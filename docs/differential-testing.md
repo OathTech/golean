@@ -14,8 +14,16 @@ message : Option String
 
 ## Current Harness
 
+`scripts/gobra-smoke` exports every Gobra corpus entry, validates each emitted
+JSON file, then runs every manifest row through Lean and checks that the
+observed status is the expected status. It deliberately does not hardcode
+expected values; value equality belongs in the differential step.
+
 `scripts/diff-smoke` compares plain Go fixtures under `Differential/plain`
-against Lean execution of the corresponding Gobra smoke artifacts.
+against Lean execution of the corresponding Gobra smoke artifacts. This is the
+main conformance loop: add a small Go program, add the matching Gobra frontend
+fixture, add a manifest row, and require real Go and Lean observations to
+match.
 
 Cases are listed in `Differential/manifest.tsv`. The manifest is intentionally
 strict and small:
@@ -39,6 +47,13 @@ The script requires `go` on `PATH`.
 The harness runs fixtures with module mode disabled and stores Go's build cache
 under `artifacts/go-build-cache` so tests do not depend on writable user-level
 cache directories.
+
+Current scalability limitation: Gobra export is slow because the harness invokes
+SBT/Gobra once per corpus entry. `scripts/diff-smoke` reuses
+`artifacts/gobra-smoke` when it exists, so repeated Go-vs-Lean comparisons are
+fast after one export. The next harness improvement should make Gobra export
+incremental or batched so adding one fixture does not require re-exporting the
+entire corpus.
 
 ## Random Program Generators
 

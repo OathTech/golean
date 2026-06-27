@@ -32,7 +32,7 @@ if [[ ! -f "$MANIFEST" ]]; then
 fi
 
 if [[ ! -d "$OUT/work" ]]; then
-  run_with_timeout "$GOBRA_SMOKE_TIMEOUT_SECONDS" scripts/gobra-smoke
+  scripts/gobra-smoke
 fi
 mkdir -p "$GO_BUILD_CACHE"
 
@@ -79,7 +79,7 @@ while IFS=$'\t' read -r id go_dir gobra_json function_name arg_ints expected_sta
     exit 2
   fi
   if [[ ! -f "$gobra_json" ]]; then
-    run_with_timeout "$GOBRA_SMOKE_TIMEOUT_SECONDS" scripts/gobra-smoke
+    scripts/gobra-smoke
   fi
   if [[ ! -f "$gobra_json" ]]; then
     echo "Gobra JSON artifact not found for $id: $gobra_json" >&2

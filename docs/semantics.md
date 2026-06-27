@@ -275,6 +275,7 @@ Currently supported:
 - descriptor-backed slices created from arrays;
 - descriptor-backed slices created by `make([]T, len, cap)`;
 - slice literals;
+- typed nil slice literals and equality against nil;
 - slice `len`, `cap`, indexing, indexed assignment, two-index slicing, and
   three-index slicing;
 - `copy` over slices, including overlapping source/destination ranges;
@@ -284,8 +285,8 @@ Currently supported:
 
 Still pending:
 
-- zero-capacity `make` edge cases, string slicing, and append growth policy
-  refinement. See `docs/slice-model.md` for the selected
+- remaining zero-capacity `make` edge cases, string slicing, and append growth
+  policy refinement. See `docs/slice-model.md` for the selected
   descriptor/backing-store design and open refinement points.
 
 ## Defined Types

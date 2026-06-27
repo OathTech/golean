@@ -23,7 +23,7 @@ private def knownTagNames : List String := [
   "If", "Index", "IndexedExp", "Initialization", "IntLit", "IntT", "InterfaceT", "Internal", "ItfTupleTerminationMeasure",
   "Label", "LabelProxy", "Length", "LessCmp", "LocalVar", "MPredicate",
   "MPredicateAccess", "MPredicateProxy", "MakeSlice", "Method", "MethodBody", "MethodBodySeqn",
-  "MethodCall", "MethodProxy", "Mod", "Mul", "Negation", "NewSliceLit", "NonItfTupleTerminationMeasure",
+  "MethodCall", "MethodProxy", "Mod", "Mul", "Negation", "NewSliceLit", "NilLit", "NonItfTupleTerminationMeasure",
   "None", "Old", "Or", "Out", "PointerT", "Predicate", "Program", "PureMethod",
   "PureMethodCall", "Ref", "Return", "SepAnd", "Seqn", "Single", "SingleAss", "Slice", "Some",
   "SliceT", "StringT", "StructLit", "StructT", "Sub", "UnboundedInteger", "UneqCmp", "Var", "While",
@@ -162,6 +162,7 @@ mutual
 
   inductive Expr where
     | var (ref : VarRef)
+    | nilLit (source : Source) (typ : Ty)
     | intLit (source : Source) (value : Int) (kind : IntegerKind) (base : Nat)
     | boolLit (source : Source) (value : Bool)
     | add (source : Source) (left right : Expr)
@@ -617,6 +618,11 @@ mutual
         (← decodeExpr s!"{path}.right" (← GoLean.StrictJson.field path obj "right"))
     match tag with
     | "LocalVar" | "In" | "Out" => return .var (← decodeVarRef path json)
+    | "NilLit" =>
+        let obj ← taggedObj path json "NilLit" ["source", "tag", "typ"]
+        return .nilLit
+          (← decodeSource s!"{path}.source" (← GoLean.StrictJson.field path obj "source"))
+          (← decodeTy s!"{path}.typ" (← GoLean.StrictJson.field path obj "typ"))
     | "IntLit" =>
         let obj ← taggedObj path json "IntLit" ["base", "kind", "source", "tag", "v"]
         return .intLit

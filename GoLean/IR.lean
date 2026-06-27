@@ -32,6 +32,7 @@ inductive TypeDef where
 
 inductive Expr where
   | var (id : String)
+  | nil (typ : Option Ty)
   | intLit (value : Int)
   | boolLit (value : Bool)
   | add (left right : Expr)
@@ -465,6 +466,14 @@ private partial def valueEq : GoValue → GoValue → Except GoError Bool
   | .nil, .slice right => do
       validateSlice right
       return right.base.isNone
+  | .slice left, .slice right => do
+      validateSlice left
+      validateSlice right
+      match left.base, right.base with
+      | none, none => return true
+      | none, some _ => return false
+      | some _, none => return false
+      | some _, some _ => stuck "non-nil slices are not comparable"
   | .array left, .array right => do
       if left.size != right.size then
         stuck s!"array equality length mismatch: {left.size} vs {right.size}"
@@ -498,6 +507,13 @@ private partial def valueEq : GoValue → GoValue → Except GoError Bool
 mutual
   partial def evalExpr (state : ExecState) : Expr → Except GoError GoValue
     | .var id => lookup state id
+    | .nil none => return .nil
+    | .nil (some typ) =>
+        match typ with
+        | .slice _ => defaultValue state typ
+        | .pointer _ => return .nil
+        | .unsupported feature => unsupported s!"nil literal for {feature}"
+        | other => stuck s!"nil literal for non-nilable type {repr other}"
     | .intLit value => return .int value
     | .boolLit value => return .bool value
     | .add left right => do

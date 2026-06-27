@@ -119,6 +119,7 @@ partial def lowerAssignee : GoLean.GobraJson.Assignee → GoLean.GoCore.Assignee
 
 partial def lowerExpr : GoLean.GobraJson.Expr → GoLean.GoCore.Expr
   | .var ref => .var (varRefId ref)
+  | .nilLit _ typ => .nil (some (lowerTy typ))
   | .intLit _ value _ _ => .intLit value
   | .boolLit _ value => .boolLit value
   | .add _ left right => .add (lowerExpr left) (lowerExpr right)

@@ -20,3 +20,11 @@ features/make-slice features/make-slice.gobra
 features/slice-literal features/slice-literal.gobra
 features/slice-copy features/slice-copy.gobra
 features/slice-append features/slice-append.gobra
+features/slice-nil-empty features/slice-nil-empty.gobra
+features/append-nil features/append-nil.gobra
+features/append-overlap features/append-overlap.gobra
+features/full-slice features/full-slice.gobra
+features/full-slice-bounds features/full-slice-bounds.gobra
+features/make-slice-zero features/make-slice-zero.gobra
+features/copy-nil features/copy-nil.gobra
+features/copy-short features/copy-short.gobra

@@ -1,0 +1,16 @@
+package main
+
+import "fmt"
+
+func main() {
+	s := []int{1, 2, 3}
+	t := append(s[:1], s...)
+	a := []int{1, 2, 3, 4}
+	u := append(a[:2], a[1:3]...)
+	z := t[0]*10000000 + t[1]*1000000 + t[2]*100000 + t[3]*10000
+	z = z + s[0]*1000 + s[1]*100 + s[2]*10
+	z = z + u[2]
+	z = z*10000 + a[0]*1000 + a[1]*100 + a[2]*10 + a[3]
+
+	fmt.Printf("{\"status\":\"ok\",\"values\":[{\"tag\":\"int\",\"value\":%d}]}\n", z)
+}

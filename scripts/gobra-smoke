@@ -28,7 +28,7 @@ lean() {
 }
 
 run_with_timeout "$LAKE_BUILD_TIMEOUT_SECONDS" lake build
-run_with_timeout "$GOBRA_EXPORT_TIMEOUT_SECONDS" lake exe golean gobra-export --manifest Corpus/gobra-smoke.txt --out "$OUT"
+lake exe golean gobra-export --manifest Corpus/gobra-smoke.txt --out "$OUT"
 
 json_files=()
 while IFS= read -r -d '' json_file; do
@@ -45,182 +45,62 @@ done
 
 echo "validated ${#json_files[@]} Gobra internal JSON artifact(s)"
 
-multi_assign_json="$OUT/work/features/multi-assign/multi-assign.gobra.internal.json"
-multi_assign_expected='{"status":"ok","values":[]}'
-multi_assign_actual="$(lean gobra-json-run --input "$multi_assign_json" --function foo_bda1d7d_F)"
-if [[ "$multi_assign_actual" != "$multi_assign_expected" ]]; then
-  echo "unexpected multi-assign Lean execution result: $multi_assign_actual" >&2
-  exit 1
-fi
+MANIFEST="Differential/manifest.tsv"
+case_count=0
+while IFS=$'\t' read -r id _go_dir gobra_json function_name arg_ints expected_status _features _expected_reason extra; do
+  if [[ -z "${id:-}" || "$id" == \#* ]]; then
+    continue
+  fi
+  if [[ -n "${extra:-}" ]]; then
+    echo "malformed differential manifest row for $id: too many fields" >&2
+    exit 2
+  fi
+  case "$expected_status" in
+    ok|panic|unsupported|stuck|error) ;;
+    *)
+      echo "unknown expected status for $id: $expected_status" >&2
+      exit 2
+      ;;
+  esac
 
-while1_json="$OUT/work/features/while1/while1.gobra.internal.json"
-while1_expected='{"status":"ok","values":[{"tag":"int","value":42}]}'
-while1_actual="$(lean gobra-json-run --input "$while1_json" --function test_bda1d7d_F --arg-int 6 --arg-int 7)"
-if [[ "$while1_actual" != "$while1_expected" ]]; then
-  echo "unexpected while1 Lean execution result: $while1_actual" >&2
-  exit 1
-fi
+  case "$gobra_json" in
+    artifacts/gobra-smoke/*) json_file="$OUT/${gobra_json#artifacts/gobra-smoke/}" ;;
+    *) json_file="$gobra_json" ;;
+  esac
+  if [[ ! -f "$json_file" ]]; then
+    echo "Gobra JSON artifact not found for $id: $json_file" >&2
+    exit 1
+  fi
 
-if_return_json="$OUT/work/features/if-return/if-return.gobra.internal.json"
-if_return_expected='{"status":"ok","values":[{"tag":"int","value":7}]}'
-if_return_actual="$(lean gobra-json-run --input "$if_return_json" --function ifReturn_bda1d7d_F --arg-int 7)"
-if [[ "$if_return_actual" != "$if_return_expected" ]]; then
-  echo "unexpected if-return Lean execution result: $if_return_actual" >&2
-  exit 1
-fi
+  lean_args=(gobra-json-run --input "$json_file" --function "$function_name")
+  if [[ "$arg_ints" != "-" ]]; then
+    IFS=',' read -r -a ints <<< "$arg_ints"
+    for value in "${ints[@]}"; do
+      lean_args+=(--arg-int "$value")
+    done
+  fi
 
-break_continue_json="$OUT/work/features/break-continue/break-continue.gobra.internal.json"
-break_continue_expected='{"status":"ok","values":[{"tag":"int","value":8}]}'
-break_continue_actual="$(lean gobra-json-run --input "$break_continue_json" --function breakContinue_bda1d7d_F)"
-if [[ "$break_continue_actual" != "$break_continue_expected" ]]; then
-  echo "unexpected break-continue Lean execution result: $break_continue_actual" >&2
-  exit 1
-fi
+  if lean_observation="$(lean "${lean_args[@]}")"; then
+    lean_status=0
+  else
+    lean_status=$?
+  fi
+  if [[ "$lean_observation" != *"\"status\":\"$expected_status\""* ]]; then
+    echo "Lean observation for $id did not have expected status $expected_status" >&2
+    echo "Lean: $lean_observation" >&2
+    exit 1
+  fi
+  if [[ "$expected_status" == "ok" && "$lean_status" -ne 0 ]]; then
+    echo "Lean execution for $id returned nonzero status $lean_status despite ok observation" >&2
+    echo "Lean: $lean_observation" >&2
+    exit 1
+  fi
 
-scalars_json="$OUT/work/features/scalars/scalars.gobra.internal.json"
-scalars_expected='{"status":"ok","values":[{"tag":"int","value":7}]}'
-scalars_actual="$(lean gobra-json-run --input "$scalars_json" --function scalars_bda1d7d_F)"
-if [[ "$scalars_actual" != "$scalars_expected" ]]; then
-  echo "unexpected scalars Lean execution result: $scalars_actual" >&2
-  exit 1
-fi
-
-divide_by_zero_json="$OUT/work/features/divide-by-zero/divide-by-zero.gobra.internal.json"
-divide_by_zero_expected='{"message":"integer divide by zero","status":"panic"}'
-if divide_by_zero_actual="$(lean gobra-json-run --input "$divide_by_zero_json" --function divideByZero_bda1d7d_F)"; then
-  echo "expected divide-by-zero Lean execution to panic" >&2
-  exit 1
-fi
-if [[ "$divide_by_zero_actual" != "$divide_by_zero_expected" ]]; then
-  echo "unexpected divide-by-zero Lean execution result: $divide_by_zero_actual" >&2
-  exit 1
-fi
-
-arrays_json="$OUT/work/features/arrays/arrays.gobra.internal.json"
-arrays_expected='{"status":"ok","values":[{"tag":"int","value":11}]}'
-arrays_actual="$(lean gobra-json-run --input "$arrays_json" --function arrays_bda1d7d_F)"
-if [[ "$arrays_actual" != "$arrays_expected" ]]; then
-  echo "unexpected arrays Lean execution result: $arrays_actual" >&2
-  exit 1
-fi
-
-array_len_cap_json="$OUT/work/features/array-len-cap/array-len-cap.gobra.internal.json"
-array_len_cap_expected='{"status":"ok","values":[{"tag":"int","value":6}]}'
-array_len_cap_actual="$(lean gobra-json-run --input "$array_len_cap_json" --function arrayLenCap_bda1d7d_F)"
-if [[ "$array_len_cap_actual" != "$array_len_cap_expected" ]]; then
-  echo "unexpected array-len-cap Lean execution result: $array_len_cap_actual" >&2
-  exit 1
-fi
-
-array_zero_json="$OUT/work/features/array-zero/array-zero.gobra.internal.json"
-array_zero_expected='{"status":"ok","values":[{"tag":"int","value":0}]}'
-array_zero_actual="$(lean gobra-json-run --input "$array_zero_json" --function arrayZero_bda1d7d_F)"
-if [[ "$array_zero_actual" != "$array_zero_expected" ]]; then
-  echo "unexpected array-zero Lean execution result: $array_zero_actual" >&2
-  exit 1
-fi
-
-nested_arrays_json="$OUT/work/features/nested-arrays/nested-arrays.gobra.internal.json"
-nested_arrays_expected='{"status":"ok","values":[{"tag":"int","value":5}]}'
-nested_arrays_actual="$(lean gobra-json-run --input "$nested_arrays_json" --function nestedArrays_bda1d7d_F)"
-if [[ "$nested_arrays_actual" != "$nested_arrays_expected" ]]; then
-  echo "unexpected nested-arrays Lean execution result: $nested_arrays_actual" >&2
-  exit 1
-fi
-
-array_param_return_json="$OUT/work/features/array-param-return/array-param-return.gobra.internal.json"
-array_param_return_expected='{"status":"ok","values":[{"tag":"int","value":10}]}'
-array_param_return_actual="$(lean gobra-json-run --input "$array_param_return_json" --function arrayParamReturn_bda1d7d_F)"
-if [[ "$array_param_return_actual" != "$array_param_return_expected" ]]; then
-  echo "unexpected array-param-return Lean execution result: $array_param_return_actual" >&2
-  exit 1
-fi
-
-pointer_array_json="$OUT/work/features/pointer-array/pointer-array.gobra.internal.json"
-pointer_array_expected='{"status":"ok","values":[{"tag":"int","value":14}]}'
-pointer_array_actual="$(lean gobra-json-run --input "$pointer_array_json" --function pointerArray_bda1d7d_F)"
-if [[ "$pointer_array_actual" != "$pointer_array_expected" ]]; then
-  echo "unexpected pointer-array Lean execution result: $pointer_array_actual" >&2
-  exit 1
-fi
-
-array_bounds_json="$OUT/work/features/array-bounds/array-bounds.gobra.internal.json"
-array_bounds_expected='{"message":"index out of range","status":"panic"}'
-if array_bounds_actual="$(lean gobra-json-run --input "$array_bounds_json" --function arrayBounds_bda1d7d_F)"; then
-  echo "expected array-bounds Lean execution to panic" >&2
-  exit 1
-fi
-if [[ "$array_bounds_actual" != "$array_bounds_expected" ]]; then
-  echo "unexpected array-bounds Lean execution result: $array_bounds_actual" >&2
-  exit 1
-fi
-
-array_copy_json="$OUT/work/features/array-copy/array-copy.gobra.internal.json"
-array_copy_expected='{"status":"ok","values":[{"tag":"int","value":10}]}'
-array_copy_actual="$(lean gobra-json-run --input "$array_copy_json" --function arrayCopy_bda1d7d_F)"
-if [[ "$array_copy_actual" != "$array_copy_expected" ]]; then
-  echo "unexpected array-copy Lean execution result: $array_copy_actual" >&2
-  exit 1
-fi
-
-array_slice_alias_json="$OUT/work/features/array-slice-alias/array-slice-alias.gobra.internal.json"
-array_slice_alias_expected='{"status":"ok","values":[{"tag":"int","value":229}]}'
-array_slice_alias_actual="$(lean gobra-json-run --input "$array_slice_alias_json" --function arraySliceAlias_bda1d7d_F)"
-if [[ "$array_slice_alias_actual" != "$array_slice_alias_expected" ]]; then
-  echo "unexpected array-slice-alias Lean execution result: $array_slice_alias_actual" >&2
-  exit 1
-fi
-
-make_slice_json="$OUT/work/features/make-slice/make-slice.gobra.internal.json"
-make_slice_expected='{"status":"ok","values":[{"tag":"int","value":537}]}'
-make_slice_actual="$(lean gobra-json-run --input "$make_slice_json" --function makeSlice_bda1d7d_F)"
-if [[ "$make_slice_actual" != "$make_slice_expected" ]]; then
-  echo "unexpected make-slice Lean execution result: $make_slice_actual" >&2
-  exit 1
-fi
-
-slice_literal_json="$OUT/work/features/slice-literal/slice-literal.gobra.internal.json"
-slice_literal_expected='{"status":"ok","values":[{"tag":"int","value":341}]}'
-slice_literal_actual="$(lean gobra-json-run --input "$slice_literal_json" --function sliceLiteral_bda1d7d_F)"
-if [[ "$slice_literal_actual" != "$slice_literal_expected" ]]; then
-  echo "unexpected slice-literal Lean execution result: $slice_literal_actual" >&2
-  exit 1
-fi
-
-slice_copy_json="$OUT/work/features/slice-copy/slice-copy.gobra.internal.json"
-slice_copy_expected='{"status":"ok","values":[{"tag":"int","value":31123}]}'
-slice_copy_actual="$(lean gobra-json-run --input "$slice_copy_json" --function sliceCopy_bda1d7d_F)"
-if [[ "$slice_copy_actual" != "$slice_copy_expected" ]]; then
-  echo "unexpected slice-copy Lean execution result: $slice_copy_actual" >&2
-  exit 1
-fi
-
-slice_append_json="$OUT/work/features/slice-append/slice-append.gobra.internal.json"
-slice_append_expected='{"status":"ok","values":[{"tag":"int","value":445725}]}'
-slice_append_actual="$(lean gobra-json-run --input "$slice_append_json" --function sliceAppend_bda1d7d_F)"
-if [[ "$slice_append_actual" != "$slice_append_expected" ]]; then
-  echo "unexpected slice-append Lean execution result: $slice_append_actual" >&2
-  exit 1
-fi
-
-pointer_identity_json="$OUT/work/features/pointer-identity/pointer-identity.gobra.internal.json"
-pointer_identity_expected='{"status":"ok","values":[]}'
-pointer_identity_actual="$(lean gobra-json-run --input "$pointer_identity_json" --function test_bda1d7d_F)"
-if [[ "$pointer_identity_actual" != "$pointer_identity_expected" ]]; then
-  echo "unexpected pointer-identity Lean execution result: $pointer_identity_actual" >&2
-  exit 1
-fi
-
-swap_json="$OUT/work/examples/swap/swap.gobra.internal.json"
-swap_expected='{"status":"ok","values":[]}'
-swap_actual="$(lean gobra-json-run --input "$swap_json" --function client_bda1d7d_F)"
-if [[ "$swap_actual" != "$swap_expected" ]]; then
-  echo "unexpected swap client Lean execution result: $swap_actual" >&2
-  exit 1
-fi
+  case_count=$((case_count + 1))
+done < "$MANIFEST"
 
 rm -rf "$OUT_FINAL"
 mv "$OUT" "$OUT_FINAL"
 trap - EXIT
 
-echo "executed 21 Gobra-fronted Go function(s) in Lean"
+echo "executed $case_count Gobra-fronted Go function(s) in Lean"
