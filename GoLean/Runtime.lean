@@ -13,6 +13,7 @@ structure Addr where
 inductive Loc where
   | base (addr : Addr)
   | field (base : Loc) (typeName fieldName : String)
+  | index (base : Loc) (index : Int)
   deriving Repr, BEq, DecidableEq
 
 inductive GoValue where
@@ -22,6 +23,7 @@ inductive GoValue where
   | addr (loc : Loc)
   | nil
   | struct (typeName : String) (fields : Array (String × GoValue))
+  | array (values : Array GoValue)
   deriving Repr, BEq
 
 structure GoState where

@@ -118,6 +118,11 @@ execution against generated Lean execution where the feature is executable.
 
 Goal: cover as much Go/Gobra code as practical.
 
+Status: started. The executable subset now includes scalar arithmetic and
+comparisons, boolean connectives, divide-by-zero panic classification, and a
+first fixed-size array subset: array types, array literals, indexing, indexed
+assignment, and array equality through GoCore values.
+
 Feature order should be driven by corpus failures and semantic dependencies,
 but the expected progression is:
 
@@ -194,11 +199,13 @@ specification hooks.
 
 ## Near-Term Work Queue
 
-1. Add Go-source-vs-Lean differential execution for plain Go targets.
-2. Expand expression/operator coverage beyond the current integer/bool subset.
-3. Make differential cases manifest-driven with feature tags and expected
-   observation status.
-4. Add arrays and slices using the same path-location model.
+1. Expand arrays from the first fixed-size subset to bounds tests, zero values,
+   length/capacity, nested arrays, and pointer-to-array behavior.
+2. Add slices using the same path-location model and the Goose/new Goose slice
+   references.
+3. Keep extending scalar coverage toward Go-sized word behavior and conversions.
+4. Add more generated/deterministic differential cases with feature tags and
+   expected observation status.
 5. Add maps and named-type/conversion behavior driven by corpus failures.
 6. Integrate Microsmith/GoSmith only after scalar, pointer, struct, array, and
    slice cases have deterministic coverage and feature filters.

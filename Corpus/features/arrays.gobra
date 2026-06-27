@@ -1,0 +1,9 @@
+package pkg;
+
+func arrays() (z int) {
+	a@ := [3]int{1, 2, 3};
+	z = a[0] + a[2];
+	a[1] = 7;
+	z = z + a[1];
+	assert a == [3]int{1, 7, 3};
+};

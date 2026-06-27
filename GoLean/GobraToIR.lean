@@ -11,6 +11,11 @@ private def varRefId : GoLean.GobraJson.VarRef → String
 partial def lowerTy : GoLean.GobraJson.Ty → GoLean.GoCore.Ty
   | .bool _ => .bool
   | .int _ _ => .int
+  | .array length elem _ =>
+      if length < 0 then
+        .unsupported s!"negative array length {length}"
+      else
+        .array length.toNat (lowerTy elem)
   | .pointer elem _ => .pointer (lowerTy elem)
   | .defined name _ => .defined name
   | .interface name _ => .unsupported s!"interface type {name}"
@@ -22,7 +27,6 @@ partial def lowerTy : GoLean.GobraJson.Ty → GoLean.GoCore.Ty
   | .function .. => .unsupported "function type"
   | .permission _ => .unsupported "permission type"
   | .sort => .unsupported "sort type"
-  | .array .. => .unsupported "array type"
   | .slice .. => .unsupported "slice type"
   | .map .. => .unsupported "map type"
   | .sequence .. => .unsupported "sequence type"
@@ -69,12 +73,23 @@ partial def lowerExprTy? : GoLean.GobraJson.Expr → Option GoLean.GoCore.Ty
   | .ref _ _ typ => some (lowerTy typ)
   | .old _ operand => lowerExprTy? operand
   | .structLit _ typ _ => some (lowerTy typ)
+  | .arrayLit _ length elem _ =>
+      if length < 0 then
+        some (.unsupported s!"negative array length {length}")
+      else
+        some (.array length.toNat (lowerTy elem))
+  | .indexedExp _ _ _ baseUnderlyingType =>
+      match lowerTy baseUnderlyingType with
+      | .array _ elem => some elem
+      | .unsupported feature => some (.unsupported feature)
+      | other => some (.unsupported s!"indexing non-array type {repr other}")
   | _ => none
 
 mutual
 partial def lowerAddressOfExpr : GoLean.GobraJson.Expr → GoLean.GoCore.Expr
   | .var ref => .ref (varRefId ref)
   | .deref _ exp _ => lowerExpr exp
+  | .indexedExp _ base index _ => .indexAddr (lowerAddressOfExpr base) (lowerExpr index)
   | .fieldRef _ recv field =>
       match (lowerExprTy? recv).bind typeNameOfTy? with
       | some typeName => .fieldAddr (lowerAddressOfExpr recv) typeName field.name
@@ -86,6 +101,7 @@ partial def lowerAddressOfExpr : GoLean.GobraJson.Expr → GoLean.GoCore.Expr
 partial def lowerAssignee : GoLean.GobraJson.Assignee → GoLean.GoCore.Assignee
   | .var _ ref => .var (varRefId ref)
   | .field _ op => .addr (lowerAddressOfExpr op)
+  | .index _ op => .addr (lowerAddressOfExpr op)
 
 partial def lowerExpr : GoLean.GobraJson.Expr → GoLean.GoCore.Expr
   | .var ref => .var (varRefId ref)
@@ -109,6 +125,7 @@ partial def lowerExpr : GoLean.GobraJson.Expr → GoLean.GoCore.Expr
       match assignee with
       | .var _ ref => .ref (varRefId ref)
       | .field _ op => lowerAddressOfExpr op
+      | .index _ op => lowerAddressOfExpr op
   | .old _ operand => .old (lowerExpr operand)
   | .deref _ exp typ => .deref (lowerExpr exp) (lowerTy typ)
   | .fieldRef _ recv field =>
@@ -117,6 +134,12 @@ partial def lowerExpr : GoLean.GobraJson.Expr → GoLean.GoCore.Expr
       | none => .unsupported "field reference without defined receiver type"
   | .address _ op => lowerAddressOfExpr op
   | .structLit _ typ args => .structLit (lowerTy typ) (args.map lowerExpr)
+  | .arrayLit _ length elem args =>
+      if length < 0 then
+        .unsupported s!"negative array length {length}"
+      else
+        .arrayLit length.toNat (lowerTy elem) (args.map (fun arg => (arg.key, lowerExpr arg.value)))
+  | .indexedExp _ base index _ => .indexGet (lowerExpr base) (lowerExpr index)
   | .pureMethodCall .. => .unsupported "pure method call expression"
   | .mPredicateAccess .. => .unsupported "method predicate access expression"
   | .predicate .. => .unsupported "predicate expression"

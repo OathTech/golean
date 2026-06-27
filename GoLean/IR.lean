@@ -7,6 +7,7 @@ open GoLean
 inductive Ty where
   | bool
   | int
+  | array (length : Nat) (elem : Ty)
   | pointer (elem : Ty)
   | defined (name : String)
   | unsupported (feature : String)
@@ -51,6 +52,9 @@ inductive Expr where
   | structLit (typ : Ty) (args : Array Expr)
   | fieldGet (recv : Expr) (typeName fieldName : String)
   | fieldAddr (base : Expr) (typeName fieldName : String)
+  | arrayLit (length : Nat) (elem : Ty) (args : Array (Int × Expr))
+  | indexGet (base index : Expr)
+  | indexAddr (base index : Expr)
   | old (operand : Expr)
   | unsupported (feature : String)
   deriving Repr, BEq, Inhabited
@@ -197,6 +201,26 @@ private def lookupLoc (state : ExecState) (name : String) : Except String Loc :=
   | some loc => return loc
   | none => throw s!"unbound GoCore variable address: {name}"
 
+private def arrayIndexNat (values : Array GoValue) (index : Int) : Except String Nat := do
+  if index < 0 then
+    throw "GoCore panic: index out of range"
+  let i := index.toNat
+  if i < values.size then
+    return i
+  else
+    throw "GoCore panic: index out of range"
+
+private def arrayGet (values : Array GoValue) (index : Int) : Except String GoValue := do
+  let i ← arrayIndexNat values index
+  match values[i]? with
+  | some value => return value
+  | none => throw "GoCore panic: index out of range"
+
+private def arraySet (values : Array GoValue) (index : Int) (value : GoValue) :
+    Except String (Array GoValue) := do
+  let i ← arrayIndexNat values index
+  return values.set! i value
+
 mutual
   partial def loadLoc (state : ExecState) : Loc → Except String GoValue
     | loc@(.base _) =>
@@ -212,6 +236,10 @@ mutual
             | some value => return value
             | none => throw s!"unknown GoCore struct field: {fieldName}"
         | other => throw s!"expected struct base for field load, got {repr other}"
+    | .index base index => do
+        match ← loadLoc state base with
+        | .array values => arrayGet values index
+        | other => throw s!"expected array base for index load, got {repr other}"
 
   partial def storeLoc (state : ExecState) : Loc → GoValue → Except String ExecState
     | loc@(.base _), value =>
@@ -224,6 +252,10 @@ mutual
             let updated ← StructFields.set fields fieldName value
             storeLoc state base (.struct actualType updated)
         | other => throw s!"expected struct base for field store, got {repr other}"
+    | .index base index, value => do
+        match ← loadLoc state base with
+        | .array values => storeLoc state base (.array (← arraySet values index value))
+        | other => throw s!"expected array base for index store, got {repr other}"
 end
 
 private def lookup (state : ExecState) (name : String) : Except String GoValue := do
@@ -233,6 +265,11 @@ mutual
   partial def defaultValue (state : ExecState) : Ty → Except String GoValue
     | .bool => return .bool false
     | .int => return .int 0
+    | .array length elem => do
+        let mut values := #[]
+        for _ in [:length] do
+          values := values.push (← defaultValue state elem)
+        return .array values
     | .pointer _ => return .nil
     | .defined name => do
         match TypeEnv.lookup state.types name with
@@ -268,6 +305,23 @@ mutual
         | none => unsupported s!"struct literal for unknown defined type {name}"
     | .unsupported feature => unsupported s!"struct literal for {feature}"
     | other => unsupported s!"struct literal for non-defined type {repr other}"
+
+  partial def buildArrayValue (state : ExecState) (length : Nat) (elem : Ty)
+      (args : Array (Int × GoValue)) : Except String GoValue := do
+    let mut values := #[]
+    for _ in [:length] do
+      values := values.push (← defaultValue state elem)
+    let mut seen : Array Int := #[]
+    for (key, value) in args do
+      if seen.contains key then
+        throw s!"duplicate GoCore array literal index: {key}"
+      seen := seen.push key
+      if key < 0 then
+        throw s!"negative GoCore array literal index: {key}"
+      match values[key.toNat]? with
+      | some _ => values := values.set! key.toNat value
+      | none => throw s!"GoCore array literal index out of range: {key}"
+    return .array values
 end
 
 private def valueAsInt : GoValue → Except String Int
@@ -353,6 +407,17 @@ mutual
         | other => throw s!"expected struct value for field access, got {repr other}"
     | .fieldAddr base typeName fieldName => do
         return .addr (.field (← valueAsLoc (← evalExpr state base)) typeName fieldName)
+    | .arrayLit length elem args => do
+        let mut values := #[]
+        for (key, arg) in args do
+          values := values.push (key, (← evalExpr state arg))
+        buildArrayValue state length elem values
+    | .indexGet base index => do
+        match ← evalExpr state base with
+        | .array values => arrayGet values (← valueAsInt (← evalExpr state index))
+        | other => throw s!"expected array value for index access, got {repr other}"
+    | .indexAddr base index => do
+        return .addr (.index (← valueAsLoc (← evalExpr state base)) (← valueAsInt (← evalExpr state index)))
     | .old operand => evalExpr state operand
     | .unsupported feature => unsupported feature
 

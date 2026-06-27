@@ -207,6 +207,41 @@ Loc :=
 Then heap ownership and proof predicates can talk about both whole structs and
 individual fields without inventing fake addresses for every field.
 
+## Arrays
+
+The first executable array model follows the same path-location idea:
+
+```text
+Loc :=
+  | base Addr
+  | field Loc typeName fieldName
+  | index Loc index
+```
+
+GoCore array values are fixed-size value arrays. Loading `Loc.index base i`
+loads the array at `base` and projects element `i`; storing through that
+location rebuilds the array with element `i` replaced. This matches the current
+struct strategy and the new Goose array reference closely enough for execution
+while keeping the later proof story field/index-local.
+
+Currently supported:
+
+- `ArrayT n elem` lowering for nonnegative `n`;
+- zero values for fixed-size arrays;
+- array literals with explicit exported keys;
+- array indexing as value projection;
+- indexed assignment through `Loc.index`;
+- array equality through structural `GoValue` equality;
+- out-of-range indexing as a `panic` observation.
+
+Still pending:
+
+- `len` and `cap`;
+- nested array tests;
+- array parameters and return values beyond simple concrete fixtures;
+- pointer-to-array indexing and slicing;
+- slice creation from arrays.
+
 ## Defined Types
 
 Gobra JSON often gives values the type `DefinedT name` and separately lists the

@@ -60,6 +60,25 @@ if [[ "$divide_by_zero_actual" != "$divide_by_zero_expected" ]]; then
   exit 1
 fi
 
+arrays_json="$OUT/work/features/arrays/arrays.gobra.internal.json"
+arrays_expected='{"status":"ok","values":[{"tag":"int","value":11}]}'
+arrays_actual="$(lake exe golean gobra-json-run --input "$arrays_json" --function arrays_bda1d7d_F)"
+if [[ "$arrays_actual" != "$arrays_expected" ]]; then
+  echo "unexpected arrays Lean execution result: $arrays_actual" >&2
+  exit 1
+fi
+
+array_bounds_json="$OUT/work/features/array-bounds/array-bounds.gobra.internal.json"
+array_bounds_expected='{"message":"GoCore panic: index out of range","status":"panic"}'
+if array_bounds_actual="$(lake exe golean gobra-json-run --input "$array_bounds_json" --function arrayBounds_bda1d7d_F)"; then
+  echo "expected array-bounds Lean execution to panic" >&2
+  exit 1
+fi
+if [[ "$array_bounds_actual" != "$array_bounds_expected" ]]; then
+  echo "unexpected array-bounds Lean execution result: $array_bounds_actual" >&2
+  exit 1
+fi
+
 pointer_identity_json="$OUT/work/features/pointer-identity/pointer-identity.gobra.internal.json"
 pointer_identity_expected='{"message":"GoCore assertion failed","status":"assertion_error"}'
 if pointer_identity_actual="$(lake exe golean gobra-json-run --input "$pointer_identity_json" --function test_bda1d7d_F)"; then
@@ -89,4 +108,4 @@ if [[ "$swap_without_final_assert_actual" != "$swap_without_final_assert_expecte
   exit 1
 fi
 
-echo "executed 6 Gobra internal JSON function(s) in Lean"
+echo "executed 8 Gobra internal JSON function(s) in Lean"

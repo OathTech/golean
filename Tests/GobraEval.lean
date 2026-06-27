@@ -122,6 +122,23 @@ private def coreScalarFunction : GoCore.Func := {
     ]
 }
 
+private def coreArrayFunction : GoCore.Func := {
+  name := "arrays_F",
+  args := #[],
+  results := #[coreParam "z"],
+  pres := #[],
+  posts := #[],
+  body := .block
+    #[{ id := "a", typ := .array 3 .int }]
+    #[
+      .assign (.var "a") (.arrayLit 3 .int #[(0, .intLit 1), (1, .intLit 2), (2, .intLit 3)]),
+      .assign (.var "z") (.add (.indexGet (.var "a") (.intLit 0)) (.indexGet (.var "a") (.intLit 2))),
+      .assign (.addr (.indexAddr (.ref "a") (.intLit 1))) (.intLit 7),
+      .assign (.var "z") (.add (.var "z") (.indexGet (.var "a") (.intLit 1))),
+      .assert (.expr (.eqCmp (.var "a") (.arrayLit 3 .int #[(0, .intLit 1), (1, .intLit 7), (2, .intLit 3)])))
+    ]
+}
+
 private def addExpr : GobraJson.Expr :=
   .add source (.var (.inParam x)) (.var (.inParam y))
 
@@ -202,6 +219,7 @@ def main : IO UInt32 := do
   passed := passed && (← expectOk "GoCore shared-heap function call"
     (GoCore.runFunctionWithContext 100 coreCellTypes #[coreSetCellFunction, coreCallFunction] coreCallFunction #[]))
   passed := passed && (← expectIntResult "GoCore scalar operators" (GoCore.runFunction 100 coreScalarFunction #[.int 10, .int 3]) 7)
+  passed := passed && (← expectIntResult "GoCore array indexing" (GoCore.runFunction 100 coreArrayFunction #[]) 11)
   passed := passed && (← expectIntResult "add function" (GoLean.GobraEval.runFunctionInts 100 doc "add_F" #[2, 3]) 5)
   passed := passed && (← expectError "missing function" (GoLean.GobraEval.runFunctionInts 100 doc "missing_F" #[]))
   passed := passed && (← expectError "wrong arity" (GoLean.GobraEval.runFunctionInts 100 doc "add_F" #[2]))
