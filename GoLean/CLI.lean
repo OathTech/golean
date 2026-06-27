@@ -155,36 +155,68 @@ private def sourceStartsAt (source : GobraJson.Source) (line column : Nat) : Boo
   | .internal => false
 
 mutual
-  private partial def ignoreAssertAtStmt (line column : Nat) : GobraJson.Stmt → GobraJson.Stmt
-    | .seqn source stmts => .seqn source (stmts.map (ignoreAssertAtStmt line column))
-    | .block source decls stmts => .block source decls (stmts.map (ignoreAssertAtStmt line column))
+  private partial def ignoreAssertAtStmts (line column : Nat) (stmts : Array GobraJson.Stmt) :
+      Array GobraJson.Stmt × Nat := Id.run do
+    let mut out := #[]
+    let mut count := 0
+    for stmt in stmts do
+      let (stmt, stmtCount) := ignoreAssertAtStmt line column stmt
+      out := out.push stmt
+      count := count + stmtCount
+    return (out, count)
+
+  private partial def ignoreAssertAtStmt (line column : Nat) : GobraJson.Stmt → GobraJson.Stmt × Nat
+    | .seqn source stmts =>
+        let (stmts, count) := ignoreAssertAtStmts line column stmts
+        (.seqn source stmts, count)
+    | .block source decls stmts =>
+        let (stmts, count) := ignoreAssertAtStmts line column stmts
+        (.block source decls stmts, count)
     | .while source cond invs terminationMeasure body =>
-        .while source cond invs terminationMeasure (ignoreAssertAtStmt line column body)
+        let (body, count) := ignoreAssertAtStmt line column body
+        (.while source cond invs terminationMeasure body, count)
     | .assert source assertion =>
         if sourceStartsAt source line column then
-          .assert source (.exprAssertion source (.boolLit source true))
+          (.assert source (.exprAssertion source (.boolLit source true)), 1)
         else
-          .assert source assertion
-    | stmt => stmt
+          (.assert source assertion, 0)
+    | stmt => (stmt, 0)
 
   private partial def ignoreAssertAtMethodBody (line column : Nat)
-      (body : GobraJson.MethodBody) : GobraJson.MethodBody :=
-    { body with
-      seqn := { body.seqn with stmts := body.seqn.stmts.map (ignoreAssertAtStmt line column) },
-      postprocessing := body.postprocessing.map (ignoreAssertAtStmt line column)
-    }
+      (body : GobraJson.MethodBody) : GobraJson.MethodBody × Nat :=
+    let (seqnStmts, seqnCount) := ignoreAssertAtStmts line column body.seqn.stmts
+    let (postprocessing, postCount) := ignoreAssertAtStmts line column body.postprocessing
+    ({ body with
+       seqn := { body.seqn with stmts := seqnStmts },
+       postprocessing := postprocessing
+     },
+     seqnCount + postCount)
 
-  private partial def ignoreAssertAtMember (line column : Nat) : GobraJson.Member → GobraJson.Member
+  private partial def ignoreAssertAtMember (line column : Nat) : GobraJson.Member → GobraJson.Member × Nat
     | .function member =>
-        .function { member with body := member.body.map (ignoreAssertAtMethodBody line column) }
+        match member.body with
+        | some body =>
+            let (body, count) := ignoreAssertAtMethodBody line column body
+            (.function { member with body := some body }, count)
+        | none => (.function member, 0)
     | .method member =>
-        .method { member with body := member.body.map (ignoreAssertAtMethodBody line column) }
-    | member => member
+        match member.body with
+        | some body =>
+            let (body, count) := ignoreAssertAtMethodBody line column body
+            (.method { member with body := some body }, count)
+        | none => (.method member, 0)
+    | member => (member, 0)
 end
 
 private def ignoreAssertAtDocument (line column : Nat) (doc : GobraJson.Document) :
-    GobraJson.Document :=
-  { doc with program := { doc.program with members := doc.program.members.map (ignoreAssertAtMember line column) } }
+    GobraJson.Document × Nat := Id.run do
+  let mut members := #[]
+  let mut count := 0
+  for member in doc.program.members do
+    let (member, memberCount) := ignoreAssertAtMember line column member
+    members := members.push member
+    count := count + memberCount
+  return ({ doc with program := { doc.program with members } }, count)
 
 private def locJson : Loc → Json
   | .base addr => Json.mkObj [("tag", Json.str "addr"), ("id", Lean.toJson addr.id)]
@@ -329,17 +361,27 @@ private def runGobraJsonRun (args : List String) : IO UInt32 := do
               IO.println (cliErrorJson s!"{input}: {err}").compress
               return 1
           | .ok doc =>
-              let doc :=
+              let doc? : Except String GobraJson.Document :=
                 match cfg.ignoreAssertAt with
-                | some (line, column) => ignoreAssertAtDocument line column doc
-                | none => doc
-              match GoLean.GobraEval.runFunctionInts cfg.fuel doc functionName cfg.args with
-              | .ok result =>
-                  IO.println (runJson result).compress
-                  return 0
+                | some (line, column) =>
+                    let (doc, count) := ignoreAssertAtDocument line column doc
+                    if count == 1 then
+                      Except.ok doc
+                    else
+                      Except.error s!"--ignore-assert-at expected exactly one assertion at {line}:{column}, found {count}"
+                | none => Except.ok doc
+              match doc? with
               | .error err =>
-                  IO.println (errorJson err).compress
+                  IO.println (cliErrorJson err).compress
                   return 1
+              | .ok doc =>
+                  match GoLean.GobraEval.runFunctionInts cfg.fuel doc functionName cfg.args with
+                  | .ok result =>
+                      IO.println (runJson result).compress
+                      return 0
+                  | .error err =>
+                      IO.println (errorJson err).compress
+                      return 1
       | _, _ =>
           IO.eprintln s!"provide --input <file> and --function <name>\n{usage}"
           return 2
