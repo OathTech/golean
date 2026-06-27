@@ -21,12 +21,15 @@ Cases are listed in `Differential/manifest.tsv`. The manifest is intentionally
 strict and small:
 
 ```text
-id<TAB>go_dir<TAB>gobra_json<TAB>function<TAB>arg_ints<TAB>ignore_assert_at<TAB>expected_status<TAB>features
+id<TAB>go_dir<TAB>gobra_json<TAB>function<TAB>arg_ints<TAB>ignore_assert_at<TAB>expected_status<TAB>features<TAB>expected_reason
 ```
 
 Use `-` for no integer args or no ignored assertion. Feature tags are
-comma-separated. The smoke script fails on malformed rows, missing files,
-unknown statuses, invalid integer arguments, and observation mismatches.
+comma-separated. Use `-` for `expected_reason` unless the expected status is
+`unsupported` or `stuck`; those statuses must include a concrete reason so they
+cannot become invisible coverage debt. The smoke script fails on malformed rows,
+missing files, unknown statuses, invalid integer arguments, and observation
+mismatches.
 
 The script requires `go` on `PATH`.
 
