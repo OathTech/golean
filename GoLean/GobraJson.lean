@@ -36,38 +36,6 @@ def KnownTag.ofString? (name : String) : Option KnownTag :=
 def isKnownTagName (name : String) : Bool :=
   (KnownTag.ofString? name).isSome
 
-inductive Value where
-  | null
-  | bool (value : Bool)
-  | int (value : Int)
-  | string (value : String)
-  | array (values : Array Value)
-  | object (fields : List (String × Value))
-  | tagged (tag : KnownTag) (fields : List (String × Value))
-  deriving Repr, BEq
-
-partial def decodeValue (path : String) (json : Json) : Except String Value := do
-  match json with
-  | .null => return .null
-  | .bool b => return .bool b
-  | .str s => return .string s
-  | .num _ => return .int (← GoLean.StrictJson.int path json)
-  | .arr values =>
-      return .array (← GoLean.StrictJson.mapArrayIdx values (fun i value => decodeValue s!"{path}[{i}]" value))
-  | .obj obj =>
-      let fields ← (GoLean.StrictJson.keys obj).mapM (fun key => do
-        let value ← GoLean.StrictJson.field path obj key
-        return (key, ← decodeValue s!"{path}.{key}" value))
-      match obj.get? "tag" with
-      | none => return .object fields
-      | some tagJson =>
-          if GoLean.StrictJson.exactKeys obj ["position", "tag"] then
-            return .object fields
-          let tagName ← GoLean.StrictJson.string s!"{path}.tag" tagJson
-          match KnownTag.ofString? tagName with
-          | some tag => return .tagged tag fields
-          | none => throw s!"{path}.tag: unknown Gobra tag {repr tagName}"
-
 structure LineColumn where
   line : Nat
   column : Nat
@@ -144,6 +112,18 @@ structure Parameter where
   typ : Ty
   deriving Repr, BEq
 
+structure Variable where
+  source : Source
+  id : String
+  typ : Ty
+  deriving Repr, BEq
+
+inductive VarRef where
+  | local (var : Variable)
+  | inParam (param : Parameter)
+  | outParam (param : Parameter)
+  deriving Repr, BEq
+
 structure FunctionProxy where
   source : Source
   name : String
@@ -155,16 +135,104 @@ structure MethodProxy where
   uniqueName : String
   deriving Repr, BEq
 
+structure LabelProxy where
+  source : Source
+  name : String
+  deriving Repr, BEq
+
+inductive BackendAnnotation where
+  deriving Repr, BEq
+
+mutual
+  inductive Decl where
+    | local (var : Variable)
+    | label (label : LabelProxy)
+    deriving Repr, BEq
+
+  inductive Assignee where
+    | var (source : Source) (op : VarRef)
+    | field (source : Source) (op : Expr)
+    deriving Repr, BEq
+
+  inductive Expr where
+    | var (ref : VarRef)
+    | intLit (source : Source) (value : Int) (kind : IntegerKind) (base : Nat)
+    | boolLit (source : Source) (value : Bool)
+    | add (source : Source) (left right : Expr)
+    | mul (source : Source) (left right : Expr)
+    | eqCmp (source : Source) (left right : Expr)
+    | atMostCmp (source : Source) (left right : Expr)
+    | atLeastCmp (source : Source) (left right : Expr)
+    | lessCmp (source : Source) (left right : Expr)
+    | deref (source : Source) (exp : Expr) (underlyingTypeExpr : Ty)
+    | fieldRef (source : Source) (recv : Expr) (field : FieldInfo)
+    | address (source : Source) (op : Expr)
+    | ref (source : Source) (ref : Assignee) (typ : Ty)
+    | old (source : Source) (operand : Expr)
+    | structLit (source : Source) (typ : Ty) (args : Array Expr)
+    | pureMethodCall (source : Source) (recv : Expr) (meth : MethodProxy)
+        (args : Array Expr) (typ : Ty) (reveal : Bool)
+    | mPredicateAccess (source : Source) (recv : Expr) (pred : MethodProxy)
+        (args : Array Expr)
+    | predicate (source : Source) (op : Expr)
+    deriving Repr, BEq
+
+  inductive Permission where
+    | full (source : Source)
+    | wildcard (source : Source)
+    deriving Repr, BEq
+
+  inductive Assertion where
+    | expr (expr : Expr)
+    | exprAssertion (source : Source) (exp : Expr)
+    | access (source : Source) (e : Expr) (p : Permission)
+    | sepAnd (source : Source) (left right : Assertion)
+    | implication (source : Source) (left right : Assertion)
+    deriving Repr, BEq
+
+  inductive Stmt where
+    | seqn (source : Source) (stmts : Array Stmt)
+    | block (source : Source) (decls : Array Decl) (stmts : Array Stmt)
+    | initialization (source : Source) (left : Variable)
+    | singleAss (source : Source) (left : Assignee) (right : Expr)
+    | assert (source : Source) (ass : Assertion)
+    | while (source : Source) (cond : Expr) (invs : Array Assertion)
+        (terminationMeasure : Option TerminationMeasure) (body : Stmt)
+    | label (source : Source) (id : LabelProxy)
+    | functionCall (source : Source) (func : FunctionProxy)
+        (targets : Array Assignee) (args : Array Expr)
+    | methodCall (source : Source) (recv : Expr) (meth : MethodProxy)
+        (targets : Array Assignee) (args : Array Expr)
+    deriving Repr, BEq
+
+  structure MethodBodySeqn where
+    source : Source
+    stmts : Array Stmt
+    deriving Repr, BEq
+
+  structure MethodBody where
+    source : Source
+    decls : Array Decl
+    seqn : MethodBodySeqn
+    postprocessing : Array Stmt
+    deriving Repr, BEq
+
+  inductive TerminationMeasure where
+    | itfTuple (source : Source) (tuple : Array Assertion) (cond : Option Expr)
+    | nonItfTuple (source : Source) (tuple : Array Assertion) (cond : Option Expr)
+    deriving Repr, BEq
+end
+
 structure FunctionMember where
   source : Source
   name : FunctionProxy
   args : Array Parameter
   results : Array Parameter
-  pres : Array Value
-  posts : Array Value
-  terminationMeasures : Array Value
-  backendAnnotations : Array Value
-  body : Option Value
+  pres : Array Assertion
+  posts : Array Assertion
+  terminationMeasures : Array TerminationMeasure
+  backendAnnotations : Array BackendAnnotation
+  body : Option MethodBody
   deriving Repr, BEq
 
 structure MethodMember where
@@ -173,11 +241,11 @@ structure MethodMember where
   name : MethodProxy
   args : Array Parameter
   results : Array Parameter
-  pres : Array Value
-  posts : Array Value
-  terminationMeasures : Array Value
-  backendAnnotations : Array Value
-  body : Option Value
+  pres : Array Assertion
+  posts : Array Assertion
+  terminationMeasures : Array TerminationMeasure
+  backendAnnotations : Array BackendAnnotation
+  body : Option MethodBody
   isPure : Bool
   isOpaque : Bool
   deriving Repr, BEq
@@ -187,7 +255,7 @@ structure MPredicateMember where
   receiver : Parameter
   name : MethodProxy
   args : Array Parameter
-  body : Option Value
+  body : Option Assertion
   deriving Repr, BEq
 
 inductive Member where
@@ -405,6 +473,23 @@ private def decodeParam (path : String) (json : Json) : Except String Parameter 
   | "Out" => decodeParameterWithTag "Out" path json
   | other => throw s!"{path}.tag: expected parameter tag, got {repr other}"
 
+private def decodeVariableWithTag (tag path : String) (json : Json) : Except String Variable := do
+  let obj ← taggedObj path json tag ["id", "source", "tag", "typ"]
+  return {
+    source := (← decodeSource s!"{path}.source" (← GoLean.StrictJson.field path obj "source")),
+    id := (← GoLean.StrictJson.string s!"{path}.id" (← GoLean.StrictJson.field path obj "id")),
+    typ := (← decodeTy s!"{path}.typ" (← GoLean.StrictJson.field path obj "typ"))
+  }
+
+private def decodeVarRef (path : String) (json : Json) : Except String VarRef := do
+  let obj ← GoLean.StrictJson.obj path json
+  let tag ← GoLean.StrictJson.string s!"{path}.tag" (← GoLean.StrictJson.field path obj "tag")
+  match tag with
+  | "LocalVar" => return .local (← decodeVariableWithTag "LocalVar" path json)
+  | "In" => return .inParam (← decodeParameterWithTag "In" path json)
+  | "Out" => return .outParam (← decodeParameterWithTag "Out" path json)
+  | other => throw s!"{path}.tag: expected variable reference tag, got {repr other}"
+
 private def decodeFunctionProxy (path : String) (json : Json) : Except String FunctionProxy := do
   let obj ← taggedObj path json "FunctionProxy" ["name", "source", "tag"]
   return {
@@ -420,10 +505,15 @@ private def decodeMethodProxyWithTag (tag path : String) (json : Json) : Except 
     uniqueName := (← GoLean.StrictJson.string s!"{path}.uniqueName" (← GoLean.StrictJson.field path obj "uniqueName"))
   }
 
-private def decodeRawArray (path : String) (json : Json) : Except String (Array Value) :=
-  decodeArrayOf path json decodeValue
+private def decodeLabelProxy (path : String) (json : Json) : Except String LabelProxy := do
+  let obj ← taggedObj path json "LabelProxy" ["name", "source", "tag"]
+  return {
+    source := (← decodeSource s!"{path}.source" (← GoLean.StrictJson.field path obj "source")),
+    name := (← GoLean.StrictJson.string s!"{path}.name" (← GoLean.StrictJson.field path obj "name"))
+  }
 
-private def decodeOptionValue (path : String) (json : Json) : Except String (Option Value) := do
+private def decodeOptionOf {α : Type} (path : String) (json : Json)
+    (decodeOne : String → Json → Except String α) : Except String (Option α) := do
   let obj ← GoLean.StrictJson.obj path json
   let tag ← GoLean.StrictJson.string s!"{path}.tag" (← GoLean.StrictJson.field path obj "tag")
   match tag with
@@ -432,9 +522,261 @@ private def decodeOptionValue (path : String) (json : Json) : Except String (Opt
       return none
   | "Some" =>
       GoLean.StrictJson.requireExactKeys path obj ["tag", "value"]
-      return some (← decodeValue s!"{path}.value" (← GoLean.StrictJson.field path obj "value"))
+      return some (← decodeOne s!"{path}.value" (← GoLean.StrictJson.field path obj "value"))
   | other =>
       throw s!"{path}.tag: expected Option tag, got {repr other}"
+
+private def decodeDecimalBase (path : String) (json : Json) : Except String Nat := do
+  let obj ← taggedObj path json "Decimal" ["base", "tag"]
+  GoLean.StrictJson.nat s!"{path}.base" (← GoLean.StrictJson.field path obj "base")
+
+private def decodeBackendAnnotation (path : String) (_json : Json) : Except String BackendAnnotation :=
+  throw s!"{path}: unsupported backend annotation"
+
+mutual
+  partial def decodeDecl (path : String) (json : Json) : Except String Decl := do
+    let obj ← GoLean.StrictJson.obj path json
+    let tag ← GoLean.StrictJson.string s!"{path}.tag" (← GoLean.StrictJson.field path obj "tag")
+    match tag with
+    | "LocalVar" => return .local (← decodeVariableWithTag "LocalVar" path json)
+    | "LabelProxy" => return .label (← decodeLabelProxy path json)
+    | other => throw s!"{path}.tag: unsupported declaration tag {repr other}"
+
+  partial def decodeAssignee (path : String) (json : Json) : Except String Assignee := do
+    let obj ← GoLean.StrictJson.obj path json
+    let tag ← GoLean.StrictJson.string s!"{path}.tag" (← GoLean.StrictJson.field path obj "tag")
+    match tag with
+    | "Var" =>
+        let obj ← taggedObj path json "Var" ["op", "source", "tag"]
+        return .var
+          (← decodeSource s!"{path}.source" (← GoLean.StrictJson.field path obj "source"))
+          (← decodeVarRef s!"{path}.op" (← GoLean.StrictJson.field path obj "op"))
+    | "Field" =>
+        let obj ← taggedObj path json "Field" ["op", "source", "tag"]
+        return .field
+          (← decodeSource s!"{path}.source" (← GoLean.StrictJson.field path obj "source"))
+          (← decodeExpr s!"{path}.op" (← GoLean.StrictJson.field path obj "op"))
+    | other => throw s!"{path}.tag: unsupported assignee tag {repr other}"
+
+  partial def decodeExpr (path : String) (json : Json) : Except String Expr := do
+    let obj ← GoLean.StrictJson.obj path json
+    let tag ← GoLean.StrictJson.string s!"{path}.tag" (← GoLean.StrictJson.field path obj "tag")
+    let binary (expected : String) (mk : Source → Expr → Expr → Expr) : Except String Expr := do
+      let obj ← taggedObj path json expected ["left", "right", "source", "tag"]
+      return mk
+        (← decodeSource s!"{path}.source" (← GoLean.StrictJson.field path obj "source"))
+        (← decodeExpr s!"{path}.left" (← GoLean.StrictJson.field path obj "left"))
+        (← decodeExpr s!"{path}.right" (← GoLean.StrictJson.field path obj "right"))
+    match tag with
+    | "LocalVar" | "In" | "Out" => return .var (← decodeVarRef path json)
+    | "IntLit" =>
+        let obj ← taggedObj path json "IntLit" ["base", "kind", "source", "tag", "v"]
+        return .intLit
+          (← decodeSource s!"{path}.source" (← GoLean.StrictJson.field path obj "source"))
+          (← GoLean.StrictJson.int s!"{path}.v" (← GoLean.StrictJson.field path obj "v"))
+          (← decodeIntegerKind s!"{path}.kind" (← GoLean.StrictJson.field path obj "kind"))
+          (← decodeDecimalBase s!"{path}.base" (← GoLean.StrictJson.field path obj "base"))
+    | "BoolLit" =>
+        let obj ← taggedObj path json "BoolLit" ["b", "source", "tag"]
+        return .boolLit
+          (← decodeSource s!"{path}.source" (← GoLean.StrictJson.field path obj "source"))
+          (← GoLean.StrictJson.bool s!"{path}.b" (← GoLean.StrictJson.field path obj "b"))
+    | "Add" => binary "Add" .add
+    | "Mul" => binary "Mul" .mul
+    | "EqCmp" => binary "EqCmp" .eqCmp
+    | "AtMostCmp" => binary "AtMostCmp" .atMostCmp
+    | "AtLeastCmp" => binary "AtLeastCmp" .atLeastCmp
+    | "LessCmp" => binary "LessCmp" .lessCmp
+    | "Deref" =>
+        let obj ← taggedObj path json "Deref" ["exp", "source", "tag", "underlyingTypeExpr"]
+        return .deref
+          (← decodeSource s!"{path}.source" (← GoLean.StrictJson.field path obj "source"))
+          (← decodeExpr s!"{path}.exp" (← GoLean.StrictJson.field path obj "exp"))
+          (← decodeTy s!"{path}.underlyingTypeExpr" (← GoLean.StrictJson.field path obj "underlyingTypeExpr"))
+    | "FieldRef" =>
+        let obj ← taggedObj path json "FieldRef" ["field", "recv", "source", "tag"]
+        return .fieldRef
+          (← decodeSource s!"{path}.source" (← GoLean.StrictJson.field path obj "source"))
+          (← decodeExpr s!"{path}.recv" (← GoLean.StrictJson.field path obj "recv"))
+          (← decodeFieldInfo s!"{path}.field" (← GoLean.StrictJson.field path obj "field"))
+    | "Address" =>
+        let obj ← taggedObj path json "Address" ["op", "source", "tag"]
+        return .address
+          (← decodeSource s!"{path}.source" (← GoLean.StrictJson.field path obj "source"))
+          (← decodeExpr s!"{path}.op" (← GoLean.StrictJson.field path obj "op"))
+    | "Ref" =>
+        let obj ← taggedObj path json "Ref" ["ref", "source", "tag", "typ"]
+        return .ref
+          (← decodeSource s!"{path}.source" (← GoLean.StrictJson.field path obj "source"))
+          (← decodeAssignee s!"{path}.ref" (← GoLean.StrictJson.field path obj "ref"))
+          (← decodeTy s!"{path}.typ" (← GoLean.StrictJson.field path obj "typ"))
+    | "Old" =>
+        let obj ← taggedObj path json "Old" ["operand", "source", "tag"]
+        return .old
+          (← decodeSource s!"{path}.source" (← GoLean.StrictJson.field path obj "source"))
+          (← decodeExpr s!"{path}.operand" (← GoLean.StrictJson.field path obj "operand"))
+    | "StructLit" =>
+        let obj ← taggedObj path json "StructLit" ["args", "source", "tag", "typ"]
+        return .structLit
+          (← decodeSource s!"{path}.source" (← GoLean.StrictJson.field path obj "source"))
+          (← decodeTy s!"{path}.typ" (← GoLean.StrictJson.field path obj "typ"))
+          (← decodeArrayOf s!"{path}.args" (← GoLean.StrictJson.field path obj "args") decodeExpr)
+    | "PureMethodCall" =>
+        let obj ← taggedObj path json "PureMethodCall" ["args", "meth", "recv", "reveal", "source", "tag", "typ"]
+        return .pureMethodCall
+          (← decodeSource s!"{path}.source" (← GoLean.StrictJson.field path obj "source"))
+          (← decodeExpr s!"{path}.recv" (← GoLean.StrictJson.field path obj "recv"))
+          (← decodeMethodProxyWithTag "MethodProxy" s!"{path}.meth" (← GoLean.StrictJson.field path obj "meth"))
+          (← decodeArrayOf s!"{path}.args" (← GoLean.StrictJson.field path obj "args") decodeExpr)
+          (← decodeTy s!"{path}.typ" (← GoLean.StrictJson.field path obj "typ"))
+          (← GoLean.StrictJson.bool s!"{path}.reveal" (← GoLean.StrictJson.field path obj "reveal"))
+    | "MPredicateAccess" =>
+        let obj ← taggedObj path json "MPredicateAccess" ["args", "pred", "recv", "source", "tag"]
+        return .mPredicateAccess
+          (← decodeSource s!"{path}.source" (← GoLean.StrictJson.field path obj "source"))
+          (← decodeExpr s!"{path}.recv" (← GoLean.StrictJson.field path obj "recv"))
+          (← decodeMethodProxyWithTag "MPredicateProxy" s!"{path}.pred" (← GoLean.StrictJson.field path obj "pred"))
+          (← decodeArrayOf s!"{path}.args" (← GoLean.StrictJson.field path obj "args") decodeExpr)
+    | "Predicate" =>
+        let obj ← taggedObj path json "Predicate" ["op", "source", "tag"]
+        return .predicate
+          (← decodeSource s!"{path}.source" (← GoLean.StrictJson.field path obj "source"))
+          (← decodeExpr s!"{path}.op" (← GoLean.StrictJson.field path obj "op"))
+    | other => throw s!"{path}.tag: unsupported expression tag {repr other}"
+
+  partial def decodePermission (path : String) (json : Json) : Except String Permission := do
+    let obj ← GoLean.StrictJson.obj path json
+    let tag ← GoLean.StrictJson.string s!"{path}.tag" (← GoLean.StrictJson.field path obj "tag")
+    match tag with
+    | "FullPerm" =>
+        let obj ← taggedObj path json "FullPerm" ["source", "tag"]
+        return .full (← decodeSource s!"{path}.source" (← GoLean.StrictJson.field path obj "source"))
+    | "WildcardPerm" =>
+        let obj ← taggedObj path json "WildcardPerm" ["source", "tag"]
+        return .wildcard (← decodeSource s!"{path}.source" (← GoLean.StrictJson.field path obj "source"))
+    | other => throw s!"{path}.tag: unsupported permission tag {repr other}"
+
+  partial def decodeAssertion (path : String) (json : Json) : Except String Assertion := do
+    let obj ← GoLean.StrictJson.obj path json
+    let tag ← GoLean.StrictJson.string s!"{path}.tag" (← GoLean.StrictJson.field path obj "tag")
+    match tag with
+    | "ExprAssertion" =>
+        let obj ← taggedObj path json "ExprAssertion" ["exp", "source", "tag"]
+        return .exprAssertion
+          (← decodeSource s!"{path}.source" (← GoLean.StrictJson.field path obj "source"))
+          (← decodeExpr s!"{path}.exp" (← GoLean.StrictJson.field path obj "exp"))
+    | "Access" =>
+        let obj ← taggedObj path json "Access" ["e", "p", "source", "tag"]
+        return .access
+          (← decodeSource s!"{path}.source" (← GoLean.StrictJson.field path obj "source"))
+          (← decodeExpr s!"{path}.e" (← GoLean.StrictJson.field path obj "e"))
+          (← decodePermission s!"{path}.p" (← GoLean.StrictJson.field path obj "p"))
+    | "SepAnd" =>
+        let obj ← taggedObj path json "SepAnd" ["left", "right", "source", "tag"]
+        return .sepAnd
+          (← decodeSource s!"{path}.source" (← GoLean.StrictJson.field path obj "source"))
+          (← decodeAssertion s!"{path}.left" (← GoLean.StrictJson.field path obj "left"))
+          (← decodeAssertion s!"{path}.right" (← GoLean.StrictJson.field path obj "right"))
+    | "Implication" =>
+        let obj ← taggedObj path json "Implication" ["left", "right", "source", "tag"]
+        return .implication
+          (← decodeSource s!"{path}.source" (← GoLean.StrictJson.field path obj "source"))
+          (← decodeAssertion s!"{path}.left" (← GoLean.StrictJson.field path obj "left"))
+          (← decodeAssertion s!"{path}.right" (← GoLean.StrictJson.field path obj "right"))
+    | _ =>
+        return .expr (← decodeExpr path json)
+
+  partial def decodeStmt (path : String) (json : Json) : Except String Stmt := do
+    let obj ← GoLean.StrictJson.obj path json
+    let tag ← GoLean.StrictJson.string s!"{path}.tag" (← GoLean.StrictJson.field path obj "tag")
+    match tag with
+    | "Seqn" =>
+        let obj ← taggedObj path json "Seqn" ["source", "stmts", "tag"]
+        return .seqn
+          (← decodeSource s!"{path}.source" (← GoLean.StrictJson.field path obj "source"))
+          (← decodeArrayOf s!"{path}.stmts" (← GoLean.StrictJson.field path obj "stmts") decodeStmt)
+    | "Block" =>
+        let obj ← taggedObj path json "Block" ["decls", "source", "stmts", "tag"]
+        return .block
+          (← decodeSource s!"{path}.source" (← GoLean.StrictJson.field path obj "source"))
+          (← decodeArrayOf s!"{path}.decls" (← GoLean.StrictJson.field path obj "decls") decodeDecl)
+          (← decodeArrayOf s!"{path}.stmts" (← GoLean.StrictJson.field path obj "stmts") decodeStmt)
+    | "Initialization" =>
+        let obj ← taggedObj path json "Initialization" ["left", "source", "tag"]
+        return .initialization
+          (← decodeSource s!"{path}.source" (← GoLean.StrictJson.field path obj "source"))
+          (← decodeVariableWithTag "LocalVar" s!"{path}.left" (← GoLean.StrictJson.field path obj "left"))
+    | "SingleAss" =>
+        let obj ← taggedObj path json "SingleAss" ["left", "right", "source", "tag"]
+        return .singleAss
+          (← decodeSource s!"{path}.source" (← GoLean.StrictJson.field path obj "source"))
+          (← decodeAssignee s!"{path}.left" (← GoLean.StrictJson.field path obj "left"))
+          (← decodeExpr s!"{path}.right" (← GoLean.StrictJson.field path obj "right"))
+    | "Assert" =>
+        let obj ← taggedObj path json "Assert" ["ass", "source", "tag"]
+        return .assert
+          (← decodeSource s!"{path}.source" (← GoLean.StrictJson.field path obj "source"))
+          (← decodeAssertion s!"{path}.ass" (← GoLean.StrictJson.field path obj "ass"))
+    | "While" =>
+        let obj ← taggedObj path json "While" ["body", "cond", "invs", "source", "tag", "terminationMeasure"]
+        return .while
+          (← decodeSource s!"{path}.source" (← GoLean.StrictJson.field path obj "source"))
+          (← decodeExpr s!"{path}.cond" (← GoLean.StrictJson.field path obj "cond"))
+          (← decodeArrayOf s!"{path}.invs" (← GoLean.StrictJson.field path obj "invs") decodeAssertion)
+          (← decodeOptionOf s!"{path}.terminationMeasure" (← GoLean.StrictJson.field path obj "terminationMeasure") decodeTerminationMeasure)
+          (← decodeStmt s!"{path}.body" (← GoLean.StrictJson.field path obj "body"))
+    | "Label" =>
+        let obj ← taggedObj path json "Label" ["id", "source", "tag"]
+        return .label
+          (← decodeSource s!"{path}.source" (← GoLean.StrictJson.field path obj "source"))
+          (← decodeLabelProxy s!"{path}.id" (← GoLean.StrictJson.field path obj "id"))
+    | "FunctionCall" =>
+        let obj ← taggedObj path json "FunctionCall" ["args", "func", "source", "tag", "targets"]
+        return .functionCall
+          (← decodeSource s!"{path}.source" (← GoLean.StrictJson.field path obj "source"))
+          (← decodeFunctionProxy s!"{path}.func" (← GoLean.StrictJson.field path obj "func"))
+          (← decodeArrayOf s!"{path}.targets" (← GoLean.StrictJson.field path obj "targets") decodeAssignee)
+          (← decodeArrayOf s!"{path}.args" (← GoLean.StrictJson.field path obj "args") decodeExpr)
+    | "MethodCall" =>
+        let obj ← taggedObj path json "MethodCall" ["args", "meth", "recv", "source", "tag", "targets"]
+        return .methodCall
+          (← decodeSource s!"{path}.source" (← GoLean.StrictJson.field path obj "source"))
+          (← decodeExpr s!"{path}.recv" (← GoLean.StrictJson.field path obj "recv"))
+          (← decodeMethodProxyWithTag "MethodProxy" s!"{path}.meth" (← GoLean.StrictJson.field path obj "meth"))
+          (← decodeArrayOf s!"{path}.targets" (← GoLean.StrictJson.field path obj "targets") decodeAssignee)
+          (← decodeArrayOf s!"{path}.args" (← GoLean.StrictJson.field path obj "args") decodeExpr)
+    | other => throw s!"{path}.tag: unsupported statement tag {repr other}"
+
+  partial def decodeMethodBodySeqn (path : String) (json : Json) : Except String MethodBodySeqn := do
+    let obj ← taggedObj path json "MethodBodySeqn" ["source", "stmts", "tag"]
+    return {
+      source := (← decodeSource s!"{path}.source" (← GoLean.StrictJson.field path obj "source")),
+      stmts := (← decodeArrayOf s!"{path}.stmts" (← GoLean.StrictJson.field path obj "stmts") decodeStmt)
+    }
+
+  partial def decodeMethodBody (path : String) (json : Json) : Except String MethodBody := do
+    let obj ← taggedObj path json "MethodBody" ["decls", "postprocessing", "seqn", "source", "tag"]
+    return {
+      source := (← decodeSource s!"{path}.source" (← GoLean.StrictJson.field path obj "source")),
+      decls := (← decodeArrayOf s!"{path}.decls" (← GoLean.StrictJson.field path obj "decls") decodeDecl),
+      seqn := (← decodeMethodBodySeqn s!"{path}.seqn" (← GoLean.StrictJson.field path obj "seqn")),
+      postprocessing := (← decodeArrayOf s!"{path}.postprocessing" (← GoLean.StrictJson.field path obj "postprocessing") decodeStmt)
+    }
+
+  partial def decodeTerminationMeasure (path : String) (json : Json) : Except String TerminationMeasure := do
+    let obj ← GoLean.StrictJson.obj path json
+    let tag ← GoLean.StrictJson.string s!"{path}.tag" (← GoLean.StrictJson.field path obj "tag")
+    let decodeTuple (expected : String) (mk : Source → Array Assertion → Option Expr → TerminationMeasure) := do
+      let obj ← taggedObj path json expected ["cond", "source", "tag", "tuple"]
+      return mk
+        (← decodeSource s!"{path}.source" (← GoLean.StrictJson.field path obj "source"))
+        (← decodeArrayOf s!"{path}.tuple" (← GoLean.StrictJson.field path obj "tuple") decodeAssertion)
+        (← decodeOptionOf s!"{path}.cond" (← GoLean.StrictJson.field path obj "cond") decodeExpr)
+    match tag with
+    | "ItfTupleTerminationMeasure" => decodeTuple "ItfTupleTerminationMeasure" .itfTuple
+    | "NonItfTupleTerminationMeasure" => decodeTuple "NonItfTupleTerminationMeasure" .nonItfTuple
+    | other => throw s!"{path}.tag: unsupported termination measure tag {repr other}"
+end
 
 private def decodeFunctionMember (path : String) (json : Json) : Except String FunctionMember := do
   let obj ← taggedObj path json "Function" ["args", "backendAnnotations", "body", "name", "posts", "pres", "results", "source", "tag", "terminationMeasures"]
@@ -443,11 +785,11 @@ private def decodeFunctionMember (path : String) (json : Json) : Except String F
     name := (← decodeFunctionProxy s!"{path}.name" (← GoLean.StrictJson.field path obj "name")),
     args := (← decodeArrayOf s!"{path}.args" (← GoLean.StrictJson.field path obj "args") decodeParam),
     results := (← decodeArrayOf s!"{path}.results" (← GoLean.StrictJson.field path obj "results") decodeParam),
-    pres := (← decodeRawArray s!"{path}.pres" (← GoLean.StrictJson.field path obj "pres")),
-    posts := (← decodeRawArray s!"{path}.posts" (← GoLean.StrictJson.field path obj "posts")),
-    terminationMeasures := (← decodeRawArray s!"{path}.terminationMeasures" (← GoLean.StrictJson.field path obj "terminationMeasures")),
-    backendAnnotations := (← decodeRawArray s!"{path}.backendAnnotations" (← GoLean.StrictJson.field path obj "backendAnnotations")),
-    body := (← decodeOptionValue s!"{path}.body" (← GoLean.StrictJson.field path obj "body"))
+    pres := (← decodeArrayOf s!"{path}.pres" (← GoLean.StrictJson.field path obj "pres") decodeAssertion),
+    posts := (← decodeArrayOf s!"{path}.posts" (← GoLean.StrictJson.field path obj "posts") decodeAssertion),
+    terminationMeasures := (← decodeArrayOf s!"{path}.terminationMeasures" (← GoLean.StrictJson.field path obj "terminationMeasures") decodeTerminationMeasure),
+    backendAnnotations := (← decodeArrayOf s!"{path}.backendAnnotations" (← GoLean.StrictJson.field path obj "backendAnnotations") decodeBackendAnnotation),
+    body := (← decodeOptionOf s!"{path}.body" (← GoLean.StrictJson.field path obj "body") decodeMethodBody)
   }
 
 private def decodeMethodMember (tag path : String) (isPure : Bool) (json : Json) : Except String MethodMember := do
@@ -468,11 +810,11 @@ private def decodeMethodMember (tag path : String) (isPure : Bool) (json : Json)
     name := (← decodeMethodProxyWithTag "MethodProxy" s!"{path}.name" (← GoLean.StrictJson.field path obj "name")),
     args := (← decodeArrayOf s!"{path}.args" (← GoLean.StrictJson.field path obj "args") decodeParam),
     results := (← decodeArrayOf s!"{path}.results" (← GoLean.StrictJson.field path obj "results") decodeParam),
-    pres := (← decodeRawArray s!"{path}.pres" (← GoLean.StrictJson.field path obj "pres")),
-    posts := (← decodeRawArray s!"{path}.posts" (← GoLean.StrictJson.field path obj "posts")),
-    terminationMeasures := (← decodeRawArray s!"{path}.terminationMeasures" (← GoLean.StrictJson.field path obj "terminationMeasures")),
-    backendAnnotations := (← decodeRawArray s!"{path}.backendAnnotations" (← GoLean.StrictJson.field path obj "backendAnnotations")),
-    body := (← decodeOptionValue s!"{path}.body" (← GoLean.StrictJson.field path obj "body")),
+    pres := (← decodeArrayOf s!"{path}.pres" (← GoLean.StrictJson.field path obj "pres") decodeAssertion),
+    posts := (← decodeArrayOf s!"{path}.posts" (← GoLean.StrictJson.field path obj "posts") decodeAssertion),
+    terminationMeasures := (← decodeArrayOf s!"{path}.terminationMeasures" (← GoLean.StrictJson.field path obj "terminationMeasures") decodeTerminationMeasure),
+    backendAnnotations := (← decodeArrayOf s!"{path}.backendAnnotations" (← GoLean.StrictJson.field path obj "backendAnnotations") decodeBackendAnnotation),
+    body := (← decodeOptionOf s!"{path}.body" (← GoLean.StrictJson.field path obj "body") decodeMethodBody),
     isPure,
     isOpaque
   }
@@ -484,7 +826,7 @@ private def decodeMPredicateMember (path : String) (json : Json) : Except String
     receiver := (← decodeParameterWithTag "In" s!"{path}.receiver" (← GoLean.StrictJson.field path obj "receiver")),
     name := (← decodeMethodProxyWithTag "MPredicateProxy" s!"{path}.name" (← GoLean.StrictJson.field path obj "name")),
     args := (← decodeArrayOf s!"{path}.args" (← GoLean.StrictJson.field path obj "args") decodeParam),
-    body := (← decodeOptionValue s!"{path}.body" (← GoLean.StrictJson.field path obj "body"))
+    body := (← decodeOptionOf s!"{path}.body" (← GoLean.StrictJson.field path obj "body") decodeAssertion)
   }
 
 private def decodeMember (path : String) (json : Json) : Except String Member := do

@@ -9,11 +9,11 @@ Current status:
 - Gobra emits transformed internal IR as `.internal.json`.
 - `golean gobra-json-check` validates emitted artifacts in Lean.
 - `golean gobra-json-tags` reports observed constructor tags and fails on tags outside the current Lean allowlist.
-- The Lean importer decodes the top-level `Program`, source positions, types, parameters, proxies, and smoke-corpus member kinds into typed structures.
-- Function bodies, specifications, and most expressions/statements are still carried as structural `Value` nodes.
+- The Lean importer decodes the top-level `Program`, source positions, types, parameters, proxies, smoke-corpus member kinds, specifications, termination measures, method bodies, statements, assignees, expressions, permissions, and assertions into typed structures.
+- Backend annotations are intentionally modeled as an uninhabited wire type for now. Empty arrays pass; any emitted annotation fails validation until we add an explicit typed representation.
 
 Next implementation step:
 
-- Replace structural `Value` fields in members with typed `Stmt`, `Expr`, and `Assertion` wire nodes.
 - Generate or derive strict decoders from the Lean wire ADT.
 - Generate the Scala export ADT/encoder from the same schema source, or generate a machine-readable schema from Lean that Scala targets.
+- Broaden the typed `Stmt`, `Expr`, and `Assertion` wire nodes against a larger Gobra corpus.
