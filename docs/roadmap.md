@@ -25,6 +25,8 @@ center.
 - The Lean-side executable semantics should be small, explicit, and fail-closed
   on unsupported or surprising inputs.
 - GoCore should model Go behavior, not Gobra's internal IR.
+- Gobra-specific assertions and specifications should be an execution mode over
+  GoCore, not the default definition of Go program execution.
 - Old and new Goose/Perennial are the main semantic references as GoCore
   expands. New Goose's path-like field locations are especially important for
   memory, structs, arrays, slices, and later proof support.
@@ -34,6 +36,40 @@ center.
 - The proof layer should come after GoCore has meaningful semantic coverage.
   When it arrives, it should be generated on top of GoCore rather than making
   Gobra IR a first-class verification target.
+
+## Hardening Gate
+
+The adversarial audit changed the near-term order of work. Before expanding
+substantially into slices, maps, interfaces, and generators, the project needs a
+hardening pass that makes mistakes visible instead of easy to hide.
+
+Required fixes:
+
+- Thread structured `GoError` values through GoCore and the CLI. Error status
+  must be data, not inferred from string prefixes.
+- Model Go runtime traps such as nil dereference, divide by zero, and
+  out-of-bounds indexing as `panic`. Reserve `stuck` for internal semantic gaps
+  where Go behavior is not yet modeled.
+- Replace raw `GoValue` equality with type-directed comparable equality.
+- Decide the integer story explicitly: model Go-sized signed/unsigned behavior
+  for supported integer types, or reject programs whose behavior depends on
+  widths not yet represented.
+- Replace statement execution's plain state return with an explicit
+  `ExecOutcome` covering normal completion, return, break, continue, panic,
+  unsupported, and stuck behavior.
+- Make expression evaluation capable of effectful Go expressions such as calls,
+  allocation, append, map operations, and channel operations before those
+  features are added.
+- Evaluate assignment lvalues and rvalues before committing stores, including
+  multiple assignment and call assignment.
+- Bounds-check indexed lvalues when the location is evaluated, including
+  address-of-index forms.
+- Make Gobra lowering fail closed: unsupported nodes, bodyless declarations,
+  malformed lvalues, and surprising type-definition shapes should produce
+  explicit failures.
+- Harden differential testing with source/hash linkage, per-run artifacts,
+  timeouts, structured observation comparison, and manifest-level reasons for
+  any expected `unsupported` or `stuck` result.
 
 ## Phase 1: Strict Frontend Export
 
@@ -106,6 +142,11 @@ message : Option String
   assertions.
 - Keep `unsupported` acceptable only when the test manifest explicitly expects
   it.
+- Require manifest reasons for expected `unsupported` and `stuck` results.
+- Parse and compare observations structurally on both sides.
+- Regenerate or reject stale Gobra JSON using source hashes.
+- Run Gobra, Go, and Lean stages with timeouts or fuel where applicable.
+- Isolate artifact directories per run to avoid races between smoke scripts.
 - Add shrinking/minimization hooks once failures become common enough to need
   them.
 
@@ -118,7 +159,8 @@ execution against generated Lean execution where the feature is executable.
 
 Goal: cover as much Go/Gobra code as practical.
 
-Status: started. The executable subset now includes scalar arithmetic and
+Status: started, but gated by the hardening pass above. The executable subset
+now includes scalar arithmetic and
 comparisons, boolean connectives, divide-by-zero panic classification, and a
 first fixed-size array subset: array types, array literals, indexing, indexed
 assignment, and array equality through GoCore values.
@@ -199,14 +241,17 @@ specification hooks.
 
 ## Near-Term Work Queue
 
-1. Expand arrays from the first fixed-size subset to bounds tests, zero values,
+1. Complete the hardening gate: structured errors, typed operation checks,
+   explicit execution outcomes, fail-closed lowering, and hardened
+   differential observations.
+2. Expand deterministic array coverage to bounds tests, zero values,
    length/capacity, nested arrays, and pointer-to-array behavior.
-2. Add slices using the same path-location model and the Goose/new Goose slice
+3. Add slices using the same path-location model and the Goose/new Goose slice
    references.
-3. Keep extending scalar coverage toward Go-sized word behavior and conversions.
-4. Add more generated/deterministic differential cases with feature tags and
+4. Keep extending scalar coverage toward Go-sized word behavior and conversions.
+5. Add more generated/deterministic differential cases with feature tags and
    expected observation status.
-5. Add maps and named-type/conversion behavior driven by corpus failures.
-6. Integrate Microsmith/GoSmith only after scalar, pointer, struct, array, and
+6. Add maps and named-type/conversion behavior driven by corpus failures.
+7. Integrate Microsmith/GoSmith only after scalar, pointer, struct, array, and
    slice cases have deterministic coverage and feature filters.
-7. Keep checking old/new Goose before adding each larger semantic feature.
+8. Keep checking old/new Goose before adding each larger semantic feature.
