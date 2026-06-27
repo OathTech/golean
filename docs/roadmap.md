@@ -190,8 +190,8 @@ assignment, and array equality through GoCore values. The control-flow subset
 now includes `if`, explicit `return`, and unlabeled `break`/`continue`.
 Fixed-size array `len` and `cap` are supported for array values.
 Zero-value arrays, nested arrays, arrays through function parameters and
-results, pointer-to-array indexing/assignment, and array-to-slice aliasing are
-covered by differential smoke tests.
+results, pointer-to-array indexing/assignment, array-to-slice aliasing, and
+nonzero-capacity slice `make` are covered by differential smoke tests.
 
 Feature order should be driven by corpus failures and semantic dependencies,
 but the expected progression is:
@@ -281,7 +281,7 @@ against GoCore-level specification hooks.
 2. Expand deterministic array and slice coverage around value-copy and aliasing
    edge cases.
 3. Continue slices using the descriptor/backing-location model in
-   `docs/slice-model.md`, adding `make`, literals, and `copy` before append.
+   `docs/slice-model.md`, adding literals and `copy` before append.
 4. Keep extending scalar coverage toward Go-sized word behavior and conversions.
 5. Add more generated/deterministic differential cases with feature tags and
    expected observation status.

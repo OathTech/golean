@@ -235,6 +235,23 @@ private def coreFullSliceFunction : GoCore.Func := {
     ]
 }
 
+private def coreMakeSliceFunction : GoCore.Func := {
+  name := "make_slice_F",
+  args := #[],
+  results := #[coreParam "z"],
+  body := .block
+    #[{ id := "s", typ := .slice .int }]
+    #[
+      .makeSlice (.var "s") .int (.intLit 3) (some (.intLit 5)),
+      .assign (.addr (.indexAddr (.var "s") (.intLit 0))) (.intLit 7),
+      .assign (.var "z")
+        (.add
+          (.add (.indexGet (.var "s") (.intLit 0))
+            (.mul (.length (.var "s")) (.intLit 10)))
+          (.mul (.capacity (.var "s")) (.intLit 100)))
+    ]
+}
+
 private def coreSliceBoundsFunction : GoCore.Func := {
   name := "slice_bounds_F",
   args := #[],
@@ -500,6 +517,7 @@ def main : IO UInt32 := do
   passed := passed && (← expectIntResult "GoCore array slice alias" (GoCore.runFunction 100 coreArraySliceAliasFunction #[]) 229)
   passed := passed && (← expectIntResult "GoCore slice reslice" (GoCore.runFunction 100 coreSliceResliceFunction #[]) 213)
   passed := passed && (← expectIntResult "GoCore full slice" (GoCore.runFunction 100 coreFullSliceFunction #[]) 5)
+  passed := passed && (← expectIntResult "GoCore make slice" (GoCore.runFunction 100 coreMakeSliceFunction #[]) 537)
   passed := passed && (← expectErrorStatus "GoCore nil dereference panic" (GoCore.runFunction 100 coreNilDerefFunction #[]) "panic")
   passed := passed && (← expectErrorStatus "GoCore divide by zero panic" (GoCore.runFunction 100 coreDivideByZeroFunction #[]) "panic")
   passed := passed && (← expectErrorStatus "GoCore index address bounds panic" (GoCore.runFunction 100 coreIndexAddrBoundsFunction #[]) "panic")

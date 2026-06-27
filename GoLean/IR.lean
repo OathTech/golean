@@ -75,6 +75,7 @@ inductive Stmt where
   | block (decls : Array Param) (stmts : Array Stmt)
   | initialization (var : Param)
   | assign (left : Assignee) (right : Expr)
+  | makeSlice (target : Assignee) (elem : Ty) (len : Expr) (cap : Option Expr)
   | call (targets : Array Assignee) (name : String) (args : Array Expr)
   | ifThenElse (cond : Expr) (thenBranch elseBranch : Stmt)
   | while (cond : Expr) (body : Stmt)
@@ -204,6 +205,10 @@ private def ExecState.bindLocal (state : ExecState) (name : String) (value : GoV
         locals := LocalEnv.set state.locals name loc,
         heap := Heap.set state.heap loc value
       }
+
+private def ExecState.alloc (state : ExecState) (value : GoValue) : Loc × ExecState :=
+  let (loc, state) := state.freshLoc
+  (loc, { state with heap := Heap.set state.heap loc value })
 
 private def unsupported {α : Type} (feature : String) : Except GoError α :=
   throw (.unsupported feature)
@@ -423,6 +428,10 @@ mutual
       | none => stuck s!"GoCore array literal index out of range: {key}"
     return .array values
 end
+
+private def buildDefaultArrayValue (state : ExecState) (length : Nat) (elem : Ty) :
+    Except GoError GoValue :=
+  buildArrayValue state length elem #[]
 
 private def valueAsInt : GoValue → Except GoError Int
   | .int value => return value
@@ -649,6 +658,22 @@ mutual
       (values : Array GoValue) : Except GoError ExecState := do
     assignLocs state (← evalAssigneeLocs state targets) values
 
+  partial def execMakeSlice (state : ExecState) (target : Assignee) (elem : Ty)
+      (lenExpr : Expr) (capExpr : Option Expr) : Except GoError ExecState := do
+    let target ← evalAssigneeLoc state target
+    let lenValue ← valueAsInt (← evalExpr state lenExpr)
+    let capValue ←
+      match capExpr with
+      | none => pure lenValue
+      | some capExpr => valueAsInt (← evalExpr state capExpr)
+    let len ← natFromNonnegativeInt "makeslice: len out of range" lenValue
+    let cap ← natFromNonnegativeInt "makeslice: cap out of range" capValue
+    if cap < len then
+      panic "makeslice: cap out of range"
+    let backing ← buildDefaultArrayValue state cap elem
+    let (base, state) := state.alloc backing
+    assignLoc state target (.slice { base := some base, offset := 0, len, cap })
+
   partial def execFunctionCallWithLocs (fuel : Nat) (state : ExecState) (targets : Array Loc)
       (name : String) (args : Array Expr) : Except GoError ExecState := do
     if fuel == 0 then
@@ -716,6 +741,7 @@ mutual
         let loc ← evalAssigneeLoc state left
         let value ← evalExpr state right
         return .normal (← assignLoc state loc value)
+    | .makeSlice target elem len cap => return .normal (← execMakeSlice state target elem len cap)
     | .call targets name args => return .normal (← execFunctionCall fuel state targets name args)
     | .ifThenElse cond thenBranch elseBranch => do
         if ← valueAsBool (← evalExpr state cond) then

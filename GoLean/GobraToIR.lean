@@ -187,6 +187,10 @@ mutual
         .block (lowerDecls decls) (stmts.map (lowerStmtWithReturnPost returnPostprocessing))
     | .initialization _ var => .initialization (lowerVariable var)
     | .singleAss _ left right => .assign (lowerAssignee left) (lowerExpr right)
+    | .makeSlice _ target typeParam lenArg capArg =>
+        match lowerTy typeParam with
+        | .slice elem => .makeSlice (.var target.id) elem (lowerExpr lenArg) (capArg.map lowerExpr)
+        | other => .unsupported s!"MakeSlice with non-slice type {repr other}"
     | .assert .. => .seqn #[]
     | .ifStmt _ cond thn els =>
         .ifThenElse (lowerExpr cond)

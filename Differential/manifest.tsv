@@ -16,3 +16,4 @@ plain/pointer-array	Differential/plain/pointer-array	artifacts/gobra-smoke/work/
 plain/array-bounds	Differential/plain/array-bounds	artifacts/gobra-smoke/work/features/array-bounds/array-bounds.gobra.internal.json	arrayBounds_bda1d7d_F	-	panic	arrays,indexing,panic	-
 plain/array-copy	Differential/plain/array-copy	artifacts/gobra-smoke/work/features/array-copy/array-copy.gobra.internal.json	arrayCopy_bda1d7d_F	-	ok	arrays,value_copy,indexing,assignment	-
 plain/array-slice-alias	Differential/plain/array-slice-alias	artifacts/gobra-smoke/work/features/array-slice-alias/array-slice-alias.gobra.internal.json	arraySliceAlias_bda1d7d_F	-	ok	arrays,slices,aliasing,len,cap	-
+plain/make-slice	Differential/plain/make-slice	artifacts/gobra-smoke/work/features/make-slice/make-slice.gobra.internal.json	makeSlice_bda1d7d_F	-	ok	slices,make,indexing,len,cap	-

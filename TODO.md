@@ -107,6 +107,8 @@ backlog items.
 - Added the first descriptor-backed slice subset: nil slice defaults, array
   slicing, slice indexing/addressing, two-index and full slicing, Gobra `Slice`
   JSON decoding/lowering, and differential array-to-slice alias coverage.
+- Added Gobra `MakeSlice` decoding/lowering and nonzero-capacity `make` support
+  with differential coverage.
 
 ## Proof Generation
 
