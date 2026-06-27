@@ -4,3 +4,4 @@ plain/multi-assign	Differential/plain/multi-assign	artifacts/gobra-smoke/work/fe
 plain/pointer-identity	Differential/plain/pointer-identity	artifacts/gobra-smoke/work/features/pointer-identity/pointer-identity.gobra.internal.json	test_bda1d7d_F	-	-	assertion_error	pointers,identity,assertions
 plain/swap-without-final-assert	Differential/plain/swap	artifacts/gobra-smoke/work/examples/swap/swap.gobra.internal.json	client_bda1d7d_F	-	48:5	ok	structs,pointers,fields,calls,assertions
 plain/scalars	Differential/plain/scalars	artifacts/gobra-smoke/work/features/scalars/scalars.gobra.internal.json	scalars_bda1d7d_F	-	-	ok	ints,comparisons,bools,division,modulo
+plain/divide-by-zero	Differential/plain/divide-by-zero	artifacts/gobra-smoke/work/features/divide-by-zero/divide-by-zero.gobra.internal.json	divideByZero_bda1d7d_F	-	-	panic	ints,division,panic

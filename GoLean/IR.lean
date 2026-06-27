@@ -295,15 +295,17 @@ mutual
     | .mul left right => do
         return .int ((← valueAsInt (← evalExpr state left)) * (← valueAsInt (← evalExpr state right)))
     | .div left right => do
+        let dividend ← valueAsInt (← evalExpr state left)
         let divisor ← valueAsInt (← evalExpr state right)
         if divisor == 0 then
           throw "GoCore panic: integer divide by zero"
-        return .int (Int.tdiv (← valueAsInt (← evalExpr state left)) divisor)
+        return .int (Int.tdiv dividend divisor)
     | .mod left right => do
+        let dividend ← valueAsInt (← evalExpr state left)
         let divisor ← valueAsInt (← evalExpr state right)
         if divisor == 0 then
           throw "GoCore panic: integer divide by zero"
-        return .int (Int.tmod (← valueAsInt (← evalExpr state left)) divisor)
+        return .int (Int.tmod dividend divisor)
     | .eqCmp left right => do
         let leftValue ← evalExpr state left
         let rightValue ← evalExpr state right

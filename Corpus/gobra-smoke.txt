@@ -4,3 +4,4 @@ features/while1 ../third_party/gobra/src/test/resources/regressions/features/whi
 features/multi-assign ../third_party/gobra/src/test/resources/regressions/features/multi-assign.gobra
 features/pointer-identity ../third_party/gobra/src/test/resources/regressions/features/pointer-identity.gobra
 features/scalars features/scalars.gobra
+features/divide-by-zero features/divide-by-zero.gobra

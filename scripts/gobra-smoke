@@ -49,6 +49,17 @@ if [[ "$scalars_actual" != "$scalars_expected" ]]; then
   exit 1
 fi
 
+divide_by_zero_json="$OUT/work/features/divide-by-zero/divide-by-zero.gobra.internal.json"
+divide_by_zero_expected='{"message":"GoCore panic: integer divide by zero","status":"panic"}'
+if divide_by_zero_actual="$(lake exe golean gobra-json-run --input "$divide_by_zero_json" --function divideByZero_bda1d7d_F)"; then
+  echo "expected divide-by-zero Lean execution to panic" >&2
+  exit 1
+fi
+if [[ "$divide_by_zero_actual" != "$divide_by_zero_expected" ]]; then
+  echo "unexpected divide-by-zero Lean execution result: $divide_by_zero_actual" >&2
+  exit 1
+fi
+
 pointer_identity_json="$OUT/work/features/pointer-identity/pointer-identity.gobra.internal.json"
 pointer_identity_expected='{"message":"GoCore assertion failed","status":"assertion_error"}'
 if pointer_identity_actual="$(lake exe golean gobra-json-run --input "$pointer_identity_json" --function test_bda1d7d_F)"; then
@@ -78,4 +89,4 @@ if [[ "$swap_without_final_assert_actual" != "$swap_without_final_assert_expecte
   exit 1
 fi
 
-echo "executed 5 Gobra internal JSON function(s) in Lean"
+echo "executed 6 Gobra internal JSON function(s) in Lean"
