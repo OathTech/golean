@@ -50,6 +50,73 @@ The old Goose code uses concepts like:
 We should copy the architecture, not the exact surface syntax. In Lean, these
 should become typed GoCore operations and proof lemmas.
 
+## New Goose / Perennial Notes
+
+Perennial's `new/` Goose design is more relevant than the older Goose printer
+alone. It is built as:
+
+```text
+Go source
+  -> Goose generated Rocq code
+  -> GooseLang lambda calculus with Go-specific instructions
+  -> Perennial/Iris WP and typed memory proof layer
+```
+
+Its design rule is:
+
+- desugar Go constructs at translation time when the result is simple;
+- encode sequencing, bindings, returns, breaks, and loops using the lambda core
+  when possible;
+- add Go-specific instructions only when the Go feature needs semantic support.
+
+Important Go-specific instructions include:
+
+- `GoAlloc`, `GoLoad`, and `GoStore`;
+- `GoZeroVal` and `CompositeLiteral`;
+- `StructFieldGet`, `StructFieldSet`, and `StructFieldRef`;
+- `Index`, `IndexRef`, `Slice`, and `FullSlice`;
+- `FuncResolve` and `MethodResolve`;
+- map, interface, string, and channel-specific internal operations.
+
+The struct memory model is the most important reference point. New Goose treats
+primitive-like values as one heap location, but structs are decomposed by field:
+
+- allocating a struct preallocates a base location and allocates each field at
+  its `StructFieldRef` address;
+- loading a struct folds over its fields, loading each field and rebuilding a
+  struct value with `StructFieldSet`;
+- storing a struct folds over its fields and stores each projected field value;
+- generated proof support defines typed points-to predicates as separating
+  conjunctions of field points-to facts.
+
+This strongly supports using path-like locations in GoCore:
+
+```text
+Loc :=
+  | base Addr
+  | field Loc typeName fieldName
+```
+
+New Goose also separates executable/generated code from proof automation:
+
+- generated code files define Rocq structs, function bodies, package
+  assumptions, and function/method unfold instances;
+- generated proof files define `TypedPointsto`, `IntoValTypedUnderlying`, and
+  field access instances;
+- proof tactics such as `wp_auto`, `wp_load`, `wp_store`, and `wp_alloc` consume
+  those instances.
+
+For this project, the lesson is not to port Goose literally. We should keep
+GoCore as a Lean deep embedding for execution and differential testing, then
+generate a proof layer over GoCore that resembles Perennial's typed field
+access and WP automation. That keeps the executable semantics small enough to
+test while leaving a route to Iris-Lean or Lean-native weakest preconditions.
+
+One caveat: Perennial's updater notes that new Goose does not currently have
+executable tests for generated code because evaluation is blocked by sealing.
+That is a reason to keep our own GoCore evaluator first-class instead of relying
+only on proof-mode execution.
+
 ## Runtime Model
 
 The executable GoCore state should contain:
