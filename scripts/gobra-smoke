@@ -4,5 +4,23 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
 cd "$ROOT"
 
+OUT="artifacts/gobra-smoke"
+
+rm -rf "$OUT"
 lake build
-lake exe golean gobra-export --manifest Corpus/gobra-smoke.txt --out artifacts/gobra-smoke
+lake exe golean gobra-export --manifest Corpus/gobra-smoke.txt --out "$OUT"
+
+json_files=()
+while IFS= read -r -d '' json_file; do
+  json_files+=("$json_file")
+done < <(find "$OUT/work" -name '*.internal.json' -print0)
+if [[ "${#json_files[@]}" -eq 0 ]]; then
+  echo "no Gobra internal JSON artifacts found under $OUT/work" >&2
+  exit 1
+fi
+
+for json_file in "${json_files[@]}"; do
+  lake exe golean gobra-json-check --input "$json_file"
+done
+
+echo "validated ${#json_files[@]} Gobra internal JSON artifact(s)"
