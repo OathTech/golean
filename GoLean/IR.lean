@@ -498,14 +498,28 @@ mutual
           return true
     | .unsupported feature => unsupported feature
 
-  partial def assignAssignee (state : ExecState) (assignee : Assignee) (value : GoValue) :
-      Except GoError ExecState := do
-    match assignee with
-    | .var id => storeLoc state (← lookupLoc state id) value
-    | .addr locExpr => storeLoc state (← valueAsLoc (← evalExpr state locExpr)) value
+  partial def evalAssigneeLoc (state : ExecState) : Assignee → Except GoError Loc
+    | .var id => lookupLoc state id
+    | .addr locExpr => do
+        valueAsLoc (← evalExpr state locExpr)
     | .unsupported feature => unsupported feature
 
-  partial def assignAssignees (state : ExecState) (targets : Array Assignee)
+  partial def evalAssigneeLocs (state : ExecState) (targets : Array Assignee) :
+      Except GoError (Array Loc) := do
+    let mut locs := #[]
+    for target in targets do
+      locs := locs.push (← evalAssigneeLoc state target)
+    return locs
+
+  partial def assignLoc (state : ExecState) (loc : Loc) (value : GoValue) :
+      Except GoError ExecState := do
+    storeLoc state loc value
+
+  partial def assignAssignee (state : ExecState) (assignee : Assignee) (value : GoValue) :
+      Except GoError ExecState := do
+    assignLoc state (← evalAssigneeLoc state assignee) value
+
+  partial def assignLocs (state : ExecState) (targets : Array Loc)
       (values : Array GoValue) : Except GoError ExecState := do
     if targets.size != values.size then
       stuck s!"expected {targets.size} call result value(s), got {values.size}"
@@ -514,12 +528,16 @@ mutual
     for target in targets do
       match values[i]? with
       | some value =>
-          state ← assignAssignee state target value
+          state ← assignLoc state target value
           i := i + 1
       | none => stuck s!"missing call result value {i}"
     return state
 
-  partial def execFunctionCall (fuel : Nat) (state : ExecState) (targets : Array Assignee)
+  partial def assignAssignees (state : ExecState) (targets : Array Assignee)
+      (values : Array GoValue) : Except GoError ExecState := do
+    assignLocs state (← evalAssigneeLocs state targets) values
+
+  partial def execFunctionCallWithLocs (fuel : Nat) (state : ExecState) (targets : Array Loc)
       (name : String) (args : Array Expr) : Except GoError ExecState := do
     if fuel == 0 then
       stuck "GoCore execution fuel exhausted"
@@ -553,7 +571,11 @@ mutual
     for result in func.results do
       resultValues := resultValues.push (← lookup callState result.id)
     let state : ExecState := { callState with locals := callerLocals }
-    assignAssignees state targets resultValues
+    assignLocs state targets resultValues
+
+  partial def execFunctionCall (fuel : Nat) (state : ExecState) (targets : Array Assignee)
+      (name : String) (args : Array Expr) : Except GoError ExecState := do
+    execFunctionCallWithLocs fuel state (← evalAssigneeLocs state targets) name args
 
   partial def execDecl (state : ExecState) (param : Param) : Except GoError ExecState := do
     return state.bindLocal param.id (← defaultValue state param.typ)
@@ -579,7 +601,9 @@ mutual
         execStmts fuel (← execDecls state decls) stmts
     | .initialization var => return .normal (← execDecl state var)
     | .assign left right => do
-        return .normal (← assignAssignee state left (← evalExpr state right))
+        let loc ← evalAssigneeLoc state left
+        let value ← evalExpr state right
+        return .normal (← assignLoc state loc value)
     | .call targets name args => return .normal (← execFunctionCall fuel state targets name args)
     | .assert assertion => do
         if ← evalAssertion state assertion then

@@ -183,6 +183,39 @@ private def coreMismatchedEqualityFunction : GoCore.Func := {
   body := .assert (.expr (.eqCmp (.intLit 0) (.boolLit false)))
 }
 
+private def coreShiftIndexFunction : GoCore.Func := {
+  name := "shiftIndex_F",
+  args := #[{ id := "p", typ := .pointer .int }],
+  results := #[coreParam "z"],
+  pres := #[],
+  posts := #[],
+  body := .seqn #[
+    .assign (.addr (.var "p")) (.intLit 1),
+    .assign (.var "z") (.intLit 9)
+  ]
+}
+
+private def coreCallTargetSequencingFunction : GoCore.Func := {
+  name := "call_target_sequencing_F",
+  args := #[],
+  results := #[],
+  pres := #[],
+  posts := #[],
+  body := .block
+    #[
+      { id := "i", typ := .int },
+      { id := "a", typ := .array 2 .int }
+    ]
+    #[
+      .assign (.var "i") (.intLit 0),
+      .assign (.var "a") (.arrayLit 2 .int #[(0, .intLit 0), (1, .intLit 0)]),
+      .call #[.addr (.indexAddr (.ref "a") (.var "i"))] "shiftIndex_F" #[.ref "i"],
+      .assert (.expr (.eqCmp (.indexGet (.var "a") (.intLit 0)) (.intLit 9))),
+      .assert (.expr (.eqCmp (.indexGet (.var "a") (.intLit 1)) (.intLit 0))),
+      .assert (.expr (.eqCmp (.var "i") (.intLit 1)))
+    ]
+}
+
 private def addExpr : GobraJson.Expr :=
   .add source (.var (.inParam x)) (.var (.inParam y))
 
@@ -272,6 +305,8 @@ def main : IO UInt32 := do
   passed := passed && (← expectErrorStatus "GoCore divide by zero panic" (GoCore.runFunction 100 coreDivideByZeroFunction #[]) "panic")
   passed := passed && (← expectErrorStatus "GoCore index address bounds panic" (GoCore.runFunction 100 coreIndexAddrBoundsFunction #[]) "panic")
   passed := passed && (← expectErrorStatus "GoCore mismatched equality stuck" (GoCore.runFunction 100 coreMismatchedEqualityFunction #[]) "stuck")
+  passed := passed && (← expectOk "GoCore call target sequencing"
+    (GoCore.runFunctionWithContext 100 [] #[coreShiftIndexFunction, coreCallTargetSequencingFunction] coreCallTargetSequencingFunction #[]))
   passed := passed && (← expectIntResult "add function" (GoLean.GobraEval.runFunctionInts 100 doc "add_F" #[2, 3]) 5)
   passed := passed && (← expectErrorStatus "missing function" (GoLean.GobraEval.runFunctionInts 100 doc "missing_F" #[]) "stuck")
   passed := passed && (← expectErrorStatus "wrong arity" (GoLean.GobraEval.runFunctionInts 100 doc "add_F" #[2]) "stuck")
