@@ -2,9 +2,10 @@
 
 This is the project repo for the Go/Gobra-to-Lean tool.
 
-The parent workspace contains research notes and checked-out dependencies under
+The parent workspace contains research notes and reference dependencies under
 `../deps`. This subdirectory is intentionally its own git repository so the tool
-can grow independently of those reference checkouts.
+can grow independently of those reference checkouts. Gobra itself is tracked as
+a submodule at `third_party/gobra`, pointing at the `septract/gobra-json` fork.
 
 Initial direction:
 
@@ -21,4 +22,10 @@ lake exe golean
 lake exe golean --help
 lake exe golean gobra-export --manifest Corpus/gobra-smoke.txt
 scripts/gobra-smoke
+```
+
+After cloning this repo, initialize submodules with:
+
+```sh
+git submodule update --init --recursive
 ```

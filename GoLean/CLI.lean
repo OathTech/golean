@@ -10,7 +10,7 @@ structure GobraExportArgs where
   input : Option FilePath := none
   id : Option String := none
   outDir : FilePath := "artifacts/gobra-smoke"
-  gobraSbt : FilePath := "../scripts/gobra-sbt"
+  gobraSbt : FilePath := "scripts/gobra-sbt"
   deriving Repr
 
 private def usage : String :=

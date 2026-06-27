@@ -1,0 +1,4 @@
+[submodule "third_party/gobra"]
+	path = third_party/gobra
+	url = https://github.com/septract/gobra-json
+	branch = gobra-json

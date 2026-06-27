@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+WORKSPACE_ROOT="$(cd "$ROOT/.." && pwd -P)"
+GOBRA_DIR="$ROOT/third_party/gobra"
+SBT_LAUNCH="$WORKSPACE_ROOT/deps/sbt-launch-1.12.4.jar"
+SBT_CACHE="$WORKSPACE_ROOT/deps/sbt-cache"
+
+if [[ ! -d "$GOBRA_DIR/.git" && ! -f "$GOBRA_DIR/.git" ]]; then
+  echo "Missing Gobra submodule at $GOBRA_DIR" >&2
+  echo "Run: git submodule update --init --recursive" >&2
+  exit 1
+fi
+
+if [[ ! -f "$SBT_LAUNCH" ]]; then
+  echo "Missing $SBT_LAUNCH" >&2
+  echo "Use the workspace-level Gobra setup to provide sbt-launch-1.12.4.jar." >&2
+  exit 1
+fi
+
+mkdir -p \
+  "$SBT_CACHE/boot" \
+  "$SBT_CACHE/global" \
+  "$SBT_CACHE/ivy" \
+  "$SBT_CACHE/coursier"
+
+cd "$GOBRA_DIR"
+
+COURSIER_CACHE="$SBT_CACHE/coursier" exec java \
+  -Dsbt.boot.directory="$SBT_CACHE/boot" \
+  -Dsbt.global.base="$SBT_CACHE/global" \
+  -Dsbt.ivy.home="$SBT_CACHE/ivy" \
+  -Dsbt.coursier.home="$SBT_CACHE/coursier" \
+  -jar "$SBT_LAUNCH" \
+  "$@"

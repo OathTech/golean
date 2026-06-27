@@ -24,7 +24,11 @@ For each corpus entry, the exporter:
 
 The source copy matters because Gobra writes `.internal` and `.vpr` files beside
 the input file. Running on the copied file keeps generated artifacts out of
-`../deps/gobra`.
+`third_party/gobra`.
+
+Gobra is tracked as a submodule at `third_party/gobra`, using the
+`https://github.com/septract/gobra-json` fork and the local `gobra-json` branch
+for exporter work.
 
 ## Smoke Corpus
 
