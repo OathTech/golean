@@ -15,3 +15,4 @@ features/array-param-return features/array-param-return.gobra
 features/pointer-array features/pointer-array.gobra
 features/array-bounds features/array-bounds.gobra
 features/array-copy features/array-copy.gobra
+features/array-slice-alias features/array-slice-alias.gobra

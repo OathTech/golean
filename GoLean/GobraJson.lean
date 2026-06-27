@@ -25,7 +25,7 @@ private def knownTagNames : List String := [
   "MPredicateAccess", "MPredicateProxy", "Method", "MethodBody", "MethodBodySeqn",
   "MethodCall", "MethodProxy", "Mod", "Mul", "Negation", "NonItfTupleTerminationMeasure",
   "None", "Old", "Or", "Out", "PointerT", "Predicate", "Program", "PureMethod",
-  "PureMethodCall", "Ref", "Return", "SepAnd", "Seqn", "Single", "SingleAss", "Some",
+  "PureMethodCall", "Ref", "Return", "SepAnd", "Seqn", "Single", "SingleAss", "Slice", "Some",
   "StringT", "StructLit", "StructT", "Sub", "UnboundedInteger", "UneqCmp", "Var", "While",
   "WildcardPerm"
 ]
@@ -186,6 +186,7 @@ mutual
         (elems : Array ArrayLitElem)
     | dfltVal (source : Source) (typ : Ty)
     | indexedExp (source : Source) (base index : Expr) (baseUnderlyingType : Ty)
+    | slice (source : Source) (base low high : Expr) (max : Option Expr) (baseUnderlyingType : Ty)
     | length (source : Source) (exp : Expr)
     | capacity (source : Source) (exp : Expr)
     | old (source : Source) (operand : Expr)
@@ -681,6 +682,15 @@ mutual
           (← decodeSource s!"{path}.source" (← GoLean.StrictJson.field path obj "source"))
           (← decodeExpr s!"{path}.base" (← GoLean.StrictJson.field path obj "base"))
           (← decodeExpr s!"{path}.index" (← GoLean.StrictJson.field path obj "index"))
+          (← decodeTy s!"{path}.baseUnderlyingType" (← GoLean.StrictJson.field path obj "baseUnderlyingType"))
+    | "Slice" =>
+        let obj ← taggedObj path json "Slice" ["base", "baseUnderlyingType", "high", "low", "max", "source", "tag"]
+        return .slice
+          (← decodeSource s!"{path}.source" (← GoLean.StrictJson.field path obj "source"))
+          (← decodeExpr s!"{path}.base" (← GoLean.StrictJson.field path obj "base"))
+          (← decodeExpr s!"{path}.low" (← GoLean.StrictJson.field path obj "low"))
+          (← decodeExpr s!"{path}.high" (← GoLean.StrictJson.field path obj "high"))
+          (← decodeOptionOf s!"{path}.max" (← GoLean.StrictJson.field path obj "max") decodeExpr)
           (← decodeTy s!"{path}.baseUnderlyingType" (← GoLean.StrictJson.field path obj "baseUnderlyingType"))
     | "Length" =>
         let obj ← taggedObj path json "Length" ["exp", "source", "tag"]

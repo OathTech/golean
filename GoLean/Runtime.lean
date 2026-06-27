@@ -29,6 +29,13 @@ inductive Loc where
   | index (base : Loc) (index : Int)
   deriving Repr, BEq, DecidableEq
 
+structure SliceValue where
+  base : Option Loc
+  offset : Nat
+  len : Nat
+  cap : Nat
+  deriving Repr, BEq
+
 inductive GoValue where
   | unit
   | bool (value : Bool)
@@ -37,6 +44,7 @@ inductive GoValue where
   | nil
   | struct (typeName : String) (fields : Array (String × GoValue))
   | array (values : Array GoValue)
+  | slice (value : SliceValue)
   deriving Repr, BEq
 
 structure GoState where

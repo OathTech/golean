@@ -27,7 +27,7 @@ partial def lowerTy : GoLean.GobraJson.Ty → GoLean.GoCore.Ty
   | .function .. => .unsupported "function type"
   | .permission _ => .unsupported "permission type"
   | .sort => .unsupported "sort type"
-  | .slice .. => .unsupported "slice type"
+  | .slice elem _ => .slice (lowerTy elem)
   | .map .. => .unsupported "map type"
   | .sequence .. => .unsupported "sequence type"
   | .set .. => .unsupported "set type"
@@ -82,8 +82,16 @@ partial def lowerExprTy? : GoLean.GobraJson.Expr → Option GoLean.GoCore.Ty
   | .indexedExp _ _ _ baseUnderlyingType =>
       match lowerTy baseUnderlyingType with
       | .array _ elem => some elem
+      | .slice elem => some elem
       | .unsupported feature => some (.unsupported feature)
       | other => some (.unsupported s!"indexing non-array type {repr other}")
+  | .slice _ _ _ _ _ baseUnderlyingType =>
+      match lowerTy baseUnderlyingType with
+      | .array _ elem => some (.slice elem)
+      | .pointer (.array _ elem) => some (.slice elem)
+      | .slice elem => some (.slice elem)
+      | .unsupported feature => some (.unsupported feature)
+      | other => some (.unsupported s!"slicing non-array/slice type {repr other}")
   | .length .. => some .int
   | .capacity .. => some .int
   | _ => none
@@ -150,6 +158,12 @@ partial def lowerExpr : GoLean.GobraJson.Expr → GoLean.GoCore.Expr
       match lowerExprTy? base with
       | some (.pointer arrayTy@(.array ..)) => .indexGet (.deref (lowerExpr base) arrayTy) (lowerExpr index)
       | _ => .indexGet (lowerExpr base) (lowerExpr index)
+  | .slice _ base low high max baseUnderlyingType =>
+      let loweredBase :=
+        match lowerTy baseUnderlyingType with
+        | .array .. => lowerAddressOfExpr base
+        | _ => lowerExpr base
+      .slice loweredBase (lowerExpr low) (lowerExpr high) (max.map lowerExpr)
   | .length _ exp => .length (lowerExpr exp)
   | .capacity _ exp => .capacity (lowerExpr exp)
   | .pureMethodCall .. => .unsupported "pure method call expression"

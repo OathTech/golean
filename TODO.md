@@ -104,6 +104,9 @@ backlog items.
   function parameters/results, and pointer-to-array indexing/assignment.
 - Reviewed Goose/Perennial/Gobra slice designs and selected a descriptor over
   backing locations as the direction for GoCore slices.
+- Added the first descriptor-backed slice subset: nil slice defaults, array
+  slicing, slice indexing/addressing, two-index and full slicing, Gobra `Slice`
+  JSON decoding/lowering, and differential array-to-slice alias coverage.
 
 ## Proof Generation
 

@@ -189,6 +189,16 @@ private partial def goValueJson : GoValue → Json
         ("tag", Json.str "array"),
         ("values", Json.arr (values.map goValueJson))
       ]
+  | .slice value =>
+      Json.mkObj [
+        ("tag", Json.str "slice"),
+        ("base", match value.base with
+          | some loc => locJson loc
+          | none => Json.null),
+        ("offset", Lean.toJson value.offset),
+        ("len", Lean.toJson value.len),
+        ("cap", Lean.toJson value.cap)
+      ]
 
 private def runJson : GoLean.GobraEval.Result → Json
   | { values } =>

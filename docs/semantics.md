@@ -272,12 +272,16 @@ Currently supported:
 - nested array values;
 - array parameters and return values in direct calls;
 - pointer-to-array indexing and indexed assignment;
+- descriptor-backed slices created from arrays;
+- slice `len`, `cap`, indexing, indexed assignment, two-index slicing, and
+  three-index slicing;
 - out-of-range indexing as a `panic` observation.
 
 Still pending:
 
-- slice creation from arrays and full slice semantics. See
-  `docs/slice-model.md` for the selected descriptor/backing-store design.
+- slice allocation with `make`, slice literals, `append`, `copy`, and string
+  slicing. See `docs/slice-model.md` for the selected descriptor/backing-store
+  design and open refinement points.
 
 ## Defined Types
 

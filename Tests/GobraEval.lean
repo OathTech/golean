@@ -161,6 +161,92 @@ private def corePointerArrayFunction : GoCore.Func := {
     ]
 }
 
+private def coreNilSliceLenCapFunction : GoCore.Func := {
+  name := "nil_slice_len_cap_F",
+  args := #[],
+  results := #[coreParam "z"],
+  body := .block
+    #[{ id := "s", typ := .slice .int }]
+    #[
+      .assign (.var "z") (.add (.length (.var "s")) (.capacity (.var "s")))
+    ]
+}
+
+private def coreArraySliceAliasFunction : GoCore.Func := {
+  name := "array_slice_alias_F",
+  args := #[],
+  results := #[coreParam "z"],
+  body := .block
+    #[
+      { id := "a", typ := .array 3 .int },
+      { id := "s", typ := .slice .int }
+    ]
+    #[
+      .assign (.var "a") (.arrayLit 3 .int #[(0, .intLit 1), (1, .intLit 2), (2, .intLit 3)]),
+      .assign (.var "s") (.slice (.ref "a") (.intLit 1) (.intLit 3) none),
+      .assign (.addr (.indexAddr (.var "s") (.intLit 0))) (.intLit 9),
+      .assign (.var "z")
+        (.add
+          (.add (.indexGet (.var "a") (.intLit 1))
+            (.mul (.length (.var "s")) (.intLit 10)))
+          (.mul (.capacity (.var "s")) (.intLit 100)))
+    ]
+}
+
+private def coreSliceResliceFunction : GoCore.Func := {
+  name := "slice_reslice_F",
+  args := #[],
+  results := #[coreParam "z"],
+  body := .block
+    #[
+      { id := "a", typ := .array 4 .int },
+      { id := "s", typ := .slice .int },
+      { id := "t", typ := .slice .int }
+    ]
+    #[
+      .assign (.var "a") (.arrayLit 4 .int #[
+        (0, .intLit 1), (1, .intLit 2), (2, .intLit 3), (3, .intLit 4)
+      ]),
+      .assign (.var "s") (.slice (.ref "a") (.intLit 1) (.intLit 4) none),
+      .assign (.var "t") (.slice (.var "s") (.intLit 1) (.intLit 2) none),
+      .assign (.var "z")
+        (.add
+          (.add (.indexGet (.var "t") (.intLit 0))
+            (.mul (.length (.var "t")) (.intLit 10)))
+          (.mul (.capacity (.var "t")) (.intLit 100)))
+    ]
+}
+
+private def coreFullSliceFunction : GoCore.Func := {
+  name := "full_slice_F",
+  args := #[],
+  results := #[coreParam "z"],
+  body := .block
+    #[
+      { id := "a", typ := .array 4 .int },
+      { id := "s", typ := .slice .int }
+    ]
+    #[
+      .assign (.var "a") (.arrayLit 4 .int #[
+        (0, .intLit 1), (1, .intLit 2), (2, .intLit 3), (3, .intLit 4)
+      ]),
+      .assign (.var "s") (.slice (.ref "a") (.intLit 1) (.intLit 3) (some (.intLit 4))),
+      .assign (.var "z") (.add (.length (.var "s")) (.capacity (.var "s")))
+    ]
+}
+
+private def coreSliceBoundsFunction : GoCore.Func := {
+  name := "slice_bounds_F",
+  args := #[],
+  results := #[],
+  body := .block
+    #[{ id := "a", typ := .array 2 .int }]
+    #[
+      .assign (.var "a") (.arrayLit 2 .int #[(0, .intLit 1), (1, .intLit 2)]),
+      .assign (.var "a") (.slice (.ref "a") (.intLit 0) (.intLit 3) none)
+    ]
+}
+
 private def coreNilDerefFunction : GoCore.Func := {
   name := "nil_deref_F",
   args := #[],
@@ -410,9 +496,14 @@ def main : IO UInt32 := do
   passed := passed && (← expectIntResult "GoCore array len cap" (GoCore.runFunction 100 coreArrayLenCapFunction #[]) 6)
   passed := passed && (← expectIntResult "GoCore array default value" (GoCore.runFunction 100 coreArrayDefaultFunction #[]) 0)
   passed := passed && (← expectIntResult "GoCore pointer-to-array indexing" (GoCore.runFunction 100 corePointerArrayFunction #[]) 14)
+  passed := passed && (← expectIntResult "GoCore nil slice len cap" (GoCore.runFunction 100 coreNilSliceLenCapFunction #[]) 0)
+  passed := passed && (← expectIntResult "GoCore array slice alias" (GoCore.runFunction 100 coreArraySliceAliasFunction #[]) 229)
+  passed := passed && (← expectIntResult "GoCore slice reslice" (GoCore.runFunction 100 coreSliceResliceFunction #[]) 213)
+  passed := passed && (← expectIntResult "GoCore full slice" (GoCore.runFunction 100 coreFullSliceFunction #[]) 5)
   passed := passed && (← expectErrorStatus "GoCore nil dereference panic" (GoCore.runFunction 100 coreNilDerefFunction #[]) "panic")
   passed := passed && (← expectErrorStatus "GoCore divide by zero panic" (GoCore.runFunction 100 coreDivideByZeroFunction #[]) "panic")
   passed := passed && (← expectErrorStatus "GoCore index address bounds panic" (GoCore.runFunction 100 coreIndexAddrBoundsFunction #[]) "panic")
+  passed := passed && (← expectErrorStatus "GoCore slice bounds panic" (GoCore.runFunction 100 coreSliceBoundsFunction #[]) "panic")
   passed := passed && (← expectErrorStatus "GoCore mismatched equality stuck" (GoCore.runFunction 100 coreMismatchedEqualityFunction #[]) "stuck")
   passed := passed && (← expectIntResult "GoCore call target sequencing"
     (GoCore.runFunctionWithContext 100 [] #[coreShiftIndexFunction, coreCallTargetSequencingFunction] coreCallTargetSequencingFunction #[]) 901)

@@ -8,6 +8,7 @@ inductive Ty where
   | bool
   | int
   | array (length : Nat) (elem : Ty)
+  | slice (elem : Ty)
   | pointer (elem : Ty)
   | defined (name : String)
   | unsupported (feature : String)
@@ -56,6 +57,7 @@ inductive Expr where
   | defaultValue (typ : Ty)
   | indexGet (base index : Expr)
   | indexAddr (base index : Expr)
+  | slice (base low high : Expr) (max : Option Expr)
   | length (operand : Expr)
   | capacity (operand : Expr)
   | old (operand : Expr)
@@ -237,6 +239,87 @@ private def arraySet (values : Array GoValue) (index : Int) (value : GoValue) :
   let i ← arrayIndexNat values index
   return values.set! i value
 
+private def natFromNonnegativeInt (context : String) (value : Int) : Except GoError Nat := do
+  if value < 0 then
+    panic context
+  return value.toNat
+
+private def validateSlice (slice : SliceValue) : Except GoError Unit := do
+  if slice.len > slice.cap then
+    stuck s!"malformed GoCore slice: len {slice.len} > cap {slice.cap}"
+  match slice.base with
+  | some _ => return ()
+  | none =>
+      if slice.offset == 0 && slice.len == 0 && slice.cap == 0 then
+        return ()
+      else
+        stuck s!"malformed GoCore nil slice: {repr slice}"
+
+private def sliceIndexLoc (slice : SliceValue) (index : Int) : Except GoError Loc := do
+  validateSlice slice
+  let i ← natFromNonnegativeInt "slice index out of bounds" index
+  if i < slice.len then
+    match slice.base with
+    | some base => return .index base (Int.ofNat (slice.offset + i))
+    | none => stuck s!"malformed GoCore nil slice with length {slice.len}"
+  else
+    panic "slice index out of bounds"
+
+private def sliceFromSlice (slice : SliceValue) (low high : Int) (max : Option Int) :
+    Except GoError GoValue := do
+  validateSlice slice
+  let low ← natFromNonnegativeInt "slice bounds out of range" low
+  let high ← natFromNonnegativeInt "slice bounds out of range" high
+  match max with
+  | none =>
+      if low <= high && high <= slice.len then
+        return .slice {
+          base := slice.base,
+          offset := slice.offset + low,
+          len := high - low,
+          cap := slice.cap - low
+        }
+      else
+        panic "slice bounds out of range"
+  | some max =>
+      let max ← natFromNonnegativeInt "slice bounds out of range" max
+      if low <= high && high <= max && max <= slice.cap then
+        return .slice {
+          base := slice.base,
+          offset := slice.offset + low,
+          len := high - low,
+          cap := max - low
+        }
+      else
+        panic "slice bounds out of range"
+
+private def sliceFromArray (base : Loc) (length : Nat) (low high : Int) (max : Option Int) :
+    Except GoError GoValue := do
+  let low ← natFromNonnegativeInt "slice bounds out of range" low
+  let high ← natFromNonnegativeInt "slice bounds out of range" high
+  match max with
+  | none =>
+      if low <= high && high <= length then
+        return .slice {
+          base := some base,
+          offset := low,
+          len := high - low,
+          cap := length - low
+        }
+      else
+        panic "slice bounds out of range"
+  | some max =>
+      let max ← natFromNonnegativeInt "slice bounds out of range" max
+      if low <= high && high <= max && max <= length then
+        return .slice {
+          base := some base,
+          offset := low,
+          len := high - low,
+          cap := max - low
+        }
+      else
+        panic "slice bounds out of range"
+
 mutual
   partial def loadLoc (state : ExecState) : Loc → Except GoError GoValue
     | loc@(.base _) =>
@@ -286,6 +369,7 @@ mutual
         for _ in [:length] do
           values := values.push (← defaultValue state elem)
         return .array values
+    | .slice _ => return .slice { base := none, offset := 0, len := 0, cap := 0 }
     | .pointer _ => return .nil
     | .defined name => do
         match TypeEnv.lookup state.types name with
@@ -360,6 +444,12 @@ private partial def valueEq : GoValue → GoValue → Except GoError Bool
   | .nil, .nil => return true
   | .addr _, .nil => return false
   | .nil, .addr _ => return false
+  | .slice left, .nil => do
+      validateSlice left
+      return left.base.isNone
+  | .nil, .slice right => do
+      validateSlice right
+      return right.base.isNone
   | .array left, .array right => do
       if left.size != right.size then
         stuck s!"array equality length mismatch: {left.size} vs {right.size}"
@@ -469,23 +559,54 @@ mutual
     | .indexGet base index => do
         match ← evalExpr state base with
         | .array values => arrayGet values (← valueAsInt (← evalExpr state index))
-        | other => stuck s!"expected array value for index access, got {repr other}"
+        | .slice slice => do
+            let loc ← sliceIndexLoc slice (← valueAsInt (← evalExpr state index))
+            loadLoc state loc
+        | other => stuck s!"expected array or slice value for index access, got {repr other}"
     | .indexAddr base index => do
-        let baseLoc ← valueAsLoc (← evalExpr state base)
         let indexValue ← valueAsInt (← evalExpr state index)
-        match ← loadLoc state baseLoc with
+        match ← evalExpr state base with
+        | .slice slice => return .addr (← sliceIndexLoc slice indexValue)
+        | .addr baseLoc =>
+            match ← loadLoc state baseLoc with
+            | .array values =>
+                let _ ← arrayIndexNat values indexValue
+                return .addr (.index baseLoc indexValue)
+            | .slice slice => return .addr (← sliceIndexLoc slice indexValue)
+            | other => stuck s!"expected array or slice base for index address, got {repr other}"
+        | other => stuck s!"expected array or slice base for index address, got {repr other}"
+    | .slice base low high max => do
+        let baseValue ← evalExpr state base
+        let lowValue ← valueAsInt (← evalExpr state low)
+        let highValue ← valueAsInt (← evalExpr state high)
+        let maxValue ←
+          match max with
+          | none => pure none
+          | some max => some <$> valueAsInt (← evalExpr state max)
+        match baseValue with
+        | .slice slice => sliceFromSlice slice lowValue highValue maxValue
+        | .addr baseLoc =>
+            match ← loadLoc state baseLoc with
+            | .array values => sliceFromArray baseLoc values.size lowValue highValue maxValue
+            | .slice slice => sliceFromSlice slice lowValue highValue maxValue
+            | other => stuck s!"expected array or slice base for slice expression, got {repr other}"
         | .array values =>
-            let _ ← arrayIndexNat values indexValue
-            return .addr (.index baseLoc indexValue)
-        | other => stuck s!"expected array base for index address, got {repr other}"
+            unsupported s!"slice expression over non-addressable array value of length {values.size}"
+        | other => stuck s!"expected array or slice value for slice expression, got {repr other}"
     | .length operand => do
         match ← evalExpr state operand with
         | .array values => return .int values.size
-        | other => unsupported s!"len for non-array value {repr other}"
+        | .slice slice => do
+            validateSlice slice
+            return .int slice.len
+        | other => unsupported s!"len for non-array/slice value {repr other}"
     | .capacity operand => do
         match ← evalExpr state operand with
         | .array values => return .int values.size
-        | other => unsupported s!"cap for non-array value {repr other}"
+        | .slice slice => do
+            validateSlice slice
+            return .int slice.cap
+        | other => unsupported s!"cap for non-array/slice value {repr other}"
     | .old operand => evalExpr state operand
     | .unsupported feature => unsupported feature
 
