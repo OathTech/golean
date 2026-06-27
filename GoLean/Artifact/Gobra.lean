@@ -18,7 +18,9 @@ structure ExportOptions where
 structure ExportResult where
   id : String
   source : FilePath
+  sourceSha256 : String
   scratchSource : FilePath
+  scratchSourceSha256 : String
   internalPath : FilePath
   internalJsonPath : FilePath
   vprPath : FilePath
@@ -41,7 +43,9 @@ def ExportResult.toJson (r : ExportResult) : Json :=
   Json.mkObj [
     ("id", Json.str r.id),
     ("source", jsonPath r.source),
+    ("sourceSha256", Json.str r.sourceSha256),
     ("scratchSource", jsonPath r.scratchSource),
+    ("scratchSourceSha256", Json.str r.scratchSourceSha256),
     ("internalPath", jsonPath r.internalPath),
     ("internalJsonPath", jsonPath r.internalJsonPath),
     ("vprPath", jsonPath r.vprPath),
@@ -67,6 +71,30 @@ private def copyTextFile (source dest : FilePath) : IO Unit := do
   ensureParent dest
   let contents ← IO.FS.readFile source
   IO.FS.writeFile dest contents
+
+private def firstField? (text : String) : Option String :=
+  text.trimAscii.toString.splitOn " " |>.filter (fun s => !s.isEmpty) |>.head?
+
+private def sha256File (path : FilePath) : IO String := do
+  let shasum ← IO.Process.output {
+    cmd := "shasum",
+    args := #["-a", "256", path.toString]
+  }
+  if shasum.exitCode == 0 then
+    match firstField? shasum.stdout with
+    | some hash => return hash
+    | none => throw <| IO.userError s!"shasum produced no hash for {path}"
+  else
+    let sha256sum ← IO.Process.output {
+      cmd := "sha256sum",
+      args := #[path.toString]
+    }
+    if sha256sum.exitCode == 0 then
+      match firstField? sha256sum.stdout with
+      | some hash => return hash
+      | none => throw <| IO.userError s!"sha256sum produced no hash for {path}"
+    else
+      throw <| IO.userError s!"could not compute sha256 for {path}: {shasum.stderr}{sha256sum.stderr}"
 
 private def postfixFile (path : FilePath) (suffix : String) : FilePath :=
   let name := path.fileName.getD path.toString
@@ -112,6 +140,8 @@ def exportOne (opts : ExportOptions) (entry : CorpusEntry) : IO ExportResult := 
   let sourceName := entry.source.fileName.getD "input.gobra"
   let scratchSource := workDir / sourceName
   copyTextFile entry.source scratchSource
+  let sourceSha256 ← sha256File entry.source
+  let scratchSourceSha256 ← sha256File scratchSource
 
   let stdoutPath := resultDir / "stdout.txt"
   let stderrPath := resultDir / "stderr.txt"
@@ -134,7 +164,9 @@ def exportOne (opts : ExportOptions) (entry : CorpusEntry) : IO ExportResult := 
   let result : ExportResult := {
     id := entry.id,
     source := entry.source,
+    sourceSha256,
     scratchSource,
+    scratchSourceSha256,
     internalPath,
     internalJsonPath,
     vprPath,
