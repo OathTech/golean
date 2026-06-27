@@ -33,6 +33,9 @@ private def knownTagNames : List String := [
 def KnownTag.ofString? (name : String) : Option KnownTag :=
   if knownTagNames.contains name then Option.some { name } else Option.none
 
+def isKnownTagName (name : String) : Bool :=
+  (KnownTag.ofString? name).isSome
+
 inductive Value where
   | null
   | bool (value : Bool)
@@ -536,5 +539,29 @@ def decodeString (contents : String) : Except String Document := do
 
 def decodeFile (path : FilePath) : IO (Except String Document) := do
   return decodeString (← IO.FS.readFile path)
+
+partial def collectTags (json : Json) : List String :=
+  match json with
+  | .null | .bool _ | .num _ | .str _ => []
+  | .arr values => (values.toList.map collectTags).foldr (fun tags acc => tags ++ acc) []
+  | .obj obj =>
+      let childTags := ((GoLean.StrictJson.keys obj).map (fun key =>
+        match obj.get? key with
+        | some value => collectTags value
+        | none => [])).foldr (fun tags acc => tags ++ acc) []
+      let ownTag :=
+        if GoLean.StrictJson.exactKeys obj ["position", "tag"] then
+          []
+        else
+          match obj.get? "tag" with
+          | some (.str tag) => [tag]
+          | _ => []
+      ownTag ++ childTags
+
+def uniqueTags (tags : List String) : List String :=
+  tags.eraseDups
+
+def unknownTags (tags : List String) : List String :=
+  uniqueTags tags |>.filter (fun tag => !isKnownTagName tag)
 
 end GoLean.GobraJson

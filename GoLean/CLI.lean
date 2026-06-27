@@ -1,9 +1,11 @@
 import GoLean.Artifact.Gobra
 import GoLean.GobraJson
+import Lean.Data.Json
 
 namespace GoLean.CLI
 
 open System
+open Lean
 open GoLean.Artifact
 
 structure GobraExportArgs where
@@ -18,7 +20,8 @@ private def usage : String :=
   "usage:\n" ++
   "  golean gobra-export --manifest <file> [--out <dir>] [--gobra-sbt <path>]\n" ++
   "  golean gobra-export --input <file> --id <id> [--out <dir>] [--gobra-sbt <path>]\n" ++
-  "  golean gobra-json-check --input <file>\n"
+  "  golean gobra-json-check --input <file>\n" ++
+  "  golean gobra-json-tags --input <file>\n"
 
 private def parseGobraExportArgs : List String → GobraExportArgs → Except String GobraExportArgs
   | [], cfg => .ok cfg
@@ -111,6 +114,30 @@ private def runGobraJsonCheck (args : List String) : IO UInt32 := do
           IO.eprintln s!"{input}: {err}"
           return 1
 
+private def runGobraJsonTags (args : List String) : IO UInt32 := do
+  let cwd ← IO.currentDir
+  match parseInputOnly args none with
+  | .error err =>
+      IO.eprintln err
+      return 2
+  | .ok input =>
+      let input := absoluteFrom cwd input
+      match Json.parse (← IO.FS.readFile input) with
+      | .error err =>
+          IO.eprintln s!"{input}: {err}"
+          return 1
+      | .ok json =>
+          let tags := GobraJson.uniqueTags (GobraJson.collectTags json)
+          let unknown := GobraJson.unknownTags tags
+          IO.println s!"{input}: {tags.length} observed tag(s)"
+          for tag in tags do
+            IO.println s!"  {tag}"
+          if unknown.isEmpty then
+            return 0
+          else
+            IO.eprintln s!"unknown tag(s): {unknown}"
+            return 1
+
 def main (args : List String) : IO UInt32 := do
   match args with
   | ["--help"] | ["-h"] =>
@@ -118,6 +145,7 @@ def main (args : List String) : IO UInt32 := do
       return 0
   | "gobra-export" :: rest => runGobraExport rest
   | "gobra-json-check" :: rest => runGobraJsonCheck rest
+  | "gobra-json-tags" :: rest => runGobraJsonTags rest
   | [] =>
       IO.println usage
       return 0
