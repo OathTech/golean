@@ -12,5 +12,6 @@ plain/array-len-cap	Differential/plain/array-len-cap	artifacts/gobra-smoke/work/
 plain/array-zero	Differential/plain/array-zero	artifacts/gobra-smoke/work/features/array-zero/array-zero.gobra.internal.json	arrayZero_bda1d7d_F	-	ok	arrays,zero_values,indexing	-
 plain/nested-arrays	Differential/plain/nested-arrays	artifacts/gobra-smoke/work/features/nested-arrays/nested-arrays.gobra.internal.json	nestedArrays_bda1d7d_F	-	ok	arrays,nested,indexing	-
 plain/array-param-return	Differential/plain/array-param-return	artifacts/gobra-smoke/work/features/array-param-return/array-param-return.gobra.internal.json	arrayParamReturn_bda1d7d_F	-	ok	arrays,calls,returns,value_copy	-
+plain/pointer-array	Differential/plain/pointer-array	artifacts/gobra-smoke/work/features/pointer-array/pointer-array.gobra.internal.json	pointerArray_bda1d7d_F	-	ok	arrays,pointers,indexing,assignment	-
 plain/array-bounds	Differential/plain/array-bounds	artifacts/gobra-smoke/work/features/array-bounds/array-bounds.gobra.internal.json	arrayBounds_bda1d7d_F	-	panic	arrays,indexing,panic	-
 plain/array-copy	Differential/plain/array-copy	artifacts/gobra-smoke/work/features/array-copy/array-copy.gobra.internal.json	arrayCopy_bda1d7d_F	-	ok	arrays,value_copy,indexing,assignment	-

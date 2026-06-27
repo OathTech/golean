@@ -12,5 +12,6 @@ features/array-len-cap features/array-len-cap.gobra
 features/array-zero features/array-zero.gobra
 features/nested-arrays features/nested-arrays.gobra
 features/array-param-return features/array-param-return.gobra
+features/pointer-array features/pointer-array.gobra
 features/array-bounds features/array-bounds.gobra
 features/array-copy features/array-copy.gobra

@@ -92,8 +92,8 @@ backlog items.
   Gobra-fronted differential smoke coverage.
 - Added fixed-array `len`/`cap`, with Gobra-fronted differential smoke
   coverage.
-- Added fixed-array zero-value initialization, nested arrays, and arrays through
-  function parameters/results.
+- Added fixed-array zero-value initialization, nested arrays, arrays through
+  function parameters/results, and pointer-to-array indexing/assignment.
 
 ## Proof Generation
 

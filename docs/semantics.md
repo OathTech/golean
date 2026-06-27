@@ -271,11 +271,11 @@ Currently supported:
 - `len` and `cap` for fixed-size array values;
 - nested array values;
 - array parameters and return values in direct calls;
+- pointer-to-array indexing and indexed assignment;
 - out-of-range indexing as a `panic` observation.
 
 Still pending:
 
-- pointer-to-array indexing and slicing;
 - slice creation from arrays.
 
 ## Defined Types

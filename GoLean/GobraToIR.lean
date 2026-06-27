@@ -92,7 +92,10 @@ mutual
 partial def lowerAddressOfExpr : GoLean.GobraJson.Expr → GoLean.GoCore.Expr
   | .var ref => .ref (varRefId ref)
   | .deref _ exp _ => lowerExpr exp
-  | .indexedExp _ base index _ => .indexAddr (lowerAddressOfExpr base) (lowerExpr index)
+  | .indexedExp _ base index _ =>
+      match lowerExprTy? base with
+      | some (.pointer (.array ..)) => .indexAddr (lowerExpr base) (lowerExpr index)
+      | _ => .indexAddr (lowerAddressOfExpr base) (lowerExpr index)
   | .fieldRef _ recv field =>
       match (lowerExprTy? recv).bind typeNameOfTy? with
       | some typeName => .fieldAddr (lowerAddressOfExpr recv) typeName field.name
@@ -143,7 +146,10 @@ partial def lowerExpr : GoLean.GobraJson.Expr → GoLean.GoCore.Expr
       else
         .arrayLit length.toNat (lowerTy elem) (args.map (fun arg => (arg.key, lowerExpr arg.value)))
   | .dfltVal _ typ => .defaultValue (lowerTy typ)
-  | .indexedExp _ base index _ => .indexGet (lowerExpr base) (lowerExpr index)
+  | .indexedExp _ base index _ =>
+      match lowerExprTy? base with
+      | some (.pointer arrayTy@(.array ..)) => .indexGet (.deref (lowerExpr base) arrayTy) (lowerExpr index)
+      | _ => .indexGet (lowerExpr base) (lowerExpr index)
   | .length _ exp => .length (lowerExpr exp)
   | .capacity _ exp => .capacity (lowerExpr exp)
   | .pureMethodCall .. => .unsupported "pure method call expression"

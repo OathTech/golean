@@ -143,6 +143,24 @@ private def coreArrayDefaultFunction : GoCore.Func := {
     ]
 }
 
+private def corePointerArrayFunction : GoCore.Func := {
+  name := "pointer_array_F",
+  args := #[],
+  results := #[coreParam "z"],
+  body := .block
+    #[
+      { id := "a", typ := .array 2 .int },
+      { id := "p", typ := .pointer (.array 2 .int) }
+    ]
+    #[
+      .assign (.var "a") (.arrayLit 2 .int #[(0, .intLit 4), (1, .intLit 5)]),
+      .assign (.var "p") (.ref "a"),
+      .assign (.var "z") (.indexGet (.deref (.var "p") (.array 2 .int)) (.intLit 1)),
+      .assign (.addr (.indexAddr (.var "p") (.intLit 0))) (.intLit 9),
+      .assign (.var "z") (.add (.var "z") (.indexGet (.var "a") (.intLit 0)))
+    ]
+}
+
 private def coreNilDerefFunction : GoCore.Func := {
   name := "nil_deref_F",
   args := #[],
@@ -391,6 +409,7 @@ def main : IO UInt32 := do
   passed := passed && (← expectIntResult "GoCore array indexing" (GoCore.runFunction 100 coreArrayFunction #[]) 11)
   passed := passed && (← expectIntResult "GoCore array len cap" (GoCore.runFunction 100 coreArrayLenCapFunction #[]) 6)
   passed := passed && (← expectIntResult "GoCore array default value" (GoCore.runFunction 100 coreArrayDefaultFunction #[]) 0)
+  passed := passed && (← expectIntResult "GoCore pointer-to-array indexing" (GoCore.runFunction 100 corePointerArrayFunction #[]) 14)
   passed := passed && (← expectErrorStatus "GoCore nil dereference panic" (GoCore.runFunction 100 coreNilDerefFunction #[]) "panic")
   passed := passed && (← expectErrorStatus "GoCore divide by zero panic" (GoCore.runFunction 100 coreDivideByZeroFunction #[]) "panic")
   passed := passed && (← expectErrorStatus "GoCore index address bounds panic" (GoCore.runFunction 100 coreIndexAddrBoundsFunction #[]) "panic")
