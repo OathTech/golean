@@ -61,6 +61,22 @@ if [[ "$while1_actual" != "$while1_expected" ]]; then
   exit 1
 fi
 
+if_return_json="$OUT/work/features/if-return/if-return.gobra.internal.json"
+if_return_expected='{"status":"ok","values":[{"tag":"int","value":7}]}'
+if_return_actual="$(lean gobra-json-run --input "$if_return_json" --function ifReturn_bda1d7d_F --arg-int 7)"
+if [[ "$if_return_actual" != "$if_return_expected" ]]; then
+  echo "unexpected if-return Lean execution result: $if_return_actual" >&2
+  exit 1
+fi
+
+break_continue_json="$OUT/work/features/break-continue/break-continue.gobra.internal.json"
+break_continue_expected='{"status":"ok","values":[{"tag":"int","value":8}]}'
+break_continue_actual="$(lean gobra-json-run --input "$break_continue_json" --function breakContinue_bda1d7d_F)"
+if [[ "$break_continue_actual" != "$break_continue_expected" ]]; then
+  echo "unexpected break-continue Lean execution result: $break_continue_actual" >&2
+  exit 1
+fi
+
 scalars_json="$OUT/work/features/scalars/scalars.gobra.internal.json"
 scalars_expected='{"status":"ok","values":[{"tag":"int","value":7}]}'
 scalars_actual="$(lean gobra-json-run --input "$scalars_json" --function scalars_bda1d7d_F)"
@@ -127,4 +143,4 @@ rm -rf "$OUT_FINAL"
 mv "$OUT" "$OUT_FINAL"
 trap - EXIT
 
-echo "executed 9 Gobra-fronted Go function(s) in Lean"
+echo "executed 11 Gobra-fronted Go function(s) in Lean"

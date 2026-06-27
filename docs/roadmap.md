@@ -109,8 +109,9 @@ corpus without accepting unexpected JSON shapes.
 Goal: make GoCore execute ordinary pointer/struct Go programs.
 
 Status: in progress. Heap-backed locals, path-like field locations, struct
-values, direct calls, and the `examples/swap` smoke execution path are now
-implemented for the current supported subset.
+values, direct calls, explicit `if`/`return`, unlabeled `break`/`continue`, and
+the `examples/swap` smoke execution path are now implemented for the current
+supported subset.
 
 Deliverables:
 
@@ -121,8 +122,12 @@ Deliverables:
 - Add struct literals, field value projection, and field address projection.
 - Add direct function calls with fresh call frames and left-to-right argument
   evaluation.
+- Add control-flow outcomes for explicit return, unlabeled break, and unlabeled
+  continue.
 - Lower Gobra field, deref, address-of, struct literal, and call nodes into
   GoCore.
+- Lower Gobra `If`, `Return`, `Break`, and `Continue` nodes into GoCore where
+  they have direct GoCore meaning. Labeled break/continue remains unsupported.
 
 Success criterion:
 
@@ -175,7 +180,8 @@ Status: started, but gated by the hardening pass above. The executable subset
 now includes scalar arithmetic and
 comparisons, boolean connectives, divide-by-zero panic classification, and a
 first fixed-size array subset: array types, array literals, indexing, indexed
-assignment, and array equality through GoCore values.
+assignment, and array equality through GoCore values. The control-flow subset
+now includes `if`, explicit `return`, and unlabeled `break`/`continue`.
 
 Feature order should be driven by corpus failures and semantic dependencies,
 but the expected progression is:

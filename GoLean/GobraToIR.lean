@@ -153,22 +153,40 @@ private def lowerDecls (decls : Array GoLean.GobraJson.Decl) : Array GoLean.GoCo
       | .label _ => out)
     #[]
 
-partial def lowerStmt : GoLean.GobraJson.Stmt → GoLean.GoCore.Stmt
-  | .seqn _ stmts => .seqn (stmts.map lowerStmt)
-  | .block _ decls stmts => .block (lowerDecls decls) (stmts.map lowerStmt)
-  | .initialization _ var => .initialization (lowerVariable var)
-  | .singleAss _ left right => .assign (lowerAssignee left) (lowerExpr right)
-  | .assert .. => .seqn #[]
-  | .while _ cond _invs _terminationMeasure body => .while (lowerExpr cond) (lowerStmt body)
-  | .label _ id => .label id.name
-  | .functionCall _ func targets args =>
-      .call (targets.map lowerAssignee) func.name (args.map lowerExpr)
-  | .methodCall _ recv meth targets args =>
-      .call (targets.map lowerAssignee) meth.uniqueName (#[lowerExpr recv] ++ args.map lowerExpr)
+mutual
+  partial def lowerStmtWithReturnPost (returnPostprocessing : Array GoLean.GoCore.Stmt) :
+      GoLean.GobraJson.Stmt → GoLean.GoCore.Stmt
+    | .seqn _ stmts => .seqn (stmts.map (lowerStmtWithReturnPost returnPostprocessing))
+    | .block _ decls stmts =>
+        .block (lowerDecls decls) (stmts.map (lowerStmtWithReturnPost returnPostprocessing))
+    | .initialization _ var => .initialization (lowerVariable var)
+    | .singleAss _ left right => .assign (lowerAssignee left) (lowerExpr right)
+    | .assert .. => .seqn #[]
+    | .ifStmt _ cond thn els =>
+        .ifThenElse (lowerExpr cond)
+          (lowerStmtWithReturnPost returnPostprocessing thn)
+          (lowerStmtWithReturnPost returnPostprocessing els)
+    | .while _ cond _invs _terminationMeasure body =>
+        .while (lowerExpr cond) (lowerStmtWithReturnPost returnPostprocessing body)
+    | .returnStmt _ => .seqn (returnPostprocessing.push .returnStmt)
+    | .breakStmt _ none _ => .breakStmt
+    | .breakStmt _ (some label) _ => .unsupported s!"labeled break {label}"
+    | .continueStmt _ none _ => .continueStmt
+    | .continueStmt _ (some label) _ => .unsupported s!"labeled continue {label}"
+    | .label _ id => .label id.name
+    | .functionCall _ func targets args =>
+        .call (targets.map lowerAssignee) func.name (args.map lowerExpr)
+    | .methodCall _ recv meth targets args =>
+        .call (targets.map lowerAssignee) meth.uniqueName (#[lowerExpr recv] ++ args.map lowerExpr)
+
+  partial def lowerStmt : GoLean.GobraJson.Stmt → GoLean.GoCore.Stmt :=
+    lowerStmtWithReturnPost #[]
+end
 
 private def lowerMethodBody (body : GoLean.GobraJson.MethodBody) : GoLean.GoCore.Stmt :=
+  let postprocessing := body.postprocessing.map lowerStmt
   .block (lowerDecls body.decls)
-    (body.seqn.stmts.map lowerStmt ++ body.postprocessing.map lowerStmt)
+    (body.seqn.stmts.map (lowerStmtWithReturnPost postprocessing) ++ postprocessing)
 
 private def hasTypeDef (defs : Array (String × GoLean.GoCore.TypeDef)) (name : String) : Bool :=
   defs.any (fun (existing, _) => existing == name)

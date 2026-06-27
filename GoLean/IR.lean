@@ -71,7 +71,11 @@ inductive Stmt where
   | initialization (var : Param)
   | assign (left : Assignee) (right : Expr)
   | call (targets : Array Assignee) (name : String) (args : Array Expr)
+  | ifThenElse (cond : Expr) (thenBranch elseBranch : Stmt)
   | while (cond : Expr) (body : Stmt)
+  | returnStmt
+  | breakStmt
+  | continueStmt
   | label (name : String)
   | unsupported (feature : String)
   deriving Repr, BEq, Inhabited
@@ -580,6 +584,11 @@ mutual
         let value ← evalExpr state right
         return .normal (← assignLoc state loc value)
     | .call targets name args => return .normal (← execFunctionCall fuel state targets name args)
+    | .ifThenElse cond thenBranch elseBranch => do
+        if ← valueAsBool (← evalExpr state cond) then
+          execStmt fuel state thenBranch
+        else
+          execStmt fuel state elseBranch
     | .while cond body => do
         if fuel == 0 then
           stuck "GoCore execution fuel exhausted"
@@ -591,6 +600,9 @@ mutual
           | .returned bodyState => return .returned bodyState
         else
           return .normal state
+    | .returnStmt => return .returned state
+    | .breakStmt => return .broke state
+    | .continueStmt => return .continued state
     | .label _ => return .normal state
     | .unsupported feature => unsupported feature
 end

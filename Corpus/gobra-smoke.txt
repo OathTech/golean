@@ -1,6 +1,8 @@
 # id path
 examples/swap ../third_party/gobra/src/test/resources/regressions/examples/swap.gobra
 features/while1 ../third_party/gobra/src/test/resources/regressions/features/while1.gobra
+features/if-return features/if-return.gobra
+features/break-continue features/break-continue.gobra
 features/multi-assign ../third_party/gobra/src/test/resources/regressions/features/multi-assign.gobra
 features/pointer-identity ../third_party/gobra/src/test/resources/regressions/features/pointer-identity.gobra
 features/scalars features/scalars.gobra

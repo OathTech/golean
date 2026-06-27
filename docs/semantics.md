@@ -319,6 +319,29 @@ Initially, GoCore can fail on recursion or impose fuel. Long term, recursion
 should be handled by the proof/evaluation infrastructure, not by assuming all
 programs terminate.
 
+## Control Flow
+
+Statement execution returns an explicit outcome:
+
+```text
+ExecOutcome :=
+  | normal state
+  | returned state
+  | broke state
+  | continued state
+```
+
+This keeps ordinary sequencing, early returns, and loop control visible in the
+semantic interface. `if` evaluates a boolean condition and propagates the
+selected branch outcome. `while` consumes `continue` by moving to the next loop
+iteration, consumes `break` as normal loop exit, and propagates `return`.
+
+Gobra's frontend currently emits function-body `postprocessing` assignments to
+copy transformed local result variables back into result parameters. That is a
+frontend artifact, so `GobraToIR` rewrites Gobra `return` statements to execute
+those postprocessing assignments before returning. GoCore itself does not know
+about Gobra postprocessing.
+
 ## Assertions And Specs
 
 Go has no general `assert` statement and Gobra's Dafny/Viper-style annotations

@@ -1,0 +1,12 @@
+package pkg;
+
+func ifReturn(x int) (z int) {
+	z = 100;
+	if x > 0 {
+		z = x;
+		return;
+	} else {
+		z = 0 - x;
+	};
+	z = z + 100;
+};

@@ -187,8 +187,50 @@ private def coreCallTargetSequencingFunction : GoCore.Func := {
     ]
 }
 
+private def coreIfReturnFunction : GoCore.Func := {
+  name := "if_return_F",
+  args := #[coreParam "x"],
+  results := #[coreParam "z"],
+  body := .seqn #[
+    .assign (.var "z") (.intLit 100),
+    .ifThenElse (.greaterCmp (.var "x") (.intLit 0))
+      (.seqn #[
+        .assign (.var "z") (.var "x"),
+        .returnStmt
+      ])
+      (.assign (.var "z") (.sub (.intLit 0) (.var "x"))),
+    .assign (.var "z") (.add (.var "z") (.intLit 100))
+  ]
+}
+
+private def coreBreakContinueFunction : GoCore.Func := {
+  name := "break_continue_F",
+  args := #[],
+  results := #[coreParam "z"],
+  body := .block
+    #[{ id := "i", typ := .int }]
+    #[
+      .assign (.var "i") (.intLit 0),
+      .assign (.var "z") (.intLit 0),
+      .while (.lessCmp (.var "i") (.intLit 5))
+        (.seqn #[
+          .assign (.var "i") (.add (.var "i") (.intLit 1)),
+          .ifThenElse (.eqCmp (.var "i") (.intLit 2))
+            .continueStmt
+            (.seqn #[]),
+          .assign (.var "z") (.add (.var "z") (.var "i")),
+          .ifThenElse (.eqCmp (.var "i") (.intLit 4))
+            .breakStmt
+            (.seqn #[])
+        ])
+    ]
+}
+
 private def addExpr : GobraJson.Expr :=
   .add source (.var (.inParam x)) (.var (.inParam y))
+
+private def falseAssertion : GobraJson.Assertion :=
+  .exprAssertion source (.boolLit source false)
 
 private def addFunction : GobraJson.FunctionMember := {
   source,
@@ -220,6 +262,25 @@ private def bodylessFunction : GobraJson.FunctionMember := {
   body := none
 }
 
+private def specErasureFunction : GobraJson.FunctionMember := {
+  addFunction with
+  name := { source, name := "spec_erasure_F" },
+  pres := #[falseAssertion],
+  posts := #[falseAssertion],
+  body := some {
+    source,
+    decls := #[],
+    seqn := {
+      source,
+      stmts := #[
+        .assert source falseAssertion,
+        .singleAss source (.var source (.outParam z)) addExpr
+      ]
+    },
+    postprocessing := #[.assert source falseAssertion]
+  }
+}
+
 private def doc : GobraJson.Document := {
   schema := {
     name := "gobra.internal",
@@ -237,6 +298,10 @@ private def doc : GobraJson.Document := {
 
 private def bodylessDoc : GobraJson.Document := {
   doc with program := { doc.program with members := #[.function bodylessFunction] }
+}
+
+private def specErasureDoc : GobraJson.Document := {
+  doc with program := { doc.program with members := #[.function specErasureFunction] }
 }
 
 private def expectIntResult (name : String) (result : Except GoError GoLean.GobraEval.Result)
@@ -306,7 +371,12 @@ def main : IO UInt32 := do
   passed := passed && (← expectErrorStatus "GoCore mismatched equality stuck" (GoCore.runFunction 100 coreMismatchedEqualityFunction #[]) "stuck")
   passed := passed && (← expectIntResult "GoCore call target sequencing"
     (GoCore.runFunctionWithContext 100 [] #[coreShiftIndexFunction, coreCallTargetSequencingFunction] coreCallTargetSequencingFunction #[]) 901)
+  passed := passed && (← expectIntResult "GoCore if return positive" (GoCore.runFunction 100 coreIfReturnFunction #[.int 7]) 7)
+  passed := passed && (← expectIntResult "GoCore if return negative" (GoCore.runFunction 100 coreIfReturnFunction #[.int (-3)]) 103)
+  passed := passed && (← expectIntResult "GoCore break continue" (GoCore.runFunction 100 coreBreakContinueFunction #[]) 8)
   passed := passed && (← expectIntResult "add function" (GoLean.GobraEval.runFunctionInts 100 doc "add_F" #[2, 3]) 5)
+  passed := passed && (← expectIntResult "Gobra specs and asserts erased"
+    (GoLean.GobraEval.runFunctionInts 100 specErasureDoc "spec_erasure_F" #[2, 3]) 5)
   passed := passed && (← expectErrorStatus "missing function" (GoLean.GobraEval.runFunctionInts 100 doc "missing_F" #[]) "stuck")
   passed := passed && (← expectErrorStatus "wrong arity" (GoLean.GobraEval.runFunctionInts 100 doc "add_F" #[2]) "stuck")
   passed := passed && (← expectErrorStatus "bodyless function unsupported" (GoLean.GobraEval.runFunctionInts 100 bodylessDoc "bodyless_F" #[]) "unsupported")

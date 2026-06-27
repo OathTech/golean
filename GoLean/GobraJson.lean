@@ -18,14 +18,14 @@ structure KnownTag where
 private def knownTagNames : List String := [
   "Access", "Add", "Address", "Assert", "AtLeastCmp", "AtMostCmp",
   "ArrayLit", "ArrayT", "Block", "BoolLit", "BoolT", "BoundedInteger", "Decimal", "DefinedT",
-  "Deref", "Div", "EqCmp", "ExprAssertion", "Field", "FieldRef", "FullPerm",
+  "Break", "Continue", "Deref", "Div", "EqCmp", "ExprAssertion", "Field", "FieldRef", "FullPerm",
   "Function", "FunctionCall", "FunctionProxy", "GreaterCmp", "Implication", "In",
-  "Index", "IndexedExp", "Initialization", "IntLit", "IntT", "InterfaceT", "Internal", "ItfTupleTerminationMeasure",
+  "If", "Index", "IndexedExp", "Initialization", "IntLit", "IntT", "InterfaceT", "Internal", "ItfTupleTerminationMeasure",
   "Label", "LabelProxy", "LessCmp", "LocalVar", "MPredicate",
   "MPredicateAccess", "MPredicateProxy", "Method", "MethodBody", "MethodBodySeqn",
   "MethodCall", "MethodProxy", "Mod", "Mul", "Negation", "NonItfTupleTerminationMeasure",
   "None", "Old", "Or", "Out", "PointerT", "Predicate", "Program", "PureMethod",
-  "PureMethodCall", "Ref", "SepAnd", "Seqn", "Single", "SingleAss", "Some",
+  "PureMethodCall", "Ref", "Return", "SepAnd", "Seqn", "Single", "SingleAss", "Some",
   "StringT", "StructLit", "StructT", "Sub", "UnboundedInteger", "UneqCmp", "Var", "While",
   "WildcardPerm"
 ]
@@ -213,8 +213,12 @@ mutual
     | initialization (source : Source) (left : Variable)
     | singleAss (source : Source) (left : Assignee) (right : Expr)
     | assert (source : Source) (ass : Assertion)
+    | ifStmt (source : Source) (cond : Expr) (thn els : Stmt)
     | while (source : Source) (cond : Expr) (invs : Array Assertion)
         (terminationMeasure : Option TerminationMeasure) (body : Stmt)
+    | returnStmt (source : Source)
+    | breakStmt (source : Source) (label : Option String) (escLabel : String)
+    | continueStmt (source : Source) (label : Option String) (escLabel : String)
     | label (source : Source) (id : LabelProxy)
     | functionCall (source : Source) (func : FunctionProxy)
         (targets : Array Assignee) (args : Array Expr)
@@ -773,6 +777,13 @@ mutual
         return .assert
           (← decodeSource s!"{path}.source" (← GoLean.StrictJson.field path obj "source"))
           (← decodeAssertion s!"{path}.ass" (← GoLean.StrictJson.field path obj "ass"))
+    | "If" =>
+        let obj ← taggedObj path json "If" ["cond", "els", "source", "tag", "thn"]
+        return .ifStmt
+          (← decodeSource s!"{path}.source" (← GoLean.StrictJson.field path obj "source"))
+          (← decodeExpr s!"{path}.cond" (← GoLean.StrictJson.field path obj "cond"))
+          (← decodeStmt s!"{path}.thn" (← GoLean.StrictJson.field path obj "thn"))
+          (← decodeStmt s!"{path}.els" (← GoLean.StrictJson.field path obj "els"))
     | "While" =>
         let obj ← taggedObj path json "While" ["body", "cond", "invs", "source", "tag", "terminationMeasure"]
         return .while
@@ -781,6 +792,22 @@ mutual
           (← decodeArrayOf s!"{path}.invs" (← GoLean.StrictJson.field path obj "invs") decodeAssertion)
           (← decodeOptionOf s!"{path}.terminationMeasure" (← GoLean.StrictJson.field path obj "terminationMeasure") decodeTerminationMeasure)
           (← decodeStmt s!"{path}.body" (← GoLean.StrictJson.field path obj "body"))
+    | "Return" =>
+        let obj ← taggedObj path json "Return" ["source", "tag"]
+        return .returnStmt
+          (← decodeSource s!"{path}.source" (← GoLean.StrictJson.field path obj "source"))
+    | "Break" =>
+        let obj ← taggedObj path json "Break" ["escLabel", "label", "source", "tag"]
+        return .breakStmt
+          (← decodeSource s!"{path}.source" (← GoLean.StrictJson.field path obj "source"))
+          (← decodeOptionOf s!"{path}.label" (← GoLean.StrictJson.field path obj "label") GoLean.StrictJson.string)
+          (← GoLean.StrictJson.string s!"{path}.escLabel" (← GoLean.StrictJson.field path obj "escLabel"))
+    | "Continue" =>
+        let obj ← taggedObj path json "Continue" ["escLabel", "label", "source", "tag"]
+        return .continueStmt
+          (← decodeSource s!"{path}.source" (← GoLean.StrictJson.field path obj "source"))
+          (← decodeOptionOf s!"{path}.label" (← GoLean.StrictJson.field path obj "label") GoLean.StrictJson.string)
+          (← GoLean.StrictJson.string s!"{path}.escLabel" (← GoLean.StrictJson.field path obj "escLabel"))
     | "Label" =>
         let obj ← taggedObj path json "Label" ["id", "source", "tag"]
         return .label

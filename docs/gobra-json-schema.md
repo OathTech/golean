@@ -16,6 +16,8 @@ Current status:
 - `golean gobra-json-tags` reports observed constructor tags and fails on tags outside the current Lean allowlist.
 - The Lean importer decodes the top-level `Program`, source positions, types, parameters, proxies, smoke-corpus member kinds, specifications, termination measures, method bodies, statements, assignees, expressions, permissions, and assertions into typed structures.
 - `GobraToIR` lowers the currently supported executable Go subset into GoCore and erases Gobra-only assertions/specifications.
+- The current statement subset includes sequencing, blocks, initialization,
+  assignment, calls, `if`, `while`, `return`, and unlabeled `break`/`continue`.
 - Backend annotations are intentionally modeled as an uninhabited wire type for now. Empty arrays pass; any emitted annotation fails validation until we add an explicit typed representation.
 
 Next implementation step:

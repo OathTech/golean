@@ -1,5 +1,7 @@
 # id	go_dir	gobra_json	function	arg_ints	expected_status	features	expected_reason
 plain/while1	Differential/plain/while1	artifacts/gobra-smoke/work/features/while1/while1.gobra.internal.json	test_bda1d7d_F	6,7	ok	ints,loops	-
+plain/if-return	Differential/plain/if-return	artifacts/gobra-smoke/work/features/if-return/if-return.gobra.internal.json	ifReturn_bda1d7d_F	7	ok	ints,if,return	-
+plain/break-continue	Differential/plain/break-continue	artifacts/gobra-smoke/work/features/break-continue/break-continue.gobra.internal.json	breakContinue_bda1d7d_F	-	ok	ints,loops,if,break,continue	-
 plain/multi-assign	Differential/plain/multi-assign	artifacts/gobra-smoke/work/features/multi-assign/multi-assign.gobra.internal.json	foo_bda1d7d_F	-	ok	ints,multi_assign	-
 plain/pointer-identity	Differential/plain/pointer-identity	artifacts/gobra-smoke/work/features/pointer-identity/pointer-identity.gobra.internal.json	test_bda1d7d_F	-	ok	pointers,identity	-
 plain/swap	Differential/plain/swap	artifacts/gobra-smoke/work/examples/swap/swap.gobra.internal.json	client_bda1d7d_F	-	ok	structs,pointers,fields,calls	-

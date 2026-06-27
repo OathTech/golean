@@ -45,6 +45,8 @@ backlog items.
 - Replace `execStmt : ExecState -> Except ... ExecState` with an explicit
   `ExecOutcome` for normal completion, return, break, continue, panic,
   unsupported, and stuck behavior.
+- Add broader control-flow coverage around nested `if`, early `return`,
+  unlabeled `break`/`continue`, and later labeled control flow.
 - Make expression evaluation able to grow to calls-in-expressions, allocation,
   append, map operations, and channel operations without changing its public
   shape again.
@@ -86,6 +88,8 @@ backlog items.
 - Added direct function and method calls with fresh local frames and shared heap.
 - Made `examples/swap` execute as ordinary Go after Gobra assertions/specs are
   erased at lowering.
+- Added GoCore `if`, explicit `return`, and unlabeled `break`/`continue`, with
+  Gobra-fronted differential smoke coverage.
 
 ## Proof Generation
 
