@@ -159,8 +159,24 @@ private def runJson : GoLean.GobraEval.Result → Json
         ("values", Json.arr (values.map goValueJson))
       ]
 
+private def errorStatus (message : String) : String :=
+  if message == "GoCore assertion failed" ||
+      message.startsWith "GoCore precondition failed" ||
+      message.startsWith "GoCore postcondition failed" then
+    "assertion_error"
+  else if message.startsWith "unsupported GoCore execution feature:" then
+    "unsupported"
+  else if message.startsWith "GoCore execution fuel exhausted" ||
+      message.startsWith "unbound GoCore" ||
+      message.startsWith "expected " ||
+      message.startsWith "nil pointer dereference" ||
+      message.startsWith "GoCore function not found:" then
+    "stuck"
+  else
+    "error"
+
 private def errorJson (message : String) : Json :=
-  Json.mkObj [("status", Json.str "error"), ("message", Json.str message)]
+  Json.mkObj [("status", Json.str (errorStatus message)), ("message", Json.str message)]
 
 private def runGobraJsonCheck (args : List String) : IO UInt32 := do
   let cwd ← IO.currentDir
