@@ -20,17 +20,19 @@ structure ExportResult where
   source : FilePath
   scratchSource : FilePath
   internalPath : FilePath
+  internalJsonPath : FilePath
   vprPath : FilePath
   stdoutPath : FilePath
   stderrPath : FilePath
   resultPath : FilePath
   exitCode : UInt32
   internalExists : Bool
+  internalJsonExists : Bool
   vprExists : Bool
   deriving Repr
 
 def ExportResult.success (r : ExportResult) : Bool :=
-  r.exitCode == 0 && r.internalExists && r.vprExists
+  r.exitCode == 0 && r.internalExists && r.internalJsonExists && r.vprExists
 
 private def jsonPath (p : FilePath) : Json :=
   Json.str p.toString
@@ -41,12 +43,14 @@ def ExportResult.toJson (r : ExportResult) : Json :=
     ("source", jsonPath r.source),
     ("scratchSource", jsonPath r.scratchSource),
     ("internalPath", jsonPath r.internalPath),
+    ("internalJsonPath", jsonPath r.internalJsonPath),
     ("vprPath", jsonPath r.vprPath),
     ("stdoutPath", jsonPath r.stdoutPath),
     ("stderrPath", jsonPath r.stderrPath),
     ("resultPath", jsonPath r.resultPath),
     ("exitCode", Lean.toJson r.exitCode.toNat),
     ("internalExists", Lean.toJson r.internalExists),
+    ("internalJsonExists", Lean.toJson r.internalJsonExists),
     ("vprExists", Lean.toJson r.vprExists),
     ("success", Lean.toJson r.success)
   ]
@@ -113,9 +117,10 @@ def exportOne (opts : ExportOptions) (entry : CorpusEntry) : IO ExportResult := 
   let stderrPath := resultDir / "stderr.txt"
   let resultPath := resultDir / "result.json"
   let internalPath := postfixFile scratchSource "internal"
+  let internalJsonPath := postfixFile scratchSource "internal.json"
   let vprPath := postfixFile scratchSource "vpr"
 
-  let gobraCommand := s!"run --noVerify --printInternal --printVpr -i {scratchSource}"
+  let gobraCommand := s!"run --noVerify --printInternal --printInternalJson --printVpr -i {scratchSource}"
   let output ← IO.Process.output {
     cmd := "bash",
     args := #[opts.gobraSbt.toString, gobraCommand]
@@ -124,18 +129,21 @@ def exportOne (opts : ExportOptions) (entry : CorpusEntry) : IO ExportResult := 
   IO.FS.writeFile stderrPath output.stderr
 
   let internalExists ← internalPath.pathExists
+  let internalJsonExists ← internalJsonPath.pathExists
   let vprExists ← vprPath.pathExists
   let result : ExportResult := {
     id := entry.id,
     source := entry.source,
     scratchSource,
     internalPath,
+    internalJsonPath,
     vprPath,
     stdoutPath,
     stderrPath,
     resultPath,
     exitCode := output.exitCode,
     internalExists,
+    internalJsonExists,
     vprExists
   }
   writeJsonFile resultPath result.toJson
