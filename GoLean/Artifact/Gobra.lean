@@ -75,7 +75,7 @@ private def copyTextFile (source dest : FilePath) : IO Unit := do
 private def firstField? (text : String) : Option String :=
   text.trimAscii.toString.splitOn " " |>.filter (fun s => !s.isEmpty) |>.head?
 
-private def sha256File (path : FilePath) : IO String := do
+def sha256File (path : FilePath) : IO String := do
   let shasum ← IO.Process.output {
     cmd := "shasum",
     args := #["-a", "256", path.toString]

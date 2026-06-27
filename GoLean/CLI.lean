@@ -26,6 +26,11 @@ structure GobraRunArgs where
   ignoreAssertAt : Option (Nat × Nat) := none
   deriving Repr
 
+structure GobraArtifactCheckArgs where
+  manifest : Option FilePath := none
+  internalJson : Option FilePath := none
+  deriving Repr
+
 private def usage : String :=
   "usage:\n" ++
   "  golean gobra-export --manifest <file> [--out <dir>] [--gobra-sbt <path>]\n" ++
@@ -33,6 +38,7 @@ private def usage : String :=
   "  golean gobra-json-check --input <file>\n" ++
   "  golean gobra-json-tags --input <file>\n" ++
   "  golean gobra-json-run --input <file> --function <name> [--arg-int <n> ...] [--fuel <n>] [--ignore-assert-at <line>:<column>]\n" ++
+  "  golean gobra-artifact-check --manifest <file> --internal-json <file>\n" ++
   "  golean observation-eq --left <json> --right <json>\n"
 
 private def parseGobraExportArgs : List String → GobraExportArgs → Except String GobraExportArgs
@@ -119,6 +125,15 @@ private def parseObservationEqArgs : List String → Option String → Option St
   | "--right" :: json :: rest, left, none => parseObservationEqArgs rest left (some json)
   | "--right" :: _ :: _, _, some _ => .error s!"duplicate --right\n{usage}"
   | flag :: _, _, _ => .error s!"unknown or incomplete option: {flag}\n{usage}"
+
+private def parseGobraArtifactCheckArgs : List String → GobraArtifactCheckArgs →
+    Except String GobraArtifactCheckArgs
+  | [], cfg => .ok cfg
+  | "--manifest" :: path :: rest, cfg =>
+      parseGobraArtifactCheckArgs rest { cfg with manifest := some (FilePath.mk path) }
+  | "--internal-json" :: path :: rest, cfg =>
+      parseGobraArtifactCheckArgs rest { cfg with internalJson := some (FilePath.mk path) }
+  | flag :: _, _ => .error s!"unknown or incomplete option: {flag}\n{usage}"
 
 private def parseJsonInt (path value : String) : Except String Int := do
   GoLean.StrictJson.int path (← Json.parse value)
@@ -306,6 +321,97 @@ private def runObservationEq (args : List String) : IO UInt32 := do
             IO.eprintln s!"right: {right.compress}"
             return 1
 
+private def artifactRecordMatches (internalJson : FilePath) (path : String) : Bool :=
+  (FilePath.mk path).normalize.toString == internalJson.normalize.toString
+
+private def checkArtifactRecord (path : String) (internalJson : FilePath) (json : Json) :
+    IO (Except String Bool) := do
+  match (do
+    let obj ← StrictJson.obj path json
+    let recordInternalJson ←
+      StrictJson.string s!"{path}.internalJsonPath" (← StrictJson.field path obj "internalJsonPath")
+    pure (obj, recordInternalJson)
+  ) with
+  | .error err => return .error err
+  | .ok (obj, recordInternalJson) =>
+      if !artifactRecordMatches internalJson recordInternalJson then
+        return .ok false
+      let parsed := (do
+        let success ← StrictJson.bool s!"{path}.success" (← StrictJson.field path obj "success")
+        let source ← StrictJson.string s!"{path}.source" (← StrictJson.field path obj "source")
+        let sourceSha256 ← StrictJson.string s!"{path}.sourceSha256" (← StrictJson.field path obj "sourceSha256")
+        let scratchSource ← StrictJson.string s!"{path}.scratchSource" (← StrictJson.field path obj "scratchSource")
+        let scratchSourceSha256 ←
+          StrictJson.string s!"{path}.scratchSourceSha256" (← StrictJson.field path obj "scratchSourceSha256")
+        pure (success, source, sourceSha256, scratchSource, scratchSourceSha256)
+      )
+      match parsed with
+      | .error err => return .error err
+      | .ok (success, source, sourceSha256, scratchSource, scratchSourceSha256) =>
+          if !success then
+            return .error s!"{path}: artifact record is not successful"
+          let sourcePath := FilePath.mk source
+          let scratchSourcePath := FilePath.mk scratchSource
+          if !(← sourcePath.pathExists) then
+            return .error s!"{path}: source does not exist: {sourcePath}"
+          if !(← scratchSourcePath.pathExists) then
+            return .error s!"{path}: scratch source does not exist: {scratchSourcePath}"
+          let actualSourceSha256 ← Artifact.Gobra.sha256File sourcePath
+          let actualScratchSourceSha256 ← Artifact.Gobra.sha256File scratchSourcePath
+          if actualSourceSha256 != sourceSha256 then
+            return .error s!"{path}: source hash changed for {sourcePath}"
+          if actualScratchSourceSha256 != scratchSourceSha256 then
+            return .error s!"{path}: scratch source hash changed for {scratchSourcePath}"
+          if sourceSha256 != scratchSourceSha256 then
+            return .error s!"{path}: source and scratch source hashes differ"
+          return .ok true
+
+private def checkArtifactManifest (manifest internalJson : FilePath) : IO (Except String Unit) := do
+  match Json.parse (← IO.FS.readFile manifest) with
+  | .error err => return .error err
+  | .ok json =>
+      match (do
+        let obj ← StrictJson.obj "manifest" json
+        StrictJson.array "manifest.results" (← StrictJson.field "manifest" obj "results")
+      ) with
+      | .error err => return .error err
+      | .ok results => do
+          let mut matchCount := 0
+          for i in [:results.size] do
+            match results[i]? with
+            | some recordJson =>
+                match ← checkArtifactRecord s!"manifest.results[{i}]" internalJson recordJson with
+                | .error err => return .error err
+                | .ok true => matchCount := matchCount + 1
+                | .ok false => pure ()
+            | none => return .error s!"manifest.results[{i}]: missing artifact record"
+          if matchCount == 1 then
+            return .ok ()
+          else
+            return .error s!"expected exactly one artifact record for {internalJson}, found {matchCount}"
+
+private def runGobraArtifactCheck (args : List String) : IO UInt32 := do
+  let cwd ← IO.currentDir
+  match parseGobraArtifactCheckArgs args {} with
+  | .error err =>
+      IO.eprintln err
+      return 2
+  | .ok cfg =>
+      match cfg.manifest, cfg.internalJson with
+      | some manifest, some internalJson =>
+          let manifest := absoluteFrom cwd manifest
+          let internalJson := absoluteFrom cwd internalJson
+          match ← checkArtifactManifest manifest internalJson with
+          | .ok _ =>
+              IO.println s!"ok: {internalJson}"
+              return 0
+          | .error err =>
+              IO.eprintln err
+              return 1
+      | _, _ =>
+          IO.eprintln s!"provide --manifest <file> and --internal-json <file>\n{usage}"
+          return 2
+
 private def runGobraJsonCheck (args : List String) : IO UInt32 := do
   let cwd ← IO.currentDir
   match parseInputOnly args none with
@@ -395,6 +501,7 @@ def main (args : List String) : IO UInt32 := do
   | "gobra-json-check" :: rest => runGobraJsonCheck rest
   | "gobra-json-tags" :: rest => runGobraJsonTags rest
   | "gobra-json-run" :: rest => runGobraJsonRun rest
+  | "gobra-artifact-check" :: rest => runGobraArtifactCheck rest
   | "observation-eq" :: rest => runObservationEq rest
   | [] =>
       IO.println usage

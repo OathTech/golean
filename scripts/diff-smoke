@@ -85,6 +85,7 @@ while IFS=$'\t' read -r id go_dir gobra_json function_name arg_ints ignore_asser
     echo "Gobra JSON artifact not found for $id: $gobra_json" >&2
     exit 2
   fi
+  lean gobra-artifact-check --manifest "$OUT/manifest.json" --internal-json "$gobra_json" >/dev/null
 
   lean_args=(gobra-json-run --input "$gobra_json" --function "$function_name")
   if [[ "$arg_ints" != "-" ]]; then
