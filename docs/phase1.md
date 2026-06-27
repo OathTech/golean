@@ -18,9 +18,11 @@ For each corpus entry, the exporter:
 
 - checks that the source exists;
 - copies the `.gobra` file into `artifacts/.../work`;
-- invokes Gobra with `--noVerify --printInternal --printVpr`;
+- invokes Gobra with `--noVerify --printInternal --printInternalJson --printVpr`;
 - records stdout, stderr, exit code, and artifact paths;
 - writes per-entry `result.json` and an aggregate `manifest.json`.
+- validates each emitted `.internal.json` with the strict Lean decoder.
+- executes the integer `while1` smoke function through the Lean-side Gobra JSON evaluator.
 
 The source copy matters because Gobra writes `.internal` and `.vpr` files beside
 the input file. Running on the copied file keeps generated artifacts out of
@@ -46,5 +48,5 @@ All four currently export successfully on this machine.
 - Avoid starting sbt once per corpus entry.
 - Add a richer corpus manifest with expected status and feature tags.
 - Add stable content hashes for generated `.internal` and `.vpr` artifacts.
-- Add a Gobra exporter that emits a machine-readable internal IR directly,
-  rather than relying on pretty-printed `.internal` text.
+- Broaden `gobra-json-run` beyond the current integer/control-flow subset.
+- Add a Go-source runner so smoke cases can compare Go execution against Lean execution.

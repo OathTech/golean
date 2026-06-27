@@ -12,3 +12,7 @@ root = "Main"
 [[lean_exe]]
 name = "gobra-json-tests"
 root = "Tests.GobraJson"
+
+[[lean_exe]]
+name = "gobra-eval-tests"
+root = "Tests.GobraEval"

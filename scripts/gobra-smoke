@@ -24,3 +24,13 @@ for json_file in "${json_files[@]}"; do
 done
 
 echo "validated ${#json_files[@]} Gobra internal JSON artifact(s)"
+
+while1_json="$OUT/work/features/while1/while1.gobra.internal.json"
+while1_expected='{"status":"ok","values":[{"tag":"int","value":42}]}'
+while1_actual="$(lake exe golean gobra-json-run --input "$while1_json" --function test_bda1d7d_F --arg-int 6 --arg-int 7)"
+if [[ "$while1_actual" != "$while1_expected" ]]; then
+  echo "unexpected while1 Lean execution result: $while1_actual" >&2
+  exit 1
+fi
+
+echo "executed while1 Gobra internal JSON in Lean"

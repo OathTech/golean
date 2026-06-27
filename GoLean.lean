@@ -6,5 +6,6 @@ import GoLean.IR
 import GoLean.DiffTest
 import GoLean.StrictJson
 import GoLean.GobraJson
+import GoLean.GobraEval
 import GoLean.Artifact.Gobra
 import GoLean.CLI
