@@ -34,7 +34,7 @@ structure ExportResult where
   deriving Repr
 
 def ExportResult.success (r : ExportResult) : Bool :=
-  r.exitCode == 0 && r.internalExists && r.internalJsonExists && r.vprExists
+  r.exitCode == 0 && r.internalExists && r.internalJsonExists
 
 private def jsonPath (p : FilePath) : Json :=
   Json.str p.toString
@@ -150,7 +150,7 @@ def exportOne (opts : ExportOptions) (entry : CorpusEntry) : IO ExportResult := 
   let internalJsonPath := postfixFile scratchSource "internal.json"
   let vprPath := postfixFile scratchSource "vpr"
 
-  let gobraCommand := s!"run --noVerify --printInternal --printInternalJson --printVpr -i {scratchSource}"
+  let gobraCommand := s!"run --noVerify --printInternal --printInternalJson -i {scratchSource}"
   let output ← IO.Process.output {
     cmd := "bash",
     args := #[opts.gobraSbt.toString, gobraCommand]

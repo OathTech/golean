@@ -76,6 +76,8 @@ inductive Stmt where
   | initialization (var : Param)
   | assign (left : Assignee) (right : Expr)
   | makeSlice (target : Assignee) (elem : Ty) (len : Expr) (cap : Option Expr)
+  | appendSlice (target : Assignee) (slice elems : Expr)
+  | copySlice (target : Assignee) (dst src : Expr)
   | call (targets : Array Assignee) (name : String) (args : Array Expr)
   | ifThenElse (cond : Expr) (thenBranch elseBranch : Stmt)
   | while (cond : Expr) (body : Stmt)
@@ -441,6 +443,10 @@ private def valueAsBool : GoValue → Except GoError Bool
   | .bool value => return value
   | other => stuck s!"expected bool value, got {repr other}"
 
+private def valueAsSlice : GoValue → Except GoError SliceValue
+  | .slice value => return value
+  | other => stuck s!"expected slice value, got {repr other}"
+
 private def valueAsLoc : GoValue → Except GoError Loc
   | .addr loc => return loc
   | .nil => panic "nil pointer dereference"
@@ -658,6 +664,57 @@ mutual
       (values : Array GoValue) : Except GoError ExecState := do
     assignLocs state (← evalAssigneeLocs state targets) values
 
+  partial def sliceVisibleValues (state : ExecState) (slice : SliceValue) :
+      Except GoError (Array GoValue) := do
+    validateSlice slice
+    let mut values := #[]
+    for i in [:slice.len] do
+      values := values.push (← loadLoc state (← sliceIndexLoc slice (Int.ofNat i)))
+    return values
+
+  partial def execCopySlice (state : ExecState) (target : Assignee) (dstExpr srcExpr : Expr) :
+      Except GoError ExecState := do
+    let targetLoc ← evalAssigneeLoc state target
+    let dstSlice ← valueAsSlice (← evalExpr state dstExpr)
+    let srcSlice ← valueAsSlice (← evalExpr state srcExpr)
+    validateSlice dstSlice
+    validateSlice srcSlice
+    let count := Nat.min dstSlice.len srcSlice.len
+    let mut values := #[]
+    for i in [:count] do
+      values := values.push (← loadLoc state (← sliceIndexLoc srcSlice (Int.ofNat i)))
+    let mut state := state
+    let mut i := 0
+    for value in values do
+      state ← storeLoc state (← sliceIndexLoc dstSlice (Int.ofNat i)) value
+      i := i + 1
+    assignLoc state targetLoc (.int (Int.ofNat count))
+
+  partial def execAppendSlice (state : ExecState) (target : Assignee) (sliceExpr elemsExpr : Expr) :
+      Except GoError ExecState := do
+    let targetLoc ← evalAssigneeLoc state target
+    let slice ← valueAsSlice (← evalExpr state sliceExpr)
+    let elems ← valueAsSlice (← evalExpr state elemsExpr)
+    validateSlice slice
+    validateSlice elems
+    let elemValues ← sliceVisibleValues state elems
+    let newLen := slice.len + elemValues.size
+    if newLen <= slice.cap then
+      let mut state := state
+      let mut i := 0
+      for value in elemValues do
+        match slice.base with
+        | some base =>
+            state ← storeLoc state (.index base (Int.ofNat (slice.offset + slice.len + i))) value
+            i := i + 1
+        | none => stuck s!"cannot append {elemValues.size} element(s) into nil slice in place"
+      assignLoc state targetLoc (.slice { slice with len := newLen })
+    else
+      let oldValues ← sliceVisibleValues state slice
+      let backing := GoValue.array (oldValues ++ elemValues)
+      let (base, state) := state.alloc backing
+      assignLoc state targetLoc (.slice { base := some base, offset := 0, len := newLen, cap := newLen })
+
   partial def execMakeSlice (state : ExecState) (target : Assignee) (elem : Ty)
       (lenExpr : Expr) (capExpr : Option Expr) : Except GoError ExecState := do
     let target ← evalAssigneeLoc state target
@@ -742,6 +799,8 @@ mutual
         let value ← evalExpr state right
         return .normal (← assignLoc state loc value)
     | .makeSlice target elem len cap => return .normal (← execMakeSlice state target elem len cap)
+    | .appendSlice target slice elems => return .normal (← execAppendSlice state target slice elems)
+    | .copySlice target dst src => return .normal (← execCopySlice state target dst src)
     | .call targets name args => return .normal (← execFunctionCall fuel state targets name args)
     | .ifThenElse cond thenBranch elseBranch => do
         if ← valueAsBool (← evalExpr state cond) then

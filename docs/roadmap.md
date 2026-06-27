@@ -96,7 +96,9 @@ Status: underway.
 Deliverables:
 
 - Maintain `third_party/gobra` as the `septract/gobra-json` fork.
-- Keep `--printInternalJson` strict and restrictive.
+- Keep `--printInternalJson` strict and restrictive, while allowing the fork to
+  add plain-Go frontend nodes where Gobra's verifier-specific builtins would
+  otherwise reject valid Go.
 - Treat Lean's wire ADT as the schema authority.
 - Reject missing fields, extra fields, unknown tags, wrong scalar types, and
   unsupported nested nodes.
@@ -191,8 +193,8 @@ now includes `if`, explicit `return`, and unlabeled `break`/`continue`.
 Fixed-size array `len` and `cap` are supported for array values.
 Zero-value arrays, nested arrays, arrays through function parameters and
 results, pointer-to-array indexing/assignment, array-to-slice aliasing,
-nonzero-capacity slice `make`, and slice literals are covered by differential
-smoke tests.
+nonzero-capacity slice `make`, slice literals, overlapping slice `copy`, and
+slice `append` aliasing/growth are covered by differential smoke tests.
 
 Feature order should be driven by corpus failures and semantic dependencies,
 but the expected progression is:
@@ -282,7 +284,8 @@ against GoCore-level specification hooks.
 2. Expand deterministic array and slice coverage around value-copy and aliasing
    edge cases.
 3. Continue slices using the descriptor/backing-location model in
-   `docs/slice-model.md`, adding `copy` before append.
+   `docs/slice-model.md`, especially zero-capacity edge cases, string slicing,
+   and append growth policy refinement.
 4. Keep extending scalar coverage toward Go-sized word behavior and conversions.
 5. Add more generated/deterministic differential cases with feature tags and
    expected observation status.

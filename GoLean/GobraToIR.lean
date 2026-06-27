@@ -222,6 +222,10 @@ partial def lowerStmtWithReturnPost (returnPostprocessing : Array GoLean.GoCore.
         | .slice elem => .makeSlice (.var target.id) elem (lowerExpr lenArg) (capArg.map lowerExpr)
         | other => .unsupported s!"MakeSlice with non-slice type {repr other}"
     | .newSliceLit _ target memberType elems => lowerNewSliceLit target memberType elems
+    | .goSliceAppend _ target slice elems =>
+        .appendSlice (.var target.id) (lowerExpr slice) (lowerExpr elems)
+    | .goSliceCopy _ target dst src =>
+        .copySlice (.var target.id) (lowerExpr dst) (lowerExpr src)
     | .assert .. => .seqn #[]
     | .ifStmt _ cond thn els =>
         .ifThenElse (lowerExpr cond)

@@ -18,16 +18,16 @@ For each corpus entry, the exporter:
 
 - checks that the source exists;
 - copies the `.gobra` file into `artifacts/.../work`;
-- invokes Gobra with `--noVerify --printInternal --printInternalJson --printVpr`;
+- invokes Gobra with `--noVerify --printInternal --printInternalJson`;
 - records stdout, stderr, exit code, and artifact paths;
 - writes per-entry `result.json` and an aggregate `manifest.json`.
 - validates each emitted `.internal.json` with the strict Lean decoder.
 - lowers Gobra JSON into the GoCore deep embedding.
 - executes the integer `while1`, `multi-assign`, and expected-failing `pointer-identity` smoke functions through the Lean-side GoCore evaluator.
 
-The source copy matters because Gobra writes `.internal` and `.vpr` files beside
-the input file. Running on the copied file keeps generated artifacts out of
-`third_party/gobra`.
+The source copy matters because Gobra writes `.internal` and `.internal.json`
+files beside the input file. Running on the copied file keeps generated
+artifacts out of `third_party/gobra`.
 
 Gobra is tracked as a submodule at `third_party/gobra`, using the
 `https://github.com/septract/gobra-json` fork and the local `gobra-json` branch

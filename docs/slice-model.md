@@ -148,7 +148,8 @@ Add GoCore operations for:
 - `indexGet` and `indexAddr` over slice values;
 - `length` and `capacity` over slices;
 - slice literals by allocating an array backing store and slicing it;
-- `append` and `copy`, after the basic descriptor model is in place.
+- `append` and `copy` as primitive slice operations over descriptor/backing
+  storage.
 
 Bounds failures should be `panic`. Malformed descriptors, missing backing
 storage, negative lengths after integer conversion, unsupported base kinds, and
@@ -259,8 +260,8 @@ descriptor should not need to change.
 3. Add `make` and slice literals with zero-initialized backing storage.
 4. Add array-to-slice and pointer-to-array slicing, preserving addressability.
 5. Add slice-to-slice and full-slice expressions.
-6. Add `copy`.
-7. Add `append`, with differential tests that separate observable element
+6. Added `copy`, including overlap-preserving differential coverage.
+7. Added `append`, with differential tests that separate observable element
    behavior from implementation-specific capacity growth.
 8. Keep every unsupported Gobra wire node and every unsupported GoCore operation
    fail-closed.

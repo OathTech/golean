@@ -277,13 +277,16 @@ Currently supported:
 - slice literals;
 - slice `len`, `cap`, indexing, indexed assignment, two-index slicing, and
   three-index slicing;
+- `copy` over slices, including overlapping source/destination ranges;
+- `append` over slices, including in-capacity writes and fresh backing-store
+  allocation when capacity is exceeded;
 - out-of-range indexing as a `panic` observation.
 
 Still pending:
 
-- `append`, `copy`, zero-capacity `make` edge cases, and string slicing. See
-  `docs/slice-model.md` for the selected descriptor/backing-store design and
-  open refinement points.
+- zero-capacity `make` edge cases, string slicing, and append growth policy
+  refinement. See `docs/slice-model.md` for the selected
+  descriptor/backing-store design and open refinement points.
 
 ## Defined Types
 

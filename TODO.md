@@ -47,10 +47,10 @@ backlog items.
   unsupported, and stuck behavior.
 - Add broader control-flow coverage around nested `if`, early `return`, and
   later labeled control flow.
-- Make expression evaluation able to grow to calls-in-expressions, allocation,
-  append, map operations, and channel operations without changing its public
-  shape again.
-- Add slices with descriptor values over backing locations, following
+- Keep expression evaluation able to grow to calls-in-expressions, allocation,
+  map operations, and channel operations without changing its public shape
+  again.
+- Continue slices with descriptor values over backing locations, following
   `docs/slice-model.md`. Do not model slices as copied vectors.
 - Keep append capacity growth explicit in tests: either avoid observing capacity
   after a reallocating append, or tag the case as Go-runtime-specific until the
@@ -59,8 +59,9 @@ backlog items.
   especially allocation limits, append growth, zero-capacity slices, string
   slicing, and panic-message details.
 - Treat Gobra's permission-argument variants of `copy` and `append` as
-  frontend artifacts; do not add Gobra permission semantics to GoCore just to
-  support them.
+  frontend artifacts. The Gobra fork may enrich `--printInternalJson` with
+  plain-Go nodes such as `GoSliceCopy` and `GoSliceAppend`; do not add Gobra
+  permission semantics to GoCore just to support them.
 - Evaluate lvalues and rvalues before committing stores, so multiple assignment
   and call assignment match Go's sequencing rules.
 - Bounds-check indexed locations when evaluating the lvalue, including
@@ -114,6 +115,10 @@ backlog items.
   with differential coverage.
 - Added Gobra `NewSliceLit` decoding/lowering and slice literal differential
   coverage.
+- Enriched the Gobra JSON fork so `--printInternalJson` accepts plain Go
+  `copy`/`append` and emits `GoSliceCopy`/`GoSliceAppend`; added GoCore
+  execution and differential coverage for overlapping copy and append
+  in-place/growth aliasing.
 
 ## Proof Generation
 

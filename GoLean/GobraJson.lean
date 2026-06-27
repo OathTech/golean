@@ -16,17 +16,17 @@ structure KnownTag where
   deriving Repr, BEq
 
 private def knownTagNames : List String := [
-  "Access", "Add", "Address", "Assert", "AtLeastCmp", "AtMostCmp",
+  "Access", "Add", "Address", "Assert", "AtLeastCmp", "AtMostCmp", "Capacity",
   "ArrayLit", "ArrayT", "Block", "BoolLit", "BoolT", "BoundedInteger", "Decimal", "DefinedT", "DfltVal",
   "Break", "Continue", "Deref", "Div", "EqCmp", "ExprAssertion", "Field", "FieldRef", "FullPerm",
-  "Function", "FunctionCall", "FunctionProxy", "GreaterCmp", "Implication", "In",
+  "Function", "FunctionCall", "FunctionProxy", "GoSliceAppend", "GoSliceCopy", "GreaterCmp", "Implication", "In",
   "If", "Index", "IndexedExp", "Initialization", "IntLit", "IntT", "InterfaceT", "Internal", "ItfTupleTerminationMeasure",
   "Label", "LabelProxy", "Length", "LessCmp", "LocalVar", "MPredicate",
   "MPredicateAccess", "MPredicateProxy", "MakeSlice", "Method", "MethodBody", "MethodBodySeqn",
   "MethodCall", "MethodProxy", "Mod", "Mul", "Negation", "NewSliceLit", "NonItfTupleTerminationMeasure",
   "None", "Old", "Or", "Out", "PointerT", "Predicate", "Program", "PureMethod",
   "PureMethodCall", "Ref", "Return", "SepAnd", "Seqn", "Single", "SingleAss", "Slice", "Some",
-  "StringT", "StructLit", "StructT", "Sub", "UnboundedInteger", "UneqCmp", "Var", "While",
+  "SliceT", "StringT", "StructLit", "StructT", "Sub", "UnboundedInteger", "UneqCmp", "Var", "While",
   "WildcardPerm"
 ]
 
@@ -220,6 +220,8 @@ mutual
         (lenArg : Expr) (capArg : Option Expr)
     | newSliceLit (source : Source) (target : Variable) (memberType : Ty)
         (elems : Array ArrayLitElem)
+    | goSliceAppend (source : Source) (target : Variable) (slice elems : Expr)
+    | goSliceCopy (source : Source) (target : Variable) (dst src : Expr)
     | assert (source : Source) (ass : Assertion)
     | ifStmt (source : Source) (cond : Expr) (thn els : Stmt)
     | while (source : Source) (cond : Expr) (invs : Array Assertion)
@@ -823,6 +825,20 @@ mutual
           (← decodeVariableWithTag "LocalVar" s!"{path}.target" (← GoLean.StrictJson.field path obj "target"))
           (← decodeTy s!"{path}.memberType" (← GoLean.StrictJson.field path obj "memberType"))
           (← decodeArrayOf s!"{path}.elems" (← GoLean.StrictJson.field path obj "elems") decodeArrayLitElem)
+    | "GoSliceAppend" =>
+        let obj ← taggedObj path json "GoSliceAppend" ["elems", "slice", "source", "tag", "target"]
+        return .goSliceAppend
+          (← decodeSource s!"{path}.source" (← GoLean.StrictJson.field path obj "source"))
+          (← decodeVariableWithTag "LocalVar" s!"{path}.target" (← GoLean.StrictJson.field path obj "target"))
+          (← decodeExpr s!"{path}.slice" (← GoLean.StrictJson.field path obj "slice"))
+          (← decodeExpr s!"{path}.elems" (← GoLean.StrictJson.field path obj "elems"))
+    | "GoSliceCopy" =>
+        let obj ← taggedObj path json "GoSliceCopy" ["dst", "source", "src", "tag", "target"]
+        return .goSliceCopy
+          (← decodeSource s!"{path}.source" (← GoLean.StrictJson.field path obj "source"))
+          (← decodeVariableWithTag "LocalVar" s!"{path}.target" (← GoLean.StrictJson.field path obj "target"))
+          (← decodeExpr s!"{path}.dst" (← GoLean.StrictJson.field path obj "dst"))
+          (← decodeExpr s!"{path}.src" (← GoLean.StrictJson.field path obj "src"))
     | "Assert" =>
         let obj ← taggedObj path json "Assert" ["ass", "source", "tag"]
         return .assert
