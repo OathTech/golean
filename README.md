@@ -17,6 +17,13 @@ Initial direction:
 - Proof and VCG layers can later reuse ideas from Aeneas, Goose/Perennial,
   Strata, and Iris-Lean.
 
+Design and roadmap docs:
+
+- `docs/architecture.md`: project layers and ownership boundaries.
+- `docs/semantics.md`: GoCore semantics design.
+- `docs/roadmap.md`: phased implementation roadmap.
+- `TODO.md`: tactical backlog.
+
 Useful commands:
 
 ```sh
