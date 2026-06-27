@@ -17,7 +17,7 @@ structure KnownTag where
 
 private def knownTagNames : List String := [
   "Access", "Add", "Address", "Assert", "AtLeastCmp", "AtMostCmp",
-  "ArrayLit", "ArrayT", "Block", "BoolLit", "BoolT", "BoundedInteger", "Decimal", "DefinedT",
+  "ArrayLit", "ArrayT", "Block", "BoolLit", "BoolT", "BoundedInteger", "Decimal", "DefinedT", "DfltVal",
   "Break", "Continue", "Deref", "Div", "EqCmp", "ExprAssertion", "Field", "FieldRef", "FullPerm",
   "Function", "FunctionCall", "FunctionProxy", "GreaterCmp", "Implication", "In",
   "If", "Index", "IndexedExp", "Initialization", "IntLit", "IntT", "InterfaceT", "Internal", "ItfTupleTerminationMeasure",
@@ -184,6 +184,7 @@ mutual
     | ref (source : Source) (ref : Assignee) (typ : Ty)
     | arrayLit (source : Source) (length : Int) (memberType : Ty)
         (elems : Array ArrayLitElem)
+    | dfltVal (source : Source) (typ : Ty)
     | indexedExp (source : Source) (base index : Expr) (baseUnderlyingType : Ty)
     | length (source : Source) (exp : Expr)
     | capacity (source : Source) (exp : Expr)
@@ -569,6 +570,10 @@ mutual
     let obj ← GoLean.StrictJson.obj path json
     let tag ← GoLean.StrictJson.string s!"{path}.tag" (← GoLean.StrictJson.field path obj "tag")
     match tag with
+    | "LocalVar" | "In" | "Out" =>
+        return .var
+          (← decodeSource s!"{path}.source" (← GoLean.StrictJson.field path obj "source"))
+          (← decodeVarRef path json)
     | "Var" =>
         let obj ← taggedObj path json "Var" ["op", "source", "tag"]
         return .var
@@ -665,6 +670,11 @@ mutual
           (← GoLean.StrictJson.int s!"{path}.length" (← GoLean.StrictJson.field path obj "length"))
           (← decodeTy s!"{path}.memberType" (← GoLean.StrictJson.field path obj "memberType"))
           (← decodeArrayOf s!"{path}.elems" (← GoLean.StrictJson.field path obj "elems") decodeArrayLitElem)
+    | "DfltVal" =>
+        let obj ← taggedObj path json "DfltVal" ["source", "tag", "typ"]
+        return .dfltVal
+          (← decodeSource s!"{path}.source" (← GoLean.StrictJson.field path obj "source"))
+          (← decodeTy s!"{path}.typ" (← GoLean.StrictJson.field path obj "typ"))
     | "IndexedExp" =>
         let obj ← taggedObj path json "IndexedExp" ["base", "baseUnderlyingType", "index", "source", "tag"]
         return .indexedExp

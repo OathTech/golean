@@ -45,8 +45,8 @@ backlog items.
 - Replace `execStmt : ExecState -> Except ... ExecState` with an explicit
   `ExecOutcome` for normal completion, return, break, continue, panic,
   unsupported, and stuck behavior.
-- Add broader control-flow coverage around nested `if`, early `return`,
-  unlabeled `break`/`continue`, and later labeled control flow.
+- Add broader control-flow coverage around nested `if`, early `return`, and
+  later labeled control flow.
 - Make expression evaluation able to grow to calls-in-expressions, allocation,
   append, map operations, and channel operations without changing its public
   shape again.
@@ -92,6 +92,8 @@ backlog items.
   Gobra-fronted differential smoke coverage.
 - Added fixed-array `len`/`cap`, with Gobra-fronted differential smoke
   coverage.
+- Added fixed-array zero-value initialization, nested arrays, and arrays through
+  function parameters/results.
 
 ## Proof Generation
 

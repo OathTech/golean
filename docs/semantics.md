@@ -263,17 +263,18 @@ Currently supported:
 
 - `ArrayT n elem` lowering for nonnegative `n`;
 - zero values for fixed-size arrays;
+- Gobra `DfltVal` expressions for supported GoCore types;
 - array literals with explicit exported keys;
 - array indexing as value projection;
 - indexed assignment through `Loc.index`;
 - array equality through structural `GoValue` equality;
 - `len` and `cap` for fixed-size array values;
+- nested array values;
+- array parameters and return values in direct calls;
 - out-of-range indexing as a `panic` observation.
 
 Still pending:
 
-- nested array tests;
-- array parameters and return values beyond simple concrete fixtures;
 - pointer-to-array indexing and slicing;
 - slice creation from arrays.
 

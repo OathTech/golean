@@ -78,6 +78,7 @@ partial def lowerExprTy? : GoLean.GobraJson.Expr → Option GoLean.GoCore.Ty
         some (.unsupported s!"negative array length {length}")
       else
         some (.array length.toNat (lowerTy elem))
+  | .dfltVal _ typ => some (lowerTy typ)
   | .indexedExp _ _ _ baseUnderlyingType =>
       match lowerTy baseUnderlyingType with
       | .array _ elem => some elem
@@ -141,6 +142,7 @@ partial def lowerExpr : GoLean.GobraJson.Expr → GoLean.GoCore.Expr
         .unsupported s!"negative array length {length}"
       else
         .arrayLit length.toNat (lowerTy elem) (args.map (fun arg => (arg.key, lowerExpr arg.value)))
+  | .dfltVal _ typ => .defaultValue (lowerTy typ)
   | .indexedExp _ base index _ => .indexGet (lowerExpr base) (lowerExpr index)
   | .length _ exp => .length (lowerExpr exp)
   | .capacity _ exp => .capacity (lowerExpr exp)

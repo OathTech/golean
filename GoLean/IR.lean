@@ -53,6 +53,7 @@ inductive Expr where
   | fieldGet (recv : Expr) (typeName fieldName : String)
   | fieldAddr (base : Expr) (typeName fieldName : String)
   | arrayLit (length : Nat) (elem : Ty) (args : Array (Int × Expr))
+  | defaultValue (typ : Ty)
   | indexGet (base index : Expr)
   | indexAddr (base index : Expr)
   | length (operand : Expr)
@@ -464,6 +465,7 @@ mutual
         for (key, arg) in args do
           values := values.push (key, (← evalExpr state arg))
         buildArrayValue state length elem values
+    | .defaultValue typ => defaultValue state typ
     | .indexGet base index => do
         match ← evalExpr state base with
         | .array values => arrayGet values (← valueAsInt (← evalExpr state index))

@@ -112,6 +112,30 @@ if [[ "$array_len_cap_actual" != "$array_len_cap_expected" ]]; then
   exit 1
 fi
 
+array_zero_json="$OUT/work/features/array-zero/array-zero.gobra.internal.json"
+array_zero_expected='{"status":"ok","values":[{"tag":"int","value":0}]}'
+array_zero_actual="$(lean gobra-json-run --input "$array_zero_json" --function arrayZero_bda1d7d_F)"
+if [[ "$array_zero_actual" != "$array_zero_expected" ]]; then
+  echo "unexpected array-zero Lean execution result: $array_zero_actual" >&2
+  exit 1
+fi
+
+nested_arrays_json="$OUT/work/features/nested-arrays/nested-arrays.gobra.internal.json"
+nested_arrays_expected='{"status":"ok","values":[{"tag":"int","value":5}]}'
+nested_arrays_actual="$(lean gobra-json-run --input "$nested_arrays_json" --function nestedArrays_bda1d7d_F)"
+if [[ "$nested_arrays_actual" != "$nested_arrays_expected" ]]; then
+  echo "unexpected nested-arrays Lean execution result: $nested_arrays_actual" >&2
+  exit 1
+fi
+
+array_param_return_json="$OUT/work/features/array-param-return/array-param-return.gobra.internal.json"
+array_param_return_expected='{"status":"ok","values":[{"tag":"int","value":10}]}'
+array_param_return_actual="$(lean gobra-json-run --input "$array_param_return_json" --function arrayParamReturn_bda1d7d_F)"
+if [[ "$array_param_return_actual" != "$array_param_return_expected" ]]; then
+  echo "unexpected array-param-return Lean execution result: $array_param_return_actual" >&2
+  exit 1
+fi
+
 array_bounds_json="$OUT/work/features/array-bounds/array-bounds.gobra.internal.json"
 array_bounds_expected='{"message":"index out of range","status":"panic"}'
 if array_bounds_actual="$(lean gobra-json-run --input "$array_bounds_json" --function arrayBounds_bda1d7d_F)"; then
@@ -151,4 +175,4 @@ rm -rf "$OUT_FINAL"
 mv "$OUT" "$OUT_FINAL"
 trap - EXIT
 
-echo "executed 12 Gobra-fronted Go function(s) in Lean"
+echo "executed 15 Gobra-fronted Go function(s) in Lean"

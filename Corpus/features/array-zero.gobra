@@ -1,0 +1,6 @@
+package pkg;
+
+func arrayZero() (z int) {
+	var a [2]int;
+	z = a[0] + a[1];
+};
