@@ -1,4 +1,5 @@
 import GoLean.Artifact.Gobra
+import GoLean.GobraJson
 
 namespace GoLean.CLI
 
@@ -16,7 +17,8 @@ structure GobraExportArgs where
 private def usage : String :=
   "usage:\n" ++
   "  golean gobra-export --manifest <file> [--out <dir>] [--gobra-sbt <path>]\n" ++
-  "  golean gobra-export --input <file> --id <id> [--out <dir>] [--gobra-sbt <path>]\n"
+  "  golean gobra-export --input <file> --id <id> [--out <dir>] [--gobra-sbt <path>]\n" ++
+  "  golean gobra-json-check --input <file>\n"
 
 private def parseGobraExportArgs : List String → GobraExportArgs → Except String GobraExportArgs
   | [], cfg => .ok cfg
@@ -86,12 +88,36 @@ private def runGobraExport (args : List String) : IO UInt32 := do
                 IO.eprintln s!"{failed.length} Gobra export(s) failed; see {opts.outDir}/manifest.json"
                 return 1
 
+private def parseInputOnly : List String → Option FilePath → Except String FilePath
+  | [], some input => .ok input
+  | [], none => .error s!"missing --input <file>\n{usage}"
+  | "--input" :: path :: rest, none => parseInputOnly rest (some (FilePath.mk path))
+  | "--input" :: _ :: _, some _ => .error s!"duplicate --input\n{usage}"
+  | flag :: _, _ => .error s!"unknown or incomplete option: {flag}\n{usage}"
+
+private def runGobraJsonCheck (args : List String) : IO UInt32 := do
+  let cwd ← IO.currentDir
+  match parseInputOnly args none with
+  | .error err =>
+      IO.eprintln err
+      return 2
+  | .ok input =>
+      let input := absoluteFrom cwd input
+      match ← GobraJson.decodeFile input with
+      | .ok doc =>
+          IO.println s!"ok: {input} ({doc.inputs.size} input(s))"
+          return 0
+      | .error err =>
+          IO.eprintln s!"{input}: {err}"
+          return 1
+
 def main (args : List String) : IO UInt32 := do
   match args with
   | ["--help"] | ["-h"] =>
       IO.println usage
       return 0
   | "gobra-export" :: rest => runGobraExport rest
+  | "gobra-json-check" :: rest => runGobraJsonCheck rest
   | [] =>
       IO.println usage
       return 0
