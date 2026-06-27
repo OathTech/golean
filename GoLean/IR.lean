@@ -65,6 +65,7 @@ inductive Stmt where
   | block (decls : Array Param) (stmts : Array Stmt)
   | initialization (var : Param)
   | assign (left : Assignee) (right : Expr)
+  | call (targets : Array Assignee) (name : String) (args : Array Expr)
   | assert (assertion : Assertion)
   | while (cond : Expr) (body : Stmt)
   | label (name : String)
@@ -85,12 +86,21 @@ structure Program where
   funcs : Array Func
   deriving Repr, BEq
 
+private def findFunctionIn? (funcs : Array Func) (name : String) : Option Func :=
+  funcs.foldl
+    (fun found func =>
+      match found with
+      | some f => some f
+      | none => if func.name == name then some func else none)
+    none
+
 abbrev LocalEnv := List (String × Loc)
 abbrev Heap := List (Loc × GoValue)
 abbrev TypeEnv := List (String × TypeDef)
 
 structure ExecState where
   types : TypeEnv := []
+  functions : Array Func := #[]
   locals : LocalEnv := []
   heap : Heap := []
   nextAddr : Nat := 0
@@ -325,6 +335,51 @@ mutual
     | .addr locExpr => storeLoc state (← valueAsLoc (← evalExpr state locExpr)) value
     | .unsupported feature => unsupported feature
 
+  partial def assignAssignees (state : ExecState) (targets : Array Assignee)
+      (values : Array GoValue) : Except String ExecState := do
+    if targets.size != values.size then
+      throw s!"expected {targets.size} call result value(s), got {values.size}"
+    let mut state := state
+    let mut i := 0
+    for target in targets do
+      match values[i]? with
+      | some value =>
+          state ← assignAssignee state target value
+          i := i + 1
+      | none => throw s!"missing call result value {i}"
+    return state
+
+  partial def execFunctionCall (fuel : Nat) (state : ExecState) (targets : Array Assignee)
+      (name : String) (args : Array Expr) : Except String ExecState := do
+    if fuel == 0 then
+      throw "GoCore execution fuel exhausted"
+    let func ←
+      match findFunctionIn? state.functions name with
+      | some func => pure func
+      | none => throw s!"GoCore function not found: {name}"
+    if func.args.size != args.size then
+      throw s!"function {name} expected {func.args.size} argument(s), got {args.size}"
+    let mut argValues := #[]
+    for arg in args do
+      argValues := argValues.push (← evalExpr state arg)
+    let callerLocals := state.locals
+    let mut callState : ExecState := { state with locals := [] }
+    let mut i := 0
+    for param in func.args do
+      match argValues[i]? with
+      | some value =>
+          callState := callState.bindLocal param.id value
+          i := i + 1
+      | none => throw s!"missing argument {i}"
+    for result in func.results do
+      callState := callState.bindLocal result.id (← defaultValue callState result.typ)
+    callState ← execStmt (fuel - 1) callState func.body
+    let mut resultValues := #[]
+    for result in func.results do
+      resultValues := resultValues.push (← lookup callState result.id)
+    let state : ExecState := { callState with locals := callerLocals }
+    assignAssignees state targets resultValues
+
   partial def execDecl (state : ExecState) (param : Param) : Except String ExecState := do
     return state.bindLocal param.id (← defaultValue state param.typ)
 
@@ -348,6 +403,7 @@ mutual
     | .initialization var => execDecl state var
     | .assign left right => do
         assignAssignee state left (← evalExpr state right)
+    | .call targets name args => execFunctionCall fuel state targets name args
     | .assert assertion => do
         if ← evalAssertion state assertion then
           return state
@@ -399,25 +455,24 @@ private def collectResults (state : ExecState) (results : Array Param) :
     values := values.push (← lookup state result.id)
   return values
 
-def runFunctionWithTypes (fuel : Nat) (types : TypeEnv) (func : Func) (args : Array GoValue) :
-    Except String Result := do
-  let state ← bindParams { types := types } func.args args
+def runFunctionWithContext (fuel : Nat) (types : TypeEnv) (functions : Array Func)
+    (func : Func) (args : Array GoValue) : Except String Result := do
+  let state ← bindParams { types := types, functions := functions } func.args args
   let state ← initResults state func.results
   checkAssertions state "precondition" func.pres
   let state ← execStmt fuel state func.body
   checkAssertions state "postcondition" func.posts
   return { values := (← collectResults state func.results) }
 
+def runFunctionWithTypes (fuel : Nat) (types : TypeEnv) (func : Func) (args : Array GoValue) :
+    Except String Result :=
+  runFunctionWithContext fuel types #[func] func args
+
 def runFunction (fuel : Nat) (func : Func) (args : Array GoValue) : Except String Result :=
   runFunctionWithTypes fuel [] func args
 
 def findFunction? (program : Program) (name : String) : Option Func :=
-  program.funcs.foldl
-    (fun found func =>
-      match found with
-      | some f => some f
-      | none => if func.name == name then some func else none)
-    none
+  findFunctionIn? program.funcs name
 
 def runNamedFunction (fuel : Nat) (program : Program) (name : String) (args : Array GoValue) :
     Except String Result := do
@@ -425,7 +480,7 @@ def runNamedFunction (fuel : Nat) (program : Program) (name : String) (args : Ar
     match findFunction? program name with
     | some func => pure func
     | none => throw s!"GoCore function not found: {name}"
-  runFunctionWithTypes fuel program.typeDefs.toList func args
+  runFunctionWithContext fuel program.typeDefs.toList program.funcs func args
 
 def runNamedFunctionInts (fuel : Nat) (program : Program) (name : String) (args : Array Int) :
     Except String Result :=

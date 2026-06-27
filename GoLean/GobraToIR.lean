@@ -137,8 +137,10 @@ partial def lowerStmt : GoLean.GobraJson.Stmt → GoLean.GoCore.Stmt
   | .assert _ assertion => .assert (lowerAssertion assertion)
   | .while _ cond _invs _terminationMeasure body => .while (lowerExpr cond) (lowerStmt body)
   | .label _ id => .label id.name
-  | .functionCall .. => .unsupported "function call statement"
-  | .methodCall .. => .unsupported "method call statement"
+  | .functionCall _ func targets args =>
+      .call (targets.map lowerAssignee) func.name (args.map lowerExpr)
+  | .methodCall _ recv meth targets args =>
+      .call (targets.map lowerAssignee) meth.uniqueName (#[lowerExpr recv] ++ args.map lowerExpr)
 
 private def lowerMethodBody (body : GoLean.GobraJson.MethodBody) : GoLean.GoCore.Stmt :=
   .block (lowerDecls body.decls)
@@ -177,6 +179,20 @@ def lowerFunctionMember (member : GoLean.GobraJson.FunctionMember) : Except Stri
     body := lowerMethodBody body
   }
 
+def lowerMethodMember (member : GoLean.GobraJson.MethodMember) : Except String GoLean.GoCore.Func := do
+  let body ←
+    match member.body with
+    | some body => pure body
+    | none => throw s!"bodyless method {member.name.uniqueName}"
+  return {
+    name := member.name.uniqueName,
+    args := #[lowerParam member.receiver] ++ member.args.map lowerParam,
+    results := member.results.map lowerParam,
+    pres := member.pres.map lowerAssertion,
+    posts := member.posts.map lowerAssertion,
+    body := lowerMethodBody body
+  }
+
 def lowerProgram (program : GoLean.GobraJson.Program) : Except String GoLean.GoCore.Program := do
   let mut funcs := #[]
   for member in program.members do
@@ -185,7 +201,11 @@ def lowerProgram (program : GoLean.GobraJson.Program) : Except String GoLean.GoC
         match member.body with
         | some _ => funcs := funcs.push (← lowerFunctionMember member)
         | none => pure ()
-    | .method _ | .mPredicate _ =>
+    | .method member =>
+        match member.body with
+        | some _ => funcs := funcs.push (← lowerMethodMember member)
+        | none => pure ()
+    | .mPredicate _ =>
         pure ()
   return { typeDefs := lowerTypeDefs program.types, funcs }
 

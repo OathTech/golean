@@ -52,4 +52,15 @@ if [[ "$pointer_identity_actual" != "$pointer_identity_expected" ]]; then
   exit 1
 fi
 
-echo "executed 3 Gobra internal JSON function(s) in Lean"
+swap_json="$OUT/work/examples/swap/swap.gobra.internal.json"
+swap_expected='{"message":"GoCore assertion failed","status":"error"}'
+if swap_actual="$(lake exe golean gobra-json-run --input "$swap_json" --function client_bda1d7d_F)"; then
+  echo "expected swap client Lean execution to fail at final assertion" >&2
+  exit 1
+fi
+if [[ "$swap_actual" != "$swap_expected" ]]; then
+  echo "unexpected swap client Lean execution result: $swap_actual" >&2
+  exit 1
+fi
+
+echo "executed 4 Gobra internal JSON function(s) in Lean"

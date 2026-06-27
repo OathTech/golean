@@ -77,6 +77,35 @@ private def coreStructFunction : GoCore.Func := {
     ]
 }
 
+private def coreSetCellFunction : GoCore.Func := {
+  name := "setCell_F",
+  args := #[
+    { id := "p", typ := .pointer (.defined "cell") },
+    { id := "v", typ := .int }
+  ],
+  results := #[],
+  pres := #[],
+  posts := #[],
+  body := .assign
+    (.addr (.fieldAddr (.var "p") "cell" "valA"))
+    (.var "v")
+}
+
+private def coreCallFunction : GoCore.Func := {
+  name := "call_F",
+  args := #[],
+  results := #[],
+  pres := #[],
+  posts := #[],
+  body := .block
+    #[{ id := "x", typ := .defined "cell" }]
+    #[
+      .assign (.var "x") (.structLit (.defined "cell") #[.intLit 42]),
+      .call #[] "setCell_F" #[.ref "x", .intLit 9],
+      .assert (.expr (.eqCmp (.var "x") (.structLit (.defined "cell") #[.intLit 9])))
+    ]
+}
+
 private def addExpr : GobraJson.Expr :=
   .add source (.var (.inParam x)) (.var (.inParam y))
 
@@ -154,6 +183,8 @@ def main : IO UInt32 := do
   passed := passed && (← expectIntResult "GoCore add function" (GoCore.runFunction 100 coreAddFunction #[.int 2, .int 3]) 5)
   passed := passed && (← expectError "GoCore pointer identity" (GoCore.runFunction 100 corePointerIdentityFunction #[]))
   passed := passed && (← expectOk "GoCore struct field update" (GoCore.runFunctionWithTypes 100 coreCellTypes coreStructFunction #[]))
+  passed := passed && (← expectOk "GoCore shared-heap function call"
+    (GoCore.runFunctionWithContext 100 coreCellTypes #[coreSetCellFunction, coreCallFunction] coreCallFunction #[]))
   passed := passed && (← expectIntResult "add function" (GoLean.GobraEval.runFunctionInts 100 doc "add_F" #[2, 3]) 5)
   passed := passed && (← expectError "missing function" (GoLean.GobraEval.runFunctionInts 100 doc "missing_F" #[]))
   passed := passed && (← expectError "wrong arity" (GoLean.GobraEval.runFunctionInts 100 doc "add_F" #[2]))
