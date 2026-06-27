@@ -58,6 +58,9 @@ backlog items.
 - Track semantic policy choices that remain open for differential refinement,
   especially allocation limits, append growth, zero-capacity slices, string
   slicing, and panic-message details.
+- Treat Gobra's permission-argument variants of `copy` and `append` as
+  frontend artifacts; do not add Gobra permission semantics to GoCore just to
+  support them.
 - Evaluate lvalues and rvalues before committing stores, so multiple assignment
   and call assignment match Go's sequencing rules.
 - Bounds-check indexed locations when evaluating the lvalue, including
