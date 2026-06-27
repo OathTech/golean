@@ -5,10 +5,23 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
 cd "$ROOT"
 
 OUT="artifacts/gobra-smoke"
+LAKE_BUILD_TIMEOUT_SECONDS="${LAKE_BUILD_TIMEOUT_SECONDS:-120}"
+GOBRA_EXPORT_TIMEOUT_SECONDS="${GOBRA_EXPORT_TIMEOUT_SECONDS:-180}"
+LEAN_TIMEOUT_SECONDS="${LEAN_TIMEOUT_SECONDS:-30}"
+
+run_with_timeout() {
+  local seconds="$1"
+  shift
+  perl -e 'my $t = shift @ARGV; my $pid = fork(); die "fork failed\n" unless defined $pid; if ($pid == 0) { exec @ARGV; exit 127 } $SIG{ALRM} = sub { kill "TERM", $pid; select undef, undef, undef, 1; kill "KILL", $pid; exit 124 }; alarm $t; waitpid $pid, 0; my $s = $?; exit($s == -1 ? 127 : ($s & 127 ? 128 + ($s & 127) : $s >> 8));' "$seconds" "$@"
+}
+
+lean() {
+  run_with_timeout "$LEAN_TIMEOUT_SECONDS" lake exe golean "$@"
+}
 
 rm -rf "$OUT"
-lake build
-lake exe golean gobra-export --manifest Corpus/gobra-smoke.txt --out "$OUT"
+run_with_timeout "$LAKE_BUILD_TIMEOUT_SECONDS" lake build
+run_with_timeout "$GOBRA_EXPORT_TIMEOUT_SECONDS" lake exe golean gobra-export --manifest Corpus/gobra-smoke.txt --out "$OUT"
 
 json_files=()
 while IFS= read -r -d '' json_file; do
@@ -20,14 +33,14 @@ if [[ "${#json_files[@]}" -eq 0 ]]; then
 fi
 
 for json_file in "${json_files[@]}"; do
-  lake exe golean gobra-json-check --input "$json_file"
+  lean gobra-json-check --input "$json_file"
 done
 
 echo "validated ${#json_files[@]} Gobra internal JSON artifact(s)"
 
 multi_assign_json="$OUT/work/features/multi-assign/multi-assign.gobra.internal.json"
 multi_assign_expected='{"status":"ok","values":[]}'
-multi_assign_actual="$(lake exe golean gobra-json-run --input "$multi_assign_json" --function foo_bda1d7d_F)"
+multi_assign_actual="$(lean gobra-json-run --input "$multi_assign_json" --function foo_bda1d7d_F)"
 if [[ "$multi_assign_actual" != "$multi_assign_expected" ]]; then
   echo "unexpected multi-assign Lean execution result: $multi_assign_actual" >&2
   exit 1
@@ -35,7 +48,7 @@ fi
 
 while1_json="$OUT/work/features/while1/while1.gobra.internal.json"
 while1_expected='{"status":"ok","values":[{"tag":"int","value":42}]}'
-while1_actual="$(lake exe golean gobra-json-run --input "$while1_json" --function test_bda1d7d_F --arg-int 6 --arg-int 7)"
+while1_actual="$(lean gobra-json-run --input "$while1_json" --function test_bda1d7d_F --arg-int 6 --arg-int 7)"
 if [[ "$while1_actual" != "$while1_expected" ]]; then
   echo "unexpected while1 Lean execution result: $while1_actual" >&2
   exit 1
@@ -43,7 +56,7 @@ fi
 
 scalars_json="$OUT/work/features/scalars/scalars.gobra.internal.json"
 scalars_expected='{"status":"ok","values":[{"tag":"int","value":7}]}'
-scalars_actual="$(lake exe golean gobra-json-run --input "$scalars_json" --function scalars_bda1d7d_F)"
+scalars_actual="$(lean gobra-json-run --input "$scalars_json" --function scalars_bda1d7d_F)"
 if [[ "$scalars_actual" != "$scalars_expected" ]]; then
   echo "unexpected scalars Lean execution result: $scalars_actual" >&2
   exit 1
@@ -51,7 +64,7 @@ fi
 
 divide_by_zero_json="$OUT/work/features/divide-by-zero/divide-by-zero.gobra.internal.json"
 divide_by_zero_expected='{"message":"integer divide by zero","status":"panic"}'
-if divide_by_zero_actual="$(lake exe golean gobra-json-run --input "$divide_by_zero_json" --function divideByZero_bda1d7d_F)"; then
+if divide_by_zero_actual="$(lean gobra-json-run --input "$divide_by_zero_json" --function divideByZero_bda1d7d_F)"; then
   echo "expected divide-by-zero Lean execution to panic" >&2
   exit 1
 fi
@@ -62,7 +75,7 @@ fi
 
 arrays_json="$OUT/work/features/arrays/arrays.gobra.internal.json"
 arrays_expected='{"status":"ok","values":[{"tag":"int","value":11}]}'
-arrays_actual="$(lake exe golean gobra-json-run --input "$arrays_json" --function arrays_bda1d7d_F)"
+arrays_actual="$(lean gobra-json-run --input "$arrays_json" --function arrays_bda1d7d_F)"
 if [[ "$arrays_actual" != "$arrays_expected" ]]; then
   echo "unexpected arrays Lean execution result: $arrays_actual" >&2
   exit 1
@@ -70,7 +83,7 @@ fi
 
 array_bounds_json="$OUT/work/features/array-bounds/array-bounds.gobra.internal.json"
 array_bounds_expected='{"message":"index out of range","status":"panic"}'
-if array_bounds_actual="$(lake exe golean gobra-json-run --input "$array_bounds_json" --function arrayBounds_bda1d7d_F)"; then
+if array_bounds_actual="$(lean gobra-json-run --input "$array_bounds_json" --function arrayBounds_bda1d7d_F)"; then
   echo "expected array-bounds Lean execution to panic" >&2
   exit 1
 fi
@@ -81,7 +94,7 @@ fi
 
 array_copy_json="$OUT/work/features/array-copy/array-copy.gobra.internal.json"
 array_copy_expected='{"status":"ok","values":[{"tag":"int","value":10}]}'
-array_copy_actual="$(lake exe golean gobra-json-run --input "$array_copy_json" --function arrayCopy_bda1d7d_F)"
+array_copy_actual="$(lean gobra-json-run --input "$array_copy_json" --function arrayCopy_bda1d7d_F)"
 if [[ "$array_copy_actual" != "$array_copy_expected" ]]; then
   echo "unexpected array-copy Lean execution result: $array_copy_actual" >&2
   exit 1
@@ -89,7 +102,7 @@ fi
 
 pointer_identity_json="$OUT/work/features/pointer-identity/pointer-identity.gobra.internal.json"
 pointer_identity_expected='{"message":"GoCore assertion failed","status":"assertion_error"}'
-if pointer_identity_actual="$(lake exe golean gobra-json-run --input "$pointer_identity_json" --function test_bda1d7d_F)"; then
+if pointer_identity_actual="$(lean gobra-json-run --input "$pointer_identity_json" --function test_bda1d7d_F)"; then
   echo "expected pointer-identity Lean execution to fail" >&2
   exit 1
 fi
@@ -100,7 +113,7 @@ fi
 
 swap_json="$OUT/work/examples/swap/swap.gobra.internal.json"
 swap_expected='{"message":"GoCore assertion failed","status":"assertion_error"}'
-if swap_actual="$(lake exe golean gobra-json-run --input "$swap_json" --function client_bda1d7d_F)"; then
+if swap_actual="$(lean gobra-json-run --input "$swap_json" --function client_bda1d7d_F)"; then
   echo "expected swap client Lean execution to fail at final assertion" >&2
   exit 1
 fi
@@ -110,7 +123,7 @@ if [[ "$swap_actual" != "$swap_expected" ]]; then
 fi
 
 swap_without_final_assert_expected='{"status":"ok","values":[]}'
-swap_without_final_assert_actual="$(lake exe golean gobra-json-run --input "$swap_json" --function client_bda1d7d_F --ignore-assert-at 48:5)"
+swap_without_final_assert_actual="$(lean gobra-json-run --input "$swap_json" --function client_bda1d7d_F --ignore-assert-at 48:5)"
 if [[ "$swap_without_final_assert_actual" != "$swap_without_final_assert_expected" ]]; then
   echo "swap client did not pass after ignoring final assertion: $swap_without_final_assert_actual" >&2
   exit 1

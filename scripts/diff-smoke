@@ -7,6 +7,19 @@ cd "$ROOT"
 OUT="artifacts/gobra-smoke"
 MANIFEST="${1:-Differential/manifest.tsv}"
 GO_BUILD_CACHE="$ROOT/artifacts/go-build-cache"
+GOBRA_SMOKE_TIMEOUT_SECONDS="${GOBRA_SMOKE_TIMEOUT_SECONDS:-240}"
+GO_TIMEOUT_SECONDS="${GO_TIMEOUT_SECONDS:-30}"
+LEAN_TIMEOUT_SECONDS="${LEAN_TIMEOUT_SECONDS:-30}"
+
+run_with_timeout() {
+  local seconds="$1"
+  shift
+  perl -e 'my $t = shift @ARGV; my $pid = fork(); die "fork failed\n" unless defined $pid; if ($pid == 0) { exec @ARGV; exit 127 } $SIG{ALRM} = sub { kill "TERM", $pid; select undef, undef, undef, 1; kill "KILL", $pid; exit 124 }; alarm $t; waitpid $pid, 0; my $s = $?; exit($s == -1 ? 127 : ($s & 127 ? 128 + ($s & 127) : $s >> 8));' "$seconds" "$@"
+}
+
+lean() {
+  run_with_timeout "$LEAN_TIMEOUT_SECONDS" lake exe golean "$@"
+}
 
 if ! command -v go >/dev/null 2>&1; then
   echo "go not found on PATH; install Go or expose it in the shell to run differential smoke tests" >&2
@@ -19,7 +32,7 @@ if [[ ! -f "$MANIFEST" ]]; then
 fi
 
 if [[ ! -d "$OUT/work" ]]; then
-  scripts/gobra-smoke
+  run_with_timeout "$GOBRA_SMOKE_TIMEOUT_SECONDS" scripts/gobra-smoke
 fi
 mkdir -p "$GO_BUILD_CACHE"
 
@@ -52,7 +65,7 @@ while IFS=$'\t' read -r id go_dir gobra_json function_name arg_ints ignore_asser
     exit 2
   fi
   if [[ ! -f "$gobra_json" ]]; then
-    scripts/gobra-smoke
+    run_with_timeout "$GOBRA_SMOKE_TIMEOUT_SECONDS" scripts/gobra-smoke
   fi
   if [[ ! -f "$gobra_json" ]]; then
     echo "Gobra JSON artifact not found for $id: $gobra_json" >&2
@@ -78,12 +91,12 @@ while IFS=$'\t' read -r id go_dir gobra_json function_name arg_ints ignore_asser
     lean_args+=(--ignore-assert-at "$ignore_assert_at")
   fi
 
-  if lean_observation="$(lake exe golean "${lean_args[@]}")"; then
+  if lean_observation="$(lean "${lean_args[@]}")"; then
     lean_status=0
   else
     lean_status=$?
   fi
-  if ! go_observation="$(GO111MODULE=off GOCACHE="$GO_BUILD_CACHE" go run "./$go_dir")"; then
+  if ! go_observation="$(run_with_timeout "$GO_TIMEOUT_SECONDS" env GO111MODULE=off GOCACHE="$GO_BUILD_CACHE" go run "./$go_dir")"; then
     echo "Go fixture failed for $id" >&2
     echo "$go_observation" >&2
     exit 1
@@ -105,7 +118,7 @@ while IFS=$'\t' read -r id go_dir gobra_json function_name arg_ints ignore_asser
     exit 1
   fi
 
-  if ! observation_diff="$(lake exe golean observation-eq --left "$lean_observation" --right "$go_observation" 2>&1)"; then
+  if ! observation_diff="$(lean observation-eq --left "$lean_observation" --right "$go_observation" 2>&1)"; then
     echo "differential mismatch for $id" >&2
     echo "Lean: $lean_observation" >&2
     echo "Go:   $go_observation" >&2
