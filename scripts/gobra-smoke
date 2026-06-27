@@ -41,6 +41,14 @@ if [[ "$while1_actual" != "$while1_expected" ]]; then
   exit 1
 fi
 
+scalars_json="$OUT/work/features/scalars/scalars.gobra.internal.json"
+scalars_expected='{"status":"ok","values":[{"tag":"int","value":7}]}'
+scalars_actual="$(lake exe golean gobra-json-run --input "$scalars_json" --function scalars_bda1d7d_F)"
+if [[ "$scalars_actual" != "$scalars_expected" ]]; then
+  echo "unexpected scalars Lean execution result: $scalars_actual" >&2
+  exit 1
+fi
+
 pointer_identity_json="$OUT/work/features/pointer-identity/pointer-identity.gobra.internal.json"
 pointer_identity_expected='{"message":"GoCore assertion failed","status":"assertion_error"}'
 if pointer_identity_actual="$(lake exe golean gobra-json-run --input "$pointer_identity_json" --function test_bda1d7d_F)"; then
@@ -70,4 +78,4 @@ if [[ "$swap_without_final_assert_actual" != "$swap_without_final_assert_expecte
   exit 1
 fi
 
-echo "executed 4 Gobra internal JSON function(s) in Lean"
+echo "executed 5 Gobra internal JSON function(s) in Lean"

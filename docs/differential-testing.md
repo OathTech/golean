@@ -30,6 +30,10 @@ unknown statuses, invalid integer arguments, and observation mismatches.
 
 The script requires `go` on `PATH`.
 
+The harness runs fixtures with module mode disabled and stores Go's build cache
+under `artifacts/go-build-cache` so tests do not depend on writable user-level
+cache directories.
+
 ## Random Program Generators
 
 There are existing Go random-program generators worth reusing.

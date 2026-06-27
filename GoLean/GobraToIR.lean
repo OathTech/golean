@@ -92,11 +92,19 @@ partial def lowerExpr : GoLean.GobraJson.Expr → GoLean.GoCore.Expr
   | .intLit _ value _ _ => .intLit value
   | .boolLit _ value => .boolLit value
   | .add _ left right => .add (lowerExpr left) (lowerExpr right)
+  | .sub _ left right => .sub (lowerExpr left) (lowerExpr right)
   | .mul _ left right => .mul (lowerExpr left) (lowerExpr right)
+  | .div _ left right => .div (lowerExpr left) (lowerExpr right)
+  | .mod _ left right => .mod (lowerExpr left) (lowerExpr right)
   | .eqCmp _ left right => .eqCmp (lowerExpr left) (lowerExpr right)
+  | .uneqCmp _ left right => .neqCmp (lowerExpr left) (lowerExpr right)
   | .atMostCmp _ left right => .atMostCmp (lowerExpr left) (lowerExpr right)
   | .atLeastCmp _ left right => .atLeastCmp (lowerExpr left) (lowerExpr right)
   | .lessCmp _ left right => .lessCmp (lowerExpr left) (lowerExpr right)
+  | .greaterCmp _ left right => .greaterCmp (lowerExpr left) (lowerExpr right)
+  | .and _ left right => .and (lowerExpr left) (lowerExpr right)
+  | .or _ left right => .or (lowerExpr left) (lowerExpr right)
+  | .negation _ operand => .not (lowerExpr operand)
   | .ref _ assignee _ =>
       match assignee with
       | .var _ ref => .ref (varRefId ref)

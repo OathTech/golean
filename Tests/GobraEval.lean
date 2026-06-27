@@ -106,6 +106,22 @@ private def coreCallFunction : GoCore.Func := {
     ]
 }
 
+private def coreScalarFunction : GoCore.Func := {
+  name := "scalars_F",
+  args := #[coreParam "x", coreParam "y"],
+  results := #[coreParam "z"],
+  pres := #[],
+  posts := #[],
+  body := .seqn #[
+      .assign (.var "z") (.sub (.var "x") (.var "y")),
+      .assert (.expr (.neqCmp (.var "z") (.var "y"))),
+      .assert (.expr (.or (.greaterCmp (.var "z") (.intLit 0)) (.eqCmp (.var "z") (.intLit 0)))),
+      .assert (.expr (.not (.lessCmp (.var "z") (.intLit 0)))),
+      .assert (.expr (.eqCmp (.div (.intLit (-7)) (.intLit 3)) (.intLit (-2)))),
+      .assert (.expr (.eqCmp (.mod (.intLit (-7)) (.intLit 3)) (.intLit (-1))))
+    ]
+}
+
 private def addExpr : GobraJson.Expr :=
   .add source (.var (.inParam x)) (.var (.inParam y))
 
@@ -185,6 +201,7 @@ def main : IO UInt32 := do
   passed := passed && (← expectOk "GoCore struct field update" (GoCore.runFunctionWithTypes 100 coreCellTypes coreStructFunction #[]))
   passed := passed && (← expectOk "GoCore shared-heap function call"
     (GoCore.runFunctionWithContext 100 coreCellTypes #[coreSetCellFunction, coreCallFunction] coreCallFunction #[]))
+  passed := passed && (← expectIntResult "GoCore scalar operators" (GoCore.runFunction 100 coreScalarFunction #[.int 10, .int 3]) 7)
   passed := passed && (← expectIntResult "add function" (GoLean.GobraEval.runFunctionInts 100 doc "add_F" #[2, 3]) 5)
   passed := passed && (← expectError "missing function" (GoLean.GobraEval.runFunctionInts 100 doc "missing_F" #[]))
   passed := passed && (← expectError "wrong arity" (GoLean.GobraEval.runFunctionInts 100 doc "add_F" #[2]))

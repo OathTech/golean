@@ -33,11 +33,19 @@ inductive Expr where
   | intLit (value : Int)
   | boolLit (value : Bool)
   | add (left right : Expr)
+  | sub (left right : Expr)
   | mul (left right : Expr)
+  | div (left right : Expr)
+  | mod (left right : Expr)
   | eqCmp (left right : Expr)
+  | neqCmp (left right : Expr)
   | atMostCmp (left right : Expr)
   | atLeastCmp (left right : Expr)
   | lessCmp (left right : Expr)
+  | greaterCmp (left right : Expr)
+  | and (left right : Expr)
+  | or (left right : Expr)
+  | not (operand : Expr)
   | ref (id : String)
   | deref (ptr : Expr) (typ : Ty)
   | structLit (typ : Ty) (args : Array Expr)
@@ -282,18 +290,48 @@ mutual
     | .boolLit value => return .bool value
     | .add left right => do
         return .int ((← valueAsInt (← evalExpr state left)) + (← valueAsInt (← evalExpr state right)))
+    | .sub left right => do
+        return .int ((← valueAsInt (← evalExpr state left)) - (← valueAsInt (← evalExpr state right)))
     | .mul left right => do
         return .int ((← valueAsInt (← evalExpr state left)) * (← valueAsInt (← evalExpr state right)))
+    | .div left right => do
+        let divisor ← valueAsInt (← evalExpr state right)
+        if divisor == 0 then
+          throw "GoCore panic: integer divide by zero"
+        return .int (Int.tdiv (← valueAsInt (← evalExpr state left)) divisor)
+    | .mod left right => do
+        let divisor ← valueAsInt (← evalExpr state right)
+        if divisor == 0 then
+          throw "GoCore panic: integer divide by zero"
+        return .int (Int.tmod (← valueAsInt (← evalExpr state left)) divisor)
     | .eqCmp left right => do
         let leftValue ← evalExpr state left
         let rightValue ← evalExpr state right
         return .bool (leftValue == rightValue)
+    | .neqCmp left right => do
+        let leftValue ← evalExpr state left
+        let rightValue ← evalExpr state right
+        return .bool (leftValue != rightValue)
     | .atMostCmp left right => do
         return .bool ((← valueAsInt (← evalExpr state left)) <= (← valueAsInt (← evalExpr state right)))
     | .atLeastCmp left right => do
         return .bool ((← valueAsInt (← evalExpr state left)) >= (← valueAsInt (← evalExpr state right)))
     | .lessCmp left right => do
         return .bool ((← valueAsInt (← evalExpr state left)) < (← valueAsInt (← evalExpr state right)))
+    | .greaterCmp left right => do
+        return .bool ((← valueAsInt (← evalExpr state left)) > (← valueAsInt (← evalExpr state right)))
+    | .and left right => do
+        if ← valueAsBool (← evalExpr state left) then
+          return .bool (← valueAsBool (← evalExpr state right))
+        else
+          return .bool false
+    | .or left right => do
+        if ← valueAsBool (← evalExpr state left) then
+          return .bool true
+        else
+          return .bool (← valueAsBool (← evalExpr state right))
+    | .not operand => do
+        return .bool (!(← valueAsBool (← evalExpr state operand)))
     | .ref id => return .addr (← lookupLoc state id)
     | .deref ptr _typ => do
         loadLoc state (← valueAsLoc (← evalExpr state ptr))

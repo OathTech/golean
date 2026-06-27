@@ -6,6 +6,7 @@ cd "$ROOT"
 
 OUT="artifacts/gobra-smoke"
 MANIFEST="${1:-Differential/manifest.tsv}"
+GO_BUILD_CACHE="$ROOT/artifacts/go-build-cache"
 
 if ! command -v go >/dev/null 2>&1; then
   echo "go not found on PATH; install Go or expose it in the shell to run differential smoke tests" >&2
@@ -20,6 +21,7 @@ fi
 if [[ ! -d "$OUT/work" ]]; then
   scripts/gobra-smoke
 fi
+mkdir -p "$GO_BUILD_CACHE"
 
 case_count=0
 
@@ -81,7 +83,7 @@ while IFS=$'\t' read -r id go_dir gobra_json function_name arg_ints ignore_asser
   else
     lean_status=$?
   fi
-  if ! go_observation="$(go run "./$go_dir")"; then
+  if ! go_observation="$(GO111MODULE=off GOCACHE="$GO_BUILD_CACHE" go run "./$go_dir")"; then
     echo "Go fixture failed for $id" >&2
     echo "$go_observation" >&2
     exit 1

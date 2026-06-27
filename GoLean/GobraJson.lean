@@ -18,15 +18,15 @@ structure KnownTag where
 private def knownTagNames : List String := [
   "Access", "Add", "Address", "Assert", "AtLeastCmp", "AtMostCmp",
   "Block", "BoolLit", "BoolT", "BoundedInteger", "Decimal", "DefinedT",
-  "Deref", "EqCmp", "ExprAssertion", "Field", "FieldRef", "FullPerm",
-  "Function", "FunctionCall", "FunctionProxy", "Implication", "In",
+  "Deref", "Div", "EqCmp", "ExprAssertion", "Field", "FieldRef", "FullPerm",
+  "Function", "FunctionCall", "FunctionProxy", "GreaterCmp", "Implication", "In",
   "Initialization", "IntLit", "IntT", "InterfaceT", "Internal", "ItfTupleTerminationMeasure",
   "Label", "LabelProxy", "LessCmp", "LocalVar", "MPredicate",
   "MPredicateAccess", "MPredicateProxy", "Method", "MethodBody", "MethodBodySeqn",
-  "MethodCall", "MethodProxy", "Mul", "NonItfTupleTerminationMeasure",
-  "None", "Old", "Out", "PointerT", "Predicate", "Program", "PureMethod",
+  "MethodCall", "MethodProxy", "Mod", "Mul", "Negation", "NonItfTupleTerminationMeasure",
+  "None", "Old", "Or", "Out", "PointerT", "Predicate", "Program", "PureMethod",
   "PureMethodCall", "Ref", "SepAnd", "Seqn", "Single", "SingleAss", "Some",
-  "StringT", "StructLit", "StructT", "UnboundedInteger", "Var", "While",
+  "StringT", "StructLit", "StructT", "Sub", "UnboundedInteger", "UneqCmp", "Var", "While",
   "WildcardPerm"
 ]
 
@@ -159,11 +159,19 @@ mutual
     | intLit (source : Source) (value : Int) (kind : IntegerKind) (base : Nat)
     | boolLit (source : Source) (value : Bool)
     | add (source : Source) (left right : Expr)
+    | sub (source : Source) (left right : Expr)
     | mul (source : Source) (left right : Expr)
+    | div (source : Source) (left right : Expr)
+    | mod (source : Source) (left right : Expr)
     | eqCmp (source : Source) (left right : Expr)
+    | uneqCmp (source : Source) (left right : Expr)
     | atMostCmp (source : Source) (left right : Expr)
     | atLeastCmp (source : Source) (left right : Expr)
     | lessCmp (source : Source) (left right : Expr)
+    | greaterCmp (source : Source) (left right : Expr)
+    | and (source : Source) (left right : Expr)
+    | or (source : Source) (left right : Expr)
+    | negation (source : Source) (operand : Expr)
     | deref (source : Source) (exp : Expr) (underlyingTypeExpr : Ty)
     | fieldRef (source : Source) (recv : Expr) (field : FieldInfo)
     | address (source : Source) (op : Expr)
@@ -582,11 +590,23 @@ mutual
           (← decodeSource s!"{path}.source" (← GoLean.StrictJson.field path obj "source"))
           (← GoLean.StrictJson.bool s!"{path}.b" (← GoLean.StrictJson.field path obj "b"))
     | "Add" => binary "Add" .add
+    | "Sub" => binary "Sub" .sub
     | "Mul" => binary "Mul" .mul
+    | "Div" => binary "Div" .div
+    | "Mod" => binary "Mod" .mod
     | "EqCmp" => binary "EqCmp" .eqCmp
+    | "UneqCmp" => binary "UneqCmp" .uneqCmp
     | "AtMostCmp" => binary "AtMostCmp" .atMostCmp
     | "AtLeastCmp" => binary "AtLeastCmp" .atLeastCmp
     | "LessCmp" => binary "LessCmp" .lessCmp
+    | "GreaterCmp" => binary "GreaterCmp" .greaterCmp
+    | "And" => binary "And" .and
+    | "Or" => binary "Or" .or
+    | "Negation" =>
+        let obj ← taggedObj path json "Negation" ["operand", "source", "tag"]
+        return .negation
+          (← decodeSource s!"{path}.source" (← GoLean.StrictJson.field path obj "source"))
+          (← decodeExpr s!"{path}.operand" (← GoLean.StrictJson.field path obj "operand"))
     | "Deref" =>
         let obj ← taggedObj path json "Deref" ["exp", "source", "tag", "underlyingTypeExpr"]
         return .deref

@@ -206,7 +206,9 @@ private def runJson : GoLean.GobraEval.Result → Json
       ]
 
 private def errorStatus (message : String) : String :=
-  if message == "GoCore assertion failed" ||
+  if message.startsWith "GoCore panic:" then
+    "panic"
+  else if message == "GoCore assertion failed" ||
       message.startsWith "GoCore precondition failed" ||
       message.startsWith "GoCore postcondition failed" then
     "assertion_error"
