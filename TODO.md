@@ -20,12 +20,21 @@ backlog items.
 
 ## GoCore Memory Milestone
 
-- Replace stable variable references with heap-backed locals.
-- Add `Loc.base` and `Loc.field` path-like locations.
-- Add typed load, store, address-of, and dereference.
-- Add `Value.struct`, struct literals, field get, and field ref.
-- Add direct function calls with fresh call frames.
-- Make `examples/swap` execute to the expected final assertion failure.
+- Add a regression test that proves `examples/swap` reaches the final
+  assertion, not an earlier assertion, without relying on manual JSON rewriting.
+- Decide whether top-level Gobra pre/postconditions should be executable
+  assertions, verification-only metadata, or controlled by a CLI flag.
+- Add richer call-frame tests, including returned values and nested calls.
+- Add method-call tests from Gobra JSON beyond `examples/swap`.
+
+## Completed GoCore Memory Milestone Items
+
+- Replaced stable variable references with heap-backed locals.
+- Added `Loc.base` and `Loc.field` path-like locations.
+- Added load, store, address-of, dereference, struct field get, and field ref.
+- Added `Value.struct` and struct literals.
+- Added direct function and method calls with fresh local frames and shared heap.
+- Made `examples/swap` execute to the expected final assertion failure.
 
 ## Proof Generation
 

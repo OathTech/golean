@@ -57,7 +57,9 @@ corpus without accepting unexpected JSON shapes.
 
 Goal: make GoCore execute ordinary pointer/struct Go programs.
 
-Status: next implementation focus.
+Status: in progress. Heap-backed locals, path-like field locations, struct
+values, direct calls, and the `examples/swap` smoke execution path are now
+implemented for the current supported subset.
 
 Deliverables:
 
@@ -79,6 +81,9 @@ far enough to reach the expected final assertion failure for the right reason.
 ## Phase 3: Differential Testing Harness
 
 Goal: compare Go execution and Lean GoCore execution over many small programs.
+
+Status: partially started. Lean execution now emits classified observations for
+successful returns, assertion failures, unsupported features, and stuck states.
 
 Deliverables:
 
@@ -166,9 +171,8 @@ specification hooks.
 
 ## Near-Term Work Queue
 
-1. Implement heap-backed locals and `Loc`.
-2. Add struct values, field get/ref, typed load/store, and deref.
-3. Lower the corresponding Gobra JSON nodes.
-4. Add the `examples/swap` smoke target.
-5. Add Go-source-vs-Lean differential execution for that target.
-6. Start generating struct field proof support modeled after new Goose.
+1. Add Go-source-vs-Lean differential execution for plain Go targets.
+2. Expand expression/operator coverage beyond the current integer/bool subset.
+3. Add arrays and slices using the same path-location model.
+4. Start generating struct field proof support modeled after new Goose.
+5. Prototype the first WP/VCG layer over GoCore.
