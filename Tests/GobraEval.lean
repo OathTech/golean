@@ -32,6 +32,31 @@ private def coreAddFunction : GoCore.Func := {
   body := .assign (.var "z") coreAddExpr
 }
 
+private def corePointerIdentityFunction : GoCore.Func := {
+  name := "pointer_identity_F",
+  args := #[],
+  results := #[],
+  pres := #[],
+  posts := #[],
+  body := .block
+    #[
+      { id := "v", typ := .int },
+      { id := "ar", typ := .pointer .int },
+      { id := "br", typ := .pointer .int },
+      { id := "arr", typ := .pointer (.pointer .int) },
+      { id := "brr", typ := .pointer (.pointer .int) }
+    ]
+    #[
+      .assign (.var "v") (.intLit 42),
+      .assign (.var "ar") (.ref "v"),
+      .assign (.var "br") (.ref "v"),
+      .assert (.expr (.eqCmp (.var "ar") (.var "br"))),
+      .assign (.var "arr") (.ref "ar"),
+      .assign (.var "brr") (.ref "br"),
+      .assert (.expr (.eqCmp (.var "arr") (.var "brr")))
+    ]
+}
+
 private def addExpr : GobraJson.Expr :=
   .add source (.var (.inParam x)) (.var (.inParam y))
 
@@ -97,6 +122,7 @@ private def expectError (name : String) (result : Except String GoLean.GobraEval
 def main : IO UInt32 := do
   let mut passed := true
   passed := passed && (← expectIntResult "GoCore add function" (GoCore.runFunction 100 coreAddFunction #[.int 2, .int 3]) 5)
+  passed := passed && (← expectError "GoCore pointer identity" (GoCore.runFunction 100 corePointerIdentityFunction #[]))
   passed := passed && (← expectIntResult "add function" (GoLean.GobraEval.runFunctionInts 100 doc "add_F" #[2, 3]) 5)
   passed := passed && (← expectError "missing function" (GoLean.GobraEval.runFunctionInts 100 doc "missing_F" #[]))
   passed := passed && (← expectError "wrong arity" (GoLean.GobraEval.runFunctionInts 100 doc "add_F" #[2]))

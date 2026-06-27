@@ -68,12 +68,12 @@ structure Program where
   funcs : Array Func
   deriving Repr, BEq
 
-abbrev Env := List (String × GoValue)
-abbrev RefEnv := List (String × Addr)
+abbrev LocalEnv := List (String × Loc)
+abbrev Heap := List (Loc × GoValue)
 
 structure ExecState where
-  values : Env := []
-  refs : RefEnv := []
+  locals : LocalEnv := []
+  heap : Heap := []
   nextAddr : Nat := 0
   deriving Repr, BEq
 
@@ -81,50 +81,67 @@ structure Result where
   values : Array GoValue
   deriving Repr, BEq
 
-private def Env.lookup : Env → String → Option GoValue
+private def LocalEnv.lookup : LocalEnv → String → Option Loc
   | [], _ => none
-  | (name, value) :: rest, needle =>
-      if name == needle then some value else Env.lookup rest needle
+  | (name, loc) :: rest, needle =>
+      if name == needle then some loc else LocalEnv.lookup rest needle
 
-private def Env.set : Env → String → GoValue → Env
-  | [], name, value => [(name, value)]
-  | (name, old) :: rest, needle, value =>
+private def LocalEnv.set : LocalEnv → String → Loc → LocalEnv
+  | [], name, loc => [(name, loc)]
+  | (name, old) :: rest, needle, loc =>
       if name == needle then
-        (name, value) :: rest
+        (name, loc) :: rest
       else
-        (name, old) :: Env.set rest needle value
+        (name, old) :: LocalEnv.set rest needle loc
 
-private def RefEnv.lookup : RefEnv → String → Option Addr
+private def Heap.lookup : Heap → Loc → Option GoValue
   | [], _ => none
-  | (name, addr) :: rest, needle =>
-      if name == needle then some addr else RefEnv.lookup rest needle
+  | (loc, value) :: rest, needle =>
+      if loc == needle then some value else Heap.lookup rest needle
 
-private def ExecState.ensureRef (state : ExecState) (name : String) : ExecState :=
-  match RefEnv.lookup state.refs name with
-  | some _ => state
+private def Heap.set : Heap → Loc → GoValue → Heap
+  | [], loc, value => [(loc, value)]
+  | (loc, old) :: rest, needle, value =>
+      if loc == needle then
+        (loc, value) :: rest
+      else
+        (loc, old) :: Heap.set rest needle value
+
+private def ExecState.freshLoc (state : ExecState) : Loc × ExecState :=
+  let loc := Loc.base { id := state.nextAddr }
+  (loc, { state with nextAddr := state.nextAddr + 1 })
+
+private def ExecState.bindLocal (state : ExecState) (name : String) (value : GoValue) :
+    ExecState :=
+  match LocalEnv.lookup state.locals name with
+  | some loc =>
+      { state with heap := Heap.set state.heap loc value }
   | none =>
+      let (loc, state) := state.freshLoc
       { state with
-        refs := (name, { id := state.nextAddr }) :: state.refs,
-        nextAddr := state.nextAddr + 1
+        locals := LocalEnv.set state.locals name loc,
+        heap := Heap.set state.heap loc value
       }
 
-private def ExecState.setValue (state : ExecState) (name : String) (value : GoValue) :
+private def ExecState.storeLoc (state : ExecState) (loc : Loc) (value : GoValue) :
     ExecState :=
-  let state := state.ensureRef name
-  { state with values := Env.set state.values name value }
+  { state with heap := Heap.set state.heap loc value }
 
 private def unsupported {α : Type} (feature : String) : Except String α :=
   throw s!"unsupported GoCore execution feature: {feature}"
 
-private def lookup (state : ExecState) (name : String) : Except String GoValue :=
-  match Env.lookup state.values name with
-  | some value => return value
-  | none => throw s!"unbound GoCore variable: {name}"
-
-private def lookupRef (state : ExecState) (name : String) : Except String Addr :=
-  match RefEnv.lookup state.refs name with
-  | some addr => return addr
+private def lookupLoc (state : ExecState) (name : String) : Except String Loc :=
+  match LocalEnv.lookup state.locals name with
+  | some loc => return loc
   | none => throw s!"unbound GoCore variable address: {name}"
+
+private def loadLoc (state : ExecState) (loc : Loc) : Except String GoValue :=
+  match Heap.lookup state.heap loc with
+  | some value => return value
+  | none => throw s!"unbound GoCore heap location: {repr loc}"
+
+private def lookup (state : ExecState) (name : String) : Except String GoValue := do
+  loadLoc state (← lookupLoc state name)
 
 private def defaultValue : Ty → Except String GoValue
   | .bool => return .bool false
@@ -160,7 +177,7 @@ mutual
         return .bool ((← valueAsInt (← evalExpr state left)) >= (← valueAsInt (← evalExpr state right)))
     | .lessCmp left right => do
         return .bool ((← valueAsInt (← evalExpr state left)) < (← valueAsInt (← evalExpr state right)))
-    | .ref id => return .addr (← lookupRef state id)
+    | .ref id => return .addr (← lookupLoc state id)
     | .old operand => evalExpr state operand
     | .unsupported feature => unsupported feature
 
@@ -179,11 +196,11 @@ mutual
   partial def assignAssignee (state : ExecState) (assignee : Assignee) (value : GoValue) :
       Except String ExecState :=
     match assignee with
-    | .var id => return state.setValue id value
+    | .var id => return state.storeLoc (← lookupLoc state id) value
     | .unsupported feature => unsupported feature
 
   partial def execDecl (state : ExecState) (param : Param) : Except String ExecState := do
-    return state.setValue param.id (← defaultValue param.typ)
+    return state.bindLocal param.id (← defaultValue param.typ)
 
   partial def execDecls (state : ExecState) (decls : Array Param) : Except String ExecState := do
     let mut state := state
@@ -238,7 +255,7 @@ private def bindParams (state : ExecState) (params : Array Param) (args : Array 
   for param in params do
     match args[i]? with
     | some value =>
-        state := state.setValue param.id value
+        state := state.bindLocal param.id value
         i := i + 1
     | none => throw s!"missing argument {i}"
   return state
@@ -246,7 +263,7 @@ private def bindParams (state : ExecState) (params : Array Param) (args : Array 
 private def initResults (state : ExecState) (results : Array Param) : Except String ExecState := do
   let mut state := state
   for result in results do
-    state := state.setValue result.id (← defaultValue result.typ)
+    state := state.bindLocal result.id (← defaultValue result.typ)
   return state
 
 private def collectResults (state : ExecState) (results : Array Param) :

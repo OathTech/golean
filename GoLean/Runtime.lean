@@ -10,11 +10,16 @@ structure Addr where
   id : Nat
   deriving Repr, BEq, DecidableEq
 
+inductive Loc where
+  | base (addr : Addr)
+  | field (base : Loc) (typeName fieldName : String)
+  deriving Repr, BEq, DecidableEq
+
 inductive GoValue where
   | unit
   | bool (value : Bool)
   | int (value : Int)
-  | addr (addr : Addr)
+  | addr (loc : Loc)
   | nil
   deriving Repr, BEq
 

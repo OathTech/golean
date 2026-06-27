@@ -128,11 +128,21 @@ private def parseGobraRunArgs : List String → GobraRunArgs → Except String G
       parseGobraRunArgs rest { cfg with fuel := (← parseJsonNat "--fuel" value) }
   | flag :: _, _ => .error s!"unknown or incomplete option: {flag}\n{usage}"
 
+private def locJson : Loc → Json
+  | .base addr => Json.mkObj [("tag", Json.str "addr"), ("id", Lean.toJson addr.id)]
+  | .field base typeName fieldName =>
+      Json.mkObj [
+        ("tag", Json.str "fieldAddr"),
+        ("base", locJson base),
+        ("typeName", Json.str typeName),
+        ("fieldName", Json.str fieldName)
+      ]
+
 private def goValueJson : GoValue → Json
   | .unit => Json.mkObj [("tag", Json.str "unit")]
   | .bool value => Json.mkObj [("tag", Json.str "bool"), ("value", Lean.toJson value)]
   | .int value => Json.mkObj [("tag", Json.str "int"), ("value", Lean.toJson value)]
-  | .addr addr => Json.mkObj [("tag", Json.str "addr"), ("id", Lean.toJson addr.id)]
+  | .addr loc => locJson loc
   | .nil => Json.mkObj [("tag", Json.str "nil")]
 
 private def runJson : GoLean.GobraEval.Result → Json
