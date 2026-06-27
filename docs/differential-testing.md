@@ -50,10 +50,10 @@ cache directories.
 
 Current scalability limitation: Gobra export is slow because the harness invokes
 SBT/Gobra once per corpus entry. `scripts/diff-smoke` reuses
-`artifacts/gobra-smoke` when it exists, so repeated Go-vs-Lean comparisons are
-fast after one export. The next harness improvement should make Gobra export
-incremental or batched so adding one fixture does not require re-exporting the
-entire corpus.
+`artifacts/gobra-smoke` when it exists and checks artifact source hashes before
+running Lean; if artifacts are missing or stale, it refreshes them once. The
+next harness improvement should make Gobra export incremental or batched so
+adding one fixture does not require re-exporting the entire corpus.
 
 ## Random Program Generators
 

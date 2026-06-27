@@ -7,7 +7,6 @@ cd "$ROOT"
 OUT="artifacts/gobra-smoke"
 MANIFEST="${1:-Differential/manifest.tsv}"
 GO_BUILD_CACHE="$ROOT/artifacts/go-build-cache"
-GOBRA_SMOKE_TIMEOUT_SECONDS="${GOBRA_SMOKE_TIMEOUT_SECONDS:-240}"
 GO_TIMEOUT_SECONDS="${GO_TIMEOUT_SECONDS:-30}"
 LEAN_TIMEOUT_SECONDS="${LEAN_TIMEOUT_SECONDS:-30}"
 
@@ -31,8 +30,15 @@ if [[ ! -f "$MANIFEST" ]]; then
   exit 2
 fi
 
-if [[ ! -d "$OUT/work" ]]; then
+refreshed_artifacts=0
+
+refresh_artifacts() {
   scripts/gobra-smoke
+  refreshed_artifacts=1
+}
+
+if [[ ! -d "$OUT/work" ]]; then
+  refresh_artifacts
 fi
 mkdir -p "$GO_BUILD_CACHE"
 
@@ -79,13 +85,26 @@ while IFS=$'\t' read -r id go_dir gobra_json function_name arg_ints expected_sta
     exit 2
   fi
   if [[ ! -f "$gobra_json" ]]; then
-    scripts/gobra-smoke
+    if [[ "$refreshed_artifacts" -eq 0 ]]; then
+      refresh_artifacts
+    fi
   fi
   if [[ ! -f "$gobra_json" ]]; then
     echo "Gobra JSON artifact not found for $id: $gobra_json" >&2
     exit 2
   fi
-  lean gobra-artifact-check --manifest "$OUT/manifest.json" --internal-json "$gobra_json" >/dev/null
+  if ! artifact_check_output="$(lean gobra-artifact-check --manifest "$OUT/manifest.json" --internal-json "$gobra_json" 2>&1)"; then
+    if [[ "$refreshed_artifacts" -eq 0 ]]; then
+      refresh_artifacts
+      artifact_check_output="$(lean gobra-artifact-check --manifest "$OUT/manifest.json" --internal-json "$gobra_json" 2>&1)" || {
+        echo "$artifact_check_output" >&2
+        exit 2
+      }
+    else
+      echo "$artifact_check_output" >&2
+      exit 2
+    fi
+  fi
 
   lean_args=(gobra-json-run --input "$gobra_json" --function "$function_name")
   if [[ "$arg_ints" != "-" ]]; then
