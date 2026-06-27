@@ -8,3 +8,7 @@ name = "GoLean"
 [[lean_exe]]
 name = "golean"
 root = "Main"
+
+[[lean_exe]]
+name = "gobra-json-tests"
+root = "Tests.GobraJson"
