@@ -9,7 +9,8 @@ backlog items.
 - Generate strict Lean decoders from that ADT, rejecting missing fields, extra fields, wrong tags, and wrong scalar types.
 - Generate the Scala export ADT/encoder from the same schema source, or generate a machine-readable schema from Lean that the Gobra exporter targets.
 - Broaden the typed `GobraJson` importer from the smoke-corpus `Stmt`, `Expr`, `Assertion`, and `TerminationMeasure` tags to larger Gobra corpora.
-- Add more negative tests for surprise JSON inputs: missing constructor fields, malformed source positions, unsupported type tags, unsupported statement tags in nested bodies, and unsupported expression tags in specs.
+- Add more negative tests for surprise JSON inputs: missing constructor fields, malformed source positions, unsupported type tags, unsupported statement tags in nested bodies, and unsupported expression tags in wire-only spec fields.
+- Keep the Gobra wire model isolated from GoCore so replacing Gobra with our own Go frontend later does not require changing the semantic core.
 
 ## Differential Execution
 
@@ -25,8 +26,6 @@ backlog items.
   builds used by the harness.
 - Prevent stale or cross-test artifacts by tying generated Gobra JSON to source
   hashes and using per-run temporary artifact directories with atomic publish.
-- Replace `--ignore-assert-at` with a fail-closed mechanism: stable assertion
-  identifiers or an exact single-match source assertion check.
 - Extend `scripts/diff-smoke` with same-source fixtures where possible, so Go
   execution and Gobra/Lean execution cannot silently drift apart.
 
@@ -36,7 +35,7 @@ backlog items.
   relational GoCore semantics for Iris-Lean. The interpreter is for testing; it
   should not be the only semantic authority.
 - Thread structured errors through GoCore:
-  `panic`, `assertion`, `unsupported`, `stuck`, and `internal`.
+  `panic`, `unsupported`, `stuck`, and `internal`.
 - Classify nil pointer dereference and Go-defined runtime traps as `panic`, not
   `stuck`.
 - Replace raw `GoValue` equality with type-directed comparable equality.
@@ -53,8 +52,10 @@ backlog items.
   and call assignment match Go's sequencing rules.
 - Bounds-check indexed locations when evaluating the lvalue, including
   address-of-index operations such as `&a[i]`.
-- Separate executable Go behavior from Gobra/spec behavior with an explicit
-  mode: `goOnly`, `gobraAssertions`, and later `proofObligations`.
+- Keep GoCore free of Gobra verification constructs. Gobra assertions,
+  preconditions, postconditions, invariants, predicates, and ghost artifacts are
+  frontend wire data only unless a later proof-extraction design explicitly
+  reinterprets them outside the runtime semantics.
 
 ## Gobra Lowering Hardening
 
@@ -71,10 +72,8 @@ backlog items.
 
 ## GoCore Memory Milestone
 
-- Add a regression test that proves `examples/swap` reaches the final
-  assertion, not an earlier assertion, without relying on manual JSON rewriting.
-- Decide whether top-level Gobra pre/postconditions should be executable
-  assertions, verification-only metadata, or controlled by a CLI flag.
+- Add regression tests that observe memory effects through ordinary Go returns
+  or Go-side output, not Gobra assertions.
 - Add richer call-frame tests, including returned values and nested calls.
 - Add method-call tests from Gobra JSON beyond `examples/swap`.
 
@@ -85,7 +84,8 @@ backlog items.
 - Added load, store, address-of, dereference, struct field get, and field ref.
 - Added `Value.struct` and struct literals.
 - Added direct function and method calls with fresh local frames and shared heap.
-- Made `examples/swap` execute to the expected final assertion failure.
+- Made `examples/swap` execute as ordinary Go after Gobra assertions/specs are
+  erased at lowering.
 
 ## Proof Generation
 

@@ -108,31 +108,18 @@ if [[ "$array_copy_actual" != "$array_copy_expected" ]]; then
 fi
 
 pointer_identity_json="$OUT/work/features/pointer-identity/pointer-identity.gobra.internal.json"
-pointer_identity_expected='{"message":"GoCore assertion failed","status":"assertion_error"}'
-if pointer_identity_actual="$(lean gobra-json-run --input "$pointer_identity_json" --function test_bda1d7d_F)"; then
-  echo "expected pointer-identity Lean execution to fail" >&2
-  exit 1
-fi
+pointer_identity_expected='{"status":"ok","values":[]}'
+pointer_identity_actual="$(lean gobra-json-run --input "$pointer_identity_json" --function test_bda1d7d_F)"
 if [[ "$pointer_identity_actual" != "$pointer_identity_expected" ]]; then
   echo "unexpected pointer-identity Lean execution result: $pointer_identity_actual" >&2
   exit 1
 fi
 
 swap_json="$OUT/work/examples/swap/swap.gobra.internal.json"
-swap_expected='{"message":"GoCore assertion failed","status":"assertion_error"}'
-if swap_actual="$(lean gobra-json-run --input "$swap_json" --function client_bda1d7d_F)"; then
-  echo "expected swap client Lean execution to fail at final assertion" >&2
-  exit 1
-fi
+swap_expected='{"status":"ok","values":[]}'
+swap_actual="$(lean gobra-json-run --input "$swap_json" --function client_bda1d7d_F)"
 if [[ "$swap_actual" != "$swap_expected" ]]; then
   echo "unexpected swap client Lean execution result: $swap_actual" >&2
-  exit 1
-fi
-
-swap_without_final_assert_expected='{"status":"ok","values":[]}'
-swap_without_final_assert_actual="$(lean gobra-json-run --input "$swap_json" --function client_bda1d7d_F --ignore-assert-at 48:5)"
-if [[ "$swap_without_final_assert_actual" != "$swap_without_final_assert_expected" ]]; then
-  echo "swap client did not pass after ignoring final assertion: $swap_without_final_assert_actual" >&2
   exit 1
 fi
 
@@ -140,4 +127,4 @@ rm -rf "$OUT_FINAL"
 mv "$OUT" "$OUT_FINAL"
 trap - EXIT
 
-echo "executed 9 Gobra internal JSON function(s) in Lean"
+echo "executed 9 Gobra-fronted Go function(s) in Lean"

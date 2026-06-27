@@ -12,6 +12,10 @@ Initial direction:
 - Gobra frontend/export artifacts lower into a clean GoCore deep embedding.
 - GoCore is the semantic center: Gobra is a frontend source, not a first-class
   verification target.
+- Gobra verification annotations are erased at lowering; differential tests
+  compare ordinary Go execution against Lean execution.
+- A native Go frontend is a likely later replacement for Gobra once coverage
+  demands it.
 - Lean executes GoCore for differential testing, and later generated Lean views
   should be checked against the same GoCore semantics.
 - Proof and VCG layers can later reuse ideas from Aeneas, Goose/Perennial,

@@ -7,7 +7,7 @@ Lean.
 Observation format:
 
 ```text
-status : ok | panic | assertion_error | unsupported | stuck | error
+status : ok | panic | unsupported | stuck | error
 values : Array Value
 message : Option String
 ```
@@ -21,15 +21,18 @@ Cases are listed in `Differential/manifest.tsv`. The manifest is intentionally
 strict and small:
 
 ```text
-id<TAB>go_dir<TAB>gobra_json<TAB>function<TAB>arg_ints<TAB>ignore_assert_at<TAB>expected_status<TAB>features<TAB>expected_reason
+id<TAB>go_dir<TAB>gobra_json<TAB>function<TAB>arg_ints<TAB>expected_status<TAB>features<TAB>expected_reason
 ```
 
-Use `-` for no integer args or no ignored assertion. Feature tags are
-comma-separated. Use `-` for `expected_reason` unless the expected status is
-`unsupported` or `stuck`; those statuses must include a concrete reason so they
-cannot become invisible coverage debt. The smoke script fails on malformed rows,
-missing files, unknown statuses, invalid integer arguments, and observation
-mismatches.
+Use `-` for no integer args. Feature tags are comma-separated. Use `-` for
+`expected_reason` unless the expected status is `unsupported` or `stuck`; those
+statuses must include a concrete reason so they cannot become invisible
+coverage debt. The smoke script fails on malformed rows, missing files, unknown
+statuses, invalid integer arguments, and observation mismatches.
+
+Gobra assertions and specifications are not observations. Differential cases
+compare ordinary Go execution against Lean execution after Gobra verification
+artifacts have been erased by lowering.
 
 The script requires `go` on `PATH`.
 

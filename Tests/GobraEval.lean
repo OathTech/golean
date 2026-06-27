@@ -20,6 +20,9 @@ private def z : GobraJson.Parameter := param "z"
 private def coreParam (id : String) : GoCore.Param :=
   { id, typ := .int }
 
+private def coreBoolParam (id : String) : GoCore.Param :=
+  { id, typ := .bool }
+
 private def coreAddExpr : GoCore.Expr :=
   .add (.var "x") (.var "y")
 
@@ -27,17 +30,13 @@ private def coreAddFunction : GoCore.Func := {
   name := "add_F",
   args := #[coreParam "x", coreParam "y"],
   results := #[coreParam "z"],
-  pres := #[],
-  posts := #[.expr (.eqCmp (.var "z") coreAddExpr)],
   body := .assign (.var "z") coreAddExpr
 }
 
 private def corePointerIdentityFunction : GoCore.Func := {
   name := "pointer_identity_F",
   args := #[],
-  results := #[],
-  pres := #[],
-  posts := #[],
+  results := #[coreBoolParam "same"],
   body := .block
     #[
       { id := "v", typ := .int },
@@ -50,10 +49,9 @@ private def corePointerIdentityFunction : GoCore.Func := {
       .assign (.var "v") (.intLit 42),
       .assign (.var "ar") (.ref "v"),
       .assign (.var "br") (.ref "v"),
-      .assert (.expr (.eqCmp (.var "ar") (.var "br"))),
       .assign (.var "arr") (.ref "ar"),
       .assign (.var "brr") (.ref "br"),
-      .assert (.expr (.eqCmp (.var "arr") (.var "brr")))
+      .assign (.var "same") (.eqCmp (.var "arr") (.var "brr"))
     ]
 }
 
@@ -63,17 +61,13 @@ private def coreCellTypes : GoCore.TypeEnv :=
 private def coreStructFunction : GoCore.Func := {
   name := "struct_F",
   args := #[],
-  results := #[],
-  pres := #[],
-  posts := #[],
+  results := #[coreParam "z"],
   body := .block
     #[{ id := "x", typ := .defined "cell" }]
     #[
       .assign (.var "x") (.structLit (.defined "cell") #[.intLit 42]),
-      .assert (.expr (.eqCmp (.fieldGet (.var "x") "cell" "valA") (.intLit 42))),
       .assign (.addr (.fieldAddr (.ref "x") "cell" "valA")) (.intLit 17),
-      .assert (.expr (.eqCmp (.var "x") (.structLit (.defined "cell") #[.intLit 17]))),
-      .assert (.expr (.eqCmp (.deref (.ref "x") (.defined "cell")) (.var "x")))
+      .assign (.var "z") (.fieldGet (.deref (.ref "x") (.defined "cell")) "cell" "valA")
     ]
 }
 
@@ -84,8 +78,6 @@ private def coreSetCellFunction : GoCore.Func := {
     { id := "v", typ := .int }
   ],
   results := #[],
-  pres := #[],
-  posts := #[],
   body := .assign
     (.addr (.fieldAddr (.var "p") "cell" "valA"))
     (.var "v")
@@ -94,15 +86,13 @@ private def coreSetCellFunction : GoCore.Func := {
 private def coreCallFunction : GoCore.Func := {
   name := "call_F",
   args := #[],
-  results := #[],
-  pres := #[],
-  posts := #[],
+  results := #[coreParam "z"],
   body := .block
     #[{ id := "x", typ := .defined "cell" }]
     #[
       .assign (.var "x") (.structLit (.defined "cell") #[.intLit 42]),
       .call #[] "setCell_F" #[.ref "x", .intLit 9],
-      .assert (.expr (.eqCmp (.var "x") (.structLit (.defined "cell") #[.intLit 9])))
+      .assign (.var "z") (.fieldGet (.var "x") "cell" "valA")
     ]
 }
 
@@ -110,15 +100,8 @@ private def coreScalarFunction : GoCore.Func := {
   name := "scalars_F",
   args := #[coreParam "x", coreParam "y"],
   results := #[coreParam "z"],
-  pres := #[],
-  posts := #[],
   body := .seqn #[
-      .assign (.var "z") (.sub (.var "x") (.var "y")),
-      .assert (.expr (.neqCmp (.var "z") (.var "y"))),
-      .assert (.expr (.or (.greaterCmp (.var "z") (.intLit 0)) (.eqCmp (.var "z") (.intLit 0)))),
-      .assert (.expr (.not (.lessCmp (.var "z") (.intLit 0)))),
-      .assert (.expr (.eqCmp (.div (.intLit (-7)) (.intLit 3)) (.intLit (-2)))),
-      .assert (.expr (.eqCmp (.mod (.intLit (-7)) (.intLit 3)) (.intLit (-1))))
+      .assign (.var "z") (.sub (.var "x") (.var "y"))
     ]
 }
 
@@ -126,16 +109,13 @@ private def coreArrayFunction : GoCore.Func := {
   name := "arrays_F",
   args := #[],
   results := #[coreParam "z"],
-  pres := #[],
-  posts := #[],
   body := .block
     #[{ id := "a", typ := .array 3 .int }]
     #[
       .assign (.var "a") (.arrayLit 3 .int #[(0, .intLit 1), (1, .intLit 2), (2, .intLit 3)]),
       .assign (.var "z") (.add (.indexGet (.var "a") (.intLit 0)) (.indexGet (.var "a") (.intLit 2))),
       .assign (.addr (.indexAddr (.ref "a") (.intLit 1))) (.intLit 7),
-      .assign (.var "z") (.add (.var "z") (.indexGet (.var "a") (.intLit 1))),
-      .assert (.expr (.eqCmp (.var "a") (.arrayLit 3 .int #[(0, .intLit 1), (1, .intLit 7), (2, .intLit 3)])))
+      .assign (.var "z") (.add (.var "z") (.indexGet (.var "a") (.intLit 1)))
     ]
 }
 
@@ -143,8 +123,6 @@ private def coreNilDerefFunction : GoCore.Func := {
   name := "nil_deref_F",
   args := #[],
   results := #[coreParam "z"],
-  pres := #[],
-  posts := #[],
   body := .block
     #[{ id := "p", typ := .pointer .int }]
     #[
@@ -156,8 +134,6 @@ private def coreDivideByZeroFunction : GoCore.Func := {
   name := "divide_by_zero_F",
   args := #[],
   results := #[coreParam "z"],
-  pres := #[],
-  posts := #[],
   body := .assign (.var "z") (.div (.intLit 1) (.intLit 0))
 }
 
@@ -165,8 +141,6 @@ private def coreIndexAddrBoundsFunction : GoCore.Func := {
   name := "index_addr_bounds_F",
   args := #[],
   results := #[],
-  pres := #[],
-  posts := #[],
   body := .block
     #[{ id := "a", typ := .array 2 .int }]
     #[
@@ -177,18 +151,14 @@ private def coreIndexAddrBoundsFunction : GoCore.Func := {
 private def coreMismatchedEqualityFunction : GoCore.Func := {
   name := "mismatched_equality_F",
   args := #[],
-  results := #[],
-  pres := #[],
-  posts := #[],
-  body := .assert (.expr (.eqCmp (.intLit 0) (.boolLit false)))
+  results := #[coreBoolParam "ok"],
+  body := .assign (.var "ok") (.eqCmp (.intLit 0) (.boolLit false))
 }
 
 private def coreShiftIndexFunction : GoCore.Func := {
   name := "shiftIndex_F",
   args := #[{ id := "p", typ := .pointer .int }],
   results := #[coreParam "z"],
-  pres := #[],
-  posts := #[],
   body := .seqn #[
     .assign (.addr (.var "p")) (.intLit 1),
     .assign (.var "z") (.intLit 9)
@@ -198,9 +168,7 @@ private def coreShiftIndexFunction : GoCore.Func := {
 private def coreCallTargetSequencingFunction : GoCore.Func := {
   name := "call_target_sequencing_F",
   args := #[],
-  results := #[],
-  pres := #[],
-  posts := #[],
+  results := #[coreParam "z"],
   body := .block
     #[
       { id := "i", typ := .int },
@@ -210,9 +178,12 @@ private def coreCallTargetSequencingFunction : GoCore.Func := {
       .assign (.var "i") (.intLit 0),
       .assign (.var "a") (.arrayLit 2 .int #[(0, .intLit 0), (1, .intLit 0)]),
       .call #[.addr (.indexAddr (.ref "a") (.var "i"))] "shiftIndex_F" #[.ref "i"],
-      .assert (.expr (.eqCmp (.indexGet (.var "a") (.intLit 0)) (.intLit 9))),
-      .assert (.expr (.eqCmp (.indexGet (.var "a") (.intLit 1)) (.intLit 0))),
-      .assert (.expr (.eqCmp (.var "i") (.intLit 1)))
+      .assign (.var "z")
+        (.add
+          (.add
+            (.mul (.indexGet (.var "a") (.intLit 0)) (.intLit 100))
+            (.mul (.indexGet (.var "a") (.intLit 1)) (.intLit 10)))
+          (.var "i"))
     ]
 }
 
@@ -282,6 +253,20 @@ private def expectIntResult (name : String) (result : Except GoError GoLean.Gobr
       IO.eprintln s!"FAIL: {name}: expected success, got {repr err}"
       return false
 
+private def expectBoolResult (name : String) (result : Except GoError GoLean.GobraEval.Result)
+    (expected : Bool) : IO Bool := do
+  match result with
+  | .ok result =>
+      if result.values == #[.bool expected] then
+        IO.println s!"ok: {name}"
+        return true
+      else
+        IO.eprintln s!"FAIL: {name}: expected {expected}, got {repr result.values}"
+        return false
+  | .error err =>
+      IO.eprintln s!"FAIL: {name}: expected success, got {repr err}"
+      return false
+
 private def expectErrorStatus (name : String) (result : Except GoError GoLean.GobraEval.Result)
     (expected : String) : IO Bool := do
   match result with
@@ -309,18 +294,18 @@ private def expectOk (name : String) (result : Except GoError GoLean.GobraEval.R
 def main : IO UInt32 := do
   let mut passed := true
   passed := passed && (← expectIntResult "GoCore add function" (GoCore.runFunction 100 coreAddFunction #[.int 2, .int 3]) 5)
-  passed := passed && (← expectErrorStatus "GoCore pointer identity" (GoCore.runFunction 100 corePointerIdentityFunction #[]) "assertion_error")
-  passed := passed && (← expectOk "GoCore struct field update" (GoCore.runFunctionWithTypes 100 coreCellTypes coreStructFunction #[]))
-  passed := passed && (← expectOk "GoCore shared-heap function call"
-    (GoCore.runFunctionWithContext 100 coreCellTypes #[coreSetCellFunction, coreCallFunction] coreCallFunction #[]))
+  passed := passed && (← expectBoolResult "GoCore pointer identity" (GoCore.runFunction 100 corePointerIdentityFunction #[]) false)
+  passed := passed && (← expectIntResult "GoCore struct field update" (GoCore.runFunctionWithTypes 100 coreCellTypes coreStructFunction #[]) 17)
+  passed := passed && (← expectIntResult "GoCore shared-heap function call"
+    (GoCore.runFunctionWithContext 100 coreCellTypes #[coreSetCellFunction, coreCallFunction] coreCallFunction #[]) 9)
   passed := passed && (← expectIntResult "GoCore scalar operators" (GoCore.runFunction 100 coreScalarFunction #[.int 10, .int 3]) 7)
   passed := passed && (← expectIntResult "GoCore array indexing" (GoCore.runFunction 100 coreArrayFunction #[]) 11)
   passed := passed && (← expectErrorStatus "GoCore nil dereference panic" (GoCore.runFunction 100 coreNilDerefFunction #[]) "panic")
   passed := passed && (← expectErrorStatus "GoCore divide by zero panic" (GoCore.runFunction 100 coreDivideByZeroFunction #[]) "panic")
   passed := passed && (← expectErrorStatus "GoCore index address bounds panic" (GoCore.runFunction 100 coreIndexAddrBoundsFunction #[]) "panic")
   passed := passed && (← expectErrorStatus "GoCore mismatched equality stuck" (GoCore.runFunction 100 coreMismatchedEqualityFunction #[]) "stuck")
-  passed := passed && (← expectOk "GoCore call target sequencing"
-    (GoCore.runFunctionWithContext 100 [] #[coreShiftIndexFunction, coreCallTargetSequencingFunction] coreCallTargetSequencingFunction #[]))
+  passed := passed && (← expectIntResult "GoCore call target sequencing"
+    (GoCore.runFunctionWithContext 100 [] #[coreShiftIndexFunction, coreCallTargetSequencingFunction] coreCallTargetSequencingFunction #[]) 901)
   passed := passed && (← expectIntResult "add function" (GoLean.GobraEval.runFunctionInts 100 doc "add_F" #[2, 3]) 5)
   passed := passed && (← expectErrorStatus "missing function" (GoLean.GobraEval.runFunctionInts 100 doc "missing_F" #[]) "stuck")
   passed := passed && (← expectErrorStatus "wrong arity" (GoLean.GobraEval.runFunctionInts 100 doc "add_F" #[2]) "stuck")

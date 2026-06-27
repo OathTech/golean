@@ -10,7 +10,9 @@ Go/Gobra source -> Gobra frontend/export -> Gobra JSON wire AST -> GoCore -> Lea
 
 Gobra is useful as a mature frontend and source of typed/transformed artifacts,
 but Gobra IR is not intended to be the verification language we expose or build
-proof principles around.
+proof principles around. It is also not assumed to be the permanent frontend;
+GoCore should be able to accept a future native Go frontend without changing
+the semantics.
 
 ## Layers
 
@@ -24,6 +26,10 @@ proof principles around.
 Frontend-specific complications should be handled in `GobraToIR`. Semantic
 constructs should be added to GoCore only when they are part of Go's behavior,
 not merely artifacts of Gobra's internal representation.
+
+Gobra assertions, preconditions, postconditions, predicates, invariants, and
+ghost constructs are frontend wire data. They are not executable GoCore
+statements or function contracts.
 
 See `docs/semantics.md` for the current GoCore semantics design and
 `docs/roadmap.md` for the phased implementation plan.

@@ -65,20 +65,12 @@ inductive Assignee where
   | unsupported (feature : String)
   deriving Repr, BEq, Inhabited
 
-inductive Assertion where
-  | expr (expr : Expr)
-  | sepAnd (left right : Assertion)
-  | implication (left right : Assertion)
-  | unsupported (feature : String)
-  deriving Repr, BEq, Inhabited
-
 inductive Stmt where
   | seqn (stmts : Array Stmt)
   | block (decls : Array Param) (stmts : Array Stmt)
   | initialization (var : Param)
   | assign (left : Assignee) (right : Expr)
   | call (targets : Array Assignee) (name : String) (args : Array Expr)
-  | assert (assertion : Assertion)
   | while (cond : Expr) (body : Stmt)
   | label (name : String)
   | unsupported (feature : String)
@@ -88,8 +80,6 @@ structure Func where
   name : String
   args : Array Param
   results : Array Param
-  pres : Array Assertion
-  posts : Array Assertion
   body : Stmt
   deriving Repr, BEq
 
@@ -214,9 +204,6 @@ private def panic {α : Type} (message : String) : Except GoError α :=
 
 private def stuck {α : Type} (message : String) : Except GoError α :=
   throw (.stuck message)
-
-private def assertionFailure {α : Type} (message : String) : Except GoError α :=
-  throw (.assertion message)
 
 private def lookupLoc (state : ExecState) (name : String) : Except GoError Loc :=
   match LocalEnv.lookup state.locals name with
@@ -486,18 +473,6 @@ mutual
     | .old operand => evalExpr state operand
     | .unsupported feature => unsupported feature
 
-  partial def evalAssertion (state : ExecState) : Assertion → Except GoError Bool
-    | .expr expr => do
-        valueAsBool (← evalExpr state expr)
-    | .sepAnd left right => do
-        return (← evalAssertion state left) && (← evalAssertion state right)
-    | .implication left right => do
-        if ← evalAssertion state left then
-          evalAssertion state right
-        else
-          return true
-    | .unsupported feature => unsupported feature
-
   partial def evalAssigneeLoc (state : ExecState) : Assignee → Except GoError Loc
     | .var id => lookupLoc state id
     | .addr locExpr => do
@@ -605,11 +580,6 @@ mutual
         let value ← evalExpr state right
         return .normal (← assignLoc state loc value)
     | .call targets name args => return .normal (← execFunctionCall fuel state targets name args)
-    | .assert assertion => do
-        if ← evalAssertion state assertion then
-          return .normal state
-        else
-          assertionFailure "GoCore assertion failed"
     | .while cond body => do
         if fuel == 0 then
           stuck "GoCore execution fuel exhausted"
@@ -624,14 +594,6 @@ mutual
     | .label _ => return .normal state
     | .unsupported feature => unsupported feature
 end
-
-private def checkAssertions (state : ExecState) (kind : String) (assertions : Array Assertion) :
-    Except GoError Unit := do
-  for assertion in assertions do
-    if ← evalAssertion state assertion then
-      pure ()
-    else
-      assertionFailure s!"GoCore {kind} failed"
 
 private def bindParams (state : ExecState) (params : Array Param) (args : Array GoValue) :
     Except GoError ExecState := do
@@ -664,14 +626,12 @@ def runFunctionWithContext (fuel : Nat) (types : TypeEnv) (functions : Array Fun
     (func : Func) (args : Array GoValue) : Except GoError Result := do
   let state ← bindParams { types := types, functions := functions } func.args args
   let state ← initResults state func.results
-  checkAssertions state "precondition" func.pres
   let state ←
     match ← execStmt fuel state func.body with
     | .normal state => pure state
     | .returned state => pure state
     | .broke _ => stuck s!"function {func.name} body escaped with break"
     | .continued _ => stuck s!"function {func.name} body escaped with continue"
-  checkAssertions state "postcondition" func.posts
   return { values := (← collectResults state func.results) }
 
 def runFunctionWithTypes (fuel : Nat) (types : TypeEnv) (func : Func) (args : Array GoValue) :

@@ -1,10 +1,10 @@
-# id	go_dir	gobra_json	function	arg_ints	ignore_assert_at	expected_status	features	expected_reason
-plain/while1	Differential/plain/while1	artifacts/gobra-smoke/work/features/while1/while1.gobra.internal.json	test_bda1d7d_F	6,7	-	ok	ints,loops,contracts	-
-plain/multi-assign	Differential/plain/multi-assign	artifacts/gobra-smoke/work/features/multi-assign/multi-assign.gobra.internal.json	foo_bda1d7d_F	-	-	ok	ints,multi_assign,assertions	-
-plain/pointer-identity	Differential/plain/pointer-identity	artifacts/gobra-smoke/work/features/pointer-identity/pointer-identity.gobra.internal.json	test_bda1d7d_F	-	-	assertion_error	pointers,identity,assertions	-
-plain/swap-without-final-assert	Differential/plain/swap	artifacts/gobra-smoke/work/examples/swap/swap.gobra.internal.json	client_bda1d7d_F	-	48:5	ok	structs,pointers,fields,calls,assertions	-
-plain/scalars	Differential/plain/scalars	artifacts/gobra-smoke/work/features/scalars/scalars.gobra.internal.json	scalars_bda1d7d_F	-	-	ok	ints,comparisons,bools,division,modulo	-
-plain/divide-by-zero	Differential/plain/divide-by-zero	artifacts/gobra-smoke/work/features/divide-by-zero/divide-by-zero.gobra.internal.json	divideByZero_bda1d7d_F	-	-	panic	ints,division,panic	-
-plain/arrays	Differential/plain/arrays	artifacts/gobra-smoke/work/features/arrays/arrays.gobra.internal.json	arrays_bda1d7d_F	-	-	ok	arrays,indexing,assignment	-
-plain/array-bounds	Differential/plain/array-bounds	artifacts/gobra-smoke/work/features/array-bounds/array-bounds.gobra.internal.json	arrayBounds_bda1d7d_F	-	-	panic	arrays,indexing,panic	-
-plain/array-copy	Differential/plain/array-copy	artifacts/gobra-smoke/work/features/array-copy/array-copy.gobra.internal.json	arrayCopy_bda1d7d_F	-	-	ok	arrays,value_copy,indexing,assignment	-
+# id	go_dir	gobra_json	function	arg_ints	expected_status	features	expected_reason
+plain/while1	Differential/plain/while1	artifacts/gobra-smoke/work/features/while1/while1.gobra.internal.json	test_bda1d7d_F	6,7	ok	ints,loops	-
+plain/multi-assign	Differential/plain/multi-assign	artifacts/gobra-smoke/work/features/multi-assign/multi-assign.gobra.internal.json	foo_bda1d7d_F	-	ok	ints,multi_assign	-
+plain/pointer-identity	Differential/plain/pointer-identity	artifacts/gobra-smoke/work/features/pointer-identity/pointer-identity.gobra.internal.json	test_bda1d7d_F	-	ok	pointers,identity	-
+plain/swap	Differential/plain/swap	artifacts/gobra-smoke/work/examples/swap/swap.gobra.internal.json	client_bda1d7d_F	-	ok	structs,pointers,fields,calls	-
+plain/scalars	Differential/plain/scalars	artifacts/gobra-smoke/work/features/scalars/scalars.gobra.internal.json	scalars_bda1d7d_F	-	ok	ints,comparisons,bools,division,modulo	-
+plain/divide-by-zero	Differential/plain/divide-by-zero	artifacts/gobra-smoke/work/features/divide-by-zero/divide-by-zero.gobra.internal.json	divideByZero_bda1d7d_F	-	panic	ints,division,panic	-
+plain/arrays	Differential/plain/arrays	artifacts/gobra-smoke/work/features/arrays/arrays.gobra.internal.json	arrays_bda1d7d_F	-	ok	arrays,indexing,assignment	-
+plain/array-bounds	Differential/plain/array-bounds	artifacts/gobra-smoke/work/features/array-bounds/array-bounds.gobra.internal.json	arrayBounds_bda1d7d_F	-	panic	arrays,indexing,panic	-
+plain/array-copy	Differential/plain/array-copy	artifacts/gobra-smoke/work/features/array-copy/array-copy.gobra.internal.json	arrayCopy_bda1d7d_F	-	ok	arrays,value_copy,indexing,assignment	-

@@ -38,7 +38,7 @@ mkdir -p "$GO_BUILD_CACHE"
 
 case_count=0
 
-while IFS=$'\t' read -r id go_dir gobra_json function_name arg_ints ignore_assert_at expected_status features expected_reason extra; do
+while IFS=$'\t' read -r id go_dir gobra_json function_name arg_ints expected_status features expected_reason extra; do
   if [[ -z "${id:-}" || "$id" == \#* ]]; then
     continue
   fi
@@ -47,13 +47,13 @@ while IFS=$'\t' read -r id go_dir gobra_json function_name arg_ints ignore_asser
     echo "malformed differential manifest row for $id: too many fields" >&2
     exit 2
   fi
-  if [[ -z "${go_dir:-}" || -z "${gobra_json:-}" || -z "${function_name:-}" || -z "${arg_ints:-}" || -z "${ignore_assert_at:-}" || -z "${expected_status:-}" || -z "${features:-}" || -z "${expected_reason:-}" ]]; then
-    echo "malformed differential manifest row for $id: expected 9 tab-separated fields" >&2
+  if [[ -z "${go_dir:-}" || -z "${gobra_json:-}" || -z "${function_name:-}" || -z "${arg_ints:-}" || -z "${expected_status:-}" || -z "${features:-}" || -z "${expected_reason:-}" ]]; then
+    echo "malformed differential manifest row for $id: expected 8 tab-separated fields" >&2
     exit 2
   fi
 
   case "$expected_status" in
-    ok|panic|assertion_error|unsupported|stuck|error) ;;
+    ok|panic|unsupported|stuck|error) ;;
     *)
       echo "unknown expected status for $id: $expected_status" >&2
       exit 2
@@ -98,14 +98,6 @@ while IFS=$'\t' read -r id go_dir gobra_json function_name arg_ints ignore_asser
       lean_args+=(--arg-int "$value")
     done
   fi
-  if [[ "$ignore_assert_at" != "-" ]]; then
-    if [[ ! "$ignore_assert_at" =~ ^[0-9]+:[0-9]+$ ]]; then
-      echo "invalid ignore_assert_at for $id: $ignore_assert_at" >&2
-      exit 2
-    fi
-    lean_args+=(--ignore-assert-at "$ignore_assert_at")
-  fi
-
   if lean_observation="$(lean "${lean_args[@]}")"; then
     lean_status=0
   else

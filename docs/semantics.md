@@ -4,7 +4,8 @@ GoCore is the deep embedding we use for execution, differential testing, and
 eventually verification in Lean.
 
 Gobra is a frontend. Gobra JSON is a strict wire format. Neither Gobra IR nor
-the JSON shape is the semantic center of the project.
+the JSON shape is the semantic center of the project. Gobra's verification
+language is not part of GoCore runtime semantics.
 
 The intended pipeline is:
 
@@ -21,6 +22,9 @@ Go/Gobra source
 
 - Keep GoCore close to Go's runtime behavior, not Gobra's implementation
   details.
+- Keep Gobra assertions, specs, predicates, invariants, and ghost artifacts out
+  of GoCore. They may be decoded fail-closed as wire data, but lowering erases
+  or rejects them instead of treating them as Go behavior.
 - Make unsupported semantics explicit. Surprise inputs should fail early.
 - Keep the executable semantics simple enough to differential-test heavily.
 - Keep the proof-facing semantics relational. The executable interpreter is a
@@ -317,17 +321,19 @@ programs terminate.
 
 ## Assertions And Specs
 
-GoCore has two related but distinct concepts:
+Go has no general `assert` statement and Gobra's Dafny/Viper-style annotations
+are not the semantics we are building. GoCore therefore has no runtime
+assertion statement, function preconditions, or function postconditions.
 
-- executable assertions, used for differential testing;
-- verification specs, used for proof obligations.
+Gobra assertions, preconditions, postconditions, loop invariants, predicates,
+and ghost artifacts are frontend wire data only. The strict importer decodes
+the fields Gobra emits so surprise JSON still fails closed, but `GobraToIR`
+does not lower those artifacts into executable GoCore behavior.
 
-For now, the executable subset may interpret simple boolean assertions and fail
-on separation assertions such as `acc`.
-
-Later, separation assertions should become proof-level propositions over the
-heap model. They should not be erased, but they also should not block execution
-of ordinary Go code when used only as Gobra verification annotations.
+Future proof extraction may define our own specification language over GoCore
+or reinterpret selected source annotations as proof obligations. That should be
+a separate layer over Go semantics, not a Gobra compatibility mode inside the
+runtime semantics.
 
 ## Gobra Lowering Policy
 
@@ -339,8 +345,9 @@ Examples:
 - Gobra `LocalVar`, `In`, and `Out` ids lower to GoCore variable ids.
 - Gobra `Ref(Var(x))` lowers to GoCore address-of variable.
 - Gobra field access lowers to `StructFieldGet` or `StructFieldRef`.
-- Gobra verification-only artifacts either lower to GoCore specs or fail as
-  unsupported, depending on whether we understand them.
+- Gobra verification-only artifacts are erased when they do not affect Go
+  execution. If a wire node is not verification-only and has no clear GoCore
+  meaning, lowering should fail or produce explicit unsupported GoCore.
 
 If a Gobra node has no clear GoCore meaning, lowering should fail or produce an
 explicit unsupported GoCore node. It should not silently approximate.
@@ -352,7 +359,7 @@ The execution story should compare observations, not proof terms.
 Observation:
 
 ```text
-status : ok | panic | assertion_error | unsupported | stuck
+status : ok | panic | unsupported | stuck | error
 returns : Array Value
 message : Option String
 ```
@@ -385,9 +392,8 @@ Required GoCore additions:
 
 Success criterion:
 
-`scripts/gobra-smoke` should lower and execute the `swap` client far enough to
-reach its expected final `assert false`, producing an assertion-error
-observation for the right reason.
+`scripts/gobra-smoke` should lower and execute the `swap` client as ordinary Go
+after Gobra assertions/specifications are erased at the lowering boundary.
 
 That milestone exercises the memory model without jumping ahead to maps,
 slices, interfaces, concurrency, or Iris integration.

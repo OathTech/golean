@@ -145,13 +145,6 @@ partial def lowerExpr : GoLean.GobraJson.Expr → GoLean.GoCore.Expr
   | .predicate .. => .unsupported "predicate expression"
 end
 
-partial def lowerAssertion : GoLean.GobraJson.Assertion → GoLean.GoCore.Assertion
-  | .expr expr => .expr (lowerExpr expr)
-  | .exprAssertion _ expr => .expr (lowerExpr expr)
-  | .sepAnd _ left right => .sepAnd (lowerAssertion left) (lowerAssertion right)
-  | .implication _ left right => .implication (lowerAssertion left) (lowerAssertion right)
-  | .access .. => .unsupported "access assertion"
-
 private def lowerDecls (decls : Array GoLean.GobraJson.Decl) : Array GoLean.GoCore.Param :=
   decls.foldl
     (fun out decl =>
@@ -165,7 +158,7 @@ partial def lowerStmt : GoLean.GobraJson.Stmt → GoLean.GoCore.Stmt
   | .block _ decls stmts => .block (lowerDecls decls) (stmts.map lowerStmt)
   | .initialization _ var => .initialization (lowerVariable var)
   | .singleAss _ left right => .assign (lowerAssignee left) (lowerExpr right)
-  | .assert _ assertion => .assert (lowerAssertion assertion)
+  | .assert .. => .seqn #[]
   | .while _ cond _invs _terminationMeasure body => .while (lowerExpr cond) (lowerStmt body)
   | .label _ id => .label id.name
   | .functionCall _ func targets args =>
@@ -205,8 +198,6 @@ def lowerFunctionMember (member : GoLean.GobraJson.FunctionMember) : Except Stri
     name := member.name.name,
     args := member.args.map lowerParam,
     results := member.results.map lowerParam,
-    pres := member.pres.map lowerAssertion,
-    posts := member.posts.map lowerAssertion,
     body := lowerMethodBody body
   }
 
@@ -214,8 +205,6 @@ def lowerBodylessFunctionMember (member : GoLean.GobraJson.FunctionMember) : GoL
   name := member.name.name,
   args := member.args.map lowerParam,
   results := member.results.map lowerParam,
-  pres := member.pres.map lowerAssertion,
-  posts := member.posts.map lowerAssertion,
   body := .unsupported s!"bodyless function {member.name.name}"
 }
 
@@ -228,8 +217,6 @@ def lowerMethodMember (member : GoLean.GobraJson.MethodMember) : Except String G
     name := member.name.uniqueName,
     args := #[lowerParam member.receiver] ++ member.args.map lowerParam,
     results := member.results.map lowerParam,
-    pres := member.pres.map lowerAssertion,
-    posts := member.posts.map lowerAssertion,
     body := lowerMethodBody body
   }
 
@@ -237,8 +224,6 @@ def lowerBodylessMethodMember (member : GoLean.GobraJson.MethodMember) : GoLean.
   name := member.name.uniqueName,
   args := #[lowerParam member.receiver] ++ member.args.map lowerParam,
   results := member.results.map lowerParam,
-  pres := member.pres.map lowerAssertion,
-  posts := member.posts.map lowerAssertion,
   body := .unsupported s!"bodyless method {member.name.uniqueName}"
 }
 

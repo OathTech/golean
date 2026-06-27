@@ -1,9 +1,10 @@
 # Roadmap
 
-This project aims to build an Aeneas-like Go-to-Lean tool with broad Gobra/Go
-coverage and executable semantics in Lean. Proof infrastructure remains an
-important later phase, but the current priority is to build and differentially
-test a substantial Go semantics first.
+This project aims to build an Aeneas-like Go-to-Lean tool with broad Go
+coverage and executable semantics in Lean. Gobra is a temporary frontend
+accelerator, not the intended semantic core or long-term frontend. Proof
+infrastructure remains an important later phase, but the current priority is to
+build and differentially test a substantial Go semantics first.
 
 The current architectural commitment is:
 
@@ -17,7 +18,8 @@ Go/Gobra source
 ```
 
 Gobra is a frontend and source of typed artifacts. GoCore is the semantic
-center.
+center. Longer term, we expect to replace Gobra with our own frontend as
+coverage demands outgrow Gobra's exported shape.
 
 ## Strategy
 
@@ -28,8 +30,9 @@ center.
   interpreter treated as a differential-testing implementation of that relation
   for supported concrete runs.
 - GoCore should model Go behavior, not Gobra's internal IR.
-- Gobra-specific assertions and specifications should be an execution mode over
-  GoCore, not the default definition of Go program execution.
+- Gobra-specific assertions, specifications, predicates, invariants, and ghost
+  artifacts are not GoCore runtime semantics. They are decoded only as strict
+  wire data and erased or rejected at the frontend boundary.
 - Old and new Goose/Perennial are the main semantic references as GoCore
   expands. New Goose's path-like field locations are especially important for
   memory, structs, arrays, slices, and later proof support.
@@ -62,8 +65,8 @@ Required fixes:
   for supported integer types, or reject programs whose behavior depends on
   widths not yet represented.
 - Replace statement execution's plain state return with an explicit
-  `ExecOutcome` covering normal completion, return, break, continue, panic,
-  unsupported, and stuck behavior.
+  `ExecOutcome` covering normal completion, return, break, and continue, with
+  typed errors representing panic, unsupported, stuck, and internal failures.
 - Make expression evaluation capable of effectful Go expressions such as calls,
   allocation, append, map operations, and channel operations before those
   features are added.
@@ -91,6 +94,9 @@ Deliverables:
 - Treat Lean's wire ADT as the schema authority.
 - Reject missing fields, extra fields, unknown tags, wrong scalar types, and
   unsupported nested nodes.
+- Keep Gobra verification-only constructs out of GoCore. The importer may
+  decode spec fields fail-closed because Gobra emits them, but lowering must
+  not make them executable Go behavior.
 - Expand the smoke corpus and negative JSON tests.
 
 Success criterion:
@@ -120,24 +126,24 @@ Deliverables:
 
 Success criterion:
 
-The `examples/swap` style program lowers from Gobra JSON and executes in Lean
-far enough to reach the expected final assertion failure for the right reason.
+The `examples/swap` style program lowers from Gobra JSON and executes in Lean as
+ordinary Go after Gobra assertions/specifications are erased.
 
 ## Phase 3: Differential Testing Harness
 
 Goal: compare Go execution and Lean GoCore execution over many small programs.
 
 Status: partially started. Lean execution now emits classified observations for
-successful returns, assertion failures, unsupported features, and stuck states.
-The first smoke harness compares a plain Go fixture against the corresponding
-Lean GoCore observation.
+successful returns, Go panics, unsupported features, and stuck states. The first
+smoke harness compares plain Go fixtures against the corresponding Lean GoCore
+observations.
 
 Deliverables:
 
 - Define a stable observation format:
 
 ```text
-status : ok | panic | assertion_error | unsupported | stuck
+status : ok | panic | unsupported | stuck | error
 returns : Array Value
 message : Option String
 ```
@@ -145,8 +151,7 @@ message : Option String
 - Add a Go-source harness that runs concrete test programs with selected inputs.
 - Compare Go results against Lean GoCore observations.
 - Drive paired differential cases from a manifest with explicit feature tags,
-  expected status, argument values, and any deliberately ignored verification
-  assertions.
+  expected status, argument values, and reasons for expected semantic gaps.
 - Keep `unsupported` acceptable only when the test manifest explicitly expects
   it.
 - Require manifest reasons for expected `unsupported` and `stuck` results.
@@ -245,9 +250,9 @@ Deliverables:
 
 Success criterion:
 
-A user can run the tool on a Gobra-supported Go package, inspect the generated
-Lean, execute supported concrete tests, and start proofs against generated
-specification hooks.
+A user can run the tool on a Go package accepted by the current frontend,
+inspect the generated Lean, execute supported concrete tests, and start proofs
+against GoCore-level specification hooks.
 
 ## Near-Term Work Queue
 
