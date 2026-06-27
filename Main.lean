@@ -1,4 +1,4 @@
 import GoLean
 
-def main : IO Unit :=
-  IO.println s!"{GoLean.projectName}: scaffold ready"
+def main (args : List String) : IO UInt32 :=
+  GoLean.CLI.main args

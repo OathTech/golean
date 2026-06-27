@@ -1,0 +1,5 @@
+# id path
+examples/swap ../../deps/gobra/src/test/resources/regressions/examples/swap.gobra
+features/while1 ../../deps/gobra/src/test/resources/regressions/features/while1.gobra
+features/multi-assign ../../deps/gobra/src/test/resources/regressions/features/multi-assign.gobra
+features/pointer-identity ../../deps/gobra/src/test/resources/regressions/features/pointer-identity.gobra

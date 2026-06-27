@@ -4,3 +4,5 @@ import GoLean.Basic
 import GoLean.Runtime
 import GoLean.IR
 import GoLean.DiffTest
+import GoLean.Artifact.Gobra
+import GoLean.CLI

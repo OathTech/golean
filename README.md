@@ -18,4 +18,6 @@ Useful commands:
 ```sh
 lake build
 lake exe golean
+lake exe golean --help
+lake exe golean gobra-export --manifest Corpus/gobra-smoke.txt
 ```
