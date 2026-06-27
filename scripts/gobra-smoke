@@ -179,6 +179,14 @@ if [[ "$make_slice_actual" != "$make_slice_expected" ]]; then
   exit 1
 fi
 
+slice_literal_json="$OUT/work/features/slice-literal/slice-literal.gobra.internal.json"
+slice_literal_expected='{"status":"ok","values":[{"tag":"int","value":341}]}'
+slice_literal_actual="$(lean gobra-json-run --input "$slice_literal_json" --function sliceLiteral_bda1d7d_F)"
+if [[ "$slice_literal_actual" != "$slice_literal_expected" ]]; then
+  echo "unexpected slice-literal Lean execution result: $slice_literal_actual" >&2
+  exit 1
+fi
+
 pointer_identity_json="$OUT/work/features/pointer-identity/pointer-identity.gobra.internal.json"
 pointer_identity_expected='{"status":"ok","values":[]}'
 pointer_identity_actual="$(lean gobra-json-run --input "$pointer_identity_json" --function test_bda1d7d_F)"
@@ -199,4 +207,4 @@ rm -rf "$OUT_FINAL"
 mv "$OUT" "$OUT_FINAL"
 trap - EXIT
 
-echo "executed 18 Gobra-fronted Go function(s) in Lean"
+echo "executed 19 Gobra-fronted Go function(s) in Lean"

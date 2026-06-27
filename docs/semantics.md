@@ -274,15 +274,16 @@ Currently supported:
 - pointer-to-array indexing and indexed assignment;
 - descriptor-backed slices created from arrays;
 - descriptor-backed slices created by `make([]T, len, cap)`;
+- slice literals;
 - slice `len`, `cap`, indexing, indexed assignment, two-index slicing, and
   three-index slicing;
 - out-of-range indexing as a `panic` observation.
 
 Still pending:
 
-- slice literals, `append`, `copy`, zero-capacity `make` edge cases, and string
-  slicing. See `docs/slice-model.md` for the selected descriptor/backing-store
-  design and open refinement points.
+- `append`, `copy`, zero-capacity `make` edge cases, and string slicing. See
+  `docs/slice-model.md` for the selected descriptor/backing-store design and
+  open refinement points.
 
 ## Defined Types
 

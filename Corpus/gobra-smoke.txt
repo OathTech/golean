@@ -17,3 +17,4 @@ features/array-bounds features/array-bounds.gobra
 features/array-copy features/array-copy.gobra
 features/array-slice-alias features/array-slice-alias.gobra
 features/make-slice features/make-slice.gobra
+features/slice-literal features/slice-literal.gobra

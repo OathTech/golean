@@ -109,6 +109,8 @@ backlog items.
   JSON decoding/lowering, and differential array-to-slice alias coverage.
 - Added Gobra `MakeSlice` decoding/lowering and nonzero-capacity `make` support
   with differential coverage.
+- Added Gobra `NewSliceLit` decoding/lowering and slice literal differential
+  coverage.
 
 ## Proof Generation
 

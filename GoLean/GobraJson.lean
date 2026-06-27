@@ -23,7 +23,7 @@ private def knownTagNames : List String := [
   "If", "Index", "IndexedExp", "Initialization", "IntLit", "IntT", "InterfaceT", "Internal", "ItfTupleTerminationMeasure",
   "Label", "LabelProxy", "Length", "LessCmp", "LocalVar", "MPredicate",
   "MPredicateAccess", "MPredicateProxy", "MakeSlice", "Method", "MethodBody", "MethodBodySeqn",
-  "MethodCall", "MethodProxy", "Mod", "Mul", "Negation", "NonItfTupleTerminationMeasure",
+  "MethodCall", "MethodProxy", "Mod", "Mul", "Negation", "NewSliceLit", "NonItfTupleTerminationMeasure",
   "None", "Old", "Or", "Out", "PointerT", "Predicate", "Program", "PureMethod",
   "PureMethodCall", "Ref", "Return", "SepAnd", "Seqn", "Single", "SingleAss", "Slice", "Some",
   "StringT", "StructLit", "StructT", "Sub", "UnboundedInteger", "UneqCmp", "Var", "While",
@@ -218,6 +218,8 @@ mutual
     | singleAss (source : Source) (left : Assignee) (right : Expr)
     | makeSlice (source : Source) (target : Variable) (typeParam : Ty)
         (lenArg : Expr) (capArg : Option Expr)
+    | newSliceLit (source : Source) (target : Variable) (memberType : Ty)
+        (elems : Array ArrayLitElem)
     | assert (source : Source) (ass : Assertion)
     | ifStmt (source : Source) (cond : Expr) (thn els : Stmt)
     | while (source : Source) (cond : Expr) (invs : Array Assertion)
@@ -814,6 +816,13 @@ mutual
           (← decodeTy s!"{path}.typeParam" (← GoLean.StrictJson.field path obj "typeParam"))
           (← decodeExpr s!"{path}.lenArg" (← GoLean.StrictJson.field path obj "lenArg"))
           (← decodeOptionOf s!"{path}.capArg" (← GoLean.StrictJson.field path obj "capArg") decodeExpr)
+    | "NewSliceLit" =>
+        let obj ← taggedObj path json "NewSliceLit" ["elems", "memberType", "source", "tag", "target"]
+        return .newSliceLit
+          (← decodeSource s!"{path}.source" (← GoLean.StrictJson.field path obj "source"))
+          (← decodeVariableWithTag "LocalVar" s!"{path}.target" (← GoLean.StrictJson.field path obj "target"))
+          (← decodeTy s!"{path}.memberType" (← GoLean.StrictJson.field path obj "memberType"))
+          (← decodeArrayOf s!"{path}.elems" (← GoLean.StrictJson.field path obj "elems") decodeArrayLitElem)
     | "Assert" =>
         let obj ← taggedObj path json "Assert" ["ass", "source", "tag"]
         return .assert

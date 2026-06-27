@@ -179,8 +179,38 @@ private def lowerDecls (decls : Array GoLean.GobraJson.Decl) : Array GoLean.GoCo
       | .label _ => out)
     #[]
 
+private def sliceLiteralLength? (elems : Array GoLean.GobraJson.ArrayLitElem) : Option Nat :=
+  elems.foldl
+    (fun acc elem =>
+      match acc with
+      | none => none
+      | some length =>
+          if elem.key < (0 : Int) then none else some (max length (elem.key.toNat + 1)))
+    (some 0)
+
 mutual
-  partial def lowerStmtWithReturnPost (returnPostprocessing : Array GoLean.GoCore.Stmt) :
+partial def lowerNewSliceLit (target : GoLean.GobraJson.Variable) (memberType : GoLean.GobraJson.Ty)
+    (elems : Array GoLean.GobraJson.ArrayLitElem) : GoLean.GoCore.Stmt :=
+  match sliceLiteralLength? elems with
+  | none => .unsupported "slice literal with negative element key"
+  | some length =>
+      let elemTy := lowerTy memberType
+      let init := #[
+        GoLean.GoCore.Stmt.makeSlice
+          (.var target.id)
+          elemTy
+          (.intLit (Int.ofNat length))
+          (some (.intLit (Int.ofNat length)))
+      ]
+      let stmts := elems.foldl
+        (fun stmts elem => stmts.push
+          (.assign
+            (.addr (.indexAddr (.var target.id) (.intLit elem.key)))
+            (lowerExpr elem.value)))
+        init
+      .seqn stmts
+
+partial def lowerStmtWithReturnPost (returnPostprocessing : Array GoLean.GoCore.Stmt) :
       GoLean.GobraJson.Stmt → GoLean.GoCore.Stmt
     | .seqn _ stmts => .seqn (stmts.map (lowerStmtWithReturnPost returnPostprocessing))
     | .block _ decls stmts =>
@@ -191,6 +221,7 @@ mutual
         match lowerTy typeParam with
         | .slice elem => .makeSlice (.var target.id) elem (lowerExpr lenArg) (capArg.map lowerExpr)
         | other => .unsupported s!"MakeSlice with non-slice type {repr other}"
+    | .newSliceLit _ target memberType elems => lowerNewSliceLit target memberType elems
     | .assert .. => .seqn #[]
     | .ifStmt _ cond thn els =>
         .ifThenElse (lowerExpr cond)
