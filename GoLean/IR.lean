@@ -122,6 +122,19 @@ structure Result where
   values : Array GoValue
   deriving Repr, BEq
 
+inductive ExecOutcome where
+  | normal (state : ExecState)
+  | returned (state : ExecState)
+  | broke (state : ExecState)
+  | continued (state : ExecState)
+  deriving Repr, BEq
+
+private def ExecOutcome.state : ExecOutcome → ExecState
+  | .normal state => state
+  | .returned state => state
+  | .broke state => state
+  | .continued state => state
+
 private def LocalEnv.lookup : LocalEnv → String → Option Loc
   | [], _ => none
   | (name, loc) :: rest, needle =>
@@ -530,7 +543,12 @@ mutual
       | none => stuck s!"missing argument {i}"
     for result in func.results do
       callState := callState.bindLocal result.id (← defaultValue callState result.typ)
-    callState ← execStmt (fuel - 1) callState func.body
+    callState ←
+      match ← execStmt (fuel - 1) callState func.body with
+      | .normal nextState => pure nextState
+      | .returned nextState => pure nextState
+      | .broke _ => stuck s!"function {name} body escaped with break"
+      | .continued _ => stuck s!"function {name} body escaped with continue"
     let mut resultValues := #[]
     for result in func.results do
       resultValues := resultValues.push (← lookup callState result.id)
@@ -547,33 +565,39 @@ mutual
     return state
 
   partial def execStmts (fuel : Nat) (state : ExecState) (stmts : Array Stmt) :
-      Except GoError ExecState := do
+      Except GoError ExecOutcome := do
     let mut state := state
     for stmt in stmts do
-      state ← execStmt fuel state stmt
-    return state
+      match ← execStmt fuel state stmt with
+      | .normal nextState => state := nextState
+      | outcome => return outcome
+    return .normal state
 
-  partial def execStmt (fuel : Nat) (state : ExecState) : Stmt → Except GoError ExecState
+  partial def execStmt (fuel : Nat) (state : ExecState) : Stmt → Except GoError ExecOutcome
     | .seqn stmts => execStmts fuel state stmts
     | .block decls stmts => do
         execStmts fuel (← execDecls state decls) stmts
-    | .initialization var => execDecl state var
+    | .initialization var => return .normal (← execDecl state var)
     | .assign left right => do
-        assignAssignee state left (← evalExpr state right)
-    | .call targets name args => execFunctionCall fuel state targets name args
+        return .normal (← assignAssignee state left (← evalExpr state right))
+    | .call targets name args => return .normal (← execFunctionCall fuel state targets name args)
     | .assert assertion => do
         if ← evalAssertion state assertion then
-          return state
+          return .normal state
         else
           assertionFailure "GoCore assertion failed"
     | .while cond body => do
         if fuel == 0 then
           stuck "GoCore execution fuel exhausted"
         if ← valueAsBool (← evalExpr state cond) then
-          execStmt (fuel - 1) (← execStmt fuel state body) (.while cond body)
+          match ← execStmt fuel state body with
+          | .normal bodyState => execStmt (fuel - 1) bodyState (.while cond body)
+          | .continued bodyState => execStmt (fuel - 1) bodyState (.while cond body)
+          | .broke bodyState => return .normal bodyState
+          | .returned bodyState => return .returned bodyState
         else
-          return state
-    | .label _ => return state
+          return .normal state
+    | .label _ => return .normal state
     | .unsupported feature => unsupported feature
 end
 
@@ -617,7 +641,12 @@ def runFunctionWithContext (fuel : Nat) (types : TypeEnv) (functions : Array Fun
   let state ← bindParams { types := types, functions := functions } func.args args
   let state ← initResults state func.results
   checkAssertions state "precondition" func.pres
-  let state ← execStmt fuel state func.body
+  let state ←
+    match ← execStmt fuel state func.body with
+    | .normal state => pure state
+    | .returned state => pure state
+    | .broke _ => stuck s!"function {func.name} body escaped with break"
+    | .continued _ => stuck s!"function {func.name} body escaped with continue"
   checkAssertions state "postcondition" func.posts
   return { values := (← collectResults state func.results) }
 
