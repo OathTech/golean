@@ -1,0 +1,10 @@
+name = "GoLean"
+version = "0.1.0"
+defaultTargets = ["golean"]
+
+[[lean_lib]]
+name = "GoLean"
+
+[[lean_exe]]
+name = "golean"
+root = "Main"
