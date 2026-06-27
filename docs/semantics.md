@@ -276,7 +276,8 @@ Currently supported:
 
 Still pending:
 
-- slice creation from arrays.
+- slice creation from arrays and full slice semantics. See
+  `docs/slice-model.md` for the selected descriptor/backing-store design.
 
 ## Defined Types
 

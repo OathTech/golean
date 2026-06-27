@@ -46,6 +46,12 @@ coverage demands outgrow Gobra's exported shape.
   syntax, values, locations, errors, and outcomes should be reusable by both the
   executable interpreter and a future relational small-step or big-step
   semantics.
+- Slice semantics should use a descriptor over backing locations, not copied
+  vectors. This follows the Goose/Perennial shape and leaves room for
+  `own_slice`/`own_slice_cap` predicates in Iris-Lean.
+- Where Go leaves implementation latitude, keep the relation broader than the
+  executable interpreter and use differential testing on real programs to
+  decide which deterministic policies matter for the test runner.
 
 ## Hardening Gate
 
@@ -191,7 +197,10 @@ Feature order should be driven by corpus failures and semantic dependencies,
 but the expected progression is:
 
 - integer and boolean operators with Go-sized words;
-- arrays and slices, including indexing, slicing, append, len, and cap;
+- arrays and slices, including indexing, slicing, append, len, and cap. Slices
+  should follow `docs/slice-model.md`: descriptor values over backing
+  locations, with append growth treated carefully because post-growth capacity
+  is observable but not fully specified by Go;
 - maps, including nil-map behavior and comma-ok lookup;
 - named types, aliases, conversions, and zero values;
 - methods and interfaces;
@@ -271,8 +280,8 @@ against GoCore-level specification hooks.
    differential observations.
 2. Expand deterministic array coverage to additional nested/value-copy edge
    cases and slice creation from arrays.
-3. Add slices using the same path-location model and the Goose/new Goose slice
-   references.
+3. Add slices using the descriptor/backing-location model in
+   `docs/slice-model.md`, starting with len/cap/indexing/make before append.
 4. Keep extending scalar coverage toward Go-sized word behavior and conversions.
 5. Add more generated/deterministic differential cases with feature tags and
    expected observation status.

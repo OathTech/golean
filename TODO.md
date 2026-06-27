@@ -50,6 +50,14 @@ backlog items.
 - Make expression evaluation able to grow to calls-in-expressions, allocation,
   append, map operations, and channel operations without changing its public
   shape again.
+- Add slices with descriptor values over backing locations, following
+  `docs/slice-model.md`. Do not model slices as copied vectors.
+- Keep append capacity growth explicit in tests: either avoid observing capacity
+  after a reallocating append, or tag the case as Go-runtime-specific until the
+  executable policy is chosen.
+- Track semantic policy choices that remain open for differential refinement,
+  especially allocation limits, append growth, zero-capacity slices, string
+  slicing, and panic-message details.
 - Evaluate lvalues and rvalues before committing stores, so multiple assignment
   and call assignment match Go's sequencing rules.
 - Bounds-check indexed locations when evaluating the lvalue, including
@@ -94,6 +102,8 @@ backlog items.
   coverage.
 - Added fixed-array zero-value initialization, nested arrays, arrays through
   function parameters/results, and pointer-to-array indexing/assignment.
+- Reviewed Goose/Perennial/Gobra slice designs and selected a descriptor over
+  backing locations as the direction for GoCore slices.
 
 ## Proof Generation
 
