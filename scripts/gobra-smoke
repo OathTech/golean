@@ -25,6 +25,14 @@ done
 
 echo "validated ${#json_files[@]} Gobra internal JSON artifact(s)"
 
+multi_assign_json="$OUT/work/features/multi-assign/multi-assign.gobra.internal.json"
+multi_assign_expected='{"status":"ok","values":[]}'
+multi_assign_actual="$(lake exe golean gobra-json-run --input "$multi_assign_json" --function foo_bda1d7d_F)"
+if [[ "$multi_assign_actual" != "$multi_assign_expected" ]]; then
+  echo "unexpected multi-assign Lean execution result: $multi_assign_actual" >&2
+  exit 1
+fi
+
 while1_json="$OUT/work/features/while1/while1.gobra.internal.json"
 while1_expected='{"status":"ok","values":[{"tag":"int","value":42}]}'
 while1_actual="$(lake exe golean gobra-json-run --input "$while1_json" --function test_bda1d7d_F --arg-int 6 --arg-int 7)"
@@ -33,4 +41,4 @@ if [[ "$while1_actual" != "$while1_expected" ]]; then
   exit 1
 fi
 
-echo "executed while1 Gobra internal JSON in Lean"
+echo "executed 2 Gobra internal JSON function(s) in Lean"
