@@ -24,3 +24,5 @@ proof principles around.
 Frontend-specific complications should be handled in `GobraToIR`. Semantic
 constructs should be added to GoCore only when they are part of Go's behavior,
 not merely artifacts of Gobra's internal representation.
+
+See `docs/semantics.md` for the current GoCore semantics design.
