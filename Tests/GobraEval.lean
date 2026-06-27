@@ -252,6 +252,47 @@ private def coreMakeSliceFunction : GoCore.Func := {
     ]
 }
 
+private def coreMapBasicFunction : GoCore.Func := {
+  name := "map_basic_F",
+  args := #[],
+  results := #[coreParam "z"],
+  body := .block
+    #[
+      { id := "nilMap", typ := .map .int .int },
+      { id := "m", typ := .map .int .int },
+      { id := "alias", typ := .map .int .int },
+      { id := "v", typ := .int },
+      { id := "ok", typ := .bool }
+    ]
+    #[
+      .makeMap (.var "m") .int .int (some (.intLit 2)),
+      .assign (.var "alias") (.var "m"),
+      .mapAssign (.var "m") (.intLit 3) (.intLit 10),
+      .mapAssign (.var "alias") (.intLit 3) (.intLit 7),
+      .mapLookup (.var "v") (.var "ok") (.var "m") (.intLit 3) .int,
+      .assign (.var "z")
+        (.add
+          (.add
+            (.add
+              (.mul (.length (.var "m")) (.intLit 1000))
+              (.mul (.mapGet (.var "nilMap") (.intLit 9) .int) (.intLit 100)))
+            (.mul (.var "v") (.intLit 10)))
+          (.mapGet (.var "m") (.intLit 4) .int)
+        )
+    ]
+}
+
+private def coreNilMapAssignFunction : GoCore.Func := {
+  name := "nil_map_assign_F",
+  args := #[],
+  results := #[],
+  body := .block
+    #[{ id := "m", typ := .map .int .int }]
+    #[
+      .mapAssign (.var "m") (.intLit 1) (.intLit 2)
+    ]
+}
+
 private def coreSliceBoundsFunction : GoCore.Func := {
   name := "slice_bounds_F",
   args := #[],
@@ -518,10 +559,12 @@ def main : IO UInt32 := do
   passed := passed && (← expectIntResult "GoCore slice reslice" (GoCore.runFunction 100 coreSliceResliceFunction #[]) 213)
   passed := passed && (← expectIntResult "GoCore full slice" (GoCore.runFunction 100 coreFullSliceFunction #[]) 5)
   passed := passed && (← expectIntResult "GoCore make slice" (GoCore.runFunction 100 coreMakeSliceFunction #[]) 537)
+  passed := passed && (← expectIntResult "GoCore map basic" (GoCore.runFunction 100 coreMapBasicFunction #[]) 1070)
   passed := passed && (← expectErrorStatus "GoCore nil dereference panic" (GoCore.runFunction 100 coreNilDerefFunction #[]) "panic")
   passed := passed && (← expectErrorStatus "GoCore divide by zero panic" (GoCore.runFunction 100 coreDivideByZeroFunction #[]) "panic")
   passed := passed && (← expectErrorStatus "GoCore index address bounds panic" (GoCore.runFunction 100 coreIndexAddrBoundsFunction #[]) "panic")
   passed := passed && (← expectErrorStatus "GoCore slice bounds panic" (GoCore.runFunction 100 coreSliceBoundsFunction #[]) "panic")
+  passed := passed && (← expectErrorStatus "GoCore nil map assignment panic" (GoCore.runFunction 100 coreNilMapAssignFunction #[]) "panic")
   passed := passed && (← expectErrorStatus "GoCore mismatched equality stuck" (GoCore.runFunction 100 coreMismatchedEqualityFunction #[]) "stuck")
   passed := passed && (← expectIntResult "GoCore call target sequencing"
     (GoCore.runFunctionWithContext 100 [] #[coreShiftIndexFunction, coreCallTargetSequencingFunction] coreCallTargetSequencingFunction #[]) 901)

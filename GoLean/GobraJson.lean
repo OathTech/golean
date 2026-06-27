@@ -22,10 +22,10 @@ private def knownTagNames : List String := [
   "Function", "FunctionCall", "FunctionProxy", "GoSliceAppend", "GoSliceCopy", "GreaterCmp", "Implication", "In",
   "If", "Index", "IndexedExp", "Initialization", "IntLit", "IntT", "InterfaceT", "Internal", "ItfTupleTerminationMeasure",
   "Label", "LabelProxy", "Length", "LessCmp", "LocalVar", "MPredicate",
-  "MPredicateAccess", "MPredicateProxy", "MakeSlice", "Method", "MethodBody", "MethodBodySeqn",
+  "MPredicateAccess", "MPredicateProxy", "MakeMap", "MakeSlice", "Method", "MethodBody", "MethodBodySeqn",
   "MethodCall", "MethodProxy", "Mod", "Mul", "Negation", "NewSliceLit", "NilLit", "NonItfTupleTerminationMeasure",
   "None", "Old", "Or", "Out", "PointerT", "Predicate", "Program", "PureMethod",
-  "PureMethodCall", "Ref", "Return", "SepAnd", "Seqn", "Single", "SingleAss", "Slice", "Some",
+  "PureMethodCall", "Ref", "Return", "SafeMapLookup", "SepAnd", "Seqn", "Single", "SingleAss", "Slice", "Some",
   "SliceT", "StringT", "StructLit", "StructT", "Sub", "UnboundedInteger", "UneqCmp", "Var", "While",
   "WildcardPerm"
 ]
@@ -219,8 +219,11 @@ mutual
     | singleAss (source : Source) (left : Assignee) (right : Expr)
     | makeSlice (source : Source) (target : Variable) (typeParam : Ty)
         (lenArg : Expr) (capArg : Option Expr)
+    | makeMap (source : Source) (target : Variable) (typeParam : Ty)
+        (initialSpaceArg : Option Expr)
     | newSliceLit (source : Source) (target : Variable) (memberType : Ty)
         (elems : Array ArrayLitElem)
+    | safeMapLookup (source : Source) (resTarget successTarget : Variable) (mapLookup : Expr)
     | goSliceAppend (source : Source) (target : Variable) (slice elems : Expr)
     | goSliceCopy (source : Source) (target : Variable) (dst src : Expr)
     | assert (source : Source) (ass : Assertion)
@@ -824,6 +827,13 @@ mutual
           (← decodeTy s!"{path}.typeParam" (← GoLean.StrictJson.field path obj "typeParam"))
           (← decodeExpr s!"{path}.lenArg" (← GoLean.StrictJson.field path obj "lenArg"))
           (← decodeOptionOf s!"{path}.capArg" (← GoLean.StrictJson.field path obj "capArg") decodeExpr)
+    | "MakeMap" =>
+        let obj ← taggedObj path json "MakeMap" ["initialSpaceArg", "source", "tag", "target", "typeParam"]
+        return .makeMap
+          (← decodeSource s!"{path}.source" (← GoLean.StrictJson.field path obj "source"))
+          (← decodeVariableWithTag "LocalVar" s!"{path}.target" (← GoLean.StrictJson.field path obj "target"))
+          (← decodeTy s!"{path}.typeParam" (← GoLean.StrictJson.field path obj "typeParam"))
+          (← decodeOptionOf s!"{path}.initialSpaceArg" (← GoLean.StrictJson.field path obj "initialSpaceArg") decodeExpr)
     | "NewSliceLit" =>
         let obj ← taggedObj path json "NewSliceLit" ["elems", "memberType", "source", "tag", "target"]
         return .newSliceLit
@@ -831,6 +841,13 @@ mutual
           (← decodeVariableWithTag "LocalVar" s!"{path}.target" (← GoLean.StrictJson.field path obj "target"))
           (← decodeTy s!"{path}.memberType" (← GoLean.StrictJson.field path obj "memberType"))
           (← decodeArrayOf s!"{path}.elems" (← GoLean.StrictJson.field path obj "elems") decodeArrayLitElem)
+    | "SafeMapLookup" =>
+        let obj ← taggedObj path json "SafeMapLookup" ["mapLookup", "resTarget", "source", "successTarget", "tag"]
+        return .safeMapLookup
+          (← decodeSource s!"{path}.source" (← GoLean.StrictJson.field path obj "source"))
+          (← decodeVariableWithTag "LocalVar" s!"{path}.resTarget" (← GoLean.StrictJson.field path obj "resTarget"))
+          (← decodeVariableWithTag "LocalVar" s!"{path}.successTarget" (← GoLean.StrictJson.field path obj "successTarget"))
+          (← decodeExpr s!"{path}.mapLookup" (← GoLean.StrictJson.field path obj "mapLookup"))
     | "GoSliceAppend" =>
         let obj ← taggedObj path json "GoSliceAppend" ["elems", "slice", "source", "tag", "target"]
         return .goSliceAppend

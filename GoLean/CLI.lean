@@ -199,6 +199,22 @@ private partial def goValueJson : GoValue → Json
         ("len", Lean.toJson value.len),
         ("cap", Lean.toJson value.cap)
       ]
+  | .map value =>
+      Json.mkObj [
+        ("tag", Json.str "map"),
+        ("base", match value.base with
+          | some loc => locJson loc
+          | none => Json.null)
+      ]
+  | .mapData entries =>
+      Json.mkObj [
+        ("tag", Json.str "mapData"),
+        ("entries", Json.arr (entries.map (fun (key, value) =>
+          Json.mkObj [
+            ("key", goValueJson key),
+            ("value", goValueJson value)
+          ])))
+      ]
 
 private def runJson : GoLean.GobraEval.Result → Json
   | { values } =>

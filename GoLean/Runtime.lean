@@ -36,6 +36,10 @@ structure SliceValue where
   cap : Nat
   deriving Repr, BEq
 
+structure MapValue where
+  base : Option Loc
+  deriving Repr, BEq
+
 inductive GoValue where
   | unit
   | bool (value : Bool)
@@ -45,6 +49,8 @@ inductive GoValue where
   | struct (typeName : String) (fields : Array (String × GoValue))
   | array (values : Array GoValue)
   | slice (value : SliceValue)
+  | map (value : MapValue)
+  | mapData (entries : Array (GoValue × GoValue))
   deriving Repr, BEq
 
 structure GoState where

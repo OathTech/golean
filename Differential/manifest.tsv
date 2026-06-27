@@ -28,3 +28,10 @@ plain/full-slice-bounds	Differential/plain/full-slice-bounds	artifacts/gobra-smo
 plain/make-slice-zero	Differential/plain/make-slice-zero	artifacts/gobra-smoke/work/features/make-slice-zero/make-slice-zero.gobra.internal.json	makeSliceZero_bda1d7d_F	-	ok	slices,make,zero_len,append	-
 plain/copy-nil	Differential/plain/copy-nil	artifacts/gobra-smoke/work/features/copy-nil/copy-nil.gobra.internal.json	copyNil_bda1d7d_F	-	ok	slices,copy,nil	-
 plain/copy-short	Differential/plain/copy-short	artifacts/gobra-smoke/work/features/copy-short/copy-short.gobra.internal.json	copyShort_bda1d7d_F	-	ok	slices,copy,prefix	-
+plain/map-basic	Differential/plain/map-basic	artifacts/gobra-smoke/work/features/map-basic/map-basic.gobra.internal.json	mapBasic_bda1d7d_F	-	ok	maps,nil,make,indexing,len	-
+plain/map-comma-ok	Differential/plain/map-comma-ok	artifacts/gobra-smoke/work/features/map-comma-ok/map-comma-ok.gobra.internal.json	mapCommaOk_bda1d7d_F	-	ok	maps,comma_ok,indexing	-
+plain/map-alias	Differential/plain/map-alias	artifacts/gobra-smoke/work/features/map-alias/map-alias.gobra.internal.json	mapAlias_bda1d7d_F	-	ok	maps,aliasing,len	-
+plain/map-nil-assign	Differential/plain/map-nil-assign	artifacts/gobra-smoke/work/features/map-nil-assign/map-nil-assign.gobra.internal.json	mapNilAssign_bda1d7d_F	-	panic	maps,nil,panic	-
+plain/map-nil-eq	Differential/plain/map-nil-eq	artifacts/gobra-smoke/work/features/map-nil-eq/map-nil-eq.gobra.internal.json	mapNilEq_bda1d7d_F	-	ok	maps,nil,equality,comma_ok	-
+plain/map-bool-values	Differential/plain/map-bool-values	artifacts/gobra-smoke/work/features/map-bool-values/map-bool-values.gobra.internal.json	mapBoolValues_bda1d7d_F	-	ok	maps,bools,zero_values	-
+plain/map-bool-keys	Differential/plain/map-bool-keys	artifacts/gobra-smoke/work/features/map-bool-keys/map-bool-keys.gobra.internal.json	mapBoolKeys_bda1d7d_F	-	ok	maps,bools,keys	-

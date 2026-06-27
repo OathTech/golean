@@ -28,7 +28,7 @@ partial def lowerTy : GoLean.GobraJson.Ty → GoLean.GoCore.Ty
   | .permission _ => .unsupported "permission type"
   | .sort => .unsupported "sort type"
   | .slice elem _ => .slice (lowerTy elem)
-  | .map .. => .unsupported "map type"
+  | .map key value _ => .map (lowerTy key) (lowerTy value)
   | .sequence .. => .unsupported "sequence type"
   | .set .. => .unsupported "set type"
   | .multiset .. => .unsupported "multiset type"
@@ -83,8 +83,9 @@ partial def lowerExprTy? : GoLean.GobraJson.Expr → Option GoLean.GoCore.Ty
       match lowerTy baseUnderlyingType with
       | .array _ elem => some elem
       | .slice elem => some elem
+      | .map _ value => some value
       | .unsupported feature => some (.unsupported feature)
-      | other => some (.unsupported s!"indexing non-array type {repr other}")
+      | other => some (.unsupported s!"indexing non-array/slice/map type {repr other}")
   | .slice _ _ _ _ _ baseUnderlyingType =>
       match lowerTy baseUnderlyingType with
       | .array _ elem => some (.slice elem)
@@ -158,6 +159,7 @@ partial def lowerExpr : GoLean.GobraJson.Expr → GoLean.GoCore.Expr
   | .indexedExp _ base index _ =>
       match lowerExprTy? base with
       | some (.pointer arrayTy@(.array ..)) => .indexGet (.deref (lowerExpr base) arrayTy) (lowerExpr index)
+      | some (.map _ valueTy) => .mapGet (lowerExpr base) (lowerExpr index) valueTy
       | _ => .indexGet (lowerExpr base) (lowerExpr index)
   | .slice _ base low high max baseUnderlyingType =>
       let loweredBase :=
@@ -189,7 +191,13 @@ private def sliceLiteralLength? (elems : Array GoLean.GobraJson.ArrayLitElem) : 
           if elem.key < (0 : Int) then none else some (max length (elem.key.toNat + 1)))
     (some 0)
 
-mutual
+private def lowerMapIndex? : GoLean.GobraJson.Expr → Option (GoLean.GoCore.Expr × GoLean.GoCore.Expr × GoLean.GoCore.Ty)
+  | .indexedExp _ base index baseUnderlyingType =>
+      match lowerTy baseUnderlyingType with
+      | .map _ valueTy => some (lowerExpr base, lowerExpr index, valueTy)
+      | _ => none
+  | _ => none
+
 partial def lowerNewSliceLit (target : GoLean.GobraJson.Variable) (memberType : GoLean.GobraJson.Ty)
     (elems : Array GoLean.GobraJson.ArrayLitElem) : GoLean.GoCore.Stmt :=
   match sliceLiteralLength? elems with
@@ -217,12 +225,27 @@ partial def lowerStmtWithReturnPost (returnPostprocessing : Array GoLean.GoCore.
     | .block _ decls stmts =>
         .block (lowerDecls decls) (stmts.map (lowerStmtWithReturnPost returnPostprocessing))
     | .initialization _ var => .initialization (lowerVariable var)
-    | .singleAss _ left right => .assign (lowerAssignee left) (lowerExpr right)
+    | .singleAss _ left right =>
+        match left with
+        | .index _ op =>
+            match lowerMapIndex? op with
+            | some (base, index, _valueTy) => .mapAssign base index (lowerExpr right)
+            | none => .assign (lowerAssignee left) (lowerExpr right)
+        | _ => .assign (lowerAssignee left) (lowerExpr right)
     | .makeSlice _ target typeParam lenArg capArg =>
         match lowerTy typeParam with
         | .slice elem => .makeSlice (.var target.id) elem (lowerExpr lenArg) (capArg.map lowerExpr)
         | other => .unsupported s!"MakeSlice with non-slice type {repr other}"
+    | .makeMap _ target typeParam initialSpaceArg =>
+        match lowerTy typeParam with
+        | .map key value => .makeMap (.var target.id) key value (initialSpaceArg.map lowerExpr)
+        | other => .unsupported s!"MakeMap with non-map type {repr other}"
     | .newSliceLit _ target memberType elems => lowerNewSliceLit target memberType elems
+    | .safeMapLookup _ resTarget successTarget mapLookup =>
+        match lowerMapIndex? mapLookup with
+        | some (base, index, valueTy) =>
+            .mapLookup (.var resTarget.id) (.var successTarget.id) base index valueTy
+        | none => .unsupported "SafeMapLookup with non-map lookup"
     | .goSliceAppend _ target slice elems =>
         .appendSlice (.var target.id) (lowerExpr slice) (lowerExpr elems)
     | .goSliceCopy _ target dst src =>
@@ -245,9 +268,8 @@ partial def lowerStmtWithReturnPost (returnPostprocessing : Array GoLean.GoCore.
     | .methodCall _ recv meth targets args =>
         .call (targets.map lowerAssignee) meth.uniqueName (#[lowerExpr recv] ++ args.map lowerExpr)
 
-  partial def lowerStmt : GoLean.GobraJson.Stmt → GoLean.GoCore.Stmt :=
-    lowerStmtWithReturnPost #[]
-end
+partial def lowerStmt : GoLean.GobraJson.Stmt → GoLean.GoCore.Stmt :=
+  lowerStmtWithReturnPost #[]
 
 private def lowerMethodBody (body : GoLean.GobraJson.MethodBody) : GoLean.GoCore.Stmt :=
   let postprocessing := body.postprocessing.map lowerStmt

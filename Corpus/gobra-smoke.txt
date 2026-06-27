@@ -28,3 +28,10 @@ features/full-slice-bounds features/full-slice-bounds.gobra
 features/make-slice-zero features/make-slice-zero.gobra
 features/copy-nil features/copy-nil.gobra
 features/copy-short features/copy-short.gobra
+features/map-basic features/map-basic.gobra
+features/map-comma-ok features/map-comma-ok.gobra
+features/map-alias features/map-alias.gobra
+features/map-nil-assign features/map-nil-assign.gobra
+features/map-nil-eq features/map-nil-eq.gobra
+features/map-bool-values features/map-bool-values.gobra
+features/map-bool-keys features/map-bool-keys.gobra

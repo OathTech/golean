@@ -9,6 +9,7 @@ inductive Ty where
   | int
   | array (length : Nat) (elem : Ty)
   | slice (elem : Ty)
+  | map (key value : Ty)
   | pointer (elem : Ty)
   | defined (name : String)
   | unsupported (feature : String)
@@ -58,6 +59,7 @@ inductive Expr where
   | defaultValue (typ : Ty)
   | indexGet (base index : Expr)
   | indexAddr (base index : Expr)
+  | mapGet (base index : Expr) (valueTy : Ty)
   | slice (base low high : Expr) (max : Option Expr)
   | length (operand : Expr)
   | capacity (operand : Expr)
@@ -77,6 +79,9 @@ inductive Stmt where
   | initialization (var : Param)
   | assign (left : Assignee) (right : Expr)
   | makeSlice (target : Assignee) (elem : Ty) (len : Expr) (cap : Option Expr)
+  | makeMap (target : Assignee) (key value : Ty) (initialSpace : Option Expr)
+  | mapAssign (base index value : Expr)
+  | mapLookup (target okTarget : Assignee) (base index : Expr) (valueTy : Ty)
   | appendSlice (target : Assignee) (slice elems : Expr)
   | copySlice (target : Assignee) (dst src : Expr)
   | call (targets : Array Assignee) (name : String) (args : Array Expr)
@@ -378,6 +383,7 @@ mutual
           values := values.push (← defaultValue state elem)
         return .array values
     | .slice _ => return .slice { base := none, offset := 0, len := 0, cap := 0 }
+    | .map _ _ => return .map { base := none }
     | .pointer _ => return .nil
     | .defined name => do
         match TypeEnv.lookup state.types name with
@@ -448,6 +454,10 @@ private def valueAsSlice : GoValue → Except GoError SliceValue
   | .slice value => return value
   | other => stuck s!"expected slice value, got {repr other}"
 
+private def valueAsMap : GoValue → Except GoError MapValue
+  | .map value => return value
+  | other => stuck s!"expected map value, got {repr other}"
+
 private def valueAsLoc : GoValue → Except GoError Loc
   | .addr loc => return loc
   | .nil => panic "nil pointer dereference"
@@ -466,6 +476,14 @@ private partial def valueEq : GoValue → GoValue → Except GoError Bool
   | .nil, .slice right => do
       validateSlice right
       return right.base.isNone
+  | .map left, .nil => return left.base.isNone
+  | .nil, .map right => return right.base.isNone
+  | .map left, .map right =>
+      match left.base, right.base with
+      | none, none => return true
+      | none, some _ => return false
+      | some _, none => return false
+      | some _, some _ => stuck "non-nil maps are not comparable"
   | .slice left, .slice right => do
       validateSlice left
       validateSlice right
@@ -504,6 +522,15 @@ private partial def valueEq : GoValue → GoValue → Except GoError Bool
       return true
   | left, right => stuck s!"incomparable or mismatched equality operands: {repr left} and {repr right}"
 
+private partial def mapEntryIndex? (entries : Array (GoValue × GoValue)) (key : GoValue) :
+    Except GoError (Option Nat) := do
+  let mut i := 0
+  for (entryKey, _) in entries do
+    if ← valueEq entryKey key then
+      return some i
+    i := i + 1
+  return none
+
 mutual
   partial def evalExpr (state : ExecState) : Expr → Except GoError GoValue
     | .var id => lookup state id
@@ -511,6 +538,7 @@ mutual
     | .nil (some typ) =>
         match typ with
         | .slice _ => defaultValue state typ
+        | .map _ _ => defaultValue state typ
         | .pointer _ => return .nil
         | .unsupported feature => unsupported s!"nil literal for {feature}"
         | other => stuck s!"nil literal for non-nilable type {repr other}"
@@ -594,6 +622,21 @@ mutual
             let loc ← sliceIndexLoc slice (← valueAsInt (← evalExpr state index))
             loadLoc state loc
         | other => stuck s!"expected array or slice value for index access, got {repr other}"
+    | .mapGet base index valueTy => do
+        let map ← valueAsMap (← evalExpr state base)
+        let key ← evalExpr state index
+        match map.base with
+        | none => defaultValue state valueTy
+        | some baseLoc =>
+            match ← loadLoc state baseLoc with
+            | .mapData entries =>
+                match ← mapEntryIndex? entries key with
+                | some i =>
+                    match entries[i]? with
+                    | some (_, value) => return value
+                    | none => stuck s!"missing map entry at index {i}"
+                | none => defaultValue state valueTy
+            | other => stuck s!"expected map data, got {repr other}"
     | .indexAddr base index => do
         let indexValue ← valueAsInt (← evalExpr state index)
         match ← evalExpr state base with
@@ -630,7 +673,14 @@ mutual
         | .slice slice => do
             validateSlice slice
             return .int slice.len
-        | other => unsupported s!"len for non-array/slice value {repr other}"
+        | .map map => do
+            match map.base with
+            | none => return .int 0
+            | some baseLoc =>
+                match ← loadLoc state baseLoc with
+                | .mapData entries => return .int entries.size
+                | other => stuck s!"expected map data, got {repr other}"
+        | other => unsupported s!"len for non-array/slice/map value {repr other}"
     | .capacity operand => do
         match ← evalExpr state operand with
         | .array values => return .int values.size
@@ -679,6 +729,64 @@ mutual
   partial def assignAssignees (state : ExecState) (targets : Array Assignee)
       (values : Array GoValue) : Except GoError ExecState := do
     assignLocs state (← evalAssigneeLocs state targets) values
+
+  partial def execMakeMap (state : ExecState) (target : Assignee) (_key _value : Ty)
+      (initialSpace : Option Expr) : Except GoError ExecState := do
+    let target ← evalAssigneeLoc state target
+    match initialSpace with
+    | none => pure ()
+    | some expr =>
+        let size ← valueAsInt (← evalExpr state expr)
+        let _ ← natFromNonnegativeInt "makemap: size out of range" size
+    let (base, state) := state.alloc (.mapData #[])
+    assignLoc state target (.map { base := some base })
+
+  partial def mapEntries (state : ExecState) (map : MapValue) :
+      Except GoError (Option (Loc × Array (GoValue × GoValue))) := do
+    match map.base with
+    | none => return none
+    | some baseLoc =>
+        match ← loadLoc state baseLoc with
+        | .mapData entries => return some (baseLoc, entries)
+        | other => stuck s!"expected map data, got {repr other}"
+
+  partial def mapLookupValue (state : ExecState) (map : MapValue) (key : GoValue)
+      (valueTy : Ty) : Except GoError (GoValue × Bool) := do
+    match ← mapEntries state map with
+    | none => return (← defaultValue state valueTy, false)
+    | some (_, entries) =>
+        match ← mapEntryIndex? entries key with
+        | some i =>
+            match entries[i]? with
+            | some (_, value) => return (value, true)
+            | none => stuck s!"missing map entry at index {i}"
+        | none => return (← defaultValue state valueTy, false)
+
+  partial def execMapAssign (state : ExecState) (baseExpr keyExpr valueExpr : Expr) :
+      Except GoError ExecState := do
+    let map ← valueAsMap (← evalExpr state baseExpr)
+    let key ← evalExpr state keyExpr
+    let value ← evalExpr state valueExpr
+    match ← mapEntries state map with
+    | none => panic "assignment to entry in nil map"
+    | some (baseLoc, entries) =>
+        let entries ←
+          match ← mapEntryIndex? entries key with
+          | some i => pure (entries.set! i (key, value))
+          | none => pure (entries.push (key, value))
+        storeLoc state baseLoc (.mapData entries)
+
+  partial def execMapLookup (state : ExecState) (target okTarget : Assignee)
+      (baseExpr keyExpr : Expr) (valueTy : Ty) : Except GoError ExecState := do
+    let targetLoc ← evalAssigneeLoc state target
+    let okLoc ← evalAssigneeLoc state okTarget
+    let map ← valueAsMap (← evalExpr state baseExpr)
+    let key ← evalExpr state keyExpr
+    let pair ← mapLookupValue state map key valueTy
+    let value := pair.1
+    let ok := pair.2
+    let state ← assignLoc state targetLoc value
+    assignLoc state okLoc (.bool ok)
 
   partial def sliceVisibleValues (state : ExecState) (slice : SliceValue) :
       Except GoError (Array GoValue) := do
@@ -815,6 +923,12 @@ mutual
         let value ← evalExpr state right
         return .normal (← assignLoc state loc value)
     | .makeSlice target elem len cap => return .normal (← execMakeSlice state target elem len cap)
+    | .makeMap target key value initialSpace =>
+        return .normal (← execMakeMap state target key value initialSpace)
+    | .mapAssign base index value =>
+        return .normal (← execMapAssign state base index value)
+    | .mapLookup target okTarget base index valueTy =>
+        return .normal (← execMapLookup state target okTarget base index valueTy)
     | .appendSlice target slice elems => return .normal (← execAppendSlice state target slice elems)
     | .copySlice target dst src => return .normal (← execCopySlice state target dst src)
     | .call targets name args => return .normal (← execFunctionCall fuel state targets name args)
