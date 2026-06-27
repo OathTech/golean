@@ -38,6 +38,8 @@ backlog items.
 
 ## Proof Generation
 
+- Deferred until after the executable semantics and differential harness cover a
+  substantial Go subset.
 - Generate struct typed points-to predicates as field-wise ownership.
 - Generate field load/store/access lemmas over `Loc.field`.
 - Prototype a Lean WP/VCG layer over GoCore.

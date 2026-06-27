@@ -1,7 +1,9 @@
 # Roadmap
 
 This project aims to build an Aeneas-like Go-to-Lean tool with broad Gobra/Go
-coverage, executable semantics, and proof infrastructure in Lean.
+coverage and executable semantics in Lean. Proof infrastructure remains an
+important later phase, but the current priority is to build and differentially
+test a substantial Go semantics first.
 
 The current architectural commitment is:
 
@@ -23,15 +25,15 @@ center.
 - The Lean-side executable semantics should be small, explicit, and fail-closed
   on unsupported or surprising inputs.
 - GoCore should model Go behavior, not Gobra's internal IR.
-- New Goose/Perennial is the main reference for Go memory and proof structure:
-  path-like field locations, typed points-to predicates, generated field access
-  lemmas, and WP automation.
+- Old and new Goose/Perennial are the main semantic references as GoCore
+  expands. New Goose's path-like field locations are especially important for
+  memory, structs, arrays, slices, and later proof support.
 - Aeneas remains useful as a Lean-facing reference, but Go needs a heap model
   because addressability, pointers, structs, slices, maps, interfaces, and
   concurrency are central to ordinary Go.
-- The proof layer should be generated on top of GoCore, potentially using
-  Iris-Lean or Lean-native WP infrastructure, rather than making Gobra IR a
-  first-class verification target.
+- The proof layer should come after GoCore has meaningful semantic coverage.
+  When it arrives, it should be generated on top of GoCore rather than making
+  Gobra IR a first-class verification target.
 
 ## Phase 1: Strict Frontend Export
 
@@ -135,6 +137,9 @@ surface decreases as the corpus grows.
 
 Goal: generate Lean proof infrastructure over GoCore.
 
+Status: deferred until GoCore has substantial semantic coverage and a working
+differential-testing loop.
+
 Deliverables:
 
 - Generate per-type Lean definitions for struct values and field access.
@@ -174,5 +179,5 @@ specification hooks.
 1. Add Go-source-vs-Lean differential execution for plain Go targets.
 2. Expand expression/operator coverage beyond the current integer/bool subset.
 3. Add arrays and slices using the same path-location model.
-4. Start generating struct field proof support modeled after new Goose.
-5. Prototype the first WP/VCG layer over GoCore.
+4. Add maps and named-type/conversion behavior driven by corpus failures.
+5. Keep checking old/new Goose before adding each larger semantic feature.
