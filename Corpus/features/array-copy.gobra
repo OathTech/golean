@@ -1,0 +1,10 @@
+package pkg;
+
+func arrayCopy() (z int) {
+	a := [2]int{1, 2};
+	b := a;
+	b[0] = 9;
+	z = a[0] + b[0];
+	assert a == [2]int{1, 2};
+	assert b == [2]int{9, 2};
+};

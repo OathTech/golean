@@ -7,3 +7,4 @@ features/scalars features/scalars.gobra
 features/divide-by-zero features/divide-by-zero.gobra
 features/arrays features/arrays.gobra
 features/array-bounds features/array-bounds.gobra
+features/array-copy features/array-copy.gobra

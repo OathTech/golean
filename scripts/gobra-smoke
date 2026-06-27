@@ -79,6 +79,14 @@ if [[ "$array_bounds_actual" != "$array_bounds_expected" ]]; then
   exit 1
 fi
 
+array_copy_json="$OUT/work/features/array-copy/array-copy.gobra.internal.json"
+array_copy_expected='{"status":"ok","values":[{"tag":"int","value":10}]}'
+array_copy_actual="$(lake exe golean gobra-json-run --input "$array_copy_json" --function arrayCopy_bda1d7d_F)"
+if [[ "$array_copy_actual" != "$array_copy_expected" ]]; then
+  echo "unexpected array-copy Lean execution result: $array_copy_actual" >&2
+  exit 1
+fi
+
 pointer_identity_json="$OUT/work/features/pointer-identity/pointer-identity.gobra.internal.json"
 pointer_identity_expected='{"message":"GoCore assertion failed","status":"assertion_error"}'
 if pointer_identity_actual="$(lake exe golean gobra-json-run --input "$pointer_identity_json" --function test_bda1d7d_F)"; then
@@ -108,4 +116,4 @@ if [[ "$swap_without_final_assert_actual" != "$swap_without_final_assert_expecte
   exit 1
 fi
 
-echo "executed 8 Gobra internal JSON function(s) in Lean"
+echo "executed 9 Gobra internal JSON function(s) in Lean"

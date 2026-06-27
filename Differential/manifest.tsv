@@ -7,3 +7,4 @@ plain/scalars	Differential/plain/scalars	artifacts/gobra-smoke/work/features/sca
 plain/divide-by-zero	Differential/plain/divide-by-zero	artifacts/gobra-smoke/work/features/divide-by-zero/divide-by-zero.gobra.internal.json	divideByZero_bda1d7d_F	-	-	panic	ints,division,panic
 plain/arrays	Differential/plain/arrays	artifacts/gobra-smoke/work/features/arrays/arrays.gobra.internal.json	arrays_bda1d7d_F	-	-	ok	arrays,indexing,assignment
 plain/array-bounds	Differential/plain/array-bounds	artifacts/gobra-smoke/work/features/array-bounds/array-bounds.gobra.internal.json	arrayBounds_bda1d7d_F	-	-	panic	arrays,indexing,panic
+plain/array-copy	Differential/plain/array-copy	artifacts/gobra-smoke/work/features/array-copy/array-copy.gobra.internal.json	arrayCopy_bda1d7d_F	-	-	ok	arrays,value_copy,indexing,assignment
