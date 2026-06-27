@@ -5,7 +5,7 @@ import "fmt"
 func main() {
 	defer func() {
 		if recover() != nil {
-			fmt.Println("{\"message\":\"GoCore panic: index out of range\",\"status\":\"panic\"}")
+			fmt.Println("{\"message\":\"index out of range\",\"status\":\"panic\"}")
 		}
 	}()
 

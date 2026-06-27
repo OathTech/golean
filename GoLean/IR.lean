@@ -163,7 +163,7 @@ private def StructFields.lookup : Array (String × GoValue) → String → Optio
         none
 
 private def StructFields.set (fields : Array (String × GoValue)) (needle : String)
-    (value : GoValue) : Except String (Array (String × GoValue)) := do
+    (value : GoValue) : Except GoError (Array (String × GoValue)) := do
   let mut out := #[]
   let mut found := false
   for (name, old) in fields do
@@ -175,7 +175,7 @@ private def StructFields.set (fields : Array (String × GoValue)) (needle : Stri
   if found then
     return out
   else
-    throw s!"unknown GoCore struct field: {needle}"
+    throw (.stuck s!"unknown GoCore struct field: {needle}")
 
 private def ExecState.freshLoc (state : ExecState) : Loc × ExecState :=
   let loc := Loc.base { id := state.nextAddr }
@@ -193,76 +193,85 @@ private def ExecState.bindLocal (state : ExecState) (name : String) (value : GoV
         heap := Heap.set state.heap loc value
       }
 
-private def unsupported {α : Type} (feature : String) : Except String α :=
-  throw s!"unsupported GoCore execution feature: {feature}"
+private def unsupported {α : Type} (feature : String) : Except GoError α :=
+  throw (.unsupported feature)
 
-private def lookupLoc (state : ExecState) (name : String) : Except String Loc :=
+private def panic {α : Type} (message : String) : Except GoError α :=
+  throw (.panic message)
+
+private def stuck {α : Type} (message : String) : Except GoError α :=
+  throw (.stuck message)
+
+private def assertionFailure {α : Type} (message : String) : Except GoError α :=
+  throw (.assertion message)
+
+private def lookupLoc (state : ExecState) (name : String) : Except GoError Loc :=
   match LocalEnv.lookup state.locals name with
   | some loc => return loc
-  | none => throw s!"unbound GoCore variable address: {name}"
+  | none => stuck s!"unbound GoCore variable address: {name}"
 
-private def arrayIndexNat (values : Array GoValue) (index : Int) : Except String Nat := do
+private def arrayIndexNat (values : Array GoValue) (index : Int) : Except GoError Nat := do
   if index < 0 then
-    throw "GoCore panic: index out of range"
+    panic "index out of range"
   let i := index.toNat
   if i < values.size then
     return i
   else
-    throw "GoCore panic: index out of range"
+    panic "index out of range"
 
-private def arrayGet (values : Array GoValue) (index : Int) : Except String GoValue := do
+private def arrayGet (values : Array GoValue) (index : Int) : Except GoError GoValue := do
   let i ← arrayIndexNat values index
   match values[i]? with
   | some value => return value
-  | none => throw "GoCore panic: index out of range"
+  | none => panic "index out of range"
 
 private def arraySet (values : Array GoValue) (index : Int) (value : GoValue) :
-    Except String (Array GoValue) := do
+    Except GoError (Array GoValue) := do
   let i ← arrayIndexNat values index
   return values.set! i value
 
 mutual
-  partial def loadLoc (state : ExecState) : Loc → Except String GoValue
+  partial def loadLoc (state : ExecState) : Loc → Except GoError GoValue
     | loc@(.base _) =>
         match Heap.lookup state.heap loc with
         | some value => return value
-        | none => throw s!"unbound GoCore heap location: {repr loc}"
+        | none => stuck s!"unbound GoCore heap location: {repr loc}"
     | .field base typeName fieldName => do
         match ← loadLoc state base with
         | .struct actualType fields =>
             if actualType != typeName then
-              throw s!"expected struct {typeName}, got struct {actualType}"
+              stuck s!"expected struct {typeName}, got struct {actualType}"
             match StructFields.lookup fields fieldName with
             | some value => return value
-            | none => throw s!"unknown GoCore struct field: {fieldName}"
-        | other => throw s!"expected struct base for field load, got {repr other}"
+            | none => stuck s!"unknown GoCore struct field: {fieldName}"
+        | other => stuck s!"expected struct base for field load, got {repr other}"
     | .index base index => do
         match ← loadLoc state base with
         | .array values => arrayGet values index
-        | other => throw s!"expected array base for index load, got {repr other}"
+        | other => stuck s!"expected array base for index load, got {repr other}"
 
-  partial def storeLoc (state : ExecState) : Loc → GoValue → Except String ExecState
+  partial def storeLoc (state : ExecState) : Loc → GoValue → Except GoError ExecState
     | loc@(.base _), value =>
         return { state with heap := Heap.set state.heap loc value }
     | .field base typeName fieldName, value => do
         match ← loadLoc state base with
         | .struct actualType fields =>
             if actualType != typeName then
-              throw s!"expected struct {typeName}, got struct {actualType}"
+              stuck s!"expected struct {typeName}, got struct {actualType}"
             let updated ← StructFields.set fields fieldName value
             storeLoc state base (.struct actualType updated)
-        | other => throw s!"expected struct base for field store, got {repr other}"
+        | other => stuck s!"expected struct base for field store, got {repr other}"
     | .index base index, value => do
         match ← loadLoc state base with
         | .array values => storeLoc state base (.array (← arraySet values index value))
-        | other => throw s!"expected array base for index store, got {repr other}"
+        | other => stuck s!"expected array base for index store, got {repr other}"
 end
 
-private def lookup (state : ExecState) (name : String) : Except String GoValue := do
+private def lookup (state : ExecState) (name : String) : Except GoError GoValue := do
   loadLoc state (← lookupLoc state name)
 
 mutual
-  partial def defaultValue (state : ExecState) : Ty → Except String GoValue
+  partial def defaultValue (state : ExecState) : Ty → Except GoError GoValue
     | .bool => return .bool false
     | .int => return .int 0
     | .array length elem => do
@@ -284,13 +293,13 @@ mutual
     | .unsupported feature => unsupported s!"default value for {feature}"
 
   partial def buildStructValue (state : ExecState) (typ : Ty) (args : Array GoValue) :
-      Except String GoValue := do
+      Except GoError GoValue := do
     match typ with
     | .defined name =>
         match TypeEnv.lookup state.types name with
         | some (.struct fields) =>
             if fields.size != args.size then
-              throw s!"struct {name} literal expected {fields.size} field value(s), got {args.size}"
+              stuck s!"struct {name} literal expected {fields.size} field value(s), got {args.size}"
             let mut values := #[]
             let mut i := 0
             for field in fields do
@@ -298,7 +307,7 @@ mutual
               | some value =>
                   values := values.push (field.name, value)
                   i := i + 1
-              | none => throw s!"missing struct field literal value {i}"
+              | none => stuck s!"missing struct field literal value {i}"
             return .struct name values
         | some (.alias target) => buildStructValue state target args
         | some (.unsupported feature) => unsupported s!"struct literal for {feature}"
@@ -307,38 +316,38 @@ mutual
     | other => unsupported s!"struct literal for non-defined type {repr other}"
 
   partial def buildArrayValue (state : ExecState) (length : Nat) (elem : Ty)
-      (args : Array (Int × GoValue)) : Except String GoValue := do
+      (args : Array (Int × GoValue)) : Except GoError GoValue := do
     let mut values := #[]
     for _ in [:length] do
       values := values.push (← defaultValue state elem)
     let mut seen : Array Int := #[]
     for (key, value) in args do
       if seen.contains key then
-        throw s!"duplicate GoCore array literal index: {key}"
+        stuck s!"duplicate GoCore array literal index: {key}"
       seen := seen.push key
       if key < 0 then
-        throw s!"negative GoCore array literal index: {key}"
+        stuck s!"negative GoCore array literal index: {key}"
       match values[key.toNat]? with
       | some _ => values := values.set! key.toNat value
-      | none => throw s!"GoCore array literal index out of range: {key}"
+      | none => stuck s!"GoCore array literal index out of range: {key}"
     return .array values
 end
 
-private def valueAsInt : GoValue → Except String Int
+private def valueAsInt : GoValue → Except GoError Int
   | .int value => return value
-  | other => throw s!"expected int value, got {repr other}"
+  | other => stuck s!"expected int value, got {repr other}"
 
-private def valueAsBool : GoValue → Except String Bool
+private def valueAsBool : GoValue → Except GoError Bool
   | .bool value => return value
-  | other => throw s!"expected bool value, got {repr other}"
+  | other => stuck s!"expected bool value, got {repr other}"
 
-private def valueAsLoc : GoValue → Except String Loc
+private def valueAsLoc : GoValue → Except GoError Loc
   | .addr loc => return loc
-  | .nil => throw "nil pointer dereference"
-  | other => throw s!"expected address value, got {repr other}"
+  | .nil => panic "nil pointer dereference"
+  | other => stuck s!"expected address value, got {repr other}"
 
 mutual
-  partial def evalExpr (state : ExecState) : Expr → Except String GoValue
+  partial def evalExpr (state : ExecState) : Expr → Except GoError GoValue
     | .var id => lookup state id
     | .intLit value => return .int value
     | .boolLit value => return .bool value
@@ -352,13 +361,13 @@ mutual
         let dividend ← valueAsInt (← evalExpr state left)
         let divisor ← valueAsInt (← evalExpr state right)
         if divisor == 0 then
-          throw "GoCore panic: integer divide by zero"
+          panic "integer divide by zero"
         return .int (Int.tdiv dividend divisor)
     | .mod left right => do
         let dividend ← valueAsInt (← evalExpr state left)
         let divisor ← valueAsInt (← evalExpr state right)
         if divisor == 0 then
-          throw "GoCore panic: integer divide by zero"
+          panic "integer divide by zero"
         return .int (Int.tmod dividend divisor)
     | .eqCmp left right => do
         let leftValue ← evalExpr state left
@@ -400,11 +409,11 @@ mutual
         match ← evalExpr state recv with
         | .struct actualType fields =>
             if actualType != typeName then
-              throw s!"expected struct {typeName}, got struct {actualType}"
+              stuck s!"expected struct {typeName}, got struct {actualType}"
             match StructFields.lookup fields fieldName with
             | some value => return value
-            | none => throw s!"unknown GoCore struct field: {fieldName}"
-        | other => throw s!"expected struct value for field access, got {repr other}"
+            | none => stuck s!"unknown GoCore struct field: {fieldName}"
+        | other => stuck s!"expected struct value for field access, got {repr other}"
     | .fieldAddr base typeName fieldName => do
         return .addr (.field (← valueAsLoc (← evalExpr state base)) typeName fieldName)
     | .arrayLit length elem args => do
@@ -415,13 +424,19 @@ mutual
     | .indexGet base index => do
         match ← evalExpr state base with
         | .array values => arrayGet values (← valueAsInt (← evalExpr state index))
-        | other => throw s!"expected array value for index access, got {repr other}"
+        | other => stuck s!"expected array value for index access, got {repr other}"
     | .indexAddr base index => do
-        return .addr (.index (← valueAsLoc (← evalExpr state base)) (← valueAsInt (← evalExpr state index)))
+        let baseLoc ← valueAsLoc (← evalExpr state base)
+        let indexValue ← valueAsInt (← evalExpr state index)
+        match ← loadLoc state baseLoc with
+        | .array values =>
+            let _ ← arrayIndexNat values indexValue
+            return .addr (.index baseLoc indexValue)
+        | other => stuck s!"expected array base for index address, got {repr other}"
     | .old operand => evalExpr state operand
     | .unsupported feature => unsupported feature
 
-  partial def evalAssertion (state : ExecState) : Assertion → Except String Bool
+  partial def evalAssertion (state : ExecState) : Assertion → Except GoError Bool
     | .expr expr => do
         valueAsBool (← evalExpr state expr)
     | .sepAnd left right => do
@@ -434,16 +449,16 @@ mutual
     | .unsupported feature => unsupported feature
 
   partial def assignAssignee (state : ExecState) (assignee : Assignee) (value : GoValue) :
-      Except String ExecState := do
+      Except GoError ExecState := do
     match assignee with
     | .var id => storeLoc state (← lookupLoc state id) value
     | .addr locExpr => storeLoc state (← valueAsLoc (← evalExpr state locExpr)) value
     | .unsupported feature => unsupported feature
 
   partial def assignAssignees (state : ExecState) (targets : Array Assignee)
-      (values : Array GoValue) : Except String ExecState := do
+      (values : Array GoValue) : Except GoError ExecState := do
     if targets.size != values.size then
-      throw s!"expected {targets.size} call result value(s), got {values.size}"
+      stuck s!"expected {targets.size} call result value(s), got {values.size}"
     let mut state := state
     let mut i := 0
     for target in targets do
@@ -451,19 +466,19 @@ mutual
       | some value =>
           state ← assignAssignee state target value
           i := i + 1
-      | none => throw s!"missing call result value {i}"
+      | none => stuck s!"missing call result value {i}"
     return state
 
   partial def execFunctionCall (fuel : Nat) (state : ExecState) (targets : Array Assignee)
-      (name : String) (args : Array Expr) : Except String ExecState := do
+      (name : String) (args : Array Expr) : Except GoError ExecState := do
     if fuel == 0 then
-      throw "GoCore execution fuel exhausted"
+      stuck "GoCore execution fuel exhausted"
     let func ←
       match findFunctionIn? state.functions name with
       | some func => pure func
-      | none => throw s!"GoCore function not found: {name}"
+      | none => stuck s!"GoCore function not found: {name}"
     if func.args.size != args.size then
-      throw s!"function {name} expected {func.args.size} argument(s), got {args.size}"
+      stuck s!"function {name} expected {func.args.size} argument(s), got {args.size}"
     let mut argValues := #[]
     for arg in args do
       argValues := argValues.push (← evalExpr state arg)
@@ -475,7 +490,7 @@ mutual
       | some value =>
           callState := callState.bindLocal param.id value
           i := i + 1
-      | none => throw s!"missing argument {i}"
+      | none => stuck s!"missing argument {i}"
     for result in func.results do
       callState := callState.bindLocal result.id (← defaultValue callState result.typ)
     callState ← execStmt (fuel - 1) callState func.body
@@ -485,23 +500,23 @@ mutual
     let state : ExecState := { callState with locals := callerLocals }
     assignAssignees state targets resultValues
 
-  partial def execDecl (state : ExecState) (param : Param) : Except String ExecState := do
+  partial def execDecl (state : ExecState) (param : Param) : Except GoError ExecState := do
     return state.bindLocal param.id (← defaultValue state param.typ)
 
-  partial def execDecls (state : ExecState) (decls : Array Param) : Except String ExecState := do
+  partial def execDecls (state : ExecState) (decls : Array Param) : Except GoError ExecState := do
     let mut state := state
     for decl in decls do
       state ← execDecl state decl
     return state
 
   partial def execStmts (fuel : Nat) (state : ExecState) (stmts : Array Stmt) :
-      Except String ExecState := do
+      Except GoError ExecState := do
     let mut state := state
     for stmt in stmts do
       state ← execStmt fuel state stmt
     return state
 
-  partial def execStmt (fuel : Nat) (state : ExecState) : Stmt → Except String ExecState
+  partial def execStmt (fuel : Nat) (state : ExecState) : Stmt → Except GoError ExecState
     | .seqn stmts => execStmts fuel state stmts
     | .block decls stmts => do
         execStmts fuel (← execDecls state decls) stmts
@@ -513,10 +528,10 @@ mutual
         if ← evalAssertion state assertion then
           return state
         else
-          throw "GoCore assertion failed"
+          assertionFailure "GoCore assertion failed"
     | .while cond body => do
         if fuel == 0 then
-          throw "GoCore execution fuel exhausted"
+          stuck "GoCore execution fuel exhausted"
         if ← valueAsBool (← evalExpr state cond) then
           execStmt (fuel - 1) (← execStmt fuel state body) (.while cond body)
         else
@@ -526,17 +541,17 @@ mutual
 end
 
 private def checkAssertions (state : ExecState) (kind : String) (assertions : Array Assertion) :
-    Except String Unit := do
+    Except GoError Unit := do
   for assertion in assertions do
     if ← evalAssertion state assertion then
       pure ()
     else
-      throw s!"GoCore {kind} failed"
+      assertionFailure s!"GoCore {kind} failed"
 
 private def bindParams (state : ExecState) (params : Array Param) (args : Array GoValue) :
-    Except String ExecState := do
+    Except GoError ExecState := do
   if params.size != args.size then
-    throw s!"expected {params.size} argument(s), got {args.size}"
+    stuck s!"expected {params.size} argument(s), got {args.size}"
   let mut state := state
   let mut i := 0
   for param in params do
@@ -544,24 +559,24 @@ private def bindParams (state : ExecState) (params : Array Param) (args : Array 
     | some value =>
         state := state.bindLocal param.id value
         i := i + 1
-    | none => throw s!"missing argument {i}"
+    | none => stuck s!"missing argument {i}"
   return state
 
-private def initResults (state : ExecState) (results : Array Param) : Except String ExecState := do
+private def initResults (state : ExecState) (results : Array Param) : Except GoError ExecState := do
   let mut state := state
   for result in results do
     state := state.bindLocal result.id (← defaultValue state result.typ)
   return state
 
 private def collectResults (state : ExecState) (results : Array Param) :
-    Except String (Array GoValue) := do
+    Except GoError (Array GoValue) := do
   let mut values := #[]
   for result in results do
     values := values.push (← lookup state result.id)
   return values
 
 def runFunctionWithContext (fuel : Nat) (types : TypeEnv) (functions : Array Func)
-    (func : Func) (args : Array GoValue) : Except String Result := do
+    (func : Func) (args : Array GoValue) : Except GoError Result := do
   let state ← bindParams { types := types, functions := functions } func.args args
   let state ← initResults state func.results
   checkAssertions state "precondition" func.pres
@@ -570,25 +585,25 @@ def runFunctionWithContext (fuel : Nat) (types : TypeEnv) (functions : Array Fun
   return { values := (← collectResults state func.results) }
 
 def runFunctionWithTypes (fuel : Nat) (types : TypeEnv) (func : Func) (args : Array GoValue) :
-    Except String Result :=
+    Except GoError Result :=
   runFunctionWithContext fuel types #[func] func args
 
-def runFunction (fuel : Nat) (func : Func) (args : Array GoValue) : Except String Result :=
+def runFunction (fuel : Nat) (func : Func) (args : Array GoValue) : Except GoError Result :=
   runFunctionWithTypes fuel [] func args
 
 def findFunction? (program : Program) (name : String) : Option Func :=
   findFunctionIn? program.funcs name
 
 def runNamedFunction (fuel : Nat) (program : Program) (name : String) (args : Array GoValue) :
-    Except String Result := do
+    Except GoError Result := do
   let func ←
     match findFunction? program name with
     | some func => pure func
-    | none => throw s!"GoCore function not found: {name}"
+    | none => stuck s!"GoCore function not found: {name}"
   runFunctionWithContext fuel program.typeDefs.toList program.funcs func args
 
 def runNamedFunctionInts (fuel : Nat) (program : Program) (name : String) (args : Array Int) :
-    Except String Result :=
+    Except GoError Result :=
   runNamedFunction fuel program name (args.map GoValue.int)
 
 end GoLean.GoCore

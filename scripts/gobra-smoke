@@ -50,7 +50,7 @@ if [[ "$scalars_actual" != "$scalars_expected" ]]; then
 fi
 
 divide_by_zero_json="$OUT/work/features/divide-by-zero/divide-by-zero.gobra.internal.json"
-divide_by_zero_expected='{"message":"GoCore panic: integer divide by zero","status":"panic"}'
+divide_by_zero_expected='{"message":"integer divide by zero","status":"panic"}'
 if divide_by_zero_actual="$(lake exe golean gobra-json-run --input "$divide_by_zero_json" --function divideByZero_bda1d7d_F)"; then
   echo "expected divide-by-zero Lean execution to panic" >&2
   exit 1
@@ -69,7 +69,7 @@ if [[ "$arrays_actual" != "$arrays_expected" ]]; then
 fi
 
 array_bounds_json="$OUT/work/features/array-bounds/array-bounds.gobra.internal.json"
-array_bounds_expected='{"message":"GoCore panic: index out of range","status":"panic"}'
+array_bounds_expected='{"message":"index out of range","status":"panic"}'
 if array_bounds_actual="$(lake exe golean gobra-json-run --input "$array_bounds_json" --function arrayBounds_bda1d7d_F)"; then
   echo "expected array-bounds Lean execution to panic" >&2
   exit 1

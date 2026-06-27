@@ -5,7 +5,7 @@ import "fmt"
 func main() {
 	defer func() {
 		if recover() != nil {
-			fmt.Println("{\"message\":\"GoCore panic: integer divide by zero\",\"status\":\"panic\"}")
+			fmt.Println("{\"message\":\"integer divide by zero\",\"status\":\"panic\"}")
 		}
 	}()
 

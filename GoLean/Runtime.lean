@@ -2,9 +2,25 @@ namespace GoLean
 
 inductive GoError where
   | panic (message : String)
+  | assertion (message : String)
   | unsupported (feature : String)
   | stuck (message : String)
-  deriving Repr, BEq
+  | internal (message : String)
+  deriving Repr, BEq, Inhabited
+
+def GoError.status : GoError → String
+  | .panic _ => "panic"
+  | .assertion _ => "assertion_error"
+  | .unsupported _ => "unsupported"
+  | .stuck _ => "stuck"
+  | .internal _ => "error"
+
+def GoError.message : GoError → String
+  | .panic message => message
+  | .assertion message => message
+  | .unsupported feature => feature
+  | .stuck message => message
+  | .internal message => message
 
 structure Addr where
   id : Nat

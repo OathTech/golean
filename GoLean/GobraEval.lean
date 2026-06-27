@@ -7,18 +7,25 @@ abbrev Result := GoLean.GoCore.Result
 def lowerDocument (doc : GoLean.GobraJson.Document) : Except String GoLean.GoCore.Program :=
   GoLean.GobraToIR.lowerDocument doc
 
+private def loweringError (message : String) : GoLean.GoError :=
+  .unsupported s!"Gobra lowering failed: {message}"
+
 def runFunctionMember (fuel : Nat) (member : GoLean.GobraJson.FunctionMember) (args : Array GoLean.GoValue) :
-    Except String Result := do
-  GoLean.GoCore.runFunction fuel (← GoLean.GobraToIR.lowerFunctionMember member) args
+    Except GoLean.GoError Result := do
+  match GoLean.GobraToIR.lowerFunctionMember member with
+  | .ok func => GoLean.GoCore.runFunction fuel func args
+  | .error err => throw (loweringError err)
 
 def runFunction (fuel : Nat) (doc : GoLean.GobraJson.Document) (name : String) (args : Array GoLean.GoValue) :
-    Except String Result := do
-  let program ← lowerDocument doc
-  GoLean.GoCore.runNamedFunction fuel program name args
+    Except GoLean.GoError Result := do
+  match lowerDocument doc with
+  | .ok program => GoLean.GoCore.runNamedFunction fuel program name args
+  | .error err => throw (loweringError err)
 
 def runFunctionInts (fuel : Nat) (doc : GoLean.GobraJson.Document) (name : String) (args : Array Int) :
-    Except String Result := do
-  let program ← lowerDocument doc
-  GoLean.GoCore.runNamedFunctionInts fuel program name args
+    Except GoLean.GoError Result := do
+  match lowerDocument doc with
+  | .ok program => GoLean.GoCore.runNamedFunctionInts fuel program name args
+  | .error err => throw (loweringError err)
 
 end GoLean.GobraEval

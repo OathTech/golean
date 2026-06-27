@@ -139,6 +139,41 @@ private def coreArrayFunction : GoCore.Func := {
     ]
 }
 
+private def coreNilDerefFunction : GoCore.Func := {
+  name := "nil_deref_F",
+  args := #[],
+  results := #[coreParam "z"],
+  pres := #[],
+  posts := #[],
+  body := .block
+    #[{ id := "p", typ := .pointer .int }]
+    #[
+      .assign (.var "z") (.deref (.var "p") .int)
+    ]
+}
+
+private def coreDivideByZeroFunction : GoCore.Func := {
+  name := "divide_by_zero_F",
+  args := #[],
+  results := #[coreParam "z"],
+  pres := #[],
+  posts := #[],
+  body := .assign (.var "z") (.div (.intLit 1) (.intLit 0))
+}
+
+private def coreIndexAddrBoundsFunction : GoCore.Func := {
+  name := "index_addr_bounds_F",
+  args := #[],
+  results := #[],
+  pres := #[],
+  posts := #[],
+  body := .block
+    #[{ id := "a", typ := .array 2 .int }]
+    #[
+      .assign (.addr (.indexAddr (.ref "a") (.intLit 2))) (.intLit 7)
+    ]
+}
+
 private def addExpr : GobraJson.Expr :=
   .add source (.var (.inParam x)) (.var (.inParam y))
 
@@ -177,7 +212,7 @@ private def doc : GobraJson.Document := {
   }
 }
 
-private def expectIntResult (name : String) (result : Except String GoLean.GobraEval.Result)
+private def expectIntResult (name : String) (result : Except GoError GoLean.GobraEval.Result)
     (expected : Int) : IO Bool := do
   match result with
   | .ok result =>
@@ -188,41 +223,48 @@ private def expectIntResult (name : String) (result : Except String GoLean.Gobra
         IO.eprintln s!"FAIL: {name}: expected {expected}, got {repr result.values}"
         return false
   | .error err =>
-      IO.eprintln s!"FAIL: {name}: expected success, got {err}"
+      IO.eprintln s!"FAIL: {name}: expected success, got {repr err}"
       return false
 
-private def expectError (name : String) (result : Except String GoLean.GobraEval.Result) :
-    IO Bool := do
+private def expectErrorStatus (name : String) (result : Except GoError GoLean.GobraEval.Result)
+    (expected : String) : IO Bool := do
   match result with
   | .ok result =>
-      IO.eprintln s!"FAIL: {name}: expected failure, got {repr result}"
+      IO.eprintln s!"FAIL: {name}: expected {expected}, got {repr result}"
       return false
-  | .error _ =>
-      IO.println s!"ok: {name}"
-      return true
+  | .error err =>
+      if err.status == expected then
+        IO.println s!"ok: {name}"
+        return true
+      else
+        IO.eprintln s!"FAIL: {name}: expected {expected}, got {err.status}: {err.message}"
+        return false
 
-private def expectOk (name : String) (result : Except String GoLean.GobraEval.Result) :
+private def expectOk (name : String) (result : Except GoError GoLean.GobraEval.Result) :
     IO Bool := do
   match result with
   | .ok _ =>
       IO.println s!"ok: {name}"
       return true
   | .error err =>
-      IO.eprintln s!"FAIL: {name}: expected success, got {err}"
+      IO.eprintln s!"FAIL: {name}: expected success, got {repr err}"
       return false
 
 def main : IO UInt32 := do
   let mut passed := true
   passed := passed && (← expectIntResult "GoCore add function" (GoCore.runFunction 100 coreAddFunction #[.int 2, .int 3]) 5)
-  passed := passed && (← expectError "GoCore pointer identity" (GoCore.runFunction 100 corePointerIdentityFunction #[]))
+  passed := passed && (← expectErrorStatus "GoCore pointer identity" (GoCore.runFunction 100 corePointerIdentityFunction #[]) "assertion_error")
   passed := passed && (← expectOk "GoCore struct field update" (GoCore.runFunctionWithTypes 100 coreCellTypes coreStructFunction #[]))
   passed := passed && (← expectOk "GoCore shared-heap function call"
     (GoCore.runFunctionWithContext 100 coreCellTypes #[coreSetCellFunction, coreCallFunction] coreCallFunction #[]))
   passed := passed && (← expectIntResult "GoCore scalar operators" (GoCore.runFunction 100 coreScalarFunction #[.int 10, .int 3]) 7)
   passed := passed && (← expectIntResult "GoCore array indexing" (GoCore.runFunction 100 coreArrayFunction #[]) 11)
+  passed := passed && (← expectErrorStatus "GoCore nil dereference panic" (GoCore.runFunction 100 coreNilDerefFunction #[]) "panic")
+  passed := passed && (← expectErrorStatus "GoCore divide by zero panic" (GoCore.runFunction 100 coreDivideByZeroFunction #[]) "panic")
+  passed := passed && (← expectErrorStatus "GoCore index address bounds panic" (GoCore.runFunction 100 coreIndexAddrBoundsFunction #[]) "panic")
   passed := passed && (← expectIntResult "add function" (GoLean.GobraEval.runFunctionInts 100 doc "add_F" #[2, 3]) 5)
-  passed := passed && (← expectError "missing function" (GoLean.GobraEval.runFunctionInts 100 doc "missing_F" #[]))
-  passed := passed && (← expectError "wrong arity" (GoLean.GobraEval.runFunctionInts 100 doc "add_F" #[2]))
+  passed := passed && (← expectErrorStatus "missing function" (GoLean.GobraEval.runFunctionInts 100 doc "missing_F" #[]) "stuck")
+  passed := passed && (← expectErrorStatus "wrong arity" (GoLean.GobraEval.runFunctionInts 100 doc "add_F" #[2]) "stuck")
   if passed then
     return 0
   else
