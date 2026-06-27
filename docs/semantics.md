@@ -23,10 +23,40 @@ Go/Gobra source
   details.
 - Make unsupported semantics explicit. Surprise inputs should fail early.
 - Keep the executable semantics simple enough to differential-test heavily.
+- Keep the proof-facing semantics relational. The executable interpreter is a
+  testing artifact and should not become the only definition of program meaning.
 - Leave room for proof-oriented layers: weakest preconditions, VCGs, Iris-style
   separation logic, or generated proof helpers.
 - Use reference designs from Goose and Perennial where they have already solved
   the shape of Go memory and struct reasoning.
+
+## Semantic Authority And Executability
+
+The project needs two related views of GoCore:
+
+- an executable interpreter, used for differential testing and fast regression
+  checks;
+- a relational small-step or big-step semantics, used as the proof-facing
+  semantic authority and as the future bridge to Iris-Lean.
+
+The executable interpreter can be deterministic and convenient. It should be
+treated as an implementation of the relation for supported terminating concrete
+runs, not as the final semantics. This matters for Iris because proof rules are
+normally stated over relations, weakest-precondition transitions, or operational
+steps, not over a single recursive evaluator function.
+
+Design consequence:
+
+- keep syntax, values, locations, typed errors, and execution outcomes reusable
+  by both views;
+- avoid hiding semantic choices inside opaque interpreter recursion;
+- define new features in a shape that can be mirrored as rules later;
+- prove, where practical, that the executable interpreter is sound with respect
+  to the relational semantics on the supported deterministic subset.
+
+Differential testing should continue to drive feature development. The relation
+does not replace executable testing; it gives us a proof-compatible statement of
+what those tests are exercising.
 
 ## What We Reuse From Goose
 
@@ -107,10 +137,11 @@ New Goose also separates executable/generated code from proof automation:
   those instances.
 
 For this project, the lesson is not to port Goose literally. We should keep
-GoCore as a Lean deep embedding for execution and differential testing, then
-generate a proof layer over GoCore that resembles Perennial's typed field
-access and WP automation. That keeps the executable semantics small enough to
-test while leaving a route to Iris-Lean or Lean-native weakest preconditions.
+GoCore as a Lean deep embedding with an executable interpreter for differential
+testing, then define a relational/proof-facing semantics over the same syntax
+and memory model. Generated proof support can then resemble Perennial's typed
+field access and WP automation. That keeps tests fast while leaving a route to
+Iris-Lean or Lean-native weakest preconditions.
 
 One caveat: Perennial's updater notes that new Goose does not currently have
 executable tests for generated code because evaluation is blocked by sealing.
@@ -147,8 +178,8 @@ HeapCell :=
 ```
 
 This is deliberately more concrete than a proof-only separation model. It gives
-us an executable semantics first. Proof layers can later interpret the same
-heap into separation assertions.
+us executable tests early. The relational semantics and proof layers can later
+interpret the same heap into separation assertions.
 
 ## Variables And Addresses
 
@@ -330,7 +361,8 @@ The main comparisons are:
 
 - Go source execution vs GoCore execution;
 - Gobra JSON lowering vs generated Lean execution;
-- GoCore evaluator vs future proof/WP execution view, where applicable.
+- GoCore evaluator vs the future relational/proof/WP execution view, where
+  applicable.
 
 Unsupported is an acceptable result only when the test manifest expects it.
 Unexpected unsupported features are coverage bugs.

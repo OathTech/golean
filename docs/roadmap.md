@@ -24,6 +24,9 @@ center.
 - Differential testing is a first-class design constraint, not a later add-on.
 - The Lean-side executable semantics should be small, explicit, and fail-closed
   on unsupported or surprising inputs.
+- The proof-facing semantics should be relational, with the executable
+  interpreter treated as a differential-testing implementation of that relation
+  for supported concrete runs.
 - GoCore should model Go behavior, not Gobra's internal IR.
 - Gobra-specific assertions and specifications should be an execution mode over
   GoCore, not the default definition of Go program execution.
@@ -36,6 +39,10 @@ center.
 - The proof layer should come after GoCore has meaningful semantic coverage.
   When it arrives, it should be generated on top of GoCore rather than making
   Gobra IR a first-class verification target.
+- Iris-Lean compatibility is a design constraint on the semantics shape:
+  syntax, values, locations, errors, and outcomes should be reusable by both the
+  executable interpreter and a future relational small-step or big-step
+  semantics.
 
 ## Hardening Gate
 
@@ -215,6 +222,9 @@ Deliverables:
 - Evaluate Iris-Lean for separation logic and concurrency-heavy proofs.
 - Keep executable GoCore semantics and proof semantics connected by the same
   core syntax and memory model.
+- Define a relational GoCore semantics suitable for Iris-Lean integration, then
+  connect the executable interpreter to it for the supported deterministic
+  subset.
 
 Success criterion:
 

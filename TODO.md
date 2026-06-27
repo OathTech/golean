@@ -32,6 +32,9 @@ backlog items.
 
 ## Hardening Phase
 
+- Keep the executable interpreter factored so it can be related to a future
+  relational GoCore semantics for Iris-Lean. The interpreter is for testing; it
+  should not be the only semantic authority.
 - Thread structured errors through GoCore:
   `panic`, `assertion`, `unsupported`, `stuck`, and `internal`.
 - Classify nil pointer dereference and Go-defined runtime traps as `panic`, not
@@ -88,6 +91,10 @@ backlog items.
 
 - Deferred until after the executable semantics and differential harness cover a
   substantial Go subset.
+- Define a relational small-step or big-step GoCore semantics over the same
+  syntax, values, locations, errors, and outcomes as the executable interpreter.
+- Prove, where practical, that the executable interpreter is sound with respect
+  to the relational semantics on supported deterministic terminating runs.
 - Generate struct typed points-to predicates as field-wise ownership.
 - Generate field load/store/access lemmas over `Loc.field`.
 - Prototype a Lean WP/VCG layer over GoCore.
