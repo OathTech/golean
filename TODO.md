@@ -15,7 +15,7 @@ backlog items.
 
 - Broaden GoCore from integer expressions, assignments, blocks, assertions, and while loops to calls, structs, pointers, fields, slices, maps, and interfaces.
 - Keep Gobra-specific handling in `GobraToIR`; semantic work belongs in GoCore unless it is purely frontend lowering.
-- Add a Go-source execution harness and compare Go observable results with Lean-side GoCore execution.
+- Extend `scripts/diff-smoke` beyond `plain/while1` with more paired Go/Gobra fixtures.
 - Emit stable machine-readable observations for both sides: return values, panics/errors, and unsupported-feature failures.
 
 ## GoCore Memory Milestone

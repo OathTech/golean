@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+cd "$ROOT"
+
+OUT="artifacts/gobra-smoke"
+while1_json="$OUT/work/features/while1/while1.gobra.internal.json"
+
+if ! command -v go >/dev/null 2>&1; then
+  echo "go not found on PATH; install Go or expose it in the shell to run differential smoke tests" >&2
+  exit 2
+fi
+
+if [[ ! -f "$while1_json" ]]; then
+  scripts/gobra-smoke
+fi
+
+lean_observation="$(lake exe golean gobra-json-run --input "$while1_json" --function test_bda1d7d_F --arg-int 6 --arg-int 7)"
+go_observation="$(go run ./Differential/plain/while1)"
+
+if [[ "$lean_observation" != "$go_observation" ]]; then
+  echo "differential mismatch for plain/while1" >&2
+  echo "Lean: $lean_observation" >&2
+  echo "Go:   $go_observation" >&2
+  exit 1
+fi
+
+echo "ok: plain/while1 matched Go and Lean observations"

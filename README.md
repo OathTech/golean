@@ -22,6 +22,7 @@ Design and roadmap docs:
 - `docs/architecture.md`: project layers and ownership boundaries.
 - `docs/semantics.md`: GoCore semantics design.
 - `docs/roadmap.md`: phased implementation roadmap.
+- `docs/differential-testing.md`: differential testing plan and generator notes.
 - `TODO.md`: tactical backlog.
 
 Useful commands:
@@ -33,6 +34,7 @@ lake exe golean --help
 lake exe golean gobra-export --manifest Corpus/gobra-smoke.txt
 lake exe golean gobra-json-run --input artifacts/gobra-smoke/work/features/while1/while1.gobra.internal.json --function test_bda1d7d_F --arg-int 6 --arg-int 7
 scripts/gobra-smoke
+scripts/diff-smoke
 ```
 
 After cloning this repo, initialize submodules with:

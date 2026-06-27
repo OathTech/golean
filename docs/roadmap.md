@@ -86,6 +86,8 @@ Goal: compare Go execution and Lean GoCore execution over many small programs.
 
 Status: partially started. Lean execution now emits classified observations for
 successful returns, assertion failures, unsupported features, and stuck states.
+The first smoke harness compares a plain Go fixture against the corresponding
+Lean GoCore observation.
 
 Deliverables:
 
