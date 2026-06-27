@@ -9,8 +9,11 @@ a submodule at `third_party/gobra`, pointing at the `septract/gobra-json` fork.
 
 Initial direction:
 
-- Gobra frontend/export artifacts feed a typed GoCore IR.
-- Lean emits executable definitions over `GoM` for differential testing.
+- Gobra frontend/export artifacts lower into a clean GoCore deep embedding.
+- GoCore is the semantic center: Gobra is a frontend source, not a first-class
+  verification target.
+- Lean executes GoCore for differential testing, and later generated Lean views
+  should be checked against the same GoCore semantics.
 - Proof and VCG layers can later reuse ideas from Aeneas, Goose/Perennial,
   Strata, and Iris-Lean.
 

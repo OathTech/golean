@@ -10,6 +10,7 @@
 
 ## Differential Execution
 
-- Broaden `gobra-json-run` from integer expressions, assignments, blocks, assertions, and while loops to calls, structs, pointers, fields, slices, maps, and interfaces.
-- Add a Go-source execution harness and compare Go observable results with Lean-side Gobra JSON execution.
+- Broaden GoCore from integer expressions, assignments, blocks, assertions, and while loops to calls, structs, pointers, fields, slices, maps, and interfaces.
+- Keep Gobra-specific handling in `GobraToIR`; semantic work belongs in GoCore unless it is purely frontend lowering.
+- Add a Go-source execution harness and compare Go observable results with Lean-side GoCore execution.
 - Emit stable machine-readable observations for both sides: return values, panics/errors, and unsupported-feature failures.

@@ -17,6 +17,21 @@ private def x : GobraJson.Parameter := param "x"
 private def y : GobraJson.Parameter := param "y"
 private def z : GobraJson.Parameter := param "z"
 
+private def coreParam (id : String) : GoCore.Param :=
+  { id, typ := .int }
+
+private def coreAddExpr : GoCore.Expr :=
+  .add (.var "x") (.var "y")
+
+private def coreAddFunction : GoCore.Func := {
+  name := "add_F",
+  args := #[coreParam "x", coreParam "y"],
+  results := #[coreParam "z"],
+  pres := #[],
+  posts := #[.expr (.eqCmp (.var "z") coreAddExpr)],
+  body := .assign (.var "z") coreAddExpr
+}
+
 private def addExpr : GobraJson.Expr :=
   .add source (.var (.inParam x)) (.var (.inParam y))
 
@@ -81,6 +96,7 @@ private def expectError (name : String) (result : Except String GoLean.GobraEval
 
 def main : IO UInt32 := do
   let mut passed := true
+  passed := passed && (← expectIntResult "GoCore add function" (GoCore.runFunction 100 coreAddFunction #[.int 2, .int 3]) 5)
   passed := passed && (← expectIntResult "add function" (GoLean.GobraEval.runFunctionInts 100 doc "add_F" #[2, 3]) 5)
   passed := passed && (← expectError "missing function" (GoLean.GobraEval.runFunctionInts 100 doc "missing_F" #[]))
   passed := passed && (← expectError "wrong arity" (GoLean.GobraEval.runFunctionInts 100 doc "add_F" #[2]))
