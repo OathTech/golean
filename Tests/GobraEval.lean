@@ -239,6 +239,16 @@ private def addFunction : GobraJson.FunctionMember := {
   }
 }
 
+private def bodylessFunction : GobraJson.FunctionMember := {
+  addFunction with
+  name := { source, name := "bodyless_F" },
+  args := #[],
+  results := #[],
+  pres := #[],
+  posts := #[],
+  body := none
+}
+
 private def doc : GobraJson.Document := {
   schema := {
     name := "gobra.internal",
@@ -252,6 +262,10 @@ private def doc : GobraJson.Document := {
     types := #[],
     members := #[.function addFunction]
   }
+}
+
+private def bodylessDoc : GobraJson.Document := {
+  doc with program := { doc.program with members := #[.function bodylessFunction] }
 }
 
 private def expectIntResult (name : String) (result : Except GoError GoLean.GobraEval.Result)
@@ -310,6 +324,7 @@ def main : IO UInt32 := do
   passed := passed && (← expectIntResult "add function" (GoLean.GobraEval.runFunctionInts 100 doc "add_F" #[2, 3]) 5)
   passed := passed && (← expectErrorStatus "missing function" (GoLean.GobraEval.runFunctionInts 100 doc "missing_F" #[]) "stuck")
   passed := passed && (← expectErrorStatus "wrong arity" (GoLean.GobraEval.runFunctionInts 100 doc "add_F" #[2]) "stuck")
+  passed := passed && (← expectErrorStatus "bodyless function unsupported" (GoLean.GobraEval.runFunctionInts 100 bodylessDoc "bodyless_F" #[]) "unsupported")
   if passed then
     return 0
   else

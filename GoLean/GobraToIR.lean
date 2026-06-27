@@ -210,6 +210,15 @@ def lowerFunctionMember (member : GoLean.GobraJson.FunctionMember) : Except Stri
     body := lowerMethodBody body
   }
 
+def lowerBodylessFunctionMember (member : GoLean.GobraJson.FunctionMember) : GoLean.GoCore.Func := {
+  name := member.name.name,
+  args := member.args.map lowerParam,
+  results := member.results.map lowerParam,
+  pres := member.pres.map lowerAssertion,
+  posts := member.posts.map lowerAssertion,
+  body := .unsupported s!"bodyless function {member.name.name}"
+}
+
 def lowerMethodMember (member : GoLean.GobraJson.MethodMember) : Except String GoLean.GoCore.Func := do
   let body ←
     match member.body with
@@ -224,6 +233,15 @@ def lowerMethodMember (member : GoLean.GobraJson.MethodMember) : Except String G
     body := lowerMethodBody body
   }
 
+def lowerBodylessMethodMember (member : GoLean.GobraJson.MethodMember) : GoLean.GoCore.Func := {
+  name := member.name.uniqueName,
+  args := #[lowerParam member.receiver] ++ member.args.map lowerParam,
+  results := member.results.map lowerParam,
+  pres := member.pres.map lowerAssertion,
+  posts := member.posts.map lowerAssertion,
+  body := .unsupported s!"bodyless method {member.name.uniqueName}"
+}
+
 def lowerProgram (program : GoLean.GobraJson.Program) : Except String GoLean.GoCore.Program := do
   let mut funcs := #[]
   for member in program.members do
@@ -231,11 +249,11 @@ def lowerProgram (program : GoLean.GobraJson.Program) : Except String GoLean.GoC
     | .function member =>
         match member.body with
         | some _ => funcs := funcs.push (← lowerFunctionMember member)
-        | none => pure ()
+        | none => funcs := funcs.push (lowerBodylessFunctionMember member)
     | .method member =>
         match member.body with
         | some _ => funcs := funcs.push (← lowerMethodMember member)
-        | none => pure ()
+        | none => funcs := funcs.push (lowerBodylessMethodMember member)
     | .mPredicate _ =>
         pure ()
   return { typeDefs := lowerTypeDefs program.types, funcs }
