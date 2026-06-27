@@ -4,10 +4,18 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
 cd "$ROOT"
 
-OUT="artifacts/gobra-smoke"
+OUT_FINAL="artifacts/gobra-smoke"
 LAKE_BUILD_TIMEOUT_SECONDS="${LAKE_BUILD_TIMEOUT_SECONDS:-120}"
 GOBRA_EXPORT_TIMEOUT_SECONDS="${GOBRA_EXPORT_TIMEOUT_SECONDS:-180}"
 LEAN_TIMEOUT_SECONDS="${LEAN_TIMEOUT_SECONDS:-30}"
+
+mkdir -p artifacts
+OUT="$(mktemp -d "$ROOT/artifacts/gobra-smoke.XXXXXX")"
+
+cleanup() {
+  rm -rf "$OUT"
+}
+trap cleanup EXIT
 
 run_with_timeout() {
   local seconds="$1"
@@ -19,7 +27,6 @@ lean() {
   run_with_timeout "$LEAN_TIMEOUT_SECONDS" lake exe golean "$@"
 }
 
-rm -rf "$OUT"
 run_with_timeout "$LAKE_BUILD_TIMEOUT_SECONDS" lake build
 run_with_timeout "$GOBRA_EXPORT_TIMEOUT_SECONDS" lake exe golean gobra-export --manifest Corpus/gobra-smoke.txt --out "$OUT"
 
@@ -128,5 +135,9 @@ if [[ "$swap_without_final_assert_actual" != "$swap_without_final_assert_expecte
   echo "swap client did not pass after ignoring final assertion: $swap_without_final_assert_actual" >&2
   exit 1
 fi
+
+rm -rf "$OUT_FINAL"
+mv "$OUT" "$OUT_FINAL"
+trap - EXIT
 
 echo "executed 9 Gobra internal JSON function(s) in Lean"

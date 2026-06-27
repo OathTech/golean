@@ -321,10 +321,37 @@ private def runObservationEq (args : List String) : IO UInt32 := do
             IO.eprintln s!"right: {right.compress}"
             return 1
 
-private def artifactRecordMatches (internalJson : FilePath) (path : String) : Bool :=
-  (FilePath.mk path).normalize.toString == internalJson.normalize.toString
+private def suffixAfter? (marker path : String) : Option String :=
+  match path.splitOn marker with
+  | [_prefix, suffix] => some suffix
+  | _ => none
 
-private def checkArtifactRecord (path : String) (internalJson : FilePath) (json : Json) :
+private def artifactRecordMatches (internalJson : FilePath) (path : String) : Bool :=
+  let actual := internalJson.normalize.toString
+  let recorded := (FilePath.mk path).normalize.toString
+  recorded == actual ||
+    match suffixAfter? "/work/" recorded, suffixAfter? "/work/" actual with
+    | some recordedSuffix, some actualSuffix => recordedSuffix == actualSuffix
+    | _, _ => false
+
+private def relocatedWorkPath? (artifactRoot : FilePath) (path : String) : Option FilePath :=
+  match suffixAfter? "/work/" ((FilePath.mk path).normalize.toString) with
+  | some suffix => some (artifactRoot / "work" / FilePath.mk suffix)
+  | none => none
+
+private def existingOrRelocatedWorkPath (artifactRoot : FilePath) (path : String) : IO FilePath := do
+  let original := FilePath.mk path
+  if ← original.pathExists then
+    return original
+  match relocatedWorkPath? artifactRoot path with
+  | some relocated =>
+      if ← relocated.pathExists then
+        return relocated
+      else
+        return original
+  | none => return original
+
+private def checkArtifactRecord (artifactRoot : FilePath) (path : String) (internalJson : FilePath) (json : Json) :
     IO (Except String Bool) := do
   match (do
     let obj ← StrictJson.obj path json
@@ -351,7 +378,7 @@ private def checkArtifactRecord (path : String) (internalJson : FilePath) (json 
           if !success then
             return .error s!"{path}: artifact record is not successful"
           let sourcePath := FilePath.mk source
-          let scratchSourcePath := FilePath.mk scratchSource
+          let scratchSourcePath ← existingOrRelocatedWorkPath artifactRoot scratchSource
           if !(← sourcePath.pathExists) then
             return .error s!"{path}: source does not exist: {sourcePath}"
           if !(← scratchSourcePath.pathExists) then
@@ -367,6 +394,7 @@ private def checkArtifactRecord (path : String) (internalJson : FilePath) (json 
           return .ok true
 
 private def checkArtifactManifest (manifest internalJson : FilePath) : IO (Except String Unit) := do
+  let artifactRoot := manifest.parent.getD "."
   match Json.parse (← IO.FS.readFile manifest) with
   | .error err => return .error err
   | .ok json =>
@@ -380,7 +408,7 @@ private def checkArtifactManifest (manifest internalJson : FilePath) : IO (Excep
           for i in [:results.size] do
             match results[i]? with
             | some recordJson =>
-                match ← checkArtifactRecord s!"manifest.results[{i}]" internalJson recordJson with
+                match ← checkArtifactRecord artifactRoot s!"manifest.results[{i}]" internalJson recordJson with
                 | .error err => return .error err
                 | .ok true => matchCount := matchCount + 1
                 | .ok false => pure ()
