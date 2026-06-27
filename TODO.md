@@ -58,10 +58,10 @@ backlog items.
 - Track semantic policy choices that remain open for differential refinement,
   especially allocation limits, append growth, zero-capacity slices, string
   slicing, and panic-message details.
-- Make Gobra artifact generation scalable. The current differential loop reuses
-  `artifacts/gobra-smoke`, but a cold export still invokes SBT/Gobra once per
-  fixture. Prefer incremental export by source hash, batched package export, or
-  a native Go frontend path once practical.
+- Keep improving artifact-generation scalability. Gobra exports are now
+  incremental by source hash, but a cold export still invokes SBT/Gobra once per
+  fixture. Prefer batched package export or a native Go frontend path once
+  practical.
 - Treat Gobra's permission-argument variants of `copy` and `append` as
   frontend artifacts. The Gobra fork may enrich `--printInternalJson` with
   plain-Go nodes such as `GoSliceCopy` and `GoSliceAppend`; do not add Gobra
@@ -127,6 +127,8 @@ backlog items.
   the differential suite to 29 cases, including typed nil slices, nil/empty
   slice distinctions, nil append, variadic overlap append, full slicing,
   full-slice bounds panics, zero-length `make`, nil copy, and short copy.
+- Added source-hash based Gobra artifact caching, so warm `scripts/gobra-smoke`
+  runs reuse unchanged successful exports.
 
 ## Proof Generation
 

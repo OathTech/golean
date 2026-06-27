@@ -6,16 +6,9 @@ cd "$ROOT"
 
 OUT_FINAL="artifacts/gobra-smoke"
 LAKE_BUILD_TIMEOUT_SECONDS="${LAKE_BUILD_TIMEOUT_SECONDS:-120}"
-GOBRA_EXPORT_TIMEOUT_SECONDS="${GOBRA_EXPORT_TIMEOUT_SECONDS:-180}"
 LEAN_TIMEOUT_SECONDS="${LEAN_TIMEOUT_SECONDS:-30}"
 
 mkdir -p artifacts
-OUT="$(mktemp -d "$ROOT/artifacts/gobra-smoke.XXXXXX")"
-
-cleanup() {
-  rm -rf "$OUT"
-}
-trap cleanup EXIT
 
 run_with_timeout() {
   local seconds="$1"
@@ -28,25 +21,11 @@ lean() {
 }
 
 run_with_timeout "$LAKE_BUILD_TIMEOUT_SECONDS" lake build
-lake exe golean gobra-export --manifest Corpus/gobra-smoke.txt --out "$OUT"
-
-json_files=()
-while IFS= read -r -d '' json_file; do
-  json_files+=("$json_file")
-done < <(find "$OUT/work" -name '*.internal.json' -print0)
-if [[ "${#json_files[@]}" -eq 0 ]]; then
-  echo "no Gobra internal JSON artifacts found under $OUT/work" >&2
-  exit 1
-fi
-
-for json_file in "${json_files[@]}"; do
-  lean gobra-json-check --input "$json_file"
-done
-
-echo "validated ${#json_files[@]} Gobra internal JSON artifact(s)"
+lake exe golean gobra-export --manifest Corpus/gobra-smoke.txt --out "$OUT_FINAL"
 
 MANIFEST="Differential/manifest.tsv"
 case_count=0
+validated_count=0
 while IFS=$'\t' read -r id _go_dir gobra_json function_name arg_ints expected_status _features _expected_reason extra; do
   if [[ -z "${id:-}" || "$id" == \#* ]]; then
     continue
@@ -64,13 +43,15 @@ while IFS=$'\t' read -r id _go_dir gobra_json function_name arg_ints expected_st
   esac
 
   case "$gobra_json" in
-    artifacts/gobra-smoke/*) json_file="$OUT/${gobra_json#artifacts/gobra-smoke/}" ;;
+    artifacts/gobra-smoke/*) json_file="$OUT_FINAL/${gobra_json#artifacts/gobra-smoke/}" ;;
     *) json_file="$gobra_json" ;;
   esac
   if [[ ! -f "$json_file" ]]; then
     echo "Gobra JSON artifact not found for $id: $json_file" >&2
     exit 1
   fi
+  lean gobra-json-check --input "$json_file"
+  validated_count=$((validated_count + 1))
 
   lean_args=(gobra-json-run --input "$json_file" --function "$function_name")
   if [[ "$arg_ints" != "-" ]]; then
@@ -99,8 +80,5 @@ while IFS=$'\t' read -r id _go_dir gobra_json function_name arg_ints expected_st
   case_count=$((case_count + 1))
 done < "$MANIFEST"
 
-rm -rf "$OUT_FINAL"
-mv "$OUT" "$OUT_FINAL"
-trap - EXIT
-
+echo "validated $validated_count Gobra internal JSON artifact(s)"
 echo "executed $case_count Gobra-fronted Go function(s) in Lean"

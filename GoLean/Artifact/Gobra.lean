@@ -1,3 +1,4 @@
+import GoLean.StrictJson
 import Lean.Data.Json
 
 namespace GoLean.Artifact.Gobra
@@ -58,6 +59,49 @@ def ExportResult.toJson (r : ExportResult) : Json :=
     ("vprExists", Lean.toJson r.vprExists),
     ("success", Lean.toJson r.success)
   ]
+
+private def decodeExportResult (path : String) (json : Json) : Except String ExportResult := do
+  let obj ← GoLean.StrictJson.obj path json
+  GoLean.StrictJson.requireExactKeys path obj [
+    "exitCode",
+    "id",
+    "internalExists",
+    "internalJsonExists",
+    "internalJsonPath",
+    "internalPath",
+    "resultPath",
+    "scratchSource",
+    "scratchSourceSha256",
+    "source",
+    "sourceSha256",
+    "stderrPath",
+    "stdoutPath",
+    "success",
+    "vprExists",
+    "vprPath"
+  ]
+  let exitCode ← GoLean.StrictJson.nat s!"{path}.exitCode" (← GoLean.StrictJson.field path obj "exitCode")
+  if exitCode > UInt32.size then
+    throw s!"{path}.exitCode: expected UInt32 exit code, got {exitCode}"
+  return {
+    id := (← GoLean.StrictJson.string s!"{path}.id" (← GoLean.StrictJson.field path obj "id")),
+    source := FilePath.mk (← GoLean.StrictJson.string s!"{path}.source" (← GoLean.StrictJson.field path obj "source")),
+    sourceSha256 := (← GoLean.StrictJson.string s!"{path}.sourceSha256" (← GoLean.StrictJson.field path obj "sourceSha256")),
+    scratchSource := FilePath.mk (← GoLean.StrictJson.string s!"{path}.scratchSource" (← GoLean.StrictJson.field path obj "scratchSource")),
+    scratchSourceSha256 :=
+      (← GoLean.StrictJson.string s!"{path}.scratchSourceSha256" (← GoLean.StrictJson.field path obj "scratchSourceSha256")),
+    internalPath := FilePath.mk (← GoLean.StrictJson.string s!"{path}.internalPath" (← GoLean.StrictJson.field path obj "internalPath")),
+    internalJsonPath :=
+      FilePath.mk (← GoLean.StrictJson.string s!"{path}.internalJsonPath" (← GoLean.StrictJson.field path obj "internalJsonPath")),
+    vprPath := FilePath.mk (← GoLean.StrictJson.string s!"{path}.vprPath" (← GoLean.StrictJson.field path obj "vprPath")),
+    stdoutPath := FilePath.mk (← GoLean.StrictJson.string s!"{path}.stdoutPath" (← GoLean.StrictJson.field path obj "stdoutPath")),
+    stderrPath := FilePath.mk (← GoLean.StrictJson.string s!"{path}.stderrPath" (← GoLean.StrictJson.field path obj "stderrPath")),
+    resultPath := FilePath.mk (← GoLean.StrictJson.string s!"{path}.resultPath" (← GoLean.StrictJson.field path obj "resultPath")),
+    exitCode := UInt32.ofNat exitCode,
+    internalExists := (← GoLean.StrictJson.bool s!"{path}.internalExists" (← GoLean.StrictJson.field path obj "internalExists")),
+    internalJsonExists := (← GoLean.StrictJson.bool s!"{path}.internalJsonExists" (← GoLean.StrictJson.field path obj "internalJsonExists")),
+    vprExists := (← GoLean.StrictJson.bool s!"{path}.vprExists" (← GoLean.StrictJson.field path obj "vprExists"))
+  }
 
 private def absoluteFrom (base : FilePath) (path : FilePath) : FilePath :=
   if path.isRelative then (base / path).normalize else path.normalize
@@ -131,6 +175,44 @@ private def writeJsonFile (path : FilePath) (json : Json) : IO Unit := do
   ensureParent path
   IO.FS.writeFile path (json.compress ++ "\n")
 
+private def readExportResult? (path : FilePath) : IO (Option ExportResult) := do
+  if !(← path.pathExists) then
+    return none
+  match Json.parse (← IO.FS.readFile path) with
+  | .error _ => return none
+  | .ok json =>
+      match decodeExportResult path.toString json with
+      | .error _ => return none
+      | .ok result => return some result
+
+private def samePath (left right : FilePath) : Bool :=
+  left.normalize.toString == right.normalize.toString
+
+private def reusableResult? (entry : CorpusEntry) (result : ExportResult) : IO Bool := do
+  if result.id != entry.id || !samePath result.source entry.source || !result.success then
+    return false
+  let sourceSha256 ← sha256File entry.source
+  if result.sourceSha256 != sourceSha256 || result.scratchSourceSha256 != sourceSha256 then
+    return false
+  if !(← result.scratchSource.pathExists) ||
+      !(← result.internalPath.pathExists) ||
+      !(← result.internalJsonPath.pathExists) ||
+      !(← result.stdoutPath.pathExists) ||
+      !(← result.stderrPath.pathExists) then
+    return false
+  let scratchSha256 ← sha256File result.scratchSource
+  return scratchSha256 == sourceSha256
+
+private def cachedResult? (opts : ExportOptions) (entry : CorpusEntry) : IO (Option ExportResult) := do
+  let resultPath := opts.outDir / "results" / entry.id / "result.json"
+  match ← readExportResult? resultPath with
+  | none => return none
+  | some result =>
+      if ← reusableResult? entry result then
+        return some result
+      else
+        return none
+
 def exportOne (opts : ExportOptions) (entry : CorpusEntry) : IO ExportResult := do
   let workDir := opts.outDir / "work" / entry.id
   let resultDir := opts.outDir / "results" / entry.id
@@ -184,11 +266,16 @@ def exportOne (opts : ExportOptions) (entry : CorpusEntry) : IO ExportResult := 
 def exportMany (opts : ExportOptions) (entries : List CorpusEntry) : IO (List ExportResult) := do
   let mut results := []
   for entry in entries do
-    IO.println s!"[gobra] exporting {entry.id}"
-    let result ← exportOne opts entry
-    let status := if result.success then "ok" else "failed"
-    IO.println s!"[gobra] {entry.id}: {status}"
-    results := results.concat result
+    match ← cachedResult? opts entry with
+    | some result =>
+        IO.println s!"[gobra] {entry.id}: cached"
+        results := results.concat result
+    | none =>
+        IO.println s!"[gobra] exporting {entry.id}"
+        let result ← exportOne opts entry
+        let status := if result.success then "ok" else "failed"
+        IO.println s!"[gobra] {entry.id}: {status}"
+        results := results.concat result
   let manifestJson := Json.mkObj [
     ("results", Json.arr (results.map ExportResult.toJson).toArray)
   ]

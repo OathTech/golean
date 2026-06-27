@@ -41,10 +41,9 @@ scripts/gobra-smoke
 scripts/diff-smoke
 ```
 
-`scripts/gobra-smoke` performs the slow Gobra export/JSON validation step.
-`scripts/diff-smoke` reuses `artifacts/gobra-smoke` when present and compares
-every manifest row against `go run`, so it is the faster inner loop after a
-successful export.
+`scripts/gobra-smoke` performs Gobra export/JSON validation and reuses
+unchanged successful exports by source hash. `scripts/diff-smoke` checks those
+artifacts and compares every manifest row against `go run`.
 
 After cloning this repo, initialize submodules with:
 

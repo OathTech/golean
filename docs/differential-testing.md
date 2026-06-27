@@ -48,12 +48,16 @@ The harness runs fixtures with module mode disabled and stores Go's build cache
 under `artifacts/go-build-cache` so tests do not depend on writable user-level
 cache directories.
 
-Current scalability limitation: Gobra export is slow because the harness invokes
-SBT/Gobra once per corpus entry. `scripts/diff-smoke` reuses
-`artifacts/gobra-smoke` when it exists and checks artifact source hashes before
-running Lean; if artifacts are missing or stale, it refreshes them once. The
-next harness improvement should make Gobra export incremental or batched so
-adding one fixture does not require re-exporting the entire corpus.
+The Gobra exporter is incremental by source hash. Each entry records the source
+hash, scratch-source hash, and generated artifact paths in
+`artifacts/gobra-smoke/results/<id>/result.json`; unchanged successful entries
+are reused on later runs. `scripts/diff-smoke` also checks artifact source
+hashes before running Lean and refreshes artifacts once if they are missing or
+stale.
+
+Remaining scalability limitation: even with per-entry caching, a cold export
+still invokes SBT/Gobra once per corpus entry. A later native Go frontend or a
+batched Gobra export mode would make cold starts much cheaper.
 
 ## Random Program Generators
 
