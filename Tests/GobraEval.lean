@@ -57,6 +57,26 @@ private def corePointerIdentityFunction : GoCore.Func := {
     ]
 }
 
+private def coreCellTypes : GoCore.TypeEnv :=
+  [("cell", .struct #[{ name := "valA", typ := .int }])]
+
+private def coreStructFunction : GoCore.Func := {
+  name := "struct_F",
+  args := #[],
+  results := #[],
+  pres := #[],
+  posts := #[],
+  body := .block
+    #[{ id := "x", typ := .defined "cell" }]
+    #[
+      .assign (.var "x") (.structLit (.defined "cell") #[.intLit 42]),
+      .assert (.expr (.eqCmp (.fieldGet (.var "x") "cell" "valA") (.intLit 42))),
+      .assign (.addr (.fieldAddr (.ref "x") "cell" "valA")) (.intLit 17),
+      .assert (.expr (.eqCmp (.var "x") (.structLit (.defined "cell") #[.intLit 17]))),
+      .assert (.expr (.eqCmp (.deref (.ref "x") (.defined "cell")) (.var "x")))
+    ]
+}
+
 private def addExpr : GobraJson.Expr :=
   .add source (.var (.inParam x)) (.var (.inParam y))
 
@@ -119,10 +139,21 @@ private def expectError (name : String) (result : Except String GoLean.GobraEval
       IO.println s!"ok: {name}"
       return true
 
+private def expectOk (name : String) (result : Except String GoLean.GobraEval.Result) :
+    IO Bool := do
+  match result with
+  | .ok _ =>
+      IO.println s!"ok: {name}"
+      return true
+  | .error err =>
+      IO.eprintln s!"FAIL: {name}: expected success, got {err}"
+      return false
+
 def main : IO UInt32 := do
   let mut passed := true
   passed := passed && (← expectIntResult "GoCore add function" (GoCore.runFunction 100 coreAddFunction #[.int 2, .int 3]) 5)
   passed := passed && (← expectError "GoCore pointer identity" (GoCore.runFunction 100 corePointerIdentityFunction #[]))
+  passed := passed && (← expectOk "GoCore struct field update" (GoCore.runFunctionWithTypes 100 coreCellTypes coreStructFunction #[]))
   passed := passed && (← expectIntResult "add function" (GoLean.GobraEval.runFunctionInts 100 doc "add_F" #[2, 3]) 5)
   passed := passed && (← expectError "missing function" (GoLean.GobraEval.runFunctionInts 100 doc "missing_F" #[]))
   passed := passed && (← expectError "wrong arity" (GoLean.GobraEval.runFunctionInts 100 doc "add_F" #[2]))

@@ -138,12 +138,19 @@ private def locJson : Loc → Json
         ("fieldName", Json.str fieldName)
       ]
 
-private def goValueJson : GoValue → Json
+private partial def goValueJson : GoValue → Json
   | .unit => Json.mkObj [("tag", Json.str "unit")]
   | .bool value => Json.mkObj [("tag", Json.str "bool"), ("value", Lean.toJson value)]
   | .int value => Json.mkObj [("tag", Json.str "int"), ("value", Lean.toJson value)]
   | .addr loc => locJson loc
   | .nil => Json.mkObj [("tag", Json.str "nil")]
+  | .struct typeName fields =>
+      Json.mkObj [
+        ("tag", Json.str "struct"),
+        ("typeName", Json.str typeName),
+        ("fields", Json.arr (fields.map (fun (name, value) =>
+          Json.mkObj [("name", Json.str name), ("value", goValueJson value)])))
+      ]
 
 private def runJson : GoLean.GobraEval.Result → Json
   | { values } =>

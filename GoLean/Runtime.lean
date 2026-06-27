@@ -21,6 +21,7 @@ inductive GoValue where
   | int (value : Int)
   | addr (loc : Loc)
   | nil
+  | struct (typeName : String) (fields : Array (String × GoValue))
   deriving Repr, BEq
 
 structure GoState where

@@ -17,10 +17,16 @@ structure Param where
   typ : Ty
   deriving Repr, BEq
 
-inductive Assignee where
-  | var (id : String)
+structure FieldDef where
+  name : String
+  typ : Ty
+  deriving Repr, BEq
+
+inductive TypeDef where
+  | struct (fields : Array FieldDef)
+  | alias (target : Ty)
   | unsupported (feature : String)
-  deriving Repr, BEq, Inhabited
+  deriving Repr, BEq
 
 inductive Expr where
   | var (id : String)
@@ -33,7 +39,17 @@ inductive Expr where
   | atLeastCmp (left right : Expr)
   | lessCmp (left right : Expr)
   | ref (id : String)
+  | deref (ptr : Expr) (typ : Ty)
+  | structLit (typ : Ty) (args : Array Expr)
+  | fieldGet (recv : Expr) (typeName fieldName : String)
+  | fieldAddr (base : Expr) (typeName fieldName : String)
   | old (operand : Expr)
+  | unsupported (feature : String)
+  deriving Repr, BEq, Inhabited
+
+inductive Assignee where
+  | var (id : String)
+  | addr (loc : Expr)
   | unsupported (feature : String)
   deriving Repr, BEq, Inhabited
 
@@ -65,13 +81,16 @@ structure Func where
   deriving Repr, BEq
 
 structure Program where
+  typeDefs : Array (String × TypeDef) := #[]
   funcs : Array Func
   deriving Repr, BEq
 
 abbrev LocalEnv := List (String × Loc)
 abbrev Heap := List (Loc × GoValue)
+abbrev TypeEnv := List (String × TypeDef)
 
 structure ExecState where
+  types : TypeEnv := []
   locals : LocalEnv := []
   heap : Heap := []
   nextAddr : Nat := 0
@@ -107,6 +126,35 @@ private def Heap.set : Heap → Loc → GoValue → Heap
       else
         (loc, old) :: Heap.set rest needle value
 
+private def TypeEnv.lookup : TypeEnv → String → Option TypeDef
+  | [], _ => none
+  | (name, defn) :: rest, needle =>
+      if name == needle then some defn else TypeEnv.lookup rest needle
+
+private def StructFields.lookup : Array (String × GoValue) → String → Option GoValue
+  | fields, needle =>
+      fields.foldl
+        (fun found (name, value) =>
+          match found with
+          | some value => some value
+          | none => if name == needle then some value else none)
+        none
+
+private def StructFields.set (fields : Array (String × GoValue)) (needle : String)
+    (value : GoValue) : Except String (Array (String × GoValue)) := do
+  let mut out := #[]
+  let mut found := false
+  for (name, old) in fields do
+    if name == needle then
+      out := out.push (name, value)
+      found := true
+    else
+      out := out.push (name, old)
+  if found then
+    return out
+  else
+    throw s!"unknown GoCore struct field: {needle}"
+
 private def ExecState.freshLoc (state : ExecState) : Loc × ExecState :=
   let loc := Loc.base { id := state.nextAddr }
   (loc, { state with nextAddr := state.nextAddr + 1 })
@@ -123,10 +171,6 @@ private def ExecState.bindLocal (state : ExecState) (name : String) (value : GoV
         heap := Heap.set state.heap loc value
       }
 
-private def ExecState.storeLoc (state : ExecState) (loc : Loc) (value : GoValue) :
-    ExecState :=
-  { state with heap := Heap.set state.heap loc value }
-
 private def unsupported {α : Type} (feature : String) : Except String α :=
   throw s!"unsupported GoCore execution feature: {feature}"
 
@@ -135,20 +179,78 @@ private def lookupLoc (state : ExecState) (name : String) : Except String Loc :=
   | some loc => return loc
   | none => throw s!"unbound GoCore variable address: {name}"
 
-private def loadLoc (state : ExecState) (loc : Loc) : Except String GoValue :=
-  match Heap.lookup state.heap loc with
-  | some value => return value
-  | none => throw s!"unbound GoCore heap location: {repr loc}"
+mutual
+  partial def loadLoc (state : ExecState) : Loc → Except String GoValue
+    | loc@(.base _) =>
+        match Heap.lookup state.heap loc with
+        | some value => return value
+        | none => throw s!"unbound GoCore heap location: {repr loc}"
+    | .field base typeName fieldName => do
+        match ← loadLoc state base with
+        | .struct actualType fields =>
+            if actualType != typeName then
+              throw s!"expected struct {typeName}, got struct {actualType}"
+            match StructFields.lookup fields fieldName with
+            | some value => return value
+            | none => throw s!"unknown GoCore struct field: {fieldName}"
+        | other => throw s!"expected struct base for field load, got {repr other}"
+
+  partial def storeLoc (state : ExecState) : Loc → GoValue → Except String ExecState
+    | loc@(.base _), value =>
+        return { state with heap := Heap.set state.heap loc value }
+    | .field base typeName fieldName, value => do
+        match ← loadLoc state base with
+        | .struct actualType fields =>
+            if actualType != typeName then
+              throw s!"expected struct {typeName}, got struct {actualType}"
+            let updated ← StructFields.set fields fieldName value
+            storeLoc state base (.struct actualType updated)
+        | other => throw s!"expected struct base for field store, got {repr other}"
+end
 
 private def lookup (state : ExecState) (name : String) : Except String GoValue := do
   loadLoc state (← lookupLoc state name)
 
-private def defaultValue : Ty → Except String GoValue
-  | .bool => return .bool false
-  | .int => return .int 0
-  | .pointer _ => return .nil
-  | .defined name => unsupported s!"default value for defined type {name}"
-  | .unsupported feature => unsupported s!"default value for {feature}"
+mutual
+  partial def defaultValue (state : ExecState) : Ty → Except String GoValue
+    | .bool => return .bool false
+    | .int => return .int 0
+    | .pointer _ => return .nil
+    | .defined name => do
+        match TypeEnv.lookup state.types name with
+        | some (.struct fields) =>
+            let mut values := #[]
+            for field in fields do
+              values := values.push (field.name, (← defaultValue state field.typ))
+            return .struct name values
+        | some (.alias target) => defaultValue state target
+        | some (.unsupported feature) => unsupported s!"default value for {feature}"
+        | none => unsupported s!"default value for unknown defined type {name}"
+    | .unsupported feature => unsupported s!"default value for {feature}"
+
+  partial def buildStructValue (state : ExecState) (typ : Ty) (args : Array GoValue) :
+      Except String GoValue := do
+    match typ with
+    | .defined name =>
+        match TypeEnv.lookup state.types name with
+        | some (.struct fields) =>
+            if fields.size != args.size then
+              throw s!"struct {name} literal expected {fields.size} field value(s), got {args.size}"
+            let mut values := #[]
+            let mut i := 0
+            for field in fields do
+              match args[i]? with
+              | some value =>
+                  values := values.push (field.name, value)
+                  i := i + 1
+              | none => throw s!"missing struct field literal value {i}"
+            return .struct name values
+        | some (.alias target) => buildStructValue state target args
+        | some (.unsupported feature) => unsupported s!"struct literal for {feature}"
+        | none => unsupported s!"struct literal for unknown defined type {name}"
+    | .unsupported feature => unsupported s!"struct literal for {feature}"
+    | other => unsupported s!"struct literal for non-defined type {repr other}"
+end
 
 private def valueAsInt : GoValue → Except String Int
   | .int value => return value
@@ -157,6 +259,11 @@ private def valueAsInt : GoValue → Except String Int
 private def valueAsBool : GoValue → Except String Bool
   | .bool value => return value
   | other => throw s!"expected bool value, got {repr other}"
+
+private def valueAsLoc : GoValue → Except String Loc
+  | .addr loc => return loc
+  | .nil => throw "nil pointer dereference"
+  | other => throw s!"expected address value, got {repr other}"
 
 mutual
   partial def evalExpr (state : ExecState) : Expr → Except String GoValue
@@ -178,6 +285,24 @@ mutual
     | .lessCmp left right => do
         return .bool ((← valueAsInt (← evalExpr state left)) < (← valueAsInt (← evalExpr state right)))
     | .ref id => return .addr (← lookupLoc state id)
+    | .deref ptr _typ => do
+        loadLoc state (← valueAsLoc (← evalExpr state ptr))
+    | .structLit typ args => do
+        let mut values := #[]
+        for arg in args do
+          values := values.push (← evalExpr state arg)
+        buildStructValue state typ values
+    | .fieldGet recv typeName fieldName => do
+        match ← evalExpr state recv with
+        | .struct actualType fields =>
+            if actualType != typeName then
+              throw s!"expected struct {typeName}, got struct {actualType}"
+            match StructFields.lookup fields fieldName with
+            | some value => return value
+            | none => throw s!"unknown GoCore struct field: {fieldName}"
+        | other => throw s!"expected struct value for field access, got {repr other}"
+    | .fieldAddr base typeName fieldName => do
+        return .addr (.field (← valueAsLoc (← evalExpr state base)) typeName fieldName)
     | .old operand => evalExpr state operand
     | .unsupported feature => unsupported feature
 
@@ -194,13 +319,14 @@ mutual
     | .unsupported feature => unsupported feature
 
   partial def assignAssignee (state : ExecState) (assignee : Assignee) (value : GoValue) :
-      Except String ExecState :=
+      Except String ExecState := do
     match assignee with
-    | .var id => return state.storeLoc (← lookupLoc state id) value
+    | .var id => storeLoc state (← lookupLoc state id) value
+    | .addr locExpr => storeLoc state (← valueAsLoc (← evalExpr state locExpr)) value
     | .unsupported feature => unsupported feature
 
   partial def execDecl (state : ExecState) (param : Param) : Except String ExecState := do
-    return state.bindLocal param.id (← defaultValue param.typ)
+    return state.bindLocal param.id (← defaultValue state param.typ)
 
   partial def execDecls (state : ExecState) (decls : Array Param) : Except String ExecState := do
     let mut state := state
@@ -263,7 +389,7 @@ private def bindParams (state : ExecState) (params : Array Param) (args : Array 
 private def initResults (state : ExecState) (results : Array Param) : Except String ExecState := do
   let mut state := state
   for result in results do
-    state := state.bindLocal result.id (← defaultValue result.typ)
+    state := state.bindLocal result.id (← defaultValue state result.typ)
   return state
 
 private def collectResults (state : ExecState) (results : Array Param) :
@@ -273,13 +399,17 @@ private def collectResults (state : ExecState) (results : Array Param) :
     values := values.push (← lookup state result.id)
   return values
 
-def runFunction (fuel : Nat) (func : Func) (args : Array GoValue) : Except String Result := do
-  let state ← bindParams {} func.args args
+def runFunctionWithTypes (fuel : Nat) (types : TypeEnv) (func : Func) (args : Array GoValue) :
+    Except String Result := do
+  let state ← bindParams { types := types } func.args args
   let state ← initResults state func.results
   checkAssertions state "precondition" func.pres
   let state ← execStmt fuel state func.body
   checkAssertions state "postcondition" func.posts
   return { values := (← collectResults state func.results) }
+
+def runFunction (fuel : Nat) (func : Func) (args : Array GoValue) : Except String Result :=
+  runFunctionWithTypes fuel [] func args
 
 def findFunction? (program : Program) (name : String) : Option Func :=
   program.funcs.foldl
@@ -295,7 +425,7 @@ def runNamedFunction (fuel : Nat) (program : Program) (name : String) (args : Ar
     match findFunction? program name with
     | some func => pure func
     | none => throw s!"GoCore function not found: {name}"
-  runFunction fuel func args
+  runFunctionWithTypes fuel program.typeDefs.toList func args
 
 def runNamedFunctionInts (fuel : Nat) (program : Program) (name : String) (args : Array Int) :
     Except String Result :=

@@ -43,9 +43,49 @@ def lowerParam (param : GoLean.GobraJson.Parameter) : GoLean.GoCore.Param :=
 def lowerVariable (var : GoLean.GobraJson.Variable) : GoLean.GoCore.Param :=
   { id := var.id, typ := lowerTy var.typ }
 
-def lowerAssignee : GoLean.GobraJson.Assignee → GoLean.GoCore.Assignee
+def lowerFieldDef (field : GoLean.GobraJson.FieldInfo) : GoLean.GoCore.FieldDef :=
+  { name := field.name, typ := lowerTy field.typ }
+
+private def typeNameOfTy? : GoLean.GoCore.Ty → Option String
+  | .defined name => some name
+  | _ => none
+
+private def varRefTy : GoLean.GobraJson.VarRef → GoLean.GobraJson.Ty
+  | .local var => var.typ
+  | .inParam param => param.typ
+  | .outParam param => param.typ
+
+partial def lowerExprTy? : GoLean.GobraJson.Expr → Option GoLean.GoCore.Ty
+  | .var ref => some (lowerTy (varRefTy ref))
+  | .deref _ _ typ =>
+      match lowerTy typ with
+      | .pointer elem => some elem
+      | other => some other
+  | .fieldRef _ _ field => some (lowerTy field.typ)
+  | .address _ operand =>
+      match lowerExprTy? operand with
+      | some typ => some (.pointer typ)
+      | none => none
+  | .ref _ _ typ => some (lowerTy typ)
+  | .old _ operand => lowerExprTy? operand
+  | .structLit _ typ _ => some (lowerTy typ)
+  | _ => none
+
+mutual
+partial def lowerAddressOfExpr : GoLean.GobraJson.Expr → GoLean.GoCore.Expr
+  | .var ref => .ref (varRefId ref)
+  | .deref _ exp _ => lowerExpr exp
+  | .fieldRef _ recv field =>
+      match (lowerExprTy? recv).bind typeNameOfTy? with
+      | some typeName => .fieldAddr (lowerAddressOfExpr recv) typeName field.name
+      | none => .unsupported "field address without defined receiver type"
+  | .address _ operand => lowerAddressOfExpr operand
+  | .old _ operand => lowerAddressOfExpr operand
+  | _ => .unsupported "address of unsupported expression"
+
+partial def lowerAssignee : GoLean.GobraJson.Assignee → GoLean.GoCore.Assignee
   | .var _ ref => .var (varRefId ref)
-  | .field .. => .unsupported "field assignment"
+  | .field _ op => .addr (lowerAddressOfExpr op)
 
 partial def lowerExpr : GoLean.GobraJson.Expr → GoLean.GoCore.Expr
   | .var ref => .var (varRefId ref)
@@ -60,15 +100,19 @@ partial def lowerExpr : GoLean.GobraJson.Expr → GoLean.GoCore.Expr
   | .ref _ assignee _ =>
       match assignee with
       | .var _ ref => .ref (varRefId ref)
-      | .field .. => .unsupported "reference to field"
+      | .field _ op => lowerAddressOfExpr op
   | .old _ operand => .old (lowerExpr operand)
-  | .deref .. => .unsupported "deref expression"
-  | .fieldRef .. => .unsupported "field reference expression"
-  | .address .. => .unsupported "address expression"
-  | .structLit .. => .unsupported "struct literal expression"
+  | .deref _ exp typ => .deref (lowerExpr exp) (lowerTy typ)
+  | .fieldRef _ recv field =>
+      match (lowerExprTy? recv).bind typeNameOfTy? with
+      | some typeName => .fieldGet (lowerExpr recv) typeName field.name
+      | none => .unsupported "field reference without defined receiver type"
+  | .address _ op => lowerAddressOfExpr op
+  | .structLit _ typ args => .structLit (lowerTy typ) (args.map lowerExpr)
   | .pureMethodCall .. => .unsupported "pure method call expression"
   | .mPredicateAccess .. => .unsupported "method predicate access expression"
   | .predicate .. => .unsupported "predicate expression"
+end
 
 partial def lowerAssertion : GoLean.GobraJson.Assertion → GoLean.GoCore.Assertion
   | .expr expr => .expr (lowerExpr expr)
@@ -100,6 +144,25 @@ private def lowerMethodBody (body : GoLean.GobraJson.MethodBody) : GoLean.GoCore
   .block (lowerDecls body.decls)
     (body.seqn.stmts.map lowerStmt ++ body.postprocessing.map lowerStmt)
 
+private def hasTypeDef (defs : Array (String × GoLean.GoCore.TypeDef)) (name : String) : Bool :=
+  defs.any (fun (existing, _) => existing == name)
+
+private def lowerTypeDefsFromTypes : List GoLean.GobraJson.Ty →
+    Array (String × GoLean.GoCore.TypeDef) → Array (String × GoLean.GoCore.TypeDef)
+  | .nil, defs => defs
+  | (.defined name _) :: (.struct fields _ghost _) :: rest, defs =>
+      let defs :=
+        if hasTypeDef defs name then
+          defs
+        else
+          defs.push (name, .struct (fields.map lowerFieldDef))
+      lowerTypeDefsFromTypes rest defs
+  | _ :: rest, defs => lowerTypeDefsFromTypes rest defs
+
+def lowerTypeDefs (types : Array GoLean.GobraJson.Ty) :
+    Array (String × GoLean.GoCore.TypeDef) :=
+  lowerTypeDefsFromTypes types.toList #[]
+
 def lowerFunctionMember (member : GoLean.GobraJson.FunctionMember) : Except String GoLean.GoCore.Func := do
   let body ←
     match member.body with
@@ -124,7 +187,7 @@ def lowerProgram (program : GoLean.GobraJson.Program) : Except String GoLean.GoC
         | none => pure ()
     | .method _ | .mPredicate _ =>
         pure ()
-  return { funcs }
+  return { typeDefs := lowerTypeDefs program.types, funcs }
 
 def lowerDocument (doc : GoLean.GobraJson.Document) : Except String GoLean.GoCore.Program :=
   lowerProgram doc.program
