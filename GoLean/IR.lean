@@ -346,6 +346,43 @@ private def valueAsLoc : GoValue → Except GoError Loc
   | .nil => panic "nil pointer dereference"
   | other => stuck s!"expected address value, got {repr other}"
 
+private partial def valueEq : GoValue → GoValue → Except GoError Bool
+  | .bool left, .bool right => return left == right
+  | .int left, .int right => return left == right
+  | .addr left, .addr right => return left == right
+  | .nil, .nil => return true
+  | .addr _, .nil => return false
+  | .nil, .addr _ => return false
+  | .array left, .array right => do
+      if left.size != right.size then
+        stuck s!"array equality length mismatch: {left.size} vs {right.size}"
+      let mut i := 0
+      for leftValue in left do
+        match right[i]? with
+        | some rightValue =>
+            if !(← valueEq leftValue rightValue) then
+              return false
+            i := i + 1
+        | none => stuck s!"missing array equality operand at index {i}"
+      return true
+  | .struct leftType leftFields, .struct rightType rightFields => do
+      if leftType != rightType then
+        stuck s!"struct equality type mismatch: {leftType} vs {rightType}"
+      if leftFields.size != rightFields.size then
+        stuck s!"struct equality field count mismatch: {leftFields.size} vs {rightFields.size}"
+      let mut i := 0
+      for (leftName, leftValue) in leftFields do
+        match rightFields[i]? with
+        | some (rightName, rightValue) =>
+            if leftName != rightName then
+              stuck s!"struct equality field mismatch: {leftName} vs {rightName}"
+            if !(← valueEq leftValue rightValue) then
+              return false
+            i := i + 1
+        | none => stuck s!"missing struct equality operand at field {i}"
+      return true
+  | left, right => stuck s!"incomparable or mismatched equality operands: {repr left} and {repr right}"
+
 mutual
   partial def evalExpr (state : ExecState) : Expr → Except GoError GoValue
     | .var id => lookup state id
@@ -372,11 +409,11 @@ mutual
     | .eqCmp left right => do
         let leftValue ← evalExpr state left
         let rightValue ← evalExpr state right
-        return .bool (leftValue == rightValue)
+        return .bool (← valueEq leftValue rightValue)
     | .neqCmp left right => do
         let leftValue ← evalExpr state left
         let rightValue ← evalExpr state right
-        return .bool (leftValue != rightValue)
+        return .bool (!(← valueEq leftValue rightValue))
     | .atMostCmp left right => do
         return .bool ((← valueAsInt (← evalExpr state left)) <= (← valueAsInt (← evalExpr state right)))
     | .atLeastCmp left right => do
