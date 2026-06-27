@@ -14,12 +14,19 @@ message : Option String
 
 ## Current Harness
 
-`scripts/diff-smoke` compares the plain Go fixture in
-`Differential/plain/while1` against the Lean execution of the corresponding
-Gobra smoke artifact.
+`scripts/diff-smoke` compares plain Go fixtures under `Differential/plain`
+against Lean execution of the corresponding Gobra smoke artifacts.
 
-This is intentionally small. Its purpose is to fix the comparison shape before
-we scale the corpus.
+Cases are listed in `Differential/manifest.tsv`. The manifest is intentionally
+strict and small:
+
+```text
+id<TAB>go_dir<TAB>gobra_json<TAB>function<TAB>arg_ints<TAB>ignore_assert_at<TAB>expected_status<TAB>features
+```
+
+Use `-` for no integer args or no ignored assertion. Feature tags are
+comma-separated. The smoke script fails on malformed rows, missing files,
+unknown statuses, invalid integer arguments, and observation mismatches.
 
 The script requires `go` on `PATH`.
 

@@ -101,6 +101,9 @@ message : Option String
 
 - Add a Go-source harness that runs concrete test programs with selected inputs.
 - Compare Go results against Lean GoCore observations.
+- Drive paired differential cases from a manifest with explicit feature tags,
+  expected status, argument values, and any deliberately ignored verification
+  assertions.
 - Keep `unsupported` acceptable only when the test manifest explicitly expects
   it.
 - Add shrinking/minimization hooks once failures become common enough to need
@@ -129,6 +132,19 @@ but the expected progression is:
 New Goose gives useful decomposition here: desugar simple constructs during
 lowering, encode ordinary sequencing/calls in GoCore, and add semantic
 primitives only for genuinely Go-specific behavior.
+
+Random Go generators enter after deterministic coverage has enough structure to
+triage failures. The two concrete candidates are:
+
+- Microsmith (`ALTree/microsmith`), as the newer Go AST/typechecker-backed
+  generator;
+- GoSmith (`dvyukov/gosmith`), as the older Csmith-like legal Go program
+  generator.
+
+Both should run behind the same feature tagging/filtering used by the
+deterministic corpus. Arbitrary generated programs are expected to outrun
+GoCore for a while, so the harness must classify unsupported features clearly
+instead of treating every generator miss as an equivalence failure.
 
 Success criterion:
 
@@ -180,6 +196,10 @@ specification hooks.
 
 1. Add Go-source-vs-Lean differential execution for plain Go targets.
 2. Expand expression/operator coverage beyond the current integer/bool subset.
-3. Add arrays and slices using the same path-location model.
-4. Add maps and named-type/conversion behavior driven by corpus failures.
-5. Keep checking old/new Goose before adding each larger semantic feature.
+3. Make differential cases manifest-driven with feature tags and expected
+   observation status.
+4. Add arrays and slices using the same path-location model.
+5. Add maps and named-type/conversion behavior driven by corpus failures.
+6. Integrate Microsmith/GoSmith only after scalar, pointer, struct, array, and
+   slice cases have deterministic coverage and feature filters.
+7. Keep checking old/new Goose before adding each larger semantic feature.

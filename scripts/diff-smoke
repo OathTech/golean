@@ -5,25 +5,118 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
 cd "$ROOT"
 
 OUT="artifacts/gobra-smoke"
-while1_json="$OUT/work/features/while1/while1.gobra.internal.json"
+MANIFEST="${1:-Differential/manifest.tsv}"
 
 if ! command -v go >/dev/null 2>&1; then
   echo "go not found on PATH; install Go or expose it in the shell to run differential smoke tests" >&2
   exit 2
 fi
 
-if [[ ! -f "$while1_json" ]]; then
+if [[ ! -f "$MANIFEST" ]]; then
+  echo "differential manifest not found: $MANIFEST" >&2
+  exit 2
+fi
+
+if [[ ! -d "$OUT/work" ]]; then
   scripts/gobra-smoke
 fi
 
-lean_observation="$(lake exe golean gobra-json-run --input "$while1_json" --function test_bda1d7d_F --arg-int 6 --arg-int 7)"
-go_observation="$(go run ./Differential/plain/while1)"
+case_count=0
 
-if [[ "$lean_observation" != "$go_observation" ]]; then
-  echo "differential mismatch for plain/while1" >&2
-  echo "Lean: $lean_observation" >&2
-  echo "Go:   $go_observation" >&2
-  exit 1
+while IFS=$'\t' read -r id go_dir gobra_json function_name arg_ints ignore_assert_at expected_status features extra; do
+  if [[ -z "${id:-}" || "$id" == \#* ]]; then
+    continue
+  fi
+
+  if [[ -n "${extra:-}" ]]; then
+    echo "malformed differential manifest row for $id: too many fields" >&2
+    exit 2
+  fi
+  if [[ -z "${go_dir:-}" || -z "${gobra_json:-}" || -z "${function_name:-}" || -z "${arg_ints:-}" || -z "${ignore_assert_at:-}" || -z "${expected_status:-}" || -z "${features:-}" ]]; then
+    echo "malformed differential manifest row for $id: expected 8 tab-separated fields" >&2
+    exit 2
+  fi
+
+  case "$expected_status" in
+    ok|panic|assertion_error|unsupported|stuck|error) ;;
+    *)
+      echo "unknown expected status for $id: $expected_status" >&2
+      exit 2
+      ;;
+  esac
+
+  if [[ ! -d "$go_dir" ]]; then
+    echo "Go fixture directory not found for $id: $go_dir" >&2
+    exit 2
+  fi
+  if [[ ! -f "$gobra_json" ]]; then
+    scripts/gobra-smoke
+  fi
+  if [[ ! -f "$gobra_json" ]]; then
+    echo "Gobra JSON artifact not found for $id: $gobra_json" >&2
+    exit 2
+  fi
+
+  lean_args=(gobra-json-run --input "$gobra_json" --function "$function_name")
+  if [[ "$arg_ints" != "-" ]]; then
+    IFS=',' read -r -a ints <<< "$arg_ints"
+    for value in "${ints[@]}"; do
+      if [[ ! "$value" =~ ^-?[0-9]+$ ]]; then
+        echo "invalid integer argument for $id: $value" >&2
+        exit 2
+      fi
+      lean_args+=(--arg-int "$value")
+    done
+  fi
+  if [[ "$ignore_assert_at" != "-" ]]; then
+    if [[ ! "$ignore_assert_at" =~ ^[0-9]+:[0-9]+$ ]]; then
+      echo "invalid ignore_assert_at for $id: $ignore_assert_at" >&2
+      exit 2
+    fi
+    lean_args+=(--ignore-assert-at "$ignore_assert_at")
+  fi
+
+  if lean_observation="$(lake exe golean "${lean_args[@]}")"; then
+    lean_status=0
+  else
+    lean_status=$?
+  fi
+  if ! go_observation="$(go run "./$go_dir")"; then
+    echo "Go fixture failed for $id" >&2
+    echo "$go_observation" >&2
+    exit 1
+  fi
+
+  if [[ "$lean_observation" != *"\"status\":\"$expected_status\""* ]]; then
+    echo "Lean observation for $id did not have expected status $expected_status" >&2
+    echo "Lean: $lean_observation" >&2
+    exit 1
+  fi
+  if [[ "$go_observation" != *"\"status\":\"$expected_status\""* ]]; then
+    echo "Go observation for $id did not have expected status $expected_status" >&2
+    echo "Go: $go_observation" >&2
+    exit 1
+  fi
+  if [[ "$expected_status" == "ok" && "$lean_status" -ne 0 ]]; then
+    echo "Lean execution for $id returned nonzero status $lean_status despite ok observation" >&2
+    echo "Lean: $lean_observation" >&2
+    exit 1
+  fi
+
+  if [[ "$lean_observation" != "$go_observation" ]]; then
+    echo "differential mismatch for $id" >&2
+    echo "Lean: $lean_observation" >&2
+    echo "Go:   $go_observation" >&2
+    exit 1
+  fi
+
+  echo "ok: $id matched Go and Lean observations [$features]"
+  case_count=$((case_count + 1))
+done < "$MANIFEST"
+
+if [[ "$case_count" -eq 0 ]]; then
+  echo "no differential cases found in $MANIFEST" >&2
+  exit 2
 fi
 
-echo "ok: plain/while1 matched Go and Lean observations"
+echo "executed $case_count differential smoke case(s)"
