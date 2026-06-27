@@ -22,6 +22,7 @@ structure GobraRunArgs where
   functionName : Option String := none
   args : Array Int := #[]
   fuel : Nat := 100000
+  ignoreAssertAt : Option (Nat × Nat) := none
   deriving Repr
 
 private def usage : String :=
@@ -30,7 +31,7 @@ private def usage : String :=
   "  golean gobra-export --input <file> --id <id> [--out <dir>] [--gobra-sbt <path>]\n" ++
   "  golean gobra-json-check --input <file>\n" ++
   "  golean gobra-json-tags --input <file>\n" ++
-  "  golean gobra-json-run --input <file> --function <name> [--arg-int <n> ...] [--fuel <n>]\n"
+  "  golean gobra-json-run --input <file> --function <name> [--arg-int <n> ...] [--fuel <n>] [--ignore-assert-at <line>:<column>]\n"
 
 private def parseGobraExportArgs : List String → GobraExportArgs → Except String GobraExportArgs
   | [], cfg => .ok cfg
@@ -116,6 +117,12 @@ private def parseJsonNat (path value : String) : Except String Nat := do
     throw s!"{path}: expected nonnegative integer, got {value}"
   return value.toNat
 
+private def parseLineColumn (path value : String) : Except String (Nat × Nat) := do
+  match value.splitOn ":" with
+  | [line, column] =>
+      return (← parseJsonNat s!"{path}.line" line, ← parseJsonNat s!"{path}.column" column)
+  | _ => throw s!"{path}: expected <line>:<column>, got {value}"
+
 private def parseGobraRunArgs : List String → GobraRunArgs → Except String GobraRunArgs
   | [], cfg => .ok cfg
   | "--input" :: path :: rest, cfg =>
@@ -126,7 +133,46 @@ private def parseGobraRunArgs : List String → GobraRunArgs → Except String G
       parseGobraRunArgs rest { cfg with args := cfg.args.push (← parseJsonInt "--arg-int" value) }
   | "--fuel" :: value :: rest, cfg => do
       parseGobraRunArgs rest { cfg with fuel := (← parseJsonNat "--fuel" value) }
+  | "--ignore-assert-at" :: value :: rest, cfg => do
+      parseGobraRunArgs rest { cfg with ignoreAssertAt := some (← parseLineColumn "--ignore-assert-at" value) }
   | flag :: _, _ => .error s!"unknown or incomplete option: {flag}\n{usage}"
+
+private def sourceStartsAt (source : GobraJson.Source) (line column : Nat) : Bool :=
+  match source with
+  | .single origin => origin.position.start.line == line && origin.position.start.column == column
+  | .internal => false
+
+mutual
+  private partial def ignoreAssertAtStmt (line column : Nat) : GobraJson.Stmt → GobraJson.Stmt
+    | .seqn source stmts => .seqn source (stmts.map (ignoreAssertAtStmt line column))
+    | .block source decls stmts => .block source decls (stmts.map (ignoreAssertAtStmt line column))
+    | .while source cond invs terminationMeasure body =>
+        .while source cond invs terminationMeasure (ignoreAssertAtStmt line column body)
+    | .assert source assertion =>
+        if sourceStartsAt source line column then
+          .assert source (.exprAssertion source (.boolLit source true))
+        else
+          .assert source assertion
+    | stmt => stmt
+
+  private partial def ignoreAssertAtMethodBody (line column : Nat)
+      (body : GobraJson.MethodBody) : GobraJson.MethodBody :=
+    { body with
+      seqn := { body.seqn with stmts := body.seqn.stmts.map (ignoreAssertAtStmt line column) },
+      postprocessing := body.postprocessing.map (ignoreAssertAtStmt line column)
+    }
+
+  private partial def ignoreAssertAtMember (line column : Nat) : GobraJson.Member → GobraJson.Member
+    | .function member =>
+        .function { member with body := member.body.map (ignoreAssertAtMethodBody line column) }
+    | .method member =>
+        .method { member with body := member.body.map (ignoreAssertAtMethodBody line column) }
+    | member => member
+end
+
+private def ignoreAssertAtDocument (line column : Nat) (doc : GobraJson.Document) :
+    GobraJson.Document :=
+  { doc with program := { doc.program with members := doc.program.members.map (ignoreAssertAtMember line column) } }
 
 private def locJson : Loc → Json
   | .base addr => Json.mkObj [("tag", Json.str "addr"), ("id", Lean.toJson addr.id)]
@@ -233,6 +279,10 @@ private def runGobraJsonRun (args : List String) : IO UInt32 := do
               IO.println (errorJson s!"{input}: {err}").compress
               return 1
           | .ok doc =>
+              let doc :=
+                match cfg.ignoreAssertAt with
+                | some (line, column) => ignoreAssertAtDocument line column doc
+                | none => doc
               match GoLean.GobraEval.runFunctionInts cfg.fuel doc functionName cfg.args with
               | .ok result =>
                   IO.println (runJson result).compress

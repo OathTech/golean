@@ -63,4 +63,11 @@ if [[ "$swap_actual" != "$swap_expected" ]]; then
   exit 1
 fi
 
+swap_without_final_assert_expected='{"status":"ok","values":[]}'
+swap_without_final_assert_actual="$(lake exe golean gobra-json-run --input "$swap_json" --function client_bda1d7d_F --ignore-assert-at 48:5)"
+if [[ "$swap_without_final_assert_actual" != "$swap_without_final_assert_expected" ]]; then
+  echo "swap client did not pass after ignoring final assertion: $swap_without_final_assert_actual" >&2
+  exit 1
+fi
+
 echo "executed 4 Gobra internal JSON function(s) in Lean"
