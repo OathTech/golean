@@ -1,6 +1,7 @@
 import GoLean.Artifact.Gobra
 import GoLean.GobraEval
 import GoLean.GobraJson
+import GoLean.StrictJson
 import Lean.Data.Json
 
 namespace GoLean.CLI
@@ -31,7 +32,8 @@ private def usage : String :=
   "  golean gobra-export --input <file> --id <id> [--out <dir>] [--gobra-sbt <path>]\n" ++
   "  golean gobra-json-check --input <file>\n" ++
   "  golean gobra-json-tags --input <file>\n" ++
-  "  golean gobra-json-run --input <file> --function <name> [--arg-int <n> ...] [--fuel <n>] [--ignore-assert-at <line>:<column>]\n"
+  "  golean gobra-json-run --input <file> --function <name> [--arg-int <n> ...] [--fuel <n>] [--ignore-assert-at <line>:<column>]\n" ++
+  "  golean observation-eq --left <json> --right <json>\n"
 
 private def parseGobraExportArgs : List String → GobraExportArgs → Except String GobraExportArgs
   | [], cfg => .ok cfg
@@ -107,6 +109,16 @@ private def parseInputOnly : List String → Option FilePath → Except String F
   | "--input" :: path :: rest, none => parseInputOnly rest (some (FilePath.mk path))
   | "--input" :: _ :: _, some _ => .error s!"duplicate --input\n{usage}"
   | flag :: _, _ => .error s!"unknown or incomplete option: {flag}\n{usage}"
+
+private def parseObservationEqArgs : List String → Option String → Option String →
+    Except String (String × String)
+  | [], some left, some right => .ok (left, right)
+  | [], _, _ => .error s!"missing --left <json> or --right <json>\n{usage}"
+  | "--left" :: json :: rest, none, right => parseObservationEqArgs rest (some json) right
+  | "--left" :: _ :: _, some _, _ => .error s!"duplicate --left\n{usage}"
+  | "--right" :: json :: rest, left, none => parseObservationEqArgs rest left (some json)
+  | "--right" :: _ :: _, _, some _ => .error s!"duplicate --right\n{usage}"
+  | flag :: _, _, _ => .error s!"unknown or incomplete option: {flag}\n{usage}"
 
 private def parseJsonInt (path value : String) : Except String Int := do
   GoLean.StrictJson.int path (← Json.parse value)
@@ -225,6 +237,43 @@ private def errorJson (error : GoError) : Json :=
 private def cliErrorJson (message : String) : Json :=
   Json.mkObj [("status", Json.str "error"), ("message", Json.str message)]
 
+private def decodeObservation (path raw : String) : Except String Json := do
+  let json ← Json.parse raw
+  let obj ← StrictJson.obj path json
+  let status ← StrictJson.string s!"{path}.status" (← StrictJson.field path obj "status")
+  match status with
+  | "ok" =>
+      StrictJson.requireExactKeys path obj ["status", "values"]
+      let _ ← StrictJson.array s!"{path}.values" (← StrictJson.field path obj "values")
+      return json
+  | "panic" | "assertion_error" | "unsupported" | "stuck" | "error" =>
+      StrictJson.requireExactKeys path obj ["status", "message"]
+      let _ ← StrictJson.string s!"{path}.message" (← StrictJson.field path obj "message")
+      return json
+  | other =>
+      throw s!"{path}.status: unknown observation status {repr other}"
+
+private def runObservationEq (args : List String) : IO UInt32 := do
+  match parseObservationEqArgs args none none with
+  | .error err =>
+      IO.eprintln err
+      return 2
+  | .ok (leftRaw, rightRaw) =>
+      match decodeObservation "left" leftRaw, decodeObservation "right" rightRaw with
+      | .error err, _ =>
+          IO.eprintln err
+          return 2
+      | _, .error err =>
+          IO.eprintln err
+          return 2
+      | .ok left, .ok right =>
+          if left == right then
+            return 0
+          else
+            IO.eprintln s!"left:  {left.compress}"
+            IO.eprintln s!"right: {right.compress}"
+            return 1
+
 private def runGobraJsonCheck (args : List String) : IO UInt32 := do
   let cwd ← IO.currentDir
   match parseInputOnly args none with
@@ -304,6 +353,7 @@ def main (args : List String) : IO UInt32 := do
   | "gobra-json-check" :: rest => runGobraJsonCheck rest
   | "gobra-json-tags" :: rest => runGobraJsonTags rest
   | "gobra-json-run" :: rest => runGobraJsonRun rest
+  | "observation-eq" :: rest => runObservationEq rest
   | [] =>
       IO.println usage
       return 0

@@ -105,10 +105,13 @@ while IFS=$'\t' read -r id go_dir gobra_json function_name arg_ints ignore_asser
     exit 1
   fi
 
-  if [[ "$lean_observation" != "$go_observation" ]]; then
+  if ! observation_diff="$(lake exe golean observation-eq --left "$lean_observation" --right "$go_observation" 2>&1)"; then
     echo "differential mismatch for $id" >&2
     echo "Lean: $lean_observation" >&2
     echo "Go:   $go_observation" >&2
+    if [[ -n "$observation_diff" ]]; then
+      echo "$observation_diff" >&2
+    fi
     exit 1
   fi
 
