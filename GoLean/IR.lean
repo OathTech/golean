@@ -55,6 +55,8 @@ inductive Expr where
   | arrayLit (length : Nat) (elem : Ty) (args : Array (Int × Expr))
   | indexGet (base index : Expr)
   | indexAddr (base index : Expr)
+  | length (operand : Expr)
+  | capacity (operand : Expr)
   | old (operand : Expr)
   | unsupported (feature : String)
   deriving Repr, BEq, Inhabited
@@ -474,6 +476,14 @@ mutual
             let _ ← arrayIndexNat values indexValue
             return .addr (.index baseLoc indexValue)
         | other => stuck s!"expected array base for index address, got {repr other}"
+    | .length operand => do
+        match ← evalExpr state operand with
+        | .array values => return .int values.size
+        | other => unsupported s!"len for non-array value {repr other}"
+    | .capacity operand => do
+        match ← evalExpr state operand with
+        | .array values => return .int values.size
+        | other => unsupported s!"cap for non-array value {repr other}"
     | .old operand => evalExpr state operand
     | .unsupported feature => unsupported feature
 

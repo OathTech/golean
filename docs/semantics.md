@@ -267,11 +267,11 @@ Currently supported:
 - array indexing as value projection;
 - indexed assignment through `Loc.index`;
 - array equality through structural `GoValue` equality;
+- `len` and `cap` for fixed-size array values;
 - out-of-range indexing as a `panic` observation.
 
 Still pending:
 
-- `len` and `cap`;
 - nested array tests;
 - array parameters and return values beyond simple concrete fixtures;
 - pointer-to-array indexing and slicing;

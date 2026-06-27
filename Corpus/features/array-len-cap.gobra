@@ -1,0 +1,6 @@
+package pkg;
+
+func arrayLenCap() (z int) {
+	a := [3]int{1, 2, 3};
+	z = len(a) + cap(a);
+};

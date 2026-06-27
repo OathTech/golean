@@ -119,6 +119,18 @@ private def coreArrayFunction : GoCore.Func := {
     ]
 }
 
+private def coreArrayLenCapFunction : GoCore.Func := {
+  name := "array_len_cap_F",
+  args := #[],
+  results := #[coreParam "z"],
+  body := .block
+    #[{ id := "a", typ := .array 3 .int }]
+    #[
+      .assign (.var "a") (.arrayLit 3 .int #[(0, .intLit 1), (1, .intLit 2), (2, .intLit 3)]),
+      .assign (.var "z") (.add (.length (.var "a")) (.capacity (.var "a")))
+    ]
+}
+
 private def coreNilDerefFunction : GoCore.Func := {
   name := "nil_deref_F",
   args := #[],
@@ -365,6 +377,7 @@ def main : IO UInt32 := do
     (GoCore.runFunctionWithContext 100 coreCellTypes #[coreSetCellFunction, coreCallFunction] coreCallFunction #[]) 9)
   passed := passed && (← expectIntResult "GoCore scalar operators" (GoCore.runFunction 100 coreScalarFunction #[.int 10, .int 3]) 7)
   passed := passed && (← expectIntResult "GoCore array indexing" (GoCore.runFunction 100 coreArrayFunction #[]) 11)
+  passed := passed && (← expectIntResult "GoCore array len cap" (GoCore.runFunction 100 coreArrayLenCapFunction #[]) 6)
   passed := passed && (← expectErrorStatus "GoCore nil dereference panic" (GoCore.runFunction 100 coreNilDerefFunction #[]) "panic")
   passed := passed && (← expectErrorStatus "GoCore divide by zero panic" (GoCore.runFunction 100 coreDivideByZeroFunction #[]) "panic")
   passed := passed && (← expectErrorStatus "GoCore index address bounds panic" (GoCore.runFunction 100 coreIndexAddrBoundsFunction #[]) "panic")

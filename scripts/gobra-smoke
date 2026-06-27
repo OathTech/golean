@@ -104,6 +104,14 @@ if [[ "$arrays_actual" != "$arrays_expected" ]]; then
   exit 1
 fi
 
+array_len_cap_json="$OUT/work/features/array-len-cap/array-len-cap.gobra.internal.json"
+array_len_cap_expected='{"status":"ok","values":[{"tag":"int","value":6}]}'
+array_len_cap_actual="$(lean gobra-json-run --input "$array_len_cap_json" --function arrayLenCap_bda1d7d_F)"
+if [[ "$array_len_cap_actual" != "$array_len_cap_expected" ]]; then
+  echo "unexpected array-len-cap Lean execution result: $array_len_cap_actual" >&2
+  exit 1
+fi
+
 array_bounds_json="$OUT/work/features/array-bounds/array-bounds.gobra.internal.json"
 array_bounds_expected='{"message":"index out of range","status":"panic"}'
 if array_bounds_actual="$(lean gobra-json-run --input "$array_bounds_json" --function arrayBounds_bda1d7d_F)"; then
@@ -143,4 +151,4 @@ rm -rf "$OUT_FINAL"
 mv "$OUT" "$OUT_FINAL"
 trap - EXIT
 
-echo "executed 11 Gobra-fronted Go function(s) in Lean"
+echo "executed 12 Gobra-fronted Go function(s) in Lean"

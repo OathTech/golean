@@ -182,6 +182,7 @@ comparisons, boolean connectives, divide-by-zero panic classification, and a
 first fixed-size array subset: array types, array literals, indexing, indexed
 assignment, and array equality through GoCore values. The control-flow subset
 now includes `if`, explicit `return`, and unlabeled `break`/`continue`.
+Fixed-size array `len` and `cap` are supported for array values.
 
 Feature order should be driven by corpus failures and semantic dependencies,
 but the expected progression is:
@@ -265,8 +266,8 @@ against GoCore-level specification hooks.
 1. Complete the hardening gate: structured errors, typed operation checks,
    explicit execution outcomes, fail-closed lowering, and hardened
    differential observations.
-2. Expand deterministic array coverage to bounds tests, zero values,
-   length/capacity, nested arrays, and pointer-to-array behavior.
+2. Expand deterministic array coverage to zero values, nested arrays, array
+   parameters/returns, and pointer-to-array behavior.
 3. Add slices using the same path-location model and the Goose/new Goose slice
    references.
 4. Keep extending scalar coverage toward Go-sized word behavior and conversions.

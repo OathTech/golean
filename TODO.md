@@ -90,6 +90,8 @@ backlog items.
   erased at lowering.
 - Added GoCore `if`, explicit `return`, and unlabeled `break`/`continue`, with
   Gobra-fronted differential smoke coverage.
+- Added fixed-array `len`/`cap`, with Gobra-fronted differential smoke
+  coverage.
 
 ## Proof Generation
 
