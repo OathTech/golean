@@ -41,4 +41,15 @@ if [[ "$while1_actual" != "$while1_expected" ]]; then
   exit 1
 fi
 
-echo "executed 2 Gobra internal JSON function(s) in Lean"
+pointer_identity_json="$OUT/work/features/pointer-identity/pointer-identity.gobra.internal.json"
+pointer_identity_expected='{"message":"Gobra assertion failed","status":"error"}'
+if pointer_identity_actual="$(lake exe golean gobra-json-run --input "$pointer_identity_json" --function test_bda1d7d_F)"; then
+  echo "expected pointer-identity Lean execution to fail" >&2
+  exit 1
+fi
+if [[ "$pointer_identity_actual" != "$pointer_identity_expected" ]]; then
+  echo "unexpected pointer-identity Lean execution result: $pointer_identity_actual" >&2
+  exit 1
+fi
+
+echo "executed 3 Gobra internal JSON function(s) in Lean"

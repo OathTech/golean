@@ -22,7 +22,7 @@ For each corpus entry, the exporter:
 - records stdout, stderr, exit code, and artifact paths;
 - writes per-entry `result.json` and an aggregate `manifest.json`.
 - validates each emitted `.internal.json` with the strict Lean decoder.
-- executes the integer `while1` and `multi-assign` smoke functions through the Lean-side Gobra JSON evaluator.
+- executes the integer `while1`, `multi-assign`, and expected-failing `pointer-identity` smoke functions through the Lean-side Gobra JSON evaluator.
 
 The source copy matters because Gobra writes `.internal` and `.vpr` files beside
 the input file. Running on the copied file keeps generated artifacts out of
