@@ -49,3 +49,7 @@ plain/tuple-assign-order	Differential/plain/tuple-assign-order	artifacts/gobra-s
 plain/shadowing	Differential/plain/shadowing	artifacts/gobra-smoke/work/features/shadowing/shadowing.gobra.internal.json	shadowing_bda1d7d_F	-	ok	scoping,shadowing,strings	-
 plain/range-array-copy	Differential/plain/range-array-copy	artifacts/gobra-smoke/work/features/range-array-copy/range-array-copy.gobra.internal.json	rangeArrayCopy_bda1d7d_F	-	ok	range,arrays,slices,value_copy	-
 plain/range-struct-copy	Differential/plain/range-struct-copy	artifacts/gobra-smoke/work/features/range-struct-copy/range-struct-copy.gobra.internal.json	rangeStructCopy_bda1d7d_F	-	ok	range,slices,structs,fields,value_copy	-
+plain/gotcha-append-aliasing	Differential/plain/gotcha-append-aliasing	artifacts/gobra-smoke/work/features/gotcha-append-aliasing/gotcha-append-aliasing.gobra.internal.json	gotchaAppendAliasing_bda1d7d_F	-	ok	slices,append,aliasing	-
+plain/arrays-are-values	Differential/plain/arrays-are-values	artifacts/gobra-smoke/work/features/arrays-are-values/arrays-are-values.gobra.internal.json	arraysAreValues_bda1d7d_F	-	ok	arrays,slices,value_copy,aliasing	-
+plain/three-index-slice	Differential/plain/three-index-slice	artifacts/gobra-smoke/work/features/three-index-slice/three-index-slice.gobra.internal.json	threeIndexSlice_bda1d7d_F	-	ok	slices,full_slice,append,aliasing	-
+plain/copy-min	Differential/plain/copy-min	artifacts/gobra-smoke/work/features/copy-min/copy-min.gobra.internal.json	copyMin_bda1d7d_F	-	ok	slices,copy,nil,prefix	-
