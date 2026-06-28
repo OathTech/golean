@@ -53,3 +53,4 @@ plain/gotcha-append-aliasing	Differential/plain/gotcha-append-aliasing	artifacts
 plain/arrays-are-values	Differential/plain/arrays-are-values	artifacts/gobra-smoke/work/features/arrays-are-values/arrays-are-values.gobra.internal.json	arraysAreValues_bda1d7d_F	-	ok	arrays,slices,value_copy,aliasing	-
 plain/three-index-slice	Differential/plain/three-index-slice	artifacts/gobra-smoke/work/features/three-index-slice/three-index-slice.gobra.internal.json	threeIndexSlice_bda1d7d_F	-	ok	slices,full_slice,append,aliasing	-
 plain/copy-min	Differential/plain/copy-min	artifacts/gobra-smoke/work/features/copy-min/copy-min.gobra.internal.json	copyMin_bda1d7d_F	-	ok	slices,copy,nil,prefix	-
+plain/variadic	Differential/plain/variadic	artifacts/gobra-smoke/work/features/variadic/variadic.gobra.internal.json	variadic_bda1d7d_F	-	ok	variadic,slices,loops,append	-

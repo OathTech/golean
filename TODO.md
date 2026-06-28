@@ -98,6 +98,9 @@ backlog items.
   or Go-side output, not Gobra assertions.
 - Add richer call-frame tests, including returned values and nested calls.
 - Add method-call tests from Gobra JSON beyond `examples/swap`.
+- Track Gobra frontend gaps found while promoting gotchas: Gobra accepts
+  variadic calls/spreads but rejects `range` directly over a `...int`
+  parameter, so `features/variadic.gobra` uses `len`/index iteration.
 
 ## Completed GoCore Memory Milestone Items
 

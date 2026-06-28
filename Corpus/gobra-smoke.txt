@@ -53,3 +53,4 @@ features/gotcha-append-aliasing features/gotcha-append-aliasing.gobra
 features/arrays-are-values features/arrays-are-values.gobra
 features/three-index-slice features/three-index-slice.gobra
 features/copy-min features/copy-min.gobra
+features/variadic features/variadic.gobra

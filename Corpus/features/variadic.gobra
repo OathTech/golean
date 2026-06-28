@@ -1,0 +1,16 @@
+package pkg;
+
+func sum(xs ...int) (t int) {
+	i := 0;
+	for i < len(xs) {
+		t = t + xs[i];
+		i = i + 1;
+	};
+};
+
+func variadic() (z int) {
+	var nilSlice []int;
+	parts := []int{4, 5};
+	merged := append([]int{1, 2, 3}, parts...);
+	z = sum(nilSlice...) * 1000 + sum(1, 2, 3) * 100 + len(merged) * 10 + merged[4];
+};
