@@ -219,6 +219,22 @@ partial def lowerNewSliceLit (target : GoLean.GobraJson.Variable) (memberType : 
         init
       .seqn stmts
 
+partial def lowerNewMapLit (target : GoLean.GobraJson.Variable) (keys values : GoLean.GobraJson.Ty)
+    (entries : Array GoLean.GobraJson.MapLitEntry) : GoLean.GoCore.Stmt :=
+  let keyTy := lowerTy keys
+  let valueTy := lowerTy values
+  let init := #[
+    GoLean.GoCore.Stmt.makeMap
+      (.var target.id)
+      keyTy
+      valueTy
+      (some (.intLit (Int.ofNat entries.size)))
+  ]
+  let stmts := entries.foldl
+    (fun stmts entry => stmts.push (.mapAssign (.var target.id) (lowerExpr entry.key) (lowerExpr entry.value)))
+    init
+  .seqn stmts
+
 partial def lowerStmtWithReturnPost (returnPostprocessing : Array GoLean.GoCore.Stmt) :
       GoLean.GobraJson.Stmt → GoLean.GoCore.Stmt
     | .seqn _ stmts => .seqn (stmts.map (lowerStmtWithReturnPost returnPostprocessing))
@@ -241,6 +257,7 @@ partial def lowerStmtWithReturnPost (returnPostprocessing : Array GoLean.GoCore.
         | .map key value => .makeMap (.var target.id) key value (initialSpaceArg.map lowerExpr)
         | other => .unsupported s!"MakeMap with non-map type {repr other}"
     | .newSliceLit _ target memberType elems => lowerNewSliceLit target memberType elems
+    | .newMapLit _ target keys values entries => lowerNewMapLit target keys values entries
     | .safeMapLookup _ resTarget successTarget mapLookup =>
         match lowerMapIndex? mapLookup with
         | some (base, index, valueTy) =>

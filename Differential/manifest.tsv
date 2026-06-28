@@ -35,3 +35,6 @@ plain/map-nil-assign	Differential/plain/map-nil-assign	artifacts/gobra-smoke/wor
 plain/map-nil-eq	Differential/plain/map-nil-eq	artifacts/gobra-smoke/work/features/map-nil-eq/map-nil-eq.gobra.internal.json	mapNilEq_bda1d7d_F	-	ok	maps,nil,equality,comma_ok	-
 plain/map-bool-values	Differential/plain/map-bool-values	artifacts/gobra-smoke/work/features/map-bool-values/map-bool-values.gobra.internal.json	mapBoolValues_bda1d7d_F	-	ok	maps,bools,zero_values	-
 plain/map-bool-keys	Differential/plain/map-bool-keys	artifacts/gobra-smoke/work/features/map-bool-keys/map-bool-keys.gobra.internal.json	mapBoolKeys_bda1d7d_F	-	ok	maps,bools,keys	-
+plain/map-literal-basic	Differential/plain/map-literal-basic	artifacts/gobra-smoke/work/features/map-literal-basic/map-literal-basic.gobra.internal.json	mapLiteralBasic_bda1d7d_F	-	ok	maps,literals,indexing,len	-
+plain/map-literal-empty	Differential/plain/map-literal-empty	artifacts/gobra-smoke/work/features/map-literal-empty/map-literal-empty.gobra.internal.json	mapLiteralEmpty_bda1d7d_F	-	ok	maps,literals,empty,equality	-
+plain/map-literal-bool	Differential/plain/map-literal-bool	artifacts/gobra-smoke/work/features/map-literal-bool/map-literal-bool.gobra.internal.json	mapLiteralBool_bda1d7d_F	-	ok	maps,literals,bools	-

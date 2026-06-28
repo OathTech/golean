@@ -35,3 +35,6 @@ features/map-nil-assign features/map-nil-assign.gobra
 features/map-nil-eq features/map-nil-eq.gobra
 features/map-bool-values features/map-bool-values.gobra
 features/map-bool-keys features/map-bool-keys.gobra
+features/map-literal-basic features/map-literal-basic.gobra
+features/map-literal-empty features/map-literal-empty.gobra
+features/map-literal-bool features/map-literal-bool.gobra

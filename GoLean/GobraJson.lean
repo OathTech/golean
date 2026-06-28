@@ -23,10 +23,10 @@ private def knownTagNames : List String := [
   "If", "Index", "IndexedExp", "Initialization", "IntLit", "IntT", "InterfaceT", "Internal", "ItfTupleTerminationMeasure",
   "Label", "LabelProxy", "Length", "LessCmp", "LocalVar", "MPredicate",
   "MPredicateAccess", "MPredicateProxy", "MakeMap", "MakeSlice", "Method", "MethodBody", "MethodBodySeqn",
-  "MethodCall", "MethodProxy", "Mod", "Mul", "Negation", "NewSliceLit", "NilLit", "NonItfTupleTerminationMeasure",
+  "MethodCall", "MethodProxy", "Mod", "Mul", "Negation", "NewMapLit", "NewSliceLit", "NilLit", "NonItfTupleTerminationMeasure",
   "None", "Old", "Or", "Out", "PointerT", "Predicate", "Program", "PureMethod",
   "PureMethodCall", "Ref", "Return", "SafeMapLookup", "SepAnd", "Seqn", "Single", "SingleAss", "Slice", "Some",
-  "SliceT", "StringT", "StructLit", "StructT", "Sub", "UnboundedInteger", "UneqCmp", "Var", "While",
+  "SliceT", "StringT", "StructLit", "StructT", "Sub", "Tuple2", "UnboundedInteger", "UneqCmp", "Var", "While",
   "WildcardPerm"
 ]
 
@@ -160,6 +160,11 @@ mutual
     value : Expr
     deriving Repr, BEq
 
+  structure MapLitEntry where
+    key : Expr
+    value : Expr
+    deriving Repr, BEq
+
   inductive Expr where
     | var (ref : VarRef)
     | nilLit (source : Source) (typ : Ty)
@@ -223,6 +228,8 @@ mutual
         (initialSpaceArg : Option Expr)
     | newSliceLit (source : Source) (target : Variable) (memberType : Ty)
         (elems : Array ArrayLitElem)
+    | newMapLit (source : Source) (target : Variable) (keys values : Ty)
+        (entries : Array MapLitEntry)
     | safeMapLookup (source : Source) (resTarget successTarget : Variable) (mapLookup : Expr)
     | goSliceAppend (source : Source) (target : Variable) (slice elems : Expr)
     | goSliceCopy (source : Source) (target : Variable) (dst src : Expr)
@@ -610,6 +617,13 @@ mutual
       value := (← decodeExpr s!"{path}.value" (← GoLean.StrictJson.field path obj "value"))
     }
 
+  partial def decodeMapLitEntry (path : String) (json : Json) : Except String MapLitEntry := do
+    let obj ← taggedObj path json "Tuple2" ["left", "right", "tag"]
+    return {
+      key := (← decodeExpr s!"{path}.left" (← GoLean.StrictJson.field path obj "left")),
+      value := (← decodeExpr s!"{path}.right" (← GoLean.StrictJson.field path obj "right"))
+    }
+
   partial def decodeExpr (path : String) (json : Json) : Except String Expr := do
     let obj ← GoLean.StrictJson.obj path json
     let tag ← GoLean.StrictJson.string s!"{path}.tag" (← GoLean.StrictJson.field path obj "tag")
@@ -841,6 +855,14 @@ mutual
           (← decodeVariableWithTag "LocalVar" s!"{path}.target" (← GoLean.StrictJson.field path obj "target"))
           (← decodeTy s!"{path}.memberType" (← GoLean.StrictJson.field path obj "memberType"))
           (← decodeArrayOf s!"{path}.elems" (← GoLean.StrictJson.field path obj "elems") decodeArrayLitElem)
+    | "NewMapLit" =>
+        let obj ← taggedObj path json "NewMapLit" ["entries", "keys", "source", "tag", "target", "values"]
+        return .newMapLit
+          (← decodeSource s!"{path}.source" (← GoLean.StrictJson.field path obj "source"))
+          (← decodeVariableWithTag "LocalVar" s!"{path}.target" (← GoLean.StrictJson.field path obj "target"))
+          (← decodeTy s!"{path}.keys" (← GoLean.StrictJson.field path obj "keys"))
+          (← decodeTy s!"{path}.values" (← GoLean.StrictJson.field path obj "values"))
+          (← decodeArrayOf s!"{path}.entries" (← GoLean.StrictJson.field path obj "entries") decodeMapLitEntry)
     | "SafeMapLookup" =>
         let obj ← taggedObj path json "SafeMapLookup" ["mapLookup", "resTarget", "source", "successTarget", "tag"]
         return .safeMapLookup
