@@ -225,6 +225,20 @@ mutual
     | value => stuck s!"expected struct {name} value, got {repr value}"
 end
 
+partial def convertValueToTy (state : ExecState) (typ : Ty) (value : GoValue) :
+    Except GoError GoValue := do
+  match typ, value with
+  | .int kind, .int value _ => return .int (kind.normalize value) kind
+  | .int kind, other => stuck s!"expected integer operand for conversion to {kind.name}, got {repr other}"
+  | .defined name, _ =>
+      match TypeEnv.lookup state.types name with
+      | some (.alias target) => convertValueToTy state target value
+      | some (.struct _) => unsupported s!"conversion to struct type {name}"
+      | some (.unsupported feature) => unsupported s!"conversion to {feature}"
+      | none => unsupported s!"conversion to unknown defined type {name}"
+  | .unsupported feature, _ => unsupported s!"conversion to {feature}"
+  | other, _ => unsupported s!"conversion to {repr other}"
+
 mutual
   partial def defaultValue (state : ExecState) : Ty → Except GoError GoValue
     | .bool => return .bool false

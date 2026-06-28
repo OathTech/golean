@@ -140,14 +140,15 @@ assignment, call-assignment targets, map lookup, append, and bounds panics.
 
 GoCore now has an integer-kind descriptor on `Ty.int` and `GoValue.int`. The
 executable interpreter normalizes fixed-width integer values on typed stores
-and integer arithmetic. The current executable policy treats `int` and `uint`
-as 64-bit, matching the current Gobra export and local differential harness.
+and integer arithmetic. A first integer-to-integer conversion slice is also in
+place. The current executable policy treats `int` and `uint` as 64-bit,
+matching the current Gobra export and local differential harness.
 
 This is the first slice, not the whole integer story. Full Go still needs:
 
 - signed and unsigned integer families;
 - `byte`/`uint8` and `rune`/`int32`;
-- conversion truncation and wraparound;
+- broader conversion families, including string/rune conversions;
 - shift semantics;
 - overflow behavior for fixed-width values;
 - an architecture-dependent `int`/`uint` width policy in the future relation.
@@ -271,7 +272,8 @@ Minimum prerequisites:
    calls-in-expressions, channel receives, or effectful builtins.
 3. In progress: introduce typed integer kinds and byte/rune values before
    string indexing and numeric conversions. The first fixed-width integer slice
-   is implemented; conversions, shifts, and string byte/rune operations remain.
+   is implemented, as is first integer-to-integer conversion support; shifts
+   and string byte/rune operations remain.
 4. Done: make equality type-directed for the current value forms before
    interfaces and exact comparability tests.
 5. Replace Gobra type-definition recovery heuristics with explicit fork output
@@ -288,7 +290,7 @@ The best next semantic family is typed integers plus byte/string operations:
 - it is small enough to differentially test thoroughly;
 - it unblocks string indexing/slicing;
 - it forces the runtime value representation to become more precise;
-- it is a prerequisite for accurate conversions, shifts, arrays, maps, and
+- it is a prerequisite for accurate shifts, broader conversions, arrays, maps, and
   constants.
 
 This is also a good forcing function for the GoCore module split, because typed

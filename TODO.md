@@ -47,8 +47,8 @@ backlog items.
   `panic`, `unsupported`, `stuck`, and `internal`.
 - Classify nil pointer dereference and Go-defined runtime traps as `panic`, not
   `stuck`.
-- Extend the integer model beyond the first fixed-width slice: conversions,
-  shifts, constants, `byte`/`rune` string operations, and exact
+- Extend the integer model beyond the current fixed-width slice: shifts,
+  constants, `byte`/`rune` string operations, broader conversion families, and exact
   architecture-dependent `int`/`uint` policy in the future relation.
 - Replace `execStmt : ExecState -> Except ... ExecState` with an explicit
   `ExecOutcome` for normal completion, return, break, continue, panic,
@@ -126,6 +126,9 @@ backlog items.
 - Added first typed integer support: GoCore integer kinds, Gobra integer-kind
   lowering, fixed-width normalization on typed stores/arithmetic, a 64-bit
   executable policy for `int`/`uint`, and `int8` overflow differential coverage.
+- Added first integer conversion support: Gobra `Conversion` decoding/lowering,
+  GoCore integer-to-integer conversion normalization, and `byte(300) == 44`
+  differential coverage. Non-integer conversions remain explicitly unsupported.
 - Replaced stable variable references with heap-backed locals.
 - Added `Loc.base` and `Loc.field` path-like locations.
 - Added load, store, address-of, dereference, struct field get, and field ref.

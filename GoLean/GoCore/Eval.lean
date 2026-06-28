@@ -32,6 +32,9 @@ mutual
     | .intLit value kind => return (.int (kind.normalize value) kind, state)
     | .stringLit value => return (.string value, state)
     | .boolLit value => return (.bool value, state)
+    | .convert typ operand => do
+        let pair ← evalExpr state operand
+        return (← convertValueToTy pair.2 typ pair.1, pair.2)
     | .add left right => do
         let leftPair ← evalExpr state left
         let rightPair ← evalExpr leftPair.2 right

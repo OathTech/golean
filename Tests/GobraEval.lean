@@ -118,6 +118,26 @@ private def coreInt8WrapFunction : GoCore.Func := {
     ]
 }
 
+private def coreByteConversionFunction : GoCore.Func := {
+  name := "byte_conversion_F",
+  args := #[],
+  results := #[coreParam "z"],
+  body := .block
+    #[{ id := "big", typ := .int .int32 }, { id := "b", typ := .int .uint8 }]
+    #[
+      .assign (.var "big") (.intLit 300),
+      .assign (.var "b") (.convert (.int .uint8) (.var "big")),
+      .assign (.var "z") (.var "b")
+    ]
+}
+
+private def coreUnsupportedConversionFunction : GoCore.Func := {
+  name := "unsupported_conversion_F",
+  args := #[],
+  results := #[{ id := "z", typ := .string }],
+  body := .assign (.var "z") (.convert .string (.intLit 65))
+}
+
 private def coreArrayFunction : GoCore.Func := {
   name := "arrays_F",
   args := #[],
@@ -667,6 +687,8 @@ def main : IO UInt32 := do
     (GoCore.runFunctionWithContext 100 coreCellTypes #[coreSetCellFunction, coreCallFunction] coreCallFunction #[]) 9)
   passed := passed && (← expectIntResult "GoCore scalar operators" (GoCore.runFunction 100 coreScalarFunction #[.int 10, .int 3]) 7)
   passed := passed && (← expectIntResult "GoCore int8 wrap" (GoCore.runFunction 100 coreInt8WrapFunction #[]) (-128))
+  passed := passed && (← expectIntResult "GoCore byte conversion wrap" (GoCore.runFunction 100 coreByteConversionFunction #[]) 44)
+  passed := passed && (← expectErrorStatus "GoCore unsupported non-integer conversion" (GoCore.runFunction 100 coreUnsupportedConversionFunction #[]) "unsupported")
   passed := passed && (← expectIntResult "GoCore array indexing" (GoCore.runFunction 100 coreArrayFunction #[]) 11)
   passed := passed && (← expectIntResult "GoCore array len cap" (GoCore.runFunction 100 coreArrayLenCapFunction #[]) 6)
   passed := passed && (← expectIntResult "GoCore array default value" (GoCore.runFunction 100 coreArrayDefaultFunction #[]) 0)

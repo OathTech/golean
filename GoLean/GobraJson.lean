@@ -18,7 +18,7 @@ structure KnownTag where
 private def knownTagNames : List String := [
   "Access", "Add", "Address", "Assert", "Assume", "AtLeastCmp", "AtMostCmp", "Capacity",
   "AnnotatedOrigin", "ArrayLit", "ArrayT", "Block", "BoolLit", "BoolT", "BoundedInteger", "Decimal", "DefinedT", "DfltVal",
-  "Break", "Continue", "Deref", "Div", "EqCmp", "ExprAssertion", "Field", "FieldRef", "FullPerm",
+  "Break", "Continue", "Conversion", "Deref", "Div", "EqCmp", "ExprAssertion", "Field", "FieldRef", "FullPerm",
   "Function", "FunctionCall", "FunctionProxy", "GhostEqCmp", "GoSliceAppend", "GoSliceCopy", "GreaterCmp", "Implication", "In",
   "If", "Index", "IndexedExp", "Initialization", "InsufficientPermissionToRangeExpressionAnnotation",
   "IntLit", "IntT", "InterfaceT", "Internal", "ItfTupleTerminationMeasure",
@@ -174,6 +174,7 @@ mutual
     | intLit (source : Source) (value : Int) (kind : IntegerKind) (base : Nat)
     | stringLit (source : Source) (value : String)
     | boolLit (source : Source) (value : Bool)
+    | conversion (source : Source) (newType : Ty) (expr : Expr)
     | add (source : Source) (left right : Expr)
     | sub (source : Source) (left right : Expr)
     | mul (source : Source) (left right : Expr)
@@ -685,6 +686,12 @@ mutual
         return .boolLit
           (← decodeSource s!"{path}.source" (← GoLean.StrictJson.field path obj "source"))
           (← GoLean.StrictJson.bool s!"{path}.b" (← GoLean.StrictJson.field path obj "b"))
+    | "Conversion" =>
+        let obj ← taggedObj path json "Conversion" ["expr", "newType", "source", "tag"]
+        return .conversion
+          (← decodeSource s!"{path}.source" (← GoLean.StrictJson.field path obj "source"))
+          (← decodeTy s!"{path}.newType" (← GoLean.StrictJson.field path obj "newType"))
+          (← decodeExpr s!"{path}.expr" (← GoLean.StrictJson.field path obj "expr"))
     | "Add" => binary "Add" .add
     | "Sub" => binary "Sub" .sub
     | "Mul" => binary "Mul" .mul

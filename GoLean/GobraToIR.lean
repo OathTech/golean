@@ -90,7 +90,13 @@ private def varRefTy : GoLean.GobraJson.VarRef → GoLean.GobraJson.Ty
 
 partial def lowerExprTy? : GoLean.GobraJson.Expr → Option GoLean.GoCore.Ty
   | .var ref => some (lowerTy (varRefTy ref))
+  | .intLit _ _ kind _ =>
+      match lowerIntegerKind? kind with
+      | some kind => some (.int kind)
+      | none => some (.unsupported s!"unsupported {lowerIntegerKindFeature kind}")
   | .stringLit .. => some .string
+  | .boolLit .. => some .bool
+  | .conversion _ newType _ => some (lowerTy newType)
   | .deref _ _ typ =>
       match lowerTy typ with
       | .pointer elem => some elem
@@ -165,6 +171,7 @@ partial def lowerExpr : GoLean.GobraJson.Expr → GoLean.GoCore.Expr
       | none => .unsupported s!"integer literal with unsupported {lowerIntegerKindFeature kind}"
   | .stringLit _ value => .stringLit value
   | .boolLit _ value => .boolLit value
+  | .conversion _ newType expr => .convert (lowerTy newType) (lowerExpr expr)
   | .add _ left right => .add (lowerExpr left) (lowerExpr right)
   | .sub _ left right => .sub (lowerExpr left) (lowerExpr right)
   | .mul _ left right => .mul (lowerExpr left) (lowerExpr right)

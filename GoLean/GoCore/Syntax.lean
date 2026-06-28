@@ -36,6 +36,7 @@ inductive Expr where
   | intLit (value : Int) (kind : IntKind := .unbounded "integer")
   | stringLit (value : String)
   | boolLit (value : Bool)
+  | convert (typ : Ty) (operand : Expr)
   | add (left right : Expr)
   | sub (left right : Expr)
   | mul (left right : Expr)
