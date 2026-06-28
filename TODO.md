@@ -47,10 +47,10 @@ backlog items.
   `panic`, `unsupported`, `stuck`, and `internal`.
 - Classify nil pointer dereference and Go-defined runtime traps as `panic`, not
   `stuck`.
-- Extend the integer model beyond the current fixed-width slice: constants,
-  string slicing and rune iteration/conversions, broader conversion families,
-  more integer edge cases, and exact architecture-dependent `int`/`uint` policy
-  in the future relation.
+- Extend the integer/string model beyond the current fixed-width and byte-string
+  slices: constants, rune iteration/conversions, string/byte-slice conversions,
+  broader conversion families, more integer edge cases, and exact
+  architecture-dependent `int`/`uint` policy in the future relation.
 - Replace `execStmt : ExecState -> Except ... ExecState` with an explicit
   `ExecOutcome` for normal completion, return, break, continue, panic,
   unsupported, and stuck behavior.
@@ -86,6 +86,10 @@ backlog items.
 
 ## Gobra Lowering Hardening
 
+- Enrich Gobra JSON string literals with exact Go bytes, not only Scala/JSON
+  text. Go escapes such as `\xNN` can denote arbitrary bytes, and GoCore's
+  byte-backed `GoString` should reject or avoid textual literal exports that
+  cannot prove byte exactness.
 - Make lowering fail closed: unsupported body nodes should not hide in dead code
   as inert GoCore nodes unless a test explicitly expects unsupported output.
 - Preserve and report bodyless functions, methods, and predicates instead of
@@ -135,6 +139,11 @@ backlog items.
   and negative-shift panic coverage.
 - Added string byte indexing: indexing a Go string reads from its UTF-8 byte
   sequence and returns a `uint8`, with direct and differential coverage.
+- Switched GoCore string values from Lean `String` to byte-backed `GoString`,
+  matching Go's byte-level string operations and Perennial/new Goose's
+  `go_string` model.
+- Added two-index string slicing over bytes, including an invalid-UTF-8
+  substring differential case.
 - Added bitwise integer operators: `&`, `|`, `^`, `&^`, and unary `^`, using
   fixed-width modular bit patterns and type-directed result normalization.
 - Replaced stable variable references with heap-backed locals.

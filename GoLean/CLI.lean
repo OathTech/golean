@@ -175,7 +175,7 @@ private partial def goValueJson : GoValue → Json
   | .unit => Json.mkObj [("tag", Json.str "unit")]
   | .bool value => Json.mkObj [("tag", Json.str "bool"), ("value", Lean.toJson value)]
   | .int value _ => Json.mkObj [("tag", Json.str "int"), ("value", Lean.toJson value)]
-  | .string value => Json.mkObj [("tag", Json.str "string"), ("value", Lean.toJson value)]
+  | .string value => Json.mkObj [("tag", Json.str "string"), ("bytes", Lean.toJson value.byteNats)]
   | .addr loc => locJson loc
   | .nil => Json.mkObj [("tag", Json.str "nil")]
   | .struct typeName fields =>

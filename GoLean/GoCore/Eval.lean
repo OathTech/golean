@@ -100,7 +100,7 @@ mutual
         | .unsupported feature => unsupported s!"nil literal for {feature}"
         | other => stuck s!"nil literal for non-nilable type {repr other}"
     | .intLit value kind => return (.int (kind.normalize value) kind, state)
-    | .stringLit value => return (.string value, state)
+    | .stringLit value => return (.string (GoString.fromLeanString value), state)
     | .boolLit value => return (.bool value, state)
     | .convert typ operand => do
         let pair ← evalExpr state operand
@@ -110,7 +110,8 @@ mutual
         let rightPair ← evalExpr leftPair.2 right
         match leftPair.1, rightPair.1 with
         | .int .., .int .. => return (← intBinaryResult "+" (· + ·) leftPair.1 rightPair.1, rightPair.2)
-        | .string leftValue, .string rightValue => return (.string (leftValue ++ rightValue), rightPair.2)
+        | .string leftValue, .string rightValue =>
+            return (.string (GoString.append leftValue rightValue), rightPair.2)
         | leftValue, rightValue => stuck s!"mismatched + operands: {repr leftValue} and {repr rightValue}"
     | .sub left right => do
         let leftPair ← evalExpr state left
@@ -293,6 +294,7 @@ mutual
             maxValue := some (← valueAsInt maxPair.1)
             current := maxPair.2
         match basePair.1 with
+        | .string value => return (← stringSlice value lowValue highValue maxValue, current)
         | .slice slice => return (← sliceFromSlice slice lowValue highValue maxValue, current)
         | .addr baseLoc =>
             match ← loadLoc current baseLoc with
@@ -306,7 +308,7 @@ mutual
         let pair ← evalExpr state operand
         match pair.1 with
         | .array values => return (.int values.size, pair.2)
-        | .string value => return (.int value.utf8ByteSize, pair.2)
+        | .string value => return (.int value.length, pair.2)
         | .slice slice => do
             validateSlice slice
             return (.int slice.len, pair.2)

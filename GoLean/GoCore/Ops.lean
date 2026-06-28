@@ -63,13 +63,22 @@ def natFromNonnegativeInt (context : String) (value : Int) : Except GoError Nat 
     panic context
   return value.toNat
 
-def stringByteGet (value : String) (index : Int) : Except GoError GoValue := do
-  let bytes := value.toUTF8
+def stringByteGet (value : GoString) (index : Int) : Except GoError GoValue := do
   let i ← natFromNonnegativeInt "index out of range" index
-  if i < bytes.size then
-    return .int (Int.ofNat (bytes.get! i).toNat) .uint8
+  match value.byte? i with
+  | some byte => return .int (Int.ofNat byte.toNat) .uint8
+  | none => panic "index out of range"
+
+def stringSlice (value : GoString) (low high : Int) (max : Option Int) :
+    Except GoError GoValue := do
+  if max.isSome then
+    stuck "full slice expression over string"
+  let low ← natFromNonnegativeInt "slice bounds out of range" low
+  let high ← natFromNonnegativeInt "slice bounds out of range" high
+  if low <= high && high <= value.length then
+    return .string (value.slice low high)
   else
-    panic "index out of range"
+    panic "slice bounds out of range"
 
 def validateSlice (slice : SliceValue) : Except GoError Unit := do
   if slice.len > slice.cap then
@@ -251,7 +260,7 @@ mutual
   partial def defaultValue (state : ExecState) : Ty → Except GoError GoValue
     | .bool => return .bool false
     | .int kind => return .int 0 kind
-    | .string => return .string ""
+    | .string => return .string GoString.empty
     | .array length elem => do
         let mut values := #[]
         for _ in [:length] do
@@ -437,20 +446,20 @@ partial def mapEntryIndex? (state : ExecState) (keyTy : Ty) (entries : Array (Go
 
 def valueLess : GoValue → GoValue → Except GoError Bool
   | .int left _, .int right _ => return left < right
-  | .string left, .string right => return compare left right == .lt
+  | .string left, .string right => return GoString.compare left right == .lt
   | left, right => stuck s!"mismatched < operands: {repr left} and {repr right}"
 
 def valueAtMost : GoValue → GoValue → Except GoError Bool
   | .int left _, .int right _ => return left <= right
-  | .string left, .string right => return compare left right != .gt
+  | .string left, .string right => return GoString.compare left right != .gt
   | left, right => stuck s!"mismatched <= operands: {repr left} and {repr right}"
 
 def valueGreater : GoValue → GoValue → Except GoError Bool
   | .int left _, .int right _ => return left > right
-  | .string left, .string right => return compare left right == .gt
+  | .string left, .string right => return GoString.compare left right == .gt
   | left, right => stuck s!"mismatched > operands: {repr left} and {repr right}"
 
 def valueAtLeast : GoValue → GoValue → Except GoError Bool
   | .int left _, .int right _ => return left >= right
-  | .string left, .string right => return compare left right != .lt
+  | .string left, .string right => return GoString.compare left right != .lt
   | left, right => stuck s!"mismatched >= operands: {repr left} and {repr right}"

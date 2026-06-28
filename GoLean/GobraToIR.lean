@@ -135,8 +135,9 @@ partial def lowerExprTy? : GoLean.GobraJson.Expr → Option GoLean.GoCore.Ty
       | .array _ elem => some (.slice elem)
       | .pointer (.array _ elem) => some (.slice elem)
       | .slice elem => some (.slice elem)
+      | .string => some .string
       | .unsupported feature => some (.unsupported feature)
-      | other => some (.unsupported s!"slicing non-array/slice type {repr other}")
+      | other => some (.unsupported s!"slicing non-array/slice/string type {repr other}")
   | .length .. => some .int
   | .capacity .. => some .int
   | _ => none

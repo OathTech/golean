@@ -177,7 +177,7 @@ Value :=
   | unit
   | bool Bool
   | int Int IntKind
-  | string String
+  | string GoString
   | addr Loc
   | nil
   | struct typeName (fields : fieldName -> Value)
@@ -210,9 +210,39 @@ Bitwise operators use fixed-width modular bit patterns for typed integer
 values, then normalize the result back to the selected result kind. Untyped
 unbounded bitwise constants remain unsupported until the constant model exists.
 
-String indexing reads from the string's UTF-8 byte sequence and returns a
-`uint8` value. String slicing and range-over-string rune semantics are still
-separate future features.
+GoCore strings are byte sequences, not Lean strings:
+
+```text
+GoString := Array UInt8
+```
+
+Lean `String` remains an input convenience for string literals exported by the
+frontend; lowering encodes it as UTF-8 bytes. This choice is required by Go:
+`len(s)`, `s[i]`, string slicing, string comparison, and `[]byte(s)` all operate
+over bytes, and Go string values can contain invalid UTF-8 after slicing or byte
+construction. It also matches the strongest reference point in Perennial's new
+Goose model: `go_string` is a byte string, string literals elaborate to byte
+lists, string indexing returns `w8`, concatenation appends byte strings, and
+ordering is lexicographic over bytes.
+
+Gobra's frontend is compatible with this even though its internal string
+literal node stores a Scala `String`: Gobra indexes `StringT` as `byte`, permits
+`string`/`[]byte` conversions, axiomatizes string length as byte length, and
+models conversion to `[]byte` by equating each string byte with the resulting
+slice element. Gobra's Viper encoding is intentionally abstract for proofs; it
+should not be our semantic storage model.
+
+Frontend caveat: a Go string literal can denote arbitrary bytes via escapes
+such as `\xNN`. Gobra's current JSON string literal field is textual, so the
+Gobra fork should eventually export exact literal bytes and the Lean importer
+should prefer that byte payload. Until then, literal lowering is exact for the
+UTF-8 text literals covered by the differential suite, while arbitrary-byte
+string literal coverage remains a frontend hardening item.
+
+String indexing currently returns a `uint8` byte. Two-index string slicing
+returns another byte-backed string and can represent invalid UTF-8. Full slice
+expressions over strings fail closed because they are not Go. Range-over-string
+rune semantics remain a separate future feature.
 
 ## Variables And Addresses
 

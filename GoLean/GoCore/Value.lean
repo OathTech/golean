@@ -123,11 +123,56 @@ structure MapValue where
   base : Option Loc
   deriving Repr, BEq
 
+structure GoString where
+  bytes : Array UInt8
+  deriving Repr, BEq
+
+namespace GoString
+
+def empty : GoString :=
+  { bytes := #[] }
+
+def fromLeanString (value : String) : GoString :=
+  { bytes := value.toUTF8.data }
+
+def append (left right : GoString) : GoString :=
+  { bytes := left.bytes ++ right.bytes }
+
+def length (value : GoString) : Nat :=
+  value.bytes.size
+
+def byte? (value : GoString) (index : Nat) : Option UInt8 :=
+  value.bytes[index]?
+
+def slice (value : GoString) (low high : Nat) : GoString :=
+  { bytes := value.bytes.extract low high }
+
+partial def compareAt (left right : Array UInt8) (index : Nat) : Ordering :=
+  match left[index]?, right[index]? with
+  | some l, some r =>
+      if l.toNat < r.toNat then
+        .lt
+      else if r.toNat < l.toNat then
+        .gt
+      else
+        compareAt left right (index + 1)
+  | none, some _ => .lt
+  | some _, none => .gt
+  | none, none => .eq
+
+def compare (left right : GoString) : Ordering :=
+  compareAt left.bytes right.bytes 0
+
+def byteNats (value : GoString) : Array Nat :=
+  value.bytes.map (fun b => b.toNat)
+
+end GoString
+
 inductive GoValue where
   | unit
   | bool (value : Bool)
   | int (value : Int) (kind : GoCore.IntKind := .int)
-  | string (value : String)
+  | string (value : GoString)
   | addr (loc : Loc)
   | nil
   | struct (typeName : String) (fields : Array (String × GoValue))
