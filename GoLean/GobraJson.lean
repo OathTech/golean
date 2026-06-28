@@ -16,15 +16,17 @@ structure KnownTag where
   deriving Repr, BEq
 
 private def knownTagNames : List String := [
-  "Access", "Add", "Address", "Assert", "AtLeastCmp", "AtMostCmp", "Capacity",
-  "ArrayLit", "ArrayT", "Block", "BoolLit", "BoolT", "BoundedInteger", "Decimal", "DefinedT", "DfltVal",
+  "Access", "Add", "Address", "Assert", "Assume", "AtLeastCmp", "AtMostCmp", "Capacity",
+  "AnnotatedOrigin", "ArrayLit", "ArrayT", "Block", "BoolLit", "BoolT", "BoundedInteger", "Decimal", "DefinedT", "DfltVal",
   "Break", "Continue", "Deref", "Div", "EqCmp", "ExprAssertion", "Field", "FieldRef", "FullPerm",
-  "Function", "FunctionCall", "FunctionProxy", "GoSliceAppend", "GoSliceCopy", "GreaterCmp", "Implication", "In",
-  "If", "Index", "IndexedExp", "Initialization", "IntLit", "IntT", "InterfaceT", "Internal", "ItfTupleTerminationMeasure",
+  "Function", "FunctionCall", "FunctionProxy", "GhostEqCmp", "GoSliceAppend", "GoSliceCopy", "GreaterCmp", "Implication", "In",
+  "If", "Index", "IndexedExp", "Initialization", "InsufficientPermissionToRangeExpressionAnnotation",
+  "IntLit", "IntT", "InterfaceT", "Internal", "ItfTupleTerminationMeasure",
   "Label", "LabelProxy", "Length", "LessCmp", "LocalVar", "MPredicate",
+  "LoopInvariantNotEstablishedAnnotation",
   "MPredicateAccess", "MPredicateProxy", "MakeMap", "MakeSlice", "Method", "MethodBody", "MethodBodySeqn",
   "MethodCall", "MethodProxy", "Mod", "Mul", "Negation", "New", "NewMapLit", "NewSliceLit", "NilLit", "NonItfTupleTerminationMeasure",
-  "None", "Old", "Or", "Out", "Pointer", "PointerT", "Predicate", "Program", "PureMethod",
+  "NoPermissionToRangeExpressionAnnotation", "None", "Old", "Or", "Out", "Pointer", "PointerT", "Predicate", "Program", "PureMethod",
   "PureMethodCall", "Ref", "Return", "SafeMapLookup", "SepAnd", "Seqn", "Single", "SingleAss", "Slice", "Some",
   "SliceT", "StringLit", "StringT", "StructLit", "StructT", "Sub", "Tuple2", "UnboundedInteger", "UneqCmp", "Var", "While",
   "WildcardPerm"
@@ -178,6 +180,7 @@ mutual
     | div (source : Source) (left right : Expr)
     | mod (source : Source) (left right : Expr)
     | eqCmp (source : Source) (left right : Expr)
+    | ghostEqCmp (source : Source) (left right : Expr)
     | uneqCmp (source : Source) (left right : Expr)
     | atMostCmp (source : Source) (left right : Expr)
     | atLeastCmp (source : Source) (left right : Expr)
@@ -237,6 +240,7 @@ mutual
     | goSliceAppend (source : Source) (target : Variable) (slice elems : Expr)
     | goSliceCopy (source : Source) (target : Variable) (dst src : Expr)
     | assert (source : Source) (ass : Assertion)
+    | assume (source : Source) (ass : Assertion)
     | ifStmt (source : Source) (cond : Expr) (thn els : Stmt)
     | while (source : Source) (cond : Expr) (invs : Array Assertion)
         (terminationMeasure : Option TerminationMeasure) (body : Stmt)
@@ -352,12 +356,28 @@ private def decodePosition (path : String) (json : Json) : Except String Positio
         pure (some lineColumn)
   return { file, start, «end» := endPos }
 
-private def decodeOrigin (path : String) (json : Json) : Except String Origin := do
+private def decodeSourceAnnotation (path : String) (json : Json) : Except String Unit := do
   let obj ← GoLean.StrictJson.obj path json
-  GoLean.StrictJson.requireExactKeys path obj ["position", "tag"]
   let tag ← GoLean.StrictJson.string s!"{path}.tag" (← GoLean.StrictJson.field path obj "tag")
-  let position ← decodePosition s!"{path}.position" (← GoLean.StrictJson.field path obj "position")
-  return { tag, position }
+  match tag with
+  | "LoopInvariantNotEstablishedAnnotation"
+  | "NoPermissionToRangeExpressionAnnotation"
+  | "InsufficientPermissionToRangeExpressionAnnotation" =>
+      GoLean.StrictJson.requireExactKeys path obj ["tag"]
+  | other =>
+      throw s!"{path}.tag: unsupported source annotation tag {repr other}"
+
+partial def decodeOrigin (path : String) (json : Json) : Except String Origin := do
+  let obj ← GoLean.StrictJson.obj path json
+  let tag ← GoLean.StrictJson.string s!"{path}.tag" (← GoLean.StrictJson.field path obj "tag")
+  if tag == "AnnotatedOrigin" then
+    GoLean.StrictJson.requireExactKeys path obj ["annotation", "origin", "tag"]
+    decodeSourceAnnotation s!"{path}.annotation" (← GoLean.StrictJson.field path obj "annotation")
+    decodeOrigin s!"{path}.origin" (← GoLean.StrictJson.field path obj "origin")
+  else
+    GoLean.StrictJson.requireExactKeys path obj ["position", "tag"]
+    let position ← decodePosition s!"{path}.position" (← GoLean.StrictJson.field path obj "position")
+    return { tag, position }
 
 private def decodeSource (path : String) (json : Json) : Except String Source := do
   let obj ← GoLean.StrictJson.obj path json
@@ -671,6 +691,7 @@ mutual
     | "Div" => binary "Div" .div
     | "Mod" => binary "Mod" .mod
     | "EqCmp" => binary "EqCmp" .eqCmp
+    | "GhostEqCmp" => binary "GhostEqCmp" .ghostEqCmp
     | "UneqCmp" => binary "UneqCmp" .uneqCmp
     | "AtMostCmp" => binary "AtMostCmp" .atMostCmp
     | "AtLeastCmp" => binary "AtLeastCmp" .atLeastCmp
@@ -906,6 +927,11 @@ mutual
     | "Assert" =>
         let obj ← taggedObj path json "Assert" ["ass", "source", "tag"]
         return .assert
+          (← decodeSource s!"{path}.source" (← GoLean.StrictJson.field path obj "source"))
+          (← decodeAssertion s!"{path}.ass" (← GoLean.StrictJson.field path obj "ass"))
+    | "Assume" =>
+        let obj ← taggedObj path json "Assume" ["ass", "source", "tag"]
+        return .assume
           (← decodeSource s!"{path}.source" (← GoLean.StrictJson.field path obj "source"))
           (← decodeAssertion s!"{path}.ass" (← GoLean.StrictJson.field path obj "ass"))
     | "If" =>

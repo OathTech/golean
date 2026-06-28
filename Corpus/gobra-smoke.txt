@@ -47,3 +47,4 @@ features/new-nil-values features/new-nil-values.gobra
 features/new-struct features/new-struct.gobra
 features/tuple-assign-order features/tuple-assign-order.gobra
 features/shadowing features/shadowing.gobra
+features/range-array-copy features/range-array-copy.gobra

@@ -143,6 +143,7 @@ partial def lowerExpr : GoLean.GobraJson.Expr → GoLean.GoCore.Expr
   | .div _ left right => .div (lowerExpr left) (lowerExpr right)
   | .mod _ left right => .mod (lowerExpr left) (lowerExpr right)
   | .eqCmp _ left right => .eqCmp (lowerExpr left) (lowerExpr right)
+  | .ghostEqCmp .. => .unsupported "ghost equality expression"
   | .uneqCmp _ left right => .neqCmp (lowerExpr left) (lowerExpr right)
   | .atMostCmp _ left right => .atMostCmp (lowerExpr left) (lowerExpr right)
   | .atLeastCmp _ left right => .atLeastCmp (lowerExpr left) (lowerExpr right)
@@ -341,6 +342,7 @@ partial def lowerStmtWithReturnPost (returnPostprocessing : Array GoLean.GoCore.
     | .goSliceCopy _ target dst src =>
         .copySlice (.var target.id) (lowerExpr dst) (lowerExpr src)
     | .assert .. => .seqn #[]
+    | .assume .. => .seqn #[]
     | .ifStmt _ cond thn els =>
         .ifThenElse (lowerExpr cond)
           (lowerStmtWithReturnPost returnPostprocessing thn)

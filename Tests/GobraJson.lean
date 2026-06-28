@@ -8,6 +8,9 @@ def validDocument : String :=
 def sourceJson : String :=
   "{\"origin\":{\"position\":{\"end\":null,\"file\":\"input.gobra\",\"start\":{\"column\":1,\"line\":1}},\"tag\":\"package input\"},\"tag\":\"Single\"}"
 
+def annotatedSourceJson : String :=
+  "{\"origin\":{\"annotation\":{\"tag\":\"NoPermissionToRangeExpressionAnnotation\"},\"origin\":{\"position\":{\"end\":null,\"file\":\"input.gobra\",\"start\":{\"column\":1,\"line\":1}},\"tag\":\"package input\"},\"tag\":\"AnnotatedOrigin\"},\"tag\":\"Single\"}"
+
 def functionProxyJson : String :=
   "{\"name\":\"f_F\",\"source\":" ++ sourceJson ++ ",\"tag\":\"FunctionProxy\"}"
 
@@ -55,6 +58,17 @@ def unknownBodyStmt : String :=
     ",\"posts\":[],\"pres\":[],\"results\":[],\"source\":" ++ sourceJson ++
     ",\"tag\":\"Function\",\"terminationMeasures\":[]}]")
 
+def assumeBodyStmt : String :=
+  documentWithMembers (
+    "[{\"args\":[],\"backendAnnotations\":[],\"body\":{\"tag\":\"Some\",\"value\":{\"decls\":[],\"postprocessing\":[],\"seqn\":{\"source\":" ++
+    sourceJson ++ ",\"stmts\":[{\"ass\":{\"exp\":{\"b\":true,\"source\":" ++ sourceJson ++
+    ",\"tag\":\"BoolLit\"},\"source\":" ++ annotatedSourceJson ++
+    ",\"tag\":\"ExprAssertion\"},\"source\":" ++ annotatedSourceJson ++
+    ",\"tag\":\"Assume\"}],\"tag\":\"MethodBodySeqn\"},\"source\":" ++ sourceJson ++
+    ",\"tag\":\"MethodBody\"}},\"name\":" ++ functionProxyJson ++
+    ",\"posts\":[],\"pres\":[],\"results\":[],\"source\":" ++ sourceJson ++
+    ",\"tag\":\"Function\",\"terminationMeasures\":[]}]")
+
 def backendAnnotation : String :=
   documentWithMembers (
     "[{\"args\":[],\"backendAnnotations\":[{\"tag\":\"Annotation\"}],\"body\":{\"tag\":\"None\"},\"name\":" ++
@@ -90,6 +104,7 @@ def main : IO UInt32 := do
   passed := passed && (← expectError "malformed inputs" malformedInputs)
   passed := passed && (← expectError "extra expression field" extraExpressionField)
   passed := passed && (← expectError "unknown body statement" unknownBodyStmt)
+  passed := passed && (← expectOk "assume body statement" assumeBodyStmt)
   passed := passed && (← expectError "backend annotation" backendAnnotation)
   if passed then
     return 0
