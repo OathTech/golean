@@ -20,7 +20,7 @@ partial def lowerTy : GoLean.GobraJson.Ty → GoLean.GoCore.Ty
   | .defined name _ => .defined name
   | .interface name _ => .unsupported s!"interface type {name}"
   | .struct _ _ _ => .unsupported "anonymous struct type"
-  | .string _ => .unsupported "string type"
+  | .string _ => .string
   | .void => .unsupported "void type"
   | .float32 _ => .unsupported "float32 type"
   | .float64 _ => .unsupported "float64 type"
@@ -61,6 +61,7 @@ private def varRefTy : GoLean.GobraJson.VarRef → GoLean.GobraJson.Ty
 
 partial def lowerExprTy? : GoLean.GobraJson.Expr → Option GoLean.GoCore.Ty
   | .var ref => some (lowerTy (varRefTy ref))
+  | .stringLit .. => some .string
   | .deref _ _ typ =>
       match lowerTy typ with
       | .pointer elem => some elem
@@ -117,11 +118,14 @@ partial def lowerAssignee : GoLean.GobraJson.Assignee → GoLean.GoCore.Assignee
   | .var _ ref => .var (varRefId ref)
   | .field _ op => .addr (lowerAddressOfExpr op)
   | .index _ op => .addr (lowerAddressOfExpr op)
+  | .pointer _ (.deref _ exp _) => .addr (lowerExpr exp)
+  | .pointer _ _ => .unsupported "pointer assignee without dereference operand"
 
 partial def lowerExpr : GoLean.GobraJson.Expr → GoLean.GoCore.Expr
   | .var ref => .var (varRefId ref)
   | .nilLit _ typ => .nil (some (lowerTy typ))
   | .intLit _ value _ _ => .intLit value
+  | .stringLit _ value => .stringLit value
   | .boolLit _ value => .boolLit value
   | .add _ left right => .add (lowerExpr left) (lowerExpr right)
   | .sub _ left right => .sub (lowerExpr left) (lowerExpr right)
@@ -142,6 +146,8 @@ partial def lowerExpr : GoLean.GobraJson.Expr → GoLean.GoCore.Expr
       | .var _ ref => .ref (varRefId ref)
       | .field _ op => lowerAddressOfExpr op
       | .index _ op => lowerAddressOfExpr op
+      | .pointer _ (.deref _ exp _) => lowerExpr exp
+      | .pointer _ _ => .unsupported "reference to pointer assignee without dereference operand"
   | .old _ operand => .old (lowerExpr operand)
   | .deref _ exp typ => .deref (lowerExpr exp) (lowerTy typ)
   | .fieldRef _ recv field =>

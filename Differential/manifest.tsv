@@ -38,3 +38,6 @@ plain/map-bool-keys	Differential/plain/map-bool-keys	artifacts/gobra-smoke/work/
 plain/map-literal-basic	Differential/plain/map-literal-basic	artifacts/gobra-smoke/work/features/map-literal-basic/map-literal-basic.gobra.internal.json	mapLiteralBasic_bda1d7d_F	-	ok	maps,literals,indexing,len	-
 plain/map-literal-empty	Differential/plain/map-literal-empty	artifacts/gobra-smoke/work/features/map-literal-empty/map-literal-empty.gobra.internal.json	mapLiteralEmpty_bda1d7d_F	-	ok	maps,literals,empty,equality	-
 plain/map-literal-bool	Differential/plain/map-literal-bool	artifacts/gobra-smoke/work/features/map-literal-bool/map-literal-bool.gobra.internal.json	mapLiteralBool_bda1d7d_F	-	ok	maps,literals,bools	-
+plain/string-basic	Differential/plain/string-basic	artifacts/gobra-smoke/work/features/string-basic/string-basic.gobra.internal.json	stringBasic_bda1d7d_F	-	ok	strings,literals,len,equality,concat	-
+plain/string-call	Differential/plain/string-call	artifacts/gobra-smoke/work/features/string-call/string-call.gobra.internal.json	stringCall_bda1d7d_F	-	ok	strings,calls,returns	-
+plain/string-pointer	Differential/plain/string-pointer	artifacts/gobra-smoke/work/features/string-pointer/string-pointer.gobra.internal.json	stringPointer_bda1d7d_F	-	ok	strings,pointers,assignment	-

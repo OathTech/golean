@@ -24,9 +24,9 @@ private def knownTagNames : List String := [
   "Label", "LabelProxy", "Length", "LessCmp", "LocalVar", "MPredicate",
   "MPredicateAccess", "MPredicateProxy", "MakeMap", "MakeSlice", "Method", "MethodBody", "MethodBodySeqn",
   "MethodCall", "MethodProxy", "Mod", "Mul", "Negation", "NewMapLit", "NewSliceLit", "NilLit", "NonItfTupleTerminationMeasure",
-  "None", "Old", "Or", "Out", "PointerT", "Predicate", "Program", "PureMethod",
+  "None", "Old", "Or", "Out", "Pointer", "PointerT", "Predicate", "Program", "PureMethod",
   "PureMethodCall", "Ref", "Return", "SafeMapLookup", "SepAnd", "Seqn", "Single", "SingleAss", "Slice", "Some",
-  "SliceT", "StringT", "StructLit", "StructT", "Sub", "Tuple2", "UnboundedInteger", "UneqCmp", "Var", "While",
+  "SliceT", "StringLit", "StringT", "StructLit", "StructT", "Sub", "Tuple2", "UnboundedInteger", "UneqCmp", "Var", "While",
   "WildcardPerm"
 ]
 
@@ -153,6 +153,7 @@ mutual
     | var (source : Source) (op : VarRef)
     | field (source : Source) (op : Expr)
     | index (source : Source) (op : Expr)
+    | pointer (source : Source) (op : Expr)
     deriving Repr, BEq
 
   structure ArrayLitElem where
@@ -169,6 +170,7 @@ mutual
     | var (ref : VarRef)
     | nilLit (source : Source) (typ : Ty)
     | intLit (source : Source) (value : Int) (kind : IntegerKind) (base : Nat)
+    | stringLit (source : Source) (value : String)
     | boolLit (source : Source) (value : Bool)
     | add (source : Source) (left right : Expr)
     | sub (source : Source) (left right : Expr)
@@ -607,6 +609,11 @@ mutual
         return .index
           (← decodeSource s!"{path}.source" (← GoLean.StrictJson.field path obj "source"))
           (← decodeExpr s!"{path}.op" (← GoLean.StrictJson.field path obj "op"))
+    | "Pointer" =>
+        let obj ← taggedObj path json "Pointer" ["op", "source", "tag"]
+        return .pointer
+          (← decodeSource s!"{path}.source" (← GoLean.StrictJson.field path obj "source"))
+          (← decodeExpr s!"{path}.op" (← GoLean.StrictJson.field path obj "op"))
     | other => throw s!"{path}.tag: unsupported assignee tag {repr other}"
 
   partial def decodeArrayLitElem (path : String) (json : Json) : Except String ArrayLitElem := do
@@ -647,6 +654,11 @@ mutual
           (← GoLean.StrictJson.int s!"{path}.v" (← GoLean.StrictJson.field path obj "v"))
           (← decodeIntegerKind s!"{path}.kind" (← GoLean.StrictJson.field path obj "kind"))
           (← decodeDecimalBase s!"{path}.base" (← GoLean.StrictJson.field path obj "base"))
+    | "StringLit" =>
+        let obj ← taggedObj path json "StringLit" ["s", "source", "tag"]
+        return .stringLit
+          (← decodeSource s!"{path}.source" (← GoLean.StrictJson.field path obj "source"))
+          (← GoLean.StrictJson.string s!"{path}.s" (← GoLean.StrictJson.field path obj "s"))
     | "BoolLit" =>
         let obj ← taggedObj path json "BoolLit" ["b", "source", "tag"]
         return .boolLit

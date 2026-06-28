@@ -282,6 +282,31 @@ private def coreMapBasicFunction : GoCore.Func := {
     ]
 }
 
+private def coreStringFunction : GoCore.Func := {
+  name := "string_F",
+  args := #[],
+  results := #[coreParam "z"],
+  body := .block
+    #[
+      { id := "empty", typ := .string },
+      { id := "s", typ := .string },
+      { id := "t", typ := .string },
+      { id := "p", typ := .pointer .string }
+    ]
+    #[
+      .assign (.var "s") (.stringLit "hi"),
+      .assign (.var "t") (.add (.var "s") (.stringLit "!")),
+      .assign (.var "p") (.ref "t"),
+      .assign (.addr (.var "p")) (.stringLit "go"),
+      .assign (.var "z")
+        (.add
+          (.add
+            (.mul (.length (.var "empty")) (.intLit 100))
+            (.mul (.length (.var "s")) (.intLit 10)))
+          (.length (.deref (.var "p") .string)))
+    ]
+}
+
 private def coreNilMapAssignFunction : GoCore.Func := {
   name := "nil_map_assign_F",
   args := #[],
@@ -560,6 +585,7 @@ def main : IO UInt32 := do
   passed := passed && (← expectIntResult "GoCore full slice" (GoCore.runFunction 100 coreFullSliceFunction #[]) 5)
   passed := passed && (← expectIntResult "GoCore make slice" (GoCore.runFunction 100 coreMakeSliceFunction #[]) 537)
   passed := passed && (← expectIntResult "GoCore map basic" (GoCore.runFunction 100 coreMapBasicFunction #[]) 1070)
+  passed := passed && (← expectIntResult "GoCore string basic" (GoCore.runFunction 100 coreStringFunction #[]) 22)
   passed := passed && (← expectErrorStatus "GoCore nil dereference panic" (GoCore.runFunction 100 coreNilDerefFunction #[]) "panic")
   passed := passed && (← expectErrorStatus "GoCore divide by zero panic" (GoCore.runFunction 100 coreDivideByZeroFunction #[]) "panic")
   passed := passed && (← expectErrorStatus "GoCore index address bounds panic" (GoCore.runFunction 100 coreIndexAddrBoundsFunction #[]) "panic")

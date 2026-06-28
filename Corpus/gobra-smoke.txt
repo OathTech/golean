@@ -38,3 +38,6 @@ features/map-bool-keys features/map-bool-keys.gobra
 features/map-literal-basic features/map-literal-basic.gobra
 features/map-literal-empty features/map-literal-empty.gobra
 features/map-literal-bool features/map-literal-bool.gobra
+features/string-basic features/string-basic.gobra
+features/string-call features/string-call.gobra
+features/string-pointer features/string-pointer.gobra

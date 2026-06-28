@@ -44,6 +44,7 @@ inductive GoValue where
   | unit
   | bool (value : Bool)
   | int (value : Int)
+  | string (value : String)
   | addr (loc : Loc)
   | nil
   | struct (typeName : String) (fields : Array (String × GoValue))

@@ -1,0 +1,14 @@
+package pkg;
+
+func stringBasic() (z int) {
+	var empty string;
+	s := "hi";
+	t := s + "!";
+	z = len(empty) * 100 + len(s) * 10 + len(t);
+	if empty == "" {
+		z = z + 1000;
+	};
+	if t == "hi!" {
+		z = z + 10000;
+	};
+};

@@ -1,0 +1,13 @@
+package pkg;
+
+func stringId(s string) (r string) {
+	return s;
+};
+
+func stringCall() (z int) {
+	s := stringId("go");
+	if s == "go" {
+		z = z + 1;
+	};
+	z = z + len(s) * 10;
+};

@@ -7,6 +7,7 @@ open GoLean
 inductive Ty where
   | bool
   | int
+  | string
   | array (length : Nat) (elem : Ty)
   | slice (elem : Ty)
   | map (key value : Ty)
@@ -35,6 +36,7 @@ inductive Expr where
   | var (id : String)
   | nil (typ : Option Ty)
   | intLit (value : Int)
+  | stringLit (value : String)
   | boolLit (value : Bool)
   | add (left right : Expr)
   | sub (left right : Expr)
@@ -377,6 +379,7 @@ mutual
   partial def defaultValue (state : ExecState) : Ty → Except GoError GoValue
     | .bool => return .bool false
     | .int => return .int 0
+    | .string => return .string ""
     | .array length elem => do
         let mut values := #[]
         for _ in [:length] do
@@ -466,6 +469,7 @@ private def valueAsLoc : GoValue → Except GoError Loc
 private partial def valueEq : GoValue → GoValue → Except GoError Bool
   | .bool left, .bool right => return left == right
   | .int left, .int right => return left == right
+  | .string left, .string right => return left == right
   | .addr left, .addr right => return left == right
   | .nil, .nil => return true
   | .addr _, .nil => return false
@@ -543,9 +547,13 @@ mutual
         | .unsupported feature => unsupported s!"nil literal for {feature}"
         | other => stuck s!"nil literal for non-nilable type {repr other}"
     | .intLit value => return .int value
+    | .stringLit value => return .string value
     | .boolLit value => return .bool value
     | .add left right => do
-        return .int ((← valueAsInt (← evalExpr state left)) + (← valueAsInt (← evalExpr state right)))
+        match ← evalExpr state left, ← evalExpr state right with
+        | .int leftValue, .int rightValue => return .int (leftValue + rightValue)
+        | .string leftValue, .string rightValue => return .string (leftValue ++ rightValue)
+        | leftValue, rightValue => stuck s!"mismatched + operands: {repr leftValue} and {repr rightValue}"
     | .sub left right => do
         return .int ((← valueAsInt (← evalExpr state left)) - (← valueAsInt (← evalExpr state right)))
     | .mul left right => do
@@ -670,6 +678,7 @@ mutual
     | .length operand => do
         match ← evalExpr state operand with
         | .array values => return .int values.size
+        | .string value => return .int value.length
         | .slice slice => do
             validateSlice slice
             return .int slice.len
