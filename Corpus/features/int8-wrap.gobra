@@ -1,0 +1,8 @@
+package pkg;
+
+func int8Wrap() (z int8) {
+	var x int8;
+	x = 127;
+	x = x + 1;
+	z = x;
+}

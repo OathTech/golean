@@ -19,10 +19,44 @@ def arrayGet (values : Array GoValue) (index : Int) : Except GoError GoValue := 
   | some value => return value
   | none => panic "index out of range"
 
+partial def coerceStoredValue : GoValue → GoValue → Except GoError GoValue
+  | .int _ kind, .int value _ => return .int (kind.normalize value) kind
+  | .array oldValues, .array newValues => do
+      if oldValues.size != newValues.size then
+        stuck s!"array store length mismatch: {oldValues.size} vs {newValues.size}"
+      let mut out := #[]
+      let mut i := 0
+      for oldValue in oldValues do
+        match newValues[i]? with
+        | some newValue =>
+            out := out.push (← coerceStoredValue oldValue newValue)
+            i := i + 1
+        | none => stuck s!"missing array store value at index {i}"
+      return .array out
+  | .struct oldType oldFields, .struct newType newFields => do
+      if oldType != newType then
+        stuck s!"struct store type mismatch: {oldType} vs {newType}"
+      if oldFields.size != newFields.size then
+        stuck s!"struct store field count mismatch: {oldFields.size} vs {newFields.size}"
+      let mut out := #[]
+      let mut i := 0
+      for (oldName, oldValue) in oldFields do
+        match newFields[i]? with
+        | some (newName, newValue) =>
+            if oldName != newName then
+              stuck s!"struct store field mismatch: {oldName} vs {newName}"
+            out := out.push (oldName, (← coerceStoredValue oldValue newValue))
+            i := i + 1
+        | none => stuck s!"missing struct store value at field {i}"
+      return .struct oldType out
+  | _, value => return value
+
 def arraySet (values : Array GoValue) (index : Int) (value : GoValue) :
     Except GoError (Array GoValue) := do
   let i ← arrayIndexNat values index
-  return values.set! i value
+  match values[i]? with
+  | some old => return values.set! i (← coerceStoredValue old value)
+  | none => panic "index out of range"
 
 def natFromNonnegativeInt (context : String) (value : Int) : Except GoError Nat := do
   if value < 0 then
@@ -126,7 +160,11 @@ mutual
         | other => stuck s!"expected array base for index load, got {repr other}"
 
   partial def storeLoc (state : ExecState) : Loc → GoValue → Except GoError ExecState
-    | loc@(.base _), value =>
+    | loc@(.base _), value => do
+        let value ←
+          match Heap.lookup state.heap loc with
+          | some old => coerceStoredValue old value
+          | none => pure value
         return { state with heap := Heap.set state.heap loc value }
     | .field base typeName fieldName, value => do
         match ← loadLoc state base with
@@ -146,9 +184,51 @@ def lookup (state : ExecState) (name : String) : Except GoError GoValue := do
   loadLoc state (← lookupLoc state name)
 
 mutual
+  partial def normalizeValueForTy (state : ExecState) : Ty → GoValue → Except GoError GoValue
+    | .int kind, .int value _ => return .int (kind.normalize value) kind
+    | .int kind, value => stuck s!"expected {kind.name} value, got {repr value}"
+    | .array length elem, .array values => do
+        if values.size != length then
+          stuck s!"array value length mismatch: expected {length}, got {values.size}"
+        let mut out := #[]
+        for value in values do
+          out := out.push (← normalizeValueForTy state elem value)
+        return .array out
+    | .array length _, value => stuck s!"expected array({length}) value, got {repr value}"
+    | .defined name, value => do
+        match TypeEnv.lookup state.types name with
+        | some (.alias target) => normalizeValueForTy state target value
+        | some (.struct fields) => normalizeStructValueForFields state name fields value
+        | some (.unsupported feature) => unsupported s!"normalizing {feature}"
+        | none => unsupported s!"normalizing unknown defined type {name}"
+    | .unsupported feature, _ => unsupported s!"normalizing {feature}"
+    | _, value => return value
+
+  partial def normalizeStructValueForFields (state : ExecState) (name : String)
+      (fields : Array FieldDef) : GoValue → Except GoError GoValue
+    | .struct actual fieldsValue => do
+        if actual != name then
+          stuck s!"struct value type mismatch: expected {name}, got {actual}"
+        if fieldsValue.size != fields.size then
+          stuck s!"struct value field count mismatch: expected {fields.size}, got {fieldsValue.size}"
+        let mut out := #[]
+        let mut i := 0
+        for field in fields do
+          match fieldsValue[i]? with
+          | some (actualField, value) =>
+              if actualField != field.name then
+                stuck s!"struct value field mismatch: expected {field.name}, got {actualField}"
+              out := out.push (field.name, (← normalizeValueForTy state field.typ value))
+              i := i + 1
+          | none => stuck s!"missing struct field value at index {i}"
+        return .struct name out
+    | value => stuck s!"expected struct {name} value, got {repr value}"
+end
+
+mutual
   partial def defaultValue (state : ExecState) : Ty → Except GoError GoValue
     | .bool => return .bool false
-    | .int => return .int 0
+    | .int kind => return .int 0 kind
     | .string => return .string ""
     | .array length elem => do
         let mut values := #[]
@@ -183,7 +263,7 @@ mutual
             for field in fields do
               match args[i]? with
               | some value =>
-                  values := values.push (field.name, value)
+                  values := values.push (field.name, (← normalizeValueForTy state field.typ value))
                   i := i + 1
               | none => stuck s!"missing struct field literal value {i}"
             return .struct name values
@@ -206,7 +286,7 @@ mutual
       if key < 0 then
         stuck s!"negative GoCore array literal index: {key}"
       match values[key.toNat]? with
-      | some _ => values := values.set! key.toNat value
+      | some old => values := values.set! key.toNat (← coerceStoredValue old (← normalizeValueForTy state elem value))
       | none => stuck s!"GoCore array literal index out of range: {key}"
     return .array values
 end
@@ -216,7 +296,11 @@ def buildDefaultArrayValue (state : ExecState) (length : Nat) (elem : Ty) :
   buildArrayValue state length elem #[]
 
 def valueAsInt : GoValue → Except GoError Int
-  | .int value => return value
+  | .int value _ => return value
+  | other => stuck s!"expected int value, got {repr other}"
+
+def valueAsIntValue : GoValue → Except GoError (Int × IntKind)
+  | .int value kind => return (value, kind)
   | other => stuck s!"expected int value, got {repr other}"
 
 def valueAsBool : GoValue → Except GoError Bool
@@ -239,8 +323,8 @@ def valueAsLoc : GoValue → Except GoError Loc
 partial def valueEq : ExecState → Ty → GoValue → GoValue → Except GoError Bool
   | _, .bool, .bool left, .bool right => return left == right
   | _, .bool, left, right => stuck s!"bool equality expected bool operands, got {repr left} and {repr right}"
-  | _, .int, .int left, .int right => return left == right
-  | _, .int, left, right => stuck s!"int equality expected int operands, got {repr left} and {repr right}"
+  | _, .int _, .int left _, .int right _ => return left == right
+  | _, .int kind, left, right => stuck s!"{kind.name} equality expected int operands, got {repr left} and {repr right}"
   | _, .string, .string left, .string right => return left == right
   | _, .string, left, right => stuck s!"string equality expected string operands, got {repr left} and {repr right}"
   | _, .pointer _, .addr left, .addr right => return left == right
@@ -330,21 +414,21 @@ partial def mapEntryIndex? (state : ExecState) (keyTy : Ty) (entries : Array (Go
   return none
 
 def valueLess : GoValue → GoValue → Except GoError Bool
-  | .int left, .int right => return left < right
+  | .int left _, .int right _ => return left < right
   | .string left, .string right => return compare left right == .lt
   | left, right => stuck s!"mismatched < operands: {repr left} and {repr right}"
 
 def valueAtMost : GoValue → GoValue → Except GoError Bool
-  | .int left, .int right => return left <= right
+  | .int left _, .int right _ => return left <= right
   | .string left, .string right => return compare left right != .gt
   | left, right => stuck s!"mismatched <= operands: {repr left} and {repr right}"
 
 def valueGreater : GoValue → GoValue → Except GoError Bool
-  | .int left, .int right => return left > right
+  | .int left _, .int right _ => return left > right
   | .string left, .string right => return compare left right == .gt
   | left, right => stuck s!"mismatched > operands: {repr left} and {repr right}"
 
 def valueAtLeast : GoValue → GoValue → Except GoError Bool
-  | .int left, .int right => return left >= right
+  | .int left _, .int right _ => return left >= right
   | .string left, .string right => return compare left right != .lt
   | left, right => stuck s!"mismatched >= operands: {repr left} and {repr right}"

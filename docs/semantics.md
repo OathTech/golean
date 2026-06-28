@@ -162,28 +162,45 @@ heap   : address -> heap cell
 next   : next fresh address
 ```
 
-The current implementation has locals plus stable variable addresses. The next
-step is to split that into a real heap:
+The current implementation has heap-backed locals, path-like locations, typed
+errors, and execution outcomes:
 
 ```text
 Addr := Nat
 
+IntKind :=
+  | int | uint
+  | int8 | uint8 | int16 | uint16 | int32 | uint32 | int64 | uint64
+  | unbounded name
+
 Value :=
   | unit
   | bool Bool
-  | int Int
-  | addr Addr
+  | int Int IntKind
+  | string String
+  | addr Loc
   | nil
   | struct typeName (fields : fieldName -> Value)
-  | unsupported feature
+  | array (Array Value)
+  | slice SliceValue
+  | map MapValue
+  | mapData (Array (Value × Value))
 
-HeapCell :=
-  | value Value
+Loc :=
+  | base Addr
+  | field Loc typeName fieldName
+  | index Loc index
 ```
 
 This is deliberately more concrete than a proof-only separation model. It gives
 us executable tests early. The relational semantics and proof layers can later
 interpret the same heap into separation assertions.
+
+The executable interpreter currently uses a 64-bit policy for `int` and `uint`,
+matching the Gobra export and local differential harness. Fixed-width integer
+values are normalized on typed stores and arithmetic. The future relational
+semantics should make architecture-dependent `int`/`uint` width an explicit
+parameter rather than baking in this executable testing policy.
 
 ## Variables And Addresses
 

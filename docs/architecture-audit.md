@@ -114,9 +114,10 @@ The first mechanical split is now in place:
 - `GoLean/IR.lean`: compatibility import during the transition.
 
 The remaining risk is not file size alone; it is semantic coupling inside the
-new modules. Expression evaluation now returns an updated state and equality is
-type-directed for the current value forms, but values still need typed
-integer/interface structure.
+new modules. Expression evaluation now returns an updated state, equality is
+type-directed for the current value forms, and integers now carry kind
+information for the first fixed-width subset. Values still need interface
+structure.
 
 ### 2. Expression Evaluation Will Need Effects
 
@@ -137,23 +138,29 @@ assignment, call-assignment targets, map lookup, append, and bounds panics.
 
 ### 3. Integer Semantics Are Under-Specified
 
-`Ty.int` and `GoValue.int Int` are useful early, but full Go needs typed widths:
+GoCore now has an integer-kind descriptor on `Ty.int` and `GoValue.int`. The
+executable interpreter normalizes fixed-width integer values on typed stores
+and integer arithmetic. The current executable policy treats `int` and `uint`
+as 64-bit, matching the current Gobra export and local differential harness.
+
+This is the first slice, not the whole integer story. Full Go still needs:
 
 - signed and unsigned integer families;
 - `byte`/`uint8` and `rune`/`int32`;
 - conversion truncation and wraparound;
 - shift semantics;
 - overflow behavior for fixed-width values;
-- architecture-dependent `int`/`uint` width policy.
+- an architecture-dependent `int`/`uint` width policy in the future relation.
 
 This cannot be postponed too long because strings, bytes, arrays, indexes,
 maps, and constants all touch numeric typing.
 
-Recommended model:
+Current model:
 
 - keep mathematical constants separate from runtime integer values;
-- add an integer-kind descriptor to `Ty`;
-- store runtime integer values normalized to their kind;
+- carry an integer-kind descriptor in `Ty` and integer runtime values;
+- store runtime integer values normalized to their kind where typed context is
+  available;
 - make operations type-directed and fail closed when kind information is
   missing.
 
@@ -249,7 +256,8 @@ structured. Otherwise generator failures will be noisy rather than useful.
 
 Minimum prerequisites:
 
-- typed integer policy;
+- typed integer policy for generator-visible integer families beyond the first
+  fixed-width slice;
 - richer string/byte support;
 - function/method call expression support;
 - manifest feature filters;
@@ -261,8 +269,9 @@ Minimum prerequisites:
    integers.
 2. Done: convert expression evaluation to state-returning form before adding
    calls-in-expressions, channel receives, or effectful builtins.
-3. Introduce typed integer kinds and byte/rune values before string indexing and
-   numeric conversions.
+3. In progress: introduce typed integer kinds and byte/rune values before
+   string indexing and numeric conversions. The first fixed-width integer slice
+   is implemented; conversions, shifts, and string byte/rune operations remain.
 4. Done: make equality type-directed for the current value forms before
    interfaces and exact comparability tests.
 5. Replace Gobra type-definition recovery heuristics with explicit fork output

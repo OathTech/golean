@@ -67,9 +67,10 @@ Required fixes:
   out-of-bounds indexing as `panic`. Reserve `stuck` for internal semantic gaps
   where Go behavior is not yet modeled.
 - Replace raw `GoValue` equality with type-directed comparable equality.
-- Decide the integer story explicitly: model Go-sized signed/unsigned behavior
-  for supported integer types, or reject programs whose behavior depends on
-  widths not yet represented.
+- Continue making the integer story explicit. The first executable slice models
+  fixed-width integer normalization and uses a 64-bit `int`/`uint` policy for
+  differential testing; conversions, shifts, constants, and the future
+  architecture-parametric relation remain open.
 - Replace statement execution's plain state return with an explicit
   `ExecOutcome` covering normal completion, return, break, and continue, with
   typed errors representing panic, unsupported, stuck, and internal failures.
@@ -188,10 +189,11 @@ Goal: cover as much Go/Gobra code as practical.
 
 Status: started, but gated by the hardening pass above. The executable subset
 now includes scalar arithmetic and
-comparisons, boolean connectives, divide-by-zero panic classification, and a
-first fixed-size array subset: array types, array literals, indexing, indexed
-assignment, and array equality through GoCore values. The control-flow subset
-now includes `if`, explicit `return`, and unlabeled `break`/`continue`.
+comparisons, boolean connectives, divide-by-zero panic classification, a first
+typed-integer subset with fixed-width normalization, and a first fixed-size
+array subset: array types, array literals, indexing, indexed assignment, and
+array equality through GoCore values. The control-flow subset now includes
+`if`, explicit `return`, and unlabeled `break`/`continue`.
 Fixed-size array `len` and `cap` are supported for array values.
 Zero-value arrays, nested arrays, arrays through function parameters and
 results, pointer-to-array indexing/assignment, array-to-slice aliasing,
@@ -202,7 +204,9 @@ covered by differential smoke tests.
 Feature order should be driven by corpus failures and semantic dependencies,
 but the expected progression is:
 
-- integer and boolean operators with Go-sized words;
+- integer and boolean operators with Go-sized words. The first fixed-width
+  integer slice is in place; conversions, shifts, constants, and richer
+  byte/rune behavior should be added incrementally with differential tests;
 - arrays and slices, including indexing, slicing, append, len, and cap. Slices
   should follow `docs/slice-model.md`: descriptor values over backing
   locations, with append growth treated carefully because post-growth capacity
@@ -281,10 +285,9 @@ against GoCore-level specification hooks.
 
 ## Near-Term Work Queue
 
-1. Complete the architecture hardening gate from
-   `docs/architecture-audit.md`: split GoCore modules, make expression
-   evaluation state-returning, make equality type-directed, and add a small
-   relational semantics skeleton.
+1. Complete the remaining architecture hardening gate from
+   `docs/architecture-audit.md`: continue the typed-integer slice and add a
+   small relational semantics skeleton.
 2. Keep expanding deterministic differential coverage, but prefer cases that
    force representation decisions we need anyway: typed integers, bytes,
    strings, conversions, and comparability.

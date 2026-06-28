@@ -1,8 +1,10 @@
+import GoLean.GoCore.Value
+
 namespace GoLean.GoCore
 
 inductive Ty where
   | bool
-  | int
+  | int (kind : IntKind := .int)
   | string
   | array (length : Nat) (elem : Ty)
   | slice (elem : Ty)
@@ -31,7 +33,7 @@ inductive TypeDef where
 inductive Expr where
   | var (id : String)
   | nil (typ : Option Ty)
-  | intLit (value : Int)
+  | intLit (value : Int) (kind : IntKind := .unbounded "integer")
   | stringLit (value : String)
   | boolLit (value : Bool)
   | add (left right : Expr)
@@ -80,7 +82,7 @@ inductive Stmt where
   | newValue (target : Assignee) (value : Expr)
   | makeSlice (target : Assignee) (elem : Ty) (len : Expr) (cap : Option Expr)
   | makeMap (target : Assignee) (key value : Ty) (initialSpace : Option Expr)
-  | mapAssign (base index value : Expr) (keyTy : Ty)
+  | mapAssign (base index value : Expr) (keyTy valueTy : Ty)
   | mapLookup (target okTarget : Assignee) (base index : Expr) (keyTy valueTy : Ty)
   | appendSlice (target : Assignee) (slice elems : Expr)
   | copySlice (target : Assignee) (dst src : Expr)

@@ -8,9 +8,34 @@ private def varRefId : GoLean.GobraJson.VarRef → String
   | .inParam param => param.id
   | .outParam param => param.id
 
+private def lowerIntegerKind? : GoLean.GobraJson.IntegerKind → Option GoLean.GoCore.IntKind
+  | .unbounded name => some (.unbounded name)
+  | .bounded name bits _lower _upper =>
+      match name, bits with
+      | "int", 64 => some .int
+      | "uint", 64 => some .uint
+      | "int8", 8 => some .int8
+      | "byte", 8 => some .uint8
+      | "uint8", 8 => some .uint8
+      | "int16", 16 => some .int16
+      | "uint16", 16 => some .uint16
+      | "rune", 32 => some .int32
+      | "int32", 32 => some .int32
+      | "uint32", 32 => some .uint32
+      | "int64", 64 => some .int64
+      | "uint64", 64 => some .uint64
+      | _, _ => none
+
+private def lowerIntegerKindFeature : GoLean.GobraJson.IntegerKind → String
+  | .unbounded name => s!"unbounded integer kind {name}"
+  | .bounded name bits _ _ => s!"bounded integer kind {name}/{bits}"
+
 partial def lowerTy : GoLean.GobraJson.Ty → GoLean.GoCore.Ty
   | .bool _ => .bool
-  | .int _ _ => .int
+  | .int _ kind =>
+      match lowerIntegerKind? kind with
+      | some kind => .int kind
+      | none => .unsupported s!"unsupported {lowerIntegerKindFeature kind}"
   | .array length elem _ =>
       if length < 0 then
         .unsupported s!"negative array length {length}"
@@ -134,7 +159,10 @@ partial def lowerAssignee : GoLean.GobraJson.Assignee → GoLean.GoCore.Assignee
 partial def lowerExpr : GoLean.GobraJson.Expr → GoLean.GoCore.Expr
   | .var ref => .var (varRefId ref)
   | .nilLit _ typ => .nil (some (lowerTy typ))
-  | .intLit _ value _ _ => .intLit value
+  | .intLit _ value kind _ =>
+      match lowerIntegerKind? kind with
+      | some kind => .intLit value kind
+      | none => .unsupported s!"integer literal with unsupported {lowerIntegerKindFeature kind}"
   | .stringLit _ value => .stringLit value
   | .boolLit _ value => .boolLit value
   | .add _ left right => .add (lowerExpr left) (lowerExpr right)
@@ -261,7 +289,7 @@ partial def lowerNewMapLit (target : GoLean.GobraJson.Variable) (keys values : G
       (some (.intLit (Int.ofNat entries.size)))
   ]
   let stmts := entries.foldl
-    (fun stmts entry => stmts.push (.mapAssign (.var target.id) (lowerExpr entry.key) (lowerExpr entry.value) keyTy))
+    (fun stmts entry => stmts.push (.mapAssign (.var target.id) (lowerExpr entry.key) (lowerExpr entry.value) keyTy valueTy))
     init
   .seqn stmts
 
@@ -325,7 +353,7 @@ partial def lowerStmtWithReturnPost (returnPostprocessing : Array GoLean.GoCore.
         match left with
         | .index _ op =>
             match lowerMapIndex? op with
-            | some (base, index, keyTy, _valueTy) => .mapAssign base index (lowerExpr right) keyTy
+            | some (base, index, keyTy, valueTy) => .mapAssign base index (lowerExpr right) keyTy valueTy
             | none => .assign (lowerAssignee left) (lowerExpr right)
         | _ => .assign (lowerAssignee left) (lowerExpr right)
     | .new _ target expr => .newValue (.var target.id) (lowerExpr expr)

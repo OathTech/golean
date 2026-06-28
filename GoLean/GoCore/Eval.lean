@@ -8,6 +8,16 @@ abbrev EvalResult := GoValue × ExecState
 abbrev LocResult := Loc × ExecState
 abbrev LocsResult := Array Loc × ExecState
 
+def intBinaryResult (opName : String) (op : Int → Int → Int) (left right : GoValue) :
+    Except GoError GoValue := do
+  let (leftValue, leftKind) ← valueAsIntValue left
+  let (rightValue, rightKind) ← valueAsIntValue right
+  let kind ←
+    match IntKind.compatibleResult leftKind rightKind with
+    | some kind => pure kind
+    | none => stuck s!"mismatched {opName} integer kinds: {leftKind.name} and {rightKind.name}"
+  return .int (kind.normalize (op leftValue rightValue)) kind
+
 mutual
   partial def evalExpr (state : ExecState) : Expr → Except GoError EvalResult
     | .var id => return (← lookup state id, state)
@@ -19,40 +29,38 @@ mutual
         | .pointer _ => return (.nil, state)
         | .unsupported feature => unsupported s!"nil literal for {feature}"
         | other => stuck s!"nil literal for non-nilable type {repr other}"
-    | .intLit value => return (.int value, state)
+    | .intLit value kind => return (.int (kind.normalize value) kind, state)
     | .stringLit value => return (.string value, state)
     | .boolLit value => return (.bool value, state)
     | .add left right => do
         let leftPair ← evalExpr state left
         let rightPair ← evalExpr leftPair.2 right
         match leftPair.1, rightPair.1 with
-        | .int leftValue, .int rightValue => return (.int (leftValue + rightValue), rightPair.2)
+        | .int .., .int .. => return (← intBinaryResult "+" (· + ·) leftPair.1 rightPair.1, rightPair.2)
         | .string leftValue, .string rightValue => return (.string (leftValue ++ rightValue), rightPair.2)
         | leftValue, rightValue => stuck s!"mismatched + operands: {repr leftValue} and {repr rightValue}"
     | .sub left right => do
         let leftPair ← evalExpr state left
         let rightPair ← evalExpr leftPair.2 right
-        return (.int ((← valueAsInt leftPair.1) - (← valueAsInt rightPair.1)), rightPair.2)
+        return (← intBinaryResult "-" (· - ·) leftPair.1 rightPair.1, rightPair.2)
     | .mul left right => do
         let leftPair ← evalExpr state left
         let rightPair ← evalExpr leftPair.2 right
-        return (.int ((← valueAsInt leftPair.1) * (← valueAsInt rightPair.1)), rightPair.2)
+        return (← intBinaryResult "*" (· * ·) leftPair.1 rightPair.1, rightPair.2)
     | .div left right => do
         let leftPair ← evalExpr state left
         let rightPair ← evalExpr leftPair.2 right
-        let dividend ← valueAsInt leftPair.1
         let divisor ← valueAsInt rightPair.1
         if divisor == 0 then
           panic "integer divide by zero"
-        return (.int (Int.tdiv dividend divisor), rightPair.2)
+        return (← intBinaryResult "/" Int.tdiv leftPair.1 rightPair.1, rightPair.2)
     | .mod left right => do
         let leftPair ← evalExpr state left
         let rightPair ← evalExpr leftPair.2 right
-        let dividend ← valueAsInt leftPair.1
         let divisor ← valueAsInt rightPair.1
         if divisor == 0 then
           panic "integer divide by zero"
-        return (.int (Int.tmod dividend divisor), rightPair.2)
+        return (← intBinaryResult "%" Int.tmod leftPair.1 rightPair.1, rightPair.2)
     | .eqCmp typ left right => do
         let leftPair ← evalExpr state left
         let rightPair ← evalExpr leftPair.2 right
@@ -142,12 +150,13 @@ mutual
         let basePair ← evalExpr state base
         let map ← valueAsMap basePair.1
         let keyPair ← evalExpr basePair.2 index
+        let key ← normalizeValueForTy keyPair.2 keyTy keyPair.1
         match map.base with
         | none => return (← defaultValue keyPair.2 valueTy, keyPair.2)
         | some baseLoc =>
             match ← loadLoc keyPair.2 baseLoc with
             | .mapData entries =>
-                match ← mapEntryIndex? keyPair.2 keyTy entries keyPair.1 with
+                match ← mapEntryIndex? keyPair.2 keyTy entries key with
                 | some i =>
                     match entries[i]? with
                     | some (_, value) => return (value, keyPair.2)
@@ -321,19 +330,21 @@ mutual
             | none => stuck s!"missing map entry at index {i}"
         | none => return (← defaultValue state valueTy, false)
 
-  partial def execMapAssign (state : ExecState) (baseExpr keyExpr valueExpr : Expr) (keyTy : Ty) :
+  partial def execMapAssign (state : ExecState) (baseExpr keyExpr valueExpr : Expr) (keyTy valueTy : Ty) :
       Except GoError ExecState := do
     let basePair ← evalExpr state baseExpr
     let map ← valueAsMap basePair.1
     let keyPair ← evalExpr basePair.2 keyExpr
     let valuePair ← evalExpr keyPair.2 valueExpr
+    let key ← normalizeValueForTy valuePair.2 keyTy keyPair.1
+    let value ← normalizeValueForTy valuePair.2 valueTy valuePair.1
     match ← mapEntries valuePair.2 map with
     | none => panic "assignment to entry in nil map"
     | some (baseLoc, entries) =>
         let entries ←
-          match ← mapEntryIndex? valuePair.2 keyTy entries keyPair.1 with
-          | some i => pure (entries.set! i (keyPair.1, valuePair.1))
-          | none => pure (entries.push (keyPair.1, valuePair.1))
+          match ← mapEntryIndex? valuePair.2 keyTy entries key with
+          | some i => pure (entries.set! i (key, value))
+          | none => pure (entries.push (key, value))
         storeLoc valuePair.2 baseLoc (.mapData entries)
 
   partial def execMapLookup (state : ExecState) (target okTarget : Assignee)
@@ -343,7 +354,8 @@ mutual
     let basePair ← evalExpr okPair.2 baseExpr
     let map ← valueAsMap basePair.1
     let keyPair ← evalExpr basePair.2 keyExpr
-    let pair ← mapLookupValue keyPair.2 map keyPair.1 keyTy valueTy
+    let key ← normalizeValueForTy keyPair.2 keyTy keyPair.1
+    let pair ← mapLookupValue keyPair.2 map key keyTy valueTy
     let value := pair.1
     let ok := pair.2
     let current ← assignLoc keyPair.2 targetPair.1 value
@@ -449,7 +461,7 @@ mutual
     for param in func.args do
       match argValues[i]? with
       | some value =>
-          callState := callState.bindLocal param.id value
+          callState := callState.bindLocal param.id (← normalizeValueForTy callState param.typ value)
           i := i + 1
       | none => stuck s!"missing argument {i}"
     for result in func.results do
@@ -503,8 +515,8 @@ mutual
     | .makeSlice target elem len cap => return .normal (← execMakeSlice state target elem len cap)
     | .makeMap target key value initialSpace =>
         return .normal (← execMakeMap state target key value initialSpace)
-    | .mapAssign base index value keyTy =>
-        return .normal (← execMapAssign state base index value keyTy)
+    | .mapAssign base index value keyTy valueTy =>
+        return .normal (← execMapAssign state base index value keyTy valueTy)
     | .mapLookup target okTarget base index keyTy valueTy =>
         return .normal (← execMapLookup state target okTarget base index keyTy valueTy)
     | .appendSlice target slice elems => return .normal (← execAppendSlice state target slice elems)
@@ -544,7 +556,7 @@ def bindParams (state : ExecState) (params : Array Param) (args : Array GoValue)
   for param in params do
     match args[i]? with
     | some value =>
-        state := state.bindLocal param.id value
+        state := state.bindLocal param.id (← normalizeValueForTy state param.typ value)
         i := i + 1
     | none => stuck s!"missing argument {i}"
   return state

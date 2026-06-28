@@ -105,6 +105,19 @@ private def coreScalarFunction : GoCore.Func := {
     ]
 }
 
+private def coreInt8WrapFunction : GoCore.Func := {
+  name := "int8_wrap_F",
+  args := #[],
+  results := #[coreParam "z"],
+  body := .block
+    #[{ id := "x", typ := .int .int8 }]
+    #[
+      .assign (.var "x") (.intLit 127),
+      .assign (.var "x") (.add (.var "x") (.intLit 1)),
+      .assign (.var "z") (.var "x")
+    ]
+}
+
 private def coreArrayFunction : GoCore.Func := {
   name := "arrays_F",
   args := #[],
@@ -290,8 +303,8 @@ private def coreMapBasicFunction : GoCore.Func := {
     #[
       .makeMap (.var "m") .int .int (some (.intLit 2)),
       .assign (.var "alias") (.var "m"),
-      .mapAssign (.var "m") (.intLit 3) (.intLit 10) .int,
-      .mapAssign (.var "alias") (.intLit 3) (.intLit 7) .int,
+      .mapAssign (.var "m") (.intLit 3) (.intLit 10) .int .int,
+      .mapAssign (.var "alias") (.intLit 3) (.intLit 7) .int .int,
       .mapLookup (.var "v") (.var "ok") (.var "m") (.intLit 3) .int .int,
       .assign (.var "z")
         (.add
@@ -364,7 +377,7 @@ private def coreNilMapAssignFunction : GoCore.Func := {
   body := .block
     #[{ id := "m", typ := .map .int .int }]
     #[
-      .mapAssign (.var "m") (.intLit 1) (.intLit 2) .int
+      .mapAssign (.var "m") (.intLit 1) (.intLit 2) .int .int
     ]
 }
 
@@ -653,6 +666,7 @@ def main : IO UInt32 := do
   passed := passed && (← expectIntResult "GoCore shared-heap function call"
     (GoCore.runFunctionWithContext 100 coreCellTypes #[coreSetCellFunction, coreCallFunction] coreCallFunction #[]) 9)
   passed := passed && (← expectIntResult "GoCore scalar operators" (GoCore.runFunction 100 coreScalarFunction #[.int 10, .int 3]) 7)
+  passed := passed && (← expectIntResult "GoCore int8 wrap" (GoCore.runFunction 100 coreInt8WrapFunction #[]) (-128))
   passed := passed && (← expectIntResult "GoCore array indexing" (GoCore.runFunction 100 coreArrayFunction #[]) 11)
   passed := passed && (← expectIntResult "GoCore array len cap" (GoCore.runFunction 100 coreArrayLenCapFunction #[]) 6)
   passed := passed && (← expectIntResult "GoCore array default value" (GoCore.runFunction 100 coreArrayDefaultFunction #[]) 0)
