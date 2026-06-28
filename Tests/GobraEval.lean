@@ -51,7 +51,7 @@ private def corePointerIdentityFunction : GoCore.Func := {
       .assign (.var "br") (.ref "v"),
       .assign (.var "arr") (.ref "ar"),
       .assign (.var "brr") (.ref "br"),
-      .assign (.var "same") (.eqCmp (.var "arr") (.var "brr"))
+      .assign (.var "same") (.eqCmp (.pointer (.pointer .int)) (.var "arr") (.var "brr"))
     ]
 }
 
@@ -290,17 +290,17 @@ private def coreMapBasicFunction : GoCore.Func := {
     #[
       .makeMap (.var "m") .int .int (some (.intLit 2)),
       .assign (.var "alias") (.var "m"),
-      .mapAssign (.var "m") (.intLit 3) (.intLit 10),
-      .mapAssign (.var "alias") (.intLit 3) (.intLit 7),
-      .mapLookup (.var "v") (.var "ok") (.var "m") (.intLit 3) .int,
+      .mapAssign (.var "m") (.intLit 3) (.intLit 10) .int,
+      .mapAssign (.var "alias") (.intLit 3) (.intLit 7) .int,
+      .mapLookup (.var "v") (.var "ok") (.var "m") (.intLit 3) .int .int,
       .assign (.var "z")
         (.add
           (.add
             (.add
               (.mul (.length (.var "m")) (.intLit 1000))
-              (.mul (.mapGet (.var "nilMap") (.intLit 9) .int) (.intLit 100)))
+              (.mul (.mapGet (.var "nilMap") (.intLit 9) .int .int) (.intLit 100)))
             (.mul (.var "v") (.intLit 10)))
-          (.mapGet (.var "m") (.intLit 4) .int)
+          (.mapGet (.var "m") (.intLit 4) .int .int)
         )
     ]
 }
@@ -364,7 +364,7 @@ private def coreNilMapAssignFunction : GoCore.Func := {
   body := .block
     #[{ id := "m", typ := .map .int .int }]
     #[
-      .mapAssign (.var "m") (.intLit 1) (.intLit 2)
+      .mapAssign (.var "m") (.intLit 1) (.intLit 2) .int
     ]
 }
 
@@ -413,7 +413,7 @@ private def coreMismatchedEqualityFunction : GoCore.Func := {
   name := "mismatched_equality_F",
   args := #[],
   results := #[coreBoolParam "ok"],
-  body := .assign (.var "ok") (.eqCmp (.intLit 0) (.boolLit false))
+  body := .assign (.var "ok") (.eqCmp .int (.intLit 0) (.boolLit false))
 }
 
 private def coreShiftIndexFunction : GoCore.Func := {
@@ -504,11 +504,11 @@ private def coreBreakContinueFunction : GoCore.Func := {
       .while (.lessCmp (.var "i") (.intLit 5))
         (.seqn #[
           .assign (.var "i") (.add (.var "i") (.intLit 1)),
-          .ifThenElse (.eqCmp (.var "i") (.intLit 2))
+          .ifThenElse (.eqCmp .int (.var "i") (.intLit 2))
             .continueStmt
             (.seqn #[]),
           .assign (.var "z") (.add (.var "z") (.var "i")),
-          .ifThenElse (.eqCmp (.var "i") (.intLit 4))
+          .ifThenElse (.eqCmp .int (.var "i") (.intLit 4))
             .breakStmt
             (.seqn #[])
         ])

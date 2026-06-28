@@ -236,29 +236,35 @@ def valueAsLoc : GoValue → Except GoError Loc
   | .nil => panic "nil pointer dereference"
   | other => stuck s!"expected address value, got {repr other}"
 
-partial def valueEq : GoValue → GoValue → Except GoError Bool
-  | .bool left, .bool right => return left == right
-  | .int left, .int right => return left == right
-  | .string left, .string right => return left == right
-  | .addr left, .addr right => return left == right
-  | .nil, .nil => return true
-  | .addr _, .nil => return false
-  | .nil, .addr _ => return false
-  | .slice left, .nil => do
-      validateSlice left
-      return left.base.isNone
-  | .nil, .slice right => do
-      validateSlice right
-      return right.base.isNone
-  | .map left, .nil => return left.base.isNone
-  | .nil, .map right => return right.base.isNone
-  | .map left, .map right =>
-      match left.base, right.base with
-      | none, none => return true
-      | none, some _ => return false
-      | some _, none => return false
-      | some _, some _ => stuck "non-nil maps are not comparable"
-  | .slice left, .slice right => do
+partial def valueEq : ExecState → Ty → GoValue → GoValue → Except GoError Bool
+  | _, .bool, .bool left, .bool right => return left == right
+  | _, .bool, left, right => stuck s!"bool equality expected bool operands, got {repr left} and {repr right}"
+  | _, .int, .int left, .int right => return left == right
+  | _, .int, left, right => stuck s!"int equality expected int operands, got {repr left} and {repr right}"
+  | _, .string, .string left, .string right => return left == right
+  | _, .string, left, right => stuck s!"string equality expected string operands, got {repr left} and {repr right}"
+  | _, .pointer _, .addr left, .addr right => return left == right
+  | _, .pointer _, .nil, .nil => return true
+  | _, .pointer _, .addr _, .nil => return false
+  | _, .pointer _, .nil, .addr _ => return false
+  | _, .pointer _, left, right => stuck s!"pointer equality expected pointer/nil operands, got {repr left} and {repr right}"
+  | state, .array length elem, .array left, .array right => do
+      if left.size != length then
+        stuck s!"left array equality length mismatch: expected {length}, got {left.size}"
+      if right.size != length then
+        stuck s!"right array equality length mismatch: expected {length}, got {right.size}"
+      let mut i := 0
+      for leftValue in left do
+        match right[i]? with
+        | some rightValue =>
+            if !(← valueEq state elem leftValue rightValue) then
+              return false
+            i := i + 1
+        | none => stuck s!"missing array equality operand at index {i}"
+      return true
+  | _, .array length _, left, right =>
+      stuck s!"array equality expected array({length}) operands, got {repr left} and {repr right}"
+  | _, .slice _, .slice left, .slice right => do
       validateSlice left
       validateSlice right
       match left.base, right.base with
@@ -266,41 +272,59 @@ partial def valueEq : GoValue → GoValue → Except GoError Bool
       | none, some _ => return false
       | some _, none => return false
       | some _, some _ => stuck "non-nil slices are not comparable"
-  | .array left, .array right => do
-      if left.size != right.size then
-        stuck s!"array equality length mismatch: {left.size} vs {right.size}"
-      let mut i := 0
-      for leftValue in left do
-        match right[i]? with
-        | some rightValue =>
-            if !(← valueEq leftValue rightValue) then
-              return false
-            i := i + 1
-        | none => stuck s!"missing array equality operand at index {i}"
-      return true
-  | .struct leftType leftFields, .struct rightType rightFields => do
-      if leftType != rightType then
-        stuck s!"struct equality type mismatch: {leftType} vs {rightType}"
-      if leftFields.size != rightFields.size then
-        stuck s!"struct equality field count mismatch: {leftFields.size} vs {rightFields.size}"
-      let mut i := 0
-      for (leftName, leftValue) in leftFields do
-        match rightFields[i]? with
-        | some (rightName, rightValue) =>
-            if leftName != rightName then
-              stuck s!"struct equality field mismatch: {leftName} vs {rightName}"
-            if !(← valueEq leftValue rightValue) then
-              return false
-            i := i + 1
-        | none => stuck s!"missing struct equality operand at field {i}"
-      return true
-  | left, right => stuck s!"incomparable or mismatched equality operands: {repr left} and {repr right}"
+  | _, .slice _, .slice left, .nil => do
+      validateSlice left
+      return left.base.isNone
+  | _, .slice _, .nil, .slice right => do
+      validateSlice right
+      return right.base.isNone
+  | _, .slice _, left, right => stuck s!"slice equality expected slice/nil operands, got {repr left} and {repr right}"
+  | _, .map _ _, .map left, .map right =>
+      match left.base, right.base with
+      | none, none => return true
+      | none, some _ => return false
+      | some _, none => return false
+      | some _, some _ => stuck "non-nil maps are not comparable"
+  | _, .map _ _, .map left, .nil => return left.base.isNone
+  | _, .map _ _, .nil, .map right => return right.base.isNone
+  | _, .map _ _, left, right => stuck s!"map equality expected map/nil operands, got {repr left} and {repr right}"
+  | state, .defined name, left, right => do
+      match TypeEnv.lookup state.types name with
+      | some (.alias target) => valueEq state target left right
+      | some (.struct fields) =>
+          match left, right with
+          | .struct leftType leftFields, .struct rightType rightFields => do
+              if leftType != name then
+                stuck s!"left struct equality type mismatch: expected {name}, got {leftType}"
+              if rightType != name then
+                stuck s!"right struct equality type mismatch: expected {name}, got {rightType}"
+              if leftFields.size != fields.size then
+                stuck s!"left struct equality field count mismatch: expected {fields.size}, got {leftFields.size}"
+              if rightFields.size != fields.size then
+                stuck s!"right struct equality field count mismatch: expected {fields.size}, got {rightFields.size}"
+              let mut i := 0
+              for field in fields do
+                match leftFields[i]?, rightFields[i]? with
+                | some (leftName, leftValue), some (rightName, rightValue) =>
+                    if leftName != field.name then
+                      stuck s!"left struct equality field mismatch: expected {field.name}, got {leftName}"
+                    if rightName != field.name then
+                      stuck s!"right struct equality field mismatch: expected {field.name}, got {rightName}"
+                    if !(← valueEq state field.typ leftValue rightValue) then
+                      return false
+                    i := i + 1
+                | _, _ => stuck s!"missing struct equality operand at field {i}"
+              return true
+          | _, _ => stuck s!"struct equality expected struct {name} operands, got {repr left} and {repr right}"
+      | some (.unsupported feature) => unsupported s!"equality for {feature}"
+      | none => unsupported s!"equality for unknown defined type {name}"
+  | _, .unsupported feature, _, _ => unsupported s!"equality for {feature}"
 
-partial def mapEntryIndex? (entries : Array (GoValue × GoValue)) (key : GoValue) :
-    Except GoError (Option Nat) := do
+partial def mapEntryIndex? (state : ExecState) (keyTy : Ty) (entries : Array (GoValue × GoValue))
+    (key : GoValue) : Except GoError (Option Nat) := do
   let mut i := 0
   for (entryKey, _) in entries do
-    if ← valueEq entryKey key then
+    if ← valueEq state keyTy entryKey key then
       return some i
     i := i + 1
   return none

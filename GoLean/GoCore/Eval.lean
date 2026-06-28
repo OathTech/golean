@@ -53,14 +53,14 @@ mutual
         if divisor == 0 then
           panic "integer divide by zero"
         return (.int (Int.tmod dividend divisor), rightPair.2)
-    | .eqCmp left right => do
+    | .eqCmp typ left right => do
         let leftPair ← evalExpr state left
         let rightPair ← evalExpr leftPair.2 right
-        return (.bool (← valueEq leftPair.1 rightPair.1), rightPair.2)
-    | .neqCmp left right => do
+        return (.bool (← valueEq rightPair.2 typ leftPair.1 rightPair.1), rightPair.2)
+    | .neqCmp typ left right => do
         let leftPair ← evalExpr state left
         let rightPair ← evalExpr leftPair.2 right
-        return (.bool (!(← valueEq leftPair.1 rightPair.1)), rightPair.2)
+        return (.bool (!(← valueEq rightPair.2 typ leftPair.1 rightPair.1)), rightPair.2)
     | .atMostCmp left right => do
         let leftPair ← evalExpr state left
         let rightPair ← evalExpr leftPair.2 right
@@ -138,7 +138,7 @@ mutual
             let loc ← sliceIndexLoc slice indexValue
             return (← loadLoc indexPair.2 loc, indexPair.2)
         | other => stuck s!"expected array or slice value for index access, got {repr other}"
-    | .mapGet base index valueTy => do
+    | .mapGet base index keyTy valueTy => do
         let basePair ← evalExpr state base
         let map ← valueAsMap basePair.1
         let keyPair ← evalExpr basePair.2 index
@@ -147,7 +147,7 @@ mutual
         | some baseLoc =>
             match ← loadLoc keyPair.2 baseLoc with
             | .mapData entries =>
-                match ← mapEntryIndex? entries keyPair.1 with
+                match ← mapEntryIndex? keyPair.2 keyTy entries keyPair.1 with
                 | some i =>
                     match entries[i]? with
                     | some (_, value) => return (value, keyPair.2)
@@ -310,18 +310,18 @@ mutual
         | other => stuck s!"expected map data, got {repr other}"
 
   partial def mapLookupValue (state : ExecState) (map : MapValue) (key : GoValue)
-      (valueTy : Ty) : Except GoError (GoValue × Bool) := do
+      (keyTy valueTy : Ty) : Except GoError (GoValue × Bool) := do
     match ← mapEntries state map with
     | none => return (← defaultValue state valueTy, false)
     | some (_, entries) =>
-        match ← mapEntryIndex? entries key with
+        match ← mapEntryIndex? state keyTy entries key with
         | some i =>
             match entries[i]? with
             | some (_, value) => return (value, true)
             | none => stuck s!"missing map entry at index {i}"
         | none => return (← defaultValue state valueTy, false)
 
-  partial def execMapAssign (state : ExecState) (baseExpr keyExpr valueExpr : Expr) :
+  partial def execMapAssign (state : ExecState) (baseExpr keyExpr valueExpr : Expr) (keyTy : Ty) :
       Except GoError ExecState := do
     let basePair ← evalExpr state baseExpr
     let map ← valueAsMap basePair.1
@@ -331,19 +331,19 @@ mutual
     | none => panic "assignment to entry in nil map"
     | some (baseLoc, entries) =>
         let entries ←
-          match ← mapEntryIndex? entries keyPair.1 with
+          match ← mapEntryIndex? valuePair.2 keyTy entries keyPair.1 with
           | some i => pure (entries.set! i (keyPair.1, valuePair.1))
           | none => pure (entries.push (keyPair.1, valuePair.1))
         storeLoc valuePair.2 baseLoc (.mapData entries)
 
   partial def execMapLookup (state : ExecState) (target okTarget : Assignee)
-      (baseExpr keyExpr : Expr) (valueTy : Ty) : Except GoError ExecState := do
+      (baseExpr keyExpr : Expr) (keyTy valueTy : Ty) : Except GoError ExecState := do
     let targetPair ← evalAssigneeLoc state target
     let okPair ← evalAssigneeLoc targetPair.2 okTarget
     let basePair ← evalExpr okPair.2 baseExpr
     let map ← valueAsMap basePair.1
     let keyPair ← evalExpr basePair.2 keyExpr
-    let pair ← mapLookupValue keyPair.2 map keyPair.1 valueTy
+    let pair ← mapLookupValue keyPair.2 map keyPair.1 keyTy valueTy
     let value := pair.1
     let ok := pair.2
     let current ← assignLoc keyPair.2 targetPair.1 value
@@ -503,10 +503,10 @@ mutual
     | .makeSlice target elem len cap => return .normal (← execMakeSlice state target elem len cap)
     | .makeMap target key value initialSpace =>
         return .normal (← execMakeMap state target key value initialSpace)
-    | .mapAssign base index value =>
-        return .normal (← execMapAssign state base index value)
-    | .mapLookup target okTarget base index valueTy =>
-        return .normal (← execMapLookup state target okTarget base index valueTy)
+    | .mapAssign base index value keyTy =>
+        return .normal (← execMapAssign state base index value keyTy)
+    | .mapLookup target okTarget base index keyTy valueTy =>
+        return .normal (← execMapLookup state target okTarget base index keyTy valueTy)
     | .appendSlice target slice elems => return .normal (← execAppendSlice state target slice elems)
     | .copySlice target dst src => return .normal (← execCopySlice state target dst src)
     | .call targets name args => return .normal (← execFunctionCall fuel state targets name args)

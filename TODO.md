@@ -36,8 +36,8 @@ backlog items.
 
 ## Hardening Phase
 
-- Make equality type-directed before adding interfaces, function values, or
-  exact comparability semantics.
+- Extend type-directed equality for interfaces, function values, and exact
+  dynamic comparability panics once those value forms exist.
 - Add a small relational GoCore semantics skeleton before concurrency or
   Iris-facing proof rules.
 - Keep the executable interpreter factored so it can be related to a future
@@ -47,7 +47,6 @@ backlog items.
   `panic`, `unsupported`, `stuck`, and `internal`.
 - Classify nil pointer dereference and Go-defined runtime traps as `panic`, not
   `stuck`.
-- Replace raw `GoValue` equality with type-directed comparable equality.
 - Decide and encode the integer model: Go-sized signed/unsigned words where
   available, or explicit rejection of programs whose behavior depends on widths
   not yet modeled.
@@ -122,6 +121,8 @@ backlog items.
 - Moved concrete `GoError`, `Loc`, `SliceValue`, `MapValue`, and `GoValue`
   definitions into `GoLean/GoCore/Value.lean`; `GoLean/Runtime.lean` is now only
   a compatibility import.
+- Replaced raw value-shape equality with type-directed GoCore equality and
+  type-directed map-key comparison.
 - Replaced stable variable references with heap-backed locals.
 - Added `Loc.base` and `Loc.field` path-like locations.
 - Added load, store, address-of, dereference, struct field get, and field ref.

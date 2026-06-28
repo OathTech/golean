@@ -114,9 +114,9 @@ The first mechanical split is now in place:
 - `GoLean/IR.lean`: compatibility import during the transition.
 
 The remaining risk is not file size alone; it is semantic coupling inside the
-new modules. Expression evaluation now returns an updated state, but equality is
-still value-shape-directed and values still need typed integer/interface
-structure.
+new modules. Expression evaluation now returns an updated state and equality is
+type-directed for the current value forms, but values still need typed
+integer/interface structure.
 
 ### 2. Expression Evaluation Will Need Effects
 
@@ -157,21 +157,20 @@ Recommended model:
 - make operations type-directed and fail closed when kind information is
   missing.
 
-### 4. Equality Must Become Type-Directed
+### 4. Equality Is Now Type-Directed For Current Values
 
-`valueEq` is currently value-shape-directed. That is enough for current scalar,
-array, struct, slice-nil, and map-nil tests, but full Go equality depends on
-static comparability and dynamic interface values.
-
-Required direction:
+`valueEq` now carries static GoCore type information:
 
 ```lean
-valueEq : Ty -> GoValue -> GoValue -> Except GoError Bool
+valueEq : ExecState -> Ty -> GoValue -> GoValue -> Except GoError Bool
 ```
 
-or an operation that carries equivalent static type information. This becomes
-mandatory before interfaces, function values, named types, or exact
-comparability semantics.
+Map key lookup uses the same typed equality path. This removes the old raw
+value-shape equality path for scalars, pointers, arrays, structs, slices, maps,
+aliases, and named structs.
+
+Remaining work: full Go equality still needs interfaces, function values, and
+exact dynamic comparability panics once those value forms are introduced.
 
 ### 5. Type Information Is Too Thin
 
@@ -264,7 +263,8 @@ Minimum prerequisites:
    calls-in-expressions, channel receives, or effectful builtins.
 3. Introduce typed integer kinds and byte/rune values before string indexing and
    numeric conversions.
-4. Make equality type-directed before interfaces and exact comparability tests.
+4. Done: make equality type-directed for the current value forms before
+   interfaces and exact comparability tests.
 5. Replace Gobra type-definition recovery heuristics with explicit fork output
    when the next struct/named-type feature requires it.
 6. Add a relational semantics skeleton before concurrency or Iris-facing proof

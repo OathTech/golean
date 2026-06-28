@@ -142,9 +142,15 @@ partial def lowerExpr : GoLean.GobraJson.Expr → GoLean.GoCore.Expr
   | .mul _ left right => .mul (lowerExpr left) (lowerExpr right)
   | .div _ left right => .div (lowerExpr left) (lowerExpr right)
   | .mod _ left right => .mod (lowerExpr left) (lowerExpr right)
-  | .eqCmp _ left right => .eqCmp (lowerExpr left) (lowerExpr right)
+  | .eqCmp _ left right =>
+      match lowerExprTy? left with
+      | some typ => .eqCmp typ (lowerExpr left) (lowerExpr right)
+      | none => .unsupported "equality expression without operand type"
   | .ghostEqCmp .. => .unsupported "ghost equality expression"
-  | .uneqCmp _ left right => .neqCmp (lowerExpr left) (lowerExpr right)
+  | .uneqCmp _ left right =>
+      match lowerExprTy? left with
+      | some typ => .neqCmp typ (lowerExpr left) (lowerExpr right)
+      | none => .unsupported "inequality expression without operand type"
   | .atMostCmp _ left right => .atMostCmp (lowerExpr left) (lowerExpr right)
   | .atLeastCmp _ left right => .atLeastCmp (lowerExpr left) (lowerExpr right)
   | .lessCmp _ left right => .lessCmp (lowerExpr left) (lowerExpr right)
@@ -182,7 +188,7 @@ partial def lowerExpr : GoLean.GobraJson.Expr → GoLean.GoCore.Expr
   | .indexedExp _ base index _ =>
       match lowerExprTy? base with
       | some (.pointer arrayTy@(.array ..)) => .indexGet (.deref (lowerExpr base) arrayTy) (lowerExpr index)
-      | some (.map _ valueTy) => .mapGet (lowerExpr base) (lowerExpr index) valueTy
+      | some (.map keyTy valueTy) => .mapGet (lowerExpr base) (lowerExpr index) keyTy valueTy
       | _ => .indexGet (lowerExpr base) (lowerExpr index)
   | .slice _ base low high max baseUnderlyingType =>
       let loweredBase :=
@@ -214,10 +220,11 @@ private def sliceLiteralLength? (elems : Array GoLean.GobraJson.ArrayLitElem) : 
           if elem.key < (0 : Int) then none else some (max length (elem.key.toNat + 1)))
     (some 0)
 
-private def lowerMapIndex? : GoLean.GobraJson.Expr → Option (GoLean.GoCore.Expr × GoLean.GoCore.Expr × GoLean.GoCore.Ty)
+private def lowerMapIndex? : GoLean.GobraJson.Expr →
+    Option (GoLean.GoCore.Expr × GoLean.GoCore.Expr × GoLean.GoCore.Ty × GoLean.GoCore.Ty)
   | .indexedExp _ base index baseUnderlyingType =>
       match lowerTy baseUnderlyingType with
-      | .map _ valueTy => some (lowerExpr base, lowerExpr index, valueTy)
+      | .map keyTy valueTy => some (lowerExpr base, lowerExpr index, keyTy, valueTy)
       | _ => none
   | _ => none
 
@@ -254,7 +261,7 @@ partial def lowerNewMapLit (target : GoLean.GobraJson.Variable) (keys values : G
       (some (.intLit (Int.ofNat entries.size)))
   ]
   let stmts := entries.foldl
-    (fun stmts entry => stmts.push (.mapAssign (.var target.id) (lowerExpr entry.key) (lowerExpr entry.value)))
+    (fun stmts entry => stmts.push (.mapAssign (.var target.id) (lowerExpr entry.key) (lowerExpr entry.value) keyTy))
     init
   .seqn stmts
 
@@ -318,7 +325,7 @@ partial def lowerStmtWithReturnPost (returnPostprocessing : Array GoLean.GoCore.
         match left with
         | .index _ op =>
             match lowerMapIndex? op with
-            | some (base, index, _valueTy) => .mapAssign base index (lowerExpr right)
+            | some (base, index, keyTy, _valueTy) => .mapAssign base index (lowerExpr right) keyTy
             | none => .assign (lowerAssignee left) (lowerExpr right)
         | _ => .assign (lowerAssignee left) (lowerExpr right)
     | .new _ target expr => .newValue (.var target.id) (lowerExpr expr)
@@ -334,8 +341,8 @@ partial def lowerStmtWithReturnPost (returnPostprocessing : Array GoLean.GoCore.
     | .newMapLit _ target keys values entries => lowerNewMapLit target keys values entries
     | .safeMapLookup _ resTarget successTarget mapLookup =>
         match lowerMapIndex? mapLookup with
-        | some (base, index, valueTy) =>
-            .mapLookup (.var resTarget.id) (.var successTarget.id) base index valueTy
+        | some (base, index, keyTy, valueTy) =>
+            .mapLookup (.var resTarget.id) (.var successTarget.id) base index keyTy valueTy
         | none => .unsupported "SafeMapLookup with non-map lookup"
     | .goSliceAppend _ target slice elems =>
         .appendSlice (.var target.id) (lowerExpr slice) (lowerExpr elems)
