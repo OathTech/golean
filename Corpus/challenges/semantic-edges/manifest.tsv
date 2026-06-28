@@ -51,12 +51,12 @@ c11	default constant types	constants,typing,complex,runes	future	requires defaul
 c12	string index yields byte	strings,bytes,indexing	candidate	requires byte/uint8 value model distinct from int
 c13	string slicing by bytes	strings,slicing,unicode	candidate	requires string slice semantics and UTF-8 observation policy
 c14	len string counts bytes	strings,bytes,unicode	candidate	requires string byte length plus rune-count library policy
-c15	delete nil map	maps,nil,delete	candidate	requires delete builtin
+c15	delete nil map	maps,nil,delete	future	Go supports this, but current Gobra rejects delete as an unknown identifier; revisit with frontend work
 c16	map element not addressable	maps,structs,addressability	future	mostly compile-time/addressability; runtime pattern is copy-write
 c17	slices and maps only compare nil	slices,maps,comparability	candidate	partly covered for nil equality; non-nil comparisons should be stuck/compile errors
 c18	reslice beyond len up to cap	slices,reslice,capacity	active-covered	covered by full-slice and slice-capacity cases
 c19	arrays comparable	arrays,equality,copied-values	candidate	GoCore supports array equality; add direct differential fixture
-c20	make len greater than cap panics	slices,make,panic	candidate	requires make-slice runtime bounds case
+c20	make len greater than cap panics	slices,make,panic	active-covered	covered by make-slice-cap-bounds
 c21	slice header passed by value	slices,calls,append,aliasing	candidate	requires call-by-value slice header plus append aliasing
 c22	nil versus empty slice	slices,nil,empty	active-covered	covered by slice-nil-empty
 c23	int divide by zero versus float infinity	integers,floats,division,panic	future	int panic covered; floats/Inf/NaN open

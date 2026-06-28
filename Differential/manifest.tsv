@@ -17,6 +17,7 @@ plain/array-bounds	Differential/plain/array-bounds	artifacts/gobra-smoke/work/fe
 plain/array-copy	Differential/plain/array-copy	artifacts/gobra-smoke/work/features/array-copy/array-copy.gobra.internal.json	arrayCopy_bda1d7d_F	-	ok	arrays,value_copy,indexing,assignment	-
 plain/array-slice-alias	Differential/plain/array-slice-alias	artifacts/gobra-smoke/work/features/array-slice-alias/array-slice-alias.gobra.internal.json	arraySliceAlias_bda1d7d_F	-	ok	arrays,slices,aliasing,len,cap	-
 plain/make-slice	Differential/plain/make-slice	artifacts/gobra-smoke/work/features/make-slice/make-slice.gobra.internal.json	makeSlice_bda1d7d_F	-	ok	slices,make,indexing,len,cap	-
+plain/make-slice-cap-bounds	Differential/plain/make-slice-cap-bounds	artifacts/gobra-smoke/work/features/make-slice-cap-bounds/make-slice-cap-bounds.gobra.internal.json	makeSliceCapBounds_bda1d7d_F	-	panic	slices,make,panic	-
 plain/slice-literal	Differential/plain/slice-literal	artifacts/gobra-smoke/work/features/slice-literal/slice-literal.gobra.internal.json	sliceLiteral_bda1d7d_F	-	ok	slices,literals,indexing,len,cap	-
 plain/slice-copy	Differential/plain/slice-copy	artifacts/gobra-smoke/work/features/slice-copy/slice-copy.gobra.internal.json	sliceCopy_bda1d7d_F	-	ok	slices,copy,overlap	-
 plain/slice-append	Differential/plain/slice-append	artifacts/gobra-smoke/work/features/slice-append/slice-append.gobra.internal.json	sliceAppend_bda1d7d_F	-	ok	slices,append,aliasing	-
