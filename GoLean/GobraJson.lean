@@ -27,7 +27,7 @@ private def knownTagNames : List String := [
   "MPredicateAccess", "MPredicateProxy", "MakeMap", "MakeSlice", "Method", "MethodBody", "MethodBodySeqn",
   "MethodCall", "MethodProxy", "Mod", "Mul", "Negation", "New", "NewMapLit", "NewSliceLit", "NilLit", "NonItfTupleTerminationMeasure",
   "NoPermissionToRangeExpressionAnnotation", "None", "Old", "Or", "Out", "Pointer", "PointerT", "Predicate", "Program", "PureMethod",
-  "PureMethodCall", "Ref", "Return", "SafeMapLookup", "SepAnd", "Seqn", "Single", "SingleAss", "Slice", "Some",
+  "PureMethodCall", "Ref", "Return", "SafeMapLookup", "SepAnd", "Seqn", "ShiftLeft", "ShiftRight", "Single", "SingleAss", "Slice", "Some",
   "SliceT", "StringLit", "StringT", "StructLit", "StructT", "Sub", "Tuple2", "UnboundedInteger", "UneqCmp", "Var", "While",
   "WildcardPerm"
 ]
@@ -180,6 +180,8 @@ mutual
     | mul (source : Source) (left right : Expr)
     | div (source : Source) (left right : Expr)
     | mod (source : Source) (left right : Expr)
+    | shiftLeft (source : Source) (left right : Expr)
+    | shiftRight (source : Source) (left right : Expr)
     | eqCmp (source : Source) (left right : Expr)
     | ghostEqCmp (source : Source) (left right : Expr)
     | uneqCmp (source : Source) (left right : Expr)
@@ -697,6 +699,8 @@ mutual
     | "Mul" => binary "Mul" .mul
     | "Div" => binary "Div" .div
     | "Mod" => binary "Mod" .mod
+    | "ShiftLeft" => binary "ShiftLeft" .shiftLeft
+    | "ShiftRight" => binary "ShiftRight" .shiftRight
     | "EqCmp" => binary "EqCmp" .eqCmp
     | "GhostEqCmp" => binary "GhostEqCmp" .ghostEqCmp
     | "UneqCmp" => binary "UneqCmp" .uneqCmp

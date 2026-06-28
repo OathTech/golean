@@ -42,6 +42,8 @@ inductive Expr where
   | mul (left right : Expr)
   | div (left right : Expr)
   | mod (left right : Expr)
+  | shiftLeft (left right : Expr)
+  | shiftRight (left right : Expr)
   | eqCmp (typ : Ty) (left right : Expr)
   | neqCmp (typ : Ty) (left right : Expr)
   | atMostCmp (left right : Expr)

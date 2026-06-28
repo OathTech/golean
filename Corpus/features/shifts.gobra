@@ -1,0 +1,9 @@
+package pkg;
+
+func shifts() (x byte, y int8) {
+	x = 1;
+	x = x << 8;
+
+	y = 0 - 3;
+	y = y >> 1;
+}

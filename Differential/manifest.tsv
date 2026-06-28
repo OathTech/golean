@@ -49,6 +49,8 @@ plain/string-compare	Differential/plain/string-compare	artifacts/gobra-smoke/wor
 plain/string-byte-len	Differential/plain/string-byte-len	artifacts/gobra-smoke/work/features/string-byte-len/string-byte-len.gobra.internal.json	stringByteLen_bda1d7d_F	-	ok	strings,unicode,len,bytes	-
 plain/int8-wrap	Differential/plain/int8-wrap	artifacts/gobra-smoke/work/features/int8-wrap/int8-wrap.gobra.internal.json	int8Wrap_bda1d7d_F	-	ok	ints,widths,overflow	-
 plain/byte-conversion	Differential/plain/byte-conversion	artifacts/gobra-smoke/work/features/byte-conversion/byte-conversion.gobra.internal.json	byteConversion_bda1d7d_F	-	ok	ints,widths,conversions,overflow	-
+plain/shifts	Differential/plain/shifts	artifacts/gobra-smoke/work/features/shifts/shifts.gobra.internal.json	shifts_bda1d7d_F	-	ok	ints,widths,conversions,shifts,overflow	-
+plain/negative-shift	Differential/plain/negative-shift	artifacts/gobra-smoke/work/features/negative-shift/negative-shift.gobra.internal.json	negativeShift_bda1d7d_F	-	panic	ints,shifts,panic	-
 plain/new-basic	Differential/plain/new-basic	artifacts/gobra-smoke/work/features/new-basic/new-basic.gobra.internal.json	newBasic_bda1d7d_F	-	ok	new,pointers,arrays,indexing	-
 plain/new-nil-values	Differential/plain/new-nil-values	artifacts/gobra-smoke/work/features/new-nil-values/new-nil-values.gobra.internal.json	newNilValues_bda1d7d_F	-	ok	new,pointers,slices,maps,nil	-
 plain/new-struct	Differential/plain/new-struct	artifacts/gobra-smoke/work/features/new-struct/new-struct.gobra.internal.json	newStruct_bda1d7d_F	-	ok	new,pointers,structs,fields	-

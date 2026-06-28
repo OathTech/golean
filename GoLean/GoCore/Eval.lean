@@ -18,6 +18,34 @@ def intBinaryResult (opName : String) (op : Int → Int → Int) (left right : G
     | none => stuck s!"mismatched {opName} integer kinds: {leftKind.name} and {rightKind.name}"
   return .int (kind.normalize (op leftValue rightValue)) kind
 
+def shiftCountNat (count : GoValue) : Except GoError Nat := do
+  let count ← valueAsInt count
+  if count < 0 then
+    panic "negative shift count"
+  return count.toNat
+
+def arithmeticShiftRight (value : Int) (count : Nat) : Int :=
+  let divisor : Int := (2 : Int) ^ count
+  if value < 0 then
+    -Int.tdiv ((-value) + divisor - 1) divisor
+  else
+    Int.tdiv value divisor
+
+def intShiftLeftResult (left right : GoValue) : Except GoError GoValue := do
+  let (leftValue, leftKind) ← valueAsIntValue left
+  let count ← shiftCountNat right
+  return .int (leftKind.normalize (leftValue * ((2 : Int) ^ count))) leftKind
+
+def intShiftRightResult (left right : GoValue) : Except GoError GoValue := do
+  let (leftValue, leftKind) ← valueAsIntValue left
+  let count ← shiftCountNat right
+  let shifted :=
+    if leftKind.signed then
+      arithmeticShiftRight leftValue count
+    else
+      Int.tdiv leftValue ((2 : Int) ^ count)
+  return .int (leftKind.normalize shifted) leftKind
+
 mutual
   partial def evalExpr (state : ExecState) : Expr → Except GoError EvalResult
     | .var id => return (← lookup state id, state)
@@ -64,6 +92,14 @@ mutual
         if divisor == 0 then
           panic "integer divide by zero"
         return (← intBinaryResult "%" Int.tmod leftPair.1 rightPair.1, rightPair.2)
+    | .shiftLeft left right => do
+        let leftPair ← evalExpr state left
+        let rightPair ← evalExpr leftPair.2 right
+        return (← intShiftLeftResult leftPair.1 rightPair.1, rightPair.2)
+    | .shiftRight left right => do
+        let leftPair ← evalExpr state left
+        let rightPair ← evalExpr leftPair.2 right
+        return (← intShiftRightResult leftPair.1 rightPair.1, rightPair.2)
     | .eqCmp typ left right => do
         let leftPair ← evalExpr state left
         let rightPair ← evalExpr leftPair.2 right

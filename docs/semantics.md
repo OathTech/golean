@@ -199,8 +199,10 @@ interpret the same heap into separation assertions.
 The executable interpreter currently uses a 64-bit policy for `int` and `uint`,
 matching the Gobra export and local differential harness. Fixed-width integer
 values are normalized on typed stores, arithmetic, and integer-to-integer
-conversions. Non-integer conversions are explicitly unsupported until their Go
-semantics are modeled. The future relational semantics should make
+conversions. Shifts use the left operand's integer kind as the result kind,
+normalize fixed-width results, implement signed arithmetic right shift, and
+classify negative shift counts as panics. Non-integer conversions are explicitly
+unsupported until their Go semantics are modeled. The future relational semantics should make
 architecture-dependent `int`/`uint` width an explicit parameter rather than
 baking in this executable testing policy.
 

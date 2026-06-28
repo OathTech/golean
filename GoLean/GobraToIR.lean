@@ -97,6 +97,8 @@ partial def lowerExprTy? : GoLean.GobraJson.Expr → Option GoLean.GoCore.Ty
   | .stringLit .. => some .string
   | .boolLit .. => some .bool
   | .conversion _ newType _ => some (lowerTy newType)
+  | .shiftLeft _ left _ => lowerExprTy? left
+  | .shiftRight _ left _ => lowerExprTy? left
   | .deref _ _ typ =>
       match lowerTy typ with
       | .pointer elem => some elem
@@ -177,6 +179,8 @@ partial def lowerExpr : GoLean.GobraJson.Expr → GoLean.GoCore.Expr
   | .mul _ left right => .mul (lowerExpr left) (lowerExpr right)
   | .div _ left right => .div (lowerExpr left) (lowerExpr right)
   | .mod _ left right => .mod (lowerExpr left) (lowerExpr right)
+  | .shiftLeft _ left right => .shiftLeft (lowerExpr left) (lowerExpr right)
+  | .shiftRight _ left right => .shiftRight (lowerExpr left) (lowerExpr right)
   | .eqCmp _ left right =>
       match lowerExprTy? left with
       | some typ => .eqCmp typ (lowerExpr left) (lowerExpr right)

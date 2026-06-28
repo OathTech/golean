@@ -1,0 +1,7 @@
+package pkg;
+
+func negativeShift() (z int) {
+	var s int;
+	s = 0 - 1;
+	z = 1 << s;
+}

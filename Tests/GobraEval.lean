@@ -138,6 +138,28 @@ private def coreUnsupportedConversionFunction : GoCore.Func := {
   body := .assign (.var "z") (.convert .string (.intLit 65))
 }
 
+private def coreShiftFunction : GoCore.Func := {
+  name := "shift_F",
+  args := #[],
+  results := #[coreParam "z"],
+  body := .block
+    #[{ id := "x", typ := .int .uint8 }, { id := "y", typ := .int .int8 }]
+    #[
+      .assign (.var "x") (.intLit 1),
+      .assign (.var "x") (.shiftLeft (.var "x") (.intLit 8)),
+      .assign (.var "y") (.intLit (-3)),
+      .assign (.var "y") (.shiftRight (.var "y") (.intLit 1)),
+      .assign (.var "z") (.add (.mul (.convert .int (.var "x")) (.intLit 10)) (.convert .int (.var "y")))
+    ]
+}
+
+private def coreNegativeShiftFunction : GoCore.Func := {
+  name := "negative_shift_F",
+  args := #[],
+  results := #[coreParam "z"],
+  body := .assign (.var "z") (.shiftLeft (.intLit 1) (.intLit (-1)))
+}
+
 private def coreArrayFunction : GoCore.Func := {
   name := "arrays_F",
   args := #[],
@@ -689,6 +711,8 @@ def main : IO UInt32 := do
   passed := passed && (← expectIntResult "GoCore int8 wrap" (GoCore.runFunction 100 coreInt8WrapFunction #[]) (-128))
   passed := passed && (← expectIntResult "GoCore byte conversion wrap" (GoCore.runFunction 100 coreByteConversionFunction #[]) 44)
   passed := passed && (← expectErrorStatus "GoCore unsupported non-integer conversion" (GoCore.runFunction 100 coreUnsupportedConversionFunction #[]) "unsupported")
+  passed := passed && (← expectIntResult "GoCore shifts" (GoCore.runFunction 100 coreShiftFunction #[]) (-2))
+  passed := passed && (← expectErrorStatus "GoCore negative shift panic" (GoCore.runFunction 100 coreNegativeShiftFunction #[]) "panic")
   passed := passed && (← expectIntResult "GoCore array indexing" (GoCore.runFunction 100 coreArrayFunction #[]) 11)
   passed := passed && (← expectIntResult "GoCore array len cap" (GoCore.runFunction 100 coreArrayLenCapFunction #[]) 6)
   passed := passed && (← expectIntResult "GoCore array default value" (GoCore.runFunction 100 coreArrayDefaultFunction #[]) 0)

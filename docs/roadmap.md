@@ -70,8 +70,8 @@ Required fixes:
 - Continue making the integer story explicit. The first executable slice models
   fixed-width integer normalization and uses a 64-bit `int`/`uint` policy for
   differential testing. A first integer-to-integer conversion slice is in
-  place; shifts, constants, broader conversions, and the future
-  architecture-parametric relation remain open.
+  place, as is a first shift slice; constants, bitwise operators, broader
+  conversions, and the future architecture-parametric relation remain open.
 - Replace statement execution's plain state return with an explicit
   `ExecOutcome` covering normal completion, return, break, and continue, with
   typed errors representing panic, unsupported, stuck, and internal failures.
@@ -192,7 +192,7 @@ Status: started, but gated by the hardening pass above. The executable subset
 now includes scalar arithmetic and
 comparisons, boolean connectives, divide-by-zero panic classification, a first
 typed-integer subset with fixed-width normalization and integer-to-integer
-conversions, and a first fixed-size
+conversions/shifts, and a first fixed-size
 array subset: array types, array literals, indexing, indexed assignment, and
 array equality through GoCore values. The control-flow subset now includes
 `if`, explicit `return`, and unlabeled `break`/`continue`.
@@ -208,8 +208,9 @@ but the expected progression is:
 
 - integer and boolean operators with Go-sized words. The first fixed-width
   integer slice is in place, including first integer-to-integer conversions;
-  shifts, constants, broader conversions, and richer byte/rune behavior should
-  be added incrementally with differential tests;
+  first shift support is also in place. Constants, bitwise operators, broader
+  conversions, and richer byte/rune behavior should be added incrementally with
+  differential tests;
 - arrays and slices, including indexing, slicing, append, len, and cap. Slices
   should follow `docs/slice-model.md`: descriptor values over backing
   locations, with append growth treated carefully because post-growth capacity
@@ -289,8 +290,9 @@ against GoCore-level specification hooks.
 ## Near-Term Work Queue
 
 1. Complete the remaining architecture hardening gate from
-   `docs/architecture-audit.md`: continue the typed-integer slice with shifts
-   and byte/string operations, and add a small relational semantics skeleton.
+   `docs/architecture-audit.md`: continue the typed-integer slice with bitwise
+   operators and byte/string operations, and add a small relational semantics
+   skeleton.
 2. Keep expanding deterministic differential coverage, but prefer cases that
    force representation decisions we need anyway: typed integers, bytes,
    strings, conversions, and comparability.
