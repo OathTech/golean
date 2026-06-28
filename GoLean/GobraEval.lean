@@ -1,3 +1,4 @@
+import GoLean.GoCore.Eval
 import GoLean.GobraToIR
 
 namespace GoLean.GobraEval

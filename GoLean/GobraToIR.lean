@@ -1,5 +1,5 @@
 import GoLean.GobraJson
-import GoLean.IR
+import GoLean.GoCore.Syntax
 
 namespace GoLean.GobraToIR
 

@@ -36,10 +36,10 @@ backlog items.
 
 ## Hardening Phase
 
-- Split `GoLean/IR.lean` into GoCore syntax, values, state, operations, and
-  executable evaluation modules before adding interfaces, typed integers, or
-  concurrency. Keep `GoLean/IR.lean` as a compatibility import during the
-  transition.
+- Finish value-layer factoring: `GoLean/GoCore/Value.lean` currently provides
+  the value-layer import point, while concrete runtime values still live in
+  `GoLean/Runtime.lean`. Move/reshape them when typed integers, bytes, runes,
+  and interfaces are introduced.
 - Convert expression evaluation to return an updated state, or move it into an
   equivalent state monad, before adding calls-in-expressions, channel receives,
   or effectful builtins.
@@ -120,6 +120,9 @@ backlog items.
 
 ## Completed GoCore Memory Milestone Items
 
+- Split the former monolithic `GoLean/IR.lean` into GoCore syntax, value import
+  point, state, operations, and executable evaluation modules. `GoLean/IR.lean`
+  remains as a compatibility import.
 - Replaced stable variable references with heap-backed locals.
 - Added `Loc.base` and `Loc.field` path-like locations.
 - Added load, store, address-of, dereference, struct field get, and field ref.

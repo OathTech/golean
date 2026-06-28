@@ -82,7 +82,7 @@ Schema drift or unknown tags should remain loud failures.
 
 ### 1. GoCore Is Too Monolithic
 
-`GoLean/IR.lean` currently contains:
+Before the first hardening refactor, `GoLean/IR.lean` contained:
 
 - syntax;
 - type definitions;
@@ -99,20 +99,24 @@ interfaces, methods, packages, typed integers, strings, channels, and relational
 rules into one file would make semantic review harder and increase accidental
 coupling.
 
-Required refactor before the next large feature family:
+The first mechanical split is now in place:
 
 - `GoLean/GoCore/Syntax.lean`: `Ty`, `Expr`, `Assignee`, `Stmt`, `Func`,
   `Program`.
-- `GoLean/GoCore/Value.lean`: `GoValue`, `SliceValue`, `MapValue`, future
-  typed integer and interface values.
+- `GoLean/GoCore/Value.lean`: value-layer import point. Concrete `GoValue`,
+  `SliceValue`, and `MapValue` definitions still live in `GoLean/Runtime.lean`
+  until the typed integer/interface refactor gives them their next shape.
 - `GoLean/GoCore/State.lean`: `ExecState`, locals, heap operations, allocation.
 - `GoLean/GoCore/Ops.lean`: default values, equality, comparison, indexing,
   slicing, map helpers.
 - `GoLean/GoCore/Eval.lean`: executable expression/statement/function
   evaluation.
-- keep `GoLean/IR.lean` as a compatibility import during the transition.
+- `GoLean/IR.lean`: compatibility import during the transition.
 
-This should be mechanical and should not change semantics.
+The remaining risk is not file size alone; it is semantic coupling inside the
+new modules. In particular, expression evaluation is still value-only, equality
+is still value-shape-directed, and runtime values still need typed
+integer/interface structure.
 
 ### 2. Expression Evaluation Will Need Effects
 
