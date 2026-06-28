@@ -1,0 +1,11 @@
+package pkg;
+
+func newBasic() (z int) {
+	p := new(int);
+	z = z + *p;
+	*p = 7;
+	z = z + *p * 10;
+	a := new([2]int);
+	(*a)[1] = 3;
+	z = z + (*a)[1] * 100;
+};

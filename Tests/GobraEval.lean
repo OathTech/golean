@@ -307,6 +307,26 @@ private def coreStringFunction : GoCore.Func := {
     ]
 }
 
+private def coreNewFunction : GoCore.Func := {
+  name := "new_F",
+  args := #[],
+  results := #[coreParam "z"],
+  body := .block
+    #[
+      { id := "p", typ := .pointer .int },
+      { id := "s", typ := .pointer (.slice .int) }
+    ]
+    #[
+      .newValue (.var "p") (.defaultValue .int),
+      .assign (.addr (.var "p")) (.intLit 7),
+      .newValue (.var "s") (.defaultValue (.slice .int)),
+      .assign (.var "z")
+        (.add
+          (.mul (.deref (.var "p") .int) (.intLit 10))
+          (.length (.deref (.var "s") (.slice .int))))
+    ]
+}
+
 private def coreNilMapAssignFunction : GoCore.Func := {
   name := "nil_map_assign_F",
   args := #[],
@@ -586,6 +606,7 @@ def main : IO UInt32 := do
   passed := passed && (← expectIntResult "GoCore make slice" (GoCore.runFunction 100 coreMakeSliceFunction #[]) 537)
   passed := passed && (← expectIntResult "GoCore map basic" (GoCore.runFunction 100 coreMapBasicFunction #[]) 1070)
   passed := passed && (← expectIntResult "GoCore string basic" (GoCore.runFunction 100 coreStringFunction #[]) 22)
+  passed := passed && (← expectIntResult "GoCore new allocation" (GoCore.runFunction 100 coreNewFunction #[]) 70)
   passed := passed && (← expectErrorStatus "GoCore nil dereference panic" (GoCore.runFunction 100 coreNilDerefFunction #[]) "panic")
   passed := passed && (← expectErrorStatus "GoCore divide by zero panic" (GoCore.runFunction 100 coreDivideByZeroFunction #[]) "panic")
   passed := passed && (← expectErrorStatus "GoCore index address bounds panic" (GoCore.runFunction 100 coreIndexAddrBoundsFunction #[]) "panic")

@@ -254,6 +254,7 @@ partial def lowerStmtWithReturnPost (returnPostprocessing : Array GoLean.GoCore.
             | some (base, index, _valueTy) => .mapAssign base index (lowerExpr right)
             | none => .assign (lowerAssignee left) (lowerExpr right)
         | _ => .assign (lowerAssignee left) (lowerExpr right)
+    | .new _ target expr => .newValue (.var target.id) (lowerExpr expr)
     | .makeSlice _ target typeParam lenArg capArg =>
         match lowerTy typeParam with
         | .slice elem => .makeSlice (.var target.id) elem (lowerExpr lenArg) (capArg.map lowerExpr)

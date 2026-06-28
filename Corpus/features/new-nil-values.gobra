@@ -1,0 +1,12 @@
+package pkg;
+
+func newNilValues() (z int) {
+	s := new([]int);
+	if *s == nil {
+		z = z + 1;
+	};
+	m := new(map[int]int);
+	if *m == nil {
+		z = z + 10;
+	};
+};

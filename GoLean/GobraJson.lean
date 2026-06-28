@@ -23,7 +23,7 @@ private def knownTagNames : List String := [
   "If", "Index", "IndexedExp", "Initialization", "IntLit", "IntT", "InterfaceT", "Internal", "ItfTupleTerminationMeasure",
   "Label", "LabelProxy", "Length", "LessCmp", "LocalVar", "MPredicate",
   "MPredicateAccess", "MPredicateProxy", "MakeMap", "MakeSlice", "Method", "MethodBody", "MethodBodySeqn",
-  "MethodCall", "MethodProxy", "Mod", "Mul", "Negation", "NewMapLit", "NewSliceLit", "NilLit", "NonItfTupleTerminationMeasure",
+  "MethodCall", "MethodProxy", "Mod", "Mul", "Negation", "New", "NewMapLit", "NewSliceLit", "NilLit", "NonItfTupleTerminationMeasure",
   "None", "Old", "Or", "Out", "Pointer", "PointerT", "Predicate", "Program", "PureMethod",
   "PureMethodCall", "Ref", "Return", "SafeMapLookup", "SepAnd", "Seqn", "Single", "SingleAss", "Slice", "Some",
   "SliceT", "StringLit", "StringT", "StructLit", "StructT", "Sub", "Tuple2", "UnboundedInteger", "UneqCmp", "Var", "While",
@@ -224,6 +224,7 @@ mutual
     | block (source : Source) (decls : Array Decl) (stmts : Array Stmt)
     | initialization (source : Source) (left : Variable)
     | singleAss (source : Source) (left : Assignee) (right : Expr)
+    | new (source : Source) (target : Variable) (expr : Expr)
     | makeSlice (source : Source) (target : Variable) (typeParam : Ty)
         (lenArg : Expr) (capArg : Option Expr)
     | makeMap (source : Source) (target : Variable) (typeParam : Ty)
@@ -845,6 +846,12 @@ mutual
           (← decodeSource s!"{path}.source" (← GoLean.StrictJson.field path obj "source"))
           (← decodeAssignee s!"{path}.left" (← GoLean.StrictJson.field path obj "left"))
           (← decodeExpr s!"{path}.right" (← GoLean.StrictJson.field path obj "right"))
+    | "New" =>
+        let obj ← taggedObj path json "New" ["expr", "source", "tag", "target"]
+        return .new
+          (← decodeSource s!"{path}.source" (← GoLean.StrictJson.field path obj "source"))
+          (← decodeVariableWithTag "LocalVar" s!"{path}.target" (← GoLean.StrictJson.field path obj "target"))
+          (← decodeExpr s!"{path}.expr" (← GoLean.StrictJson.field path obj "expr"))
     | "MakeSlice" =>
         let obj ← taggedObj path json "MakeSlice" ["capArg", "lenArg", "source", "tag", "target", "typeParam"]
         return .makeSlice

@@ -80,6 +80,7 @@ inductive Stmt where
   | block (decls : Array Param) (stmts : Array Stmt)
   | initialization (var : Param)
   | assign (left : Assignee) (right : Expr)
+  | newValue (target : Assignee) (value : Expr)
   | makeSlice (target : Assignee) (elem : Ty) (len : Expr) (cap : Option Expr)
   | makeMap (target : Assignee) (key value : Ty) (initialSpace : Option Expr)
   | mapAssign (base index value : Expr)
@@ -759,6 +760,13 @@ mutual
       (values : Array GoValue) : Except GoError ExecState := do
     assignLocs state (← evalAssigneeLocs state targets) values
 
+  partial def execNewValue (state : ExecState) (target : Assignee) (valueExpr : Expr) :
+      Except GoError ExecState := do
+    let target ← evalAssigneeLoc state target
+    let value ← evalExpr state valueExpr
+    let (loc, state) := state.alloc value
+    assignLoc state target (.addr loc)
+
   partial def execMakeMap (state : ExecState) (target : Assignee) (_key _value : Ty)
       (initialSpace : Option Expr) : Except GoError ExecState := do
     let target ← evalAssigneeLoc state target
@@ -951,6 +959,7 @@ mutual
         let loc ← evalAssigneeLoc state left
         let value ← evalExpr state right
         return .normal (← assignLoc state loc value)
+    | .newValue target value => return .normal (← execNewValue state target value)
     | .makeSlice target elem len cap => return .normal (← execMakeSlice state target elem len cap)
     | .makeMap target key value initialSpace =>
         return .normal (← execMakeMap state target key value initialSpace)
