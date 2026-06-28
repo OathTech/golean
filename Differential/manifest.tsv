@@ -44,3 +44,4 @@ plain/string-pointer	Differential/plain/string-pointer	artifacts/gobra-smoke/wor
 plain/string-compare	Differential/plain/string-compare	artifacts/gobra-smoke/work/features/string-compare/string-compare.gobra.internal.json	stringCompare_bda1d7d_F	-	ok	strings,comparisons	-
 plain/new-basic	Differential/plain/new-basic	artifacts/gobra-smoke/work/features/new-basic/new-basic.gobra.internal.json	newBasic_bda1d7d_F	-	ok	new,pointers,arrays,indexing	-
 plain/new-nil-values	Differential/plain/new-nil-values	artifacts/gobra-smoke/work/features/new-nil-values/new-nil-values.gobra.internal.json	newNilValues_bda1d7d_F	-	ok	new,pointers,slices,maps,nil	-
+plain/new-struct	Differential/plain/new-struct	artifacts/gobra-smoke/work/features/new-struct/new-struct.gobra.internal.json	newStruct_bda1d7d_F	-	ok	new,pointers,structs,fields	-

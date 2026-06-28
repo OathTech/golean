@@ -1,0 +1,12 @@
+package pkg;
+
+type cell struct {
+	v int
+}
+
+func newStruct() (z int) {
+	p := new(cell);
+	z = z + p.v;
+	p.v = 9;
+	z = z + p.v * 10;
+};

@@ -54,6 +54,10 @@ private def typeNameOfTy? : GoLean.GoCore.Ty → Option String
   | .defined name => some name
   | _ => none
 
+private def pointerTypeNameOfTy? : GoLean.GoCore.Ty → Option String
+  | .pointer (.defined name) => some name
+  | _ => none
+
 private def varRefTy : GoLean.GobraJson.VarRef → GoLean.GobraJson.Ty
   | .local var => var.typ
   | .inParam param => param.typ
@@ -107,9 +111,15 @@ partial def lowerAddressOfExpr : GoLean.GobraJson.Expr → GoLean.GoCore.Expr
       | some (.pointer (.array ..)) => .indexAddr (lowerExpr base) (lowerExpr index)
       | _ => .indexAddr (lowerAddressOfExpr base) (lowerExpr index)
   | .fieldRef _ recv field =>
-      match (lowerExprTy? recv).bind typeNameOfTy? with
-      | some typeName => .fieldAddr (lowerAddressOfExpr recv) typeName field.name
-      | none => .unsupported "field address without defined receiver type"
+      match lowerExprTy? recv with
+      | some recvTy =>
+          match typeNameOfTy? recvTy with
+          | some typeName => .fieldAddr (lowerAddressOfExpr recv) typeName field.name
+          | none =>
+              match pointerTypeNameOfTy? recvTy with
+              | some typeName => .fieldAddr (lowerExpr recv) typeName field.name
+              | none => .unsupported "field address without defined receiver type"
+      | none => .unsupported "field address without receiver type"
   | .address _ operand => lowerAddressOfExpr operand
   | .old _ operand => lowerAddressOfExpr operand
   | _ => .unsupported "address of unsupported expression"
@@ -151,9 +161,15 @@ partial def lowerExpr : GoLean.GobraJson.Expr → GoLean.GoCore.Expr
   | .old _ operand => .old (lowerExpr operand)
   | .deref _ exp typ => .deref (lowerExpr exp) (lowerTy typ)
   | .fieldRef _ recv field =>
-      match (lowerExprTy? recv).bind typeNameOfTy? with
-      | some typeName => .fieldGet (lowerExpr recv) typeName field.name
-      | none => .unsupported "field reference without defined receiver type"
+      match lowerExprTy? recv with
+      | some recvTy =>
+          match typeNameOfTy? recvTy with
+          | some typeName => .fieldGet (lowerExpr recv) typeName field.name
+          | none =>
+              match pointerTypeNameOfTy? recvTy with
+              | some typeName => .fieldGet (.deref (lowerExpr recv) (.defined typeName)) typeName field.name
+              | none => .unsupported "field reference without defined receiver type"
+      | none => .unsupported "field reference without receiver type"
   | .address _ op => lowerAddressOfExpr op
   | .structLit _ typ args => .structLit (lowerTy typ) (args.map lowerExpr)
   | .arrayLit _ length elem args =>
@@ -303,15 +319,22 @@ private def lowerMethodBody (body : GoLean.GobraJson.MethodBody) : GoLean.GoCore
 private def hasTypeDef (defs : Array (String × GoLean.GoCore.TypeDef)) (name : String) : Bool :=
   defs.any (fun (existing, _) => existing == name)
 
+private def firstStructFields? : List GoLean.GobraJson.Ty → Option (Array GoLean.GobraJson.FieldInfo)
+  | [] => none
+  | (.struct fields _ghost _) :: _ => some fields
+  | _ :: rest => firstStructFields? rest
+
 private def lowerTypeDefsFromTypes : List GoLean.GobraJson.Ty →
     Array (String × GoLean.GoCore.TypeDef) → Array (String × GoLean.GoCore.TypeDef)
   | .nil, defs => defs
-  | (.defined name _) :: (.struct fields _ghost _) :: rest, defs =>
+  | (.defined name _) :: rest, defs =>
       let defs :=
         if hasTypeDef defs name then
           defs
         else
-          defs.push (name, .struct (fields.map lowerFieldDef))
+          match firstStructFields? rest with
+          | some fields => defs.push (name, .struct (fields.map lowerFieldDef))
+          | none => defs
       lowerTypeDefsFromTypes rest defs
   | _ :: rest, defs => lowerTypeDefsFromTypes rest defs
 

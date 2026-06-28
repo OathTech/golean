@@ -44,3 +44,4 @@ features/string-pointer features/string-pointer.gobra
 features/string-compare features/string-compare.gobra
 features/new-basic features/new-basic.gobra
 features/new-nil-values features/new-nil-values.gobra
+features/new-struct features/new-struct.gobra
