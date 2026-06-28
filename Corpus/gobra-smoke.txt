@@ -2,6 +2,7 @@
 examples/swap ../third_party/gobra/src/test/resources/regressions/examples/swap.gobra
 features/while1 ../third_party/gobra/src/test/resources/regressions/features/while1.gobra
 features/if-return features/if-return.gobra
+features/if-init-scope features/if-init-scope.gobra
 features/break-continue features/break-continue.gobra
 features/multi-assign ../third_party/gobra/src/test/resources/regressions/features/multi-assign.gobra
 features/pointer-identity ../third_party/gobra/src/test/resources/regressions/features/pointer-identity.gobra
@@ -51,6 +52,7 @@ features/new-struct features/new-struct.gobra
 features/naked-return features/naked-return.gobra
 features/tuple-assign-order features/tuple-assign-order.gobra
 features/shadowing features/shadowing.gobra
+features/short-decl-mixing features/short-decl-mixing.gobra
 features/range-array-copy features/range-array-copy.gobra
 features/range-struct-copy features/range-struct-copy.gobra
 features/gotcha-append-aliasing features/gotcha-append-aliasing.gobra

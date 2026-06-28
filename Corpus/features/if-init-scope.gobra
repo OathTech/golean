@@ -1,0 +1,10 @@
+package pkg;
+
+func ifInitScope() (z int) {
+	if v := 3; v > 5 {
+		z = v;
+	} else {
+		z = v + 10;
+	};
+	z = z + 100;
+};

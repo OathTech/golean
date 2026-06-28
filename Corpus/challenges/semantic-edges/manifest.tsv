@@ -68,8 +68,8 @@ c28	switch fallthrough	control-flow,switch,fallthrough	future	requires switch an
 c29	expressionless switch and case lists	control-flow,switch	future	requires switch lowering
 c30	range over integer	range,integers,go1.22	future	requires Go 1.22 range-over-int policy
 c31	range over function iterator	range,functions,go1.23	future	requires function values and iterator range policy
-c32	if init statement scope	scoping,control-flow	candidate	frontend scoping/lowering check once init statements are supported
-c33	short declaration mixing	scoping,short-decl	candidate	frontend scoping/lowering check
+c32	if init statement scope	scoping,control-flow	active-covered	covered by if-init-scope
+c33	short declaration mixing	scoping,short-decl	active-covered	covered by short-decl-mixing
 c34	labeled continue	labels,loops,control-flow	future	requires labeled continue
 c35	for as only loop keyword	loops	active-covered	while-style `for cond` already covered
 c36	panic nil behavior	panic,recover,go1.21	future	requires panic/recover/defer
