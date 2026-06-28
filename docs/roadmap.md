@@ -209,8 +209,8 @@ but the expected progression is:
 - integer and boolean operators with Go-sized words. The first fixed-width
   integer slice is in place, including first integer-to-integer conversions;
   first shift support is also in place. Constants, bitwise operators, broader
-  conversions, and richer byte/rune behavior should be added incrementally with
-  differential tests;
+  conversions, string slicing, and richer rune behavior should be added
+  incrementally with differential tests;
 - arrays and slices, including indexing, slicing, append, len, and cap. Slices
   should follow `docs/slice-model.md`: descriptor values over backing
   locations, with append growth treated carefully because post-growth capacity
@@ -290,9 +290,9 @@ against GoCore-level specification hooks.
 ## Near-Term Work Queue
 
 1. Complete the remaining architecture hardening gate from
-   `docs/architecture-audit.md`: continue the typed-integer slice with bitwise
-   operators and byte/string operations, and add a small relational semantics
-   skeleton.
+   `docs/architecture-audit.md`: continue the typed-integer/string slice with
+   bitwise operators, string slicing, and rune operations, and add a small
+   relational semantics skeleton.
 2. Keep expanding deterministic differential coverage, but prefer cases that
    force representation decisions we need anyway: typed integers, bytes,
    strings, conversions, and comparability.

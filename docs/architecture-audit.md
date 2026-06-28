@@ -273,9 +273,9 @@ Minimum prerequisites:
 2. Done: convert expression evaluation to state-returning form before adding
    calls-in-expressions, channel receives, or effectful builtins.
 3. In progress: introduce typed integer kinds and byte/rune values before
-   string indexing and numeric conversions. The first fixed-width integer slice
-   is implemented, as are first integer-to-integer conversion and shift
-   support; string byte/rune operations remain.
+   string operations and numeric conversions. The first fixed-width integer
+   slice is implemented, as are first integer-to-integer conversion, shift, and
+   string byte-indexing support; string slicing and rune operations remain.
 4. Done: make equality type-directed for the current value forms before
    interfaces and exact comparability tests.
 5. Replace Gobra type-definition recovery heuristics with explicit fork output
@@ -290,7 +290,7 @@ Do not add interfaces or concurrency next.
 The best next semantic family is typed integers plus byte/string operations:
 
 - it is small enough to differentially test thoroughly;
-- it unblocks string indexing/slicing;
+- it unblocks string slicing and rune-level operations;
 - it forces the runtime value representation to become more precise;
 - it is a prerequisite for bitwise operators, broader conversions, arrays,
   maps, and constants.

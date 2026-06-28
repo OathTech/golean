@@ -392,6 +392,19 @@ private def coreStringByteLenFunction : GoCore.Func := {
   body := .assign (.var "z") (.length (.stringLit "h\u00e9llo"))
 }
 
+private def coreStringIndexFunction : GoCore.Func := {
+  name := "string_index_F",
+  args := #[],
+  results := #[{ id := "a", typ := .int .uint8 }, { id := "b", typ := .int .uint8 }],
+  body := .block
+    #[{ id := "s", typ := .string }]
+    #[
+      .assign (.var "s") (.stringLit "h\u00e9"),
+      .assign (.var "a") (.indexGet (.var "s") (.intLit 1)),
+      .assign (.var "b") (.indexGet (.var "s") (.intLit 2))
+    ]
+}
+
 private def coreNewFunction : GoCore.Func := {
   name := "new_F",
   args := #[],
@@ -676,6 +689,20 @@ private def expectBoolResult (name : String) (result : Except GoError GoLean.Gob
       IO.eprintln s!"FAIL: {name}: expected success, got {repr err}"
       return false
 
+private def expectValues (name : String) (result : Except GoError GoLean.GobraEval.Result)
+    (expected : Array GoValue) : IO Bool := do
+  match result with
+  | .ok result =>
+      if result.values == expected then
+        IO.println s!"ok: {name}"
+        return true
+      else
+        IO.eprintln s!"FAIL: {name}: expected {repr expected}, got {repr result.values}"
+        return false
+  | .error err =>
+      IO.eprintln s!"FAIL: {name}: expected success, got {repr err}"
+      return false
+
 private def expectErrorStatus (name : String) (result : Except GoError GoLean.GobraEval.Result)
     (expected : String) : IO Bool := do
   match result with
@@ -726,6 +753,8 @@ def main : IO UInt32 := do
   passed := passed && (← expectIntResult "GoCore map basic" (GoCore.runFunction 100 coreMapBasicFunction #[]) 1070)
   passed := passed && (← expectIntResult "GoCore string basic" (GoCore.runFunction 100 coreStringFunction #[]) 22)
   passed := passed && (← expectIntResult "GoCore string byte length" (GoCore.runFunction 100 coreStringByteLenFunction #[]) 6)
+  passed := passed && (← expectValues "GoCore string byte indexing"
+    (GoCore.runFunction 100 coreStringIndexFunction #[]) #[.int 195 .uint8, .int 169 .uint8])
   passed := passed && (← expectIntResult "GoCore new allocation" (GoCore.runFunction 100 coreNewFunction #[]) 70)
   passed := passed && (← expectErrorStatus "GoCore nil dereference panic" (GoCore.runFunction 100 coreNilDerefFunction #[]) "panic")
   passed := passed && (← expectErrorStatus "GoCore divide by zero panic" (GoCore.runFunction 100 coreDivideByZeroFunction #[]) "panic")

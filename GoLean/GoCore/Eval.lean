@@ -181,10 +181,11 @@ mutual
         let indexValue ← valueAsInt indexPair.1
         match basePair.1 with
         | .array values => return (← arrayGet values indexValue, indexPair.2)
+        | .string value => return (← stringByteGet value indexValue, indexPair.2)
         | .slice slice => do
             let loc ← sliceIndexLoc slice indexValue
             return (← loadLoc indexPair.2 loc, indexPair.2)
-        | other => stuck s!"expected array or slice value for index access, got {repr other}"
+        | other => stuck s!"expected array, slice, or string value for index access, got {repr other}"
     | .mapGet base index keyTy valueTy => do
         let basePair ← evalExpr state base
         let map ← valueAsMap basePair.1

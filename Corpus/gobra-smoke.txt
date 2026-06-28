@@ -47,6 +47,7 @@ features/string-call features/string-call.gobra
 features/string-pointer features/string-pointer.gobra
 features/string-compare features/string-compare.gobra
 features/string-byte-len features/string-byte-len.gobra
+features/string-index features/string-index.gobra
 features/int8-wrap features/int8-wrap.gobra
 features/byte-conversion features/byte-conversion.gobra
 features/shifts features/shifts.gobra

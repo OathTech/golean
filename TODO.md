@@ -48,9 +48,9 @@ backlog items.
 - Classify nil pointer dereference and Go-defined runtime traps as `panic`, not
   `stuck`.
 - Extend the integer model beyond the current fixed-width slice: constants,
-  `byte`/`rune` string operations, broader conversion families, bitwise
-  operators, and exact architecture-dependent `int`/`uint` policy in the future
-  relation.
+  string slicing and rune iteration/conversions, broader conversion families,
+  bitwise operators, and exact architecture-dependent `int`/`uint` policy in
+  the future relation.
 - Replace `execStmt : ExecState -> Except ... ExecState` with an explicit
   `ExecOutcome` for normal completion, return, break, continue, panic,
   unsupported, and stuck behavior.
@@ -133,6 +133,8 @@ backlog items.
 - Added first shift support: Gobra `ShiftLeft`/`ShiftRight` decoding/lowering,
   fixed-width left/right shift normalization, signed arithmetic right shift,
   and negative-shift panic coverage.
+- Added string byte indexing: indexing a Go string reads from its UTF-8 byte
+  sequence and returns a `uint8`, with direct and differential coverage.
 - Replaced stable variable references with heap-backed locals.
 - Added `Loc.base` and `Loc.field` path-like locations.
 - Added load, store, address-of, dereference, struct field get, and field ref.

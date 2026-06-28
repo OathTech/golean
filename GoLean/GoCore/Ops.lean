@@ -63,6 +63,14 @@ def natFromNonnegativeInt (context : String) (value : Int) : Except GoError Nat 
     panic context
   return value.toNat
 
+def stringByteGet (value : String) (index : Int) : Except GoError GoValue := do
+  let bytes := value.toUTF8
+  let i ← natFromNonnegativeInt "index out of range" index
+  if i < bytes.size then
+    return .int (Int.ofNat (bytes.get! i).toNat) .uint8
+  else
+    panic "index out of range"
+
 def validateSlice (slice : SliceValue) : Except GoError Unit := do
   if slice.len > slice.cap then
     stuck s!"malformed GoCore slice: len {slice.len} > cap {slice.cap}"

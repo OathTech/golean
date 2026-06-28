@@ -121,9 +121,10 @@ partial def lowerExprTy? : GoLean.GobraJson.Expr → Option GoLean.GoCore.Ty
       match lowerTy baseUnderlyingType with
       | .array _ elem => some elem
       | .slice elem => some elem
+      | .string => some (.int .uint8)
       | .map _ value => some value
       | .unsupported feature => some (.unsupported feature)
-      | other => some (.unsupported s!"indexing non-array/slice/map type {repr other}")
+      | other => some (.unsupported s!"indexing non-array/slice/string/map type {repr other}")
   | .slice _ _ _ _ _ baseUnderlyingType =>
       match lowerTy baseUnderlyingType with
       | .array _ elem => some (.slice elem)
