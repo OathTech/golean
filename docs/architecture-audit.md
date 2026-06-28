@@ -103,9 +103,9 @@ The first mechanical split is now in place:
 
 - `GoLean/GoCore/Syntax.lean`: `Ty`, `Expr`, `Assignee`, `Stmt`, `Func`,
   `Program`.
-- `GoLean/GoCore/Value.lean`: value-layer import point. Concrete `GoValue`,
-  `SliceValue`, and `MapValue` definitions still live in `GoLean/Runtime.lean`
-  until the typed integer/interface refactor gives them their next shape.
+- `GoLean/GoCore/Value.lean`: concrete `GoError`, `Loc`, `SliceValue`,
+  `MapValue`, and `GoValue` definitions. `GoLean/Runtime.lean` remains only as
+  a compatibility import.
 - `GoLean/GoCore/State.lean`: `ExecState`, locals, heap operations, allocation.
 - `GoLean/GoCore/Ops.lean`: default values, equality, comparison, indexing,
   slicing, map helpers.
@@ -115,7 +115,7 @@ The first mechanical split is now in place:
 
 The remaining risk is not file size alone; it is semantic coupling inside the
 new modules. Expression evaluation now returns an updated state, but equality is
-still value-shape-directed and runtime values still need typed integer/interface
+still value-shape-directed and values still need typed integer/interface
 structure.
 
 ### 2. Expression Evaluation Will Need Effects

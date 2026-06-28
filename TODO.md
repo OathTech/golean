@@ -36,10 +36,6 @@ backlog items.
 
 ## Hardening Phase
 
-- Finish value-layer factoring: `GoLean/GoCore/Value.lean` currently provides
-  the value-layer import point, while concrete runtime values still live in
-  `GoLean/Runtime.lean`. Move/reshape them when typed integers, bytes, runes,
-  and interfaces are introduced.
 - Make equality type-directed before adding interfaces, function values, or
   exact comparability semantics.
 - Add a small relational GoCore semantics skeleton before concurrency or
@@ -123,6 +119,9 @@ backlog items.
 - Converted GoCore expression and assignee evaluation to return an updated
   `ExecState`, preserving Go's evaluate-before-store assignment discipline while
   leaving room for calls-in-expressions, receives, and effectful builtins.
+- Moved concrete `GoError`, `Loc`, `SliceValue`, `MapValue`, and `GoValue`
+  definitions into `GoLean/GoCore/Value.lean`; `GoLean/Runtime.lean` is now only
+  a compatibility import.
 - Replaced stable variable references with heap-backed locals.
 - Added `Loc.base` and `Loc.field` path-like locations.
 - Added load, store, address-of, dereference, struct field get, and field ref.
