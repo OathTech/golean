@@ -15,10 +15,11 @@ backlog items.
 ## Differential Execution
 
 - Keep Gobra-specific handling in `GobraToIR`; semantic work belongs in GoCore unless it is purely frontend lowering.
-- Promote cases from `Corpus/challenges/go-gotchas/` into the active
+- Promote cases from `Corpus/challenges/semantic-edges/` into the active
   Gobra/Lean differential suite one feature at a time. Keep the challenge
-  corpus runnable by `scripts/gotchas-challenge-smoke`, but do not treat it as
-  a supported-semantics claim until a case lands in `Differential/manifest.tsv`.
+  corpus runnable by `scripts/semantic-edges-challenge-smoke`, but do not treat
+  it as a supported-semantics claim until cases land in
+  `Differential/manifest.tsv`.
 - Replace stringly typed evaluator failures with structured `GoError` values and
   stable observations. CLI classification must not depend on matching error
   message prefixes.
@@ -98,7 +99,7 @@ backlog items.
   or Go-side output, not Gobra assertions.
 - Add richer call-frame tests, including returned values and nested calls.
 - Add method-call tests from Gobra JSON beyond `examples/swap`.
-- Track Gobra frontend gaps found while promoting gotchas: Gobra accepts
+- Track Gobra frontend gaps found while promoting semantic-edge cases: Gobra accepts
   variadic calls/spreads but rejects `range` directly over a `...int`
   parameter, so `features/variadic.gobra` uses `len`/index iteration.
 

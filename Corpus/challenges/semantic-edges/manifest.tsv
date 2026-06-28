@@ -1,0 +1,99 @@
+# id	title	themes	status	notes
+g01	nil pointer in interface is not nil	interfaces,nil,methods	future	interface value representation and type assertions
+g02	loop variable capture Go 1.22	concurrency,closures,range	future	requires goroutines, closures, range, and Go version policy
+g03	append can overwrite shared backing array	slices,append,aliasing	active-covered	related active cases: slice-append, append-overlap
+g04	nil map read versus write	maps,nil,panic	active-covered	related active cases: map-basic, map-nil-assign
+g05	defer argument evaluation	defer,calls	future	requires defer call queue and argument evaluation timing
+g06	defer mutates named return	defer,returns	future	requires named returns plus deferred closure mutation
+g07	closed channel receive and send	channel,close,panic	future	requires channels and close semantics
+g08	range over array copies	range,arrays,slices	active-covered	covered by range-array-copy
+g09	range over string yields byte offsets and runes	strings,range,unicode	future	requires UTF-8/rune semantics
+g10	int division and int8 overflow	integers,widths,overflow	candidate	division covered; fixed-width integer overflow still open
+g11	interface comparison can panic	interfaces,comparability,panic	future	requires dynamic interface equality
+g12	iota repeated expressions	constants,iota	candidate	requires constants/iota frontend coverage
+g13	JSON nil slice versus empty slice	stdlib,json,slices	future	stdlib behavior, not GoCore runtime semantics initially
+g14	short declaration shadowing	scoping,cfg	active-covered	covered by shadowing
+g15	time equality versus Equal	stdlib,time,methods	future	stdlib behavior outside initial semantics
+g16	method value copies receiver	methods,closures,values	future	requires method values and receiver binding
+g17	struct comparison can panic via interface field	structs,interfaces,comparability,panic	future	requires dynamic interface equality inside comparable structs
+g18	defer in loop runs at function return	defer,loops	future	requires defer stack
+g19	tuple assignment evaluates targets before stores	multiple-assignment,slices,evaluation-order	active-covered	covered by tuple-assign-order
+g20	NaN and map keys	floats,maps,nan	future	requires floating point and NaN equality policy
+g21	Stringer recursion trap	methods,fmt,recursion	future	stdlib formatting plus method dispatch
+g22	type assertion comma-ok versus panic	interfaces,type-assertions,panic	future	requires interfaces/type assertions
+g23	break inside switch versus labeled break	switch,labels,control-flow	future	requires switch and labeled control flow
+g24	variadic nil spread and append spread	variadic,slices,append	active-covered	covered by variadic and append-overlap
+g25	arrays are values; slices alias	arrays,slices,value-copy,aliasing	active-covered	covered by array-copy and slice aliasing cases
+g26	nil channel disables select case	channels,select,nil	future	requires channels/select
+g27	select random among ready cases	channels,select,nondeterminism	future	requires nondeterministic observation policy
+g28	recover only direct in deferred function	panic,recover,defer	future	requires panic/defer/recover
+g29	nil pointer receiver method call	methods,nil,pointers	future	requires methods and nil receiver semantics
+g30	string(int) rune conversion	conversions,strings,runes	future	requires conversions and Unicode/rune model
+g31	wide and negative shifts	integers,shifts,panic	future	requires shift semantics and integer widths
+g32	three-index slicing limits capacity	slices,full-slice,append	active-covered	related active cases: full-slice, append-overlap
+g33	copy moves min length	slices,copy,nil	active-covered	related active cases: copy-short, copy-nil
+g34	map iteration order randomized	maps,range,nondeterminism	future	requires map range and nondeterminism policy
+g35	range over slice of structs copies elements	range,slices,structs,copies	active-covered	covered by range-struct-copy
+g36	blocked goroutine leak	concurrency,channels,runtime	future	requires goroutines/channels; observation is runtime-dependent
+g37	function values compare only to nil	functions,nil,comparability	future	requires function values
+g38	numeric conversions truncate or wrap	conversions,integers,floats	future	requires numeric conversions and float policy
+c01	pointer-receiver method set	interfaces,methods,pointers	future	requires interface values, method sets, and type assertions
+c02	interface comparison different dynamic types	interfaces,equality,comparability	future	requires interface representation and dynamic equality
+c03	type switch on nil interface	interfaces,type-switch,nil	future	requires type switches and interface nil semantics
+c04	embedding promotes methods	embedding,methods,interfaces	future	requires embedded fields and promoted methods
+c05	outer field shadows embedded field	embedding,fields,shadowing	future	requires embedded field selection
+c06	empty struct zero size	unsafe,sizeof,structs	future	requires unsafe.Sizeof or a compile-time size model
+c07	untyped constants arbitrary precision	constants,integers,precision	future	requires constant evaluator and shifts
+c08	iota counts through blanks	constants,iota	future	requires iota frontend coverage
+c09	untyped constant adapts to context	constants,typing,conversions	future	requires typed/untyped constant model
+c10	constant integer versus float division	constants,division,floats	future	requires constant evaluator and floats
+c11	default constant types	constants,typing,complex,runes	future	requires default type rules, complex, and runes
+c12	string index yields byte	strings,bytes,indexing	candidate	requires byte/uint8 value model distinct from int
+c13	string slicing by bytes	strings,slicing,unicode	candidate	requires string slice semantics and UTF-8 observation policy
+c14	len string counts bytes	strings,bytes,unicode	candidate	requires string byte length plus rune-count library policy
+c15	delete nil map	maps,nil,delete	candidate	requires delete builtin
+c16	map element not addressable	maps,structs,addressability	future	mostly compile-time/addressability; runtime pattern is copy-write
+c17	slices and maps only compare nil	slices,maps,comparability	candidate	partly covered for nil equality; non-nil comparisons should be stuck/compile errors
+c18	reslice beyond len up to cap	slices,reslice,capacity	active-covered	covered by full-slice and slice-capacity cases
+c19	arrays comparable	arrays,equality,copied-values	candidate	GoCore supports array equality; add direct differential fixture
+c20	make len greater than cap panics	slices,make,panic	candidate	requires make-slice runtime bounds case
+c21	slice header passed by value	slices,calls,append,aliasing	candidate	requires call-by-value slice header plus append aliasing
+c22	nil versus empty slice	slices,nil,empty	active-covered	covered by slice-nil-empty
+c23	int divide by zero versus float infinity	integers,floats,division,panic	future	int panic covered; floats/Inf/NaN open
+c24	bitwise complement	integers,bitwise,widths	future	requires bitwise operators and integer widths
+c25	bit clear operator	integers,bitwise	future	requires `&^`
+c26	no implicit numeric conversion	typing,conversions,floats	future	mostly compile-time; runtime needs floats and explicit conversion
+c27	complex numbers	complex,numbers	future	requires complex number model
+c28	switch fallthrough	control-flow,switch,fallthrough	future	requires switch and fallthrough
+c29	expressionless switch and case lists	control-flow,switch	future	requires switch lowering
+c30	range over integer	range,integers,go1.22	future	requires Go 1.22 range-over-int policy
+c31	range over function iterator	range,functions,go1.23	future	requires function values and iterator range policy
+c32	if init statement scope	scoping,control-flow	candidate	frontend scoping/lowering check once init statements are supported
+c33	short declaration mixing	scoping,short-decl	candidate	frontend scoping/lowering check
+c34	labeled continue	labels,loops,control-flow	future	requires labeled continue
+c35	for as only loop keyword	loops	active-covered	while-style `for cond` already covered
+c36	panic nil behavior	panic,recover,go1.21	future	requires panic/recover/defer
+c37	defer during panic	defer,panic	future	requires defer stack and panic unwind
+c38	goroutine self recover	concurrency,panic,recover	future	requires goroutines, channels, panic/recover
+c39	zero value mutex and buffer	stdlib,sync,bytes,zero-values	future	stdlib/runtime behavior outside GoCore initial surface
+c40	buffered channel send blocking	channels,select,buffering	future	requires channels and select
+c41	range over channel	channels,range,close	future	requires channels and close/range semantics
+c42	sync.Once	stdlib,sync	future	stdlib behavior
+c43	unused locals are compile errors	compile-errors,blank-identifier	future	compile-time-only behavior
+c44	package init dependency order	init,globals	future	requires package-level vars and init order
+c45	pointer and channel identity	pointers,channels,equality	future	pointer identity partly covered; channels open
+c46	fmt Stringer verbs	fmt,methods,interfaces	future	stdlib formatting and method dispatch
+c47	byte slice printing	fmt,bytes,slices	future	stdlib formatting
+c48	wrong fmt verb	fmt,stdlib	future	stdlib formatting
+c49	struct fmt verbs	fmt,structs	future	stdlib formatting
+c50	errors.New distinct values	errors,interfaces,identity	future	stdlib errors and interface identity
+c51	errors.Is wrap chain	errors,stdlib	future	stdlib errors
+c52	closures share captured variables	closures,functions,fvars	future	requires closures and captured variables
+c53	method expression receiver argument	methods,functions	future	requires method expressions
+c54	naked return named results	returns,named-results	candidate	named results exist; naked return semantics needs focused fixture
+c55	variadic no args nil slice	variadic,nil,slices	candidate	variadic calls covered; no-args nil-slice behavior not yet active
+c56	generic functions and no generic methods	generics,type-parameters	future	requires generics
+c57	comparable constraint and inference	generics,comparability,inference	future	requires generics
+c58	zero value of type parameter	generics,zero-values	future	requires generics
+c59	visibility by identifier case	json,exported-fields,stdlib	future	stdlib JSON and package visibility
+c60	new map versus make map	maps,new,make,nil	candidate	`new(map)` plus nil-map assignment panic

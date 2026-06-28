@@ -39,6 +39,7 @@ lake exe golean gobra-export --manifest Corpus/gobra-smoke.txt
 lake exe golean gobra-json-run --input artifacts/gobra-smoke/work/features/while1/while1.gobra.internal.json --function test_bda1d7d_F --arg-int 6 --arg-int 7
 scripts/gobra-smoke
 scripts/diff-smoke
+scripts/semantic-edges-challenge-smoke
 ```
 
 `scripts/gobra-smoke` performs Gobra export/JSON validation and reuses

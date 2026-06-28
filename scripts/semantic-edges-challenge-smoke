@@ -1,0 +1,56 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+cd "$ROOT"
+
+BASE="Corpus/challenges/semantic-edges"
+CASES="$BASE/cases"
+FULL="$BASE/full"
+GO_BUILD_CACHE="$ROOT/artifacts/go-build-cache"
+
+if [[ ! -d "$CASES" ]]; then
+  echo "challenge cases not found: $CASES" >&2
+  exit 2
+fi
+if ! command -v go >/dev/null 2>&1; then
+  echo "go not found on PATH" >&2
+  exit 2
+fi
+
+mkdir -p "$GO_BUILD_CACHE"
+
+case_count=0
+while IFS= read -r dir; do
+  rel="${dir#"$CASES"/}"
+  output="$(env GO111MODULE=off GOCACHE="$GO_BUILD_CACHE" go run "./$dir")"
+  if [[ "$output" != *'"status":"ok"'* ]]; then
+    echo "challenge case failed: $rel" >&2
+    echo "$output" >&2
+    exit 1
+  fi
+  echo "ok: $rel $output"
+  case_count=$((case_count + 1))
+done < <(find "$CASES" -mindepth 1 -maxdepth 1 -type d | sort)
+
+if [[ "$case_count" -eq 0 ]]; then
+  echo "no challenge cases found" >&2
+  exit 2
+fi
+
+full_count=0
+if [[ -d "$FULL" ]]; then
+  while IFS= read -r src; do
+    rel="${src#"$BASE"/}"
+    output="$(env GO111MODULE=off GOCACHE="$GO_BUILD_CACHE" go run "./$src")"
+    if [[ "$output" != *"Go "* ]]; then
+      echo "full challenge program produced unexpected output: $rel" >&2
+      echo "$output" >&2
+      exit 1
+    fi
+    echo "ok: $rel"
+    full_count=$((full_count + 1))
+  done < <(find "$FULL" -mindepth 1 -maxdepth 1 -type f -name '*.go' | sort)
+fi
+
+echo "executed $case_count semantic-edge split case(s) and $full_count full tour(s)"
