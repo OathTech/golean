@@ -91,7 +91,7 @@ c51	errors.Is wrap chain	errors,stdlib	future	stdlib errors
 c52	closures share captured variables	closures,functions,fvars	future	requires closures and captured variables
 c53	method expression receiver argument	methods,functions	future	requires method expressions
 c54	naked return named results	returns,named-results	candidate	named results exist; naked return semantics needs focused fixture
-c55	variadic no args nil slice	variadic,nil,slices	candidate	variadic calls covered; no-args nil-slice behavior not yet active
+c55	variadic no args nil slice	variadic,nil,slices	active-covered	covered by variadic
 c56	generic functions and no generic methods	generics,type-parameters	future	requires generics
 c57	comparable constraint and inference	generics,comparability,inference	future	requires generics
 c58	zero value of type parameter	generics,zero-values	future	requires generics
