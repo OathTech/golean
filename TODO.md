@@ -40,9 +40,6 @@ backlog items.
   the value-layer import point, while concrete runtime values still live in
   `GoLean/Runtime.lean`. Move/reshape them when typed integers, bytes, runes,
   and interfaces are introduced.
-- Convert expression evaluation to return an updated state, or move it into an
-  equivalent state monad, before adding calls-in-expressions, channel receives,
-  or effectful builtins.
 - Make equality type-directed before adding interfaces, function values, or
   exact comparability semantics.
 - Add a small relational GoCore semantics skeleton before concurrency or
@@ -123,6 +120,9 @@ backlog items.
 - Split the former monolithic `GoLean/IR.lean` into GoCore syntax, value import
   point, state, operations, and executable evaluation modules. `GoLean/IR.lean`
   remains as a compatibility import.
+- Converted GoCore expression and assignee evaluation to return an updated
+  `ExecState`, preserving Go's evaluate-before-store assignment discipline while
+  leaving room for calls-in-expressions, receives, and effectful builtins.
 - Replaced stable variable references with heap-backed locals.
 - Added `Loc.base` and `Loc.field` path-like locations.
 - Added load, store, address-of, dereference, struct field get, and field ref.

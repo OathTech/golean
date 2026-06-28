@@ -114,35 +114,26 @@ The first mechanical split is now in place:
 - `GoLean/IR.lean`: compatibility import during the transition.
 
 The remaining risk is not file size alone; it is semantic coupling inside the
-new modules. In particular, expression evaluation is still value-only, equality
-is still value-shape-directed, and runtime values still need typed
-integer/interface structure.
+new modules. Expression evaluation now returns an updated state, but equality is
+still value-shape-directed and runtime values still need typed integer/interface
+structure.
 
 ### 2. Expression Evaluation Will Need Effects
 
-`evalExpr` currently returns only a value:
-
-```lean
-ExecState -> Expr -> Except GoError GoValue
-```
-
-That is enough for the current subset, but not for full Go. Go expressions can
-contain calls, receives, conversions with panics, allocation-like builtins,
-append, map operations, and eventually interface/method dispatch. Some of those
-can mutate state or interact with concurrency.
-
-Required direction:
+`evalExpr` now returns both a value and the updated state:
 
 ```lean
 evalExpr : ExecState -> Expr -> Except GoError (GoValue × ExecState)
 ```
 
-or an equivalent state monad over `ExecState`. Assignment sequencing must keep
-the current Go rule: evaluate lvalues and rvalues before committing stores.
+Assignee evaluation has the same shape for locations. This keeps the current
+interpreter ready for Go expressions that can mutate state, including
+calls-in-expressions, receives, conversions with panics, allocation-like
+builtins, append, map operations, and eventually interface/method dispatch.
 
-Do not do this refactor casually in the middle of a feature. It should be a
-dedicated checkpoint with regression tests around multiple assignment,
-call-assignment targets, map lookup, append, and bounds panics.
+The checkpoint preserves the current Go assignment discipline: evaluate lvalues
+and rvalues before committing stores. Existing regression tests cover multiple
+assignment, call-assignment targets, map lookup, append, and bounds panics.
 
 ### 3. Integer Semantics Are Under-Specified
 
@@ -267,9 +258,9 @@ Minimum prerequisites:
 
 ## Immediate Refactor Plan
 
-1. Split GoCore modules mechanically before adding interfaces or typed
+1. Done: split GoCore modules mechanically before adding interfaces or typed
    integers.
-2. Convert expression evaluation to state-returning form before adding
+2. Done: convert expression evaluation to state-returning form before adding
    calls-in-expressions, channel receives, or effectful builtins.
 3. Introduce typed integer kinds and byte/rune values before string indexing and
    numeric conversions.
