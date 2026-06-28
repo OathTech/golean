@@ -55,7 +55,7 @@ c15	delete nil map	maps,nil,delete	future	Go supports this, but current Gobra re
 c16	map element not addressable	maps,structs,addressability	future	mostly compile-time/addressability; runtime pattern is copy-write
 c17	slices and maps only compare nil	slices,maps,comparability	candidate	partly covered for nil equality; non-nil comparisons should be stuck/compile errors
 c18	reslice beyond len up to cap	slices,reslice,capacity	active-covered	covered by full-slice and slice-capacity cases
-c19	arrays comparable	arrays,equality,copied-values	candidate	GoCore supports array equality; add direct differential fixture
+c19	arrays comparable	arrays,equality,copied-values	active-covered	covered by array-comparable
 c20	make len greater than cap panics	slices,make,panic	active-covered	covered by make-slice-cap-bounds
 c21	slice header passed by value	slices,calls,append,aliasing	active-covered	covered by slice-header-by-value
 c22	nil versus empty slice	slices,nil,empty	active-covered	covered by slice-nil-empty
