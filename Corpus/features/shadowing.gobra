@@ -1,0 +1,10 @@
+package pkg;
+
+func shadowing() (z int) {
+	err := "outer";
+	if true {
+		err := "inner";
+		_ = err;
+	};
+	z = len(err);
+};
