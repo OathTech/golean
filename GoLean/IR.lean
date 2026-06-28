@@ -289,7 +289,7 @@ private def sliceFromSlice (slice : SliceValue) (low high : Int) (max : Option I
   let high ← natFromNonnegativeInt "slice bounds out of range" high
   match max with
   | none =>
-      if low <= high && high <= slice.len then
+      if low <= high && high <= slice.cap then
         return .slice {
           base := slice.base,
           offset := slice.offset + low,

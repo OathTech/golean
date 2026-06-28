@@ -21,6 +21,7 @@ plain/make-slice-cap-bounds	Differential/plain/make-slice-cap-bounds	artifacts/g
 plain/slice-literal	Differential/plain/slice-literal	artifacts/gobra-smoke/work/features/slice-literal/slice-literal.gobra.internal.json	sliceLiteral_bda1d7d_F	-	ok	slices,literals,indexing,len,cap	-
 plain/slice-copy	Differential/plain/slice-copy	artifacts/gobra-smoke/work/features/slice-copy/slice-copy.gobra.internal.json	sliceCopy_bda1d7d_F	-	ok	slices,copy,overlap	-
 plain/slice-append	Differential/plain/slice-append	artifacts/gobra-smoke/work/features/slice-append/slice-append.gobra.internal.json	sliceAppend_bda1d7d_F	-	ok	slices,append,aliasing	-
+plain/slice-header-by-value	Differential/plain/slice-header-by-value	artifacts/gobra-smoke/work/features/slice-header-by-value/slice-header-by-value.gobra.internal.json	sliceHeaderByValue_bda1d7d_F	-	ok	slices,calls,append,aliasing,value_copy	-
 plain/slice-nil-empty	Differential/plain/slice-nil-empty	artifacts/gobra-smoke/work/features/slice-nil-empty/slice-nil-empty.gobra.internal.json	sliceNilEmpty_bda1d7d_F	-	ok	slices,nil,empty,append	-
 plain/append-nil	Differential/plain/append-nil	artifacts/gobra-smoke/work/features/append-nil/append-nil.gobra.internal.json	appendNil_bda1d7d_F	-	ok	slices,nil,append	-
 plain/append-overlap	Differential/plain/append-overlap	artifacts/gobra-smoke/work/features/append-overlap/append-overlap.gobra.internal.json	appendOverlap_bda1d7d_F	-	ok	slices,append,overlap,variadic	-

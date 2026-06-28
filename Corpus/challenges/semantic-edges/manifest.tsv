@@ -57,7 +57,7 @@ c17	slices and maps only compare nil	slices,maps,comparability	candidate	partly 
 c18	reslice beyond len up to cap	slices,reslice,capacity	active-covered	covered by full-slice and slice-capacity cases
 c19	arrays comparable	arrays,equality,copied-values	candidate	GoCore supports array equality; add direct differential fixture
 c20	make len greater than cap panics	slices,make,panic	active-covered	covered by make-slice-cap-bounds
-c21	slice header passed by value	slices,calls,append,aliasing	candidate	requires call-by-value slice header plus append aliasing
+c21	slice header passed by value	slices,calls,append,aliasing	active-covered	covered by slice-header-by-value
 c22	nil versus empty slice	slices,nil,empty	active-covered	covered by slice-nil-empty
 c23	int divide by zero versus float infinity	integers,floats,division,panic	future	int panic covered; floats/Inf/NaN open
 c24	bitwise complement	integers,bitwise,widths	future	requires bitwise operators and integer widths

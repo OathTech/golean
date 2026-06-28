@@ -1,0 +1,25 @@
+package main
+
+import "fmt"
+
+func growLocal(s []int) {
+	s = append(s, 99)
+}
+
+func setFirst(s []int) {
+	s[0] = 7
+}
+
+func main() {
+	a := make([]int, 3, 4)
+	a[0] = 1
+	a[1] = 2
+	a[2] = 3
+	growLocal(a)
+	lenAfter := len(a)
+	capAfter := cap(a)
+	b := a[:4]
+	setFirst(a)
+	z := lenAfter*10000 + capAfter*1000 + a[0]*100 + b[3]
+	fmt.Printf("{\"status\":\"ok\",\"values\":[{\"tag\":\"int\",\"value\":%d}]}\n", z)
+}

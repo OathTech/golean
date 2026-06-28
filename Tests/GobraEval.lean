@@ -217,6 +217,29 @@ private def coreSliceResliceFunction : GoCore.Func := {
     ]
 }
 
+private def coreSliceExtendToCapacityFunction : GoCore.Func := {
+  name := "slice_extend_to_capacity_F",
+  args := #[],
+  results := #[coreParam "z"],
+  body := .block
+    #[
+      { id := "s", typ := .slice .int },
+      { id := "t", typ := .slice .int }
+    ]
+    #[
+      .makeSlice (.var "s") .int (.intLit 3) (some (.intLit 4)),
+      .assign (.var "t") (.slice (.var "s") (.intLit 0) (.intLit 4) none),
+      .assign (.var "z")
+        (.add
+          (.add
+            (.mul (.length (.var "s")) (.intLit 1000))
+            (.mul (.capacity (.var "s")) (.intLit 100)))
+          (.add
+            (.mul (.length (.var "t")) (.intLit 10))
+            (.capacity (.var "t"))))
+    ]
+}
+
 private def coreFullSliceFunction : GoCore.Func := {
   name := "full_slice_F",
   args := #[],
@@ -630,6 +653,7 @@ def main : IO UInt32 := do
   passed := passed && (← expectIntResult "GoCore nil slice len cap" (GoCore.runFunction 100 coreNilSliceLenCapFunction #[]) 0)
   passed := passed && (← expectIntResult "GoCore array slice alias" (GoCore.runFunction 100 coreArraySliceAliasFunction #[]) 229)
   passed := passed && (← expectIntResult "GoCore slice reslice" (GoCore.runFunction 100 coreSliceResliceFunction #[]) 213)
+  passed := passed && (← expectIntResult "GoCore slice extend to capacity" (GoCore.runFunction 100 coreSliceExtendToCapacityFunction #[]) 3444)
   passed := passed && (← expectIntResult "GoCore full slice" (GoCore.runFunction 100 coreFullSliceFunction #[]) 5)
   passed := passed && (← expectIntResult "GoCore make slice" (GoCore.runFunction 100 coreMakeSliceFunction #[]) 537)
   passed := passed && (← expectIntResult "GoCore map basic" (GoCore.runFunction 100 coreMapBasicFunction #[]) 1070)
