@@ -46,6 +46,7 @@ plain/string-basic	Differential/plain/string-basic	artifacts/gobra-smoke/work/fe
 plain/string-call	Differential/plain/string-call	artifacts/gobra-smoke/work/features/string-call/string-call.gobra.internal.json	stringCall_bda1d7d_F	-	ok	strings,calls,returns	-
 plain/string-pointer	Differential/plain/string-pointer	artifacts/gobra-smoke/work/features/string-pointer/string-pointer.gobra.internal.json	stringPointer_bda1d7d_F	-	ok	strings,pointers,assignment	-
 plain/string-compare	Differential/plain/string-compare	artifacts/gobra-smoke/work/features/string-compare/string-compare.gobra.internal.json	stringCompare_bda1d7d_F	-	ok	strings,comparisons	-
+plain/string-byte-len	Differential/plain/string-byte-len	artifacts/gobra-smoke/work/features/string-byte-len/string-byte-len.gobra.internal.json	stringByteLen_bda1d7d_F	-	ok	strings,unicode,len,bytes	-
 plain/new-basic	Differential/plain/new-basic	artifacts/gobra-smoke/work/features/new-basic/new-basic.gobra.internal.json	newBasic_bda1d7d_F	-	ok	new,pointers,arrays,indexing	-
 plain/new-nil-values	Differential/plain/new-nil-values	artifacts/gobra-smoke/work/features/new-nil-values/new-nil-values.gobra.internal.json	newNilValues_bda1d7d_F	-	ok	new,pointers,slices,maps,nil	-
 plain/new-struct	Differential/plain/new-struct	artifacts/gobra-smoke/work/features/new-struct/new-struct.gobra.internal.json	newStruct_bda1d7d_F	-	ok	new,pointers,structs,fields	-

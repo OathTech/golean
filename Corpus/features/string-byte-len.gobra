@@ -1,0 +1,6 @@
+package pkg;
+
+func stringByteLen() (z int) {
+	s := "héllo";
+	z = len(s);
+};

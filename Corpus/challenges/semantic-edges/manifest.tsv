@@ -50,7 +50,7 @@ c10	constant integer versus float division	constants,division,floats	future	requ
 c11	default constant types	constants,typing,complex,runes	future	requires default type rules, complex, and runes
 c12	string index yields byte	strings,bytes,indexing	candidate	requires byte/uint8 value model distinct from int
 c13	string slicing by bytes	strings,slicing,unicode	candidate	requires string slice semantics and UTF-8 observation policy
-c14	len string counts bytes	strings,bytes,unicode	candidate	requires string byte length plus rune-count library policy
+c14	len string counts bytes	strings,bytes,unicode	active-covered	covered by string-byte-len
 c15	delete nil map	maps,nil,delete	future	Go supports this, but current Gobra rejects delete as an unknown identifier; revisit with frontend work
 c16	map element not addressable	maps,structs,addressability	future	mostly compile-time/addressability; runtime pattern is copy-write
 c17	slices and maps only compare nil	slices,maps,comparability	candidate	partly covered for nil equality; non-nil comparisons should be stuck/compile errors

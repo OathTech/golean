@@ -700,7 +700,7 @@ mutual
     | .length operand => do
         match ← evalExpr state operand with
         | .array values => return .int values.size
-        | .string value => return .int value.length
+        | .string value => return .int value.utf8ByteSize
         | .slice slice => do
             validateSlice slice
             return .int slice.len
