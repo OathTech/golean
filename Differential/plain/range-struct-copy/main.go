@@ -1,0 +1,22 @@
+package main
+
+import "fmt"
+
+type point struct {
+	x int
+}
+
+func main() {
+	pts := []point{{1}, {2}, {3}}
+	for _, p := range pts {
+		p.x = 99
+	}
+	pre := pts[0].x*100 + pts[1].x*10 + pts[2].x
+
+	for i := range pts {
+		pts[i].x = 99
+	}
+	post := pts[0].x*10000 + pts[1].x*100 + pts[2].x
+	z := pre*1000000 + post
+	fmt.Printf("{\"status\":\"ok\",\"values\":[{\"tag\":\"int\",\"value\":%d}]}\n", z)
+}

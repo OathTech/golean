@@ -48,3 +48,4 @@ features/new-struct features/new-struct.gobra
 features/tuple-assign-order features/tuple-assign-order.gobra
 features/shadowing features/shadowing.gobra
 features/range-array-copy features/range-array-copy.gobra
+features/range-struct-copy features/range-struct-copy.gobra

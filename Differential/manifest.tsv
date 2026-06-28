@@ -48,3 +48,4 @@ plain/new-struct	Differential/plain/new-struct	artifacts/gobra-smoke/work/featur
 plain/tuple-assign-order	Differential/plain/tuple-assign-order	artifacts/gobra-smoke/work/features/tuple-assign-order/tuple-assign-order.gobra.internal.json	tupleAssignOrder_bda1d7d_F	-	ok	multi_assign,slices,indexing,evaluation_order	-
 plain/shadowing	Differential/plain/shadowing	artifacts/gobra-smoke/work/features/shadowing/shadowing.gobra.internal.json	shadowing_bda1d7d_F	-	ok	scoping,shadowing,strings	-
 plain/range-array-copy	Differential/plain/range-array-copy	artifacts/gobra-smoke/work/features/range-array-copy/range-array-copy.gobra.internal.json	rangeArrayCopy_bda1d7d_F	-	ok	range,arrays,slices,value_copy	-
+plain/range-struct-copy	Differential/plain/range-struct-copy	artifacts/gobra-smoke/work/features/range-struct-copy/range-struct-copy.gobra.internal.json	rangeStructCopy_bda1d7d_F	-	ok	range,slices,structs,fields,value_copy	-

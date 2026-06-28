@@ -371,28 +371,54 @@ private def lowerMethodBody (body : GoLean.GobraJson.MethodBody) : GoLean.GoCore
 private def hasTypeDef (defs : Array (String × GoLean.GoCore.TypeDef)) (name : String) : Bool :=
   defs.any (fun (existing, _) => existing == name)
 
+private def structFields? : GoLean.GobraJson.Ty → Option (Array GoLean.GobraJson.FieldInfo)
+  | .struct fields _ghost _ => some fields
+  | _ => none
+
 private def firstStructFields? : List GoLean.GobraJson.Ty → Option (Array GoLean.GobraJson.FieldInfo)
   | [] => none
-  | (.struct fields _ghost _) :: _ => some fields
-  | _ :: rest => firstStructFields? rest
+  | ty :: rest =>
+      match structFields? ty with
+      | some fields => some fields
+      | none => firstStructFields? rest
+
+private def firstStructFieldsBeforeNextDefined? :
+    List GoLean.GobraJson.Ty → Option (Array GoLean.GobraJson.FieldInfo)
+  | [] => none
+  | (.defined ..) :: _ => none
+  | ty :: rest =>
+      match structFields? ty with
+      | some fields => some fields
+      | none => firstStructFieldsBeforeNextDefined? rest
 
 private def lowerTypeDefsFromTypes : List GoLean.GobraJson.Ty →
+    Option (Array GoLean.GobraJson.FieldInfo) →
     Array (String × GoLean.GoCore.TypeDef) → Array (String × GoLean.GoCore.TypeDef)
-  | .nil, defs => defs
-  | (.defined name _) :: rest, defs =>
+  | .nil, _, defs => defs
+  | ty :: rest, lastStruct, defs =>
+      let lastStruct :=
+        match structFields? ty with
+        | some fields => some fields
+        | none => lastStruct
       let defs :=
-        if hasTypeDef defs name then
-          defs
-        else
-          match firstStructFields? rest with
-          | some fields => defs.push (name, .struct (fields.map lowerFieldDef))
-          | none => defs
-      lowerTypeDefsFromTypes rest defs
-  | _ :: rest, defs => lowerTypeDefsFromTypes rest defs
+        match ty with
+        | .defined name _ =>
+            if hasTypeDef defs name then
+              defs
+            else
+              let fields? :=
+                match firstStructFieldsBeforeNextDefined? rest with
+                | some fields => some fields
+                | none => lastStruct
+              match fields? with
+              | some fields => defs.push (name, .struct (fields.map lowerFieldDef))
+              | none => defs
+        | _ => defs
+      lowerTypeDefsFromTypes rest lastStruct defs
 
 def lowerTypeDefs (types : Array GoLean.GobraJson.Ty) :
     Array (String × GoLean.GoCore.TypeDef) :=
-  lowerTypeDefsFromTypes types.toList #[]
+  lowerTypeDefsFromTypes types.toList none #[]
 
 def lowerFunctionMember (member : GoLean.GobraJson.FunctionMember) : Except String GoLean.GoCore.Func := do
   let body ←
