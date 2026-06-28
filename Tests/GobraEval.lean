@@ -160,6 +160,38 @@ private def coreNegativeShiftFunction : GoCore.Func := {
   body := .assign (.var "z") (.shiftLeft (.intLit 1) (.intLit (-1)))
 }
 
+private def coreBitwiseFunction : GoCore.Func := {
+  name := "bitwise_F",
+  args := #[],
+  results := #[
+    { id := "a", typ := .int .uint8 },
+    { id := "b", typ := .int .uint8 },
+    { id := "c", typ := .int .uint8 },
+    { id := "d", typ := .int .uint8 },
+    { id := "e", typ := .int .uint8 },
+    { id := "f", typ := .int .int8 }
+  ],
+  body := .block
+    #[
+      { id := "x", typ := .int .uint8 },
+      { id := "y", typ := .int .uint8 },
+      { id := "zero", typ := .int .uint8 },
+      { id := "signedZero", typ := .int .int8 }
+    ]
+    #[
+      .assign (.var "x") (.intLit 15),
+      .assign (.var "y") (.intLit 5),
+      .assign (.var "zero") (.intLit 0),
+      .assign (.var "signedZero") (.intLit 0),
+      .assign (.var "a") (.bitAnd (.var "x") (.var "y")),
+      .assign (.var "b") (.bitOr (.var "x") (.var "y")),
+      .assign (.var "c") (.bitXor (.var "x") (.var "y")),
+      .assign (.var "d") (.bitClear (.var "x") (.var "y")),
+      .assign (.var "e") (.bitNeg (.var "zero")),
+      .assign (.var "f") (.bitNeg (.var "signedZero"))
+    ]
+}
+
 private def coreArrayFunction : GoCore.Func := {
   name := "arrays_F",
   args := #[],
@@ -740,6 +772,9 @@ def main : IO UInt32 := do
   passed := passed && (← expectErrorStatus "GoCore unsupported non-integer conversion" (GoCore.runFunction 100 coreUnsupportedConversionFunction #[]) "unsupported")
   passed := passed && (← expectIntResult "GoCore shifts" (GoCore.runFunction 100 coreShiftFunction #[]) (-2))
   passed := passed && (← expectErrorStatus "GoCore negative shift panic" (GoCore.runFunction 100 coreNegativeShiftFunction #[]) "panic")
+  passed := passed && (← expectValues "GoCore bitwise operators"
+    (GoCore.runFunction 100 coreBitwiseFunction #[])
+    #[.int 5 .uint8, .int 15 .uint8, .int 10 .uint8, .int 10 .uint8, .int 255 .uint8, .int (-1) .int8])
   passed := passed && (← expectIntResult "GoCore array indexing" (GoCore.runFunction 100 coreArrayFunction #[]) 11)
   passed := passed && (← expectIntResult "GoCore array len cap" (GoCore.runFunction 100 coreArrayLenCapFunction #[]) 6)
   passed := passed && (← expectIntResult "GoCore array default value" (GoCore.runFunction 100 coreArrayDefaultFunction #[]) 0)

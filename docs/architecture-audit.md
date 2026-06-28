@@ -151,7 +151,7 @@ This is the first slice, not the whole integer story. Full Go still needs:
 - signed and unsigned integer families;
 - `byte`/`uint8` and `rune`/`int32`;
 - broader conversion families, including string/rune conversions;
-- bitwise operators and more shift edge cases;
+- more bitwise/shift edge cases;
 - overflow behavior for fixed-width values;
 - an architecture-dependent `int`/`uint` width policy in the future relation.
 
@@ -274,8 +274,8 @@ Minimum prerequisites:
    calls-in-expressions, channel receives, or effectful builtins.
 3. In progress: introduce typed integer kinds and byte/rune values before
    string operations and numeric conversions. The first fixed-width integer
-   slice is implemented, as are first integer-to-integer conversion, shift, and
-   string byte-indexing support; string slicing and rune operations remain.
+   slice is implemented, as are integer-to-integer conversion, shift, bitwise,
+   and string byte-indexing support; string slicing and rune operations remain.
 4. Done: make equality type-directed for the current value forms before
    interfaces and exact comparability tests.
 5. Replace Gobra type-definition recovery heuristics with explicit fork output
@@ -292,8 +292,7 @@ The best next semantic family is typed integers plus byte/string operations:
 - it is small enough to differentially test thoroughly;
 - it unblocks string slicing and rune-level operations;
 - it forces the runtime value representation to become more precise;
-- it is a prerequisite for bitwise operators, broader conversions, arrays,
-  maps, and constants.
+- it is a prerequisite for broader conversions, arrays, maps, and constants.
 
 This is also a good forcing function for the GoCore module split, because typed
 integers touch syntax, values, operations, lowering, tests, and docs.

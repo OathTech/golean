@@ -99,6 +99,11 @@ partial def lowerExprTy? : GoLean.GobraJson.Expr → Option GoLean.GoCore.Ty
   | .conversion _ newType _ => some (lowerTy newType)
   | .shiftLeft _ left _ => lowerExprTy? left
   | .shiftRight _ left _ => lowerExprTy? left
+  | .bitAnd _ left _ => lowerExprTy? left
+  | .bitOr _ left _ => lowerExprTy? left
+  | .bitXor _ left _ => lowerExprTy? left
+  | .bitClear _ left _ => lowerExprTy? left
+  | .bitNeg _ operand => lowerExprTy? operand
   | .deref _ _ typ =>
       match lowerTy typ with
       | .pointer elem => some elem
@@ -182,6 +187,11 @@ partial def lowerExpr : GoLean.GobraJson.Expr → GoLean.GoCore.Expr
   | .mod _ left right => .mod (lowerExpr left) (lowerExpr right)
   | .shiftLeft _ left right => .shiftLeft (lowerExpr left) (lowerExpr right)
   | .shiftRight _ left right => .shiftRight (lowerExpr left) (lowerExpr right)
+  | .bitAnd _ left right => .bitAnd (lowerExpr left) (lowerExpr right)
+  | .bitOr _ left right => .bitOr (lowerExpr left) (lowerExpr right)
+  | .bitXor _ left right => .bitXor (lowerExpr left) (lowerExpr right)
+  | .bitClear _ left right => .bitClear (lowerExpr left) (lowerExpr right)
+  | .bitNeg _ operand => .bitNeg (lowerExpr operand)
   | .eqCmp _ left right =>
       match lowerExprTy? left with
       | some typ => .eqCmp typ (lowerExpr left) (lowerExpr right)

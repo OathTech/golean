@@ -16,7 +16,7 @@ structure KnownTag where
   deriving Repr, BEq
 
 private def knownTagNames : List String := [
-  "Access", "Add", "Address", "Assert", "Assume", "AtLeastCmp", "AtMostCmp", "Capacity",
+  "Access", "Add", "Address", "Assert", "Assume", "AtLeastCmp", "AtMostCmp", "BitAnd", "BitClear", "BitNeg", "BitOr", "BitXor", "Capacity",
   "AnnotatedOrigin", "ArrayLit", "ArrayT", "Block", "BoolLit", "BoolT", "BoundedInteger", "Decimal", "DefinedT", "DfltVal",
   "Break", "Continue", "Conversion", "Deref", "Div", "EqCmp", "ExprAssertion", "Field", "FieldRef", "FullPerm",
   "Function", "FunctionCall", "FunctionProxy", "GhostEqCmp", "GoSliceAppend", "GoSliceCopy", "GreaterCmp", "Implication", "In",
@@ -182,6 +182,11 @@ mutual
     | mod (source : Source) (left right : Expr)
     | shiftLeft (source : Source) (left right : Expr)
     | shiftRight (source : Source) (left right : Expr)
+    | bitAnd (source : Source) (left right : Expr)
+    | bitOr (source : Source) (left right : Expr)
+    | bitXor (source : Source) (left right : Expr)
+    | bitClear (source : Source) (left right : Expr)
+    | bitNeg (source : Source) (operand : Expr)
     | eqCmp (source : Source) (left right : Expr)
     | ghostEqCmp (source : Source) (left right : Expr)
     | uneqCmp (source : Source) (left right : Expr)
@@ -701,6 +706,15 @@ mutual
     | "Mod" => binary "Mod" .mod
     | "ShiftLeft" => binary "ShiftLeft" .shiftLeft
     | "ShiftRight" => binary "ShiftRight" .shiftRight
+    | "BitAnd" => binary "BitAnd" .bitAnd
+    | "BitOr" => binary "BitOr" .bitOr
+    | "BitXor" => binary "BitXor" .bitXor
+    | "BitClear" => binary "BitClear" .bitClear
+    | "BitNeg" =>
+        let obj ← taggedObj path json "BitNeg" ["op", "source", "tag"]
+        return .bitNeg
+          (← decodeSource s!"{path}.source" (← GoLean.StrictJson.field path obj "source"))
+          (← decodeExpr s!"{path}.op" (← GoLean.StrictJson.field path obj "op"))
     | "EqCmp" => binary "EqCmp" .eqCmp
     | "GhostEqCmp" => binary "GhostEqCmp" .ghostEqCmp
     | "UneqCmp" => binary "UneqCmp" .uneqCmp

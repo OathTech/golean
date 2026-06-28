@@ -60,8 +60,8 @@ c20	make len greater than cap panics	slices,make,panic	active-covered	covered by
 c21	slice header passed by value	slices,calls,append,aliasing	active-covered	covered by slice-header-by-value
 c22	nil versus empty slice	slices,nil,empty	active-covered	covered by slice-nil-empty
 c23	int divide by zero versus float infinity	integers,floats,division,panic	future	int panic covered; floats/Inf/NaN open
-c24	bitwise complement	integers,bitwise,widths	future	requires bitwise operators and integer widths
-c25	bit clear operator	integers,bitwise	future	requires `&^`
+c24	bitwise complement	integers,bitwise,widths	active-covered	covered by bitwise
+c25	bit clear operator	integers,bitwise	active-covered	covered by bitwise
 c26	no implicit numeric conversion	typing,conversions,floats	future	mostly compile-time; runtime needs floats and explicit conversion
 c27	complex numbers	complex,numbers	future	requires complex number model
 c28	switch fallthrough	control-flow,switch,fallthrough	future	requires switch and fallthrough

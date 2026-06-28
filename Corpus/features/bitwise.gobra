@@ -1,0 +1,19 @@
+package pkg;
+
+func bitwise() (a byte, b byte, c byte, d byte, e byte, f int8) {
+	var x byte;
+	x = 15;
+	var y byte;
+	y = 5;
+	var zero byte;
+	zero = 0;
+	var signedZero int8;
+	signedZero = 0;
+
+	a = x & y;
+	b = x | y;
+	c = x ^ y;
+	d = x &^ y;
+	e = ^zero;
+	f = ^signedZero;
+}

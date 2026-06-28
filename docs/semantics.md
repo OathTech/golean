@@ -206,6 +206,10 @@ unsupported until their Go semantics are modeled. The future relational semantic
 architecture-dependent `int`/`uint` width an explicit parameter rather than
 baking in this executable testing policy.
 
+Bitwise operators use fixed-width modular bit patterns for typed integer
+values, then normalize the result back to the selected result kind. Untyped
+unbounded bitwise constants remain unsupported until the constant model exists.
+
 String indexing reads from the string's UTF-8 byte sequence and returns a
 `uint8` value. String slicing and range-over-string rune semantics are still
 separate future features.

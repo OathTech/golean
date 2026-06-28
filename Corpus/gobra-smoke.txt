@@ -52,6 +52,7 @@ features/int8-wrap features/int8-wrap.gobra
 features/byte-conversion features/byte-conversion.gobra
 features/shifts features/shifts.gobra
 features/negative-shift features/negative-shift.gobra
+features/bitwise features/bitwise.gobra
 features/new-basic features/new-basic.gobra
 features/new-nil-values features/new-nil-values.gobra
 features/new-struct features/new-struct.gobra

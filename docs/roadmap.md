@@ -70,8 +70,8 @@ Required fixes:
 - Continue making the integer story explicit. The first executable slice models
   fixed-width integer normalization and uses a 64-bit `int`/`uint` policy for
   differential testing. A first integer-to-integer conversion slice is in
-  place, as is a first shift slice; constants, bitwise operators, broader
-  conversions, and the future architecture-parametric relation remain open.
+  place, as are first shift and bitwise slices; constants, broader conversions,
+  and the future architecture-parametric relation remain open.
 - Replace statement execution's plain state return with an explicit
   `ExecOutcome` covering normal completion, return, break, and continue, with
   typed errors representing panic, unsupported, stuck, and internal failures.
@@ -208,7 +208,7 @@ but the expected progression is:
 
 - integer and boolean operators with Go-sized words. The first fixed-width
   integer slice is in place, including first integer-to-integer conversions;
-  first shift support is also in place. Constants, bitwise operators, broader
+  first shift and bitwise support are also in place. Constants, broader
   conversions, string slicing, and richer rune behavior should be added
   incrementally with differential tests;
 - arrays and slices, including indexing, slicing, append, len, and cap. Slices
@@ -291,8 +291,8 @@ against GoCore-level specification hooks.
 
 1. Complete the remaining architecture hardening gate from
    `docs/architecture-audit.md`: continue the typed-integer/string slice with
-   bitwise operators, string slicing, and rune operations, and add a small
-   relational semantics skeleton.
+   string slicing, rune operations, and remaining integer edge cases, and add a
+   small relational semantics skeleton.
 2. Keep expanding deterministic differential coverage, but prefer cases that
    force representation decisions we need anyway: typed integers, bytes,
    strings, conversions, and comparability.

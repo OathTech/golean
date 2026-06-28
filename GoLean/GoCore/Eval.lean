@@ -18,6 +18,48 @@ def intBinaryResult (opName : String) (op : Int → Int → Int) (left right : G
     | none => stuck s!"mismatched {opName} integer kinds: {leftKind.name} and {rightKind.name}"
   return .int (kind.normalize (op leftValue rightValue)) kind
 
+def intKindBitWidth (opName : String) (kind : IntKind) : Except GoError Nat := do
+  match kind.bits? with
+  | some bits => return bits
+  | none => unsupported s!"{opName} for unbounded integer kind {kind.name}"
+
+def intKindUnsignedNat (kind : IntKind) (value : Int) : Except GoError Nat := do
+  let bits ← intKindBitWidth "bitwise operator" kind
+  let modulus : Int := (2 : Int) ^ bits
+  return (value % modulus).toNat
+
+def intBitwiseBinaryResult (opName : String) (op : Nat → Nat → Nat) (left right : GoValue) :
+    Except GoError GoValue := do
+  let (leftValue, leftKind) ← valueAsIntValue left
+  let (rightValue, rightKind) ← valueAsIntValue right
+  let kind ←
+    match IntKind.compatibleResult leftKind rightKind with
+    | some kind => pure kind
+    | none => stuck s!"mismatched {opName} integer kinds: {leftKind.name} and {rightKind.name}"
+  let leftBits ← intKindUnsignedNat kind leftValue
+  let rightBits ← intKindUnsignedNat kind rightValue
+  return .int (kind.normalize (Int.ofNat (op leftBits rightBits))) kind
+
+def intBitClearResult (left right : GoValue) : Except GoError GoValue := do
+  let (leftValue, leftKind) ← valueAsIntValue left
+  let (rightValue, rightKind) ← valueAsIntValue right
+  let kind ←
+    match IntKind.compatibleResult leftKind rightKind with
+    | some kind => pure kind
+    | none => stuck s!"mismatched &^ integer kinds: {leftKind.name} and {rightKind.name}"
+  let bits ← intKindBitWidth "&^" kind
+  let mask := (2 ^ bits) - 1
+  let leftBits ← intKindUnsignedNat kind leftValue
+  let rightBits ← intKindUnsignedNat kind rightValue
+  return .int (kind.normalize (Int.ofNat (Nat.land leftBits (Nat.xor rightBits mask)))) kind
+
+def intBitNegResult (value : GoValue) : Except GoError GoValue := do
+  let (intValue, kind) ← valueAsIntValue value
+  let bits ← intKindBitWidth "^" kind
+  let mask := (2 ^ bits) - 1
+  let valueBits ← intKindUnsignedNat kind intValue
+  return .int (kind.normalize (Int.ofNat (Nat.xor valueBits mask))) kind
+
 def shiftCountNat (count : GoValue) : Except GoError Nat := do
   let count ← valueAsInt count
   if count < 0 then
@@ -100,6 +142,25 @@ mutual
         let leftPair ← evalExpr state left
         let rightPair ← evalExpr leftPair.2 right
         return (← intShiftRightResult leftPair.1 rightPair.1, rightPair.2)
+    | .bitAnd left right => do
+        let leftPair ← evalExpr state left
+        let rightPair ← evalExpr leftPair.2 right
+        return (← intBitwiseBinaryResult "&" Nat.land leftPair.1 rightPair.1, rightPair.2)
+    | .bitOr left right => do
+        let leftPair ← evalExpr state left
+        let rightPair ← evalExpr leftPair.2 right
+        return (← intBitwiseBinaryResult "|" Nat.lor leftPair.1 rightPair.1, rightPair.2)
+    | .bitXor left right => do
+        let leftPair ← evalExpr state left
+        let rightPair ← evalExpr leftPair.2 right
+        return (← intBitwiseBinaryResult "^" Nat.xor leftPair.1 rightPair.1, rightPair.2)
+    | .bitClear left right => do
+        let leftPair ← evalExpr state left
+        let rightPair ← evalExpr leftPair.2 right
+        return (← intBitClearResult leftPair.1 rightPair.1, rightPair.2)
+    | .bitNeg operand => do
+        let pair ← evalExpr state operand
+        return (← intBitNegResult pair.1, pair.2)
     | .eqCmp typ left right => do
         let leftPair ← evalExpr state left
         let rightPair ← evalExpr leftPair.2 right
