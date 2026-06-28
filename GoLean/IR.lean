@@ -535,6 +535,26 @@ private partial def mapEntryIndex? (entries : Array (GoValue × GoValue)) (key :
     i := i + 1
   return none
 
+private def valueLess : GoValue → GoValue → Except GoError Bool
+  | .int left, .int right => return left < right
+  | .string left, .string right => return compare left right == .lt
+  | left, right => stuck s!"mismatched < operands: {repr left} and {repr right}"
+
+private def valueAtMost : GoValue → GoValue → Except GoError Bool
+  | .int left, .int right => return left <= right
+  | .string left, .string right => return compare left right != .gt
+  | left, right => stuck s!"mismatched <= operands: {repr left} and {repr right}"
+
+private def valueGreater : GoValue → GoValue → Except GoError Bool
+  | .int left, .int right => return left > right
+  | .string left, .string right => return compare left right == .gt
+  | left, right => stuck s!"mismatched > operands: {repr left} and {repr right}"
+
+private def valueAtLeast : GoValue → GoValue → Except GoError Bool
+  | .int left, .int right => return left >= right
+  | .string left, .string right => return compare left right != .lt
+  | left, right => stuck s!"mismatched >= operands: {repr left} and {repr right}"
+
 mutual
   partial def evalExpr (state : ExecState) : Expr → Except GoError GoValue
     | .var id => lookup state id
@@ -579,13 +599,13 @@ mutual
         let rightValue ← evalExpr state right
         return .bool (!(← valueEq leftValue rightValue))
     | .atMostCmp left right => do
-        return .bool ((← valueAsInt (← evalExpr state left)) <= (← valueAsInt (← evalExpr state right)))
+        return .bool (← valueAtMost (← evalExpr state left) (← evalExpr state right))
     | .atLeastCmp left right => do
-        return .bool ((← valueAsInt (← evalExpr state left)) >= (← valueAsInt (← evalExpr state right)))
+        return .bool (← valueAtLeast (← evalExpr state left) (← evalExpr state right))
     | .lessCmp left right => do
-        return .bool ((← valueAsInt (← evalExpr state left)) < (← valueAsInt (← evalExpr state right)))
+        return .bool (← valueLess (← evalExpr state left) (← evalExpr state right))
     | .greaterCmp left right => do
-        return .bool ((← valueAsInt (← evalExpr state left)) > (← valueAsInt (← evalExpr state right)))
+        return .bool (← valueGreater (← evalExpr state left) (← evalExpr state right))
     | .and left right => do
         if ← valueAsBool (← evalExpr state left) then
           return .bool (← valueAsBool (← evalExpr state right))

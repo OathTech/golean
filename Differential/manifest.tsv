@@ -41,3 +41,4 @@ plain/map-literal-bool	Differential/plain/map-literal-bool	artifacts/gobra-smoke
 plain/string-basic	Differential/plain/string-basic	artifacts/gobra-smoke/work/features/string-basic/string-basic.gobra.internal.json	stringBasic_bda1d7d_F	-	ok	strings,literals,len,equality,concat	-
 plain/string-call	Differential/plain/string-call	artifacts/gobra-smoke/work/features/string-call/string-call.gobra.internal.json	stringCall_bda1d7d_F	-	ok	strings,calls,returns	-
 plain/string-pointer	Differential/plain/string-pointer	artifacts/gobra-smoke/work/features/string-pointer/string-pointer.gobra.internal.json	stringPointer_bda1d7d_F	-	ok	strings,pointers,assignment	-
+plain/string-compare	Differential/plain/string-compare	artifacts/gobra-smoke/work/features/string-compare/string-compare.gobra.internal.json	stringCompare_bda1d7d_F	-	ok	strings,comparisons	-

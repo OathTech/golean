@@ -41,3 +41,4 @@ features/map-literal-bool features/map-literal-bool.gobra
 features/string-basic features/string-basic.gobra
 features/string-call features/string-call.gobra
 features/string-pointer features/string-pointer.gobra
+features/string-compare features/string-compare.gobra
