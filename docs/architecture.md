@@ -32,4 +32,5 @@ ghost constructs are frontend wire data. They are not executable GoCore
 statements or function contracts.
 
 See `docs/semantics.md` for the current GoCore semantics design and
-`docs/roadmap.md` for the phased implementation plan.
+`docs/roadmap.md` for the phased implementation plan. See
+`docs/architecture-audit.md` for the current scaling audit and refactor gates.

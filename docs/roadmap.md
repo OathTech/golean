@@ -281,18 +281,21 @@ against GoCore-level specification hooks.
 
 ## Near-Term Work Queue
 
-1. Complete the hardening gate: structured errors, typed operation checks,
-   explicit execution outcomes, fail-closed lowering, and hardened
-   differential observations.
-2. Expand deterministic array and slice coverage around value-copy and aliasing
-   edge cases.
+1. Complete the architecture hardening gate from
+   `docs/architecture-audit.md`: split GoCore modules, make expression
+   evaluation state-returning, make equality type-directed, and add a small
+   relational semantics skeleton.
+2. Keep expanding deterministic differential coverage, but prefer cases that
+   force representation decisions we need anyway: typed integers, bytes,
+   strings, conversions, and comparability.
 3. Continue slices using the descriptor/backing-location model in
-   `docs/slice-model.md`, especially remaining zero-capacity edge cases, string
-   slicing, and append growth policy refinement.
-4. Keep extending scalar coverage toward Go-sized word behavior and conversions.
-5. Add more generated/deterministic differential cases with feature tags and
-   expected observation status.
-6. Add maps and named-type/conversion behavior driven by corpus failures.
-7. Integrate Microsmith/GoSmith only after scalar, pointer, struct, array, and
-   slice cases have deterministic coverage and feature filters.
-8. Keep checking old/new Goose before adding each larger semantic feature.
+   `docs/slice-model.md`, especially string slicing, zero-capacity edge cases,
+   and append growth policy refinement.
+4. Track frontend gaps separately from semantic gaps. Gobra-fronted failures
+   such as `delete` should pressure the Gobra fork or a future native frontend,
+   not distort GoCore.
+5. Add maps and named-type/conversion behavior driven by corpus failures.
+6. Integrate Microsmith/GoSmith only after scalar, pointer, struct, array, and
+   slice cases have deterministic coverage, typed integer policy, and feature
+   filters.
+7. Keep checking old/new Goose before adding each larger semantic feature.

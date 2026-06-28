@@ -36,6 +36,17 @@ backlog items.
 
 ## Hardening Phase
 
+- Split `GoLean/IR.lean` into GoCore syntax, values, state, operations, and
+  executable evaluation modules before adding interfaces, typed integers, or
+  concurrency. Keep `GoLean/IR.lean` as a compatibility import during the
+  transition.
+- Convert expression evaluation to return an updated state, or move it into an
+  equivalent state monad, before adding calls-in-expressions, channel receives,
+  or effectful builtins.
+- Make equality type-directed before adding interfaces, function values, or
+  exact comparability semantics.
+- Add a small relational GoCore semantics skeleton before concurrency or
+  Iris-facing proof rules.
 - Keep the executable interpreter factored so it can be related to a future
   relational GoCore semantics for Iris-Lean. The interpreter is for testing; it
   should not be the only semantic authority.
@@ -95,6 +106,10 @@ backlog items.
 
 ## GoCore Memory Milestone
 
+- Track frontend gaps separately from semantic gaps. For example, Gobra
+  currently rejects the Go `delete` builtin, so map deletion needs either Gobra
+  fork enrichment or a future native Go frontend before it can enter the active
+  Gobra-fronted differential suite.
 - Add regression tests that observe memory effects through ordinary Go returns
   or Go-side output, not Gobra assertions.
 - Add richer call-frame tests, including returned values and nested calls.

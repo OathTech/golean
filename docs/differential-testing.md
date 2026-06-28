@@ -25,6 +25,11 @@ main conformance loop: add a small Go program, add the matching Gobra frontend
 fixture, add a manifest row, and require real Go and Lean observations to
 match.
 
+`scripts/diff-one <id> ...` filters `Differential/manifest.tsv` to one or more
+exact manifest ids and then delegates to `scripts/diff-smoke`. Use it for the
+tight edit/test loop while implementing a feature, then run the full smoke suite
+before committing.
+
 Cases are listed in `Differential/manifest.tsv`. The manifest is intentionally
 strict and small:
 

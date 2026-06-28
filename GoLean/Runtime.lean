@@ -54,13 +54,4 @@ inductive GoValue where
   | mapData (entries : Array (GoValue × GoValue))
   deriving Repr, BEq
 
-structure GoState where
-  nextAddr : Nat := 0
-  deriving Repr
-
-abbrev GoM (α : Type) := EStateM GoError GoState α
-
-def unsupported {α : Type} (feature : String) : GoM α :=
-  throw (.unsupported feature)
-
 end GoLean
