@@ -80,6 +80,7 @@ inductive Stmt where
   | block (decls : Array Param) (stmts : Array Stmt)
   | initialization (var : Param)
   | assign (left : Assignee) (right : Expr)
+  | assignMany (left : Array Assignee) (right : Array Expr)
   | newValue (target : Assignee) (value : Expr)
   | makeSlice (target : Assignee) (elem : Ty) (len : Expr) (cap : Option Expr)
   | makeMap (target : Assignee) (key value : Ty) (initialSpace : Option Expr)
@@ -760,6 +761,16 @@ mutual
       (values : Array GoValue) : Except GoError ExecState := do
     assignLocs state (← evalAssigneeLocs state targets) values
 
+  partial def execAssignMany (state : ExecState) (left : Array Assignee) (right : Array Expr) :
+      Except GoError ExecState := do
+    if left.size != right.size then
+      stuck s!"multi-assignment expected {left.size} value(s), got {right.size}"
+    let locs ← evalAssigneeLocs state left
+    let mut values := #[]
+    for expr in right do
+      values := values.push (← evalExpr state expr)
+    assignLocs state locs values
+
   partial def execNewValue (state : ExecState) (target : Assignee) (valueExpr : Expr) :
       Except GoError ExecState := do
     let target ← evalAssigneeLoc state target
@@ -959,6 +970,7 @@ mutual
         let loc ← evalAssigneeLoc state left
         let value ← evalExpr state right
         return .normal (← assignLoc state loc value)
+    | .assignMany left right => return .normal (← execAssignMany state left right)
     | .newValue target value => return .normal (← execNewValue state target value)
     | .makeSlice target elem len cap => return .normal (← execMakeSlice state target elem len cap)
     | .makeMap target key value initialSpace =>

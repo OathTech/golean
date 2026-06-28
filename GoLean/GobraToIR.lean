@@ -257,9 +257,59 @@ partial def lowerNewMapLit (target : GoLean.GobraJson.Variable) (keys values : G
     init
   .seqn stmts
 
+private def lowerTempVarAssignee? : GoLean.GobraJson.Assignee → Option String
+  | .var _ (.local var) => some var.id
+  | _ => none
+
+private def lowerVarExprId? : GoLean.GobraJson.Expr → Option String
+  | .var (.local var) => some var.id
+  | _ => none
+
+private def splitAt? {α : Type} (xs : Array α) (n : Nat) : Option (Array α × Array α) := do
+  if n <= xs.size then
+    return (xs.extract 0 n, xs.extract n xs.size)
+  else
+    none
+
+private def lowerDesugaredMultiAssign? (stmts : Array GoLean.GobraJson.Stmt) :
+    Option GoLean.GoCore.Stmt := do
+  if stmts.size == 0 || stmts.size % 2 != 0 then
+    none
+  let n := stmts.size / 2
+  let (tempStmts, targetStmts) ← splitAt? stmts n
+  let mut tempIds := #[]
+  let mut loweredTemps := #[]
+  for stmt in tempStmts do
+    match stmt with
+    | .singleAss _ left right =>
+        let id ← lowerTempVarAssignee? left
+        tempIds := tempIds.push id
+        loweredTemps := loweredTemps.push (GoLean.GoCore.Stmt.assign (.var id) (lowerExpr right))
+    | _ => none
+  let mut targets := #[]
+  let mut values := #[]
+  let mut i := 0
+  for stmt in targetStmts do
+    match stmt with
+    | .singleAss _ left right =>
+        let id ← lowerVarExprId? right
+        match tempIds[i]? with
+        | some expected =>
+            if id != expected then
+              none
+        | none => none
+        targets := targets.push (lowerAssignee left)
+        values := values.push (GoLean.GoCore.Expr.var id)
+        i := i + 1
+    | _ => none
+  return .seqn (loweredTemps.push (.assignMany targets values))
+
 partial def lowerStmtWithReturnPost (returnPostprocessing : Array GoLean.GoCore.Stmt) :
       GoLean.GobraJson.Stmt → GoLean.GoCore.Stmt
-    | .seqn _ stmts => .seqn (stmts.map (lowerStmtWithReturnPost returnPostprocessing))
+    | .seqn _ stmts =>
+        match lowerDesugaredMultiAssign? stmts with
+        | some stmt => stmt
+        | none => .seqn (stmts.map (lowerStmtWithReturnPost returnPostprocessing))
     | .block _ decls stmts =>
         .block (lowerDecls decls) (stmts.map (lowerStmtWithReturnPost returnPostprocessing))
     | .initialization _ var => .initialization (lowerVariable var)

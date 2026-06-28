@@ -45,3 +45,4 @@ plain/string-compare	Differential/plain/string-compare	artifacts/gobra-smoke/wor
 plain/new-basic	Differential/plain/new-basic	artifacts/gobra-smoke/work/features/new-basic/new-basic.gobra.internal.json	newBasic_bda1d7d_F	-	ok	new,pointers,arrays,indexing	-
 plain/new-nil-values	Differential/plain/new-nil-values	artifacts/gobra-smoke/work/features/new-nil-values/new-nil-values.gobra.internal.json	newNilValues_bda1d7d_F	-	ok	new,pointers,slices,maps,nil	-
 plain/new-struct	Differential/plain/new-struct	artifacts/gobra-smoke/work/features/new-struct/new-struct.gobra.internal.json	newStruct_bda1d7d_F	-	ok	new,pointers,structs,fields	-
+plain/tuple-assign-order	Differential/plain/tuple-assign-order	artifacts/gobra-smoke/work/features/tuple-assign-order/tuple-assign-order.gobra.internal.json	tupleAssignOrder_bda1d7d_F	-	ok	multi_assign,slices,indexing,evaluation_order	-

@@ -418,6 +418,34 @@ private def coreCallTargetSequencingFunction : GoCore.Func := {
     ]
 }
 
+private def coreAssignManySequencingFunction : GoCore.Func := {
+  name := "assign_many_sequencing_F",
+  args := #[],
+  results := #[coreParam "z"],
+  body := .block
+    #[
+      { id := "a", typ := .array 3 .int },
+      { id := "s", typ := .slice .int },
+      { id := "i", typ := .int }
+    ]
+    #[
+      .assign (.var "a") (.arrayLit 3 .int #[(0, .intLit 0), (1, .intLit 0), (2, .intLit 0)]),
+      .assign (.var "s") (.slice (.ref "a") (.intLit 0) (.intLit 3) none),
+      .assign (.var "i") (.intLit 0),
+      .assignMany
+        #[.var "i", .addr (.indexAddr (.var "s") (.var "i"))]
+        #[.intLit 1, .intLit 2],
+      .assign (.var "z")
+        (.add
+          (.mul (.var "i") (.intLit 1000))
+          (.add
+            (.mul (.indexGet (.var "s") (.intLit 0)) (.intLit 100))
+            (.add
+              (.mul (.indexGet (.var "s") (.intLit 1)) (.intLit 10))
+              (.indexGet (.var "s") (.intLit 2)))))
+    ]
+}
+
 private def coreIfReturnFunction : GoCore.Func := {
   name := "if_return_F",
   args := #[coreParam "x"],
@@ -615,6 +643,8 @@ def main : IO UInt32 := do
   passed := passed && (← expectErrorStatus "GoCore mismatched equality stuck" (GoCore.runFunction 100 coreMismatchedEqualityFunction #[]) "stuck")
   passed := passed && (← expectIntResult "GoCore call target sequencing"
     (GoCore.runFunctionWithContext 100 [] #[coreShiftIndexFunction, coreCallTargetSequencingFunction] coreCallTargetSequencingFunction #[]) 901)
+  passed := passed && (← expectIntResult "GoCore simultaneous assignment sequencing"
+    (GoCore.runFunction 100 coreAssignManySequencingFunction #[]) 1200)
   passed := passed && (← expectIntResult "GoCore if return positive" (GoCore.runFunction 100 coreIfReturnFunction #[.int 7]) 7)
   passed := passed && (← expectIntResult "GoCore if return negative" (GoCore.runFunction 100 coreIfReturnFunction #[.int (-3)]) 103)
   passed := passed && (← expectIntResult "GoCore break continue" (GoCore.runFunction 100 coreBreakContinueFunction #[]) 8)
