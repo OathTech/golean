@@ -96,4 +96,4 @@ c56	generic functions and no generic methods	generics,type-parameters	future	req
 c57	comparable constraint and inference	generics,comparability,inference	future	requires generics
 c58	zero value of type parameter	generics,zero-values	future	requires generics
 c59	visibility by identifier case	json,exported-fields,stdlib	future	stdlib JSON and package visibility
-c60	new map versus make map	maps,new,make,nil	candidate	`new(map)` plus nil-map assignment panic
+c60	new map versus make map	maps,new,make,nil	active-covered	covered by new-map-vs-make

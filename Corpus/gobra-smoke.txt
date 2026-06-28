@@ -50,6 +50,7 @@ features/string-byte-len features/string-byte-len.gobra
 features/new-basic features/new-basic.gobra
 features/new-nil-values features/new-nil-values.gobra
 features/new-struct features/new-struct.gobra
+features/new-map-vs-make features/new-map-vs-make.gobra
 features/naked-return features/naked-return.gobra
 features/tuple-assign-order features/tuple-assign-order.gobra
 features/shadowing features/shadowing.gobra
