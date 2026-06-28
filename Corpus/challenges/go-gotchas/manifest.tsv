@@ -1,0 +1,39 @@
+# id	title	themes	status	notes
+g01	nil pointer in interface is not nil	interfaces,nil,methods	future	interface value representation and type assertions
+g02	loop variable capture Go 1.22	concurrency,closures,range	future	requires goroutines, closures, range, and Go version policy
+g03	append can overwrite shared backing array	slices,append,aliasing	active-covered	related active cases: slice-append, append-overlap
+g04	nil map read versus write	maps,nil,panic	active-covered	related active cases: map-basic, map-nil-assign
+g05	defer argument evaluation	defer,calls	future	requires defer call queue and argument evaluation timing
+g06	defer mutates named return	defer,returns	future	requires named returns plus deferred closure mutation
+g07	closed channel receive and send	channel,close,panic	future	requires channels and close semantics
+g08	range over array copies	range,arrays,slices	candidate	requires range semantics; useful for array value-copy policy
+g09	range over string yields byte offsets and runes	strings,range,unicode	future	requires UTF-8/rune semantics
+g10	int division and int8 overflow	integers,widths,overflow	candidate	division covered; fixed-width integer overflow still open
+g11	interface comparison can panic	interfaces,comparability,panic	future	requires dynamic interface equality
+g12	iota repeated expressions	constants,iota	candidate	requires constants/iota frontend coverage
+g13	JSON nil slice versus empty slice	stdlib,json,slices	future	stdlib behavior, not GoCore runtime semantics initially
+g14	short declaration shadowing	scoping,cfg	candidate	frontend/lowering scoping check
+g15	time equality versus Equal	stdlib,time,methods	future	stdlib behavior outside initial semantics
+g16	method value copies receiver	methods,closures,values	future	requires method values and receiver binding
+g17	struct comparison can panic via interface field	structs,interfaces,comparability,panic	future	requires dynamic interface equality inside comparable structs
+g18	defer in loop runs at function return	defer,loops	future	requires defer stack
+g19	tuple assignment evaluates targets before stores	multiple-assignment,slices,evaluation-order	candidate	tracks existing TODO on lvalue/rvalue sequencing
+g20	NaN and map keys	floats,maps,nan	future	requires floating point and NaN equality policy
+g21	Stringer recursion trap	methods,fmt,recursion	future	stdlib formatting plus method dispatch
+g22	type assertion comma-ok versus panic	interfaces,type-assertions,panic	future	requires interfaces/type assertions
+g23	break inside switch versus labeled break	switch,labels,control-flow	future	requires switch and labeled control flow
+g24	variadic nil spread and append spread	variadic,slices,append	candidate	variadic append partly covered; user function variadics open
+g25	arrays are values; slices alias	arrays,slices,value-copy,aliasing	active-covered	covered by array-copy and slice aliasing cases
+g26	nil channel disables select case	channels,select,nil	future	requires channels/select
+g27	select random among ready cases	channels,select,nondeterminism	future	requires nondeterministic observation policy
+g28	recover only direct in deferred function	panic,recover,defer	future	requires panic/defer/recover
+g29	nil pointer receiver method call	methods,nil,pointers	future	requires methods and nil receiver semantics
+g30	string(int) rune conversion	conversions,strings,runes	future	requires conversions and Unicode/rune model
+g31	wide and negative shifts	integers,shifts,panic	future	requires shift semantics and integer widths
+g32	three-index slicing limits capacity	slices,full-slice,append	active-covered	related active cases: full-slice, append-overlap
+g33	copy moves min length	slices,copy,nil	active-covered	related active cases: copy-short, copy-nil
+g34	map iteration order randomized	maps,range,nondeterminism	future	requires map range and nondeterminism policy
+g35	range over slice of structs copies elements	range,slices,structs,copies	future	requires range semantics over slices
+g36	blocked goroutine leak	concurrency,channels,runtime	future	requires goroutines/channels; observation is runtime-dependent
+g37	function values compare only to nil	functions,nil,comparability	future	requires function values
+g38	numeric conversions truncate or wrap	conversions,integers,floats	future	requires numeric conversions and float policy

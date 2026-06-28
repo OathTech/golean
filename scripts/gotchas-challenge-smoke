@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+cd "$ROOT"
+
+BASE="Corpus/challenges/go-gotchas/cases"
+GO_BUILD_CACHE="$ROOT/artifacts/go-build-cache"
+
+if [[ ! -d "$BASE" ]]; then
+  echo "challenge corpus not found: $BASE" >&2
+  exit 2
+fi
+if ! command -v go >/dev/null 2>&1; then
+  echo "go not found on PATH" >&2
+  exit 2
+fi
+
+mkdir -p "$GO_BUILD_CACHE"
+
+case_count=0
+while IFS= read -r dir; do
+  rel="${dir#"$BASE"/}"
+  output="$(env GO111MODULE=off GOCACHE="$GO_BUILD_CACHE" go run "./$dir")"
+  if [[ "$output" != *'"status":"ok"'* ]]; then
+    echo "challenge case failed: $rel" >&2
+    echo "$output" >&2
+    exit 1
+  fi
+  echo "ok: $rel $output"
+  case_count=$((case_count + 1))
+done < <(find "$BASE" -mindepth 1 -maxdepth 1 -type d | sort)
+
+if [[ "$case_count" -eq 0 ]]; then
+  echo "no challenge cases found" >&2
+  exit 2
+fi
+
+echo "executed $case_count Go gotcha challenge case(s)"
