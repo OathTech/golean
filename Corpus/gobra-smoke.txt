@@ -64,6 +64,7 @@ features/naked-return features/naked-return.gobra
 features/tuple-assign-order features/tuple-assign-order.gobra
 features/shadowing features/shadowing.gobra
 features/short-decl-mixing features/short-decl-mixing.gobra
+features/switch-basic features/switch-basic.gobra
 features/range-array-copy features/range-array-copy.gobra
 features/range-struct-copy features/range-struct-copy.gobra
 features/gotcha-append-aliasing features/gotcha-append-aliasing.gobra
