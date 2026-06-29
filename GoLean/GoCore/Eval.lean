@@ -105,6 +105,27 @@ mutual
     | .convert typ operand => do
         let pair ← evalExpr state operand
         return (← convertValueToTy pair.2 typ pair.1, pair.2)
+    | .bytesFromString operand => do
+        let pair ← evalExpr state operand
+        match pair.1 with
+        | .string value =>
+            let bytes := value.bytes.map (fun b => GoValue.int (Int.ofNat b.toNat) .uint8)
+            let (base, current) := pair.2.alloc (.array bytes)
+            return (.slice { base := some base, offset := 0, len := bytes.size, cap := bytes.size }, current)
+        | other => stuck s!"expected string operand for []byte conversion, got {repr other}"
+    | .stringFromByteSlice operand => do
+        let pair ← evalExpr state operand
+        let slice ← valueAsSlice pair.1
+        let values ← sliceVisibleValues pair.2 slice
+        let mut bytes := #[]
+        for value in values do
+          match value with
+          | .int byte .uint8 =>
+              if byte < 0 || byte > 255 then
+                stuck s!"malformed uint8 byte value in string conversion: {byte}"
+              bytes := bytes.push (UInt8.ofNat byte.toNat)
+          | other => stuck s!"expected uint8 element in string conversion, got {repr other}"
+        return (.string { bytes := bytes }, pair.2)
     | .add left right => do
         let leftPair ← evalExpr state left
         let rightPair ← evalExpr leftPair.2 right

@@ -37,6 +37,8 @@ inductive Expr where
   | stringLit (value : GoString)
   | boolLit (value : Bool)
   | convert (typ : Ty) (operand : Expr)
+  | bytesFromString (operand : Expr)
+  | stringFromByteSlice (operand : Expr)
   | add (left right : Expr)
   | sub (left right : Expr)
   | mul (left right : Expr)

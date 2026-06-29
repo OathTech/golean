@@ -1,0 +1,12 @@
+package pkg;
+
+func stringByteConversion() (l int, s0 byte, t0 byte, t1 byte) {
+	s := "A\xff\n\u00e9";
+	bs := []byte(s);
+	bs[0] = 66;
+	t := string(bs);
+	l = len(bs);
+	s0 = s[0];
+	t0 = t[0];
+	t1 = t[1];
+}

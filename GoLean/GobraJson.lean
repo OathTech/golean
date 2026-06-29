@@ -235,6 +235,7 @@ mutual
     | block (source : Source) (decls : Array Decl) (stmts : Array Stmt)
     | initialization (source : Source) (left : Variable)
     | singleAss (source : Source) (left : Assignee) (right : Expr)
+    | effectfulConversion (source : Source) (target : Variable) (newType : Ty) (expr : Expr)
     | new (source : Source) (target : Variable) (expr : Expr)
     | makeSlice (source : Source) (target : Variable) (typeParam : Ty)
         (lenArg : Expr) (capArg : Option Expr)
@@ -902,6 +903,13 @@ mutual
           (← decodeSource s!"{path}.source" (← GoLean.StrictJson.field path obj "source"))
           (← decodeAssignee s!"{path}.left" (← GoLean.StrictJson.field path obj "left"))
           (← decodeExpr s!"{path}.right" (← GoLean.StrictJson.field path obj "right"))
+    | "EffectfulConversion" =>
+        let obj ← taggedObj path json "EffectfulConversion" ["expr", "newType", "source", "tag", "target"]
+        return .effectfulConversion
+          (← decodeSource s!"{path}.source" (← GoLean.StrictJson.field path obj "source"))
+          (← decodeVariableWithTag "LocalVar" s!"{path}.target" (← GoLean.StrictJson.field path obj "target"))
+          (← decodeTy s!"{path}.newType" (← GoLean.StrictJson.field path obj "newType"))
+          (← decodeExpr s!"{path}.expr" (← GoLean.StrictJson.field path obj "expr"))
     | "New" =>
         let obj ← taggedObj path json "New" ["expr", "source", "tag", "target"]
         return .new

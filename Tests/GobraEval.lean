@@ -29,6 +29,9 @@ private def coreAddExpr : GoCore.Expr :=
 private def coreStringLit (value : String) : GoCore.Expr :=
   .stringLit (GoString.fromLeanString value)
 
+private def coreStringByteLit (bytes : Array Nat) : GoCore.Expr :=
+  .stringLit { bytes := bytes.map UInt8.ofNat }
+
 private def coreAddFunction : GoCore.Func := {
   name := "add_F",
   args := #[coreParam "x", coreParam "y"],
@@ -456,6 +459,32 @@ private def coreStringSliceFunction : GoCore.Func := {
     ]
 }
 
+private def coreStringByteConversionFunction : GoCore.Func := {
+  name := "string_byte_conversion_F",
+  args := #[],
+  results := #[coreParam "z"],
+  body := .block
+    #[
+      { id := "s", typ := .string },
+      { id := "bs", typ := .slice (.int .uint8) },
+      { id := "t", typ := .string }
+    ]
+    #[
+      .assign (.var "s") (coreStringByteLit #[65, 255, 10, 195, 169]),
+      .assign (.var "bs") (.bytesFromString (.var "s")),
+      .assign (.addr (.indexAddr (.var "bs") (.intLit 0))) (.intLit 66),
+      .assign (.var "t") (.stringFromByteSlice (.var "bs")),
+      .assign (.var "z")
+        (.add
+          (.add
+            (.mul (.length (.var "bs")) (.intLit 1000000))
+            (.mul (.convert .int (.indexGet (.var "s") (.intLit 0))) (.intLit 10000)))
+          (.add
+            (.mul (.convert .int (.indexGet (.var "t") (.intLit 0))) (.intLit 100))
+            (.convert .int (.indexGet (.var "t") (.intLit 1)))))
+    ]
+}
+
 private def coreNewFunction : GoCore.Func := {
   name := "new_F",
   args := #[],
@@ -810,6 +839,8 @@ def main : IO UInt32 := do
   passed := passed && (← expectValues "GoCore string byte indexing"
     (GoCore.runFunction 100 coreStringIndexFunction #[]) #[.int 195 .uint8, .int 169 .uint8])
   passed := passed && (← expectIntResult "GoCore string byte slicing" (GoCore.runFunction 100 coreStringSliceFunction #[]) 295)
+  passed := passed && (← expectIntResult "GoCore string byte conversions"
+    (GoCore.runFunction 100 coreStringByteConversionFunction #[]) 5656855)
   passed := passed && (← expectIntResult "GoCore new allocation" (GoCore.runFunction 100 coreNewFunction #[]) 70)
   passed := passed && (← expectErrorStatus "GoCore nil dereference panic" (GoCore.runFunction 100 coreNilDerefFunction #[]) "panic")
   passed := passed && (← expectErrorStatus "GoCore divide by zero panic" (GoCore.runFunction 100 coreDivideByZeroFunction #[]) "panic")

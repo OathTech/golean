@@ -50,6 +50,7 @@ features/string-byte-len features/string-byte-len.gobra
 features/string-index features/string-index.gobra
 features/string-slice features/string-slice.gobra
 features/string-escape-bytes features/string-escape-bytes.gobra
+features/string-byte-conversion features/string-byte-conversion.gobra
 features/int8-wrap features/int8-wrap.gobra
 features/byte-conversion features/byte-conversion.gobra
 features/shifts features/shifts.gobra

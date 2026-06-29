@@ -180,7 +180,13 @@ partial def lowerExpr : GoLean.GobraJson.Expr → GoLean.GoCore.Expr
       | none => .unsupported s!"integer literal with unsupported {lowerIntegerKindFeature kind}"
   | .stringLit _ _ bytes => .stringLit { bytes := bytes }
   | .boolLit _ value => .boolLit value
-  | .conversion _ newType expr => .convert (lowerTy newType) (lowerExpr expr)
+  | .conversion _ newType expr =>
+      let target := lowerTy newType
+      let operand := lowerExpr expr
+      match target, lowerExprTy? expr with
+      | .slice (.int .uint8), some .string => .bytesFromString operand
+      | .string, some (.slice (.int .uint8)) => .stringFromByteSlice operand
+      | _, _ => .convert target operand
   | .add _ left right => .add (lowerExpr left) (lowerExpr right)
   | .sub _ left right => .sub (lowerExpr left) (lowerExpr right)
   | .mul _ left right => .mul (lowerExpr left) (lowerExpr right)
@@ -379,6 +385,8 @@ partial def lowerStmtWithReturnPost (returnPostprocessing : Array GoLean.GoCore.
             | some (base, index, keyTy, valueTy) => .mapAssign base index (lowerExpr right) keyTy valueTy
             | none => .assign (lowerAssignee left) (lowerExpr right)
         | _ => .assign (lowerAssignee left) (lowerExpr right)
+    | .effectfulConversion _ target newType expr =>
+        .assign (.var target.id) (lowerExpr (.conversion .internal newType expr))
     | .new _ target expr => .newValue (.var target.id) (lowerExpr expr)
     | .makeSlice _ target typeParam lenArg capArg =>
         match lowerTy typeParam with
