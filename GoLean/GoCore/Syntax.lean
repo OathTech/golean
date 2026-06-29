@@ -34,7 +34,7 @@ inductive Expr where
   | var (id : String)
   | nil (typ : Option Ty)
   | intLit (value : Int) (kind : IntKind := .unbounded "integer")
-  | stringLit (value : String)
+  | stringLit (value : GoString)
   | boolLit (value : Bool)
   | convert (typ : Ty) (operand : Expr)
   | add (left right : Expr)

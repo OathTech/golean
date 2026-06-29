@@ -178,7 +178,7 @@ partial def lowerExpr : GoLean.GobraJson.Expr → GoLean.GoCore.Expr
       match lowerIntegerKind? kind with
       | some kind => .intLit value kind
       | none => .unsupported s!"integer literal with unsupported {lowerIntegerKindFeature kind}"
-  | .stringLit _ value => .stringLit value
+  | .stringLit _ _ bytes => .stringLit { bytes := bytes }
   | .boolLit _ value => .boolLit value
   | .conversion _ newType expr => .convert (lowerTy newType) (lowerExpr expr)
   | .add _ left right => .add (lowerExpr left) (lowerExpr right)

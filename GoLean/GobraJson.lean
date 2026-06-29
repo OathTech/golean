@@ -172,7 +172,7 @@ mutual
     | var (ref : VarRef)
     | nilLit (source : Source) (typ : Ty)
     | intLit (source : Source) (value : Int) (kind : IntegerKind) (base : Nat)
-    | stringLit (source : Source) (value : String)
+    | stringLit (source : Source) (value : String) (bytes : Array UInt8)
     | boolLit (source : Source) (value : Bool)
     | conversion (source : Source) (newType : Ty) (expr : Expr)
     | add (source : Source) (left right : Expr)
@@ -427,6 +427,15 @@ private def decodeArrayOf {α : Type} (path : String) (json : Json)
     (decodeOne : String → Json → Except String α) : Except String (Array α) := do
   let values ← GoLean.StrictJson.array path json
   GoLean.StrictJson.mapArrayIdx values (fun i value => decodeOne s!"{path}[{i}]" value)
+
+private def decodeByteArray (path : String) (json : Json) : Except String (Array UInt8) := do
+  let values ← GoLean.StrictJson.array path json
+  GoLean.StrictJson.mapArrayIdx values (fun i value => do
+    let byte ← GoLean.StrictJson.nat s!"{path}[{i}]" value
+    if byte <= 255 then
+      return UInt8.ofNat byte
+    else
+      throw s!"{path}[{i}]: expected byte <= 255, got {byte}")
 
 mutual
   partial def decodeTy (path : String) (json : Json) : Except String Ty := do
@@ -684,10 +693,11 @@ mutual
           (← decodeIntegerKind s!"{path}.kind" (← GoLean.StrictJson.field path obj "kind"))
           (← decodeDecimalBase s!"{path}.base" (← GoLean.StrictJson.field path obj "base"))
     | "StringLit" =>
-        let obj ← taggedObj path json "StringLit" ["s", "source", "tag"]
+        let obj ← taggedObj path json "StringLit" ["bytes", "s", "source", "tag"]
         return .stringLit
           (← decodeSource s!"{path}.source" (← GoLean.StrictJson.field path obj "source"))
           (← GoLean.StrictJson.string s!"{path}.s" (← GoLean.StrictJson.field path obj "s"))
+          (← decodeByteArray s!"{path}.bytes" (← GoLean.StrictJson.field path obj "bytes"))
     | "BoolLit" =>
         let obj ← taggedObj path json "BoolLit" ["b", "source", "tag"]
         return .boolLit

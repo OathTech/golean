@@ -26,6 +26,9 @@ private def coreBoolParam (id : String) : GoCore.Param :=
 private def coreAddExpr : GoCore.Expr :=
   .add (.var "x") (.var "y")
 
+private def coreStringLit (value : String) : GoCore.Expr :=
+  .stringLit (GoString.fromLeanString value)
+
 private def coreAddFunction : GoCore.Func := {
   name := "add_F",
   args := #[coreParam "x", coreParam "y"],
@@ -404,10 +407,10 @@ private def coreStringFunction : GoCore.Func := {
       { id := "p", typ := .pointer .string }
     ]
     #[
-      .assign (.var "s") (.stringLit "hi"),
-      .assign (.var "t") (.add (.var "s") (.stringLit "!")),
+      .assign (.var "s") (coreStringLit "hi"),
+      .assign (.var "t") (.add (.var "s") (coreStringLit "!")),
       .assign (.var "p") (.ref "t"),
-      .assign (.addr (.var "p")) (.stringLit "go"),
+      .assign (.addr (.var "p")) (coreStringLit "go"),
       .assign (.var "z")
         (.add
           (.add
@@ -421,7 +424,7 @@ private def coreStringByteLenFunction : GoCore.Func := {
   name := "string_byte_len_F",
   args := #[],
   results := #[coreParam "z"],
-  body := .assign (.var "z") (.length (.stringLit "h\u00e9llo"))
+  body := .assign (.var "z") (.length (coreStringLit "h\u00e9llo"))
 }
 
 private def coreStringIndexFunction : GoCore.Func := {
@@ -431,7 +434,7 @@ private def coreStringIndexFunction : GoCore.Func := {
   body := .block
     #[{ id := "s", typ := .string }]
     #[
-      .assign (.var "s") (.stringLit "h\u00e9"),
+      .assign (.var "s") (coreStringLit "h\u00e9"),
       .assign (.var "a") (.indexGet (.var "s") (.intLit 1)),
       .assign (.var "b") (.indexGet (.var "s") (.intLit 2))
     ]
@@ -444,7 +447,7 @@ private def coreStringSliceFunction : GoCore.Func := {
   body := .block
     #[{ id := "s", typ := .string }, { id := "t", typ := .string }]
     #[
-      .assign (.var "s") (.stringLit "h\u00e9"),
+      .assign (.var "s") (coreStringLit "h\u00e9"),
       .assign (.var "t") (.slice (.var "s") (.intLit 1) (.intLit 2) none),
       .assign (.var "z")
         (.add

@@ -14,10 +14,12 @@ structure CorpusEntry where
 structure ExportOptions where
   gobraSbt : FilePath
   outDir : FilePath
+  cacheKey : String
   deriving Repr
 
 structure ExportResult where
   id : String
+  cacheKey : String
   source : FilePath
   sourceSha256 : String
   scratchSource : FilePath
@@ -43,6 +45,7 @@ private def jsonPath (p : FilePath) : Json :=
 def ExportResult.toJson (r : ExportResult) : Json :=
   Json.mkObj [
     ("id", Json.str r.id),
+    ("cacheKey", Json.str r.cacheKey),
     ("source", jsonPath r.source),
     ("sourceSha256", Json.str r.sourceSha256),
     ("scratchSource", jsonPath r.scratchSource),
@@ -65,6 +68,7 @@ private def decodeExportResult (path : String) (json : Json) : Except String Exp
   GoLean.StrictJson.requireExactKeys path obj [
     "exitCode",
     "id",
+    "cacheKey",
     "internalExists",
     "internalJsonExists",
     "internalJsonPath",
@@ -85,6 +89,7 @@ private def decodeExportResult (path : String) (json : Json) : Except String Exp
     throw s!"{path}.exitCode: expected UInt32 exit code, got {exitCode}"
   return {
     id := (← GoLean.StrictJson.string s!"{path}.id" (← GoLean.StrictJson.field path obj "id")),
+    cacheKey := (← GoLean.StrictJson.string s!"{path}.cacheKey" (← GoLean.StrictJson.field path obj "cacheKey")),
     source := FilePath.mk (← GoLean.StrictJson.string s!"{path}.source" (← GoLean.StrictJson.field path obj "source")),
     sourceSha256 := (← GoLean.StrictJson.string s!"{path}.sourceSha256" (← GoLean.StrictJson.field path obj "sourceSha256")),
     scratchSource := FilePath.mk (← GoLean.StrictJson.string s!"{path}.scratchSource" (← GoLean.StrictJson.field path obj "scratchSource")),
@@ -208,7 +213,7 @@ private def cachedResult? (opts : ExportOptions) (entry : CorpusEntry) : IO (Opt
   match ← readExportResult? resultPath with
   | none => return none
   | some result =>
-      if ← reusableResult? entry result then
+      if result.cacheKey == opts.cacheKey && (← reusableResult? entry result) then
         return some result
       else
         return none
@@ -245,6 +250,7 @@ def exportOne (opts : ExportOptions) (entry : CorpusEntry) : IO ExportResult := 
   let vprExists ← vprPath.pathExists
   let result : ExportResult := {
     id := entry.id,
+    cacheKey := opts.cacheKey,
     source := entry.source,
     sourceSha256,
     scratchSource,

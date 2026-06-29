@@ -100,7 +100,7 @@ mutual
         | .unsupported feature => unsupported s!"nil literal for {feature}"
         | other => stuck s!"nil literal for non-nilable type {repr other}"
     | .intLit value kind => return (.int (kind.normalize value) kind, state)
-    | .stringLit value => return (.string (GoString.fromLeanString value), state)
+    | .stringLit value => return (.string value, state)
     | .boolLit value => return (.bool value, state)
     | .convert typ operand => do
         let pair ← evalExpr state operand

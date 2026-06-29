@@ -78,6 +78,19 @@ private def canonicalizeEntries (entries : List Gobra.CorpusEntry) :
     out := out.concat { entry with source }
   return .ok out
 
+private def gobraExporterCacheKey (cwd : FilePath) : IO String := do
+  let files := #[
+    cwd / "scripts" / "gobra-sbt",
+    cwd / "third_party" / "gobra" / "src" / "main" / "scala" / "viper" / "gobra" / "reporting" / "InternalJsonExporter.scala"
+  ]
+  let mut parts := #[]
+  for file in files do
+    if ← file.pathExists then
+      parts := parts.push s!"{file}:{← Artifact.Gobra.sha256File file}"
+    else
+      parts := parts.push s!"{file}:missing"
+  return String.intercalate "\n" parts.toList
+
 private def runGobraExport (args : List String) : IO UInt32 := do
   let cwd ← IO.currentDir
   match parseGobraExportArgs args {} with
@@ -97,7 +110,8 @@ private def runGobraExport (args : List String) : IO UInt32 := do
           | .ok entries =>
               let opts : Gobra.ExportOptions := {
                 gobraSbt := absoluteFrom cwd cfg.gobraSbt,
-                outDir := absoluteFrom cwd cfg.outDir
+                outDir := absoluteFrom cwd cfg.outDir,
+                cacheKey := (← gobraExporterCacheKey cwd)
               }
               let results ← Gobra.exportMany opts entries
               let failed := results.filter (fun r => !r.success)

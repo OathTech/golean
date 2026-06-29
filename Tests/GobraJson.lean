@@ -75,6 +75,27 @@ def backendAnnotation : String :=
     functionProxyJson ++ ",\"posts\":[],\"pres\":[],\"results\":[],\"source\":" ++
     sourceJson ++ ",\"tag\":\"Function\",\"terminationMeasures\":[]}]")
 
+def functionWithPreExpr (expr : String) : String :=
+  documentWithMembers (
+    "[{\"args\":[],\"backendAnnotations\":[],\"body\":{\"tag\":\"None\"},\"name\":" ++ functionProxyJson ++
+    ",\"posts\":[],\"pres\":[{\"exp\":" ++ expr ++ ",\"source\":" ++ sourceJson ++
+    ",\"tag\":\"ExprAssertion\"}],\"results\":[],\"source\":" ++ sourceJson ++
+    ",\"tag\":\"Function\",\"terminationMeasures\":[]}]")
+
+def validStringLiteral : String :=
+  functionWithPreExpr (
+    "{\"bytes\":[104,195,169],\"s\":\"hé\",\"source\":" ++ sourceJson ++
+    ",\"tag\":\"StringLit\"}")
+
+def stringLiteralMissingBytes : String :=
+  functionWithPreExpr (
+    "{\"s\":\"hé\",\"source\":" ++ sourceJson ++ ",\"tag\":\"StringLit\"}")
+
+def stringLiteralBadByte : String :=
+  functionWithPreExpr (
+    "{\"bytes\":[256],\"s\":\"x\",\"source\":" ++ sourceJson ++
+    ",\"tag\":\"StringLit\"}")
+
 private def expectOk (name contents : String) : IO Bool := do
   match GoLean.GobraJson.decodeString contents with
   | .ok _ =>
@@ -106,6 +127,9 @@ def main : IO UInt32 := do
   passed := passed && (← expectError "unknown body statement" unknownBodyStmt)
   passed := passed && (← expectOk "assume body statement" assumeBodyStmt)
   passed := passed && (← expectError "backend annotation" backendAnnotation)
+  passed := passed && (← expectOk "string literal bytes" validStringLiteral)
+  passed := passed && (← expectError "string literal missing bytes" stringLiteralMissingBytes)
+  passed := passed && (← expectError "string literal bad byte" stringLiteralBadByte)
   if passed then
     return 0
   else
