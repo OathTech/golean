@@ -64,7 +64,7 @@ c24	bitwise complement	integers,bitwise,widths	active-covered	covered by bitwise
 c25	bit clear operator	integers,bitwise	active-covered	covered by bitwise
 c26	no implicit numeric conversion	typing,conversions,floats	future	mostly compile-time; runtime needs floats and explicit conversion
 c27	complex numbers	complex,numbers	future	requires complex number model
-c28	switch fallthrough	control-flow,switch,fallthrough	future	switch without fallthrough is covered by switch-basic; explicit fallthrough remains open
+c28	switch fallthrough	control-flow,switch,fallthrough	future	switch without fallthrough is covered by switch-basic; Gobra parser rejects explicit fallthrough
 c29	expressionless switch and case lists	control-flow,switch	active-covered	covered by switch-basic
 c30	range over integer	range,integers,go1.22	future	requires Go 1.22 range-over-int policy
 c31	range over function iterator	range,functions,go1.23	future	requires function values and iterator range policy

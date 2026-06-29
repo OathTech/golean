@@ -118,6 +118,9 @@ backlog items.
   rejects legal Go integer-to-string conversions such as `string(65)` and
   `string(byte(255))`, so active differential coverage cannot use the Gobra
   frontend for this rune-conversion slice yet.
+- Track Gobra frontend gaps found while promoting switch cases: Gobra accepts
+  basic and expressionless switches but rejects explicit `fallthrough` in the
+  parser.
 
 ## Completed GoCore Memory Milestone Items
 
