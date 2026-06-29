@@ -39,6 +39,7 @@ inductive Expr where
   | convert (typ : Ty) (operand : Expr)
   | bytesFromString (operand : Expr)
   | stringFromByteSlice (operand : Expr)
+  | stringFromRune (operand : Expr)
   | add (left right : Expr)
   | sub (left right : Expr)
   | mul (left right : Expr)

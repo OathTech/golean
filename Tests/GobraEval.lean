@@ -485,6 +485,33 @@ private def coreStringByteConversionFunction : GoCore.Func := {
     ]
 }
 
+private def coreStringRuneConversionFunction : GoCore.Func := {
+  name := "string_rune_conversion_F",
+  args := #[],
+  results := #[coreParam "z"],
+  body := .block
+    #[
+      { id := "s", typ := .string },
+      { id := "t", typ := .string },
+      { id := "bad", typ := .string }
+    ]
+    #[
+      .assign (.var "s") (.stringFromRune (.intLit 65)),
+      .assign (.var "t") (.stringFromRune (.intLit 255 (.uint8))),
+      .assign (.var "bad") (.stringFromRune (.intLit (-1))),
+      .assign (.var "z")
+        (.add
+          (.add
+            (.mul (.length (.var "s")) (.intLit 1000000))
+            (.mul (.convert .int (.indexGet (.var "s") (.intLit 0))) (.intLit 10000)))
+          (.add
+            (.add
+              (.mul (.length (.var "t")) (.intLit 1000))
+              (.mul (.convert .int (.indexGet (.var "t") (.intLit 0))) (.intLit 10)))
+            (.length (.var "bad"))))
+    ]
+}
+
 private def coreNewFunction : GoCore.Func := {
   name := "new_F",
   args := #[],
@@ -841,6 +868,8 @@ def main : IO UInt32 := do
   passed := passed && (← expectIntResult "GoCore string byte slicing" (GoCore.runFunction 100 coreStringSliceFunction #[]) 295)
   passed := passed && (← expectIntResult "GoCore string byte conversions"
     (GoCore.runFunction 100 coreStringByteConversionFunction #[]) 5656855)
+  passed := passed && (← expectIntResult "GoCore string rune conversions"
+    (GoCore.runFunction 100 coreStringRuneConversionFunction #[]) 1653953)
   passed := passed && (← expectIntResult "GoCore new allocation" (GoCore.runFunction 100 coreNewFunction #[]) 70)
   passed := passed && (← expectErrorStatus "GoCore nil dereference panic" (GoCore.runFunction 100 coreNilDerefFunction #[]) "panic")
   passed := passed && (← expectErrorStatus "GoCore divide by zero panic" (GoCore.runFunction 100 coreDivideByZeroFunction #[]) "panic")

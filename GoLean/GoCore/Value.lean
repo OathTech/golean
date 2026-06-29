@@ -135,6 +135,45 @@ def empty : GoString :=
 def fromLeanString (value : String) : GoString :=
   { bytes := value.toUTF8.data }
 
+def replacementRune : GoString :=
+  { bytes := #[0xef, 0xbf, 0xbd] }
+
+def utf8Byte (value : Nat) : UInt8 :=
+  UInt8.ofNat value
+
+def fromCodePointNat (code : Nat) : GoString :=
+  if code <= 0x7f then
+    { bytes := #[utf8Byte code] }
+  else if code <= 0x7ff then
+    { bytes := #[
+        utf8Byte (0xc0 + code / 0x40),
+        utf8Byte (0x80 + code % 0x40)
+      ] }
+  else if code <= 0xffff then
+    if 0xd800 <= code && code <= 0xdfff then
+      replacementRune
+    else
+      { bytes := #[
+          utf8Byte (0xe0 + code / 0x1000),
+          utf8Byte (0x80 + (code / 0x40) % 0x40),
+          utf8Byte (0x80 + code % 0x40)
+        ] }
+  else if code <= 0x10ffff then
+    { bytes := #[
+        utf8Byte (0xf0 + code / 0x40000),
+        utf8Byte (0x80 + (code / 0x1000) % 0x40),
+        utf8Byte (0x80 + (code / 0x40) % 0x40),
+        utf8Byte (0x80 + code % 0x40)
+      ] }
+  else
+    replacementRune
+
+def fromCodePoint (code : Int) : GoString :=
+  if code < 0 then
+    replacementRune
+  else
+    fromCodePointNat code.toNat
+
 def append (left right : GoString) : GoString :=
   { bytes := left.bytes ++ right.bytes }
 

@@ -114,6 +114,10 @@ backlog items.
 - Track Gobra frontend gaps found while promoting semantic-edge cases: Gobra accepts
   variadic calls/spreads but rejects `range` directly over a `...int`
   parameter, so `features/variadic.gobra` uses `len`/index iteration.
+- Track Gobra frontend gaps found while promoting conversion cases: Gobra
+  rejects legal Go integer-to-string conversions such as `string(65)` and
+  `string(byte(255))`, so active differential coverage cannot use the Gobra
+  frontend for this rune-conversion slice yet.
 
 ## Completed GoCore Memory Milestone Items
 

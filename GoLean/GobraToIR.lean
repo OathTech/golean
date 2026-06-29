@@ -186,6 +186,7 @@ partial def lowerExpr : GoLean.GobraJson.Expr → GoLean.GoCore.Expr
       match target, lowerExprTy? expr with
       | .slice (.int .uint8), some .string => .bytesFromString operand
       | .string, some (.slice (.int .uint8)) => .stringFromByteSlice operand
+      | .string, some (.int _) => .stringFromRune operand
       | _, _ => .convert target operand
   | .add _ left right => .add (lowerExpr left) (lowerExpr right)
   | .sub _ left right => .sub (lowerExpr left) (lowerExpr right)

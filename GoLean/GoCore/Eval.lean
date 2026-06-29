@@ -126,6 +126,10 @@ mutual
               bytes := bytes.push (UInt8.ofNat byte.toNat)
           | other => stuck s!"expected uint8 element in string conversion, got {repr other}"
         return (.string { bytes := bytes }, pair.2)
+    | .stringFromRune operand => do
+        let pair ← evalExpr state operand
+        let codePoint ← valueAsInt pair.1
+        return (.string (GoString.fromCodePoint codePoint), pair.2)
     | .add left right => do
         let leftPair ← evalExpr state left
         let rightPair ← evalExpr leftPair.2 right
