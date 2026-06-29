@@ -141,16 +141,18 @@ assignment, call-assignment targets, map lookup, append, and bounds panics.
 GoCore now has an integer-kind descriptor on `Ty.int` and `GoValue.int`. The
 executable interpreter normalizes fixed-width integer values on typed stores
 and integer arithmetic. A first integer-to-integer conversion slice is also in
-place, as is a first shift slice. The current executable policy treats `int`
-and `uint` as 64-bit, matching the local Go differential harness; the Gobra
-fork can still expose narrower `int` metadata in some conversion nodes, so
-architecture policy must remain explicit rather than implicit.
+place, as are first shift and bitwise slices. Strings are now byte-backed,
+with exact literal bytes from Gobra JSON and first string/`[]byte` conversion
+coverage. The current executable policy treats `int` and `uint` as 64-bit,
+matching the local Go differential harness; the Gobra fork can still expose
+narrower `int` metadata in some conversion nodes, so architecture policy must
+remain explicit rather than implicit.
 
 This is the first slice, not the whole integer story. Full Go still needs:
 
 - signed and unsigned integer families;
 - `byte`/`uint8` and `rune`/`int32`;
-- broader conversion families, including string/rune conversions;
+- broader conversion families, including rune conversions;
 - more bitwise/shift edge cases;
 - overflow behavior for fixed-width values;
 - an architecture-dependent `int`/`uint` width policy in the future relation.
@@ -275,7 +277,8 @@ Minimum prerequisites:
 3. In progress: introduce typed integer kinds and byte/rune values before
    string operations and numeric conversions. The first fixed-width integer
    slice is implemented, as are integer-to-integer conversion, shift, bitwise,
-   and string byte-indexing support; string slicing and rune operations remain.
+   string byte-indexing/slicing, and string/`[]byte` conversion support; rune
+   operations remain.
 4. Done: make equality type-directed for the current value forms before
    interfaces and exact comparability tests.
 5. Replace Gobra type-definition recovery heuristics with explicit fork output

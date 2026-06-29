@@ -208,8 +208,9 @@ but the expected progression is:
 
 - integer and boolean operators with Go-sized words. The first fixed-width
   integer slice is in place, including first integer-to-integer conversions;
-  first shift and bitwise support are also in place. Constants, broader
-  conversions, string slicing, and richer rune behavior should be added
+  first shift and bitwise support are also in place. Byte-backed string
+  literals, string slicing, and string/`[]byte` conversions are in place.
+  Constants, broader conversions, and richer rune behavior should be added
   incrementally with differential tests;
 - arrays and slices, including indexing, slicing, append, len, and cap. Slices
   should follow `docs/slice-model.md`: descriptor values over backing
@@ -291,14 +292,14 @@ against GoCore-level specification hooks.
 
 1. Complete the remaining architecture hardening gate from
    `docs/architecture-audit.md`: continue the typed-integer/string slice with
-   string slicing, rune operations, and remaining integer edge cases, and add a
-   small relational semantics skeleton.
+   rune operations and remaining integer edge cases, and add a small relational
+   semantics skeleton.
 2. Keep expanding deterministic differential coverage, but prefer cases that
    force representation decisions we need anyway: typed integers, bytes,
    strings, conversions, and comparability.
 3. Continue slices using the descriptor/backing-location model in
-   `docs/slice-model.md`, especially string slicing, zero-capacity edge cases,
-   and append growth policy refinement.
+   `docs/slice-model.md`, especially zero-capacity edge cases and append growth
+   policy refinement.
 4. Track frontend gaps separately from semantic gaps. Gobra-fronted failures
    such as `delete` should pressure the Gobra fork or a future native frontend,
    not distort GoCore.

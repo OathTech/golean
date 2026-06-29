@@ -48,9 +48,9 @@ backlog items.
 - Classify nil pointer dereference and Go-defined runtime traps as `panic`, not
   `stuck`.
 - Extend the integer/string model beyond the current fixed-width and byte-string
-  slices: constants, rune iteration/conversions, string/byte-slice conversions,
-  broader conversion families, more integer edge cases, and exact
-  architecture-dependent `int`/`uint` policy in the future relation.
+  slices: constants, rune iteration/conversions, broader conversion families,
+  more integer edge cases, and exact architecture-dependent `int`/`uint` policy
+  in the future relation.
 - Replace `execStmt : ExecState -> Except ... ExecState` with an explicit
   `ExecOutcome` for normal completion, return, break, continue, panic,
   unsupported, and stuck behavior.
@@ -134,6 +134,11 @@ backlog items.
 - Added first integer conversion support: Gobra `Conversion` decoding/lowering,
   GoCore integer-to-integer conversion normalization, and `byte(300) == 44`
   differential coverage. Non-integer conversions remain explicitly unsupported.
+- Added byte-backed string literals and string/`[]byte` conversions:
+  Gobra JSON now exports exact `StringLit.bytes`, Lean rejects stale string
+  literal JSON, GoCore has explicit byte-string conversion nodes, and the
+  differential suite covers escaped arbitrary bytes plus conversion copy
+  semantics.
 - Added first shift support: Gobra `ShiftLeft`/`ShiftRight` decoding/lowering,
   fixed-width left/right shift normalization, signed arithmetic right shift,
   and negative-shift panic coverage.
