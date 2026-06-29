@@ -19,8 +19,8 @@ The central decisions still look right:
   values, locations, errors, and outcomes.
 - The heap model with path-like `Loc.field` and `Loc.index` locations is the
   right foundation for structs, arrays, slices, and later Iris-style ownership.
-- The active workflow, "add feature, add paired Go/Gobra fixture, compare Go
-  execution against Lean execution", is exposing real mistakes early.
+- The active workflow, "add feature, add a canonical Go litmus test, compare
+  Go execution against Lean execution", is exposing real mistakes early.
 
 The biggest risks are scale and semantic precision, not the top-level design.
 The next phase should make those risks explicit before adding interfaces,
@@ -69,7 +69,7 @@ over path-like locations rather than over ad hoc generated addresses.
 
 ### Differential Loop
 
-The current paired corpus is already useful. It found the slice reslicing
+The current canonical Go corpus is already useful. It found the slice reslicing
 capacity bug and the string byte-length bug before those choices hardened into
 assumptions. That is exactly the intended role of the testing loop.
 
@@ -243,16 +243,15 @@ Recommended path:
 - add feature filtering in the manifest once feature families grow;
 - eventually batch Gobra export or bypass Gobra with a native Go frontend.
 
-### Paired Source Drift
-
-The Gobra fixture and plain Go fixture are separate files. This is tolerable
-now, but long-term conformance should avoid drift.
+### Frontend Coverage Gaps
 
 Recommended path:
 
-- when possible, generate both from a single source template;
-- or move toward a native Go frontend so the same Go source drives both real Go
-  execution and GoCore lowering.
+- keep `Corpus/coverage` same-source: the Go file run by `go run` is also the
+  file sent to the frontend for Lean execution;
+- do not add hand-maintained Gobra variants when Gobra rejects legal Go;
+- use `scripts/coverage` to report the failing stage for every litmus case;
+- move toward a native Go frontend if Gobra cannot cover enough ordinary Go.
 
 ### Generator Readiness
 

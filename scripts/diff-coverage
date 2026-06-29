@@ -1,0 +1,233 @@
+#!/usr/bin/env bash
+set -uo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+cd "$ROOT"
+
+MANIFEST="${1:-Corpus/coverage/manifest.tsv}"
+OUT="${GOLEAN_GOBRA_ARTIFACTS:-artifacts/gobra-smoke}"
+GO_BUILD_CACHE="$ROOT/artifacts/go-build-cache"
+LAKE_BUILD_TIMEOUT_SECONDS="${LAKE_BUILD_TIMEOUT_SECONDS:-120}"
+GOBRA_EXPORT_TIMEOUT_SECONDS="${GOBRA_EXPORT_TIMEOUT_SECONDS:-900}"
+GO_TIMEOUT_SECONDS="${GO_TIMEOUT_SECONDS:-30}"
+LEAN_TIMEOUT_SECONDS="${LEAN_TIMEOUT_SECONDS:-30}"
+
+run_with_timeout() {
+  local seconds="$1"
+  shift
+  perl -e 'my $t = shift @ARGV; my $pid = fork(); die "fork failed\n" unless defined $pid; if ($pid == 0) { exec @ARGV; exit 127 } $SIG{ALRM} = sub { kill "TERM", $pid; select undef, undef, undef, 1; kill "KILL", $pid; exit 124 }; alarm $t; waitpid $pid, 0; my $s = $?; exit($s == -1 ? 127 : ($s & 127 ? 128 + ($s & 127) : $s >> 8));' "$seconds" "$@"
+}
+
+lean() {
+  run_with_timeout "$LEAN_TIMEOUT_SECONDS" lake exe golean "$@"
+}
+
+if ! command -v go >/dev/null 2>&1; then
+  echo "go not found on PATH; install Go or expose it in the shell to run differential coverage" >&2
+  exit 2
+fi
+
+if [[ ! -f "$MANIFEST" ]]; then
+  echo "differential manifest not found: $MANIFEST" >&2
+  exit 2
+fi
+
+mkdir -p artifacts "$OUT" "$GO_BUILD_CACHE"
+
+EXPORT_MANIFEST="$(mktemp "${TMPDIR:-/tmp}/golean-gobra-export.XXXXXX.txt")"
+cleanup() {
+  rm -f "$EXPORT_MANIFEST"
+}
+trap cleanup EXIT
+
+if ! awk -v root="$ROOT" -F $'\t' '
+BEGIN { ok = 1 }
+/^#/ || NF == 0 { next }
+NF != 8 {
+  print "malformed differential manifest row: expected 8 tab-separated fields: " $0 > "/dev/stderr"
+  ok = 0
+  next
+}
+{
+  id = $1
+  go_dir = $2
+  if (id == "" || go_dir == "") {
+    print "malformed differential manifest row: missing id or go_dir: " $0 > "/dev/stderr"
+    ok = 0
+    next
+  }
+  if (go_dir ~ /^\//) {
+    print id " " go_dir "/main.go"
+  } else {
+    print id " " root "/" go_dir "/main.go"
+  }
+}
+END { if (!ok) exit 2 }
+' "$MANIFEST" > "$EXPORT_MANIFEST"; then
+  exit 2
+fi
+
+echo "building Lean executable..."
+if ! run_with_timeout "$LAKE_BUILD_TIMEOUT_SECONDS" lake build; then
+  echo "lake build failed" >&2
+  exit 1
+fi
+
+EXPORT_LOG="$OUT/export.log"
+echo "exporting canonical Go inputs through Gobra..."
+if run_with_timeout "$GOBRA_EXPORT_TIMEOUT_SECONDS" lake exe golean gobra-export --manifest "$EXPORT_MANIFEST" --out "$OUT" > "$EXPORT_LOG" 2>&1; then
+  export_status=0
+else
+  export_status=$?
+  echo "Gobra export reported failures; continuing to classify every manifest row."
+  echo "Full export log: $EXPORT_LOG"
+fi
+
+case_count=0
+pass_count=0
+fail_count=0
+
+report_pass() {
+  local id="$1"
+  local features="$2"
+  printf 'PASS\t%s\t%s\n' "$id" "$features"
+  pass_count=$((pass_count + 1))
+}
+
+report_fail() {
+  local id="$1"
+  local features="$2"
+  local stage="$3"
+  local detail="$4"
+  printf 'FAIL\t%s\t%s\tstage=%s\tdetail=%s\n' "$id" "$features" "$stage" "$detail"
+  fail_count=$((fail_count + 1))
+}
+
+while IFS=$'\t' read -r id go_dir gobra_json function_name arg_ints expected_status features expected_reason extra; do
+  if [[ -z "${id:-}" || "$id" == \#* ]]; then
+    continue
+  fi
+
+  case_count=$((case_count + 1))
+  failed=0
+
+  if [[ -n "${extra:-}" ]]; then
+    report_fail "$id" "${features:-unknown}" "manifest" "too many tab-separated fields"
+    continue
+  fi
+  if [[ -z "${go_dir:-}" || -z "${gobra_json:-}" || -z "${function_name:-}" || -z "${arg_ints:-}" || -z "${expected_status:-}" || -z "${features:-}" || -z "${expected_reason:-}" ]]; then
+    report_fail "$id" "${features:-unknown}" "manifest" "expected 8 tab-separated fields"
+    continue
+  fi
+  case "$expected_status" in
+    ok|panic|unsupported|stuck|error) ;;
+    *)
+      report_fail "$id" "$features" "manifest" "unknown expected status: $expected_status"
+      continue
+      ;;
+  esac
+  case "$expected_status" in
+    unsupported|stuck)
+      if [[ "$expected_reason" == "-" ]]; then
+        report_fail "$id" "$features" "manifest" "$expected_status requires an expected_reason"
+        continue
+      fi
+      ;;
+    *)
+      if [[ "$expected_reason" != "-" ]]; then
+        report_fail "$id" "$features" "manifest" "unexpected expected_reason for status $expected_status: $expected_reason"
+        continue
+      fi
+      ;;
+  esac
+
+  go_file="$go_dir/main.go"
+  if [[ ! -f "$go_file" ]]; then
+    report_fail "$id" "$features" "go-source" "missing $go_file"
+    continue
+  fi
+
+  if go_observation="$(run_with_timeout "$GO_TIMEOUT_SECONDS" env GO111MODULE=off GOCACHE="$GO_BUILD_CACHE" go run "./$go_dir" 2>&1)"; then
+    if ! lean observation-eq --left "$go_observation" --right "$go_observation" >/dev/null 2>&1; then
+      report_fail "$id" "$features" "go-observation" "Go output is not a valid observation: $go_observation"
+      failed=1
+    elif [[ "$go_observation" != *"\"status\":\"$expected_status\""* ]]; then
+      report_fail "$id" "$features" "go-observation" "expected status $expected_status, got $go_observation"
+      failed=1
+    fi
+  else
+    report_fail "$id" "$features" "go-run" "$go_observation"
+    failed=1
+  fi
+  if [[ "$failed" -ne 0 ]]; then
+    continue
+  fi
+
+  if [[ ! -f "$gobra_json" ]]; then
+    result_path="$OUT/results/$id/result.json"
+    if [[ -f "$result_path" ]]; then
+      report_fail "$id" "$features" "gobra-export" "go=ok; no internal JSON at $gobra_json; see $result_path"
+    else
+      report_fail "$id" "$features" "gobra-export" "go=ok; no internal JSON at $gobra_json"
+    fi
+    continue
+  fi
+
+  if ! artifact_check_output="$(lean gobra-artifact-check --manifest "$OUT/manifest.json" --internal-json "$gobra_json" 2>&1)"; then
+    report_fail "$id" "$features" "artifact-check" "$artifact_check_output"
+    continue
+  fi
+
+  if ! json_check_output="$(lean gobra-json-check --input "$gobra_json" 2>&1)"; then
+    report_fail "$id" "$features" "json-check" "$json_check_output"
+    continue
+  fi
+
+  lean_args=(gobra-json-run --input "$gobra_json" --function "$function_name")
+  if [[ "$arg_ints" != "-" ]]; then
+    IFS=',' read -r -a ints <<< "$arg_ints"
+    for value in "${ints[@]}"; do
+      if [[ ! "$value" =~ ^-?[0-9]+$ ]]; then
+        report_fail "$id" "$features" "manifest" "invalid integer argument: $value"
+        failed=1
+      else
+        lean_args+=(--arg-int "$value")
+      fi
+    done
+  fi
+  if [[ "$failed" -ne 0 ]]; then
+    continue
+  fi
+
+  if lean_observation="$(lean "${lean_args[@]}" 2>&1)"; then
+    lean_status=0
+  else
+    lean_status=$?
+  fi
+  if [[ "$lean_observation" != *"\"status\":\"$expected_status\""* ]]; then
+    report_fail "$id" "$features" "lean-observation" "expected status $expected_status, got $lean_observation"
+    continue
+  fi
+  if [[ "$expected_status" == "ok" && "$lean_status" -ne 0 ]]; then
+    report_fail "$id" "$features" "lean-run" "nonzero exit $lean_status despite ok observation: $lean_observation"
+    continue
+  fi
+
+  if ! observation_diff="$(lean observation-eq --left "$lean_observation" --right "$go_observation" 2>&1)"; then
+    report_fail "$id" "$features" "differential" "Lean=$lean_observation Go=$go_observation $observation_diff"
+    continue
+  fi
+
+  report_pass "$id" "$features"
+done < "$MANIFEST"
+
+echo
+echo "differential coverage summary: cases=$case_count pass=$pass_count fail=$fail_count export_status=$export_status"
+
+if [[ "$case_count" -eq 0 ]]; then
+  echo "no differential cases found in $MANIFEST" >&2
+  exit 2
+fi
+if [[ "$fail_count" -ne 0 || "$export_status" -ne 0 ]]; then
+  exit 1
+fi

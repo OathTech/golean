@@ -16,10 +16,12 @@ differential harness.
 Promotion rule:
 
 1. Add or enrich GoCore semantics for one focused feature.
-2. Add a Gobra fixture under `Corpus/features/`.
-3. Add the matching Go fixture under `Differential/plain/`.
-4. Add the row to `Differential/manifest.tsv`.
-5. Run `scripts/gobra-smoke` and `scripts/diff-smoke`.
+2. Add a tiny canonical Go fixture under `Corpus/coverage/litmus/`.
+3. Add the row to `Corpus/coverage/manifest.tsv`.
+4. Run `scripts/diff-coverage` or the full `scripts/coverage`.
+
+Do not add a hand-maintained Gobra variant. If the frontend fails on the
+canonical Go input, that failure is a coverage signal.
 
 The catalog in `manifest.tsv` includes the source gotchas and bestiary cases,
 including ones that need substantial future work such as interfaces, channels,

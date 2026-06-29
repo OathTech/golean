@@ -1,7 +1,0 @@
-package pkg;
-
-func byteConversion() (z byte) {
-	var big int32;
-	big = 300;
-	z = byte(big);
-}

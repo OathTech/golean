@@ -14,24 +14,32 @@ message : Option String
 
 ## Current Harness
 
-`scripts/gobra-smoke` exports every Gobra corpus entry, validates each emitted
-JSON file, then runs every manifest row through Lean and checks that the
-observed status is the expected status. It deliberately does not hardcode
-expected values; value equality belongs in the differential step.
+`Corpus/coverage` is the source of truth for coverage tests. The active
+executable differential corpus lives in `Corpus/coverage/litmus`, and rows are
+listed in `Corpus/coverage/manifest.tsv`.
 
-`scripts/diff-smoke` compares plain Go fixtures under `Differential/plain`
-against Lean execution of the corresponding Gobra smoke artifacts. This is the
-main conformance loop: add a small Go program, add the matching Gobra frontend
-fixture, add a manifest row, and require real Go and Lean observations to
-match.
+`scripts/diff-coverage` is the main conformance loop. It exports every
+canonical Go source through the frontend, runs every Go fixture with `go run`,
+runs every successfully exported artifact through Lean, compares observations
+structurally, and reports every case before exiting. It does not stop at the
+first failure, and its nonzero exit code means at least one feature is not fully
+covered.
 
-`scripts/diff-one <id> ...` filters `Differential/manifest.tsv` to one or more
-exact manifest ids and then delegates to `scripts/diff-smoke`. Use it for the
-tight edit/test loop while implementing a feature, then run the full smoke suite
-before committing.
+`scripts/coverage-negative` runs static negative Go cases under
+`Corpus/coverage/negative/compile`. These are invalid Go programs that should
+fail during compilation or typechecking. They are not executable differential
+tests, but they are part of the coverage picture because a full Go frontend must
+diagnose them cleanly.
 
-Cases are listed in `Differential/manifest.tsv`. The manifest is intentionally
-strict and small:
+`scripts/coverage` runs both lanes. `scripts/diff-smoke` is retained as a
+compatibility alias for `scripts/diff-coverage`.
+
+`scripts/diff-one <id> ...` filters `Corpus/coverage/manifest.tsv` to one or
+more exact manifest ids and then delegates to the differential coverage runner.
+Use it for the tight edit/test loop while implementing a feature.
+
+Executable cases are listed in `Corpus/coverage/manifest.tsv`. The manifest is
+intentionally strict and small:
 
 ```text
 id<TAB>go_dir<TAB>gobra_json<TAB>function<TAB>arg_ints<TAB>expected_status<TAB>features<TAB>expected_reason
@@ -43,9 +51,14 @@ statuses must include a concrete reason so they cannot become invisible
 coverage debt. The smoke script fails on malformed rows, missing files, unknown
 statuses, invalid integer arguments, and observation mismatches.
 
-Gobra assertions and specifications are not observations. Differential cases
-compare ordinary Go execution against Lean execution after Gobra verification
-artifacts have been erased by lowering.
+There are no hand-maintained Gobra variants. Differential cases compare the
+same ordinary Go source against Lean execution after frontend artifacts have
+been lowered to GoCore.
+
+Runtime-negative behavior, such as divide-by-zero or bounds panics, belongs in
+the executable manifest with `expected_status=panic`. Static negative behavior,
+such as unused locals, invalid comparisons, or non-addressable assignments,
+belongs in `Corpus/coverage/negative/compile`.
 
 The script requires `go` on `PATH`.
 
@@ -56,7 +69,7 @@ cache directories.
 The Gobra exporter is incremental by source hash. Each entry records the source
 hash, scratch-source hash, and generated artifact paths in
 `artifacts/gobra-smoke/results/<id>/result.json`; unchanged successful entries
-are reused on later runs. `scripts/diff-smoke` also checks artifact source
+are reused on later runs. `scripts/diff-coverage` also checks artifact source
 hashes before running Lean and refreshes artifacts once if they are missing or
 stale.
 
@@ -115,8 +128,8 @@ Risks:
 
 Do not start by fuzzing arbitrary generated Go. First:
 
-1. Build a deterministic paired corpus of small Go/Gobra programs.
-2. Add feature tags to each case.
+1. Build a deterministic corpus of small canonical Go litmus programs.
+2. Add feature tags and expected runtime status to each case.
 3. Use Goose and new Goose as semantic references before adding each feature.
 4. Once GoCore supports enough scalar, pointer, struct, array, and slice
    behavior, integrate Microsmith or GoSmith behind a feature filter.

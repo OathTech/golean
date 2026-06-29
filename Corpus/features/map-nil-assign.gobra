@@ -1,7 +1,0 @@
-package pkg;
-
-func mapNilAssign() (z int) {
-	var m map[int]int;
-	m[1] = 2;
-	z = len(m);
-};

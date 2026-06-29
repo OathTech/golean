@@ -35,16 +35,19 @@ Useful commands:
 lake build
 lake exe golean
 lake exe golean --help
-lake exe golean gobra-export --manifest Corpus/gobra-smoke.txt
-lake exe golean gobra-json-run --input artifacts/gobra-smoke/work/features/while1/while1.gobra.internal.json --function test_bda1d7d_F --arg-int 6 --arg-int 7
+scripts/coverage
+scripts/diff-coverage
+scripts/coverage-negative
+scripts/diff-one litmus/if-return
 scripts/gobra-smoke
-scripts/diff-smoke
 scripts/semantic-edges-challenge-smoke
 ```
 
-`scripts/gobra-smoke` performs Gobra export/JSON validation and reuses
-unchanged successful exports by source hash. `scripts/diff-smoke` checks those
-artifacts and compares every manifest row against `go run`.
+`Corpus/coverage` is the source of truth for small coverage litmus tests.
+`scripts/coverage` runs both executable differential coverage and static
+compile-negative coverage. The executable lane runs the same canonical Go files
+with `go run` and through the frontend/Lean path; there are no separate Gobra
+fixtures.
 
 After cloning this repo, initialize submodules with:
 

@@ -5,6 +5,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
 cd "$ROOT"
 
 OUT_FINAL="artifacts/gobra-smoke"
+MANIFEST="Corpus/coverage/manifest.tsv"
 LAKE_BUILD_TIMEOUT_SECONDS="${LAKE_BUILD_TIMEOUT_SECONDS:-120}"
 LEAN_TIMEOUT_SECONDS="${LEAN_TIMEOUT_SECONDS:-30}"
 
@@ -21,9 +22,30 @@ lean() {
 }
 
 run_with_timeout "$LAKE_BUILD_TIMEOUT_SECONDS" lake build
-lake exe golean gobra-export --manifest Corpus/gobra-smoke.txt --out "$OUT_FINAL"
 
-MANIFEST="Differential/manifest.tsv"
+EXPORT_MANIFEST="$(mktemp "${TMPDIR:-/tmp}/golean-gobra-export.XXXXXX.txt")"
+cleanup() {
+  rm -f "$EXPORT_MANIFEST"
+}
+trap cleanup EXIT
+
+awk -v root="$ROOT" -F $'\t' '
+/^#/ || NF == 0 { next }
+NF != 8 {
+  print "malformed differential manifest row: expected 8 tab-separated fields: " $0 > "/dev/stderr"
+  exit 2
+}
+{
+  if ($2 ~ /^\//) {
+    print $1 " " $2 "/main.go"
+  } else {
+    print $1 " " root "/" $2 "/main.go"
+  }
+}
+' "$MANIFEST" > "$EXPORT_MANIFEST"
+
+lake exe golean gobra-export --manifest "$EXPORT_MANIFEST" --out "$OUT_FINAL"
+
 case_count=0
 validated_count=0
 while IFS=$'\t' read -r id _go_dir gobra_json function_name arg_ints expected_status _features _expected_reason extra; do

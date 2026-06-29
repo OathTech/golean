@@ -1,0 +1,4 @@
+# id	go_dir	expected_substring	features
+unused-local	Corpus/coverage/negative/compile/unused-local	declared and not used	unused,compile_error
+slice-compare	Corpus/coverage/negative/compile/slice-compare	slice can only be compared to nil	slices,comparability,compile_error
+map-field-assign	Corpus/coverage/negative/compile/map-field-assign	cannot assign to struct field	maps,addressability,compile_error

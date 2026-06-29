@@ -487,8 +487,8 @@ Required GoCore additions:
 
 Success criterion:
 
-`scripts/gobra-smoke` should lower and execute the `swap` client as ordinary Go
-after Gobra assertions/specifications are erased at the lowering boundary.
+`scripts/diff-one litmus/swap` should lower and execute the `swap` client as
+ordinary Go after frontend-only artifacts are erased at the lowering boundary.
 
 That milestone exercises the memory model without jumping ahead to maps,
 slices, interfaces, concurrency, or Iris integration.

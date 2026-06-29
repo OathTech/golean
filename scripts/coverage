@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+set -uo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+cd "$ROOT"
+
+scripts/diff-coverage
+diff_status=$?
+
+scripts/coverage-negative
+negative_status=$?
+
+echo
+echo "coverage lanes: differential=$diff_status negative=$negative_status"
+
+if [[ "$diff_status" -ne 0 || "$negative_status" -ne 0 ]]; then
+  exit 1
+fi

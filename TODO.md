@@ -19,7 +19,14 @@ backlog items.
   Gobra/Lean differential suite one feature at a time. Keep the challenge
   corpus runnable by `scripts/semantic-edges-challenge-smoke`, but do not treat
   it as a supported-semantics claim until cases land in
-  `Differential/manifest.tsv`.
+  `Corpus/coverage/manifest.tsv`.
+- Keep `Corpus/coverage` comprehensive. Do not remove cases because the
+  frontend or semantics fails; let `scripts/coverage` report the failing stage.
+- Do not maintain Gobra variants of coverage inputs. The canonical Go source is
+  the input to both `go run` and the frontend/Lean path.
+- Expand `Corpus/coverage/negative/compile` with static Go errors. Runtime Go
+  errors that execute and panic belong in the differential manifest with
+  `expected_status=panic`.
 - Replace stringly typed evaluator failures with structured `GoError` values and
   stable observations. CLI classification must not depend on matching error
   message prefixes.
@@ -31,8 +38,8 @@ backlog items.
   builds used by the harness.
 - Prevent stale or cross-test artifacts by tying generated Gobra JSON to source
   hashes and using per-run temporary artifact directories with atomic publish.
-- Extend `scripts/diff-smoke` with same-source fixtures where possible, so Go
-  execution and Gobra/Lean execution cannot silently drift apart.
+- Keep `scripts/diff-coverage` same-source: Go execution and frontend/Lean
+  execution must consume the same canonical Go file.
 
 ## Hardening Phase
 

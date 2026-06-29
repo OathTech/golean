@@ -5,19 +5,13 @@
 The current implementation provides a small Gobra artifact exporter:
 
 ```sh
-lake exe golean gobra-export --manifest Corpus/gobra-smoke.txt --out artifacts/gobra-smoke
-```
-
-or:
-
-```sh
-scripts/gobra-smoke
+scripts/diff-coverage
 ```
 
 For each corpus entry, the exporter:
 
 - checks that the source exists;
-- copies the `.gobra` file into `artifacts/.../work`;
+- copies the canonical Go file into `artifacts/.../work`;
 - invokes Gobra with `--noVerify --printInternal --printInternalJson`;
 - records stdout, stderr, exit code, and artifact paths;
 - writes per-entry `result.json` and an aggregate `manifest.json`.
@@ -27,27 +21,24 @@ For each corpus entry, the exporter:
 
 The source copy matters because Gobra writes `.internal` and `.internal.json`
 files beside the input file. Running on the copied file keeps generated
-artifacts out of `third_party/gobra`.
+artifacts out of `Corpus/coverage`.
 
 Gobra is tracked as a submodule at `third_party/gobra`, using the
 `https://github.com/septract/gobra-json` fork and the local `gobra-json` branch
 for exporter work.
 
-## Smoke Corpus
+## Coverage Corpus
 
-The smoke corpus is in `Corpus/gobra-smoke.txt`:
-
-- `examples/swap`
-- `features/while1`
-- `features/multi-assign`
-- `features/pointer-identity`
-
-All four currently export successfully on this machine.
+The active executable corpus is in `Corpus/coverage/manifest.tsv`, with tiny
+canonical Go fixtures under `Corpus/coverage/litmus`. Static negative cases
+that should fail Go compilation/typechecking live under
+`Corpus/coverage/negative/compile`.
 
 ## Next Work
 
 - Avoid starting sbt once per corpus entry.
-- Add a richer corpus manifest with expected status and feature tags.
+- Keep expanding the corpus with tiny feature-focused Go litmus tests.
 - Add stable content hashes for generated `.internal` and `.vpr` artifacts.
 - Broaden GoCore and `GobraToIR` beyond the current integer/control-flow subset.
-- Add a Go-source runner so smoke cases can compare Go execution against Lean execution.
+- Keep frontend failures visible in coverage reports instead of maintaining
+  alternate frontend-only sources.

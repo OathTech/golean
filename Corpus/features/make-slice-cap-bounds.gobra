@@ -1,8 +1,0 @@
-package pkg;
-
-func makeSliceCapBounds() (z int) {
-	length := 5;
-	capacity := 3;
-	s := make([]int, length, capacity);
-	z = len(s);
-};

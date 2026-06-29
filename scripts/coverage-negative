@@ -1,0 +1,79 @@
+#!/usr/bin/env bash
+set -uo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+cd "$ROOT"
+
+MANIFEST="${1:-Corpus/coverage/negative/compile/manifest.tsv}"
+GO_BUILD_CACHE="$ROOT/artifacts/go-build-cache"
+GO_TIMEOUT_SECONDS="${GO_TIMEOUT_SECONDS:-30}"
+
+run_with_timeout() {
+  local seconds="$1"
+  shift
+  perl -e 'my $t = shift @ARGV; my $pid = fork(); die "fork failed\n" unless defined $pid; if ($pid == 0) { exec @ARGV; exit 127 } $SIG{ALRM} = sub { kill "TERM", $pid; select undef, undef, undef, 1; kill "KILL", $pid; exit 124 }; alarm $t; waitpid $pid, 0; my $s = $?; exit($s == -1 ? 127 : ($s & 127 ? 128 + ($s & 127) : $s >> 8));' "$seconds" "$@"
+}
+
+if ! command -v go >/dev/null 2>&1; then
+  echo "go not found on PATH; install Go or expose it in the shell to run negative coverage" >&2
+  exit 2
+fi
+
+if [[ ! -f "$MANIFEST" ]]; then
+  echo "negative coverage manifest not found: $MANIFEST" >&2
+  exit 2
+fi
+
+mkdir -p artifacts "$GO_BUILD_CACHE"
+
+case_count=0
+pass_count=0
+fail_count=0
+
+while IFS=$'\t' read -r id go_dir expected_substring features extra; do
+  if [[ -z "${id:-}" || "$id" == \#* ]]; then
+    continue
+  fi
+  case_count=$((case_count + 1))
+
+  if [[ -n "${extra:-}" ]]; then
+    printf 'FAIL\t%s\t%s\tstage=manifest\tdetail=too many tab-separated fields\n' "$id" "${features:-unknown}"
+    fail_count=$((fail_count + 1))
+    continue
+  fi
+  if [[ -z "${go_dir:-}" || -z "${expected_substring:-}" || -z "${features:-}" ]]; then
+    printf 'FAIL\t%s\t%s\tstage=manifest\tdetail=expected 4 tab-separated fields\n' "$id" "${features:-unknown}"
+    fail_count=$((fail_count + 1))
+    continue
+  fi
+  if [[ ! -f "$go_dir/main.go" ]]; then
+    printf 'FAIL\t%s\t%s\tstage=go-source\tdetail=missing %s/main.go\n' "$id" "$features" "$go_dir"
+    fail_count=$((fail_count + 1))
+    continue
+  fi
+
+  if output="$(run_with_timeout "$GO_TIMEOUT_SECONDS" env GO111MODULE=off GOCACHE="$GO_BUILD_CACHE" go run "./$go_dir" 2>&1)"; then
+    printf 'FAIL\t%s\t%s\tstage=go-compile\tdetail=program unexpectedly compiled and ran\n' "$id" "$features"
+    fail_count=$((fail_count + 1))
+    continue
+  fi
+
+  if [[ "$output" == *"$expected_substring"* ]]; then
+    printf 'PASS\t%s\t%s\n' "$id" "$features"
+    pass_count=$((pass_count + 1))
+  else
+    printf 'FAIL\t%s\t%s\tstage=go-compile\tdetail=expected substring %q in %q\n' "$id" "$features" "$expected_substring" "$output"
+    fail_count=$((fail_count + 1))
+  fi
+done < "$MANIFEST"
+
+echo
+echo "negative coverage summary: cases=$case_count pass=$pass_count fail=$fail_count"
+
+if [[ "$case_count" -eq 0 ]]; then
+  echo "no negative coverage cases found in $MANIFEST" >&2
+  exit 2
+fi
+if [[ "$fail_count" -ne 0 ]]; then
+  exit 1
+fi

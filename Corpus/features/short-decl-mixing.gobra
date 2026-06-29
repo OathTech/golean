@@ -1,7 +1,0 @@
-package pkg;
-
-func shortDeclMixing() (z int) {
-	a := 1;
-	a, b := 2, 3;
-	z = a * 10 + b;
-};

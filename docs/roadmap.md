@@ -107,14 +107,14 @@ Deliverables:
 - Keep Gobra verification-only constructs out of GoCore. The importer may
   decode spec fields fail-closed because Gobra emits them, but lowering must
   not make them executable Go behavior.
-- Expand the smoke corpus and negative JSON tests.
+- Expand `Corpus/coverage` and negative JSON tests.
 
 Success criterion:
 
-`scripts/gobra-smoke` exports, validates, and runs the current Gobra smoke
-corpus without accepting unexpected JSON shapes. Manifest rows are executed
-generically, so adding a new differential case should not require editing the
-smoke script.
+`scripts/coverage` reports every active canonical Go litmus case and every
+compile-negative case without accepting unexpected JSON shapes. Manifest rows
+are executed generically, so adding a new differential case should not require
+editing the runner.
 
 ## Phase 2: Executable GoCore Memory
 
@@ -151,9 +151,9 @@ ordinary Go after Gobra assertions/specifications are erased.
 Goal: compare Go execution and Lean GoCore execution over many small programs.
 
 Status: partially started. Lean execution now emits classified observations for
-successful returns, Go panics, unsupported features, and stuck states. The first
-smoke harness compares plain Go fixtures against the corresponding Lean GoCore
-observations.
+successful returns, Go panics, unsupported features, and stuck states. The
+coverage harness compares canonical Go fixtures against the corresponding Lean
+GoCore observations and reports all failing stages.
 
 Deliverables:
 
@@ -167,8 +167,11 @@ message : Option String
 
 - Add a Go-source harness that runs concrete test programs with selected inputs.
 - Compare Go results against Lean GoCore observations.
-- Drive paired differential cases from a manifest with explicit feature tags,
-  expected status, argument values, and reasons for expected semantic gaps.
+- Drive same-source differential cases from a manifest with explicit feature
+  tags, expected status, argument values, and reasons for expected semantic
+  gaps.
+- Keep static compile/typecheck negative tests in a separate negative coverage
+  lane, because rejected Go programs have no runtime observation to compare.
 - Keep `unsupported` acceptable only when the test manifest explicitly expects
   it.
 - Require manifest reasons for expected `unsupported` and `stuck` results.

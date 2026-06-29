@@ -9,7 +9,7 @@ if [[ "$#" -lt 1 ]]; then
   exit 2
 fi
 
-MANIFEST="Differential/manifest.tsv"
+MANIFEST="Corpus/coverage/manifest.tsv"
 FILTERED="$(mktemp "${TMPDIR:-/tmp}/golean-diff-one.XXXXXX.tsv")"
 cleanup() {
   rm -f "$FILTERED"

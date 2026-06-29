@@ -1,6 +1,0 @@
-package pkg;
-
-func divideByZero() (z int) {
-	y := 0;
-	z = 1 / y;
-};

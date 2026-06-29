@@ -1,7 +1,0 @@
-package pkg;
-
-func stringIndex() (a byte, b byte) {
-	s := "hé";
-	a = s[1];
-	b = s[2];
-}
