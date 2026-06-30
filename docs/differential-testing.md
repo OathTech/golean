@@ -46,10 +46,19 @@ id<TAB>go_dir<TAB>gobra_json<TAB>function<TAB>arg_ints<TAB>expected_status<TAB>f
 ```
 
 Use `-` for no integer args. Feature tags are comma-separated. Use `-` for
-`expected_reason` unless the expected status is `unsupported` or `stuck`; those
-statuses must include a concrete reason so they cannot become invisible
-coverage debt. The smoke script fails on malformed rows, missing files, unknown
-statuses, invalid integer arguments, and observation mismatches.
+`expected_reason` unless the expected status is `panic`, `unsupported`, or
+`stuck`; those statuses must include a concrete reason so they cannot become
+invisible coverage debt. The smoke script fails on malformed rows, missing
+files, unknown statuses, invalid integer arguments, and observation mismatches.
+
+The `function` column is a source-level subject function name, not a Gobra
+hash-suffixed internal name. It must be defined in the canonical Go file. The
+Go `main` function should be only an observation harness for successful cases:
+it calls the subject function and prints JSON. For expected panic cases, `main`
+should call the subject directly and let the Go process panic. The runner
+normalizes that process failure into a canonical panic observation after
+checking that it was a real Go panic and that the output contains the manifest
+reason.
 
 There are no hand-maintained Gobra variants. Differential cases compare the
 same ordinary Go source against Lean execution after frontend artifacts have

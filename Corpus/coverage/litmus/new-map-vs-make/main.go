@@ -2,7 +2,7 @@ package main
 
 import "fmt"
 
-func main() {
+func newMapVsMake() int {
 	z := 0
 	p := new(map[string]int)
 	if *p == nil {
@@ -14,5 +14,9 @@ func main() {
 	}
 	m["k"] = 7
 	z += m["k"] * 100
-	fmt.Printf("{\"status\":\"ok\",\"values\":[{\"tag\":\"int\",\"value\":%d}]}\n", z)
+	return z
+}
+
+func main() {
+	fmt.Printf("{\"status\":\"ok\",\"values\":[{\"tag\":\"int\",\"value\":%d}]}\n", newMapVsMake())
 }

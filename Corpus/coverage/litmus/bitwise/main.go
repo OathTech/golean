@@ -2,7 +2,7 @@ package main
 
 import "fmt"
 
-func main() {
+func bitwise() (byte, byte, byte, byte, byte, int8) {
 	var x byte
 	x = 15
 	var y byte
@@ -19,6 +19,11 @@ func main() {
 	e := ^zero
 	f := ^signedZero
 
+	return a, b, c, d, e, f
+}
+
+func main() {
+	a, b, c, d, e, f := bitwise()
 	fmt.Printf(
 		"{\"status\":\"ok\",\"values\":[{\"tag\":\"int\",\"value\":%d},{\"tag\":\"int\",\"value\":%d},{\"tag\":\"int\",\"value\":%d},{\"tag\":\"int\",\"value\":%d},{\"tag\":\"int\",\"value\":%d},{\"tag\":\"int\",\"value\":%d}]}\n",
 		a,

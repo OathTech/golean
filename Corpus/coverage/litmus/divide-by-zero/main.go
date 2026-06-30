@@ -1,15 +1,10 @@
 package main
 
-import "fmt"
-
-func main() {
-	defer func() {
-		if recover() != nil {
-			fmt.Println("{\"message\":\"integer divide by zero\",\"status\":\"panic\"}")
-		}
-	}()
-
+func divideByZero() {
 	y := 0
 	_ = 1 / y
-	fmt.Println("{\"status\":\"ok\",\"values\":[]}")
+}
+
+func main() {
+	divideByZero()
 }

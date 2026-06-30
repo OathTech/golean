@@ -63,7 +63,7 @@ def intBitNegResult (value : GoValue) : Except GoError GoValue := do
 def shiftCountNat (count : GoValue) : Except GoError Nat := do
   let count ← valueAsInt count
   if count < 0 then
-    panic "negative shift count"
+    panic "negative shift amount"
   return count.toNat
 
 def arithmeticShiftRight (value : Int) (count : Nat) : Int :=

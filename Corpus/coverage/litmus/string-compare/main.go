@@ -2,7 +2,7 @@ package main
 
 import "fmt"
 
-func main() {
+func stringCompare() int {
 	var z int
 	a := "alpha"
 	b := "beta"
@@ -19,5 +19,9 @@ func main() {
 		z = z + 1000
 	}
 
-	fmt.Printf("{\"status\":\"ok\",\"values\":[{\"tag\":\"int\",\"value\":%d}]}\n", z)
+	return z
+}
+
+func main() {
+	fmt.Printf("{\"status\":\"ok\",\"values\":[{\"tag\":\"int\",\"value\":%d}]}\n", stringCompare())
 }

@@ -24,7 +24,11 @@ func exprless(n int) int {
 	}
 }
 
-func main() {
+func switchBasic() int {
 	z := classify(1) + classify(3) + classify(9) + exprless(-1) + exprless(0) + exprless(5)
-	fmt.Printf("{\"status\":\"ok\",\"values\":[{\"tag\":\"int\",\"value\":%d}]}\n", z)
+	return z
+}
+
+func main() {
+	fmt.Printf("{\"status\":\"ok\",\"values\":[{\"tag\":\"int\",\"value\":%d}]}\n", switchBasic())
 }

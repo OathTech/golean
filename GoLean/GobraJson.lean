@@ -28,7 +28,7 @@ private def knownTagNames : List String := [
   "MethodCall", "MethodProxy", "Mod", "Mul", "Negation", "New", "NewMapLit", "NewSliceLit", "NilLit", "NonItfTupleTerminationMeasure",
   "NoPermissionToRangeExpressionAnnotation", "None", "Old", "Or", "Out", "Pointer", "PointerT", "Predicate", "Program", "PureMethod",
   "PureMethodCall", "Ref", "Return", "SafeMapLookup", "SepAnd", "Seqn", "ShiftLeft", "ShiftRight", "Single", "SingleAss", "Slice", "Some",
-  "SliceT", "StringLit", "StringT", "StructLit", "StructT", "Sub", "Tuple2", "UnboundedInteger", "UneqCmp", "Var", "While",
+  "SliceT", "StringLit", "StringT", "StructLit", "StructT", "Sub", "ToInterface", "Tuple2", "UnboundedInteger", "UneqCmp", "Var", "While",
   "WildcardPerm"
 ]
 
@@ -209,6 +209,7 @@ mutual
     | length (source : Source) (exp : Expr)
     | capacity (source : Source) (exp : Expr)
     | old (source : Source) (operand : Expr)
+    | toInterface (source : Source) (exp : Expr) (typ : Ty)
     | structLit (source : Source) (typ : Ty) (args : Array Expr)
     | pureMethodCall (source : Source) (recv : Expr) (meth : MethodProxy)
         (args : Array Expr) (typ : Ty) (reveal : Bool)
@@ -806,6 +807,12 @@ mutual
         return .old
           (← decodeSource s!"{path}.source" (← GoLean.StrictJson.field path obj "source"))
           (← decodeExpr s!"{path}.operand" (← GoLean.StrictJson.field path obj "operand"))
+    | "ToInterface" =>
+        let obj ← taggedObj path json "ToInterface" ["exp", "source", "tag", "typ"]
+        return .toInterface
+          (← decodeSource s!"{path}.source" (← GoLean.StrictJson.field path obj "source"))
+          (← decodeExpr s!"{path}.exp" (← GoLean.StrictJson.field path obj "exp"))
+          (← decodeTy s!"{path}.typ" (← GoLean.StrictJson.field path obj "typ"))
     | "StructLit" =>
         let obj ← taggedObj path json "StructLit" ["args", "source", "tag", "typ"]
         return .structLit

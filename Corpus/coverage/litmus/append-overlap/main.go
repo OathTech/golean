@@ -2,7 +2,7 @@ package main
 
 import "fmt"
 
-func main() {
+func appendOverlap() int {
 	s := []int{1, 2, 3}
 	t := append(s[:1], s...)
 	a := []int{1, 2, 3, 4}
@@ -12,5 +12,9 @@ func main() {
 	z = z + u[2]
 	z = z*10000 + a[0]*1000 + a[1]*100 + a[2]*10 + a[3]
 
-	fmt.Printf("{\"status\":\"ok\",\"values\":[{\"tag\":\"int\",\"value\":%d}]}\n", z)
+	return z
+}
+
+func main() {
+	fmt.Printf("{\"status\":\"ok\",\"values\":[{\"tag\":\"int\",\"value\":%d}]}\n", appendOverlap())
 }

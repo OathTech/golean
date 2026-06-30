@@ -2,7 +2,7 @@ package main
 
 import "fmt"
 
-func main() {
+func arrayCopy() int {
 	a := [2]int{1, 2}
 	b := a
 	b[0] = 9
@@ -10,5 +10,9 @@ func main() {
 
 	_ = a
 	_ = b
-	fmt.Printf("{\"status\":\"ok\",\"values\":[{\"tag\":\"int\",\"value\":%d}]}\n", z)
+	return z
+}
+
+func main() {
+	fmt.Printf("{\"status\":\"ok\",\"values\":[{\"tag\":\"int\",\"value\":%d}]}\n", arrayCopy())
 }

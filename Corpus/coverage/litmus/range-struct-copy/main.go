@@ -6,7 +6,7 @@ type point struct {
 	x int
 }
 
-func main() {
+func rangeStructCopy() int {
 	pts := []point{{1}, {2}, {3}}
 	for _, p := range pts {
 		p.x = 99
@@ -18,5 +18,9 @@ func main() {
 	}
 	post := pts[0].x*10000 + pts[1].x*100 + pts[2].x
 	z := pre*1000000 + post
-	fmt.Printf("{\"status\":\"ok\",\"values\":[{\"tag\":\"int\",\"value\":%d}]}\n", z)
+	return z
+}
+
+func main() {
+	fmt.Printf("{\"status\":\"ok\",\"values\":[{\"tag\":\"int\",\"value\":%d}]}\n", rangeStructCopy())
 }

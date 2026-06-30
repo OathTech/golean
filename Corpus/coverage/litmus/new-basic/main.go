@@ -2,7 +2,7 @@ package main
 
 import "fmt"
 
-func main() {
+func newBasic() int {
 	var z int
 	p := new(int)
 	z = z + *p
@@ -12,5 +12,9 @@ func main() {
 	(*a)[1] = 3
 	z = z + (*a)[1]*100
 
-	fmt.Printf("{\"status\":\"ok\",\"values\":[{\"tag\":\"int\",\"value\":%d}]}\n", z)
+	return z
+}
+
+func main() {
+	fmt.Printf("{\"status\":\"ok\",\"values\":[{\"tag\":\"int\",\"value\":%d}]}\n", newBasic())
 }

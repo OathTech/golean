@@ -8,6 +8,24 @@ private def varRefId : GoLean.GobraJson.VarRef → String
   | .inParam param => param.id
   | .outParam param => param.id
 
+private def isHexDigit (c : Char) : Bool :=
+  c == '0' || c == '1' || c == '2' || c == '3' || c == '4' ||
+  c == '5' || c == '6' || c == '7' || c == '8' || c == '9' ||
+  c == 'a' || c == 'b' || c == 'c' || c == 'd' || c == 'e' || c == 'f' ||
+  c == 'A' || c == 'B' || c == 'C' || c == 'D' || c == 'E' || c == 'F'
+
+private def isHexString (s : String) : Bool :=
+  !s.isEmpty && s.toList.all isHexDigit
+
+private def stripGobraFunctionSuffix (name : String) : String :=
+  match name.splitOn "_" |>.reverse with
+  | "F" :: hash :: rest =>
+      if hash.length >= 6 && isHexString hash && !rest.isEmpty then
+        String.intercalate "_" rest.reverse
+      else
+        name
+  | _ => name
+
 private def lowerIntegerKind? : GoLean.GobraJson.IntegerKind → Option GoLean.GoCore.IntKind
   | .unbounded name => some (.unbounded name)
   | .bounded name bits _lower _upper =>
@@ -115,6 +133,7 @@ partial def lowerExprTy? : GoLean.GobraJson.Expr → Option GoLean.GoCore.Ty
       | none => none
   | .ref _ _ typ => some (lowerTy typ)
   | .old _ operand => lowerExprTy? operand
+  | .toInterface _ _ typ => some (lowerTy typ)
   | .structLit _ typ _ => some (lowerTy typ)
   | .arrayLit _ length elem _ =>
       if length < 0 then
@@ -162,6 +181,7 @@ partial def lowerAddressOfExpr : GoLean.GobraJson.Expr → GoLean.GoCore.Expr
       | none => .unsupported "field address without receiver type"
   | .address _ operand => lowerAddressOfExpr operand
   | .old _ operand => lowerAddressOfExpr operand
+  | .toInterface _ operand _ => lowerAddressOfExpr operand
   | _ => .unsupported "address of unsupported expression"
 
 partial def lowerAssignee : GoLean.GobraJson.Assignee → GoLean.GoCore.Assignee
@@ -224,6 +244,7 @@ partial def lowerExpr : GoLean.GobraJson.Expr → GoLean.GoCore.Expr
       | .pointer _ (.deref _ exp _) => lowerExpr exp
       | .pointer _ _ => .unsupported "reference to pointer assignee without dereference operand"
   | .old _ operand => .old (lowerExpr operand)
+  | .toInterface _ _ _ => .unsupported "interface conversion"
   | .deref _ exp typ => .deref (lowerExpr exp) (lowerTy typ)
   | .fieldRef _ recv field =>
       match lowerExprTy? recv with
@@ -423,7 +444,7 @@ partial def lowerStmtWithReturnPost (returnPostprocessing : Array GoLean.GoCore.
     | .continueStmt _ (some label) _ => .unsupported s!"labeled continue {label}"
     | .label _ id => .label id.name
     | .functionCall _ func targets args =>
-        .call (targets.map lowerAssignee) func.name (args.map lowerExpr)
+        .call (targets.map lowerAssignee) (stripGobraFunctionSuffix func.name) (args.map lowerExpr)
     | .methodCall _ recv meth targets args =>
         .call (targets.map lowerAssignee) meth.uniqueName (#[lowerExpr recv] ++ args.map lowerExpr)
 
@@ -493,14 +514,14 @@ def lowerFunctionMember (member : GoLean.GobraJson.FunctionMember) : Except Stri
     | some body => pure body
     | none => throw s!"bodyless function {member.name.name}"
   return {
-    name := member.name.name,
+    name := stripGobraFunctionSuffix member.name.name,
     args := member.args.map lowerParam,
     results := member.results.map lowerParam,
     body := lowerMethodBody body
   }
 
 def lowerBodylessFunctionMember (member : GoLean.GobraJson.FunctionMember) : GoLean.GoCore.Func := {
-  name := member.name.name,
+  name := stripGobraFunctionSuffix member.name.name,
   args := member.args.map lowerParam,
   results := member.results.map lowerParam,
   body := .unsupported s!"bodyless function {member.name.name}"

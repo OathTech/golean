@@ -2,7 +2,7 @@ package main
 
 import "fmt"
 
-func main() {
+func mapLiteralBool() int {
 	var z int
 	m := map[bool]bool{true: true, false: false}
 	if m[true] {
@@ -15,5 +15,9 @@ func main() {
 	}
 	z = z + len(m)*1000
 
-	fmt.Printf("{\"status\":\"ok\",\"values\":[{\"tag\":\"int\",\"value\":%d}]}\n", z)
+	return z
+}
+
+func main() {
+	fmt.Printf("{\"status\":\"ok\",\"values\":[{\"tag\":\"int\",\"value\":%d}]}\n", mapLiteralBool())
 }

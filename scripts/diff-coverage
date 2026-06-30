@@ -22,6 +22,16 @@ lean() {
   run_with_timeout "$LEAN_TIMEOUT_SECONDS" lake exe golean "$@"
 }
 
+json_string_literal() {
+  local value="$1"
+  case "$value" in
+    *$'\n'*|*$'\r'*|*$'\t'*|*\"*|*\\*)
+      return 1
+      ;;
+  esac
+  printf '"%s"' "$value"
+}
+
 if ! command -v go >/dev/null 2>&1; then
   echo "go not found on PATH; install Go or expose it in the shell to run differential coverage" >&2
   exit 2
@@ -35,8 +45,9 @@ fi
 mkdir -p artifacts "$OUT" "$GO_BUILD_CACHE"
 
 EXPORT_MANIFEST="$(mktemp "${TMPDIR:-/tmp}/golean-gobra-export.XXXXXX.txt")"
+EXPORT_CANDIDATES="$(mktemp "${TMPDIR:-/tmp}/golean-gobra-export-candidates.XXXXXX.tsv")"
 cleanup() {
-  rm -f "$EXPORT_MANIFEST"
+  rm -f "$EXPORT_MANIFEST" "$EXPORT_CANDIDATES"
 }
 trap cleanup EXIT
 
@@ -57,15 +68,21 @@ NF != 8 {
     next
   }
   if (go_dir ~ /^\//) {
-    print id " " go_dir "/main.go"
+    print id "\t" go_dir "/main.go" "\t" $4
   } else {
-    print id " " root "/" go_dir "/main.go"
+    print id "\t" root "/" go_dir "/main.go" "\t" $4
   }
 }
 END { if (!ok) exit 2 }
-' "$MANIFEST" > "$EXPORT_MANIFEST"; then
+' "$MANIFEST" > "$EXPORT_CANDIDATES"; then
   exit 2
 fi
+
+while IFS=$'\t' read -r id go_file function_name; do
+  if [[ -f "$go_file" ]] && rg -q "func[[:space:]]+$function_name[[:space:]]*\\(" "$go_file"; then
+    printf '%s %s\n' "$id" "$go_file" >> "$EXPORT_MANIFEST"
+  fi
+done < "$EXPORT_CANDIDATES"
 
 echo "building Lean executable..."
 if ! run_with_timeout "$LAKE_BUILD_TIMEOUT_SECONDS" lake build; then
@@ -74,8 +91,16 @@ if ! run_with_timeout "$LAKE_BUILD_TIMEOUT_SECONDS" lake build; then
 fi
 
 EXPORT_LOG="$OUT/export.log"
-echo "exporting canonical Go inputs through Gobra..."
-if run_with_timeout "$GOBRA_EXPORT_TIMEOUT_SECONDS" lake exe golean gobra-export --manifest "$EXPORT_MANIFEST" --out "$OUT" > "$EXPORT_LOG" 2>&1; then
+if [[ -s "$EXPORT_MANIFEST" ]]; then
+  echo "exporting canonical Go inputs through Gobra..."
+elif [[ -s "$EXPORT_CANDIDATES" ]]; then
+  echo "no litmus rows passed source/function preflight; skipping Gobra export"
+else
+  echo "no differential rows found; skipping Gobra export"
+fi
+if [[ ! -s "$EXPORT_MANIFEST" ]]; then
+  export_status=0
+elif run_with_timeout "$GOBRA_EXPORT_TIMEOUT_SECONDS" lake exe golean gobra-export --manifest "$EXPORT_MANIFEST" --out "$OUT" > "$EXPORT_LOG" 2>&1; then
   export_status=0
 else
   export_status=$?
@@ -127,7 +152,7 @@ while IFS=$'\t' read -r id go_dir gobra_json function_name arg_ints expected_sta
       ;;
   esac
   case "$expected_status" in
-    unsupported|stuck)
+    panic|unsupported|stuck)
       if [[ "$expected_reason" == "-" ]]; then
         report_fail "$id" "$features" "manifest" "$expected_status requires an expected_reason"
         continue
@@ -146,9 +171,16 @@ while IFS=$'\t' read -r id go_dir gobra_json function_name arg_ints expected_sta
     report_fail "$id" "$features" "go-source" "missing $go_file"
     continue
   fi
+  if ! rg -q "func[[:space:]]+$function_name[[:space:]]*\\(" "$go_file"; then
+    report_fail "$id" "$features" "litmus-contract" "manifest function $function_name is not defined in $go_file"
+    continue
+  fi
 
   if go_observation="$(run_with_timeout "$GO_TIMEOUT_SECONDS" env GO111MODULE=off GOCACHE="$GO_BUILD_CACHE" go run "./$go_dir" 2>&1)"; then
-    if ! lean observation-eq --left "$go_observation" --right "$go_observation" >/dev/null 2>&1; then
+    if [[ "$expected_status" == "panic" ]]; then
+      report_fail "$id" "$features" "go-observation" "expected panic, but Go exited successfully: $go_observation"
+      failed=1
+    elif ! lean observation-eq --left "$go_observation" --right "$go_observation" >/dev/null 2>&1; then
       report_fail "$id" "$features" "go-observation" "Go output is not a valid observation: $go_observation"
       failed=1
     elif [[ "$go_observation" != *"\"status\":\"$expected_status\""* ]]; then
@@ -156,8 +188,23 @@ while IFS=$'\t' read -r id go_dir gobra_json function_name arg_ints expected_sta
       failed=1
     fi
   else
-    report_fail "$id" "$features" "go-run" "$go_observation"
-    failed=1
+    if [[ "$expected_status" == "panic" ]]; then
+      if [[ "$go_observation" != *"panic:"* ]]; then
+        report_fail "$id" "$features" "go-run" "expected Go panic, got: $go_observation"
+        failed=1
+      elif [[ "$go_observation" != *"$expected_reason"* ]]; then
+        report_fail "$id" "$features" "go-observation" "Go panic did not contain expected reason $expected_reason: $go_observation"
+        failed=1
+      elif ! escaped_reason="$(json_string_literal "$expected_reason")"; then
+        report_fail "$id" "$features" "manifest" "panic expected_reason contains unsupported JSON characters: $expected_reason"
+        failed=1
+      else
+        go_observation="{\"message\":$escaped_reason,\"status\":\"panic\"}"
+      fi
+    else
+      report_fail "$id" "$features" "go-run" "$go_observation"
+      failed=1
+    fi
   fi
   if [[ "$failed" -ne 0 ]]; then
     continue

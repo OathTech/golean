@@ -2,7 +2,7 @@ package main
 
 import "fmt"
 
-func main() {
+func arrayComparable() int {
 	a := [3]int{1, 2, 3}
 	b := [3]int{1, 2, 3}
 	c := [3]int{1, 2, 4}
@@ -13,5 +13,9 @@ func main() {
 	if a != c {
 		z += 20
 	}
-	fmt.Printf("{\"status\":\"ok\",\"values\":[{\"tag\":\"int\",\"value\":%d}]}\n", z)
+	return z
+}
+
+func main() {
+	fmt.Printf("{\"status\":\"ok\",\"values\":[{\"tag\":\"int\",\"value\":%d}]}\n", arrayComparable())
 }

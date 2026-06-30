@@ -8,8 +8,12 @@ func split(sum int) (a int, b int) {
 	return
 }
 
-func main() {
+func nakedReturn() int {
 	a, b := split(17)
 	z := a*10 + b
-	fmt.Printf("{\"status\":\"ok\",\"values\":[{\"tag\":\"int\",\"value\":%d}]}\n", z)
+	return z
+}
+
+func main() {
+	fmt.Printf("{\"status\":\"ok\",\"values\":[{\"tag\":\"int\",\"value\":%d}]}\n", nakedReturn())
 }

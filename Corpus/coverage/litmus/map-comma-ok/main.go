@@ -2,7 +2,7 @@ package main
 
 import "fmt"
 
-func main() {
+func mapCommaOk() int {
 	m := make(map[int]int)
 	v1, ok1 := m[3]
 	m[3] = 10
@@ -19,5 +19,9 @@ func main() {
 		z = z + 200
 	}
 
-	fmt.Printf("{\"status\":\"ok\",\"values\":[{\"tag\":\"int\",\"value\":%d}]}\n", z)
+	return z
+}
+
+func main() {
+	fmt.Printf("{\"status\":\"ok\",\"values\":[{\"tag\":\"int\",\"value\":%d}]}\n", mapCommaOk())
 }

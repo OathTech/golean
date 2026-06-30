@@ -2,7 +2,7 @@ package main
 
 import "fmt"
 
-func main() {
+func stringBasic() int {
 	var z int
 	var empty string
 	s := "hi"
@@ -15,5 +15,9 @@ func main() {
 		z = z + 10000
 	}
 
-	fmt.Printf("{\"status\":\"ok\",\"values\":[{\"tag\":\"int\",\"value\":%d}]}\n", z)
+	return z
+}
+
+func main() {
+	fmt.Printf("{\"status\":\"ok\",\"values\":[{\"tag\":\"int\",\"value\":%d}]}\n", stringBasic())
 }

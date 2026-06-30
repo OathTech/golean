@@ -40,6 +40,14 @@ backlog items.
   hashes and using per-run temporary artifact directories with atomic publish.
 - Keep `scripts/diff-coverage` same-source: Go execution and frontend/Lean
   execution must consume the same canonical Go file.
+- Preserve the executable corpus contract: every row in
+  `Corpus/coverage/manifest.tsv` names a subject function in the canonical
+  `main.go`. Successful cases print JSON from `main`; expected panic cases let
+  Go panic and are normalized by the top-level runner.
+- Investigate the current Gobra export blockers surfaced by the same-source
+  corpus: local addressability for `&x`/array slicing from arrays, pointer
+  receiver method lookup, string pointer assignment, and variadic nil-slice
+  comparison.
 
 ## Hardening Phase
 

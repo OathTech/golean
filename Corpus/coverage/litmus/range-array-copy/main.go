@@ -2,7 +2,7 @@ package main
 
 import "fmt"
 
-func main() {
+func rangeArrayCopy() int {
 	arr := [3]int{1, 2, 3}
 	for _, v := range arr {
 		v = v * 10
@@ -15,5 +15,9 @@ func main() {
 
 	z := arr[0]*100000 + arr[1]*10000 + arr[2]*1000 +
 		sl[0]*100 + sl[1]*10 + sl[2]
-	fmt.Printf("{\"status\":\"ok\",\"values\":[{\"tag\":\"int\",\"value\":%d}]}\n", z)
+	return z
+}
+
+func main() {
+	fmt.Printf("{\"status\":\"ok\",\"values\":[{\"tag\":\"int\",\"value\":%d}]}\n", rangeArrayCopy())
 }

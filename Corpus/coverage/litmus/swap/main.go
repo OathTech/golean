@@ -18,7 +18,7 @@ func (self *cell) swap3(other *cell) {
 	self.val, other.val = other.val, self.val
 }
 
-func main() {
+func client() {
 	x := cell{42}
 	y := cell{17}
 
@@ -27,5 +27,9 @@ func main() {
 	(&x).swap3(&y)
 
 	_, _ = x, y
+}
+
+func main() {
+	client()
 	fmt.Println("{\"status\":\"ok\",\"values\":[]}")
 }

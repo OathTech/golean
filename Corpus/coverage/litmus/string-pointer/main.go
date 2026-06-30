@@ -2,7 +2,7 @@ package main
 
 import "fmt"
 
-func main() {
+func stringPointer() int {
 	var z int
 	s := "test"
 	p := &s
@@ -15,5 +15,9 @@ func main() {
 	}
 	z = z + len(*p)*100
 
-	fmt.Printf("{\"status\":\"ok\",\"values\":[{\"tag\":\"int\",\"value\":%d}]}\n", z)
+	return z
+}
+
+func main() {
+	fmt.Printf("{\"status\":\"ok\",\"values\":[{\"tag\":\"int\",\"value\":%d}]}\n", stringPointer())
 }

@@ -6,7 +6,7 @@ func stringId(s string) string {
 	return s
 }
 
-func main() {
+func stringCall() int {
 	var z int
 	s := stringId("go")
 	if s == "go" {
@@ -14,5 +14,9 @@ func main() {
 	}
 	z = z + len(s)*10
 
-	fmt.Printf("{\"status\":\"ok\",\"values\":[{\"tag\":\"int\",\"value\":%d}]}\n", z)
+	return z
+}
+
+func main() {
+	fmt.Printf("{\"status\":\"ok\",\"values\":[{\"tag\":\"int\",\"value\":%d}]}\n", stringCall())
 }
