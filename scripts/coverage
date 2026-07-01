@@ -29,6 +29,7 @@ Filters for run/list:
 
 Report options:
   --by tag|stage      group latest results by feature tag or failure stage
+  --full              report artifacts/coverage/latest-full.tsv
 EOF
 }
 
@@ -45,7 +46,22 @@ run_exec() {
   if ! scripts/coverage-manifest --artifact-root "$ARTIFACT_ROOT" ${manifest_args+"${manifest_args[@]}"} > "$manifest"; then
     return 2
   fi
-  scripts/diff-coverage "$manifest"
+
+  local total_cases run_full filters
+  total_cases="$(scripts/coverage-manifest --artifact-root "$ARTIFACT_ROOT" --list | wc -l | tr -d ' ')"
+  if [[ "${#manifest_args[@]}" -eq 0 ]]; then
+    run_full=true
+    filters="-"
+  else
+    run_full=false
+    printf -v filters '%q ' "${manifest_args[@]}"
+    filters="${filters% }"
+  fi
+
+  GOLEAN_COVERAGE_TOTAL_CASES="$total_cases" \
+  GOLEAN_COVERAGE_RUN_FULL="$run_full" \
+  GOLEAN_COVERAGE_FILTERS="$filters" \
+    scripts/diff-coverage "$manifest"
 }
 
 list_cases() {
@@ -54,8 +70,13 @@ list_cases() {
 
 report_latest() {
   local by=""
+  local full_report=0
   while [[ "$#" -gt 0 ]]; do
     case "$1" in
+      --full)
+        full_report=1
+        shift
+        ;;
       --by)
         if [[ "$#" -lt 2 ]]; then
           echo "coverage report: --by requires tag or stage" >&2
@@ -76,9 +97,27 @@ report_latest() {
   done
 
   local latest="$ARTIFACT_ROOT/latest.tsv"
+  local meta="$ARTIFACT_ROOT/latest.meta.tsv"
+  if [[ "$full_report" -eq 1 ]]; then
+    latest="$ARTIFACT_ROOT/latest-full.tsv"
+    meta="$ARTIFACT_ROOT/latest-full.meta.tsv"
+  fi
   if [[ ! -f "$latest" ]]; then
     echo "coverage report: missing $latest; run scripts/coverage run first" >&2
     return 2
+  fi
+  if [[ -f "$meta" ]]; then
+    local full_run filters total_cases manifest_cases
+    full_run="$(awk -F '\t' '$1 == "full_run" { print $2 }' "$meta")"
+    filters="$(awk -F '\t' '$1 == "filters" { print $2 }' "$meta")"
+    total_cases="$(awk -F '\t' '$1 == "total_corpus_cases" { print $2 }' "$meta")"
+    manifest_cases="$(awk -F '\t' '$1 == "manifest_cases" { print $2 }' "$meta")"
+    if [[ "$full_run" != "true" ]]; then
+      echo "coverage report: latest.tsv is not a full run; filters=${filters:-unknown}" >&2
+    fi
+    if [[ -n "$total_cases" && -n "$manifest_cases" && "$total_cases" != "$manifest_cases" ]]; then
+      echo "coverage report: latest.tsv covers $manifest_cases of $total_cases corpus cases" >&2
+    fi
   fi
 
   case "$by" in

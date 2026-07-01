@@ -20,17 +20,20 @@ package contains `main.go` plus a local `cases.tsv` metadata file. Stable case
 ids are derived from the path under `exec`.
 
 `scripts/diff-coverage` is the main conformance loop. It exports every
-canonical Go source through the frontend, runs every Go fixture with `go run`,
-runs every successfully exported artifact through Lean, compares observations
-structurally, and reports every case before exiting. It does not stop at the
-first failure, and its nonzero exit code means at least one feature is not fully
-covered.
+canonical Go source through the frontend, generates a temporary Go harness that
+strips the handwritten `main` and calls the metadata subject with the metadata
+integer args, runs that harness with `go run`, runs every successfully exported
+artifact through Lean, compares observations structurally, and reports every
+case before exiting. It does not stop at the first failure, and its nonzero exit
+code means at least one feature is not fully covered.
 
 `scripts/coverage-negative` runs static negative Go cases under
 `Corpus/coverage/negative/compile`. These are invalid Go programs that should
 fail during compilation or typechecking. Each package has a local `case.tsv`
 metadata file. They are not executable differential tests, but they are part of
-the coverage picture because a full Go frontend must diagnose them cleanly.
+the coverage picture because a full Go frontend must diagnose them cleanly. The
+lane uses `go build`, not `go run`, so a runtime panic cannot count as a static
+negative pass.
 
 `scripts/coverage` runs both lanes by default. It also supports focused
 subcommands:
@@ -40,6 +43,7 @@ scripts/coverage list --tag slices
 scripts/coverage run --prefix maps/
 scripts/coverage run --status panic
 scripts/coverage run --last-failed
+scripts/coverage report --full
 scripts/coverage report --by tag
 scripts/coverage report --by stage
 ```
@@ -65,12 +69,11 @@ statuses, invalid integer arguments, and observation mismatches.
 
 The `subject` column is a source-level function name, not a Gobra
 hash-suffixed internal name. It must be defined in the canonical Go file. The
-Go `main` function should be only an observation harness for successful cases:
-it calls the subject function and prints JSON. For expected panic cases, `main`
-should call the subject directly and let the Go process panic. The runner
-normalizes that process failure into a canonical panic observation after
-checking that it was a real Go panic and that the output contains the manifest
-reason.
+Go side does not trust handwritten observation code: the runner generates a
+temporary harness that calls the subject with the metadata args. For expected
+panic cases, the generated harness lets the process panic. The runner checks
+that the panic contains the manifest reason, then compares Lean against the
+actual normalized Go panic message.
 
 There are no hand-maintained Gobra variants. Differential cases compare the
 same ordinary Go source against Lean execution after frontend artifacts have
@@ -86,6 +89,13 @@ The script requires `go` on `PATH`.
 The harness runs fixtures with module mode disabled and stores Go's build cache
 under `artifacts/go-build-cache` so tests do not depend on writable user-level
 cache directories.
+
+Each run writes `artifacts/coverage/latest.tsv` plus
+`artifacts/coverage/latest.meta.tsv`. The metadata records whether the run was
+full or filtered, the filters, manifest hash, manifest case count, and total
+corpus size. Reports warn when `latest.tsv` came from a filtered run.
+`scripts/coverage report --full` reports the latest complete corpus run even
+after focused reruns overwrite `latest.tsv`.
 
 The Gobra exporter is incremental by source hash. Each entry records the source
 hash, scratch-source hash, and generated artifact paths in
@@ -154,5 +164,5 @@ Do not start by fuzzing arbitrary generated Go. First:
 3. Use Goose and new Goose as semantic references before adding each feature.
 4. Once GoCore supports enough scalar, pointer, struct, array, and slice
    behavior, integrate Microsmith or GoSmith behind a feature filter.
-5. Treat every unexpected `unsupported` as a coverage bug and every `stuck` as a
-   semantics/lowering bug unless the manifest explicitly expects it.
+5. Treat every Lean `unsupported`, `stuck`, or `error` as a red conformance
+   result in the executable lane.

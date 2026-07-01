@@ -7,6 +7,7 @@ cd "$ROOT"
 MANIFEST="${1:-}"
 OUT="${GOLEAN_COVERAGE_ARTIFACTS:-artifacts/coverage}"
 RESULTS_TSV="${GOLEAN_COVERAGE_RESULTS:-$OUT/latest.tsv}"
+META_TSV="${GOLEAN_COVERAGE_META:-$OUT/latest.meta.tsv}"
 GO_BUILD_CACHE="$ROOT/artifacts/go-build-cache"
 LAKE_BUILD_TIMEOUT_SECONDS="${LAKE_BUILD_TIMEOUT_SECONDS:-120}"
 GOBRA_EXPORT_TIMEOUT_SECONDS="${GOBRA_EXPORT_TIMEOUT_SECONDS:-900}"
@@ -25,12 +26,26 @@ lean() {
 
 json_string_literal() {
   local value="$1"
-  case "$value" in
-    *$'\n'*|*$'\r'*|*$'\t'*|*\"*|*\\*)
-      return 1
-      ;;
-  esac
+  value="${value//\\/\\\\}"
+  value="${value//\"/\\\"}"
+  value="${value//$'\n'/\\n}"
+  value="${value//$'\r'/\\r}"
+  value="${value//$'\t'/\\t}"
   printf '"%s"' "$value"
+}
+
+panic_message() {
+  awk '
+    /^panic: / {
+      sub(/^panic: /, "")
+      print
+      found = 1
+      exit
+    }
+    END {
+      if (!found) exit 1
+    }
+  '
 }
 
 if ! command -v go >/dev/null 2>&1; then
@@ -54,6 +69,18 @@ fi
 
 mkdir -p artifacts "$OUT" "$GO_BUILD_CACHE"
 printf 'result\tid\tfeatures\tstage\tdetail\n' > "$RESULTS_TSV"
+
+manifest_sha="$(shasum -a 256 "$MANIFEST" | awk '{ print $1 }')"
+manifest_cases="$(awk -F $'\t' 'NF > 0 && $1 !~ /^#/ { count += 1 } END { print count + 0 }' "$MANIFEST")"
+{
+  printf 'key\tvalue\n'
+  printf 'manifest\t%s\n' "$MANIFEST"
+  printf 'manifest_sha256\t%s\n' "$manifest_sha"
+  printf 'manifest_cases\t%s\n' "$manifest_cases"
+  printf 'total_corpus_cases\t%s\n' "${GOLEAN_COVERAGE_TOTAL_CASES:-unknown}"
+  printf 'full_run\t%s\n' "${GOLEAN_COVERAGE_RUN_FULL:-unknown}"
+  printf 'filters\t%s\n' "${GOLEAN_COVERAGE_FILTERS:-unknown}"
+} > "$META_TSV"
 
 EXPORT_MANIFEST="$(mktemp "${TMPDIR:-/tmp}/golean-gobra-export.XXXXXX")"
 EXPORT_CANDIDATES="$(mktemp "${TMPDIR:-/tmp}/golean-gobra-export-candidates.XXXXXX")"
@@ -202,7 +229,22 @@ while IFS=$'\t' read -r id go_dir gobra_json function_name arg_ints expected_sta
     continue
   fi
 
-  if go_observation="$(run_with_timeout "$GO_TIMEOUT_SECONDS" env GO111MODULE=off GOCACHE="$GO_BUILD_CACHE" go run "./$go_dir" 2>&1)"; then
+  go_run_dir="$OUT/go-run/$id"
+  if [[ "$go_run_dir" == /* ]]; then
+    go_run_pkg="$go_run_dir"
+  else
+    go_run_pkg="./$go_run_dir"
+  fi
+  if ! harness_output="$(run_with_timeout "$GO_TIMEOUT_SECONDS" env GO111MODULE=off GOCACHE="$GO_BUILD_CACHE" go run ./tools/coverageharness \
+      --input "$go_file" \
+      --out "$go_run_dir" \
+      --subject "$function_name" \
+      --args "$arg_ints" 2>&1)"; then
+    report_fail "$id" "$features" "go-harness" "$harness_output"
+    continue
+  fi
+
+  if go_observation="$(run_with_timeout "$GO_TIMEOUT_SECONDS" env GO111MODULE=off GOCACHE="$GO_BUILD_CACHE" go run "$go_run_pkg" 2>&1)"; then
     if [[ "$expected_status" == "panic" ]]; then
       report_fail "$id" "$features" "go-observation" "expected panic, but Go exited successfully: $go_observation"
       failed=1
@@ -221,10 +263,11 @@ while IFS=$'\t' read -r id go_dir gobra_json function_name arg_ints expected_sta
       elif [[ "$go_observation" != *"$expected_reason"* ]]; then
         report_fail "$id" "$features" "go-observation" "Go panic did not contain expected reason $expected_reason: $go_observation"
         failed=1
-      elif ! escaped_reason="$(json_string_literal "$expected_reason")"; then
-        report_fail "$id" "$features" "manifest" "panic expected_reason contains unsupported JSON characters: $expected_reason"
+      elif ! actual_panic_message="$(printf '%s\n' "$go_observation" | panic_message)"; then
+        report_fail "$id" "$features" "go-observation" "could not extract Go panic message: $go_observation"
         failed=1
       else
+        escaped_reason="$(json_string_literal "$actual_panic_message")"
         go_observation="{\"message\":$escaped_reason,\"status\":\"panic\"}"
       fi
     else
@@ -297,6 +340,12 @@ done < "$MANIFEST"
 echo
 echo "differential coverage summary: cases=$case_count pass=$pass_count fail=$fail_count export_status=$export_status"
 echo "results: $RESULTS_TSV"
+echo "metadata: $META_TSV"
+
+if [[ "${GOLEAN_COVERAGE_RUN_FULL:-unknown}" == "true" ]]; then
+  cp "$RESULTS_TSV" "$OUT/latest-full.tsv"
+  cp "$META_TSV" "$OUT/latest-full.meta.tsv"
+fi
 
 if [[ "$case_count" -eq 0 ]]; then
   echo "no differential cases found in $MANIFEST" >&2

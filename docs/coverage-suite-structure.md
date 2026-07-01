@@ -27,6 +27,7 @@ Current executable layout:
 
 ```text
 Corpus/coverage/
+  tags.tsv
   exec/
     <area>/
       <case>/
@@ -91,7 +92,8 @@ remaining easy to inspect.
 
 Each executable package has a `cases.tsv` file. The runner validates exact
 column count, valid statuses, known feature tags, subject presence in `main.go`,
-and expected reason policy.
+path and row id syntax, duplicate ids, subject syntax, integer args, and
+expected reason policy.
 
 Columns:
 
@@ -127,71 +129,21 @@ Every executable package contains `main.go`.
 Each row names a subject function. The subject function contains the behavior
 under test. Lean executes that function directly after frontend lowering.
 
-For `ok` cases, `main` prints one canonical JSON observation after calling the
-subject. For `panic` cases, `main` calls the subject and lets the Go process
-panic; the top-level runner normalizes the real process failure into a
-canonical panic observation after checking the panic text contains
-`expected_reason`.
+For Go execution, the runner generates a temporary harness from metadata rather
+than trusting a handwritten `main`. The generator strips the source `main`,
+calls the named subject with the metadata integer args, and encodes the return
+values as observations. For `panic` cases, it lets the process panic; the
+runner extracts the actual Go panic line and compares that normalized
+observation against Lean.
 
-Grouped packages should use a small `main` dispatcher keyed by the row id:
-
-```go
-func main() {
-	switch os.Args[1] {
-	case "ascii":
-		printInt(ascii())
-	case "utf8-leading-byte":
-		printInt(utf8LeadingByte())
-	default:
-		panic("unknown case")
-	}
-}
-```
-
-The dispatcher is observation plumbing only. It must not contain feature logic.
+Handwritten `main` functions may remain useful for `go run` debugging, but they
+are not part of the differential contract.
 
 ## Feature Tags
 
-Feature tags should be controlled vocabulary, not free text. Initial top-level
-tags:
-
-```text
-arrays
-assignment
-bools
-calls
-channels
-comparability
-concurrency
-constants
-control_flow
-defer
-errors
-fields
-functions
-generics
-interfaces
-maps
-methods
-nil
-panic
-pointers
-range
-returns
-scoping
-slices
-strings
-structs
-types
-unsafe
-zero_values
-```
-
-Secondary tags are allowed when they are stable and useful in reports, for
-example `append`, `copy`, `aliasing`, `full_slice`, `unicode`, `iota`,
-`evaluation_order`, `overflow`, and `comma_ok`.
-
-The runner should warn or fail on unknown tags once `tags.tsv` exists.
+Feature tags are controlled by `Corpus/coverage/tags.tsv`. The manifest
+generator rejects unknown tags, malformed tags, and duplicate entries in the
+vocabulary. Add tags intentionally; do not use ad hoc spellings in case files.
 
 ## Runner UX
 
@@ -207,6 +159,7 @@ scripts/coverage run --tag maps --tag nil
 scripts/coverage run --status panic
 scripts/coverage run --last-failed
 scripts/coverage report
+scripts/coverage report --full
 scripts/coverage report --by tag
 scripts/coverage report --by stage
 ```
@@ -229,7 +182,14 @@ It also writes machine-readable results:
 
 ```text
 artifacts/coverage/latest.tsv
+artifacts/coverage/latest.meta.tsv
 ```
+
+Filtered runs still write `latest.tsv`, but the metadata records `full_run`,
+filters, manifest hash, manifest case count, and total corpus case count.
+Reports warn when `latest.tsv` is not a full corpus run. Full runs also update
+`artifacts/coverage/latest-full.tsv`, which can be summarized with
+`scripts/coverage report --full`.
 
 Summary reports should include:
 
@@ -248,10 +208,9 @@ failure is understood.
 
 ## Migration Plan
 
-1. Add controlled `tags.tsv` validation.
-2. Add JSON output next to `artifacts/coverage/latest.tsv`.
-3. Expand the corpus aggressively from `Corpus/challenges/semantic-edges`.
-4. Add optional suite files under `Corpus/coverage/suites/` for curated subsets.
+1. Add JSON output next to `artifacts/coverage/latest.tsv`.
+2. Expand the corpus aggressively from `Corpus/challenges/semantic-edges`.
+3. Add optional suite files under `Corpus/coverage/suites/` for curated subsets.
 
 The central executable and compile-negative manifests have been removed.
 Generated normalized manifests are an implementation detail of the current

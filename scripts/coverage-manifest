@@ -5,6 +5,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
 cd "$ROOT"
 
 EXEC_ROOT="Corpus/coverage/exec"
+TAGS_FILE="Corpus/coverage/tags.tsv"
 ARTIFACT_ROOT="${GOLEAN_COVERAGE_ARTIFACTS:-artifacts/coverage}"
 LIST_ONLY=0
 STATUS_FILTER=""
@@ -27,6 +28,7 @@ Options:
   --status <status>   include rows with expected Go status: ok or panic
   --last-failed       include ids that failed in artifacts/coverage/latest.tsv
   --exec-root <dir>   executable corpus root
+  --tags-file <file>  canonical feature tag list
   --artifact-root <dir>
                       artifact root used to derive Gobra JSON paths
 EOF
@@ -84,6 +86,14 @@ while [[ "$#" -gt 0 ]]; do
       EXEC_ROOT="$2"
       shift 2
       ;;
+    --tags-file)
+      if [[ "$#" -lt 2 ]]; then
+        echo "coverage-manifest: --tags-file requires an argument" >&2
+        exit 2
+      fi
+      TAGS_FILE="$2"
+      shift 2
+      ;;
     --artifact-root)
       if [[ "$#" -lt 2 ]]; then
         echo "coverage-manifest: --artifact-root requires an argument" >&2
@@ -117,6 +127,14 @@ while [[ "$#" -gt 0 ]]; do
   esac
 done
 
+case "$STATUS_FILTER" in
+  ""|ok|panic) ;;
+  *)
+    echo "coverage-manifest: invalid --status $STATUS_FILTER; use ok or panic" >&2
+    exit 2
+    ;;
+esac
+
 if [[ "$LAST_FAILED" -eq 1 ]]; then
   latest="$ARTIFACT_ROOT/latest.tsv"
   if [[ ! -f "$latest" ]]; then
@@ -139,6 +157,39 @@ if [[ ! -d "$EXEC_ROOT" ]]; then
   echo "coverage-manifest: executable corpus root not found: $EXEC_ROOT" >&2
   exit 2
 fi
+if [[ ! -f "$TAGS_FILE" ]]; then
+  echo "coverage-manifest: tag vocabulary not found: $TAGS_FILE" >&2
+  exit 2
+fi
+
+known_tags=""
+while IFS= read -r tag; do
+  if [[ -z "$tag" || "$tag" == \#* ]]; then
+    continue
+  fi
+  if [[ ! "$tag" =~ ^[a-z][a-z0-9_-]*$ ]]; then
+    echo "coverage-manifest: invalid canonical tag in $TAGS_FILE: $tag" >&2
+    exit 2
+  fi
+  if [[ " $known_tags " == *" $tag "* ]]; then
+    echo "coverage-manifest: duplicate canonical tag in $TAGS_FILE: $tag" >&2
+    exit 2
+  fi
+  known_tags="$known_tags $tag"
+done < "$TAGS_FILE"
+
+if [[ "$TAG_FILTER_COUNT" -gt 0 ]]; then
+  for tag in "${TAG_FILTERS[@]}"; do
+    if [[ ! "$tag" =~ ^[a-z][a-z0-9_-]*$ ]]; then
+      echo "coverage-manifest: invalid --tag syntax: $tag" >&2
+      exit 2
+    fi
+    if [[ " $known_tags " != *" $tag "* ]]; then
+      echo "coverage-manifest: unknown --tag: $tag" >&2
+      exit 2
+    fi
+  done
+fi
 
 contains_exact_id() {
   local wanted="$1"
@@ -158,6 +209,40 @@ has_tag() {
   local features="$1"
   local tag="$2"
   [[ ",$features," == *",$tag,"* ]]
+}
+
+validate_path_id() {
+  local value="$1"
+  local part
+  IFS='/' read -r -a parts <<< "$value"
+  for part in "${parts[@]}"; do
+    if [[ ! "$part" =~ ^[a-z0-9][a-z0-9_-]*$ ]]; then
+      return 1
+    fi
+  done
+  return 0
+}
+
+validate_features() {
+  local cases_file="$1"
+  local features="$2"
+  local tag
+  IFS=',' read -r -a tags <<< "$features"
+  for tag in "${tags[@]}"; do
+    if [[ -z "$tag" ]]; then
+      echo "coverage-manifest: $cases_file: empty feature tag" >&2
+      return 1
+    fi
+    if [[ ! "$tag" =~ ^[a-z][a-z0-9_-]*$ ]]; then
+      echo "coverage-manifest: $cases_file: invalid feature tag syntax: $tag" >&2
+      return 1
+    fi
+    if [[ " $known_tags " != *" $tag "* ]]; then
+      echo "coverage-manifest: $cases_file: unknown feature tag: $tag" >&2
+      return 1
+    fi
+  done
+  return 0
 }
 
 include_case() {
@@ -189,6 +274,11 @@ while IFS= read -r cases_file; do
   rel="${cases_file#"$EXEC_ROOT"/}"
   rel="${rel%/cases.tsv}"
   go_dir="$EXEC_ROOT/$rel"
+  if ! validate_path_id "$rel"; then
+    echo "coverage-manifest: invalid executable case path id: $rel" >&2
+    bad=1
+    continue
+  fi
   if [[ ! -f "$go_dir/main.go" ]]; then
     echo "coverage-manifest: missing $go_dir/main.go" >&2
     bad=1
@@ -206,6 +296,25 @@ while IFS= read -r cases_file; do
     fi
     if [[ -z "${subject:-}" || -z "${args:-}" || -z "${expected_status:-}" || -z "${expected_reason:-}" || -z "${features:-}" ]]; then
       echo "coverage-manifest: $cases_file: expected 6 tab-separated fields" >&2
+      bad=1
+      continue
+    fi
+    if [[ "$row_id" != "-" && ! "$row_id" =~ ^[a-z0-9][a-z0-9_-]*$ ]]; then
+      echo "coverage-manifest: $cases_file: invalid row id: $row_id" >&2
+      bad=1
+      continue
+    fi
+    if [[ ! "$subject" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]]; then
+      echo "coverage-manifest: $cases_file: invalid subject identifier: $subject" >&2
+      bad=1
+      continue
+    fi
+    if [[ "$args" != "-" && ! "$args" =~ ^-?[0-9]+(,-?[0-9]+)*$ ]]; then
+      echo "coverage-manifest: $cases_file: invalid integer args: $args" >&2
+      bad=1
+      continue
+    fi
+    if ! validate_features "$cases_file" "$features"; then
       bad=1
       continue
     fi
@@ -238,6 +347,11 @@ while IFS= read -r cases_file; do
       full_id="$rel"
     else
       full_id="$rel/$row_id"
+    fi
+    if [[ " $seen_ids " == *" $full_id "* ]]; then
+      echo "coverage-manifest: duplicate executable case id $full_id" >&2
+      bad=1
+      continue
     fi
     seen_ids="$seen_ids $full_id"
     include_case "$full_id" "$expected_status" "$features" || continue

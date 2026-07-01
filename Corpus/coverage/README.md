@@ -11,27 +11,28 @@ format, naming scheme, subset runner UX, and migration plan.
   feature per package.
 - `exec/<area>/<case>/cases.tsv`: local metadata for executable differential
   rows in that package.
+- `tags.tsv`: canonical executable feature tag vocabulary.
 - `negative/compile/<case>/main.go`: compile-negative litmus programs.
 - `negative/compile/<case>/case.tsv`: local metadata for compile-negative
   cases.
 
 Executable differential cases use one canonical Go source. The same `main.go`
-is run by `go run` and exported through the frontend for Lean execution. There
-are no hand-maintained Gobra variants.
+is exported through the frontend for Lean execution and copied into a generated
+Go harness for real Go execution. There are no hand-maintained Gobra variants.
 
 Each executable row names a subject function in `cases.tsv`. That function must
 be defined in the canonical Go file and contain the feature behavior under
-test. For successful executable cases, the file's `main` function is only an
-observation harness that calls the subject function and prints JSON. For
-expected panic cases, `main` calls the subject directly and lets the Go process
-panic; the top-level runner normalizes that real process failure into the same
-panic observation shape Lean emits. Lean runs the subject function directly; Go
-runs `main`; both paths consume the same source file.
+test. The coverage runner ignores any handwritten `main` function when running
+the Go side: it strips `main`, generates a temporary harness, calls the same
+subject with the same integer args as Lean, and encodes the observation. For
+expected panic cases, the generated harness lets the Go process panic and the
+runner extracts the real panic message.
 
 Runtime-negative Go behavior, such as bounds errors or divide-by-zero panics,
 belongs in `cases.tsv` with `expected_status=panic` and a concrete
 `expected_reason`. Static Go errors that prevent execution belong in
-`negative/compile`.
+`negative/compile`; that lane uses `go build`, not `go run`, so runtime
+failures cannot masquerade as compile/typecheck failures.
 
 Grouped litmus files are allowed when the file remains small and each metadata
 row names the feature being exercised. Large tours stay under

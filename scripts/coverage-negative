@@ -7,6 +7,7 @@ cd "$ROOT"
 MANIFEST="${1:-}"
 GO_BUILD_CACHE="$ROOT/artifacts/go-build-cache"
 GO_TIMEOUT_SECONDS="${GO_TIMEOUT_SECONDS:-30}"
+BUILD_OUT="$(mktemp -d "${TMPDIR:-/tmp}/golean-negative-build.XXXXXX")"
 
 run_with_timeout() {
   local seconds="$1"
@@ -39,6 +40,7 @@ cleanup() {
   if [[ -n "$GENERATED_MANIFEST" ]]; then
     rm -f "$GENERATED_MANIFEST"
   fi
+  rm -rf "$BUILD_OUT"
 }
 trap cleanup EXIT
 
@@ -68,8 +70,9 @@ while IFS=$'\t' read -r id go_dir expected_substring features extra; do
     continue
   fi
 
-  if output="$(run_with_timeout "$GO_TIMEOUT_SECONDS" env GO111MODULE=off GOCACHE="$GO_BUILD_CACHE" go run "./$go_dir" 2>&1)"; then
-    printf 'FAIL\t%s\t%s\tstage=go-compile\tdetail=program unexpectedly compiled and ran\n' "$id" "$features"
+  binary="$BUILD_OUT/${id//\//__}"
+  if output="$(run_with_timeout "$GO_TIMEOUT_SECONDS" env GO111MODULE=off GOCACHE="$GO_BUILD_CACHE" go build -o "$binary" "./$go_dir" 2>&1)"; then
+    printf 'FAIL\t%s\t%s\tstage=go-compile\tdetail=program unexpectedly compiled\n' "$id" "$features"
     fail_count=$((fail_count + 1))
     continue
   fi

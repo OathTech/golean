@@ -85,9 +85,9 @@ Required fixes:
 - Make Gobra lowering fail closed: unsupported nodes, bodyless declarations,
   malformed lvalues, and surprising type-definition shapes should produce
   explicit failures.
-- Harden differential testing with source/hash linkage, per-run artifacts,
-  timeouts, structured observation comparison, and manifest-level reasons for
-  any expected `unsupported` or `stuck` result.
+- Harden differential testing with source/hash linkage, generated Go harnesses,
+  per-run artifacts, timeouts, structured observation comparison, and metadata
+  that cannot turn Lean `unsupported` or `stuck` outcomes into passing cases.
 
 ## Phase 1: Strict Frontend Export
 
