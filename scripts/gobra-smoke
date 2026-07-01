@@ -4,8 +4,8 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
 cd "$ROOT"
 
-OUT_FINAL="artifacts/gobra-smoke"
-MANIFEST="Corpus/coverage/manifest.tsv"
+OUT_FINAL="${GOLEAN_COVERAGE_ARTIFACTS:-artifacts/coverage}"
+MANIFEST="$(mktemp "${TMPDIR:-/tmp}/golean-gobra-smoke.XXXXXX")"
 LAKE_BUILD_TIMEOUT_SECONDS="${LAKE_BUILD_TIMEOUT_SECONDS:-120}"
 LEAN_TIMEOUT_SECONDS="${LEAN_TIMEOUT_SECONDS:-30}"
 
@@ -23,11 +23,13 @@ lean() {
 
 run_with_timeout "$LAKE_BUILD_TIMEOUT_SECONDS" lake build
 
-EXPORT_MANIFEST="$(mktemp "${TMPDIR:-/tmp}/golean-gobra-export.XXXXXX.txt")"
+EXPORT_MANIFEST="$(mktemp "${TMPDIR:-/tmp}/golean-gobra-export.XXXXXX")"
 cleanup() {
-  rm -f "$EXPORT_MANIFEST"
+  rm -f "$EXPORT_MANIFEST" "$MANIFEST"
 }
 trap cleanup EXIT
+
+scripts/coverage-manifest --artifact-root "$OUT_FINAL" > "$MANIFEST"
 
 awk -v root="$ROOT" -F $'\t' '
 /^#/ || NF == 0 { next }
@@ -57,17 +59,14 @@ while IFS=$'\t' read -r id _go_dir gobra_json function_name arg_ints expected_st
     exit 2
   fi
   case "$expected_status" in
-    ok|panic|unsupported|stuck|error) ;;
+    ok|panic) ;;
     *)
-      echo "unknown expected status for $id: $expected_status" >&2
+      echo "invalid expected Go status for $id: $expected_status; use ok or panic" >&2
       exit 2
       ;;
   esac
 
-  case "$gobra_json" in
-    artifacts/gobra-smoke/*) json_file="$OUT_FINAL/${gobra_json#artifacts/gobra-smoke/}" ;;
-    *) json_file="$gobra_json" ;;
-  esac
+  json_file="$gobra_json"
   if [[ ! -f "$json_file" ]]; then
     echo "Gobra JSON artifact not found for $id: $json_file" >&2
     exit 1

@@ -4,15 +4,187 @@ set -uo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
 cd "$ROOT"
 
-scripts/diff-coverage
-diff_status=$?
+ARTIFACT_ROOT="${GOLEAN_COVERAGE_ARTIFACTS:-artifacts/coverage}"
 
-scripts/coverage-negative
-negative_status=$?
+usage() {
+  cat >&2 <<'EOF'
+usage: scripts/coverage [command] [filters]
 
-echo
-echo "coverage lanes: differential=$diff_status negative=$negative_status"
+Commands:
+  run                 run executable differential coverage
+  all                 run executable and compile-negative coverage
+  list                list executable cases matching filters
+  report              summarize artifacts/coverage/latest.tsv
+  negative            run compile-negative coverage
 
-if [[ "$diff_status" -ne 0 || "$negative_status" -ne 0 ]]; then
-  exit 1
-fi
+Default command is "all".
+
+Filters for run/list:
+  <id> ...            exact executable case ids
+  --id <id>           exact executable case id
+  --prefix <prefix>   executable case id prefix
+  --tag <tag>         required feature tag; repeat for intersection
+  --status <status>   expected status filter
+  --last-failed       rerun failures from artifacts/coverage/latest.tsv
+
+Report options:
+  --by tag|stage      group latest results by feature tag or failure stage
+EOF
+}
+
+manifest_args=()
+
+run_exec() {
+  local manifest
+  manifest="$(mktemp "${TMPDIR:-/tmp}/golean-coverage.XXXXXX")"
+  cleanup() {
+    rm -f "$manifest"
+  }
+  trap cleanup RETURN
+
+  if ! scripts/coverage-manifest --artifact-root "$ARTIFACT_ROOT" ${manifest_args+"${manifest_args[@]}"} > "$manifest"; then
+    return 2
+  fi
+  scripts/diff-coverage "$manifest"
+}
+
+list_cases() {
+  scripts/coverage-manifest --artifact-root "$ARTIFACT_ROOT" --list ${manifest_args+"${manifest_args[@]}"}
+}
+
+report_latest() {
+  local by=""
+  while [[ "$#" -gt 0 ]]; do
+    case "$1" in
+      --by)
+        if [[ "$#" -lt 2 ]]; then
+          echo "coverage report: --by requires tag or stage" >&2
+          return 2
+        fi
+        by="$2"
+        shift 2
+        ;;
+      -h|--help)
+        usage
+        return 0
+        ;;
+      *)
+        echo "coverage report: unknown option $1" >&2
+        return 2
+        ;;
+    esac
+  done
+
+  local latest="$ARTIFACT_ROOT/latest.tsv"
+  if [[ ! -f "$latest" ]]; then
+    echo "coverage report: missing $latest; run scripts/coverage run first" >&2
+    return 2
+  fi
+
+  case "$by" in
+    "")
+      awk -F '\t' '
+        NR == 1 { next }
+        {
+          total += 1
+          counts[$1] += 1
+        }
+        END {
+          printf "cases=%d pass=%d fail=%d\n", total, counts["PASS"] + 0, counts["FAIL"] + 0
+        }
+      ' "$latest"
+      ;;
+    tag)
+      printf "tag\tpass\tfail\ttotal\n"
+      awk -F '\t' '
+        NR == 1 { next }
+        {
+          n = split($3, tags, ",")
+          for (i = 1; i <= n; i++) {
+            tag = tags[i]
+            total[tag] += 1
+            if ($1 == "PASS") pass[tag] += 1
+            if ($1 == "FAIL") fail[tag] += 1
+          }
+        }
+        END {
+          for (tag in total) {
+            printf "%s\t%d\t%d\t%d\n", tag, pass[tag] + 0, fail[tag] + 0, total[tag]
+          }
+        }
+      ' "$latest" | sort
+      ;;
+    stage)
+      printf "stage\tfail\n"
+      awk -F '\t' '
+        NR == 1 { next }
+        $1 == "FAIL" { stage[$4] += 1; total += 1 }
+        END {
+          for (s in stage) {
+            printf "%s\t%d\n", s, stage[s]
+          }
+          if (total == 0) {
+            printf "-\t0\n"
+          }
+        }
+      ' "$latest" | sort
+      ;;
+    *)
+      echo "coverage report: unknown grouping $by" >&2
+      return 2
+      ;;
+  esac
+}
+
+cmd="${1:-all}"
+case "$cmd" in
+  run|all|list|report|negative|-h|--help)
+    shift || true
+    ;;
+  *)
+    cmd="all"
+    ;;
+esac
+
+case "$cmd" in
+  -h|--help)
+    usage
+    exit 0
+    ;;
+  report)
+    report_latest "$@"
+    exit $?
+    ;;
+  negative)
+    scripts/coverage-negative "$@"
+    exit $?
+    ;;
+  run|list|all)
+    manifest_args=("$@")
+    ;;
+esac
+
+case "$cmd" in
+  list)
+    list_cases
+    exit $?
+    ;;
+  run)
+    run_exec
+    exit $?
+    ;;
+  all)
+    run_exec
+    diff_status=$?
+
+    scripts/coverage-negative
+    negative_status=$?
+
+    echo
+    echo "coverage lanes: differential=$diff_status negative=$negative_status"
+
+    if [[ "$diff_status" -ne 0 || "$negative_status" -ne 0 ]]; then
+      exit 1
+    fi
+    ;;
+esac

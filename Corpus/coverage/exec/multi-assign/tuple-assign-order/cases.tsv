@@ -1,0 +1,2 @@
+# id	subject	args	expected_status	expected_reason	features
+-	tupleAssignOrder	-	ok	-	multi_assign,slices,indexing,evaluation_order

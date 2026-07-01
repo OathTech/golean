@@ -1,0 +1,2 @@
+# id	subject	args	expected_status	expected_reason	features
+-	divideByZero	-	panic	integer divide by zero	ints,division,panic

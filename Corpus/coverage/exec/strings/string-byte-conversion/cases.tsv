@@ -1,0 +1,2 @@
+# id	subject	args	expected_status	expected_reason	features
+-	stringByteConversion	-	ok	-	strings,literals,conversions,bytes,copy_semantics,invalid_utf8

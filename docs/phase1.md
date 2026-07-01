@@ -29,10 +29,10 @@ for exporter work.
 
 ## Coverage Corpus
 
-The active executable corpus is in `Corpus/coverage/manifest.tsv`, with tiny
-canonical Go fixtures under `Corpus/coverage/litmus`. Static negative cases
-that should fail Go compilation/typechecking live under
-`Corpus/coverage/negative/compile`.
+The active executable corpus is under `Corpus/coverage/exec`, with local
+`cases.tsv` metadata files next to tiny canonical Go fixtures. Static negative
+cases that should fail Go compilation/typechecking live under
+`Corpus/coverage/negative/compile`, with local `case.tsv` metadata files.
 
 ## Next Work
 

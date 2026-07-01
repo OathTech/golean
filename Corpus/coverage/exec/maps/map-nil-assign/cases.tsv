@@ -1,0 +1,2 @@
+# id	subject	args	expected_status	expected_reason	features
+-	mapNilAssign	-	panic	assignment to entry in nil map	maps,nil,panic

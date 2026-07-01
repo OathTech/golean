@@ -1,0 +1,2 @@
+# id	subject	args	expected_status	expected_reason	features
+-	rangeStructCopy	-	ok	-	range,slices,structs,fields,value_copy

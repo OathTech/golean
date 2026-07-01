@@ -1,0 +1,2 @@
+# id	subject	args	expected_status	expected_reason	features
+-	mapBasic	-	ok	-	maps,nil,make,indexing,len

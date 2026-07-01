@@ -4,7 +4,7 @@ set -uo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
 cd "$ROOT"
 
-MANIFEST="${1:-Corpus/coverage/negative/compile/manifest.tsv}"
+MANIFEST="${1:-}"
 GO_BUILD_CACHE="$ROOT/artifacts/go-build-cache"
 GO_TIMEOUT_SECONDS="${GO_TIMEOUT_SECONDS:-30}"
 
@@ -19,12 +19,28 @@ if ! command -v go >/dev/null 2>&1; then
   exit 2
 fi
 
+GENERATED_MANIFEST=""
+if [[ -z "$MANIFEST" ]]; then
+  GENERATED_MANIFEST="$(mktemp "${TMPDIR:-/tmp}/golean-negative-coverage.XXXXXX")"
+  if ! scripts/coverage-negative-manifest > "$GENERATED_MANIFEST"; then
+    exit 2
+  fi
+  MANIFEST="$GENERATED_MANIFEST"
+fi
+
 if [[ ! -f "$MANIFEST" ]]; then
   echo "negative coverage manifest not found: $MANIFEST" >&2
   exit 2
 fi
 
 mkdir -p artifacts "$GO_BUILD_CACHE"
+
+cleanup() {
+  if [[ -n "$GENERATED_MANIFEST" ]]; then
+    rm -f "$GENERATED_MANIFEST"
+  fi
+}
+trap cleanup EXIT
 
 case_count=0
 pass_count=0

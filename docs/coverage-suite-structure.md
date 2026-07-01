@@ -8,33 +8,36 @@ and avoid a central manifest becoming a second source of truth.
 
 - Every executable test uses ordinary canonical Go source.
 - The Go and Lean paths consume the same source file.
-- Runtime behavior is classified per case: `ok`, `panic`, `unsupported`,
-  `stuck`, or `error`.
+- Expected Go runtime behavior is classified per case as `ok` or `panic`.
+  Lean `unsupported`, `stuck`, and `error` observations are failures, not
+  expected conformance outcomes.
 - Static invalid-Go cases live in a separate negative lane.
 - Test ids, source paths, and artifact paths are derived mechanically.
 - Subsets are runnable by id, directory prefix, feature tag, expected status,
   or last failure stage.
 - Reports summarize both individual red/green cases and feature coverage.
+- Gaps are exposed, not hidden. Unsupported features, frontend failures,
+  semantic stuckness, and differential mismatches stay red in the default
+  report. Known-gap annotations may categorize work, but they must not make the
+  main conformance lane green.
 
 ## Directory Layout
 
-Target layout:
+Current executable layout:
 
 ```text
 Corpus/coverage/
   exec/
     <area>/
-      <feature>/
-        <case>/
-          main.go
-          cases.tsv
+      <case>/
+        main.go
+        cases.tsv
   negative/
     compile/
       <area>/
-        <feature>/
-          <case>/
-            main.go
-            case.tsv
+        <case>/
+          main.go
+          case.tsv
   suites/
     smoke.lst
     frontend.lst
@@ -42,9 +45,9 @@ Corpus/coverage/
   README.md
 ```
 
-The current `Corpus/coverage/litmus` directory is the first executable suite.
-We should migrate it into `exec/` incrementally once the metadata generator is
-in place.
+Deeper grouping such as `exec/<area>/<feature>/<case>` is allowed when it makes
+the suite easier to browse. The id is always derived from the relative path
+under `exec`.
 
 ## Naming
 
@@ -101,9 +104,11 @@ Rules:
 - `id` is `-` for a one-case package, otherwise a kebab-case suffix.
 - `subject` is the source-level Go function Lean should run.
 - `args` is `-` or comma-separated integer arguments.
-- `expected_status` is one of `ok`, `panic`, `unsupported`, `stuck`, `error`.
-- `expected_reason` is `-` for `ok` and `error`; it is required for `panic`,
-  `unsupported`, and `stuck`.
+- `expected_status` is one of `ok` or `panic`.
+- `expected_reason` is `-` for `ok`; it is required for `panic`.
+- Frontend export failures, Lean `unsupported`, Lean `stuck`, Lean `error`, and
+  differential mismatches are reported as red cases. They are not encoded as
+  expected statuses in executable metadata.
 - `features` is a comma-separated list of canonical feature tags.
 
 Derived fields:
@@ -196,7 +201,7 @@ Target commands:
 scripts/coverage list
 scripts/coverage list --tag slices
 scripts/coverage run
-scripts/coverage run slices/append/overlap
+scripts/coverage run slices/append-overlap
 scripts/coverage run --prefix slices/
 scripts/coverage run --tag maps --tag nil
 scripts/coverage run --status panic
@@ -220,11 +225,10 @@ PASS<TAB><id><TAB><features>
 FAIL<TAB><id><TAB><features><TAB>stage=<stage><TAB>detail=<detail>
 ```
 
-It should also write machine-readable results:
+It also writes machine-readable results:
 
 ```text
 artifacts/coverage/latest.tsv
-artifacts/coverage/latest.json
 ```
 
 Summary reports should include:
@@ -238,18 +242,17 @@ Summary reports should include:
 This makes it reasonable to keep a large suite where many features are still
 red, because the red cases are categorized and measurable.
 
+The default executable lane is a conformance signal, not an expected-failure
+test suite. A case that does not match Go remains a failure even when the
+failure is understood.
+
 ## Migration Plan
 
-1. Add a manifest generator that reads `cases.tsv` files and emits the current
-   normalized manifest format.
-2. Move `Corpus/coverage/litmus` to `Corpus/coverage/exec` by area in small
-   batches.
-3. Derive artifact paths from ids instead of storing them in case metadata.
-4. Add filtering by exact id, prefix, tag, expected status, and previous
-   failure stage.
-5. Add `artifacts/coverage/latest.{tsv,json}` reports.
-6. Add controlled `tags.tsv` validation.
-7. Expand the corpus aggressively from `Corpus/challenges/semantic-edges`.
+1. Add controlled `tags.tsv` validation.
+2. Add JSON output next to `artifacts/coverage/latest.tsv`.
+3. Expand the corpus aggressively from `Corpus/challenges/semantic-edges`.
+4. Add optional suite files under `Corpus/coverage/suites/` for curated subsets.
 
-The current central `manifest.tsv` should remain until the generator can
-round-trip the existing suite without changing pass/fail classifications.
+The central executable and compile-negative manifests have been removed.
+Generated normalized manifests are an implementation detail of the current
+Gobra/Lean and Go-negative runners.

@@ -4,8 +4,9 @@ set -uo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
 cd "$ROOT"
 
-MANIFEST="${1:-Corpus/coverage/manifest.tsv}"
-OUT="${GOLEAN_GOBRA_ARTIFACTS:-artifacts/gobra-smoke}"
+MANIFEST="${1:-}"
+OUT="${GOLEAN_COVERAGE_ARTIFACTS:-artifacts/coverage}"
+RESULTS_TSV="${GOLEAN_COVERAGE_RESULTS:-$OUT/latest.tsv}"
 GO_BUILD_CACHE="$ROOT/artifacts/go-build-cache"
 LAKE_BUILD_TIMEOUT_SECONDS="${LAKE_BUILD_TIMEOUT_SECONDS:-120}"
 GOBRA_EXPORT_TIMEOUT_SECONDS="${GOBRA_EXPORT_TIMEOUT_SECONDS:-900}"
@@ -37,17 +38,30 @@ if ! command -v go >/dev/null 2>&1; then
   exit 2
 fi
 
+GENERATED_MANIFEST=""
+if [[ -z "$MANIFEST" ]]; then
+  GENERATED_MANIFEST="$(mktemp "${TMPDIR:-/tmp}/golean-coverage-manifest.XXXXXX")"
+  if ! scripts/coverage-manifest --artifact-root "$OUT" > "$GENERATED_MANIFEST"; then
+    exit 2
+  fi
+  MANIFEST="$GENERATED_MANIFEST"
+fi
+
 if [[ ! -f "$MANIFEST" ]]; then
   echo "differential manifest not found: $MANIFEST" >&2
   exit 2
 fi
 
 mkdir -p artifacts "$OUT" "$GO_BUILD_CACHE"
+printf 'result\tid\tfeatures\tstage\tdetail\n' > "$RESULTS_TSV"
 
-EXPORT_MANIFEST="$(mktemp "${TMPDIR:-/tmp}/golean-gobra-export.XXXXXX.txt")"
-EXPORT_CANDIDATES="$(mktemp "${TMPDIR:-/tmp}/golean-gobra-export-candidates.XXXXXX.tsv")"
+EXPORT_MANIFEST="$(mktemp "${TMPDIR:-/tmp}/golean-gobra-export.XXXXXX")"
+EXPORT_CANDIDATES="$(mktemp "${TMPDIR:-/tmp}/golean-gobra-export-candidates.XXXXXX")"
 cleanup() {
   rm -f "$EXPORT_MANIFEST" "$EXPORT_CANDIDATES"
+  if [[ -n "$GENERATED_MANIFEST" ]]; then
+    rm -f "$GENERATED_MANIFEST"
+  fi
 }
 trap cleanup EXIT
 
@@ -116,7 +130,16 @@ report_pass() {
   local id="$1"
   local features="$2"
   printf 'PASS\t%s\t%s\n' "$id" "$features"
+  printf 'PASS\t%s\t%s\t-\t-\n' "$id" "$features" >> "$RESULTS_TSV"
   pass_count=$((pass_count + 1))
+}
+
+one_line() {
+  local value="$1"
+  value="${value//$'\t'/ }"
+  value="${value//$'\r'/\\r}"
+  value="${value//$'\n'/\\n}"
+  printf '%s' "$value"
 }
 
 report_fail() {
@@ -124,7 +147,10 @@ report_fail() {
   local features="$2"
   local stage="$3"
   local detail="$4"
+  local flat_detail
+  flat_detail="$(one_line "$detail")"
   printf 'FAIL\t%s\t%s\tstage=%s\tdetail=%s\n' "$id" "$features" "$stage" "$detail"
+  printf 'FAIL\t%s\t%s\t%s\t%s\n' "$id" "$features" "$stage" "$flat_detail" >> "$RESULTS_TSV"
   fail_count=$((fail_count + 1))
 }
 
@@ -145,14 +171,14 @@ while IFS=$'\t' read -r id go_dir gobra_json function_name arg_ints expected_sta
     continue
   fi
   case "$expected_status" in
-    ok|panic|unsupported|stuck|error) ;;
+    ok|panic) ;;
     *)
-      report_fail "$id" "$features" "manifest" "unknown expected status: $expected_status"
+      report_fail "$id" "$features" "manifest" "invalid expected Go status: $expected_status; use ok or panic"
       continue
       ;;
   esac
   case "$expected_status" in
-    panic|unsupported|stuck)
+    panic)
       if [[ "$expected_reason" == "-" ]]; then
         report_fail "$id" "$features" "manifest" "$expected_status requires an expected_reason"
         continue
@@ -270,6 +296,7 @@ done < "$MANIFEST"
 
 echo
 echo "differential coverage summary: cases=$case_count pass=$pass_count fail=$fail_count export_status=$export_status"
+echo "results: $RESULTS_TSV"
 
 if [[ "$case_count" -eq 0 ]]; then
   echo "no differential cases found in $MANIFEST" >&2

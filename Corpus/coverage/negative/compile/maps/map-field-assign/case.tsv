@@ -1,0 +1,2 @@
+# expected_substring	features
+cannot assign to struct field	maps,addressability,compile_error

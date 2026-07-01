@@ -167,14 +167,14 @@ message : Option String
 
 - Add a Go-source harness that runs concrete test programs with selected inputs.
 - Compare Go results against Lean GoCore observations.
-- Drive same-source differential cases from a manifest with explicit feature
-  tags, expected status, argument values, and reasons for expected semantic
-  gaps.
+- Drive same-source differential cases from local metadata with explicit
+  feature tags, argument values, and expected Go runtime status.
 - Keep static compile/typecheck negative tests in a separate negative coverage
   lane, because rejected Go programs have no runtime observation to compare.
-- Keep `unsupported` acceptable only when the test manifest explicitly expects
-  it.
-- Require manifest reasons for expected `unsupported` and `stuck` results.
+- Reject expected `unsupported`, `stuck`, or `error` statuses in executable
+  metadata. These are Lean/model outcomes and must remain red in the
+  conformance lane.
+- Require manifest reasons for expected Go `panic` results.
 - Parse and compare observations structurally on both sides.
 - Regenerate or reject stale Gobra JSON using source hashes.
 - Run Gobra, Go, and Lean stages with timeouts or fuel where applicable.

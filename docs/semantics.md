@@ -466,8 +466,10 @@ The main comparisons are:
 - GoCore evaluator vs the future relational/proof/WP execution view, where
   applicable.
 
-Unsupported is an acceptable result only when the test manifest expects it.
-Unexpected unsupported features are coverage bugs.
+Lean `unsupported`, `stuck`, and `error` observations are not passing
+conformance outcomes. They should be classified loudly in reports so we can
+distinguish frontend gaps, semantic gaps, malformed states, and true
+differential mismatches without hiding any of them.
 
 ## Near-Term Milestone
 
@@ -487,7 +489,7 @@ Required GoCore additions:
 
 Success criterion:
 
-`scripts/diff-one litmus/swap` should lower and execute the `swap` client as
+`scripts/diff-one structs/swap` should lower and execute the `swap` client as
 ordinary Go after frontend-only artifacts are erased at the lowering boundary.
 
 That milestone exercises the memory model without jumping ahead to maps,

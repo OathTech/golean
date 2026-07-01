@@ -5,44 +5,13 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
 cd "$ROOT"
 
 if [[ "$#" -lt 1 ]]; then
-  echo "usage: scripts/diff-one <manifest-id> [<manifest-id> ...]" >&2
+  echo "usage: scripts/diff-one <case-id> [<case-id> ...]" >&2
   exit 2
 fi
 
-MANIFEST="Corpus/coverage/manifest.tsv"
-FILTERED="$(mktemp "${TMPDIR:-/tmp}/golean-diff-one.XXXXXX.tsv")"
-cleanup() {
-  rm -f "$FILTERED"
-}
-trap cleanup EXIT
+args=()
+for id in "$@"; do
+  args+=(--id "$id")
+done
 
-awk -v ids="$*" '
-BEGIN {
-  n = split(ids, wanted, " ")
-  for (i = 1; i <= n; i++) {
-    keep[wanted[i]] = 1
-  }
-}
-/^#/ || NF == 0 {
-  print
-  next
-}
-($1 in keep) {
-  print
-  seen[$1] = 1
-}
-END {
-  missing = 0
-  for (id in keep) {
-    if (!(id in seen)) {
-      print "diff-one: no manifest row for " id > "/dev/stderr"
-      missing = 1
-    }
-  }
-  if (missing) {
-    exit 2
-  }
-}
-' "$MANIFEST" > "$FILTERED"
-
-scripts/diff-smoke "$FILTERED"
+scripts/coverage run "${args[@]}"

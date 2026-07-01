@@ -4,4 +4,4 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
 cd "$ROOT"
 
-scripts/diff-coverage "${1:-Corpus/coverage/manifest.tsv}"
+scripts/diff-coverage "$@"
