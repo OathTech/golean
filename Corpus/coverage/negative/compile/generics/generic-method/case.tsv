@@ -1,0 +1,2 @@
+# expected_substring	features
+method must have no type parameters	generics,methods,compile_error

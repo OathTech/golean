@@ -1,0 +1,2 @@
+# expected_substring	features
+map can only be compared to nil	maps,comparability,compile_error

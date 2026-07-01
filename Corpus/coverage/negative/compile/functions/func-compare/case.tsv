@@ -1,0 +1,2 @@
+# expected_substring	features
+func can only be compared to nil	functions,comparability,compile_error

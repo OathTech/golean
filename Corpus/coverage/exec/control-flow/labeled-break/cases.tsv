@@ -1,0 +1,2 @@
+# id	subject	args	expected_status	expected_reason	features
+-	labeledBreak	-	ok	-	control_flow,break,labels,switch,loops
