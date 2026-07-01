@@ -19,6 +19,9 @@ format, naming scheme, subset runner UX, and migration plan.
 Executable differential cases use one canonical Go source. The same `main.go`
 is exported through the frontend for Lean execution and copied into a generated
 Go harness for real Go execution. There are no hand-maintained Gobra variants.
+The corpus unit is a package directory, but the current Gobra frontend only
+supports single-file executable packages; multi-file packages fail visibly until
+a package-aware frontend adapter exists.
 
 Each executable row names a subject function in `cases.tsv`. That function must
 be defined in the canonical Go file and contain the feature behavior under
@@ -27,6 +30,8 @@ the Go side: it strips `main`, generates a temporary harness, calls the same
 subject with the same integer args as Lean, and encodes the observation. For
 expected panic cases, the generated harness lets the Go process panic and the
 runner extracts the real panic message.
+Successful subjects must return at least one observable value. Mutation-only
+tests should return a checksum or deterministic summary.
 
 Runtime-negative Go behavior, such as bounds errors or divide-by-zero panics,
 belongs in `cases.tsv` with `expected_status=panic` and a concrete
@@ -44,6 +49,7 @@ row names the feature being exercised. Large tours stay under
 scripts/coverage
 scripts/coverage list --tag slices
 scripts/coverage run --prefix maps/
+scripts/coverage negative --tag compile_error
 scripts/coverage report --by stage
 scripts/diff-coverage
 scripts/coverage-negative
@@ -52,3 +58,6 @@ scripts/diff-one ints/if-return
 
 The coverage scripts report every row before exiting. A nonzero exit means at
 least one feature is not fully covered by the requested lane.
+Use `scripts/coverage all` for the full executable plus compile-negative run;
+filtered work should use `scripts/coverage run ...` or
+`scripts/coverage negative ...` explicitly.

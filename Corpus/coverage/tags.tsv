@@ -1,6 +1,7 @@
 aliasing
 append
 arrays
+addressability
 assignment
 bitwise
 bools
@@ -12,6 +13,7 @@ cases
 comma_ok
 comparability
 comparisons
+compile_error
 concat
 continue
 control_flow
@@ -44,6 +46,7 @@ named-results
 nested
 new
 nil
+nondet
 overflow
 overlap
 panic
@@ -62,6 +65,7 @@ strings
 structs
 switch
 unicode
+unused
 value_copy
 variadic
 widths

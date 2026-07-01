@@ -9,17 +9,19 @@ build and differentially test a substantial Go semantics first.
 The current architectural commitment is:
 
 ```text
-Go/Gobra source
-  -> Gobra frontend/export
-  -> strict Gobra JSON wire AST
-  -> GobraToIR lowering
+Go source
+  -> selected frontend adapter
+  -> strict frontend wire artifact
+  -> frontend-to-GoCore lowering
   -> GoCore deep embedding
   -> Lean execution and proof infrastructure
 ```
 
 Gobra is a frontend and source of typed artifacts. GoCore is the semantic
 center. Longer term, we expect to replace Gobra with our own frontend as
-coverage demands outgrow Gobra's exported shape.
+coverage demands outgrow Gobra's exported shape. The differential corpus is
+therefore source-level Go plus metadata; frontend artifact paths and frontend
+quirks must stay inside adapters.
 
 ## Strategy
 
@@ -88,6 +90,9 @@ Required fixes:
 - Harden differential testing with source/hash linkage, generated Go harnesses,
   per-run artifacts, timeouts, structured observation comparison, and metadata
   that cannot turn Lean `unsupported` or `stuck` outcomes into passing cases.
+- Keep the coverage corpus and normalized manifests frontend-independent. Gobra
+  may be the current adapter, but switching to a Go AST frontend or a later
+  custom frontend must not require changing litmus inputs or Go observations.
 
 ## Phase 1: Strict Frontend Export
 

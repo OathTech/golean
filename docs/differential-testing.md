@@ -1,8 +1,9 @@
 # Differential Testing
 
 The active testing strategy is to compare executable observations from real Go
-programs with observations from Gobra JSON lowered into GoCore and executed in
-Lean.
+programs with observations from the same source after a frontend lowers it into
+GoCore and Lean executes it. Gobra JSON is the current frontend, but the
+coverage corpus and Go observation harness are frontend-independent.
 
 Observation format:
 
@@ -12,6 +13,10 @@ values : Array Value
 message : Option String
 ```
 
+Every observation carries `schema = "golean-observation-v1"`. Lean validates
+the observation recursively and rejects unknown value tags, missing fields, and
+extra fields.
+
 ## Current Harness
 
 `Corpus/coverage` is the source of truth for coverage tests. The active
@@ -20,12 +25,18 @@ package contains `main.go` plus a local `cases.tsv` metadata file. Stable case
 ids are derived from the path under `exec`.
 
 `scripts/diff-coverage` is the main conformance loop. It exports every
-canonical Go source through the frontend, generates a temporary Go harness that
+canonical Go source through the selected frontend, generates a temporary Go harness that
 strips the handwritten `main` and calls the metadata subject with the metadata
 integer args, runs that harness with `go run`, runs every successfully exported
 artifact through Lean, compares observations structurally, and reports every
 case before exiting. It does not stop at the first failure, and its nonzero exit
 code means at least one feature is not fully covered.
+
+Set `GOLEAN_FRONTEND=gobra` to use the current Gobra JSON path. Other frontend
+values currently fail closed as `frontend-export` failures until an adapter is
+implemented. Gobra itself is treated as a temporary single-file frontend: if a
+corpus package has multiple non-test Go files, the case is red rather than
+silently comparing Go's package execution against Gobra's single-file export.
 
 `scripts/coverage-negative` runs static negative Go cases under
 `Corpus/coverage/negative/compile`. These are invalid Go programs that should
@@ -64,8 +75,15 @@ is the expected Go runtime status and must be `ok` or `panic`; use `-` for
 failures, Lean `unsupported`, Lean `stuck`, Lean `error`, and differential
 mismatches are red conformance failures, not expected metadata statuses.
 `scripts/coverage-manifest` derives the normalized manifest consumed by the
-current Gobra/Lean runner. It fails on malformed rows, missing files, invalid
-statuses, invalid integer arguments, and observation mismatches.
+selected frontend/Lean runner. Frontend artifact paths are computed by the
+frontend adapter, not stored in the corpus-derived manifest. The manifest
+generator fails on malformed rows, missing files, invalid statuses, invalid
+integer arguments, and observation mismatches.
+
+An `ok` subject must return at least one observable value. A subject that only
+mutates local state and returns nothing is not a differential test; it can pass
+without observing the behavior it intended to test. Return a checksum or other
+small deterministic summary instead.
 
 The `subject` column is a source-level function name, not a Gobra
 hash-suffixed internal name. It must be defined in the canonical Go file. The
@@ -90,12 +108,21 @@ The harness runs fixtures with module mode disabled and stores Go's build cache
 under `artifacts/go-build-cache` so tests do not depend on writable user-level
 cache directories.
 
+The default executable lane is deterministic. Cases tagged `nondet` are
+rejected unless `GOLEAN_ALLOW_NONDET=1` is set, and that mode is reserved for a
+future relation-style oracle rather than ordinary equality.
+
 Each run writes `artifacts/coverage/latest.tsv` plus
 `artifacts/coverage/latest.meta.tsv`. The metadata records whether the run was
-full or filtered, the filters, manifest hash, manifest case count, and total
-corpus size. Reports warn when `latest.tsv` came from a filtered run.
+full or filtered, the filters, frontend, manifest hash, manifest case count,
+total corpus size, git commit, and dirty flag. Reports warn when `latest.tsv`
+came from a filtered run.
 `scripts/coverage report --full` reports the latest complete corpus run even
-after focused reruns overwrite `latest.tsv`.
+after focused reruns overwrite `latest.tsv`; it regenerates the current full
+manifest and warns/fails if the saved full report is stale.
+`scripts/coverage negative` accepts the same style of `--id`, `--prefix`, and
+`--tag` filters for compile-negative cases. `scripts/coverage all` intentionally
+rejects filters so a partial lane cannot look like a full conformance pass.
 
 The Gobra exporter is incremental by source hash. Each entry records the source
 hash, scratch-source hash, and generated artifact paths in

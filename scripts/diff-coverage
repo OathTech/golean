@@ -8,6 +8,7 @@ MANIFEST="${1:-}"
 OUT="${GOLEAN_COVERAGE_ARTIFACTS:-artifacts/coverage}"
 RESULTS_TSV="${GOLEAN_COVERAGE_RESULTS:-$OUT/latest.tsv}"
 META_TSV="${GOLEAN_COVERAGE_META:-$OUT/latest.meta.tsv}"
+FRONTEND="${GOLEAN_FRONTEND:-gobra}"
 GO_BUILD_CACHE="$ROOT/artifacts/go-build-cache"
 LAKE_BUILD_TIMEOUT_SECONDS="${LAKE_BUILD_TIMEOUT_SECONDS:-120}"
 GOBRA_EXPORT_TIMEOUT_SECONDS="${GOBRA_EXPORT_TIMEOUT_SECONDS:-900}"
@@ -48,6 +49,14 @@ panic_message() {
   '
 }
 
+package_go_file_count() {
+  find "$1" -maxdepth 1 -name '*.go' ! -name '*_test.go' -print | wc -l | tr -d ' '
+}
+
+gobra_internal_json_path() {
+  printf '%s/work/%s/main.go.internal.json' "$OUT" "$1"
+}
+
 if ! command -v go >/dev/null 2>&1; then
   echo "go not found on PATH; install Go or expose it in the shell to run differential coverage" >&2
   exit 2
@@ -72,14 +81,23 @@ printf 'result\tid\tfeatures\tstage\tdetail\n' > "$RESULTS_TSV"
 
 manifest_sha="$(shasum -a 256 "$MANIFEST" | awk '{ print $1 }')"
 manifest_cases="$(awk -F $'\t' 'NF > 0 && $1 !~ /^#/ { count += 1 } END { print count + 0 }' "$MANIFEST")"
+git_commit="$(git rev-parse HEAD 2>/dev/null || printf 'unknown')"
+if git diff --quiet -- . 2>/dev/null && git diff --cached --quiet -- . 2>/dev/null; then
+  git_dirty=false
+else
+  git_dirty=true
+fi
 {
   printf 'key\tvalue\n'
+  printf 'frontend\t%s\n' "$FRONTEND"
   printf 'manifest\t%s\n' "$MANIFEST"
   printf 'manifest_sha256\t%s\n' "$manifest_sha"
   printf 'manifest_cases\t%s\n' "$manifest_cases"
   printf 'total_corpus_cases\t%s\n' "${GOLEAN_COVERAGE_TOTAL_CASES:-unknown}"
   printf 'full_run\t%s\n' "${GOLEAN_COVERAGE_RUN_FULL:-unknown}"
   printf 'filters\t%s\n' "${GOLEAN_COVERAGE_FILTERS:-unknown}"
+  printf 'git_commit\t%s\n' "$git_commit"
+  printf 'git_dirty\t%s\n' "$git_dirty"
 } > "$META_TSV"
 
 EXPORT_MANIFEST="$(mktemp "${TMPDIR:-/tmp}/golean-gobra-export.XXXXXX")"
@@ -95,8 +113,8 @@ trap cleanup EXIT
 if ! awk -v root="$ROOT" -F $'\t' '
 BEGIN { ok = 1 }
 /^#/ || NF == 0 { next }
-NF != 8 {
-  print "malformed differential manifest row: expected 8 tab-separated fields: " $0 > "/dev/stderr"
+NF != 7 {
+  print "malformed differential manifest row: expected 7 tab-separated fields: " $0 > "/dev/stderr"
   ok = 0
   next
 }
@@ -109,9 +127,9 @@ NF != 8 {
     next
   }
   if (go_dir ~ /^\//) {
-    print id "\t" go_dir "/main.go" "\t" $4
+    print id "\t" go_dir "/main.go" "\t" $3
   } else {
-    print id "\t" root "/" go_dir "/main.go" "\t" $4
+    print id "\t" root "/" go_dir "/main.go" "\t" $3
   }
 }
 END { if (!ok) exit 2 }
@@ -120,6 +138,13 @@ END { if (!ok) exit 2 }
 fi
 
 while IFS=$'\t' read -r id go_file function_name; do
+  go_dir="$(dirname "$go_file")"
+  if [[ "$FRONTEND" != "gobra" ]]; then
+    continue
+  fi
+  if [[ "$(package_go_file_count "$go_dir")" -ne 1 ]]; then
+    continue
+  fi
   if [[ -f "$go_file" ]] && rg -q "func[[:space:]]+$function_name[[:space:]]*\\(" "$go_file"; then
     printf '%s %s\n' "$id" "$go_file" >> "$EXPORT_MANIFEST"
   fi
@@ -132,20 +157,25 @@ if ! run_with_timeout "$LAKE_BUILD_TIMEOUT_SECONDS" lake build; then
 fi
 
 EXPORT_LOG="$OUT/export.log"
-if [[ -s "$EXPORT_MANIFEST" ]]; then
-  echo "exporting canonical Go inputs through Gobra..."
+if [[ "$FRONTEND" != "gobra" ]]; then
+  echo "unsupported frontend '$FRONTEND'; continuing to classify every manifest row."
+  export_status=2
+elif [[ -s "$EXPORT_MANIFEST" ]]; then
+  echo "exporting canonical Go inputs through frontend: gobra..."
 elif [[ -s "$EXPORT_CANDIDATES" ]]; then
-  echo "no litmus rows passed source/function preflight; skipping Gobra export"
+  echo "no litmus rows passed source/function preflight; skipping frontend export"
 else
-  echo "no differential rows found; skipping Gobra export"
+  echo "no differential rows found; skipping frontend export"
 fi
-if [[ ! -s "$EXPORT_MANIFEST" ]]; then
+if [[ "$FRONTEND" != "gobra" ]]; then
+  :
+elif [[ ! -s "$EXPORT_MANIFEST" ]]; then
   export_status=0
 elif run_with_timeout "$GOBRA_EXPORT_TIMEOUT_SECONDS" lake exe golean gobra-export --manifest "$EXPORT_MANIFEST" --out "$OUT" > "$EXPORT_LOG" 2>&1; then
   export_status=0
 else
   export_status=$?
-  echo "Gobra export reported failures; continuing to classify every manifest row."
+  echo "Frontend export reported failures; continuing to classify every manifest row."
   echo "Full export log: $EXPORT_LOG"
 fi
 
@@ -176,12 +206,12 @@ report_fail() {
   local detail="$4"
   local flat_detail
   flat_detail="$(one_line "$detail")"
-  printf 'FAIL\t%s\t%s\tstage=%s\tdetail=%s\n' "$id" "$features" "$stage" "$detail"
+  printf 'FAIL\t%s\t%s\tstage=%s\tdetail=%s\n' "$id" "$features" "$stage" "$flat_detail"
   printf 'FAIL\t%s\t%s\t%s\t%s\n' "$id" "$features" "$stage" "$flat_detail" >> "$RESULTS_TSV"
   fail_count=$((fail_count + 1))
 }
 
-while IFS=$'\t' read -r id go_dir gobra_json function_name arg_ints expected_status features expected_reason extra; do
+while IFS=$'\t' read -r id go_dir function_name arg_ints expected_status features expected_reason extra; do
   if [[ -z "${id:-}" || "$id" == \#* ]]; then
     continue
   fi
@@ -193,8 +223,8 @@ while IFS=$'\t' read -r id go_dir gobra_json function_name arg_ints expected_sta
     report_fail "$id" "${features:-unknown}" "manifest" "too many tab-separated fields"
     continue
   fi
-  if [[ -z "${go_dir:-}" || -z "${gobra_json:-}" || -z "${function_name:-}" || -z "${arg_ints:-}" || -z "${expected_status:-}" || -z "${features:-}" || -z "${expected_reason:-}" ]]; then
-    report_fail "$id" "${features:-unknown}" "manifest" "expected 8 tab-separated fields"
+  if [[ -z "${go_dir:-}" || -z "${function_name:-}" || -z "${arg_ints:-}" || -z "${expected_status:-}" || -z "${features:-}" || -z "${expected_reason:-}" ]]; then
+    report_fail "$id" "${features:-unknown}" "manifest" "expected 7 tab-separated fields"
     continue
   fi
   case "$expected_status" in
@@ -239,6 +269,7 @@ while IFS=$'\t' read -r id go_dir gobra_json function_name arg_ints expected_sta
       --input "$go_file" \
       --out "$go_run_dir" \
       --subject "$function_name" \
+      --expected-status "$expected_status" \
       --args "$arg_ints" 2>&1)"; then
     report_fail "$id" "$features" "go-harness" "$harness_output"
     continue
@@ -268,7 +299,7 @@ while IFS=$'\t' read -r id go_dir gobra_json function_name arg_ints expected_sta
         failed=1
       else
         escaped_reason="$(json_string_literal "$actual_panic_message")"
-        go_observation="{\"message\":$escaped_reason,\"status\":\"panic\"}"
+        go_observation="{\"message\":$escaped_reason,\"schema\":\"golean-observation-v1\",\"status\":\"panic\"}"
       fi
     else
       report_fail "$id" "$features" "go-run" "$go_observation"
@@ -279,12 +310,23 @@ while IFS=$'\t' read -r id go_dir gobra_json function_name arg_ints expected_sta
     continue
   fi
 
+  package_go_files="$(package_go_file_count "$go_dir")"
+  if [[ "$FRONTEND" != "gobra" ]]; then
+    report_fail "$id" "$features" "frontend-export" "unsupported frontend '$FRONTEND'"
+    continue
+  fi
+  if [[ "$package_go_files" -ne 1 ]]; then
+    report_fail "$id" "$features" "frontend-export" "gobra frontend currently supports exactly one non-test Go file per package; found $package_go_files"
+    continue
+  fi
+
+  gobra_json="$(gobra_internal_json_path "$id")"
   if [[ ! -f "$gobra_json" ]]; then
     result_path="$OUT/results/$id/result.json"
     if [[ -f "$result_path" ]]; then
-      report_fail "$id" "$features" "gobra-export" "go=ok; no internal JSON at $gobra_json; see $result_path"
+      report_fail "$id" "$features" "frontend-export" "frontend=gobra; go=ok; no internal JSON at $gobra_json; see $result_path"
     else
-      report_fail "$id" "$features" "gobra-export" "go=ok; no internal JSON at $gobra_json"
+      report_fail "$id" "$features" "frontend-export" "frontend=gobra; go=ok; no internal JSON at $gobra_json"
     fi
     continue
   fi

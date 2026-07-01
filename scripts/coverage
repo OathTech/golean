@@ -98,6 +98,7 @@ report_latest() {
 
   local latest="$ARTIFACT_ROOT/latest.tsv"
   local meta="$ARTIFACT_ROOT/latest.meta.tsv"
+  local report_status=0
   if [[ "$full_report" -eq 1 ]]; then
     latest="$ARTIFACT_ROOT/latest-full.tsv"
     meta="$ARTIFACT_ROOT/latest-full.meta.tsv"
@@ -117,6 +118,43 @@ report_latest() {
     fi
     if [[ -n "$total_cases" && -n "$manifest_cases" && "$total_cases" != "$manifest_cases" ]]; then
       echo "coverage report: latest.tsv covers $manifest_cases of $total_cases corpus cases" >&2
+    fi
+    if [[ "$full_report" -eq 1 ]]; then
+      local stored_manifest_sha current_manifest current_manifest_sha current_manifest_cases stored_commit current_commit current_dirty
+      stored_manifest_sha="$(awk -F '\t' '$1 == "manifest_sha256" { print $2 }' "$meta")"
+      stored_commit="$(awk -F '\t' '$1 == "git_commit" { print $2 }' "$meta")"
+      current_manifest="$(mktemp "${TMPDIR:-/tmp}/golean-current-full-manifest.XXXXXX")"
+      if scripts/coverage-manifest --artifact-root "$ARTIFACT_ROOT" > "$current_manifest"; then
+        current_manifest_sha="$(shasum -a 256 "$current_manifest" | awk '{ print $1 }')"
+        current_manifest_cases="$(awk -F '\t' 'NF > 0 && $1 !~ /^#/ { count += 1 } END { print count + 0 }' "$current_manifest")"
+        if [[ -n "$stored_manifest_sha" && "$stored_manifest_sha" != "$current_manifest_sha" ]]; then
+          echo "coverage report: latest-full.tsv is stale; current full manifest hash differs" >&2
+          report_status=1
+        fi
+        if [[ -n "$manifest_cases" && "$manifest_cases" != "$current_manifest_cases" ]]; then
+          echo "coverage report: latest-full.tsv has $manifest_cases case(s), current corpus has $current_manifest_cases" >&2
+          report_status=1
+        fi
+      else
+        echo "coverage report: could not regenerate current full manifest for staleness check" >&2
+        report_status=1
+      fi
+      rm -f "$current_manifest"
+
+      current_commit="$(git rev-parse HEAD 2>/dev/null || printf 'unknown')"
+      if git diff --quiet -- . 2>/dev/null && git diff --cached --quiet -- . 2>/dev/null; then
+        current_dirty=false
+      else
+        current_dirty=true
+      fi
+      if [[ -n "$stored_commit" && "$stored_commit" != "$current_commit" ]]; then
+        echo "coverage report: latest-full.tsv was produced at git commit $stored_commit, current commit is $current_commit" >&2
+        report_status=1
+      fi
+      if [[ "$current_dirty" == "true" ]]; then
+        echo "coverage report: working tree is dirty; latest-full.tsv may not match current files" >&2
+        report_status=1
+      fi
     fi
   fi
 
@@ -173,6 +211,7 @@ report_latest() {
       return 2
       ;;
   esac
+  return "$report_status"
 }
 
 cmd="${1:-all}"
@@ -195,7 +234,15 @@ case "$cmd" in
     exit $?
     ;;
   negative)
-    scripts/coverage-negative "$@"
+    negative_manifest="$(mktemp "${TMPDIR:-/tmp}/golean-negative-coverage.XXXXXX")"
+    cleanup_negative() {
+      rm -f "$negative_manifest"
+    }
+    trap cleanup_negative EXIT
+    if ! scripts/coverage-negative-manifest "$@" > "$negative_manifest"; then
+      exit 2
+    fi
+    scripts/coverage-negative "$negative_manifest"
     exit $?
     ;;
   run|list|all)
@@ -213,6 +260,10 @@ case "$cmd" in
     exit $?
     ;;
   all)
+    if [[ "$#" -ne 0 ]]; then
+      echo "coverage all: filters are ambiguous across lanes; use 'scripts/coverage run ...' or 'scripts/coverage negative ...'" >&2
+      exit 2
+    fi
     run_exec
     diff_status=$?
 

@@ -33,8 +33,8 @@ scripts/coverage-manifest --artifact-root "$OUT_FINAL" > "$MANIFEST"
 
 awk -v root="$ROOT" -F $'\t' '
 /^#/ || NF == 0 { next }
-NF != 8 {
-  print "malformed differential manifest row: expected 8 tab-separated fields: " $0 > "/dev/stderr"
+NF != 7 {
+  print "malformed differential manifest row: expected 7 tab-separated fields: " $0 > "/dev/stderr"
   exit 2
 }
 {
@@ -50,7 +50,7 @@ lake exe golean gobra-export --manifest "$EXPORT_MANIFEST" --out "$OUT_FINAL"
 
 case_count=0
 validated_count=0
-while IFS=$'\t' read -r id _go_dir gobra_json function_name arg_ints expected_status _features _expected_reason extra; do
+while IFS=$'\t' read -r id _go_dir function_name arg_ints expected_status _features _expected_reason extra; do
   if [[ -z "${id:-}" || "$id" == \#* ]]; then
     continue
   fi
@@ -66,7 +66,7 @@ while IFS=$'\t' read -r id _go_dir gobra_json function_name arg_ints expected_st
       ;;
   esac
 
-  json_file="$gobra_json"
+  json_file="$OUT_FINAL/work/$id/main.go.internal.json"
   if [[ ! -f "$json_file" ]]; then
     echo "Gobra JSON artifact not found for $id: $json_file" >&2
     exit 1

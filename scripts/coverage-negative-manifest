@@ -5,10 +5,19 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
 cd "$ROOT"
 
 NEGATIVE_ROOT="Corpus/coverage/negative/compile"
+TAGS_FILE="Corpus/coverage/tags.tsv"
 
 usage() {
   cat >&2 <<'EOF'
-usage: scripts/coverage-negative-manifest [--root <dir>] [--list] [<id> ...]
+usage: scripts/coverage-negative-manifest [options] [<id> ...]
+
+Options:
+  --root <dir>        compile-negative corpus root
+  --tags-file <file>  canonical feature tag list
+  --list              print ids and metadata
+  --id <id>           include one exact id
+  --prefix <prefix>   include ids under a prefix
+  --tag <tag>         required feature tag; repeat for intersection
 
 Emits normalized compile-negative manifest rows:
 id<TAB>go_dir<TAB>expected_substring<TAB>features
@@ -16,6 +25,9 @@ EOF
 }
 
 LIST_ONLY=0
+PREFIX_FILTER=""
+TAG_FILTERS=()
+TAG_FILTER_COUNT=0
 EXACT_IDS=()
 EXACT_ID_COUNT=0
 
@@ -32,6 +44,40 @@ while [[ "$#" -gt 0 ]]; do
     --list)
       LIST_ONLY=1
       shift
+      ;;
+    --id)
+      if [[ "$#" -lt 2 ]]; then
+        echo "coverage-negative-manifest: --id requires an argument" >&2
+        exit 2
+      fi
+      EXACT_IDS+=("$2")
+      EXACT_ID_COUNT=$((EXACT_ID_COUNT + 1))
+      shift 2
+      ;;
+    --prefix)
+      if [[ "$#" -lt 2 ]]; then
+        echo "coverage-negative-manifest: --prefix requires an argument" >&2
+        exit 2
+      fi
+      PREFIX_FILTER="$2"
+      shift 2
+      ;;
+    --tag)
+      if [[ "$#" -lt 2 ]]; then
+        echo "coverage-negative-manifest: --tag requires an argument" >&2
+        exit 2
+      fi
+      TAG_FILTERS+=("$2")
+      TAG_FILTER_COUNT=$((TAG_FILTER_COUNT + 1))
+      shift 2
+      ;;
+    --tags-file)
+      if [[ "$#" -lt 2 ]]; then
+        echo "coverage-negative-manifest: --tags-file requires an argument" >&2
+        exit 2
+      fi
+      TAGS_FILE="$2"
+      shift 2
       ;;
     -h|--help)
       usage
@@ -62,6 +108,39 @@ if [[ ! -d "$NEGATIVE_ROOT" ]]; then
   echo "coverage-negative-manifest: root not found: $NEGATIVE_ROOT" >&2
   exit 2
 fi
+if [[ ! -f "$TAGS_FILE" ]]; then
+  echo "coverage-negative-manifest: tag vocabulary not found: $TAGS_FILE" >&2
+  exit 2
+fi
+
+known_tags=""
+while IFS= read -r tag; do
+  if [[ -z "$tag" || "$tag" == \#* ]]; then
+    continue
+  fi
+  if [[ ! "$tag" =~ ^[a-z][a-z0-9_-]*$ ]]; then
+    echo "coverage-negative-manifest: invalid canonical tag in $TAGS_FILE: $tag" >&2
+    exit 2
+  fi
+  if [[ " $known_tags " == *" $tag "* ]]; then
+    echo "coverage-negative-manifest: duplicate canonical tag in $TAGS_FILE: $tag" >&2
+    exit 2
+  fi
+  known_tags="$known_tags $tag"
+done < "$TAGS_FILE"
+
+if [[ "$TAG_FILTER_COUNT" -gt 0 ]]; then
+  for tag in "${TAG_FILTERS[@]}"; do
+    if [[ ! "$tag" =~ ^[a-z][a-z0-9_-]*$ ]]; then
+      echo "coverage-negative-manifest: invalid --tag syntax: $tag" >&2
+      exit 2
+    fi
+    if [[ " $known_tags " != *" $tag "* ]]; then
+      echo "coverage-negative-manifest: unknown --tag: $tag" >&2
+      exit 2
+    fi
+  done
+fi
 
 contains_exact_id() {
   local wanted="$1"
@@ -77,6 +156,63 @@ contains_exact_id() {
   return 1
 }
 
+has_tag() {
+  local features="$1"
+  local tag="$2"
+  [[ ",$features," == *",$tag,"* ]]
+}
+
+validate_path_id() {
+  local value="$1"
+  local part
+  IFS='/' read -r -a parts <<< "$value"
+  for part in "${parts[@]}"; do
+    if [[ ! "$part" =~ ^[a-z0-9][a-z0-9_-]*$ ]]; then
+      return 1
+    fi
+  done
+  return 0
+}
+
+validate_features() {
+  local case_file="$1"
+  local features="$2"
+  local tag
+  IFS=',' read -r -a tags <<< "$features"
+  for tag in "${tags[@]}"; do
+    if [[ -z "$tag" ]]; then
+      echo "coverage-negative-manifest: $case_file: empty feature tag" >&2
+      return 1
+    fi
+    if [[ ! "$tag" =~ ^[a-z][a-z0-9_-]*$ ]]; then
+      echo "coverage-negative-manifest: $case_file: invalid feature tag syntax: $tag" >&2
+      return 1
+    fi
+    if [[ " $known_tags " != *" $tag "* ]]; then
+      echo "coverage-negative-manifest: $case_file: unknown feature tag: $tag" >&2
+      return 1
+    fi
+  done
+  return 0
+}
+
+include_case() {
+  local full_id="$1"
+  local features="$2"
+
+  contains_exact_id "$full_id" || return 1
+  if [[ -n "$PREFIX_FILTER" && "$full_id" != "$PREFIX_FILTER"* ]]; then
+    return 1
+  fi
+  local tag
+  if [[ "$TAG_FILTER_COUNT" -gt 0 ]]; then
+    for tag in "${TAG_FILTERS[@]}"; do
+      has_tag "$features" "$tag" || return 1
+    done
+  fi
+  return 0
+}
+
 seen_ids=""
 emitted=0
 bad=0
@@ -85,6 +221,11 @@ while IFS= read -r case_file; do
   rel="${case_file#"$NEGATIVE_ROOT"/}"
   rel="${rel%/case.tsv}"
   go_dir="$NEGATIVE_ROOT/$rel"
+  if ! validate_path_id "$rel"; then
+    echo "coverage-negative-manifest: invalid compile-negative case path id: $rel" >&2
+    bad=1
+    continue
+  fi
   if [[ ! -f "$go_dir/main.go" ]]; then
     echo "coverage-negative-manifest: missing $go_dir/main.go" >&2
     bad=1
@@ -105,10 +246,24 @@ while IFS= read -r case_file; do
       bad=1
       continue
     fi
+    if ! validate_features "$case_file" "$features"; then
+      bad=1
+      continue
+    fi
+    if has_tag "$features" "nondet" && [[ "${GOLEAN_ALLOW_NONDET:-0}" != "1" ]]; then
+      echo "coverage-negative-manifest: $case_file: nondet cases require GOLEAN_ALLOW_NONDET=1 and a relation-style oracle" >&2
+      bad=1
+      continue
+    fi
 
     full_id="$rel"
+    if [[ " $seen_ids " == *" $full_id "* ]]; then
+      echo "coverage-negative-manifest: duplicate compile-negative case id $full_id" >&2
+      bad=1
+      continue
+    fi
     seen_ids="$seen_ids $full_id"
-    contains_exact_id "$full_id" || continue
+    include_case "$full_id" "$features" || continue
     emitted=$((emitted + 1))
     if [[ "$LIST_ONLY" -eq 1 ]]; then
       printf '%s\t%s\t%s\t%s\n' "$full_id" "$features" "$go_dir" "$expected_substring"

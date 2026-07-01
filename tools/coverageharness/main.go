@@ -21,6 +21,7 @@ type config struct {
 	out     string
 	subject string
 	args    string
+	status  string
 }
 
 func main() {
@@ -29,6 +30,7 @@ func main() {
 	flag.StringVar(&cfg.out, "out", "", "output directory")
 	flag.StringVar(&cfg.subject, "subject", "", "subject function")
 	flag.StringVar(&cfg.args, "args", "-", "comma-separated integer args or -")
+	flag.StringVar(&cfg.status, "expected-status", "ok", "expected Go status: ok or panic")
 	flag.Parse()
 
 	if err := run(cfg); err != nil {
@@ -46,36 +48,48 @@ func run(cfg config) error {
 		return err
 	}
 
+	if cfg.status != "ok" && cfg.status != "panic" {
+		return fmt.Errorf("invalid --expected-status %q", cfg.status)
+	}
+
+	inputDir := filepath.Dir(cfg.input)
+	inputFiles, err := packageFiles(inputDir)
+	if err != nil {
+		return err
+	}
+
 	fset := token.NewFileSet()
-	file, err := parser.ParseFile(fset, cfg.input, nil, parser.ParseComments)
-	if err != nil {
-		return err
-	}
-
 	var subject *ast.FuncDecl
-	decls := file.Decls[:0]
-	for _, decl := range file.Decls {
-		fn, ok := decl.(*ast.FuncDecl)
-		if ok && fn.Recv == nil && fn.Name.Name == "main" {
-			continue
+	parsed := []parsedFile{}
+	for _, inputFile := range inputFiles {
+		file, err := parser.ParseFile(fset, inputFile, nil, parser.ParseComments)
+		if err != nil {
+			return err
 		}
-		if ok && fn.Recv == nil && fn.Name.Name == cfg.subject {
-			subject = fn
+
+		decls := file.Decls[:0]
+		for _, decl := range file.Decls {
+			fn, ok := decl.(*ast.FuncDecl)
+			if ok && fn.Recv == nil && fn.Name.Name == "main" {
+				continue
+			}
+			if ok && fn.Recv == nil && fn.Name.Name == cfg.subject {
+				if subject != nil {
+					return fmt.Errorf("duplicate subject function %q in package %s", cfg.subject, inputDir)
+				}
+				subject = fn
+			}
+			decls = append(decls, decl)
 		}
-		decls = append(decls, decl)
+		file.Decls = decls
+		pruneUnusedImports(file)
+		parsed = append(parsed, parsedFile{path: inputFile, file: file})
 	}
-	file.Decls = decls
 	if subject == nil {
-		return fmt.Errorf("subject function %q not found in %s", cfg.subject, cfg.input)
+		return fmt.Errorf("subject function %q not found in %s", cfg.subject, inputDir)
 	}
 
-	pruneUnusedImports(file)
-	source, err := formatNode(fset, file)
-	if err != nil {
-		return err
-	}
-
-	harness, err := harnessSource(fset, subject, cfg.subject, argValues)
+	harness, err := harnessSource(fset, subject, cfg.subject, argValues, cfg.status)
 	if err != nil {
 		return err
 	}
@@ -86,10 +100,39 @@ func run(cfg config) error {
 	if err := os.MkdirAll(cfg.out, 0o755); err != nil {
 		return err
 	}
-	if err := os.WriteFile(filepath.Join(cfg.out, "main.go"), source, 0o644); err != nil {
-		return err
+	for _, parsedFile := range parsed {
+		source, err := formatNode(fset, parsedFile.file)
+		if err != nil {
+			return err
+		}
+		if err := os.WriteFile(filepath.Join(cfg.out, filepath.Base(parsedFile.path)), source, 0o644); err != nil {
+			return err
+		}
 	}
 	return os.WriteFile(filepath.Join(cfg.out, "zz_golean_harness.go"), harness, 0o644)
+}
+
+type parsedFile struct {
+	path string
+	file *ast.File
+}
+
+func packageFiles(dir string) ([]string, error) {
+	files, err := filepath.Glob(filepath.Join(dir, "*.go"))
+	if err != nil {
+		return nil, err
+	}
+	out := []string{}
+	for _, file := range files {
+		if strings.HasSuffix(filepath.Base(file), "_test.go") {
+			continue
+		}
+		out = append(out, file)
+	}
+	if len(out) == 0 {
+		return nil, fmt.Errorf("no non-test Go files in %s", dir)
+	}
+	return out, nil
 }
 
 func parseArgs(raw string) ([]string, error) {
@@ -167,12 +210,15 @@ func formatNode(fset *token.FileSet, node any) ([]byte, error) {
 	return formatted, nil
 }
 
-func harnessSource(fset *token.FileSet, fn *ast.FuncDecl, subject string, argValues []string) ([]byte, error) {
+func harnessSource(fset *token.FileSet, fn *ast.FuncDecl, subject string, argValues []string, expectedStatus string) ([]byte, error) {
 	paramTypes, variadic, err := functionParamTypes(fset, fn.Type)
 	if err != nil {
 		return nil, err
 	}
 	resultCount := functionResultCount(fn.Type)
+	if expectedStatus == "ok" && resultCount == 0 {
+		return nil, fmt.Errorf("ok subject %s must return at least one observable value", subject)
+	}
 	if err := validateArgCount(subject, paramTypes, variadic, argValues); err != nil {
 		return nil, err
 	}
@@ -264,13 +310,13 @@ func _goleanReflectValue(value _golean_reflect.Value) (any, error) {
 }
 
 func _goleanPrintOk(values []any) {
-	if err := _golean_json.NewEncoder(_golean_os.Stdout).Encode(map[string]any{"status": "ok", "values": values}); err != nil {
+	if err := _golean_json.NewEncoder(_golean_os.Stdout).Encode(map[string]any{"schema": "golean-observation-v1", "status": "ok", "values": values}); err != nil {
 		panic(err)
 	}
 }
 
 func _goleanPrintError(message string) {
-	if err := _golean_json.NewEncoder(_golean_os.Stdout).Encode(map[string]any{"status": "error", "message": message}); err != nil {
+	if err := _golean_json.NewEncoder(_golean_os.Stdout).Encode(map[string]any{"schema": "golean-observation-v1", "status": "error", "message": message}); err != nil {
 		panic(err)
 	}
 }

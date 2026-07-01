@@ -30,7 +30,7 @@ Options:
   --exec-root <dir>   executable corpus root
   --tags-file <file>  canonical feature tag list
   --artifact-root <dir>
-                      artifact root used to derive Gobra JSON paths
+                      artifact root used for latest.tsv and runner artifacts
 EOF
 }
 
@@ -318,6 +318,11 @@ while IFS= read -r cases_file; do
       bad=1
       continue
     fi
+    if has_tag "$features" "nondet" && [[ "${GOLEAN_ALLOW_NONDET:-0}" != "1" ]]; then
+      echo "coverage-manifest: $cases_file: nondet cases require GOLEAN_ALLOW_NONDET=1 and a relation-style oracle" >&2
+      bad=1
+      continue
+    fi
     case "$expected_status" in
       ok|panic) ;;
       *)
@@ -360,10 +365,9 @@ while IFS= read -r cases_file; do
     if [[ "$LIST_ONLY" -eq 1 ]]; then
       printf '%s\t%s\t%s\t%s\t%s\n' "$full_id" "$expected_status" "$features" "$go_dir" "$subject"
     else
-      printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
+      printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
         "$full_id" \
         "$go_dir" \
-        "$ARTIFACT_ROOT/work/$full_id/main.go.internal.json" \
         "$subject" \
         "$args" \
         "$expected_status" \

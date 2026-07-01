@@ -10,6 +10,9 @@ open System
 open Lean
 open GoLean.Artifact
 
+private def observationSchema : String :=
+  "golean-observation-v1"
+
 structure GobraExportArgs where
   manifest : Option FilePath := none
   input : Option FilePath := none
@@ -234,30 +237,131 @@ private partial def goValueJson : GoValue → Json
 private def runJson : GoLean.GobraEval.Result → Json
   | { values } =>
       Json.mkObj [
+        ("schema", Json.str observationSchema),
         ("status", Json.str "ok"),
         ("values", Json.arr (values.map goValueJson))
       ]
 
 private def errorJson (error : GoError) : Json :=
   Json.mkObj [
+    ("schema", Json.str observationSchema),
     ("status", Json.str error.status),
     ("message", Json.str error.message)
   ]
 
 private def cliErrorJson (message : String) : Json :=
-  Json.mkObj [("status", Json.str "error"), ("message", Json.str message)]
+  Json.mkObj [
+    ("schema", Json.str observationSchema),
+    ("status", Json.str "error"),
+    ("message", Json.str message)
+  ]
+
+private partial def decodeLocObservation (path : String) (json : Json) : Except String Unit := do
+  let obj ← StrictJson.obj path json
+  let tag ← StrictJson.string s!"{path}.tag" (← StrictJson.field path obj "tag")
+  match tag with
+  | "addr" =>
+      StrictJson.requireExactKeys path obj ["id", "tag"]
+      let _ ← StrictJson.nat s!"{path}.id" (← StrictJson.field path obj "id")
+      pure ()
+  | "fieldAddr" =>
+      StrictJson.requireExactKeys path obj ["base", "fieldName", "tag", "typeName"]
+      decodeLocObservation s!"{path}.base" (← StrictJson.field path obj "base")
+      let _ ← StrictJson.string s!"{path}.typeName" (← StrictJson.field path obj "typeName")
+      let _ ← StrictJson.string s!"{path}.fieldName" (← StrictJson.field path obj "fieldName")
+      pure ()
+  | "indexAddr" =>
+      StrictJson.requireExactKeys path obj ["base", "index", "tag"]
+      decodeLocObservation s!"{path}.base" (← StrictJson.field path obj "base")
+      let _ ← StrictJson.int s!"{path}.index" (← StrictJson.field path obj "index")
+      pure ()
+  | other =>
+      throw s!"{path}.tag: unknown location tag {repr other}"
+
+private def decodeOptionalLoc (path : String) (json : Json) : Except String Unit :=
+  match json with
+  | .null => pure ()
+  | other => decodeLocObservation path other
+
+private partial def decodeGoValueObservation (path : String) (json : Json) : Except String Unit := do
+  let obj ← StrictJson.obj path json
+  let tag ← StrictJson.string s!"{path}.tag" (← StrictJson.field path obj "tag")
+  match tag with
+  | "unit" =>
+      StrictJson.requireExactKeys path obj ["tag"]
+  | "bool" =>
+      StrictJson.requireExactKeys path obj ["tag", "value"]
+      let _ ← StrictJson.bool s!"{path}.value" (← StrictJson.field path obj "value")
+      pure ()
+  | "int" =>
+      StrictJson.requireExactKeys path obj ["tag", "value"]
+      let _ ← StrictJson.int s!"{path}.value" (← StrictJson.field path obj "value")
+      pure ()
+  | "string" =>
+      StrictJson.requireExactKeys path obj ["bytes", "tag"]
+      let bytes ← StrictJson.array s!"{path}.bytes" (← StrictJson.field path obj "bytes")
+      let _ ← StrictJson.mapArrayIdx bytes (fun i byte => do
+        let _ ← StrictJson.nat s!"{path}.bytes[{i}]" byte
+        pure ())
+      pure ()
+  | "nil" =>
+      StrictJson.requireExactKeys path obj ["tag"]
+  | "addr" | "fieldAddr" | "indexAddr" =>
+      decodeLocObservation path json
+  | "struct" =>
+      StrictJson.requireExactKeys path obj ["fields", "tag", "typeName"]
+      let _ ← StrictJson.string s!"{path}.typeName" (← StrictJson.field path obj "typeName")
+      let fields ← StrictJson.array s!"{path}.fields" (← StrictJson.field path obj "fields")
+      let _ ← StrictJson.mapArrayIdx fields (fun i fieldJson => do
+        let fieldObj ← StrictJson.obj s!"{path}.fields[{i}]" fieldJson
+        StrictJson.requireExactKeys s!"{path}.fields[{i}]" fieldObj ["name", "value"]
+        let _ ← StrictJson.string s!"{path}.fields[{i}].name" (← StrictJson.field s!"{path}.fields[{i}]" fieldObj "name")
+        decodeGoValueObservation s!"{path}.fields[{i}].value" (← StrictJson.field s!"{path}.fields[{i}]" fieldObj "value"))
+      pure ()
+  | "array" =>
+      StrictJson.requireExactKeys path obj ["tag", "values"]
+      let values ← StrictJson.array s!"{path}.values" (← StrictJson.field path obj "values")
+      let _ ← StrictJson.mapArrayIdx values (fun i value => do
+        decodeGoValueObservation s!"{path}.values[{i}]" value)
+      pure ()
+  | "slice" =>
+      StrictJson.requireExactKeys path obj ["base", "cap", "len", "offset", "tag"]
+      decodeOptionalLoc s!"{path}.base" (← StrictJson.field path obj "base")
+      let _ ← StrictJson.nat s!"{path}.offset" (← StrictJson.field path obj "offset")
+      let _ ← StrictJson.nat s!"{path}.len" (← StrictJson.field path obj "len")
+      let _ ← StrictJson.nat s!"{path}.cap" (← StrictJson.field path obj "cap")
+      pure ()
+  | "map" =>
+      StrictJson.requireExactKeys path obj ["base", "tag"]
+      decodeOptionalLoc s!"{path}.base" (← StrictJson.field path obj "base")
+  | "mapData" =>
+      StrictJson.requireExactKeys path obj ["entries", "tag"]
+      let entries ← StrictJson.array s!"{path}.entries" (← StrictJson.field path obj "entries")
+      let _ ← StrictJson.mapArrayIdx entries (fun i entryJson => do
+        let entryObj ← StrictJson.obj s!"{path}.entries[{i}]" entryJson
+        StrictJson.requireExactKeys s!"{path}.entries[{i}]" entryObj ["key", "value"]
+        decodeGoValueObservation s!"{path}.entries[{i}].key" (← StrictJson.field s!"{path}.entries[{i}]" entryObj "key")
+        decodeGoValueObservation s!"{path}.entries[{i}].value" (← StrictJson.field s!"{path}.entries[{i}]" entryObj "value"))
+      pure ()
+  | other =>
+      throw s!"{path}.tag: unknown Go observation value tag {repr other}"
 
 private def decodeObservation (path raw : String) : Except String Json := do
   let json ← Json.parse raw
   let obj ← StrictJson.obj path json
+  let schema ← StrictJson.string s!"{path}.schema" (← StrictJson.field path obj "schema")
+  if schema != observationSchema then
+    throw s!"{path}.schema: expected {repr observationSchema}, got {repr schema}"
   let status ← StrictJson.string s!"{path}.status" (← StrictJson.field path obj "status")
   match status with
   | "ok" =>
-      StrictJson.requireExactKeys path obj ["status", "values"]
-      let _ ← StrictJson.array s!"{path}.values" (← StrictJson.field path obj "values")
+      StrictJson.requireExactKeys path obj ["schema", "status", "values"]
+      let values ← StrictJson.array s!"{path}.values" (← StrictJson.field path obj "values")
+      let _ ← StrictJson.mapArrayIdx values (fun i value => do
+        decodeGoValueObservation s!"{path}.values[{i}]" value)
       return json
   | "panic" | "unsupported" | "stuck" | "error" =>
-      StrictJson.requireExactKeys path obj ["status", "message"]
+      StrictJson.requireExactKeys path obj ["message", "schema", "status"]
       let _ ← StrictJson.string s!"{path}.message" (← StrictJson.field path obj "message")
       return json
   | other =>

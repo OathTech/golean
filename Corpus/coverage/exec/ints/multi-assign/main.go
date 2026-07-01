@@ -2,13 +2,12 @@ package main
 
 import "fmt"
 
-func foo() {
+func foo() int {
 	x, y, z := 1, 2, 3
 	y, z, x = z, x, y
-	_, _, _ = x, y, z
+	return x*100 + y*10 + z
 }
 
 func main() {
-	foo()
-	fmt.Println("{\"status\":\"ok\",\"values\":[]}")
+	fmt.Printf("{\"status\":\"ok\",\"values\":[{\"tag\":\"int\",\"value\":%d}]}\n", foo())
 }

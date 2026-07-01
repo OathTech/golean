@@ -112,15 +112,19 @@ Rules:
   differential mismatches are reported as red cases. They are not encoded as
   expected statuses in executable metadata.
 - `features` is a comma-separated list of canonical feature tags.
+- `ok` subjects must return at least one observable value. Use a checksum or
+  deterministic summary for mutation-heavy tests.
 
 Derived fields:
 
 - `go_dir` is the directory containing `cases.tsv`.
-- `gobra_json` is `artifacts/coverage/work/<full-id>/main.go.internal.json`.
+- Frontend artifact paths are adapter-owned. For the current Gobra adapter this
+  is `artifacts/coverage/work/<full-id>/main.go.internal.json`, but the
+  normalized manifest does not store that path.
 - Result logs are under `artifacts/coverage/results/<full-id>/`.
 
-This removes the current manifest duplication where ids, source directories,
-and artifact paths can drift independently.
+This removes manifest duplication where ids, source directories, and
+frontend-specific artifact paths can drift independently.
 
 ## Go Source Contract
 
@@ -131,19 +135,26 @@ under test. Lean executes that function directly after frontend lowering.
 
 For Go execution, the runner generates a temporary harness from metadata rather
 than trusting a handwritten `main`. The generator strips the source `main`,
+copies every non-test Go file in the package into the temporary directory,
 calls the named subject with the metadata integer args, and encodes the return
-values as observations. For `panic` cases, it lets the process panic; the
-runner extracts the actual Go panic line and compares that normalized
-observation against Lean.
+values as schema-versioned observations. For `panic` cases, it lets the process
+panic; the runner extracts the actual Go panic line and compares that
+normalized observation against Lean.
 
 Handwritten `main` functions may remain useful for `go run` debugging, but they
 are not part of the differential contract.
+
+The corpus unit is a Go package directory. The current Gobra frontend can only
+export a single `main.go`; multi-file executable packages therefore fail red in
+the `frontend-export` stage until a package-aware frontend adapter exists.
 
 ## Feature Tags
 
 Feature tags are controlled by `Corpus/coverage/tags.tsv`. The manifest
 generator rejects unknown tags, malformed tags, and duplicate entries in the
 vocabulary. Add tags intentionally; do not use ad hoc spellings in case files.
+The `nondet` tag is reserved for future relation-style or repeated-run oracles
+and is rejected by the default equality lane.
 
 ## Runner UX
 
@@ -158,6 +169,9 @@ scripts/coverage run --prefix slices/
 scripts/coverage run --tag maps --tag nil
 scripts/coverage run --status panic
 scripts/coverage run --last-failed
+scripts/coverage negative
+scripts/coverage negative --id slices/slice-compare
+scripts/coverage negative --tag compile_error
 scripts/coverage report
 scripts/coverage report --full
 scripts/coverage report --by tag
@@ -168,6 +182,9 @@ scripts/coverage report --by stage
 ids. The main implementation should be a single coverage driver that builds a
 temporary normalized manifest and delegates to the existing differential
 runner.
+`scripts/coverage all` runs both executable and compile-negative lanes and
+rejects filters, because executable and negative ids live in separate
+namespaces.
 
 ## Reports
 
@@ -186,10 +203,12 @@ artifacts/coverage/latest.meta.tsv
 ```
 
 Filtered runs still write `latest.tsv`, but the metadata records `full_run`,
-filters, manifest hash, manifest case count, and total corpus case count.
+filters, frontend, manifest hash, manifest case count, total corpus case count,
+git commit, and dirty flag.
 Reports warn when `latest.tsv` is not a full corpus run. Full runs also update
 `artifacts/coverage/latest-full.tsv`, which can be summarized with
-`scripts/coverage report --full`.
+`scripts/coverage report --full`; full reports are checked against the current
+generated full manifest so stale reports cannot look authoritative.
 
 Summary reports should include:
 
@@ -214,4 +233,4 @@ failure is understood.
 
 The central executable and compile-negative manifests have been removed.
 Generated normalized manifests are an implementation detail of the current
-Gobra/Lean and Go-negative runners.
+frontend/Lean and Go-negative runners.

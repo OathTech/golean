@@ -18,7 +18,7 @@ func (self *cell) swap3(other *cell) {
 	self.val, other.val = other.val, self.val
 }
 
-func client() {
+func client() int {
 	x := cell{42}
 	y := cell{17}
 
@@ -26,10 +26,9 @@ func client() {
 	swap2(&x, &y)
 	(&x).swap3(&y)
 
-	_, _ = x, y
+	return x.val*100 + y.val
 }
 
 func main() {
-	client()
-	fmt.Println("{\"status\":\"ok\",\"values\":[]}")
+	fmt.Printf("{\"status\":\"ok\",\"values\":[{\"tag\":\"int\",\"value\":%d}]}\n", client())
 }

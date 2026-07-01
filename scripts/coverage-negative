@@ -5,6 +5,8 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
 cd "$ROOT"
 
 MANIFEST="${1:-}"
+OUT="${GOLEAN_COVERAGE_ARTIFACTS:-artifacts/coverage}"
+RESULTS_TSV="${GOLEAN_NEGATIVE_RESULTS:-$OUT/negative-latest.tsv}"
 GO_BUILD_CACHE="$ROOT/artifacts/go-build-cache"
 GO_TIMEOUT_SECONDS="${GO_TIMEOUT_SECONDS:-30}"
 BUILD_OUT="$(mktemp -d "${TMPDIR:-/tmp}/golean-negative-build.XXXXXX")"
@@ -34,7 +36,8 @@ if [[ ! -f "$MANIFEST" ]]; then
   exit 2
 fi
 
-mkdir -p artifacts "$GO_BUILD_CACHE"
+mkdir -p artifacts "$OUT" "$GO_BUILD_CACHE"
+printf 'result\tid\tfeatures\tstage\tdetail\n' > "$RESULTS_TSV"
 
 cleanup() {
   if [[ -n "$GENERATED_MANIFEST" ]]; then
@@ -48,6 +51,34 @@ case_count=0
 pass_count=0
 fail_count=0
 
+one_line() {
+  local value="$1"
+  value="${value//$'\t'/ }"
+  value="${value//$'\r'/\\r}"
+  value="${value//$'\n'/\\n}"
+  printf '%s' "$value"
+}
+
+report_negative_fail() {
+  local id="$1"
+  local features="$2"
+  local stage="$3"
+  local detail="$4"
+  local flat_detail
+  flat_detail="$(one_line "$detail")"
+  printf 'FAIL\t%s\t%s\tstage=%s\tdetail=%s\n' "$id" "$features" "$stage" "$flat_detail"
+  printf 'FAIL\t%s\t%s\t%s\t%s\n' "$id" "$features" "$stage" "$flat_detail" >> "$RESULTS_TSV"
+  fail_count=$((fail_count + 1))
+}
+
+report_negative_pass() {
+  local id="$1"
+  local features="$2"
+  printf 'PASS\t%s\t%s\n' "$id" "$features"
+  printf 'PASS\t%s\t%s\t-\t-\n' "$id" "$features" >> "$RESULTS_TSV"
+  pass_count=$((pass_count + 1))
+}
+
 while IFS=$'\t' read -r id go_dir expected_substring features extra; do
   if [[ -z "${id:-}" || "$id" == \#* ]]; then
     continue
@@ -55,39 +86,34 @@ while IFS=$'\t' read -r id go_dir expected_substring features extra; do
   case_count=$((case_count + 1))
 
   if [[ -n "${extra:-}" ]]; then
-    printf 'FAIL\t%s\t%s\tstage=manifest\tdetail=too many tab-separated fields\n' "$id" "${features:-unknown}"
-    fail_count=$((fail_count + 1))
+    report_negative_fail "$id" "${features:-unknown}" "manifest" "too many tab-separated fields"
     continue
   fi
   if [[ -z "${go_dir:-}" || -z "${expected_substring:-}" || -z "${features:-}" ]]; then
-    printf 'FAIL\t%s\t%s\tstage=manifest\tdetail=expected 4 tab-separated fields\n' "$id" "${features:-unknown}"
-    fail_count=$((fail_count + 1))
+    report_negative_fail "$id" "${features:-unknown}" "manifest" "expected 4 tab-separated fields"
     continue
   fi
   if [[ ! -f "$go_dir/main.go" ]]; then
-    printf 'FAIL\t%s\t%s\tstage=go-source\tdetail=missing %s/main.go\n' "$id" "$features" "$go_dir"
-    fail_count=$((fail_count + 1))
+    report_negative_fail "$id" "$features" "go-source" "missing $go_dir/main.go"
     continue
   fi
 
   binary="$BUILD_OUT/${id//\//__}"
   if output="$(run_with_timeout "$GO_TIMEOUT_SECONDS" env GO111MODULE=off GOCACHE="$GO_BUILD_CACHE" go build -o "$binary" "./$go_dir" 2>&1)"; then
-    printf 'FAIL\t%s\t%s\tstage=go-compile\tdetail=program unexpectedly compiled\n' "$id" "$features"
-    fail_count=$((fail_count + 1))
+    report_negative_fail "$id" "$features" "go-compile" "program unexpectedly compiled"
     continue
   fi
 
   if [[ "$output" == *"$expected_substring"* ]]; then
-    printf 'PASS\t%s\t%s\n' "$id" "$features"
-    pass_count=$((pass_count + 1))
+    report_negative_pass "$id" "$features"
   else
-    printf 'FAIL\t%s\t%s\tstage=go-compile\tdetail=expected substring %q in %q\n' "$id" "$features" "$expected_substring" "$output"
-    fail_count=$((fail_count + 1))
+    report_negative_fail "$id" "$features" "go-compile" "expected substring '$expected_substring' in '$output'"
   fi
 done < "$MANIFEST"
 
 echo
 echo "negative coverage summary: cases=$case_count pass=$pass_count fail=$fail_count"
+echo "results: $RESULTS_TSV"
 
 if [[ "$case_count" -eq 0 ]]; then
   echo "no negative coverage cases found in $MANIFEST" >&2
