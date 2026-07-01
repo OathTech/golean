@@ -2,6 +2,9 @@
 
 This directory is the source of truth for coverage-oriented testing.
 
+See `docs/coverage-suite-structure.md` for the target large-suite layout,
+metadata format, naming scheme, subset runner UX, and migration plan.
+
 ## Layout
 
 - `manifest.tsv`: active executable differential cases.
