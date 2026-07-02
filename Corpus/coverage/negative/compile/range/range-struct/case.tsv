@@ -1,0 +1,2 @@
+# expected_substring	features
+cannot range over s	range,structs,compile_error

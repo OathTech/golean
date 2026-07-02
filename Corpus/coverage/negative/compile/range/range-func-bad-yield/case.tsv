@@ -1,0 +1,2 @@
+# expected_substring	features
+func must be func	range,functions,compile_error
