@@ -1,0 +1,2 @@
+# expected_substring	features
+multiple defaults	control_flow,switch,default,compile_error

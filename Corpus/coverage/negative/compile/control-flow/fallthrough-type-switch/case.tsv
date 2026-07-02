@@ -1,0 +1,2 @@
+# expected_substring	features
+cannot fallthrough in type switch	control_flow,switch,type_switch,fallthrough,compile_error
