@@ -1,0 +1,2 @@
+# expected_substring	features
+undefined: x	scoping,compile_error

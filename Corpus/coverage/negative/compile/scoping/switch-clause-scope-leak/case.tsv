@@ -1,0 +1,2 @@
+# expected_substring	features
+undefined: x	scoping,switch,cases,compile_error
