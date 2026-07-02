@@ -1,0 +1,2 @@
+# expected_substring	features
+cannot assign	strings,slicing,assignment,compile_error

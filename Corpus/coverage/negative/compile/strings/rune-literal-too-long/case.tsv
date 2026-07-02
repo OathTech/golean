@@ -1,0 +1,2 @@
+# expected_substring	features
+more than one character in rune literal	strings,runes,literals,compile_error

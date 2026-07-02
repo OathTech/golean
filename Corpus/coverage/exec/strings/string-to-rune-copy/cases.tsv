@@ -1,0 +1,2 @@
+# id	subject	args	expected_status	expected_reason	features
+-	stringToRuneCopy	-	ok	-	strings,runes,conversions,copy_semantics,unicode
