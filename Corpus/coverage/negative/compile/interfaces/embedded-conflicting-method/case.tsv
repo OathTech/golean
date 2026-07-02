@@ -1,0 +1,2 @@
+# expected_substring	features
+duplicate method m	interfaces,embedding,methods,compile_error

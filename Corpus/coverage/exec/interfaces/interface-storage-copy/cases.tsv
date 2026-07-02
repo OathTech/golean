@@ -1,0 +1,3 @@
+# id	subject	args	expected_status	expected_reason	features
+value	interfaceStoresValueCopy	-	ok	-	interfaces,value_copy,structs,type_assertions
+pointer	interfaceStoresPointerValue	-	ok	-	interfaces,pointers,aliasing,type_assertions
