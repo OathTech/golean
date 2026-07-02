@@ -1,0 +1,2 @@
+# id	subject	args	expected_status	expected_reason	features
+-	mapTupleRhsBeforeTargetWrite	-	ok	-	maps,multi_assign,evaluation_order,indexing

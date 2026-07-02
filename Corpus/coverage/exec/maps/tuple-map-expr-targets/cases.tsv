@@ -1,0 +1,2 @@
+# id	subject	args	expected_status	expected_reason	features
+-	mapTupleMapExprTargets	-	ok	-	maps,multi_assign,evaluation_order,calls,indexing
