@@ -1,0 +1,2 @@
+# expected_substring	features
+invalid map key type	maps,slices,keys,comparability,compile_error
