@@ -1,0 +1,2 @@
+# expected_substring	features
+multiple-value pair()	multi_assign,multi_result,compile_error

@@ -1,0 +1,2 @@
+# id	subject	args	expected_status	expected_reason	features
+-	selectorTargetBeforeRHS	-	ok	-	multi_assign,assignment,evaluation_order,fields,pointers,calls
