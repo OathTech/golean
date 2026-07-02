@@ -1,0 +1,2 @@
+# id	subject	args	expected_status	expected_reason	features
+-	mapLiteralInterfaceKeyPanic	-	panic	hash of unhashable type []int	maps,literals,keys,interfaces,comparability,panic,slices
