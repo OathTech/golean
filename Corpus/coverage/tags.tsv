@@ -14,6 +14,7 @@ closures
 comma_ok
 comparability
 comparisons
+complex
 compile_error
 concat
 continue
@@ -33,6 +34,7 @@ escapes
 evaluation_order
 fallthrough
 fields
+floats
 full_slice
 functions
 generics

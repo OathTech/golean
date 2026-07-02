@@ -33,8 +33,8 @@ suite grows. Representative cases are examples, not an exhaustive manifest.
 | Literals and zero values | partial | `arrays/array-zero`, `new/new-nil-values`, `maps/map-literal-empty` | Add booleans, composite literals across all aggregate types, typed/untyped literal interactions. |
 | Basic arithmetic and comparisons | active | `ints/scalars`, `ints/bitwise`, `strings/string-compare` | Add broader unsigned comparisons and mixed defined types. |
 | Integer widths and overflow | partial | `ints/int8-wrap`, `ints/byte-conversion`, `ints/shifts` | Add all integer widths, unsigned wrap, conversion matrices, architecture-sized `int` policy notes. |
-| Floating point | missing | - | Add finite operations, infinities, NaN, signed zero, comparisons, conversions. |
-| Complex numbers | missing | - | Add construction, real/imag, arithmetic, comparison restrictions. |
+| Floating point | partial | `floats/finite-arithmetic`, `floats/division-specials`, `floats/signed-zero`, `floats/to-int-truncation`, `negative/compile/floats/implicit-int-float` | Add float32-specific arithmetic beyond complex parts, rounding precision boundaries, overflow/underflow, typed/untyped float constants, and more conversion matrix cases. |
+| Complex numbers | partial | `complex/basic`, `complex/equality`, `complex/zero-value`, `complex/complex64-parts`, `negative/compile/complex/complex-order`, `negative/compile/complex/complex-to-int` | Add complex constants, complex64 arithmetic precision, division, NaN/Inf parts, typed aliases, and more invalid operation/conversion restrictions. |
 | Constants and iota | partial | `constants/const-precision`, `constants/iota-blank`, `constants/iota-expressions` | Add default constant types, typed constants, constant overflow rejection, constant division with floats. |
 | Assignment and evaluation order | active | `ints/multi-assign`, `multi-assign/tuple-assign-order` | Add call-return assignment, map/slice/index target ordering, side-effecting selectors. |
 | If and basic loops | active | `ints/if-return`, `if/if-init-scope`, `ints/while1`, `ints/break-continue` | Add post statements with side effects, infinite loops with returns. |
@@ -53,7 +53,7 @@ suite grows. Representative cases are examples, not an exhaustive manifest.
 | Generics | partial | `negative/compile/generics/generic-method` | Add executable generic functions, inference, constraints, type sets, zero values. |
 | Package initialization | partial | `init/package-init-order` | Add multiple files, multiple init functions, import initialization order. |
 | Imports and visibility | partial | `negative/compile/imports/unused-import` | Add exported/unexported selectors across packages when multi-package harness exists. |
-| Builtins | partial | many slice/map/string cases | Add `clear`, `min`, `max`, `complex`, `real`, `imag`, `close`, `recover`, `panic`, `copy`, `append`, `delete`, `len`, `cap`, `make`, `new`. |
+| Builtins | partial | many slice/map/string cases plus `complex/basic`, `complex/complex64-parts` | Add `clear`, `min`, `max`, `close`, `recover`, `panic`, `copy`, `append`, `delete`, `len`, `cap`, `make`, `new`; broaden `complex`, `real`, and `imag` coverage. |
 | Channels | missing | - | Add deterministic basics once oracle can handle blocking/panic/close cleanly; select fairness is deferred-nondet. |
 | Goroutines and scheduling | deferred-nondet | - | Needs relation-style or repeated-run oracle; do not place scheduler-dependent cases in default lane. |
 | Map iteration order | deferred-nondet | - | Needs set/permutation observation or relation-style oracle. |

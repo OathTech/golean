@@ -1,0 +1,2 @@
+# expected_substring	features
+operator < not defined	complex,comparisons,compile_error
