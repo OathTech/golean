@@ -1,0 +1,2 @@
+# expected_substring	features
+cannot close receive-only channel	channels,close,compile_error

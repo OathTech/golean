@@ -1,0 +1,2 @@
+# id	subject	args	expected_status	expected_reason	features
+-	channelCloseClosedPanic	-	panic	close of closed channel	channels,close,panic

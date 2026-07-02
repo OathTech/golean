@@ -1,0 +1,2 @@
+# expected_substring	features
+cannot send to receive-only channel	channels,compile_error

@@ -10,7 +10,9 @@ bytes
 calls
 cap
 cases
+channels
 closures
+close
 comma_ok
 comparability
 comparisons
@@ -79,6 +81,7 @@ return
 returns
 runes
 scoping
+select
 shadowing
 shifts
 short_decl
