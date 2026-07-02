@@ -1,0 +1,2 @@
+# expected_substring	features
+x redeclared	structs,fields,compile_error

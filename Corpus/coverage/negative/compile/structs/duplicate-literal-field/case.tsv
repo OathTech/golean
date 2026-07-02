@@ -1,0 +1,2 @@
+# expected_substring	features
+duplicate field name x	structs,fields,literals,compile_error

@@ -1,0 +1,2 @@
+# expected_substring	features
+mixture of field:value and value elements	structs,fields,literals,compile_error

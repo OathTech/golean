@@ -1,0 +1,2 @@
+# id	subject	args	expected_status	expected_reason	features
+-	structAnonymousField	-	ok	-	structs,fields,embedding,assignment

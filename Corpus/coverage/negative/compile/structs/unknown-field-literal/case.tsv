@@ -1,0 +1,2 @@
+# expected_substring	features
+unknown field y	structs,fields,literals,compile_error

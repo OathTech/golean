@@ -1,5 +1,10 @@
 # Differential Coverage Ledger
 
+Editing rule: this file is the mutable coverage accounting artifact. Long-cycle
+coverage agents should update this ledger as they add, classify, or defer
+coverage. They should not modify `docs/coverage-buildout-plan.md` during
+ordinary buildout.
+
 This is the mutable coverage accounting document for the Go differential test
 suite. The stable buildout policy lives in
 `docs/coverage-buildout-plan.md`; do not edit that plan during ordinary corpus
@@ -43,7 +48,7 @@ suite grows. Representative cases are examples, not an exhaustive manifest.
 | Functions and returns | partial | `returns/naked-return`, `functions/closure-share`, `functions/recursion`, `functions/higher-order-arg`, `functions/function-nil-compare`, `returns/multi-result-argument` | Add function values returned from functions, method values as callbacks, recursive methods, and more multi-result call placement edge cases. |
 | Defer, panic, recover | partial | `defer/defer-arg-eval`, `defer/defer-named-return`, `defer/multiple-lifo`, `defer/unnamed-return`, `panic-recover/recover-direct`, `panic-recover/recover-value`, `panic-recover/deferred-panic-replaces`, `panic-recover/panic-nil-recover`, `negative/compile/defer/defer-non-call`, `negative/compile/panic-recover/recover-argument`, `negative/compile/panic-recover/panic-no-argument` | Add panic/recover interactions across nested calls and multiple stack frames, deferred calls that recover then re-panic, deferred nil function call behavior, and more interaction with named result assignment. |
 | Pointers and allocation | partial | `new/new-basic`, `pointers/pointer-identity`, `new/new-struct` | Add pointer-to-pointer, nil dereference in more contexts, addressability edge cases. |
-| Structs and fields | partial | `structs/swap`, `embedding/embedded-field-shadow` | Add tags if relevant, anonymous fields, comparability with interface fields. |
+| Structs and fields | partial | `structs/swap`, `structs/keyed-literal`, `structs/positional-literal`, `structs/zero-value`, `structs/copy-value`, `structs/pointer-field`, `structs/anonymous-field`, `structs/comparable`, `structs/interface-field-compare-panic`, `embedding/embedded-field-shadow`, `negative/compile/structs/duplicate-field`, `negative/compile/structs/unknown-field-literal`, `negative/compile/structs/too-many-values`, `negative/compile/structs/mixed-literal`, `negative/compile/structs/duplicate-literal-field` | Add struct tags if admitted as core syntax without reflection semantics, more anonymous field depth/shadowing variants, blank identifier fields, recursive structs through pointers, and addressability edge cases involving selectors. |
 | Methods and method sets | partial | `methods/method-value-copy`, `methods/method-expression`, `methods/pointer-method-expression`, `methods/pointer-method-value`, `methods/interface-dispatch`, `methods/pointer-auto-address`, `methods/value-auto-deref`, `methods/pointer-receiver-method-set`, `negative/compile/methods/value-pointer-interface`, `negative/compile/methods/ambiguous-promoted-method`, `negative/compile/methods/nonlocal-receiver` | Add method expressions involving interfaces, method values stored in interfaces, promoted method depth/shadowing variants, generic type method dispatch, and more invalid receiver forms. |
 | Arrays | active | `arrays/arrays`, `arrays/array-copy`, `arrays/array-comparable`, `arrays/nested-arrays` | Add larger nested literals and pointer-to-array edge cases. |
 | Slices | active | `slices/slice-append`, `slices/full-slice`, `slices/reslice-capacity`, `slices/slice-header-by-value` | Add append growth policy observations only when portable; avoid relying on spare capacity not guaranteed by spec except when constructed. |

@@ -1,0 +1,2 @@
+# expected_substring	features
+too many values in struct literal	structs,literals,compile_error
