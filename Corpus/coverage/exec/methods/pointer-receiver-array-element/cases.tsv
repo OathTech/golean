@@ -1,0 +1,2 @@
+# id	subject	args	expected_status	expected_reason	features
+-	pointerReceiverArrayElement	-	ok	-	methods,pointers,arrays,addressability,assignment

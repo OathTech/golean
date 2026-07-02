@@ -77,7 +77,15 @@ if [[ ! -f "$MANIFEST" ]]; then
 fi
 
 mkdir -p artifacts "$OUT" "$GO_BUILD_CACHE"
-printf 'result\tid\tfeatures\tstage\tdetail\n' > "$RESULTS_TSV"
+
+RESULTS_DIR="$(dirname "$RESULTS_TSV")"
+RESULTS_BASE="$(basename "$RESULTS_TSV")"
+META_DIR="$(dirname "$META_TSV")"
+META_BASE="$(basename "$META_TSV")"
+mkdir -p "$RESULTS_DIR" "$META_DIR"
+RESULTS_TMP="$(mktemp "$RESULTS_DIR/.${RESULTS_BASE}.XXXXXX")"
+META_TMP="$(mktemp "$META_DIR/.${META_BASE}.XXXXXX")"
+printf 'result\tid\tfeatures\tstage\tdetail\n' > "$RESULTS_TMP"
 
 manifest_sha="$(shasum -a 256 "$MANIFEST" | awk '{ print $1 }')"
 manifest_cases="$(awk -F $'\t' 'NF > 0 && $1 !~ /^#/ { count += 1 } END { print count + 0 }' "$MANIFEST")"
@@ -98,17 +106,22 @@ fi
   printf 'filters\t%s\n' "${GOLEAN_COVERAGE_FILTERS:-unknown}"
   printf 'git_commit\t%s\n' "$git_commit"
   printf 'git_dirty\t%s\n' "$git_dirty"
-} > "$META_TSV"
+} > "$META_TMP"
 
 EXPORT_MANIFEST="$(mktemp "${TMPDIR:-/tmp}/golean-gobra-export.XXXXXX")"
 EXPORT_CANDIDATES="$(mktemp "${TMPDIR:-/tmp}/golean-gobra-export-candidates.XXXXXX")"
 cleanup() {
-  rm -f "$EXPORT_MANIFEST" "$EXPORT_CANDIDATES"
+  rm -f "$EXPORT_MANIFEST" "$EXPORT_CANDIDATES" "$RESULTS_TMP" "$META_TMP"
   if [[ -n "$GENERATED_MANIFEST" ]]; then
     rm -f "$GENERATED_MANIFEST"
   fi
 }
 trap cleanup EXIT
+
+publish_results() {
+  mv "$RESULTS_TMP" "$RESULTS_TSV"
+  mv "$META_TMP" "$META_TSV"
+}
 
 if ! awk -v root="$ROOT" -F $'\t' '
 BEGIN { ok = 1 }
@@ -187,7 +200,7 @@ report_pass() {
   local id="$1"
   local features="$2"
   printf 'PASS\t%s\t%s\n' "$id" "$features"
-  printf 'PASS\t%s\t%s\t-\t-\n' "$id" "$features" >> "$RESULTS_TSV"
+  printf 'PASS\t%s\t%s\t-\t-\n' "$id" "$features" >> "$RESULTS_TMP"
   pass_count=$((pass_count + 1))
 }
 
@@ -207,7 +220,7 @@ report_fail() {
   local flat_detail
   flat_detail="$(one_line "$detail")"
   printf 'FAIL\t%s\t%s\tstage=%s\tdetail=%s\n' "$id" "$features" "$stage" "$flat_detail"
-  printf 'FAIL\t%s\t%s\t%s\t%s\n' "$id" "$features" "$stage" "$flat_detail" >> "$RESULTS_TSV"
+  printf 'FAIL\t%s\t%s\t%s\t%s\n' "$id" "$features" "$stage" "$flat_detail" >> "$RESULTS_TMP"
   fail_count=$((fail_count + 1))
 }
 
@@ -381,6 +394,7 @@ done < "$MANIFEST"
 
 echo
 echo "differential coverage summary: cases=$case_count pass=$pass_count fail=$fail_count export_status=$export_status"
+publish_results
 echo "results: $RESULTS_TSV"
 echo "metadata: $META_TSV"
 

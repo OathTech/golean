@@ -1,0 +1,2 @@
+# expected_substring	features
+cannot call pointer method	methods,pointers,maps,addressability,compile_error

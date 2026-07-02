@@ -1,0 +1,2 @@
+# expected_substring	features
+interface method must have no type parameters	interfaces,methods,generics,compile_error
