@@ -1,0 +1,2 @@
+# id	subject	args	expected_status	expected_reason	features
+-	embeddedPointerNilPanic	-	panic	invalid memory address or nil pointer dereference	embedding,fields,structs,pointers,nil,panic

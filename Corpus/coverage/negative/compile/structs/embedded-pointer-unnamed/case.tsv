@@ -1,0 +1,1 @@
+embedded field type cannot be a pointer	structs,embedding,pointers,compile_error
