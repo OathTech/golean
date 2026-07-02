@@ -77,6 +77,7 @@ prefix
 range
 recursion
 recover
+representability
 return
 returns
 runes
@@ -90,10 +91,12 @@ slicing
 strings
 structs
 switch
+typed
 type_assertions
 type_sets
 type_switch
 unicode
+untyped
 unused
 value_copy
 variadic

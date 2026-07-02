@@ -1,0 +1,2 @@
+# expected_substring	features
+negative shift count	constants,shifts,compile_error
