@@ -1,0 +1,2 @@
+# expected_substring	features
+empty type set	generics,type_sets,constraints,compile_error

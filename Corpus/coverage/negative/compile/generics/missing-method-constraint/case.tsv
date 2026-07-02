@@ -1,0 +1,2 @@
+# expected_substring	features
+missing method M	generics,constraints,methods,compile_error

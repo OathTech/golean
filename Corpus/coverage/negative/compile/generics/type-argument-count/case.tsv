@@ -1,0 +1,2 @@
+# expected_substring	features
+too many type arguments	generics,compile_error

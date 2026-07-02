@@ -1,0 +1,2 @@
+# expected_substring	features
+cannot infer T	generics,inference,compile_error
