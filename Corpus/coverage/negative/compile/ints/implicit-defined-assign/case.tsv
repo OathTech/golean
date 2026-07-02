@@ -1,0 +1,2 @@
+# expected_substring	features
+cannot use x	ints,typed,assignment,compile_error
