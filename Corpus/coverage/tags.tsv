@@ -42,6 +42,7 @@ full_slice
 functions
 generics
 globals
+goto
 higher_order
 identity
 if

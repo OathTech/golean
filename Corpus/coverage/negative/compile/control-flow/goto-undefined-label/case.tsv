@@ -1,0 +1,2 @@
+# expected_substring	features
+label missing not defined	control_flow,goto,labels,compile_error

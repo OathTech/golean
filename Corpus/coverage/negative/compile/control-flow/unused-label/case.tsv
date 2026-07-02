@@ -1,0 +1,2 @@
+# expected_substring	features
+label L defined and not used	control_flow,labels,unused,compile_error
