@@ -1,0 +1,2 @@
+# expected_substring	features
+cannot convert "1"	channels,make,strings,compile_error

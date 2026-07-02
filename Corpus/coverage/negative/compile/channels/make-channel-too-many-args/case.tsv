@@ -1,0 +1,2 @@
+# expected_substring	features
+expects 1 or 2 arguments	channels,make,compile_error

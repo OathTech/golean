@@ -1,0 +1,11 @@
+# id	subject	args	expected_status	expected_reason	features
+zero-buffer	channelMakeZeroBuffer	-	ok	-	channels,make,len,cap,zero_values
+len-expression	channelMakeLenExpression	-	ok	-	channels,make,len,cap,evaluation_order
+negative-buffer-panic	channelMakeNegativePanic	-	panic	size out of range	channels,make,panic
+len-cap-directional	channelLenCapDirectionalValues	-	ok	-	channels,len,cap,typed
+close-does-not-drain	channelCloseDoesNotDrain	-	ok	-	channels,close,len,comma_ok
+buffered-fifo	channelBufferedFifo	-	ok	-	channels,make
+receive-comma-ok-open	channelReceiveCommaOkOpen	-	ok	-	channels,comma_ok,len
+ordinary-send-eval-order	channelOrdinarySendEvalOrder	-	ok	-	channels,evaluation_order
+ordinary-receive-eval-order	channelOrdinaryReceiveEvalOrder	-	ok	-	channels,evaluation_order
+close-eval-order	channelCloseEvalOrder	-	ok	-	channels,close,evaluation_order
