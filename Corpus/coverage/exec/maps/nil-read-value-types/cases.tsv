@@ -1,0 +1,2 @@
+# id	subject	args	expected_status	expected_reason	features
+-	mapNilReadValueTypes	-	ok	-	maps,nil,zero_values,indexing,structs
