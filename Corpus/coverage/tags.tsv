@@ -98,6 +98,7 @@ slicing
 strings
 structs
 switch
+tags
 typed
 type_assertions
 type_sets

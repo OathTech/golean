@@ -1,0 +1,2 @@
+# expected_substring	features
+cannot use y	structs,tags,assignment,compile_error

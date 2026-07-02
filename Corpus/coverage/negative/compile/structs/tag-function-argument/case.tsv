@@ -1,0 +1,2 @@
+# expected_substring	features
+cannot use x	structs,tags,calls,compile_error

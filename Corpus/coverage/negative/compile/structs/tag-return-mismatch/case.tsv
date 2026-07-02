@@ -1,0 +1,2 @@
+# expected_substring	features
+cannot use struct	structs,tags,returns,compile_error

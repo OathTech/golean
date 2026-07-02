@@ -1,0 +1,2 @@
+# expected_substring	features
+cannot use k	structs,tags,maps,keys,compile_error
