@@ -1,0 +1,2 @@
+# id	subject	args	expected_status	expected_reason	features
+-	mapInterfaceSliceKeyPanic	-	panic	hash of unhashable type	maps,interfaces,keys,comparability,panic,slices
