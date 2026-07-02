@@ -1,0 +1,2 @@
+# id	subject	args	expected_status	expected_reason	features
+-	definedSliceStringConversion	-	ok	-	strings,bytes,runes,conversions,typed,slices
