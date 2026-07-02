@@ -1,0 +1,2 @@
+# id	subject	args	expected_status	expected_reason	features
+-	nestedFrameRecover	-	ok	-	panic,recover,defer,calls,named-results

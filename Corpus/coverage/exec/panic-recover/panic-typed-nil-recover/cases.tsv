@@ -1,0 +1,2 @@
+# id	subject	args	expected_status	expected_reason	features
+-	panicTypedNilRecover	-	ok	-	panic,recover,defer,nil,pointers,type_assertions

@@ -1,0 +1,2 @@
+# expected_substring	features
+recover (built-in) must be called	recover,compile_error

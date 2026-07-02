@@ -1,0 +1,2 @@
+# expected_substring	features
+panic (built-in) must be called	panic,compile_error

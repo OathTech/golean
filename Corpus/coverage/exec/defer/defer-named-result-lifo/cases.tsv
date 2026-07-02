@@ -1,0 +1,2 @@
+# id	subject	args	expected_status	expected_reason	features
+-	deferNamedResultLIFO	-	ok	-	defer,named-results,evaluation_order,returns
