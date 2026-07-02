@@ -1,0 +1,2 @@
+# expected_substring	features
+method duplicateMethodReceiver.m already declared	methods,compile_error

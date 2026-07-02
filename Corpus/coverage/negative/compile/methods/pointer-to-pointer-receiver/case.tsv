@@ -1,0 +1,2 @@
+# expected_substring	features
+invalid receiver type	methods,pointers,compile_error
