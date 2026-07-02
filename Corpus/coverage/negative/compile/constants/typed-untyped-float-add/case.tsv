@@ -1,0 +1,2 @@
+# expected_substring	features
+truncated	constants,typed,untyped,floats,compile_error

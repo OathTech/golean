@@ -1,0 +1,2 @@
+# expected_substring	features
+not constant	constants,strings,slicing,compile_error
