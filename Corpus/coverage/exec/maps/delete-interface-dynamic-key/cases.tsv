@@ -1,0 +1,2 @@
+# id	subject	args	expected_status	expected_reason	features
+-	deleteInterfaceDynamicKey	-	ok	-	maps,delete,interfaces,keys,typed,comma_ok
