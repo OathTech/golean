@@ -1,0 +1,2 @@
+# expected_substring	features
+cannot use "x"	channels,typed,compile_error

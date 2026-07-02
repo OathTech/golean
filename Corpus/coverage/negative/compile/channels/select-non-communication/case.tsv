@@ -1,0 +1,2 @@
+# expected_substring	features
+select case must be send or receive	channels,select,compile_error

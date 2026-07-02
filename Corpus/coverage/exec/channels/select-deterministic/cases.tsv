@@ -1,0 +1,14 @@
+# id	subject	args	expected_status	expected_reason	features
+default-only	channelSelectDefaultOnly	-	ok	-	channels,select,default
+closed-buffered-receive	channelSelectClosedBufferedReceive	-	ok	-	channels,select,close,comma_ok,len
+closed-drained-receive	channelSelectClosedDrainedReceive	-	ok	-	channels,select,close,comma_ok,zero_values
+closed-receive-declare	channelSelectClosedReceiveDeclare	-	ok	-	channels,select,close,comma_ok,scoping
+nil-and-ready-receive	channelSelectNilAndReadyReceive	-	ok	-	channels,select,nil,default
+nil-and-ready-send	channelSelectNilAndReadySend	-	ok	-	channels,select,nil,default
+send-closed-panic	channelSelectSendClosedPanic	-	panic	send on closed channel	channels,select,close,panic
+send-rhs-eval-unselected	channelSelectSendRhsEvalUnselected	-	ok	-	channels,select,evaluation_order,nil
+channel-operands-eval-order	channelSelectChanOperandsEvalOrder	-	ok	-	channels,select,evaluation_order,nil
+unselected-receive-lhs-not-eval	channelSelectUnselectedReceiveLhsNotEval	-	ok	-	channels,select,evaluation_order,assignment
+selected-receive-lhs-eval	channelSelectSelectedReceiveLhsEval	-	ok	-	channels,select,evaluation_order,assignment
+send-rhs-panic-before-default	channelSelectSendRhsPanicBeforeDefault	-	panic	select send rhs	channels,select,evaluation_order,panic
+recv-chan-panic-before-default	channelSelectRecvChanPanicBeforeDefault	-	panic	select receive channel	channels,select,evaluation_order,panic

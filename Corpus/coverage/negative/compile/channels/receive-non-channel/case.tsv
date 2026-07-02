@@ -1,0 +1,2 @@
+# expected_substring	features
+cannot receive from non-channel	channels,compile_error
