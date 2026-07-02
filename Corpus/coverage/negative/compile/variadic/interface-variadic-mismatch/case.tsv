@@ -1,0 +1,2 @@
+# expected_substring	features
+wrong type for method m	variadic,interfaces,methods,compile_error
