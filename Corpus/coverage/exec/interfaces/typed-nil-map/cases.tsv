@@ -1,0 +1,2 @@
+# id	subject	args	expected_status	expected_reason	features
+-	typedNilMapInterface	-	ok	-	interfaces,nil,maps,type_assertions

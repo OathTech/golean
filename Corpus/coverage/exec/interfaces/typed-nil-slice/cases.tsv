@@ -1,0 +1,2 @@
+# id	subject	args	expected_status	expected_reason	features
+-	typedNilSliceInterface	-	ok	-	interfaces,nil,slices,type_assertions

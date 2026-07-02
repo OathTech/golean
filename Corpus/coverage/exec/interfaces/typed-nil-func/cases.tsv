@@ -1,0 +1,2 @@
+# id	subject	args	expected_status	expected_reason	features
+-	typedNilFuncInterface	-	ok	-	interfaces,nil,functions,type_assertions

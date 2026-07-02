@@ -1,0 +1,2 @@
+# expected_substring	features
+as int8 value	interfaces,type_switch,switch,compile_error
