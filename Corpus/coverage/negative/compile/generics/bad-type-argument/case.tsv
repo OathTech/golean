@@ -1,0 +1,2 @@
+# expected_substring	features
+does not satisfy intOnly	generics,type_sets,constraints,compile_error

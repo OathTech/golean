@@ -1,0 +1,2 @@
+# expected_substring	features
+does not satisfy comparable	generics,comparability,constraints,compile_error

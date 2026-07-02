@@ -1,0 +1,2 @@
+# id	subject	args	expected_status	expected_reason	features
+-	genericTypeSetConstraint	-	ok	-	generics,type_sets,constraints,conversions

@@ -17,6 +17,7 @@ comparisons
 complex
 compile_error
 concat
+constraints
 continue
 control_flow
 conversions
@@ -44,6 +45,7 @@ identity
 if
 imports
 indexing
+inference
 init
 ints
 interfaces
@@ -86,6 +88,7 @@ strings
 structs
 switch
 type_assertions
+type_sets
 type_switch
 unicode
 unused

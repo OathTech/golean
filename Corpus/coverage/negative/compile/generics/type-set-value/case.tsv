@@ -1,0 +1,2 @@
+# expected_substring	features
+outside a type constraint	generics,type_sets,constraints,compile_error
