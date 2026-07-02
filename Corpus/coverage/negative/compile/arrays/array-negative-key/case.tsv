@@ -1,0 +1,2 @@
+# expected_substring	features
+index -1	arrays,literals,compile_error

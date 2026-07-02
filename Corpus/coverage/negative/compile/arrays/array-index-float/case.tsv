@@ -1,0 +1,2 @@
+# expected_substring	features
+truncated to int	arrays,indexing,compile_error

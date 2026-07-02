@@ -1,0 +1,2 @@
+# expected_substring	features
+cannot use b	arrays,assignment,compile_error
