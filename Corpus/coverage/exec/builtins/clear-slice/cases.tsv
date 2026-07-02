@@ -1,0 +1,2 @@
+# id	subject	args	expected_status	expected_reason	features
+-	builtinClearSlice	-	ok	-	clear,slices,zero_values,len,cap

@@ -6,11 +6,13 @@ assignment
 bitwise
 bools
 break
+builtins
 bytes
 calls
 cap
 cases
 channels
+clear
 closures
 close
 comma_ok
@@ -46,6 +48,7 @@ goto
 higher_order
 identity
 if
+imag
 imports
 indexing
 inference
@@ -61,7 +64,9 @@ literals
 loops
 make
 maps
+max
 methods
+min
 modulo
 multi_assign
 multi_result
@@ -78,6 +83,7 @@ prefix
 range
 recursion
 recover
+real
 representability
 return
 returns
