@@ -1,0 +1,2 @@
+# id	subject	args	expected_status	expected_reason	features
+-	rangeInvalidUTF8	-	ok	-	strings,range,unicode,bytes,runes,invalid_utf8

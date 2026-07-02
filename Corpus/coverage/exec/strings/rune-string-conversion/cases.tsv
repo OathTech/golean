@@ -1,0 +1,2 @@
+# id	subject	args	expected_status	expected_reason	features
+-	runeStringConversion	-	ok	-	strings,conversions,runes,unicode,bytes

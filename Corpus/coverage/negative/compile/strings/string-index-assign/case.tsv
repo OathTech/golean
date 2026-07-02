@@ -1,0 +1,2 @@
+# expected_substring	features
+cannot assign to s[0]	strings,indexing,assignment,compile_error
