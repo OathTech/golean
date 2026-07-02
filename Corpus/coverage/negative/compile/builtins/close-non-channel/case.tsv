@@ -1,0 +1,2 @@
+# expected_substring	features
+cannot close non-channel	builtins,close,compile_error

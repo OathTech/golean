@@ -1,0 +1,2 @@
+# expected_substring	features
+truncated	builtins,make,slices,floats,compile_error

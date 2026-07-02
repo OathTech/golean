@@ -1,0 +1,2 @@
+# expected_substring	features
+argument must be a slice	builtins,append,compile_error

@@ -1,0 +1,2 @@
+# expected_substring	features
+cannot use "hi"	builtins,append,strings,slices,runes,compile_error
