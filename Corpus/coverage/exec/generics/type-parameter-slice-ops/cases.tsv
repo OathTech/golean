@@ -1,0 +1,2 @@
+# id	subject	args	expected_status	expected_reason	features
+-	genericTypeParameterSliceOps	-	ok	-	generics,type_sets,slices,indexing,assignment,len,typed
