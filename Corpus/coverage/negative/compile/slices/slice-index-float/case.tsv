@@ -1,0 +1,2 @@
+# expected_substring	features
+truncated to int	slices,slicing,compile_error
