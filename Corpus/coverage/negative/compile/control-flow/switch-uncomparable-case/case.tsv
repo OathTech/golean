@@ -1,0 +1,2 @@
+# expected_substring	features
+invalid case	control_flow,switch,comparability,slices,compile_error
