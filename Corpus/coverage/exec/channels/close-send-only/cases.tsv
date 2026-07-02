@@ -1,0 +1,2 @@
+# id	subject	args	expected_status	expected_reason	features
+-	channelCloseSendOnly	-	ok	-	channels,close,typed,calls

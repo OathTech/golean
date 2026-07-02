@@ -1,0 +1,2 @@
+# expected_substring	features
+cannot use sendOnly	channels,typed,assignment,compile_error
