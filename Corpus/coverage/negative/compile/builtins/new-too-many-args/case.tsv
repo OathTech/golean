@@ -1,0 +1,2 @@
+# expected_substring	features
+too many arguments	builtins,new,compile_error

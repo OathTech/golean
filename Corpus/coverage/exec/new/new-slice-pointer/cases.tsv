@@ -1,0 +1,2 @@
+# id	subject	args	expected_status	expected_reason	features
+-	newSlicePointer	-	ok	-	new,pointers,slices,nil,append

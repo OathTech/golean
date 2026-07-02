@@ -1,0 +1,2 @@
+# expected_substring	features
+cannot use xs	variadic,slices,compile_error
