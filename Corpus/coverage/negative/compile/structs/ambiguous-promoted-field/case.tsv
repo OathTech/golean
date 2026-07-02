@@ -1,0 +1,2 @@
+# expected_substring	features
+ambiguous selector	structs,fields,embedding,compile_error

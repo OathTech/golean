@@ -1,0 +1,2 @@
+# expected_substring	features
+has no field or method _	structs,fields,compile_error
