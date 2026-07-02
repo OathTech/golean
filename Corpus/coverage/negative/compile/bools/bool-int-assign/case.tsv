@@ -1,0 +1,2 @@
+# expected_substring	features
+cannot use 1	bools,assignment,compile_error

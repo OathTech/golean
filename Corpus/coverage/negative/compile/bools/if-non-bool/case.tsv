@@ -1,0 +1,2 @@
+# expected_substring	features
+non-boolean condition	bools,if,compile_error

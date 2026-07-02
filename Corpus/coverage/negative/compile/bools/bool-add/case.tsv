@@ -1,0 +1,2 @@
+# expected_substring	features
+operator + not defined	bools,compile_error
