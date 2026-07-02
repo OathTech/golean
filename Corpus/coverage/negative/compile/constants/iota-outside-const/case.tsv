@@ -1,0 +1,1 @@
+cannot use iota outside constant declaration	constants,iota,compile_error

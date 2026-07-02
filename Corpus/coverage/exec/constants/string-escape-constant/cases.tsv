@@ -1,0 +1,2 @@
+# id	subject	args	expected_status	expected_reason	features
+-	stringEscapeConstant	-	ok	-	constants,strings,literals,escapes,len,indexing
