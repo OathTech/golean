@@ -1,0 +1,2 @@
+# id	subject	args	expected_status	expected_reason	features
+-	multiResultMapValue	-	ok	-	returns,multi_result,maps,comma_ok
