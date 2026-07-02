@@ -1,0 +1,2 @@
+# id	subject	args	expected_status	expected_reason	features
+-	gotoOutOfSelect	-	ok	-	control_flow,goto,labels,select,channels,default

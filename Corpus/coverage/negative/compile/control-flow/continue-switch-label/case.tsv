@@ -1,0 +1,2 @@
+# expected_substring	features
+invalid continue label	control_flow,continue,labels,switch,compile_error
