@@ -1,0 +1,2 @@
+# expected_substring	features
+func init must have no arguments	init,functions,compile_error
