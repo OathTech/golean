@@ -1,0 +1,2 @@
+# expected_substring	features
+must be integer	constants,arrays,floats,compile_error

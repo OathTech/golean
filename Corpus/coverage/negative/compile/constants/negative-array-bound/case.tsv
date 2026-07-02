@@ -1,0 +1,2 @@
+# expected_substring	features
+invalid array length	constants,arrays,compile_error
