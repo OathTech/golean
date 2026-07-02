@@ -1,0 +1,2 @@
+# expected_substring	features
+method m has pointer receiver	methods,interfaces,pointers,compile_error

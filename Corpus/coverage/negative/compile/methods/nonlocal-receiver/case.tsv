@@ -1,0 +1,2 @@
+# expected_substring	features
+cannot define new methods on non-local type	methods,compile_error
