@@ -1,0 +1,2 @@
+# expected_substring	features
+fallthrough statement out of place	control_flow,switch,fallthrough,compile_error

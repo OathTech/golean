@@ -1,0 +1,2 @@
+# id	subject	args	expected_status	expected_reason	features
+-	switchInit	-	ok	-	control_flow,switch,scoping

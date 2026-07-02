@@ -1,0 +1,2 @@
+# expected_substring	features
+not an interface	control_flow,switch,type_switch,compile_error
