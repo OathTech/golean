@@ -40,7 +40,7 @@ suite grows. Representative cases are examples, not an exhaustive manifest.
 | If and basic loops | active | `ints/if-return`, `if/if-init-scope`, `ints/while1`, `ints/break-continue` | Add post statements with side effects, infinite loops with returns. |
 | Switch | partial | `control-flow/switch-basic`, `control-flow/switch-fallthrough` | Add expression evaluation once, duplicate/default restrictions in negative lane, type switch variants. |
 | Labels, break, continue, goto | partial | `control-flow/labeled-break`, `control-flow/labeled-continue` | Add `goto`, invalid label jumps, scope-crossing restrictions. |
-| Functions and returns | partial | `returns/naked-return`, `strings/string-call`, `functions/closure-share` | Add recursion, higher-order functions, function nil comparison, multi-result call placement. |
+| Functions and returns | partial | `returns/naked-return`, `functions/closure-share`, `functions/recursion`, `functions/higher-order-arg`, `functions/function-nil-compare`, `returns/multi-result-argument` | Add function values returned from functions, method values as callbacks, recursive methods, and more multi-result call placement edge cases. |
 | Defer, panic, recover | partial | `defer/defer-arg-eval`, `defer/defer-named-return`, `panic-recover/recover-direct` | Add panic replacement by deferred panic, recover return values, multiple defers, `panic(nil)` version case. |
 | Pointers and allocation | partial | `new/new-basic`, `pointers/pointer-identity`, `new/new-struct` | Add pointer-to-pointer, nil dereference in more contexts, addressability edge cases. |
 | Structs and fields | partial | `structs/swap`, `embedding/embedded-field-shadow` | Add tags if relevant, anonymous fields, comparability with interface fields. |

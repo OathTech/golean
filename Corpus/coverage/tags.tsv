@@ -37,6 +37,7 @@ full_slice
 functions
 generics
 globals
+higher_order
 identity
 if
 imports
@@ -68,6 +69,7 @@ panic
 pointers
 prefix
 range
+recursion
 recover
 return
 returns

@@ -1,0 +1,2 @@
+# id	subject	args	expected_status	expected_reason	features
+-	multiResultMethod	-	ok	-	returns,multi_result,methods,structs,calls
