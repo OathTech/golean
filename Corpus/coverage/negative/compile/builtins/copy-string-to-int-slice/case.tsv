@@ -1,0 +1,2 @@
+# expected_substring	features
+different element types int and byte	builtins,copy,strings,slices,compile_error

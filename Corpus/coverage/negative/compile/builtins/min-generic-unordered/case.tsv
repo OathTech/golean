@@ -1,0 +1,2 @@
+# expected_substring	features
+cannot be ordered	builtins,min,generics,compile_error

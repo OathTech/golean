@@ -1,0 +1,9 @@
+# id	subject	args	expected_status	expected_reason	features
+one-arg	builtinMinMaxOneArg	-	ok	-	builtins,min,max,ints
+eval-order	builtinMinMaxEvalOrder	-	ok	-	builtins,min,max,evaluation_order,calls,ints
+defined-int	builtinMinMaxDefinedInt	-	ok	-	builtins,min,max,typed,ints
+defined-string	builtinMinMaxDefinedString	-	ok	-	builtins,min,max,typed,strings
+untyped-float-context	builtinMinMaxUntypedFloatContext	-	ok	-	builtins,min,max,untyped,floats,conversions
+generic-ints	builtinMinMaxGenericIntsSubject	-	ok	-	builtins,min,max,generics,type_sets,ints
+generic-strings	builtinMinMaxGenericStringsSubject	-	ok	-	builtins,min,max,generics,type_sets,strings
+expressions	builtinMinMaxExpressions	-	ok	-	builtins,min,max,ints

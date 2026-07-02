@@ -1,0 +1,11 @@
+# id	subject	args	expected_status	expected_reason	features
+eval-order	builtinCopyEvalOrder	-	ok	-	builtins,copy,evaluation_order,slices
+defined-slices	builtinCopyDefinedSlices	-	ok	-	builtins,copy,slices,typed
+defined-byte-string	builtinCopyDefinedByteString	-	ok	-	builtins,copy,strings,bytes,typed
+empty-string-to-bytes	builtinCopyEmptyStringToBytes	-	ok	-	builtins,copy,strings,bytes,empty
+nil-source	builtinCopyNilSource	-	ok	-	builtins,copy,slices,nil
+nil-destination	builtinCopyNilDestination	-	ok	-	builtins,copy,slices,nil,len,cap
+forward-overlap	builtinCopyForwardOverlap	-	ok	-	builtins,copy,slices,overlap,aliasing
+array-slice	builtinCopyArraySlice	-	ok	-	builtins,copy,arrays,slices
+string-prefix	builtinCopyStringPrefix	-	ok	-	builtins,copy,strings,bytes,prefix
+generic-slices	builtinCopyGenericSubject	-	ok	-	builtins,copy,generics,type_sets,slices
