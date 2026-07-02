@@ -1,0 +1,2 @@
+# expected_substring	features
+assignment mismatch	multi_assign,short_decl,compile_error

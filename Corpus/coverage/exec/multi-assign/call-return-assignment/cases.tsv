@@ -1,0 +1,2 @@
+# id	subject	args	expected_status	expected_reason	features
+-	callReturnAssignment	-	ok	-	multi_assign,multi_result,assignment,calls

@@ -1,0 +1,2 @@
+# id	subject	args	expected_status	expected_reason	features
+-	multiAssignTargetEvalBeforeCall	-	ok	-	multi_assign,multi_result,assignment,evaluation_order,slices,indexing,calls

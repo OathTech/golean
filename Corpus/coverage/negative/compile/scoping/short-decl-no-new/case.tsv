@@ -1,0 +1,2 @@
+# expected_substring	features
+no new variables	scoping,short_decl,compile_error
