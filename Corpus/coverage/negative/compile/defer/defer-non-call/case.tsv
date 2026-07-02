@@ -1,0 +1,2 @@
+# expected_substring	features
+expression in defer must be function call	defer,compile_error
