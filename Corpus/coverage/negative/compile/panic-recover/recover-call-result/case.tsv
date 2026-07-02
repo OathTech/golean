@@ -1,0 +1,2 @@
+# expected_substring	features
+is not a function	recover,calls,compile_error

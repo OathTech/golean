@@ -1,0 +1,2 @@
+# expected_substring	features
+invalid operation	panic,variadic,compile_error

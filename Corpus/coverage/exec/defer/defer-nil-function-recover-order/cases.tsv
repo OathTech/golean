@@ -1,0 +1,2 @@
+# id	subject	args	expected_status	expected_reason	features
+-	deferNilFunctionRecoverOrder	-	ok	-	defer,functions,nil,panic,recover,returns,named-results

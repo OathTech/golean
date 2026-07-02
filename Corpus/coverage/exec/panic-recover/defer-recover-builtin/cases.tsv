@@ -1,0 +1,2 @@
+# id	subject	args	expected_status	expected_reason	features
+-	deferRecoverBuiltin	-	panic	boom	panic,recover,defer,returns,named-results

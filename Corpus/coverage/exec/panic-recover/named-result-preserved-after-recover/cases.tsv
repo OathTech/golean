@@ -1,0 +1,2 @@
+# id	subject	args	expected_status	expected_reason	features
+-	namedResultPreservedAfterRecover	-	ok	-	panic,recover,defer,named-results,returns
