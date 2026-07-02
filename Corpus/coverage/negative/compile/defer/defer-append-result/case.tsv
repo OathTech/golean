@@ -1,0 +1,2 @@
+# expected_substring	features
+defer discards result	defer,append,compile_error

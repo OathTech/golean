@@ -1,0 +1,2 @@
+# expected_substring	features
+too many arguments for panic	panic,compile_error
