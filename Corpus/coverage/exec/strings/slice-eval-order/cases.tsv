@@ -1,0 +1,2 @@
+# id	subject	args	expected_status	expected_reason	features
+-	stringSliceEvalOrder	-	ok	-	strings,slicing,evaluation_order,calls,bytes
