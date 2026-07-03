@@ -1,0 +1,2 @@
+# expected_substring	features
+operator % not defined	floats,ints,generics,type_sets,modulo,compile_error

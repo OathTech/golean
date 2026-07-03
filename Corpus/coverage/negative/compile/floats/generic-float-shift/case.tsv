@@ -1,0 +1,2 @@
+# expected_substring	features
+shifted operand	floats,generics,type_sets,shifts,compile_error

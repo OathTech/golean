@@ -1,0 +1,9 @@
+# id	subject	args	expected_status	expected_reason	features
+defined-float32-sum	genericFloat32DefinedSum	-	ok	-	floats,generics,type_sets,typed
+defined-float64-sum	genericFloat64DefinedSum	-	ok	-	floats,generics,type_sets,typed
+compound-assign	genericFloatCompoundAssign	-	ok	-	floats,generics,type_sets,assignment
+ordering	genericFloatOrdering	-	ok	-	floats,generics,type_sets,comparisons
+conversion-to-int	genericFloatConversionToInt	-	ok	-	floats,generics,type_sets,conversions
+explicit-constant	genericFloatExplicitConstant	-	ok	-	floats,generics,type_sets,constants,untyped,conversions
+inference	genericFloatInference	-	ok	-	floats,generics,type_sets,inference
+zero-value	genericFloatZeroValue	-	ok	-	floats,generics,type_sets,zero_values
