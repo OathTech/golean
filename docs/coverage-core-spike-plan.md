@@ -1,11 +1,11 @@
-# Core Go Coverage Spike Plan
+# Core Go Coverage Spike Goal
 
-This document is a focused spike plan derived from
+This is the focused spike goal document derived from
 `docs/coverage-buildout-plan.md`. The original buildout plan remains the stable
-policy for the long comprehensive corpus effort. This document narrows the next
-coverage task to a shorter, achievable spike: bulk up the thin core-language
-areas enough that implementation work on the Lean executable interpreter can
-proceed with a credible, high-signal differential test base.
+policy for the long comprehensive corpus effort. This separate document narrows
+the next coverage task to a shorter, achievable spike: bulk up thin
+core-language areas enough that implementation work on the Lean executable
+interpreter can proceed with a credible, high-signal differential test base.
 
 The goal is not complete Go conformance. The goal is a "nice core of Go"
 coverage set: broad enough that common mistakes in a deterministic executable
@@ -13,10 +13,10 @@ interpreter for ordinary Go are likely to be exposed quickly.
 
 ## Starting Point
 
-Current validated baseline at the start of this spike:
+Current validated baseline after the first spike batches:
 
-- executable cases: 633;
-- compile-negative cases: 298;
+- executable cases: 655;
+- compile-negative cases: 301;
 - `GOLEAN_FRONTEND=none scripts/coverage run`: all executable cases reach
   `frontend-export`;
 - `scripts/coverage-negative`: all negative cases pass;
@@ -25,6 +25,16 @@ Current validated baseline at the start of this spike:
 The corpus is already strong enough to start building `golean`. This spike
 exists to reduce the highest-risk blind spots before and during that
 implementation, not to delay implementation until coverage is exhaustive.
+
+Completed spike batches have already added representative coverage for:
+
+- Go 1.26 expression-form `new(expr)`;
+- comparison short-circuiting for arrays, structs, and nested aggregates;
+- runtime edges of generic `T comparable` with interface dynamic values.
+
+The remaining spike focus is range-over-function, higher-order generic
+inference, recursive generic constraints, and one package-aware harness
+design/accounting decision.
 
 ## Non-Negotiable Rules
 
@@ -50,7 +60,10 @@ required harness/design work.
 
 Completion requires:
 
-- each P0 area below has representative executable or compile-negative tests;
+- each remaining P0 coverage area below has representative executable or
+  compile-negative tests;
+- each completed P0 area remains visible in the ledger and is not duplicated
+  without a distinct semantic reason;
 - any unimplemented harness capability has a clear design note in the ledger;
 - a full validation gate passes;
 - there is a short handoff/report stating what was covered, what remains thin,
@@ -62,12 +75,15 @@ a small precise batch beats a large pile of redundant cases.
 ## P0 Spike Areas
 
 These are the highest-impact gaps for a deterministic executable interpreter.
-Work through them first.
+Work through the remaining areas first. Completed areas are retained here so a
+future agent can see why they are no longer the active focus.
 
 ### Go 1.26 `new(expr)`
 
-Official Go 1.26 adds expression forms of `new`. Existing coverage mostly
-exercises `new(T)`. Add focused cases for:
+Status: covered in this spike by `new/new-expr` and
+`negative/compile/builtins/new-nil-expr`.
+
+Official Go 1.26 adds expression forms of `new`. Existing coverage now includes:
 
 - typed value expression allocation and initialized value;
 - untyped integer, boolean, string, rune, float, and complex defaulting where
@@ -78,15 +94,18 @@ exercises `new(T)`. Add focused cases for:
 - pointer identity between repeated `new(expr)` calls;
 - static invalid forms such as `new(nil)` if rejected by the toolchain.
 
-Tag with `new`, `pointers`, `conversions`, `typed`, `untyped`,
-`evaluation_order`, `generics`, or other existing semantic tags as appropriate.
-Document the Go 1.26 version dependency in the ledger.
+Do not add more `new(expr)` cases during this spike unless they expose a
+distinct unrepresented rule. Keep the Go 1.26 version dependency documented in
+the ledger.
 
 ### Comparison Short-Circuiting
 
+Status: covered in this spike by `comparisons/short-circuit` and static
+negative comparison cases.
+
 Array and struct comparison order can hide or expose runtime panics when later
-elements or fields contain interfaces with uncomparable dynamic values. Add
-cases for:
+elements or fields contain interfaces with uncomparable dynamic values. Existing
+coverage now includes:
 
 - array comparison where an early unequal element prevents a later interface
   comparison panic;
@@ -96,13 +115,17 @@ cases for:
 - compile-negative cases for statically uncomparable array/struct members if
   not already covered.
 
-These tests should make comparison order observable without relying on
-unspecified behavior.
+Do not add more comparison short-circuit cases during this spike unless they
+make a new comparison-order rule observable without relying on unspecified
+behavior.
 
 ### Generic `comparable` Runtime Edges
 
+Status: covered in this spike by `generics/comparable-runtime-edge`; existing
+negative generic cases cover the static invalid assumptions.
+
 Go's `comparable` constraint admits some interface-typed values whose dynamic
-comparison can still panic. Add small generic cases for:
+comparison can still panic. Existing coverage now includes:
 
 - `Eq[T comparable]` instantiated with `any` values holding comparable dynamic
   values;
@@ -111,10 +134,11 @@ comparison can still panic. Add small generic cases for:
 - arrays or structs containing interface fields under a comparable generic
   function;
 - negative cases for unconstrained comparison and invalid comparable
-  assumptions if missing.
+  assumptions.
 
 The point is to catch a semantics that treats `comparable` as "comparison can
-never panic".
+never panic". Do not add more generic comparable cases during this spike unless
+they expose a distinct missing rule.
 
 ### Range Over Function
 
@@ -157,18 +181,14 @@ recursive generic data types, which is not the same thing. Add cases for:
 
 Document the Go 1.26 dependency.
 
-## P1 Spike Areas
+### Package-Aware Harness Design Checkpoint
 
-Do these after the P0 areas, or interleave only when a P0 area requires the same
-setup.
+Package/import semantics are the largest remaining core-language hole, but they
+need harness support before they can be expressed honestly. This spike should
+make one concrete design/accounting decision even if it does not implement the
+full multi-package harness.
 
-### Package-Aware Harness Design
-
-Package/import semantics are the largest core-language hole, but they may need
-harness support before they can be expressed honestly. Investigate enough to
-decide whether the current spike can add package-aware executable tests.
-
-Target behaviors:
+Target behaviors for the future package-aware lane:
 
 - multi-file package initialization;
 - package-level declaration order across files;
@@ -178,8 +198,13 @@ Target behaviors:
 - method sets across package boundaries.
 
 If current tooling cannot express this without cheating, do not force cases
-into the active lane. Update the ledger with a precise harness limitation and
+into the active lane. Update the ledger with a precise harness limitation and a
 proposed directory/manifest shape.
+
+## P1 Spike Areas
+
+Do these after the P0 areas, or interleave only when a P0 area requires the same
+setup.
 
 ### Pointer, Addressability, And Writeback Depth
 
@@ -323,7 +348,7 @@ The spike can stop when:
 
 - all P0 areas have active representative coverage or precise ledger/design
   notes;
-- at least one P1 decision has been made for package-aware harness support;
+- at least one package-aware harness design/accounting decision has been made;
 - the coverage ledger accurately reflects the new state;
 - the default fail-closed control lane still works;
 - a concise final spike summary can say what implementation mistakes the suite

@@ -1,0 +1,7 @@
+# id	subject	args	expected_status	expected_reason	features
+pass-to-generic	higherOrderInferencePassToGeneric	-	ok	-	generics,inference,functions,calls
+pass-to-concrete	higherOrderInferencePassToConcrete	-	ok	-	generics,inference,functions,calls,type_sets
+assignment-target	higherOrderInferenceAssignmentTarget	-	ok	-	generics,inference,functions,assignment,strings
+named-function-type	higherOrderInferenceNamedFunctionType	-	ok	-	generics,inference,functions,typed,assignment
+return-target	higherOrderInferenceReturnTarget	-	ok	-	generics,inference,functions,returns
+partial-instantiation-target	higherOrderInferencePartialInstantiationTarget	-	ok	-	generics,inference,functions,calls

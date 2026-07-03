@@ -1,0 +1,2 @@
+# expected_substring	features
+cannot use generic function id without instantiation	generics,inference,functions,returns,compile_error

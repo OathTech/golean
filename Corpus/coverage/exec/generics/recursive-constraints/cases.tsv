@@ -1,0 +1,5 @@
+# id	subject	args	expected_status	expected_reason	features
+clone	recursiveConstraintClone	-	ok	-	generics,constraints,methods,calls
+argument-method	recursiveConstraintArgumentMethod	-	ok	-	generics,constraints,methods,calls
+pointer-self	recursiveConstraintPointerSelf	-	ok	-	generics,constraints,methods,pointers,calls
+comparable	recursiveConstraintComparable	-	ok	-	generics,constraints,methods,comparability

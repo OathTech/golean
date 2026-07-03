@@ -1,0 +1,2 @@
+# expected_substring	features
+cannot infer B	generics,inference,functions,compile_error

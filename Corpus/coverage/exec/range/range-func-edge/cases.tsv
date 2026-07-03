@@ -1,0 +1,8 @@
+# id	subject	args	expected_status	expected_reason	features
+zero-value	rangeFuncZeroValueIterator	-	ok	-	range,functions,loops,zero_values
+two-value	rangeFuncTwoValueIterator	-	ok	-	range,functions,loops,strings
+zero-yielded-values	rangeFuncZeroYieldedValues	-	ok	-	range,functions,loops,zero_values,strings
+no-yield	rangeFuncNoYield	-	ok	-	range,functions,loops,zero_values
+break-defer-trace	rangeFuncBreakDeferTrace	-	ok	-	range,functions,break,defer,loops
+panic-propagation	rangeFuncPanicPropagation	-	panic	iterator boom	range,functions,panic,loops
+ignored-false-panic	rangeFuncIgnoredFalsePanic	-	panic	continued iteration	range,functions,break,panic,loops
