@@ -1,0 +1,2 @@
+# expected_substring	features
+use of untyped nil in argument to new	builtins,new,nil,compile_error

@@ -69,3 +69,15 @@ suite grows. Representative cases are examples, not an exhaustive manifest.
 | Unsafe and layout | deferred-unsafe | - | Needs explicit unsafe policy. |
 | Standard library semantics | deferred-stdlib | - | Track separately from language semantics; reduce only language-relevant parts into active cases. |
 | Go version-specific features | partial | `panic-recover/panic-nil-recover` records Go 1.21+ behavior; `builtins/clear-map`, `builtins/clear-slice`, `builtins/min-max-ints`, and `builtins/min-max-strings` use Go 1.21+ builtins; `range/range-int`, `range/range-int-zero`, `range/range-int-negative`, `range/range-int-typed`, and `range/range-loop-var-capture` record Go 1.22+ range/loop-variable behavior; `range/range-func-basic` and `range/range-func-break` record Go 1.23+ iterator-function range behavior; `generics/type-aliases` records generic type alias behavior supported by the installed Go 1.26.4 toolchain; current active cases otherwise use baseline installed Go 1.26.4 | Add future version notes when syntax or semantics changes across Go releases. |
+
+## Core Coverage Spike Notes
+
+- `new/new-expr` adds Go 1.26 expression-form `new` coverage: typed value
+  operands, untyped defaulting across scalar kinds, expression evaluation once,
+  composite operands, generic operands, and distinct allocations.
+- `negative/compile/builtins/new-nil-expr` records that `new(nil)` is rejected
+  by the installed Go 1.26.4 toolchain.
+- Remaining P0 spike areas from `docs/coverage-core-spike-plan.md`: comparison
+  short-circuiting, generic `comparable` runtime panics, richer range-over-func,
+  higher-order generic inference, recursive generic constraints, and
+  package-aware harness design/accounting.

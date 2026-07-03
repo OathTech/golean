@@ -1,0 +1,7 @@
+# id	subject	args	expected_status	expected_reason	features
+typed-value	newExprTypedValue	-	ok	-	new,pointers,typed,assignment
+untyped-defaults	newExprUntypedDefaults	-	ok	-	new,pointers,untyped,conversions,ints,bools,strings,runes,floats,complex
+eval-once	newExprEvalOnce	-	ok	-	new,pointers,evaluation_order,functions,calls
+composite-operand	newExprCompositeOperand	-	ok	-	new,pointers,structs,literals,fields
+generic-operand	newExprGeneric	-	ok	-	new,pointers,generics,type_sets,typed
+distinct-pointers	newExprDistinctPointers	-	ok	-	new,pointers,identity,assignment
