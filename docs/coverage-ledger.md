@@ -82,7 +82,14 @@ suite grows. Representative cases are examples, not an exhaustive manifest.
   reaches a later interface comparison panic. `negative/compile/comparisons`
   adds direct static invalid forms for arrays and structs containing slice
   members.
-- Remaining P0 spike areas from `docs/coverage-core-spike-plan.md`: generic
-  `comparable` runtime panics, richer range-over-func, higher-order generic
-  inference, recursive generic constraints, and package-aware harness
-  design/accounting.
+- `generics/comparable-runtime-edge` adds runtime `T comparable` cases where
+  `T = any` compares ordinary comparable dynamic values and panics for slice,
+  map, and function dynamic values. It also covers arrays and structs
+  containing interface fields under a comparable generic equality function,
+  including a short-circuiting struct case.
+- Existing negative generic cases already cover static invalid comparable
+  assumptions: unconstrained comparison, unconstrained map keys, and
+  non-comparable type arguments.
+- Remaining P0 spike areas from `docs/coverage-core-spike-plan.md`: richer
+  range-over-func, higher-order generic inference, recursive generic
+  constraints, and package-aware harness design/accounting.

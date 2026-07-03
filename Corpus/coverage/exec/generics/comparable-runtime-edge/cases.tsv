@@ -1,0 +1,9 @@
+# id	subject	args	expected_status	expected_reason	features
+any-equal-ints	genericComparableAnyEqualInts	-	ok	-	generics,comparability,interfaces,equality
+any-different-dynamic-types	genericComparableAnyDifferentDynamicTypes	-	ok	-	generics,comparability,interfaces,typed,equality
+any-slice-panic	genericComparableAnySlicePanic	-	panic	comparing uncomparable type []int	generics,comparability,interfaces,slices,panic
+any-map-panic	genericComparableAnyMapPanic	-	panic	comparing uncomparable type map[string]int	generics,comparability,interfaces,maps,panic
+any-func-panic	genericComparableAnyFuncPanic	-	panic	comparing uncomparable type func()	generics,comparability,interfaces,functions,panic
+array-interface-panic	genericComparableArrayInterfacePanic	-	panic	comparing uncomparable type []int	generics,comparability,arrays,interfaces,slices,panic
+struct-interface-panic	genericComparableStructInterfacePanic	-	panic	comparing uncomparable type []int	generics,comparability,structs,interfaces,slices,panic
+struct-skips-interface-panic	genericComparableStructSkipsInterfacePanic	-	ok	-	generics,comparability,structs,interfaces,slices,panic,evaluation_order
