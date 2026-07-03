@@ -1,0 +1,8 @@
+# id	subject	args	expected_status	expected_reason	features
+interpreted-simple-escapes	interpretedSimpleEscapes	-	ok	-	strings,literals,escapes,bytes
+interpreted-octal-hex-escapes	interpretedOctalHexEscapes	-	ok	-	strings,literals,escapes,bytes,invalid_utf8
+interpreted-unicode-escape-bytes	interpretedUnicodeEscapeBytes	-	ok	-	strings,literals,escapes,bytes,unicode
+interpreted-nul-byte	interpretedNulByte	-	ok	-	strings,literals,escapes,bytes
+raw-multiline-literal	rawMultilineLiteral	-	ok	-	strings,literals,escapes,bytes
+raw-quotes-and-backslashes	rawQuotesAndBackslashes	-	ok	-	strings,literals,escapes,bytes
+raw-empty-literal	rawEmptyLiteral	-	ok	-	strings,literals

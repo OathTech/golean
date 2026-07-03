@@ -1,0 +1,2 @@
+# expected_substring	features
+newline in string	strings,literals,compile_error

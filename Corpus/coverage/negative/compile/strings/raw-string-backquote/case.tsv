@@ -1,0 +1,2 @@
+# expected_substring	features
+string not terminated	strings,literals,escapes,compile_error

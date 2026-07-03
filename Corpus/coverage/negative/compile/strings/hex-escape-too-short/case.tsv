@@ -1,0 +1,2 @@
+# expected_substring	features
+invalid character	strings,literals,escapes,compile_error
