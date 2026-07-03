@@ -1,0 +1,2 @@
+# expected_substring	features
+cannot take address	structs,fields,literals,addressability,compile_error

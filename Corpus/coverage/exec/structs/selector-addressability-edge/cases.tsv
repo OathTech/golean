@@ -1,0 +1,8 @@
+# id	subject	args	expected_status	expected_reason	features
+read-call-result	structSelectorReadCallResult	-	ok	-	structs,fields,calls,addressability,value_copy
+read-conversion-result	structSelectorReadConversionResult	-	ok	-	structs,fields,conversions,addressability,value_copy
+pointer-result-assign	structSelectorPointerResultAssign	-	ok	-	structs,fields,pointers,assignment,addressability
+pointer-field-from-call-result	structSelectorPointerFieldFromCallResult	-	ok	-	structs,fields,pointers,calls,assignment,addressability
+map-value-slice-field-write	structSelectorMapValueSliceFieldWrite	-	ok	-	structs,fields,maps,slices,assignment,aliasing,addressability
+map-value-pointer-field-write	structSelectorMapValuePointerFieldWrite	-	ok	-	structs,fields,maps,pointers,assignment,aliasing,addressability
+map-value-copy-then-assign	structSelectorMapValueCopyThenAssign	-	ok	-	structs,fields,maps,value_copy,assignment,addressability

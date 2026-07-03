@@ -1,0 +1,2 @@
+# expected_substring	features
+cannot assign	structs,fields,conversions,addressability,compile_error
