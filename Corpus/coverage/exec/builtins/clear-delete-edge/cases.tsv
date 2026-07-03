@@ -1,0 +1,14 @@
+# id	subject	args	expected_status	expected_reason	features
+clear-nil-map	builtinClearNilMap	-	ok	-	builtins,clear,maps,nil,len
+clear-nil-slice	builtinClearNilSlice	-	ok	-	builtins,clear,slices,nil,len,cap
+clear-defined-map	builtinClearDefinedMap	-	ok	-	builtins,clear,maps,typed
+clear-defined-slice	builtinClearDefinedSlice	-	ok	-	builtins,clear,slices,typed,zero_values
+clear-slice-alias-visible	builtinClearSliceAliasVisible	-	ok	-	builtins,clear,slices,aliasing
+clear-array-slice	builtinClearArraySlice	-	ok	-	builtins,clear,arrays,slices
+clear-eval-order	builtinClearEvalOrder	-	ok	-	builtins,clear,evaluation_order,slices
+clear-generic-slice	builtinClearGenericSliceSubject	-	ok	-	builtins,clear,generics,type_sets,slices
+clear-generic-map	builtinClearGenericMapSubject	-	ok	-	builtins,clear,generics,type_sets,maps
+delete-defined-map	builtinDeleteDefinedMap	-	ok	-	builtins,delete,maps,typed
+delete-generic-map	builtinDeleteGenericMapSubject	-	ok	-	builtins,delete,generics,type_sets,maps
+delete-nil-map-evaluates-key	builtinDeleteNilMapEvaluatesKey	-	ok	-	builtins,delete,maps,nil,evaluation_order
+delete-map-expr-panic-before-key	builtinDeleteMapExprPanicBeforeKey	-	panic	delete map expr	builtins,delete,maps,evaluation_order,panic

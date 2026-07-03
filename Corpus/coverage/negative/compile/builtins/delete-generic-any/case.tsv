@@ -1,0 +1,2 @@
+# expected_substring	features
+is not a map	builtins,delete,generics,compile_error
