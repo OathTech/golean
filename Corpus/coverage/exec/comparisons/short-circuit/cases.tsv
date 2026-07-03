@@ -1,0 +1,9 @@
+# id	subject	args	expected_status	expected_reason	features
+array-skips-interface-panic	comparisonArraySkipsInterfacePanic	-	ok	-	comparisons,comparability,arrays,interfaces,slices,panic,evaluation_order
+array-reaches-interface-panic	comparisonArrayReachesInterfacePanic	-	panic	comparing uncomparable type []int	comparisons,comparability,arrays,interfaces,slices,panic,evaluation_order
+struct-skips-interface-panic	comparisonStructSkipsInterfacePanic	-	ok	-	comparisons,comparability,structs,interfaces,slices,panic,evaluation_order
+struct-reaches-interface-panic	comparisonStructReachesInterfacePanic	-	panic	comparing uncomparable type []int	comparisons,comparability,structs,interfaces,slices,panic,evaluation_order
+nested-array-struct-skips-panic	comparisonNestedArrayStructSkipsPanic	-	ok	-	comparisons,comparability,arrays,structs,interfaces,slices,nested,panic,evaluation_order
+nested-array-struct-reaches-panic	comparisonNestedArrayStructReachesPanic	-	panic	comparing uncomparable type []int	comparisons,comparability,arrays,structs,interfaces,slices,nested,panic,evaluation_order
+struct-nested-array-skips-panic	comparisonStructNestedArraySkipsPanic	-	ok	-	comparisons,comparability,structs,arrays,interfaces,slices,nested,panic,evaluation_order
+struct-nested-array-reaches-panic	comparisonStructNestedArrayReachesPanic	-	panic	comparing uncomparable type []int	comparisons,comparability,structs,arrays,interfaces,slices,nested,panic,evaluation_order

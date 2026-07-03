@@ -77,7 +77,12 @@ suite grows. Representative cases are examples, not an exhaustive manifest.
   composite operands, generic operands, and distinct allocations.
 - `negative/compile/builtins/new-nil-expr` records that `new(nil)` is rejected
   by the installed Go 1.26.4 toolchain.
-- Remaining P0 spike areas from `docs/coverage-core-spike-plan.md`: comparison
-  short-circuiting, generic `comparable` runtime panics, richer range-over-func,
-  higher-order generic inference, recursive generic constraints, and
-  package-aware harness design/accounting.
+- `comparisons/short-circuit` adds paired array, struct, and nested
+  array/struct comparison-order cases where early inequality either skips or
+  reaches a later interface comparison panic. `negative/compile/comparisons`
+  adds direct static invalid forms for arrays and structs containing slice
+  members.
+- Remaining P0 spike areas from `docs/coverage-core-spike-plan.md`: generic
+  `comparable` runtime panics, richer range-over-func, higher-order generic
+  inference, recursive generic constraints, and package-aware harness
+  design/accounting.

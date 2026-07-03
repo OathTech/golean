@@ -1,0 +1,2 @@
+# expected_substring	features
+cannot be compared	comparisons,structs,slices,comparability,compile_error
