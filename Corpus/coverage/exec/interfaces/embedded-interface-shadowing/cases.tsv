@@ -1,0 +1,7 @@
+# id	subject	args	expected_status	expected_reason	features
+interface-field-dispatch	embeddedInterfaceFieldDispatch	-	ok	-	interfaces,embedding,methods,calls
+interface-field-nil-panic	embeddedInterfaceFieldNilPanic	-	panic	runtime error: invalid memory address or nil pointer dereference	interfaces,embedding,methods,nil,panic
+interface-field-shadowed	embeddedInterfaceFieldShadowed	-	ok	-	interfaces,embedding,methods,shadowing,calls
+pointer-method-promoted	embeddedPointerMethodPromotedToInterface	-	ok	-	interfaces,embedding,methods,pointers,calls
+nil-pointer-method-promoted	embeddedNilPointerMethodPromoted	-	ok	-	interfaces,embedding,methods,pointers,nil,calls
+explicit-duplicate	embeddedInterfaceExplicitDuplicate	-	ok	-	interfaces,embedding,methods
