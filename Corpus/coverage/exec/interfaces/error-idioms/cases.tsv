@@ -1,0 +1,9 @@
+# id	subject	args	expected_status	expected_reason	features
+nil-error	nilErrorReturnIsNil	-	ok	-	interfaces,nil
+value-equality	errorValueEquality	-	ok	-	interfaces,equality,comparability
+pointer-identity	errorPointerIdentity	-	ok	-	interfaces,pointers,identity,comparability
+uncomparable-panic	errorUncomparableComparePanic	-	panic	runtime error: comparing uncomparable type main.sliceError	interfaces,comparability,panic,slices
+extra-interface-assertion	errorExtraInterfaceAssertion	-	ok	-	interfaces,type_assertions,methods
+promoted-method	errorPromotedMethod	-	ok	-	interfaces,embedding,methods,strings
+nil-pointer-method	nilPointerErrorMethodCall	-	ok	-	interfaces,nil,pointers,methods
+any-round-trip	errorInAnyRoundTrip	-	ok	-	interfaces,type_assertions,methods
