@@ -1,0 +1,6 @@
+# id	subject	args	expected_status	expected_reason	features
+slice-same-type	genericAliasSliceSameType	-	ok	-	generics,aliases,slices,calls
+map-literal	genericAliasMapLiteral	-	ok	-	generics,aliases,maps,literals,zero_values
+struct-literal	genericAliasStructLiteral	-	ok	-	generics,aliases,structs,literals,assignment
+func-type	genericAliasFuncType	-	ok	-	generics,aliases,functions,calls
+nested-map	genericAliasNestedMap	-	ok	-	generics,aliases,maps,slices,nested,literals
