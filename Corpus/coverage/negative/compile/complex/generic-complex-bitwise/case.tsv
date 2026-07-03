@@ -1,0 +1,2 @@
+# expected_substring	features
+operator & not defined	complex,generics,type_sets,bitwise,compile_error

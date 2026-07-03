@@ -1,0 +1,2 @@
+# expected_substring	features
+type parameter T cannot use operator <	complex,generics,type_sets,comparisons,compile_error

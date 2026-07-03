@@ -1,0 +1,2 @@
+# expected_substring	features
+not supported as argument to built-in imag	complex,generics,type_sets,builtins,imag,compile_error

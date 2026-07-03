@@ -1,0 +1,10 @@
+# id	subject	args	expected_status	expected_reason	features
+defined-complex64-sum	genericComplex64DefinedSum	-	ok	-	complex,generics,type_sets,typed
+defined-complex128-sum	genericComplex128DefinedSum	-	ok	-	complex,generics,type_sets,typed
+compound-assign	genericComplexCompoundAssign	-	ok	-	complex,generics,type_sets,assignment
+division	genericComplexDivision	-	ok	-	complex,generics,type_sets,division
+equality	genericComplexEquality	-	ok	-	complex,generics,type_sets,equality,comparisons
+explicit-constant	genericComplexExplicitConstant	-	ok	-	complex,generics,type_sets,constants,untyped,conversions
+conversion	genericComplexConversion	-	ok	-	complex,generics,type_sets,conversions,typed
+inference	genericComplexInference	-	ok	-	complex,generics,type_sets,inference
+zero-value	genericComplexZeroValue	-	ok	-	complex,generics,type_sets,zero_values
