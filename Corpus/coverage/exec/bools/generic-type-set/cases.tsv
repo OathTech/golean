@@ -1,0 +1,6 @@
+# id	subject	args	expected_status	expected_reason	features
+not-defined	genericBoolNotDefined	-	ok	-	bools,generics,type_sets,typed
+and-or	genericBoolAndOr	-	ok	-	bools,generics,type_sets
+equality	genericBoolEquality	-	ok	-	bools,generics,type_sets,equality
+inference	genericBoolInference	-	ok	-	bools,generics,type_sets,inference
+zero-value	genericBoolZeroValue	-	ok	-	bools,generics,type_sets,zero_values
