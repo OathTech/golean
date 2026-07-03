@@ -1,0 +1,5 @@
+# id	subject	args	expected_status	expected_reason	features
+struct-call	compositeFunctionStructCall	-	ok	-	functions,structs,calls
+slice-call	compositeFunctionSliceCall	-	ok	-	functions,slices,calls,nil
+map-call	compositeFunctionMapCall	-	ok	-	functions,maps,calls,nil,zero_values
+struct-reassign	compositeFunctionStructReassign	-	ok	-	functions,structs,assignment,calls
