@@ -6,6 +6,48 @@ accelerator, not the intended semantic core or long-term frontend. Proof
 infrastructure remains an important later phase, but the current priority is to
 build and differentially test a substantial Go semantics first.
 
+## North Star Target
+
+Decided 2026-07-17: the long-range target program is `etcd-io/raft`, the Raft
+consensus library extracted from etcd. It is real production Go with
+well-studied correctness properties (election safety, log matching, leader
+completeness), and its core below `RawNode` is a deterministic single-threaded
+state machine: goroutines and channels live only in the `node.go` wrapper, so
+the verification-relevant core fits the deterministic differential oracle and
+keeps concurrency deferred, as already planned.
+
+What the target forces, roughly in order:
+
+- A native Go frontend. etcd raft is multi-package, uses modern Go, and
+  includes generated protobuf structs; the Gobra export path will not scale to
+  it. Multi-package support and the single-file harness limitation are on the
+  critical path.
+- A stdlib extern/model policy. The core needs at least `fmt`-style formatting
+  stubs (Logger is injectable), `errors` values, and `sort` including
+  `sort.Slice` with closures. `math/rand` is injectable.
+- Order-insensitive map-iteration observations. Vote counting and committed
+  index calculation fold over `map[uint64]`-keyed state; results are
+  order-insensitive, but the oracle needs the planned nondet/relational lane or
+  normalized observations.
+- A concrete proof-layer goal: state raft's safety invariants over GoCore and
+  prove them for the translated core, giving Phase 5/6 a real benchmark.
+
+Suggested climbing ladder, each stage a differential milestone:
+
+1. `quorum` package: pure map/slice vote math, few hundred lines. First
+   multi-package and native-frontend pilot.
+2. `tracker` package: Progress/Inflights structs, slices, invariants.
+3. `log_unstable.go` plus `MemoryStorage`: a slice-aliasing stress test for
+   the descriptor model.
+4. `raft.go` step function driven by `raftpb.Message` values, replaying
+   etcd's own datadriven interaction test traces as the differential oracle.
+5. `RawNode` end to end. `node.go` and channels wait for the concurrency
+   phase.
+
+The north star does not change near-term ordering: the semantics cleanup in
+`docs/semantics-cleanup-plan.md` comes first, because string-based identity
+and frontend-artifact debt would be fatal at raft scale.
+
 The current architectural commitment is:
 
 ```text
