@@ -77,7 +77,6 @@ inductive Expr where
   | slice (base low high : Expr) (max : Option Expr)
   | length (operand : Expr) (typ : Option Ty := none)
   | capacity (operand : Expr) (typ : Option Ty := none)
-  | old (operand : Expr)
   | unsupported (feature : String)
   deriving Repr, BEq, Inhabited
 

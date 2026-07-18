@@ -4,6 +4,52 @@ This file is the persistent handoff log for the semantics upgrade defined in
 `docs/gocore-semantics-upgrade-goal.md`. Newest entry first. Each entry either
 appends to or explicitly supersedes the previous one.
 
+## 2026-07-17: Phase 1 complete — runtime `old` removed
+
+Branch:
+- `gocore-semantics-upgrade`
+
+Changed:
+- `GoLean/GoCore/Syntax.lean`: removed `Expr.old`.
+- `GoLean/GoCore/Eval.lean`: removed the `old`-as-identity evaluation case.
+- `GoLean/GobraToIR.lean`: runtime `Old` now lowers to
+  `.unsupported "old expression in runtime code"`; `lowerExprTy?` returns
+  `none` for `Old`; `lowerAddressOfExpr` no longer looks through `Old` (falls
+  into the fail-closed catch-all). Spec-field erasure (assertions, pres/posts,
+  postprocessing asserts) is unchanged; `Old` remains decodable wire data.
+- `Tests/GobraEval.lean`: added `runtime old expression fails closed`, a wire
+  document whose body assigns `old(x + y)`; expects error status
+  `unsupported`.
+
+Phase:
+- Phase 1 complete. Next: Phase 2, stable semantic identities (design note
+  below).
+
+Validation:
+- `lake build`: pass (38 jobs).
+- `lake exe gobra-eval-tests`: pass, including the new fail-closed test.
+- `lake exe gobra-json-tests`: pass.
+- `scripts/coverage run <136 cached-export case ids>` (same slice as Phase 0
+  baseline): 136 cases, 123 pass, 13 fail. Failing stages: 3 differential,
+  5 lean-observation, 4 json-check, 1 artifact-check. The failing case-id set
+  is identical to the Phase 0 baseline; zero new red cases.
+- `git diff --check`: clean.
+
+Regressions:
+- none. No active case depended on runtime `old`.
+
+Known blockers:
+- none.
+
+Next recommended step:
+- Phase 2 slice 1: add the identity newtypes and the lowering symbol map
+  (collect pass over Gobra members/types, strip mangling once, fail closed on
+  collision), then thread `TypeId`/`FuncId` through GoCore in follow-up
+  slices.
+
+Commit status:
+- committed (this entry accompanies the Phase 1 commit).
+
 ## Phase 2 design note (recorded 2026-07-17)
 
 Chosen identity layer: newtype identities (`TypeId`, `FuncId`, `MethodId`)

@@ -379,7 +379,6 @@ mutual
                 validateSlice slice
                 return (.int slice.cap, pair.2)
             | other => unsupported s!"cap for non-array/slice value {repr other}"
-    | .old operand => evalExpr state operand
     | .unsupported feature => unsupported feature
 
   partial def evalAssigneeLoc (state : ExecState) : Assignee → Except GoError LocResult

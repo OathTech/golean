@@ -768,6 +768,24 @@ private def specErasureDoc : GobraJson.Document := {
   doc with program := { doc.program with members := #[.function specErasureFunction] }
 }
 
+private def runtimeOldFunction : GobraJson.FunctionMember := {
+  addFunction with
+  name := { source, name := "runtime_old_F" },
+  body := some {
+    source,
+    decls := #[],
+    seqn := {
+      source,
+      stmts := #[.singleAss source (.var source (.outParam z)) (.old source addExpr)]
+    },
+    postprocessing := #[]
+  }
+}
+
+private def runtimeOldDoc : GobraJson.Document := {
+  doc with program := { doc.program with members := #[.function runtimeOldFunction] }
+}
+
 private def expectIntResult (name : String) (result : Except GoError GoLean.GobraEval.Result)
     (expected : Int) : IO Bool := do
   match result with
@@ -887,6 +905,8 @@ def main : IO UInt32 := do
   passed := passed && (← expectIntResult "add function" (GoLean.GobraEval.runFunctionInts 100 doc "add_F" #[2, 3]) 5)
   passed := passed && (← expectIntResult "Gobra specs and asserts erased"
     (GoLean.GobraEval.runFunctionInts 100 specErasureDoc "spec_erasure_F" #[2, 3]) 5)
+  passed := passed && (← expectErrorStatus "runtime old expression fails closed"
+    (GoLean.GobraEval.runFunctionInts 100 runtimeOldDoc "runtime_old_F" #[2, 3]) "unsupported")
   passed := passed && (← expectErrorStatus "missing function" (GoLean.GobraEval.runFunctionInts 100 doc "missing_F" #[]) "stuck")
   passed := passed && (← expectErrorStatus "wrong arity" (GoLean.GobraEval.runFunctionInts 100 doc "add_F" #[2]) "stuck")
   passed := passed && (← expectErrorStatus "bodyless function unsupported" (GoLean.GobraEval.runFunctionInts 100 bodylessDoc "bodyless_F" #[]) "unsupported")

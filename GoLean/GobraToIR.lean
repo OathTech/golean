@@ -132,7 +132,7 @@ partial def lowerExprTy? : GoLean.GobraJson.Expr → Option GoLean.GoCore.Ty
       | some typ => some (.pointer typ)
       | none => none
   | .ref _ _ typ => some (lowerTy typ)
-  | .old _ operand => lowerExprTy? operand
+  | .old _ _ => none
   | .toInterface _ _ typ => some (lowerTy typ)
   | .typeAssertion _ _ typ => some (lowerTy typ)
   | .structLit _ typ _ => some (lowerTy typ)
@@ -181,7 +181,6 @@ partial def lowerAddressOfExpr : GoLean.GobraJson.Expr → GoLean.GoCore.Expr
               | none => .unsupported "field address without defined receiver type"
       | none => .unsupported "field address without receiver type"
   | .address _ operand => lowerAddressOfExpr operand
-  | .old _ operand => lowerAddressOfExpr operand
   | .toInterface _ operand _ => lowerAddressOfExpr operand
   | _ => .unsupported "address of unsupported expression"
 
@@ -244,7 +243,7 @@ partial def lowerExpr : GoLean.GobraJson.Expr → GoLean.GoCore.Expr
       | .index _ op => lowerAddressOfExpr op
       | .pointer _ (.deref _ exp _) => lowerExpr exp
       | .pointer _ _ => .unsupported "reference to pointer assignee without dereference operand"
-  | .old _ operand => .old (lowerExpr operand)
+  | .old _ _ => .unsupported "old expression in runtime code"
   | .toInterface _ operand typ =>
       match lowerExprTy? operand with
       | some dynamic => .toInterface (lowerTy typ) dynamic (lowerExpr operand)
