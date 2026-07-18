@@ -4,6 +4,38 @@ This file is the persistent handoff log for the semantics upgrade defined in
 `docs/gocore-semantics-upgrade-goal.md`. Newest entry first. Each entry either
 appends to or explicitly supersedes the previous one.
 
+## 2026-07-17: Phase 4 slice 2 — typed heap cells
+
+Branch:
+- `gocore-semantics-upgrade`
+
+Changed:
+- `GoLean/GoCore/State.lean`: heap cells are now `HeapCell` records with an
+  optional `declaredTy` alongside the value. `declareLocal` records the
+  declared type; `alloc` takes an optional allocation type.
+- `GoLean/GoCore/Ops.lean`: `loadLoc`/`storeLoc` relocated after the
+  normalization block. Stores to a typed cell normalize against the
+  declared type (`normalizeValueForTy`); untyped cells fall back to the old
+  value-shape coercion (`coerceStoredValue`), kept as a documented
+  transitional path.
+- `GoLean/GoCore/Eval.lean`: params, results, and declarations record their
+  declared types; slice backings from `[]byte` conversion, `make`, and
+  append growth record `.array cap elem` allocation types. Remaining
+  untyped allocations (`newValue`, map data cells) are the enumerated gap
+  for the next slice or the well-formedness pass.
+
+Validation:
+- `lake build`, `gobra-eval-tests` (46 ok), `gobra-json-tests`: pass.
+- `scripts/coverage run <136 cached-export case ids>`: 136 cases, 123 pass,
+  13 fail; failing set unchanged.
+- `git diff --check`: clean.
+
+Regressions:
+- none.
+
+Commit status:
+- committed (this entry accompanies the slice commit).
+
 ## 2026-07-17: Phase 4 slice 1 — explicit lexical scoping for locals
 
 Branch:

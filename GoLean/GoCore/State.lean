@@ -14,7 +14,17 @@ inner to outer; declaration always creates a fresh binding in the innermost
 scope, so shadowing gets a fresh location instead of reusing the outer one.
 Block execution pushes a scope on entry and pops it on every exit path. -/
 abbrev LocalEnv := List Scope
-abbrev Heap := List (Loc × GoValue)
+
+/-- A heap cell records the value and, when known at allocation, the declared
+type of the allocation. Stores to a typed cell are normalized against the
+declared type; untyped cells (legacy allocation paths, tracked for closure in
+the semantics upgrade) fall back to value-shape coercion. -/
+structure HeapCell where
+  declaredTy : Option Ty := none
+  value : GoValue
+  deriving Repr, BEq
+
+abbrev Heap := List (Loc × HeapCell)
 abbrev TypeEnv := List (TypeId × TypeDef)
 
 structure ExecState where
@@ -68,18 +78,18 @@ def LocalEnv.popScope : LocalEnv → LocalEnv
   | [] => []
   | _ :: outer => outer
 
-def Heap.lookup : Heap → Loc → Option GoValue
+def Heap.lookup : Heap → Loc → Option HeapCell
   | [], _ => none
-  | (loc, value) :: rest, needle =>
-      if loc == needle then some value else Heap.lookup rest needle
+  | (loc, cell) :: rest, needle =>
+      if loc == needle then some cell else Heap.lookup rest needle
 
-def Heap.set : Heap → Loc → GoValue → Heap
-  | [], loc, value => [(loc, value)]
-  | (loc, old) :: rest, needle, value =>
+def Heap.set : Heap → Loc → HeapCell → Heap
+  | [], loc, cell => [(loc, cell)]
+  | (loc, old) :: rest, needle, cell =>
       if loc == needle then
-        (loc, value) :: rest
+        (loc, cell) :: rest
       else
-        (loc, old) :: Heap.set rest needle value
+        (loc, old) :: Heap.set rest needle cell
 
 def TypeEnv.lookup : TypeEnv → TypeId → Option TypeDef
   | [], _ => none
@@ -117,17 +127,18 @@ def ExecState.freshLoc (state : ExecState) : Loc × ExecState :=
 /-- Declare a local: always a fresh location in the innermost scope, even
 when the name shadows an outer binding. Assignment to an existing local goes
 through `lookupLoc`/`storeLoc`, never through this. -/
-def ExecState.declareLocal (state : ExecState) (name : String) (value : GoValue) :
-    ExecState :=
+def ExecState.declareLocal (state : ExecState) (name : String) (typ : Option Ty)
+    (value : GoValue) : ExecState :=
   let (loc, state) := state.freshLoc
   { state with
     locals := LocalEnv.declare state.locals name loc,
-    heap := Heap.set state.heap loc value
+    heap := Heap.set state.heap loc { declaredTy := typ, value }
   }
 
-def ExecState.alloc (state : ExecState) (value : GoValue) : Loc × ExecState :=
+def ExecState.alloc (state : ExecState) (value : GoValue) (typ : Option Ty := none) :
+    Loc × ExecState :=
   let (loc, state) := state.freshLoc
-  (loc, { state with heap := Heap.set state.heap loc value })
+  (loc, { state with heap := Heap.set state.heap loc { declaredTy := typ, value } })
 
 def unsupported {α : Type} (feature : String) : Except GoError α :=
   throw (.unsupported feature)

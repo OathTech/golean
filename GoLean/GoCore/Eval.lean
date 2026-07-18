@@ -110,7 +110,7 @@ mutual
         match pair.1 with
         | .string value =>
             let bytes := value.bytes.map (fun b => GoValue.int (Int.ofNat b.toNat) .uint8)
-            let (base, current) := pair.2.alloc (.array bytes)
+            let (base, current) := pair.2.alloc (.array bytes) (some (.array bytes.size (.int .uint8)))
             return (.slice { base := some base, offset := 0, len := bytes.size, cap := bytes.size }, current)
         | other => stuck s!"expected string operand for []byte conversion, got {repr other}"
     | .stringFromByteSlice operand => do
@@ -604,7 +604,7 @@ mutual
       let oldValues ← sliceVisibleValues elemsPair.2 slice
       let newCap := appendGrowthCap slice.cap newLen
       let backing ← buildAppendBackingValue elemsPair.2 elem oldValues elemValues newCap
-      let (base, current) := elemsPair.2.alloc backing
+      let (base, current) := elemsPair.2.alloc backing (some (.array newCap elem))
       assignLoc current targetPair.1 (.slice { base := some base, offset := 0, len := newLen, cap := newCap })
 
   partial def execMakeSlice (state : ExecState) (target : Assignee) (elem : Ty)
@@ -625,7 +625,7 @@ mutual
     if cap < len then
       panic "runtime error: makeslice: cap out of range"
     let backing ← buildDefaultArrayValue current cap elem
-    let allocated := current.alloc backing
+    let allocated := current.alloc backing (some (.array cap elem))
     let base := allocated.1
     let afterAlloc := allocated.2
     assignLoc afterAlloc targetPair.1 (.slice { base := some base, offset := 0, len, cap })
@@ -663,11 +663,11 @@ mutual
     for param in func.args do
       match argValues[i]? with
       | some value =>
-          callState := callState.declareLocal param.id (← normalizeValueForTy callState param.typ value)
+          callState := callState.declareLocal param.id (some param.typ) (← normalizeValueForTy callState param.typ value)
           i := i + 1
       | none => stuck s!"missing argument {i}"
     for result in func.results do
-      callState := callState.declareLocal result.id (← defaultValue callState result.typ)
+      callState := callState.declareLocal result.id (some result.typ) (← defaultValue callState result.typ)
     callState ←
       match ← execStmt (fuel - 1) callState func.body with
       | .normal nextState => pure nextState
@@ -704,7 +704,7 @@ mutual
     execFunctionCallWithLocs fuel targetPair.2 targetPair.1 id args
 
   partial def execDecl (state : ExecState) (param : Param) : Except GoError ExecState := do
-    return state.declareLocal param.id (← defaultValue state param.typ)
+    return state.declareLocal param.id (some param.typ) (← defaultValue state param.typ)
 
   partial def execDecls (state : ExecState) (decls : Array Param) : Except GoError ExecState := do
     let mut current := state
@@ -786,7 +786,7 @@ def bindParams (state : ExecState) (params : Array Param) (args : Array GoValue)
   for param in params do
     match args[i]? with
     | some value =>
-        state := state.declareLocal param.id (← normalizeValueForTy state param.typ value)
+        state := state.declareLocal param.id (some param.typ) (← normalizeValueForTy state param.typ value)
         i := i + 1
     | none => stuck s!"missing argument {i}"
   return state
@@ -794,7 +794,7 @@ def bindParams (state : ExecState) (params : Array Param) (args : Array GoValue)
 def initResults (state : ExecState) (results : Array Param) : Except GoError ExecState := do
   let mut state := state
   for result in results do
-    state := state.declareLocal result.id (← defaultValue state result.typ)
+    state := state.declareLocal result.id (some result.typ) (← defaultValue state result.typ)
   return state
 
 def collectResults (state : ExecState) (results : Array Param) :

@@ -163,50 +163,6 @@ def sliceFromArray (base : Loc) (length : Nat) (low high : Int) (max : Option In
       else
         panic "slice bounds out of range"
 
-mutual
-  partial def loadLoc (state : ExecState) : Loc → Except GoError GoValue
-    | loc@(.base _) =>
-        match Heap.lookup state.heap loc with
-        | some value => return value
-        | none => stuck s!"unbound GoCore heap location: {repr loc}"
-    | .field base typeId fieldName => do
-        match ← loadLoc state base with
-        | .struct actualType fields =>
-            if actualType != typeId then
-              stuck s!"expected struct {typeId.key}, got struct {actualType.key}"
-            match StructFields.lookup fields fieldName with
-            | some value => return value
-            | none => stuck s!"unknown GoCore struct field: {fieldName}"
-        | other => stuck s!"expected struct base for field load, got {repr other}"
-    | .index base index => do
-        match ← loadLoc state base with
-        | .array values => arrayGet values index
-        | other => stuck s!"expected array base for index load, got {repr other}"
-
-  partial def storeLoc (state : ExecState) : Loc → GoValue → Except GoError ExecState
-    | loc@(.base _), value => do
-        let value ←
-          match Heap.lookup state.heap loc with
-          | some old => coerceStoredValue old value
-          | none => pure value
-        return { state with heap := Heap.set state.heap loc value }
-    | .field base typeId fieldName, value => do
-        match ← loadLoc state base with
-        | .struct actualType fields =>
-            if actualType != typeId then
-              stuck s!"expected struct {typeId.key}, got struct {actualType.key}"
-            let updated ← StructFields.set fields fieldName value
-            storeLoc state base (.struct actualType updated)
-        | other => stuck s!"expected struct base for field store, got {repr other}"
-    | .index base index, value => do
-        match ← loadLoc state base with
-        | .array values => storeLoc state base (.array (← arraySet values index value))
-        | other => stuck s!"expected array base for index store, got {repr other}"
-end
-
-def lookup (state : ExecState) (name : String) : Except GoError GoValue := do
-  loadLoc state (← lookupLoc state name)
-
 partial def resolveDefinedAliases (state : ExecState) : Ty → Ty
   | .defined name =>
       match TypeEnv.lookup state.types name with
@@ -319,6 +275,54 @@ mutual
         return .struct name out
     | value => stuck s!"expected struct {name.key} value, got {repr value}"
 end
+
+mutual
+  partial def loadLoc (state : ExecState) : Loc → Except GoError GoValue
+    | loc@(.base _) =>
+        match Heap.lookup state.heap loc with
+        | some cell => return cell.value
+        | none => stuck s!"unbound GoCore heap location: {repr loc}"
+    | .field base typeId fieldName => do
+        match ← loadLoc state base with
+        | .struct actualType fields =>
+            if actualType != typeId then
+              stuck s!"expected struct {typeId.key}, got struct {actualType.key}"
+            match StructFields.lookup fields fieldName with
+            | some value => return value
+            | none => stuck s!"unknown GoCore struct field: {fieldName}"
+        | other => stuck s!"expected struct base for field load, got {repr other}"
+    | .index base index => do
+        match ← loadLoc state base with
+        | .array values => arrayGet values index
+        | other => stuck s!"expected array base for index load, got {repr other}"
+
+  partial def storeLoc (state : ExecState) : Loc → GoValue → Except GoError ExecState
+    | loc@(.base _), value => do
+        match Heap.lookup state.heap loc with
+        | some cell => do
+            let value ←
+              match cell.declaredTy with
+              | some ty => normalizeValueForTy state ty value
+              | none => coerceStoredValue cell.value value
+            return { state with heap := Heap.set state.heap loc { cell with value } }
+        | none =>
+            return { state with heap := Heap.set state.heap loc { value } }
+    | .field base typeId fieldName, value => do
+        match ← loadLoc state base with
+        | .struct actualType fields =>
+            if actualType != typeId then
+              stuck s!"expected struct {typeId.key}, got struct {actualType.key}"
+            let updated ← StructFields.set fields fieldName value
+            storeLoc state base (.struct actualType updated)
+        | other => stuck s!"expected struct base for field store, got {repr other}"
+    | .index base index, value => do
+        match ← loadLoc state base with
+        | .array values => storeLoc state base (.array (← arraySet values index value))
+        | other => stuck s!"expected array base for index store, got {repr other}"
+end
+
+def lookup (state : ExecState) (name : String) : Except GoError GoValue := do
+  loadLoc state (← lookupLoc state name)
 
 partial def convertValueToTy (state : ExecState) (typ : Ty) (value : GoValue) :
     Except GoError GoValue := do
