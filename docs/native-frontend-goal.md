@@ -123,6 +123,12 @@ sufficiency set. Status as of 2026-07-18:
 
 ### Layer 2 — edge enumeration (souped up)
 
+Status 2026-07-18: the VoteResult decision boundary — the tally's safety
+property — is covered by `quorum/vote-result` (7 subjects: empty-wins,
+won-exact, lost, pending, even-won, even-one-short, tie-lost), authored via the
+harness's reflection observation (subjects return `int`, no hand-written JSON).
+Remaining Layer-2 families below are pending.
+
 For each feature, cover the boundaries quorum actually hits, not just the happy
 path:
 

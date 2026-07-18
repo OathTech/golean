@@ -1,0 +1,8 @@
+# id	subject	args	expected_status	expected_reason	features
+empty-wins	voteResultEmptyWins	-	ok	-	quorum,maps,defined_type,methods,len
+won-exact	voteResultWonExact	-	ok	-	quorum,maps,range,comma_ok,methods
+lost	voteResultLost	-	ok	-	quorum,maps,range,comma_ok,methods
+pending	voteResultPending	-	ok	-	quorum,maps,range,comma_ok,methods
+even-won	voteResultEvenWon	-	ok	-	quorum,maps,range,comma_ok,methods
+even-one-short	voteResultEvenOneShort	-	ok	-	quorum,maps,range,comma_ok,methods
+tie-lost	voteResultTieLost	-	ok	-	quorum,maps,range,comma_ok,methods
