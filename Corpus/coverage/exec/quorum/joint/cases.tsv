@@ -1,0 +1,7 @@
+# id	subject	args	expected_status	expected_reason	features
+vote-both-win	jointVoteBothWin	-	ok	-	quorum,arrays,defined_type,maps,methods,indexing
+vote-disagree-lost	jointVoteDisagreeLost	-	ok	-	quorum,arrays,defined_type,maps,methods,indexing
+vote-disagree-pending	jointVoteDisagreePending	-	ok	-	quorum,arrays,defined_type,maps,methods,indexing
+vote-both-pending	jointVoteBothPending	-	ok	-	quorum,arrays,defined_type,maps,methods,indexing
+committed-min	jointCommittedMin	-	ok	-	quorum,arrays,defined_type,slices,methods,indexing
+ids-union	jointIDsUnion	-	ok	-	quorum,arrays,defined_type,maps,range,methods
