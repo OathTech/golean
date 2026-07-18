@@ -27,8 +27,8 @@ private def knownTagNames : List String := [
   "MPredicateAccess", "MPredicateProxy", "MakeMap", "MakeSlice", "Method", "MethodBody", "MethodBodySeqn",
   "MethodCall", "MethodProxy", "Mod", "Mul", "Negation", "New", "NewMapLit", "NewSliceLit", "NilLit", "NonItfTupleTerminationMeasure",
   "NoPermissionToRangeExpressionAnnotation", "None", "Old", "Or", "Out", "Pointer", "PointerT", "Predicate", "Program", "PureMethod",
-  "PureMethodCall", "Ref", "Return", "SafeMapLookup", "SepAnd", "Seqn", "ShiftLeft", "ShiftRight", "Single", "SingleAss", "Slice", "Some",
-  "SliceT", "StringLit", "StringT", "StructLit", "StructT", "Sub", "ToInterface", "Tuple2", "UnboundedInteger", "UneqCmp", "Var", "While",
+  "PureMethodCall", "Ref", "Return", "SafeMapLookup", "SafeTypeAssertion", "SepAnd", "Seqn", "ShiftLeft", "ShiftRight", "Single", "SingleAss", "Slice", "Some",
+  "SliceT", "StringLit", "StringT", "StructLit", "StructT", "Sub", "ToInterface", "Tuple2", "TypeAssertion", "UnboundedInteger", "UneqCmp", "Var", "While",
   "WildcardPerm"
 ]
 
@@ -210,6 +210,7 @@ mutual
     | capacity (source : Source) (exp : Expr)
     | old (source : Source) (operand : Expr)
     | toInterface (source : Source) (exp : Expr) (typ : Ty)
+    | typeAssertion (source : Source) (exp : Expr) (arg : Ty)
     | structLit (source : Source) (typ : Ty) (args : Array Expr)
     | pureMethodCall (source : Source) (recv : Expr) (meth : MethodProxy)
         (args : Array Expr) (typ : Ty) (reveal : Bool)
@@ -247,6 +248,8 @@ mutual
     | newMapLit (source : Source) (target : Variable) (keys values : Ty)
         (entries : Array MapLitEntry)
     | safeMapLookup (source : Source) (resTarget successTarget : Variable) (mapLookup : Expr)
+    | safeTypeAssertion (source : Source) (resTarget successTarget : Variable)
+        (expr : Expr) (typ : Ty)
     | goSliceAppend (source : Source) (target : Variable) (slice elems : Expr)
     | goSliceCopy (source : Source) (target : Variable) (dst src : Expr)
     | assert (source : Source) (ass : Assertion)
@@ -813,6 +816,12 @@ mutual
           (← decodeSource s!"{path}.source" (← GoLean.StrictJson.field path obj "source"))
           (← decodeExpr s!"{path}.exp" (← GoLean.StrictJson.field path obj "exp"))
           (← decodeTy s!"{path}.typ" (← GoLean.StrictJson.field path obj "typ"))
+    | "TypeAssertion" =>
+        let obj ← taggedObj path json "TypeAssertion" ["arg", "exp", "source", "tag"]
+        return .typeAssertion
+          (← decodeSource s!"{path}.source" (← GoLean.StrictJson.field path obj "source"))
+          (← decodeExpr s!"{path}.exp" (← GoLean.StrictJson.field path obj "exp"))
+          (← decodeTy s!"{path}.arg" (← GoLean.StrictJson.field path obj "arg"))
     | "StructLit" =>
         let obj ← taggedObj path json "StructLit" ["args", "source", "tag", "typ"]
         return .structLit
@@ -960,6 +969,14 @@ mutual
           (← decodeVariableWithTag "LocalVar" s!"{path}.resTarget" (← GoLean.StrictJson.field path obj "resTarget"))
           (← decodeVariableWithTag "LocalVar" s!"{path}.successTarget" (← GoLean.StrictJson.field path obj "successTarget"))
           (← decodeExpr s!"{path}.mapLookup" (← GoLean.StrictJson.field path obj "mapLookup"))
+    | "SafeTypeAssertion" =>
+        let obj ← taggedObj path json "SafeTypeAssertion" ["expr", "resTarget", "source", "successTarget", "tag", "typ"]
+        return .safeTypeAssertion
+          (← decodeSource s!"{path}.source" (← GoLean.StrictJson.field path obj "source"))
+          (← decodeVariableWithTag "LocalVar" s!"{path}.resTarget" (← GoLean.StrictJson.field path obj "resTarget"))
+          (← decodeVariableWithTag "LocalVar" s!"{path}.successTarget" (← GoLean.StrictJson.field path obj "successTarget"))
+          (← decodeExpr s!"{path}.expr" (← GoLean.StrictJson.field path obj "expr"))
+          (← decodeTy s!"{path}.typ" (← GoLean.StrictJson.field path obj "typ"))
     | "GoSliceAppend" =>
         let obj ← taggedObj path json "GoSliceAppend" ["elems", "slice", "source", "tag", "target"]
         return .goSliceAppend

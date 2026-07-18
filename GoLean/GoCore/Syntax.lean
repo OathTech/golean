@@ -10,6 +10,7 @@ inductive Ty where
   | slice (elem : Ty)
   | map (key value : Ty)
   | pointer (elem : Ty)
+  | interface (name : String)
   | defined (name : String)
   | unsupported (feature : String)
   deriving Repr, BEq, Inhabited
@@ -68,12 +69,14 @@ inductive Expr where
   | fieldAddr (base : Expr) (typeName fieldName : String)
   | arrayLit (length : Nat) (elem : Ty) (args : Array (Int × Expr))
   | defaultValue (typ : Ty)
+  | toInterface (target dynamic : Ty) (operand : Expr)
+  | typeAssert (operand : Expr) (target : Ty)
   | indexGet (base index : Expr)
   | indexAddr (base index : Expr)
   | mapGet (base index : Expr) (keyTy valueTy : Ty)
   | slice (base low high : Expr) (max : Option Expr)
-  | length (operand : Expr)
-  | capacity (operand : Expr)
+  | length (operand : Expr) (typ : Option Ty := none)
+  | capacity (operand : Expr) (typ : Option Ty := none)
   | old (operand : Expr)
   | unsupported (feature : String)
   deriving Repr, BEq, Inhabited
@@ -95,7 +98,8 @@ inductive Stmt where
   | makeMap (target : Assignee) (key value : Ty) (initialSpace : Option Expr)
   | mapAssign (base index value : Expr) (keyTy valueTy : Ty)
   | mapLookup (target okTarget : Assignee) (base index : Expr) (keyTy valueTy : Ty)
-  | appendSlice (target : Assignee) (slice elems : Expr)
+  | typeAssert (target okTarget : Assignee) (expr : Expr) (targetTy : Ty)
+  | appendSlice (target : Assignee) (elem : Ty) (slice elems : Expr)
   | copySlice (target : Assignee) (dst src : Expr)
   | call (targets : Array Assignee) (name : String) (args : Array Expr)
   | ifThenElse (cond : Expr) (thenBranch elseBranch : Stmt)
@@ -114,9 +118,16 @@ structure Func where
   body : Stmt
   deriving Repr, BEq
 
+structure MethodInfo where
+  name : String
+  uniqueName : String
+  recv : Ty
+  deriving Repr, BEq
+
 structure Program where
   typeDefs : Array (String × TypeDef) := #[]
   funcs : Array Func
+  methods : Array MethodInfo := #[]
   deriving Repr, BEq
 
 def findFunctionIn? (funcs : Array Func) (name : String) : Option Func :=

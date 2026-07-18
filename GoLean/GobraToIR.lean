@@ -61,7 +61,7 @@ partial def lowerTy : GoLean.GobraJson.Ty → GoLean.GoCore.Ty
         .array length.toNat (lowerTy elem)
   | .pointer elem _ => .pointer (lowerTy elem)
   | .defined name _ => .defined name
-  | .interface name _ => .unsupported s!"interface type {name}"
+  | .interface name _ => .interface name
   | .struct _ _ _ => .unsupported "anonymous struct type"
   | .string _ => .string
   | .void => .unsupported "void type"
@@ -134,6 +134,7 @@ partial def lowerExprTy? : GoLean.GobraJson.Expr → Option GoLean.GoCore.Ty
   | .ref _ _ typ => some (lowerTy typ)
   | .old _ operand => lowerExprTy? operand
   | .toInterface _ _ typ => some (lowerTy typ)
+  | .typeAssertion _ _ typ => some (lowerTy typ)
   | .structLit _ typ _ => some (lowerTy typ)
   | .arrayLit _ length elem _ =>
       if length < 0 then
@@ -244,7 +245,11 @@ partial def lowerExpr : GoLean.GobraJson.Expr → GoLean.GoCore.Expr
       | .pointer _ (.deref _ exp _) => lowerExpr exp
       | .pointer _ _ => .unsupported "reference to pointer assignee without dereference operand"
   | .old _ operand => .old (lowerExpr operand)
-  | .toInterface _ _ _ => .unsupported "interface conversion"
+  | .toInterface _ operand typ =>
+      match lowerExprTy? operand with
+      | some dynamic => .toInterface (lowerTy typ) dynamic (lowerExpr operand)
+      | none => .unsupported "ToInterface without dynamic operand type"
+  | .typeAssertion _ operand typ => .typeAssert (lowerExpr operand) (lowerTy typ)
   | .deref _ exp typ => .deref (lowerExpr exp) (lowerTy typ)
   | .fieldRef _ recv field =>
       match lowerExprTy? recv with
@@ -275,8 +280,8 @@ partial def lowerExpr : GoLean.GobraJson.Expr → GoLean.GoCore.Expr
         | .array .. => lowerAddressOfExpr base
         | _ => lowerExpr base
       .slice loweredBase (lowerExpr low) (lowerExpr high) (max.map lowerExpr)
-  | .length _ exp => .length (lowerExpr exp)
-  | .capacity _ exp => .capacity (lowerExpr exp)
+  | .length _ exp => .length (lowerExpr exp) (lowerExprTy? exp)
+  | .capacity _ exp => .capacity (lowerExpr exp) (lowerExprTy? exp)
   | .pureMethodCall .. => .unsupported "pure method call expression"
   | .mPredicateAccess .. => .unsupported "method predicate access expression"
   | .predicate .. => .unsupported "predicate expression"
@@ -352,11 +357,27 @@ private def lowerVarExprId? : GoLean.GobraJson.Expr → Option String
   | .var (.local var) => some var.id
   | _ => none
 
+private def lowerTempTargetIds? (targets : Array GoLean.GobraJson.Assignee) :
+    Option (Array String) := do
+  let mut ids := #[]
+  for target in targets do
+    ids := ids.push (← lowerTempVarAssignee? target)
+  return ids
+
 private def splitAt? {α : Type} (xs : Array α) (n : Nat) : Option (Array α × Array α) := do
   if n <= xs.size then
     return (xs.extract 0 n, xs.extract n xs.size)
   else
     none
+
+private def unwrapSingleSeqn? (stmts : Array GoLean.GobraJson.Stmt) :
+    Option (Array GoLean.GobraJson.Stmt) := do
+  if stmts.size == 1 then
+    match ← stmts[0]? with
+    | .seqn _ inner => some inner
+    | _ => some stmts
+  else
+    some stmts
 
 private def lowerDesugaredMultiAssign? (stmts : Array GoLean.GobraJson.Stmt) :
     Option GoLean.GoCore.Stmt := do
@@ -391,12 +412,44 @@ private def lowerDesugaredMultiAssign? (stmts : Array GoLean.GobraJson.Stmt) :
     | _ => none
   return .seqn (loweredTemps.push (.assignMany targets values))
 
+private def lowerDesugaredCallAssign? (stmts : Array GoLean.GobraJson.Stmt) :
+    Option GoLean.GoCore.Stmt := do
+  if stmts.size < 2 then
+    none
+  let callStmt ← stmts[0]?
+  let (func, tempTargets, args) ←
+    match callStmt with
+    | .functionCall _ func tempTargets args => some (func, tempTargets, args)
+    | _ => none
+  let tempIds ← lowerTempTargetIds? tempTargets
+  let targetStmts ← unwrapSingleSeqn? (stmts.extract 1 stmts.size)
+  if targetStmts.size != tempIds.size then
+    none
+  let mut targets := #[]
+  let mut i := 0
+  for stmt in targetStmts do
+    match stmt with
+    | .singleAss _ left right =>
+        let id ← lowerVarExprId? right
+        match tempIds[i]? with
+        | some expected =>
+            if id != expected then
+              none
+        | none => none
+        targets := targets.push (lowerAssignee left)
+        i := i + 1
+    | _ => none
+  return .call targets (stripGobraFunctionSuffix func.name) (args.map lowerExpr)
+
 partial def lowerStmtWithReturnPost (returnPostprocessing : Array GoLean.GoCore.Stmt) :
       GoLean.GobraJson.Stmt → GoLean.GoCore.Stmt
     | .seqn _ stmts =>
-        match lowerDesugaredMultiAssign? stmts with
+        match lowerDesugaredCallAssign? stmts with
         | some stmt => stmt
-        | none => .seqn (stmts.map (lowerStmtWithReturnPost returnPostprocessing))
+        | none =>
+            match lowerDesugaredMultiAssign? stmts with
+            | some stmt => stmt
+            | none => .seqn (stmts.map (lowerStmtWithReturnPost returnPostprocessing))
     | .block _ decls stmts =>
         .block (lowerDecls decls) (stmts.map (lowerStmtWithReturnPost returnPostprocessing))
     | .initialization _ var => .initialization (lowerVariable var)
@@ -425,8 +478,12 @@ partial def lowerStmtWithReturnPost (returnPostprocessing : Array GoLean.GoCore.
         | some (base, index, keyTy, valueTy) =>
             .mapLookup (.var resTarget.id) (.var successTarget.id) base index keyTy valueTy
         | none => .unsupported "SafeMapLookup with non-map lookup"
+    | .safeTypeAssertion _ resTarget successTarget expr typ =>
+        .typeAssert (.var resTarget.id) (.var successTarget.id) (lowerExpr expr) (lowerTy typ)
     | .goSliceAppend _ target slice elems =>
-        .appendSlice (.var target.id) (lowerExpr slice) (lowerExpr elems)
+        match lowerTy target.typ with
+        | .slice elem => .appendSlice (.var target.id) elem (lowerExpr slice) (lowerExpr elems)
+        | other => .unsupported s!"GoSliceAppend with non-slice target type {repr other}"
     | .goSliceCopy _ target dst src =>
         .copySlice (.var target.id) (lowerExpr dst) (lowerExpr src)
     | .assert .. => .seqn #[]
@@ -470,14 +527,15 @@ private def firstStructFields? : List GoLean.GobraJson.Ty → Option (Array GoLe
       | some fields => some fields
       | none => firstStructFields? rest
 
-private def firstStructFieldsBeforeNextDefined? :
+private def firstStructFieldsBeforeNextDefined? (currentName : String) :
     List GoLean.GobraJson.Ty → Option (Array GoLean.GobraJson.FieldInfo)
   | [] => none
-  | (.defined ..) :: _ => none
+  | (.defined name _) :: rest =>
+      if name == currentName then firstStructFieldsBeforeNextDefined? currentName rest else none
   | ty :: rest =>
       match structFields? ty with
       | some fields => some fields
-      | none => firstStructFieldsBeforeNextDefined? rest
+      | none => firstStructFieldsBeforeNextDefined? currentName rest
 
 private def lowerTypeDefsFromTypes : List GoLean.GobraJson.Ty →
     Option (Array GoLean.GobraJson.FieldInfo) →
@@ -495,7 +553,7 @@ private def lowerTypeDefsFromTypes : List GoLean.GobraJson.Ty →
               defs
             else
               let fields? :=
-                match firstStructFieldsBeforeNextDefined? rest with
+                match firstStructFieldsBeforeNextDefined? name rest with
                 | some fields => some fields
                 | none => lastStruct
               match fields? with
@@ -546,6 +604,12 @@ def lowerBodylessMethodMember (member : GoLean.GobraJson.MethodMember) : GoLean.
   body := .unsupported s!"bodyless method {member.name.uniqueName}"
 }
 
+def lowerMethodInfo (member : GoLean.GobraJson.MethodMember) : GoLean.GoCore.MethodInfo := {
+  name := member.name.name,
+  uniqueName := member.name.uniqueName,
+  recv := lowerTy member.receiver.typ
+}
+
 def lowerProgram (program : GoLean.GobraJson.Program) : Except String GoLean.GoCore.Program := do
   let mut funcs := #[]
   for member in program.members do
@@ -559,8 +623,13 @@ def lowerProgram (program : GoLean.GobraJson.Program) : Except String GoLean.GoC
         | some _ => funcs := funcs.push (← lowerMethodMember member)
         | none => funcs := funcs.push (lowerBodylessMethodMember member)
     | .mPredicate _ =>
-        pure ()
-  return { typeDefs := lowerTypeDefs program.types, funcs }
+      pure ()
+  let mut methods := #[]
+  for member in program.members do
+    match member with
+    | .method member => methods := methods.push (lowerMethodInfo member)
+    | _ => pure ()
+  return { typeDefs := lowerTypeDefs program.types, funcs, methods }
 
 def lowerDocument (doc : GoLean.GobraJson.Document) : Except String GoLean.GoCore.Program :=
   lowerProgram doc.program

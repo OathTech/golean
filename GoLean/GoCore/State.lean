@@ -12,6 +12,7 @@ abbrev TypeEnv := List (String × TypeDef)
 structure ExecState where
   types : TypeEnv := []
   functions : Array Func := #[]
+  methods : Array MethodInfo := #[]
   locals : LocalEnv := []
   heap : Heap := []
   nextAddr : Nat := 0

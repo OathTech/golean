@@ -262,6 +262,18 @@ mutual
           current := pair.2
         return (← buildArrayValue current length elem values, current)
     | .defaultValue typ => return (← defaultValue state typ, state)
+    | .toInterface _target dynamic operand => do
+        let pair ← evalExpr state operand
+        match dynamicTypeName? pair.2 dynamic with
+        | some dynamicName => return (.interface dynamicName pair.1, pair.2)
+        | none => unsupported s!"interface conversion for dynamic type {repr dynamic}"
+    | .typeAssert operand targetTy => do
+        let pair ← evalExpr state operand
+        let result ← typeAssertValue pair.2 pair.1 targetTy
+        if result.2 then
+          return (result.1, pair.2)
+        else
+          panic (typeAssertPanicMessage pair.2 pair.1 targetTy)
     | .indexGet base index => do
         let basePair ← evalExpr state base
         let indexPair ← evalExpr basePair.2 index
@@ -329,30 +341,44 @@ mutual
         | .array values =>
             unsupported s!"slice expression over non-addressable array value of length {values.size}"
         | other => stuck s!"expected array or slice value for slice expression, got {repr other}"
-    | .length operand => do
+    | .length operand typ => do
         let pair ← evalExpr state operand
-        match pair.1 with
-        | .array values => return (.int values.size, pair.2)
-        | .string value => return (.int value.length, pair.2)
-        | .slice slice => do
-            validateSlice slice
-            return (.int slice.len, pair.2)
-        | .map map => do
-            match map.base with
-            | none => return (.int 0, pair.2)
-            | some baseLoc =>
+        match typ with
+        | some (.pointer (.array length _)) => return (.int length, pair.2)
+        | _ =>
+            match pair.1 with
+            | .array values => return (.int values.size, pair.2)
+            | .addr baseLoc =>
                 match ← loadLoc pair.2 baseLoc with
-                | .mapData entries => return (.int entries.size, pair.2)
-                | other => stuck s!"expected map data, got {repr other}"
-        | other => unsupported s!"len for non-array/slice/map value {repr other}"
-    | .capacity operand => do
+                | .array values => return (.int values.size, pair.2)
+                | other => unsupported s!"len for non-array pointer value {repr other}"
+            | .string value => return (.int value.length, pair.2)
+            | .slice slice => do
+                validateSlice slice
+                return (.int slice.len, pair.2)
+            | .map map => do
+                match map.base with
+                | none => return (.int 0, pair.2)
+                | some baseLoc =>
+                    match ← loadLoc pair.2 baseLoc with
+                    | .mapData entries => return (.int entries.size, pair.2)
+                    | other => stuck s!"expected map data, got {repr other}"
+            | other => unsupported s!"len for non-array/slice/map value {repr other}"
+    | .capacity operand typ => do
         let pair ← evalExpr state operand
-        match pair.1 with
-        | .array values => return (.int values.size, pair.2)
-        | .slice slice => do
-            validateSlice slice
-            return (.int slice.cap, pair.2)
-        | other => unsupported s!"cap for non-array/slice value {repr other}"
+        match typ with
+        | some (.pointer (.array length _)) => return (.int length, pair.2)
+        | _ =>
+            match pair.1 with
+            | .array values => return (.int values.size, pair.2)
+            | .addr baseLoc =>
+                match ← loadLoc pair.2 baseLoc with
+                | .array values => return (.int values.size, pair.2)
+                | other => unsupported s!"cap for non-array pointer value {repr other}"
+            | .slice slice => do
+                validateSlice slice
+                return (.int slice.cap, pair.2)
+            | other => unsupported s!"cap for non-array/slice value {repr other}"
     | .old operand => evalExpr state operand
     | .unsupported feature => unsupported feature
 
@@ -489,6 +515,15 @@ mutual
     let current ← assignLoc keyPair.2 targetPair.1 value
     assignLoc current okPair.1 (.bool ok)
 
+  partial def execTypeAssert (state : ExecState) (target okTarget : Assignee)
+      (expr : Expr) (targetTy : Ty) : Except GoError ExecState := do
+    let targetPair ← evalAssigneeLoc state target
+    let okPair ← evalAssigneeLoc targetPair.2 okTarget
+    let valuePair ← evalExpr okPair.2 expr
+    let result ← typeAssertValue valuePair.2 valuePair.1 targetTy
+    let current ← assignLoc valuePair.2 targetPair.1 result.1
+    assignLoc current okPair.1 (.bool result.2)
+
   partial def sliceVisibleValues (state : ExecState) (slice : SliceValue) :
       Except GoError (Array GoValue) := do
     validateSlice slice
@@ -517,8 +552,36 @@ mutual
       i := i + 1
     assignLoc current targetPair.1 (.int (Int.ofNat count))
 
-  partial def execAppendSlice (state : ExecState) (target : Assignee) (sliceExpr elemsExpr : Expr) :
-      Except GoError ExecState := do
+  partial def appendGrowthCap (oldCap newLen : Nat) : Nat :=
+    if newLen <= oldCap then
+      oldCap
+    else if oldCap == 0 then
+      max 4 newLen
+    else if newLen > oldCap + oldCap then
+      newLen
+    else if oldCap < 256 then
+      oldCap + oldCap
+    else
+      let rec loop (cap : Nat) : Nat :=
+        if cap >= newLen then
+          cap
+        else
+          loop (cap + (cap + 3 * 256) / 4)
+      loop oldCap
+
+  partial def buildAppendBackingValue (state : ExecState) (elem : Ty)
+      (oldValues elemValues : Array GoValue) (newCap : Nat) : Except GoError GoValue := do
+    let mut values := #[]
+    for value in oldValues ++ elemValues do
+      values := values.push (← normalizeValueForTy state elem value)
+    if values.size > newCap then
+      stuck s!"append backing capacity {newCap} smaller than length {values.size}"
+    for _ in [:newCap - values.size] do
+      values := values.push (← defaultValue state elem)
+    return .array values
+
+  partial def execAppendSlice (state : ExecState) (target : Assignee) (elem : Ty)
+      (sliceExpr elemsExpr : Expr) : Except GoError ExecState := do
     let targetPair ← evalAssigneeLoc state target
     let slicePair ← evalExpr targetPair.2 sliceExpr
     let slice ← valueAsSlice slicePair.1
@@ -540,9 +603,10 @@ mutual
       assignLoc current targetPair.1 (.slice { slice with len := newLen })
     else
       let oldValues ← sliceVisibleValues elemsPair.2 slice
-      let backing := GoValue.array (oldValues ++ elemValues)
+      let newCap := appendGrowthCap slice.cap newLen
+      let backing ← buildAppendBackingValue elemsPair.2 elem oldValues elemValues newCap
       let (base, current) := elemsPair.2.alloc backing
-      assignLoc current targetPair.1 (.slice { base := some base, offset := 0, len := newLen, cap := newLen })
+      assignLoc current targetPair.1 (.slice { base := some base, offset := 0, len := newLen, cap := newCap })
 
   partial def execMakeSlice (state : ExecState) (target : Assignee) (elem : Ty)
       (lenExpr : Expr) (capExpr : Option Expr) : Except GoError ExecState := do
@@ -557,32 +621,43 @@ mutual
         let capPair ← evalExpr current capExpr
         capValue := (← valueAsInt capPair.1)
         current := capPair.2
-    let len ← natFromNonnegativeInt "makeslice: len out of range" lenValue
-    let cap ← natFromNonnegativeInt "makeslice: cap out of range" capValue
+    let len ← natFromNonnegativeInt "runtime error: makeslice: len out of range" lenValue
+    let cap ← natFromNonnegativeInt "runtime error: makeslice: cap out of range" capValue
     if cap < len then
-      panic "makeslice: cap out of range"
+      panic "runtime error: makeslice: cap out of range"
     let backing ← buildDefaultArrayValue current cap elem
     let allocated := current.alloc backing
     let base := allocated.1
     let afterAlloc := allocated.2
     assignLoc afterAlloc targetPair.1 (.slice { base := some base, offset := 0, len, cap })
 
-  partial def execFunctionCallWithLocs (fuel : Nat) (state : ExecState) (targets : Array Loc)
-      (name : String) (args : Array Expr) : Except GoError ExecState := do
+  partial def dynamicDispatch? (state : ExecState) (func : Func) (argValues : Array GoValue) :
+      Except GoError (Option (Func × Array GoValue)) := do
+    match methodInfoByUnique? state func.name with
+    | none => return none
+    | some method =>
+        match methodRecvInterfaceName? state method with
+        | none => return none
+        | some _ =>
+            match argValues[0]? with
+            | some (GoValue.interface dynamicName inner) =>
+                match concreteMethodForDynamic? state dynamicName method.name with
+                | some concrete =>
+                    let targetFunc ←
+                      match findFunctionIn? state.functions concrete.uniqueName with
+                      | some func => pure func
+                      | none => stuck s!"GoCore dynamic method target not found: {concrete.uniqueName}"
+                    return some (targetFunc, argValues.set! 0 inner)
+                | none => stuck s!"dynamic type {dynamicName} has no method {method.name}"
+            | _ => return none
+
+  partial def execFunctionWithValues (fuel : Nat) (state : ExecState) (targets : Array Loc)
+      (func : Func) (argValues : Array GoValue) : Except GoError ExecState := do
     if fuel == 0 then
       stuck "GoCore execution fuel exhausted"
-    let func ←
-      match findFunctionIn? state.functions name with
-      | some func => pure func
-      | none => stuck s!"GoCore function not found: {name}"
-    if func.args.size != args.size then
-      stuck s!"function {name} expected {func.args.size} argument(s), got {args.size}"
-    let mut current := state
-    let mut argValues := #[]
-    for arg in args do
-      let pair ← evalExpr current arg
-      argValues := argValues.push pair.1
-      current := pair.2
+    if func.args.size != argValues.size then
+      stuck s!"function {func.name} expected {func.args.size} argument(s), got {argValues.size}"
+    let current := state
     let callerLocals := current.locals
     let mut callState : ExecState := { current with locals := [] }
     let mut i := 0
@@ -598,13 +673,31 @@ mutual
       match ← execStmt (fuel - 1) callState func.body with
       | .normal nextState => pure nextState
       | .returned nextState => pure nextState
-      | .broke _ => stuck s!"function {name} body escaped with break"
-      | .continued _ => stuck s!"function {name} body escaped with continue"
+      | .broke _ => stuck s!"function {func.name} body escaped with break"
+      | .continued _ => stuck s!"function {func.name} body escaped with continue"
     let mut resultValues := #[]
     for result in func.results do
       resultValues := resultValues.push (← lookup callState result.id)
     let callerState : ExecState := { callState with locals := callerLocals }
     assignLocs callerState targets resultValues
+
+  partial def execFunctionCallWithLocs (fuel : Nat) (state : ExecState) (targets : Array Loc)
+      (name : String) (args : Array Expr) : Except GoError ExecState := do
+    let func ←
+      match findFunctionIn? state.functions name with
+      | some func => pure func
+      | none => stuck s!"GoCore function not found: {name}"
+    if func.args.size != args.size then
+      stuck s!"function {name} expected {func.args.size} argument(s), got {args.size}"
+    let mut current := state
+    let mut argValues := #[]
+    for arg in args do
+      let pair ← evalExpr current arg
+      argValues := argValues.push pair.1
+      current := pair.2
+    match ← dynamicDispatch? current func argValues with
+    | some (targetFunc, targetArgs) => execFunctionWithValues fuel current targets targetFunc targetArgs
+    | none => execFunctionWithValues fuel current targets func argValues
 
   partial def execFunctionCall (fuel : Nat) (state : ExecState) (targets : Array Assignee)
       (name : String) (args : Array Expr) : Except GoError ExecState := do
@@ -647,7 +740,9 @@ mutual
         return .normal (← execMapAssign state base index value keyTy valueTy)
     | .mapLookup target okTarget base index keyTy valueTy =>
         return .normal (← execMapLookup state target okTarget base index keyTy valueTy)
-    | .appendSlice target slice elems => return .normal (← execAppendSlice state target slice elems)
+    | .typeAssert target okTarget expr targetTy =>
+        return .normal (← execTypeAssert state target okTarget expr targetTy)
+    | .appendSlice target elem slice elems => return .normal (← execAppendSlice state target elem slice elems)
     | .copySlice target dst src => return .normal (← execCopySlice state target dst src)
     | .call targets name args => return .normal (← execFunctionCall fuel state targets name args)
     | .ifThenElse cond thenBranch elseBranch => do
@@ -703,8 +798,9 @@ def collectResults (state : ExecState) (results : Array Param) :
   return values
 
 def runFunctionWithContext (fuel : Nat) (types : TypeEnv) (functions : Array Func)
-    (func : Func) (args : Array GoValue) : Except GoError Result := do
-  let state ← bindParams { types := types, functions := functions } func.args args
+    (func : Func) (args : Array GoValue) (methods : Array MethodInfo := #[]) :
+    Except GoError Result := do
+  let state ← bindParams { types := types, functions := functions, methods := methods } func.args args
   let state ← initResults state func.results
   let state ←
     match ← execStmt fuel state func.body with
@@ -730,7 +826,7 @@ def runNamedFunction (fuel : Nat) (program : Program) (name : String) (args : Ar
     match findFunction? program name with
     | some func => pure func
     | none => stuck s!"GoCore function not found: {name}"
-  runFunctionWithContext fuel program.typeDefs.toList program.funcs func args
+  runFunctionWithContext fuel program.typeDefs.toList program.funcs func args program.methods
 
 def runNamedFunctionInts (fuel : Nat) (program : Program) (name : String) (args : Array Int) :
     Except GoError Result :=

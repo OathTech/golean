@@ -27,6 +27,8 @@ Design and roadmap docs:
 - `docs/semantics.md`: GoCore semantics design.
 - `docs/roadmap.md`: phased implementation roadmap.
 - `docs/differential-testing.md`: differential testing plan and generator notes.
+- `docs/agent-sandbox.md`: scratch directory and temp-cache conventions for
+  sandboxed agent sessions.
 - `TODO.md`: tactical backlog.
 
 Useful commands:
@@ -42,6 +44,10 @@ scripts/diff-one litmus/if-return
 scripts/gobra-smoke
 scripts/semantic-edges-challenge-smoke
 ```
+
+Use `scripts/coverage run ...` or `scripts/diff-one ...` for Go-vs-Lean
+equivalence during semantics work. `scripts/gobra-smoke` is only a
+frontend/Lean smoke check and does not compare against real Go output.
 
 `Corpus/coverage` is the source of truth for small coverage litmus tests.
 `scripts/coverage` runs both executable differential coverage and static

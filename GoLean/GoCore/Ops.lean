@@ -63,6 +63,9 @@ def natFromNonnegativeInt (context : String) (value : Int) : Except GoError Nat 
     panic context
   return value.toNat
 
+def fullSliceMaxBoundsPanic (max capacity : Nat) : Except GoError α :=
+  panic s!"runtime error: slice bounds out of range [::{max}] with capacity {capacity}"
+
 def stringByteGet (value : GoString) (index : Int) : Except GoError GoValue := do
   let i ← natFromNonnegativeInt "index out of range" index
   match value.byte? i with
@@ -119,7 +122,9 @@ def sliceFromSlice (slice : SliceValue) (low high : Int) (max : Option Int) :
         panic "slice bounds out of range"
   | some max =>
       let max ← natFromNonnegativeInt "slice bounds out of range" max
-      if low <= high && high <= max && max <= slice.cap then
+      if max > slice.cap then
+        fullSliceMaxBoundsPanic max slice.cap
+      else if low <= high && high <= max then
         return .slice {
           base := slice.base,
           offset := slice.offset + low,
@@ -146,7 +151,9 @@ def sliceFromArray (base : Loc) (length : Nat) (low high : Int) (max : Option In
         panic "slice bounds out of range"
   | some max =>
       let max ← natFromNonnegativeInt "slice bounds out of range" max
-      if low <= high && high <= max && max <= length then
+      if max > length then
+        fullSliceMaxBoundsPanic max length
+      else if low <= high && high <= max then
         return .slice {
           base := some base,
           offset := low,
@@ -200,6 +207,76 @@ end
 def lookup (state : ExecState) (name : String) : Except GoError GoValue := do
   loadLoc state (← lookupLoc state name)
 
+partial def resolveDefinedAliases (state : ExecState) : Ty → Ty
+  | .defined name =>
+      match TypeEnv.lookup state.types name with
+      | some (.alias target) => resolveDefinedAliases state target
+      | _ => .defined name
+  | other => other
+
+partial def dynamicTypeName? (state : ExecState) (typ : Ty) : Option String :=
+  match resolveDefinedAliases state typ with
+  | .defined name => some name
+  | .pointer (.defined name) => some s!"*{name}"
+  | .bool => some "bool"
+  | .int kind => some kind.name
+  | .string => some "string"
+  | _ => none
+
+def methodInfoByUnique? (state : ExecState) (uniqueName : String) : Option MethodInfo :=
+  state.methods.foldl
+    (fun found method =>
+      match found with
+      | some method => some method
+      | none => if method.uniqueName == uniqueName then some method else none)
+    none
+
+def methodRecvInterfaceName? (state : ExecState) (method : MethodInfo) : Option String :=
+  match resolveDefinedAliases state method.recv with
+  | .interface name => some name
+  | _ => none
+
+def methodRecvDynamicName? (state : ExecState) (method : MethodInfo) : Option String :=
+  match resolveDefinedAliases state method.recv with
+  | .defined name => some name
+  | .pointer (.defined name) => some s!"*{name}"
+  | _ => none
+
+def interfaceMethodRequirements (state : ExecState) (interfaceName : String) : Array MethodInfo :=
+  state.methods.foldl
+    (fun out method =>
+      match methodRecvInterfaceName? state method with
+      | some name => if name == interfaceName then out.push method else out
+      | none => out)
+    #[]
+
+def hasConcreteMethod (state : ExecState) (dynamicName methodName : String) : Bool :=
+  state.methods.any
+    (fun method =>
+      method.name == methodName &&
+        match methodRecvDynamicName? state method with
+        | some name => name == dynamicName
+        | none => false)
+
+def dynamicImplementsInterface (state : ExecState) (dynamicName interfaceName : String) : Bool :=
+  (interfaceMethodRequirements state interfaceName).all
+    (fun requirement => hasConcreteMethod state dynamicName requirement.name)
+
+def concreteMethodForDynamic? (state : ExecState) (dynamicName methodName : String) :
+    Option MethodInfo :=
+  state.methods.foldl
+    (fun found method =>
+      match found with
+      | some method => some method
+      | none =>
+          if method.name == methodName then
+            match methodRecvDynamicName? state method with
+            | some name => if name == dynamicName then some method else none
+            | none => none
+          else
+            none)
+    none
+
 mutual
   partial def normalizeValueForTy (state : ExecState) : Ty → GoValue → Except GoError GoValue
     | .int kind, .int value _ => return .int (kind.normalize value) kind
@@ -212,6 +289,7 @@ mutual
           out := out.push (← normalizeValueForTy state elem value)
         return .array out
     | .array length _, value => stuck s!"expected array({length}) value, got {repr value}"
+    | .interface _, value => return value
     | .defined name, value => do
         match TypeEnv.lookup state.types name with
         | some (.alias target) => normalizeValueForTy state target value
@@ -269,6 +347,7 @@ mutual
     | .slice _ => return .slice { base := none, offset := 0, len := 0, cap := 0 }
     | .map _ _ => return .map { base := none }
     | .pointer _ => return .nil
+    | .interface _ => return .nil
     | .defined name => do
         match TypeEnv.lookup state.types name with
         | some (.struct fields) =>
@@ -326,6 +405,51 @@ def buildDefaultArrayValue (state : ExecState) (length : Nat) (elem : Ty) :
     Except GoError GoValue :=
   buildArrayValue state length elem #[]
 
+partial def typeAssertValue (state : ExecState) (value : GoValue) (targetTy : Ty) :
+    Except GoError (GoValue × Bool) := do
+  let failed ← defaultValue state targetTy
+  match value with
+  | .nil => return (failed, false)
+  | .interface dynamicName inner =>
+      match resolveDefinedAliases state targetTy with
+      | .interface interfaceName =>
+          if dynamicImplementsInterface state dynamicName interfaceName then
+            return (.interface dynamicName inner, true)
+          else
+            return (failed, false)
+      | _ =>
+          match dynamicTypeName? state targetTy with
+          | some targetName =>
+              if dynamicName == targetName then
+                return (inner, true)
+              else
+                return (failed, false)
+          | none => unsupported s!"type assertion to {repr targetTy}"
+  | other => unsupported s!"type assertion from non-interface value {repr other}"
+
+partial def goTypeNameForMessage (state : ExecState) (typ : Ty) : String :=
+  match resolveDefinedAliases state typ with
+  | .bool => "bool"
+  | .int kind => kind.name
+  | .string => "string"
+  | .pointer elem => s!"*{goTypeNameForMessage state elem}"
+  | .slice elem => s!"[]{goTypeNameForMessage state elem}"
+  | .map key value => s!"map[{goTypeNameForMessage state key}]{goTypeNameForMessage state value}"
+  | .interface "empty_interface" => "interface {}"
+  | .interface name => name
+  | .defined name => name
+  | .array length elem => s!"[{length}]{goTypeNameForMessage state elem}"
+  | .unsupported feature => feature
+
+def dynamicTypeNameForMessage : GoValue → String
+  | .interface dynamicName _ => dynamicName
+  | .nil => "nil"
+  | other => s!"{repr other}"
+
+def typeAssertPanicMessage (state : ExecState) (value : GoValue) (targetTy : Ty) : String :=
+  "interface conversion: interface {} is " ++
+    dynamicTypeNameForMessage value ++ ", not " ++ goTypeNameForMessage state targetTy
+
 def valueAsInt : GoValue → Except GoError Int
   | .int value _ => return value
   | other => stuck s!"expected int value, got {repr other}"
@@ -348,7 +472,7 @@ def valueAsMap : GoValue → Except GoError MapValue
 
 def valueAsLoc : GoValue → Except GoError Loc
   | .addr loc => return loc
-  | .nil => panic "nil pointer dereference"
+  | .nil => panic "runtime error: invalid memory address or nil pointer dereference"
   | other => stuck s!"expected address value, got {repr other}"
 
 partial def valueEq : ExecState → Ty → GoValue → GoValue → Except GoError Bool
@@ -403,6 +527,10 @@ partial def valueEq : ExecState → Ty → GoValue → GoValue → Except GoErro
   | _, .map _ _, .map left, .nil => return left.base.isNone
   | _, .map _ _, .nil, .map right => return right.base.isNone
   | _, .map _ _, left, right => stuck s!"map equality expected map/nil operands, got {repr left} and {repr right}"
+  | _, .interface _, .nil, .nil => return true
+  | _, .interface _, .nil, _ => return false
+  | _, .interface _, _, .nil => return false
+  | _, .interface _, left, right => unsupported s!"interface equality for {repr left} and {repr right}"
   | state, .defined name, left, right => do
       match TypeEnv.lookup state.types name with
       | some (.alias target) => valueEq state target left right

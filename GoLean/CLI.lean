@@ -195,6 +195,12 @@ private partial def goValueJson : GoValue → Json
   | .string value => Json.mkObj [("tag", Json.str "string"), ("bytes", Lean.toJson value.byteNats)]
   | .addr loc => locJson loc
   | .nil => Json.mkObj [("tag", Json.str "nil")]
+  | .interface dynamic value =>
+      Json.mkObj [
+        ("tag", Json.str "interface"),
+        ("dynamic", Json.str dynamic),
+        ("value", goValueJson value)
+      ]
   | .struct typeName fields =>
       Json.mkObj [
         ("tag", Json.str "struct"),
@@ -306,6 +312,10 @@ private partial def decodeGoValueObservation (path : String) (json : Json) : Exc
       pure ()
   | "nil" =>
       StrictJson.requireExactKeys path obj ["tag"]
+  | "interface" =>
+      StrictJson.requireExactKeys path obj ["dynamic", "tag", "value"]
+      let _ ← StrictJson.string s!"{path}.dynamic" (← StrictJson.field path obj "dynamic")
+      decodeGoValueObservation s!"{path}.value" (← StrictJson.field path obj "value")
   | "addr" | "fieldAddr" | "indexAddr" =>
       decodeLocObservation path json
   | "struct" =>

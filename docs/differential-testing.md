@@ -62,6 +62,15 @@ scripts/coverage report --by stage
 `scripts/diff-one <id> ...` remains a short exact-id runner for the tight
 edit/test loop while implementing a feature.
 
+`scripts/gobra-smoke` is not a conformance oracle. It is a frontend/Lean smoke
+check: it exports Gobra JSON, validates the JSON, and runs the Lean interpreter
+against expected statuses, but it does not run real Go or compare Go and Lean
+observations. Use `scripts/coverage run ...`, `scripts/diff-coverage`, or
+`scripts/diff-one ...` for Go-vs-Lean equivalence. Also note that
+`gobra-smoke` performs Gobra export without the main differential runner's
+per-stage classification, so it is a poor default for iteration when export is
+slow or stuck.
+
 Executable cases are described by `cases.tsv` files next to their Go source.
 The local metadata is intentionally strict and small:
 
@@ -107,6 +116,8 @@ The script requires `go` on `PATH`.
 The harness runs fixtures with module mode disabled and stores Go's build cache
 under `artifacts/go-build-cache` so tests do not depend on writable user-level
 cache directories.
+For ad hoc Go probes outside the coverage scripts, use a sandbox-writable cache
+such as `GOCACHE=/private/tmp/go-build`; see `docs/agent-sandbox.md`.
 
 The default executable lane is deterministic. Cases tagged `nondet` are
 rejected unless `GOLEAN_ALLOW_NONDET=1` is set, and that mode is reserved for a

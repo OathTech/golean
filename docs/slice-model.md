@@ -185,11 +185,10 @@ For `append`, use the Go semantic split:
 
 The exact new capacity after allocation is observable through `cap`, but Go
 does not specify a single growth formula. Perennial models this with
-nondeterministic extra capacity. For executable differential testing we should
-initially avoid tests that observe post-reallocation capacity, or tag them as
-Go-runtime-version-specific. The relational semantics can allow any fresh
-capacity `>= newLen`; the executable interpreter can use a deterministic growth
-policy as a test runner.
+nondeterministic extra capacity. The executable interpreter now uses a
+deterministic Go-runtime-oriented growth policy so current differential tests
+that observe `cap` after reallocation have a concrete oracle. The relational
+semantics should still allow any fresh capacity `>= newLen`.
 
 This pattern should generalize beyond append. When Go specifies a family of
 allowed behaviors, the relation should express the family. The executable
@@ -202,7 +201,7 @@ behavior or current-runtime behavior.
 The following choices should stay explicit until real-program differential
 testing narrows them:
 
-- append growth policy after reallocation;
+- append growth policy after reallocation for the future relational semantics;
 - exact behavior of zero-length and zero-capacity non-nil slices;
 - integer overflow and allocation-size limits for `make`, `append`, and bounds
   arithmetic;
@@ -261,7 +260,7 @@ descriptor should not need to change.
 4. Add array-to-slice and pointer-to-array slicing, preserving addressability.
 5. Add slice-to-slice and full-slice expressions.
 6. Added `copy`, including overlap-preserving differential coverage.
-7. Added `append`, with differential tests that separate observable element
-   behavior from implementation-specific capacity growth.
+7. Added `append`, including backing allocation for capacity tails and focused
+   differential coverage for capacity-observing growth.
 8. Keep every unsupported Gobra wire node and every unsupported GoCore operation
    fail-closed.

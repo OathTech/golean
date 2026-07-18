@@ -15,6 +15,15 @@ backlog items.
 ## Differential Execution
 
 - Keep Gobra-specific handling in `GobraToIR`; semantic work belongs in GoCore unless it is purely frontend lowering.
+- Current iteration priority after the core coverage spike: use
+  `scripts/coverage run ...`/`scripts/diff-one ...` as the conformance loop and
+  fix cases that reach a Go-vs-Lean differential mismatch before chasing cases
+  blocked in Gobra export or JSON decoding.
+- Track frontend-blocked corpus rows separately from GoCore semantics work.
+  Recent focused probes show `delete`, `clear`, `range int`, richer method
+  expressions/auto-addressing, floats, complex numbers, and `min`/`max` are
+  often blocked before Lean by the current Gobra path; do not count those as
+  GoCore semantic failures until a frontend can produce GoCore for them.
 - Promote cases from `Corpus/challenges/semantic-edges/` into the active
   Gobra/Lean differential suite one feature at a time. Keep the challenge
   corpus runnable by `scripts/semantic-edges-challenge-smoke`, but do not treat
@@ -76,9 +85,10 @@ backlog items.
   again.
 - Continue slices with descriptor values over backing locations, following
   `docs/slice-model.md`. Do not model slices as copied vectors.
-- Keep append capacity growth explicit in tests: either avoid observing capacity
-  after a reallocating append, or tag the case as Go-runtime-specific until the
-  executable policy is chosen.
+- Keep append capacity growth explicit in tests. The executable interpreter now
+  has a deterministic policy for Go-vs-Lean differential runs; the later
+  relational semantics should still allow implementation-specific fresh
+  capacities.
 - Track semantic policy choices that remain open for differential refinement,
   especially allocation limits, append growth, zero-capacity slices, string
   slicing, and panic-message details.
@@ -186,6 +196,8 @@ backlog items.
   coverage.
 - Added fixed-array zero-value initialization, nested arrays, arrays through
   function parameters/results, and pointer-to-array indexing/assignment.
+- Added type-aware `len`/`cap` for pointer-to-array values, including nil
+  pointers, so GoCore matches Go's non-dereferencing array-pointer behavior.
 - Reviewed Goose/Perennial/Gobra slice designs and selected a descriptor over
   backing locations as the direction for GoCore slices.
 - Added the first descriptor-backed slice subset: nil slice defaults, array
@@ -199,6 +211,18 @@ backlog items.
   `copy`/`append` and emits `GoSliceCopy`/`GoSliceAppend`; added GoCore
   execution and differential coverage for overlapping copy and append
   in-place/growth aliasing.
+- Refined append growth to allocate real backing capacity tail cells and match
+  current focused Go differential cases that observe post-reallocation `cap`.
+- Added the first executable interface-value subset: `ToInterface` boxes carry
+  a dynamic type tag, Gobra `SafeTypeAssertion` and expression `TypeAssertion`
+  lower to GoCore, interface method calls dynamically dispatch to concrete
+  methods where Gobra exposes method metadata, and focused differential coverage
+  passes for interface dispatch, interface-to-interface assertions, concrete
+  assertions, assertion panics, and interface storage-copy cases.
+- Next interface semantics targets are typed-nil interface equality,
+  dynamic interface equality/comparability panics, and type switches. Keep
+  frontend-export failures separate; many typed-nil and error idiom cases are
+  still blocked before Lean by the current Gobra path.
 - Made `scripts/gobra-smoke` manifest-driven for Lean execution and expanded
   the differential suite to 29 cases, including typed nil slices, nil/empty
   slice distinctions, nil append, variadic overlap append, full slicing,

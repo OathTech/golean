@@ -214,6 +214,7 @@ inductive GoValue where
   | string (value : GoString)
   | addr (loc : Loc)
   | nil
+  | interface (dynamic : String) (value : GoValue)
   | struct (typeName : String) (fields : Array (String × GoValue))
   | array (values : Array GoValue)
   | slice (value : SliceValue)
