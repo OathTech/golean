@@ -1,0 +1,6 @@
+# id	subject	args	expected_status	expected_reason	features
+empty-maxuint	committedIndexEmpty	-	ok	-	quorum,maps,defined_type,methods,len,widths
+all-acked	committedIndexAllAcked	-	ok	-	quorum,maps,slices,arrays,indexing,methods
+unacked	committedIndexUnacked	-	ok	-	quorum,maps,slices,arrays,indexing,methods
+on-stack	committedIndexOnStack	-	ok	-	quorum,arrays,slices,indexing,len,methods
+heap	committedIndexHeap	-	ok	-	quorum,slices,indexing,len,methods
