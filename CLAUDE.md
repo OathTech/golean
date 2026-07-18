@@ -24,6 +24,21 @@ failing-set diff — it is what kept 13 consecutive cleanup slices at zero
 regressions. `scripts/gobra-smoke` is a frontend/Lean smoke check, NOT a
 Go-vs-Lean conformance oracle; never claim equivalence from it.
 
+## Guardrails first: differential tests before tool buildout
+
+Before building a feature of the tool (a frontend, a lowering path, a semantic
+construct), add the differential corpus cases that pin its target behavior
+first — isolated per feature, with edge cases. The Go oracle (`go run`) is free
+and authoritative, so writing the case first costs almost nothing and fixes the
+target before the implementation can drift. A tool feature is not "started"
+until its guardrail cases exist and classify correctly (a case the tool can't
+yet handle should be visibly frontend/feature-blocked, never a false pass).
+This is why the corpus is frontend-independent: canonical Go is the input to
+both `go run` and the tool. Aim for suites strong enough that *green implies the
+target is covered* — see the three-layer sufficiency strategy in
+`docs/native-frontend-goal.md` (isolated cases, edge enumeration, integration +
+input fuzzing).
+
 ## Fail closed, always
 
 Unknown wire nodes, unsupported features, malformed state → an explicit

@@ -1,0 +1,2 @@
+# id	subject	args	expected_status	expected_reason	features
+-	definedMapValue	-	ok	-	maps,defined_type,comma_ok,len,conversions,quorum

@@ -96,24 +96,30 @@ cases are frontend json-check red today), `make([]T,0,cap)` (`builtins/make-slic
 `slices/*`), typed iota (`constants/typed-iota`), defined int-type operators
 (`ints/defined-type-ops`), uint arithmetic and division rounding (`ints/*`).
 
-**Gaps — no isolated case exists, must add** (canonical Go + `cases.tsv`;
-frontend-blocked until the native frontend lowers them, which is expected and
-correct — the corpus is frontend-independent):
+**Gaps — canonical Go + `cases.tsv`; frontend-blocked until the native
+frontend lowers them, which is expected and correct — the corpus is
+frontend-independent.** All quorum-relevant cases (isolated + integration) carry
+the `quorum` tag, so `scripts/coverage run --tag quorum` runs the whole
+sufficiency set. Status as of 2026-07-18:
 
-1. Defined map type: `type M map[uint64]struct{}`.
-2. Value-receiver method on a defined map type: `func (m M) F() ...`.
-   **Corpus-wide there is currently no method on any non-struct receiver** —
-   this is quorum's central idiom and the single most important gap.
-3. Value-receiver method on a defined primitive type: `type Index uint64;
-   func (i Index) F() ...`.
-4. Defined array type over a defined type: `type J [2]M`.
-5. `map[K]struct{}` set idiom: empty-struct value, membership via comma-ok and
-   range.
-6. Nested defined types: map value is itself a defined type (`map[uint64]Index`).
-7. On-stack-array-else-make idiom: `var stk [7]uint64;
-   if len(stk) >= n { s = stk[:n] } else { s = make([]uint64, n) }`.
-8. Fill-from-right into a slice, then sort, then index the median
-   (the `CommittedIndex` core) — depends on the `slices.Sort` extern.
+1. [added] Defined map type `type M map[uint64]struct{}` + value-receiver method
+   on it — `methods/defined-map-receiver` (a faithful `VoteResult` reduction;
+   also the fix for "no method on any non-struct receiver existed corpus-wide",
+   quorum's central idiom).
+2. [added] Value-receiver method on a defined primitive type (`type Index
+   uint64`) — `methods/defined-int-receiver`.
+3. [added] Defined array type + method + indexing — `arrays/defined-array-receiver`.
+4. [added] `map[K]struct{}` set idiom (empty-struct value, comma-ok membership)
+   — `maps/set-membership`.
+5. [added] Nested defined types (map value is a defined type `map[uint64]Index`)
+   — `maps/defined-map-value`.
+6. [added] On-stack-array-else-make + fill-from-right (the `CommittedIndex`
+   slice trick, both branches) — `slices/array-to-slice-conditional`.
+7. [pending] Fill-from-right → sort → index-median as the full `CommittedIndex`
+   algorithm — depends on the `slices.Sort` extern; lands with slice 5 as a
+   Layer-3 integration case.
+8. [pending] Defined array type *over a defined type* (`type J [2]M`) — the
+   `JointConfig` shape; add with slice 3.
 
 ### Layer 2 — edge enumeration (souped up)
 
