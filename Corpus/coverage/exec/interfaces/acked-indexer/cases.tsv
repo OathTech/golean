@@ -1,0 +1,3 @@
+# id	subject	args	expected_status	expected_reason	features
+hit	ackedIndexerHit	-	ok	-	quorum,interfaces,defined_type,maps,comma_ok,multi_result
+miss	ackedIndexerMiss	-	ok	-	quorum,interfaces,defined_type,maps,comma_ok,multi_result

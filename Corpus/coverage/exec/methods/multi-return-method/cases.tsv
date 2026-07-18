@@ -1,0 +1,2 @@
+# id	subject	args	expected_status	expected_reason	features
+-	multiReturnMethod	-	ok	-	methods,defined_type,maps,comma_ok,multi_result,quorum
