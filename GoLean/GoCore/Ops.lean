@@ -4,20 +4,26 @@ namespace GoLean.GoCore
 
 open GoLean
 
+def indexOutOfRangePanic (index : Int) (length : Nat) : Except GoError α :=
+  if index < 0 then
+    panic s!"runtime error: index out of range [{index}]"
+  else
+    panic s!"runtime error: index out of range [{index}] with length {length}"
+
 def arrayIndexNat (values : Array GoValue) (index : Int) : Except GoError Nat := do
   if index < 0 then
-    panic "index out of range"
+    indexOutOfRangePanic index values.size
   let i := index.toNat
   if i < values.size then
     return i
   else
-    panic "index out of range"
+    indexOutOfRangePanic index values.size
 
 def arrayGet (values : Array GoValue) (index : Int) : Except GoError GoValue := do
   let i ← arrayIndexNat values index
   match values[i]? with
   | some value => return value
-  | none => panic "index out of range"
+  | none => indexOutOfRangePanic index values.size
 
 partial def coerceStoredValue : GoValue → GoValue → Except GoError GoValue
   | .int _ kind, .int value _ => return .int (kind.normalize value) kind
@@ -56,7 +62,7 @@ def arraySet (values : Array GoValue) (index : Int) (value : GoValue) :
   let i ← arrayIndexNat values index
   match values[i]? with
   | some old => return values.set! i (← coerceStoredValue old value)
-  | none => panic "index out of range"
+  | none => indexOutOfRangePanic index values.size
 
 def natFromNonnegativeInt (context : String) (value : Int) : Except GoError Nat := do
   if value < 0 then
@@ -67,10 +73,12 @@ def fullSliceMaxBoundsPanic (max capacity : Nat) : Except GoError α :=
   panic s!"runtime error: slice bounds out of range [::{max}] with capacity {capacity}"
 
 def stringByteGet (value : GoString) (index : Int) : Except GoError GoValue := do
-  let i ← natFromNonnegativeInt "index out of range" index
+  if index < 0 then
+    indexOutOfRangePanic index value.length
+  let i := index.toNat
   match value.byte? i with
   | some byte => return .int (Int.ofNat byte.toNat) .uint8
-  | none => panic "index out of range"
+  | none => indexOutOfRangePanic index value.length
 
 def stringSlice (value : GoString) (low high : Int) (max : Option Int) :
     Except GoError GoValue := do

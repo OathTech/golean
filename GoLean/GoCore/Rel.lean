@@ -91,7 +91,7 @@ inductive ExprR : ExecState → Expr → ExprOut → Prop where
   | divByZero {s s₁ s₂ l r lv lk rk} :
       ExprR s l (.value (.int lv lk) s₁) →
       ExprR s₁ r (.value (.int 0 rk) s₂) →
-      ExprR s (.div l r) (.panic "integer divide by zero")
+      ExprR s (.div l r) (.panic "runtime error: integer divide by zero")
   | eqCmp {s s₁ s₂ ty l r lv rv b} :
       ExprR s l (.value lv s₁) →
       ExprR s₁ r (.value rv s₂) →

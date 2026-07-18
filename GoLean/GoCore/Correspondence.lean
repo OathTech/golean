@@ -78,7 +78,7 @@ theorem divByZeroPanics (s : ExecState) (loc : Loc)
     (h : lookupLoc s "x" = .ok loc) :
     Steps
       (.exec (.assign (.var "x") (.div (.intLit 1) (.intLit 0))) .stop s)
-      (.panicked "integer divide by zero") :=
+      (.panicked "runtime error: integer divide by zero") :=
   Steps.single (.assignValuePanic (.var h) (.divByZero .intLit .intLit))
 
 end GoLean.GoCore.Correspondence

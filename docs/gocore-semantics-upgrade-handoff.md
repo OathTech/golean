@@ -4,6 +4,47 @@ This file is the persistent handoff log for the semantics upgrade defined in
 `docs/gocore-semantics-upgrade-goal.md`. Newest entry first. Each entry either
 appends to or explicitly supersedes the previous one.
 
+## 2026-07-18: Go-exact runtime panic messages for index, shift, division
+
+Branch:
+- `gocore-semantics-upgrade`
+
+Changed:
+- `GoLean/GoCore/Ops.lean`: `indexOutOfRangePanic` produces Go's exact
+  messages — `runtime error: index out of range [i]` for negative indexes
+  and `… [i] with length n` otherwise — used by array indexing, array
+  stores, and string byte indexing.
+- `GoLean/GoCore/Eval.lean`: division/modulo panics say
+  `runtime error: integer divide by zero`; negative shifts say
+  `runtime error: negative shift amount`.
+- `GoLean/GoCore/Rel.lean`, `Correspondence.lean`: rules and theorem
+  updated in lockstep.
+
+This closes the three message-alignment differential failures recorded in
+the Phase 0 baseline (`arrays/array-bounds`, `ints/divide-by-zero`,
+`ints/negative-shift`).
+
+Validation:
+- `lake build` (library, tests, Correspondence): pass; unit suites 46
+  ok / json ok.
+- `scripts/coverage run <136 cached-export case ids>`: 136 cases,
+  **126 pass, 10 fail** — the three differential failures flipped to PASS,
+  no other change. The remaining red set is fully classified: 4
+  frontend/export decode gaps (`maps/nil-read-key-types`,
+  `range/range-map-sum`, `range/range-nil-map`, plus the stale
+  artifact-check record for
+  `comparisons/short-circuit/nested-array-struct-reaches-panic`) and 6
+  Phase 5 interface-semantics gaps (slice-dynamic interface conversion,
+  interface equality on typed nils, interface-type default values /
+  dispatch pending explicit type-declaration export).
+- `git diff --check`: clean.
+
+Regressions:
+- none; net improvement of 3 cases over the Phase 0 baseline.
+
+Commit status:
+- committed (this entry accompanies the slice commit).
+
 ## 2026-07-18: Phase 6 slice 1 — small-step relational semantics skeleton
 
 Branch:

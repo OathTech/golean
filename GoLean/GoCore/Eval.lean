@@ -63,7 +63,7 @@ def intBitNegResult (value : GoValue) : Except GoError GoValue := do
 def shiftCountNat (count : GoValue) : Except GoError Nat := do
   let count ← valueAsInt count
   if count < 0 then
-    panic "negative shift amount"
+    panic "runtime error: negative shift amount"
   return count.toNat
 
 def arithmeticShiftRight (value : Int) (count : Nat) : Int :=
@@ -151,14 +151,14 @@ mutual
         let rightPair ← evalExpr leftPair.2 right
         let divisor ← valueAsInt rightPair.1
         if divisor == 0 then
-          panic "integer divide by zero"
+          panic "runtime error: integer divide by zero"
         return (← intBinaryResult "/" Int.tdiv leftPair.1 rightPair.1, rightPair.2)
     | .mod left right => do
         let leftPair ← evalExpr state left
         let rightPair ← evalExpr leftPair.2 right
         let divisor ← valueAsInt rightPair.1
         if divisor == 0 then
-          panic "integer divide by zero"
+          panic "runtime error: integer divide by zero"
         return (← intBinaryResult "%" Int.tmod leftPair.1 rightPair.1, rightPair.2)
     | .shiftLeft left right => do
         let leftPair ← evalExpr state left
