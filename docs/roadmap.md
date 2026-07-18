@@ -43,6 +43,12 @@ Suggested climbing ladder, each stage a differential milestone:
    etcd's own datadriven interaction test traces as the differential oracle.
 5. `RawNode` end to end. `node.go` and channels wait for the concurrency
    phase.
+6. Eventually: the concurrent `node.go` layer, once GoCore has a small-step
+   relational semantics compatible with Iris-Lean's `PrimStep` interface
+   (forked goroutines are the `List Expr` component of the step relation) and
+   Iris-Lean integration is toolchain-feasible. Concurrency reasoning is
+   expected to come from Iris-Lean, following the Goose/Perennial precedent
+   for verified Go distributed systems.
 
 The north star does not change near-term ordering: the semantics cleanup in
 `docs/semantics-cleanup-plan.md` comes first, because string-based identity

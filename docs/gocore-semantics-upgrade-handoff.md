@@ -4,6 +4,39 @@ This file is the persistent handoff log for the semantics upgrade defined in
 `docs/gocore-semantics-upgrade-goal.md`. Newest entry first. Each entry either
 appends to or explicitly supersedes the previous one.
 
+## Phase 2 design note (recorded 2026-07-17)
+
+Chosen identity layer: newtype identities (`TypeId`, `FuncId`, `MethodId`)
+wrapping canonical source-level names, produced only by an explicit symbol map
+that lowering builds in a first pass over Gobra members and types. The map
+strips Gobra `_<hash>_T` / `_<hash>_F` mangling once, at the boundary, and
+fails closed on collisions. GoCore equality, dispatch, interface dynamic tags,
+and lookup consume the newtypes; raw Gobra names never cross the boundary.
+This is the "equivalent explicit identity layer" the goal doc allows; the
+compact numeric ID table remains a contained, mechanical follow-up because
+every identity creation point goes through the symbol map. Transitional
+raw-string sites (to enumerate as they are touched): pointer dynamic tags
+derived as `*name` strings in `Ops.dynamicTypeName?`, and the
+`empty_interface` sentinel interface name.
+
+Evidence this matters: Gobra-mangled names currently leak into interface
+dynamic tags (`*nilCompareA_4b5075e4_T` in baseline failures) and would leak
+into struct observations if any active case observed a whole struct value
+(the Go oracle prints source names such as `copiedStruct`).
+
+## Phase 6 design note (recorded 2026-07-17)
+
+The relational semantics skeleton should be small-step, not big-step.
+Concurrency is an explicit eventual goal via Iris-Lean, and Iris-Lean's
+`Iris.ProgramLogic.Language`/`PrimStep` interface requires a primitive step
+relation of shape `Expr × State → Obs → Expr × State × List Expr → Prop`,
+where the `List Expr` component is forked threads; goroutine spawn maps onto
+it directly. A big-step relation would have to be rebuilt for that interface.
+The deterministic executable interpreter remains the differential test
+implementation; the small-step relation is the proof-facing authority. See
+`docs/iris-lean-review.md` for the interface details and the Lean toolchain
+version gap that gates direct Iris-Lean dependency integration.
+
 ## 2026-07-17: Phase 0 baseline recorded
 
 Branch:
