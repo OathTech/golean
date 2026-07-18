@@ -4,6 +4,61 @@ This file is the persistent handoff log for the semantics upgrade defined in
 `docs/gocore-semantics-upgrade-goal.md`. Newest entry first. Each entry either
 appends to or explicitly supersedes the previous one.
 
+## 2026-07-17: Phase 3 slice 1 — MethodSubtypeProof decoded as wire metadata
+
+Branch:
+- `gocore-semantics-upgrade`
+
+Changed:
+- `GoLean/GobraJson.lean`: added `MethodSubtypeProofMember` (strict decode
+  of source, sub/super proxies, superT, receiver, args, results, optional
+  body) and the `AutoImplProofAnnotation` source annotation; both added to
+  `knownTagNames`. Documented as wire data only.
+- `GoLean/GobraToIR.lean`: `buildSymbolMap` and `lowerProgram` explicitly
+  skip proof members — they never become executable functions, symbol map
+  entries, or dispatch metadata.
+
+Result: `methods/interface-dispatch` progressed from a json-check decode
+rejection to a classified semantics gap: Lean now reports
+`unsupported: default value for unknown defined type
+methodDispatchInterface`. The adjacency-based type recovery reconstructs
+only struct definitions, so defined interface types have no `TypeEnv`
+entry (their zero value is a nil interface). Extending adjacency recovery
+would deepen junk item 4; the clean fix is explicit type-declaration
+export from the Gobra fork, which is a frontend decision (see pause note
+below).
+
+Observed while probing: interface type export names use a second mangling
+pattern (`Y$fd0d1673_4b5075e4_`) that `stripGobraTypeSuffix` does not
+canonicalize. Consistent within a program, so dispatch is unaffected, but
+Phase 5 interface work should canonicalize it when interface type
+identity becomes load-bearing.
+
+Phase:
+- Phase 3 partially complete: proof members are wire-only (the core Phase 3
+  requirement) and bodyless members already fail closed at execution.
+  Remaining Phase 3 items — explicit or fail-closed type recovery, and
+  restricting return postprocessing to recognized reconstruction patterns —
+  are blocked on or entangled with the frontend export decision.
+
+Validation:
+- `lake build`, unit suites, and the 136-case slice: recorded in the
+  accompanying commit message; the expected delta is
+  `methods/interface-dispatch` moving stage from json-check to
+  lean-observation while remaining red.
+
+Pause note (per "When To Pause For User Decision"):
+- Phases 1 and 2 are complete; the core of Phase 3 is complete. Further
+  interface progress needs Gobra JSON export enrichment (explicit type
+  declarations, and later method-set metadata), a change in the Scala fork.
+  Given the etcd-raft north star already commits to a native Go frontend,
+  the user should decide: enrich the Gobra fork, start the native frontend
+  early, or proceed with Phase 4 (typed locals/heap, frontend-independent)
+  while deferring the frontend decision.
+
+Commit status:
+- committed (this entry accompanies the slice commit).
+
 ## 2026-07-17: Phase 2 slice 3 — receiver-scoped method canonical keys
 
 Branch:

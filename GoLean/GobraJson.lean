@@ -17,14 +17,14 @@ structure KnownTag where
 
 private def knownTagNames : List String := [
   "Access", "Add", "Address", "Assert", "Assume", "AtLeastCmp", "AtMostCmp", "BitAnd", "BitClear", "BitNeg", "BitOr", "BitXor", "Capacity",
-  "AnnotatedOrigin", "ArrayLit", "ArrayT", "Block", "BoolLit", "BoolT", "BoundedInteger", "Decimal", "DefinedT", "DfltVal",
+  "AnnotatedOrigin", "ArrayLit", "ArrayT", "AutoImplProofAnnotation", "Block", "BoolLit", "BoolT", "BoundedInteger", "Decimal", "DefinedT", "DfltVal",
   "Break", "Continue", "Conversion", "Deref", "Div", "EqCmp", "ExprAssertion", "Field", "FieldRef", "FullPerm",
   "Function", "FunctionCall", "FunctionProxy", "GhostEqCmp", "GoSliceAppend", "GoSliceCopy", "GreaterCmp", "Implication", "In",
   "If", "Index", "IndexedExp", "Initialization", "InsufficientPermissionToRangeExpressionAnnotation",
   "IntLit", "IntT", "InterfaceT", "Internal", "ItfTupleTerminationMeasure",
   "Label", "LabelProxy", "Length", "LessCmp", "LocalVar", "MPredicate",
   "LoopInvariantNotEstablishedAnnotation",
-  "MPredicateAccess", "MPredicateProxy", "MakeMap", "MakeSlice", "Method", "MethodBody", "MethodBodySeqn",
+  "MPredicateAccess", "MPredicateProxy", "MakeMap", "MakeSlice", "Method", "MethodBody", "MethodBodySeqn", "MethodSubtypeProof",
   "MethodCall", "MethodProxy", "Mod", "Mul", "Negation", "New", "NewMapLit", "NewSliceLit", "NilLit", "NonItfTupleTerminationMeasure",
   "NoPermissionToRangeExpressionAnnotation", "None", "Old", "Or", "Out", "Pointer", "PointerT", "Predicate", "Program", "PureMethod",
   "PureMethodCall", "Ref", "Return", "SafeMapLookup", "SafeTypeAssertion", "SepAnd", "Seqn", "ShiftLeft", "ShiftRight", "Single", "SingleAss", "Slice", "Some",
@@ -320,10 +320,25 @@ structure MPredicateMember where
   body : Option Assertion
   deriving Repr, BEq
 
+/-- Gobra subtype proof evidence. Decoded strictly as wire data only: proof
+members must never lower into executable GoCore functions or participate in
+dispatch. -/
+structure MethodSubtypeProofMember where
+  source : Source
+  subProxy : MethodProxy
+  superT : Ty
+  superProxy : MethodProxy
+  receiver : Parameter
+  args : Array Parameter
+  results : Array Parameter
+  body : Option MethodBody
+  deriving Repr, BEq
+
 inductive Member where
   | function (member : FunctionMember)
   | method (member : MethodMember)
   | mPredicate (member : MPredicateMember)
+  | methodSubtypeProof (member : MethodSubtypeProofMember)
   deriving Repr, BEq
 
 structure Program where
@@ -377,6 +392,10 @@ private def decodeSourceAnnotation (path : String) (json : Json) : Except String
   | "NoPermissionToRangeExpressionAnnotation"
   | "InsufficientPermissionToRangeExpressionAnnotation" =>
       GoLean.StrictJson.requireExactKeys path obj ["tag"]
+  | "AutoImplProofAnnotation" =>
+      GoLean.StrictJson.requireExactKeys path obj ["subType", "superType", "tag"]
+      let _ ← GoLean.StrictJson.string s!"{path}.subType" (← GoLean.StrictJson.field path obj "subType")
+      let _ ← GoLean.StrictJson.string s!"{path}.superType" (← GoLean.StrictJson.field path obj "superType")
   | other =>
       throw s!"{path}.tag: unsupported source annotation tag {repr other}"
 
@@ -1126,6 +1145,21 @@ private def decodeMethodMember (tag path : String) (isPure : Bool) (json : Json)
     isOpaque
   }
 
+private def decodeMethodSubtypeProofMember (path : String) (json : Json) :
+    Except String MethodSubtypeProofMember := do
+  let obj ← taggedObj path json "MethodSubtypeProof"
+    ["args", "body", "receiver", "results", "source", "subProxy", "superProxy", "superT", "tag"]
+  return {
+    source := (← decodeSource s!"{path}.source" (← GoLean.StrictJson.field path obj "source")),
+    subProxy := (← decodeMethodProxyWithTag "MethodProxy" s!"{path}.subProxy" (← GoLean.StrictJson.field path obj "subProxy")),
+    superT := (← decodeTy s!"{path}.superT" (← GoLean.StrictJson.field path obj "superT")),
+    superProxy := (← decodeMethodProxyWithTag "MethodProxy" s!"{path}.superProxy" (← GoLean.StrictJson.field path obj "superProxy")),
+    receiver := (← decodeParameterWithTag "In" s!"{path}.receiver" (← GoLean.StrictJson.field path obj "receiver")),
+    args := (← decodeArrayOf s!"{path}.args" (← GoLean.StrictJson.field path obj "args") decodeParam),
+    results := (← decodeArrayOf s!"{path}.results" (← GoLean.StrictJson.field path obj "results") decodeParam),
+    body := (← decodeOptionOf s!"{path}.body" (← GoLean.StrictJson.field path obj "body") decodeMethodBody)
+  }
+
 private def decodeMPredicateMember (path : String) (json : Json) : Except String MPredicateMember := do
   let obj ← taggedObj path json "MPredicate" ["args", "body", "name", "receiver", "source", "tag"]
   return {
@@ -1144,6 +1178,7 @@ private def decodeMember (path : String) (json : Json) : Except String Member :=
   | "Method" => return .method (← decodeMethodMember "Method" path false json)
   | "PureMethod" => return .method (← decodeMethodMember "PureMethod" path true json)
   | "MPredicate" => return .mPredicate (← decodeMPredicateMember path json)
+  | "MethodSubtypeProof" => return .methodSubtypeProof (← decodeMethodSubtypeProofMember path json)
   | other => throw s!"{path}.tag: unsupported member tag {repr other}"
 
 private def decodeProgram (path : String) (json : Json) : Except String Program := do

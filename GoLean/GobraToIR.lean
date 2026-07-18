@@ -105,6 +105,7 @@ def buildSymbolMap (members : Array GoLean.GobraJson.Member) : Except String Sym
           throw s!"method name collision on canonical name {canonical.key} (from {uniqueName})"
         map := { map with methods := map.methods.push (uniqueName, canonical) }
     | .mPredicate _ => pure ()
+    | .methodSubtypeProof _ => pure ()
   return map
 
 private def lowerIntegerKind? : GoLean.GobraJson.IntegerKind → Option GoLean.GoCore.IntKind
@@ -751,6 +752,10 @@ def lowerProgram (program : GoLean.GobraJson.Program) : Except String GoLean.GoC
         | some _ => funcs := funcs.push (← lowerMethodMember symbols member)
         | none => funcs := funcs.push (← lowerBodylessMethodMember symbols member)
     | .mPredicate _ =>
+      pure ()
+    | .methodSubtypeProof _ =>
+      -- Proof evidence is wire metadata only; it must never become an
+      -- executable GoCore function or dispatch entry.
       pure ()
   let mut methods := #[]
   for member in program.members do
