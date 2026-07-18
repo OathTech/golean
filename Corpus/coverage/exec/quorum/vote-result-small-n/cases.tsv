@@ -1,0 +1,7 @@
+# id	subject	args	expected_status	expected_reason	features
+n1-won	voteN1Won	-	ok	-	quorum,maps,methods,range,comma_ok
+n1-lost	voteN1Lost	-	ok	-	quorum,maps,methods,range,comma_ok
+n1-pending	voteN1Pending	-	ok	-	quorum,maps,methods,len
+n2-won	voteN2Won	-	ok	-	quorum,maps,methods,range,comma_ok
+n2-one-yes-lost	voteN2OneYesLost	-	ok	-	quorum,maps,methods,range,comma_ok
+n2-one-missing-pending	voteN2OneMissingPending	-	ok	-	quorum,maps,methods,range,comma_ok

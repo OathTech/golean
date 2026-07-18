@@ -1,0 +1,4 @@
+# id	subject	args	expected_status	expected_reason	features
+n1-acked	committedN1Acked	-	ok	-	quorum,maps,slices,methods,indexing
+n1-unacked	committedN1Unacked	-	ok	-	quorum,maps,slices,methods,indexing
+all-unacked	committedAllUnacked	-	ok	-	quorum,maps,slices,methods,indexing
