@@ -1,0 +1,2 @@
+# id	subject	args	expected_status	expected_reason	features
+-	definedMapReceiver	-	ok	-	methods,defined_type,maps,range,comma_ok,quorum
