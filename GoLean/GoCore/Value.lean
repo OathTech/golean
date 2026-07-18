@@ -106,9 +106,18 @@ structure Addr where
   id : Nat
   deriving Repr, BEq, DecidableEq
 
+/-- Semantic type identity. The key is the canonical source-level type name.
+It is constructed by frontend lowering, which strips frontend name mangling
+in exactly one place and fails closed on collisions between distinct
+declared types; raw frontend names must not be used as type identity. The
+string representation is transitional pending a compact ID table. -/
+structure TypeId where
+  key : String
+  deriving Repr, BEq, DecidableEq, Inhabited
+
 inductive Loc where
   | base (addr : Addr)
-  | field (base : Loc) (typeName fieldName : String)
+  | field (base : Loc) (typeId : TypeId) (fieldName : String)
   | index (base : Loc) (index : Int)
   deriving Repr, BEq, DecidableEq
 
@@ -215,7 +224,7 @@ inductive GoValue where
   | addr (loc : Loc)
   | nil
   | interface (dynamic : String) (value : GoValue)
-  | struct (typeName : String) (fields : Array (String × GoValue))
+  | struct (typeId : TypeId) (fields : Array (String × GoValue))
   | array (values : Array GoValue)
   | slice (value : SliceValue)
   | map (value : MapValue)

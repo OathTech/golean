@@ -4,6 +4,58 @@ This file is the persistent handoff log for the semantics upgrade defined in
 `docs/gocore-semantics-upgrade-goal.md`. Newest entry first. Each entry either
 appends to or explicitly supersedes the previous one.
 
+## 2026-07-17: Phase 2 slice 2 — TypeId for defined and interface types
+
+Branch:
+- `gocore-semantics-upgrade`
+
+Changed:
+- `GoLean/GoCore/Value.lean`: added `TypeId` (newtype over the canonical
+  source-level type name); `Loc.field` and `GoValue.struct` carry `TypeId`.
+- `GoLean/GoCore/Syntax.lean`: `Ty.defined`/`Ty.interface` carry `TypeId`;
+  `Expr.fieldGet`/`Expr.fieldAddr` carry `TypeId`; `Program.typeDefs` keyed
+  by `TypeId`.
+- `GoLean/GoCore/State.lean`: `TypeEnv` keyed by `TypeId`.
+- `GoLean/GoCore/Ops.lean`, `GoLean/GoCore/Eval.lean`: identity comparisons
+  now compare `TypeId`s; diagnostics print `.key`.
+- `GoLean/GobraToIR.lean`: added `stripGobraTypeSuffix` and
+  `typeIdOfGobraName` as the only `TypeId` construction point from Gobra
+  names; `lowerProgram` fails closed when two distinct declared Gobra type
+  names collide on one canonical name (`checkTypeIdCollisions`).
+- `GoLean/CLI.lean`: struct and field-address observations print the
+  canonical `.key`, so observed type names are source-level (matching the
+  Go oracle's `typ.Name()`), not Gobra-mangled.
+- `Tests/GobraEval.lean`: fixtures updated mechanically.
+
+Design note: `TypeId` construction from Gobra names uses a deterministic
+strip validated for collisions at program level, rather than a threaded
+lookup map, because `lowerTy` is called from pure expression-lowering
+context. When Phase 3 makes type declarations explicit wire data, the
+constructor can switch to a declaration-backed map without touching GoCore.
+Interface dynamic tags remain derived strings (`id.key`, `*id.key`,
+primitive names) pending the Phase 5 interface rebuild; they now carry
+canonical names instead of mangled ones.
+
+Phase:
+- Phase 2 in progress (slice 2 of ~3). Next: slice 2c, method canonical
+  keys from receiver `TypeId` plus method name, replacing the transitional
+  Gobra `uniqueName` keys.
+
+Validation:
+- `lake build` (library and test executables): pass.
+- `lake exe gobra-eval-tests`: 46 ok. `lake exe gobra-json-tests`: pass.
+- `scripts/coverage run <136 cached-export case ids>`: 136 cases, 123 pass,
+  13 fail; failing case-id set identical to the Phase 0 baseline. Interface
+  diagnostics now show canonical names (`*nilCompareA`,
+  `assertInterfaceReader`) instead of Gobra-mangled ones.
+- `git diff --check`: clean.
+
+Regressions:
+- none.
+
+Commit status:
+- committed (this entry accompanies the slice commit).
+
 ## 2026-07-17: Phase 2 slice 1 — FuncId and the lowering symbol map
 
 Branch:

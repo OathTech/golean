@@ -21,8 +21,8 @@ inductive Ty where
   | slice (elem : Ty)
   | map (key value : Ty)
   | pointer (elem : Ty)
-  | interface (name : String)
-  | defined (name : String)
+  | interface (id : TypeId)
+  | defined (id : TypeId)
   | unsupported (feature : String)
   deriving Repr, BEq, Inhabited
 
@@ -76,8 +76,8 @@ inductive Expr where
   | ref (id : String)
   | deref (ptr : Expr) (typ : Ty)
   | structLit (typ : Ty) (args : Array Expr)
-  | fieldGet (recv : Expr) (typeName fieldName : String)
-  | fieldAddr (base : Expr) (typeName fieldName : String)
+  | fieldGet (recv : Expr) (typeId : TypeId) (fieldName : String)
+  | fieldAddr (base : Expr) (typeId : TypeId) (fieldName : String)
   | arrayLit (length : Nat) (elem : Ty) (args : Array (Int × Expr))
   | defaultValue (typ : Ty)
   | toInterface (target dynamic : Ty) (operand : Expr)
@@ -135,7 +135,7 @@ structure MethodInfo where
   deriving Repr, BEq
 
 structure Program where
-  typeDefs : Array (String × TypeDef) := #[]
+  typeDefs : Array (TypeId × TypeDef) := #[]
   funcs : Array Func
   methods : Array MethodInfo := #[]
   deriving Repr, BEq

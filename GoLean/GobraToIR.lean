@@ -26,6 +26,22 @@ private def stripGobraFunctionSuffix (name : String) : String :=
         name
   | _ => name
 
+private def stripGobraTypeSuffix (name : String) : String :=
+  match name.splitOn "_" |>.reverse with
+  | "T" :: hash :: rest =>
+      if hash.length >= 6 && isHexString hash && !rest.isEmpty then
+        String.intercalate "_" rest.reverse
+      else
+        name
+  | _ => name
+
+/-- The only construction point for `TypeId` from Gobra export names. The
+strip is deterministic, so references and declarations agree; `lowerProgram`
+separately fails closed when two distinct declared Gobra type names collide
+on the same canonical name. -/
+def typeIdOfGobraName (name : String) : GoLean.TypeId :=
+  ⟨stripGobraTypeSuffix name⟩
+
 /-- Explicit symbol map from Gobra export names to GoCore semantic function
 identities. This is the only place Gobra name mangling is interpreted: the
 map is built in one pass over the program members before any lowering, and
@@ -114,8 +130,8 @@ partial def lowerTy : GoLean.GobraJson.Ty → GoLean.GoCore.Ty
       else
         .array length.toNat (lowerTy elem)
   | .pointer elem _ => .pointer (lowerTy elem)
-  | .defined name _ => .defined name
-  | .interface name _ => .interface name
+  | .defined name _ => .defined (typeIdOfGobraName name)
+  | .interface name _ => .interface (typeIdOfGobraName name)
   | .struct _ _ _ => .unsupported "anonymous struct type"
   | .string _ => .string
   | .void => .unsupported "void type"
@@ -147,12 +163,12 @@ def lowerVariable (var : GoLean.GobraJson.Variable) : GoLean.GoCore.Param :=
 def lowerFieldDef (field : GoLean.GobraJson.FieldInfo) : GoLean.GoCore.FieldDef :=
   { name := field.name, typ := lowerTy field.typ }
 
-private def typeNameOfTy? : GoLean.GoCore.Ty → Option String
-  | .defined name => some name
+private def typeNameOfTy? : GoLean.GoCore.Ty → Option GoLean.TypeId
+  | .defined id => some id
   | _ => none
 
-private def pointerTypeNameOfTy? : GoLean.GoCore.Ty → Option String
-  | .pointer (.defined name) => some name
+private def pointerTypeNameOfTy? : GoLean.GoCore.Ty → Option GoLean.TypeId
+  | .pointer (.defined id) => some id
   | _ => none
 
 private def varRefTy : GoLean.GobraJson.VarRef → GoLean.GobraJson.Ty
@@ -573,8 +589,9 @@ private def lowerMethodBody (symbols : SymbolMap) (body : GoLean.GobraJson.Metho
   .block (lowerDecls body.decls)
     (body.seqn.stmts.map (lowerStmtWithReturnPost symbols postprocessing) ++ postprocessing)
 
-private def hasTypeDef (defs : Array (String × GoLean.GoCore.TypeDef)) (name : String) : Bool :=
-  defs.any (fun (existing, _) => existing == name)
+private def hasTypeDef (defs : Array (GoLean.TypeId × GoLean.GoCore.TypeDef))
+    (id : GoLean.TypeId) : Bool :=
+  defs.any (fun (existing, _) => existing == id)
 
 private def structFields? : GoLean.GobraJson.Ty → Option (Array GoLean.GobraJson.FieldInfo)
   | .struct fields _ghost _ => some fields
@@ -599,7 +616,8 @@ private def firstStructFieldsBeforeNextDefined? (currentName : String) :
 
 private def lowerTypeDefsFromTypes : List GoLean.GobraJson.Ty →
     Option (Array GoLean.GobraJson.FieldInfo) →
-    Array (String × GoLean.GoCore.TypeDef) → Array (String × GoLean.GoCore.TypeDef)
+    Array (GoLean.TypeId × GoLean.GoCore.TypeDef) →
+    Array (GoLean.TypeId × GoLean.GoCore.TypeDef)
   | .nil, _, defs => defs
   | ty :: rest, lastStruct, defs =>
       let lastStruct :=
@@ -609,7 +627,7 @@ private def lowerTypeDefsFromTypes : List GoLean.GobraJson.Ty →
       let defs :=
         match ty with
         | .defined name _ =>
-            if hasTypeDef defs name then
+            if hasTypeDef defs (typeIdOfGobraName name) then
               defs
             else
               let fields? :=
@@ -617,14 +635,31 @@ private def lowerTypeDefsFromTypes : List GoLean.GobraJson.Ty →
                 | some fields => some fields
                 | none => lastStruct
               match fields? with
-              | some fields => defs.push (name, .struct (fields.map lowerFieldDef))
+              | some fields => defs.push (typeIdOfGobraName name, .struct (fields.map lowerFieldDef))
               | none => defs
         | _ => defs
       lowerTypeDefsFromTypes rest lastStruct defs
 
 def lowerTypeDefs (types : Array GoLean.GobraJson.Ty) :
-    Array (String × GoLean.GoCore.TypeDef) :=
+    Array (GoLean.TypeId × GoLean.GoCore.TypeDef) :=
   lowerTypeDefsFromTypes types.toList none #[]
+
+/-- Fail closed when two distinct declared Gobra type names strip to the same
+canonical `TypeId`. Deterministic stripping makes references and declarations
+agree, but it must never silently merge distinct types. -/
+private def checkTypeIdCollisions (types : Array GoLean.GobraJson.Ty) :
+    Except String Unit := do
+  let mut seen : Array (GoLean.TypeId × String) := #[]
+  for ty in types do
+    match ty with
+    | .defined name _ =>
+        let id := typeIdOfGobraName name
+        match seen.find? (fun (existing, _) => existing == id) with
+        | some (_, existingName) =>
+            if existingName != name then
+              throw s!"type name collision on canonical name {id.key} (from {existingName} and {name})"
+        | none => seen := seen.push (id, name)
+    | _ => pure ()
 
 private def resolvedFunctionId (symbols : SymbolMap) (gobraName : String) :
     Except String GoLean.GoCore.FuncId :=
@@ -691,6 +726,7 @@ def lowerMethodInfo (symbols : SymbolMap) (member : GoLean.GobraJson.MethodMembe
   }
 
 def lowerProgram (program : GoLean.GobraJson.Program) : Except String GoLean.GoCore.Program := do
+  checkTypeIdCollisions program.types
   let symbols ← buildSymbolMap program.members
   let mut funcs := #[]
   for member in program.members do

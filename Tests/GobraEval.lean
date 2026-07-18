@@ -62,30 +62,30 @@ private def corePointerIdentityFunction : GoCore.Func := {
 }
 
 private def coreCellTypes : GoCore.TypeEnv :=
-  [("cell", .struct #[{ name := "valA", typ := .int }])]
+  [(⟨"cell"⟩, .struct #[{ name := "valA", typ := .int }])]
 
 private def coreStructFunction : GoCore.Func := {
   id := ⟨"struct_F"⟩,
   args := #[],
   results := #[coreParam "z"],
   body := .block
-    #[{ id := "x", typ := .defined "cell" }]
+    #[{ id := "x", typ := .defined ⟨"cell"⟩ }]
     #[
-      .assign (.var "x") (.structLit (.defined "cell") #[.intLit 42]),
-      .assign (.addr (.fieldAddr (.ref "x") "cell" "valA")) (.intLit 17),
-      .assign (.var "z") (.fieldGet (.deref (.ref "x") (.defined "cell")) "cell" "valA")
+      .assign (.var "x") (.structLit (.defined ⟨"cell"⟩) #[.intLit 42]),
+      .assign (.addr (.fieldAddr (.ref "x") ⟨"cell"⟩ "valA")) (.intLit 17),
+      .assign (.var "z") (.fieldGet (.deref (.ref "x") (.defined ⟨"cell"⟩)) ⟨"cell"⟩ "valA")
     ]
 }
 
 private def coreSetCellFunction : GoCore.Func := {
   id := ⟨"setCell_F"⟩,
   args := #[
-    { id := "p", typ := .pointer (.defined "cell") },
+    { id := "p", typ := .pointer (.defined ⟨"cell"⟩) },
     { id := "v", typ := .int }
   ],
   results := #[],
   body := .assign
-    (.addr (.fieldAddr (.var "p") "cell" "valA"))
+    (.addr (.fieldAddr (.var "p") ⟨"cell"⟩ "valA"))
     (.var "v")
 }
 
@@ -94,11 +94,11 @@ private def coreCallFunction : GoCore.Func := {
   args := #[],
   results := #[coreParam "z"],
   body := .block
-    #[{ id := "x", typ := .defined "cell" }]
+    #[{ id := "x", typ := .defined ⟨"cell"⟩ }]
     #[
-      .assign (.var "x") (.structLit (.defined "cell") #[.intLit 42]),
+      .assign (.var "x") (.structLit (.defined ⟨"cell"⟩) #[.intLit 42]),
       .call #[] ⟨"setCell_F"⟩ #[.ref "x", .intLit 9],
-      .assign (.var "z") (.fieldGet (.var "x") "cell" "valA")
+      .assign (.var "z") (.fieldGet (.var "x") ⟨"cell"⟩ "valA")
     ]
 }
 

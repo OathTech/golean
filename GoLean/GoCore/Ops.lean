@@ -35,7 +35,7 @@ partial def coerceStoredValue : GoValue → GoValue → Except GoError GoValue
       return .array out
   | .struct oldType oldFields, .struct newType newFields => do
       if oldType != newType then
-        stuck s!"struct store type mismatch: {oldType} vs {newType}"
+        stuck s!"struct store type mismatch: {oldType.key} vs {newType.key}"
       if oldFields.size != newFields.size then
         stuck s!"struct store field count mismatch: {oldFields.size} vs {newFields.size}"
       let mut out := #[]
@@ -169,11 +169,11 @@ mutual
         match Heap.lookup state.heap loc with
         | some value => return value
         | none => stuck s!"unbound GoCore heap location: {repr loc}"
-    | .field base typeName fieldName => do
+    | .field base typeId fieldName => do
         match ← loadLoc state base with
         | .struct actualType fields =>
-            if actualType != typeName then
-              stuck s!"expected struct {typeName}, got struct {actualType}"
+            if actualType != typeId then
+              stuck s!"expected struct {typeId.key}, got struct {actualType.key}"
             match StructFields.lookup fields fieldName with
             | some value => return value
             | none => stuck s!"unknown GoCore struct field: {fieldName}"
@@ -190,11 +190,11 @@ mutual
           | some old => coerceStoredValue old value
           | none => pure value
         return { state with heap := Heap.set state.heap loc value }
-    | .field base typeName fieldName, value => do
+    | .field base typeId fieldName, value => do
         match ← loadLoc state base with
         | .struct actualType fields =>
-            if actualType != typeName then
-              stuck s!"expected struct {typeName}, got struct {actualType}"
+            if actualType != typeId then
+              stuck s!"expected struct {typeId.key}, got struct {actualType.key}"
             let updated ← StructFields.set fields fieldName value
             storeLoc state base (.struct actualType updated)
         | other => stuck s!"expected struct base for field store, got {repr other}"
@@ -216,8 +216,8 @@ partial def resolveDefinedAliases (state : ExecState) : Ty → Ty
 
 partial def dynamicTypeName? (state : ExecState) (typ : Ty) : Option String :=
   match resolveDefinedAliases state typ with
-  | .defined name => some name
-  | .pointer (.defined name) => some s!"*{name}"
+  | .defined id => some id.key
+  | .pointer (.defined id) => some s!"*{id.key}"
   | .bool => some "bool"
   | .int kind => some kind.name
   | .string => some "string"
@@ -233,13 +233,13 @@ def methodInfoByFuncId? (state : ExecState) (id : FuncId) : Option MethodInfo :=
 
 def methodRecvInterfaceName? (state : ExecState) (method : MethodInfo) : Option String :=
   match resolveDefinedAliases state method.recv with
-  | .interface name => some name
+  | .interface id => some id.key
   | _ => none
 
 def methodRecvDynamicName? (state : ExecState) (method : MethodInfo) : Option String :=
   match resolveDefinedAliases state method.recv with
-  | .defined name => some name
-  | .pointer (.defined name) => some s!"*{name}"
+  | .defined id => some id.key
+  | .pointer (.defined id) => some s!"*{id.key}"
   | _ => none
 
 def interfaceMethodRequirements (state : ExecState) (interfaceName : String) : Array MethodInfo :=
@@ -295,15 +295,15 @@ mutual
         | some (.alias target) => normalizeValueForTy state target value
         | some (.struct fields) => normalizeStructValueForFields state name fields value
         | some (.unsupported feature) => unsupported s!"normalizing {feature}"
-        | none => unsupported s!"normalizing unknown defined type {name}"
+        | none => unsupported s!"normalizing unknown defined type {name.key}"
     | .unsupported feature, _ => unsupported s!"normalizing {feature}"
     | _, value => return value
 
-  partial def normalizeStructValueForFields (state : ExecState) (name : String)
+  partial def normalizeStructValueForFields (state : ExecState) (name : TypeId)
       (fields : Array FieldDef) : GoValue → Except GoError GoValue
     | .struct actual fieldsValue => do
         if actual != name then
-          stuck s!"struct value type mismatch: expected {name}, got {actual}"
+          stuck s!"struct value type mismatch: expected {name.key}, got {actual.key}"
         if fieldsValue.size != fields.size then
           stuck s!"struct value field count mismatch: expected {fields.size}, got {fieldsValue.size}"
         let mut out := #[]
@@ -317,7 +317,7 @@ mutual
               i := i + 1
           | none => stuck s!"missing struct field value at index {i}"
         return .struct name out
-    | value => stuck s!"expected struct {name} value, got {repr value}"
+    | value => stuck s!"expected struct {name.key} value, got {repr value}"
 end
 
 partial def convertValueToTy (state : ExecState) (typ : Ty) (value : GoValue) :
@@ -328,9 +328,9 @@ partial def convertValueToTy (state : ExecState) (typ : Ty) (value : GoValue) :
   | .defined name, _ =>
       match TypeEnv.lookup state.types name with
       | some (.alias target) => convertValueToTy state target value
-      | some (.struct _) => unsupported s!"conversion to struct type {name}"
+      | some (.struct _) => unsupported s!"conversion to struct type {name.key}"
       | some (.unsupported feature) => unsupported s!"conversion to {feature}"
-      | none => unsupported s!"conversion to unknown defined type {name}"
+      | none => unsupported s!"conversion to unknown defined type {name.key}"
   | .unsupported feature, _ => unsupported s!"conversion to {feature}"
   | other, _ => unsupported s!"conversion to {repr other}"
 
@@ -357,7 +357,7 @@ mutual
             return .struct name values
         | some (.alias target) => defaultValue state target
         | some (.unsupported feature) => unsupported s!"default value for {feature}"
-        | none => unsupported s!"default value for unknown defined type {name}"
+        | none => unsupported s!"default value for unknown defined type {name.key}"
     | .unsupported feature => unsupported s!"default value for {feature}"
 
   partial def buildStructValue (state : ExecState) (typ : Ty) (args : Array GoValue) :
@@ -367,7 +367,7 @@ mutual
         match TypeEnv.lookup state.types name with
         | some (.struct fields) =>
             if fields.size != args.size then
-              stuck s!"struct {name} literal expected {fields.size} field value(s), got {args.size}"
+              stuck s!"struct {name.key} literal expected {fields.size} field value(s), got {args.size}"
             let mut values := #[]
             let mut i := 0
             for field in fields do
@@ -379,7 +379,7 @@ mutual
             return .struct name values
         | some (.alias target) => buildStructValue state target args
         | some (.unsupported feature) => unsupported s!"struct literal for {feature}"
-        | none => unsupported s!"struct literal for unknown defined type {name}"
+        | none => unsupported s!"struct literal for unknown defined type {name.key}"
     | .unsupported feature => unsupported s!"struct literal for {feature}"
     | other => unsupported s!"struct literal for non-defined type {repr other}"
 
@@ -413,7 +413,7 @@ partial def typeAssertValue (state : ExecState) (value : GoValue) (targetTy : Ty
   | .interface dynamicName inner =>
       match resolveDefinedAliases state targetTy with
       | .interface interfaceName =>
-          if dynamicImplementsInterface state dynamicName interfaceName then
+          if dynamicImplementsInterface state dynamicName interfaceName.key then
             return (.interface dynamicName inner, true)
           else
             return (failed, false)
@@ -435,9 +435,9 @@ partial def goTypeNameForMessage (state : ExecState) (typ : Ty) : String :=
   | .pointer elem => s!"*{goTypeNameForMessage state elem}"
   | .slice elem => s!"[]{goTypeNameForMessage state elem}"
   | .map key value => s!"map[{goTypeNameForMessage state key}]{goTypeNameForMessage state value}"
-  | .interface "empty_interface" => "interface {}"
-  | .interface name => name
-  | .defined name => name
+  | .interface ⟨"empty_interface"⟩ => "interface {}"
+  | .interface name => name.key
+  | .defined name => name.key
   | .array length elem => s!"[{length}]{goTypeNameForMessage state elem}"
   | .unsupported feature => feature
 
@@ -538,9 +538,9 @@ partial def valueEq : ExecState → Ty → GoValue → GoValue → Except GoErro
           match left, right with
           | .struct leftType leftFields, .struct rightType rightFields => do
               if leftType != name then
-                stuck s!"left struct equality type mismatch: expected {name}, got {leftType}"
+                stuck s!"left struct equality type mismatch: expected {name.key}, got {leftType.key}"
               if rightType != name then
-                stuck s!"right struct equality type mismatch: expected {name}, got {rightType}"
+                stuck s!"right struct equality type mismatch: expected {name.key}, got {rightType.key}"
               if leftFields.size != fields.size then
                 stuck s!"left struct equality field count mismatch: expected {fields.size}, got {leftFields.size}"
               if rightFields.size != fields.size then
@@ -558,9 +558,9 @@ partial def valueEq : ExecState → Ty → GoValue → GoValue → Except GoErro
                     i := i + 1
                 | _, _ => stuck s!"missing struct equality operand at field {i}"
               return true
-          | _, _ => stuck s!"struct equality expected struct {name} operands, got {repr left} and {repr right}"
+          | _, _ => stuck s!"struct equality expected struct {name.key} operands, got {repr left} and {repr right}"
       | some (.unsupported feature) => unsupported s!"equality for {feature}"
-      | none => unsupported s!"equality for unknown defined type {name}"
+      | none => unsupported s!"equality for unknown defined type {name.key}"
   | _, .unsupported feature, _, _ => unsupported s!"equality for {feature}"
 
 partial def mapEntryIndex? (state : ExecState) (keyTy : Ty) (entries : Array (GoValue × GoValue))

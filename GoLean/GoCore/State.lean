@@ -7,7 +7,7 @@ open GoLean
 
 abbrev LocalEnv := List (String × Loc)
 abbrev Heap := List (Loc × GoValue)
-abbrev TypeEnv := List (String × TypeDef)
+abbrev TypeEnv := List (TypeId × TypeDef)
 
 structure ExecState where
   types : TypeEnv := []
@@ -61,10 +61,10 @@ def Heap.set : Heap → Loc → GoValue → Heap
       else
         (loc, old) :: Heap.set rest needle value
 
-def TypeEnv.lookup : TypeEnv → String → Option TypeDef
+def TypeEnv.lookup : TypeEnv → TypeId → Option TypeDef
   | [], _ => none
-  | (name, defn) :: rest, needle =>
-      if name == needle then some defn else TypeEnv.lookup rest needle
+  | (id, defn) :: rest, needle =>
+      if id == needle then some defn else TypeEnv.lookup rest needle
 
 def StructFields.lookup : Array (String × GoValue) → String → Option GoValue
   | fields, needle =>

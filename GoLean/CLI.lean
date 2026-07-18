@@ -174,11 +174,11 @@ private def parseGobraRunArgs : List String → GobraRunArgs → Except String G
 
 private def locJson : Loc → Json
   | .base addr => Json.mkObj [("tag", Json.str "addr"), ("id", Lean.toJson addr.id)]
-  | .field base typeName fieldName =>
+  | .field base typeId fieldName =>
       Json.mkObj [
         ("tag", Json.str "fieldAddr"),
         ("base", locJson base),
-        ("typeName", Json.str typeName),
+        ("typeName", Json.str typeId.key),
         ("fieldName", Json.str fieldName)
       ]
   | .index base index =>
@@ -201,10 +201,10 @@ private partial def goValueJson : GoValue → Json
         ("dynamic", Json.str dynamic),
         ("value", goValueJson value)
       ]
-  | .struct typeName fields =>
+  | .struct typeId fields =>
       Json.mkObj [
         ("tag", Json.str "struct"),
-        ("typeName", Json.str typeName),
+        ("typeName", Json.str typeId.key),
         ("fields", Json.arr (fields.map (fun (name, value) =>
           Json.mkObj [("name", Json.str name), ("value", goValueJson value)])))
       ]

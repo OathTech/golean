@@ -245,7 +245,7 @@ mutual
         match pair.1 with
         | .struct actualType fields =>
             if actualType != typeName then
-              stuck s!"expected struct {typeName}, got struct {actualType}"
+              stuck s!"expected struct {typeName.key}, got struct {actualType.key}"
             match StructFields.lookup fields fieldName with
             | some value => return (value, pair.2)
             | none => stuck s!"unknown GoCore struct field: {fieldName}"
