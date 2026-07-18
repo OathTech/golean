@@ -4,6 +4,53 @@ This file is the persistent handoff log for the semantics upgrade defined in
 `docs/gocore-semantics-upgrade-goal.md`. Newest entry first. Each entry either
 appends to or explicitly supersedes the previous one.
 
+## 2026-07-17: Phase 2 slice 3 — receiver-scoped method canonical keys
+
+Branch:
+- `gocore-semantics-upgrade`
+
+Changed:
+- `GoLean/GobraToIR.lean`: method entries in the symbol map now get
+  canonical keys `<receiver type canonical name>.<method name>` (via
+  `receiverTypeKey?` over defined, pointer-to-defined, and interface
+  receiver types), replacing the transitional Gobra `uniqueName` keys. Go
+  forbids declaring the same method name on both receiver forms of a type,
+  so the key is unique across value and pointer receivers. Methods with
+  receiver shapes outside those three fail closed at map construction.
+
+With this slice, Phase 2's required outcomes are met:
+- semantic identities exist (`FuncId`, `TypeId`) and are the authority for
+  function lookup, calls, dispatch metadata, struct/field identity, type
+  environment keys, and interface dynamic-tag derivation;
+- Gobra-mangled names are interpreted only inside the symbol map and
+  `typeIdOfGobraName`, both fail-closed on collision;
+- lowering builds an explicit symbol map;
+- remaining raw-string sites, enumerated as transitional: interface dynamic
+  tags are derived strings (`id.key`, `*id.key`, primitive kind names) and
+  the `empty_interface` sentinel — both scheduled for the Phase 5 interface
+  rebuild; `MethodInfo.name` holds the method source name pending real
+  method-set semantics; local variable names remain strings by design
+  (lexical scoping is Phase 4).
+
+Phase:
+- Phase 2 complete pending validation below. Next: Phase 3, Gobra adapter
+  cleanup — decode `MethodSubtypeProof` as ignorable wire metadata instead
+  of a json-check rejection (this blocks `methods/interface-dispatch` at
+  decode today), and tighten bodyless/type-recovery fail-closed behavior.
+
+Validation:
+- `lake build` (library and test executables): pass.
+- `lake exe gobra-eval-tests`: 46 ok. `lake exe gobra-json-tests`: pass.
+- `scripts/coverage run <136 cached-export case ids>`: 136 cases, 123 pass,
+  13 fail; failing case-id set identical to the Phase 0 baseline.
+- `git diff --check`: clean.
+
+Regressions:
+- none.
+
+Commit status:
+- committed (this entry accompanies the slice commit).
+
 ## 2026-07-17: Phase 2 slice 2 — TypeId for defined and interface types
 
 Branch:

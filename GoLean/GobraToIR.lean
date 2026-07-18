@@ -42,13 +42,20 @@ on the same canonical name. -/
 def typeIdOfGobraName (name : String) : GoLean.TypeId :=
   ⟨stripGobraTypeSuffix name⟩
 
+private def receiverTypeKey? : GoLean.GobraJson.Ty → Option String
+  | .defined name _ => some (stripGobraTypeSuffix name)
+  | .pointer (.defined name _) _ => some (stripGobraTypeSuffix name)
+  | .interface name _ => some (stripGobraTypeSuffix name)
+  | _ => none
+
 /-- Explicit symbol map from Gobra export names to GoCore semantic function
 identities. This is the only place Gobra name mangling is interpreted: the
 map is built in one pass over the program members before any lowering, and
 call lowering resolves callees through it, failing closed on names that no
-declared member exports. Method entries currently keep the Gobra
-`uniqueName` as their transitional canonical key until `TypeId` lands and
-methods can be keyed by receiver type and method name. -/
+declared member exports. Method canonical keys are
+`<receiver type canonical name>.<method name>`; Go forbids a type from
+declaring the same method name on both receiver forms, so the key is
+unique across value and pointer receivers. -/
 structure SymbolMap where
   functions : Array (String × GoLean.GoCore.FuncId) := #[]
   methods : Array (String × GoLean.GoCore.FuncId) := #[]
@@ -87,11 +94,15 @@ def buildSymbolMap (members : Array GoLean.GobraJson.Member) : Except String Sym
         map := { map with functions := map.functions.push (gobraName, canonical) }
     | .method member =>
         let uniqueName := member.name.uniqueName
-        let canonical : GoLean.GoCore.FuncId := ⟨uniqueName⟩
+        let recvKey ←
+          match receiverTypeKey? member.receiver.typ with
+          | some key => pure key
+          | none => throw s!"method {uniqueName} has unsupported receiver type for the symbol map"
+        let canonical : GoLean.GoCore.FuncId := ⟨s!"{recvKey}.{member.name.name}"⟩
         if (map.method? uniqueName).isSome then
           throw s!"duplicate Gobra method unique name {uniqueName}"
         if map.hasCanonical canonical then
-          throw s!"method name collision on canonical name {canonical.key}"
+          throw s!"method name collision on canonical name {canonical.key} (from {uniqueName})"
         map := { map with methods := map.methods.push (uniqueName, canonical) }
     | .mPredicate _ => pure ()
   return map
