@@ -167,6 +167,36 @@ Layer 1 without Layer 3 proves features work in isolation but not in
 composition; Layer 3 without Layer 1 finds bugs but not their cause. All three
 are required for the sufficiency claim.
 
+### Coverage status (2026-07-18)
+
+Idiom coverage for the verification-relevant quorum target is **complete** in
+the corpus (all `quorum`-tagged; run `scripts/coverage run --tag quorum`). Every
+case is Go-oracle-green and currently frontend-export-blocked under Gobra — the
+exact target set for the native frontend.
+
+Idioms covered: defined types over uint64/uint8/map/array; value-receiver
+methods on defined map/primitive/array types; multi-value-return methods;
+the `AckedIndexer` interface + dynamic dispatch (hit/miss); `map[K]struct{}`
+sets; nested defined types (`map[uint64]Index`); map range + comma-ok;
+comma-ok from method/interface calls; nil-map zero-value reads;
+`make([]T,0,cap)`/`make([]T,n)`; on-stack-else-heap slice with fill-from-right;
+array indexing and range over a defined array (`JointConfig`); `len`; the
+`n/2+1` threshold; defined↔underlying + narrowing conversions; typed
+`1 + iota` on a defined type.
+
+Edge probes: VoteResult across won/lost/pending/tie/exact/one-short and the
+threshold at n=1,2,3(odd),4(even),7(on-stack),8(heap); CommittedIndex at
+empty→MaxUint64, median, unacked-drags-median, n=1 acked/unacked, all-unacked;
+Joint agree/disagree-lost/disagree-pending/both-pending, committed-min,
+ids-union; MaxUint64 and uint8 wrap through conversions and the observation
+pipeline.
+
+Still frontend/extern-pending (not corpus gaps): `slices.Sort`-faithful
+CommittedIndex (lands with the extern; the hand-rolled sort already pins the
+algorithm), and the display functions (`String`/`Describe`,
+`[...]uint8{}` literal, function-local struct type) which are not
+verification-relevant.
+
 ### Buildout order
 
 Add the Layer-1 gap cases as the matching frontend slice reaches them (a slice
