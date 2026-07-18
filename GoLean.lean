@@ -10,3 +10,4 @@ import GoLean.GobraToIR
 import GoLean.GobraEval
 import GoLean.Artifact.Gobra
 import GoLean.CLI
+import GoLean.NativeToIR

@@ -170,7 +170,9 @@ if ! run_with_timeout "$LAKE_BUILD_TIMEOUT_SECONDS" lake build; then
 fi
 
 EXPORT_LOG="$OUT/export.log"
-if [[ "$FRONTEND" != "gobra" ]]; then
+if [[ "$FRONTEND" == "native" ]]; then
+  echo "native frontend: per-case type-check + emit (no batch export)"
+elif [[ "$FRONTEND" != "gobra" ]]; then
   echo "unsupported frontend '$FRONTEND'; continuing to classify every manifest row."
   export_status=2
 elif [[ -s "$EXPORT_MANIFEST" ]]; then
@@ -324,37 +326,50 @@ while IFS=$'\t' read -r id go_dir function_name arg_ints expected_status feature
   fi
 
   package_go_files="$(package_go_file_count "$go_dir")"
-  if [[ "$FRONTEND" != "gobra" ]]; then
+
+  if [[ "$FRONTEND" == "native" ]]; then
+    # Native Go frontend: type-check + emit the native wire JSON, then run it
+    # through the native lowering. Multi-file packages are allowed (go/types
+    # resolves them); no batch export step is needed.
+    wire_json="$OUT/native/$id/wire.json"
+    mkdir -p "$(dirname "$wire_json")"
+    if ! native_export="$(run_with_timeout "$GO_TIMEOUT_SECONDS" env GO111MODULE=off GOCACHE="$GO_BUILD_CACHE" go run ./tools/nativefrontend --dir "$go_dir" --out "$wire_json" 2>&1)"; then
+      report_fail "$id" "$features" "frontend-export" "native frontend: $native_export"
+      continue
+    fi
+    lean_args=(native-json-run --input "$wire_json" --function "$function_name")
+  elif [[ "$FRONTEND" == "gobra" ]]; then
+    if [[ "$package_go_files" -ne 1 ]]; then
+      report_fail "$id" "$features" "frontend-export" "gobra frontend currently supports exactly one non-test Go file per package; found $package_go_files"
+      continue
+    fi
+
+    gobra_json="$(gobra_internal_json_path "$id")"
+    if [[ ! -f "$gobra_json" ]]; then
+      result_path="$OUT/results/$id/result.json"
+      if [[ -f "$result_path" ]]; then
+        report_fail "$id" "$features" "frontend-export" "frontend=gobra; go=ok; no internal JSON at $gobra_json; see $result_path"
+      else
+        report_fail "$id" "$features" "frontend-export" "frontend=gobra; go=ok; no internal JSON at $gobra_json"
+      fi
+      continue
+    fi
+
+    if ! artifact_check_output="$(lean gobra-artifact-check --manifest "$OUT/manifest.json" --internal-json "$gobra_json" 2>&1)"; then
+      report_fail "$id" "$features" "artifact-check" "$artifact_check_output"
+      continue
+    fi
+
+    if ! json_check_output="$(lean gobra-json-check --input "$gobra_json" 2>&1)"; then
+      report_fail "$id" "$features" "json-check" "$json_check_output"
+      continue
+    fi
+
+    lean_args=(gobra-json-run --input "$gobra_json" --function "$function_name")
+  else
     report_fail "$id" "$features" "frontend-export" "unsupported frontend '$FRONTEND'"
     continue
   fi
-  if [[ "$package_go_files" -ne 1 ]]; then
-    report_fail "$id" "$features" "frontend-export" "gobra frontend currently supports exactly one non-test Go file per package; found $package_go_files"
-    continue
-  fi
-
-  gobra_json="$(gobra_internal_json_path "$id")"
-  if [[ ! -f "$gobra_json" ]]; then
-    result_path="$OUT/results/$id/result.json"
-    if [[ -f "$result_path" ]]; then
-      report_fail "$id" "$features" "frontend-export" "frontend=gobra; go=ok; no internal JSON at $gobra_json; see $result_path"
-    else
-      report_fail "$id" "$features" "frontend-export" "frontend=gobra; go=ok; no internal JSON at $gobra_json"
-    fi
-    continue
-  fi
-
-  if ! artifact_check_output="$(lean gobra-artifact-check --manifest "$OUT/manifest.json" --internal-json "$gobra_json" 2>&1)"; then
-    report_fail "$id" "$features" "artifact-check" "$artifact_check_output"
-    continue
-  fi
-
-  if ! json_check_output="$(lean gobra-json-check --input "$gobra_json" 2>&1)"; then
-    report_fail "$id" "$features" "json-check" "$json_check_output"
-    continue
-  fi
-
-  lean_args=(gobra-json-run --input "$gobra_json" --function "$function_name")
   if [[ "$arg_ints" != "-" ]]; then
     IFS=',' read -r -a ints <<< "$arg_ints"
     for value in "${ints[@]}"; do

@@ -1,6 +1,7 @@
 import GoLean.Artifact.Gobra
 import GoLean.GobraEval
 import GoLean.GobraJson
+import GoLean.NativeToIR
 import GoLean.StrictJson
 import Lean.Data.Json
 
@@ -583,12 +584,45 @@ private def runGobraJsonRun (args : List String) : IO UInt32 := do
           IO.eprintln s!"provide --input <file> and --function <name>\n{usage}"
           return 2
 
+private def runNativeJsonRun (args : List String) : IO UInt32 := do
+  let cwd ← IO.currentDir
+  match parseGobraRunArgs args {} with
+  | .error err =>
+      IO.eprintln err
+      return 2
+  | .ok cfg =>
+      match cfg.input, cfg.functionName with
+      | some input, some functionName =>
+          let input := absoluteFrom cwd input
+          let contents ← IO.FS.readFile input
+          match Lean.Json.parse contents with
+          | .error err =>
+              IO.println (cliErrorJson s!"{input}: JSON parse error: {err}").compress
+              return 1
+          | .ok json =>
+              match GoLean.NativeToIR.decodeProgram json with
+              | .error err =>
+                  IO.println (cliErrorJson s!"{input}: {err}").compress
+                  return 1
+              | .ok program =>
+                  match GoLean.GoCore.runNamedFunctionInts cfg.fuel program functionName cfg.args with
+                  | .ok result =>
+                      IO.println (runJson result).compress
+                      return 0
+                  | .error err =>
+                      IO.println (errorJson err).compress
+                      return 1
+      | _, _ =>
+          IO.eprintln s!"provide --input <file> and --function <name>\n{usage}"
+          return 2
+
 def main (args : List String) : IO UInt32 := do
   match args with
   | ["--help"] | ["-h"] =>
       IO.println usage
       return 0
   | "gobra-export" :: rest => runGobraExport rest
+  | "native-json-run" :: rest => runNativeJsonRun rest
   | "gobra-json-check" :: rest => runGobraJsonCheck rest
   | "gobra-json-tags" :: rest => runGobraJsonTags rest
   | "gobra-json-run" :: rest => runGobraJsonRun rest
