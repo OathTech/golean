@@ -1,3 +1,4 @@
 /.lake
 /artifacts
 .DS_Store
+/.claude
