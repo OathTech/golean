@@ -4,6 +4,64 @@ This file is the persistent handoff log for the semantics upgrade defined in
 `docs/gocore-semantics-upgrade-goal.md`. Newest entry first. Each entry either
 appends to or explicitly supersedes the previous one.
 
+## 2026-07-18: Phase 6 slice 1 — small-step relational semantics skeleton
+
+Branch:
+- `gocore-semantics-upgrade`
+
+Changed:
+- `GoLean/GoCore/Rel.lean` (new): the first proof-facing relation.
+  Big-step expression evaluation (`ExprR`) with explicit panic rules over
+  scalar arithmetic/comparison, `ref`/`deref` (nil-deref panic), struct
+  field access, and array indexing (bounds panic); assignee/decls/args/
+  params/results helper relations; a continuation-based small-step
+  statement relation (`Step` over `Config`) covering sequencing, blocks
+  with scope push/pop on every exit path, declaration, assignment, `if`,
+  `while`, `return`/`break`/`continue` unwinding, and direct calls with
+  fresh frames over the shared heap. Panics are rules; stuck and
+  unsupported are the absence of rules. Imports `Ops` (shared substrate)
+  but not `Eval` (interpreter).
+- `GoLean/GoCore/Correspondence.lean` (new): states the intended
+  interpreter-soundness and panic-agreement propositions (deferred
+  proofs), and proves five concrete derivations exercising the rules:
+  empty sequence, `while false` skip, `if true`/`return` unwinding,
+  `break` out of `while true`, and `x = 1/0` reaching `panicked` with
+  Go's message.
+- `GoLean/GoCore.lean`: imports the new modules so they build with the
+  library.
+
+Iris note: `Step` is the sequential core of the future `PrimStep`
+instance; forked goroutines will extend a step with a `List Config` of
+spawned threads (`c ↦ (c', [])` today), per the recorded Phase 6 design
+note.
+
+Out of skeleton scope (no rules, documented in the module header):
+slices, maps, interfaces, effectful builtins, multi-assignment, dynamic
+dispatch. These gain rules as the corresponding cleanup phases land.
+
+Validation:
+- `lake build GoLean.GoCore.Rel GoLean.GoCore.Correspondence`: pass, all
+  theorems check.
+- `lake exe gobra-eval-tests`: 46 ok; `gobra-json-tests`: pass;
+  `lake exe golean`: exit 0.
+- Differential slice NOT rerun in full: the diff adds Prop-level modules
+  only and touches no runtime code. Spot-check `scripts/diff-one
+  structs/swap ints/scalars`: `ints/scalars` PASS; `structs/swap` fails at
+  frontend-export because it has no cached Gobra export (it is outside the
+  136-case cached slice) — a pre-existing condition, not a regression.
+- `git diff --check`: clean.
+
+Phase:
+- Phase 6 skeleton exists. The semantics upgrade's frontend-independent
+  phases (1, 2, 3-core, 4, 6-skeleton) are complete. Remaining: Phase 5
+  interfaces (frontend-gated, see Phase 3 pause note), Phase 3 residue
+  (explicit type declarations, return-postprocessing restriction — also
+  frontend-entangled), correspondence proofs (deferred by design), and
+  growing relational rules alongside future features.
+
+Commit status:
+- committed (this entry accompanies the slice commit).
+
 ## 2026-07-17: Phase 4 slice 3 — new-allocation typing and well-formedness
 
 Branch:
