@@ -4,6 +4,51 @@ This file is the persistent handoff log for the semantics upgrade defined in
 `docs/gocore-semantics-upgrade-goal.md`. Newest entry first. Each entry either
 appends to or explicitly supersedes the previous one.
 
+## 2026-07-17: Phase 4 slice 1 — explicit lexical scoping for locals
+
+Branch:
+- `gocore-semantics-upgrade`
+
+Changed:
+- `GoLean/GoCore/State.lean`: `LocalEnv` is now a scope stack
+  (`List Scope`, innermost first). Lookup walks inner to outer.
+  `LocalEnv.declare` always binds fresh in the innermost scope;
+  `pushScope`/`popScope` manage block extent. `ExecState.bindLocal`
+  (which silently reused an existing location on redeclaration) is
+  replaced by `ExecState.declareLocal`, which always allocates a fresh
+  location — shadowing now gets its own cell.
+- `GoLean/GoCore/Eval.lean`: `.block` pushes a scope on entry and pops it
+  on every exit path (normal, returned, broke, continued). Declaration
+  sites (params, results, decls, initialization) use `declareLocal`;
+  assignment still resolves through `lookupLoc` and cannot create
+  bindings.
+
+Why no behavior change is expected on the current corpus: Gobra
+alpha-renames local ids, so GoCore never previously saw two bindings with
+the same name — lexical scoping was effectively outsourced to frontend
+renaming, which is exactly the kind of frontend-recovery reliance this
+upgrade removes. A future native frontend can now emit source names
+directly and shadowing is handled by GoCore itself.
+
+Remaining Phase 4 items (next slices):
+- heap cells recording declared type or allocation metadata; stores
+  checked against it (slice 4b);
+- documented well-formedness checks for locals/heap/type tables (4c).
+
+Validation:
+- `lake build` (library and tests): pass.
+- `lake exe gobra-eval-tests`: 46 ok. `lake exe gobra-json-tests`: pass.
+- `scripts/coverage run <136 cached-export case ids>`: 136 cases, 123 pass,
+  13 fail; failing set identical to the post-Phase-3 set (which shares its
+  case ids with the Phase 0 baseline).
+- `git diff --check`: clean.
+
+Regressions:
+- none.
+
+Commit status:
+- committed (this entry accompanies the slice commit).
+
 ## 2026-07-17: Phase 3 slice 1 — MethodSubtypeProof decoded as wire metadata
 
 Branch:

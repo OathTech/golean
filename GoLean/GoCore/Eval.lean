@@ -663,11 +663,11 @@ mutual
     for param in func.args do
       match argValues[i]? with
       | some value =>
-          callState := callState.bindLocal param.id (← normalizeValueForTy callState param.typ value)
+          callState := callState.declareLocal param.id (← normalizeValueForTy callState param.typ value)
           i := i + 1
       | none => stuck s!"missing argument {i}"
     for result in func.results do
-      callState := callState.bindLocal result.id (← defaultValue callState result.typ)
+      callState := callState.declareLocal result.id (← defaultValue callState result.typ)
     callState ←
       match ← execStmt (fuel - 1) callState func.body with
       | .normal nextState => pure nextState
@@ -704,7 +704,7 @@ mutual
     execFunctionCallWithLocs fuel targetPair.2 targetPair.1 id args
 
   partial def execDecl (state : ExecState) (param : Param) : Except GoError ExecState := do
-    return state.bindLocal param.id (← defaultValue state param.typ)
+    return state.declareLocal param.id (← defaultValue state param.typ)
 
   partial def execDecls (state : ExecState) (decls : Array Param) : Except GoError ExecState := do
     let mut current := state
@@ -724,7 +724,15 @@ mutual
   partial def execStmt (fuel : Nat) (state : ExecState) : Stmt → Except GoError ExecOutcome
     | .seqn stmts => execStmts fuel state stmts
     | .block decls stmts => do
-        execStmts fuel (← execDecls state decls) stmts
+        let entered := { state with locals := state.locals.pushScope }
+        let outcome ← execStmts fuel (← execDecls entered decls) stmts
+        let exitScope (s : ExecState) : ExecState :=
+          { s with locals := s.locals.popScope }
+        return match outcome with
+        | .normal s => .normal (exitScope s)
+        | .returned s => .returned (exitScope s)
+        | .broke s => .broke (exitScope s)
+        | .continued s => .continued (exitScope s)
     | .initialization var => return .normal (← execDecl state var)
     | .assign left right => do
         let locPair ← evalAssigneeLoc state left
@@ -778,7 +786,7 @@ def bindParams (state : ExecState) (params : Array Param) (args : Array GoValue)
   for param in params do
     match args[i]? with
     | some value =>
-        state := state.bindLocal param.id (← normalizeValueForTy state param.typ value)
+        state := state.declareLocal param.id (← normalizeValueForTy state param.typ value)
         i := i + 1
     | none => stuck s!"missing argument {i}"
   return state
@@ -786,7 +794,7 @@ def bindParams (state : ExecState) (params : Array Param) (args : Array GoValue)
 def initResults (state : ExecState) (results : Array Param) : Except GoError ExecState := do
   let mut state := state
   for result in results do
-    state := state.bindLocal result.id (← defaultValue state result.typ)
+    state := state.declareLocal result.id (← defaultValue state result.typ)
   return state
 
 def collectResults (state : ExecState) (results : Array Param) :

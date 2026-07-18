@@ -5,7 +5,15 @@ namespace GoLean.GoCore
 
 open GoLean
 
-abbrev LocalEnv := List (String × Loc)
+/-- One lexical scope: bindings from local names to heap-backed locations,
+innermost binding first. -/
+abbrev Scope := List (String × Loc)
+
+/-- Lexical scope stack, innermost scope first. Name lookup walks scopes
+inner to outer; declaration always creates a fresh binding in the innermost
+scope, so shadowing gets a fresh location instead of reusing the outer one.
+Block execution pushes a scope on entry and pops it on every exit path. -/
+abbrev LocalEnv := List Scope
 abbrev Heap := List (Loc × GoValue)
 abbrev TypeEnv := List (TypeId × TypeDef)
 
@@ -35,18 +43,30 @@ def ExecOutcome.state : ExecOutcome → ExecState
   | .broke state => state
   | .continued state => state
 
-def LocalEnv.lookup : LocalEnv → String → Option Loc
+def Scope.lookup : Scope → String → Option Loc
   | [], _ => none
   | (name, loc) :: rest, needle =>
-      if name == needle then some loc else LocalEnv.lookup rest needle
+      if name == needle then some loc else Scope.lookup rest needle
 
-def LocalEnv.set : LocalEnv → String → Loc → LocalEnv
-  | [], name, loc => [(name, loc)]
-  | (name, old) :: rest, needle, loc =>
-      if name == needle then
-        (name, loc) :: rest
-      else
-        (name, old) :: LocalEnv.set rest needle loc
+def LocalEnv.lookup : LocalEnv → String → Option Loc
+  | [], _ => none
+  | scope :: outer, needle =>
+      match Scope.lookup scope needle with
+      | some loc => some loc
+      | none => LocalEnv.lookup outer needle
+
+/-- Bind a name in the innermost scope. An empty environment is treated as a
+single empty scope so frame setup can start from `[]`. -/
+def LocalEnv.declare : LocalEnv → String → Loc → LocalEnv
+  | [], name, loc => [[(name, loc)]]
+  | scope :: outer, name, loc => ((name, loc) :: scope) :: outer
+
+def LocalEnv.pushScope (env : LocalEnv) : LocalEnv :=
+  [] :: env
+
+def LocalEnv.popScope : LocalEnv → LocalEnv
+  | [] => []
+  | _ :: outer => outer
 
 def Heap.lookup : Heap → Loc → Option GoValue
   | [], _ => none
@@ -94,17 +114,16 @@ def ExecState.freshLoc (state : ExecState) : Loc × ExecState :=
   let loc := Loc.base { id := state.nextAddr }
   (loc, { state with nextAddr := state.nextAddr + 1 })
 
-def ExecState.bindLocal (state : ExecState) (name : String) (value : GoValue) :
+/-- Declare a local: always a fresh location in the innermost scope, even
+when the name shadows an outer binding. Assignment to an existing local goes
+through `lookupLoc`/`storeLoc`, never through this. -/
+def ExecState.declareLocal (state : ExecState) (name : String) (value : GoValue) :
     ExecState :=
-  match LocalEnv.lookup state.locals name with
-  | some loc =>
-      { state with heap := Heap.set state.heap loc value }
-  | none =>
-      let (loc, state) := state.freshLoc
-      { state with
-        locals := LocalEnv.set state.locals name loc,
-        heap := Heap.set state.heap loc value
-      }
+  let (loc, state) := state.freshLoc
+  { state with
+    locals := LocalEnv.declare state.locals name loc,
+    heap := Heap.set state.heap loc value
+  }
 
 def ExecState.alloc (state : ExecState) (value : GoValue) : Loc × ExecState :=
   let (loc, state) := state.freshLoc
