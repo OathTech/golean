@@ -439,11 +439,11 @@ mutual
       current := pair.2
     assignLocs current locPair.1 values
 
-  partial def execNewValue (state : ExecState) (target : Assignee) (valueExpr : Expr) :
-      Except GoError ExecState := do
+  partial def execNewValue (state : ExecState) (target : Assignee) (valueExpr : Expr)
+      (typ : Option Ty) : Except GoError ExecState := do
     let targetPair ← evalAssigneeLoc state target
     let valuePair ← evalExpr targetPair.2 valueExpr
-    let (loc, current) := valuePair.2.alloc valuePair.1
+    let (loc, current) := valuePair.2.alloc valuePair.1 typ
     assignLoc current targetPair.1 (.addr loc)
 
   partial def execMakeMap (state : ExecState) (target : Assignee) (_key _value : Ty)
@@ -739,7 +739,7 @@ mutual
         let valuePair ← evalExpr locPair.2 right
         return .normal (← assignLoc valuePair.2 locPair.1 valuePair.1)
     | .assignMany left right => return .normal (← execAssignMany state left right)
-    | .newValue target value => return .normal (← execNewValue state target value)
+    | .newValue target value typ => return .normal (← execNewValue state target value typ)
     | .makeSlice target elem len cap => return .normal (← execMakeSlice state target elem len cap)
     | .makeMap target key value initialSpace =>
         return .normal (← execMakeMap state target key value initialSpace)

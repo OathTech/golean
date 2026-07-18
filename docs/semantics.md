@@ -265,6 +265,50 @@ Then:
 This matches the direction Goose takes: variables that may be addressed are
 represented by locations, and operations use load/store around those locations.
 
+## State Well-Formedness
+
+Updated 2026-07-17 to record the invariants the executable state now
+maintains, which the future relational semantics should assume or carry as an
+explicit well-formedness predicate.
+
+Locals:
+
+- the local environment is a lexical scope stack, innermost scope first;
+- name lookup resolves inner to outer; declaration always binds a fresh
+  location in the innermost scope, so shadowing never aliases the outer
+  binding;
+- block execution pushes a scope on entry and pops exactly that scope on
+  every exit path (normal, return, break, continue);
+- assignment resolves an existing binding and can never create one;
+- every bound name maps to a location present in the heap.
+
+Heap:
+
+- each heap cell carries its value and, when known at allocation, the
+  declared type of the allocation (`HeapCell.declaredTy`);
+- declarations, parameters, results, `new` allocations, and slice backings
+  from conversions, `make`, and `append` record declared types; map data
+  cells currently do not (their typing is enforced by the map operations,
+  which carry key/value types);
+- a store to a typed cell is normalized against the declared type; a store
+  to an untyped cell falls back to value-shape coercion, a transitional
+  path that should shrink to nothing as remaining allocation sites gain
+  types;
+- path locations (`Loc.field`, `Loc.index`) address within a base cell;
+  field access checks the stored struct's `TypeId` against the path's
+  expected `TypeId`.
+
+Identity:
+
+- struct values, interface dynamic tags, the type environment, and field
+  paths use semantic `TypeId`s; functions and dispatch metadata use
+  `FuncId`s; raw frontend names never act as identity (they are stripped
+  and collision-checked once, at the lowering boundary).
+
+The interpreter enforces these dynamically (stuck on violation). The
+relational semantics should state them as a predicate over states and prove
+preservation, rather than re-deriving them from interpreter behavior.
+
 ## Structs And Fields
 
 Struct support should be split into value projection and address projection.

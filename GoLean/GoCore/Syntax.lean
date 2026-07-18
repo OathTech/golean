@@ -103,7 +103,7 @@ inductive Stmt where
   | initialization (var : Param)
   | assign (left : Assignee) (right : Expr)
   | assignMany (left : Array Assignee) (right : Array Expr)
-  | newValue (target : Assignee) (value : Expr)
+  | newValue (target : Assignee) (value : Expr) (typ : Option Ty := none)
   | makeSlice (target : Assignee) (elem : Ty) (len : Expr) (cap : Option Expr)
   | makeMap (target : Assignee) (key value : Ty) (initialSpace : Option Expr)
   | mapAssign (base index value : Expr) (keyTy valueTy : Ty)

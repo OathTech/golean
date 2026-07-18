@@ -545,7 +545,12 @@ partial def lowerStmtWithReturnPost (symbols : SymbolMap)
         | _ => .assign (lowerAssignee left) (lowerExpr right)
     | .effectfulConversion _ target newType expr =>
         .assign (.var target.id) (lowerExpr (.conversion .internal newType expr))
-    | .new _ target expr => .newValue (.var target.id) (lowerExpr expr)
+    | .new _ target expr =>
+        let allocTy :=
+          match lowerTy target.typ with
+          | .pointer elem => some elem
+          | _ => none
+        .newValue (.var target.id) (lowerExpr expr) allocTy
     | .makeSlice _ target typeParam lenArg capArg =>
         match lowerTy typeParam with
         | .slice elem => .makeSlice (.var target.id) elem (lowerExpr lenArg) (capArg.map lowerExpr)

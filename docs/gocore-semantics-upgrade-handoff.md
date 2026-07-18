@@ -4,6 +4,42 @@ This file is the persistent handoff log for the semantics upgrade defined in
 `docs/gocore-semantics-upgrade-goal.md`. Newest entry first. Each entry either
 appends to or explicitly supersedes the previous one.
 
+## 2026-07-17: Phase 4 slice 3 — new-allocation typing and well-formedness
+
+Branch:
+- `gocore-semantics-upgrade`
+
+Changed:
+- `GoLean/GoCore/Syntax.lean` / `Eval.lean` / `GobraToIR.lean`:
+  `Stmt.newValue` carries the allocation type (the pointee of the target's
+  pointer type, available on the Gobra `New` target variable), and `new`
+  allocations record it on the heap cell. Map data cells remain the only
+  untyped allocation, documented as typed-by-operation.
+- `docs/semantics.md`: new "State Well-Formedness" section recording the
+  locals/heap/identity invariants the interpreter now maintains
+  dynamically, phrased for the future relational semantics to assume as an
+  explicit predicate.
+
+Phase:
+- Phase 4 complete: lexical scoping explicit, declarations distinguished
+  from assignment, heap cells typed at every allocation site except map
+  data, stores type-directed on typed cells, invariants documented. Next
+  per the recommended order: Phase 5 (clean interface semantics) is
+  frontend-gated (see the Phase 3 pause note); Phase 6 (small-step
+  relational skeleton, per the recorded design note) is not.
+
+Validation:
+- `lake build`, `gobra-eval-tests` (46 ok), `gobra-json-tests`: pass.
+- `scripts/coverage run <136 cached-export case ids>`: 136 cases, 123 pass,
+  13 fail; failing set unchanged.
+- `git diff --check`: clean.
+
+Regressions:
+- none.
+
+Commit status:
+- committed (this entry accompanies the slice commit).
+
 ## 2026-07-17: Phase 4 slice 2 — typed heap cells
 
 Branch:
