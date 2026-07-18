@@ -16,31 +16,59 @@ Go that Gobra cannot handle. See `docs/2026-07-18_prioritization.md`: the
 native frontend is both the biggest throughput lever and the largest
 design-debt retirement (it also retires the adjacency-based type recovery).
 
-## The contract: reuse the existing wire ADT
+## The contract: a clean native wire + a native lowering adapter
 
-**Do not change GoCore or the lowering.** The native frontend emits the same
-strict wire JSON that `GoLean/GobraJson.lean` decodes and `GoLean/GobraToIR.lean`
-lowers. This is the whole point of the frontend/wire/GoCore isolation the
-architecture already bought: the frontend is a replaceable component behind a
-stable schema.
+Decided 2026-07-18 (superseding the earlier "reuse the Gobra wire" note). The
+invariant is **GoCore is untouched**, not "reuse the Gobra wire". Emitting the
+Gobra schema from `go/types` would mean synthesizing Gobra-shaped baggage
+(Source origins, addressability, desugaring patterns) and satisfying
+`GobraToIR`'s recovery heuristics (adjacency type reconstruction, desugared
+multi-assign/call-assign matching, return postprocessing, proxy-name
+stripping) — coupling the native frontend to the very quirks we are escaping,
+even though `go/types` has already resolved everything cleanly.
 
-- Target schema: the `Document` → `Program` → `members`/`types` shape in
-  `GoLean/GobraJson.lean`. Known-good examples live under
-  `artifacts/coverage/work/<case>/main.go.internal.json` (Gobra-produced).
-- The strict Lean decoder is the schema authority. The native exporter is
-  correct when its output passes `golean gobra-json-check` and lowers/executes
-  identically to the Go oracle.
-- Where the wire ADT carries Gobra-only fields (assertions, proof members,
-  spec origins), the native exporter emits the empty/absent forms. Where Gobra
-  mangles names, the native exporter emits clean source names — lowering
-  already canonicalizes both, so cleaner input is strictly better.
-- If a needed Go construct has no wire representation, extend the wire ADT
-  (and its Lean decoder) deliberately, fail-closed, rather than approximating.
+Instead:
 
-Location: `tools/nativefrontend/` (Go program, go/ast + go/types). The harness
-selects it via `GOLEAN_FRONTEND=native` (the switch already exists in
-`scripts/diff-coverage`; default stays `gobra`). Gobra stays alive in parallel
-until the native path covers the current 136 with no regression.
+- The native frontend is a Go program using **`go/parser` + `go/ast` +
+  `go/types`** (stdlib; the coverage harness already uses the parser half).
+  `go/types` hands back fully resolved types, defined types, folded constants,
+  and — importantly — **method sets and interface type-sets**, the metadata
+  that was frontend-gating Phase 5 interfaces.
+- It emits a **clean native wire schema** shaped by `go/types` (a new
+  `GoLean/NativeJson.lean` decoder), lowered by a new **`GoLean/NativeToIR.lean`
+  adapter** into the same fixed GoCore — parallel to `GobraJson`/`GobraToIR`,
+  not replacing GoCore. Because `go/types` resolved names and types up front,
+  the lowering is direct with no recovery heuristics.
+- Dependencies: **stdlib only**. `go/importer` resolves stdlib imports
+  (`math`, `strconv`); no `golang.org/x/tools`. Multi-package loading can add
+  `go/packages` later if source-level cross-package loading is needed.
+- Fail closed: an unrepresentable construct is an explicit adapter error, never
+  an approximation.
+
+Location: `tools/nativefrontend/` (Go, `GO111MODULE=off`, stdlib only). Harness
+selects it via `GOLEAN_FRONTEND=native` (switch already exists in
+`scripts/diff-coverage`; default stays `gobra` until parity).
+
+## Endgame: eliminate Gobra entirely
+
+The success criterion is not "runs quorum" — it is **the native frontend covers
+what Gobra covered so Gobra can be deleted**. Gobra was always a temporary
+frontend accelerator (roadmap, AGENTS.md); GoCore is Gobra-free, the corpus is
+frontend-independent, and proof infra is planned on top of GoCore, not via
+Gobra. Removing it drops ~780 MB of Scala/SBT/JVM dependencies plus four Lean
+modules, scripts, and CLI surface, and it deletes the per-fixture export
+bottleneck.
+
+Removal set (delete only after native reaches/exceeds parity and the default is
+flipped): `third_party/gobra` submodule; `deps/gobra`, `deps/sbt-cache`,
+`sbt-launch*.jar`; `GoLean/GobraJson.lean`, `GobraToIR.lean`, `GobraEval.lean`,
+`Artifact/Gobra.lean`; `scripts/gobra-sbt`, `scripts/gobra-smoke` and the export
+path in `diff-coverage`; the `gobra-*` CLI commands.
+
+Sequencing: build native in parallel → reach parity on the corpus (start with
+the 136 currently-validated cases, then the ~536 Gobra could never export,
+then the 39-case quorum set) → flip `GOLEAN_FRONTEND` default to native →
+verify no regression → delete Gobra.
 
 ## Validation strategy: parity on the corpus first, then quorum
 
@@ -216,9 +244,16 @@ defined types and the needed externs exist.
 
 ## Slice plan (each a differential milestone)
 
-0. **Vertical slice**: exporter emits wire JSON for one trivial function
-   (e.g. an `add`), passes `golean gobra-json-check`, lowers, and matches the
-   Go oracle under `GOLEAN_FRONTEND=native`. Proves the architecture end to end.
+0a. **[done 2026-07-18] Foundation proof**: `tools/nativefrontend` parses +
+   type-checks with `go/parser`/`go/types`/`importer.Default()`. Verified it
+   resolves defined types, non-struct-receiver methods, and interface
+   method-sets on real corpus files *and type-checks the entire real
+   `deps/raft/quorum` package* (multi-file, all stdlib imports resolved). No
+   parser to build; the target's full type structure is available up front.
+0b. **Vertical slice**: define the native wire schema (`GoLean/NativeJson.lean`)
+   + `GoLean/NativeToIR.lean`; the exporter emits it for one trivial function;
+   passes a native json-check, lowers, and matches the Go oracle under
+   `GOLEAN_FRONTEND=native`. Proves the full pipeline end to end.
 1. Scalars, control flow, direct calls → parity on the arithmetic/if/loop slice
    of the corpus.
 2. Structs, pointers, arrays, slices, maps → parity across those corpus areas.
