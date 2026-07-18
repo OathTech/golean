@@ -3,6 +3,31 @@
 See `docs/roadmap.md` for the phased project roadmap. This file tracks tactical
 backlog items.
 
+## Goose/Perennial Design Mapping
+
+- Produce a systematic design mapping of GoCore against new Goose/Perennial
+  (reference checkouts under `../deps/goose` and `../deps/perennial/new`),
+  area by area, so their lessons are adopted or explicitly rejected rather
+  than rediscovered. Record the mapping and each adopt/reject decision in a
+  dedicated doc (suggested: `docs/goose-perennial-mapping.md`).
+- Areas to map, with their Perennial/Goose anchors: memory model and typed
+  points-to (`theory/mem.v`, per-index array ownership in `theory/array.v`)
+  versus GoCore `Loc.field`/`Loc.index` and the heap-cell typing work;
+  semantic type universe and tables (`defn/prelang.v`, `defn/postlang.v`,
+  `GoSemanticsFunctions`) versus GoCore `TypeId`/`FuncId` tables; interface
+  semantics from type sets and method sets (`defn/interface.v`) versus the
+  planned Phase 5 rebuild; slice descriptors and nondeterministic append
+  capacity (`defn/slice.v`) versus `docs/slice-model.md`; strings as byte
+  sequences (`go_string`); channels and concurrency primitives (new Goose
+  channel model) ahead of the Iris-Lean concurrency phase; proof-generation
+  templates (`proofgen/tmpl/types.tmpl`) ahead of Phase 5/6 proof output.
+- The mapping should state, per area, what Goose/Perennial does, what GoCore
+  does today, whether the delta is intentional (and why) or a gap with a
+  planned fix, and which upcoming phase consumes the lesson. Keep it a
+  design-review artifact, not ported code: the architecture lesson (clean
+  frontend translation, explicit semantic tables, typed primitives, proof
+  automation layered above the core) is the thing to preserve.
+
 ## Gobra JSON Schema
 
 - Make the Lean wire ADT the schema authority for Gobra JSON. This is the project direction; see `docs/gobra-json-schema.md`.
