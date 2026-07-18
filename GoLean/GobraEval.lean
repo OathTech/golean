@@ -13,7 +13,10 @@ private def loweringError (message : String) : GoLean.GoError :=
 
 def runFunctionMember (fuel : Nat) (member : GoLean.GobraJson.FunctionMember) (args : Array GoLean.GoValue) :
     Except GoLean.GoError Result := do
-  match GoLean.GobraToIR.lowerFunctionMember member with
+  let lowered := do
+    let symbols ← GoLean.GobraToIR.buildSymbolMap #[.function member]
+    GoLean.GobraToIR.lowerFunctionMember symbols member
+  match lowered with
   | .ok func => GoLean.GoCore.runFunction fuel func args
   | .error err => throw (loweringError err)
 

@@ -2,6 +2,17 @@ import GoLean.GoCore.Value
 
 namespace GoLean.GoCore
 
+/-- Semantic function identity. The key is a canonical name produced only by
+the frontend symbol map (source-level function name; receiver-scoped method
+key). Raw frontend names such as Gobra-mangled exports must not construct
+this directly: lowering resolves them through its symbol map and fails
+closed on unknown or colliding names. The string representation is
+transitional; a compact ID table can replace it without touching consumers
+because all construction points go through the symbol map. -/
+structure FuncId where
+  key : String
+  deriving Repr, BEq, Inhabited
+
 inductive Ty where
   | bool
   | int (kind : IntKind := .int)
@@ -100,7 +111,7 @@ inductive Stmt where
   | typeAssert (target okTarget : Assignee) (expr : Expr) (targetTy : Ty)
   | appendSlice (target : Assignee) (elem : Ty) (slice elems : Expr)
   | copySlice (target : Assignee) (dst src : Expr)
-  | call (targets : Array Assignee) (name : String) (args : Array Expr)
+  | call (targets : Array Assignee) (func : FuncId) (args : Array Expr)
   | ifThenElse (cond : Expr) (thenBranch elseBranch : Stmt)
   | while (cond : Expr) (body : Stmt)
   | returnStmt
@@ -111,7 +122,7 @@ inductive Stmt where
   deriving Repr, BEq, Inhabited
 
 structure Func where
-  name : String
+  id : FuncId
   args : Array Param
   results : Array Param
   body : Stmt
@@ -119,7 +130,7 @@ structure Func where
 
 structure MethodInfo where
   name : String
-  uniqueName : String
+  funcId : FuncId
   recv : Ty
   deriving Repr, BEq
 
@@ -129,10 +140,10 @@ structure Program where
   methods : Array MethodInfo := #[]
   deriving Repr, BEq
 
-def findFunctionIn? (funcs : Array Func) (name : String) : Option Func :=
+def findFunctionIn? (funcs : Array Func) (id : FuncId) : Option Func :=
   funcs.foldl
     (fun found func =>
       match found with
       | some f => some f
-      | none => if func.name == name then some func else none)
+      | none => if func.id == id then some func else none)
     none

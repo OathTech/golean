@@ -632,7 +632,7 @@ mutual
 
   partial def dynamicDispatch? (state : ExecState) (func : Func) (argValues : Array GoValue) :
       Except GoError (Option (Func × Array GoValue)) := do
-    match methodInfoByUnique? state func.name with
+    match methodInfoByFuncId? state func.id with
     | none => return none
     | some method =>
         match methodRecvInterfaceName? state method with
@@ -643,9 +643,9 @@ mutual
                 match concreteMethodForDynamic? state dynamicName method.name with
                 | some concrete =>
                     let targetFunc ←
-                      match findFunctionIn? state.functions concrete.uniqueName with
+                      match findFunctionIn? state.functions concrete.funcId with
                       | some func => pure func
-                      | none => stuck s!"GoCore dynamic method target not found: {concrete.uniqueName}"
+                      | none => stuck s!"GoCore dynamic method target not found: {concrete.funcId.key}"
                     return some (targetFunc, argValues.set! 0 inner)
                 | none => stuck s!"dynamic type {dynamicName} has no method {method.name}"
             | _ => return none
@@ -655,7 +655,7 @@ mutual
     if fuel == 0 then
       stuck "GoCore execution fuel exhausted"
     if func.args.size != argValues.size then
-      stuck s!"function {func.name} expected {func.args.size} argument(s), got {argValues.size}"
+      stuck s!"function {func.id.key} expected {func.args.size} argument(s), got {argValues.size}"
     let current := state
     let callerLocals := current.locals
     let mut callState : ExecState := { current with locals := [] }
@@ -672,8 +672,8 @@ mutual
       match ← execStmt (fuel - 1) callState func.body with
       | .normal nextState => pure nextState
       | .returned nextState => pure nextState
-      | .broke _ => stuck s!"function {func.name} body escaped with break"
-      | .continued _ => stuck s!"function {func.name} body escaped with continue"
+      | .broke _ => stuck s!"function {func.id.key} body escaped with break"
+      | .continued _ => stuck s!"function {func.id.key} body escaped with continue"
     let mut resultValues := #[]
     for result in func.results do
       resultValues := resultValues.push (← lookup callState result.id)
@@ -681,13 +681,13 @@ mutual
     assignLocs callerState targets resultValues
 
   partial def execFunctionCallWithLocs (fuel : Nat) (state : ExecState) (targets : Array Loc)
-      (name : String) (args : Array Expr) : Except GoError ExecState := do
+      (id : FuncId) (args : Array Expr) : Except GoError ExecState := do
     let func ←
-      match findFunctionIn? state.functions name with
+      match findFunctionIn? state.functions id with
       | some func => pure func
-      | none => stuck s!"GoCore function not found: {name}"
+      | none => stuck s!"GoCore function not found: {id.key}"
     if func.args.size != args.size then
-      stuck s!"function {name} expected {func.args.size} argument(s), got {args.size}"
+      stuck s!"function {id.key} expected {func.args.size} argument(s), got {args.size}"
     let mut current := state
     let mut argValues := #[]
     for arg in args do
@@ -699,9 +699,9 @@ mutual
     | none => execFunctionWithValues fuel current targets func argValues
 
   partial def execFunctionCall (fuel : Nat) (state : ExecState) (targets : Array Assignee)
-      (name : String) (args : Array Expr) : Except GoError ExecState := do
+      (id : FuncId) (args : Array Expr) : Except GoError ExecState := do
     let targetPair ← evalAssigneeLocs state targets
-    execFunctionCallWithLocs fuel targetPair.2 targetPair.1 name args
+    execFunctionCallWithLocs fuel targetPair.2 targetPair.1 id args
 
   partial def execDecl (state : ExecState) (param : Param) : Except GoError ExecState := do
     return state.bindLocal param.id (← defaultValue state param.typ)
@@ -743,7 +743,7 @@ mutual
         return .normal (← execTypeAssert state target okTarget expr targetTy)
     | .appendSlice target elem slice elems => return .normal (← execAppendSlice state target elem slice elems)
     | .copySlice target dst src => return .normal (← execCopySlice state target dst src)
-    | .call targets name args => return .normal (← execFunctionCall fuel state targets name args)
+    | .call targets funcId args => return .normal (← execFunctionCall fuel state targets funcId args)
     | .ifThenElse cond thenBranch elseBranch => do
         let condPair ← evalExpr state cond
         if ← valueAsBool condPair.1 then
@@ -805,8 +805,8 @@ def runFunctionWithContext (fuel : Nat) (types : TypeEnv) (functions : Array Fun
     match ← execStmt fuel state func.body with
     | .normal state => pure state
     | .returned state => pure state
-    | .broke _ => stuck s!"function {func.name} body escaped with break"
-    | .continued _ => stuck s!"function {func.name} body escaped with continue"
+    | .broke _ => stuck s!"function {func.id.key} body escaped with break"
+    | .continued _ => stuck s!"function {func.id.key} body escaped with continue"
   return { values := (← collectResults state func.results) }
 
 def runFunctionWithTypes (fuel : Nat) (types : TypeEnv) (func : Func) (args : Array GoValue) :
@@ -816,8 +816,12 @@ def runFunctionWithTypes (fuel : Nat) (types : TypeEnv) (func : Func) (args : Ar
 def runFunction (fuel : Nat) (func : Func) (args : Array GoValue) : Except GoError Result :=
   runFunctionWithTypes fuel [] func args
 
+/-- Lookup by canonical function name. This is the user-facing entry point
+(CLI subject-function selection); it constructs the `FuncId` from the
+canonical source-level name, which is exactly what the symbol map assigns to
+plain functions. -/
 def findFunction? (program : Program) (name : String) : Option Func :=
-  findFunctionIn? program.funcs name
+  findFunctionIn? program.funcs ⟨name⟩
 
 def runNamedFunction (fuel : Nat) (program : Program) (name : String) (args : Array GoValue) :
     Except GoError Result := do

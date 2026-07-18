@@ -223,12 +223,12 @@ partial def dynamicTypeName? (state : ExecState) (typ : Ty) : Option String :=
   | .string => some "string"
   | _ => none
 
-def methodInfoByUnique? (state : ExecState) (uniqueName : String) : Option MethodInfo :=
+def methodInfoByFuncId? (state : ExecState) (id : FuncId) : Option MethodInfo :=
   state.methods.foldl
     (fun found method =>
       match found with
       | some method => some method
-      | none => if method.uniqueName == uniqueName then some method else none)
+      | none => if method.funcId == id then some method else none)
     none
 
 def methodRecvInterfaceName? (state : ExecState) (method : MethodInfo) : Option String :=

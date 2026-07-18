@@ -33,14 +33,14 @@ private def coreStringByteLit (bytes : Array Nat) : GoCore.Expr :=
   .stringLit { bytes := bytes.map UInt8.ofNat }
 
 private def coreAddFunction : GoCore.Func := {
-  name := "add_F",
+  id := ⟨"add_F"⟩,
   args := #[coreParam "x", coreParam "y"],
   results := #[coreParam "z"],
   body := .assign (.var "z") coreAddExpr
 }
 
 private def corePointerIdentityFunction : GoCore.Func := {
-  name := "pointer_identity_F",
+  id := ⟨"pointer_identity_F"⟩,
   args := #[],
   results := #[coreBoolParam "same"],
   body := .block
@@ -65,7 +65,7 @@ private def coreCellTypes : GoCore.TypeEnv :=
   [("cell", .struct #[{ name := "valA", typ := .int }])]
 
 private def coreStructFunction : GoCore.Func := {
-  name := "struct_F",
+  id := ⟨"struct_F"⟩,
   args := #[],
   results := #[coreParam "z"],
   body := .block
@@ -78,7 +78,7 @@ private def coreStructFunction : GoCore.Func := {
 }
 
 private def coreSetCellFunction : GoCore.Func := {
-  name := "setCell_F",
+  id := ⟨"setCell_F"⟩,
   args := #[
     { id := "p", typ := .pointer (.defined "cell") },
     { id := "v", typ := .int }
@@ -90,20 +90,20 @@ private def coreSetCellFunction : GoCore.Func := {
 }
 
 private def coreCallFunction : GoCore.Func := {
-  name := "call_F",
+  id := ⟨"call_F"⟩,
   args := #[],
   results := #[coreParam "z"],
   body := .block
     #[{ id := "x", typ := .defined "cell" }]
     #[
       .assign (.var "x") (.structLit (.defined "cell") #[.intLit 42]),
-      .call #[] "setCell_F" #[.ref "x", .intLit 9],
+      .call #[] ⟨"setCell_F"⟩ #[.ref "x", .intLit 9],
       .assign (.var "z") (.fieldGet (.var "x") "cell" "valA")
     ]
 }
 
 private def coreScalarFunction : GoCore.Func := {
-  name := "scalars_F",
+  id := ⟨"scalars_F"⟩,
   args := #[coreParam "x", coreParam "y"],
   results := #[coreParam "z"],
   body := .seqn #[
@@ -112,7 +112,7 @@ private def coreScalarFunction : GoCore.Func := {
 }
 
 private def coreInt8WrapFunction : GoCore.Func := {
-  name := "int8_wrap_F",
+  id := ⟨"int8_wrap_F"⟩,
   args := #[],
   results := #[coreParam "z"],
   body := .block
@@ -125,7 +125,7 @@ private def coreInt8WrapFunction : GoCore.Func := {
 }
 
 private def coreByteConversionFunction : GoCore.Func := {
-  name := "byte_conversion_F",
+  id := ⟨"byte_conversion_F"⟩,
   args := #[],
   results := #[coreParam "z"],
   body := .block
@@ -138,14 +138,14 @@ private def coreByteConversionFunction : GoCore.Func := {
 }
 
 private def coreUnsupportedConversionFunction : GoCore.Func := {
-  name := "unsupported_conversion_F",
+  id := ⟨"unsupported_conversion_F"⟩,
   args := #[],
   results := #[{ id := "z", typ := .string }],
   body := .assign (.var "z") (.convert .string (.intLit 65))
 }
 
 private def coreShiftFunction : GoCore.Func := {
-  name := "shift_F",
+  id := ⟨"shift_F"⟩,
   args := #[],
   results := #[coreParam "z"],
   body := .block
@@ -160,14 +160,14 @@ private def coreShiftFunction : GoCore.Func := {
 }
 
 private def coreNegativeShiftFunction : GoCore.Func := {
-  name := "negative_shift_F",
+  id := ⟨"negative_shift_F"⟩,
   args := #[],
   results := #[coreParam "z"],
   body := .assign (.var "z") (.shiftLeft (.intLit 1) (.intLit (-1)))
 }
 
 private def coreBitwiseFunction : GoCore.Func := {
-  name := "bitwise_F",
+  id := ⟨"bitwise_F"⟩,
   args := #[],
   results := #[
     { id := "a", typ := .int .uint8 },
@@ -199,7 +199,7 @@ private def coreBitwiseFunction : GoCore.Func := {
 }
 
 private def coreArrayFunction : GoCore.Func := {
-  name := "arrays_F",
+  id := ⟨"arrays_F"⟩,
   args := #[],
   results := #[coreParam "z"],
   body := .block
@@ -213,7 +213,7 @@ private def coreArrayFunction : GoCore.Func := {
 }
 
 private def coreArrayLenCapFunction : GoCore.Func := {
-  name := "array_len_cap_F",
+  id := ⟨"array_len_cap_F"⟩,
   args := #[],
   results := #[coreParam "z"],
   body := .block
@@ -225,7 +225,7 @@ private def coreArrayLenCapFunction : GoCore.Func := {
 }
 
 private def coreArrayDefaultFunction : GoCore.Func := {
-  name := "array_default_F",
+  id := ⟨"array_default_F"⟩,
   args := #[],
   results := #[coreParam "z"],
   body := .block
@@ -237,7 +237,7 @@ private def coreArrayDefaultFunction : GoCore.Func := {
 }
 
 private def corePointerArrayFunction : GoCore.Func := {
-  name := "pointer_array_F",
+  id := ⟨"pointer_array_F"⟩,
   args := #[],
   results := #[coreParam "z"],
   body := .block
@@ -255,7 +255,7 @@ private def corePointerArrayFunction : GoCore.Func := {
 }
 
 private def coreNilSliceLenCapFunction : GoCore.Func := {
-  name := "nil_slice_len_cap_F",
+  id := ⟨"nil_slice_len_cap_F"⟩,
   args := #[],
   results := #[coreParam "z"],
   body := .block
@@ -266,7 +266,7 @@ private def coreNilSliceLenCapFunction : GoCore.Func := {
 }
 
 private def coreArraySliceAliasFunction : GoCore.Func := {
-  name := "array_slice_alias_F",
+  id := ⟨"array_slice_alias_F"⟩,
   args := #[],
   results := #[coreParam "z"],
   body := .block
@@ -287,7 +287,7 @@ private def coreArraySliceAliasFunction : GoCore.Func := {
 }
 
 private def coreSliceResliceFunction : GoCore.Func := {
-  name := "slice_reslice_F",
+  id := ⟨"slice_reslice_F"⟩,
   args := #[],
   results := #[coreParam "z"],
   body := .block
@@ -311,7 +311,7 @@ private def coreSliceResliceFunction : GoCore.Func := {
 }
 
 private def coreSliceExtendToCapacityFunction : GoCore.Func := {
-  name := "slice_extend_to_capacity_F",
+  id := ⟨"slice_extend_to_capacity_F"⟩,
   args := #[],
   results := #[coreParam "z"],
   body := .block
@@ -334,7 +334,7 @@ private def coreSliceExtendToCapacityFunction : GoCore.Func := {
 }
 
 private def coreFullSliceFunction : GoCore.Func := {
-  name := "full_slice_F",
+  id := ⟨"full_slice_F"⟩,
   args := #[],
   results := #[coreParam "z"],
   body := .block
@@ -352,7 +352,7 @@ private def coreFullSliceFunction : GoCore.Func := {
 }
 
 private def coreMakeSliceFunction : GoCore.Func := {
-  name := "make_slice_F",
+  id := ⟨"make_slice_F"⟩,
   args := #[],
   results := #[coreParam "z"],
   body := .block
@@ -369,7 +369,7 @@ private def coreMakeSliceFunction : GoCore.Func := {
 }
 
 private def coreMapBasicFunction : GoCore.Func := {
-  name := "map_basic_F",
+  id := ⟨"map_basic_F"⟩,
   args := #[],
   results := #[coreParam "z"],
   body := .block
@@ -399,7 +399,7 @@ private def coreMapBasicFunction : GoCore.Func := {
 }
 
 private def coreStringFunction : GoCore.Func := {
-  name := "string_F",
+  id := ⟨"string_F"⟩,
   args := #[],
   results := #[coreParam "z"],
   body := .block
@@ -424,14 +424,14 @@ private def coreStringFunction : GoCore.Func := {
 }
 
 private def coreStringByteLenFunction : GoCore.Func := {
-  name := "string_byte_len_F",
+  id := ⟨"string_byte_len_F"⟩,
   args := #[],
   results := #[coreParam "z"],
   body := .assign (.var "z") (.length (coreStringLit "h\u00e9llo"))
 }
 
 private def coreStringIndexFunction : GoCore.Func := {
-  name := "string_index_F",
+  id := ⟨"string_index_F"⟩,
   args := #[],
   results := #[{ id := "a", typ := .int .uint8 }, { id := "b", typ := .int .uint8 }],
   body := .block
@@ -444,7 +444,7 @@ private def coreStringIndexFunction : GoCore.Func := {
 }
 
 private def coreStringSliceFunction : GoCore.Func := {
-  name := "string_slice_F",
+  id := ⟨"string_slice_F"⟩,
   args := #[],
   results := #[coreParam "z"],
   body := .block
@@ -460,7 +460,7 @@ private def coreStringSliceFunction : GoCore.Func := {
 }
 
 private def coreStringByteConversionFunction : GoCore.Func := {
-  name := "string_byte_conversion_F",
+  id := ⟨"string_byte_conversion_F"⟩,
   args := #[],
   results := #[coreParam "z"],
   body := .block
@@ -486,7 +486,7 @@ private def coreStringByteConversionFunction : GoCore.Func := {
 }
 
 private def coreStringRuneConversionFunction : GoCore.Func := {
-  name := "string_rune_conversion_F",
+  id := ⟨"string_rune_conversion_F"⟩,
   args := #[],
   results := #[coreParam "z"],
   body := .block
@@ -513,7 +513,7 @@ private def coreStringRuneConversionFunction : GoCore.Func := {
 }
 
 private def coreNewFunction : GoCore.Func := {
-  name := "new_F",
+  id := ⟨"new_F"⟩,
   args := #[],
   results := #[coreParam "z"],
   body := .block
@@ -533,7 +533,7 @@ private def coreNewFunction : GoCore.Func := {
 }
 
 private def coreNilMapAssignFunction : GoCore.Func := {
-  name := "nil_map_assign_F",
+  id := ⟨"nil_map_assign_F"⟩,
   args := #[],
   results := #[],
   body := .block
@@ -544,7 +544,7 @@ private def coreNilMapAssignFunction : GoCore.Func := {
 }
 
 private def coreSliceBoundsFunction : GoCore.Func := {
-  name := "slice_bounds_F",
+  id := ⟨"slice_bounds_F"⟩,
   args := #[],
   results := #[],
   body := .block
@@ -556,7 +556,7 @@ private def coreSliceBoundsFunction : GoCore.Func := {
 }
 
 private def coreNilDerefFunction : GoCore.Func := {
-  name := "nil_deref_F",
+  id := ⟨"nil_deref_F"⟩,
   args := #[],
   results := #[coreParam "z"],
   body := .block
@@ -567,14 +567,14 @@ private def coreNilDerefFunction : GoCore.Func := {
 }
 
 private def coreDivideByZeroFunction : GoCore.Func := {
-  name := "divide_by_zero_F",
+  id := ⟨"divide_by_zero_F"⟩,
   args := #[],
   results := #[coreParam "z"],
   body := .assign (.var "z") (.div (.intLit 1) (.intLit 0))
 }
 
 private def coreIndexAddrBoundsFunction : GoCore.Func := {
-  name := "index_addr_bounds_F",
+  id := ⟨"index_addr_bounds_F"⟩,
   args := #[],
   results := #[],
   body := .block
@@ -585,14 +585,14 @@ private def coreIndexAddrBoundsFunction : GoCore.Func := {
 }
 
 private def coreMismatchedEqualityFunction : GoCore.Func := {
-  name := "mismatched_equality_F",
+  id := ⟨"mismatched_equality_F"⟩,
   args := #[],
   results := #[coreBoolParam "ok"],
   body := .assign (.var "ok") (.eqCmp .int (.intLit 0) (.boolLit false))
 }
 
 private def coreShiftIndexFunction : GoCore.Func := {
-  name := "shiftIndex_F",
+  id := ⟨"shiftIndex_F"⟩,
   args := #[{ id := "p", typ := .pointer .int }],
   results := #[coreParam "z"],
   body := .seqn #[
@@ -602,7 +602,7 @@ private def coreShiftIndexFunction : GoCore.Func := {
 }
 
 private def coreCallTargetSequencingFunction : GoCore.Func := {
-  name := "call_target_sequencing_F",
+  id := ⟨"call_target_sequencing_F"⟩,
   args := #[],
   results := #[coreParam "z"],
   body := .block
@@ -613,7 +613,7 @@ private def coreCallTargetSequencingFunction : GoCore.Func := {
     #[
       .assign (.var "i") (.intLit 0),
       .assign (.var "a") (.arrayLit 2 .int #[(0, .intLit 0), (1, .intLit 0)]),
-      .call #[.addr (.indexAddr (.ref "a") (.var "i"))] "shiftIndex_F" #[.ref "i"],
+      .call #[.addr (.indexAddr (.ref "a") (.var "i"))] ⟨"shiftIndex_F"⟩ #[.ref "i"],
       .assign (.var "z")
         (.add
           (.add
@@ -624,7 +624,7 @@ private def coreCallTargetSequencingFunction : GoCore.Func := {
 }
 
 private def coreAssignManySequencingFunction : GoCore.Func := {
-  name := "assign_many_sequencing_F",
+  id := ⟨"assign_many_sequencing_F"⟩,
   args := #[],
   results := #[coreParam "z"],
   body := .block
@@ -652,7 +652,7 @@ private def coreAssignManySequencingFunction : GoCore.Func := {
 }
 
 private def coreIfReturnFunction : GoCore.Func := {
-  name := "if_return_F",
+  id := ⟨"if_return_F"⟩,
   args := #[coreParam "x"],
   results := #[coreParam "z"],
   body := .seqn #[
@@ -668,7 +668,7 @@ private def coreIfReturnFunction : GoCore.Func := {
 }
 
 private def coreBreakContinueFunction : GoCore.Func := {
-  name := "break_continue_F",
+  id := ⟨"break_continue_F"⟩,
   args := #[],
   results := #[coreParam "z"],
   body := .block

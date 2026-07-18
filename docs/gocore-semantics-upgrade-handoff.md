@@ -4,6 +4,67 @@ This file is the persistent handoff log for the semantics upgrade defined in
 `docs/gocore-semantics-upgrade-goal.md`. Newest entry first. Each entry either
 appends to or explicitly supersedes the previous one.
 
+## 2026-07-17: Phase 2 slice 1 — FuncId and the lowering symbol map
+
+Branch:
+- `gocore-semantics-upgrade`
+
+Changed:
+- `GoLean/GoCore/Syntax.lean`: added `FuncId` (newtype over a canonical key,
+  documented as symbol-map-only construction); `Func.name` became
+  `Func.id : FuncId`; `Stmt.call` takes `FuncId`; `findFunctionIn?` looks up
+  by `FuncId`; `MethodInfo.uniqueName` became `MethodInfo.funcId : FuncId`.
+- `GoLean/GoCore/Eval.lean`: call execution, dynamic dispatch, and messages
+  use `FuncId`; `findFunction?`/`runNamedFunction` remain string-keyed as the
+  documented user-facing lookup by canonical function name.
+- `GoLean/GoCore/Ops.lean`: `methodInfoByUnique?` became
+  `methodInfoByFuncId?`.
+- `GoLean/GobraToIR.lean`: added `SymbolMap` and `buildSymbolMap`, built in
+  one pass over program members before lowering, failing closed on duplicate
+  export names and canonical-name collisions. `stripGobraFunctionSuffix` is
+  now interpreted only inside `buildSymbolMap`. Call lowering resolves
+  callees through the map; calls to undeclared functions/methods lower to
+  `.unsupported` instead of guessing via suffix stripping. Member lowering
+  and `lowerMethodInfo` resolve their own IDs through the map.
+- `GoLean/GobraEval.lean`: `runFunctionMember` builds a singleton symbol map.
+- `Tests/GobraEval.lean`: `GoCore.Func` fixtures use `id := ⟨...⟩`; `.call`
+  fixtures wrap callee keys.
+
+Transitional raw-string identity sites (enumerated per the phase gate):
+- method canonical keys are still the Gobra `uniqueName` (until `TypeId`
+  lands and methods can be keyed by receiver type and method name);
+- `Ty.defined`/`Ty.interface` names, `GoValue.struct`/`GoValue.interface`
+  tags, and `dynamicTypeName?` pointer-tag strings (`*name`) are untouched
+  in this slice — they are slice 2b.
+
+Phase:
+- Phase 2 in progress (slice 1 of ~3). Next: slice 2b, `TypeId` for defined
+  and interface types.
+
+Validation:
+- `lake build` (including test executables): pass.
+- `lake exe gobra-eval-tests`: 46 ok, 0 fail.
+- `lake exe gobra-json-tests`: pass.
+- `scripts/coverage run <136 cached-export case ids>`: 136 cases, 123 pass,
+  13 fail (3 differential, 5 lean-observation, 4 json-check,
+  1 artifact-check); failing case-id set identical to the Phase 0 baseline.
+- `git diff --check`: clean.
+
+Regressions:
+- none.
+
+Known blockers:
+- none.
+
+Next recommended step:
+- Slice 2b: `TypeId` for `Ty.defined`/`Ty.interface`, `TypeEnv`, struct and
+  interface value tags, with mangling stripped to source display names via
+  the symbol map, so interface dynamic tags and struct observations match
+  the Go oracle's source-level names.
+
+Commit status:
+- committed (this entry accompanies the slice commit).
+
 ## 2026-07-17: Phase 1 complete — runtime `old` removed
 
 Branch:

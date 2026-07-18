@@ -26,6 +26,60 @@ private def stripGobraFunctionSuffix (name : String) : String :=
         name
   | _ => name
 
+/-- Explicit symbol map from Gobra export names to GoCore semantic function
+identities. This is the only place Gobra name mangling is interpreted: the
+map is built in one pass over the program members before any lowering, and
+call lowering resolves callees through it, failing closed on names that no
+declared member exports. Method entries currently keep the Gobra
+`uniqueName` as their transitional canonical key until `TypeId` lands and
+methods can be keyed by receiver type and method name. -/
+structure SymbolMap where
+  functions : Array (String × GoLean.GoCore.FuncId) := #[]
+  methods : Array (String × GoLean.GoCore.FuncId) := #[]
+  deriving Repr
+
+private def lookupEntry? (entries : Array (String × GoLean.GoCore.FuncId)) (name : String) :
+    Option GoLean.GoCore.FuncId :=
+  entries.foldl
+    (fun found (entryName, id) =>
+      match found with
+      | some id => some id
+      | none => if entryName == name then some id else none)
+    none
+
+def SymbolMap.function? (map : SymbolMap) (name : String) : Option GoLean.GoCore.FuncId :=
+  lookupEntry? map.functions name
+
+def SymbolMap.method? (map : SymbolMap) (uniqueName : String) : Option GoLean.GoCore.FuncId :=
+  lookupEntry? map.methods uniqueName
+
+private def SymbolMap.hasCanonical (map : SymbolMap) (id : GoLean.GoCore.FuncId) : Bool :=
+  map.functions.any (fun (_, existing) => existing == id) ||
+    map.methods.any (fun (_, existing) => existing == id)
+
+def buildSymbolMap (members : Array GoLean.GobraJson.Member) : Except String SymbolMap := do
+  let mut map : SymbolMap := {}
+  for member in members do
+    match member with
+    | .function member =>
+        let gobraName := member.name.name
+        let canonical : GoLean.GoCore.FuncId := ⟨stripGobraFunctionSuffix gobraName⟩
+        if (map.function? gobraName).isSome then
+          throw s!"duplicate Gobra function export name {gobraName}"
+        if map.hasCanonical canonical then
+          throw s!"function name collision on canonical name {canonical.key} (from {gobraName})"
+        map := { map with functions := map.functions.push (gobraName, canonical) }
+    | .method member =>
+        let uniqueName := member.name.uniqueName
+        let canonical : GoLean.GoCore.FuncId := ⟨uniqueName⟩
+        if (map.method? uniqueName).isSome then
+          throw s!"duplicate Gobra method unique name {uniqueName}"
+        if map.hasCanonical canonical then
+          throw s!"method name collision on canonical name {canonical.key}"
+        map := { map with methods := map.methods.push (uniqueName, canonical) }
+    | .mPredicate _ => pure ()
+  return map
+
 private def lowerIntegerKind? : GoLean.GobraJson.IntegerKind → Option GoLean.GoCore.IntKind
   | .unbounded name => some (.unbounded name)
   | .bounded name bits _lower _upper =>
@@ -411,8 +465,8 @@ private def lowerDesugaredMultiAssign? (stmts : Array GoLean.GobraJson.Stmt) :
     | _ => none
   return .seqn (loweredTemps.push (.assignMany targets values))
 
-private def lowerDesugaredCallAssign? (stmts : Array GoLean.GobraJson.Stmt) :
-    Option GoLean.GoCore.Stmt := do
+private def lowerDesugaredCallAssign? (symbols : SymbolMap)
+    (stmts : Array GoLean.GobraJson.Stmt) : Option GoLean.GoCore.Stmt := do
   if stmts.size < 2 then
     none
   let callStmt ← stmts[0]?
@@ -438,19 +492,21 @@ private def lowerDesugaredCallAssign? (stmts : Array GoLean.GobraJson.Stmt) :
         targets := targets.push (lowerAssignee left)
         i := i + 1
     | _ => none
-  return .call targets (stripGobraFunctionSuffix func.name) (args.map lowerExpr)
+  let funcId ← symbols.function? func.name
+  return .call targets funcId (args.map lowerExpr)
 
-partial def lowerStmtWithReturnPost (returnPostprocessing : Array GoLean.GoCore.Stmt) :
+partial def lowerStmtWithReturnPost (symbols : SymbolMap)
+      (returnPostprocessing : Array GoLean.GoCore.Stmt) :
       GoLean.GobraJson.Stmt → GoLean.GoCore.Stmt
     | .seqn _ stmts =>
-        match lowerDesugaredCallAssign? stmts with
+        match lowerDesugaredCallAssign? symbols stmts with
         | some stmt => stmt
         | none =>
             match lowerDesugaredMultiAssign? stmts with
             | some stmt => stmt
-            | none => .seqn (stmts.map (lowerStmtWithReturnPost returnPostprocessing))
+            | none => .seqn (stmts.map (lowerStmtWithReturnPost symbols returnPostprocessing))
     | .block _ decls stmts =>
-        .block (lowerDecls decls) (stmts.map (lowerStmtWithReturnPost returnPostprocessing))
+        .block (lowerDecls decls) (stmts.map (lowerStmtWithReturnPost symbols returnPostprocessing))
     | .initialization _ var => .initialization (lowerVariable var)
     | .singleAss _ left right =>
         match left with
@@ -489,10 +545,10 @@ partial def lowerStmtWithReturnPost (returnPostprocessing : Array GoLean.GoCore.
     | .assume .. => .seqn #[]
     | .ifStmt _ cond thn els =>
         .ifThenElse (lowerExpr cond)
-          (lowerStmtWithReturnPost returnPostprocessing thn)
-          (lowerStmtWithReturnPost returnPostprocessing els)
+          (lowerStmtWithReturnPost symbols returnPostprocessing thn)
+          (lowerStmtWithReturnPost symbols returnPostprocessing els)
     | .while _ cond _invs _terminationMeasure body =>
-        .while (lowerExpr cond) (lowerStmtWithReturnPost returnPostprocessing body)
+        .while (lowerExpr cond) (lowerStmtWithReturnPost symbols returnPostprocessing body)
     | .returnStmt _ => .seqn (returnPostprocessing.push .returnStmt)
     | .breakStmt _ none _ => .breakStmt
     | .breakStmt _ (some label) _ => .unsupported s!"labeled break {label}"
@@ -500,17 +556,22 @@ partial def lowerStmtWithReturnPost (returnPostprocessing : Array GoLean.GoCore.
     | .continueStmt _ (some label) _ => .unsupported s!"labeled continue {label}"
     | .label _ id => .label id.name
     | .functionCall _ func targets args =>
-        .call (targets.map lowerAssignee) (stripGobraFunctionSuffix func.name) (args.map lowerExpr)
+        match symbols.function? func.name with
+        | some funcId => .call (targets.map lowerAssignee) funcId (args.map lowerExpr)
+        | none => .unsupported s!"call to undeclared function {func.name}"
     | .methodCall _ recv meth targets args =>
-        .call (targets.map lowerAssignee) meth.uniqueName (#[lowerExpr recv] ++ args.map lowerExpr)
+        match symbols.method? meth.uniqueName with
+        | some funcId => .call (targets.map lowerAssignee) funcId (#[lowerExpr recv] ++ args.map lowerExpr)
+        | none => .unsupported s!"call to undeclared method {meth.uniqueName}"
 
-partial def lowerStmt : GoLean.GobraJson.Stmt → GoLean.GoCore.Stmt :=
-  lowerStmtWithReturnPost #[]
+partial def lowerStmt (symbols : SymbolMap) : GoLean.GobraJson.Stmt → GoLean.GoCore.Stmt :=
+  lowerStmtWithReturnPost symbols #[]
 
-private def lowerMethodBody (body : GoLean.GobraJson.MethodBody) : GoLean.GoCore.Stmt :=
-  let postprocessing := body.postprocessing.map lowerStmt
+private def lowerMethodBody (symbols : SymbolMap) (body : GoLean.GobraJson.MethodBody) :
+    GoLean.GoCore.Stmt :=
+  let postprocessing := body.postprocessing.map (lowerStmt symbols)
   .block (lowerDecls body.decls)
-    (body.seqn.stmts.map (lowerStmtWithReturnPost postprocessing) ++ postprocessing)
+    (body.seqn.stmts.map (lowerStmtWithReturnPost symbols postprocessing) ++ postprocessing)
 
 private def hasTypeDef (defs : Array (String × GoLean.GoCore.TypeDef)) (name : String) : Bool :=
   defs.any (fun (existing, _) => existing == name)
@@ -565,68 +626,89 @@ def lowerTypeDefs (types : Array GoLean.GobraJson.Ty) :
     Array (String × GoLean.GoCore.TypeDef) :=
   lowerTypeDefsFromTypes types.toList none #[]
 
-def lowerFunctionMember (member : GoLean.GobraJson.FunctionMember) : Except String GoLean.GoCore.Func := do
+private def resolvedFunctionId (symbols : SymbolMap) (gobraName : String) :
+    Except String GoLean.GoCore.FuncId :=
+  match symbols.function? gobraName with
+  | some id => return id
+  | none => throw s!"function {gobraName} missing from symbol map"
+
+private def resolvedMethodId (symbols : SymbolMap) (uniqueName : String) :
+    Except String GoLean.GoCore.FuncId :=
+  match symbols.method? uniqueName with
+  | some id => return id
+  | none => throw s!"method {uniqueName} missing from symbol map"
+
+def lowerFunctionMember (symbols : SymbolMap) (member : GoLean.GobraJson.FunctionMember) :
+    Except String GoLean.GoCore.Func := do
   let body ←
     match member.body with
     | some body => pure body
     | none => throw s!"bodyless function {member.name.name}"
   return {
-    name := stripGobraFunctionSuffix member.name.name,
+    id := ← resolvedFunctionId symbols member.name.name,
     args := member.args.map lowerParam,
     results := member.results.map lowerParam,
-    body := lowerMethodBody body
+    body := lowerMethodBody symbols body
   }
 
-def lowerBodylessFunctionMember (member : GoLean.GobraJson.FunctionMember) : GoLean.GoCore.Func := {
-  name := stripGobraFunctionSuffix member.name.name,
-  args := member.args.map lowerParam,
-  results := member.results.map lowerParam,
-  body := .unsupported s!"bodyless function {member.name.name}"
-}
+def lowerBodylessFunctionMember (symbols : SymbolMap) (member : GoLean.GobraJson.FunctionMember) :
+    Except String GoLean.GoCore.Func := do
+  return {
+    id := ← resolvedFunctionId symbols member.name.name,
+    args := member.args.map lowerParam,
+    results := member.results.map lowerParam,
+    body := .unsupported s!"bodyless function {member.name.name}"
+  }
 
-def lowerMethodMember (member : GoLean.GobraJson.MethodMember) : Except String GoLean.GoCore.Func := do
+def lowerMethodMember (symbols : SymbolMap) (member : GoLean.GobraJson.MethodMember) :
+    Except String GoLean.GoCore.Func := do
   let body ←
     match member.body with
     | some body => pure body
     | none => throw s!"bodyless method {member.name.uniqueName}"
   return {
-    name := member.name.uniqueName,
+    id := ← resolvedMethodId symbols member.name.uniqueName,
     args := #[lowerParam member.receiver] ++ member.args.map lowerParam,
     results := member.results.map lowerParam,
-    body := lowerMethodBody body
+    body := lowerMethodBody symbols body
   }
 
-def lowerBodylessMethodMember (member : GoLean.GobraJson.MethodMember) : GoLean.GoCore.Func := {
-  name := member.name.uniqueName,
-  args := #[lowerParam member.receiver] ++ member.args.map lowerParam,
-  results := member.results.map lowerParam,
-  body := .unsupported s!"bodyless method {member.name.uniqueName}"
-}
+def lowerBodylessMethodMember (symbols : SymbolMap) (member : GoLean.GobraJson.MethodMember) :
+    Except String GoLean.GoCore.Func := do
+  return {
+    id := ← resolvedMethodId symbols member.name.uniqueName,
+    args := #[lowerParam member.receiver] ++ member.args.map lowerParam,
+    results := member.results.map lowerParam,
+    body := .unsupported s!"bodyless method {member.name.uniqueName}"
+  }
 
-def lowerMethodInfo (member : GoLean.GobraJson.MethodMember) : GoLean.GoCore.MethodInfo := {
-  name := member.name.name,
-  uniqueName := member.name.uniqueName,
-  recv := lowerTy member.receiver.typ
-}
+def lowerMethodInfo (symbols : SymbolMap) (member : GoLean.GobraJson.MethodMember) :
+    Except String GoLean.GoCore.MethodInfo := do
+  return {
+    name := member.name.name,
+    funcId := ← resolvedMethodId symbols member.name.uniqueName,
+    recv := lowerTy member.receiver.typ
+  }
 
 def lowerProgram (program : GoLean.GobraJson.Program) : Except String GoLean.GoCore.Program := do
+  let symbols ← buildSymbolMap program.members
   let mut funcs := #[]
   for member in program.members do
     match member with
     | .function member =>
         match member.body with
-        | some _ => funcs := funcs.push (← lowerFunctionMember member)
-        | none => funcs := funcs.push (lowerBodylessFunctionMember member)
+        | some _ => funcs := funcs.push (← lowerFunctionMember symbols member)
+        | none => funcs := funcs.push (← lowerBodylessFunctionMember symbols member)
     | .method member =>
         match member.body with
-        | some _ => funcs := funcs.push (← lowerMethodMember member)
-        | none => funcs := funcs.push (lowerBodylessMethodMember member)
+        | some _ => funcs := funcs.push (← lowerMethodMember symbols member)
+        | none => funcs := funcs.push (← lowerBodylessMethodMember symbols member)
     | .mPredicate _ =>
       pure ()
   let mut methods := #[]
   for member in program.members do
     match member with
-    | .method member => methods := methods.push (lowerMethodInfo member)
+    | .method member => methods := methods.push (← lowerMethodInfo symbols member)
     | _ => pure ()
   return { typeDefs := lowerTypeDefs program.types, funcs, methods }
 
