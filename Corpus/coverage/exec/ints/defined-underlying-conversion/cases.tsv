@@ -1,0 +1,2 @@
+# id	subject	args	expected_status	expected_reason	features
+-	definedUnderlyingConversion	-	ok	-	quorum,conversions,defined_type,widths,ints
