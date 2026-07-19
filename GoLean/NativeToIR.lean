@@ -326,6 +326,12 @@ partial def decodeStmt (results : Array Param) (path : String) (json : Json) : L
       | some (name, args) =>
           pure (.call #[] ⟨name⟩ (← args.mapIdxM (fun i a => decodeExpr s!"{path}.expr.args[{i}]" a)))
       | none => fail s!"expression statement is not a call at {path} (calls are the only effectful expressions modeled)"
+  | "new" =>
+      -- &T{...}: allocate `value` and bind its address into `target`.
+      let t ← decodeTarget s!"{path}.target" (← StrictJson.field path obj "target")
+      let value ← decodeExpr s!"{path}.value" (← StrictJson.field path obj "value")
+      let elemTy ← decodeTy s!"{path}.elemType" (← StrictJson.field path obj "elemType")
+      pure (.seqn ((← declaresOf #[t]).push (.newValue t.assignee value (some elemTy))))
   | "break" => pure .breakStmt
   | "continue" => pure .continueStmt
   | other => fail s!"unsupported statement {other} at {path}"
@@ -464,6 +470,23 @@ private def decodeFunc (path : String) (json : Json) : LowerM Func := do
   let body ← decodeStmt res s!"{path}.body" (← StrictJson.field path obj "body")
   pure { id := ⟨name⟩, args, results := res, body }
 
+/-- A method lowers to a receiver-scoped GoCore function (`RecvType.method`,
+receiver as the first parameter) plus a `MethodInfo` dispatch-table entry. -/
+private def decodeMethod (path : String) (json : Json) : LowerM (Func × MethodInfo) := do
+  let obj ← StrictJson.obj path json
+  let name ← StrictJson.string s!"{path}.name" (← StrictJson.field path obj "name")
+  let recvType ← StrictJson.string s!"{path}.recvType" (← StrictJson.field path obj "recvType")
+  let recv ← decodeParam s!"{path}.recv" (← StrictJson.field path obj "recv")
+  let params ← StrictJson.array s!"{path}.params" (← StrictJson.field path obj "params")
+  let results ← StrictJson.array s!"{path}.results" (← StrictJson.field path obj "results")
+  let args ← params.mapIdxM (fun i p => decodeParam s!"{path}.params[{i}]" p)
+  let res ← results.mapIdxM (fun i p => decodeParam s!"{path}.results[{i}]" p)
+  let body ← decodeStmt res s!"{path}.body" (← StrictJson.field path obj "body")
+  let funcId : FuncId := ⟨s!"{recvType}.{name}"⟩
+  let func : Func := { id := funcId, args := #[recv] ++ args, results := res, body }
+  let info : MethodInfo := { name, funcId, recv := recv.typ }
+  pure (func, info)
+
 partial def decodeProgram (json : Json) : LowerM Program := do
   let obj ← StrictJson.obj "program" json
   let schema ← StrictJson.string "program.schema" (← StrictJson.field "program" obj "schema")
@@ -472,8 +495,13 @@ partial def decodeProgram (json : Json) : LowerM Program := do
   let funcsJson ← StrictJson.array "program.funcs" (← StrictJson.field "program" obj "funcs")
   let funcs ← funcsJson.mapIdxM (fun i f => decodeFunc s!"program.funcs[{i}]" f)
   let typesJson ← StrictJson.array "program.types" (← StrictJson.field "program" obj "types")
-  let typeDefs ← typesJson.mapIdxM (fun i t => decodeTypeDef s!"program.types[{i}]" t)
-  -- Methods are wired with the method/call increment.
-  pure { typeDefs, funcs, methods := #[] }
+  let declaredDefs ← typesJson.mapIdxM (fun i t => decodeTypeDef s!"program.types[{i}]" t)
+  -- The canonical empty struct (map[K]struct{} set idiom) is always available.
+  let typeDefs := #[(⟨"struct{}"⟩, TypeDef.struct #[])] ++ declaredDefs
+  let methodsJson ← StrictJson.array "program.methods" (← StrictJson.field "program" obj "methods")
+  let methodPairs ← methodsJson.mapIdxM (fun i m => decodeMethod s!"program.methods[{i}]" m)
+  -- Method bodies are executable functions (looked up by FuncId on call);
+  -- MethodInfo is the dispatch table.
+  pure { typeDefs, funcs := funcs ++ methodPairs.map Prod.fst, methods := methodPairs.map Prod.snd }
 
 end GoLean.NativeToIR

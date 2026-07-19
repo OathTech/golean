@@ -134,7 +134,16 @@ func (e *emitter) emitFuncDecl(d *ast.FuncDecl) (map[string]any, error) {
 		if err != nil {
 			return nil, err
 		}
+		defType := recv.Type()
+		if ptr, ok := defType.(*types.Pointer); ok {
+			defType = ptr.Elem()
+		}
+		name, ok := namedTypeName(defType)
+		if !ok {
+			return nil, unsup("method on anonymous type %s", defType)
+		}
 		fn["recv"] = map[string]any{"id": localName(recv), "type": rty}
+		fn["recvType"] = name
 	}
 
 	if d.Body == nil {
@@ -205,13 +214,42 @@ func (e *emitter) emitBlock(b *ast.BlockStmt) (map[string]any, error) {
 func (e *emitter) emitStmtList(list []ast.Stmt) ([]any, error) {
 	out := []any{}
 	for _, s := range list {
+		// A-normal form: emit each statement with a fresh hoist accumulator, then
+		// emit the hoisted temp bindings (from calls/allocs in its expressions)
+		// immediately before it.
+		saved := e.hoisted
+		e.hoisted = nil
 		w, err := e.emitStmt(s)
+		hoists := e.hoisted
+		e.hoisted = saved
 		if err != nil {
 			return nil, err
 		}
+		out = append(out, hoists...)
 		out = append(out, w)
 	}
 	return out, nil
+}
+
+// hoist binds an effectful node (call/alloc) to a fresh temp before the current
+// statement and returns a reference to that temp.
+func (e *emitter) hoist(node any, resultType types.Type) (any, error) {
+	if e.hoistForbidden != "" {
+		return nil, unsup("call/allocation in %s (would change evaluation order)", e.hoistForbidden)
+	}
+	ty, err := e.emitType(resultType)
+	if err != nil {
+		return nil, err
+	}
+	name := "$c" + itoa(e.tmpSeq)
+	e.tmpSeq++
+	e.hoisted = append(e.hoisted, map[string]any{
+		"stmt":   "assign",
+		"define": true,
+		"lhs":    []any{map[string]any{"target": "declare", "id": name, "type": ty}},
+		"rhs":    []any{node},
+	})
+	return map[string]any{"expr": "ident", "name": name, "type": ty}, nil
 }
 
 func (e *emitter) emitStmt(s ast.Stmt) (any, error) {
@@ -231,6 +269,15 @@ func (e *emitter) emitStmt(s ast.Stmt) (any, error) {
 	case *ast.IncDecStmt:
 		return e.emitIncDec(st)
 	case *ast.ExprStmt:
+		// A call in statement position lowers directly to a GoCore call
+		// statement (no value needed, so no hoist).
+		if call, ok := st.X.(*ast.CallExpr); ok {
+			node, _, err := e.emitCallNode(call)
+			if err != nil {
+				return nil, err
+			}
+			return map[string]any{"stmt": "expr", "expr": node}, nil
+		}
 		expr, err := e.emitExpr(st.X)
 		if err != nil {
 			return nil, err
@@ -405,7 +452,9 @@ func (e *emitter) emitFor(st *ast.ForStmt) (any, error) {
 		node["init"] = init
 	}
 	if st.Cond != nil {
-		cond, err := e.emitExpr(st.Cond)
+		// The loop condition is re-evaluated each iteration; a hoist would move
+		// it before the loop.
+		cond, err := e.emitGuarded(true, "loop condition", st.Cond)
 		if err != nil {
 			return nil, err
 		}
@@ -612,6 +661,30 @@ func (e *emitter) emitAddressOf(x ast.Expr) (any, error) {
 		return e.emitExpr(ex.X)
 	case *ast.ParenExpr:
 		return e.emitAddressOf(ex.X)
+	case *ast.CompositeLit:
+		// &T{...}: allocate the composite and take its address (A-normal form:
+		// hoist a `new` statement binding a temp to the pointer).
+		if e.hoistForbidden != "" {
+			return nil, unsup("&composite in %s", e.hoistForbidden)
+		}
+		val, err := e.emitCompositeLit(ex)
+		if err != nil {
+			return nil, err
+		}
+		elemTy, err := e.emitType(e.info.TypeOf(ex))
+		if err != nil {
+			return nil, err
+		}
+		ptrTy := map[string]any{"kind": "pointer", "elem": elemTy}
+		name := "$c" + itoa(e.tmpSeq)
+		e.tmpSeq++
+		e.hoisted = append(e.hoisted, map[string]any{
+			"stmt":     "new",
+			"target":   map[string]any{"target": "declare", "id": name, "type": ptrTy},
+			"value":    val,
+			"elemType": elemTy,
+		})
+		return map[string]any{"expr": "ident", "name": name, "type": ptrTy}, nil
 	default:
 		return nil, unsup("address-of %T", x)
 	}
@@ -773,7 +846,9 @@ func (e *emitter) emitBinary(b *ast.BinaryExpr) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	y, err := e.emitExpr(b.Y)
+	// The RHS of a short-circuit operator is only conditionally evaluated, so a
+	// call there cannot be hoisted ahead of the operator.
+	y, err := e.emitGuarded(op == "&&" || op == "||", "short-circuit operand", b.Y)
 	if err != nil {
 		return nil, err
 	}
@@ -816,45 +891,130 @@ func (e *emitter) emitUnaryExpr(u *ast.UnaryExpr) (any, error) {
 	return e.emitUnary(u)
 }
 
+// emitCall in expression position: conversions are pure and returned inline;
+// calls are effectful and hoisted (A-normal form) to a temp.
 func (e *emitter) emitCall(c *ast.CallExpr) (any, error) {
-	// A "call" whose callee position is a type is a conversion T(x). go/types
-	// records this on the callee expression.
+	node, effectful, err := e.emitCallNode(c)
+	if err != nil {
+		return nil, err
+	}
+	if !effectful {
+		return node, nil
+	}
+	return e.hoist(node, e.info.TypeOf(c))
+}
+
+// emitCallNode builds the wire node for a call/conversion and reports whether
+// it is effectful (a call/allocation that must be sequenced) or pure (a
+// conversion).
+func (e *emitter) emitCallNode(c *ast.CallExpr) (any, bool, error) {
+	// A callee position that is a type is a conversion T(x).
 	if tv, ok := e.info.Types[c.Fun]; ok && tv.IsType() {
 		if len(c.Args) != 1 {
-			return nil, unsup("conversion with %d arguments", len(c.Args))
+			return nil, false, unsup("conversion with %d arguments", len(c.Args))
 		}
 		target, err := e.emitType(e.info.TypeOf(c))
 		if err != nil {
-			return nil, err
+			return nil, false, err
 		}
 		arg, err := e.emitExpr(c.Args[0])
 		if err != nil {
-			return nil, err
+			return nil, false, err
 		}
-		return map[string]any{"expr": "convert", "target": target, "x": arg}, nil
+		return map[string]any{"expr": "convert", "target": target, "x": arg}, false, nil
+	}
+
+	// Method call x.M(args): a call to the receiver-scoped FuncId
+	// "DefiningType.M" with the receiver prepended as the first argument.
+	if sel, ok := c.Fun.(*ast.SelectorExpr); ok {
+		return e.emitMethodCall(c, sel)
 	}
 
 	fnID, ok := c.Fun.(*ast.Ident)
 	if !ok {
-		return nil, unsup("call target %T", c.Fun)
+		return nil, false, unsup("call target %T", c.Fun)
 	}
 	switch e.info.Uses[fnID].(type) {
 	case *types.Func:
-		// direct call, handled below
 	case *types.Builtin:
-		return nil, unsup("builtin %s", fnID.Name)
+		return nil, false, unsup("builtin %s", fnID.Name)
 	default:
-		return nil, unsup("call to non-function %s", fnID.Name)
+		return nil, false, unsup("call to non-function %s", fnID.Name)
 	}
+	args, err := e.emitArgs(c.Args)
+	if err != nil {
+		return nil, false, err
+	}
+	return map[string]any{"expr": "call", "func": fnID.Name, "args": args}, true, nil
+}
+
+func (e *emitter) emitMethodCall(c *ast.CallExpr, sel *ast.SelectorExpr) (any, bool, error) {
+	seln, ok := e.info.Selections[sel]
+	if !ok || seln.Kind() != types.MethodVal {
+		return nil, false, unsup("selector call %s is not a method value", sel.Sel.Name)
+	}
+	fn, ok := seln.Obj().(*types.Func)
+	if !ok {
+		return nil, false, unsup("method %s is not a func", sel.Sel.Name)
+	}
+	recvType := fn.Type().(*types.Signature).Recv().Type()
+	// Interface-receiver methods need dynamic dispatch (interface increment).
+	if _, isIface := recvType.Underlying().(*types.Interface); isIface {
+		return nil, false, unsup("interface method dispatch %s", sel.Sel.Name)
+	}
+	// Defining type name (strip a pointer receiver) for the FuncId.
+	defType := recvType
+	pointerRecv := false
+	if ptr, ok := recvType.(*types.Pointer); ok {
+		defType = ptr.Elem()
+		pointerRecv = true
+	}
+	name, ok := namedTypeName(defType)
+	if !ok {
+		return nil, false, unsup("method on anonymous type %s", defType)
+	}
+	// Receiver argument: pass the address for a pointer receiver, else the value.
+	var recvArg any
+	var err error
+	if pointerRecv {
+		recvArg, err = e.emitAddressOf(sel.X)
+	} else {
+		recvArg, err = e.emitExpr(sel.X)
+	}
+	if err != nil {
+		return nil, false, err
+	}
+	args, err := e.emitArgs(c.Args)
+	if err != nil {
+		return nil, false, err
+	}
+	all := append([]any{recvArg}, args...)
+	return map[string]any{"expr": "call", "func": name + "." + sel.Sel.Name, "args": all}, true, nil
+}
+
+// emitGuarded emits x, forbidding hoists while `guard` holds (restoring any
+// prior guard afterward).
+func (e *emitter) emitGuarded(guard bool, reason string, x ast.Expr) (any, error) {
+	if !guard {
+		return e.emitExpr(x)
+	}
+	saved := e.hoistForbidden
+	e.hoistForbidden = reason
+	w, err := e.emitExpr(x)
+	e.hoistForbidden = saved
+	return w, err
+}
+
+func (e *emitter) emitArgs(as []ast.Expr) ([]any, error) {
 	args := []any{}
-	for _, a := range c.Args {
+	for _, a := range as {
 		w, err := e.emitExpr(a)
 		if err != nil {
 			return nil, err
 		}
 		args = append(args, w)
 	}
-	return map[string]any{"expr": "call", "func": fnID.Name, "args": args}, nil
+	return args, nil
 }
 
 // ---- operator tables ----

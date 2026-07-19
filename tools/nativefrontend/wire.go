@@ -21,7 +21,18 @@ type emitter struct {
 	fset *token.FileSet
 	info *types.Info
 	pkg  *types.Package
+
+	// A-normal form: calls and allocations in expression position are hoisted
+	// into let-bound temp statements accumulated here for the statement being
+	// emitted, so GoCore expressions stay pure (calls are statements).
+	hoisted        []any
+	tmpSeq         int
+	hoistForbidden string // non-empty where hoisting is unsafe (short-circuit RHS, loop cond)
 }
+
+// emptyStructName is the canonical GoCore type name for the empty struct
+// struct{} (the set-value idiom map[K]struct{}).
+const emptyStructName = "struct{}"
 
 // unsupported is returned when a construct is not yet modeled. The pipeline
 // fails closed: the emitter never approximates.
@@ -81,7 +92,13 @@ func (e *emitter) emitType(t types.Type) (any, error) {
 		}
 		return nil, unsup("anonymous non-empty interface type %s", ty)
 	case *types.Struct:
-		return nil, unsup("anonymous struct type %s", ty)
+		// The empty struct struct{} (the set-value idiom map[K]struct{}) is a
+		// canonical named empty struct in GoCore; other anonymous structs are
+		// not modeled.
+		if ty.NumFields() == 0 {
+			return map[string]any{"kind": "named", "name": emptyStructName}, nil
+		}
+		return nil, unsup("anonymous non-empty struct type %s", ty)
 	default:
 		return nil, unsup("type %T (%s)", t, t)
 	}
