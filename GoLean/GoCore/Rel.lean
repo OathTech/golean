@@ -100,6 +100,8 @@ inductive ExprR : ExecState → Expr → ExprOut → Prop where
   | ref {s id loc} :
       lookupLoc s id = .ok loc →
       ExprR s (.ref id) (.value (.addr loc) s)
+  | locLit {s l} :
+      ExprR s (.locLit l) (.value (.addr l) s)
   | deref {s s₁ e ty loc v} :
       ExprR s e (.value (.addr loc) s₁) →
       loadLoc s₁ loc = .ok v →

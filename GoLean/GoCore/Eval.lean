@@ -229,6 +229,7 @@ mutual
         let pair ← evalExpr state operand
         return (.bool (!(← valueAsBool pair.1)), pair.2)
     | .ref id => return (.addr (← lookupLoc state id), state)
+    | .locLit l => return (.addr l, state)
     | .deref ptr _typ => do
         let pair ← evalExpr state ptr
         return (← loadLoc pair.2 (← valueAsLoc pair.1), pair.2)

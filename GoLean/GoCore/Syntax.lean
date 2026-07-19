@@ -74,6 +74,12 @@ inductive Expr where
   | or (left right : Expr)
   | not (operand : Expr)
   | ref (id : String)
+  /-- A resolved location literal — evaluates to its address. Proof-facing:
+  introduced only by the relation's name-resolution substitution (`substLoc`),
+  never emitted by the frontend. The location-resolved core (Goose-aligned;
+  `docs/2026-07-19_reshape-mechanics-design.md`) rewrites `var`/`ref` into this
+  so the relation performs no runtime name lookup. -/
+  | locLit (l : Loc)
   | deref (ptr : Expr) (typ : Ty)
   | structLit (typ : Ty) (args : Array Expr)
   | fieldGet (recv : Expr) (typeId : TypeId) (fieldName : String)
