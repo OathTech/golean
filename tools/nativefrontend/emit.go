@@ -384,6 +384,20 @@ func (e *emitter) emitAssign(st *ast.AssignStmt) (any, error) {
 		}
 		lhs = append(lhs, w)
 	}
+	// A single call on the RHS (possibly multi-value) is emitted un-hoisted so
+	// the lowering makes it a call statement writing all targets; hoisting would
+	// force its result into one temp, which fails for a multi-value return.
+	if len(st.Rhs) == 1 {
+		if call, ok := st.Rhs[0].(*ast.CallExpr); ok {
+			node, effectful, err := e.emitCallNode(call)
+			if err != nil {
+				return nil, err
+			}
+			if effectful {
+				return map[string]any{"stmt": "assign", "define": define, "lhs": lhs, "rhs": []any{node}}, nil
+			}
+		}
+	}
 	rhs := []any{}
 	for _, r := range st.Rhs {
 		w, err := e.emitExpr(r)

@@ -504,12 +504,23 @@ partial def decodeAssign (results : Array Param) (path : String) (obj : StrictJs
   let lhs ← StrictJson.array s!"{path}.lhs" (← StrictJson.field path obj "lhs")
   let rhs ← StrictJson.array s!"{path}.rhs" (← StrictJson.field path obj "rhs")
   -- Single call on the RHS assigned to targets → GoCore call statement.
+  -- Blank targets route to fresh discard temps.
   if rhs.size == 1 then
     match ← asCall? rhs[0]! with
     | some (name, args) =>
-        let targets ← lhs.mapIdxM (fun i t => decodeTarget s!"{path}.lhs[{i}]" t)
-        let assignees ← targets.mapM (fun t => targetAssignee t)
-        return .seqn ((← declaresOf targets) ++ #[.call assignees ⟨name⟩ (← args.mapIdxM (fun i a => decodeExpr s!"{path}.args[{i}]" a))])
+        let mut decls : Array Stmt := #[]
+        let mut assignees : Array Assignee := #[]
+        for i in [:lhs.size] do
+          let lj := lhs[i]!
+          if targetIsBlank lj then
+            let tmp := s!"$cr{i}"
+            decls := decls.push (.initialization { id := tmp, typ := .int })
+            assignees := assignees.push (.var tmp)
+          else
+            let t ← decodeTarget s!"{path}.lhs[{i}]" lj
+            decls := decls ++ (← declaresOf #[t])
+            assignees := assignees.push t.assignee
+        return .seqn (decls.push (.call assignees ⟨name⟩ (← args.mapIdxM (fun i a => decodeExpr s!"{path}.args[{i}]" a))))
     | none => pure ()
   -- Comma-ok map lookup: `v, ok := m[k]`. Blank targets route to fresh temps.
   if lhs.size == 2 && rhs.size == 1 then
