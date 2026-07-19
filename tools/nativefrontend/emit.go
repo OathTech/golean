@@ -1230,7 +1230,29 @@ func (e *emitter) emitCallNode(c *ast.CallExpr) (any, bool, error) {
 	if err != nil {
 		return nil, false, err
 	}
-	return map[string]any{"expr": "call", "func": fnID.Name, "args": args}, true, nil
+	resultTypes, err := e.emitResultTypes(sig)
+	if err != nil {
+		return nil, false, err
+	}
+	return map[string]any{"expr": "call", "func": fnID.Name, "args": args, "resultTypes": resultTypes}, true, nil
+}
+
+// emitResultTypes emits a function signature's result types (used to type
+// discard temps for blank call-result targets).
+func (e *emitter) emitResultTypes(sig *types.Signature) ([]any, error) {
+	out := []any{}
+	if sig == nil {
+		return out, nil
+	}
+	r := sig.Results()
+	for i := 0; i < r.Len(); i++ {
+		t, err := e.emitType(r.At(i).Type())
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, t)
+	}
+	return out, nil
 }
 
 // emitCallArgs emits call arguments, collecting the trailing arguments of a
@@ -1309,7 +1331,11 @@ func (e *emitter) emitMethodCall(c *ast.CallExpr, sel *ast.SelectorExpr) (any, b
 		return nil, false, err
 	}
 	all := append([]any{recvArg}, args...)
-	return map[string]any{"expr": "call", "func": name + "." + sel.Sel.Name, "args": all}, true, nil
+	resultTypes, err := e.emitResultTypes(fn.Type().(*types.Signature))
+	if err != nil {
+		return nil, false, err
+	}
+	return map[string]any{"expr": "call", "func": name + "." + sel.Sel.Name, "args": all, "resultTypes": resultTypes}, true, nil
 }
 
 // emitGuarded emits x, forbidding hoists while `guard` holds (restoring any

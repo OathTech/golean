@@ -1,0 +1,2 @@
+# id	subject	args	expected_status	expected_reason	features
+-	blankDiscardNonint	-	ok	-	multi_assign,calls,multi_result

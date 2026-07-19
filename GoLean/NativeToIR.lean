@@ -508,13 +508,22 @@ partial def decodeAssign (results : Array Param) (path : String) (obj : StrictJs
   if rhs.size == 1 then
     match ← asCall? rhs[0]! with
     | some (name, args) =>
+        -- Result types (when the frontend supplies them) type blank discard
+        -- temps correctly; fall back to int only if absent.
+        let callObj ← StrictJson.obj s!"{path}.rhs[0]" rhs[0]!
+        let resultTypes ← (match callObj.get? "resultTypes" with
+          | some rt => do
+              let arr ← StrictJson.array s!"{path}.rhs[0].resultTypes" rt
+              arr.mapIdxM (fun i t => decodeTy s!"{path}.rhs[0].resultTypes[{i}]" t)
+          | none => pure #[])
         let mut decls : Array Stmt := #[]
         let mut assignees : Array Assignee := #[]
         for i in [:lhs.size] do
           let lj := lhs[i]!
           if targetIsBlank lj then
             let tmp := s!"$cr{i}"
-            decls := decls.push (.initialization { id := tmp, typ := .int })
+            let ty := resultTypes[i]?.getD .int
+            decls := decls.push (.initialization { id := tmp, typ := ty })
             assignees := assignees.push (.var tmp)
           else
             let t ← decodeTarget s!"{path}.lhs[{i}]" lj
@@ -605,10 +614,24 @@ partial def decodeFor (results : Array Param) (path : String) (obj : StrictJson.
     | none => pure (.boolLit true))
   let body ← decodeStmt results s!"{path}.body" (← StrictJson.field path obj "body")
   let post ← (match obj.get? "post" with
-    | some p => do pure #[← decodeStmt results s!"{path}.post" p]
-    | none => pure #[])
-  let loopBody := Stmt.block #[] (#[body] ++ post)
-  let loop := Stmt.while cond loopBody
+    | some p => decodeStmt results s!"{path}.post" p
+    | none => pure (.seqn #[]))
+  -- `continue` must still run the post statement, but GoCore's `while` re-runs
+  -- its whole body on continue. So run post at the top of the body except on
+  -- the first iteration (guarded by a flag), then re-check the condition; this
+  -- makes `for init; cond; post` faithful under continue and break.
+  let loopBody := Stmt.block #[] #[
+    .ifThenElse (.var "$forFirst")
+      (.assign (.var "$forFirst") (.boolLit false))
+      post,
+    .ifThenElse cond (.seqn #[]) .breakStmt,
+    body
+  ]
+  let loop := Stmt.block #[] #[
+    .initialization { id := "$forFirst", typ := .bool },
+    .assign (.var "$forFirst") (.boolLit true),
+    .while (.boolLit true) loopBody
+  ]
   match obj.get? "init" with
   | some initE => pure (.block #[] #[← decodeStmt results s!"{path}.init" initE, loop])
   | none => pure loop
