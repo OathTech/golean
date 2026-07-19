@@ -122,6 +122,31 @@ The interpreter keeps `declareLocal` unchanged.
   `env` — the env premise discharges, so the law is genuinely usable (what #23
   was blocked on).
 
+## Blast radius & future-compatibility (checked before go/no-go)
+
+**Does env-in-control / option (ii) block later work? No — it enables the hard part.**
+- **Concurrency (raft's core):** Go locals are per-goroutine; env-in-*control*
+  gives thread-local locals for free (each goroutine's `Config` carries its own
+  `env`), matching Iris/HeapLang (per-thread expr, shared heap). Env-in-*state*
+  (rejected Option A) would have been a concurrency **blocker**. So this reshape
+  is a prerequisite for concurrency, not an obstacle.
+- **Closures:** capture the `env` at creation; locals are boxed heap cells, so
+  capture-by-reference works via the captured locs. Fine under (ii).
+- **Calls-in-expressions:** a known, already-flagged future refactor (`ExprR`
+  big-step → Config-level), **independent** of env placement; (ii) extends cleanly.
+- **Defer/recover, interface dispatch, the typed/field-granular heap upgrade:**
+  orthogonal; no interaction.
+
+**Blast radius:** touched = `Rel.lean` + `Correspondence.lean` + `GoLeanProofs.lean`
+(proof-facing only). Untouched = interpreter (`Eval.lean`), `ExecState` fields
+(`locals` stays for the interpreter), `NativeToIR`, frontend, differential corpus
+→ **no possible behavioral regression**. Throwaway collateral: `SliceSpike.lean`'s
+`env_bridge` and untracked `Probe.lean` need a trivial `env` update or deletion.
+
+**De-risking refinement:** keep `env : LocalEnv` (the existing scope-stack type) —
+the reshape then changes *where* locals live, not *how* they're represented (flat
+env is a separate later simplification). One change, not two.
+
 ## Execution order & risk
 - Order: `Rel.lean` (Cont → Config → Step → ExprR/AssigneeR/aux) → build (expect
   red) → `Correspondence.lean` → `GoLeanProofs.lean` → green. Atomic; compiler-first.
