@@ -48,16 +48,27 @@ we did not. Generality is what makes "pry wider" cheap instead of a rewrite.
 Layers bottom→top; per slice-construct status. ✓=green, ▲=frontier (stalls here),
 · = not yet reached.
 
+Updated 2026-07-19 after the CEK reshape (#23 done):
+
 | construct \ layer      | L1 frontend | L2 interp+diff | L3 relation | L4 corresp. | L5 WP lemma | L6 spec |
 |------------------------|:---:|:---:|:---:|:---:|:---:|:---:|
-| int lit / arith        | ✓ | ✓ | ✓ | ▲ | · | · |
+| int lit / arith        | ✓ | ✓ | ✓ | ▲ | ✓* | · |
 | local decl `x := 0`    | ✓ | ✓ | ✓ | ▲ | · | · |
-| assign to var          | ✓ | ✓ | ✓ | ▲ | ▲(#23) | · |
+| assign to var          | ✓ | ✓ | ✓ | ▲ | **✓** | · |
 | address-of `&x`        | ✓ | ✓ | ✓ | ▲ | · | · |
-| deref-load `*p`        | ✓ | ✓ | ✓ | ▲ | · | · |
-| deref-store `*p = …`   | ✓ | ✓ | ✓ | ▲ | ▲(#23) | · |
-| call + frame + return  | ✓ | ✓ | ✓ | ▲ | ▲(new) | · |
+| deref-load `*p`        | ✓ | ✓ | ✓ | ▲ | ✓* (read law) | · |
+| deref-store `*p = …`   | ✓ | ✓ | ✓ | ▲ | ▲ (unblocked) | · |
+| call + frame + return  | ✓ | ✓ | ✓ | ▲ | ▲ (new) | · |
 | composed spec (main)   | — | ✓ | — | — | — | ▲ |
+
+`*` = available as a supporting lemma, not a standalone WP step (arith is
+big-step inside `ExprR`; deref-load is `pointsTo_loadLoc`, an ownership⟹value
+lemma). **Bold ✓** = the reshape's headline: `wp_assign` is now a usable law
+(`wp_assign_lit` discharges its premises), closing the audited #23 blocker.
+`deref-store` L5 is now marked **unblocked** rather than #23-blocked: the camera
+problem is gone for *every* assignee form (`.var` resolves via `env`; `.addr`
+resolves via `ExprR env` — both fixed in the goal), so the deref-store lemma is
+now just "to write," not "structurally blocked."
 
 **Grounding of the lower rows:** L1 — `ref`/`deref`/`addr`/`field-addr`/
 `index-addr` all lower in `NativeToIR.lean`; `*p = …` lowers via `.deref e →
@@ -74,10 +85,15 @@ has `ExprR.ref`/`.deref`, `AssigneeR.addr`, `assign`, `call`, `frameReturn`.
   requires **totalizing the exercised subset** (assign / ref / deref / call /
   frame / return over the scalar+pointer fragment) and proving the per-construct
   correspondence lemmas. Heaviest frontier.
-- **L5 — WP general lemmas.** Have: `wp_seqn` (✓). Blocked: `wp_assign` is a
-  scaffold until **#23** (locals in the state interp) makes `hred` dischargeable.
-  Missing: general WP lemmas for `ref`, deref-load, deref-store, and
-  **call/frame/return** (none exist). Gated on #23, then build the lemmas.
+- **L5 — WP general lemmas.** Have: `wp_seqn` (✓), and now **`wp_assign` — a
+  usable law** (CEK reshape closed #23; `wp_assign_lit` discharges it), plus
+  `pointsTo_loadLoc` (the deref-load read law). Still to write (all now
+  *unblocked* — no camera obstacle remains): a **deref-store** lemma (assignee
+  `.addr`, same pattern as `wp_assign` with `AssigneeR.addr`), the **non-literal
+  rhs** assembly for `*p + 1` (compose `pointsTo_loadLoc` + arith into
+  `hrhs`/`hrhs_det`), and the **call/frame/return** lemma (none exists; also needs
+  the results-allocation gap closed so a value-returning frame like `main` reads
+  its result local). These are ordinary lemma-writing now, not blocked research.
 - L6 — spec: compose the WP lemmas into `{p↦n} inc(p) {p↦n+1}` and `main ⊢
   result = 2` (via `∀`-general sub-lemmas). Trivial once L5 lands.
 
