@@ -149,6 +149,13 @@ theorem heapToMap_set_base (h : Heap) (a : Addr) (cell : HeapCell) :
     | index b i =>
       simp [Heap.set, Heap.lookup, ih]
 
+/-- Pure interpreter fact: at a base loc whose cell is `cell`, `loadLoc` returns
+its value. The operational half of the read law. -/
+theorem loadLoc_base_of_lookup {σ : ExecState} {a : Addr} {cell : HeapCell}
+    (h : Heap.lookup σ.heap (.base a) = some cell) :
+    loadLoc σ (.base a) = .ok cell.value := by
+  unfold loadLoc; rw [h]; rfl
+
 /-- The GoCore ghost state: invariant+credit cameras plus gen_heap over the
 base-address heap. WP laws *assume* it, exactly as HeapLang's laws assume
 `[HeapLangGS]`; constructing it is adequacy's job. -/
@@ -191,6 +198,22 @@ theorem wp_seqn {ss k} :
       cases h with
       | step st => cases st; exact ⟨rfl, rfl, rfl, rfl⟩))
   iexact H
+
+/-- **The heap read law**. Owning the target cell pins what the interpreter/
+relation reads from it: `a.id ↦ cell` forces `loadLoc σ (.base a) = .ok
+cell.value`. Unlike the store, this is *not* a standalone WP law — GoCore's CK
+machine has no bare deref `Step` (reads are `ExprR` premises inside statement
+steps like `assign`/`if`), so the read side is exposed as this ownership⟹value
+lemma, which discharges a deref-RHS inside a `wp_assign`'s `hred`. -/
+theorem pointsTo_loadLoc {GF : BundledGFunctors} {hlc : HasLC} [GoCoreGS hlc GF]
+    {σ : ExecState} {a : Addr} {cell : HeapCell} :
+    genHeapInterp (GF := GF) (H := GoHeapF) (heapToMap σ.heap) ∗ a.id ↦ cell
+      ⊢ |==> ⌜loadLoc σ (.base a) = .ok cell.value⌝ := by
+  iintro ⟨Hσ, Hpt⟩
+  imod genHeap_valid $$ [$Hσ $Hpt] with %Hmap
+  imodintro; ipureintro
+  apply loadLoc_base_of_lookup
+  rw [get?_heapToMap] at Hmap; simpa using Hmap
 
 /-- **The heap store law** over GoCore's real `Step.assign`.
 
@@ -250,5 +273,85 @@ theorem wp_assign {a : Addr} {oldcell newcell : HeapCell} {lhs rhs k}
       · itrivial
 
 end HeapWP
+
+/-! ## Step 3b.3 — adequacy: end-to-end soundness of the WP layer
+
+Mirrors HeapLang's `heap_adequacy`. From an initial `σ`, allocate the GoCore
+ghost state (gen_heap heap-view + meta names over `heapToMap σ.heap`) and derive
+`adequate .NotStuck`: a `WP c {{ v, ⌜φ v⌝ }}` provable under *any* allocated
+ghost state entails the real machine started at `(c, σ)` never gets stuck and
+every terminal value satisfies `φ`. This closes the chain **real relation →
+`Language` → WP laws → adequacy** on GoCore's actual `Step`. -/
+
+/-- The GoCore *pre* ghost state: the functors are present but names are not yet
+allocated (allocation is adequacy's job). -/
+class GoCoreGpreS (hlc : outParam HasLC) (GF : BundledGFunctors) extends
+    InvGpreS GF where
+  heap_pre : genHeapPreS Nat HeapCell GF GoHeapF
+attribute [reducible, instance] GoCoreGpreS.heap_pre
+
+/-- A concrete functor bundle realizing `GoCoreGpreS`: the invariant + credit
+cameras (functors 0–3) plus the gen_heap heap-view / meta-view / meta-token
+functors (4–6) over `Nat`/`HeapCell`/`GoHeapF`. Mirrors HeapLang's `HeapLangS`
+with GoCore's key/value types. -/
+def GoCoreS : BundledGFunctors
+  | 0 => ⟨InvMapF, by infer_instance⟩
+  | 1 => ⟨constOF (DisjointLeibnizSet CoPset), by infer_instance⟩
+  | 2 => ⟨constOF (DisjointLeibnizSet PosSet), by infer_instance⟩
+  | 3 => ⟨Auth.AuthURF (constOF Credit), by infer_instance⟩
+  | 4 => ⟨constOF (HeapView Nat (Agree (LeibnizO HeapCell)) GoHeapF), by infer_instance⟩
+  | 5 => ⟨constOF (HeapView Nat (Agree (LeibnizO GName)) GoHeapF), by infer_instance⟩
+  | 6 => ⟨constOF MetaUR, by infer_instance⟩
+  | _ => ⟨constOF Unit, by infer_instance⟩
+
+instance instGoCoreGpreS : GoCoreGpreS HasLC.hasLC GoCoreS where
+  toWsatGpreS := by
+    constructor
+    · exists 0
+    · exists 1
+    · exists 2
+  toLcGpreS := by
+    constructor
+    · exists 3
+  heap_pre := by
+    constructor
+    · constructor
+      exists 4
+    · constructor
+      exists 5
+    · exists 6
+
+/-- **Adequacy** for GoCore's real relation. `φ`-correct, never-stuck execution
+follows from a universally-quantified WP. -/
+theorem go_adequacy [GoCoreGpreS .hasLC GF] (c : Config) (σ : ExecState)
+    (φ : Unit → Prop)
+    (Hwp : ∀ [GoCoreGS .hasLC GF], ⊢@{IProp GF} (WP c {{ v, ⌜φ v⌝ }})) :
+    adequate .NotStuck c σ (fun v _ => φ v) := by
+  refine wp_adequacy (GF := GF) .NotStuck c σ φ ?_
+  intro inst κs
+  imod iOwn_alloc (E := GhostMapG.elem (K := Nat) (V := HeapCell) (H := GoHeapF))
+    (HeapView.Auth (H := GoHeapF) (.own 1)
+      (Std.PartialMap.map (fun v : HeapCell => toAgree (LeibnizO.mk v))
+        (heapToMap σ.heap)))
+    HeapView.auth_one_valid with ⟨%γh, Hh⟩
+  imod iOwn_alloc (E := GhostMapG.elem (K := Nat) (V := GName) (H := GoHeapF))
+    (HeapView.Auth (H := GoHeapF) (.own 1)
+      (Std.PartialMap.map (fun g : GName => toAgree (LeibnizO.mk g))
+        (∅ : GoHeapF GName)))
+    HeapView.auth_one_valid with ⟨%γm, Hm⟩
+  letI _ : GoCoreGS .hasLC GF := ⟨⟨γh, γm⟩⟩
+  imodintro
+  iexists (fun σ _ => genHeapInterp (GF := GF) (H := GoHeapF) (heapToMap σ.heap))
+  iexists (fun _ => iprop(True))
+  isplitl [Hh Hm]
+  · simp only [genHeapInterp]
+    iexists (∅ : GoHeapF GName)
+    isplitr
+    · ipureintro
+      intro k hk
+      simp [Std.PartialMap.dom, LawfulPartialMap.get?_empty] at hk
+    unfold ghost_map_auth
+    iframe Hh Hm
+  · exact Hwp
 
 end GoLean.Iris

@@ -75,11 +75,23 @@ In order (reordered — Iris spike front-loaded):
        *hypothesis* because `ExecState.locals` isn't in the state interpretation;
        modelling locals would let it be derived. See
        `docs/2026-07-18_a2-step3-wp-design.md` §"3b.2 result".
-     - [ ] **3b.3** — adequacy (mirror HeapLang's `heap_adequacy`: allocate the
-       heap ghost state from `σ.heap`, target `adequate .NotStuck`), and
-       `wp_load` over `deref` (symmetric, `loadLoc` + `genHeap_valid` only). The
-       locals-in-state-interp reshape that discharges `hred` is the larger open
-       item — likely folded into Reshape B.
+     - [x] **3b.3 (skeleton)** — the chain **real relation → `Language` → WP →
+       adequacy** now closes, axioms clean:
+       - `go_adequacy` — `adequate .NotStuck` for GoCore's real `Step`, mirroring
+         HeapLang's `heap_adequacy` (concrete `GoCoreS` functor bundle +
+         `GoCoreGpreS`; allocate gen_heap names from `heapToMap σ.heap`). A
+         universally-quantified WP now yields never-stuck, `φ`-correct execution.
+       - `pointsTo_loadLoc` — the **read law**: `a.id ↦ cell` forces `loadLoc σ
+         (.base a) = .ok cell.value` (+ pure `loadLoc_base_of_lookup`). Note:
+         there is *no* standalone `wp_load` — GoCore's CK machine has no bare
+         deref `Step` (reads are `ExprR` premises inside statement steps), so the
+         read side is this ownership⟹value lemma, which discharges a deref-RHS
+         inside a `wp_assign` `hred`.
+     - [ ] **3b.4 (open)** — discharge the `hred` operational side condition in
+       general (not per-call), by modelling `ExecState.locals` in the state
+       interpretation (or an intermediate location-resolved `Config`). This is
+       the one remaining caveat on the heap laws; likely folded into Reshape B,
+       which already reshapes `ExecState`.
 3. [ ] **Reshape B** (oracle `choices` out of `ExecState` → external stream,
    existential `mapRange` rule) + relation catch-up for **one** nondeterministic
    feature + correspondence over that feature. Finish interpreter totality here,

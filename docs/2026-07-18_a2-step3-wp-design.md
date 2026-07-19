@@ -145,9 +145,34 @@ learned vs. the plan above:
   **locals modelled in the state interpretation** (or an intermediate
   location-resolved Config, HeapLang-style). That is the next structural step —
   likely folded into Reshape B, since it also touches `ExecState`'s shape.
-- **Next:** `wp_load` over `deref` (read-only: `loadLoc` + read bridge +
-  `genHeap_valid`, no update), then adequacy (`heap_adequacy` analogue:
-  `genHeap_init` from `σ.heap`, `adequate .NotStuck`).
+## 3b.3 result — read law + adequacy; the skeleton closes (2026-07-19)
+
+The chain **real relation → `Language` → WP laws → adequacy** now holds
+end-to-end on GoCore's actual `Step`, all axiom-clean.
+
+- **`go_adequacy`** — `adequate .NotStuck c σ (fun v _ => φ v)` from a
+  universally-quantified `WP c {{v, ⌜φ v⌝}}`. Ported from HeapLang's
+  `heap_adequacy` almost verbatim: a concrete `GoCoreS : BundledGFunctors`
+  (invariant+credit cameras 0–3, gen_heap heap-view/meta functors 4–6 over
+  `Nat`/`HeapCell`/`GoHeapF`) + a `GoCoreGpreS` pre-state class + an
+  `instGoCoreGpreS` instance; adequacy allocates the gen_heap names from
+  `heapToMap σ.heap` (the projection substituted for HeapLang's raw `σ.heap`) and
+  hands back the `StateInterp`. The port needed *no* new proof ideas — the ~50
+  lines of camera bundling flagged as "heaviest risk" compiled on the first
+  attempt once the key/value types were substituted. This is the first
+  end-to-end "safety follows from a WP proof" artifact for GoCore.
+- **`pointsTo_loadLoc` (the read law)** — `genHeapInterp (heapToMap σ.heap) ∗
+  a.id ↦ cell ⊢ ==∗ ⌜loadLoc σ (.base a) = .ok cell.value⌝`, via `genHeap_valid`
+  + the read bridge + the pure `loadLoc_base_of_lookup`. **There is no standalone
+  `wp_load`**: GoCore's CK machine has no bare deref `Step` — reads are `ExprR`
+  premises *inside* statement steps (`assign`/`if`/`while`/`call`). So the read
+  side is exposed as this ownership⟹value lemma (not a WP law), which is exactly
+  what discharges a deref-RHS inside a `wp_assign` `hred`. If a standalone
+  `wp_load` is ever wanted, it requires lifting expressions to `Config` steps
+  (an expressions-as-configs reshape) — not currently justified.
+- **Still open (3b.4):** the `hred` caveat. Discharging it in general needs
+  `ExecState.locals` in the state interpretation (or a location-resolved
+  intermediate `Config`); folded into Reshape B.
 
 ## Notes
 
