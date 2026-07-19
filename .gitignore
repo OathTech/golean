@@ -1,4 +1,5 @@
 /.lake
+/proofs/.lake
 /artifacts
 .DS_Store
 /.claude

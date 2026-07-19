@@ -1,0 +1,24 @@
+name = "golean-proofs"
+defaultTargets = ["GoLeanProofs"]
+
+# The Iris proof layer, kept a SEPARATE Lake package inside the golean repo so
+# `lake build` at the repo root never depends on or fetches iris-lean; only
+# building THIS package pulls it. golean's own lakefile stays dependency-free.
+#
+# iris-lean is a pinned git dependency (not an external path) so the repo is
+# self-contained: clone golean + `lake build` here fetches everything. The rev
+# is the one validated by the spike (docs/2026-07-18_iris-spike-result.md); it
+# targets Lean 4.31.0.
+
+[[require]]
+name = "GoLean"
+path = ".."
+
+[[require]]
+name = "iris"
+git = "https://github.com/leanprover-community/iris-lean.git"
+rev = "3877dbeccd1b0545c5be7ef73318e8c86acf79ab"
+subDir = "Iris"
+
+[[lean_lib]]
+name = "GoLeanProofs"
