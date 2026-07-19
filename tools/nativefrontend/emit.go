@@ -346,6 +346,36 @@ func (e *emitter) emitAssign(st *ast.AssignStmt) (any, error) {
 		return map[string]any{"stmt": "compound-assign", "op": op, "target": target, "read": read, "rhs": rhs}, nil
 	}
 
+	// Map element assignment `m[k] = v` is a map store, not an addressed
+	// index (maps are not addressable).
+	if !define && len(st.Lhs) == 1 && len(st.Rhs) == 1 {
+		if ix, ok := st.Lhs[0].(*ast.IndexExpr); ok {
+			if m, ok := e.info.TypeOf(ix.X).Underlying().(*types.Map); ok {
+				base, err := e.emitExpr(ix.X)
+				if err != nil {
+					return nil, err
+				}
+				index, err := e.emitExpr(ix.Index)
+				if err != nil {
+					return nil, err
+				}
+				value, err := e.emitExpr(st.Rhs[0])
+				if err != nil {
+					return nil, err
+				}
+				keyTy, err := e.emitType(m.Key())
+				if err != nil {
+					return nil, err
+				}
+				valTy, err := e.emitType(m.Elem())
+				if err != nil {
+					return nil, err
+				}
+				return map[string]any{"stmt": "map-assign", "base": base, "index": index, "value": value, "keyType": keyTy, "valueType": valTy}, nil
+			}
+		}
+	}
+
 	lhs := []any{}
 	for _, l := range st.Lhs {
 		w, err := e.emitAssignTarget(l, define)
@@ -794,7 +824,7 @@ func (e *emitter) emitCompositeLit(cl *ast.CompositeLit) (any, error) {
 	case *types.Array:
 		return e.emitArrayLit(cl, u)
 	case *types.Slice:
-		return nil, unsup("slice literal (statement-level, next increment)")
+		return e.emitSliceLit(cl, u)
 	case *types.Map:
 		return e.emitMapLit(cl, u)
 	default:
@@ -848,6 +878,60 @@ func (e *emitter) emitStructLit(cl *ast.CompositeLit, t types.Type, st *types.St
 		}
 	}
 	return map[string]any{"expr": "struct-lit", "target": target, "args": args}, nil
+}
+
+// hoistSliceLit hoists a slice allocation (makeSlice + per-index assign) bound
+// to a temp and returns the temp reference.
+func (e *emitter) hoistSliceLit(elems []any, elemTy any, length int64) (any, error) {
+	if e.hoistForbidden != "" {
+		return nil, unsup("slice literal in %s", e.hoistForbidden)
+	}
+	sliceTy := map[string]any{"kind": "slice", "elem": elemTy}
+	name := "$c" + itoa(e.tmpSeq)
+	e.tmpSeq++
+	e.hoisted = append(e.hoisted, map[string]any{
+		"stmt":   "slice-lit",
+		"target": map[string]any{"target": "declare", "id": name, "type": sliceTy},
+		"elem":   elemTy,
+		"length": length,
+		"elems":  elems,
+	})
+	return map[string]any{"expr": "ident", "name": name, "type": sliceTy}, nil
+}
+
+func (e *emitter) emitSliceLit(cl *ast.CompositeLit, s *types.Slice) (any, error) {
+	elemTy, err := e.emitType(s.Elem())
+	if err != nil {
+		return nil, err
+	}
+	elems := []any{}
+	idx := int64(0)
+	length := int64(0)
+	for _, elt := range cl.Elts {
+		if kv, ok := elt.(*ast.KeyValueExpr); ok {
+			tv, ok := e.info.Types[kv.Key]
+			if !ok || tv.Value == nil {
+				return nil, unsup("slice literal key is not constant")
+			}
+			idx, _ = constant.Int64Val(tv.Value)
+			v, err := e.emitExpr(kv.Value)
+			if err != nil {
+				return nil, err
+			}
+			elems = append(elems, map[string]any{"index": idx, "value": v})
+		} else {
+			v, err := e.emitExpr(elt)
+			if err != nil {
+				return nil, err
+			}
+			elems = append(elems, map[string]any{"index": idx, "value": v})
+		}
+		if idx+1 > length {
+			length = idx + 1
+		}
+		idx++
+	}
+	return e.hoistSliceLit(elems, elemTy, length)
 }
 
 // emitMapLit hoists a map literal (an allocation) into a makeMap + per-entry
@@ -1059,18 +1143,55 @@ func (e *emitter) emitCallNode(c *ast.CallExpr) (any, bool, error) {
 	if !ok {
 		return nil, false, unsup("call target %T", c.Fun)
 	}
-	switch e.info.Uses[fnID].(type) {
+	var sig *types.Signature
+	switch obj := e.info.Uses[fnID].(type) {
 	case *types.Func:
+		sig, _ = obj.Type().(*types.Signature)
 	case *types.Builtin:
 		return e.emitBuiltin(c, fnID.Name)
 	default:
 		return nil, false, unsup("call to non-function %s", fnID.Name)
 	}
-	args, err := e.emitArgs(c.Args)
+	args, err := e.emitCallArgs(sig, c)
 	if err != nil {
 		return nil, false, err
 	}
 	return map[string]any{"expr": "call", "func": fnID.Name, "args": args}, true, nil
+}
+
+// emitCallArgs emits call arguments, collecting the trailing arguments of a
+// variadic call into a slice (unless the call already spreads with `...`).
+func (e *emitter) emitCallArgs(sig *types.Signature, c *ast.CallExpr) ([]any, error) {
+	if sig == nil || !sig.Variadic() || c.Ellipsis != token.NoPos {
+		return e.emitArgs(c.Args)
+	}
+	fixed := sig.Params().Len() - 1
+	args := []any{}
+	for i := 0; i < fixed; i++ {
+		w, err := e.emitExpr(c.Args[i])
+		if err != nil {
+			return nil, err
+		}
+		args = append(args, w)
+	}
+	elemType := sig.Params().At(fixed).Type().(*types.Slice).Elem()
+	elemTy, err := e.emitType(elemType)
+	if err != nil {
+		return nil, err
+	}
+	elems := []any{}
+	for i := fixed; i < len(c.Args); i++ {
+		w, err := e.emitExpr(c.Args[i])
+		if err != nil {
+			return nil, err
+		}
+		elems = append(elems, map[string]any{"index": int64(i - fixed), "value": w})
+	}
+	sliceRef, err := e.hoistSliceLit(elems, elemTy, int64(len(c.Args)-fixed))
+	if err != nil {
+		return nil, err
+	}
+	return append(args, sliceRef), nil
 }
 
 func (e *emitter) emitMethodCall(c *ast.CallExpr, sel *ast.SelectorExpr) (any, bool, error) {

@@ -263,6 +263,13 @@ private def decodeTarget (path : String) (json : Json) : LowerM Target := do
 
 private def targetAssignee (t : Target) : LowerM Assignee := pure t.assignee
 
+/-- The expression that reads a declared local target (used to index into a
+freshly-built slice/map temp). -/
+private def targetBaseExpr (t : Target) : Expr :=
+  match t.assignee with
+  | .var id => .var id
+  | _ => .var "$lit"
+
 private def declaresOf (targets : Array Target) : LowerM (Array Stmt) := do
   pure (targets.filterMap (fun t => t.declare.map Stmt.initialization))
 
@@ -355,6 +362,31 @@ partial def decodeStmt (results : Array Param) (path : String) (json : Json) : L
       let value ← decodeExpr s!"{path}.value" (← StrictJson.field path obj "value")
       let elemTy ← decodeTy s!"{path}.elemType" (← StrictJson.field path obj "elemType")
       pure (.seqn ((← declaresOf #[t]).push (.newValue t.assignee value (some elemTy))))
+  | "map-assign" =>
+      let base ← decodeExpr s!"{path}.base" (← StrictJson.field path obj "base")
+      let index ← decodeExpr s!"{path}.index" (← StrictJson.field path obj "index")
+      let value ← decodeExpr s!"{path}.value" (← StrictJson.field path obj "value")
+      let keyTy ← decodeTy s!"{path}.keyType" (← StrictJson.field path obj "keyType")
+      let valTy ← decodeTy s!"{path}.valueType" (← StrictJson.field path obj "valueType")
+      pure (.mapAssign base index value keyTy valTy)
+  | "slice-lit" =>
+      -- slice literal: makeSlice into a temp, then assign each element.
+      let t ← decodeTarget s!"{path}.target" (← StrictJson.field path obj "target")
+      let elemTy ← decodeTy s!"{path}.elem" (← StrictJson.field path obj "elem")
+      let length ← StrictJson.nat s!"{path}.length" (← StrictJson.field path obj "length")
+      let elems ← StrictJson.array s!"{path}.elems" (← StrictJson.field path obj "elems")
+      let lenLit : Expr := .intLit (Int.ofNat length) .int
+      let mut stmts ← declaresOf #[t]
+      stmts := stmts.push (.makeSlice t.assignee elemTy lenLit (some lenLit))
+      for i in [:elems.size] do
+        match elems[i]? with
+        | some el =>
+            let eo ← StrictJson.obj s!"{path}.elems[{i}]" el
+            let index ← StrictJson.int s!"{path}.elems[{i}].index" (← StrictJson.field s!"{path}.elems[{i}]" eo "index")
+            let value ← decodeExpr s!"{path}.elems[{i}].value" (← StrictJson.field s!"{path}.elems[{i}]" eo "value")
+            stmts := stmts.push (.assign (.addr (.indexAddr (targetBaseExpr t) (.intLit index .int))) value)
+        | none => pure ()
+      pure (.seqn stmts)
   | "map-lit" =>
       -- map literal: makeMap into a temp, then assign each entry.
       let t ← decodeTarget s!"{path}.target" (← StrictJson.field path obj "target")
