@@ -105,6 +105,36 @@ Nondeterministic points that consume choices, now and later:
   append-growth/allocation immediately (they are currently deterministic
   policies that this generalizes).
 
+## Range / iteration representation (decided 2026-07-18)
+
+Validated against new Goose/Perennial (`deps/perennial/new/golang/defn/`),
+which is our proof-layer reference — "build for the future" means matching it:
+
+- `slice.for_range` is an **index-based for-loop** over `0..len` using
+  `IndexRef` — desugared onto the generic loop combinator, *not* a primitive.
+- `map.for_range` is a **dedicated semantic primitive** `InternalMapForRange`
+  with its own step rule (wrapped in StartRead/FinishRead for iteration
+  invalidation), because maps have no index and iteration order is
+  nondeterministic.
+
+So GoCore mirrors this:
+
+- **Slice / array / string / int range → desugar** (in `NativeToIR`) to a
+  GoCore index for-loop using existing `while` + `length` + `indexGet`. No new
+  GoCore construct.
+- **Map range → a dedicated GoCore `mapRange` primitive.** This is the one
+  genuine iteration primitive and the first per-step oracle consumer: at each
+  step it consumes a choice bounded by the number of remaining keys to pick the
+  next entry. The abstract map value stays an unordered finite map; order lives
+  entirely in the per-step choices.
+- Range-over-func (Go 1.23) and channel range are later primitives that slot in
+  beside `mapRange`; they are not needed for raft's core.
+
+This is less machinery than a universal cursor and more faithful (it is what
+the reference framework does). It also keeps the reasoning story clean: index
+ranges get the standard loop-invariant rule; `mapRange` gets one step rule that
+threads the oracle.
+
 ## Recommended path
 
 Build the choice-oracle abstraction now, before adding `range`/maps, so map
