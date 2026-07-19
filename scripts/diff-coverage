@@ -404,6 +404,26 @@ while IFS=$'\t' read -r id go_dir function_name arg_ints expected_status feature
     continue
   fi
 
+  # Oracle-invariance check: re-run under several nondeterminism choice streams.
+  # A deterministic-lane-eligible program has an observation that does not vary
+  # with the oracle (e.g. map iteration order). Variance means the program is
+  # genuinely nondeterministic and must not be a strict-lane pass. Only the
+  # native path threads choices today.
+  if [[ "$FRONTEND" == "native" ]]; then
+    nondet=0
+    for oracle in "9,8,7,6,5,4,3,2,1,0" "1,3,5,7,9,2,4,6,8,0" "5,5,5,5,5,5,5,5"; do
+      if variant_obs="$(lean "${lean_args[@]}" --choices "$oracle" 2>&1)"; then :; fi
+      if ! lean observation-eq --left "$lean_observation" --right "$variant_obs" >/dev/null 2>&1; then
+        report_fail "$id" "$features" "nondet" "observation varies with iteration order (oracle [$oracle]): default=$lean_observation variant=$variant_obs"
+        nondet=1
+        break
+      fi
+    done
+    if [[ "$nondet" -ne 0 ]]; then
+      continue
+    fi
+  fi
+
   report_pass "$id" "$features"
 done < "$MANIFEST"
 

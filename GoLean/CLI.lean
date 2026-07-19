@@ -27,6 +27,11 @@ structure GobraRunArgs where
   functionName : Option String := none
   args : Array Int := #[]
   fuel : Nat := 100000
+  /-- Nondeterminism oracle: the choice stream consumed at nondeterministic
+  points (map iteration order, append capacity). Empty is the canonical
+  default. The harness runs the same program under several sequences to check
+  observation invariance. -/
+  choices : List Nat := []
   deriving Repr
 
 structure GobraArtifactCheckArgs where
@@ -171,6 +176,10 @@ private def parseGobraRunArgs : List String → GobraRunArgs → Except String G
       parseGobraRunArgs rest { cfg with args := cfg.args.push (← parseJsonInt "--arg-int" value) }
   | "--fuel" :: value :: rest, cfg => do
       parseGobraRunArgs rest { cfg with fuel := (← parseJsonNat "--fuel" value) }
+  | "--choices" :: value :: rest, cfg => do
+      let parts := (value.splitOn ",").filter (fun s => !s.isEmpty)
+      let choices ← parts.mapM (fun s => parseJsonNat "--choices" s)
+      parseGobraRunArgs rest { cfg with choices }
   | flag :: _, _ => .error s!"unknown or incomplete option: {flag}\n{usage}"
 
 private def locJson : Loc → Json
@@ -605,7 +614,7 @@ private def runNativeJsonRun (args : List String) : IO UInt32 := do
                   IO.println (cliErrorJson s!"{input}: {err}").compress
                   return 1
               | .ok program =>
-                  match GoLean.GoCore.runNamedFunctionInts cfg.fuel program functionName cfg.args with
+                  match GoLean.GoCore.runNamedFunctionInts cfg.fuel program functionName cfg.args cfg.choices with
                   | .ok result =>
                       IO.println (runJson result).compress
                       return 0
