@@ -389,6 +389,25 @@ end
 
 /-! ## Program -/
 
+private def decodeFieldDef (path : String) (json : Json) : LowerM FieldDef := do
+  let obj ← StrictJson.obj path json
+  let name ← StrictJson.string s!"{path}.name" (← StrictJson.field path obj "name")
+  let typ ← decodeTy s!"{path}.type" (← StrictJson.field path obj "type")
+  pure { name, typ }
+
+private def decodeTypeDef (path : String) (json : Json) : LowerM (TypeId × TypeDef) := do
+  let obj ← StrictJson.obj path json
+  let name ← StrictJson.string s!"{path}.name" (← StrictJson.field path obj "name")
+  let defObj ← StrictJson.obj s!"{path}.def" (← StrictJson.field path obj "def")
+  let kind ← StrictJson.string s!"{path}.def.kind" (← StrictJson.field s!"{path}.def" defObj "kind")
+  match kind with
+  | "struct" =>
+      let fields ← StrictJson.array s!"{path}.def.fields" (← StrictJson.field s!"{path}.def" defObj "fields")
+      pure (⟨name⟩, .struct (← fields.mapIdxM (fun i f => decodeFieldDef s!"{path}.def.fields[{i}]" f)))
+  | "alias" =>
+      pure (⟨name⟩, .alias (← decodeTy s!"{path}.def.target" (← StrictJson.field s!"{path}.def" defObj "target")))
+  | other => fail s!"unsupported type definition kind {other} at {path}"
+
 private def decodeFunc (path : String) (json : Json) : LowerM Func := do
   let obj ← StrictJson.obj path json
   let name ← StrictJson.string s!"{path}.name" (← StrictJson.field path obj "name")
@@ -406,7 +425,9 @@ partial def decodeProgram (json : Json) : LowerM Program := do
     fail s!"unexpected schema {schema}"
   let funcsJson ← StrictJson.array "program.funcs" (← StrictJson.field "program" obj "funcs")
   let funcs ← funcsJson.mapIdxM (fun i f => decodeFunc s!"program.funcs[{i}]" f)
-  -- Types and methods are wired in a later increment.
-  pure { typeDefs := #[], funcs, methods := #[] }
+  let typesJson ← StrictJson.array "program.types" (← StrictJson.field "program" obj "types")
+  let typeDefs ← typesJson.mapIdxM (fun i t => decodeTypeDef s!"program.types[{i}]" t)
+  -- Methods are wired with the method/call increment.
+  pure { typeDefs, funcs, methods := #[] }
 
 end GoLean.NativeToIR

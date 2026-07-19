@@ -72,24 +72,37 @@ func (e *emitter) emitGenDeclTypes(d *ast.GenDecl) ([]any, error) {
 		if !ok {
 			continue
 		}
-		st, isStruct := named.Underlying().(*types.Struct)
-		if !isStruct {
-			// Non-struct defined types need no TypeDef; use-site types encode
-			// their shape and methods live in the method table.
+		if st, isStruct := named.Underlying().(*types.Struct); isStruct {
+			fields := []any{}
+			for i := 0; i < st.NumFields(); i++ {
+				fld := st.Field(i)
+				fty, err := e.emitType(fld.Type())
+				if err != nil {
+					return nil, err
+				}
+				fields = append(fields, map[string]any{"name": fld.Name(), "type": fty})
+			}
+			out = append(out, map[string]any{
+				"name": ts.Name.Name,
+				"def":  map[string]any{"kind": "struct", "fields": fields},
+			})
 			continue
 		}
-		fields := []any{}
-		for i := 0; i < st.NumFields(); i++ {
-			fld := st.Field(i)
-			fty, err := e.emitType(fld.Type())
-			if err != nil {
-				return nil, err
-			}
-			fields = append(fields, map[string]any{"name": fld.Name(), "type": fty})
+		if _, isInterface := named.Underlying().(*types.Interface); isInterface {
+			// Interface types carry no GoCore TypeDef; their shape is the
+			// interface type at use sites and dispatch uses the method table.
+			continue
+		}
+		// Other defined types (over primitives, maps, arrays, slices) become
+		// aliases to their underlying type so GoCore can resolve defaults,
+		// conversions, and equality.
+		underlying, err := e.emitType(named.Underlying())
+		if err != nil {
+			return nil, err
 		}
 		out = append(out, map[string]any{
 			"name": ts.Name.Name,
-			"def":  map[string]any{"kind": "struct", "fields": fields},
+			"def":  map[string]any{"kind": "alias", "target": underlying},
 		})
 	}
 	return out, nil
