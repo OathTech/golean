@@ -112,6 +112,34 @@ The interpreter keeps `declareLocal` unchanged.
 - `go_adequacy`: re-prove (functor bundle unchanged; only the `Config` shape
   threads env). `pointsTo_loadLoc` unaffected (pure heap).
 
+## (ii) wiring pinned during execution (2026-07-19)
+
+Resolved while coding the `Step` rules:
+- **`.returning` carries env; `.next`/`.breaking`/`.continuing` do not.** `ToVal`
+  only constrains the terminal `.next .stop`, so non-`.next` control configs may
+  carry env freely. `return e` lowers to *assign the result local, then
+  `.returnStmt`*, so results are named locals read from the **callee** env at
+  frame exit — hence `.returning env k` must carry that env (threaded up through
+  `seq`/`loop` conts, discarding their envs, until it hits `.frame`). `.breaking`/
+  `.continuing` target the `loop` cont (which carries env) so they stay env-free.
+- **`.scope` cont removed.** Under (ii) a block's env lives in its `seq` cont and
+  is discarded at `seqDone`/`seqBreak`/… on every path, so `.scope` (which existed
+  only to `popScope` `s.locals`) is vestigial. Block: `.exec (.block decls ss) env
+  k → .next (.seq ss.toList env' k)` (no `.scope`), `DeclsR (env.pushScope) …`.
+- **`.frame` drops `callerLocals`.** On return, `.next k` resumes and `k` (the
+  caller's `seq`/frame cont) already carries the caller env — nothing to restore.
+  `Cont.frame (targets) (results) (k)`.
+- **Inline `.initialization` rebuilds its `seq` cont with the extended env:**
+  `.exec (.initialization p) env (.seq rest env k)` (exec-env = seq-cont-env by
+  `seqNext`) `→ .next (.seq rest (env.declare p.id loc) k)` after `s.alloc`. This
+  is how mid-sequence `x := 0` scopes over the rest — the case that killed
+  substitution, trivial here.
+- **Results-allocation gap preserved, not fixed.** The current `Step.call` binds
+  only `func.args`, not `func.results` (the interpreter declares results, the
+  relation does not — a pre-existing skeleton gap, untested by the proven
+  instances). This reshape *relocates locals→env only*; it does not close that
+  gap. Track separately.
+
 ## Validation
 - `lake build` (core) + `lake --dir=proofs build` green.
 - `#print axioms` clean for `wp_seqn`, `wp_assign` (now unconditional-modulo-env),
