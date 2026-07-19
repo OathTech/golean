@@ -3,85 +3,62 @@
 See `docs/roadmap.md` for the phased project roadmap. This file tracks tactical
 backlog items.
 
-## Current Priority Sequence (post-2026-07 design review)
+## Current Priority Sequence
 
-The end state is a complete trust chain: real Go → executable model
-(differentially validated against `go run`) → the **relational semantics**
-(the proof authority) → machine-checked proofs (Iris-Lean). The two-reviewer
-design review found the executable/testing half sound but the proof half
-blocked at the foundation (the interpreter and the shared `Ops` substrate are
-`partial def`, so the relation's own premises are opaque and its correspondence
-theorems are unprovable-as-written). **Feature breadth is paused for this
-foundation work.** Reviews synthesized in the design docs; both reviewers
-(proof-chain, engineering) idle/available.
+**Authority: `docs/2026-07-18_master-plan.md` §8** (the reordered sequence, after
+the three-reviewer adversarial review; full findings in
+`docs/2026-07-18_review-findings.md`). This section is a status mirror — keep the
+narrative in the master plan, not here.
+
+The trust chain: real Go → executable interpreter (differentially validated vs
+`go run`) → **nondeterministic relational semantics** (the Iris proof authority)
+→ Iris-Lean proofs. Two artifacts on purpose (the relation must over-approximate
+Go's nondeterminism, so it can't be a total step function; the interpreter is its
+oracle-instantiated executable projection).
 
 Done:
 
-- [x] Turn reviewer-found Go divergences into differential tests, then fix
-  (`control-flow/for-continue-post-plain`, `multi-assign/blank-discard-nonint`).
-- [x] Drop Gobra entirely; native is the only frontend, real Go is the oracle.
-- [x] Honesty fixes (correspondence "blocked", not "deferred"; sufficiency not
-  yet "quorum covered").
+- [x] Bugs → differential tests → fixes; drop Gobra; honesty fixes.
+- [x] **`Ops.lean` fully total** (zero `partial def`) — the review's actual
+  blocker; makes the relation's premises unfoldable. Fuel decision in
+  `docs/2026-07-18_totality-fuel-decision.md`. Needed under any architecture.
+- [x] Interpreter **expression/value layer** total (structural lower cluster).
+- [x] Master plan written + attacked by three reviewers → **reorder** (below).
 
-In order:
+Cheap decisions now locked (master plan §8, C3):
 
-1. **Totality of the substrate + interpreter** (the top priority; also an Iris
-   prerequisite — Iris WP rules are proved by inverting the relation's premises,
-   which is impossible while those premises call opaque partials):
-   - [x] Convert the structurally-recursive `Ops` ops (`loadLoc`, `storeLoc`,
-     `coerceStoredValue`) to plain `def`.
-   - [x] Decide and implement the type-directed-recursion strategy: **fuel**
-     (decremented only at `.defined` type-env resolution, so it bounds
-     type-nesting depth not value size). See
-     `docs/2026-07-18_totality-fuel-decision.md`. Applied to
-     `valueEq`/`normalizeValueForTy`/`defaultValue`/`convertValueToTy`/
-     `resolveDefinedAliases`/`goTypeNameForMessage` via constant-fuel wrappers
-     over fuel'd workers (call sites unchanged); array/struct child recursion
-     refactored from for-loops to structural list helpers. **`Ops.lean` is now
-     fully total — zero `partial def`.** Library builds, 40 unit tests green,
-     quorum 37/39.
-   - [ ] De-partial the interpreter (`Eval.lean`, ~30-function mutual block) via
-     structural/well-founded recursion on `fuel`. `execStmt`/`execStmts` already
-     carry fuel; the `evalExpr` expression recursion, the call/loop recursion,
-     and the many `for`-loop helpers need the same fuel-and-structural treatment
-     used for `Ops`. This is the larger remaining half.
-   - [ ] Prove one real interpreter↔relation correspondence lemma on the
-     scalar/control subset to validate the whole approach end-to-end.
-2. **Relation catch-up + merge invariant** (`Rel.lean` must become an actual
-   authority):
-   - Grow `Rel.lean` to cover the current interpreter subset — slices, maps,
-     `mapRange`, conversions, multi-assign — with nondeterminism expressed as
-     the relation permitting **all** valid behaviors (map order = any
-     permutation; append cap = any `≥ newLen`). The oracle stays interpreter-
-     side for deterministic testing; the relation is genuinely nondeterministic
-     (this is an Iris soundness requirement, not just testing hygiene).
-   - Adopt the merge invariant: no interpreter feature merges without its
-     relational rule (total premises; nondeterminism permitted where Go has it).
-3. **Guardrails** (keep the differential anchor honest):
-   - Strengthen the oracle-invariance check — exhaustive permutations for small
-     maps + seeded-random streams (seed recorded), and make it
-     frontend-independent.
-   - Add golden-wire emitter unit tests (`tools/nativefrontend/*_test.go`) for
-     the intricate desugarings: ANF hoisting/ordering, short-circuit no-hoist,
-     compound-assign, variadic spread, keyed struct/slice/map literals.
-   - Add a multi-file exec corpus case (cross-file calls/types) so the native
-     multi-package advantage is a tested guardrail.
-4. **Iris `Language` spike** (validate the proof endgame on a slice): once the
-   scalar/control relation is total, instantiate Iris-Lean's `Language`
-   typeclass for that subset and prove one WP rule (e.g. `wp_load`). This
-   flushes out the structural mixin lemmas, the continuation-machine-vs-
-   evaluation-context design question, and the toolchain version gap
-   (iris-lean v4.31 vs project v4.29 — see `docs/iris-lean-review.md`) before
-   building out more relation.
+- [x] **D1** — target adequacy is the not-stuck/progress form (turns every
+  "unsupported/fuel = stuck" gap from false-safety-unsound into proof-blocking).
+- [ ] **D2** — map-mid-mutation semantics (Perennial read-invalidation vs
+  snapshot-permute) + a per-nondeterministic-construct completeness artifact.
+  *Bites at the first nondeterministic feature (step 3), not before.*
+- [ ] **D3** — correspondence shape (step-indexed/prefix or small-step oracle
+  interpreter) so it covers prefixes of nonterminating runs. *Bites at step 3.*
 
-Deferred until the foundation is set (then resume under the merge invariant):
+In order (reordered — Iris spike front-loaded):
 
-- Native interface dispatch (closes quorum 39/39; `AckedIndexer` is the last 2
-  quorum cases). Cheap and broadly useful, but a feature — paused.
-- Remaining native feature breadth toward the raft ladder: switch, closures/
-  func values, defer, string/rune range, and the rest.
-- `slices.Sort` extern + the input-fuzzing harness for the quorum sufficiency
-  Layer 3 (the `slices.Sort`-faithful `CommittedIndex` variant).
+1. [ ] **Throwaway Iris spike** — isolated 4.31 + Qq + batteries worktree, a tiny
+   heap-split step relation, prove one heap-touching `wp_store` + run adequacy
+   (`adequate_alt`). Validates toolchain gap + bare-`Language` embedding +
+   adequacy shape *before* reshaping the real `Rel.lean`. Kill-or-validate.
+2. [ ] **Reshape A** — split the heap out of `Config`/`ExecState` into Iris
+   `State` (`Config` can't be Iris `Expr` while it embeds the heap). Then port
+   the spike onto the real scalar relation.
+3. [ ] **Reshape B** (oracle `choices` out of `ExecState` → external stream,
+   existential `mapRange` rule) + relation catch-up for **one** nondeterministic
+   feature + correspondence over that feature. Finish interpreter totality here,
+   against the corrected shapes and D3.
+4. [ ] Scope the merge invariant to the **proof frontier** (quorum's feature set,
+   not every interpreter feature); guardrails; breadth.
+
+**Paused** (was "next", now correctly deferred): finishing the big-step
+`execStmt`/upper-cluster totalization — its correspondence covers only
+terminating runs and goes false once `mapRange` runs with the oracle in state
+(master plan §8 C1). Resume in step 3 against the reshaped, oracle-external
+interpreter.
+
+Deferred until the foundation is set: native interface dispatch (quorum 39/39),
+feature breadth up the raft ladder, `slices.Sort` extern + input fuzzing.
 
 ## Goose/Perennial Design Mapping
 

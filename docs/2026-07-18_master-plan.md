@@ -272,7 +272,10 @@ fuzzing.
 ## 8. Review outcome (2026-07-18) — three adversarial reviews
 
 Three independent adversarial reviewers (proof-theory, Iris-mechanization,
-engineering-strategy) attacked this plan. **Unanimous verdict: the two-object
+engineering-strategy) attacked this plan. Full per-reviewer findings (severities,
+concrete failure scenarios, file:line citations) are recorded in
+`docs/2026-07-18_review-findings.md`; this section is the synthesis and the
+resulting sequence. **Unanimous verdict: the two-object
 architecture is sound — do NOT rethink the foundation — but the §6 work sequence
 and two concrete GoCore shapes are wrong and must change before any more
 big-step interpreter-totality investment.** Pausing the `execStmt` totalization
