@@ -423,7 +423,13 @@ func (e *emitter) emitIncDec(st *ast.IncDecStmt) (any, error) {
 	if st.Tok == token.DEC {
 		op = "-"
 	}
-	return map[string]any{"stmt": "incdec", "op": op, "x": x}, nil
+	// Carry the operand type so the synthetic 1 literal takes the operand's
+	// integer kind (otherwise uint8-- would mix uint8 with an int literal).
+	ty, err := e.typeOf(st.X)
+	if err != nil {
+		return nil, err
+	}
+	return map[string]any{"stmt": "incdec", "op": op, "x": x, "type": ty}, nil
 }
 
 // ---- expressions ----
@@ -551,14 +557,33 @@ func (e *emitter) emitUnary(u *ast.UnaryExpr) (any, error) {
 }
 
 func (e *emitter) emitCall(c *ast.CallExpr) (any, error) {
-	// Builtins and conversions are handled as the pipeline grows; start with
-	// direct calls to named functions.
+	// A "call" whose callee position is a type is a conversion T(x). go/types
+	// records this on the callee expression.
+	if tv, ok := e.info.Types[c.Fun]; ok && tv.IsType() {
+		if len(c.Args) != 1 {
+			return nil, unsup("conversion with %d arguments", len(c.Args))
+		}
+		target, err := e.emitType(e.info.TypeOf(c))
+		if err != nil {
+			return nil, err
+		}
+		arg, err := e.emitExpr(c.Args[0])
+		if err != nil {
+			return nil, err
+		}
+		return map[string]any{"expr": "convert", "target": target, "x": arg}, nil
+	}
+
 	fnID, ok := c.Fun.(*ast.Ident)
 	if !ok {
 		return nil, unsup("call target %T", c.Fun)
 	}
-	obj := e.info.Uses[fnID]
-	if _, isFunc := obj.(*types.Func); !isFunc {
+	switch e.info.Uses[fnID].(type) {
+	case *types.Func:
+		// direct call, handled below
+	case *types.Builtin:
+		return nil, unsup("builtin %s", fnID.Name)
+	default:
 		return nil, unsup("call to non-function %s", fnID.Name)
 	}
 	args := []any{}

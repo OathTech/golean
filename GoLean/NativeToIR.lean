@@ -115,6 +115,10 @@ partial def decodeExpr (path : String) (json : Json) : LowerM Expr := do
       let s ← StrictJson.string s!"{path}.value" (← StrictJson.field path obj "value")
       pure (.stringLit (GoString.fromLeanString s))
   | "nil" => pure (.nil (← optType path obj))
+  | "convert" =>
+      let target ← decodeTy s!"{path}.target" (← StrictJson.field path obj "target")
+      let x ← decodeExpr s!"{path}.x" (← StrictJson.field path obj "x")
+      pure (.convert target x)
   | "unary" =>
       let op ← StrictJson.string s!"{path}.op" (← StrictJson.field path obj "op")
       let x ← decodeExpr s!"{path}.x" (← StrictJson.field path obj "x")
@@ -210,6 +214,19 @@ private def targetAssignee (t : Target) : LowerM Assignee := pure t.assignee
 private def declaresOf (targets : Array Target) : LowerM (Array Stmt) := do
   pure (targets.filterMap (fun t => t.declare.map Stmt.initialization))
 
+/-- Whether a wire assignment target is the blank identifier `_`. -/
+private def targetIsBlank (json : Json) : Bool :=
+  match json.getObjVal? "target" with
+  | .ok (.str "blank") => true
+  | _ => false
+
+/-- The declared type carried on a wire expression node (fallback `int`). -/
+private def exprTypeOf (path : String) (json : Json) : LowerM Ty := do
+  let obj ← StrictJson.obj path json
+  match obj.get? "type" with
+  | some t => decodeTy s!"{path}.type" t
+  | none => pure (.int .int)
+
 /-! ## Statements -/
 
 /-- Detect a call whose result feeds an assignment / return / expression
@@ -247,7 +264,7 @@ partial def decodeStmt (results : Array Param) (path : String) (json : Json) : L
       let op ← StrictJson.string s!"{path}.op" (← StrictJson.field path obj "op")
       let x ← decodeExpr s!"{path}.x" (← StrictJson.field path obj "x")
       let target ← exprAsAssignee s!"{path}.x" x
-      let one : Expr := .intLit 1 .int
+      let one : Expr := .intLit 1 (intKindOfOptType (← optType path obj))
       let rhs := if op == "-" then Expr.sub x one else Expr.add x one
       pure (.assign target rhs)
   | "compound-assign" =>
@@ -297,9 +314,29 @@ partial def decodeAssign (results : Array Param) (path : String) (obj : StrictJs
     | none => pure ()
   if lhs.size != rhs.size then
     fail s!"assignment arity {lhs.size} != {rhs.size} at {path}"
+  else if lhs.any targetIsBlank then
+    -- Blank targets discard their value but must still evaluate the RHS (so a
+    -- panic in `_ = a/b` fires). Evaluate every RHS left-to-right into a fresh
+    -- temp, then write back the non-blank targets from their temps.
+    let mut stmts : Array Stmt := #[]
+    let mut i := 0
+    for r in rhs do
+      let ty ← exprTypeOf s!"{path}.rhs[{i}]" r
+      let tmp := s!"$t{i}"
+      stmts := stmts.push (.initialization { id := tmp, typ := ty })
+      stmts := stmts.push (.assign (.var tmp) (← decodeExpr s!"{path}.rhs[{i}]" r))
+      i := i + 1
+    i := 0
+    for l in lhs do
+      if !targetIsBlank l then
+        let t ← decodeTarget s!"{path}.lhs[{i}]" l
+        stmts := stmts ++ (← declaresOf #[t])
+        stmts := stmts.push (.assign t.assignee (.var s!"$t{i}"))
+      i := i + 1
+    pure (.seqn stmts)
   else
-    -- Element-wise; declarations first, then a simultaneous multi-assign so
-    -- swaps are correct.
+    -- No blanks: declarations first, then a simultaneous multi-assign so swaps
+    -- are correct.
     let targets ← lhs.mapIdxM (fun i t => decodeTarget s!"{path}.lhs[{i}]" t)
     let exprs ← rhs.mapIdxM (fun i e => decodeExpr s!"{path}.rhs[{i}]" e)
     let assignees ← targets.mapM (fun t => targetAssignee t)
