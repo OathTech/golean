@@ -2,6 +2,8 @@
 
 Three parallel deep-reads of the actual checkouts (`../deps/perennial/{src/goose_lang,new,goose}`, `../deps/goose`), to settle the locals-modelling fork (#23) against the one system that has verified concurrent Go in Iris — the same problem class as our raft north star. All claims below were grounded to file:line by the readers; spot-check before relying.
 
+**Terminology (to avoid a muddle):** *Goose* = the translator (Go → GooseLang) + the GooseLang language/semantics. *Perennial* = the Iris proof framework (crash-safety, concurrency) that verifies programs expressed in GooseLang. Same team; Perennial came *after* and is built *on* Goose — they are **one stack, not divergent**. There is a separate internal split — *old Goose model* → *new Goose model* (`perennial/new/`, a backwards-incompatible rewrite) — but that rewrite was to add **real mutation, `go_type`-based structs, and interfaces** (old Goose: "assignments are not supported, only bindings"). **Both old and new are substitution-based with a heap-only state and no runtime name environment** — they agree on the one axis this note turns on. So "the Goose/Perennial design" below means that single shared design; the only thing diverging from it is *our* Option A.
+
 ## What Perennial actually does
 
 **Variables & functions (`src/goose_lang/lang.v`, `new/golang/`, `goose.go`):**
