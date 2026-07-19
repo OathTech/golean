@@ -34,14 +34,15 @@ Blocked on interpreter/substrate totality (see the module header). -/
 def interpreterSoundStatement : Prop :=
   ∀ (fuel : Nat) (s s' : ExecState) (stmt : Stmt),
     execStmt fuel s stmt = .ok (.normal s') →
-    Steps (.exec stmt .stop s) (.next .stop s')
+    Steps (.exec stmt .stop) s (.next .stop) s'
 
 /-- Intended panic agreement: if the interpreter reports a Go panic, the
-relation reaches `panicked` with the same message. Deferred. -/
+relation reaches `panicked` with the same message (at some fault state).
+Deferred. -/
 def interpreterPanicStatement : Prop :=
   ∀ (fuel : Nat) (s : ExecState) (stmt : Stmt) (msg : String),
     execStmt fuel s stmt = .error (.panic msg) →
-    Steps (.exec stmt .stop s) (.panicked msg)
+    ∃ s', Steps (.exec stmt .stop) s (.panicked msg) s'
 
 /-! ## Proven instances
 
@@ -50,21 +51,21 @@ that the control-flow rules compose the way the interpreter behaves. -/
 
 /-- An empty sequence completes normally in two steps. -/
 theorem seqnNilSteps (s : ExecState) :
-    Steps (.exec (.seqn #[]) .stop s) (.next .stop s) :=
+    Steps (.exec (.seqn #[]) .stop) s (.next .stop) s :=
   ((Steps.single .seqn).tail .seqDone)
 
 /-- `while false { body }` skips its body: condition literals evaluate by
 rule, the loop exits normally. -/
 theorem whileFalseSteps (s : ExecState) (body : Stmt) :
-    Steps (.exec (.while (.boolLit false) body) .stop s) (.next .stop s) :=
+    Steps (.exec (.while (.boolLit false) body) .stop) s (.next .stop) s :=
   Steps.single (.whileFalse .boolLit)
 
 /-- `if true { return } else {}` reaches the returning configuration and
 unwinds through sequence context. -/
 theorem ifTrueReturnSteps (s : ExecState) :
     Steps
-      (.exec (.seqn #[.ifThenElse (.boolLit true) .returnStmt (.seqn #[])]) .stop s)
-      (.returning .stop s) :=
+      (.exec (.seqn #[.ifThenElse (.boolLit true) .returnStmt (.seqn #[])]) .stop) s
+      (.returning .stop) s :=
   (((((Steps.single .seqn).tail
       .seqNext).tail
       (.ifTrue .boolLit)).tail
@@ -74,7 +75,7 @@ theorem ifTrueReturnSteps (s : ExecState) :
 /-- `break` inside `while true` exits the loop normally: the breaking
 configuration is absorbed by the loop context. -/
 theorem whileTrueBreakSteps (s : ExecState) :
-    Steps (.exec (.while (.boolLit true) .breakStmt) .stop s) (.next .stop s) :=
+    Steps (.exec (.while (.boolLit true) .breakStmt) .stop) s (.next .stop) s :=
   (((Steps.single (.whileTrue .boolLit)).tail
       .breakStmt).tail
       .loopBreak)
@@ -84,8 +85,8 @@ theorem whileTrueBreakSteps (s : ExecState) :
 theorem divByZeroPanics (s : ExecState) (loc : Loc)
     (h : lookupLoc s "x" = .ok loc) :
     Steps
-      (.exec (.assign (.var "x") (.div (.intLit 1) (.intLit 0))) .stop s)
-      (.panicked "runtime error: integer divide by zero") :=
+      (.exec (.assign (.var "x") (.div (.intLit 1) (.intLit 0))) .stop) s
+      (.panicked "runtime error: integer divide by zero") s :=
   Steps.single (.assignValuePanic (.var h) (.divByZero .intLit .intLit))
 
 end GoLean.GoCore.Correspondence

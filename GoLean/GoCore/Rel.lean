@@ -220,101 +220,108 @@ inductive Cont where
   `callerLocals`, and store into `targets`. -/
   | frame (callerLocals : LocalEnv) (targets : List Loc) (results : List Param) (k : Cont)
 
-/-- Sequential configurations. `panicked` is terminal program behavior. -/
+/-- Sequential **control** configurations — the Iris `Expr` projection.
+
+Reshape A (`docs/2026-07-18_reshape-a-design.md`): `Config` no longer embeds the
+`ExecState`; the state is the paired component of `Step`, so `Config` is a valid
+Iris `Expr` (`ToVal`'s round-trip law forbids the term carrying the heap).
+`panicked` is terminal program behavior. -/
 inductive Config where
-  | exec (stmt : Stmt) (k : Cont) (s : ExecState)
+  | exec (stmt : Stmt) (k : Cont)
   /-- The current statement completed normally. -/
-  | next (k : Cont) (s : ExecState)
-  | breaking (k : Cont) (s : ExecState)
-  | continuing (k : Cont) (s : ExecState)
-  | returning (k : Cont) (s : ExecState)
+  | next (k : Cont)
+  | breaking (k : Cont)
+  | continuing (k : Cont)
+  | returning (k : Cont)
   | panicked (msg : String)
 
-/-- One small step. No rule applies to malformed or unmodeled
-configurations: they are stuck. -/
-inductive Step : Config → Config → Prop where
+/-- One small step over `(control, state)` pairs (`ExecState` is the Iris
+`State` projection). No rule applies to malformed or unmodeled configurations:
+they are stuck. `panicked` carries the state at the fault (terminal; the
+post-state is inert). -/
+inductive Step : Config → ExecState → Config → ExecState → Prop where
   -- Sequencing.
   | seqn {ss k s} :
-      Step (.exec (.seqn ss) k s) (.next (.seq ss.toList k) s)
+      Step (.exec (.seqn ss) k) s (.next (.seq ss.toList k)) s
   | seqNext {t rest k s} :
-      Step (.next (.seq (t :: rest) k) s) (.exec t (.seq rest k) s)
+      Step (.next (.seq (t :: rest) k)) s (.exec t (.seq rest k)) s
   | seqDone {k s} :
-      Step (.next (.seq [] k) s) (.next k s)
+      Step (.next (.seq [] k)) s (.next k) s
   | seqBreak {rest k s} :
-      Step (.breaking (.seq rest k) s) (.breaking k s)
+      Step (.breaking (.seq rest k)) s (.breaking k) s
   | seqContinue {rest k s} :
-      Step (.continuing (.seq rest k) s) (.continuing k s)
+      Step (.continuing (.seq rest k)) s (.continuing k) s
   | seqReturn {rest k s} :
-      Step (.returning (.seq rest k) s) (.returning k s)
+      Step (.returning (.seq rest k)) s (.returning k) s
   -- Blocks and lexical scope extent.
   | block {decls ss k s s'} :
       DeclsR { s with locals := s.locals.pushScope } decls.toList s' →
-      Step (.exec (.block decls ss) k s) (.next (.seq ss.toList (.scope k)) s')
+      Step (.exec (.block decls ss) k) s (.next (.seq ss.toList (.scope k))) s'
   | scopeNext {k s} :
-      Step (.next (.scope k) s) (.next k { s with locals := s.locals.popScope })
+      Step (.next (.scope k)) s (.next k) { s with locals := s.locals.popScope }
   | scopeBreak {k s} :
-      Step (.breaking (.scope k) s) (.breaking k { s with locals := s.locals.popScope })
+      Step (.breaking (.scope k)) s (.breaking k) { s with locals := s.locals.popScope }
   | scopeContinue {k s} :
-      Step (.continuing (.scope k) s) (.continuing k { s with locals := s.locals.popScope })
+      Step (.continuing (.scope k)) s (.continuing k) { s with locals := s.locals.popScope }
   | scopeReturn {k s} :
-      Step (.returning (.scope k) s) (.returning k { s with locals := s.locals.popScope })
+      Step (.returning (.scope k)) s (.returning k) { s with locals := s.locals.popScope }
   -- Declaration and assignment.
   | initialization {p v k s} :
       defaultValue s p.typ = .ok v →
-      Step (.exec (.initialization p) k s)
-        (.next k (s.declareLocal p.id (some p.typ) v))
+      Step (.exec (.initialization p) k) s
+        (.next k) (s.declareLocal p.id (some p.typ) v)
   | assign {lhs rhs loc v k s s₁ s₂ s₃} :
       AssigneeR s lhs (.loc loc s₁) →
       ExprR s₁ rhs (.value v s₂) →
       storeLoc s₂ loc v = .ok s₃ →
-      Step (.exec (.assign lhs rhs) k s) (.next k s₃)
+      Step (.exec (.assign lhs rhs) k) s (.next k) s₃
   | assignTargetPanic {lhs rhs msg k s} :
       AssigneeR s lhs (.panic msg) →
-      Step (.exec (.assign lhs rhs) k s) (.panicked msg)
+      Step (.exec (.assign lhs rhs) k) s (.panicked msg) s
   | assignValuePanic {lhs rhs loc msg k s s₁} :
       AssigneeR s lhs (.loc loc s₁) →
       ExprR s₁ rhs (.panic msg) →
-      Step (.exec (.assign lhs rhs) k s) (.panicked msg)
+      Step (.exec (.assign lhs rhs) k) s (.panicked msg) s₁
   | assignStorePanic {lhs rhs loc v msg k s s₁ s₂} :
       AssigneeR s lhs (.loc loc s₁) →
       ExprR s₁ rhs (.value v s₂) →
       storeLoc s₂ loc v = .error (.panic msg) →
-      Step (.exec (.assign lhs rhs) k s) (.panicked msg)
+      Step (.exec (.assign lhs rhs) k) s (.panicked msg) s₂
   -- Conditionals.
   | ifTrue {c t e k s s'} :
       ExprR s c (.value (.bool true) s') →
-      Step (.exec (.ifThenElse c t e) k s) (.exec t k s')
+      Step (.exec (.ifThenElse c t e) k) s (.exec t k) s'
   | ifFalse {c t e k s s'} :
       ExprR s c (.value (.bool false) s') →
-      Step (.exec (.ifThenElse c t e) k s) (.exec e k s')
+      Step (.exec (.ifThenElse c t e) k) s (.exec e k) s'
   | ifPanic {c t e msg k s} :
       ExprR s c (.panic msg) →
-      Step (.exec (.ifThenElse c t e) k s) (.panicked msg)
+      Step (.exec (.ifThenElse c t e) k) s (.panicked msg) s
   -- Loops.
   | whileTrue {c b k s s'} :
       ExprR s c (.value (.bool true) s') →
-      Step (.exec (.while c b) k s) (.exec b (.loop c b k) s')
+      Step (.exec (.while c b) k) s (.exec b (.loop c b k)) s'
   | whileFalse {c b k s s'} :
       ExprR s c (.value (.bool false) s') →
-      Step (.exec (.while c b) k s) (.next k s')
+      Step (.exec (.while c b) k) s (.next k) s'
   | whilePanic {c b msg k s} :
       ExprR s c (.panic msg) →
-      Step (.exec (.while c b) k s) (.panicked msg)
+      Step (.exec (.while c b) k) s (.panicked msg) s
   | loopNext {c b k s} :
-      Step (.next (.loop c b k) s) (.exec (.while c b) k s)
+      Step (.next (.loop c b k)) s (.exec (.while c b) k) s
   | loopContinue {c b k s} :
-      Step (.continuing (.loop c b k) s) (.exec (.while c b) k s)
+      Step (.continuing (.loop c b k)) s (.exec (.while c b) k) s
   | loopBreak {c b k s} :
-      Step (.breaking (.loop c b k) s) (.next k s)
+      Step (.breaking (.loop c b k)) s (.next k) s
   | loopReturn {c b k s} :
-      Step (.returning (.loop c b k) s) (.returning k s)
+      Step (.returning (.loop c b k)) s (.returning k) s
   -- Control transfer statements.
   | returnStmt {k s} :
-      Step (.exec .returnStmt k s) (.returning k s)
+      Step (.exec .returnStmt k) s (.returning k) s
   | breakStmt {k s} :
-      Step (.exec .breakStmt k s) (.breaking k s)
+      Step (.exec .breakStmt k) s (.breaking k) s
   | continueStmt {k s} :
-      Step (.exec .continueStmt k s) (.continuing k s)
+      Step (.exec .continueStmt k) s (.continuing k) s
   -- Direct calls: resolve targets and arguments in the caller, then enter
   -- a fresh frame sharing the heap. Dynamic dispatch is outside the
   -- skeleton (no rule when the callee expects an interface receiver).
@@ -323,28 +330,29 @@ inductive Step : Config → Config → Prop where
       ArgsR s₁ args.toList argVals s₂ →
       findFunctionIn? s₂.functions funcId = some func →
       BindParamsR { s₂ with locals := [] } func.args.toList argVals frameState →
-      Step (.exec (.call targets funcId args) k s)
+      Step (.exec (.call targets funcId args) k) s
         (.exec func.body
-          (.frame s₂.locals targetLocs func.results.toList k)
-          frameState)
+          (.frame s₂.locals targetLocs func.results.toList k)) frameState
   | frameReturn {callerLocals targets results k s vs s'} :
       ResultsR s results vs →
       StoreManyR { s with locals := callerLocals } targets vs s' →
-      Step (.returning (.frame callerLocals targets results k) s) (.next k s')
+      Step (.returning (.frame callerLocals targets results k)) s (.next k) s'
   | frameFall {callerLocals targets results k s vs s'} :
       ResultsR s results vs →
       StoreManyR { s with locals := callerLocals } targets vs s' →
-      Step (.next (.frame callerLocals targets results k) s) (.next k s')
+      Step (.next (.frame callerLocals targets results k)) s (.next k) s'
 
-/-- Reflexive-transitive closure of `Step`. -/
-inductive Steps : Config → Config → Prop where
-  | refl (c : Config) : Steps c c
-  | tail {a b c} : Steps a b → Step b c → Steps a c
+/-- Reflexive-transitive closure of `Step` over `(control, state)` pairs. -/
+inductive Steps : Config → ExecState → Config → ExecState → Prop where
+  | refl (c : Config) (s : ExecState) : Steps c s c s
+  | tail {a sa b sb c sc} : Steps a sa b sb → Step b sb c sc → Steps a sa c sc
 
-theorem Steps.single {a b : Config} (h : Step a b) : Steps a b :=
-  .tail (.refl a) h
+theorem Steps.single {a b : Config} {sa sb : ExecState} (h : Step a sa b sb) :
+    Steps a sa b sb :=
+  .tail (.refl a sa) h
 
-theorem Steps.trans {a b c : Config} : Steps a b → Steps b c → Steps a c := by
+theorem Steps.trans {a b c : Config} {sa sb sc : ExecState} :
+    Steps a sa b sb → Steps b sb c sc → Steps a sa c sc := by
   intro hab hbc
   induction hbc with
   | refl => exact hab
@@ -352,7 +360,7 @@ theorem Steps.trans {a b c : Config} : Steps a b → Steps b c → Steps a c := 
 
 /-- A configuration the sequential relation considers finished. -/
 def Config.terminal : Config → Prop
-  | .next .stop _ => True
+  | .next .stop => True
   | .panicked _ => True
   | _ => False
 
