@@ -1,4 +1,6 @@
 import Iris.ProgramLogic.WeakestPre
+import Iris.ProgramLogic.Lifting
+import Iris.ProofMode
 import GoLean.GoCore.Rel
 
 /-!
@@ -47,5 +49,51 @@ instance : Language Config ExecState Unit Unit where
   val_stuck h := by
     cases h with
     | step st => cases st <;> rfl
+
+instance : Inhabited ExecState := ⟨{}⟩
+
+/-! ## Step 3a — a real WP law over GoCore's `Step` (pure control, no gen_heap)
+
+Assumes the invariant+credit cameras `[InvGS_gen hlc GF]` (as HeapLang's WP laws
+assume `[HeapLangGS]`), a trivial state interpretation (step 3b replaces it with
+gen_heap over `ExecState.heap`), and derives `IrisGS_gen`. Then proves a WP rule
+for `seqn` — a pure deterministic control step — validating iris-lean's WP
+machinery on the real relation. -/
+
+section PureWP
+variable {GF : BundledGFunctors} {hlc : HasLC} [InvGS_gen hlc GF]
+
+/-- Trivial state interpretation (no heap reasoning yet). `Obs = Unit`. -/
+instance : StateInterp ExecState Unit GF where
+  stateInterp _ _ _ _ := iprop(True)
+
+instance : IrisGS_gen hlc Config GF where
+  numLatersPerStep _ := 0
+  forkPost _ := iprop(True)
+  stateInterp_mono _ _ _ _ := by iintro $
+
+variable {s : Stuckness} {E : CoPset} {Φ : Unit → IProp GF}
+
+/-- `seqn` is a pure, deterministic control step: `.exec (.seqn ss) k` reduces
+only to `.next (.seq ss.toList k)` with the state unchanged. This is a genuine
+weakest-precondition law over GoCore's actual `Step` relation. -/
+theorem wp_seqn {ss k} :
+    (|={E}[E]▷=> £ 1 -∗ WP (Config.next (.seq ss.toList k)) @ s ; E {{ Φ }}) ⊢
+      WP (Config.exec (.seqn ss) k) @ s ; E {{ Φ }} := by
+  iintro H
+  iapply (wp_lift_pure_det_step_no_fork (E₂ := E)
+    (e₂ := Config.next (.seq ss.toList k))
+    (Hsafe := by
+      intro σ
+      cases s
+      · exact ⟨[], Config.next (.seq ss.toList k), σ, [], GoPrimStep.step Step.seqn⟩
+      · rfl)
+    (Hpuredet := by
+      intro σ obs e₂' σ₂ eₜ' h
+      cases h with
+      | step st => cases st; exact ⟨rfl, rfl, rfl, rfl⟩))
+  iexact H
+
+end PureWP
 
 end GoLean.Iris
