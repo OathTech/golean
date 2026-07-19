@@ -25,37 +25,47 @@ def arrayGet (values : Array GoValue) (index : Int) : Except GoError GoValue := 
   | some value => return value
   | none => indexOutOfRangePanic index values.size
 
-partial def coerceStoredValue : GoValue → GoValue → Except GoError GoValue
-  | .int _ kind, .int value _ => return .int (kind.normalize value) kind
-  | .array oldValues, .array newValues => do
-      if oldValues.size != newValues.size then
-        stuck s!"array store length mismatch: {oldValues.size} vs {newValues.size}"
-      let mut out := #[]
-      let mut i := 0
-      for oldValue in oldValues do
-        match newValues[i]? with
-        | some newValue =>
-            out := out.push (← coerceStoredValue oldValue newValue)
-            i := i + 1
-        | none => stuck s!"missing array store value at index {i}"
-      return .array out
-  | .struct oldType oldFields, .struct newType newFields => do
-      if oldType != newType then
-        stuck s!"struct store type mismatch: {oldType.key} vs {newType.key}"
-      if oldFields.size != newFields.size then
-        stuck s!"struct store field count mismatch: {oldFields.size} vs {newFields.size}"
-      let mut out := #[]
-      let mut i := 0
-      for (oldName, oldValue) in oldFields do
-        match newFields[i]? with
-        | some (newName, newValue) =>
-            if oldName != newName then
-              stuck s!"struct store field mismatch: {oldName} vs {newName}"
-            out := out.push (oldName, (← coerceStoredValue oldValue newValue))
-            i := i + 1
-        | none => stuck s!"missing struct store value at field {i}"
-      return .struct oldType out
-  | _, value => return value
+-- Total: structurally recursive on the first `GoValue`. The array/struct
+-- cases recurse into children through list helpers (`coerceArray`/
+-- `coerceStruct`) rather than a `for`-loop, so Lean can see each recursive
+-- call lands on a strict subterm and derives well-founded termination.
+mutual
+  def coerceStoredValue : GoValue → GoValue → Except GoError GoValue
+    | .int _ kind, .int value _ => return .int (kind.normalize value) kind
+    | .array oldValues, .array newValues =>
+        if oldValues.size != newValues.size then
+          stuck s!"array store length mismatch: {oldValues.size} vs {newValues.size}"
+        else
+          .array <$> coerceArray oldValues.toList newValues.toList
+    | .struct oldType oldFields, .struct newType newFields =>
+        if oldType != newType then
+          stuck s!"struct store type mismatch: {oldType.key} vs {newType.key}"
+        else if oldFields.size != newFields.size then
+          stuck s!"struct store field count mismatch: {oldFields.size} vs {newFields.size}"
+        else
+          .struct oldType <$> coerceStruct oldFields.toList newFields.toList
+    | _, value => return value
+
+  /-- Coerce array elements pairwise; callers guarantee equal lengths. -/
+  def coerceArray : List GoValue → List GoValue → Except GoError (Array GoValue)
+    | oldValue :: oldRest, newValue :: newRest => do
+        let head ← coerceStoredValue oldValue newValue
+        let tail ← coerceArray oldRest newRest
+        return #[head] ++ tail
+    | _, _ => return #[]
+
+  /-- Coerce struct fields pairwise, checking field-name alignment. -/
+  def coerceStruct :
+      List (String × GoValue) → List (String × GoValue) →
+      Except GoError (Array (String × GoValue))
+    | (oldName, oldValue) :: oldRest, (newName, newValue) :: newRest => do
+        if oldName != newName then
+          stuck s!"struct store field mismatch: {oldName} vs {newName}"
+        let head ← coerceStoredValue oldValue newValue
+        let tail ← coerceStruct oldRest newRest
+        return #[(oldName, head)] ++ tail
+    | _, _ => return #[]
+end
 
 def arraySet (values : Array GoValue) (index : Int) (value : GoValue) :
     Except GoError (Array GoValue) := do
@@ -284,27 +294,32 @@ mutual
     | value => stuck s!"expected struct {name.key} value, got {repr value}"
 end
 
-mutual
-  partial def loadLoc (state : ExecState) : Loc → Except GoError GoValue
-    | loc@(.base _) =>
-        match Heap.lookup state.heap loc with
-        | some cell => return cell.value
-        | none => stuck s!"unbound GoCore heap location: {repr loc}"
-    | .field base typeId fieldName => do
-        match ← loadLoc state base with
-        | .struct actualType fields =>
-            if actualType != typeId then
-              stuck s!"expected struct {typeId.key}, got struct {actualType.key}"
-            match StructFields.lookup fields fieldName with
-            | some value => return value
-            | none => stuck s!"unknown GoCore struct field: {fieldName}"
-        | other => stuck s!"expected struct base for field load, got {repr other}"
-    | .index base index => do
-        match ← loadLoc state base with
-        | .array values => arrayGet values index
-        | other => stuck s!"expected array base for index load, got {repr other}"
+-- Total: structural recursion on the `Loc` argument (field/index bases are
+-- strict subterms). loadLoc depends only on itself and total helpers, so it is
+-- a genuine `def` — the premise of the eventual `wp_load` proof rule.
+def loadLoc (state : ExecState) : Loc → Except GoError GoValue
+  | loc@(.base _) =>
+      match Heap.lookup state.heap loc with
+      | some cell => return cell.value
+      | none => stuck s!"unbound GoCore heap location: {repr loc}"
+  | .field base typeId fieldName => do
+      match ← loadLoc state base with
+      | .struct actualType fields =>
+          if actualType != typeId then
+            stuck s!"expected struct {typeId.key}, got struct {actualType.key}"
+          match StructFields.lookup fields fieldName with
+          | some value => return value
+          | none => stuck s!"unknown GoCore struct field: {fieldName}"
+      | other => stuck s!"expected struct base for field load, got {repr other}"
+  | .index base index => do
+      match ← loadLoc state base with
+      | .array values => arrayGet values index
+      | other => stuck s!"expected array base for index load, got {repr other}"
 
-  partial def storeLoc (state : ExecState) : Loc → GoValue → Except GoError ExecState
+-- storeLoc remains `partial` for now: it calls `normalizeValueForTy`, whose
+-- totality depends on the type-directed-recursion strategy decision (fuel vs.
+-- type-environment acyclicity). It becomes a `def` once that lands.
+partial def storeLoc (state : ExecState) : Loc → GoValue → Except GoError ExecState
     | loc@(.base _), value => do
         match Heap.lookup state.heap loc with
         | some cell => do
@@ -327,7 +342,6 @@ mutual
         match ← loadLoc state base with
         | .array values => storeLoc state base (.array (← arraySet values index value))
         | other => stuck s!"expected array base for index store, got {repr other}"
-end
 
 def lookup (state : ExecState) (name : String) : Except GoError GoValue := do
   loadLoc state (← lookupLoc state name)
