@@ -282,7 +282,11 @@ func (e *emitter) emitAssign(st *ast.AssignStmt) (any, error) {
 		if len(st.Lhs) != 1 || len(st.Rhs) != 1 {
 			return nil, unsup("compound assignment arity")
 		}
-		lhs, err := e.emitExpr(st.Lhs[0])
+		target, err := e.emitLValue(st.Lhs[0])
+		if err != nil {
+			return nil, err
+		}
+		read, err := e.emitExpr(st.Lhs[0])
 		if err != nil {
 			return nil, err
 		}
@@ -290,7 +294,7 @@ func (e *emitter) emitAssign(st *ast.AssignStmt) (any, error) {
 		if err != nil {
 			return nil, err
 		}
-		return map[string]any{"stmt": "compound-assign", "op": op, "lhs": lhs, "rhs": rhs}, nil
+		return map[string]any{"stmt": "compound-assign", "op": op, "target": target, "read": read, "rhs": rhs}, nil
 	}
 
 	lhs := []any{}
@@ -330,13 +334,8 @@ func (e *emitter) emitAssignTarget(l ast.Expr, define bool) (any, error) {
 		}
 		return map[string]any{"target": "var", "id": id.Name}, nil
 	}
-	// Non-ident lvalue (field, index, deref): reuse expression emission; the
-	// Lean side turns it into an addressable location.
-	expr, err := e.emitExpr(l)
-	if err != nil {
-		return nil, err
-	}
-	return map[string]any{"target": "lvalue", "expr": expr}, nil
+	// Non-ident lvalue (field, index, deref): emit as an addressed location.
+	return e.emitLValue(l)
 }
 
 func (e *emitter) emitDeclStmt(st *ast.DeclStmt) (any, error) {
@@ -428,7 +427,11 @@ func (e *emitter) emitFor(st *ast.ForStmt) (any, error) {
 }
 
 func (e *emitter) emitIncDec(st *ast.IncDecStmt) (any, error) {
-	x, err := e.emitExpr(st.X)
+	target, err := e.emitLValue(st.X)
+	if err != nil {
+		return nil, err
+	}
+	read, err := e.emitExpr(st.X)
 	if err != nil {
 		return nil, err
 	}
@@ -442,7 +445,7 @@ func (e *emitter) emitIncDec(st *ast.IncDecStmt) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	return map[string]any{"stmt": "incdec", "op": op, "x": x, "type": ty}, nil
+	return map[string]any{"stmt": "incdec", "op": op, "target": target, "read": read, "type": ty}, nil
 }
 
 // ---- expressions ----
@@ -483,12 +486,248 @@ func (e *emitter) emitExprBare(x ast.Expr) (any, error) {
 	case *ast.BinaryExpr:
 		return e.emitBinary(ex)
 	case *ast.UnaryExpr:
-		return e.emitUnary(ex)
+		return e.emitUnaryExpr(ex)
 	case *ast.CallExpr:
 		return e.emitCall(ex)
+	case *ast.CompositeLit:
+		return e.emitCompositeLit(ex)
+	case *ast.SelectorExpr:
+		return e.emitSelector(ex)
+	case *ast.IndexExpr:
+		return e.emitIndex(ex)
+	case *ast.StarExpr:
+		return e.emitStar(ex)
 	default:
 		return nil, unsup("expression %T at %s", x, e.fset.Position(x.Pos()))
 	}
+}
+
+// namedTypeName returns the declared name of a (possibly pointer-wrapped) named
+// type, for use as a GoCore struct TypeId.
+func namedTypeName(t types.Type) (string, bool) {
+	if named, ok := t.(*types.Named); ok {
+		return named.Obj().Name(), true
+	}
+	return "", false
+}
+
+// fieldBase emits the struct value a field selector reads from, auto-dereferencing
+// a pointer receiver (Go's x.f where x is *T), and returns the struct's TypeId.
+func (e *emitter) fieldBase(sel *ast.SelectorExpr) (any, string, error) {
+	recvType := e.info.TypeOf(sel.X)
+	base, err := e.emitExpr(sel.X)
+	if err != nil {
+		return nil, "", err
+	}
+	if ptr, ok := recvType.Underlying().(*types.Pointer); ok {
+		name, ok := namedTypeName(ptr.Elem())
+		if !ok {
+			return nil, "", unsup("field selector on pointer to anonymous struct")
+		}
+		elemTy, err := e.emitType(ptr.Elem())
+		if err != nil {
+			return nil, "", err
+		}
+		return map[string]any{"expr": "deref", "ptr": base, "type": elemTy}, name, nil
+	}
+	name, ok := namedTypeName(recvType)
+	if !ok {
+		return nil, "", unsup("field selector on anonymous struct type %s", recvType)
+	}
+	return base, name, nil
+}
+
+func (e *emitter) emitSelector(sel *ast.SelectorExpr) (any, error) {
+	// A method value / package selector is not a field read; only field
+	// selections are handled here (method calls come with the call increment).
+	if seln, ok := e.info.Selections[sel]; ok && seln.Kind() != types.FieldVal {
+		return nil, unsup("non-field selector %s (method/expr)", sel.Sel.Name)
+	}
+	base, structName, err := e.fieldBase(sel)
+	if err != nil {
+		return nil, err
+	}
+	return map[string]any{"expr": "field-get", "recv": base, "typeId": structName, "field": sel.Sel.Name}, nil
+}
+
+func (e *emitter) emitIndex(ix *ast.IndexExpr) (any, error) {
+	baseType := e.info.TypeOf(ix.X).Underlying()
+	base, err := e.emitExpr(ix.X)
+	if err != nil {
+		return nil, err
+	}
+	index, err := e.emitExpr(ix.Index)
+	if err != nil {
+		return nil, err
+	}
+	if m, ok := baseType.(*types.Map); ok {
+		keyTy, err := e.emitType(m.Key())
+		if err != nil {
+			return nil, err
+		}
+		valTy, err := e.emitType(m.Elem())
+		if err != nil {
+			return nil, err
+		}
+		return map[string]any{"expr": "map-get", "base": base, "index": index, "keyType": keyTy, "valueType": valTy}, nil
+	}
+	return map[string]any{"expr": "index-get", "base": base, "index": index}, nil
+}
+
+func (e *emitter) emitStar(st *ast.StarExpr) (any, error) {
+	ptr, err := e.emitExpr(st.X)
+	if err != nil {
+		return nil, err
+	}
+	pointee, err := e.emitType(e.info.TypeOf(st))
+	if err != nil {
+		return nil, err
+	}
+	return map[string]any{"expr": "deref", "ptr": ptr, "type": pointee}, nil
+}
+
+// emitAddressOf handles &x forms.
+func (e *emitter) emitAddressOf(x ast.Expr) (any, error) {
+	switch ex := x.(type) {
+	case *ast.Ident:
+		return map[string]any{"expr": "ref", "id": ex.Name}, nil
+	case *ast.SelectorExpr:
+		base, structName, err := e.fieldBase(ex)
+		if err != nil {
+			return nil, err
+		}
+		return map[string]any{"expr": "field-addr", "base": base, "typeId": structName, "field": ex.Sel.Name}, nil
+	case *ast.IndexExpr:
+		base, err := e.emitExpr(ex.X)
+		if err != nil {
+			return nil, err
+		}
+		index, err := e.emitExpr(ex.Index)
+		if err != nil {
+			return nil, err
+		}
+		return map[string]any{"expr": "index-addr", "base": base, "index": index}, nil
+	case *ast.StarExpr:
+		// &(*p) is p.
+		return e.emitExpr(ex.X)
+	case *ast.ParenExpr:
+		return e.emitAddressOf(ex.X)
+	default:
+		return nil, unsup("address-of %T", x)
+	}
+}
+
+// emitLValue emits an assignment target for an arbitrary addressable
+// expression: plain locals stay `var`, everything else becomes an addressed
+// location (`&x` form) that GoCore assigns through.
+func (e *emitter) emitLValue(x ast.Expr) (any, error) {
+	if id, ok := x.(*ast.Ident); ok {
+		if id.Name == "_" {
+			return map[string]any{"target": "blank"}, nil
+		}
+		return map[string]any{"target": "var", "id": id.Name}, nil
+	}
+	addr, err := e.emitAddressOf(x)
+	if err != nil {
+		return nil, err
+	}
+	return map[string]any{"target": "addr", "expr": addr}, nil
+}
+
+func (e *emitter) emitCompositeLit(cl *ast.CompositeLit) (any, error) {
+	t := e.info.TypeOf(cl)
+	switch u := t.Underlying().(type) {
+	case *types.Struct:
+		return e.emitStructLit(cl, t, u)
+	case *types.Array:
+		return e.emitArrayLit(cl, u)
+	case *types.Slice:
+		return nil, unsup("slice literal (statement-level, next increment)")
+	case *types.Map:
+		return nil, unsup("map literal (statement-level, next increment)")
+	default:
+		return nil, unsup("composite literal of type %s", t)
+	}
+}
+
+func (e *emitter) emitStructLit(cl *ast.CompositeLit, t types.Type, st *types.Struct) (any, error) {
+	target, err := e.emitType(t)
+	if err != nil {
+		return nil, err
+	}
+	// Collect keyed values by field name, if the literal is keyed.
+	keyed := map[string]ast.Expr{}
+	positional := []ast.Expr{}
+	for _, elt := range cl.Elts {
+		if kv, ok := elt.(*ast.KeyValueExpr); ok {
+			keyed[kv.Key.(*ast.Ident).Name] = kv.Value
+		} else {
+			positional = append(positional, elt)
+		}
+	}
+	args := []any{}
+	// GoCore structLit takes positional args in declared field order; fill
+	// keyed literals in order with zero-value defaults for omitted fields.
+	for i := 0; i < st.NumFields(); i++ {
+		fld := st.Field(i)
+		if len(positional) > 0 {
+			if i >= len(positional) {
+				return nil, unsup("positional struct literal missing field %s", fld.Name())
+			}
+			w, err := e.emitExpr(positional[i])
+			if err != nil {
+				return nil, err
+			}
+			args = append(args, w)
+			continue
+		}
+		if v, ok := keyed[fld.Name()]; ok {
+			w, err := e.emitExpr(v)
+			if err != nil {
+				return nil, err
+			}
+			args = append(args, w)
+		} else {
+			fty, err := e.emitType(fld.Type())
+			if err != nil {
+				return nil, err
+			}
+			args = append(args, map[string]any{"expr": "default", "type": fty})
+		}
+	}
+	return map[string]any{"expr": "struct-lit", "target": target, "args": args}, nil
+}
+
+func (e *emitter) emitArrayLit(cl *ast.CompositeLit, arr *types.Array) (any, error) {
+	elem, err := e.emitType(arr.Elem())
+	if err != nil {
+		return nil, err
+	}
+	elems := []any{}
+	idx := int64(0)
+	for _, elt := range cl.Elts {
+		if kv, ok := elt.(*ast.KeyValueExpr); ok {
+			kv2, ok := e.info.Types[kv.Key]
+			if !ok || kv2.Value == nil {
+				return nil, unsup("array literal key is not constant")
+			}
+			k, _ := constant.Int64Val(kv2.Value)
+			idx = k
+			w, err := e.emitExpr(kv.Value)
+			if err != nil {
+				return nil, err
+			}
+			elems = append(elems, map[string]any{"index": idx, "value": w})
+		} else {
+			w, err := e.emitExpr(elt)
+			if err != nil {
+				return nil, err
+			}
+			elems = append(elems, map[string]any{"index": idx, "value": w})
+		}
+		idx++
+	}
+	return map[string]any{"expr": "array-lit", "length": arr.Len(), "elem": elem, "elems": elems}, nil
 }
 
 func (e *emitter) emitIdent(id *ast.Ident) (any, error) {
@@ -567,6 +806,14 @@ func (e *emitter) emitUnary(u *ast.UnaryExpr) (any, error) {
 	default:
 		return nil, unsup("unary operator %s", u.Op)
 	}
+}
+
+// emitUnaryExpr dispatches unary operators, routing & to address-of.
+func (e *emitter) emitUnaryExpr(u *ast.UnaryExpr) (any, error) {
+	if u.Op == token.AND {
+		return e.emitAddressOf(u.X)
+	}
+	return e.emitUnary(u)
 }
 
 func (e *emitter) emitCall(c *ast.CallExpr) (any, error) {

@@ -115,10 +115,56 @@ partial def decodeExpr (path : String) (json : Json) : LowerM Expr := do
       let s ← StrictJson.string s!"{path}.value" (← StrictJson.field path obj "value")
       pure (.stringLit (GoString.fromLeanString s))
   | "nil" => pure (.nil (← optType path obj))
+  | "ref" =>
+      pure (.ref (← StrictJson.string s!"{path}.id" (← StrictJson.field path obj "id")))
+  | "deref" =>
+      let ptr ← decodeExpr s!"{path}.ptr" (← StrictJson.field path obj "ptr")
+      let typ ← decodeTy s!"{path}.type" (← StrictJson.field path obj "type")
+      pure (.deref ptr typ)
+  | "field-get" =>
+      let recv ← decodeExpr s!"{path}.recv" (← StrictJson.field path obj "recv")
+      let typeId ← StrictJson.string s!"{path}.typeId" (← StrictJson.field path obj "typeId")
+      let field ← StrictJson.string s!"{path}.field" (← StrictJson.field path obj "field")
+      pure (.fieldGet recv ⟨typeId⟩ field)
+  | "field-addr" =>
+      let base ← decodeExpr s!"{path}.base" (← StrictJson.field path obj "base")
+      let typeId ← StrictJson.string s!"{path}.typeId" (← StrictJson.field path obj "typeId")
+      let field ← StrictJson.string s!"{path}.field" (← StrictJson.field path obj "field")
+      pure (.fieldAddr base ⟨typeId⟩ field)
+  | "index-get" =>
+      let base ← decodeExpr s!"{path}.base" (← StrictJson.field path obj "base")
+      let index ← decodeExpr s!"{path}.index" (← StrictJson.field path obj "index")
+      pure (.indexGet base index)
+  | "index-addr" =>
+      let base ← decodeExpr s!"{path}.base" (← StrictJson.field path obj "base")
+      let index ← decodeExpr s!"{path}.index" (← StrictJson.field path obj "index")
+      pure (.indexAddr base index)
+  | "map-get" =>
+      let base ← decodeExpr s!"{path}.base" (← StrictJson.field path obj "base")
+      let index ← decodeExpr s!"{path}.index" (← StrictJson.field path obj "index")
+      let keyTy ← decodeTy s!"{path}.keyType" (← StrictJson.field path obj "keyType")
+      let valueTy ← decodeTy s!"{path}.valueType" (← StrictJson.field path obj "valueType")
+      pure (.mapGet base index keyTy valueTy)
   | "convert" =>
       let target ← decodeTy s!"{path}.target" (← StrictJson.field path obj "target")
       let x ← decodeExpr s!"{path}.x" (← StrictJson.field path obj "x")
       pure (.convert target x)
+  | "default" =>
+      pure (.defaultValue (← decodeTy s!"{path}.type" (← StrictJson.field path obj "type")))
+  | "struct-lit" =>
+      let target ← decodeTy s!"{path}.target" (← StrictJson.field path obj "target")
+      let args ← StrictJson.array s!"{path}.args" (← StrictJson.field path obj "args")
+      pure (.structLit target (← args.mapIdxM (fun i a => decodeExpr s!"{path}.args[{i}]" a)))
+  | "array-lit" =>
+      let length ← StrictJson.nat s!"{path}.length" (← StrictJson.field path obj "length")
+      let elem ← decodeTy s!"{path}.elem" (← StrictJson.field path obj "elem")
+      let elems ← StrictJson.array s!"{path}.elems" (← StrictJson.field path obj "elems")
+      let pairs ← elems.mapIdxM (fun i el => do
+        let eo ← StrictJson.obj s!"{path}.elems[{i}]" el
+        let index ← StrictJson.int s!"{path}.elems[{i}].index" (← StrictJson.field s!"{path}.elems[{i}]" eo "index")
+        let value ← decodeExpr s!"{path}.elems[{i}].value" (← StrictJson.field s!"{path}.elems[{i}]" eo "value")
+        pure (index, value))
+      pure (.arrayLit length elem pairs)
   | "unary" =>
       let op ← StrictJson.string s!"{path}.op" (← StrictJson.field path obj "op")
       let x ← decodeExpr s!"{path}.x" (← StrictJson.field path obj "x")
@@ -204,9 +250,9 @@ private def decodeTarget (path : String) (json : Json) : LowerM Target := do
       pure { assignee := .var id, declare := none }
   | "blank" =>
       pure { assignee := .unsupported "blank assignment target", declare := none }
-  | "lvalue" =>
+  | "addr" =>
       let e ← decodeExpr s!"{path}.expr" (← StrictJson.field path obj "expr")
-      pure { assignee := ← exprAsAssignee path e, declare := none }
+      pure { assignee := .addr e, declare := none }
   | other => fail s!"unsupported assignment target {other} at {path}"
 
 private def targetAssignee (t : Target) : LowerM Assignee := pure t.assignee
@@ -262,18 +308,18 @@ partial def decodeStmt (results : Array Param) (path : String) (json : Json) : L
       decodeFor results path obj
   | "incdec" =>
       let op ← StrictJson.string s!"{path}.op" (← StrictJson.field path obj "op")
-      let x ← decodeExpr s!"{path}.x" (← StrictJson.field path obj "x")
-      let target ← exprAsAssignee s!"{path}.x" x
+      let t ← decodeTarget s!"{path}.target" (← StrictJson.field path obj "target")
+      let read ← decodeExpr s!"{path}.read" (← StrictJson.field path obj "read")
       let one : Expr := .intLit 1 (intKindOfOptType (← optType path obj))
-      let rhs := if op == "-" then Expr.sub x one else Expr.add x one
-      pure (.assign target rhs)
+      let rhs := if op == "-" then Expr.sub read one else Expr.add read one
+      pure (.assign t.assignee rhs)
   | "compound-assign" =>
       let op ← StrictJson.string s!"{path}.op" (← StrictJson.field path obj "op")
-      let lhs ← decodeExpr s!"{path}.lhs" (← StrictJson.field path obj "lhs")
+      let t ← decodeTarget s!"{path}.target" (← StrictJson.field path obj "target")
+      let read ← decodeExpr s!"{path}.read" (← StrictJson.field path obj "read")
       let rhs ← decodeExpr s!"{path}.rhs" (← StrictJson.field path obj "rhs")
-      let target ← exprAsAssignee s!"{path}.lhs" lhs
-      let combined ← decodeCompound op lhs rhs
-      pure (.assign target combined)
+      let combined ← decodeCompound op read rhs
+      pure (.assign t.assignee combined)
   | "expr" =>
       let e ← StrictJson.field path obj "expr"
       match ← asCall? e with
