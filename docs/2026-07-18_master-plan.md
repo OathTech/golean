@@ -376,9 +376,12 @@ a blocker (proof Q5, iris Findings 5-6).
    `Config`/`Cont` seats on bare `Language` (no ectx rewrite); heap WP + not-stuck
    adequacy (D1) work on our shape. The two reshapes below are the path to
    porting this onto real GoCore.
-2. **Reshape A** (heap → Iris `State`) on the current scalar subset; then port
-   the spike's `wp_store` onto the real relation. The v4.29→v4.31 toolchain bump
-   is scheduled here, with integration.
+2. **Reshape A** (heap → Iris `State`) — [x] **split done**
+   (`docs/2026-07-18_reshape-a-design.md`): `Config` is state-free, `Step`
+   relates `(Config, ExecState)` pairs, `ExecState`/`Ops`/interpreter untouched,
+   proven instances re-proved, golean green. [ ] **A2**: bump 4.29→4.31, add
+   iris-lean dep, instantiate bare `Language` on `Config`/`ExecState`, port
+   `wp_store`/`wp_load` onto the real relation (mirror `../iris-spike/`).
 3. If the spike survives: **Reshape B** (oracle out of state) + relation
    catch-up for **one nondeterministic feature** (append-cap, or a 2-element map
    range) + the correspondence lemma over **that** feature — the machinery that

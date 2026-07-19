@@ -42,10 +42,16 @@ In order (reordered — Iris spike front-loaded):
    `Language` CK machine (no ectx) + real `wp_store` via `wp_lift_atomic_step`,
    axioms clean. Toolchain builds offline at 4.31; CK shape seats on bare
    `Language`; not-stuck adequacy (D1) is the library's native form.
-2. [ ] **Reshape A** — split the heap out of `Config`/`ExecState` into Iris
-   `State` (`Config` can't be Iris `Expr` while it embeds the heap). Then port
-   the spike's `wp_store` onto the real scalar relation. Schedule the v4.29→v4.31
-   toolchain bump here.
+2. **Reshape A** — heap out of `Config` into Iris `State`
+   (`docs/2026-07-18_reshape-a-design.md`):
+   - [x] **Split done.** `Config` is now state-free (control + cont = Iris
+     `Expr`); `Step` relates `(Config, ExecState)` pairs. `ExecState`/`Ops`/
+     interpreter untouched (no adapter needed); proven correspondence instances
+     re-proved. golean green.
+   - [ ] **A2 — Iris port** (paired with the toolchain bump): bump golean
+     4.29→4.31, add iris-lean as a dependency, instantiate bare `Language` on
+     `Config`/`ExecState` (mirror `../iris-spike/`), port `wp_store`/`wp_load`
+     onto the real scalar relation.
 3. [ ] **Reshape B** (oracle `choices` out of `ExecState` → external stream,
    existential `mapRange` rule) + relation catch-up for **one** nondeterministic
    feature + correspondence over that feature. Finish interpreter totality here,
