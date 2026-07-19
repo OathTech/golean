@@ -655,9 +655,57 @@ func (e *emitter) emitExprBare(x ast.Expr) (any, error) {
 		return e.emitIndex(ex)
 	case *ast.StarExpr:
 		return e.emitStar(ex)
+	case *ast.SliceExpr:
+		return e.emitSliceExpr(ex)
 	default:
 		return nil, unsup("expression %T at %s", x, e.fset.Position(x.Pos()))
 	}
+}
+
+func (e *emitter) emitSliceExpr(se *ast.SliceExpr) (any, error) {
+	// Array bases slice through their address; slice/string bases by value.
+	var base any
+	var err error
+	if _, isArray := e.info.TypeOf(se.X).Underlying().(*types.Array); isArray {
+		base, err = e.emitAddressOf(se.X)
+	} else {
+		base, err = e.emitExpr(se.X)
+	}
+	if err != nil {
+		return nil, err
+	}
+	low := any(map[string]any{"expr": "int", "value": "0", "type": intType("int")})
+	if se.Low != nil {
+		if low, err = e.emitExpr(se.Low); err != nil {
+			return nil, err
+		}
+	}
+	var high any
+	if se.High != nil {
+		if high, err = e.emitExpr(se.High); err != nil {
+			return nil, err
+		}
+	} else {
+		// default high is len(base)
+		operand, err := e.emitExpr(se.X)
+		if err != nil {
+			return nil, err
+		}
+		opTy, err := e.typeOf(se.X)
+		if err != nil {
+			return nil, err
+		}
+		high = map[string]any{"expr": "builtin-len", "operand": operand, "operandType": opTy}
+	}
+	node := map[string]any{"expr": "slice", "base": base, "low": low, "high": high}
+	if se.Slice3 && se.Max != nil {
+		m, err := e.emitExpr(se.Max)
+		if err != nil {
+			return nil, err
+		}
+		node["max"] = m
+	}
+	return node, nil
 }
 
 // namedTypeName returns the declared name of a (possibly pointer-wrapped) named
@@ -1272,8 +1320,62 @@ func (e *emitter) emitBuiltin(c *ast.CallExpr, name string) (any, bool, error) {
 			tag = "builtin-cap"
 		}
 		return map[string]any{"expr": tag, "operand": operand, "operandType": opTy}, false, nil
+	case "make":
+		return e.emitMake(c)
 	default:
 		return nil, false, unsup("builtin %s", name)
+	}
+}
+
+// emitMake hoists make([]T, len[, cap]) / make(map[K]V[, hint]) into a
+// makeSlice/makeMap statement bound to a temp and returns the temp reference
+// (already hoisted, so pure to the caller).
+func (e *emitter) emitMake(c *ast.CallExpr) (any, bool, error) {
+	if e.hoistForbidden != "" {
+		return nil, false, unsup("make in %s", e.hoistForbidden)
+	}
+	t := e.info.TypeOf(c.Args[0])
+	ty, err := e.emitType(t)
+	if err != nil {
+		return nil, false, err
+	}
+	name := "$c" + itoa(e.tmpSeq)
+	e.tmpSeq++
+	target := map[string]any{"target": "declare", "id": name, "type": ty}
+	ref := map[string]any{"expr": "ident", "name": name, "type": ty}
+	switch u := t.Underlying().(type) {
+	case *types.Slice:
+		elemTy, err := e.emitType(u.Elem())
+		if err != nil {
+			return nil, false, err
+		}
+		lenArg, err := e.emitExpr(c.Args[1])
+		if err != nil {
+			return nil, false, err
+		}
+		node := map[string]any{"stmt": "make-slice", "target": target, "elem": elemTy, "len": lenArg}
+		if len(c.Args) >= 3 {
+			capArg, err := e.emitExpr(c.Args[2])
+			if err != nil {
+				return nil, false, err
+			}
+			node["cap"] = capArg
+		}
+		e.hoisted = append(e.hoisted, node)
+		return ref, false, nil
+	case *types.Map:
+		keyTy, err := e.emitType(u.Key())
+		if err != nil {
+			return nil, false, err
+		}
+		valTy, err := e.emitType(u.Elem())
+		if err != nil {
+			return nil, false, err
+		}
+		e.hoisted = append(e.hoisted, map[string]any{"stmt": "make-map", "target": target, "keyType": keyTy, "valueType": valTy})
+		return ref, false, nil
+	default:
+		return nil, false, unsup("make of %s", t)
 	}
 }
 

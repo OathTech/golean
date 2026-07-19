@@ -151,6 +151,14 @@ partial def decodeExpr (path : String) (json : Json) : LowerM Expr := do
       let keyTy ← decodeTy s!"{path}.keyType" (← StrictJson.field path obj "keyType")
       let valueTy ← decodeTy s!"{path}.valueType" (← StrictJson.field path obj "valueType")
       pure (.mapGet base index keyTy valueTy)
+  | "slice" =>
+      let base ← decodeExpr s!"{path}.base" (← StrictJson.field path obj "base")
+      let low ← decodeExpr s!"{path}.low" (← StrictJson.field path obj "low")
+      let high ← decodeExpr s!"{path}.high" (← StrictJson.field path obj "high")
+      let max ← (match obj.get? "max" with
+        | some m => do pure (some (← decodeExpr s!"{path}.max" m))
+        | none => pure none)
+      pure (.slice base low high max)
   | "convert" =>
       let target ← decodeTy s!"{path}.target" (← StrictJson.field path obj "target")
       let x ← decodeExpr s!"{path}.x" (← StrictJson.field path obj "x")
@@ -362,6 +370,19 @@ partial def decodeStmt (results : Array Param) (path : String) (json : Json) : L
       let value ← decodeExpr s!"{path}.value" (← StrictJson.field path obj "value")
       let elemTy ← decodeTy s!"{path}.elemType" (← StrictJson.field path obj "elemType")
       pure (.seqn ((← declaresOf #[t]).push (.newValue t.assignee value (some elemTy))))
+  | "make-slice" =>
+      let t ← decodeTarget s!"{path}.target" (← StrictJson.field path obj "target")
+      let elemTy ← decodeTy s!"{path}.elem" (← StrictJson.field path obj "elem")
+      let lenE ← decodeExpr s!"{path}.len" (← StrictJson.field path obj "len")
+      let capE ← (match obj.get? "cap" with
+        | some c => do pure (some (← decodeExpr s!"{path}.cap" c))
+        | none => pure none)
+      pure (.seqn ((← declaresOf #[t]).push (.makeSlice t.assignee elemTy lenE capE)))
+  | "make-map" =>
+      let t ← decodeTarget s!"{path}.target" (← StrictJson.field path obj "target")
+      let keyTy ← decodeTy s!"{path}.keyType" (← StrictJson.field path obj "keyType")
+      let valTy ← decodeTy s!"{path}.valueType" (← StrictJson.field path obj "valueType")
+      pure (.seqn ((← declaresOf #[t]).push (.makeMap t.assignee keyTy valTy none)))
   | "map-assign" =>
       let base ← decodeExpr s!"{path}.base" (← StrictJson.field path obj "base")
       let index ← decodeExpr s!"{path}.index" (← StrictJson.field path obj "index")
