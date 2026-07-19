@@ -14,15 +14,15 @@ exist because they let us do that without accumulating debt, not as ceremony.
 
 1. `lake build` passes.
 2. Run the focused differential slice for the touched area
-   (`scripts/coverage run <ids...>` over the cached-export set, or
-   `scripts/diff-one <id>`), plus `lake exe gobra-eval-tests`.
+   (`scripts/coverage run <ids...>` or `scripts/diff-one <id>`, native
+   frontend), plus `lake exe gocore-eval-tests`.
 3. Diff the failing case-id set against the last recorded baseline. **Same set
    = no regression.** Any new red is investigated before committing.
 
 A green build is not evidence of correctness. The cheap, decisive signal is the
 failing-set diff — it is what kept 13 consecutive cleanup slices at zero
-regressions. `scripts/gobra-smoke` is a frontend/Lean smoke check, NOT a
-Go-vs-Lean conformance oracle; never claim equivalence from it.
+regressions. The differential oracle is real Go (`go run`); the native Go
+frontend (`tools/nativefrontend` + `NativeToIR.lean`) is the only frontend.
 
 ## Capture decisions in files, not chat
 
@@ -64,10 +64,10 @@ A visible red case beats a hidden wrong answer.
 
 ## GoCore stays pure
 
-GoCore contains only Go runtime semantics. Gobra proof artifacts, spec-only
-constructs (`old`), name mangling, and export-layout heuristics are quarantined
-in `GobraToIR`/`GobraJson` and fail closed there — they never become GoCore
-nodes. Semantic identity is `TypeId`/`FuncId`, never raw frontend strings.
+GoCore contains only Go runtime semantics. Frontend-specific concerns (name
+resolution, desugaring, any wire quirks) are quarantined in `NativeToIR` and
+fail closed there — they never become GoCore nodes. Semantic identity is
+`TypeId`/`FuncId`, never raw frontend strings.
 Every mangling strip happens at exactly one boundary constructor and
 collision-checks. This isolation is what lets the frontend be replaced without
 touching the semantic core — protect it.

@@ -1,23 +1,23 @@
 # GoLean
 
-This is the project repo for the Go/Gobra-to-Lean tool.
+This is the project repo for the Go-to-Lean tool.
 
 The parent workspace contains research notes and reference dependencies under
 `../deps`. This subdirectory is intentionally its own git repository so the tool
-can grow independently of those reference checkouts. Gobra itself is tracked as
-a submodule at `third_party/gobra`, pointing at the `septract/gobra-json` fork.
+can grow independently of those reference checkouts.
 
-Initial direction:
+Direction:
 
-- Gobra frontend/export artifacts lower into a clean GoCore deep embedding.
-- GoCore is the semantic center: Gobra is a frontend source, not a first-class
-  verification target.
-- Gobra verification annotations are erased at lowering; differential tests
-  compare ordinary Go execution against Lean execution.
-- A native Go frontend is a likely later replacement for Gobra once coverage
-  demands it.
-- Lean executes GoCore for differential testing, and later generated Lean views
-  should be checked against the same GoCore semantics.
+- A native Go frontend (`tools/nativefrontend`, built on `go/parser` +
+  `go/types`) type-checks Go and emits a clean typed wire schema that
+  `GoLean/NativeToIR.lean` lowers into a GoCore deep embedding. (Gobra was an
+  earlier temporary frontend accelerator and has been removed.)
+- GoCore is the semantic center; frontend-specific concerns stay in the
+  lowering adapter and fail closed.
+- Differential tests compare ordinary Go execution (`go run`) against Lean
+  execution of GoCore.
+- The proof-facing relational semantics is the eventual authority; the
+  executable interpreter is a differentially-validated test artifact.
 - Proof and VCG layers can later reuse ideas from Aeneas, Goose/Perennial,
   Strata, and Iris-Lean.
 
@@ -35,28 +35,18 @@ Useful commands:
 
 ```sh
 lake build
-lake exe golean
 lake exe golean --help
+lake exe gocore-eval-tests
 scripts/coverage
 scripts/diff-coverage
 scripts/coverage-negative
 scripts/diff-one litmus/if-return
-scripts/gobra-smoke
-scripts/semantic-edges-challenge-smoke
 ```
 
 Use `scripts/coverage run ...` or `scripts/diff-one ...` for Go-vs-Lean
-equivalence during semantics work. `scripts/gobra-smoke` is only a
-frontend/Lean smoke check and does not compare against real Go output.
+equivalence during semantics work (native frontend by default).
 
 `Corpus/coverage` is the source of truth for small coverage litmus tests.
 `scripts/coverage` runs both executable differential coverage and static
 compile-negative coverage. The executable lane runs the same canonical Go files
-with `go run` and through the frontend/Lean path; there are no separate Gobra
-fixtures.
-
-After cloning this repo, initialize submodules with:
-
-```sh
-git submodule update --init --recursive
-```
+with `go run` and through the native frontend / Lean path.

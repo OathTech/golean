@@ -8,10 +8,17 @@ States the intended relationship between the executable interpreter
 (`GoLean.GoCore.Eval`) and the relational skeleton (`GoLean.GoCore.Rel`),
 and proves small instances that exercise the relational rules.
 
-The full soundness proofs are deliberately deferred: the skeleton exists to
-force every interpreter feature to have an explicit rule shape, not to
-block cleanup on proof engineering. The statements below are the contract
-new features must keep provable in principle.
+Honest status (per the 2026-07 design review): these statements are not
+merely "deferred" — as written they are **not yet provable**. Both the
+interpreter (`Eval`) and the shared substrate (`Ops`: `loadLoc`, `valueEq`,
+`normalizeValueForTy`, …) are `partial def`, which in Lean 4 emit opaque
+constants with no equational lemmas, so the `execStmt … = .ok …` hypothesis
+below cannot be inverted and the relation's own rule premises (which call
+those partials) cannot be unfolded. Making the substrate and interpreter
+total (structural where possible; a fuel or type-environment-acyclicity
+argument for the type-directed ops) is the prerequisite that turns these
+`Prop`s into provable theorems. That totality work is the current top
+priority; until it lands, treat the correspondence as blocked, not deferred.
 -/
 
 namespace GoLean.GoCore.Correspondence
@@ -23,7 +30,7 @@ supported deterministic terminating runs: a normal interpreter completion
 is a reachable terminal of the step relation. (Analogous statements for
 returned/broke/continued outcomes quantify over the matching unwinding
 configurations, and interpreter panics correspond to `Config.panicked`.)
-Deferred, not yet proven. -/
+Blocked on interpreter/substrate totality (see the module header). -/
 def interpreterSoundStatement : Prop :=
   ∀ (fuel : Nat) (s s' : ExecState) (stmt : Stmt),
     execStmt fuel s stmt = .ok (.normal s') →

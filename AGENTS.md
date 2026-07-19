@@ -2,37 +2,35 @@
 
 ## Project Context
 
-- GoCore is the semantic center of this repo. Gobra is a temporary frontend that
-  exports artifacts for lowering; do not treat Gobra annotations or Gobra's
-  reasoning model as the target semantics.
+- GoCore is the semantic center of this repo. The native Go frontend
+  (`tools/nativefrontend`, built on `go/parser` + `go/types`) is the only
+  frontend; it emits a typed wire schema that `NativeToIR` lowers into GoCore.
+  (Gobra was an earlier temporary frontend and has been removed.)
 - Differential testing is the feature gate for executable semantics: compare
-  real Go output against Lean GoCore interpreter output and require equivalent
-  observations.
-- The long-term aim is Goose/Perennial-style reasoning about Go programs, but
-  current implementation work should prioritize executable GoCore semantics
-  that survive real Go-vs-Lean differential tests.
+  real Go output (`go run`) against Lean GoCore interpreter output and require
+  equivalent observations.
+- The end goal is a complete trust chain: Go → executable model
+  (differentially validated) → relational semantics (the proof authority) →
+  machine-checked proofs (Goose/Perennial/Iris-style). The relational semantics
+  must keep pace with the interpreter — see the merge invariant below.
 
 ## Architecture Rules
 
-- GoCore may contain only Go runtime semantics. It must not contain Gobra proof
-  artifacts, Gobra permissions/predicates/invariants, synthetic proof-wrapper
-  calls, or runtime meanings for spec-only constructs such as `old`.
-- Frontend-specific recovery belongs in `GobraToIR` or the Gobra JSON exporter,
-  and must fail closed when it cannot produce clean GoCore. Do not make Gobra
-  name mangling, export ordering, or adjacency in `program.types` a semantic
-  fact.
-- If a Gobra wire node has no clear Go runtime meaning, reject it at decoding or
-  lowering. Prefer a visible frontend/json/lowering failure over an inert or
+- GoCore may contain only Go runtime semantics — no frontend artifacts,
+  name-mangling assumptions, or export-layout heuristics as semantic facts.
+- Frontend-specific concerns (name resolution, desugaring, wire shape) belong in
+  `NativeToIR` (or the Go emitter) and must fail closed when they cannot produce
+  clean GoCore. Prefer a visible frontend/lowering failure over an inert or
   approximate GoCore node.
 - Interface semantics must come from Go type identity, type sets, method sets,
-  dynamic values, typed nils, and comparability rules. Do not use
-  `MethodSubtypeProof` or other proof evidence as dispatch infrastructure.
-- Strings may be useful debug names, but stable semantic identity should be
-  represented explicitly as the semantics upgrade proceeds. Avoid adding new
-  runtime equality/dispatch behavior that depends on raw source or Gobra names.
-- Keep executable semantics and future proof semantics aligned: new interpreter
-  behavior should have an obvious future relational rule shape. Do not hide a
-  semantic choice in evaluator recursion just to pass a case.
+  dynamic values, typed nils, and comparability rules.
+- Stable semantic identity is `TypeId`/`FuncId`, not raw source strings.
+- **Merge invariant (from the 2026-07 design review):** the proof-facing
+  relation (`Rel.lean`) and its premises must stay total and keep pace with the
+  interpreter. Do not add an interpreter feature without its relational rule
+  shape (total premises; nondeterminism permitted where Go has it). Do not hide
+  a semantic choice in evaluator recursion just to pass a case. See
+  `docs/nondeterminism-design.md` and the design-review notes.
 
 ## Planning Docs
 
@@ -54,12 +52,12 @@
   - `scripts/coverage run --tag <tag>`
   - `scripts/coverage run --last-failed`
 - Use `scripts/coverage run ...`, `scripts/diff-coverage`, or
-  `scripts/diff-one ...` for Go-vs-Lean conformance.
-- `scripts/gobra-smoke` is only a frontend/Lean smoke check. It does not run
-  real Go and does not prove Go-vs-Lean equivalence.
-- Keep Gobra/frontend export failures separate from GoCore semantic failures.
-  Prefer fixing cases that reach Lean and produce a differential mismatch before
-  chasing broad frontend coverage.
+  `scripts/diff-one ...` for Go-vs-Lean conformance (native frontend by
+  default). The harness also checks observation-invariance across nondeterminism
+  oracles for native cases.
+- Keep frontend (native emission/lowering) failures separate from GoCore
+  semantic failures. Prefer fixing cases that reach Lean and produce a
+  differential mismatch before chasing broad frontend coverage.
 - For Lean changes, run `lake build` before declaring the work complete. Add
   focused differential runs for the feature touched.
 - For cleanup work, record intentional regressions with the case id, previous

@@ -6,6 +6,24 @@ contract, the scope, and how to validate. Companion to
 `docs/gocore-semantics-upgrade-goal.md`; the same discipline applies
 (`CLAUDE.md` validation gate, fail-closed, small slices, honest regressions).
 
+## Current status (2026-07-19)
+
+- **Gobra has been removed entirely** — the native frontend is the only
+  frontend and `GOLEAN_FRONTEND=native` is the default. The differential oracle
+  is real Go (`go run`), never Gobra. Sections below that discuss Gobra
+  parity/deletion as a future gate are historical.
+- **Quorum core runs 37/39 under native.** `VoteResult`, `CommittedIndex`, and
+  `JointConfig` (and all their edge cases) execute end-to-end. The two
+  remaining are the `AckedIndexer` interface-dispatch cases (interface emission
+  not yet wired in the native frontend).
+- Sufficiency honesty: the real quorum functions now run as differential cases
+  (Layer 3 is largely realized for the concrete core), but the *input-fuzzing*
+  harness and the `slices.Sort`-faithful `CommittedIndex` variant are still
+  pending, and interface dispatch is not covered — so "quorum fully covered" is
+  not yet earned.
+- Per the 2026-07 design review, feature breadth is paused in favor of the
+  proof-foundation work (interpreter/substrate totality, relation catch-up).
+
 ## Why
 
 Gobra is the throughput and coverage bottleneck: only ~136 of 672 corpus cases
