@@ -62,36 +62,34 @@ In order (reordered — Iris spike front-loaded):
        `Nat`; `GoCoreGS` class, `heapToMap` projection, `StateInterp` via
        `genHeapInterp`, `IrisGS`). The `↦` connective over GoCore's heap now
        compiles; `wp_seqn` re-proved under the real state interp. No sorry.
-     - [x] **3b.2** — `wp_assign`, the real heap store law over `Step.assign`,
-       via `wp_lift_step` (non-value successor `.next k`), in continuation-passing
-       form (`a.id ↦ old ∗ (a.id ↦ new -∗ WP (.next k)) ⊢ WP (assign) k`). Axioms
-       clean, no sorry. **Crux insight:** defining `heapToMap` as a **foldr**
-       (head inserted last → head wins) makes it match `Heap.lookup`'s first-match
-       *unconditionally* — the anticipated heap-key-uniqueness invariant is not
-       needed. Two reusable bridge lemmas (`get?_heapToMap`, `heapToMap_set_base`)
-       carry `genHeap_valid`/`genHeap_update` onto GoCore's real `storeLoc`.
-       **Known caveat (tracked):** the operational side condition `hred`
-       (assignee/rhs resolve to this base-cell write, deterministically) is a
-       *hypothesis* because `ExecState.locals` isn't in the state interpretation;
-       modelling locals would let it be derived. See
-       `docs/2026-07-18_a2-step3-wp-design.md` §"3b.2 result".
-     - [x] **3b.3 (skeleton)** — the chain **real relation → `Language` → WP →
-       adequacy** now closes, axioms clean:
-       - `go_adequacy` — `adequate .NotStuck` for GoCore's real `Step`, mirroring
-         HeapLang's `heap_adequacy` (concrete `GoCoreS` functor bundle +
-         `GoCoreGpreS`; allocate gen_heap names from `heapToMap σ.heap`). A
-         universally-quantified WP now yields never-stuck, `φ`-correct execution.
-       - `pointsTo_loadLoc` — the **read law**: `a.id ↦ cell` forces `loadLoc σ
-         (.base a) = .ok cell.value` (+ pure `loadLoc_base_of_lookup`). Note:
-         there is *no* standalone `wp_load` — GoCore's CK machine has no bare
-         deref `Step` (reads are `ExprR` premises inside statement steps), so the
-         read side is this ownership⟹value lemma, which discharges a deref-RHS
-         inside a `wp_assign` `hred`.
-     - [ ] **3b.4 (open)** — discharge the `hred` operational side condition in
-       general (not per-call), by modelling `ExecState.locals` in the state
-       interpretation (or an intermediate location-resolved `Config`). This is
-       the one remaining caveat on the heap laws; likely folded into Reshape B,
-       which already reshapes `ExecState`.
+     - [~] **3b.2 — `wp_assign` is a SCAFFOLD, not a usable law** (corrected by
+       the pre-merge audit, 2026-07-19, findings D2-4/D2-5). Axiom-clean and the
+       gen_heap-update mechanism is genuinely proven, via `wp_lift_step`
+       (non-value successor `.next k`) + the two reusable bridge lemmas
+       (`get?_heapToMap`, `heapToMap_set_base`; the `foldr` `heapToMap` matches
+       `Heap.lookup` first-match *unconditionally* — no heap-key-uniqueness
+       invariant). **BUT its `hred` hypothesis is unsatisfiable for any real
+       assign**: `hred` quantifies `∀ σ₁` constrained only on `σ₁.heap`, while a
+       variable LHS needs `σ₁.locals` to resolve — an empty-locals `σ₁` meets the
+       antecedent yet admits no step. So **no instance of the law exists**; it
+       certifies the heap-camera wiring only. The earlier "discharged per-call for
+       a variable LHS" claim was **false**. Real usability is blocked on 3b.4.
+     - [~] **3b.3 — read law + adequacy, both scope-limited** (audit D1-1):
+       - `go_adequacy` — `adequate .NotStuck`, real functor bundle, axiom-clean —
+         **but covers only non-panicking runs**: `.panicked` has no outgoing
+         `Step` in the Iris layer, so it counts as *stuck*, and any Go panic makes
+         `Hwp` unprovable. Admitting panicking terminals (panics-as-values/obs) is
+         deferred.
+       - `pointsTo_loadLoc` — read law (`a.id ↦ cell` ⟹ `loadLoc … = ok value`).
+         Genuinely a lemma, not a WP; correct as stated (no bare-deref `Step`).
+     - [ ] **3b.4 (the real blocker on usable heap laws)** — model `ExecState.locals`
+       in the state interpretation (or a location-resolved intermediate `Config`)
+       so assignee/rhs resolution is *derived*, making `hred` dischargeable and
+       `wp_assign` an actual Hoare law. Audit D2-7/D4-12: locals are a
+       name-shadowing push/pop scope stack **split across `Config.frame`
+       (callerLocals) and `ExecState.locals`** — this needs a different camera +
+       new scope-push/pop WP laws, materially harder than the heap wiring. Folds
+       into Reshape B.
 3. **Reshape B** (`docs/2026-07-19_reshape-b-oracle-externalization.md`):
    - [x] **Slice 1 — oracle externalization.** `choices` removed from
      `ExecState`; the interpreter threads `Choices` externally through the

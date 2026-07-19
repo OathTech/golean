@@ -1,10 +1,17 @@
 # Roadmap
 
+> **STALE — pending refresh (flagged 2026-07-19 by the pre-merge audit, D4-13).**
+> This doc predates two major shifts and is partly out of date: **(1) Gobra has
+> been dropped** — the native Go frontend (`tools/nativefrontend` +
+> `NativeToIR.lean`) is the sole frontend, so all "Gobra frontend / Gobra export
+> path / critical-path risk" framing below is obsolete. **(2) The Iris proof
+> layer is underway** (in-repo `proofs/`), no longer just "a later phase." Read
+> the body as historical context; current state of record lives in `TODO.md`,
+> `CLAUDE.md`, and the dated design notes. Full rewrite tracked as a task.
+
 This project aims to build an Aeneas-like Go-to-Lean tool with broad Go
-coverage and executable semantics in Lean. Gobra is a temporary frontend
-accelerator, not the intended semantic core or long-term frontend. Proof
-infrastructure remains an important later phase, but the current priority is to
-build and differentially test a substantial Go semantics first.
+coverage and executable semantics in Lean. Proof infrastructure (the Iris layer)
+is now an active track alongside broadening the differentially-tested semantics.
 
 ## North Star Target
 

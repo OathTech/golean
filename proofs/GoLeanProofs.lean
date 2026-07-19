@@ -215,22 +215,28 @@ theorem pointsTo_loadLoc {GF : BundledGFunctors} {hlc : HasLC} [GoCoreGS hlc GF]
   apply loadLoc_base_of_lookup
   rw [get?_heapToMap] at Hmap; simpa using Hmap
 
-/-- **The heap store law** over GoCore's real `Step.assign`.
+/-- **The heap store law over `Step.assign` — currently a SCAFFOLD, not a usable
+law.** (Pre-merge audit 2026-07-19, finding D2-4/D2-5, confirmed.)
 
-The genuine heap Hoare law: to run `x = e` (an `assign`) then continue as `k`,
-it suffices to own the target cell `a.id ↦ oldcell` and be able to continue once
-it holds the written value `a.id ↦ newcell`. Proved via `wp_lift_step` (the
-successor `.next k` is a *non-value* control config, unlike HeapLang's store
-which reduces to `()`), consuming and re-producing the gen_heap points-to through
-`genHeap_valid`/`genHeap_update` and the `heapToMap` bridge lemmas.
+The proved content is real and axiom-clean: the gen_heap update mechanism behind
+a base-cell store is sound — own `a.id ↦ oldcell`, continue once it holds
+`a.id ↦ newcell`, proved via `wp_lift_step` (`.next k` is a *non-value*
+successor) + `genHeap_valid`/`genHeap_update` + the `heapToMap` bridges.
 
-`hred` is the operational side condition: at a state whose target base cell holds
-`oldcell`, the assign steps deterministically to `.next k` writing `newcell` into
-that one cell. It is discharged per-call from the concrete `lhs`/`rhs` (e.g. a
-variable LHS + pure RHS, where `AssigneeR`/`ExprR` are deterministic and
-non-panicking and `storeLoc` hits the base cell). Modelling `ExecState.locals` in
-the state interpretation would let this be derived rather than assumed; that is a
-future reshape, tracked — for now the heap-camera core is what is proven. -/
+**But `hred` is not dischargeable for any real assign, so no instance of this law
+exists.** `hred` quantifies `∀ σ₁` constrained *only* on `σ₁.heap`; `σ₁.locals`
+is a separate `ExecState` field it never pins. For a variable LHS `x = e`,
+`Step.assign` needs `AssigneeR σ₁ (.var id) …`, i.e. `lookupLoc σ₁ id` succeeds —
+which depends on `σ₁.locals`. An `σ₁` with the right heap cell but empty locals
+satisfies `hred`'s antecedent yet admits **no** step, so `hred`'s consequent is
+false: `hred` is unprovable for a variable LHS (the case an earlier docstring
+wrongly named as the discharge example). Every surface way to name a location
+routes through `locals` (`.var`/`.ref`), so this is not special to variables.
+
+Making this a genuine Hoare law requires modelling `σ₁.locals` in the state
+interpretation (TODO 3b.4 / Reshape B) so resolution is *derived*, not assumed
+over an unconstrained `σ₁`. Until then this theorem certifies the heap-camera
+wiring only. -/
 theorem wp_assign {a : Addr} {oldcell newcell : HeapCell} {lhs rhs k}
     (hred : ∀ σ₁ : ExecState, Heap.lookup σ₁.heap (.base a) = some oldcell →
       Step (Config.exec (.assign lhs rhs) k) σ₁ (.next k)
@@ -321,8 +327,17 @@ instance instGoCoreGpreS : GoCoreGpreS HasLC.hasLC GoCoreS where
       exists 5
     · exists 6
 
-/-- **Adequacy** for GoCore's real relation. `φ`-correct, never-stuck execution
-follows from a universally-quantified WP. -/
+/-- **Adequacy** for GoCore's real relation, over `NotStuck` — but note the
+scope. (Pre-merge audit 2026-07-19, finding D1-1, confirmed.) `adequate
+.NotStuck` requires every reachable config to be a value or reducible. In the
+current Iris layer `.panicked msg` has `toVal = none` and **no** outgoing `Step`
+(no rule sources it), so it counts as *stuck* — even though `Rel.lean` treats a
+panic as legitimate terminal *behavior* (`Config.terminal`). So this theorem's
+guarantee covers only runs that never reach `.panicked`; a Go panic (bounds,
+nil-deref, divide-by-zero) makes `Hwp` unprovable rather than being a permitted
+terminal. Modelling panics as values/observations in the Iris layer (so
+adequacy admits panicking terminals) is deferred — until then read the guarantee
+as "`φ`-correct, never-stuck execution *among non-panicking runs*". -/
 theorem go_adequacy [GoCoreGpreS .hasLC GF] (c : Config) (σ : ExecState)
     (φ : Unit → Prop)
     (Hwp : ∀ [GoCoreGS .hasLC GF], ⊢@{IProp GF} (WP c {{ v, ⌜φ v⌝ }})) :
