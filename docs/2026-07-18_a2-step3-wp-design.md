@@ -106,6 +106,49 @@ Concrete facts established before 3b's full implementation, to start it efficien
   `wp_seqn` under `[GoCoreGS]` — its pure proof still holds; this avoids two
   conflicting `StateInterp ExecState Unit GF` instances.
 
+## 3b.2 result — `wp_assign` proved (2026-07-19)
+
+`wp_assign` lands: the first heap Hoare law over GoCore's real `Step.assign`,
+axiom-clean (`propext`/`Classical.choice`/`Quot.sound`, no sorry). What was
+learned vs. the plan above:
+
+- **The heap-key-uniqueness invariant is NOT needed** (the subtlety flagged for
+  the crux lemma dissolved). Defining `heapToMap` as a **`foldr`** — the list
+  head is inserted *last*, so it wins a key clash — makes the projection match
+  `Heap.lookup`'s front-to-back first-match *unconditionally*. Both skip
+  non-`base` locs identically. So the two bridge lemmas hold for *any* heap, no
+  well-formedness hypothesis:
+  - `get?_heapToMap : get? (heapToMap h) k = Heap.lookup h (.base ⟨k⟩)` (read
+    bridge — turns `genHeap_valid`'s map fact into the assoc-list lookup
+    `storeLoc`/`loadLoc` consume).
+  - `heapToMap_set_base : heapToMap (Heap.set h (.base a) c) ≡ₘ insert (heapToMap
+    h) a.id c` (write bridge — lets `genHeap_update` service `storeLoc`). Proved
+    via the read bridge, reducing to a pure `Heap.set`/`Heap.lookup` fact.
+  These are small structural inductions; the `≡ₘ` (pointwise `get?`) target +
+  `genHeapInterp_eqv` avoid any strict map-equality reasoning.
+- **`wp_lift_step`, not `wp_lift_atomic_step`.** The spike's store reduced to a
+  *value* (`()`), so atomic lifting applied. GoCore's assign reduces to `.next
+  k`, a **non-value** control config, so the general `wp_lift_step` is required,
+  and the law is **continuation-passing**: `a.id ↦ old ∗ (a.id ↦ new -∗ WP
+  (.next k) @ s;E {{Φ}}) ⊢ WP (.exec (.assign lhs rhs) k) @ s;E {{Φ}}`. This is
+  the right shape for a statement-level law in a CK machine — you thread the
+  caller's continuation WP (which `wp_lift_step` hands back as `WP e₂`), instead
+  of applying `Φ` to a produced value. `wp_load` will mirror it.
+- **The locals gap (the real remaining work).** `Step.assign` bundles
+  `AssigneeR`/`ExprR`/`storeLoc`, and resolving `lhs`/`rhs` to a location + value
+  reads `ExecState.locals`, which the state interpretation does **not** model
+  (gen_heap owns only `σ.heap`). So the law takes an operational side condition
+  `hred` as a hypothesis: "at a state whose target base cell holds `oldcell`, the
+  assign steps deterministically to `.next k` writing `newcell` into that one
+  cell." The heap-camera core — valid/update/bridge — is fully proven; `hred` is
+  discharged per-call from concrete `lhs`/`rhs`. Deriving `hred` in general needs
+  **locals modelled in the state interpretation** (or an intermediate
+  location-resolved Config, HeapLang-style). That is the next structural step —
+  likely folded into Reshape B, since it also touches `ExecState`'s shape.
+- **Next:** `wp_load` over `deref` (read-only: `loadLoc` + read bridge +
+  `genHeap_valid`, no update), then adequacy (`heap_adequacy` analogue:
+  `genHeap_init` from `σ.heap`, `adequate .NotStuck`).
+
 ## Notes
 
 - The proof file stays **legacy** (imports golean-legacy + iris-module); the

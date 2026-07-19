@@ -62,11 +62,24 @@ In order (reordered — Iris spike front-loaded):
        `Nat`; `GoCoreGS` class, `heapToMap` projection, `StateInterp` via
        `genHeapInterp`, `IrisGS`). The `↦` connective over GoCore's heap now
        compiles; `wp_seqn` re-proved under the real state interp. No sorry.
-     - [ ] **3b.2** — `wp_assign` (heap store over `Step.assign`) via
-       `wp_lift_step` (non-value successor `.next k`). Crux lemma:
-       `heapToMap (Heap.set h (.base a) cell) = (heapToMap h).insert a.id cell`.
-       Then adequacy (mirror HeapLang's `heap_adequacy`). Templates: spike +
-       HeapLang; Rocq Iris if iris-lean lacks a gen_heap lemma.
+     - [x] **3b.2** — `wp_assign`, the real heap store law over `Step.assign`,
+       via `wp_lift_step` (non-value successor `.next k`), in continuation-passing
+       form (`a.id ↦ old ∗ (a.id ↦ new -∗ WP (.next k)) ⊢ WP (assign) k`). Axioms
+       clean, no sorry. **Crux insight:** defining `heapToMap` as a **foldr**
+       (head inserted last → head wins) makes it match `Heap.lookup`'s first-match
+       *unconditionally* — the anticipated heap-key-uniqueness invariant is not
+       needed. Two reusable bridge lemmas (`get?_heapToMap`, `heapToMap_set_base`)
+       carry `genHeap_valid`/`genHeap_update` onto GoCore's real `storeLoc`.
+       **Known caveat (tracked):** the operational side condition `hred`
+       (assignee/rhs resolve to this base-cell write, deterministically) is a
+       *hypothesis* because `ExecState.locals` isn't in the state interpretation;
+       modelling locals would let it be derived. See
+       `docs/2026-07-18_a2-step3-wp-design.md` §"3b.2 result".
+     - [ ] **3b.3** — adequacy (mirror HeapLang's `heap_adequacy`: allocate the
+       heap ghost state from `σ.heap`, target `adequate .NotStuck`), and
+       `wp_load` over `deref` (symmetric, `loadLoc` + `genHeap_valid` only). The
+       locals-in-state-interp reshape that discharges `hred` is the larger open
+       item — likely folded into Reshape B.
 3. [ ] **Reshape B** (oracle `choices` out of `ExecState` → external stream,
    existential `mapRange` rule) + relation catch-up for **one** nondeterministic
    feature + correspondence over that feature. Finish interpreter totality here,
