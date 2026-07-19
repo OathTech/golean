@@ -602,9 +602,15 @@ mutual
       assignLoc current targetPair.1 (.slice { slice with len := newLen })
     else
       let oldValues ← sliceVisibleValues elemsPair.2 slice
-      let newCap := appendGrowthCap slice.cap newLen
-      let backing ← buildAppendBackingValue elemsPair.2 elem oldValues elemValues newCap
-      let (base, current) := elemsPair.2.alloc backing (some (.array newCap elem))
+      -- Go does not specify post-reallocation capacity; any cap >= newLen is
+      -- valid. The oracle chooses one: the default (0) reproduces the
+      -- Go-matching growth formula for differential testing, and other choices
+      -- explore additional valid capacities so cap-observing programs are
+      -- revealed as nondeterministic by the invariance check.
+      let (extra, afterChoice) := elemsPair.2.consume 8
+      let newCap := appendGrowthCap slice.cap newLen + extra
+      let backing ← buildAppendBackingValue afterChoice elem oldValues elemValues newCap
+      let (base, current) := afterChoice.alloc backing (some (.array newCap elem))
       assignLoc current targetPair.1 (.slice { base := some base, offset := 0, len := newLen, cap := newCap })
 
   partial def execMakeSlice (state : ExecState) (target : Assignee) (elem : Ty)
