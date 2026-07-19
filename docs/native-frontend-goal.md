@@ -278,18 +278,19 @@ recorded frontend-blocked classifications) before the next.
 ## Parity status (2026-07-18)
 
 Native pipeline is proven end-to-end and extends one construct at a time.
-Measured areas under `GOLEAN_FRONTEND=native`: **ints 26/26 (full parity)**,
-arrays 7/17, structs 6/30, pointers 6/15, comparisons 0/8, bools 2/10,
-returns 2/10, if 1/4, control-flow 1/39. The scalar / control-flow / memory
-core (functions, `:=`/assign/multi-assign, if/for, arithmetic, comparisons,
-conversions, blank targets, named types + type table, struct/array literals,
-field/index access, address-of, deref) works. Remaining blockers are
-enumerated unimplemented features, each a bounded increment: slice/map
-literals + ops, method calls, `&T{...}`, func values/closures, builtins
-(len/cap/append/make), switch, goto/labels, defer, select.
+**ints is at full parity (26/26).** The whole scalar / control-flow / memory /
+call core works: functions, `:=`/assign/multi-assign, if/for, arithmetic,
+comparisons, conversions, blank targets, named types + type table,
+struct/array literals, field/index access, address-of, deref, **A-normal-form
+method and function calls** (`x.M(...)`, `&T{...}`), the empty struct `struct{}`,
+and `len`/`cap`. Verified: a method call through ANF returns the right value;
+the real `deps/raft/quorum` package type-checks.
 
-The next blocker set (method calls, `&T{...}`, nested calls) all reduce to the
-open A-normal-form decision below.
+Remaining blockers, each a bounded increment: **range** (unmodeled in GoCore —
+see decision below), map literals + comma-ok + `make`/`delete`, slice literals
++ `make`/`append`/slice-expr + `slices.Sort` extern, func values/closures,
+switch, goto/labels, defer, select. Quorum needs range + map ops + slice ops
+on top of what works.
 
 ## Design decisions and open questions
 
@@ -333,8 +334,34 @@ and clean emission (user steer, 2026-07-18).
   precedent GoCore already follows, and confines the complexity to the
   replaceable frontend. This is a reasoning-affecting architectural choice, so
   it is surfaced to the user rather than taken unilaterally.
-- **[note] Multi-file packages** are supported by the native path (go/types
-  resolves them); the Gobra one-file-per-package limit does not apply.
+- **[decided] A-normal form** (2026-07-18, user): implemented. Calls/allocs in
+  expression position hoist to let-bound temps; short-circuit RHS and loop
+  conditions are guarded (fail closed) to preserve evaluation order. Method
+  calls unify as calls to `RecvType.M` with the receiver prepended.
+- **[DECISION POINT, reached 2026-07-18] `range` / map iteration in GoCore.**
+  GoCore has *no* iteration construct, and Gobra never lowered `range` either
+  (the `range/*` corpus cases are frontend-blocked in the baseline). So `range`
+  is an unmodeled GoCore feature, not just a frontend gap, and it is required
+  for quorum (`for id := range c`). Adding it is a GoCore-shape + semantics
+  decision:
+  - **What to add:** a range/iteration construct over slices, arrays, maps,
+    strings, integers (Go 1.22), and iterator funcs (Go 1.23). Slice/array/
+    string/int ranges have deterministic order and are straightforward.
+  - **The real question is map iteration order.** Go map iteration order is
+    nondeterministic. The coverage ledger already lists "map iteration order"
+    as `deferred-nondet`. Options: (a) the executable interpreter picks a
+    deterministic order (e.g. insertion or sorted) and the relational semantics
+    permits any permutation — quorum's uses are all order-insensitive
+    (count/sort), so a deterministic executable order gives correct
+    differential results while the relation stays honest about nondeterminism;
+    (b) restrict the default lane to order-insensitive map-range observations
+    (already the corpus policy) and model map range with a chosen deterministic
+    order under the hood. Both keep the reasoning story clean (the relation
+    allows any order); they differ mainly in interpreter policy.
+  - Recommendation: add the range construct with a deterministic executable
+    map-iteration order (option a), documenting it as an executable policy the
+    relational semantics generalizes — mirroring how append-growth is handled.
+    This is a GoCore change affecting reasoning, so it is surfaced to the user.
 
 ## Handoff
 
