@@ -56,6 +56,46 @@ the gen_heap library (`Iris.BI.Lib.GenHeap`) for GoCore's heap:
 - **Adequacy**: mirror HeapLang's `heap_adequacy` (allocate the heap ghost state
   from `σ.heap`), targeting `adequate .NotStuck` (decision D1).
 
+## 3b findings from the initial probe (2026-07-19)
+
+Concrete facts established before 3b's full implementation, to start it efficiently:
+
+- **Key gen_heap by `GoLean.Addr`, not `Loc`.** Heap cells live only at
+  `.base addr` locs, and `Addr` is `structure Addr where id : Nat` — a trivial
+  lawful `Ord` (`compare a.id b.id`), avoiding a lawful compare for the recursive
+  `Loc`. Namespace gotcha: the value types (`Addr`, `Loc`, `GoValue`) are in
+  namespace **`GoLean`** (not `GoLean.GoCore`) — `Value.lean` closes `GoCore`
+  before defining them. So it's `GoLean.Addr`.
+- **The `genHeapGS`/`genHeapPreS` classes** (`Iris.BI.Lib.GenHeap`): a
+  `genHeapGS L V GF H` needs `[Std.LawfulFiniteMap H L]` and bundles
+  `GhostMapG`/`ElemG` functors + `heapName`/`metaName`. For a WP *lemma* you
+  **assume** a `GoCoreGS` class (extends `InvGS_gen` + `genHeapGS Addr HeapCell
+  GF GoHeapF`), exactly as HeapLang's laws assume `[HeapLangGS]`; no functor
+  construction (that is adequacy, 3b-final).
+- **Vendored-Std friction (the iris-lean-maturity issue).** `Std.LawfulFiniteMap`
+  is iris-lean's **own** vendored `Std` (`Iris/Std/PartialMap.lean`), not Lean's
+  batteries `Std`. The `ExtTreeMap`-satisfies-`LawfulFiniteMap` instance comes via
+  the imports HeapLang uses: `Std.Data.ExtTreeMap`, `Iris.Std.FromMathlib`,
+  `Iris.Std.GenSetsInstances`. Resolve the exact instance path there first (a
+  scratch `example : Std.LawfulFiniteMap (fun V => Std.ExtTreeMap GoLean.Addr V
+  compare) GoLean.Addr := inferInstance` with those imports).
+- **`GoHeapF := fun V => Std.ExtTreeMap GoLean.Addr V compare`**; `StateInterp σ
+  := genHeapInterp (convert σ.heap)` with `convert : List (Loc × HeapCell) →
+  ExtTreeMap Addr HeapCell` folding `.base addr ↦ cell` (ignore non-`.base`,
+  there are none). Relate `Heap.lookup σ.heap (.base a) = some cell` ↔
+  `(convert σ.heap).get? a = some cell` as the bridge lemma for `wp_store`.
+- **`wp_store` is at STATEMENT granularity** (reviewer B3): there is no atomic
+  heap `Step`; the atomic step is `Step.assign`, which evaluates `AssigneeR`/
+  `ExprR` (pure, read-only in the scalar subset) then `storeLoc`. So the law is
+  `wp_assign` over `Step.assign`, mirroring the spike's `wp_store` proof
+  (`wp_lift_atomic_step` + `genHeap_valid`/`genHeap_update`) but inverting the
+  assign rule and threading the pure assignee/expr premises. Rocq Iris is the
+  reference if iris-lean lacks a needed gen_heap lemma.
+- **When to swap 3a's placeholder:** replace the trivial `StateInterp`/`IrisGS`
+  (under `[InvGS_gen]`) with the gen_heap ones (under `[GoCoreGS]`) and move
+  `wp_seqn` under `[GoCoreGS]` — its pure proof still holds; this avoids two
+  conflicting `StateInterp ExecState Unit GF` instances.
+
 ## Notes
 
 - The proof file stays **legacy** (imports golean-legacy + iris-module); the
