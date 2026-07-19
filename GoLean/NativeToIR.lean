@@ -139,6 +139,12 @@ partial def decodeExpr (path : String) (json : Json) : LowerM Expr := do
       let base ← decodeExpr s!"{path}.base" (← StrictJson.field path obj "base")
       let index ← decodeExpr s!"{path}.index" (← StrictJson.field path obj "index")
       pure (.indexAddr base index)
+  | "builtin-len" =>
+      let operand ← decodeExpr s!"{path}.operand" (← StrictJson.field path obj "operand")
+      pure (.length operand (some (← decodeTy s!"{path}.operandType" (← StrictJson.field path obj "operandType"))))
+  | "builtin-cap" =>
+      let operand ← decodeExpr s!"{path}.operand" (← StrictJson.field path obj "operand")
+      pure (.capacity operand (some (← decodeTy s!"{path}.operandType" (← StrictJson.field path obj "operandType"))))
   | "map-get" =>
       let base ← decodeExpr s!"{path}.base" (← StrictJson.field path obj "base")
       let index ← decodeExpr s!"{path}.index" (← StrictJson.field path obj "index")

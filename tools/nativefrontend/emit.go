@@ -937,7 +937,7 @@ func (e *emitter) emitCallNode(c *ast.CallExpr) (any, bool, error) {
 	switch e.info.Uses[fnID].(type) {
 	case *types.Func:
 	case *types.Builtin:
-		return nil, false, unsup("builtin %s", fnID.Name)
+		return e.emitBuiltin(c, fnID.Name)
 	default:
 		return nil, false, unsup("call to non-function %s", fnID.Name)
 	}
@@ -1003,6 +1003,32 @@ func (e *emitter) emitGuarded(guard bool, reason string, x ast.Expr) (any, error
 	w, err := e.emitExpr(x)
 	e.hoistForbidden = saved
 	return w, err
+}
+
+// emitBuiltin handles Go builtin calls. len/cap are pure expressions; the
+// effectful builtins (make/append/...) are added incrementally.
+func (e *emitter) emitBuiltin(c *ast.CallExpr, name string) (any, bool, error) {
+	switch name {
+	case "len", "cap":
+		if len(c.Args) != 1 {
+			return nil, false, unsup("%s with %d arguments", name, len(c.Args))
+		}
+		operand, err := e.emitExpr(c.Args[0])
+		if err != nil {
+			return nil, false, err
+		}
+		opTy, err := e.typeOf(c.Args[0])
+		if err != nil {
+			return nil, false, err
+		}
+		tag := "builtin-len"
+		if name == "cap" {
+			tag = "builtin-cap"
+		}
+		return map[string]any{"expr": tag, "operand": operand, "operandType": opTy}, false, nil
+	default:
+		return nil, false, unsup("builtin %s", name)
+	}
 }
 
 func (e *emitter) emitArgs(as []ast.Expr) ([]any, error) {
