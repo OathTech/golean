@@ -1,0 +1,51 @@
+#!/usr/bin/env bash
+# Diff a differential-coverage run against the recorded native-frontend baseline
+# (baselines/native-full.tsv). "Same set = no regression" is the validation gate:
+# this prints only the case-ids whose (result, stage) changed vs the baseline,
+# plus ids present in one but not the other.
+#
+# Usage: scripts/coverage-baseline-diff [<results.tsv>]
+#   default results file: artifacts/coverage/latest.tsv (the last run)
+# Exit 0 = identical to baseline (no regression). Exit 1 = drift (ids printed).
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+cd "$ROOT"
+
+BASELINE="baselines/native-full.tsv"
+RESULTS="${1:-artifacts/coverage/latest.tsv}"
+
+[ -f "$BASELINE" ] || { echo "no baseline at $BASELINE" >&2; exit 2; }
+[ -f "$RESULTS" ]  || { echo "no results at $RESULTS" >&2; exit 2; }
+
+# Baseline columns: result,id,stage. Results columns: result,id,features,stage.
+# Single awk pass, no temp files (sandbox-safe): load baseline (result/stage keyed
+# by id), then compare each result row; emit drift and one-sided ids.
+drift="$(awk -F'\t' -v BASE="$BASELINE" '
+  BEGIN {
+    while ((getline line < BASE) > 0) {
+      if (line ~ /^#/) continue
+      n = split(line, f, "\t")
+      if (f[1] == "result" || n < 2) continue
+      bkey[f[2]] = f[1] "/" f[3]; bseen[f[2]] = 1
+    }
+  }
+  /^#/ { next }
+  $1 == "result" { next }
+  NF >= 2 {
+    id = $2; now = $1 "/" $4; rseen[id] = 1
+    if (!(id in bkey))      { print id "\tNEW id -> " now; next }
+    if (bkey[id] != now)      print id "\tbaseline[" bkey[id] "] -> now[" now "]"
+  }
+  END {
+    for (id in bseen) if (!(id in rseen)) print id "\tDROPPED (in baseline, absent now)"
+  }
+' "$RESULTS" | LC_ALL=C sort)"
+
+if [ -z "$drift" ]; then
+  echo "no regression: $(basename "$RESULTS") result/stage set == $BASELINE"
+  exit 0
+fi
+echo "DRIFT vs $BASELINE:"
+echo "$drift"
+exit 1

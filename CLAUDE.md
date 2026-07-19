@@ -24,6 +24,27 @@ failing-set diff — it is what kept 13 consecutive cleanup slices at zero
 regressions. The differential oracle is real Go (`go run`); the native Go
 frontend (`tools/nativefrontend` + `NativeToIR.lean`) is the only frontend.
 
+### Baseline pinning (the "recorded baseline" in step 3)
+
+The recorded baseline is a **tracked** file, `baselines/native-full.tsv` —
+`result<TAB>id<TAB>stage` per case, sorted by id, with a dated header (recording
+commit, counts, frontend). `artifacts/` is gitignored, so a run's `latest.tsv`
+is *not* the record; the tracked baseline is. `detail` (free-text errors) is
+omitted on purpose — it churns; `result`+`stage` is the regression signal.
+
+- **Diff a run against it:** `scripts/coverage-baseline-diff [results.tsv]`
+  (defaults to `artifacts/coverage/latest.tsv`). Exit 0 = identical set (no
+  regression); exit 1 prints exactly the drifted ids (PASS↔FAIL flips, stage
+  changes, new/dropped ids). This *is* the step-3 gate, mechanized.
+- **A `frontend-export` FAIL is an expected native-frontend coverage gap**, not a
+  bug — but a *new* one still counts as drift and must be explained.
+- **Re-pin the baseline only on a deliberate, explained coverage change** (a
+  frontend/interpreter feature legitimately moves cases): regenerate the file
+  from a full run, bump its dated header, and commit it *in the same change* that
+  caused the move, with the reason. Never re-pin to launder an unexplained
+  regression. A focused slice (`diff-one`/`coverage run <ids>`) is for the tight
+  loop; the tracked baseline is re-pinned only from a **full** run.
+
 ## Capture decisions in files, not chat
 
 Every relevant design decision, tradeoff, or open question must be written into
