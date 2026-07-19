@@ -266,3 +266,114 @@ fuzzing.
    deterministic skeleton?
 6. **Anywhere the composed guarantee (§4) is weaker than it reads** — any seam
    that is actually unsound rather than merely trusted/empirical.
+
+---
+
+## 8. Review outcome (2026-07-18) — three adversarial reviews
+
+Three independent adversarial reviewers (proof-theory, Iris-mechanization,
+engineering-strategy) attacked this plan. **Unanimous verdict: the two-object
+architecture is sound — do NOT rethink the foundation — but the §6 work sequence
+and two concrete GoCore shapes are wrong and must change before any more
+big-step interpreter-totality investment.** Pausing the `execStmt` totalization
+was correct. `Ops` totality and the interpreter expression layer are *not*
+wasted (needed under any fork), though Reshape A below re-plumbs them.
+
+### Convergent findings
+
+**C1 — Finishing big-step interpreter totality + a scalar correspondence lemma
+is the wrong next build.** Three independent reasons:
+- *(proof, Finding 3)* A big-step `execStmt … = .ok (.normal s') → Steps …`
+  bridge structurally covers only **terminating** runs. Raft's core is a
+  reactive, nonterminating `Step(Message)` loop; safety is proved over infinite
+  executions and their finite prefixes. A big-step-to-`.next .stop` statement
+  cannot express a prefix ending mid-execution, so the bridge covers none of the
+  regime raft lives in.
+- *(iris, Finding 4)* The correspondence conclusion becomes **FALSE** the moment
+  `mapRange` runs: the oracle lives *inside* `ExecState` (`State.lean:43`,
+  consumed by `execMapRangeLoop`), the relation ignores it, so the two post
+  states differ in `choices`. Not merely unproven — false as stated.
+- *(strategy, F2)* On the scalar subset interpreter and relation coincide, so a
+  scalar lemma never exercises the oracle-parameterized correspondence
+  (`execStmt(oracle) = ok → ∃ path, Steps`) that is the actually-hard part.
+
+**C2 — Two required GoCore reshapes before breadth** (iris, grounded in the
+actual `deps/iris-lean` sources):
+- *Reshape A — split the heap out of `Config`/`ExecState` into Iris `State`.*
+  Iris `PrimStep` is `Expr × State → …`; every `Config` constructor embeds
+  `ExecState` (`Rel.lean:224-231`), so `Config` cannot be Iris `Expr` — the
+  `ToVal` round-trip law is unsatisfiable while the term embeds the heap.
+  Re-plumbs `Config`/`Step`/`ExprR` (locals straddle the split; tedious but
+  provable).
+- *Reshape B — move `choices` out of `ExecState` into an external oracle stream*,
+  and make the `mapRange` rule existential (`∃ idx < remaining.size, …`). The
+  only shape where the relation stays nondeterministic, state-equality in the
+  correspondence holds, and the oracle path is a witness. Decide before step-2
+  relation catch-up.
+- *Not an ectx redesign.* A CK machine maps to **bare** Iris `Language` (lifting
+  lemmas `wp_lift_atomic_step` etc. + full adequacy all exist); the Config/Cont-
+  vs-ectx worry is answered by "instantiate `Language` directly, forgo
+  `wp_bind`." **Cost: no compositional `wp_bind`** — statement/function specs
+  need manual induction over statement + continuation structure. Lower the
+  expectation of what Iris buys (still get the separation-logic heap, framing,
+  invariants; not slick modular WP).
+
+**C3 — Three cheap decisions to write down now** (proof):
+- **D1 — target adequacy is the not-stuck / progress form** (Iris
+  `adequate_alt` / `adequate_tp_safe`, confirmed present). This downgrades every
+  "unsupported / fuel = stuck" gap — including the §3 type-fuel seam — from
+  *false-safety-unsound* to merely *proof-blocking*. Without this commitment the
+  relation's silent "stuck = absence of rule" is a real false-safety hole under
+  partial/terminal-only adequacy. One sentence; do it first.
+- **D2 — decide map-mid-mutation semantics explicitly, and require a
+  per-nondeterministic-construct completeness artifact.** "Snapshot-permute"
+  (current design note) UNDER-approximates Go: a key inserted during
+  `for k := range m` may be visited, and the *entire empirical apparatus is blind
+  to it* for observation-invariant programs (progress-adequacy passes;
+  differential compares one order; observation-invariance is trivially true).
+  Choose Perennial-style read-invalidation vs snapshot-permute consciously;
+  replace "merge invariant as discipline" with an enumerated "here are all
+  successors Go permits from this config + the rule permitting each" artifact.
+- **D3 — decide the correspondence shape** (step-indexed / prefix, or a
+  small-step oracle-parameterized interpreter) so it covers finite prefixes of
+  nonterminating runs. Settle this *before* finishing interpreter totality.
+
+**C4 — Enforce the big-step `ExprR` purity invariant as a typed constraint now.**
+It is sound only while expressions stay pure / total / deterministic /
+heap-read-only / non-allocating / fuel-independent — "no calls" understates it.
+`append` (nondet cap), map/composite literals, and `new` (allocation) break it
+the moment they enter `Expr` position, forcing the very "refactor expressions
+into the configuration language" the `Rel.lean:56-59` comment warns of.
+
+**C5 — Scope the merge invariant to the proof frontier** (strategy F3/F4), not
+every interpreter feature (≈50% velocity tax, institutionalizes the lag).
+Require a relational rule only for features the current ladder rung will prove
+over (quorum: uint64 arith, control flow, maps range/comma-ok, slices
+append/sort — NOT channels/defer/goroutines/most interface machinery). The
+relation is an untested middle artifact: either make the correspondence lemma
+the "proof-ready" bar, or treat the relation as scratch until proof time — don't
+maintain unchecked relational rules.
+
+**Settled / minor:** the §3 type-fuel seam is acceptable once D1 is committed —
+do NOT rewrite to acyclicity now (all three). "Green suite ⟹ quorum covered" is
+*fidelity*, not *safety* — stop implying it discharges the north star (strategy
+F6). ANF-purity is structurally enforced today, panic-as-behavior and
+frame/scope handling are correct, the toolchain gap (project v4.29 vs iris-lean
+v4.31, deps = only Qq + batteries) is a spike-in-isolated-worktree concern, not
+a blocker (proof Q5, iris Findings 5-6).
+
+### Resulting sequence (supersedes §6)
+
+0. **Write D1–D3 into this plan.** Cheap, now.
+1. **Reshape A** (heap → Iris `State`) on the current scalar subset.
+2. **Iris vertical-slice spike** in an isolated worktree pinned to 4.31 + Qq +
+   batteries: instantiate bare `Language`, prove one **heap-touching atomic
+   statement** WP (`wp_store`, not a pure control step), run adequacy → one
+   Hoare triple. The cheapest experiment that kills-or-validates the whole chain;
+   front-loads the embedding + toolchain risk currently scheduled last.
+3. If the spike survives: **Reshape B** (oracle out of state) + relation
+   catch-up for **one nondeterministic feature** (append-cap, or a 2-element map
+   range) + the correspondence lemma over **that** feature — the machinery that
+   actually needs de-risking. Finish interpreter totality here, against the now-
+   correct shapes and the settled correspondence form (D3).
+4. Scope the merge invariant to the proof frontier (C5); guardrails; breadth.
