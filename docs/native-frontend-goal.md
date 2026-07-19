@@ -275,6 +275,22 @@ recorded frontend-blocked classifications) before the next.
 - Display/formatting stdlib models.
 - Performance of the exporter.
 
+## Parity status (2026-07-18)
+
+Native pipeline is proven end-to-end and extends one construct at a time.
+Measured areas under `GOLEAN_FRONTEND=native`: **ints 26/26 (full parity)**,
+arrays 7/17, structs 6/30, pointers 6/15, comparisons 0/8, bools 2/10,
+returns 2/10, if 1/4, control-flow 1/39. The scalar / control-flow / memory
+core (functions, `:=`/assign/multi-assign, if/for, arithmetic, comparisons,
+conversions, blank targets, named types + type table, struct/array literals,
+field/index access, address-of, deref) works. Remaining blockers are
+enumerated unimplemented features, each a bounded increment: slice/map
+literals + ops, method calls, `&T{...}`, func values/closures, builtins
+(len/cap/append/make), switch, goto/labels, defer, select.
+
+The next blocker set (method calls, `&T{...}`, nested calls) all reduce to the
+open A-normal-form decision below.
+
 ## Design decisions and open questions
 
 Recorded as they arise (per the CLAUDE.md "capture decisions in files"
@@ -289,17 +305,34 @@ and clean emission (user steer, 2026-07-18).
   `go/types` type.
 - **[decided] Constant folding on the Go side.** Constant expressions
   (`-7/3`) are folded via `go/types` (no runtime division), matching Go.
-- **[open, imminent] Calls-in-expressions / A-normal form.** GoCore has no call
-  expression — calls are statements only. Today `NativeToIR` special-cases
-  calls in assign/return/expr-statement position; nested calls (`x + foo()`,
-  quorum's `l.AckedIndex(id)` inside an expression) are unsupported. The
-  principled resolution is **A-normal form**: the frontend normalizes every
-  call to a let-bound temp before the expression that uses it. ANF is *good*
-  for reasoning (it matches Goose/Perennial let-binding and is WP-friendly), so
-  the statement-only-call design is defensible if we commit to ANF lowering
-  rather than adding call-expressions to GoCore. This is the first substantive
-  GoCore-shape decision and is needed for quorum (method calls). Decide when
-  the method/call increment lands.
+- **[DECISION POINT, reached 2026-07-18] Calls-in-expressions / A-normal form.**
+  GoCore has no call expression — calls are statements only, and the same is
+  true of allocations (`newValue`) and other effects. The native frontend now
+  covers the whole scalar/control-flow/memory core, and the *entire* next
+  blocker set is effects-in-expression-position: method calls
+  (`x.M(...)`), nested function calls (`f(g())`, `x + foo()`), `&T{...}`
+  (address of a composite = allocate + address), and func-value calls. All of
+  these are essential for quorum.
+
+  Two ways forward:
+  - **(A) A-normal form in the frontend (recommended).** A normalization pass
+    hoists every call / allocation out of expression position into a preceding
+    let-bound temp statement, leaving GoCore expressions pure. GoCore is
+    unchanged. ANF is the standard verified-compiler normal form and is *good
+    for reasoning* — it matches Goose/Perennial let-binding and is WP-friendly,
+    which serves the "GoCore must support reasoning" test. Cost: one frontend
+    normalization pass that must respect Go's left-to-right evaluation order
+    and short-circuiting.
+  - **(B) Add call/alloc expressions to GoCore.** The frontend stays a direct
+    map. Cost: GoCore's expression language gains effects, which complicates
+    the relational semantics (evaluation order and effects inside expressions)
+    — worse for the reasoning story.
+
+  Recommendation: **(A)**. It keeps GoCore's expression language pure and
+  reasoning-friendly (the user's own criterion), matches the Goose/Perennial
+  precedent GoCore already follows, and confines the complexity to the
+  replaceable frontend. This is a reasoning-affecting architectural choice, so
+  it is surfaced to the user rather than taken unilaterally.
 - **[note] Multi-file packages** are supported by the native path (go/types
   resolves them); the Gobra one-file-per-package limit does not apply.
 
