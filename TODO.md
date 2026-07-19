@@ -3,6 +3,76 @@
 See `docs/roadmap.md` for the phased project roadmap. This file tracks tactical
 backlog items.
 
+## Current Priority Sequence (post-2026-07 design review)
+
+The end state is a complete trust chain: real Go → executable model
+(differentially validated against `go run`) → the **relational semantics**
+(the proof authority) → machine-checked proofs (Iris-Lean). The two-reviewer
+design review found the executable/testing half sound but the proof half
+blocked at the foundation (the interpreter and the shared `Ops` substrate are
+`partial def`, so the relation's own premises are opaque and its correspondence
+theorems are unprovable-as-written). **Feature breadth is paused for this
+foundation work.** Reviews synthesized in the design docs; both reviewers
+(proof-chain, engineering) idle/available.
+
+Done:
+
+- [x] Turn reviewer-found Go divergences into differential tests, then fix
+  (`control-flow/for-continue-post-plain`, `multi-assign/blank-discard-nonint`).
+- [x] Drop Gobra entirely; native is the only frontend, real Go is the oracle.
+- [x] Honesty fixes (correspondence "blocked", not "deferred"; sufficiency not
+  yet "quorum covered").
+
+In order:
+
+1. **Totality of the substrate + interpreter** (the top priority; also an Iris
+   prerequisite — Iris WP rules are proved by inverting the relation's premises,
+   which is impossible while those premises call opaque partials):
+   - Convert the structurally-recursive `Ops` ops (`loadLoc`, `storeLoc`,
+     `coerceStoredValue`) to plain `def`. Mechanical, low-risk, do first.
+   - Decide and implement the type-directed-recursion strategy for
+     `valueEq`/`normalizeValueForTy`/`defaultValue` — fuel-indexing vs. a
+     type-environment-acyclicity well-formedness hypothesis. Settle this
+     **before** any further type-directed feature.
+   - De-partial `execStmt` via structural/well-founded recursion on `fuel`.
+   - Prove one real interpreter↔relation correspondence lemma on the
+     scalar/control subset to validate the whole approach end-to-end.
+2. **Relation catch-up + merge invariant** (`Rel.lean` must become an actual
+   authority):
+   - Grow `Rel.lean` to cover the current interpreter subset — slices, maps,
+     `mapRange`, conversions, multi-assign — with nondeterminism expressed as
+     the relation permitting **all** valid behaviors (map order = any
+     permutation; append cap = any `≥ newLen`). The oracle stays interpreter-
+     side for deterministic testing; the relation is genuinely nondeterministic
+     (this is an Iris soundness requirement, not just testing hygiene).
+   - Adopt the merge invariant: no interpreter feature merges without its
+     relational rule (total premises; nondeterminism permitted where Go has it).
+3. **Guardrails** (keep the differential anchor honest):
+   - Strengthen the oracle-invariance check — exhaustive permutations for small
+     maps + seeded-random streams (seed recorded), and make it
+     frontend-independent.
+   - Add golden-wire emitter unit tests (`tools/nativefrontend/*_test.go`) for
+     the intricate desugarings: ANF hoisting/ordering, short-circuit no-hoist,
+     compound-assign, variadic spread, keyed struct/slice/map literals.
+   - Add a multi-file exec corpus case (cross-file calls/types) so the native
+     multi-package advantage is a tested guardrail.
+4. **Iris `Language` spike** (validate the proof endgame on a slice): once the
+   scalar/control relation is total, instantiate Iris-Lean's `Language`
+   typeclass for that subset and prove one WP rule (e.g. `wp_load`). This
+   flushes out the structural mixin lemmas, the continuation-machine-vs-
+   evaluation-context design question, and the toolchain version gap
+   (iris-lean v4.31 vs project v4.29 — see `docs/iris-lean-review.md`) before
+   building out more relation.
+
+Deferred until the foundation is set (then resume under the merge invariant):
+
+- Native interface dispatch (closes quorum 39/39; `AckedIndexer` is the last 2
+  quorum cases). Cheap and broadly useful, but a feature — paused.
+- Remaining native feature breadth toward the raft ladder: switch, closures/
+  func values, defer, string/rune range, and the rest.
+- `slices.Sort` extern + the input-fuzzing harness for the quorum sufficiency
+  Layer 3 (the `slices.Sort`-faithful `CommittedIndex` variant).
+
 ## Goose/Perennial Design Mapping
 
 - Produce a systematic design mapping of GoCore against new Goose/Perennial
@@ -27,15 +97,6 @@ backlog items.
   design-review artifact, not ported code: the architecture lesson (clean
   frontend translation, explicit semantic tables, typed primitives, proof
   automation layered above the core) is the thing to preserve.
-
-## Gobra JSON Schema
-
-- Make the Lean wire ADT the schema authority for Gobra JSON. This is the project direction; see `docs/gobra-json-schema.md`.
-- Generate strict Lean decoders from that ADT, rejecting missing fields, extra fields, wrong tags, and wrong scalar types.
-- Generate the Scala export ADT/encoder from the same schema source, or generate a machine-readable schema from Lean that the Gobra exporter targets.
-- Broaden the typed `GobraJson` importer from the smoke-corpus `Stmt`, `Expr`, `Assertion`, and `TerminationMeasure` tags to larger Gobra corpora.
-- Add more negative tests for surprise JSON inputs: missing constructor fields, malformed source positions, unsupported type tags, unsupported statement tags in nested bodies, and unsupported expression tags in wire-only spec fields.
-- Keep the Gobra wire model isolated from GoCore so replacing Gobra with our own Go frontend later does not require changing the semantic core.
 
 ## Differential Execution
 
@@ -133,23 +194,6 @@ backlog items.
   preconditions, postconditions, invariants, predicates, and ghost artifacts are
   frontend wire data only unless a later proof-extraction design explicitly
   reinterprets them outside the runtime semantics.
-
-## Gobra Lowering Hardening
-
-- Enrich Gobra JSON string literals with exact Go bytes, not only Scala/JSON
-  text. Go escapes such as `\xNN` can denote arbitrary bytes, and GoCore's
-  byte-backed `GoString` should reject or avoid textual literal exports that
-  cannot prove byte exactness.
-- Make lowering fail closed: unsupported body nodes should not hide in dead code
-  as inert GoCore nodes unless a test explicitly expects unsupported output.
-- Preserve and report bodyless functions, methods, and predicates instead of
-  silently dropping them.
-- Use typed lvalue syntax in the wire/lowering layer so field/index assignment
-  cannot be represented by arbitrary malformed expressions.
-- Replace adjacency-based type definition recovery with explicit validated
-  structure from Gobra JSON.
-- Keep `knownTagNames` complete relative to `GobraJson` decoders and test that
-  unknown tags are rejected in nested positions.
 
 ## GoCore Memory Milestone
 
