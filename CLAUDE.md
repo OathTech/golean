@@ -24,6 +24,21 @@ failing-set diff — it is what kept 13 consecutive cleanup slices at zero
 regressions. `scripts/gobra-smoke` is a frontend/Lean smoke check, NOT a
 Go-vs-Lean conformance oracle; never claim equivalence from it.
 
+## Capture decisions in files, not chat
+
+Every relevant design decision, tradeoff, or open question must be written into
+a tracked file (the goal/plan doc for the work, `TODO.md`, or a dated design
+note) — not left in conversation. Chat is ephemeral; the repo is the record. If
+a decision changes direction (e.g. reshaping GoCore, choosing a wire format,
+deferring a feature), note what was decided, why, and what it affects. This is
+what lets any session — human or agent — resume without re-deriving context.
+
+Design principle for GoCore specifically: **GoCore is reshapeable, not
+sacrosanct.** Judge its shape by two questions — does it support *reasoning*
+(a clean relational/WP story) and does it help get *emission* right (frontends
+lower to it cleanly)? If GoCore's shape fights either, change GoCore rather than
+contort around it, and record the decision.
+
 ## Guardrails first: differential tests before tool buildout
 
 Before building a feature of the tool (a frontend, a lowering path, a semantic

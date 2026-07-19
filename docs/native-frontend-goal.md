@@ -275,6 +275,34 @@ recorded frontend-blocked classifications) before the next.
 - Display/formatting stdlib models.
 - Performance of the exporter.
 
+## Design decisions and open questions
+
+Recorded as they arise (per the CLAUDE.md "capture decisions in files"
+practice). GoCore is reshapeable — judge it by whether it supports reasoning
+and clean emission (user steer, 2026-07-18).
+
+- **[decided] Clean native wire + `NativeToIR` adapter**, not the Gobra wire.
+  See "The contract" above.
+- **[decided] Wire = typed Go AST; GoCore desugaring lives in `NativeToIR`
+  (Lean).** Keeps the Go emitter a mechanical serializer and the semantic
+  mapping inspectable in Lean. Every expression node carries its resolved
+  `go/types` type.
+- **[decided] Constant folding on the Go side.** Constant expressions
+  (`-7/3`) are folded via `go/types` (no runtime division), matching Go.
+- **[open, imminent] Calls-in-expressions / A-normal form.** GoCore has no call
+  expression — calls are statements only. Today `NativeToIR` special-cases
+  calls in assign/return/expr-statement position; nested calls (`x + foo()`,
+  quorum's `l.AckedIndex(id)` inside an expression) are unsupported. The
+  principled resolution is **A-normal form**: the frontend normalizes every
+  call to a let-bound temp before the expression that uses it. ANF is *good*
+  for reasoning (it matches Goose/Perennial let-binding and is WP-friendly), so
+  the statement-only-call design is defensible if we commit to ANF lowering
+  rather than adding call-expressions to GoCore. This is the first substantive
+  GoCore-shape decision and is needed for quorum (method calls). Decide when
+  the method/call increment lands.
+- **[note] Multi-file packages** are supported by the native path (go/types
+  resolves them); the Gobra one-file-per-package limit does not apply.
+
 ## Handoff
 
 Persistent handoff for this effort: `docs/native-frontend-handoff.md` (create
