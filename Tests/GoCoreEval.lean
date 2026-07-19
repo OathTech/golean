@@ -1,21 +1,8 @@
-import GoLean.GobraEval
+import GoLean.GoCore
 
-namespace Tests.GobraEval
+namespace Tests.GoCoreEval
 
 open GoLean
-
-private def source : GobraJson.Source :=
-  .internal
-
-private def intTy : GobraJson.Ty :=
-  .int .exclusive (.bounded "int" 64 (-1000000) 1000000)
-
-private def param (id : String) : GobraJson.Parameter :=
-  { source, id, typ := intTy }
-
-private def x : GobraJson.Parameter := param "x"
-private def y : GobraJson.Parameter := param "y"
-private def z : GobraJson.Parameter := param "z"
 
 private def coreParam (id : String) : GoCore.Param :=
   { id, typ := .int }
@@ -690,103 +677,7 @@ private def coreBreakContinueFunction : GoCore.Func := {
     ]
 }
 
-private def addExpr : GobraJson.Expr :=
-  .add source (.var (.inParam x)) (.var (.inParam y))
-
-private def falseAssertion : GobraJson.Assertion :=
-  .exprAssertion source (.boolLit source false)
-
-private def addFunction : GobraJson.FunctionMember := {
-  source,
-  name := { source, name := "add_F" },
-  args := #[x, y],
-  results := #[z],
-  pres := #[],
-  posts := #[.exprAssertion source (.eqCmp source (.var (.outParam z)) addExpr)],
-  terminationMeasures := #[],
-  backendAnnotations := #[],
-  body := some {
-    source,
-    decls := #[],
-    seqn := {
-      source,
-      stmts := #[.singleAss source (.var source (.outParam z)) addExpr]
-    },
-    postprocessing := #[]
-  }
-}
-
-private def bodylessFunction : GobraJson.FunctionMember := {
-  addFunction with
-  name := { source, name := "bodyless_F" },
-  args := #[],
-  results := #[],
-  pres := #[],
-  posts := #[],
-  body := none
-}
-
-private def specErasureFunction : GobraJson.FunctionMember := {
-  addFunction with
-  name := { source, name := "spec_erasure_F" },
-  pres := #[falseAssertion],
-  posts := #[falseAssertion],
-  body := some {
-    source,
-    decls := #[],
-    seqn := {
-      source,
-      stmts := #[
-        .assert source falseAssertion,
-        .singleAss source (.var source (.outParam z)) addExpr
-      ]
-    },
-    postprocessing := #[.assert source falseAssertion]
-  }
-}
-
-private def doc : GobraJson.Document := {
-  schema := {
-    name := "gobra.internal",
-    version := 1,
-    encoding := "structural-adt",
-    failClosed := true
-  },
-  inputs := #["synthetic.gobra"],
-  program := {
-    source,
-    types := #[],
-    members := #[.function addFunction]
-  }
-}
-
-private def bodylessDoc : GobraJson.Document := {
-  doc with program := { doc.program with members := #[.function bodylessFunction] }
-}
-
-private def specErasureDoc : GobraJson.Document := {
-  doc with program := { doc.program with members := #[.function specErasureFunction] }
-}
-
-private def runtimeOldFunction : GobraJson.FunctionMember := {
-  addFunction with
-  name := { source, name := "runtime_old_F" },
-  body := some {
-    source,
-    decls := #[],
-    seqn := {
-      source,
-      stmts := #[.singleAss source (.var source (.outParam z)) (.old source addExpr)]
-    },
-    postprocessing := #[]
-  }
-}
-
-private def runtimeOldDoc : GobraJson.Document := {
-  doc with program := { doc.program with members := #[.function runtimeOldFunction] }
-}
-
-private def expectIntResult (name : String) (result : Except GoError GoLean.GobraEval.Result)
+private def expectIntResult (name : String) (result : Except GoError GoLean.GoCore.Result)
     (expected : Int) : IO Bool := do
   match result with
   | .ok result =>
@@ -800,7 +691,7 @@ private def expectIntResult (name : String) (result : Except GoError GoLean.Gobr
       IO.eprintln s!"FAIL: {name}: expected success, got {repr err}"
       return false
 
-private def expectBoolResult (name : String) (result : Except GoError GoLean.GobraEval.Result)
+private def expectBoolResult (name : String) (result : Except GoError GoLean.GoCore.Result)
     (expected : Bool) : IO Bool := do
   match result with
   | .ok result =>
@@ -814,7 +705,7 @@ private def expectBoolResult (name : String) (result : Except GoError GoLean.Gob
       IO.eprintln s!"FAIL: {name}: expected success, got {repr err}"
       return false
 
-private def expectValues (name : String) (result : Except GoError GoLean.GobraEval.Result)
+private def expectValues (name : String) (result : Except GoError GoLean.GoCore.Result)
     (expected : Array GoValue) : IO Bool := do
   match result with
   | .ok result =>
@@ -828,7 +719,7 @@ private def expectValues (name : String) (result : Except GoError GoLean.GobraEv
       IO.eprintln s!"FAIL: {name}: expected success, got {repr err}"
       return false
 
-private def expectErrorStatus (name : String) (result : Except GoError GoLean.GobraEval.Result)
+private def expectErrorStatus (name : String) (result : Except GoError GoLean.GoCore.Result)
     (expected : String) : IO Bool := do
   match result with
   | .ok result =>
@@ -842,7 +733,7 @@ private def expectErrorStatus (name : String) (result : Except GoError GoLean.Go
         IO.eprintln s!"FAIL: {name}: expected {expected}, got {err.status}: {err.message}"
         return false
 
-private def expectOk (name : String) (result : Except GoError GoLean.GobraEval.Result) :
+private def expectOk (name : String) (result : Except GoError GoLean.GoCore.Result) :
     IO Bool := do
   match result with
   | .ok _ =>
@@ -902,20 +793,12 @@ def main : IO UInt32 := do
   passed := passed && (← expectIntResult "GoCore if return positive" (GoCore.runFunction 100 coreIfReturnFunction #[.int 7]) 7)
   passed := passed && (← expectIntResult "GoCore if return negative" (GoCore.runFunction 100 coreIfReturnFunction #[.int (-3)]) 103)
   passed := passed && (← expectIntResult "GoCore break continue" (GoCore.runFunction 100 coreBreakContinueFunction #[]) 8)
-  passed := passed && (← expectIntResult "add function" (GoLean.GobraEval.runFunctionInts 100 doc "add_F" #[2, 3]) 5)
-  passed := passed && (← expectIntResult "Gobra specs and asserts erased"
-    (GoLean.GobraEval.runFunctionInts 100 specErasureDoc "spec_erasure_F" #[2, 3]) 5)
-  passed := passed && (← expectErrorStatus "runtime old expression fails closed"
-    (GoLean.GobraEval.runFunctionInts 100 runtimeOldDoc "runtime_old_F" #[2, 3]) "unsupported")
-  passed := passed && (← expectErrorStatus "missing function" (GoLean.GobraEval.runFunctionInts 100 doc "missing_F" #[]) "stuck")
-  passed := passed && (← expectErrorStatus "wrong arity" (GoLean.GobraEval.runFunctionInts 100 doc "add_F" #[2]) "stuck")
-  passed := passed && (← expectErrorStatus "bodyless function unsupported" (GoLean.GobraEval.runFunctionInts 100 bodylessDoc "bodyless_F" #[]) "unsupported")
   if passed then
     return 0
   else
     return 1
 
-end Tests.GobraEval
+end Tests.GoCoreEval
 
 def main : IO UInt32 :=
-  Tests.GobraEval.main
+  Tests.GoCoreEval.main

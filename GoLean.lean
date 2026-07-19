@@ -5,9 +5,6 @@ import GoLean.Runtime
 import GoLean.IR
 import GoLean.DiffTest
 import GoLean.StrictJson
-import GoLean.GobraJson
-import GoLean.GobraToIR
-import GoLean.GobraEval
-import GoLean.Artifact.Gobra
-import GoLean.CLI
+import GoLean.GoCore
 import GoLean.NativeToIR
+import GoLean.CLI
