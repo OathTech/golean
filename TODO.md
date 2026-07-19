@@ -48,10 +48,15 @@ In order (reordered — Iris spike front-loaded):
      `Expr`); `Step` relates `(Config, ExecState)` pairs. `ExecState`/`Ops`/
      interpreter untouched (no adapter needed); proven correspondence instances
      re-proved. golean green.
-   - [ ] **A2 — Iris port** (paired with the toolchain bump): bump golean
-     4.29→4.31, add iris-lean as a dependency, instantiate bare `Language` on
-     `Config`/`ExecState` (mirror `../iris-spike/`), port `wp_store`/`wp_load`
-     onto the real scalar relation.
+   - **A2 — Iris port** (in the in-repo `proofs/` package; golean core stays
+     iris-free — verified root build is 36 jobs, dependency-free manifest):
+     - [x] Bump golean 4.29→4.31 (clean: build/tests/quorum green, 0 warnings).
+     - [x] In-repo `proofs/` Lake package (iris-lean as a **pinned git dep**,
+       not an external path); bare `Language` instantiated on the real
+       `Config`/`ExecState` (`ToVal`/`PrimStep`/`val_stuck`, no sorry).
+     - [ ] `IrisGS_gen` + gen_heap over `ExecState.heap` (GoCore's `Heap` is a
+       `List (Loc × HeapCell)` — needs adapting to gen_heap's map interface) +
+       port `wp_store`/`wp_load` onto the real scalar relation.
 3. [ ] **Reshape B** (oracle `choices` out of `ExecState` → external stream,
    existential `mapRange` rule) + relation catch-up for **one** nondeterministic
    feature + correspondence over that feature. Finish interpreter totality here,
