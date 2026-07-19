@@ -96,6 +96,30 @@ runs and handoff-quality claims require the full-run metadata, not a filtered
 (`docs/gocore-semantics-upgrade-handoff.md`) in its stated format — but do not
 impose that ceremony on a one-line fix.
 
+## Branch, merge, and adversarial audit (before milestones)
+
+Adopted from ACL2Lean (see `docs/2026-07-19_review-merge-practices.md` for the
+full pattern):
+
+- **Never merge or push without explicit sign-off at the moment of merge.**
+  Feature work stays on a branch, never directly on `main`. When a branch is
+  ready, *pause, report, and ask* — merge only if approved right then. Approval
+  is never inferred from an earlier "merge it", from the branch being green, or
+  from any broad "go ahead". Same for `git push`. Prefer linear/fast-forward
+  history; `--no-ff` is allowed but not the default.
+- **Audit adversarially *before* claiming a milestone or merging, not after** —
+  self-certification is unreliable, so audit before building a mountain on it.
+  **Get sign-off on the audit *plan* (dimensions, agent count, model, cost)
+  before launching any subagent** — audits are token-expensive; the scale is the
+  user's call. The pattern (encode as a `Workflow`): (1) ground-truth first —
+  real build + `#print axioms`/differential failing-set, never prose; (2)
+  parallel *decorrelated* adversarial reviewers, one per dimension, skeptical
+  persona ("probably subtly wrong — find where"), pointed at primary sources,
+  not fed our conclusions; (3) every finding grounded to `file:line`, tagged
+  verbatim-vs-reconstructed, with what it could not verify; (4) independent
+  verification of each finding, defaulting to *refute* if thin; (5) honest
+  synthesis — drop refuted, spot-check the top survivors yourself.
+
 ## Housekeeping
 
 - `.claude/` is gitignored. Date working notes `YYYY-MM-DD_name.md`; top-level
