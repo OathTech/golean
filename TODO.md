@@ -28,14 +28,24 @@ In order:
 1. **Totality of the substrate + interpreter** (the top priority; also an Iris
    prerequisite — Iris WP rules are proved by inverting the relation's premises,
    which is impossible while those premises call opaque partials):
-   - Convert the structurally-recursive `Ops` ops (`loadLoc`, `storeLoc`,
-     `coerceStoredValue`) to plain `def`. Mechanical, low-risk, do first.
-   - Decide and implement the type-directed-recursion strategy for
-     `valueEq`/`normalizeValueForTy`/`defaultValue` — fuel-indexing vs. a
-     type-environment-acyclicity well-formedness hypothesis. Settle this
-     **before** any further type-directed feature.
-   - De-partial `execStmt` via structural/well-founded recursion on `fuel`.
-   - Prove one real interpreter↔relation correspondence lemma on the
+   - [x] Convert the structurally-recursive `Ops` ops (`loadLoc`, `storeLoc`,
+     `coerceStoredValue`) to plain `def`.
+   - [x] Decide and implement the type-directed-recursion strategy: **fuel**
+     (decremented only at `.defined` type-env resolution, so it bounds
+     type-nesting depth not value size). See
+     `docs/2026-07-18_totality-fuel-decision.md`. Applied to
+     `valueEq`/`normalizeValueForTy`/`defaultValue`/`convertValueToTy`/
+     `resolveDefinedAliases`/`goTypeNameForMessage` via constant-fuel wrappers
+     over fuel'd workers (call sites unchanged); array/struct child recursion
+     refactored from for-loops to structural list helpers. **`Ops.lean` is now
+     fully total — zero `partial def`.** Library builds, 40 unit tests green,
+     quorum 37/39.
+   - [ ] De-partial the interpreter (`Eval.lean`, ~30-function mutual block) via
+     structural/well-founded recursion on `fuel`. `execStmt`/`execStmts` already
+     carry fuel; the `evalExpr` expression recursion, the call/loop recursion,
+     and the many `for`-loop helpers need the same fuel-and-structural treatment
+     used for `Ops`. This is the larger remaining half.
+   - [ ] Prove one real interpreter↔relation correspondence lemma on the
      scalar/control subset to validate the whole approach end-to-end.
 2. **Relation catch-up + merge invariant** (`Rel.lean` must become an actual
    authority):

@@ -12,7 +12,7 @@ and never consumes it, so no valid value can spuriously exhaust it. Go type
 definitions cannot form value-containment cycles, so any well-formed program
 stays far under this bound. Chosen over a type-environment-acyclicity
 well-formedness proof for uniformity with `execStmt`'s fuel (design decision
-2026-07-18; see docs/nondeterminism-design.md). -/
+2026-07-18; see docs/2026-07-18_totality-fuel-decision.md). -/
 def typeResolutionFuel : Nat := 1024
 
 def indexOutOfRangePanic (index : Int) (length : Nat) : Except GoError α :=
