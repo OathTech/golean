@@ -54,14 +54,14 @@ In order (reordered — Iris spike front-loaded):
      - [x] In-repo `proofs/` Lake package (iris-lean as a **pinned git dep**,
        not an external path); bare `Language` instantiated on the real
        `Config`/`ExecState` (`ToVal`/`PrimStep`/`val_stuck`, no sorry).
-     - [ ] `IrisGS_gen` + WP laws over the real relation
-       (`docs/2026-07-18_a2-step3-wp-design.md`): **3a** a pure-control WP law
-       (`wp_seqn`, via `wp_lift_pure_det_step_no_fork`) needing only an
-       invariant+credit GF + trivial StateInterp — the cheap real-WP milestone;
-       **3b** gen_heap over `Loc→HeapCell` (needs `Ord Loc` + a List→map
-       conversion in StateInterp, `ExecState` untouched) → `wp_store`/`wp_load`
-       over `Step.assign`/`deref` + adequacy. Camera plumbing mirrors HeapLang;
-       3a lands first, sidestepping gen_heap.
+     - [x] **3a** — real WP law (`wp_seqn`) over GoCore's actual `Step`, via
+       `wp_lift_pure_det_step_no_fork` (invariant+credit cameras *assumed*, not
+       constructed; trivial StateInterp; `IrisGS_gen` derived). Axioms clean, no
+       sorry. Iris WP machinery validated on the real relation.
+     - [ ] **3b** — gen_heap over `Loc→HeapCell` (`Ord Loc` + List→map conversion
+       in StateInterp, `ExecState` untouched) → `wp_store`/`wp_load` over
+       `Step.assign`/`deref` + adequacy (`docs/2026-07-18_a2-step3-wp-design.md`).
+       iris-lean may lack pieces here — Rocq Iris (`deps/`) is the reference.
 3. [ ] **Reshape B** (oracle `choices` out of `ExecState` → external stream,
    existential `mapRange` rule) + relation catch-up for **one** nondeterministic
    feature + correspondence over that feature. Finish interpreter totality here,
