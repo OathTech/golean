@@ -368,12 +368,17 @@ a blocker (proof Q5, iris Findings 5-6).
 ### Resulting sequence (supersedes §6)
 
 0. **Write D1–D3 into this plan.** Cheap, now.
-1. **Reshape A** (heap → Iris `State`) on the current scalar subset.
-2. **Iris vertical-slice spike** in an isolated worktree pinned to 4.31 + Qq +
-   batteries: instantiate bare `Language`, prove one **heap-touching atomic
-   statement** WP (`wp_store`, not a pure control step), run adequacy → one
-   Hoare triple. The cheapest experiment that kills-or-validates the whole chain;
-   front-loads the embedding + toolchain risk currently scheduled last.
+1. [x] **Iris vertical-slice spike** — DONE, **VALIDATE** (see
+   `docs/2026-07-18_iris-spike-result.md`). In `../iris-spike/` (Lean 4.31,
+   requires `deps/iris-lean`): a bare-`Language` CK machine (no ectx) over
+   HeapLang's heap, with a real `wp_store` via `wp_lift_atomic_step` (axioms:
+   propext/Classical.choice/Quot.sound only). Confirms: toolchain builds offline;
+   `Config`/`Cont` seats on bare `Language` (no ectx rewrite); heap WP + not-stuck
+   adequacy (D1) work on our shape. The two reshapes below are the path to
+   porting this onto real GoCore.
+2. **Reshape A** (heap → Iris `State`) on the current scalar subset; then port
+   the spike's `wp_store` onto the real relation. The v4.29→v4.31 toolchain bump
+   is scheduled here, with integration.
 3. If the spike survives: **Reshape B** (oracle out of state) + relation
    catch-up for **one nondeterministic feature** (append-cap, or a 2-element map
    range) + the correspondence lemma over **that** feature — the machinery that

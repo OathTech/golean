@@ -37,13 +37,15 @@ Cheap decisions now locked (master plan §8, C3):
 
 In order (reordered — Iris spike front-loaded):
 
-1. [ ] **Throwaway Iris spike** — isolated 4.31 + Qq + batteries worktree, a tiny
-   heap-split step relation, prove one heap-touching `wp_store` + run adequacy
-   (`adequate_alt`). Validates toolchain gap + bare-`Language` embedding +
-   adequacy shape *before* reshaping the real `Rel.lean`. Kill-or-validate.
+1. [x] **Throwaway Iris spike** — DONE, **VALIDATE**
+   (`docs/2026-07-18_iris-spike-result.md`; project at `../iris-spike/`). Bare
+   `Language` CK machine (no ectx) + real `wp_store` via `wp_lift_atomic_step`,
+   axioms clean. Toolchain builds offline at 4.31; CK shape seats on bare
+   `Language`; not-stuck adequacy (D1) is the library's native form.
 2. [ ] **Reshape A** — split the heap out of `Config`/`ExecState` into Iris
    `State` (`Config` can't be Iris `Expr` while it embeds the heap). Then port
-   the spike onto the real scalar relation.
+   the spike's `wp_store` onto the real scalar relation. Schedule the v4.29→v4.31
+   toolchain bump here.
 3. [ ] **Reshape B** (oracle `choices` out of `ExecState` → external stream,
    existential `mapRange` rule) + relation catch-up for **one** nondeterministic
    feature + correspondence over that feature. Finish interpreter totality here,
