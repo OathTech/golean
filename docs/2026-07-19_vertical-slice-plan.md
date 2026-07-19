@@ -56,8 +56,8 @@ Updated 2026-07-19 after the CEK reshape (#23 done):
 | local decl `x := 0`    | ✓ | ✓ | ✓ | ▲ | · | · |
 | assign to var          | ✓ | ✓ | ✓ | ▲ | **✓** | · |
 | address-of `&x`        | ✓ | ✓ | ✓ | ▲ | · | · |
-| deref-load `*p`        | ✓ | ✓ | ✓ | ▲ | ✓* (read law) | · |
-| deref-store `*p = …`   | ✓ | ✓ | ✓ | ▲ | ▲ (unblocked) | · |
+| deref-load `*p`        | ✓ | ✓ | ✓ | ▲ | ✓* (`exprR_deref_load`) | · |
+| deref-store `*p = …`   | ✓ | ✓ | ✓ | ▲ | **✓** (`wp_deref_store`) | · |
 | call + frame + return  | ✓ | ✓ | ✓ | ▲ | ▲ (new) | · |
 | composed spec (main)   | — | ✓ | — | — | — | ▲ |
 
@@ -85,15 +85,18 @@ has `ExprR.ref`/`.deref`, `AssigneeR.addr`, `assign`, `call`, `frameReturn`.
   requires **totalizing the exercised subset** (assign / ref / deref / call /
   frame / return over the scalar+pointer fragment) and proving the per-construct
   correspondence lemmas. Heaviest frontier.
-- **L5 — WP general lemmas.** Have: `wp_seqn` (✓), and now **`wp_assign` — a
-  usable law** (CEK reshape closed #23; `wp_assign_lit` discharges it), plus
-  `pointsTo_loadLoc` (the deref-load read law). Still to write (all now
-  *unblocked* — no camera obstacle remains): a **deref-store** lemma (assignee
-  `.addr`, same pattern as `wp_assign` with `AssigneeR.addr`), the **non-literal
-  rhs** assembly for `*p + 1` (compose `pointsTo_loadLoc` + arith into
-  `hrhs`/`hrhs_det`), and the **call/frame/return** lemma (none exists; also needs
-  the results-allocation gap closed so a value-returning frame like `main` reads
-  its result local). These are ordinary lemma-writing now, not blocked research.
+- **L5 — WP general lemmas.** Have (all axiom-clean): `wp_seqn`; **`wp_assign`**
+  (var LHS, `wp_assign_lit` discharges it) and **`wp_deref_store`** (`*p = e`,
+  `.addr` LHS) — both built on the shared gen_heap core **`wp_store_step`** (which
+  takes the now-*derivable* `hred`); `pointsTo_loadLoc` (read law) and
+  **`exprR_deref_load`** (the `*p` expression fact). Remaining to reach the spec:
+  (a) the **non-literal-rhs assembly** — compose `exprR_deref_load` + `ExprR.addInt`
+  into `wp_deref_store`'s `hrhs`/`hrhs_det` for `*p + 1`, which forces (b)
+  **multi-cell ownership** (`inc`'s `p` is a pointer *param*, so resolving `*p`
+  reads p's own cell as well as the target — the spec owns `p_loc ↦ addr(a) ∗ a ↦
+  n`), and (c) the **call/frame/return** lemma (none exists; also needs the
+  results-allocation gap closed so a value-returning frame like `main` reads its
+  result local). All now ordinary lemma-writing / composition, no blocked research.
 - L6 — spec: compose the WP lemmas into `{p↦n} inc(p) {p↦n+1}` and `main ⊢
   result = 2` (via `∀`-general sub-lemmas). Trivial once L5 lands.
 

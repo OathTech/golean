@@ -217,6 +217,56 @@ theorem pointsTo_loadLoc {GF : BundledGFunctors} {hlc : HasLC} [GoCoreGS hlc GF]
   apply loadLoc_base_of_lookup
   rw [get?_heapToMap] at Hmap; simpa using Hmap
 
+/-- **Shared core: a deterministic single-step store over the owned cell.** Given
+that the statement `Step`s (deterministically) from any state holding
+`a.id ↦ oldcell` to `.next k` with that cell updated to `newcell`, own-and-update
+the gen_heap cell across the step. This is the reusable gen_heap machinery behind
+every assign-family WP law (var-assign, deref-store, …); each front-end law
+proves its `hred` from its own resolution facts and calls this. The `hred`
+premise — unsatisfiable in the pre-CEK layer for *any* real assign — is now
+routinely dischargeable because the assignee resolves against the control `env`
+(fixed in the goal), not the quantified state. -/
+private theorem wp_store_step {a : Addr} {oldcell newcell : HeapCell} {stmt env k}
+    (hred : ∀ σ₁ : ExecState, Heap.lookup σ₁.heap (.base a) = some oldcell →
+      Step (Config.exec stmt env k) σ₁ (.next k)
+           { σ₁ with heap := Heap.set σ₁.heap (.base a) newcell } ∧
+      (∀ c' s', Step (Config.exec stmt env k) σ₁ c' s' →
+           c' = Config.next k ∧
+           s' = { σ₁ with heap := Heap.set σ₁.heap (.base a) newcell })) :
+    a.id ↦ oldcell ∗ (a.id ↦ newcell -∗ WP (Config.next k) @ s ; E {{ Φ }})
+      ⊢ WP (Config.exec stmt env k) @ s ; E {{ Φ }} := by
+  iintro ⟨Hpt, Hcont⟩
+  iapply wp_lift_step (h := rfl)
+  iintro %σ₁ %ns %obs %obs' %nt Hσ
+  simp only [stateInterp]
+  ihave %Hmap : ⌜get? (heapToMap σ₁.heap) a.id = some oldcell⌝ $$ [Hσ Hpt]
+  · icases genHeap_valid $$ [$Hσ $Hpt] with >%h
+    itrivial
+  have hlook : Heap.lookup σ₁.heap (.base a) = some oldcell := by
+    rw [get?_heapToMap] at Hmap; simpa using Hmap
+  iapply fupd_mask_intro Std.LawfulSet.empty_subset
+  iintro Hclose
+  isplitr
+  · ipureintro
+    cases s
+    · exact ⟨[], Config.next k, _, [], GoPrimStep.step (hred σ₁ hlook).1⟩
+    · trivial
+  inext
+  iintro %e₂ %σ₂ %eₜ %Hstep Hcred
+  cases Hstep with
+  | step st =>
+    obtain ⟨rfl, rfl⟩ := (hred σ₁ hlook).2 _ _ st
+    imod (genHeap_update (v₂ := newcell)) $$ [$Hσ $Hpt] with ⟨Hσ, Hpt⟩
+    imod Hclose
+    imodintro
+    simp only [Algebra.BigOpL.bigOpL_nil]
+    isplitl [Hσ]
+    · iapply (genHeapInterp_eqv
+        (fun kk => (heapToMap_set_base σ₁.heap a newcell kk).symm)) $$ Hσ
+    · isplitl [Hpt Hcont]
+      · iapply Hcont $$ Hpt
+      · itrivial
+
 /-- **The heap store law over `Step.assign` — now a usable Hoare law** (CEK
 reshape, `docs/2026-07-19_cek-reshape-plan.md`; closes the pre-merge audit
 finding D2-4/D2-5).
@@ -283,37 +333,86 @@ theorem wp_assign {a : Addr} {oldcell newcell : HeapCell} {v : GoValue}
         have hd := hrhs_det σ₁ _ hr; injection hd with hv hs2
         rw [← hloc, hv, hs2, hstore σ₁ hlook] at hs
         simp at hs
-  iintro ⟨Hpt, Hcont⟩
-  iapply wp_lift_step (h := rfl)
-  iintro %σ₁ %ns %obs %obs' %nt Hσ
-  simp only [stateInterp]
-  ihave %Hmap : ⌜get? (heapToMap σ₁.heap) a.id = some oldcell⌝ $$ [Hσ Hpt]
-  · icases genHeap_valid $$ [$Hσ $Hpt] with >%h
-    itrivial
-  have hlook : Heap.lookup σ₁.heap (.base a) = some oldcell := by
-    rw [get?_heapToMap] at Hmap; simpa using Hmap
-  iapply fupd_mask_intro Std.LawfulSet.empty_subset
-  iintro Hclose
-  isplitr
-  · ipureintro
-    cases s
-    · exact ⟨[], Config.next k, _, [], GoPrimStep.step (hred σ₁ hlook).1⟩
-    · trivial
-  inext
-  iintro %e₂ %σ₂ %eₜ %Hstep Hcred
-  cases Hstep with
-  | step st =>
-    obtain ⟨rfl, rfl⟩ := (hred σ₁ hlook).2 _ _ st
-    imod (genHeap_update (v₂ := newcell)) $$ [$Hσ $Hpt] with ⟨Hσ, Hpt⟩
-    imod Hclose
-    imodintro
-    simp only [Algebra.BigOpL.bigOpL_nil]
-    isplitl [Hσ]
-    · iapply (genHeapInterp_eqv
-        (fun kk => (heapToMap_set_base σ₁.heap a newcell kk).symm)) $$ Hσ
-    · isplitl [Hpt Hcont]
-      · iapply Hcont $$ Hpt
-      · itrivial
+  exact wp_store_step hred
+
+/-- **The pointer store law `*p = e` — a usable Hoare law.** This is the store
+form the slice actually needs (`inc`'s body). The assignee is `.addr aexpr` (the
+address to store at is the *value* of `aexpr` — e.g. `aexpr = .var "p"` for
+`*p`), resolved through `AssigneeR.addr`. Under CEK that resolution is again a
+fixed-`env` fact — `aexpr` evaluates against the control `env`, not the state —
+so, exactly as for `wp_assign`, the law needs no camera and no unconstrained
+`∀σ`.
+
+Premises (all dischargeable for a concrete `*p = e`; none has the old locals
+problem):
+- `hres`/`hres_det` — `aexpr` evaluates only to the target address `.addr (.base
+  a)`, state unchanged. Determinism additionally rules out the `addrNil`/`addr`
+  panic steps (a nil or panicking address expression) during inversion.
+- `hrhs`/`hrhs_det` — `e` evaluates only to `v`, state unchanged.
+- `hstore` — storing `v` at the owned cell yields the update to `newcell`.
+
+Shares the gen_heap core (`wp_store_step`) with `wp_assign`; only the assignee
+resolution differs (`AssigneeR.addr` vs `.var`). -/
+theorem wp_deref_store {a : Addr} {oldcell newcell : HeapCell} {v : GoValue}
+    {aexpr rhs env k}
+    (hres : ∀ σ₁ : ExecState, ExprR env σ₁ aexpr (.value (.addr (.base a)) σ₁))
+    (hres_det : ∀ σ₁ (out : ExprOut),
+        ExprR env σ₁ aexpr out → out = .value (.addr (.base a)) σ₁)
+    (hrhs : ∀ σ₁ : ExecState, ExprR env σ₁ rhs (.value v σ₁))
+    (hrhs_det : ∀ σ₁ (out : ExprOut), ExprR env σ₁ rhs out → out = .value v σ₁)
+    (hstore : ∀ σ₁ : ExecState, Heap.lookup σ₁.heap (.base a) = some oldcell →
+        storeLoc σ₁ (.base a) v
+          = .ok { σ₁ with heap := Heap.set σ₁.heap (.base a) newcell }) :
+    a.id ↦ oldcell ∗ (a.id ↦ newcell -∗ WP (Config.next k) @ s ; E {{ Φ }})
+      ⊢ WP (Config.exec (.assign (.addr aexpr) rhs) env k) @ s ; E {{ Φ }} := by
+  have hred : ∀ σ₁ : ExecState, Heap.lookup σ₁.heap (.base a) = some oldcell →
+      Step (Config.exec (.assign (.addr aexpr) rhs) env k) σ₁ (.next k)
+           { σ₁ with heap := Heap.set σ₁.heap (.base a) newcell } ∧
+      (∀ c' s', Step (Config.exec (.assign (.addr aexpr) rhs) env k) σ₁ c' s' →
+           c' = Config.next k ∧
+           s' = { σ₁ with heap := Heap.set σ₁.heap (.base a) newcell }) := by
+    intro σ₁ hlook
+    refine ⟨Step.assign (AssigneeR.addr (hres σ₁)) (hrhs σ₁) (hstore σ₁ hlook), ?_⟩
+    intro c' s' hst
+    cases hst with
+    | assign hass hr hs =>
+      cases hass with
+      | addr haddr =>
+        -- addr expr resolves to `.base a`, state unchanged (hres_det)
+        have hd := hres_det σ₁ _ haddr; injection hd with hav has1
+        injection hav with hloc
+        have hd2 := hrhs_det σ₁ _ (has1 ▸ hr); injection hd2 with hv hs2
+        rw [hloc, hv, hs2, hstore σ₁ hlook] at hs; injection hs with hs3
+        exact ⟨rfl, hs3.symm⟩
+    | assignTargetPanic hass =>
+      cases hass with
+      | addrNil haddr => have hd := hres_det σ₁ _ haddr; simp at hd
+      | addrPanic haddr => exact ExprOut.noConfusion (hres_det σ₁ _ haddr)
+    | assignValuePanic _ hr =>
+      exact ExprOut.noConfusion (hrhs_det _ _ hr)
+    | assignStorePanic hass hr hs =>
+      cases hass with
+      | addr haddr =>
+        have hd := hres_det σ₁ _ haddr; injection hd with hav has1
+        injection hav with hloc
+        have hd2 := hrhs_det σ₁ _ (has1 ▸ hr); injection hd2 with hv hs2
+        rw [hloc, hv, hs2, hstore σ₁ hlook] at hs
+        simp at hs
+  exact wp_store_step hred
+
+/-- **Deref-load as an `ExprR` fact.** If `aexpr` resolves to `.addr (.base a)`
+(state unchanged) and the cell at `a` holds `cell`, then `*aexpr` evaluates to
+`cell.value`. This is the expression-level building block for a non-literal
+right-hand side such as `*p` (and, composed with `ExprR.addInt`, `*p + 1`). Pure
+relational fact — no separation logic here; heap *ownership* enters only where
+this feeds a WP premise, via `pointsTo_loadLoc` turning `↦` into the `hcell`
+hypothesis. -/
+theorem exprR_deref_load {env : LocalEnv} {σ : ExecState} {aexpr : Expr} {ty : Ty}
+    {a : Addr} {cell : HeapCell}
+    (haddr : ExprR env σ aexpr (.value (.addr (.base a)) σ))
+    (hcell : Heap.lookup σ.heap (.base a) = some cell) :
+    ExprR env σ (.deref aexpr ty) (.value cell.value σ) :=
+  ExprR.deref haddr (loadLoc_base_of_lookup hcell)
 
 /-- Inversion of `ExprR` on an integer literal: it evaluates only to its
 normalized value, leaving the state unchanged. The `binPanic*` rules carry a
