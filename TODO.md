@@ -58,10 +58,15 @@ In order (reordered — Iris spike front-loaded):
        `wp_lift_pure_det_step_no_fork` (invariant+credit cameras *assumed*, not
        constructed; trivial StateInterp; `IrisGS_gen` derived). Axioms clean, no
        sorry. Iris WP machinery validated on the real relation.
-     - [ ] **3b** — gen_heap over `Loc→HeapCell` (`Ord Loc` + List→map conversion
-       in StateInterp, `ExecState` untouched) → `wp_store`/`wp_load` over
-       `Step.assign`/`deref` + adequacy (`docs/2026-07-18_a2-step3-wp-design.md`).
-       iris-lean may lack pieces here — Rocq Iris (`deps/`) is the reference.
+     - [x] **3b.1** — gen_heap wired to GoCore's real heap (keyed by base-address
+       `Nat`; `GoCoreGS` class, `heapToMap` projection, `StateInterp` via
+       `genHeapInterp`, `IrisGS`). The `↦` connective over GoCore's heap now
+       compiles; `wp_seqn` re-proved under the real state interp. No sorry.
+     - [ ] **3b.2** — `wp_assign` (heap store over `Step.assign`) via
+       `wp_lift_step` (non-value successor `.next k`). Crux lemma:
+       `heapToMap (Heap.set h (.base a) cell) = (heapToMap h).insert a.id cell`.
+       Then adequacy (mirror HeapLang's `heap_adequacy`). Templates: spike +
+       HeapLang; Rocq Iris if iris-lean lacks a gen_heap lemma.
 3. [ ] **Reshape B** (oracle `choices` out of `ExecState` → external stream,
    existential `mapRange` rule) + relation catch-up for **one** nondeterministic
    feature + correspondence over that feature. Finish interpreter totality here,
