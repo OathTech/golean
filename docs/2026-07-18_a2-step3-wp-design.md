@@ -1,0 +1,68 @@
+# A2 step 3 design — WP laws over the real GoCore relation (2026-07-18)
+
+Where A2 stands: the bare `Language` is instantiated on the real
+`Config`/`ExecState` (`proofs/GoLeanProofs.lean`, committed, builds). Step 3 adds
+`IrisGS_gen` + a state interpretation, then proves WP laws. Two sub-milestones,
+cheap-first:
+
+## 3a. Pure control WP (no gen_heap) — the cheap real-WP milestone
+
+Proves a WP law over GoCore's actual `Step` without any heap reasoning, so it
+needs only the invariant + later-credit cameras (not the heap functors).
+
+- **GF**: a `BundledGFunctors` with functors 0–3 of HeapLang's `HeapLangS`
+  (`InvMapF`, `DisjointLeibnizSet CoPset`, `DisjointLeibnizSet PosSet`,
+  `Auth.AuthURF Credit`) — the invariant + credit machinery WP/fupd require.
+  Drop HeapLang's functors 4–6 (the heap `HeapView`/`MetaUR`). Mirror the
+  `InvGpreS` + `LcGpreS` instances (no `heap_pre`).
+- **StateInterp**: `stateInterp _ _ _ _ := iprop(True)` (nothing to interpret
+  without a heap).
+- **IrisGS_gen**: `numLatersPerStep _ := 0`, `forkPost _ := True`,
+  `stateInterp_mono` trivial. `ExecState` is `Inhabited` (structure defaults),
+  satisfying `wp_lift_pure_det_step_no_fork`'s `[Inhabited State]`.
+- **The law**: e.g. `wp_seqn : WP (.exec (.seqn ss) k) {{Φ}} ⊣ WP (.next (.seq
+  ss.toList k)) {{Φ}}` via `wp_lift_pure_det_step_no_fork`. `Step`'s `seqn` rule
+  is deterministic (unique successor, state unchanged) — discharge `Hsafe`
+  (reducible: witness the `seqn` step) and `Hpuredet` (invert `Step`: only `seqn`
+  applies to `.exec (.seqn ss) k`; `cases` the step). Good candidates: `seqn`,
+  `seqDone`, `ifTrue/ifFalse` (need the `ExprR` cond premise — pick `boolLit`),
+  `returnStmt`, `loopBreak`.
+
+This is the "real WP over the real relation" validation, deferring heap plumbing.
+
+## 3b. Heap WP (`wp_store`/`wp_load`) — needs the gen_heap bundle
+
+The real payoff: a heap law over `Step.assign`/`deref`. Requires instantiating
+the gen_heap library (`Iris.BI.Lib.GenHeap`) for GoCore's heap:
+
+- **Key/value**: `Loc` → `HeapCell` (heap cells are keyed by `.base` locs).
+  `Loc` has `DecidableEq`; gen_heap's map (`Std.ExtTreeMap`) additionally needs
+  **`Ord Loc`** (derive it; `Loc` = `base`/`field`/`index` over
+  `Addr`/`TypeId`/`String`/`Int`, all orderable).
+- **Map functor**: `fun V => Std.ExtTreeMap Loc V compare` (GoCore's `HeapF`),
+  plus the `HeapView Loc (Agree (LeibnizO HeapCell)) HeapF` functor added to the
+  GF (extend 3a's GF with HeapLang's functors 4–6 analogues).
+- **StateInterp**: `stateInterp σ _ _ _ := genHeapInterp (σ.heap.toExtTreeMap)`
+  — convert GoCore's `Heap` (`List (Loc × HeapCell)`) to the map **inside** the
+  interpretation, so `ExecState`/`Ops`/interpreter stay untouched (no heap
+  representation change, differential suite safe). The conversion must be a
+  faithful function `List (Loc × HeapCell) → ExtTreeMap Loc HeapCell` (last-write
+  or dedup-consistent with `Heap.set`/`Heap.lookup`).
+- **The laws**: mirror the spike's `wp_store` (`../iris-spike/Spike.lean`) but
+  over `Step.assign` (uses `AssigneeR`/`ExprR`/`storeLoc` premises) — invert the
+  assign rule, relate `pointsTo l cell` to `Heap.lookup σ.heap l` via the
+  conversion + `genHeap_valid`, update via `genHeap_update`. `wp_load` over
+  `deref` similarly with `loadLoc`.
+- **Adequacy**: mirror HeapLang's `heap_adequacy` (allocate the heap ghost state
+  from `σ.heap`), targeting `adequate .NotStuck` (decision D1).
+
+## Notes
+
+- The proof file stays **legacy** (imports golean-legacy + iris-module); the
+  probe confirmed iris's `iprop`/proof-mode/`WP` machinery works from legacy, so
+  no module migration is needed (backlogged).
+- Keep 3a and 3b in files under the `GoLeanProofs` lib so the committed bare-
+  `Language` milestone isn't disturbed if a proof is mid-flight.
+- The heaviest risk is the gen_heap camera bundling (dense, ~50 lines mirrored
+  from HeapLang) and the List→map conversion lemmas; 3a sidesteps all of it and
+  should land first.
