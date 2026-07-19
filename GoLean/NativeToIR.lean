@@ -511,17 +511,23 @@ partial def decodeAssign (results : Array Param) (path : String) (obj : StrictJs
         let assignees ← targets.mapM (fun t => targetAssignee t)
         return .seqn ((← declaresOf targets) ++ #[.call assignees ⟨name⟩ (← args.mapIdxM (fun i a => decodeExpr s!"{path}.args[{i}]" a))])
     | none => pure ()
-  -- Comma-ok map lookup: `v, ok := m[k]`.
+  -- Comma-ok map lookup: `v, ok := m[k]`. Blank targets route to fresh temps.
   if lhs.size == 2 && rhs.size == 1 then
     match ← asMapGet? rhs[0]! with
     | some (baseJ, indexJ, keyTyJ, valTyJ) =>
-        let t0 ← decodeTarget s!"{path}.lhs[0]" lhs[0]!
-        let t1 ← decodeTarget s!"{path}.lhs[1]" lhs[1]!
         let base ← decodeExpr s!"{path}.rhs[0].base" baseJ
         let index ← decodeExpr s!"{path}.rhs[0].index" indexJ
         let keyTy ← decodeTy s!"{path}.rhs[0].keyType" keyTyJ
         let valTy ← decodeTy s!"{path}.rhs[0].valueType" valTyJ
-        return .seqn ((← declaresOf #[t0, t1]).push (.mapLookup t0.assignee t1.assignee base index keyTy valTy))
+        let commaOkTarget (j : Json) (p : String) (ty : Ty) (tmp : String) : LowerM (Assignee × Array Stmt) :=
+          if targetIsBlank j then
+            pure (.var tmp, #[.initialization { id := tmp, typ := ty }])
+          else do
+            let t ← decodeTarget p j
+            pure (t.assignee, ← declaresOf #[t])
+        let (a0, d0) ← commaOkTarget lhs[0]! s!"{path}.lhs[0]" valTy "$mlv"
+        let (a1, d1) ← commaOkTarget lhs[1]! s!"{path}.lhs[1]" .bool "$mlok"
+        return .seqn (d0 ++ d1 ++ #[.mapLookup a0 a1 base index keyTy valTy])
     | none => pure ()
   if lhs.size != rhs.size then
     fail s!"assignment arity {lhs.size} != {rhs.size} at {path}"

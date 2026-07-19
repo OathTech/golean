@@ -1084,7 +1084,19 @@ func (e *emitter) emitBasicLit(lit *ast.BasicLit) (any, error) {
 func (e *emitter) emitConstValue(tv types.TypeAndValue) (any, error) {
 	switch tv.Value.Kind() {
 	case constant.Int:
-		return map[string]any{"expr": "int", "value": tv.Value.ExactString()}, nil
+		node := map[string]any{"expr": "int", "value": tv.Value.ExactString()}
+		// Attach the underlying integer kind so a literal typed as a defined
+		// type (e.g. `1` in `counter(uint64) + 1`) gets the right width, not
+		// the default int. Set here so the generic type wrapper does not
+		// override it with the named type.
+		if b, ok := tv.Type.Underlying().(*types.Basic); ok && b.Info()&types.IsInteger != 0 {
+			ty, err := e.emitBasic(b)
+			if err != nil {
+				return nil, err
+			}
+			node["type"] = ty
+		}
+		return node, nil
 	case constant.Bool:
 		return map[string]any{"expr": "bool", "value": constant.BoolVal(tv.Value)}, nil
 	case constant.String:
