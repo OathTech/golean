@@ -187,3 +187,42 @@ env is a separate later simplification). One change, not two.
   seq cont or a one-step `.next (.seq [] env' k)`), and whether `env` is a flat
   list or keeps the `LocalEnv` scope stack (flat is viable under (ii); scope stack
   is a safe conservative choice).
+
+## DONE — executed 2026-07-19 (all green, all axiom-clean)
+
+The reshape landed atomically across `Rel.lean` + `Correspondence.lean` +
+`GoLeanProofs.lean` (+ the throwaway `SliceSpike.lean` bridge lemmas). Core
+`lake build` green, proofs `lake build GoLeanProofs` green, `gocore-eval-tests`
+40/40, differential unaffected (interpreter untouched). `#print axioms` for
+`wp_seqn`, `wp_assign`, `wp_assign_lit`, `pointsTo_loadLoc`, `go_adequacy` =
+`[propext, Classical.choice, Quot.sound]` (no `sorry`, no `native_decide`).
+
+**Decisions pinned during execution (resolving the "open wiring" above):**
+- **`env : LocalEnv`** kept (the existing scope-stack type) — reshape changes
+  *where* locals live, not *how* represented. Flat-list simplification deferred.
+- **Inline `.initialization` rides the seq cont:** `.exec (.initialization p) env
+  (.seq rest env k) → .next (.seq rest (env.declare p.id loc) k)` after `s.alloc`
+  (exec-env = seq-cont-env by `seqNext`). Matches option (ii)'s pinned wiring.
+- **Fall-through vs return (the one point the plan left to pin):** `.returning`
+  carries the callee `env` and `frameReturn` reads named results from it;
+  fall-through `frameFall` (`.next (.frame …) → .next k`) stores *no* results.
+  This avoids any `seqDone`-vs-frame rule overlap (they match different cont
+  heads) with **no env on `.next`** (needed for the `ToVal` terminal). Rules
+  `frameReturn`/`frameFall` are correct for void frames; named-result frames are
+  gated by the **pre-existing results-allocation gap** (`Step.call` binds only
+  `func.args`), which this reshape deliberately does *not* close. Both gaps are
+  documented in `Rel.lean`'s module header.
+- **`.scope` cont removed** — block env lives in its `seq` cont, discarded at
+  `seqDone`; no `popScope`-on-state anywhere.
+
+**`wp_assign` is now a usable law.** The unsatisfiable `hred` is replaced by the
+pure resolution premise `LocalEnv.lookup env id = some (.base a)` (dischargeable —
+`env` is fixed in the goal) plus ordinary rhs/store operational facts (`hrhs`,
+`hrhs_det`, `hstore`). Determinism is derived by inverting the four assign
+step-rules (the panic variants are refuted via `hrhs_det`, i.e. rhs
+determinism). **`wp_assign_lit`** is the payoff check: for `x = intLit n` against
+a concrete env binding `x ↦ .base a`, the resolution premise discharges by
+`simp`, and `hrhs`/`hrhs_det` discharge outright (the latter via
+`exprR_intLit_det`, which inverts `ExprR` on a literal past the function-valued
+`binPanic*` indices using `generalize`). Only `hstore` (store-typing normalization)
+remains — orthogonal to the resolution fix. This closes task #23.

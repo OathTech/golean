@@ -178,20 +178,22 @@ instance : IrisGS_gen hlc Config GF where
 
 variable {s : Stuckness} {E : CoPset} {Φ : Unit → IProp GF}
 
-/-- `seqn` is a pure, deterministic control step: `.exec (.seqn ss) k` reduces
-only to `.next (.seq ss.toList k)` with the state unchanged. A genuine
-weakest-precondition law over GoCore's actual `Step` relation (holds under the
-real gen_heap state interpretation, since the step is pure). -/
-theorem wp_seqn {ss k} :
-    (|={E}[E]▷=> £ 1 -∗ WP (Config.next (.seq ss.toList k)) @ s ; E {{ Φ }}) ⊢
-      WP (Config.exec (.seqn ss) k) @ s ; E {{ Φ }} := by
+/-- `seqn` is a pure, deterministic control step: `.exec (.seqn ss) env k`
+reduces only to `.next (.seq ss.toList env k)` with the state unchanged. A
+genuine weakest-precondition law over GoCore's actual `Step` relation (holds
+under the real gen_heap state interpretation, since the step is pure). The
+control environment `env` rides through unchanged — sequencing reads no
+variables. -/
+theorem wp_seqn {ss env k} :
+    (|={E}[E]▷=> £ 1 -∗ WP (Config.next (.seq ss.toList env k)) @ s ; E {{ Φ }}) ⊢
+      WP (Config.exec (.seqn ss) env k) @ s ; E {{ Φ }} := by
   iintro H
   iapply (wp_lift_pure_det_step_no_fork (E₂ := E)
-    (e₂ := Config.next (.seq ss.toList k))
+    (e₂ := Config.next (.seq ss.toList env k))
     (Hsafe := by
       intro σ
       cases s
-      · exact ⟨[], Config.next (.seq ss.toList k), σ, [], GoPrimStep.step Step.seqn⟩
+      · exact ⟨[], Config.next (.seq ss.toList env k), σ, [], GoPrimStep.step Step.seqn⟩
       · rfl)
     (Hpuredet := by
       intro σ obs e₂' σ₂ eₜ' h
@@ -215,37 +217,72 @@ theorem pointsTo_loadLoc {GF : BundledGFunctors} {hlc : HasLC} [GoCoreGS hlc GF]
   apply loadLoc_base_of_lookup
   rw [get?_heapToMap] at Hmap; simpa using Hmap
 
-/-- **The heap store law over `Step.assign` — currently a SCAFFOLD, not a usable
-law.** (Pre-merge audit 2026-07-19, finding D2-4/D2-5, confirmed.)
+/-- **The heap store law over `Step.assign` — now a usable Hoare law** (CEK
+reshape, `docs/2026-07-19_cek-reshape-plan.md`; closes the pre-merge audit
+finding D2-4/D2-5).
 
-The proved content is real and axiom-clean: the gen_heap update mechanism behind
-a base-cell store is sound — own `a.id ↦ oldcell`, continue once it holds
-`a.id ↦ newcell`, proved via `wp_lift_step` (`.next k` is a *non-value*
-successor) + `genHeap_valid`/`genHeap_update` + the `heapToMap` bridges.
+The earlier version's `hred` was unsatisfiable: it quantified `∀ σ₁`
+constrained only on `σ₁.heap`, yet a variable LHS `x = e` needs
+`AssigneeR σ₁ (.var id) …` resolved from `σ₁.locals` — an `ExecState` field
+`hred` never pinned, so an empty-locals `σ₁` met the antecedent while admitting
+no step. Relocating locals into the control `env` (CEK) fixes exactly this: the
+target `x` now resolves against `env`, which is **fixed in the WP goal** (it
+rides in the `Config`, not the quantified state `σ₁`). So resolution becomes the
+pure, dischargeable premise `hres : LocalEnv.lookup env id = some (.base a)` — no
+state camera, no `∀σ₁`. The heap core is the spike's `wp_store`.
 
-**But `hred` is not dischargeable for any real assign, so no instance of this law
-exists.** `hred` quantifies `∀ σ₁` constrained *only* on `σ₁.heap`; `σ₁.locals`
-is a separate `ExecState` field it never pins. For a variable LHS `x = e`,
-`Step.assign` needs `AssigneeR σ₁ (.var id) …`, i.e. `lookupLoc σ₁ id` succeeds —
-which depends on `σ₁.locals`. An `σ₁` with the right heap cell but empty locals
-satisfies `hred`'s antecedent yet admits **no** step, so `hred`'s consequent is
-false: `hred` is unprovable for a variable LHS (the case an earlier docstring
-wrongly named as the discharge example). Every surface way to name a location
-routes through `locals` (`.var`/`.ref`), so this is not special to variables.
+The remaining premises are the operational facts about the right-hand side and
+the store, all legitimately dischargeable for a concrete assign (none has the
+old locals problem):
+- `hrhs` — `rhs` evaluates to `v` without changing the state (its existence);
+- `hrhs_det` — `rhs` evaluates *only* to `v` (determinism), which rules out the
+  panic step-rules during inversion;
+- `hstore` — storing `v` at the owned cell yields the heap update to `newcell`.
 
-Making this a genuine Hoare law requires modelling `σ₁.locals` in the state
-interpretation (TODO 3b.4 / Reshape B) so resolution is *derived*, not assumed
-over an unconstrained `σ₁`. Until then this theorem certifies the heap-camera
-wiring only. -/
-theorem wp_assign {a : Addr} {oldcell newcell : HeapCell} {lhs rhs k}
-    (hred : ∀ σ₁ : ExecState, Heap.lookup σ₁.heap (.base a) = some oldcell →
-      Step (Config.exec (.assign lhs rhs) k) σ₁ (.next k)
-           { σ₁ with heap := Heap.set σ₁.heap (.base a) newcell } ∧
-      (∀ c' s', Step (Config.exec (.assign lhs rhs) k) σ₁ c' s' →
-           c' = Config.next k ∧
-           s' = { σ₁ with heap := Heap.set σ₁.heap (.base a) newcell })) :
+Owning `a.id ↦ oldcell`, the assign steps deterministically to `.next k` with the
+cell updated to `newcell`; the continuation runs owning `a.id ↦ newcell`. See
+`wp_assign_lit` for the payoff: every premise discharged for a concrete
+`x = intLit n`. -/
+theorem wp_assign {a : Addr} {oldcell newcell : HeapCell} {v : GoValue}
+    {id rhs env k}
+    (hres : LocalEnv.lookup env id = some (.base a))
+    (hrhs : ∀ σ₁ : ExecState, ExprR env σ₁ rhs (.value v σ₁))
+    (hrhs_det : ∀ σ₁ (out : ExprOut), ExprR env σ₁ rhs out → out = .value v σ₁)
+    (hstore : ∀ σ₁ : ExecState, Heap.lookup σ₁.heap (.base a) = some oldcell →
+        storeLoc σ₁ (.base a) v
+          = .ok { σ₁ with heap := Heap.set σ₁.heap (.base a) newcell }) :
     a.id ↦ oldcell ∗ (a.id ↦ newcell -∗ WP (Config.next k) @ s ; E {{ Φ }})
-      ⊢ WP (Config.exec (.assign lhs rhs) k) @ s ; E {{ Φ }} := by
+      ⊢ WP (Config.exec (.assign (.var id) rhs) env k) @ s ; E {{ Φ }} := by
+  -- The reduction facts the old proof took as `hred`, now *derived* from the
+  -- pure resolution premise plus the rhs/store operational facts.
+  have hred : ∀ σ₁ : ExecState, Heap.lookup σ₁.heap (.base a) = some oldcell →
+      Step (Config.exec (.assign (.var id) rhs) env k) σ₁ (.next k)
+           { σ₁ with heap := Heap.set σ₁.heap (.base a) newcell } ∧
+      (∀ c' s', Step (Config.exec (.assign (.var id) rhs) env k) σ₁ c' s' →
+           c' = Config.next k ∧
+           s' = { σ₁ with heap := Heap.set σ₁.heap (.base a) newcell }) := by
+    intro σ₁ hlook
+    refine ⟨Step.assign (AssigneeR.var hres) (hrhs σ₁) (hstore σ₁ hlook), ?_⟩
+    intro c' s' hst
+    cases hst with
+    | assign hass hr hs =>
+      cases hass with
+      | var hl =>
+        -- target location is `.base a` (hl + hres); rhs value/state are `v`/σ₁
+        rw [hres] at hl; injection hl with hloc
+        have hd := hrhs_det σ₁ _ hr; injection hd with hv hs2
+        rw [← hloc, hv, hs2, hstore σ₁ hlook] at hs; injection hs with hs3
+        exact ⟨rfl, hs3.symm⟩
+    | assignTargetPanic hass => cases hass
+    | assignValuePanic _ hr =>
+      exact ExprOut.noConfusion (hrhs_det _ _ hr)
+    | assignStorePanic hass hr hs =>
+      cases hass with
+      | var hl =>
+        rw [hres] at hl; injection hl with hloc
+        have hd := hrhs_det σ₁ _ hr; injection hd with hv hs2
+        rw [← hloc, hv, hs2, hstore σ₁ hlook] at hs
+        simp at hs
   iintro ⟨Hpt, Hcont⟩
   iapply wp_lift_step (h := rfl)
   iintro %σ₁ %ns %obs %obs' %nt Hσ
@@ -277,6 +314,49 @@ theorem wp_assign {a : Addr} {oldcell newcell : HeapCell} {lhs rhs k}
     · isplitl [Hpt Hcont]
       · iapply Hcont $$ Hpt
       · itrivial
+
+/-- Inversion of `ExprR` on an integer literal: it evaluates only to its
+normalized value, leaving the state unchanged. The `binPanic*` rules carry a
+function-valued `mk` index, so plain `cases` punts (higher-order unification) —
+`generalize` the literal to a variable first, then each spurious case is refuted
+by `Expr.noConfusion` (after fixing `mk` from its disjunction). -/
+private theorem exprR_intLit_det {env : LocalEnv} {σ : ExecState} {n : Int}
+    {kind : IntKind} {out : ExprOut}
+    (h : ExprR env σ (.intLit n kind) out) :
+    out = ExprOut.value (.int (kind.normalize n) kind) σ := by
+  generalize he : Expr.intLit n kind = e at h
+  cases h with
+  | intLit => injection he with e1 e2; subst e1; subst e2; rfl
+  | binPanicLeft mk hmk _ =>
+      rcases hmk with rfl | rfl | rfl | rfl <;> exact Expr.noConfusion he
+  | binPanicRight mk hmk _ _ =>
+      rcases hmk with rfl | rfl | rfl | rfl <;> exact Expr.noConfusion he
+  | _ => exact Expr.noConfusion he
+
+/-- **Payoff: `wp_assign` is genuinely instantiable.** This is what task #23 was
+blocked on — the old law's `hred` was unsatisfiable for *every* real assign
+(`docs/2026-07-19_premerge-audit-results.md`, D2-4/D2-5). Here the resolution
+premise discharges by `simp`/`rfl` against a concrete control environment that
+binds `x ↦ .base a`, and the right-hand-side premises are discharged outright for
+an integer literal (`hrhs` by `ExprR.intLit`; `hrhs_det` by one `cases`). Only
+`hstore` — the ordinary "storing a well-typed value at the owned cell succeeds"
+side-condition — is left as a hypothesis; it is about the store's value
+normalization, wholly independent of the locals-resolution fix this reshape
+delivered. Contrast the old law, where *no* premise set was dischargeable at
+all. -/
+theorem wp_assign_lit {a : Addr} {oldcell newcell : HeapCell} {n : Int}
+    {kind : IntKind} {rest : LocalEnv} {k}
+    (hstore : ∀ σ₁ : ExecState, Heap.lookup σ₁.heap (.base a) = some oldcell →
+        storeLoc σ₁ (.base a) (.int (kind.normalize n) kind)
+          = .ok { σ₁ with heap := Heap.set σ₁.heap (.base a) newcell }) :
+    a.id ↦ oldcell ∗ (a.id ↦ newcell -∗ WP (Config.next k) @ s ; E {{ Φ }})
+      ⊢ WP (Config.exec (.assign (.var "x") (.intLit n kind))
+              ([("x", Loc.base a)] :: rest) k) @ s ; E {{ Φ }} :=
+  wp_assign (id := "x") (v := .int (kind.normalize n) kind)
+    (by simp [LocalEnv.lookup, Scope.lookup])
+    (fun _ => ExprR.intLit)
+    (fun _ _ h => exprR_intLit_det h)
+    hstore
 
 end HeapWP
 

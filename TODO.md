@@ -62,18 +62,16 @@ In order (reordered — Iris spike front-loaded):
        `Nat`; `GoCoreGS` class, `heapToMap` projection, `StateInterp` via
        `genHeapInterp`, `IrisGS`). The `↦` connective over GoCore's heap now
        compiles; `wp_seqn` re-proved under the real state interp. No sorry.
-     - [~] **3b.2 — `wp_assign` is a SCAFFOLD, not a usable law** (corrected by
-       the pre-merge audit, 2026-07-19, findings D2-4/D2-5). Axiom-clean and the
-       gen_heap-update mechanism is genuinely proven, via `wp_lift_step`
-       (non-value successor `.next k`) + the two reusable bridge lemmas
-       (`get?_heapToMap`, `heapToMap_set_base`; the `foldr` `heapToMap` matches
-       `Heap.lookup` first-match *unconditionally* — no heap-key-uniqueness
-       invariant). **BUT its `hred` hypothesis is unsatisfiable for any real
-       assign**: `hred` quantifies `∀ σ₁` constrained only on `σ₁.heap`, while a
-       variable LHS needs `σ₁.locals` to resolve — an empty-locals `σ₁` meets the
-       antecedent yet admits no step. So **no instance of the law exists**; it
-       certifies the heap-camera wiring only. The earlier "discharged per-call for
-       a variable LHS" claim was **false**. Real usability is blocked on 3b.4.
+     - [x] **3b.2 — `wp_assign` is now a USABLE law** (CEK reshape, 2026-07-19,
+       `docs/2026-07-19_cek-reshape-plan.md`; closes audit D2-4/D2-5). The
+       unsatisfiable `hred` is gone: locals moved from `ExecState` into the
+       control `env` (CEK), so the target resolves against `env` — **fixed in the
+       WP goal, not the quantified state**. The law's premise is now the pure,
+       dischargeable `LocalEnv.lookup env id = some (.base a)` plus ordinary
+       rhs/store facts; **`wp_assign_lit` discharges them** for `x = intLit n`
+       (payoff check). Heap core unchanged (the two bridge lemmas, `wp_lift_step`
+       non-value successor). Axiom-clean `[propext, Classical.choice, Quot.sound]`.
+       This is what closes #23; see also 3b.4 (now subsumed).
      - [~] **3b.3 — read law + adequacy, both scope-limited** (audit D1-1):
        - `go_adequacy` — `adequate .NotStuck`, real functor bundle, axiom-clean —
          **but covers only non-panicking runs**: `.panicked` has no outgoing
@@ -82,14 +80,18 @@ In order (reordered — Iris spike front-loaded):
          deferred.
        - `pointsTo_loadLoc` — read law (`a.id ↦ cell` ⟹ `loadLoc … = ok value`).
          Genuinely a lemma, not a WP; correct as stated (no bare-deref `Step`).
-     - [ ] **3b.4 (the real blocker on usable heap laws)** — model `ExecState.locals`
-       in the state interpretation (or a location-resolved intermediate `Config`)
-       so assignee/rhs resolution is *derived*, making `hred` dischargeable and
-       `wp_assign` an actual Hoare law. Audit D2-7/D4-12: locals are a
-       name-shadowing push/pop scope stack **split across `Config.frame`
-       (callerLocals) and `ExecState.locals`** — this needs a different camera +
-       new scope-push/pop WP laws, materially harder than the heap wiring. Folds
-       into Reshape B.
+     - [x] **3b.4 — SUBSUMED by the CEK reshape (3b.2).** The plan here was to
+       model `ExecState.locals` in the state interpretation (needing a locals
+       camera). The reshape took the **better** route the Goose/Perennial
+       investigation surfaced: put locals in the **control** (`Config.env`), not
+       the state, so resolution is a pure fixed-`env` fact with **no camera and no
+       `∀σ`**. The audit's "locals split across `Config.frame` + `ExecState.locals`"
+       concern dissolves: the relation's locals live only in `Config`
+       (`.exec`/`.returning` env, `Cont.seq`/`loop` env), and `ExecState.locals`
+       is now solely the interpreter's, serving as the correspondence bridge
+       `σ.locals ≈ Config.env`. Env-in-control is also the concurrency prerequisite
+       (per-goroutine locals). No new scope-push/pop WP laws were needed — scope is
+       the continuation's env, discarded at `seqDone`.
 3. **Reshape B** (`docs/2026-07-19_reshape-b-oracle-externalization.md`):
    - [x] **Slice 1 — oracle externalization.** `choices` removed from
      `ExecState`; the interpreter threads `Choices` externally through the
