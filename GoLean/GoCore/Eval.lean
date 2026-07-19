@@ -805,9 +805,10 @@ def collectResults (state : ExecState) (results : Array Param) :
   return values
 
 def runFunctionWithContext (fuel : Nat) (types : TypeEnv) (functions : Array Func)
-    (func : Func) (args : Array GoValue) (methods : Array MethodInfo := #[]) :
+    (func : Func) (args : Array GoValue) (methods : Array MethodInfo := #[])
+    (choices : List Nat := []) :
     Except GoError Result := do
-  let state ← bindParams { types := types, functions := functions, methods := methods } func.args args
+  let state ← bindParams { types := types, functions := functions, methods := methods, choices } func.args args
   let state ← initResults state func.results
   let state ←
     match ← execStmt fuel state func.body with
@@ -831,17 +832,19 @@ plain functions. -/
 def findFunction? (program : Program) (name : String) : Option Func :=
   findFunctionIn? program.funcs ⟨name⟩
 
-def runNamedFunction (fuel : Nat) (program : Program) (name : String) (args : Array GoValue) :
+def runNamedFunction (fuel : Nat) (program : Program) (name : String) (args : Array GoValue)
+    (choices : List Nat := []) :
     Except GoError Result := do
   let func ←
     match findFunction? program name with
     | some func => pure func
     | none => stuck s!"GoCore function not found: {name}"
-  runFunctionWithContext fuel program.typeDefs.toList program.funcs func args program.methods
+  runFunctionWithContext fuel program.typeDefs.toList program.funcs func args program.methods choices
 
-def runNamedFunctionInts (fuel : Nat) (program : Program) (name : String) (args : Array Int) :
+def runNamedFunctionInts (fuel : Nat) (program : Program) (name : String) (args : Array Int)
+    (choices : List Nat := []) :
     Except GoError Result :=
-  runNamedFunction fuel program name (args.map GoValue.int)
+  runNamedFunction fuel program name (args.map GoValue.int) choices
 
 
 end GoLean.GoCore
