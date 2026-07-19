@@ -92,10 +92,25 @@ In order (reordered — Iris spike front-loaded):
        interpretation (or an intermediate location-resolved `Config`). This is
        the one remaining caveat on the heap laws; likely folded into Reshape B,
        which already reshapes `ExecState`.
-3. [ ] **Reshape B** (oracle `choices` out of `ExecState` → external stream,
-   existential `mapRange` rule) + relation catch-up for **one** nondeterministic
-   feature + correspondence over that feature. Finish interpreter totality here,
-   against the corrected shapes and D3.
+3. **Reshape B** (`docs/2026-07-19_reshape-b-oracle-externalization.md`):
+   - [x] **Slice 1 — oracle externalization.** `choices` removed from
+     `ExecState`; the interpreter threads `Choices` externally through the
+     statement cluster + `execAppendSlice` (expression layer untouched);
+     `Choices.consume` replaces `ExecState.consume`; entry points seed the
+     stream. Relation + proofs needed zero change (the field was dead there).
+     `interpreterSoundStatement`/`interpreterPanicStatement` now thread `ch → ch'`
+     externally, so the relation compares oracle-free states (removes §8 C1's
+     obstruction). **Validated:** core+proofs build green; `gocore-eval-tests`
+     40/40 unchanged; append + range differential slices **identical** failing
+     sets to baseline (quorum 37/39, the 2 fails are known frontend-blocked
+     interface dispatch, not regressions).
+   - [ ] **Slice 2 — existential `mapRange` rule** in `Rel.lean`: a rule relating
+     a map-range loop to *any* iteration order (relation over-approximates; the
+     interpreter instantiates via the external stream).
+   - [ ] **Slice 3 — correspondence for `mapRange`**: the interpreter's
+     oracle-instantiated iteration is one projection of the existential rule.
+   - [ ] Then resume interpreter totality (paused, below) against the corrected,
+     oracle-external shape.
 4. [ ] Scope the merge invariant to the **proof frontier** (quorum's feature set,
    not every interpreter feature); guardrails; breadth.
 

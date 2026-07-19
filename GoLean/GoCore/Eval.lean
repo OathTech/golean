@@ -590,7 +590,7 @@ mutual
     return .array values
 
   def execAppendSlice (state : ExecState) (target : Assignee) (elem : Ty)
-      (sliceExpr elemsExpr : Expr) : Except GoError ExecState := do
+      (sliceExpr elemsExpr : Expr) (choices : Choices) : Except GoError (ExecState × Choices) := do
     let targetPair ← evalAssigneeLoc state target
     let slicePair ← evalExpr targetPair.2 sliceExpr
     let slice ← valueAsSlice slicePair.1
@@ -609,7 +609,7 @@ mutual
             current ← storeLoc current (.index base (Int.ofNat (slice.offset + slice.len + i))) value
             i := i + 1
         | none => stuck s!"cannot append {elemValues.size} element(s) into nil slice in place"
-      assignLoc current targetPair.1 (.slice { slice with len := newLen })
+      return (← assignLoc current targetPair.1 (.slice { slice with len := newLen }), choices)
     else
       let oldValues ← sliceVisibleValues elemsPair.2 slice
       -- Go does not specify post-reallocation capacity; any cap >= newLen is
@@ -617,11 +617,11 @@ mutual
       -- Go-matching growth formula for differential testing, and other choices
       -- explore additional valid capacities so cap-observing programs are
       -- revealed as nondeterministic by the invariance check.
-      let (extra, afterChoice) := elemsPair.2.consume 8
+      let (extra, choices) := choices.consume 8
       let newCap := appendGrowthCap slice.cap newLen + extra
-      let backing ← buildAppendBackingValue afterChoice elem oldValues elemValues newCap
-      let (base, current) := afterChoice.alloc backing (some (.array newCap elem))
-      assignLoc current targetPair.1 (.slice { base := some base, offset := 0, len := newLen, cap := newCap })
+      let backing ← buildAppendBackingValue elemsPair.2 elem oldValues elemValues newCap
+      let (base, current) := elemsPair.2.alloc backing (some (.array newCap elem))
+      return (← assignLoc current targetPair.1 (.slice { base := some base, offset := 0, len := newLen, cap := newCap }), choices)
 
   def execMakeSlice (state : ExecState) (target : Assignee) (elem : Ty)
       (lenExpr : Expr) (capExpr : Option Expr) : Except GoError ExecState := do
@@ -671,7 +671,8 @@ end
 -- structural cluster above is already total and never calls back into this one).
 mutual
   partial def execFunctionWithValues (fuel : Nat) (state : ExecState) (targets : Array Loc)
-      (func : Func) (argValues : Array GoValue) : Except GoError ExecState := do
+      (func : Func) (argValues : Array GoValue) (choices : Choices) :
+      Except GoError (ExecState × Choices) := do
     if fuel == 0 then
       stuck "GoCore execution fuel exhausted"
     if func.args.size != argValues.size then
@@ -688,20 +689,22 @@ mutual
       | none => stuck s!"missing argument {i}"
     for result in func.results do
       callState := callState.declareLocal result.id (some result.typ) (← defaultValue callState result.typ)
-    callState ←
-      match ← execStmt (fuel - 1) callState func.body with
+    let (outcome, choices) ← execStmt (fuel - 1) callState choices func.body
+    let finalState ←
+      match outcome with
       | .normal nextState => pure nextState
       | .returned nextState => pure nextState
       | .broke _ => stuck s!"function {func.id.key} body escaped with break"
       | .continued _ => stuck s!"function {func.id.key} body escaped with continue"
     let mut resultValues := #[]
     for result in func.results do
-      resultValues := resultValues.push (← lookup callState result.id)
-    let callerState : ExecState := { callState with locals := callerLocals }
-    assignLocs callerState targets resultValues
+      resultValues := resultValues.push (← lookup finalState result.id)
+    let callerState : ExecState := { finalState with locals := callerLocals }
+    return (← assignLocs callerState targets resultValues, choices)
 
   partial def execFunctionCallWithLocs (fuel : Nat) (state : ExecState) (targets : Array Loc)
-      (id : FuncId) (args : Array Expr) : Except GoError ExecState := do
+      (id : FuncId) (args : Array Expr) (choices : Choices) :
+      Except GoError (ExecState × Choices) := do
     let func ←
       match findFunctionIn? state.functions id with
       | some func => pure func
@@ -715,13 +718,14 @@ mutual
       argValues := argValues.push pair.1
       current := pair.2
     match ← dynamicDispatch? current func argValues with
-    | some (targetFunc, targetArgs) => execFunctionWithValues fuel current targets targetFunc targetArgs
-    | none => execFunctionWithValues fuel current targets func argValues
+    | some (targetFunc, targetArgs) => execFunctionWithValues fuel current targets targetFunc targetArgs choices
+    | none => execFunctionWithValues fuel current targets func argValues choices
 
   partial def execFunctionCall (fuel : Nat) (state : ExecState) (targets : Array Assignee)
-      (id : FuncId) (args : Array Expr) : Except GoError ExecState := do
+      (id : FuncId) (args : Array Expr) (choices : Choices) :
+      Except GoError (ExecState × Choices) := do
     let targetPair ← evalAssigneeLocs state targets
-    execFunctionCallWithLocs fuel targetPair.2 targetPair.1 id args
+    execFunctionCallWithLocs fuel targetPair.2 targetPair.1 id args choices
 
   partial def execDecl (state : ExecState) (param : Param) : Except GoError ExecState := do
     return state.declareLocal param.id (some param.typ) (← defaultValue state param.typ)
@@ -732,70 +736,75 @@ mutual
       current ← execDecl current decl
     return current
 
-  partial def execStmts (fuel : Nat) (state : ExecState) (stmts : Array Stmt) :
-      Except GoError ExecOutcome :=
-    execStmtList fuel state stmts.toList
+  partial def execStmts (fuel : Nat) (state : ExecState) (stmts : Array Stmt)
+      (choices : Choices) : Except GoError (ExecOutcome × Choices) :=
+    execStmtList fuel state choices stmts.toList
 
   /-- Execute statements in order, short-circuiting on the first non-normal
   outcome. Structural on the list so `execStmt`'s recursion stays visible to the
   termination checker. -/
-  partial def execStmtList (fuel : Nat) (state : ExecState) :
-      List Stmt → Except GoError ExecOutcome
-    | [] => return .normal state
+  partial def execStmtList (fuel : Nat) (state : ExecState) (choices : Choices) :
+      List Stmt → Except GoError (ExecOutcome × Choices)
+    | [] => return (.normal state, choices)
     | stmt :: rest => do
-        match ← execStmt fuel state stmt with
-        | .normal nextState => execStmtList fuel nextState rest
-        | outcome => return outcome
+        match ← execStmt fuel state choices stmt with
+        | (.normal nextState, choices) => execStmtList fuel nextState choices rest
+        | (outcome, choices) => return (outcome, choices)
 
-  partial def execStmt (fuel : Nat) (state : ExecState) : Stmt → Except GoError ExecOutcome
-    | .seqn stmts => execStmts fuel state stmts
+  partial def execStmt (fuel : Nat) (state : ExecState) (choices : Choices) :
+      Stmt → Except GoError (ExecOutcome × Choices)
+    | .seqn stmts => execStmts fuel state stmts choices
     | .block decls stmts => do
         let entered := { state with locals := state.locals.pushScope }
-        let outcome ← execStmts fuel (← execDecls entered decls) stmts
+        let (outcome, choices) ← execStmts fuel (← execDecls entered decls) stmts choices
         let exitScope (s : ExecState) : ExecState :=
           { s with locals := s.locals.popScope }
-        return match outcome with
+        return (match outcome with
         | .normal s => .normal (exitScope s)
         | .returned s => .returned (exitScope s)
         | .broke s => .broke (exitScope s)
-        | .continued s => .continued (exitScope s)
-    | .initialization var => return .normal (← execDecl state var)
+        | .continued s => .continued (exitScope s), choices)
+    | .initialization var => return (.normal (← execDecl state var), choices)
     | .assign left right => do
         let locPair ← evalAssigneeLoc state left
         let valuePair ← evalExpr locPair.2 right
-        return .normal (← assignLoc valuePair.2 locPair.1 valuePair.1)
-    | .assignMany left right => return .normal (← execAssignMany state left right)
-    | .newValue target value typ => return .normal (← execNewValue state target value typ)
-    | .makeSlice target elem len cap => return .normal (← execMakeSlice state target elem len cap)
+        return (.normal (← assignLoc valuePair.2 locPair.1 valuePair.1), choices)
+    | .assignMany left right => return (.normal (← execAssignMany state left right), choices)
+    | .newValue target value typ => return (.normal (← execNewValue state target value typ), choices)
+    | .makeSlice target elem len cap => return (.normal (← execMakeSlice state target elem len cap), choices)
     | .makeMap target key value initialSpace =>
-        return .normal (← execMakeMap state target key value initialSpace)
+        return (.normal (← execMakeMap state target key value initialSpace), choices)
     | .mapAssign base index value keyTy valueTy =>
-        return .normal (← execMapAssign state base index value keyTy valueTy)
+        return (.normal (← execMapAssign state base index value keyTy valueTy), choices)
     | .mapLookup target okTarget base index keyTy valueTy =>
-        return .normal (← execMapLookup state target okTarget base index keyTy valueTy)
+        return (.normal (← execMapLookup state target okTarget base index keyTy valueTy), choices)
     | .typeAssert target okTarget expr targetTy =>
-        return .normal (← execTypeAssert state target okTarget expr targetTy)
-    | .appendSlice target elem slice elems => return .normal (← execAppendSlice state target elem slice elems)
-    | .copySlice target dst src => return .normal (← execCopySlice state target dst src)
-    | .call targets funcId args => return .normal (← execFunctionCall fuel state targets funcId args)
+        return (.normal (← execTypeAssert state target okTarget expr targetTy), choices)
+    | .appendSlice target elem slice elems => do
+        let (s, choices) ← execAppendSlice state target elem slice elems choices
+        return (.normal s, choices)
+    | .copySlice target dst src => return (.normal (← execCopySlice state target dst src), choices)
+    | .call targets funcId args => do
+        let (s, choices) ← execFunctionCall fuel state targets funcId args choices
+        return (.normal s, choices)
     | .ifThenElse cond thenBranch elseBranch => do
         let condPair ← evalExpr state cond
         if ← valueAsBool condPair.1 then
-          execStmt fuel condPair.2 thenBranch
+          execStmt fuel condPair.2 choices thenBranch
         else
-          execStmt fuel condPair.2 elseBranch
+          execStmt fuel condPair.2 choices elseBranch
     | .while cond body => do
         if fuel == 0 then
           stuck "GoCore execution fuel exhausted"
         let condPair ← evalExpr state cond
         if ← valueAsBool condPair.1 then
-          match ← execStmt fuel condPair.2 body with
-          | .normal bodyState => execStmt (fuel - 1) bodyState (.while cond body)
-          | .continued bodyState => execStmt (fuel - 1) bodyState (.while cond body)
-          | .broke bodyState => return .normal bodyState
-          | .returned bodyState => return .returned bodyState
+          match ← execStmt fuel condPair.2 choices body with
+          | (.normal bodyState, choices) => execStmt (fuel - 1) bodyState choices (.while cond body)
+          | (.continued bodyState, choices) => execStmt (fuel - 1) bodyState choices (.while cond body)
+          | (.broke bodyState, choices) => return (.normal bodyState, choices)
+          | (.returned bodyState, choices) => return (.returned bodyState, choices)
         else
-          return .normal condPair.2
+          return (.normal condPair.2, choices)
     | .mapRange keyVar valVar mapExpr keyTy valTy body => do
         let mapPair ← evalExpr state mapExpr
         let map ← valueAsMap mapPair.1
@@ -806,11 +815,11 @@ mutual
               match ← loadLoc mapPair.2 base with
               | .mapData es => pure es
               | other => stuck s!"expected map data for range, got {repr other}"
-        execMapRangeLoop fuel mapPair.2 keyVar valVar keyTy valTy body entries
-    | .returnStmt => return .returned state
-    | .breakStmt => return .broke state
-    | .continueStmt => return .continued state
-    | .label _ => return .normal state
+        execMapRangeLoop fuel mapPair.2 keyVar valVar keyTy valTy body entries choices
+    | .returnStmt => return (.returned state, choices)
+    | .breakStmt => return (.broke state, choices)
+    | .continueStmt => return (.continued state, choices)
+    | .label _ => return (.normal state, choices)
     | .unsupported feature => unsupported feature
 
   /-- Iterate the snapshotted map entries in an oracle-chosen order: at each
@@ -819,12 +828,13 @@ mutual
   the body. The default oracle (0) yields the stored order. -/
   partial def execMapRangeLoop (fuel : Nat) (state : ExecState)
       (keyVar valVar : Option String) (keyTy valTy : Ty) (body : Stmt)
-      (remaining : Array (GoValue × GoValue)) : Except GoError ExecOutcome := do
+      (remaining : Array (GoValue × GoValue)) (choices : Choices) :
+      Except GoError (ExecOutcome × Choices) := do
     if remaining.isEmpty then
-      return .normal state
-    let (idx, state) := state.consume remaining.size
+      return (.normal state, choices)
+    let (idx, choices) := choices.consume remaining.size
     match remaining[idx]? with
-    | none => return .normal state
+    | none => return (.normal state, choices)
     | some (key, value) =>
         let rest := remaining.eraseIdx! idx
         let mut iterState : ExecState := { state with locals := state.locals.pushScope }
@@ -835,11 +845,11 @@ mutual
         | some name => iterState := iterState.declareLocal name (some valTy) (← normalizeValueForTy iterState valTy value)
         | none => pure ()
         let popScope (s : ExecState) : ExecState := { s with locals := s.locals.popScope }
-        match ← execStmt fuel iterState body with
-        | .normal s => execMapRangeLoop fuel (popScope s) keyVar valVar keyTy valTy body rest
-        | .continued s => execMapRangeLoop fuel (popScope s) keyVar valVar keyTy valTy body rest
-        | .broke s => return .normal (popScope s)
-        | .returned s => return .returned (popScope s)
+        match ← execStmt fuel iterState choices body with
+        | (.normal s, choices) => execMapRangeLoop fuel (popScope s) keyVar valVar keyTy valTy body rest choices
+        | (.continued s, choices) => execMapRangeLoop fuel (popScope s) keyVar valVar keyTy valTy body rest choices
+        | (.broke s, choices) => return (.normal (popScope s), choices)
+        | (.returned s, choices) => return (.returned (popScope s), choices)
 end
 
 def bindParams (state : ExecState) (params : Array Param) (args : Array GoValue) :
@@ -871,12 +881,13 @@ def collectResults (state : ExecState) (results : Array Param) :
 
 def runFunctionWithContext (fuel : Nat) (types : TypeEnv) (functions : Array Func)
     (func : Func) (args : Array GoValue) (methods : Array MethodInfo := #[])
-    (choices : List Nat := []) :
+    (choices : Choices := []) :
     Except GoError Result := do
-  let state ← bindParams { types := types, functions := functions, methods := methods, choices } func.args args
+  let state ← bindParams { types := types, functions := functions, methods := methods } func.args args
   let state ← initResults state func.results
+  let (outcome, _) ← execStmt fuel state choices func.body
   let state ←
-    match ← execStmt fuel state func.body with
+    match outcome with
     | .normal state => pure state
     | .returned state => pure state
     | .broke _ => stuck s!"function {func.id.key} body escaped with break"

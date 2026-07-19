@@ -30,18 +30,25 @@ supported deterministic terminating runs: a normal interpreter completion
 is a reachable terminal of the step relation. (Analogous statements for
 returned/broke/continued outcomes quantify over the matching unwinding
 configurations, and interpreter panics correspond to `Config.panicked`.)
-Blocked on interpreter/substrate totality (see the module header). -/
+
+After Reshape B (oracle externalization,
+`docs/2026-07-19_reshape-b-oracle-externalization.md`) the interpreter threads
+the choice stream `ch → ch'` *externally*, so it never appears in the relation's
+oracle-free `ExecState`. This is what removes master-plan §8 C1's obstruction:
+the interpreter's nondeterminism consumption is invisible to the state the
+relation compares. Still blocked on interpreter/substrate totality (module
+header) — but now the statement is over clean states. -/
 def interpreterSoundStatement : Prop :=
-  ∀ (fuel : Nat) (s s' : ExecState) (stmt : Stmt),
-    execStmt fuel s stmt = .ok (.normal s') →
+  ∀ (fuel : Nat) (s s' : ExecState) (stmt : Stmt) (ch ch' : Choices),
+    execStmt fuel s ch stmt = .ok (.normal s', ch') →
     Steps (.exec stmt .stop) s (.next .stop) s'
 
 /-- Intended panic agreement: if the interpreter reports a Go panic, the
-relation reaches `panicked` with the same message (at some fault state).
-Deferred. -/
+relation reaches `panicked` with the same message (at some fault state). The
+input choice stream is threaded but irrelevant to the panic message. Deferred. -/
 def interpreterPanicStatement : Prop :=
-  ∀ (fuel : Nat) (s : ExecState) (stmt : Stmt) (msg : String),
-    execStmt fuel s stmt = .error (.panic msg) →
+  ∀ (fuel : Nat) (s : ExecState) (stmt : Stmt) (msg : String) (ch : Choices),
+    execStmt fuel s ch stmt = .error (.panic msg) →
     ∃ s', Steps (.exec stmt .stop) s (.panicked msg) s'
 
 /-! ## Proven instances

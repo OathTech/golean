@@ -34,13 +34,6 @@ structure ExecState where
   locals : LocalEnv := []
   heap : Heap := []
   nextAddr : Nat := 0
-  /-- The nondeterminism choice stream ("parser of randomness"): each
-  nondeterministic point (map iteration order, append capacity, allocation)
-  consumes the next choice. Exhaustion yields the canonical default (0). GoCore
-  never commits to determinism Go lacks; the interpreter only picks a behavior
-  by instantiating this oracle, which is a testing convenience — see
-  `docs/nondeterminism-design.md`. -/
-  choices : List Nat := []
   deriving Repr, BEq
 
 structure Result where
@@ -127,14 +120,24 @@ def StructFields.set (fields : Array (String × GoValue)) (needle : String)
   else
     throw (.stuck s!"unknown GoCore struct field: {needle}")
 
-/-- Consume the next nondeterministic choice, bounded by the number of
-alternatives at this point. Exhaustion yields 0 (the canonical default). This
-is the sole way the interpreter resolves nondeterminism. -/
-def ExecState.consume (state : ExecState) (bound : Nat) : Nat × ExecState :=
+/-- The nondeterminism choice stream ("parser of randomness"): each
+nondeterministic point (map iteration order, append capacity) consumes the next
+choice. It is threaded by the interpreter **external to `ExecState`**, so the
+relation and the interpreter/relation correspondence compare oracle-free states.
+GoCore never commits to determinism Go lacks; the interpreter only picks a
+behavior by instantiating this oracle, a testing convenience — see
+`docs/nondeterminism-design.md` and
+`docs/2026-07-19_reshape-b-oracle-externalization.md`. -/
+abbrev Choices := List Nat
+
+/-- Consume the next nondeterministic choice from the external stream, bounded by
+the number of alternatives at this point. Exhaustion yields 0 (the canonical
+default). This is the sole way the interpreter resolves nondeterminism. -/
+def Choices.consume (choices : Choices) (bound : Nat) : Nat × Choices :=
   let b := max 1 bound
-  match state.choices with
-  | [] => (0, state)
-  | c :: rest => (c % b, { state with choices := rest })
+  match choices with
+  | [] => (0, choices)
+  | c :: rest => (c % b, rest)
 
 def ExecState.freshLoc (state : ExecState) : Loc × ExecState :=
   let loc := Loc.base { id := state.nextAddr }
