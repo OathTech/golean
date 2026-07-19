@@ -266,6 +266,8 @@ func (e *emitter) emitStmt(s ast.Stmt) (any, error) {
 		return e.emitIf(st)
 	case *ast.ForStmt:
 		return e.emitFor(st)
+	case *ast.RangeStmt:
+		return e.emitRange(st)
 	case *ast.IncDecStmt:
 		return e.emitIncDec(st)
 	case *ast.ExprStmt:
@@ -472,6 +474,83 @@ func (e *emitter) emitFor(st *ast.ForStmt) (any, error) {
 		return nil, err
 	}
 	node["body"] = body
+	return node, nil
+}
+
+// rangeVarName returns the loop-variable name, or "" for absent/blank (`_`).
+func rangeVarName(x ast.Expr) string {
+	id, ok := x.(*ast.Ident)
+	if !ok || id.Name == "_" {
+		return ""
+	}
+	return id.Name
+}
+
+func nameOrNull(s string) any {
+	if s == "" {
+		return nil
+	}
+	return s
+}
+
+// emitRange emits `for k, v := range X`. Map range becomes the GoCore mapRange
+// primitive; index-able ranges (slice/array/int) carry a "kind" that NativeToIR
+// desugars to an index for-loop. Only `:=` range vars are modeled for now.
+func (e *emitter) emitRange(rs *ast.RangeStmt) (any, error) {
+	if rs.Key != nil && rs.Tok == token.ASSIGN {
+		return nil, unsup("range with assigned (non-:=) variables")
+	}
+	coll, err := e.emitExpr(rs.X)
+	if err != nil {
+		return nil, err
+	}
+	body, err := e.emitBlock(rs.Body)
+	if err != nil {
+		return nil, err
+	}
+	node := map[string]any{
+		"stmt":       "range",
+		"keyVar":     nameOrNull(rangeVarName(rs.Key)),
+		"valVar":     nameOrNull(rangeVarName(rs.Value)),
+		"collection": coll,
+		"body":       body,
+	}
+	switch u := e.info.TypeOf(rs.X).Underlying().(type) {
+	case *types.Map:
+		kt, err := e.emitType(u.Key())
+		if err != nil {
+			return nil, err
+		}
+		vt, err := e.emitType(u.Elem())
+		if err != nil {
+			return nil, err
+		}
+		node["kind"] = "map"
+		node["keyType"] = kt
+		node["valueType"] = vt
+	case *types.Slice:
+		et, err := e.emitType(u.Elem())
+		if err != nil {
+			return nil, err
+		}
+		node["kind"] = "slice"
+		node["elemType"] = et
+	case *types.Array:
+		et, err := e.emitType(u.Elem())
+		if err != nil {
+			return nil, err
+		}
+		node["kind"] = "array"
+		node["elemType"] = et
+	case *types.Basic:
+		if u.Info()&types.IsInteger != 0 {
+			node["kind"] = "int"
+		} else {
+			return nil, unsup("range over %s", u)
+		}
+	default:
+		return nil, unsup("range over %s", e.info.TypeOf(rs.X))
+	}
 	return node, nil
 }
 
@@ -717,7 +796,7 @@ func (e *emitter) emitCompositeLit(cl *ast.CompositeLit) (any, error) {
 	case *types.Slice:
 		return nil, unsup("slice literal (statement-level, next increment)")
 	case *types.Map:
-		return nil, unsup("map literal (statement-level, next increment)")
+		return e.emitMapLit(cl, u)
 	default:
 		return nil, unsup("composite literal of type %s", t)
 	}
@@ -769,6 +848,52 @@ func (e *emitter) emitStructLit(cl *ast.CompositeLit, t types.Type, st *types.St
 		}
 	}
 	return map[string]any{"expr": "struct-lit", "target": target, "args": args}, nil
+}
+
+// emitMapLit hoists a map literal (an allocation) into a makeMap + per-entry
+// assignments bound to a temp, and returns the temp reference.
+func (e *emitter) emitMapLit(cl *ast.CompositeLit, m *types.Map) (any, error) {
+	if e.hoistForbidden != "" {
+		return nil, unsup("map literal in %s", e.hoistForbidden)
+	}
+	keyTy, err := e.emitType(m.Key())
+	if err != nil {
+		return nil, err
+	}
+	valTy, err := e.emitType(m.Elem())
+	if err != nil {
+		return nil, err
+	}
+	mapTy, err := e.emitType(m)
+	if err != nil {
+		return nil, err
+	}
+	entries := []any{}
+	for _, elt := range cl.Elts {
+		kv, ok := elt.(*ast.KeyValueExpr)
+		if !ok {
+			return nil, unsup("map literal element is not key:value")
+		}
+		k, err := e.emitExpr(kv.Key)
+		if err != nil {
+			return nil, err
+		}
+		v, err := e.emitExpr(kv.Value)
+		if err != nil {
+			return nil, err
+		}
+		entries = append(entries, map[string]any{"key": k, "value": v})
+	}
+	name := "$c" + itoa(e.tmpSeq)
+	e.tmpSeq++
+	e.hoisted = append(e.hoisted, map[string]any{
+		"stmt":      "map-lit",
+		"target":    map[string]any{"target": "declare", "id": name, "type": mapTy},
+		"keyType":   keyTy,
+		"valueType": valTy,
+		"entries":   entries,
+	})
+	return map[string]any{"expr": "ident", "name": name, "type": mapTy}, nil
 }
 
 func (e *emitter) emitArrayLit(cl *ast.CompositeLit, arr *types.Array) (any, error) {

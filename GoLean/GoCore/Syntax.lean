@@ -114,6 +114,13 @@ inductive Stmt where
   | call (targets : Array Assignee) (func : FuncId) (args : Array Expr)
   | ifThenElse (cond : Expr) (thenBranch elseBranch : Stmt)
   | while (cond : Expr) (body : Stmt)
+  /-- Map iteration primitive (the one nondeterministic iteration form). The
+  abstract map is an unordered finite map; the iteration order is drawn from
+  the choice oracle, one choice per step (next key among those remaining).
+  Index-able ranges (slice/array/string/int) desugar to `while` and are not
+  represented here. See `docs/nondeterminism-design.md`. `keyVar`/`valVar` are
+  `none` for blank or absent range variables. -/
+  | mapRange (keyVar valVar : Option String) (mapExpr : Expr) (keyTy valTy : Ty) (body : Stmt)
   | returnStmt
   | breakStmt
   | continueStmt

@@ -776,11 +776,50 @@ mutual
           | .returned bodyState => return .returned bodyState
         else
           return .normal condPair.2
+    | .mapRange keyVar valVar mapExpr keyTy valTy body => do
+        let mapPair ← evalExpr state mapExpr
+        let map ← valueAsMap mapPair.1
+        let entries ←
+          match map.base with
+          | none => pure #[]
+          | some base =>
+              match ← loadLoc mapPair.2 base with
+              | .mapData es => pure es
+              | other => stuck s!"expected map data for range, got {repr other}"
+        execMapRangeLoop fuel mapPair.2 keyVar valVar keyTy valTy body entries
     | .returnStmt => return .returned state
     | .breakStmt => return .broke state
     | .continueStmt => return .continued state
     | .label _ => return .normal state
     | .unsupported feature => unsupported feature
+
+  /-- Iterate the snapshotted map entries in an oracle-chosen order: at each
+  step consume a choice bounded by the number of remaining entries to pick the
+  next one, bind the range variables in a fresh per-iteration scope, and run
+  the body. The default oracle (0) yields the stored order. -/
+  partial def execMapRangeLoop (fuel : Nat) (state : ExecState)
+      (keyVar valVar : Option String) (keyTy valTy : Ty) (body : Stmt)
+      (remaining : Array (GoValue × GoValue)) : Except GoError ExecOutcome := do
+    if remaining.isEmpty then
+      return .normal state
+    let (idx, state) := state.consume remaining.size
+    match remaining[idx]? with
+    | none => return .normal state
+    | some (key, value) =>
+        let rest := remaining.eraseIdx! idx
+        let mut iterState : ExecState := { state with locals := state.locals.pushScope }
+        match keyVar with
+        | some name => iterState := iterState.declareLocal name (some keyTy) (← normalizeValueForTy iterState keyTy key)
+        | none => pure ()
+        match valVar with
+        | some name => iterState := iterState.declareLocal name (some valTy) (← normalizeValueForTy iterState valTy value)
+        | none => pure ()
+        let popScope (s : ExecState) : ExecState := { s with locals := s.locals.popScope }
+        match ← execStmt fuel iterState body with
+        | .normal s => execMapRangeLoop fuel (popScope s) keyVar valVar keyTy valTy body rest
+        | .continued s => execMapRangeLoop fuel (popScope s) keyVar valVar keyTy valTy body rest
+        | .broke s => return .normal (popScope s)
+        | .returned s => return .returned (popScope s)
 end
 
 def bindParams (state : ExecState) (params : Array Param) (args : Array GoValue) :

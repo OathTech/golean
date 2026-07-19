@@ -272,6 +272,12 @@ private def targetIsBlank (json : Json) : Bool :=
   | .ok (.str "blank") => true
   | _ => false
 
+/-- An optional string field: a JSON string, or `null`/absent → `none`. -/
+private def optString (obj : StrictJson.Obj) (key : String) : Option String :=
+  match obj.get? key with
+  | some (.str s) => some s
+  | _ => none
+
 /-- The declared type carried on a wire expression node (fallback `int`). -/
 private def exprTypeOf (path : String) (json : Json) : LowerM Ty := do
   let obj ← StrictJson.obj path json
@@ -280,6 +286,15 @@ private def exprTypeOf (path : String) (json : Json) : LowerM Ty := do
   | none => pure (.int .int)
 
 /-! ## Statements -/
+
+/-- Detect `m[k]` (a map index) as the RHS of a comma-ok lookup. -/
+private def asMapGet? (json : Json) : LowerM (Option (Json × Json × Json × Json)) := do
+  match json.getObjVal? "expr" with
+  | .ok (.str "map-get") =>
+      let obj ← StrictJson.obj "map-get" json
+      pure (some (← StrictJson.field "map-get" obj "base", ← StrictJson.field "map-get" obj "index",
+        ← StrictJson.field "map-get" obj "keyType", ← StrictJson.field "map-get" obj "valueType"))
+  | _ => pure none
 
 /-- Detect a call whose result feeds an assignment / return / expression
 statement, so it can lower to a GoCore call statement. -/
@@ -332,15 +347,88 @@ partial def decodeStmt (results : Array Param) (path : String) (json : Json) : L
       | some (name, args) =>
           pure (.call #[] ⟨name⟩ (← args.mapIdxM (fun i a => decodeExpr s!"{path}.expr.args[{i}]" a)))
       | none => fail s!"expression statement is not a call at {path} (calls are the only effectful expressions modeled)"
+  | "range" =>
+      decodeRange results path obj
   | "new" =>
       -- &T{...}: allocate `value` and bind its address into `target`.
       let t ← decodeTarget s!"{path}.target" (← StrictJson.field path obj "target")
       let value ← decodeExpr s!"{path}.value" (← StrictJson.field path obj "value")
       let elemTy ← decodeTy s!"{path}.elemType" (← StrictJson.field path obj "elemType")
       pure (.seqn ((← declaresOf #[t]).push (.newValue t.assignee value (some elemTy))))
+  | "map-lit" =>
+      -- map literal: makeMap into a temp, then assign each entry.
+      let t ← decodeTarget s!"{path}.target" (← StrictJson.field path obj "target")
+      let keyTy ← decodeTy s!"{path}.keyType" (← StrictJson.field path obj "keyType")
+      let valTy ← decodeTy s!"{path}.valueType" (← StrictJson.field path obj "valueType")
+      let entries ← StrictJson.array s!"{path}.entries" (← StrictJson.field path obj "entries")
+      let base : Expr :=
+        match t.assignee with
+        | .var id => .var id
+        | _ => .var "$maplit"
+      let mut stmts ← declaresOf #[t]
+      stmts := stmts.push (.makeMap t.assignee keyTy valTy none)
+      for i in [:entries.size] do
+        match entries[i]? with
+        | some e =>
+            let eo ← StrictJson.obj s!"{path}.entries[{i}]" e
+            let key ← decodeExpr s!"{path}.entries[{i}].key" (← StrictJson.field s!"{path}.entries[{i}]" eo "key")
+            let value ← decodeExpr s!"{path}.entries[{i}].value" (← StrictJson.field s!"{path}.entries[{i}]" eo "value")
+            stmts := stmts.push (.mapAssign base key value keyTy valTy)
+        | none => pure ()
+      pure (.seqn stmts)
   | "break" => pure .breakStmt
   | "continue" => pure .continueStmt
   | other => fail s!"unsupported statement {other} at {path}"
+
+/-- Lower `for k, v := range X`. Map range is the `mapRange` primitive; index
+ranges (slice/array/int) desugar to an index `while` loop. The index is
+incremented at the top of the loop body (guarded by a first-iteration flag) so
+`continue` still advances it, matching Go. -/
+partial def decodeRange (results : Array Param) (path : String) (obj : StrictJson.Obj) : LowerM Stmt := do
+  let kind ← StrictJson.string s!"{path}.kind" (← StrictJson.field path obj "kind")
+  let keyVar := optString obj "keyVar"
+  let valVar := optString obj "valVar"
+  let collJson ← StrictJson.field path obj "collection"
+  let coll ← decodeExpr s!"{path}.collection" collJson
+  let body ← decodeStmt results s!"{path}.body" (← StrictJson.field path obj "body")
+  match kind with
+  | "map" =>
+      let keyTy ← decodeTy s!"{path}.keyType" (← StrictJson.field path obj "keyType")
+      let valTy ← decodeTy s!"{path}.valueType" (← StrictJson.field path obj "valueType")
+      pure (.mapRange keyVar valVar coll keyTy valTy body)
+  | "slice" | "array" | "int" =>
+      let collTy ← exprTypeOf s!"{path}.collection" collJson
+      let intTy : Ty := .int .int
+      let ridx : Expr := .var "$ridx"
+      -- Length: len(collection) for slice/array; the int itself for int range.
+      let lenExpr : Expr := if kind == "int" then .var "$rcoll" else .length (.var "$rcoll") none
+      -- Per-iteration loop-variable bindings.
+      let mut iter : Array Stmt := #[
+        -- increment index at top except on the first iteration
+        .ifThenElse (.var "$rfirst")
+          (.assign (.var "$rfirst") (.boolLit false))
+          (.assign (.var "$ridx") (.add ridx (.intLit 1 .int))),
+        -- exit when the index reaches the length
+        .ifThenElse (.atLeastCmp ridx (.var "$rlen")) .breakStmt (.seqn #[])
+      ]
+      match keyVar with
+      | some k => iter := iter ++ #[.initialization { id := k, typ := intTy }, .assign (.var k) ridx]
+      | none => pure ()
+      if kind != "int" then
+        match valVar with
+        | some v =>
+            let elemTy ← decodeTy s!"{path}.elemType" (← StrictJson.field path obj "elemType")
+            iter := iter ++ #[.initialization { id := v, typ := elemTy }, .assign (.var v) (.indexGet (.var "$rcoll") ridx)]
+        | none => pure ()
+      iter := iter.push body
+      pure (.block #[] #[
+        .initialization { id := "$rcoll", typ := collTy }, .assign (.var "$rcoll") coll,
+        .initialization { id := "$rlen", typ := intTy }, .assign (.var "$rlen") lenExpr,
+        .initialization { id := "$ridx", typ := intTy }, .assign (.var "$ridx") (.intLit 0 .int),
+        .initialization { id := "$rfirst", typ := .bool }, .assign (.var "$rfirst") (.boolLit true),
+        .while (.boolLit true) (.block #[] iter)
+      ])
+  | other => fail s!"unsupported range kind {other} at {path}"
 
 partial def decodeReturn (results : Array Param) (path : String) (obj : StrictJson.Obj) : LowerM Stmt := do
   let rs ← StrictJson.array s!"{path}.results" (← StrictJson.field path obj "results")
@@ -369,6 +457,18 @@ partial def decodeAssign (results : Array Param) (path : String) (obj : StrictJs
         let targets ← lhs.mapIdxM (fun i t => decodeTarget s!"{path}.lhs[{i}]" t)
         let assignees ← targets.mapM (fun t => targetAssignee t)
         return .seqn ((← declaresOf targets) ++ #[.call assignees ⟨name⟩ (← args.mapIdxM (fun i a => decodeExpr s!"{path}.args[{i}]" a))])
+    | none => pure ()
+  -- Comma-ok map lookup: `v, ok := m[k]`.
+  if lhs.size == 2 && rhs.size == 1 then
+    match ← asMapGet? rhs[0]! with
+    | some (baseJ, indexJ, keyTyJ, valTyJ) =>
+        let t0 ← decodeTarget s!"{path}.lhs[0]" lhs[0]!
+        let t1 ← decodeTarget s!"{path}.lhs[1]" lhs[1]!
+        let base ← decodeExpr s!"{path}.rhs[0].base" baseJ
+        let index ← decodeExpr s!"{path}.rhs[0].index" indexJ
+        let keyTy ← decodeTy s!"{path}.rhs[0].keyType" keyTyJ
+        let valTy ← decodeTy s!"{path}.rhs[0].valueType" valTyJ
+        return .seqn ((← declaresOf #[t0, t1]).push (.mapLookup t0.assignee t1.assignee base index keyTy valTy))
     | none => pure ()
   if lhs.size != rhs.size then
     fail s!"assignment arity {lhs.size} != {rhs.size} at {path}"
