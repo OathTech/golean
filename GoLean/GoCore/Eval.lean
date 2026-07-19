@@ -89,7 +89,7 @@ def intShiftRightResult (left right : GoValue) : Except GoError GoValue := do
   return .int (leftKind.normalize shifted) leftKind
 
 mutual
-  partial def evalExpr (state : ExecState) : Expr → Except GoError EvalResult
+  def evalExpr (state : ExecState) : Expr → Except GoError EvalResult
     | .var id => return (← lookup state id, state)
     | .nil none => return (.nil, state)
     | .nil (some typ) =>
@@ -233,12 +233,7 @@ mutual
         let pair ← evalExpr state ptr
         return (← loadLoc pair.2 (← valueAsLoc pair.1), pair.2)
     | .structLit typ args => do
-        let mut current := state
-        let mut values := #[]
-        for arg in args do
-          let pair ← evalExpr current arg
-          values := values.push pair.1
-          current := pair.2
+        let (values, current) ← evalExprSeq state args.toList
         return (← buildStructValue current typ values, current)
     | .fieldGet recv typeName fieldName => do
         let pair ← evalExpr state recv
@@ -254,12 +249,7 @@ mutual
         let pair ← evalExpr state base
         return (.addr (.field (← valueAsLoc pair.1) typeName fieldName), pair.2)
     | .arrayLit length elem args => do
-        let mut current := state
-        let mut values := #[]
-        for (key, arg) in args do
-          let pair ← evalExpr current arg
-          values := values.push (key, pair.1)
-          current := pair.2
+        let (values, current) ← evalExprKeyedSeq state args.toList
         return (← buildArrayValue current length elem values, current)
     | .defaultValue typ => return (← defaultValue state typ, state)
     | .toInterface _target dynamic operand => do
@@ -381,14 +371,34 @@ mutual
             | other => unsupported s!"cap for non-array/slice value {repr other}"
     | .unsupported feature => unsupported feature
 
-  partial def evalAssigneeLoc (state : ExecState) : Assignee → Except GoError LocResult
+  /-- Evaluate a sequence of expressions left-to-right, threading state (Go
+  evaluation order). Structural on the list so `evalExpr`'s recursion on the
+  element expressions stays visible to the termination checker. -/
+  def evalExprSeq (state : ExecState) : List Expr → Except GoError (Array GoValue × ExecState)
+    | [] => return (#[], state)
+    | arg :: rest => do
+        let pair ← evalExpr state arg
+        let (tailValues, finalState) ← evalExprSeq pair.2 rest
+        return (#[pair.1] ++ tailValues, finalState)
+
+  /-- Like `evalExprSeq`, but each expression is paired with a literal index
+  key (array-literal element positions), threading state left-to-right. -/
+  def evalExprKeyedSeq (state : ExecState) :
+      List (Int × Expr) → Except GoError (Array (Int × GoValue) × ExecState)
+    | [] => return (#[], state)
+    | (key, arg) :: rest => do
+        let pair ← evalExpr state arg
+        let (tailValues, finalState) ← evalExprKeyedSeq pair.2 rest
+        return (#[(key, pair.1)] ++ tailValues, finalState)
+
+  def evalAssigneeLoc (state : ExecState) : Assignee → Except GoError LocResult
     | .var id => return (← lookupLoc state id, state)
     | .addr locExpr => do
         let pair ← evalExpr state locExpr
         return (← valueAsLoc pair.1, pair.2)
     | .unsupported feature => unsupported feature
 
-  partial def evalAssigneeLocs (state : ExecState) (targets : Array Assignee) :
+  def evalAssigneeLocs (state : ExecState) (targets : Array Assignee) :
       Except GoError LocsResult := do
     let mut current := state
     let mut locs := #[]
@@ -398,16 +408,16 @@ mutual
       current := pair.2
     return (locs, current)
 
-  partial def assignLoc (state : ExecState) (loc : Loc) (value : GoValue) :
+  def assignLoc (state : ExecState) (loc : Loc) (value : GoValue) :
       Except GoError ExecState := do
     storeLoc state loc value
 
-  partial def assignAssignee (state : ExecState) (assignee : Assignee) (value : GoValue) :
+  def assignAssignee (state : ExecState) (assignee : Assignee) (value : GoValue) :
       Except GoError ExecState := do
     let pair ← evalAssigneeLoc state assignee
     assignLoc pair.2 pair.1 value
 
-  partial def assignLocs (state : ExecState) (targets : Array Loc)
+  def assignLocs (state : ExecState) (targets : Array Loc)
       (values : Array GoValue) : Except GoError ExecState := do
     if targets.size != values.size then
       stuck s!"expected {targets.size} call result value(s), got {values.size}"
@@ -421,12 +431,12 @@ mutual
       | none => stuck s!"missing call result value {i}"
     return current
 
-  partial def assignAssignees (state : ExecState) (targets : Array Assignee)
+  def assignAssignees (state : ExecState) (targets : Array Assignee)
       (values : Array GoValue) : Except GoError ExecState := do
     let pair ← evalAssigneeLocs state targets
     assignLocs pair.2 pair.1 values
 
-  partial def execAssignMany (state : ExecState) (left : Array Assignee) (right : Array Expr) :
+  def execAssignMany (state : ExecState) (left : Array Assignee) (right : Array Expr) :
       Except GoError ExecState := do
     if left.size != right.size then
       stuck s!"multi-assignment expected {left.size} value(s), got {right.size}"
@@ -439,14 +449,14 @@ mutual
       current := pair.2
     assignLocs current locPair.1 values
 
-  partial def execNewValue (state : ExecState) (target : Assignee) (valueExpr : Expr)
+  def execNewValue (state : ExecState) (target : Assignee) (valueExpr : Expr)
       (typ : Option Ty) : Except GoError ExecState := do
     let targetPair ← evalAssigneeLoc state target
     let valuePair ← evalExpr targetPair.2 valueExpr
     let (loc, current) := valuePair.2.alloc valuePair.1 typ
     assignLoc current targetPair.1 (.addr loc)
 
-  partial def execMakeMap (state : ExecState) (target : Assignee) (_key _value : Ty)
+  def execMakeMap (state : ExecState) (target : Assignee) (_key _value : Ty)
       (initialSpace : Option Expr) : Except GoError ExecState := do
     let targetPair ← evalAssigneeLoc state target
     let mut current := targetPair.2
@@ -462,7 +472,7 @@ mutual
     let afterAlloc := allocated.2
     assignLoc afterAlloc targetPair.1 (.map { base := some base })
 
-  partial def mapEntries (state : ExecState) (map : MapValue) :
+  def mapEntries (state : ExecState) (map : MapValue) :
       Except GoError (Option (Loc × Array (GoValue × GoValue))) := do
     match map.base with
     | none => return none
@@ -471,7 +481,7 @@ mutual
         | .mapData entries => return some (baseLoc, entries)
         | other => stuck s!"expected map data, got {repr other}"
 
-  partial def mapLookupValue (state : ExecState) (map : MapValue) (key : GoValue)
+  def mapLookupValue (state : ExecState) (map : MapValue) (key : GoValue)
       (keyTy valueTy : Ty) : Except GoError (GoValue × Bool) := do
     match ← mapEntries state map with
     | none => return (← defaultValue state valueTy, false)
@@ -483,7 +493,7 @@ mutual
             | none => stuck s!"missing map entry at index {i}"
         | none => return (← defaultValue state valueTy, false)
 
-  partial def execMapAssign (state : ExecState) (baseExpr keyExpr valueExpr : Expr) (keyTy valueTy : Ty) :
+  def execMapAssign (state : ExecState) (baseExpr keyExpr valueExpr : Expr) (keyTy valueTy : Ty) :
       Except GoError ExecState := do
     let basePair ← evalExpr state baseExpr
     let map ← valueAsMap basePair.1
@@ -500,7 +510,7 @@ mutual
           | none => pure (entries.push (key, value))
         storeLoc valuePair.2 baseLoc (.mapData entries)
 
-  partial def execMapLookup (state : ExecState) (target okTarget : Assignee)
+  def execMapLookup (state : ExecState) (target okTarget : Assignee)
       (baseExpr keyExpr : Expr) (keyTy valueTy : Ty) : Except GoError ExecState := do
     let targetPair ← evalAssigneeLoc state target
     let okPair ← evalAssigneeLoc targetPair.2 okTarget
@@ -514,7 +524,7 @@ mutual
     let current ← assignLoc keyPair.2 targetPair.1 value
     assignLoc current okPair.1 (.bool ok)
 
-  partial def execTypeAssert (state : ExecState) (target okTarget : Assignee)
+  def execTypeAssert (state : ExecState) (target okTarget : Assignee)
       (expr : Expr) (targetTy : Ty) : Except GoError ExecState := do
     let targetPair ← evalAssigneeLoc state target
     let okPair ← evalAssigneeLoc targetPair.2 okTarget
@@ -523,7 +533,7 @@ mutual
     let current ← assignLoc valuePair.2 targetPair.1 result.1
     assignLoc current okPair.1 (.bool result.2)
 
-  partial def sliceVisibleValues (state : ExecState) (slice : SliceValue) :
+  def sliceVisibleValues (state : ExecState) (slice : SliceValue) :
       Except GoError (Array GoValue) := do
     validateSlice slice
     let mut values := #[]
@@ -531,7 +541,7 @@ mutual
       values := values.push (← loadLoc state (← sliceIndexLoc slice (Int.ofNat i)))
     return values
 
-  partial def execCopySlice (state : ExecState) (target : Assignee) (dstExpr srcExpr : Expr) :
+  def execCopySlice (state : ExecState) (target : Assignee) (dstExpr srcExpr : Expr) :
       Except GoError ExecState := do
     let targetPair ← evalAssigneeLoc state target
     let dstPair ← evalExpr targetPair.2 dstExpr
@@ -551,7 +561,7 @@ mutual
       i := i + 1
     assignLoc current targetPair.1 (.int (Int.ofNat count))
 
-  partial def appendGrowthCap (oldCap newLen : Nat) : Nat :=
+  def appendGrowthCap (oldCap newLen : Nat) : Nat :=
     if newLen <= oldCap then
       oldCap
     else if oldCap == 0 then
@@ -568,7 +578,7 @@ mutual
           loop (cap + (cap + 3 * 256) / 4)
       loop oldCap
 
-  partial def buildAppendBackingValue (state : ExecState) (elem : Ty)
+  def buildAppendBackingValue (state : ExecState) (elem : Ty)
       (oldValues elemValues : Array GoValue) (newCap : Nat) : Except GoError GoValue := do
     let mut values := #[]
     for value in oldValues ++ elemValues do
@@ -579,7 +589,7 @@ mutual
       values := values.push (← defaultValue state elem)
     return .array values
 
-  partial def execAppendSlice (state : ExecState) (target : Assignee) (elem : Ty)
+  def execAppendSlice (state : ExecState) (target : Assignee) (elem : Ty)
       (sliceExpr elemsExpr : Expr) : Except GoError ExecState := do
     let targetPair ← evalAssigneeLoc state target
     let slicePair ← evalExpr targetPair.2 sliceExpr
@@ -613,7 +623,7 @@ mutual
       let (base, current) := afterChoice.alloc backing (some (.array newCap elem))
       assignLoc current targetPair.1 (.slice { base := some base, offset := 0, len := newLen, cap := newCap })
 
-  partial def execMakeSlice (state : ExecState) (target : Assignee) (elem : Ty)
+  def execMakeSlice (state : ExecState) (target : Assignee) (elem : Ty)
       (lenExpr : Expr) (capExpr : Option Expr) : Except GoError ExecState := do
     let targetPair ← evalAssigneeLoc state target
     let lenPair ← evalExpr targetPair.2 lenExpr
@@ -636,7 +646,7 @@ mutual
     let afterAlloc := allocated.2
     assignLoc afterAlloc targetPair.1 (.slice { base := some base, offset := 0, len, cap })
 
-  partial def dynamicDispatch? (state : ExecState) (func : Func) (argValues : Array GoValue) :
+  def dynamicDispatch? (state : ExecState) (func : Func) (argValues : Array GoValue) :
       Except GoError (Option (Func × Array GoValue)) := do
     match methodInfoByFuncId? state func.id with
     | none => return none
@@ -655,7 +665,11 @@ mutual
                     return some (targetFunc, argValues.set! 0 inner)
                 | none => stuck s!"dynamic type {dynamicName} has no method {method.name}"
             | _ => return none
+end
 
+-- Fuel'd upper cluster: function calls and loops recurse on `fuel` (the lower
+-- structural cluster above is already total and never calls back into this one).
+mutual
   partial def execFunctionWithValues (fuel : Nat) (state : ExecState) (targets : Array Loc)
       (func : Func) (argValues : Array GoValue) : Except GoError ExecState := do
     if fuel == 0 then
@@ -719,13 +733,19 @@ mutual
     return current
 
   partial def execStmts (fuel : Nat) (state : ExecState) (stmts : Array Stmt) :
-      Except GoError ExecOutcome := do
-    let mut current := state
-    for stmt in stmts do
-      match ← execStmt fuel current stmt with
-      | .normal nextState => current := nextState
-      | outcome => return outcome
-    return .normal current
+      Except GoError ExecOutcome :=
+    execStmtList fuel state stmts.toList
+
+  /-- Execute statements in order, short-circuiting on the first non-normal
+  outcome. Structural on the list so `execStmt`'s recursion stays visible to the
+  termination checker. -/
+  partial def execStmtList (fuel : Nat) (state : ExecState) :
+      List Stmt → Except GoError ExecOutcome
+    | [] => return .normal state
+    | stmt :: rest => do
+        match ← execStmt fuel state stmt with
+        | .normal nextState => execStmtList fuel nextState rest
+        | outcome => return outcome
 
   partial def execStmt (fuel : Nat) (state : ExecState) : Stmt → Except GoError ExecOutcome
     | .seqn stmts => execStmts fuel state stmts
