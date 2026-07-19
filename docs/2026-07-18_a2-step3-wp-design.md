@@ -72,13 +72,23 @@ Concrete facts established before 3b's full implementation, to start it efficien
   **assume** a `GoCoreGS` class (extends `InvGS_gen` + `genHeapGS Addr HeapCell
   GF GoHeapF`), exactly as HeapLang's laws assume `[HeapLangGS]`; no functor
   construction (that is adequacy, 3b-final).
-- **Vendored-Std friction (the iris-lean-maturity issue).** `Std.LawfulFiniteMap`
-  is iris-lean's **own** vendored `Std` (`Iris/Std/PartialMap.lean`), not Lean's
-  batteries `Std`. The `ExtTreeMap`-satisfies-`LawfulFiniteMap` instance comes via
-  the imports HeapLang uses: `Std.Data.ExtTreeMap`, `Iris.Std.FromMathlib`,
-  `Iris.Std.GenSetsInstances`. Resolve the exact instance path there first (a
-  scratch `example : Std.LawfulFiniteMap (fun V => Std.ExtTreeMap GoLean.Addr V
-  compare) GoLean.Addr := inferInstance` with those imports).
+- **RESOLVED — the path is confirmed (2026-07-19 probe).** The "vendored-Std
+  friction" was a name-resolution mistake, not a missing instance. The class is
+  **`Iris.Std.LawfulFiniteMap`** (iris-lean's own `Iris.Std`, seen as `Std`
+  inside iris via `open Iris`), and it **infers out of the box** for a
+  `Nat`-keyed map:
+  ```
+  import Std.Data.ExtTreeMap Iris.Std.PartialMap Iris.Std.FromMathlib
+         Iris.Std.GenSetsInstances Iris.BI.Lib.GenHeap
+  example : Iris.Std.LawfulFiniteMap (fun V => Std.ExtTreeMap Nat V compare) Nat
+      := inferInstance   -- ✓
+  ```
+  So **key gen_heap by `Nat`** (the `addr.id`), not `Addr`/`Loc` — `Nat` already
+  has `TransCmp`/`LawfulEqCmp`/`DecidableEq`, which are exactly what
+  `GenSetsInstances` + gen_heap need. `GoHeapF := fun V => Std.ExtTreeMap Nat V
+  compare`; `convert : Heap → ExtTreeMap Nat HeapCell` folds `.base ⟨n⟩ ↦ cell`.
+  No unproven Iris capability remains — the whole of 3b now has a working
+  template (spike for `wp_store`/adequacy, HeapLang for the camera).
 - **`GoHeapF := fun V => Std.ExtTreeMap GoLean.Addr V compare`**; `StateInterp σ
   := genHeapInterp (convert σ.heap)` with `convert : List (Loc × HeapCell) →
   ExtTreeMap Addr HeapCell` folding `.base addr ↦ cell` (ignore non-`.base`,
