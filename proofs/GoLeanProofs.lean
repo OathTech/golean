@@ -1,6 +1,12 @@
 import Iris.ProgramLogic.WeakestPre
 import Iris.ProgramLogic.Lifting
+import Iris.ProgramLogic.Adequacy
 import Iris.ProofMode
+import Iris.BI.Lib.GenHeap
+import Std.Data.ExtTreeMap
+import Iris.Std.PartialMap
+import Iris.Std.FromMathlib
+import Iris.Std.GenSetsInstances
 import GoLean.GoCore.Rel
 
 /-!
@@ -52,20 +58,39 @@ instance : Language Config ExecState Unit Unit where
 
 instance : Inhabited ExecState := ⟨{}⟩
 
-/-! ## Step 3a — a real WP law over GoCore's `Step` (pure control, no gen_heap)
+/-! ## Step 3b — gen_heap over GoCore's real heap
 
-Assumes the invariant+credit cameras `[InvGS_gen hlc GF]` (as HeapLang's WP laws
-assume `[HeapLangGS]`), a trivial state interpretation (step 3b replaces it with
-gen_heap over `ExecState.heap`), and derives `IrisGS_gen`. Then proves a WP rule
-for `seqn` — a pure deterministic control step — validating iris-lean's WP
-machinery on the real relation. -/
+Wire iris-lean's gen_heap to GoCore's actual heap, keyed by the base address
+`Nat` (heap cells live only at `.base ⟨n⟩` locs; `Nat` has the lawful compare
+`ExtTreeMap`/gen_heap require, sidestepping a compare for the recursive `Loc`).
+This gives the `↦` connective over GoCore's heap and the `StateInterp`/`IrisGS`
+that WP laws — pure (`wp_seqn`) and heap-touching (`wp_assign`) — run against. -/
 
-section PureWP
-variable {GF : BundledGFunctors} {hlc : HasLC} [InvGS_gen hlc GF]
+/-- gen_heap's finite-map functor, keyed by the base-address `Nat`. -/
+abbrev GoHeapF : Type → Type := fun V => Std.ExtTreeMap Nat V compare
 
-/-- Trivial state interpretation (no heap reasoning yet). `Obs = Unit`. -/
+/-- Project GoCore's association-list heap into gen_heap's finite map, keyed by
+the base address. `Heap.set` keeps keys unique, so a left fold is faithful. -/
+def heapToMap (h : Heap) : GoHeapF HeapCell :=
+  h.foldl (fun m (loc, cell) =>
+    match loc with
+    | .base a => m.insert a.id cell
+    | _ => m) ∅
+
+/-- The GoCore ghost state: invariant+credit cameras plus gen_heap over the
+base-address heap. WP laws *assume* it, exactly as HeapLang's laws assume
+`[HeapLangGS]`; constructing it is adequacy's job. -/
+class GoCoreGS (hlc : outParam HasLC) (GF : BundledGFunctors) extends
+    InvGS_gen hlc GF where
+  heap : genHeapGS Nat HeapCell GF GoHeapF
+attribute [reducible, instance] GoCoreGS.heap
+
+section HeapWP
+variable {GF : BundledGFunctors} {hlc : HasLC} [GoCoreGS hlc GF]
+
+/-- State interpretation: gen_heap over the projected heap. -/
 instance : StateInterp ExecState Unit GF where
-  stateInterp _ _ _ _ := iprop(True)
+  stateInterp σ _ _ _ := genHeapInterp (GF := GF) (H := GoHeapF) (heapToMap σ.heap)
 
 instance : IrisGS_gen hlc Config GF where
   numLatersPerStep _ := 0
@@ -75,8 +100,9 @@ instance : IrisGS_gen hlc Config GF where
 variable {s : Stuckness} {E : CoPset} {Φ : Unit → IProp GF}
 
 /-- `seqn` is a pure, deterministic control step: `.exec (.seqn ss) k` reduces
-only to `.next (.seq ss.toList k)` with the state unchanged. This is a genuine
-weakest-precondition law over GoCore's actual `Step` relation. -/
+only to `.next (.seq ss.toList k)` with the state unchanged. A genuine
+weakest-precondition law over GoCore's actual `Step` relation (holds under the
+real gen_heap state interpretation, since the step is pure). -/
 theorem wp_seqn {ss k} :
     (|={E}[E]▷=> £ 1 -∗ WP (Config.next (.seq ss.toList k)) @ s ; E {{ Φ }}) ⊢
       WP (Config.exec (.seqn ss) k) @ s ; E {{ Φ }} := by
@@ -94,6 +120,6 @@ theorem wp_seqn {ss k} :
       | step st => cases st; exact ⟨rfl, rfl, rfl, rfl⟩))
   iexact H
 
-end PureWP
+end HeapWP
 
 end GoLean.Iris
