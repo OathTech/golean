@@ -55,11 +55,29 @@ GoCore IR ──[S2 correspondence]──▶ Rel.Step ──[S3 relation]──�
     PASS↔FAIL flip or stage change fails. *Strengthen:* run it **in the gate**,
     not ad hoc, and carry the whole report (ACL2Lean §1 golden full-report diff,
     with a `.actual` for re-baselining).
-  - [ ] **Expectation-class ratchet** (ACL2Lean §6): tag each case `match` /
-    `unsupported` / `known-bug`. `unsupported` **fails if the tool now produces a
-    value** ("unexpectedly better" fails until reclassified) — this is what stops
-    silent drift *in either direction* and would have surfaced F1's write path
-    the moment it started/stopped working.
+  - [x] **Expectation-class ratchet — already provided, now explicit.** GoLean's
+    expectation class is *emergent*, not a per-case label: the **baseline**
+    (`baselines/native-full.tsv`) records each case's result+stage (the
+    expectation), and **`coverage-baseline-diff`** (in `scripts/ci`) fails on
+    *any* flip — including an `frontend-export`/`FAIL` case that starts producing
+    a value ("unexpectedly better" is drift). Re-pinning is a deliberate,
+    explained commit (CLAUDE.md), so drift can't be laundered. The **class** of a
+    non-pass is then: `frontend-export` = unsupported (coverage gap);
+    `lean-observation`/`differential` **in a BUG's `Cases`** = known-bug;
+    otherwise = **unexplained** (the 85, surfaced by `check-bugs`). *Deeper
+    refinement (tracked):* explicit per-case `known-bug:BUG-N` labels would tie a
+    red to its bug in the case itself (needs a harness "tool-expectation"
+    dimension — today only the Go-oracle status exists).
+  - [x] **Feature-coverage cross-check** (done, `scripts/check-coverage` in
+    `scripts/ci`): every canonical `tags.tsv` tag is exercised (across exec +
+    negative lanes) — a **dead tag** (declared, never tested) hard-fails; a tag
+    used only by failing cases is a **warning** (unimplemented, or wholesale
+    broken — currently 33, all legitimately-unsupported features); `nondet` is a
+    documented reserved exception. This is the "green ⇒ covered" guard at the
+    vocabulary level. *Limit (tracked):* the tag vocabulary is coarse
+    (`fields`+`assignment` doesn't separate field-*read* from field-*write*), so
+    it does not yet catch the F1 *sub-feature* class by coverage — finer
+    write-vs-read tags would. F1 itself is caught via `BUGS.md` instead.
   - [ ] **Three-layer sufficiency** for each feature (isolated case + edge
     enumeration + integration/fuzz), per `docs/native-frontend-goal.md`, so
     `green ⇒ target covered`, not `green ⇒ happy path only`.

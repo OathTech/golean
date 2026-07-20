@@ -1,0 +1,109 @@
+#!/usr/bin/env python3
+"""Feature-coverage guard (S0/S1 omission resistance).
+
+Cross-checks the canonical feature vocabulary (Corpus/coverage/tags.tsv) against
+what the differential corpus actually *exercises*, using the recorded baseline
+(baselines/native-full.tsv) for pass/fail. Complements the manifest's existing
+"every used tag is canonical" validation with the reverse + a pass check:
+
+  FAIL  a canonical tag exercised by NO case            (declared, never tested)
+  WARN  a canonical tag with cases but ZERO passing     (feature claimed but
+        nothing green exercises it — wholesale-broken, or legitimately
+        unsupported; review / pin to a BUG)
+
+So "green implies covered" gets closer to true: a feature can't sit in the
+vocabulary with no living, passing witness without being surfaced.
+
+Usage: scripts/check-coverage [--strict]
+  --strict  treat the all-failing WARN category as a failure too.
+Exit 0 = ok (dead tags outside the reserved allowlist are always fatal).
+Exit 1 = a dead tag (or, under --strict, an all-failing tag).
+"""
+import subprocess, sys, os
+
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+os.chdir(ROOT)
+strict = "--strict" in sys.argv[1:]
+
+TAGS = "Corpus/coverage/tags.tsv"
+BASE = "baselines/native-full.tsv"
+
+# Canonical tags that legitimately have no default-lane case. Each needs a reason.
+RESERVED = {
+    # nondet cases require GOLEAN_ALLOW_NONDET=1 + a relation-style oracle
+    # (map-iteration order is not differentially testable against `go run`), so
+    # they never appear in the default manifest. Reserved, not dead.
+    "nondet",
+}
+
+# Canonical vocabulary.
+with open(TAGS) as f:
+    vocab = [l.strip() for l in f if l.strip() and not l.startswith("#")]
+
+# Baseline: id -> result.
+result = {}
+with open(BASE) as f:
+    for l in f:
+        if l.startswith("#"):
+            continue
+        p = l.rstrip("\n").split("\t")
+        if len(p) >= 2 and p[0] != "result":
+            result[p[1]] = p[0]
+
+# Manifest: id -> features (regenerated, ground truth).
+man = subprocess.run(["./scripts/coverage-manifest"], capture_output=True, text=True)
+if man.returncode != 0:
+    sys.stderr.write("check-coverage: coverage-manifest failed:\n" + man.stderr)
+    sys.exit(2)
+
+cases = {t: 0 for t in vocab}    # EXEC-lane case count (has pass/fail)
+passes = {t: 0 for t in vocab}   # EXEC-lane passing count
+used = set()                     # exercised in EITHER lane
+for l in man.stdout.splitlines():
+    p = l.split("\t")
+    if len(p) < 6:
+        continue
+    cid, feats = p[0], p[5]
+    for t in feats.split(","):
+        used.add(t)
+        if t in cases:
+            cases[t] += 1
+            if result.get(cid) == "PASS":
+                passes[t] += 1
+
+# Negative-compile lane: case.tsv (singular), features in column 2. These cases
+# are compile-rejection witnesses (no exec pass/fail), but they DO exercise tags.
+import glob
+for cf in glob.glob("Corpus/coverage/negative/**/case.tsv", recursive=True):
+    with open(cf) as f:
+        for l in f:
+            if l.startswith("#"):
+                continue
+            cols = l.rstrip("\n").split("\t")
+            if len(cols) >= 2:
+                for t in cols[1].split(","):
+                    used.add(t)
+
+# DEAD = canonical tag exercised in NEITHER lane and not reserved. ALL-FAILING =
+# used in the exec lane but with zero passing baseline cases.
+dead = sorted(t for t in vocab if t not in used and t not in RESERVED)
+reserved_unused = sorted(t for t in RESERVED if t not in used)
+allfail = sorted(t for t in vocab if cases[t] > 0 and passes[t] == 0)
+
+if dead:
+    print(f"FAIL: {len(dead)} canonical tag(s) exercised by NO case (declared, never tested):")
+    print("  " + ", ".join(dead))
+    print("  → add a case exercising each, remove it from tags.tsv, or (if legitimately")
+    print("    untestable in the default lane) add it to RESERVED in scripts/check-coverage.")
+if allfail:
+    print(f"WARN: {len(allfail)} canonical tag(s) with cases but ZERO passing "
+          f"(unimplemented feature, or a wholesale-broken one — review / pin to a BUG):")
+    print("  " + ", ".join(allfail))
+if reserved_unused:
+    print(f"note: {len(reserved_unused)} reserved tag(s) unused by design: {', '.join(reserved_unused)}")
+
+bad = bool(dead) or (strict and bool(allfail))
+if not dead:
+    print(f"check-coverage: ok ({len(vocab)} canonical tags; no dead tags"
+          + (f"; {len(allfail)} all-failing (warn)" if allfail else "") + ")")
+sys.exit(1 if bad else 0)

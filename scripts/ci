@@ -47,9 +47,14 @@ else
   ok "escape-hatch preflight"
 fi
 
-# 1b. Bug-index cross-check (static, no build): BUGS.md <-> corpus tags.
+# 1b. Bug-index cross-check (static, no build): BUGS.md <-> baseline.
 step "fidelity-bug index cross-check (scripts/check-bugs.sh)"
-if bugout="$(./scripts/check-bugs.sh 2>&1)"; then echo "  $bugout"; ok "bug-index cross-check"; else echo "$bugout"; bad "bug-index cross-check"; fi
+if bugout="$(./scripts/check-bugs.sh 2>&1)"; then echo "$bugout" | sed 's/^/  /'; ok "bug-index cross-check"; else echo "$bugout"; bad "bug-index cross-check"; fi
+
+# 1c. Feature-coverage cross-check: every canonical tag exercised (no dead tags);
+#     all-failing tags surfaced. Manifest generation, no Lean build.
+step "feature-coverage cross-check (scripts/check-coverage)"
+if covout="$(./scripts/check-coverage 2>&1)"; then echo "$covout" | tail -2 | sed 's/^/  /'; ok "feature-coverage (no dead tags)"; else echo "$covout"; bad "feature-coverage (dead tag — see above)"; fi
 
 # 2. Core build (the frontend / interpreter / relation).
 step "core build (lake build)"
