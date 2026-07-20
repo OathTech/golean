@@ -3,6 +3,19 @@
 See `docs/roadmap.md` for the phased project roadmap. This file tracks tactical
 backlog items.
 
+## Epistemic hardening / pipeline error-resistance (2026-07-19, priority #0)
+
+Plan of record: `docs/2026-07-19_pipeline-error-resistance.md` (stage-by-stage
+gates vs omission+commission; adapted from the ACL2Lean playbook). Goal: the
+infra guides an error-prone agent to correctness — build-enforced gates over
+discipline. **Done:** `proofs/Audit.lean` in-build axiom+non-vacuity gate;
+`scripts/ci` one-command gate; `docs/BUGS.md` + `scripts/check-bugs.sh`
+baseline-backed cross-check. **Next (priority order in the doc):** item 3
+differential expectation-class ratchet + S0 feature↔case manifest; item 4
+end-to-end adequacy witness + close `hstore`; item 5 Eval big-step totalization.
+**Ratchet:** 85 baseline fidelity failures not yet explained by a BUG entry —
+triage into `docs/BUGS.md` over time (`scripts/check-bugs.sh` warns).
+
 ## Directional audit follow-ups (2026-07-19)
 
 Full findings + dispositions: `docs/2026-07-19_directional-audit-findings.md`.
