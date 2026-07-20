@@ -63,11 +63,15 @@ GoCore IR ──[S2 correspondence]──▶ Rel.Step ──[S3 relation]──�
   - [ ] **Three-layer sufficiency** for each feature (isolated case + edge
     enumeration + integration/fuzz), per `docs/native-frontend-goal.md`, so
     `green ⇒ target covered`, not `green ⇒ happy path only`.
-  - [ ] **`docs/BUGS.md` ↔ tagged-cases bidirectional cross-check** (ACL2Lean §5
-    `check-bugs.sh`): every known semantic gap (F1, the 80 `lean-observation`
-    fails triaged) is a canonical entry; a `bug:BUG-N` tag must name an open bug,
-    and every open differential-pinned bug must have a live tag. Known limitations
-    can't rot in prose or be silently dropped.
+  - [x] **`docs/BUGS.md` ↔ baseline cross-check** (done, `scripts/check-bugs.sh`
+    in `scripts/ci`): each open differential-pinned bug's `- Cases:` must exist in
+    the baseline and be `FAIL` (a PASSing pinned case = fixed-not-closed →
+    fails); and it **warns** how many baseline fidelity failures
+    (lean-observation/differential) are not yet explained by a bug — currently
+    **85** (F1's 3 explained). Chose baseline-backed pinning over corpus feature
+    tags because the corpus has a *controlled* tag vocabulary (`tags.tsv`) that
+    (rightly) rejects `bug:*`; the baseline check is also stronger (verifies the
+    case actually fails). *Ratchet:* triage those 85 into BUG entries over time.
 
 ### S2 — Correspondence (interpreter ⇄ relation)
 - **Commission:** the correspondence *statement* is false. **Omission:**

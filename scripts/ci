@@ -47,6 +47,10 @@ else
   ok "escape-hatch preflight"
 fi
 
+# 1b. Bug-index cross-check (static, no build): BUGS.md <-> corpus tags.
+step "fidelity-bug index cross-check (scripts/check-bugs.sh)"
+if bugout="$(./scripts/check-bugs.sh 2>&1)"; then echo "  $bugout"; ok "bug-index cross-check"; else echo "$bugout"; bad "bug-index cross-check"; fi
+
 # 2. Core build (the frontend / interpreter / relation).
 step "core build (lake build)"
 if lake build 2>&1 | tail -3; then ok "core build"; else bad "core build"; fi
