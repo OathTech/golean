@@ -128,10 +128,10 @@ GoCore IR ──[S2 correspondence]──▶ Rel.Step ──[S3 relation]──�
 
 - [x] **`proofs/Audit.lean`** — in-build axiom + non-vacuity gate (a default
   target; a weakened claim fails `lake build`). Three-state `✓ / ◌ / ✗` ledger.
-- [ ] **One `scripts/ci` gate** bundling every check (ACL2Lean `just ci`):
-  core build, proofs build (⇒ Audit), `gocore-eval-tests`, escape-hatch grep,
-  baseline diff, BUGS cross-check, manifest cross-check. One command an agent
-  runs before claiming done; CI runs the same.
+- [x] **One `scripts/ci` gate** (done) bundling: escape-hatch preflight, core
+  build, proofs build (⇒ Audit), `gocore-eval-tests`, baseline diff of the last
+  run (`--diff` re-runs the corpus). One command an agent runs before claiming
+  done. *Still to add as they land:* BUGS cross-check, feature↔case manifest.
 - [ ] **Escape-hatch source gate** (`scripts/proof-audit`): grep the tree for
   `sorry`/`admit`/`native_decide`/`axiom`/new `partial` in proof-facing files;
   fail if any appears where it's disallowed. (Complements the in-build axiom

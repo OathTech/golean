@@ -12,12 +12,18 @@ exist because they let us do that without accumulating debt, not as ceremony.
 
 ## The validation gate (always, before any commit that touches runtime code)
 
+0. **Run `scripts/ci`** — the one-command gate that bundles the steps below
+   (escape-hatch preflight, core build, proofs build incl. the in-build `Audit`
+   axiom/non-vacuity gate, eval tests, baseline diff of the last run). It fails
+   loud and local. For runtime changes add the differential (step 2 / `--diff`).
+   The individual steps, when you need them directly:
 1. `lake build` passes.
 2. Run the focused differential slice for the touched area
    (`scripts/coverage run <ids...>` or `scripts/diff-one <id>`, native
    frontend), plus `lake exe gocore-eval-tests`.
-3. Diff the failing case-id set against the last recorded baseline. **Same set
-   = no regression.** Any new red is investigated before committing.
+3. Diff the failing case-id set against the last recorded baseline
+   (`scripts/coverage-baseline-diff`). **Same set = no regression.** Any new red
+   is investigated before committing.
 
 A green build is not evidence of correctness. The cheap, decisive signal is the
 failing-set diff — it is what kept 13 consecutive cleanup slices at zero

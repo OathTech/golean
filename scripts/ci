@@ -1,0 +1,87 @@
+#!/usr/bin/env bash
+# The always-run gate. One command an agent runs before claiming work done; CI
+# runs the same. Each step is a standing guardrail (see
+# docs/2026-07-19_pipeline-error-resistance.md). Runs ALL steps even if one
+# fails, then reports a summary and exits non-zero on any failure.
+#
+#   scripts/ci          fast gate: escape-hatch preflight, builds (incl. the
+#                       in-build axiom/non-vacuity Audit gate), eval tests, and
+#                       a baseline diff of the LAST recorded differential run.
+#   scripts/ci --diff   also re-runs the full native differential corpus first
+#                       (slow: `go run` per case), then diffs it. Do this when
+#                       you touched runtime code (frontend / interpreter / Ops).
+#
+# NOTE: the differential is the FOUNDATION of the trust chain. `scripts/ci`
+# (no flag) only checks that the LAST recorded run still matches the baseline;
+# it does not re-run Go. For runtime changes, use --diff (or run
+# scripts/diff-one <ids> for a focused slice) so the baseline reflects reality.
+set -uo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+cd "$ROOT"
+
+RUN_DIFF=0
+[ "${1:-}" = "--diff" ] && RUN_DIFF=1
+
+fail=0
+declare -a RESULTS
+step() { printf '\n\033[1m── %s\033[0m\n' "$1"; }
+ok()   { RESULTS+=("  ok   $1"); }
+bad()  { RESULTS+=("  FAIL $1"); fail=1; }
+
+# 1. Escape-hatch preflight (cheap, no build). The authoritative axiom check is
+#    the in-build Audit gate (step 3); this catches obvious holes at edit time.
+step "escape-hatch preflight (sorry / admit / native_decide / axiom in proof-facing code)"
+# Match the tokens as CODE, then drop prose: line-comments (`--`), docstring
+# lines, and backtick-quoted mentions (`sorry`/`native_decide`/…). The in-build
+# Audit gate (step 3) is authoritative; this is the cheap early-warning.
+hatch="$(grep -rnE '\bsorry\b|\badmit\b|native_decide|^[[:space:]]*axiom ' \
+           GoLean proofs/GoLeanProofs.lean proofs/Audit.lean proofs/SliceSpike.lean 2>/dev/null \
+         | grep -vE '(^|[^[:alnum:]])--|/-|`(sorry|admit|native_decide|axiom)`|no sorry|without .*sorry|axioms:' \
+         || true)"
+if [ -n "$hatch" ]; then
+  echo "$hatch"
+  bad "escape-hatch preflight — review the lines above (the in-build Audit gate is authoritative)"
+else
+  echo "  none found"
+  ok "escape-hatch preflight"
+fi
+
+# 2. Core build (the frontend / interpreter / relation).
+step "core build (lake build)"
+if lake build 2>&1 | tail -3; then ok "core build"; else bad "core build"; fi
+
+# 3. Proofs build — this runs proofs/Audit.lean: the axiom allowlist
+#    (#guard_msgs #print axioms) + non-vacuity witness references. A weakened
+#    proof-layer claim FAILS HERE.
+step "proofs build incl. Audit gate (axiom allowlist + non-vacuity)"
+if ( cd proofs && lake build 2>&1 | tail -4 ); then ok "proofs + Audit gate"; else bad "proofs + Audit gate"; fi
+
+# 4. Interpreter unit tests.
+step "interpreter eval tests (gocore-eval-tests)"
+evout="$(lake exe gocore-eval-tests 2>&1)"; evrc=$?
+evok="$(printf '%s\n' "$evout" | grep -c '^ok:')"
+evbad="$(printf '%s\n' "$evout" | grep -icE '^(not ok|fail)')"
+echo "  ok:$evok  fail:$evbad  exit:$evrc"
+if [ "$evrc" -eq 0 ] && [ "$evbad" -eq 0 ]; then ok "eval tests ($evok ok)"; else bad "eval tests (exit $evrc, $evbad bad)"; fi
+
+# 5. Differential baseline diff (the ratchet: PASS<->FAIL flips / stage changes).
+if [ "$RUN_DIFF" -eq 1 ]; then
+  step "re-run full native differential corpus (--diff)"
+  if ./scripts/diff-smoke 2>&1 | tail -2; then ok "differential run"; else bad "differential run"; fi
+fi
+step "differential baseline diff (scripts/coverage-baseline-diff)"
+if [ -f artifacts/coverage/latest.tsv ]; then
+  if ./scripts/coverage-baseline-diff; then ok "baseline diff (no regression)"; else bad "baseline diff (DRIFT — see above)"; fi
+else
+  echo "  no artifacts/coverage/latest.tsv — run scripts/ci --diff or scripts/diff-one first"
+  RESULTS+=("  skip differential baseline diff (no recorded run)")
+fi
+
+# Summary
+printf '\n\033[1m══ scripts/ci summary ══\033[0m\n'
+printf '%s\n' "${RESULTS[@]}"
+if [ "$fail" -ne 0 ]; then
+  printf '\n\033[1mRESULT: FAIL\033[0m\n'; exit 1
+fi
+printf '\n\033[1mRESULT: PASS\033[0m\n'
