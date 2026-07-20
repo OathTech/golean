@@ -1,5 +1,5 @@
 name = "golean-proofs"
-defaultTargets = ["GoLeanProofs"]
+defaultTargets = ["GoLeanProofs", "Audit"]
 
 # The Iris proof layer, kept a SEPARATE Lake package inside the golean repo so
 # `lake build` at the repo root never depends on or fetches iris-lean; only
@@ -22,3 +22,8 @@ subDir = "Iris"
 
 [[lean_lib]]
 name = "GoLeanProofs"
+
+# In-build epistemic gate: axiom-allowlist (#guard_msgs #print axioms) + non-vacuity
+# witness references. A weakening of the proof layer's claims fails THIS build.
+[[lean_lib]]
+name = "Audit"
