@@ -3,6 +3,35 @@
 See `docs/roadmap.md` for the phased project roadmap. This file tracks tactical
 backlog items.
 
+## Directional audit follow-ups (2026-07-19)
+
+Full findings + dispositions: `docs/2026-07-19_directional-audit-findings.md`.
+Verdict: on-track-with-corrections. Fixed same-day: `wp_deref_store` vacuity /
+docstring (+ `wp_deref_store_ref` witness), non-vacuity gate codified in
+CLAUDE.md, stale Correspondence header. Open items:
+
+- [ ] **F1 (major, was HIDDEN) — struct-field / array-element WRITES are stuck.**
+  `b.n = 7`, `a[1] = …`, `p.n = …` fail closed at `lean-observation` ("expected
+  address value, got struct"). Frontend lowering bug: `tools/nativefrontend/emit.go`
+  `fieldBase`(~736) and `emitAddressOf` SelectorExpr(~814) emit a value-read base
+  where the address path needs `.ref`/`.fieldAddr`. GoCore has the primitives.
+  Fix the lowering when structs enter the proof frontier; meanwhile fix the
+  `docs/native-frontend-goal.md` overclaim that "field/index access" works (reads
+  only). On the north-star path (raft mutates struct fields pervasively).
+- [ ] **F4 (major, strategic) — concurrency design note BEFORE fork machinery.**
+  Decide whether multi-node quorum safety needs shared-heap concurrent separation
+  logic (goroutine model, what env-in-control enables) or an N-node
+  interleaving/message model. The "env-in-control is the concurrency prerequisite"
+  rationale targets intra-node goroutines, not the multi-node concurrency safety
+  is about — don't conflate them.
+- [ ] **F5 (major) — size the target theorem.** Draft a skeletal multi-node
+  quorum-safety target (state space, message/failure model, invariant statement)
+  so the A→B→C widening ladder aims at something explicit, not just "raft".
+- [ ] **F3 (leverage) — prioritize Eval big-step totalization** over more WP
+  lemmas: it converts `interpreterSound/PanicStatement` from Props into theorems
+  and joins the two currently-disconnected islands (interpreter ⇄ Iris proofs).
+  Ops is already total, so the gap is Eval's ~9 big-step `partial def`s only.
+
 ## Current Priority Sequence
 
 **Authority: `docs/2026-07-18_master-plan.md` §8** (the reordered sequence, after
