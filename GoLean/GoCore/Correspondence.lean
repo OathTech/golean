@@ -8,17 +8,19 @@ States the intended relationship between the executable interpreter
 (`GoLean.GoCore.Eval`) and the relational skeleton (`GoLean.GoCore.Rel`),
 and proves small instances that exercise the relational rules.
 
-Honest status (per the 2026-07 design review): these statements are not
-merely "deferred" — as written they are **not yet provable**. Both the
-interpreter (`Eval`) and the shared substrate (`Ops`: `loadLoc`, `valueEq`,
-`normalizeValueForTy`, …) are `partial def`, which in Lean 4 emit opaque
-constants with no equational lemmas, so the `execStmt … = .ok …` hypothesis
-below cannot be inverted and the relation's own rule premises (which call
-those partials) cannot be unfolded. Making the substrate and interpreter
-total (structural where possible; a fuel or type-environment-acyclicity
-argument for the type-directed ops) is the prerequisite that turns these
-`Prop`s into provable theorems. That totality work is the current top
-priority; until it lands, treat the correspondence as blocked, not deferred.
+Honest status (per the 2026-07 design review; updated 2026-07-19): these
+statements are not merely "deferred" — as written they are **not yet
+provable**. The shared substrate (`Ops`: `loadLoc`, `valueEq`,
+`normalizeValueForTy`, …) is now **fully total** (0 `partial def`), so the
+relation's own rule premises unfold. The remaining blocker is narrower: the
+interpreter's big-step cluster in `Eval` (`execStmt` and its ~9 sibling
+`partial def`s) is still `partial`, emitting opaque constants with no
+equational lemmas, so the `execStmt … = .ok …` hypothesis below cannot be
+inverted. Totalizing that big-step cluster (structural/fuel) is the single
+remaining prerequisite that turns these `Prop`s into provable theorems and
+connects the differential-validated interpreter to the Iris-proven relation.
+Until it lands, treat the correspondence as blocked, not deferred — the two
+sides are, as of today, formally disconnected.
 -/
 
 namespace GoLean.GoCore.Correspondence

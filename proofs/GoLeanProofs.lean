@@ -335,24 +335,35 @@ theorem wp_assign {a : Addr} {oldcell newcell : HeapCell} {v : GoValue}
         simp at hs
   exact wp_store_step hred
 
-/-- **The pointer store law `*p = e` — a usable Hoare law.** This is the store
-form the slice actually needs (`inc`'s body). The assignee is `.addr aexpr` (the
-address to store at is the *value* of `aexpr` — e.g. `aexpr = .var "p"` for
-`*p`), resolved through `AssigneeR.addr`. Under CEK that resolution is again a
-fixed-`env` fact — `aexpr` evaluates against the control `env`, not the state —
-so, exactly as for `wp_assign`, the law needs no camera and no unconstrained
-`∀σ`.
+/-- **A store-through-address law `*aexpr = e`.** The assignee is `.addr aexpr`
+(store at the address that `aexpr` evaluates to), resolved through
+`AssigneeR.addr`; shares the gen_heap core (`wp_store_step`) with `wp_assign` —
+only the assignee resolution differs.
 
-Premises (all dischargeable for a concrete `*p = e`; none has the old locals
-problem):
-- `hres`/`hres_det` — `aexpr` evaluates only to the target address `.addr (.base
-  a)`, state unchanged. Determinism additionally rules out the `addrNil`/`addr`
-  panic steps (a nil or panicking address expression) during inversion.
+**Scope — read this before using it** (corrected per the 2026-07-19 directional
+audit; the prior docstring overclaimed):
+
+The `hres`/`hres_det` premises are `∀σ₁` — they require `aexpr` to evaluate to
+the target address `.base a` *in every state*. That holds only for a
+**heap-independent** address expression, i.e. one resolved purely from the
+control `env`: `aexpr = .ref x` (`&x`) via `ExprR.ref`, or a resolved location.
+`wp_deref_store_ref` is the discharge witness proving the law is genuinely
+non-vacuous for that case.
+
+It does **not** yet cover the frontend's real `*p` where `p` is a pointer
+*variable*: there the address is the *value* of `p`'s cell, so `hres`'s `∀σ₁` is
+unsatisfiable (an `σ₁` where `p`'s cell holds a different address meets nothing).
+That read-through case needs the `hres`/`hrhs` premises **conditioned on the
+owned cell(s)** plus multi-`↦` ownership (own `p`'s cell *and* the target) — the
+tracked next increment (`docs/2026-07-19_vertical-slice-plan.md`, L5), not this
+law. So `inc`'s body `*p = *p + 1` is not yet provable by this law alone.
+
+Premises:
+- `hres`/`hres_det` — `aexpr` evaluates only to `.addr (.base a)`, state
+  unchanged (heap-independent; see scope). Determinism additionally rules out the
+  `addrNil`/`addr` panic steps during inversion.
 - `hrhs`/`hrhs_det` — `e` evaluates only to `v`, state unchanged.
-- `hstore` — storing `v` at the owned cell yields the update to `newcell`.
-
-Shares the gen_heap core (`wp_store_step`) with `wp_assign`; only the assignee
-resolution differs (`AssigneeR.addr` vs `.var`). -/
+- `hstore` — storing `v` at the owned cell yields the update to `newcell`. -/
 theorem wp_deref_store {a : Addr} {oldcell newcell : HeapCell} {v : GoValue}
     {aexpr rhs env k}
     (hres : ∀ σ₁ : ExecState, ExprR env σ₁ aexpr (.value (.addr (.base a)) σ₁))
@@ -432,6 +443,24 @@ private theorem exprR_intLit_det {env : LocalEnv} {σ : ExecState} {n : Int}
       rcases hmk with rfl | rfl | rfl | rfl <;> exact Expr.noConfusion he
   | _ => exact Expr.noConfusion he
 
+/-- Inversion of `ExprR` on `.ref id` (address-of a variable): it evaluates only
+to the address of `id`'s location (state unchanged). Same `generalize`-past-the
+function-valued `binPanic*` indices shape as `exprR_intLit_det`. -/
+private theorem exprR_ref_det {env : LocalEnv} {σ : ExecState} {id : String}
+    {loc : Loc} {out : ExprOut} (hlk : LocalEnv.lookup env id = some loc)
+    (h : ExprR env σ (.ref id) out) :
+    out = ExprOut.value (.addr loc) σ := by
+  generalize he : Expr.ref id = e at h
+  cases h with
+  | ref hl =>
+      injection he with hid; subst hid
+      rw [hlk] at hl; injection hl with hl'; subst hl'; rfl
+  | binPanicLeft mk hmk _ =>
+      rcases hmk with rfl | rfl | rfl | rfl <;> exact Expr.noConfusion he
+  | binPanicRight mk hmk _ _ =>
+      rcases hmk with rfl | rfl | rfl | rfl <;> exact Expr.noConfusion he
+  | _ => exact Expr.noConfusion he
+
 /-- **Payoff: `wp_assign` is genuinely instantiable.** This is what task #23 was
 blocked on — the old law's `hred` was unsatisfiable for *every* real assign
 (`docs/2026-07-19_premerge-audit-results.md`, D2-4/D2-5). Here the resolution
@@ -453,6 +482,29 @@ theorem wp_assign_lit {a : Addr} {oldcell newcell : HeapCell} {n : Int}
               ([("x", Loc.base a)] :: rest) k) @ s ; E {{ Φ }} :=
   wp_assign (id := "x") (v := .int (kind.normalize n) kind)
     (by simp [LocalEnv.lookup, Scope.lookup])
+    (fun _ => ExprR.intLit)
+    (fun _ _ h => exprR_intLit_det h)
+    hstore
+
+/-- **Non-vacuity witness for `wp_deref_store`.** Discharges the heap-independent
+address case the law genuinely covers: `*(&x) = n` — assignee `.addr (.ref "x")`,
+whose address resolves purely from `env` (`x ↦ .base a`) via `ExprR.ref`, so the
+`∀σ₁` `hres`/`hres_det` premises hold. `hrhs`/`hrhs_det` discharge for the integer
+literal; only the store-typing `hstore` remains. This proves `wp_deref_store` is a
+real (non-scaffold) law — contrast the read-through `*p` case, whose address comes
+from a pointer variable's cell and therefore needs cell-conditioned premises +
+multi-`↦` ownership (the tracked next increment, not this witness). -/
+theorem wp_deref_store_ref {a : Addr} {oldcell newcell : HeapCell} {n : Int}
+    {kind : IntKind} {rest : LocalEnv} {k}
+    (hstore : ∀ σ₁ : ExecState, Heap.lookup σ₁.heap (.base a) = some oldcell →
+        storeLoc σ₁ (.base a) (.int (kind.normalize n) kind)
+          = .ok { σ₁ with heap := Heap.set σ₁.heap (.base a) newcell }) :
+    a.id ↦ oldcell ∗ (a.id ↦ newcell -∗ WP (Config.next k) @ s ; E {{ Φ }})
+      ⊢ WP (Config.exec (.assign (.addr (.ref "x")) (.intLit n kind))
+              ([("x", Loc.base a)] :: rest) k) @ s ; E {{ Φ }} :=
+  wp_deref_store (a := a) (v := .int (kind.normalize n) kind)
+    (fun _ => ExprR.ref (by simp [LocalEnv.lookup, Scope.lookup]))
+    (fun _ _ h => exprR_ref_det (by simp [LocalEnv.lookup, Scope.lookup]) h)
     (fun _ => ExprR.intLit)
     (fun _ _ h => exprR_intLit_det h)
     hstore
