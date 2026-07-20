@@ -145,6 +145,15 @@ full pattern):
 
 - `.claude/` is gitignored. Date working notes `YYYY-MM-DD_name.md`; top-level
   docs (README, roadmap, this file) are exempt.
-- Sandbox/scratch conventions: `docs/agent-sandbox.md`. For ad hoc Go probes
-  set `GOCACHE=/private/tmp/go-build` so the user cache is untouched.
+- Sandbox/scratch conventions: `docs/agent-sandbox.md`. For ad hoc Go probes set
+  `GOCACHE="$PWD/artifacts/go-build-cache"` (repo-local, sandbox-writable) or
+  `GOCACHE="$TMPDIR/go-build"` — **not** `/private/tmp/...`, which the command
+  sandbox denies. The differential scripts already set their own repo-local cache.
 - Do not `rm -rf` scratch dirs without approval; leave them for OS cleanup.
+- **Diagnosing async results before calling them "failed":** a background
+  `Bash`/`Workflow` that buffers can show empty stdout mid-run — check the
+  artifact it writes (a TSV, the task `result`), not stdout. A Workflow
+  `<failures>` line is a **single branch** failing (e.g. one agent's
+  StructuredOutput retry cap), not the run; read `<transcriptDir>/journal.jsonl`
+  (one result per agent) and `<usage>` (`agents_error` vs `agents_done`) before
+  reporting failure. Say what survived. (Recorded because this misfired twice.)
