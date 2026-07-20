@@ -13,8 +13,13 @@ discipline. **Done:** `proofs/Audit.lean` in-build axiom+non-vacuity gate;
 baseline-backed cross-check. **Next (priority order in the doc):** item 3
 differential expectation-class ratchet + S0 feature↔case manifest; item 4
 end-to-end adequacy witness + close `hstore`; item 5 Eval big-step totalization.
-**Ratchet:** 85 baseline fidelity failures not yet explained by a BUG entry —
-triage into `docs/BUGS.md` over time (`scripts/check-bugs.sh` warns).
+**Ratchet — concrete backlog:** 85 baseline fidelity failures (77
+lean-observation + 8 differential) not yet explained by a BUG entry. Inspect the
+exact ids with `scripts/check-bugs.sh --list`; triage into `docs/BUGS.md` over
+time (the check warns until 0). Many are array/struct value-semantics cases that
+likely share BUG-001's address-lowering root cause — fold them into BUG-001 as
+they're confirmed. Separately, `scripts/check-coverage` lists 33 all-failing
+feature tags = unimplemented features (roadmap, not defects).
 
 ## Directional audit follow-ups (2026-07-19)
 

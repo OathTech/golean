@@ -9,8 +9,12 @@
 #   (2) every open Pinned-by:differential bug lists >=1 case;
 #   (3) WARN: how many baseline fidelity failures (stage lean-observation /
 #       differential) are not yet explained by any bug's Cases (omission surface).
+#
+#   scripts/check-bugs.sh --list   print that untriaged surface (id + stage),
+#                                  the concrete backlog to triage into BUGS.md.
 set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.."
+LIST=0; [ "${1:-}" = "--list" ] && LIST=1
 
 BUGS=docs/BUGS.md
 BASELINE=baselines/native-full.tsv
@@ -60,12 +64,19 @@ done <<< "$bugs"
 #     by any bug. A warning (visible omission surface), not a hard failure.
 unexplained="$(awk -F'\t' -v DC="$declared_cases" '
   BEGIN { n=split(DC,a," "); for(i=1;i<=n;i++) named[a[i]]=1 }
-  !/^#/ && $1=="FAIL" && ($3=="lean-observation" || $3=="differential") && !($2 in named) { print $2 }
+  !/^#/ && $1=="FAIL" && ($3=="lean-observation" || $3=="differential") && !($2 in named) { print $2"\t"$3 }
 ' "$BASELINE" | sort)"
 nun="$(printf '%s' "$unexplained" | grep -c . || true)"
+
+if [ "$LIST" -eq 1 ]; then
+  echo "# Untriaged fidelity failures ($nun) — baseline FAILs at a fidelity stage"
+  echo "# not yet explained by a docs/BUGS.md entry. Triage each into a BUG."
+  printf '%s\n' "$unexplained"
+  exit 0
+fi
 
 if [ "$fail" -ne 0 ]; then echo "check-bugs: FAIL"; exit 1; fi
 echo "check-bugs: ok ($nbugs bug(s); pinned cases fail as claimed)"
 if [ "$nun" -gt 0 ]; then
-  echo "check-bugs: WARN — $nun baseline fidelity failure(s) not yet explained by a BUG entry (ratchet toward 0; see docs/BUGS.md)"
+  echo "check-bugs: WARN — $nun baseline fidelity failure(s) not yet explained by a BUG entry (ratchet toward 0; 'scripts/check-bugs.sh --list' to see them)"
 fi
