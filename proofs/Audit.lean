@@ -1,4 +1,5 @@
 import GoLeanProofs
+import GoLean.GoCore.Correspondence
 
 /-!
 # In-build epistemic gate for the Iris proof layer
@@ -36,6 +37,44 @@ the matching docstring here in the same commit, with the reason.
 open GoLean.Iris
 
 namespace GoLean.Iris.Audit
+
+/-! ## Exhaustive axiom sweep — every declaration, not a hand-maintained list
+
+The curated `#guard_msgs` gates below pin the *exact* axiom set of the key
+theorems. But a curated list is only as good as the hand maintaining it: a NEW
+theorem (public or private) added anywhere under the proof-facing namespaces
+would dodge it. This sweep closes that: it walks **every** constant whose
+(private-name-stripped) name lies under `GoLean.Iris` or `GoLean.GoCore`
+(relation, correspondence, substrate — everything the proofs rest on), collects
+its transitive axioms, and **fails the build** if any declaration depends on
+one outside the classical trio `{propext, Classical.choice, Quot.sound}` —
+which is exactly how a `sorry` (`sorryAx`) or `native_decide` (`ofReduceBool`)
+would surface. Coverage is by construction, not by enumeration: adding a
+declaration automatically adds it to the audit. -/
+
+open Lean in
+#eval show CoreM Unit from do
+  let env ← getEnv
+  let allowed : List Name := [``propext, ``Classical.choice, ``Quot.sound]
+  let prefixes : List Name := [`GoLean.Iris, `GoLean.GoCore]
+  let names : Array Name := env.constants.fold (fun acc n _ => acc.push n) #[]
+  let mut bad : Array (Name × Name) := #[]
+  let mut audited := 0
+  for n in names do
+    let user := (privateToUserName? n).getD n
+    unless prefixes.any (·.isPrefixOf user) do continue
+    let axs ← collectAxioms n
+    audited := audited + 1
+    for ax in axs do
+      unless allowed.contains ax do
+        bad := bad.push (n, ax)
+  if bad.isEmpty then
+    IO.println s!"audit sweep: {audited} declarations under GoLean.Iris/GoLean.GoCore, all axiom-clean"
+  else
+    let lines := bad.qsort (fun a b => a.1.toString < b.1.toString)
+      |>.map (fun (n, ax) => s!"  {n} depends on {ax}")
+    throwError "audit sweep FAILED — declarations with disallowed axioms \
+      (a `sorry`, `native_decide`, or new postulate?):\n{String.intercalate "\n" lines.toList}"
 
 /-! ## Axiom gates — the recorded axiom set of every proof-facing declaration.
     A change to any set fails the build until this file is deliberately updated. -/

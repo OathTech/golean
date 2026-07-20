@@ -35,8 +35,10 @@ step "escape-hatch preflight (sorry / admit / native_decide / axiom in proof-fac
 # Match the tokens as CODE, then drop prose: line-comments (`--`), docstring
 # lines, and backtick-quoted mentions (`sorry`/`native_decide`/…). The in-build
 # Audit gate (step 3) is authoritative; this is the cheap early-warning.
-hatch="$(grep -rnE '\bsorry\b|\badmit\b|native_decide|^[[:space:]]*axiom ' \
-           GoLean proofs/GoLeanProofs.lean proofs/Audit.lean proofs/SliceSpike.lean 2>/dev/null \
+# Depth-proof file list via find (no globstar dependence); .lake excluded. Any
+# NEW .lean file under GoLean/ or proofs/ is scanned automatically.
+hatch="$(find GoLean proofs -name '*.lean' -not -path '*/.lake/*' -print0 2>/dev/null \
+         | xargs -0 grep -nE '\bsorry\b|\badmit\b|native_decide|^[[:space:]]*axiom ' 2>/dev/null \
          | grep -vE '(^|[^[:alnum:]])--|/-|`(sorry|admit|native_decide|axiom)`|no sorry|without .*sorry|axioms:' \
          || true)"
 if [ -n "$hatch" ]; then
