@@ -182,3 +182,44 @@ Highest leverage / lowest risk first; each is a standing gate, not a one-off.
 
 Done this session: `proofs/Audit.lean` gate, CLAUDE.md non-vacuity + async-failure
 rules, pinned baseline + diff, `wp_deref_store` correction + witness.
+
+## Zero-drop hardening round (2026-07-20) — advisors' leaks closed
+
+Two decorrelated advisors (red-team + FV-practices survey) converged on the same
+top leaks; all five light ones are now closed (each negative-tested):
+
+1. **CI enforcement** — `.github/workflows/lean_action_ci.yml` now runs
+   `scripts/ci` on push/PR and the full `scripts/ci --diff` nightly + on
+   dispatch (was: a bare root `lake build` that never built the proofs package,
+   so the Audit gate never ran automatically). CI is redundancy for the same
+   local command, not a different check. *Decision:* no git pre-push hook — the
+   sandbox denies `.git/hooks` writes, hooks are bypassable anyway, and CI is
+   the non-bypassable layer; keeps the local loop fast.
+2. **Honest-scope baseline diff** — a partial recorded run is labeled
+   `PARTIAL (n/717 … NOT a full certification)` + staleness note; only a
+   full-corpus run earns "no regression" (and uses `--full`). Was: "ok — no
+   regression" from a 3-case `diff-one` file. This also *repairs* the
+   "expectation-class ratchet is emergent" claim above: with the nightly full
+   diff, the ratchet now actually bites on schedule, not only when someone
+   happens to run a full corpus.
+3. **Exhaustive axiom sweep** — `Audit.lean` walks all ~1970 declarations under
+   `GoLean.Iris`/`GoLean.GoCore` (private names included, Correspondence now
+   imported) and fails the build on any axiom outside the classical trio. A new
+   `sorry`-theorem anywhere is caught by construction — no hand list to dodge.
+   Escape-hatch grep is now `find`-based over every `.lean` under
+   `GoLean/`+`proofs/` (new files scanned automatically).
+4. **Bug-status symmetry + untriaged ratchet** — `check-bugs.sh`: a
+   `Status: fixed` bug's cases must PASS; the unexplained-fidelity-failure
+   count must not exceed `baselines/untriaged-count` (85) — a new bug can't
+   hide in the pile and deleting a BUG entry trips the ratchet.
+5. **Re-pin laundering guard** — `scripts/ci` (only when the baseline differs
+   from HEAD): every PASS→non-PASS flip must be named in `docs/BUGS.md`, and
+   the guard **fails closed** if the HEAD baseline can't be read (the first
+   implementation failed open under the sandbox — caught by its own negative
+   test).
+
+**Deferred (valuable, not plumbing — schedule as real work items):**
+mutation/tamper testing of the differential corpus (the one check of corpus
+*sensitivity*; start advisory, promote to nightly); sub-feature read/write tag
+granularity (would catch the F1 class by coverage); wider observation channel
+(beyond the single int return); exact-match panic messages (now substring).

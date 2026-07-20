@@ -6,13 +6,18 @@ backlog items.
 ## Epistemic hardening / pipeline error-resistance (2026-07-19, priority #0)
 
 Plan of record: `docs/2026-07-19_pipeline-error-resistance.md` (stage-by-stage
-gates vs omission+commission; adapted from the ACL2Lean playbook). Goal: the
-infra guides an error-prone agent to correctness — build-enforced gates over
-discipline. **Done:** `proofs/Audit.lean` in-build axiom+non-vacuity gate;
-`scripts/ci` one-command gate; `docs/BUGS.md` + `scripts/check-bugs.sh`
-baseline-backed cross-check. **Next (priority order in the doc):** item 3
-differential expectation-class ratchet + S0 feature↔case manifest; item 4
-end-to-end adequacy witness + close `hstore`; item 5 Eval big-step totalization.
+gates vs omission+commission; adapted from the ACL2Lean playbook + a two-advisor
+zero-drop review, see its 2026-07-20 section). Goal: the infra guides an
+error-prone agent to correctness — build-enforced gates over discipline.
+**Done:** `proofs/Audit.lean` in-build axiom gate + EXHAUSTIVE 1970-decl sweep;
+`scripts/ci` one-command gate, now ENFORCED by CI (fast on push/PR, full
+differential nightly/dispatch); honest-scope baseline diff; re-pin laundering
+guard; `docs/BUGS.md` cross-check with fixed→PASS symmetry + untriaged-count
+ratchet (`baselines/untriaged-count`); feature-coverage check.
+**Next:** item 4 end-to-end adequacy witness + close `hstore`; item 5 Eval
+big-step totalization. **Deferred hardening (real work items, not plumbing):**
+corpus mutation/tamper testing; sub-feature read/write tags; wider observation
+channel; exact panic-message matching.
 **Ratchet — concrete backlog:** 85 baseline fidelity failures (77
 lean-observation + 8 differential) not yet explained by a BUG entry. Inspect the
 exact ids with `scripts/check-bugs.sh --list`; triage into `docs/BUGS.md` over

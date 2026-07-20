@@ -1,14 +1,52 @@
-name: Lean Action CI
+name: gate
+
+# The non-bypassable backstop for scripts/ci (the one-command validation gate:
+# escape-hatch preflight, bug-index + feature-coverage cross-checks, core build,
+# proofs build incl. the in-build Audit axiom/non-vacuity sweep, eval tests,
+# baseline diff + re-pin guard). Push/PR runs the fast gate; the full
+# differential corpus (`go run` per case) runs nightly and on manual dispatch.
+# Local runs of scripts/ci give the same answer — CI is redundancy, not a
+# different check.
 
 on:
   push:
   pull_request:
   workflow_dispatch:
+  schedule:
+    - cron: '17 3 * * *' # nightly full differential
 
 jobs:
-  build:
+  gate:
     runs-on: ubuntu-latest
-
+    timeout-minutes: 120
     steps:
       - uses: actions/checkout@v5
-      - uses: leanprover/lean-action@v1
+
+      - name: Install elan
+        run: |
+          curl -sSfL https://elan.lean-lang.org/elan-init.sh | sh -s -- -y --default-toolchain none
+          echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
+
+      - name: Cache toolchains and build artifacts
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.elan
+            .lake
+            proofs/.lake
+          key: lake-${{ runner.os }}-${{ hashFiles('lean-toolchain', 'proofs/lean-toolchain', 'proofs/lake-manifest.json') }}
+          restore-keys: lake-${{ runner.os }}-
+
+      - name: Fast gate (scripts/ci)
+        if: github.event_name == 'push' || github.event_name == 'pull_request'
+        run: ./scripts/ci
+
+      - name: Set up Go (full differential)
+        if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+        uses: actions/setup-go@v5
+        with:
+          go-version: stable
+
+      - name: Full gate incl. differential corpus (scripts/ci --diff)
+        if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+        run: ./scripts/ci --diff
