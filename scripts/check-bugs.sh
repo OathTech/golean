@@ -7,8 +7,14 @@
 #   (1) every `- Cases:` id of an open Pinned-by:differential bug exists in the
 #       baseline AND is currently FAIL (a PASSing pinned case = fixed-not-closed);
 #   (2) every open Pinned-by:differential bug lists >=1 case;
-#   (3) WARN: how many baseline fidelity failures (stage lean-observation /
-#       differential) are not yet explained by any bug's Cases (omission surface).
+#   (3) SYMMETRIC: every `Status: fixed` differential bug's cases must now PASS
+#       (marking a bug fixed while its cases still fail is laundering);
+#   (4) RATCHET: the count of unexplained baseline fidelity failures (stage
+#       lean-observation / differential, in no bug's Cases) must not EXCEED the
+#       recorded ceiling in baselines/untriaged-count — a new bug cannot hide in
+#       the pile, and deleting a BUG entry raises the count and trips this.
+#       When the count drops, lower the ceiling in the same commit (the check
+#       says so). Below the ceiling it reports the remainder as the backlog.
 #
 #   scripts/check-bugs.sh --list   print that untriaged surface (id + stage),
 #                                  the concrete backlog to triage into BUGS.md.
@@ -35,14 +41,13 @@ bugs="$(awk '
   END { if (id) print id"|"st"|"pb"|"cs }
 ' "$BUGS")"
 
-declared_cases=""   # accumulate all cases named by any bug (for the warn check)
+declared_cases=""   # accumulate all cases named by any bug (for the ratchet)
 nbugs=0
 while IFS='|' read -r id st pb cs; do
   [ -z "${id:-}" ] && continue
   nbugs=$((nbugs+1))
-  [ "$st" = open ] || continue
   [ "$pb" = differential ] || continue
-  if [ -z "$cs" ]; then
+  if [ "$st" = open ] && [ -z "$cs" ]; then
     echo "FAIL (2): $id is open+differential but lists no '- Cases:'"; fail=1; continue
   fi
   IFS=',' read -r -a arr <<< "$cs"
@@ -50,9 +55,11 @@ while IFS='|' read -r id st pb cs; do
     [ -z "$c" ] && continue
     declared_cases="$declared_cases $c"
     if res="$(blk "$c")"; then
-      case "$res" in
-        FAIL/*) : ;;  # good: the case fails, as an open bug requires
-        PASS/*) echo "FAIL (1): $id case '$c' is $res in baseline — bug fixed-not-closed, or case no longer pins it"; fail=1 ;;
+      case "$st/$res" in
+        open/FAIL/*)  : ;;  # good: an open bug's case fails, as claimed
+        open/PASS/*)  echo "FAIL (1): $id case '$c' is $res in baseline — bug fixed-not-closed, or case no longer pins it"; fail=1 ;;
+        fixed/PASS/*) : ;;  # good: a fixed bug's case passes, as claimed
+        fixed/FAIL/*) echo "FAIL (3): $id is marked fixed but case '$c' is still $res in baseline"; fail=1 ;;
       esac
     else
       echo "FAIL (1): $id case '$c' not found in $BASELINE"; fail=1
@@ -75,8 +82,24 @@ if [ "$LIST" -eq 1 ]; then
   exit 0
 fi
 
+# (4) The ratchet: unexplained count must not exceed the recorded ceiling.
+CEIL_FILE=baselines/untriaged-count
+if [ -f "$CEIL_FILE" ]; then
+  ceil="$(grep -vE '^#' "$CEIL_FILE" | head -1 | tr -d '[:space:]')"
+  if [ "$nun" -gt "$ceil" ]; then
+    echo "FAIL (4): unexplained fidelity failures rose ${ceil} -> ${nun} — a new bug is hiding in the pile (or a BUG entry was deleted). Triage the new id(s) into docs/BUGS.md ('scripts/check-bugs.sh --list') or, if genuinely pre-existing, raise $CEIL_FILE with justification."
+    fail=1
+  fi
+else
+  echo "FAIL (4): missing $CEIL_FILE (the untriaged ceiling) — create it with the current count $nun"
+  fail=1
+fi
+
 if [ "$fail" -ne 0 ]; then echo "check-bugs: FAIL"; exit 1; fi
-echo "check-bugs: ok ($nbugs bug(s); pinned cases fail as claimed)"
+echo "check-bugs: ok ($nbugs bug(s); pinned cases behave as claimed)"
 if [ "$nun" -gt 0 ]; then
-  echo "check-bugs: WARN — $nun baseline fidelity failure(s) not yet explained by a BUG entry (ratchet toward 0; 'scripts/check-bugs.sh --list' to see them)"
+  echo "check-bugs: backlog — $nun/$ceil unexplained fidelity failure(s) ('scripts/check-bugs.sh --list'; ratchet toward 0)"
+  if [ "$nun" -lt "$ceil" ]; then
+    echo "check-bugs: ceiling is $ceil but count is $nun — lower $CEIL_FILE to $nun in this commit (ratchet down)"
+  fi
 fi

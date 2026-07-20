@@ -1,0 +1,4 @@
+# Ceiling for unexplained baseline fidelity failures (scripts/check-bugs.sh
+# check 4). The count may only go DOWN; raising it requires justification in
+# the same commit. Recorded 2026-07-20: 77 lean-observation + 8 differential.
+85
