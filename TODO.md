@@ -3,6 +3,15 @@
 See `docs/roadmap.md` for the phased project roadmap. This file tracks tactical
 backlog items.
 
+## THE work queue: close the vertical slice
+
+Authority: `docs/2026-07-19_vertical-slice-plan.md` §Punch-list (2026-07-20).
+In order: (1) close `hstore` → (2) end-to-end adequacy witness → (3)
+heap-reading RHS `*p = *p+1` (multi-`↦`) → (4) call/frame/return law +
+results-allocation gap → (5) `inc` spec + `main = 2` → (6) Eval totalization +
+correspondence (the L4 wall). 1–5 unblocked lemma work; 6 is the big lift.
+Keep the narrative there, status-mirror here.
+
 ## Epistemic hardening / pipeline error-resistance (2026-07-19, priority #0)
 
 Plan of record: `docs/2026-07-19_pipeline-error-resistance.md` (stage-by-stage

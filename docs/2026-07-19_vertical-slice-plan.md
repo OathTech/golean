@@ -121,12 +121,40 @@ refinement + quorum invariant (D4-9, the top of the chain, still nonexistent).
 Each widening adds constructs/columns to the frontier map and reuses the general
 lemmas from prior slices.
 
-## First moves
+## First moves — superseded 2026-07-20 by the punch list below
 
-1. Add the slice program as a differential corpus case; confirm L2 green (diff vs
-   `go run` = 2). Grounds the bottom of the map for the exact program.
-2. #23: model `ExecState.locals` (+ `Config.frame` callerLocals) in the state
-   interpretation → make `wp_assign` a usable law (its `hred` dischargeable).
-3. Build the missing L5 general lemmas: `wp_ref`, deref-load, deref-store,
-   call/frame/return.
-4. Compose L6: `inc` spec + `main` result. Then push L4 (totalize + correspond).
+(Original moves 1–2 are DONE: slice cases differentially green; the CEK reshape
+made `wp_assign` a usable, witnessed law. Move 3 partially done: deref-load
+lemma + `wp_deref_store`+witness landed; call/frame remains.)
+
+## Punch list to close the slice (2026-07-20 — THE work queue, in order)
+
+Layer status: L1 frontend ✅ · L2 interp+differential ✅ · L3 relation ✅ (CEK) ·
+L4 correspondence ❌ (the wall) · L5 WP laws 🟨 (~60%) · L6 spec ⬜.
+
+1. **Close `hstore`** — discharge the open store-typing side-condition in
+   `wp_assign_lit`/`wp_deref_store_ref` for a concrete cell, so a witness
+   carries ZERO hypotheses (`◌ → ✓` in `proofs/Audit.lean`'s ledger). Small.
+2. **End-to-end adequacy witness** — compose the shipped laws (`wp_seqn` +
+   `wp_assign_lit`) into a WP for a concrete program, feed `go_adequacy`, get a
+   **closed** `adequate …` theorem. Proves the WP→adequacy chain composes
+   (currently believed, never demonstrated). Turns the ledger's biggest `◌`
+   green; add both witnesses to the Audit sweep's curated gates.
+3. **Heap-reading RHS** — `*p = *p + 1`: premises conditioned on the owned
+   cell(s), multi-`↦` ownership (`p_loc ↦ addr(a) ∗ a ↦ n`), composing
+   `exprR_deref_load` + `ExprR.addInt`. First genuinely separation-logic step.
+4. **Call/frame/return law** — reason across `inc(&x)`: frame entry
+   (BindParams), body spec as hypothesis, frame exit. Includes closing the
+   **results-allocation gap** (`Step.call` binds args only — `Rel.lean` module
+   header) so a value-returning `main` works. The last "does not exist" law.
+5. **Compose L6** — `{p ↦ n} inc(p) {p ↦ n+1}` (∀n, general — the
+   anti-specialization check) and `main ⊢ result = 2`. The slice's finish line.
+6. **Totalize Eval's big-step cluster → prove the correspondence** (the L4
+   wall; TODO F3). Converts `interpreterSound/PanicStatement` from Props into
+   theorems and joins the differential island to the proof island. Heaviest;
+   after it, "differentially tested" and "proven" refer to the same artifact.
+
+Items 1–5: ordinary lemma work, no known blockers. Item 6: the one big lift.
+Non-blocker note: BUG-001 (struct/array writes) does NOT gate this slice (no
+structs in it). After the slice: widen per the ladder (§Widening) with the
+concurrency-model design note (TODO F4) before any fork machinery.
