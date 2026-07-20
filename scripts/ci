@@ -75,16 +75,71 @@ echo "  ok:$evok  fail:$evbad  exit:$evrc"
 if [ "$evrc" -eq 0 ] && [ "$evbad" -eq 0 ]; then ok "eval tests ($evok ok)"; else bad "eval tests (exit $evrc, $evbad bad)"; fi
 
 # 5. Differential baseline diff (the ratchet: PASS<->FAIL flips / stage changes).
+# HONEST SCOPE: a partial run (diff-one / focused slice) can only certify the
+# cases it ran. Only a full-corpus run earns "no regression"; a partial one is
+# reported as partial and NEVER as a full certification — and if the recorded
+# run predates HEAD, that staleness is surfaced too.
 if [ "$RUN_DIFF" -eq 1 ]; then
   step "re-run full native differential corpus (--diff)"
   if ./scripts/diff-smoke 2>&1 | tail -2; then ok "differential run"; else bad "differential run"; fi
 fi
 step "differential baseline diff (scripts/coverage-baseline-diff)"
 if [ -f artifacts/coverage/latest.tsv ]; then
-  if ./scripts/coverage-baseline-diff; then ok "baseline diff (no regression)"; else bad "baseline diff (DRIFT — see above)"; fi
+  ran="$(awk -F'\t' '!/^#/ && $1!="result" && NF>=2' artifacts/coverage/latest.tsv | wc -l | tr -d ' ')"
+  total="$(./scripts/coverage-manifest 2>/dev/null | wc -l | tr -d ' ')"
+  runcommit="$(awk -F'\t' '$1=="git_commit"{print $2}' artifacts/coverage/latest.meta.tsv 2>/dev/null)"
+  head="$(git rev-parse HEAD 2>/dev/null)"
+  stale=""
+  [ -n "$runcommit" ] && [ "$runcommit" != "unknown" ] && [ "$runcommit" != "$head" ] && stale=" [recorded at ${runcommit:0:7}, HEAD is ${head:0:7} — stale]"
+  if [ "$ran" -ge "$total" ] && [ "$total" -gt 0 ]; then
+    if ./scripts/coverage-baseline-diff --full; then ok "baseline diff FULL ($ran/$total, no regression)$stale"; else bad "baseline diff (DRIFT — see above)"; fi
+  else
+    if ./scripts/coverage-baseline-diff; then
+      RESULTS+=("  note baseline diff PARTIAL ($ran/$total run, no drift among them — NOT a full certification; use --diff)$stale")
+    else
+      bad "baseline diff (DRIFT among the $ran cases run — see above)"
+    fi
+  fi
 else
   echo "  no artifacts/coverage/latest.tsv — run scripts/ci --diff or scripts/diff-one first"
   RESULTS+=("  skip differential baseline diff (no recorded run)")
+fi
+
+# 5b. Baseline re-pin guard: only active when baselines/native-full.tsv differs
+# from HEAD. A re-pin that flips any case PASS -> non-PASS must name each such
+# case in docs/BUGS.md (same change) — regressions cannot be laundered into the
+# baseline silently.
+if ! git diff --quiet HEAD -- baselines/native-full.tsv 2>/dev/null; then
+  step "baseline re-pin guard (PASS→FAIL flips must be named in docs/BUGS.md)"
+  # No process substitution (sandbox may deny /dev/fd): pipe the HEAD version in
+  # on stdin, working copy as a file, in one awk pass. FAIL CLOSED: if the HEAD
+  # version can't be read, that's a guard error, not a pass.
+  if headbase="$(git show HEAD:baselines/native-full.tsv 2>/dev/null)"; then
+    flips="$(printf '%s\n' "$headbase" | awk -F'\t' -v WC=baselines/native-full.tsv '
+      BEGIN {
+        while ((getline line < WC) > 0) {
+          n = split(line, f, "\t")
+          if (line !~ /^#/ && f[1] == "PASS" && n >= 2) nowpass[f[2]] = 1
+        }
+      }
+      !/^#/ && $1=="PASS" && NF>=2 && !($2 in nowpass) { print $2 }
+    ' | LC_ALL=C sort)"
+    pin_bad=0
+    while read -r id; do
+      [ -z "$id" ] && continue
+      if ! grep -q "$id" docs/BUGS.md; then
+        echo "  PASS→non-PASS flip not named in docs/BUGS.md: $id"; pin_bad=1
+      fi
+    done <<< "$flips"
+    nfl="$(printf '%s' "$flips" | grep -c . || true)"
+    if [ "$pin_bad" -ne 0 ]; then
+      bad "re-pin guard (regressions baked into baseline unexplained — name them in BUGS.md)"
+    else
+      ok "re-pin guard ($nfl PASS→non-PASS flip(s), all named in BUGS.md)"
+    fi
+  else
+    bad "re-pin guard (could not read HEAD baseline — refusing to certify the re-pin)"
+  fi
 fi
 
 # Summary
