@@ -147,6 +147,11 @@ L4 correspondence ❌ (the wall) · L5 WP laws 🟨 (~60%) · L6 spec ⬜.
    (BindParams), body spec as hypothesis, frame exit. Includes closing the
    **results-allocation gap** (`Step.call` binds args only — `Rel.lean` module
    header) so a value-returning `main` works. The last "does not exist" law.
+   ⚠ Note (pre-merge audit F-B): closing the gap means **editing `Step.call`**
+   — a change to the trusted operational relation, not just adding a lemma. It
+   must preserve the `ToVal` terminal constraint and re-clear the full
+   validation gate (relation changes don't touch the interpreter, but the
+   correspondence instances and every WP proof over `Step` must re-elaborate).
 5. **Compose L6** — `{p ↦ n} inc(p) {p ↦ n+1}` (∀n, general — the
    anti-specialization check) and `main ⊢ result = 2`. The slice's finish line.
 6. **Totalize Eval's big-step cluster → prove the correspondence** (the L4
@@ -154,7 +159,8 @@ L4 correspondence ❌ (the wall) · L5 WP laws 🟨 (~60%) · L6 spec ⬜.
    theorems and joins the differential island to the proof island. Heaviest;
    after it, "differentially tested" and "proven" refer to the same artifact.
 
-Items 1–5: ordinary lemma work, no known blockers. Item 6: the one big lift.
+Items 1–3 and 5: ordinary lemma work, no known blockers. Item 4 embeds a
+semantics edit (see its ⚠ note). Item 6: the one big lift.
 Non-blocker note: BUG-001 (struct/array writes) does NOT gate this slice (no
 structs in it). After the slice: widen per the ladder (§Widening) with the
 concurrency-model design note (TODO F4) before any fork machinery.

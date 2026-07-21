@@ -202,21 +202,35 @@ top leaks; all five light ones are now closed (each negative-tested):
    "expectation-class ratchet is emergent" claim above: with the nightly full
    diff, the ratchet now actually bites on schedule, not only when someone
    happens to run a full corpus.
-3. **Exhaustive axiom sweep** — `Audit.lean` walks all ~1970 declarations under
-   `GoLean.Iris`/`GoLean.GoCore` (private names included, Correspondence now
-   imported) and fails the build on any axiom outside the classical trio. A new
-   `sorry`-theorem anywhere is caught by construction — no hand list to dodge.
-   Escape-hatch grep is now `find`-based over every `.lean` under
-   `GoLean/`+`proofs/` (new files scanned automatically).
+3. **Exhaustive axiom sweep** — `Audit.lean` audits **by module of origin, not
+   namespace** (pre-merge tamper audit F1: the first version's namespace-prefix
+   filter let a top-level `sorry` theorem in the built proofs file pass): all
+   ~2371 declarations in every `GoLean*` module, any namespace, private names
+   included, fail the build on any axiom outside the classical trio. Precise
+   scope: every declaration in the **built import closure**; a brand-new
+   proofs file must be imported to be built, which `scripts/ci`'s
+   **proofs-file coverage gate** (F2) enforces — every `proofs/*.lean` must be
+   imported into the audited build or on an explicit standalone allowlist.
+   Escape-hatch grep: `find`-based, strips line comments before matching (F1b:
+   a trailing `--` comment previously exempted the whole line) and matches
+   `sorryAx`/`ofReduceBool` (the axioms behind the surface syntax).
 4. **Bug-status symmetry + untriaged ratchet** — `check-bugs.sh`: a
    `Status: fixed` bug's cases must PASS; the unexplained-fidelity-failure
    count must not exceed `baselines/untriaged-count` (85) — a new bug can't
    hide in the pile and deleting a BUG entry trips the ratchet.
-5. **Re-pin laundering guard** — `scripts/ci` (only when the baseline differs
-   from HEAD): every PASS→non-PASS flip must be named in `docs/BUGS.md`, and
-   the guard **fails closed** if the HEAD baseline can't be read (the first
-   implementation failed open under the sandbox — caught by its own negative
-   test).
+5. **Re-pin laundering guard** — `scripts/ci`, two modes (tamper audit F3a: the
+   worktree-only mode was inert on any clean checkout, i.e. in CI): dirty tree
+   compares worktree-vs-HEAD (pre-commit); clean tree compares HEAD-vs-HEAD~1
+   (post-commit + CI, audits the tip commit). Every PASS→non-PASS flip must
+   appear as a **whole token on a `- Cases:` line** of `docs/BUGS.md` (F3b: an
+   unanchored substring grep was satisfied by prose mentions and by longer ids
+   containing the flipped one — 24 such substring pairs exist in the baseline).
+   Fails **closed** on any internal error — a lesson earned twice: the first
+   implementation failed open when the sandbox denied process substitution,
+   and the second failed open when BSD awk rejected a multiline `-v` value;
+   both were caught by negative tests, and the guard now checks its own
+   comparison's exit status. Known residual: multi-commit pushes are only
+   fully audited pre-commit (CI sees the tip diff).
 
 **Deferred (valuable, not plumbing — schedule as real work items):**
 mutation/tamper testing of the differential corpus (the one check of corpus
