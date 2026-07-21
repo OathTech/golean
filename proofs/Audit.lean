@@ -134,6 +134,16 @@ open Lean in
 /-- info: 'GoLean.Iris.wp_inc_via_ptr' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms wp_inc_via_ptr
 
+-- The call law (arc slice-call-frame item 4b): frame entry with fresh-cell
+-- handover, resolved against the state-interp-pinned program; the frame-pop
+-- step law; and the composed cross-frame witness.
+/-- info: 'GoLean.Iris.wp_call_unary' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms wp_call_unary
+/-- info: 'GoLean.Iris.wp_frame_fall' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms wp_frame_fall
+/-- info: 'GoLean.Iris.wp_inc_call' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms wp_inc_call
+
 -- The end-to-end artifact: a CLOSED `adequate` theorem composed from the WP
 -- laws through go_adequacy (arc slice-l5-pure item 2). The chain composes.
 /-- info: 'GoLean.Iris.wp_seq_done' depends on axioms: [propext, Classical.choice, Quot.sound] -/
@@ -155,6 +165,10 @@ example := @wp_deref_store_ref
 /-- `✓` wp_store_via_ptr — witnessed by `wp_inc_via_ptr` (`*p = *p + 1`, the
 multi-`↦` read-through store; ∀-general over the stored int). -/
 example := @wp_inc_via_ptr
+/-- `✓` wp_call_unary — witnessed by `wp_inc_call` (the full `inc(&x)` call:
+frame entry with fresh param cell → body store → frame exit; sole premise is
+program membership, genuinely external). -/
+example := @wp_inc_call
 
 /-! ## Three-state ledger — what is NOT yet fully closed (kept honest, not hidden)
 

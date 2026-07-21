@@ -195,6 +195,33 @@ theorem HeapWf.set_existing {σ : ExecState} {a : Addr} {c₀ c : HeapCell}
   rw [heap_lookup_set_base_ne hne]
   exact hwf n hn'
 
+/-- In a well-formed state the next address is absent from the projected map —
+the gen_heap allocation side-condition. -/
+theorem HeapWf.fresh_get? {σ : ExecState} (hwf : HeapWf σ) :
+    get? (heapToMap σ.heap) σ.nextAddr = none := by
+  rw [get?_heapToMap]
+  exact hwf σ.nextAddr (Nat.le_refl _)
+
+/-- `ExecState.alloc` computes to a fresh base location and the heap/counter
+update — pinned as an equation so both step-construction and inversion can
+rewrite with it. -/
+theorem ExecState.alloc_eq (σ : ExecState) (v : GoValue) (ty : Option Ty) :
+    σ.alloc v ty = (.base ⟨σ.nextAddr⟩,
+      { σ with heap := Heap.set σ.heap (.base ⟨σ.nextAddr⟩) ⟨ty, v⟩,
+               nextAddr := σ.nextAddr + 1 }) := rfl
+
+/-- Allocation preserves well-formedness: the new cell sits at the old
+`nextAddr`, below the bumped counter. -/
+theorem HeapWf.alloc {σ : ExecState} (hwf : HeapWf σ) {c : HeapCell} :
+    HeapWf { σ with heap := Heap.set σ.heap (.base ⟨σ.nextAddr⟩) c,
+                    nextAddr := σ.nextAddr + 1 } := by
+  intro n hn
+  have hn' : σ.nextAddr + 1 ≤ n := hn
+  show Heap.lookup (Heap.set σ.heap (.base ⟨σ.nextAddr⟩) c) (.base ⟨n⟩) = none
+  rw [heap_lookup_set_base_ne (show (⟨σ.nextAddr⟩ : Addr).id ≠ n by
+    show σ.nextAddr ≠ n; omega)]
+  exact hwf n (by omega)
+
 /-- `IntKind.normalize` is idempotent. The fact behind discharging the store
 witnesses' `hstore` to zero hypotheses: a store of an already-normalized int at
 a `.int kind`-typed cell re-normalizes to the same value. -/
@@ -875,6 +902,170 @@ theorem wp_inc_via_ptr {pa a : Addr} {pdecl : Option Ty} {ty : Ty}
     (fun σ₁ out hlp hla h =>
       exprR_inc_det (by simp [LocalEnv.lookup, Scope.lookup]) hlp rfl hla h)
     (fun σ₁ hla => storeLoc_int_cell hla (m + kind.normalize lit))
+
+/-! ## Arc `slice-call-frame` item 4b — the call law
+
+`Step.call` enters a fresh frame, ALLOCATING the parameter cell. The law's
+continuation therefore receives a **fresh** `↦` for an address chosen by the
+machine (`∀ pa` on the Iris side), and the function is resolved against the
+state-interp-pinned program (`GoCoreGS.prog`) — a pure premise, not a `∀σ` one
+(`docs/2026-07-20_call-law-design.md`). -/
+
+/-- **The unary void call law.** General over the function, argument
+expression, and continuation; arity-specialized to the slice's shape (one
+parameter, no results — `inc`). Premises: the function is in the pinned
+program; the argument evaluates (state-independently, e.g. `&x`) to `v`, which
+normalizes at the parameter type to `v'`. The continuation runs the body in
+the fresh one-binding frame env, owning the freshly allocated parameter cell,
+under the `.frame` continuation. Arity-generality (parameter *lists*) is a
+tracked widening, not a semantic limitation. -/
+theorem wp_call_unary {funcId : FuncId} {func : Func} {pid : String} {pty : Ty}
+    {body : Stmt} {argExpr : Expr} {v v' : GoValue} {env k}
+    (hfind : findFunctionIn? (GoCoreGS.prog GF) funcId = some func)
+    (hargs : func.args = #[⟨pid, pty⟩])
+    (hres : func.results = #[])
+    (hbody : func.body = body)
+    (harg : ∀ σ₁ : ExecState, ExprR env σ₁ argExpr (.value v σ₁))
+    (harg_det : ∀ σ₁ (out : ExprOut), ExprR env σ₁ argExpr out → out = .value v σ₁)
+    (hnorm : ∀ σ₁ : ExecState, normalizeValueForTy σ₁ pty v = .ok v') :
+    iprop(∀ pa : Addr, pa.id ↦ (⟨some pty, v'⟩ : HeapCell) -∗
+        WP (Config.exec body [[(pid, Loc.base pa)]]
+              (.frame [] [] k)) @ s ; E {{ Φ }})
+      ⊢ WP (Config.exec (.call #[] funcId #[argExpr]) env k) @ s ; E {{ Φ }} := by
+  obtain ⟨fid, fargs, fres, fbody⟩ := func
+  simp only at hargs hres hbody
+  subst hargs; subst hres; subst hbody
+  iintro Hcont
+  iapply wp_lift_step (h := rfl)
+  iintro %σ₁ %ns %obs %obs' %nt Hσ
+  simp only [stateInterp]
+  icases Hσ with ⟨Hσ, %Hinv⟩
+  obtain ⟨hfns, hwf⟩ := Hinv
+  have hstep : Step (.exec (.call #[] funcId #[argExpr]) env k) σ₁
+      (.exec fbody [[(pid, Loc.base ⟨σ₁.nextAddr⟩)]] (.frame [] [] k))
+      { σ₁ with heap := Heap.set σ₁.heap (.base ⟨σ₁.nextAddr⟩) ⟨some pty, v'⟩,
+                nextAddr := σ₁.nextAddr + 1 } :=
+    Step.call AssigneesR.nil (ArgsR.cons (harg σ₁) ArgsR.nil)
+      (by rw [hfns]; exact hfind)
+      (BindParamsR.cons (hnorm σ₁) (ExecState.alloc_eq σ₁ v' (some pty))
+        BindParamsR.nil)
+      DeclsR.nil
+  have hdet : ∀ c' s',
+      Step (.exec (.call #[] funcId #[argExpr]) env k) σ₁ c' s' →
+      c' = Config.exec fbody [[(pid, Loc.base ⟨σ₁.nextAddr⟩)]] (.frame [] [] k) ∧
+      s' = { σ₁ with heap := Heap.set σ₁.heap (.base ⟨σ₁.nextAddr⟩) ⟨some pty, v'⟩,
+                     nextAddr := σ₁.nextAddr + 1 } := by
+    intro c' s' hst
+    cases hst with
+    | call hass hargsR hfindR hbind hdecls =>
+      cases hass
+      cases hargsR with
+      | cons hE hrest =>
+        have hd := harg_det σ₁ _ hE
+        injection hd with hv hs0
+        rw [hs0] at hrest
+        cases hrest
+        rw [hfns, hfind] at hfindR
+        injection hfindR with hfunc
+        subst hfunc
+        rw [hv] at hbind
+        cases hbind with
+        | cons hn' ha' hrest' =>
+          rw [hnorm σ₁] at hn'
+          injection hn' with hv'
+          rw [← hv', ExecState.alloc_eq] at ha'
+          injection ha' with hloc hst'
+          rw [← hloc, ← hst'] at hrest'
+          cases hrest'
+          cases hdecls
+          exact ⟨rfl, rfl⟩
+  iapply fupd_mask_intro Std.LawfulSet.empty_subset
+  iintro Hclose
+  isplitr
+  · ipureintro
+    cases s
+    · exact ⟨[], _, _, [], GoPrimStep.step hstep⟩
+    · trivial
+  inext
+  iintro %e₂ %σ₂ %eₜ %Hstep Hcred
+  cases Hstep with
+  | step st =>
+    obtain ⟨rfl, rfl⟩ := hdet _ _ st
+    imod (genHeap_alloc (v := (⟨some pty, v'⟩ : HeapCell)) hwf.fresh_get?)
+      $$ Hσ with ⟨Hσ, Hpt, Htok⟩
+    imod Hclose
+    imodintro
+    simp only [Algebra.BigOpL.bigOpL_nil]
+    isplitl [Hσ]
+    · isplitl [Hσ]
+      · iapply (genHeapInterp_eqv
+          (fun kk => (heapToMap_set_base σ₁.heap ⟨σ₁.nextAddr⟩ _ kk).symm)) $$ Hσ
+      · ipureintro
+        exact ⟨hfns, hwf.alloc⟩
+    · isplitl [Hpt Hcont]
+      · iapply Hcont $$ %(⟨σ₁.nextAddr⟩ : Addr) Hpt
+      · itrivial
+
+/-- Pure, deterministic frame pop: normal completion of a function body
+resumes the caller (`Step.frameFall`; stores no results — void frames). -/
+theorem wp_frame_fall {targets results k} :
+    (|={E}[E]▷=> £ 1 -∗ WP (Config.next k) @ s ; E {{ Φ }}) ⊢
+      WP (Config.next (.frame targets results k)) @ s ; E {{ Φ }} := by
+  iintro H
+  iapply (wp_lift_pure_det_step_no_fork (E₂ := E)
+    (e₂ := Config.next k)
+    (Hsafe := by
+      intro σ
+      cases s
+      · exact ⟨[], Config.next k, σ, [], GoPrimStep.step Step.frameFall⟩
+      · rfl)
+    (Hpuredet := by
+      intro σ obs e₂' σ₂ eₜ' h
+      cases h with
+      | step st => cases st; exact ⟨rfl, rfl, rfl, rfl⟩))
+  iexact H
+
+/-- **Zero-hypothesis-modulo-program witness: the full `inc(&x)` call.**
+`{x ↦ m} inc(&x) {x ↦ norm(m + lit)}` where `inc` is the one-pointer-param,
+no-results function with body `*p = *p + lit` — the slice's `inc`, ∀-general
+over `m` and `lit`. Composes `wp_call_unary` (frame entry, fresh param cell)
+→ `wp_inc_via_ptr` (the body's multi-`↦` store) → `wp_frame_fall` (frame
+exit); the parameter cell is dropped at return (affine). The only premise is
+program membership (`hfind`) — genuinely external: *which* program we run. -/
+theorem wp_inc_call {a : Addr} {kind : IntKind} {m lit : Int} {ty : Ty}
+    {fid incId : FuncId} {rest : LocalEnv} {k}
+    (hfind : findFunctionIn? (GoCoreGS.prog GF) incId = some
+      ⟨fid, #[⟨"p", .pointer (.int kind)⟩], #[],
+        .assign (.addr (.var "p"))
+          (.add (.deref (.var "p") ty) (.intLit lit kind))⟩) :
+    a.id ↦ (⟨some (.int kind), .int m kind⟩ : HeapCell)
+      ∗ (a.id ↦ (⟨some (.int kind), .int (kind.normalize (m + kind.normalize lit)) kind⟩ : HeapCell)
+          -∗ WP (Config.next k) @ s ; E {{ Φ }})
+      ⊢ WP (Config.exec (.call #[] incId #[.ref "x"])
+              ([("x", Loc.base a)] :: rest) k) @ s ; E {{ Φ }} := by
+  iintro ⟨Ha, Hcont⟩
+  iapply (wp_call_unary (pid := "p") (pty := .pointer (.int kind))
+    (v := .addr (.base a)) (v' := .addr (.base a)) hfind rfl rfl rfl
+    (fun _ => ExprR.ref (by simp [LocalEnv.lookup, Scope.lookup]))
+    (fun _ _ h => exprR_ref_det (by simp [LocalEnv.lookup, Scope.lookup]) h)
+    (fun _ => by
+      simp [normalizeValueForTy, normalizeValueForTyFuel, typeResolutionFuel]
+      rfl))
+  iintro %pa Hp
+  iapply (wp_inc_via_ptr (pa := pa) (a := a)
+    (pdecl := some ((Ty.int kind).pointer)) (ty := ty) (kind := kind)
+    (m := m) (lit := lit) (rest := []) (k := .frame [] [] k))
+  isplitl [Hp]
+  · iexact Hp
+  isplitl [Ha]
+  · iexact Ha
+  iintro ⟨Hp', Ha'⟩
+  iapply wp_frame_fall
+  iapply fupd_intro
+  inext
+  iapply fupd_intro
+  iintro Hcred
+  iapply Hcont $$ Ha'
 
 end HeapWP
 
