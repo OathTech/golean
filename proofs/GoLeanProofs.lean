@@ -324,17 +324,19 @@ proves its `hred` from its own resolution facts and calls this. The `hred`
 premise — unsatisfiable in the pre-CEK layer for *any* real assign — is now
 routinely dischargeable because the assignee resolves against the control `env`
 (fixed in the goal), not the quantified state. -/
-private theorem wp_store_step {a : Addr} {oldcell newcell : HeapCell} {stmt env k}
+private theorem wp_store_step {a : Addr} {oldcell newcell : HeapCell}
+    {c₀ : Config} {k}
+    (hnv : ToVal.toVal c₀ = (none : Option Unit))
     (hred : ∀ σ₁ : ExecState, Heap.lookup σ₁.heap (.base a) = some oldcell →
-      Step (Config.exec stmt env k) σ₁ (.next k)
+      Step c₀ σ₁ (.next k)
            { σ₁ with heap := Heap.set σ₁.heap (.base a) newcell } ∧
-      (∀ c' s', Step (Config.exec stmt env k) σ₁ c' s' →
+      (∀ c' s', Step c₀ σ₁ c' s' →
            c' = Config.next k ∧
            s' = { σ₁ with heap := Heap.set σ₁.heap (.base a) newcell })) :
     a.id ↦ oldcell ∗ (a.id ↦ newcell -∗ WP (Config.next k) @ s ; E {{ Φ }})
-      ⊢ WP (Config.exec stmt env k) @ s ; E {{ Φ }} := by
+      ⊢ WP c₀ @ s ; E {{ Φ }} := by
   iintro ⟨Hpt, Hcont⟩
-  iapply wp_lift_step (h := rfl)
+  iapply wp_lift_step (h := hnv)
   iintro %σ₁ %ns %obs %obs' %nt Hσ
   simp only [stateInterp]
   icases Hσ with ⟨Hσ, %Hinv⟩
@@ -378,20 +380,21 @@ read cell rides through unchanged; the target cell updates. Owning both `↦` at
 full fraction implies `pa ≠ a` semantically, so no aliasing side-condition is
 needed. This is the first multi-`↦` (genuinely separation-logic) core. -/
 private theorem wp_store_step₂ {pa a : Addr} {pcell oldcell newcell : HeapCell}
-    {stmt env k}
+    {c₀ : Config} {k}
+    (hnv : ToVal.toVal c₀ = (none : Option Unit))
     (hred : ∀ σ₁ : ExecState,
       Heap.lookup σ₁.heap (.base pa) = some pcell →
       Heap.lookup σ₁.heap (.base a) = some oldcell →
-      Step (Config.exec stmt env k) σ₁ (.next k)
+      Step c₀ σ₁ (.next k)
            { σ₁ with heap := Heap.set σ₁.heap (.base a) newcell } ∧
-      (∀ c' s', Step (Config.exec stmt env k) σ₁ c' s' →
+      (∀ c' s', Step c₀ σ₁ c' s' →
            c' = Config.next k ∧
            s' = { σ₁ with heap := Heap.set σ₁.heap (.base a) newcell })) :
     pa.id ↦ pcell ∗ a.id ↦ oldcell
       ∗ (pa.id ↦ pcell ∗ a.id ↦ newcell -∗ WP (Config.next k) @ s ; E {{ Φ }})
-      ⊢ WP (Config.exec stmt env k) @ s ; E {{ Φ }} := by
+      ⊢ WP c₀ @ s ; E {{ Φ }} := by
   iintro ⟨Hppt, Hpt, Hcont⟩
-  iapply wp_lift_step (h := rfl)
+  iapply wp_lift_step (h := hnv)
   iintro %σ₁ %ns %obs %obs' %nt Hσ
   simp only [stateInterp]
   icases Hσ with ⟨Hσ, %Hinv⟩
@@ -498,7 +501,7 @@ theorem wp_assign {a : Addr} {oldcell newcell : HeapCell} {v : GoValue}
         have hd := hrhs_det σ₁ _ hr; injection hd with hv hs2
         rw [← hloc, hv, hs2, hstore σ₁ hlook] at hs
         simp at hs
-  exact wp_store_step hred
+  exact wp_store_step rfl hred
 
 /-- **A store-through-address law `*aexpr = e`.** The assignee is `.addr aexpr`
 (store at the address that `aexpr` evaluates to), resolved through
@@ -574,7 +577,7 @@ theorem wp_deref_store {a : Addr} {oldcell newcell : HeapCell} {v : GoValue}
         have hd2 := hrhs_det σ₁ _ (has1 ▸ hr); injection hd2 with hv hs2
         rw [hloc, hv, hs2, hstore σ₁ hlook] at hs
         simp at hs
-  exact wp_store_step hred
+  exact wp_store_step rfl hred
 
 /-- **Deref-load as an `ExprR` fact.** If `aexpr` resolves to `.addr (.base a)`
 (state unchanged) and the cell at `a` holds `cell`, then `*aexpr` evaluates to
@@ -864,7 +867,7 @@ theorem wp_store_via_ptr {pa a : Addr} {pcell oldcell newcell : HeapCell}
         injection hd2 with hv hs2
         rw [hloc, hv, hs2, hstore σ₁ hla] at hs
         simp at hs
-  exact wp_store_step₂ hred
+  exact wp_store_step₂ rfl hred
 
 /-- **Zero-hypothesis witness: `*p = *p + lit` (∀-general over `m` AND `lit`;
 `inc`'s body is the `lit = 1` instance).** Own `p`'s cell
@@ -1024,6 +1027,109 @@ theorem wp_frame_fall {targets results k} :
       cases h with
       | step st => cases st; exact ⟨rfl, rfl, rfl, rfl⟩))
   iexact H
+
+/-- Pure, deterministic step: advance a sequence to its next statement
+(`Step.seqNext`). -/
+theorem wp_seq_next {t : Stmt} {rest : List Stmt} {env k} :
+    (|={E}[E]▷=> £ 1 -∗ WP (Config.exec t env (.seq rest env k)) @ s ; E {{ Φ }}) ⊢
+      WP (Config.next (.seq (t :: rest) env k)) @ s ; E {{ Φ }} := by
+  iintro H
+  iapply (wp_lift_pure_det_step_no_fork (E₂ := E)
+    (e₂ := Config.exec t env (.seq rest env k))
+    (Hsafe := by
+      intro σ
+      cases s
+      · exact ⟨[], _, σ, [], GoPrimStep.step Step.seqNext⟩
+      · rfl)
+    (Hpuredet := by
+      intro σ obs e₂' σ₂ eₜ' h
+      cases h with
+      | step st => cases st; exact ⟨rfl, rfl, rfl, rfl⟩))
+  iexact H
+
+/-- Pure, deterministic step: `return` starts unwinding, carrying the current
+env into `.returning` (so the frame can read named results). -/
+theorem wp_return {env k} :
+    (|={E}[E]▷=> £ 1 -∗ WP (Config.returning env k) @ s ; E {{ Φ }}) ⊢
+      WP (Config.exec .returnStmt env k) @ s ; E {{ Φ }} := by
+  iintro H
+  iapply (wp_lift_pure_det_step_no_fork (E₂ := E)
+    (e₂ := Config.returning env k)
+    (Hsafe := by
+      intro σ
+      cases s
+      · exact ⟨[], _, σ, [], GoPrimStep.step Step.returnStmt⟩
+      · rfl)
+    (Hpuredet := by
+      intro σ obs e₂' σ₂ eₜ' h
+      cases h with
+      | step st => cases st; exact ⟨rfl, rfl, rfl, rfl⟩))
+  iexact H
+
+/-- **The value-returning frame exit.** `return` reaches the frame with the
+callee env carried by `.returning`; the named result local (allocated at frame
+entry since the results-allocation fix) is read from its owned cell and stored
+to the caller's target cell. Premises conditioned on the two owned cells, via
+the two-cell core (result cell read, target written). Arity-specialized to one
+result/one target, like `wp_call_unary`. Witness: `wp_frame_return_int`. -/
+theorem wp_frame_return {ra ta : Addr} {rcell tcell newtcell : HeapCell}
+    {rname : String} {rty : Ty} {calleeEnv : LocalEnv} {k}
+    (hres : LocalEnv.lookup calleeEnv rname = some (.base ra))
+    (hstore : ∀ σ₁ : ExecState, Heap.lookup σ₁.heap (.base ta) = some tcell →
+        storeLoc σ₁ (.base ta) rcell.value
+          = .ok { σ₁ with heap := Heap.set σ₁.heap (.base ta) newtcell }) :
+    ra.id ↦ rcell ∗ ta.id ↦ tcell
+      ∗ (ra.id ↦ rcell ∗ ta.id ↦ newtcell -∗ WP (Config.next k) @ s ; E {{ Φ }})
+      ⊢ WP (Config.returning calleeEnv (.frame [.base ta] [⟨rname, rty⟩] k))
+          @ s ; E {{ Φ }} := by
+  have hred : ∀ σ₁ : ExecState,
+      Heap.lookup σ₁.heap (.base ra) = some rcell →
+      Heap.lookup σ₁.heap (.base ta) = some tcell →
+      Step (Config.returning calleeEnv (.frame [.base ta] [⟨rname, rty⟩] k)) σ₁
+        (.next k) { σ₁ with heap := Heap.set σ₁.heap (.base ta) newtcell } ∧
+      (∀ c' s',
+        Step (Config.returning calleeEnv (.frame [.base ta] [⟨rname, rty⟩] k)) σ₁ c' s' →
+        c' = Config.next k ∧
+        s' = { σ₁ with heap := Heap.set σ₁.heap (.base ta) newtcell }) := by
+    intro σ₁ hlr hlt
+    refine ⟨Step.frameReturn
+      (ResultsR.cons hres (loadLoc_base_of_lookup hlr) ResultsR.nil)
+      (StoreManyR.cons (hstore σ₁ hlt) StoreManyR.nil), ?_⟩
+    intro c' s' hst
+    cases hst with
+    | frameReturn hresR hstoreR =>
+      cases hresR with
+      | cons hl hload hrest =>
+        rw [hres] at hl
+        injection hl with hloc
+        rw [← hloc, loadLoc_base_of_lookup hlr] at hload
+        injection hload with hval
+        cases hrest
+        rw [← hval] at hstoreR
+        cases hstoreR with
+        | cons hst1 hrest2 =>
+          rw [hstore σ₁ hlt] at hst1
+          injection hst1 with hs1
+          rw [← hs1] at hrest2
+          cases hrest2
+          exact ⟨rfl, rfl⟩
+  exact wp_store_step₂ rfl hred
+
+/-- Witness for `wp_frame_return`: an int result local (holding a normalized
+`n`, ∀-general) returned into an int target cell (any prior value `w`). Sole
+premise: the result local resolves in the callee env — the fact the caller of
+this law always has from `wp_call`-style entry. -/
+theorem wp_frame_return_int {ra ta : Addr} {kind : IntKind} {n : Int}
+    {w : GoValue} {rname : String} {rty : Ty} {calleeEnv : LocalEnv} {k}
+    (hres : LocalEnv.lookup calleeEnv rname = some (.base ra)) :
+    ra.id ↦ (⟨some (.int kind), .int (kind.normalize n) kind⟩ : HeapCell)
+      ∗ ta.id ↦ (⟨some (.int kind), w⟩ : HeapCell)
+      ∗ (ra.id ↦ (⟨some (.int kind), .int (kind.normalize n) kind⟩ : HeapCell)
+          ∗ ta.id ↦ (⟨some (.int kind), .int (kind.normalize n) kind⟩ : HeapCell)
+          -∗ WP (Config.next k) @ s ; E {{ Φ }})
+      ⊢ WP (Config.returning calleeEnv (.frame [.base ta] [⟨rname, rty⟩] k))
+          @ s ; E {{ Φ }} :=
+  wp_frame_return hres (fun σ₁ hlt => storeLoc_int_cell hlt n)
 
 /-- **Zero-hypothesis-modulo-program witness: the full `inc(&x)` call.**
 `{x ↦ m} inc(&x) {x ↦ norm(m + lit)}` where `inc` is the one-pointer-param,
