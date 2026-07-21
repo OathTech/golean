@@ -77,3 +77,21 @@ use Iris internally — invariants, ghost state — but the exported claim is al
 an operational statement, e.g. an invariant over reachable states.) This keeps
 the believability audit to: kernel + axioms + ~400 lines of semantics + the
 differential evidence.
+
+
+## Addendum (2026-07-21): theorems over the envelope, not the sample
+
+The end-state theorems quantify over **unbounded executions under
+nondeterministic contexts** — all inputs, all oracle draws (map order, append
+capacity), eventually all schedules. Execution can only sample that envelope;
+no run establishes a ∀. This is the purpose of the Iris layer, and why the
+proof route (WP → adequacy → correspondence) is the one that survives beyond
+the closed deterministic slice, where `slice_interp_computes_two` merely
+*looks* execution-decidable. Concretely carried by: ∀-general laws
+(anti-specialization discipline), nondeterminism as relational existentials
+vs interpreter oracle parameter (`Choices`), and the correspondence's generic
+choice-stream threading — when nondet constructs enter the fragment, the
+statement becomes "every oracle-instantiated run is a relation run," and
+adequacy transfers to interpreter runs under any oracle. The differential
+samples the envelope to pin the *semantics*; the proofs cover it to establish
+the *program* — complementary, each guarding the other's blind side.
