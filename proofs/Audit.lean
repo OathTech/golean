@@ -258,8 +258,8 @@ example := @slice_adequate
   stated* (the interpreter is richer than the relation, e.g. string `add`;
   and D1 nested-`seqn` scoping — see the Correspondence module header and
   `docs/2026-07-21_eval-totalization-correspondence.md`). Nothing here or
-  elsewhere should count them as established. Calls (D2) and the panic side
-  (D3) are the tracked next layers.
+  elsewhere should count them as established. The D1 splice rule and the panic side
+  (D3) are the tracked next layers (Arc C); calls are covered as of item 6e.
 -/
 
 /-- Non-vacuity reference: the fragment correspondence theorems exist and

@@ -6,12 +6,14 @@ import GoLeanProofs.Specs.Slice
 
 Instantiates the interpreter⇄relation correspondence on THE slice program —
 the same `sliceProg`/`incFunc`/`mainFunc` terms `slice_adequate` speaks
-about. This is the closed witness that the fragment conditions
+about. This is the witness that the fragment conditions
 (`StInv`/`FuncFrag`/`SpineFrag`) are satisfiable *by the real proof subject*,
-per the non-vacuity gate: it exhibits a concrete interpreter run
-(kernel-computed, `r = 2` in the final heap) and its `Steps` derivation in
-the relation — the run the differential validates is an execution of the
-semantics the Iris proofs govern.
+per the non-vacuity gate: every hypothesis of the correspondence except the
+interpreter run itself is discharged concretely, so any normal run of
+`sliceProg` is an execution of the semantics the Iris proofs govern. (An
+earlier draft claimed a kernel-computed run here; that was wrong twice over —
+WF-compiled definitions don't reduce definitionally, and proving-by-executing
+is the wrong layer. Corrected per the 2026-07-21 pre-merge audit.)
 
 Iris-free on purpose: everything here is about the core-side correspondence;
 it lives in the proofs package only because the slice program terms do.
@@ -96,9 +98,15 @@ the bookkeeping `locals` field.
 The run itself enters as a hypothesis by design: the totalized interpreter is
 compiled by well-founded recursion, which does not reduce definitionally, so
 the kernel cannot execute it inside a proof — and running it is the
-*executable* world's job anyway. That world discharges it: the eval tests and
-the differential corpus case `pointers/inc-via-call` (real Go oracle) execute
-exactly this program shape and observe `r = 2`. -/
+*executable* world's job anyway. Honest scope of that external discharge
+(per the 2026-07-21 pre-merge audit): nothing currently executes this exact
+term. The differential corpus case `pointers/inc-via-call` runs the
+*frontend lowering* of the same Go source — a different GoCore term
+(synthesized result names, nested-seqn declarations) whose equivalence to
+`sliceProg` is a manual claim (see `Specs/Slice.lean`), and whose shape is
+outside the proven fragment until the D1 splice rule lands. Connecting the
+proof subject to an actually-executed term is exactly the golden-lowering
+item (Arc D). -/
 theorem slice_interp_run_in_relation (fuel : Nat) (σf : ExecState)
     (ch' : Choices)
     (hrun : execStmt fuel σ₀ [] (sliceProg mainId .int)

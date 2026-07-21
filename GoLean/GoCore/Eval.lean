@@ -428,7 +428,8 @@ mutual
   when the lengths match (callers check arity). -/
   def assignLocList (state : ExecState) :
       List Loc → List GoValue → Except GoError ExecState
-    | [], _ => return state
+    | [], [] => return state
+    | [], _ :: _ => stuck "extra GoCore assignment value"
     | _ :: _, [] => stuck "missing GoCore assignment value"
     | loc :: locs, v :: vs => do
         assignLocList (← assignLoc state loc v) locs vs
@@ -695,7 +696,8 @@ declared type, left to right. Structural on the lists (correspondence-facing,
 aligns with `BindParamsR`); behavior identical to the previous indexed
 `for`-loop — callers check arity first, so the mismatch case is unreachable. -/
 def bindParamList (state : ExecState) : List Param → List GoValue → Except GoError ExecState
-  | [], _ => return state
+  | [], [] => return state
+  | [], _ :: _ => stuck "extra argument value"
   | _ :: _, [] => stuck "missing argument"
   | p :: ps, v :: vs => do
       bindParamList (state.declareLocal p.id (some p.typ) (← normalizeValueForTy state p.typ v)) ps vs
