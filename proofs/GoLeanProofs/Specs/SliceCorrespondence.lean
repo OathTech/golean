@@ -143,4 +143,25 @@ theorem frontend_shaped_decl_in_relation (fuel : Nat) (σf : ExecState)
       (by intro a ha; simp at ha; subst ha; exact .var _)
       (by intro e he; simp at he))
 
+/-- **D3 witness (panic-side non-vacuity).** A genuinely panicking fragment
+program — `x := 1; x = 1/0` — maps into the relation's terminal `.panicked`
+with Go's exact message. The run hypothesis is discharged by the executable
+world (the differential corpus covers division-by-zero against real Go). -/
+theorem panic_shaped_in_relation (fuel : Nat) (msg : String)
+    (hrun : execStmt fuel σ₀ []
+      (.seqn #[.initialization ⟨"x", .int .int⟩,
+               .assign (.var "x")
+                 (.div (.intLit 1 .int) (.intLit 0 .int))])
+      = .error (.panic msg)) :
+    ∃ σp, Steps (.exec (.seqn #[.initialization ⟨"x", .int .int⟩,
+               .assign (.var "x")
+                 (.div (.intLit 1 .int) (.intLit 0 .int))]) [] .stop) σ₀
+      (.panicked msg) σp := by
+  refine interpreterPanic_spineSeq fuel σ₀ _ [] msg ?_ σ₀_inv hrun
+  intro s hs
+  simp at hs
+  rcases hs with rfl | rfl
+  · exact .init (.int _) (by simp)
+  · exact .ns (.assign (.var _) (.div (.intLit 1 .int) (.intLit 0 .int)))
+
 end GoLean.Iris.SliceCorrespondence

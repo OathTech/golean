@@ -253,13 +253,17 @@ example := @slice_adequate
   (block-scoped declarations may not shadow result names); value-returning
   fall-through is excluded syntactically (`EndsRet`, mirroring Go's
   missing-return compile error). Axiom-clean.
+- `✓ interpreterPanic_frag` — the panic side is **proven over the fragment**
+  (arc `rel-completion` D3b, 2026-07-21): an interpreter panic on a fragment
+  statement reaches the relation's terminal `.panicked` with the same
+  message (T1p/T2p mutual panic induction; substrate panic-freedom lemmas;
+  witnessed on `x := 1; x = 1/0`).
 - The **unrestricted** `interpreterSoundStatement`/`interpreterPanicStatement`
-  remain `def : Prop` — **stated, not proven**, and are *false as literally
-  stated* (the interpreter is richer than the relation, e.g. string `add`;
-  and D1 nested-`seqn` scoping — see the Correspondence module header and
-  `docs/2026-07-21_eval-totalization-correspondence.md`). Nothing here or
-  elsewhere should count them as established. The D1 splice rule and the panic side
-  (D3) are the tracked next layers (Arc C); calls are covered as of item 6e.
+  remain `def : Prop` — **stated, not proven**, and false as literally
+  stated only for the richer-interpreter reason now (the interpreter covers
+  values/constructs the relation doesn't; the D1 splice rule landed, so the
+  scoping counterexample is gone). Nothing here or elsewhere should count
+  them as established; widening the fragment narrows the gap.
 -/
 
 /-- Non-vacuity reference: the fragment correspondence theorems exist and
@@ -267,6 +271,8 @@ type-check with their stated hypotheses. -/
 example := @GoLean.GoCore.Correspondence.interpreterSound_frag
 example := @GoLean.Iris.SliceCorrespondence.slice_interp_run_in_relation
 example := @GoLean.Iris.SliceCorrespondence.frontend_shaped_decl_in_relation
+example := @GoLean.GoCore.Correspondence.interpreterPanic_frag
+example := @GoLean.Iris.SliceCorrespondence.panic_shaped_in_relation
 example := @GoLean.GoCore.Correspondence.execStmt_frag_sound
 example := @GoLean.GoCore.Correspondence.evalExpr_frag_ok
 

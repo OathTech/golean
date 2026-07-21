@@ -159,3 +159,18 @@ rule's docstring claims only what its correspondence case demonstrates;
 `interpreterPanic_frag` is D3's non-vacuity witness; D1's is the T2
 splice-case + (Arc D) the golden-lowering slice; D2's is the simplified
 frameReturn correspondence + the retirement of the avoid machinery.
+
+
+## Completion record (2026-07-21, end of arc work)
+
+All three landed as designed, four commits: D2-proper (f5a1557, net
+deletion), D1 (24a3d3e, splice + strip-target machinery + tail-generalized
+T2 + `seqnSpine`, witnessed on the frontend shape), D3a (2521e61, panic
+rules + call-leg judgments + expression/assignee panic bridges; discovered
+and fixed a FIFTH divergence — `divByZero` demanded an int left operand
+while the interpreter checks the divisor first), D3b (T1p/T2p statement
+panic induction + substrate panic-freedom lemmas + `interpreterPanic_frag`
++ `interpreterPanic_spineSeq`, witnessed on `x := 1; x = 1/0`). Both of
+item 6's Props now have fragment-scoped THEOREMS: `interpreterSound_frag`
+and `interpreterPanic_frag`. The unrestricted Props' remaining falseness is
+solely the richer-interpreter scope (the D1 counterexample is gone).
