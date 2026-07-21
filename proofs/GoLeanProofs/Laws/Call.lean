@@ -72,6 +72,12 @@ theorem wp_call_unary {funcId : FuncId} {func : Func} {pid : String} {pty : Ty}
                      nextAddr := σ₁.nextAddr + 1 } := by
     intro c' s' hst
     cases hst with
+    | callTargetsPanic hp => cases hp
+    | callArgsPanic hassP hp =>
+      cases hassP
+      cases hp with
+      | here he' => exact absurd (harg_det σ₁ _ he') (by simp)
+      | there hv hrest => cases hrest
     | call hass hargsR hfindR hbind hdecls hlk =>
       cases hass
       cases hargsR with
@@ -171,6 +177,11 @@ theorem wp_call_nullary_ret {funcId : FuncId} {func : Func} {rname : String}
                      nextAddr := σ₁.nextAddr + 1 } := by
     intro c' s' hst
     cases hst with
+    | callTargetsPanic hp =>
+      cases hp with
+      | here ha => cases ha
+      | there ha hrest => cases hrest
+    | callArgsPanic hassP hp => cases hp
     | call hass hargsR hfindR hbind hdecls hlk =>
       cases hass with
       | cons hA hrestA =>

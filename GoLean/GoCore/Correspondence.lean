@@ -143,6 +143,10 @@ def HeapFrag (σ : ExecState) : Prop :=
 
 /-! ### `Except`-bind inversion — the workhorses for inverting interpreter runs -/
 
+@[simp] theorem pure_ne_error {ε α : Type} (a : α) (e : ε) :
+    ((pure a : Except ε α) = .error e) ↔ False := by
+  simp [pure, Except.pure]
+
 @[simp] theorem stuck_def {α : Type} (m : String) :
     (stuck m : Except GoError α) = .error (.stuck m) := rfl
 @[simp] theorem panic_def {α : Type} (m : String) :
@@ -768,6 +772,262 @@ theorem findFunctionIn?_mem {funcs : Array Func} {id : FuncId} {f : Func}
 theorem dynamicDispatch?_none {σ : ExecState} (hm : σ.methods = #[])
     (f : Func) (vs : Array GoValue) : dynamicDispatch? σ f vs = .ok none := by
   simp [dynamicDispatch?, methodInfoByFuncId?, hm, pure, Except.pure]
+
+/-! ## The panic-side expression and assignee bridges (D3)
+
+Fragment evaluations that panic map to `ExprR .panic` derivations. Loads,
+lookups, and fragment-typed normalization/equality never panic (they fail
+as `stuck`), so every fragment panic originates at division by zero or a
+nil dereference and propagates through the strict operand positions. -/
+
+theorem intBinaryResult_no_panic {op : String} {f : Int → Int → Int}
+    {l r : GoValue} {msg : String} :
+    intBinaryResult op f l r ≠ .error (.panic msg) := by
+  unfold intBinaryResult
+  cases l <;> cases r <;>
+    simp [valueAsIntValue, bind_eq_error] <;>
+  (cases hc : IntKind.compatibleResult _ _ <;>
+    simp [Functor.map, Except.map])
+
+theorem valueEq_frag_no_panic {t : Ty} (ht : TyFrag t) {σ : ExecState}
+    (l r : GoValue) {msg : String} :
+    valueEq σ t l r ≠ .error (.panic msg) := by
+  cases ht <;> cases l <;> cases r <;> simp [valueEq, valueEqFuel]
+
+theorem evalExpr_frag_panic {e : Expr} (hf : ExprFrag e) :
+    ∀ {σ : ExecState}, HeapFrag σ → ∀ {msg : String},
+      evalExpr σ e = .error (.panic msg) →
+      ∀ L, ExprR σ.locals (σ.withLocals L) e (.panic msg) := by
+  induction hf with
+  | var id =>
+    intro σ hh msg h L
+    simp only [evalExpr, GoCore.lookup] at h
+    rw [bind_eq_error] at h
+    rcases h with h | ⟨w, hw, h⟩
+    · rw [bind_eq_error] at h
+      rcases h with h | ⟨loc, hloc, h⟩
+      · unfold lookupLoc at h
+        cases hl : LocalEnv.lookup σ.locals id <;> rw [hl] at h <;> simp at h
+      · exact absurd h (loadLoc_no_panic hh)
+    · simp at h
+  | intLit n k => intro σ hh msg h L; simp [evalExpr] at h
+  | boolLit b => intro σ hh msg h L; simp [evalExpr] at h
+  | add hl hr ihl ihr =>
+    intro σ hh msg h L
+    simp only [evalExpr] at h
+    rw [bind_eq_error] at h
+    rcases h with h | ⟨⟨lv, σ₁⟩, hlv, h⟩
+    · exact .binPanicLeft _ (.inl rfl) (ihl hh h L)
+    · obtain ⟨heq, hfl, hRl⟩ := evalExpr_frag_ok hl hh hlv
+      subst heq
+      rw [bind_eq_error] at h
+      rcases h with h | ⟨⟨rv, σ₂⟩, hrv, h⟩
+      · exact .binPanicRight _ (.inl rfl) (hRl L) (ihr hh h L)
+      · obtain ⟨heq2, hfr, hRr⟩ := evalExpr_frag_ok hr hh hrv
+        subst heq2
+        cases hfl <;> cases hfr <;> dsimp only at h <;>
+          first
+            | (rw [bind_eq_error] at h
+               rcases h with h | ⟨w, hw, h⟩
+               · exact absurd h intBinaryResult_no_panic
+               · simp at h)
+            | simp at h
+  | sub hl hr ihl ihr =>
+    intro σ hh msg h L
+    simp only [evalExpr] at h
+    rw [bind_eq_error] at h
+    rcases h with h | ⟨⟨lv, σ₁⟩, hlv, h⟩
+    · exact .binPanicLeft _ (.inr (.inl rfl)) (ihl hh h L)
+    · obtain ⟨heq, hfl, hRl⟩ := evalExpr_frag_ok hl hh hlv
+      subst heq
+      rw [bind_eq_error] at h
+      rcases h with h | ⟨⟨rv, σ₂⟩, hrv, h⟩
+      · exact .binPanicRight _ (.inr (.inl rfl)) (hRl L) (ihr hh h L)
+      · obtain ⟨heq2, hfr, hRr⟩ := evalExpr_frag_ok hr hh hrv
+        subst heq2
+        cases hfl <;> cases hfr <;> dsimp only at h <;>
+          first
+            | (rw [bind_eq_error] at h
+               rcases h with h | ⟨w, hw, h⟩
+               · exact absurd h intBinaryResult_no_panic
+               · simp at h)
+            | simp at h
+  | mul hl hr ihl ihr =>
+    intro σ hh msg h L
+    simp only [evalExpr] at h
+    rw [bind_eq_error] at h
+    rcases h with h | ⟨⟨lv, σ₁⟩, hlv, h⟩
+    · exact .binPanicLeft _ (.inr (.inr (.inl rfl))) (ihl hh h L)
+    · obtain ⟨heq, hfl, hRl⟩ := evalExpr_frag_ok hl hh hlv
+      subst heq
+      rw [bind_eq_error] at h
+      rcases h with h | ⟨⟨rv, σ₂⟩, hrv, h⟩
+      · exact .binPanicRight _ (.inr (.inr (.inl rfl))) (hRl L) (ihr hh h L)
+      · obtain ⟨heq2, hfr, hRr⟩ := evalExpr_frag_ok hr hh hrv
+        subst heq2
+        cases hfl <;> cases hfr <;> dsimp only at h <;>
+          first
+            | (rw [bind_eq_error] at h
+               rcases h with h | ⟨w, hw, h⟩
+               · exact absurd h intBinaryResult_no_panic
+               · simp at h)
+            | simp at h
+  | div hl hr ihl ihr =>
+    intro σ hh msg h L
+    simp only [evalExpr] at h
+    rw [bind_eq_error] at h
+    rcases h with h | ⟨⟨lv, σ₁⟩, hlv, h⟩
+    · exact .binPanicLeft _ (.inr (.inr (.inr rfl))) (ihl hh h L)
+    · obtain ⟨heq, hfl, hRl⟩ := evalExpr_frag_ok hl hh hlv
+      subst heq
+      rw [bind_eq_error] at h
+      rcases h with h | ⟨⟨rv, σ₂⟩, hrv, h⟩
+      · exact .binPanicRight _ (.inr (.inr (.inr rfl))) (hRl L) (ihr hh h L)
+      · obtain ⟨heq2, hfr, hRr⟩ := evalExpr_frag_ok hr hh hrv
+        subst heq2
+        cases hfr with
+        | int rvv rk =>
+          rw [bind_eq_error] at h
+          rcases h with h | ⟨d, hd, h⟩
+          · simp [valueAsInt] at h
+          · simp only [valueAsInt, pure_eq_ok] at hd
+            subst hd
+            cases hz : (rvv == 0) with
+            | true =>
+              have hz' : rvv = 0 := by simpa using hz
+              subst hz'
+              rw [hz] at h
+              simp only [reduceIte, panic_def] at h
+              rw [bind_eq_error] at h
+              rcases h with h | ⟨u, hu, h⟩
+              · injection h with hmsg
+                injection hmsg with hmsg'
+                subst hmsg'
+                exact .divByZero (hRl L) (hRr L)
+              · simp at hu
+            | false =>
+              rw [hz] at h
+              simp only [Bool.false_eq_true, reduceIte] at h
+              rw [bind_eq_error] at h
+              rcases h with h | ⟨w, hw, h⟩
+              · simp at h
+              · rw [bind_eq_error] at h
+                rcases h with h | ⟨u, hu, h⟩
+                · exact absurd h intBinaryResult_no_panic
+                · simp at h
+        | bool b =>
+          rw [bind_eq_error] at h
+          rcases h with h | ⟨d, hd, h⟩
+          · simp [valueAsInt] at h
+          · simp [valueAsInt] at hd
+        | addr l =>
+          rw [bind_eq_error] at h
+          rcases h with h | ⟨d, hd, h⟩
+          · simp [valueAsInt] at h
+          · simp [valueAsInt] at hd
+        | nil =>
+          rw [bind_eq_error] at h
+          rcases h with h | ⟨d, hd, h⟩
+          · simp [valueAsInt] at h
+          · simp [valueAsInt] at hd
+  | eqCmp hty hl hr ihl ihr =>
+    intro σ hh msg h L
+    simp only [evalExpr] at h
+    rw [bind_eq_error] at h
+    rcases h with h | ⟨⟨lv, σ₁⟩, hlv, h⟩
+    · exact .eqPanicLeft (ihl hh h L)
+    · obtain ⟨heq, hfl, hRl⟩ := evalExpr_frag_ok hl hh hlv
+      subst heq
+      rw [bind_eq_error] at h
+      rcases h with h | ⟨⟨rv, σ₂⟩, hrv, h⟩
+      · exact .eqPanicRight (hRl L) (ihr hh h L)
+      · obtain ⟨heq2, hfr, hRr⟩ := evalExpr_frag_ok hr hh hrv
+        subst heq2
+        rw [bind_eq_error] at h
+        rcases h with h | ⟨b, hb, h⟩
+        · exact absurd h (valueEq_frag_no_panic hty _ _)
+        · simp at h
+  | ref id =>
+    intro σ hh msg h L
+    simp only [evalExpr] at h
+    rw [bind_eq_error] at h
+    rcases h with h | ⟨loc, hloc, h⟩
+    · unfold lookupLoc at h
+      cases hl : LocalEnv.lookup σ.locals id <;> rw [hl] at h <;> simp at h
+    · simp at h
+  | locLit l => intro σ hh msg h L; simp [evalExpr] at h
+  | deref ty hp ihp =>
+    intro σ hh msg h L
+    simp only [evalExpr] at h
+    rw [bind_eq_error] at h
+    rcases h with h | ⟨⟨pv, σ₁⟩, hpv, h⟩
+    · exact .derefPanic (ihp hh h L)
+    · obtain ⟨heq, hfp, hRp⟩ := evalExpr_frag_ok hp hh hpv
+      subst heq
+      rw [bind_eq_error] at h
+      rcases h with h | ⟨loc, hloc, h⟩
+      · cases hfp with
+        | nil =>
+          simp only [valueAsLoc, panic_def] at h
+          injection h with hmsg
+          injection hmsg with hmsg'
+          subst hmsg'
+          exact .derefNil (hRp L)
+        | int n k => simp [valueAsLoc] at h
+        | bool b => simp [valueAsLoc] at h
+        | addr l => simp [valueAsLoc] at h
+      · cases hfp with
+        | addr l =>
+          simp only [valueAsLoc, pure_eq_ok] at hloc
+          subst hloc
+          rw [bind_eq_error] at h
+          rcases h with h | ⟨w, hw, h⟩
+          · exact absurd h (loadLoc_no_panic hh)
+          · simp at h
+        | int n k => simp [valueAsLoc] at hloc
+        | bool b => simp [valueAsLoc] at hloc
+        | nil => simp [valueAsLoc] at hloc
+
+theorem evalAssigneeLoc_frag_panic {a : Assignee} (ha : AssigneeFrag a) :
+    ∀ {σ : ExecState}, HeapFrag σ → ∀ {msg : String},
+      evalAssigneeLoc σ a = .error (.panic msg) →
+      ∀ L, AssigneeR σ.locals (σ.withLocals L) a (.panic msg) := by
+  cases ha with
+  | var id =>
+    intro σ hh msg h L
+    simp only [evalAssigneeLoc] at h
+    rw [bind_eq_error] at h
+    rcases h with h | ⟨loc, hloc, h⟩
+    · unfold lookupLoc at h
+      cases hl : LocalEnv.lookup σ.locals id <;> rw [hl] at h <;> simp at h
+    · simp at h
+  | addr he =>
+    intro σ hh msg h L
+    simp only [evalAssigneeLoc] at h
+    rw [bind_eq_error] at h
+    rcases h with h | ⟨⟨pv, σ₁⟩, hpv, h⟩
+    · exact .addrPanic (evalExpr_frag_panic he hh h L)
+    · obtain ⟨heq, hfp, hRp⟩ := evalExpr_frag_ok he hh hpv
+      subst heq
+      cases hfp with
+      | nil =>
+        simp only [valueAsLoc, panic_def] at h
+        rw [bind_eq_error] at h
+        rcases h with h | ⟨w, hw, h⟩
+        · injection h with hmsg
+          injection hmsg with hmsg'
+          subst hmsg'
+          exact .addrNil (hRp L)
+        · simp at hw
+      | int n k =>
+        dsimp only at h
+        simp [valueAsLoc, bind, Except.bind] at h
+      | bool b =>
+        dsimp only at h
+        simp [valueAsLoc, bind, Except.bind] at h
+      | addr l =>
+        dsimp only at h
+        simp [valueAsLoc, bind, Except.bind, pure, Except.pure] at h
 
 /-! ## Call bridges: the interpreter's call path maps to the relation's
 `ArgsR`/`AssigneesR`/`BindParamsR`/`ResultsR`/`StoreManyR` legs. -/

@@ -121,6 +121,11 @@ theorem exprR_deref_var_det {env : LocalEnv} {σ : ExecState} {p : String}
       rcases hmk with rfl | rfl | rfl | rfl <;> exact Expr.noConfusion he
   | binPanicRight mk hmk _ _ =>
       rcases hmk with rfl | rfl | rfl | rfl <;> exact Expr.noConfusion he
+  | derefPanic hpanic =>
+      injection he with h1 h2
+      subst h1
+      have hd := exprR_var_det hl hloadp hpanic
+      exact ExprOut.noConfusion hd
   | _ => exact Expr.noConfusion he
 
 /-- `k == k` for the derived `BEq IntKind` (constant constructors by `decide`;

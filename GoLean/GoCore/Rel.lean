@@ -132,8 +132,13 @@ inductive ExprR (env : LocalEnv) : ExecState → Expr → ExprOut → Prop where
       rv ≠ 0 →
       IntKind.compatibleResult lk rk = some k →
       ExprR env s (.div l r) (.value (.int (k.normalize (Int.tdiv lv rv)) k) s₂)
-  | divByZero {s s₁ s₂ l r lv lk rk} :
-      ExprR env s l (.value (.int lv lk) s₁) →
+  -- Divide-by-zero fires on a zero divisor regardless of the left operand's
+  -- shape — matching the interpreter, which checks the divisor before typing
+  -- the operands (D3 refinement, arc rel-completion: the previous int-left
+  -- premise made the relation stuck where the interpreter panics on
+  -- ill-typed-but-panicking programs; Go-unreachable either way).
+  | divByZero {s s₁ s₂ l r lv rk} :
+      ExprR env s l (.value lv s₁) →
       ExprR env s₁ r (.value (.int 0 rk) s₂) →
       ExprR env s (.div l r) (.panic "runtime error: integer divide by zero")
   | eqCmp {s s₁ s₂ ty l r lv rv b} :
@@ -182,6 +187,29 @@ inductive ExprR (env : LocalEnv) : ExecState → Expr → ExprOut → Prop where
       ExprR env s l (.value lv s₁) →
       ExprR env s₁ r (.panic msg) →
       ExprR env s (mk l r) (.panic msg)
+  -- Panic propagation through the remaining strict operand positions
+  -- (arc rel-completion D3: previously these were stuck where the
+  -- interpreter — and Go — panics).
+  | eqPanicLeft {s ty l r msg} :
+      ExprR env s l (.panic msg) →
+      ExprR env s (.eqCmp ty l r) (.panic msg)
+  | eqPanicRight {s s₁ ty l r lv msg} :
+      ExprR env s l (.value lv s₁) →
+      ExprR env s₁ r (.panic msg) →
+      ExprR env s (.eqCmp ty l r) (.panic msg)
+  | derefPanic {s e ty msg} :
+      ExprR env s e (.panic msg) →
+      ExprR env s (.deref e ty) (.panic msg)
+  | fieldGetPanic {s recv typeId fieldName msg} :
+      ExprR env s recv (.panic msg) →
+      ExprR env s (.fieldGet recv typeId fieldName) (.panic msg)
+  | indexPanicBase {s base index msg} :
+      ExprR env s base (.panic msg) →
+      ExprR env s (.indexGet base index) (.panic msg)
+  | indexPanicIndex {s s₁ base index bv msg} :
+      ExprR env s base (.value bv s₁) →
+      ExprR env s₁ index (.panic msg) →
+      ExprR env s (.indexGet base index) (.panic msg)
 
 /-- Outcome of resolving an assignee to a location. -/
 inductive LocOut where
@@ -272,6 +300,31 @@ inductive AssigneesR (env : LocalEnv) : ExecState → List Assignee → List Loc
       AssigneeR env s a (.loc loc s₁) →
       AssigneesR env s₁ rest locs s' →
       AssigneesR env s (a :: rest) (loc :: locs) s'
+
+/-- A panic while resolving caller targets, left to right: the first
+panicking assignee wins; the fault state is the state at its entry
+(assignee panics carry no post-state). Arc rel-completion D3. -/
+inductive AssigneesPanicR (env : LocalEnv) :
+    ExecState → List Assignee → String → ExecState → Prop where
+  | here {s a rest msg} :
+      AssigneeR env s a (.panic msg) →
+      AssigneesPanicR env s (a :: rest) msg s
+  | there {s s₁ a rest loc msg sf} :
+      AssigneeR env s a (.loc loc s₁) →
+      AssigneesPanicR env s₁ rest msg sf →
+      AssigneesPanicR env s (a :: rest) msg sf
+
+/-- A panic while evaluating call arguments, left to right (after targets
+resolved). Arc rel-completion D3. -/
+inductive ArgsPanicR (env : LocalEnv) :
+    ExecState → List Expr → String → ExecState → Prop where
+  | here {s e rest msg} :
+      ExprR env s e (.panic msg) →
+      ArgsPanicR env s (e :: rest) msg s
+  | there {s s₁ e rest v msg sf} :
+      ExprR env s e (.value v s₁) →
+      ArgsPanicR env s₁ rest msg sf →
+      ArgsPanicR env s (e :: rest) msg sf
 
 /-- Continuations for the small-step statement relation. Each continuation
 that resumes statement execution carries the `env` active for those
@@ -440,6 +493,15 @@ inductive Step : Config → ExecState → Config → ExecState → Prop where
       LookupsR frameEnv func.results.toList resultLocs →
       Step (.exec (.call targets funcId args) env k) s
         (.exec func.body frameEnv (.frame targetLocs resultLocs k)) frameState
+  -- Call-leg panics (D3): a panic while resolving targets or evaluating
+  -- arguments is the program's panic — terminal, like the assign panics.
+  | callTargetsPanic {targets funcId args msg env k s sf} :
+      AssigneesPanicR env s targets.toList msg sf →
+      Step (.exec (.call targets funcId args) env k) s (.panicked msg) sf
+  | callArgsPanic {targets funcId args targetLocs msg env k s s₁ sf} :
+      AssigneesR env s targets.toList targetLocs s₁ →
+      ArgsPanicR env s₁ args.toList msg sf →
+      Step (.exec (.call targets funcId args) env k) s (.panicked msg) sf
   -- Frame exit, explicit return: read the result values from the call-time
   -- pinned locations, store into caller targets, resume the caller (whose
   -- environment is carried by `k`).
