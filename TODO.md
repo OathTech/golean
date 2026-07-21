@@ -15,10 +15,11 @@ to arc 2**.
 discharged by the `inc` spec + `main = 2` — the slice finish line).
 **Arc 3** = item 6 solo (Eval totalization → correspondence, the L4 wall).
 Keep the narrative there, status-mirror here.
-**Backlog (structure):** split the ~1,150-line `proofs/GoLeanProofs.lean` into
-a scalable module layout — design + constraints (gate interactions, private
-boundaries, growth axes) in `docs/2026-07-20_proofs-structure-backlog.md`;
-execute at the arc boundary as a pure mechanical commit.
+**NEXT PRIORITY after the slice merges:** act on the repo-structure audit the
+user commissioned (`docs/2026-07-20_repo-structure-audit.md`) — work its
+findings as the first post-slice arc, folding in the proofs-layer split
+(design + constraints in `docs/2026-07-20_proofs-structure-backlog.md`:
+gate interactions, private boundaries, growth axes; pure mechanical commits).
 
 ## Epistemic hardening / pipeline error-resistance (2026-07-19, priority #0)
 

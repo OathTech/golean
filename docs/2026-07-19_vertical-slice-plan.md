@@ -164,8 +164,19 @@ L4 correspondence ❌ (the wall) · L5 WP laws 🟨 (~60%) · L6 spec ⬜.
    must preserve the `ToVal` terminal constraint and re-clear the full
    validation gate (relation changes don't touch the interpreter, but the
    correspondence instances and every WP proof over `Step` must re-elaborate).
-5. **Compose L6** — `{p ↦ n} inc(p) {p ↦ n+1}` (∀n, general — the
-   anti-specialization check) and `main ⊢ result = 2`. The slice's finish line.
+5. **Compose L6 — DONE (2026-07-21).** `wp_inc_call` = the `inc` spec
+   (∀-general, cross-frame); `wp_main_call` (∀-general composition through
+   main's whole body) and `wp_main_returns_two` (the `kind=.int, lit=1`
+   instance: calling main stores `.int 2` — the literal 2 appears only in this
+   final instance); **`slice_adequate`** = the closed end-to-end theorem: from
+   ANY well-formed initial state containing `inc`+`main`, the full program
+   `r := 0; r = main()` runs to termination never-stuck (`adequate .NotStuck`,
+   zero ownership hypotheses — the program allocates its own cells), with
+   `r ↦ 2` machine-checked Iris-side within the proof. **2b remainder
+   (tracked):** surfacing `r = 2` *operationally* in `adequate`'s φ needs the
+   strong-adequacy final-state readout (`wp_strong_adequacy_gen` plumbing) —
+   the one strengthening left; the heap-touching closed `adequate` itself is
+   delivered.
 6. **Totalize Eval's big-step cluster → prove the correspondence** (the L4
    wall; TODO F3). Converts `interpreterSound/PanicStatement` from Props into
    theorems and joins the differential island to the proof island. Heaviest;

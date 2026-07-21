@@ -1009,6 +1009,100 @@ theorem wp_call_unary {funcId : FuncId} {func : Func} {pid : String} {pty : Ty}
       · iapply Hcont $$ %(⟨σ₁.nextAddr⟩ : Addr) Hpt
       · itrivial
 
+/-- **The nullary-arg, unary-result call law** (`main`'s entry shape): zero
+arguments, one named result — the result cell is allocated at its default
+value by the `DeclsR` leg of `Step.call` (the results-allocation fix) and
+handed fresh to the continuation. The caller's target resolves in the caller
+env; its cell is stored only at frame RETURN, so no target ownership is needed
+at entry. -/
+theorem wp_call_nullary_ret {funcId : FuncId} {func : Func} {rname : String}
+    {rty : Ty} {body : Stmt} {v : GoValue} {tgt : String} {ta : Addr} {env k}
+    (hfind : findFunctionIn? (GoCoreGS.prog GF) funcId = some func)
+    (hargs : func.args = #[])
+    (hres : func.results = #[⟨rname, rty⟩])
+    (hbody : func.body = body)
+    (hres_t : LocalEnv.lookup env tgt = some (.base ta))
+    (hdef : ∀ σ₁ : ExecState, defaultValue σ₁ rty = .ok v) :
+    iprop(∀ ra : Addr, ra.id ↦ (⟨some rty, v⟩ : HeapCell) -∗
+        WP (Config.exec body [[(rname, Loc.base ra)]]
+              (.frame [Loc.base ta] [⟨rname, rty⟩] k)) @ s ; E {{ Φ }})
+      ⊢ WP (Config.exec (.call #[.var tgt] funcId #[]) env k) @ s ; E {{ Φ }} := by
+  obtain ⟨fid, fargs, fres, fbody⟩ := func
+  simp only at hargs hres hbody
+  subst hargs; subst hres; subst hbody
+  iintro Hcont
+  iapply wp_lift_step (h := rfl)
+  iintro %σ₁ %ns %obs %obs' %nt Hσ
+  simp only [stateInterp]
+  icases Hσ with ⟨Hσ, %Hinv⟩
+  obtain ⟨hfns, hwf⟩ := Hinv
+  have hstep : Step (.exec (.call #[.var tgt] funcId #[]) env k) σ₁
+      (.exec fbody [[(rname, Loc.base ⟨σ₁.nextAddr⟩)]]
+        (.frame [Loc.base ta] [⟨rname, rty⟩] k))
+      { σ₁ with heap := Heap.set σ₁.heap (.base ⟨σ₁.nextAddr⟩) ⟨some rty, v⟩,
+                nextAddr := σ₁.nextAddr + 1 } :=
+    Step.call (AssigneesR.cons (AssigneeR.var hres_t) AssigneesR.nil) ArgsR.nil
+      (by rw [hfns]; exact hfind)
+      BindParamsR.nil
+      (DeclsR.cons (hdef σ₁) (ExecState.alloc_eq σ₁ v (some rty)) DeclsR.nil)
+  have hdet : ∀ c' s',
+      Step (.exec (.call #[.var tgt] funcId #[]) env k) σ₁ c' s' →
+      c' = Config.exec fbody [[(rname, Loc.base ⟨σ₁.nextAddr⟩)]]
+             (.frame [Loc.base ta] [⟨rname, rty⟩] k) ∧
+      s' = { σ₁ with heap := Heap.set σ₁.heap (.base ⟨σ₁.nextAddr⟩) ⟨some rty, v⟩,
+                     nextAddr := σ₁.nextAddr + 1 } := by
+    intro c' s' hst
+    cases hst with
+    | call hass hargsR hfindR hbind hdecls =>
+      cases hass with
+      | cons hA hrestA =>
+        cases hA with
+        | var hl =>
+          rw [hres_t] at hl
+          injection hl with hloc
+          cases hrestA
+          cases hargsR
+          rw [hfns, hfind] at hfindR
+          injection hfindR with hfunc
+          subst hfunc
+          cases hbind
+          cases hdecls with
+          | cons hd ha hrest =>
+            rw [hdef σ₁] at hd
+            injection hd with hv
+            rw [← hv, ExecState.alloc_eq] at ha
+            injection ha with hloc2 hst'
+            rw [← hloc2, ← hst'] at hrest
+            cases hrest
+            rw [← hloc]
+            exact ⟨rfl, rfl⟩
+  iapply fupd_mask_intro Std.LawfulSet.empty_subset
+  iintro Hclose
+  isplitr
+  · ipureintro
+    cases s
+    · exact ⟨[], _, _, [], GoPrimStep.step hstep⟩
+    · trivial
+  inext
+  iintro %e₂ %σ₂ %eₜ %Hstep Hcred
+  cases Hstep with
+  | step st =>
+    obtain ⟨rfl, rfl⟩ := hdet _ _ st
+    imod (genHeap_alloc (v := (⟨some rty, v⟩ : HeapCell)) hwf.fresh_get?)
+      $$ Hσ with ⟨Hσ, Hpt, Htok⟩
+    imod Hclose
+    imodintro
+    simp only [Algebra.BigOpL.bigOpL_nil]
+    isplitl [Hσ]
+    · isplitl [Hσ]
+      · iapply (genHeapInterp_eqv
+          (fun kk => (heapToMap_set_base σ₁.heap ⟨σ₁.nextAddr⟩ _ kk).symm)) $$ Hσ
+      · ipureintro
+        exact ⟨hfns, hwf.alloc⟩
+    · isplitl [Hpt Hcont]
+      · iapply Hcont $$ %(⟨σ₁.nextAddr⟩ : Addr) Hpt
+      · itrivial
+
 /-- Pure, deterministic frame pop: normal completion of a function body
 resumes the caller (`Step.frameFall`; stores no results — void frames). -/
 theorem wp_frame_fall {targets results k} :
@@ -1211,6 +1305,26 @@ theorem wp_assign_var_int {sa ta : Addr} {kind : IntKind} {n : Int}
       ⊢ WP (Config.exec (.assign (.var tgt) (.var src)) env k) @ s ; E {{ Φ }} :=
   wp_assign_var hres_t hres_s (fun σ₁ hlt => storeLoc_int_cell hlt n)
 
+/-- Pure, deterministic step: `return` unwinds past a sequence continuation,
+discarding that scope (`Step.seqReturn`); the callee env rides in
+`.returning`. -/
+theorem wp_seq_return {retEnv : LocalEnv} {rest : List Stmt} {env k} :
+    (|={E}[E]▷=> £ 1 -∗ WP (Config.returning retEnv k) @ s ; E {{ Φ }}) ⊢
+      WP (Config.returning retEnv (.seq rest env k)) @ s ; E {{ Φ }} := by
+  iintro H
+  iapply (wp_lift_pure_det_step_no_fork (E₂ := E)
+    (e₂ := Config.returning retEnv k)
+    (Hsafe := by
+      intro σ
+      cases s
+      · exact ⟨[], _, σ, [], GoPrimStep.step Step.seqReturn⟩
+      · rfl)
+    (Hpuredet := by
+      intro σ obs e₂' σ₂ eₜ' h
+      cases h with
+      | step st => cases st; exact ⟨rfl, rfl, rfl, rfl⟩))
+  iexact H
+
 /-- **The value-returning frame exit.** `return` reaches the frame with the
 callee env carried by `.returning`; the named result local (allocated at frame
 entry since the results-allocation fix) is read from its owned cell and stored
@@ -1284,21 +1398,21 @@ over `m` and `lit`. Composes `wp_call_unary` (frame entry, fresh param cell)
 exit); the parameter cell is dropped at return (affine). The only premise is
 program membership (`hfind`) — genuinely external: *which* program we run. -/
 theorem wp_inc_call {a : Addr} {kind : IntKind} {m lit : Int} {ty : Ty}
-    {fid incId : FuncId} {rest : LocalEnv} {k}
+    {fid incId : FuncId} {xname : String} {env : LocalEnv} {k}
     (hfind : findFunctionIn? (GoCoreGS.prog GF) incId = some
       ⟨fid, #[⟨"p", .pointer (.int kind)⟩], #[],
         .assign (.addr (.var "p"))
-          (.add (.deref (.var "p") ty) (.intLit lit kind))⟩) :
+          (.add (.deref (.var "p") ty) (.intLit lit kind))⟩)
+    (hx : LocalEnv.lookup env xname = some (.base a)) :
     a.id ↦ (⟨some (.int kind), .int m kind⟩ : HeapCell)
       ∗ (a.id ↦ (⟨some (.int kind), .int (kind.normalize (m + kind.normalize lit)) kind⟩ : HeapCell)
           -∗ WP (Config.next k) @ s ; E {{ Φ }})
-      ⊢ WP (Config.exec (.call #[] incId #[.ref "x"])
-              ([("x", Loc.base a)] :: rest) k) @ s ; E {{ Φ }} := by
+      ⊢ WP (Config.exec (.call #[] incId #[.ref xname]) env k) @ s ; E {{ Φ }} := by
   iintro ⟨Ha, Hcont⟩
   iapply (wp_call_unary (pid := "p") (pty := .pointer (.int kind))
     (v := .addr (.base a)) (v' := .addr (.base a)) hfind rfl rfl rfl
-    (fun _ => ExprR.ref (by simp [LocalEnv.lookup, Scope.lookup]))
-    (fun _ _ h => exprR_ref_det (by simp [LocalEnv.lookup, Scope.lookup]) h)
+    (fun _ => ExprR.ref hx)
+    (fun _ _ h => exprR_ref_det hx h)
     (fun _ => by
       simp [normalizeValueForTy, normalizeValueForTyFuel, typeResolutionFuel]
       rfl))
@@ -1317,6 +1431,132 @@ theorem wp_inc_call {a : Addr} {kind : IntKind} {m lit : Int} {ty : Ty}
   iapply fupd_intro
   iintro Hcred
   iapply Hcont $$ Ha'
+
+/-! ## Item 5 — the slice composition: `main` returns 2
+
+The slice programs as GoCore terms (`abbrev` so `iapply` sees through them).
+These are the GoCore-level `inc`/`main`; their tie to the Go source is the
+differential corpus (`Corpus/coverage/exec/pointers/inc-via-call`), and the
+interpreter⇄relation link is punch-list item 6. -/
+
+/-- `func inc(p *int) { *p = *p + lit }` (slice: `lit = 1`). -/
+abbrev incFunc (fid : FuncId) (kind : IntKind) (ty : Ty) (lit : Int) : Func :=
+  ⟨fid, #[⟨"p", .pointer (.int kind)⟩], #[],
+    .assign (.addr (.var "p"))
+      (.add (.deref (.var "p") ty) (.intLit lit kind))⟩
+
+/-- `func main() int { x := 0; inc(&x); inc(&x); ret = x; return }` — `return
+x` in result-local lowered form. -/
+abbrev mainBody (incId : FuncId) (kind : IntKind) : Stmt :=
+  .seqn #[
+    .initialization ⟨"x", .int kind⟩,
+    .call #[] incId #[.ref "x"],
+    .call #[] incId #[.ref "x"],
+    .assign (.var "ret") (.var "x"),
+    .returnStmt]
+
+abbrev mainFunc (mid incId : FuncId) (kind : IntKind) : Func :=
+  ⟨mid, #[], #[⟨"ret", .int kind⟩], mainBody incId kind⟩
+
+/-- **The slice composition, ∀-general:** calling `main` stores
+`norm(norm(0 + norm lit) + norm lit)` — two `inc`s from zero — into the
+caller's target cell. Every law in the chain fires: nullary-ret call entry
+(fresh result cell) → seqn → init (fresh `x` cell) → two cross-frame `inc`
+calls → result-local copy → return unwinding → value-returning frame exit.
+Premises: the two functions are in the pinned program and the target resolves
+— all genuinely external. -/
+theorem wp_main_call {kind : IntKind} {lit : Int} {ty : Ty}
+    {mid incId fid : FuncId} {tgt : String} {ta : Addr} {w : GoValue} {env k}
+    (hmain : findFunctionIn? (GoCoreGS.prog GF) mid
+      = some (mainFunc mid incId kind))
+    (hinc : findFunctionIn? (GoCoreGS.prog GF) incId
+      = some (incFunc fid kind ty lit))
+    (htgt : LocalEnv.lookup env tgt = some (.base ta)) :
+    ta.id ↦ (⟨some (.int kind), w⟩ : HeapCell)
+      ∗ (ta.id ↦ (⟨some (.int kind),
+            .int (kind.normalize (kind.normalize (0 + kind.normalize lit)
+              + kind.normalize lit)) kind⟩ : HeapCell)
+          -∗ WP (Config.next k) @ s ; E {{ Φ }})
+      ⊢ WP (Config.exec (.call #[.var tgt] mid #[]) env k) @ s ; E {{ Φ }} := by
+  iintro ⟨Hta, Hcont⟩
+  iapply (wp_call_nullary_ret (rname := "ret") (rty := .int kind)
+    (v := .int 0 kind) (body := mainBody incId kind) hmain rfl rfl rfl htgt
+    (fun _ => by
+      simp [defaultValue, defaultValueFuel, typeResolutionFuel]
+      rfl))
+  iintro %ra Hra
+  iapply wp_seqn
+  iapply fupd_intro; inext; iapply fupd_intro; iintro Hcred1
+  iapply wp_seq_next
+  iapply fupd_intro; inext; iapply fupd_intro; iintro Hcred2
+  iapply wp_init_int
+  iintro %xa Hxa
+  iapply wp_seq_next
+  iapply fupd_intro; inext; iapply fupd_intro; iintro Hcred3
+  iapply (wp_inc_call (a := xa) (kind := kind) (lit := lit) (m := 0) hinc
+    (by simp [LocalEnv.lookup, Scope.lookup, LocalEnv.declare]))
+  isplitl [Hxa]
+  · iexact Hxa
+  iintro Hxa
+  iapply wp_seq_next
+  iapply fupd_intro; inext; iapply fupd_intro; iintro Hcred4
+  iapply (wp_inc_call (a := xa) (kind := kind) (lit := lit)
+    (m := kind.normalize (0 + kind.normalize lit)) hinc
+    (by simp [LocalEnv.lookup, Scope.lookup, LocalEnv.declare]))
+  isplitl [Hxa]
+  · iexact Hxa
+  iintro Hxa
+  iapply wp_seq_next
+  iapply fupd_intro; inext; iapply fupd_intro; iintro Hcred5
+  iapply (wp_assign_var_int (sa := xa) (ta := ra) (kind := kind)
+    (n := kind.normalize (0 + kind.normalize lit) + kind.normalize lit)
+    (w := .int 0 kind) (tgt := "ret") (src := "x")
+    (hres_t := by simp [LocalEnv.lookup, Scope.lookup, LocalEnv.declare])
+    (hres_s := by simp [LocalEnv.lookup, Scope.lookup, LocalEnv.declare]))
+  isplitl [Hxa]
+  · iexact Hxa
+  isplitl [Hra]
+  · iexact Hra
+  iintro ⟨Hxa, Hra⟩
+  iapply wp_seq_next
+  iapply fupd_intro; inext; iapply fupd_intro; iintro Hcred6
+  iapply wp_return
+  iapply fupd_intro; inext; iapply fupd_intro; iintro Hcred7
+  iapply wp_seq_return
+  iapply fupd_intro; inext; iapply fupd_intro; iintro Hcred8
+  iapply (wp_frame_return_int (ra := ra) (ta := ta) (kind := kind)
+    (n := kind.normalize (0 + kind.normalize lit) + kind.normalize lit)
+    (w := w) (rname := "ret")
+    (hres := by simp [LocalEnv.lookup, Scope.lookup, LocalEnv.declare]))
+  isplitl [Hra]
+  · iexact Hra
+  isplitl [Hta]
+  · iexact Hta
+  iintro ⟨Hra, Hta⟩
+  iapply Hcont $$ Hta
+
+/-- **The slice's L6 finish line: `main` returns 2** — the `kind = .int`,
+`lit = 1` instance of the general composition. The literal `2` appears only
+here, in the final specialized instance (the composition and every law are
+∀-general — the anti-specialization check). -/
+theorem wp_main_returns_two {ty : Ty} {mid incId fid : FuncId} {tgt : String}
+    {ta : Addr} {w : GoValue} {env k}
+    (hmain : findFunctionIn? (GoCoreGS.prog GF) mid
+      = some (mainFunc mid incId .int))
+    (hinc : findFunctionIn? (GoCoreGS.prog GF) incId
+      = some (incFunc fid .int ty 1))
+    (htgt : LocalEnv.lookup env tgt = some (.base ta)) :
+    ta.id ↦ (⟨some (.int .int), w⟩ : HeapCell)
+      ∗ (ta.id ↦ (⟨some (.int .int), .int 2 .int⟩ : HeapCell)
+          -∗ WP (Config.next k) @ s ; E {{ Φ }})
+      ⊢ WP (Config.exec (.call #[.var tgt] mid #[]) env k) @ s ; E {{ Φ }} := by
+  have h2 : IntKind.normalize .int
+      (IntKind.normalize .int (0 + IntKind.normalize .int 1)
+        + IntKind.normalize .int 1) = 2 := by decide
+  have := wp_main_call (kind := .int) (lit := 1) (ty := ty) hmain hinc htgt
+    (w := w) (k := k) (s := s) (E := E) (Φ := Φ)
+  rw [h2] at this
+  exact this
 
 end HeapWP
 
@@ -1380,7 +1620,8 @@ adequacy admits panicking terminals) is deferred — until then read the guarant
 as "`φ`-correct, never-stuck execution *among non-panicking runs*". -/
 theorem go_adequacy [GoCoreGpreS .hasLC GF] (c : Config) (σ : ExecState)
     (φ : Unit → Prop) (hσwf : HeapWf σ)
-    (Hwp : ∀ [GoCoreGS .hasLC GF], ⊢@{IProp GF} (WP c {{ v, ⌜φ v⌝ }})) :
+    (Hwp : ∀ [GoCoreGS .hasLC GF], GoCoreGS.prog GF = σ.functions →
+      ⊢@{IProp GF} (WP c {{ v, ⌜φ v⌝ }})) :
     adequate .NotStuck c σ (fun v _ => φ v) := by
   refine wp_adequacy (GF := GF) .NotStuck c σ φ ?_
   intro inst κs
@@ -1412,7 +1653,7 @@ theorem go_adequacy [GoCoreGpreS .hasLC GF] (c : Config) (σ : ExecState)
       iframe Hh Hm
     · ipureintro
       exact ⟨rfl, hσwf⟩
-  · exact Hwp
+  · exact Hwp rfl
 
 /-! ## Arc `slice-l5-pure` item 2 — the end-to-end adequacy witness
 
@@ -1461,7 +1702,7 @@ semantics, full stop. -/
 theorem adequate_seqn_nil (σ : ExecState) (env : LocalEnv) (hwf : HeapWf σ) :
     adequate .NotStuck (Config.exec (.seqn #[]) env .stop) σ (fun _ _ => True) :=
   go_adequacy (GF := GoCoreS) _ _ _ hwf (by
-    intro _
+    intro _ _
     iapply wp_seqn
     iapply fupd_intro
     inext
@@ -1472,6 +1713,50 @@ theorem adequate_seqn_nil (σ : ExecState) (env : LocalEnv) (hwf : HeapWf σ) :
     inext
     iapply fupd_intro
     iintro Hcred2
+    iapply (wp_value' (v := ()))
+    ipureintro
+    trivial)
+
+/-- The closed slice program: allocate the result target, call `main` into it.
+Runs from ANY well-formed state — it owns nothing initially (the target cell
+is its own allocation), which is what lets adequacy discharge with zero
+ownership hypotheses. -/
+abbrev sliceProg (mid : FuncId) (kind : IntKind) : Stmt :=
+  .seqn #[.initialization ⟨"r", .int kind⟩, .call #[.var "r"] mid #[]]
+
+/-- **The slice's closed end-to-end theorem.** For any well-formed initial
+state whose function table contains the slice's `inc` and `main`, the full
+program `r := 0; r = main()` — two pointer-writing `inc` calls deep — provably
+runs to termination and never gets stuck: a closed `adequate .NotStuck` whose
+statement contains no Iris. The result value (`r ↦ 2`) is machine-checked
+Iris-side inside this very proof (`wp_main_returns_two`); surfacing it
+*operationally* in `adequate`'s φ needs the strong-adequacy final-state
+readout — tracked as the 2b remainder in the punch list. -/
+theorem slice_adequate {ty : Ty} (σ : ExecState) (mid incId fid : FuncId)
+    (hwf : HeapWf σ)
+    (hmain : findFunctionIn? σ.functions mid = some (mainFunc mid incId .int))
+    (hinc : findFunctionIn? σ.functions incId = some (incFunc fid .int ty 1)) :
+    adequate .NotStuck (Config.exec (sliceProg mid .int) [] .stop) σ
+      (fun _ _ => True) :=
+  go_adequacy (GF := GoCoreS) _ _ _ hwf (by
+    intro _ hprog
+    iapply wp_seqn
+    iapply fupd_intro; inext; iapply fupd_intro; iintro Hcred1
+    iapply wp_seq_next
+    iapply fupd_intro; inext; iapply fupd_intro; iintro Hcred2
+    iapply wp_init_int
+    iintro %ra Hra
+    iapply wp_seq_next
+    iapply fupd_intro; inext; iapply fupd_intro; iintro Hcred3
+    iapply (wp_main_returns_two (ta := ra) (ty := ty)
+      (hmain := by rw [hprog]; exact hmain)
+      (hinc := by rw [hprog]; exact hinc)
+      (htgt := by simp [LocalEnv.lookup, Scope.lookup, LocalEnv.declare]))
+    isplitl [Hra]
+    · iexact Hra
+    iintro Hra
+    iapply wp_seq_done
+    iapply fupd_intro; inext; iapply fupd_intro; iintro Hcred4
     iapply (wp_value' (v := ()))
     ipureintro
     trivial)

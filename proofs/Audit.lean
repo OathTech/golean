@@ -165,6 +165,18 @@ open Lean in
 /-- info: 'GoLean.Iris.wp_assign_var_int' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms wp_assign_var_int
 
+-- Item 5: the slice composition and its closed end-to-end theorem.
+/-- info: 'GoLean.Iris.wp_seq_return' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms wp_seq_return
+/-- info: 'GoLean.Iris.wp_call_nullary_ret' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms wp_call_nullary_ret
+/-- info: 'GoLean.Iris.wp_main_call' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms wp_main_call
+/-- info: 'GoLean.Iris.wp_main_returns_two' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms wp_main_returns_two
+/-- info: 'GoLean.Iris.slice_adequate' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms slice_adequate
+
 -- The end-to-end artifact: a CLOSED `adequate` theorem composed from the WP
 -- laws through go_adequacy (arc slice-l5-pure item 2). The chain composes.
 /-- info: 'GoLean.Iris.wp_seq_done' depends on axioms: [propext, Classical.choice, Quot.sound] -/
@@ -199,6 +211,13 @@ example := @wp_init_int
 /-- `✓` wp_assign_var — witnessed by `wp_assign_var_int` (int var copy,
 ∀-general). -/
 example := @wp_assign_var_int
+/-- `✓` wp_call_nullary_ret — witnessed by `wp_main_call` (main's entry in the
+slice composition; ∀-general over kind/lit). -/
+example := @wp_main_call
+/-- `✓` the slice itself — `slice_adequate` is the closed end-to-end theorem
+(never-stuck, r ↦ 2 machine-checked inside; see its docstring for the
+operational-readout remainder). -/
+example := @slice_adequate
 
 /-! ## Three-state ledger — what is NOT yet fully closed (kept honest, not hidden)
 
