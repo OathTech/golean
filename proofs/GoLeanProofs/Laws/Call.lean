@@ -64,7 +64,7 @@ theorem wp_call_unary {funcId : FuncId} {func : Func} {pid : String} {pty : Ty}
       (by rw [hfns]; exact hfind)
       (BindParamsR.cons (hnorm σ₁) (ExecState.alloc_eq σ₁ v' (some pty))
         BindParamsR.nil)
-      DeclsR.nil
+      DeclsR.nil LookupsR.nil
   have hdet : ∀ c' s',
       Step (.exec (.call #[] funcId #[argExpr]) env k) σ₁ c' s' →
       c' = Config.exec fbody [[(pid, Loc.base ⟨σ₁.nextAddr⟩)]] (.frame [] [] k) ∧
@@ -72,7 +72,7 @@ theorem wp_call_unary {funcId : FuncId} {func : Func} {pid : String} {pty : Ty}
                      nextAddr := σ₁.nextAddr + 1 } := by
     intro c' s' hst
     cases hst with
-    | call hass hargsR hfindR hbind hdecls =>
+    | call hass hargsR hfindR hbind hdecls hlk =>
       cases hass
       cases hargsR with
       | cons hE hrest =>
@@ -93,6 +93,7 @@ theorem wp_call_unary {funcId : FuncId} {func : Func} {pid : String} {pty : Ty}
           rw [← hloc, ← hst'] at hrest'
           cases hrest'
           cases hdecls
+          cases hlk
           exact ⟨rfl, rfl⟩
   iapply fupd_mask_intro Std.LawfulSet.empty_subset
   iintro Hclose
@@ -137,7 +138,7 @@ theorem wp_call_nullary_ret {funcId : FuncId} {func : Func} {rname : String}
     (hdef : ∀ σ₁ : ExecState, defaultValue σ₁ rty = .ok v) :
     iprop(∀ ra : Addr, ra.id ↦ (⟨some rty, v⟩ : HeapCell) -∗
         WP (Config.exec body [[(rname, Loc.base ra)]]
-              (.frame [Loc.base ta] [⟨rname, rty⟩] k)) @ s ; E {{ Φ }})
+              (.frame [Loc.base ta] [Loc.base ra] k)) @ s ; E {{ Φ }})
       ⊢ WP (Config.exec (.call #[.var tgt] funcId #[]) env k) @ s ; E {{ Φ }} := by
   obtain ⟨fid, fargs, fres, fbody⟩ := func
   simp only at hargs hres hbody
@@ -148,24 +149,29 @@ theorem wp_call_nullary_ret {funcId : FuncId} {func : Func} {rname : String}
   simp only [stateInterp]
   icases Hσ with ⟨Hσ, %Hinv⟩
   obtain ⟨hfns, hwf⟩ := Hinv
+  have hlkp : LocalEnv.lookup
+      (LocalEnv.declare [] rname (Loc.base ⟨σ₁.nextAddr⟩)) rname
+      = some (Loc.base ⟨σ₁.nextAddr⟩) := by
+    simp [LocalEnv.declare, LocalEnv.lookup, Scope.lookup]
   have hstep : Step (.exec (.call #[.var tgt] funcId #[]) env k) σ₁
       (.exec fbody [[(rname, Loc.base ⟨σ₁.nextAddr⟩)]]
-        (.frame [Loc.base ta] [⟨rname, rty⟩] k))
+        (.frame [Loc.base ta] [Loc.base ⟨σ₁.nextAddr⟩] k))
       { σ₁ with heap := Heap.set σ₁.heap (.base ⟨σ₁.nextAddr⟩) ⟨some rty, v⟩,
                 nextAddr := σ₁.nextAddr + 1 } :=
     Step.call (AssigneesR.cons (AssigneeR.var hres_t) AssigneesR.nil) ArgsR.nil
       (by rw [hfns]; exact hfind)
       BindParamsR.nil
       (DeclsR.cons (hdef σ₁) (ExecState.alloc_eq σ₁ v (some rty)) DeclsR.nil)
+      (LookupsR.cons hlkp LookupsR.nil)
   have hdet : ∀ c' s',
       Step (.exec (.call #[.var tgt] funcId #[]) env k) σ₁ c' s' →
       c' = Config.exec fbody [[(rname, Loc.base ⟨σ₁.nextAddr⟩)]]
-             (.frame [Loc.base ta] [⟨rname, rty⟩] k) ∧
+             (.frame [Loc.base ta] [Loc.base ⟨σ₁.nextAddr⟩] k) ∧
       s' = { σ₁ with heap := Heap.set σ₁.heap (.base ⟨σ₁.nextAddr⟩) ⟨some rty, v⟩,
                      nextAddr := σ₁.nextAddr + 1 } := by
     intro c' s' hst
     cases hst with
-    | call hass hargsR hfindR hbind hdecls =>
+    | call hass hargsR hfindR hbind hdecls hlk =>
       cases hass with
       | cons hA hrestA =>
         cases hA with
@@ -186,8 +192,15 @@ theorem wp_call_nullary_ret {funcId : FuncId} {func : Func} {rname : String}
             injection ha with hloc2 hst'
             rw [← hloc2, ← hst'] at hrest
             cases hrest
-            rw [← hloc]
-            exact ⟨rfl, rfl⟩
+            cases hlk with
+            | cons hlk1 hlkrest =>
+              cases hlkrest
+              have hlkloc := hlk1
+              rw [show LocalEnv.declare [] rname (Loc.base ⟨σ₁.nextAddr⟩)
+                  = [[(rname, Loc.base ⟨σ₁.nextAddr⟩)]] from rfl] at hlkloc ⊢
+              simp [LocalEnv.lookup, Scope.lookup] at hlkloc
+              rw [← hloc, ← hlkloc]
+              exact ⟨rfl, rfl⟩
   iapply fupd_mask_intro Std.LawfulSet.empty_subset
   iintro Hclose
   isplitr
@@ -215,43 +228,41 @@ theorem wp_call_nullary_ret {funcId : FuncId} {func : Func} {rname : String}
       · iapply Hcont $$ %(⟨σ₁.nextAddr⟩ : Addr) Hpt
       · itrivial
 
-/-- **The value-returning frame exit.** `return` reaches the frame with the
-callee env carried by `.returning`; the named result local (allocated at frame
-entry since the results-allocation fix) is read from its owned cell and stored
-to the caller's target cell. Premises conditioned on the two owned cells, via
-the two-cell core (result cell read, target written). Arity-specialized to one
-result/one target, like `wp_call_unary`. Witness: `wp_frame_return_int`. -/
-theorem wp_frame_return {ra ta : Addr} {rcell tcell newtcell : HeapCell}
-    {rname : String} {rty : Ty} {calleeEnv : LocalEnv} {k}
-    (hres : LocalEnv.lookup calleeEnv rname = some (.base ra))
+/-- **The value-returning frame exit.** `return` reaches the frame; the
+result cell — whose *location* was pinned at call time (D2-proper) — is read
+from its owned cell and stored to the caller's target cell. Premises
+conditioned on the two owned cells, via the two-cell core (result cell read,
+target written). No environment resolution: the env-free `.returning` and
+the location-carrying frame make the read unambiguous under any shadowing.
+Arity-specialized to one result/one target, like `wp_call_unary`. Witness:
+`wp_frame_return_int`. -/
+theorem wp_frame_return {ra ta : Addr} {rcell tcell newtcell : HeapCell} {k}
     (hstore : ∀ σ₁ : ExecState, Heap.lookup σ₁.heap (.base ta) = some tcell →
         storeLoc σ₁ (.base ta) rcell.value
           = .ok { σ₁ with heap := Heap.set σ₁.heap (.base ta) newtcell }) :
     ra.id ↦ rcell ∗ ta.id ↦ tcell
       ∗ (ra.id ↦ rcell ∗ ta.id ↦ newtcell -∗ WP (Config.next k) @ s ; E {{ Φ }})
-      ⊢ WP (Config.returning calleeEnv (.frame [.base ta] [⟨rname, rty⟩] k))
+      ⊢ WP (Config.returning (.frame [.base ta] [.base ra] k))
           @ s ; E {{ Φ }} := by
   have hred : ∀ σ₁ : ExecState,
       Heap.lookup σ₁.heap (.base ra) = some rcell →
       Heap.lookup σ₁.heap (.base ta) = some tcell →
-      Step (Config.returning calleeEnv (.frame [.base ta] [⟨rname, rty⟩] k)) σ₁
+      Step (Config.returning (.frame [.base ta] [.base ra] k)) σ₁
         (.next k) { σ₁ with heap := Heap.set σ₁.heap (.base ta) newtcell } ∧
       (∀ c' s',
-        Step (Config.returning calleeEnv (.frame [.base ta] [⟨rname, rty⟩] k)) σ₁ c' s' →
+        Step (Config.returning (.frame [.base ta] [.base ra] k)) σ₁ c' s' →
         c' = Config.next k ∧
         s' = { σ₁ with heap := Heap.set σ₁.heap (.base ta) newtcell }) := by
     intro σ₁ hlr hlt
     refine ⟨Step.frameReturn
-      (ResultsR.cons hres (loadLoc_base_of_lookup hlr) ResultsR.nil)
+      (LoadsR.cons (loadLoc_base_of_lookup hlr) LoadsR.nil)
       (StoreManyR.cons (hstore σ₁ hlt) StoreManyR.nil), ?_⟩
     intro c' s' hst
     cases hst with
     | frameReturn hresR hstoreR =>
       cases hresR with
-      | cons hl hload hrest =>
-        rw [hres] at hl
-        injection hl with hloc
-        rw [← hloc, loadLoc_base_of_lookup hlr] at hload
+      | cons hload hrest =>
+        rw [loadLoc_base_of_lookup hlr] at hload
         injection hload with hval
         cases hrest
         rw [← hval] at hstoreR
@@ -265,20 +276,19 @@ theorem wp_frame_return {ra ta : Addr} {rcell tcell newtcell : HeapCell}
   exact wp_store_step₂ rfl hred
 
 /-- Witness for `wp_frame_return`: an int result local (holding a normalized
-`n`, ∀-general) returned into an int target cell (any prior value `w`). Sole
-premise: the result local resolves in the callee env — the fact the caller of
-this law always has from `wp_call`-style entry. -/
+`n`, ∀-general) returned into an int target cell (any prior value `w`).
+Zero premises beyond the owned cells (D2-proper erased the env-resolution
+premise). -/
 theorem wp_frame_return_int {ra ta : Addr} {kind : IntKind} {n : Int}
-    {w : GoValue} {rname : String} {rty : Ty} {calleeEnv : LocalEnv} {k}
-    (hres : LocalEnv.lookup calleeEnv rname = some (.base ra)) :
+    {w : GoValue} {k} :
     ra.id ↦ (⟨some (.int kind), .int (kind.normalize n) kind⟩ : HeapCell)
       ∗ ta.id ↦ (⟨some (.int kind), w⟩ : HeapCell)
       ∗ (ra.id ↦ (⟨some (.int kind), .int (kind.normalize n) kind⟩ : HeapCell)
           ∗ ta.id ↦ (⟨some (.int kind), .int (kind.normalize n) kind⟩ : HeapCell)
           -∗ WP (Config.next k) @ s ; E {{ Φ }})
-      ⊢ WP (Config.returning calleeEnv (.frame [.base ta] [⟨rname, rty⟩] k))
+      ⊢ WP (Config.returning (.frame [.base ta] [.base ra] k))
           @ s ; E {{ Φ }} :=
-  wp_frame_return hres (fun σ₁ hlt => storeLoc_int_cell hlt n)
+  wp_frame_return (fun σ₁ hlt => storeLoc_int_cell hlt n)
 
 end
 

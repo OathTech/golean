@@ -74,15 +74,14 @@ Known skeleton gaps (tracked, unexercised by the proven instances):
   values into the frame env after binding `func.args` (via `DeclsR`),
   mirroring the interpreter's `execFunctionWithValues`. `return x` assigns
   the result local, which `frameReturn`'s `ResultsR` reads at frame exit.
-- **Fall-through results.** A function body that completes normally
-  (`frameFall`) stores no results — normal-completion configs (`.next`) are
-  env-free by design (the Iris `ToVal` law forbids the terminal `.next .stop`
-  from carrying an env), so the callee env is unavailable there. Explicit
-  `return` (`frameReturn`) does read results, because `.returning` carries
-  the callee env. Void functions are correct either way; Go's own semantics
-  require an explicit `return` in any function with results (a missing
-  return is a compile error), so named-result fall-through is unreachable
-  from real Go — recorded here because the *relation* does not forbid it.
+- **Fall-through results — CLOSED** (arc `rel-completion` D2-proper,
+  2026-07-21): frame exits (return AND fall-through) read result values from
+  locations pinned at call time (`LookupsR` in `Step.call`, `LoadsR` at
+  exit), so no exit path consults an environment. `.returning` is env-free
+  like the other unwinding configs. This also makes the frame exit correct
+  under Go-legal block-scoped shadowing of result names (bare `return`
+  reads the *result variable*, not the innermost binding), which the old
+  env-carried read got wrong.
 -/
 
 namespace GoLean.GoCore.Rel
@@ -236,15 +235,25 @@ inductive BindParamsR : LocalEnv → ExecState → List Param → List GoValue �
       BindParamsR (env.declare p.id loc) s₁ ps vs env' s' →
       BindParamsR env s (p :: ps) (v :: vs) env' s'
 
-/-- Reading a function's named results at frame exit, resolved against the
-callee frame environment `env`. -/
-inductive ResultsR (env : LocalEnv) : ExecState → List Param → List GoValue → Prop where
-  | nil {s} : ResultsR env s [] []
-  | cons {s p ps v vs loc} :
+/-- Resolving the freshly-declared result ids to their frame locations, at
+call time — immediately after `DeclsR` declares them, when the resolution is
+unambiguous (D2-proper, arc rel-completion: the frame exit no longer consults
+any environment, so later shadowing cannot redirect the read). -/
+inductive LookupsR (env : LocalEnv) : List Param → List Loc → Prop where
+  | nil : LookupsR env [] []
+  | cons {p ps loc locs} :
       LocalEnv.lookup env p.id = some loc →
+      LookupsR env ps locs →
+      LookupsR env (p :: ps) (loc :: locs)
+
+/-- Reading call results at frame exit from their call-time-pinned locations.
+State-only; no environment. -/
+inductive LoadsR (s : ExecState) : List Loc → List GoValue → Prop where
+  | nil : LoadsR s [] []
+  | cons {loc locs v vs} :
       loadLoc s loc = .ok v →
-      ResultsR env s ps vs →
-      ResultsR env s (p :: ps) (v :: vs)
+      LoadsR s locs vs →
+      LoadsR s (loc :: locs) (v :: vs)
 
 /-- Writing call results back to caller target locations. Heap-only; no
 environment. -/
@@ -277,11 +286,12 @@ inductive Cont where
   Normal completion and `continue` retest the condition, `break` resumes
   after the loop, `return` keeps unwinding. -/
   | loop (cond : Expr) (body : Stmt) (env : LocalEnv) (k : Cont)
-  /-- Call frame: on `return`, read `results` from the callee environment
-  (carried by the `returning` config) and store into `targets`. The caller
-  environment is already carried by `k` (the caller's `seq`/`loop`
-  continuation), so nothing is restored here. -/
-  | frame (targets : List Loc) (results : List Param) (k : Cont)
+  /-- Call frame: at frame exit (return OR fall-through), read the result
+  values from `results` — the frame cells' *locations*, pinned at call time
+  (D2-proper) — and store into `targets`. The caller environment is already
+  carried by `k` (the caller's `seq`/`loop` continuation), so nothing is
+  restored here. -/
+  | frame (targets : List Loc) (results : List Loc) (k : Cont)
 
 /-- Sequential **control** configurations — the Iris `Expr` projection.
 
@@ -302,9 +312,10 @@ inductive Config where
   | next (k : Cont)
   | breaking (k : Cont)
   | continuing (k : Cont)
-  /-- Unwinding a `return`; carries the callee environment so `frame` can
-  read named results. -/
-  | returning (env : LocalEnv) (k : Cont)
+  /-- Unwinding a `return`. Env-free like the other completion configs
+  (D2-proper): the frame reads results from call-time-pinned locations, so
+  nothing needs the return-point environment. -/
+  | returning (k : Cont)
   | panicked (msg : String)
 
 /-- One small step over `(control, state)` pairs (`ExecState` is the Iris
@@ -324,8 +335,8 @@ inductive Step : Config → ExecState → Config → ExecState → Prop where
       Step (.breaking (.seq rest env k)) s (.breaking k) s
   | seqContinue {rest env k s} :
       Step (.continuing (.seq rest env k)) s (.continuing k) s
-  | seqReturn {retEnv rest env k s} :
-      Step (.returning retEnv (.seq rest env k)) s (.returning retEnv k) s
+  | seqReturn {rest env k s} :
+      Step (.returning (.seq rest env k)) s (.returning k) s
   -- Blocks: push a fresh scope, declare block locals into it, and hand the
   -- extended environment to the block's sequence continuation. There is no
   -- separate `scope` continuation — the block's environment is discarded
@@ -386,13 +397,12 @@ inductive Step : Config → ExecState → Config → ExecState → Prop where
       Step (.continuing (.loop c b env k)) s (.exec (.while c b) env k) s
   | loopBreak {c b env k s} :
       Step (.breaking (.loop c b env k)) s (.next k) s
-  | loopReturn {retEnv c b env k s} :
-      Step (.returning retEnv (.loop c b env k)) s (.returning retEnv k) s
-  -- Control transfer statements. `return` carries the current environment
-  -- into `returning` so the frame can read named results; `break`/`continue`
-  -- target a loop continuation and need no environment.
+  | loopReturn {c b env k s} :
+      Step (.returning (.loop c b env k)) s (.returning k) s
+  -- Control transfer statements. All three are env-free unwinding signals;
+  -- the frame's result read uses call-time-pinned locations (D2-proper).
   | returnStmt {env k s} :
-      Step (.exec .returnStmt env k) s (.returning env k) s
+      Step (.exec .returnStmt env k) s (.returning k) s
   | breakStmt {env k s} :
       Step (.exec .breakStmt env k) s (.breaking k) s
   | continueStmt {env k s} :
@@ -405,26 +415,31 @@ inductive Step : Config → ExecState → Config → ExecState → Prop where
   -- the callee expects an interface receiver). (Arc slice-call-frame item 4:
   -- this closes the results-allocation gap — `return x` assigns the result
   -- local, which now exists in the frame env for `frameReturn` to read.)
-  | call {targets funcId args func targetLocs argVals argsEnv frameEnv env k s s₁ s₂ s₃ frameState} :
+  | call {targets funcId args func targetLocs argVals argsEnv frameEnv resultLocs env k s s₁ s₂ s₃ frameState} :
       AssigneesR env s targets.toList targetLocs s₁ →
       ArgsR env s₁ args.toList argVals s₂ →
       findFunctionIn? s₂.functions funcId = some func →
       BindParamsR [] s₂ func.args.toList argVals argsEnv s₃ →
       DeclsR argsEnv s₃ func.results.toList frameEnv frameState →
+      LookupsR frameEnv func.results.toList resultLocs →
       Step (.exec (.call targets funcId args) env k) s
-        (.exec func.body frameEnv (.frame targetLocs func.results.toList k)) frameState
-  -- Explicit return: read named results from the callee environment carried
-  -- by `returning`, store into caller targets, resume the caller (whose
+        (.exec func.body frameEnv (.frame targetLocs resultLocs k)) frameState
+  -- Frame exit, explicit return: read the result values from the call-time
+  -- pinned locations, store into caller targets, resume the caller (whose
   -- environment is carried by `k`).
-  | frameReturn {calleeEnv targets results k s vs s'} :
-      ResultsR calleeEnv s results vs →
+  | frameReturn {targets results k s vs s'} :
+      LoadsR s results vs →
       StoreManyR s targets vs s' →
-      Step (.returning calleeEnv (.frame targets results k)) s (.next k) s'
-  -- Fall-through (normal completion of a function body). Normal-completion
-  -- configs are env-free, so no results are read here (fall-through results
-  -- gap — see the module header); correct for void functions.
-  | frameFall {targets results k s} :
-      Step (.next (.frame targets results k)) s (.next k) s
+      Step (.returning (.frame targets results k)) s (.next k) s'
+  -- Frame exit, fall-through (normal completion of a function body): the
+  -- SAME read/store as `frameReturn` (D2-proper — the fall-through results
+  -- gap is closed; a value-returning fall-through stores the declared
+  -- defaults, exactly as the interpreter does; for void frames both lists
+  -- are empty and the step is pure).
+  | frameFall {targets results k s vs s'} :
+      LoadsR s results vs →
+      StoreManyR s targets vs s' →
+      Step (.next (.frame targets results k)) s (.next k) s'
 
 /-- Reflexive-transitive closure of `Step` over `(control, state)` pairs. -/
 inductive Steps : Config → ExecState → Config → ExecState → Prop where

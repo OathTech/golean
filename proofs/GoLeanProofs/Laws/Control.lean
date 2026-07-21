@@ -48,23 +48,30 @@ theorem wp_seqn {ss env k} :
       | step st => cases st; exact ⟨rfl, rfl, rfl, rfl⟩))
   iexact H
 
-/-- Pure, deterministic frame pop: normal completion of a function body
-resumes the caller (`Step.frameFall`; stores no results — void frames). -/
-theorem wp_frame_fall {targets results k} :
+/-- Pure, deterministic frame pop for VOID frames: normal completion of a
+body with no results and no targets resumes the caller (`Step.frameFall`
+with empty read/store legs — D2-proper: value-returning frame exits are
+state-reading and get their own law in `Laws/Call`). -/
+theorem wp_frame_fall {k} :
     (|={E}[E]▷=> £ 1 -∗ WP (Config.next k) @ s ; E {{ Φ }}) ⊢
-      WP (Config.next (.frame targets results k)) @ s ; E {{ Φ }} := by
+      WP (Config.next (.frame [] [] k)) @ s ; E {{ Φ }} := by
   iintro H
   iapply (wp_lift_pure_det_step_no_fork (E₂ := E)
     (e₂ := Config.next k)
     (Hsafe := by
       intro σ
       cases s
-      · exact ⟨[], Config.next k, σ, [], GoPrimStep.step Step.frameFall⟩
+      · exact ⟨[], Config.next k, σ, [], GoPrimStep.step (Step.frameFall .nil .nil)⟩
       · rfl)
     (Hpuredet := by
       intro σ obs e₂' σ₂ eₜ' h
       cases h with
-      | step st => cases st; exact ⟨rfl, rfl, rfl, rfl⟩))
+      | step st =>
+        cases st with
+        | frameFall hld hst =>
+          cases hld
+          cases hst
+          exact ⟨rfl, rfl, rfl, rfl⟩))
   iexact H
 
 /-- Pure, deterministic step: advance a sequence to its next statement
@@ -86,14 +93,14 @@ theorem wp_seq_next {t : Stmt} {rest : List Stmt} {env k} :
       | step st => cases st; exact ⟨rfl, rfl, rfl, rfl⟩))
   iexact H
 
-/-- Pure, deterministic step: `return` starts unwinding, carrying the current
-env into `.returning` (so the frame can read named results). -/
+/-- Pure, deterministic step: `return` starts unwinding (env-free after
+D2-proper: the frame reads results from call-time-pinned locations). -/
 theorem wp_return {env k} :
-    (|={E}[E]▷=> £ 1 -∗ WP (Config.returning env k) @ s ; E {{ Φ }}) ⊢
+    (|={E}[E]▷=> £ 1 -∗ WP (Config.returning k) @ s ; E {{ Φ }}) ⊢
       WP (Config.exec .returnStmt env k) @ s ; E {{ Φ }} := by
   iintro H
   iapply (wp_lift_pure_det_step_no_fork (E₂ := E)
-    (e₂ := Config.returning env k)
+    (e₂ := Config.returning k)
     (Hsafe := by
       intro σ
       cases s
@@ -106,14 +113,13 @@ theorem wp_return {env k} :
   iexact H
 
 /-- Pure, deterministic step: `return` unwinds past a sequence continuation,
-discarding that scope (`Step.seqReturn`); the callee env rides in
-`.returning`. -/
-theorem wp_seq_return {retEnv : LocalEnv} {rest : List Stmt} {env k} :
-    (|={E}[E]▷=> £ 1 -∗ WP (Config.returning retEnv k) @ s ; E {{ Φ }}) ⊢
-      WP (Config.returning retEnv (.seq rest env k)) @ s ; E {{ Φ }} := by
+discarding that scope (`Step.seqReturn`). -/
+theorem wp_seq_return {rest : List Stmt} {env k} :
+    (|={E}[E]▷=> £ 1 -∗ WP (Config.returning k) @ s ; E {{ Φ }}) ⊢
+      WP (Config.returning (.seq rest env k)) @ s ; E {{ Φ }} := by
   iintro H
   iapply (wp_lift_pure_det_step_no_fork (E₂ := E)
-    (e₂ := Config.returning retEnv k)
+    (e₂ := Config.returning k)
     (Hsafe := by
       intro σ
       cases s

@@ -174,8 +174,7 @@ theorem wp_main_call {kind : IntKind} {lit : Int} {ty : Ty}
   iapply fupd_intro; inext; iapply fupd_intro; iintro Hcred8
   iapply (wp_frame_return_int (ra := ra) (ta := ta) (kind := kind)
     (n := kind.normalize (0 + kind.normalize lit) + kind.normalize lit)
-    (w := w) (rname := "ret")
-    (hres := by simp [LocalEnv.lookup, Scope.lookup, LocalEnv.declare]))
+    (w := w))
   isplitl [Hra]
   · iexact Hra
   isplitl [Hta]

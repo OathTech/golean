@@ -40,7 +40,6 @@ theorem incFunc_frag : FuncFrag (incFunc incId .int (.int .int) 1) where
   resultsTy := by intro r hr; simp at hr
   body := by
     right
-    refine ⟨?_, rfl⟩
     exact .assign (.addr (.var "p")) (.add (.deref _ (.var "p")) (.intLit 1 .int))
 
 /-- `main` is a fragment function (`.seqn` spine body ending in `return`;
@@ -54,7 +53,7 @@ theorem mainFunc_frag : FuncFrag (mainFunc mainId incId .int) where
     exact .int _
   body := by
     left
-    refine ⟨_, rfl, ?_, fun _ => ?_⟩
+    refine ⟨_, rfl, ?_⟩
     · intro s hs
       simp at hs
       rcases hs with rfl | rfl | rfl | rfl
@@ -63,7 +62,6 @@ theorem mainFunc_frag : FuncFrag (mainFunc mainId incId .int) where
           (by intro e he; simp at he; subst he; exact .ref _))
       · exact .ns (.assign (.var _) (.var _))
       · exact .ns .returnStmt
-    · exact .cons _ (.cons _ (.cons _ (.cons _ .single)))
 
 /-- The initial state satisfies the program invariant. -/
 theorem σ₀_inv : StInv σ₀ where
