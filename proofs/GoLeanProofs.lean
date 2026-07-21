@@ -1395,8 +1395,11 @@ theorem wp_frame_return_int {ra ta : Addr} {kind : IntKind} {n : Int}
 no-results function with body `*p = *p + lit` — the slice's `inc`, ∀-general
 over `m` and `lit`. Composes `wp_call_unary` (frame entry, fresh param cell)
 → `wp_inc_via_ptr` (the body's multi-`↦` store) → `wp_frame_fall` (frame
-exit); the parameter cell is dropped at return (affine). The only premise is
-program membership (`hfind`) — genuinely external: *which* program we run. -/
+exit); the parameter cell is dropped at return (affine). Premises: program
+membership (`hfind`, genuinely external — *which* program we run) and the
+argument-variable resolution (`hx`, a fixed-env side-condition discharged by
+`simp` at every use). (Premise count corrected per the 2026-07-21 pre-merge
+audit, finding F1.) -/
 theorem wp_inc_call {a : Addr} {kind : IntKind} {m lit : Int} {ty : Ty}
     {fid incId : FuncId} {xname : String} {env : LocalEnv} {k}
     (hfind : findFunctionIn? (GoCoreGS.prog GF) incId = some
@@ -1435,9 +1438,15 @@ theorem wp_inc_call {a : Addr} {kind : IntKind} {m lit : Int} {ty : Ty}
 /-! ## Item 5 — the slice composition: `main` returns 2
 
 The slice programs as GoCore terms (`abbrev` so `iapply` sees through them).
-These are the GoCore-level `inc`/`main`; their tie to the Go source is the
-differential corpus (`Corpus/coverage/exec/pointers/inc-via-call`), and the
-interpreter⇄relation link is punch-list item 6. -/
+These are **hand-modeled** GoCore-level `inc`/`main`: semantically equivalent
+to the native frontend's lowering of the corpus case
+(`Corpus/coverage/exec/pointers/inc-via-call`) but not byte-identical — the
+frontend synthesizes the result-local name (`$res0`, not `ret`) and nests
+`return`'s assign+return in its own `seqn` inside a `block`. That equivalence
+is a manual claim, not machine-checked: the corpus differential validates the
+*interpreter* against Go, and the interpreter⇄relation link is punch-list
+item 6 (stated, not proven). (Precision added per the 2026-07-21 pre-merge
+audit, auditors 1+2.) -/
 
 /-- `func inc(p *int) { *p = *p + lit }` (slice: `lit = 1`). -/
 abbrev incFunc (fid : FuncId) (kind : IntKind) (ty : Ty) (lit : Int) : Func :=
@@ -1692,8 +1701,9 @@ end EndToEnd
 
 /-- **The chain composes — a closed `adequate` theorem.** For any
 **well-formed** initial state (`HeapWf` — heap keys below `nextAddr`, the one
-side-condition the state interpretation carries; every state the semantics
-can construct satisfies it) and any environment, the empty-sequence program
+side-condition the state interpretation carries; states the semantics
+constructs are believed to satisfy it — asserted, not proven, and the states
+of interest, e.g. the empty heap, satisfy it trivially) and any environment, the empty-sequence program
 provably runs to termination without ever getting stuck: `WP` is assembled
 from `wp_seqn` + `wp_seq_done` + `wp_value'`, discharged through
 `go_adequacy` with the concrete functor bundle `GoCoreS`. The statement

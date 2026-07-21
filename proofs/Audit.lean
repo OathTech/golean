@@ -199,8 +199,9 @@ example := @wp_deref_store_ref
 multi-`↦` read-through store; ∀-general over the stored int). -/
 example := @wp_inc_via_ptr
 /-- `✓` wp_call_unary — witnessed by `wp_inc_call` (the full `inc(&x)` call:
-frame entry with fresh param cell → body store → frame exit; sole premise is
-program membership, genuinely external). -/
+frame entry with fresh param cell → body store → frame exit; premises are
+program membership (genuinely external) and the argument-variable resolution
+(fixed-env, discharged by `simp` at every use)). -/
 example := @wp_inc_call
 /-- `✓` wp_frame_return — witnessed by `wp_frame_return_int` (int result local
 returned into an int target cell, ∀-general). -/
