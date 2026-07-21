@@ -290,6 +290,63 @@ private theorem wp_store_step {a : Addr} {oldcell newcell : HeapCell} {stmt env 
       · iapply Hcont $$ Hpt
       · itrivial
 
+/-- **Two-cell store core** (arc `slice-l5-pure` item 3): like `wp_store_step`,
+but the reduction facts may additionally depend on a second owned cell
+`pa.id ↦ pcell` that the step only *reads* (e.g. `p`'s own cell when storing
+through the pointer `*p` — the address to store at is `pcell`'s value). The
+read cell rides through unchanged; the target cell updates. Owning both `↦` at
+full fraction implies `pa ≠ a` semantically, so no aliasing side-condition is
+needed. This is the first multi-`↦` (genuinely separation-logic) core. -/
+private theorem wp_store_step₂ {pa a : Addr} {pcell oldcell newcell : HeapCell}
+    {stmt env k}
+    (hred : ∀ σ₁ : ExecState,
+      Heap.lookup σ₁.heap (.base pa) = some pcell →
+      Heap.lookup σ₁.heap (.base a) = some oldcell →
+      Step (Config.exec stmt env k) σ₁ (.next k)
+           { σ₁ with heap := Heap.set σ₁.heap (.base a) newcell } ∧
+      (∀ c' s', Step (Config.exec stmt env k) σ₁ c' s' →
+           c' = Config.next k ∧
+           s' = { σ₁ with heap := Heap.set σ₁.heap (.base a) newcell })) :
+    pa.id ↦ pcell ∗ a.id ↦ oldcell
+      ∗ (pa.id ↦ pcell ∗ a.id ↦ newcell -∗ WP (Config.next k) @ s ; E {{ Φ }})
+      ⊢ WP (Config.exec stmt env k) @ s ; E {{ Φ }} := by
+  iintro ⟨Hppt, Hpt, Hcont⟩
+  iapply wp_lift_step (h := rfl)
+  iintro %σ₁ %ns %obs %obs' %nt Hσ
+  simp only [stateInterp]
+  ihave %Hmap : ⌜get? (heapToMap σ₁.heap) a.id = some oldcell⌝ $$ [Hσ Hpt]
+  · icases genHeap_valid $$ [$Hσ $Hpt] with >%h
+    itrivial
+  ihave %Hmapp : ⌜get? (heapToMap σ₁.heap) pa.id = some pcell⌝ $$ [Hσ Hppt]
+  · icases genHeap_valid $$ [$Hσ $Hppt] with >%h
+    itrivial
+  have hlook : Heap.lookup σ₁.heap (.base a) = some oldcell := by
+    rw [get?_heapToMap] at Hmap; simpa using Hmap
+  have hlookp : Heap.lookup σ₁.heap (.base pa) = some pcell := by
+    rw [get?_heapToMap] at Hmapp; simpa using Hmapp
+  iapply fupd_mask_intro Std.LawfulSet.empty_subset
+  iintro Hclose
+  isplitr
+  · ipureintro
+    cases s
+    · exact ⟨[], Config.next k, _, [], GoPrimStep.step (hred σ₁ hlookp hlook).1⟩
+    · trivial
+  inext
+  iintro %e₂ %σ₂ %eₜ %Hstep Hcred
+  cases Hstep with
+  | step st =>
+    obtain ⟨rfl, rfl⟩ := (hred σ₁ hlookp hlook).2 _ _ st
+    imod (genHeap_update (v₂ := newcell)) $$ [$Hσ $Hpt] with ⟨Hσ, Hpt⟩
+    imod Hclose
+    imodintro
+    simp only [Algebra.BigOpL.bigOpL_nil]
+    isplitl [Hσ]
+    · iapply (genHeapInterp_eqv
+        (fun kk => (heapToMap_set_base σ₁.heap a newcell kk).symm)) $$ Hσ
+    · isplitl [Hppt Hpt Hcont]
+      · iapply Hcont $$ [$Hppt $Hpt]
+      · itrivial
+
 /-- **The heap store law over `Step.assign` — now a usable Hoare law** (CEK
 reshape, `docs/2026-07-19_cek-reshape-plan.md`; closes the pre-merge audit
 finding D2-4/D2-5).
@@ -530,6 +587,235 @@ theorem wp_deref_store_ref {a : Addr} {w : GoValue} {n : Int}
     (fun _ => ExprR.intLit)
     (fun _ _ h => exprR_intLit_det h)
     (fun _ hlook => storeLoc_int_cell hlook n)
+
+/-! ## Arc `slice-l5-pure` item 3 — the read-through pointer store `*p = …`
+
+The case `wp_deref_store` cannot cover: the target address is the *value of
+`p`'s cell*, so resolution is heap-dependent. The premises here are
+**conditioned on the owned cells** (this is what the `∀σ₁`-unsatisfiability of
+the state-independent premises forces), and the law consumes the two-cell core
+`wp_store_step₂`: own `p`'s cell (read) and the target cell (written). -/
+
+/-- Inversion of `ExprR` on `.var p`, conditioned on the resolution and load
+facts: it evaluates only to the loaded value, state unchanged. -/
+private theorem exprR_var_det {env : LocalEnv} {σ : ExecState} {p : String}
+    {loc : Loc} {val : GoValue} {out : ExprOut}
+    (hl : LocalEnv.lookup env p = some loc)
+    (hv : loadLoc σ loc = .ok val)
+    (h : ExprR env σ (.var p) out) : out = .value val σ := by
+  generalize he : Expr.var p = e at h
+  cases h with
+  | var hl' hv' =>
+      injection he with hp; subst hp
+      rw [hl] at hl'; injection hl' with hloc; subst hloc
+      rw [hv] at hv'; injection hv' with hval; subst hval; rfl
+  | binPanicLeft mk hmk _ =>
+      rcases hmk with rfl | rfl | rfl | rfl <;> exact Expr.noConfusion he
+  | binPanicRight mk hmk _ _ =>
+      rcases hmk with rfl | rfl | rfl | rfl <;> exact Expr.noConfusion he
+  | _ => exact Expr.noConfusion he
+
+/-- Inversion of `ExprR` on `*p` (deref of a variable), conditioned on `p`'s
+resolution and both cells: it evaluates only to the target cell's value. -/
+private theorem exprR_deref_var_det {env : LocalEnv} {σ : ExecState} {p : String}
+    {ty : Ty} {pa a : Addr} {pcell acell : HeapCell} {out : ExprOut}
+    (hl : LocalEnv.lookup env p = some (.base pa))
+    (hp : Heap.lookup σ.heap (.base pa) = some pcell)
+    (hpv : pcell.value = .addr (.base a))
+    (ha : Heap.lookup σ.heap (.base a) = some acell)
+    (h : ExprR env σ (.deref (.var p) ty) out) : out = .value acell.value σ := by
+  have hloadp : loadLoc σ (.base pa) = .ok (.addr (.base a)) := by
+    rw [loadLoc_base_of_lookup hp, hpv]
+  generalize he : Expr.deref (.var p) ty = e at h
+  cases h with
+  | deref haddr hload =>
+      injection he with h1 h2; subst h1; subst h2
+      have hd := exprR_var_det hl hloadp haddr
+      injection hd with hav hs1
+      injection hav with hloc
+      subst hs1; subst hloc
+      rw [loadLoc_base_of_lookup ha] at hload
+      injection hload with hval; subst hval
+      rfl
+  | derefNil haddr =>
+      injection he with h1 h2; subst h1
+      have hd := exprR_var_det hl hloadp haddr
+      injection hd with hav _
+      exact GoValue.noConfusion hav
+  | binPanicLeft mk hmk _ =>
+      rcases hmk with rfl | rfl | rfl | rfl <;> exact Expr.noConfusion he
+  | binPanicRight mk hmk _ _ =>
+      rcases hmk with rfl | rfl | rfl | rfl <;> exact Expr.noConfusion he
+  | _ => exact Expr.noConfusion he
+
+/-- `k == k` for the derived `BEq IntKind` (constant constructors by `decide`;
+`unbounded` reduces to `String` beq-reflexivity). -/
+private theorem intKind_beq_self (k : IntKind) : (k == k) = true := by
+  cases k
+  case unbounded name => exact beq_self_eq_true (a := name)
+  all_goals decide
+
+/-- `compatibleResult` on equal kinds is that kind. -/
+private theorem intKind_compatibleResult_self (k : IntKind) :
+    IntKind.compatibleResult k k = some k := by
+  simp [IntKind.compatibleResult, intKind_beq_self]
+
+/-- Inversion of `ExprR` on `*p + lit`, conditioned on the cells: it evaluates
+only to the normalized sum. The composite determinism fact behind the
+`*p = *p + 1` witness. -/
+private theorem exprR_inc_det {env : LocalEnv} {σ : ExecState} {p : String}
+    {ty : Ty} {pa a : Addr} {pcell : HeapCell} {kind : IntKind} {m lit : Int}
+    {out : ExprOut}
+    (hl : LocalEnv.lookup env p = some (.base pa))
+    (hp : Heap.lookup σ.heap (.base pa) = some pcell)
+    (hpv : pcell.value = .addr (.base a))
+    (ha : Heap.lookup σ.heap (.base a) = some ⟨some (.int kind), .int m kind⟩)
+    (h : ExprR env σ (.add (.deref (.var p) ty) (.intLit lit kind)) out) :
+    out = .value (.int (kind.normalize (m + kind.normalize lit)) kind) σ := by
+  generalize he : Expr.add (.deref (.var p) ty) (.intLit lit kind) = e at h
+  cases h with
+  | addInt hle hre hk =>
+      injection he with h1 h2; subst h1; subst h2
+      have hld := exprR_deref_var_det hl hp hpv ha hle
+      injection hld with hlv hs1
+      injection hlv with hm hkl
+      have hrd := exprR_intLit_det (hs1 ▸ hre)
+      injection hrd with hrv hs2
+      injection hrv with hn hkr
+      subst hkl; subst hkr
+      rw [intKind_compatibleResult_self] at hk
+      injection hk with hkk
+      subst hkk; subst hm; subst hn; subst hs2
+      rfl
+  | binPanicLeft mk hmk hpanic =>
+      rcases hmk with rfl | rfl | rfl | rfl <;> try exact Expr.noConfusion he
+      injection he with h1 h2; subst h1
+      exact ExprOut.noConfusion (exprR_deref_var_det hl hp hpv ha hpanic)
+  | binPanicRight mk hmk hval hpanic =>
+      rcases hmk with rfl | rfl | rfl | rfl <;> try exact Expr.noConfusion he
+      injection he with h1 h2; subst h1; subst h2
+      have hd := exprR_deref_var_det hl hp hpv ha hval
+      injection hd with _ hs1
+      exact ExprOut.noConfusion (exprR_intLit_det (hs1 ▸ hpanic))
+  | _ => exact Expr.noConfusion he
+
+/-- **The read-through pointer store law `*p = e`** — `p` is a pointer
+*variable*; the target address is the value of `p`'s cell. Premises are
+conditioned on the two owned cells (that conditioning is exactly what the
+audit-established unsatisfiability of state-independent premises requires):
+- `hres` — `p` resolves in `env` to its own cell `pa`;
+- `hpval` — `p`'s cell holds the target address `.addr (.base a)`;
+- `hrhs`/`hrhs_det` — under both cell facts, `rhs` evaluates only to `v`;
+- `hstore` — storing `v` at the owned target yields the update.
+Consumes the two-cell core; the continuation regains both cells, target
+updated. Witness: `wp_inc_via_ptr` (`*p = *p + 1`, zero hypotheses). -/
+theorem wp_store_via_ptr {pa a : Addr} {pcell oldcell newcell : HeapCell}
+    {v : GoValue} {p : String} {rhs env k}
+    (hres : LocalEnv.lookup env p = some (.base pa))
+    (hpval : pcell.value = .addr (.base a))
+    (hrhs : ∀ σ₁ : ExecState,
+        Heap.lookup σ₁.heap (.base pa) = some pcell →
+        Heap.lookup σ₁.heap (.base a) = some oldcell →
+        ExprR env σ₁ rhs (.value v σ₁))
+    (hrhs_det : ∀ σ₁ (out : ExprOut),
+        Heap.lookup σ₁.heap (.base pa) = some pcell →
+        Heap.lookup σ₁.heap (.base a) = some oldcell →
+        ExprR env σ₁ rhs out → out = .value v σ₁)
+    (hstore : ∀ σ₁ : ExecState, Heap.lookup σ₁.heap (.base a) = some oldcell →
+        storeLoc σ₁ (.base a) v
+          = .ok { σ₁ with heap := Heap.set σ₁.heap (.base a) newcell }) :
+    pa.id ↦ pcell ∗ a.id ↦ oldcell
+      ∗ (pa.id ↦ pcell ∗ a.id ↦ newcell -∗ WP (Config.next k) @ s ; E {{ Φ }})
+      ⊢ WP (Config.exec (.assign (.addr (.var p)) rhs) env k) @ s ; E {{ Φ }} := by
+  have hred : ∀ σ₁ : ExecState,
+      Heap.lookup σ₁.heap (.base pa) = some pcell →
+      Heap.lookup σ₁.heap (.base a) = some oldcell →
+      Step (Config.exec (.assign (.addr (.var p)) rhs) env k) σ₁ (.next k)
+           { σ₁ with heap := Heap.set σ₁.heap (.base a) newcell } ∧
+      (∀ c' s', Step (Config.exec (.assign (.addr (.var p)) rhs) env k) σ₁ c' s' →
+           c' = Config.next k ∧
+           s' = { σ₁ with heap := Heap.set σ₁.heap (.base a) newcell }) := by
+    intro σ₁ hlp hla
+    have hloadp : loadLoc σ₁ (.base pa) = .ok (.addr (.base a)) := by
+      rw [loadLoc_base_of_lookup hlp, hpval]
+    refine ⟨Step.assign (AssigneeR.addr (ExprR.var hres hloadp))
+      (hrhs σ₁ hlp hla) (hstore σ₁ hla), ?_⟩
+    intro c' s' hst
+    cases hst with
+    | assign hass hr hs =>
+      cases hass with
+      | addr haddr =>
+        have hd := exprR_var_det hres hloadp haddr
+        injection hd with hav hs1
+        injection hav with hloc
+        rw [hs1] at hr
+        have hd2 := hrhs_det σ₁ _ hlp hla hr
+        injection hd2 with hv hs2
+        rw [hloc, hv, hs2, hstore σ₁ hla] at hs
+        injection hs with hs3
+        exact ⟨rfl, hs3.symm⟩
+    | assignTargetPanic hass =>
+      cases hass with
+      | addrNil haddr =>
+        have hd := exprR_var_det hres hloadp haddr
+        injection hd with hav _
+        exact GoValue.noConfusion hav
+      | addrPanic haddr =>
+        exact ExprOut.noConfusion (exprR_var_det hres hloadp haddr)
+    | assignValuePanic hass hr =>
+      cases hass with
+      | addr haddr =>
+        have hd := exprR_var_det hres hloadp haddr
+        injection hd with _ hs1
+        exact ExprOut.noConfusion (hrhs_det σ₁ _ (hs1 ▸ hlp) (hs1 ▸ hla) (hs1 ▸ hr))
+    | assignStorePanic hass hr hs =>
+      cases hass with
+      | addr haddr =>
+        have hd := exprR_var_det hres hloadp haddr
+        injection hd with hav hs1
+        injection hav with hloc
+        rw [hs1] at hr
+        have hd2 := hrhs_det σ₁ _ hlp hla hr
+        injection hd2 with hv hs2
+        rw [hloc, hv, hs2, hstore σ₁ hla] at hs
+        simp at hs
+  exact wp_store_step₂ hred
+
+/-- **Zero-hypothesis witness: `*p = *p + 1` — `inc`'s body.** Own `p`'s cell
+(holding a pointer to `a`) and the target int cell (holding `m`); after the
+statement the target holds the normalized `m + 1` and `p`'s cell is unchanged.
+Every premise of `wp_store_via_ptr` is discharged: resolution by `simp`
+against the concrete env, the conditioned rhs evaluation by
+`ExprR.addInt`/`ExprR.deref`/`ExprR.var`, its determinism by `exprR_inc_det`,
+and the store by `storeLoc_int_cell`. The first multi-`↦` closed spec — the
+`{p ↦ –, a ↦ m} *p = *p+1 {p ↦ –, a ↦ m+1}` shape the slice's `inc` needs
+(∀ m: general, not specialized to an example value). -/
+theorem wp_inc_via_ptr {pa a : Addr} {pdecl : Option Ty} {ty : Ty}
+    {kind : IntKind} {m lit : Int} {rest : LocalEnv} {k} :
+    pa.id ↦ (⟨pdecl, .addr (.base a)⟩ : HeapCell)
+      ∗ a.id ↦ (⟨some (.int kind), .int m kind⟩ : HeapCell)
+      ∗ (pa.id ↦ (⟨pdecl, .addr (.base a)⟩ : HeapCell)
+          ∗ a.id ↦ (⟨some (.int kind), .int (kind.normalize (m + kind.normalize lit)) kind⟩ : HeapCell)
+          -∗ WP (Config.next k) @ s ; E {{ Φ }})
+      ⊢ WP (Config.exec
+              (.assign (.addr (.var "p"))
+                (.add (.deref (.var "p") ty) (.intLit lit kind)))
+              ([("p", Loc.base pa)] :: rest) k) @ s ; E {{ Φ }} :=
+  wp_store_via_ptr (pa := pa) (a := a)
+    (v := .int (kind.normalize (m + kind.normalize lit)) kind)
+    (by simp [LocalEnv.lookup, Scope.lookup])
+    rfl
+    (fun σ₁ hlp hla =>
+      ExprR.addInt
+        (ExprR.deref (ExprR.var (loc := .base pa)
+            (by simp [LocalEnv.lookup, Scope.lookup])
+            (by rw [loadLoc_base_of_lookup hlp]))
+          (by rw [loadLoc_base_of_lookup hla]))
+        ExprR.intLit
+        (intKind_compatibleResult_self kind))
+    (fun σ₁ out hlp hla h =>
+      exprR_inc_det (by simp [LocalEnv.lookup, Scope.lookup]) hlp rfl hla h)
+    (fun σ₁ hla => storeLoc_int_cell hla (m + kind.normalize lit))
 
 end HeapWP
 

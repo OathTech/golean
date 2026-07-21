@@ -144,9 +144,11 @@ L4 correspondence ❌ (the wall) · L5 WP laws 🟨 (~60%) · L6 spec ⬜.
    needs a `go_heap_adequacy` variant that hands the initial heap's `↦`
    fragments to the WP proof (HeapLang's `heap_adequacy` shape — gen_heap init
    with fragment ownership). Do alongside item 3 or fold into arc 2's finish.
-3. **Heap-reading RHS** — `*p = *p + 1`: premises conditioned on the owned
-   cell(s), multi-`↦` ownership (`p_loc ↦ addr(a) ∗ a ↦ n`), composing
-   `exprR_deref_load` + `ExprR.addInt`. First genuinely separation-logic step.
+3. **Heap-reading RHS** — `*p = *p + 1`. **DONE (2026-07-20):**
+   `wp_store_via_ptr` (premises conditioned on the owned cells, consuming the
+   new two-cell core `wp_store_step₂`) + zero-hypothesis witness
+   `wp_inc_via_ptr` (`{p ↦ addr(a) ∗ a ↦ m} *p = *p+lit {p ↦ addr(a) ∗ a ↦
+   norm(m+lit)}`, ∀-general over `m`). First multi-`↦` law; in the Audit gates.
 4. **Call/frame/return law** — reason across `inc(&x)`: frame entry
    (BindParams), body spec as hypothesis, frame exit. Includes closing the
    **results-allocation gap** (`Step.call` binds args only — `Rel.lean` module

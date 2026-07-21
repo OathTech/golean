@@ -127,6 +127,13 @@ open Lean in
 /-- info: 'GoLean.Iris.storeLoc_int_cell' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in #print axioms storeLoc_int_cell
 
+-- The read-through pointer store (arc slice-l5-pure item 3): the first
+-- multi-points-to law, premises conditioned on the owned cells.
+/-- info: 'GoLean.Iris.wp_store_via_ptr' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms wp_store_via_ptr
+/-- info: 'GoLean.Iris.wp_inc_via_ptr' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms wp_inc_via_ptr
+
 -- The end-to-end artifact: a CLOSED `adequate` theorem composed from the WP
 -- laws through go_adequacy (arc slice-l5-pure item 2). The chain composes.
 /-- info: 'GoLean.Iris.wp_seq_done' depends on axioms: [propext, Classical.choice, Quot.sound] -/
@@ -145,6 +152,9 @@ example := @wp_assign_lit
 /-- `✓` wp_deref_store — witnessed by `wp_deref_store_ref` (`*(&x) = intLit n`,
 the heap-independent address the law covers). -/
 example := @wp_deref_store_ref
+/-- `✓` wp_store_via_ptr — witnessed by `wp_inc_via_ptr` (`*p = *p + 1`, the
+multi-`↦` read-through store; ∀-general over the stored int). -/
+example := @wp_inc_via_ptr
 
 /-! ## Three-state ledger — what is NOT yet fully closed (kept honest, not hidden)
 
