@@ -95,6 +95,21 @@ CLAUDE.md, stale Correspondence header. Open items:
 - [ ] **F5 (major) — size the target theorem.** Draft a skeletal multi-node
   quorum-safety target (state space, message/failure model, invariant statement)
   so the A→B→C widening ladder aims at something explicit, not just "raft".
+  **Bar refined 2026-07-21 (user): "the Verdi results, but on real code."**
+  Decomposition: (tier 1, committed — known-solid machinery) the Raft safety
+  invariant stack (election safety, log matching, leader completeness,
+  state-machine safety) capped by linearizability of the replicated service —
+  what Verdi actually proved, but attached to real frontend-lowered Go via the
+  differential+correspondence chain instead of Verdi's model/shim gap; (tier 2,
+  explicit stretch — own machinery decision) convergence/liveness under
+  fairness, which Verdi did NOT prove and which is a known weak spot of
+  step-indexed logics (cf. Trillium/Fairis in Coq-land) — never silently
+  bundled with tier 1. Network/failure model (drop/dup/reorder/delay) is one
+  more nondeterminism source, architecturally the `Choices` move again
+  (relation over-approximates the adversarial scheduler, executable side
+  instantiates) over an N-node model — this is F4's decision. Plus
+  ghost/history state for linearizability and the GoCore⇒abstract-raft
+  refinement layer (master plan D4-9).
 - [ ] **F3 (leverage) — prioritize Eval big-step totalization** over more WP
   lemmas: it converts `interpreterSound/PanicStatement` from Props into theorems
   and joins the two currently-disconnected islands (interpreter ⇄ Iris proofs).
