@@ -156,6 +156,45 @@ theorem loadLoc_base_of_lookup {σ : ExecState} {a : Addr} {cell : HeapCell}
     loadLoc σ (.base a) = .ok cell.value := by
   unfold loadLoc; rw [h]; rfl
 
+/-- Heap well-formedness: every base address at or above `nextAddr` is
+unmapped, so `ExecState.alloc`'s fresh location is genuinely fresh (the
+gen_heap allocation side-condition; `docs/2026-07-20_call-law-design.md`).
+Carried in the state interpretation and preserved by every step. -/
+def HeapWf (σ : ExecState) : Prop :=
+  ∀ n : Nat, σ.nextAddr ≤ n → Heap.lookup σ.heap (.base ⟨n⟩) = none
+
+/-- Setting one base cell leaves lookups at every other base address unchanged
+(via the `heapToMap` bridges — no `BEq Loc` lawfulness needed). -/
+theorem heap_lookup_set_base_ne {h : Heap} {n : Nat} {b : Addr} {c : HeapCell}
+    (hne : b.id ≠ n) :
+    Heap.lookup (Heap.set h (.base b) c) (.base ⟨n⟩) = Heap.lookup h (.base ⟨n⟩) := by
+  rw [← get?_heapToMap, ← get?_heapToMap, (heapToMap_set_base h b c) n,
+    get?_insert_ne hne]
+
+/-- A mapped base address is below `nextAddr` in a well-formed heap. -/
+theorem HeapWf.lt_of_lookup {σ : ExecState} {a : Addr} {c : HeapCell}
+    (hwf : HeapWf σ) (h : Heap.lookup σ.heap (.base a) = some c) :
+    a.id < σ.nextAddr := by
+  rcases Nat.lt_or_ge a.id σ.nextAddr with hlt | hge
+  · exact hlt
+  · have hnone : Heap.lookup σ.heap (.base ⟨a.id⟩) = none := hwf a.id hge
+    rw [h] at hnone
+    cases hnone
+
+/-- Storing at a mapped base cell preserves heap well-formedness (the key set
+and `nextAddr` are unchanged). -/
+theorem HeapWf.set_existing {σ : ExecState} {a : Addr} {c₀ c : HeapCell}
+    (hwf : HeapWf σ) (hex : Heap.lookup σ.heap (.base a) = some c₀) :
+    HeapWf { σ with heap := Heap.set σ.heap (.base a) c } := by
+  intro n hn
+  have hn' : σ.nextAddr ≤ n := hn
+  have hne : a.id ≠ n := by
+    have := hwf.lt_of_lookup hex
+    omega
+  show Heap.lookup (Heap.set σ.heap (.base a) c) (.base ⟨n⟩) = none
+  rw [heap_lookup_set_base_ne hne]
+  exact hwf n hn'
+
 /-- `IntKind.normalize` is idempotent. The fact behind discharging the store
 witnesses' `hstore` to zero hypotheses: a store of an already-normalized int at
 a `.int kind`-typed cell re-normalizes to the same value. -/
@@ -180,19 +219,28 @@ theorem storeLoc_int_cell {σ : ExecState} {a : Addr} {kind : IntKind}
   rfl
 
 /-- The GoCore ghost state: invariant+credit cameras plus gen_heap over the
-base-address heap. WP laws *assume* it, exactly as HeapLang's laws assume
-`[HeapLangGS]`; constructing it is adequacy's job. -/
+base-address heap, and the **fixed program** `prog` the state interpretation
+pins `σ.functions` to (functions are Step-invariant; pinning them is what
+lets `wp_call` take a pure `findFunctionIn? prog … = some func` premise
+instead of an unsatisfiable `∀σ` one — `docs/2026-07-20_call-law-design.md`).
+WP laws *assume* it, exactly as HeapLang's laws assume `[HeapLangGS]`;
+constructing it is adequacy's job. -/
 class GoCoreGS (hlc : outParam HasLC) (GF : BundledGFunctors) extends
     InvGS_gen hlc GF where
   heap : genHeapGS Nat HeapCell GF GoHeapF
+  prog : Array Func
 attribute [reducible, instance] GoCoreGS.heap
 
 section HeapWP
 variable {GF : BundledGFunctors} {hlc : HasLC} [GoCoreGS hlc GF]
 
-/-- State interpretation: gen_heap over the projected heap. -/
+/-- State interpretation: gen_heap over the projected heap, plus the two pure
+step-invariants — `σ.functions` pinned to the fixed program and heap
+well-formedness (`docs/2026-07-20_call-law-design.md`). -/
 instance : StateInterp ExecState Unit GF where
-  stateInterp σ _ _ _ := genHeapInterp (GF := GF) (H := GoHeapF) (heapToMap σ.heap)
+  stateInterp σ _ _ _ :=
+    iprop(genHeapInterp (GF := GF) (H := GoHeapF) (heapToMap σ.heap)
+      ∗ ⌜σ.functions = GoCoreGS.prog GF ∧ HeapWf σ⌝)
 
 instance : IrisGS_gen hlc Config GF where
   numLatersPerStep _ := 0
@@ -262,6 +310,8 @@ private theorem wp_store_step {a : Addr} {oldcell newcell : HeapCell} {stmt env 
   iapply wp_lift_step (h := rfl)
   iintro %σ₁ %ns %obs %obs' %nt Hσ
   simp only [stateInterp]
+  icases Hσ with ⟨Hσ, %Hinv⟩
+  obtain ⟨hfns, hwf⟩ := Hinv
   ihave %Hmap : ⌜get? (heapToMap σ₁.heap) a.id = some oldcell⌝ $$ [Hσ Hpt]
   · icases genHeap_valid $$ [$Hσ $Hpt] with >%h
     itrivial
@@ -284,8 +334,11 @@ private theorem wp_store_step {a : Addr} {oldcell newcell : HeapCell} {stmt env 
     imodintro
     simp only [Algebra.BigOpL.bigOpL_nil]
     isplitl [Hσ]
-    · iapply (genHeapInterp_eqv
-        (fun kk => (heapToMap_set_base σ₁.heap a newcell kk).symm)) $$ Hσ
+    · isplitl [Hσ]
+      · iapply (genHeapInterp_eqv
+          (fun kk => (heapToMap_set_base σ₁.heap a newcell kk).symm)) $$ Hσ
+      · ipureintro
+        exact ⟨hfns, hwf.set_existing hlook⟩
     · isplitl [Hpt Hcont]
       · iapply Hcont $$ Hpt
       · itrivial
@@ -314,6 +367,8 @@ private theorem wp_store_step₂ {pa a : Addr} {pcell oldcell newcell : HeapCell
   iapply wp_lift_step (h := rfl)
   iintro %σ₁ %ns %obs %obs' %nt Hσ
   simp only [stateInterp]
+  icases Hσ with ⟨Hσ, %Hinv⟩
+  obtain ⟨hfns, hwf⟩ := Hinv
   ihave %Hmap : ⌜get? (heapToMap σ₁.heap) a.id = some oldcell⌝ $$ [Hσ Hpt]
   · icases genHeap_valid $$ [$Hσ $Hpt] with >%h
     itrivial
@@ -341,8 +396,11 @@ private theorem wp_store_step₂ {pa a : Addr} {pcell oldcell newcell : HeapCell
     imodintro
     simp only [Algebra.BigOpL.bigOpL_nil]
     isplitl [Hσ]
-    · iapply (genHeapInterp_eqv
-        (fun kk => (heapToMap_set_base σ₁.heap a newcell kk).symm)) $$ Hσ
+    · isplitl [Hσ]
+      · iapply (genHeapInterp_eqv
+          (fun kk => (heapToMap_set_base σ₁.heap a newcell kk).symm)) $$ Hσ
+      · ipureintro
+        exact ⟨hfns, hwf.set_existing hlook⟩
     · isplitl [Hppt Hpt Hcont]
       · iapply Hcont $$ [$Hppt $Hpt]
       · itrivial
@@ -879,7 +937,7 @@ terminal. Modelling panics as values/observations in the Iris layer (so
 adequacy admits panicking terminals) is deferred — until then read the guarantee
 as "`φ`-correct, never-stuck execution *among non-panicking runs*". -/
 theorem go_adequacy [GoCoreGpreS .hasLC GF] (c : Config) (σ : ExecState)
-    (φ : Unit → Prop)
+    (φ : Unit → Prop) (hσwf : HeapWf σ)
     (Hwp : ∀ [GoCoreGS .hasLC GF], ⊢@{IProp GF} (WP c {{ v, ⌜φ v⌝ }})) :
     adequate .NotStuck c σ (fun v _ => φ v) := by
   refine wp_adequacy (GF := GF) .NotStuck c σ φ ?_
@@ -894,19 +952,24 @@ theorem go_adequacy [GoCoreGpreS .hasLC GF] (c : Config) (σ : ExecState)
       (Std.PartialMap.map (fun g : GName => toAgree (LeibnizO.mk g))
         (∅ : GoHeapF GName)))
     HeapView.auth_one_valid with ⟨%γm, Hm⟩
-  letI _ : GoCoreGS .hasLC GF := ⟨⟨γh, γm⟩⟩
+  letI _ : GoCoreGS .hasLC GF := ⟨⟨γh, γm⟩, σ.functions⟩
   imodintro
-  iexists (fun σ _ => genHeapInterp (GF := GF) (H := GoHeapF) (heapToMap σ.heap))
+  iexists (fun σ' _ =>
+    iprop(genHeapInterp (GF := GF) (H := GoHeapF) (heapToMap σ'.heap)
+      ∗ ⌜σ'.functions = σ.functions ∧ HeapWf σ'⌝))
   iexists (fun _ => iprop(True))
   isplitl [Hh Hm]
-  · simp only [genHeapInterp]
-    iexists (∅ : GoHeapF GName)
-    isplitr
+  · isplitl [Hh Hm]
+    · simp only [genHeapInterp]
+      iexists (∅ : GoHeapF GName)
+      isplitr
+      · ipureintro
+        intro k hk
+        simp [Std.PartialMap.dom, LawfulPartialMap.get?_empty] at hk
+      unfold ghost_map_auth
+      iframe Hh Hm
     · ipureintro
-      intro k hk
-      simp [Std.PartialMap.dom, LawfulPartialMap.get?_empty] at hk
-    unfold ghost_map_auth
-    iframe Hh Hm
+      exact ⟨rfl, hσwf⟩
   · exact Hwp
 
 /-! ## Arc `slice-l5-pure` item 2 — the end-to-end adequacy witness
@@ -944,15 +1007,18 @@ theorem wp_seq_done {env k} :
 
 end EndToEnd
 
-/-- **The chain composes — a closed, zero-hypothesis `adequate` theorem.**
-For any initial state and environment, the empty-sequence program provably
-runs to termination without ever getting stuck: `WP` is assembled from
-`wp_seqn` + `wp_seq_done` + `wp_value'`, discharged through `go_adequacy`
-with the concrete functor bundle `GoCoreS`. The statement mentions no Iris —
-it is `adequate .NotStuck` over the operational semantics, full stop. -/
-theorem adequate_seqn_nil (σ : ExecState) (env : LocalEnv) :
+/-- **The chain composes — a closed `adequate` theorem.** For any
+**well-formed** initial state (`HeapWf` — heap keys below `nextAddr`, the one
+side-condition the state interpretation carries; every state the semantics
+can construct satisfies it) and any environment, the empty-sequence program
+provably runs to termination without ever getting stuck: `WP` is assembled
+from `wp_seqn` + `wp_seq_done` + `wp_value'`, discharged through
+`go_adequacy` with the concrete functor bundle `GoCoreS`. The statement
+mentions no Iris — it is `adequate .NotStuck` over the operational
+semantics, full stop. -/
+theorem adequate_seqn_nil (σ : ExecState) (env : LocalEnv) (hwf : HeapWf σ) :
     adequate .NotStuck (Config.exec (.seqn #[]) env .stop) σ (fun _ _ => True) :=
-  go_adequacy (GF := GoCoreS) _ _ _ (by
+  go_adequacy (GF := GoCoreS) _ _ _ hwf (by
     intro _
     iapply wp_seqn
     iapply fupd_intro
