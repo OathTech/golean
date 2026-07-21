@@ -239,14 +239,20 @@ example := @slice_adequate
   normalize on an int-typed cell, arbitrary prior value). Each witness is a
   closed instantiation of its law.
 - `✓ interpreterSound_frag` — the interpreter⇄relation correspondence is
-  **proven over the scalar+pointer fragment** (arc `eval-totalization`,
-  2026-07-21): the Eval big-step cluster was totalized (GoCore has zero
-  `partial def`s), and `execStmt_frag_sound`/`execStmtList_frag_sound` (mutual
-  simulation on `(fuel, sizeOf stmt)`) derive `interpreterSound_frag` — a
-  normal interpreter completion of a fragment statement (assign, seqn, block
-  with declarations, if, while, return/break/continue) over a fragment heap is
-  a reachable `Steps` terminal, in exactly `interpreterSoundStatement`'s
-  shape. Axiom-clean.
+  **proven over the scalar+pointer fragment, calls included** (arc
+  `eval-totalization`, 2026-07-21): the Eval big-step cluster was totalized
+  (GoCore has zero `partial def`s), and `execStmt_frag_sound`/
+  `execStmtList_frag_sound` (mutual simulation on `(fuel, sizeOf stmt)`)
+  derive `interpreterSound_frag` — a normal interpreter completion of a
+  fragment statement (assign, seqn, block with declarations, if, while,
+  return/break/continue, **and direct calls with frames**: `Step.call` →
+  body simulation → `frameReturn`/`frameFall`) over a fragment program
+  (`StInv`: fragment heap, no methods, fragment functions) is a reachable
+  `Steps` terminal, in exactly `interpreterSoundStatement`'s shape. The D2
+  frame-exit divergence is carried as the `avoid`-index discipline
+  (block-scoped declarations may not shadow result names); value-returning
+  fall-through is excluded syntactically (`EndsRet`, mirroring Go's
+  missing-return compile error). Axiom-clean.
 - The **unrestricted** `interpreterSoundStatement`/`interpreterPanicStatement`
   remain `def : Prop` — **stated, not proven**, and are *false as literally
   stated* (the interpreter is richer than the relation, e.g. string `add`;

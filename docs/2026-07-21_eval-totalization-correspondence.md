@@ -138,6 +138,38 @@ Landed 2026-07-21 (commits 821b07d, 9b38254, + statement-layer foundation):
 5. **First statement-level lemma** (DONE): `execStmt_assign_ok` — an
    interpreter assignment IS `Step.assign`. Axiom-clean.
 
+### Call/frame layer — PROVEN (2026-07-21, same arc, later)
+
+The full remainder landed; the fragment correspondence now **covers calls**:
+
+- **Eval restructure #2** (behavior-identical, differential-validated): the
+  call path's `for`-loops became list-structural helpers — `evalExprSeq`
+  (args), `evalAssigneeLocList` (targets), `bindParamList` (params),
+  `execDeclList` (results init), `readResultList` (results readback),
+  `assignLocList` (caller stores) — each aligned 1:1 with its relational leg
+  (`ArgsR`/`AssigneesR`/`BindParamsR`/`DeclsR`/`ResultsR`/`StoreManyR`), with
+  five proven bridge lemmas.
+- **T1/T2 strengthened**: `StInv` (fragment heap + no methods + `FuncsFrag`)
+  threaded through; every outcome (returned included) preserves `locals`
+  exactly for NS statements; T2's returned case carries the `TopAvoid`
+  preservation + result-name agreement that crosses block pops.
+- **D2 discharged by discipline, not semantics change**: the `avoid` index on
+  the fragment predicates forbids block-scoped shadowing of result names, so
+  `frameReturn`'s returning-env read agrees with the interpreter's
+  popped-scope read. Frontend output satisfies it ($-synthesized results).
+- **Fall-through gap discharged syntactically**: `FuncFrag` requires
+  value-returning bodies to end in `return` (`EndsRet` + `endsRet_no_normal`),
+  mirroring Go's missing-return compile error; void fall-through maps to
+  `frameFall` (arity forces empty targets).
+- **`interpreterSound_frag`** now covers the slice-shaped fragment including
+  `inc`/`main`-style calls. Axiom-clean.
+
+**Process note (recorded):** a background full differential racing concurrent
+edits to the same Lake package produced a phantom all-FAIL drift (the runner
+rebuilds `golean` from the working tree; mid-edit states break the build).
+Diagnosis: wholesale PASS→FAIL flips = broken-binary signature, not
+semantics. Full runs must not overlap edits to `GoLean/**` or `proofs/**`.
+
 ### Statement layer — PROVEN (2026-07-21, same arc)
 
 T1/T2 landed exactly as designed below, plus the headline corollary

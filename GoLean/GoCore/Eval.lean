@@ -399,15 +399,20 @@ mutual
         return (← valueAsLoc pair.1, pair.2)
     | .unsupported feature => unsupported feature
 
+  /-- Structural on the list (correspondence-facing, aligns with
+  `AssigneesR`); behavior identical to the previous `for`-loop. -/
+  def evalAssigneeLocList (state : ExecState) :
+      List Assignee → Except GoError (List Loc × ExecState)
+    | [] => return ([], state)
+    | target :: rest => do
+        let pair ← evalAssigneeLoc state target
+        let (tailLocs, finalState) ← evalAssigneeLocList pair.2 rest
+        return (pair.1 :: tailLocs, finalState)
+
   def evalAssigneeLocs (state : ExecState) (targets : Array Assignee) :
       Except GoError LocsResult := do
-    let mut current := state
-    let mut locs := #[]
-    for target in targets do
-      let pair ← evalAssigneeLoc current target
-      locs := locs.push pair.1
-      current := pair.2
-    return (locs, current)
+    let pair ← evalAssigneeLocList state targets.toList
+    return (pair.1.toArray, pair.2)
 
   def assignLoc (state : ExecState) (loc : Loc) (value : GoValue) :
       Except GoError ExecState := do
@@ -418,19 +423,21 @@ mutual
     let pair ← evalAssigneeLoc state assignee
     assignLoc pair.2 pair.1 value
 
+  /-- Structural on the lists (correspondence-facing, aligns with
+  `StoreManyR`); behavior identical to the array `for`-loop in `assignLocs`
+  when the lengths match (callers check arity). -/
+  def assignLocList (state : ExecState) :
+      List Loc → List GoValue → Except GoError ExecState
+    | [], _ => return state
+    | _ :: _, [] => stuck "missing GoCore assignment value"
+    | loc :: locs, v :: vs => do
+        assignLocList (← assignLoc state loc v) locs vs
+
   def assignLocs (state : ExecState) (targets : Array Loc)
       (values : Array GoValue) : Except GoError ExecState := do
     if targets.size != values.size then
       stuck s!"expected {targets.size} call result value(s), got {values.size}"
-    let mut current := state
-    let mut i := 0
-    for target in targets do
-      match values[i]? with
-      | some value =>
-          current ← assignLoc current target value
-          i := i + 1
-      | none => stuck s!"missing call result value {i}"
-    return current
+    assignLocList state targets.toList values.toList
 
   def assignAssignees (state : ExecState) (targets : Array Assignee)
       (values : Array GoValue) : Except GoError ExecState := do
@@ -683,6 +690,24 @@ def execDeclList (state : ExecState) : List Param → Except GoError ExecState
 def execDecls (state : ExecState) (decls : Array Param) : Except GoError ExecState :=
   execDeclList state decls.toList
 
+/-- Bind call parameters into the (locals-cleared) frame state, normalized at
+declared type, left to right. Structural on the lists (correspondence-facing,
+aligns with `BindParamsR`); behavior identical to the previous indexed
+`for`-loop — callers check arity first, so the mismatch case is unreachable. -/
+def bindParamList (state : ExecState) : List Param → List GoValue → Except GoError ExecState
+  | [], _ => return state
+  | _ :: _, [] => stuck "missing argument"
+  | p :: ps, v :: vs => do
+      bindParamList (state.declareLocal p.id (some p.typ) (← normalizeValueForTy state p.typ v)) ps vs
+
+/-- Read a function's named results at frame exit, in declaration order.
+Structural on the list (aligns with `ResultsR`); behavior identical to the
+previous `for`-loop over `func.results`. -/
+def readResultList (state : ExecState) : List Param → Except GoError (List GoValue)
+  | [] => return []
+  | r :: rs => do
+      return (← lookup state r.id) :: (← readResultList state rs)
+
 -- Fuel'd upper cluster: function calls and loops recurse on `fuel` (the lower
 -- structural cluster above is already total and never calls back into this one).
 --
@@ -706,18 +731,10 @@ mutual
     | fuel' + 1 =>
       if func.args.size != argValues.size then
         stuck s!"function {func.id.key} expected {func.args.size} argument(s), got {argValues.size}"
-      let current := state
-      let callerLocals := current.locals
-      let mut callState : ExecState := { current with locals := [] }
-      let mut i := 0
-      for param in func.args do
-        match argValues[i]? with
-        | some value =>
-            callState := callState.declareLocal param.id (some param.typ) (← normalizeValueForTy callState param.typ value)
-            i := i + 1
-        | none => stuck s!"missing argument {i}"
-      for result in func.results do
-        callState := callState.declareLocal result.id (some result.typ) (← defaultValue callState result.typ)
+      let callerLocals := state.locals
+      let boundState ← bindParamList { state with locals := [] }
+        func.args.toList argValues.toList
+      let callState ← execDeclList boundState func.results.toList
       let (outcome, choices) ← execStmt fuel' callState choices func.body
       let finalState ←
         match outcome with
@@ -725,11 +742,9 @@ mutual
         | .returned nextState => pure nextState
         | .broke _ => stuck s!"function {func.id.key} body escaped with break"
         | .continued _ => stuck s!"function {func.id.key} body escaped with continue"
-      let mut resultValues := #[]
-      for result in func.results do
-        resultValues := resultValues.push (← lookup finalState result.id)
+      let resultValues ← readResultList finalState func.results.toList
       let callerState : ExecState := { finalState with locals := callerLocals }
-      return (← assignLocs callerState targets resultValues, choices)
+      return (← assignLocs callerState targets resultValues.toArray, choices)
   termination_by (fuel, 0, 1)
 
   def execFunctionCallWithLocs (fuel : Nat) (state : ExecState) (targets : Array Loc)
@@ -741,12 +756,7 @@ mutual
       | none => stuck s!"GoCore function not found: {id.key}"
     if func.args.size != args.size then
       stuck s!"function {id.key} expected {func.args.size} argument(s), got {args.size}"
-    let mut current := state
-    let mut argValues := #[]
-    for arg in args do
-      let pair ← evalExpr current arg
-      argValues := argValues.push pair.1
-      current := pair.2
+    let (argValues, current) ← evalExprSeq state args.toList
     match ← dynamicDispatch? current func argValues with
     | some (targetFunc, targetArgs) => execFunctionWithValues fuel current targets targetFunc targetArgs choices
     | none => execFunctionWithValues fuel current targets func argValues choices
