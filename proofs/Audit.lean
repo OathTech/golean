@@ -155,6 +155,16 @@ open Lean in
 /-- info: 'GoLean.Iris.wp_return' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms wp_return
 
+-- Declaration + var-copy laws (the last per-construct laws main() needs).
+/-- info: 'GoLean.Iris.wp_init' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms wp_init
+/-- info: 'GoLean.Iris.wp_init_int' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms wp_init_int
+/-- info: 'GoLean.Iris.wp_assign_var' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms wp_assign_var
+/-- info: 'GoLean.Iris.wp_assign_var_int' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms wp_assign_var_int
+
 -- The end-to-end artifact: a CLOSED `adequate` theorem composed from the WP
 -- laws through go_adequacy (arc slice-l5-pure item 2). The chain composes.
 /-- info: 'GoLean.Iris.wp_seq_done' depends on axioms: [propext, Classical.choice, Quot.sound] -/
@@ -183,6 +193,12 @@ example := @wp_inc_call
 /-- `✓` wp_frame_return — witnessed by `wp_frame_return_int` (int result local
 returned into an int target cell, ∀-general). -/
 example := @wp_frame_return_int
+/-- `✓` wp_init — witnessed by `wp_init_int` (`x := 0` at int, zero
+hypotheses). -/
+example := @wp_init_int
+/-- `✓` wp_assign_var — witnessed by `wp_assign_var_int` (int var copy,
+∀-general). -/
+example := @wp_assign_var_int
 
 /-! ## Three-state ledger — what is NOT yet fully closed (kept honest, not hidden)
 
