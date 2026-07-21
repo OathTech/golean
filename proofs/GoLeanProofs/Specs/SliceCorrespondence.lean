@@ -113,4 +113,34 @@ theorem slice_interp_run_in_relation (fuel : Nat) (σf : ExecState)
       (.next .stop) (σf.withLocals []) :=
   interpreterSound_spineSeq fuel σ₀ σf _ [] ch' sliceProg_spine σ₀_inv hrun
 
+/-- **D1 witness (splice non-vacuity).** The frontend lowers every
+declaration group as a *nested* `.seqn` spliced into the enclosing statement
+list (`x := 0` → `.seqn #[init x, assign x 0]`). With the splice rule, that
+shape is spine-legal (`SpineFrag.seqnSpine`) and its interpreter runs are
+relation executions — the exact program shape that was UNPROVABLE before
+D1 (the old wrap rule discarded the nested seqn's env at `seqDone`). -/
+theorem frontend_shaped_decl_in_relation (fuel : Nat) (σf : ExecState)
+    (ch' : Choices)
+    (hrun : execStmt fuel σ₀ []
+      (.seqn #[.seqn #[.initialization ⟨"r", .int .int⟩,
+                       .assign (.var "r") (.intLit 0 .int)],
+               .call #[.var "r"] mainId #[]]) = .ok (.normal σf, ch')) :
+    Steps (.exec (.seqn #[.seqn #[.initialization ⟨"r", .int .int⟩,
+                       .assign (.var "r") (.intLit 0 .int)],
+               .call #[.var "r"] mainId #[]]) [] .stop) σ₀
+      (.next .stop) (σf.withLocals []) := by
+  refine interpreterSound_spineSeq fuel σ₀ σf _ [] ch' ?_ σ₀_inv hrun
+  intro s hs
+  simp at hs
+  rcases hs with rfl | rfl
+  · refine .seqnSpine ?_
+    intro q hq
+    simp at hq
+    rcases hq with rfl | rfl
+    · exact .init (.int _) (by simp)
+    · exact .ns (.assign (.var _) (.intLit 0 .int))
+  · exact .ns (.call
+      (by intro a ha; simp at ha; subst ha; exact .var _)
+      (by intro e he; simp at he))
+
 end GoLean.Iris.SliceCorrespondence

@@ -26,21 +26,21 @@ variable {GF : BundledGFunctors} {hlc : HasLC} [GoCoreGS hlc GF]
 variable {s : Stuckness} {E : CoPset} {Φ : Unit → IProp GF}
 
 /-- `seqn` is a pure, deterministic control step: `.exec (.seqn ss) env k`
-reduces only to `.next (.seq ss.toList env k)` with the state unchanged. A
-genuine weakest-precondition law over GoCore's actual `Step` relation (holds
-under the real gen_heap state interpretation, since the step is pure). The
-control environment `env` rides through unchanged — sequencing reads no
-variables. -/
+reduces only to `.next (seqCont ss.toList env k)` with the state unchanged
+(D1: under a same-env governing seq this splices; at a concrete non-seq
+continuation `seqCont` reduces definitionally to the old wrap, so existing
+applications are unchanged). A genuine weakest-precondition law over
+GoCore's actual `Step` relation. -/
 theorem wp_seqn {ss env k} :
-    (|={E}[E]▷=> £ 1 -∗ WP (Config.next (.seq ss.toList env k)) @ s ; E {{ Φ }}) ⊢
+    (|={E}[E]▷=> £ 1 -∗ WP (Config.next (seqCont ss.toList env k)) @ s ; E {{ Φ }}) ⊢
       WP (Config.exec (.seqn ss) env k) @ s ; E {{ Φ }} := by
   iintro H
   iapply (wp_lift_pure_det_step_no_fork (E₂ := E)
-    (e₂ := Config.next (.seq ss.toList env k))
+    (e₂ := Config.next (seqCont ss.toList env k))
     (Hsafe := by
       intro σ
       cases s
-      · exact ⟨[], Config.next (.seq ss.toList env k), σ, [], GoPrimStep.step Step.seqn⟩
+      · exact ⟨[], Config.next (seqCont ss.toList env k), σ, [], GoPrimStep.step Step.seqn⟩
       · rfl)
     (Hpuredet := by
       intro σ obs e₂' σ₂ eₜ' h

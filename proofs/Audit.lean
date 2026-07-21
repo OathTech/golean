@@ -266,6 +266,7 @@ example := @slice_adequate
 type-check with their stated hypotheses. -/
 example := @GoLean.GoCore.Correspondence.interpreterSound_frag
 example := @GoLean.Iris.SliceCorrespondence.slice_interp_run_in_relation
+example := @GoLean.Iris.SliceCorrespondence.frontend_shaped_decl_in_relation
 example := @GoLean.GoCore.Correspondence.execStmt_frag_sound
 example := @GoLean.GoCore.Correspondence.evalExpr_frag_ok
 

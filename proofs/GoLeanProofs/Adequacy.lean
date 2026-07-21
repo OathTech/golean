@@ -131,6 +131,7 @@ theorem adequate_seqn_nil (σ : ExecState) (env : LocalEnv) (hwf : HeapWf σ) :
   go_adequacy (GF := GoCoreS) _ _ _ hwf (by
     intro _ _
     iapply wp_seqn
+    simp only [seqCont]
     iapply fupd_intro
     inext
     iapply fupd_intro

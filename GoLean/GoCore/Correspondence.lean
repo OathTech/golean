@@ -936,6 +936,12 @@ inductive SpineFrag : List String → Stmt → Prop where
   | ns {avoid : List String} {s : Stmt} : StmtFragNS s → SpineFrag avoid s
   | init {avoid : List String} {p : Param} : TyFrag p.typ → p.id ∉ avoid →
       SpineFrag avoid (.initialization p)
+  /-- A nested `.seqn` in spine position — declarations allowed (D1: the
+  splice rule makes the relation scope-transparent here, matching the
+  interpreter and Go statement lists; this is the shape the frontend emits
+  for every declaration group). -/
+  | seqnSpine {avoid : List String} {ss : Array Stmt} :
+      (∀ s, s ∈ ss → SpineFrag avoid s) → SpineFrag avoid (.seqn ss)
 end
 
 /-- A fragment function: fragment-typed params and results, and a body that
@@ -1027,13 +1033,13 @@ theorem execStmt_frag_sound {stmt : Stmt} (hf : StmtFragNS stmt)
           (.next k) (σf.withLocals L)
     | .broke σf => σf.locals = σ.locals ∧
         ∀ L k, Steps (.exec stmt σ.locals k) (σ.withLocals L)
-          (.breaking k) (σf.withLocals L)
+          (.breaking k.stripSeqs) (σf.withLocals L)
     | .continued σf => σf.locals = σ.locals ∧
         ∀ L k, Steps (.exec stmt σ.locals k) (σ.withLocals L)
-          (.continuing k) (σf.withLocals L)
+          (.continuing k.stripSeqs) (σf.withLocals L)
     | .returned σf => σf.locals = σ.locals ∧
         ∀ L k, Steps (.exec stmt σ.locals k) (σ.withLocals L)
-          (.returning k) (σf.withLocals L) := by
+          (.returning k.stripSeqs) (σf.withLocals L) := by
   cases stmt with
   | initialization p => exact nomatch hf
   | assignMany l r => exact nomatch hf
@@ -1067,20 +1073,117 @@ theorem execStmt_frag_sound {stmt : Stmt} (hf : StmtFragNS stmt)
       cases out with
       | normal σf =>
         obtain ⟨-, hns, -, hsteps⟩ := hrest
-        exact ⟨hns (fun s hs => hss s (by simpa using hs)), fun L k =>
-          (Steps.single .seqn).trans (hsteps L k)⟩
+        have hloc := hns (fun s hs => hss s (by simpa using hs))
+        refine ⟨hloc, fun L k => (Steps.single Step.seqn).trans ?_⟩
+        have hwrap : ∀ k₀ : Cont,
+            seqCont ss.toList σ.locals k₀ = .seq ss.toList σ.locals k₀ →
+            Steps (.next (seqCont ss.toList σ.locals k₀)) (σ.withLocals L)
+              (.next k₀) (σf.withLocals L) := by
+          intro k₀ he
+          rw [he]
+          have h0 := hsteps L k₀ []
+          rw [List.append_nil] at h0
+          exact h0.tail Step.seqDone
+        match k with
+        | .stop => exact hwrap .stop rfl
+        | .loop c b env' k₂ => exact hwrap _ rfl
+        | .frame t r k₂ => exact hwrap _ rfl
+        | .seq rest env' k₂ =>
+          by_cases henv : env' = σ.locals
+          · subst henv
+            have h0 := hsteps L k₂ rest
+            rw [hloc] at h0
+            rw [show seqCont ss.toList σ.locals (.seq rest σ.locals k₂)
+                = .seq (ss.toList ++ rest) σ.locals k₂ by simp [seqCont]]
+            exact h0
+          · exact hwrap _ (by simp [seqCont, henv])
       | broke σf =>
         obtain ⟨-, hns, -, hsteps⟩ := hrest
-        exact ⟨hns (fun s hs => hss s (by simpa using hs)), fun L k =>
-          (Steps.single .seqn).trans (hsteps L k)⟩
+        refine ⟨hns (fun s hs => hss s (by simpa using hs)),
+          fun L k => (Steps.single Step.seqn).trans ?_⟩
+        match k with
+        | .stop =>
+          have h0 := hsteps L .stop []
+          rw [List.append_nil] at h0
+          exact h0
+        | .loop c b env' k₂ =>
+          have h0 := hsteps L (.loop c b env' k₂) []
+          rw [List.append_nil] at h0
+          exact h0
+        | .frame t r k₂ =>
+          have h0 := hsteps L (.frame t r k₂) []
+          rw [List.append_nil] at h0
+          exact h0
+        | .seq rest env' k₂ =>
+          by_cases henv : env' = σ.locals
+          · subst henv
+            rw [show seqCont ss.toList σ.locals (.seq rest σ.locals k₂)
+                = .seq (ss.toList ++ rest) σ.locals k₂ by simp [seqCont]]
+            exact hsteps L k₂ rest
+          · rw [show seqCont ss.toList σ.locals (.seq rest env' k₂)
+                = .seq ss.toList σ.locals (.seq rest env' k₂) by
+                  simp [seqCont, henv]]
+            have h0 := hsteps L (.seq rest env' k₂) []
+            rw [List.append_nil] at h0
+            exact h0
       | continued σf =>
         obtain ⟨-, hns, -, hsteps⟩ := hrest
-        exact ⟨hns (fun s hs => hss s (by simpa using hs)), fun L k =>
-          (Steps.single .seqn).trans (hsteps L k)⟩
+        refine ⟨hns (fun s hs => hss s (by simpa using hs)),
+          fun L k => (Steps.single Step.seqn).trans ?_⟩
+        match k with
+        | .stop =>
+          have h0 := hsteps L .stop []
+          rw [List.append_nil] at h0
+          exact h0
+        | .loop c b env' k₂ =>
+          have h0 := hsteps L (.loop c b env' k₂) []
+          rw [List.append_nil] at h0
+          exact h0
+        | .frame t r k₂ =>
+          have h0 := hsteps L (.frame t r k₂) []
+          rw [List.append_nil] at h0
+          exact h0
+        | .seq rest env' k₂ =>
+          by_cases henv : env' = σ.locals
+          · subst henv
+            rw [show seqCont ss.toList σ.locals (.seq rest σ.locals k₂)
+                = .seq (ss.toList ++ rest) σ.locals k₂ by simp [seqCont]]
+            exact hsteps L k₂ rest
+          · rw [show seqCont ss.toList σ.locals (.seq rest env' k₂)
+                = .seq ss.toList σ.locals (.seq rest env' k₂) by
+                  simp [seqCont, henv]]
+            have h0 := hsteps L (.seq rest env' k₂) []
+            rw [List.append_nil] at h0
+            exact h0
       | returned σf =>
         obtain ⟨-, hns, -, hsteps⟩ := hrest
-        exact ⟨hns (fun s hs => hss s (by simpa using hs)), fun L k =>
-          (Steps.single .seqn).trans (hsteps L k)⟩
+        refine ⟨hns (fun s hs => hss s (by simpa using hs)),
+          fun L k => (Steps.single Step.seqn).trans ?_⟩
+        match k with
+        | .stop =>
+          have h0 := hsteps L .stop []
+          rw [List.append_nil] at h0
+          exact h0
+        | .loop c b env' k₂ =>
+          have h0 := hsteps L (.loop c b env' k₂) []
+          rw [List.append_nil] at h0
+          exact h0
+        | .frame t r k₂ =>
+          have h0 := hsteps L (.frame t r k₂) []
+          rw [List.append_nil] at h0
+          exact h0
+        | .seq rest env' k₂ =>
+          by_cases henv : env' = σ.locals
+          · subst henv
+            rw [show seqCont ss.toList σ.locals (.seq rest σ.locals k₂)
+                = .seq (ss.toList ++ rest) σ.locals k₂ by simp [seqCont]]
+            exact hsteps L k₂ rest
+          · rw [show seqCont ss.toList σ.locals (.seq rest env' k₂)
+                = .seq ss.toList σ.locals (.seq rest env' k₂) by
+                  simp [seqCont, henv]]
+            have h0 := hsteps L (.seq rest env' k₂) []
+            rw [List.append_nil] at h0
+            exact h0
   | block decls ss =>
     cases hf with
     | block hdeclsTy hss =>
@@ -1104,25 +1207,33 @@ theorem execStmt_frag_sound {stmt : Stmt} (hf : StmtFragNS stmt)
         refine ⟨⟨hbinv.heap, hbinv.methods, hbinv.funcs⟩, ?_, fun L k => ?_⟩
         · show σbf.locals.popScope = σ.locals
           rw [hpop, hdpop]; rfl
-        · exact (Steps.single (Step.block (hdR L))).trans (hsteps L k)
+        · have h0 := hsteps L k []
+          rw [List.append_nil] at h0
+          exact ((Steps.single (Step.block (hdR L))).trans h0).tail Step.seqDone
       | broke σbf =>
         obtain ⟨hpop, -, -, hsteps⟩ := hrest
         refine ⟨⟨hbinv.heap, hbinv.methods, hbinv.funcs⟩, ?_, fun L k => ?_⟩
         · show σbf.locals.popScope = σ.locals
           rw [hpop, hdpop]; rfl
-        · exact (Steps.single (Step.block (hdR L))).trans (hsteps L k)
+        · have h0 := hsteps L k []
+          rw [List.append_nil] at h0
+          exact (Steps.single (Step.block (hdR L))).trans h0
       | continued σbf =>
         obtain ⟨hpop, -, -, hsteps⟩ := hrest
         refine ⟨⟨hbinv.heap, hbinv.methods, hbinv.funcs⟩, ?_, fun L k => ?_⟩
         · show σbf.locals.popScope = σ.locals
           rw [hpop, hdpop]; rfl
-        · exact (Steps.single (Step.block (hdR L))).trans (hsteps L k)
+        · have h0 := hsteps L k []
+          rw [List.append_nil] at h0
+          exact (Steps.single (Step.block (hdR L))).trans h0
       | returned σbf =>
         obtain ⟨hpop, -, -, hsteps⟩ := hrest
         refine ⟨⟨hbinv.heap, hbinv.methods, hbinv.funcs⟩, ?_, fun L k => ?_⟩
         · show σbf.locals.popScope = σ.locals
           rw [hpop, hdpop]; rfl
-        · exact (Steps.single (Step.block (hdR L))).trans (hsteps L k)
+        · have h0 := hsteps L k []
+          rw [List.append_nil] at h0
+          exact (Steps.single (Step.block (hdR L))).trans h0
   | ifThenElse c t e =>
     cases hf with
     | ifThenElse hc ht he =>
@@ -1287,8 +1398,9 @@ theorem execStmt_frag_sound {stmt : Stmt} (hf : StmtFragNS stmt)
               simp only [pure_eq_ok, Prod.mk.injEq] at h
               obtain ⟨rfl, rfl⟩ := h
               exact ⟨hbinv, hlb, fun L k =>
-                ((Steps.single (Step.whileTrue (hRc L))).trans
-                  (hbsteps L (.loop c b σ.locals k))).tail Step.loopReturn⟩
+                (((Steps.single (Step.whileTrue (hRc L))).trans
+                  (hbsteps L (.loop c b σ.locals k))).tail
+                  Step.loopReturn).trans (Steps.returning_strip k _)⟩
         | int n k => simp [valueAsBool] at hbv
         | addr l => simp [valueAsBool] at hbv
         | nil => simp [valueAsBool] at hbv
@@ -1373,8 +1485,10 @@ theorem execStmt_frag_sound {stmt : Stmt} (hf : StmtFragNS stmt)
             (∀ r ∈ func.results.toList,
               LocalEnv.lookup callState.locals r.id
                 = LocalEnv.lookup σbf.locals r.id) ∧
-            ∀ L k', Steps (.exec func.body callState.locals k')
-                (callState.withLocals L) (.next k') (σbf.withLocals L) := by
+            ∀ L tl rl k₀, Steps
+                (.exec func.body callState.locals (.frame tl rl k₀))
+                (callState.withLocals L) (.next (.frame tl rl k₀))
+                (σbf.withLocals L) := by
           rcases hff.body with ⟨bss, hbodyEq, hspine⟩ | hbodyNS
           · rw [hbodyEq] at hbody
             simp only [execStmt, execStmts] at hbody
@@ -1386,13 +1500,18 @@ theorem execStmt_frag_sound {stmt : Stmt} (hf : StmtFragNS stmt)
               hcinv hbody
             obtain ⟨-, -, hlk, hsteps⟩ := hout2
             refine ⟨hoinv, fun r hr =>
-              (hlk r.id (List.mem_map_of_mem hr)).symm, fun L k' => ?_⟩
+              (hlk r.id (List.mem_map_of_mem hr)).symm, fun L tl rl k₀ => ?_⟩
             rw [hbodyEq]
-            exact (Steps.single Step.seqn).trans (hsteps L k')
+            have h0 := hsteps L (.frame tl rl k₀) []
+            rw [List.append_nil] at h0
+            exact ((Steps.single (Step.seqn (ss := bss)
+              (env := callState.locals) (k := .frame tl rl k₀)
+              (s := callState.withLocals L))).trans h0).tail Step.seqDone
           · obtain ⟨hoinv, hout2⟩ :=
               execStmt_frag_sound hbodyNS fuel' callState ch hcinv hbody
             obtain ⟨hl, hsteps⟩ := hout2
-            exact ⟨hoinv, fun r hr => by rw [hl], fun L k' => hsteps L k'⟩
+            exact ⟨hoinv, fun r hr => by rw [hl],
+              fun L tl rl k₀ => hsteps L (.frame tl rl k₀)⟩
         obtain ⟨hoinv, hlkpres, hbsteps⟩ := hbodyRun
         rw [bind_eq_ok] at hwl
         obtain ⟨resultValues, hread, hwl⟩ := hwl
@@ -1433,14 +1552,16 @@ theorem execStmt_frag_sound {stmt : Stmt} (hf : StmtFragNS stmt)
             (σbf.withLocals L) (.next k) (σst.withLocals L) :=
           Step.frameFall (hLd L) (hStoreR L)
         exact ((Steps.single hstep1).trans
-          (hbsteps L (.frame tlocs resultLocs k))).tail hframe
+          (hbsteps L tlocs resultLocs k)).tail hframe
       | returned σbf =>
         have hbodyRun : StInv σbf ∧
             (∀ r ∈ func.results.toList,
               LocalEnv.lookup callState.locals r.id
                 = LocalEnv.lookup σbf.locals r.id) ∧
-            ∀ L k', Steps (.exec func.body callState.locals k')
-                (callState.withLocals L) (.returning k') (σbf.withLocals L) := by
+            ∀ L tl rl k₀, Steps
+                (.exec func.body callState.locals (.frame tl rl k₀))
+                (callState.withLocals L) (.returning (.frame tl rl k₀))
+                (σbf.withLocals L) := by
           rcases hff.body with ⟨bss, hbodyEq, hspine⟩ | hbodyNS
           · rw [hbodyEq] at hbody
             simp only [execStmt, execStmts] at hbody
@@ -1452,13 +1573,18 @@ theorem execStmt_frag_sound {stmt : Stmt} (hf : StmtFragNS stmt)
               hcinv hbody
             obtain ⟨-, -, hlk, hsteps⟩ := hout2
             refine ⟨hoinv, fun r hr =>
-              (hlk r.id (List.mem_map_of_mem hr)).symm, fun L k' => ?_⟩
+              (hlk r.id (List.mem_map_of_mem hr)).symm, fun L tl rl k₀ => ?_⟩
             rw [hbodyEq]
-            exact (Steps.single Step.seqn).trans (hsteps L k')
+            have h0 := hsteps L (.frame tl rl k₀) []
+            rw [List.append_nil] at h0
+            exact (Steps.single (Step.seqn (ss := bss)
+              (env := callState.locals) (k := .frame tl rl k₀)
+              (s := callState.withLocals L))).trans h0
           · obtain ⟨hoinv, hout2⟩ :=
               execStmt_frag_sound hbodyNS fuel' callState ch hcinv hbody
             obtain ⟨hl, hsteps⟩ := hout2
-            exact ⟨hoinv, fun r hr => by rw [hl], fun L k' => hsteps L k'⟩
+            exact ⟨hoinv, fun r hr => by rw [hl],
+              fun L tl rl k₀ => hsteps L (.frame tl rl k₀)⟩
         obtain ⟨hoinv, hlkpres, hbsteps⟩ := hbodyRun
         rw [bind_eq_ok] at hwl
         obtain ⟨resultValues, hread, hwl⟩ := hwl
@@ -1499,35 +1625,39 @@ theorem execStmt_frag_sound {stmt : Stmt} (hf : StmtFragNS stmt)
             (σbf.withLocals L) (.next k) (σst.withLocals L) :=
           Step.frameReturn (hLd L) (hStoreR L)
         exact ((Steps.single hstep1).trans
-          (hbsteps L (.frame tlocs resultLocs k))).tail hframe
+          (hbsteps L tlocs resultLocs k)).tail hframe
   | returnStmt =>
     cases hf with
     | returnStmt =>
       simp only [execStmt, pure_eq_ok, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
-      exact ⟨hinv, rfl, fun L k => Steps.single .returnStmt⟩
+      exact ⟨hinv, rfl, fun L k =>
+        (Steps.single .returnStmt).trans (Steps.returning_strip k _)⟩
   | breakStmt =>
     cases hf with
     | breakStmt =>
       simp only [execStmt, pure_eq_ok, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
-      exact ⟨hinv, rfl, fun L k => Steps.single .breakStmt⟩
+      exact ⟨hinv, rfl, fun L k =>
+        (Steps.single .breakStmt).trans (Steps.breaking_strip k _)⟩
   | continueStmt =>
     cases hf with
     | continueStmt =>
       simp only [execStmt, pure_eq_ok, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
-      exact ⟨hinv, rfl, fun L k => Steps.single .continueStmt⟩
+      exact ⟨hinv, rfl, fun L k =>
+        (Steps.single .continueStmt).trans (Steps.continuing_strip k _)⟩
 termination_by (fuel, sizeOf stmt)
 decreasing_by all_goals (subst_vars; decreasing_tactic)
 
-/-- **T2 — spine-list simulation.** A successful interpreter run of a spine
-statement list maps to `Steps` from `.next (.seq ss σ.locals k)` to the
-outcome's configuration; declarations extend the tracked seq env in lockstep
-with the interpreter's locals. Only the top scope is touched; a spine of
-non-spine statements leaves `locals` exactly unchanged; resolutions of the
-avoided ids are preserved (D2-proper's residual: spine inits cannot redirect
-the frame's result read). -/
+/-- **T2 — spine-list simulation**, generalized over a residual `tail` (D1):
+a successful interpreter run of the spine `ss` maps to `Steps` processing the
+`ss`-prefix of the combined list `.seq (ss ++ tail)` — landing at
+`.seq tail` under the (possibly extended) final locals for normal
+completion, or at the seq-stripped unwinding configuration otherwise.
+`tail := []` plus one `seqDone` recovers the un-generalized form; the
+generalization is what lets a spliced nested seqn (a `seqnSpine` head)
+continue seamlessly into the enclosing rest. -/
 theorem execStmtList_frag_sound {avoid : List String} {ss : List Stmt}
     (hf : ∀ s ∈ ss, SpineFrag avoid s)
     (fuel : Nat) (σ : ExecState) (ch : Choices) (hinv : StInv σ)
@@ -1538,29 +1668,29 @@ theorem execStmtList_frag_sound {avoid : List String} {ss : List Stmt}
     | .normal σf => σf.locals.popScope = σ.locals.popScope ∧
         ((∀ s ∈ ss, StmtFragNS s) → σf.locals = σ.locals) ∧
         (∀ id ∈ avoid, LocalEnv.lookup σf.locals id = LocalEnv.lookup σ.locals id) ∧
-        ∀ L k, Steps (.next (.seq ss σ.locals k)) (σ.withLocals L)
-          (.next k) (σf.withLocals L)
+        ∀ L k tail, Steps (.next (.seq (ss ++ tail) σ.locals k)) (σ.withLocals L)
+          (.next (.seq tail σf.locals k)) (σf.withLocals L)
     | .broke σf => σf.locals.popScope = σ.locals.popScope ∧
         ((∀ s ∈ ss, StmtFragNS s) → σf.locals = σ.locals) ∧
         (∀ id ∈ avoid, LocalEnv.lookup σf.locals id = LocalEnv.lookup σ.locals id) ∧
-        ∀ L k, Steps (.next (.seq ss σ.locals k)) (σ.withLocals L)
-          (.breaking k) (σf.withLocals L)
+        ∀ L k tail, Steps (.next (.seq (ss ++ tail) σ.locals k)) (σ.withLocals L)
+          (.breaking k.stripSeqs) (σf.withLocals L)
     | .continued σf => σf.locals.popScope = σ.locals.popScope ∧
         ((∀ s ∈ ss, StmtFragNS s) → σf.locals = σ.locals) ∧
         (∀ id ∈ avoid, LocalEnv.lookup σf.locals id = LocalEnv.lookup σ.locals id) ∧
-        ∀ L k, Steps (.next (.seq ss σ.locals k)) (σ.withLocals L)
-          (.continuing k) (σf.withLocals L)
+        ∀ L k tail, Steps (.next (.seq (ss ++ tail) σ.locals k)) (σ.withLocals L)
+          (.continuing k.stripSeqs) (σf.withLocals L)
     | .returned σf => σf.locals.popScope = σ.locals.popScope ∧
         ((∀ s ∈ ss, StmtFragNS s) → σf.locals = σ.locals) ∧
         (∀ id ∈ avoid, LocalEnv.lookup σf.locals id = LocalEnv.lookup σ.locals id) ∧
-        ∀ L k, Steps (.next (.seq ss σ.locals k)) (σ.withLocals L)
-          (.returning k) (σf.withLocals L) := by
+        ∀ L k tail, Steps (.next (.seq (ss ++ tail) σ.locals k)) (σ.withLocals L)
+          (.returning k.stripSeqs) (σf.withLocals L) := by
   cases ss with
   | nil =>
     simp only [execStmtList, pure_eq_ok, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
     exact ⟨hinv, rfl, fun _ => rfl, fun _ _ => rfl,
-      fun L k => Steps.single .seqDone⟩
+      fun L k tail => .refl _ _⟩
   | cons s rest =>
     simp only [execStmtList] at h
     rw [bind_eq_ok] at h
@@ -1582,12 +1712,13 @@ theorem execStmtList_frag_sound {avoid : List String} {ss : List Stmt}
       obtain ⟨hif, hrest⟩ := execStmtList_frag_sound
         (fun q hq => hf q (by simp [hq])) fuel _ ch hinv₁ h
       refine ⟨hif, ?_⟩
-      have hpre : ∀ L k,
-          Steps (.next (.seq (Stmt.initialization p :: rest) σ.locals k))
+      have hpre : ∀ L k tail,
+          Steps (.next (.seq ((Stmt.initialization p :: rest) ++ tail) σ.locals k))
             (σ.withLocals L)
-            (.next (.seq rest ((σ.declareLocal p.id (some p.typ) v).locals) k))
+            (.next (.seq (rest ++ tail)
+              ((σ.declareLocal p.id (some p.typ) v).locals) k))
             ((σ.declareLocal p.id (some p.typ) v).withLocals L) := by
-        intro L k
+        intro L k tail
         refine (Steps.single Step.seqNext).tail
           (Step.initialization (v := v) (loc := (σ.alloc v (some p.typ)).1)
             ((defaultValue_state_indep (σ.withLocals L) σ htp).trans hv)
@@ -1607,30 +1738,138 @@ theorem execStmtList_frag_sound {avoid : List String} {ss : List Stmt}
         obtain ⟨hpop, -, hlk, hsteps⟩ := hrest
         refine ⟨hpop.trans hdpop, ?_,
           fun id hid => (hlk id hid).trans (hdlk id hid),
-          fun L k => (hpre L k).trans (hsteps L k)⟩
+          fun L k tail => (hpre L k tail).trans (hsteps L k tail)⟩
         intro hns
         exact absurd (hns (.initialization p) (by simp)) (by rintro ⟨⟩)
       | broke σf =>
         obtain ⟨hpop, -, hlk, hsteps⟩ := hrest
         refine ⟨hpop.trans hdpop, ?_,
           fun id hid => (hlk id hid).trans (hdlk id hid),
-          fun L k => (hpre L k).trans (hsteps L k)⟩
+          fun L k tail => (hpre L k tail).trans (hsteps L k tail)⟩
         intro hns
         exact absurd (hns (.initialization p) (by simp)) (by rintro ⟨⟩)
       | continued σf =>
         obtain ⟨hpop, -, hlk, hsteps⟩ := hrest
         refine ⟨hpop.trans hdpop, ?_,
           fun id hid => (hlk id hid).trans (hdlk id hid),
-          fun L k => (hpre L k).trans (hsteps L k)⟩
+          fun L k tail => (hpre L k tail).trans (hsteps L k tail)⟩
         intro hns
         exact absurd (hns (.initialization p) (by simp)) (by rintro ⟨⟩)
       | returned σf =>
         obtain ⟨hpop, -, hlk, hsteps⟩ := hrest
         refine ⟨hpop.trans hdpop, ?_,
           fun id hid => (hlk id hid).trans (hdlk id hid),
-          fun L k => (hpre L k).trans (hsteps L k)⟩
+          fun L k tail => (hpre L k tail).trans (hsteps L k tail)⟩
         intro hns
         exact absurd (hns (.initialization p) (by simp)) (by rintro ⟨⟩)
+    | @seqnSpine _ ss' hss' =>
+      -- interpreter: scope-transparent nested list; relation: SPLICE (D1)
+      simp only [execStmt, execStmts] at hhead
+      have hsz1 : sizeOf ss'.toList < 1 + (1 + sizeOf ss') + sizeOf rest := by
+        cases ss'; simp +arith
+      obtain ⟨hinv₁, hout1⟩ := execStmtList_frag_sound
+        (fun q hq => hss' q (by simpa using hq)) fuel σ ch hinv hhead
+      have hsplice : ∀ L k tail,
+          Steps (.next (.seq ((Stmt.seqn ss' :: rest) ++ tail) σ.locals k))
+            (σ.withLocals L)
+            (.next (.seq (ss'.toList ++ (rest ++ tail)) σ.locals k))
+            (σ.withLocals L) := by
+        intro L k tail
+        refine (Steps.single Step.seqNext).tail ?_
+        have := Step.seqn (ss := ss') (env := σ.locals)
+          (k := .seq (rest ++ tail) σ.locals k) (s := σ.withLocals L)
+        rwa [show seqCont ss'.toList σ.locals (.seq (rest ++ tail) σ.locals k)
+            = .seq (ss'.toList ++ (rest ++ tail)) σ.locals k by
+          simp [seqCont]] at this
+      cases o₁ with
+      | normal σ₁ =>
+        obtain ⟨hpop1, hns1, hlk1, hsteps1⟩ := hout1
+        obtain ⟨hif, hrest⟩ := execStmtList_frag_sound
+          (fun q hq => hf q (by simp [hq])) fuel σ₁ ch₁ hinv₁ h
+        refine ⟨hif, ?_⟩
+        cases out with
+        | normal σf =>
+          obtain ⟨hpop, hnseq, hlk, hsteps⟩ := hrest
+          refine ⟨hpop.trans hpop1, ?_,
+            fun id hid => (hlk id hid).trans (hlk1 id hid),
+            fun L k tail => ?_⟩
+          · intro hns'
+            have hh := hns' (.seqn ss') (by simp)
+            cases hh with
+            | seqn hels =>
+              exact (hnseq (fun q hq => hns' q (by simp [hq]))).trans
+                (hns1 (fun q hq => hels q (by simpa using hq)))
+          · exact ((hsplice L k tail).trans
+              (hsteps1 L k (rest ++ tail))).trans (hsteps L k tail)
+        | broke σf =>
+          obtain ⟨hpop, hnseq, hlk, hsteps⟩ := hrest
+          refine ⟨hpop.trans hpop1, ?_,
+            fun id hid => (hlk id hid).trans (hlk1 id hid),
+            fun L k tail => ?_⟩
+          · intro hns'
+            have hh := hns' (.seqn ss') (by simp)
+            cases hh with
+            | seqn hels =>
+              exact (hnseq (fun q hq => hns' q (by simp [hq]))).trans
+                (hns1 (fun q hq => hels q (by simpa using hq)))
+          · exact ((hsplice L k tail).trans
+              (hsteps1 L k (rest ++ tail))).trans (hsteps L k tail)
+        | continued σf =>
+          obtain ⟨hpop, hnseq, hlk, hsteps⟩ := hrest
+          refine ⟨hpop.trans hpop1, ?_,
+            fun id hid => (hlk id hid).trans (hlk1 id hid),
+            fun L k tail => ?_⟩
+          · intro hns'
+            have hh := hns' (.seqn ss') (by simp)
+            cases hh with
+            | seqn hels =>
+              exact (hnseq (fun q hq => hns' q (by simp [hq]))).trans
+                (hns1 (fun q hq => hels q (by simpa using hq)))
+          · exact ((hsplice L k tail).trans
+              (hsteps1 L k (rest ++ tail))).trans (hsteps L k tail)
+        | returned σf =>
+          obtain ⟨hpop, hnseq, hlk, hsteps⟩ := hrest
+          refine ⟨hpop.trans hpop1, ?_,
+            fun id hid => (hlk id hid).trans (hlk1 id hid),
+            fun L k tail => ?_⟩
+          · intro hns'
+            have hh := hns' (.seqn ss') (by simp)
+            cases hh with
+            | seqn hels =>
+              exact (hnseq (fun q hq => hns' q (by simp [hq]))).trans
+                (hns1 (fun q hq => hels q (by simpa using hq)))
+          · exact ((hsplice L k tail).trans
+              (hsteps1 L k (rest ++ tail))).trans (hsteps L k tail)
+      | broke σ₁ =>
+        obtain ⟨hpop1, hns1, hlk1, hsteps1⟩ := hout1
+        simp only [pure_eq_ok, Prod.mk.injEq] at h
+        obtain ⟨rfl, rfl⟩ := h
+        refine ⟨hinv₁, hpop1, ?_, hlk1, fun L k tail =>
+          (hsplice L k tail).trans (hsteps1 L k (rest ++ tail))⟩
+        intro hns'
+        have hh := hns' (.seqn ss') (by simp)
+        cases hh with
+        | seqn hels => exact hns1 (fun q hq => hels q (by simpa using hq))
+      | continued σ₁ =>
+        obtain ⟨hpop1, hns1, hlk1, hsteps1⟩ := hout1
+        simp only [pure_eq_ok, Prod.mk.injEq] at h
+        obtain ⟨rfl, rfl⟩ := h
+        refine ⟨hinv₁, hpop1, ?_, hlk1, fun L k tail =>
+          (hsplice L k tail).trans (hsteps1 L k (rest ++ tail))⟩
+        intro hns'
+        have hh := hns' (.seqn ss') (by simp)
+        cases hh with
+        | seqn hels => exact hns1 (fun q hq => hels q (by simpa using hq))
+      | returned σ₁ =>
+        obtain ⟨hpop1, hns1, hlk1, hsteps1⟩ := hout1
+        simp only [pure_eq_ok, Prod.mk.injEq] at h
+        obtain ⟨rfl, rfl⟩ := h
+        refine ⟨hinv₁, hpop1, ?_, hlk1, fun L k tail =>
+          (hsplice L k tail).trans (hsteps1 L k (rest ++ tail))⟩
+        intro hns'
+        have hh := hns' (.seqn ss') (by simp)
+        cases hh with
+        | seqn hels => exact hns1 (fun q hq => hels q (by simpa using hq))
     | ns hns =>
       obtain ⟨hhinv, hrest1⟩ := execStmt_frag_sound hns fuel σ ch hinv hhead
       cases o₁ with
@@ -1640,48 +1879,54 @@ theorem execStmtList_frag_sound {avoid : List String} {ss : List Stmt}
           (fun q hq => hf q (by simp [hq])) fuel σ₁ ch₁ hhinv h
         rw [hl₁] at hrest
         refine ⟨hif, ?_⟩
-        have hpre : ∀ L k,
-            Steps (.next (.seq (s :: rest) σ.locals k)) (σ.withLocals L)
-              (.next (.seq rest σ.locals k)) (σ₁.withLocals L) := fun L k =>
-          (Steps.single Step.seqNext).trans (hsteps1 L (.seq rest σ.locals k))
+        have hpre : ∀ L k tail,
+            Steps (.next (.seq ((s :: rest) ++ tail) σ.locals k)) (σ.withLocals L)
+              (.next (.seq (rest ++ tail) σ.locals k)) (σ₁.withLocals L) :=
+          fun L k tail =>
+            (Steps.single Step.seqNext).trans
+              (hsteps1 L (.seq (rest ++ tail) σ.locals k))
         cases out with
         | normal σf =>
           obtain ⟨hpop, hnseq, hlk, hsteps⟩ := hrest
           exact ⟨hpop, fun hns' => hnseq (fun q hq => hns' q (by simp [hq])),
-            hlk, fun L k => (hpre L k).trans (hsteps L k)⟩
+            hlk, fun L k tail => (hpre L k tail).trans (hsteps L k tail)⟩
         | broke σf =>
           obtain ⟨hpop, hnseq, hlk, hsteps⟩ := hrest
           exact ⟨hpop, fun hns' => hnseq (fun q hq => hns' q (by simp [hq])),
-            hlk, fun L k => (hpre L k).trans (hsteps L k)⟩
+            hlk, fun L k tail => (hpre L k tail).trans (hsteps L k tail)⟩
         | continued σf =>
           obtain ⟨hpop, hnseq, hlk, hsteps⟩ := hrest
           exact ⟨hpop, fun hns' => hnseq (fun q hq => hns' q (by simp [hq])),
-            hlk, fun L k => (hpre L k).trans (hsteps L k)⟩
+            hlk, fun L k tail => (hpre L k tail).trans (hsteps L k tail)⟩
         | returned σf =>
           obtain ⟨hpop, hnseq, hlk, hsteps⟩ := hrest
           exact ⟨hpop, fun hns' => hnseq (fun q hq => hns' q (by simp [hq])),
-            hlk, fun L k => (hpre L k).trans (hsteps L k)⟩
+            hlk, fun L k tail => (hpre L k tail).trans (hsteps L k tail)⟩
       | broke σ₁ =>
         obtain ⟨hl₁, hsteps1⟩ := hrest1
         simp only [pure_eq_ok, Prod.mk.injEq] at h
         obtain ⟨rfl, rfl⟩ := h
-        exact ⟨hhinv, by rw [hl₁], fun _ => hl₁, fun id _ => by rw [hl₁],
-          fun L k => ((Steps.single Step.seqNext).trans
-            (hsteps1 L (.seq rest σ.locals k))).tail Step.seqBreak⟩
+        refine ⟨hhinv, by rw [hl₁], fun _ => hl₁, fun id _ => by rw [hl₁],
+          fun L k tail => ?_⟩
+        refine (Steps.single Step.seqNext).trans ?_
+        have h0 := hsteps1 L (.seq (rest ++ tail) σ.locals k)
+        exact h0
       | continued σ₁ =>
         obtain ⟨hl₁, hsteps1⟩ := hrest1
         simp only [pure_eq_ok, Prod.mk.injEq] at h
         obtain ⟨rfl, rfl⟩ := h
-        exact ⟨hhinv, by rw [hl₁], fun _ => hl₁, fun id _ => by rw [hl₁],
-          fun L k => ((Steps.single Step.seqNext).trans
-            (hsteps1 L (.seq rest σ.locals k))).tail Step.seqContinue⟩
+        refine ⟨hhinv, by rw [hl₁], fun _ => hl₁, fun id _ => by rw [hl₁],
+          fun L k tail => ?_⟩
+        refine (Steps.single Step.seqNext).trans ?_
+        exact hsteps1 L (.seq (rest ++ tail) σ.locals k)
       | returned σ₁ =>
         obtain ⟨hl₁, hsteps1⟩ := hrest1
         simp only [pure_eq_ok, Prod.mk.injEq] at h
         obtain ⟨rfl, rfl⟩ := h
-        exact ⟨hhinv, by rw [hl₁], fun _ => hl₁, fun id _ => by rw [hl₁],
-          fun L k => ((Steps.single Step.seqNext).trans
-            (hsteps1 L (.seq rest σ.locals k))).tail Step.seqReturn⟩
+        refine ⟨hhinv, by rw [hl₁], fun _ => hl₁, fun id _ => by rw [hl₁],
+          fun L k tail => ?_⟩
+        refine (Steps.single Step.seqNext).trans ?_
+        exact hsteps1 L (.seq (rest ++ tail) σ.locals k)
 termination_by (fuel, sizeOf ss)
 decreasing_by all_goals (subst_vars; decreasing_tactic)
 end
@@ -1716,7 +1961,10 @@ theorem interpreterSound_spineSeq (fuel : Nat) (σ σ' : ExecState)
       (σ'.withLocals σ.locals) := by
   simp only [execStmt, execStmts] at h
   obtain ⟨-, -, -, -, hsteps⟩ := execStmtList_frag_sound hf fuel σ ch hinv h
-  exact (Steps.single Step.seqn).trans (hsteps σ.locals .stop)
+  have h0 := hsteps σ.locals .stop []
+  rw [List.append_nil] at h0
+  exact ((Steps.single (Step.seqn (ss := ss) (env := σ.locals) (k := .stop)
+    (s := σ.withLocals σ.locals))).trans h0).tail Step.seqDone
 
 /-! ## Proven instances
 
@@ -1727,7 +1975,8 @@ that the control-flow rules compose the way the interpreter behaves. -/
 environment works — the empty sequence reads no variables. -/
 theorem seqnNilSteps (s : ExecState) (env : LocalEnv) :
     Steps (.exec (.seqn #[]) env .stop) s (.next .stop) s :=
-  ((Steps.single .seqn).tail .seqDone)
+  ((Steps.single (Step.seqn (ss := #[]) (env := env) (k := .stop)
+    (s := s))).tail .seqDone)
 
 /-- `while false { body }` skips its body: condition literals evaluate by
 rule, the loop exits normally. -/
@@ -1741,7 +1990,9 @@ theorem ifTrueReturnSteps (s : ExecState) (env : LocalEnv) :
     Steps
       (.exec (.seqn #[.ifThenElse (.boolLit true) .returnStmt (.seqn #[])]) env .stop) s
       (.returning .stop) s :=
-  (((((Steps.single .seqn).tail
+  (((((Steps.single (Step.seqn
+      (ss := #[.ifThenElse (.boolLit true) .returnStmt (.seqn #[])])
+      (env := env) (k := .stop) (s := s))).tail
       .seqNext).tail
       (.ifTrue .boolLit)).tail
       .returnStmt).tail

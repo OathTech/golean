@@ -293,6 +293,20 @@ inductive Cont where
   restored here. -/
   | frame (targets : List Loc) (results : List Loc) (k : Cont)
 
+/-- The continuation for entering a `.seqn`: under a *same-env* governing
+sequence, SPLICE the statements into it (D1, arc rel-completion) — Go
+statement lists splice and only blocks scope, so a frontend-lowered nested
+declaration group (`x := 1` → `.seqn #[init x, assign x 1]`) extends the env
+of the *enclosing* rest, exactly like the interpreter's scope-transparent
+`.seqn`. Any other continuation (or an env-mismatched seq, unreachable from
+real programs — the fallback is the old wrap behavior, never a new claim)
+wraps in a fresh seq node. A total function, so the `seqn` rule stays
+single-conclusion and deterministic. -/
+def seqCont (ss : List Stmt) (env : LocalEnv) : Cont → Cont
+  | .seq rest env' k => if env' = env then .seq (ss ++ rest) env k
+                        else .seq ss env (.seq rest env' k)
+  | k => .seq ss env k
+
 /-- Sequential **control** configurations — the Iris `Expr` projection.
 
 Reshape A (`docs/2026-07-18_reshape-a-design.md`): `Config` does not embed the
@@ -325,8 +339,10 @@ post-state is inert). -/
 inductive Step : Config → ExecState → Config → ExecState → Prop where
   -- Sequencing. Each `seq` continuation carries the environment active for
   -- its statements; exhausting it discards that environment (scope exit).
+  -- Entering a nested `.seqn` under a same-env governing seq SPLICES (D1;
+  -- see `seqCont`), so mid-list declarations extend the enclosing rest.
   | seqn {ss env k s} :
-      Step (.exec (.seqn ss) env k) s (.next (.seq ss.toList env k)) s
+      Step (.exec (.seqn ss) env k) s (.next (seqCont ss.toList env k)) s
   | seqNext {t rest env k s} :
       Step (.next (.seq (t :: rest) env k)) s (.exec t env (.seq rest env k)) s
   | seqDone {env k s} :
@@ -441,6 +457,17 @@ inductive Step : Config → ExecState → Config → ExecState → Prop where
       StoreManyR s targets vs s' →
       Step (.next (.frame targets results k)) s (.next k) s'
 
+/-- Strip leading sequence frames from a continuation — the stable form the
+unwinding configurations (`breaking`/`continuing`/`returning`) reach after
+the `seqBreak`/`seqContinue`/`seqReturn` steps discharge pending sequence
+nodes. Loops and frames are barriers (their unwinding rules are semantic:
+loop re-entry / frame result stores). With the D1 splice rule the machine
+may skip intermediate wrapped forms, so simulation targets are stated at
+the stripped continuation. -/
+def Cont.stripSeqs : Cont → Cont
+  | .seq _ _ k => k.stripSeqs
+  | k => k
+
 /-- Reflexive-transitive closure of `Step` over `(control, state)` pairs. -/
 inductive Steps : Config → ExecState → Config → ExecState → Prop where
   | refl (c : Config) (s : ExecState) : Steps c s c s
@@ -456,6 +483,30 @@ theorem Steps.trans {a b c : Config} {sa sb sc : ExecState} :
   induction hbc with
   | refl => exact hab
   | tail _ hstep ih => exact .tail ih hstep
+
+theorem Steps.breaking_strip (k : Cont) (s : ExecState) :
+    Steps (.breaking k) s (.breaking k.stripSeqs) s := by
+  induction k with
+  | seq rest env k ih => exact (Steps.single Step.seqBreak).trans ih
+  | stop => exact .refl _ _
+  | loop c b env k ih => exact .refl _ _
+  | frame t r k ih => exact .refl _ _
+
+theorem Steps.continuing_strip (k : Cont) (s : ExecState) :
+    Steps (.continuing k) s (.continuing k.stripSeqs) s := by
+  induction k with
+  | seq rest env k ih => exact (Steps.single Step.seqContinue).trans ih
+  | stop => exact .refl _ _
+  | loop c b env k ih => exact .refl _ _
+  | frame t r k ih => exact .refl _ _
+
+theorem Steps.returning_strip (k : Cont) (s : ExecState) :
+    Steps (.returning k) s (.returning k.stripSeqs) s := by
+  induction k with
+  | seq rest env k ih => exact (Steps.single Step.seqReturn).trans ih
+  | stop => exact .refl _ _
+  | loop c b env k ih => exact .refl _ _
+  | frame t r k ih => exact .refl _ _
 
 /-- A configuration the sequential relation considers finished. -/
 def Config.terminal : Config → Prop

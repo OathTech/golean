@@ -134,6 +134,7 @@ theorem wp_main_call {kind : IntKind} {lit : Int} {ty : Ty}
       rfl))
   iintro %ra Hra
   iapply wp_seqn
+  simp only [seqCont]
   iapply fupd_intro; inext; iapply fupd_intro; iintro Hcred1
   iapply wp_seq_next
   iapply fupd_intro; inext; iapply fupd_intro; iintro Hcred2
@@ -229,6 +230,7 @@ theorem slice_adequate {ty : Ty} (σ : ExecState) (mid incId fid : FuncId)
   go_adequacy (GF := GoCoreS) _ _ _ hwf (by
     intro _ hprog
     iapply wp_seqn
+    simp only [seqCont]
     iapply fupd_intro; inext; iapply fupd_intro; iintro Hcred1
     iapply wp_seq_next
     iapply fupd_intro; inext; iapply fupd_intro; iintro Hcred2
