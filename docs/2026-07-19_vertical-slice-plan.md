@@ -149,10 +149,16 @@ L4 correspondence ❌ (the wall) · L5 WP laws 🟨 (~60%) · L6 spec ⬜.
    new two-cell core `wp_store_step₂`) + zero-hypothesis witness
    `wp_inc_via_ptr` (`{p ↦ addr(a) ∗ a ↦ m} *p = *p+lit {p ↦ addr(a) ∗ a ↦
    norm(m+lit)}`, ∀-general over `m`). First multi-`↦` law; in the Audit gates.
-4. **Call/frame/return law** — reason across `inc(&x)`: frame entry
-   (BindParams), body spec as hypothesis, frame exit. Includes closing the
-   **results-allocation gap** (`Step.call` binds args only — `Rel.lean` module
-   header) so a value-returning `main` works. The last "does not exist" law.
+4. **Call/frame/return law** — **DONE (2026-07-20)** in five increments:
+   4a `Step.call` results-allocation edit; 4b-i functions-pinned + `HeapWf`
+   state interp (`docs/2026-07-20_call-law-design.md`); `wp_call_unary` (frame
+   entry, fresh param cell via `genHeap_alloc`) + `wp_frame_fall` +
+   **`wp_inc_call`** (the composed `{x↦m} inc(&x) {x↦m+lit}` cross-frame
+   witness); `wp_frame_return` (+`_int` witness, value-returning exit);
+   `wp_init`/`wp_assign_var` (+witnesses). Every construct in main()'s body
+   now has its law. Remaining nuance for item 5: a nullary-arg/unary-result
+   call variant for main's own entry (result cell allocated via the DeclsR
+   leg — same pattern as `wp_call_unary`).
    ⚠ Note (pre-merge audit F-B): closing the gap means **editing `Step.call`**
    — a change to the trusted operational relation, not just adding a lemma. It
    must preserve the `ToVal` terminal constraint and re-clear the full
