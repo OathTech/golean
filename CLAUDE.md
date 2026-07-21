@@ -144,8 +144,11 @@ way an arc reaches `main`).
 
 ### The merge protocol — follow EXACTLY, every step, every time
 
-1. **Feature work happens on a branch off `main`** — never directly on `main`.
-   (Process-contract amendments to this file may land on `main` directly.)
+1. **ALL work happens on a branch off `main`** — never directly on `main`,
+   including doc-only and process-contract changes, unless the user directly
+   authorizes a specific commit to land on `main` (rule tightened 2026-07-21
+   at user direction; the old "process amendments may land directly" carve-out
+   is revoked).
 2. **Arc complete → run the gate:** `scripts/ci` (add `--diff` when runtime
    code changed). Must be green before anything else.
 3. **THE AUDIT CHECK — NEVER, EVER SKIPPED.** Before any merge, explicitly ask
