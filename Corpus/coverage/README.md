@@ -18,8 +18,9 @@ format, naming scheme, subset runner UX, and migration plan.
 
 Executable differential cases use one canonical Go source. The same `main.go`
 is exported through the frontend for Lean execution and copied into a generated
-Go harness for real Go execution. There are no hand-maintained Gobra variants.
-The corpus unit is a package directory, but the current Gobra frontend only
+Go harness for real Go execution. There are no hand-maintained frontend
+variants. The corpus unit is a package directory, but the native frontend
+(`tools/nativefrontend`, the sole frontend — Gobra was removed 2026-07-19) only
 supports single-file executable packages; multi-file packages fail visibly until
 a package-aware frontend adapter exists.
 

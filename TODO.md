@@ -228,10 +228,10 @@ feature breadth up the raft ladder, `slices.Sort` extern + input fuzzing.
 - Track frontend-blocked corpus rows separately from GoCore semantics work.
   Recent focused probes show `delete`, `clear`, `range int`, richer method
   expressions/auto-addressing, floats, complex numbers, and `min`/`max` are
-  often blocked before Lean by the current Gobra path; do not count those as
-  GoCore semantic failures until a frontend can produce GoCore for them.
+  often blocked before Lean at the frontend; do not count those as
+  GoCore semantic failures until the native frontend can produce GoCore for them.
 - Promote cases from `Corpus/challenges/semantic-edges/` into the active
-  Gobra/Lean differential suite one feature at a time. Keep the challenge
+  native/Lean differential suite one feature at a time. Keep the challenge
   corpus runnable by `scripts/semantic-edges-challenge-smoke`, but do not treat
   it as a supported-semantics claim until cases land in
   `Corpus/coverage/manifest.tsv`.

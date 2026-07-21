@@ -1,7 +1,10 @@
 # Go Semantic Edges Challenge Corpus
 
 This directory tracks interesting Go edge cases from AI-generated `gotchas.go`
-and `bestiary.go` tours. These are not part of the active Gobra/Lean
+and `bestiary.go` tours. **Status: manual-only reference suite** (run via
+`scripts/semantic-edges-challenge-smoke`; deliberately NOT wired into
+`scripts/ci` — structure audit 2026-07-20, item 7). These are not part of the
+active native/Lean
 differential manifest yet. They are challenge programs to promote one at a time
 as GoCore and the frontend cover the relevant language surface.
 
@@ -20,7 +23,7 @@ Promotion rule:
 3. Add the row to `Corpus/coverage/manifest.tsv`.
 4. Run `scripts/diff-coverage` or the full `scripts/coverage`.
 
-Do not add a hand-maintained Gobra variant. If the frontend fails on the
+Do not add a hand-maintained frontend variant. If the frontend fails on the
 canonical Go input, that failure is a coverage signal.
 
 The catalog in `manifest.tsv` includes the source gotchas and bestiary cases,
