@@ -211,7 +211,13 @@ if [ -n "$PIN_MODE" ]; then
   step "baseline re-pin guard ($PIN_MODE; flips must be on a BUGS.md Cases: line)"
   # No process substitution (sandbox may deny /dev/fd): old version on stdin,
   # new version read inside awk. FAIL CLOSED on any unreadable input.
-  if oldbase="$(git show "$PIN_OLD":$GUARD_BASE 2>/dev/null)"; then
+  # An INITIAL pin (file absent in the old rev) has no PASS→non-PASS flips by
+  # definition: treat it as nothing-to-launder. Fail closed only on OTHER read
+  # errors. (Found live: adding baselines/negative-full.tsv tripped the guard
+  # on the very next commit because HEAD~1 predated the file.)
+  if ! git cat-file -e "$PIN_OLD":"$GUARD_BASE" 2>/dev/null; then
+    ok "re-pin guard ($GUARD_BASE: initial pin at $PIN_OLD — no prior baseline, nothing to launder)"
+  elif oldbase="$(git show "$PIN_OLD":$GUARD_BASE 2>/dev/null)"; then
     if [ -n "$PIN_NEW_FILE" ]; then newbase="$(cat "$PIN_NEW_FILE")"; else newbase="$(git show HEAD:$GUARD_BASE 2>/dev/null)"; fi
     if [ -z "$newbase" ]; then
       bad "re-pin guard (could not read the new baseline — refusing to certify)"
