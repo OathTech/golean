@@ -6,18 +6,65 @@ past the point where one file is defensible (raised in review during arc
 the split should serve the *eventual* scalable structure, not just today's
 contents.
 
-## Starting-point proposal (from the review discussion)
+## Design of record (2026-07-21 — supersedes the starting-point sketch)
+
+Two distinct questions, answered separately:
+
+### (1) File decomposition: four STRATA, laws by CONSTRUCT
 
 ```
-proofs/GoLeanProofs.lean        root: doc + imports (lib target unchanged)
-proofs/GoLeanProofs/Lang.lean       Config ⇒ Iris Language wiring
-proofs/GoLeanProofs/HeapBridge.lean heapToMap bridges + HeapWf + pure store/alloc facts
-proofs/GoLeanProofs/Ghost.lean      GoCoreGS + state interpretation
-proofs/GoLeanProofs/PureSteps.lean  pure control-step laws (seqn / seq_done / frame_fall)
-proofs/GoLeanProofs/Store.lean      store cores, laws, ExprR inversion helpers, witnesses
-proofs/GoLeanProofs/Call.lean       call law + cross-frame witness
-proofs/GoLeanProofs/Adequacy.lean   functor bundle, go_adequacy, end-to-end witnesses
+proofs/GoLeanProofs.lean               root: doc + imports (lib target unchanged)
+proofs/Audit.lean                      the gate (root; single file until it hurts)
+
+# Infrastructure — stable; changes are deliberate design events
+proofs/GoLeanProofs/Lang.lean          Config ⇒ Iris wiring (ToVal, PrimStep, Language)
+proofs/GoLeanProofs/HeapBridge.lean    heapToMap bridges, HeapWf, alloc eqns, pure store facts
+proofs/GoLeanProofs/Ghost.lean         GoCoreGS, state interpretation, IrisGS
+proofs/GoLeanProofs/Lifting.lean       the store/alloc step cores (de-privatized, marked
+                                       internal — the "one step + ghost update" engines)
+proofs/GoLeanProofs/Inversions.lean    exprR_*_det + intKind facts (de-privatized; shared)
+
+# Laws — grows ONE FILE PER CONSTRUCT FAMILY; law + witness CO-LOCATED
+# (the non-vacuity ship-together rule becomes a per-file visual invariant)
+proofs/GoLeanProofs/Laws/Control.lean  wp_seqn/seq_next/seq_done/seq_return/return/frame_fall
+proofs/GoLeanProofs/Laws/Assign.lean   wp_assign, wp_deref_store, wp_store_via_ptr,
+                                       wp_assign_var + witnesses
+proofs/GoLeanProofs/Laws/Init.lean     wp_init + witness
+proofs/GoLeanProofs/Laws/Call.lean     wp_call_unary, wp_call_nullary_ret,
+                                       wp_frame_return + witnesses
+
+# Specs — grows ONE FILE PER VERIFIED TARGET PROGRAM
+proofs/GoLeanProofs/Specs/Slice.lean   incFunc/mainBody/sliceProg, wp_inc_call,
+                                       wp_main_*, slice_adequate
+
+proofs/GoLeanProofs/Adequacy.lean      GoCoreGpreS/GoCoreS/go_adequacy
+                                       (+ future go_heap_adequacy)
 ```
+
+Rationale: this week's growth pattern shows new work arrives as
+construct-law-families and program-specs, not infrastructure (which changed
+only at deliberate design events — the CEK reshape, the state-interp
+upgrade). The frequent operation (add a law family / add a spec) must be a
+new-file operation touching nothing else. Future arrivals slot cleanly:
+`Laws/Loop.lean` (while + invariant), `Laws/Map.lean`, `Specs/Quorum.lean`.
+
+### (2) proofs/ folder organization as the project grows
+
+1. **`proofs/` = the Iris-dependent world; Iris-free stays core-side.** The
+   separate Lake package is the trust-story boundary: everything needed to
+   *believe* an end-state theorem (Rel, Eval, Correspondence — incl. item 6's
+   correspondence proofs when they land, which are Iris-free) lives in
+   `GoLean/`; `proofs/` is pure methodology and dissolves via adequacy.
+2. **The four strata are the growth axes.** Concurrency infrastructure (post-
+   F4 decision) = a deliberate infrastructure event; raft-ladder targets =
+   routine `Specs/` additions; adequacy variants extend `Adequacy.lean` until
+   it earns a directory; `Audit.lean` likewise splits per-stratum only when
+   unwieldy (root importing all gate files).
+3. **Gates make the structure self-enforcing:** the import-closure ci check
+   (landed 2026-07-21) makes an unwired file a loud failure; the module-scoped
+   sweep audits whatever is wired; non-vacuity is checkable per-`Laws/` file
+   by eye. Structure the gates enforce doesn't rot.
+
 
 ## Things the design must handle (found while scoping — don't lose these)
 
