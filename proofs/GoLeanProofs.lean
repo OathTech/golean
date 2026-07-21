@@ -9,6 +9,7 @@ import GoLeanProofs.Laws.Init
 import GoLeanProofs.Laws.Call
 import GoLeanProofs.Adequacy
 import GoLeanProofs.Specs.Slice
+import GoLeanProofs.Specs.SliceCorrespondence
 
 /-!
 # GoCore ⇒ Iris — the proof layer (root)

@@ -3,23 +3,50 @@
 See `docs/roadmap.md` for the phased project roadmap. This file tracks tactical
 backlog items.
 
-## THE work queue: close the vertical slice
+## THE work queue: from slice to platform (updated 2026-07-21, post Arc B)
 
-Authority: `docs/2026-07-19_vertical-slice-plan.md` §Punch-list + §Arc-shape
-(2026-07-20). Batched by risk class into three arcs:
-**Arc 1 `slice-l5-pure` (ACTIVE)** = items 1 + 2a + 3, proofs-only
-(zero-hypothesis witnesses, pure-program end-to-end adequacy witness, multi-`↦`
-heap-reading RHS); **2b (heap-touching adequacy, `go_heap_adequacy`) deferred
-to arc 2**.
-**Arc 2 `slice-call-frame`** = items 4+5 (Step.call semantics edit + call law,
-discharged by the `inc` spec + `main = 2` — the slice finish line).
-**Arc 3** = item 6 solo (Eval totalization → correspondence, the L4 wall).
-Keep the narrative there, status-mirror here.
-**NEXT PRIORITY after the slice merges:** act on the repo-structure audit the
-user commissioned (`docs/2026-07-20_repo-structure-audit.md`) — work its
-findings as the first post-slice arc, folding in the proofs-layer split
-(design + constraints in `docs/2026-07-20_proofs-structure-backlog.md`:
-gate interactions, private boundaries, growth axes; pure mechanical commits).
+**DONE and merged**: the vertical slice (arcs `slice-l5-pure` +
+`slice-call-frame` — `slice_adequate` closed); structure-hardening + the
+proofs module split (`docs/2026-07-20_repo-structure-audit.md` worked).
+**DONE on branch `eval-totalization` (Arc B, item 6 — pending audit+merge)**:
+Eval totalized (GoCore `partial`-free); the interpreter⇄relation
+correspondence proven over the full slice-shaped fragment *including calls*
+(`interpreterSound_frag`, axiom-clean). Design of record + the three
+discovered divergences D1/D2/D3:
+`docs/2026-07-21_eval-totalization-correspondence.md`.
+
+**Next arcs, sequenced by durability** (durability test: per-fragment
+mechanism vs per-program artifact; decided with user 2026-07-21):
+
+- **Arc C — Rel completion (D1+D3+D2-proper, ONE slice).** Semantics risk
+  class (trusted-relation edits, three-auditor bar, one downstream re-proof
+  wave through `wp_seqn`/witnesses/inversions/T1-T2 instead of three):
+  D1 seqn-splice rule (relation currently cannot run ANY frontend-lowered
+  program with a declaration — the deepest gap); D3 panic-propagation rules
+  for `eqCmp`/`deref` operands (then `interpreterPanic_frag`); D2-proper
+  (stash result *locations* in `Cont.frame`, erasing the shadowing hazard and
+  the fall-through gap, retiring the `avoid`-discipline). Land BEFORE widening
+  the fragment — every construct added first doubles the re-proof.
+- **Arc D — the exit infrastructure (proofs-only risk class).**
+  (1) 2b: `go_heap_adequacy` on `wp_strong_adequacy_gen` — initial-heap `↦`
+  handover + final-state extraction; the exit door every future state-property
+  spec uses (the raft target is a state property). Known unknown: ergonomics
+  of iris-lean's strong-adequacy form. (2) Golden-lowering mechanism:
+  elaboration-time decode of checked-in frontend JSON + CI staleness diff;
+  reprove the slice spec against the real lowered term. Finish line: *the
+  frontend-lowered program, executed by the differentially-validated
+  interpreter, terminates safely with `r = 2` in the final heap* — every span
+  kernel-checked.
+- **Arc E→ — widen per the ladder** (`docs/2026-07-19_vertical-slice-plan.md`
+  §Widening): while-invariant WP rule (slice B) → **BUG-001 fix + the
+  85-failure triage immediately before structs/arrays** → quorum-threshold
+  slice C. F4 concurrency-model note before any goroutine machinery; F5
+  target-theorem skeleton rides along. Arity-general call laws when the
+  ladder first needs them.
+
+Per-program demo artifacts (golden file for slice.go, `r = 2` instance,
+`sliceProg` correspondence witness) are bounded to ONE witness per mechanism —
+they double as the non-vacuity discharges our gate requires.
 
 ## Epistemic hardening / pipeline error-resistance (2026-07-19, priority #0)
 

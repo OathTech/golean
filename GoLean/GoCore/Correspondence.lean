@@ -1029,9 +1029,10 @@ results gap). -/
 structure FuncFrag (f : Func) : Prop where
   argsTy : ∀ p, p ∈ f.args → TyFrag p.typ
   resultsTy : ∀ r, r ∈ f.results → TyFrag r.typ
-  body : ∃ ss : Array Stmt, f.body = .seqn ss ∧
-    (∀ s, s ∈ ss → SpineFrag (f.results.toList.map (·.id)) s) ∧
-    (f.results ≠ #[] → EndsRet ss.toList)
+  body : (∃ ss : Array Stmt, f.body = .seqn ss ∧
+      (∀ s, s ∈ ss → SpineFrag (f.results.toList.map (·.id)) s) ∧
+      (f.results ≠ #[] → EndsRet ss.toList)) ∨
+    (StmtFragNS (f.results.toList.map (·.id)) f.body ∧ f.results = #[])
 
 def FuncsFrag (funcs : Array Func) : Prop := ∀ f, f ∈ funcs → FuncFrag f
 
@@ -1451,7 +1452,92 @@ theorem execStmt_frag_sound {avoid : List String} {stmt : Stmt}
       -- run the body through T2
       rw [bind_eq_ok] at hwl
       obtain ⟨⟨outcome, ch₁⟩, hbody, hwl⟩ := hwl
-      obtain ⟨bss, hbodyEq, hspine, hret⟩ := hff.body
+      rcases hff.body with ⟨bss, hbodyEq, hspine, hret⟩ | ⟨hbodyNS, hresNil⟩
+      case inr =>
+        -- void function with a bare non-spine body: enter T1 directly
+        obtain ⟨hoinv, hout2⟩ :=
+          execStmt_frag_sound hbodyNS fuel' callState ch hcinv hbody
+        rw [hresNil] at hwl
+        cases outcome with
+        | broke σbf => simp [bind_eq_ok] at hwl
+        | continued σbf => simp [bind_eq_ok] at hwl
+        | normal σbf =>
+          obtain ⟨hlb, hsteps2⟩ := hout2
+          rw [bind_eq_ok] at hwl
+          obtain ⟨resultValues, hread, hwl⟩ := hwl
+          simp only [readResultList, pure_eq_ok] at hread
+          subst hread
+          simp only [assignLocs] at hwl
+          cases hna3 : (tlocs.toArray.size != (([] : List GoValue)).toArray.size) with
+          | true => rw [hna3] at hwl; simp [bind_eq_ok] at hwl
+          | false =>
+          rw [hna3] at hwl
+          have htlocs_nil : tlocs = [] := by
+            have hsz := (by simpa using hna3 :
+              tlocs.toArray.size = (([] : List GoValue)).toArray.size)
+            simpa using hsz
+          subst htlocs_nil
+          simp only [Bool.false_eq_true, reduceIte, pure_bind] at hwl
+          rw [bind_eq_ok] at hwl
+          obtain ⟨σst, hstores, hwl⟩ := hwl
+          simp only [pure_eq_ok, Prod.mk.injEq] at hwl
+          obtain ⟨h1, h2⟩ := hwl
+          subst σfin
+          subst chfin
+          have hσst : σst = { σbf with locals := σ.locals } := by
+            have := hstores
+            simp only [assignLocList, pure_eq_ok] at this
+            exact this.symm
+          subst hσst
+          refine ⟨⟨hoinv.heap, hoinv.methods, hoinv.funcs⟩, rfl, fun L k => ?_⟩
+          have hstep1 : Step (.exec (.call targets funcId args) σ.locals k)
+              (σ.withLocals L)
+              (.exec func.body callState.locals (.frame [] func.results.toList k))
+              (callState.withLocals L) :=
+            Step.call (hAss L) (hArgs L) hfind (hBind L) (hDecls L)
+          exact ((Steps.single hstep1).trans
+            (hsteps2 L (.frame [] func.results.toList k))).tail Step.frameFall
+        | returned σbf =>
+          obtain ⟨hlb, hE2⟩ := hout2
+          rw [bind_eq_ok] at hwl
+          obtain ⟨resultValues, hread, hwl⟩ := hwl
+          simp only [readResultList, pure_eq_ok] at hread
+          subst hread
+          simp only [assignLocs] at hwl
+          cases hna3 : (tlocs.toArray.size != (([] : List GoValue)).toArray.size) with
+          | true => rw [hna3] at hwl; simp [bind_eq_ok] at hwl
+          | false =>
+          rw [hna3] at hwl
+          have htlocs_nil : tlocs = [] := by
+            have hsz := (by simpa using hna3 :
+              tlocs.toArray.size = (([] : List GoValue)).toArray.size)
+            simpa using hsz
+          subst htlocs_nil
+          simp only [Bool.false_eq_true, reduceIte, pure_bind] at hwl
+          rw [bind_eq_ok] at hwl
+          obtain ⟨σst, hstores, hwl⟩ := hwl
+          simp only [pure_eq_ok, Prod.mk.injEq] at hwl
+          obtain ⟨h1, h2⟩ := hwl
+          subst σfin
+          subst chfin
+          have hσst : σst = { σbf with locals := σ.locals } := by
+            have := hstores
+            simp only [assignLocList, pure_eq_ok] at this
+            exact this.symm
+          subst hσst
+          refine ⟨⟨hoinv.heap, hoinv.methods, hoinv.funcs⟩, rfl, fun L k => ?_⟩
+          obtain ⟨Eret, hag, hbodySteps⟩ := hE2 L (.frame [] func.results.toList k)
+          have hstep1 : Step (.exec (.call targets funcId args) σ.locals k)
+              (σ.withLocals L)
+              (.exec func.body callState.locals (.frame [] func.results.toList k))
+              (callState.withLocals L) :=
+            Step.call (hAss L) (hArgs L) hfind (hBind L) (hDecls L)
+          have hframe : Step (.returning Eret (.frame [] func.results.toList k))
+              (σbf.withLocals L) (.next k) (σbf.withLocals L) := by
+            rw [hresNil]
+            exact Step.frameReturn .nil .nil
+          exact ((Steps.single hstep1).trans hbodySteps).tail hframe
+      case inl =>
       rw [hbodyEq] at hbody
       simp only [execStmt, execStmts] at hbody
       have hsz : sizeOf bss.toList < sizeOf bss := by cases bss; simp +arith
@@ -1751,6 +1837,20 @@ theorem interpreterSound_frag (fuel : Nat) (σ σ' : ExecState) (stmt : Stmt)
     rw [← hl]; rfl
   rw [hσ, hσ'] at hstep
   exact hstep
+
+/-- Spine-level entry: a `.seqn` program whose elements are spine fragments
+(top-level declarations allowed — e.g. `r := 0; r = main()`). The relation's
+final state agrees with the interpreter's up to the interpreter-bookkeeping
+`locals` field (top-level declarations persist there). -/
+theorem interpreterSound_spineSeq (fuel : Nat) (σ σ' : ExecState)
+    (ss : Array Stmt) (ch ch' : Choices)
+    (hf : ∀ s ∈ ss.toList, SpineFrag [] s) (hinv : StInv σ)
+    (h : execStmt fuel σ ch (.seqn ss) = .ok (.normal σ', ch')) :
+    Steps (.exec (.seqn ss) σ.locals .stop) σ (.next .stop)
+      (σ'.withLocals σ.locals) := by
+  simp only [execStmt, execStmts] at h
+  obtain ⟨-, -, -, -, hsteps⟩ := execStmtList_frag_sound hf fuel σ ch hinv h
+  exact (Steps.single Step.seqn).trans (hsteps σ.locals .stop)
 
 /-! ## Proven instances
 
