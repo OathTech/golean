@@ -69,18 +69,20 @@ builtins, multi-assignment) is intentionally outside the skeleton and has
 no rules yet.
 
 Known skeleton gaps (tracked, unexercised by the proven instances):
-- **Results-allocation gap.** `Step.call` binds only `func.args` into the
-  frame env, not `func.results`. So `frameReturn`'s `ResultsR` is derivable
-  only for void frames until results are declared at frame entry (as the
-  interpreter does). This reshape relocates locals→env; it does not close
-  that gap.
+- **Results-allocation gap — CLOSED** (arc `slice-call-frame` item 4,
+  2026-07-20): `Step.call` now allocates `func.results` at their default
+  values into the frame env after binding `func.args` (via `DeclsR`),
+  mirroring the interpreter's `execFunctionWithValues`. `return x` assigns
+  the result local, which `frameReturn`'s `ResultsR` reads at frame exit.
 - **Fall-through results.** A function body that completes normally
   (`frameFall`) stores no results — normal-completion configs (`.next`) are
   env-free by design (the Iris `ToVal` law forbids the terminal `.next .stop`
   from carrying an env), so the callee env is unavailable there. Explicit
   `return` (`frameReturn`) does read results, because `.returning` carries
-  the callee env. Void functions are correct either way. Named-result
-  fall-through awaits the results-allocation fix.
+  the callee env. Void functions are correct either way; Go's own semantics
+  require an explicit `return` in any function with results (a missing
+  return is a compile error), so named-result fall-through is unreachable
+  from real Go — recorded here because the *relation* does not forbid it.
 -/
 
 namespace GoLean.GoCore.Rel
@@ -396,15 +398,19 @@ inductive Step : Config → ExecState → Config → ExecState → Prop where
   | continueStmt {env k s} :
       Step (.exec .continueStmt env k) s (.continuing k) s
   -- Direct calls: resolve targets and arguments in the caller, then enter a
-  -- fresh frame (env `[]` extended by the parameters) sharing the heap.
-  -- Dynamic dispatch is outside the skeleton (no rule when the callee
-  -- expects an interface receiver). Results-allocation gap: only `func.args`
-  -- are bound, not `func.results` (see the module header).
-  | call {targets funcId args func targetLocs argVals frameEnv env k s s₁ s₂ frameState} :
+  -- fresh frame (env `[]` extended by the parameters, then the named results
+  -- allocated at their default values — mirroring the interpreter's
+  -- `execFunctionWithValues`, which binds params then declares results) over
+  -- the shared heap. Dynamic dispatch is outside the skeleton (no rule when
+  -- the callee expects an interface receiver). (Arc slice-call-frame item 4:
+  -- this closes the results-allocation gap — `return x` assigns the result
+  -- local, which now exists in the frame env for `frameReturn` to read.)
+  | call {targets funcId args func targetLocs argVals argsEnv frameEnv env k s s₁ s₂ s₃ frameState} :
       AssigneesR env s targets.toList targetLocs s₁ →
       ArgsR env s₁ args.toList argVals s₂ →
       findFunctionIn? s₂.functions funcId = some func →
-      BindParamsR [] s₂ func.args.toList argVals frameEnv frameState →
+      BindParamsR [] s₂ func.args.toList argVals argsEnv s₃ →
+      DeclsR argsEnv s₃ func.results.toList frameEnv frameState →
       Step (.exec (.call targets funcId args) env k) s
         (.exec func.body frameEnv (.frame targetLocs func.results.toList k)) frameState
   -- Explicit return: read named results from the callee environment carried
