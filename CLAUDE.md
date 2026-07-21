@@ -138,19 +138,49 @@ impose that ceremony on a one-line fix.
 ## Branch, merge, and adversarial audit (before milestones)
 
 Adopted from ACL2Lean (see `docs/2026-07-19_review-merge-practices.md` for the
-full pattern):
+full pattern; merge steps made exact 2026-07-20 after a pointer-surgery merge
+(`git branch -f`) caused avoidable confusion — the protocol below is the ONLY
+way an arc reaches `main`).
 
-- **Never merge or push without explicit sign-off at the moment of merge.**
-  Feature work stays on a branch, never directly on `main`. When a branch is
-  ready, *pause, report, and ask* — merge only if approved right then. Approval
-  is never inferred from an earlier "merge it", from the branch being green, or
-  from any broad "go ahead". Same for `git push`. Prefer linear/fast-forward
-  history; `--no-ff` is allowed but not the default.
+### The merge protocol — follow EXACTLY, every step, every time
+
+1. **Feature work happens on a branch off `main`** — never directly on `main`.
+   (Process-contract amendments to this file may land on `main` directly.)
+2. **Arc complete → run the gate:** `scripts/ci` (add `--diff` when runtime
+   code changed). Must be green before anything else.
+3. **THE AUDIT CHECK — NEVER, EVER SKIPPED.** Before any merge, explicitly ask
+   the user about a pre-merge adversarial audit: propose scope + scale
+   (dimensions, agent count, model, cost) and get sign-off on that plan before
+   launching any subagent. The user may **waive or trim** the audit — that is
+   their call to make, never ours — but the *ask itself is unconditional*. No
+   green gate, no prior audit of an earlier state, no urgency, and no "it's
+   only docs" reasoning ever substitutes for asking. If an audit runs: findings
+   are fixed on the branch, then re-run step 2.
+4. **Pause, report, ask for merge sign-off.** Merge only on explicit approval
+   given *at that moment, for that specific merge*. Approval is never inferred
+   from an earlier "merge it", a green gate, a passed audit, or any broad "go
+   ahead".
+5. **The merge is exactly:**
+   ```
+   git checkout main
+   git merge --ff-only <branch>
+   ```
+   If `--ff-only` refuses (main moved), rebase the branch onto `main`, re-run
+   step 2, and return to step 4. No merge commits, no `git branch -f`, no
+   pointer surgery — the operation must be legible as a merge to a human
+   reading the terminal and the reflog.
+6. **End state: checked out on `main`**, at the merged tip, tree clean, gate
+   green. The next arc is decided from here and starts with
+   `git checkout -b <new-branch>`. Do not linger on the merged feature branch.
+7. **`git push` is a separate action** with its own explicit sign-off — never
+   bundled into the merge, never assumed from it.
+### How to run the audit (the pattern behind step 3)
+
 - **Audit adversarially *before* claiming a milestone or merging, not after** —
   self-certification is unreliable, so audit before building a mountain on it.
-  **Get sign-off on the audit *plan* (dimensions, agent count, model, cost)
-  before launching any subagent** — audits are token-expensive; the scale is the
-  user's call. The pattern (encode as a `Workflow`): (1) ground-truth first —
+  Audit the branch's **final state**: an audit of an earlier snapshot does not
+  cover work added since (this bit us — "audited twice" was true of an old
+  tip). The pattern (encode as a `Workflow`): (1) ground-truth first —
   real build + `#print axioms`/differential failing-set, never prose; (2)
   parallel *decorrelated* adversarial reviewers, one per dimension, skeptical
   persona ("probably subtly wrong — find where"), pointed at primary sources,
