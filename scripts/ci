@@ -158,9 +158,11 @@ fi
 # Mode detection by EXACT git exit code (0 = same, 1 = differs, >=2 = error):
 # treating an error as "differs" made the guard misfire on GitHub's shallow
 # clones (HEAD~1 absent -> git error -> guard activated -> fail-closed on a
-# baseline that never changed). Shallow clones without HEAD~1 skip the
-# tip-commit audit with a loud note (our workflow fetches depth 2, so this
-# only affects foreign shallow checkouts).
+# baseline that never changed). A shallow clone without HEAD~1 cannot verify
+# the tip commit at all, so it FAILS CLOSED with instructions (never a silent
+# skip — a laundered tip re-pin must not pass a shallow CI). Our workflow
+# fetches depth 2; any checkout that can't provide HEAD~1 must be fixed, not
+# waved through.
 git diff --quiet HEAD -- baselines/native-full.tsv 2>/dev/null; wt_rc=$?
 PIN_MODE=""
 if [ "$wt_rc" -eq 1 ]; then
@@ -177,7 +179,8 @@ elif git rev-parse --verify -q HEAD~1 >/dev/null 2>&1; then
     bad "re-pin guard (git diff errored rc=$c_rc comparing HEAD~1 — refusing to certify)"
   fi
 else
-  RESULTS+=("  note re-pin guard: shallow clone (no HEAD~1) — tip-commit re-pin not audited here (CI fetches depth 2)")
+  step "baseline re-pin guard"
+  bad "re-pin guard (shallow clone: HEAD~1 unavailable, tip commit UNVERIFIABLE — fetch with depth >= 2)"
 fi
 if [ -n "$PIN_MODE" ]; then
   step "baseline re-pin guard ($PIN_MODE; flips must be on a BUGS.md Cases: line)"
