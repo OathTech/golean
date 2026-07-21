@@ -61,19 +61,37 @@ fi
 # proofs/*.lean must be imported into the audited build (reachable from
 # Audit.lean, whose root import is GoLeanProofs) or on the explicit standalone
 # allowlist below (deliberate, documented exceptions only).
-step "proofs-file audit coverage (every proofs/*.lean built+swept or allowlisted)"
+step "proofs-file audit coverage (every proofs/**/*.lean in the audited import closure or allowlisted)"
 STANDALONE_PROOFS="SliceSpike"  # SliceSpike: superseded spike kept as record (structure audit P1-3: an allowlist entry must name an existing, documented file — no pre-authorized holes)
+# Transitive import closure from the build roots (Audit, GoLeanProofs), over
+# ALL .lean files under proofs/ including subdirectories — module names derived
+# from paths (proofs/GoLeanProofs/Foo.lean -> GoLeanProofs.Foo). A module
+# outside the closure is never built, so the in-build sweep never sees it
+# (tamper-audit F2 class; subdir handling required by the module-split design,
+# docs/2026-07-20_proofs-structure-backlog.md).
 pf_bad=0
-for f in proofs/*.lean; do
-  b="$(basename "$f" .lean)"
-  case "$b" in Audit) continue ;; esac
-  case " $STANDALONE_PROOFS " in *" $b "*) continue ;; esac
-  if ! grep -qE "^import $b$" proofs/Audit.lean proofs/GoLeanProofs.lean 2>/dev/null \
-     && [ "$b" != "GoLeanProofs" ]; then
-    echo "  proofs/$b.lean is neither imported into the audited build nor on the standalone allowlist"
-    pf_bad=1
-  fi
+closure="Audit GoLeanProofs"
+grow=1
+while [ "$grow" -eq 1 ]; do
+  grow=0
+  for m in $closure; do
+    mf="proofs/$(echo "$m" | tr '.' '/').lean"
+    [ -f "$mf" ] || continue
+    for imp in $(grep -E '^import ' "$mf" | sed 's/^import //'); do
+      impf="proofs/$(echo "$imp" | tr '.' '/').lean"
+      [ -f "$impf" ] || continue   # external import (Iris, GoLean core) — not ours
+      case " $closure " in *" $imp "*) ;; *) closure="$closure $imp"; grow=1 ;; esac
+    done
+  done
 done
+while IFS= read -r f; do
+  rel="${f#proofs/}"
+  m="$(echo "${rel%.lean}" | tr '/' '.')"
+  case " $STANDALONE_PROOFS " in *" $m "*) continue ;; esac
+  case " $closure " in *" $m "*) continue ;; esac
+  echo "  proofs/$rel (module $m) is not in the audited import closure nor on the standalone allowlist"
+  pf_bad=1
+done < <(find proofs -name '*.lean' -not -path '*/.lake/*')
 if [ "$pf_bad" -ne 0 ]; then
   bad "proofs-file audit coverage (un-swept proof file — import it from Audit.lean or allowlist with a reason)"
 else
