@@ -83,7 +83,15 @@ if [ "$evrc" -eq 0 ] && [ "$evbad" -eq 0 ]; then ok "eval tests ($evok ok)"; els
 # run predates HEAD, that staleness is surfaced too.
 if [ "$RUN_DIFF" -eq 1 ]; then
   step "re-run full native differential corpus (--diff)"
-  if ./scripts/diff-smoke 2>&1 | tail -2; then ok "differential run"; else bad "differential run"; fi
+  # Exit semantics of diff-coverage: 1 = some cases FAIL (expected — the corpus
+  # deliberately outruns the tool; whether the failing SET is acceptable is the
+  # baseline diff's job below), >=2 = the run itself broke (no cases, bad
+  # manifest, missing oracle). Judge run-completion here, regression below.
+  ./scripts/diff-smoke 2>&1 | tail -3; drc=${PIPESTATUS[0]}
+  case "$drc" in
+    0|1) ok "differential run completed (exit $drc; failing-set judged by baseline diff)" ;;
+    *)   bad "differential run BROKE (exit $drc — not a case failure; see output)" ;;
+  esac
 fi
 step "differential baseline diff (scripts/coverage-baseline-diff)"
 if [ -f artifacts/coverage/latest.tsv ]; then
@@ -96,7 +104,9 @@ if [ -f artifacts/coverage/latest.tsv ]; then
   if [ "$ran" -ge "$total" ] && [ "$total" -gt 0 ]; then
     if ./scripts/coverage-baseline-diff --full; then ok "baseline diff FULL ($ran/$total, no regression)$stale"; else bad "baseline diff (DRIFT — see above)"; fi
   else
-    if ./scripts/coverage-baseline-diff; then
+    if [ "$RUN_DIFF" -eq 1 ]; then
+      bad "baseline diff (--diff demanded a full run but results are PARTIAL: $ran/$total)"
+    elif ./scripts/coverage-baseline-diff; then
       RESULTS+=("  note baseline diff PARTIAL ($ran/$total run, no drift among them — NOT a full certification; use --diff)$stale")
     else
       bad "baseline diff (DRIFT among the $ran cases run — see above)"
