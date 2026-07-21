@@ -7,8 +7,10 @@ backlog items.
 
 Authority: `docs/2026-07-19_vertical-slice-plan.md` §Punch-list + §Arc-shape
 (2026-07-20). Batched by risk class into three arcs:
-**Arc 1 `slice-l5-pure` (ACTIVE)** = items 1+2+3, proofs-only (zero-hypothesis
-witnesses, end-to-end adequacy witness, multi-`↦` heap-reading RHS).
+**Arc 1 `slice-l5-pure` (ACTIVE)** = items 1 + 2a + 3, proofs-only
+(zero-hypothesis witnesses, pure-program end-to-end adequacy witness, multi-`↦`
+heap-reading RHS); **2b (heap-touching adequacy, `go_heap_adequacy`) deferred
+to arc 2**.
 **Arc 2 `slice-call-frame`** = items 4+5 (Step.call semantics edit + call law,
 discharged by the `inc` spec + `main = 2` — the slice finish line).
 **Arc 3** = item 6 solo (Eval totalization → correspondence, the L4 wall).

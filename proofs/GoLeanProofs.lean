@@ -781,7 +781,8 @@ theorem wp_store_via_ptr {pa a : Addr} {pcell oldcell newcell : HeapCell}
         simp at hs
   exact wp_store_step₂ hred
 
-/-- **Zero-hypothesis witness: `*p = *p + 1` — `inc`'s body.** Own `p`'s cell
+/-- **Zero-hypothesis witness: `*p = *p + lit` (∀-general over `m` AND `lit`;
+`inc`'s body is the `lit = 1` instance).** Own `p`'s cell
 (holding a pointer to `a`) and the target int cell (holding `m`); after the
 statement the target holds the normalized `m + 1` and `p`'s cell is unchanged.
 Every premise of `wp_store_via_ptr` is discharged: resolution by `simp`
