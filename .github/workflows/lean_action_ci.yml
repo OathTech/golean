@@ -21,6 +21,8 @@ jobs:
     timeout-minutes: 120
     steps:
       - uses: actions/checkout@v5
+        with:
+          fetch-depth: 2 # the re-pin guard audits the tip commit vs HEAD~1
 
       - name: Install elan
         run: |
