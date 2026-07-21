@@ -58,7 +58,7 @@ Suggested climbing ladder, each stage a differential milestone:
    for verified Go distributed systems.
 
 The north star does not change near-term ordering: the semantics cleanup in
-`docs/semantics-cleanup-plan.md` comes first, because string-based identity
+`docs/archive/semantics-cleanup-plan.md` comes first, because string-based identity
 and frontend-artifact debt would be fatal at raft scale.
 
 The current architectural commitment is:
@@ -354,7 +354,7 @@ against GoCore-level specification hooks.
 ## Near-Term Work Queue
 
 1. Complete the remaining architecture hardening gate from
-   `docs/architecture-audit.md`: continue the typed-integer/string slice with
+   `docs/archive/architecture-audit.md`: continue the typed-integer/string slice with
    rune operations and remaining integer edge cases, and add a small relational
    semantics skeleton.
 2. Keep expanding deterministic differential coverage, but prefer cases that

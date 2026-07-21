@@ -1,3 +1,5 @@
+> **ARCHIVED (2026-07-21).** Historical record — superseded or completed; see `docs/archive/README.md`. Do not treat as current guidance.
+
 # Architecture Audit
 
 Date: 2026-06-28

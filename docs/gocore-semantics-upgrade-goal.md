@@ -90,11 +90,11 @@ Do not use destructive git commands such as `git reset --hard` or
 Read these before starting implementation:
 
 - `AGENTS.md`: project operating context.
-- `docs/semantics-cleanup-plan.md`: cleanup inventory and phase order.
+- `docs/archive/semantics-cleanup-plan.md`: cleanup inventory and phase order.
 - `docs/semantics.md`: current GoCore semantic design.
 - `docs/iris-lean-review.md`: Iris-Lean compatibility notes.
 - `docs/slice-model.md`: slice descriptor model.
-- `docs/differential-testing.md`: Go-vs-Lean validation loop.
+- `docs/archive/differential-testing.md`: Go-vs-Lean validation loop.
 - `docs/coverage-ledger.md`: supported and missing behavior accounting.
 
 Use these dependency sources as design references, not as code to copy blindly:

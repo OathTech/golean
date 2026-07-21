@@ -1,3 +1,5 @@
+> **ARCHIVED (2026-07-21).** Historical record — superseded or completed; see `docs/archive/README.md`. Do not treat as current guidance.
+
 # Differential Testing
 
 The active testing strategy is to compare executable observations from real Go

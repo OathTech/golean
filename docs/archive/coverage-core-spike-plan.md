@@ -1,3 +1,5 @@
+> **ARCHIVED (2026-07-21).** Historical record — superseded or completed; see `docs/archive/README.md`. Do not treat as current guidance.
+
 # Core Go Coverage Spike Goal
 
 This is the focused spike goal document derived from

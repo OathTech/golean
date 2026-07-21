@@ -1,3 +1,5 @@
+> **ARCHIVED (2026-07-21).** Historical record — superseded or completed; see `docs/archive/README.md`. Do not treat as current guidance.
+
 # Differential Coverage Buildout Plan
 
 This document is the authoritative operating guide for the long-cycle buildout

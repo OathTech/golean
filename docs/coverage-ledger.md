@@ -2,12 +2,12 @@
 
 Editing rule: this file is the mutable coverage accounting artifact. Long-cycle
 coverage agents should update this ledger as they add, classify, or defer
-coverage. They should not modify `docs/coverage-buildout-plan.md` during
+coverage. They should not modify `docs/archive/coverage-buildout-plan.md` during
 ordinary buildout.
 
 This is the mutable coverage accounting document for the Go differential test
 suite. The stable buildout policy lives in
-`docs/coverage-buildout-plan.md`; do not edit that plan during ordinary corpus
+`docs/archive/coverage-buildout-plan.md`; do not edit that plan during ordinary corpus
 buildout. Update this ledger when adding meaningful feature areas, promoting
 challenge cases, or discovering deferred/unexpressible behavior.
 
@@ -122,6 +122,6 @@ suite grows. Representative cases are examples, not an exhaustive manifest.
   and subject function. Until that lane exists, package/import initialization,
   visibility, cross-package type identity, and cross-package method-set tests
   stay ledger-visible rather than hidden in misleading single-package cases.
-- Remaining P0 spike areas from `docs/coverage-core-spike-plan.md`: none for
+- Remaining P0 spike areas from `docs/archive/coverage-core-spike-plan.md`: none for
   active deterministic coverage; complete the full validation gate before
   treating the spike as finished.

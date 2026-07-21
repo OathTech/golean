@@ -26,7 +26,7 @@ Design and roadmap docs:
 - `docs/architecture.md`: project layers and ownership boundaries.
 - `docs/semantics.md`: GoCore semantics design.
 - `docs/roadmap.md`: phased implementation roadmap.
-- `docs/differential-testing.md`: differential testing plan and generator notes.
+- `docs/archive/differential-testing.md`: differential testing plan and generator notes.
 - `docs/agent-sandbox.md`: scratch directory and temp-cache conventions for
   sandboxed agent sessions.
 - `TODO.md`: tactical backlog.

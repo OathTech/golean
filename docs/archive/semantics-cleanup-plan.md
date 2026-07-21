@@ -1,3 +1,5 @@
+> **ARCHIVED (2026-07-21).** Historical record — superseded or completed; see `docs/archive/README.md`. Do not treat as current guidance.
+
 # GoCore Semantics Cleanup Plan
 
 This plan is the hard gate before expanding GoCore further toward proof

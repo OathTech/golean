@@ -1,3 +1,5 @@
+> **ARCHIVED (2026-07-21).** Historical record — superseded or completed; see `docs/archive/README.md`. Do not treat as current guidance.
+
 # Gobra JSON Schema Strategy
 
 Lean is the schema authority for Gobra JSON.

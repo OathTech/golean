@@ -33,4 +33,4 @@ statements or function contracts.
 
 See `docs/semantics.md` for the current GoCore semantics design and
 `docs/roadmap.md` for the phased implementation plan. See
-`docs/architecture-audit.md` for the current scaling audit and refactor gates.
+`docs/archive/architecture-audit.md` for the current scaling audit and refactor gates.

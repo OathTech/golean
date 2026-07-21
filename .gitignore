@@ -3,3 +3,5 @@
 /artifacts
 .DS_Store
 /.claude
+.claude/
+.cc-writes/

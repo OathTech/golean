@@ -37,7 +37,7 @@
 - `docs/gocore-semantics-upgrade-goal.md` is the operating guide for the
   semantics cleanup/upgrade. Follow its phase gates, forbidden behaviors,
   validation rules, and handoff format.
-- `docs/semantics-cleanup-plan.md` records the current junk inventory and cleanup
+- `docs/archive/semantics-cleanup-plan.md` records the current junk inventory and cleanup
   order. Regressions are allowed only when they remove forbidden semantics or
   expose invalid frontend assumptions.
 - Persistent handoffs for the semantics upgrade belong in
