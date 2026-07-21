@@ -668,42 +668,68 @@ mutual
             | _ => return none
 end
 
+/-- Default-initialize a declared local. Total (no recursion into the big-step
+cluster); hoisted out of the `mutual` block below so that block holds only the
+genuinely recursive functions. -/
+def execDecl (state : ExecState) (param : Param) : Except GoError ExecState := do
+  return state.declareLocal param.id (some param.typ) (← defaultValue state param.typ)
+
+def execDecls (state : ExecState) (decls : Array Param) : Except GoError ExecState := do
+  let mut current := state
+  for decl in decls do
+    current ← execDecl current decl
+  return current
+
 -- Fuel'd upper cluster: function calls and loops recurse on `fuel` (the lower
 -- structural cluster above is already total and never calls back into this one).
+--
+-- TOTAL (2026-07-21, punch-list item 6): well-founded on the lexicographic
+-- measure (fuel, statement size, tiebreak). Fuel decreases at exactly the two
+-- back-edges it always did — function-body entry and the `while` back-edge —
+-- so behavior is bit-identical to the previous `partial` version; the
+-- `fuel == 0` guards are merely restructured into structural `match`es so the
+-- decrement is visible to the termination checker. Statement size covers the
+-- structural descent (`seqn`/`block` elements, `if` branches, loop bodies);
+-- the tiebreak orders the same-fuel call chain
+-- (`execFunctionCall` → `…WithLocs` → `…WithValues`) and `mapRange`'s
+-- shrinking snapshot. This is what gives the cluster equational lemmas, the
+-- prerequisite for the interpreter/relation correspondence proofs.
 mutual
-  partial def execFunctionWithValues (fuel : Nat) (state : ExecState) (targets : Array Loc)
+  def execFunctionWithValues (fuel : Nat) (state : ExecState) (targets : Array Loc)
       (func : Func) (argValues : Array GoValue) (choices : Choices) :
       Except GoError (ExecState × Choices) := do
-    if fuel == 0 then
-      stuck "GoCore execution fuel exhausted"
-    if func.args.size != argValues.size then
-      stuck s!"function {func.id.key} expected {func.args.size} argument(s), got {argValues.size}"
-    let current := state
-    let callerLocals := current.locals
-    let mut callState : ExecState := { current with locals := [] }
-    let mut i := 0
-    for param in func.args do
-      match argValues[i]? with
-      | some value =>
-          callState := callState.declareLocal param.id (some param.typ) (← normalizeValueForTy callState param.typ value)
-          i := i + 1
-      | none => stuck s!"missing argument {i}"
-    for result in func.results do
-      callState := callState.declareLocal result.id (some result.typ) (← defaultValue callState result.typ)
-    let (outcome, choices) ← execStmt (fuel - 1) callState choices func.body
-    let finalState ←
-      match outcome with
-      | .normal nextState => pure nextState
-      | .returned nextState => pure nextState
-      | .broke _ => stuck s!"function {func.id.key} body escaped with break"
-      | .continued _ => stuck s!"function {func.id.key} body escaped with continue"
-    let mut resultValues := #[]
-    for result in func.results do
-      resultValues := resultValues.push (← lookup finalState result.id)
-    let callerState : ExecState := { finalState with locals := callerLocals }
-    return (← assignLocs callerState targets resultValues, choices)
+    match fuel with
+    | 0 => stuck "GoCore execution fuel exhausted"
+    | fuel' + 1 =>
+      if func.args.size != argValues.size then
+        stuck s!"function {func.id.key} expected {func.args.size} argument(s), got {argValues.size}"
+      let current := state
+      let callerLocals := current.locals
+      let mut callState : ExecState := { current with locals := [] }
+      let mut i := 0
+      for param in func.args do
+        match argValues[i]? with
+        | some value =>
+            callState := callState.declareLocal param.id (some param.typ) (← normalizeValueForTy callState param.typ value)
+            i := i + 1
+        | none => stuck s!"missing argument {i}"
+      for result in func.results do
+        callState := callState.declareLocal result.id (some result.typ) (← defaultValue callState result.typ)
+      let (outcome, choices) ← execStmt fuel' callState choices func.body
+      let finalState ←
+        match outcome with
+        | .normal nextState => pure nextState
+        | .returned nextState => pure nextState
+        | .broke _ => stuck s!"function {func.id.key} body escaped with break"
+        | .continued _ => stuck s!"function {func.id.key} body escaped with continue"
+      let mut resultValues := #[]
+      for result in func.results do
+        resultValues := resultValues.push (← lookup finalState result.id)
+      let callerState : ExecState := { finalState with locals := callerLocals }
+      return (← assignLocs callerState targets resultValues, choices)
+  termination_by (fuel, 0, 1)
 
-  partial def execFunctionCallWithLocs (fuel : Nat) (state : ExecState) (targets : Array Loc)
+  def execFunctionCallWithLocs (fuel : Nat) (state : ExecState) (targets : Array Loc)
       (id : FuncId) (args : Array Expr) (choices : Choices) :
       Except GoError (ExecState × Choices) := do
     let func ←
@@ -721,38 +747,34 @@ mutual
     match ← dynamicDispatch? current func argValues with
     | some (targetFunc, targetArgs) => execFunctionWithValues fuel current targets targetFunc targetArgs choices
     | none => execFunctionWithValues fuel current targets func argValues choices
+  termination_by (fuel, 0, 2)
 
-  partial def execFunctionCall (fuel : Nat) (state : ExecState) (targets : Array Assignee)
+  def execFunctionCall (fuel : Nat) (state : ExecState) (targets : Array Assignee)
       (id : FuncId) (args : Array Expr) (choices : Choices) :
       Except GoError (ExecState × Choices) := do
     let targetPair ← evalAssigneeLocs state targets
     execFunctionCallWithLocs fuel targetPair.2 targetPair.1 id args choices
+  termination_by (fuel, 0, 3)
 
-  partial def execDecl (state : ExecState) (param : Param) : Except GoError ExecState := do
-    return state.declareLocal param.id (some param.typ) (← defaultValue state param.typ)
-
-  partial def execDecls (state : ExecState) (decls : Array Param) : Except GoError ExecState := do
-    let mut current := state
-    for decl in decls do
-      current ← execDecl current decl
-    return current
-
-  partial def execStmts (fuel : Nat) (state : ExecState) (stmts : Array Stmt)
+  def execStmts (fuel : Nat) (state : ExecState) (stmts : Array Stmt)
       (choices : Choices) : Except GoError (ExecOutcome × Choices) :=
+    have : sizeOf stmts.toList < sizeOf stmts := by cases stmts; simp +arith
     execStmtList fuel state choices stmts.toList
+  termination_by (fuel, sizeOf stmts, 0)
 
   /-- Execute statements in order, short-circuiting on the first non-normal
   outcome. Structural on the list so `execStmt`'s recursion stays visible to the
   termination checker. -/
-  partial def execStmtList (fuel : Nat) (state : ExecState) (choices : Choices) :
+  def execStmtList (fuel : Nat) (state : ExecState) (choices : Choices) :
       List Stmt → Except GoError (ExecOutcome × Choices)
     | [] => return (.normal state, choices)
     | stmt :: rest => do
         match ← execStmt fuel state choices stmt with
         | (.normal nextState, choices) => execStmtList fuel nextState choices rest
         | (outcome, choices) => return (outcome, choices)
+  termination_by l => (fuel, sizeOf l, 0)
 
-  partial def execStmt (fuel : Nat) (state : ExecState) (choices : Choices) :
+  def execStmt (fuel : Nat) (state : ExecState) (choices : Choices) :
       Stmt → Except GoError (ExecOutcome × Choices)
     | .seqn stmts => execStmts fuel state stmts choices
     | .block decls stmts => do
@@ -794,18 +816,19 @@ mutual
           execStmt fuel condPair.2 choices thenBranch
         else
           execStmt fuel condPair.2 choices elseBranch
-    | .while cond body => do
-        if fuel == 0 then
-          stuck "GoCore execution fuel exhausted"
-        let condPair ← evalExpr state cond
-        if ← valueAsBool condPair.1 then
-          match ← execStmt fuel condPair.2 choices body with
-          | (.normal bodyState, choices) => execStmt (fuel - 1) bodyState choices (.while cond body)
-          | (.continued bodyState, choices) => execStmt (fuel - 1) bodyState choices (.while cond body)
-          | (.broke bodyState, choices) => return (.normal bodyState, choices)
-          | (.returned bodyState, choices) => return (.returned bodyState, choices)
-        else
-          return (.normal condPair.2, choices)
+    | .while cond body =>
+        match fuel with
+        | 0 => stuck "GoCore execution fuel exhausted"
+        | fuel' + 1 => do
+          let condPair ← evalExpr state cond
+          if ← valueAsBool condPair.1 then
+            match ← execStmt (fuel' + 1) condPair.2 choices body with
+            | (.normal bodyState, choices) => execStmt fuel' bodyState choices (.while cond body)
+            | (.continued bodyState, choices) => execStmt fuel' bodyState choices (.while cond body)
+            | (.broke bodyState, choices) => return (.normal bodyState, choices)
+            | (.returned bodyState, choices) => return (.returned bodyState, choices)
+          else
+            return (.normal condPair.2, choices)
     | .mapRange keyVar valVar mapExpr keyTy valTy body => do
         let mapPair ← evalExpr state mapExpr
         let map ← valueAsMap mapPair.1
@@ -822,22 +845,26 @@ mutual
     | .continueStmt => return (.continued state, choices)
     | .label _ => return (.normal state, choices)
     | .unsupported feature => unsupported feature
+  termination_by stmt => (fuel, sizeOf stmt, 0)
 
   /-- Iterate the snapshotted map entries in an oracle-chosen order: at each
   step consume a choice bounded by the number of remaining entries to pick the
   next one, bind the range variables in a fresh per-iteration scope, and run
   the body. The default oracle (0) yields the stored order. -/
-  partial def execMapRangeLoop (fuel : Nat) (state : ExecState)
+  def execMapRangeLoop (fuel : Nat) (state : ExecState)
       (keyVar valVar : Option String) (keyTy valTy : Ty) (body : Stmt)
       (remaining : Array (GoValue × GoValue)) (choices : Choices) :
       Except GoError (ExecOutcome × Choices) := do
     if remaining.isEmpty then
       return (.normal state, choices)
     let (idx, choices) := choices.consume remaining.size
-    match remaining[idx]? with
+    match hidx : remaining[idx]? with
     | none => return (.normal state, choices)
     | some (key, value) =>
-        let rest := remaining.eraseIdx! idx
+        -- In-bounds by `hidx`; the checked `eraseIdx` (vs `eraseIdx!`) makes
+        -- the shrinking snapshot visible to the termination checker.
+        have hlt : idx < remaining.size := (Array.getElem?_eq_some_iff.mp hidx).1
+        let rest := remaining.eraseIdx idx hlt
         let mut iterState : ExecState := { state with locals := state.locals.pushScope }
         match keyVar with
         | some name => iterState := iterState.declareLocal name (some keyTy) (← normalizeValueForTy iterState keyTy key)
@@ -851,6 +878,7 @@ mutual
         | (.continued s, choices) => execMapRangeLoop fuel (popScope s) keyVar valVar keyTy valTy body rest choices
         | (.broke s, choices) => return (.normal (popScope s), choices)
         | (.returned s, choices) => return (.returned (popScope s), choices)
+  termination_by (fuel, sizeOf body, 1 + remaining.size)
 end
 
 def bindParams (state : ExecState) (params : Array Param) (args : Array GoValue) :

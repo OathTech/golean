@@ -195,18 +195,20 @@ def byte? (value : GoString) (index : Nat) : Option UInt8 :=
 def slice (value : GoString) (low high : Nat) : GoString :=
   { bytes := value.bytes.extract low high }
 
-partial def compareAt (left right : Array UInt8) (index : Nat) : Ordering :=
-  match left[index]?, right[index]? with
+def compareAt (left right : Array UInt8) (index : Nat) : Ordering :=
+  match hl : left[index]?, right[index]? with
   | some l, some r =>
       if l.toNat < r.toNat then
         .lt
       else if r.toNat < l.toNat then
         .gt
       else
+        have : index < left.size := (Array.getElem?_eq_some_iff.mp hl).1
         compareAt left right (index + 1)
   | none, some _ => .lt
   | some _, none => .gt
   | none, none => .eq
+termination_by left.size - index
 
 def compare (left right : GoString) : Ordering :=
   compareAt left.bytes right.bytes 0
