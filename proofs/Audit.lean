@@ -144,11 +144,11 @@ example := @wp_deref_store_ref
 - `◌ wp_seqn` — axiom-clean; a pure control-reduction law with no `∀σ`-over-state
   premise (no vacuity surface), currently used by no downstream witness. Low
   risk; a witness lands with the adequacy end-to-end proof.
-- `◌ wp_assign_lit` / `wp_deref_store_ref` — discharge every premise **except**
-  the external `hstore` (a `∀σ` store-typing side-condition). That premise is
-  believed dischargeable (idempotent normalize on a well-typed int cell) but is
-  **not proven here**. Tracked: discharge `hstore` for a concrete cell so a
-  witness carries *zero* open hypotheses.
+- `✓ wp_assign_lit` / `✓ wp_deref_store_ref` — **ZERO hypotheses** (arc
+  `slice-l5-pure` item 1, 2026-07-20): the formerly-open `hstore` side-condition
+  is now proven via `storeLoc_int_cell` + `intKind_normalize_idem` (idempotent
+  normalize on an int-typed cell, arbitrary prior value). Each witness is a
+  closed instantiation of its law.
 - The interpreter⇄relation correspondence (`interpreterSoundStatement`,
   `interpreterPanicStatement`) are `def : Prop` — **stated, not proven**
   (blocked on Eval big-step totalization). They are claims, not theorems; nothing

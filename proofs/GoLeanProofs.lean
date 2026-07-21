@@ -156,6 +156,29 @@ theorem loadLoc_base_of_lookup {σ : ExecState} {a : Addr} {cell : HeapCell}
     loadLoc σ (.base a) = .ok cell.value := by
   unfold loadLoc; rw [h]; rfl
 
+/-- `IntKind.normalize` is idempotent. The fact behind discharging the store
+witnesses' `hstore` to zero hypotheses: a store of an already-normalized int at
+a `.int kind`-typed cell re-normalizes to the same value. -/
+theorem intKind_normalize_idem (kind : IntKind) (v : Int) :
+    kind.normalize (kind.normalize v) = kind.normalize v := by
+  cases kind <;> simp [IntKind.normalize, IntKind.bits?, IntKind.signed] <;>
+    (repeat' split) <;> omega
+
+/-- Pure interpreter fact closing the witnesses' `hstore` premise: storing a
+normalized int into an int-typed cell succeeds and yields exactly the updated
+cell (the store's `normalizeValueForTy` re-normalization collapses by
+`intKind_normalize_idem`). -/
+theorem storeLoc_int_cell {σ : ExecState} {a : Addr} {kind : IntKind}
+    {w : GoValue}
+    (h : Heap.lookup σ.heap (.base a) = some ⟨some (.int kind), w⟩)
+    (n : Int) :
+    storeLoc σ (.base a) (.int (kind.normalize n) kind)
+      = .ok { σ with heap := Heap.set σ.heap (.base a) ⟨some (.int kind), .int (kind.normalize n) kind⟩ } := by
+  unfold storeLoc
+  rw [h]
+  simp only [normalizeValueForTy, normalizeValueForTyFuel, intKind_normalize_idem]
+  rfl
+
 /-- The GoCore ghost state: invariant+credit cameras plus gen_heap over the
 base-address heap. WP laws *assume* it, exactly as HeapLang's laws assume
 `[HeapLangGS]`; constructing it is adequacy's job. -/
@@ -461,45 +484,44 @@ private theorem exprR_ref_det {env : LocalEnv} {σ : ExecState} {id : String}
       rcases hmk with rfl | rfl | rfl | rfl <;> exact Expr.noConfusion he
   | _ => exact Expr.noConfusion he
 
-/-- **Payoff: `wp_assign` is genuinely instantiable.** This is what task #23 was
-blocked on — the old law's `hred` was unsatisfiable for *every* real assign
-(`docs/2026-07-19_premerge-audit-results.md`, D2-4/D2-5). Here the resolution
-premise discharges by `simp`/`rfl` against a concrete control environment that
-binds `x ↦ .base a`, and the right-hand-side premises are discharged outright for
-an integer literal (`hrhs` by `ExprR.intLit`; `hrhs_det` by one `cases`). Only
-`hstore` — the ordinary "storing a well-typed value at the owned cell succeeds"
-side-condition — is left as a hypothesis; it is about the store's value
-normalization, wholly independent of the locals-resolution fix this reshape
-delivered. Contrast the old law, where *no* premise set was dischargeable at
-all. -/
-theorem wp_assign_lit {a : Addr} {oldcell newcell : HeapCell} {n : Int}
-    {kind : IntKind} {rest : LocalEnv} {k}
-    (hstore : ∀ σ₁ : ExecState, Heap.lookup σ₁.heap (.base a) = some oldcell →
-        storeLoc σ₁ (.base a) (.int (kind.normalize n) kind)
-          = .ok { σ₁ with heap := Heap.set σ₁.heap (.base a) newcell }) :
-    a.id ↦ oldcell ∗ (a.id ↦ newcell -∗ WP (Config.next k) @ s ; E {{ Φ }})
+/-- **Payoff: `wp_assign` is genuinely instantiable — with ZERO hypotheses.**
+This is what task #23 was blocked on — the old law's `hred` was unsatisfiable
+for *every* real assign (`docs/2026-07-19_premerge-audit-results.md`,
+D2-4/D2-5). Every premise is discharged: resolution by `simp` against the
+concrete control environment binding `x ↦ .base a`; the rhs premises outright
+for an integer literal (`ExprR.intLit` / `exprR_intLit_det`); and the store
+side-condition by `storeLoc_int_cell` (the cell is int-typed, so the store's
+re-normalization collapses by `intKind_normalize_idem`). The owned cell's prior
+value `w` is arbitrary — this is the general "assign a literal over anything in
+an int cell" spec, closed. (Arc `slice-l5-pure` item 1: `hstore` was previously
+an open `∀σ` hypothesis; the Audit ledger's `◌` is now `✓`.) -/
+theorem wp_assign_lit {a : Addr} {w : GoValue} {n : Int}
+    {kind : IntKind} {rest : LocalEnv} {k} :
+    a.id ↦ (⟨some (.int kind), w⟩ : HeapCell)
+      ∗ (a.id ↦ (⟨some (.int kind), .int (kind.normalize n) kind⟩ : HeapCell)
+          -∗ WP (Config.next k) @ s ; E {{ Φ }})
       ⊢ WP (Config.exec (.assign (.var "x") (.intLit n kind))
               ([("x", Loc.base a)] :: rest) k) @ s ; E {{ Φ }} :=
   wp_assign (id := "x") (v := .int (kind.normalize n) kind)
     (by simp [LocalEnv.lookup, Scope.lookup])
     (fun _ => ExprR.intLit)
     (fun _ _ h => exprR_intLit_det h)
-    hstore
+    (fun _ hlook => storeLoc_int_cell hlook n)
 
-/-- **Non-vacuity witness for `wp_deref_store`.** Discharges the heap-independent
-address case the law genuinely covers: `*(&x) = n` — assignee `.addr (.ref "x")`,
-whose address resolves purely from `env` (`x ↦ .base a`) via `ExprR.ref`, so the
-`∀σ₁` `hres`/`hres_det` premises hold. `hrhs`/`hrhs_det` discharge for the integer
-literal; only the store-typing `hstore` remains. This proves `wp_deref_store` is a
-real (non-scaffold) law — contrast the read-through `*p` case, whose address comes
-from a pointer variable's cell and therefore needs cell-conditioned premises +
-multi-`↦` ownership (the tracked next increment, not this witness). -/
-theorem wp_deref_store_ref {a : Addr} {oldcell newcell : HeapCell} {n : Int}
-    {kind : IntKind} {rest : LocalEnv} {k}
-    (hstore : ∀ σ₁ : ExecState, Heap.lookup σ₁.heap (.base a) = some oldcell →
-        storeLoc σ₁ (.base a) (.int (kind.normalize n) kind)
-          = .ok { σ₁ with heap := Heap.set σ₁.heap (.base a) newcell }) :
-    a.id ↦ oldcell ∗ (a.id ↦ newcell -∗ WP (Config.next k) @ s ; E {{ Φ }})
+/-- **Non-vacuity witness for `wp_deref_store` — ZERO hypotheses.** Discharges
+the heap-independent address case the law genuinely covers: `*(&x) = n` —
+assignee `.addr (.ref "x")`, whose address resolves purely from `env`
+(`x ↦ .base a`) via `ExprR.ref`, so the `∀σ₁` `hres`/`hres_det` premises hold.
+`hrhs`/`hrhs_det` discharge for the integer literal, and the store side-condition
+by `storeLoc_int_cell` (arbitrary prior value `w` in an int-typed cell). This
+proves `wp_deref_store` is a real (non-scaffold) law — contrast the read-through
+`*p` case, whose address comes from a pointer variable's cell and therefore needs
+cell-conditioned premises + multi-`↦` ownership (arc item 3, not this witness). -/
+theorem wp_deref_store_ref {a : Addr} {w : GoValue} {n : Int}
+    {kind : IntKind} {rest : LocalEnv} {k} :
+    a.id ↦ (⟨some (.int kind), w⟩ : HeapCell)
+      ∗ (a.id ↦ (⟨some (.int kind), .int (kind.normalize n) kind⟩ : HeapCell)
+          -∗ WP (Config.next k) @ s ; E {{ Φ }})
       ⊢ WP (Config.exec (.assign (.addr (.ref "x")) (.intLit n kind))
               ([("x", Loc.base a)] :: rest) k) @ s ; E {{ Φ }} :=
   wp_deref_store (a := a) (v := .int (kind.normalize n) kind)
@@ -507,7 +529,7 @@ theorem wp_deref_store_ref {a : Addr} {oldcell newcell : HeapCell} {n : Int}
     (fun _ _ h => exprR_ref_det (by simp [LocalEnv.lookup, Scope.lookup]) h)
     (fun _ => ExprR.intLit)
     (fun _ _ h => exprR_intLit_det h)
-    hstore
+    (fun _ hlook => storeLoc_int_cell hlook n)
 
 end HeapWP
 
