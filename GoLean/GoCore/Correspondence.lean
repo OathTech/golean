@@ -617,6 +617,535 @@ theorem execStmt_assign_ok {fuel : Nat} {σ : ExecState} {ch : Choices}
     (fun cell t hc ht => (hh _ _ hc).2 t ht), hst]
   rfl
 
+/-! ## The statement layer: fragment statements simulate in the CEK relation -/
+
+@[simp] theorem withLocals_set_locals (σ : ExecState) (X L : LocalEnv) :
+    ExecState.withLocals { σ with locals := X } L = σ.withLocals L := rfl
+
+theorem defaultValue_frag_val {σ : ExecState} {t : Ty} {v : GoValue}
+    (ht : TyFrag t) (h : defaultValue σ t = .ok v) : FragVal v := by
+  cases ht <;> simp [defaultValue, defaultValueFuel, pure_eq_ok] at h <;>
+    (subst h; constructor)
+
+theorem declare_popScope (E : LocalEnv) (n : String) (l : Loc) :
+    (LocalEnv.declare E n l).popScope = E.popScope := by
+  cases E <;> rfl
+
+/-- Declaration-list bridge: the interpreter's `execDeclList` is the
+relation's `DeclsR`, with the fragment heap preserved and only the top
+scope touched. -/
+theorem execDeclList_frag_sound {decls : List Param}
+    (hd : ∀ p ∈ decls, TyFrag p.typ) :
+    ∀ {σ : ExecState}, HeapFrag σ → ∀ {σd : ExecState},
+      execDeclList σ decls = .ok σd →
+      HeapFrag σd ∧ σd.locals.popScope = σ.locals.popScope ∧
+        ∀ L, DeclsR σ.locals (σ.withLocals L) decls σd.locals (σd.withLocals L) := by
+  induction decls with
+  | nil =>
+    intro σ hh σd h
+    simp only [execDeclList, pure_eq_ok] at h
+    subst h
+    exact ⟨hh, rfl, fun L => .nil⟩
+  | cons p rest ih =>
+    intro σ hh σd h
+    simp only [execDeclList, execDecl, bind_eq_ok, pure_eq_ok] at h
+    obtain ⟨σ₁, ⟨v, hv, hσ₁⟩, h⟩ := h
+    have htp : TyFrag p.typ := hd p (by simp)
+    have hfv : FragVal v := defaultValue_frag_val htp hv
+    subst hσ₁
+    have hh₁ : HeapFrag (σ.declareLocal p.id (some p.typ) v) := by
+      rw [declareLocal_eq_alloc]
+      exact heapFrag_alloc hh hfv (fun t' ht' => by cases ht'; exact htp)
+    obtain ⟨hhd, hpop, hR⟩ := ih (fun q hq => hd q (by simp [hq])) hh₁ h
+    refine ⟨hhd, ?_, fun L => ?_⟩
+    · rw [hpop, declareLocal_eq_alloc]
+      exact declare_popScope ..
+    · refine DeclsR.cons (v := v) (loc := (σ.alloc v (some p.typ)).1)
+        (s₁ := (σ.alloc v (some p.typ)).2.withLocals L)
+        ((defaultValue_state_indep (σ.withLocals L) σ htp).trans hv)
+        (alloc_withLocals σ L v (some p.typ)) ?_
+      exact hR L
+
+mutual
+/-- Non-spine fragment statements — usable in any position. Crucially
+excludes `.initialization`: only the *governing* seq tracks a declaration's
+env extension in the relation (D1), so declarations are fragment-legal only
+as spine elements. Calls are the next layer (D2 conditions). -/
+inductive StmtFragNS : Stmt → Prop where
+  | assign {a : Assignee} {e : Expr} :
+      AssigneeFrag a → ExprFrag e → StmtFragNS (.assign a e)
+  | seqn {ss : Array Stmt} :
+      (∀ s, s ∈ ss → StmtFragNS s) → StmtFragNS (.seqn ss)
+  | block {decls : Array Param} {ss : Array Stmt} :
+      (∀ p, p ∈ decls → TyFrag p.typ) → (∀ s, s ∈ ss → SpineFrag s) →
+      StmtFragNS (.block decls ss)
+  | ifThenElse {c : Expr} {t e : Stmt} :
+      ExprFrag c → StmtFragNS t → StmtFragNS e → StmtFragNS (.ifThenElse c t e)
+  | whileStmt {c : Expr} {b : Stmt} :
+      ExprFrag c → StmtFragNS b → StmtFragNS (.while c b)
+  | returnStmt : StmtFragNS .returnStmt
+  | breakStmt : StmtFragNS .breakStmt
+  | continueStmt : StmtFragNS .continueStmt
+
+/-- Spine (declaration-tracking) positions: elements of a function/block
+body statement list. -/
+inductive SpineFrag : Stmt → Prop where
+  | ns {s : Stmt} : StmtFragNS s → SpineFrag s
+  | init {p : Param} : TyFrag p.typ → SpineFrag (.initialization p)
+end
+
+mutual
+/-- **T1 — statement simulation.** A successful interpreter execution of a
+non-spine fragment statement maps to a `Steps` segment of the CEK relation,
+from `.exec stmt σ.locals k` to the outcome's configuration over any
+continuation `k` and transported state, preserving the fragment heap.
+Normal/broke/continued completions leave `locals` untouched; a `return`
+reaches `.returning` with the return-point environment. -/
+theorem execStmt_frag_sound {stmt : Stmt} (hf : StmtFragNS stmt)
+    (fuel : Nat) (σ : ExecState) (ch : Choices) (hh : HeapFrag σ)
+    {out : ExecOutcome} {ch' : Choices}
+    (h : execStmt fuel σ ch stmt = .ok (out, ch')) :
+    HeapFrag out.state ∧
+    match out with
+    | .normal σf => σf.locals = σ.locals ∧
+        ∀ L k, Steps (.exec stmt σ.locals k) (σ.withLocals L)
+          (.next k) (σf.withLocals L)
+    | .broke σf => σf.locals = σ.locals ∧
+        ∀ L k, Steps (.exec stmt σ.locals k) (σ.withLocals L)
+          (.breaking k) (σf.withLocals L)
+    | .continued σf => σf.locals = σ.locals ∧
+        ∀ L k, Steps (.exec stmt σ.locals k) (σ.withLocals L)
+          (.continuing k) (σf.withLocals L)
+    | .returned σf =>
+        ∀ L k, ∃ Eret, Steps (.exec stmt σ.locals k) (σ.withLocals L)
+          (.returning Eret k) (σf.withLocals L) := by
+  cases stmt with
+  | initialization p => exact nomatch hf
+  | assignMany l r => exact nomatch hf
+  | newValue t v ty => exact nomatch hf
+  | makeSlice t e l c => exact nomatch hf
+  | makeMap t k v i => exact nomatch hf
+  | mapAssign b i v kt vt => exact nomatch hf
+  | mapLookup t o b i kt vt => exact nomatch hf
+  | typeAssert t o e tt => exact nomatch hf
+  | appendSlice t e s es => exact nomatch hf
+  | copySlice t d s => exact nomatch hf
+  | call t f a => exact nomatch hf
+  | mapRange kv vv me kt vt b => exact nomatch hf
+  | label n => exact nomatch hf
+  | unsupported f => exact nomatch hf
+  | assign a e =>
+    cases hf with
+    | assign ha he =>
+      obtain ⟨σf, rfl, rfl, hhf, hloc, hstep⟩ := execStmt_assign_ok ha he hh h
+      exact ⟨hhf, hloc, fun L k => Steps.single (hstep L k)⟩
+  | seqn ss =>
+    cases hf with
+    | seqn hss =>
+      simp only [execStmt, execStmts] at h
+      have hsz : sizeOf ss.toList < sizeOf ss := by cases ss; simp +arith
+      obtain ⟨hhf, hrest⟩ :=
+        execStmtList_frag_sound (fun s hs => .ns (hss s (by simpa using hs))) fuel σ ch hh h
+      refine ⟨hhf, ?_⟩
+      cases out with
+      | normal σf =>
+        obtain ⟨hpop, hns, hsteps⟩ := hrest
+        exact ⟨hns (fun s hs => hss s (by simpa using hs)), fun L k =>
+          (Steps.single .seqn).trans (hsteps L k)⟩
+      | broke σf =>
+        obtain ⟨hpop, hns, hsteps⟩ := hrest
+        exact ⟨hns (fun s hs => hss s (by simpa using hs)), fun L k => (Steps.single .seqn).trans (hsteps L k)⟩
+      | continued σf =>
+        obtain ⟨hpop, hns, hsteps⟩ := hrest
+        exact ⟨hns (fun s hs => hss s (by simpa using hs)), fun L k => (Steps.single .seqn).trans (hsteps L k)⟩
+      | returned σf =>
+        intro L k
+        obtain ⟨Eret, hsteps⟩ := hrest L k
+        exact ⟨Eret, (Steps.single .seqn).trans hsteps⟩
+  | block decls ss =>
+    cases hf with
+    | block hdecls hss =>
+      simp only [execStmt, execStmts, execDecls, bind_eq_ok] at h
+      obtain ⟨σd, hdecl, h⟩ := h
+      obtain ⟨⟨oc, ch₁⟩, hbody, h⟩ := h
+      simp only [pure_eq_ok, Prod.mk.injEq] at h
+      obtain ⟨hout, rfl⟩ := h
+      have hhent : HeapFrag { σ with locals := σ.locals.pushScope } := hh
+      obtain ⟨hhd, hdpop, hdR⟩ :=
+        execDeclList_frag_sound (fun p hp => hdecls p (by simpa using hp)) hhent hdecl
+      have hsz : sizeOf ss.toList < sizeOf ss := by cases ss; simp +arith
+      obtain ⟨hhb, hrest⟩ := execStmtList_frag_sound
+        (fun s hs => hss s (by simpa using hs)) fuel σd ch hhd hbody
+      subst hout
+      cases oc with
+      | normal σf =>
+        obtain ⟨hpop, _, hsteps⟩ := hrest
+        refine ⟨hhb, ?_, fun L k => ?_⟩
+        · show σf.locals.popScope = σ.locals
+          rw [hpop]; exact hdpop
+        · exact (Steps.single (Step.block (hdR L))).trans (hsteps L k)
+      | broke σf =>
+        obtain ⟨hpop, _, hsteps⟩ := hrest
+        refine ⟨hhb, ?_, fun L k => ?_⟩
+        · show σf.locals.popScope = σ.locals
+          rw [hpop]; exact hdpop
+        · exact (Steps.single (Step.block (hdR L))).trans (hsteps L k)
+      | continued σf =>
+        obtain ⟨hpop, _, hsteps⟩ := hrest
+        refine ⟨hhb, ?_, fun L k => ?_⟩
+        · show σf.locals.popScope = σ.locals
+          rw [hpop]; exact hdpop
+        · exact (Steps.single (Step.block (hdR L))).trans (hsteps L k)
+      | returned σf =>
+        refine ⟨hhb, fun L k => ?_⟩
+        obtain ⟨Eret, hsteps⟩ := hrest L k
+        exact ⟨Eret, (Steps.single (Step.block (hdR L))).trans hsteps⟩
+  | ifThenElse c t e =>
+    cases hf with
+    | ifThenElse hc ht he =>
+      simp only [execStmt] at h
+      rw [bind_eq_ok] at h
+      obtain ⟨⟨cv, σ₁⟩, hc', h⟩ := h
+      obtain ⟨heq, hfc, hRc⟩ := evalExpr_frag_ok hc hh hc'
+      rw [heq] at h
+      rw [bind_eq_ok] at h
+      obtain ⟨b, hbv, h⟩ := h
+      cases hfc with
+      | bool bv =>
+        simp only [valueAsBool, pure_eq_ok] at hbv
+        subst hbv
+        cases bv with
+        | true =>
+          simp only [reduceIte] at h
+          obtain ⟨hhf, hrest⟩ := execStmt_frag_sound ht fuel σ ch hh h
+          refine ⟨hhf, ?_⟩
+          cases out with
+          | normal σf =>
+            obtain ⟨hl, hsteps⟩ := hrest
+            exact ⟨hl, fun L k =>
+              (Steps.single (Step.ifTrue (hRc L))).trans (hsteps L k)⟩
+          | broke σf =>
+            obtain ⟨hl, hsteps⟩ := hrest
+            exact ⟨hl, fun L k =>
+              (Steps.single (Step.ifTrue (hRc L))).trans (hsteps L k)⟩
+          | continued σf =>
+            obtain ⟨hl, hsteps⟩ := hrest
+            exact ⟨hl, fun L k =>
+              (Steps.single (Step.ifTrue (hRc L))).trans (hsteps L k)⟩
+          | returned σf =>
+            intro L k
+            obtain ⟨Eret, hsteps⟩ := hrest L k
+            exact ⟨Eret, (Steps.single (Step.ifTrue (hRc L))).trans hsteps⟩
+        | false =>
+          simp only [Bool.false_eq_true, reduceIte] at h
+          obtain ⟨hhf, hrest⟩ := execStmt_frag_sound he fuel σ ch hh h
+          refine ⟨hhf, ?_⟩
+          cases out with
+          | normal σf =>
+            obtain ⟨hl, hsteps⟩ := hrest
+            exact ⟨hl, fun L k =>
+              (Steps.single (Step.ifFalse (hRc L))).trans (hsteps L k)⟩
+          | broke σf =>
+            obtain ⟨hl, hsteps⟩ := hrest
+            exact ⟨hl, fun L k =>
+              (Steps.single (Step.ifFalse (hRc L))).trans (hsteps L k)⟩
+          | continued σf =>
+            obtain ⟨hl, hsteps⟩ := hrest
+            exact ⟨hl, fun L k =>
+              (Steps.single (Step.ifFalse (hRc L))).trans (hsteps L k)⟩
+          | returned σf =>
+            intro L k
+            obtain ⟨Eret, hsteps⟩ := hrest L k
+            exact ⟨Eret, (Steps.single (Step.ifFalse (hRc L))).trans hsteps⟩
+      | int n k => simp [valueAsBool] at hbv
+      | addr l => simp [valueAsBool] at hbv
+      | nil => simp [valueAsBool] at hbv
+  | «while» c b =>
+    cases hf with
+    | whileStmt hc hb =>
+      cases fuel with
+      | zero => simp [execStmt] at h
+      | succ fuel' =>
+        simp only [execStmt] at h
+        rw [bind_eq_ok] at h
+        obtain ⟨⟨cv, σ₁⟩, hc', h⟩ := h
+        obtain ⟨heq, hfc, hRc⟩ := evalExpr_frag_ok hc hh hc'
+        rw [heq] at h
+        rw [bind_eq_ok] at h
+        obtain ⟨b, hbv, h⟩ := h
+        cases hfc with
+        | bool bv =>
+          simp only [valueAsBool, pure_eq_ok] at hbv
+          subst hbv
+          cases bv with
+          | false =>
+            simp only [Bool.false_eq_true, reduceIte, pure_eq_ok,
+              Prod.mk.injEq] at h
+            obtain ⟨rfl, rfl⟩ := h
+            exact ⟨hh, rfl, fun L k => Steps.single (.whileFalse (hRc L))⟩
+          | true =>
+            simp only [reduceIte] at h
+            rw [bind_eq_ok] at h
+            obtain ⟨⟨ob, ch₁⟩, hbody, h⟩ := h
+            obtain ⟨hhb, hrest1⟩ := execStmt_frag_sound hb (fuel' + 1) σ ch hh hbody
+            cases ob with
+            | normal σb =>
+              obtain ⟨hlb, hbsteps⟩ := hrest1
+              obtain ⟨hhf, hrest⟩ :=
+                execStmt_frag_sound (.whileStmt hc hb) fuel' σb ch₁ hhb h
+              rw [hlb] at hrest
+              refine ⟨hhf, ?_⟩
+              cases out with
+              | normal σf =>
+                obtain ⟨hl, hsteps⟩ := hrest
+                refine ⟨hl.trans hlb.symm ▸ hl, fun L k => ?_⟩
+                exact ((((Steps.single (Step.whileTrue (hRc L))).trans
+                  (hbsteps L (.loop c b σ.locals k))).tail
+                  Step.loopNext).trans (hsteps L k))
+              | broke σf =>
+                obtain ⟨hl, hsteps⟩ := hrest
+                refine ⟨hl.trans hlb.symm ▸ hl, fun L k => ?_⟩
+                exact ((((Steps.single (Step.whileTrue (hRc L))).trans
+                  (hbsteps L (.loop c b σ.locals k))).tail
+                  Step.loopNext).trans (hsteps L k))
+              | continued σf =>
+                obtain ⟨hl, hsteps⟩ := hrest
+                refine ⟨hl.trans hlb.symm ▸ hl, fun L k => ?_⟩
+                exact ((((Steps.single (Step.whileTrue (hRc L))).trans
+                  (hbsteps L (.loop c b σ.locals k))).tail
+                  Step.loopNext).trans (hsteps L k))
+              | returned σf =>
+                intro L k
+                obtain ⟨Eret, hsteps⟩ := hrest L k
+                exact ⟨Eret, (((Steps.single (Step.whileTrue (hRc L))).trans
+                  (hbsteps L (.loop c b σ.locals k))).tail
+                  Step.loopNext).trans hsteps⟩
+            | continued σb =>
+              obtain ⟨hlb, hbsteps⟩ := hrest1
+              obtain ⟨hhf, hrest⟩ :=
+                execStmt_frag_sound (.whileStmt hc hb) fuel' σb ch₁ hhb h
+              rw [hlb] at hrest
+              refine ⟨hhf, ?_⟩
+              cases out with
+              | normal σf =>
+                obtain ⟨hl, hsteps⟩ := hrest
+                refine ⟨hl.trans hlb.symm ▸ hl, fun L k => ?_⟩
+                exact ((((Steps.single (Step.whileTrue (hRc L))).trans
+                  (hbsteps L (.loop c b σ.locals k))).tail
+                  Step.loopContinue).trans (hsteps L k))
+              | broke σf =>
+                obtain ⟨hl, hsteps⟩ := hrest
+                refine ⟨hl.trans hlb.symm ▸ hl, fun L k => ?_⟩
+                exact ((((Steps.single (Step.whileTrue (hRc L))).trans
+                  (hbsteps L (.loop c b σ.locals k))).tail
+                  Step.loopContinue).trans (hsteps L k))
+              | continued σf =>
+                obtain ⟨hl, hsteps⟩ := hrest
+                refine ⟨hl.trans hlb.symm ▸ hl, fun L k => ?_⟩
+                exact ((((Steps.single (Step.whileTrue (hRc L))).trans
+                  (hbsteps L (.loop c b σ.locals k))).tail
+                  Step.loopContinue).trans (hsteps L k))
+              | returned σf =>
+                intro L k
+                obtain ⟨Eret, hsteps⟩ := hrest L k
+                exact ⟨Eret, (((Steps.single (Step.whileTrue (hRc L))).trans
+                  (hbsteps L (.loop c b σ.locals k))).tail
+                  Step.loopContinue).trans hsteps⟩
+            | broke σb =>
+              obtain ⟨hlb, hbsteps⟩ := hrest1
+              simp only [pure_eq_ok, Prod.mk.injEq] at h
+              obtain ⟨rfl, rfl⟩ := h
+              exact ⟨hhb, hlb, fun L k =>
+                ((Steps.single (Step.whileTrue (hRc L))).trans
+                  (hbsteps L (.loop c b σ.locals k))).tail Step.loopBreak⟩
+            | returned σb =>
+              simp only [pure_eq_ok, Prod.mk.injEq] at h
+              obtain ⟨rfl, rfl⟩ := h
+              refine ⟨hhb, fun L k => ?_⟩
+              obtain ⟨Eret, hbsteps⟩ := hrest1 L (.loop c b σ.locals k)
+              exact ⟨Eret, ((Steps.single (Step.whileTrue (hRc L))).trans
+                hbsteps).tail Step.loopReturn⟩
+        | int n k => simp [valueAsBool] at hbv
+        | addr l => simp [valueAsBool] at hbv
+        | nil => simp [valueAsBool] at hbv
+  | returnStmt =>
+    cases hf with
+    | returnStmt =>
+      simp only [execStmt, pure_eq_ok, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl⟩ := h
+      exact ⟨hh, fun L k => ⟨σ.locals, Steps.single .returnStmt⟩⟩
+  | breakStmt =>
+    cases hf with
+    | breakStmt =>
+      simp only [execStmt, pure_eq_ok, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl⟩ := h
+      exact ⟨hh, rfl, fun L k => Steps.single .breakStmt⟩
+  | continueStmt =>
+    cases hf with
+    | continueStmt =>
+      simp only [execStmt, pure_eq_ok, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl⟩ := h
+      exact ⟨hh, rfl, fun L k => Steps.single .continueStmt⟩
+termination_by (fuel, sizeOf stmt)
+decreasing_by all_goals (subst_vars; decreasing_tactic)
+
+/-- **T2 — spine-list simulation.** A successful interpreter run of a spine
+statement list maps to `Steps` from `.next (.seq ss σ.locals k)` to the
+outcome's configuration; declarations extend the tracked seq env in
+lockstep with the interpreter's locals. Only the top scope is touched, and
+an initialization-free list leaves `locals` exactly unchanged. -/
+theorem execStmtList_frag_sound {ss : List Stmt} (hf : ∀ s ∈ ss, SpineFrag s)
+    (fuel : Nat) (σ : ExecState) (ch : Choices) (hh : HeapFrag σ)
+    {out : ExecOutcome} {ch' : Choices}
+    (h : execStmtList fuel σ ch ss = .ok (out, ch')) :
+    HeapFrag out.state ∧
+    match out with
+    | .normal σf => σf.locals.popScope = σ.locals.popScope ∧
+        ((∀ s ∈ ss, StmtFragNS s) → σf.locals = σ.locals) ∧
+        ∀ L k, Steps (.next (.seq ss σ.locals k)) (σ.withLocals L)
+          (.next k) (σf.withLocals L)
+    | .broke σf => σf.locals.popScope = σ.locals.popScope ∧
+        ((∀ s ∈ ss, StmtFragNS s) → σf.locals = σ.locals) ∧
+        ∀ L k, Steps (.next (.seq ss σ.locals k)) (σ.withLocals L)
+          (.breaking k) (σf.withLocals L)
+    | .continued σf => σf.locals.popScope = σ.locals.popScope ∧
+        ((∀ s ∈ ss, StmtFragNS s) → σf.locals = σ.locals) ∧
+        ∀ L k, Steps (.next (.seq ss σ.locals k)) (σ.withLocals L)
+          (.continuing k) (σf.withLocals L)
+    | .returned σf =>
+        ∀ L k, ∃ Eret, Steps (.next (.seq ss σ.locals k)) (σ.withLocals L)
+          (.returning Eret k) (σf.withLocals L) := by
+  cases ss with
+  | nil =>
+    simp only [execStmtList, pure_eq_ok, Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl⟩ := h
+    exact ⟨hh, rfl, fun _ => rfl, fun L k => Steps.single .seqDone⟩
+  | cons s rest =>
+    simp only [execStmtList] at h
+    rw [bind_eq_ok] at h
+    obtain ⟨⟨o₁, ch₁⟩, hhead, h⟩ := h
+    have hs : SpineFrag s := hf s (by simp)
+    cases hs with
+    | @init p htp =>
+      simp only [execStmt, execDecl, bind_eq_ok, pure_eq_ok,
+        Prod.mk.injEq] at hhead
+      obtain ⟨σ₁, ⟨v, hv, hσ₁⟩, ho₁, rfl⟩ := hhead
+      subst hσ₁
+      subst ho₁
+      have hfv := defaultValue_frag_val htp hv
+      have hh₁ : HeapFrag (σ.declareLocal p.id (some p.typ) v) := by
+        rw [declareLocal_eq_alloc]
+        exact heapFrag_alloc hh hfv (fun t' ht' => by cases ht'; exact htp)
+      obtain ⟨hhf, hrest⟩ := execStmtList_frag_sound
+        (fun q hq => hf q (by simp [hq])) fuel _ ch hh₁ h
+      refine ⟨hhf, ?_⟩
+      have hpre : ∀ L k,
+          Steps (.next (.seq (Stmt.initialization p :: rest) σ.locals k))
+            (σ.withLocals L)
+            (.next (.seq rest ((σ.declareLocal p.id (some p.typ) v).locals) k))
+            ((σ.declareLocal p.id (some p.typ) v).withLocals L) := by
+        intro L k
+        refine (Steps.single Step.seqNext).tail
+          (Step.initialization (v := v) (loc := (σ.alloc v (some p.typ)).1)
+            ((defaultValue_state_indep (σ.withLocals L) σ htp).trans hv)
+            (alloc_withLocals σ L v (some p.typ)))
+      have hdpop : (σ.declareLocal p.id (some p.typ) v).locals.popScope
+          = σ.locals.popScope := by
+        rw [declareLocal_eq_alloc]
+        exact declare_popScope ..
+      cases out with
+      | normal σf =>
+        obtain ⟨hpop, _, hsteps⟩ := hrest
+        refine ⟨hpop.trans hdpop, ?_, fun L k => (hpre L k).trans (hsteps L k)⟩
+        intro hns
+        exact absurd (hns (.initialization p) (by simp)) (by rintro ⟨⟩)
+      | broke σf =>
+        obtain ⟨hpop, _, hsteps⟩ := hrest
+        refine ⟨hpop.trans hdpop, ?_, fun L k => (hpre L k).trans (hsteps L k)⟩
+        intro hns
+        exact absurd (hns (.initialization p) (by simp)) (by rintro ⟨⟩)
+      | continued σf =>
+        obtain ⟨hpop, _, hsteps⟩ := hrest
+        refine ⟨hpop.trans hdpop, ?_, fun L k => (hpre L k).trans (hsteps L k)⟩
+        intro hns
+        exact absurd (hns (.initialization p) (by simp)) (by rintro ⟨⟩)
+      | returned σf =>
+        intro L k
+        obtain ⟨Eret, hsteps⟩ := hrest L k
+        exact ⟨Eret, (hpre L k).trans hsteps⟩
+    | ns hns =>
+      obtain ⟨hhb, hrest1⟩ := execStmt_frag_sound hns fuel σ ch hh hhead
+      cases o₁ with
+      | normal σ₁ =>
+        obtain ⟨hl₁, hsteps1⟩ := hrest1
+        obtain ⟨hhf, hrest⟩ := execStmtList_frag_sound
+          (fun q hq => hf q (by simp [hq])) fuel σ₁ ch₁ hhb h
+        rw [hl₁] at hrest
+        refine ⟨hhf, ?_⟩
+        have hpre : ∀ L k,
+            Steps (.next (.seq (s :: rest) σ.locals k)) (σ.withLocals L)
+              (.next (.seq rest σ.locals k)) (σ₁.withLocals L) := fun L k =>
+          (Steps.single Step.seqNext).trans (hsteps1 L (.seq rest σ.locals k))
+        cases out with
+        | normal σf =>
+          obtain ⟨hpop, hnseq, hsteps⟩ := hrest
+          exact ⟨hpop, fun hns' => hnseq (fun q hq => hns' q (by simp [hq])),
+            fun L k => (hpre L k).trans (hsteps L k)⟩
+        | broke σf =>
+          obtain ⟨hpop, hnseq, hsteps⟩ := hrest
+          exact ⟨hpop, fun hns' => hnseq (fun q hq => hns' q (by simp [hq])),
+            fun L k => (hpre L k).trans (hsteps L k)⟩
+        | continued σf =>
+          obtain ⟨hpop, hnseq, hsteps⟩ := hrest
+          exact ⟨hpop, fun hns' => hnseq (fun q hq => hns' q (by simp [hq])),
+            fun L k => (hpre L k).trans (hsteps L k)⟩
+        | returned σf =>
+          intro L k
+          obtain ⟨Eret, hsteps⟩ := hrest L k
+          exact ⟨Eret, (hpre L k).trans hsteps⟩
+      | broke σ₁ =>
+        obtain ⟨hl₁, hsteps1⟩ := hrest1
+        simp only [pure_eq_ok, Prod.mk.injEq] at h
+        obtain ⟨rfl, rfl⟩ := h
+        exact ⟨hhb, by rw [hl₁], fun _ => hl₁, fun L k =>
+          ((Steps.single Step.seqNext).trans
+            (hsteps1 L (.seq rest σ.locals k))).tail Step.seqBreak⟩
+      | continued σ₁ =>
+        obtain ⟨hl₁, hsteps1⟩ := hrest1
+        simp only [pure_eq_ok, Prod.mk.injEq] at h
+        obtain ⟨rfl, rfl⟩ := h
+        exact ⟨hhb, by rw [hl₁], fun _ => hl₁, fun L k =>
+          ((Steps.single Step.seqNext).trans
+            (hsteps1 L (.seq rest σ.locals k))).tail Step.seqContinue⟩
+      | returned σ₁ =>
+        simp only [pure_eq_ok, Prod.mk.injEq] at h
+        obtain ⟨rfl, rfl⟩ := h
+        refine ⟨hhb, fun L k => ?_⟩
+        obtain ⟨Eret, hsteps1⟩ := hrest1 L (.seq rest σ.locals k)
+        exact ⟨Eret, ((Steps.single Step.seqNext).trans hsteps1).tail
+          Step.seqReturn⟩
+termination_by (fuel, sizeOf ss)
+decreasing_by all_goals (subst_vars; decreasing_tactic)
+end
+
+/-- **The fragment interpreter-soundness theorem** — `interpreterSoundStatement`
+restricted to the scalar+pointer fragment, in exactly its shape: a normal
+interpreter completion of a fragment statement over a fragment heap is a
+reachable terminal of the step relation, from the same state to the same
+state. (For non-spine fragment statements the interpreter leaves `locals`
+unchanged, so no `withLocals` appears in the statement.) -/
+theorem interpreterSound_frag (fuel : Nat) (σ σ' : ExecState) (stmt : Stmt)
+    (ch ch' : Choices) (hf : StmtFragNS stmt) (hh : HeapFrag σ)
+    (h : execStmt fuel σ ch stmt = .ok (.normal σ', ch')) :
+    Steps (.exec stmt σ.locals .stop) σ (.next .stop) σ' := by
+  obtain ⟨_, hl, hsteps⟩ := execStmt_frag_sound hf fuel σ ch hh h
+  have hstep := hsteps σ.locals .stop
+  have hσ : σ.withLocals σ.locals = σ := rfl
+  have hσ' : σ'.withLocals σ.locals = σ' := by
+    rw [← hl]; rfl
+  rw [hσ, hσ'] at hstep
+  exact hstep
+
 /-! ## Proven instances
 
 Concrete derivations over rules with no opaque function premises, checking

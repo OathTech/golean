@@ -238,10 +238,28 @@ example := @slice_adequate
   is now proven via `storeLoc_int_cell` + `intKind_normalize_idem` (idempotent
   normalize on an int-typed cell, arbitrary prior value). Each witness is a
   closed instantiation of its law.
-- The interpreter⇄relation correspondence (`interpreterSoundStatement`,
-  `interpreterPanicStatement`) are `def : Prop` — **stated, not proven**
-  (blocked on Eval big-step totalization). They are claims, not theorems; nothing
-  here or elsewhere should count them as established.
+- `✓ interpreterSound_frag` — the interpreter⇄relation correspondence is
+  **proven over the scalar+pointer fragment** (arc `eval-totalization`,
+  2026-07-21): the Eval big-step cluster was totalized (GoCore has zero
+  `partial def`s), and `execStmt_frag_sound`/`execStmtList_frag_sound` (mutual
+  simulation on `(fuel, sizeOf stmt)`) derive `interpreterSound_frag` — a
+  normal interpreter completion of a fragment statement (assign, seqn, block
+  with declarations, if, while, return/break/continue) over a fragment heap is
+  a reachable `Steps` terminal, in exactly `interpreterSoundStatement`'s
+  shape. Axiom-clean.
+- The **unrestricted** `interpreterSoundStatement`/`interpreterPanicStatement`
+  remain `def : Prop` — **stated, not proven**, and are *false as literally
+  stated* (the interpreter is richer than the relation, e.g. string `add`;
+  and D1 nested-`seqn` scoping — see the Correspondence module header and
+  `docs/2026-07-21_eval-totalization-correspondence.md`). Nothing here or
+  elsewhere should count them as established. Calls (D2) and the panic side
+  (D3) are the tracked next layers.
 -/
+
+/-- Non-vacuity reference: the fragment correspondence theorems exist and
+type-check with their stated hypotheses. -/
+example := @GoLean.GoCore.Correspondence.interpreterSound_frag
+example := @GoLean.GoCore.Correspondence.execStmt_frag_sound
+example := @GoLean.GoCore.Correspondence.evalExpr_frag_ok
 
 end GoLean.Iris.Audit

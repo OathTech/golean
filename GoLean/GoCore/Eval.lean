@@ -674,11 +674,14 @@ genuinely recursive functions. -/
 def execDecl (state : ExecState) (param : Param) : Except GoError ExecState := do
   return state.declareLocal param.id (some param.typ) (← defaultValue state param.typ)
 
-def execDecls (state : ExecState) (decls : Array Param) : Except GoError ExecState := do
-  let mut current := state
-  for decl in decls do
-    current ← execDecl current decl
-  return current
+/-- Structural on the list (rather than a `for` fold) so the correspondence
+proofs can invert it cheaply; behavior identical. -/
+def execDeclList (state : ExecState) : List Param → Except GoError ExecState
+  | [] => return state
+  | p :: rest => do execDeclList (← execDecl state p) rest
+
+def execDecls (state : ExecState) (decls : Array Param) : Except GoError ExecState :=
+  execDeclList state decls.toList
 
 -- Fuel'd upper cluster: function calls and loops recurse on `fuel` (the lower
 -- structural cluster above is already total and never calls back into this one).

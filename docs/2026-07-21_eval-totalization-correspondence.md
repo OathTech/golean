@@ -138,7 +138,22 @@ Landed 2026-07-21 (commits 821b07d, 9b38254, + statement-layer foundation):
 5. **First statement-level lemma** (DONE): `execStmt_assign_ok` — an
    interpreter assignment IS `Step.assign`. Axiom-clean.
 
-### Statement-layer design (the remaining lift — shapes fixed, next session)
+### Statement layer — PROVEN (2026-07-21, same arc)
+
+T1/T2 landed exactly as designed below, plus the headline corollary
+**`interpreterSound_frag`** — `interpreterSoundStatement`'s literal shape
+restricted to the fragment (`Steps (.exec stmt σ.locals .stop) σ (.next .stop)
+σ'`), axiom-clean. Mechanics that made it go through: `cases stmt` *first*
+(so the termination checker sees the structural descent), then invert the
+`StmtFragNS`/`SpineFrag` hypothesis per constructor (`nomatch hf` kills the
+14 non-fragment constructors); `decreasing_by all_goals (subst_vars;
+decreasing_tactic)` plus `have hsz : sizeOf ss.toList < sizeOf ss` at the two
+Array→List call sites. `execDecls` was restructured over a list
+(`execDeclList`, behavior identical) so `execDeclList_frag_sound` inverts
+cheaply and aligns with `DeclsR`. Remaining in item 6: the call/frame layer
+(D2 no-shadowing condition) and the panic side (blocked on D3).
+
+### Statement-layer design (as executed)
 
 Two mutual theorems by `(fuel, sizeOf stmt)` recursion mirroring the
 interpreter's own measure, over two predicates: `StmtFragNS` (non-spine
