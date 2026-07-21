@@ -92,6 +92,16 @@ new-file operation touching nothing else. Future arrivals slot cleanly:
   and witness ship together — the structure should keep them adjacent so the
   gate stays easy to check by eye.
 
+## DONE — executed 2026-07-21 (branch `proofs-module-split`)
+
+Split per the design of record: 11 modules across the four strata; the two
+lifting cores and seven inversion lemmas de-privatized (shared across law
+files); every law file carries its witnesses (co-location invariant). Verified:
+first build zero errors; audit sweep count IDENTICAL pre/post (2,527 decls —
+nothing dropped); top-level declaration name-sets identical (59); all curated
+axiom pins unchanged; scripts/ci 9/9 green incl. the import-closure check over
+the new subdirectory modules.
+
 ## When
 
 Natural slot: at the `slice-call-frame` arc boundary (post-merge, pre-arc-3) —
