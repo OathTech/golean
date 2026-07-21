@@ -62,7 +62,7 @@ fi
 # Audit.lean, whose root import is GoLeanProofs) or on the explicit standalone
 # allowlist below (deliberate, documented exceptions only).
 step "proofs-file audit coverage (every proofs/*.lean built+swept or allowlisted)"
-STANDALONE_PROOFS="SliceSpike Probe"  # SliceSpike: superseded spike kept as record; Probe: scratch
+STANDALONE_PROOFS="SliceSpike"  # SliceSpike: superseded spike kept as record (structure audit P1-3: an allowlist entry must name an existing, documented file — no pre-authorized holes)
 pf_bad=0
 for f in proofs/*.lean; do
   b="$(basename "$f" .lean)"
@@ -124,6 +124,29 @@ if [ "$RUN_DIFF" -eq 1 ]; then
     *)   bad "differential run BROKE (exit $drc — not a case failure; see output)" ;;
   esac
 fi
+# 5n. Negative corpus (structure audit P1-1): 309 compile-rejection guardrails,
+# previously attached to nothing. Fresh run under --diff (cheap: go build per
+# case); static diff of the last recorded run always.
+if [ "$RUN_DIFF" -eq 1 ]; then
+  step "re-run negative corpus (--diff)"
+  ./scripts/coverage-negative 2>&1 | tail -2; nrc=${PIPESTATUS[0]}
+  case "$nrc" in
+    0|1) ok "negative run completed (exit $nrc; set judged by baseline diff)" ;;
+    *)   bad "negative run BROKE (exit $nrc)" ;;
+  esac
+fi
+step "negative baseline diff"
+if [ -f artifacts/coverage/negative-latest.tsv ]; then
+  if ./scripts/coverage-baseline-diff --full --baseline baselines/negative-full.tsv        artifacts/coverage/negative-latest.tsv; then
+    ok "negative baseline diff (no regression)"
+  else
+    bad "negative baseline diff (DRIFT — see above)"
+  fi
+else
+  echo "  no artifacts/coverage/negative-latest.tsv — run scripts/coverage-negative first"
+  RESULTS+=("  skip negative baseline diff (no recorded run)")
+fi
+
 step "differential baseline diff (scripts/coverage-baseline-diff)"
 if [ -f artifacts/coverage/latest.tsv ]; then
   ran="$(awk -F'\t' '!/^#/ && $1!="result" && NF>=2' artifacts/coverage/latest.tsv | wc -l | tr -d ' ')"
@@ -148,7 +171,9 @@ else
   RESULTS+=("  skip differential baseline diff (no recorded run)")
 fi
 
-# 5b. Baseline re-pin guard. A re-pin that flips any case PASS -> non-PASS must
+for GUARD_BASE in baselines/native-full.tsv baselines/negative-full.tsv; do
+# 5b. Baseline re-pin guards — BOTH tracked baselines (exec + negative).
+# A re-pin that flips any case PASS -> non-PASS must
 # list each such case on a `- Cases:` line in docs/BUGS.md — regressions cannot
 # be laundered into the baseline silently. Two modes (tamper audit F3a: the
 # worktree-only mode was inert on any clean checkout, i.e. in CI):
@@ -163,15 +188,15 @@ fi
 # skip — a laundered tip re-pin must not pass a shallow CI). Our workflow
 # fetches depth 2; any checkout that can't provide HEAD~1 must be fixed, not
 # waved through.
-git diff --quiet HEAD -- baselines/native-full.tsv 2>/dev/null; wt_rc=$?
+git diff --quiet HEAD -- $GUARD_BASE 2>/dev/null; wt_rc=$?
 PIN_MODE=""
 if [ "$wt_rc" -eq 1 ]; then
-  PIN_MODE="worktree-vs-HEAD"; PIN_OLD="HEAD"; PIN_NEW_FILE="baselines/native-full.tsv"
+  PIN_MODE="worktree-vs-HEAD"; PIN_OLD="HEAD"; PIN_NEW_FILE="$GUARD_BASE"
 elif [ "$wt_rc" -ge 2 ]; then
   step "baseline re-pin guard"
   bad "re-pin guard (git diff errored rc=$wt_rc determining worktree state — refusing to certify)"
 elif git rev-parse --verify -q HEAD~1 >/dev/null 2>&1; then
-  git diff --quiet HEAD~1 HEAD -- baselines/native-full.tsv 2>/dev/null; c_rc=$?
+  git diff --quiet HEAD~1 HEAD -- $GUARD_BASE 2>/dev/null; c_rc=$?
   if [ "$c_rc" -eq 1 ]; then
     PIN_MODE="HEAD-vs-HEAD~1"; PIN_OLD="HEAD~1"; PIN_NEW_FILE=""
   elif [ "$c_rc" -ge 2 ]; then
@@ -186,8 +211,8 @@ if [ -n "$PIN_MODE" ]; then
   step "baseline re-pin guard ($PIN_MODE; flips must be on a BUGS.md Cases: line)"
   # No process substitution (sandbox may deny /dev/fd): old version on stdin,
   # new version read inside awk. FAIL CLOSED on any unreadable input.
-  if oldbase="$(git show "$PIN_OLD":baselines/native-full.tsv 2>/dev/null)"; then
-    if [ -n "$PIN_NEW_FILE" ]; then newbase="$(cat "$PIN_NEW_FILE")"; else newbase="$(git show HEAD:baselines/native-full.tsv 2>/dev/null)"; fi
+  if oldbase="$(git show "$PIN_OLD":$GUARD_BASE 2>/dev/null)"; then
+    if [ -n "$PIN_NEW_FILE" ]; then newbase="$(cat "$PIN_NEW_FILE")"; else newbase="$(git show HEAD:$GUARD_BASE 2>/dev/null)"; fi
     if [ -z "$newbase" ]; then
       bad "re-pin guard (could not read the new baseline — refusing to certify)"
     else
@@ -231,6 +256,8 @@ if [ -n "$PIN_MODE" ]; then
     bad "re-pin guard (could not read $PIN_OLD baseline — refusing to certify the re-pin)"
   fi
 fi
+
+done
 
 # Summary
 printf '\n\033[1m══ scripts/ci summary ══\033[0m\n'

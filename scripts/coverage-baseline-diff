@@ -7,8 +7,11 @@
 # — so a focused `diff-one` run diffs cleanly. Use --full to additionally require
 # every baseline case to be present (a completeness check for full corpus runs).
 #
-# Usage: scripts/coverage-baseline-diff [--full] [<results.tsv>]
-#   default results file: artifacts/coverage/latest.tsv (the last run)
+# Usage: scripts/coverage-baseline-diff [--full] [--baseline <file>] [<results.tsv>]
+#   default baseline: baselines/native-full.tsv; default results:
+#   artifacts/coverage/latest.tsv. Pass --baseline baselines/negative-full.tsv
+#   with artifacts/coverage/negative-latest.tsv for the negative lane (same
+#   column discipline in both lanes).
 # Exit 0 = no regression among cases run. Exit 1 = drift (ids printed).
 set -euo pipefail
 
@@ -16,8 +19,14 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
 cd "$ROOT"
 
 FULL=0
-if [ "${1:-}" = "--full" ]; then FULL=1; shift; fi
 BASELINE="baselines/native-full.tsv"
+while :; do
+  case "${1:-}" in
+    --full) FULL=1; shift ;;
+    --baseline) BASELINE="${2:?--baseline needs a file}"; shift 2 ;;
+    *) break ;;
+  esac
+done
 RESULTS="${1:-artifacts/coverage/latest.tsv}"
 
 [ -f "$BASELINE" ] || { echo "no baseline at $BASELINE" >&2; exit 2; }

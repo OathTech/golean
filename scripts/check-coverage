@@ -86,6 +86,26 @@ for cf in glob.glob("Corpus/coverage/negative/**/case.tsv", recursive=True):
 
 # DEAD = canonical tag exercised in NEITHER lane and not reserved. ALL-FAILING =
 # used in the exec lane but with zero passing baseline cases.
+# Husk case-directories (structure audit P1-2): a directory under the corpus
+# roots with no metadata file anywhere beneath it is INVISIBLE to case
+# discovery — silently skipped, contra fail-closed. Hard-fail on any
+# (dot-directories excluded: tool droppings, not case dirs).
+husks = []
+for root in ("Corpus/coverage/exec", "Corpus/coverage/negative"):
+    for dirpath, dirnames, filenames in os.walk(root):
+        dirnames[:] = [d for d in dirnames if not d.startswith(".")]
+        has_meta = any(
+            f in ("cases.tsv", "case.tsv")
+            for _, _, fs in os.walk(dirpath) for f in fs
+        )
+        if not has_meta:
+            husks.append(dirpath)
+if husks:
+    print(f"FAIL: {len(husks)} husk case-director(ies) — no metadata file beneath, invisible to discovery:")
+    for h in sorted(husks):
+        print(f"  {h}")
+    sys.exit(1)
+
 dead = sorted(t for t in vocab if t not in used and t not in RESERVED)
 reserved_unused = sorted(t for t in RESERVED if t not in used)
 allfail = sorted(t for t in vocab if cases[t] > 0 and passes[t] == 0)
