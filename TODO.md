@@ -5,11 +5,13 @@ backlog items.
 
 ## THE work queue: close the vertical slice
 
-Authority: `docs/2026-07-19_vertical-slice-plan.md` §Punch-list (2026-07-20).
-In order: (1) close `hstore` → (2) end-to-end adequacy witness → (3)
-heap-reading RHS `*p = *p+1` (multi-`↦`) → (4) call/frame/return law +
-results-allocation gap → (5) `inc` spec + `main = 2` → (6) Eval totalization +
-correspondence (the L4 wall). 1–5 unblocked lemma work; 6 is the big lift.
+Authority: `docs/2026-07-19_vertical-slice-plan.md` §Punch-list + §Arc-shape
+(2026-07-20). Batched by risk class into three arcs:
+**Arc 1 `slice-l5-pure` (ACTIVE)** = items 1+2+3, proofs-only (zero-hypothesis
+witnesses, end-to-end adequacy witness, multi-`↦` heap-reading RHS).
+**Arc 2 `slice-call-frame`** = items 4+5 (Step.call semantics edit + call law,
+discharged by the `inc` spec + `main = 2` — the slice finish line).
+**Arc 3** = item 6 solo (Eval totalization → correspondence, the L4 wall).
 Keep the narrative there, status-mirror here.
 
 ## Epistemic hardening / pipeline error-resistance (2026-07-19, priority #0)

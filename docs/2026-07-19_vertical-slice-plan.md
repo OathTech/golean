@@ -164,3 +164,26 @@ semantics edit (see its ⚠ note). Item 6: the one big lift.
 Non-blocker note: BUG-001 (struct/array writes) does NOT gate this slice (no
 structs in it). After the slice: widen per the ladder (§Widening) with the
 concurrency-model design note (TODO F4) before any fork machinery.
+
+### Arc shape (2026-07-20) — items batched by RISK CLASS, not adjacency
+
+The audit boundary sits exactly where the risk boundary is: pure proof-layer
+work (touches `proofs/` only — the differential is frozen by construction,
+cheap audit) is batched separately from semantics edits (trusted relation
+changes — everything downstream re-elaborates, focused audit).
+
+- **Arc 1 `slice-l5-pure` — items 1+2+3** (proofs-only): zero-hypothesis
+  witnesses (`hstore` closed, `◌ → ✓`), the end-to-end adequacy witness (first
+  fully closed `adequate` — the first demonstrated "Iris dissolves" artifact,
+  added to the Audit gates), multi-`↦` heap-reading RHS (`*p = *p + 1`).
+- **Arc 2 `slice-call-frame` — items 4+5**: the `Step.call` results-allocation
+  edit + call/frame/return law, with item 5 (`inc` spec + `main ⊢ 2`) composed
+  in the same arc — item 5 IS the call law's discharge witness, so per the
+  non-vacuity gate the law shouldn't merge without it. Slice finish line.
+- **Arc 3 — item 6** solo (Eval totalization → correspondence): different
+  subsystem, heaviest lift.
+- F4/F5 strategy notes ride along wherever convenient (F5 pairs with arc 2's
+  finish).
+
+Each arc ends per the CLAUDE.md merge protocol (gate → audit ask → sign-off →
+ff-merge → on `main`).
