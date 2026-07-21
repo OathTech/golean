@@ -164,6 +164,30 @@ The full remainder landed; the fragment correspondence now **covers calls**:
 - **`interpreterSound_frag`** now covers the slice-shaped fragment including
   `inc`/`main`-style calls. Axiom-clean.
 
+### The lowering target (pinned 2026-07-21, user discussion)
+
+The composition the witness enables — **Arc D's finish line, stated exactly**:
+
+```
+theorem slice_interp_computes_two
+    (fuel : Nat) (σf : ExecState) (ch' : Choices)
+    (hrun : execStmt fuel σ₀ [] (sliceProg mainId .int) = .ok (.normal σf, ch')) :
+    loadLoc σf (.base ⟨0⟩) = .ok (.int 2 .int)
+```
+
+∀-general over fuel and runs; no execution in the proof. Derivation: the run
+is a `Steps` derivation (the landed witness `slice_interp_run_in_relation`)
+reaching the terminal config; the 2b strong-adequacy readout applies its φ to
+every relation execution reaching that terminal; hence the interpreter's
+final heap has `r = 2`. This is the Iris result *lowered to a theorem about
+interpreter executions of the specific program* — the statement mentions only
+`execStmt`/`loadLoc`/the program (Iris and even the relation appear only
+inside the proof). Division of labor, stated precisely: the kernel never
+*executes* the interpreter (WF-compiled, no definitional reduction — and
+proving-by-computing is the executable world's job anyway); it proves facts
+*about* all executions deductively. 2b is therefore the last span of the
+lowering, not a cosmetic readout.
+
 **Process note (recorded):** a background full differential racing concurrent
 edits to the same Lake package produced a phantom all-FAIL drift (the runner
 rebuilds `golean` from the working tree; mid-edit states break the build).
