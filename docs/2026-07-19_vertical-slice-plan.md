@@ -135,11 +135,15 @@ L4 correspondence ❌ (the wall) · L5 WP laws 🟨 (~60%) · L6 spec ⬜.
 1. **Close `hstore`** — discharge the open store-typing side-condition in
    `wp_assign_lit`/`wp_deref_store_ref` for a concrete cell, so a witness
    carries ZERO hypotheses (`◌ → ✓` in `proofs/Audit.lean`'s ledger). Small.
-2. **End-to-end adequacy witness** — compose the shipped laws (`wp_seqn` +
-   `wp_assign_lit`) into a WP for a concrete program, feed `go_adequacy`, get a
-   **closed** `adequate …` theorem. Proves the WP→adequacy chain composes
-   (currently believed, never demonstrated). Turns the ledger's biggest `◌`
-   green; add both witnesses to the Audit sweep's curated gates.
+2. **End-to-end adequacy witness** — compose shipped laws into a WP for a
+   concrete program, feed `go_adequacy`, get a **closed** `adequate …` theorem.
+   **2a DONE (2026-07-20):** `adequate_seqn_nil` (`wp_seqn` + new `wp_seq_done`
+   + `wp_value'` through `go_adequacy`/`GoCoreS`) — zero hypotheses, pure
+   program; the chain composes and the conclusion is Iris-free. In the Audit
+   gates. **2b (open):** a *heap-touching* witness composing `wp_assign_lit`
+   needs a `go_heap_adequacy` variant that hands the initial heap's `↦`
+   fragments to the WP proof (HeapLang's `heap_adequacy` shape — gen_heap init
+   with fragment ownership). Do alongside item 3 or fold into arc 2's finish.
 3. **Heap-reading RHS** — `*p = *p + 1`: premises conditioned on the owned
    cell(s), multi-`↦` ownership (`p_loc ↦ addr(a) ∗ a ↦ n`), composing
    `exprR_deref_load` + `ExprR.addInt`. First genuinely separation-logic step.

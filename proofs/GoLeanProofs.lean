@@ -622,4 +622,63 @@ theorem go_adequacy [GoCoreGpreS .hasLC GF] (c : Config) (σ : ExecState)
     iframe Hh Hm
   · exact Hwp
 
+/-! ## Arc `slice-l5-pure` item 2 — the end-to-end adequacy witness
+
+The one artifact that demonstrates the WP→adequacy chain *composes*: a concrete
+program, its WP built from the shipped laws, fed through `go_adequacy`, yielding
+a **closed** `adequate` theorem with zero hypotheses. This is the first
+demonstration that Iris dissolves (`docs/2026-07-20_end-state-theorem.md`): the
+conclusion `adequate .NotStuck …` is a pure operational statement over
+`Step`/`Config`/`ExecState`; every Iris construct lives only in the proof. -/
+
+section EndToEnd
+variable {GF : BundledGFunctors} {hlc : HasLC} [GoCoreGS hlc GF]
+variable {s : Stuckness} {E : CoPset} {Φ : Unit → IProp GF}
+
+/-- Pure, deterministic control step: an exhausted sequence pops to its
+continuation (discarding that scope's env — CEK scope exit). Mirror of
+`wp_seqn` for `Step.seqDone`. -/
+theorem wp_seq_done {env k} :
+    (|={E}[E]▷=> £ 1 -∗ WP (Config.next k) @ s ; E {{ Φ }}) ⊢
+      WP (Config.next (.seq [] env k)) @ s ; E {{ Φ }} := by
+  iintro H
+  iapply (wp_lift_pure_det_step_no_fork (E₂ := E)
+    (e₂ := Config.next k)
+    (Hsafe := by
+      intro σ
+      cases s
+      · exact ⟨[], Config.next k, σ, [], GoPrimStep.step Step.seqDone⟩
+      · rfl)
+    (Hpuredet := by
+      intro σ obs e₂' σ₂ eₜ' h
+      cases h with
+      | step st => cases st; exact ⟨rfl, rfl, rfl, rfl⟩))
+  iexact H
+
+end EndToEnd
+
+/-- **The chain composes — a closed, zero-hypothesis `adequate` theorem.**
+For any initial state and environment, the empty-sequence program provably
+runs to termination without ever getting stuck: `WP` is assembled from
+`wp_seqn` + `wp_seq_done` + `wp_value'`, discharged through `go_adequacy`
+with the concrete functor bundle `GoCoreS`. The statement mentions no Iris —
+it is `adequate .NotStuck` over the operational semantics, full stop. -/
+theorem adequate_seqn_nil (σ : ExecState) (env : LocalEnv) :
+    adequate .NotStuck (Config.exec (.seqn #[]) env .stop) σ (fun _ _ => True) :=
+  go_adequacy (GF := GoCoreS) _ _ _ (by
+    intro _
+    iapply wp_seqn
+    iapply fupd_intro
+    inext
+    iapply fupd_intro
+    iintro Hcred
+    iapply wp_seq_done
+    iapply fupd_intro
+    inext
+    iapply fupd_intro
+    iintro Hcred2
+    iapply (wp_value' (v := ()))
+    ipureintro
+    trivial)
+
 end GoLean.Iris

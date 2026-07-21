@@ -121,6 +121,19 @@ open Lean in
 /-- info: 'GoLean.Iris.go_adequacy' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms go_adequacy
 
+-- The store side-condition facts behind the zero-hypothesis witnesses.
+/-- info: 'GoLean.Iris.intKind_normalize_idem' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms intKind_normalize_idem
+/-- info: 'GoLean.Iris.storeLoc_int_cell' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms storeLoc_int_cell
+
+-- The end-to-end artifact: a CLOSED `adequate` theorem composed from the WP
+-- laws through go_adequacy (arc slice-l5-pure item 2). The chain composes.
+/-- info: 'GoLean.Iris.wp_seq_done' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms wp_seq_done
+/-- info: 'GoLean.Iris.adequate_seqn_nil' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms adequate_seqn_nil
+
 /-! ## Non-vacuity gate — every user-facing WP law is bound to a discharge witness.
     Deleting a witness (or a law) makes one of these references fail to elaborate,
     breaking the build. `wp_assign_lit`/`wp_deref_store_ref` each instantiate their
@@ -135,15 +148,17 @@ example := @wp_deref_store_ref
 
 /-! ## Three-state ledger — what is NOT yet fully closed (kept honest, not hidden)
 
-- `◌ go_adequacy` — axiom-clean, but **not yet instantiated end-to-end**: no
-  witness composes the WP laws into a `WP c {{…}}` and feeds `go_adequacy` to
-  yield a closed `adequate …` for a concrete program. Until that witness exists,
-  "the chain composes" is unproven at the top. Tracked: build an adequacy
-  end-to-end witness (a concrete GoCore program, WP built from `wp_seqn` +
-  `wp_assign_lit`, no remaining hypotheses).
-- `◌ wp_seqn` — axiom-clean; a pure control-reduction law with no `∀σ`-over-state
-  premise (no vacuity surface), currently used by no downstream witness. Low
-  risk; a witness lands with the adequacy end-to-end proof.
+- `✓ go_adequacy` — **instantiated end-to-end** (arc `slice-l5-pure` item 2,
+  2026-07-20): `adequate_seqn_nil` composes `wp_seqn` + `wp_seq_done` +
+  `wp_value'` through `go_adequacy` with the concrete bundle `GoCoreS`,
+  yielding a closed, zero-hypothesis `adequate .NotStuck …` for the
+  empty-sequence program from any initial state — the chain composes, and the
+  conclusion mentions no Iris. **Honest scope:** the witness is a *pure*
+  program. A *heap-touching* end-to-end witness (composing `wp_assign_lit`)
+  additionally needs a `go_heap_adequacy` variant that hands the initial
+  heap's `↦` fragments to the WP proof (HeapLang's `heap_adequacy` shape) —
+  tracked as punch-list item 2b, not yet built.
+- `✓ wp_seqn` — now consumed by the end-to-end witness `adequate_seqn_nil`.
 - `✓ wp_assign_lit` / `✓ wp_deref_store_ref` — **ZERO hypotheses** (arc
   `slice-l5-pure` item 1, 2026-07-20): the formerly-open `hstore` side-condition
   is now proven via `storeLoc_int_cell` + `intKind_normalize_idem` (idempotent
