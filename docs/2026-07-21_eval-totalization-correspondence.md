@@ -109,15 +109,59 @@ gap to fix when `frame`/`returning` are next touched — cleanest fix: stash the
 result *locations* in `Cont.frame` at call time (also erases the fall-through
 results gap noted in `Rel.lean`).
 
+**D3 — missing panic-propagation rules in `ExprR`.** The relation propagates
+operand panics only through `add/sub/mul/div` (`binPanicLeft/Right`); `eqCmp`
+and `deref` operands have no propagation rule, so e.g. `(1/0) == x` panics in
+the interpreter with no relational derivation. Fix alongside D1 in the
+Rel-completion slice. Until then the panic-side bridge covers the arithmetic
+core only (note `deref` of a nil pointer IS covered — `valueAsLoc .nil`
+panics with exactly `derefNil`'s message).
+
 ### Proof plan (per-construct lemmas, then the fragment capstone)
 
-1. Transport lemmas (Ops level). 2. Expression bridge:
-`ExprFrag e → HeapFrag σ → evalExpr σ e = .ok (v, σ') → σ' = σ ∧ FragVal v ∧ ExprR σ.locals (σ.withLocals L) e (.value v (σ.withLocals L))`
-(fragment expressions don't touch state). 3. Assignee bridge. 4. Per-construct
-statement lemmas via `execStmt.induct`, each concluding a `Steps` segment
-composed with `Steps.trans` (big-step → small-step is the natural direction).
-5. Capstone: `execStmt` fragment soundness (normal + returned + panic
-outcomes), converting `interpreterSoundStatement`'s fragment restriction from
-a `Prop` into a theorem. The unrestricted statements stay `Prop`s with an
-honest docstring (they are *false* as stated until D1 is resolved — the
-header must say so).
+Landed 2026-07-21 (commits 821b07d, 9b38254, + statement-layer foundation):
+
+1. **Transport lemmas** (DONE): `withLocals` + field simps; `loadLoc`/`alloc`
+   unconditional; `normalizeValueForTy`/`defaultValue`/`valueEq`
+   state-*independent* at `TyFrag` types (their equations neither read
+   `state.types` nor recurse — much cheaper than the general
+   `mutual_induct` transports, which remain the documented widening path);
+   `storeLoc` at base locations conditioned on the cell's declared type
+   being `TyFrag` (supplied by `HeapFrag`).
+2. **Expression bridge** (DONE): `evalExpr_frag_ok` — fragment evaluation
+   preserves state, yields `FragVal`s, and maps to `ExprR` with
+   `env := σ.locals` over any transported state. Axiom-clean.
+3. **Assignee bridge** (DONE): `evalAssigneeLoc_frag_ok` (var + addr).
+4. **Heap preservation** (DONE): `lookup_set_cases` (no `BEq`-lawfulness
+   reasoning needed), `heapFrag_set/alloc`, `storeLoc_frag` (success forces
+   base locations, preserves `HeapFrag`, leaves locals untouched).
+5. **First statement-level lemma** (DONE): `execStmt_assign_ok` — an
+   interpreter assignment IS `Step.assign`. Axiom-clean.
+
+### Statement-layer design (the remaining lift — shapes fixed, next session)
+
+Two mutual theorems by `(fuel, sizeOf stmt)` recursion mirroring the
+interpreter's own measure, over two predicates: `StmtFragNS` (non-spine
+statements: assign, if/while with NS bodies, block, NS-only nested seqns,
+return/break/continue — **no** `.initialization`, which dodges D1 exactly)
+and spine lists (NS ∪ `.initialization` with `TyFrag`):
+
+- **T1 (statement, NS)** `execStmt fuel σ ch stmt = .ok (out, ch')` →
+  `HeapFrag out.state` ∧ outcome-indexed conclusion:
+  normal → `σf.locals = σ.locals` ∧ `∀ L k, Steps (.exec stmt σ.locals k)
+  (σ.withLocals L) (.next k) (σf.withLocals L)`; broke/continued → same
+  with `.breaking k`/`.continuing k`; returned → `∃ Eret, … (.returning
+  Eret k) …` (Eret uncharacterized until the call/frame layer, which needs
+  the no-result-shadowing WF condition from D2).
+- **T2 (spine list)** from `.next (.seq ss σ.locals k)` to `.next k`, with
+  the weaker locals claim `σf.locals.popScope = σ.locals.popScope` (what
+  `block` consumes) plus init-free ⇒ locals equality (what NS seqn
+  consumes). `Step.initialization` aligns because the interpreter's
+  `declareLocal` is literally `alloc` + env-`declare`
+  (`declareLocal_eq_alloc`), and the list-level env is re-synced to
+  `σᵢ.locals` at every element.
+- **Call/frame layer** (after T1/T2): `BindParamsR`/`DeclsR`/`ResultsR`
+  bridges + the D2 no-shadowing condition; then the capstone fragment
+  version of `interpreterSoundStatement`.
+
+Panic-side: arithmetic core only until D3 is fixed.

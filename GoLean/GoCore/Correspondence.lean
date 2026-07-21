@@ -462,6 +462,161 @@ theorem evalExpr_frag_ok {e : Expr} (hf : ExprFrag e) :
     | bool b => simp only [valueAsLoc, stuck_def, reduceCtorEq] at hloc
     | nil => simp only [valueAsLoc, panic_def, reduceCtorEq] at hloc
 
+/-! ## Fragment heap preservation
+
+`Heap.set` results are the written cell or an untouched old cell — the one
+fact all heap-mutation preservation proofs need, provable without any
+`BEq` lawfulness reasoning. -/
+
+theorem lookup_set_cases (h : Heap) (loc loc' : Loc) (c : HeapCell) :
+    Heap.lookup (Heap.set h loc c) loc' = some c ∨
+    Heap.lookup (Heap.set h loc c) loc' = Heap.lookup h loc' := by
+  induction h with
+  | nil =>
+    simp only [Heap.set, Heap.lookup]
+    split
+    · exact .inl rfl
+    · exact .inr rfl
+  | cons hd rest ih =>
+    obtain ⟨l, o⟩ := hd
+    simp only [Heap.set]
+    split
+    · simp only [Heap.lookup]
+      split
+      · exact .inl rfl
+      · exact .inr rfl
+    · simp only [Heap.lookup]
+      split
+      · exact .inr rfl
+      · exact ih
+
+theorem heapFrag_set {σ : ExecState} (hh : HeapFrag σ) {c : HeapCell}
+    (hcv : FragVal c.value) (hct : ∀ t, c.declaredTy = some t → TyFrag t)
+    (loc : Loc) : HeapFrag { σ with heap := Heap.set σ.heap loc c } := by
+  intro loc' cell hcell
+  rcases lookup_set_cases σ.heap loc loc' c with hc | hc
+  · rw [hcell] at hc
+    cases hc
+    exact ⟨hcv, hct⟩
+  · exact hh loc' cell (hc ▸ hcell)
+
+theorem heapFrag_alloc {σ : ExecState} (hh : HeapFrag σ) {v : GoValue}
+    {t : Option Ty} (hv : FragVal v) (ht : ∀ t', t = some t' → TyFrag t') :
+    HeapFrag (σ.alloc v t).2 := by
+  have : HeapFrag { σ with nextAddr := σ.nextAddr + 1 } := hh
+  exact heapFrag_set this hv ht _
+
+/-- Fragment normalization yields fragment values (int-typed stores normalize
+the int; bool/pointer-typed stores pass the value through). -/
+theorem normalizeValueForTy_frag_val {σ : ExecState} {t : Ty} {v w : GoValue}
+    (ht : TyFrag t) (hv : FragVal v)
+    (h : normalizeValueForTy σ t v = .ok w) : FragVal w := by
+  cases ht <;> cases hv <;>
+    simp [normalizeValueForTy, normalizeValueForTyFuel, pure_eq_ok] at h <;>
+    (subst h; constructor)
+
+theorem coerceStoredValue_frag_val {old v w : GoValue} (hv : FragVal v)
+    (h : coerceStoredValue old v = .ok w) : FragVal w := by
+  cases old <;> cases hv <;>
+    simp [coerceStoredValue, pure_eq_ok] at h <;>
+    (subst h; constructor)
+
+/-- Successful fragment stores happen at base locations (field/index stores
+would need struct/array cells, which `FragVal` excludes), only touch the
+heap, and preserve its fragment shape. -/
+theorem storeLoc_frag {σ : ExecState} (hh : HeapFrag σ) {loc : Loc}
+    {v : GoValue} {σf : ExecState} (hv : FragVal v)
+    (h : storeLoc σ loc v = .ok σf) :
+    (∃ a, loc = .base a) ∧ HeapFrag σf ∧ σf.locals = σ.locals := by
+  cases loc with
+  | base a =>
+    refine ⟨⟨a, rfl⟩, ?_⟩
+    cases hl : Heap.lookup σ.heap (.base a) with
+    | some cell =>
+      cases hd : cell.declaredTy with
+      | some t =>
+        simp only [storeLoc, hl, hd, bind_eq_ok, pure_eq_ok] at h
+        obtain ⟨w, hw, h⟩ := h
+        subst h
+        exact ⟨heapFrag_set hh
+          (normalizeValueForTy_frag_val ((hh _ _ hl).2 t hd) hv hw)
+          (fun t' ht' => (hh _ _ hl).2 t' (hd ▸ ht')) _, rfl⟩
+      | none =>
+        simp only [storeLoc, hl, hd, bind_eq_ok, pure_eq_ok] at h
+        obtain ⟨w, hw, h⟩ := h
+        subst h
+        exact ⟨heapFrag_set hh (coerceStoredValue_frag_val hv hw)
+          (fun t' ht' => by cases ht') _, rfl⟩
+    | none =>
+      simp only [storeLoc, hl, pure_eq_ok] at h
+      subst h
+      exact ⟨heapFrag_set hh hv (fun t' ht' => by cases ht') _, rfl⟩
+  | field base typeId fieldName =>
+    simp only [storeLoc, bind_eq_ok] at h
+    obtain ⟨w, hw, h⟩ := h
+    cases loadLoc_frag hh hw <;> simp at h
+  | index base index =>
+    simp only [storeLoc, bind_eq_ok] at h
+    obtain ⟨w, hw, h⟩ := h
+    cases loadLoc_frag hh hw <;> simp at h
+
+/-! ## The assignee bridge and the first statement-level correspondence -/
+
+inductive AssigneeFrag : Assignee → Prop where
+  | var (id : String) : AssigneeFrag (.var id)
+  | addr {e : Expr} : ExprFrag e → AssigneeFrag (.addr e)
+
+theorem evalAssigneeLoc_frag_ok {a : Assignee} (ha : AssigneeFrag a)
+    {σ : ExecState} (hh : HeapFrag σ) {loc : Loc} {σ' : ExecState}
+    (h : evalAssigneeLoc σ a = .ok (loc, σ')) :
+    σ' = σ ∧ ∀ L, AssigneeR σ.locals (σ.withLocals L) a (.loc loc (σ.withLocals L)) := by
+  cases ha with
+  | var id =>
+    simp only [evalAssigneeLoc, bind_eq_ok, pure_eq_ok, Prod.mk.injEq] at h
+    obtain ⟨l, hl, rfl, rfl⟩ := h
+    exact ⟨rfl, fun L => .var (lookupLoc_eq_ok.mp hl)⟩
+  | addr he =>
+    simp only [evalAssigneeLoc] at h
+    rw [bind_eq_ok] at h
+    obtain ⟨⟨pv, σ₁⟩, hp, h⟩ := h
+    obtain ⟨rfl, hfp, hRp⟩ := evalExpr_frag_ok he hh hp
+    cases hfp with
+    | addr l =>
+      simp only [valueAsLoc, bind_eq_ok, pure_eq_ok, Prod.mk.injEq] at h
+      obtain ⟨a, rfl, rfl, rfl⟩ := h
+      exact ⟨rfl, fun L => .addr (hRp L)⟩
+    | int n k => simp [valueAsLoc, Functor.map, Except.map] at h
+    | bool b => simp [valueAsLoc, Functor.map, Except.map] at h
+    | nil => simp [valueAsLoc, Functor.map, Except.map] at h
+
+/-- **The first statement-level correspondence**: a successful interpreter
+assignment maps to the relation's `Step.assign` — one small step from
+`.exec (.assign a e) σ.locals k` to `.next k` over any transported state,
+with the fragment heap shape preserved and locals untouched. The choice
+stream is untouched (no nondeterminism in the fragment). -/
+theorem execStmt_assign_ok {fuel : Nat} {σ : ExecState} {ch : Choices}
+    {a : Assignee} {e : Expr} (ha : AssigneeFrag a) (he : ExprFrag e)
+    (hh : HeapFrag σ) {out : ExecOutcome} {ch' : Choices}
+    (h : execStmt fuel σ ch (.assign a e) = .ok (out, ch')) :
+    ∃ σf, out = .normal σf ∧ ch' = ch ∧ HeapFrag σf ∧ σf.locals = σ.locals ∧
+      ∀ L k, Step (.exec (.assign a e) σ.locals k) (σ.withLocals L)
+        (.next k) (σf.withLocals L) := by
+  simp only [execStmt] at h
+  rw [bind_eq_ok] at h
+  obtain ⟨⟨loc, σ₁⟩, hloc, h⟩ := h
+  obtain ⟨rfl, hA⟩ := evalAssigneeLoc_frag_ok ha hh hloc
+  rw [bind_eq_ok] at h
+  obtain ⟨⟨v, σ₂⟩, hv', h⟩ := h
+  obtain ⟨rfl, hfv, hRv⟩ := evalExpr_frag_ok he hh hv'
+  simp only [assignLoc, bind_eq_ok, pure_eq_ok, Prod.mk.injEq] at h
+  obtain ⟨σf, hst, rfl, rfl⟩ := h
+  obtain ⟨⟨addr, rfl⟩, hhf, hlocals⟩ := storeLoc_frag hh hfv hst
+  refine ⟨σf, rfl, rfl, hhf, hlocals, fun L k => ?_⟩
+  refine Step.assign (hA L) (hRv L) ?_
+  rw [storeLoc_withLocals_base _ L addr v
+    (fun cell t hc ht => (hh _ _ hc).2 t ht), hst]
+  rfl
+
 /-! ## Proven instances
 
 Concrete derivations over rules with no opaque function premises, checking
