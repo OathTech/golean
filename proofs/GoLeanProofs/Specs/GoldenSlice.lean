@@ -1,5 +1,4 @@
 import GoLean.GoCore.Correspondence
-import GoLeanProofs.Specs.SliceCorrespondence
 
 /-!
 # The golden-lowered slice (arc `exit-infra`)

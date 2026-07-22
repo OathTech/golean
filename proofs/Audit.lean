@@ -287,6 +287,17 @@ example := @slice_adequate
   statement reaches the relation's terminal `.panicked` with the same
   message (T1p/T2p mutual panic induction; substrate panic-freedom lemmas;
   witnessed on `x := 1; x = 1/0`).
+- `◌ Surface` (arc `spec-surface`, 2026-07-21) — **the native spec surface's
+  step-0 targets are STATED, not proven**: `GoTriple` (the surface Hoare
+  judgment over `execStmt` runs), `goldenTriple_statement`
+  (`{r ↦ 0} r = incViaCall() {r ↦ 2}` — the pinned-observable form that,
+  once proven, IS entitled to the name "lowering target"),
+  `goldenReturnsTwo_statement` (plain-register: the output cell at address
+  0 holds 2), and the `goldenNotThree_statement` negative twin. The
+  discharging machinery (initial-heap-handover adequacy, the
+  reflection/extraction boundary, the generic exit theorem) is staged in
+  `docs/2026-07-21_native-spec-surface.md` §5. Nothing may cite these
+  `def : Prop`s as established.
 - The **unrestricted** `interpreterSoundStatement`/`interpreterPanicStatement`
   remain `def : Prop` — **stated, not proven**, and false as literally
   stated only for the richer-interpreter reason now (the interpreter covers
@@ -313,6 +324,10 @@ example := @GoLean.Iris.GoldenSlice.wp_incLowered_call
 example := @GoLean.Iris.GoldenSlice.wp_incViaCallLowered_ret2
 example := @GoLean.Iris.GoldenSlice.golden_adequate_computes
 example := @GoLean.Iris.GoldenSlice.golden_interp_computes_two
+example := @GoLean.Surface.GoTriple
+example := @GoLean.Surface.goldenTriple_statement
+example := @GoLean.Surface.goldenReturnsTwo_statement
+example := @GoLean.Surface.goldenNotThree_statement
 example := @GoLean.GoCore.Correspondence.execStmt_frag_sound
 example := @GoLean.GoCore.Correspondence.evalExpr_frag_ok
 

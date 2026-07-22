@@ -114,6 +114,26 @@ else
   bad "golden lowering DRIFTED (re-pin deliberately with the frontend change)"
 fi
 
+# 1c. Surface purity (docs/2026-07-21_native-spec-surface.md D1): the spec
+# surface and its dependency chain stay Iris-free — statements humans read
+# must never mention Iris machinery. Checks DIRECT imports of the surface
+# module(s) against an allowlist, plus the chain link GoldenSlice.
+step "surface purity (Iris-free spec surface)"
+surface_ok=1
+for f in proofs/GoLeanProofs/Surface.lean proofs/GoLeanProofs/Specs/GoldenSlice.lean; do
+  bad_imports=$(grep -E '^import ' "$f" | grep -Ev '^import (GoLean\.|Std\.|GoLeanProofs\.Specs\.GoldenSlice$|GoLeanProofs\.Surface)' || true)
+  if [ -n "$bad_imports" ]; then
+    echo "  $f has non-surface imports:" >&2
+    echo "$bad_imports" | sed 's/^/    /' >&2
+    surface_ok=0
+  fi
+done
+if [ "$surface_ok" = 1 ]; then
+  ok "surface purity (Iris-free imports)"
+else
+  bad "surface module imports outside the Iris-free allowlist"
+fi
+
 # 2. Core build (the frontend / interpreter / relation).
 step "core build (lake build)"
 if lake build 2>&1 | tail -3; then ok "core build"; else bad "core build"; fi
