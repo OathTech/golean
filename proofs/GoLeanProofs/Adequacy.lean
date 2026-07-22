@@ -18,6 +18,7 @@ well-formed initial state), and the generic end-to-end witness.
 
 open Iris Iris.ProgramLogic Iris.Std Iris.Std.PartialMap
 open GoLean GoLean.GoCore GoLean.GoCore.Rel
+open Iris.ProgramLogic.Language.Notation Iris.BI
 
 namespace GoLean.Iris
 
@@ -106,6 +107,89 @@ theorem go_adequacy [GoCoreGpreS .hasLC GF] (c : Config) (σ : ExecState)
     · ipureintro
       exact ⟨rfl, hσwf⟩
   · exact Hwp rfl
+
+/-! ## Arc `exit-infra` (2b): the strong-adequacy operational readout
+
+`go_heap_adequacy` is the exit door for STATE-property specs: the WP carries
+a resource postcondition `Ψ` (e.g. `a.id ↦ cell`), and an extraction
+entailment turns `genHeapInterp σf ∗ Ψ v` into a pure fact about the final
+`ExecState` — surfacing what the Iris proof knows into `adequate`'s φ.
+Built on `wp_strong_adequacy_gen`, whose φ-continuation hands us the FINAL
+state interpretation (the plain `wp_adequacy` route discards it). -/
+
+/-- Sequential `Steps` embed into the (singleton) thread-pool erased-step
+closure — the trace form `adequate` quantifies over. -/
+theorem steps_erased {c c' : Config} {σ σ' : ExecState}
+    (h : Steps c σ c' σ') : ([c], σ) -·->ₜₚ* ([c'], σ') := by
+  induction h with
+  | refl => exact .refl
+  | tail hab hstep ih =>
+    exact FromMathlib.Relation.ReflTransGen.tail ih ⟨[], Language.Step.of_primStep
+      (GoPrimStep.step hstep) (t₁ := []) (t₂ := [])⟩
+
+theorem go_heap_adequacy [GoCoreGpreS .hasLC GF] (c : Config) (σ : ExecState)
+    (Ψ : ∀ [GoCoreGS .hasLC GF], Unit → IProp GF)
+    (φ : Unit → ExecState → Prop) (hσwf : HeapWf σ)
+    (Hwp : ∀ [GoCoreGS .hasLC GF], GoCoreGS.prog GF = σ.functions →
+      ⊢@{IProp GF} (WP c {{ v, Ψ v }}))
+    (Hext : ∀ [GoCoreGS .hasLC GF], GoCoreGS.prog GF = σ.functions →
+      ∀ (σ2 : ExecState) (v : Unit),
+        iprop(genHeapInterp (GF := GF) (H := GoHeapF) (heapToMap σ2.heap) ∗ Ψ v)
+          ⊢ |==> ⌜φ v σ2⌝) :
+    adequate .NotStuck c σ φ := by
+  refine (adequate_alt _ c σ φ).mpr ?_
+  intro t2 σ2 hreach
+  obtain ⟨n, κs, hsteps⟩ := (Language.erasedStep_nSteps _ _).mp hreach
+  apply wp_strong_adequacy_gen (GF := GF) (hlc := .hasLC) .NotStuck
+    (Hsteps := hsteps) (numLaters := fun _ => 0)
+  iintro %Hinv
+  imod iOwn_alloc (E := GhostMapG.elem (K := Nat) (V := HeapCell) (H := GoHeapF))
+    (HeapView.Auth (H := GoHeapF) (.own 1)
+      (Std.PartialMap.map (fun v : HeapCell => toAgree (LeibnizO.mk v))
+        (heapToMap σ.heap)))
+    HeapView.auth_one_valid with ⟨%γh, Hh⟩
+  imod iOwn_alloc (E := GhostMapG.elem (K := Nat) (V := GName) (H := GoHeapF))
+    (HeapView.Auth (H := GoHeapF) (.own 1)
+      (Std.PartialMap.map (fun g : GName => toAgree (LeibnizO.mk g))
+        (∅ : GoHeapF GName)))
+    HeapView.auth_one_valid with ⟨%γm, Hm⟩
+  letI _ : GoCoreGS .hasLC GF := ⟨⟨γh, γm⟩, σ.functions⟩
+  imodintro
+  iexists (fun σ' _ _ _ =>
+    iprop(genHeapInterp (GF := GF) (H := GoHeapF) (heapToMap σ'.heap)
+      ∗ ⌜σ'.functions = σ.functions ∧ HeapWf σ'⌝))
+  iexists [(fun v => Ψ v)], (fun _ => iprop(True)), (fun _ _ _ _ => fupd_intro)
+  dsimp only
+  isplitl [Hh Hm]
+  · isplitl [Hh Hm]
+    · simp only [genHeapInterp]
+      iexists (∅ : GoHeapF GName)
+      isplitr
+      · ipureintro
+        intro k hk
+        simp [Std.PartialMap.dom, LawfulPartialMap.get?_empty] at hk
+      unfold ghost_map_auth
+      iframe Hh Hm
+    · ipureintro
+      exact ⟨rfl, hσwf⟩
+  isplitl
+  · iapply BigSepL2.bigSepL2_singleton
+    exact Hwp rfl
+  iintro %es' %t2' %Heq %Hlen %HNS Hst Hwptp _
+  icases BigSepL2.bigSepL2_cons_inv_right $$ Hwptp with ⟨%e', %_, %Heq', Hpost, H⟩
+  subst Heq' Heq
+  icases BigSepL2.bigSepL2_nil_inv_right $$ H with %Heq
+  subst Heq
+  icases Hst with ⟨Hgh, %Hpure⟩
+  cases h : toVal e'
+  · iapply fupd_mask_intro_discard Std.LawfulSet.empty_subset
+    ipureintro
+    grind
+  · dsimp only [Option.elim_some]
+    imod (Hext rfl σ2 _) $$ [$Hgh $Hpost] with %Hφv
+    iapply fupd_mask_intro_discard Std.LawfulSet.empty_subset
+    ipureintro
+    grind
 
 /-! ## Arc `slice-l5-pure` item 2 — the end-to-end adequacy witness
 

@@ -232,6 +232,16 @@ example := @slice_adequate
   additionally needs a `go_heap_adequacy` variant that hands the initial
   heap's `↦` fragments to the WP proof (HeapLang's `heap_adequacy` shape) —
   tracked as punch-list item 2b, not yet built.
+- `✓ go_heap_adequacy` + `✓ slice_adequate_computes` +
+  `✓ slice_interp_computes_two` — **the 2b operational readout and the
+  LOWERING TARGET are closed** (arc `exit-infra`, 2026-07-21): strong
+  adequacy surfaces the Iris-side `r ↦ 2` into `adequate`'s φ as a final
+  `ExecState` fact, and composing with the correspondence yields: EVERY
+  terminating interpreter run of the slice program ends with a heap cell
+  holding `int 2` — no execution in the proof; no Iris, and not even the
+  relation, in the statement. Honest scope: the cell's address is
+  existential (allocation addresses are dynamic); pinning it via the
+  derivation is a tracked strengthening, as is the `≠ 3` refutation twin.
 - `✓ wp_seqn` — now consumed by the end-to-end witness `adequate_seqn_nil`.
 - `✓ wp_assign_lit` / `✓ wp_deref_store_ref` — **ZERO hypotheses** (arc
   `slice-l5-pure` item 1, 2026-07-20): the formerly-open `hstore` side-condition
@@ -276,6 +286,9 @@ example := @GoLean.GoCore.Correspondence.interpreterPanic_frag
 example := @GoLean.Iris.SliceCorrespondence.panic_shaped_in_relation
 example := @GoLean.Iris.SliceCorrespondence.panic_eq_shaped_in_relation
 example := @GoLean.Iris.SliceCorrespondence.panic_call_arg_in_relation
+example := @GoLean.Iris.go_heap_adequacy
+example := @GoLean.Iris.slice_adequate_computes
+example := @GoLean.Iris.SliceCorrespondence.slice_interp_computes_two
 example := @GoLean.GoCore.Correspondence.execStmt_frag_sound
 example := @GoLean.GoCore.Correspondence.evalExpr_frag_ok
 

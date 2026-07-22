@@ -251,6 +251,50 @@ theorem slice_adequate {ty : Ty} (σ : ExecState) (mid incId fid : FuncId)
     ipureintro
     trivial)
 
+/-- **The 2b operational readout (arc `exit-infra`).** The slice's adequacy
+with the result SURFACED into φ: every terminating run's final heap contains
+a cell holding exactly `int 2` at the run's `r`-cell — the `r ↦ 2` fact the
+Iris proof always knew, now an `ExecState` fact. Built on `go_heap_adequacy`
+(strong adequacy): the WP carries the result cell as its postcondition and
+`pointsTo_loadLoc` extracts it against the final state interpretation. -/
+theorem slice_adequate_computes {ty : Ty} (σ : ExecState)
+    (mid incId fid : FuncId) (hwf : HeapWf σ)
+    (hmain : findFunctionIn? σ.functions mid = some (mainFunc mid incId .int))
+    (hinc : findFunctionIn? σ.functions incId = some (incFunc fid .int ty 1)) :
+    adequate .NotStuck (Config.exec (sliceProg mid .int) [] .stop) σ
+      (fun _ σf => ∃ a : Addr, loadLoc σf (.base a) = .ok (.int 2 .int)) := by
+  refine go_heap_adequacy (GF := GoCoreS) _ _
+    (Ψ := fun _ => iprop(∃ a : Addr,
+      a.id ↦ (⟨some (.int .int), .int 2 .int⟩ : HeapCell))) _ hwf ?_ ?_
+  · intro _ hprog
+    iapply wp_seqn
+    simp only [seqCont]
+    iapply fupd_intro; inext; iapply fupd_intro; iintro Hcred1
+    iapply wp_seq_next
+    iapply fupd_intro; inext; iapply fupd_intro; iintro Hcred2
+    iapply wp_init_int
+    iintro %ra Hra
+    iapply wp_seq_next
+    iapply fupd_intro; inext; iapply fupd_intro; iintro Hcred3
+    iapply (wp_main_returns_two (ta := ra) (ty := ty)
+      (hmain := by rw [hprog]; exact hmain)
+      (hinc := by rw [hprog]; exact hinc)
+      (htgt := by simp [LocalEnv.lookup, Scope.lookup, LocalEnv.declare]))
+    isplitl [Hra]
+    · iexact Hra
+    iintro Hra
+    iapply wp_seq_done
+    iapply fupd_intro; inext; iapply fupd_intro; iintro Hcred4
+    iapply (wp_value' (v := ()))
+    iexists ra
+    iexact Hra
+  · intro _ hprog σ2 v
+    iintro ⟨Hgh, ⟨%a, Hpt⟩⟩
+    imod (pointsTo_loadLoc (σ := σ2) (a := a)) $$ [$Hgh $Hpt] with %Hload
+    imodintro
+    ipureintro
+    exact ⟨a, Hload⟩
+
 end
 
 end GoLean.Iris

@@ -206,4 +206,28 @@ theorem panic_call_arg_in_relation (fuel : Nat) (msg : String)
           exact .div (.intLit 1 .int) (.intLit 0 .int)))
     σ₀_inv hrun
 
+/-- **THE LOWERING TARGET (Arc D finish line, pinned 2026-07-21).** The Iris
+result lowered all the way to a theorem about interpreter executions: EVERY
+terminating interpreter run of the slice program ends with a heap cell
+holding exactly `int 2` — ∀-general over fuel and runs, no execution in the
+proof, no Iris (and not even the relation) in the statement. Derivation:
+the run is a `Steps` derivation (the correspondence witness), embedded into
+the thread-pool trace (`steps_erased`), governed by the strong-adequacy
+readout (`slice_adequate_computes` / `go_heap_adequacy`). -/
+theorem slice_interp_computes_two (fuel : Nat) (σf : ExecState)
+    (ch' : Choices)
+    (hrun : execStmt fuel σ₀ [] (sliceProg mainId .int)
+      = .ok (.normal σf, ch')) :
+    ∃ a : Addr, loadLoc σf (.base a) = .ok (.int 2 .int) := by
+  have hsteps := slice_interp_run_in_relation fuel σf ch' hrun
+  have htp := steps_erased hsteps
+  have hwf : HeapWf σ₀ := by
+    intro n hn
+    rfl
+  have hadeq := slice_adequate_computes (ty := .int .int) σ₀ mainId incId incId
+    hwf (by rfl) (by rfl)
+  have := hadeq.adequate_result [] (σf.withLocals []) () htp
+  obtain ⟨a, hload⟩ := this
+  exact ⟨a, by rw [← loadLoc_withLocals σf [] (.base a)]; exact hload⟩
+
 end GoLean.Iris.SliceCorrespondence
