@@ -27,7 +27,28 @@ mechanism vs per-program artifact; decided with user 2026-07-21):
   (stash result *locations* in `Cont.frame`, erasing the shadowing hazard and
   the fall-through gap, retiring the `avoid`-discipline). Land BEFORE widening
   the fragment — every construct added first doubles the re-proof.
-- **Arc D — the exit infrastructure (proofs-only risk class).**
+- **Arc D — the exit infrastructure (IN PROGRESS on `exit-infra`; 4 commits).**
+  DONE: the widening-loop doc (step-0 intended proofs + negative instances);
+  2b CLOSED — `go_heap_adequacy` on `wp_strong_adequacy_gen` (the spike
+  resolved as the good case: fits our bundle as shipped), `steps_erased`,
+  `slice_adequate_computes`, and **`slice_interp_computes_two` PROVEN** (the
+  lowering target: every terminating run of the slice program ends with a
+  cell holding int 2 — no Iris, no relation in the statement);
+  `NegativeSpecs` module (stuckness pins + divByZero premise pin); the
+  golden-lowering mechanism — `sliceLowered` (the frontend's ACTUAL lowering
+  as a Lean literal), `scripts/check-golden` (both-links staleness guard, in
+  ci — 10 steps now), fragment proofs + `golden_interp_run_in_relation` over
+  the real lowered term; `wp_block_nil` law.
+  **REMAINING (next session): the golden WP walk** →
+  `golden_interp_computes_two`. Enumerated route: `wp_incLowered_call`
+  (wp_call_unary → wp_block_nil → seq/splice walk → wp_inc_via_ptr →
+  seq_done → frame_fall), `wp_incViaCallLowered_ret2` (wp_call_nullary_ret
+  → block → spliced init/assign groups → two lowered-inc calls →
+  $res0-assign → return unwind → wp_frame_return_int),
+  `golden_adequate_computes` (go_heap_adequacy), compose. Then honest-scope
+  strengthenings (existential→pinned address; ≠2-refutation twin) and the
+  arc's audit ask (proofs-only class).
+  Original scope note:
   (1) 2b: `go_heap_adequacy` on `wp_strong_adequacy_gen` — initial-heap `↦`
   handover + final-state extraction; the exit door every future state-property
   spec uses (the raft target is a state property). Known unknown: ergonomics
