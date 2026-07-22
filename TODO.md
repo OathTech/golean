@@ -45,9 +45,17 @@ mechanism vs per-program artifact; decided with user 2026-07-21):
   lowering (`sliceLowered_funcs` is the kernel-checked bridge; first WP use
   of the D1 splice branch via `seqCont_splice`; `wp_inc_via_ptr_env` added
   for pushed-scope lookups). The "hand model ≈ lowering" footnote is retired.
-  **REMAINING: honest-scope strengthenings (existential→pinned address;
-  ≠2-refutation twin) — then the arc's audit ask (proofs-only class, Opus
-  reviewers).**
+  **SCOPE CORRECTION (2026-07-21, user-driven): the `*_computes` theorems
+  prove "computed-SOMEWHERE" (existential address), NOT "returns 2" — a
+  theorem's value is exactly its statement, and the lowering target is
+  claimed only by the pinned-observable form. Design of record for the fix:
+  `docs/2026-07-21_native-spec-surface.md`** — the native spec surface
+  (deep-embedded SL over heaplets + once-proven reflection/extraction
+  boundary; Iris strictly internal; per-program work = shape checks + WP
+  walk + generic exit theorem; refutation twins fall out as corollaries).
+  Staging §5 there; the golden WP walk is reused as-is. Open: whether the
+  surface build-out lands in this arc or the next; then the audit ask
+  (Opus reviewers) + merge sign-off.
   Original scope note:
   (1) 2b: `go_heap_adequacy` on `wp_strong_adequacy_gen` — initial-heap `↦`
   handover + final-state extraction; the exit door every future state-property
