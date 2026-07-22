@@ -233,17 +233,22 @@ example := @slice_adequate
   heap's `↦` fragments to the WP proof (HeapLang's `heap_adequacy` shape) —
   tracked as punch-list item 2b, not yet built.
 - `✓ go_heap_adequacy` + `✓ slice_adequate_computes` +
-  `✓ slice_interp_computes_two` — **the 2b operational readout and the
-  LOWERING TARGET are closed** (arc `exit-infra`, 2026-07-21): strong
-  adequacy surfaces the Iris-side `r ↦ 2` into `adequate`'s φ as a final
+  `✓ slice_interp_computes_two` — **the 2b operational readout is closed in
+  its COMPUTED-SOMEWHERE form** (arc `exit-infra`, 2026-07-21): strong
+  adequacy surfaces an Iris-side `↦ 2` into `adequate`'s φ as a final
   `ExecState` fact, and composing with the correspondence yields: EVERY
-  terminating interpreter run of the slice program ends with a heap cell
+  terminating interpreter run of the slice program ends with SOME heap cell
   holding `int 2` — no execution in the proof; no Iris, and not even the
-  relation, in the statement. Honest scope: the cell's address is
-  existential (allocation addresses are dynamic); pinning it via the
-  derivation is a tracked strengthening, as is the `≠ 3` refutation twin.
-- `✓ golden_interp_computes_two` — **the golden lowering target is closed
-  over the FRONTEND'S OWN OUTPUT** (arc `exit-infra`, 2026-07-21): the full
+  relation, in the statement. **The cell's address is EXISTENTIAL — this is
+  NOT the lowering target** ("the result cell holds 2"): it cannot
+  distinguish "returns 2" from "computed 2 somewhere" (dead frame cells
+  also hold 2). Per `docs/2026-07-21_native-spec-surface.md` D8, the
+  lowering target is claimed only by the pinned-observable triple, staged
+  there as the spec-surface arc (its `≠ 3` refutation twin falls out as a
+  corollary once observables are pinned).
+- `✓ golden_interp_computes_two` — **the computed-somewhere readout holds
+  over the FRONTEND'S OWN OUTPUT** (arc `exit-infra`, 2026-07-21; same
+  existential-address scope as above — NOT the lowering target): the full
   WP walk (`wp_incLowered_call` → `wp_incViaCallLowered_ret2` →
   `golden_adequate_computes`) runs over `GoldenSlice.sliceLowered` — the
   frontend's actual lowering, pinned by `scripts/check-golden` — through

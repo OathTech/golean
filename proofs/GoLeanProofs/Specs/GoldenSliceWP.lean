@@ -303,15 +303,16 @@ theorem golden_adequate_computes {ty : Ty} (σ : ExecState) (fid : FuncId)
 
 end
 
-/-- **THE GOLDEN LOWERING TARGET.** Every terminating interpreter run of
-the driver over THE FRONTEND'S ACTUAL LOWERING (`sliceLowered`, pinned to
-the frontend's output by `scripts/check-golden`) ends with a heap cell
-holding exactly `int 2`. Statement mentions only the interpreter and the
-golden state — no Iris, no relation; the chain (correspondence witness →
-trace erasure → strong adequacy → heap readout) is inside the proof.
-Scope: the address is existential, as in `slice_interp_computes_two` —
-pinning it to the run's `r`-cell is the tracked honest-scope
-strengthening. -/
+/-- **The golden computed-somewhere readout.** Every terminating
+interpreter run of the driver over THE FRONTEND'S ACTUAL LOWERING
+(`sliceLowered`, pinned to the frontend's output by `scripts/check-golden`)
+ends with SOME heap cell holding exactly `int 2`. Statement mentions only
+the interpreter and the golden state — no Iris, no relation; the chain
+(correspondence witness → trace erasure → strong adequacy → heap readout)
+is inside the proof. **Scope: the address is EXISTENTIAL — this is NOT the
+lowering target** ("the result cell holds 2"), per
+`docs/2026-07-21_native-spec-surface.md` D8; the pinned-observable form is
+the spec-surface arc's step-0 target. -/
 theorem golden_interp_computes_two (fuel : Nat) (σf : ExecState)
     (ch' : Choices)
     (hrun : execStmt fuel σg [] goldenProg = .ok (.normal σf, ch')) :

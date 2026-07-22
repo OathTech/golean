@@ -43,7 +43,13 @@ if ! diff -q "$BASE" "$WORK/fresh.repr" > /dev/null; then
   exit 1
 fi
 
-# Link 2: the checked-in Lean term prints the same repr
+# Link 2: the checked-in Lean term prints the same repr.
+# Build the module first: `lake env lean --run` loads the existing .olean,
+# which can be stale relative to an edited GoldenSlice.lean within a single
+# run (2026-07-21 audit hardening — the window self-healed on the next run,
+# but fail-closed means not relying on that).
+(cd proofs && lake build GoLeanProofs.Specs.GoldenSlice > /dev/null) \
+  || { echo "check-golden: FAIL — GoldenSlice build failed (fail closed)" >&2; exit 1; }
 cat > "$WORK/term.lean" <<'LEAN'
 import GoLeanProofs.Specs.GoldenSlice
 def main : IO Unit :=

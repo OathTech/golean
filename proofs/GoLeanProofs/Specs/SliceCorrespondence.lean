@@ -206,11 +206,15 @@ theorem panic_call_arg_in_relation (fuel : Nat) (msg : String)
           exact .div (.intLit 1 .int) (.intLit 0 .int)))
     σ₀_inv hrun
 
-/-- **THE LOWERING TARGET (Arc D finish line, pinned 2026-07-21).** The Iris
-result lowered all the way to a theorem about interpreter executions: EVERY
-terminating interpreter run of the slice program ends with a heap cell
-holding exactly `int 2` — ∀-general over fuel and runs, no execution in the
-proof, no Iris (and not even the relation) in the statement. Derivation:
+/-- **The computed-somewhere operational readout for the slice.** EVERY
+terminating interpreter run of the slice program ends with SOME heap cell
+holding `int 2` — ∀-general over fuel and runs, no execution in the proof,
+no Iris (and not even the relation) in the statement. **Scope (exactly the
+statement, per `docs/2026-07-21_native-spec-surface.md` §1/D8): the
+address is EXISTENTIAL** — this does not distinguish "returns 2" from
+"computed 2 somewhere" (`x`'s and `$res0`'s dead cells also hold 2); the
+*lowering target* proper ("the result cell holds 2") is claimed only by
+the pinned-observable form, staged as the spec-surface arc. Derivation:
 the run is a `Steps` derivation (the correspondence witness), embedded into
 the thread-pool trace (`steps_erased`), governed by the strong-adequacy
 readout (`slice_adequate_computes` / `go_heap_adequacy`). -/

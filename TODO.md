@@ -31,9 +31,10 @@ mechanism vs per-program artifact; decided with user 2026-07-21):
   DONE: the widening-loop doc (step-0 intended proofs + negative instances);
   2b CLOSED — `go_heap_adequacy` on `wp_strong_adequacy_gen` (the spike
   resolved as the good case: fits our bundle as shipped), `steps_erased`,
-  `slice_adequate_computes`, and **`slice_interp_computes_two` PROVEN** (the
-  lowering target: every terminating run of the slice program ends with a
-  cell holding int 2 — no Iris, no relation in the statement);
+  `slice_adequate_computes`, and **`slice_interp_computes_two` PROVEN**
+  (computed-somewhere form: every terminating run of the slice program ends
+  with SOME cell holding int 2, address existential — no Iris, no relation
+  in the statement; see the SCOPE CORRECTION below);
   `NegativeSpecs` module (stuckness pins + divByZero premise pin); the
   golden-lowering mechanism — `sliceLowered` (the frontend's ACTUAL lowering
   as a Lean literal), `scripts/check-golden` (both-links staleness guard, in

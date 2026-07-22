@@ -252,11 +252,15 @@ theorem slice_adequate {ty : Ty} (σ : ExecState) (mid incId fid : FuncId)
     trivial)
 
 /-- **The 2b operational readout (arc `exit-infra`).** The slice's adequacy
-with the result SURFACED into φ: every terminating run's final heap contains
-a cell holding exactly `int 2` at the run's `r`-cell — the `r ↦ 2` fact the
-Iris proof always knew, now an `ExecState` fact. Built on `go_heap_adequacy`
-(strong adequacy): the WP carries the result cell as its postcondition and
-`pointsTo_loadLoc` extracts it against the final state interpretation. -/
+with a result surfaced into φ: every terminating run's final heap contains
+SOME cell holding exactly `int 2`. **Scope: the address is existential** —
+the Iris proof internally establishes `r ↦ 2` for the specific result cell,
+but that precision is NOT carried by this statement (the fresh-allocation
+`∀ ra` cannot be named in φ); the pinned-observable form is the
+spec-surface arc's step-0 target (`docs/2026-07-21_native-spec-surface.md`).
+Built on `go_heap_adequacy` (strong adequacy): the WP carries a result cell
+as its postcondition and `pointsTo_loadLoc` extracts it against the final
+state interpretation. -/
 theorem slice_adequate_computes {ty : Ty} (σ : ExecState)
     (mid incId fid : FuncId) (hwf : HeapWf σ)
     (hmain : findFunctionIn? σ.functions mid = some (mainFunc mid incId .int))
