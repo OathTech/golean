@@ -24,7 +24,7 @@ exit theorem (`goTriple_of_wp`, boundary layer) discharges it; nothing in
 this file or its docstrings claims otherwise.
 -/
 
-open GoLean GoLean.GoCore
+open GoLean GoLean.GoCore GoLean.GoCore.Rel
 
 namespace GoLean.Surface
 
@@ -98,28 +98,67 @@ the boundary layer holds the agreement). -/
 def HeapBounded (hp : Heap) (na : Nat) : Prop :=
   ∀ n : Nat, na ≤ n → Heap.lookup hp (.base ⟨n⟩) = none
 
-/-- **The surface Hoare judgment** (v1 per the design note): over any
-well-formed initial state whose function table is `funcs`, whose locals are
-`env₀`, and whose heap satisfies `P` *exactly* (D4: exact footprint — `P`
-describes the whole initial heap), every terminating `execStmt` run of
-`prog` — under ANY nondeterminism choices — ends in a state some sub-heaplet
-of which satisfies `Q` (D3: intuitionistic postcondition; dead-frame cells
-are framed away). `types`/`methods` sit at their empty defaults (v1 fragment
-scope), and the initial heap carries the fragment-scope side condition
-(`Correspondence.HeapFrag` — interpreter-level vocabulary: cells hold
-fragment values; a `sat` projection cannot see non-base or shadowed
-association-list entries, so this is stated on the raw heap; it weakens as
-the fragment widens). Partial correctness: progress/never-stuck is a
-separate companion judgment, per the design note. -/
+/-- An admissible framed initial state for `P`: well-formed (`bounded`),
+fragment-scoped (`frag` — `Correspondence.HeapFrag`, interpreter-level
+vocabulary: cells hold fragment values; stated on the raw heap because a
+`sat` projection cannot see non-base or shadowed association-list entries;
+weakens as the fragment widens), and its heaplet splits into the
+`P`-footprint `hP` and a frame `F` — the cells the program is NOT given.
+`F` is the "in any heap where the footprint is allocated" quantifier of a
+quantified testcase (`docs/2026-07-21_spec-space.md` §2). -/
+structure InitialSplit (P : HProp) (hp : Heap) (na : Nat)
+    (hP F : Heaplet) : Prop where
+  bounded : HeapBounded hp na
+  frag : Correspondence.HeapFrag { heap := hp }
+  disj : ∀ k, hP.get? k = none ∨ F.get? k = none
+  cover : ∀ k c, (heapletOf hp).get? k = some c
+    ↔ (hP.get? k = some c ∨ F.get? k = some c)
+  sat_pre : sat hP P
+
+/-- **The surface Hoare judgment — FRAME-CLOSED** (the quantified-testcase
+form: "give the program any inputs, in ANY heap where the `P`-cells are
+allocated"). Over any admissible initial state whose heaplet is
+`P`-footprint ⊎ frame `F`, every terminating `execStmt` run of `prog` —
+under ANY nondeterminism choices — ends in a state where (a) some
+`Q`-satisfying heaplet exists DISJOINT from `F`, and (b) **`F` survives
+unchanged** — the program touched nothing it wasn't given. (b) is the
+separation in separation logic: without it a triple is a statement about
+hermetic laboratory heaps, not call sites, and pointer-returning contracts
+could not promise freshness. Intuitionistic on the `Q` side (dead-frame
+cells framed away); `types`/`methods` at their empty defaults (v1 fragment
+scope); partial correctness — `Progress` below is the companion, and
+`GoSpec` bundles both. -/
 def GoTriple (funcs : Array Func) (env₀ : LocalEnv) (P : HProp) (prog : Stmt)
     (Q : HProp) : Prop :=
-  ∀ (hp : Heap) (na : Nat), HeapBounded hp na →
-    Correspondence.HeapFrag { heap := hp } →
-    sat (heapletOf hp) P →
+  ∀ (hp : Heap) (na : Nat) (hP F : Heaplet), InitialSplit P hp na hP F →
     ∀ (fuel : Nat) (ch : Choices) (σf : ExecState) (ch' : Choices),
       execStmt fuel { functions := funcs, locals := env₀, heap := hp, nextAddr := na }
           ch prog = .ok (.normal σf, ch') →
-      ∃ h : Heaplet, h.sub (heapletOf σf.heap) ∧ sat h Q
+      ∃ hQ : Heaplet, (∀ k, hQ.get? k = none ∨ F.get? k = none)
+        ∧ hQ.sub (heapletOf σf.heap) ∧ F.sub (heapletOf σf.heap) ∧ sat hQ Q
+
+/-- **The progress companion**: from any admissible framed initial state,
+every relation-reachable configuration is either the terminal value or can
+step — never stuck. Stated over the trusted relation (`Steps`/`Step`,
+Iris-free). Scope note (tracked as #24): a `.panicked` terminal counts as
+stuck in this reading, so for programs whose WP is provable this also
+implies no reachable panics — the guarantee reads "safe, non-panicking
+execution". -/
+def Progress (funcs : Array Func) (env₀ : LocalEnv) (P : HProp)
+    (prog : Stmt) : Prop :=
+  ∀ (hp : Heap) (na : Nat) (hP F : Heaplet), InitialSplit P hp na hP F →
+    ∀ (c' : Config) (σ' : ExecState),
+      Steps (.exec prog env₀ .stop)
+        { functions := funcs, locals := env₀, heap := hp, nextAddr := na } c' σ' →
+      c' = .next .stop ∨ ∃ (c'' : Config) (σ'' : ExecState), Step c' σ' c'' σ''
+
+/-- **The full surface judgment**: the frame-closed triple AND progress —
+"runs safely, and every terminating run delivers `Q` without touching the
+frame". This is the form specs should be stated in; a triple alone is
+satisfiable by a program that always crashes. -/
+def GoSpec (funcs : Array Func) (env₀ : LocalEnv) (P : HProp) (prog : Stmt)
+    (Q : HProp) : Prop :=
+  GoTriple funcs env₀ P prog Q ∧ Progress funcs env₀ P prog
 
 /-! ## Step-0 intended statements (the spec-surface arc's targets)
 
@@ -153,6 +192,13 @@ the pinned-observable form that (unlike the existential `*_computes`
 theorems) IS entitled to the name "lowering target" once proven. -/
 def goldenTriple_statement : Prop :=
   GoTriple sliceLowered.funcs outEnv outCell0 goldenDriver outCell2
+
+open GoLean.Iris.GoldenSlice in
+/-- **Step-0 target A′: the full golden spec** — the frame-closed triple
+plus progress, as one judgment: safe non-panicking execution that delivers
+`r ↦ 2` and touches nothing outside its footprint. -/
+def goldenSpec_statement : Prop :=
+  GoSpec sliceLowered.funcs outEnv outCell0 goldenDriver outCell2
 
 open GoLean.Iris.GoldenSlice in
 /-- The concrete seeded initial state for the system-register statements:

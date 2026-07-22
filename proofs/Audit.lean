@@ -301,10 +301,19 @@ example := @slice_adequate
   extraction reconstructs genuine disjointness from `DFrac` validity), and
   the generic exit theorem `goTriple_of_wp` — per-program obligations are
   exactly the fragment shape checks plus the WP proof (the golden walk,
-  reused unchanged). v1 honest scope: `GoTriple` carries the
-  fragment-scope side condition (`HeapFrag` on the raw initial heap) and
-  exact-footprint preconditions (D4); partial correctness (progress is the
-  separate `adequate .NotStuck` side).
+  reused unchanged — twice now: the frame-closure upgrade below also left
+  it untouched). **Frame closure + progress landed (same arc, later):**
+  `GoTriple` is now FRAME-CLOSED — the quantified-testcase form: any heap
+  where the `P`-footprint is allocated, and the frame provably survives
+  untouched (`F.sub` of the final heap) — with Iris's `wp_frame_l`
+  carrying the frame inside `goSpec_of_wp` so the per-program WP
+  obligation never mentions it; and `Progress` (every relation-reachable
+  configuration is terminal or can step, from `adequate_not_stuck`) is
+  bundled with the triple as `GoSpec`. `goldenSpec` proves the full
+  judgment for the golden program. v1 honest scope: the fragment-scope
+  side condition (`HeapFrag` on the raw initial heap) remains; a
+  `.panicked` terminal counts as stuck, so `Progress` implies no reachable
+  panics (#24 scope).
 - The **unrestricted** `interpreterSoundStatement`/`interpreterPanicStatement`
   remain `def : Prop` — **stated, not proven**, and false as literally
   stated only for the richer-interpreter reason now (the interpreter covers
@@ -339,6 +348,10 @@ example := @GoLean.Iris.go_heap_adequacy_own
 example := @GoLean.Iris.reflect
 example := @GoLean.Iris.extract
 example := @GoLean.Iris.goTriple_of_wp
+example := @GoLean.Iris.goSpec_of_wp
+example := @GoLean.Surface.GoSpec
+example := @GoLean.Surface.Progress
+example := @GoLean.Surface.goldenSpec
 example := @GoLean.Surface.goldenTriple
 example := @GoLean.Surface.goldenReturnsTwo
 example := @GoLean.Surface.goldenNotThree

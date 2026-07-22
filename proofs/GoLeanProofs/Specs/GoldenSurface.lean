@@ -26,12 +26,15 @@ open GoLean.Surface GoLean.Iris GoLean.Iris.GoldenSlice
 
 namespace GoLean.Surface
 
-/-- **Step-0 target A, proven: the golden triple.**
-`{r ↦ 0} r = incViaCall() {r ↦ 2}` — a native surface judgment over
-interpreter runs, discharged through the once-proven exit pipe. -/
-theorem goldenTriple : goldenTriple_statement := by
-  unfold goldenTriple_statement
-  refine goTriple_of_wp ?_ ?_ ?_
+/-- **Step-0 target A′, proven: the full golden spec** — the FRAME-CLOSED
+triple (`{r ↦ 0} r = incViaCall() {r ↦ 2}` in any heap where the output
+cell is allocated, frame untouched) plus progress (safe, non-panicking
+execution), discharged through the once-proven exit pipe. The WP
+obligation is `wp_incViaCallLowered_ret2` reused unchanged — the frame
+never appears in the per-program proof. -/
+theorem goldenSpec : goldenSpec_statement := by
+  unfold goldenSpec_statement
+  refine goSpec_of_wp ?_ ?_ ?_
   · -- shape check: the driver is a fragment statement
     exact .call
       (by intro a ha; simp at ha; subst ha; exact .var _)
@@ -52,6 +55,14 @@ theorem goldenTriple : goldenTriple_statement := by
     iapply (wp_value' (v := ()))
     iexact H2
 
+/-- **Step-0 target A, proven: the golden triple** (the triple half of
+`goldenSpec`). -/
+theorem goldenTriple : goldenTriple_statement := by
+  unfold goldenTriple_statement
+  have h := goldenSpec
+  unfold goldenSpec_statement GoSpec at h
+  exact h.1
+
 /-- **Step-0 target B, proven — THE LOWERING TARGET.** Every terminating
 interpreter run of the seeded driver over the frontend's actual lowering
 leaves `int 2` in the designated output cell at base address 0. Plain
@@ -62,23 +73,35 @@ theorem goldenReturnsTwo : goldenReturnsTwo_statement := by
   intro fuel ch σf ch' hrun
   have htriple := goldenTriple
   unfold goldenTriple_statement at htriple
-  have hres := htriple goldenOut.heap 1
-    (by
-      intro n hn
-      obtain ⟨m, rfl⟩ : ∃ m, n = m + 1 := ⟨n - 1, by omega⟩
-      rfl)
-    (by
-      intro loc cell h
-      simp only [goldenOut, Heap.lookup] at h
-      split at h
-      · injection h with h'
-        subst h'
-        exact ⟨.int 0 .int, fun t ht => by
-          injection ht with ht'; subst ht'; exact .int .int⟩
-      · exact absurd h (by simp))
-    (by rfl)
+  have hres := htriple goldenOut.heap 1 (heapletOf goldenOut.heap)
+    (∅ : Heaplet)
+    { bounded := by
+        intro n hn
+        obtain ⟨m, rfl⟩ : ∃ m, n = m + 1 := ⟨n - 1, by omega⟩
+        rfl
+      frag := by
+        intro loc cell h
+        simp only [goldenOut, Heap.lookup] at h
+        split at h
+        · injection h with h'
+          subst h'
+          exact ⟨.int 0 .int, fun t ht => by
+            injection ht with ht'; subst ht'; exact .int .int⟩
+        · exact absurd h (by simp)
+      disj := fun k => .inr (by
+        rw [heaplet_get?_eq]
+        exact LawfulPartialMap.get?_empty (M := GoHeapF) (k := k))
+      cover := fun k c => by
+        constructor
+        · exact fun h => .inl h
+        · rintro (h | h)
+          · exact h
+          · rw [heaplet_get?_eq,
+              LawfulPartialMap.get?_empty (M := GoHeapF) (k := k)] at h
+            cases h
+      sat_pre := by rfl }
     fuel ch σf ch' hrun
-  obtain ⟨h, hsub, hsat⟩ := hres
+  obtain ⟨h, _hd, hsub, _hF, hsat⟩ := hres
   rw [show h = (∅ : Heaplet).insert 0 ⟨some (.int .int), .int 2 .int⟩
     from hsat] at hsub
   have hget := hsub 0 ⟨some (.int .int), .int 2 .int⟩ (by

@@ -254,6 +254,15 @@ theorem ownHeaplet_sub {m : GoHeapF HeapCell} {h : GoHeapF HeapCell} :
   intro k c hk
   exact hsub k c hk
 
+/-- A sub-heaplet fact about a disjoint union decomposes (via
+`union_cover`) — the pure tail of framed extraction. -/
+theorem sub_union_split {hQ F m : GoHeapF HeapCell}
+    (hdisj : ∀ k, hQ.get? k = none ∨ F.get? k = none)
+    (hsub : Heaplet.sub (Std.PartialMap.union (M := GoHeapF) hQ F) m) :
+    Heaplet.sub hQ m ∧ Heaplet.sub F m :=
+  ⟨fun k c hk => hsub k c ((union_cover hdisj k c).mpr (.inl hk)),
+   fun k c hk => hsub k c ((union_cover hdisj k c).mpr (.inr hk))⟩
+
 /-- **Extraction.** The state interpretation over the final heap plus an
 embedded postcondition yields the pure native fact: some sub-heaplet of the
 final heap satisfies `Q`. This is the once-proven postcondition crossing
