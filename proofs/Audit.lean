@@ -242,6 +242,19 @@ example := @slice_adequate
   relation, in the statement. Honest scope: the cell's address is
   existential (allocation addresses are dynamic); pinning it via the
   derivation is a tracked strengthening, as is the `≠ 3` refutation twin.
+- `✓ golden_interp_computes_two` — **the golden lowering target is closed
+  over the FRONTEND'S OWN OUTPUT** (arc `exit-infra`, 2026-07-21): the full
+  WP walk (`wp_incLowered_call` → `wp_incViaCallLowered_ret2` →
+  `golden_adequate_computes`) runs over `GoldenSlice.sliceLowered` — the
+  frontend's actual lowering, pinned by `scripts/check-golden` — through
+  every Arc C mechanism the hand model never exercised: `wp_block_nil` +
+  pushed-scope lookups, D1 `seqCont` splices of nested `.seqn` groups
+  (`seqCont_splice`, the first use of the splice branch in a WP proof), the
+  explicit `x = 0` assignment, the synthesized `$res0` result local.
+  Composed with `golden_interp_run_in_relation`: every terminating
+  interpreter run of the driver over the lowered program ends with a heap
+  cell holding `int 2`. The "hand model ≈ lowering" manual claim is retired;
+  the same existential-address honest scope as the slice version applies.
 - `✓ wp_seqn` — now consumed by the end-to-end witness `adequate_seqn_nil`.
 - `✓ wp_assign_lit` / `✓ wp_deref_store_ref` — **ZERO hypotheses** (arc
   `slice-l5-pure` item 1, 2026-07-20): the formerly-open `hstore` side-condition
@@ -290,6 +303,11 @@ example := @GoLean.Iris.go_heap_adequacy
 example := @GoLean.Iris.slice_adequate_computes
 example := @GoLean.Iris.SliceCorrespondence.slice_interp_computes_two
 example := @GoLean.Iris.GoldenSlice.golden_interp_run_in_relation
+example := @GoLean.Iris.GoldenSlice.sliceLowered_funcs
+example := @GoLean.Iris.GoldenSlice.wp_incLowered_call
+example := @GoLean.Iris.GoldenSlice.wp_incViaCallLowered_ret2
+example := @GoLean.Iris.GoldenSlice.golden_adequate_computes
+example := @GoLean.Iris.GoldenSlice.golden_interp_computes_two
 example := @GoLean.GoCore.Correspondence.execStmt_frag_sound
 example := @GoLean.GoCore.Correspondence.evalExpr_frag_ok
 

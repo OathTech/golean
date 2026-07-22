@@ -360,6 +360,38 @@ theorem wp_inc_via_ptr {pa a : Addr} {pdecl : Option Ty} {ty : Ty}
       exprR_inc_det (by simp [LocalEnv.lookup, Scope.lookup]) hlp rfl hla h)
     (fun σ₁ hla => storeLoc_int_cell hla (m + kind.normalize lit))
 
+/-- Env-general variant of `wp_inc_via_ptr`: `p` resolves anywhere in `env`
+(premise `hres`, a fixed-env side-condition discharged by `simp` at every
+use — same status as `wp_call_unary`'s `hx`). Needed by the golden walk: the
+frontend block-wraps every body, so the parameter sits under a pushed empty
+scope (`[] :: [[("p", pa)]]`), which the concrete-env witness above cannot
+match. `wp_inc_via_ptr` remains the zero-hypothesis non-vacuity witness. -/
+theorem wp_inc_via_ptr_env {pa a : Addr} {pdecl : Option Ty} {ty : Ty}
+    {kind : IntKind} {m lit : Int} {p : String} {env : LocalEnv} {k}
+    (hres : LocalEnv.lookup env p = some (.base pa)) :
+    pa.id ↦ (⟨pdecl, .addr (.base a)⟩ : HeapCell)
+      ∗ a.id ↦ (⟨some (.int kind), .int m kind⟩ : HeapCell)
+      ∗ (pa.id ↦ (⟨pdecl, .addr (.base a)⟩ : HeapCell)
+          ∗ a.id ↦ (⟨some (.int kind), .int (kind.normalize (m + kind.normalize lit)) kind⟩ : HeapCell)
+          -∗ WP (Config.next k) @ s ; E {{ Φ }})
+      ⊢ WP (Config.exec
+              (.assign (.addr (.var p))
+                (.add (.deref (.var p) ty) (.intLit lit kind)))
+              env k) @ s ; E {{ Φ }} :=
+  wp_store_via_ptr (pa := pa) (a := a)
+    (v := .int (kind.normalize (m + kind.normalize lit)) kind)
+    hres
+    rfl
+    (fun σ₁ hlp hla =>
+      ExprR.addInt
+        (ExprR.deref (ExprR.var (loc := .base pa) hres
+            (by rw [loadLoc_base_of_lookup hlp]))
+          (by rw [loadLoc_base_of_lookup hla]))
+        ExprR.intLit
+        (intKind_compatibleResult_self kind))
+    (fun σ₁ out hlp hla h => exprR_inc_det hres hlp rfl hla h)
+    (fun σ₁ hla => storeLoc_int_cell hla (m + kind.normalize lit))
+
 /-! ## Arc `slice-call-frame` item 4b — the call law
 
 `Step.call` enters a fresh frame, ALLOCATING the parameter cell. The law's
@@ -434,7 +466,7 @@ theorem wp_assign_var_int {sa ta : Addr} {kind : IntKind} {n : Int}
           ∗ ta.id ↦ (⟨some (.int kind), .int (kind.normalize n) kind⟩ : HeapCell)
           -∗ WP (Config.next k) @ s ; E {{ Φ }})
       ⊢ WP (Config.exec (.assign (.var tgt) (.var src)) env k) @ s ; E {{ Φ }} :=
-  wp_assign_var hres_t hres_s (fun σ₁ hlt => storeLoc_int_cell hlt n)
+  wp_assign_var hres_t hres_s (fun _ hlt => storeLoc_int_cell hlt n)
 
 end
 

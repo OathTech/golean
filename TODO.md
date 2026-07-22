@@ -38,16 +38,16 @@ mechanism vs per-program artifact; decided with user 2026-07-21):
   golden-lowering mechanism — `sliceLowered` (the frontend's ACTUAL lowering
   as a Lean literal), `scripts/check-golden` (both-links staleness guard, in
   ci — 10 steps now), fragment proofs + `golden_interp_run_in_relation` over
-  the real lowered term; `wp_block_nil` law.
-  **REMAINING (next session): the golden WP walk** →
-  `golden_interp_computes_two`. Enumerated route: `wp_incLowered_call`
-  (wp_call_unary → wp_block_nil → seq/splice walk → wp_inc_via_ptr →
-  seq_done → frame_fall), `wp_incViaCallLowered_ret2` (wp_call_nullary_ret
-  → block → spliced init/assign groups → two lowered-inc calls →
-  $res0-assign → return unwind → wp_frame_return_int),
-  `golden_adequate_computes` (go_heap_adequacy), compose. Then honest-scope
-  strengthenings (existential→pinned address; ≠2-refutation twin) and the
-  arc's audit ask (proofs-only class).
+  the real lowered term; `wp_block_nil` law; **the golden WP walk DONE
+  (2026-07-21)** — `Specs/GoldenSliceWP.lean`: `wp_incLowered_call` +
+  `wp_incViaCallLowered_call`/`_ret2` + `golden_adequate_computes` +
+  **`golden_interp_computes_two` PROVEN** over the frontend's actual
+  lowering (`sliceLowered_funcs` is the kernel-checked bridge; first WP use
+  of the D1 splice branch via `seqCont_splice`; `wp_inc_via_ptr_env` added
+  for pushed-scope lookups). The "hand model ≈ lowering" footnote is retired.
+  **REMAINING: honest-scope strengthenings (existential→pinned address;
+  ≠2-refutation twin) — then the arc's audit ask (proofs-only class, Opus
+  reviewers).**
   Original scope note:
   (1) 2b: `go_heap_adequacy` on `wp_strong_adequacy_gen` — initial-heap `↦`
   handover + final-state extraction; the exit door every future state-property

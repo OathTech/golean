@@ -299,7 +299,7 @@ theorem wp_frame_return_int {ra ta : Addr} {kind : IntKind} {n : Int}
           -∗ WP (Config.next k) @ s ; E {{ Φ }})
       ⊢ WP (Config.returning (.frame [.base ta] [.base ra] k))
           @ s ; E {{ Φ }} :=
-  wp_frame_return (fun σ₁ hlt => storeLoc_int_cell hlt n)
+  wp_frame_return (fun _ hlt => storeLoc_int_cell hlt n)
 
 end
 
