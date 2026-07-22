@@ -74,6 +74,33 @@ theorem wp_frame_fall {k} :
           exact ⟨rfl, rfl, rfl, rfl⟩))
   iexact H
 
+/-- Pure, deterministic step: enter a declaration-free block
+(`Step.block` with the empty `DeclsR` leg) — the shape the frontend wraps
+every function body and control-flow branch in. The block's sequence runs
+under a pushed (empty) scope; declaration-carrying blocks get their own law
+when a proof first needs one. -/
+theorem wp_block_nil {ss : Array Stmt} {env k} :
+    (|={E}[E]▷=> £ 1 -∗
+      WP (Config.next (.seq ss.toList env.pushScope k)) @ s ; E {{ Φ }}) ⊢
+      WP (Config.exec (.block #[] ss) env k) @ s ; E {{ Φ }} := by
+  iintro H
+  iapply (wp_lift_pure_det_step_no_fork (E₂ := E)
+    (e₂ := Config.next (.seq ss.toList env.pushScope k))
+    (Hsafe := by
+      intro σ
+      cases s
+      · exact ⟨[], _, σ, [], GoPrimStep.step (Step.block DeclsR.nil)⟩
+      · rfl)
+    (Hpuredet := by
+      intro σ obs e₂' σ₂ eₜ' h
+      cases h with
+      | step st =>
+        cases st with
+        | block hd =>
+          cases hd
+          exact ⟨rfl, rfl, rfl, rfl⟩))
+  iexact H
+
 /-- Pure, deterministic step: advance a sequence to its next statement
 (`Step.seqNext`). -/
 theorem wp_seq_next {t : Stmt} {rest : List Stmt} {env k} :
