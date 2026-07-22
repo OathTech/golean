@@ -179,6 +179,8 @@ way an arc reaches `main`).
    bundled into the merge, never assumed from it.
 ### How to run the audit (the pattern behind step 3)
 
+- **Reviewer model: Opus** — pre-merge audit reviewers and their verifiers run
+  on Opus-class models (user direction 2026-07-21); don't silently downgrade.
 - **Audit adversarially *before* claiming a milestone or merging, not after** —
   self-certification is unreliable, so audit before building a mountain on it.
   Audit the branch's **final state**: an audit of an earlier snapshot does not
