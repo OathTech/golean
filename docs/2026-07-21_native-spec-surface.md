@@ -90,7 +90,12 @@ for end-to-end theorems.
   giving the standard heaplet semantics (`sep` = disjoint split). Deep
   embedding is deliberate: both boundary crossings are proven by induction on
   `HProp` syntax, once.
-- **The triple** (v1 shape, partial correctness over terminating runs):
+- **The triple** (v1 sketch as first staged; **superseded 2026-07-21 by
+  the shipped frame-closed form** — `GoTriple` in
+  `proofs/GoLeanProofs/Surface.lean` quantifies over a frame `F` via
+  `InitialSplit` and concludes net frame preservation; see
+  `docs/2026-07-21_spec-space.md` §6 and the statement-shape trio. The
+  sketch below is kept for the design history):
 
   ```
   GoTriple (P : HProp) (env₀) (prog : Stmt) (Q : HProp) : Prop :=

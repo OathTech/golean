@@ -120,11 +120,13 @@ form: "give the program any inputs, in ANY heap where the `P`-cells are
 allocated"). Over any admissible initial state whose heaplet is
 `P`-footprint ⊎ frame `F`, every terminating `execStmt` run of `prog` —
 under ANY nondeterminism choices — ends in a state where (a) some
-`Q`-satisfying heaplet exists DISJOINT from `F`, and (b) **`F` survives
-unchanged** — the program touched nothing it wasn't given. (b) is the
-separation in separation logic: without it a triple is a statement about
-hermetic laboratory heaps, not call sites, and pointer-returning contracts
-could not promise freshness. Intuitionistic on the `Q` side (dead-frame
+`Q`-satisfying heaplet exists DISJOINT from `F`, and (b) **every binding
+of `F` is intact in the final heap** (net frame preservation — precisely
+`F.sub`; as a terminal-state judgment this is the strongest observable
+form: it does not, and cannot, speak about intermediate configurations).
+(b) is the separation in separation logic: without it a triple is a
+statement about hermetic laboratory heaps, not call sites, and
+pointer-returning contracts could not promise freshness. Intuitionistic on the `Q` side (dead-frame
 cells framed away); `types`/`methods` at their empty defaults (v1 fragment
 scope); partial correctness — `Progress` below is the companion, and
 `GoSpec` bundles both. -/
@@ -153,9 +155,9 @@ def Progress (funcs : Array Func) (env₀ : LocalEnv) (P : HProp)
       c' = .next .stop ∨ ∃ (c'' : Config) (σ'' : ExecState), Step c' σ' c'' σ''
 
 /-- **The full surface judgment**: the frame-closed triple AND progress —
-"runs safely, and every terminating run delivers `Q` without touching the
-frame". This is the form specs should be stated in; a triple alone is
-satisfiable by a program that always crashes. -/
+"runs safely, and every terminating run delivers `Q` with the frame's
+bindings intact". This is the form specs should be stated in; a triple
+alone is satisfiable by a program that always crashes. -/
 def GoSpec (funcs : Array Func) (env₀ : LocalEnv) (P : HProp) (prog : Stmt)
     (Q : HProp) : Prop :=
   GoTriple funcs env₀ P prog Q ∧ Progress funcs env₀ P prog
@@ -166,7 +168,7 @@ def GoSpec (funcs : Array Func) (env₀ : LocalEnv) (P : HProp) (prog : Stmt)
 reads: *calling `fid(args)` in any admissible heap satisfying `P` — with
 any frame, into any caller target cell with any prior value — terminates
 only in states where the target cell received some `n` with `Q n`, beside
-`P`'s leftovers, the frame untouched.* The return value is observed
+`P`'s leftovers, the frame's bindings intact.* The return value is observed
 exactly where Go's call protocol delivers it: the caller's target cell,
 written at frame exit from the callee's named result locals — the same
 values `collectResults`/the differential runner reads, and the binding

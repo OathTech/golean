@@ -80,7 +80,8 @@ mechanism vs per-program artifact; decided with user 2026-07-21):
   observed at the caller's target cell, the call protocol's frame-exit
   observation; `(T, error)` queued behind the interface widening),
   `goldenFuncSpec` proven ("incViaCall() needs no heap and returns 2" —
-  the golden walk's FOURTH unchanged reuse). **THE TRIO IS COMPLETE.**
+  the golden walk unchanged throughout: three direct applications across
+  four statement shapes). **THE TRIO IS COMPLETE.**
   REMAINING: the arc's audit ask (Opus reviewers) + merge sign-off; then
   future widenings per the design notes (heaplet-canonical GoTriple
   dropping the `HeapFrag` side condition, `var x ⇓ v` sugar, arity-general

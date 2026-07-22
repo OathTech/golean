@@ -58,8 +58,11 @@ theorem goldenSpec : goldenSpec_statement := by
 /-- **Step-0 target A″, proven: the golden function spec** — the
 engineer-readable form: `incViaCall()` needs no heap and returns 2, into
 any caller cell, over any prior value, beside any frame. The WP obligation
-is `wp_incViaCallLowered_ret2` reused unchanged — the FOURTH reuse of the
-same walk across four different statement shapes. -/
+is `wp_incViaCallLowered_ret2` reused unchanged — its THIRD direct
+application (after `golden_adequate_computes` and `goldenSpec`), carrying
+its fourth statement shape (`goldenTriple` derives from `goldenSpec`
+without touching the walk). (Count corrected per the 2026-07-21 pre-merge
+audit.) -/
 theorem goldenFuncSpec : goldenFuncSpec_statement := by
   unfold goldenFuncSpec_statement GoFuncSpec
   intro ra w

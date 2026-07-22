@@ -116,22 +116,33 @@ fi
 
 # 1c. Surface purity (docs/2026-07-21_native-spec-surface.md D1): the spec
 # surface and its dependency chain stay Iris-free — statements humans read
-# must never mention Iris machinery. Checks DIRECT imports of the surface
-# module(s) against an allowlist, plus the chain link GoldenSlice.
+# must never mention Iris machinery. Two checks close the chain (2026-07-21
+# audit hardening — the original checked only two files' direct imports
+# against an unanchored allowlist, which was fail-open):
+#   (a) the surface files' DIRECT imports against an exactly-anchored
+#       allowlist (GoLean core, Std, and the golden-term chain link);
+#   (b) the GoLean/ core — the only allowlisted prefix with its own
+#       dependency freedom — contains NO Iris imports anywhere, so every
+#       transitive path from the surface stays Iris-free.
 step "surface purity (Iris-free spec surface)"
 surface_ok=1
 for f in proofs/GoLeanProofs/Surface.lean proofs/GoLeanProofs/Specs/GoldenSlice.lean; do
-  bad_imports=$(grep -E '^import ' "$f" | grep -Ev '^import (GoLean\.|Std\.|GoLeanProofs\.Specs\.GoldenSlice$|GoLeanProofs\.Surface)' || true)
+  bad_imports=$(grep -E '^import ' "$f" | grep -Ev '^import (GoLean\.|Std\.|GoLeanProofs\.Specs\.GoldenSlice$|GoLeanProofs\.Surface$)' || true)
   if [ -n "$bad_imports" ]; then
     echo "  $f has non-surface imports:" >&2
     echo "$bad_imports" | sed 's/^/    /' >&2
     surface_ok=0
   fi
 done
+if grep -rEq '^import Iris' GoLean/ --include='*.lean'; then
+  echo "  GoLean/ core has Iris imports (taints the surface chain):" >&2
+  grep -rEl '^import Iris' GoLean/ --include='*.lean' | sed 's/^/    /' >&2
+  surface_ok=0
+fi
 if [ "$surface_ok" = 1 ]; then
-  ok "surface purity (Iris-free imports)"
+  ok "surface purity (Iris-free imports, chain-closed)"
 else
-  bad "surface module imports outside the Iris-free allowlist"
+  bad "surface purity violated (Iris reachable from the spec surface)"
 fi
 
 # 2. Core build (the frontend / interpreter / relation).

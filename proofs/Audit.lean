@@ -316,7 +316,9 @@ example := @slice_adequate
   protocol's/`collectResults`' frame-exit observation; `(T, error)`
   queued behind the interface widening) — "`incViaCall()` needs no heap
   and returns 2", ∀ target cell, prior value, and frame; the golden WP
-  walk reused unchanged a fourth time. v1 honest scope: the fragment-scope
+  walk unchanged throughout (three direct applications, four statement
+  shapes — the triple derives from `goldenSpec`). v1 honest scope: the
+  fragment-scope
   side condition (`HeapFrag` on the raw initial heap) remains; a
   `.panicked` terminal counts as stuck, so `Progress` implies no reachable
   panics (#24 scope).
