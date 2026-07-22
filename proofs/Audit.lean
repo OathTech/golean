@@ -310,7 +310,13 @@ example := @slice_adequate
   obligation never mentions it; and `Progress` (every relation-reachable
   configuration is terminal or can step, from `adequate_not_stuck`) is
   bundled with the triple as `GoSpec`. `goldenSpec` proves the full
-  judgment for the golden program. v1 honest scope: the fragment-scope
+  judgment for the golden program, and `goldenFuncSpec` proves the
+  function-level quantified-testcase form (`GoFuncSpec`, v1: unary int
+  result, return observed at the caller's target cell = the call
+  protocol's/`collectResults`' frame-exit observation; `(T, error)`
+  queued behind the interface widening) — "`incViaCall()` needs no heap
+  and returns 2", ∀ target cell, prior value, and frame; the golden WP
+  walk reused unchanged a fourth time. v1 honest scope: the fragment-scope
   side condition (`HeapFrag` on the raw initial heap) remains; a
   `.panicked` terminal counts as stuck, so `Progress` implies no reachable
   panics (#24 scope).
@@ -351,7 +357,9 @@ example := @GoLean.Iris.goTriple_of_wp
 example := @GoLean.Iris.goSpec_of_wp
 example := @GoLean.Surface.GoSpec
 example := @GoLean.Surface.Progress
+example := @GoLean.Surface.GoFuncSpec
 example := @GoLean.Surface.goldenSpec
+example := @GoLean.Surface.goldenFuncSpec
 example := @GoLean.Surface.goldenTriple
 example := @GoLean.Surface.goldenReturnsTwo
 example := @GoLean.Surface.goldenNotThree

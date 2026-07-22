@@ -160,6 +160,27 @@ def GoSpec (funcs : Array Func) (env₀ : LocalEnv) (P : HProp) (prog : Stmt)
     (Q : HProp) : Prop :=
   GoTriple funcs env₀ P prog Q ∧ Progress funcs env₀ P prog
 
+/-- **The function-level quantified-testcase form** (v1: unary int result;
+`(T, error)` returns are queued behind the interface widening —
+`docs/2026-07-21_spec-space.md` §6). `GoFuncSpec funcs fid kind args P Q`
+reads: *calling `fid(args)` in any admissible heap satisfying `P` — with
+any frame, into any caller target cell with any prior value — terminates
+only in states where the target cell received some `n` with `Q n`, beside
+`P`'s leftovers, the frame untouched.* The return value is observed
+exactly where Go's call protocol delivers it: the caller's target cell,
+written at frame exit from the callee's named result locals — the same
+values `collectResults`/the differential runner reads, and the binding
+point that stays correct when `defer` (which may mutate named results
+after `return`) enters the fragment. -/
+def GoFuncSpec (funcs : Array Func) (fid : FuncId) (kind : IntKind)
+    (args : Array Expr) (P : HProp) (Q : Int → HProp) : Prop :=
+  ∀ (ra : Nat) (w : GoValue),
+    GoSpec funcs [[("$callres", Loc.base ⟨ra⟩)]]
+      (.sep (.pointsTo ra ⟨some (.int kind), w⟩) P)
+      (.call #[.var "$callres"] fid args)
+      (.ex fun (n : Int) =>
+        .sep (.pointsTo ra ⟨some (.int kind), .int n kind⟩) (Q n))
+
 /-! ## Step-0 intended statements (the spec-surface arc's targets)
 
 Stated FIRST, per the widening loop (`docs/2026-07-21_widening-loop.md`):
@@ -199,6 +220,15 @@ plus progress, as one judgment: safe non-panicking execution that delivers
 `r ↦ 2` and touches nothing outside its footprint. -/
 def goldenSpec_statement : Prop :=
   GoSpec sliceLowered.funcs outEnv outCell0 goldenDriver outCell2
+
+open GoLean.Iris.GoldenSlice in
+/-- **Step-0 target A″: the golden FUNCTION spec** — the form an engineer
+reads: "`incViaCall()` takes no arguments, needs no heap, and returns 2" —
+∀-quantified over the caller's target cell, its prior value, and the
+frame. -/
+def goldenFuncSpec_statement : Prop :=
+  GoFuncSpec sliceLowered.funcs ⟨"incViaCall"⟩ .int #[] .emp
+    (fun n => .pure (n = 2))
 
 open GoLean.Iris.GoldenSlice in
 /-- The concrete seeded initial state for the system-register statements:

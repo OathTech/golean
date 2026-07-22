@@ -55,6 +55,36 @@ theorem goldenSpec : goldenSpec_statement := by
     iapply (wp_value' (v := ()))
     iexact H2
 
+/-- **Step-0 target A″, proven: the golden function spec** — the
+engineer-readable form: `incViaCall()` needs no heap and returns 2, into
+any caller cell, over any prior value, beside any frame. The WP obligation
+is `wp_incViaCallLowered_ret2` reused unchanged — the FOURTH reuse of the
+same walk across four different statement shapes. -/
+theorem goldenFuncSpec : goldenFuncSpec_statement := by
+  unfold goldenFuncSpec_statement GoFuncSpec
+  intro ra w
+  refine goSpec_of_wp ?_ ?_ ?_
+  · exact .call
+      (by intro a ha; simp at ha; subst ha; exact .var _)
+      (by intro e he; simp at he)
+  · exact σg_inv.funcs
+  · intro _inst hprog
+    simp only [embed]
+    iintro ⟨H0, -⟩
+    iapply (wp_incViaCallLowered_ret2 (ta := ⟨ra⟩) (ty := .int .int)
+      (w := w)
+      (hmain := by rw [hprog]; rfl)
+      (hinc := by rw [hprog]; rfl)
+      (htgt := by simp [LocalEnv.lookup, Scope.lookup]))
+    isplitl [H0]
+    · iexact H0
+    iintro H2
+    iapply (wp_value' (v := ()))
+    iexists (2 : Int)
+    isplitl [H2]
+    · iexact H2
+    · ipureintro; rfl
+
 /-- **Step-0 target A, proven: the golden triple** (the triple half of
 `goldenSpec`). -/
 theorem goldenTriple : goldenTriple_statement := by

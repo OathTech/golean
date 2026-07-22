@@ -75,13 +75,17 @@ mechanism vs per-program artifact; decided with user 2026-07-21):
   `GoTriple` is frame-closed (quantified-testcase form; frame provably
   untouched; `wp_frame_l` carries it inside `goSpec_of_wp`, per-program WP
   obligation unchanged), `Progress` + `GoSpec` bundle safety with the
-  triple, `goldenSpec` proven. REMAINING: (3 of trio) the function-level
-  spec form with return values (`GoFuncSpec`; ret binder = result locals
-  at frame exit; plain-value returns v1, `(T, error)` queued behind the
-  interface widening); then the arc's audit ask (Opus reviewers) + merge
-  sign-off; then future widenings per the design notes (heaplet-canonical
-  GoTriple dropping the `HeapFrag` side condition, `var x ⇓ v` sugar,
-  invariant readout — the raft-shaped exit door).
+  triple, `goldenSpec` proven; **(3 of trio) `GoFuncSpec` DONE** — the
+  function-level quantified-testcase form (v1 unary int result; return
+  observed at the caller's target cell, the call protocol's frame-exit
+  observation; `(T, error)` queued behind the interface widening),
+  `goldenFuncSpec` proven ("incViaCall() needs no heap and returns 2" —
+  the golden walk's FOURTH unchanged reuse). **THE TRIO IS COMPLETE.**
+  REMAINING: the arc's audit ask (Opus reviewers) + merge sign-off; then
+  future widenings per the design notes (heaplet-canonical GoTriple
+  dropping the `HeapFrag` side condition, `var x ⇓ v` sugar, arity-general
+  GoFuncSpec + runner-equivalence lemma, invariant readout — the
+  raft-shaped exit door).
   Original scope note:
   (1) 2b: `go_heap_adequacy` on `wp_strong_adequacy_gen` — initial-heap `↦`
   handover + final-state extraction; the exit door every future state-property
