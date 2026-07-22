@@ -164,4 +164,46 @@ theorem panic_shaped_in_relation (fuel : Nat) (msg : String)
   · exact .init (.int _) (by simp)
   · exact .ns (.assign (.var _) (.div (.intLit 1 .int) (.intLit 0 .int)))
 
+/-- **D3 witness, new-rule coverage (pre-merge audit):** a panic inside an
+`eqCmp` operand — covered only by the NEW `eqPanicLeft` rule — reaches the
+relation's terminal `.panicked`. -/
+theorem panic_eq_shaped_in_relation (fuel : Nat) (msg : String)
+    (hrun : execStmt fuel σ₀ []
+      (.seqn #[.initialization ⟨"x", .int .int⟩,
+               .assign (.var "x")
+                 (.eqCmp (.int .int)
+                   (.div (.intLit 1 .int) (.intLit 0 .int))
+                   (.intLit 1 .int))])
+      = .error (.panic msg)) :
+    ∃ σp, Steps (.exec (.seqn #[.initialization ⟨"x", .int .int⟩,
+               .assign (.var "x")
+                 (.eqCmp (.int .int)
+                   (.div (.intLit 1 .int) (.intLit 0 .int))
+                   (.intLit 1 .int))]) [] .stop) σ₀
+      (.panicked msg) σp := by
+  refine interpreterPanic_spineSeq fuel σ₀ _ [] msg ?_ σ₀_inv hrun
+  intro s hs
+  simp at hs
+  rcases hs with rfl | rfl
+  · exact .init (.int _) (by simp)
+  · exact .ns (.assign (.var _)
+      (.eqCmp (.int _) (.div (.intLit 1 .int) (.intLit 0 .int))
+        (.intLit 1 .int)))
+
+/-- **D3 witness, call-leg coverage (pre-merge audit):** a panic while
+evaluating a call ARGUMENT — covered only by the NEW `Step.callArgsPanic`
+rule — reaches `.panicked`. -/
+theorem panic_call_arg_in_relation (fuel : Nat) (msg : String)
+    (hrun : execStmt fuel σ₀ []
+      (.call #[] incId #[.div (.intLit 1 .int) (.intLit 0 .int)])
+      = .error (.panic msg)) :
+    ∃ σp, Steps (.exec (.call #[] incId
+        #[.div (.intLit 1 .int) (.intLit 0 .int)]) [] .stop) σ₀
+      (.panicked msg) σp :=
+  interpreterPanic_frag fuel σ₀ _ [] msg
+    (.call (by intro a ha; simp at ha)
+      (by intro e he; simp at he; subst he
+          exact .div (.intLit 1 .int) (.intLit 0 .int)))
+    σ₀_inv hrun
+
 end GoLean.Iris.SliceCorrespondence

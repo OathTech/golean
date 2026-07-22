@@ -248,11 +248,12 @@ example := @slice_adequate
   return/break/continue, **and direct calls with frames**: `Step.call` →
   body simulation → `frameReturn`/`frameFall`) over a fragment program
   (`StInv`: fragment heap, no methods, fragment functions) is a reachable
-  `Steps` terminal, in exactly `interpreterSoundStatement`'s shape. The D2
-  frame-exit divergence is carried as the `avoid`-index discipline
-  (block-scoped declarations may not shadow result names); value-returning
-  fall-through is excluded syntactically (`EndsRet`, mirroring Go's
-  missing-return compile error). Axiom-clean.
+  `Steps` terminal, in exactly `interpreterSoundStatement`'s shape.
+  (Updated for arc `rel-completion`: frame exits read call-time-pinned
+  locations, so block-scoped shadowing needs NO condition and fall-through
+  stores like `frameReturn`; the residual Go-unreachable condition is only
+  that a body's spine inits don't redeclare a result id —
+  `SpineFrag.init`'s `∉ avoid`.) Axiom-clean.
 - `✓ interpreterPanic_frag` — the panic side is **proven over the fragment**
   (arc `rel-completion` D3b, 2026-07-21): an interpreter panic on a fragment
   statement reaches the relation's terminal `.panicked` with the same
@@ -273,6 +274,8 @@ example := @GoLean.Iris.SliceCorrespondence.slice_interp_run_in_relation
 example := @GoLean.Iris.SliceCorrespondence.frontend_shaped_decl_in_relation
 example := @GoLean.GoCore.Correspondence.interpreterPanic_frag
 example := @GoLean.Iris.SliceCorrespondence.panic_shaped_in_relation
+example := @GoLean.Iris.SliceCorrespondence.panic_eq_shaped_in_relation
+example := @GoLean.Iris.SliceCorrespondence.panic_call_arg_in_relation
 example := @GoLean.GoCore.Correspondence.execStmt_frag_sound
 example := @GoLean.GoCore.Correspondence.evalExpr_frag_ok
 

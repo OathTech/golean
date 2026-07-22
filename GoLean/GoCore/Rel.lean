@@ -200,16 +200,11 @@ inductive ExprR (env : LocalEnv) : ExecState → Expr → ExprOut → Prop where
   | derefPanic {s e ty msg} :
       ExprR env s e (.panic msg) →
       ExprR env s (.deref e ty) (.panic msg)
-  | fieldGetPanic {s recv typeId fieldName msg} :
-      ExprR env s recv (.panic msg) →
-      ExprR env s (.fieldGet recv typeId fieldName) (.panic msg)
-  | indexPanicBase {s base index msg} :
-      ExprR env s base (.panic msg) →
-      ExprR env s (.indexGet base index) (.panic msg)
-  | indexPanicIndex {s s₁ base index bv msg} :
-      ExprR env s base (.value bv s₁) →
-      ExprR env s₁ index (.panic msg) →
-      ExprR env s (.indexGet base index) (.panic msg)
+  -- fieldGet/indexGet operand-panic propagation is deliberately NOT added
+  -- yet (2026-07-21 pre-merge audit): those constructors are outside the
+  -- proven fragment, so rules for them would be unwitnessed growth of the
+  -- trusted surface. They land with the structs/arrays widening, together
+  -- with their correspondence cases and witnesses.
 
 /-- Outcome of resolving an assignee to a location. -/
 inductive LocOut where

@@ -18,17 +18,13 @@ reasons:
 1. **The interpreter is richer than the relation.** E.g. `add` also
    concatenates strings; the relation has no such rule, so an
    interpreter-successful string-add run reaches no relational derivation.
-   The provable theorem is over the **scalar+pointer fragment**
+   The provable theorems are over the **scalar+pointer fragment**
    (syntactic fragment + fragment-shaped heap), built below.
-2. **D1 — nested `.seqn` scoping.** The frontend lowers `x := 5` to a nested
-   `.seqn #[init, assign]` spliced into the enclosing block's statement list;
-   the interpreter's `.seqn` is scope-transparent (Go-correct: statement
-   lists splice, only blocks scope), but the relation wraps every `.seqn` in
-   its own `Cont.seq` and discards its env at `seqDone`, so the binding dies
-   early and later uses are stuck. Correspondence over frontend-emitted
-   programs needs the proposed splice rule (its own audited slice); until
-   then the theorems carry a well-formedness side condition and cover the
-   hand-modeled proof subjects.
+2. ~~D1 — nested `.seqn` scoping~~ **RESOLVED** (arc `rel-completion`): the
+   splice rule (`seqCont` in `Rel.lean`) makes the relation
+   scope-transparent for statement lists, matching the interpreter and Go;
+   `SpineFrag.seqnSpine` covers the frontend's nested declaration groups,
+   witnessed in `SliceCorrespondence.lean`. Reason 1 is now the only gap.
 
 The statements are kept as named `Prop`s recording the eventual unconditional
 target; the theorems below prove fragment-scoped versions — BOTH sides as of
