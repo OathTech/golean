@@ -1,0 +1,34 @@
+{ typeDefs := #[({ key := "struct{}" }, GoLean.GoCore.TypeDef.struct #[])],
+  funcs := #[{ id := { key := "inc" },
+               args := #[{ id := "p",
+                           typ := GoLean.GoCore.Ty.pointer (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int)) }],
+               results := #[],
+               body := GoLean.GoCore.Stmt.block
+                         #[]
+                         #[GoLean.GoCore.Stmt.seqn
+                             #[GoLean.GoCore.Stmt.assign
+                                 (GoLean.GoCore.Assignee.addr (GoLean.GoCore.Expr.var "p"))
+                                 (GoLean.GoCore.Expr.add
+                                   (GoLean.GoCore.Expr.deref
+                                     (GoLean.GoCore.Expr.var "p")
+                                     (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int)))
+                                   (GoLean.GoCore.Expr.intLit 1 (GoLean.GoCore.IntKind.int)))]] },
+             { id := { key := "incViaCall" },
+               args := #[],
+               results := #[{ id := "$res0", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int) }],
+               body := GoLean.GoCore.Stmt.block
+                         #[]
+                         #[GoLean.GoCore.Stmt.seqn
+                             #[GoLean.GoCore.Stmt.initialization
+                                 { id := "x", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int) },
+                               GoLean.GoCore.Stmt.assign
+                                 (GoLean.GoCore.Assignee.var "x")
+                                 (GoLean.GoCore.Expr.intLit 0 (GoLean.GoCore.IntKind.int))],
+                           GoLean.GoCore.Stmt.call #[] { key := "inc" } #[GoLean.GoCore.Expr.ref "x"],
+                           GoLean.GoCore.Stmt.call #[] { key := "inc" } #[GoLean.GoCore.Expr.ref "x"],
+                           GoLean.GoCore.Stmt.seqn
+                             #[GoLean.GoCore.Stmt.assign
+                                 (GoLean.GoCore.Assignee.var "$res0")
+                                 (GoLean.GoCore.Expr.var "x"),
+                               GoLean.GoCore.Stmt.returnStmt]] }],
+  methods := #[] }

@@ -10,6 +10,7 @@ import GoLeanProofs.Laws.Call
 import GoLeanProofs.Adequacy
 import GoLeanProofs.Specs.Slice
 import GoLeanProofs.Specs.SliceCorrespondence
+import GoLeanProofs.Specs.GoldenSlice
 import GoLeanProofs.NegativeSpecs
 
 /-!

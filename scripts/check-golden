@@ -1,0 +1,59 @@
+#!/usr/bin/env bash
+# Golden-lowering staleness guard (arc exit-infra).
+# Verifies BOTH links of the chain "proof subject = decoded(frontend(source))":
+#   1. fresh frontend emit + decode of the golden source reproduces the
+#      checked-in repr baseline (frontend/decoder drift detection);
+#   2. the checked-in Lean term (GoldenSlice.sliceLowered) prints the same
+#      repr (Lean-term vs baseline drift detection).
+# Any mismatch fails CLOSED: re-pin deliberately (regenerate baseline + term
+# in the same commit as the frontend/decoder change, with the reason).
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+cd "$ROOT"
+
+SRC_DIR="Corpus/coverage/exec/pointers/inc-via-call"
+BASE="baselines/golden/slice-lowered.repr"
+WORK="${TMPDIR:-/tmp}/golden-check.$$"
+mkdir -p "$WORK"
+trap 'rm -f "$WORK"/* 2>/dev/null; rmdir "$WORK" 2>/dev/null || true' EXIT
+
+[ -f "$BASE" ] || { echo "check-golden: FAIL — no baseline at $BASE" >&2; exit 1; }
+
+# Link 1: frontend + decoder reproduce the baseline
+export GOCACHE="${GOCACHE:-$ROOT/artifacts/go-build-cache}"
+GO111MODULE=off go run ./tools/nativefrontend --dir "$SRC_DIR" --out "$WORK/wire.json" \
+  || { echo "check-golden: FAIL — frontend emit failed (fail closed)" >&2; exit 1; }
+cat > "$WORK/decode.lean" <<LEAN
+import GoLean.NativeToIR
+def main : IO Unit := do
+  let raw ← IO.FS.readFile "$WORK/wire.json"
+  match Lean.Json.parse raw with
+  | .error e => IO.println s!"PARSE ERROR: {e}"
+  | .ok json =>
+    match GoLean.NativeToIR.decodeProgram json with
+    | .error e => IO.println s!"DECODE ERROR: {e}"
+    | .ok prog => IO.println (repr prog)
+LEAN
+lake env lean --run "$WORK/decode.lean" > "$WORK/fresh.repr" \
+  || { echo "check-golden: FAIL — decode run failed (fail closed)" >&2; exit 1; }
+grep -q "ERROR" "$WORK/fresh.repr" && { echo "check-golden: FAIL — decoder error:"; cat "$WORK/fresh.repr"; exit 1; }
+if ! diff -q "$BASE" "$WORK/fresh.repr" > /dev/null; then
+  echo "check-golden: FAIL — frontend/decoder output drifted from $BASE:" >&2
+  diff "$BASE" "$WORK/fresh.repr" | head -20 >&2
+  exit 1
+fi
+
+# Link 2: the checked-in Lean term prints the same repr
+cat > "$WORK/term.lean" <<'LEAN'
+import GoLeanProofs.Specs.GoldenSlice
+def main : IO Unit :=
+  IO.println (repr GoLean.Iris.GoldenSlice.sliceLowered)
+LEAN
+(cd proofs && lake env lean --run "$WORK/term.lean" > "$WORK/term.repr") \
+  || { echo "check-golden: FAIL — term print failed (fail closed)" >&2; exit 1; }
+if ! diff -q "$BASE" "$WORK/term.repr" > /dev/null; then
+  echo "check-golden: FAIL — Lean term drifted from $BASE:" >&2
+  diff "$BASE" "$WORK/term.repr" | head -20 >&2
+  exit 1
+fi
+echo "check-golden: ok — proof subject = decoded(frontend(source)), both links"

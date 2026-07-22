@@ -289,6 +289,7 @@ example := @GoLean.Iris.SliceCorrespondence.panic_call_arg_in_relation
 example := @GoLean.Iris.go_heap_adequacy
 example := @GoLean.Iris.slice_adequate_computes
 example := @GoLean.Iris.SliceCorrespondence.slice_interp_computes_two
+example := @GoLean.Iris.GoldenSlice.golden_interp_run_in_relation
 example := @GoLean.GoCore.Correspondence.execStmt_frag_sound
 example := @GoLean.GoCore.Correspondence.evalExpr_frag_ok
 
