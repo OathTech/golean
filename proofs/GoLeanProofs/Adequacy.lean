@@ -191,6 +191,64 @@ theorem go_heap_adequacy [GoCoreGpreS .hasLC GF] (c : Config) (σ : ExecState)
     ipureintro
     grind
 
+/-- **Strong adequacy with initial-heap handover** (arc `spec-surface`
+stage 2; the full HeapLang `heap_adequacy` shape, via iris-lean's
+`genHeap_init_names`): the WP proof now RECEIVES the `↦` fragments for the
+entire initial heap, so specs can name seeded observable cells at concrete
+addresses (`docs/2026-07-21_native-spec-surface.md` D5) instead of
+allocating their cells inside the run behind the `∀ fresh` quantifier.
+`go_heap_adequacy` (empty handover) remains for self-allocating drivers. -/
+theorem go_heap_adequacy_own [GoCoreGpreS .hasLC GF] (c : Config)
+    (σ : ExecState)
+    (Ψ : ∀ [GoCoreGS .hasLC GF], Unit → IProp GF)
+    (φ : Unit → ExecState → Prop) (hσwf : HeapWf σ)
+    (Hwp : ∀ [GoCoreGS .hasLC GF], GoCoreGS.prog GF = σ.functions →
+      iprop([∗map] l ↦ cell ∈ heapToMap σ.heap, l ↦ cell)
+        ⊢@{IProp GF} (WP c {{ v, Ψ v }}))
+    (Hext : ∀ [GoCoreGS .hasLC GF], GoCoreGS.prog GF = σ.functions →
+      ∀ (σ2 : ExecState) (v : Unit),
+        iprop(genHeapInterp (GF := GF) (H := GoHeapF) (heapToMap σ2.heap) ∗ Ψ v)
+          ⊢ |==> ⌜φ v σ2⌝) :
+    adequate .NotStuck c σ φ := by
+  refine (adequate_alt _ c σ φ).mpr ?_
+  intro t2 σ2 hreach
+  obtain ⟨n, κs, hsteps⟩ := (Language.erasedStep_nSteps _ _).mp hreach
+  apply wp_strong_adequacy_gen (GF := GF) (hlc := .hasLC) .NotStuck
+    (Hsteps := hsteps) (numLaters := fun _ => 0)
+  iintro %Hinv
+  imod (genHeap_init_names (GF := GF) (heapToMap σ.heap))
+    with ⟨%γh, %γm, Hσ, Hpts, Htok⟩
+  letI _ : GoCoreGS .hasLC GF := ⟨⟨γh, γm⟩, σ.functions⟩
+  imodintro
+  iexists (fun σ' _ _ _ =>
+    iprop(genHeapInterp (GF := GF) (H := GoHeapF) (heapToMap σ'.heap)
+      ∗ ⌜σ'.functions = σ.functions ∧ HeapWf σ'⌝))
+  iexists [(fun v => Ψ v)], (fun _ => iprop(True)), (fun _ _ _ _ => fupd_intro)
+  dsimp only
+  isplitl [Hσ]
+  · isplitl [Hσ]
+    · iexact Hσ
+    · ipureintro
+      exact ⟨rfl, hσwf⟩
+  isplitl [Hpts]
+  · iapply BigSepL2.bigSepL2_singleton
+    iapply (Hwp rfl) $$ Hpts
+  iintro %es' %t2' %Heq %Hlen %HNS Hst Hwptp _
+  icases BigSepL2.bigSepL2_cons_inv_right $$ Hwptp with ⟨%e', %_, %Heq', Hpost, H⟩
+  subst Heq' Heq
+  icases BigSepL2.bigSepL2_nil_inv_right $$ H with %Heq
+  subst Heq
+  icases Hst with ⟨Hgh, %Hpure⟩
+  cases h : toVal e'
+  · iapply fupd_mask_intro_discard Std.LawfulSet.empty_subset
+    ipureintro
+    grind
+  · dsimp only [Option.elim_some]
+    imod (Hext rfl σ2 _) $$ [$Hgh $Hpost] with %Hφv
+    iapply fupd_mask_intro_discard Std.LawfulSet.empty_subset
+    ipureintro
+    grind
+
 /-! ## Arc `slice-l5-pure` item 2 — the end-to-end adequacy witness
 
 The one artifact that demonstrates the WP→adequacy chain *composes*: a concrete

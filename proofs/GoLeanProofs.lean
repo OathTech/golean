@@ -13,6 +13,9 @@ import GoLeanProofs.Specs.SliceCorrespondence
 import GoLeanProofs.Specs.GoldenSlice
 import GoLeanProofs.Specs.GoldenSliceWP
 import GoLeanProofs.Surface
+import GoLeanProofs.SurfaceBridge
+import GoLeanProofs.SurfaceExit
+import GoLeanProofs.Specs.GoldenSurface
 import GoLeanProofs.NegativeSpecs
 
 /-!

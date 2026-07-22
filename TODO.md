@@ -54,9 +54,26 @@ mechanism vs per-program artifact; decided with user 2026-07-21):
   (deep-embedded SL over heaplets + once-proven reflection/extraction
   boundary; Iris strictly internal; per-program work = shape checks + WP
   walk + generic exit theorem; refutation twins fall out as corollaries).
-  Staging §5 there; the golden WP walk is reused as-is. Open: whether the
-  surface build-out lands in this arc or the next; then the audit ask
-  (Opus reviewers) + merge sign-off.
+  Staging §5 there; the golden WP walk is reused as-is. (Arc D merged
+  2026-07-21 @ 4cf8052 after a 3-Opus audit — zero semantic findings, all
+  confirmed findings = pre-D8 overclaim language, fixed.)
+- **Arc `spec-surface` (IN PROGRESS on `spec-surface`): THE LOWERING TARGET
+  IS CLOSED in its pinned form.** Landed (2026-07-21): step 0 —
+  `Surface.lean` (Iris-free Layer S, ci-linted: Heaplet/HProp/sat/GoTriple
+  + intended statements); stage 2 — `go_heap_adequacy_own` (initial-heap
+  `↦` handover via `genHeap_init_names`); stage 3 — `SurfaceBridge.lean`
+  (`reflect`/`extract` by full `HProp` induction; `∗` extraction gets
+  genuine disjointness from `DFrac` validity; map-API agreement lemmas);
+  stage 4 — `goTriple_of_wp` (the generic exit theorem; per-program work =
+  shape checks + WP proof, nothing else); stages 5–6 —
+  `Specs/GoldenSurface.lean`: **`goldenTriple`
+  ({r ↦ 0} r=incViaCall() {r ↦ 2}), `goldenReturnsTwo` (output cell at
+  address 0 holds 2 — plain register, no ∃), `goldenNotThree` (the twin,
+  a two-line corollary) ALL PROVEN** over the frontend's actual lowering.
+  REMAINING: the arc's audit ask (Opus reviewers) + merge sign-off; then
+  future widenings tracked in the design note (P ∗ frame preconditions,
+  heaplet-canonical GoTriple dropping the `HeapFrag` side condition,
+  `var x ⇓ v` sugar, progress companion judgment).
   Original scope note:
   (1) 2b: `go_heap_adequacy` on `wp_strong_adequacy_gen` — initial-heap `↦`
   handover + final-state extraction; the exit door every future state-property

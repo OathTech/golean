@@ -105,11 +105,16 @@ describes the whole initial heap), every terminating `execStmt` run of
 `prog` — under ANY nondeterminism choices — ends in a state some sub-heaplet
 of which satisfies `Q` (D3: intuitionistic postcondition; dead-frame cells
 are framed away). `types`/`methods` sit at their empty defaults (v1 fragment
-scope). Partial correctness: progress/never-stuck is a separate companion
-judgment, per the design note. -/
+scope), and the initial heap carries the fragment-scope side condition
+(`Correspondence.HeapFrag` — interpreter-level vocabulary: cells hold
+fragment values; a `sat` projection cannot see non-base or shadowed
+association-list entries, so this is stated on the raw heap; it weakens as
+the fragment widens). Partial correctness: progress/never-stuck is a
+separate companion judgment, per the design note. -/
 def GoTriple (funcs : Array Func) (env₀ : LocalEnv) (P : HProp) (prog : Stmt)
     (Q : HProp) : Prop :=
   ∀ (hp : Heap) (na : Nat), HeapBounded hp na →
+    Correspondence.HeapFrag { heap := hp } →
     sat (heapletOf hp) P →
     ∀ (fuel : Nat) (ch : Choices) (σf : ExecState) (ch' : Choices),
       execStmt fuel { functions := funcs, locals := env₀, heap := hp, nextAddr := na }
