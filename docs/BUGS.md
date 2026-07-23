@@ -107,3 +107,21 @@ with fragment size, so every Arc-E widening rung built before F4 decides
 deepens the potential hole. Recommendation recorded: write the F4 note
 before or alongside the next major fragment widening (structs/arrays),
 not after.
+
+**Direction pinned (2026-07-22, user):** fix path 2 (confinement-only
+v1) is REJECTED as the target — it excludes most actually interesting
+concurrent Go (mutex-protected shared state, sync/atomic, lock-free
+patterns); "CSL-proofs-only is a trivial kind of concurrency." The target
+is full shared-memory, fine-grained concurrency with the complete Iris
+apparatus. Path 1 (the memory-op machine) is THE fix, and its scope is
+larger than first recorded: the INTERPRETER is in scope too — it is the
+executable side of the Choices split, and instantiating real schedules
+requires preemption points at memory-op granularity (big-step `evalExpr`
+cannot be preempted mid-expression; an earlier claim that the interpreter
+survives unchanged was wrong). Alignment note: Go's sync/atomic is SC, so
+an SC interleaving model at memory-op granularity honestly covers
+atomics-based code; plain-access races remain out of verification scope
+(UB-ish in Go — same position as Goose). Sequencing consequence: the
+reshape is unavoidable and its cost scales with fragment size, so it
+should be the next MAJOR arc after the current rung — BEFORE the
+structs/arrays widening, which would otherwise be built twice.
