@@ -125,3 +125,21 @@ atomics-based code; plain-access races remain out of verification scope
 reshape is unavoidable and its cost scales with fragment size, so it
 should be the next MAJOR arc after the current rung — BEFORE the
 structs/arrays widening, which would otherwise be built twice.
+
+**Reshape R1+R2 landed (2026-07-23, branch `reshape-smallstep`, stages
+S0–S4 of `docs/2026-07-23_reshape-r1r2-machine-design.md`):** the
+structural root is fixed. Expression evaluation is in the configuration
+language (`GoLean/GoCore/Machine.lean`: `evalE`/`retV` configs, generic
+`strictK` operand frames), loads and stores are individual `Step` rules,
+and `Step.assign` no longer bundles reads with its write (target address,
+RHS evaluation, and the store are separate steps around machine-evaluated
+operands). The interpreter is the relation instantiated (`stepFn`,
+iterated fuel-bounded), so preemption points exist at memory-op
+granularity on the executable side too. The big-step rules (`ExprR`, old
+statement rules, `Eval` cluster, T1/T2 correspondence) are DELETED per the
+F4 §2 directive — validated by ZERO DRIFT on the full 718-case
+differential plus 40/40 eval tests. Still open before this bug CLOSES
+(R4): goroutine rules + scheduler `Choices`, and the granularity-ledger
+re-audit of multi-cell apply steps (`appendSlice` spill, `copySlice`) —
+coarse-but-recorded, fine sequentially, must not silently enter
+concurrency claims.

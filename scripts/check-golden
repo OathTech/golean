@@ -48,10 +48,13 @@ fi
 # which can be stale relative to an edited GoldenSlice.lean within a single
 # run (2026-07-21 audit hardening — the window self-healed on the next run,
 # but fail-closed means not relying on that).
-(cd proofs && lake build GoLeanProofs.Specs.GoldenSlice > /dev/null) \
-  || { echo "check-golden: FAIL — GoldenSlice build failed (fail closed)" >&2; exit 1; }
+# (Reshape S4, 2026-07-23: the pin lives in the pure-syntax module
+# GoldenProgram — same namespace/term — so this guard stays armed while the
+# semantics-dependent proof modules are rebuilt at R3.)
+(cd proofs && lake build GoLeanProofs.Specs.GoldenProgram > /dev/null) \
+  || { echo "check-golden: FAIL — GoldenProgram build failed (fail closed)" >&2; exit 1; }
 cat > "$WORK/term.lean" <<'LEAN'
-import GoLeanProofs.Specs.GoldenSlice
+import GoLeanProofs.Specs.GoldenProgram
 def main : IO Unit :=
   IO.println (repr GoLean.Iris.GoldenSlice.sliceLowered)
 LEAN

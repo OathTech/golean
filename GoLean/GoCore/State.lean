@@ -27,11 +27,15 @@ structure HeapCell where
 abbrev Heap := List (Loc × HeapCell)
 abbrev TypeEnv := List (TypeId × TypeDef)
 
+/-- The machine state. Locals are NOT here (reshape S4, 2026-07-23): the
+current frame's environment lives in the control configuration
+(`Machine.Config`, CEK env-in-control), so the state is program context +
+heap only. The old interpreter's `locals` field — the correspondence
+bridge `σ.locals ≈ Config.env` — is gone with the big-step cluster. -/
 structure ExecState where
   types : TypeEnv := []
   functions : Array Func := #[]
   methods : Array MethodInfo := #[]
-  locals : LocalEnv := []
   heap : Heap := []
   nextAddr : Nat := 0
   deriving Repr, BEq
@@ -40,6 +44,10 @@ structure Result where
   values : Array GoValue
   deriving Repr, BEq
 
+/-- Statement-execution outcome classification. Survives the reshape S4
+deletion because the Surface layer's `execStmt`-SHAPED wrapper (F4 §2's
+decided interface, restored at R3) reproduces the old signature
+`… → Except GoError (ExecOutcome × Choices)` over iterated `stepFn`. -/
 inductive ExecOutcome where
   | normal (state : ExecState)
   | returned (state : ExecState)
@@ -74,9 +82,8 @@ def LocalEnv.declare : LocalEnv → String → Loc → LocalEnv
 def LocalEnv.pushScope (env : LocalEnv) : LocalEnv :=
   [] :: env
 
-def LocalEnv.popScope : LocalEnv → LocalEnv
-  | [] => []
-  | _ :: outer => outer
+-- `LocalEnv.popScope` deleted (reshape S4): scope exit is continuation
+-- discard in the machine; nothing pops.
 
 def Heap.lookup : Heap → Loc → Option HeapCell
   | [], _ => none
@@ -143,17 +150,6 @@ def ExecState.freshLoc (state : ExecState) : Loc × ExecState :=
   let loc := Loc.base { id := state.nextAddr }
   (loc, { state with nextAddr := state.nextAddr + 1 })
 
-/-- Declare a local: always a fresh location in the innermost scope, even
-when the name shadows an outer binding. Assignment to an existing local goes
-through `lookupLoc`/`storeLoc`, never through this. -/
-def ExecState.declareLocal (state : ExecState) (name : String) (typ : Option Ty)
-    (value : GoValue) : ExecState :=
-  let (loc, state) := state.freshLoc
-  { state with
-    locals := LocalEnv.declare state.locals name loc,
-    heap := Heap.set state.heap loc { declaredTy := typ, value }
-  }
-
 def ExecState.alloc (state : ExecState) (value : GoValue) (typ : Option Ty := none) :
     Loc × ExecState :=
   let (loc, state) := state.freshLoc
@@ -168,7 +164,5 @@ def panic {α : Type} (message : String) : Except GoError α :=
 def stuck {α : Type} (message : String) : Except GoError α :=
   throw (.stuck message)
 
-def lookupLoc (state : ExecState) (name : String) : Except GoError Loc :=
-  match LocalEnv.lookup state.locals name with
-  | some loc => return loc
-  | none => stuck s!"unbound GoCore variable address: {name}"
+-- `lookupLoc` deleted (reshape S4): name resolution goes through the
+-- control-side `LocalEnv` (`Machine.Config.env`), never the state.

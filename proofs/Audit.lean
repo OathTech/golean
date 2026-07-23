@@ -1,7 +1,22 @@
+import Lean
 import GoLeanProofs
-import GoLean.GoCore.Correspondence
+import GoLean
 
 /-!
+# REBUILD STATE (reshape S4, 2026-07-23): proof-layer gates PRUNED
+
+The proof layer is pruned pending its R3 rebuild against the fine-grained
+machine (`proofs/GoLeanProofs.lean` holds the restoration checklist; the
+F4 deletion directive removed the big-step semantics everything below
+audited). What remains LIVE here: the exhaustive axiom sweep, now over the
+core (`GoLean.*` incl. `Machine`/`StepFn`) plus whatever proof modules
+have been restored. The curated axiom gates, non-vacuity witness
+references, and the three-state ledger are preserved VERBATIM in the
+`PRUNED` block at the bottom — they are the per-theorem restoration
+checklist, un-commented entry by entry as R3 re-proves each. The reshape
+branch does not merge until this file's gates are fully restored (design
+note §6).
+
 # In-build epistemic gate for the Iris proof layer
 
 This file is a **machine-checked, re-runnable** guard on the proof layer's
@@ -33,8 +48,6 @@ green claim); `✗` would be a hole (must never appear — the build forbids it)
 To re-baseline after an *intended* change: run `#print axioms <name>` and update
 the matching docstring here in the same commit, with the reason.
 -/
-
-open GoLean.Iris
 
 namespace GoLean.Iris.Audit
 
@@ -86,8 +99,14 @@ open Lean in
     throwError "audit sweep FAILED — declarations with disallowed axioms \
       (a `sorry`, `native_decide`, or new postulate?):\n{String.intercalate "\n" lines.toList}"
 
-/-! ## Axiom gates — the recorded axiom set of every proof-facing declaration.
-    A change to any set fails the build until this file is deliberately updated. -/
+/- ############################################################################
+   PRUNED at reshape S4 (2026-07-23) — do not delete: this block is the
+   per-theorem R3 restoration checklist. Un-comment each gate/reference in
+   the same commit that restores its theorem against the new machine.
+   ############################################################################
+
+## Axiom gates — the recorded axiom set of every proof-facing declaration.
+    A change to any set fails the build until this file is deliberately updated.
 
 -- Heap projection bridges (read/write faithfulness of `heapToMap`).
 /-- info: 'GoLean.Iris.get?_heapToMap' depends on axioms: [propext, Classical.choice, Quot.sound] -/
@@ -449,5 +468,7 @@ example := @GoLean.Iris.exprR_var_add_lit_det
 example := @GoLean.Iris.exprR_var_eq_lit
 example := @GoLean.Iris.exprR_var_eq_lit_det
 example := @GoLean.Iris.wp_while_eq_once
+
+   ######################### end PRUNED block ################################ -/
 
 end GoLean.Iris.Audit

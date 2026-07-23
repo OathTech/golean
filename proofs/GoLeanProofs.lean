@@ -1,38 +1,40 @@
-import GoLeanProofs.Lang
-import GoLeanProofs.HeapBridge
-import GoLeanProofs.Ghost
-import GoLeanProofs.Lifting
-import GoLeanProofs.Inversions
-import GoLeanProofs.Laws.Control
-import GoLeanProofs.Laws.Assign
-import GoLeanProofs.Laws.Init
-import GoLeanProofs.Laws.Call
-import GoLeanProofs.Laws.Loop
-import GoLeanProofs.Adequacy
-import GoLeanProofs.Specs.Slice
-import GoLeanProofs.Specs.SliceCorrespondence
-import GoLeanProofs.Specs.GoldenSlice
-import GoLeanProofs.Specs.GoldenSliceWP
-import GoLeanProofs.Surface
-import GoLeanProofs.SurfaceBridge
-import GoLeanProofs.SurfaceExit
-import GoLeanProofs.Specs.GoldenSurface
-import GoLeanProofs.NegativeSpecs
+import GoLeanProofs.Specs.GoldenProgram
 
 /-!
-# GoCore ⇒ Iris — the proof layer (root)
+# GoCore ⇒ Iris — the proof layer (root) — PRUNED at reshape S4 (2026-07-23)
 
-Module structure (design of record:
-`docs/2026-07-20_proofs-structure-backlog.md` — four strata, one-way deps):
+LIVE through the prune: `Specs.GoldenProgram` — the golden-lowering pin
+(`sliceLowered`), extracted to pure syntax at S4 so `scripts/check-golden`
+stays armed while the semantics-dependent modules below are rebuilt.
 
-- **Infrastructure**: `Lang` (Config ⇒ Iris wiring), `HeapBridge` (heap model +
-  `HeapWf`), `Ghost` (`GoCoreGS`, state interpretation), `Lifting` (store/alloc
-  step cores), `Inversions` (determinism lemmas).
-- **Laws/** — one file per construct family, law + witness co-located:
-  `Control`, `Assign`, `Init`, `Call`.
-- **Specs/** — one file per verified target program: `Slice`.
-- **Adequacy** — functor bundle + `go_adequacy`.
+The reshape (branch `reshape-smallstep`;
+`docs/2026-07-23_reshape-r1r2-machine-design.md`, executing the F4
+deletion directive in `docs/2026-07-22_f4-concurrency-model.md` §2)
+deleted the big-step semantics (`ExprR`, the old `Rel.Step`, `Eval`'s
+big-step cluster, `Correspondence`) that every module below consumed. The
+whole proof layer is R3 scope: it is rebuilt against
+`GoLean.GoCore.Machine` (fine-grained relation + iterated `stepFn`), and
+this import list is the RESTORATION CHECKLIST — each module returns here
+as it is re-proven, and the reshape branch does not merge until this list
+is restored and the Surface statement content is byte-identical (design
+note §6 merge gate).
 
-The in-build gate is `Audit.lean` (a sibling default target); every module here
-is in its sweep via the root import closure, which `scripts/ci` enforces.
+Pruned modules (files kept on disk as the porting source; also on
+`scripts/ci`'s `STANDALONE_PROOFS` allowlist until restored):
+
+- `GoLeanProofs.Lang` — Config ⇒ Iris wiring (port: swap `Rel` for
+  `Machine`, re-case `val_stuck`)
+- `GoLeanProofs.HeapBridge` — heap model + `HeapWf`
+- `GoLeanProofs.Ghost` — `GoCoreGS`, state interpretation
+- `GoLeanProofs.Lifting` — step cores (R3: bind-form laws, `wp_atomic`)
+- `GoLeanProofs.Inversions` — determinism lemmas (per-rule now)
+- `GoLeanProofs.Laws.Control` / `.Assign` / `.Init` / `.Call` / `.Loop`
+- `GoLeanProofs.Adequacy` — functor bundle + `go_adequacy` family
+- `GoLeanProofs.Specs.Slice` / `.SliceCorrespondence` / `.GoldenSlice` /
+  `.GoldenSliceWP`
+- `GoLeanProofs.Surface` — Layer S (statements restored byte-identical;
+  `execStmt`-shaped wrapper over iterated `stepFn`, F4 §2)
+- `GoLeanProofs.SurfaceBridge` / `.SurfaceExit` /
+  `.Specs.GoldenSurface` — the exit pipes and golden discharges
+- `GoLeanProofs.NegativeSpecs`
 -/

@@ -375,8 +375,8 @@ def storeLoc (state : ExecState) : Loc → GoValue → Except GoError ExecState
         | .array values => storeLoc state base (.array (← arraySet values index value))
         | other => stuck s!"expected array base for index store, got {repr other}"
 
-def lookup (state : ExecState) (name : String) : Except GoError GoValue := do
-  loadLoc state (← lookupLoc state name)
+-- `lookup` deleted (reshape S4): variable reads are `Machine.Step.evalVar`
+-- (control-side env lookup + `loadLoc`), never a state-side name lookup.
 
 -- Total via fuel: only the `.defined → .alias` chain recurses; fuel bounds it.
 def convertValueToTyFuel : Nat → ExecState → Ty → GoValue → Except GoError GoValue
