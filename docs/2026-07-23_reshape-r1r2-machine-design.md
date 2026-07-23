@@ -148,10 +148,23 @@ one scope story (continuation-carried), everywhere.
 
 ## 3. Relation vs. executable: one machine, two coverages
 
+**S1 refinement (2026-07-23, supersedes the coverage phrasing below):**
+the relation's expression rules are *generic* over the shared op table —
+`enter` (via `strictPlan`), `shift`, and `apply` (via `applyStrictOp` as a
+function premise) — so the relation automatically covers every strict
+expression form the executable covers, with one table validated by the
+differential oracle. This is "one semantics, instantiated" taken
+literally: `stepFn`'s arms and the relation's premises call the same
+functions, making the per-rule soundness/completeness lemmas nearly
+definitional. The *claims* surface remains scoped by which WP laws and
+witnesses exist (unchanged doctrine); statement-side wide features
+(`assignMany`, map/slice statement forms, `mapRange`) still get their
+frames/rules at S2.
+
 - `Machine.Step : Config → ExecState → Config → ExecState → Prop` — rules
-  for exactly the current relation fragment (claims surface unchanged in
-  R1; wide features get rules only when they get witnesses, per the
-  guardrails doctrine). Panics are rules; stuck/unsupported is silence.
+  for the current relation fragment's statements + generic expression
+  rules (see refinement above). Panics are rules; stuck/unsupported is
+  silence.
 - `stepFn : Config → ExecState → Choices → Except GoError (Config ×
   ExecState × Choices)` — total on the full interpreter fragment;
   `.error` exactly where the machine is stuck/unsupported (with the
