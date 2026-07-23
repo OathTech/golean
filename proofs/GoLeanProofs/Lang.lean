@@ -7,7 +7,7 @@ import Std.Data.ExtTreeMap
 import Iris.Std.PartialMap
 import Iris.Std.FromMathlib
 import Iris.Std.GenSetsInstances
-import GoLean.GoCore.Rel
+import GoLean.GoCore.MachineSound
 
 /-!
 # GoCore ⇒ Iris `Language` wiring
@@ -15,7 +15,7 @@ The `Config`/`ExecState`/`Step` instantiation of iris-lean's bare `Language`.
 -/
 
 open Iris Iris.ProgramLogic Iris.Std Iris.Std.PartialMap
-open GoLean GoLean.GoCore GoLean.GoCore.Rel
+open GoLean GoLean.GoCore GoLean.GoCore.Machine
 
 namespace GoLean.Iris
 
