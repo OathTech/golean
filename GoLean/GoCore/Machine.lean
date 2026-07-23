@@ -931,10 +931,14 @@ inductive Step : Config → ExecState → Config → ExecState → Prop where
       nt ≤ done.length →
       Step (.retV v (.stmtOpK op nt done (e :: rest) env k)) s
         (.evalE e env (.stmtOpK op nt (v :: done) rest env k)) s
-  | stmtOpTargetPanic {op nt done v msg pending env k s} :
+  -- (Restricted to a nonempty pending list: at the apply position the same
+  -- nil-target panic surfaces through `applyStmtOp`'s `locsOf` — rule
+  -- `stmtOpApplyPanic` — keeping the rules in one-to-one correspondence
+  -- with `stepFn`'s arms.)
+  | stmtOpTargetPanic {op nt done v msg e rest env k s} :
       done.length < nt →
       valueAsLoc v = .error (.panic msg) →
-      Step (.retV v (.stmtOpK op nt done pending env k)) s (.panicked msg) s
+      Step (.retV v (.stmtOpK op nt done (e :: rest) env k)) s (.panicked msg) s
   | stmtOpApply {op nt done v env k s s' ch ch'} :
       applyStmtOp s ch op nt (v :: done).reverse = .ok (s', ch') →
       Step (.retV v (.stmtOpK op nt done [] env k)) s (.next k) s'

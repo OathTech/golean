@@ -49,7 +49,7 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
       | .initialization p =>
           match k with
           | .seq rest kenv k' =>
-              if kenv == env then do
+              if kenv = env then do
                 let v ← defaultValue s p.typ
                 let (loc, s') := s.alloc v (some p.typ)
                 return (.next (.seq rest (env.declare p.id loc) k'), s', choices)
@@ -194,15 +194,21 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
           | [] => do
               let (func, frameEnv, resultLocs, s') ← enterFrame s fid (vals ++ [v])
               return (.exec func.body frameEnv (.frame locs resultLocs k'), s', choices)
-      | .stmtOpK op nt done pending env k' => do
-          if done.length < nt then
-            match valueAsLoc v with
-            | .error (.panic msg) => return (.panicked msg, s, choices)
-            | .error err => throw err
-            | .ok _ => pure ()
+      | .stmtOpK op nt done pending env k' =>
+          -- Target addresses are checked as they arrive ONLY when more
+          -- operands follow (interpreter panic timing); at the apply
+          -- position the same check happens inside `applyStmtOp`'s
+          -- `locsOf`, so the rules need no extra guard there.
           match pending with
           | e :: rest =>
-              return (.evalE e env (.stmtOpK op nt (v :: done) rest env k'), s, choices)
+              if done.length < nt then
+                match valueAsLoc v with
+                | .error (.panic msg) => return (.panicked msg, s, choices)
+                | .error err => throw err
+                | .ok _ =>
+                    return (.evalE e env (.stmtOpK op nt (v :: done) rest env k'), s, choices)
+              else
+                return (.evalE e env (.stmtOpK op nt (v :: done) rest env k'), s, choices)
           | [] =>
               match applyStmtOp s choices op nt (v :: done).reverse with
               | .ok (s', choices') => return (.next k', s', choices')
