@@ -154,6 +154,40 @@ def Progress (funcs : Array Func) (env₀ : LocalEnv) (P : HProp)
         { functions := funcs, locals := env₀, heap := hp, nextAddr := na } c' σ' →
       c' = .next .stop ∨ ∃ (c'' : Config) (σ'' : ExecState), Step c' σ' c'' σ''
 
+/-- **The invariance judgment** (arc `invariant-readout`, design of record
+`docs/2026-07-22_invariant-readout-design.md`): from any admissible framed
+initial state, EVERY relation-reachable configuration — mid-call,
+mid-expression, wherever control is — has a sub-heaplet satisfying `I`.
+
+Tradition honesty (design note §1): this is NOT a separation-logic notion
+— Reynolds/O'Hearn triples speak only of terminal states. It is
+**Verdi-style invariance over the transition system** (`Rel.Step`), the
+native shape of safety properties of non-terminating programs (for which
+`GoTriple` is vacuous). `HProp` is only the assertion language; the
+sub-heaplet reading is `I ∗ true` — the rest of the heap (the program's
+working state) may be in any mid-computation shape, which is what makes
+invariance provable at all (§3: `I` is the protocol-governed portion of
+the state, never the whole mutated footprint). -/
+def GoInvariant (funcs : Array Func) (env₀ : LocalEnv) (P : HProp)
+    (prog : Stmt) (I : HProp) : Prop :=
+  ∀ (hp : Heap) (na : Nat) (hP F : Heaplet), InitialSplit P hp na hP F →
+    ∀ (c' : Config) (σ' : ExecState),
+      Steps (.exec prog env₀ .stop)
+        { functions := funcs, locals := env₀, heap := hp, nextAddr := na } c' σ' →
+      ∃ hI : Heaplet, hI.sub (heapletOf σ'.heap) ∧ sat hI I
+
+/-- Precondition strengthening for `GoInvariant` (surface-level, Iris-free):
+a stronger precondition proves the same invariance. Only `sat_pre` in
+`InitialSplit` mentions `P`, so this is a two-line record update. Used by
+discharges whose stated precondition (e.g. "the cell holds 0") entails the
+exit theorem's canonical `I ∗ P'` shape ("the cell satisfies I"). -/
+theorem goInvariant_mono_pre {funcs env₀ prog} {P Q I : HProp}
+    (h : ∀ hp : Heaplet, sat hp P → sat hp Q)
+    (hinv : GoInvariant funcs env₀ Q prog I) :
+    GoInvariant funcs env₀ P prog I :=
+  fun hp na hP F hin c' σ' hsteps =>
+    hinv hp na hP F { hin with sat_pre := h hP hin.sat_pre } c' σ' hsteps
+
 /-- **The full surface judgment**: the frame-closed triple AND progress —
 "runs safely, and every terminating run delivers `Q` with the frame's
 bindings intact". This is the form specs should be stated in; a triple
@@ -248,6 +282,22 @@ def goldenReturnsTwo_statement : Prop :=
   ∀ (fuel : Nat) (ch : Choices) (σf : ExecState) (ch' : Choices),
     execStmt fuel goldenOut ch goldenDriver = .ok (.normal σf, ch') →
     loadLoc σf (.base ⟨0⟩) = .ok (.int 2 .int)
+
+open GoLean.Iris.GoldenSlice in
+/-- **Step-0 target C (arc `invariant-readout`): the golden register
+invariant.** At EVERY relation-reachable configuration of the seeded
+golden driver — mid-call included — the output cell holds `int 0` or
+`int 2`: never 1, never garbage, never retyped. The miniature of a Verdi
+register invariant ("the register only ever holds values the state machine
+permits"); chosen so the physical invariant needs no ghost state (the
+single write-step goes 0 → 2 atomically). A statement `GoTriple`
+structurally cannot make (terminal states only) and `Progress` does not
+(never-stuck only). -/
+def goldenInvariant_statement : Prop :=
+  GoInvariant sliceLowered.funcs outEnv outCell0 goldenDriver
+    (.ex fun (n : Int) =>
+      .sep (.pointsTo 0 ⟨some (.int .int), .int n .int⟩)
+        (.pure (n = 0 ∨ n = 2)))
 
 /-- **Step-0 negative twin: the output cell provably does NOT hold 3** in
 any terminating run. Once target B is proven this is a two-line corollary

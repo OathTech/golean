@@ -130,26 +130,30 @@ theorem wp_incLowered_call {a : Addr} {kind : IntKind} {m lit : Int} {ty : Ty}
   iapply fupd_intro; inext; iapply fupd_intro; iintro Hcred6
   iapply Hcont $$ Ha'
 
-/-- **The lowered `incViaCall()` composition, ∀-general**: calling the
-frontend's lowered `incViaCall` stores `norm(norm(norm 0 + norm lit) +
-norm lit)` — explicit zero assignment, then two lowered `inc`s — into the
-caller's target cell. The golden counterpart of `wp_main_call`; the extra
-`norm 0` in the chain is the frontend's explicit `x = 0` assignment (the
-hand model relied on the declaration default). -/
-theorem wp_incViaCallLowered_call {kind : IntKind} {lit : Int} {ty : Ty}
-    {mid incId fid : FuncId} {tgt : String} {ta : Addr} {w : GoValue} {env k}
+/-- **The lowered `incViaCall()` body walk, generic in the frame exit**
+(arc `invariant-readout` refactor): the ENTIRE body — frame allocation,
+explicit `x = 0`, two lowered `inc`s, `$res0 = x`, `return` — ending at
+the value-returning frame-exit configuration, whose discharge the caller
+supplies (`Hfin`, ∀-quantified over the machine-chosen result address).
+The walk itself never touches the caller's target cell `ta`, so ONE walk
+serves both exits: the owned-cell form (`wp_incViaCallLowered_call` =
+this + `wp_frame_return_int`) and the invariant form
+(`wp_incViaCallLowered_inv` = this + `wp_frame_return_inv`). -/
+theorem wp_incViaCallLowered_frame {kind : IntKind} {lit : Int} {ty : Ty}
+    {mid incId fid : FuncId} {tgt : String} {ta : Addr} {env k}
     (hmain : findFunctionIn? (GoCoreGS.prog GF) mid
       = some (incViaCallLoweredFunc mid incId kind))
     (hinc : findFunctionIn? (GoCoreGS.prog GF) incId
       = some (incLoweredFunc fid kind ty lit))
     (htgt : LocalEnv.lookup env tgt = some (.base ta)) :
-    ta.id ↦ (⟨some (.int kind), w⟩ : HeapCell)
-      ∗ (ta.id ↦ (⟨some (.int kind),
-            .int (kind.normalize (kind.normalize (kind.normalize 0 + kind.normalize lit)
-              + kind.normalize lit)) kind⟩ : HeapCell)
-          -∗ WP (Config.next k) @ s ; E {{ Φ }})
+    (iprop(∀ ra : Addr,
+      (ra.id ↦ (⟨some (.int kind),
+          .int (kind.normalize (kind.normalize (kind.normalize 0 + kind.normalize lit)
+            + kind.normalize lit)) kind⟩ : HeapCell))
+        -∗ WP (Config.returning (.frame [.base ta] [.base ra] k))
+            @ s ; E {{ Φ }}) : IProp GF)
       ⊢ WP (Config.exec (.call #[.var tgt] mid #[]) env k) @ s ; E {{ Φ }} := by
-  iintro ⟨Hta, Hcont⟩
+  iintro Hfin
   iapply (wp_call_nullary_ret (rname := "$res0") (rty := .int kind)
     (v := .int 0 kind) (body := incViaCallLoweredBody incId kind)
     hmain rfl rfl rfl htgt
@@ -225,6 +229,31 @@ theorem wp_incViaCallLowered_call {kind : IntKind} {lit : Int} {ty : Ty}
   iapply fupd_intro; inext; iapply fupd_intro; iintro Hcred12
   iapply wp_seq_return
   iapply fupd_intro; inext; iapply fupd_intro; iintro Hcred13
+  iapply Hfin $$ %ra Hra
+
+/-- **The lowered `incViaCall()` composition, ∀-general**: calling the
+frontend's lowered `incViaCall` stores `norm(norm(norm 0 + norm lit) +
+norm lit)` — explicit zero assignment, then two lowered `inc`s — into the
+caller's target cell. The golden counterpart of `wp_main_call`; the extra
+`norm 0` in the chain is the frontend's explicit `x = 0` assignment (the
+hand model relied on the declaration default). Now derived from the
+frame-generic walk + the owned frame exit. -/
+theorem wp_incViaCallLowered_call {kind : IntKind} {lit : Int} {ty : Ty}
+    {mid incId fid : FuncId} {tgt : String} {ta : Addr} {w : GoValue} {env k}
+    (hmain : findFunctionIn? (GoCoreGS.prog GF) mid
+      = some (incViaCallLoweredFunc mid incId kind))
+    (hinc : findFunctionIn? (GoCoreGS.prog GF) incId
+      = some (incLoweredFunc fid kind ty lit))
+    (htgt : LocalEnv.lookup env tgt = some (.base ta)) :
+    ta.id ↦ (⟨some (.int kind), w⟩ : HeapCell)
+      ∗ (ta.id ↦ (⟨some (.int kind),
+            .int (kind.normalize (kind.normalize (kind.normalize 0 + kind.normalize lit)
+              + kind.normalize lit)) kind⟩ : HeapCell)
+          -∗ WP (Config.next k) @ s ; E {{ Φ }})
+      ⊢ WP (Config.exec (.call #[.var tgt] mid #[]) env k) @ s ; E {{ Φ }} := by
+  iintro ⟨Hta, Hcont⟩
+  iapply (wp_incViaCallLowered_frame (fid := fid) (ty := ty) hmain hinc htgt)
+  iintro %ra Hra
   iapply (wp_frame_return_int (ra := ra) (ta := ta) (kind := kind)
     (n := kind.normalize (kind.normalize 0 + kind.normalize lit) + kind.normalize lit)
     (w := w))
@@ -234,6 +263,50 @@ theorem wp_incViaCallLowered_call {kind : IntKind} {lit : Int} {ty : Ty}
   · iexact Hta
   iintro ⟨Hra, Hta⟩
   iapply Hcont $$ Hta
+
+/-- **The invariant-form walk** (arc `invariant-readout`): the same body
+walk, with the caller's target cell living in an Iris invariant `Icnt`
+instead of being owned. The frame exit opens the invariant around the
+single writing step and re-establishes it with the stored result
+(`hclose` — the per-step preservation obligation); `hint` says every
+invariant-permitted cell is int-typed, so the store succeeds on whatever
+the invariant exposes. Postcondition-free consumer: the target's `↦` never
+leaves the invariant, so the continuation gets no cell back. -/
+theorem wp_incViaCallLowered_inv {kind : IntKind} {lit : Int} {ty : Ty}
+    {mid incId fid : FuncId} {tgt : String} {ta : Addr} {env k}
+    {S : HeapCell → Prop} {Icnt : IProp GF} {N : Namespace}
+    (hmain : findFunctionIn? (GoCoreGS.prog GF) mid
+      = some (incViaCallLoweredFunc mid incId kind))
+    (hinc : findFunctionIn? (GoCoreGS.prog GF) incId
+      = some (incLoweredFunc fid kind ty lit))
+    (htgt : LocalEnv.lookup env tgt = some (.base ta))
+    (hN : ↑N ⊆ E)
+    (hopen : Icnt ⊢ iprop(∃ cell, ⌜S cell⌝ ∗ ta.id ↦ cell))
+    (hclose : (iprop(ta.id ↦ (⟨some (.int kind),
+        .int (kind.normalize (kind.normalize (kind.normalize 0 + kind.normalize lit)
+          + kind.normalize lit)) kind⟩ : HeapCell)) : IProp GF) ⊢ Icnt)
+    (hint : ∀ cell, S cell → ∃ w : GoValue, cell = ⟨some (.int kind), w⟩) :
+    Iris.inv N Icnt ∗ WP (Config.next k) @ s ; E {{ Φ }}
+      ⊢ WP (Config.exec (.call #[.var tgt] mid #[]) env k) @ s ; E {{ Φ }} := by
+  iintro ⟨HinvT, Hcont⟩
+  iapply (wp_incViaCallLowered_frame (fid := fid) (ty := ty) hmain hinc htgt)
+  iintro %ra Hra
+  iapply (wp_frame_return_inv (ra := ra) (ta := ta) (N := N)
+    (rcell := ⟨some (.int kind),
+      .int (kind.normalize (kind.normalize (kind.normalize 0 + kind.normalize lit)
+        + kind.normalize lit)) kind⟩)
+    hN hopen hclose
+    (fun σ₁ tcell hS hlt => by
+      obtain ⟨w, rfl⟩ := hint tcell hS
+      exact storeLoc_int_cell hlt
+        (kind.normalize (kind.normalize 0 + kind.normalize lit)
+          + kind.normalize lit)))
+  isplitl [HinvT]
+  · iexact HinvT
+  isplitl [Hra]
+  · iexact Hra
+  iintro Hra
+  iexact Hcont
 
 /-- **The golden L6 finish line: lowered `incViaCall` returns 2** — the
 `kind = .int`, `lit = 1` instance. The literal `2` appears only in the

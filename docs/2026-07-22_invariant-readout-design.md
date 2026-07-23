@@ -208,3 +208,33 @@ quantified state-interp premise vs our fixed `GoCoreGS`; whether the
 `▷`-strip needs a timelessness instance for `HProp`-embedded assertions or
 per-case handling; whether `.panicked`-as-stuck interacts with the trivial
 postcondition (it shouldn't — Progress already covers it — but check).
+
+## 7. Build record (2026-07-22, same day — the unknowns resolved)
+
+All resolved favorably; the arc built in one pass:
+
+- iris-lean ships everything needed: `wp_invariance_gen`
+  (`ProgramLogic/Adequacy.lean:317`), `inv`/`inv_alloc`/`inv_acc`
+  (defined directly in accessor form), `instTimelessPointsTo`,
+  `elim_modal_timeless`, and mask-generic WP laws throughout.
+- **One real architectural finding:** `wp_atomic` is INAPPLICABLE to
+  GoCore — it requires the expression to step to a *value*, which works
+  in HeapLang only via the bind rule isolating atomic sub-expressions;
+  our `Config`s are whole-machine states, never values mid-program. The
+  route instead: open the invariant inside the lifting lemmas' own
+  `={E,∅}` fupd slots (`wp_store_step₂_inv`), with the goal's `▷`
+  absorbing the invariant's later and a timeless strip for the
+  reducibility side. If GoCore ever grows an evaluation-context/bind
+  structure, `wp_atomic` becomes available — not needed for now.
+- Delivered: `GoInvariant` + `goldenInvariant_statement` +
+  `goInvariant_mono_pre` (Surface, Iris-free); `embed_timeless`
+  (bridge); `go_heap_invariance` (adequacy); `wp_store_step₂_inv`
+  (lifting core, invariant content generic via `hopen`/`hclose`);
+  `wp_frame_return_inv` (frame-exit form); walk refactor
+  `wp_incViaCallLowered_frame` (+ `_call` rederived statement-unchanged,
+  `_inv` added); `goInvariant_of_wp` (generic exit; `nroot` namespace,
+  v1 single-invariant); `goldenInvariant` (the discharge and the
+  non-vacuity witness). Audit ledger `✓ Invariance`; sweep axiom-clean.
+- Queued from §6: the frame-subsumption corollary (needs an
+  HProp-of-heaplet fold — new surface vocabulary, deliberate decision);
+  multi-invariant namespaces; ghost/abstract-state machinery.

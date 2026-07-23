@@ -85,11 +85,20 @@ mechanism vs per-program artifact; decided with user 2026-07-21):
   REMAINING: the arc's audit ask (Opus reviewers) + merge sign-off; then
   future widenings per the design notes (heaplet-canonical GoTriple
   dropping the `HeapFrag` side condition, `var x ⇓ v` sugar, arity-general
-  GoFuncSpec + runner-equivalence lemma, invariant readout — the
-  raft-shaped exit door, design of record
-  `docs/2026-07-22_invariant-readout-design.md`: Verdi-style invariance over
-  `Rel` via `wp_invariance`, golden discharge "cell 0 ∈ {0,2} at every
-  reachable state"; ghost/abstract-state machinery queued AFTER it).
+  GoFuncSpec + runner-equivalence lemma).
+  **Invariant readout: DONE** (arc `invariant-readout`, 2026-07-22; design
+  of record `docs/2026-07-22_invariant-readout-design.md` incl. §7 build
+  record): `GoInvariant` = Verdi-style invariance over `Rel`;
+  `goldenInvariant` proven ("cell 0 ∈ {0,2} at EVERY reachable
+  configuration") through `goInvariant_of_wp` → `go_heap_invariance` →
+  iris-lean `wp_invariance`; walk refactored once
+  (`wp_incViaCallLowered_frame`, pluggable frame exit), owned form
+  rederived statement-unchanged. Key finding: `wp_atomic` inapplicable to
+  whole-machine `Config`s — invariants open inside the lifting fupd slots
+  (`wp_store_step₂_inv`). QUEUED from the arc: frame-subsumption corollary
+  (needs an HProp-of-heaplet fold), multi-invariant namespaces (v1 =
+  `nroot`), ghost/abstract-state machinery (design note §3 — the
+  linearization-point idiom for multi-step protocol updates).
   Original scope note:
   (1) 2b: `go_heap_adequacy` on `wp_strong_adequacy_gen` — initial-heap `↦`
   handover + final-state extraction; the exit door every future state-property

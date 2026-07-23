@@ -88,6 +88,24 @@ def embed : HProp → IProp GF
   | .sep P Q => iprop(embed P ∗ embed Q)
   | .ex f => iprop(∃ a, embed (f a))
 
+/-- Every embedded surface assertion is **timeless** — `HProp` is first-order
+heap data (`emp`/pure/`↦`/`∗`/`∃`), so `▷ ⟦P⟧` collapses to `◇ ⟦P⟧`. This is
+what lets the invariance readout strip the later that `inv`-opening puts on
+the invariant body (arc `invariant-readout`); proven once by induction, like
+every boundary crossing. -/
+instance embed_timeless : (P : HProp) → BI.Timeless (embed (GF := GF) P)
+  | .emp => by unfold embed; infer_instance
+  | .pure φ => by unfold embed; infer_instance
+  | .pointsTo ℓ c => by unfold embed; infer_instance
+  | .sep P Q =>
+      haveI := embed_timeless P
+      haveI := embed_timeless Q
+      by unfold embed; infer_instance
+  | .ex f =>
+      haveI : ∀ a, BI.Timeless (embed (GF := GF) (f a)) :=
+        fun a => embed_timeless (f a)
+      by unfold embed; infer_instance
+
 /-! ## Ownership helpers -/
 
 theorem ownHeaplet_empty {P : IProp GF} [Affine P] :

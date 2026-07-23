@@ -1,5 +1,6 @@
 import GoLeanProofs.SurfaceBridge
 import GoLeanProofs.Adequacy
+import Iris.Instances.Lib.Invariants
 
 /-!
 # The generic exit theorem (arc `spec-surface` stages 4 + frame closure)
@@ -111,6 +112,70 @@ theorem goSpec_of_wp
       obtain ⟨_obs, c'', σ'', _eₜ, hstep⟩ := hred
       cases hstep with
       | step h => exact ⟨_, _, h⟩
+
+/-- **The invariance exit theorem** (arc `invariant-readout`, design of
+record `docs/2026-07-22_invariant-readout-design.md` §6): from a WP proof
+with **trivial postcondition** that works with `I` held in an Iris
+invariant (∀-quantified namespace) beside the residual precondition `P'`,
+the NATIVE invariance judgment `GoInvariant`: every relation-reachable
+configuration has a sub-heaplet satisfying `I`.
+
+The once-proven pipe: reflect the initial split; allocate
+`inv nroot (embed I)` from `I`'s footprint — **persistence is the
+transport** (design note §2): the extraction wand receives only the state
+interpretation at the reachable state, and the persistent invariant token
+is the one resource that crosses to it; at the reachable state, open the
+invariant against the state interpretation, strip the later
+(`embed_timeless`), and read the sub-heaplet out (`embed_toHeaplet` +
+`ownHeaplet_sub`). Per-program obligations: the WP proof (which must
+respect the per-atomic-step preservation discipline for `I`'s footprint —
+e.g. `wp_frame_return_inv`). Nothing else, ever. -/
+theorem goInvariant_of_wp {I P' : HProp}
+    (Hwp : ∀ [GoCoreGS .hasLC GoCoreS], GoCoreGS.prog GoCoreS = funcs →
+      ∀ N : Namespace,
+        iprop(Iris.inv N (embed (GF := GoCoreS) I) ∗ embed (GF := GoCoreS) P')
+          ⊢ WP (Config.exec prog env₀ .stop) {{ _v, iprop(True) }}) :
+    GoInvariant funcs env₀ (.sep I P') prog I := by
+  intro hp na hP F hinit c' σ' hsteps
+  have htp := steps_erased hsteps
+  suffices h : ∃ hI : Heaplet, Heaplet.sub hI (heapToMap σ'.heap) ∧ sat hI I by
+    obtain ⟨hI, hsub, hsat⟩ := h
+    exact ⟨hI, by rw [heapletOf_eq_heapToMap]; exact hsub, hsat⟩
+  refine go_heap_invariance (GF := GoCoreS)
+    (Config.exec prog env₀ .stop)
+    (ExecState.mk (types := []) (functions := funcs) (methods := #[])
+      (locals := env₀) (heap := hp) (nextAddr := na))
+    [c'] σ' _ hinit.bounded ?_ htp
+  intro _inst hprog
+  have hsplit : ownHeaplet (GF := GoCoreS) (heapToMap hp)
+      ⊢ iprop((embed I ∗ embed P') ∗ ownHeaplet F) := by
+    rw [← heapletOf_eq_heapToMap]
+    refine ((BigSepM.bigSepM_eqv_of_perm
+      (cover_equiv hinit.disj hinit.cover)).1).trans ?_
+    exact ((ownHeaplet_union hinit.disj).1).trans
+      (sep_mono (reflect (.sep I P') hP hinit.sat_pre) .rfl)
+  show ownHeaplet (GF := GoCoreS) (heapToMap hp) ⊢ _
+  iintro Hpts
+  icases hsplit $$ Hpts with ⟨⟨HI0, HP'⟩, -⟩
+  ihave HIlater : iprop(▷ embed (GF := GoCoreS) I) $$ [HI0]
+  · inext
+    iexact HI0
+  imod (inv_alloc nroot ⊤ (embed I)) $$ HIlater with #HinvT
+  imodintro
+  isplitl [HP']
+  · iapply (Hwp hprog nroot)
+    isplitl []
+    · iexact HinvT
+    · iexact HP'
+  iintro Hgh
+  iexists (⊤ \ ↑(nroot : Namespace))
+  imod (inv_acc (E := ⊤) (fun _ _ => CoPset.mem_full)) $$ HinvT with ⟨HI, -⟩
+  imod HI with HI
+  icases (embed_toHeaplet I) $$ HI with ⟨%hI, %hsI, HownI⟩
+  ihave %hsub := ownHeaplet_sub $$ [$Hgh $HownI]
+  imodintro
+  ipureintro
+  exact ⟨hI, hsub, hsI⟩
 
 /-- The triple half alone, for consumers that only need it. -/
 theorem goTriple_of_wp

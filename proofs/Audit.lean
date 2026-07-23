@@ -322,6 +322,34 @@ example := @slice_adequate
   side condition (`HeapFrag` on the raw initial heap) remains; a
   `.panicked` terminal counts as stuck, so `Progress` implies no reachable
   panics (#24 scope).
+- `✓ Invariance` (arc `invariant-readout`, 2026-07-22; design of record
+  `docs/2026-07-22_invariant-readout-design.md`) — **THE INVARIANCE
+  READOUT IS OPEN.** `GoInvariant` (Surface.lean, Iris-free) is
+  Verdi-style invariance over `Rel`: every relation-reachable
+  configuration has a sub-heaplet satisfying `I` (`I ∗ true` reading; NOT
+  an SL triple variant — the docstring names the tradition). PROVEN:
+  `goldenInvariant` — at EVERY reachable configuration of the seeded
+  golden driver, the output cell holds `int 0` or `int 2` (the miniature
+  Verdi register invariant; a statement `GoTriple` structurally cannot
+  make and `Progress` does not). Machinery, all once-proven:
+  `go_heap_invariance` (iris-lean `wp_invariance` + genHeap handover —
+  extraction at an ARBITRARY reachable state, trivial WP postcondition,
+  persistence as the transport), `embed_timeless` (HProp is first-order ⇒
+  the inv-opening later strips), the invariant-opening store core
+  `wp_store_step₂_inv` (invariant opened inside the lifting's fupd slots —
+  `wp_atomic` is inapplicable to whole-machine `Config`s, recorded in its
+  docstring) with `wp_frame_return_inv` as the frame-exit form, and the
+  generic exit `goInvariant_of_wp`. The golden walk was refactored once
+  (`wp_incViaCallLowered_frame` — body walk generic in the frame exit;
+  `wp_incViaCallLowered_call` rederived with statement unchanged), so the
+  SAME walk discharges the owned and invariant forms — anti-hack
+  preserved: per-program work = the precondition shape check + the WP
+  proof. v1 honest scope: exit precondition shape is `I ∗ P'`
+  (`goInvariant_mono_pre` strengthens); namespace fixed to `nroot`
+  (single-invariant v1); the frame-subsumption corollary (invariance ⇒
+  per-state frame preservation for untouched F) is QUEUED — it needs an
+  HProp-of-heaplet fold, new surface vocabulary; ghost/abstract-state
+  machinery queued behind it (design note §3).
 - The **unrestricted** `interpreterSoundStatement`/`interpreterPanicStatement`
   remain `def : Prop` — **stated, not proven**, and false as literally
   stated only for the richer-interpreter reason now (the interpreter covers
@@ -367,5 +395,21 @@ example := @GoLean.Surface.goldenReturnsTwo
 example := @GoLean.Surface.goldenNotThree
 example := @GoLean.GoCore.Correspondence.execStmt_frag_sound
 example := @GoLean.GoCore.Correspondence.evalExpr_frag_ok
+
+/-- `✓` arc `invariant-readout`: the invariance judgment, its exit pipe, and
+the golden discharge (which is also the non-vacuity witness for
+`wp_store_step₂_inv`/`wp_frame_return_inv`/`goInvariant_of_wp` — all
+premises discharged on the concrete lowered program). -/
+example := @GoLean.Surface.GoInvariant
+example := @GoLean.Surface.goldenInvariant_statement
+example := @GoLean.Surface.goldenInvariant
+example := @GoLean.Surface.goInvariant_mono_pre
+example := @GoLean.Iris.embed_timeless
+example := @GoLean.Iris.go_heap_invariance
+example := @GoLean.Iris.wp_store_step₂_inv
+example := @GoLean.Iris.wp_frame_return_inv
+example := @GoLean.Iris.GoldenSlice.wp_incViaCallLowered_frame
+example := @GoLean.Iris.GoldenSlice.wp_incViaCallLowered_inv
+example := @GoLean.Iris.goInvariant_of_wp
 
 end GoLean.Iris.Audit

@@ -286,6 +286,58 @@ theorem wp_frame_return {ra ta : Addr} {rcell tcell newtcell : HeapCell} {k}
           exact ⟨rfl, rfl⟩
   exact wp_store_step₂ rfl hred
 
+/-- **The invariant-opening frame exit** (arc `invariant-readout`): like
+`wp_frame_return`, but the caller's target cell is not owned — it lives in
+an Iris invariant with content `Icnt`, opened around the single
+frame-return step and re-established with the stored result (`hclose`, the
+per-step preservation obligation). The result cell `ra` stays owned, and
+the continuation gets it back; the target's `↦` returns to the invariant.
+`hstore` must succeed on EVERY `S`-cell the invariant may expose (for int
+registers: any int-typed cell). -/
+theorem wp_frame_return_inv {ra ta : Addr} {rcell newtcell : HeapCell}
+    {S : HeapCell → Prop} {Icnt : IProp GF} {k} {N : Namespace}
+    (hN : ↑N ⊆ E)
+    (hopen : Icnt ⊢ iprop(∃ cell, ⌜S cell⌝ ∗ ta.id ↦ cell))
+    (hclose : (iprop(ta.id ↦ newtcell) : IProp GF) ⊢ Icnt)
+    (hstore : ∀ (σ₁ : ExecState) (tcell : HeapCell), S tcell →
+      Heap.lookup σ₁.heap (.base ta) = some tcell →
+        storeLoc σ₁ (.base ta) rcell.value
+          = .ok { σ₁ with heap := Heap.set σ₁.heap (.base ta) newtcell }) :
+    Iris.inv N Icnt ∗ ra.id ↦ rcell
+      ∗ (ra.id ↦ rcell -∗ WP (Config.next k) @ s ; E {{ Φ }})
+      ⊢ WP (Config.returning (.frame [.base ta] [.base ra] k))
+          @ s ; E {{ Φ }} := by
+  have hred : ∀ (σ₁ : ExecState) (tcell : HeapCell), S tcell →
+      Heap.lookup σ₁.heap (.base ra) = some rcell →
+      Heap.lookup σ₁.heap (.base ta) = some tcell →
+      Step (Config.returning (.frame [.base ta] [.base ra] k)) σ₁
+        (.next k) { σ₁ with heap := Heap.set σ₁.heap (.base ta) newtcell } ∧
+      (∀ c' s',
+        Step (Config.returning (.frame [.base ta] [.base ra] k)) σ₁ c' s' →
+        c' = Config.next k ∧
+        s' = { σ₁ with heap := Heap.set σ₁.heap (.base ta) newtcell }) := by
+    intro σ₁ tcell hS hlr hlt
+    refine ⟨Step.frameReturn
+      (LoadsR.cons (loadLoc_base_of_lookup hlr) LoadsR.nil)
+      (StoreManyR.cons (hstore σ₁ tcell hS hlt) StoreManyR.nil), ?_⟩
+    intro c' s' hst
+    cases hst with
+    | frameReturn hresR hstoreR =>
+      cases hresR with
+      | cons hload hrest =>
+        rw [loadLoc_base_of_lookup hlr] at hload
+        injection hload with hval
+        cases hrest
+        rw [← hval] at hstoreR
+        cases hstoreR with
+        | cons hst1 hrest2 =>
+          rw [hstore σ₁ tcell hS hlt] at hst1
+          injection hst1 with hs1
+          rw [← hs1] at hrest2
+          cases hrest2
+          exact ⟨rfl, rfl⟩
+  exact wp_store_step₂_inv hN rfl hopen hclose hred
+
 /-- Witness for `wp_frame_return`: an int result local (holding a normalized
 `n`, ∀-general) returned into an int target cell (any prior value `w`).
 Zero premises beyond the owned cells (D2-proper erased the env-resolution

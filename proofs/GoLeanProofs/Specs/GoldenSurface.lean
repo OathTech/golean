@@ -88,6 +88,78 @@ theorem goldenFuncSpec : goldenFuncSpec_statement := by
     · iexact H2
     · ipureintro; rfl
 
+/-- **Step-0 target C, proven: the golden register invariant** (arc
+`invariant-readout`). At EVERY relation-reachable configuration of the
+seeded golden driver — mid-call included — the output cell holds `int 0`
+or `int 2`. Discharged through the invariance exit pipe
+(`goInvariant_of_wp` → `go_heap_invariance` → iris-lean `wp_invariance`),
+with the WP obligation the SAME body walk as every other golden statement
+(`wp_incViaCallLowered_frame`), the frame exit swapped for the
+invariant-opening form (`wp_frame_return_inv`): the single step that
+writes the register opens the invariant and re-establishes it at 2.
+Per-program work: the precondition shape check (cell-holds-0 entails
+cell-satisfies-I) and the WP proof. -/
+theorem goldenInvariant : goldenInvariant_statement := by
+  unfold goldenInvariant_statement
+  refine goInvariant_mono_pre ?_ (goInvariant_of_wp (P' := .emp) ?_)
+  · -- precondition shape check: `r ↦ 0` entails `I ∗ emp`
+    intro hp hsat
+    have hdisj : ∀ k, hp.get? k = (none : Option HeapCell)
+        ∨ (∅ : Heaplet).get? k = none := fun k =>
+      Or.inr (by
+        rw [heaplet_get?_eq]
+        exact LawfulPartialMap.get?_empty (M := GoHeapF) (k := k))
+    have hcover : ∀ k (c : HeapCell), hp.get? k = some c
+        ↔ (hp.get? k = some c ∨ (∅ : Heaplet).get? k = some c) := fun k c =>
+      ⟨Or.inl, fun h => h.elim id (fun h0 => by
+        rw [heaplet_get?_eq,
+          LawfulPartialMap.get?_empty (M := GoHeapF) (k := k)] at h0
+        cases h0)⟩
+    exact ⟨hp, ∅, ⟨0, hp, ∅, hsat, ⟨Or.inl rfl, rfl⟩, hdisj, hcover⟩,
+      rfl, hdisj, hcover⟩
+  · -- the WP obligation: the golden walk with the invariant-opening exit
+    intro _inst hprog N
+    iintro ⟨HinvT, -⟩
+    iapply (wp_incViaCallLowered_inv (kind := .int) (lit := 1)
+      (ty := .int .int) (ta := ⟨0⟩) (N := N)
+      (S := fun cell => ∃ n : Int,
+        (n = 0 ∨ n = 2) ∧ cell = ⟨some (.int .int), .int n .int⟩)
+      (Icnt := embed (GF := GoCoreS) (.ex fun (n : Int) =>
+        .sep (.pointsTo 0 ⟨some (.int .int), .int n .int⟩)
+          (.pure (n = 0 ∨ n = 2))))
+      (hmain := by rw [hprog]; rfl)
+      (hinc := by rw [hprog]; rfl)
+      (htgt := by simp [LocalEnv.lookup, Scope.lookup])
+      (hN := fun _ _ => CoPset.mem_full)
+      (hopen := by
+        simp only [embed]
+        iintro ⟨%n, Hpt, %hn⟩
+        iexists (⟨some (.int .int), .int n .int⟩ : HeapCell)
+        isplitl []
+        · ipureintro
+          exact ⟨n, hn, rfl⟩
+        · iexact Hpt)
+      (hclose := by
+        have h2 : IntKind.normalize .int
+            (IntKind.normalize .int
+              (IntKind.normalize .int 0 + IntKind.normalize .int 1)
+              + IntKind.normalize .int 1) = 2 := by decide
+        rw [h2]
+        simp only [embed]
+        iintro Hpt
+        iexists (2 : Int)
+        isplitl [Hpt]
+        · iexact Hpt
+        · ipureintro
+          exact Or.inr rfl)
+      (hint := fun cell hS => by
+        obtain ⟨n, _, rfl⟩ := hS
+        exact ⟨.int n .int, rfl⟩))
+    isplitl [HinvT]
+    · iexact HinvT
+    iapply (wp_value' (v := ()))
+    itrivial
+
 /-- **Step-0 target A, proven: the golden triple** (the triple half of
 `goldenSpec`). -/
 theorem goldenTriple : goldenTriple_statement := by

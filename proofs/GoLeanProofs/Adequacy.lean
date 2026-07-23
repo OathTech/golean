@@ -249,6 +249,51 @@ theorem go_heap_adequacy_own [GoCoreGpreS .hasLC GF] (c : Config)
     ipureintro
     grind
 
+/-- **The invariance readout** (arc `invariant-readout`, design of record
+`docs/2026-07-22_invariant-readout-design.md`): iris-lean's `wp_invariance`
+instantiated with GoCore's genHeap state interpretation and initial-heap
+handover. Unlike `go_heap_adequacy*`, the conclusion `φ` is extracted at an
+**arbitrary reachable** configuration `(t2, σ2)` — not a terminal one — and
+the WP obligation carries the **trivial postcondition** (the triple's `Q`
+plays no role in invariance). The extraction wand receives ONLY the state
+interpretation at `σ2`: owned resources inside the WP never reach it, so
+the fact must arrive via something persistent the user's `|={⊤}=>` staged —
+in practice an Iris invariant token (`inv_alloc` from the handed-over
+fragments; persistence is the transport, design note §2). -/
+theorem go_heap_invariance [GoCoreGpreS .hasLC GF] (c : Config)
+    (σ : ExecState) (t2 : List Config) (σ2 : ExecState) (φ : Prop)
+    (hσwf : HeapWf σ)
+    (Hwp : ∀ [GoCoreGS .hasLC GF], GoCoreGS.prog GF = σ.functions →
+      iprop([∗map] l ↦ cell ∈ heapToMap σ.heap, l ↦ cell)
+        ⊢ |={⊤}=> iprop(
+            (WP c {{ _v, iprop(True) }}) ∗
+            (genHeapInterp (GF := GF) (H := GoHeapF) (heapToMap σ2.heap)
+              -∗ ∃ E : CoPset, |={⊤,E}=> ⌜φ⌝)))
+    (Hsteps : ([c], σ) -·->ₜₚ* (t2, σ2)) :
+    φ := by
+  refine wp_invariance_gen (GF := GF) (hlc := .hasLC) .NotStuck c σ σ2 t2 φ
+    ?_ Hsteps
+  iintro %Hinv %κs
+  imod (genHeap_init_names (GF := GF) (heapToMap σ.heap))
+    with ⟨%γh, %γm, Hσ, Hpts, Htok⟩
+  letI _ : GoCoreGS .hasLC GF := ⟨⟨γh, γm⟩, σ.functions⟩
+  imod (Hwp rfl) $$ Hpts with ⟨Hwp', Hcont⟩
+  imodintro
+  iexists (fun σ' _ _ =>
+    iprop(genHeapInterp (GF := GF) (H := GoHeapF) (heapToMap σ'.heap)
+      ∗ ⌜σ'.functions = σ.functions ∧ HeapWf σ'⌝))
+  iexists (fun _ => iprop(True))
+  dsimp only
+  isplitl [Hσ]
+  · isplitl [Hσ]
+    · iexact Hσ
+    · ipureintro
+      exact ⟨rfl, hσwf⟩
+  isplitl [Hwp']
+  · iexact Hwp'
+  iintro ⟨Hgh, %Hpure⟩
+  iapply Hcont $$ Hgh
+
 /-! ## Arc `slice-l5-pure` item 2 — the end-to-end adequacy witness
 
 The one artifact that demonstrates the WP→adequacy chain *composes*: a concrete
