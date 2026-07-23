@@ -59,7 +59,7 @@ correct it when the lowering is fixed. Tracked in `TODO.md` (F1).
   committed, so "coarser than Go" is wrong-by-default, not a scope note)
 
 `ExprR` is a big-step premise relation inside statement steps, so a
-compound expression reading several cells (`x == y`, `x < a+b`) is ONE
+compound expression reading several cells (`x == y`, `x == y+z`) is ONE
 atomic `Rel` step. Real Go interleaves goroutines between the reads. If
 goroutine rules are added over the current granularity, the model UNDER-
 approximates real behaviors (misses torn reads), and Iris invariant
