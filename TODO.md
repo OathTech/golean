@@ -159,11 +159,18 @@ CLAUDE.md, stale Correspondence header. Open items:
   `docs/native-frontend-goal.md` overclaim that "field/index access" works (reads
   only). On the north-star path (raft mutates struct fields pervasively).
 - [ ] **F4 (major, strategic) — concurrency design note BEFORE fork machinery.**
-  Decide whether multi-node quorum safety needs shared-heap concurrent separation
-  logic (goroutine model, what env-in-control enables) or an N-node
-  interleaving/message model. The "env-in-control is the concurrency prerequisite"
-  rationale targets intra-node goroutines, not the multi-node concurrency safety
-  is about — don't conflate them. **F4 is BLOCKED by BUG-002
+  **DECIDED 2026-07-22 — design of record
+  `docs/2026-07-22_f4-concurrency-model.md`:** fine-grained shared-memory
+  concurrency (confinement-only REJECTED); memory-op granularity, SC,
+  atomics as SC steps, plain races out of scope (DRF-SC condition stated
+  explicitly); **big-step rules DELETED in the reshape, no interop shim**
+  (user directive); interpreter becomes iterated stepFn (T1/T2
+  correspondence dissolves to per-rule lemmas); Choices is the native
+  controlled-scheduler hook (Coyote/PCT/P-style fuzzing = Choices
+  generators); staged plan R0–R5, reshape BEFORE structs/arrays.
+  Remaining open in F4's original scope: the multi-node/N-node network
+  model for quorum safety (distinct from intra-node goroutines — don't
+  conflate; decided at F5 time). **F4 machinery is BLOCKED by BUG-002
   (`docs/BUGS.md`, 2026-07-22): expression-step atomicity.** `ExprR` is a
   premise relation, so a multi-read condition is ONE atomic `Rel` step —
   coarser than Go's interleaving. Sequentially sound (no call exprs in
