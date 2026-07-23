@@ -106,14 +106,17 @@ turns a case red (removing junk it depended on), record it: case id, old→new
 stage, the bad assumption removed, the clean fix. Do not weaken the oracle,
 skip a case, or edit canonical Go to make something pass.
 
-## Proof-facing code is total; interpreter debt is tagged
+## Proof-facing code is total; keep it that way
 
 New relational/proof-facing definitions (`Rel.lean`, `Correspondence.lean`) are
 total — no `partial`, no `sorry`, no `native_decide`. The executable
-interpreter is currently `partial` (a known, tracked debt against the
-correspondence proofs); do not add new `partial` semantic functions without a
-concrete reason, and prefer structural/well-founded recursion in new code so
-the proof direction stays reachable.
+interpreter's big-step cluster is ALSO total (arc `eval-totalization`,
+2026-07-21 — GoCore has 0 `partial def`s; the remaining `partial`s are
+frontend/CLI, outside the semantic core). Do not add new `partial` semantic
+functions without a concrete reason, and prefer structural/well-founded
+recursion in new code so the proof direction stays reachable. (Status line
+corrected 2026-07-22 per pre-merge audit — the old text still called the
+interpreter `partial`.)
 
 **Non-vacuity gate (axiom-clean is not enough).** A WP/Hoare law can be
 axiom-clean *and vacuous* — premises no real program can satisfy simultaneously,

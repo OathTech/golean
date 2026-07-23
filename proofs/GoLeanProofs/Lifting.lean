@@ -158,10 +158,15 @@ discipline that makes the invariance readout true: the cell may be WRITTEN
 Mechanically this is why no `wp_atomic` is needed: our `Config`s are
 whole-machine states that never step to values mid-program, so the
 HeapLang open-around-atomic-subexpression route is unavailable — instead
-the invariant is opened inside the lifting's own `={E,∅}` slots, its `▷`
-absorbed by the step goal's later (plus a timeless strip for the
-reducibility side). The read cell `pa` stays owned, as in
-`wp_store_step₂`. -/
+the invariant is opened inside the lifting's own `={E,∅}` slots, and its
+`▷` is stripped WHOLESALE by timelessness (the content is first-order
+heap data — `elim_modal_timeless` fires under the fupd goal); the
+stripped cell then serves both the reducibility proof and the post-step
+ghost update, and the close side re-introduces a fresh `▷` to restore
+`Icnt`. (Wording corrected per the 2026-07-22 pre-merge audit: an earlier
+docstring claimed the step goal's own later absorbs the invariant's — it
+does not; the timeless strip is the primary mechanism.) The read cell
+`pa` stays owned, as in `wp_store_step₂`. -/
 theorem wp_store_step₂_inv {pa a : Addr} {pcell : HeapCell}
     {S : HeapCell → Prop} {newcell : HeapCell} {Icnt : IProp GF}
     {c₀ : Config} {k} {N : Namespace}

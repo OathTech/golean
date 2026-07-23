@@ -222,10 +222,15 @@ All resolved favorably; the arc built in one pass:
   in HeapLang only via the bind rule isolating atomic sub-expressions;
   our `Config`s are whole-machine states, never values mid-program. The
   route instead: open the invariant inside the lifting lemmas' own
-  `={E,∅}` fupd slots (`wp_store_step₂_inv`), with the goal's `▷`
-  absorbing the invariant's later and a timeless strip for the
-  reducibility side. If GoCore ever grows an evaluation-context/bind
-  structure, `wp_atomic` becomes available — not needed for now.
+  `={E,∅}` fupd slots (`wp_store_step₂_inv`), with the invariant's `▷`
+  stripped WHOLESALE by timelessness (`elim_modal_timeless` under the
+  fupd goal — the content is first-order heap data); the stripped cell
+  serves both the reducibility proof and the post-step ghost update, and
+  the close side re-introduces a fresh `▷`. (Wording corrected per the
+  2026-07-22 pre-merge audit: the first draft claimed the step goal's own
+  later absorbs the invariant's — it does not.) If GoCore ever grows an
+  evaluation-context/bind structure, `wp_atomic` becomes available — not
+  needed for now.
 - Delivered: `GoInvariant` + `goldenInvariant_statement` +
   `goInvariant_mono_pre` (Surface, Iris-free); `embed_timeless`
   (bridge); `go_heap_invariance` (adequacy); `wp_store_step₂_inv`
