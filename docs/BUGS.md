@@ -47,3 +47,63 @@ fields pervasively). GoCore already has the right primitives (`fieldAddr`,
 `indexAddr`); the fix is in `emit.go`. Also: `docs/native-frontend-goal.md`
 overclaims "field/index access" as working (true for reads, false for writes) —
 correct it when the lowering is fixed. Tracked in `TODO.md` (F1).
+
+## BUG-002 — expression-step atomicity is wrong for concurrent Go (latent)
+
+- Status: open
+- Pinned-by: none (latent — `Rel` has no goroutine rules yet, so no
+  concurrent claim is derivable today and no differential case can pin it;
+  it becomes a live unsoundness the day concurrency lands without the fix)
+- Discovered: 2026-07-22 (arc E loop-law review of the Goose divergence;
+  classified a BUG, not a caveat, at user direction — concurrency is
+  committed, so "coarser than Go" is wrong-by-default, not a scope note)
+
+`ExprR` is a big-step premise relation inside statement steps, so a
+compound expression reading several cells (`x == y`, `x < a+b`) is ONE
+atomic `Rel` step. Real Go interleaves goroutines between the reads. If
+goroutine rules are added over the current granularity, the model UNDER-
+approximates real behaviors (misses torn reads), and Iris invariant
+opening "around one atomic step" licenses reasoning across a multi-read
+window — together enough to prove theorems false of real Go for racy
+programs (e.g. invariant-mediated plain reads racing a two-step writer:
+the model never shows the mixed pair a real schedule can produce). The
+DRF escape ("coarse ≡ fine for race-free programs") is NOT self-enforcing:
+the logic would verify such racy programs without complaint, so carrying
+this granularity into a concurrent `Rel` violates fail-closed (a hidden
+wrong answer, not a visible red).
+
+**Consequence: the concurrency arc (F4) is BLOCKED on resolving this.**
+Sequentially it is NOT a bug — GoCore `Expr` has no call constructor (the
+frontend must lower calls out of expressions), so no sequential program
+distinguishes the granularities; every current theorem is unaffected.
+
+Fix paths (F4 decides; record the choice there):
+1. **Refactor expression evaluation into the configuration language**
+   (small-step expression machine): word-level granularity, `wp_bind` and
+   `wp_atomic` become available (retiring two recorded workarounds), and
+   the calls-in-expressions trigger in `Rel.lean` points the same way.
+   The likely eventual fix; substantial correspondence rework.
+2. **v1 confinement concurrency**: goroutine-confined heaps, ownership
+   transferred only via channel externs (CSP-style) — no shared-memory
+   invariants in v1, making expression granularity moot; matches the
+   etcd-raft north star's actual architecture (single-threaded core,
+   message passing). Defers (1) to a lock-free-code widening.
+3. Law-discipline restriction (invariants openable only around
+   single-access steps): fragile, easy to violate silently — likely
+   reject.
+
+See `docs/2026-07-22_arc-e-while-invariant.md` §2′ (the sequential
+justification) and TODO.md F4 (the charter). This entry exists so the
+constraint cannot rot in prose while goroutine machinery is built.
+
+**Scope sharpening (2026-07-22, same day):** the full fix is bigger than
+expressions. Even a small-step expression machine leaves `Step.assign`
+bundling its reads and its write in one step — true word-level atomicity
+requires decomposing statement steps into a HeapLang-style memory-op
+machine, a major reshape of the trusted relation. This strengthens the
+case for fix path 2 (confinement v1) and for making the F4 *decision*
+early even while the *fix* is deferred: the rework cost of path 1 scales
+with fragment size, so every Arc-E widening rung built before F4 decides
+deepens the potential hole. Recommendation recorded: write the F4 note
+before or alongside the next major fragment widening (structs/arrays),
+not after.

@@ -163,7 +163,17 @@ CLAUDE.md, stale Correspondence header. Open items:
   logic (goroutine model, what env-in-control enables) or an N-node
   interleaving/message model. The "env-in-control is the concurrency prerequisite"
   rationale targets intra-node goroutines, not the multi-node concurrency safety
-  is about — don't conflate them. **Charter extended 2026-07-22:** F4 must
+  is about — don't conflate them. **F4 is BLOCKED by BUG-002
+  (`docs/BUGS.md`, 2026-07-22): expression-step atomicity.** `ExprR` is a
+  premise relation, so a multi-read condition is ONE atomic `Rel` step —
+  coarser than Go's interleaving. Sequentially sound (no call exprs in
+  the IR — `docs/2026-07-22_arc-e-while-invariant.md` §2′); carried into
+  a concurrent `Rel` it under-approximates schedules and over-licenses
+  invariant opening — theorems provable that are false of real racy Go,
+  with no self-enforcing DRF scope. Goroutine rules must not land until
+  F4 picks a fix (expression small-step refactor / v1 channel-confinement
+  model / rejected law-discipline — see the BUG-002 entry).
+  **Charter extended 2026-07-22:** F4 must
   include a fault-model section per `docs/2026-07-22_fault-model.md`
   (taxonomy panic/fatal/deadlock/race-scope/exhaustion; what `Rel`
   represents; what the oracle discriminates — fault *identity*, not just
