@@ -15,7 +15,11 @@ structure RunArgs where
   input : Option FilePath := none
   functionName : Option String := none
   args : Array Int := #[]
-  fuel : Nat := 100000
+  /-- Fuel counts MACHINE STEPS (reshape S3, 2026-07-23; previously
+  while-back-edges + call entries only), so the default is retuned upward.
+  No corpus case or script pins `--fuel`; the tracked baseline gates the
+  retune. -/
+  fuel : Nat := 10000000
   /-- Nondeterminism oracle: the choice stream consumed at nondeterministic
   points (map iteration order, append capacity). Empty is the canonical
   default. The harness runs the same program under several sequences to check
@@ -313,7 +317,10 @@ private def runNativeJsonRun (args : List String) : IO UInt32 := do
                   IO.println (cliErrorJson s!"{input}: {err}").compress
                   return 1
               | .ok program =>
-                  match GoLean.GoCore.runNamedFunctionInts cfg.fuel program functionName cfg.args cfg.choices with
+                  -- Reshape S3 flip (2026-07-23): the machine interpreter
+                  -- (iterated stepFn) is the executable; the big-step
+                  -- interpreter is deleted at S4.
+                  match GoLean.GoCore.Machine.runNamedFunctionIntsM cfg.fuel program functionName cfg.args cfg.choices with
                   | .ok result =>
                       IO.println (runJson result).compress
                       return 0
