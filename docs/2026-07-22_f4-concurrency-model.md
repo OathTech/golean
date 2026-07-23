@@ -51,12 +51,22 @@ baselines**, not in code: the reshape's acceptance gate is ZERO sequential
 drift on the full differential (718 cases at the time of writing), the
 strongest safety net the project owns.
 
-Cosmetic open choice: the Surface layer's statements quantify over
-`execStmt`-shaped runs. Either keep an `execStmt`-shaped function —
-fuel-bounded iteration of the NEW step function, possibly under the old
-name — so Surface statements keep their form (this is the new semantics
-packaged, not a shim: no old rule appears in it), or restate the Surface
-statements against a new API. Decide at reshape time; both are honest.
+**Surface-statement interface: DECIDED (2026-07-22, pain analysis with
+user) — keep the `execStmt`-shaped wrapper**: fuel-bounded iteration of
+the NEW step function under the old name/signature. Not a shim — no old
+rule appears in it; a docstring line says so for auditors. Rationale:
+Surface statements ∀-quantify fuel and Choices, so both changing
+denotation (fuel per machine step; Choices carrying scheduler decisions
+later) is invisible to them given fuel-monotonicity (trivial for iterated
+step); only concrete-fuel pins (runner config) retune. Proof scripts
+unfolding `execStmt` equations break equally under either choice (R3 work
+regardless). The wrapper preserves theorem-level comparability — "R3
+restores `goldenReturnsTwo` statement byte-identical" is the proof-layer
+twin of the zero-drift differential gate — and keeps the design principle
+that statements quantify over the EXECUTABLE artifact. The signature is
+inherently sequential; at R4 it simply remains the sequential-fragment
+entry point (concurrent specs get new judgment forms regardless — never
+stretch this one).
 
 ## 3. Architecture: one semantics, instantiated
 
