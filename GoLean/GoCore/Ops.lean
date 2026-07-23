@@ -803,3 +803,76 @@ def sliceVisibleValues (state : ExecState) (slice : SliceValue) :
   for i in [:slice.len] do
     values := values.push (← loadLoc state (← sliceIndexLoc slice (Int.ofNat i)))
   return values
+
+/-! The following were also never recursive; moved out of `Eval.lean`'s mutual
+cluster (reshape S2 motion, 2026-07-23) for sharing with `Machine`/`stepFn`.
+Pure motion — no behavior change. -/
+
+def mapEntries (state : ExecState) (map : MapValue) :
+    Except GoError (Option (Loc × Array (GoValue × GoValue))) := do
+  match map.base with
+  | none => return none
+  | some baseLoc =>
+      match ← loadLoc state baseLoc with
+      | .mapData entries => return some (baseLoc, entries)
+      | other => stuck s!"expected map data, got {repr other}"
+
+def mapLookupValue (state : ExecState) (map : MapValue) (key : GoValue)
+    (keyTy valueTy : Ty) : Except GoError (GoValue × Bool) := do
+  match ← mapEntries state map with
+  | none => return (← defaultValue state valueTy, false)
+  | some (_, entries) =>
+      match ← mapEntryIndex? state keyTy entries key with
+      | some i =>
+          match entries[i]? with
+          | some (_, value) => return (value, true)
+          | none => stuck s!"missing map entry at index {i}"
+      | none => return (← defaultValue state valueTy, false)
+
+def appendGrowthCap (oldCap newLen : Nat) : Nat :=
+  if newLen <= oldCap then
+    oldCap
+  else if oldCap == 0 then
+    max 4 newLen
+  else if newLen > oldCap + oldCap then
+    newLen
+  else if oldCap < 256 then
+    oldCap + oldCap
+  else
+    let rec loop (cap : Nat) : Nat :=
+      if cap >= newLen then
+        cap
+      else
+        loop (cap + (cap + 3 * 256) / 4)
+    loop oldCap
+
+def buildAppendBackingValue (state : ExecState) (elem : Ty)
+    (oldValues elemValues : Array GoValue) (newCap : Nat) : Except GoError GoValue := do
+  let mut values := #[]
+  for value in oldValues ++ elemValues do
+    values := values.push (← normalizeValueForTy state elem value)
+  if values.size > newCap then
+    stuck s!"append backing capacity {newCap} smaller than length {values.size}"
+  for _ in [:newCap - values.size] do
+    values := values.push (← defaultValue state elem)
+  return .array values
+
+def dynamicDispatch? (state : ExecState) (func : Func) (argValues : Array GoValue) :
+    Except GoError (Option (Func × Array GoValue)) := do
+  match methodInfoByFuncId? state func.id with
+  | none => return none
+  | some method =>
+      match methodRecvInterfaceName? state method with
+      | none => return none
+      | some _ =>
+          match argValues[0]? with
+          | some (GoValue.interface dynamicName inner) =>
+              match concreteMethodForDynamic? state dynamicName method.name with
+              | some concrete =>
+                  let targetFunc ←
+                    match findFunctionIn? state.functions concrete.funcId with
+                    | some func => pure func
+                    | none => stuck s!"GoCore dynamic method target not found: {concrete.funcId.key}"
+                  return some (targetFunc, argValues.set! 0 inner)
+              | none => stuck s!"dynamic type {dynamicName} has no method {method.name}"
+          | _ => return none
