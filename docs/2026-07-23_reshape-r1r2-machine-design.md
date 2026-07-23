@@ -237,6 +237,31 @@ gate, then deleting:
 content byte-identical to `main`'s, plus the standing pre-merge audit
 ask. R1+R2 alone never reach `main` with the proof layer pruned.
 
+## 6′. Stage log (updated as stages land; branch `reshape-smallstep`)
+
+- **S0–S4 DONE (2026-07-23):** design note; `Machine.lean` (fine-grained
+  relation, shared op tables); `stepFn` + drivers; THE FLIP (zero drift on
+  718, eval tests 40/40, fuel default 10^7); THE DELETION (`Eval`/`Rel`/
+  `Correspondence` + `ExecState.locals` gone; proofs pruned with tracked
+  checklists; golden pin extracted to pure-syntax `GoldenProgram`;
+  `scripts/ci` 11/11 PASS incl. zero drift re-verified post-deletion).
+- **S5 DONE (2026-07-23):** `MachineSound.lean` — `stepFn_sound`
+  (fun_cases over the definition tree), `step_complete` (∃-choice-stream
+  realization; nondet rules witnessed by the encoding stream), and
+  `runConfig_sound` (terminating runs are reachable `Steps` traces — the
+  `interpreterSound` analogue, now total over the FULL fragment). T1/T2
+  are replaced; sweep 3179 decls axiom-clean. Two stepFn adjustments for
+  rule/arm one-to-one correspondence (decidable-eq init scope check;
+  target pre-check only when operands remain), re-validated by eval tests
+  + a full differential run.
+- **S6/R3 IN PROGRESS:** infrastructure stratum restored (Lang /
+  HeapBridge / Ghost — namespace-only ports; `val_stuck` proof unchanged).
+  NEXT: Inversions (determinism now largely generic — rules are disjoint
+  except the two choice classes), Lifting + Laws (the bind-form redesign:
+  `wp_bind` via continuation composition, `LanguageCtx` validation against
+  iris-lean), Adequacy, Surface pipes + `execStmt`-shaped wrapper,
+  witnesses, Audit gate un-pruning.
+
 ## 7. What survives untouched
 
 Frontend + wire format, corpus, oracle and runner scripts, tracked
