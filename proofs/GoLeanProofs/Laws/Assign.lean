@@ -468,6 +468,71 @@ theorem wp_assign_var_int {sa ta : Addr} {kind : IntKind} {n : Int}
       ⊢ WP (Config.exec (.assign (.var tgt) (.var src)) env k) @ s ; E {{ Φ }} :=
   wp_assign_var hres_t hres_s (fun _ hlt => storeLoc_int_cell hlt n)
 
+/-- The updated cell after `x = x + lit` (hoisted: multi-line anonymous
+constructors fail to parse inside `{ σ with … }` updates). -/
+abbrev varIncCell (kind : IntKind) (m lit : Int) : HeapCell :=
+  ⟨some (.int kind), .int (kind.normalize (m + kind.normalize lit)) kind⟩
+
+/-- **Self-increment through a variable: `x = x + lit`** (arc E rung B1 —
+the loop-witness body). The rhs reads the SAME cell the assignee writes,
+so `wp_assign`'s state-independent `hrhs` cannot apply (the `*p = *p + 1`
+problem, var flavor); built directly on the single-cell `wp_store_step`
+with the reduction facts conditioned on the owned cell
+(`exprR_var_add_lit_det`). ∀-general over `m` and `lit`; zero unresolved
+premises beyond env resolution. -/
+theorem wp_var_inc {a : Addr} {kind : IntKind} {m lit : Int} {x : String}
+    {env k}
+    (hres : LocalEnv.lookup env x = some (.base a)) :
+    a.id ↦ (⟨some (.int kind), .int m kind⟩ : HeapCell)
+      ∗ (a.id ↦ varIncCell kind m lit
+          -∗ WP (Config.next k) @ s ; E {{ Φ }})
+      ⊢ WP (Config.exec (.assign (.var x) (.add (.var x) (.intLit lit kind)))
+          env k) @ s ; E {{ Φ }} := by
+  have hred : ∀ σ₁ : ExecState,
+      Heap.lookup σ₁.heap (.base a) = some ⟨some (.int kind), .int m kind⟩ →
+      Step (Config.exec (.assign (.var x) (.add (.var x) (.intLit lit kind)))
+          env k) σ₁
+        (.next k)
+        { σ₁ with heap := Heap.set σ₁.heap (.base a) (varIncCell kind m lit) } ∧
+      (∀ c' s', Step (Config.exec
+            (.assign (.var x) (.add (.var x) (.intLit lit kind))) env k) σ₁
+            c' s' →
+        c' = Config.next k ∧
+        s' = { σ₁ with
+          heap := Heap.set σ₁.heap (.base a) (varIncCell kind m lit) }) := by
+    intro σ₁ hlook
+    refine ⟨Step.assign (AssigneeR.var hres)
+      (ExprR.addInt (ExprR.var hres (loadLoc_base_of_lookup hlook))
+        ExprR.intLit (intKind_compatibleResult_self kind))
+      (storeLoc_int_cell hlook (m + kind.normalize lit)), ?_⟩
+    intro c' s' hst
+    cases hst with
+    | assign hass hr hs =>
+      cases hass with
+      | var hl =>
+        rw [hres] at hl; injection hl with hloc
+        have hd := exprR_var_add_lit_det hres hlook hr
+        injection hd with hv hs2
+        rw [← hloc, hv, hs2, storeLoc_int_cell hlook (m + kind.normalize lit)]
+          at hs
+        injection hs with hs3
+        exact ⟨rfl, hs3.symm⟩
+    | assignTargetPanic hass => cases hass
+    | assignValuePanic hass hr =>
+      cases hass with
+      | var hl =>
+        exact ExprOut.noConfusion (exprR_var_add_lit_det hres hlook hr)
+    | assignStorePanic hass hr hs =>
+      cases hass with
+      | var hl =>
+        rw [hres] at hl; injection hl with hloc
+        have hd := exprR_var_add_lit_det hres hlook hr
+        injection hd with hv hs2
+        rw [← hloc, hv, hs2, storeLoc_int_cell hlook (m + kind.normalize lit)]
+          at hs
+        simp at hs
+  exact wp_store_step rfl hred
+
 end
 
 end GoLean.Iris

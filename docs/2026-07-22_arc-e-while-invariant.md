@@ -107,6 +107,36 @@ triple vacuously at the triple layer; `Progress`/`GoSpec` still hold
 metrics are explicitly out of scope for the ladder until liveness (F5
 tier 2).
 
+## 2′. Generalization amendment (2026-07-22, user direction, BUILT)
+
+Before the §2 sketch was committed, user direction: mirror the
+established Iris-project structure (HeapLang/Goose), don't reinvent, and
+generalize early. The §2 single-cell shape (`Inv : HeapCell → Prop`,
+`dec : HeapCell → Bool`) was over-specialized — it could not state a
+two-cell loop invariant, let alone ghost state. What was actually built:
+
+- The prior art is **Goose/Perennial's `wp_forBreak_cond`** (HeapLang
+  itself has no loop construct — loops are recursion + Löb at the proof
+  site). Its shape: a **`Bool`-indexed invariant `I : Bool → iProp`**
+  (continue/exit), persistent body spec. `wp_while_inv` adopts exactly
+  this: `I : Bool → IProp GF`, arbitrary resources, `Hbody` a Lean-level
+  (hence freely reusable = □) premise, exit receives `I false`. The
+  single-cell form of §2 survives only inside the witness's instance of
+  `I`.
+- The lifting core generalized the same way: `wp_det_step_keep` over an
+  arbitrary resource `P` with the reduction premise conditioned on
+  resources in the general form (`genHeapInterp ∗ P ⊢ |==> ⌜step ∧ det⌝`)
+  — subsuming §2's planned single-cell `wp_read_step` (never committed).
+- **Recorded divergence (not a reinvention):** HeapLang/Goose route the
+  loop condition through `wp_bind` as a sub-expression WP; our CK machine
+  has no bind and `ExprR` is premise-level (the same language-shape fact
+  that makes `wp_atomic` inapplicable — invariant-readout design note
+  §7). So the condition arrives as the resource-conditioned premise
+  `Hcond`. If expression evaluation ever moves into the configuration
+  language (tracked note in `Rel.lean`), revisit toward the bind form.
+- The `Bool` index is also exactly the extension point Goose uses for
+  `break`/`continue` — rung-B follow-ups fit the locked shape.
+
 ## 3. B1 witness + surface discharge
 
 Witness program (fragment-legal today):

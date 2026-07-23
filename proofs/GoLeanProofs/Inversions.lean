@@ -179,4 +179,93 @@ theorem exprR_inc_det {env : LocalEnv} {σ : ExecState} {p : String}
       exact ExprOut.noConfusion (exprR_intLit_det (hs1 ▸ hpanic))
   | _ => exact Expr.noConfusion he
 
+/-- Inversion of `ExprR` on `x + lit` (variable plus int literal),
+conditioned on `x`'s int cell: it evaluates only to the normalized sum.
+The var twin of `exprR_inc_det` (arc E rung B1: the loop witness body
+`x = x + 1`). -/
+theorem exprR_var_add_lit_det {env : LocalEnv} {σ : ExecState} {x : String}
+    {a : Addr} {kind : IntKind} {m lit : Int} {out : ExprOut}
+    (hl : LocalEnv.lookup env x = some (.base a))
+    (ha : Heap.lookup σ.heap (.base a) = some ⟨some (.int kind), .int m kind⟩)
+    (h : ExprR env σ (.add (.var x) (.intLit lit kind)) out) :
+    out = .value (.int (kind.normalize (m + kind.normalize lit)) kind) σ := by
+  generalize he : Expr.add (.var x) (.intLit lit kind) = e at h
+  cases h with
+  | addInt hle hre hk =>
+      injection he with h1 h2; subst h1; subst h2
+      have hld := exprR_var_det hl (loadLoc_base_of_lookup ha) hle
+      injection hld with hlv hs1
+      injection hlv with hm hkl
+      have hrd := exprR_intLit_det (hs1 ▸ hre)
+      injection hrd with hrv hs2
+      injection hrv with hn hkr
+      subst hkl; subst hkr
+      rw [intKind_compatibleResult_self] at hk
+      injection hk with hkk
+      subst hkk; subst hm; subst hn; subst hs2
+      rfl
+  | binPanicLeft mk hmk hpanic =>
+      rcases hmk with rfl | rfl | rfl | rfl <;> try exact Expr.noConfusion he
+      injection he with h1 h2; subst h1
+      exact ExprOut.noConfusion
+        (exprR_var_det hl (loadLoc_base_of_lookup ha) hpanic)
+  | binPanicRight mk hmk hval hpanic =>
+      rcases hmk with rfl | rfl | rfl | rfl <;> try exact Expr.noConfusion he
+      injection he with h1 h2; subst h1; subst h2
+      have hd := exprR_var_det hl (loadLoc_base_of_lookup ha) hval
+      injection hd with _ hs1
+      exact ExprOut.noConfusion (exprR_intLit_det (hs1 ▸ hpanic))
+  | _ => exact Expr.noConfusion he
+
+/-- `x == z` (int-typed equality of a variable against an int literal)
+evaluates to the boolean `m == kind.normalize z`, state unchanged —
+forward direction, conditioned on `x`'s int cell. The `valueEq` premise
+reduces definitionally on the int/int case (fuel- and state-blind). -/
+theorem exprR_var_eq_lit {env : LocalEnv} {σ : ExecState} {x : String}
+    {a : Addr} {kind : IntKind} {m z : Int}
+    (hl : LocalEnv.lookup env x = some (.base a))
+    (ha : Heap.lookup σ.heap (.base a) = some ⟨some (.int kind), .int m kind⟩) :
+    ExprR env σ (.eqCmp (.int kind) (.var x) (.intLit z kind))
+      (.value (.bool (m == kind.normalize z)) σ) :=
+  ExprR.eqCmp (ExprR.var hl (loadLoc_base_of_lookup ha)) ExprR.intLit
+    (by simp only [valueEq, valueEqFuel]; rfl)
+
+/-- Inversion of `ExprR` on `x == z`, conditioned on `x`'s int cell: it
+evaluates only to the boolean `m == kind.normalize z`, state unchanged. -/
+theorem exprR_var_eq_lit_det {env : LocalEnv} {σ : ExecState} {x : String}
+    {a : Addr} {kind : IntKind} {m z : Int} {out : ExprOut}
+    (hl : LocalEnv.lookup env x = some (.base a))
+    (ha : Heap.lookup σ.heap (.base a) = some ⟨some (.int kind), .int m kind⟩)
+    (h : ExprR env σ (.eqCmp (.int kind) (.var x) (.intLit z kind)) out) :
+    out = .value (.bool (m == kind.normalize z)) σ := by
+  generalize he : Expr.eqCmp (.int kind) (.var x) (.intLit z kind) = e at h
+  cases h with
+  | eqCmp hle hre hveq =>
+      injection he with h0 h1 h2; subst h0; subst h1; subst h2
+      have hld := exprR_var_det hl (loadLoc_base_of_lookup ha) hle
+      injection hld with hlv hs1
+      subst hlv
+      have hrd := exprR_intLit_det (hs1 ▸ hre)
+      injection hrd with hrv hs2
+      subst hrv
+      rw [show valueEq _ (.int kind) (GoValue.int m kind)
+          (.int (kind.normalize z) kind) = .ok (m == kind.normalize z)
+        from by simp only [valueEq, valueEqFuel]; rfl] at hveq
+      injection hveq with hb
+      subst hb; subst hs2; rfl
+  | eqPanicLeft hpanic =>
+      injection he with h0 h1 h2; subst h1
+      exact ExprOut.noConfusion
+        (exprR_var_det hl (loadLoc_base_of_lookup ha) hpanic)
+  | eqPanicRight hval hpanic =>
+      injection he with h0 h1 h2; subst h1; subst h2
+      have hd := exprR_var_det hl (loadLoc_base_of_lookup ha) hval
+      injection hd with _ hs1
+      exact ExprOut.noConfusion (exprR_intLit_det (hs1 ▸ hpanic))
+  | binPanicLeft mk hmk _ =>
+      rcases hmk with rfl | rfl | rfl | rfl <;> exact Expr.noConfusion he
+  | binPanicRight mk hmk _ _ =>
+      rcases hmk with rfl | rfl | rfl | rfl <;> exact Expr.noConfusion he
+  | _ => exact Expr.noConfusion he
+
 end GoLean.Iris

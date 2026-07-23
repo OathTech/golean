@@ -7,6 +7,7 @@ import GoLeanProofs.Laws.Control
 import GoLeanProofs.Laws.Assign
 import GoLeanProofs.Laws.Init
 import GoLeanProofs.Laws.Call
+import GoLeanProofs.Laws.Loop
 import GoLeanProofs.Adequacy
 import GoLeanProofs.Specs.Slice
 import GoLeanProofs.Specs.SliceCorrespondence

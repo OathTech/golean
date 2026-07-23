@@ -350,6 +350,31 @@ example := @slice_adequate
   per-state frame preservation for untouched F) is QUEUED — it needs an
   HProp-of-heaplet fold, new surface vocabulary; ghost/abstract-state
   machinery queued behind it (design note §3).
+- `✓ Loop` (arc E rung B1, 2026-07-22; design of record
+  `docs/2026-07-22_arc-e-while-invariant.md`) — **THE WHILE-INVARIANT LAW
+  IS IN**: `wp_while_inv`, the partial-correctness Hoare while-rule by Löb
+  induction (`iloeb`), mirroring Goose/Perennial's `wp_forBreak_cond`
+  (user direction 2026-07-22: follow established Iris-project structure,
+  generalize early): the loop invariant is `I : Bool → IProp` — arbitrary
+  resources indexed by the condition's value — NOT a single-cell
+  predicate; the exit continuation receives `I false`. Machinery:
+  `wp_det_step_keep` (resource-conditioned deterministic non-mutating
+  step core — subsumes the single-cell read-step), `wp_loop_next` (the
+  back edge, where the Löb `▷` strips), `wp_var_inc` (`x = x + lit`, the
+  self-reading assign the state-independent `wp_assign` cannot express),
+  and `exprR_var_add_lit_det`/`exprR_var_eq_lit`(`_det`) inversions.
+  Witness (same commit, non-vacuity gate): `wp_while_eq_once` —
+  `{x ↦ 0} while (x == 0) { x = x + 1 } {x ↦ 1}`, corpus-pinned
+  (`control-flow/while-eq-single-iteration`, differential PASS). HONEST
+  SCOPE: single-iteration witness (`ExprR` has `eqCmp` but no ordering
+  comparison — the multi-iteration witness arrives with rung B2's `ltCmp`
+  semantics widening); body normal-completion only (`break`/`continue`
+  laws arrive with a witness needing them); partial correctness (an
+  infinite loop satisfies the triple layer vacuously; progress still
+  real). Recorded divergence: condition handling is a premise (`Hcond`),
+  not Goose's `wp_bind` — our CK machine has no bind (same fact as the
+  `wp_atomic` inapplicability); revisit if expression evaluation moves
+  into the configuration language.
 - The **unrestricted** `interpreterSoundStatement`/`interpreterPanicStatement`
   remain `def : Prop` — **stated, not proven**, and false as literally
   stated only for the richer-interpreter reason now (the interpreter covers
@@ -411,5 +436,18 @@ example := @GoLean.Iris.wp_frame_return_inv
 example := @GoLean.Iris.GoldenSlice.wp_incViaCallLowered_frame
 example := @GoLean.Iris.GoldenSlice.wp_incViaCallLowered_inv
 example := @GoLean.Iris.goInvariant_of_wp
+
+/-- `✓` arc E rung B1: the while-invariant law and its machinery, all
+witnessed by `wp_while_eq_once` (which instantiates `wp_while_inv`,
+`wp_det_step_keep`, `wp_var_inc`, and both new inversions on the
+corpus-pinned single-iteration loop, discharging every premise). -/
+example := @GoLean.Iris.wp_det_step_keep
+example := @GoLean.Iris.wp_loop_next
+example := @GoLean.Iris.wp_while_inv
+example := @GoLean.Iris.wp_var_inc
+example := @GoLean.Iris.exprR_var_add_lit_det
+example := @GoLean.Iris.exprR_var_eq_lit
+example := @GoLean.Iris.exprR_var_eq_lit_det
+example := @GoLean.Iris.wp_while_eq_once
 
 end GoLean.Iris.Audit

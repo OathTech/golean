@@ -146,6 +146,63 @@ theorem wp_store_step₂ {pa a : Addr} {pcell oldcell newcell : HeapCell}
       · iapply Hcont $$ [$Hppt $Hpt]
       · itrivial
 
+/-- **Resource-conditioned deterministic non-mutating step core** (arc E
+rung B1, `docs/2026-07-22_arc-e-while-invariant.md` §2, generalized per
+user direction 2026-07-22 — mirror the general shape, don't specialize):
+a single step that READS state the resources `P` describe but mutates
+nothing — the state passes through unchanged, and `P` rides through to
+the continuation. The reduction premise is conditioned on the resources
+in the most general way: from the state interpretation and `P`, the step
+and its determinism follow. Neither existing core fits
+(`wp_lift_pure_det_step_no_fork` is pure — the step may not depend on the
+heap; `wp_store_step` writes). This is the engine for condition-branching
+steps (`while`/`if` conditions): the caller decides the successor `c₁`
+from `P`'s content BEFORE applying the core (e.g. by casing on the
+`Bool`-indexed loop invariant), so the core stays deterministic. -/
+theorem wp_det_step_keep {P : IProp GF} {c₀ c₁ : Config}
+    (hnv : ToVal.toVal c₀ = (none : Option Unit))
+    (hred : ∀ σ₁ : ExecState,
+      iprop(genHeapInterp (GF := GF) (H := GoHeapF) (heapToMap σ₁.heap) ∗ P)
+        ⊢ |==> ⌜Step c₀ σ₁ c₁ σ₁ ∧
+            (∀ c' s', Step c₀ σ₁ c' s' → c' = c₁ ∧ s' = σ₁)⌝) :
+    P ∗ (P -∗ WP c₁ @ s ; E {{ Φ }})
+      ⊢ WP c₀ @ s ; E {{ Φ }} := by
+  iintro ⟨HP, Hcont⟩
+  iapply wp_lift_step (h := hnv)
+  iintro %σ₁ %ns %obs %obs' %nt Hσ
+  simp only [stateInterp]
+  icases Hσ with ⟨Hσ, %Hinv⟩
+  obtain ⟨hfns, hwf⟩ := Hinv
+  ihave %Hstep : ⌜Step c₀ σ₁ c₁ σ₁ ∧
+      (∀ c' s', Step c₀ σ₁ c' s' → c' = c₁ ∧ s' = σ₁)⌝ $$ [Hσ HP]
+  · icases (hred σ₁) $$ [$Hσ $HP] with >%h
+    ipureintro
+    exact h
+  obtain ⟨hstep, hdet⟩ := Hstep
+  iapply fupd_mask_intro Std.LawfulSet.empty_subset
+  iintro Hclose
+  isplitr
+  · ipureintro
+    cases s
+    · exact ⟨[], c₁, _, [], GoPrimStep.step hstep⟩
+    · trivial
+  inext
+  iintro %e₂ %σ₂ %eₜ %Hstep Hcred
+  cases Hstep with
+  | step st =>
+    obtain ⟨rfl, rfl⟩ := hdet _ _ st
+    imod Hclose
+    imodintro
+    simp only [Algebra.BigOpL.bigOpL_nil]
+    isplitl [Hσ]
+    · isplitl [Hσ]
+      · iexact Hσ
+      · ipureintro
+        exact ⟨hfns, hwf⟩
+    · isplitl [HP Hcont]
+      · iapply Hcont $$ HP
+      · itrivial
+
 /-- **Invariant-opening two-cell store core** (arc `invariant-readout`,
 design note §2/§6): like `wp_store_step₂`, but the *written* cell is not
 owned — it lives in an **Iris invariant** with content `Icnt`, opened
