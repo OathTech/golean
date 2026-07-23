@@ -1,12 +1,16 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-07-19  commit: d0ff231  frontend: native  oracle: go run
-# manifest_cases: 717  pass: 187  fail: 530
+# recorded: 2026-07-22  commit: 1aa0867  frontend: native  oracle: go run
+# manifest_cases: 718  pass: 188  fail: 530
+# Re-pin reason: deliberate coverage ADDITION — new guardrail case
+# control-flow/while-eq-single-iteration (arc E rung B1, the while-invariant
+# law's witness shape; PASS on arrival). Sole delta vs the 2026-07-19 pin:
+# this one NEW id. No flips, no stage changes (verified by
+# scripts/coverage-baseline-diff before re-pin).
 # Columns: result<TAB>id<TAB>stage  (sorted by id). 'detail' is intentionally
 # omitted — free-text error messages churn; result+stage is the regression signal.
 # Regression = any PASS->FAIL flip or stage change vs this file for the same id.
 # Frontend-gap FAILs (stage=frontend-export) are expected until the native
 # frontend grows; a NEW frontend-export FAIL still means a real change.
-result	id	stage
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
 FAIL	arrays/array-copy	lean-observation
@@ -215,6 +219,7 @@ FAIL	control-flow/switch-no-expression-default	frontend-export
 FAIL	control-flow/switch-no-match-no-default	frontend-export
 FAIL	control-flow/switch-uncomparable-tag-default	frontend-export
 FAIL	control-flow/switch-untyped-case-conversion	frontend-export
+PASS	control-flow/while-eq-single-iteration	-
 FAIL	defer/defer-arg-eval	frontend-export
 FAIL	defer/defer-arg-panic-before-register	frontend-export
 FAIL	defer/defer-function-result-discard	frontend-export
