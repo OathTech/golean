@@ -42,11 +42,20 @@ before argument evaluation) here happen after all operands are evaluated.
 Observable only for ill-typed programs the frontend cannot emit; both
 sides fail closed.
 
-Statement-side scope in this file (S1): the current relation fragment plus
-`label`. Wide statements (`assignMany`, slices/maps statement forms,
-`mapRange`, `newValue`, `typeAssert`) get machine coverage at S2 via the
-same frame discipline; until then they have no rules here and keep running
-on the old interpreter.
+Statement-side coverage (S2): the full interpreter fragment. Wide
+statements (`assignMany`, `newValue`, make/assign/lookup for maps and
+slices, `typeAssert`, `appendSlice`, `copySlice`) go through one generic
+`stmtOpK` frame — an operand plan (`stmtPlan`) whose leading `ntargets`
+operands are target addresses, checked as they arrive (preserving the
+interpreter's resolve-targets-first order and nil-target panic timing) —
+ending in a single `applyStmtOp` state-update step. `mapRange` gets a
+dedicated iteration frame whose pick-next step is the machine's
+nondeterministic step class (any in-range index is a legal step; the
+executable instantiates it from `Choices`), together with `appendSlice`'s
+capacity choice inside `applyStmtOp`. The multi-cell apply steps
+(`appendSlice`, `copySlice`) are the granularity-ledger entries from the
+design note §1: sequentially fine, re-audited before any concurrency
+claim mentions them (R4).
 -/
 
 namespace GoLean.GoCore.Machine
@@ -380,9 +389,12 @@ def storeMany : ExecState → List Loc → List GoValue → Except GoError ExecS
   | _, [], _ :: _ => stuck "extra GoCore assignment value"
   | _, _ :: _, [] => stuck "missing GoCore assignment value"
 
-/-- Function lookup, arity check, parameter binding, result declaration, and
-result-location pinning — everything between "arguments are values" and
-"executing the callee body". One step in the machine (frame entry). -/
+/-- Function lookup, arity check, dynamic method dispatch, parameter
+binding, result declaration, and result-location pinning — everything
+between "arguments are values" and "executing the callee body". One step in
+the machine (frame entry). The two arity checks mirror the interpreter's
+(pre-dispatch in `execFunctionCallWithLocs`, post-dispatch in
+`execFunctionWithValues`). -/
 def enterFrame (s : ExecState) (fid : FuncId) (argVals : List GoValue) :
     Except GoError (Func × LocalEnv × List Loc × ExecState) := do
   let func ←
@@ -391,10 +403,244 @@ def enterFrame (s : ExecState) (fid : FuncId) (argVals : List GoValue) :
     | none => stuck s!"GoCore function not found: {fid.key}"
   if func.args.size != argVals.length then
     stuck s!"function {fid.key} expected {func.args.size} argument(s), got {argVals.length}"
+  let (func, argVals) ←
+    match ← dynamicDispatch? s func argVals.toArray with
+    | some (targetFunc, targetArgs) => pure (targetFunc, targetArgs.toList)
+    | none => pure (func, argVals)
+  if func.args.size != argVals.length then
+    stuck s!"function {func.id.key} expected {func.args.size} argument(s), got {argVals.length}"
   let (argsEnv, s₁) ← bindParams [] s func.args.toList argVals
   let (frameEnv, s₂) ← allocDecls argsEnv s₁ func.results.toList
   let resultLocs ← pinResultLocs frameEnv func.results.toList
   return (func, frameEnv, resultLocs, s₂)
+
+/-! ## Wide statements: the statement-op table -/
+
+/-- Head of a wide statement: evaluate the operand plan (targets first, as
+addresses, then the value operands), then perform the state update in one
+`applyStmtOp` step. -/
+inductive StmtOp where
+  | assignMany
+  | newValue (typ : Option Ty)
+  | makeSlice (elem : Ty) (hasCap : Bool)
+  | makeMap (hasSpace : Bool)
+  | mapAssign (keyTy valueTy : Ty)
+  | mapLookup (keyTy valueTy : Ty)
+  | typeAssertStmt (targetTy : Ty)
+  | appendSlice (elem : Ty)
+  | copySlice
+  deriving Repr, BEq
+
+/-- Classify a wide statement: the head, how many leading operands are
+target addresses, and the operand expressions in evaluation order (the
+interpreter's order: all targets, then the value operands). `none` for
+statements with their own rules, for unsupported assignees, and for
+`assignMany` arity mismatch (the executable reports those with the
+interpreter's messages). -/
+def stmtPlan : Stmt → Option (StmtOp × Nat × List Expr)
+  | .assignMany left right => do
+      if left.size != right.size then none else
+      let tes ← assigneesExprs left.toList
+      return (.assignMany, left.size, tes ++ right.toList)
+  | .newValue target value typ => do
+      let te ← assigneeExpr target
+      return (.newValue typ, 1, [te, value])
+  | .makeSlice target elem len cap => do
+      let te ← assigneeExpr target
+      return (.makeSlice elem cap.isSome, 1, [te, len] ++ cap.toList)
+  | .makeMap target _ _ space => do
+      let te ← assigneeExpr target
+      return (.makeMap space.isSome, 1, [te] ++ space.toList)
+  | .mapAssign base index value keyTy valueTy =>
+      return (.mapAssign keyTy valueTy, 0, [base, index, value])
+  | .mapLookup target okTarget base index keyTy valueTy => do
+      let te ← assigneeExpr target
+      let oke ← assigneeExpr okTarget
+      return (.mapLookup keyTy valueTy, 2, [te, oke, base, index])
+  | .typeAssert target okTarget expr targetTy => do
+      let te ← assigneeExpr target
+      let oke ← assigneeExpr okTarget
+      return (.typeAssertStmt targetTy, 2, [te, oke, expr])
+  | .appendSlice target elem slice elems => do
+      let te ← assigneeExpr target
+      return (.appendSlice elem, 1, [te, slice, elems])
+  | .copySlice target dst src => do
+      let te ← assigneeExpr target
+      return (.copySlice, 1, [te, dst, src])
+  | _ => none
+
+/-- Extract target locations from already-checked address values. -/
+def locsOf : List GoValue → Except GoError (List Loc)
+  | [] => return []
+  | v :: vs => do return (← valueAsLoc v) :: (← locsOf vs)
+
+/-- Apply a wide statement's head to its evaluated operands (`nt` leading
+target addresses, then values). One state-update step; transcribed from the
+big-step interpreter's exec helpers minus the operand recursion.
+`appendSlice`'s spill path consumes a capacity choice — the second
+nondeterministic point, threaded exactly as the interpreter does. -/
+def applyStmtOp (s : ExecState) (choices : Choices) (op : StmtOp) (nt : Nat)
+    (vs : List GoValue) : Except GoError (ExecState × Choices) := do
+  match op with
+  | .assignMany => do
+      let locs ← locsOf (vs.take nt)
+      return ((← storeMany s locs (vs.drop nt)), choices)
+  | .newValue typ =>
+      match vs with
+      | [tv, value] => do
+          let loc ← valueAsLoc tv
+          let (nloc, s₁) := s.alloc value typ
+          return ((← storeLoc s₁ loc (.addr nloc)), choices)
+      | _ => stuck "malformed newValue operands"
+  | .makeSlice elem hasCap => do
+      let (tv, lenV, capV?) ←
+        match vs, hasCap with
+        | [tv, lenV], false => pure (tv, lenV, none)
+        | [tv, lenV, capV], true => pure (tv, lenV, some capV)
+        | _, _ => stuck "malformed makeSlice operands"
+      let lenValue ← valueAsInt lenV
+      let capValue ←
+        match capV? with
+        | none => pure lenValue
+        | some capV => valueAsInt capV
+      let len ← natFromNonnegativeInt "runtime error: makeslice: len out of range" lenValue
+      let cap ← natFromNonnegativeInt "runtime error: makeslice: cap out of range" capValue
+      if cap < len then
+        panic "runtime error: makeslice: cap out of range"
+      let backing ← buildDefaultArrayValue s cap elem
+      let (base, s₁) := s.alloc backing (some (.array cap elem))
+      let loc ← valueAsLoc tv
+      return ((← storeLoc s₁ loc (.slice { base := some base, offset := 0, len, cap })), choices)
+  | .makeMap hasSpace => do
+      let (tv, spaceV?) ←
+        match vs, hasSpace with
+        | [tv], false => pure (tv, none)
+        | [tv, spaceV], true => pure (tv, some spaceV)
+        | _, _ => stuck "malformed makeMap operands"
+      match spaceV? with
+      | none => pure ()
+      | some spaceV => do
+          let size ← valueAsInt spaceV
+          let _ ← natFromNonnegativeInt "makemap: size out of range" size
+      let (base, s₁) := s.alloc (.mapData #[])
+      let loc ← valueAsLoc tv
+      return ((← storeLoc s₁ loc (.map { base := some base })), choices)
+  | .mapAssign keyTy valueTy =>
+      match vs with
+      | [baseV, keyV, valueV] => do
+          let map ← valueAsMap baseV
+          let key ← normalizeValueForTy s keyTy keyV
+          let value ← normalizeValueForTy s valueTy valueV
+          match ← mapEntries s map with
+          | none => panic "assignment to entry in nil map"
+          | some (baseLoc, entries) =>
+              let entries ←
+                match ← mapEntryIndex? s keyTy entries key with
+                | some i => pure (entries.set! i (key, value))
+                | none => pure (entries.push (key, value))
+              return ((← storeLoc s baseLoc (.mapData entries)), choices)
+      | _ => stuck "malformed mapAssign operands"
+  | .mapLookup keyTy valueTy =>
+      match vs with
+      | [tv, okv, baseV, keyV] => do
+          let map ← valueAsMap baseV
+          let key ← normalizeValueForTy s keyTy keyV
+          let pair ← mapLookupValue s map key keyTy valueTy
+          let tloc ← valueAsLoc tv
+          let okloc ← valueAsLoc okv
+          let s₁ ← storeLoc s tloc pair.1
+          return ((← storeLoc s₁ okloc (.bool pair.2)), choices)
+      | _ => stuck "malformed mapLookup operands"
+  | .typeAssertStmt targetTy =>
+      match vs with
+      | [tv, okv, value] => do
+          let result ← typeAssertValue s value targetTy
+          let tloc ← valueAsLoc tv
+          let okloc ← valueAsLoc okv
+          let s₁ ← storeLoc s tloc result.1
+          return ((← storeLoc s₁ okloc (.bool result.2)), choices)
+      | _ => stuck "malformed typeAssert operands"
+  | .appendSlice elem =>
+      match vs with
+      | [tv, sliceV, elemsV] => do
+          let slice ← valueAsSlice sliceV
+          let elems ← valueAsSlice elemsV
+          validateSlice slice
+          validateSlice elems
+          let elemValues ← sliceVisibleValues s elems
+          let newLen := slice.len + elemValues.size
+          let tloc ← valueAsLoc tv
+          if newLen <= slice.cap then
+            let mut current := s
+            let mut i := 0
+            for value in elemValues do
+              match slice.base with
+              | some base =>
+                  current ← storeLoc current
+                    (.index base (Int.ofNat (slice.offset + slice.len + i))) value
+                  i := i + 1
+              | none => stuck s!"cannot append {elemValues.size} element(s) into nil slice in place"
+            return ((← storeLoc current tloc (.slice { slice with len := newLen })), choices)
+          else
+            let oldValues ← sliceVisibleValues s slice
+            let (extra, choices) := choices.consume 8
+            let newCap := appendGrowthCap slice.cap newLen + extra
+            let backing ← buildAppendBackingValue s elem oldValues elemValues newCap
+            let (base, current) := s.alloc backing (some (.array newCap elem))
+            return ((← storeLoc current tloc
+              (.slice { base := some base, offset := 0, len := newLen, cap := newCap })), choices)
+      | _ => stuck "malformed appendSlice operands"
+  | .copySlice =>
+      match vs with
+      | [tv, dstV, srcV] => do
+          let dstSlice ← valueAsSlice dstV
+          let srcSlice ← valueAsSlice srcV
+          validateSlice dstSlice
+          validateSlice srcSlice
+          let count := Nat.min dstSlice.len srcSlice.len
+          let mut values := #[]
+          for i in [:count] do
+            values := values.push (← loadLoc s (← sliceIndexLoc srcSlice (Int.ofNat i)))
+          let mut current := s
+          let mut i := 0
+          for value in values do
+            current ← storeLoc current (← sliceIndexLoc dstSlice (Int.ofNat i)) value
+            i := i + 1
+          let tloc ← valueAsLoc tv
+          return ((← storeLoc current tloc (.int (Int.ofNat count))), choices)
+      | _ => stuck "malformed copySlice operands"
+
+/-- The entries a `mapRange` iterates: snapshot of the map's data cell
+(empty for a nil map). -/
+def mapRangeEntries (s : ExecState) (v : GoValue) :
+    Except GoError (Array (GoValue × GoValue)) := do
+  let map ← valueAsMap v
+  match map.base with
+  | none => return #[]
+  | some base =>
+      match ← loadLoc s base with
+      | .mapData es => return es
+      | other => stuck s!"expected map data for range, got {repr other}"
+
+/-- Declare a `mapRange` iteration's key/value variables in a fresh scope
+(normalized at the range types), mirroring the interpreter's per-iteration
+`declareLocal`s. -/
+def bindIterVars (env : LocalEnv) (s : ExecState) (keyVar valVar : Option String)
+    (keyTy valTy : Ty) (key value : GoValue) :
+    Except GoError (LocalEnv × ExecState) := do
+  let (env, s) ←
+    match keyVar with
+    | some name => do
+        let kv ← normalizeValueForTy s keyTy key
+        let (loc, s') := s.alloc kv (some keyTy)
+        pure (env.declare name loc, s')
+    | none => pure (env, s)
+  match valVar with
+  | some name => do
+      let vv ← normalizeValueForTy s valTy value
+      let (loc, s') := s.alloc vv (some valTy)
+      pure (env.declare name loc, s')
+  | none => pure (env, s)
 
 /-! ## Continuations and configurations -/
 
@@ -443,6 +689,22 @@ inductive Cont where
   entry. -/
   | callArgsK (fid : FuncId) (locs : List Loc) (vals : List GoValue)
       (pending : List Expr) (env : LocalEnv) (k : Cont)
+  /-- Wide-statement operand evaluation: the leading `ntargets` operands are
+  target addresses (checked as they arrive); `done` holds evaluated
+  operands most recent first. Ends in one `applyStmtOp` step. -/
+  | stmtOpK (op : StmtOp) (ntargets : Nat) (done : List GoValue)
+      (pending : List Expr) (env : LocalEnv) (k : Cont)
+  /-- Awaiting the `mapRange` map value; the snapshot step follows. -/
+  | mapRangeK (keyVar valVar : Option String) (keyTy valTy : Ty)
+      (body : Stmt) (env : LocalEnv) (k : Cont)
+  /-- `mapRange` iteration context: `remaining` is the unconsumed snapshot.
+  The pick-next step is nondeterministic (any in-range index); `break`
+  finishes the range, `continue` proceeds, `return` unwinds. The
+  per-iteration scope is the entered body's environment; this frame carries
+  the *original* `env` for subsequent iterations (scope exit by discard,
+  as everywhere in the CEK design). -/
+  | mapIterK (keyVar valVar : Option String) (keyTy valTy : Ty) (body : Stmt)
+      (remaining : Array (GoValue × GoValue)) (env : LocalEnv) (k : Cont)
 
 /-- The continuation for entering a `.seqn`: under a same-env governing
 sequence, SPLICE the statements into it (D1) — Go statement lists splice
@@ -647,6 +909,67 @@ inductive Step : Config → ExecState → Config → ExecState → Prop where
       enterFrame s fid (vals ++ [v]) = .ok (func, frameEnv, resultLocs, s') →
       Step (.retV v (.callArgsK fid locs vals [] env k)) s
         (.exec func.body frameEnv (.frame locs resultLocs k)) s'
+  -- Wide statements (S2): one generic operand-plan frame; targets are
+  -- checked as their addresses arrive (interpreter order), and the final
+  -- state update is one `applyStmtOp` step. The `ch`/`ch'` choice streams
+  -- are rule variables: a step under ANY choice stream is a legal step
+  -- (the relation over-approximates the nondeterminism the executable
+  -- resolves via `Choices`).
+  | stmtOpFirst {stmt op nt e rest env k s} :
+      stmtPlan stmt = some (op, nt, e :: rest) →
+      Step (.exec stmt env k) s (.evalE e env (.stmtOpK op nt [] rest env k)) s
+  | stmtOpNullary {stmt op nt env k s s' ch ch'} :
+      stmtPlan stmt = some (op, nt, []) →
+      applyStmtOp s ch op nt [] = .ok (s', ch') →
+      Step (.exec stmt env k) s (.next k) s'
+  | stmtOpShiftTarget {op nt done v loc e rest env k s} :
+      done.length < nt →
+      valueAsLoc v = .ok loc →
+      Step (.retV v (.stmtOpK op nt done (e :: rest) env k)) s
+        (.evalE e env (.stmtOpK op nt (v :: done) rest env k)) s
+  | stmtOpShiftPlain {op nt done v e rest env k s} :
+      nt ≤ done.length →
+      Step (.retV v (.stmtOpK op nt done (e :: rest) env k)) s
+        (.evalE e env (.stmtOpK op nt (v :: done) rest env k)) s
+  | stmtOpTargetPanic {op nt done v msg pending env k s} :
+      done.length < nt →
+      valueAsLoc v = .error (.panic msg) →
+      Step (.retV v (.stmtOpK op nt done pending env k)) s (.panicked msg) s
+  | stmtOpApply {op nt done v env k s s' ch ch'} :
+      applyStmtOp s ch op nt (v :: done).reverse = .ok (s', ch') →
+      Step (.retV v (.stmtOpK op nt done [] env k)) s (.next k) s'
+  | stmtOpApplyPanic {op nt done v msg env k s ch} :
+      applyStmtOp s ch op nt (v :: done).reverse = .error (.panic msg) →
+      Step (.retV v (.stmtOpK op nt done [] env k)) s (.panicked msg) s
+  -- Map iteration (S2): snapshot, then nondeterministic pick-next — any
+  -- in-range index is a legal step (the executable instantiates the pick
+  -- from `Choices`, one choice per remaining entry).
+  | mapRange {keyVar valVar mapExpr keyTy valTy body env k s} :
+      Step (.exec (.mapRange keyVar valVar mapExpr keyTy valTy body) env k) s
+        (.evalE mapExpr env (.mapRangeK keyVar valVar keyTy valTy body env k)) s
+  | mapRangeSnapshot {v entries keyVar valVar keyTy valTy body env k s} :
+      mapRangeEntries s v = .ok entries →
+      Step (.retV v (.mapRangeK keyVar valVar keyTy valTy body env k)) s
+        (.next (.mapIterK keyVar valVar keyTy valTy body entries env k)) s
+  | mapIterDone {keyVar valVar keyTy valTy body env k s} :
+      Step (.next (.mapIterK keyVar valVar keyTy valTy body #[] env k)) s
+        (.next k) s
+  | mapIterNext {keyVar valVar keyTy valTy body remaining idx env env' k s s'}
+      (hidx : idx < remaining.size) :
+      bindIterVars env.pushScope s keyVar valVar keyTy valTy
+        remaining[idx].1 remaining[idx].2 = .ok (env', s') →
+      Step (.next (.mapIterK keyVar valVar keyTy valTy body remaining env k)) s
+        (.exec body env' (.mapIterK keyVar valVar keyTy valTy body
+          (remaining.eraseIdx idx hidx) env k)) s'
+  | mapIterContinue {keyVar valVar keyTy valTy body remaining env k s} :
+      Step (.continuing (.mapIterK keyVar valVar keyTy valTy body remaining env k)) s
+        (.next (.mapIterK keyVar valVar keyTy valTy body remaining env k)) s
+  | mapIterBreak {keyVar valVar keyTy valTy body remaining env k s} :
+      Step (.breaking (.mapIterK keyVar valVar keyTy valTy body remaining env k)) s
+        (.next k) s
+  | mapIterReturn {keyVar valVar keyTy valTy body remaining env k s} :
+      Step (.returning (.mapIterK keyVar valVar keyTy valTy body remaining env k)) s
+        (.returning k) s
   -- Frame exit: explicit return and fall-through perform the same
   -- pinned-location result read and caller-target stores.
   | frameReturn {targets results k s vs s'} :
