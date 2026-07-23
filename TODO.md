@@ -86,7 +86,10 @@ mechanism vs per-program artifact; decided with user 2026-07-21):
   future widenings per the design notes (heaplet-canonical GoTriple
   dropping the `HeapFrag` side condition, `var x ⇓ v` sugar, arity-general
   GoFuncSpec + runner-equivalence lemma, invariant readout — the
-  raft-shaped exit door).
+  raft-shaped exit door, design of record
+  `docs/2026-07-22_invariant-readout-design.md`: Verdi-style invariance over
+  `Rel` via `wp_invariance`, golden discharge "cell 0 ∈ {0,2} at every
+  reachable state"; ghost/abstract-state machinery queued AFTER it).
   Original scope note:
   (1) 2b: `go_heap_adequacy` on `wp_strong_adequacy_gen` — initial-heap `↦`
   handover + final-state extraction; the exit door every future state-property
@@ -151,7 +154,12 @@ CLAUDE.md, stale Correspondence header. Open items:
   logic (goroutine model, what env-in-control enables) or an N-node
   interleaving/message model. The "env-in-control is the concurrency prerequisite"
   rationale targets intra-node goroutines, not the multi-node concurrency safety
-  is about — don't conflate them.
+  is about — don't conflate them. **Charter extended 2026-07-22:** F4 must
+  include a fault-model section per `docs/2026-07-22_fault-model.md`
+  (taxonomy panic/fatal/deadlock/race-scope/exhaustion; what `Rel`
+  represents; what the oracle discriminates — fault *identity*, not just
+  existence; guardrail suites per class BEFORE goroutine machinery; the
+  DRF/SC scope condition on soundness claims stated explicitly).
 - [ ] **F5 (major) — size the target theorem.** Draft a skeletal multi-node
   quorum-safety target (state space, message/failure model, invariant statement)
   so the A→B→C widening ladder aims at something explicit, not just "raft".
@@ -170,10 +178,16 @@ CLAUDE.md, stale Correspondence header. Open items:
   instantiates) over an N-node model — this is F4's decision. Plus
   ghost/history state for linearizability and the GoCore⇒abstract-raft
   refinement layer (master plan D4-9).
-- [ ] **F3 (leverage) — prioritize Eval big-step totalization** over more WP
-  lemmas: it converts `interpreterSound/PanicStatement` from Props into theorems
-  and joins the two currently-disconnected islands (interpreter ⇄ Iris proofs).
-  Ops is already total, so the gap is Eval's ~9 big-step `partial def`s only.
+- [x] **F3 (leverage) — Eval big-step totalization: DONE** (arc
+  `eval-totalization`, 2026-07-21; design of record
+  `docs/2026-07-21_eval-totalization-correspondence.md`). GoCore has 0
+  `partial def`s; `interpreterSound_frag`/`interpreterPanic_frag` are proven
+  fragment-scoped theorems and the former is load-bearing in the surface
+  exit pipe (`goSpec_of_wp`). Residue (not a standalone arc): the blanket
+  unconditional `interpreterSound` stays false-as-stated while the
+  interpreter is richer than the relation (e.g. string `add`); each Arc E
+  fragment widening extends relation + correspondence in lockstep.
+  (Entry corrected 2026-07-22 — was stale, predating the totalization arc.)
 
 ## Current Priority Sequence
 

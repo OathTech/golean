@@ -181,3 +181,13 @@ generic over what it reads out where that is cheap.
 | `HProp` opaque-atom constructor vs per-library readout relations | first abstract-predicate export |
 | World/network semantics shape | first multi-node target (F4+) |
 | Liveness machinery (tier 2) | explicitly deferred (F5 stretch) |
+| Surface-level composition rule for exported statements | first multi-library client |
+
+**On the last row (added 2026-07-22):** our surface statements are adequacy
+*readouts* of Layer-I reasoning, not composition interfaces — two exported
+`GoInvariant`/`GoSpec` theorems do not link; their quantifiers are already
+discharged. Until the library-spec decision binds, composition happens at
+Layer I (namespaced invariants, abstract predicates), and the composable
+artifact is the WP lemma, not the exported theorem (the golden walk's
+one-walk-four-shapes reuse is the existing instance of this). See
+`docs/2026-07-22_invariant-readout-design.md` §5.
