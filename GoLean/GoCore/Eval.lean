@@ -8,85 +8,9 @@ abbrev EvalResult := GoValue × ExecState
 abbrev LocResult := Loc × ExecState
 abbrev LocsResult := Array Loc × ExecState
 
-def intBinaryResult (opName : String) (op : Int → Int → Int) (left right : GoValue) :
-    Except GoError GoValue := do
-  let (leftValue, leftKind) ← valueAsIntValue left
-  let (rightValue, rightKind) ← valueAsIntValue right
-  let kind ←
-    match IntKind.compatibleResult leftKind rightKind with
-    | some kind => pure kind
-    | none => stuck s!"mismatched {opName} integer kinds: {leftKind.name} and {rightKind.name}"
-  return .int (kind.normalize (op leftValue rightValue)) kind
-
-def intKindBitWidth (opName : String) (kind : IntKind) : Except GoError Nat := do
-  match kind.bits? with
-  | some bits => return bits
-  | none => unsupported s!"{opName} for unbounded integer kind {kind.name}"
-
-def intKindUnsignedNat (kind : IntKind) (value : Int) : Except GoError Nat := do
-  let bits ← intKindBitWidth "bitwise operator" kind
-  let modulus : Int := (2 : Int) ^ bits
-  return (value % modulus).toNat
-
-def intBitwiseBinaryResult (opName : String) (op : Nat → Nat → Nat) (left right : GoValue) :
-    Except GoError GoValue := do
-  let (leftValue, leftKind) ← valueAsIntValue left
-  let (rightValue, rightKind) ← valueAsIntValue right
-  let kind ←
-    match IntKind.compatibleResult leftKind rightKind with
-    | some kind => pure kind
-    | none => stuck s!"mismatched {opName} integer kinds: {leftKind.name} and {rightKind.name}"
-  let leftBits ← intKindUnsignedNat kind leftValue
-  let rightBits ← intKindUnsignedNat kind rightValue
-  return .int (kind.normalize (Int.ofNat (op leftBits rightBits))) kind
-
-def intBitClearResult (left right : GoValue) : Except GoError GoValue := do
-  let (leftValue, leftKind) ← valueAsIntValue left
-  let (rightValue, rightKind) ← valueAsIntValue right
-  let kind ←
-    match IntKind.compatibleResult leftKind rightKind with
-    | some kind => pure kind
-    | none => stuck s!"mismatched &^ integer kinds: {leftKind.name} and {rightKind.name}"
-  let bits ← intKindBitWidth "&^" kind
-  let mask := (2 ^ bits) - 1
-  let leftBits ← intKindUnsignedNat kind leftValue
-  let rightBits ← intKindUnsignedNat kind rightValue
-  return .int (kind.normalize (Int.ofNat (Nat.land leftBits (Nat.xor rightBits mask)))) kind
-
-def intBitNegResult (value : GoValue) : Except GoError GoValue := do
-  let (intValue, kind) ← valueAsIntValue value
-  let bits ← intKindBitWidth "^" kind
-  let mask := (2 ^ bits) - 1
-  let valueBits ← intKindUnsignedNat kind intValue
-  return .int (kind.normalize (Int.ofNat (Nat.xor valueBits mask))) kind
-
-def shiftCountNat (count : GoValue) : Except GoError Nat := do
-  let count ← valueAsInt count
-  if count < 0 then
-    panic "runtime error: negative shift amount"
-  return count.toNat
-
-def arithmeticShiftRight (value : Int) (count : Nat) : Int :=
-  let divisor : Int := (2 : Int) ^ count
-  if value < 0 then
-    -Int.tdiv ((-value) + divisor - 1) divisor
-  else
-    Int.tdiv value divisor
-
-def intShiftLeftResult (left right : GoValue) : Except GoError GoValue := do
-  let (leftValue, leftKind) ← valueAsIntValue left
-  let count ← shiftCountNat right
-  return .int (leftKind.normalize (leftValue * ((2 : Int) ^ count))) leftKind
-
-def intShiftRightResult (left right : GoValue) : Except GoError GoValue := do
-  let (leftValue, leftKind) ← valueAsIntValue left
-  let count ← shiftCountNat right
-  let shifted :=
-    if leftKind.signed then
-      arithmeticShiftRight leftValue count
-    else
-      Int.tdiv leftValue ((2 : Int) ^ count)
-  return .int (leftKind.normalize shifted) leftKind
+-- The value-level operator result helpers (`intBinaryResult` …
+-- `intShiftRightResult`) and `sliceVisibleValues` moved to `Ops.lean`
+-- (reshape S1 motion, 2026-07-23) so `Machine.lean` can share them.
 
 mutual
   def evalExpr (state : ExecState) : Expr → Except GoError EvalResult
@@ -541,14 +465,6 @@ mutual
     let result ← typeAssertValue valuePair.2 valuePair.1 targetTy
     let current ← assignLoc valuePair.2 targetPair.1 result.1
     assignLoc current okPair.1 (.bool result.2)
-
-  def sliceVisibleValues (state : ExecState) (slice : SliceValue) :
-      Except GoError (Array GoValue) := do
-    validateSlice slice
-    let mut values := #[]
-    for i in [:slice.len] do
-      values := values.push (← loadLoc state (← sliceIndexLoc slice (Int.ofNat i)))
-    return values
 
   def execCopySlice (state : ExecState) (target : Assignee) (dstExpr srcExpr : Expr) :
       Except GoError ExecState := do
