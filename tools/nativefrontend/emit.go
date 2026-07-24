@@ -252,6 +252,48 @@ func (e *emitter) hoist(node any, resultType types.Type) (any, error) {
 	return map[string]any{"expr": "ident", "name": name, "type": ty}, nil
 }
 
+// splatMultiCall hoists a multi-value call into per-result temps and returns
+// the temp ident nodes — the lowering for tuple FORWARDING positions
+// (`return f()`, `g(f())`, tuple-into-variadic): Go's one-unnamed-tuple
+// forms become the same multi-target call statement the direct
+// `a, b := f()` form already uses, so the decoder and machine see nothing
+// new (W1, docs/2026-07-24_sequential-coverage-scoping.md).
+func (e *emitter) splatMultiCall(c *ast.CallExpr) ([]any, error) {
+	if e.hoistForbidden != "" {
+		return nil, unsup("call/allocation in %s (would change evaluation order)", e.hoistForbidden)
+	}
+	tup, ok := e.info.TypeOf(c).(*types.Tuple)
+	if !ok {
+		return nil, unsup("multi-value splat of non-tuple call")
+	}
+	node, effectful, err := e.emitCallNode(c)
+	if err != nil {
+		return nil, err
+	}
+	if !effectful {
+		return nil, unsup("multi-value splat of non-call")
+	}
+	lhs := []any{}
+	idents := []any{}
+	for i := 0; i < tup.Len(); i++ {
+		ty, err := e.emitType(tup.At(i).Type())
+		if err != nil {
+			return nil, err
+		}
+		name := "$c" + itoa(e.tmpSeq)
+		e.tmpSeq++
+		lhs = append(lhs, map[string]any{"target": "declare", "id": name, "type": ty})
+		idents = append(idents, map[string]any{"expr": "ident", "name": name, "type": ty})
+	}
+	e.hoisted = append(e.hoisted, map[string]any{
+		"stmt":   "assign",
+		"define": true,
+		"lhs":    lhs,
+		"rhs":    []any{node},
+	})
+	return idents, nil
+}
+
 func (e *emitter) emitStmt(s ast.Stmt) (any, error) {
 	switch st := s.(type) {
 	case *ast.BlockStmt:
@@ -308,6 +350,20 @@ func (e *emitter) emitStmt(s ast.Stmt) (any, error) {
 }
 
 func (e *emitter) emitReturn(st *ast.ReturnStmt) (any, error) {
+	// `return f()` forwarding a multi-value call: splat into temps and
+	// return the temps (the hoisted call statement is spliced before the
+	// return by the A-normal-form machinery).
+	if len(st.Results) == 1 {
+		if call, ok := st.Results[0].(*ast.CallExpr); ok {
+			if _, isTup := e.info.TypeOf(call).(*types.Tuple); isTup {
+				idents, err := e.splatMultiCall(call)
+				if err != nil {
+					return nil, err
+				}
+				return map[string]any{"stmt": "return", "results": idents}, nil
+			}
+		}
+	}
 	results := []any{}
 	for _, r := range st.Results {
 		w, err := e.emitExpr(r)
@@ -1258,6 +1314,38 @@ func (e *emitter) emitResultTypes(sig *types.Signature) ([]any, error) {
 // emitCallArgs emits call arguments, collecting the trailing arguments of a
 // variadic call into a slice (unless the call already spreads with `...`).
 func (e *emitter) emitCallArgs(sig *types.Signature, c *ast.CallExpr) ([]any, error) {
+	// Tuple forwarding `g(f())`: splat the inner multi-value call into
+	// temps, then treat the temp idents as the argument list (variadic
+	// packing proceeds over them like any other arguments).
+	if len(c.Args) == 1 {
+		if inner, ok := c.Args[0].(*ast.CallExpr); ok {
+			if _, isTup := e.info.TypeOf(inner).(*types.Tuple); isTup {
+				idents, err := e.splatMultiCall(inner)
+				if err != nil {
+					return nil, err
+				}
+				if sig == nil || !sig.Variadic() || c.Ellipsis != token.NoPos {
+					return idents, nil
+				}
+				fixed := sig.Params().Len() - 1
+				args := append([]any{}, idents[:fixed]...)
+				elemType := sig.Params().At(fixed).Type().(*types.Slice).Elem()
+				elemTy, err := e.emitType(elemType)
+				if err != nil {
+					return nil, err
+				}
+				elems := []any{}
+				for i := fixed; i < len(idents); i++ {
+					elems = append(elems, map[string]any{"index": int64(i - fixed), "value": idents[i]})
+				}
+				sliceRef, err := e.hoistSliceLit(elems, elemTy, int64(len(idents)-fixed))
+				if err != nil {
+					return nil, err
+				}
+				return append(args, sliceRef), nil
+			}
+		}
+	}
 	if sig == nil || !sig.Variadic() || c.Ellipsis != token.NoPos {
 		return e.emitArgs(c.Args)
 	}

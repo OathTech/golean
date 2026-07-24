@@ -1,16 +1,13 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-07-22  commit: 1aa0867  frontend: native  oracle: go run
-# manifest_cases: 718  pass: 188  fail: 530
-# Re-pin reason: deliberate coverage ADDITION — new guardrail case
-# control-flow/while-eq-single-iteration (arc E rung B1, the while-invariant
-# law's witness shape; PASS on arrival). Sole delta vs the 2026-07-19 pin:
-# this one NEW id. No flips, no stage changes (verified by
-# scripts/coverage-baseline-diff before re-pin).
-# Columns: result<TAB>id<TAB>stage  (sorted by id). 'detail' is intentionally
-# omitted — free-text error messages churn; result+stage is the regression signal.
-# Regression = any PASS->FAIL flip or stage change vs this file for the same id.
-# Frontend-gap FAILs (stage=frontend-export) are expected until the native
-# frontend grows; a NEW frontend-export FAIL still means a real change.
+# recorded: 2026-07-24  commit: e0a7243  frontend: native  oracle: go run
+# manifest_cases: 718  pass: 192  fail: 526
+# Re-pin reason: deliberate coverage ADDITION — W1 tuple forwarding
+# (docs/2026-07-24_sequential-coverage-scoping.md): the frontend splat
+# lowering for multi-value calls in forwarding positions (return f();
+# g(f()); tuple-into-variadic) flips exactly four frontend-export FAILs
+# to PASS (returns/multi-result-forward, returns/multi-result-argument,
+# returns/named-result-defaults, variadic/multi-result-call); no other
+# case moved.
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
 FAIL	arrays/array-copy	lean-observation
@@ -603,15 +600,15 @@ PASS	range/range-slice-index-value	-
 FAIL	range/range-string-index-only	frontend-export
 FAIL	range/range-struct-copy	lean-observation
 PASS	returns/early-return-named	-
-FAIL	returns/multi-result-argument	frontend-export
+PASS	returns/multi-result-argument	-
 PASS	returns/multi-result-assign-order	-
 PASS	returns/multi-result-assignment	-
-FAIL	returns/multi-result-forward	frontend-export
+PASS	returns/multi-result-forward	-
 PASS	returns/multi-result-map-value	-
 PASS	returns/multi-result-method	-
 PASS	returns/naked-return	-
 FAIL	returns/named-multi-defer	frontend-export
-FAIL	returns/named-result-defaults	frontend-export
+PASS	returns/named-result-defaults	-
 PASS	scoping/block-shadow	-
 FAIL	scoping/closure-shadow-binding	frontend-export
 PASS	scoping/for-body-shadow	-
@@ -719,7 +716,7 @@ PASS	structs/zero-value	-
 PASS	variadic/defined-slice-spread	-
 FAIL	variadic/forwarding	differential
 PASS	variadic/literal-args-local-slice	-
-FAIL	variadic/multi-result-call	frontend-export
+PASS	variadic/multi-result-call	-
 FAIL	variadic/no-args-vs-empty-spread	differential
 PASS	variadic/spread-aliasing	-
 FAIL	variadic/variadic	frontend-export
