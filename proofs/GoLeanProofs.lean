@@ -5,6 +5,7 @@ import GoLeanProofs.Lifting
 import GoLeanProofs.Inversions
 import GoLeanProofs.Laws.Control
 import GoLeanProofs.Laws.Init
+import GoLeanProofs.Laws.Eval
 import GoLeanProofs.Specs.GoldenProgram
 
 /-!
@@ -17,7 +18,12 @@ stays armed while the semantics-dependent modules below are rebuilt.
 RESTORED (R3, 2026-07-23): `Lang` (Config ⇒ Iris wiring — `val_stuck`
 held with the identical proof over the new rules), `HeapBridge`, `Ghost`
 (namespace-only ports; the heap model and state interpretation never
-depended on the big-step rules); `Lifting` (all four step cores were
+depended on the big-step rules); `Laws.Control` (rules survived verbatim;
+uniform Hpuredet closer); `Laws.Init` (rule survived verbatim); NEW
+`Laws.Eval` — the expression-walk step laws, the machine's answer to
+`wp_bind`: generic `wp_pure_det` over `step_det` + one small law per step
+class (literals/ref/strict enter-shift-apply/assign glue/if/while
+dispatch + the heap-reading `wp_eval_var` load step); `Lifting` (all four step cores were
 already rule-agnostic — `hred`-premised — so the port is the namespace
 swap); `Inversions` (REWRITTEN: the per-`ExprR`-form `*_det` family
 collapses into the single generic `step_det` over `Config.choiceFree` —
