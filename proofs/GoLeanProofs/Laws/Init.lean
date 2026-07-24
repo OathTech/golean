@@ -7,7 +7,7 @@ import Std.Data.ExtTreeMap
 import Iris.Std.PartialMap
 import Iris.Std.FromMathlib
 import Iris.Std.GenSetsInstances
-import GoLean.GoCore.Rel
+import GoLean.GoCore.MachineSound
 import GoLeanProofs.Lifting
 import GoLeanProofs.Inversions
 
@@ -17,7 +17,7 @@ import GoLeanProofs.Inversions
 -/
 
 open Iris Iris.ProgramLogic Iris.Std Iris.Std.PartialMap
-open GoLean GoLean.GoCore GoLean.GoCore.Rel
+open GoLean GoLean.GoCore GoLean.GoCore.Machine
 
 namespace GoLean.Iris
 
@@ -57,6 +57,8 @@ theorem wp_init {pid : String} {pty : Ty} {v : GoValue} {rest : List Stmt}
                      nextAddr := σ₁.nextAddr + 1 } := by
     intro c' s' hst
     cases hst with
+    | stmtOpFirst hplan => simp [stmtPlan] at hplan
+    | stmtOpNullary hplan _ => simp [stmtPlan] at hplan
     | initialization hd ha =>
       rw [hdef σ₁] at hd
       injection hd with hv
@@ -99,8 +101,7 @@ theorem wp_init_int {pid : String} {kind : IntKind} {rest : List Stmt} {env k} :
       ⊢ WP (Config.exec (.initialization ⟨pid, .int kind⟩) env (.seq rest env k))
           @ s ; E {{ Φ }} :=
   wp_init (fun _ => by
-    simp [defaultValue, defaultValueFuel, typeResolutionFuel]
-    rfl)
+    simp [defaultValue, defaultValueFuel, typeResolutionFuel])
 
 end
 

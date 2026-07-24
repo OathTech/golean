@@ -4,6 +4,7 @@ import GoLeanProofs.Ghost
 import GoLeanProofs.Lifting
 import GoLeanProofs.Inversions
 import GoLeanProofs.Laws.Control
+import GoLeanProofs.Laws.Init
 import GoLeanProofs.Specs.GoldenProgram
 
 /-!
@@ -37,7 +38,7 @@ note §6 merge gate).
 Pruned modules (files kept on disk as the porting source; also on
 `scripts/ci`'s `STANDALONE_PROOFS` allowlist until restored):
 
-- `GoLeanProofs.Laws.Assign` / `.Init` / `.Call` / `.Loop`
+- `GoLeanProofs.Laws.Assign` / `.Call` / `.Loop`
 - `GoLeanProofs.Adequacy` — functor bundle + `go_adequacy` family
 - `GoLeanProofs.Specs.Slice` / `.SliceCorrespondence` / `.GoldenSlice` /
   `.GoldenSliceWP`
