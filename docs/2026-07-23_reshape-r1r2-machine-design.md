@@ -275,13 +275,30 @@ ask. R1+R2 alone never reach `main` with the proof layer pruned.
   propagated panic at a relation-silent site (e.g. frame-exit stores),
   so the panic-side driver theorem needs a reachability argument, not a
   one-line corollary — build it when an R3 witness needs it.
-- **S6/R3 IN PROGRESS:** infrastructure stratum restored (Lang /
-  HeapBridge / Ghost — namespace-only ports; `val_stuck` proof unchanged).
-  NEXT: Inversions (determinism now largely generic — rules are disjoint
-  except the two choice classes), Lifting + Laws (the bind-form redesign:
-  `wp_bind` via continuation composition, `LanguageCtx` validation against
-  iris-lean), Adequacy, Surface pipes + `execStmt`-shaped wrapper,
-  witnesses, Audit gate un-pruning.
+- **S6/R3 IN PROGRESS** (through part 6, 2026-07-23): RESTORED — Lang /
+  HeapBridge / Ghost (namespace ports; `val_stuck` unchanged); Lifting
+  (all four step cores were rule-agnostic — `hred`-premised — so the port
+  is the namespace swap); Inversions REWRITTEN as ONE generic `step_det`
+  over `Config.choiceFree` (rules disjoint away from the mapIterK pick
+  and the stmtOpK apply); Laws/Control (rules survived verbatim; uniform
+  `Hpuredet` closer refuting the generic stmtOp* rules); Laws/Init
+  (verbatim rule). NEW — `Laws/Eval`: the expression-walk step laws, the
+  machine's answer to `wp_bind`: generic `wp_pure_det` (determinism =
+  `step_det`, no per-instance inversions) + per-step laws (literals, ref,
+  strict enter/shift/apply — ONE `wp_strict_apply_pure` covers the whole
+  pure-op table — assign glue, if/while dispatch and receipt, the
+  heap-reading `wp_eval_var` load step, the `wp_assign_store` store step).
+  Laws/Assign REWRITTEN as the composed walk; **`wp_assign_lit` (entry →
+  `&x` → target → literal → store, store side-condition closed by
+  `storeLoc_int_cell`) is the walk architecture's discharge witness —
+  the composed-walk design is validated end to end.** Decision recorded:
+  no `LanguageCtx`/bind instance — per-step laws compose the walks
+  directly; revisit only if walk-composition pain shows up in the golden
+  re-derivation. REMAINING: Laws/Call (frame entry/exit), Laws/Loop
+  (`wp_while_inv` re-derivation — condition now a machine walk, not an
+  `ExprR` premise), Adequacy, Surface pipes + `execStmt`-shaped wrapper,
+  Specs witnesses byte-identical, Audit PRUNED-block un-commenting, ci
+  allowlist emptied.
 
 ## 7. What survives untouched
 
