@@ -318,4 +318,35 @@ theorem runConfig_sound {fuel : Nat} {s : ExecState} {c : Config}
       obtain ⟨⟨c', s', ch'⟩, hstep, hrun⟩ := h
       exact (Steps.single (stepFn_sound hstep)).trans (ih _ _ _ hrun)
 
+/-- Wrapper-level soundness for normal completion: a terminating
+`execStmt` run (the F4 §2 Surface wrapper) is a reachable relation trace
+to the sequential terminal. Total — the old fragment-scoped
+side-conditions (`HeapFrag`, `StInv`) are retired. -/
+theorem execStmtLoop_sound_normal {fuel : Nat} {σ : ExecState} {c : Config}
+    {ch : Choices} {σf : ExecState} {chf : Choices}
+    (h : execStmtLoop fuel σ c ch = .ok (.normal σf, chf)) :
+    Steps c σ (.next .stop) σf := by
+  fun_induction execStmtLoop fuel σ c ch with
+  | case1 =>
+      simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq,
+        ExecOutcome.normal.injEq] at h
+      obtain ⟨rfl, rfl⟩ := h
+      exact Steps.refl _ _
+  | case2 => simp [throw, throwThe, MonadExceptOf.throw] at h
+  | case3 => simp [throw, throwThe, MonadExceptOf.throw] at h
+  | case4 => simp [throw, throwThe, MonadExceptOf.throw] at h
+  | case5 => simp [throw, throwThe, MonadExceptOf.throw] at h
+  | case6 => simp [throw, throwThe, MonadExceptOf.throw] at h
+  | case7 =>
+      rename_i ih
+      rw [bind_eq_ok] at h
+      obtain ⟨⟨c', s', ch'⟩, hstep, hrun⟩ := h
+      exact (Steps.single (stepFn_sound hstep)).trans (ih _ _ _ hrun)
+
+theorem execStmt_sound_normal {fuel : Nat} {env : LocalEnv} {σ : ExecState}
+    {ch : Choices} {prog : Stmt} {σf : ExecState} {chf : Choices}
+    (h : execStmt fuel env σ ch prog = .ok (.normal σf, chf)) :
+    Steps (.exec prog env .stop) σ (.next .stop) σf :=
+  execStmtLoop_sound_normal h
+
 end GoLean.GoCore.Machine

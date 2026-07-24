@@ -21,7 +21,7 @@ deliberately does not import even `Iris.Std`, so these live on this side.
 -/
 
 open Iris Iris.BI Iris.ProgramLogic Iris.Std Iris.Std.PartialMap
-open GoLean GoLean.GoCore GoLean.GoCore.Rel
+open GoLean GoLean.GoCore GoLean.GoCore.Machine
 open GoLean.Surface
 
 namespace GoLean.Iris

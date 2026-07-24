@@ -10,6 +10,9 @@ import GoLeanProofs.Laws.Assign
 import GoLeanProofs.Laws.Call
 import GoLeanProofs.Laws.Loop
 import GoLeanProofs.Adequacy
+import GoLeanProofs.Surface
+import GoLeanProofs.SurfaceBridge
+import GoLeanProofs.SurfaceExit
 import GoLeanProofs.Specs.GoldenProgram
 
 /-!
@@ -50,9 +53,6 @@ Pruned modules (files kept on disk as the porting source; also on
 
 - `GoLeanProofs.Specs.Slice` / `.SliceCorrespondence` / `.GoldenSlice` /
   `.GoldenSliceWP`
-- `GoLeanProofs.Surface` — Layer S (statements restored byte-identical;
-  `execStmt`-shaped wrapper over iterated `stepFn`, F4 §2)
-- `GoLeanProofs.SurfaceBridge` / `.SurfaceExit` /
-  `.Specs.GoldenSurface` — the exit pipes and golden discharges
+- `GoLeanProofs.Specs.GoldenSurface` — the golden discharges
 - `GoLeanProofs.NegativeSpecs`
 -/

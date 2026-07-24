@@ -13,13 +13,16 @@ step). The once-proven pipe: correspondence witness → trace erasure →
 initial-heap-handover adequacy, with `reflect` feeding the precondition
 in, Iris's frame rule (`wp_frame_l`) carrying the frame — the user's WP
 obligation never mentions it — and `extract` reading the postcondition
-out. Per-program obligations are exactly: fragment shape checks and the
-WP proof. Nothing else, ever (`docs/2026-07-21_native-spec-surface.md`,
-the anti-hack invariant).
+out. Per-program obligations are exactly: the WP proof. Nothing else, ever
+(`docs/2026-07-21_native-spec-surface.md`, the anti-hack invariant).
+(Reshape R3: the old fragment shape checks — `StmtFragNS`/`FuncsFrag`,
+with the fragment-scoped `interpreterSound_frag` behind them — are
+RETIRED: `execStmt_sound_normal` is total, so the exit needs no fragment
+side-conditions and the judgments got strictly stronger.)
 -/
 
 open Iris Iris.BI Iris.ProgramLogic Iris.Std Iris.Std.PartialMap
-open GoLean GoLean.GoCore GoLean.GoCore.Rel GoLean.GoCore.Correspondence
+open GoLean GoLean.GoCore GoLean.GoCore.Machine
 open GoLean.Surface
 
 namespace GoLean.Iris
@@ -33,13 +36,14 @@ whose φ carries the framed native postcondition. Both halves of `GoSpec`
 read off it. -/
 private theorem goSpec_adequate
     (Hwp : ∀ [GoCoreGS .hasLC GoCoreS], GoCoreGS.prog GoCoreS = funcs →
+      GoCoreGS.methods GoCoreS = #[] →
       embed (GF := GoCoreS) P
         ⊢ WP (Config.exec prog env₀ .stop) {{ _v, embed Q }})
     {hp : Heap} {na : Nat} {hP F : Heaplet}
     (hinit : InitialSplit P hp na hP F) :
     adequate .NotStuck (Config.exec prog env₀ .stop)
       (ExecState.mk (types := []) (functions := funcs) (methods := #[])
-        (locals := env₀) (heap := hp) (nextAddr := na))
+        (heap := hp) (nextAddr := na))
       (fun _ σ2 => ∃ hQ : Heaplet,
         (∀ k, hQ.get? k = none ∨ F.get? k = none)
         ∧ Heaplet.sub hQ (heapToMap σ2.heap)
@@ -51,7 +55,7 @@ private theorem goSpec_adequate
       ∧ Heaplet.sub hQ (heapToMap σ2.heap)
       ∧ Heaplet.sub F (heapToMap σ2.heap) ∧ sat hQ Q)
     hinit.bounded ?_ ?_
-  · intro _inst hprog
+  · intro _inst hprog hmeths
     have hsplit : ownHeaplet (GF := GoCoreS) (heapToMap hp)
         ⊢ embed P ∗ ownHeaplet F := by
       rw [← heapletOf_eq_heapToMap]
@@ -60,8 +64,8 @@ private theorem goSpec_adequate
       exact ((ownHeaplet_union hinit.disj).1).trans
         (sep_mono (reflect P hP hinit.sat_pre) .rfl)
     exact hsplit.trans ((BI.sep_comm.1).trans
-      ((sep_mono .rfl (Hwp hprog)).trans wp_frame_l))
-  · intro _inst _hprog σ2 _v
+      ((sep_mono .rfl (Hwp hprog hmeths)).trans wp_frame_l))
+  · intro _inst _hprog _hmeths σ2 _v
     iintro ⟨Hσ, HF, HQ⟩
     icases (embed_toHeaplet Q) $$ HQ with ⟨%hQ, %hsQ, HownQ⟩
     ihave %hdisjQF := ownHeaplet_disjoint $$ [$HownQ $HF]
@@ -80,19 +84,15 @@ private theorem goSpec_adequate
   carries it inside the pipe.
 Conclusion: the full native judgment — frame-closed triple + progress. -/
 theorem goSpec_of_wp
-    (hfrag : StmtFragNS prog)
-    (hfuncs : FuncsFrag funcs)
     (Hwp : ∀ [GoCoreGS .hasLC GoCoreS], GoCoreGS.prog GoCoreS = funcs →
+      GoCoreGS.methods GoCoreS = #[] →
       embed (GF := GoCoreS) P
         ⊢ WP (Config.exec prog env₀ .stop) {{ _v, embed Q }}) :
     GoSpec funcs env₀ P prog Q := by
   constructor
   · -- the frame-closed triple
     intro hp na hP F hinit fuel ch σf ch' hrun
-    have hinv : StInv (ExecState.mk (types := []) (functions := funcs)
-        (methods := #[]) (locals := env₀) (heap := hp) (nextAddr := na)) :=
-      ⟨hinit.frag, rfl, hfuncs⟩
-    have hsteps := interpreterSound_frag fuel _ σf prog ch ch' hfrag hinv hrun
+    have hsteps := execStmt_sound_normal hrun
     have htp := steps_erased hsteps
     have hres := (goSpec_adequate Hwp hinit).adequate_result [] σf () htp
     obtain ⟨hQ, hd, h1, h2, hs⟩ := hres
@@ -132,6 +132,7 @@ respect the per-atomic-step preservation discipline for `I`'s footprint —
 e.g. `wp_frame_return_inv`). Nothing else, ever. -/
 theorem goInvariant_of_wp {I P' : HProp}
     (Hwp : ∀ [GoCoreGS .hasLC GoCoreS], GoCoreGS.prog GoCoreS = funcs →
+      GoCoreGS.methods GoCoreS = #[] →
       ∀ N : Namespace,
         iprop(Iris.inv N (embed (GF := GoCoreS) I) ∗ embed (GF := GoCoreS) P')
           ⊢ WP (Config.exec prog env₀ .stop) {{ _v, iprop(True) }}) :
@@ -144,9 +145,9 @@ theorem goInvariant_of_wp {I P' : HProp}
   refine go_heap_invariance (GF := GoCoreS)
     (Config.exec prog env₀ .stop)
     (ExecState.mk (types := []) (functions := funcs) (methods := #[])
-      (locals := env₀) (heap := hp) (nextAddr := na))
+      (heap := hp) (nextAddr := na))
     [c'] σ' _ hinit.bounded ?_ htp
-  intro _inst hprog
+  intro _inst hprog hmeths
   have hsplit : ownHeaplet (GF := GoCoreS) (heapToMap hp)
       ⊢ iprop((embed I ∗ embed P') ∗ ownHeaplet F) := by
     rw [← heapletOf_eq_heapToMap]
@@ -163,7 +164,7 @@ theorem goInvariant_of_wp {I P' : HProp}
   imod (inv_alloc nroot ⊤ (embed I)) $$ HIlater with #HinvT
   imodintro
   isplitl [HP']
-  · iapply (Hwp hprog nroot)
+  · iapply (Hwp hprog hmeths nroot)
     isplitl []
     · iexact HinvT
     · iexact HP'
@@ -179,13 +180,12 @@ theorem goInvariant_of_wp {I P' : HProp}
 
 /-- The triple half alone, for consumers that only need it. -/
 theorem goTriple_of_wp
-    (hfrag : StmtFragNS prog)
-    (hfuncs : FuncsFrag funcs)
     (Hwp : ∀ [GoCoreGS .hasLC GoCoreS], GoCoreGS.prog GoCoreS = funcs →
+      GoCoreGS.methods GoCoreS = #[] →
       embed (GF := GoCoreS) P
         ⊢ WP (Config.exec prog env₀ .stop) {{ _v, embed Q }}) :
     GoTriple funcs env₀ P prog Q :=
-  (goSpec_of_wp hfrag hfuncs Hwp).1
+  (goSpec_of_wp Hwp).1
 
 end
 

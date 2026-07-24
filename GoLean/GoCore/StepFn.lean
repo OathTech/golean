@@ -312,6 +312,35 @@ def runFunctionWithContextM (fuel : Nat) (types : TypeEnv) (functions : Array Fu
   let (sF, _) ← runConfig fuel s₂ c₀ choices
   return { values := (← loadMany sF resultLocs).toArray }
 
+/-- **The `execStmt`-shaped wrapper** (F4 §2's decided Surface interface;
+`docs/2026-07-23_reshape-r1r2-machine-design.md`): fuel-bounded iteration
+of `stepFn` from a bare statement configuration, classified into the old
+big-step `ExecOutcome` at the four unwound terminals. NOT a shim — no
+big-step rule appears here; the name and result shape are kept so Surface
+statements stay recognizable. Fuel counts machine steps. The `env`
+argument replaces the old `ExecState.locals` seeding (deleted at S4 —
+env-in-config is the only name-resolution story). -/
+def execStmtLoop : Nat → ExecState → Config → Choices →
+    Except GoError (ExecOutcome × Choices)
+  | fuel, σ, c, choices =>
+      match c with
+      | .next .stop => return (.normal σ, choices)
+      | .returning .stop => return (.returned σ, choices)
+      | .breaking .stop => return (.broke σ, choices)
+      | .continuing .stop => return (.continued σ, choices)
+      | .panicked msg => throw (.panic msg)
+      | c =>
+          match fuel with
+          | 0 => throw (.stuck "GoCore execution fuel exhausted")
+          | fuel + 1 => do
+              let (c', σ', choices') ← stepFn σ c choices
+              execStmtLoop fuel σ' c' choices'
+
+@[inherit_doc execStmtLoop]
+def execStmt (fuel : Nat) (env : LocalEnv) (σ : ExecState) (choices : Choices)
+    (prog : Stmt) : Except GoError (ExecOutcome × Choices) :=
+  execStmtLoop fuel σ (.exec prog env .stop) choices
+
 def runFunctionWithTypesM (fuel : Nat) (types : TypeEnv) (func : Func)
     (args : Array GoValue) : Except GoError Result :=
   runFunctionWithContextM fuel types #[func] func args

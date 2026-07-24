@@ -1,5 +1,5 @@
-import GoLean.GoCore.Eval
-import GoLeanProofs.Specs.GoldenSlice
+import GoLean.GoCore.MachineSound
+import GoLeanProofs.Specs.GoldenProgram
 import Std.Data.ExtTreeMap
 
 /-!
@@ -8,7 +8,8 @@ import Std.Data.ExtTreeMap
 Design of record: `docs/2026-07-21_native-spec-surface.md`. This module is
 the specification language humans read: heaplets, a deep-embedded assertion
 language `HProp` with standard heaplet satisfaction, the `GoTriple` judgment
-over interpreter (`execStmt`) runs, and the spec-surface arc's **step-0
+over `execStmt` runs (the F4 §2 wrapper: fuel-bounded iteration of the
+machine's `stepFn` under the old name and result shape — not a shim), and the spec-surface arc's **step-0
 intended statements** (widening loop: targets stated before the machinery
 that discharges them).
 
@@ -24,7 +25,7 @@ exit theorem (`goTriple_of_wp`, boundary layer) discharges it; nothing in
 this file or its docstrings claims otherwise.
 -/
 
-open GoLean GoLean.GoCore GoLean.GoCore.Rel
+open GoLean GoLean.GoCore GoLean.GoCore.Machine
 
 namespace GoLean.Surface
 
@@ -99,17 +100,17 @@ def HeapBounded (hp : Heap) (na : Nat) : Prop :=
   ∀ n : Nat, na ≤ n → Heap.lookup hp (.base ⟨n⟩) = none
 
 /-- An admissible framed initial state for `P`: well-formed (`bounded`),
-fragment-scoped (`frag` — `Correspondence.HeapFrag`, interpreter-level
-vocabulary: cells hold fragment values; stated on the raw heap because a
-`sat` projection cannot see non-base or shadowed association-list entries;
-weakens as the fragment widens), and its heaplet splits into the
-`P`-footprint `hP` and a frame `F` — the cells the program is NOT given.
-`F` is the "in any heap where the footprint is allocated" quantifier of a
-quantified testcase (`docs/2026-07-21_spec-space.md` §2). -/
+and its heaplet splits into the `P`-footprint `hP` and a frame `F` — the
+cells the program is NOT given. `F` is the "in any heap where the
+footprint is allocated" quantifier of a quantified testcase
+(`docs/2026-07-21_spec-space.md` §2). (Reshape R3: the old `frag`
+fragment-scoping field — `Correspondence.HeapFrag` — is RETIRED: the
+machine's soundness theorems are total over the full fragment, so the
+side-condition it discharged no longer exists. Statements got strictly
+stronger.) -/
 structure InitialSplit (P : HProp) (hp : Heap) (na : Nat)
     (hP F : Heaplet) : Prop where
   bounded : HeapBounded hp na
-  frag : Correspondence.HeapFrag { heap := hp }
   disj : ∀ k, hP.get? k = none ∨ F.get? k = none
   cover : ∀ k c, (heapletOf hp).get? k = some c
     ↔ (hP.get? k = some c ∨ F.get? k = some c)
@@ -134,7 +135,7 @@ def GoTriple (funcs : Array Func) (env₀ : LocalEnv) (P : HProp) (prog : Stmt)
     (Q : HProp) : Prop :=
   ∀ (hp : Heap) (na : Nat) (hP F : Heaplet), InitialSplit P hp na hP F →
     ∀ (fuel : Nat) (ch : Choices) (σf : ExecState) (ch' : Choices),
-      execStmt fuel { functions := funcs, locals := env₀, heap := hp, nextAddr := na }
+      execStmt fuel env₀ { functions := funcs, heap := hp, nextAddr := na }
           ch prog = .ok (.normal σf, ch') →
       ∃ hQ : Heaplet, (∀ k, hQ.get? k = none ∨ F.get? k = none)
         ∧ hQ.sub (heapletOf σf.heap) ∧ F.sub (heapletOf σf.heap) ∧ sat hQ Q
@@ -151,7 +152,7 @@ def Progress (funcs : Array Func) (env₀ : LocalEnv) (P : HProp)
   ∀ (hp : Heap) (na : Nat) (hP F : Heaplet), InitialSplit P hp na hP F →
     ∀ (c' : Config) (σ' : ExecState),
       Steps (.exec prog env₀ .stop)
-        { functions := funcs, locals := env₀, heap := hp, nextAddr := na } c' σ' →
+        { functions := funcs, heap := hp, nextAddr := na } c' σ' →
       c' = .next .stop ∨ ∃ (c'' : Config) (σ'' : ExecState), Step c' σ' c'' σ''
 
 /-- **The invariance judgment** (arc `invariant-readout`, design of record
@@ -173,7 +174,7 @@ def GoInvariant (funcs : Array Func) (env₀ : LocalEnv) (P : HProp)
   ∀ (hp : Heap) (na : Nat) (hP F : Heaplet), InitialSplit P hp na hP F →
     ∀ (c' : Config) (σ' : ExecState),
       Steps (.exec prog env₀ .stop)
-        { functions := funcs, locals := env₀, heap := hp, nextAddr := na } c' σ' →
+        { functions := funcs, heap := hp, nextAddr := na } c' σ' →
       ∃ hI : Heaplet, hI.sub (heapletOf σ'.heap) ∧ sat hI I
 
 /-- Precondition strengthening for `GoInvariant` (surface-level, Iris-free):
@@ -271,7 +272,6 @@ open GoLean.Iris.GoldenSlice in
 golden functions, the output cell at address 0, `r` bound to it. -/
 def goldenOut : ExecState :=
   { functions := sliceLowered.funcs,
-    locals := outEnv,
     heap := [(.base ⟨0⟩, ⟨some (.int .int), .int 0 .int⟩)],
     nextAddr := 1 }
 
@@ -280,7 +280,7 @@ register): the output cell holds 2.** No `∃`, no SL, no Iris: the
 designated observable, by address, in every terminating run. -/
 def goldenReturnsTwo_statement : Prop :=
   ∀ (fuel : Nat) (ch : Choices) (σf : ExecState) (ch' : Choices),
-    execStmt fuel goldenOut ch goldenDriver = .ok (.normal σf, ch') →
+    execStmt fuel outEnv goldenOut ch goldenDriver = .ok (.normal σf, ch') →
     loadLoc σf (.base ⟨0⟩) = .ok (.int 2 .int)
 
 open GoLean.Iris.GoldenSlice in
@@ -306,7 +306,7 @@ pinning observables collapses the refutation twins from design problems to
 corollaries. Guards against spec-layer trivialization. -/
 def goldenNotThree_statement : Prop :=
   ∀ (fuel : Nat) (ch : Choices) (σf : ExecState) (ch' : Choices),
-    execStmt fuel goldenOut ch goldenDriver = .ok (.normal σf, ch') →
+    execStmt fuel outEnv goldenOut ch goldenDriver = .ok (.normal σf, ch') →
     ¬ loadLoc σf (.base ⟨0⟩) = .ok (.int 3 .int)
 
 end GoLean.Surface

@@ -68,7 +68,7 @@ STANDALONE_PROOFS="SliceSpike"  # SliceSpike: superseded spike kept as record (s
 # ledger preserved in proofs/Audit.lean's PRUNED block). Each module leaves
 # this list in the commit that restores it; the reshape branch does not merge
 # with any of these still listed.
-STANDALONE_PROOFS="$STANDALONE_PROOFS GoLeanProofs.Specs.Slice GoLeanProofs.Specs.SliceCorrespondence GoLeanProofs.Specs.GoldenSlice GoLeanProofs.Specs.GoldenSliceWP GoLeanProofs.Surface GoLeanProofs.SurfaceBridge GoLeanProofs.SurfaceExit GoLeanProofs.Specs.GoldenSurface GoLeanProofs.NegativeSpecs"
+STANDALONE_PROOFS="$STANDALONE_PROOFS GoLeanProofs.Specs.Slice GoLeanProofs.Specs.SliceCorrespondence GoLeanProofs.Specs.GoldenSlice GoLeanProofs.Specs.GoldenSliceWPBridgeExit GoLeanProofs.Specs.GoldenSurface GoLeanProofs.NegativeSpecs"
 # Transitive import closure from the build roots (Audit, GoLeanProofs), over
 # ALL .lean files under proofs/ including subdirectories — module names derived
 # from paths (proofs/GoLeanProofs/Foo.lean -> GoLeanProofs.Foo). A module
@@ -133,7 +133,7 @@ fi
 step "surface purity (Iris-free spec surface)"
 surface_ok=1
 for f in proofs/GoLeanProofs/Surface.lean proofs/GoLeanProofs/Specs/GoldenSlice.lean; do
-  bad_imports=$(grep -E '^import ' "$f" | grep -Ev '^import (GoLean\.|Std\.|GoLeanProofs\.Specs\.GoldenSlice$|GoLeanProofs\.Surface$)' || true)
+  bad_imports=$(grep -E '^import ' "$f" | grep -Ev '^import (GoLean\.|Std\.|GoLeanProofs\.Specs\.GoldenSlice$|GoLeanProofs\.Specs\.GoldenProgram$|GoLeanProofs\.Surface$)' || true)
   if [ -n "$bad_imports" ]; then
     echo "  $f has non-surface imports:" >&2
     echo "$bad_imports" | sed 's/^/    /' >&2
