@@ -247,32 +247,40 @@ theorem wp_frame_return_int {ta ra : Addr} {kind tkind : IntKind}
   obtain ⟨h1, h2⟩ := step_det (by trivial) hstep hst
   exact ⟨h1.symm, h2.symm⟩
 
+/-- **Invariant-opening value frame exit** (the invariance-readout form of
+`wp_frame_return_int`): the caller target lives in an Iris invariant with
+content `Icnt` (`S`-shaped int cells, per `hint`), opened around the
+single frame-exit store and closed at the written value. On the
+`wp_store_step₂_inv` core. -/
+theorem wp_frame_return_int_inv {ta ra : Addr} {kind tkind : IntKind}
+    {m : Int} {S : HeapCell → Prop} {Icnt : IProp GF} {k} {N : Namespace}
+    (hN : ↑N ⊆ E)
+    (hint : ∀ cell, S cell → ∃ w', cell = ⟨some (.int tkind), w'⟩)
+    (hopen : Icnt ⊢ iprop(∃ cell, ⌜S cell⌝ ∗ ta.id ↦ cell))
+    (hclose : (iprop(ta.id ↦ (⟨some (.int tkind), .int (tkind.normalize m) tkind⟩ : HeapCell)) : IProp GF) ⊢ Icnt) :
+    Iris.inv N Icnt
+      ∗ ra.id ↦ (⟨some (.int kind), .int m kind⟩ : HeapCell)
+      ∗ (ra.id ↦ (⟨some (.int kind), .int m kind⟩ : HeapCell)
+          -∗ WP (Config.next k) @ s ; E {{ Φ }})
+      ⊢ WP (Config.returning (.frame [.base ta] [.base ra] k))
+          @ s ; E {{ Φ }} := by
+  iapply wp_store_step₂_inv (hN := hN) (hnv := rfl) (hopen := hopen)
+    (hclose := hclose)
+  intro σ₁ oldcell hS hlookr hlookt
+  obtain ⟨w', rfl⟩ := hint oldcell hS
+  have hload : loadMany σ₁ [Loc.base ra] = .ok [GoValue.int m kind] := by
+    simp [loadMany, loadLoc, hlookr, Bind.bind, Except.bind]
+  have hstore : storeMany σ₁ [Loc.base ta] [GoValue.int m kind]
+      = .ok { σ₁ with heap := Heap.set σ₁.heap (.base ta) ⟨some (.int tkind), .int (tkind.normalize m) tkind⟩ } := by
+    simp [storeMany, storeLoc_int_any hlookt m, Bind.bind, Except.bind]
+  have hstep := Step.frameReturn (k := k) hload hstore
+  refine ⟨hstep, ?_⟩
+  intro c' s' hst
+  obtain ⟨h1, h2⟩ := step_det (by trivial) hstep hst
+  exact ⟨h1.symm, h2.symm⟩
+
 /-! ### Non-vacuity witnesses on the golden functions -/
 
-/-- The golden `inc` function, as a named literal; `sliceLowered_funcs_eq`
-kernel-checks it against the pinned frontend lowering. -/
-private def incF : Func :=
-  { id := ⟨"inc"⟩,
-    args := #[⟨"p", .pointer (.int .int)⟩],
-    results := #[],
-    body := .block #[] #[.seqn #[.assign (.addr (.var "p"))
-      (.add (.deref (.var "p") (.int .int)) (.intLit 1 .int))]] }
-
-/-- The golden `incViaCall` function, as a named literal (same bridge). -/
-private def incViaCallF : Func :=
-  { id := ⟨"incViaCall"⟩,
-    args := #[],
-    results := #[⟨"$res0", .int .int⟩],
-    body := .block #[] #[
-      .seqn #[.initialization ⟨"x", .int .int⟩,
-              .assign (.var "x") (.intLit 0 .int)],
-      .call #[] ⟨"inc"⟩ #[.ref "x"],
-      .call #[] ⟨"inc"⟩ #[.ref "x"],
-      .seqn #[.assign (.var "$res0") (.var "x"), .returnStmt]] }
-
-/-- Kernel bridge: the named literals ARE the pinned lowering's functions. -/
-private theorem sliceLowered_funcs_eq :
-    GoldenSlice.sliceLowered.funcs = #[incF, incViaCallF] := rfl
 
 /-- Witness for `wp_call_enter_arg1` on the CONCRETE golden `inc`: every
 premise discharges by computation given the two genuinely-external pins
@@ -282,12 +290,12 @@ theorem wp_call_enter_inc {xa : Addr} {locs : List Loc} {env k}
     (hmeths : GoCoreGS.methods GF = #[]) :
     iprop(∀ pa : Addr,
         pa.id ↦ (⟨some (.pointer (.int .int)), .addr (.base xa)⟩ : HeapCell) -∗
-        WP (Config.exec incF.body [[("p", Loc.base pa)]] (.frame locs [] k))
+        WP (Config.exec GoldenSlice.incFunc.body [[("p", Loc.base pa)]] (.frame locs [] k))
           @ s ; E {{ Φ }})
       ⊢ WP (Config.retV (.addr (.base xa))
             (.callArgsK ⟨"inc"⟩ locs [] [] env k)) @ s ; E {{ Φ }} :=
   wp_call_enter_arg1
-    (hfind := by rw [hprog, sliceLowered_funcs_eq]; rfl)
+    (hfind := by rw [hprog, GoldenSlice.sliceLowered_funcs_eq]; rfl)
     (hargs := rfl)
     (hres := rfl)
     (hnodisp := fun σ h => by
@@ -302,12 +310,12 @@ theorem wp_call_enter_incViaCall {tl : Loc} {env k}
     (hmeths : GoCoreGS.methods GF = #[]) :
     iprop(∀ ra : Addr,
         ra.id ↦ (⟨some (.int .int), .int 0 .int⟩ : HeapCell) -∗
-        WP (Config.exec incViaCallF.body [[("$res0", Loc.base ra)]]
+        WP (Config.exec GoldenSlice.incViaCallFunc.body [[("$res0", Loc.base ra)]]
               (.frame [tl] [Loc.base ra] k)) @ s ; E {{ Φ }})
       ⊢ WP (Config.retV (.addr tl)
             (.callTargetsK ⟨"incViaCall"⟩ [] [] [] env k)) @ s ; E {{ Φ }} :=
   wp_call_enter_ret1
-    (hfind := by rw [hprog, sliceLowered_funcs_eq]; rfl)
+    (hfind := by rw [hprog, GoldenSlice.sliceLowered_funcs_eq]; rfl)
     (hargs := rfl)
     (hres := rfl)
     (hnodisp := fun σ h => by

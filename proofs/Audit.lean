@@ -3,20 +3,6 @@ import GoLeanProofs
 import GoLean
 
 /-!
-# REBUILD STATE (reshape S4, 2026-07-23): proof-layer gates PRUNED
-
-The proof layer is pruned pending its R3 rebuild against the fine-grained
-machine (`proofs/GoLeanProofs.lean` holds the restoration checklist; the
-F4 deletion directive removed the big-step semantics everything below
-audited). What remains LIVE here: the exhaustive axiom sweep, now over the
-core (`GoLean.*` incl. `Machine`/`StepFn`) plus whatever proof modules
-have been restored. The curated axiom gates, non-vacuity witness
-references, and the three-state ledger are preserved VERBATIM in the
-`PRUNED` block at the bottom — they are the per-theorem restoration
-checklist, un-commented entry by entry as R3 re-proves each. The reshape
-branch does not merge until this file's gates are fully restored (design
-note §6).
-
 # In-build epistemic gate for the Iris proof layer
 
 This file is a **machine-checked, re-runnable** guard on the proof layer's
@@ -99,376 +85,129 @@ open Lean in
     throwError "audit sweep FAILED — declarations with disallowed axioms \
       (a `sorry`, `native_decide`, or new postulate?):\n{String.intercalate "\n" lines.toList}"
 
-/- ############################################################################
-   PRUNED at reshape S4 (2026-07-23) — do not delete: this block is the
-   per-theorem R3 restoration checklist. Un-comment each gate/reference in
-   the same commit that restores its theorem against the new machine.
-   ############################################################################
-
-## Axiom gates — the recorded axiom set of every proof-facing declaration.
+/-! ## Axiom gates — the recorded axiom set of every proof-facing declaration.
     A change to any set fails the build until this file is deliberately updated.
+    (R3 REBUILD, 2026-07-23: the reshape's S4 PRUNED block — the per-theorem
+    restoration checklist — served its purpose and is replaced by the gates
+    below over the restored surface. The old entries and their theorems
+    remain readable at git rev 5a9eab2; the retirement mapping is in the
+    ledger section.) -/
 
--- Heap projection bridges (read/write faithfulness of `heapToMap`).
-/-- info: 'GoLean.Iris.get?_heapToMap' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs in #print axioms get?_heapToMap
-/-- info: 'GoLean.Iris.heapToMap_set_base' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs in #print axioms heapToMap_set_base
+-- The machine correspondence (T1/T2's replacement) — note: no
+-- Classical.choice; these are constructive.
+/-- info: 'GoLean.GoCore.Machine.stepFn_sound' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.GoCore.Machine.stepFn_sound
+/-- info: 'GoLean.GoCore.Machine.step_complete' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.GoCore.Machine.step_complete
+/-- info: 'GoLean.GoCore.Machine.runConfig_sound' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.GoCore.Machine.runConfig_sound
+/-- info: 'GoLean.GoCore.Machine.execStmt_sound_normal' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.GoCore.Machine.execStmt_sound_normal
+/-- info: 'GoLean.GoCore.Machine.step_det' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.GoCore.Machine.step_det
 
--- Read law + its operational half.
-/-- info: 'GoLean.Iris.loadLoc_base_of_lookup' depends on axioms: [propext] -/
-#guard_msgs in #print axioms loadLoc_base_of_lookup
-/-- info: 'GoLean.Iris.pointsTo_loadLoc' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs in #print axioms pointsTo_loadLoc
-/-- info: 'GoLean.Iris.exprR_deref_load' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in #print axioms exprR_deref_load
-
--- WP laws.
-/-- info: 'GoLean.Iris.wp_seqn' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs in #print axioms wp_seqn
-/-- info: 'GoLean.Iris.wp_assign' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs in #print axioms wp_assign
-/-- info: 'GoLean.Iris.wp_deref_store' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs in #print axioms wp_deref_store
-
--- Discharge witnesses (the non-vacuity evidence).
-/-- info: 'GoLean.Iris.wp_assign_lit' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs in #print axioms wp_assign_lit
-/-- info: 'GoLean.Iris.wp_deref_store_ref' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs in #print axioms wp_deref_store_ref
-
--- Adequacy (the top of the WP layer).
+-- The adequacy family.
 /-- info: 'GoLean.Iris.go_adequacy' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs in #print axioms go_adequacy
-
--- The store side-condition facts behind the zero-hypothesis witnesses.
-/-- info: 'GoLean.Iris.intKind_normalize_idem' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in #print axioms intKind_normalize_idem
-/-- info: 'GoLean.Iris.storeLoc_int_cell' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in #print axioms storeLoc_int_cell
-
--- The read-through pointer store (arc slice-l5-pure item 3): the first
--- multi-points-to law, premises conditioned on the owned cells.
-/-- info: 'GoLean.Iris.wp_store_via_ptr' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs in #print axioms wp_store_via_ptr
-/-- info: 'GoLean.Iris.wp_inc_via_ptr' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs in #print axioms wp_inc_via_ptr
-
--- The call law (arc slice-call-frame item 4b): frame entry with fresh-cell
--- handover, resolved against the state-interp-pinned program; the frame-pop
--- step law; and the composed cross-frame witness.
-/-- info: 'GoLean.Iris.wp_call_unary' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs in #print axioms wp_call_unary
-/-- info: 'GoLean.Iris.wp_frame_fall' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs in #print axioms wp_frame_fall
-/-- info: 'GoLean.Iris.wp_inc_call' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs in #print axioms wp_inc_call
-
--- The value-returning frame exit + the remaining pure control-step laws
--- (arc slice-call-frame, toward item 5's main composition).
-/-- info: 'GoLean.Iris.wp_frame_return' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs in #print axioms wp_frame_return
-/-- info: 'GoLean.Iris.wp_frame_return_int' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs in #print axioms wp_frame_return_int
-/-- info: 'GoLean.Iris.wp_seq_next' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs in #print axioms wp_seq_next
-/-- info: 'GoLean.Iris.wp_return' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs in #print axioms wp_return
-
--- Declaration + var-copy laws (the last per-construct laws main() needs).
-/-- info: 'GoLean.Iris.wp_init' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs in #print axioms wp_init
-/-- info: 'GoLean.Iris.wp_init_int' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs in #print axioms wp_init_int
-/-- info: 'GoLean.Iris.wp_assign_var' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs in #print axioms wp_assign_var
-/-- info: 'GoLean.Iris.wp_assign_var_int' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs in #print axioms wp_assign_var_int
-
--- Item 5: the slice composition and its closed end-to-end theorem.
-/-- info: 'GoLean.Iris.wp_seq_return' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs in #print axioms wp_seq_return
-/-- info: 'GoLean.Iris.wp_call_nullary_ret' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs in #print axioms wp_call_nullary_ret
-/-- info: 'GoLean.Iris.wp_main_call' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs in #print axioms wp_main_call
-/-- info: 'GoLean.Iris.wp_main_returns_two' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs in #print axioms wp_main_returns_two
-/-- info: 'GoLean.Iris.slice_adequate' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs in #print axioms slice_adequate
-
--- The end-to-end artifact: a CLOSED `adequate` theorem composed from the WP
--- laws through go_adequacy (arc slice-l5-pure item 2). The chain composes.
-/-- info: 'GoLean.Iris.wp_seq_done' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs in #print axioms wp_seq_done
+#guard_msgs in #print axioms GoLean.Iris.go_adequacy
+/-- info: 'GoLean.Iris.go_heap_adequacy_own' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.go_heap_adequacy_own
+/-- info: 'GoLean.Iris.go_heap_invariance' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.go_heap_invariance
 /-- info: 'GoLean.Iris.adequate_seqn_nil' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs in #print axioms adequate_seqn_nil
+#guard_msgs in #print axioms GoLean.Iris.adequate_seqn_nil
 
-/-! ## Non-vacuity gate — every user-facing WP law is bound to a discharge witness.
-    Deleting a witness (or a law) makes one of these references fail to elaborate,
-    breaking the build. `wp_assign_lit`/`wp_deref_store_ref` each instantiate their
-    law on a concrete program and discharge all but the external store-typing
-    side-condition. -/
+-- The exit pipes.
+/-- info: 'GoLean.Iris.goSpec_of_wp' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.goSpec_of_wp
+/-- info: 'GoLean.Iris.goInvariant_of_wp' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.goInvariant_of_wp
 
-/-- `✓` wp_assign — witnessed by `wp_assign_lit` (`x = intLit n`). -/
-example := @wp_assign_lit
-/-- `✓` wp_deref_store — witnessed by `wp_deref_store_ref` (`*(&x) = intLit n`,
-the heap-independent address the law covers). -/
-example := @wp_deref_store_ref
-/-- `✓` wp_store_via_ptr — witnessed by `wp_inc_via_ptr` (`*p = *p + 1`, the
-multi-`↦` read-through store; ∀-general over the stored int). -/
-example := @wp_inc_via_ptr
-/-- `✓` wp_call_unary — witnessed by `wp_inc_call` (the full `inc(&x)` call:
-frame entry with fresh param cell → body store → frame exit; premises are
-program membership (genuinely external) and the argument-variable resolution
-(fixed-env, discharged by `simp` at every use)). -/
-example := @wp_inc_call
-/-- `✓` wp_frame_return — witnessed by `wp_frame_return_int` (int result local
-returned into an int target cell, ∀-general). -/
-example := @wp_frame_return_int
-/-- `✓` wp_init — witnessed by `wp_init_int` (`x := 0` at int, zero
-hypotheses). -/
-example := @wp_init_int
-/-- `✓` wp_assign_var — witnessed by `wp_assign_var_int` (int var copy,
-∀-general). -/
-example := @wp_assign_var_int
-/-- `✓` wp_call_nullary_ret — witnessed by `wp_main_call` (main's entry in the
-slice composition; ∀-general over kind/lit). -/
-example := @wp_main_call
-/-- `✓` the slice itself — `slice_adequate` is the closed end-to-end theorem
-(never-stuck, r ↦ 2 machine-checked inside; see its docstring for the
-operational-readout remainder). -/
-example := @slice_adequate
+-- The composed-walk laws and their witnesses.
+/-- info: 'GoLean.Iris.wp_assign_lit' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.wp_assign_lit
+/-- info: 'GoLean.Iris.wp_while_inv' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.wp_while_inv
+/-- info: 'GoLean.Iris.wp_while_eq_once' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.wp_while_eq_once
+/-- info: 'GoLean.Iris.GoldenSlice.wp_goldenDriver' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.GoldenSlice.wp_goldenDriver
 
-/-! ## Three-state ledger — what is NOT yet fully closed (kept honest, not hidden)
+-- The golden surface: all six step-0 targets.
+/-- info: 'GoLean.Surface.goldenSpec' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Surface.goldenSpec
+/-- info: 'GoLean.Surface.goldenFuncSpec' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Surface.goldenFuncSpec
+/-- info: 'GoLean.Surface.goldenInvariant' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Surface.goldenInvariant
+/-- info: 'GoLean.Surface.goldenTriple' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Surface.goldenTriple
+/-- info: 'GoLean.Surface.goldenReturnsTwo' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Surface.goldenReturnsTwo
+/-- info: 'GoLean.Surface.goldenNotThree' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Surface.goldenNotThree
 
-- `✓ go_adequacy` — **instantiated end-to-end** (arc `slice-l5-pure` item 2,
-  2026-07-20): `adequate_seqn_nil` composes `wp_seqn` + `wp_seq_done` +
-  `wp_value'` through `go_adequacy` with the concrete bundle `GoCoreS`,
-  yielding a closed, zero-hypothesis `adequate .NotStuck …` for the
-  empty-sequence program from any initial state — the chain composes, and the
-  conclusion mentions no Iris. **Honest scope:** the witness is a *pure*
-  program. A *heap-touching* end-to-end witness (composing `wp_assign_lit`)
-  additionally needs a `go_heap_adequacy` variant that hands the initial
-  heap's `↦` fragments to the WP proof (HeapLang's `heap_adequacy` shape) —
-  tracked as punch-list item 2b, not yet built.
-- `✓ go_heap_adequacy` + `✓ slice_adequate_computes` +
-  `✓ slice_interp_computes_two` — **the 2b operational readout is closed in
-  its COMPUTED-SOMEWHERE form** (arc `exit-infra`, 2026-07-21): strong
-  adequacy surfaces an Iris-side `↦ 2` into `adequate`'s φ as a final
-  `ExecState` fact, and composing with the correspondence yields: EVERY
-  terminating interpreter run of the slice program ends with SOME heap cell
-  holding `int 2` — no execution in the proof; no Iris, and not even the
-  relation, in the statement. **The cell's address is EXISTENTIAL — this is
-  NOT the lowering target** ("the result cell holds 2"): it cannot
-  distinguish "returns 2" from "computed 2 somewhere" (dead frame cells
-  also hold 2). Per `docs/2026-07-21_native-spec-surface.md` D8, the
-  lowering target is claimed only by the pinned-observable form — which is
-  now PROVEN: see the `✓ Surface` entry (`goldenReturnsTwo`, with the
-  `≠ 3` twin as its corollary).
-- `✓ golden_interp_computes_two` — **the computed-somewhere readout holds
-  over the FRONTEND'S OWN OUTPUT** (arc `exit-infra`, 2026-07-21; same
-  existential-address scope as above — NOT the lowering target): the full
-  WP walk (`wp_incLowered_call` → `wp_incViaCallLowered_ret2` →
-  `golden_adequate_computes`) runs over `GoldenSlice.sliceLowered` — the
-  frontend's actual lowering, pinned by `scripts/check-golden` — through
-  every Arc C mechanism the hand model never exercised: `wp_block_nil` +
-  pushed-scope lookups, D1 `seqCont` splices of nested `.seqn` groups
-  (`seqCont_splice`, the first use of the splice branch in a WP proof), the
-  explicit `x = 0` assignment, the synthesized `$res0` result local.
-  Composed with `golden_interp_run_in_relation`: every terminating
-  interpreter run of the driver over the lowered program ends with a heap
-  cell holding `int 2`. The "hand model ≈ lowering" manual claim is retired;
-  the same existential-address honest scope as the slice version applies.
-- `✓ wp_seqn` — now consumed by the end-to-end witness `adequate_seqn_nil`.
-- `✓ wp_assign_lit` / `✓ wp_deref_store_ref` — **ZERO hypotheses** (arc
-  `slice-l5-pure` item 1, 2026-07-20): the formerly-open `hstore` side-condition
-  is now proven via `storeLoc_int_cell` + `intKind_normalize_idem` (idempotent
-  normalize on an int-typed cell, arbitrary prior value). Each witness is a
-  closed instantiation of its law.
-- `✓ interpreterSound_frag` — the interpreter⇄relation correspondence is
-  **proven over the scalar+pointer fragment, calls included** (arc
-  `eval-totalization`, 2026-07-21): the Eval big-step cluster was totalized
-  (GoCore has zero `partial def`s), and `execStmt_frag_sound`/
-  `execStmtList_frag_sound` (mutual simulation on `(fuel, sizeOf stmt)`)
-  derive `interpreterSound_frag` — a normal interpreter completion of a
-  fragment statement (assign, seqn, block with declarations, if, while,
-  return/break/continue, **and direct calls with frames**: `Step.call` →
-  body simulation → `frameReturn`/`frameFall`) over a fragment program
-  (`StInv`: fragment heap, no methods, fragment functions) is a reachable
-  `Steps` terminal, in exactly `interpreterSoundStatement`'s shape.
-  (Updated for arc `rel-completion`: frame exits read call-time-pinned
-  locations, so block-scoped shadowing needs NO condition and fall-through
-  stores like `frameReturn`; the residual Go-unreachable condition is only
-  that a body's spine inits don't redeclare a result id —
-  `SpineFrag.init`'s `∉ avoid`.) Axiom-clean.
-- `✓ interpreterPanic_frag` — the panic side is **proven over the fragment**
-  (arc `rel-completion` D3b, 2026-07-21): an interpreter panic on a fragment
-  statement reaches the relation's terminal `.panicked` with the same
-  message (T1p/T2p mutual panic induction; substrate panic-freedom lemmas;
-  witnessed on `x := 1; x = 1/0`).
-- `✓ Surface` (arc `spec-surface`, 2026-07-21) — **THE LOWERING TARGET IS
-  CLOSED, in its pinned-observable form.** All three step-0 targets are
-  PROVEN (`Specs/GoldenSurface.lean`): `goldenTriple`
-  (`{r ↦ 0} r = incViaCall() {r ↦ 2}` — a native `GoTriple` over
-  `execStmt` runs of the frontend's actual lowering),
-  `goldenReturnsTwo` (the Verdi-register corollary: the designated output
-  cell at base address 0 holds `int 2` in every terminating run — no `∃`
-  over addresses), and `goldenNotThree` (the negative twin, now the
-  promised two-line corollary). Machinery, all once-proven:
-  `go_heap_adequacy_own` (initial-heap handover via `genHeap_init_names`),
-  the `SurfaceBridge` crossings (`reflect`/`extract` by `HProp` induction;
-  extraction reconstructs genuine disjointness from `DFrac` validity), and
-  the generic exit theorem `goTriple_of_wp` — per-program obligations are
-  exactly the fragment shape checks plus the WP proof (the golden walk,
-  reused unchanged — twice now: the frame-closure upgrade below also left
-  it untouched). **Frame closure + progress landed (same arc, later):**
-  `GoTriple` is now FRAME-CLOSED — the quantified-testcase form: any heap
-  where the `P`-footprint is allocated, and the frame provably survives
-  untouched (`F.sub` of the final heap) — with Iris's `wp_frame_l`
-  carrying the frame inside `goSpec_of_wp` so the per-program WP
-  obligation never mentions it; and `Progress` (every relation-reachable
-  configuration is terminal or can step, from `adequate_not_stuck`) is
-  bundled with the triple as `GoSpec`. `goldenSpec` proves the full
-  judgment for the golden program, and `goldenFuncSpec` proves the
-  function-level quantified-testcase form (`GoFuncSpec`, v1: unary int
-  result, return observed at the caller's target cell = the call
-  protocol's/`collectResults`' frame-exit observation; `(T, error)`
-  queued behind the interface widening) — "`incViaCall()` needs no heap
-  and returns 2", ∀ target cell, prior value, and frame; the golden WP
-  walk unchanged throughout (three direct applications, four statement
-  shapes — the triple derives from `goldenSpec`). v1 honest scope: the
-  fragment-scope
-  side condition (`HeapFrag` on the raw initial heap) remains; a
-  `.panicked` terminal counts as stuck, so `Progress` implies no reachable
-  panics (#24 scope).
-- `✓ Invariance` (arc `invariant-readout`, 2026-07-22; design of record
-  `docs/2026-07-22_invariant-readout-design.md`) — **THE INVARIANCE
-  READOUT IS OPEN.** `GoInvariant` (Surface.lean, Iris-free) is
-  Verdi-style invariance over `Rel`: every relation-reachable
-  configuration has a sub-heaplet satisfying `I` (`I ∗ true` reading; NOT
-  an SL triple variant — the docstring names the tradition). PROVEN:
-  `goldenInvariant` — at EVERY reachable configuration of the seeded
-  golden driver, the output cell holds `int 0` or `int 2` (the miniature
-  Verdi register invariant; a statement `GoTriple` structurally cannot
-  make and `Progress` does not). Machinery, all once-proven:
-  `go_heap_invariance` (iris-lean `wp_invariance` + genHeap handover —
-  extraction at an ARBITRARY reachable state, trivial WP postcondition,
-  persistence as the transport), `embed_timeless` (HProp is first-order ⇒
-  the inv-opening later strips), the invariant-opening store core
-  `wp_store_step₂_inv` (invariant opened inside the lifting's fupd slots —
-  `wp_atomic` is inapplicable to whole-machine `Config`s, recorded in its
-  docstring) with `wp_frame_return_inv` as the frame-exit form, and the
-  generic exit `goInvariant_of_wp`. The golden walk was refactored once
-  (`wp_incViaCallLowered_frame` — body walk generic in the frame exit;
-  `wp_incViaCallLowered_call` rederived with statement unchanged), so the
-  SAME walk discharges the owned and invariant forms — anti-hack
-  preserved: per-program work = the precondition shape check + the WP
-  proof. v1 honest scope: exit precondition shape is `I ∗ P'`
-  (`goInvariant_mono_pre` strengthens); namespace fixed to `nroot`
-  (single-invariant v1); the frame-subsumption corollary (invariance ⇒
-  per-state frame preservation for untouched F) is QUEUED — it needs an
-  HProp-of-heaplet fold, new surface vocabulary; ghost/abstract-state
-  machinery queued behind it (design note §3).
-- `✓ Loop` (arc E rung B1, 2026-07-22; design of record
-  `docs/2026-07-22_arc-e-while-invariant.md`) — **THE WHILE-INVARIANT LAW
-  IS IN**: `wp_while_inv`, the partial-correctness Hoare while-rule by Löb
-  induction (`iloeb`), mirroring Goose/Perennial's `wp_forBreak_cond`
-  (user direction 2026-07-22: follow established Iris-project structure,
-  generalize early): the loop invariant is `I : Bool → IProp` — arbitrary
-  resources indexed by the condition's value — NOT a single-cell
-  predicate; the exit continuation receives `I false`. Machinery:
-  `wp_det_step_keep` (resource-conditioned deterministic non-mutating
-  step core — subsumes the single-cell read-step), `wp_loop_next` (the
-  back edge, where the Löb `▷` strips), `wp_var_inc` (`x = x + lit`, the
-  self-reading assign the state-independent `wp_assign` cannot express),
-  and `exprR_var_add_lit_det`/`exprR_var_eq_lit`(`_det`) inversions.
-  Witness (same commit, non-vacuity gate): `wp_while_eq_once` —
-  `{x ↦ 0} while (x == 0) { x = x + 1 } {x ↦ 1}`, corpus-pinned
-  (`control-flow/while-eq-single-iteration`, differential PASS). HONEST
-  SCOPE: single-iteration witness (`ExprR` has `eqCmp` but no ordering
-  comparison — the multi-iteration witness arrives with rung B2's `ltCmp`
-  semantics widening); body normal-completion only (`break`/`continue`
-  laws arrive with a witness needing them); partial correctness (an
-  infinite loop satisfies the triple layer vacuously; progress still
-  real). Recorded divergence: condition handling is a premise (`Hcond`),
-  not Goose's `wp_bind` — our CK machine has no bind (same fact as the
-  `wp_atomic` inapplicability); revisit if expression evaluation moves
-  into the configuration language.
-- The **unrestricted** `interpreterSoundStatement`/`interpreterPanicStatement`
-  remain `def : Prop` — **stated, not proven**, and false as literally
-  stated only for the richer-interpreter reason now (the interpreter covers
-  values/constructs the relation doesn't; the D1 splice rule landed, so the
-  scoping counterexample is gone). Nothing here or elsewhere should count
-  them as established; widening the fragment narrows the gap.
--/
+/-! ## Non-vacuity gate — every user-facing WP law bound to a discharge
+    witness (deleting a witness or a law breaks this build). -/
 
-/-- Non-vacuity reference: the fragment correspondence theorems exist and
-type-check with their stated hypotheses. -/
-example := @GoLean.GoCore.Correspondence.interpreterSound_frag
-example := @GoLean.Iris.SliceCorrespondence.slice_interp_run_in_relation
-example := @GoLean.Iris.SliceCorrespondence.frontend_shaped_decl_in_relation
-example := @GoLean.GoCore.Correspondence.interpreterPanic_frag
-example := @GoLean.Iris.SliceCorrespondence.panic_shaped_in_relation
-example := @GoLean.Iris.SliceCorrespondence.panic_eq_shaped_in_relation
-example := @GoLean.Iris.SliceCorrespondence.panic_call_arg_in_relation
-example := @GoLean.Iris.go_heap_adequacy
-example := @GoLean.Iris.slice_adequate_computes
-example := @GoLean.Iris.SliceCorrespondence.slice_interp_computes_two
-example := @GoLean.Iris.GoldenSlice.golden_interp_run_in_relation
-example := @GoLean.Iris.GoldenSlice.sliceLowered_funcs
-example := @GoLean.Iris.GoldenSlice.wp_incLowered_call
-example := @GoLean.Iris.GoldenSlice.wp_incViaCallLowered_ret2
-example := @GoLean.Iris.GoldenSlice.golden_adequate_computes
-example := @GoLean.Iris.GoldenSlice.golden_interp_computes_two
-example := @GoLean.Surface.GoTriple
-example := @GoLean.Surface.goldenTriple_statement
-example := @GoLean.Surface.goldenReturnsTwo_statement
-example := @GoLean.Surface.goldenNotThree_statement
-example := @GoLean.Iris.go_heap_adequacy_own
-example := @GoLean.Iris.reflect
-example := @GoLean.Iris.extract
-example := @GoLean.Iris.goTriple_of_wp
-example := @GoLean.Iris.goSpec_of_wp
-example := @GoLean.Surface.GoSpec
-example := @GoLean.Surface.Progress
-example := @GoLean.Surface.GoFuncSpec
-example := @GoLean.Surface.goldenSpec
-example := @GoLean.Surface.goldenFuncSpec
-example := @GoLean.Surface.goldenTriple
-example := @GoLean.Surface.goldenReturnsTwo
-example := @GoLean.Surface.goldenNotThree
-example := @GoLean.GoCore.Correspondence.execStmt_frag_sound
-example := @GoLean.GoCore.Correspondence.evalExpr_frag_ok
-
-/-- `✓` arc `invariant-readout`: the invariance judgment, its exit pipe, and
-the golden discharge (which is also the non-vacuity witness for
-`wp_store_step₂_inv`/`wp_frame_return_inv`/`goInvariant_of_wp` — all
-premises discharged on the concrete lowered program). -/
-example := @GoLean.Surface.GoInvariant
-example := @GoLean.Surface.goldenInvariant_statement
-example := @GoLean.Surface.goldenInvariant
-example := @GoLean.Surface.goInvariant_mono_pre
-example := @GoLean.Iris.embed_timeless
-example := @GoLean.Iris.go_heap_invariance
-example := @GoLean.Iris.wp_store_step₂_inv
-example := @GoLean.Iris.wp_frame_return_inv
-example := @GoLean.Iris.GoldenSlice.wp_incViaCallLowered_frame
-example := @GoLean.Iris.GoldenSlice.wp_incViaCallLowered_inv
-example := @GoLean.Iris.goInvariant_of_wp
-
-/-- `✓` arc E rung B1: the while-invariant law and its machinery, all
-witnessed by `wp_while_eq_once` (which instantiates `wp_while_inv`,
-`wp_det_step_keep`, `wp_var_inc`, and both new inversions on the
-corpus-pinned single-iteration loop, discharging every premise). -/
-example := @GoLean.Iris.wp_det_step_keep
-example := @GoLean.Iris.wp_loop_next
-example := @GoLean.Iris.wp_while_inv
-example := @GoLean.Iris.wp_var_inc
-example := @GoLean.Iris.exprR_var_add_lit_det
-example := @GoLean.Iris.exprR_var_eq_lit
-example := @GoLean.Iris.exprR_var_eq_lit_det
+/-- `✓` the expression-walk step laws + `wp_assign_lit` — the composed
+assignment walk is itself the discharge witness of the walk architecture
+(every step law's premise discharged on a concrete statement). -/
+example := @GoLean.Iris.wp_assign_lit
+/-- `✓` wp_while_inv — witnessed by `wp_while_eq_once` (corpus-pinned
+`control-flow/while-eq-single-iteration`; the full Löb cycle with real
+machine walks on both sides). -/
 example := @GoLean.Iris.wp_while_eq_once
+/-- `✓` the call laws — witnessed on the CONCRETE golden functions
+(`wp_call_enter_inc`, `wp_call_enter_incViaCall`; kernel-bridged literals;
+external premises = the program/method pins). -/
+example := @GoLean.Iris.wp_call_enter_inc
+example := @GoLean.Iris.wp_call_enter_incViaCall
+/-- `✓` the frame exits — `wp_frame_return_int` (premise-free given
+resources) and its invariant-opening form, both consumed by the golden
+walk. -/
+example := @GoLean.Iris.wp_frame_return_int
+example := @GoLean.Iris.wp_frame_return_int_inv
+/-- `✓` the golden walk and both its call forms. -/
+example := @GoLean.Iris.GoldenSlice.wp_inc_body
+example := @GoLean.Iris.GoldenSlice.wp_call_inc_stmt
+example := @GoLean.Iris.GoldenSlice.wp_incViaCall_body
+example := @GoLean.Iris.GoldenSlice.wp_goldenCall
+example := @GoLean.Iris.GoldenSlice.wp_goldenCall_inv
+/-- `✓` the negative pins (trivialization guards). -/
+example := @GoLean.GoCore.NegativeSpecs.unbound_ref_stuck
+example := @GoLean.GoCore.NegativeSpecs.unbound_var_stuck
+example := @GoLean.GoCore.NegativeSpecs.terminal_stuck
+example := @GoLean.GoCore.NegativeSpecs.div_nonzero_no_panic
 
-   ######################### end PRUNED block ################################ -/
+/-! ## Three-state ledger
+
+- `✓ Machine correspondence` (reshape S5, 2026-07-23) — `stepFn_sound` +
+  `step_complete` + `runConfig_sound`/`execStmt_sound_normal` replace the
+  old T1/T2 fragment inductions AT FULL-FRAGMENT SCOPE (no `StInv`, no
+  `HeapFrag`, no spine conditions). The old *fragment-scoped* theorems
+  (`interpreterSound_frag`, `interpreterPanic_frag`) are RETIRED —
+  superseded by strictly stronger statements. The driver-level PANIC
+  assembly (an `interpreterPanic` analogue over `runConfig`'s `.error`
+  path) is explicitly QUEUED, not claimed: helper-propagated panics at
+  relation-silent sites make it need a reachability argument (stage log
+  §6′ of the design note).
+- `✓ Surface` (R3, 2026-07-23) — ALL SIX golden targets re-proven over
+  the machine (`goldenSpec`/`goldenFuncSpec`/`goldenInvariant`/
+  `goldenTriple`/`goldenReturnsTwo`/`goldenNotThree`), statements
+  unchanged in content modulo two RECORDED strengthenings (env as
+  `execStmt`-wrapper argument; `HeapFrag` side-condition retired). The
+  exit pipes lost their fragment shape checks. The old
+  existential-address `*_computes` readouts and the hand-model slice
+  chain (`slice_adequate`, `wp_main_returns_two`, `wp_inc_call`, …) are
+  RETIRED as superseded — the pinned-observable forms subsume their
+  claims; the deleted theorems remain at git rev 5a9eab2.
+- `✓ Loop` (R3) — `wp_while_inv` re-derived with the bind-form condition
+  premise; the arc-E recorded divergence (condition as operational
+  premise) is CLOSED exactly as its revisit note predicted.
+- The unrestricted driver-outcome parity statements (normal AND panic and
+  stuck classification, wrapper vs relation) are NOT claimed as theorems;
+  the differential (zero drift on 718) is the operational evidence, and
+  the queued panic assembly is the proof-side gap on record.
+-/
 
 end GoLean.Iris.Audit

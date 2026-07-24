@@ -1,402 +1,412 @@
-import GoLeanProofs.Specs.Slice
-import GoLeanProofs.Specs.GoldenSlice
+import Iris.ProgramLogic.WeakestPre
+import Iris.ProofMode
+import GoLean.GoCore.MachineSound
+import GoLeanProofs.Laws.Control
+import GoLeanProofs.Laws.Eval
+import GoLeanProofs.Laws.Assign
+import GoLeanProofs.Laws.Call
+import GoLeanProofs.Laws.Init
+import GoLeanProofs.SurfaceBridge
 
 /-!
-# The golden WP walk (arc `exit-infra`)
+# The golden WP walk (R3 rewrite over the fine-grained machine)
 
-The Iris side of the golden slice: weakest-precondition walks over the
-frontend's ACTUAL lowering (`GoldenSlice.sliceLowered`, pinned by
-`scripts/check-golden`), composed with the correspondence witness
-(`golden_interp_run_in_relation`) into `golden_interp_computes_two` — the
-lowering-target theorem with the "hand model ≈ lowering" footnote fully
-retired: every terminating interpreter run of the driver over the frontend's
-own output ends with a heap cell holding `int 2`, and the proof subject IS
-the executed artifact.
-
-The lowered shape differs from the hand-modeled slice (`Specs/Slice.lean`)
-in exactly the ways Arc C/D built machinery for: `.block`-wrapped bodies
-(`wp_block_nil` + a pushed scope every lookup must see through), nested
-`.seqn` declaration groups spliced by D1's `seqCont` (`seqCont_splice`),
-the explicit `x = 0` assignment the frontend emits after the declaration,
-and the synthesized `$res0` result local.
-
-The walks are ∀-general over `kind`/`lit`/`m` where the lowered term is
-(the golden instance `kind = .int`, `lit = 1` appears only in the final
-specialized theorems — same anti-specialization discipline as `Slice.lean`).
+The full walk for the frontend's pinned lowering, composed from the new
+per-step laws: `wp_inc_body` (the `*p = *p + 1` body — var read, deref
+apply, add apply, store), `wp_call_inc_stmt` (the `inc(&x)` call
+statement end to end), `wp_incViaCall_body` (init, seeded assign, two
+`inc` calls, result write-back, return), and `wp_goldenDriver` — the
+exit-form WP for the seeded driver `r = incViaCall()`: `{r ↦ 0} … {r ↦ 2}`
+over any bundle with the golden program/method pins. The old `*_computes`
+existential-address readouts are RETIRED (superseded by the Surface
+pinned forms), as are the fragment-shape lemmas (the machine's soundness
+is total).
 -/
 
 open Iris Iris.ProgramLogic Iris.Std Iris.Std.PartialMap
-open GoLean GoLean.GoCore GoLean.GoCore.Rel GoLean.GoCore.Correspondence
+open GoLean GoLean.GoCore GoLean.GoCore.Machine
+open GoLean.Surface (outCell0 outCell2 goldenDriver outEnv)
 
 namespace GoLean.Iris.GoldenSlice
 
-/-- D1's `seqCont` splices under a same-env governing sequence — the
-equation the walks use to step through the frontend's nested `.seqn`
-groups (the hand-modeled slice only ever hit `seqCont`'s non-`.seq`
-wrap branch). -/
-theorem seqCont_splice (ss rest : List Stmt) (env : LocalEnv) (k : Cont) :
+set_option linter.unusedSimpArgs false
+
+/-- The D1 splice, as a rewrite (same-env governing sequence). -/
+theorem seqCont_splice {ss rest : List Stmt} {env : LocalEnv} {k : Cont} :
     seqCont ss env (.seq rest env k) = .seq (ss ++ rest) env k := by
   simp [seqCont]
-
-/-! ## The lowered shapes, parametrized
-
-`abbrev`s so `iapply` sees through them; `sliceLowered_funcs` below is the
-machine-checked bridge to the golden term. -/
-
-/-- The frontend's lowering of `inc`'s body: block-wrapped, `.seqn`-grouped
-`*p = *p + lit` (golden instance: `kind = .int`, `ty = .int .int`,
-`lit = 1`). -/
-abbrev incLoweredBody (kind : IntKind) (ty : Ty) (lit : Int) : Stmt :=
-  .block #[] #[.seqn #[.assign (.addr (.var "p"))
-    (.add (.deref (.var "p") ty) (.intLit lit kind))]]
-
-abbrev incLoweredFunc (fid : FuncId) (kind : IntKind) (ty : Ty)
-    (lit : Int) : Func :=
-  ⟨fid, #[⟨"p", .pointer (.int kind)⟩], #[], incLoweredBody kind ty lit⟩
-
-/-- The frontend's lowering of `incViaCall`'s body: block-wrapped; the
-`x := 0` short declaration lowers to a `.seqn`-grouped init + explicit
-zero assignment; `return x` lowers to a `.seqn`-grouped `$res0`-assign +
-bare return. -/
-abbrev incViaCallLoweredBody (incId : FuncId) (kind : IntKind) : Stmt :=
-  .block #[] #[
-    .seqn #[.initialization ⟨"x", .int kind⟩,
-            .assign (.var "x") (.intLit 0 kind)],
-    .call #[] incId #[.ref "x"],
-    .call #[] incId #[.ref "x"],
-    .seqn #[.assign (.var "$res0") (.var "x"), .returnStmt]]
-
-abbrev incViaCallLoweredFunc (mid incId : FuncId) (kind : IntKind) : Func :=
-  ⟨mid, #[], #[⟨"$res0", .int kind⟩], incViaCallLoweredBody incId kind⟩
-
-/-- **The bridge: the parametrized shapes ARE the golden term** — the walks
-below are about `sliceLowered`, kernel-checked, not by analogy. -/
-theorem sliceLowered_funcs :
-    sliceLowered.funcs
-      = #[incLoweredFunc ⟨"inc"⟩ .int (.int .int) 1,
-          incViaCallLoweredFunc ⟨"incViaCall"⟩ ⟨"inc"⟩ .int] := rfl
 
 section
 variable {GF : BundledGFunctors} {hlc : HasLC} [GoCoreGS hlc GF]
 variable {s : Stuckness} {E : CoPset} {Φ : Unit → IProp GF}
 
-/-- **The lowered `inc(&x)` call spec**: `{x ↦ m} inc(&x) {x ↦ norm(m+lit)}`
-for the FRONTEND's lowered `inc` — the golden counterpart of `wp_inc_call`.
-The block wrapper costs a `wp_block_nil` step and a pushed scope (hence
-`wp_inc_via_ptr_env` with the lookup discharged through it); the `.seqn`
-group costs a `seqCont_splice`. Premises: program membership (`hfind`) and
-argument resolution (`hx`), both genuinely external — same status as
-`wp_inc_call`'s. -/
-theorem wp_incLowered_call {a : Addr} {kind : IntKind} {m lit : Int} {ty : Ty}
-    {fid incId : FuncId} {xname : String} {env : LocalEnv} {k}
-    (hfind : findFunctionIn? (GoCoreGS.prog GF) incId
-      = some (incLoweredFunc fid kind ty lit))
-    (hx : LocalEnv.lookup env xname = some (.base a)) :
-    a.id ↦ (⟨some (.int kind), .int m kind⟩ : HeapCell)
-      ∗ (a.id ↦ (⟨some (.int kind), .int (kind.normalize (m + kind.normalize lit)) kind⟩ : HeapCell)
+/-- The `inc` body walk: `*p = *p + 1` under the frame environment. -/
+theorem wp_inc_body {pa xa : Addr} {m : Int} {k} :
+    pa.id ↦ (⟨some (.pointer (.int .int)), .addr (.base xa)⟩ : HeapCell)
+      ∗ xa.id ↦ (⟨some (.int .int), .int m .int⟩ : HeapCell)
+      ∗ (pa.id ↦ (⟨some (.pointer (.int .int)), .addr (.base xa)⟩ : HeapCell)
+          ∗ xa.id ↦ (⟨some (.int .int), .int (IntKind.normalize .int (m + 1)) .int⟩ : HeapCell)
           -∗ WP (Config.next k) @ s ; E {{ Φ }})
-      ⊢ WP (Config.exec (.call #[] incId #[.ref xname]) env k) @ s ; E {{ Φ }} := by
-  iintro ⟨Ha, Hcont⟩
-  iapply (wp_call_unary (pid := "p") (pty := .pointer (.int kind))
-    (v := .addr (.base a)) (v' := .addr (.base a)) hfind rfl rfl rfl
-    (fun _ => ExprR.ref hx)
-    (fun _ _ h => exprR_ref_det hx h)
-    (fun _ => by
-      simp [normalizeValueForTy, normalizeValueForTyFuel, typeResolutionFuel]
-      rfl))
-  iintro %pa Hp
+      ⊢ WP (Config.exec incFunc.body [[("p", Loc.base pa)]] k) @ s ; E {{ Φ }} := by
+  iintro ⟨Hp, Hx, Hcont⟩
+  simp only [incFunc]
   iapply wp_block_nil
-  iapply fupd_intro; inext; iapply fupd_intro; iintro Hcred1
+  iapply fupd_intro
+  inext
+  iapply fupd_intro
+  iintro Hc1
   iapply wp_seq_next
-  iapply fupd_intro; inext; iapply fupd_intro; iintro Hcred2
+  iapply fupd_intro
+  inext
+  iapply fupd_intro
+  iintro Hc2
   iapply wp_seqn
-  rw [seqCont_splice]
-  simp only [List.cons_append, List.nil_append]
-  iapply fupd_intro; inext; iapply fupd_intro; iintro Hcred3
+  simp only [List.toList_toArray, seqCont_splice, List.cons_append,
+    List.nil_append]
+  iapply fupd_intro
+  inext
+  iapply fupd_intro
+  iintro Hc3
   iapply wp_seq_next
-  iapply fupd_intro; inext; iapply fupd_intro; iintro Hcred4
-  iapply (wp_inc_via_ptr_env (pa := pa) (a := a)
-    (pdecl := some ((Ty.int kind).pointer)) (ty := ty) (kind := kind)
-    (m := m) (lit := lit)
-    (hres := by simp [LocalEnv.lookup, Scope.lookup, LocalEnv.pushScope]))
+  iapply fupd_intro
+  inext
+  iapply fupd_intro
+  iintro Hc4
+  iapply (wp_assign_start (te := .var "p") rfl)
+  iapply fupd_intro
+  inext
+  iapply fupd_intro
+  iintro Hc5
+  iapply (wp_eval_var
+    (cell := ⟨some (.pointer (.int .int)), .addr (.base xa)⟩) rfl)
   isplitl [Hp]
   · iexact Hp
-  isplitl [Ha]
-  · iexact Ha
-  iintro ⟨Hp', Ha'⟩
+  iintro Hp
+  iapply wp_assign_target
+  iapply fupd_intro
+  inext
+  iapply fupd_intro
+  iintro Hc6
+  iapply (wp_eval_strict (op := .add)
+    (e₁ := .deref (.var "p") (.int .int)) (rest := [.intLit 1 .int]) rfl)
+  iapply fupd_intro
+  inext
+  iapply fupd_intro
+  iintro Hc7
+  iapply (wp_eval_strict (op := .deref (.int .int)) (e₁ := .var "p")
+    (rest := []) rfl)
+  iapply fupd_intro
+  inext
+  iapply fupd_intro
+  iintro Hc8
+  iapply (wp_eval_var
+    (cell := ⟨some (.pointer (.int .int)), .addr (.base xa)⟩) rfl)
+  isplitl [Hp]
+  · iexact Hp
+  iintro Hp
+  iapply (wp_strict_apply_deref (cell := ⟨some (.int .int), .int m .int⟩))
+  isplitl [Hx]
+  · iexact Hx
+  iintro Hx
+  iapply wp_strict_shift
+  iapply fupd_intro
+  inext
+  iapply fupd_intro
+  iintro Hc9
+  iapply wp_eval_intLit
+  iapply fupd_intro
+  inext
+  iapply fupd_intro
+  iintro Hc10
+  rw [show IntKind.normalize .int 1 = 1 from by decide]
+  iapply (wp_strict_apply_pure
+    (out := .int (IntKind.normalize .int (m + 1)) .int) (happly := by
+      intro σ
+      have h1 : IntKind.compatibleResult .int .int = some .int := rfl
+      simp [applyStrictOp, intBinaryResult, valueAsIntValue, h1,
+        Bind.bind, Except.bind]))
+  iapply fupd_intro
+  inext
+  iapply fupd_intro
+  iintro Hc11
+  iapply (wp_assign_store (oldcell := ⟨some (.int .int), .int m .int⟩)
+    (newcell := ⟨some (.int .int), .int (IntKind.normalize .int (m + 1)) .int⟩)
+    (fun σ₁ hlook => storeLoc_int_cell hlook (m + 1)))
+  isplitl [Hx]
+  · iexact Hx
+  iintro Hx
   iapply wp_seq_done
-  iapply fupd_intro; inext; iapply fupd_intro; iintro Hcred5
-  iapply wp_frame_fall
-  iapply fupd_intro; inext; iapply fupd_intro; iintro Hcred6
-  iapply Hcont $$ Ha'
+  iapply fupd_intro
+  inext
+  iapply fupd_intro
+  iintro Hc12
+  iapply Hcont $$ [$Hp $Hx]
 
-/-- **The lowered `incViaCall()` body walk, generic in the frame exit**
-(arc `invariant-readout` refactor): the ENTIRE body — frame allocation,
-explicit `x = 0`, two lowered `inc`s, `$res0 = x`, `return` — ending at
-the value-returning frame-exit configuration, whose discharge the caller
-supplies (`Hfin`, ∀-quantified over the machine-chosen result address).
-The walk itself never touches the caller's target cell `ta`, so ONE walk
-serves both exits: the owned-cell form (`wp_incViaCallLowered_call` =
-this + `wp_frame_return_int`) and the invariant form
-(`wp_incViaCallLowered_inv` = this + `wp_frame_return_inv`). -/
-theorem wp_incViaCallLowered_frame {kind : IntKind} {lit : Int} {ty : Ty}
-    {mid incId fid : FuncId} {tgt : String} {ta : Addr} {env k}
-    (hmain : findFunctionIn? (GoCoreGS.prog GF) mid
-      = some (incViaCallLoweredFunc mid incId kind))
-    (hinc : findFunctionIn? (GoCoreGS.prog GF) incId
-      = some (incLoweredFunc fid kind ty lit))
-    (htgt : LocalEnv.lookup env tgt = some (.base ta)) :
-    (iprop(∀ ra : Addr,
-      (ra.id ↦ (⟨some (.int kind),
-          .int (kind.normalize (kind.normalize (kind.normalize 0 + kind.normalize lit)
-            + kind.normalize lit)) kind⟩ : HeapCell))
-        -∗ WP (Config.returning (.frame [.base ta] [.base ra] k))
-            @ s ; E {{ Φ }}) : IProp GF)
-      ⊢ WP (Config.exec (.call #[.var tgt] mid #[]) env k) @ s ; E {{ Φ }} := by
-  iintro Hfin
-  iapply (wp_call_nullary_ret (rname := "$res0") (rty := .int kind)
-    (v := .int 0 kind) (body := incViaCallLoweredBody incId kind)
-    hmain rfl rfl rfl htgt
-    (fun _ => by
-      simp [defaultValue, defaultValueFuel, typeResolutionFuel]
-      rfl))
-  iintro %ra Hra
-  iapply wp_block_nil
-  iapply fupd_intro; inext; iapply fupd_intro; iintro Hcred1
-  iapply wp_seq_next
-  iapply fupd_intro; inext; iapply fupd_intro; iintro Hcred2
-  iapply wp_seqn
-  rw [seqCont_splice]
-  simp only [List.cons_append, List.nil_append]
-  iapply fupd_intro; inext; iapply fupd_intro; iintro Hcred3
-  iapply wp_seq_next
-  iapply fupd_intro; inext; iapply fupd_intro; iintro Hcred4
-  iapply wp_init_int
-  iintro %xa Hxa
-  iapply wp_seq_next
-  iapply fupd_intro; inext; iapply fupd_intro; iintro Hcred5
-  iapply (wp_assign (id := "x") (a := xa)
-    (oldcell := ⟨some (.int kind), .int 0 kind⟩)
-    (newcell := ⟨some (.int kind), .int (kind.normalize 0) kind⟩)
-    (v := .int (kind.normalize 0) kind)
-    (hres := by
-      simp [LocalEnv.lookup, Scope.lookup, LocalEnv.declare, LocalEnv.pushScope])
-    (hrhs := fun _ => ExprR.intLit)
-    (hrhs_det := fun _ _ h => exprR_intLit_det h)
-    (hstore := fun _ hlook => storeLoc_int_cell hlook 0))
-  isplitl [Hxa]
-  · iexact Hxa
-  iintro Hxa
-  iapply wp_seq_next
-  iapply fupd_intro; inext; iapply fupd_intro; iintro Hcred6
-  iapply (wp_incLowered_call (a := xa) (kind := kind) (lit := lit)
-    (m := kind.normalize 0) hinc
-    (by simp [LocalEnv.lookup, Scope.lookup, LocalEnv.declare, LocalEnv.pushScope]))
-  isplitl [Hxa]
-  · iexact Hxa
-  iintro Hxa
-  iapply wp_seq_next
-  iapply fupd_intro; inext; iapply fupd_intro; iintro Hcred7
-  iapply (wp_incLowered_call (a := xa) (kind := kind) (lit := lit)
-    (m := kind.normalize (kind.normalize 0 + kind.normalize lit)) hinc
-    (by simp [LocalEnv.lookup, Scope.lookup, LocalEnv.declare, LocalEnv.pushScope]))
-  isplitl [Hxa]
-  · iexact Hxa
-  iintro Hxa
-  iapply wp_seq_next
-  iapply fupd_intro; inext; iapply fupd_intro; iintro Hcred8
-  iapply wp_seqn
-  rw [seqCont_splice]
-  simp only [List.cons_append, List.nil_append]
-  iapply fupd_intro; inext; iapply fupd_intro; iintro Hcred9
-  iapply wp_seq_next
-  iapply fupd_intro; inext; iapply fupd_intro; iintro Hcred10
-  iapply (wp_assign_var_int (sa := xa) (ta := ra) (kind := kind)
-    (n := kind.normalize (kind.normalize 0 + kind.normalize lit) + kind.normalize lit)
-    (w := .int 0 kind) (tgt := "$res0") (src := "x")
-    (hres_t := by
-      simp [LocalEnv.lookup, Scope.lookup, LocalEnv.declare, LocalEnv.pushScope])
-    (hres_s := by
-      simp [LocalEnv.lookup, Scope.lookup, LocalEnv.declare, LocalEnv.pushScope]))
-  isplitl [Hxa]
-  · iexact Hxa
-  isplitl [Hra]
-  · iexact Hra
-  iintro ⟨Hxa, Hra⟩
-  iapply wp_seq_next
-  iapply fupd_intro; inext; iapply fupd_intro; iintro Hcred11
-  iapply wp_return
-  iapply fupd_intro; inext; iapply fupd_intro; iintro Hcred12
-  iapply wp_seq_return
-  iapply fupd_intro; inext; iapply fupd_intro; iintro Hcred13
-  iapply Hfin $$ %ra Hra
-
-/-- **The lowered `incViaCall()` composition, ∀-general**: calling the
-frontend's lowered `incViaCall` stores `norm(norm(norm 0 + norm lit) +
-norm lit)` — explicit zero assignment, then two lowered `inc`s — into the
-caller's target cell. The golden counterpart of `wp_main_call`; the extra
-`norm 0` in the chain is the frontend's explicit `x = 0` assignment (the
-hand model relied on the declaration default). Now derived from the
-frame-generic walk + the owned frame exit. -/
-theorem wp_incViaCallLowered_call {kind : IntKind} {lit : Int} {ty : Ty}
-    {mid incId fid : FuncId} {tgt : String} {ta : Addr} {w : GoValue} {env k}
-    (hmain : findFunctionIn? (GoCoreGS.prog GF) mid
-      = some (incViaCallLoweredFunc mid incId kind))
-    (hinc : findFunctionIn? (GoCoreGS.prog GF) incId
-      = some (incLoweredFunc fid kind ty lit))
-    (htgt : LocalEnv.lookup env tgt = some (.base ta)) :
-    ta.id ↦ (⟨some (.int kind), w⟩ : HeapCell)
-      ∗ (ta.id ↦ (⟨some (.int kind),
-            .int (kind.normalize (kind.normalize (kind.normalize 0 + kind.normalize lit)
-              + kind.normalize lit)) kind⟩ : HeapCell)
+/-- The `inc(&x)` call statement, end to end: dispatch → argument → frame
+entry (the `wp_call_enter_inc` witness) → body → frame fall. The dead
+parameter cell is dropped (affine). -/
+theorem wp_call_inc_stmt {env : LocalEnv} {xa : Addr} {m : Int} {k}
+    (hx : LocalEnv.lookup env "x" = some (.base xa))
+    (hprog : GoCoreGS.prog GF = sliceLowered.funcs)
+    (hmeths : GoCoreGS.methods GF = #[]) :
+    xa.id ↦ (⟨some (.int .int), .int m .int⟩ : HeapCell)
+      ∗ (xa.id ↦ (⟨some (.int .int), .int (IntKind.normalize .int (m + 1)) .int⟩ : HeapCell)
           -∗ WP (Config.next k) @ s ; E {{ Φ }})
-      ⊢ WP (Config.exec (.call #[.var tgt] mid #[]) env k) @ s ; E {{ Φ }} := by
-  iintro ⟨Hta, Hcont⟩
-  iapply (wp_incViaCallLowered_frame (fid := fid) (ty := ty) hmain hinc htgt)
-  iintro %ra Hra
-  iapply (wp_frame_return_int (ra := ra) (ta := ta) (kind := kind)
-    (n := kind.normalize (kind.normalize 0 + kind.normalize lit) + kind.normalize lit)
-    (w := w))
-  isplitl [Hra]
-  · iexact Hra
-  isplitl [Hta]
-  · iexact Hta
-  iintro ⟨Hra, Hta⟩
-  iapply Hcont $$ Hta
+      ⊢ WP (Config.exec (.call #[] ⟨"inc"⟩ #[.ref "x"]) env k) @ s ; E {{ Φ }} := by
+  iintro ⟨Hx, Hcont⟩
+  iapply (wp_call_first_arg (a := .ref "x") (rest := []) rfl rfl)
+  iapply fupd_intro
+  inext
+  iapply fupd_intro
+  iintro Hc1
+  iapply (wp_eval_ref hx)
+  iapply fupd_intro
+  inext
+  iapply fupd_intro
+  iintro Hc2
+  iapply (wp_call_enter_inc (locs := []) hprog hmeths)
+  iintro %pa Hp
+  iapply wp_inc_body
+  isplitl [Hp]
+  · iexact Hp
+  isplitl [Hx]
+  · iexact Hx
+  iintro ⟨Hp, Hx⟩
+  iapply wp_frame_fall
+  iapply fupd_intro
+  inext
+  iapply fupd_intro
+  iintro Hc3
+  iapply Hcont $$ Hx
 
-/-- **The invariant-form walk** (arc `invariant-readout`): the same body
-walk, with the caller's target cell living in an Iris invariant `Icnt`
-instead of being owned. The frame exit opens the invariant around the
-single writing step and re-establishes it with the stored result
-(`hclose` — the per-step preservation obligation); `hint` says every
-invariant-permitted cell is int-typed, so the store succeeds on whatever
-the invariant exposes. Postcondition-free consumer: the target's `↦` never
-leaves the invariant, so the continuation gets no cell back. -/
-theorem wp_incViaCallLowered_inv {kind : IntKind} {lit : Int} {ty : Ty}
-    {mid incId fid : FuncId} {tgt : String} {ta : Addr} {env k}
-    {S : HeapCell → Prop} {Icnt : IProp GF} {N : Namespace}
-    (hmain : findFunctionIn? (GoCoreGS.prog GF) mid
-      = some (incViaCallLoweredFunc mid incId kind))
-    (hinc : findFunctionIn? (GoCoreGS.prog GF) incId
-      = some (incLoweredFunc fid kind ty lit))
-    (htgt : LocalEnv.lookup env tgt = some (.base ta))
-    (hN : ↑N ⊆ E)
-    (hopen : Icnt ⊢ iprop(∃ cell, ⌜S cell⌝ ∗ ta.id ↦ cell))
-    (hclose : (iprop(ta.id ↦ (⟨some (.int kind),
-        .int (kind.normalize (kind.normalize (kind.normalize 0 + kind.normalize lit)
-          + kind.normalize lit)) kind⟩ : HeapCell)) : IProp GF) ⊢ Icnt)
-    (hint : ∀ cell, S cell → ∃ w : GoValue, cell = ⟨some (.int kind), w⟩) :
-    Iris.inv N Icnt ∗ WP (Config.next k) @ s ; E {{ Φ }}
-      ⊢ WP (Config.exec (.call #[.var tgt] mid #[]) env k) @ s ; E {{ Φ }} := by
-  iintro ⟨HinvT, Hcont⟩
-  iapply (wp_incViaCallLowered_frame (fid := fid) (ty := ty) hmain hinc htgt)
-  iintro %ra Hra
-  iapply (wp_frame_return_inv (ra := ra) (ta := ta) (N := N)
-    (rcell := ⟨some (.int kind),
-      .int (kind.normalize (kind.normalize (kind.normalize 0 + kind.normalize lit)
-        + kind.normalize lit)) kind⟩)
-    hN hopen hclose
-    (fun σ₁ tcell hS hlt => by
-      obtain ⟨w, rfl⟩ := hint tcell hS
-      exact storeLoc_int_cell hlt
-        (kind.normalize (kind.normalize 0 + kind.normalize lit)
-          + kind.normalize lit)))
-  isplitl [HinvT]
-  · iexact HinvT
-  isplitl [Hra]
-  · iexact Hra
-  iintro Hra
-  iexact Hcont
+/-- The `incViaCall` body walk: declare `x`, seed 0, two `inc(&x)` calls,
+write `x` to the pinned result cell, return. The dead `x` cell is
+dropped. -/
+theorem wp_incViaCall_body {ra : Addr} {k}
+    (hprog : GoCoreGS.prog GF = sliceLowered.funcs)
+    (hmeths : GoCoreGS.methods GF = #[]) :
+    ra.id ↦ (⟨some (.int .int), .int 0 .int⟩ : HeapCell)
+      ∗ (ra.id ↦ (⟨some (.int .int), .int 2 .int⟩ : HeapCell)
+          -∗ WP (Config.returning k) @ s ; E {{ Φ }})
+      ⊢ WP (Config.exec incViaCallFunc.body [[("$res0", Loc.base ra)]] k)
+          @ s ; E {{ Φ }} := by
+  iintro ⟨Hr, Hcont⟩
+  simp only [incViaCallFunc]
+  iapply wp_block_nil
+  iapply fupd_intro
+  inext
+  iapply fupd_intro
+  iintro Hc1
+  iapply wp_seq_next
+  iapply fupd_intro
+  inext
+  iapply fupd_intro
+  iintro Hc2
+  iapply wp_seqn
+  simp only [List.toList_toArray, seqCont_splice, List.cons_append,
+    List.nil_append]
+  iapply fupd_intro
+  inext
+  iapply fupd_intro
+  iintro Hc3
+  iapply wp_seq_next
+  iapply fupd_intro
+  inext
+  iapply fupd_intro
+  iintro Hc4
+  iapply wp_init_int
+  iintro %xa Hx
+  iapply wp_seq_next
+  iapply fupd_intro
+  inext
+  iapply fupd_intro
+  iintro Hc5
+  iapply (wp_assign_lit (n := 0) (kind := .int)
+    (w := .int 0 .int) rfl)
+  isplitl [Hx]
+  · iexact Hx
+  iintro Hx
+  rw [show IntKind.normalize .int 0 = 0 from by decide] at *
+  iapply wp_seq_next
+  iapply fupd_intro
+  inext
+  iapply fupd_intro
+  iintro Hc6
+  iapply (wp_call_inc_stmt (m := 0) rfl hprog hmeths)
+  isplitl [Hx]
+  · iexact Hx
+  iintro Hx
+  rw [show IntKind.normalize .int (0 + 1) = 1 from by decide] at *
+  iapply wp_seq_next
+  iapply fupd_intro
+  inext
+  iapply fupd_intro
+  iintro Hc7
+  iapply (wp_call_inc_stmt (m := 1) rfl hprog hmeths)
+  isplitl [Hx]
+  · iexact Hx
+  iintro Hx
+  rw [show IntKind.normalize .int (1 + 1) = 2 from by decide] at *
+  iapply wp_seq_next
+  iapply fupd_intro
+  inext
+  iapply fupd_intro
+  iintro Hc8
+  iapply wp_seqn
+  simp only [List.toList_toArray, seqCont_splice, List.cons_append,
+    List.nil_append]
+  iapply fupd_intro
+  inext
+  iapply fupd_intro
+  iintro Hc9
+  iapply wp_seq_next
+  iapply fupd_intro
+  inext
+  iapply fupd_intro
+  iintro Hc10
+  iapply (wp_assign_start (te := .ref "$res0") rfl)
+  iapply fupd_intro
+  inext
+  iapply fupd_intro
+  iintro Hc11
+  iapply (wp_eval_ref (loc := .base ra) rfl)
+  iapply fupd_intro
+  inext
+  iapply fupd_intro
+  iintro Hc12
+  iapply wp_assign_target
+  iapply fupd_intro
+  inext
+  iapply fupd_intro
+  iintro Hc13
+  iapply (wp_eval_var (cell := ⟨some (.int .int), .int 2 .int⟩) rfl)
+  isplitl [Hx]
+  · iexact Hx
+  iintro Hx
+  iapply (wp_assign_store (oldcell := ⟨some (.int .int), .int 0 .int⟩)
+    (newcell := ⟨some (.int .int), .int 2 .int⟩)
+    (fun σ₁ hlook => by
+      have h := storeLoc_int_any (mkind := .int) hlook 2
+      rw [show IntKind.normalize .int 2 = 2 from by decide] at h
+      exact h))
+  isplitl [Hr]
+  · iexact Hr
+  iintro Hr
+  iapply wp_seq_next
+  iapply fupd_intro
+  inext
+  iapply fupd_intro
+  iintro Hc14
+  iapply wp_return
+  iapply fupd_intro
+  inext
+  iapply fupd_intro
+  iintro Hc15
+  iapply wp_seq_return
+  iapply fupd_intro
+  inext
+  iapply fupd_intro
+  iintro Hc16
+  iapply Hcont $$ Hr
 
-/-- **The golden L6 finish line: lowered `incViaCall` returns 2** — the
-`kind = .int`, `lit = 1` instance. The literal `2` appears only in the
-specialized instances, never in the general walks. -/
-theorem wp_incViaCallLowered_ret2 {ty : Ty} {mid incId fid : FuncId}
-    {tgt : String} {ta : Addr} {w : GoValue} {env k}
-    (hmain : findFunctionIn? (GoCoreGS.prog GF) mid
-      = some (incViaCallLoweredFunc mid incId .int))
-    (hinc : findFunctionIn? (GoCoreGS.prog GF) incId
-      = some (incLoweredFunc fid .int ty 1))
-    (htgt : LocalEnv.lookup env tgt = some (.base ta)) :
+/-- **The generic golden call walk**: `x = incViaCall()` into any target
+cell (any prior value), any environment binding, any continuation —
+dispatch → target address → frame entry → body → value frame exit. -/
+theorem wp_goldenCall {ta : Addr} {w : GoValue} {x : String} {env k}
+    (hres : LocalEnv.lookup env x = some (.base ta))
+    (hprog : GoCoreGS.prog GF = sliceLowered.funcs)
+    (hmeths : GoCoreGS.methods GF = #[]) :
     ta.id ↦ (⟨some (.int .int), w⟩ : HeapCell)
       ∗ (ta.id ↦ (⟨some (.int .int), .int 2 .int⟩ : HeapCell)
           -∗ WP (Config.next k) @ s ; E {{ Φ }})
-      ⊢ WP (Config.exec (.call #[.var tgt] mid #[]) env k) @ s ; E {{ Φ }} := by
-  have h2 : IntKind.normalize .int
-      (IntKind.normalize .int (IntKind.normalize .int 0 + IntKind.normalize .int 1)
-        + IntKind.normalize .int 1) = 2 := by decide
-  have := wp_incViaCallLowered_call (kind := .int) (lit := 1) (ty := ty)
-    hmain hinc htgt (w := w) (k := k) (s := s) (E := E) (Φ := Φ)
-  rw [h2] at this
-  exact this
+      ⊢ WP (Config.exec (.call #[.var x] ⟨"incViaCall"⟩ #[]) env k)
+          @ s ; E {{ Φ }} := by
+  iintro ⟨Hr, Hcont⟩
+  iapply (wp_call_first_target (te := .ref x) (rest := []) rfl)
+  iapply fupd_intro
+  inext
+  iapply fupd_intro
+  iintro Hc₁
+  iapply (wp_eval_ref hres)
+  iapply fupd_intro
+  inext
+  iapply fupd_intro
+  iintro Hc₂
+  iapply (wp_call_enter_incViaCall (tl := .base ta) hprog hmeths)
+  iintro %ra Hres
+  iapply (wp_incViaCall_body hprog hmeths)
+  isplitl [Hres]
+  · iexact Hres
+  iintro Hres
+  iapply (wp_frame_return_int (m := 2) (kind := .int) (tkind := .int)
+    (w := w))
+  isplitl [Hres]
+  · iexact Hres
+  isplitl [Hr]
+  · iexact Hr
+  iintro ⟨Hres, Hr⟩
+  rw [show IntKind.normalize .int 2 = 2 from by decide] at *
+  iapply Hcont $$ Hr
 
-/-- **The golden operational readout.** The driver over the lowered
-program, with the result surfaced into `adequate`'s φ: every terminating
-run's final heap contains a cell holding exactly `int 2`. Mirror of
-`slice_adequate_computes`, subject swapped for the frontend's lowering. -/
-theorem golden_adequate_computes {ty : Ty} (σ : ExecState) (fid : FuncId)
-    (hwf : HeapWf σ)
-    (hmain : findFunctionIn? σ.functions ⟨"incViaCall"⟩
-      = some (incViaCallLoweredFunc ⟨"incViaCall"⟩ ⟨"inc"⟩ .int))
-    (hinc : findFunctionIn? σ.functions ⟨"inc"⟩
-      = some (incLoweredFunc fid .int ty 1)) :
-    adequate .NotStuck (Config.exec goldenProg [] .stop) σ
-      (fun _ σf => ∃ a : Addr, loadLoc σf (.base a) = .ok (.int 2 .int)) := by
-  refine go_heap_adequacy (GF := GoCoreS) _ _
-    (Ψ := fun _ => iprop(∃ a : Addr,
-      a.id ↦ (⟨some (.int .int), .int 2 .int⟩ : HeapCell))) _ hwf ?_ ?_
-  · intro _ hprog
-    iapply wp_seqn
-    simp only [seqCont]
-    iapply fupd_intro; inext; iapply fupd_intro; iintro Hcred1
-    iapply wp_seq_next
-    iapply fupd_intro; inext; iapply fupd_intro; iintro Hcred2
-    iapply wp_init_int
-    iintro %ra Hra
-    iapply wp_seq_next
-    iapply fupd_intro; inext; iapply fupd_intro; iintro Hcred3
-    iapply (wp_incViaCallLowered_ret2 (ta := ra) (ty := ty)
-      (hmain := by rw [hprog]; exact hmain)
-      (hinc := by rw [hprog]; exact hinc)
-      (htgt := by simp [LocalEnv.lookup, Scope.lookup, LocalEnv.declare]))
-    isplitl [Hra]
-    · iexact Hra
-    iintro Hra
-    iapply wp_seq_done
-    iapply fupd_intro; inext; iapply fupd_intro; iintro Hcred4
-    iapply (wp_value' (v := ()))
-    iexists ra
-    iexact Hra
-  · intro _ hprog σ2 v
-    iintro ⟨Hgh, ⟨%a, Hpt⟩⟩
-    imod (pointsTo_loadLoc (σ := σ2) (a := a)) $$ [$Hgh $Hpt] with %Hload
-    imodintro
-    ipureintro
-    exact ⟨a, Hload⟩
+/-- **The invariant-form golden call walk**: the target register lives in
+an Iris invariant (never owned by the walk — the call only computes its
+ADDRESS before the single frame-exit write, which opens and re-closes the
+invariant via `wp_frame_return_int_inv`). The rest of the walk is
+identical to `wp_goldenCall`. -/
+theorem wp_goldenCall_inv {ta : Addr} {x : String} {env k} {N : Namespace}
+    {S : HeapCell → Prop} {Icnt : IProp GF}
+    (hres : LocalEnv.lookup env x = some (.base ta))
+    (hprog : GoCoreGS.prog GF = sliceLowered.funcs)
+    (hmeths : GoCoreGS.methods GF = #[])
+    (hN : ↑N ⊆ E)
+    (hint : ∀ cell, S cell → ∃ w', cell = ⟨some (.int .int), w'⟩)
+    (hopen : Icnt ⊢ iprop(∃ cell, ⌜S cell⌝ ∗ ta.id ↦ cell))
+    (hclose : (iprop(ta.id ↦ (⟨some (.int .int), .int (IntKind.normalize .int 2) .int⟩ : HeapCell)) : IProp GF) ⊢ Icnt) :
+    Iris.inv N Icnt ∗ WP (Config.next k) @ s ; E {{ Φ }}
+      ⊢ WP (Config.exec (.call #[.var x] ⟨"incViaCall"⟩ #[]) env k)
+          @ s ; E {{ Φ }} := by
+  iintro ⟨HinvT, Hnext⟩
+  iapply (wp_call_first_target (te := .ref x) (rest := []) rfl)
+  iapply fupd_intro
+  inext
+  iapply fupd_intro
+  iintro Hc₁
+  iapply (wp_eval_ref hres)
+  iapply fupd_intro
+  inext
+  iapply fupd_intro
+  iintro Hc₂
+  iapply (wp_call_enter_incViaCall (tl := .base ta) hprog hmeths)
+  iintro %ra Hres
+  iapply (wp_incViaCall_body hprog hmeths)
+  isplitl [Hres]
+  · iexact Hres
+  iintro Hres
+  iapply (wp_frame_return_int_inv (m := 2) (kind := .int) (tkind := .int)
+    hN hint hopen hclose)
+  isplitl [HinvT]
+  · iexact HinvT
+  isplitl [Hres]
+  · iexact Hres
+  iintro Hres
+  iexact Hnext
+
+/-- **The golden driver, exit form**: `{r ↦ 0} r = incViaCall() {r ↦ 2}`
+as the WP entailment the Surface exit theorems consume. -/
+theorem wp_goldenDriver
+    (hprog : GoCoreGS.prog GF = sliceLowered.funcs)
+    (hmeths : GoCoreGS.methods GF = #[]) :
+    embed (GF := GF) outCell0
+      ⊢ WP (Config.exec goldenDriver outEnv .stop) {{ _v, embed outCell2 }} := by
+  simp only [outCell0, outCell2, embed]
+  iintro Hr
+  iapply (wp_goldenCall (w := .int 0 .int) rfl hprog hmeths)
+  isplitl [Hr]
+  · iexact Hr
+  iintro Hr
+  iapply (wp_value' (v := ()))
+  iexact Hr
 
 end
-
-/-- **The golden computed-somewhere readout.** Every terminating
-interpreter run of the driver over THE FRONTEND'S ACTUAL LOWERING
-(`sliceLowered`, pinned to the frontend's output by `scripts/check-golden`)
-ends with SOME heap cell holding exactly `int 2`. Statement mentions only
-the interpreter and the golden state — no Iris, no relation; the chain
-(correspondence witness → trace erasure → strong adequacy → heap readout)
-is inside the proof. **Scope: the address is EXISTENTIAL — this is NOT the
-lowering target** ("the result cell holds 2"), per
-`docs/2026-07-21_native-spec-surface.md` D8; the pinned-observable form is
-the spec-surface arc's step-0 target. -/
-theorem golden_interp_computes_two (fuel : Nat) (σf : ExecState)
-    (ch' : Choices)
-    (hrun : execStmt fuel σg [] goldenProg = .ok (.normal σf, ch')) :
-    ∃ a : Addr, loadLoc σf (.base a) = .ok (.int 2 .int) := by
-  have hsteps := golden_interp_run_in_relation fuel σf ch' hrun
-  have htp := steps_erased hsteps
-  have hwf : HeapWf σg := by intro n hn; rfl
-  have hadeq := golden_adequate_computes (ty := .int .int) σg ⟨"inc"⟩ hwf
-    (by rfl) (by rfl)
-  have := hadeq.adequate_result [] (σf.withLocals []) () htp
-  obtain ⟨a, hload⟩ := this
-  exact ⟨a, by rw [← loadLoc_withLocals σf [] (.base a)]; exact hload⟩
 
 end GoLean.Iris.GoldenSlice

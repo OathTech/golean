@@ -63,12 +63,6 @@ fi
 # allowlist below (deliberate, documented exceptions only).
 step "proofs-file audit coverage (every proofs/**/*.lean in the audited import closure or allowlisted)"
 STANDALONE_PROOFS="SliceSpike"  # SliceSpike: superseded spike kept as record (structure audit P1-3: an allowlist entry must name an existing, documented file — no pre-authorized holes)
-# Reshape S4 prune (2026-07-23): the proof layer awaits its R3 rebuild against
-# the fine-grained machine (restoration checklist in proofs/GoLeanProofs.lean;
-# ledger preserved in proofs/Audit.lean's PRUNED block). Each module leaves
-# this list in the commit that restores it; the reshape branch does not merge
-# with any of these still listed.
-STANDALONE_PROOFS="$STANDALONE_PROOFS GoLeanProofs.Specs.Slice GoLeanProofs.Specs.SliceCorrespondence GoLeanProofs.Specs.GoldenSlice GoLeanProofs.Specs.GoldenSliceWPBridgeExit GoLeanProofs.Specs.GoldenSurface GoLeanProofs.NegativeSpecs"
 # Transitive import closure from the build roots (Audit, GoLeanProofs), over
 # ALL .lean files under proofs/ including subdirectories — module names derived
 # from paths (proofs/GoLeanProofs/Foo.lean -> GoLeanProofs.Foo). A module

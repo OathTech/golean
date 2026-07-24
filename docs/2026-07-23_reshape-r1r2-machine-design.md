@@ -275,30 +275,38 @@ ask. R1+R2 alone never reach `main` with the proof layer pruned.
   propagated panic at a relation-silent site (e.g. frame-exit stores),
   so the panic-side driver theorem needs a reachability argument, not a
   one-line corollary — build it when an R3 witness needs it.
-- **S6/R3 IN PROGRESS** (through part 6, 2026-07-23): RESTORED — Lang /
-  HeapBridge / Ghost (namespace ports; `val_stuck` unchanged); Lifting
-  (all four step cores were rule-agnostic — `hred`-premised — so the port
-  is the namespace swap); Inversions REWRITTEN as ONE generic `step_det`
-  over `Config.choiceFree` (rules disjoint away from the mapIterK pick
-  and the stmtOpK apply); Laws/Control (rules survived verbatim; uniform
-  `Hpuredet` closer refuting the generic stmtOp* rules); Laws/Init
-  (verbatim rule). NEW — `Laws/Eval`: the expression-walk step laws, the
-  machine's answer to `wp_bind`: generic `wp_pure_det` (determinism =
-  `step_det`, no per-instance inversions) + per-step laws (literals, ref,
-  strict enter/shift/apply — ONE `wp_strict_apply_pure` covers the whole
-  pure-op table — assign glue, if/while dispatch and receipt, the
-  heap-reading `wp_eval_var` load step, the `wp_assign_store` store step).
-  Laws/Assign REWRITTEN as the composed walk; **`wp_assign_lit` (entry →
-  `&x` → target → literal → store, store side-condition closed by
-  `storeLoc_int_cell`) is the walk architecture's discharge witness —
-  the composed-walk design is validated end to end.** Decision recorded:
-  no `LanguageCtx`/bind instance — per-step laws compose the walks
-  directly; revisit only if walk-composition pain shows up in the golden
-  re-derivation. REMAINING: Laws/Call (frame entry/exit), Laws/Loop
-  (`wp_while_inv` re-derivation — condition now a machine walk, not an
-  `ExprR` premise), Adequacy, Surface pipes + `execStmt`-shaped wrapper,
-  Specs witnesses byte-identical, Audit PRUNED-block un-commenting, ci
-  allowlist emptied.
+- **S6/R3 COMPLETE (2026-07-23):** every stratum restored over the
+  machine. Infrastructure: Lang/HeapBridge/Ghost (namespace ports; Ghost
+  now pins `methods` beside `prog` — the machine consults `σ.methods` at
+  frame entry), Lifting (rule-agnostic cores, namespace port), Inversions
+  REWRITTEN as one generic `step_det`. Laws: Control/Init verbatim; NEW
+  Eval (the expression-walk step laws — the `wp_bind` answer: per-step
+  laws composed, no `LanguageCtx`); Assign/Call/Loop rewritten as
+  composed walks with same-commit witnesses (`wp_assign_lit`; the golden
+  frame-entry instances on kernel-bridged literals; `wp_while_eq_once`
+  with the bind-form condition — the arc-E recorded divergence CLOSED).
+  Adequacy: all four exit doors + `adequate_seqn_nil`. Surface: the
+  `execStmt`-shaped wrapper (`execStmtLoop`/`execStmt` +
+  `execStmt_sound_normal`, total); two RECORDED statement deltas, both
+  strengthenings (env as wrapper argument after `ExecState.locals` died;
+  `InitialSplit.frag`/`HeapFrag` retired — machine soundness is total);
+  SurfaceBridge untouched; SurfaceExit lost its fragment shape checks.
+  Specs: GoldenSliceWP rewritten (body walks + `wp_goldenCall`(/`_inv`) +
+  `wp_goldenDriver`); **ALL SIX golden targets re-proven**
+  (`goldenSpec`/`goldenFuncSpec`/`goldenInvariant`/`goldenTriple`/
+  `goldenReturnsTwo`/`goldenNotThree`). NegativeSpecs rewritten (pins at
+  the resolution step + the shared op table). RETIRED: `Specs.Slice`,
+  `Specs.SliceCorrespondence`, `Specs.GoldenSlice` (superseded; content
+  at rev 5a9eab2; mapping in the Audit ledger). Audit gates LIVE again
+  (21 curated pins + non-vacuity refs + new ledger; sweep 4208 decls
+  clean); ci allowlist back to its original single entry. One incident
+  during final validation, caught by the gate working as designed: the
+  wrapper-soundness theorem's lint warnings replayed into the runner's
+  JSON channel (the RECORDED ops failure mode) — mass phantom drift with
+  IDENTICAL observations; fixed by keeping the proof file lint-clean;
+  zero drift re-verified (718/718). Remaining before merge: the standing
+  pre-merge audit ask (mid-arc audit covered S1–S5; scope R3's delta),
+  merge + push sign-offs.
 
 ## 7. What survives untouched
 

@@ -318,6 +318,7 @@ theorem runConfig_sound {fuel : Nat} {s : ExecState} {c : Config}
       obtain ⟨⟨c', s', ch'⟩, hstep, hrun⟩ := h
       exact (Steps.single (stepFn_sound hstep)).trans (ih _ _ _ hrun)
 
+set_option linter.unusedSimpArgs false in
 /-- Wrapper-level soundness for normal completion: a terminating
 `execStmt` run (the F4 §2 Surface wrapper) is a reachable relation trace
 to the sequential terminal. Total — the old fragment-scoped

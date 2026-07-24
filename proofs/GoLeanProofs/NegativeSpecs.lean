@@ -1,36 +1,45 @@
-import GoLean.GoCore.Correspondence
+import GoLean.GoCore.MachineSound
 import GoLeanProofs.Inversions
 
 /-!
-# Negative proof instances (the widening loop's step-0 second half)
+# Negative proof instances (R3 rewrite over the fine-grained machine)
 
 Provable NEGATIONS, checked by the ordinary build: guards against
-spec-layer trivialization — the failure mode where the relation or a law
-weakens enough that wrong claims become provable while every other gate
-stays green (`docs/2026-07-21_widening-loop.md`). First instances:
-stuckness pins (the relation's fail-closed behavior as theorems) and a
-premise pin.
+spec-layer trivialization (`docs/2026-07-21_widening-loop.md`). The old
+`ExprR` pins move to their machine analogues: unbound-variable stuckness
+now bites at the RESOLUTION step (the machine defers resolution to the
+`evalE` configuration — the assign statement itself steps, its target
+evaluation cannot), and the divide-by-zero premise pin moves into the
+shared op table (`applyStrictOp`), which both the relation's apply rules
+and `stepFn` consume.
 -/
 
 namespace GoLean.GoCore.NegativeSpecs
 
-open GoLean GoLean.GoCore GoLean.GoCore.Rel GoLean.Iris
+open GoLean GoLean.GoCore GoLean.GoCore.Machine
 
-/-- **Stuckness pin:** an assignment to an unbound variable has NO step —
-fail-closed is a theorem, not a hope. If a relation edit ever makes
-unbound-variable programs progress, this breaks the build. -/
-theorem unbound_assign_stuck (σ : ExecState) (e : Expr) :
+/-- **Stuckness pin:** resolving an unbound variable has NO step — the
+machine fails closed at the resolution configuration. -/
+theorem unbound_ref_stuck (σ : ExecState) (k : Cont) :
     ¬ ∃ (c' : Config) (σ' : ExecState),
-      Step (.exec (.assign (.var "x") e) [] .stop) σ c' σ' := by
+      Step (.evalE (.ref "x") [] k) σ c' σ' := by
   rintro ⟨c', σ', hstep⟩
   cases hstep with
-  | assign hA _ _ =>
-      cases hA with | var hl => simp [LocalEnv.lookup] at hl
-  | assignTargetPanic hA => cases hA
-  | assignValuePanic hA _ =>
-      cases hA with | var hl => simp [LocalEnv.lookup] at hl
-  | assignStorePanic hA _ _ =>
-      cases hA with | var hl => simp [LocalEnv.lookup] at hl
+  | evalRef hl => simp [LocalEnv.lookup] at hl
+  | evalStrict hplan => simp [strictPlan] at hplan
+  | evalStrictNullary hplan _ => simp [strictPlan] at hplan
+  | evalStrictNullaryPanic hplan _ => simp [strictPlan] at hplan
+
+/-- **Stuckness pin:** reading an unbound variable has NO step. -/
+theorem unbound_var_stuck (σ : ExecState) (k : Cont) :
+    ¬ ∃ (c' : Config) (σ' : ExecState),
+      Step (.evalE (.var "x") [] k) σ c' σ' := by
+  rintro ⟨c', σ', hstep⟩
+  cases hstep with
+  | evalVar hl _ => simp [LocalEnv.lookup] at hl
+  | evalStrict hplan => simp [strictPlan] at hplan
+  | evalStrictNullary hplan _ => simp [strictPlan] at hplan
+  | evalStrictNullaryPanic hplan _ => simp [strictPlan] at hplan
 
 /-- **Stuckness pin:** the terminal value configuration is irreducible. -/
 theorem terminal_stuck (σ : ExecState) :
@@ -38,35 +47,27 @@ theorem terminal_stuck (σ : ExecState) :
   rintro ⟨c', σ', hstep⟩
   cases hstep
 
-/-- **Premise pin (`divByZero`):** the zero-divisor premise is load-bearing —
-division by a nonzero literal does NOT panic-derive. If `divByZero` ever
-loses its zero requirement, this breaks. -/
-theorem div_nonzero_no_panic (σ : ExecState) (env : LocalEnv) (msg : String) :
-    ¬ ExprR env σ (.div (.intLit 1 .int) (.intLit 1 .int)) (.panic msg) := by
+/-- **Premise pin (divide-by-zero):** the zero-divisor check in the shared
+op table is load-bearing — dividing by a nonzero literal does not panic.
+If `applyStrictOp`'s `.div` arm ever loses its divisor check's guard
+direction, this breaks. -/
+theorem div_nonzero_no_panic (σ : ExecState) (msg : String) :
+    applyStrictOp σ .div [.int 1 .int, .int 1 .int]
+      ≠ .error (.panic msg) := by
   intro h
-  generalize he : Expr.div (.intLit 1 .int) (.intLit 1 .int) = e at h
-  cases h with
-  | divByZero hl hr =>
-      injection he with h1 h2
-      subst h2
-      have hd := exprR_intLit_det hr
-      injection hd with hv hs
-      injection hv with hn hk
-      exact absurd hn (by decide)
-  | binPanicLeft mk hmk hp =>
-      rcases hmk with rfl | rfl | rfl | rfl <;>
-        first
-          | exact Expr.noConfusion he
-          | (injection he with h1 h2
-             subst h1
-             exact ExprOut.noConfusion (exprR_intLit_det hp))
-  | binPanicRight mk hmk hv hp =>
-      rcases hmk with rfl | rfl | rfl | rfl <;>
-        first
-          | exact Expr.noConfusion he
-          | (injection he with h1 h2
-             subst h2
-             exact ExprOut.noConfusion (exprR_intLit_det hp))
-  | _ => exact Expr.noConfusion he
+  have h1 : IntKind.compatibleResult .int .int = some .int := rfl
+  simp [applyStrictOp, intBinaryResult, valueAsIntValue, valueAsInt, h1,
+    Bind.bind, Except.bind] at h
+
+/-- ... and the step-level corollary: the `div` apply step from nonzero
+literals cannot reach `panicked`. -/
+theorem div_nonzero_apply_no_panic (σ σ' : ExecState) (msg : String)
+    (env : LocalEnv) (k : Cont) :
+    ¬ Step (.retV (.int 1 .int) (.strictK .div [.int 1 .int] [] env k)) σ
+        (.panicked msg) σ' := by
+  intro hstep
+  cases hstep with
+  | strictApplyPanic happly =>
+      exact div_nonzero_no_panic σ msg (by simpa using happly)
 
 end GoLean.GoCore.NegativeSpecs

@@ -10,49 +10,52 @@ import GoLeanProofs.Laws.Assign
 import GoLeanProofs.Laws.Call
 import GoLeanProofs.Laws.Loop
 import GoLeanProofs.Adequacy
+import GoLeanProofs.Specs.GoldenProgram
+import GoLeanProofs.Specs.GoldenSliceWP
 import GoLeanProofs.Surface
 import GoLeanProofs.SurfaceBridge
 import GoLeanProofs.SurfaceExit
-import GoLeanProofs.Specs.GoldenProgram
+import GoLeanProofs.Specs.GoldenSurface
+import GoLeanProofs.NegativeSpecs
 
 /-!
-# GoCore ⇒ Iris — the proof layer (root) — PRUNED at reshape S4 (2026-07-23)
+# GoCore ⇒ Iris — the proof layer (root)
 
-LIVE through the prune: `Specs.GoldenProgram` — the golden-lowering pin
-(`sliceLowered`), extracted to pure syntax at S4 so `scripts/check-golden`
-stays armed while the semantics-dependent modules below are rebuilt.
+R3 REBUILD COMPLETE (2026-07-23, branch `reshape-smallstep`;
+`docs/2026-07-23_reshape-r1r2-machine-design.md`): every stratum restored
+over the fine-grained machine.
 
-RESTORED (R3, 2026-07-23): `Lang` (Config ⇒ Iris wiring — `val_stuck`
-held with the identical proof over the new rules), `HeapBridge`, `Ghost`
-(namespace-only ports; the heap model and state interpretation never
-depended on the big-step rules); `Laws.Control` (rules survived verbatim;
-uniform Hpuredet closer); `Laws.Init` (rule survived verbatim); NEW
-`Laws.Eval` — the expression-walk step laws, the machine's answer to
-`wp_bind`: generic `wp_pure_det` over `step_det` + one small law per step
-class (literals/ref/strict enter-shift-apply/assign glue/if/while
-dispatch + the heap-reading `wp_eval_var` load step); `Lifting` (all four step cores were
-already rule-agnostic — `hred`-premised — so the port is the namespace
-swap); `Inversions` (REWRITTEN: the per-`ExprR`-form `*_det` family
-collapses into the single generic `step_det` over `Config.choiceFree` —
-rules are disjoint away from the two choice classes).
+- **Infrastructure**: `Lang` (Config ⇒ Iris wiring), `HeapBridge`,
+  `Ghost` (state interpretation, now pinning functions AND methods),
+  `Lifting` (the four rule-agnostic step cores), `Inversions` (ONE
+  generic `step_det` replaces the old per-form inversion family).
+- **Laws/** — `Control` and `Init` (rules survived the reshape verbatim);
+  NEW `Eval` (the expression-walk step laws — the machine's answer to
+  `wp_bind`); `Assign`, `Call`, `Loop` rewritten as composed walks, each
+  with same-commit witnesses (`wp_assign_lit`, the golden frame-entry
+  instances, `wp_while_eq_once`).
+- **Specs/** — `GoldenProgram` (the pure-syntax frontend pin),
+  `GoldenSliceWP` (the golden walk: body lemmas + `wp_goldenCall`(/`_inv`)
+  + `wp_goldenDriver`), `GoldenSurface` (all six step-0 targets
+  re-proven).
+- **Surface** stack — Layer S over the `execStmt`-shaped wrapper (two
+  recorded statement deltas, both strengthenings: env as a wrapper
+  argument after `ExecState.locals` died; the `HeapFrag` fragment
+  side-condition retired because machine soundness is total),
+  `SurfaceBridge` (untouched), `SurfaceExit` (fragment shape checks
+  gone).
+- `NegativeSpecs` — trivialization guards over the machine.
 
-The reshape (branch `reshape-smallstep`;
-`docs/2026-07-23_reshape-r1r2-machine-design.md`, executing the F4
-deletion directive in `docs/2026-07-22_f4-concurrency-model.md` §2)
-deleted the big-step semantics (`ExprR`, the old `Rel.Step`, `Eval`'s
-big-step cluster, `Correspondence`) that every module below consumed. The
-whole proof layer is R3 scope: it is rebuilt against
-`GoLean.GoCore.Machine` (fine-grained relation + iterated `stepFn`), and
-this import list is the RESTORATION CHECKLIST — each module returns here
-as it is re-proven, and the reshape branch does not merge until this list
-is restored and the Surface statement content is byte-identical (design
-note §6 merge gate).
+RETIRED at R3 (files deleted; the deleted content remains at git rev
+5a9eab2 and in `Audit.lean`'s historical ledger): `Specs.Slice` and
+`Specs.SliceCorrespondence` (the hand-model slice and its fragment-scoped
+interpreter⇄relation bridge — superseded by the golden pipeline and the
+total `stepFn_sound`/`step_complete`/`runConfig_sound`), `Specs.GoldenSlice`
+(pin moved to `GoldenProgram`; walk rewritten in `GoldenSliceWP`; the
+existential-address `*_computes` readouts superseded by the Surface
+pinned forms).
 
-Pruned modules (files kept on disk as the porting source; also on
-`scripts/ci`'s `STANDALONE_PROOFS` allowlist until restored):
-
-- `GoLeanProofs.Specs.Slice` / `.SliceCorrespondence` / `.GoldenSlice` /
-  `.GoldenSliceWP`
-- `GoLeanProofs.Specs.GoldenSurface` — the golden discharges
-- `GoLeanProofs.NegativeSpecs`
+The in-build gate is `Audit.lean` (a sibling default target); every module
+here is in its sweep via the root import closure, which `scripts/ci`
+enforces.
 -/

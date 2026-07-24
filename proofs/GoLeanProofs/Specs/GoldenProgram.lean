@@ -60,4 +60,29 @@ def sliceLowered : Program :=
                                  GoLean.GoCore.Stmt.returnStmt]] }],
     methods := #[] }
 
+/-- The golden `inc` function as a named literal; `sliceLowered_funcs_eq`
+kernel-checks the pair against the pinned lowering. -/
+def incFunc : Func :=
+  { id := ⟨"inc"⟩,
+    args := #[⟨"p", .pointer (.int .int)⟩],
+    results := #[],
+    body := .block #[] #[.seqn #[.assign (.addr (.var "p"))
+      (.add (.deref (.var "p") (.int .int)) (.intLit 1 .int))]] }
+
+/-- The golden `incViaCall` function as a named literal (same bridge). -/
+def incViaCallFunc : Func :=
+  { id := ⟨"incViaCall"⟩,
+    args := #[],
+    results := #[⟨"$res0", .int .int⟩],
+    body := .block #[] #[
+      .seqn #[.initialization ⟨"x", .int .int⟩,
+              .assign (.var "x") (.intLit 0 .int)],
+      .call #[] ⟨"inc"⟩ #[.ref "x"],
+      .call #[] ⟨"inc"⟩ #[.ref "x"],
+      .seqn #[.assign (.var "$res0") (.var "x"), .returnStmt]] }
+
+/-- Kernel bridge: the named literals ARE the pinned lowering's functions. -/
+theorem sliceLowered_funcs_eq :
+    sliceLowered.funcs = #[incFunc, incViaCallFunc] := rfl
+
 end GoLean.Iris.GoldenSlice
