@@ -8,6 +8,7 @@ import GoLeanProofs.Laws.Init
 import GoLeanProofs.Laws.Eval
 import GoLeanProofs.Laws.Assign
 import GoLeanProofs.Laws.Call
+import GoLeanProofs.Laws.Loop
 import GoLeanProofs.Specs.GoldenProgram
 
 /-!
@@ -46,7 +47,6 @@ note §6 merge gate).
 Pruned modules (files kept on disk as the porting source; also on
 `scripts/ci`'s `STANDALONE_PROOFS` allowlist until restored):
 
-- `GoLeanProofs.Laws.Loop`
 - `GoLeanProofs.Adequacy` — functor bundle + `go_adequacy` family
 - `GoLeanProofs.Specs.Slice` / `.SliceCorrespondence` / `.GoldenSlice` /
   `.GoldenSliceWP`
