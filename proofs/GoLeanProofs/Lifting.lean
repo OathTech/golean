@@ -8,7 +8,7 @@ import Std.Data.ExtTreeMap
 import Iris.Std.PartialMap
 import Iris.Std.FromMathlib
 import Iris.Std.GenSetsInstances
-import GoLean.GoCore.Rel
+import GoLean.GoCore.MachineSound
 import GoLeanProofs.Ghost
 
 /-!
@@ -18,7 +18,7 @@ The reusable one-step-plus-ghost-update engines behind every store-family law
 -/
 
 open Iris Iris.ProgramLogic Iris.Std Iris.Std.PartialMap
-open GoLean GoLean.GoCore GoLean.GoCore.Rel
+open GoLean GoLean.GoCore GoLean.GoCore.Machine
 
 namespace GoLean.Iris
 

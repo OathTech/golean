@@ -68,7 +68,7 @@ STANDALONE_PROOFS="SliceSpike"  # SliceSpike: superseded spike kept as record (s
 # ledger preserved in proofs/Audit.lean's PRUNED block). Each module leaves
 # this list in the commit that restores it; the reshape branch does not merge
 # with any of these still listed.
-STANDALONE_PROOFS="$STANDALONE_PROOFS GoLeanProofs.Lifting GoLeanProofs.Inversions GoLeanProofs.Laws.Control GoLeanProofs.Laws.Assign GoLeanProofs.Laws.Init GoLeanProofs.Laws.Call GoLeanProofs.Laws.Loop GoLeanProofs.Adequacy GoLeanProofs.Specs.Slice GoLeanProofs.Specs.SliceCorrespondence GoLeanProofs.Specs.GoldenSlice GoLeanProofs.Specs.GoldenSliceWP GoLeanProofs.Surface GoLeanProofs.SurfaceBridge GoLeanProofs.SurfaceExit GoLeanProofs.Specs.GoldenSurface GoLeanProofs.NegativeSpecs"
+STANDALONE_PROOFS="$STANDALONE_PROOFS GoLeanProofs.Laws.Control GoLeanProofs.Laws.Assign GoLeanProofs.Laws.Init GoLeanProofs.Laws.Call GoLeanProofs.Laws.Loop GoLeanProofs.Adequacy GoLeanProofs.Specs.Slice GoLeanProofs.Specs.SliceCorrespondence GoLeanProofs.Specs.GoldenSlice GoLeanProofs.Specs.GoldenSliceWP GoLeanProofs.Surface GoLeanProofs.SurfaceBridge GoLeanProofs.SurfaceExit GoLeanProofs.Specs.GoldenSurface GoLeanProofs.NegativeSpecs"
 # Transitive import closure from the build roots (Audit, GoLeanProofs), over
 # ALL .lean files under proofs/ including subdirectories — module names derived
 # from paths (proofs/GoLeanProofs/Foo.lean -> GoLeanProofs.Foo). A module

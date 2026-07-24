@@ -1,6 +1,8 @@
 import GoLeanProofs.Lang
 import GoLeanProofs.HeapBridge
 import GoLeanProofs.Ghost
+import GoLeanProofs.Lifting
+import GoLeanProofs.Inversions
 import GoLeanProofs.Specs.GoldenProgram
 
 /-!
@@ -13,7 +15,11 @@ stays armed while the semantics-dependent modules below are rebuilt.
 RESTORED (R3, 2026-07-23): `Lang` (Config ⇒ Iris wiring — `val_stuck`
 held with the identical proof over the new rules), `HeapBridge`, `Ghost`
 (namespace-only ports; the heap model and state interpretation never
-depended on the big-step rules).
+depended on the big-step rules); `Lifting` (all four step cores were
+already rule-agnostic — `hred`-premised — so the port is the namespace
+swap); `Inversions` (REWRITTEN: the per-`ExprR`-form `*_det` family
+collapses into the single generic `step_det` over `Config.choiceFree` —
+rules are disjoint away from the two choice classes).
 
 The reshape (branch `reshape-smallstep`;
 `docs/2026-07-23_reshape-r1r2-machine-design.md`, executing the F4
@@ -30,8 +36,6 @@ note §6 merge gate).
 Pruned modules (files kept on disk as the porting source; also on
 `scripts/ci`'s `STANDALONE_PROOFS` allowlist until restored):
 
-- `GoLeanProofs.Lifting` — step cores (R3: bind-form laws, `wp_atomic`)
-- `GoLeanProofs.Inversions` — determinism lemmas (per-rule now)
 - `GoLeanProofs.Laws.Control` / `.Assign` / `.Init` / `.Call` / `.Loop`
 - `GoLeanProofs.Adequacy` — functor bundle + `go_adequacy` family
 - `GoLeanProofs.Specs.Slice` / `.SliceCorrespondence` / `.GoldenSlice` /
