@@ -1,13 +1,15 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-07-24  commit: e0a7243  frontend: native  oracle: go run
-# manifest_cases: 718  pass: 192  fail: 526
-# Re-pin reason: deliberate coverage ADDITION — W1 tuple forwarding
-# (docs/2026-07-24_sequential-coverage-scoping.md): the frontend splat
-# lowering for multi-value calls in forwarding positions (return f();
-# g(f()); tuple-into-variadic) flips exactly four frontend-export FAILs
-# to PASS (returns/multi-result-forward, returns/multi-result-argument,
-# returns/named-result-defaults, variadic/multi-result-call); no other
-# case moved.
+# recorded: 2026-07-24  commit: 5c7439c  frontend: native  oracle: go run
+# manifest_cases: 718  pass: 203  fail: 515
+# Re-pin reason: deliberate coverage ADDITION — W2 slice 1 (expression
+# switch desugar + the shadow-capture define fix,
+# docs/2026-07-24_sequential-coverage-scoping.md). Eleven FAIL->PASS
+# flips (the control-flow/scoping switch family incl. switch-init-shadow,
+# whose guardrail exposed and fixed a LATENT general define bug: RHS of a
+# self-shadowing define read the fresh cell); one stage advance,
+# switch-interface-case-panic frontend-export -> lean-observation (the
+# frontend now emits it; the residue is machine-side interface equality —
+# interfaces lane). Zero PASS regressions.
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
 FAIL	arrays/array-copy	lean-observation
@@ -177,7 +179,7 @@ FAIL	constants/typed-untyped-binary	frontend-export
 FAIL	constants/untyped-adaptation	frontend-export
 FAIL	constants/untyped-complex-context	frontend-export
 FAIL	control-flow/break-label-select	frontend-export
-FAIL	control-flow/continue-in-switch	frontend-export
+PASS	control-flow/continue-in-switch	-
 FAIL	control-flow/continue-label-post	frontend-export
 FAIL	control-flow/expressionless-switch-order	frontend-export
 FAIL	control-flow/for-break-skips-post	frontend-export
@@ -201,21 +203,21 @@ FAIL	control-flow/labeled-continue	frontend-export
 FAIL	control-flow/labeled-empty-statement	frontend-export
 FAIL	control-flow/labeled-statement-scope	frontend-export
 FAIL	control-flow/nested-labeled-break	frontend-export
-FAIL	control-flow/switch-basic	frontend-export
+PASS	control-flow/switch-basic	-
 FAIL	control-flow/switch-case-expression-panic	frontend-export
 FAIL	control-flow/switch-case-order	frontend-export
-FAIL	control-flow/switch-default-position	frontend-export
+PASS	control-flow/switch-default-position	-
 FAIL	control-flow/switch-expression-once	frontend-export
 FAIL	control-flow/switch-fallthrough	frontend-export
 FAIL	control-flow/switch-fallthrough-skips-case-expression	frontend-export
-FAIL	control-flow/switch-init	frontend-export
+PASS	control-flow/switch-init	-
 FAIL	control-flow/switch-init-before-expression	frontend-export
-FAIL	control-flow/switch-interface-case-panic	frontend-export
-FAIL	control-flow/switch-multi-case-values	frontend-export
-FAIL	control-flow/switch-no-expression-default	frontend-export
-FAIL	control-flow/switch-no-match-no-default	frontend-export
-FAIL	control-flow/switch-uncomparable-tag-default	frontend-export
-FAIL	control-flow/switch-untyped-case-conversion	frontend-export
+FAIL	control-flow/switch-interface-case-panic	lean-observation
+PASS	control-flow/switch-multi-case-values	-
+PASS	control-flow/switch-no-expression-default	-
+PASS	control-flow/switch-no-match-no-default	-
+PASS	control-flow/switch-uncomparable-tag-default	-
+PASS	control-flow/switch-untyped-case-conversion	-
 PASS	control-flow/while-eq-single-iteration	-
 FAIL	defer/defer-arg-eval	frontend-export
 FAIL	defer/defer-arg-panic-before-register	frontend-export
@@ -616,8 +618,8 @@ PASS	scoping/for-init-scope	-
 FAIL	scoping/select-clause-scope	frontend-export
 PASS	scoping/shadowing	-
 PASS	scoping/short-decl-mixing	-
-FAIL	scoping/switch-clause-scope	frontend-export
-FAIL	scoping/switch-init-shadow	frontend-export
+PASS	scoping/switch-clause-scope	-
+PASS	scoping/switch-init-shadow	-
 FAIL	scoping/type-switch-guard-shadow	frontend-export
 FAIL	slices/append-nil	frontend-export
 FAIL	slices/append-overlap	frontend-export

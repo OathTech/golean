@@ -327,11 +327,16 @@ func (e *emitter) emitStmt(s ast.Stmt) (any, error) {
 			return nil, err
 		}
 		return map[string]any{"stmt": "expr", "expr": expr}, nil
+	case *ast.SwitchStmt:
+		return e.emitSwitch(st)
 	case *ast.BranchStmt:
 		switch st.Tok {
 		case token.BREAK:
 			if st.Label != nil {
 				return nil, unsup("labeled break")
+			}
+			if n := len(e.breakStack); n > 0 && e.breakStack[n-1] == "switch" {
+				return nil, unsup("break inside switch (W2 slice 2)")
 			}
 			return map[string]any{"stmt": "break"}, nil
 		case token.CONTINUE:
@@ -373,6 +378,32 @@ func (e *emitter) emitReturn(st *ast.ReturnStmt) (any, error) {
 		results = append(results, w)
 	}
 	return map[string]any{"stmt": "return", "results": results}, nil
+}
+
+// containsIdent reports whether the expression mentions any of the given
+// names as an identifier — the shadow-capture test for defines: in
+// `x := x + 1` the RHS's x is the OUTER x (Go evaluates define RHSes
+// before the new names exist), but the wire format carries names only, so
+// the decoder's initialization-then-assign lowering would resolve it to
+// the freshly-declared cell. Capturing defines pre-bind their RHSes to
+// hoisted temps (evaluated before the statement, in the outer scope).
+// Found via the W2 switch-init-shadow guardrail (2026-07-24): a latent
+// general define bug, not a switch bug.
+func (e *emitter) containsVarUse(x ast.Expr, names map[string]bool) bool {
+	found := false
+	ast.Inspect(x, func(n ast.Node) bool {
+		if id, ok := n.(*ast.Ident); ok && names[id.Name] {
+			// Only VARIABLE uses shadow-capture: struct-literal field keys
+			// and selector fields are idents too, but go/types resolves
+			// them to field objects (found via returns/multi-result-method,
+			// where the literal keys a:/b: matched the define targets).
+			if v, ok := e.info.Uses[id].(*types.Var); ok && !v.IsField() {
+				found = true
+			}
+		}
+		return !found
+	})
+	return found
 }
 
 func (e *emitter) emitAssign(st *ast.AssignStmt) (any, error) {
@@ -440,11 +471,36 @@ func (e *emitter) emitAssign(st *ast.AssignStmt) (any, error) {
 		}
 		lhs = append(lhs, w)
 	}
+	// Shadow capture (see containsIdent): does any RHS mention a name this
+	// define introduces?
+	var defineNames map[string]bool
+	captures := false
+	if define {
+		defineNames = map[string]bool{}
+		for _, l := range st.Lhs {
+			if id, ok := l.(*ast.Ident); ok && id.Name != "_" {
+				if obj, isDef := e.info.Defs[id]; isDef && obj != nil {
+					defineNames[id.Name] = true
+				}
+			}
+		}
+		for _, r := range st.Rhs {
+			if e.containsVarUse(r, defineNames) {
+				captures = true
+			}
+		}
+	}
 	// A single call on the RHS (possibly multi-value) is emitted un-hoisted so
 	// the lowering makes it a call statement writing all targets; hoisting would
 	// force its result into one temp, which fails for a multi-value return.
 	if len(st.Rhs) == 1 {
 		if call, ok := st.Rhs[0].(*ast.CallExpr); ok {
+			if captures {
+				// `x := f(x)`-shaped: the call's arguments would read the
+				// fresh cells. Fail closed until the arg-level pre-binding
+				// lands.
+				return nil, unsup("self-shadowing define with call RHS")
+			}
 			node, effectful, err := e.emitCallNode(call)
 			if err != nil {
 				return nil, err
@@ -459,6 +515,15 @@ func (e *emitter) emitAssign(st *ast.AssignStmt) (any, error) {
 		w, err := e.emitExpr(r)
 		if err != nil {
 			return nil, err
+		}
+		// Capturing define: pre-bind EVERY RHS to a hoisted temp (uniformly,
+		// preserving left-to-right evaluation), so the values are read in
+		// the outer scope before the declarations take effect.
+		if captures {
+			w, err = e.hoist(w, e.info.TypeOf(r))
+			if err != nil {
+				return nil, err
+			}
 		}
 		rhs = append(rhs, w)
 	}
@@ -545,6 +610,8 @@ func (e *emitter) emitIf(st *ast.IfStmt) (any, error) {
 }
 
 func (e *emitter) emitFor(st *ast.ForStmt) (any, error) {
+	e.breakStack = append(e.breakStack, "loop")
+	defer func() { e.breakStack = e.breakStack[:len(e.breakStack)-1] }()
 	node := map[string]any{"stmt": "for"}
 	if st.Init != nil {
 		init, err := e.emitStmt(st.Init)
@@ -597,6 +664,8 @@ func nameOrNull(s string) any {
 // primitive; index-able ranges (slice/array/int) carry a "kind" that NativeToIR
 // desugars to an index for-loop. Only `:=` range vars are modeled for now.
 func (e *emitter) emitRange(rs *ast.RangeStmt) (any, error) {
+	e.breakStack = append(e.breakStack, "loop")
+	defer func() { e.breakStack = e.breakStack[:len(e.breakStack)-1] }()
 	if rs.Key != nil && rs.Tok == token.ASSIGN {
 		return nil, unsup("range with assigned (non-:=) variables")
 	}
@@ -677,6 +746,107 @@ func (e *emitter) emitIncDec(st *ast.IncDecStmt) (any, error) {
 }
 
 // ---- expressions ----
+
+// emitSwitch (W2 slice 1, docs/2026-07-24_sequential-coverage-scoping.md):
+// an expression switch desugars to a nested if-chain inside a fresh block —
+// the init statement and the once-evaluated tag temp scope to the switch;
+// one branch per case VALUE in source order (lazy case-expression
+// evaluation, so a panicking case expression fires exactly when Go's
+// would); bodies duplicated across a multi-value case's values; default
+// spliced as the final else regardless of source position. Fail-closed
+// residue for later slices: fallthrough (BranchStmt default arm), bare
+// break targeting the switch (breakStack), calls in case expressions
+// (lazy position — hoisting would evaluate them eagerly), type switches
+// (interfaces lane).
+func (e *emitter) emitSwitch(st *ast.SwitchStmt) (any, error) {
+	body := []any{}
+	if st.Init != nil {
+		sub, err := e.emitStmtList([]ast.Stmt{st.Init})
+		if err != nil {
+			return nil, err
+		}
+		body = append(body, sub...)
+	}
+	var tagRef any
+	var tagTy any
+	if st.Tag != nil {
+		saved := e.hoisted
+		e.hoisted = nil
+		tagExpr, err := e.emitExpr(st.Tag)
+		hoists := e.hoisted
+		e.hoisted = saved
+		if err != nil {
+			return nil, err
+		}
+		ty, err := e.typeOf(st.Tag)
+		if err != nil {
+			return nil, err
+		}
+		tagTy = ty
+		name := "$sw" + itoa(e.tmpSeq)
+		e.tmpSeq++
+		body = append(body, hoists...)
+		body = append(body, map[string]any{
+			"stmt":   "assign",
+			"define": true,
+			"lhs":    []any{map[string]any{"target": "declare", "id": name, "type": ty}},
+			"rhs":    []any{tagExpr},
+		})
+		tagRef = map[string]any{"expr": "ident", "name": name, "type": ty}
+	}
+	type swClause struct {
+		conds []any
+		body  any
+	}
+	clauses := []swClause{}
+	var defaultBody any
+	e.breakStack = append(e.breakStack, "switch")
+	defer func() { e.breakStack = e.breakStack[:len(e.breakStack)-1] }()
+	for _, raw := range st.Body.List {
+		cc, ok := raw.(*ast.CaseClause)
+		if !ok {
+			return nil, unsup("switch body statement %T", raw)
+		}
+		cbody, err := e.emitStmtList(cc.Body)
+		if err != nil {
+			return nil, err
+		}
+		blk := map[string]any{"stmt": "block", "body": cbody}
+		if cc.List == nil {
+			defaultBody = blk
+			continue
+		}
+		conds := []any{}
+		for _, ce := range cc.List {
+			cw, err := e.emitGuarded(true, "switch case expression", ce)
+			if err != nil {
+				return nil, err
+			}
+			var cond any
+			if st.Tag == nil {
+				cond = cw
+			} else {
+				cond = map[string]any{"expr": "binary", "op": "==", "x": tagRef, "y": cw, "operandType": tagTy}
+			}
+			conds = append(conds, cond)
+		}
+		clauses = append(clauses, swClause{conds: conds, body: blk})
+	}
+	chain := defaultBody
+	for i := len(clauses) - 1; i >= 0; i-- {
+		for j := len(clauses[i].conds) - 1; j >= 0; j-- {
+			node := map[string]any{"stmt": "if", "cond": clauses[i].conds[j], "then": clauses[i].body}
+			if chain != nil {
+				node["else"] = chain
+			}
+			chain = node
+		}
+	}
+	if chain != nil {
+		body = append(body, chain)
+	}
+	return map[string]any{"stmt": "block", "body": body}, nil
+}
 
 func (e *emitter) emitExpr(x ast.Expr) (any, error) {
 	node, err := e.emitExprBare(x)

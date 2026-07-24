@@ -28,6 +28,12 @@ type emitter struct {
 	hoisted        []any
 	tmpSeq         int
 	hoistForbidden string // non-empty where hoisting is unsafe (short-circuit RHS, loop cond)
+
+	// Bare-`break` target tracking (W2): Go's bare break targets the
+	// nearest enclosing for/switch/select; the switch desugaring (an
+	// if-chain) has no native break target, so a bare break whose target
+	// is a switch fails closed until the flag desugaring lands (slice 2).
+	breakStack []string
 }
 
 // emptyStructName is the canonical GoCore type name for the empty struct
