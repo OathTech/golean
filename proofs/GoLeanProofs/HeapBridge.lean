@@ -200,4 +200,19 @@ theorem storeLoc_int_cell {σ : ExecState} {a : Addr} {kind : IntKind}
   simp only [normalizeValueForTy, normalizeValueForTyFuel, intKind_normalize_idem]
   rfl
 
+/-- Like `storeLoc_int_cell`, but for an arbitrary (possibly unnormalized)
+int payload: the store's type-directed normalization applies. The frame-exit
+store law reads a result cell and writes it to the caller's target, so the
+stored value arrives as whatever the cell held. -/
+theorem storeLoc_int_any {σ : ExecState} {a : Addr} {kind mkind : IntKind}
+    {w : GoValue}
+    (h : Heap.lookup σ.heap (.base a) = some ⟨some (.int kind), w⟩)
+    (m : Int) :
+    storeLoc σ (.base a) (.int m mkind)
+      = .ok { σ with heap := Heap.set σ.heap (.base a) ⟨some (.int kind), .int (kind.normalize m) kind⟩ } := by
+  unfold storeLoc
+  rw [h]
+  simp only [normalizeValueForTy, normalizeValueForTyFuel]
+  rfl
+
 end GoLean.Iris

@@ -51,7 +51,7 @@ theorem wp_store_step {a : Addr} {oldcell newcell : HeapCell}
   iintro %σ₁ %ns %obs %obs' %nt Hσ
   simp only [stateInterp]
   icases Hσ with ⟨Hσ, %Hinv⟩
-  obtain ⟨hfns, hwf⟩ := Hinv
+  obtain ⟨hfns, hmeths, hwf⟩ := Hinv
   ihave %Hmap : ⌜get? (heapToMap σ₁.heap) a.id = some oldcell⌝ $$ [Hσ Hpt]
   · icases genHeap_valid $$ [$Hσ $Hpt] with >%h
     itrivial
@@ -78,7 +78,7 @@ theorem wp_store_step {a : Addr} {oldcell newcell : HeapCell}
       · iapply (genHeapInterp_eqv
           (fun kk => (heapToMap_set_base σ₁.heap a newcell kk).symm)) $$ Hσ
       · ipureintro
-        exact ⟨hfns, hwf.set_existing hlook⟩
+        exact ⟨hfns, hmeths, hwf.set_existing hlook⟩
     · isplitl [Hpt Hcont]
       · iapply Hcont $$ Hpt
       · itrivial
@@ -109,7 +109,7 @@ theorem wp_store_step₂ {pa a : Addr} {pcell oldcell newcell : HeapCell}
   iintro %σ₁ %ns %obs %obs' %nt Hσ
   simp only [stateInterp]
   icases Hσ with ⟨Hσ, %Hinv⟩
-  obtain ⟨hfns, hwf⟩ := Hinv
+  obtain ⟨hfns, hmeths, hwf⟩ := Hinv
   ihave %Hmap : ⌜get? (heapToMap σ₁.heap) a.id = some oldcell⌝ $$ [Hσ Hpt]
   · icases genHeap_valid $$ [$Hσ $Hpt] with >%h
     itrivial
@@ -141,7 +141,7 @@ theorem wp_store_step₂ {pa a : Addr} {pcell oldcell newcell : HeapCell}
       · iapply (genHeapInterp_eqv
           (fun kk => (heapToMap_set_base σ₁.heap a newcell kk).symm)) $$ Hσ
       · ipureintro
-        exact ⟨hfns, hwf.set_existing hlook⟩
+        exact ⟨hfns, hmeths, hwf.set_existing hlook⟩
     · isplitl [Hppt Hpt Hcont]
       · iapply Hcont $$ [$Hppt $Hpt]
       · itrivial
@@ -172,7 +172,7 @@ theorem wp_det_step_keep {P : IProp GF} {c₀ c₁ : Config}
   iintro %σ₁ %ns %obs %obs' %nt Hσ
   simp only [stateInterp]
   icases Hσ with ⟨Hσ, %Hinv⟩
-  obtain ⟨hfns, hwf⟩ := Hinv
+  obtain ⟨hfns, hmeths, hwf⟩ := Hinv
   ihave %Hstep : ⌜Step c₀ σ₁ c₁ σ₁ ∧
       (∀ c' s', Step c₀ σ₁ c' s' → c' = c₁ ∧ s' = σ₁)⌝ $$ [Hσ HP]
   · icases (hred σ₁) $$ [$Hσ $HP] with >%h
@@ -198,7 +198,7 @@ theorem wp_det_step_keep {P : IProp GF} {c₀ c₁ : Config}
     · isplitl [Hσ]
       · iexact Hσ
       · ipureintro
-        exact ⟨hfns, hwf⟩
+        exact ⟨hfns, hmeths, hwf⟩
     · isplitl [HP Hcont]
       · iapply Hcont $$ HP
       · itrivial
@@ -248,7 +248,7 @@ theorem wp_store_step₂_inv {pa a : Addr} {pcell : HeapCell}
   iintro %σ₁ %ns %obs %obs' %nt Hσ
   simp only [stateInterp]
   icases Hσ with ⟨Hσ, %Hinv⟩
-  obtain ⟨hfns, hwf⟩ := Hinv
+  obtain ⟨hfns, hmeths, hwf⟩ := Hinv
   imod (inv_acc hN) $$ HinvT with ⟨HI, HcloseI⟩
   ihave HI' : iprop(▷ ∃ cell, ⌜S cell⌝ ∗ a.id ↦ cell) $$ [HI]
   · iapply BI.later_mono hopen $$ HI
@@ -289,7 +289,7 @@ theorem wp_store_step₂_inv {pa a : Addr} {pcell : HeapCell}
       · iapply (genHeapInterp_eqv
           (fun kk => (heapToMap_set_base σ₁.heap a newcell kk).symm)) $$ Hσ
       · ipureintro
-        exact ⟨hfns, hwf.set_existing hlook⟩
+        exact ⟨hfns, hmeths, hwf.set_existing hlook⟩
     · isplitl [Hppt Hcont]
       · iapply Hcont $$ Hppt
       · itrivial

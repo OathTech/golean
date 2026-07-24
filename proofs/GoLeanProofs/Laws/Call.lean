@@ -7,100 +7,118 @@ import Std.Data.ExtTreeMap
 import Iris.Std.PartialMap
 import Iris.Std.FromMathlib
 import Iris.Std.GenSetsInstances
-import GoLean.GoCore.Rel
-import GoLeanProofs.Lifting
-import GoLeanProofs.Inversions
+import GoLean.GoCore.MachineSound
+import GoLeanProofs.HeapBridge
+import GoLeanProofs.Laws.Eval
+import GoLeanProofs.Specs.GoldenProgram
 
 /-!
-# Call/frame laws + witnesses
-Frame entry (unary arg; nullary-arg/unary-result) with fresh-cell handover;
-value-returning frame exit.
+# Call laws (R3 rewrite over the fine-grained machine)
+
+Under the machine a call is a walk: dispatch (`wp_call_first_target` /
+`wp_call_first_arg`), the target/argument evaluations (Laws/Eval), then
+ONE allocating frame-entry step (`enterFrame`: lookup, arity, dispatch,
+parameter binding, result declaration, result-location pinning), the
+body, and a frame exit. The frame-entry laws here cover the two shapes
+the golden program exercises — unary-argument void-result
+(`wp_call_enter_arg1`, the `inc(&x)` shape) and nullary-argument
+single-int-result (`wp_call_enter_ret1`, the `r = incViaCall()` shape) —
+each with its premises discharged on the CONCRETE golden functions as the
+non-vacuity witnesses (`wp_call_enter_inc`, `wp_call_enter_incViaCall`;
+the genuinely-external premises are the program/method-table pins, as in
+the old `wp_inc_call`). `wp_frame_return_int` is the value frame exit
+(read the pinned result cell, store to the caller's target — the
+`wp_store_step₂` two-cell core), premise-free given the resources.
+
+Dynamic dispatch note: the machine consults `σ.methods` at frame entry,
+so `GoCoreGS` now pins the method table like the program; the
+`hnodisp` premise closes by computation once the table is pinned
+concrete (`#[]` for the golden program).
 -/
 
 open Iris Iris.ProgramLogic Iris.Std Iris.Std.PartialMap
-open GoLean GoLean.GoCore GoLean.GoCore.Rel
+open GoLean GoLean.GoCore GoLean.GoCore.Machine
 
 namespace GoLean.Iris
+
+-- Uniform simp sets across law variants; the unused-arg linter misfires
+-- per-instance.
+set_option linter.unusedSimpArgs false
 
 section
 variable {GF : BundledGFunctors} {hlc : HasLC} [GoCoreGS hlc GF]
 variable {s : Stuckness} {E : CoPset} {Φ : Unit → IProp GF}
 
-/-- **The unary void call law.** General over the function, argument
-expression, and continuation; arity-specialized to the slice's shape (one
-parameter, no results — `inc`). Premises: the function is in the pinned
-program; the argument evaluates (state-independently, e.g. `&x`) to `v`, which
-normalizes at the parameter type to `v'`. The continuation runs the body in
-the fresh one-binding frame env, owning the freshly allocated parameter cell,
-under the `.frame` continuation. Arity-generality (parameter *lists*) is a
-tracked widening, not a semantic limitation. -/
-theorem wp_call_unary {funcId : FuncId} {func : Func} {pid : String} {pty : Ty}
-    {body : Stmt} {argExpr : Expr} {v v' : GoValue} {env k}
-    (hfind : findFunctionIn? (GoCoreGS.prog GF) funcId = some func)
+/-- Dispatch a call with at least one target: evaluate the first target
+address. -/
+theorem wp_call_first_target {targets : Array Assignee} {fid : FuncId}
+    {args : Array Expr} {te : Expr} {rest : List Expr} {env k}
+    (hplan : assigneesExprs targets.toList = some (te :: rest)) :
+    (|={E}[E]▷=> £ 1 -∗
+      WP (Config.evalE te env (.callTargetsK fid [] rest args.toList env k))
+        @ s ; E {{ Φ }}) ⊢
+      WP (Config.exec (.call targets fid args) env k) @ s ; E {{ Φ }} :=
+  wp_pure_det rfl (by simp [Config.choiceFree, stmtPlan])
+    (fun _ => Step.callFirstTarget hplan)
+
+/-- Dispatch a targetless call with at least one argument: evaluate the
+first argument. -/
+theorem wp_call_first_arg {targets : Array Assignee} {fid : FuncId}
+    {args : Array Expr} {a : Expr} {rest : List Expr} {env k}
+    (htargets : assigneesExprs targets.toList = some [])
+    (hargs : args.toList = a :: rest) :
+    (|={E}[E]▷=> £ 1 -∗
+      WP (Config.evalE a env (.callArgsK fid [] [] rest env k))
+        @ s ; E {{ Φ }}) ⊢
+      WP (Config.exec (.call targets fid args) env k) @ s ; E {{ Φ }} :=
+  wp_pure_det rfl (by simp [Config.choiceFree, stmtPlan])
+    (fun _ => Step.callFirstArg htargets hargs)
+
+/-- **Frame entry, unary argument / void result** (the `inc(&x)` shape):
+the last argument value arrives, and one step allocates the parameter
+cell (normalized at declared type) and enters the body under the fresh
+one-binding frame environment. The continuation receives the
+machine-chosen cell (`∀ pa`). -/
+theorem wp_call_enter_arg1 {fid : FuncId} {func : Func} {pid : String}
+    {pty : Ty} {v v' : GoValue} {locs : List Loc} {env k}
+    (hfind : findFunctionIn? (GoCoreGS.prog GF) fid = some func)
     (hargs : func.args = #[⟨pid, pty⟩])
     (hres : func.results = #[])
-    (hbody : func.body = body)
-    (harg : ∀ σ₁ : ExecState, ExprR env σ₁ argExpr (.value v σ₁))
-    (harg_det : ∀ σ₁ (out : ExprOut), ExprR env σ₁ argExpr out → out = .value v σ₁)
-    (hnorm : ∀ σ₁ : ExecState, normalizeValueForTy σ₁ pty v = .ok v') :
+    (hnodisp : ∀ σ : ExecState, σ.methods = GoCoreGS.methods GF →
+      dynamicDispatch? σ func #[v] = .ok none)
+    (hnorm : ∀ σ : ExecState, normalizeValueForTy σ pty v = .ok v') :
     iprop(∀ pa : Addr, pa.id ↦ (⟨some pty, v'⟩ : HeapCell) -∗
-        WP (Config.exec body [[(pid, Loc.base pa)]]
-              (.frame [] [] k)) @ s ; E {{ Φ }})
-      ⊢ WP (Config.exec (.call #[] funcId #[argExpr]) env k) @ s ; E {{ Φ }} := by
-  obtain ⟨fid, fargs, fres, fbody⟩ := func
-  simp only at hargs hres hbody
-  subst hargs; subst hres; subst hbody
+        WP (Config.exec func.body [[(pid, Loc.base pa)]] (.frame locs [] k))
+          @ s ; E {{ Φ }})
+      ⊢ WP (Config.retV v (.callArgsK fid locs [] [] env k)) @ s ; E {{ Φ }} := by
+  have henter : ∀ σ₁ : ExecState, σ₁.functions = GoCoreGS.prog GF →
+      σ₁.methods = GoCoreGS.methods GF →
+      enterFrame σ₁ fid [v]
+        = .ok (func, [[(pid, Loc.base ⟨σ₁.nextAddr⟩)]], [],
+            { σ₁ with heap := Heap.set σ₁.heap (.base ⟨σ₁.nextAddr⟩) ⟨some pty, v'⟩, nextAddr := σ₁.nextAddr + 1 }) := by
+    intro σ₁ hfns hmeths
+    unfold enterFrame
+    rw [hfns, hfind]
+    simp [hargs, hres, Bind.bind, Except.bind, hnodisp σ₁ hmeths, bindParams,
+      hnorm σ₁, ExecState.alloc, ExecState.freshLoc, allocDecls, pinResultLocs,
+      LocalEnv.declare]
+    exact hfns
   iintro Hcont
   iapply wp_lift_step (h := rfl)
   iintro %σ₁ %ns %obs %obs' %nt Hσ
   simp only [stateInterp]
   icases Hσ with ⟨Hσ, %Hinv⟩
-  obtain ⟨hfns, hwf⟩ := Hinv
-  have hstep : Step (.exec (.call #[] funcId #[argExpr]) env k) σ₁
-      (.exec fbody [[(pid, Loc.base ⟨σ₁.nextAddr⟩)]] (.frame [] [] k))
-      { σ₁ with heap := Heap.set σ₁.heap (.base ⟨σ₁.nextAddr⟩) ⟨some pty, v'⟩,
-                nextAddr := σ₁.nextAddr + 1 } :=
-    Step.call AssigneesR.nil (ArgsR.cons (harg σ₁) ArgsR.nil)
-      (by rw [hfns]; exact hfind)
-      (BindParamsR.cons (hnorm σ₁) (ExecState.alloc_eq σ₁ v' (some pty))
-        BindParamsR.nil)
-      DeclsR.nil LookupsR.nil
+  obtain ⟨hfns, hmeths, hwf⟩ := Hinv
+  have hstep := Step.callArgsDoneEnter (vals := []) (locs := locs) (env := env)
+    (k := k) (henter σ₁ hfns hmeths)
   have hdet : ∀ c' s',
-      Step (.exec (.call #[] funcId #[argExpr]) env k) σ₁ c' s' →
-      c' = Config.exec fbody [[(pid, Loc.base ⟨σ₁.nextAddr⟩)]] (.frame [] [] k) ∧
-      s' = { σ₁ with heap := Heap.set σ₁.heap (.base ⟨σ₁.nextAddr⟩) ⟨some pty, v'⟩,
-                     nextAddr := σ₁.nextAddr + 1 } := by
+      Step (.retV v (.callArgsK fid locs [] [] env k)) σ₁ c' s' →
+      c' = Config.exec func.body [[(pid, Loc.base ⟨σ₁.nextAddr⟩)]]
+             (.frame locs [] k)
+        ∧ s' = { σ₁ with heap := Heap.set σ₁.heap (.base ⟨σ₁.nextAddr⟩) ⟨some pty, v'⟩, nextAddr := σ₁.nextAddr + 1 } := by
     intro c' s' hst
-    cases hst with
-    | callTargetsPanic hp => cases hp
-    | callArgsPanic hassP hp =>
-      cases hassP
-      cases hp with
-      | here he' => exact absurd (harg_det σ₁ _ he') (by simp)
-      | there hv hrest => cases hrest
-    | call hass hargsR hfindR hbind hdecls hlk =>
-      cases hass
-      cases hargsR with
-      | cons hE hrest =>
-        have hd := harg_det σ₁ _ hE
-        injection hd with hv hs0
-        rw [hs0] at hrest
-        cases hrest
-        rw [hfns, hfind] at hfindR
-        injection hfindR with hfunc
-        subst hfunc
-        rw [hv] at hbind
-        cases hbind with
-        | cons hn' ha' hrest' =>
-          rw [hnorm σ₁] at hn'
-          injection hn' with hv'
-          rw [← hv', ExecState.alloc_eq] at ha'
-          injection ha' with hloc hst'
-          rw [← hloc, ← hst'] at hrest'
-          cases hrest'
-          cases hdecls
-          cases hlk
-          exact ⟨rfl, rfl⟩
+    obtain ⟨h1, h2⟩ := step_det (by trivial) hstep hst
+    exact ⟨h1.symm, h2.symm⟩
   iapply fupd_mask_intro Std.LawfulSet.empty_subset
   iintro Hclose
   isplitr
@@ -123,95 +141,56 @@ theorem wp_call_unary {funcId : FuncId} {func : Func} {pid : String} {pty : Ty}
       · iapply (genHeapInterp_eqv
           (fun kk => (heapToMap_set_base σ₁.heap ⟨σ₁.nextAddr⟩ _ kk).symm)) $$ Hσ
       · ipureintro
-        exact ⟨hfns, hwf.alloc⟩
+        exact ⟨hfns, hmeths, hwf.alloc⟩
     · isplitl [Hpt Hcont]
       · iapply Hcont $$ %(⟨σ₁.nextAddr⟩ : Addr) Hpt
       · itrivial
 
-/-- **The nullary-arg, unary-result call law** (`main`'s entry shape): zero
-arguments, one named result — the result cell is allocated at its default
-value by the `DeclsR` leg of `Step.call` (the results-allocation fix) and
-handed fresh to the continuation. The caller's target resolves in the caller
-env; its cell is stored only at frame RETURN, so no target ownership is needed
-at entry. -/
-theorem wp_call_nullary_ret {funcId : FuncId} {func : Func} {rname : String}
-    {rty : Ty} {body : Stmt} {v : GoValue} {tgt : String} {ta : Addr} {env k}
-    (hfind : findFunctionIn? (GoCoreGS.prog GF) funcId = some func)
+/-- **Frame entry, nullary argument / single result** (the
+`r = incViaCall()` shape): the (single) target address arrives, and one
+step allocates the result cell at its default and enters the body; the
+frame pins the caller target and the result location. -/
+theorem wp_call_enter_ret1 {fid : FuncId} {func : Func} {rid : String}
+    {rty : Ty} {dv : GoValue} {tl : Loc} {env k}
+    (hfind : findFunctionIn? (GoCoreGS.prog GF) fid = some func)
     (hargs : func.args = #[])
-    (hres : func.results = #[⟨rname, rty⟩])
-    (hbody : func.body = body)
-    (hres_t : LocalEnv.lookup env tgt = some (.base ta))
-    (hdef : ∀ σ₁ : ExecState, defaultValue σ₁ rty = .ok v) :
-    iprop(∀ ra : Addr, ra.id ↦ (⟨some rty, v⟩ : HeapCell) -∗
-        WP (Config.exec body [[(rname, Loc.base ra)]]
-              (.frame [Loc.base ta] [Loc.base ra] k)) @ s ; E {{ Φ }})
-      ⊢ WP (Config.exec (.call #[.var tgt] funcId #[]) env k) @ s ; E {{ Φ }} := by
-  obtain ⟨fid, fargs, fres, fbody⟩ := func
-  simp only at hargs hres hbody
-  subst hargs; subst hres; subst hbody
+    (hres : func.results = #[⟨rid, rty⟩])
+    (hnodisp : ∀ σ : ExecState, σ.methods = GoCoreGS.methods GF →
+      dynamicDispatch? σ func #[] = .ok none)
+    (hdef : ∀ σ : ExecState, defaultValue σ rty = .ok dv) :
+    iprop(∀ ra : Addr, ra.id ↦ (⟨some rty, dv⟩ : HeapCell) -∗
+        WP (Config.exec func.body [[(rid, Loc.base ra)]]
+              (.frame [tl] [Loc.base ra] k)) @ s ; E {{ Φ }})
+      ⊢ WP (Config.retV (.addr tl) (.callTargetsK fid [] [] [] env k))
+          @ s ; E {{ Φ }} := by
+  have henter : ∀ σ₁ : ExecState, σ₁.functions = GoCoreGS.prog GF →
+      σ₁.methods = GoCoreGS.methods GF →
+      enterFrame σ₁ fid []
+        = .ok (func, [[(rid, Loc.base ⟨σ₁.nextAddr⟩)]], [Loc.base ⟨σ₁.nextAddr⟩],
+            { σ₁ with heap := Heap.set σ₁.heap (.base ⟨σ₁.nextAddr⟩) ⟨some rty, dv⟩, nextAddr := σ₁.nextAddr + 1 }) := by
+    intro σ₁ hfns hmeths
+    unfold enterFrame
+    rw [hfns, hfind]
+    simp [hargs, hres, Bind.bind, Except.bind, hnodisp σ₁ hmeths, bindParams,
+      hdef σ₁, ExecState.alloc, ExecState.freshLoc, allocDecls, pinResultLocs,
+      LocalEnv.declare, LocalEnv.lookup, Scope.lookup]
+    exact hfns
   iintro Hcont
   iapply wp_lift_step (h := rfl)
   iintro %σ₁ %ns %obs %obs' %nt Hσ
   simp only [stateInterp]
   icases Hσ with ⟨Hσ, %Hinv⟩
-  obtain ⟨hfns, hwf⟩ := Hinv
-  have hlkp : LocalEnv.lookup
-      (LocalEnv.declare [] rname (Loc.base ⟨σ₁.nextAddr⟩)) rname
-      = some (Loc.base ⟨σ₁.nextAddr⟩) := by
-    simp [LocalEnv.declare, LocalEnv.lookup, Scope.lookup]
-  have hstep : Step (.exec (.call #[.var tgt] funcId #[]) env k) σ₁
-      (.exec fbody [[(rname, Loc.base ⟨σ₁.nextAddr⟩)]]
-        (.frame [Loc.base ta] [Loc.base ⟨σ₁.nextAddr⟩] k))
-      { σ₁ with heap := Heap.set σ₁.heap (.base ⟨σ₁.nextAddr⟩) ⟨some rty, v⟩,
-                nextAddr := σ₁.nextAddr + 1 } :=
-    Step.call (AssigneesR.cons (AssigneeR.var hres_t) AssigneesR.nil) ArgsR.nil
-      (by rw [hfns]; exact hfind)
-      BindParamsR.nil
-      (DeclsR.cons (hdef σ₁) (ExecState.alloc_eq σ₁ v (some rty)) DeclsR.nil)
-      (LookupsR.cons hlkp LookupsR.nil)
+  obtain ⟨hfns, hmeths, hwf⟩ := Hinv
+  have hstep := Step.callTargetsDoneEnter (locs := []) (env := env) (k := k)
+    (rfl : valueAsLoc (.addr tl) = .ok tl) (henter σ₁ hfns hmeths)
   have hdet : ∀ c' s',
-      Step (.exec (.call #[.var tgt] funcId #[]) env k) σ₁ c' s' →
-      c' = Config.exec fbody [[(rname, Loc.base ⟨σ₁.nextAddr⟩)]]
-             (.frame [Loc.base ta] [Loc.base ⟨σ₁.nextAddr⟩] k) ∧
-      s' = { σ₁ with heap := Heap.set σ₁.heap (.base ⟨σ₁.nextAddr⟩) ⟨some rty, v⟩,
-                     nextAddr := σ₁.nextAddr + 1 } := by
+      Step (.retV (.addr tl) (.callTargetsK fid [] [] [] env k)) σ₁ c' s' →
+      c' = Config.exec func.body [[(rid, Loc.base ⟨σ₁.nextAddr⟩)]]
+             (.frame ([] ++ [tl]) [Loc.base ⟨σ₁.nextAddr⟩] k)
+        ∧ s' = { σ₁ with heap := Heap.set σ₁.heap (.base ⟨σ₁.nextAddr⟩) ⟨some rty, dv⟩, nextAddr := σ₁.nextAddr + 1 } := by
     intro c' s' hst
-    cases hst with
-    | callTargetsPanic hp =>
-      cases hp with
-      | here ha => cases ha
-      | there ha hrest => cases hrest
-    | callArgsPanic hassP hp => cases hp
-    | call hass hargsR hfindR hbind hdecls hlk =>
-      cases hass with
-      | cons hA hrestA =>
-        cases hA with
-        | var hl =>
-          rw [hres_t] at hl
-          injection hl with hloc
-          cases hrestA
-          cases hargsR
-          rw [hfns, hfind] at hfindR
-          injection hfindR with hfunc
-          subst hfunc
-          cases hbind
-          cases hdecls with
-          | cons hd ha hrest =>
-            rw [hdef σ₁] at hd
-            injection hd with hv
-            rw [← hv, ExecState.alloc_eq] at ha
-            injection ha with hloc2 hst'
-            rw [← hloc2, ← hst'] at hrest
-            cases hrest
-            cases hlk with
-            | cons hlk1 hlkrest =>
-              cases hlkrest
-              have hlkloc := hlk1
-              rw [show LocalEnv.declare [] rname (Loc.base ⟨σ₁.nextAddr⟩)
-                  = [[(rname, Loc.base ⟨σ₁.nextAddr⟩)]] from rfl] at hlkloc ⊢
-              simp [LocalEnv.lookup, Scope.lookup] at hlkloc
-              rw [← hloc, ← hlkloc]
-              exact ⟨rfl, rfl⟩
+    obtain ⟨h1, h2⟩ := step_det (by trivial) hstep hst
+    exact ⟨h1.symm, h2.symm⟩
   iapply fupd_mask_intro Std.LawfulSet.empty_subset
   iintro Hclose
   isplitr
@@ -224,7 +203,8 @@ theorem wp_call_nullary_ret {funcId : FuncId} {func : Func} {rname : String}
   cases Hstep with
   | step st =>
     obtain ⟨rfl, rfl⟩ := hdet _ _ st
-    imod (genHeap_alloc (v := (⟨some rty, v⟩ : HeapCell)) hwf.fresh_get?)
+    simp only [List.nil_append]
+    imod (genHeap_alloc (v := (⟨some rty, dv⟩ : HeapCell)) hwf.fresh_get?)
       $$ Hσ with ⟨Hσ, Hpt, Htok⟩
     imod Hclose
     imodintro
@@ -234,124 +214,106 @@ theorem wp_call_nullary_ret {funcId : FuncId} {func : Func} {rname : String}
       · iapply (genHeapInterp_eqv
           (fun kk => (heapToMap_set_base σ₁.heap ⟨σ₁.nextAddr⟩ _ kk).symm)) $$ Hσ
       · ipureintro
-        exact ⟨hfns, hwf.alloc⟩
+        exact ⟨hfns, hmeths, hwf.alloc⟩
     · isplitl [Hpt Hcont]
       · iapply Hcont $$ %(⟨σ₁.nextAddr⟩ : Addr) Hpt
       · itrivial
 
-/-- **The value-returning frame exit.** `return` reaches the frame; the
-result cell — whose *location* was pinned at call time (D2-proper) — is read
-from its owned cell and stored to the caller's target cell. Premises
-conditioned on the two owned cells, via the two-cell core (result cell read,
-target written). No environment resolution: the env-free `.returning` and
-the location-carrying frame make the read unambiguous under any shadowing.
-Arity-specialized to one result/one target, like `wp_call_unary`. Witness:
-`wp_frame_return_int`. -/
-theorem wp_frame_return {ra ta : Addr} {rcell tcell newtcell : HeapCell} {k}
-    (hstore : ∀ σ₁ : ExecState, Heap.lookup σ₁.heap (.base ta) = some tcell →
-        storeLoc σ₁ (.base ta) rcell.value
-          = .ok { σ₁ with heap := Heap.set σ₁.heap (.base ta) newtcell }) :
-    ra.id ↦ rcell ∗ ta.id ↦ tcell
-      ∗ (ra.id ↦ rcell ∗ ta.id ↦ newtcell -∗ WP (Config.next k) @ s ; E {{ Φ }})
-      ⊢ WP (Config.returning (.frame [.base ta] [.base ra] k))
-          @ s ; E {{ Φ }} := by
-  have hred : ∀ σ₁ : ExecState,
-      Heap.lookup σ₁.heap (.base ra) = some rcell →
-      Heap.lookup σ₁.heap (.base ta) = some tcell →
-      Step (Config.returning (.frame [.base ta] [.base ra] k)) σ₁
-        (.next k) { σ₁ with heap := Heap.set σ₁.heap (.base ta) newtcell } ∧
-      (∀ c' s',
-        Step (Config.returning (.frame [.base ta] [.base ra] k)) σ₁ c' s' →
-        c' = Config.next k ∧
-        s' = { σ₁ with heap := Heap.set σ₁.heap (.base ta) newtcell }) := by
-    intro σ₁ hlr hlt
-    refine ⟨Step.frameReturn
-      (LoadsR.cons (loadLoc_base_of_lookup hlr) LoadsR.nil)
-      (StoreManyR.cons (hstore σ₁ hlt) StoreManyR.nil), ?_⟩
-    intro c' s' hst
-    cases hst with
-    | frameReturn hresR hstoreR =>
-      cases hresR with
-      | cons hload hrest =>
-        rw [loadLoc_base_of_lookup hlr] at hload
-        injection hload with hval
-        cases hrest
-        rw [← hval] at hstoreR
-        cases hstoreR with
-        | cons hst1 hrest2 =>
-          rw [hstore σ₁ hlt] at hst1
-          injection hst1 with hs1
-          rw [← hs1] at hrest2
-          cases hrest2
-          exact ⟨rfl, rfl⟩
-  exact wp_store_step₂ rfl hred
-
-/-- **The invariant-opening frame exit** (arc `invariant-readout`): like
-`wp_frame_return`, but the caller's target cell is not owned — it lives in
-an Iris invariant with content `Icnt`, opened around the single
-frame-return step and re-established with the stored result (`hclose`, the
-per-step preservation obligation). The result cell `ra` stays owned, and
-the continuation gets it back; the target's `↦` returns to the invariant.
-`hstore` must succeed on EVERY `S`-cell the invariant may expose (for int
-registers: any int-typed cell). -/
-theorem wp_frame_return_inv {ra ta : Addr} {rcell newtcell : HeapCell}
-    {S : HeapCell → Prop} {Icnt : IProp GF} {k} {N : Namespace}
-    (hN : ↑N ⊆ E)
-    (hopen : Icnt ⊢ iprop(∃ cell, ⌜S cell⌝ ∗ ta.id ↦ cell))
-    (hclose : (iprop(ta.id ↦ newtcell) : IProp GF) ⊢ Icnt)
-    (hstore : ∀ (σ₁ : ExecState) (tcell : HeapCell), S tcell →
-      Heap.lookup σ₁.heap (.base ta) = some tcell →
-        storeLoc σ₁ (.base ta) rcell.value
-          = .ok { σ₁ with heap := Heap.set σ₁.heap (.base ta) newtcell }) :
-    Iris.inv N Icnt ∗ ra.id ↦ rcell
-      ∗ (ra.id ↦ rcell -∗ WP (Config.next k) @ s ; E {{ Φ }})
-      ⊢ WP (Config.returning (.frame [.base ta] [.base ra] k))
-          @ s ; E {{ Φ }} := by
-  have hred : ∀ (σ₁ : ExecState) (tcell : HeapCell), S tcell →
-      Heap.lookup σ₁.heap (.base ra) = some rcell →
-      Heap.lookup σ₁.heap (.base ta) = some tcell →
-      Step (Config.returning (.frame [.base ta] [.base ra] k)) σ₁
-        (.next k) { σ₁ with heap := Heap.set σ₁.heap (.base ta) newtcell } ∧
-      (∀ c' s',
-        Step (Config.returning (.frame [.base ta] [.base ra] k)) σ₁ c' s' →
-        c' = Config.next k ∧
-        s' = { σ₁ with heap := Heap.set σ₁.heap (.base ta) newtcell }) := by
-    intro σ₁ tcell hS hlr hlt
-    refine ⟨Step.frameReturn
-      (LoadsR.cons (loadLoc_base_of_lookup hlr) LoadsR.nil)
-      (StoreManyR.cons (hstore σ₁ tcell hS hlt) StoreManyR.nil), ?_⟩
-    intro c' s' hst
-    cases hst with
-    | frameReturn hresR hstoreR =>
-      cases hresR with
-      | cons hload hrest =>
-        rw [loadLoc_base_of_lookup hlr] at hload
-        injection hload with hval
-        cases hrest
-        rw [← hval] at hstoreR
-        cases hstoreR with
-        | cons hst1 hrest2 =>
-          rw [hstore σ₁ tcell hS hlt] at hst1
-          injection hst1 with hs1
-          rw [← hs1] at hrest2
-          cases hrest2
-          exact ⟨rfl, rfl⟩
-  exact wp_store_step₂_inv hN rfl hopen hclose hred
-
-/-- Witness for `wp_frame_return`: an int result local (holding a normalized
-`n`, ∀-general) returned into an int target cell (any prior value `w`).
-Zero premises beyond the owned cells (D2-proper erased the env-resolution
-premise). -/
-theorem wp_frame_return_int {ra ta : Addr} {kind : IntKind} {n : Int}
-    {w : GoValue} {k} :
-    ra.id ↦ (⟨some (.int kind), .int (kind.normalize n) kind⟩ : HeapCell)
-      ∗ ta.id ↦ (⟨some (.int kind), w⟩ : HeapCell)
-      ∗ (ra.id ↦ (⟨some (.int kind), .int (kind.normalize n) kind⟩ : HeapCell)
-          ∗ ta.id ↦ (⟨some (.int kind), .int (kind.normalize n) kind⟩ : HeapCell)
+/-- **Value frame exit**: `return` at a frame with one pinned int result
+location and one int-typed caller target — read the result cell, store
+(normalizing) into the target. The `wp_store_step₂` two-cell core: the
+result cell is read-only, the target is written. Premise-free given the
+resources (the store side-condition is internalized by
+`storeLoc_int_any`). -/
+theorem wp_frame_return_int {ta ra : Addr} {kind tkind : IntKind}
+    {m : Int} {w : GoValue} {k}
+    : ra.id ↦ (⟨some (.int kind), .int m kind⟩ : HeapCell)
+      ∗ ta.id ↦ (⟨some (.int tkind), w⟩ : HeapCell)
+      ∗ (ra.id ↦ (⟨some (.int kind), .int m kind⟩ : HeapCell)
+          ∗ ta.id ↦ (⟨some (.int tkind), .int (tkind.normalize m) tkind⟩ : HeapCell)
           -∗ WP (Config.next k) @ s ; E {{ Φ }})
       ⊢ WP (Config.returning (.frame [.base ta] [.base ra] k))
-          @ s ; E {{ Φ }} :=
-  wp_frame_return (fun _ hlt => storeLoc_int_cell hlt n)
+          @ s ; E {{ Φ }} := by
+  iapply wp_store_step₂ (hnv := rfl)
+  intro σ₁ hlookr hlookt
+  have hload : loadMany σ₁ [Loc.base ra] = .ok [GoValue.int m kind] := by
+    simp [loadMany, loadLoc, hlookr, Bind.bind, Except.bind]
+  have hstore : storeMany σ₁ [Loc.base ta] [GoValue.int m kind]
+      = .ok { σ₁ with heap := Heap.set σ₁.heap (.base ta) ⟨some (.int tkind), .int (tkind.normalize m) tkind⟩ } := by
+    simp [storeMany, storeLoc_int_any hlookt m, Bind.bind, Except.bind]
+  have hstep := Step.frameReturn (k := k) hload hstore
+  refine ⟨hstep, ?_⟩
+  intro c' s' hst
+  obtain ⟨h1, h2⟩ := step_det (by trivial) hstep hst
+  exact ⟨h1.symm, h2.symm⟩
+
+/-! ### Non-vacuity witnesses on the golden functions -/
+
+/-- The golden `inc` function, as a named literal; `sliceLowered_funcs_eq`
+kernel-checks it against the pinned frontend lowering. -/
+private def incF : Func :=
+  { id := ⟨"inc"⟩,
+    args := #[⟨"p", .pointer (.int .int)⟩],
+    results := #[],
+    body := .block #[] #[.seqn #[.assign (.addr (.var "p"))
+      (.add (.deref (.var "p") (.int .int)) (.intLit 1 .int))]] }
+
+/-- The golden `incViaCall` function, as a named literal (same bridge). -/
+private def incViaCallF : Func :=
+  { id := ⟨"incViaCall"⟩,
+    args := #[],
+    results := #[⟨"$res0", .int .int⟩],
+    body := .block #[] #[
+      .seqn #[.initialization ⟨"x", .int .int⟩,
+              .assign (.var "x") (.intLit 0 .int)],
+      .call #[] ⟨"inc"⟩ #[.ref "x"],
+      .call #[] ⟨"inc"⟩ #[.ref "x"],
+      .seqn #[.assign (.var "$res0") (.var "x"), .returnStmt]] }
+
+/-- Kernel bridge: the named literals ARE the pinned lowering's functions. -/
+private theorem sliceLowered_funcs_eq :
+    GoldenSlice.sliceLowered.funcs = #[incF, incViaCallF] := rfl
+
+/-- Witness for `wp_call_enter_arg1` on the CONCRETE golden `inc`: every
+premise discharges by computation given the two genuinely-external pins
+(program and method table). -/
+theorem wp_call_enter_inc {xa : Addr} {locs : List Loc} {env k}
+    (hprog : GoCoreGS.prog GF = GoldenSlice.sliceLowered.funcs)
+    (hmeths : GoCoreGS.methods GF = #[]) :
+    iprop(∀ pa : Addr,
+        pa.id ↦ (⟨some (.pointer (.int .int)), .addr (.base xa)⟩ : HeapCell) -∗
+        WP (Config.exec incF.body [[("p", Loc.base pa)]] (.frame locs [] k))
+          @ s ; E {{ Φ }})
+      ⊢ WP (Config.retV (.addr (.base xa))
+            (.callArgsK ⟨"inc"⟩ locs [] [] env k)) @ s ; E {{ Φ }} :=
+  wp_call_enter_arg1
+    (hfind := by rw [hprog, sliceLowered_funcs_eq]; rfl)
+    (hargs := rfl)
+    (hres := rfl)
+    (hnodisp := fun σ h => by
+      simp [dynamicDispatch?, methodInfoByFuncId?, h, hmeths, Bind.bind, Except.bind])
+    (hnorm := fun σ => by
+      simp [normalizeValueForTy, normalizeValueForTyFuel])
+
+/-- Witness for `wp_call_enter_ret1` on the CONCRETE golden `incViaCall`
+(nullary, one int result `$res0` defaulting to 0). -/
+theorem wp_call_enter_incViaCall {tl : Loc} {env k}
+    (hprog : GoCoreGS.prog GF = GoldenSlice.sliceLowered.funcs)
+    (hmeths : GoCoreGS.methods GF = #[]) :
+    iprop(∀ ra : Addr,
+        ra.id ↦ (⟨some (.int .int), .int 0 .int⟩ : HeapCell) -∗
+        WP (Config.exec incViaCallF.body [[("$res0", Loc.base ra)]]
+              (.frame [tl] [Loc.base ra] k)) @ s ; E {{ Φ }})
+      ⊢ WP (Config.retV (.addr tl)
+            (.callTargetsK ⟨"incViaCall"⟩ [] [] [] env k)) @ s ; E {{ Φ }} :=
+  wp_call_enter_ret1
+    (hfind := by rw [hprog, sliceLowered_funcs_eq]; rfl)
+    (hargs := rfl)
+    (hres := rfl)
+    (hnodisp := fun σ h => by
+      simp [dynamicDispatch?, methodInfoByFuncId?, h, hmeths, Bind.bind, Except.bind])
+    (hdef := fun σ => by
+      simp [defaultValue, defaultValueFuel, typeResolutionFuel])
 
 end
 

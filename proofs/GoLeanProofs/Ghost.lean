@@ -33,6 +33,11 @@ class GoCoreGS (hlc : outParam HasLC) (GF : BundledGFunctors) extends
     InvGS_gen hlc GF where
   heap : genHeapGS Nat HeapCell GF GoHeapF
   prog : Array Func
+  /-- The fixed method table, pinned like `prog` (R3: the machine's
+  frame-entry step consults `σ.methods` for dynamic dispatch, so call laws
+  need it pinned — it is `Step`-invariant for the same reason functions
+  are: no rule writes it). -/
+  methods : Array MethodInfo
 attribute [reducible, instance] GoCoreGS.heap
 
 variable {GF : BundledGFunctors} {hlc : HasLC} [GoCoreGS hlc GF]
@@ -43,7 +48,8 @@ well-formedness (`docs/2026-07-20_call-law-design.md`). -/
 instance : StateInterp ExecState Unit GF where
   stateInterp σ _ _ _ :=
     iprop(genHeapInterp (GF := GF) (H := GoHeapF) (heapToMap σ.heap)
-      ∗ ⌜σ.functions = GoCoreGS.prog GF ∧ HeapWf σ⌝)
+      ∗ ⌜σ.functions = GoCoreGS.prog GF ∧ σ.methods = GoCoreGS.methods GF
+          ∧ HeapWf σ⌝)
 
 instance : IrisGS_gen hlc Config GF where
   numLatersPerStep _ := 0

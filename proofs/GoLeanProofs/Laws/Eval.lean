@@ -193,6 +193,33 @@ theorem wp_eval_var {id : String} {a : Addr} {cell : HeapCell} {env k}
   obtain ⟨h1, h2⟩ := step_det (by trivial) (Step.evalVar hres hload) hst
   exact ⟨h1.symm, h2.symm⟩
 
+/-- **The deref apply step**: the strict `deref` operator's application is
+a load through the delivered address. The read cell rides through. -/
+theorem wp_strict_apply_deref {ty : Ty} {a : Addr} {cell : HeapCell} {env k} :
+    a.id ↦ cell
+      ∗ (a.id ↦ cell -∗ WP (Config.retV cell.value k) @ s ; E {{ Φ }})
+      ⊢ WP (Config.retV (.addr (.base a))
+            (.strictK (.deref ty) [] [] env k)) @ s ; E {{ Φ }} := by
+  iapply wp_det_step_keep (P := iprop(a.id ↦ cell))
+    (c₁ := Config.retV cell.value k) (hnv := rfl)
+  intro σ₁
+  iintro ⟨Hσ, Hpt⟩
+  ihave %Hmap : ⌜get? (heapToMap σ₁.heap) a.id = some cell⌝ $$ [Hσ Hpt]
+  · icases genHeap_valid $$ [$Hσ $Hpt] with >%h
+    itrivial
+  have hlook : Heap.lookup σ₁.heap (.base a) = some cell := by
+    rw [get?_heapToMap] at Hmap; simpa using Hmap
+  have happly : applyStrictOp σ₁ (.deref ty) [.addr (.base a)]
+      = .ok (cell.value, σ₁) := by
+    simp [applyStrictOp, valueAsLoc, Bind.bind, Except.bind, loadLoc, hlook]
+  imodintro
+  ipureintro
+  refine ⟨Step.strictApply (done := []) happly, ?_⟩
+  intro c' s' hst
+  obtain ⟨h1, h2⟩ := step_det (by trivial)
+    (Step.strictApply (done := []) happly) hst
+  exact ⟨h1.symm, h2.symm⟩
+
 /-- **The store step**: deliver the RHS value to a `.base`-located target
 whose cell is owned. `hstore` is the cell-conditioned store fact (for
 int-typed cells, `storeLoc_int_cell` discharges it). Instantiates the
