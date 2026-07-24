@@ -7,7 +7,7 @@ import Std.Data.ExtTreeMap
 import Iris.Std.PartialMap
 import Iris.Std.FromMathlib
 import Iris.Std.GenSetsInstances
-import GoLean.GoCore.Rel
+import GoLean.GoCore.MachineSound
 import GoLeanProofs.Ghost
 
 /-!
@@ -17,9 +17,14 @@ unwinding, frame fall-through.
 -/
 
 open Iris Iris.ProgramLogic Iris.Std Iris.Std.PartialMap
-open GoLean GoLean.GoCore GoLean.GoCore.Rel
+open GoLean GoLean.GoCore GoLean.GoCore.Machine
 
 namespace GoLean.Iris
+
+-- The uniform Hpuredet closer names every function a rule-premise might
+-- need; the unused-arg linter misfires per-law (an argument unused in one
+-- law's rule set is load-bearing in another's).
+set_option linter.unusedSimpArgs false
 
 section
 variable {GF : BundledGFunctors} {hlc : HasLC} [GoCoreGS hlc GF]
@@ -45,7 +50,7 @@ theorem wp_seqn {ss env k} :
     (Hpuredet := by
       intro σ obs e₂' σ₂ eₜ' h
       cases h with
-      | step st => cases st; exact ⟨rfl, rfl, rfl, rfl⟩))
+      | step st => cases st <;> simp_all [stmtPlan, loadMany, storeMany, allocDecls]))
   iexact H
 
 /-- Pure, deterministic frame pop for VOID frames: normal completion of a
@@ -61,17 +66,12 @@ theorem wp_frame_fall {k} :
     (Hsafe := by
       intro σ
       cases s
-      · exact ⟨[], Config.next k, σ, [], GoPrimStep.step (Step.frameFall .nil .nil)⟩
+      · exact ⟨[], Config.next k, σ, [], GoPrimStep.step (Step.frameFall rfl rfl)⟩
       · rfl)
     (Hpuredet := by
       intro σ obs e₂' σ₂ eₜ' h
       cases h with
-      | step st =>
-        cases st with
-        | frameFall hld hst =>
-          cases hld
-          cases hst
-          exact ⟨rfl, rfl, rfl, rfl⟩))
+      | step st => cases st <;> simp_all [stmtPlan, loadMany, storeMany, allocDecls]))
   iexact H
 
 /-- Pure, deterministic step: enter a declaration-free block
@@ -89,16 +89,12 @@ theorem wp_block_nil {ss : Array Stmt} {env k} :
     (Hsafe := by
       intro σ
       cases s
-      · exact ⟨[], _, σ, [], GoPrimStep.step (Step.block DeclsR.nil)⟩
+      · exact ⟨[], _, σ, [], GoPrimStep.step (Step.block rfl)⟩
       · rfl)
     (Hpuredet := by
       intro σ obs e₂' σ₂ eₜ' h
       cases h with
-      | step st =>
-        cases st with
-        | block hd =>
-          cases hd
-          exact ⟨rfl, rfl, rfl, rfl⟩))
+      | step st => cases st <;> simp_all [stmtPlan, loadMany, storeMany, allocDecls]))
   iexact H
 
 /-- Pure, deterministic step: advance a sequence to its next statement
@@ -117,7 +113,7 @@ theorem wp_seq_next {t : Stmt} {rest : List Stmt} {env k} :
     (Hpuredet := by
       intro σ obs e₂' σ₂ eₜ' h
       cases h with
-      | step st => cases st; exact ⟨rfl, rfl, rfl, rfl⟩))
+      | step st => cases st <;> simp_all [stmtPlan, loadMany, storeMany, allocDecls]))
   iexact H
 
 /-- Pure, deterministic step: `return` starts unwinding (env-free after
@@ -136,7 +132,7 @@ theorem wp_return {env k} :
     (Hpuredet := by
       intro σ obs e₂' σ₂ eₜ' h
       cases h with
-      | step st => cases st; exact ⟨rfl, rfl, rfl, rfl⟩))
+      | step st => cases st <;> simp_all [stmtPlan, loadMany, storeMany, allocDecls]))
   iexact H
 
 /-- Pure, deterministic step: `return` unwinds past a sequence continuation,
@@ -155,7 +151,7 @@ theorem wp_seq_return {rest : List Stmt} {env k} :
     (Hpuredet := by
       intro σ obs e₂' σ₂ eₜ' h
       cases h with
-      | step st => cases st; exact ⟨rfl, rfl, rfl, rfl⟩))
+      | step st => cases st <;> simp_all [stmtPlan, loadMany, storeMany, allocDecls]))
   iexact H
 
 /-- Pure, deterministic control step: an exhausted sequence pops to its
@@ -175,7 +171,7 @@ theorem wp_seq_done {env k} :
     (Hpuredet := by
       intro σ obs e₂' σ₂ eₜ' h
       cases h with
-      | step st => cases st; exact ⟨rfl, rfl, rfl, rfl⟩))
+      | step st => cases st <;> simp_all [stmtPlan, loadMany, storeMany, allocDecls]))
   iexact H
 
 end
