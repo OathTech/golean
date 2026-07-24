@@ -126,8 +126,19 @@ fi
 #       transitive path from the surface stays Iris-free.
 step "surface purity (Iris-free spec surface)"
 surface_ok=1
-for f in proofs/GoLeanProofs/Surface.lean proofs/GoLeanProofs/Specs/GoldenSlice.lean; do
-  bad_imports=$(grep -E '^import ' "$f" | grep -Ev '^import (GoLean\.|Std\.|GoLeanProofs\.Specs\.GoldenSlice$|GoLeanProofs\.Specs\.GoldenProgram$|GoLeanProofs\.Surface$)' || true)
+# R3 audit fix (2026-07-23, sustained finding): the scan list follows the
+# GoldenSlice -> GoldenProgram rename (the half-completed rename left the
+# gate scanning a deleted file — a silent no-op — while the replacement,
+# imported by Surface.lean, was scanned by neither arm). Hardened
+# fail-closed: a listed file that does not exist now FAILS the gate, so a
+# future rename cannot silently reopen this hole.
+for f in proofs/GoLeanProofs/Surface.lean proofs/GoLeanProofs/Specs/GoldenProgram.lean; do
+  if [ ! -f "$f" ]; then
+    echo "  surface-purity scan target MISSING: $f (rename without re-pointing the gate?)" >&2
+    surface_ok=0
+    continue
+  fi
+  bad_imports=$(grep -E '^import ' "$f" | grep -Ev '^import (GoLean\.|Std\.|GoLeanProofs\.Specs\.GoldenProgram$|GoLeanProofs\.Surface$)' || true)
   if [ -n "$bad_imports" ]; then
     echo "  $f has non-surface imports:" >&2
     echo "$bad_imports" | sed 's/^/    /' >&2
@@ -146,8 +157,21 @@ else
 fi
 
 # 2. Core build (the frontend / interpreter / relation).
-step "core build (lake build)"
-if lake build 2>&1 | tail -3; then ok "core build"; else bad "core build"; fi
+step "core build (lake build; must be WARNING-free — GoLean/ module warnings
+# replay into the runner's stdout and corrupt the JSON observation channel,
+# the recorded ops failure mode that produced mass phantom drift 2026-07-23)"
+core_out="$(lake build 2>&1)"
+core_rc=$?
+echo "$core_out" | tail -3
+core_warns="$(echo "$core_out" | grep -E '^warning: GoLean/' || true)"
+if [ $core_rc -ne 0 ]; then
+  bad "core build"
+elif [ -n "$core_warns" ]; then
+  echo "$core_warns" | head -10
+  bad "core build has GoLean/ warnings (they corrupt the runner JSON channel)"
+else
+  ok "core build (warning-free)"
+fi
 
 # 3. Proofs build — this runs proofs/Audit.lean: the axiom allowlist
 #    (#guard_msgs #print axioms) + non-vacuity witness references. A weakened
