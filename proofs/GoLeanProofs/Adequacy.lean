@@ -7,7 +7,7 @@ import Std.Data.ExtTreeMap
 import Iris.Std.PartialMap
 import Iris.Std.FromMathlib
 import Iris.Std.GenSetsInstances
-import GoLean.GoCore.Rel
+import GoLean.GoCore.MachineSound
 import GoLeanProofs.Laws.Control
 
 /-!
@@ -17,7 +17,7 @@ well-formed initial state), and the generic end-to-end witness.
 -/
 
 open Iris Iris.ProgramLogic Iris.Std Iris.Std.PartialMap
-open GoLean GoLean.GoCore GoLean.GoCore.Rel
+open GoLean GoLean.GoCore GoLean.GoCore.Machine
 open Iris.ProgramLogic.Language.Notation Iris.BI
 
 namespace GoLean.Iris
@@ -74,6 +74,7 @@ as "`φ`-correct, never-stuck execution *among non-panicking runs*". -/
 theorem go_adequacy [GoCoreGpreS .hasLC GF] (c : Config) (σ : ExecState)
     (φ : Unit → Prop) (hσwf : HeapWf σ)
     (Hwp : ∀ [GoCoreGS .hasLC GF], GoCoreGS.prog GF = σ.functions →
+      GoCoreGS.methods GF = σ.methods →
       ⊢@{IProp GF} (WP c {{ v, ⌜φ v⌝ }})) :
     adequate .NotStuck c σ (fun v _ => φ v) := by
   refine wp_adequacy (GF := GF) .NotStuck c σ φ ?_
@@ -88,11 +89,11 @@ theorem go_adequacy [GoCoreGpreS .hasLC GF] (c : Config) (σ : ExecState)
       (Std.PartialMap.map (fun g : GName => toAgree (LeibnizO.mk g))
         (∅ : GoHeapF GName)))
     HeapView.auth_one_valid with ⟨%γm, Hm⟩
-  letI _ : GoCoreGS .hasLC GF := ⟨⟨γh, γm⟩, σ.functions⟩
+  letI _ : GoCoreGS .hasLC GF := ⟨⟨γh, γm⟩, σ.functions, σ.methods⟩
   imodintro
   iexists (fun σ' _ =>
     iprop(genHeapInterp (GF := GF) (H := GoHeapF) (heapToMap σ'.heap)
-      ∗ ⌜σ'.functions = σ.functions ∧ HeapWf σ'⌝))
+      ∗ ⌜σ'.functions = σ.functions ∧ σ'.methods = σ.methods ∧ HeapWf σ'⌝))
   iexists (fun _ => iprop(True))
   isplitl [Hh Hm]
   · isplitl [Hh Hm]
@@ -105,8 +106,8 @@ theorem go_adequacy [GoCoreGpreS .hasLC GF] (c : Config) (σ : ExecState)
       unfold ghost_map_auth
       iframe Hh Hm
     · ipureintro
-      exact ⟨rfl, hσwf⟩
-  · exact Hwp rfl
+      exact ⟨rfl, rfl, hσwf⟩
+  · exact Hwp rfl rfl
 
 /-! ## Arc `exit-infra` (2b): the strong-adequacy operational readout
 
@@ -131,8 +132,10 @@ theorem go_heap_adequacy [GoCoreGpreS .hasLC GF] (c : Config) (σ : ExecState)
     (Ψ : ∀ [GoCoreGS .hasLC GF], Unit → IProp GF)
     (φ : Unit → ExecState → Prop) (hσwf : HeapWf σ)
     (Hwp : ∀ [GoCoreGS .hasLC GF], GoCoreGS.prog GF = σ.functions →
+      GoCoreGS.methods GF = σ.methods →
       ⊢@{IProp GF} (WP c {{ v, Ψ v }}))
     (Hext : ∀ [GoCoreGS .hasLC GF], GoCoreGS.prog GF = σ.functions →
+      GoCoreGS.methods GF = σ.methods →
       ∀ (σ2 : ExecState) (v : Unit),
         iprop(genHeapInterp (GF := GF) (H := GoHeapF) (heapToMap σ2.heap) ∗ Ψ v)
           ⊢ |==> ⌜φ v σ2⌝) :
@@ -153,11 +156,11 @@ theorem go_heap_adequacy [GoCoreGpreS .hasLC GF] (c : Config) (σ : ExecState)
       (Std.PartialMap.map (fun g : GName => toAgree (LeibnizO.mk g))
         (∅ : GoHeapF GName)))
     HeapView.auth_one_valid with ⟨%γm, Hm⟩
-  letI _ : GoCoreGS .hasLC GF := ⟨⟨γh, γm⟩, σ.functions⟩
+  letI _ : GoCoreGS .hasLC GF := ⟨⟨γh, γm⟩, σ.functions, σ.methods⟩
   imodintro
   iexists (fun σ' _ _ _ =>
     iprop(genHeapInterp (GF := GF) (H := GoHeapF) (heapToMap σ'.heap)
-      ∗ ⌜σ'.functions = σ.functions ∧ HeapWf σ'⌝))
+      ∗ ⌜σ'.functions = σ.functions ∧ σ'.methods = σ.methods ∧ HeapWf σ'⌝))
   iexists [(fun v => Ψ v)], (fun _ => iprop(True)), (fun _ _ _ _ => fupd_intro)
   dsimp only
   isplitl [Hh Hm]
@@ -171,10 +174,10 @@ theorem go_heap_adequacy [GoCoreGpreS .hasLC GF] (c : Config) (σ : ExecState)
       unfold ghost_map_auth
       iframe Hh Hm
     · ipureintro
-      exact ⟨rfl, hσwf⟩
+      exact ⟨rfl, rfl, hσwf⟩
   isplitl
   · iapply BigSepL2.bigSepL2_singleton
-    exact Hwp rfl
+    exact Hwp rfl rfl
   iintro %es' %t2' %Heq %Hlen %HNS Hst Hwptp _
   icases BigSepL2.bigSepL2_cons_inv_right $$ Hwptp with ⟨%e', %_, %Heq', Hpost, H⟩
   subst Heq' Heq
@@ -186,7 +189,7 @@ theorem go_heap_adequacy [GoCoreGpreS .hasLC GF] (c : Config) (σ : ExecState)
     ipureintro
     grind
   · dsimp only [Option.elim_some]
-    imod (Hext rfl σ2 _) $$ [$Hgh $Hpost] with %Hφv
+    imod (Hext rfl rfl σ2 _) $$ [$Hgh $Hpost] with %Hφv
     iapply fupd_mask_intro_discard Std.LawfulSet.empty_subset
     ipureintro
     grind
@@ -203,9 +206,11 @@ theorem go_heap_adequacy_own [GoCoreGpreS .hasLC GF] (c : Config)
     (Ψ : ∀ [GoCoreGS .hasLC GF], Unit → IProp GF)
     (φ : Unit → ExecState → Prop) (hσwf : HeapWf σ)
     (Hwp : ∀ [GoCoreGS .hasLC GF], GoCoreGS.prog GF = σ.functions →
+      GoCoreGS.methods GF = σ.methods →
       iprop([∗map] l ↦ cell ∈ heapToMap σ.heap, l ↦ cell)
         ⊢@{IProp GF} (WP c {{ v, Ψ v }}))
     (Hext : ∀ [GoCoreGS .hasLC GF], GoCoreGS.prog GF = σ.functions →
+      GoCoreGS.methods GF = σ.methods →
       ∀ (σ2 : ExecState) (v : Unit),
         iprop(genHeapInterp (GF := GF) (H := GoHeapF) (heapToMap σ2.heap) ∗ Ψ v)
           ⊢ |==> ⌜φ v σ2⌝) :
@@ -218,21 +223,21 @@ theorem go_heap_adequacy_own [GoCoreGpreS .hasLC GF] (c : Config)
   iintro %Hinv
   imod (genHeap_init_names (GF := GF) (heapToMap σ.heap))
     with ⟨%γh, %γm, Hσ, Hpts, Htok⟩
-  letI _ : GoCoreGS .hasLC GF := ⟨⟨γh, γm⟩, σ.functions⟩
+  letI _ : GoCoreGS .hasLC GF := ⟨⟨γh, γm⟩, σ.functions, σ.methods⟩
   imodintro
   iexists (fun σ' _ _ _ =>
     iprop(genHeapInterp (GF := GF) (H := GoHeapF) (heapToMap σ'.heap)
-      ∗ ⌜σ'.functions = σ.functions ∧ HeapWf σ'⌝))
+      ∗ ⌜σ'.functions = σ.functions ∧ σ'.methods = σ.methods ∧ HeapWf σ'⌝))
   iexists [(fun v => Ψ v)], (fun _ => iprop(True)), (fun _ _ _ _ => fupd_intro)
   dsimp only
   isplitl [Hσ]
   · isplitl [Hσ]
     · iexact Hσ
     · ipureintro
-      exact ⟨rfl, hσwf⟩
+      exact ⟨rfl, rfl, hσwf⟩
   isplitl [Hpts]
   · iapply BigSepL2.bigSepL2_singleton
-    iapply (Hwp rfl) $$ Hpts
+    iapply (Hwp rfl rfl) $$ Hpts
   iintro %es' %t2' %Heq %Hlen %HNS Hst Hwptp _
   icases BigSepL2.bigSepL2_cons_inv_right $$ Hwptp with ⟨%e', %_, %Heq', Hpost, H⟩
   subst Heq' Heq
@@ -244,7 +249,7 @@ theorem go_heap_adequacy_own [GoCoreGpreS .hasLC GF] (c : Config)
     ipureintro
     grind
   · dsimp only [Option.elim_some]
-    imod (Hext rfl σ2 _) $$ [$Hgh $Hpost] with %Hφv
+    imod (Hext rfl rfl σ2 _) $$ [$Hgh $Hpost] with %Hφv
     iapply fupd_mask_intro_discard Std.LawfulSet.empty_subset
     ipureintro
     grind
@@ -264,6 +269,7 @@ theorem go_heap_invariance [GoCoreGpreS .hasLC GF] (c : Config)
     (σ : ExecState) (t2 : List Config) (σ2 : ExecState) (φ : Prop)
     (hσwf : HeapWf σ)
     (Hwp : ∀ [GoCoreGS .hasLC GF], GoCoreGS.prog GF = σ.functions →
+      GoCoreGS.methods GF = σ.methods →
       iprop([∗map] l ↦ cell ∈ heapToMap σ.heap, l ↦ cell)
         ⊢ |={⊤}=> iprop(
             (WP c {{ _v, iprop(True) }}) ∗
@@ -276,19 +282,19 @@ theorem go_heap_invariance [GoCoreGpreS .hasLC GF] (c : Config)
   iintro %Hinv %κs
   imod (genHeap_init_names (GF := GF) (heapToMap σ.heap))
     with ⟨%γh, %γm, Hσ, Hpts, Htok⟩
-  letI _ : GoCoreGS .hasLC GF := ⟨⟨γh, γm⟩, σ.functions⟩
-  imod (Hwp rfl) $$ Hpts with ⟨Hwp', Hcont⟩
+  letI _ : GoCoreGS .hasLC GF := ⟨⟨γh, γm⟩, σ.functions, σ.methods⟩
+  imod (Hwp rfl rfl) $$ Hpts with ⟨Hwp', Hcont⟩
   imodintro
   iexists (fun σ' _ _ =>
     iprop(genHeapInterp (GF := GF) (H := GoHeapF) (heapToMap σ'.heap)
-      ∗ ⌜σ'.functions = σ.functions ∧ HeapWf σ'⌝))
+      ∗ ⌜σ'.functions = σ.functions ∧ σ'.methods = σ.methods ∧ HeapWf σ'⌝))
   iexists (fun _ => iprop(True))
   dsimp only
   isplitl [Hσ]
   · isplitl [Hσ]
     · iexact Hσ
     · ipureintro
-      exact ⟨rfl, hσwf⟩
+      exact ⟨rfl, rfl, hσwf⟩
   isplitl [Hwp']
   · iexact Hwp'
   iintro ⟨Hgh, %Hpure⟩
@@ -316,7 +322,7 @@ semantics, full stop. -/
 theorem adequate_seqn_nil (σ : ExecState) (env : LocalEnv) (hwf : HeapWf σ) :
     adequate .NotStuck (Config.exec (.seqn #[]) env .stop) σ (fun _ _ => True) :=
   go_adequacy (GF := GoCoreS) _ _ _ hwf (by
-    intro _ _
+    intro _ _ _
     iapply wp_seqn
     simp only [seqCont]
     iapply fupd_intro
