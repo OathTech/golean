@@ -125,10 +125,15 @@ one cell), so most "wide" apply steps are 1–2 memory operations already.
 The deliberately-coarse residue, recorded per the F4 fault-model
 discipline:
 
-- `appendSlice` (spill path), `copySlice`: multi-cell read/write loops in
-  one apply step. Fine sequentially; they must be decomposed (or their
-  non-atomicity otherwise modeled) before any concurrency claim mentions
-  them (R4 gate item). Go itself gives these no atomicity.
+- `appendSlice` (BOTH paths — the in-place path is a store *loop* over
+  the shared backing cell, the spill path a fresh-backing build; the
+  in-place loop is the more concurrency-relevant of the two), `copySlice`:
+  multi-write loops in one apply step. Fine sequentially; they must be
+  decomposed (or their non-atomicity otherwise modeled) before any
+  concurrency claim mentions them (R4 gate item — which in any case
+  re-audits EVERY apply step, per below). Go itself gives these no
+  atomicity. (Precision fix from the 2026-07-23 mid-arc audit: the
+  earlier wording named only the spill path.)
 - `stmtOp`/`strictOp` apply steps that both read and write remain single
   steps only where Go's own memory model would make the region
   single-threaded-observable; the R4 review re-audits every apply step
@@ -254,6 +259,22 @@ ask. R1+R2 alone never reach `main` with the proof layer pruned.
   rule/arm one-to-one correspondence (decidable-eq init scope check;
   target pre-check only when operands remain), re-validated by eval tests
   + a full differential run.
+- **MID-ARC ADVERSARIAL AUDIT (2026-07-23, user-approved):** 3
+  decorrelated Opus reviewers (transcription fidelity vs the deleted
+  big-step originals at rev `5a9eab2`; relation design; proof+gate
+  integrity) + 2 refute-by-default Opus verifiers per finding, 13 agents.
+  **5 findings, 0 sustained** — no semantic defect, no transcription
+  error, no gate weakening; refutations spot-checked. Three elective
+  precision fixes folded in: the granularity ledger now names BOTH
+  `appendSlice` paths (the in-place store loop is the concurrency-relevant
+  one); the recorded-divergences list gains the bare-`.initialization`
+  fail-closed case; and the **driver-level panic corollary is explicitly
+  QUEUED, not claimed** — `runConfig_sound` covers the normal terminal
+  only; a `runConfig` panic error arises either from a reached
+  `.panicked` configuration (relation-covered) or from a helper-
+  propagated panic at a relation-silent site (e.g. frame-exit stores),
+  so the panic-side driver theorem needs a reachability argument, not a
+  one-line corollary — build it when an R3 witness needs it.
 - **S6/R3 IN PROGRESS:** infrastructure stratum restored (Lang /
   HeapBridge / Ghost — namespace-only ports; `val_stuck` proof unchanged).
   NEXT: Inversions (determinism now largely generic — rules are disjoint

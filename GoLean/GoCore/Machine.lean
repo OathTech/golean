@@ -34,13 +34,19 @@ Design highlights (full rationale in the design note):
   address value; the consuming frame turns nil into Go's nil-dereference
   panic via `valueAsLoc`, exactly where the interpreter does.
 
-Known (Go-unreachable) reorderings vs. the old interpreter, accepted and
-gated by the S3 zero-drift differential: operand *class* checks that the
-big-step interpreter performed between operand evaluations (e.g. `mapGet`
-checking the base is a map before evaluating the key; call arity checked
-before argument evaluation) here happen after all operands are evaluated.
-Observable only for ill-typed programs the frontend cannot emit; both
-sides fail closed.
+Known (Go-unreachable) divergences vs. the old interpreter, accepted and
+gated by the S3 zero-drift differential (list re-checked by the 2026-07-23
+mid-arc audit):
+- operand *class* checks that the big-step interpreter performed between
+  operand evaluations (e.g. `mapGet` checking the base is a map before
+  evaluating the key; call arity checked before argument evaluation) here
+  happen after all operands are evaluated — observable only for ill-typed
+  programs the frontend cannot emit; both sides fail closed;
+- a bare `.initialization` NOT directly under a statement sequence is
+  stuck here where the big-step interpreter ran it as a dead no-op — the
+  declaration's whole purpose is extending the enclosing sequence's
+  environment, so outside one it fails closed; the frontend only ever
+  emits initializations inside `.seqn`/`.block` statement lists.
 
 Statement-side coverage (S2): the full interpreter fragment. Wide
 statements (`assignMany`, `newValue`, make/assign/lookup for maps and
