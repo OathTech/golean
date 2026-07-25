@@ -487,3 +487,65 @@ Recover (deferred to slice 2) then needs only: `.panicked` becomes an
 unwinding `.panicking msg` configuration that meets the same frame nodes
 and runs the same chains. Nothing in slice 1 depends on panic-as-teleport,
 so §3.3's prohibition is honored and the extension is additive.
+
+## 10. W3 slice 2: recover — design, and why it is ALL-OR-NOTHING
+
+Not started (2026-07-25, stopped deliberately at a gated state). The
+design is settled; the work is a fresh session's.
+
+### Why no partial version
+
+`defer/recover-normal-return` needs only "recover() returns nil when not
+panicking", which is *exactly true* of today's machine — panics are
+terminal, so defers never run on the panic path and recover could only
+ever see nil. Shipping that alone would make
+`defer/defer-nil-function-recover-order` a **wrong answer** (we report a
+panic where Go returns 42) instead of the fail-closed frontend rejection
+it is now. Fail-closed-always forbids that, so `recover` lands whole.
+
+### The machine change
+
+1. **`Config.panicking (msg : String) (k : Cont)`** — panic becomes an
+   UNWINDING configuration. Every rule that currently produces
+   `.panicked msg` (the strict-apply panics, `assignTargetPanic`,
+   `assignStorePanic`, the call/value-call nil-callee panics, the
+   stmtOp panics, `deferCalleeNil`) instead produces `.panicking msg k`,
+   carrying the continuation it was holding.
+2. **Unwinding rules**, mirroring the `breaking`/`returning` families:
+   `.panicking msg (.seq _ _ k)` → `.panicking msg k`; likewise for
+   `.loop`, `.breakableK`, `.mapIterK`.
+3. **Defers run on the panic path** (this closes a RECORDED divergence —
+   today they are skipped, which is unobservable only because panic is
+   terminal):
+   `.panicking msg (.frame t r ((fid,vals) :: ds) k)` → enter the call
+   with continuation `.frame [] [] [] (.panicResumeK msg (.frame t r ds k))`,
+   and `Step (.next (.panicResumeK msg k))` → `.panicking msg k`.
+   With an empty chain: `.panicking msg (.frame _ _ [] k)` →
+   `.panicking msg k` (results are NOT stored — the call did not return).
+4. **`.panicking msg .stop` → `.panicked msg`**, which keeps NO outgoing
+   rule. This is the load-bearing detail for the proof layer (below).
+5. **`recover()`** is an expression whose step inspects the continuation:
+   walk outward; if a `.frame` is crossed and the very next node is a
+   `.panicResumeK msg k'`, the call is directly inside a deferred function
+   of the panicking frame — return `msg` and REBUILD the continuation with
+   that marker removed (cancelling the unwind). Anything else returns nil,
+   which is exactly Go's rule that recover only works when called directly
+   by a deferred function.
+
+### Effect on the proof layer (checked, not assumed)
+
+`Progress` says every reachable configuration is terminal or can step, and
+`.panicked` has no rule, so today it implies *no reachable panics*. After
+this change intermediate `panicking` configurations DO step, but the
+terminal `.panicked` at `.stop` still does not — so the statement is
+unchanged and its meaning SHARPENS to *no unrecovered panics*, which is
+the guarantee one actually wants. `goldenSpec` is unaffected (its program
+cannot panic). **#24's docstring must be updated in the same commit** —
+stale claim-text is this project's recurring audit finding.
+
+### Expected cost
+
+Eight panic rules rewritten, ~8 new rules, `MachineSound`'s positional
+`fun_cases` tags remapped again (the recurring tax — see §W2 note), one
+frontend builtin, and a proof-layer docstring pass. The `defer` chain is
+already frame-carried precisely so this is additive, per §9.
