@@ -1,14 +1,14 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-07-25  commit: 7ce738b  frontend: native  oracle: go run
-# manifest_cases: 755  pass: 269  fail: 486
-# Re-pin reason: deliberate coverage ADDITION — W5 edge enumeration (scoping
-# note section 6): 11 NEW closure cases aimed at capture semantics, all PASS.
-# Covers per-iteration loop-variable capture (Go 1.22), per-invocation state
-# from one factory, nested re-capture, simultaneous assign through captures,
-# args mixed with captures, func-variable reassignment, a parameter SHADOWING
-# a captured name, capturing a NAMED RESULT (the W3 precursor), and a closure
-# escaping the block that declared its capture. Corpus 744 -> 755, 258 -> 269
-# passing; no pre-existing case moved.
+# recorded: 2026-07-25  commit: 787eefa  frontend: native  oracle: go run
+# manifest_cases: 755  pass: 279  fail: 476
+# Re-pin reason: deliberate coverage ADDITION — W3 slice 1, defer (scoping
+# note section 9): the defer chain is carried by Cont.frame and drains one
+# call per step BEFORE the pinned-location result read, so a deferred call
+# mutating a named result is observable (defer/defer-named-return,
+# defer-named-result-lifo) — the behavior Perennial's wrap_defer cannot
+# express because it snapshots the return value first. Ten cases flip;
+# 269 -> 279 passing. The six remaining defer cases fail closed on the two
+# sets slice 1 excludes by design: method values, and recover (slice 2).
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
 FAIL	arrays/array-copy	lean-observation
@@ -236,21 +236,21 @@ PASS	control-flow/switch-tag-once	-
 PASS	control-flow/switch-uncomparable-tag-default	-
 PASS	control-flow/switch-untyped-case-conversion	-
 PASS	control-flow/while-eq-single-iteration	-
-FAIL	defer/defer-arg-eval	frontend-export
+PASS	defer/defer-arg-eval	-
 FAIL	defer/defer-arg-panic-before-register	frontend-export
-FAIL	defer/defer-function-result-discard	frontend-export
-FAIL	defer/defer-function-value-eval	frontend-export
-FAIL	defer/defer-in-loop	frontend-export
+PASS	defer/defer-function-result-discard	-
+PASS	defer/defer-function-value-eval	-
+PASS	defer/defer-in-loop	-
 FAIL	defer/defer-interface-value-eval	frontend-export
 FAIL	defer/defer-method-receiver-eval	frontend-export
-FAIL	defer/defer-named-result-lifo	frontend-export
-FAIL	defer/defer-named-return	frontend-export
-FAIL	defer/defer-nil-function-panic	frontend-export
+PASS	defer/defer-named-result-lifo	-
+PASS	defer/defer-named-return	-
+PASS	defer/defer-nil-function-panic	-
 FAIL	defer/defer-nil-function-recover-order	frontend-export
 FAIL	defer/defer-pointer-receiver-live	frontend-export
-FAIL	defer/multiple-lifo	frontend-export
+PASS	defer/multiple-lifo	-
 FAIL	defer/recover-normal-return	frontend-export
-FAIL	defer/unnamed-return	frontend-export
+PASS	defer/unnamed-return	-
 FAIL	embedding/deep-promoted-field	lean-observation
 FAIL	embedding/deep-promoted-method	lean-observation
 FAIL	embedding/embedded-field-shadow	lean-observation
@@ -644,7 +644,7 @@ PASS	returns/multi-result-method-forward	-
 PASS	returns/multi-result-three	-
 PASS	returns/multi-result-to-existing	-
 PASS	returns/naked-return	-
-FAIL	returns/named-multi-defer	frontend-export
+PASS	returns/named-multi-defer	-
 PASS	returns/named-result-defaults	-
 PASS	scoping/block-shadow	-
 PASS	scoping/closure-shadow-binding	-

@@ -59,14 +59,14 @@ with empty read/store legs — D2-proper: value-returning frame exits are
 state-reading and get their own law in `Laws/Call`). -/
 theorem wp_frame_fall {k} :
     (|={E}[E]▷=> £ 1 -∗ WP (Config.next k) @ s ; E {{ Φ }}) ⊢
-      WP (Config.next (.frame [] [] k)) @ s ; E {{ Φ }} := by
+      WP (Config.next (.frame [] [] [] k)) @ s ; E {{ Φ }} := by
   iintro H
   iapply (wp_lift_pure_det_step_no_fork (E₂ := E)
     (e₂ := Config.next k)
     (Hsafe := by
       intro σ
       cases s
-      · exact ⟨[], Config.next k, σ, [], GoPrimStep.step (Step.frameFall rfl rfl)⟩
+      · exact ⟨[], Config.next k, σ, [], GoPrimStep.step (Step.frameFall (targets := []) (results := []) rfl rfl)⟩
       · rfl)
     (Hpuredet := by
       intro σ obs e₂' σ₂ eₜ' h

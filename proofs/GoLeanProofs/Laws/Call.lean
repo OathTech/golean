@@ -88,7 +88,7 @@ theorem wp_call_enter_arg1 {fid : FuncId} {func : Func} {pid : String}
       dynamicDispatch? σ func #[v] = .ok none)
     (hnorm : ∀ σ : ExecState, normalizeValueForTy σ pty v = .ok v') :
     iprop(∀ pa : Addr, pa.id ↦ (⟨some pty, v'⟩ : HeapCell) -∗
-        WP (Config.exec func.body [[(pid, Loc.base pa)]] (.frame locs [] k))
+        WP (Config.exec func.body [[(pid, Loc.base pa)]] (.frame locs [] [] k))
           @ s ; E {{ Φ }})
       ⊢ WP (Config.retV v (.callArgsK fid locs [] [] env k)) @ s ; E {{ Φ }} := by
   have henter : ∀ σ₁ : ExecState, σ₁.functions = GoCoreGS.prog GF →
@@ -114,7 +114,7 @@ theorem wp_call_enter_arg1 {fid : FuncId} {func : Func} {pid : String}
   have hdet : ∀ c' s',
       Step (.retV v (.callArgsK fid locs [] [] env k)) σ₁ c' s' →
       c' = Config.exec func.body [[(pid, Loc.base ⟨σ₁.nextAddr⟩)]]
-             (.frame locs [] k)
+             (.frame locs [] [] k)
         ∧ s' = { σ₁ with heap := Heap.set σ₁.heap (.base ⟨σ₁.nextAddr⟩) ⟨some pty, v'⟩, nextAddr := σ₁.nextAddr + 1 } := by
     intro c' s' hst
     obtain ⟨h1, h2⟩ := step_det (by trivial) hstep hst
@@ -160,7 +160,7 @@ theorem wp_call_enter_ret1 {fid : FuncId} {func : Func} {rid : String}
     (hdef : ∀ σ : ExecState, defaultValue σ rty = .ok dv) :
     iprop(∀ ra : Addr, ra.id ↦ (⟨some rty, dv⟩ : HeapCell) -∗
         WP (Config.exec func.body [[(rid, Loc.base ra)]]
-              (.frame [tl] [Loc.base ra] k)) @ s ; E {{ Φ }})
+              (.frame [tl] [Loc.base ra] [] k)) @ s ; E {{ Φ }})
       ⊢ WP (Config.retV (.addr tl) (.callTargetsK fid [] [] [] env k))
           @ s ; E {{ Φ }} := by
   have henter : ∀ σ₁ : ExecState, σ₁.functions = GoCoreGS.prog GF →
@@ -186,7 +186,7 @@ theorem wp_call_enter_ret1 {fid : FuncId} {func : Func} {rid : String}
   have hdet : ∀ c' s',
       Step (.retV (.addr tl) (.callTargetsK fid [] [] [] env k)) σ₁ c' s' →
       c' = Config.exec func.body [[(rid, Loc.base ⟨σ₁.nextAddr⟩)]]
-             (.frame ([] ++ [tl]) [Loc.base ⟨σ₁.nextAddr⟩] k)
+             (.frame ([] ++ [tl]) [Loc.base ⟨σ₁.nextAddr⟩] [] k)
         ∧ s' = { σ₁ with heap := Heap.set σ₁.heap (.base ⟨σ₁.nextAddr⟩) ⟨some rty, dv⟩, nextAddr := σ₁.nextAddr + 1 } := by
     intro c' s' hst
     obtain ⟨h1, h2⟩ := step_det (by trivial) hstep hst
@@ -232,7 +232,7 @@ theorem wp_frame_return_int {ta ra : Addr} {kind tkind : IntKind}
       ∗ (ra.id ↦ (⟨some (.int kind), .int m kind⟩ : HeapCell)
           ∗ ta.id ↦ (⟨some (.int tkind), .int (tkind.normalize m) tkind⟩ : HeapCell)
           -∗ WP (Config.next k) @ s ; E {{ Φ }})
-      ⊢ WP (Config.returning (.frame [.base ta] [.base ra] k))
+      ⊢ WP (Config.returning (.frame [.base ta] [.base ra] [] k))
           @ s ; E {{ Φ }} := by
   iapply wp_store_step₂ (hnv := rfl)
   intro σ₁ hlookr hlookt
@@ -262,7 +262,7 @@ theorem wp_frame_return_int_inv {ta ra : Addr} {kind tkind : IntKind}
       ∗ ra.id ↦ (⟨some (.int kind), .int m kind⟩ : HeapCell)
       ∗ (ra.id ↦ (⟨some (.int kind), .int m kind⟩ : HeapCell)
           -∗ WP (Config.next k) @ s ; E {{ Φ }})
-      ⊢ WP (Config.returning (.frame [.base ta] [.base ra] k))
+      ⊢ WP (Config.returning (.frame [.base ta] [.base ra] [] k))
           @ s ; E {{ Φ }} := by
   iapply wp_store_step₂_inv (hN := hN) (hnv := rfl) (hopen := hopen)
     (hclose := hclose)
@@ -290,7 +290,7 @@ theorem wp_call_enter_inc {xa : Addr} {locs : List Loc} {env k}
     (hmeths : GoCoreGS.methods GF = #[]) :
     iprop(∀ pa : Addr,
         pa.id ↦ (⟨some (.pointer (.int .int)), .addr (.base xa)⟩ : HeapCell) -∗
-        WP (Config.exec GoldenSlice.incFunc.body [[("p", Loc.base pa)]] (.frame locs [] k))
+        WP (Config.exec GoldenSlice.incFunc.body [[("p", Loc.base pa)]] (.frame locs [] [] k))
           @ s ; E {{ Φ }})
       ⊢ WP (Config.retV (.addr (.base xa))
             (.callArgsK ⟨"inc"⟩ locs [] [] env k)) @ s ; E {{ Φ }} :=
@@ -311,7 +311,7 @@ theorem wp_call_enter_incViaCall {tl : Loc} {env k}
     iprop(∀ ra : Addr,
         ra.id ↦ (⟨some (.int .int), .int 0 .int⟩ : HeapCell) -∗
         WP (Config.exec GoldenSlice.incViaCallFunc.body [[("$res0", Loc.base ra)]]
-              (.frame [tl] [Loc.base ra] k)) @ s ; E {{ Φ }})
+              (.frame [tl] [Loc.base ra] [] k)) @ s ; E {{ Φ }})
       ⊢ WP (Config.retV (.addr tl)
             (.callTargetsK ⟨"incViaCall"⟩ [] [] [] env k)) @ s ; E {{ Φ }} :=
   wp_call_enter_ret1

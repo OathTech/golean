@@ -131,6 +131,10 @@ inductive Stmt where
   captured values are prepended to the arguments at frame entry — the
   lambda-lifting protocol of §8. Calling a `nil` func value panics. -/
   | callValue (targets : Array Assignee) (callee : Expr) (args : Array Expr)
+  /-- `defer f(args)`: evaluate the callee and arguments NOW, and prepend
+  the pending call to the innermost frame's defer chain, which runs at
+  frame exit before the results are read (W3 §9). -/
+  | deferCall (callee : Expr) (args : Array Expr)
   | ifThenElse (cond : Expr) (thenBranch elseBranch : Stmt)
   | while (cond : Expr) (body : Stmt)
   /-- Map iteration primitive (the one nondeterministic iteration form). The

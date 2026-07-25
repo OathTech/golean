@@ -69,6 +69,8 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
       | .continueStmt => return (.continuing k, s, choices)
       | .label _ => return (.next k, s, choices)
       | .breakable b => return (.exec b env (.breakableK k), s, choices)
+      | .deferCall callee args =>
+          return (.evalE callee env (.deferCalleeK args.toList env k), s, choices)
       | .callValue targets callee args =>
           match assigneesExprs targets.toList with
           | some (te :: rest) =>
@@ -86,7 +88,7 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
                   return (.evalE a env (.callArgsK fid [] [] rest env k), s, choices)
               | [] => do
                   let (func, frameEnv, resultLocs, s') ← enterFrame s fid []
-                  return (.exec func.body frameEnv (.frame [] resultLocs k), s', choices)
+                  return (.exec func.body frameEnv (.frame [] resultLocs [] k), s', choices)
           | none => throw (.unsupported "unsupported call target assignee")
       | .mapRange keyVar valVar mapExpr keyTy valTy body =>
           return (.evalE mapExpr env
@@ -193,7 +195,7 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
                   | [] => do
                       let (func, frameEnv, resultLocs, s') ← enterFrame s fid []
                       return (.exec func.body frameEnv
-                        (.frame (locs ++ [loc]) resultLocs k'), s', choices)
+                        (.frame (locs ++ [loc]) resultLocs [] k'), s', choices)
       | .callArgsK fid locs vals pending env k' =>
           match pending with
           | a :: rest =>
@@ -201,7 +203,7 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
                 (.callArgsK fid locs (vals ++ [v]) rest env k'), s, choices)
           | [] => do
               let (func, frameEnv, resultLocs, s') ← enterFrame s fid (vals ++ [v])
-              return (.exec func.body frameEnv (.frame locs resultLocs k'), s', choices)
+              return (.exec func.body frameEnv (.frame locs resultLocs [] k'), s', choices)
       | .stmtOpK op nt done pending env k' =>
           -- Target addresses are checked as they arrive ONLY when more
           -- operands follow (interpreter panic timing); at the apply
@@ -243,7 +245,7 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
                     (.callValArgsK fid captured locs [] rest env k'), s, choices)
               | [] => do
                   let (func, frameEnv, resultLocs, s') ← enterFrame s fid captured
-                  return (.exec func.body frameEnv (.frame locs resultLocs k'), s', choices)
+                  return (.exec func.body frameEnv (.frame locs resultLocs [] k'), s', choices)
           | .nil =>
               return (.panicked
                 "runtime error: invalid memory address or nil pointer dereference", s, choices)
@@ -256,7 +258,30 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
           | [] => do
               let (func, frameEnv, resultLocs, s') ←
                 enterFrame s fid (captured ++ vals ++ [v])
-              return (.exec func.body frameEnv (.frame locs resultLocs k'), s', choices)
+              return (.exec func.body frameEnv (.frame locs resultLocs [] k'), s', choices)
+      | .deferCalleeK args env k' =>
+          match v with
+          | .funcVal fid captured =>
+              match args with
+              | a :: rest =>
+                  return (.evalE a env (.deferArgsK fid captured [] rest env k'), s, choices)
+              | [] =>
+                  match pushDefer (fid, captured) k' with
+                  | some k'' => return (.next k'', s, choices)
+                  | none => throw (.stuck "defer outside a call frame")
+          | .nil =>
+              return (.panicked
+                "runtime error: invalid memory address or nil pointer dereference", s, choices)
+          | other => throw (.stuck s!"expected function value in defer, got {repr other}")
+      | .deferArgsK fid captured vals pending env k' =>
+          match pending with
+          | a :: rest =>
+              return (.evalE a env
+                (.deferArgsK fid captured (vals ++ [v]) rest env k'), s, choices)
+          | [] =>
+              match pushDefer (fid, captured ++ vals ++ [v]) k' with
+              | some k'' => return (.next k'', s, choices)
+              | none => throw (.stuck "defer outside a call frame")
       | .mapRangeK keyVar valVar keyTy valTy body env k' => do
           let entries ← mapRangeEntries s v
           return (.next (.mapIterK keyVar valVar keyTy valTy body entries env k'), s, choices)
@@ -268,10 +293,16 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
       | .seq (t :: rest) env k' => return (.exec t env (.seq rest env k'), s, choices)
       | .seq [] _ k' => return (.next k', s, choices)
       | .loop c b env k' => return (.exec (.while c b) env k', s, choices)
-      | .frame targets results k' => do
+      | .frame targets results [] k' => do
           let vs ← loadMany s results
           let s' ← storeMany s targets vs
           return (.next k', s', choices)
+      | .frame targets results ((fid, vals) :: ds) k' => do
+          -- A deferred call's results are DISCARDED (Go), so its frame reads
+          -- nothing and stores nowhere; only its effects matter.
+          let (func, frameEnv, _resultLocs, s') ← enterFrame s fid vals
+          return (.exec func.body frameEnv
+            (.frame [] [] [] (.frame targets results ds k')), s', choices)
       | .breakableK k' => return (.next k', s, choices)
       | .mapIterK keyVar valVar keyTy valTy body remaining env k' =>
           if remaining.isEmpty then
@@ -295,7 +326,7 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
       | .loop _ _ _ k' => return (.next k', s, choices)
       | .breakableK k' => return (.next k', s, choices)
       | .mapIterK _ _ _ _ _ _ _ k' => return (.next k', s, choices)
-      | .frame _ _ _ => throw (.stuck "function body escaped with break")
+      | .frame _ _ _ _ => throw (.stuck "function body escaped with break")
       | .stop => throw (.stuck "break outside loop")
       | _ => throw (.internal "break delivered to expression continuation")
   | .continuing k =>
@@ -305,7 +336,7 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
       | .loop c b env k' => return (.exec (.while c b) env k', s, choices)
       | .mapIterK keyVar valVar keyTy valTy body remaining env k' =>
           return (.next (.mapIterK keyVar valVar keyTy valTy body remaining env k'), s, choices)
-      | .frame _ _ _ => throw (.stuck "function body escaped with continue")
+      | .frame _ _ _ _ => throw (.stuck "function body escaped with continue")
       | .stop => throw (.stuck "continue outside loop")
       | _ => throw (.internal "continue delivered to expression continuation")
   | .returning k =>
@@ -314,10 +345,16 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
       | .breakableK k' => return (.returning k', s, choices)
       | .loop _ _ _ k' => return (.returning k', s, choices)
       | .mapIterK _ _ _ _ _ _ _ k' => return (.returning k', s, choices)
-      | .frame targets results k' => do
+      | .frame targets results [] k' => do
           let vs ← loadMany s results
           let s' ← storeMany s targets vs
           return (.next k', s', choices)
+      | .frame targets results ((fid, vals) :: ds) k' => do
+          -- A deferred call's results are DISCARDED (Go), so its frame reads
+          -- nothing and stores nowhere; only its effects matter.
+          let (func, frameEnv, _resultLocs, s') ← enterFrame s fid vals
+          return (.exec func.body frameEnv
+            (.frame [] [] [] (.frame targets results ds k')), s', choices)
       | .stop => throw (.internal "return unwound past the entry frame")
       | _ => throw (.internal "return delivered to expression continuation")
 
@@ -355,7 +392,7 @@ def runFunctionWithContextM (fuel : Nat) (types : TypeEnv) (functions : Array Fu
   -- The entry frame is a pure barrier (`[] []`): the big-step entry never
   -- stored results anywhere — the driver reads the pinned locations from
   -- the terminal state below.
-  let c₀ : Config := .exec func.body frameEnv (.frame [] [] .stop)
+  let c₀ : Config := .exec func.body frameEnv (.frame [] [] [] .stop)
   let (sF, _) ← runConfig fuel s₂ c₀ choices
   return { values := (← loadMany sF resultLocs).toArray }
 

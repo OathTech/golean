@@ -333,6 +333,24 @@ func (e *emitter) emitStmt(s ast.Stmt) (any, error) {
 		return map[string]any{"stmt": "expr", "expr": expr}, nil
 	case *ast.SwitchStmt:
 		return e.emitSwitch(st)
+	case *ast.DeferStmt:
+		// `defer f(args)`: the callee and arguments are evaluated NOW; the
+		// pending call is prepended to the frame's chain and runs at frame
+		// exit (W3 §9). A method value or closure callee is just an
+		// expression, so this reuses the func-value machinery.
+		callee, err := e.emitExpr(st.Call.Fun)
+		if err != nil {
+			return nil, err
+		}
+		var dsig *types.Signature
+		if tv, ok := e.info.Types[st.Call.Fun]; ok {
+			dsig, _ = tv.Type.Underlying().(*types.Signature)
+		}
+		args, err := e.emitCallArgs(dsig, st.Call)
+		if err != nil {
+			return nil, err
+		}
+		return map[string]any{"stmt": "defer", "callee": callee, "args": args}, nil
 	case *ast.BranchStmt:
 		switch st.Tok {
 		case token.BREAK:

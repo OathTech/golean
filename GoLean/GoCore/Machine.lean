@@ -667,9 +667,18 @@ inductive Cont where
   /-- Loop context: normal completion and `continue` retest the condition,
   `break` resumes after the loop, `return` keeps unwinding. -/
   | loop (cond : Expr) (body : Stmt) (env : LocalEnv) (k : Cont)
-  /-- Call frame: at frame exit, read `results` (call-time-pinned frame
-  cell locations) and store into `targets`. -/
-  | frame (targets : List Loc) (results : List Loc) (k : Cont)
+  /-- Call frame: at frame exit, run the `defers` chain (LIFO), THEN read
+  `results` (call-time-pinned frame cell locations) and store into
+  `targets`. Running defers before the read is what makes a deferred call's
+  mutation of a named result observable (W3 §9). -/
+  | frame (targets : List Loc) (results : List Loc)
+      (defers : List (FuncId × List GoValue)) (k : Cont)
+  /-- Awaiting a deferred call's callee value. -/
+  | deferCalleeK (args : List Expr) (env : LocalEnv) (k : Cont)
+  /-- Awaiting a deferred call's arguments; they are evaluated AT DEFER
+  TIME (Go), then the call is prepended to the innermost frame's chain. -/
+  | deferArgsK (fid : FuncId) (captured : List GoValue) (vals : List GoValue)
+      (pending : List Expr) (env : LocalEnv) (k : Cont)
   /-- Breakable scope (`Stmt.breakable`): catches `breaking`, passes
   `continuing`/`returning` through. -/
   | breakableK (k : Cont)
@@ -736,6 +745,19 @@ def seqCont (ss : List Stmt) (env : LocalEnv) : Cont → Cont
   | .seq rest env' k => if env' = env then .seq (ss ++ rest) env k
                         else .seq ss env (.seq rest env' k)
   | k => .seq ss env k
+
+/-- Prepend a pending call onto the innermost enclosing frame's defer chain
+(LIFO). Statement-shaped continuations are walked through; a `defer`
+outside any frame (or under an expression frame, which cannot contain a
+statement) has no rule — fail closed. -/
+def pushDefer (d : FuncId × List GoValue) : Cont → Option Cont
+  | .frame t r ds k => some (.frame t r (d :: ds) k)
+  | .seq rest env k => (pushDefer d k).map (Cont.seq rest env)
+  | .loop c b env k => (pushDefer d k).map (Cont.loop c b env)
+  | .breakableK k => (pushDefer d k).map Cont.breakableK
+  | .mapIterK kv vv kt vt b rem env k =>
+      (pushDefer d k).map (Cont.mapIterK kv vv kt vt b rem env)
+  | _ => none
 
 /-- Control configurations (the Iris `Expr` projection; the `ExecState` is
 the paired `Step` component, as before). New over the old relation:
@@ -919,7 +941,7 @@ inductive Step : Config → ExecState → Config → ExecState → Prop where
       args.toList = [] →
       enterFrame s fid [] = .ok (func, frameEnv, resultLocs, s') →
       Step (.exec (.call targets fid args) env k) s
-        (.exec func.body frameEnv (.frame [] resultLocs k)) s'
+        (.exec func.body frameEnv (.frame [] resultLocs [] k)) s'
   | callTargetLoc {v loc fid locs te rest args env k s} :
       valueAsLoc v = .ok loc →
       Step (.retV v (.callTargetsK fid locs (te :: rest) args env k)) s
@@ -932,7 +954,7 @@ inductive Step : Config → ExecState → Config → ExecState → Prop where
       valueAsLoc v = .ok loc →
       enterFrame s fid [] = .ok (func, frameEnv, resultLocs, s') →
       Step (.retV v (.callTargetsK fid locs [] [] env k)) s
-        (.exec func.body frameEnv (.frame (locs ++ [loc]) resultLocs k)) s'
+        (.exec func.body frameEnv (.frame (locs ++ [loc]) resultLocs [] k)) s'
   | callTargetPanic {v msg fid locs pending args env k s} :
       valueAsLoc v = .error (.panic msg) →
       Step (.retV v (.callTargetsK fid locs pending args env k)) s
@@ -943,7 +965,7 @@ inductive Step : Config → ExecState → Config → ExecState → Prop where
   | callArgsDoneEnter {v fid locs vals func frameEnv resultLocs env k s s'} :
       enterFrame s fid (vals ++ [v]) = .ok (func, frameEnv, resultLocs, s') →
       Step (.retV v (.callArgsK fid locs vals [] env k)) s
-        (.exec func.body frameEnv (.frame locs resultLocs k)) s'
+        (.exec func.body frameEnv (.frame locs resultLocs [] k)) s'
   -- Wide statements (S2): one generic operand-plan frame; targets are
   -- checked as their addresses arrive (interpreter order), and the final
   -- state update is one `applyStmtOp` step. The `ch`/`ch'` choice streams
@@ -1040,7 +1062,7 @@ inductive Step : Config → ExecState → Config → ExecState → Prop where
   | callValCalleeEnter {fid captured locs func frameEnv resultLocs env k s s'} :
       enterFrame s fid captured = .ok (func, frameEnv, resultLocs, s') →
       Step (.retV (.funcVal fid captured) (.callValCalleeK locs [] env k)) s
-        (.exec func.body frameEnv (.frame locs resultLocs k)) s'
+        (.exec func.body frameEnv (.frame locs resultLocs [] k)) s'
   /-- Calling a nil function value panics (Go). -/
   | callValCalleeNil {locs args env k s} :
       Step (.retV .nil (.callValCalleeK locs args env k)) s
@@ -1051,17 +1073,51 @@ inductive Step : Config → ExecState → Config → ExecState → Prop where
   | callValArgsEnter {v fid captured locs vals func frameEnv resultLocs env k s s'} :
       enterFrame s fid (captured ++ vals ++ [v]) = .ok (func, frameEnv, resultLocs, s') →
       Step (.retV v (.callValArgsK fid captured locs vals [] env k)) s
-        (.exec func.body frameEnv (.frame locs resultLocs k)) s'
+        (.exec func.body frameEnv (.frame locs resultLocs [] k)) s'
   -- Frame exit: explicit return and fall-through perform the same
   -- pinned-location result read and caller-target stores.
   | frameReturn {targets results k s vs s'} :
       loadMany s results = .ok vs →
       storeMany s targets vs = .ok s' →
-      Step (.returning (.frame targets results k)) s (.next k) s'
+      Step (.returning (.frame targets results [] k)) s (.next k) s'
   | frameFall {targets results k s vs s'} :
       loadMany s results = .ok vs →
       storeMany s targets vs = .ok s' →
-      Step (.next (.frame targets results k)) s (.next k) s'
+      Step (.next (.frame targets results [] k)) s (.next k) s'
+  -- Draining the defer chain: one deferred call per step, each in its own
+  -- frame whose continuation is this frame with the rest of the chain, so
+  -- both exit paths converge on the rules above once the chain is empty.
+  -- The inner frame has NO targets and NO results: a deferred call's
+  -- results are discarded in Go (`defer/defer-function-result-discard`).
+  | frameDeferFall {targets results fid vals ds k s func frameEnv resultLocs s'} :
+      enterFrame s fid vals = .ok (func, frameEnv, resultLocs, s') →
+      Step (.next (.frame targets results ((fid, vals) :: ds) k)) s
+        (.exec func.body frameEnv
+          (.frame [] [] [] (.frame targets results ds k))) s'
+  | frameDeferReturn {targets results fid vals ds k s func frameEnv resultLocs s'} :
+      enterFrame s fid vals = .ok (func, frameEnv, resultLocs, s') →
+      Step (.returning (.frame targets results ((fid, vals) :: ds) k)) s
+        (.exec func.body frameEnv
+          (.frame [] [] [] (.frame targets results ds k))) s'
+  -- Registering a deferred call: callee, then arguments, evaluated NOW.
+  | deferStmt {callee args env k s} :
+      Step (.exec (.deferCall callee args) env k) s
+        (.evalE callee env (.deferCalleeK args.toList env k)) s
+  | deferCalleeArg {fid captured a rest env k s} :
+      Step (.retV (.funcVal fid captured) (.deferCalleeK (a :: rest) env k)) s
+        (.evalE a env (.deferArgsK fid captured [] rest env k)) s
+  | deferCalleeNoArgs {fid captured env k k' s} :
+      pushDefer (fid, captured) k = some k' →
+      Step (.retV (.funcVal fid captured) (.deferCalleeK [] env k)) s (.next k') s
+  | deferCalleeNil {args env k s} :
+      Step (.retV .nil (.deferCalleeK args env k)) s
+        (.panicked "runtime error: invalid memory address or nil pointer dereference") s
+  | deferArgNext {v fid captured vals a rest env k s} :
+      Step (.retV v (.deferArgsK fid captured vals (a :: rest) env k)) s
+        (.evalE a env (.deferArgsK fid captured (vals ++ [v]) rest env k)) s
+  | deferArgsDone {v fid captured vals env k k' s} :
+      pushDefer (fid, captured ++ vals ++ [v]) k = some k' →
+      Step (.retV v (.deferArgsK fid captured vals [] env k)) s (.next k') s
 
 /-- Reflexive-transitive closure of `Step`. -/
 inductive Steps : Config → ExecState → Config → ExecState → Prop where

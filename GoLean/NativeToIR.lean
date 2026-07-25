@@ -354,6 +354,11 @@ partial def decodeStmt (results : Array Param) (path : String) (json : Json) : L
   | "block" =>
       let body ← StrictJson.array s!"{path}.body" (← StrictJson.field path obj "body")
       pure (.block #[] (← body.mapIdxM (fun i s => decodeStmt results s!"{path}.body[{i}]" s)))
+  | "defer" =>
+      let callee ← decodeExpr s!"{path}.callee" (← StrictJson.field path obj "callee")
+      let args ← StrictJson.array s!"{path}.args" (← StrictJson.field path obj "args")
+      pure (.deferCall callee
+        (← args.mapIdxM (fun i a => decodeExpr s!"{path}.args[{i}]" a)))
   | "breakable" =>
       pure (.breakable (← decodeStmt results s!"{path}.body"
         (← StrictJson.field path obj "body")))
