@@ -359,3 +359,72 @@ capturing the `Loc` is both natural and correct; capturing VALUES would be
 the foreclosure (it silently changes loop-variable and mutation semantics,
 and `defer func(){ result++ }()` — W3's whole point — depends on
 by-reference capture). Method values ride the same representation.
+
+## 8. W5 design: closures by lambda lifting (step 0)
+
+Prior art checked (`../deps/goose/goose.go:996 funcLit`): Goose translates
+a Go func literal to a **GooseLang lambda** — closures are free for them
+because the object language is a lambda calculus and their locals are
+heap-allocated, so lexical capture IS by-reference. GoCore is
+deliberately first-order with `FuncId` semantic identity, so we cannot
+copy that; the recorded route (§3.5) is **lambda lifting**, which
+preserves FuncId identity instead of introducing object-language
+binders.
+
+### The lowering
+
+A literal `func(p…) r… { body }` appearing in `F` is hoisted to a
+synthetic top-level function `F$litN` whose parameters are
+**`(captured… , p…)`**, each captured variable passed as a
+**pointer** (`*T`). Inside the lifted body, a reference to captured `x`
+becomes `*x$ptr`. At the creation site the value is
+
+```
+funcVal (FuncId "F$litN") [ &x, &y, … ]        -- the captured ADDRESSES
+```
+
+and calling a func value `f(a…)` enters `F$litN` with
+`captured ++ args`. Capture-by-reference (§7's foreclosure item) is then
+*explicit in the lowering* rather than implicit in a binder: two closures
+over the same `x` receive the same `Loc`, so `functions/closure-share`
+(two closures mutating one `x`) is the pin. Go 1.22 per-iteration loop
+variables need no special work — our range/for desugaring already
+allocates a fresh cell per iteration, so each closure captures a distinct
+`Loc` (`range/range-loop-var-capture` is the pin, expecting 10/20/30 and
+not 30/30/30).
+
+### Machine additions (kept minimal and additive)
+
+- `GoValue.funcVal (fid : FuncId) (captured : List GoValue)` — the value.
+  Zero value of a func type stays `.nil` (Go), so `defaultValue` is
+  unchanged in shape.
+- `Ty.funcType (params results : List Ty)` — enough to type a cell and
+  give it a zero value; no structural typing is needed since dispatch is
+  by `FuncId`.
+- `Stmt.callValue (targets) (callee : Expr) (args)` — call through a
+  value. The existing `enterFrame` is reused verbatim: evaluate callee to
+  a `funcVal`, evaluate args, then enter with `captured ++ args`. Calling
+  a `nil` func value panics (Go), which the existing fail-closed path
+  turns into a real panic step.
+
+### Scope of slice 1 and what fails closed
+
+Slice 1: literals with captures, bound to a local / called immediately /
+passed as an argument, plus calls through func-typed locals and
+parameters. Fails closed for now: **method values** (`x.M` as a value —
+same representation, needs receiver capture), func literals in struct
+fields, and recursive closures that capture themselves (`closure-recursion`
+needs the cell to exist before the value is built — a real ordering
+question, deferred with its case left red).
+
+### Foreclosure check before building
+
+- Capturing **values** instead of `Loc`s would be the foreclosure (breaks
+  sharing, loop-variable semantics, and `defer func(){ result++ }()`,
+  which W3 depends on). We capture `Loc`s. ✓
+- `funcVal` carrying `FuncId` + captured values is exactly the shape
+  **method values** and **W3's deferred calls** need — the defer chain
+  entry is a pending call, i.e. this same pair. Building defer on it later
+  is extension, not rework. ✓
+- Nothing here depends on panic-as-teleport, so §3.3's prohibition is
+  untouched. ✓
