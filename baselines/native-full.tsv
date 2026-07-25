@@ -1,14 +1,18 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-07-25  commit: 787eefa  frontend: native  oracle: go run
-# manifest_cases: 755  pass: 279  fail: 476
-# Re-pin reason: deliberate coverage ADDITION — W3 slice 1, defer (scoping
-# note section 9): the defer chain is carried by Cont.frame and drains one
-# call per step BEFORE the pinned-location result read, so a deferred call
-# mutating a named result is observable (defer/defer-named-return,
-# defer-named-result-lifo) — the behavior Perennial's wrap_defer cannot
-# express because it snapshots the return value first. Ten cases flip;
-# 269 -> 279 passing. The six remaining defer cases fail closed on the two
-# sets slice 1 excludes by design: method values, and recover (slice 2).
+# recorded: 2026-07-25  commit: bc296be  frontend: native  oracle: go run
+# manifest_cases: 757  pass: 283  fail: 474
+# Re-pin reason: deliberate coverage ADDITION — W3 method values. A method
+# value x.M is funcVal(FuncId T.M, [receiver]) since methods already lower
+# to functions taking the receiver first; value receivers copy at
+# method-value time, pointer receivers capture the address. TWO NEW
+# guardrails (methods/method-value-read, pointer-method-value-read) exist
+# because every pre-existing method-value case also writes a struct field
+# (W4/BUG-001), which would have left the feature implemented but
+# UNVALIDATED. They immediately caught a real bug: an already-pointer base
+# with a pointer receiver was getting its address taken, building a double
+# pointer — a latent flaw in the pre-existing method-CALL path too. Fixing
+# it also repaired methods/nil-receiver, which had been failing.
+# Corpus 755 -> 757, 279 -> 283 passing.
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
 FAIL	arrays/array-copy	lean-observation
@@ -242,12 +246,12 @@ PASS	defer/defer-function-result-discard	-
 PASS	defer/defer-function-value-eval	-
 PASS	defer/defer-in-loop	-
 FAIL	defer/defer-interface-value-eval	frontend-export
-FAIL	defer/defer-method-receiver-eval	frontend-export
+FAIL	defer/defer-method-receiver-eval	lean-observation
 PASS	defer/defer-named-result-lifo	-
 PASS	defer/defer-named-return	-
 PASS	defer/defer-nil-function-panic	-
 FAIL	defer/defer-nil-function-recover-order	frontend-export
-FAIL	defer/defer-pointer-receiver-live	frontend-export
+FAIL	defer/defer-pointer-receiver-live	lean-observation
 PASS	defer/multiple-lifo	-
 FAIL	defer/recover-normal-return	frontend-export
 PASS	defer/unnamed-return	-
@@ -302,7 +306,7 @@ FAIL	functions/function-interface-compare-panic	lean-observation
 PASS	functions/function-nil-compare	-
 PASS	functions/function-reassign	-
 PASS	functions/higher-order-arg	-
-FAIL	functions/method-value-callback	frontend-export
+FAIL	functions/method-value-callback	lean-observation
 PASS	functions/nil-function-call-panic	-
 PASS	functions/recursion	-
 PASS	functions/return-function	-
@@ -500,15 +504,17 @@ PASS	methods/defined-map-receiver	-
 FAIL	methods/embedded-interface-satisfaction	frontend-export
 FAIL	methods/interface-dispatch	frontend-export
 FAIL	methods/method-expression	frontend-export
-FAIL	methods/method-value-copy	frontend-export
+FAIL	methods/method-value-copy	lean-observation
+PASS	methods/method-value-read	-
 PASS	methods/multi-return-method	-
-FAIL	methods/nil-pointer-method-value	frontend-export
-FAIL	methods/nil-receiver	lean-observation
+PASS	methods/nil-pointer-method-value	-
+PASS	methods/nil-receiver	-
 FAIL	methods/nil-receiver-interface-dispatch	frontend-export
 FAIL	methods/pointer-auto-address	lean-observation
 FAIL	methods/pointer-method-expression	frontend-export
-FAIL	methods/pointer-method-value	frontend-export
-FAIL	methods/pointer-method-value-live	frontend-export
+FAIL	methods/pointer-method-value	lean-observation
+FAIL	methods/pointer-method-value-live	lean-observation
+PASS	methods/pointer-method-value-read	-
 FAIL	methods/pointer-receiver-array-element	lean-observation
 FAIL	methods/pointer-receiver-method-set	frontend-export
 FAIL	methods/pointer-receiver-slice-element	lean-observation
@@ -740,7 +746,7 @@ FAIL	structs/selector-addressability-edge/pointer-result-assign	lean-observation
 PASS	structs/selector-addressability-edge/read-call-result	-
 FAIL	structs/selector-addressability-edge/read-conversion-result	lean-observation
 FAIL	structs/selector-eval-once	lean-observation
-FAIL	structs/swap	frontend-export
+FAIL	structs/swap	lean-observation
 PASS	structs/tag-basic	-
 PASS	structs/tag-comparable	-
 FAIL	structs/tag-defined-conversion	lean-observation
@@ -763,4 +769,4 @@ FAIL	variadic/variadic-generic	frontend-export
 FAIL	variadic/variadic-interface-dispatch	frontend-export
 FAIL	variadic/variadic-method	lean-observation
 FAIL	variadic/variadic-method-expression	frontend-export
-FAIL	variadic/variadic-method-value-copy	frontend-export
+FAIL	variadic/variadic-method-value-copy	lean-observation

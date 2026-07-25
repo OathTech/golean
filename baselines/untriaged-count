@@ -1,21 +1,24 @@
 # Ceiling for unexplained baseline fidelity failures (scripts/check-bugs.sh
 # check 4). The count may only go DOWN; raising it requires justification in
 # the same commit. Recorded 2026-07-20: 77 lean-observation + 8 differential.
-# Raised 85 -> 86 on 2026-07-24 (W2 slice 1): switch-interface-case-panic
-# ADVANCED from frontend-export into lean-observation.
-# Raised 86 -> 91 on 2026-07-25 (W5 slice 1b, lambda lifting): FIVE cases
-# advanced the same way — the frontend now exports them and the residue is a
-# machine-side fail-closed gap, so the failure moved piles rather than
-# anything getting worse. All five inspected before raising:
-#   arrays/index-eval-order, maps/compound-assign-eval-once,
-#   maps/tuple-map-expr-targets, structs/selector-eval-once
-#     -> the non-addressable-base gap (taking an address into an array/map/
-#        struct VALUE). One class, W4/BUG-001 territory.
-#   functions/function-interface-compare-panic
-#     -> interface equality on a func value: Go PANICS, we report unsupported,
-#        so this is a fault-IDENTITY gap (docs/2026-07-22_fault-model.md), not
-#        just missing coverage. Worth its own fix when interfaces land.
-# A sixth advanced case was FIXED rather than absorbed
-# (variadic/variadic-function-value: named functions as values now lower to
-# captureless func values), which is why this is +5 and not +6.
-91
+#
+# 2026-07-24 (W2 slice 1)  85 -> 86: switch-interface-case-panic advanced from
+#   frontend-export into lean-observation.
+# 2026-07-25 (W5 lambda lifting)  86 -> 91: five cases advanced the same way —
+#   four are the non-addressable-base gap, one is a fault-IDENTITY gap
+#   (interface equality on a func value panics in Go, we report unsupported).
+# 2026-07-25 (W3 method values)  91 -> 98: SEVEN more advanced, and this time
+#   they are ONE class — struct FIELD WRITES on a local (`c.n = 99`), i.e.
+#   BUG-001/W4. Every pre-existing method-value case mutates a field, which is
+#   why two new read-only guardrails were added to validate method values at
+#   all. Cases: defer/defer-method-receiver-eval, defer/defer-pointer-receiver-
+#   live, functions/method-value-callback, methods/method-value-copy,
+#   methods/pointer-method-value, methods/pointer-method-value-live,
+#   structs/swap, variadic/variadic-method-value-copy (net +7 because
+#   methods/nil-receiver was FIXED by the receiver-rule correction).
+#
+# PATTERN WORTH ACTING ON: this ceiling has gone 85 -> 98 in one session, and
+# nearly every raise is coverage outrunning the machine's struct/array
+# support. W4 (BUG-001, struct/array writes) is now the highest-value rung —
+# it converts a large block of these into passes rather than adding more.
+98

@@ -1057,6 +1057,22 @@ func namedTypeName(t types.Type) (string, bool) {
 
 // fieldBase emits the struct value a field selector reads from, auto-dereferencing
 // a pointer receiver (Go's x.f where x is *T), and returns the struct's TypeId.
+// methodReceiverArg emits the receiver operand for a method call or method
+// value. Go's rule: with a POINTER receiver, an already-pointer base is used
+// AS IS and an addressable value base has its address taken; with a VALUE
+// receiver the base is copied. Taking the address of an already-pointer base
+// would build a double pointer, which shows up as a field access on an addr
+// (`methods/pointer-method-value-read`).
+func (e *emitter) methodReceiverArg(sel *ast.SelectorExpr, pointerRecv bool) (any, error) {
+	if !pointerRecv {
+		return e.emitExpr(sel.X)
+	}
+	if _, alreadyPtr := e.info.TypeOf(sel.X).Underlying().(*types.Pointer); alreadyPtr {
+		return e.emitExpr(sel.X)
+	}
+	return e.emitAddressOf(sel.X)
+}
+
 func (e *emitter) fieldBase(sel *ast.SelectorExpr) (any, string, error) {
 	recvType := e.info.TypeOf(sel.X)
 	base, err := e.emitExpr(sel.X)
@@ -1082,9 +1098,40 @@ func (e *emitter) fieldBase(sel *ast.SelectorExpr) (any, string, error) {
 }
 
 func (e *emitter) emitSelector(sel *ast.SelectorExpr) (any, error) {
-	// A method value / package selector is not a field read; only field
-	// selections are handled here (method calls come with the call increment).
 	if seln, ok := e.info.Selections[sel]; ok && seln.Kind() != types.FieldVal {
+		// A METHOD VALUE `x.M`: the same representation as a lifted closure
+		// (§8) — the receiver is simply the first captured value, because
+		// methods already lower to functions taking the receiver first. Go
+		// evaluates the receiver AT METHOD-VALUE TIME: a value receiver is
+		// copied then (pinned by defer/defer-method-receiver-eval), a pointer
+		// receiver captures the address so later mutation is visible
+		// (defer/defer-pointer-receiver-live).
+		if seln.Kind() == types.MethodVal {
+			fn, ok := seln.Obj().(*types.Func)
+			if !ok {
+				return nil, unsup("method %s is not a func", sel.Sel.Name)
+			}
+			recvType := fn.Type().(*types.Signature).Recv().Type()
+			if _, isIface := recvType.Underlying().(*types.Interface); isIface {
+				return nil, unsup("interface method value %s", sel.Sel.Name)
+			}
+			defType := recvType
+			pointerRecv := false
+			if ptr, ok := recvType.(*types.Pointer); ok {
+				defType = ptr.Elem()
+				pointerRecv = true
+			}
+			name, ok := namedTypeName(defType)
+			if !ok {
+				return nil, unsup("method on anonymous type %s", defType)
+			}
+			recvArg, err := e.methodReceiverArg(sel, pointerRecv)
+			if err != nil {
+				return nil, err
+			}
+			return map[string]any{"expr": "func-value",
+				"func": name + "." + fn.Name(), "captured": []any{recvArg}}, nil
+		}
 		return nil, unsup("non-field selector %s (method/expr)", sel.Sel.Name)
 	}
 	base, structName, err := e.fieldBase(sel)
@@ -1878,14 +1925,8 @@ func (e *emitter) emitMethodCall(c *ast.CallExpr, sel *ast.SelectorExpr) (any, b
 	if !ok {
 		return nil, false, unsup("method on anonymous type %s", defType)
 	}
-	// Receiver argument: pass the address for a pointer receiver, else the value.
-	var recvArg any
-	var err error
-	if pointerRecv {
-		recvArg, err = e.emitAddressOf(sel.X)
-	} else {
-		recvArg, err = e.emitExpr(sel.X)
-	}
+	// Receiver argument (see methodReceiverArg for Go's rule).
+	recvArg, err := e.methodReceiverArg(sel, pointerRecv)
 	if err != nil {
 		return nil, false, err
 	}
