@@ -666,6 +666,9 @@ inductive Cont where
   /-- Call frame: at frame exit, read `results` (call-time-pinned frame
   cell locations) and store into `targets`. -/
   | frame (targets : List Loc) (results : List Loc) (k : Cont)
+  /-- Breakable scope (`Stmt.breakable`): catches `breaking`, passes
+  `continuing`/`returning` through. -/
+  | breakableK (k : Cont)
   /-- Strict-operator evaluation: `done` holds evaluated operands (most
   recent first), `pending` the rest, in evaluation order. -/
   | strictK (op : StrictOp) (done : List GoValue) (pending : List Expr)
@@ -863,6 +866,18 @@ inductive Step : Config → ExecState → Config → ExecState → Prop where
       Step (.breaking (.loop c b env k)) s (.next k) s
   | loopReturn {c b env k s} :
       Step (.returning (.loop c b env k)) s (.returning k) s
+  -- Breakable scopes (switch/select bodies): `break` exits the scope,
+  -- everything else unwinds past it unchanged.
+  | breakableEnter {b env k s} :
+      Step (.exec (.breakable b) env k) s (.exec b env (.breakableK k)) s
+  | breakableDone {k s} :
+      Step (.next (.breakableK k)) s (.next k) s
+  | breakableBreak {k s} :
+      Step (.breaking (.breakableK k)) s (.next k) s
+  | breakableContinue {k s} :
+      Step (.continuing (.breakableK k)) s (.continuing k) s
+  | breakableReturn {k s} :
+      Step (.returning (.breakableK k)) s (.returning k) s
   -- Control transfer
   | returnStmt {env k s} :
       Step (.exec .returnStmt env k) s (.returning k) s

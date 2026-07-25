@@ -68,6 +68,7 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
       | .breakStmt => return (.breaking k, s, choices)
       | .continueStmt => return (.continuing k, s, choices)
       | .label _ => return (.next k, s, choices)
+      | .breakable b => return (.exec b env (.breakableK k), s, choices)
       | .call targets fid args =>
           match assigneesExprs targets.toList with
           | some (te :: rest) =>
@@ -229,6 +230,7 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
           let vs ← loadMany s results
           let s' ← storeMany s targets vs
           return (.next k', s', choices)
+      | .breakableK k' => return (.next k', s, choices)
       | .mapIterK keyVar valVar keyTy valTy body remaining env k' =>
           if remaining.isEmpty then
             return (.next k', s, choices)
@@ -249,6 +251,7 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
       match k with
       | .seq _ _ k' => return (.breaking k', s, choices)
       | .loop _ _ _ k' => return (.next k', s, choices)
+      | .breakableK k' => return (.next k', s, choices)
       | .mapIterK _ _ _ _ _ _ _ k' => return (.next k', s, choices)
       | .frame _ _ _ => throw (.stuck "function body escaped with break")
       | .stop => throw (.stuck "break outside loop")
@@ -256,6 +259,7 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
   | .continuing k =>
       match k with
       | .seq _ _ k' => return (.continuing k', s, choices)
+      | .breakableK k' => return (.continuing k', s, choices)
       | .loop c b env k' => return (.exec (.while c b) env k', s, choices)
       | .mapIterK keyVar valVar keyTy valTy body remaining env k' =>
           return (.next (.mapIterK keyVar valVar keyTy valTy body remaining env k'), s, choices)
@@ -265,6 +269,7 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
   | .returning k =>
       match k with
       | .seq _ _ k' => return (.returning k', s, choices)
+      | .breakableK k' => return (.returning k', s, choices)
       | .loop _ _ _ k' => return (.returning k', s, choices)
       | .mapIterK _ _ _ _ _ _ _ k' => return (.returning k', s, choices)
       | .frame targets results k' => do

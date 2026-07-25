@@ -64,11 +64,27 @@ representation at all**.
   multi-target call lowering) plus runner result plumbing. No machine
   foreclosure found.
 - **W2 — switch / type-switch / fallthrough.** Frontend desugaring to
-  if-chains (Go spec semantics: evaluate tag once, first match). Machine
-  needs nothing new; type-switch reuses `typeAssert` machinery. Recorded
+  if-chains (Go spec semantics: evaluate tag once, first match).
+  Type-switch reuses `typeAssert` machinery (interfaces lane). Recorded
   cost, not a foreclosure: specs about a switch will read as its
   desugaring (acceptable at this tier; revisit only if spec-readability
   demands a native form).
+  **AMENDMENT (slice 2, 2026-07-24) — one machine addition was the
+  non-foreclosing choice.** Bare `break` inside a switch has no target in
+  an if-chain. The cheap route (a frontend flag desugar, or wrapping the
+  chain in a once-running loop) is exactly a §0 foreclosure: `select`
+  needs real breakable scopes, labeled break would extend them, and the
+  once-loop variant silently breaks `continue` (which must target the
+  enclosing LOOP — pinned by `control-flow/continue-in-switch`). So
+  GoCore gained `Stmt.breakable` + `Cont.breakableK` + five rules: honest
+  Go semantics (switch and select bodies ARE breakable scopes), additive,
+  and the extension point labels/select will grow from. Cost measured:
+  the proof layer needed ZERO changes — `step_det`'s generic determinism
+  proof, the correspondence theorems, and all 21 Audit gates absorbed the
+  new rules untouched (sweep 4208 → 4256 decls). `fallthrough` stays
+  frontend-side (body-suffix chaining), failing closed when the
+  falling-through clause declares names — inlining the next clause's body
+  would nest sibling scopes.
 - **W3 — defer / recover.** NOT mere coverage — machine design, and this
   ladder's one mandatory early item (§3.3): the current `panicked`
   configuration discards the continuation (panic-as-teleport), and

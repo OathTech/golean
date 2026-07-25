@@ -335,9 +335,6 @@ func (e *emitter) emitStmt(s ast.Stmt) (any, error) {
 			if st.Label != nil {
 				return nil, unsup("labeled break")
 			}
-			if n := len(e.breakStack); n > 0 && e.breakStack[n-1] == "switch" {
-				return nil, unsup("break inside switch (W2 slice 2)")
-			}
 			return map[string]any{"stmt": "break"}, nil
 		case token.CONTINUE:
 			if st.Label != nil {
@@ -610,8 +607,6 @@ func (e *emitter) emitIf(st *ast.IfStmt) (any, error) {
 }
 
 func (e *emitter) emitFor(st *ast.ForStmt) (any, error) {
-	e.breakStack = append(e.breakStack, "loop")
-	defer func() { e.breakStack = e.breakStack[:len(e.breakStack)-1] }()
 	node := map[string]any{"stmt": "for"}
 	if st.Init != nil {
 		init, err := e.emitStmt(st.Init)
@@ -664,8 +659,6 @@ func nameOrNull(s string) any {
 // primitive; index-able ranges (slice/array/int) carry a "kind" that NativeToIR
 // desugars to an index for-loop. Only `:=` range vars are modeled for now.
 func (e *emitter) emitRange(rs *ast.RangeStmt) (any, error) {
-	e.breakStack = append(e.breakStack, "loop")
-	defer func() { e.breakStack = e.breakStack[:len(e.breakStack)-1] }()
 	if rs.Key != nil && rs.Tok == token.ASSIGN {
 		return nil, unsup("range with assigned (non-:=) variables")
 	}
@@ -795,47 +788,95 @@ func (e *emitter) emitSwitch(st *ast.SwitchStmt) (any, error) {
 		tagRef = map[string]any{"expr": "ident", "name": name, "type": ty}
 	}
 	type swClause struct {
-		conds []any
-		body  any
+		conds       []any // nil for default
+		stmts       []any
+		fallsThru   bool
+		declares    bool
+		effective   any // filled in reverse, chaining fallthrough targets
 	}
 	clauses := []swClause{}
-	var defaultBody any
-	e.breakStack = append(e.breakStack, "switch")
-	defer func() { e.breakStack = e.breakStack[:len(e.breakStack)-1] }()
 	for _, raw := range st.Body.List {
 		cc, ok := raw.(*ast.CaseClause)
 		if !ok {
 			return nil, unsup("switch body statement %T", raw)
 		}
-		cbody, err := e.emitStmtList(cc.Body)
+		list := cc.Body
+		fallsThru := false
+		if n := len(list); n > 0 {
+			if br, ok := list[n-1].(*ast.BranchStmt); ok && br.Tok == token.FALLTHROUGH {
+				fallsThru = true
+				list = list[:n-1]
+			}
+		}
+		declares := false
+		for _, s := range list {
+			switch d := s.(type) {
+			case *ast.DeclStmt:
+				declares = true
+			case *ast.AssignStmt:
+				if d.Tok == token.DEFINE {
+					declares = true
+				}
+			}
+		}
+		cbody, err := e.emitStmtList(list)
 		if err != nil {
 			return nil, err
 		}
-		blk := map[string]any{"stmt": "block", "body": cbody}
-		if cc.List == nil {
-			defaultBody = blk
+		cl := swClause{stmts: cbody, fallsThru: fallsThru, declares: declares}
+		if cc.List != nil {
+			conds := []any{}
+			for _, ce := range cc.List {
+				cw, err := e.emitGuarded(true, "switch case expression", ce)
+				if err != nil {
+					return nil, err
+				}
+				var cond any
+				if st.Tag == nil {
+					cond = cw
+				} else {
+					cond = map[string]any{"expr": "binary", "op": "==", "x": tagRef, "y": cw, "operandType": tagTy}
+				}
+				conds = append(conds, cond)
+			}
+			cl.conds = conds
+		}
+		clauses = append(clauses, cl)
+	}
+	// Effective bodies, built in reverse: `fallthrough` runs the NEXT
+	// clause's body without testing its case expression, so the effective
+	// body of a falling-through clause is its own statements followed by
+	// the next clause's effective body. Fail closed when the
+	// falling-through clause declares names: inlining the next clause's
+	// body inside this clause's scope would let those declarations shadow
+	// what Go resolves in the outer scope (Go's clause scopes are
+	// siblings, not nested).
+	for i := len(clauses) - 1; i >= 0; i-- {
+		stmts := clauses[i].stmts
+		if clauses[i].fallsThru {
+			if i+1 >= len(clauses) {
+				return nil, unsup("fallthrough in final switch clause")
+			}
+			if clauses[i].declares {
+				return nil, unsup("fallthrough out of a clause that declares names")
+			}
+			stmts = append(append([]any{}, stmts...), clauses[i+1].effective)
+		}
+		clauses[i].effective = map[string]any{"stmt": "block", "body": stmts}
+	}
+	var defaultBody any
+	chainClauses := []swClause{}
+	for _, cl := range clauses {
+		if cl.conds == nil {
+			defaultBody = cl.effective
 			continue
 		}
-		conds := []any{}
-		for _, ce := range cc.List {
-			cw, err := e.emitGuarded(true, "switch case expression", ce)
-			if err != nil {
-				return nil, err
-			}
-			var cond any
-			if st.Tag == nil {
-				cond = cw
-			} else {
-				cond = map[string]any{"expr": "binary", "op": "==", "x": tagRef, "y": cw, "operandType": tagTy}
-			}
-			conds = append(conds, cond)
-		}
-		clauses = append(clauses, swClause{conds: conds, body: blk})
+		chainClauses = append(chainClauses, cl)
 	}
 	chain := defaultBody
-	for i := len(clauses) - 1; i >= 0; i-- {
-		for j := len(clauses[i].conds) - 1; j >= 0; j-- {
-			node := map[string]any{"stmt": "if", "cond": clauses[i].conds[j], "then": clauses[i].body}
+	for i := len(chainClauses) - 1; i >= 0; i-- {
+		for j := len(chainClauses[i].conds) - 1; j >= 0; j-- {
+			node := map[string]any{"stmt": "if", "cond": chainClauses[i].conds[j], "then": chainClauses[i].effective}
 			if chain != nil {
 				node["else"] = chain
 			}
@@ -845,7 +886,12 @@ func (e *emitter) emitSwitch(st *ast.SwitchStmt) (any, error) {
 	if chain != nil {
 		body = append(body, chain)
 	}
-	return map[string]any{"stmt": "block", "body": body}, nil
+	// The switch is a BREAKABLE SCOPE (Go): a bare `break` in any clause
+	// exits it, while `continue`/`return` unwind past to the enclosing
+	// loop/frame. GoCore models this directly (Stmt.breakable) rather than
+	// by a flag desugaring — see the constructor's docstring.
+	return map[string]any{"stmt": "breakable",
+		"body": map[string]any{"stmt": "block", "body": body}}, nil
 }
 
 func (e *emitter) emitExpr(x ast.Expr) (any, error) {

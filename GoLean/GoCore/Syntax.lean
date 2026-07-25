@@ -106,6 +106,14 @@ inductive Assignee where
 inductive Stmt where
   | seqn (stmts : Array Stmt)
   | block (decls : Array Param) (stmts : Array Stmt)
+  /-- A **breakable scope**: `break` inside `body` exits this statement;
+  `continue`/`return` pass through to the enclosing loop/frame. Go's
+  `switch` and `select` bodies are breakable scopes, so this is Go runtime
+  semantics, not a frontend quirk (W2 slice 2,
+  `docs/2026-07-24_sequential-coverage-scoping.md`): a frontend flag
+  desugaring would be a shortcut that labeled break and `select` later
+  have to undo, which the arc's defer-never-foreclose rule forbids. -/
+  | breakable (body : Stmt)
   | initialization (var : Param)
   | assign (left : Assignee) (right : Expr)
   | assignMany (left : Array Assignee) (right : Array Expr)

@@ -1,15 +1,12 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-07-24  commit: 5c7439c  frontend: native  oracle: go run
-# manifest_cases: 718  pass: 203  fail: 515
-# Re-pin reason: deliberate coverage ADDITION — W2 slice 1 (expression
-# switch desugar + the shadow-capture define fix,
-# docs/2026-07-24_sequential-coverage-scoping.md). Eleven FAIL->PASS
-# flips (the control-flow/scoping switch family incl. switch-init-shadow,
-# whose guardrail exposed and fixed a LATENT general define bug: RHS of a
-# self-shadowing define read the fresh cell); one stage advance,
-# switch-interface-case-panic frontend-export -> lean-observation (the
-# frontend now emits it; the residue is machine-side interface equality —
-# interfaces lane). Zero PASS regressions.
+# recorded: 2026-07-24  commit: 1ac3261  frontend: native  oracle: go run
+# manifest_cases: 720  pass: 206  fail: 514
+# Re-pin reason: deliberate coverage ADDITION — W2 slice 2 (breakable
+# scopes + fallthrough, docs/2026-07-24_sequential-coverage-scoping.md).
+# TWO NEW guardrail cases (control-flow/switch-break,
+# control-flow/switch-break-in-loop — written first, classified fail-closed
+# before the feature, now PASS) and switch-fallthrough frontend-export ->
+# PASS. Corpus 718 -> 720. Zero other movement.
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
 FAIL	arrays/array-copy	lean-observation
@@ -204,11 +201,13 @@ FAIL	control-flow/labeled-empty-statement	frontend-export
 FAIL	control-flow/labeled-statement-scope	frontend-export
 FAIL	control-flow/nested-labeled-break	frontend-export
 PASS	control-flow/switch-basic	-
+PASS	control-flow/switch-break	-
+PASS	control-flow/switch-break-in-loop	-
 FAIL	control-flow/switch-case-expression-panic	frontend-export
 FAIL	control-flow/switch-case-order	frontend-export
 PASS	control-flow/switch-default-position	-
 FAIL	control-flow/switch-expression-once	frontend-export
-FAIL	control-flow/switch-fallthrough	frontend-export
+PASS	control-flow/switch-fallthrough	-
 FAIL	control-flow/switch-fallthrough-skips-case-expression	frontend-export
 PASS	control-flow/switch-init	-
 FAIL	control-flow/switch-init-before-expression	frontend-export
