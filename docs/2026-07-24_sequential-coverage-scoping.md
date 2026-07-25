@@ -188,3 +188,105 @@ step-0 scoping); the generic-spec question (§3.2); native-switch spec
 forms (§W2); float re-entry timing. Each deferred item's re-entry
 DESIGN is sketched above precisely so that deciding to add it later is
 an ordinary arc, not a reshape.
+
+## 5. Goose/Perennial cross-check (2026-07-24, `../deps/goose`,
+`../deps/perennial`)
+
+Sanity check before building W3, per the §0 principle: where the state of
+the art has already made these calls, match it unless we can say why not.
+Read from the checkouts (file:line below), not from memory or the web.
+
+### 5.1 Where we AGREE (independent convergence — reassuring)
+
+- **Control-flow representation.** Perennial's `new/golang/defn/exception.v`
+  is an "exception monad" over tagged values: `do: e` = `("#execute", e)`,
+  `return: v` = `("return", v)`, with loop-consumed `break`/`continue`
+  markers and `exception_do` stripping the tag at the function boundary.
+  That is *exactly* our configuration set — `next` / `returning` /
+  `breaking` / `continuing`, consumed by `Cont.loop` and `Cont.frame`.
+  They encode control state in VALUES because GooseLang is an expression
+  language; we encode it in CONFIGURATIONS because we have a CK machine.
+  Same semantics, dual representation.
+- **Switch desugaring.** `goose.go:1146 switchStmt` = a `$sw` let-bound
+  once-evaluated tag, the default clause extracted as the innermost
+  `else`, cases folded in reverse into nested ifs. We independently built
+  the same thing (down to the `$sw` temp name).
+- **Panic = stuck, recover unmodeled.** `src/goose_lang/lang.v:301`
+  `Panic s := Primitive0 (PanicOp s)` with `lang.v:1769 stuck_Panic` —
+  panic has NO step; proofs discharge it by showing unreachability.
+  Goose emits `panic`/`recover` as resolved model functions
+  (`goose.go:828,853`) but the model gives panic no reduction. **This is
+  exactly our current position** (`.panicked` terminal, #24's
+  panicked-counts-as-stuck). So today we are at parity, not behind.
+
+### 5.2 Where we are ALREADY more faithful (keep it that way)
+
+- **`break` inside `switch`.** `goose.go:1643 branchStmt` emits
+  `BreakExpr` unconditionally, and `switchStmt` installs no break target,
+  so a `break` in a switch inside a loop would be consumed by the LOOP
+  combinator — Go says it exits the switch and the loop's next statement
+  still runs. No Goose testdata exercises the pattern (checked: zero
+  hits across `testdata/`), so it is untested subset territory for them
+  rather than a shipped wrong answer. Our W2 slice 2 `Stmt.breakable`
+  handles it correctly, and `control-flow/switch-break-in-loop` pins the
+  difference against real Go.
+- **Multi-value case expression ORDER.** Goose folds `case a, b, c` into
+  `getCond(2) || (getCond(1) || getCond(0))` (`goose.go:1146`), which
+  under short-circuit `||` tests the case expressions RIGHT to LEFT; Go
+  evaluates them left to right and stops at the first match. Unobservable
+  for pure expressions, observable for effectful/panicking ones. Our
+  body-duplicating chain preserves source order (pinned by
+  `control-flow/switch-case-order`, currently closure-blocked).
+
+### 5.3 The W3-decisive finding: defer and named results
+
+Perennial's `new/golang/defn/defer.v` `wrap_defer`:
+
+```
+let: "$defer" := GoAlloc deferType (zero) in     (* a no-op closure *)
+"$defer" <-[deferType] #(func.mk <> <> #());;
+let: "$func_ret" := exception_do ("body" "$defer") in
+(![deferType] "$defer") #();;                    (* run the defer chain *)
+"$func_ret"
+```
+
+and `goose.go:1743 deferStmt` prepends each `defer f(args)` onto that
+cell as a closure (args evaluated eagerly at the defer statement — Go's
+rule), giving LIFO order. Two consequences:
+
+1. **The chain-in-a-cell shape is validated prior art** — adopt it.
+2. **Their return value is snapshotted BEFORE defers run.** A bare
+   `return` with named results becomes `return: (![T] name, …)`
+   (`goose.go:2209`), i.e. the values are read at the `return` statement;
+   `wrap_defer` then binds `$func_ret` and only afterwards runs the
+   defers. So a deferred closure that MUTATES a named result does not
+   change the returned value — which is the opposite of Go, and is
+   precisely the `defer func(){ err = wrap(err) }()` idiom. Coherent for
+   them (it is inseparable from `recover`, which they do not model), but
+   we must not copy it.
+
+**Our architecture is already correct here and this pins it as a
+constraint:** frame exit reads results from CALL-TIME-PINNED locations at
+the moment of exit (D2-proper, `Cont.frame`'s `results`), so if defers run
+BEFORE that read, a defer mutating a named result is observed — matching
+Go. W3 must therefore run the defer chain *inside* the frame-exit step
+sequence, ahead of `loadMany`, and must NOT snapshot result values at the
+`return` statement.
+
+### 5.4 W3 scope decision (recorded, not yet built)
+
+Two viable scopes, and the foreclosure test decides how to stage them:
+
+- **(b) defer-only, panic stays terminal** — Goose parity; covers the 40
+  `defer` cases; the 27 `recover` cases stay red and fail-closed.
+- **(a) full recover** — panic becomes an unwinding configuration that
+  runs defers frame by frame; goes beyond the state of the art.
+
+(b) does not foreclose (a) **provided the defer chain is first-class
+state reachable from the panic path** — i.e. carried by the frame
+(`Cont.frame` gaining a defer-chain component, or an explicit cell as
+Goose does), NOT desugared by the frontend into "run these statements
+before each return site". The frontend-desugar route is cheaper and is
+exactly the foreclosure §0 forbids: the panicking path would never see
+those statements, and adding `recover` later would mean redoing defer.
+**Decision: stage (b) first with the frame-carried chain, then (a).**

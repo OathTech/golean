@@ -197,6 +197,27 @@ way an arc reaches `main`).
   verification of each finding, defaulting to *refute* if thin; (5) honest
   synthesis — drop refuted, spot-check the top survivors yourself.
 
+## Reference checkouts (`../deps/`, outside this repo)
+
+Sibling checkouts available for reading — consult them instead of guessing or
+web-searching when a design question has prior art:
+
+- `../deps/goose` — goose-lang/goose, the Go→Rocq translator. `goose.go` is the
+  whole translation (statement/expression handlers); `testdata/` is its
+  supported-subset corpus.
+- `../deps/perennial` — the Rocq/Iris side. `new/golang/defn/*.v` is the Go
+  model of record (`exception.v` = the return/break/continue "exception monad",
+  `defer.v` = `wrap_defer`, `loop.v`, `chan.v`); `src/goose_lang/lang.v` is
+  GooseLang itself.
+- `../deps/iris-lean` — the Lean Iris port we build against (also a Lake dep).
+- `../deps/raft` — etcd-io/raft, the north-star target.
+- `../deps/gobra`, `../deps/aeneas`, `../deps/strata` — other verification
+  toolchains kept for comparison.
+
+Design comparisons against Goose/Perennial are recorded in the arc's design
+note (e.g. `docs/2026-07-24_sequential-coverage-scoping.md` §5), not left in
+chat — including where we deliberately diverge.
+
 ## Housekeeping
 
 - `.claude/` is gitignored. Date working notes `YYYY-MM-DD_name.md`; top-level
