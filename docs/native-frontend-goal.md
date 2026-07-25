@@ -299,7 +299,8 @@ Native pipeline is proven end-to-end and extends one construct at a time.
 **ints is at full parity (26/26).** The whole scalar / control-flow / memory /
 call core works: functions, `:=`/assign/multi-assign, if/for, arithmetic,
 comparisons, conversions, blank targets, named types + type table,
-struct/array literals, field/index access, address-of, deref, **A-normal-form
+struct/array literals, field/index access (reads AND writes — the write
+path was BUG-001, closed 2026-07-25), address-of, deref, **A-normal-form
 method and function calls** (`x.M(...)`, `&T{...}`), the empty struct `struct{}`,
 and `len`/`cap`. Verified: a method call through ANF returns the right value;
 the real `deps/raft/quorum` package type-checks.

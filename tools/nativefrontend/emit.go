@@ -437,11 +437,48 @@ func (e *emitter) emitAssign(st *ast.AssignStmt) (any, error) {
 		if len(st.Lhs) != 1 || len(st.Rhs) != 1 {
 			return nil, unsup("compound assignment arity")
 		}
-		target, err := e.emitLValue(st.Lhs[0])
-		if err != nil {
-			return nil, err
+		// Map element compound assign `m[k] op= v`: maps are not
+		// addressable, so this is a read-then-store — base and key
+		// evaluated ONCE each (hoisted temps), read via map-get, store
+		// via map-assign, all existing wire vocabulary.
+		if ix, ok := st.Lhs[0].(*ast.IndexExpr); ok {
+			if mt, ok := e.info.TypeOf(ix.X).Underlying().(*types.Map); ok {
+				baseW, err := e.emitExpr(ix.X)
+				if err != nil {
+					return nil, err
+				}
+				baseRef, err := e.hoist(baseW, e.info.TypeOf(ix.X))
+				if err != nil {
+					return nil, err
+				}
+				keyW, err := e.emitExpr(ix.Index)
+				if err != nil {
+					return nil, err
+				}
+				keyRef, err := e.hoist(keyW, mt.Key())
+				if err != nil {
+					return nil, err
+				}
+				keyTy, err := e.emitType(mt.Key())
+				if err != nil {
+					return nil, err
+				}
+				valTy, err := e.emitType(mt.Elem())
+				if err != nil {
+					return nil, err
+				}
+				rhs, err := e.emitExpr(st.Rhs[0])
+				if err != nil {
+					return nil, err
+				}
+				read := map[string]any{"expr": "map-get", "base": baseRef,
+					"index": keyRef, "keyType": keyTy, "valueType": valTy}
+				return map[string]any{"stmt": "map-compound-assign", "op": op,
+					"base": baseRef, "index": keyRef, "read": read, "rhs": rhs,
+					"keyType": keyTy, "valueType": valTy}, nil
+			}
 		}
-		read, err := e.emitExpr(st.Lhs[0])
+		target, read, err := e.emitReadWriteTarget(st.Lhs[0])
 		if err != nil {
 			return nil, err
 		}
@@ -766,12 +803,44 @@ func (e *emitter) emitRange(rs *ast.RangeStmt) (any, error) {
 	return node, nil
 }
 
-func (e *emitter) emitIncDec(st *ast.IncDecStmt) (any, error) {
-	target, err := e.emitLValue(st.X)
-	if err != nil {
-		return nil, err
+// emitReadWriteTarget emits the (target, read) pair for a read-modify-write
+// statement (compound assign, ++/--). Go evaluates the operand's ADDRESS
+// once; emitting target and read independently would run any call in the
+// lvalue twice (`structs/selector-eval-once`: get().x += 4 must call get
+// once). When the lvalue is effectful, pre-bind its address to a temp and
+// read through it; a pure lvalue keeps the direct two-emission form, whose
+// double evaluation is unobservable.
+func (e *emitter) emitReadWriteTarget(lv ast.Expr) (any, any, error) {
+	if !containsCall(lv) {
+		target, err := e.emitLValue(lv)
+		if err != nil {
+			return nil, nil, err
+		}
+		read, err := e.emitExpr(lv)
+		if err != nil {
+			return nil, nil, err
+		}
+		return target, read, nil
 	}
-	read, err := e.emitExpr(st.X)
+	addr, err := e.emitAddressOf(lv)
+	if err != nil {
+		return nil, nil, err
+	}
+	lvTy, err := e.emitType(e.info.TypeOf(lv))
+	if err != nil {
+		return nil, nil, err
+	}
+	ref, err := e.hoist(addr, types.NewPointer(e.info.TypeOf(lv)))
+	if err != nil {
+		return nil, nil, err
+	}
+	target := map[string]any{"target": "addr", "expr": ref}
+	read := map[string]any{"expr": "deref", "ptr": ref, "type": lvTy}
+	return target, read, nil
+}
+
+func (e *emitter) emitIncDec(st *ast.IncDecStmt) (any, error) {
+	target, read, err := e.emitReadWriteTarget(st.X)
 	if err != nil {
 		return nil, err
 	}
@@ -1186,13 +1255,42 @@ func (e *emitter) emitAddressOf(x ast.Expr) (any, error) {
 	case *ast.Ident:
 		return map[string]any{"expr": "ref", "id": ex.Name}, nil
 	case *ast.SelectorExpr:
-		base, structName, err := e.fieldBase(ex)
+		// Field ADDRESS: the machine's fieldAddr builds Loc.field on an
+		// address operand (W4). A pointer base already IS the address (Go
+		// auto-derefs p.n); an addressable value base recurses — so a.b.c
+		// becomes fieldAddr(fieldAddr(ref a)). The old code passed the
+		// base VALUE here, which is the root of the struct-field-write
+		// backlog class (untriaged-count 2026-07-25 entry).
+		bt := e.info.TypeOf(ex.X)
+		var base any
+		var err error
+		var defType types.Type
+		if ptr, ok := bt.Underlying().(*types.Pointer); ok {
+			base, err = e.emitExpr(ex.X)
+			defType = ptr.Elem()
+		} else {
+			base, err = e.emitAddressOf(ex.X)
+			defType = bt
+		}
 		if err != nil {
 			return nil, err
 		}
+		structName, ok := namedTypeName(defType)
+		if !ok {
+			return nil, unsup("field address on anonymous struct type %s", defType)
+		}
 		return map[string]any{"expr": "field-addr", "base": base, "typeId": structName, "field": ex.Sel.Name}, nil
 	case *ast.IndexExpr:
-		base, err := e.emitExpr(ex.X)
+		// Index ADDRESS: a slice value carries its own base location, so
+		// the slice VALUE is the operand; an ARRAY base needs its address
+		// (same W4 class as fields).
+		var base any
+		var err error
+		if _, isArray := e.info.TypeOf(ex.X).Underlying().(*types.Array); isArray {
+			base, err = e.emitAddressOf(ex.X)
+		} else {
+			base, err = e.emitExpr(ex.X)
+		}
 		if err != nil {
 			return nil, err
 		}

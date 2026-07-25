@@ -29,7 +29,18 @@ differential-pinned) `- Cases: <id>, <id>, …` (baseline case ids), then prose.
 
 ## BUG-001 — struct-field / array-element WRITE lowers an address base as a value
 
-- Status: open
+- Status: **CLOSED 2026-07-25** (W4 slice 1, branch `seq-coverage-scoping`)
+- Fix: exactly where the 2026-07-19 diagnosis pointed — `emitAddressOf` in
+  `tools/nativefrontend/emit.go` now emits ADDRESS chains (`a.b.c` →
+  `fieldAddr(fieldAddr(ref a))`; pointer bases used as-is per auto-deref;
+  array `index-addr` takes the array's address, slices stay by-value).
+  GoCore needed zero changes, as predicted. All three pinned cases PASS
+  (structs/copy-value, structs/pointer-field, arrays/arrays) plus 33 more
+  in the same class (36 total, re-pin 2026-07-25). Fixing it exposed and
+  fixed a second bug the fail-closed stuck had been masking:
+  read-modify-write lvalues containing calls evaluated their address twice
+  (`structs/selector-eval-once` — a WRONG ANSWER once reachable).
+- Original status: open
 - Pinned-by: differential
 - Cases: structs/copy-value, structs/pointer-field, arrays/arrays
 - Discovered: 2026-07-19 (directional audit, finding F1)

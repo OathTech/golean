@@ -418,6 +418,18 @@ partial def decodeStmt (results : Array Param) (path : String) (json : Json) : L
       let keyTy ← decodeTy s!"{path}.keyType" (← StrictJson.field path obj "keyType")
       let valTy ← decodeTy s!"{path}.valueType" (← StrictJson.field path obj "valueType")
       pure (.seqn ((← declaresOf #[t]).push (.makeMap t.assignee keyTy valTy none)))
+  | "map-compound-assign" =>
+      -- m[k] op= v with base/key pre-hoisted by the frontend: read via
+      -- mapGet, combine, store via mapAssign.
+      let op ← StrictJson.string s!"{path}.op" (← StrictJson.field path obj "op")
+      let base ← decodeExpr s!"{path}.base" (← StrictJson.field path obj "base")
+      let index ← decodeExpr s!"{path}.index" (← StrictJson.field path obj "index")
+      let read ← decodeExpr s!"{path}.read" (← StrictJson.field path obj "read")
+      let rhs ← decodeExpr s!"{path}.rhs" (← StrictJson.field path obj "rhs")
+      let keyTy ← decodeTy s!"{path}.keyType" (← StrictJson.field path obj "keyType")
+      let valTy ← decodeTy s!"{path}.valueType" (← StrictJson.field path obj "valueType")
+      let combined ← decodeCompound op read rhs
+      pure (.mapAssign base index combined keyTy valTy)
   | "map-assign" =>
       let base ← decodeExpr s!"{path}.base" (← StrictJson.field path obj "base")
       let index ← decodeExpr s!"{path}.index" (← StrictJson.field path obj "index")

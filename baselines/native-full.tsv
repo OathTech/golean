@@ -1,33 +1,32 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-07-25  commit: bc296be  frontend: native  oracle: go run
-# manifest_cases: 757  pass: 283  fail: 474
-# Re-pin reason: deliberate coverage ADDITION — W3 method values. A method
-# value x.M is funcVal(FuncId T.M, [receiver]) since methods already lower
-# to functions taking the receiver first; value receivers copy at
-# method-value time, pointer receivers capture the address. TWO NEW
-# guardrails (methods/method-value-read, pointer-method-value-read) exist
-# because every pre-existing method-value case also writes a struct field
-# (W4/BUG-001), which would have left the feature implemented but
-# UNVALIDATED. They immediately caught a real bug: an already-pointer base
-# with a pointer receiver was getting its address taken, building a double
-# pointer — a latent flaw in the pre-existing method-CALL path too. Fixing
-# it also repaired methods/nil-receiver, which had been failing.
-# Corpus 755 -> 757, 279 -> 283 passing.
+# recorded: 2026-07-25  commit: 5395f23  frontend: native  oracle: go run
+# manifest_cases: 757  pass: 319  fail: 438
+# Re-pin reason: deliberate coverage ADDITION — W4 slice 1 (addressable
+# chains). Three connected frontend fixes: field/index ADDRESSES now emit
+# proper address chains (fieldAddr recurses to the base address, pointer
+# bases used as-is per auto-deref; array index-addr takes the array
+# address; the machine needed ZERO changes — it already handled address
+# operands), read-modify-write lvalues with calls evaluate their address
+# ONCE (structs/selector-eval-once was a wrong answer: get().x += 4 called
+# get twice), and map-element compound assign desugars to hoisted temps +
+# map-get + map-assign. THIRTY-SIX cases flip FAIL -> PASS, zero other
+# movement; 283 -> 319 passing. The 8 differential-stage failures are the
+# same pre-existing triage backlog.
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
-FAIL	arrays/array-copy	lean-observation
+PASS	arrays/array-copy	-
 PASS	arrays/array-len-cap	-
-FAIL	arrays/array-param-return	lean-observation
+PASS	arrays/array-param-return	-
 PASS	arrays/array-slice-alias	-
 PASS	arrays/array-zero	-
-FAIL	arrays/arrays	lean-observation
-FAIL	arrays/arrays-are-values	lean-observation
+PASS	arrays/arrays	-
+PASS	arrays/arrays-are-values	-
 PASS	arrays/defined-array-receiver	-
-FAIL	arrays/index-eval-order	lean-observation
+PASS	arrays/index-eval-order	-
 PASS	arrays/keyed-literal-eval-order	-
 PASS	arrays/keyed-literal-sparse	-
 PASS	arrays/nested-arrays	-
-FAIL	arrays/nested-copy-value	lean-observation
+PASS	arrays/nested-copy-value	-
 PASS	arrays/nil-pointer-len-cap	-
 FAIL	arrays/pointer-array	lean-observation
 FAIL	bools/generic-type-set/and-or	frontend-export
@@ -246,18 +245,18 @@ PASS	defer/defer-function-result-discard	-
 PASS	defer/defer-function-value-eval	-
 PASS	defer/defer-in-loop	-
 FAIL	defer/defer-interface-value-eval	frontend-export
-FAIL	defer/defer-method-receiver-eval	lean-observation
+PASS	defer/defer-method-receiver-eval	-
 PASS	defer/defer-named-result-lifo	-
 PASS	defer/defer-named-return	-
 PASS	defer/defer-nil-function-panic	-
 FAIL	defer/defer-nil-function-recover-order	frontend-export
-FAIL	defer/defer-pointer-receiver-live	lean-observation
+PASS	defer/defer-pointer-receiver-live	-
 PASS	defer/multiple-lifo	-
 FAIL	defer/recover-normal-return	frontend-export
 PASS	defer/unnamed-return	-
 FAIL	embedding/deep-promoted-field	lean-observation
 FAIL	embedding/deep-promoted-method	lean-observation
-FAIL	embedding/embedded-field-shadow	lean-observation
+PASS	embedding/embedded-field-shadow	-
 FAIL	embedding/embedded-method-promote	lean-observation
 FAIL	embedding/embedded-pointer-field	lean-observation
 FAIL	embedding/embedded-pointer-nil-panic	lean-observation
@@ -306,7 +305,7 @@ FAIL	functions/function-interface-compare-panic	lean-observation
 PASS	functions/function-nil-compare	-
 PASS	functions/function-reassign	-
 PASS	functions/higher-order-arg	-
-FAIL	functions/method-value-callback	lean-observation
+PASS	functions/method-value-callback	-
 PASS	functions/nil-function-call-panic	-
 PASS	functions/recursion	-
 PASS	functions/return-function	-
@@ -447,9 +446,9 @@ PASS	ints/unsigned-right-shift	-
 PASS	ints/while1	-
 PASS	ints/wrap-width-boundaries	-
 PASS	maps/array-key	-
-FAIL	maps/array-value-copy	lean-observation
+PASS	maps/array-value-copy	-
 FAIL	maps/channel-key	frontend-export
-FAIL	maps/compound-assign-eval-once	lean-observation
+PASS	maps/compound-assign-eval-once	-
 PASS	maps/defined-map-value	-
 FAIL	maps/delete-alias-visible	frontend-export
 FAIL	maps/delete-eval-order	frontend-export
@@ -471,7 +470,7 @@ PASS	maps/map-basic	-
 PASS	maps/map-bool-keys	-
 PASS	maps/map-bool-values	-
 PASS	maps/map-comma-ok	-
-FAIL	maps/map-copy-write	lean-observation
+PASS	maps/map-copy-write	-
 PASS	maps/map-expr-assign-eval-order	-
 PASS	maps/map-literal-basic	-
 PASS	maps/map-literal-bool	-
@@ -504,20 +503,20 @@ PASS	methods/defined-map-receiver	-
 FAIL	methods/embedded-interface-satisfaction	frontend-export
 FAIL	methods/interface-dispatch	frontend-export
 FAIL	methods/method-expression	frontend-export
-FAIL	methods/method-value-copy	lean-observation
+PASS	methods/method-value-copy	-
 PASS	methods/method-value-read	-
 PASS	methods/multi-return-method	-
 PASS	methods/nil-pointer-method-value	-
 PASS	methods/nil-receiver	-
 FAIL	methods/nil-receiver-interface-dispatch	frontend-export
-FAIL	methods/pointer-auto-address	lean-observation
+PASS	methods/pointer-auto-address	-
 FAIL	methods/pointer-method-expression	frontend-export
-FAIL	methods/pointer-method-value	lean-observation
-FAIL	methods/pointer-method-value-live	lean-observation
+PASS	methods/pointer-method-value	-
+PASS	methods/pointer-method-value-live	-
 PASS	methods/pointer-method-value-read	-
-FAIL	methods/pointer-receiver-array-element	lean-observation
+PASS	methods/pointer-receiver-array-element	-
 FAIL	methods/pointer-receiver-method-set	frontend-export
-FAIL	methods/pointer-receiver-slice-element	lean-observation
+PASS	methods/pointer-receiver-slice-element	-
 PASS	methods/recursive-method	-
 FAIL	methods/value-auto-deref	lean-observation
 PASS	multi-assign/blank-discard-nonint	-
@@ -527,7 +526,7 @@ PASS	multi-assign/lhs-index-eval-order	-
 PASS	multi-assign/repeated-index-write	-
 PASS	multi-assign/repeated-variable-write	-
 PASS	multi-assign/rhs-before-writes	-
-FAIL	multi-assign/selector-target-before-rhs	lean-observation
+PASS	multi-assign/selector-target-before-rhs	-
 PASS	multi-assign/target-eval-before-call	-
 PASS	multi-assign/tuple-assign-order	-
 PASS	native-smoke/arith	-
@@ -566,9 +565,9 @@ FAIL	panic-recover/repanic-recovered-by-outer	frontend-export
 FAIL	panic-recover/return-expression-panic-recovered	frontend-export
 FAIL	panic-recover/self-recovered-defer-panic	frontend-export
 FAIL	panic-recover/unnamed-recover-zero-return	frontend-export
-FAIL	pointers/address-array-index	lean-observation
-FAIL	pointers/address-field	lean-observation
-FAIL	pointers/composite-literal-address	lean-observation
+PASS	pointers/address-array-index	-
+PASS	pointers/address-field	-
+PASS	pointers/composite-literal-address	-
 PASS	pointers/deref-assign	-
 PASS	pointers/inc-via-call	-
 FAIL	pointers/nil-array-index-panic	lean-observation
@@ -629,12 +628,12 @@ PASS	range/range-int-zero	-
 FAIL	range/range-loop-var-capture	frontend-export
 FAIL	range/range-map-delete-current	frontend-export
 PASS	range/range-map-sum	-
-FAIL	range/range-map-value-copy	lean-observation
+PASS	range/range-map-value-copy	-
 PASS	range/range-nil-map	-
 PASS	range/range-nil-slice	-
 PASS	range/range-slice-index-value	-
 FAIL	range/range-string-index-only	frontend-export
-FAIL	range/range-struct-copy	lean-observation
+PASS	range/range-struct-copy	-
 PASS	returns/early-return-named	-
 PASS	returns/multi-result-argument	-
 PASS	returns/multi-result-assign-order	-
@@ -729,24 +728,24 @@ FAIL	strings/string-to-rune-copy	lean-observation
 FAIL	structs/anonymous-field	lean-observation
 PASS	structs/blank-field	-
 PASS	structs/comparable	-
-FAIL	structs/copy-value	lean-observation
+PASS	structs/copy-value	-
 FAIL	structs/interface-field-compare-panic	lean-observation
 PASS	structs/keyed-literal	-
 PASS	structs/keyed-literal-eval-order	-
-FAIL	structs/pointer-field	lean-observation
+PASS	structs/pointer-field	-
 PASS	structs/positional-literal	-
 PASS	structs/positional-literal-eval-order	-
 PASS	structs/recursive-pointer	-
-FAIL	structs/selector-address-pointer	lean-observation
-FAIL	structs/selector-addressability-edge/map-value-copy-then-assign	lean-observation
-FAIL	structs/selector-addressability-edge/map-value-pointer-field-write	lean-observation
+PASS	structs/selector-address-pointer	-
+PASS	structs/selector-addressability-edge/map-value-copy-then-assign	-
+PASS	structs/selector-addressability-edge/map-value-pointer-field-write	-
 PASS	structs/selector-addressability-edge/map-value-slice-field-write	-
-FAIL	structs/selector-addressability-edge/pointer-field-from-call-result	lean-observation
-FAIL	structs/selector-addressability-edge/pointer-result-assign	lean-observation
+PASS	structs/selector-addressability-edge/pointer-field-from-call-result	-
+PASS	structs/selector-addressability-edge/pointer-result-assign	-
 PASS	structs/selector-addressability-edge/read-call-result	-
 FAIL	structs/selector-addressability-edge/read-conversion-result	lean-observation
-FAIL	structs/selector-eval-once	lean-observation
-FAIL	structs/swap	lean-observation
+PASS	structs/selector-eval-once	-
+PASS	structs/swap	-
 PASS	structs/tag-basic	-
 PASS	structs/tag-comparable	-
 FAIL	structs/tag-defined-conversion	lean-observation
@@ -754,7 +753,7 @@ FAIL	structs/tag-embedded-field	lean-observation
 FAIL	structs/tag-nested-conversion	frontend-export
 FAIL	structs/tag-pointer-conversion	lean-observation
 FAIL	structs/tag-unnamed-conversion	frontend-export
-FAIL	structs/tuple-field-swap	lean-observation
+PASS	structs/tuple-field-swap	-
 PASS	structs/zero-value	-
 PASS	variadic/defined-slice-spread	-
 FAIL	variadic/forwarding	differential
@@ -769,4 +768,4 @@ FAIL	variadic/variadic-generic	frontend-export
 FAIL	variadic/variadic-interface-dispatch	frontend-export
 FAIL	variadic/variadic-method	lean-observation
 FAIL	variadic/variadic-method-expression	frontend-export
-FAIL	variadic/variadic-method-value-copy	lean-observation
+PASS	variadic/variadic-method-value-copy	-
