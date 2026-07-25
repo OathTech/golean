@@ -1,21 +1,18 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-07-25  commit: 5395f23  frontend: native  oracle: go run
-# manifest_cases: 757  pass: 319  fail: 438
-# Re-pin reason: deliberate coverage ADDITION — W4 slice 1 (addressable
-# chains). Three connected frontend fixes: field/index ADDRESSES now emit
-# proper address chains (fieldAddr recurses to the base address, pointer
-# bases used as-is per auto-deref; array index-addr takes the array
-# address; the machine needed ZERO changes — it already handled address
-# operands), read-modify-write lvalues with calls evaluate their address
-# ONCE (structs/selector-eval-once was a wrong answer: get().x += 4 called
-# get twice), and map-element compound assign desugars to hoisted temps +
-# map-get + map-assign. THIRTY-SIX cases flip FAIL -> PASS, zero other
-# movement; 283 -> 319 passing. The 8 differential-stage failures are the
-# same pre-existing triage backlog.
+# recorded: 2026-07-25  commit: c908921  frontend: native  oracle: go run
+# manifest_cases: 764  pass: 326  fail: 438
+# Re-pin reason: deliberate coverage ADDITION — W4 edge enumeration: seven
+# NEW write-chain cases, all PASS (nested field chains, array-of-struct
+# field writes = index-then-field, struct-array element writes =
+# field-then-index, pointer hops mid-chain, effectful array index
+# compound, field ++/--, aliased-pointer field writes). Oracle-valued.
+# No pre-existing case moved.
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
 PASS	arrays/array-copy	-
+PASS	arrays/array-element-compound	-
 PASS	arrays/array-len-cap	-
+PASS	arrays/array-of-struct-field-write	-
 PASS	arrays/array-param-return	-
 PASS	arrays/array-slice-alias	-
 PASS	arrays/array-zero	-
@@ -729,10 +726,14 @@ FAIL	structs/anonymous-field	lean-observation
 PASS	structs/blank-field	-
 PASS	structs/comparable	-
 PASS	structs/copy-value	-
+PASS	structs/field-incdec	-
+PASS	structs/field-write-aliased-pointer	-
 FAIL	structs/interface-field-compare-panic	lean-observation
 PASS	structs/keyed-literal	-
 PASS	structs/keyed-literal-eval-order	-
+PASS	structs/nested-field-write	-
 PASS	structs/pointer-field	-
+PASS	structs/pointer-hop-field-write	-
 PASS	structs/positional-literal	-
 PASS	structs/positional-literal-eval-order	-
 PASS	structs/recursive-pointer	-
@@ -745,6 +746,7 @@ PASS	structs/selector-addressability-edge/pointer-result-assign	-
 PASS	structs/selector-addressability-edge/read-call-result	-
 FAIL	structs/selector-addressability-edge/read-conversion-result	lean-observation
 PASS	structs/selector-eval-once	-
+PASS	structs/struct-array-element-write	-
 PASS	structs/swap	-
 PASS	structs/tag-basic	-
 PASS	structs/tag-comparable	-
