@@ -1,16 +1,14 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-07-25  commit: 56ed927  frontend: native  oracle: go run
-# manifest_cases: 744  pass: 258  fail: 486
-# Re-pin reason: deliberate coverage ADDITION — W5 slice 1b, frontend lambda
-# lifting (docs/2026-07-24_sequential-coverage-scoping.md §8). Closures gate
-# far more than closure cases (many eval-order cases use a closure as their
-# side-effect marker), so 228 -> 258 passing. INCLUDES TWO FIDELITY FIXES the
-# new coverage exposed, both pre-existing and previously unreachable: else-if
-# conditions were hoisted eagerly outside the chain (Go stops at the first
-# match; same class fixed for `for` post statements), and keyed struct
-# literals evaluated in declaration rather than source order. The 8 remaining
-# differential-stage failures are the pre-existing triage backlog, unchanged.
-# Also: named functions used as VALUES now lower to captureless func values.
+# recorded: 2026-07-25  commit: 7ce738b  frontend: native  oracle: go run
+# manifest_cases: 755  pass: 269  fail: 486
+# Re-pin reason: deliberate coverage ADDITION — W5 edge enumeration (scoping
+# note section 6): 11 NEW closure cases aimed at capture semantics, all PASS.
+# Covers per-iteration loop-variable capture (Go 1.22), per-invocation state
+# from one factory, nested re-capture, simultaneous assign through captures,
+# args mixed with captures, func-variable reassignment, a parameter SHADOWING
+# a captured name, capturing a NAMED RESULT (the W3 precursor), and a closure
+# escaping the block that declared its capture. Corpus 744 -> 755, 258 -> 269
+# passing; no pre-existing case moved.
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
 FAIL	arrays/array-copy	lean-observation
@@ -281,9 +279,20 @@ FAIL	floats/signed-zero	frontend-export
 FAIL	floats/to-int-truncation	frontend-export
 FAIL	floats/to-uint-truncation	frontend-export
 FAIL	floats/typed-constant-adaptation	frontend-export
+PASS	functions/closure-arg-and-capture	-
+PASS	functions/closure-block-scope-capture	-
+PASS	functions/closure-captures-named-result	-
+PASS	functions/closure-captures-param	-
+PASS	functions/closure-frame-sees-mutation	-
+PASS	functions/closure-loop-var-capture	-
+PASS	functions/closure-nested-recapture	-
+PASS	functions/closure-param-shadows-capture	-
 PASS	functions/closure-recursion	-
 PASS	functions/closure-return-state	-
+PASS	functions/closure-returns-closure	-
 PASS	functions/closure-share	-
+PASS	functions/closure-two-vars-one-closure	-
+PASS	functions/closure-value-reassigned	-
 FAIL	functions/composite-function-values/map-call	frontend-export
 FAIL	functions/composite-function-values/slice-call	frontend-export
 FAIL	functions/composite-function-values/struct-call	frontend-export

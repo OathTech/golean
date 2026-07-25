@@ -1,0 +1,2 @@
+# id	subject	args	expected_status	expected_reason	features
+-	closureCapturesNamedResult	-	ok	-	functions,closures,named-results,returns
