@@ -69,6 +69,13 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
       | .continueStmt => return (.continuing k, s, choices)
       | .label _ => return (.next k, s, choices)
       | .breakable b => return (.exec b env (.breakableK k), s, choices)
+      | .callValue targets callee args =>
+          match assigneesExprs targets.toList with
+          | some (te :: rest) =>
+              return (.evalE te env (.callValTargetsK callee [] rest args.toList env k), s, choices)
+          | some [] =>
+              return (.evalE callee env (.callValCalleeK [] args.toList env k), s, choices)
+          | none => throw (.unsupported "unsupported value-call target assignee")
       | .call targets fid args =>
           match assigneesExprs targets.toList with
           | some (te :: rest) =>
@@ -215,6 +222,41 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
               | .ok (s', choices') => return (.next k', s', choices')
               | .error (.panic msg) => return (.panicked msg, s, choices)
               | .error err => throw err
+      | .callValTargetsK callee locs pending args env k' =>
+          match valueAsLoc v with
+          | .error (.panic msg) => return (.panicked msg, s, choices)
+          | .error err => throw err
+          | .ok loc =>
+              match pending with
+              | te :: rest =>
+                  return (.evalE te env
+                    (.callValTargetsK callee (locs ++ [loc]) rest args env k'), s, choices)
+              | [] =>
+                  return (.evalE callee env
+                    (.callValCalleeK (locs ++ [loc]) args env k'), s, choices)
+      | .callValCalleeK locs args env k' =>
+          match v with
+          | .funcVal fid captured =>
+              match args with
+              | a :: rest =>
+                  return (.evalE a env
+                    (.callValArgsK fid captured locs [] rest env k'), s, choices)
+              | [] => do
+                  let (func, frameEnv, resultLocs, s') ← enterFrame s fid captured
+                  return (.exec func.body frameEnv (.frame locs resultLocs k'), s', choices)
+          | .nil =>
+              return (.panicked
+                "runtime error: invalid memory address or nil pointer dereference", s, choices)
+          | other => throw (.stuck s!"expected function value, got {repr other}")
+      | .callValArgsK fid captured locs vals pending env k' =>
+          match pending with
+          | a :: rest =>
+              return (.evalE a env
+                (.callValArgsK fid captured locs (vals ++ [v]) rest env k'), s, choices)
+          | [] => do
+              let (func, frameEnv, resultLocs, s') ←
+                enterFrame s fid (captured ++ vals ++ [v])
+              return (.exec func.body frameEnv (.frame locs resultLocs k'), s', choices)
       | .mapRangeK keyVar valVar keyTy valTy body env k' => do
           let entries ← mapRangeEntries s v
           return (.next (.mapIterK keyVar valVar keyTy valTy body entries env k'), s, choices)

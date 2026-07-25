@@ -280,6 +280,10 @@ mutual
         .array <$> normalizeArrayForTy fuel state elem values.toList
     | _, _, .array length _, value => stuck s!"expected array({length}) value, got {repr value}"
     | _, _, .interface _, value => return value
+    -- Func values carry their own identity; nil is the zero value.
+    | _, _, .funcType _ _, .funcVal fid captured => return .funcVal fid captured
+    | _, _, .funcType _ _, .nil => return .nil
+    | _, _, .funcType _ _, value => stuck s!"expected func value, got {repr value}"
     | fuel + 1, state, .defined name, value => do
         match TypeEnv.lookup state.types name with
         | some (.alias target) => normalizeValueForTyFuel fuel state target value
@@ -415,6 +419,7 @@ mutual
     | _, _, .slice _ => return .slice { base := none, offset := 0, len := 0, cap := 0 }
     | _, _, .map _ _ => return .map { base := none }
     | _, _, .pointer _ => return .nil
+    | _, _, .funcType _ _ => return .nil
     | _, _, .interface _ => return .nil
     | fuel + 1, state, .defined name => do
         match TypeEnv.lookup state.types name with
@@ -531,6 +536,7 @@ def goTypeNameForMessageFuel : Nat → ExecState → Ty → String
       | .interface name => name.key
       | .defined name => name.key
       | .array length elem => s!"[{length}]{goTypeNameForMessageFuel fuel state elem}"
+      | .funcType _ _ => "func"
       | .unsupported feature => feature
   | 0, _, _ => "<type nesting too deep>"
 
@@ -584,6 +590,12 @@ mutual
     | _, _, .int kind, left, right => stuck s!"{kind.name} equality expected int operands, got {repr left} and {repr right}"
     | _, _, .string, .string left, .string right => return left == right
     | _, _, .string, left, right => stuck s!"string equality expected string operands, got {repr left} and {repr right}"
+    -- Go: func values are comparable only against nil.
+    | _, _, .funcType _ _, .nil, .nil => return true
+    | _, _, .funcType _ _, .funcVal _ _, .nil => return false
+    | _, _, .funcType _ _, .nil, .funcVal _ _ => return false
+    | _, _, .funcType _ _, left, right =>
+        stuck s!"func values are not comparable: {repr left} and {repr right}"
     | _, _, .pointer _, .addr left, .addr right => return left == right
     | _, _, .pointer _, .nil, .nil => return true
     | _, _, .pointer _, .addr _, .nil => return false

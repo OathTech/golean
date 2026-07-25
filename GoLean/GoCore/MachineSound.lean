@@ -72,19 +72,19 @@ theorem stepFn_sound {s : ExecState} {c : Config} {ch : Choices}
       Prod.mk.injEq]
     obtain ⟨v, hd, rfl, rfl, rfl⟩ := h
     exact Step.initialization hd rfl
-  case case19 =>
+  case case22 =>
     simp_all only [stepFn, bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq]
     obtain ⟨⟨func, frameEnv, resultLocs, s₂⟩, hd, rfl, rfl, rfl⟩ := h
     exact Step.callImmediate ‹_› ‹_› hd
-  case case24 =>
+  case case27 =>
     simp_all only [stepFn, bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq]
     obtain ⟨⟨s₂, ch₂⟩, hd, rfl, rfl, rfl⟩ := h
     exact Step.stmtOpNullary ‹_› hd
-  case case28 =>
+  case case31 =>
     simp_all only [stepFn, bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq]
     obtain ⟨v, hd, rfl, rfl, rfl⟩ := h
     exact Step.evalVar ‹_› hd
-  case case48 =>
+  case case51 =>
     simp_all only [stepFn, bind_eq_ok]
     obtain ⟨b, hb, h⟩ := h
     obtain rfl := valueAsBool_ok hb
@@ -96,7 +96,7 @@ theorem stepFn_sound {s : ExecState} {c : Config} {ch : Choices}
     · simp only [reduceIte, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl, rfl⟩ := h
       exact Step.andTrue
-  case case49 =>
+  case case52 =>
     simp_all only [stepFn, bind_eq_ok]
     obtain ⟨b, hb, h⟩ := h
     obtain rfl := valueAsBool_ok hb
@@ -108,12 +108,12 @@ theorem stepFn_sound {s : ExecState} {c : Config} {ch : Choices}
     · simp only [reduceIte, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl, rfl⟩ := h
       exact Step.orTrue
-  case case50 =>
+  case case53 =>
     simp_all only [stepFn, bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq]
     obtain ⟨b, hb, rfl, rfl, rfl⟩ := h
     obtain rfl := valueAsBool_ok hb
     exact Step.boolCoerce
-  case case51 =>
+  case case54 =>
     simp_all only [stepFn, bind_eq_ok]
     obtain ⟨b, hb, h⟩ := h
     obtain rfl := valueAsBool_ok hb
@@ -125,7 +125,7 @@ theorem stepFn_sound {s : ExecState} {c : Config} {ch : Choices}
     · simp only [reduceIte, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl, rfl⟩ := h
       exact Step.ifTrue
-  case case52 =>
+  case case55 =>
     simp_all only [stepFn, bind_eq_ok]
     obtain ⟨b, hb, h⟩ := h
     obtain rfl := valueAsBool_ok hb
@@ -137,34 +137,42 @@ theorem stepFn_sound {s : ExecState} {c : Config} {ch : Choices}
     · simp only [reduceIte, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl, rfl⟩ := h
       exact Step.whileTrue
-  case case63 =>
+  case case66 =>
     simp_all only [stepFn, bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq]
     obtain ⟨⟨func, frameEnv, resultLocs, s₂⟩, hd, rfl, rfl, rfl⟩ := h
     exact Step.callTargetsDoneEnter ‹_› hd
-  case case65 =>
+  case case68 =>
     simp_all only [stepFn, bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq]
     obtain ⟨⟨func, frameEnv, resultLocs, s₂⟩, hd, rfl, rfl, rfl⟩ := h
     exact Step.callArgsDoneEnter hd
-  case case69 =>
+  case case72 =>
     simp_all only [stepFn, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq]
     obtain ⟨rfl, rfl, rfl⟩ := h
     exact Step.stmtOpShiftPlain (Nat.le_of_not_lt ‹_›)
-  case case73 =>
+  case case81 =>
+    simp_all only [stepFn, bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq]
+    obtain ⟨⟨func, frameEnv, resultLocs, s₂⟩, hd, rfl, rfl, rfl⟩ := h
+    exact Step.callValCalleeEnter hd
+  case case85 =>
+    simp_all only [stepFn, bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq]
+    obtain ⟨⟨func, frameEnv, resultLocs, s₂⟩, hd, rfl, rfl, rfl⟩ := h
+    exact Step.callValArgsEnter hd
+  case case86 =>
     simp_all only [stepFn, bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq]
     obtain ⟨entries, hd, rfl, rfl, rfl⟩ := h
     exact Step.mapRangeSnapshot hd
-  case case80 =>
+  case case93 =>
     simp_all only [stepFn, bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq]
     obtain ⟨vs, hload, s₂, hstore, rfl, rfl, rfl⟩ := h
     exact Step.frameFall hload hstore
-  case case82 =>
+  case case95 =>
     rename_i hempty
     obtain rfl : _ = (#[] : Array (GoValue × GoValue)) := Array.isEmpty_iff.mp hempty
     simp_all only [stepFn, Array.isEmpty_empty, reduceIte, Except.ok.injEq,
       Prod.mk.injEq]
     obtain ⟨rfl, rfl, rfl⟩ := h
     exact Step.mapIterDone
-  case case83 =>
+  case case96 =>
     rename_i keyVar valVar keyTy valTy body remaining env k' hne idx choices₂
       hcons hidx
     exfalso
@@ -175,7 +183,7 @@ theorem stepFn_sound {s : ExecState} {c : Config} {ch : Choices}
     have hlt : idx < remaining.size := by
       simpa [hcons] using consume_fst_lt (ch := ch) hsz
     omega
-  case case84 =>
+  case case97 =>
     rename_i keyVar valVar keyTy valTy body remaining env k' hne idx choices₂
       hcons key value hidx hlt
     simp only [stepFn, hcons] at h
@@ -193,7 +201,7 @@ theorem stepFn_sound {s : ExecState} {c : Config} {ch : Choices}
       obtain ⟨⟨env', s₁⟩, hd, rfl, rfl, rfl⟩ := h
       obtain ⟨_, hw⟩ := Array.getElem?_eq_some_iff.mp hidx
       exact Step.mapIterNext hlt (by rw [hw]; exact hd)
-  case case104 =>
+  case case117 =>
     simp_all only [stepFn, bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq]
     obtain ⟨vs, hload, s₂, hstore, rfl, rfl, rfl⟩ := h
     exact Step.frameReturn hload hstore

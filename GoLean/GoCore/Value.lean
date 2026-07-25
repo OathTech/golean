@@ -71,6 +71,18 @@ def IntKind.isFlexible : IntKind → Bool
   | .unbounded _ => true
   | _ => false
 
+/-- Semantic function identity. The key is a canonical name produced only by
+the frontend symbol map (source-level function name; receiver-scoped method
+key; synthetic `F$litN` for a lifted func literal). Raw frontend names must
+not construct this directly — lowering resolves them through its symbol map
+and fails closed on unknown or colliding names.
+
+Lives here rather than in `Syntax` because `GoValue.funcVal` carries it, the
+same reason `TypeId` lives beside the values that carry it. -/
+structure FuncId where
+  key : String
+  deriving Repr, BEq, Inhabited, DecidableEq
+
 def IntKind.compatibleResult (left right : IntKind) : Option IntKind :=
   if left == right then
     some left
@@ -231,6 +243,14 @@ inductive GoValue where
   | slice (value : SliceValue)
   | map (value : MapValue)
   | mapData (entries : Array (GoValue × GoValue))
+  /-- A **function value**: the callee's semantic identity plus the values
+  captured at closure-creation time. Closures are lambda-lifted by the
+  frontend (`docs/2026-07-24_sequential-coverage-scoping.md` §8), so the
+  captured values are the ADDRESSES of the captured variables — Go captures
+  by reference, and making that explicit here is what keeps two closures
+  over one variable sharing it. Method values and (later) deferred calls use
+  the same shape. The zero value of a func type is `nil`, not this. -/
+  | funcVal (fid : GoCore.FuncId) (captured : List GoValue)
   deriving Repr, BEq
 
 namespace GoCore

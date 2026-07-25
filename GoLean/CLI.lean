@@ -93,6 +93,11 @@ private partial def goValueJson : GoValue → Json
   | .string value => Json.mkObj [("tag", Json.str "string"), ("bytes", Lean.toJson value.byteNats)]
   | .addr loc => locJson loc
   | .nil => Json.mkObj [("tag", Json.str "nil")]
+  -- Func values are not observable in Go (not comparable, not printable),
+  -- so the observation channel reports identity only; a case whose OUTPUT
+  -- is a func value is outside the differential's comparable surface.
+  | .funcVal fid _ =>
+      Json.mkObj [("tag", Json.str "func"), ("id", Json.str fid.key)]
   | .interface dynamic value =>
       Json.mkObj [
         ("tag", Json.str "interface"),

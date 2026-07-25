@@ -75,6 +75,12 @@ partial def decodeTy (path : String) (json : Json) : LowerM Ty := do
       pure (.defined ⟨← StrictJson.string s!"{path}.name" (← StrictJson.field path obj "name")⟩)
   | "interface" =>
       pure (.interface ⟨← StrictJson.string s!"{path}.name" (← StrictJson.field path obj "name")⟩)
+  | "func" =>
+      let params ← StrictJson.array s!"{path}.params" (← StrictJson.field path obj "params")
+      let results ← StrictJson.array s!"{path}.results" (← StrictJson.field path obj "results")
+      pure (.funcType
+        (← params.toList.mapIdxM (fun i t => decodeTy s!"{path}.params[{i}]" t))
+        (← results.toList.mapIdxM (fun i t => decodeTy s!"{path}.results[{i}]" t)))
   | other => fail s!"unsupported type kind {other} at {path}"
 
 private def decodeParam (path : String) (json : Json) : LowerM Param := do
@@ -104,6 +110,11 @@ partial def decodeExpr (path : String) (json : Json) : LowerM Expr := do
   match tag with
   | "ident" =>
       pure (.var (← StrictJson.string s!"{path}.name" (← StrictJson.field path obj "name")))
+  | "func-value" =>
+      let fid ← StrictJson.string s!"{path}.func" (← StrictJson.field path obj "func")
+      let captured ← StrictJson.array s!"{path}.captured" (← StrictJson.field path obj "captured")
+      pure (.funcVal ⟨fid⟩
+        (← captured.mapIdxM (fun i c => decodeExpr s!"{path}.captured[{i}]" c)))
   | "int" =>
       let s ← StrictJson.string s!"{path}.value" (← StrictJson.field path obj "value")
       match s.toInt? with
@@ -332,6 +343,18 @@ partial def decodeStmt (results : Array Param) (path : String) (json : Json) : L
   | "block" =>
       let body ← StrictJson.array s!"{path}.body" (← StrictJson.field path obj "body")
       pure (.block #[] (← body.mapIdxM (fun i s => decodeStmt results s!"{path}.body[{i}]" s)))
+  | "call-value" =>
+      let callee ← decodeExpr s!"{path}.callee" (← StrictJson.field path obj "callee")
+      let args ← StrictJson.array s!"{path}.args" (← StrictJson.field path obj "args")
+      let argEs ← args.mapIdxM (fun i a => decodeExpr s!"{path}.args[{i}]" a)
+      let lhs ← StrictJson.array s!"{path}.lhs" (← StrictJson.field path obj "lhs")
+      let mut decls : Array Stmt := #[]
+      let mut assignees : Array Assignee := #[]
+      for i in [:lhs.size] do
+        let t ← decodeTarget s!"{path}.lhs[{i}]" lhs[i]!
+        decls := decls ++ (← declaresOf #[t])
+        assignees := assignees.push t.assignee
+      pure (.seqn (decls.push (.callValue assignees callee argEs)))
   | "breakable" =>
       pure (.breakable (← decodeStmt results s!"{path}.body"
         (← StrictJson.field path obj "body")))

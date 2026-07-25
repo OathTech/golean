@@ -743,6 +743,34 @@ private def expectOk (name : String) (result : Except GoError GoLean.GoCore.Resu
       IO.eprintln s!"FAIL: {name}: expected success, got {repr err}"
       return false
 
+/-- The lifted body of `func() { x++ }` (W5 §8): captures arrive as pointer
+parameters, so the closure and its creator share the cell. -/
+def coreClosureBodyFunction : GoCore.Func := {
+  id := ⟨"main$lit0"⟩
+  args := #[⟨"x$ptr", .pointer (.int .int)⟩]
+  results := #[]
+  body := .seqn #[
+    .assign (.addr (.var "x$ptr"))
+      (.add (.deref (.var "x$ptr") (.int .int)) (.intLit 1 .int))]
+}
+
+/-- `x := 0; f := func(){ x++ }; f(); f(); return x` — the machine half of
+`functions/closure-share`: TWO calls through one func value must both hit the
+SAME captured cell, which is what capture-by-reference means. -/
+def coreClosureShareFunction : GoCore.Func := {
+  id := ⟨"closureShare"⟩
+  args := #[]
+  results := #[⟨"r", .int .int⟩]
+  body := .seqn #[
+    .initialization ⟨"x", .int .int⟩,
+    .initialization ⟨"f", .funcType [] []⟩,
+    .assign (.var "f") (.funcVal ⟨"main$lit0"⟩ #[.ref "x"]),
+    .callValue #[] (.var "f") #[],
+    .callValue #[] (.var "f") #[],
+    .assign (.var "r") (.var "x"),
+    .returnStmt]
+}
+
 def main : IO UInt32 := do
   let mut passed := true
   passed := passed && (← expectIntResult "GoCore add function" (GoCore.Machine.runFunctionM 100000 coreAddFunction #[.int 2, .int 3]) 5)
@@ -793,6 +821,9 @@ def main : IO UInt32 := do
   passed := passed && (← expectIntResult "GoCore if return positive" (GoCore.Machine.runFunctionM 100000 coreIfReturnFunction #[.int 7]) 7)
   passed := passed && (← expectIntResult "GoCore if return negative" (GoCore.Machine.runFunctionM 100000 coreIfReturnFunction #[.int (-3)]) 103)
   passed := passed && (← expectIntResult "GoCore break continue" (GoCore.Machine.runFunctionM 100000 coreBreakContinueFunction #[]) 8)
+  passed := passed && (← expectIntResult "GoCore closure shares captured cell"
+    (GoCore.Machine.runFunctionWithContextM 100000 []
+      #[coreClosureBodyFunction, coreClosureShareFunction] coreClosureShareFunction #[]) 2)
   if passed then
     return 0
   else

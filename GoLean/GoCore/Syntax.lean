@@ -2,16 +2,8 @@ import GoLean.GoCore.Value
 
 namespace GoLean.GoCore
 
-/-- Semantic function identity. The key is a canonical name produced only by
-the frontend symbol map (source-level function name; receiver-scoped method
-key). Raw frontend names such as Gobra-mangled exports must not construct
-this directly: lowering resolves them through its symbol map and fails
-closed on unknown or colliding names. The string representation is
-transitional; a compact ID table can replace it without touching consumers
-because all construction points go through the symbol map. -/
-structure FuncId where
-  key : String
-  deriving Repr, BEq, Inhabited
+-- `FuncId` now lives in `Value.lean` (beside `TypeId`) so `GoValue.funcVal`
+-- can carry it; it is re-exported by this module's namespace.
 
 inductive Ty where
   | bool
@@ -21,6 +13,9 @@ inductive Ty where
   | slice (elem : Ty)
   | map (key value : Ty)
   | pointer (elem : Ty)
+  /-- A function type. Structural detail is carried for zero values and
+  typing only — dispatch is by `FuncId`, never by this. -/
+  | funcType (params results : List Ty)
   | interface (id : TypeId)
   | defined (id : TypeId)
   | unsupported (feature : String)
@@ -74,6 +69,11 @@ inductive Expr where
   | or (left right : Expr)
   | not (operand : Expr)
   | ref (id : String)
+  /-- Build a **function value**: the lifted callee's identity plus the
+  expressions producing its captured values (addresses — Go captures by
+  reference; §8 of the coverage-scoping note). Operands evaluate left to
+  right like any strict form. -/
+  | funcVal (fid : FuncId) (captured : Array Expr)
   /-- A resolved location literal — evaluates to its address. Proof-facing:
   introduced only by the relation's name-resolution substitution (`substLoc`),
   never emitted by the frontend. The location-resolved core (Goose-aligned;
@@ -126,6 +126,11 @@ inductive Stmt where
   | appendSlice (target : Assignee) (elem : Ty) (slice elems : Expr)
   | copySlice (target : Assignee) (dst src : Expr)
   | call (targets : Array Assignee) (func : FuncId) (args : Array Expr)
+  /-- Call through a function VALUE (a closure, method value, or func-typed
+  variable). The callee expression evaluates to a `GoValue.funcVal`, whose
+  captured values are prepended to the arguments at frame entry — the
+  lambda-lifting protocol of §8. Calling a `nil` func value panics. -/
+  | callValue (targets : Array Assignee) (callee : Expr) (args : Array Expr)
   | ifThenElse (cond : Expr) (thenBranch elseBranch : Stmt)
   | while (cond : Expr) (body : Stmt)
   /-- Map iteration primitive (the one nondeterministic iteration form). The

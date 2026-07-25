@@ -108,6 +108,8 @@ inductive StrictOp where
   | capacityOf (typ : Option Ty)
   | defaultValueOf (ty : Ty)
   | nilLit (typ : Option Ty)
+  /-- Build a closure value from its captured operands (§8). -/
+  | funcValOf (fid : FuncId)
   deriving Repr, BEq
 
 /-- Classify an expression as a strict-operator application: the head and
@@ -155,6 +157,7 @@ def strictPlan : Expr → Option (StrictOp × List Expr)
   | .capacity e ty => some (.capacityOf ty, [e])
   | .defaultValue ty => some (.defaultValueOf ty, [])
   | .nil ty => some (.nilLit ty, [])
+  | .funcVal fid captured => some (.funcValOf fid, captured.toList)
   | _ => none
 
 /-- Slice-expression application, after all operands are values (base, low,
@@ -336,6 +339,7 @@ def applyStrictOp (s : ExecState) : StrictOp → List GoValue → Except GoError
           | .slice slice =>
               validateSlice slice *> return (.int slice.cap, s)
           | other => unsupported s!"cap for non-array/slice value {repr other}"
+  | .funcValOf fid, vs => return (.funcVal fid vs, s)
   | .defaultValueOf ty, [] => do return ((← defaultValue s ty), s)
   | .nilLit typ, [] =>
       match typ with
@@ -669,6 +673,16 @@ inductive Cont where
   /-- Breakable scope (`Stmt.breakable`): catches `breaking`, passes
   `continuing`/`returning` through. -/
   | breakableK (k : Cont)
+  /-- Call-through-value (§8): awaiting a target address; then remaining
+  targets, then the callee expression. -/
+  | callValTargetsK (callee : Expr) (locs : List Loc) (pending : List Expr)
+      (args : List Expr) (env : LocalEnv) (k : Cont)
+  /-- Awaiting the CALLEE value (a `funcVal`, or `nil` → panic). -/
+  | callValCalleeK (locs : List Loc) (args : List Expr) (env : LocalEnv) (k : Cont)
+  /-- Awaiting an argument of a value call; `captured` are the closure's
+  captured values, prepended to the arguments at frame entry. -/
+  | callValArgsK (fid : FuncId) (captured : List GoValue) (locs : List Loc)
+      (vals : List GoValue) (pending : List Expr) (env : LocalEnv) (k : Cont)
   /-- Strict-operator evaluation: `done` holds evaluated operands (most
   recent first), `pending` the rest, in evaluation order. -/
   | strictK (op : StrictOp) (done : List GoValue) (pending : List Expr)
@@ -995,6 +1009,49 @@ inductive Step : Config → ExecState → Config → ExecState → Prop where
   | mapIterReturn {keyVar valVar keyTy valTy body remaining env k s} :
       Step (.returning (.mapIterK keyVar valVar keyTy valTy body remaining env k)) s
         (.returning k) s
+  -- Call through a function VALUE (§8): targets, then the callee, then the
+  -- arguments; frame entry prepends the closure's captured values, which is
+  -- the whole lambda-lifting protocol. `enterFrame` is reused verbatim.
+  | callValueFirstTarget {targets callee args te rest env k s} :
+      assigneesExprs targets.toList = some (te :: rest) →
+      Step (.exec (.callValue targets callee args) env k) s
+        (.evalE te env (.callValTargetsK callee [] rest args.toList env k)) s
+  | callValueNoTargets {targets callee args env k s} :
+      assigneesExprs targets.toList = some [] →
+      Step (.exec (.callValue targets callee args) env k) s
+        (.evalE callee env (.callValCalleeK [] args.toList env k)) s
+  | callValTargetLoc {v loc callee locs te rest args env k s} :
+      valueAsLoc v = .ok loc →
+      Step (.retV v (.callValTargetsK callee locs (te :: rest) args env k)) s
+        (.evalE te env (.callValTargetsK callee (locs ++ [loc]) rest args env k)) s
+  | callValTargetsDone {v loc callee locs args env k s} :
+      valueAsLoc v = .ok loc →
+      Step (.retV v (.callValTargetsK callee locs [] args env k)) s
+        (.evalE callee env (.callValCalleeK (locs ++ [loc]) args env k)) s
+  | callValTargetPanic {v msg callee locs pending args env k s} :
+      valueAsLoc v = .error (.panic msg) →
+      Step (.retV v (.callValTargetsK callee locs pending args env k)) s
+        (.panicked msg) s
+  /-- The callee value arrives; start the arguments. -/
+  | callValCalleeArg {fid captured locs a rest env k s} :
+      Step (.retV (.funcVal fid captured) (.callValCalleeK locs (a :: rest) env k)) s
+        (.evalE a env (.callValArgsK fid captured locs [] rest env k)) s
+  /-- Nullary call through a value: enter directly with the captures. -/
+  | callValCalleeEnter {fid captured locs func frameEnv resultLocs env k s s'} :
+      enterFrame s fid captured = .ok (func, frameEnv, resultLocs, s') →
+      Step (.retV (.funcVal fid captured) (.callValCalleeK locs [] env k)) s
+        (.exec func.body frameEnv (.frame locs resultLocs k)) s'
+  /-- Calling a nil function value panics (Go). -/
+  | callValCalleeNil {locs args env k s} :
+      Step (.retV .nil (.callValCalleeK locs args env k)) s
+        (.panicked "runtime error: invalid memory address or nil pointer dereference") s
+  | callValArgNext {v fid captured locs vals a rest env k s} :
+      Step (.retV v (.callValArgsK fid captured locs vals (a :: rest) env k)) s
+        (.evalE a env (.callValArgsK fid captured locs (vals ++ [v]) rest env k)) s
+  | callValArgsEnter {v fid captured locs vals func frameEnv resultLocs env k s s'} :
+      enterFrame s fid (captured ++ vals ++ [v]) = .ok (func, frameEnv, resultLocs, s') →
+      Step (.retV v (.callValArgsK fid captured locs vals [] env k)) s
+        (.exec func.body frameEnv (.frame locs resultLocs k)) s'
   -- Frame exit: explicit return and fall-through perform the same
   -- pinned-location result read and caller-target stores.
   | frameReturn {targets results k s vs s'} :
