@@ -1,12 +1,16 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-07-24  commit: 1ac3261  frontend: native  oracle: go run
-# manifest_cases: 720  pass: 206  fail: 514
-# Re-pin reason: deliberate coverage ADDITION — W2 slice 2 (breakable
-# scopes + fallthrough, docs/2026-07-24_sequential-coverage-scoping.md).
-# TWO NEW guardrail cases (control-flow/switch-break,
-# control-flow/switch-break-in-loop — written first, classified fail-closed
-# before the feature, now PASS) and switch-fallthrough frontend-export ->
-# PASS. Corpus 718 -> 720. Zero other movement.
+# recorded: 2026-07-24  commit: 9278683  frontend: native  oracle: go run
+# manifest_cases: 744  pass: 228  fail: 516
+# Re-pin reason: deliberate coverage ADDITION — the W1/W2 edge-enumeration
+# batch (docs/2026-07-24_sequential-coverage-scoping.md §6): 24 NEW cases
+# aimed at the freshly-built areas' own code seams. 22 PASS (tuple
+# forwarding out of methods/named-result funcs, the fixed+variadic split
+# over splatted temps, break through nested blocks, nested fallthrough,
+# break/continue interleaving, tag-once evaluation) and 2 deliberately RED
+# pinning known fail-closed gaps with their exact reasons
+# (switch-case-call: calls in case expressions would need lazy hoisting;
+# switch-fallthrough-declaring-clause: sibling-scope restriction).
+# Corpus 720 -> 744. No pre-existing case moved.
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
 FAIL	arrays/array-copy	lean-observation
@@ -202,19 +206,35 @@ FAIL	control-flow/labeled-statement-scope	frontend-export
 FAIL	control-flow/nested-labeled-break	frontend-export
 PASS	control-flow/switch-basic	-
 PASS	control-flow/switch-break	-
+PASS	control-flow/switch-break-continue-interleave	-
 PASS	control-flow/switch-break-in-loop	-
+PASS	control-flow/switch-break-inner-loop	-
+PASS	control-flow/switch-break-nested-block	-
+FAIL	control-flow/switch-case-call	frontend-export
 FAIL	control-flow/switch-case-expression-panic	frontend-export
 FAIL	control-flow/switch-case-order	frontend-export
+PASS	control-flow/switch-clause-nested-block-declares	-
+PASS	control-flow/switch-default-only-break	-
 PASS	control-flow/switch-default-position	-
+PASS	control-flow/switch-empty-clause	-
 FAIL	control-flow/switch-expression-once	frontend-export
 PASS	control-flow/switch-fallthrough	-
+PASS	control-flow/switch-fallthrough-chain	-
+FAIL	control-flow/switch-fallthrough-declaring-clause	frontend-export
+PASS	control-flow/switch-fallthrough-into-default	-
 FAIL	control-flow/switch-fallthrough-skips-case-expression	frontend-export
+PASS	control-flow/switch-fallthrough-target-declares	-
+PASS	control-flow/switch-fallthrough-then-break	-
 PASS	control-flow/switch-init	-
 FAIL	control-flow/switch-init-before-expression	frontend-export
 FAIL	control-flow/switch-interface-case-panic	lean-observation
 PASS	control-flow/switch-multi-case-values	-
+PASS	control-flow/switch-nested-break	-
+PASS	control-flow/switch-nested-fallthrough	-
 PASS	control-flow/switch-no-expression-default	-
 PASS	control-flow/switch-no-match-no-default	-
+PASS	control-flow/switch-return-in-clause	-
+PASS	control-flow/switch-tag-once	-
 PASS	control-flow/switch-uncomparable-tag-default	-
 PASS	control-flow/switch-untyped-case-conversion	-
 PASS	control-flow/while-eq-single-iteration	-
@@ -604,9 +624,16 @@ PASS	returns/early-return-named	-
 PASS	returns/multi-result-argument	-
 PASS	returns/multi-result-assign-order	-
 PASS	returns/multi-result-assignment	-
+PASS	returns/multi-result-blank-forward	-
 PASS	returns/multi-result-forward	-
+PASS	returns/multi-result-forward-named	-
+PASS	returns/multi-result-forward-nested	-
+PASS	returns/multi-result-forward-three	-
 PASS	returns/multi-result-map-value	-
 PASS	returns/multi-result-method	-
+PASS	returns/multi-result-method-forward	-
+PASS	returns/multi-result-three	-
+PASS	returns/multi-result-to-existing	-
 PASS	returns/naked-return	-
 FAIL	returns/named-multi-defer	frontend-export
 PASS	returns/named-result-defaults	-
@@ -718,6 +745,7 @@ PASS	variadic/defined-slice-spread	-
 FAIL	variadic/forwarding	differential
 PASS	variadic/literal-args-local-slice	-
 PASS	variadic/multi-result-call	-
+PASS	variadic/multi-result-into-fixed-variadic	-
 FAIL	variadic/no-args-vs-empty-spread	differential
 PASS	variadic/spread-aliasing	-
 FAIL	variadic/variadic	frontend-export

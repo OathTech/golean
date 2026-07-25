@@ -180,10 +180,33 @@ way an arc reaches `main`).
    `git checkout -b <new-branch>`. Do not linger on the merged feature branch.
 7. **`git push` is a separate action** with its own explicit sign-off — never
    bundled into the merge, never assumed from it.
+
 ### How to run the audit (the pattern behind step 3)
 
 - **Reviewer model: Opus** — pre-merge audit reviewers and their verifiers run
   on Opus-class models (user direction 2026-07-21); don't silently downgrade.
+- **THE SEMANTICS IS THE PRIMARY DIMENSION — always audit it** (user
+  direction 2026-07-24). GoCore's machine and relation are the trust
+  surface everything else rests on: proofs, specs, and the differential all
+  inherit their errors. Do NOT reason "semantic dimensions returned zero
+  findings, so semantics is low-risk" — that is dropping a check because it
+  passes, and the worst defect this project has had (BUG-002, expression-step
+  atomicity) was a semantics defect **no test could catch**, found by
+  reasoning about the model and paid for with the whole reshape. Classes the
+  green gates structurally CANNOT see:
+  - **unexercised paths** — the differential validates only what the corpus
+    runs (this is how Goose's break-in-switch divergence survived; found by
+    reading, not running). Findings become corpus cases.
+  - **atomicity / granularity** — step decomposition is unobservable
+    sequentially and only bites under concurrency (the granularity ledger,
+    `docs/2026-07-23_reshape-r1r2-machine-design.md` §1). BUG-002's class.
+  - **fail-closed classification** — an `unsupported` that should have been
+    a supported-and-correct answer never appears as a failure anywhere.
+  - **claim strength / vacuity** — whether a law says what it appears to.
+  Secondary but audit-only: **gate honesty** — do commits/notes/re-pin
+  reasons match the code, did a gate quietly fail open (the 2026-07-23
+  purity-scan rename hole was invisible to eleven green steps).
+  Cadence is unchanged: pre-merge only.
 - **Audit adversarially *before* claiming a milestone or merging, not after** —
   self-certification is unreliable, so audit before building a mountain on it.
   Audit the branch's **final state**: an audit of an earlier snapshot does not

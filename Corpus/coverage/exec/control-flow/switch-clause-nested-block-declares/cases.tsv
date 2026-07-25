@@ -1,0 +1,2 @@
+# id	subject	args	expected_status	expected_reason	features
+-	switchClauseNestedBlockDeclares	-	ok	-	control_flow,switch,scoping,cases,shadowing

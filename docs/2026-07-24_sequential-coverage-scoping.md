@@ -290,3 +290,72 @@ before each return site". The frontend-desugar route is cheaper and is
 exactly the foreclosure §0 forbids: the panicking path would never see
 those statements, and adding `recover` later would mean redoing defer.
 **Decision: stage (b) first with the frame-carried chain, then (a).**
+
+## 6. Edge enumeration is part of each rung's definition of done
+(practice adopted 2026-07-24, user direction)
+
+The guardrail-first rule says a feature isn't *started* until its cases
+exist. This adds the closing half: a rung isn't *done* until its edges are
+enumerated into the corpus. Layer 2 of the three-layer sufficiency
+strategy (`docs/native-frontend-goal.md`) applied per-rung rather than
+saved for the end.
+
+Concretely, after the minimal guardrails go green, write a batch that
+attacks the **implementation's own seams** — not the happy path:
+
+- every branch the lowering has (fixed/variadic splits, target-vs-value
+  operand positions, declare-vs-assign, blank targets, named results);
+- every nesting the machine can reach (break through nested blocks, a
+  loop inside a switch clause, a switch inside a switch, fallthrough
+  inside a nested switch, break/continue interleaved in one loop body);
+- evaluation ORDER and once-ness wherever the desugaring reorders
+  anything (tag evaluated once; case expressions left to right);
+- the scope boundaries the transformation blurs (clause scopes, shadowed
+  defines, nested blocks that declare).
+
+Two rules that keep this honest:
+
+1. **The oracle supplies the expected values, never the author.** Write
+   the program, let `go run` say what it does. (A case whose expected
+   value was reasoned out by hand is a case that encodes the author's
+   misunderstanding.)
+2. **Known gaps get RED guardrails, not silence.** A construct the tool
+   fails closed on gets a corpus case that records the exact failure
+   reason, so the baseline diff *forces* attention when it later flips.
+   W2 shipped two: `switch-case-call` (calls in case expressions —
+   hoisting them would evaluate eagerly and break Go's lazy case order)
+   and `switch-fallthrough-declaring-clause` (the sibling-scope
+   restriction of §W2's amendment).
+
+Calibration note, recorded because it matters for reading results: an
+all-green edge batch is WEAKER evidence than one that finds something.
+W1+W2's batch was 22 green / 2 deliberately red on the second attempt —
+the first attempt was too easy and was rewritten to aim at the new code
+paths. If a batch finds nothing, suspect the batch before the code.
+
+
+## 7. Ladder re-order: W5 (closures) before W3 (defer/recover)
+(2026-07-24, discovered by surveying the guardrails)
+
+The corpus decides the order. Of the 15 `defer/` cases, **10 use closures**
+(`defer func(){ … }()` — the idiomatic form) and 3 more use method values;
+only 2 use a plain named function. Building W3 first would validate a
+machine-design-critical rung against two exercisable cases, violating the
+rule that a feature is not started until its guardrails classify AND can
+run.
+
+Checked against §0 before re-ordering: the reason W3 was early is the
+foreclosure rule — nothing may be built that *depends on* panic-as-teleport.
+Closures do not (they are frontend lambda-lifting plus a func-value
+`GoValue`), so W5-then-W3 deepens no hole. The prohibition stands unchanged
+in the meantime.
+
+**New order: … W5 (closures/func values) → W3 (defer/recover) → W4 …**
+
+W5's own foreclosure item, recorded now: **Go closures capture by
+REFERENCE** (the closure and the enclosing frame share the variable). Our
+locals are already heap cells and the environment maps names to `Loc`, so
+capturing the `Loc` is both natural and correct; capturing VALUES would be
+the foreclosure (it silently changes loop-variable and mutation semantics,
+and `defer func(){ result++ }()` — W3's whole point — depends on
+by-reference capture). Method values ride the same representation.

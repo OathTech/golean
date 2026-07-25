@@ -1,0 +1,2 @@
+# id	subject	args	expected_status	expected_reason	features
+-	switchTagOnce	-	ok	-	control_flow,switch,evaluation_order,calls
