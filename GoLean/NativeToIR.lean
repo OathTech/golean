@@ -333,6 +333,17 @@ private def asCall? (json : Json) : LowerM (Option (String × Array Json)) := do
       pure (some (name, args))
   | _ => pure none
 
+/-- Recognize a call through a func VALUE (a closure or func-typed
+variable): the callee is an expression rather than a name (W5 §8). -/
+private def asCallValue? (json : Json) : LowerM (Option (Json × Array Json)) := do
+  match json.getObjVal? "expr" with
+  | .ok (.str "call-value") =>
+      let obj ← StrictJson.obj "call-value" json
+      let callee ← StrictJson.field "call-value" obj "callee"
+      let args ← StrictJson.array "call-value.args" (← StrictJson.field "call-value" obj "args")
+      pure (some (callee, args))
+  | _ => pure none
+
 mutual
 
 /-- Lower a statement. `results` are the enclosing function's result params. -/
@@ -343,18 +354,6 @@ partial def decodeStmt (results : Array Param) (path : String) (json : Json) : L
   | "block" =>
       let body ← StrictJson.array s!"{path}.body" (← StrictJson.field path obj "body")
       pure (.block #[] (← body.mapIdxM (fun i s => decodeStmt results s!"{path}.body[{i}]" s)))
-  | "call-value" =>
-      let callee ← decodeExpr s!"{path}.callee" (← StrictJson.field path obj "callee")
-      let args ← StrictJson.array s!"{path}.args" (← StrictJson.field path obj "args")
-      let argEs ← args.mapIdxM (fun i a => decodeExpr s!"{path}.args[{i}]" a)
-      let lhs ← StrictJson.array s!"{path}.lhs" (← StrictJson.field path obj "lhs")
-      let mut decls : Array Stmt := #[]
-      let mut assignees : Array Assignee := #[]
-      for i in [:lhs.size] do
-        let t ← decodeTarget s!"{path}.lhs[{i}]" lhs[i]!
-        decls := decls ++ (← declaresOf #[t])
-        assignees := assignees.push t.assignee
-      pure (.seqn (decls.push (.callValue assignees callee argEs)))
   | "breakable" =>
       pure (.breakable (← decodeStmt results s!"{path}.body"
         (← StrictJson.field path obj "body")))
@@ -387,7 +386,12 @@ partial def decodeStmt (results : Array Param) (path : String) (json : Json) : L
       match ← asCall? e with
       | some (name, args) =>
           pure (.call #[] ⟨name⟩ (← args.mapIdxM (fun i a => decodeExpr s!"{path}.expr.args[{i}]" a)))
-      | none => fail s!"expression statement is not a call at {path} (calls are the only effectful expressions modeled)"
+      | none =>
+          match ← asCallValue? e with
+          | some (callee, args) =>
+              pure (.callValue #[] (← decodeExpr s!"{path}.expr.callee" callee)
+                (← args.mapIdxM (fun i a => decodeExpr s!"{path}.expr.args[{i}]" a)))
+          | none => fail s!"expression statement is not a call at {path} (calls are the only effectful expressions modeled)"
   | "range" =>
       decodeRange results path obj
   | "new" =>
@@ -556,6 +560,33 @@ partial def decodeAssign (results : Array Param) (path : String) (obj : StrictJs
             decls := decls ++ (← declaresOf #[t])
             assignees := assignees.push t.assignee
         return .seqn (decls.push (.call assignees ⟨name⟩ (← args.mapIdxM (fun i a => decodeExpr s!"{path}.args[{i}]" a))))
+    | none => pure ()
+  -- Same for a call through a func value.
+  if rhs.size == 1 then
+    match ← asCallValue? rhs[0]! with
+    | some (calleeJ, args) =>
+        let callObj ← StrictJson.obj s!"{path}.rhs[0]" rhs[0]!
+        let resultTypes ← (match callObj.get? "resultTypes" with
+          | some rt => do
+              let arr ← StrictJson.array s!"{path}.rhs[0].resultTypes" rt
+              arr.mapIdxM (fun i t => decodeTy s!"{path}.rhs[0].resultTypes[{i}]" t)
+          | none => pure #[])
+        let callee ← decodeExpr s!"{path}.rhs[0].callee" calleeJ
+        let argEs ← args.mapIdxM (fun i a => decodeExpr s!"{path}.rhs[0].args[{i}]" a)
+        let mut decls : Array Stmt := #[]
+        let mut assignees : Array Assignee := #[]
+        for i in [:lhs.size] do
+          let lj := lhs[i]!
+          if targetIsBlank lj then
+            let tmp := s!"$cv{i}"
+            let ty := resultTypes[i]?.getD .int
+            decls := decls.push (.initialization { id := tmp, typ := ty })
+            assignees := assignees.push (.var tmp)
+          else
+            let t ← decodeTarget s!"{path}.lhs[{i}]" lj
+            decls := decls ++ (← declaresOf #[t])
+            assignees := assignees.push t.assignee
+        return .seqn (decls.push (.callValue assignees callee argEs))
     | none => pure ()
   -- Comma-ok map lookup: `v, ok := m[k]`. Blank targets route to fresh temps.
   if lhs.size == 2 && rhs.size == 1 then

@@ -29,10 +29,14 @@ func (e *emitter) emitProgram(files []*ast.File) (map[string]any, error) {
 				if d.Recv == nil && d.Name.Name == "main" {
 					continue
 				}
+				e.curFuncName = d.Name.Name
+				e.liftSeq = 0
 				fn, err := e.emitFuncDecl(d)
 				if err != nil {
 					return nil, err
 				}
+				funcs = append(funcs, e.lifted...)
+				e.lifted = nil
 				if d.Recv != nil {
 					methods = append(methods, fn)
 				} else {
@@ -530,6 +534,10 @@ func (e *emitter) emitAssign(st *ast.AssignStmt) (any, error) {
 // emitAssignTarget emits an lvalue. On `:=`, a target ident that go/types
 // records as a new definition is a declaration (carries its type).
 func (e *emitter) emitAssignTarget(l ast.Expr, define bool) (any, error) {
+	if pname, ok := e.capturedPtr(l); ok {
+		return map[string]any{"target": "addr",
+			"expr": map[string]any{"expr": "ident", "name": pname}}, nil
+	}
 	if id, ok := l.(*ast.Ident); ok {
 		if id.Name == "_" {
 			return map[string]any{"target": "blank"}, nil
@@ -597,9 +605,22 @@ func (e *emitter) emitIf(st *ast.IfStmt) (any, error) {
 	}
 	node["then"] = then
 	if st.Else != nil {
+		// An `else if` condition is evaluated ONLY when the earlier tests
+		// fail, so any call it hoists must land INSIDE the else branch. The
+		// enclosing accumulator would place it before the whole chain, making
+		// every later condition eager — pre-existing bug, unreachable until
+		// closures let a case observe it (`if/else-if-first-match`).
+		saved := e.hoisted
+		e.hoisted = nil
 		els, err := e.emitStmt(st.Else)
+		elseHoists := e.hoisted
+		e.hoisted = saved
 		if err != nil {
 			return nil, err
+		}
+		if len(elseHoists) > 0 {
+			els = map[string]any{"stmt": "block",
+				"body": append(append([]any{}, elseHoists...), els)}
 		}
 		node["else"] = els
 	}
@@ -625,9 +646,20 @@ func (e *emitter) emitFor(st *ast.ForStmt) (any, error) {
 		node["cond"] = cond
 	}
 	if st.Post != nil {
+		// The post statement runs every iteration; hoists from it must stay
+		// inside it rather than escaping to before the loop (same class as
+		// the else-if fix above).
+		saved := e.hoisted
+		e.hoisted = nil
 		post, err := e.emitStmt(st.Post)
+		postHoists := e.hoisted
+		e.hoisted = saved
 		if err != nil {
 			return nil, err
+		}
+		if len(postHoists) > 0 {
+			post = map[string]any{"stmt": "block",
+				"body": append(append([]any{}, postHoists...), post)}
 		}
 		node["post"] = post
 	}
@@ -943,6 +975,8 @@ func (e *emitter) emitExprBare(x ast.Expr) (any, error) {
 		return e.emitStar(ex)
 	case *ast.SliceExpr:
 		return e.emitSliceExpr(ex)
+	case *ast.FuncLit:
+		return e.emitFuncLit(ex)
 	default:
 		return nil, unsup("expression %T at %s", x, e.fset.Position(x.Pos()))
 	}
@@ -1080,6 +1114,9 @@ func (e *emitter) emitStar(st *ast.StarExpr) (any, error) {
 
 // emitAddressOf handles &x forms.
 func (e *emitter) emitAddressOf(x ast.Expr) (any, error) {
+	if pname, ok := e.capturedPtr(x); ok {
+		return map[string]any{"expr": "ident", "name": pname}, nil
+	}
 	switch ex := x.(type) {
 	case *ast.Ident:
 		return map[string]any{"expr": "ref", "id": ex.Name}, nil
@@ -1137,6 +1174,10 @@ func (e *emitter) emitAddressOf(x ast.Expr) (any, error) {
 // expression: plain locals stay `var`, everything else becomes an addressed
 // location (`&x` form) that GoCore assigns through.
 func (e *emitter) emitLValue(x ast.Expr) (any, error) {
+	if pname, ok := e.capturedPtr(x); ok {
+		return map[string]any{"target": "addr",
+			"expr": map[string]any{"expr": "ident", "name": pname}}, nil
+	}
 	if id, ok := x.(*ast.Ident); ok {
 		if id.Name == "_" {
 			return map[string]any{"target": "blank"}, nil
@@ -1166,6 +1207,19 @@ func (e *emitter) emitCompositeLit(cl *ast.CompositeLit) (any, error) {
 	}
 }
 
+// containsCall reports whether an expression performs a call (and so has an
+// observable evaluation MOMENT, not just a value).
+func containsCall(x ast.Expr) bool {
+	found := false
+	ast.Inspect(x, func(n ast.Node) bool {
+		if _, ok := n.(*ast.CallExpr); ok {
+			found = true
+		}
+		return !found
+	})
+	return found
+}
+
 func (e *emitter) emitStructLit(cl *ast.CompositeLit, t types.Type, st *types.Struct) (any, error) {
 	target, err := e.emitType(t)
 	if err != nil {
@@ -1180,6 +1234,28 @@ func (e *emitter) emitStructLit(cl *ast.CompositeLit, t types.Type, st *types.St
 		} else {
 			positional = append(positional, elt)
 		}
+	}
+	// Go evaluates a keyed literal's values in SOURCE order, but GoCore's
+	// structLit takes them in DECLARATION order. When a value performs a
+	// call, that reordering is observable (`structs/keyed-literal-eval-order`),
+	// so pre-bind the effectful ones to temps in source order and use the
+	// temps below. Pure values need no temp — their evaluation moment is
+	// unobservable.
+	preBound := map[string]any{}
+	for _, elt := range cl.Elts {
+		kv, ok := elt.(*ast.KeyValueExpr)
+		if !ok || !containsCall(kv.Value) {
+			continue
+		}
+		w, err := e.emitExpr(kv.Value)
+		if err != nil {
+			return nil, err
+		}
+		ref, err := e.hoist(w, e.info.TypeOf(kv.Value))
+		if err != nil {
+			return nil, err
+		}
+		preBound[kv.Key.(*ast.Ident).Name] = ref
 	}
 	args := []any{}
 	// GoCore structLit takes positional args in declared field order; fill
@@ -1197,7 +1273,9 @@ func (e *emitter) emitStructLit(cl *ast.CompositeLit, t types.Type, st *types.St
 			args = append(args, w)
 			continue
 		}
-		if v, ok := keyed[fld.Name()]; ok {
+		if ref, ok := preBound[fld.Name()]; ok {
+			args = append(args, ref)
+		} else if v, ok := keyed[fld.Name()]; ok {
 			w, err := e.emitExpr(v)
 			if err != nil {
 				return nil, err
@@ -1346,6 +1424,125 @@ func (e *emitter) emitArrayLit(cl *ast.CompositeLit, arr *types.Array) (any, err
 	return map[string]any{"expr": "array-lit", "length": arr.Len(), "elem": elem, "elems": elems}, nil
 }
 
+// freeCaptures returns the variables a func literal captures: identifiers it
+// USES that were declared outside it (and are not package-level funcs, types
+// or constants), in deterministic source order.
+func (e *emitter) freeCaptures(lit *ast.FuncLit) []*types.Var {
+	inner := map[types.Object]bool{}
+	ast.Inspect(lit, func(n ast.Node) bool {
+		if id, ok := n.(*ast.Ident); ok {
+			if obj, isDef := e.info.Defs[id]; isDef && obj != nil {
+				inner[obj] = true
+			}
+		}
+		return true
+	})
+	seen := map[types.Object]bool{}
+	out := []*types.Var{}
+	ast.Inspect(lit, func(n ast.Node) bool {
+		id, ok := n.(*ast.Ident)
+		if !ok {
+			return true
+		}
+		v, isVar := e.info.Uses[id].(*types.Var)
+		if !isVar || inner[v] || seen[v] || v.IsField() {
+			return true
+		}
+		// Package-level variables are not captures (globals are unsupported
+		// today and would fail closed elsewhere).
+		if v.Parent() == nil || v.Parent() == e.pkg.Scope() {
+			return true
+		}
+		seen[v] = true
+		out = append(out, v)
+		return true
+	})
+	return out
+}
+
+// emitFuncLit lambda-lifts a func literal (§8): the body becomes a synthetic
+// top-level function whose leading parameters are POINTERS to the captured
+// variables, and the expression becomes a func value carrying their
+// addresses. Two closures over one variable therefore receive the same
+// address — Go's capture-by-reference, made explicit.
+func (e *emitter) emitFuncLit(lit *ast.FuncLit) (any, error) {
+	sig, ok := e.info.TypeOf(lit).(*types.Signature)
+	if !ok {
+		return nil, unsup("func literal without a signature")
+	}
+	captures := e.freeCaptures(lit)
+
+	name := e.curFuncName + "$lit" + itoa(e.liftSeq)
+	e.liftSeq++
+
+	// Parameters: captured pointers first, then the literal's own.
+	params := []any{}
+	capturedArgs := []any{}
+	newCapture := map[types.Object]string{}
+	for k, v := range e.captureParam {
+		newCapture[k] = v // a nested literal still reaches outer captures
+	}
+	for _, v := range captures {
+		pname := v.Name() + "$cap"
+		pty, err := e.emitType(v.Type())
+		if err != nil {
+			return nil, err
+		}
+		params = append(params, map[string]any{"id": pname,
+			"type": map[string]any{"kind": "pointer", "elem": pty}})
+		// The captured ADDRESS at the creation site — itself a deref-free
+		// reference, or the outer pointer parameter when re-capturing.
+		if outer, ok := e.captureParam[v]; ok {
+			capturedArgs = append(capturedArgs,
+				map[string]any{"expr": "ident", "name": outer})
+		} else {
+			capturedArgs = append(capturedArgs,
+				map[string]any{"expr": "ref", "id": v.Name()})
+		}
+		newCapture[v] = pname
+	}
+	own, err := e.emitParams(sig.Params())
+	if err != nil {
+		return nil, err
+	}
+	params = append(params, own...)
+	results, err := e.emitResults(sig.Results())
+	if err != nil {
+		return nil, err
+	}
+
+	// Emit the body with the capture map in force and a fresh hoist context.
+	savedCapture, savedHoisted, savedName := e.captureParam, e.hoisted, e.curFuncName
+	e.captureParam, e.hoisted = newCapture, nil
+	body, berr := e.emitBlock(lit.Body)
+	e.captureParam, e.hoisted, e.curFuncName = savedCapture, savedHoisted, savedName
+	if berr != nil {
+		return nil, berr
+	}
+
+	e.lifted = append(e.lifted, map[string]any{
+		"name": name, "params": params, "results": results, "body": body,
+	})
+	return map[string]any{"expr": "func-value", "func": name,
+		"captured": capturedArgs}, nil
+}
+
+// capturedPtr reports the pointer-parameter name for a captured variable when
+// emitting a lifted body (§8), so WRITE positions reach the shared cell too:
+// `x = v` becomes `*x$cap = v`, and `&x` becomes the pointer itself.
+func (e *emitter) capturedPtr(x ast.Expr) (string, bool) {
+	id, ok := x.(*ast.Ident)
+	if !ok || e.captureParam == nil {
+		return "", false
+	}
+	obj := e.info.Uses[id]
+	if obj == nil {
+		return "", false
+	}
+	pname, ok := e.captureParam[obj]
+	return pname, ok
+}
+
 func (e *emitter) emitIdent(id *ast.Ident) (any, error) {
 	switch id.Name {
 	case "true":
@@ -1358,6 +1555,29 @@ func (e *emitter) emitIdent(id *ast.Ident) (any, error) {
 	// A constant identifier folds to its value.
 	if tv, ok := e.info.Types[id]; ok && tv.Value != nil {
 		return e.emitConstValue(tv)
+	}
+	// A declared function used as a VALUE (`f := someFunc`) is a func value
+	// with no captures — the same representation lifted literals get (§8).
+	// Callee positions never reach here (emitCallNode handles them), so this
+	// is exactly the value-position case.
+	if fn, ok := e.info.Uses[id].(*types.Func); ok {
+		if _, isSig := fn.Type().(*types.Signature); isSig {
+			return map[string]any{"expr": "func-value", "func": fn.Name(),
+				"captured": []any{}}, nil
+		}
+	}
+	// Inside a lifted body, a captured variable is reached through its
+	// pointer parameter (§8): reading `x` is `*x$ptr`.
+	if obj := e.info.Uses[id]; obj != nil {
+		if pname, ok := e.captureParam[obj]; ok {
+			ty, err := e.emitType(obj.Type())
+			if err != nil {
+				return nil, err
+			}
+			return map[string]any{"expr": "deref",
+				"ptr":  map[string]any{"expr": "ident", "name": pname},
+				"type": ty}, nil
+		}
 	}
 	return map[string]any{"expr": "ident", "name": id.Name}, nil
 }
@@ -1495,6 +1715,27 @@ func (e *emitter) emitCallNode(c *ast.CallExpr) (any, bool, error) {
 		sig, _ = obj.Type().(*types.Signature)
 	case *types.Builtin:
 		return e.emitBuiltin(c, fnID.Name)
+	case *types.Var:
+		// A call through a func-typed VARIABLE (closure or func value): the
+		// callee is an expression, not a name (§8).
+		vsig, ok := obj.Type().Underlying().(*types.Signature)
+		if !ok {
+			return nil, false, unsup("call to non-function variable %s", fnID.Name)
+		}
+		callee, err := e.emitExpr(fnID)
+		if err != nil {
+			return nil, false, err
+		}
+		args, err := e.emitCallArgs(vsig, c)
+		if err != nil {
+			return nil, false, err
+		}
+		resultTypes, err := e.emitResultTypes(vsig)
+		if err != nil {
+			return nil, false, err
+		}
+		return map[string]any{"expr": "call-value", "callee": callee,
+			"args": args, "resultTypes": resultTypes}, true, nil
 	default:
 		return nil, false, unsup("call to non-function %s", fnID.Name)
 	}

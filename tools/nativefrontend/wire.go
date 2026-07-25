@@ -28,6 +28,17 @@ type emitter struct {
 	hoisted        []any
 	tmpSeq         int
 	hoistForbidden string // non-empty where hoisting is unsafe (short-circuit RHS, loop cond)
+
+	// Lambda lifting (W5, docs/2026-07-24_sequential-coverage-scoping.md §8):
+	// func literals are hoisted to synthetic top-level functions taking their
+	// captured variables as POINTER parameters, so Go's capture-by-reference
+	// is explicit in the lowering. `lifted` accumulates them; `captureParam`
+	// maps a captured variable to its pointer-parameter name while emitting a
+	// lifted body, so references to it become derefs.
+	lifted        []any
+	liftSeq       int
+	curFuncName   string
+	captureParam  map[types.Object]string
 }
 
 // emptyStructName is the canonical GoCore type name for the empty struct
@@ -91,6 +102,24 @@ func (e *emitter) emitType(t types.Type) (any, error) {
 			return map[string]any{"kind": "interface", "name": "any"}, nil
 		}
 		return nil, unsup("anonymous non-empty interface type %s", ty)
+	case *types.Signature:
+		params := []any{}
+		for i := 0; i < ty.Params().Len(); i++ {
+			pt, err := e.emitType(ty.Params().At(i).Type())
+			if err != nil {
+				return nil, err
+			}
+			params = append(params, pt)
+		}
+		results := []any{}
+		for i := 0; i < ty.Results().Len(); i++ {
+			rt, err := e.emitType(ty.Results().At(i).Type())
+			if err != nil {
+				return nil, err
+			}
+			results = append(results, rt)
+		}
+		return map[string]any{"kind": "func", "params": params, "results": results}, nil
 	case *types.Struct:
 		// The empty struct struct{} (the set-value idiom map[K]struct{}) is a
 		// canonical named empty struct in GoCore; other anonymous structs are

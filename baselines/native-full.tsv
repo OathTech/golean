@@ -1,16 +1,16 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-07-24  commit: 9278683  frontend: native  oracle: go run
-# manifest_cases: 744  pass: 228  fail: 516
-# Re-pin reason: deliberate coverage ADDITION — the W1/W2 edge-enumeration
-# batch (docs/2026-07-24_sequential-coverage-scoping.md §6): 24 NEW cases
-# aimed at the freshly-built areas' own code seams. 22 PASS (tuple
-# forwarding out of methods/named-result funcs, the fixed+variadic split
-# over splatted temps, break through nested blocks, nested fallthrough,
-# break/continue interleaving, tag-once evaluation) and 2 deliberately RED
-# pinning known fail-closed gaps with their exact reasons
-# (switch-case-call: calls in case expressions would need lazy hoisting;
-# switch-fallthrough-declaring-clause: sibling-scope restriction).
-# Corpus 720 -> 744. No pre-existing case moved.
+# recorded: 2026-07-25  commit: 56ed927  frontend: native  oracle: go run
+# manifest_cases: 744  pass: 258  fail: 486
+# Re-pin reason: deliberate coverage ADDITION — W5 slice 1b, frontend lambda
+# lifting (docs/2026-07-24_sequential-coverage-scoping.md §8). Closures gate
+# far more than closure cases (many eval-order cases use a closure as their
+# side-effect marker), so 228 -> 258 passing. INCLUDES TWO FIDELITY FIXES the
+# new coverage exposed, both pre-existing and previously unreachable: else-if
+# conditions were hoisted eagerly outside the chain (Go stops at the first
+# match; same class fixed for `for` post statements), and keyed struct
+# literals evaluated in declaration rather than source order. The 8 remaining
+# differential-stage failures are the pre-existing triage backlog, unchanged.
+# Also: named functions used as VALUES now lower to captureless func values.
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
 FAIL	arrays/array-copy	lean-observation
@@ -21,8 +21,8 @@ PASS	arrays/array-zero	-
 FAIL	arrays/arrays	lean-observation
 FAIL	arrays/arrays-are-values	lean-observation
 PASS	arrays/defined-array-receiver	-
-FAIL	arrays/index-eval-order	frontend-export
-FAIL	arrays/keyed-literal-eval-order	frontend-export
+FAIL	arrays/index-eval-order	lean-observation
+PASS	arrays/keyed-literal-eval-order	-
 PASS	arrays/keyed-literal-sparse	-
 PASS	arrays/nested-arrays	-
 FAIL	arrays/nested-copy-value	lean-observation
@@ -183,11 +183,11 @@ FAIL	control-flow/break-label-select	frontend-export
 PASS	control-flow/continue-in-switch	-
 FAIL	control-flow/continue-label-post	frontend-export
 FAIL	control-flow/expressionless-switch-order	frontend-export
-FAIL	control-flow/for-break-skips-post	frontend-export
+PASS	control-flow/for-break-skips-post	-
 FAIL	control-flow/for-condition-eval	frontend-export
 PASS	control-flow/for-continue-post-plain	-
-FAIL	control-flow/for-continue-runs-post	frontend-export
-FAIL	control-flow/for-post-side-effects	frontend-export
+PASS	control-flow/for-continue-runs-post	-
+PASS	control-flow/for-post-side-effects	-
 FAIL	control-flow/goto-backward-redeclare	frontend-export
 FAIL	control-flow/goto-defer-return	frontend-export
 FAIL	control-flow/goto-forward	frontend-export
@@ -217,7 +217,7 @@ PASS	control-flow/switch-clause-nested-block-declares	-
 PASS	control-flow/switch-default-only-break	-
 PASS	control-flow/switch-default-position	-
 PASS	control-flow/switch-empty-clause	-
-FAIL	control-flow/switch-expression-once	frontend-export
+PASS	control-flow/switch-expression-once	-
 PASS	control-flow/switch-fallthrough	-
 PASS	control-flow/switch-fallthrough-chain	-
 FAIL	control-flow/switch-fallthrough-declaring-clause	frontend-export
@@ -226,7 +226,7 @@ FAIL	control-flow/switch-fallthrough-skips-case-expression	frontend-export
 PASS	control-flow/switch-fallthrough-target-declares	-
 PASS	control-flow/switch-fallthrough-then-break	-
 PASS	control-flow/switch-init	-
-FAIL	control-flow/switch-init-before-expression	frontend-export
+PASS	control-flow/switch-init-before-expression	-
 FAIL	control-flow/switch-interface-case-panic	lean-observation
 PASS	control-flow/switch-multi-case-values	-
 PASS	control-flow/switch-nested-break	-
@@ -281,22 +281,22 @@ FAIL	floats/signed-zero	frontend-export
 FAIL	floats/to-int-truncation	frontend-export
 FAIL	floats/to-uint-truncation	frontend-export
 FAIL	floats/typed-constant-adaptation	frontend-export
-FAIL	functions/closure-recursion	frontend-export
-FAIL	functions/closure-return-state	frontend-export
-FAIL	functions/closure-share	frontend-export
+PASS	functions/closure-recursion	-
+PASS	functions/closure-return-state	-
+PASS	functions/closure-share	-
 FAIL	functions/composite-function-values/map-call	frontend-export
 FAIL	functions/composite-function-values/slice-call	frontend-export
 FAIL	functions/composite-function-values/struct-call	frontend-export
 FAIL	functions/composite-function-values/struct-reassign	frontend-export
 FAIL	functions/function-in-interface	frontend-export
-FAIL	functions/function-interface-compare-panic	frontend-export
-FAIL	functions/function-nil-compare	frontend-export
-FAIL	functions/function-reassign	frontend-export
-FAIL	functions/higher-order-arg	frontend-export
+FAIL	functions/function-interface-compare-panic	lean-observation
+PASS	functions/function-nil-compare	-
+PASS	functions/function-reassign	-
+PASS	functions/higher-order-arg	-
 FAIL	functions/method-value-callback	frontend-export
-FAIL	functions/nil-function-call-panic	frontend-export
+PASS	functions/nil-function-call-panic	-
 PASS	functions/recursion	-
-FAIL	functions/return-function	frontend-export
+PASS	functions/return-function	-
 FAIL	generics/comparable-constraint	frontend-export
 FAIL	generics/comparable-runtime-edge/any-different-dynamic-types	frontend-export
 FAIL	generics/comparable-runtime-edge/any-equal-ints	frontend-export
@@ -343,10 +343,10 @@ FAIL	generics/type-parameter-slice-ops	frontend-export
 FAIL	generics/type-set-constraint	frontend-export
 FAIL	generics/zero-composite	frontend-export
 FAIL	generics/zero-values	frontend-export
-FAIL	if/condition-evaluated-once	frontend-export
-FAIL	if/else-if-first-match	frontend-export
+PASS	if/condition-evaluated-once	-
+PASS	if/else-if-first-match	-
 PASS	if/if-init-scope	-
-FAIL	if/init-before-condition	frontend-export
+PASS	if/init-before-condition	-
 FAIL	init/blank-var-init	lean-observation
 FAIL	init/global-zero-before-init	lean-observation
 FAIL	init/init-sees-var-values	lean-observation
@@ -436,7 +436,7 @@ PASS	ints/wrap-width-boundaries	-
 PASS	maps/array-key	-
 FAIL	maps/array-value-copy	lean-observation
 FAIL	maps/channel-key	frontend-export
-FAIL	maps/compound-assign-eval-once	frontend-export
+FAIL	maps/compound-assign-eval-once	lean-observation
 PASS	maps/defined-map-value	-
 FAIL	maps/delete-alias-visible	frontend-export
 FAIL	maps/delete-eval-order	frontend-export
@@ -448,21 +448,21 @@ FAIL	maps/delete-nil-interface-key-panic	frontend-export
 FAIL	maps/delete-nil-key-types	frontend-export
 FAIL	maps/delete-nil-map	frontend-export
 FAIL	maps/delete-nil-value-types	frontend-export
-FAIL	maps/index-assign-eval-order	frontend-export
+PASS	maps/index-assign-eval-order	-
 FAIL	maps/interface-dynamic-type-key	lean-observation
 FAIL	maps/interface-key	lean-observation
 FAIL	maps/interface-slice-key-panic	lean-observation
-FAIL	maps/literal-eval-order	frontend-export
+PASS	maps/literal-eval-order	-
 PASS	maps/map-alias	-
 PASS	maps/map-basic	-
 PASS	maps/map-bool-keys	-
 PASS	maps/map-bool-values	-
 PASS	maps/map-comma-ok	-
 FAIL	maps/map-copy-write	lean-observation
-FAIL	maps/map-expr-assign-eval-order	frontend-export
+PASS	maps/map-expr-assign-eval-order	-
 PASS	maps/map-literal-basic	-
 PASS	maps/map-literal-bool	-
-FAIL	maps/map-literal-duplicate-eval-order	frontend-export
+PASS	maps/map-literal-duplicate-eval-order	-
 PASS	maps/map-literal-duplicate-runtime-key	-
 PASS	maps/map-literal-empty	-
 FAIL	maps/map-literal-interface-distinct-dynamic-type	lean-observation
@@ -483,7 +483,7 @@ PASS	maps/set-membership	-
 PASS	maps/slice-value-element-write	-
 PASS	maps/struct-key	-
 FAIL	maps/tuple-assign-key-eval	lean-observation
-FAIL	maps/tuple-map-expr-targets	frontend-export
+FAIL	maps/tuple-map-expr-targets	lean-observation
 FAIL	maps/tuple-rhs-before-target-write	lean-observation
 FAIL	maps/tuple-swap-values	lean-observation
 PASS	methods/defined-int-receiver	-
@@ -508,7 +508,7 @@ FAIL	methods/value-auto-deref	lean-observation
 PASS	multi-assign/blank-discard-nonint	-
 PASS	multi-assign/call-return-assignment	-
 PASS	multi-assign/deref-target-before-rhs	-
-FAIL	multi-assign/lhs-index-eval-order	frontend-export
+PASS	multi-assign/lhs-index-eval-order	-
 PASS	multi-assign/repeated-index-write	-
 PASS	multi-assign/repeated-variable-write	-
 PASS	multi-assign/rhs-before-writes	-
@@ -638,7 +638,7 @@ PASS	returns/naked-return	-
 FAIL	returns/named-multi-defer	frontend-export
 PASS	returns/named-result-defaults	-
 PASS	scoping/block-shadow	-
-FAIL	scoping/closure-shadow-binding	frontend-export
+PASS	scoping/closure-shadow-binding	-
 PASS	scoping/for-body-shadow	-
 PASS	scoping/for-init-scope	-
 FAIL	scoping/select-clause-scope	frontend-export
@@ -666,15 +666,15 @@ FAIL	slices/make-slice-zero	frontend-export
 PASS	slices/reslice-capacity	-
 FAIL	slices/slice-append	frontend-export
 FAIL	slices/slice-copy	frontend-export
-FAIL	slices/slice-expr-eval-order	frontend-export
+PASS	slices/slice-expr-eval-order	-
 FAIL	slices/slice-header-by-value	frontend-export
 PASS	slices/slice-literal	-
 FAIL	slices/slice-nil-empty	frontend-export
 FAIL	slices/three-index-slice	frontend-export
 FAIL	strings/byte-slice-to-string-copy	lean-observation
-FAIL	strings/concat-eval-order	frontend-export
+PASS	strings/concat-eval-order	-
 FAIL	strings/defined-slice-string-conversion	lean-observation
-FAIL	strings/index-eval-order	frontend-export
+PASS	strings/index-eval-order	-
 PASS	strings/literal-edge/interpreted-nul-byte	-
 FAIL	strings/literal-edge/interpreted-octal-hex-escapes	differential
 PASS	strings/literal-edge/interpreted-simple-escapes	-
@@ -693,7 +693,7 @@ PASS	strings/rune-literal-values	-
 FAIL	strings/rune-slice-conversion	lean-observation
 FAIL	strings/rune-slice-to-string-copy	lean-observation
 FAIL	strings/rune-string-conversion	lean-observation
-FAIL	strings/slice-eval-order	frontend-export
+PASS	strings/slice-eval-order	-
 PASS	strings/string-basic	-
 FAIL	strings/string-byte-conversion	lean-observation
 PASS	strings/string-byte-len	-
@@ -717,10 +717,10 @@ PASS	structs/comparable	-
 FAIL	structs/copy-value	lean-observation
 FAIL	structs/interface-field-compare-panic	lean-observation
 PASS	structs/keyed-literal	-
-FAIL	structs/keyed-literal-eval-order	frontend-export
+PASS	structs/keyed-literal-eval-order	-
 FAIL	structs/pointer-field	lean-observation
 PASS	structs/positional-literal	-
-FAIL	structs/positional-literal-eval-order	frontend-export
+PASS	structs/positional-literal-eval-order	-
 PASS	structs/recursive-pointer	-
 FAIL	structs/selector-address-pointer	lean-observation
 FAIL	structs/selector-addressability-edge/map-value-copy-then-assign	lean-observation
@@ -730,7 +730,7 @@ FAIL	structs/selector-addressability-edge/pointer-field-from-call-result	lean-ob
 FAIL	structs/selector-addressability-edge/pointer-result-assign	lean-observation
 PASS	structs/selector-addressability-edge/read-call-result	-
 FAIL	structs/selector-addressability-edge/read-conversion-result	lean-observation
-FAIL	structs/selector-eval-once	frontend-export
+FAIL	structs/selector-eval-once	lean-observation
 FAIL	structs/swap	frontend-export
 PASS	structs/tag-basic	-
 PASS	structs/tag-comparable	-
@@ -749,7 +749,7 @@ PASS	variadic/multi-result-into-fixed-variadic	-
 FAIL	variadic/no-args-vs-empty-spread	differential
 PASS	variadic/spread-aliasing	-
 FAIL	variadic/variadic	frontend-export
-FAIL	variadic/variadic-function-value	frontend-export
+PASS	variadic/variadic-function-value	-
 FAIL	variadic/variadic-generic	frontend-export
 FAIL	variadic/variadic-interface-dispatch	frontend-export
 FAIL	variadic/variadic-method	lean-observation
