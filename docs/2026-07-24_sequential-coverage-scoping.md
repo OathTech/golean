@@ -428,3 +428,62 @@ question, deferred with its case left red).
   is extension, not rework. ✓
 - Nothing here depends on panic-as-teleport, so §3.3's prohibition is
   untouched. ✓
+
+## 9. W3 design: the defer chain lives in the FRAME (step 0)
+
+All 15 `defer/` guardrails now fail on exactly one thing (`*ast.DeferStmt`
+unsupported) — closures cleared the rest, confirming §7's re-order.
+
+### Where the chain lives (the decision, with the argument that settles it)
+
+Three candidates were considered:
+
+- **(A) frame-carried** — `Cont.frame` gains `defers : List (FuncId ×
+  List GoValue)`; a `defer` statement rebuilds the continuation to
+  prepend onto the innermost frame (LIFO by construction).
+- **(B) heap cell** — Goose/Perennial's shape (`$defer` holds a closure
+  chain; `../deps/perennial/new/golang/defn/defer.v`). The frame must
+  still carry the cell's `Loc`, so it costs the same constructor change
+  AND adds heap encoding for a pending call.
+- **(C) state-side stack** — `ExecState.defers : List (List …)`.
+  Cheapest today: no constructor changes at all.
+
+**(C) is a foreclosure and is rejected.** Defers are per-FRAME mutable
+state, and under concurrency each goroutine has its own frame stack — a
+state-side stack would need to become per-goroutine exactly when
+goroutines land (R4), which is the "shortcut a later feature must undo"
+that §0 forbids. (A) is thread-local *by construction*: each goroutine
+carries its own continuation. That argument also decides against (B),
+which buys nothing over (A) here — Goose needs a heap cell only because
+GooseLang has no continuation structure to hang the chain on.
+
+**Decision: (A).** Accepted cost: `Cont.frame` gains a field, which
+ripples mechanically through the call/frame laws and the golden walk.
+
+### The rules (and why recover stays reachable)
+
+Frame exit runs the chain BEFORE the pinned-location result read (§5.3's
+constraint — this is what makes `defer func(){ result++ }()` observable,
+where Goose's snapshot-at-return cannot):
+
+```
+(.next      (.frame t r (d :: ds) k))  → enter d, continuation (.frame [] [] (.frame t r ds k))
+(.returning (.frame t r (d :: ds) k))  → same
+(.next      (.frame t r []        k))  → the existing read/store exit
+```
+
+A deferred call therefore runs in its own frame whose continuation is the
+outer frame with the remaining defers, so the chain drains one call per
+step and converges on the existing exit rules. Normal and `return` exits
+converge because `frameFall` and `frameReturn` already perform identical
+work.
+
+Registration evaluates the callee and then the arguments **at defer
+time** (Go's rule, pinned by `defer/defer-arg-eval`), reusing the
+value-call frames, and ends in a step that rebuilds the continuation to
+prepend onto the innermost frame.
+
+Recover (deferred to slice 2) then needs only: `.panicked` becomes an
+unwinding `.panicking msg` configuration that meets the same frame nodes
+and runs the same chains. Nothing in slice 1 depends on panic-as-teleport,
+so §3.3's prohibition is honored and the extension is additive.
