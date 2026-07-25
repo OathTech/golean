@@ -29,7 +29,20 @@ func (e *emitter) emitProgram(files []*ast.File) (map[string]any, error) {
 				if d.Recv == nil && d.Name.Name == "main" {
 					continue
 				}
+				// Lifted-literal names must be unique program-wide: methods
+				// qualify by receiver type (A.go1$lit0 vs B.go1$lit0 — the
+				// pre-merge audit found same-named methods colliding and the
+				// wrong body executing). The decoder collision-checks too.
 				e.curFuncName = d.Name.Name
+				if d.Recv != nil && len(d.Recv.List) > 0 {
+					rt := e.info.Defs[d.Name].Type().(*types.Signature).Recv().Type()
+					if ptr, ok := rt.(*types.Pointer); ok {
+						rt = ptr.Elem()
+					}
+					if rn, ok := namedTypeName(rt); ok {
+						e.curFuncName = rn + "." + d.Name.Name
+					}
+				}
 				e.liftSeq = 0
 				fn, err := e.emitFuncDecl(d)
 				if err != nil {
@@ -438,44 +451,10 @@ func (e *emitter) emitAssign(st *ast.AssignStmt) (any, error) {
 			return nil, unsup("compound assignment arity")
 		}
 		// Map element compound assign `m[k] op= v`: maps are not
-		// addressable, so this is a read-then-store — base and key
-		// evaluated ONCE each (hoisted temps), read via map-get, store
-		// via map-assign, all existing wire vocabulary.
+		// addressable, so this is a read-then-store (emitMapCompound).
 		if ix, ok := st.Lhs[0].(*ast.IndexExpr); ok {
 			if mt, ok := e.info.TypeOf(ix.X).Underlying().(*types.Map); ok {
-				baseW, err := e.emitExpr(ix.X)
-				if err != nil {
-					return nil, err
-				}
-				baseRef, err := e.hoist(baseW, e.info.TypeOf(ix.X))
-				if err != nil {
-					return nil, err
-				}
-				keyW, err := e.emitExpr(ix.Index)
-				if err != nil {
-					return nil, err
-				}
-				keyRef, err := e.hoist(keyW, mt.Key())
-				if err != nil {
-					return nil, err
-				}
-				keyTy, err := e.emitType(mt.Key())
-				if err != nil {
-					return nil, err
-				}
-				valTy, err := e.emitType(mt.Elem())
-				if err != nil {
-					return nil, err
-				}
-				rhs, err := e.emitExpr(st.Rhs[0])
-				if err != nil {
-					return nil, err
-				}
-				read := map[string]any{"expr": "map-get", "base": baseRef,
-					"index": keyRef, "keyType": keyTy, "valueType": valTy}
-				return map[string]any{"stmt": "map-compound-assign", "op": op,
-					"base": baseRef, "index": keyRef, "read": read, "rhs": rhs,
-					"keyType": keyTy, "valueType": valTy}, nil
+				return e.emitMapCompound(ix, mt, op, st.Rhs[0])
 			}
 		}
 		target, read, err := e.emitReadWriteTarget(st.Lhs[0])
@@ -549,6 +528,20 @@ func (e *emitter) emitAssign(st *ast.AssignStmt) (any, error) {
 	// A single call on the RHS (possibly multi-value) is emitted un-hoisted so
 	// the lowering makes it a call statement writing all targets; hoisting would
 	// force its result into one temp, which fails for a multi-value return.
+	// ONLY for plain identifier targets: the call statement's machine
+	// semantics evaluate target ADDRESSES first, but gc runs the call first
+	// and reads a plain index/pointer operand at store time (pre-merge audit
+	// 2026-07-25, probe-verified: a[i] = f() with f mutating i uses the NEW
+	// i). A single addressed target falls through to the generic path,
+	// whose A-normal-form hoist gives exactly gc's call-first order; a
+	// MULTI-value call onto addressed targets cannot be hoisted and fails
+	// closed rather than silently reordering.
+	allIdentTargets := true
+	for _, l := range st.Lhs {
+		if _, ok := l.(*ast.Ident); !ok {
+			allIdentTargets = false
+		}
+	}
 	if len(st.Rhs) == 1 {
 		if call, ok := st.Rhs[0].(*ast.CallExpr); ok {
 			if captures {
@@ -557,12 +550,24 @@ func (e *emitter) emitAssign(st *ast.AssignStmt) (any, error) {
 				// lands.
 				return nil, unsup("self-shadowing define with call RHS")
 			}
-			node, effectful, err := e.emitCallNode(call)
-			if err != nil {
-				return nil, err
+			isMultiValue := false
+			if tup, ok := e.info.TypeOf(call).(*types.Tuple); ok && tup.Len() > 1 {
+				isMultiValue = true
 			}
-			if effectful {
-				return map[string]any{"stmt": "assign", "define": define, "lhs": lhs, "rhs": []any{node}}, nil
+			// gc's observed order differs by arity (both oracle-pinned):
+			// multi-value assignments evaluate target ADDRESSES first
+			// (multi-assign/target-eval-before-call), so they keep the call
+			// statement; a SINGLE-value call onto an addressed target runs
+			// the call first (multi-assign/index-target-rhs-call-order), so
+			// it falls through to the generic hoist path below.
+			if allIdentTargets || isMultiValue {
+				node, effectful, err := e.emitCallNode(call)
+				if err != nil {
+					return nil, err
+				}
+				if effectful {
+					return map[string]any{"stmt": "assign", "define": define, "lhs": lhs, "rhs": []any{node}}, nil
+				}
 			}
 		}
 	}
@@ -617,6 +622,19 @@ func (e *emitter) emitDeclStmt(st *ast.DeclStmt) (any, error) {
 	if !ok || gd.Tok != token.VAR {
 		return nil, unsup("declaration statement %s", declTok(st))
 	}
+	// Shadow capture, same rule as `:=` (see emitAssign): `var x = x + 1`
+	// initializers evaluate in the OUTER scope, but the decoder's
+	// initialization-then-assign lowering would resolve the name to the
+	// fresh cell. Pre-bind capturing initializers to hoisted temps.
+	// (Pre-merge audit 2026-07-25: the := fix did not cover var.)
+	declNames := map[string]bool{}
+	for _, spec := range gd.Specs {
+		for _, name := range spec.(*ast.ValueSpec).Names {
+			if name.Name != "_" {
+				declNames[name.Name] = true
+			}
+		}
+	}
 	decls := []any{}
 	for _, spec := range gd.Specs {
 		vs := spec.(*ast.ValueSpec)
@@ -631,6 +649,12 @@ func (e *emitter) emitDeclStmt(st *ast.DeclStmt) (any, error) {
 				init, err := e.emitExpr(vs.Values[i])
 				if err != nil {
 					return nil, err
+				}
+				if e.containsVarUse(vs.Values[i], declNames) {
+					init, err = e.hoist(init, e.info.TypeOf(vs.Values[i]))
+					if err != nil {
+						return nil, err
+					}
 				}
 				d["init"] = init
 			}
@@ -683,6 +707,46 @@ func (e *emitter) emitIf(st *ast.IfStmt) (any, error) {
 }
 
 func (e *emitter) emitFor(st *ast.ForStmt) (any, error) {
+	// Go >= 1.22: each ForClause iteration has its OWN loop variable, so a
+	// func literal in the body capturing it must see a per-iteration cell.
+	// Our lowering declares the variable once outside the loop (one shared
+	// cell) — a silent wrong answer for escaping captures (pre-merge audit
+	// 2026-07-25; range loops are per-iteration already and are fine). Fail
+	// closed until the per-iteration desugar lands. `defer f(i)` is fine —
+	// args evaluate at defer time; only literal BODIES capture.
+	if st.Init != nil {
+		loopVars := map[types.Object]bool{}
+		if as, ok := st.Init.(*ast.AssignStmt); ok && as.Tok == token.DEFINE {
+			for _, l := range as.Lhs {
+				if id, ok := l.(*ast.Ident); ok {
+					if obj := e.info.Defs[id]; obj != nil {
+						loopVars[obj] = true
+					}
+				}
+			}
+		}
+		if len(loopVars) > 0 {
+			captured := false
+			ast.Inspect(st.Body, func(n ast.Node) bool {
+				lit, ok := n.(*ast.FuncLit)
+				if !ok {
+					return true
+				}
+				ast.Inspect(lit, func(m ast.Node) bool {
+					if id, ok := m.(*ast.Ident); ok {
+						if obj := e.info.Uses[id]; obj != nil && loopVars[obj] {
+							captured = true
+						}
+					}
+					return !captured
+				})
+				return !captured
+			})
+			if captured {
+				return nil, unsup("func literal captures a for-clause loop variable (Go 1.22 per-iteration semantics not yet lowered)")
+			}
+		}
+	}
 	node := map[string]any{"stmt": "for"}
 	if st.Init != nil {
 		init, err := e.emitStmt(st.Init)
@@ -839,14 +903,69 @@ func (e *emitter) emitReadWriteTarget(lv ast.Expr) (any, any, error) {
 	return target, read, nil
 }
 
-func (e *emitter) emitIncDec(st *ast.IncDecStmt) (any, error) {
-	target, read, err := e.emitReadWriteTarget(st.X)
+// emitMapCompound lowers a map-element read-modify-write (`m[k] op= v`,
+// `m[k]++`): base and key evaluated ONCE each into hoisted temps, read via
+// map-get, store via map-assign.
+// rhsExpr may be nil (IncDec), in which case a literal 1 is used. The RHS is
+// emitted AFTER base and key so its effects come last (gc's order — the
+// first refactor emitted it first and maps/compound-assign-eval-once
+// caught the swap immediately).
+func (e *emitter) emitMapCompound(ix *ast.IndexExpr, mt *types.Map, op string, rhsExpr ast.Expr) (any, error) {
+	baseW, err := e.emitExpr(ix.X)
 	if err != nil {
 		return nil, err
 	}
+	baseRef, err := e.hoist(baseW, e.info.TypeOf(ix.X))
+	if err != nil {
+		return nil, err
+	}
+	keyW, err := e.emitExpr(ix.Index)
+	if err != nil {
+		return nil, err
+	}
+	keyRef, err := e.hoist(keyW, mt.Key())
+	if err != nil {
+		return nil, err
+	}
+	keyTy, err := e.emitType(mt.Key())
+	if err != nil {
+		return nil, err
+	}
+	valTy, err := e.emitType(mt.Elem())
+	if err != nil {
+		return nil, err
+	}
+	var rhs any = map[string]any{"expr": "int", "value": "1",
+		"type": map[string]any{"kind": "int", "int": "int"}}
+	if rhsExpr != nil {
+		rhs, err = e.emitExpr(rhsExpr)
+		if err != nil {
+			return nil, err
+		}
+	}
+	read := map[string]any{"expr": "map-get", "base": baseRef,
+		"index": keyRef, "keyType": keyTy, "valueType": valTy}
+	return map[string]any{"stmt": "map-compound-assign", "op": op,
+		"base": baseRef, "index": keyRef, "read": read, "rhs": rhs,
+		"keyType": keyTy, "valueType": valTy}, nil
+}
+
+func (e *emitter) emitIncDec(st *ast.IncDecStmt) (any, error) {
 	op := "+"
 	if st.Tok == token.DEC {
 		op = "-"
+	}
+	// m[k]++ is a map read-modify-write, not an addressed location (maps are
+	// not addressable) — same desugar as m[k] op= 1 (pre-merge audit
+	// 2026-07-25: the op= path existed, the IncDec path did not).
+	if ix, ok := st.X.(*ast.IndexExpr); ok {
+		if mt, ok := e.info.TypeOf(ix.X).Underlying().(*types.Map); ok {
+			return e.emitMapCompound(ix, mt, op, nil)
+		}
+	}
+	target, read, err := e.emitReadWriteTarget(st.X)
+	if err != nil {
+		return nil, err
 	}
 	// Carry the operand type so the synthetic 1 literal takes the operand's
 	// integer kind (otherwise uint8-- would mix uint8 with an int literal).
@@ -2028,7 +2147,7 @@ func (e *emitter) emitMethodCall(c *ast.CallExpr, sel *ast.SelectorExpr) (any, b
 	if err != nil {
 		return nil, false, err
 	}
-	args, err := e.emitArgs(c.Args)
+	args, err := e.emitCallArgs(fn.Type().(*types.Signature), c)
 	if err != nil {
 		return nil, false, err
 	}

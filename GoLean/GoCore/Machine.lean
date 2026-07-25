@@ -672,12 +672,15 @@ inductive Cont where
   `targets`. Running defers before the read is what makes a deferred call's
   mutation of a named result observable (W3 §9). -/
   | frame (targets : List Loc) (results : List Loc)
-      (defers : List (FuncId × List GoValue)) (k : Cont)
+      (defers : List (GoValue × List GoValue)) (k : Cont)
   /-- Awaiting a deferred call's callee value. -/
   | deferCalleeK (args : List Expr) (env : LocalEnv) (k : Cont)
   /-- Awaiting a deferred call's arguments; they are evaluated AT DEFER
-  TIME (Go), then the call is prepended to the innermost frame's chain. -/
-  | deferArgsK (fid : FuncId) (captured : List GoValue) (vals : List GoValue)
+  TIME (Go), then the pending call — the callee VALUE plus argument
+  values — is prepended to the innermost frame's chain. A nil callee
+  REGISTERS fine and panics only at invocation (pre-merge audit
+  2026-07-25; Go's rule). -/
+  | deferArgsK (callee : GoValue) (vals : List GoValue)
       (pending : List Expr) (env : LocalEnv) (k : Cont)
   /-- Breakable scope (`Stmt.breakable`): catches `breaking`, passes
   `continuing`/`returning` through. -/
@@ -688,9 +691,11 @@ inductive Cont where
       (args : List Expr) (env : LocalEnv) (k : Cont)
   /-- Awaiting the CALLEE value (a `funcVal`, or `nil` → panic). -/
   | callValCalleeK (locs : List Loc) (args : List Expr) (env : LocalEnv) (k : Cont)
-  /-- Awaiting an argument of a value call; `captured` are the closure's
-  captured values, prepended to the arguments at frame entry. -/
-  | callValArgsK (fid : FuncId) (captured : List GoValue) (locs : List Loc)
+  /-- Awaiting an argument of a value call. Carries the callee VALUE: a
+  funcVal's captures are prepended at frame entry; a nil callee evaluates
+  every argument first and panics at the invocation step (Go's order —
+  pre-merge audit 2026-07-25). -/
+  | callValArgsK (callee : GoValue) (locs : List Loc)
       (vals : List GoValue) (pending : List Expr) (env : LocalEnv) (k : Cont)
   /-- Strict-operator evaluation: `done` holds evaluated operands (most
   recent first), `pending` the rest, in evaluation order. -/
@@ -746,11 +751,18 @@ def seqCont (ss : List Stmt) (env : LocalEnv) : Cont → Cont
                         else .seq ss env (.seq rest env' k)
   | k => .seq ss env k
 
+/-- A value that may sit in callee position: a function value, or nil
+(which panics at INVOCATION, not at evaluation/registration). -/
+def deferrableCallee : GoValue → Bool
+  | .funcVal _ _ => true
+  | .nil => true
+  | _ => false
+
 /-- Prepend a pending call onto the innermost enclosing frame's defer chain
 (LIFO). Statement-shaped continuations are walked through; a `defer`
 outside any frame (or under an expression frame, which cannot contain a
 statement) has no rule — fail closed. -/
-def pushDefer (d : FuncId × List GoValue) : Cont → Option Cont
+def pushDefer (d : GoValue × List GoValue) : Cont → Option Cont
   | .frame t r ds k => some (.frame t r (d :: ds) k)
   | .seq rest env k => (pushDefer d k).map (Cont.seq rest env)
   | .loop c b env k => (pushDefer d k).map (Cont.loop c b env)
@@ -1054,26 +1066,32 @@ inductive Step : Config → ExecState → Config → ExecState → Prop where
       valueAsLoc v = .error (.panic msg) →
       Step (.retV v (.callValTargetsK callee locs pending args env k)) s
         (.panicked msg) s
-  /-- The callee value arrives; start the arguments. -/
-  | callValCalleeArg {fid captured locs a rest env k s} :
-      Step (.retV (.funcVal fid captured) (.callValCalleeK locs (a :: rest) env k)) s
-        (.evalE a env (.callValArgsK fid captured locs [] rest env k)) s
+  /-- The callee value arrives (funcVal or nil); start the arguments. Go
+  evaluates the callee and ALL arguments before the nil check fires. -/
+  | callValCalleeArg {cv locs a rest env k s} :
+      deferrableCallee cv = true →
+      Step (.retV cv (.callValCalleeK locs (a :: rest) env k)) s
+        (.evalE a env (.callValArgsK cv locs [] rest env k)) s
   /-- Nullary call through a value: enter directly with the captures. -/
   | callValCalleeEnter {fid captured locs func frameEnv resultLocs env k s s'} :
       enterFrame s fid captured = .ok (func, frameEnv, resultLocs, s') →
       Step (.retV (.funcVal fid captured) (.callValCalleeK locs [] env k)) s
         (.exec func.body frameEnv (.frame locs resultLocs [] k)) s'
-  /-- Calling a nil function value panics (Go). -/
-  | callValCalleeNil {locs args env k s} :
-      Step (.retV .nil (.callValCalleeK locs args env k)) s
+  /-- Nullary call of a nil function value: nothing to evaluate, panic. -/
+  | callValCalleeNil {locs env k s} :
+      Step (.retV .nil (.callValCalleeK locs [] env k)) s
         (.panicked "runtime error: invalid memory address or nil pointer dereference") s
-  | callValArgNext {v fid captured locs vals a rest env k s} :
-      Step (.retV v (.callValArgsK fid captured locs vals (a :: rest) env k)) s
-        (.evalE a env (.callValArgsK fid captured locs (vals ++ [v]) rest env k)) s
+  | callValArgNext {v cv locs vals a rest env k s} :
+      Step (.retV v (.callValArgsK cv locs vals (a :: rest) env k)) s
+        (.evalE a env (.callValArgsK cv locs (vals ++ [v]) rest env k)) s
   | callValArgsEnter {v fid captured locs vals func frameEnv resultLocs env k s s'} :
       enterFrame s fid (captured ++ vals ++ [v]) = .ok (func, frameEnv, resultLocs, s') →
-      Step (.retV v (.callValArgsK fid captured locs vals [] env k)) s
+      Step (.retV v (.callValArgsK (.funcVal fid captured) locs vals [] env k)) s
         (.exec func.body frameEnv (.frame locs resultLocs [] k)) s'
+  /-- All arguments evaluated, callee is nil: NOW the invocation panics. -/
+  | callValArgsNil {v locs vals env k s} :
+      Step (.retV v (.callValArgsK .nil locs vals [] env k)) s
+        (.panicked "runtime error: invalid memory address or nil pointer dereference") s
   -- Frame exit: explicit return and fall-through perform the same
   -- pinned-location result read and caller-target stores.
   | frameReturn {targets results k s vs s'} :
@@ -1089,35 +1107,42 @@ inductive Step : Config → ExecState → Config → ExecState → Prop where
   -- both exit paths converge on the rules above once the chain is empty.
   -- The inner frame has NO targets and NO results: a deferred call's
   -- results are discarded in Go (`defer/defer-function-result-discard`).
-  | frameDeferFall {targets results fid vals ds k s func frameEnv resultLocs s'} :
-      enterFrame s fid vals = .ok (func, frameEnv, resultLocs, s') →
-      Step (.next (.frame targets results ((fid, vals) :: ds) k)) s
+  | frameDeferFall {targets results fid captured args ds k s func frameEnv resultLocs s'} :
+      enterFrame s fid (captured ++ args) = .ok (func, frameEnv, resultLocs, s') →
+      Step (.next (.frame targets results ((.funcVal fid captured, args) :: ds) k)) s
         (.exec func.body frameEnv
           (.frame [] [] [] (.frame targets results ds k))) s'
-  | frameDeferReturn {targets results fid vals ds k s func frameEnv resultLocs s'} :
-      enterFrame s fid vals = .ok (func, frameEnv, resultLocs, s') →
-      Step (.returning (.frame targets results ((fid, vals) :: ds) k)) s
+  | frameDeferReturn {targets results fid captured args ds k s func frameEnv resultLocs s'} :
+      enterFrame s fid (captured ++ args) = .ok (func, frameEnv, resultLocs, s') →
+      Step (.returning (.frame targets results ((.funcVal fid captured, args) :: ds) k)) s
         (.exec func.body frameEnv
           (.frame [] [] [] (.frame targets results ds k))) s'
+  /-- Invoking a nil deferred call panics at DRAIN time (Go: registration
+  succeeded; the panic belongs to the invocation). -/
+  | frameDeferNilFall {targets results args ds k s} :
+      Step (.next (.frame targets results ((.nil, args) :: ds) k)) s
+        (.panicked "runtime error: invalid memory address or nil pointer dereference") s
+  | frameDeferNilReturn {targets results args ds k s} :
+      Step (.returning (.frame targets results ((.nil, args) :: ds) k)) s
+        (.panicked "runtime error: invalid memory address or nil pointer dereference") s
   -- Registering a deferred call: callee, then arguments, evaluated NOW.
   | deferStmt {callee args env k s} :
       Step (.exec (.deferCall callee args) env k) s
         (.evalE callee env (.deferCalleeK args.toList env k)) s
-  | deferCalleeArg {fid captured a rest env k s} :
-      Step (.retV (.funcVal fid captured) (.deferCalleeK (a :: rest) env k)) s
-        (.evalE a env (.deferArgsK fid captured [] rest env k)) s
-  | deferCalleeNoArgs {fid captured env k k' s} :
-      pushDefer (fid, captured) k = some k' →
-      Step (.retV (.funcVal fid captured) (.deferCalleeK [] env k)) s (.next k') s
-  | deferCalleeNil {args env k s} :
-      Step (.retV .nil (.deferCalleeK args env k)) s
-        (.panicked "runtime error: invalid memory address or nil pointer dereference") s
-  | deferArgNext {v fid captured vals a rest env k s} :
-      Step (.retV v (.deferArgsK fid captured vals (a :: rest) env k)) s
-        (.evalE a env (.deferArgsK fid captured (vals ++ [v]) rest env k)) s
-  | deferArgsDone {v fid captured vals env k k' s} :
-      pushDefer (fid, captured ++ vals ++ [v]) k = some k' →
-      Step (.retV v (.deferArgsK fid captured vals [] env k)) s (.next k') s
+  | deferCalleeArg {cv a rest env k s} :
+      deferrableCallee cv = true →
+      Step (.retV cv (.deferCalleeK (a :: rest) env k)) s
+        (.evalE a env (.deferArgsK cv [] rest env k)) s
+  | deferCalleeNoArgs {cv env k k' s} :
+      deferrableCallee cv = true →
+      pushDefer (cv, []) k = some k' →
+      Step (.retV cv (.deferCalleeK [] env k)) s (.next k') s
+  | deferArgNext {v cv vals a rest env k s} :
+      Step (.retV v (.deferArgsK cv vals (a :: rest) env k)) s
+        (.evalE a env (.deferArgsK cv (vals ++ [v]) rest env k)) s
+  | deferArgsDone {v cv vals env k k' s} :
+      pushDefer (cv, vals ++ [v]) k = some k' →
+      Step (.retV v (.deferArgsK cv vals [] env k)) s (.next k') s
 
 /-- Reflexive-transitive closure of `Step`. -/
 inductive Steps : Config → ExecState → Config → ExecState → Prop where

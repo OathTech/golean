@@ -149,38 +149,38 @@ theorem stepFn_sound {s : ExecState} {c : Config} {ch : Choices}
     simp_all only [stepFn, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq]
     obtain ⟨rfl, rfl, rfl⟩ := h
     exact Step.stmtOpShiftPlain (Nat.le_of_not_lt ‹_›)
-  case case82 =>
+  case case81 =>
     simp_all only [stepFn, bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq]
     obtain ⟨⟨func, frameEnv, resultLocs, s₂⟩, hd, rfl, rfl, rfl⟩ := h
     exact Step.callValCalleeEnter hd
-  case case86 =>
+  case case87 =>
     simp_all only [stepFn, bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq]
     obtain ⟨⟨func, frameEnv, resultLocs, s₂⟩, hd, rfl, rfl, rfl⟩ := h
     exact Step.callValArgsEnter hd
-  case case95 =>
+  case case97 =>
     simp_all only [stepFn, bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq]
     obtain ⟨entries, hd, rfl, rfl, rfl⟩ := h
     exact Step.mapRangeSnapshot hd
-  case case102 =>
+  case case104 =>
     simp_all only [stepFn, bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq]
     obtain ⟨vs, hload, s₂, hstore, rfl, rfl, rfl⟩ := h
     exact Step.frameFall hload hstore
-  case case103 =>
+  case case105 =>
     simp_all only [stepFn, bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq]
     obtain ⟨⟨func, frameEnv, resultLocs, s₂⟩, hd, rfl, rfl, rfl⟩ := h
     exact Step.frameDeferFall hd
-  case case128 =>
+  case case132 =>
     simp_all only [stepFn, bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq]
     obtain ⟨⟨func, frameEnv, resultLocs, s₂⟩, hd, rfl, rfl, rfl⟩ := h
     exact Step.frameDeferReturn hd
-  case case105 =>
+  case case109 =>
     rename_i hempty
     obtain rfl : _ = (#[] : Array (GoValue × GoValue)) := Array.isEmpty_iff.mp hempty
     simp_all only [stepFn, Array.isEmpty_empty, reduceIte, Except.ok.injEq,
       Prod.mk.injEq]
     obtain ⟨rfl, rfl, rfl⟩ := h
     exact Step.mapIterDone
-  case case106 =>
+  case case110 =>
     rename_i keyVar valVar keyTy valTy body remaining env k' hne idx choices₂
       hcons hidx
     exfalso
@@ -191,7 +191,7 @@ theorem stepFn_sound {s : ExecState} {c : Config} {ch : Choices}
     have hlt : idx < remaining.size := by
       simpa [hcons] using consume_fst_lt (ch := ch) hsz
     omega
-  case case107 =>
+  case case111 =>
     rename_i keyVar valVar keyTy valTy body remaining env k' hne idx choices₂
       hcons key value hidx hlt
     simp only [stepFn, hcons] at h
@@ -209,7 +209,7 @@ theorem stepFn_sound {s : ExecState} {c : Config} {ch : Choices}
       obtain ⟨⟨env', s₁⟩, hd, rfl, rfl, rfl⟩ := h
       obtain ⟨_, hw⟩ := Array.getElem?_eq_some_iff.mp hidx
       exact Step.mapIterNext hlt (by rw [hw]; exact hd)
-  case case127 =>
+  case case131 =>
     simp_all only [stepFn, bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq]
     obtain ⟨vs, hload, s₂, hstore, rfl, rfl, rfl⟩ := h
     exact Step.frameReturn hload hstore

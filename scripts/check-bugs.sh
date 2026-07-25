@@ -46,6 +46,13 @@ nbugs=0
 while IFS='|' read -r id st pb cs; do
   [ -z "${id:-}" ] && continue
   nbugs=$((nbugs+1))
+  # Fail closed on an unparseable status: a token this parser does not
+  # recognize silently exempts the bug from every check below (the 2026-07-25
+  # pre-merge audit caught exactly that — BUG-001 closed as '**CLOSED ...**'
+  # disarmed all three case pins).
+  if [ "$st" != open ] && [ "$st" != fixed ]; then
+    echo "FAIL (0): $id has unrecognized 'Status: $st' (must be open|fixed)"; fail=1; continue
+  fi
   [ "$pb" = differential ] || continue
   if [ "$st" = open ] && [ -z "$cs" ]; then
     echo "FAIL (2): $id is open+differential but lists no '- Cases:'"; fail=1; continue

@@ -29,7 +29,8 @@ differential-pinned) `- Cases: <id>, <id>, …` (baseline case ids), then prose.
 
 ## BUG-001 — struct-field / array-element WRITE lowers an address base as a value
 
-- Status: **CLOSED 2026-07-25** (W4 slice 1, branch `seq-coverage-scoping`)
+- Status: fixed
+- Closed: 2026-07-25 (W4 slice 1, branch `seq-coverage-scoping`)
 - Fix: exactly where the 2026-07-19 diagnosis pointed — `emitAddressOf` in
   `tools/nativefrontend/emit.go` now emits ADDRESS chains (`a.b.c` →
   `fieldAddr(fieldAddr(ref a))`; pointer bases used as-is per auto-deref;
@@ -58,6 +59,29 @@ fields pervasively). GoCore already has the right primitives (`fieldAddr`,
 `indexAddr`); the fix is in `emit.go`. Also: `docs/native-frontend-goal.md`
 overclaims "field/index access" as working (true for reads, false for writes) —
 correct it when the lowering is fixed. Tracked in `TODO.md` (F1).
+
+## BUG-003 — for-clause per-iteration loop variables (Go 1.22) are not lowered
+
+- Status: open
+- Pinned-by: differential
+- Cases: control-flow/for-loopvar-escape, functions/closure-loop-var-capture
+- Discovered: 2026-07-25 (pre-merge adversarial audit of `seq-coverage-scoping`)
+
+A three-clause `for` declares its variable ONCE outside the loop in our
+lowering, but Go ≥1.22 gives each iteration its own variable — a closure
+escaping the iteration must see that iteration's value. With lambda-lifted
+closures capturing by address, the shared cell was a **silent wrong answer**
+(`for-loopvar-escape`: Go 01, we produced 22). The frontend now FAILS CLOSED
+on any func literal capturing a for-clause loop variable, which also turned
+`closure-loop-var-capture` red — its within-iteration capture was
+observationally correct under the shared cell, but the cheap guard cannot
+distinguish escaping from non-escaping captures (intentional red, recorded
+here per the re-pin guard). Range loops are per-iteration already and are
+unaffected (`range/range-loop-var-capture` stays green). The fix is a real
+design item: the spec declares each subsequent iteration's variable before
+the post statement, initialized from the previous one, and our
+while-lowering cannot express that without a per-iteration copy-in that
+survives `continue` (scoping note §8 has the re-entry sketch).
 
 ## BUG-002 — expression-step atomicity is wrong for concurrent Go (latent)
 

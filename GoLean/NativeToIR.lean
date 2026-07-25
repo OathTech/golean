@@ -775,6 +775,16 @@ partial def decodeProgram (json : Json) : LowerM Program := do
   let methodPairs ← methodsJson.mapIdxM (fun i m => decodeMethod s!"program.methods[{i}]" m)
   -- Method bodies are executable functions (looked up by FuncId on call);
   -- MethodInfo is the dispatch table.
-  pure { typeDefs, funcs := funcs ++ methodPairs.map Prod.fst, methods := methodPairs.map Prod.snd }
+  let allFuncs := funcs ++ methodPairs.map Prod.fst
+  -- Collision check at the boundary (CLAUDE.md: every identity constructor
+  -- collision-checks). Duplicate FuncIds would make findFunctionIn? silently
+  -- run the FIRST body for BOTH callers — the 2026-07-25 pre-merge audit
+  -- found exactly that via same-named methods' lifted literals.
+  let mut seen : Std.HashSet String := {}
+  for f in allFuncs do
+    if seen.contains f.id.key then
+      fail s!"duplicate function id {f.id.key} in program"
+    seen := seen.insert f.id.key
+  pure { typeDefs, funcs := allFuncs, methods := methodPairs.map Prod.snd }
 
 end GoLean.NativeToIR

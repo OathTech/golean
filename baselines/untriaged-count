@@ -13,4 +13,6 @@
 #   interfaces/type-assertion machinery, builtins (append/copy/delete/new),
 #   strings edge semantics, and the 8 pre-existing differential-stage wrong
 #   answers (strings/variadic/interface classes, tracked for triage).
-65
+# 2026-07-25 (audit response)  65 -> 64: variadic/variadic-method flipped PASS
+#   when method calls gained variadic packing (audit finding 6's fix).
+64

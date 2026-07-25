@@ -78,10 +78,14 @@ representation at all**.
   enclosing LOOP — pinned by `control-flow/continue-in-switch`). So
   GoCore gained `Stmt.breakable` + `Cont.breakableK` + five rules: honest
   Go semantics (switch and select bodies ARE breakable scopes), additive,
-  and the extension point labels/select will grow from. Cost measured:
-  the proof layer needed ZERO changes — `step_det`'s generic determinism
-  proof, the correspondence theorems, and all 21 Audit gates absorbed the
-  new rules untouched (sweep 4208 → 4256 decls). `fallthrough` stays
+  and the extension point labels/select will grow from. Cost measured
+  (phrasing corrected by the 2026-07-25 pre-merge audit — "ZERO
+  proof-layer changes" overclaimed): zero changes to any proof STATEMENT
+  or proof body — `step_det`'s generic determinism proof, the
+  correspondence theorems, and all 21 Audit gates absorbed the new rules
+  with their content untouched (sweep 4208 → 4256 decls) — but
+  `MachineSound`'s positional `fun_cases` tags needed a ~34-line
+  mechanical remap, a tax that recurs on every stepFn widening. `fallthrough` stays
   frontend-side (body-suffix chaining), failing closed when the
   falling-through clause declares names — inlining the next clause's body
   would nest sibling scopes.
@@ -388,10 +392,18 @@ and calling a func value `f(a…)` enters `F$litN` with
 *explicit in the lowering* rather than implicit in a binder: two closures
 over the same `x` receive the same `Loc`, so `functions/closure-share`
 (two closures mutating one `x`) is the pin. Go 1.22 per-iteration loop
-variables need no special work — our range/for desugaring already
-allocates a fresh cell per iteration, so each closure captures a distinct
-`Loc` (`range/range-loop-var-capture` is the pin, expecting 10/20/30 and
-not 30/30/30).
+variables: **TRUE FOR RANGE ONLY** (corrected by the 2026-07-25 pre-merge
+audit; the original text claimed it for all loops and was wrong). The
+range desugaring allocates a fresh cell per iteration
+(`range/range-loop-var-capture` pins 10/20/30), but a three-clause `for`
+declares its variable ONCE outside the loop, so an escaping capture would
+see one shared cell — a silent wrong answer. The frontend now FAILS
+CLOSED on a func literal capturing a for-clause loop variable
+(`control-flow/for-loopvar-escape` pins the rejection). Re-entry sketch
+for the real desugar: the spec declares each subsequent iteration's
+variable implicitly before the post statement, initialized from the
+previous one — our while-lowering cannot express that without a
+per-iteration copy-in that survives `continue`; design it deliberately.
 
 ### Machine additions (kept minimal and additive)
 
@@ -546,6 +558,7 @@ stale claim-text is this project's recurring audit finding.
 ### Expected cost
 
 Eight panic rules rewritten, ~8 new rules, `MachineSound`'s positional
-`fun_cases` tags remapped again (the recurring tax — see §W2 note), one
+`fun_cases` tags remapped again (the recurring tax — recorded in the W2
+amendment in §2 above), one
 frontend builtin, and a proof-layer docstring pass. The `defer` chain is
 already frame-carried precisely so this is additive, per §9.

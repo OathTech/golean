@@ -237,49 +237,52 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
                   return (.evalE callee env
                     (.callValCalleeK (locs ++ [loc]) args env k'), s, choices)
       | .callValCalleeK locs args env k' =>
-          match v with
-          | .funcVal fid captured =>
-              match args with
-              | a :: rest =>
-                  return (.evalE a env
-                    (.callValArgsK fid captured locs [] rest env k'), s, choices)
-              | [] => do
-                  let (func, frameEnv, resultLocs, s') ← enterFrame s fid captured
-                  return (.exec func.body frameEnv (.frame locs resultLocs [] k'), s', choices)
-          | .nil =>
-              return (.panicked
-                "runtime error: invalid memory address or nil pointer dereference", s, choices)
-          | other => throw (.stuck s!"expected function value, got {repr other}")
-      | .callValArgsK fid captured locs vals pending env k' =>
-          match pending with
-          | a :: rest =>
-              return (.evalE a env
-                (.callValArgsK fid captured locs (vals ++ [v]) rest env k'), s, choices)
-          | [] => do
-              let (func, frameEnv, resultLocs, s') ←
-                enterFrame s fid (captured ++ vals ++ [v])
+          match v, args with
+          | .funcVal fid captured, [] => do
+              let (func, frameEnv, resultLocs, s') ← enterFrame s fid captured
               return (.exec func.body frameEnv (.frame locs resultLocs [] k'), s', choices)
-      | .deferCalleeK args env k' =>
-          match v with
-          | .funcVal fid captured =>
-              match args with
-              | a :: rest =>
-                  return (.evalE a env (.deferArgsK fid captured [] rest env k'), s, choices)
-              | [] =>
-                  match pushDefer (fid, captured) k' with
-                  | some k'' => return (.next k'', s, choices)
-                  | none => throw (.stuck "defer outside a call frame")
-          | .nil =>
+          | .nil, [] =>
               return (.panicked
                 "runtime error: invalid memory address or nil pointer dereference", s, choices)
-          | other => throw (.stuck s!"expected function value in defer, got {repr other}")
-      | .deferArgsK fid captured vals pending env k' =>
+          | cv, a :: rest =>
+              -- Go evaluates the callee and ALL arguments before the nil
+              -- check fires, so nil proceeds into the argument walk.
+              if deferrableCallee cv then
+                return (.evalE a env (.callValArgsK cv locs [] rest env k'), s, choices)
+              else throw (.stuck s!"expected function value, got {repr cv}")
+          | other, [] => throw (.stuck s!"expected function value, got {repr other}")
+      | .callValArgsK cv locs vals pending env k' =>
           match pending with
           | a :: rest =>
               return (.evalE a env
-                (.deferArgsK fid captured (vals ++ [v]) rest env k'), s, choices)
+                (.callValArgsK cv locs (vals ++ [v]) rest env k'), s, choices)
           | [] =>
-              match pushDefer (fid, captured ++ vals ++ [v]) k' with
+              match cv with
+              | .funcVal fid captured => do
+                  let (func, frameEnv, resultLocs, s') ←
+                    enterFrame s fid (captured ++ vals ++ [v])
+                  return (.exec func.body frameEnv (.frame locs resultLocs [] k'), s', choices)
+              | .nil =>
+                  return (.panicked
+                    "runtime error: invalid memory address or nil pointer dereference", s, choices)
+              | other => throw (.stuck s!"expected function value, got {repr other}")
+      | .deferCalleeK args env k' =>
+          if deferrableCallee v then
+            match args with
+            | a :: rest =>
+                return (.evalE a env (.deferArgsK v [] rest env k'), s, choices)
+            | [] =>
+                match pushDefer (v, []) k' with
+                | some k'' => return (.next k'', s, choices)
+                | none => throw (.stuck "defer outside a call frame")
+          else throw (.stuck s!"expected function value in defer, got {repr v}")
+      | .deferArgsK cv vals pending env k' =>
+          match pending with
+          | a :: rest =>
+              return (.evalE a env
+                (.deferArgsK cv (vals ++ [v]) rest env k'), s, choices)
+          | [] =>
+              match pushDefer (cv, vals ++ [v]) k' with
               | some k'' => return (.next k'', s, choices)
               | none => throw (.stuck "defer outside a call frame")
       | .mapRangeK keyVar valVar keyTy valTy body env k' => do
@@ -297,12 +300,19 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
           let vs ← loadMany s results
           let s' ← storeMany s targets vs
           return (.next k', s', choices)
-      | .frame targets results ((fid, vals) :: ds) k' => do
-          -- A deferred call's results are DISCARDED (Go), so its frame reads
-          -- nothing and stores nowhere; only its effects matter.
-          let (func, frameEnv, _resultLocs, s') ← enterFrame s fid vals
-          return (.exec func.body frameEnv
-            (.frame [] [] [] (.frame targets results ds k')), s', choices)
+      | .frame targets results ((cv, args) :: ds) k' =>
+          match cv with
+          | .funcVal fid captured => do
+              -- A deferred call's results are DISCARDED (Go); only effects
+              -- matter, so the inner frame reads and stores nothing.
+              let (func, frameEnv, _resultLocs, s') ← enterFrame s fid (captured ++ args)
+              return (.exec func.body frameEnv
+                (.frame [] [] [] (.frame targets results ds k')), s', choices)
+          | .nil =>
+              -- Registration succeeded; the INVOCATION panics (Go).
+              return (.panicked
+                "runtime error: invalid memory address or nil pointer dereference", s, choices)
+          | other => throw (.stuck s!"deferred callee is not a function value: {repr other}")
       | .breakableK k' => return (.next k', s, choices)
       | .mapIterK keyVar valVar keyTy valTy body remaining env k' =>
           if remaining.isEmpty then
@@ -349,12 +359,19 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
           let vs ← loadMany s results
           let s' ← storeMany s targets vs
           return (.next k', s', choices)
-      | .frame targets results ((fid, vals) :: ds) k' => do
-          -- A deferred call's results are DISCARDED (Go), so its frame reads
-          -- nothing and stores nowhere; only its effects matter.
-          let (func, frameEnv, _resultLocs, s') ← enterFrame s fid vals
-          return (.exec func.body frameEnv
-            (.frame [] [] [] (.frame targets results ds k')), s', choices)
+      | .frame targets results ((cv, args) :: ds) k' =>
+          match cv with
+          | .funcVal fid captured => do
+              -- A deferred call's results are DISCARDED (Go); only effects
+              -- matter, so the inner frame reads and stores nothing.
+              let (func, frameEnv, _resultLocs, s') ← enterFrame s fid (captured ++ args)
+              return (.exec func.body frameEnv
+                (.frame [] [] [] (.frame targets results ds k')), s', choices)
+          | .nil =>
+              -- Registration succeeded; the INVOCATION panics (Go).
+              return (.panicked
+                "runtime error: invalid memory address or nil pointer dereference", s, choices)
+          | other => throw (.stuck s!"deferred callee is not a function value: {repr other}")
       | .stop => throw (.internal "return unwound past the entry frame")
       | _ => throw (.internal "return delivered to expression continuation")
 

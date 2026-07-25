@@ -1,12 +1,16 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-07-25  commit: c908921  frontend: native  oracle: go run
-# manifest_cases: 764  pass: 326  fail: 438
-# Re-pin reason: deliberate coverage ADDITION — W4 edge enumeration: seven
-# NEW write-chain cases, all PASS (nested field chains, array-of-struct
-# field writes = index-then-field, struct-array element writes =
-# field-then-index, pointer hops mid-chain, effectful array index
-# compound, field ++/--, aliased-pointer field writes). Oracle-valued.
-# No pre-existing case moved.
+# recorded: 2026-07-25  commit: f4d5874  frontend: native  oracle: go run
+# manifest_cases: 772  pass: 333  fail: 439
+# Re-pin reason: PRE-MERGE AUDIT RESPONSE (12 sustained findings, all
+# addressed; workflow wf_39e07c39-eb5). Eight NEW oracle-pinned cases for
+# the fixes (var-shadow-init, map-incdec, same-name-method-closures,
+# method-variadic, method-multi-result-arg, index-target/deref-target
+# rhs-call-order) plus one NEW red pin (for-loopvar-escape) and ONE
+# INTENTIONAL PASS->FAIL (closure-loop-var-capture): both are BUG-003 —
+# for-clause per-iteration loop variables fail closed until the real
+# desugar lands, closing a silent-wrong-answer hole. Bonus flip:
+# variadic/variadic-method PASSes now that method calls pack variadics.
+# Corpus 764 -> 772, 326 -> 333 passing.
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
 PASS	arrays/array-copy	-
@@ -185,6 +189,7 @@ PASS	control-flow/for-break-skips-post	-
 FAIL	control-flow/for-condition-eval	frontend-export
 PASS	control-flow/for-continue-post-plain	-
 PASS	control-flow/for-continue-runs-post	-
+FAIL	control-flow/for-loopvar-escape	frontend-export
 PASS	control-flow/for-post-side-effects	-
 FAIL	control-flow/goto-backward-redeclare	frontend-export
 FAIL	control-flow/goto-defer-return	frontend-export
@@ -284,7 +289,7 @@ PASS	functions/closure-block-scope-capture	-
 PASS	functions/closure-captures-named-result	-
 PASS	functions/closure-captures-param	-
 PASS	functions/closure-frame-sees-mutation	-
-PASS	functions/closure-loop-var-capture	-
+FAIL	functions/closure-loop-var-capture	frontend-export
 PASS	functions/closure-nested-recapture	-
 PASS	functions/closure-param-shadows-capture	-
 PASS	functions/closure-recursion	-
@@ -469,6 +474,7 @@ PASS	maps/map-bool-values	-
 PASS	maps/map-comma-ok	-
 PASS	maps/map-copy-write	-
 PASS	maps/map-expr-assign-eval-order	-
+PASS	maps/map-incdec	-
 PASS	maps/map-literal-basic	-
 PASS	maps/map-literal-bool	-
 PASS	maps/map-literal-duplicate-eval-order	-
@@ -515,10 +521,12 @@ PASS	methods/pointer-receiver-array-element	-
 FAIL	methods/pointer-receiver-method-set	frontend-export
 PASS	methods/pointer-receiver-slice-element	-
 PASS	methods/recursive-method	-
+PASS	methods/same-name-method-closures	-
 FAIL	methods/value-auto-deref	lean-observation
 PASS	multi-assign/blank-discard-nonint	-
 PASS	multi-assign/call-return-assignment	-
 PASS	multi-assign/deref-target-before-rhs	-
+PASS	multi-assign/index-target-rhs-call-order	-
 PASS	multi-assign/lhs-index-eval-order	-
 PASS	multi-assign/repeated-index-write	-
 PASS	multi-assign/repeated-variable-write	-
@@ -566,6 +574,7 @@ PASS	pointers/address-array-index	-
 PASS	pointers/address-field	-
 PASS	pointers/composite-literal-address	-
 PASS	pointers/deref-assign	-
+PASS	pointers/deref-target-rhs-call-order	-
 PASS	pointers/inc-via-call	-
 FAIL	pointers/nil-array-index-panic	lean-observation
 PASS	pointers/nil-deref-panic	-
@@ -632,6 +641,7 @@ PASS	range/range-slice-index-value	-
 FAIL	range/range-string-index-only	frontend-export
 PASS	range/range-struct-copy	-
 PASS	returns/early-return-named	-
+PASS	returns/method-multi-result-arg	-
 PASS	returns/multi-result-argument	-
 PASS	returns/multi-result-assign-order	-
 PASS	returns/multi-result-assignment	-
@@ -658,6 +668,7 @@ PASS	scoping/short-decl-mixing	-
 PASS	scoping/switch-clause-scope	-
 PASS	scoping/switch-init-shadow	-
 FAIL	scoping/type-switch-guard-shadow	frontend-export
+PASS	scoping/var-shadow-init	-
 FAIL	slices/append-nil	frontend-export
 FAIL	slices/append-overlap	frontend-export
 FAIL	slices/append-overlap-window	frontend-export
@@ -760,6 +771,7 @@ PASS	structs/zero-value	-
 PASS	variadic/defined-slice-spread	-
 FAIL	variadic/forwarding	differential
 PASS	variadic/literal-args-local-slice	-
+PASS	variadic/method-variadic	-
 PASS	variadic/multi-result-call	-
 PASS	variadic/multi-result-into-fixed-variadic	-
 FAIL	variadic/no-args-vs-empty-spread	differential
@@ -768,6 +780,6 @@ FAIL	variadic/variadic	frontend-export
 PASS	variadic/variadic-function-value	-
 FAIL	variadic/variadic-generic	frontend-export
 FAIL	variadic/variadic-interface-dispatch	frontend-export
-FAIL	variadic/variadic-method	lean-observation
+PASS	variadic/variadic-method	-
 FAIL	variadic/variadic-method-expression	frontend-export
 PASS	variadic/variadic-method-value-copy	-
