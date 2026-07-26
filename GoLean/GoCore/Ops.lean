@@ -93,6 +93,50 @@ def natFromNonnegativeInt (context : String) (value : Int) : Except GoError Nat 
 def fullSliceMaxBoundsPanic (max capacity : Nat) : Except GoError α :=
   panic s!"runtime error: slice bounds out of range [::{max}] with capacity {capacity}"
 
+/-- Go's TWO-index slice-expression bounds check, with the runtime's exact
+messages and check ORDER (oracle-pinned 2026-07-25, arc
+`wrong-answers-builtins`): the HIGH bound first — negative renders `[:h]`
+with no suffix, over the limit renders `[:h] with <limitName> <limit>` —
+then the LOW: negative renders `[l:]` (Go omits the high there), else
+`[l:h]`. `limitName` is `length` for strings/arrays, `capacity` for
+slices. Returns the checked bounds. -/
+def checkSliceBounds (limitName : String) (limit : Nat) (low high : Int) :
+    Except GoError (Nat × Nat) := do
+  if high < 0 then
+    panic s!"runtime error: slice bounds out of range [:{high}]"
+  if high > limit then
+    panic s!"runtime error: slice bounds out of range [:{high}] with {limitName} {limit}"
+  if low < 0 then
+    panic s!"runtime error: slice bounds out of range [{low}:]"
+  if low > high then
+    panic s!"runtime error: slice bounds out of range [{low}:{high}]"
+  return (low.toNat, high.toNat)
+
+/-- Go's THREE-index (full) slice-expression bounds check after the
+max-vs-capacity check: HIGH against max (negative `[:h:]`, over `[:h:m]`),
+then LOW (negative `[l::]`, over `[l:h:]`) — the runtime's exact messages,
+oracle-pinned 2026-07-25. -/
+def checkSliceBounds3 (max : Nat) (low high : Int) :
+    Except GoError (Nat × Nat) := do
+  if high < 0 then
+    panic s!"runtime error: slice bounds out of range [:{high}:]"
+  if high > max then
+    panic s!"runtime error: slice bounds out of range [:{high}:{max}]"
+  if low < 0 then
+    panic s!"runtime error: slice bounds out of range [{low}::]"
+  if low > high then
+    panic s!"runtime error: slice bounds out of range [{low}:{high}:]"
+  return (low.toNat, high.toNat)
+
+/-- The full-slice MAX bound against capacity: negative renders `[::m]`
+with no suffix, over renders `[::m] with capacity c` (oracle-pinned). -/
+def checkSliceMax (capacity : Nat) (max : Int) : Except GoError Nat := do
+  if max < 0 then
+    panic s!"runtime error: slice bounds out of range [::{max}]"
+  if max > capacity then
+    fullSliceMaxBoundsPanic max.toNat capacity
+  return max.toNat
+
 def stringByteGet (value : GoString) (index : Int) : Except GoError GoValue := do
   if index < 0 then
     indexOutOfRangePanic index value.length
@@ -105,12 +149,8 @@ def stringSlice (value : GoString) (low high : Int) (max : Option Int) :
     Except GoError GoValue := do
   if max.isSome then
     stuck "full slice expression over string"
-  let low ← natFromNonnegativeInt "slice bounds out of range" low
-  let high ← natFromNonnegativeInt "slice bounds out of range" high
-  if low <= high && high <= value.length then
-    return .string (value.slice low high)
-  else
-    panic "slice bounds out of range"
+  let (low, high) ← checkSliceBounds "length" value.length low high
+  return .string (value.slice low high)
 
 def validateSlice (slice : SliceValue) : Except GoError Unit := do
   if slice.len > slice.cap then
@@ -125,72 +165,61 @@ def validateSlice (slice : SliceValue) : Except GoError Unit := do
 
 def sliceIndexLoc (slice : SliceValue) (index : Int) : Except GoError Loc := do
   validateSlice slice
-  let i ← natFromNonnegativeInt "slice index out of bounds" index
+  -- Go's exact index message (same renderer as arrays; the old plain
+  -- "slice index out of bounds" was a latent divergence found by the
+  -- unwinding-arc audit's probes, fixed in arc `wrong-answers-builtins`).
+  let i ← (do
+    if index < 0 then indexOutOfRangePanic index slice.len
+    else pure index.toNat)
   if i < slice.len then
     match slice.base with
     | some base => return .index base (Int.ofNat (slice.offset + i))
     | none => stuck s!"malformed GoCore nil slice with length {slice.len}"
   else
-    panic "slice index out of bounds"
+    indexOutOfRangePanic index slice.len
 
 def sliceFromSlice (slice : SliceValue) (low high : Int) (max : Option Int) :
     Except GoError GoValue := do
   validateSlice slice
-  let low ← natFromNonnegativeInt "slice bounds out of range" low
-  let high ← natFromNonnegativeInt "slice bounds out of range" high
   match max with
   | none =>
-      if low <= high && high <= slice.cap then
-        return .slice {
-          base := slice.base,
-          offset := slice.offset + low,
-          len := high - low,
-          cap := slice.cap - low
-        }
-      else
-        panic "slice bounds out of range"
+      let (low, high) ← checkSliceBounds "capacity" slice.cap low high
+      return .slice {
+        base := slice.base,
+        offset := slice.offset + low,
+        len := high - low,
+        cap := slice.cap - low
+      }
   | some max =>
-      let max ← natFromNonnegativeInt "slice bounds out of range" max
-      if max > slice.cap then
-        fullSliceMaxBoundsPanic max slice.cap
-      else if low <= high && high <= max then
-        return .slice {
-          base := slice.base,
-          offset := slice.offset + low,
-          len := high - low,
-          cap := max - low
-        }
-      else
-        panic "slice bounds out of range"
+      let max ← checkSliceMax slice.cap max
+      let (low, high) ← checkSliceBounds3 max low high
+      return .slice {
+        base := slice.base,
+        offset := slice.offset + low,
+        len := high - low,
+        cap := max - low
+      }
 
 def sliceFromArray (base : Loc) (length : Nat) (low high : Int) (max : Option Int) :
     Except GoError GoValue := do
-  let low ← natFromNonnegativeInt "slice bounds out of range" low
-  let high ← natFromNonnegativeInt "slice bounds out of range" high
   match max with
   | none =>
-      if low <= high && high <= length then
-        return .slice {
-          base := some base,
-          offset := low,
-          len := high - low,
-          cap := length - low
-        }
-      else
-        panic "slice bounds out of range"
+      let (low, high) ← checkSliceBounds "length" length low high
+      return .slice {
+        base := some base,
+        offset := low,
+        len := high - low,
+        cap := length - low
+      }
   | some max =>
-      let max ← natFromNonnegativeInt "slice bounds out of range" max
-      if max > length then
-        fullSliceMaxBoundsPanic max length
-      else if low <= high && high <= max then
-        return .slice {
-          base := some base,
-          offset := low,
-          len := high - low,
-          cap := max - low
-        }
-      else
-        panic "slice bounds out of range"
+      let max ← checkSliceMax length max
+      let (low, high) ← checkSliceBounds3 max low high
+      return .slice {
+        base := some base,
+        offset := low,
+        len := high - low,
+        cap := max - low
+      }
 
 -- Total via fuel: follows the `.defined → .alias` chain, decrementing fuel per
 -- hop. On exhaustion it returns the type unresolved (a safe fixed point).
