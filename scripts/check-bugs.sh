@@ -102,6 +102,33 @@ else
   fail=1
 fi
 
+# (4b) The SET ratchet: the count alone launders equal-sized swaps (N fixed
+# + N new wrong answers = same count; pre-merge audit 2026-07-26). The
+# untriaged IDs are tracked; a NEW entrant fails until it is triaged into
+# docs/BUGS.md or added to the tracked set with in-file justification, and
+# a departed id must be removed in the same commit (a stale entry would
+# re-admit a regression silently).
+IDS_FILE=baselines/untriaged-ids
+if [ -f "$IDS_FILE" ]; then
+  current_ids="$(printf '%s\n' "$unexplained" | cut -f1 | grep . | sort || true)"
+  tracked_ids="$(grep -vE '^#' "$IDS_FILE" | grep . | sort || true)"
+  new_ids="$(comm -13 <(printf '%s\n' "$tracked_ids") <(printf '%s\n' "$current_ids") || true)"
+  gone_ids="$(comm -23 <(printf '%s\n' "$tracked_ids") <(printf '%s\n' "$current_ids") || true)"
+  if [ -n "$new_ids" ]; then
+    echo "FAIL (4b): NEW untriaged fidelity failure(s) not in $IDS_FILE:"
+    printf '%s\n' "$new_ids" | sed 's/^/  /'
+    fail=1
+  fi
+  if [ -n "$gone_ids" ]; then
+    echo "FAIL (4b): tracked untriaged id(s) no longer failing — remove from $IDS_FILE in this commit (ratchet down):"
+    printf '%s\n' "$gone_ids" | sed 's/^/  /'
+    fail=1
+  fi
+else
+  echo "FAIL (4b): missing $IDS_FILE (the tracked untriaged id set) — create it from 'scripts/check-bugs.sh --list'"
+  fail=1
+fi
+
 if [ "$fail" -ne 0 ]; then echo "check-bugs: FAIL"; exit 1; fi
 echo "check-bugs: ok ($nbugs bug(s); pinned cases behave as claimed)"
 if [ "$nun" -gt 0 ]; then

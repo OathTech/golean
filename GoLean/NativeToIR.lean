@@ -548,12 +548,27 @@ partial def decodeRange (results : Array Param) (path : String) (obj : StrictJso
       let keyTy ← decodeTy s!"{path}.keyType" (← StrictJson.field path obj "keyType")
       let valTy ← decodeTy s!"{path}.valueType" (← StrictJson.field path obj "valueType")
       pure (.mapRange keyVar valVar coll keyTy valTy body)
-  | "slice" | "array" | "int" =>
+  | "slice" | "array" | "int" | "array-pointer" =>
       let collTy ← exprTypeOf s!"{path}.collection" collJson
       let intTy : Ty := .int .int
       let ridx : Expr := .var "$ridx"
-      -- Length: len(collection) for slice/array; the int itself for int range.
-      let lenExpr : Expr := if kind == "int" then .var "$rcoll" else .length (.var "$rcoll") none
+      -- Range over *[N]T (value form): the pointer binds once; each
+      -- iteration reads the element THROUGH it, so writes to the array
+      -- during the loop are observed and a nil pointer panics at the
+      -- first read (pre-merge audit 2026-07-26). N is static.
+      let arrPtrTy? ← (match obj.get? "arrType" with
+        | some t => do pure (some (← decodeTy s!"{path}.arrType" t))
+        | none => pure none)
+      let arrPtrLen? ← (match obj.get? "len" with
+        | some l => do pure (some (← StrictJson.nat s!"{path}.len" l))
+        | none => pure none)
+      -- Length: len(collection) for slice/array; the int itself for int
+      -- range; the static N for array-pointer.
+      let lenExpr : Expr :=
+        if kind == "int" then .var "$rcoll"
+        else match arrPtrLen? with
+        | some n => .intLit (Int.ofNat n) .int
+        | none => .length (.var "$rcoll") none
       -- Per-iteration loop-variable bindings.
       let mut iter : Array Stmt := #[
         -- increment index at top except on the first iteration
@@ -570,7 +585,11 @@ partial def decodeRange (results : Array Param) (path : String) (obj : StrictJso
         match valVar with
         | some v =>
             let elemTy ← decodeTy s!"{path}.elemType" (← StrictJson.field path obj "elemType")
-            iter := iter ++ #[.initialization { id := v, typ := elemTy }, .assign (.var v) (.indexGet (.var "$rcoll") ridx)]
+            let base : Expr :=
+              match arrPtrTy? with
+              | some arrTy => .deref (.var "$rcoll") arrTy
+              | none => .var "$rcoll"
+            iter := iter ++ #[.initialization { id := v, typ := elemTy }, .assign (.var v) (.indexGet base ridx)]
         | none => pure ()
       iter := iter.push body
       pure (.block #[] #[

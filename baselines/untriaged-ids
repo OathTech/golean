@@ -1,0 +1,38 @@
+# Tracked set of untriaged fidelity-failure ids (check-bugs check 4b).
+# A NEW entrant fails the gate until triaged into docs/BUGS.md or added
+# here with justification; a departed id must be removed in the same
+# commit. Introduced 2026-07-26 (pre-merge audit of wrong-answers-
+# builtins: the count-only ratchet cannot see equal-sized swaps — this
+# branch itself swapped 3 fixed strings conversions for 3 newly-visible
+# interface-key delete gaps, invisible to the count).
+arrays/pointer-array
+embedding/deep-promoted-field
+embedding/deep-promoted-method
+embedding/embedded-method-promote
+embedding/embedded-pointer-field
+embedding/embedded-pointer-nil-panic
+embedding/promoted-field-depth-shadow
+init/blank-var-init
+init/global-zero-before-init
+init/init-sees-var-values
+init/multiple-init-order
+init/package-init-order
+init/var-init-sequence
+maps/delete-interface-key-panic
+maps/delete-nil-interface-key-panic
+maps/interface-slice-key-panic
+methods/value-auto-deref
+pointers/nil-array-index-panic
+pointers/nil-value-receiver-call-panic
+strings/defined-slice-string-conversion
+strings/nil-slice-string-conversion
+strings/rune-invalid-values
+strings/rune-slice-conversion
+strings/rune-slice-to-string-copy
+strings/rune-string-conversion
+strings/string-to-rune-copy
+structs/anonymous-field
+structs/selector-addressability-edge/read-conversion-result
+structs/tag-defined-conversion
+structs/tag-embedded-field
+structs/tag-pointer-conversion

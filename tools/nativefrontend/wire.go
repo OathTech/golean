@@ -39,6 +39,9 @@ type emitter struct {
 	liftSeq       int
 	curFuncName   string
 	captureParam  map[types.Object]string
+	// The enclosing function's result tuple, for the return-site
+	// interface-conversion guard.
+	curResults *types.Tuple
 
 	// Whether the `defer recover()` no-op function has been registered.
 	deferNoopEmitted bool

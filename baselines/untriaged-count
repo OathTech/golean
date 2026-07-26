@@ -20,4 +20,8 @@
 #   boundary, and 8 mis-lowered interface cases moved to
 #   frontend-export by the implicit-conversion guard — the first
 #   16-point drop; ratchet toward 0 continues.
-48
+# 2026-07-26 (audit response)  48 -> 31: the extended interface-
+#   conversion guard refuses 18 formerly-lean-observation cases at
+#   the boundary (they were mis-lowered raw-representation cases,
+#   BUG-006), removing them from the fidelity ledger honestly.
+31

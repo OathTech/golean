@@ -153,6 +153,7 @@ func (e *emitter) emitGenDeclTypes(d *ast.GenDecl) ([]any, error) {
 
 func (e *emitter) emitFuncDecl(d *ast.FuncDecl) (map[string]any, error) {
 	sig := e.info.Defs[d.Name].Type().(*types.Signature)
+	e.curResults = sig.Results()
 
 	params, err := e.emitParams(sig.Params())
 	if err != nil {
@@ -437,12 +438,26 @@ func (e *emitter) emitStmt(s ast.Stmt) (any, error) {
 }
 
 func (e *emitter) emitReturn(st *ast.ReturnStmt) (any, error) {
+	// Interface-typed results: fail closed on implicit conversion (the
+	// audit 2026-07-26 found `return p` into an `error`/`any` result
+	// slipping the guard — the same typed-nil raw-representation hole).
+	guardResult := func(i int, rt types.Type) error {
+		if e.curResults == nil || i >= e.curResults.Len() {
+			return nil
+		}
+		return e.implicitInterfaceConversionGuard(e.curResults.At(i).Type(), rt)
+	}
 	// `return f()` forwarding a multi-value call: splat into temps and
 	// return the temps (the hoisted call statement is spliced before the
 	// return by the A-normal-form machinery).
 	if len(st.Results) == 1 {
 		if call, ok := st.Results[0].(*ast.CallExpr); ok {
-			if _, isTup := e.info.TypeOf(call).(*types.Tuple); isTup {
+			if tup, isTup := e.info.TypeOf(call).(*types.Tuple); isTup {
+				for i := 0; i < tup.Len(); i++ {
+					if err := guardResult(i, tup.At(i).Type()); err != nil {
+						return nil, err
+					}
+				}
 				idents, err := e.splatMultiCall(call)
 				if err != nil {
 					return nil, err
@@ -452,7 +467,10 @@ func (e *emitter) emitReturn(st *ast.ReturnStmt) (any, error) {
 		}
 	}
 	results := []any{}
-	for _, r := range st.Results {
+	for i, r := range st.Results {
+		if err := guardResult(i, e.info.TypeOf(r)); err != nil {
+			return nil, err
+		}
 		w, err := e.emitExpr(r)
 		if err != nil {
 			return nil, err
@@ -563,6 +581,14 @@ func (e *emitter) emitAssign(st *ast.AssignStmt) (any, error) {
 	if !define && len(st.Lhs) == 1 && len(st.Rhs) == 1 {
 		if ix, ok := st.Lhs[0].(*ast.IndexExpr); ok {
 			if m, ok := e.info.TypeOf(ix.X).Underlying().(*types.Map); ok {
+				if err := e.implicitInterfaceConversionGuard(
+					m.Key(), e.info.TypeOf(ix.Index)); err != nil {
+					return nil, err
+				}
+				if err := e.implicitInterfaceConversionGuard(
+					m.Elem(), e.info.TypeOf(st.Rhs[0])); err != nil {
+					return nil, err
+				}
 				base, err := e.emitExpr(ix.X)
 				if err != nil {
 					return nil, err
@@ -948,8 +974,16 @@ func (e *emitter) emitRange(rs *ast.RangeStmt) (any, error) {
 	prefix := []any{}
 	if rs.Tok == token.ASSIGN {
 		bind := func(outer ast.Expr, temp string) (string, error) {
-			if id, ok := outer.(*ast.Ident); ok && id.Name == "_" {
+			id, isIdent := outer.(*ast.Ident)
+			if isIdent && id.Name == "_" {
 				return "", nil
+			}
+			// Non-identifier targets evaluate their operands EVERY
+			// iteration in Go; the emit-once lowering would freeze one
+			// address and hoist the operands' effects out of the loop
+			// (pre-merge audit 2026-07-26) — fail closed.
+			if !isIdent {
+				return "", unsup("range assignment to non-identifier target (operands evaluate per iteration)")
 			}
 			target, err := e.emitLValue(outer)
 			if err != nil {
@@ -1008,6 +1042,10 @@ func (e *emitter) emitRange(rs *ast.RangeStmt) (any, error) {
 			kindFields["kind"] = "int"
 			valName = ""
 		} else {
+			// Value form: the POINTER binds once; each iteration reads the
+			// element THROUGH it, so writes to the array during the loop
+			// are observed (an up-front deref snapshotted — pre-merge
+			// audit 2026-07-26). A nil pointer panics at the first read.
 			arrTy, err := e.emitType(ptr.Elem())
 			if err != nil {
 				return nil, err
@@ -1016,9 +1054,15 @@ func (e *emitter) emitRange(rs *ast.RangeStmt) (any, error) {
 			if err != nil {
 				return nil, err
 			}
-			coll = map[string]any{"expr": "deref", "ptr": pw, "type": arrTy}
-			kindFields["kind"] = "array"
+			pref, err := e.hoist(pw, e.info.TypeOf(rs.X))
+			if err != nil {
+				return nil, err
+			}
+			coll = pref
+			kindFields["kind"] = "array-pointer"
 			kindFields["elemType"] = elemTy
+			kindFields["arrType"] = arrTy
+			kindFields["len"] = arr.Len()
 		}
 	} else {
 		w, err := e.emitExpr(rs.X)
@@ -1694,6 +1738,15 @@ func (e *emitter) emitLValue(x ast.Expr) (any, error) {
 		}
 		return map[string]any{"target": "var", "id": id.Name}, nil
 	}
+	// A map element is not addressable — outside the dedicated
+	// single-assign fast path (mapAssign) it has no address to take, and
+	// emitting index-addr would die as a runtime stuck instead of a
+	// boundary refusal (audit 2026-07-26).
+	if ix, ok := x.(*ast.IndexExpr); ok {
+		if _, isMap := e.info.TypeOf(ix.X).Underlying().(*types.Map); isMap {
+			return nil, unsup("map element as assignment target outside a single assignment")
+		}
+	}
 	addr, err := e.emitAddressOf(x)
 	if err != nil {
 		return nil, err
@@ -1701,8 +1754,80 @@ func (e *emitter) emitLValue(x ast.Expr) (any, error) {
 	return map[string]any{"target": "addr", "expr": addr}, nil
 }
 
+// guardCompositeInterfaces applies the implicit-interface-conversion guard
+// to every typed slot a composite literal fills (struct fields, slice and
+// array elements, map keys and values) — the audit 2026-07-26 found these
+// sites unguarded, leaving the typed-nil raw representation reachable.
+func (e *emitter) guardCompositeInterfaces(cl *ast.CompositeLit, t types.Type) error {
+	guard := func(slot types.Type, val ast.Expr) error {
+		if slot == nil {
+			return nil
+		}
+		return e.implicitInterfaceConversionGuard(slot, e.info.TypeOf(val))
+	}
+	switch u := t.Underlying().(type) {
+	case *types.Struct:
+		for i, el := range cl.Elts {
+			var ft types.Type
+			val := el
+			if kv, ok := el.(*ast.KeyValueExpr); ok {
+				if id, ok := kv.Key.(*ast.Ident); ok {
+					for j := 0; j < u.NumFields(); j++ {
+						if u.Field(j).Name() == id.Name {
+							ft = u.Field(j).Type()
+						}
+					}
+				}
+				val = kv.Value
+			} else if i < u.NumFields() {
+				ft = u.Field(i).Type()
+			}
+			if err := guard(ft, val); err != nil {
+				return err
+			}
+		}
+	case *types.Slice:
+		for _, el := range cl.Elts {
+			val := el
+			if kv, ok := el.(*ast.KeyValueExpr); ok {
+				val = kv.Value
+			}
+			if err := guard(u.Elem(), val); err != nil {
+				return err
+			}
+		}
+	case *types.Array:
+		for _, el := range cl.Elts {
+			val := el
+			if kv, ok := el.(*ast.KeyValueExpr); ok {
+				val = kv.Value
+			}
+			if err := guard(u.Elem(), val); err != nil {
+				return err
+			}
+		}
+	case *types.Map:
+		for _, el := range cl.Elts {
+			kv, ok := el.(*ast.KeyValueExpr)
+			if !ok {
+				continue
+			}
+			if err := guard(u.Key(), kv.Key); err != nil {
+				return err
+			}
+			if err := guard(u.Elem(), kv.Value); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
 func (e *emitter) emitCompositeLit(cl *ast.CompositeLit) (any, error) {
 	t := e.info.TypeOf(cl)
+	if err := e.guardCompositeInterfaces(cl, t); err != nil {
+		return nil, err
+	}
 	switch u := t.Underlying().(type) {
 	case *types.Struct:
 		return e.emitStructLit(cl, t, u)
@@ -2023,9 +2148,12 @@ func (e *emitter) emitFuncLit(lit *ast.FuncLit) (any, error) {
 
 	// Emit the body with the capture map in force and a fresh hoist context.
 	savedCapture, savedHoisted, savedName := e.captureParam, e.hoisted, e.curFuncName
+	savedResults := e.curResults
 	e.captureParam, e.hoisted = newCapture, nil
+	e.curResults = sig.Results()
 	body, berr := e.emitBlock(lit.Body)
 	e.captureParam, e.hoisted, e.curFuncName = savedCapture, savedHoisted, savedName
+	e.curResults = savedResults
 	if berr != nil {
 		return nil, berr
 	}

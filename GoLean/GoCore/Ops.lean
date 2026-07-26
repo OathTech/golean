@@ -90,9 +90,6 @@ def natFromNonnegativeInt (context : String) (value : Int) : Except GoError Nat 
     panic context
   return value.toNat
 
-def fullSliceMaxBoundsPanic (max capacity : Nat) : Except GoError α :=
-  panic s!"runtime error: slice bounds out of range [::{max}] with capacity {capacity}"
-
 /-- Go's TWO-index slice-expression bounds check, with the runtime's exact
 messages and check ORDER (oracle-pinned 2026-07-25, arc
 `wrong-answers-builtins`): the HIGH bound first — negative renders `[:h]`
@@ -128,13 +125,16 @@ def checkSliceBounds3 (max : Nat) (low high : Int) :
     panic s!"runtime error: slice bounds out of range [{low}:{high}:]"
   return (low.toNat, high.toNat)
 
-/-- The full-slice MAX bound against capacity: negative renders `[::m]`
-with no suffix, over renders `[::m] with capacity c` (oracle-pinned). -/
-def checkSliceMax (capacity : Nat) (max : Int) : Except GoError Nat := do
+/-- The full-slice MAX bound against its limit: negative renders `[::m]`
+with no suffix, over renders `[::m] with <limitName> <limit>` — `capacity`
+for slices, `length` for arrays (pre-merge audit 2026-07-26 caught the
+hardcoded "capacity" diverging on array bases; oracle-pinned). -/
+def checkSliceMax (limitName : String) (limit : Nat) (max : Int) :
+    Except GoError Nat := do
   if max < 0 then
     panic s!"runtime error: slice bounds out of range [::{max}]"
-  if max > capacity then
-    fullSliceMaxBoundsPanic max.toNat capacity
+  if max > limit then
+    panic s!"runtime error: slice bounds out of range [::{max}] with {limitName} {limit}"
   return max.toNat
 
 /-- Go's `utf8.DecodeRuneInString` at a byte offset, with range-over-string
@@ -228,7 +228,7 @@ def sliceFromSlice (slice : SliceValue) (low high : Int) (max : Option Int) :
         cap := slice.cap - low
       }
   | some max =>
-      let max ← checkSliceMax slice.cap max
+      let max ← checkSliceMax "capacity" slice.cap max
       let (low, high) ← checkSliceBounds3 max low high
       return .slice {
         base := slice.base,
@@ -249,7 +249,7 @@ def sliceFromArray (base : Loc) (length : Nat) (low high : Int) (max : Option In
         cap := length - low
       }
   | some max =>
-      let max ← checkSliceMax length max
+      let max ← checkSliceMax "length" length max
       let (low, high) ← checkSliceBounds3 max low high
       return .slice {
         base := some base,

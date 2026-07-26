@@ -96,3 +96,34 @@ Deliberately excluded for now: generics (the pilot's extern-policy note
 decides how far stubs reach before monomorphization is ever needed);
 floats/complex (IEEE doctrine, own arc when something real needs them);
 channels (R4+).
+
+## Arc 1 build log (2026-07-26, completion)
+
+- Slices 0–2 landed (12 commits before the audit): 8 wrong answers
+  killed; builtins + conversions + const decls + range family (incl.
+  range-over-string on `decodeRuneAt`) + per-decl quarantine + set of
+  frontend fixes the guardrails caught (double-hoist builtins, Go 1.26
+  `new(expr)`, generic-instantiation boundary). Corpus 374 → 470.
+- **Pre-merge audit (user-approved full scale, 35 agents: 3 Opus
+  reviewers + 2 refute-by-default Opus verifiers per finding): 11
+  sustained = 7 distinct defects, 5 refuted, ALL addressed:**
+  1. interface-conversion guard holes (returns, composite literals,
+     map-assign, map-element multi-assign) — guard extended; BUG-006
+     records the class and the one intentional PASS→FAIL it closed;
+  2. pointer-array value ranges snapshotted — now read THROUGH the
+     pointer each iteration (writes during the loop observed; nil
+     panics at first read);
+  3. ASSIGN-form range lvalue effects hoisted once — non-identifier
+     targets fail closed;
+  4. map iteration does not observe delete/clear — BUG-005 (snapshot
+     semantics; machine fix is its own slice), two red pins;
+  5. map-element lvalues outside single assignment die runtime-stuck —
+     boundary refusal now;
+  6. 3-index slice of an ARRAY said "capacity", Go says "length" —
+     `checkSliceMax` parameterized;
+  7. count-only ratchet launders equal-sized swaps — **the SET ratchet**
+     (`baselines/untriaged-ids`, check-bugs 4b): new entrants fail the
+     gate, departures must be removed in the same commit.
+- End state: corpus **785 / 469** (the −1 is BUG-006's intentional
+  flip), untriaged ledger **64 → 31** (18 mis-lowered cases now refused
+  at the boundary), gate 12/12.

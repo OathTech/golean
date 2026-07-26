@@ -1,12 +1,21 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-07-26  commit: 9aa3fb4  frontend: native  oracle: go run
-# manifest_cases: 783  pass: 470  fail: 313
-# Re-pin reason: SLICE 2 of arc wrong-answers-builtins (const decls as
-# no-ops with folded uses; ASSIGN-form range; range over *[N]T with
-# nil-safe index-only form; RANGE OVER STRING on the new decodeRuneAt
-# machine primitive — utf8 accept-range exact; general func-typed call
-# targets). 26 FAIL->PASS, zero regressions, no reclassifications.
-# Corpus 783, passing 444 -> 470.
+# recorded: 2026-07-26  commit: 10a6c08  frontend: native  oracle: go run
+# manifest_cases: 785  pass: 469  fail: 316
+# Re-pin reason: PRE-MERGE AUDIT RESPONSE for wrong-answers-builtins
+# (11 sustained findings = 7 distinct, all addressed; see the arc doc
+# build log and BUGS.md). Drift: 2 NEW red pins for BUG-005 (map
+# iteration does not observe delete/clear — snapshot semantics; machine
+# fix is its own slice); 18 already-red cases move lean-observation ->
+# frontend-export (the interface-conversion guard extended to composite
+# literals, map-assign, returns, and map-element multi-assign targets
+# now refuses them at the boundary — they LEAVE the untriaged ledger,
+# 48 -> 30); ONE INTENTIONAL PASS->FAIL
+# (comparisons/short-circuit/struct-skips-interface-panic, listed in
+# BUG-006's Cases: accidentally green via short-circuit over a raw
+# interface field). Also: pointer-array value ranges read THROUGH the
+# pointer per iteration; ASSIGN-form range targets restricted to
+# identifiers; 3-index array slice message says length not capacity.
+# Corpus 783 -> 785, passing 470 -> 469 (the one intentional flip).
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
 PASS	arrays/array-copy	-
@@ -117,14 +126,14 @@ FAIL	channels/select-nil-default	frontend-export
 FAIL	channels/select-ready-receive	frontend-export
 FAIL	channels/select-ready-send	frontend-export
 FAIL	channels/send-closed-panic	frontend-export
-FAIL	comparisons/short-circuit/array-reaches-interface-panic	lean-observation
-FAIL	comparisons/short-circuit/array-skips-interface-panic	lean-observation
-FAIL	comparisons/short-circuit/nested-array-struct-reaches-panic	lean-observation
-FAIL	comparisons/short-circuit/nested-array-struct-skips-panic	lean-observation
-FAIL	comparisons/short-circuit/struct-nested-array-reaches-panic	lean-observation
-FAIL	comparisons/short-circuit/struct-nested-array-skips-panic	lean-observation
-FAIL	comparisons/short-circuit/struct-reaches-interface-panic	lean-observation
-PASS	comparisons/short-circuit/struct-skips-interface-panic	-
+FAIL	comparisons/short-circuit/array-reaches-interface-panic	frontend-export
+FAIL	comparisons/short-circuit/array-skips-interface-panic	frontend-export
+FAIL	comparisons/short-circuit/nested-array-struct-reaches-panic	frontend-export
+FAIL	comparisons/short-circuit/nested-array-struct-skips-panic	frontend-export
+FAIL	comparisons/short-circuit/struct-nested-array-reaches-panic	frontend-export
+FAIL	comparisons/short-circuit/struct-nested-array-skips-panic	frontend-export
+FAIL	comparisons/short-circuit/struct-reaches-interface-panic	frontend-export
+FAIL	comparisons/short-circuit/struct-skips-interface-panic	frontend-export
 FAIL	complex/basic	frontend-export
 FAIL	complex/builtin-untyped-args	frontend-export
 FAIL	complex/complex64-parts	frontend-export
@@ -383,13 +392,13 @@ FAIL	interfaces/error-idioms/promoted-method	frontend-export
 FAIL	interfaces/error-idioms/uncomparable-panic	frontend-export
 FAIL	interfaces/error-idioms/value-equality	frontend-export
 FAIL	interfaces/error-interface	frontend-export
-FAIL	interfaces/interface-array-compare-panic	lean-observation
+FAIL	interfaces/interface-array-compare-panic	frontend-export
 FAIL	interfaces/interface-compare	frontend-export
 FAIL	interfaces/interface-compare-panic	frontend-export
 FAIL	interfaces/interface-defined-type-identity	frontend-export
 FAIL	interfaces/interface-method-expression	frontend-export
 FAIL	interfaces/interface-method-value	frontend-export
-FAIL	interfaces/interface-nested-struct-compare-panic	lean-observation
+FAIL	interfaces/interface-nested-struct-compare-panic	frontend-export
 FAIL	interfaces/interface-storage-copy/pointer	frontend-export
 FAIL	interfaces/interface-storage-copy/value	frontend-export
 FAIL	interfaces/nil-interface	frontend-export
@@ -446,12 +455,14 @@ PASS	ints/wrap-width-boundaries	-
 PASS	maps/array-key	-
 PASS	maps/array-value-copy	-
 FAIL	maps/channel-key	frontend-export
+FAIL	maps/clear-during-range	differential
 PASS	maps/compound-assign-eval-once	-
 PASS	maps/defined-map-value	-
 PASS	maps/delete-alias-visible	-
+FAIL	maps/delete-during-range	differential
 PASS	maps/delete-eval-order	-
 PASS	maps/delete-existing	-
-FAIL	maps/delete-interface-dynamic-key	lean-observation
+FAIL	maps/delete-interface-dynamic-key	frontend-export
 FAIL	maps/delete-interface-key-panic	lean-observation
 PASS	maps/delete-missing	-
 FAIL	maps/delete-nil-interface-key-panic	lean-observation
@@ -459,8 +470,8 @@ FAIL	maps/delete-nil-key-types	frontend-export
 PASS	maps/delete-nil-map	-
 PASS	maps/delete-nil-value-types	-
 PASS	maps/index-assign-eval-order	-
-FAIL	maps/interface-dynamic-type-key	lean-observation
-FAIL	maps/interface-key	lean-observation
+FAIL	maps/interface-dynamic-type-key	frontend-export
+FAIL	maps/interface-key	frontend-export
 FAIL	maps/interface-slice-key-panic	lean-observation
 PASS	maps/literal-eval-order	-
 PASS	maps/map-alias	-
@@ -493,10 +504,10 @@ PASS	maps/pointer-key	-
 PASS	maps/set-membership	-
 PASS	maps/slice-value-element-write	-
 PASS	maps/struct-key	-
-FAIL	maps/tuple-assign-key-eval	lean-observation
-FAIL	maps/tuple-map-expr-targets	lean-observation
-FAIL	maps/tuple-rhs-before-target-write	lean-observation
-FAIL	maps/tuple-swap-values	lean-observation
+FAIL	maps/tuple-assign-key-eval	frontend-export
+FAIL	maps/tuple-map-expr-targets	frontend-export
+FAIL	maps/tuple-rhs-before-target-write	frontend-export
+FAIL	maps/tuple-swap-values	frontend-export
 PASS	methods/defined-int-receiver	-
 PASS	methods/defined-map-receiver	-
 FAIL	methods/embedded-interface-satisfaction	frontend-export
@@ -746,7 +757,7 @@ PASS	structs/comparable	-
 PASS	structs/copy-value	-
 PASS	structs/field-incdec	-
 PASS	structs/field-write-aliased-pointer	-
-FAIL	structs/interface-field-compare-panic	lean-observation
+FAIL	structs/interface-field-compare-panic	frontend-export
 PASS	structs/keyed-literal	-
 PASS	structs/keyed-literal-eval-order	-
 PASS	structs/nested-field-write	-

@@ -60,6 +60,53 @@ fields pervasively). GoCore already has the right primitives (`fieldAddr`,
 overclaims "field/index access" as working (true for reads, false for writes) —
 correct it when the lowering is fixed. Tracked in `TODO.md` (F1).
 
+## BUG-006 — interface slots hold RAW values (no conversion wrap); guarded fail-closed
+
+- Status: open
+- Pinned-by: differential
+- Cases: comparisons/short-circuit/struct-skips-interface-panic
+- Discovered: 2026-07-25/26 (slice 0d; scope completed by the pre-merge audit)
+
+The lowering has no interface-conversion wrap: a concrete value flowing
+into an interface-typed slot keeps its raw representation, which makes
+typed-nil comparisons and cross-dynamic-type behavior silently WRONG
+(`interfaces/typed-nil-pointer-compare`: Go 111, raw lowering 1). Until
+the interfaces campaign lands the real wrap
+(`docs/2026-07-25_arc-sequence.md` item 3), the frontend FAILS CLOSED at
+every site a value implicitly converts to interface: assignment pairs,
+var initializers, call arguments and packed variadic elements, append
+elements, `new(expr)`, composite-literal fields/elements/keys/values,
+the map-assign fast path, and `return` into interface results (the last
+four were audit findings — the guard's first cut missed them). The
+pinned case is the one PASS→FAIL this closed: a struct literal with an
+interface field was accidentally green because Go's `==` short-circuits
+on an earlier field before touching the raw payload — listed here per
+the re-pin guard. The guard treats an untyped-nil source as exact
+(a nil interface IS the raw nil).
+
+## BUG-005 — map iteration does not observe delete/clear (snapshot semantics)
+
+- Status: open
+- Pinned-by: differential
+- Cases: maps/delete-during-range, maps/clear-during-range
+- Discovered: 2026-07-26 (pre-merge adversarial audit of `wrong-answers-builtins`)
+
+`mapRange` snapshots the entry array once (the reshape's nondeterminism
+design) and iterates the snapshot, so an entry removed during iteration
+is still produced. The Go spec is explicit the other way: "If a map entry
+that has not yet been reached is removed during iteration, the
+corresponding iteration value will not be produced." The combination only
+became REACHABLE when this arc landed `delete`/`clear` — the audit's
+probe (`for k := range m { n++; delete all }`) gets one iteration from Go
+and three from the machine, a silent wrong answer, now pinned red by the
+two Cases. (Entries CREATED during iteration may or may not be produced,
+so the snapshot's not-producing them is fine — removal is the defect.)
+The fix is real machine surgery: `Cont.mapIterK` must carry the map's
+base location and the pick-next step must skip keys no longer present
+(and re-read values live), which touches the nondeterministic rule pair
+and `MachineSound` — scheduled as its own slice, not rushed into an
+audit response.
+
 ## BUG-004 — panic abort rendering: boxing identity and defined-type payloads unmodeled
 
 - Status: open
