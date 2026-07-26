@@ -1907,7 +1907,16 @@ func (e *emitter) emitConstValue(tv types.TypeAndValue) (any, error) {
 	case constant.Bool:
 		return map[string]any{"expr": "bool", "value": constant.BoolVal(tv.Value)}, nil
 	case constant.String:
-		return map[string]any{"expr": "string", "value": constant.StringVal(tv.Value)}, nil
+		// The VALUE (escapes decoded) travels as raw BYTES: a Go string may
+		// be invalid UTF-8 ("\xff"), and encoding/json silently replaces
+		// invalid sequences with U+FFFD — which corrupted literal bytes
+		// (wrong-answers slice 0b; strings/string-escape-bytes pinned it).
+		bytes := []byte(constant.StringVal(tv.Value))
+		vals := make([]any, len(bytes))
+		for i, b := range bytes {
+			vals[i] = int(b)
+		}
+		return map[string]any{"expr": "string", "bytes": vals}, nil
 	default:
 		return nil, unsup("constant kind %s", tv.Value.Kind())
 	}

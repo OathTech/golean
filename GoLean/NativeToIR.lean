@@ -123,8 +123,14 @@ partial def decodeExpr (path : String) (json : Json) : LowerM Expr := do
   | "bool" =>
       pure (.boolLit (← StrictJson.bool s!"{path}.value" (← StrictJson.field path obj "value")))
   | "string" =>
-      let s ← StrictJson.string s!"{path}.value" (← StrictJson.field path obj "value")
-      pure (.stringLit (GoString.fromLeanString s))
+      -- Literal VALUE as raw bytes: a Go string may be invalid UTF-8, which
+      -- a JSON string cannot carry (wrong-answers slice 0b).
+      let arr ← StrictJson.array s!"{path}.bytes" (← StrictJson.field path obj "bytes")
+      let bytes ← arr.mapIdxM (fun i b => do
+        let n ← StrictJson.nat s!"{path}.bytes[{i}]" b
+        if n < 256 then pure (UInt8.ofNat n)
+        else fail s!"string literal byte out of range at {path}.bytes[{i}]: {n}")
+      pure (.stringLit { bytes })
   | "nil" => pure (.nil (← optType path obj))
   | "recover" => pure .recoverCall
   | "ref" =>
