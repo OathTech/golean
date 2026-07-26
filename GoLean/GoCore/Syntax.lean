@@ -99,6 +99,10 @@ inductive Expr where
   right like any strict form. -/
   | minOf (args : Array Expr)
   | maxOf (args : Array Expr)
+  /-- UTF-8 rune decode at a byte offset — the range-over-string desugar's
+  primitives (`decodeRuneAt`: invalid encodings yield U+FFFD, width 1). -/
+  | runeAt (s off : Expr)
+  | runeSizeAt (s off : Expr)
   /-- The `recover()` builtin. Not a strict operator: its value depends on
   the continuation (it recovers exactly when called directly by a deferred
   function invoked by a panic — the unwinding arc,

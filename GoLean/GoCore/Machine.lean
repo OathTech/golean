@@ -118,6 +118,9 @@ inductive StrictOp where
   /-- `min`/`max` over ints or strings (Go's ordered builtins). -/
   | minOf
   | maxOf
+  /-- UTF-8 rune decode at a byte offset (range-over-string desugar). -/
+  | runeAt
+  | runeSizeAt
   deriving Repr, BEq
 
 /-- Classify an expression as a strict-operator application: the head and
@@ -168,6 +171,8 @@ def strictPlan : Expr → Option (StrictOp × List Expr)
   | .funcVal fid captured => some (.funcValOf fid, captured.toList)
   | .minOf args => some (.minOf, args.toList)
   | .maxOf args => some (.maxOf, args.toList)
+  | .runeAt s off => some (.runeAt, [s, off])
+  | .runeSizeAt s off => some (.runeSizeAt, [s, off])
   | _ => none
 
 /-- Slice-expression application, after all operands are values (base, low,
@@ -362,6 +367,22 @@ def applyStrictOp (s : ExecState) : StrictOp → List GoValue → Except GoError
         if ← valueLess best w then
           best := w
       return (best, s)
+  | .runeAt, [sv, ov] => do
+      match sv with
+      | .string str => do
+          let off ← valueAsInt ov
+          if off < 0 then
+            stuck s!"negative rune-decode offset {off}"
+          return (.int (decodeRuneAt str off.toNat).1 .int32, s)
+      | other => stuck s!"expected string operand for rune decode, got {repr other}"
+  | .runeSizeAt, [sv, ov] => do
+      match sv with
+      | .string str => do
+          let off ← valueAsInt ov
+          if off < 0 then
+            stuck s!"negative rune-decode offset {off}"
+          return (.int (Int.ofNat (decodeRuneAt str off.toNat).2) .int, s)
+      | other => stuck s!"expected string operand for rune decode, got {repr other}"
   | .defaultValueOf ty, [] => do return ((← defaultValue s ty), s)
   | .nilLit typ, [] =>
       match typ with

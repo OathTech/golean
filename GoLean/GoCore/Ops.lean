@@ -137,6 +137,43 @@ def checkSliceMax (capacity : Nat) (max : Int) : Except GoError Nat := do
     fullSliceMaxBoundsPanic max.toNat capacity
   return max.toNat
 
+/-- Go's `utf8.DecodeRuneInString` at a byte offset, with range-over-string
+semantics: an invalid, surrogate, overlong, or truncated encoding yields
+U+FFFD with width 1 (the accept-range table of `unicode/utf8`;
+oracle-pinned by `strings/range-invalid-utf8`). Returns (rune, width). -/
+def decodeRuneAt (s : GoString) (off : Nat) : Int × Nat :=
+  -- Out-of-range reads yield a sentinel that fails every range check.
+  let b (i : Nat) : Nat := ((s.bytes[off + i]?).map (·.toNat)).getD 0x100
+  let cont (x lo hi : Nat) : Bool := lo ≤ x && x ≤ hi
+  let bad : Int × Nat := (0xFFFD, 1)
+  let b0 := b 0
+  if b0 < 0x80 then (Int.ofNat b0, 1)
+  else if b0 < 0xC2 then bad
+  else if b0 ≤ 0xDF then
+    let b1 := b 1
+    if cont b1 0x80 0xBF then
+      (Int.ofNat (((b0 - 0xC0) <<< 6) + (b1 - 0x80)), 2)
+    else bad
+  else if b0 ≤ 0xEF then
+    let b1 := b 1
+    let lo1 := if b0 == 0xE0 then 0xA0 else 0x80
+    let hi1 := if b0 == 0xED then 0x9F else 0xBF
+    let b2 := b 2
+    if cont b1 lo1 hi1 && cont b2 0x80 0xBF then
+      (Int.ofNat (((b0 - 0xE0) <<< 12) + ((b1 - 0x80) <<< 6) + (b2 - 0x80)), 3)
+    else bad
+  else if b0 ≤ 0xF4 then
+    let b1 := b 1
+    let lo1 := if b0 == 0xF0 then 0x90 else 0x80
+    let hi1 := if b0 == 0xF4 then 0x8F else 0xBF
+    let b2 := b 2
+    let b3 := b 3
+    if cont b1 lo1 hi1 && cont b2 0x80 0xBF && cont b3 0x80 0xBF then
+      (Int.ofNat (((b0 - 0xF0) <<< 18) + ((b1 - 0x80) <<< 12)
+        + ((b2 - 0x80) <<< 6) + (b3 - 0x80)), 4)
+    else bad
+  else bad
+
 def stringByteGet (value : GoString) (index : Int) : Except GoError GoValue := do
   if index < 0 then
     indexOutOfRangePanic index value.length

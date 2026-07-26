@@ -580,6 +580,35 @@ partial def decodeRange (results : Array Param) (path : String) (obj : StrictJso
         .initialization { id := "$rfirst", typ := .bool }, .assign (.var "$rfirst") (.boolLit true),
         .while (.boolLit true) (.block #[] iter)
       ])
+  | "string" =>
+      -- Rune iteration: the key is the rune's starting BYTE offset, the
+      -- value the decoded rune (invalid encodings: U+FFFD, width 1 — the
+      -- machine's decodeRuneAt). The next offset advances at the TOP of
+      -- each iteration, before the body, so `continue` re-tests with the
+      -- advance already applied.
+      let intTy : Ty := .int .int
+      let roff : Expr := .var "$roff"
+      let mut iter : Array Stmt := #[
+        .ifThenElse (.atLeastCmp (.var "$rnext") (.length (.var "$rcoll") none))
+          .breakStmt (.seqn #[]),
+        .initialization { id := "$roff", typ := intTy },
+        .assign (.var "$roff") (.var "$rnext"),
+        .assign (.var "$rnext") (.add roff (.runeSizeAt (.var "$rcoll") roff))
+      ]
+      match keyVar with
+      | some k => iter := iter ++ #[.initialization { id := k, typ := intTy }, .assign (.var k) roff]
+      | none => pure ()
+      match valVar with
+      | some v => iter := iter ++
+          #[.initialization { id := v, typ := .int .int32 },
+            .assign (.var v) (.runeAt (.var "$rcoll") roff)]
+      | none => pure ()
+      iter := iter.push body
+      pure (.block #[] #[
+        .initialization { id := "$rcoll", typ := .string }, .assign (.var "$rcoll") coll,
+        .initialization { id := "$rnext", typ := intTy }, .assign (.var "$rnext") (.intLit 0 .int),
+        .while (.boolLit true) (.block #[] iter)
+      ])
   | other => fail s!"unsupported range kind {other} at {path}"
 
 partial def decodeReturn (results : Array Param) (path : String) (obj : StrictJson.Obj) : LowerM Stmt := do

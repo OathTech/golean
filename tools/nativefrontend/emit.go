@@ -740,6 +740,11 @@ func (e *emitter) emitAssignTarget(l ast.Expr, define bool) (any, error) {
 
 func (e *emitter) emitDeclStmt(st *ast.DeclStmt) (any, error) {
 	gd, ok := st.Decl.(*ast.GenDecl)
+	// A const declaration is a no-op statement: go/types folds every USE
+	// of the constant to its value (emitIdent), so nothing lowers here.
+	if ok && gd.Tok == token.CONST {
+		return map[string]any{"stmt": "block", "body": []any{}}, nil
+	}
 	if !ok || gd.Tok != token.VAR {
 		return nil, unsup("declaration statement %s", declTok(st))
 	}
@@ -935,59 +940,150 @@ func nameOrNull(s string) any {
 // primitive; index-able ranges (slice/array/int) carry a "kind" that NativeToIR
 // desugars to an index for-loop. Only `:=` range vars are modeled for now.
 func (e *emitter) emitRange(rs *ast.RangeStmt) (any, error) {
-	if rs.Key != nil && rs.Tok == token.ASSIGN {
-		return nil, unsup("range with assigned (non-:=) variables")
+	// ASSIGN form (`for i, v = range X`): iterate with declared temps and
+	// assign the outer lvalues at the top of each iteration (key first,
+	// then value — Go's order). Blank targets stay unbound.
+	keyName := rangeVarName(rs.Key)
+	valName := rangeVarName(rs.Value)
+	prefix := []any{}
+	if rs.Tok == token.ASSIGN {
+		bind := func(outer ast.Expr, temp string) (string, error) {
+			if id, ok := outer.(*ast.Ident); ok && id.Name == "_" {
+				return "", nil
+			}
+			target, err := e.emitLValue(outer)
+			if err != nil {
+				return "", err
+			}
+			ty, err := e.typeOf(outer)
+			if err != nil {
+				return "", err
+			}
+			prefix = append(prefix, map[string]any{
+				"stmt": "assign", "define": false,
+				"lhs": []any{target},
+				"rhs": []any{map[string]any{"expr": "ident", "name": temp, "type": ty}},
+			})
+			return temp, nil
+		}
+		if rs.Key != nil {
+			n, err := bind(rs.Key, "$rangeKey")
+			if err != nil {
+				return nil, err
+			}
+			keyName = n
+		}
+		if rs.Value != nil {
+			n, err := bind(rs.Value, "$rangeVal")
+			if err != nil {
+				return nil, err
+			}
+			valName = n
+		}
 	}
-	coll, err := e.emitExpr(rs.X)
+
+	rangeTy := e.info.TypeOf(rs.X).Underlying()
+	var coll any
+	kindFields := map[string]any{}
+	if ptr, ok := rangeTy.(*types.Pointer); ok {
+		// Range over *[N]T: the pointer evaluates ONCE; the index-only
+		// form (and N == 0) never dereferences — a nil pointer iterates
+		// fine, N is static — while the value form reads elements through
+		// it (nil panics at the first read, which the up-front deref
+		// reproduces: nothing observable happens between loop entry and
+		// the first element read).
+		arr, ok := ptr.Elem().Underlying().(*types.Array)
+		if !ok {
+			return nil, unsup("range over %s", e.info.TypeOf(rs.X))
+		}
+		pw, err := e.emitExpr(rs.X)
+		if err != nil {
+			return nil, err
+		}
+		if valName == "" || arr.Len() == 0 {
+			if _, err := e.hoist(pw, e.info.TypeOf(rs.X)); err != nil {
+				return nil, err
+			}
+			coll = map[string]any{"expr": "int", "value": itoa(int(arr.Len()))}
+			kindFields["kind"] = "int"
+			valName = ""
+		} else {
+			arrTy, err := e.emitType(ptr.Elem())
+			if err != nil {
+				return nil, err
+			}
+			elemTy, err := e.emitType(arr.Elem())
+			if err != nil {
+				return nil, err
+			}
+			coll = map[string]any{"expr": "deref", "ptr": pw, "type": arrTy}
+			kindFields["kind"] = "array"
+			kindFields["elemType"] = elemTy
+		}
+	} else {
+		w, err := e.emitExpr(rs.X)
+		if err != nil {
+			return nil, err
+		}
+		coll = w
+		switch u := rangeTy.(type) {
+		case *types.Map:
+			kt, err := e.emitType(u.Key())
+			if err != nil {
+				return nil, err
+			}
+			vt, err := e.emitType(u.Elem())
+			if err != nil {
+				return nil, err
+			}
+			kindFields["kind"] = "map"
+			kindFields["keyType"] = kt
+			kindFields["valueType"] = vt
+		case *types.Slice:
+			et, err := e.emitType(u.Elem())
+			if err != nil {
+				return nil, err
+			}
+			kindFields["kind"] = "slice"
+			kindFields["elemType"] = et
+		case *types.Array:
+			et, err := e.emitType(u.Elem())
+			if err != nil {
+				return nil, err
+			}
+			kindFields["kind"] = "array"
+			kindFields["elemType"] = et
+		case *types.Basic:
+			if u.Info()&types.IsInteger != 0 {
+				kindFields["kind"] = "int"
+			} else if u.Info()&types.IsString != 0 {
+				kindFields["kind"] = "string"
+			} else {
+				return nil, unsup("range over %s", u)
+			}
+		default:
+			return nil, unsup("range over %s", e.info.TypeOf(rs.X))
+		}
+	}
+
+	var body any
+	blk, err := e.emitBlock(rs.Body)
 	if err != nil {
 		return nil, err
 	}
-	body, err := e.emitBlock(rs.Body)
-	if err != nil {
-		return nil, err
+	body = blk
+	if len(prefix) > 0 {
+		body = map[string]any{"stmt": "block", "body": append(prefix, body)}
 	}
 	node := map[string]any{
 		"stmt":       "range",
-		"keyVar":     nameOrNull(rangeVarName(rs.Key)),
-		"valVar":     nameOrNull(rangeVarName(rs.Value)),
+		"keyVar":     nameOrNull(keyName),
+		"valVar":     nameOrNull(valName),
 		"collection": coll,
 		"body":       body,
 	}
-	switch u := e.info.TypeOf(rs.X).Underlying().(type) {
-	case *types.Map:
-		kt, err := e.emitType(u.Key())
-		if err != nil {
-			return nil, err
-		}
-		vt, err := e.emitType(u.Elem())
-		if err != nil {
-			return nil, err
-		}
-		node["kind"] = "map"
-		node["keyType"] = kt
-		node["valueType"] = vt
-	case *types.Slice:
-		et, err := e.emitType(u.Elem())
-		if err != nil {
-			return nil, err
-		}
-		node["kind"] = "slice"
-		node["elemType"] = et
-	case *types.Array:
-		et, err := e.emitType(u.Elem())
-		if err != nil {
-			return nil, err
-		}
-		node["kind"] = "array"
-		node["elemType"] = et
-	case *types.Basic:
-		if u.Info()&types.IsInteger != 0 {
-			node["kind"] = "int"
-		} else {
-			return nil, unsup("range over %s", u)
-		}
-	default:
-		return nil, unsup("range over %s", e.info.TypeOf(rs.X))
+	for k, v := range kindFields {
+		node[k] = v
 	}
 	return node, nil
 }
@@ -2166,6 +2262,25 @@ func (e *emitter) emitCallNode(c *ast.CallExpr) (any, bool, error) {
 
 	fnID, ok := c.Fun.(*ast.Ident)
 	if !ok {
+		// Any other func-typed EXPRESSION in callee position (an indexed
+		// func value `fns[i]()`, a parenthesized value, a field read) is a
+		// call through the value — the §8 machinery.
+		if vsig, ok := e.info.TypeOf(c.Fun).Underlying().(*types.Signature); ok {
+			callee, err := e.emitExpr(c.Fun)
+			if err != nil {
+				return nil, false, err
+			}
+			args, err := e.emitCallArgs(vsig, c)
+			if err != nil {
+				return nil, false, err
+			}
+			resultTypes, err := e.emitResultTypes(vsig)
+			if err != nil {
+				return nil, false, err
+			}
+			return map[string]any{"expr": "call-value", "callee": callee,
+				"args": args, "resultTypes": resultTypes}, true, nil
+		}
 		return nil, false, unsup("call target %T", c.Fun)
 	}
 	var sig *types.Signature
