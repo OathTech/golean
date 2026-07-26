@@ -1,21 +1,12 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-07-26  commit: 923e3ec  frontend: native  oracle: go run
-# manifest_cases: 783  pass: 444  fail: 339
-# Re-pin reason: BUILTINS SLICE 1 (arc wrong-answers-builtins, item 1 of
-# docs/2026-07-25_arc-sequence.md). new (incl. Go 1.26 new(expr)),
-# append, copy, delete, clear, min/max landed (machine op-table
-# additions only — zero step-rule or proof changes); string<->byte/rune
-# conversions route to their dedicated operators; per-decl QUARANTINE
-# stops one unsupported declaration poisoning its file (stub fails
-# closed at call, runner classifies it frontend-export); generic
-# instantiation f[int] refused at the boundary (was runtime-stuck).
-# 70 FAIL->PASS. Four reclassifications: 3 interface-key deletes now
-# VISIBLE machine gaps (lean-observation; interfaces campaign) and
-# full-slice-cap-zero lands in the nondet lane (observes append's
-# modeled capacity choice — cannot be a strict-lane pass by design).
-# Fixed en route: emitAssign double-ran hoisting builtin emitters
-# (copy executed twice); new(expr) default-initialized (eval-once).
-# Corpus 783, passing 374 -> 444. Zero regressions.
+# recorded: 2026-07-26  commit: 9aa3fb4  frontend: native  oracle: go run
+# manifest_cases: 783  pass: 470  fail: 313
+# Re-pin reason: SLICE 2 of arc wrong-answers-builtins (const decls as
+# no-ops with folded uses; ASSIGN-form range; range over *[N]T with
+# nil-safe index-only form; RANGE OVER STRING on the new decodeRuneAt
+# machine primitive — utf8 accept-range exact; general func-typed call
+# targets). 26 FAIL->PASS, zero regressions, no reclassifications.
+# Corpus 783, passing 444 -> 470.
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
 PASS	arrays/array-copy	-
@@ -139,7 +130,7 @@ FAIL	complex/builtin-untyped-args	frontend-export
 FAIL	complex/complex64-parts	frontend-export
 FAIL	complex/complex64-rounding	frontend-export
 FAIL	complex/compound-assign	frontend-export
-FAIL	complex/constant-real-imag	frontend-export
+PASS	complex/constant-real-imag	-
 FAIL	complex/defined-type-ops	frontend-export
 FAIL	complex/division	frontend-export
 FAIL	complex/equality	frontend-export
@@ -156,13 +147,13 @@ FAIL	complex/nan-inf-parts	frontend-export
 FAIL	complex/real-imag-defined	frontend-export
 PASS	complex/real-imag-real-args	-
 FAIL	complex/zero-value	frontend-export
-FAIL	constants/array-bound	frontend-export
-FAIL	constants/builtin-len-cap-constants	frontend-export
-FAIL	constants/complex-constant	frontend-export
+PASS	constants/array-bound	-
+PASS	constants/builtin-len-cap-constants	-
+PASS	constants/complex-constant	-
 PASS	constants/const-precision	-
-FAIL	constants/constant-character-representability	frontend-export
-FAIL	constants/constant-comparison	frontend-export
-FAIL	constants/constant-division	frontend-export
+PASS	constants/constant-character-representability	-
+PASS	constants/constant-comparison	-
+PASS	constants/constant-division	-
 PASS	constants/default-bool-string	-
 FAIL	constants/default-types	frontend-export
 PASS	constants/dependent-constants	-
@@ -173,17 +164,17 @@ PASS	constants/iota-expressions	-
 PASS	constants/iota-multi-name-repeat	-
 PASS	constants/iota-reset-blocks	-
 PASS	constants/iota-typed-repeat	-
-FAIL	constants/representability-boundaries	frontend-export
-FAIL	constants/rune-escape-constants	frontend-export
-FAIL	constants/shift-representability	frontend-export
-FAIL	constants/shift-width-boundaries	frontend-export
-FAIL	constants/string-escape-constant	frontend-export
+PASS	constants/representability-boundaries	-
+PASS	constants/rune-escape-constants	-
+PASS	constants/shift-representability	-
+PASS	constants/shift-width-boundaries	-
+PASS	constants/string-escape-constant	-
 FAIL	constants/typed-complex-binary	frontend-export
-FAIL	constants/typed-explicit-conversion	frontend-export
+PASS	constants/typed-explicit-conversion	-
 PASS	constants/typed-iota	-
 PASS	constants/typed-iota-offset	-
-FAIL	constants/typed-string-binary	frontend-export
-FAIL	constants/typed-untyped-binary	frontend-export
+PASS	constants/typed-string-binary	-
+PASS	constants/typed-untyped-binary	-
 FAIL	constants/untyped-adaptation	frontend-export
 FAIL	constants/untyped-complex-context	frontend-export
 FAIL	control-flow/break-label-select	frontend-export
@@ -303,8 +294,8 @@ PASS	functions/closure-returns-closure	-
 PASS	functions/closure-share	-
 PASS	functions/closure-two-vars-one-closure	-
 PASS	functions/closure-value-reassigned	-
-FAIL	functions/composite-function-values/map-call	frontend-export
-FAIL	functions/composite-function-values/slice-call	frontend-export
+PASS	functions/composite-function-values/map-call	-
+PASS	functions/composite-function-values/slice-call	-
 FAIL	functions/composite-function-values/struct-call	frontend-export
 FAIL	functions/composite-function-values/struct-reassign	frontend-export
 FAIL	functions/function-in-interface	frontend-export
@@ -631,9 +622,9 @@ PASS	quorum/vote-result/pending	-
 PASS	quorum/vote-result/tie-lost	-
 PASS	quorum/vote-result/won-exact	-
 PASS	range/range-array-copy	-
-FAIL	range/range-array-pointer	frontend-export
-FAIL	range/range-array-pointer-nil-index	frontend-export
-FAIL	range/range-array-pointer-nil-value-panic	frontend-export
+PASS	range/range-array-pointer	-
+PASS	range/range-array-pointer-nil-index	-
+PASS	range/range-array-pointer-nil-value-panic	-
 FAIL	range/range-func-basic	frontend-export
 FAIL	range/range-func-break	frontend-export
 FAIL	range/range-func-edge/break-defer-trace	frontend-export
@@ -645,16 +636,16 @@ FAIL	range/range-func-edge/zero-value	frontend-export
 FAIL	range/range-func-edge/zero-yielded-values	frontend-export
 PASS	range/range-int	-
 PASS	range/range-int-negative	-
-FAIL	range/range-int-typed	frontend-export
+PASS	range/range-int-typed	-
 PASS	range/range-int-zero	-
-FAIL	range/range-loop-var-capture	frontend-export
+PASS	range/range-loop-var-capture	-
 PASS	range/range-map-delete-current	-
 PASS	range/range-map-sum	-
 PASS	range/range-map-value-copy	-
 PASS	range/range-nil-map	-
 PASS	range/range-nil-slice	-
 PASS	range/range-slice-index-value	-
-FAIL	range/range-string-index-only	frontend-export
+PASS	range/range-string-index-only	-
 PASS	range/range-struct-copy	-
 PASS	returns/early-return-named	-
 PASS	returns/method-multi-result-arg	-
@@ -722,9 +713,9 @@ PASS	strings/literal-edge/raw-multiline-literal	-
 PASS	strings/literal-edge/raw-quotes-and-backslashes	-
 FAIL	strings/nil-slice-string-conversion	lean-observation
 PASS	strings/no-normalization	-
-FAIL	strings/range-byte-offsets	frontend-export
-FAIL	strings/range-combining-mark	frontend-export
-FAIL	strings/range-invalid-utf8	frontend-export
+PASS	strings/range-byte-offsets	-
+PASS	strings/range-combining-mark	-
+PASS	strings/range-invalid-utf8	-
 PASS	strings/raw-string-literal	-
 FAIL	strings/rune-invalid-values	lean-observation
 PASS	strings/rune-literal-values	-
