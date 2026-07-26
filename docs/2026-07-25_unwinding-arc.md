@@ -94,6 +94,118 @@ Fail-closed-always forbids that. Recover lands whole or not at all.
 - Pre-merge audit ask (semantics primary — the unwinding rules and the
   recover walk are new trust surface), then user merge sign-off.
 
+## Design addendum (2026-07-25, pre-implementation): the panic CHAIN
+
+Written after re-deriving the design against the differential's actual
+fault-identity contract and fresh oracle probes (Go 1.26.4). Three findings
+refine §10's single-value sketch; all are oracle-pinned, none contradict
+the plan's structure.
+
+### A1. Fault identity pins the FIRST panic line — so `panicking` carries a chain
+
+The harness does not recover: an aborting case emits Go's raw runtime
+output, and `scripts/diff-coverage` extracts the **first** `^panic: ` line
+as the observation message (continuation lines are tab-indented and do not
+match). Go prints the goroutine's whole panic chain, oldest first, with
+`[recovered]` marking entries that were recovered when a later panic
+superseded them. Oracle:
+
+- panic during a deferred call of an unrecovered panic:
+  `panic: first` ⏎ `\tpanic: second` → observed message **`first`**
+  (this is what `panic-recover/deferred-panic-replaces` will compare;
+  its manifest `expected_reason` "second" is only a substring check
+  against Go's full output).
+- recover then re-panic inside the same deferred call:
+  `panic: inner [recovered]` ⏎ `\tpanic: wrapped` → observed message
+  **`inner [recovered]`** (`panic-recover/recover-repanic`).
+
+A single-value `panicking v k` cannot produce either message. Therefore:
+
+```
+structure PanicEntry where
+  value : GoValue      -- what recover returns (interface-wrapped, A2)
+  recovered : Bool
+Config.panicking (chain : List PanicEntry) (k : Cont)   -- oldest first
+```
+
+Rules (mirror shapes of `breaking`/`returning`, plus the marker):
+
+- statement frames (`seq`/`loop`/`breakableK`/`mapIterK`) and all
+  expression frames: strip, chain unchanged. (Expression frames too:
+  a panic can surface mid-expression; `breaking` never could.)
+- `panicking chain (.frame t r [] k) → panicking chain k` — no result
+  read (the call did not return).
+- `panicking chain (.frame t r (d::ds) k)` → enter the deferred call `d`
+  with continuation `.frame [] [] [] (.panicResumeK chain (.frame t r ds k))`
+  — the chain moves INTO the marker while the deferred call runs.
+- `next (.panicResumeK chain k)` — the deferred call completed:
+  - newest entry recovered → **`next k`**: the whole chain is discarded
+    and the frame resumes its NORMAL exit path (drain remaining defers,
+    then read pinned results — named results preserved, unnamed results
+    stay at their defaults; Go's "the surrounding function returns
+    normally").
+  - newest entry not recovered → `panicking chain k` (unwinding resumes).
+- `panicking newChain (.panicResumeK oldChain k) → panicking (oldChain ++
+  newChain) k` — a NEW panic during a panic-path deferred call merges
+  behind the suspended chain. This one rule produces both oracle
+  renderings above.
+- `panicking chain .stop → panicked (render chain.head)` — terminal;
+  rendering below. `.panicked` stays terminal with no outgoing rule, so
+  `Progress`'s statement is unchanged and its reading sharpens to "no
+  UNRECOVERED panics" exactly as §1 promised.
+
+`recover()` (own `Expr` constructor; needs the continuation): walk the
+continuation crossing expression/statement frames; stop at the FIRST
+`.frame`; if the continuation directly under it is `.panicResumeK chain k'`
+with newest entry not yet recovered → return newest `.value` and rebuild
+the continuation with that entry marked recovered; anything else → `.nil`.
+One deterministic function, so `step_det` sees a function-premise rule.
+This yields Go's called-directly-by-a-deferred-function rule (a nested
+call's walk stops at the nested frame → nil; a normal-path drain has a
+plain `.frame` under the inner frame, not a marker → nil —
+`defer/recover-normal-return`), and marks-once (`recover-twice`: second
+call sees recovered=true → nil).
+
+### A2. Panic payloads are interface values (typed nil must recover non-nil)
+
+`panic-recover/panic-typed-nil-recover` panics a nil `*T` and requires
+`recover() != nil` to be TRUE (non-nil interface holding a nil pointer)
+and `r.(*T)` to yield nil. A raw `.nil` payload gives the wrong answer at
+the first check — silently. So `panic(e)` wraps its argument exactly as Go
+converts to `any`: the frontend emits the static type; lowering builds
+`.toInterface` over the existing machinery (`dynamicTypeName?` already
+covers string/int/bool/pointer-to-defined — precisely the in-scope payload
+types, failing closed elsewhere). An argument already of interface type is
+passed through unwrapped (`panic(recover())` must not double-wrap). A
+delivered `.nil` (untyped `panic(nil)` or a nil interface at runtime)
+becomes the distinguished nil-panic payload. Runtime panics (the 12
+existing `.panicked` rule sites) carry `.interface "runtime.Error"
+(.string msg)` — the dot-carrying dynamic name cannot collide with a
+source-level `TypeId`.
+
+Existing machinery this leans on, verified: `normalizeValueForTy` passes
+any value through interface-typed cells (`r := recover()` stores fine);
+`valueEq` at interface types discriminates exactly nil vs non-nil (what
+the corpus compares); `typeAssertValue` unwraps `.interface dyn inner` by
+dynamic-name match.
+
+### A3. Oracle pins (Go 1.26.4, probes 2026-07-25)
+
+- `defer recover()` does **not** recover (`panic: boom`, exit 2) — recover
+  invoked AS the deferred function is not "called by" one. Lowering: a
+  deferred no-op (synthetic empty function), pinned by
+  `panic-recover/defer-recover-builtin` (expected: panic, reason boom).
+- Abort renderings: `panic("s")` → `s`; `panic(4)` → `4`; `panic(true)` →
+  `true`; `panic(nil)` → **`nil`** (Go 1.26 prints the PanicNilError as
+  `nil`); runtime-error payloads → their message (unchanged from today).
+- Typed nil pointer aborting: `panic: (*main.T) 0x0` — package-qualified;
+  our dynamic names are not. Rendering a pointer payload at ABORT fails
+  closed (unsupported) rather than approximating; recovering one works
+  (A2). No corpus case aborts with a pointer payload; if one is ever
+  added it must first decide the package-qualification story.
+- Chain rendering: first line only, ` [recovered]` suffix from the
+  entry's flag; deeper lines never observed by the harness.
+
 ## Standing session facts (for the fresh context)
 
 `main` @ 234301e pushed except the binary-cleanup commit (ask user or
