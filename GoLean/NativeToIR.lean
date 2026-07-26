@@ -436,6 +436,17 @@ partial def decodeStmt (results : Array Param) (path : String) (json : Json) : L
       let keyTy ← decodeTy s!"{path}.keyType" (← StrictJson.field path obj "keyType")
       let valTy ← decodeTy s!"{path}.valueType" (← StrictJson.field path obj "valueType")
       pure (.seqn ((← declaresOf #[t]).push (.makeMap t.assignee keyTy valTy none)))
+  | "append" =>
+      let t ← decodeTarget s!"{path}.target" (← StrictJson.field path obj "target")
+      let elemTy ← decodeTy s!"{path}.elem" (← StrictJson.field path obj "elem")
+      let slice ← decodeExpr s!"{path}.slice" (← StrictJson.field path obj "slice")
+      let elems ← decodeExpr s!"{path}.elems" (← StrictJson.field path obj "elems")
+      pure (.seqn ((← declaresOf #[t]).push (.appendSlice t.assignee elemTy slice elems)))
+  | "copy" =>
+      let t ← decodeTarget s!"{path}.target" (← StrictJson.field path obj "target")
+      let dst ← decodeExpr s!"{path}.dst" (← StrictJson.field path obj "dst")
+      let src ← decodeExpr s!"{path}.src" (← StrictJson.field path obj "src")
+      pure (.seqn ((← declaresOf #[t]).push (.copySlice t.assignee dst src)))
   | "map-compound-assign" =>
       -- m[k] op= v with base/key pre-hoisted by the frontend: read via
       -- mapGet, combine, store via mapAssign.

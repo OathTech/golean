@@ -2340,6 +2340,38 @@ func (e *emitter) emitBuiltin(c *ast.CallExpr, name string) (any, bool, error) {
 		return map[string]any{"expr": tag, "operand": operand, "operandType": opTy}, false, nil
 	case "make":
 		return e.emitMake(c)
+	case "new":
+		// new(T): allocate T's zero value, yield the pointer (the same
+		// hoisted "new" statement the &T{...} lowering uses, with a
+		// default-value payload).
+		if len(c.Args) != 1 {
+			return nil, false, unsup("new with %d arguments", len(c.Args))
+		}
+		if e.hoistForbidden != "" {
+			return nil, false, unsup("new in %s", e.hoistForbidden)
+		}
+		ptr, ok := e.info.TypeOf(c).(*types.Pointer)
+		if !ok {
+			return nil, false, unsup("new result is not a pointer")
+		}
+		elemTy, err := e.emitType(ptr.Elem())
+		if err != nil {
+			return nil, false, err
+		}
+		ptrTy := map[string]any{"kind": "pointer", "elem": elemTy}
+		name := "$c" + itoa(e.tmpSeq)
+		e.tmpSeq++
+		e.hoisted = append(e.hoisted, map[string]any{
+			"stmt":     "new",
+			"target":   map[string]any{"target": "declare", "id": name, "type": ptrTy},
+			"value":    map[string]any{"expr": "default", "type": elemTy},
+			"elemType": elemTy,
+		})
+		return map[string]any{"expr": "ident", "name": name, "type": ptrTy}, false, nil
+	case "append":
+		return e.emitAppend(c)
+	case "copy":
+		return e.emitCopy(c)
 	case "recover":
 		if len(c.Args) != 0 {
 			return nil, false, unsup("recover with %d arguments", len(c.Args))
@@ -2417,6 +2449,120 @@ func (e *emitter) emitDeferNoop() any {
 		"callee": map[string]any{"expr": "func-value", "func": deferNoopName,
 			"captured": []any{}},
 		"args": []any{}}
+}
+
+// byteSliceOrWrappedString emits a []byte-typed operand: a string-typed
+// expression wraps in the []byte conversion (append(b, s...) and
+// copy(b, s) read the string's bytes; the fresh backing is invisible —
+// the operand is only read).
+func (e *emitter) byteSliceOrWrappedString(x ast.Expr) (any, error) {
+	w, err := e.emitExpr(x)
+	if err != nil {
+		return nil, err
+	}
+	if b, ok := e.info.TypeOf(x).Underlying().(*types.Basic); ok && b.Info()&types.IsString != 0 {
+		return map[string]any{"expr": "convert",
+			"target": map[string]any{"kind": "slice", "elem": intType("uint8")},
+			"x":      w}, nil
+	}
+	return w, nil
+}
+
+// emitAppend hoists append(s, ...) into an "append" statement bound to a
+// temp (the machine's appendSlice op: target, base slice, elems slice).
+// Non-spread arguments pack into a slice literal exactly like variadic
+// packing; a spread argument passes through (a string spread wraps as
+// []byte).
+func (e *emitter) emitAppend(c *ast.CallExpr) (any, bool, error) {
+	if e.hoistForbidden != "" {
+		return nil, false, unsup("append in %s", e.hoistForbidden)
+	}
+	if len(c.Args) == 0 {
+		return nil, false, unsup("append with no arguments")
+	}
+	resTy := e.info.TypeOf(c)
+	sl, ok := resTy.Underlying().(*types.Slice)
+	if !ok {
+		return nil, false, unsup("append result is not a slice")
+	}
+	elemTy, err := e.emitType(sl.Elem())
+	if err != nil {
+		return nil, false, err
+	}
+	base, err := e.emitExpr(c.Args[0])
+	if err != nil {
+		return nil, false, err
+	}
+	var elems any
+	if c.Ellipsis != token.NoPos {
+		if len(c.Args) != 2 {
+			return nil, false, unsup("append spread with %d arguments", len(c.Args))
+		}
+		elems, err = e.byteSliceOrWrappedString(c.Args[1])
+		if err != nil {
+			return nil, false, err
+		}
+	} else {
+		packed := []any{}
+		for i := 1; i < len(c.Args); i++ {
+			if err := e.implicitInterfaceConversionGuard(
+				sl.Elem(), e.info.TypeOf(c.Args[i])); err != nil {
+				return nil, false, err
+			}
+			w, err := e.emitExpr(c.Args[i])
+			if err != nil {
+				return nil, false, err
+			}
+			packed = append(packed, map[string]any{"index": int64(i - 1), "value": w})
+		}
+		elems, err = e.hoistSliceLit(packed, elemTy, int64(len(c.Args)-1))
+		if err != nil {
+			return nil, false, err
+		}
+	}
+	ty, err := e.emitType(resTy)
+	if err != nil {
+		return nil, false, err
+	}
+	name := "$c" + itoa(e.tmpSeq)
+	e.tmpSeq++
+	e.hoisted = append(e.hoisted, map[string]any{
+		"stmt":   "append",
+		"target": map[string]any{"target": "declare", "id": name, "type": ty},
+		"elem":   elemTy,
+		"slice":  base,
+		"elems":  elems,
+	})
+	return map[string]any{"expr": "ident", "name": name, "type": ty}, false, nil
+}
+
+// emitCopy hoists copy(dst, src) into a "copy" statement whose temp holds
+// the copied count (a string source wraps as []byte).
+func (e *emitter) emitCopy(c *ast.CallExpr) (any, bool, error) {
+	if e.hoistForbidden != "" {
+		return nil, false, unsup("copy in %s", e.hoistForbidden)
+	}
+	if len(c.Args) != 2 {
+		return nil, false, unsup("copy with %d arguments", len(c.Args))
+	}
+	dst, err := e.emitExpr(c.Args[0])
+	if err != nil {
+		return nil, false, err
+	}
+	src, err := e.byteSliceOrWrappedString(c.Args[1])
+	if err != nil {
+		return nil, false, err
+	}
+	name := "$c" + itoa(e.tmpSeq)
+	e.tmpSeq++
+	intTy := intType("int")
+	e.hoisted = append(e.hoisted, map[string]any{
+		"stmt":   "copy",
+		"target": map[string]any{"target": "declare", "id": name, "type": intTy},
+		"dst":    dst,
+		"src":    src,
+	})
+	return map[string]any{"expr": "ident", "name": name, "type": intTy}, false, nil
 }
 
 // emitMake hoists make([]T, len[, cap]) / make(map[K]V[, hint]) into a
