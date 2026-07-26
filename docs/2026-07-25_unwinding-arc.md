@@ -262,6 +262,14 @@ dynamic-name match.
   interfaces-lane constructs: type assertion, type switch); `defer`
   14/15 (1 red on interface method values). Exit criterion "passes or
   fails closed on a DIFFERENT named feature" holds.
+- **2026-07-25, re-pin + honesty** (`d4c670a`, `175a806`, `7c99172`):
+  panic(nil) legacy correction; baseline 772/333 → **781/368** — 26
+  FAIL→PASS flips + 9 new PASSes, zero regressions, every flip
+  enumerated in the baseline header; untriaged ceiling unchanged at 64
+  (the flips were frontend-export gaps, not fidelity failures); #24
+  sharpened, adequacy scope reworded, §3.3 retired. Gate 12/12 at the
+  tip (the recorded full run predates the doc-only commits; runtime
+  code identical). Awaiting the pre-merge audit ask.
 
 ## Standing session facts (for the fresh context)
 
