@@ -63,14 +63,17 @@ instance instGoCoreGpreS : GoCoreGpreS HasLC.hasLC GoCoreS where
 /-- **Adequacy** for GoCore's real relation, over `NotStuck` — but note the
 scope. (Pre-merge audit 2026-07-19, finding D1-1, confirmed.) `adequate
 .NotStuck` requires every reachable config to be a value or reducible. In the
-current Iris layer `.panicked msg` has `toVal = none` and **no** outgoing `Step`
-(no rule sources it), so it counts as *stuck* — even though `Rel.lean` treats a
-panic as legitimate terminal *behavior* (`Config.terminal`). So this theorem's
-guarantee covers only runs that never reach `.panicked`; a Go panic (bounds,
-nil-deref, divide-by-zero) makes `Hwp` unprovable rather than being a permitted
-terminal. Modelling panics as values/observations in the Iris layer (so
-adequacy admits panicking terminals) is deferred — until then read the guarantee
-as "`φ`-correct, never-stuck execution *among non-panicking runs*". -/
+current Iris layer `.panicked msg` has `toVal = none` and **no** outgoing `Step`,
+so it counts as *stuck* — even though the machine treats it as legitimate
+terminal *behavior* (`Config.terminal`). Since the unwinding arc
+(`docs/2026-07-25_unwinding-arc.md`), `.panicked` is reached only by an
+UNRECOVERED panic chain: a panic mid-unwind (`.panicking`) steps — defers run
+and `recover` can cancel it — so a recovered panic is an ordinary control path
+this guarantee covers. What remains outside it is the unrecovered abort: that
+makes `Hwp` unprovable rather than being a permitted terminal. Modelling the
+abort as a value/observation in the Iris layer is deferred — until then read
+the guarantee as "`φ`-correct, never-stuck execution *among runs that do not
+abort on an unrecovered panic*". -/
 theorem go_adequacy [GoCoreGpreS .hasLC GF] (c : Config) (σ : ExecState)
     (φ : Unit → Prop) (hσwf : HeapWf σ)
     (Hwp : ∀ [GoCoreGS .hasLC GF], GoCoreGS.prog GF = σ.functions →

@@ -143,10 +143,14 @@ def GoTriple (funcs : Array Func) (env₀ : LocalEnv) (P : HProp) (prog : Stmt)
 /-- **The progress companion**: from any admissible framed initial state,
 every relation-reachable configuration is either the terminal value or can
 step — never stuck. Stated over the trusted relation (`Steps`/`Step`,
-Iris-free). Scope note (tracked as #24): a `.panicked` terminal counts as
-stuck in this reading, so for programs whose WP is provable this also
-implies no reachable panics — the guarantee reads "safe, non-panicking
-execution". -/
+Iris-free). Scope note (tracked as #24, sharpened by the unwinding arc,
+`docs/2026-07-25_unwinding-arc.md`): `.panicked` — the terminal an
+UNRECOVERED panic chain reaches at `.stop` — counts as stuck in this
+reading, while a `.panicking` configuration mid-unwind can step (defers
+run, `recover` may cancel it). So for programs whose WP is provable this
+implies no reachable *unrecovered* panics — the guarantee reads "safe
+execution that never aborts on a panic"; a recovered panic is an ordinary
+control path inside it. -/
 def Progress (funcs : Array Func) (env₀ : LocalEnv) (P : HProp)
     (prog : Stmt) : Prop :=
   ∀ (hp : Heap) (na : Nat) (hP F : Heaplet), InitialSplit P hp na hP F →

@@ -138,6 +138,16 @@ separate, bigger decision (polymorphic values or a spec-level quantifier)
 to be undone for it.
 
 ### 3.3 defer / recover — THE live foreclosure risk (hence W3, early)
+
+> **RETIRED 2026-07-25 (the unwinding arc,
+> `docs/2026-07-25_unwinding-arc.md`).** Panic-as-teleport no longer
+> exists: `Config.panicking (chain) (k)` unwinds, defers run on the panic
+> path, `recover` cancels the unwind, and terminal `.panicked` remains
+> only at `.stop` — the sketch below, landed (with the chain refinement
+> the arc's §A1 records). The foreclosure discipline in this section is
+> discharged; #24's reading sharpened to "no UNRECOVERED panics". Kept
+> verbatim below as the design history.
+
 Current machine: `Config.panicked msg` is TERMINAL and drops the whole
 continuation; the proof layer's #24 reads panicked-as-stuck; the queued
 driver-level panic theorem already notes panics also travel as `.error`
