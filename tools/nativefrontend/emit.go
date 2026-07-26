@@ -457,6 +457,46 @@ func (e *emitter) containsVarUse(x ast.Expr, names map[string]bool) bool {
 	return found
 }
 
+// implicitInterfaceConversionGuard fails closed when a value of
+// non-interface static type flows into an interface-typed slot: the
+// lowering has no interface wrap at assignment/argument sites yet, so the
+// raw representation makes typed-nil and cross-dynamic-type comparisons
+// silently WRONG (interfaces/typed-nil-pointer-compare pinned it — Go 111,
+// raw lowering 1). The wrap lands with the interfaces campaign
+// (docs/2026-07-25_arc-sequence.md item 3); until then this construct is a
+// visible boundary refusal. An untyped-nil RHS is exact as-is.
+func (e *emitter) implicitInterfaceConversionGuard(target types.Type, rhs types.Type) error {
+	if target == nil || !types.IsInterface(target) {
+		return nil
+	}
+	if rhs == nil {
+		return nil
+	}
+	if b, ok := rhs.(*types.Basic); ok && b.Kind() == types.UntypedNil {
+		return nil
+	}
+	if !types.IsInterface(rhs) {
+		return unsup("implicit interface conversion (interfaces campaign)")
+	}
+	return nil
+}
+
+// assignTargetType resolves the static type of an assignment target for the
+// guard above (a fresh `:=` definition's type comes from Defs; blanks skip).
+func (e *emitter) assignTargetType(l ast.Expr, define bool) types.Type {
+	if id, ok := l.(*ast.Ident); ok {
+		if id.Name == "_" {
+			return nil
+		}
+		if define {
+			if obj, isDef := e.info.Defs[id]; isDef && obj != nil {
+				return obj.Type()
+			}
+		}
+	}
+	return e.info.TypeOf(l)
+}
+
 func (e *emitter) emitAssign(st *ast.AssignStmt) (any, error) {
 	define := st.Tok == token.DEFINE
 	if !define && st.Tok != token.ASSIGN {
@@ -524,6 +564,25 @@ func (e *emitter) emitAssign(st *ast.AssignStmt) (any, error) {
 			return nil, err
 		}
 		lhs = append(lhs, w)
+	}
+	// Interface-typed targets: fail closed on implicit conversion (both the
+	// per-pair and the multi-value-call shapes).
+	if len(st.Rhs) == len(st.Lhs) {
+		for i, l := range st.Lhs {
+			if err := e.implicitInterfaceConversionGuard(
+				e.assignTargetType(l, define), e.info.TypeOf(st.Rhs[i])); err != nil {
+				return nil, err
+			}
+		}
+	} else if len(st.Rhs) == 1 {
+		if tup, ok := e.info.TypeOf(st.Rhs[0]).(*types.Tuple); ok && tup.Len() == len(st.Lhs) {
+			for i, l := range st.Lhs {
+				if err := e.implicitInterfaceConversionGuard(
+					e.assignTargetType(l, define), tup.At(i).Type()); err != nil {
+					return nil, err
+				}
+			}
+		}
 	}
 	// Shadow capture (see containsIdent): does any RHS mention a name this
 	// define introduces?
@@ -665,6 +724,10 @@ func (e *emitter) emitDeclStmt(st *ast.DeclStmt) (any, error) {
 			}
 			d := map[string]any{"id": name.Name, "type": ty}
 			if i < len(vs.Values) {
+				if err := e.implicitInterfaceConversionGuard(
+					obj.Type(), e.info.TypeOf(vs.Values[i])); err != nil {
+					return nil, err
+				}
 				init, err := e.emitExpr(vs.Values[i])
 				if err != nil {
 					return nil, err
@@ -2140,11 +2203,28 @@ func (e *emitter) emitCallArgs(sig *types.Signature, c *ast.CallExpr) ([]any, er
 		}
 	}
 	if sig == nil || !sig.Variadic() || c.Ellipsis != token.NoPos {
+		// Interface-typed params: fail closed on implicit conversion (a
+		// spread argument is exact — the slice type already matches).
+		if sig != nil && c.Ellipsis == token.NoPos {
+			params := sig.Params()
+			for i, a := range c.Args {
+				if i < params.Len() {
+					if err := e.implicitInterfaceConversionGuard(
+						params.At(i).Type(), e.info.TypeOf(a)); err != nil {
+						return nil, err
+					}
+				}
+			}
+		}
 		return e.emitArgs(c.Args)
 	}
 	fixed := sig.Params().Len() - 1
 	args := []any{}
 	for i := 0; i < fixed; i++ {
+		if err := e.implicitInterfaceConversionGuard(
+			sig.Params().At(i).Type(), e.info.TypeOf(c.Args[i])); err != nil {
+			return nil, err
+		}
 		w, err := e.emitExpr(c.Args[i])
 		if err != nil {
 			return nil, err
@@ -2165,6 +2245,10 @@ func (e *emitter) emitCallArgs(sig *types.Signature, c *ast.CallExpr) ([]any, er
 	}
 	elems := []any{}
 	for i := fixed; i < len(c.Args); i++ {
+		if err := e.implicitInterfaceConversionGuard(
+			elemType, e.info.TypeOf(c.Args[i])); err != nil {
+			return nil, err
+		}
 		w, err := e.emitExpr(c.Args[i])
 		if err != nil {
 			return nil, err
