@@ -676,18 +676,14 @@ so type asserts against user types correctly fail on it. -/
 def runtimeErrorValue (msg : String) : GoValue :=
   .interface "runtime.Error" (.string (GoString.fromLeanString msg))
 
-/-- The payload of `panic(nil)` (or of a nil interface panicked at
-runtime): Go 1.21's `*runtime.PanicNilError` — non-nil, so
-`recover() != nil` holds. Go 1.26 renders it as `nil` (oracle probe
-2026-07-25). -/
-def panicNilValue : GoValue :=
-  .interface "*runtime.PanicNilError" .unit
-
-/-- Coerce a delivered `panic` argument to its chain payload: a nil
-interface becomes the distinguished nil-panic value; everything else (an
-interface value built by the lowering's `any`-conversion) passes through. -/
+/-- Coerce a delivered `panic` argument to its chain payload — the
+identity: the oracle runs in GOPATH mode (no `go.mod`), where `panic(nil)`
+keeps its LEGACY semantics — `recover()` returns nil and the abort line
+renders `nil` (differentially pinned by `panic-recover/panic-nil-recover`,
+Go answer 0, and `panic-recover/panic-nil-abort`). Go 1.21's
+`*runtime.PanicNilError` applies only under a module declaring go ≥ 1.21;
+if the oracle ever moves to module mode this is the knob (arc doc §A2). -/
 def panicPayload : GoValue → GoValue
-  | .nil => panicNilValue
   | v => v
 
 /-- Constructive ASCII decode for abort rendering. Core's
@@ -707,7 +703,7 @@ def asciiString? (bytes : Array UInt8) : Option String :=
 (e.g. pointer values print machine addresses) — the terminal rule fails
 closed there (arc doc §A3). -/
 def renderPanicPayload : GoValue → Option String
-  | .interface "*runtime.PanicNilError" .unit => some "nil"
+  | .nil => some "nil"
   | .interface _ (.string s) => asciiString? s.bytes
   | .interface _ (.int v _) => some (toString v)
   | .interface _ (.bool b) => some (if b then "true" else "false")
