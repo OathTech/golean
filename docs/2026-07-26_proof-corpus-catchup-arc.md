@@ -55,3 +55,23 @@ this arc pays).
 - The recover `GoFuncSpec` is proven over the pinned actual lowering and
   referenced from `proofs/Audit.lean` (the manifest gate).
 - Ledger + manifest updated; gate 12/12; audit ask; merge sign-off.
+
+## Addendum: the parallel differential runner (2026-07-26, user request)
+
+Iteration speed was gated on the sequential runner. `scripts/diff-coverage`
+now runs a worker pool: one row file per manifest case, `xargs -P`
+(`GOLEAN_COVERAGE_JOBS`, default = core count; `1` restores strictly
+sequential execution), per-case result files assembled in MANIFEST ORDER —
+the output TSV is byte-compatible with the sequential runner's. The
+per-case `lake exe` startup tax (~4 invocations/case incl. the
+nondet-oracle re-runs) is gone: the once-built binary is invoked directly,
+fail-closed if missing.
+
+Measured on the full 785-case corpus (8-core darwin): sequential 15:24 →
+parallel 7:50 (~2×), outputs identical (baseline diff green both ways;
+result+stage identity across all 785 rows). The remaining gap is
+process-spawn/system time in per-case `go run` harness compiles — future
+levers, recorded not built: persist compiled harness binaries keyed on
+source hash; batch the frontend emission. The negative lane (309
+compile-only checks) has the same shape and is a cheap follow-up if it
+ever bottlenecks.

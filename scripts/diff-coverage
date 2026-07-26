@@ -20,8 +20,12 @@ run_with_timeout() {
   perl -e 'my $t = shift @ARGV; my $pid = fork(); die "fork failed\n" unless defined $pid; if ($pid == 0) { exec @ARGV; exit 127 } $SIG{ALRM} = sub { kill "TERM", $pid; select undef, undef, undef, 1; kill "KILL", $pid; exit 124 }; alarm $t; waitpid $pid, 0; my $s = $?; exit($s == -1 ? 127 : ($s & 127 ? 128 + ($s & 127) : $s >> 8));' "$seconds" "$@"
 }
 
+# Invokes the ONCE-BUILT golean binary directly: `lake exe` per case pays
+# lake's startup (and a possible package lock) ~4x per case across the
+# nondet-oracle re-runs — resolved after the up-front `lake build`.
+GOLEAN_BIN="$ROOT/.lake/build/bin/golean"
 lean() {
-  run_with_timeout "$LEAN_TIMEOUT_SECONDS" lake exe golean "$@"
+  run_with_timeout "$LEAN_TIMEOUT_SECONDS" "$GOLEAN_BIN" "$@"
 }
 
 json_string_literal() {
@@ -117,6 +121,10 @@ if ! run_with_timeout "$LAKE_BUILD_TIMEOUT_SECONDS" lake build; then
   echo "lake build failed" >&2
   exit 1
 fi
+if [[ ! -x "$GOLEAN_BIN" ]]; then
+  echo "built golean binary not found at $GOLEAN_BIN" >&2
+  exit 1
+fi
 
 export_status=0
 if [[ "$FRONTEND" == "native" ]]; then
@@ -126,16 +134,12 @@ else
   export_status=2
 fi
 
-case_count=0
-pass_count=0
-fail_count=0
 
 report_pass() {
   local id="$1"
   local features="$2"
   printf 'PASS\t%s\t%s\n' "$id" "$features"
-  printf 'PASS\t%s\t%s\t-\t-\n' "$id" "$features" >> "$RESULTS_TMP"
-  pass_count=$((pass_count + 1))
+  printf 'PASS\t%s\t%s\t-\t-\n' "$id" "$features" >> "$CASE_OUT"
 }
 
 one_line() {
@@ -154,44 +158,46 @@ report_fail() {
   local flat_detail
   flat_detail="$(one_line "$detail")"
   printf 'FAIL\t%s\t%s\tstage=%s\tdetail=%s\n' "$id" "$features" "$stage" "$flat_detail"
-  printf 'FAIL\t%s\t%s\t%s\t%s\n' "$id" "$features" "$stage" "$flat_detail" >> "$RESULTS_TMP"
-  fail_count=$((fail_count + 1))
+  printf 'FAIL\t%s\t%s\t%s\t%s\n' "$id" "$features" "$stage" "$flat_detail" >> "$CASE_OUT"
 }
 
-while IFS=$'\t' read -r id go_dir function_name arg_ints expected_status features expected_reason extra; do
-  if [[ -z "${id:-}" || "$id" == \#* ]]; then
-    continue
-  fi
-
-  case_count=$((case_count + 1))
-  failed=0
+# One manifest row, classified end to end. Writes its TSV row(s) to
+# $CASE_OUT; progress goes to stdout (interleaved under parallelism —
+# the assembled TSV is manifest-ordered regardless).
+run_case() {
+  local rowfile="$1"
+  CASE_OUT="${rowfile%.in}.out"
+  : > "$CASE_OUT"
+  local id go_dir function_name arg_ints expected_status features expected_reason extra
+  IFS=$'\t' read -r id go_dir function_name arg_ints expected_status features expected_reason extra < "$rowfile"
+  local failed=0
 
   if [[ -n "${extra:-}" ]]; then
     report_fail "$id" "${features:-unknown}" "manifest" "too many tab-separated fields"
-    continue
+    return 0
   fi
   if [[ -z "${go_dir:-}" || -z "${function_name:-}" || -z "${arg_ints:-}" || -z "${expected_status:-}" || -z "${features:-}" || -z "${expected_reason:-}" ]]; then
     report_fail "$id" "${features:-unknown}" "manifest" "expected 7 tab-separated fields"
-    continue
+    return 0
   fi
   case "$expected_status" in
     ok|panic) ;;
     *)
       report_fail "$id" "$features" "manifest" "invalid expected Go status: $expected_status; use ok or panic"
-      continue
+      return 0
       ;;
   esac
   case "$expected_status" in
     panic)
       if [[ "$expected_reason" == "-" ]]; then
         report_fail "$id" "$features" "manifest" "$expected_status requires an expected_reason"
-        continue
+        return 0
       fi
       ;;
     *)
       if [[ "$expected_reason" != "-" ]]; then
         report_fail "$id" "$features" "manifest" "unexpected expected_reason for status $expected_status: $expected_reason"
-        continue
+        return 0
       fi
       ;;
   esac
@@ -199,11 +205,11 @@ while IFS=$'\t' read -r id go_dir function_name arg_ints expected_status feature
   go_file="$go_dir/main.go"
   if [[ ! -f "$go_file" ]]; then
     report_fail "$id" "$features" "go-source" "missing $go_file"
-    continue
+    return 0
   fi
   if ! rg -q "func[[:space:]]+$function_name[[:space:]]*\\(" "$go_file"; then
     report_fail "$id" "$features" "litmus-contract" "manifest function $function_name is not defined in $go_file"
-    continue
+    return 0
   fi
 
   go_run_dir="$OUT/go-run/$id"
@@ -219,7 +225,7 @@ while IFS=$'\t' read -r id go_dir function_name arg_ints expected_status feature
       --expected-status "$expected_status" \
       --args "$arg_ints" 2>&1)"; then
     report_fail "$id" "$features" "go-harness" "$harness_output"
-    continue
+    return 0
   fi
 
   if go_observation="$(run_with_timeout "$GO_TIMEOUT_SECONDS" env GO111MODULE=off GOCACHE="$GO_BUILD_CACHE" go run "$go_run_pkg" 2>&1)"; then
@@ -254,12 +260,12 @@ while IFS=$'\t' read -r id go_dir function_name arg_ints expected_status feature
     fi
   fi
   if [[ "$failed" -ne 0 ]]; then
-    continue
+    return 0
   fi
 
   if [[ "$FRONTEND" != "native" ]]; then
     report_fail "$id" "$features" "frontend-export" "unsupported frontend '$FRONTEND' (only 'native' is supported)"
-    continue
+    return 0
   fi
   # Native Go frontend: type-check + emit the native wire JSON, then run it
   # through the native lowering. Multi-file packages are allowed (go/types
@@ -268,7 +274,7 @@ while IFS=$'\t' read -r id go_dir function_name arg_ints expected_status feature
   mkdir -p "$(dirname "$wire_json")"
   if ! native_export="$(run_with_timeout "$GO_TIMEOUT_SECONDS" env GO111MODULE=off GOCACHE="$GO_BUILD_CACHE" go run ./tools/nativefrontend --dir "$go_dir" --out "$wire_json" 2>&1)"; then
     report_fail "$id" "$features" "frontend-export" "native frontend: $native_export"
-    continue
+    return 0
   fi
   lean_args=(native-json-run --input "$wire_json" --function "$function_name")
   if [[ "$arg_ints" != "-" ]]; then
@@ -283,7 +289,7 @@ while IFS=$'\t' read -r id go_dir function_name arg_ints expected_status feature
     done
   fi
   if [[ "$failed" -ne 0 ]]; then
-    continue
+    return 0
   fi
 
   if lean_observation="$(lean "${lean_args[@]}" 2>&1)"; then
@@ -298,19 +304,19 @@ while IFS=$'\t' read -r id go_dir function_name arg_ints expected_status feature
     # the untriaged ledger keeps meaning "machine gaps".
     if [[ "$lean_observation" == *'"status":"unsupported"'* && "$lean_observation" == *"frontend-quarantined: "* ]]; then
       report_fail "$id" "$features" "frontend-export" "$lean_observation"
-      continue
+      return 0
     fi
     report_fail "$id" "$features" "lean-observation" "expected status $expected_status, got $lean_observation"
-    continue
+    return 0
   fi
   if [[ "$expected_status" == "ok" && "$lean_status" -ne 0 ]]; then
     report_fail "$id" "$features" "lean-run" "nonzero exit $lean_status despite ok observation: $lean_observation"
-    continue
+    return 0
   fi
 
   if ! observation_diff="$(lean observation-eq --left "$lean_observation" --right "$go_observation" 2>&1)"; then
     report_fail "$id" "$features" "differential" "Lean=$lean_observation Go=$go_observation $observation_diff"
-    continue
+    return 0
   fi
 
   # Oracle-invariance check: re-run under several nondeterminism choice streams.
@@ -329,12 +335,60 @@ while IFS=$'\t' read -r id go_dir function_name arg_ints expected_status feature
       fi
     done
     if [[ "$nondet" -ne 0 ]]; then
-      continue
+      return 0
     fi
   fi
 
   report_pass "$id" "$features"
+}
+
+# ---- the parallel driver: one row file per manifest case, a worker pool
+# over them, results assembled in manifest order (byte-identical to the
+# sequential runner's output). GOLEAN_COVERAGE_JOBS=1 restores strictly
+# sequential execution.
+if [[ -z "${GOLEAN_COVERAGE_JOBS:-}" ]]; then
+  GOLEAN_COVERAGE_JOBS="$( (command -v nproc >/dev/null && nproc) || sysctl -n hw.ncpu 2>/dev/null || echo 4)"
+fi
+ROWDIR="$(mktemp -d "${TMPDIR:-/tmp}/golean-coverage-rows.XXXXXX")"
+row_i=0
+while IFS= read -r line; do
+  if [[ -z "$line" || "$line" == \#* ]]; then
+    continue
+  fi
+  row_i=$((row_i + 1))
+  printf '%s\n' "$line" > "$ROWDIR/$(printf '%06d' "$row_i").in"
 done < "$MANIFEST"
+case_count="$row_i"
+
+export CASE_OUT ROOT OUT FRONTEND GO_BUILD_CACHE GOLEAN_BIN \
+  GO_TIMEOUT_SECONDS LEAN_TIMEOUT_SECONDS
+export -f run_case run_with_timeout lean json_string_literal panic_message \
+  report_pass report_fail one_line
+
+if [[ "$GOLEAN_COVERAGE_JOBS" -le 1 ]]; then
+  for f in "$ROWDIR"/*.in; do
+    run_case "$f"
+  done
+else
+  ls "$ROWDIR"/*.in | xargs -P "$GOLEAN_COVERAGE_JOBS" -n 1 bash -c 'run_case "$1"' _
+fi
+
+pass_count=0
+fail_count=0
+for f in "$ROWDIR"/*.in; do
+  outf="${f%.in}.out"
+  if [[ -f "$outf" ]]; then
+    cat "$outf" >> "$RESULTS_TMP"
+  else
+    # A worker died without classifying (should be impossible; the row
+    # itself carries the id in field 1) — fail closed, never silent.
+    printf 'FAIL\t%s\tunknown\tharness\tworker produced no result\n' \
+      "$(cut -f1 "$f")" >> "$RESULTS_TMP"
+  fi
+done
+pass_count="$(awk -F '\t' '$1=="PASS"' "$RESULTS_TMP" | wc -l | tr -d ' ')"
+fail_count="$(awk -F '\t' '$1=="FAIL"' "$RESULTS_TMP" | wc -l | tr -d ' ')"
+rm -rf "$ROWDIR"
 
 echo
 echo "differential coverage summary: cases=$case_count pass=$pass_count fail=$fail_count export_status=$export_status"
