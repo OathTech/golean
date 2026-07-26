@@ -1,18 +1,21 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-07-26  commit: 25d0fa1  frontend: native  oracle: go run
-# manifest_cases: 783  pass: 374  fail: 409
-# Re-pin reason: WRONG-ANSWERS SLICE 0 (arc wrong-answers-builtins,
-# docs/2026-07-25_arc-sequence.md item 1). All 8 recorded
-# differential-stage wrong answers addressed: 7 FIXED and now PASS
-# (Go-exact slice-bounds messages: pointer-array-slice-bounds,
-# string-slice-bounds, string-slice-low-high-panic; literal bytes on
-# the wire: interpreted-octal-hex-escapes, string-escape-bytes;
-# nil variadic packing: forwarding, no-args-vs-empty-spread), and
-# typed-nil-pointer-compare fails CLOSED at the boundary (implicit
-# interface conversion guard) pending the interfaces campaign. The
-# same guard moves 8 more already-red mis-lowered cases from
-# lean-observation to frontend-export (earlier, honest refusals).
-# Corpus 783, passing 367 -> 374. Zero regressions.
+# recorded: 2026-07-26  commit: 923e3ec  frontend: native  oracle: go run
+# manifest_cases: 783  pass: 444  fail: 339
+# Re-pin reason: BUILTINS SLICE 1 (arc wrong-answers-builtins, item 1 of
+# docs/2026-07-25_arc-sequence.md). new (incl. Go 1.26 new(expr)),
+# append, copy, delete, clear, min/max landed (machine op-table
+# additions only — zero step-rule or proof changes); string<->byte/rune
+# conversions route to their dedicated operators; per-decl QUARANTINE
+# stops one unsupported declaration poisoning its file (stub fails
+# closed at call, runner classifies it frontend-export); generic
+# instantiation f[int] refused at the boundary (was runtime-stuck).
+# 70 FAIL->PASS. Four reclassifications: 3 interface-key deletes now
+# VISIBLE machine gaps (lean-observation; interfaces campaign) and
+# full-slice-cap-zero lands in the nondet lane (observes append's
+# modeled capacity choice — cannot be a strict-lane pass by design).
+# Fixed en route: emitAssign double-ran hoisting builtin emitters
+# (copy executed twice); new(expr) default-initialized (eval-once).
+# Corpus 783, passing 374 -> 444. Zero regressions.
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
 PASS	arrays/array-copy	-
@@ -36,50 +39,50 @@ FAIL	bools/generic-type-set/and-or	frontend-export
 FAIL	bools/generic-type-set/equality	frontend-export
 FAIL	bools/generic-type-set/inference	frontend-export
 FAIL	bools/generic-type-set/not-defined	frontend-export
-FAIL	bools/generic-type-set/zero-value	frontend-export
+PASS	bools/generic-type-set/zero-value	-
 FAIL	bools/left-to-right	frontend-export
 PASS	bools/logical-ops	-
 FAIL	bools/short-circuit-and	frontend-export
 FAIL	bools/short-circuit-or	frontend-export
 PASS	bools/zero-value	-
-FAIL	builtins/append-defined-byte-slice-string	frontend-export
-FAIL	builtins/append-string-to-bytes	frontend-export
-FAIL	builtins/clear-delete-edge/clear-array-slice	frontend-export
-FAIL	builtins/clear-delete-edge/clear-defined-map	frontend-export
-FAIL	builtins/clear-delete-edge/clear-defined-slice	frontend-export
-FAIL	builtins/clear-delete-edge/clear-eval-order	frontend-export
+PASS	builtins/append-defined-byte-slice-string	-
+PASS	builtins/append-string-to-bytes	-
+PASS	builtins/clear-delete-edge/clear-array-slice	-
+PASS	builtins/clear-delete-edge/clear-defined-map	-
+PASS	builtins/clear-delete-edge/clear-defined-slice	-
+PASS	builtins/clear-delete-edge/clear-eval-order	-
 FAIL	builtins/clear-delete-edge/clear-generic-map	frontend-export
 FAIL	builtins/clear-delete-edge/clear-generic-slice	frontend-export
-FAIL	builtins/clear-delete-edge/clear-nil-map	frontend-export
-FAIL	builtins/clear-delete-edge/clear-nil-slice	frontend-export
-FAIL	builtins/clear-delete-edge/clear-slice-alias-visible	frontend-export
-FAIL	builtins/clear-delete-edge/delete-defined-map	frontend-export
+PASS	builtins/clear-delete-edge/clear-nil-map	-
+PASS	builtins/clear-delete-edge/clear-nil-slice	-
+PASS	builtins/clear-delete-edge/clear-slice-alias-visible	-
+PASS	builtins/clear-delete-edge/delete-defined-map	-
 FAIL	builtins/clear-delete-edge/delete-generic-map	frontend-export
-FAIL	builtins/clear-delete-edge/delete-map-expr-panic-before-key	frontend-export
-FAIL	builtins/clear-delete-edge/delete-nil-map-evaluates-key	frontend-export
-FAIL	builtins/clear-map	frontend-export
-FAIL	builtins/clear-slice	frontend-export
-FAIL	builtins/copy-edge/array-slice	frontend-export
-FAIL	builtins/copy-edge/defined-byte-string	frontend-export
-FAIL	builtins/copy-edge/defined-slices	frontend-export
-FAIL	builtins/copy-edge/empty-string-to-bytes	frontend-export
-FAIL	builtins/copy-edge/eval-order	frontend-export
-FAIL	builtins/copy-edge/forward-overlap	frontend-export
+PASS	builtins/clear-delete-edge/delete-map-expr-panic-before-key	-
+PASS	builtins/clear-delete-edge/delete-nil-map-evaluates-key	-
+PASS	builtins/clear-map	-
+PASS	builtins/clear-slice	-
+PASS	builtins/copy-edge/array-slice	-
+PASS	builtins/copy-edge/defined-byte-string	-
+PASS	builtins/copy-edge/defined-slices	-
+PASS	builtins/copy-edge/empty-string-to-bytes	-
+PASS	builtins/copy-edge/eval-order	-
+PASS	builtins/copy-edge/forward-overlap	-
 FAIL	builtins/copy-edge/generic-slices	frontend-export
-FAIL	builtins/copy-edge/nil-destination	frontend-export
-FAIL	builtins/copy-edge/nil-source	frontend-export
-FAIL	builtins/copy-edge/string-prefix	frontend-export
-FAIL	builtins/copy-string-to-bytes	frontend-export
+PASS	builtins/copy-edge/nil-destination	-
+PASS	builtins/copy-edge/nil-source	-
+PASS	builtins/copy-edge/string-prefix	-
+PASS	builtins/copy-string-to-bytes	-
 PASS	builtins/len-cap-array-pointer	-
 FAIL	builtins/make-channel-len-cap	frontend-export
 PASS	builtins/make-map-hint	-
-FAIL	builtins/min-max-edge/defined-int	frontend-export
-FAIL	builtins/min-max-edge/defined-string	frontend-export
-FAIL	builtins/min-max-edge/eval-order	frontend-export
-FAIL	builtins/min-max-edge/expressions	frontend-export
+PASS	builtins/min-max-edge/defined-int	-
+PASS	builtins/min-max-edge/defined-string	-
+PASS	builtins/min-max-edge/eval-order	-
+PASS	builtins/min-max-edge/expressions	-
 FAIL	builtins/min-max-edge/generic-ints	frontend-export
 FAIL	builtins/min-max-edge/generic-strings	frontend-export
-FAIL	builtins/min-max-edge/one-arg	frontend-export
+PASS	builtins/min-max-edge/one-arg	-
 FAIL	builtins/min-max-edge/untyped-float-context	frontend-export
 PASS	builtins/min-max-ints	-
 PASS	builtins/min-max-strings	-
@@ -382,7 +385,7 @@ FAIL	interfaces/embedded-interface-shadowing/nil-pointer-method-promoted	fronten
 FAIL	interfaces/embedded-interface-shadowing/pointer-method-promoted	frontend-export
 FAIL	interfaces/error-idioms/any-round-trip	frontend-export
 FAIL	interfaces/error-idioms/extra-interface-assertion	frontend-export
-FAIL	interfaces/error-idioms/nil-error	frontend-export
+PASS	interfaces/error-idioms/nil-error	-
 FAIL	interfaces/error-idioms/nil-pointer-method	frontend-export
 FAIL	interfaces/error-idioms/pointer-identity	frontend-export
 FAIL	interfaces/error-idioms/promoted-method	frontend-export
@@ -454,16 +457,16 @@ PASS	maps/array-value-copy	-
 FAIL	maps/channel-key	frontend-export
 PASS	maps/compound-assign-eval-once	-
 PASS	maps/defined-map-value	-
-FAIL	maps/delete-alias-visible	frontend-export
-FAIL	maps/delete-eval-order	frontend-export
-FAIL	maps/delete-existing	frontend-export
-FAIL	maps/delete-interface-dynamic-key	frontend-export
-FAIL	maps/delete-interface-key-panic	frontend-export
-FAIL	maps/delete-missing	frontend-export
-FAIL	maps/delete-nil-interface-key-panic	frontend-export
+PASS	maps/delete-alias-visible	-
+PASS	maps/delete-eval-order	-
+PASS	maps/delete-existing	-
+FAIL	maps/delete-interface-dynamic-key	lean-observation
+FAIL	maps/delete-interface-key-panic	lean-observation
+PASS	maps/delete-missing	-
+FAIL	maps/delete-nil-interface-key-panic	lean-observation
 FAIL	maps/delete-nil-key-types	frontend-export
-FAIL	maps/delete-nil-map	frontend-export
-FAIL	maps/delete-nil-value-types	frontend-export
+PASS	maps/delete-nil-map	-
+PASS	maps/delete-nil-value-types	-
 PASS	maps/index-assign-eval-order	-
 FAIL	maps/interface-dynamic-type-key	lean-observation
 FAIL	maps/interface-key	lean-observation
@@ -495,7 +498,7 @@ FAIL	maps/nil-read-key-types	frontend-export
 PASS	maps/nil-read-value-types	-
 PASS	maps/nil-value-comma-ok	-
 PASS	maps/overwrite	-
-FAIL	maps/pointer-key	frontend-export
+PASS	maps/pointer-key	-
 PASS	maps/set-membership	-
 PASS	maps/slice-value-element-write	-
 PASS	maps/struct-key	-
@@ -539,18 +542,18 @@ PASS	multi-assign/tuple-assign-order	-
 PASS	native-smoke/arith	-
 PASS	native-smoke/maprange	-
 PASS	native-smoke/method	-
-FAIL	new/new-basic	frontend-export
-FAIL	new/new-distinct-allocations	frontend-export
-FAIL	new/new-expr/composite-operand	frontend-export
-FAIL	new/new-expr/distinct-pointers	frontend-export
-FAIL	new/new-expr/eval-once	frontend-export
+PASS	new/new-basic	-
+PASS	new/new-distinct-allocations	-
+PASS	new/new-expr/composite-operand	-
+PASS	new/new-expr/distinct-pointers	-
+PASS	new/new-expr/eval-once	-
 FAIL	new/new-expr/generic-operand	frontend-export
-FAIL	new/new-expr/typed-value	frontend-export
+PASS	new/new-expr/typed-value	-
 FAIL	new/new-expr/untyped-defaults	frontend-export
-FAIL	new/new-map-vs-make	frontend-export
-FAIL	new/new-nil-values	frontend-export
-FAIL	new/new-slice-pointer	frontend-export
-FAIL	new/new-struct	frontend-export
+PASS	new/new-map-vs-make	-
+PASS	new/new-nil-values	-
+PASS	new/new-slice-pointer	-
+PASS	new/new-struct	-
 PASS	panic-recover/defer-arg-during-panic	-
 PASS	panic-recover/defer-panic-after-return	-
 PASS	panic-recover/defer-panic-recovered-after-return	-
@@ -593,12 +596,12 @@ FAIL	pointers/nil-array-index-panic	lean-observation
 PASS	pointers/nil-deref-panic	-
 PASS	pointers/nil-selector-panic	-
 FAIL	pointers/nil-value-receiver-call-panic	lean-observation
-FAIL	pointers/pointer-array-full-slice	frontend-export
+PASS	pointers/pointer-array-full-slice	-
 PASS	pointers/pointer-array-slice	-
 PASS	pointers/pointer-array-slice-bounds	-
 PASS	pointers/pointer-identity	-
 PASS	pointers/pointer-param-alias	-
-FAIL	pointers/pointer-slice-header	frontend-export
+PASS	pointers/pointer-slice-header	-
 PASS	pointers/pointer-to-pointer	-
 PASS	quorum/committed-index-edges/all-unacked	-
 PASS	quorum/committed-index-edges/n1-acked	-
@@ -645,7 +648,7 @@ PASS	range/range-int-negative	-
 FAIL	range/range-int-typed	frontend-export
 PASS	range/range-int-zero	-
 FAIL	range/range-loop-var-capture	frontend-export
-FAIL	range/range-map-delete-current	frontend-export
+PASS	range/range-map-delete-current	-
 PASS	range/range-map-sum	-
 PASS	range/range-map-value-copy	-
 PASS	range/range-nil-map	-
@@ -682,31 +685,31 @@ PASS	scoping/switch-clause-scope	-
 PASS	scoping/switch-init-shadow	-
 FAIL	scoping/type-switch-guard-shadow	frontend-export
 PASS	scoping/var-shadow-init	-
-FAIL	slices/append-nil	frontend-export
-FAIL	slices/append-overlap	frontend-export
-FAIL	slices/append-overlap-window	frontend-export
-FAIL	slices/append-self	frontend-export
+PASS	slices/append-nil	-
+PASS	slices/append-overlap	-
+PASS	slices/append-overlap-window	-
+PASS	slices/append-self	-
 PASS	slices/array-to-slice-conditional	-
-FAIL	slices/copy-min	frontend-export
-FAIL	slices/copy-nil	frontend-export
-FAIL	slices/copy-overlap-backward	frontend-export
-FAIL	slices/copy-short	frontend-export
+PASS	slices/copy-min	-
+PASS	slices/copy-nil	-
+PASS	slices/copy-overlap-backward	-
+PASS	slices/copy-short	-
 PASS	slices/full-slice	-
 PASS	slices/full-slice-bounds	-
-FAIL	slices/full-slice-cap-zero	frontend-export
-FAIL	slices/gotcha-append-aliasing	frontend-export
+FAIL	slices/full-slice-cap-zero	nondet
+PASS	slices/gotcha-append-aliasing	-
 PASS	slices/make-slice	-
 PASS	slices/make-slice-cap-bounds	-
-FAIL	slices/make-slice-zero	frontend-export
+PASS	slices/make-slice-zero	-
 PASS	slices/reslice-capacity	-
-FAIL	slices/slice-append	frontend-export
-FAIL	slices/slice-copy	frontend-export
+PASS	slices/slice-append	-
+PASS	slices/slice-copy	-
 PASS	slices/slice-expr-eval-order	-
-FAIL	slices/slice-header-by-value	frontend-export
+PASS	slices/slice-header-by-value	-
 PASS	slices/slice-literal	-
-FAIL	slices/slice-nil-empty	frontend-export
-FAIL	slices/three-index-slice	frontend-export
-FAIL	strings/byte-slice-to-string-copy	lean-observation
+PASS	slices/slice-nil-empty	-
+PASS	slices/three-index-slice	-
+PASS	strings/byte-slice-to-string-copy	-
 PASS	strings/concat-eval-order	-
 FAIL	strings/defined-slice-string-conversion	lean-observation
 PASS	strings/index-eval-order	-
@@ -730,7 +733,7 @@ FAIL	strings/rune-slice-to-string-copy	lean-observation
 FAIL	strings/rune-string-conversion	lean-observation
 PASS	strings/slice-eval-order	-
 PASS	strings/string-basic	-
-FAIL	strings/string-byte-conversion	lean-observation
+PASS	strings/string-byte-conversion	-
 PASS	strings/string-byte-len	-
 PASS	strings/string-byte-order-compare	-
 PASS	strings/string-call	-
@@ -739,7 +742,7 @@ PASS	strings/string-escape-bytes	-
 PASS	strings/string-index	-
 PASS	strings/string-index-bounds	-
 PASS	strings/string-index-panic-eval-order	-
-FAIL	strings/string-int-rune	lean-observation
+PASS	strings/string-int-rune	-
 PASS	strings/string-pointer	-
 PASS	strings/string-slice	-
 PASS	strings/string-slice-bounds	-
@@ -789,7 +792,7 @@ PASS	variadic/multi-result-call	-
 PASS	variadic/multi-result-into-fixed-variadic	-
 PASS	variadic/no-args-vs-empty-spread	-
 PASS	variadic/spread-aliasing	-
-FAIL	variadic/variadic	frontend-export
+PASS	variadic/variadic	-
 PASS	variadic/variadic-function-value	-
 FAIL	variadic/variadic-generic	frontend-export
 FAIL	variadic/variadic-interface-dispatch	frontend-export

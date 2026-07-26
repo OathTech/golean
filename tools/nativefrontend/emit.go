@@ -1301,6 +1301,13 @@ func (e *emitter) emitExprBare(x ast.Expr) (any, error) {
 	case *ast.SelectorExpr:
 		return e.emitSelector(ex)
 	case *ast.IndexExpr:
+		// A generic INSTANTIATION `f[int]` parses as an index expression;
+		// treating it as indexing would emit the type argument as a
+		// variable read (caught: "unbound variable address: int" —
+		// stuck at runtime instead of a boundary refusal).
+		if tv, ok := e.info.Types[ex.Index]; ok && tv.IsType() {
+			return nil, unsup("generic instantiation %s", e.fset.Position(ex.Pos()))
+		}
 		return e.emitIndex(ex)
 	case *ast.StarExpr:
 		return e.emitStar(ex)
@@ -2417,13 +2424,34 @@ func (e *emitter) emitBuiltin(c *ast.CallExpr, name string) (any, bool, error) {
 		if err != nil {
 			return nil, false, err
 		}
+		// Go 1.26 accepts new(EXPR) too — allocate initialized with the
+		// expression's value (the type form takes the zero value). The
+		// original type-only arm silently default-initialized the value
+		// form (new/new-expr/eval-once caught the expression never
+		// evaluating).
+		val := map[string]any{"expr": "default", "type": elemTy}
+		if tv, ok := e.info.Types[c.Args[0]]; !ok || !tv.IsType() {
+			if err := e.implicitInterfaceConversionGuard(
+				ptr.Elem(), e.info.TypeOf(c.Args[0])); err != nil {
+				return nil, false, err
+			}
+			w, err := e.emitExpr(c.Args[0])
+			if err != nil {
+				return nil, false, err
+			}
+			if m, ok := w.(map[string]any); ok {
+				val = m
+			} else {
+				return nil, false, unsup("new operand emission shape")
+			}
+		}
 		ptrTy := map[string]any{"kind": "pointer", "elem": elemTy}
 		name := "$c" + itoa(e.tmpSeq)
 		e.tmpSeq++
 		e.hoisted = append(e.hoisted, map[string]any{
 			"stmt":     "new",
 			"target":   map[string]any{"target": "declare", "id": name, "type": ptrTy},
-			"value":    map[string]any{"expr": "default", "type": elemTy},
+			"value":    val,
 			"elemType": elemTy,
 		})
 		return map[string]any{"expr": "ident", "name": name, "type": ptrTy}, false, nil
