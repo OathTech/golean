@@ -176,12 +176,24 @@ converts to `any`: the frontend emits the static type; lowering builds
 `.toInterface` over the existing machinery (`dynamicTypeName?` already
 covers string/int/bool/pointer-to-defined — precisely the in-scope payload
 types, failing closed elsewhere). An argument already of interface type is
-passed through unwrapped (`panic(recover())` must not double-wrap). A
-delivered `.nil` (untyped `panic(nil)` or a nil interface at runtime)
-becomes the distinguished nil-panic payload. Runtime panics (the 12
-existing `.panicked` rule sites) carry `.interface "runtime.Error"
-(.string msg)` — the dot-carrying dynamic name cannot collide with a
-source-level `TypeId`.
+passed through unwrapped (`panic(recover())` must not double-wrap). Runtime
+panics (the 12 existing `.panicked` rule sites) carry `.interface
+"runtime.Error" (.string msg)` — the dot-carrying dynamic name cannot
+collide with a source-level `TypeId`.
+
+**`panic(nil)` correction (found by the differential, first pipeline
+run):** the oracle runs `go run` in GOPATH mode (no `go.mod`), where
+`panic(nil)` keeps its LEGACY semantics — `recover()` returns **nil**
+(`panic-recover/panic-nil-recover`, Go answer 0) and the abort line is
+`panic: nil` — the "nil" rendering probed in §A3 is the legacy nil
+payload, not a `*runtime.PanicNilError`. The machine models the oracle:
+`panicPayload` is the identity, a `.nil` chain-entry payload renders
+`nil`. Go 1.21's PanicNilError applies only under a module declaring
+go ≥ 1.21; if the harness ever moves to module mode, `panicPayload` is
+the knob and these two cases are the tripwire (they will flip loudly).
+The in-file comment in `panic-nil-recover/main.go` claiming the 1.21
+behavior predates this finding — the oracle, not the comment, is the
+record.
 
 Existing machinery this leans on, verified: `normalizeValueForTy` passes
 any value through interface-typed cells (`r := recover()` stores fine);
@@ -205,6 +217,51 @@ dynamic-name match.
   added it must first decide the package-qualification story.
 - Chain rendering: first line only, ` [recovered]` suffix from the
   entry's flag; deeper lines never observed by the harness.
+- **`[recovered, repanicked]` (probe 2026-07-25):** when a new panic's
+  value is EQUAL (interface `==`, i.e. semantic equality — a recreated
+  equal string collapses too) to the just-recovered value, Go 1.26 prints
+  a single first line `panic: orig [recovered, repanicked]` instead of a
+  two-line chain; an unequal value keeps the `[recovered]` + chained
+  second line form. Rendering rule for the head entry: recovered ∧ second
+  entry exists ∧ payloads structurally equal → ` [recovered, repanicked]`;
+  recovered otherwise → ` [recovered]`. Pinned by
+  `panic-recover/repanic-same-value-abort` (new) vs
+  `panic-recover/recover-repanic` (existing, unequal values).
+- Edge-batch value pins (same probe session): recover-in-defer-args of a
+  nested defer INSIDE a panic-run deferred function DOES recover (arg
+  evaluation is a direct call by that deferred function) → 32;
+  loop-registered defers: only the first-drained (last-registered)
+  recovers, the rest see nil → 312010; defer-args recover on the normal
+  path → nil at registration → 5.
+
+## Build log
+
+- **2026-07-25, design addendum** (`e94b49a`): §A1–A3 — chain refinement,
+  fault-identity first-line contract, oracle probes (Go 1.26.4).
+- **2026-07-25, guardrails**: 9 new edge-batch cases (recover outside
+  defer / store-local / in-defer-args ×2 / loop-defer;
+  repanic-same-value-abort; panic-int/bool/nil-abort), all
+  oracle-validated at add time; predictions 32 / 312010 / 5 confirmed.
+- **2026-07-25, machine slice** (`5197aad`): the full §A1 rule set;
+  MachineSound via stash-enumerate-restore (23 renumbered + 3 new
+  handlers; `step_complete` gains `panicUnwind`; `step_det` simp set
+  extended). **Constructive-pin incident:** core's `String.fromUTF8?`
+  depends on `Classical.choice` and tainted `stepFn.fun_cases` — caught
+  by the Audit axiom gate, fixed with a constructive ASCII decoder that
+  fails closed on non-ASCII abort payloads. Eval tests +3 machine pins.
+- **2026-07-25, frontend+decoder slice**: `panic`/`recover` wire nodes;
+  `defer recover()` no-op lowering; IIFE call targets (unblocks
+  `recover-indirect`'s two-frame walk pin); recover node carries its
+  interface type (the untyped discard-cell fallback had typed it `int` —
+  caught by `unnamed-recover-zero-return` going stuck).
+  **Differential-caught design correction:** `panic(nil)` is LEGACY in
+  the GOPATH-mode oracle (§A2 correction above) — the machine's
+  PanicNilError mapping was a wrong answer against `panic-nil-recover`
+  and was removed; `panicPayload` is the identity.
+- Suite state after the slices: `panic-recover` 28/30 (2 red on
+  interfaces-lane constructs: type assertion, type switch); `defer`
+  14/15 (1 red on interface method values). Exit criterion "passes or
+  fails closed on a DIFFERENT named feature" holds.
 
 ## Standing session facts (for the fresh context)
 

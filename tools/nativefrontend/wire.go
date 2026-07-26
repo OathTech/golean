@@ -39,6 +39,9 @@ type emitter struct {
 	liftSeq       int
 	curFuncName   string
 	captureParam  map[types.Object]string
+
+	// Whether the `defer recover()` no-op function has been registered.
+	deferNoopEmitted bool
 }
 
 // emptyStructName is the canonical GoCore type name for the empty struct

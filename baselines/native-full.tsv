@@ -1,16 +1,19 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-07-25  commit: f4d5874  frontend: native  oracle: go run
-# manifest_cases: 772  pass: 333  fail: 439
-# Re-pin reason: PRE-MERGE AUDIT RESPONSE (12 sustained findings, all
-# addressed; workflow wf_39e07c39-eb5). Eight NEW oracle-pinned cases for
-# the fixes (var-shadow-init, map-incdec, same-name-method-closures,
-# method-variadic, method-multi-result-arg, index-target/deref-target
-# rhs-call-order) plus one NEW red pin (for-loopvar-escape) and ONE
-# INTENTIONAL PASS->FAIL (closure-loop-var-capture): both are BUG-003 —
-# for-clause per-iteration loop variables fail closed until the real
-# desugar lands, closing a silent-wrong-answer hole. Bonus flip:
-# variadic/variadic-method PASSes now that method calls pack variadics.
-# Corpus 764 -> 772, 326 -> 333 passing.
+# recorded: 2026-07-25  commit: d4c670a  frontend: native  oracle: go run
+# manifest_cases: 781  pass: 368  fail: 413
+# Re-pin reason: THE UNWINDING ARC (panic-as-configuration + recover;
+# docs/2026-07-25_unwinding-arc.md). The machine gained the panic chain,
+# panic-path defers, and the recover walk; the frontend/decoder gained
+# panic/recover wire nodes, the defer-recover() no-op lowering, and IIFE
+# call targets. Drift is ALL green-ward: 26 FAIL->PASS flips (all of
+# panic-recover/* except the two interfaces-lane reds, the three
+# recover-blocked defer/* cases, builtins/recover-outside-defer,
+# maps/nil-assign-eval-before-panic, strings/string-index- and
+# string-slice-panic-eval-order) plus 9 NEW oracle-validated edge cases
+# (recover-outside-defer, recover-store-local, repanic-same-value-abort,
+# recover-in-defer-args{,-panicking}, recover-loop-defer,
+# panic-{int,bool,nil}-abort), all PASS. Zero regressions.
+# Corpus 772 -> 781, 333 -> 368 passing.
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
 PASS	arrays/array-copy	-
@@ -82,7 +85,7 @@ FAIL	builtins/min-max-edge/untyped-float-context	frontend-export
 PASS	builtins/min-max-ints	-
 PASS	builtins/min-max-strings	-
 FAIL	builtins/real-imag	frontend-export
-FAIL	builtins/recover-outside-defer	frontend-export
+PASS	builtins/recover-outside-defer	-
 FAIL	channels/buffered-basic	frontend-export
 FAIL	channels/close-closed-panic	frontend-export
 FAIL	channels/close-nil-panic	frontend-export
@@ -242,7 +245,7 @@ PASS	control-flow/switch-uncomparable-tag-default	-
 PASS	control-flow/switch-untyped-case-conversion	-
 PASS	control-flow/while-eq-single-iteration	-
 PASS	defer/defer-arg-eval	-
-FAIL	defer/defer-arg-panic-before-register	frontend-export
+PASS	defer/defer-arg-panic-before-register	-
 PASS	defer/defer-function-result-discard	-
 PASS	defer/defer-function-value-eval	-
 PASS	defer/defer-in-loop	-
@@ -251,10 +254,10 @@ PASS	defer/defer-method-receiver-eval	-
 PASS	defer/defer-named-result-lifo	-
 PASS	defer/defer-named-return	-
 PASS	defer/defer-nil-function-panic	-
-FAIL	defer/defer-nil-function-recover-order	frontend-export
+PASS	defer/defer-nil-function-recover-order	-
 PASS	defer/defer-pointer-receiver-live	-
 PASS	defer/multiple-lifo	-
-FAIL	defer/recover-normal-return	frontend-export
+PASS	defer/recover-normal-return	-
 PASS	defer/unnamed-return	-
 FAIL	embedding/deep-promoted-field	lean-observation
 FAIL	embedding/deep-promoted-method	lean-observation
@@ -487,7 +490,7 @@ FAIL	maps/map-literal-nan-keys	frontend-export
 PASS	maps/map-nil-assign	-
 PASS	maps/map-nil-eq	-
 PASS	maps/map-value-inner-write	-
-FAIL	maps/nil-assign-eval-before-panic	frontend-export
+PASS	maps/nil-assign-eval-before-panic	-
 FAIL	maps/nil-channel-key	frontend-export
 FAIL	maps/nil-read-key-types	frontend-export
 PASS	maps/nil-read-value-types	-
@@ -549,27 +552,36 @@ FAIL	new/new-map-vs-make	frontend-export
 FAIL	new/new-nil-values	frontend-export
 FAIL	new/new-slice-pointer	frontend-export
 FAIL	new/new-struct	frontend-export
-FAIL	panic-recover/defer-arg-during-panic	frontend-export
-FAIL	panic-recover/defer-panic-after-return	frontend-export
-FAIL	panic-recover/defer-panic-recovered-after-return	frontend-export
-FAIL	panic-recover/defer-recover-builtin	frontend-export
-FAIL	panic-recover/defer-registered-during-unwind	frontend-export
-FAIL	panic-recover/deferred-panic-replaces	frontend-export
-FAIL	panic-recover/named-result-preserved-after-recover	frontend-export
-FAIL	panic-recover/nested-frame-recover	frontend-export
-FAIL	panic-recover/panic-defer-order	frontend-export
-FAIL	panic-recover/panic-nil-recover	frontend-export
+PASS	panic-recover/defer-arg-during-panic	-
+PASS	panic-recover/defer-panic-after-return	-
+PASS	panic-recover/defer-panic-recovered-after-return	-
+PASS	panic-recover/defer-recover-builtin	-
+PASS	panic-recover/defer-registered-during-unwind	-
+PASS	panic-recover/deferred-panic-replaces	-
+PASS	panic-recover/named-result-preserved-after-recover	-
+PASS	panic-recover/nested-frame-recover	-
+PASS	panic-recover/panic-bool-abort	-
+PASS	panic-recover/panic-defer-order	-
+PASS	panic-recover/panic-int-abort	-
+PASS	panic-recover/panic-nil-abort	-
+PASS	panic-recover/panic-nil-recover	-
 FAIL	panic-recover/panic-typed-nil-recover	frontend-export
-FAIL	panic-recover/recover-direct	frontend-export
-FAIL	panic-recover/recover-in-deferred-method	frontend-export
-FAIL	panic-recover/recover-indirect	frontend-export
-FAIL	panic-recover/recover-repanic	frontend-export
-FAIL	panic-recover/recover-twice	frontend-export
+PASS	panic-recover/recover-direct	-
+PASS	panic-recover/recover-in-defer-args	-
+PASS	panic-recover/recover-in-defer-args-panicking	-
+PASS	panic-recover/recover-in-deferred-method	-
+PASS	panic-recover/recover-indirect	-
+PASS	panic-recover/recover-loop-defer	-
+PASS	panic-recover/recover-outside-defer	-
+PASS	panic-recover/recover-repanic	-
+PASS	panic-recover/recover-store-local	-
+PASS	panic-recover/recover-twice	-
 FAIL	panic-recover/recover-value	frontend-export
-FAIL	panic-recover/repanic-recovered-by-outer	frontend-export
-FAIL	panic-recover/return-expression-panic-recovered	frontend-export
-FAIL	panic-recover/self-recovered-defer-panic	frontend-export
-FAIL	panic-recover/unnamed-recover-zero-return	frontend-export
+PASS	panic-recover/repanic-recovered-by-outer	-
+PASS	panic-recover/repanic-same-value-abort	-
+PASS	panic-recover/return-expression-panic-recovered	-
+PASS	panic-recover/self-recovered-defer-panic	-
+PASS	panic-recover/unnamed-recover-zero-return	-
 PASS	pointers/address-array-index	-
 PASS	pointers/address-field	-
 PASS	pointers/composite-literal-address	-
@@ -725,13 +737,13 @@ PASS	strings/string-compare	-
 FAIL	strings/string-escape-bytes	differential
 PASS	strings/string-index	-
 PASS	strings/string-index-bounds	-
-FAIL	strings/string-index-panic-eval-order	frontend-export
+PASS	strings/string-index-panic-eval-order	-
 FAIL	strings/string-int-rune	lean-observation
 PASS	strings/string-pointer	-
 PASS	strings/string-slice	-
 FAIL	strings/string-slice-bounds	differential
 FAIL	strings/string-slice-low-high-panic	differential
-FAIL	strings/string-slice-panic-eval-order	frontend-export
+PASS	strings/string-slice-panic-eval-order	-
 FAIL	strings/string-to-rune-copy	lean-observation
 FAIL	structs/anonymous-field	lean-observation
 PASS	structs/blank-field	-

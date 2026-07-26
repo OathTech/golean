@@ -333,6 +333,11 @@ func (e *emitter) emitStmt(s ast.Stmt) (any, error) {
 		// A call in statement position lowers directly to a GoCore call
 		// statement (no value needed, so no hoist).
 		if call, ok := st.X.(*ast.CallExpr); ok {
+			if id, ok := call.Fun.(*ast.Ident); ok {
+				if _, isBuiltin := e.info.Uses[id].(*types.Builtin); isBuiltin && id.Name == "panic" {
+					return e.emitPanicStmt(call)
+				}
+			}
 			node, _, err := e.emitCallNode(call)
 			if err != nil {
 				return nil, err
@@ -351,6 +356,20 @@ func (e *emitter) emitStmt(s ast.Stmt) (any, error) {
 		// pending call is prepended to the frame's chain and runs at frame
 		// exit (W3 §9). A method value or closure callee is just an
 		// expression, so this reuses the func-value machinery.
+		if id, ok := st.Call.Fun.(*ast.Ident); ok {
+			if _, isBuiltin := e.info.Uses[id].(*types.Builtin); isBuiltin {
+				// `defer recover()` does NOT recover: recover must be called
+				// BY a deferred function, not AS one (oracle-pinned by
+				// panic-recover/defer-recover-builtin, arc doc §A3). It is a
+				// semantic no-op, lowered to a deferred empty function so the
+				// drain still observes a registration. Other deferred
+				// builtins (incl. panic) fail closed.
+				if id.Name == "recover" && len(st.Call.Args) == 0 {
+					return e.emitDeferNoop(), nil
+				}
+				return nil, unsup("defer of builtin %s", id.Name)
+			}
+		}
 		callee, err := e.emitExpr(st.Call.Fun)
 		if err != nil {
 			return nil, err
@@ -1987,6 +2006,26 @@ func (e *emitter) emitCallNode(c *ast.CallExpr) (any, bool, error) {
 		return e.emitMethodCall(c, sel)
 	}
 
+	// An immediately-invoked func literal `func(){...}(args)`: lift the
+	// literal (the ordinary §8 machinery) and call through the value.
+	if lit, ok := c.Fun.(*ast.FuncLit); ok {
+		callee, err := e.emitFuncLit(lit)
+		if err != nil {
+			return nil, false, err
+		}
+		lsig, _ := e.info.TypeOf(lit).Underlying().(*types.Signature)
+		args, err := e.emitCallArgs(lsig, c)
+		if err != nil {
+			return nil, false, err
+		}
+		resultTypes, err := e.emitResultTypes(lsig)
+		if err != nil {
+			return nil, false, err
+		}
+		return map[string]any{"expr": "call-value", "callee": callee,
+			"args": args, "resultTypes": resultTypes}, true, nil
+	}
+
 	fnID, ok := c.Fun.(*ast.Ident)
 	if !ok {
 		return nil, false, unsup("call target %T", c.Fun)
@@ -2195,9 +2234,72 @@ func (e *emitter) emitBuiltin(c *ast.CallExpr, name string) (any, bool, error) {
 		return map[string]any{"expr": tag, "operand": operand, "operandType": opTy}, false, nil
 	case "make":
 		return e.emitMake(c)
+	case "recover":
+		if len(c.Args) != 0 {
+			return nil, false, unsup("recover with %d arguments", len(c.Args))
+		}
+		// Effectful: recover marks the panic recovered, so it must keep its
+		// source position in the evaluation order (the hoist machinery
+		// sequences it like any call). The machine's continuation walk fires
+		// wherever it actually evaluates.
+		return map[string]any{"expr": "recover",
+			"type": map[string]any{"kind": "interface", "name": "any"}}, true, nil
+	case "panic":
+		// panic(v) in a value position cannot type-check; reaching here means
+		// an unmodeled context (e.g. panic as a call argument) — fail closed.
+		return nil, false, unsup("builtin panic outside statement position")
 	default:
 		return nil, false, unsup("builtin %s", name)
 	}
+}
+
+// emitPanicStmt lowers `panic(v)` to a wire panic statement. The payload is
+// converted to `any` exactly as Go converts it: a non-interface argument
+// carries its static type ("wrap") for the interface conversion; an argument
+// already of interface type passes through bare; an untyped nil literal is a
+// bare nil (Go 1.21 turns a nil payload into *runtime.PanicNilError at
+// runtime — the machine's rule, arc doc §A2).
+func (e *emitter) emitPanicStmt(c *ast.CallExpr) (any, error) {
+	if len(c.Args) != 1 {
+		return nil, unsup("panic with %d arguments", len(c.Args))
+	}
+	arg := c.Args[0]
+	t := e.info.TypeOf(arg)
+	if b, ok := t.(*types.Basic); ok && b.Kind() == types.UntypedNil {
+		return map[string]any{"stmt": "panic",
+			"value": map[string]any{"expr": "nil"}}, nil
+	}
+	value, err := e.emitExpr(arg)
+	if err != nil {
+		return nil, err
+	}
+	if types.IsInterface(t) {
+		return map[string]any{"stmt": "panic", "value": value}, nil
+	}
+	wrap, err := e.emitType(t)
+	if err != nil {
+		return nil, err
+	}
+	return map[string]any{"stmt": "panic", "value": value, "wrap": wrap}, nil
+}
+
+// deferNoopName is the synthetic function a `defer recover()` defers — a Go
+// identifier cannot contain '$', so it cannot collide with user functions.
+const deferNoopName = "$deferRecoverNoop"
+
+// emitDeferNoop defers the synthetic empty function, registering it once.
+func (e *emitter) emitDeferNoop() any {
+	if !e.deferNoopEmitted {
+		e.deferNoopEmitted = true
+		e.lifted = append(e.lifted, map[string]any{
+			"name": deferNoopName, "params": []any{}, "results": []any{},
+			"body": map[string]any{"stmt": "block", "body": []any{}},
+		})
+	}
+	return map[string]any{"stmt": "defer",
+		"callee": map[string]any{"expr": "func-value", "func": deferNoopName,
+			"captured": []any{}},
+		"args": []any{}}
 }
 
 // emitMake hoists make([]T, len[, cap]) / make(map[K]V[, hint]) into a

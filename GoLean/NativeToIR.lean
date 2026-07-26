@@ -126,6 +126,7 @@ partial def decodeExpr (path : String) (json : Json) : LowerM Expr := do
       let s ← StrictJson.string s!"{path}.value" (← StrictJson.field path obj "value")
       pure (.stringLit (GoString.fromLeanString s))
   | "nil" => pure (.nil (← optType path obj))
+  | "recover" => pure .recoverCall
   | "ref" =>
       pure (.ref (← StrictJson.string s!"{path}.id" (← StrictJson.field path obj "id")))
   | "deref" =>
@@ -359,6 +360,17 @@ partial def decodeStmt (results : Array Param) (path : String) (json : Json) : L
       let args ← StrictJson.array s!"{path}.args" (← StrictJson.field path obj "args")
       pure (.deferCall callee
         (← args.mapIdxM (fun i a => decodeExpr s!"{path}.args[{i}]" a)))
+  | "panic" =>
+      -- The payload's `any`-conversion: a "wrap" type wraps via the
+      -- machine's `toInterface` (its `dynamicTypeName?` fails closed on
+      -- unsupported dynamics); no "wrap" means the argument is already an
+      -- interface (or the untyped-nil payload).
+      let value ← decodeExpr s!"{path}.value" (← StrictJson.field path obj "value")
+      match obj.get? "wrap" with
+      | some t =>
+          let ty ← decodeTy s!"{path}.wrap" t
+          pure (.panicStmt (.toInterface (.interface ⟨"any"⟩) ty value))
+      | none => pure (.panicStmt value)
   | "breakable" =>
       pure (.breakable (← decodeStmt results s!"{path}.body"
         (← StrictJson.field path obj "body")))
