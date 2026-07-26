@@ -817,7 +817,7 @@ def corePanicAbortFunction : GoCore.Func := {
   args := #[]
   results := #[⟨"r", .int .int⟩]
   body := .seqn #[
-    .panicStmt (.toInterface (.interface ⟨"empty_interface"⟩) (.int .int) (.intLit 4)),
+    .panicStmt (.toInterface (.interface ⟨"empty_interface"⟩) (.int .int) (.intLit 4 .int)),
     .returnStmt]
 }
 

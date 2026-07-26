@@ -60,6 +60,46 @@ fields pervasively). GoCore already has the right primitives (`fieldAddr`,
 overclaims "field/index access" as working (true for reads, false for writes) —
 correct it when the lowering is fixed. Tracked in `TODO.md` (F1).
 
+## BUG-004 — panic abort rendering: boxing identity and defined-type payloads unmodeled
+
+- Status: open
+- Pinned-by: differential
+- Cases: panic-recover/repanic-same-value-abort, panic-recover/panic-named-type-abort, panic-recover/panic-newline-abort
+- Discovered: 2026-07-25 (pre-merge adversarial audit of `unwinding-arc`)
+
+Go's abort output makes three demands the machine's value-level state
+cannot meet, all found by the audit and now FAILING CLOSED instead of
+printing a wrong first line:
+
+1. **`[recovered, repanicked]` collapse is eface IDENTITY** (a bitwise
+   type-word + data-pointer compare in `preprintpanics`), not semantic
+   equality. `panic(recover())` and re-panicked constant literals share a
+   box and collapse; runtime-computed equal values do not (the arc's §A3
+   probe was constant-folded — `"or"+"ig"` is one static eface). Unequal
+   payloads certainly render ` [recovered]`; EQUAL payloads are
+   undecidable without an allocation-identity model, so `renderPanicHead`
+   returns none there. This turned `repanic-same-value-abort`
+   PASS→FAIL (intentional, recorded here per the re-pin guard): the
+   collapse it pins is real Go behavior our chain cannot decide.
+2. **Defined-type payloads print qualified**: `panic(Code(7))` renders
+   `main.Code(7)` via `printanycustomtype`. Root cause is deeper than the
+   render arm: the lowering models a defined non-struct type as a GoCore
+   ALIAS, so `dynamicTypeName?` resolves `Code` to `int` and the identity
+   is erased before the machine sees it (the same conflation will matter
+   for type asserts when the interfaces lane opens). The frontend now
+   fails closed on defined non-struct panic payloads at emit
+   (`panic-named-type-abort` is the red pin, stage frontend-export; the
+   wildcarded render printed the bare `7` — a silent wrong answer), and
+   `renderPanicPayload` checks the dynamic name against the predeclared
+   one as defense in depth.
+3. **Multi-line string payloads**: Go's first line stops at an embedded
+   `\n` (`printindented`); `asciiString?` rejects the newline byte
+   (`panic-newline-abort` is the red pin).
+
+RECOVERING any of these payloads is fully supported — only the terminal
+abort line is restricted. The fix, if ever needed, is an allocation
+identity on boxed payloads (1) and a package-qualification story (2).
+
 ## BUG-003 — for-clause per-iteration loop variables (Go 1.22) are not lowered
 
 - Status: open

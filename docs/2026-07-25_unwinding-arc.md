@@ -217,16 +217,19 @@ dynamic-name match.
   added it must first decide the package-qualification story.
 - Chain rendering: first line only, ` [recovered]` suffix from the
   entry's flag; deeper lines never observed by the harness.
-- **`[recovered, repanicked]` (probe 2026-07-25):** when a new panic's
-  value is EQUAL (interface `==`, i.e. semantic equality — a recreated
-  equal string collapses too) to the just-recovered value, Go 1.26 prints
-  a single first line `panic: orig [recovered, repanicked]` instead of a
-  two-line chain; an unequal value keeps the `[recovered]` + chained
-  second line form. Rendering rule for the head entry: recovered ∧ second
-  entry exists ∧ payloads structurally equal → ` [recovered, repanicked]`;
-  recovered otherwise → ` [recovered]`. Pinned by
-  `panic-recover/repanic-same-value-abort` (new) vs
-  `panic-recover/recover-repanic` (existing, unequal values).
+- **`[recovered, repanicked]` (probe 2026-07-25) — CORRECTED by the
+  pre-merge audit:** the collapse is decided by eface IDENTITY (bitwise
+  type-word + data-pointer compare in `preprintpanics`), NOT semantic
+  equality. The original probe was constant-folded: `"or"+"ig"` is one
+  static eface, so it collapsed; `mk("or","ig")` computed at runtime does
+  not (verified: Go prints `[recovered]` + a chained second line). The
+  shipped rule (BUG-004): structurally UNEQUAL payloads render
+  ` [recovered]` (identity implies equality, so this direction is
+  certain); structurally EQUAL payloads are undecidable without an
+  allocation-identity model — fail closed.
+  `panic-recover/repanic-same-value-abort` flipped PASS→FAIL
+  (intentional, listed in BUG-004) and `panic-recover/recover-repanic`
+  (unequal values) stays green.
 - Edge-batch value pins (same probe session): recover-in-defer-args of a
   nested defer INSIDE a panic-run deferred function DOES recover (arg
   evaluation is a direct call by that deferred function) → 32;
@@ -262,6 +265,24 @@ dynamic-name match.
   interfaces-lane constructs: type assertion, type switch); `defer`
   14/15 (1 red on interface method values). Exit criterion "passes or
   fails closed on a DIFFERENT named feature" holds.
+- **2026-07-25, PRE-MERGE AUDIT (user-approved full scale: 3 Opus
+  reviewers + 2 refute-by-default Opus verifiers per finding, 29
+  agents): 7 sustained (4 distinct defects — both semantics dimensions
+  independently found the top two), 6 refuted.** All four fixed on the
+  branch as BUG-004 (see docs/BUGS.md): (1) HIGH — the
+  `[recovered, repanicked]` collapse is eface IDENTITY, not semantic
+  equality (§A3 correction above; equal-payload case now fails closed;
+  `repanic-same-value-abort` intentionally PASS→FAIL); (2) HIGH —
+  defined-type payloads rendered bare (`panic(Code(7))` printed `7`, Go
+  prints `main.Code(7)`); root cause is the alias lowering erasing the
+  defined-type identity — frontend now fails closed at emit, machine
+  name-checks as defense in depth (`panic-named-type-abort` red pin);
+  (3) MEDIUM — multi-line string payloads have no one-line rendering
+  (`asciiString?` rejects `\n`; `panic-newline-abort` red pin);
+  (4) MEDIUM — stale PanicNilError comment at the emit.go lowering site
+  (the exact knob §A2 warns about) corrected. The audit's verifiers
+  compiled probes both ways; the two silent-wrong-answer HIGHs are again
+  the unexercised-paths class no green gate can see.
 - **2026-07-25, re-pin + honesty** (`d4c670a`, `175a806`, `7c99172`):
   panic(nil) legacy correction; baseline 772/333 → **781/368** — 26
   FAIL→PASS flips + 9 new PASSes, zero regressions, every flip

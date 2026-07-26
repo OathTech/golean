@@ -1,19 +1,17 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-07-25  commit: d4c670a  frontend: native  oracle: go run
-# manifest_cases: 781  pass: 368  fail: 413
-# Re-pin reason: THE UNWINDING ARC (panic-as-configuration + recover;
-# docs/2026-07-25_unwinding-arc.md). The machine gained the panic chain,
-# panic-path defers, and the recover walk; the frontend/decoder gained
-# panic/recover wire nodes, the defer-recover() no-op lowering, and IIFE
-# call targets. Drift is ALL green-ward: 26 FAIL->PASS flips (all of
-# panic-recover/* except the two interfaces-lane reds, the three
-# recover-blocked defer/* cases, builtins/recover-outside-defer,
-# maps/nil-assign-eval-before-panic, strings/string-index- and
-# string-slice-panic-eval-order) plus 9 NEW oracle-validated edge cases
-# (recover-outside-defer, recover-store-local, repanic-same-value-abort,
-# recover-in-defer-args{,-panicking}, recover-loop-defer,
-# panic-{int,bool,nil}-abort), all PASS. Zero regressions.
-# Corpus 772 -> 781, 333 -> 368 passing.
+# recorded: 2026-07-25  commit: a468a5e  frontend: native  oracle: go run
+# manifest_cases: 783  pass: 367  fail: 416
+# Re-pin reason: PRE-MERGE AUDIT RESPONSE for the unwinding arc (7
+# sustained findings = 4 distinct defects, all fixed as BUG-004; see
+# docs/BUGS.md and the arc doc build log). Drift is exactly the three
+# intentional fail-closed pins: NEW panic-named-type-abort (defined-type
+# payload identity erased by alias lowering -> frontend fails closed),
+# NEW panic-newline-abort (multi-line payload has no one-line rendering),
+# and ONE INTENTIONAL PASS->FAIL repanic-same-value-abort (the
+# [recovered, repanicked] collapse is eface IDENTITY, undecidable for
+# structurally equal payloads without an allocation-identity model; the
+# case is listed in BUG-004's Cases per the re-pin guard).
+# Corpus 781 -> 783, 368 -> 367 passing.
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
 PASS	arrays/array-copy	-
@@ -563,6 +561,8 @@ PASS	panic-recover/nested-frame-recover	-
 PASS	panic-recover/panic-bool-abort	-
 PASS	panic-recover/panic-defer-order	-
 PASS	panic-recover/panic-int-abort	-
+FAIL	panic-recover/panic-named-type-abort	frontend-export
+FAIL	panic-recover/panic-newline-abort	lean-observation
 PASS	panic-recover/panic-nil-abort	-
 PASS	panic-recover/panic-nil-recover	-
 FAIL	panic-recover/panic-typed-nil-recover	frontend-export
@@ -578,7 +578,7 @@ PASS	panic-recover/recover-store-local	-
 PASS	panic-recover/recover-twice	-
 FAIL	panic-recover/recover-value	frontend-export
 PASS	panic-recover/repanic-recovered-by-outer	-
-PASS	panic-recover/repanic-same-value-abort	-
+FAIL	panic-recover/repanic-same-value-abort	lean-observation
 PASS	panic-recover/return-expression-panic-recovered	-
 PASS	panic-recover/self-recovered-defer-panic	-
 PASS	panic-recover/unnamed-recover-zero-return	-

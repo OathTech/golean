@@ -689,43 +689,58 @@ def panicPayload : GoValue → GoValue
 /-- Constructive ASCII decode for abort rendering. Core's
 `String.fromUTF8?` depends on `Classical.choice` (its validation proofs),
 and the machine-correspondence theorems are pinned constructive
-(`proofs/Audit.lean`) — so abort rendering covers ASCII payloads and
-fails closed on any byte ≥ 0x80: a non-ASCII payload aborting is a
-visible unsupported, never a wrong message. -/
+(`proofs/Audit.lean`) — so abort rendering covers single-line ASCII
+payloads and fails closed on any byte ≥ 0x80 AND on an embedded newline
+(Go routes string payloads through `printindented`, so its FIRST abort
+line stops at a `\n` — a multi-line payload has no one-line rendering to
+pin; pre-merge audit 2026-07-25, BUG-004): a rejected payload aborting is
+a visible unsupported, never a wrong message. -/
 def asciiString? (bytes : Array UInt8) : Option String :=
   bytes.foldl
     (fun acc b => acc.bind fun out =>
-      if b < 0x80 then some (out.push (Char.ofNat b.toNat)) else none)
+      if b < 0x80 && b != 0x0A then some (out.push (Char.ofNat b.toNat)) else none)
     (some "")
 
 /-- Render a panic payload as Go's first abort line renders it (after
-`panic: `). `none` for payload shapes whose Go rendering is not pinned
-(e.g. pointer values print machine addresses) — the terminal rule fails
-closed there (arc doc §A3). -/
+`panic: `). Go prints the BARE value only for the predeclared types —
+a defined type renders via `printanycustomtype` as `main.T(v)`, which we
+do not model (package qualification; BUG-004) — so the dynamic name is
+CHECKED against the predeclared name, and everything else is `none`: the
+terminal rule fails closed rather than printing a bare value Go would
+qualify (pre-merge audit 2026-07-25 caught the wildcarded version doing
+exactly that). -/
 def renderPanicPayload : GoValue → Option String
   | .nil => some "nil"
-  | .interface _ (.string s) => asciiString? s.bytes
-  | .interface _ (.int v _) => some (toString v)
-  | .interface _ (.bool b) => some (if b then "true" else "false")
+  | .interface "runtime.Error" (.string s) => asciiString? s.bytes
+  | .interface "string" (.string s) => asciiString? s.bytes
+  | .interface dyn (.int v kind) =>
+      if dyn == kind.name then some (toString v) else none
+  | .interface "bool" (.bool b) => some (if b then "true" else "false")
   | _ => none
 
-/-- Go's first abort line for a panic chain (arc doc §A3, oracle-pinned):
-the head payload, plus ` [recovered, repanicked]` when the head was
-recovered and the immediately following entry re-panicked an equal value
-(Go compares by interface equality — semantic, not identity), or
-` [recovered]` when merely recovered. -/
-def renderPanicHead (first : PanicEntry) (rest : List PanicEntry) : Option String := do
-  let base ← renderPanicPayload first.value
-  if first.recovered then
-    match rest with
-    | e :: _ =>
-        if e.value == first.value then
-          return base ++ " [recovered, repanicked]"
-        else
-          return base ++ " [recovered]"
-    | [] => return base ++ " [recovered]"
-  else
-    return base
+/-- Go's first abort line for a panic chain. The `[recovered, repanicked]`
+collapse is decided by the runtime via eface IDENTITY — a bitwise compare
+of the interface's type word AND data pointer (`preprintpanics`,
+runtime/panic.go), NOT semantic equality (pre-merge audit 2026-07-25;
+the §A3 probe that suggested otherwise was constant-folded — `"or"+"ig"`
+shares a static eface, `mk("or","ig")` at runtime does not). Value-level
+state decides only one direction: structurally UNEQUAL payloads can never
+share a box, so ` [recovered]` is certain there; structurally EQUAL
+payloads may or may not collapse (`panic(recover())` and constant
+literals do, runtime-computed equal values do not) — fail closed
+(BUG-004). -/
+def renderPanicHead (first : PanicEntry) (rest : List PanicEntry) : Option String :=
+  (renderPanicPayload first.value).bind fun base =>
+    if first.recovered then
+      match rest with
+      | e :: _ =>
+          if e.value == first.value then
+            none -- boxing identity unmodeled: collapse undecidable (BUG-004)
+          else
+            some (base ++ " [recovered]")
+      | [] => some (base ++ " [recovered]")
+    else
+      some base
 
 /-- Mark the newest (last) chain entry recovered, returning its payload —
 what `recover()` yields. `none` if the chain is empty or the newest entry

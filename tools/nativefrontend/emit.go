@@ -2257,8 +2257,9 @@ func (e *emitter) emitBuiltin(c *ast.CallExpr, name string) (any, bool, error) {
 // converted to `any` exactly as Go converts it: a non-interface argument
 // carries its static type ("wrap") for the interface conversion; an argument
 // already of interface type passes through bare; an untyped nil literal is a
-// bare nil (Go 1.21 turns a nil payload into *runtime.PanicNilError at
-// runtime — the machine's rule, arc doc §A2).
+// bare nil, which STAYS nil — the GOPATH-mode oracle keeps legacy panic(nil)
+// semantics (recover() returns nil; the machine's panicPayload is the
+// identity, arc doc §A2 correction).
 func (e *emitter) emitPanicStmt(c *ast.CallExpr) (any, error) {
 	if len(c.Args) != 1 {
 		return nil, unsup("panic with %d arguments", len(c.Args))
@@ -2275,6 +2276,16 @@ func (e *emitter) emitPanicStmt(c *ast.CallExpr) (any, error) {
 	}
 	if types.IsInterface(t) {
 		return map[string]any{"stmt": "panic", "value": value}, nil
+	}
+	// A defined (named) non-struct type: the lowering models it as a GoCore
+	// alias, so the interface wrap would erase its identity — and Go's abort
+	// line prints it QUALIFIED (`main.T(v)`), which the bare value is not.
+	// Fail closed (BUG-004). Named structs keep their identity (TypeId) and
+	// pass through; their abort rendering fails closed machine-side.
+	if named, ok := t.(*types.Named); ok {
+		if _, isStruct := named.Underlying().(*types.Struct); !isStruct {
+			return nil, unsup("panic payload of defined type %s (alias lowering erases its identity)", named.Obj().Name())
+		}
 	}
 	wrap, err := e.emitType(t)
 	if err != nil {
