@@ -2121,6 +2121,12 @@ func (e *emitter) emitCallArgs(sig *types.Signature, c *ast.CallExpr) ([]any, er
 				if err != nil {
 					return nil, err
 				}
+				// Zero variadic values pack as a NIL slice (Go: xs == nil
+				// inside the callee), not an allocated empty one.
+				if len(idents) == fixed {
+					return append(args, map[string]any{"expr": "nil",
+						"type": map[string]any{"kind": "slice", "elem": elemTy}}), nil
+				}
 				elems := []any{}
 				for i := fixed; i < len(idents); i++ {
 					elems = append(elems, map[string]any{"index": int64(i - fixed), "value": idents[i]})
@@ -2149,6 +2155,13 @@ func (e *emitter) emitCallArgs(sig *types.Signature, c *ast.CallExpr) ([]any, er
 	elemTy, err := e.emitType(elemType)
 	if err != nil {
 		return nil, err
+	}
+	// Zero variadic values pack as a NIL slice (Go: xs == nil inside the
+	// callee — variadic/no-args-vs-empty-spread pins the distinction from
+	// an explicit empty spread), not an allocated empty one.
+	if len(c.Args) == fixed {
+		return append(args, map[string]any{"expr": "nil",
+			"type": map[string]any{"kind": "slice", "elem": elemTy}}), nil
 	}
 	elems := []any{}
 	for i := fixed; i < len(c.Args); i++ {
