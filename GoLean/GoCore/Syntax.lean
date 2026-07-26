@@ -94,6 +94,11 @@ inductive Expr where
   | slice (base low high : Expr) (max : Option Expr)
   | length (operand : Expr) (typ : Option Ty := none)
   | capacity (operand : Expr) (typ : Option Ty := none)
+  /-- The `recover()` builtin. Not a strict operator: its value depends on
+  the continuation (it recovers exactly when called directly by a deferred
+  function invoked by a panic — the unwinding arc,
+  `docs/2026-07-25_unwinding-arc.md` §A1). -/
+  | recoverCall
   | unsupported (feature : String)
   deriving Repr, BEq, Inhabited
 
@@ -147,6 +152,13 @@ inductive Stmt where
   | returnStmt
   | breakStmt
   | continueStmt
+  /-- The `panic(v)` builtin: evaluate the payload, then start unwinding
+  with a fresh one-entry panic chain. The payload expression carries the
+  Go `any`-conversion (lowering wraps non-interface arguments in
+  `.toInterface`); a payload that evaluates to a nil interface becomes
+  the distinguished nil-panic value (Go 1.21 `*runtime.PanicNilError`).
+  The unwinding arc, `docs/2026-07-25_unwinding-arc.md`. -/
+  | panicStmt (payload : Expr)
   | label (name : String)
   | unsupported (feature : String)
   deriving Repr, BEq, Inhabited

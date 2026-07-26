@@ -60,14 +60,16 @@ theorem div_nonzero_no_panic (σ : ExecState) (msg : String) :
     Bind.bind, Except.bind] at h
 
 /-- ... and the step-level corollary: the `div` apply step from nonzero
-literals cannot reach `panicked`. -/
-theorem div_nonzero_apply_no_panic (σ σ' : ExecState) (msg : String)
-    (env : LocalEnv) (k : Cont) :
+literals cannot start unwinding (the unwinding arc re-aimed this from the
+old terminal `.panicked` — a panic step now produces `.panicking`, so the
+meaningful negative is over the unwinding configuration). -/
+theorem div_nonzero_apply_no_panic (σ σ' : ExecState)
+    (chain : List PanicEntry) (env : LocalEnv) (k k' : Cont) :
     ¬ Step (.retV (.int 1 .int) (.strictK .div [.int 1 .int] [] env k)) σ
-        (.panicked msg) σ' := by
+        (.panicking chain k') σ' := by
   intro hstep
   cases hstep with
   | strictApplyPanic happly =>
-      exact div_nonzero_no_panic σ msg (by simpa using happly)
+      exact div_nonzero_no_panic σ _ (by simpa using happly)
 
 end GoLean.GoCore.NegativeSpecs

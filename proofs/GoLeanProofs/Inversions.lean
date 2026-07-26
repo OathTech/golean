@@ -41,7 +41,8 @@ theorem step_det {c : Config} {σ : ExecState} {c₁ : Config} {σ₁ : ExecStat
     (h₁ : Step c σ c₁ σ₁) (h₂ : Step c σ c₂ σ₂) : c₁ = c₂ ∧ σ₁ = σ₂ := by
   cases h₁ <;> cases h₂ <;>
     first
-      | (simp_all [Config.choiceFree, strictPlan, stmtPlan]; done)
+      | (simp_all [Config.choiceFree, strictPlan, stmtPlan, panicPassthrough,
+          chainNewestRecovered]; done)
       | omega
 
 end GoLean.GoCore.Machine

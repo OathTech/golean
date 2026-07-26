@@ -771,6 +771,56 @@ def coreClosureShareFunction : GoCore.Func := {
     .returnStmt]
 }
 
+/-- The lifted body of `func(rp *int) { if recover() != nil { *rp = 7 } }` —
+the canonical recover-er, receiving the captured address of a result cell. -/
+def coreRecoverBodyFunction : GoCore.Func := {
+  id := ⟨"main$rec0"⟩
+  args := #[⟨"rp", .pointer (.int .int)⟩]
+  results := #[]
+  body := .seqn #[
+    .ifThenElse
+      (.neqCmp (.interface ⟨"empty_interface"⟩) .recoverCall (.nil none))
+      (.assign (.addr (.var "rp")) (.intLit 7))
+      (.seqn #[]),
+    .returnStmt]
+}
+
+/-- `r := 0; defer rec(&r); panic("boom"); r` — the deferred call runs on
+the panic path, `recover` cancels the unwind, and the function returns
+normally with the named result the recover-er wrote (the unwinding arc). -/
+def coreRecoverCatchFunction : GoCore.Func := {
+  id := ⟨"recoverCatch"⟩
+  args := #[]
+  results := #[⟨"r", .int .int⟩]
+  body := .seqn #[
+    .deferCall (.funcVal ⟨"main$rec0"⟩ #[.ref "r"]) #[],
+    .panicStmt (.toInterface (.interface ⟨"empty_interface"⟩) .string (.stringLit (GoString.fromLeanString "boom"))),
+    .returnStmt]
+}
+
+/-- Same recover-er drained on the NORMAL exit path: `recover` returns nil
+(nothing is panicking), so the result keeps its assigned value. -/
+def coreRecoverNormalNilFunction : GoCore.Func := {
+  id := ⟨"recoverNormalNil"⟩
+  args := #[]
+  results := #[⟨"r", .int .int⟩]
+  body := .seqn #[
+    .deferCall (.funcVal ⟨"main$rec0"⟩ #[.ref "r"]) #[],
+    .assign (.var "r") (.intLit 5),
+    .returnStmt]
+}
+
+/-- `panic(4)` with no recover: the chain unwinds to the entry frame and
+aborts with panic status (message pinned by the differential). -/
+def corePanicAbortFunction : GoCore.Func := {
+  id := ⟨"panicAbort"⟩
+  args := #[]
+  results := #[⟨"r", .int .int⟩]
+  body := .seqn #[
+    .panicStmt (.toInterface (.interface ⟨"empty_interface"⟩) (.int .int) (.intLit 4)),
+    .returnStmt]
+}
+
 def main : IO UInt32 := do
   let mut passed := true
   passed := passed && (← expectIntResult "GoCore add function" (GoCore.Machine.runFunctionM 100000 coreAddFunction #[.int 2, .int 3]) 5)
@@ -824,6 +874,14 @@ def main : IO UInt32 := do
   passed := passed && (← expectIntResult "GoCore closure shares captured cell"
     (GoCore.Machine.runFunctionWithContextM 100000 []
       #[coreClosureBodyFunction, coreClosureShareFunction] coreClosureShareFunction #[]) 2)
+  passed := passed && (← expectIntResult "GoCore recover catches panic-path defer"
+    (GoCore.Machine.runFunctionWithContextM 100000 []
+      #[coreRecoverBodyFunction, coreRecoverCatchFunction] coreRecoverCatchFunction #[]) 7)
+  passed := passed && (← expectIntResult "GoCore recover nil on normal drain"
+    (GoCore.Machine.runFunctionWithContextM 100000 []
+      #[coreRecoverBodyFunction, coreRecoverNormalNilFunction] coreRecoverNormalNilFunction #[]) 5)
+  passed := passed && (← expectErrorStatus "GoCore unrecovered panic aborts"
+    (GoCore.Machine.runFunctionM 100000 corePanicAbortFunction #[]) "panic")
   if passed then
     return 0
   else

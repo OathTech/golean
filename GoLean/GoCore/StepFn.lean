@@ -8,9 +8,11 @@ sharing the rule premises' functions verbatim (`strictPlan`,
 `applyStrictOp`, `stmtPlan`, `applyStmtOp`, `enterFrame`, …), plus the
 *why* on every configuration the relation is silent on — an explicit
 `.stuck`/`.unsupported`/`.internal` error, never a silent approximation
-(fail closed). Panics are in-model: a panic *step* produces the
-`.panicked` configuration (`.ok`), which the driver reports as
-`GoError.panic`; only out-of-model conditions are `Except` errors.
+(fail closed). Panics are in-model: a panic *step* produces a
+`.panicking` configuration (`.ok`) that unwinds — running defers, open to
+`recover` — and an unrecovered chain reaching `.stop` becomes `.panicked`,
+which the driver reports as `GoError.panic`; only out-of-model conditions
+are `Except` errors.
 
 Nondeterminism: the two choice points (mapRange pick-next, appendSlice
 spill capacity) consume from the external `Choices` stream, exactly as
@@ -40,6 +42,39 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
     Except GoError (Config × ExecState × Choices) := do
   match c with
   | .panicked _ => throw (.internal "step on terminal panicked configuration")
+  | .panicking chain k =>
+      match k with
+      | .frame _targets _results [] k' => return (.panicking chain k', s, choices)
+      | .frame targets results ((cv, args) :: ds) k' =>
+          match cv with
+          | .funcVal fid captured => do
+              -- Defers run on the panic path, above the suspended chain's
+              -- marker (the shape `recover`'s walk detects).
+              let (func, frameEnv, _resultLocs, s') ← enterFrame s fid (captured ++ args)
+              return (.exec func.body frameEnv
+                (.frame [] [] [] (.panicResumeK chain
+                  (.frame targets results ds k'))), s', choices)
+          | .nil =>
+              -- The nil invocation's panic joins the chain; remaining
+              -- defers keep draining.
+              return (.panicking (chain ++ [⟨runtimeErrorValue
+                "runtime error: invalid memory address or nil pointer dereference", false⟩])
+                (.frame targets results ds k'), s, choices)
+          | other => throw (.stuck s!"deferred callee is not a function value: {repr other}")
+      | .panicResumeK suspended k' =>
+          return (.panicking (suspended ++ chain) k', s, choices)
+      | .stop =>
+          match chain with
+          | first :: rest =>
+              match renderPanicHead first rest with
+              | some msg => return (.panicked msg, s, choices)
+              | none => throw (.unsupported
+                  s!"panic abort rendering for payload {repr first.value}")
+          | [] => throw (.internal "empty panic chain at stop")
+      | k =>
+          match panicPassthrough k with
+          | some k' => return (.panicking chain k', s, choices)
+          | none => throw (.internal "unclassified continuation in panic unwinding")
   | .exec stmt env k =>
       match stmt with
       | .seqn ss => return (.next (seqCont ss.toList env k), s, choices)
@@ -71,6 +106,8 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
       | .breakable b => return (.exec b env (.breakableK k), s, choices)
       | .deferCall callee args =>
           return (.evalE callee env (.deferCalleeK args.toList env k), s, choices)
+      | .panicStmt e =>
+          return (.evalE e env (.panicArgK k), s, choices)
       | .callValue targets callee args =>
           match assigneesExprs targets.toList with
           | some (te :: rest) =>
@@ -127,6 +164,9 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
       | .locLit l => return (.retV (.addr l) k, s, choices)
       | .and l r => return (.evalE l env (.andK r env k), s, choices)
       | .or l r => return (.evalE l env (.orK r env k), s, choices)
+      | .recoverCall =>
+          let (v, k') := recoverResult k
+          return (.retV v k', s, choices)
       | .unsupported feature => throw (.unsupported feature)
       | e =>
           match strictPlan e with
@@ -135,7 +175,8 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
           | some (op, []) =>
               match applyStrictOp s op [] with
               | .ok (v, s') => return (.retV v k, s', choices)
-              | .error (.panic msg) => return (.panicked msg, s, choices)
+              | .error (.panic msg) =>
+                  return (.panicking [⟨runtimeErrorValue msg, false⟩] k, s, choices)
               | .error err => throw err
           | none => throw (.internal "unclassified expression")
   | .retV v k =>
@@ -145,7 +186,8 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
       | .strictK op done [] _ k' =>
           match applyStrictOp s op (v :: done).reverse with
           | .ok (out, s') => return (.retV out k', s', choices)
-          | .error (.panic msg) => return (.panicked msg, s, choices)
+          | .error (.panic msg) =>
+              return (.panicking [⟨runtimeErrorValue msg, false⟩] k', s, choices)
           | .error err => throw err
       | .andK r env k' => do
           if ← valueAsBool v then
@@ -171,16 +213,19 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
       | .assignTargetK rhs env k' =>
           match valueAsLoc v with
           | .ok loc => return (.evalE rhs env (.assignStoreK loc k'), s, choices)
-          | .error (.panic msg) => return (.panicked msg, s, choices)
+          | .error (.panic msg) =>
+              return (.panicking [⟨runtimeErrorValue msg, false⟩] k', s, choices)
           | .error err => throw err
       | .assignStoreK loc k' =>
           match storeLoc s loc v with
           | .ok s' => return (.next k', s', choices)
-          | .error (.panic msg) => return (.panicked msg, s, choices)
+          | .error (.panic msg) =>
+              return (.panicking [⟨runtimeErrorValue msg, false⟩] k', s, choices)
           | .error err => throw err
       | .callTargetsK fid locs pending args env k' =>
           match valueAsLoc v with
-          | .error (.panic msg) => return (.panicked msg, s, choices)
+          | .error (.panic msg) =>
+              return (.panicking [⟨runtimeErrorValue msg, false⟩] k', s, choices)
           | .error err => throw err
           | .ok loc =>
               match pending with
@@ -213,7 +258,8 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
           | e :: rest =>
               if done.length < nt then
                 match valueAsLoc v with
-                | .error (.panic msg) => return (.panicked msg, s, choices)
+                | .error (.panic msg) =>
+                    return (.panicking [⟨runtimeErrorValue msg, false⟩] k', s, choices)
                 | .error err => throw err
                 | .ok _ =>
                     return (.evalE e env (.stmtOpK op nt (v :: done) rest env k'), s, choices)
@@ -222,11 +268,13 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
           | [] =>
               match applyStmtOp s choices op nt (v :: done).reverse with
               | .ok (s', choices') => return (.next k', s', choices')
-              | .error (.panic msg) => return (.panicked msg, s, choices)
+              | .error (.panic msg) =>
+                  return (.panicking [⟨runtimeErrorValue msg, false⟩] k', s, choices)
               | .error err => throw err
       | .callValTargetsK callee locs pending args env k' =>
           match valueAsLoc v with
-          | .error (.panic msg) => return (.panicked msg, s, choices)
+          | .error (.panic msg) =>
+              return (.panicking [⟨runtimeErrorValue msg, false⟩] k', s, choices)
           | .error err => throw err
           | .ok loc =>
               match pending with
@@ -242,8 +290,9 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
               let (func, frameEnv, resultLocs, s') ← enterFrame s fid captured
               return (.exec func.body frameEnv (.frame locs resultLocs [] k'), s', choices)
           | .nil, [] =>
-              return (.panicked
-                "runtime error: invalid memory address or nil pointer dereference", s, choices)
+              return (.panicking [⟨runtimeErrorValue
+                "runtime error: invalid memory address or nil pointer dereference", false⟩]
+                k', s, choices)
           | cv, a :: rest =>
               -- Go evaluates the callee and ALL arguments before the nil
               -- check fires, so nil proceeds into the argument walk.
@@ -263,8 +312,9 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
                     enterFrame s fid (captured ++ vals ++ [v])
                   return (.exec func.body frameEnv (.frame locs resultLocs [] k'), s', choices)
               | .nil =>
-                  return (.panicked
-                    "runtime error: invalid memory address or nil pointer dereference", s, choices)
+                  return (.panicking [⟨runtimeErrorValue
+                    "runtime error: invalid memory address or nil pointer dereference", false⟩]
+                    k', s, choices)
               | other => throw (.stuck s!"expected function value, got {repr other}")
       | .deferCalleeK args env k' =>
           if deferrableCallee v then
@@ -288,6 +338,8 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
       | .mapRangeK keyVar valVar keyTy valTy body env k' => do
           let entries ← mapRangeEntries s v
           return (.next (.mapIterK keyVar valVar keyTy valTy body entries env k'), s, choices)
+      | .panicArgK k' =>
+          return (.panicking [⟨panicPayload v, false⟩] k', s, choices)
       | .stop => throw (.internal "value delivered to empty continuation")
       | _ => throw (.internal "value delivered to statement continuation")
   | .next k =>
@@ -309,10 +361,19 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
               return (.exec func.body frameEnv
                 (.frame [] [] [] (.frame targets results ds k')), s', choices)
           | .nil =>
-              -- Registration succeeded; the INVOCATION panics (Go).
-              return (.panicked
-                "runtime error: invalid memory address or nil pointer dereference", s, choices)
+              -- Registration succeeded; the INVOCATION panics (Go), and
+              -- this frame's remaining defers run on the panic path.
+              return (.panicking [⟨runtimeErrorValue
+                "runtime error: invalid memory address or nil pointer dereference", false⟩]
+                (.frame targets results ds k'), s, choices)
           | other => throw (.stuck s!"deferred callee is not a function value: {repr other}")
+      | .panicResumeK chain k' =>
+          if chainNewestRecovered chain then
+            -- Recovered: the unwind is cancelled; the frame below resumes
+            -- its normal exit path (Go: "returns normally").
+            return (.next k', s, choices)
+          else
+            return (.panicking chain k', s, choices)
       | .breakableK k' => return (.next k', s, choices)
       | .mapIterK keyVar valVar keyTy valTy body remaining env k' =>
           if remaining.isEmpty then
@@ -368,9 +429,11 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
               return (.exec func.body frameEnv
                 (.frame [] [] [] (.frame targets results ds k')), s', choices)
           | .nil =>
-              -- Registration succeeded; the INVOCATION panics (Go).
-              return (.panicked
-                "runtime error: invalid memory address or nil pointer dereference", s, choices)
+              -- Registration succeeded; the INVOCATION panics (Go), and
+              -- this frame's remaining defers run on the panic path.
+              return (.panicking [⟨runtimeErrorValue
+                "runtime error: invalid memory address or nil pointer dereference", false⟩]
+                (.frame targets results ds k'), s, choices)
           | other => throw (.stuck s!"deferred callee is not a function value: {repr other}")
       | .stop => throw (.internal "return unwound past the entry frame")
       | _ => throw (.internal "return delivered to expression continuation")

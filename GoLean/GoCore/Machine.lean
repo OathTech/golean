@@ -23,9 +23,14 @@ Design highlights (full rationale in the design note):
   are literally one semantics, instantiated (the differential oracle
   validates the shared table; the *claims* surface stays scoped by which WP
   laws and witnesses exist).
-- **Panic propagation is free**: a panic step abandons the whole
-  continuation (`.panicked` is terminal), so the old per-operator
-  `binPanicLeft/Right`-style propagation rules have no analogue here.
+- **Panic is unwinding, not teleport** (the unwinding arc,
+  `docs/2026-07-25_unwinding-arc.md`): a panic step starts a `.panicking`
+  configuration carrying the panic CHAIN, which strips continuation
+  frames one step at a time, runs each frame's defers on the way out
+  (where `recover` can cancel it), and only at `.stop` becomes the
+  terminal `.panicked` abort line. The old per-operator
+  `binPanicLeft/Right`-style propagation rules still have no analogue —
+  propagation is the one generic `panicUnwind` rule.
 - **Fail closed**: unsupported/malformed forms have no rules (relation
   silence); `applyStrictOp` returns `.stuck`/`.unsupported` errors that no
   rule matches. The executable reports the *why* (S2).
@@ -652,6 +657,97 @@ def bindIterVars (env : LocalEnv) (s : ExecState) (keyVar valVar : Option String
       pure (env.declare name loc, s')
   | none => pure (env, s)
 
+/-! ## The panic chain (the unwinding arc, `docs/2026-07-25_unwinding-arc.md` §A1–A3) -/
+
+/-- One entry of a goroutine's panic chain: the payload (the interface
+value `recover` returns) and whether a `recover` has caught it. The chain
+is oldest-first; Go's abort output prints it in this order and the
+differential's fault identity compares the FIRST line, so the head entry
+(with its `recovered` flag) is what terminal rendering must get right. -/
+structure PanicEntry where
+  value : GoValue
+  recovered : Bool
+  deriving Repr, BEq
+
+/-- The payload of a Go runtime panic (nil dereference, division by zero,
+…): a `runtime.Error` interface value. The dotted dynamic name cannot
+collide with a source-level `TypeId` (Go identifiers cannot contain `.`),
+so type asserts against user types correctly fail on it. -/
+def runtimeErrorValue (msg : String) : GoValue :=
+  .interface "runtime.Error" (.string (GoString.fromLeanString msg))
+
+/-- The payload of `panic(nil)` (or of a nil interface panicked at
+runtime): Go 1.21's `*runtime.PanicNilError` — non-nil, so
+`recover() != nil` holds. Go 1.26 renders it as `nil` (oracle probe
+2026-07-25). -/
+def panicNilValue : GoValue :=
+  .interface "*runtime.PanicNilError" .unit
+
+/-- Coerce a delivered `panic` argument to its chain payload: a nil
+interface becomes the distinguished nil-panic value; everything else (an
+interface value built by the lowering's `any`-conversion) passes through. -/
+def panicPayload : GoValue → GoValue
+  | .nil => panicNilValue
+  | v => v
+
+/-- Constructive ASCII decode for abort rendering. Core's
+`String.fromUTF8?` depends on `Classical.choice` (its validation proofs),
+and the machine-correspondence theorems are pinned constructive
+(`proofs/Audit.lean`) — so abort rendering covers ASCII payloads and
+fails closed on any byte ≥ 0x80: a non-ASCII payload aborting is a
+visible unsupported, never a wrong message. -/
+def asciiString? (bytes : Array UInt8) : Option String :=
+  bytes.foldl
+    (fun acc b => acc.bind fun out =>
+      if b < 0x80 then some (out.push (Char.ofNat b.toNat)) else none)
+    (some "")
+
+/-- Render a panic payload as Go's first abort line renders it (after
+`panic: `). `none` for payload shapes whose Go rendering is not pinned
+(e.g. pointer values print machine addresses) — the terminal rule fails
+closed there (arc doc §A3). -/
+def renderPanicPayload : GoValue → Option String
+  | .interface "*runtime.PanicNilError" .unit => some "nil"
+  | .interface _ (.string s) => asciiString? s.bytes
+  | .interface _ (.int v _) => some (toString v)
+  | .interface _ (.bool b) => some (if b then "true" else "false")
+  | _ => none
+
+/-- Go's first abort line for a panic chain (arc doc §A3, oracle-pinned):
+the head payload, plus ` [recovered, repanicked]` when the head was
+recovered and the immediately following entry re-panicked an equal value
+(Go compares by interface equality — semantic, not identity), or
+` [recovered]` when merely recovered. -/
+def renderPanicHead (first : PanicEntry) (rest : List PanicEntry) : Option String := do
+  let base ← renderPanicPayload first.value
+  if first.recovered then
+    match rest with
+    | e :: _ =>
+        if e.value == first.value then
+          return base ++ " [recovered, repanicked]"
+        else
+          return base ++ " [recovered]"
+    | [] => return base ++ " [recovered]"
+  else
+    return base
+
+/-- Mark the newest (last) chain entry recovered, returning its payload —
+what `recover()` yields. `none` if the chain is empty or the newest entry
+is already recovered (Go: a second `recover` in the same deferred call
+returns nil — `panic-recover/recover-twice`). -/
+def markNewestRecovered : List PanicEntry → Option (GoValue × List PanicEntry)
+  | [] => none
+  | [e] =>
+      if e.recovered then none
+      else some (e.value, [{ e with recovered := true }])
+  | e :: rest =>
+      (markNewestRecovered rest).map (fun (v, rest') => (v, e :: rest'))
+
+/-- Whether the newest (last) chain entry has been recovered — decides
+whether a completed panic-path deferred call cancels the unwind. -/
+def chainNewestRecovered (chain : List PanicEntry) : Bool :=
+  (chain.getLast?.map (·.recovered)).getD false
+
 /-! ## Continuations and configurations -/
 
 /-- Continuations. The statement frames (`seq`/`loop`/`frame`) are exactly
@@ -742,6 +838,18 @@ inductive Cont where
   as everywhere in the CEK design). -/
   | mapIterK (keyVar valVar : Option String) (keyTy valTy : Ty) (body : Stmt)
       (remaining : Array (GoValue × GoValue)) (env : LocalEnv) (k : Cont)
+  /-- Awaiting a `panic` payload value. -/
+  | panicArgK (k : Cont)
+  /-- The suspended panic chain while a panic-path deferred call runs
+  above it (arc doc §A1). Built ONLY by the panic-drain rule, directly
+  under the deferred call's frame — which is what makes the `recover`
+  walk's "cross exactly one frame onto a marker" test Go's
+  called-directly-by-a-deferred-function rule. On the deferred call's
+  completion: newest entry recovered → the chain is discarded and the
+  frame below resumes its normal exit path; otherwise unwinding resumes.
+  A NEW panic unwinding through the marker merges behind the suspended
+  chain. -/
+  | panicResumeK (chain : List PanicEntry) (k : Cont)
 
 /-- The continuation for entering a `.seqn`: under a same-env governing
 sequence, SPLICE the statements into it (D1) — Go statement lists splice
@@ -771,6 +879,85 @@ def pushDefer (d : GoValue × List GoValue) : Cont → Option Cont
       (pushDefer d k).map (Cont.mapIterK kv vv kt vt b rem env)
   | _ => none
 
+/-- One unwinding step through a continuation frame: every frame that is
+not a call frame, a suspended-chain marker, or `.stop` is stripped with
+the chain unchanged — statement glue AND expression frames (a panic can
+surface mid-expression, unlike `break`/`continue`/`return`). The three
+`none` heads each have their own unwinding rules. -/
+def panicPassthrough : Cont → Option Cont
+  | .seq _ _ k => some k
+  | .loop _ _ _ k => some k
+  | .breakableK k => some k
+  | .mapIterK _ _ _ _ _ _ _ k => some k
+  | .strictK _ _ _ _ k => some k
+  | .andK _ _ k => some k
+  | .orK _ _ k => some k
+  | .boolK k => some k
+  | .ifK _ _ _ k => some k
+  | .whileK _ _ _ k => some k
+  | .assignTargetK _ _ k => some k
+  | .assignStoreK _ k => some k
+  | .callTargetsK _ _ _ _ _ k => some k
+  | .callArgsK _ _ _ _ _ k => some k
+  | .stmtOpK _ _ _ _ _ k => some k
+  | .mapRangeK _ _ _ _ _ _ k => some k
+  | .callValTargetsK _ _ _ _ _ k => some k
+  | .callValCalleeK _ _ _ k => some k
+  | .callValArgsK _ _ _ _ _ k => some k
+  | .deferCalleeK _ _ k => some k
+  | .deferArgsK _ _ _ _ k => some k
+  | .panicArgK k => some k
+  | .frame _ _ _ _ => none
+  | .panicResumeK _ _ => none
+  | .stop => none
+
+/-- The `recover()` builtin (arc doc §A1): walk the continuation without
+crossing more than one call frame; recover applies exactly when the
+continuation directly under the first `.frame` is a `panicResumeK` whose
+newest entry is not yet recovered — the shape the panic-drain rule builds
+and nothing else builds. Returns the recovered payload and the
+continuation with the entry marked, or `.nil` and the continuation
+unchanged (never stuck: `recover` outside a panic-run deferred function
+is a defined no-op in Go). -/
+def recoverResult : Cont → GoValue × Cont
+  | .frame t r ds (.panicResumeK chain k) =>
+      match markNewestRecovered chain with
+      | some (v, chain') => (v, .frame t r ds (.panicResumeK chain' k))
+      | none => (.nil, .frame t r ds (.panicResumeK chain k))
+  | k@(.frame _ _ _ _) => (.nil, k)
+  | k@.stop => (.nil, k)
+  | k@(.panicResumeK _ _) => (.nil, k)
+  | .seq a b k => let (v, k') := recoverResult k; (v, .seq a b k')
+  | .loop a b c k => let (v, k') := recoverResult k; (v, .loop a b c k')
+  | .breakableK k => let (v, k') := recoverResult k; (v, .breakableK k')
+  | .mapIterK a b c d e f g k =>
+      let (v, k') := recoverResult k; (v, .mapIterK a b c d e f g k')
+  | .strictK a b c d k => let (v, k') := recoverResult k; (v, .strictK a b c d k')
+  | .andK a b k => let (v, k') := recoverResult k; (v, .andK a b k')
+  | .orK a b k => let (v, k') := recoverResult k; (v, .orK a b k')
+  | .boolK k => let (v, k') := recoverResult k; (v, .boolK k')
+  | .ifK a b c k => let (v, k') := recoverResult k; (v, .ifK a b c k')
+  | .whileK a b c k => let (v, k') := recoverResult k; (v, .whileK a b c k')
+  | .assignTargetK a b k => let (v, k') := recoverResult k; (v, .assignTargetK a b k')
+  | .assignStoreK a k => let (v, k') := recoverResult k; (v, .assignStoreK a k')
+  | .callTargetsK a b c d e k =>
+      let (v, k') := recoverResult k; (v, .callTargetsK a b c d e k')
+  | .callArgsK a b c d e k =>
+      let (v, k') := recoverResult k; (v, .callArgsK a b c d e k')
+  | .stmtOpK a b c d e k => let (v, k') := recoverResult k; (v, .stmtOpK a b c d e k')
+  | .mapRangeK a b c d e f k =>
+      let (v, k') := recoverResult k; (v, .mapRangeK a b c d e f k')
+  | .callValTargetsK a b c d e k =>
+      let (v, k') := recoverResult k; (v, .callValTargetsK a b c d e k')
+  | .callValCalleeK a b c k =>
+      let (v, k') := recoverResult k; (v, .callValCalleeK a b c k')
+  | .callValArgsK a b c d e k =>
+      let (v, k') := recoverResult k; (v, .callValArgsK a b c d e k')
+  | .deferCalleeK a b k => let (v, k') := recoverResult k; (v, .deferCalleeK a b k')
+  | .deferArgsK a b c d k =>
+      let (v, k') := recoverResult k; (v, .deferArgsK a b c d k')
+  | .panicArgK k => let (v, k') := recoverResult k; (v, .panicArgK k')
+
 /-- Control configurations (the Iris `Expr` projection; the `ExecState` is
 the paired `Step` component, as before). New over the old relation:
 `evalE` (expression under evaluation) and `retV` (value delivery). The
@@ -784,15 +971,25 @@ inductive Config where
   | breaking (k : Cont)
   | continuing (k : Cont)
   | returning (k : Cont)
+  /-- Unwinding: a panic (chain, arc doc §A1) travelling outward through
+  the continuation. Frames strip; call frames run their defers (which is
+  where `recover` can catch it); `.stop` renders the terminal abort. -/
+  | panicking (chain : List PanicEntry) (k : Cont)
+  /-- The terminal abort: Go's first `panic: ` line. No outgoing rule —
+  which is exactly what keeps `Progress`'s statement meaning "verified ⇒
+  no UNRECOVERED panic" (the unwinding arc retired panic-as-teleport;
+  `.panicking` is the recoverable, non-terminal form). -/
   | panicked (msg : String)
 
 /-! ## The step relation -/
 
 /-- One machine step over `(control, state)` pairs. No rule applies to
 malformed or unmodeled configurations: they are stuck (fail closed). A
-panic step abandons the continuation — `.panicked` is terminal, so panic
-propagation needs no rules. Nondeterministic steps (map iteration order,
-append capacity) arrive at S2 with their statements. -/
+panic step starts UNWINDING (`.panicking` carries the chain and the
+continuation): defers run on the panic path, `recover` in a panic-run
+deferred call cancels the unwind, and only an unrecovered chain reaching
+`.stop` becomes the terminal `.panicked`. Nondeterministic steps (map
+iteration order, append capacity) arrive at S2 with their statements. -/
 inductive Step : Config → ExecState → Config → ExecState → Prop where
   -- Expression entry
   | evalVar {id loc v env k s} :
@@ -824,7 +1021,12 @@ inductive Step : Config → ExecState → Config → ExecState → Prop where
   | evalStrictNullaryPanic {e op msg env k s} :
       strictPlan e = some (op, []) →
       applyStrictOp s op [] = .error (.panic msg) →
-      Step (.evalE e env k) s (.panicked msg) s
+      Step (.evalE e env k) s (.panicking [⟨runtimeErrorValue msg, false⟩] k) s
+  /-- `recover()`: the walk-and-mark is one deterministic function of the
+  continuation (arc doc §A1); never stuck. -/
+  | evalRecover {env k v k' s} :
+      recoverResult k = (v, k') →
+      Step (.evalE .recoverCall env k) s (.retV v k') s
   | evalAnd {l r env k s} :
       Step (.evalE (.and l r) env k) s (.evalE l env (.andK r env k)) s
   | evalOr {l r env k s} :
@@ -838,7 +1040,8 @@ inductive Step : Config → ExecState → Config → ExecState → Prop where
       Step (.retV v (.strictK op done [] env k)) s (.retV out k) s'
   | strictApplyPanic {op done v msg env k s} :
       applyStrictOp s op (v :: done).reverse = .error (.panic msg) →
-      Step (.retV v (.strictK op done [] env k)) s (.panicked msg) s
+      Step (.retV v (.strictK op done [] env k)) s
+        (.panicking [⟨runtimeErrorValue msg, false⟩] k) s
   -- Short-circuit frames
   | andTrue {r env k s} :
       Step (.retV (.bool true) (.andK r env k)) s (.evalE r env (.boolK k)) s
@@ -884,13 +1087,15 @@ inductive Step : Config → ExecState → Config → ExecState → Prop where
         (.evalE rhs env (.assignStoreK loc k)) s
   | assignTargetPanic {v msg rhs env k s} :
       valueAsLoc v = .error (.panic msg) →
-      Step (.retV v (.assignTargetK rhs env k)) s (.panicked msg) s
+      Step (.retV v (.assignTargetK rhs env k)) s
+        (.panicking [⟨runtimeErrorValue msg, false⟩] k) s
   | assignStore {v loc k s s'} :
       storeLoc s loc v = .ok s' →
       Step (.retV v (.assignStoreK loc k)) s (.next k) s'
   | assignStorePanic {v loc msg k s} :
       storeLoc s loc v = .error (.panic msg) →
-      Step (.retV v (.assignStoreK loc k)) s (.panicked msg) s
+      Step (.retV v (.assignStoreK loc k)) s
+        (.panicking [⟨runtimeErrorValue msg, false⟩] k) s
   -- Conditionals
   | ifStmt {c t e env k s} :
       Step (.exec (.ifThenElse c t e) env k) s (.evalE c env (.ifK t e env k)) s
@@ -970,7 +1175,7 @@ inductive Step : Config → ExecState → Config → ExecState → Prop where
   | callTargetPanic {v msg fid locs pending args env k s} :
       valueAsLoc v = .error (.panic msg) →
       Step (.retV v (.callTargetsK fid locs pending args env k)) s
-        (.panicked msg) s
+        (.panicking [⟨runtimeErrorValue msg, false⟩] k) s
   | callArgNext {v fid locs vals a rest env k s} :
       Step (.retV v (.callArgsK fid locs vals (a :: rest) env k)) s
         (.evalE a env (.callArgsK fid locs (vals ++ [v]) rest env k)) s
@@ -1007,13 +1212,15 @@ inductive Step : Config → ExecState → Config → ExecState → Prop where
   | stmtOpTargetPanic {op nt done v msg e rest env k s} :
       done.length < nt →
       valueAsLoc v = .error (.panic msg) →
-      Step (.retV v (.stmtOpK op nt done (e :: rest) env k)) s (.panicked msg) s
+      Step (.retV v (.stmtOpK op nt done (e :: rest) env k)) s
+        (.panicking [⟨runtimeErrorValue msg, false⟩] k) s
   | stmtOpApply {op nt done v env k s s' ch ch'} :
       applyStmtOp s ch op nt (v :: done).reverse = .ok (s', ch') →
       Step (.retV v (.stmtOpK op nt done [] env k)) s (.next k) s'
   | stmtOpApplyPanic {op nt done v msg env k s ch} :
       applyStmtOp s ch op nt (v :: done).reverse = .error (.panic msg) →
-      Step (.retV v (.stmtOpK op nt done [] env k)) s (.panicked msg) s
+      Step (.retV v (.stmtOpK op nt done [] env k)) s
+        (.panicking [⟨runtimeErrorValue msg, false⟩] k) s
   -- Map iteration (S2): snapshot, then nondeterministic pick-next — any
   -- in-range index is a legal step (the executable instantiates the pick
   -- from `Choices`, one choice per remaining entry).
@@ -1065,7 +1272,7 @@ inductive Step : Config → ExecState → Config → ExecState → Prop where
   | callValTargetPanic {v msg callee locs pending args env k s} :
       valueAsLoc v = .error (.panic msg) →
       Step (.retV v (.callValTargetsK callee locs pending args env k)) s
-        (.panicked msg) s
+        (.panicking [⟨runtimeErrorValue msg, false⟩] k) s
   /-- The callee value arrives (funcVal or nil); start the arguments. Go
   evaluates the callee and ALL arguments before the nil check fires. -/
   | callValCalleeArg {cv locs a rest env k s} :
@@ -1080,7 +1287,8 @@ inductive Step : Config → ExecState → Config → ExecState → Prop where
   /-- Nullary call of a nil function value: nothing to evaluate, panic. -/
   | callValCalleeNil {locs env k s} :
       Step (.retV .nil (.callValCalleeK locs [] env k)) s
-        (.panicked "runtime error: invalid memory address or nil pointer dereference") s
+        (.panicking [⟨runtimeErrorValue
+          "runtime error: invalid memory address or nil pointer dereference", false⟩] k) s
   | callValArgNext {v cv locs vals a rest env k s} :
       Step (.retV v (.callValArgsK cv locs vals (a :: rest) env k)) s
         (.evalE a env (.callValArgsK cv locs (vals ++ [v]) rest env k)) s
@@ -1091,7 +1299,8 @@ inductive Step : Config → ExecState → Config → ExecState → Prop where
   /-- All arguments evaluated, callee is nil: NOW the invocation panics. -/
   | callValArgsNil {v locs vals env k s} :
       Step (.retV v (.callValArgsK .nil locs vals [] env k)) s
-        (.panicked "runtime error: invalid memory address or nil pointer dereference") s
+        (.panicking [⟨runtimeErrorValue
+          "runtime error: invalid memory address or nil pointer dereference", false⟩] k) s
   -- Frame exit: explicit return and fall-through perform the same
   -- pinned-location result read and caller-target stores.
   | frameReturn {targets results k s vs s'} :
@@ -1118,13 +1327,19 @@ inductive Step : Config → ExecState → Config → ExecState → Prop where
         (.exec func.body frameEnv
           (.frame [] [] [] (.frame targets results ds k))) s'
   /-- Invoking a nil deferred call panics at DRAIN time (Go: registration
-  succeeded; the panic belongs to the invocation). -/
+  succeeded; the panic belongs to the invocation). The panic starts
+  unwinding AT THIS FRAME with its remaining defers — which run, and may
+  recover (`defer/defer-nil-function-recover-order` pins the order). -/
   | frameDeferNilFall {targets results args ds k s} :
       Step (.next (.frame targets results ((.nil, args) :: ds) k)) s
-        (.panicked "runtime error: invalid memory address or nil pointer dereference") s
+        (.panicking [⟨runtimeErrorValue
+          "runtime error: invalid memory address or nil pointer dereference", false⟩]
+          (.frame targets results ds k)) s
   | frameDeferNilReturn {targets results args ds k s} :
       Step (.returning (.frame targets results ((.nil, args) :: ds) k)) s
-        (.panicked "runtime error: invalid memory address or nil pointer dereference") s
+        (.panicking [⟨runtimeErrorValue
+          "runtime error: invalid memory address or nil pointer dereference", false⟩]
+          (.frame targets results ds k)) s
   -- Registering a deferred call: callee, then arguments, evaluated NOW.
   | deferStmt {callee args env k s} :
       Step (.exec (.deferCall callee args) env k) s
@@ -1143,6 +1358,63 @@ inductive Step : Config → ExecState → Config → ExecState → Prop where
   | deferArgsDone {v cv vals env k k' s} :
       pushDefer (cv, vals ++ [v]) k = some k' →
       Step (.retV v (.deferArgsK cv vals [] env k)) s (.next k') s
+  -- The unwinding arc (`docs/2026-07-25_unwinding-arc.md` §A1): panic as
+  -- a travelling configuration.
+  /-- `panic(v)`: evaluate the payload (already `any`-converted by the
+  lowering), then start unwinding. -/
+  | panicStmt {e env k s} :
+      Step (.exec (.panicStmt e) env k) s (.evalE e env (.panicArgK k)) s
+  | panicArgValue {v k s} :
+      Step (.retV v (.panicArgK k)) s (.panicking [⟨panicPayload v, false⟩] k) s
+  /-- Unwinding strips every non-frame, non-marker continuation. -/
+  | panicUnwind {chain k k' s} :
+      panicPassthrough k = some k' →
+      Step (.panicking chain k) s (.panicking chain k') s
+  /-- Unwinding past a frame with no (remaining) defers: results are NOT
+  read — the call did not return. -/
+  | panicFrameEmpty {chain targets results k s} :
+      Step (.panicking chain (.frame targets results [] k)) s
+        (.panicking chain k) s
+  /-- Defers RUN on the panic path: the deferred call executes above a
+  `panicResumeK` carrying the suspended chain — the shape `recover`'s
+  walk detects. Results discarded, as on the normal drain. -/
+  | panicFrameDefer {chain targets results fid captured args ds k s func frameEnv resultLocs s'} :
+      enterFrame s fid (captured ++ args) = .ok (func, frameEnv, resultLocs, s') →
+      Step (.panicking chain (.frame targets results ((.funcVal fid captured, args) :: ds) k)) s
+        (.exec func.body frameEnv
+          (.frame [] [] [] (.panicResumeK chain (.frame targets results ds k)))) s'
+  /-- A nil deferred callee invoked DURING unwinding: the invocation's
+  nil-dereference panic joins the chain (newest last) and this frame's
+  remaining defers keep draining. -/
+  | panicFrameDeferNil {chain targets results args ds k s} :
+      Step (.panicking chain (.frame targets results ((.nil, args) :: ds) k)) s
+        (.panicking (chain ++ [⟨runtimeErrorValue
+          "runtime error: invalid memory address or nil pointer dereference", false⟩])
+          (.frame targets results ds k)) s
+  /-- A NEW panic unwinding through a suspended chain's marker merges
+  behind it — this single rule produces Go's chained abort output
+  (`panic: first ⏎ panic: second`, `… [recovered] ⏎ …`). -/
+  | panicResumeMerge {chain suspended k s} :
+      Step (.panicking chain (.panicResumeK suspended k)) s
+        (.panicking (suspended ++ chain) k) s
+  /-- A panic-path deferred call completed and the newest chain entry was
+  recovered: the unwind is cancelled, the whole chain discarded, and the
+  frame below resumes its NORMAL exit path (drain remaining defers, then
+  read pinned results — Go's "the surrounding function returns
+  normally"). -/
+  | panicResumeRecovered {chain k s} :
+      chainNewestRecovered chain = true →
+      Step (.next (.panicResumeK chain k)) s (.next k) s
+  /-- …not recovered: unwinding resumes below. -/
+  | panicResumeContinue {chain k s} :
+      chainNewestRecovered chain = false →
+      Step (.next (.panicResumeK chain k)) s (.panicking chain k) s
+  /-- An unrecovered chain at `.stop`: the terminal abort, rendered as
+  Go's first `panic: ` line (arc doc §A3). Chains whose head payload has
+  no pinned rendering have no rule — fail closed. -/
+  | panicAbort {first rest msg s} :
+      renderPanicHead first rest = some msg →
+      Step (.panicking (first :: rest) .stop) s (.panicked msg) s
 
 /-- Reflexive-transitive closure of `Step`. -/
 inductive Steps : Config → ExecState → Config → ExecState → Prop where
