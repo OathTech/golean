@@ -133,6 +133,18 @@ partial def decodeExpr (path : String) (json : Json) : LowerM Expr := do
       pure (.stringLit { bytes })
   | "nil" => pure (.nil (← optType path obj))
   | "recover" => pure .recoverCall
+  | "bytes-from-string" =>
+      pure (.bytesFromString (← decodeExpr s!"{path}.x" (← StrictJson.field path obj "x")))
+  | "min" =>
+      let args ← StrictJson.array s!"{path}.args" (← StrictJson.field path obj "args")
+      pure (.minOf (← args.mapIdxM (fun i a => decodeExpr s!"{path}.args[{i}]" a)))
+  | "max" =>
+      let args ← StrictJson.array s!"{path}.args" (← StrictJson.field path obj "args")
+      pure (.maxOf (← args.mapIdxM (fun i a => decodeExpr s!"{path}.args[{i}]" a)))
+  | "string-from-bytes" =>
+      pure (.stringFromByteSlice (← decodeExpr s!"{path}.x" (← StrictJson.field path obj "x")))
+  | "string-from-rune" =>
+      pure (.stringFromRune (← decodeExpr s!"{path}.x" (← StrictJson.field path obj "x")))
   | "ref" =>
       pure (.ref (← StrictJson.string s!"{path}.id" (← StrictJson.field path obj "id")))
   | "deref" =>
@@ -436,6 +448,17 @@ partial def decodeStmt (results : Array Param) (path : String) (json : Json) : L
       let keyTy ← decodeTy s!"{path}.keyType" (← StrictJson.field path obj "keyType")
       let valTy ← decodeTy s!"{path}.valueType" (← StrictJson.field path obj "valueType")
       pure (.seqn ((← declaresOf #[t]).push (.makeMap t.assignee keyTy valTy none)))
+  | "map-delete" =>
+      let base ← decodeExpr s!"{path}.base" (← StrictJson.field path obj "base")
+      let index ← decodeExpr s!"{path}.index" (← StrictJson.field path obj "index")
+      let keyTy ← decodeTy s!"{path}.keyType" (← StrictJson.field path obj "keyType")
+      pure (.mapDelete base index keyTy)
+  | "clear-map" =>
+      pure (.clearMap (← decodeExpr s!"{path}.base" (← StrictJson.field path obj "base")))
+  | "clear-slice" =>
+      let base ← decodeExpr s!"{path}.base" (← StrictJson.field path obj "base")
+      let elemTy ← decodeTy s!"{path}.elem" (← StrictJson.field path obj "elem")
+      pure (.clearSlice base elemTy)
   | "append" =>
       let t ← decodeTarget s!"{path}.target" (← StrictJson.field path obj "target")
       let elemTy ← decodeTy s!"{path}.elem" (← StrictJson.field path obj "elem")
@@ -765,6 +788,25 @@ private def decodeTypeDef (path : String) (json : Json) : LowerM (TypeId × Type
 private def decodeFunc (path : String) (json : Json) : LowerM Func := do
   let obj ← StrictJson.obj path json
   let name ← StrictJson.string s!"{path}.name" (← StrictJson.field path obj "name")
+  -- A QUARANTINED declaration (per-decl fail-closed, slice 1 of arc
+  -- wrong-answers-builtins): the frontend could not lower this function
+  -- (e.g. generics, floats), but other declarations in the package can
+  -- still run. The stub's params carry `Ty.unsupported`, so a CALL fails
+  -- closed with the original reason at bind time (arity preserved); a
+  -- nullary call hits the unsupported body. Merely being declared — or
+  -- taken as a value — is fine.
+  match obj.get? "unsupported" with
+  | some r =>
+      let reason ← StrictJson.string s!"{path}.unsupported" r
+      -- The marker prefix lets the differential runner classify a call
+      -- into a stub as the frontend coverage gap it is (stage
+      -- frontend-export), keeping the fidelity ledger for machine gaps.
+      let reason := s!"frontend-quarantined: {reason}"
+      let arity ← StrictJson.nat s!"{path}.arity" (← StrictJson.field path obj "arity")
+      let args := (Array.range arity).map
+        (fun i => ({ id := s!"$stub{i}", typ := .unsupported reason } : Param))
+      pure { id := ⟨name⟩, args, results := #[], body := .unsupported reason }
+  | none =>
   let params ← StrictJson.array s!"{path}.params" (← StrictJson.field path obj "params")
   let results ← StrictJson.array s!"{path}.results" (← StrictJson.field path obj "results")
   let args ← params.mapIdxM (fun i p => decodeParam s!"{path}.params[{i}]" p)

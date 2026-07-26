@@ -292,6 +292,14 @@ while IFS=$'\t' read -r id go_dir function_name arg_ints expected_status feature
     lean_status=$?
   fi
   if [[ "$lean_observation" != *"\"status\":\"$expected_status\""* ]]; then
+    # A call into a frontend-QUARANTINED stub (per-decl fail-closed for
+    # declarations the frontend cannot lower) is a frontend coverage gap,
+    # not a machine-fidelity failure — classify it as the export stage so
+    # the untriaged ledger keeps meaning "machine gaps".
+    if [[ "$lean_observation" == *'"status":"unsupported"'* && "$lean_observation" == *"frontend-quarantined: "* ]]; then
+      report_fail "$id" "$features" "frontend-export" "$lean_observation"
+      continue
+    fi
     report_fail "$id" "$features" "lean-observation" "expected status $expected_status, got $lean_observation"
     continue
   fi

@@ -6,6 +6,7 @@ package main
 // yet modeled return an unsupported error (fail closed).
 
 import (
+	"errors"
 	"go/ast"
 	"go/constant"
 	"go/token"
@@ -46,6 +47,29 @@ func (e *emitter) emitProgram(files []*ast.File) (map[string]any, error) {
 				e.liftSeq = 0
 				fn, err := e.emitFuncDecl(d)
 				if err != nil {
+					// Per-decl quarantine: an UNSUPPORTED plain function
+					// becomes a stub that fails closed when CALLED (params
+					// typed unsupported carry the reason; arity preserved),
+					// so one generic/float helper no longer poisons every
+					// other subject in its file. Methods and non-unsupported
+					// errors still fail the whole export.
+					var u unsupported
+					if errors.As(err, &u) && d.Recv == nil {
+						e.lifted = nil
+						arity := 0
+						if d.Type.Params != nil {
+							for _, f := range d.Type.Params.List {
+								n := len(f.Names)
+								if n == 0 {
+									n = 1
+								}
+								arity += n
+							}
+						}
+						funcs = append(funcs, map[string]any{
+							"name": d.Name.Name, "unsupported": u.what, "arity": arity})
+						continue
+					}
 					return nil, err
 				}
 				funcs = append(funcs, e.lifted...)
@@ -334,8 +358,15 @@ func (e *emitter) emitStmt(s ast.Stmt) (any, error) {
 		// statement (no value needed, so no hoist).
 		if call, ok := st.X.(*ast.CallExpr); ok {
 			if id, ok := call.Fun.(*ast.Ident); ok {
-				if _, isBuiltin := e.info.Uses[id].(*types.Builtin); isBuiltin && id.Name == "panic" {
-					return e.emitPanicStmt(call)
+				if _, isBuiltin := e.info.Uses[id].(*types.Builtin); isBuiltin {
+					switch id.Name {
+					case "panic":
+						return e.emitPanicStmt(call)
+					case "delete":
+						return e.emitDeleteStmt(call)
+					case "clear":
+						return e.emitClearStmt(call)
+					}
 				}
 			}
 			node, _, err := e.emitCallNode(call)
@@ -622,7 +653,19 @@ func (e *emitter) emitAssign(st *ast.AssignStmt) (any, error) {
 	}
 	if len(st.Rhs) == 1 {
 		if call, ok := st.Rhs[0].(*ast.CallExpr); ok {
-			if captures {
+			// Builtins never produce multi-value results and their emitters
+			// may HOIST statements as a side effect — the speculative
+			// emitCallNode below would run those effects twice when it
+			// falls through (copy-edge/eval-order caught copy executing
+			// twice). Route builtin RHSes through the generic single-emit
+			// path.
+			isBuiltinCall := false
+			if id, ok := call.Fun.(*ast.Ident); ok {
+				if _, isB := e.info.Uses[id].(*types.Builtin); isB {
+					isBuiltinCall = true
+				}
+			}
+			if !isBuiltinCall && captures {
 				// `x := f(x)`-shaped: the call's arguments would read the
 				// fresh cells. Fail closed until the arg-level pre-binding
 				// lands.
@@ -638,7 +681,7 @@ func (e *emitter) emitAssign(st *ast.AssignStmt) (any, error) {
 			// statement; a SINGLE-value call onto an addressed target runs
 			// the call first (multi-assign/index-target-rhs-call-order), so
 			// it falls through to the generic hoist path below.
-			if allIdentTargets || isMultiValue {
+			if !isBuiltinCall && (allIdentTargets || isMultiValue) {
 				node, effectful, err := e.emitCallNode(call)
 				if err != nil {
 					return nil, err
@@ -2061,11 +2104,27 @@ func (e *emitter) emitCallNode(c *ast.CallExpr) (any, bool, error) {
 		if len(c.Args) != 1 {
 			return nil, false, unsup("conversion with %d arguments", len(c.Args))
 		}
-		target, err := e.emitType(e.info.TypeOf(c))
+		arg, err := e.emitExpr(c.Args[0])
 		if err != nil {
 			return nil, false, err
 		}
-		arg, err := e.emitExpr(c.Args[0])
+		// String/byte/rune conversions have dedicated machine operators —
+		// the generic convert op covers only scalar conversions (slice 1,
+		// arc wrong-answers-builtins; these were latent backlog reds).
+		tt := e.info.TypeOf(c).Underlying()
+		ot := e.info.TypeOf(c.Args[0]).Underlying()
+		if isByteSlice(tt) && isStringType(ot) {
+			return map[string]any{"expr": "bytes-from-string", "x": arg}, false, nil
+		}
+		if isStringType(tt) && isByteSlice(ot) {
+			return map[string]any{"expr": "string-from-bytes", "x": arg}, false, nil
+		}
+		if isStringType(tt) {
+			if b, ok := ot.(*types.Basic); ok && b.Info()&types.IsInteger != 0 {
+				return map[string]any{"expr": "string-from-rune", "x": arg}, false, nil
+			}
+		}
+		target, err := e.emitType(e.info.TypeOf(c))
 		if err != nil {
 			return nil, false, err
 		}
@@ -2372,6 +2431,23 @@ func (e *emitter) emitBuiltin(c *ast.CallExpr, name string) (any, bool, error) {
 		return e.emitAppend(c)
 	case "copy":
 		return e.emitCopy(c)
+	case "min", "max":
+		// Pure strict operators over ints/strings; constant calls fold
+		// before reaching here (go/types gives them a constant value, so
+		// emitCallNode's conversion/constant paths never call us... but a
+		// non-constant call lands here).
+		if len(c.Args) == 0 {
+			return nil, false, unsup("%s with no arguments", name)
+		}
+		args := []any{}
+		for _, a := range c.Args {
+			w, err := e.emitExpr(a)
+			if err != nil {
+				return nil, false, err
+			}
+			args = append(args, w)
+		}
+		return map[string]any{"expr": name, "args": args}, false, nil
 	case "recover":
 		if len(c.Args) != 0 {
 			return nil, false, unsup("recover with %d arguments", len(c.Args))
@@ -2432,6 +2508,54 @@ func (e *emitter) emitPanicStmt(c *ast.CallExpr) (any, error) {
 	return map[string]any{"stmt": "panic", "value": value, "wrap": wrap}, nil
 }
 
+// emitDeleteStmt lowers `delete(m, k)` (base evaluates before the key; a
+// nil map is a no-op that still evaluates both — the machine op's rule).
+func (e *emitter) emitDeleteStmt(c *ast.CallExpr) (any, error) {
+	if len(c.Args) != 2 {
+		return nil, unsup("delete with %d arguments", len(c.Args))
+	}
+	mt, ok := e.info.TypeOf(c.Args[0]).Underlying().(*types.Map)
+	if !ok {
+		return nil, unsup("delete on non-map")
+	}
+	base, err := e.emitExpr(c.Args[0])
+	if err != nil {
+		return nil, err
+	}
+	index, err := e.emitExpr(c.Args[1])
+	if err != nil {
+		return nil, err
+	}
+	keyTy, err := e.emitType(mt.Key())
+	if err != nil {
+		return nil, err
+	}
+	return map[string]any{"stmt": "map-delete", "base": base, "index": index, "keyType": keyTy}, nil
+}
+
+// emitClearStmt lowers `clear(m)` / `clear(s)` onto the machine's clear ops.
+func (e *emitter) emitClearStmt(c *ast.CallExpr) (any, error) {
+	if len(c.Args) != 1 {
+		return nil, unsup("clear with %d arguments", len(c.Args))
+	}
+	base, err := e.emitExpr(c.Args[0])
+	if err != nil {
+		return nil, err
+	}
+	switch u := e.info.TypeOf(c.Args[0]).Underlying().(type) {
+	case *types.Map:
+		return map[string]any{"stmt": "clear-map", "base": base}, nil
+	case *types.Slice:
+		elemTy, err := e.emitType(u.Elem())
+		if err != nil {
+			return nil, err
+		}
+		return map[string]any{"stmt": "clear-slice", "base": base, "elem": elemTy}, nil
+	default:
+		return nil, unsup("clear on %s", e.info.TypeOf(c.Args[0]))
+	}
+}
+
 // deferNoopName is the synthetic function a `defer recover()` defers — a Go
 // identifier cannot contain '$', so it cannot collide with user functions.
 const deferNoopName = "$deferRecoverNoop"
@@ -2451,6 +2575,22 @@ func (e *emitter) emitDeferNoop() any {
 		"args": []any{}}
 }
 
+// isByteSlice reports whether an underlying type is []byte/[]uint8.
+func isByteSlice(t types.Type) bool {
+	sl, ok := t.(*types.Slice)
+	if !ok {
+		return false
+	}
+	b, ok := sl.Elem().Underlying().(*types.Basic)
+	return ok && b.Kind() == types.Uint8
+}
+
+// isStringType reports whether an underlying type is string.
+func isStringType(t types.Type) bool {
+	b, ok := t.(*types.Basic)
+	return ok && b.Info()&types.IsString != 0
+}
+
 // byteSliceOrWrappedString emits a []byte-typed operand: a string-typed
 // expression wraps in the []byte conversion (append(b, s...) and
 // copy(b, s) read the string's bytes; the fresh backing is invisible —
@@ -2460,10 +2600,8 @@ func (e *emitter) byteSliceOrWrappedString(x ast.Expr) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	if b, ok := e.info.TypeOf(x).Underlying().(*types.Basic); ok && b.Info()&types.IsString != 0 {
-		return map[string]any{"expr": "convert",
-			"target": map[string]any{"kind": "slice", "elem": intType("uint8")},
-			"x":      w}, nil
+	if isStringType(e.info.TypeOf(x).Underlying()) {
+		return map[string]any{"expr": "bytes-from-string", "x": w}, nil
 	}
 	return w, nil
 }

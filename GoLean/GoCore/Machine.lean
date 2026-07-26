@@ -115,6 +115,9 @@ inductive StrictOp where
   | nilLit (typ : Option Ty)
   /-- Build a closure value from its captured operands (§8). -/
   | funcValOf (fid : FuncId)
+  /-- `min`/`max` over ints or strings (Go's ordered builtins). -/
+  | minOf
+  | maxOf
   deriving Repr, BEq
 
 /-- Classify an expression as a strict-operator application: the head and
@@ -163,6 +166,8 @@ def strictPlan : Expr → Option (StrictOp × List Expr)
   | .defaultValue ty => some (.defaultValueOf ty, [])
   | .nil ty => some (.nilLit ty, [])
   | .funcVal fid captured => some (.funcValOf fid, captured.toList)
+  | .minOf args => some (.minOf, args.toList)
+  | .maxOf args => some (.maxOf, args.toList)
   | _ => none
 
 /-- Slice-expression application, after all operands are values (base, low,
@@ -345,6 +350,18 @@ def applyStrictOp (s : ExecState) : StrictOp → List GoValue → Except GoError
               validateSlice slice *> return (.int slice.cap, s)
           | other => unsupported s!"cap for non-array/slice value {repr other}"
   | .funcValOf fid, vs => return (.funcVal fid vs, s)
+  | .minOf, v :: vs => do
+      let mut best := v
+      for w in vs do
+        if ← valueLess w best then
+          best := w
+      return (best, s)
+  | .maxOf, v :: vs => do
+      let mut best := v
+      for w in vs do
+        if ← valueLess best w then
+          best := w
+      return (best, s)
   | .defaultValueOf ty, [] => do return ((← defaultValue s ty), s)
   | .nilLit typ, [] =>
       match typ with
@@ -444,6 +461,9 @@ inductive StmtOp where
   | typeAssertStmt (targetTy : Ty)
   | appendSlice (elem : Ty)
   | copySlice
+  | mapDelete (keyTy : Ty)
+  | clearMap
+  | clearSlice (elem : Ty)
   deriving Repr, BEq
 
 /-- Classify a wide statement: the head, how many leading operands are
@@ -482,6 +502,10 @@ def stmtPlan : Stmt → Option (StmtOp × Nat × List Expr)
   | .copySlice target dst src => do
       let te ← assigneeExpr target
       return (.copySlice, 1, [te, dst, src])
+  | .mapDelete base index keyTy =>
+      return (.mapDelete keyTy, 0, [base, index])
+  | .clearMap base => return (.clearMap, 0, [base])
+  | .clearSlice base elem => return (.clearSlice elem, 0, [base])
   | _ => none
 
 /-- Extract target locations from already-checked address values. -/
@@ -605,6 +629,41 @@ def applyStmtOp (s : ExecState) (choices : Choices) (op : StmtOp) (nt : Nat)
             return ((← storeLoc current tloc
               (.slice { base := some base, offset := 0, len := newLen, cap := newCap })), choices)
       | _ => stuck "malformed appendSlice operands"
+  | .mapDelete keyTy =>
+      match vs with
+      | [baseV, keyV] => do
+          let map ← valueAsMap baseV
+          let key ← normalizeValueForTy s keyTy keyV
+          match ← mapEntries s map with
+          | none => return (s, choices) -- nil map: no-op (the key evaluated)
+          | some (baseLoc, entries) =>
+              match ← mapEntryIndex? s keyTy entries key with
+              | some i =>
+                  return ((← storeLoc s baseLoc (.mapData (entries.eraseIdx! i))), choices)
+              | none => return (s, choices)
+      | _ => stuck "malformed mapDelete operands"
+  | .clearMap =>
+      match vs with
+      | [baseV] => do
+          let map ← valueAsMap baseV
+          match ← mapEntries s map with
+          | none => return (s, choices) -- nil map: no-op
+          | some (baseLoc, _) =>
+              return ((← storeLoc s baseLoc (.mapData #[])), choices)
+      | _ => stuck "malformed clearMap operands"
+  | .clearSlice elem =>
+      -- Multi-cell in one apply step, like copySlice: a granularity-ledger
+      -- entry to re-audit before any concurrency claim mentions it (R4).
+      match vs with
+      | [baseV] => do
+          let slice ← valueAsSlice baseV
+          validateSlice slice
+          let zero ← defaultValue s elem
+          let mut current := s
+          for i in [:slice.len] do
+            current ← storeLoc current (← sliceIndexLoc slice (Int.ofNat i)) zero
+          return (current, choices)
+      | _ => stuck "malformed clearSlice operands"
   | .copySlice =>
       match vs with
       | [tv, dstV, srcV] => do

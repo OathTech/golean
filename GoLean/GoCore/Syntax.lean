@@ -94,6 +94,11 @@ inductive Expr where
   | slice (base low high : Expr) (max : Option Expr)
   | length (operand : Expr) (typ : Option Ty := none)
   | capacity (operand : Expr) (typ : Option Ty := none)
+  /-- `min(...)` / `max(...)` over ints or strings (Go's ordered builtins;
+  constant-folded calls never reach here). Operands evaluate left to
+  right like any strict form. -/
+  | minOf (args : Array Expr)
+  | maxOf (args : Array Expr)
   /-- The `recover()` builtin. Not a strict operator: its value depends on
   the continuation (it recovers exactly when called directly by a deferred
   function invoked by a panic — the unwinding arc,
@@ -126,6 +131,15 @@ inductive Stmt where
   | makeSlice (target : Assignee) (elem : Ty) (len : Expr) (cap : Option Expr)
   | makeMap (target : Assignee) (key value : Ty) (initialSpace : Option Expr)
   | mapAssign (base index value : Expr) (keyTy valueTy : Ty)
+  /-- `delete(m, k)`: remove the key's entry. A nil map is a no-op — the
+  base and key still evaluate, in that order (Go; the clear-delete-edge
+  suite pins both). -/
+  | mapDelete (base index : Expr) (keyTy : Ty)
+  /-- `clear(m)`: remove every entry (nil map no-op). -/
+  | clearMap (base : Expr)
+  /-- `clear(s)`: zero the slice's visible elements IN PLACE (aliases
+  observe it). -/
+  | clearSlice (base : Expr) (elem : Ty)
   | mapLookup (target okTarget : Assignee) (base index : Expr) (keyTy valueTy : Ty)
   | typeAssert (target okTarget : Assignee) (expr : Expr) (targetTy : Ty)
   | appendSlice (target : Assignee) (elem : Ty) (slice elems : Expr)
