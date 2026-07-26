@@ -15,4 +15,9 @@
 #   answers (strings/variadic/interface classes, tracked for triage).
 # 2026-07-25 (audit response)  65 -> 64: variadic/variadic-method flipped PASS
 #   when method calls gained variadic packing (audit finding 6's fix).
-64
+# 2026-07-26 (wrong-answers slice 0)  64 -> 48: the 8 recorded
+#   differential wrong answers fixed (7 green) or refused at the
+#   boundary, and 8 mis-lowered interface cases moved to
+#   frontend-export by the implicit-conversion guard — the first
+#   16-point drop; ratchet toward 0 continues.
+48

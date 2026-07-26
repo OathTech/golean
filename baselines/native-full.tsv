@@ -1,17 +1,18 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-07-25  commit: a468a5e  frontend: native  oracle: go run
-# manifest_cases: 783  pass: 367  fail: 416
-# Re-pin reason: PRE-MERGE AUDIT RESPONSE for the unwinding arc (7
-# sustained findings = 4 distinct defects, all fixed as BUG-004; see
-# docs/BUGS.md and the arc doc build log). Drift is exactly the three
-# intentional fail-closed pins: NEW panic-named-type-abort (defined-type
-# payload identity erased by alias lowering -> frontend fails closed),
-# NEW panic-newline-abort (multi-line payload has no one-line rendering),
-# and ONE INTENTIONAL PASS->FAIL repanic-same-value-abort (the
-# [recovered, repanicked] collapse is eface IDENTITY, undecidable for
-# structurally equal payloads without an allocation-identity model; the
-# case is listed in BUG-004's Cases per the re-pin guard).
-# Corpus 781 -> 783, 368 -> 367 passing.
+# recorded: 2026-07-26  commit: 25d0fa1  frontend: native  oracle: go run
+# manifest_cases: 783  pass: 374  fail: 409
+# Re-pin reason: WRONG-ANSWERS SLICE 0 (arc wrong-answers-builtins,
+# docs/2026-07-25_arc-sequence.md item 1). All 8 recorded
+# differential-stage wrong answers addressed: 7 FIXED and now PASS
+# (Go-exact slice-bounds messages: pointer-array-slice-bounds,
+# string-slice-bounds, string-slice-low-high-panic; literal bytes on
+# the wire: interpreted-octal-hex-escapes, string-escape-bytes;
+# nil variadic packing: forwarding, no-args-vs-empty-spread), and
+# typed-nil-pointer-compare fails CLOSED at the boundary (implicit
+# interface conversion guard) pending the interfaces campaign. The
+# same guard moves 8 more already-red mis-lowered cases from
+# lean-observation to frontend-export (earlier, honest refusals).
+# Corpus 783, passing 367 -> 374. Zero regressions.
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
 PASS	arrays/array-copy	-
@@ -231,7 +232,7 @@ PASS	control-flow/switch-fallthrough-target-declares	-
 PASS	control-flow/switch-fallthrough-then-break	-
 PASS	control-flow/switch-init	-
 PASS	control-flow/switch-init-before-expression	-
-FAIL	control-flow/switch-interface-case-panic	lean-observation
+FAIL	control-flow/switch-interface-case-panic	frontend-export
 PASS	control-flow/switch-multi-case-values	-
 PASS	control-flow/switch-nested-break	-
 PASS	control-flow/switch-nested-fallthrough	-
@@ -304,7 +305,7 @@ FAIL	functions/composite-function-values/slice-call	frontend-export
 FAIL	functions/composite-function-values/struct-call	frontend-export
 FAIL	functions/composite-function-values/struct-reassign	frontend-export
 FAIL	functions/function-in-interface	frontend-export
-FAIL	functions/function-interface-compare-panic	lean-observation
+FAIL	functions/function-interface-compare-panic	frontend-export
 PASS	functions/function-nil-compare	-
 PASS	functions/function-reassign	-
 PASS	functions/higher-order-arg	-
@@ -389,9 +390,9 @@ FAIL	interfaces/error-idioms/uncomparable-panic	frontend-export
 FAIL	interfaces/error-idioms/value-equality	frontend-export
 FAIL	interfaces/error-interface	frontend-export
 FAIL	interfaces/interface-array-compare-panic	lean-observation
-FAIL	interfaces/interface-compare	lean-observation
-FAIL	interfaces/interface-compare-panic	lean-observation
-FAIL	interfaces/interface-defined-type-identity	lean-observation
+FAIL	interfaces/interface-compare	frontend-export
+FAIL	interfaces/interface-compare-panic	frontend-export
+FAIL	interfaces/interface-defined-type-identity	frontend-export
 FAIL	interfaces/interface-method-expression	frontend-export
 FAIL	interfaces/interface-method-value	frontend-export
 FAIL	interfaces/interface-nested-struct-compare-panic	lean-observation
@@ -420,7 +421,7 @@ FAIL	interfaces/typed-nil-channel	frontend-export
 FAIL	interfaces/typed-nil-composite	frontend-export
 FAIL	interfaces/typed-nil-func	frontend-export
 FAIL	interfaces/typed-nil-map	frontend-export
-FAIL	interfaces/typed-nil-pointer-compare	differential
+FAIL	interfaces/typed-nil-pointer-compare	frontend-export
 FAIL	interfaces/typed-nil-slice	frontend-export
 PASS	ints/bitwise	-
 PASS	ints/break-continue	-
@@ -481,9 +482,9 @@ PASS	maps/map-literal-bool	-
 PASS	maps/map-literal-duplicate-eval-order	-
 PASS	maps/map-literal-duplicate-runtime-key	-
 PASS	maps/map-literal-empty	-
-FAIL	maps/map-literal-interface-distinct-dynamic-type	lean-observation
-FAIL	maps/map-literal-interface-duplicate-key	lean-observation
-FAIL	maps/map-literal-interface-key-panic	lean-observation
+FAIL	maps/map-literal-interface-distinct-dynamic-type	frontend-export
+FAIL	maps/map-literal-interface-duplicate-key	frontend-export
+FAIL	maps/map-literal-interface-key-panic	frontend-export
 FAIL	maps/map-literal-nan-keys	frontend-export
 PASS	maps/map-nil-assign	-
 PASS	maps/map-nil-eq	-
@@ -594,7 +595,7 @@ PASS	pointers/nil-selector-panic	-
 FAIL	pointers/nil-value-receiver-call-panic	lean-observation
 FAIL	pointers/pointer-array-full-slice	frontend-export
 PASS	pointers/pointer-array-slice	-
-FAIL	pointers/pointer-array-slice-bounds	differential
+PASS	pointers/pointer-array-slice-bounds	-
 PASS	pointers/pointer-identity	-
 PASS	pointers/pointer-param-alias	-
 FAIL	pointers/pointer-slice-header	frontend-export
@@ -710,7 +711,7 @@ PASS	strings/concat-eval-order	-
 FAIL	strings/defined-slice-string-conversion	lean-observation
 PASS	strings/index-eval-order	-
 PASS	strings/literal-edge/interpreted-nul-byte	-
-FAIL	strings/literal-edge/interpreted-octal-hex-escapes	differential
+PASS	strings/literal-edge/interpreted-octal-hex-escapes	-
 PASS	strings/literal-edge/interpreted-simple-escapes	-
 PASS	strings/literal-edge/interpreted-unicode-escape-bytes	-
 PASS	strings/literal-edge/raw-empty-literal	-
@@ -734,15 +735,15 @@ PASS	strings/string-byte-len	-
 PASS	strings/string-byte-order-compare	-
 PASS	strings/string-call	-
 PASS	strings/string-compare	-
-FAIL	strings/string-escape-bytes	differential
+PASS	strings/string-escape-bytes	-
 PASS	strings/string-index	-
 PASS	strings/string-index-bounds	-
 PASS	strings/string-index-panic-eval-order	-
 FAIL	strings/string-int-rune	lean-observation
 PASS	strings/string-pointer	-
 PASS	strings/string-slice	-
-FAIL	strings/string-slice-bounds	differential
-FAIL	strings/string-slice-low-high-panic	differential
+PASS	strings/string-slice-bounds	-
+PASS	strings/string-slice-low-high-panic	-
 PASS	strings/string-slice-panic-eval-order	-
 FAIL	strings/string-to-rune-copy	lean-observation
 FAIL	structs/anonymous-field	lean-observation
@@ -781,12 +782,12 @@ FAIL	structs/tag-unnamed-conversion	frontend-export
 PASS	structs/tuple-field-swap	-
 PASS	structs/zero-value	-
 PASS	variadic/defined-slice-spread	-
-FAIL	variadic/forwarding	differential
+PASS	variadic/forwarding	-
 PASS	variadic/literal-args-local-slice	-
 PASS	variadic/method-variadic	-
 PASS	variadic/multi-result-call	-
 PASS	variadic/multi-result-into-fixed-variadic	-
-FAIL	variadic/no-args-vs-empty-spread	differential
+PASS	variadic/no-args-vs-empty-spread	-
 PASS	variadic/spread-aliasing	-
 FAIL	variadic/variadic	frontend-export
 PASS	variadic/variadic-function-value	-
