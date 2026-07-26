@@ -138,6 +138,17 @@ discipline:
   steps only where Go's own memory model would make the region
   single-threaded-observable; the R4 review re-audits every apply step
   against the goroutine interleaving before goroutine rules land.
+- **Added 2026-07-26 (proof-corpus catch-up arc, the audits' named
+  entries):** `clearSlice` — a store LOOP over the visible elements in
+  one apply step, the same class as `copySlice`. The defer/panic chain
+  ops: `enterFrame` inside the drain rules (`frameDefer*`,
+  `panicFrameDefer`) allocates every parameter/result cell in ONE step
+  (same as ordinary calls — listed for completeness, not new coarseness);
+  `panicResumeMerge`'s chain append and `recover`'s continuation
+  rebuild (`markNewestRecovered`) touch NO heap cells — the chain lives
+  in the continuation, which is per-goroutine by construction, so they
+  are interleaving-irrelevant at R4 (the reason the unwinding design
+  put it there). All re-audited with everything else at the R4 gate.
 
 ## 2. Locals unification: `ExecState.locals` dies
 

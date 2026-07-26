@@ -129,6 +129,8 @@ open Lean in
 #guard_msgs in #print axioms GoLean.Iris.wp_while_inv
 /-- info: 'GoLean.Iris.wp_while_eq_once' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Iris.wp_while_eq_once
+/-- info: 'GoLean.Iris.wp_recover_catch_seven' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.wp_recover_catch_seven
 /-- info: 'GoLean.Iris.GoldenSlice.wp_goldenDriver' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Iris.GoldenSlice.wp_goldenDriver
 
@@ -167,6 +169,21 @@ resources) and its invariant-opening form, both consumed by the golden
 walk. -/
 example := @GoLean.Iris.wp_frame_return_int
 example := @GoLean.Iris.wp_frame_return_int_inv
+/-- `✓` the unwinding/defer/call-value law families (proof-corpus
+catch-up arc, 2026-07-26) — witnessed AT ONCE by the recover-catch
+composition walk (`defer rec(&r); panic("boom")` provably returns 7:
+defer registration, panic entry, unwinding, the PANIC-path drain, the
+recover walk marking the chain, the write through the captured pointer,
+the cancelled unwind, and both frame exits), plus per-law instantiation
+witnesses for the paths the walk does not traverse (value-call entry,
+normal-path drains, unrecovered resume, chain merge, breakables).
+Proof-corpus entry: the defer/recover composition row
+(`docs/2026-07-24_proof-corpus.md` §5). -/
+example := @GoLean.Iris.wp_recover_catch_seven
+example := @GoLean.Iris.wp_call_value_enter_rec
+example := @GoLean.Iris.wp_frame_defer_return_rec
+example := @GoLean.Iris.wp_frame_defer_fall_rec
+
 /-- `✓` the golden walk and both its call forms. -/
 example := @GoLean.Iris.GoldenSlice.wp_inc_body
 example := @GoLean.Iris.GoldenSlice.wp_call_inc_stmt

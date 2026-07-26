@@ -68,20 +68,31 @@ so the record starts honest rather than aspirational.
 | `pointers/inc-via-call` | `GoLean.Surface.goldenFuncSpec` | call/frame protocol, pointer mutation through a callee, the D2-proper result read |
 | `pointers/inc-via-call` | `GoLean.Surface.goldenInvariant` | per-step invariance over a whole call (what a triple structurally cannot say) |
 | `control-flow/while-eq-single-iteration` | `GoLean.Iris.wp_while_eq_once` | the Löb loop rule with a real machine-walked condition |
+| `panic-recover/recover-direct` (core shape; eval-pin `GoCore recover catches panic-path defer`) | `GoLean.Iris.wp_recover_catch_seven` | **defer + panic + recover composed**: registration, unwinding, the panic-path drain, the recover continuation walk, a write through a captured pointer, the cancelled unwind — the W3/unwinding entry. Added 2026-07-26 (proof-corpus catch-up arc); the program is the hand-authored core shape sharing the case's structure (closure capturing the named result, recover guarding the write), like the `wp_while_eq_once` precedent — the frontend-lowering pin (golden mechanism, second program) remains owed. |
 
 **Owed, in ladder order** (each becomes an entry when its rung lands; a
 rung is not "finished" until its entry exists, though slices need not
 block on it):
 
 - W1 tuples — a multi-result function proved at `GoFuncSpec`; stresses
-  whether the frame-exit law generalizes past one result.
+  whether the frame-exit law generalizes past one result. (Prediction 3
+  confirmed 2026-07-26: this is where the arity widening binds.)
 - W2 switch — `control-flow/switch-basic`'s `classify`; stresses the
   if-chain walk and whether case dispatch composes with early return.
+  (The `wp_breakable_*` laws landed 2026-07-26; the composed entry
+  remains owed.)
 - W5 closures — `functions/closure-share`; stresses reasoning about a
   captured cell aliased between two callees (the first genuinely
-  separation-logic-shaped obligation in the corpus).
-- W3 defer — `defer/multiple-lifo`; stresses frame-exit ordering.
+  separation-logic-shaped obligation in the corpus). (The
+  `wp_call_value_*` entry laws landed 2026-07-26.)
+- W3 defer — PARTIALLY PAID 2026-07-26 by `wp_recover_catch_seven`
+  (composition incl. the panic path); `defer/multiple-lifo`'s
+  LIFO-ordering entry remains owed.
 - W4 structs/arrays — a bounds-checked accumulator over an array.
+- NEW (2026-07-26): the frontend-LOWERING twin of
+  `wp_recover_catch_seven` — extend the golden-pin mechanism to a second
+  program so the composition theorem is over
+  decoded(frontend(source)) rather than the hand core shape.
 
 ## 6. What this will find (predictions, recorded so they can be wrong)
 
