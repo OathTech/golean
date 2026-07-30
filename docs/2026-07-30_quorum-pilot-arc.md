@@ -104,3 +104,37 @@ test values — the first "Verdi results, but on real code" artifact
 - 2026-07-30: arc opened; branch `quorum-pilot`; this plan of record +
   the `deps/` restructure. Phase 0 blocked on the `deps/raft` clone
   (user, separate thread).
+- 2026-07-30: `deps/` populated. **Phase-0 source discoveries** (all
+  from reading `deps/raft/quorum/`, revising plan assumptions):
+  1. `CommittedIndex` calls **`slices.Sort` (generic)** — the
+     remembered hand-rolled insertion sort is gone from current
+     etcd-io/raft. The phase-2 extern-policy note now has its central
+     exhibit: a generic stdlib callsite on the critical path (`cmp` and
+     `math.MaxUint64` ride along).
+  2. **`Index` is a defined type** (`type Index uint64`) and
+     `MajorityConfig` is a defined map type with METHODS —
+     defined-type identity (BUG-004) and method-on-defined-type
+     lowering are both directly on the goal path, not just
+     interface-adjacent.
+  3. `AckedIndex` returns `(Index, bool)` — confirms the multi-result
+     forcing; `GoFuncSpec2` defined at phase 0 as the statement shape.
+  4. `quick_test.go` contains etcd's own reference implementation
+     (`alternativeMajorityCommittedIndex`, quickchecked 50k cases
+     against the main one) — the declarative spec below is pinned to
+     BOTH implementations' shapes, and `testdata/majority_commit.txt`
+     is a ready-made oracle-value table for phase 3.
+  5. Also on the path: `var stk [7]uint64` + array-to-slice
+     (`stk[:n]`), `make([]uint64, n)`, map range with order-insensitive
+     fill (sort follows — the D2 observation shape), uint64
+     conversions.
+- 2026-07-30: **Phase 0 LANDED** — `Specs/QuorumTargets.lean`:
+  `IsCommittedIndex` (committedness + maximality + empty-`MaxUint64`
+  convention), executable reference `committedIndexRef` (structural
+  sort, so etcd's datadriven values pin by `rfl`), non-vacuity
+  instances incl. maximality discharged on the 3-voter example +
+  negative twins (102 committed; 103 and 101 both refuted);
+  TARGET `committedIndexRef_meets_spec_statement` (phase-4 critical
+  path: machine walk lands on the ref, this upgrades to the spec);
+  `GoFuncSpec2` statement shape (discharge machinery = phase 4, no
+  applicability claimed). Audit pins added for the instances; the
+  `*_statement` defs stay unpinned targets by design.

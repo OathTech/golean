@@ -18,6 +18,7 @@ import GoLeanProofs.SurfaceBridge
 import GoLeanProofs.SurfaceExit
 import GoLeanProofs.Specs.GoldenSurface
 import GoLeanProofs.Specs.GoldenRecover
+import GoLeanProofs.Specs.QuorumTargets
 import GoLeanProofs.NegativeSpecs
 
 /-!

@@ -156,6 +156,17 @@ open Lean in
 /-- info: 'GoLean.Surface.recoverFuncSpec' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Surface.recoverFuncSpec
 
+-- Quorum-pilot phase-0 pins (statement-first targets; the *_statement
+-- defs are TARGETS and are deliberately not pinned as results — these
+-- are the non-vacuity instances showing the spec is satisfiable and
+-- bites, on etcd's own example values).
+/-- info: 'GoLean.Quorum.isCommittedIndex_acked3' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Quorum.isCommittedIndex_acked3
+/-- info: 'GoLean.Quorum.not_committedIndex_acked3_103' depends on axioms: [propext] -/
+#guard_msgs in #print axioms GoLean.Quorum.not_committedIndex_acked3_103
+/-- info: 'GoLean.Quorum.not_committedIndex_acked3_101' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Quorum.not_committedIndex_acked3_101
+
 /-! ## Non-vacuity gate — every user-facing WP law bound to a discharge
     witness (deleting a witness or a law breaks this build). -/
 
