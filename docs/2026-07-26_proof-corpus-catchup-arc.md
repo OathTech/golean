@@ -56,6 +56,27 @@ this arc pays).
   referenced from `proofs/Audit.lean` (the manifest gate).
 - Ledger + manifest updated; gate 12/12; audit ask; merge sign-off.
 
+## Completion record (2026-07-30)
+
+- **Slice A**: landed 2026-07-26 (16 pure-det + 4 stateful laws, each
+  witnessed; `wp_recover_catch_seven` as the family witness).
+- **Slice B**: the composition core landed 2026-07-26 as the
+  hand-authored core shape; the arc's stated deliverable — the recover
+  spec **over the pinned actual lowering** — landed 2026-07-30:
+  `scripts/check-golden` generalized to a pin list (second program
+  `GoldenRecover.recoverLowered` + `baselines/golden/recover-lowered.repr`,
+  both links verified); `Specs/GoldenRecover.lean` walks the actual
+  lowering end to end (`wp_recoverDirect_body`, `wp_recoverCall`) and
+  discharges `GoLean.Surface.recoverFuncSpec` — the `GoFuncSpec` form
+  the exit criteria name — via the standard exit pipe. One new law the
+  actual lowering demanded: `wp_frame_fall_int` (FALL-path value frame
+  exit — a recovered function returns normally without `return`;
+  witness = the walk itself, same commit). Audit pins + non-vacuity refs
+  added; the manifest row updated and the owed twin row retired.
+- **Ledger + manifest**: recorded 2026-07-26 (unchanged by slice B — the
+  new law's read/store granularity matches `frameReturn`'s existing
+  entry).
+
 ## Addendum: the parallel differential runner (2026-07-26, user request)
 
 Iteration speed was gated on the sequential runner. `scripts/diff-coverage`

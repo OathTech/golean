@@ -17,6 +17,7 @@ import GoLeanProofs.Surface
 import GoLeanProofs.SurfaceBridge
 import GoLeanProofs.SurfaceExit
 import GoLeanProofs.Specs.GoldenSurface
+import GoLeanProofs.Specs.GoldenRecover
 import GoLeanProofs.NegativeSpecs
 
 /-!

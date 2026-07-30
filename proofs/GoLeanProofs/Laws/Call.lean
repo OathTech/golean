@@ -247,6 +247,36 @@ theorem wp_frame_return_int {ta ra : Addr} {kind tkind : IntKind}
   obtain ⟨h1, h2⟩ := step_det (by trivial) hstep hst
   exact ⟨h1.symm, h2.symm⟩
 
+/-- **Value frame exit on the FALL path**: normal completion (no explicit
+`return`) at a frame with one pinned int result location and one int-typed
+caller target — the machine's `Step.frameFall` performs the SAME
+pinned-location read and caller-target store as `frameReturn`. This is
+Go's "the surrounding function returns normally" exit after a recovered
+panic (`panicResumeRecovered` resumes the frame on its fall path), and
+the exit of any result-carrying function that falls off its end. Witness:
+the recover composition walk (`Specs/GoldenRecover.lean`, `m := 7`). -/
+theorem wp_frame_fall_int {ta ra : Addr} {kind tkind : IntKind}
+    {m : Int} {w : GoValue} {k}
+    : ra.id ↦ (⟨some (.int kind), .int m kind⟩ : HeapCell)
+      ∗ ta.id ↦ (⟨some (.int tkind), w⟩ : HeapCell)
+      ∗ (ra.id ↦ (⟨some (.int kind), .int m kind⟩ : HeapCell)
+          ∗ ta.id ↦ (⟨some (.int tkind), .int (tkind.normalize m) tkind⟩ : HeapCell)
+          -∗ WP (Config.next k) @ s ; E {{ Φ }})
+      ⊢ WP (Config.next (.frame [.base ta] [.base ra] [] k))
+          @ s ; E {{ Φ }} := by
+  iapply wp_store_step₂ (hnv := rfl)
+  intro σ₁ hlookr hlookt
+  have hload : loadMany σ₁ [Loc.base ra] = .ok [GoValue.int m kind] := by
+    simp [loadMany, loadLoc, hlookr, Bind.bind, Except.bind]
+  have hstore : storeMany σ₁ [Loc.base ta] [GoValue.int m kind]
+      = .ok { σ₁ with heap := Heap.set σ₁.heap (.base ta) ⟨some (.int tkind), .int (tkind.normalize m) tkind⟩ } := by
+    simp [storeMany, storeLoc_int_any hlookt m, Bind.bind, Except.bind]
+  have hstep := Step.frameFall (k := k) hload hstore
+  refine ⟨hstep, ?_⟩
+  intro c' s' hst
+  obtain ⟨h1, h2⟩ := step_det (by trivial) hstep hst
+  exact ⟨h1.symm, h2.symm⟩
+
 /-- **Invariant-opening value frame exit** (the invariance-readout form of
 `wp_frame_return_int`): the caller target lives in an Iris invariant with
 content `Icnt` (`S`-shaped int cells, per `hint`), opened around the

@@ -133,6 +133,8 @@ open Lean in
 #guard_msgs in #print axioms GoLean.Iris.wp_recover_catch_seven
 /-- info: 'GoLean.Iris.GoldenSlice.wp_goldenDriver' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Iris.GoldenSlice.wp_goldenDriver
+/-- info: 'GoLean.Iris.GoldenRecover.wp_recoverDirect_body' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.GoldenRecover.wp_recoverDirect_body
 
 -- The golden surface: all six step-0 targets.
 /-- info: 'GoLean.Surface.goldenSpec' depends on axioms: [propext, Classical.choice, Quot.sound] -/
@@ -147,6 +149,12 @@ open Lean in
 #guard_msgs in #print axioms GoLean.Surface.goldenReturnsTwo
 /-- info: 'GoLean.Surface.goldenNotThree' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Surface.goldenNotThree
+
+-- The recover spec over the PINNED ACTUAL LOWERING (proof-corpus
+-- catch-up arc, slice B — the manifest gate for the frontend-lowering
+-- twin of `wp_recover_catch_seven`).
+/-- info: 'GoLean.Surface.recoverFuncSpec' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Surface.recoverFuncSpec
 
 /-! ## Non-vacuity gate — every user-facing WP law bound to a discharge
     witness (deleting a witness or a law breaks this build). -/
@@ -183,6 +191,18 @@ example := @GoLean.Iris.wp_recover_catch_seven
 example := @GoLean.Iris.wp_call_value_enter_rec
 example := @GoLean.Iris.wp_frame_defer_return_rec
 example := @GoLean.Iris.wp_frame_defer_fall_rec
+/-- `✓` the same composition over the PINNED ACTUAL LOWERING
+(`GoldenRecover.recoverLowered`, `scripts/check-golden`'s second program;
+proof-corpus catch-up arc slice B, 2026-07-30): the walk additionally
+witnesses `wp_init` at an interface type, the interface-cell store, the
+recover continuation walk crossing the assign frames, and the FALL-path
+value frame exit `wp_frame_fall_int` (a function that ends by
+recovered-panic fall-through, never by `return`). `recoverFuncSpec` is
+the manifest gate for the row. -/
+example := @GoLean.Iris.GoldenRecover.wp_recoverDirect_body
+example := @GoLean.Iris.GoldenRecover.wp_recoverCall
+example := @GoLean.Iris.wp_frame_fall_int
+example := @GoLean.Surface.recoverFuncSpec
 
 /-- `✓` the golden walk and both its call forms. -/
 example := @GoLean.Iris.GoldenSlice.wp_inc_body

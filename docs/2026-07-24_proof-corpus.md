@@ -68,7 +68,8 @@ so the record starts honest rather than aspirational.
 | `pointers/inc-via-call` | `GoLean.Surface.goldenFuncSpec` | call/frame protocol, pointer mutation through a callee, the D2-proper result read |
 | `pointers/inc-via-call` | `GoLean.Surface.goldenInvariant` | per-step invariance over a whole call (what a triple structurally cannot say) |
 | `control-flow/while-eq-single-iteration` | `GoLean.Iris.wp_while_eq_once` | the Löb loop rule with a real machine-walked condition |
-| `panic-recover/recover-direct` (core shape; eval-pin `GoCore recover catches panic-path defer`) | `GoLean.Iris.wp_recover_catch_seven` | **defer + panic + recover composed**: registration, unwinding, the panic-path drain, the recover continuation walk, a write through a captured pointer, the cancelled unwind — the W3/unwinding entry. Added 2026-07-26 (proof-corpus catch-up arc); the program is the hand-authored core shape sharing the case's structure (closure capturing the named result, recover guarding the write), like the `wp_while_eq_once` precedent — the frontend-lowering pin (golden mechanism, second program) remains owed. |
+| `panic-recover/recover-direct` (core shape; eval-pin `GoCore recover catches panic-path defer`) | `GoLean.Iris.wp_recover_catch_seven` | **defer + panic + recover composed**: registration, unwinding, the panic-path drain, the recover continuation walk, a write through a captured pointer, the cancelled unwind — the W3/unwinding entry. Added 2026-07-26 (proof-corpus catch-up arc); the program is the hand-authored core shape sharing the case's structure (closure capturing the named result, recover guarding the write), like the `wp_while_eq_once` precedent. |
+| `panic-recover/recover-direct` (**PINNED ACTUAL LOWERING** — `GoldenRecover.recoverLowered`, `scripts/check-golden`'s second program) | `GoLean.Surface.recoverFuncSpec` | the same composition at `GoFuncSpec` strength over decoded(frontend(source)): block scopes, recover's value routed through the `$c0` interface-typed temporary (init + assign, the recover continuation walk crossing the assign frames), the cell-read `!= nil` guard, and the FALL-path value frame exit (`wp_frame_fall_int` — Go's "returns normally" after recovery; no `return` anywhere in the callee). Paid 2026-07-30 (slice B); retires the owed frontend-lowering-twin row below. |
 
 **Owed, in ladder order** (each becomes an entry when its rung lands; a
 rung is not "finished" until its entry exists, though slices need not
@@ -89,10 +90,9 @@ block on it):
   (composition incl. the panic path); `defer/multiple-lifo`'s
   LIFO-ordering entry remains owed.
 - W4 structs/arrays — a bounds-checked accumulator over an array.
-- NEW (2026-07-26): the frontend-LOWERING twin of
-  `wp_recover_catch_seven` — extend the golden-pin mechanism to a second
-  program so the composition theorem is over
-  decoded(frontend(source)) rather than the hand core shape.
+- ~~NEW (2026-07-26): the frontend-LOWERING twin of
+  `wp_recover_catch_seven`~~ — **PAID 2026-07-30** (`recoverFuncSpec`,
+  manifest row above; the golden-pin mechanism now carries two programs).
 
 ## 6. What this will find (predictions, recorded so they can be wrong)
 
