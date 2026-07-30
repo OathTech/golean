@@ -40,11 +40,27 @@ type emitter struct {
 	curFuncName   string
 	captureParam  map[types.Object]string
 	// The enclosing function's result tuple, for the return-site
-	// interface-conversion guard.
+	// interface-conversion wrap.
 	curResults *types.Tuple
 
 	// Whether the `defer recover()` no-op function has been registered.
 	deferNoopEmitted bool
+
+	// Interface-receiver methods CALLED somewhere in the package, keyed
+	// "<IfaceName>.<Method>" (the exact func id the call emits). Interfaces
+	// declared in the package anchor their methods via emitGenDeclTypes;
+	// predeclared ones (error) and, later, imported ones have no decl here,
+	// so emitProgram synthesizes their table entries from this record.
+	calledIfaceMethods map[string]calledIfaceMethod
+}
+
+// calledIfaceMethod records one interface-dispatch call target: the receiver
+// interface's wire name (qualified, or bare for predeclared), the method
+// name, and its signature (for params/results of a synthesized table entry).
+type calledIfaceMethod struct {
+	ifaceName string
+	method    string
+	sig       *types.Signature
 }
 
 // emptyStructName is the canonical GoCore type name for the empty struct
@@ -70,11 +86,13 @@ func (e *emitter) emitType(t types.Type) (any, error) {
 	case *types.Named:
 		obj := ty.Obj()
 		// A named type whose underlying is an interface is an interface type;
-		// otherwise it is a defined type. GoCore distinguishes the two.
+		// otherwise it is a defined type. GoCore distinguishes the two. Names
+		// are package-qualified ("main.T"); predeclared types (error) stay
+		// bare (no package).
 		if _, ok := ty.Underlying().(*types.Interface); ok {
-			return map[string]any{"kind": "interface", "name": obj.Name()}, nil
+			return map[string]any{"kind": "interface", "name": qualifiedTypeName(obj)}, nil
 		}
-		return map[string]any{"kind": "named", "name": obj.Name()}, nil
+		return map[string]any{"kind": "named", "name": qualifiedTypeName(obj)}, nil
 	case *types.Pointer:
 		elem, err := e.emitType(ty.Elem())
 		if err != nil {

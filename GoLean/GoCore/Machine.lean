@@ -271,10 +271,16 @@ def applyStrictOp (s : ExecState) : StrictOp → List GoValue → Except GoError
       if keys.length != vs.length then
         stuck s!"array literal expected {keys.length} element value(s), got {vs.length}"
       return ((← buildArrayValue s n elem (keys.zip vs).toArray), s)
-  | .toInterface _ dynamic, [v] =>
-      match dynamicTypeName? s dynamic with
-      | some dynamicName => return (.interface dynamicName v, s)
-      | none => unsupported s!"interface conversion for dynamic type {repr dynamic}"
+  | .toInterface _ dynamic, [v] => do
+      -- Box with the CANONICAL dynamic type (S3): aliases resolved,
+      -- identity kept, fail closed on unsupported leaves. An
+      -- interface-typed source is an interface→interface conversion:
+      -- the existing box (or nil) passes through unchanged — Go never
+      -- double-boxes.
+      let dynTy ← canonicalDynamicTy s dynamic
+      match dynTy with
+      | .interface _ => return (v, s)
+      | _ => return (.interface dynTy v, s)
   | .typeAssert targetTy, [v] => do
       let result ← typeAssertValue s v targetTy
       if result.2 then
@@ -595,7 +601,7 @@ def applyStmtOp (s : ExecState) (choices : Choices) (op : StmtOp) (nt : Nat)
           | none => panic "assignment to entry in nil map"
           | some (baseLoc, entries) =>
               let entries ←
-                match ← mapEntryIndex? s keyTy entries key with
+                match ← mapEntryIndex? s keyTy entries key (isInsert := true) with
                 | some i => pure (entries.set! i (key, value))
                 | none => pure (entries.push (key, value))
               return ((← storeLoc s baseLoc (.mapData entries)), choices)
@@ -754,7 +760,7 @@ structure PanicEntry where
 collide with a source-level `TypeId` (Go identifiers cannot contain `.`),
 so type asserts against user types correctly fail on it. -/
 def runtimeErrorValue (msg : String) : GoValue :=
-  .interface "runtime.Error" (.string (GoString.fromLeanString msg))
+  .interface (.defined ⟨"runtime.Error"⟩) (.string (GoString.fromLeanString msg))
 
 /-- Coerce a delivered `panic` argument to its chain payload — the
 identity: the oracle runs in GOPATH mode (no `go.mod`), where `panic(nil)`
@@ -791,11 +797,18 @@ qualify (pre-merge audit 2026-07-25 caught the wildcarded version doing
 exactly that). -/
 def renderPanicPayload : GoValue → Option String
   | .nil => some "nil"
-  | .interface "runtime.Error" (.string s) => asciiString? s.bytes
-  | .interface "string" (.string s) => asciiString? s.bytes
-  | .interface dyn (.int v kind) =>
-      if dyn == kind.name then some (toString v) else none
-  | .interface "bool" (.bool b) => some (if b then "true" else "false")
+  | .interface (.defined ⟨"runtime.Error"⟩) (.string s) => asciiString? s.bytes
+  | .interface .string (.string s) => asciiString? s.bytes
+  | .interface (.int dkind) (.int v kind) =>
+      if dkind == kind then some (toString v) else none
+  | .interface .bool (.bool b) => some (if b then "true" else "false")
+  -- A DEFINED-type payload renders qualified with Go's
+  -- `printanycustomtype` shape: `main.Code(7)` (BUG-004 item 2 — the
+  -- identity is modeled since the interfaces campaign; the KEY is
+  -- package-qualified by the frontend, so it renders verbatim). Only
+  -- the int-underlying form is pinned; other underlyings stay closed.
+  | .interface (.defined name) (.int v _) =>
+      if name.key == "runtime.Error" then none else some s!"{name.key}({v})"
   | _ => none
 
 /-- Go's first abort line for a panic chain. The `[recovered, repanicked]`

@@ -270,6 +270,75 @@ def resolveDefinedAliasesFuel : Nat → ExecState → Ty → Ty
 def resolveDefinedAliases (state : ExecState) (typ : Ty) : Ty :=
   resolveDefinedAliasesFuel typeResolutionFuel state typ
 
+/-- Deep canonicalization for DYNAMIC-TYPE identity (interfaces campaign
+S3): resolve alias chains everywhere in the type structure, stopping at
+identity-bearing `.defined` names. Two types denote the same Go dynamic
+type iff their canonical forms are `BEq` — box tags, assert targets, and
+method-set receivers all compare in canonical form. Fuel bounds alias
+chains only (structure is finite); on exhaustion the type is returned
+as-is, matching `resolveDefinedAliasesFuel`'s convention. -/
+def canonicalTyFuel : Nat → ExecState → Ty → Ty
+  | fuel + 1, state, .defined name =>
+      (match TypeEnv.lookup state.types name with
+       | some (.alias target) => canonicalTyFuel fuel state target
+       | _ => .defined name)
+  | fuel + 1, state, .pointer elem => .pointer (canonicalTyFuel fuel state elem)
+  | fuel + 1, state, .slice elem => .slice (canonicalTyFuel fuel state elem)
+  | fuel + 1, state, .array n elem => .array n (canonicalTyFuel fuel state elem)
+  | fuel + 1, state, .map k v =>
+      .map (canonicalTyFuel fuel state k) (canonicalTyFuel fuel state v)
+  | fuel + 1, state, .funcType ps rs =>
+      .funcType (ps.map (canonicalTyFuel fuel state))
+        (rs.map (canonicalTyFuel fuel state))
+  | _, _, other => other
+
+def canonicalTy (state : ExecState) (typ : Ty) : Ty :=
+  canonicalTyFuel typeResolutionFuel state typ
+
+/-- Does the type mention an `.unsupported` leaf? Used to fail closed at
+boxing time (an unrenderable dynamic type must never become a tag). -/
+def Ty.mentionsUnsupported : Ty → Bool
+  | .unsupported _ => true
+  | .pointer e => Ty.mentionsUnsupported e
+  | .slice e => Ty.mentionsUnsupported e
+  | .array _ e => Ty.mentionsUnsupported e
+  | .map k v => Ty.mentionsUnsupported k || Ty.mentionsUnsupported v
+  | .funcType ps rs =>
+      ps.attach.any (fun ⟨t, _⟩ => Ty.mentionsUnsupported t)
+        || rs.attach.any (fun ⟨t, _⟩ => Ty.mentionsUnsupported t)
+  | _ => false
+
+/-- The canonical dynamic-type tag for boxing, fail-closed. -/
+def canonicalDynamicTy (state : ExecState) (typ : Ty) : Except GoError Ty := do
+  let c := canonicalTy state typ
+  if c.mentionsUnsupported then
+    unsupported s!"interface conversion for dynamic type {repr typ}"
+  else
+    return c
+
+/-- Is the type DEFINITELY uncomparable in Go's runtime sense (a slice,
+map, or func anywhere in its resolved structure)? Drives the
+`comparing uncomparable type` panic on interface equality. Struct
+fields and array elements recurse; interfaces themselves are
+comparable (their comparison may panic deeper, at their own dynamic
+types). Fuel bounds defined-type resolution. -/
+def tyUncomparableFuel : Nat → ExecState → Ty → Bool
+  | _, _, .slice _ => true
+  | _, _, .map _ _ => true
+  | _, _, .funcType _ _ => true
+  | fuel + 1, state, .defined name =>
+      (match TypeEnv.lookup state.types name with
+       | some (.alias t) => tyUncomparableFuel fuel state t
+       | some (.defined t) => tyUncomparableFuel fuel state t
+       | some (.struct fields) =>
+           fields.any (fun f => tyUncomparableFuel fuel state f.typ)
+       | _ => false)
+  | fuel + 1, state, .array _ e => tyUncomparableFuel fuel state e
+  | _, _, _ => false
+
+def tyUncomparable (state : ExecState) (typ : Ty) : Bool :=
+  tyUncomparableFuel typeResolutionFuel state typ
+
 def dynamicTypeName? (state : ExecState) (typ : Ty) : Option String :=
   match resolveDefinedAliases state typ with
   | .defined id => some id.key
@@ -292,11 +361,13 @@ def methodRecvInterfaceName? (state : ExecState) (method : MethodInfo) : Option 
   | .interface id => some id.key
   | _ => none
 
-def methodRecvDynamicName? (state : ExecState) (method : MethodInfo) : Option String :=
-  match resolveDefinedAliases state method.recv with
-  | .defined id => some id.key
-  | .pointer (.defined id) => some s!"*{id.key}"
-  | _ => none
+/-- A concrete method's receiver in canonical form (Ty-keyed identity,
+interfaces campaign S3 — was a rendered name string). `none` for
+interface receivers (those are requirements, not implementations). -/
+def methodRecvDynamicTy? (state : ExecState) (method : MethodInfo) : Option Ty :=
+  match canonicalTy state method.recv with
+  | .interface _ => none
+  | recv => some recv
 
 def interfaceMethodRequirements (state : ExecState) (interfaceName : String) : Array MethodInfo :=
   state.methods.foldl
@@ -306,32 +377,44 @@ def interfaceMethodRequirements (state : ExecState) (interfaceName : String) : A
       | none => out)
     #[]
 
-def hasConcreteMethod (state : ExecState) (dynamicName methodName : String) : Bool :=
-  state.methods.any
-    (fun method =>
-      method.name == methodName &&
-        match methodRecvDynamicName? state method with
-        | some name => name == dynamicName
-        | none => false)
-
-def dynamicImplementsInterface (state : ExecState) (dynamicName interfaceName : String) : Bool :=
-  (interfaceMethodRequirements state interfaceName).all
-    (fun requirement => hasConcreteMethod state dynamicName requirement.name)
-
-def concreteMethodForDynamic? (state : ExecState) (dynamicName methodName : String) :
-    Option MethodInfo :=
-  state.methods.foldl
+/-- Go's method-set rule: the method set of `*T` includes `T`'s value-
+receiver methods (the reverse is FALSE — a value box never satisfies a
+pointer-receiver method; probed 2026-07-30, design note Q3). The lookup
+result records whether the receiver must be auto-dereferenced (a
+pointer box dispatching to a value-receiver method). -/
+def concreteMethodForDynamic? (state : ExecState) (dynTy : Ty) (methodName : String) :
+    Option (MethodInfo × Bool) :=
+  let direct := state.methods.foldl
     (fun found method =>
       match found with
-      | some method => some method
+      | some _ => found
       | none =>
-          if method.name == methodName then
-            match methodRecvDynamicName? state method with
-            | some name => if name == dynamicName then some method else none
-            | none => none
-          else
-            none)
+          if method.name == methodName &&
+              methodRecvDynamicTy? state method == some dynTy then
+            some (method, false)
+          else none)
     none
+  match direct, dynTy with
+  | some hit, _ => some hit
+  | none, .pointer elem =>
+      state.methods.foldl
+        (fun found method =>
+          match found with
+          | some _ => found
+          | none =>
+              if method.name == methodName &&
+                  methodRecvDynamicTy? state method == some elem then
+                some (method, true)
+              else none)
+        none
+  | none, _ => none
+
+def hasConcreteMethod (state : ExecState) (dynTy : Ty) (methodName : String) : Bool :=
+  (concreteMethodForDynamic? state dynTy methodName).isSome
+
+def dynamicImplementsInterface (state : ExecState) (dynTy : Ty) (interfaceName : String) : Bool :=
+  (interfaceMethodRequirements state interfaceName).all
+    (fun requirement => hasConcreteMethod state dynTy requirement.name)
 
 -- Total via fuel: fuel is decremented only at `.defined` resolution; array and
 -- struct child recursion is structural through list helpers. The public
@@ -353,6 +436,7 @@ mutual
     | fuel + 1, state, .defined name, value => do
         match TypeEnv.lookup state.types name with
         | some (.alias target) => normalizeValueForTyFuel fuel state target value
+        | some (.defined target) => normalizeValueForTyFuel fuel state target value
         | some (.struct fields) => normalizeStructValueForFields fuel state name fields value
         | some (.unsupported feature) => unsupported s!"normalizing {feature}"
         | none => unsupported s!"normalizing unknown defined type {name.key}"
@@ -455,9 +539,23 @@ def convertValueToTyFuel : Nat → ExecState → Ty → GoValue → Except GoErr
   | fuel + 1, state, .defined name, value =>
       match TypeEnv.lookup state.types name with
       | some (.alias target) => convertValueToTyFuel fuel state target value
+      | some (.defined target) => convertValueToTyFuel fuel state target value
       | some (.struct _) => unsupported s!"conversion to struct type {name.key}"
       | some (.unsupported feature) => unsupported s!"conversion to {feature}"
       | none => unsupported s!"conversion to unknown defined type {name.key}"
+  -- Identity conversions Go permits at runtime with no representation
+  -- change (`string(s)` — surfaced by interfaces/error-interface's
+  -- `string(e.Error())` shape, 2026-07-30).
+  | _, _, .string, .string s => return .string s
+  -- Conversion INTO an interface type at a machine site (map key slots,
+  -- assert results): a box or nil interface passes as-is (the frontend's
+  -- to-interface wrap already built the box); a raw value here is a
+  -- lowering bug — fail closed, never silently box without a dynamic
+  -- type (interfaces campaign, 2026-07-30).
+  | _, _, .interface _, value@(.interface _ _) => return value
+  | _, _, .interface _, .nil => return .nil
+  | _, _, .interface id, value =>
+      stuck s!"raw value reached interface conversion to {id.key}: {repr value}"
   | 0, _, .defined _, _ => unsupported "conversion: type nesting too deep"
   | _, _, .unsupported feature, _ => unsupported s!"conversion to {feature}"
   | _, _, other, _ => unsupported s!"conversion to {repr other}"
@@ -492,6 +590,7 @@ mutual
         | some (.struct fields) =>
             .struct name <$> defaultStructFields fuel state fields.toList
         | some (.alias target) => defaultValueFuel fuel state target
+        | some (.defined target) => defaultValueFuel fuel state target
         | some (.unsupported feature) => unsupported s!"default value for {feature}"
         | none => unsupported s!"default value for unknown defined type {name.key}"
     | 0, _, .defined _ => unsupported "default value: type nesting too deep"
@@ -530,6 +629,11 @@ def buildStructValueFuel : Nat → ExecState → Ty → Array GoValue → Except
             stuck s!"struct {name.key} literal expected {fields.size} field value(s), got {args.size}"
           .struct name <$> buildStructFields state fields.toList args.toList
       | some (.alias target) => buildStructValueFuel fuel state target args
+      -- Defined-over-struct stays `.struct`; a `.defined` here would be a
+      -- struct literal at a NON-struct named type — fail closed (identity
+      -- tagging for defined-over-defined-struct is unresolved; see the
+      -- TypeDef.defined docstring).
+      | some (.defined _) => unsupported s!"struct literal for defined type {name.key} over non-struct underlying"
       | some (.unsupported feature) => unsupported s!"struct literal for {feature}"
       | none => unsupported s!"struct literal for unknown defined type {name.key}"
   | 0, _, .defined _, _ => unsupported "struct literal: type nesting too deep"
@@ -569,21 +673,21 @@ def typeAssertValue (state : ExecState) (value : GoValue) (targetTy : Ty) :
   let failed ← defaultValue state targetTy
   match value with
   | .nil => return (failed, false)
-  | .interface dynamicName inner =>
+  | .interface dynTy inner =>
       match resolveDefinedAliases state targetTy with
       | .interface interfaceName =>
-          if dynamicImplementsInterface state dynamicName interfaceName.key then
-            return (.interface dynamicName inner, true)
+          if dynamicImplementsInterface state dynTy interfaceName.key then
+            return (.interface dynTy inner, true)
           else
             return (failed, false)
       | _ =>
-          match dynamicTypeName? state targetTy with
-          | some targetName =>
-              if dynamicName == targetName then
-                return (inner, true)
-              else
-                return (failed, false)
-          | none => unsupported s!"type assertion to {repr targetTy}"
+          -- Concrete target: canonical dynamic-type identity (S3 —
+          -- structural BEq, no name rendering, so slice/map/array
+          -- dynamic types assert correctly too).
+          if dynTy == canonicalTy state targetTy then
+            return (inner, true)
+          else
+            return (failed, false)
   | other => unsupported s!"type assertion from non-interface value {repr other}"
 
 -- Total via fuel: recurses through both alias resolution and type subterms
@@ -602,21 +706,29 @@ def goTypeNameForMessageFuel : Nat → ExecState → Ty → String
       | .interface name => name.key
       | .defined name => name.key
       | .array length elem => s!"[{length}]{goTypeNameForMessageFuel fuel state elem}"
-      | .funcType _ _ => "func"
+      | .funcType params results =>
+          -- Go renders the signature: `func()`, `func(int) bool`,
+          -- `func() (int, error)` (message-fidelity, 2026-07-30).
+          let ps := ", ".intercalate (params.map (goTypeNameForMessageFuel fuel state))
+          let base := s!"func({ps})"
+          match results with
+          | [] => base
+          | [r] => s!"{base} {goTypeNameForMessageFuel fuel state r}"
+          | rs => s!"{base} ({", ".intercalate (rs.map (goTypeNameForMessageFuel fuel state))})"
       | .unsupported feature => feature
   | 0, _, _ => "<type nesting too deep>"
 
 def goTypeNameForMessage (state : ExecState) (typ : Ty) : String :=
   goTypeNameForMessageFuel typeResolutionFuel state typ
 
-def dynamicTypeNameForMessage : GoValue → String
-  | .interface dynamicName _ => dynamicName
+def dynamicTypeNameForMessage (state : ExecState) : GoValue → String
+  | .interface dynTy _ => goTypeNameForMessage state dynTy
   | .nil => "nil"
   | other => s!"{repr other}"
 
 def typeAssertPanicMessage (state : ExecState) (value : GoValue) (targetTy : Ty) : String :=
   "interface conversion: interface {} is " ++
-    dynamicTypeNameForMessage value ++ ", not " ++ goTypeNameForMessage state targetTy
+    dynamicTypeNameForMessage state value ++ ", not " ++ goTypeNameForMessage state targetTy
 
 def valueAsInt : GoValue → Except GoError Int
   | .int value _ => return value
@@ -702,10 +814,30 @@ mutual
     | _, _, .interface _, .nil, .nil => return true
     | _, _, .interface _, .nil, _ => return false
     | _, _, .interface _, _, .nil => return false
+    -- Box-vs-box (S3, Perennial `go_eq_interface` shape): different
+    -- canonical dynamic types → false, no value comparison. Same dynamic
+    -- type → Go first checks the DYNAMIC type's comparability (resolved
+    -- through defined types: slices/maps/funcs anywhere inside panic at
+    -- runtime under the DYNAMIC name — `comparing uncomparable type
+    -- main.T`), then compares the payloads AT the dynamic type.
+    | fuel + 1, state, .interface _,
+        .interface dynL innerL, .interface dynR innerR =>
+      if dynL != dynR then
+        return false
+      else if tyUncomparable state dynL then
+        throw (.panic s!"runtime error: comparing uncomparable type {goTypeNameForMessage state dynL}")
+      else
+        valueEqFuel fuel state dynL innerL innerR
+    | 0, _, .interface _, .interface _ _, .interface _ _ =>
+        unsupported "interface equality: type nesting too deep"
     | _, _, .interface _, left, right => unsupported s!"interface equality for {repr left} and {repr right}"
     | fuel + 1, state, .defined name, left, right => do
         match TypeEnv.lookup state.types name with
         | some (.alias target) => valueEqFuel fuel state target left right
+        -- Runtime values of a defined type share the underlying
+        -- representation; static typing guarantees both sides have the
+        -- same defined type, so equality is equality at the underlying.
+        | some (.defined target) => valueEqFuel fuel state target left right
         | some (.struct fields) =>
             match left, right with
             | .struct leftType leftFields, .struct rightType rightFields => do
@@ -755,7 +887,22 @@ def valueEq (state : ExecState) (ty : Ty) (left right : GoValue) : Except GoErro
 
 -- Not recursive; total now that valueEq is. The for-loop is fine in a plain def.
 def mapEntryIndex? (state : ExecState) (keyTy : Ty) (entries : Array (GoValue × GoValue))
-    (key : GoValue) : Except GoError (Option Nat) := do
+    (key : GoValue) (isInsert : Bool := false) : Except GoError (Option Nat) := do
+  -- Go hashes the key BEFORE any comparison: inserting or looking up a
+  -- box with an uncomparable dynamic type panics even on an empty map.
+  -- The runtime PHRASES the two paths differently (probed 2026-07-30):
+  -- mapassign says `runtime error: hash of unhashable type []int`;
+  -- mapaccess/mapdelete say `hash of unhashable type: []int`. Single
+  -- choke point: get/assign/delete all route through here.
+  match key with
+  | .interface dynTy _ =>
+      if tyUncomparable state dynTy then
+        let name := goTypeNameForMessage state dynTy
+        if isInsert then
+          throw (.panic s!"runtime error: hash of unhashable type {name}")
+        else
+          throw (.panic s!"hash of unhashable type: {name}")
+  | _ => pure ()
   let mut i := 0
   for (entryKey, _) in entries do
     if ← valueEq state keyTy entryKey key then
@@ -944,13 +1091,29 @@ def dynamicDispatch? (state : ExecState) (func : Func) (argValues : Array GoValu
       | none => return none
       | some _ =>
           match argValues[0]? with
-          | some (GoValue.interface dynamicName inner) =>
-              match concreteMethodForDynamic? state dynamicName method.name with
-              | some concrete =>
+          | some (GoValue.interface dynTy inner) =>
+              match concreteMethodForDynamic? state dynTy method.name with
+              | some (concrete, needsDeref) =>
                   let targetFunc ←
                     match findFunctionIn? state.functions concrete.funcId with
                     | some func => pure func
                     | none => stuck s!"GoCore dynamic method target not found: {concrete.funcId.key}"
-                  return some (targetFunc, argValues.set! 0 inner)
-              | none => stuck s!"dynamic type {dynamicName} has no method {method.name}"
+                  -- A pointer box dispatching to a value-receiver method
+                  -- auto-dereferences the receiver (Go's *T ⊇ T method
+                  -- set; nil pointer panics as a nil dereference).
+                  let recvValue ←
+                    if needsDeref then
+                      match inner with
+                      | .addr loc => loadLoc state loc
+                      | .nil => throw (.panic "runtime error: invalid memory address or nil pointer dereference")
+                      | other => stuck s!"pointer-box receiver expected address, got {repr other}"
+                    else
+                      pure inner
+                  return some (targetFunc, argValues.set! 0 recvValue)
+              | none => stuck s!"dynamic type {goTypeNameForMessage state dynTy} has no method {method.name}"
+          -- Calling a method on a NIL interface: Go's runtime nil
+          -- dereference panic (probe-pinned; the stub body behind this
+          -- is unreachable and fails stuck if a bug ever reaches it).
+          | some GoValue.nil =>
+              throw (.panic "runtime error: invalid memory address or nil pointer dereference")
           | _ => return none

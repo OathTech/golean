@@ -11,6 +11,7 @@ import (
 	"go/constant"
 	"go/token"
 	"go/types"
+	"sort"
 )
 
 // ---- program ----
@@ -80,13 +81,53 @@ func (e *emitter) emitProgram(files []*ast.File) (map[string]any, error) {
 					funcs = append(funcs, fn)
 				}
 			case *ast.GenDecl:
-				tds, err := e.emitGenDeclTypes(d)
+				tds, ims, err := e.emitGenDeclTypes(d)
 				if err != nil {
 					return nil, err
 				}
 				typeDefs = append(typeDefs, tds...)
+				methods = append(methods, ims...)
 			}
 		}
+	}
+
+	// Interface-dispatch anchors for interfaces NOT declared in this package
+	// (predeclared error; imported interfaces later): every emitted
+	// "<Iface>.<Method>" call needs a table entry, but only package-declared
+	// interfaces got one above. Synthesize the missing ones from the recorded
+	// calls, in sorted order for a deterministic wire.
+	declaredIface := map[string]bool{}
+	for _, m := range methods {
+		if mm, ok := m.(map[string]any); ok && mm["interface"] == true {
+			declaredIface[mm["recvType"].(string)+"."+mm["name"].(string)] = true
+		}
+	}
+	calledKeys := make([]string, 0, len(e.calledIfaceMethods))
+	for k := range e.calledIfaceMethods {
+		calledKeys = append(calledKeys, k)
+	}
+	sort.Strings(calledKeys)
+	for _, k := range calledKeys {
+		if declaredIface[k] {
+			continue
+		}
+		cm := e.calledIfaceMethods[k]
+		params, err := e.emitParams(cm.sig.Params())
+		if err != nil {
+			return nil, err
+		}
+		results, err := e.emitResults(cm.sig.Results())
+		if err != nil {
+			return nil, err
+		}
+		methods = append(methods, map[string]any{
+			"name":      cm.method,
+			"recvType":  cm.ifaceName,
+			"recv":      map[string]any{"id": "$recv", "type": map[string]any{"kind": "interface", "name": cm.ifaceName}},
+			"params":    params,
+			"results":   results,
+			"interface": true,
+		})
 	}
 
 	return map[string]any{
@@ -100,11 +141,16 @@ func (e *emitter) emitProgram(files []*ast.File) (map[string]any, error) {
 
 // emitGenDeclTypes emits type declarations (only defined struct types carry a
 // GoCore TypeDef today; defined types over primitives/maps/arrays are handled
-// by their use-site types, and their methods by the method table).
-func (e *emitter) emitGenDeclTypes(d *ast.GenDecl) ([]any, error) {
+// by their use-site types, and their methods by the method table). Interface
+// type declarations emit no TypeDef but contribute one bodyless entry per
+// method of their FULL method set (embedded interfaces included) to the
+// program METHODS list — the dispatch table the interfaces campaign's
+// "<InterfaceName>.<Method>" calls resolve through.
+func (e *emitter) emitGenDeclTypes(d *ast.GenDecl) ([]any, []any, error) {
 	if d.Tok != token.TYPE {
-		return nil, nil
+		return nil, nil, nil
 	}
+	ifaceMethods := []any{}
 	out := []any{}
 	for _, spec := range d.Specs {
 		ts := spec.(*ast.TypeSpec)
@@ -113,40 +159,69 @@ func (e *emitter) emitGenDeclTypes(d *ast.GenDecl) ([]any, error) {
 		if !ok {
 			continue
 		}
+		qname := qualifiedTypeName(named.Obj())
 		if st, isStruct := named.Underlying().(*types.Struct); isStruct {
 			fields := []any{}
 			for i := 0; i < st.NumFields(); i++ {
 				fld := st.Field(i)
 				fty, err := e.emitType(fld.Type())
 				if err != nil {
-					return nil, err
+					return nil, nil, err
 				}
 				fields = append(fields, map[string]any{"name": fld.Name(), "type": fty})
 			}
 			out = append(out, map[string]any{
-				"name": ts.Name.Name,
+				"name": qname,
 				"def":  map[string]any{"kind": "struct", "fields": fields},
 			})
 			continue
 		}
-		if _, isInterface := named.Underlying().(*types.Interface); isInterface {
+		if iface, isInterface := named.Underlying().(*types.Interface); isInterface {
 			// Interface types carry no GoCore TypeDef; their shape is the
-			// interface type at use sites and dispatch uses the method table.
+			// interface type at use sites. Dispatch goes through per-method
+			// table entries: same wire shape as a concrete method (recv +
+			// params + results), marked "interface": true, with NO body.
+			recvTy := map[string]any{"kind": "interface", "name": qname}
+			for i := 0; i < iface.NumMethods(); i++ {
+				m := iface.Method(i)
+				sig := m.Type().(*types.Signature)
+				params, err := e.emitParams(sig.Params())
+				if err != nil {
+					return nil, nil, err
+				}
+				results, err := e.emitResults(sig.Results())
+				if err != nil {
+					return nil, nil, err
+				}
+				ifaceMethods = append(ifaceMethods, map[string]any{
+					"name":      m.Name(),
+					"recvType":  qname,
+					"recv":      map[string]any{"id": "$recv", "type": recvTy},
+					"params":    params,
+					"results":   results,
+					"interface": true,
+				})
+			}
 			continue
 		}
-		// Other defined types (over primitives, maps, arrays, slices) become
-		// aliases to their underlying type so GoCore can resolve defaults,
-		// conversions, and equality.
+		// Other defined types (over primitives, maps, arrays, slices) are
+		// IDENTITY-BEARING (interfaces campaign S2, BUG-004 item 2): they
+		// emit kind "defined" with their underlying, so GoCore keeps the
+		// identity for boxing/asserts/method sets while resolving defaults,
+		// conversions, and equality through the underlying. True Go aliases
+		// (`type T = U`) never reach this loop: go/types materializes them
+		// as *types.Alias, so the *types.Named cast above filters them and
+		// their use sites emit U directly.
 		underlying, err := e.emitType(named.Underlying())
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		out = append(out, map[string]any{
-			"name": ts.Name.Name,
-			"def":  map[string]any{"kind": "alias", "target": underlying},
+			"name": qname,
+			"def":  map[string]any{"kind": "defined", "target": underlying},
 		})
 	}
-	return out, nil
+	return out, ifaceMethods, nil
 }
 
 // ---- functions ----
@@ -438,29 +513,31 @@ func (e *emitter) emitStmt(s ast.Stmt) (any, error) {
 }
 
 func (e *emitter) emitReturn(st *ast.ReturnStmt) (any, error) {
-	// Interface-typed results: fail closed on implicit conversion (the
-	// audit 2026-07-26 found `return p` into an `error`/`any` result
-	// slipping the guard — the same typed-nil raw-representation hole).
-	guardResult := func(i int, rt types.Type) error {
+	// Interface-typed results: box the returned value when its static type is
+	// non-interface (wrapInterfaceConversion; replaces the fail-closed guard).
+	wrapResult := func(i int, rt types.Type, w any) (any, error) {
 		if e.curResults == nil || i >= e.curResults.Len() {
-			return nil
+			return w, nil
 		}
-		return e.implicitInterfaceConversionGuard(e.curResults.At(i).Type(), rt)
+		return e.wrapInterfaceConversion(e.curResults.At(i).Type(), rt, w)
 	}
 	// `return f()` forwarding a multi-value call: splat into temps and
 	// return the temps (the hoisted call statement is spliced before the
-	// return by the A-normal-form machinery).
+	// return by the A-normal-form machinery). Interface-typed result slots
+	// wrap the individual temps.
 	if len(st.Results) == 1 {
 		if call, ok := st.Results[0].(*ast.CallExpr); ok {
 			if tup, isTup := e.info.TypeOf(call).(*types.Tuple); isTup {
-				for i := 0; i < tup.Len(); i++ {
-					if err := guardResult(i, tup.At(i).Type()); err != nil {
-						return nil, err
-					}
-				}
 				idents, err := e.splatMultiCall(call)
 				if err != nil {
 					return nil, err
+				}
+				for i := 0; i < len(idents) && i < tup.Len(); i++ {
+					w, err := wrapResult(i, tup.At(i).Type(), idents[i])
+					if err != nil {
+						return nil, err
+					}
+					idents[i] = w
 				}
 				return map[string]any{"stmt": "return", "results": idents}, nil
 			}
@@ -468,10 +545,11 @@ func (e *emitter) emitReturn(st *ast.ReturnStmt) (any, error) {
 	}
 	results := []any{}
 	for i, r := range st.Results {
-		if err := guardResult(i, e.info.TypeOf(r)); err != nil {
+		w, err := e.emitExpr(r)
+		if err != nil {
 			return nil, err
 		}
-		w, err := e.emitExpr(r)
+		w, err = wrapResult(i, e.info.TypeOf(r), w)
 		if err != nil {
 			return nil, err
 		}
@@ -506,28 +584,33 @@ func (e *emitter) containsVarUse(x ast.Expr, names map[string]bool) bool {
 	return found
 }
 
-// implicitInterfaceConversionGuard fails closed when a value of
-// non-interface static type flows into an interface-typed slot: the
-// lowering has no interface wrap at assignment/argument sites yet, so the
-// raw representation makes typed-nil and cross-dynamic-type comparisons
-// silently WRONG (interfaces/typed-nil-pointer-compare pinned it — Go 111,
-// raw lowering 1). The wrap lands with the interfaces campaign
-// (docs/2026-07-25_arc-sequence.md item 3); until then this construct is a
-// visible boundary refusal. An untyped-nil RHS is exact as-is.
-func (e *emitter) implicitInterfaceConversionGuard(target types.Type, rhs types.Type) error {
+// wrapInterfaceConversion boxes an emitted expression when a value of
+// non-interface static type flows into an interface-typed slot (the
+// interfaces campaign's real conversion; replaces the fail-closed guard,
+// BUG-006). Untyped nil stays bare (a nil interface IS nil); an
+// interface-typed source needs no wrap (Go never double-boxes).
+func (e *emitter) wrapInterfaceConversion(target types.Type, rhs types.Type, operand any) (any, error) {
 	if target == nil || !types.IsInterface(target) {
-		return nil
+		return operand, nil
 	}
 	if rhs == nil {
-		return nil
+		return operand, nil
 	}
 	if b, ok := rhs.(*types.Basic); ok && b.Kind() == types.UntypedNil {
-		return nil
+		return operand, nil
 	}
-	if !types.IsInterface(rhs) {
-		return unsup("implicit interface conversion (interfaces campaign)")
+	if types.IsInterface(rhs) {
+		return operand, nil
 	}
-	return nil
+	targetWire, err := e.emitType(target)
+	if err != nil {
+		return nil, err
+	}
+	dynWire, err := e.emitType(rhs)
+	if err != nil {
+		return nil, err
+	}
+	return map[string]any{"expr": "to-interface", "target": targetWire, "dynamic": dynWire, "operand": operand}, nil
 }
 
 // assignTargetType resolves the static type of an assignment target for the
@@ -576,19 +659,37 @@ func (e *emitter) emitAssign(st *ast.AssignStmt) (any, error) {
 		return map[string]any{"stmt": "compound-assign", "op": op, "target": target, "read": read, "rhs": rhs}, nil
 	}
 
+	// Comma-ok type assertion `v, ok := x.(T)` / `v, ok = x.(T)`: a dedicated
+	// statement (the map comma-ok pattern), targets in the ordinary assign
+	// target encoding — on `:=`, v declares as T and ok as bool via Defs.
+	if len(st.Lhs) == 2 && len(st.Rhs) == 1 {
+		if ta, isTA := ast.Unparen(st.Rhs[0]).(*ast.TypeAssertExpr); isTA && ta.Type != nil {
+			target, err := e.emitAssignTarget(st.Lhs[0], define)
+			if err != nil {
+				return nil, err
+			}
+			okTarget, err := e.emitAssignTarget(st.Lhs[1], define)
+			if err != nil {
+				return nil, err
+			}
+			operand, err := e.emitExpr(ta.X)
+			if err != nil {
+				return nil, err
+			}
+			targetTy, err := e.emitType(e.info.TypeOf(ta.Type))
+			if err != nil {
+				return nil, err
+			}
+			return map[string]any{"stmt": "type-assert", "target": target,
+				"okTarget": okTarget, "expr": operand, "targetType": targetTy}, nil
+		}
+	}
+
 	// Map element assignment `m[k] = v` is a map store, not an addressed
 	// index (maps are not addressable).
 	if !define && len(st.Lhs) == 1 && len(st.Rhs) == 1 {
 		if ix, ok := st.Lhs[0].(*ast.IndexExpr); ok {
 			if m, ok := e.info.TypeOf(ix.X).Underlying().(*types.Map); ok {
-				if err := e.implicitInterfaceConversionGuard(
-					m.Key(), e.info.TypeOf(ix.Index)); err != nil {
-					return nil, err
-				}
-				if err := e.implicitInterfaceConversionGuard(
-					m.Elem(), e.info.TypeOf(st.Rhs[0])); err != nil {
-					return nil, err
-				}
 				base, err := e.emitExpr(ix.X)
 				if err != nil {
 					return nil, err
@@ -597,7 +698,15 @@ func (e *emitter) emitAssign(st *ast.AssignStmt) (any, error) {
 				if err != nil {
 					return nil, err
 				}
+				index, err = e.wrapInterfaceConversion(m.Key(), e.info.TypeOf(ix.Index), index)
+				if err != nil {
+					return nil, err
+				}
 				value, err := e.emitExpr(st.Rhs[0])
+				if err != nil {
+					return nil, err
+				}
+				value, err = e.wrapInterfaceConversion(m.Elem(), e.info.TypeOf(st.Rhs[0]), value)
 				if err != nil {
 					return nil, err
 				}
@@ -622,21 +731,18 @@ func (e *emitter) emitAssign(st *ast.AssignStmt) (any, error) {
 		}
 		lhs = append(lhs, w)
 	}
-	// Interface-typed targets: fail closed on implicit conversion (both the
-	// per-pair and the multi-value-call shapes).
-	if len(st.Rhs) == len(st.Lhs) {
-		for i, l := range st.Lhs {
-			if err := e.implicitInterfaceConversionGuard(
-				e.assignTargetType(l, define), e.info.TypeOf(st.Rhs[i])); err != nil {
-				return nil, err
-			}
-		}
-	} else if len(st.Rhs) == 1 {
+	// Interface-typed targets: per-pair RHSes wrap at emission (below); a
+	// multi-value call's tuple components cannot be wrapped post-hoc (the
+	// call node produces the whole tuple), so that shape stays a refusal.
+	if len(st.Rhs) == 1 && len(st.Lhs) > 1 {
 		if tup, ok := e.info.TypeOf(st.Rhs[0]).(*types.Tuple); ok && tup.Len() == len(st.Lhs) {
 			for i, l := range st.Lhs {
-				if err := e.implicitInterfaceConversionGuard(
-					e.assignTargetType(l, define), tup.At(i).Type()); err != nil {
-					return nil, err
+				target := e.assignTargetType(l, define)
+				comp := tup.At(i).Type()
+				if target != nil && types.IsInterface(target) && !types.IsInterface(comp) {
+					if b, isB := comp.(*types.Basic); !isB || b.Kind() != types.UntypedNil {
+						return nil, unsup("implicit interface conversion in multi-value assignment (interfaces campaign, deferred)")
+					}
 				}
 			}
 		}
@@ -713,13 +819,22 @@ func (e *emitter) emitAssign(st *ast.AssignStmt) (any, error) {
 					return nil, err
 				}
 				if effectful {
+					// Single-value call into an interface-typed target: box
+					// the call's result (multi-value stays refused above).
+					if !isMultiValue && len(st.Lhs) == 1 {
+						node, err = e.wrapInterfaceConversion(
+							e.assignTargetType(st.Lhs[0], define), e.info.TypeOf(call), node)
+						if err != nil {
+							return nil, err
+						}
+					}
 					return map[string]any{"stmt": "assign", "define": define, "lhs": lhs, "rhs": []any{node}}, nil
 				}
 			}
 		}
 	}
 	rhs := []any{}
-	for _, r := range st.Rhs {
+	for i, r := range st.Rhs {
 		w, err := e.emitExpr(r)
 		if err != nil {
 			return nil, err
@@ -729,6 +844,16 @@ func (e *emitter) emitAssign(st *ast.AssignStmt) (any, error) {
 		// the outer scope before the declarations take effect.
 		if captures {
 			w, err = e.hoist(w, e.info.TypeOf(r))
+			if err != nil {
+				return nil, err
+			}
+		}
+		// Per-pair interface-typed target: box the (possibly temp-bound)
+		// value. Wrapping AFTER the hoist keeps the temp at the value's
+		// static type; the boxed view is built where it is consumed.
+		if len(st.Rhs) == len(st.Lhs) {
+			w, err = e.wrapInterfaceConversion(
+				e.assignTargetType(st.Lhs[i], define), e.info.TypeOf(r), w)
 			if err != nil {
 				return nil, err
 			}
@@ -798,16 +923,27 @@ func (e *emitter) emitDeclStmt(st *ast.DeclStmt) (any, error) {
 			}
 			d := map[string]any{"id": name.Name, "type": ty}
 			if i < len(vs.Values) {
-				if err := e.implicitInterfaceConversionGuard(
-					obj.Type(), e.info.TypeOf(vs.Values[i])); err != nil {
-					return nil, err
-				}
 				init, err := e.emitExpr(vs.Values[i])
 				if err != nil {
 					return nil, err
 				}
 				if e.containsVarUse(vs.Values[i], declNames) {
 					init, err = e.hoist(init, e.info.TypeOf(vs.Values[i]))
+					if err != nil {
+						return nil, err
+					}
+				}
+				// Interface-typed declaration with a non-interface
+				// initializer: box (after any hoist, so the temp keeps the
+				// value's static type). A multi-value initializer's tuple
+				// components cannot be wrapped post-hoc — deferred.
+				if _, isTup := e.info.TypeOf(vs.Values[i]).(*types.Tuple); isTup {
+					if types.IsInterface(obj.Type()) {
+						return nil, unsup("implicit interface conversion in multi-value assignment (interfaces campaign, deferred)")
+					}
+				} else {
+					init, err = e.wrapInterfaceConversion(
+						obj.Type(), e.info.TypeOf(vs.Values[i]), init)
 					if err != nil {
 						return nil, err
 					}
@@ -1188,6 +1324,13 @@ func (e *emitter) emitMapCompound(ix *ast.IndexExpr, mt *types.Map, op string, r
 	if err != nil {
 		return nil, err
 	}
+	// Interface-typed key: box BEFORE the hoist — the temp is declared at
+	// the map's key type, so it must hold the boxed key (read and store
+	// both compare against boxed stored keys).
+	keyW, err = e.wrapInterfaceConversion(mt.Key(), e.info.TypeOf(ix.Index), keyW)
+	if err != nil {
+		return nil, err
+	}
 	keyRef, err := e.hoist(keyW, mt.Key())
 	if err != nil {
 		return nil, err
@@ -1455,6 +1598,27 @@ func (e *emitter) emitExprBare(x ast.Expr) (any, error) {
 		return e.emitSliceExpr(ex)
 	case *ast.FuncLit:
 		return e.emitFuncLit(ex)
+	case *ast.TypeAssertExpr:
+		// Single-result panicking form `x.(T)`. The comma-ok form is a
+		// dedicated statement (emitAssign); a comma-ok assert reaching
+		// expression position (its type is a tuple) is an unmodeled shape.
+		// `x.(type)` (Type == nil) only occurs under a type switch, which
+		// fails closed at the statement level.
+		if ex.Type == nil {
+			return nil, unsup("type switch guard in expression position")
+		}
+		if _, isTup := e.info.TypeOf(ex).(*types.Tuple); isTup {
+			return nil, unsup("type assert form outside a 2-target assignment (interfaces campaign, deferred)")
+		}
+		operand, err := e.emitExpr(ex.X)
+		if err != nil {
+			return nil, err
+		}
+		target, err := e.emitType(e.info.TypeOf(ex.Type))
+		if err != nil {
+			return nil, err
+		}
+		return map[string]any{"expr": "type-assert", "operand": operand, "target": target}, nil
 	default:
 		return nil, unsup("expression %T at %s", x, e.fset.Position(x.Pos()))
 	}
@@ -1506,11 +1670,22 @@ func (e *emitter) emitSliceExpr(se *ast.SliceExpr) (any, error) {
 	return node, nil
 }
 
-// namedTypeName returns the declared name of a (possibly pointer-wrapped) named
-// type, for use as a GoCore struct TypeId.
+// qualifiedTypeName renders a declared type's wire name PACKAGE-QUALIFIED
+// ("main.sliceError") — Go renders panic messages qualified, and
+// cross-package identity needs the package in the TypeId. Predeclared
+// (universe) types like `error` have no package and stay bare.
+func qualifiedTypeName(obj *types.TypeName) string {
+	if obj.Pkg() == nil {
+		return obj.Name()
+	}
+	return obj.Pkg().Name() + "." + obj.Name()
+}
+
+// namedTypeName returns the qualified declared name of a (possibly
+// pointer-wrapped) named type, for use as a GoCore struct TypeId.
 func namedTypeName(t types.Type) (string, bool) {
 	if named, ok := t.(*types.Named); ok {
-		return named.Obj().Name(), true
+		return qualifiedTypeName(named.Obj()), true
 	}
 	return "", false
 }
@@ -1612,6 +1787,12 @@ func (e *emitter) emitIndex(ix *ast.IndexExpr) (any, error) {
 		return nil, err
 	}
 	if m, ok := baseType.(*types.Map); ok {
+		// Interface-typed key: box the lookup key so it compares against the
+		// BOXED stored keys (raw-vs-boxed equality — maps/interface-key).
+		index, err = e.wrapInterfaceConversion(m.Key(), e.info.TypeOf(ix.Index), index)
+		if err != nil {
+			return nil, err
+		}
 		keyTy, err := e.emitType(m.Key())
 		if err != nil {
 			return nil, err
@@ -1754,80 +1935,8 @@ func (e *emitter) emitLValue(x ast.Expr) (any, error) {
 	return map[string]any{"target": "addr", "expr": addr}, nil
 }
 
-// guardCompositeInterfaces applies the implicit-interface-conversion guard
-// to every typed slot a composite literal fills (struct fields, slice and
-// array elements, map keys and values) — the audit 2026-07-26 found these
-// sites unguarded, leaving the typed-nil raw representation reachable.
-func (e *emitter) guardCompositeInterfaces(cl *ast.CompositeLit, t types.Type) error {
-	guard := func(slot types.Type, val ast.Expr) error {
-		if slot == nil {
-			return nil
-		}
-		return e.implicitInterfaceConversionGuard(slot, e.info.TypeOf(val))
-	}
-	switch u := t.Underlying().(type) {
-	case *types.Struct:
-		for i, el := range cl.Elts {
-			var ft types.Type
-			val := el
-			if kv, ok := el.(*ast.KeyValueExpr); ok {
-				if id, ok := kv.Key.(*ast.Ident); ok {
-					for j := 0; j < u.NumFields(); j++ {
-						if u.Field(j).Name() == id.Name {
-							ft = u.Field(j).Type()
-						}
-					}
-				}
-				val = kv.Value
-			} else if i < u.NumFields() {
-				ft = u.Field(i).Type()
-			}
-			if err := guard(ft, val); err != nil {
-				return err
-			}
-		}
-	case *types.Slice:
-		for _, el := range cl.Elts {
-			val := el
-			if kv, ok := el.(*ast.KeyValueExpr); ok {
-				val = kv.Value
-			}
-			if err := guard(u.Elem(), val); err != nil {
-				return err
-			}
-		}
-	case *types.Array:
-		for _, el := range cl.Elts {
-			val := el
-			if kv, ok := el.(*ast.KeyValueExpr); ok {
-				val = kv.Value
-			}
-			if err := guard(u.Elem(), val); err != nil {
-				return err
-			}
-		}
-	case *types.Map:
-		for _, el := range cl.Elts {
-			kv, ok := el.(*ast.KeyValueExpr)
-			if !ok {
-				continue
-			}
-			if err := guard(u.Key(), kv.Key); err != nil {
-				return err
-			}
-			if err := guard(u.Elem(), kv.Value); err != nil {
-				return err
-			}
-		}
-	}
-	return nil
-}
-
 func (e *emitter) emitCompositeLit(cl *ast.CompositeLit) (any, error) {
 	t := e.info.TypeOf(cl)
-	if err := e.guardCompositeInterfaces(cl, t); err != nil {
-		return nil, err
-	}
 	switch u := t.Underlying().(type) {
 	case *types.Struct:
 		return e.emitStructLit(cl, t, u)
@@ -1905,13 +2014,27 @@ func (e *emitter) emitStructLit(cl *ast.CompositeLit, t types.Type, st *types.St
 			if err != nil {
 				return nil, err
 			}
+			w, err = e.wrapInterfaceConversion(fld.Type(), e.info.TypeOf(positional[i]), w)
+			if err != nil {
+				return nil, err
+			}
 			args = append(args, w)
 			continue
 		}
 		if ref, ok := preBound[fld.Name()]; ok {
+			// The pre-bound temp holds the value at its static type; box the
+			// temp reference into an interface-typed field.
+			ref, err := e.wrapInterfaceConversion(fld.Type(), e.info.TypeOf(keyed[fld.Name()]), ref)
+			if err != nil {
+				return nil, err
+			}
 			args = append(args, ref)
 		} else if v, ok := keyed[fld.Name()]; ok {
 			w, err := e.emitExpr(v)
+			if err != nil {
+				return nil, err
+			}
+			w, err = e.wrapInterfaceConversion(fld.Type(), e.info.TypeOf(v), w)
 			if err != nil {
 				return nil, err
 			}
@@ -1955,24 +2078,24 @@ func (e *emitter) emitSliceLit(cl *ast.CompositeLit, s *types.Slice) (any, error
 	idx := int64(0)
 	length := int64(0)
 	for _, elt := range cl.Elts {
+		val := elt
 		if kv, ok := elt.(*ast.KeyValueExpr); ok {
 			tv, ok := e.info.Types[kv.Key]
 			if !ok || tv.Value == nil {
 				return nil, unsup("slice literal key is not constant")
 			}
 			idx, _ = constant.Int64Val(tv.Value)
-			v, err := e.emitExpr(kv.Value)
-			if err != nil {
-				return nil, err
-			}
-			elems = append(elems, map[string]any{"index": idx, "value": v})
-		} else {
-			v, err := e.emitExpr(elt)
-			if err != nil {
-				return nil, err
-			}
-			elems = append(elems, map[string]any{"index": idx, "value": v})
+			val = kv.Value
 		}
+		v, err := e.emitExpr(val)
+		if err != nil {
+			return nil, err
+		}
+		v, err = e.wrapInterfaceConversion(s.Elem(), e.info.TypeOf(val), v)
+		if err != nil {
+			return nil, err
+		}
+		elems = append(elems, map[string]any{"index": idx, "value": v})
 		if idx+1 > length {
 			length = idx + 1
 		}
@@ -2009,7 +2132,15 @@ func (e *emitter) emitMapLit(cl *ast.CompositeLit, m *types.Map) (any, error) {
 		if err != nil {
 			return nil, err
 		}
+		k, err = e.wrapInterfaceConversion(m.Key(), e.info.TypeOf(kv.Key), k)
+		if err != nil {
+			return nil, err
+		}
 		v, err := e.emitExpr(kv.Value)
+		if err != nil {
+			return nil, err
+		}
+		v, err = e.wrapInterfaceConversion(m.Elem(), e.info.TypeOf(kv.Value), v)
 		if err != nil {
 			return nil, err
 		}
@@ -2035,6 +2166,7 @@ func (e *emitter) emitArrayLit(cl *ast.CompositeLit, arr *types.Array) (any, err
 	elems := []any{}
 	idx := int64(0)
 	for _, elt := range cl.Elts {
+		val := elt
 		if kv, ok := elt.(*ast.KeyValueExpr); ok {
 			kv2, ok := e.info.Types[kv.Key]
 			if !ok || kv2.Value == nil {
@@ -2042,18 +2174,17 @@ func (e *emitter) emitArrayLit(cl *ast.CompositeLit, arr *types.Array) (any, err
 			}
 			k, _ := constant.Int64Val(kv2.Value)
 			idx = k
-			w, err := e.emitExpr(kv.Value)
-			if err != nil {
-				return nil, err
-			}
-			elems = append(elems, map[string]any{"index": idx, "value": w})
-		} else {
-			w, err := e.emitExpr(elt)
-			if err != nil {
-				return nil, err
-			}
-			elems = append(elems, map[string]any{"index": idx, "value": w})
+			val = kv.Value
 		}
+		w, err := e.emitExpr(val)
+		if err != nil {
+			return nil, err
+		}
+		w, err = e.wrapInterfaceConversion(arr.Elem(), e.info.TypeOf(val), w)
+		if err != nil {
+			return nil, err
+		}
+		elems = append(elems, map[string]any{"index": idx, "value": w})
 		idx++
 	}
 	return map[string]any{"expr": "array-lit", "length": arr.Len(), "elem": elem, "elems": elems}, nil
@@ -2355,6 +2486,16 @@ func (e *emitter) emitCallNode(c *ast.CallExpr) (any, bool, error) {
 				return map[string]any{"expr": "string-from-rune", "x": arg}, false, nil
 			}
 		}
+		// An EXPLICIT conversion to an interface type is a box, exactly
+		// like the implicit sites (`any(1)` in delete/index keys): emit
+		// the to-interface wrap with the operand's static type as the
+		// dynamic — the machine's convert op correctly refuses raw
+		// values at interface targets (interfaces campaign, 2026-07-30).
+		if converted, err := e.wrapInterfaceConversion(e.info.TypeOf(c), e.info.TypeOf(c.Args[0]), arg); err != nil {
+			return nil, false, err
+		} else if types.IsInterface(e.info.TypeOf(c)) {
+			return converted, false, nil
+		}
 		target, err := e.emitType(e.info.TypeOf(c))
 		if err != nil {
 			return nil, false, err
@@ -2512,29 +2653,38 @@ func (e *emitter) emitCallArgs(sig *types.Signature, c *ast.CallExpr) ([]any, er
 		}
 	}
 	if sig == nil || !sig.Variadic() || c.Ellipsis != token.NoPos {
-		// Interface-typed params: fail closed on implicit conversion (a
-		// spread argument is exact — the slice type already matches).
+		// Interface-typed params: box non-interface arguments (a spread
+		// argument is exact — the slice type already matches, no wrap).
 		if sig != nil && c.Ellipsis == token.NoPos {
 			params := sig.Params()
+			args := []any{}
 			for i, a := range c.Args {
+				w, err := e.emitExpr(a)
+				if err != nil {
+					return nil, err
+				}
 				if i < params.Len() {
-					if err := e.implicitInterfaceConversionGuard(
-						params.At(i).Type(), e.info.TypeOf(a)); err != nil {
+					w, err = e.wrapInterfaceConversion(
+						params.At(i).Type(), e.info.TypeOf(a), w)
+					if err != nil {
 						return nil, err
 					}
 				}
+				args = append(args, w)
 			}
+			return args, nil
 		}
 		return e.emitArgs(c.Args)
 	}
 	fixed := sig.Params().Len() - 1
 	args := []any{}
 	for i := 0; i < fixed; i++ {
-		if err := e.implicitInterfaceConversionGuard(
-			sig.Params().At(i).Type(), e.info.TypeOf(c.Args[i])); err != nil {
+		w, err := e.emitExpr(c.Args[i])
+		if err != nil {
 			return nil, err
 		}
-		w, err := e.emitExpr(c.Args[i])
+		w, err = e.wrapInterfaceConversion(
+			sig.Params().At(i).Type(), e.info.TypeOf(c.Args[i]), w)
 		if err != nil {
 			return nil, err
 		}
@@ -2554,11 +2704,11 @@ func (e *emitter) emitCallArgs(sig *types.Signature, c *ast.CallExpr) ([]any, er
 	}
 	elems := []any{}
 	for i := fixed; i < len(c.Args); i++ {
-		if err := e.implicitInterfaceConversionGuard(
-			elemType, e.info.TypeOf(c.Args[i])); err != nil {
+		w, err := e.emitExpr(c.Args[i])
+		if err != nil {
 			return nil, err
 		}
-		w, err := e.emitExpr(c.Args[i])
+		w, err = e.wrapInterfaceConversion(elemType, e.info.TypeOf(c.Args[i]), w)
 		if err != nil {
 			return nil, err
 		}
@@ -2581,9 +2731,47 @@ func (e *emitter) emitMethodCall(c *ast.CallExpr, sel *ast.SelectorExpr) (any, b
 		return nil, false, unsup("method %s is not a func", sel.Sel.Name)
 	}
 	recvType := fn.Type().(*types.Signature).Recv().Type()
-	// Interface-receiver methods need dynamic dispatch (interface increment).
+	// Interface-receiver call: dynamic dispatch through the method-table
+	// entry "<InterfaceName>.<Method>", the interface value itself as the
+	// first argument — AS IS, no address-of or copy adjustment (the boxed
+	// value carries its own receiver; methodReceiverArg's pointer logic is
+	// for concrete receivers only).
 	if _, isIface := recvType.Underlying().(*types.Interface); isIface {
-		return nil, false, unsup("interface method dispatch %s", sel.Sel.Name)
+		recvStatic := e.info.TypeOf(sel.X)
+		if _, ok := recvStatic.Underlying().(*types.Interface); !ok {
+			// Promotion through an embedded interface field: the receiver
+			// expression is not the interface value itself — deferred.
+			return nil, false, unsup("interface method dispatch through embedding (interfaces campaign, deferred)")
+		}
+		ifaceName, ok := namedTypeName(recvStatic)
+		if !ok {
+			return nil, false, unsup("method call on anonymous interface type")
+		}
+		// Record the dispatch target so emitProgram can synthesize a table
+		// anchor when the interface is not declared in this package
+		// (predeclared error, imported interfaces).
+		if e.calledIfaceMethods == nil {
+			e.calledIfaceMethods = map[string]calledIfaceMethod{}
+		}
+		e.calledIfaceMethods[ifaceName+"."+sel.Sel.Name] = calledIfaceMethod{
+			ifaceName: ifaceName, method: sel.Sel.Name,
+			sig: fn.Type().(*types.Signature),
+		}
+		recvArg, err := e.emitExpr(sel.X)
+		if err != nil {
+			return nil, false, err
+		}
+		args, err := e.emitCallArgs(fn.Type().(*types.Signature), c)
+		if err != nil {
+			return nil, false, err
+		}
+		all := append([]any{recvArg}, args...)
+		resultTypes, err := e.emitResultTypes(fn.Type().(*types.Signature))
+		if err != nil {
+			return nil, false, err
+		}
+		return map[string]any{"expr": "call", "func": ifaceName + "." + sel.Sel.Name,
+			"args": all, "resultTypes": resultTypes}, true, nil
 	}
 	// Defining type name (strip a pointer receiver) for the FuncId.
 	defType := recvType
@@ -2674,11 +2862,11 @@ func (e *emitter) emitBuiltin(c *ast.CallExpr, name string) (any, bool, error) {
 		// evaluating).
 		val := map[string]any{"expr": "default", "type": elemTy}
 		if tv, ok := e.info.Types[c.Args[0]]; !ok || !tv.IsType() {
-			if err := e.implicitInterfaceConversionGuard(
-				ptr.Elem(), e.info.TypeOf(c.Args[0])); err != nil {
+			w, err := e.emitExpr(c.Args[0])
+			if err != nil {
 				return nil, false, err
 			}
-			w, err := e.emitExpr(c.Args[0])
+			w, err = e.wrapInterfaceConversion(ptr.Elem(), e.info.TypeOf(c.Args[0]), w)
 			if err != nil {
 				return nil, false, err
 			}
@@ -2762,16 +2950,10 @@ func (e *emitter) emitPanicStmt(c *ast.CallExpr) (any, error) {
 	if types.IsInterface(t) {
 		return map[string]any{"stmt": "panic", "value": value}, nil
 	}
-	// A defined (named) non-struct type: the lowering models it as a GoCore
-	// alias, so the interface wrap would erase its identity — and Go's abort
-	// line prints it QUALIFIED (`main.T(v)`), which the bare value is not.
-	// Fail closed (BUG-004). Named structs keep their identity (TypeId) and
-	// pass through; their abort rendering fails closed machine-side.
-	if named, ok := t.(*types.Named); ok {
-		if _, isStruct := named.Underlying().(*types.Struct); !isStruct {
-			return nil, unsup("panic payload of defined type %s (alias lowering erases its identity)", named.Obj().Name())
-		}
-	}
+	// Defined non-struct types are identity-bearing since kind "defined"
+	// landed (interfaces campaign; the BUG-004 refusal is lifted): their
+	// wrap carries the defined type, so the boxed payload keeps its
+	// identity and Go's qualified abort rendering.
 	wrap, err := e.emitType(t)
 	if err != nil {
 		return nil, err
@@ -2794,6 +2976,12 @@ func (e *emitter) emitDeleteStmt(c *ast.CallExpr) (any, error) {
 		return nil, err
 	}
 	index, err := e.emitExpr(c.Args[1])
+	if err != nil {
+		return nil, err
+	}
+	// Interface-typed key: box, same as map reads/stores (the deleted key
+	// compares against boxed stored keys — maps/delete-interface-dynamic-key).
+	index, err = e.wrapInterfaceConversion(mt.Key(), e.info.TypeOf(c.Args[1]), index)
 	if err != nil {
 		return nil, err
 	}
@@ -2914,11 +3102,11 @@ func (e *emitter) emitAppend(c *ast.CallExpr) (any, bool, error) {
 	} else {
 		packed := []any{}
 		for i := 1; i < len(c.Args); i++ {
-			if err := e.implicitInterfaceConversionGuard(
-				sl.Elem(), e.info.TypeOf(c.Args[i])); err != nil {
+			w, err := e.emitExpr(c.Args[i])
+			if err != nil {
 				return nil, false, err
 			}
-			w, err := e.emitExpr(c.Args[i])
+			w, err = e.wrapInterfaceConversion(sl.Elem(), e.info.TypeOf(c.Args[i]), w)
 			if err != nil {
 				return nil, false, err
 			}

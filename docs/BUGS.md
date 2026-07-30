@@ -60,9 +60,40 @@ fields pervasively). GoCore already has the right primitives (`fieldAddr`,
 overclaims "field/index access" as working (true for reads, false for writes) —
 correct it when the lowering is fixed. Tracked in `TODO.md` (F1).
 
-## BUG-006 — interface slots hold RAW values (no conversion wrap); guarded fail-closed
+## BUG-007 — method PROMOTION through embedded fields is unmodeled
 
 - Status: open
+- Pinned-by: differential
+- Cases: interfaces/embedded-interface-shadowing/interface-field-dispatch, interfaces/embedded-interface-shadowing/interface-field-nil-panic, interfaces/embedded-interface-shadowing/nil-pointer-method-promoted, interfaces/embedded-interface-shadowing/pointer-method-promoted, interfaces/error-idioms/promoted-method, methods/embedded-interface-satisfaction, embedding/deep-promoted-method, embedding/embedded-method-promote
+- Discovered: 2026-07-30 (interfaces campaign — these cases were
+  frontend-blocked before the campaign; the wrap/dispatch landing made
+  the gap VISIBLE at the machine: `dynamic type main.T has no method m`)
+
+Go promotes an embedded field's methods (and its interface's method
+set) to the embedding struct, with receiver adjustment through the
+field path — depth-first, shadowing by depth, ambiguity = compile
+error. The machine's method table has only DECLARED methods, so a
+promoted call finds no entry: dispatch fails stuck (fail-closed —
+never a wrong answer), and method-SET checks reject types whose
+interface satisfaction is via promotion. The two pre-existing
+`embedding/` untriaged ids are the same root cause and are folded in
+here (untriaged 29 → 27 in the same commit). Fix direction (owed
+sub-slice, recorded in
+`docs/2026-07-30_interfaces-campaign-design.md`): frontend synthesizes
+forwarding method entries for the promoted method set (receiver
+adjustment = field access chain), which keeps GoCore's dispatch flat —
+mirroring how gc actually compiles wrappers.
+
+## BUG-006 — interface slots hold RAW values (no conversion wrap); guarded fail-closed
+
+- Status: fixed (2026-07-30, interfaces campaign — the real
+  conversion wrap landed: `wrapInterfaceConversion` emits
+  `to-interface` at every former guard site; the machine boxes with the
+  canonical dynamic `Ty`. `interfaces/typed-nil-pointer-compare` now
+  PASSES (Go 111 = machine 111); the pinned case below flipped back
+  FAIL→PASS with the wrap in place. Residue kept fail-closed: the two
+  multi-value-assign tuple sites still refuse (deferred, message says
+  so).)
 - Pinned-by: differential
 - Cases: comparisons/short-circuit/struct-skips-interface-panic
 - Discovered: 2026-07-25/26 (slice 0d; scope completed by the pre-merge audit)
@@ -111,7 +142,7 @@ audit response.
 
 - Status: open
 - Pinned-by: differential
-- Cases: panic-recover/repanic-same-value-abort, panic-recover/panic-named-type-abort, panic-recover/panic-newline-abort
+- Cases: panic-recover/repanic-same-value-abort, panic-recover/panic-newline-abort
 - Discovered: 2026-07-25 (pre-merge adversarial audit of `unwinding-arc`)
 
 Go's abort output makes three demands the machine's value-level state
@@ -129,16 +160,16 @@ printing a wrong first line:
    PASS→FAIL (intentional, recorded here per the re-pin guard): the
    collapse it pins is real Go behavior our chain cannot decide.
 2. **Defined-type payloads print qualified**: `panic(Code(7))` renders
-   `main.Code(7)` via `printanycustomtype`. Root cause is deeper than the
-   render arm: the lowering models a defined non-struct type as a GoCore
-   ALIAS, so `dynamicTypeName?` resolves `Code` to `int` and the identity
-   is erased before the machine sees it (the same conflation will matter
-   for type asserts when the interfaces lane opens). The frontend now
-   fails closed on defined non-struct panic payloads at emit
-   (`panic-named-type-abort` is the red pin, stage frontend-export; the
-   wildcarded render printed the bare `7` — a silent wrong answer), and
-   `renderPanicPayload` checks the dynamic name against the predeclared
-   one as defense in depth.
+   `main.Code(7)` via `printanycustomtype`. Root cause was deeper than
+   the render arm: the lowering modeled a defined non-struct type as a
+   GoCore ALIAS, erasing the identity before the machine saw it.
+   **FIXED 2026-07-30 (interfaces campaign)**: `TypeDef.defined` keeps
+   the identity, TypeId keys are package-qualified at the frontend, and
+   `renderPanicPayload` renders the `main.Code(7)` form for
+   int-underlying defined payloads (other underlyings stay closed).
+   `panic-recover/panic-named-type-abort` flipped red→PASS with this.
+   Items 1 (eface identity) and 3 (multi-line payloads) remain open;
+   their pins stay red.
 3. **Multi-line string payloads**: Go's first line stops at an embedded
    `\n` (`printindented`); `asciiString?` rejects the newline byte
    (`panic-newline-abort` is the red pin).

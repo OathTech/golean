@@ -127,6 +127,47 @@ structure TypeId where
   key : String
   deriving Repr, BEq, DecidableEq, Inhabited
 
+namespace GoCore
+
+/-- Go types. Lives here (not `Syntax.lean`) since the interfaces
+campaign (S3, 2026-07-30) so `GoValue.interface` can carry its dynamic
+type STRUCTURALLY — identity and typed operations on boxed values key on
+canonical `Ty` equality (the Perennial `interface.mk_ok` design), never
+on rendered name strings. Stays in the `GoCore` namespace (the golden
+repr pins print `GoLean.GoCore.Ty.…`). -/
+inductive Ty where
+  | bool
+  | int (kind : IntKind := IntKind.int)
+  | string
+  | array (length : Nat) (elem : Ty)
+  | slice (elem : Ty)
+  | map (key value : Ty)
+  | pointer (elem : Ty)
+  /-- A function type. Structural detail is carried for zero values and
+  typing only — dispatch is by `FuncId`, never by this. -/
+  | funcType (params results : List Ty)
+  | interface (id : TypeId)
+  | defined (id : TypeId)
+  | unsupported (feature : String)
+  deriving Repr, BEq, Inhabited
+
+/-- Structural rendering of a (canonical) dynamic type for the
+OBSERVATION channel only — identity never keys on this (S3). -/
+def Ty.dynamicName : Ty → String
+  | .bool => "bool"
+  | .int kind => kind.name
+  | .string => "string"
+  | .defined id => id.key
+  | .interface id => id.key
+  | .pointer e => "*" ++ Ty.dynamicName e
+  | .slice e => "[]" ++ Ty.dynamicName e
+  | .array n e => s!"[{n}]" ++ Ty.dynamicName e
+  | .map k v => s!"map[{Ty.dynamicName k}]{Ty.dynamicName v}"
+  | .funcType _ _ => "func"
+  | .unsupported f => s!"<unsupported {f}>"
+
+end GoCore
+
 inductive Loc where
   | base (addr : Addr)
   | field (base : Loc) (typeId : TypeId) (fieldName : String)
@@ -237,7 +278,13 @@ inductive GoValue where
   | string (value : GoString)
   | addr (loc : Loc)
   | nil
-  | interface (dynamic : String) (value : GoValue)
+  /-- An interface box: the CANONICAL dynamic type (aliases resolved at
+  box time, defined-type identity kept — `canonicalDynamicTy`) plus the
+  boxed value. Identity comparisons, type asserts, method dispatch, and
+  equality-at-dynamic-type all key on `dynamic` structurally (interfaces
+  campaign S3, 2026-07-30; was a rendered `String`). A nil interface is
+  `GoValue.nil`, never a box. -/
+  | interface (dynamic : GoCore.Ty) (value : GoValue)
   | struct (typeId : TypeId) (fields : Array (String × GoValue))
   | array (values : Array GoValue)
   | slice (value : SliceValue)

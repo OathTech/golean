@@ -427,7 +427,7 @@ abbrev progFuncs : Array Func := #[recFunc, catchFunc]
 
 /-- The panic payload after the `any`-conversion. -/
 abbrev payload : GoValue :=
-  .interface "string" (.string (GoString.fromLeanString "boom"))
+  .interface .string (.string (GoString.fromLeanString "boom"))
 
 end RecoverWitness
 
@@ -512,7 +512,9 @@ theorem wp_recover_catch_seven {ra : Addr} {k}
   iapply fupd_intro
   iintro Hc11
   iapply (wp_strict_apply_pure (out := RecoverWitness.payload)
-    (happly := fun σ => rfl))
+    (happly := fun σ => by
+      simp [applyStrictOp, canonicalDynamicTy, canonicalTy, canonicalTyFuel,
+        Ty.mentionsUnsupported, RecoverWitness.payload, Bind.bind, Except.bind]))
   iapply fupd_intro
   inext
   iapply fupd_intro

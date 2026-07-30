@@ -24,4 +24,8 @@
 #   conversion guard refuses 18 formerly-lean-observation cases at
 #   the boundary (they were mis-lowered raw-representation cases,
 #   BUG-006), removing them from the fidelity ledger honestly.
-31
+# 2026-07-30 (interfaces campaign, quorum-pilot phase 1)  31 -> 27: two
+#   map-key panic cases now conformant (unhashable-key prechecks); two
+#   embedding ids folded into BUG-007 (method promotion) with the six
+#   newly-visible promotion cases the campaign surfaced.
+27

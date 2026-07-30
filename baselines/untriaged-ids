@@ -7,8 +7,6 @@
 # interface-key delete gaps, invisible to the count).
 arrays/pointer-array
 embedding/deep-promoted-field
-embedding/deep-promoted-method
-embedding/embedded-method-promote
 embedding/embedded-pointer-field
 embedding/embedded-pointer-nil-panic
 embedding/promoted-field-depth-shadow
@@ -18,9 +16,7 @@ init/init-sees-var-values
 init/multiple-init-order
 init/package-init-order
 init/var-init-sequence
-maps/delete-interface-key-panic
 maps/delete-nil-interface-key-panic
-maps/interface-slice-key-panic
 methods/value-auto-deref
 pointers/nil-array-index-panic
 pointers/nil-value-receiver-call-panic

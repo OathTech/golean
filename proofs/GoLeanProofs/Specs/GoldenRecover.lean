@@ -35,7 +35,7 @@ set_option linter.unusedSimpArgs false
 
 /-- The panic payload after the lowering's `any`-conversion. -/
 abbrev payload : GoValue :=
-  .interface "string" (.string ⟨#[98, 111, 111, 109, 45, 100, 105, 114, 101, 99, 116]⟩)
+  .interface .string (.string ⟨#[98, 111, 111, 109, 45, 100, 105, 114, 101, 99, 116]⟩)
 
 section
 variable {GF : BundledGFunctors} {hlc : HasLC} [GoCoreGS hlc GF]
@@ -120,7 +120,9 @@ theorem wp_recoverDirect_body {ra : Addr} {tl : Loc} {k}
   inext
   iapply fupd_intro
   iintro Hc11
-  iapply (wp_strict_apply_pure (out := payload) (happly := fun σ => rfl))
+  iapply (wp_strict_apply_pure (out := payload) (happly := fun σ => by
+    simp [applyStrictOp, canonicalDynamicTy, canonicalTy, canonicalTyFuel,
+      Ty.mentionsUnsupported, payload, Bind.bind, Except.bind]))
   iapply fupd_intro
   inext
   iapply fupd_intro

@@ -222,6 +222,18 @@ partial def decodeExpr (path : String) (json : Json) : LowerM Expr := do
       let x ← decodeExpr s!"{path}.x" (← StrictJson.field path obj "x")
       let y ← decodeExpr s!"{path}.y" (← StrictJson.field path obj "y")
       decodeBinary path obj op x y
+  | "to-interface" =>
+      -- The interface-conversion wrap (interfaces campaign S3): the
+      -- machine boxes the operand with the canonical dynamic type.
+      let target ← decodeTy s!"{path}.target" (← StrictJson.field path obj "target")
+      let dynamic ← decodeTy s!"{path}.dynamic" (← StrictJson.field path obj "dynamic")
+      let operand ← decodeExpr s!"{path}.operand" (← StrictJson.field path obj "operand")
+      pure (.toInterface target dynamic operand)
+  | "type-assert" =>
+      -- Single-result assert `x.(T)` — panics on mismatch.
+      let operand ← decodeExpr s!"{path}.operand" (← StrictJson.field path obj "operand")
+      let target ← decodeTy s!"{path}.target" (← StrictJson.field path obj "target")
+      pure (.typeAssert operand target)
   | "call" => fail "call in expression position is not modeled (calls are statements)"
   | other => fail s!"unsupported expression {other} at {path}"
 where
@@ -396,6 +408,31 @@ partial def decodeStmt (results : Array Param) (path : String) (json : Json) : L
       decodeReturn results path obj
   | "assign" =>
       decodeAssign results path obj
+  | "type-assert" =>
+      -- Comma-ok assert `v, ok := x.(T)` (Stmt.typeAssert: never panics;
+      -- blanks route to typed discard temps like decodeAssign's).
+      let tJson ← StrictJson.field path obj "target"
+      let okJson ← StrictJson.field path obj "okTarget"
+      let e ← decodeExpr s!"{path}.expr" (← StrictJson.field path obj "expr")
+      let ty ← decodeTy s!"{path}.targetType" (← StrictJson.field path obj "targetType")
+      let mut decls : Array Stmt := #[]
+      let mut vAssignee : Assignee := .unsupported "type-assert target"
+      let mut okAssignee : Assignee := .unsupported "type-assert okTarget"
+      if targetIsBlank tJson then
+        decls := decls.push (.initialization { id := "$ta", typ := ty })
+        vAssignee := .var "$ta"
+      else
+        let t ← decodeTarget s!"{path}.target" tJson
+        decls := decls ++ (← declaresOf #[t])
+        vAssignee := t.assignee
+      if targetIsBlank okJson then
+        decls := decls.push (.initialization { id := "$taok", typ := .bool })
+        okAssignee := .var "$taok"
+      else
+        let okT ← decodeTarget s!"{path}.okTarget" okJson
+        decls := decls ++ (← declaresOf #[okT])
+        okAssignee := okT.assignee
+      return .seqn (decls.push (.typeAssert vAssignee okAssignee e ty))
   | "var" =>
       decodeVar path obj
   | "if" =>
@@ -831,6 +868,11 @@ private def decodeTypeDef (path : String) (json : Json) : LowerM (TypeId × Type
       pure (⟨name⟩, .struct (← fields.mapIdxM (fun i f => decodeFieldDef s!"{path}.def.fields[{i}]" f)))
   | "alias" =>
       pure (⟨name⟩, .alias (← decodeTy s!"{path}.def.target" (← StrictJson.field s!"{path}.def" defObj "target")))
+  | "defined" =>
+      -- Identity-bearing named type over a non-struct underlying
+      -- (interfaces campaign S2): resolution stops here for identity
+      -- purposes; operations resolve through `target`.
+      pure (⟨name⟩, .defined (← decodeTy s!"{path}.def.target" (← StrictJson.field s!"{path}.def" defObj "target")))
   | other => fail s!"unsupported type definition kind {other} at {path}"
 
 private def decodeFunc (path : String) (json : Json) : LowerM Func := do
@@ -873,11 +915,20 @@ private def decodeMethod (path : String) (json : Json) : LowerM (Func × MethodI
   let results ← StrictJson.array s!"{path}.results" (← StrictJson.field path obj "results")
   let args ← params.mapIdxM (fun i p => decodeParam s!"{path}.params[{i}]" p)
   let res ← results.mapIdxM (fun i p => decodeParam s!"{path}.results[{i}]" p)
-  let body ← decodeStmt res s!"{path}.body" (← StrictJson.field path obj "body")
   let funcId : FuncId := ⟨s!"{recvType}.{name}"⟩
-  let func : Func := { id := funcId, args := #[recv] ++ args, results := res, body }
   let info : MethodInfo := { name, funcId, recv := recv.typ }
-  pure (func, info)
+  match obj.get? "interface" with
+  | some _ =>
+      -- An INTERFACE method: a signature-only dispatch anchor.
+      -- `enterFrame` finds this Func, `dynamicDispatch?` redirects on the
+      -- receiver box (or raises Go's nil-interface panic); the stub body
+      -- is unreachable and fails STUCK (call to a nonexistent function)
+      -- if a dispatch bug ever reaches it — never a silent zero return.
+      let stub : Stmt := .call #[] ⟨"$interface-method-unreachable"⟩ #[]
+      pure ({ id := funcId, args := #[recv] ++ args, results := res, body := stub }, info)
+  | none =>
+      let body ← decodeStmt res s!"{path}.body" (← StrictJson.field path obj "body")
+      pure ({ id := funcId, args := #[recv] ++ args, results := res, body }, info)
 
 partial def decodeProgram (json : Json) : LowerM Program := do
   let obj ← StrictJson.obj "program" json

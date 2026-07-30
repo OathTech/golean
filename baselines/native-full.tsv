@@ -1,14 +1,21 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-07-30  commit: e4fe9d4+audit-response (re-pinned in the
-#   same commit as the coverage change)  frontend: native  oracle: go run
-# manifest_cases: 787  pass: 471  fail: 316
-# Re-pin reason: PRE-MERGE AUDIT RESPONSE for proof-corpus-catchup —
-# two NEW cases pin Step.panicFrameDeferNil, previously validated only
-# by reading (a nil deferred callee invoked while a panic is already
-# unwinding): panic-recover/nil-defer-during-unwind (recovering twin,
-# ok/1) and panic-recover/nil-defer-during-unwind-abort (chain-order /
-# head-rendering twin). Both PASS; corpus 785 -> 787; every other row
-# identical to the 2026-07-26 baseline (drift = exactly the 2 new ids).
+# recorded: 2026-07-30  commit: quorum-pilot interfaces-campaign (re-pinned
+#   in the same commit as the coverage change)  frontend: native  oracle: go run
+# manifest_cases: 787  pass: 525  fail: 262
+# Re-pin reason: THE INTERFACES CAMPAIGN (quorum-pilot phase 1, design of
+# record docs/2026-07-30_interfaces-campaign-design.md): identity-bearing
+# TypeDef.defined (BUG-004 item 2 fixed), structural dynamic-type box
+# tags, the interface-conversion wrap at every former guard site (BUG-006
+# FIXED — typed-nil-pointer-compare now PASSES), Ty-keyed method sets and
+# dispatch with pointer-box auto-deref, type asserts (both forms),
+# synthesized anchors for predeclared interfaces (error), package-
+# qualified TypeId keys with reflect-style unqualified observations,
+# unhashable-key prechecks with per-operation Go messages, string/
+# interface identity conversions. Drift = 54 FAIL->PASS + 6 stage moves
+# to VISIBLE machine gaps (the method-promotion class, triaged as
+# BUG-007 in this commit); ZERO PASS->FAIL. Untriaged set: 31 -> 27
+# (two map-key panics conformant; two embedding ids folded into
+# BUG-007's Cases line).
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
 PASS	arrays/array-copy	-
@@ -119,14 +126,14 @@ FAIL	channels/select-nil-default	frontend-export
 FAIL	channels/select-ready-receive	frontend-export
 FAIL	channels/select-ready-send	frontend-export
 FAIL	channels/send-closed-panic	frontend-export
-FAIL	comparisons/short-circuit/array-reaches-interface-panic	frontend-export
-FAIL	comparisons/short-circuit/array-skips-interface-panic	frontend-export
-FAIL	comparisons/short-circuit/nested-array-struct-reaches-panic	frontend-export
-FAIL	comparisons/short-circuit/nested-array-struct-skips-panic	frontend-export
-FAIL	comparisons/short-circuit/struct-nested-array-reaches-panic	frontend-export
-FAIL	comparisons/short-circuit/struct-nested-array-skips-panic	frontend-export
-FAIL	comparisons/short-circuit/struct-reaches-interface-panic	frontend-export
-FAIL	comparisons/short-circuit/struct-skips-interface-panic	frontend-export
+PASS	comparisons/short-circuit/array-reaches-interface-panic	-
+PASS	comparisons/short-circuit/array-skips-interface-panic	-
+PASS	comparisons/short-circuit/nested-array-struct-reaches-panic	-
+PASS	comparisons/short-circuit/nested-array-struct-skips-panic	-
+PASS	comparisons/short-circuit/struct-nested-array-reaches-panic	-
+PASS	comparisons/short-circuit/struct-nested-array-skips-panic	-
+PASS	comparisons/short-circuit/struct-reaches-interface-panic	-
+PASS	comparisons/short-circuit/struct-skips-interface-panic	-
 FAIL	complex/basic	frontend-export
 FAIL	complex/builtin-untyped-args	frontend-export
 FAIL	complex/complex64-parts	frontend-export
@@ -228,7 +235,7 @@ PASS	control-flow/switch-fallthrough-target-declares	-
 PASS	control-flow/switch-fallthrough-then-break	-
 PASS	control-flow/switch-init	-
 PASS	control-flow/switch-init-before-expression	-
-FAIL	control-flow/switch-interface-case-panic	frontend-export
+PASS	control-flow/switch-interface-case-panic	-
 PASS	control-flow/switch-multi-case-values	-
 PASS	control-flow/switch-nested-break	-
 PASS	control-flow/switch-nested-fallthrough	-
@@ -300,8 +307,8 @@ PASS	functions/composite-function-values/map-call	-
 PASS	functions/composite-function-values/slice-call	-
 FAIL	functions/composite-function-values/struct-call	frontend-export
 FAIL	functions/composite-function-values/struct-reassign	frontend-export
-FAIL	functions/function-in-interface	frontend-export
-FAIL	functions/function-interface-compare-panic	frontend-export
+PASS	functions/function-in-interface	-
+PASS	functions/function-interface-compare-panic	-
 PASS	functions/function-nil-compare	-
 PASS	functions/function-reassign	-
 PASS	functions/higher-order-arg	-
@@ -365,45 +372,45 @@ FAIL	init/init-sees-var-values	lean-observation
 FAIL	init/multiple-init-order	lean-observation
 FAIL	init/package-init-order	lean-observation
 FAIL	init/var-init-sequence	lean-observation
-FAIL	interfaces/acked-indexer/hit	frontend-export
-FAIL	interfaces/acked-indexer/miss	frontend-export
-FAIL	interfaces/embedded-interface	frontend-export
-FAIL	interfaces/embedded-interface-assertion	frontend-export
-FAIL	interfaces/embedded-interface-duplicate-method	frontend-export
-FAIL	interfaces/embedded-interface-shadowing/explicit-duplicate	frontend-export
-FAIL	interfaces/embedded-interface-shadowing/interface-field-dispatch	frontend-export
-FAIL	interfaces/embedded-interface-shadowing/interface-field-nil-panic	frontend-export
-FAIL	interfaces/embedded-interface-shadowing/interface-field-shadowed	frontend-export
-FAIL	interfaces/embedded-interface-shadowing/nil-pointer-method-promoted	frontend-export
-FAIL	interfaces/embedded-interface-shadowing/pointer-method-promoted	frontend-export
-FAIL	interfaces/error-idioms/any-round-trip	frontend-export
+PASS	interfaces/acked-indexer/hit	-
+PASS	interfaces/acked-indexer/miss	-
+PASS	interfaces/embedded-interface	-
+PASS	interfaces/embedded-interface-assertion	-
+PASS	interfaces/embedded-interface-duplicate-method	-
+PASS	interfaces/embedded-interface-shadowing/explicit-duplicate	-
+FAIL	interfaces/embedded-interface-shadowing/interface-field-dispatch	lean-observation
+FAIL	interfaces/embedded-interface-shadowing/interface-field-nil-panic	lean-observation
+PASS	interfaces/embedded-interface-shadowing/interface-field-shadowed	-
+FAIL	interfaces/embedded-interface-shadowing/nil-pointer-method-promoted	lean-observation
+FAIL	interfaces/embedded-interface-shadowing/pointer-method-promoted	lean-observation
+PASS	interfaces/error-idioms/any-round-trip	-
 FAIL	interfaces/error-idioms/extra-interface-assertion	frontend-export
 PASS	interfaces/error-idioms/nil-error	-
-FAIL	interfaces/error-idioms/nil-pointer-method	frontend-export
-FAIL	interfaces/error-idioms/pointer-identity	frontend-export
-FAIL	interfaces/error-idioms/promoted-method	frontend-export
-FAIL	interfaces/error-idioms/uncomparable-panic	frontend-export
-FAIL	interfaces/error-idioms/value-equality	frontend-export
-FAIL	interfaces/error-interface	frontend-export
-FAIL	interfaces/interface-array-compare-panic	frontend-export
-FAIL	interfaces/interface-compare	frontend-export
-FAIL	interfaces/interface-compare-panic	frontend-export
-FAIL	interfaces/interface-defined-type-identity	frontend-export
+PASS	interfaces/error-idioms/nil-pointer-method	-
+PASS	interfaces/error-idioms/pointer-identity	-
+FAIL	interfaces/error-idioms/promoted-method	lean-observation
+PASS	interfaces/error-idioms/uncomparable-panic	-
+PASS	interfaces/error-idioms/value-equality	-
+PASS	interfaces/error-interface	-
+PASS	interfaces/interface-array-compare-panic	-
+PASS	interfaces/interface-compare	-
+PASS	interfaces/interface-compare-panic	-
+PASS	interfaces/interface-defined-type-identity	-
 FAIL	interfaces/interface-method-expression	frontend-export
 FAIL	interfaces/interface-method-value	frontend-export
-FAIL	interfaces/interface-nested-struct-compare-panic	frontend-export
-FAIL	interfaces/interface-storage-copy/pointer	frontend-export
-FAIL	interfaces/interface-storage-copy/value	frontend-export
-FAIL	interfaces/nil-interface	frontend-export
-FAIL	interfaces/type-assert-interface	frontend-export
-FAIL	interfaces/type-assertions/comma-ok	frontend-export
-FAIL	interfaces/type-assertions/panic	frontend-export
+PASS	interfaces/interface-nested-struct-compare-panic	-
+PASS	interfaces/interface-storage-copy/pointer	-
+PASS	interfaces/interface-storage-copy/value	-
+PASS	interfaces/nil-interface	-
+PASS	interfaces/type-assert-interface	-
+PASS	interfaces/type-assertions/comma-ok	-
+PASS	interfaces/type-assertions/panic	-
 FAIL	interfaces/typed-nil-channel	frontend-export
-FAIL	interfaces/typed-nil-composite	frontend-export
-FAIL	interfaces/typed-nil-func	frontend-export
-FAIL	interfaces/typed-nil-map	frontend-export
-FAIL	interfaces/typed-nil-pointer-compare	frontend-export
-FAIL	interfaces/typed-nil-slice	frontend-export
+PASS	interfaces/typed-nil-composite	-
+PASS	interfaces/typed-nil-func	-
+PASS	interfaces/typed-nil-map	-
+PASS	interfaces/typed-nil-pointer-compare	-
+PASS	interfaces/typed-nil-slice	-
 FAIL	interfaces/type-switch-default-binding	frontend-export
 FAIL	interfaces/type-switch-default-binding-type	frontend-export
 FAIL	interfaces/type-switch-dynamic	frontend-export
@@ -455,17 +462,17 @@ PASS	maps/delete-alias-visible	-
 FAIL	maps/delete-during-range	differential
 PASS	maps/delete-eval-order	-
 PASS	maps/delete-existing	-
-FAIL	maps/delete-interface-dynamic-key	frontend-export
-FAIL	maps/delete-interface-key-panic	lean-observation
+PASS	maps/delete-interface-dynamic-key	-
+PASS	maps/delete-interface-key-panic	-
 PASS	maps/delete-missing	-
 FAIL	maps/delete-nil-interface-key-panic	lean-observation
 FAIL	maps/delete-nil-key-types	frontend-export
 PASS	maps/delete-nil-map	-
 PASS	maps/delete-nil-value-types	-
 PASS	maps/index-assign-eval-order	-
-FAIL	maps/interface-dynamic-type-key	frontend-export
-FAIL	maps/interface-key	frontend-export
-FAIL	maps/interface-slice-key-panic	lean-observation
+PASS	maps/interface-dynamic-type-key	-
+PASS	maps/interface-key	-
+PASS	maps/interface-slice-key-panic	-
 PASS	maps/literal-eval-order	-
 PASS	maps/map-alias	-
 PASS	maps/map-basic	-
@@ -480,9 +487,9 @@ PASS	maps/map-literal-bool	-
 PASS	maps/map-literal-duplicate-eval-order	-
 PASS	maps/map-literal-duplicate-runtime-key	-
 PASS	maps/map-literal-empty	-
-FAIL	maps/map-literal-interface-distinct-dynamic-type	frontend-export
-FAIL	maps/map-literal-interface-duplicate-key	frontend-export
-FAIL	maps/map-literal-interface-key-panic	frontend-export
+PASS	maps/map-literal-interface-distinct-dynamic-type	-
+PASS	maps/map-literal-interface-duplicate-key	-
+PASS	maps/map-literal-interface-key-panic	-
 FAIL	maps/map-literal-nan-keys	frontend-export
 PASS	maps/map-nil-assign	-
 PASS	maps/map-nil-eq	-
@@ -503,8 +510,8 @@ FAIL	maps/tuple-rhs-before-target-write	frontend-export
 FAIL	maps/tuple-swap-values	frontend-export
 PASS	methods/defined-int-receiver	-
 PASS	methods/defined-map-receiver	-
-FAIL	methods/embedded-interface-satisfaction	frontend-export
-FAIL	methods/interface-dispatch	frontend-export
+FAIL	methods/embedded-interface-satisfaction	lean-observation
+PASS	methods/interface-dispatch	-
 FAIL	methods/method-expression	frontend-export
 PASS	methods/method-value-copy	-
 PASS	methods/method-value-read	-
@@ -518,7 +525,7 @@ PASS	methods/pointer-method-value	-
 PASS	methods/pointer-method-value-live	-
 PASS	methods/pointer-method-value-read	-
 PASS	methods/pointer-receiver-array-element	-
-FAIL	methods/pointer-receiver-method-set	frontend-export
+PASS	methods/pointer-receiver-method-set	-
 PASS	methods/pointer-receiver-slice-element	-
 PASS	methods/recursive-method	-
 PASS	methods/same-name-method-closures	-
@@ -562,11 +569,11 @@ PASS	panic-recover/nil-defer-during-unwind-abort	-
 PASS	panic-recover/panic-bool-abort	-
 PASS	panic-recover/panic-defer-order	-
 PASS	panic-recover/panic-int-abort	-
-FAIL	panic-recover/panic-named-type-abort	frontend-export
+PASS	panic-recover/panic-named-type-abort	-
 FAIL	panic-recover/panic-newline-abort	lean-observation
 PASS	panic-recover/panic-nil-abort	-
 PASS	panic-recover/panic-nil-recover	-
-FAIL	panic-recover/panic-typed-nil-recover	frontend-export
+PASS	panic-recover/panic-typed-nil-recover	-
 PASS	panic-recover/recover-direct	-
 PASS	panic-recover/recover-in-defer-args	-
 PASS	panic-recover/recover-in-defer-args-panicking	-
@@ -752,7 +759,7 @@ PASS	structs/comparable	-
 PASS	structs/copy-value	-
 PASS	structs/field-incdec	-
 PASS	structs/field-write-aliased-pointer	-
-FAIL	structs/interface-field-compare-panic	frontend-export
+PASS	structs/interface-field-compare-panic	-
 PASS	structs/keyed-literal	-
 PASS	structs/keyed-literal-eval-order	-
 PASS	structs/nested-field-write	-
@@ -792,7 +799,7 @@ PASS	variadic/spread-aliasing	-
 PASS	variadic/variadic	-
 PASS	variadic/variadic-function-value	-
 FAIL	variadic/variadic-generic	frontend-export
-FAIL	variadic/variadic-interface-dispatch	frontend-export
+PASS	variadic/variadic-interface-dispatch	-
 PASS	variadic/variadic-method	-
 FAIL	variadic/variadic-method-expression	frontend-export
 PASS	variadic/variadic-method-value-copy	-

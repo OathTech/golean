@@ -3,23 +3,9 @@ import GoLean.GoCore.Value
 namespace GoLean.GoCore
 
 -- `FuncId` now lives in `Value.lean` (beside `TypeId`) so `GoValue.funcVal`
--- can carry it; it is re-exported by this module's namespace.
-
-inductive Ty where
-  | bool
-  | int (kind : IntKind := .int)
-  | string
-  | array (length : Nat) (elem : Ty)
-  | slice (elem : Ty)
-  | map (key value : Ty)
-  | pointer (elem : Ty)
-  /-- A function type. Structural detail is carried for zero values and
-  typing only — dispatch is by `FuncId`, never by this. -/
-  | funcType (params results : List Ty)
-  | interface (id : TypeId)
-  | defined (id : TypeId)
-  | unsupported (feature : String)
-  deriving Repr, BEq, Inhabited
+-- can carry it; `Ty` moved there too (interfaces campaign S3, 2026-07-30)
+-- so `GoValue.interface` can carry its dynamic type structurally. Both are
+-- re-exported by this module's namespace.
 
 structure Param where
   id : String
@@ -34,6 +20,17 @@ structure FieldDef where
 inductive TypeDef where
   | struct (fields : Array FieldDef)
   | alias (target : Ty)
+  /-- An identity-BEARING named type over a non-struct underlying
+  (`type T int`, `type MC map[uint64]struct{}`) — BUG-004's fix
+  (interfaces campaign S2, 2026-07-30). Runtime values share the
+  underlying representation (normalize/default/convert/equality resolve
+  through it); the identity matters at interface boxing, type asserts,
+  and method sets, where the STATIC type at the site carries it. `type
+  T = U` remains `.alias` (identity erased, correctly). Defined types
+  over STRUCT underlyings stay `.struct` (their values are
+  name-tagged); defined-over-defined-struct fails closed at the
+  consumer until a case needs it. -/
+  | defined (underlying : Ty)
   | unsupported (feature : String)
   deriving Repr, BEq
 
