@@ -27,10 +27,13 @@ equations, all decidable on concrete continuations). The stateful
 exceptions (frame entry for value calls and the defer drain, which
 allocate) live below with the `wp_call_enter_*` shape.
 
-Non-vacuity: the whole family is witnessed at once by
-`wp_recover_catch_seven` — a complete WP walk of the concrete
-recover-catch program (`defer rec(&result); panic("boom")` returning 7),
-which steps through every law in this file.
+Non-vacuity (wording corrected 2026-07-30, pre-merge audit): the
+composition walk `wp_recover_catch_seven` (`defer rec(&result);
+panic("boom")` returning 7) traverses the defer/panic/recover SPINE —
+11 of this file's 21 laws. Every law the walk does not traverse has its
+own NAMED instantiation witness at the bottom of this file, each
+referenced from `proofs/Audit.lean` (anonymous `example` witnesses were
+invisible to the reference gate — deleting one broke nothing).
 -/
 
 open Iris Iris.ProgramLogic Iris.Std Iris.Std.PartialMap
@@ -730,27 +733,30 @@ theorem wp_frame_defer_fall_rec {ra : Addr}
 
 /-- The remaining premise-carrying pure laws instantiated on concrete
 shapes: dispatch, an unrecovered marker resuming the unwind, unwinding
-past a spent frame, a chain merge, and the breakable family. -/
-example {env k} :
+past a spent frame, a chain merge, and the breakable family. NAMED
+theorems (2026-07-30 pre-merge audit: as anonymous `example`s these were
+structurally invisible to `Audit.lean`'s reference gate — deleting one
+broke nothing), each referenced from the Audit non-vacuity block. -/
+theorem wp_call_value_no_targets_witness {env k} :
     (|={E}[E]▷=> £ 1 -∗
       WP (Config.evalE (.var "f") env
         (.callValCalleeK [] [] env k)) @ s ; E {{ Φ }}) ⊢
       WP (Config.exec (.callValue #[] (.var "f") #[]) env k) @ s ; E {{ Φ }} :=
   wp_call_value_no_targets rfl
 
-example {k} :
+theorem wp_panic_resume_continue_witness {k} :
     (|={E}[E]▷=> £ 1 -∗
       WP (Config.panicking [⟨.nil, false⟩] k) @ s ; E {{ Φ }}) ⊢
       WP (Config.next (.panicResumeK [⟨.nil, false⟩] k)) @ s ; E {{ Φ }} :=
   wp_panic_resume_continue rfl
 
-example {k} :
+theorem wp_panic_frame_empty_witness {k} :
     (|={E}[E]▷=> £ 1 -∗
       WP (Config.panicking [⟨.nil, false⟩] k) @ s ; E {{ Φ }}) ⊢
       WP (Config.panicking [⟨.nil, false⟩] (.frame [] [] [] k)) @ s ; E {{ Φ }} :=
   wp_panic_frame_empty
 
-example {k} :
+theorem wp_panic_resume_merge_witness {k} :
     (|={E}[E]▷=> £ 1 -∗
       WP (Config.panicking ([⟨.nil, true⟩] ++ [⟨.nil, false⟩]) k)
         @ s ; E {{ Φ }}) ⊢
@@ -758,16 +764,48 @@ example {k} :
             (.panicResumeK [⟨.nil, true⟩] k)) @ s ; E {{ Φ }} :=
   wp_panic_resume_merge
 
-example {env k} :
+theorem wp_breakable_enter_witness {env k} :
     (|={E}[E]▷=> £ 1 -∗
       WP (Config.exec (.seqn #[]) env (.breakableK k)) @ s ; E {{ Φ }}) ⊢
       WP (Config.exec (.breakable (.seqn #[])) env k) @ s ; E {{ Φ }} :=
   wp_breakable_enter
 
-example {k} :
+theorem wp_breakable_break_witness {k} :
     (|={E}[E]▷=> £ 1 -∗ WP (Config.next k) @ s ; E {{ Φ }}) ⊢
       WP (Config.breaking (.breakableK k)) @ s ; E {{ Φ }} :=
   wp_breakable_break
+
+/-- `wp_breakable_done`'s witness (2026-07-30 pre-merge audit: the ONE
+unwitnessed law in the family — a repo-wide grep found only its own
+definition). An empty breakable body falls through: enter, empty seqn,
+seq-done, breakable-done — all four laws discharged on the concrete
+statement, composed end to end. -/
+theorem wp_breakable_done_witness {env k} :
+    WP (Config.next k) @ s ; E {{ Φ }} ⊢
+      WP (Config.exec (.breakable (.seqn #[])) env k) @ s ; E {{ Φ }} := by
+  iintro H
+  iapply wp_breakable_enter
+  iapply fupd_intro
+  inext
+  iapply fupd_intro
+  iintro Hc1
+  iapply wp_seqn
+  simp only [List.toList_toArray, seqCont]
+  iapply fupd_intro
+  inext
+  iapply fupd_intro
+  iintro Hc2
+  iapply wp_seq_done
+  iapply fupd_intro
+  inext
+  iapply fupd_intro
+  iintro Hc3
+  iapply wp_breakable_done
+  iapply fupd_intro
+  inext
+  iapply fupd_intro
+  iintro Hc4
+  iexact H
 
 end
 

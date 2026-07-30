@@ -164,10 +164,22 @@ report_fail() {
 # One manifest row, classified end to end. Writes its TSV row(s) to
 # $CASE_OUT; progress goes to stdout (interleaved under parallelism —
 # the assembled TSV is manifest-ordered regardless).
+# ATOMIC PUBLISH (2026-07-30 pre-merge audit finding): rows accumulate in
+# a .out.tmp and land at .out in one mv only after classification
+# completes. A worker killed mid-case (OOM/kill under the nproc-wide
+# pool) leaves NO .out, so the assembler's fail-closed fallback fires —
+# previously the file was created empty up front and a dead worker's
+# case vanished from the TSV silently.
 run_case() {
   local rowfile="$1"
-  CASE_OUT="${rowfile%.in}.out"
+  CASE_OUT="${rowfile%.in}.out.tmp"
   : > "$CASE_OUT"
+  run_case_rows "$rowfile"
+  mv "$CASE_OUT" "${rowfile%.in}.out"
+}
+
+run_case_rows() {
+  local rowfile="$1"
   local id go_dir function_name arg_ints expected_status features expected_reason extra
   IFS=$'\t' read -r id go_dir function_name arg_ints expected_status features expected_reason extra < "$rowfile"
   local failed=0
@@ -362,26 +374,32 @@ case_count="$row_i"
 
 export CASE_OUT ROOT OUT FRONTEND GO_BUILD_CACHE GOLEAN_BIN \
   GO_TIMEOUT_SECONDS LEAN_TIMEOUT_SECONDS
-export -f run_case run_with_timeout lean json_string_literal panic_message \
-  report_pass report_fail one_line
+export -f run_case run_case_rows run_with_timeout lean json_string_literal \
+  panic_message report_pass report_fail one_line
+
+# Record the concurrency the run used (audit finding: a load-induced
+# timeout drift was indistinguishable from a real one after the fact).
+printf 'jobs\t%s\n' "$GOLEAN_COVERAGE_JOBS" >> "$META_TMP"
 
 if [[ "$GOLEAN_COVERAGE_JOBS" -le 1 ]]; then
   for f in "$ROWDIR"/*.in; do
     run_case "$f"
   done
 else
-  ls "$ROWDIR"/*.in | xargs -P "$GOLEAN_COVERAGE_JOBS" -n 1 bash -c 'run_case "$1"' _
+  ls "$ROWDIR"/*.in | xargs -P "$GOLEAN_COVERAGE_JOBS" -n 1 bash -c 'run_case "$1"' _ \
+    || echo "diff-coverage: WARNING — worker pool exited nonzero; unclassified cases fail closed below" >&2
 fi
 
 pass_count=0
 fail_count=0
 for f in "$ROWDIR"/*.in; do
   outf="${f%.in}.out"
-  if [[ -f "$outf" ]]; then
+  if [[ -s "$outf" ]]; then
     cat "$outf" >> "$RESULTS_TMP"
   else
-    # A worker died without classifying (should be impossible; the row
-    # itself carries the id in field 1) — fail closed, never silent.
+    # No published result (worker died before its atomic mv) or an empty
+    # one (no classification path can produce it) — fail closed, never
+    # silent. The row itself carries the id in field 1.
     printf 'FAIL\t%s\tunknown\tharness\tworker produced no result\n' \
       "$(cut -f1 "$f")" >> "$RESULTS_TMP"
   fi

@@ -58,8 +58,10 @@ this arc pays).
 
 ## Completion record (2026-07-30)
 
-- **Slice A**: landed 2026-07-26 (16 pure-det + 4 stateful laws, each
-  witnessed; `wp_recover_catch_seven` as the family witness).
+- **Slice A**: landed 2026-07-26 (17 pure-det + 4 stateful laws — the
+  2026-07-26 commit message's "16" undercounted by one, and the
+  uncounted law, `wp_breakable_done`, was exactly the unwitnessed one
+  the pre-merge audit caught; see the audit response below).
 - **Slice B**: the composition core landed 2026-07-26 as the
   hand-authored core shape; the arc's stated deliverable — the recover
   spec **over the pinned actual lowering** — landed 2026-07-30:
@@ -76,6 +78,63 @@ this arc pays).
 - **Ledger + manifest**: recorded 2026-07-26 (unchanged by slice B — the
   new law's read/store granularity matches `frameReturn`'s existing
   entry).
+
+## Pre-merge audit response (2026-07-30)
+
+3 Opus reviewers (semantics / vacuity / gate-honesty) + refute-by-default
+verification: 16 findings, 10 confirmed (1 major, 4 minor, 5 note),
+6 refuted. All confirmed findings addressed on the branch:
+
+1. **[major, gate-honesty] check-golden link 1 ran against a possibly
+   stale decoder .olean** — the exact drift class the link exists to
+   catch could pass in the run that introduced it (link 2 had the build
+   hardening since 2026-07-21; link 1 never did; pre-existing on main,
+   surfaced by the multi-pin rewrite review). Fix: `lake build
+   GoLean.NativeToIR` before the pin loop, fail closed.
+2. **[minor, semantics+gate-honesty, one root cause reported by both
+   dimensions] parallel runner silent case drop** — `run_case` created
+   its `.out` empty up front, so the assembler's absence-keyed fail-closed
+   fallback never fired for a worker killed mid-case; the row vanished
+   from `latest.tsv` and the tight-loop `coverage-baseline-diff` (no
+   `--full`) reported "no regression". Fix: atomic publish (`.out.tmp` →
+   `mv` after classification), assembler treats missing OR empty as
+   fail-closed, worker-pool exit status surfaced.
+3. **[minor, vacuity] `wp_breakable_done` had NO witness** (the one law
+   in the family; repo-wide grep found only its definition) and
+   **[minor, gate-honesty] the per-law witnesses were anonymous
+   `example`s** the Audit reference gate structurally cannot protect.
+   Fix: all witnesses are now named theorems; `wp_breakable_done_witness`
+   added (empty breakable body falls through, all four laws discharged);
+   every witness referenced from `Audit.lean`.
+4. **[minor, vacuity] docstring overclaims** — Unwind.lean's header
+   ("steps through every law in this file" — it traverses 11 of 21) and
+   the Audit block's mirror of it corrected to the accurate split
+   (spine walk + named per-law witnesses).
+5. **[note, vacuity] `GoFuncSpec`'s binding-point justification cited
+   `collectResults`, which does not exist.** Corrected to the real
+   mechanism (`Step.frameReturn`/`frameFall` copy `loadMany results`
+   into targets; the runner's `runFunctionWithContextM` loads the same
+   pinned result locations).
+6. **[note, semantics] `panicFrameDeferNil` was validated only by
+   reading** (no corpus case drives a nil deferred callee during an
+   unwind). Fix: two new cases,
+   `panic-recover/nil-defer-during-unwind` (recovering twin, ok/1) and
+   `…-abort` (chain-order/head-rendering twin, panic "boom") — both
+   PASS; corpus 785 → 787, full baseline re-pinned in this commit.
+7. **[note, semantics] `panic-nil-recover`'s guardrail comment asserted
+   the opposite of the pinned behavior** (the oracle's GOPATH-mode
+   invocation keeps legacy `panic(nil)` semantics). Comment corrected to
+   match `panicPayload`'s docstring; program untouched.
+8. **[note, gate-honesty] run metadata did not record the concurrency**
+   (load-induced timeout drift indistinguishable after the fact). Fix:
+   `jobs` row in `latest.meta.tsv`.
+
+Notable refuted findings (kept for the record): the `∀σ`-unsatisfiable
+`hnorm` claim for `.defined` types (refuted — the laws are never
+instantiated at defined types and the premise is per-instance), the
+"typeDefs dropped ⇒ manifest overclaim" (refuted — the pinned programs'
+walks never resolve a defined type), and the granularity-ledger-entry
+gap for `frameReturn` (refuted — the entry exists).
 
 ## Addendum: the parallel differential runner (2026-07-26, user request)
 

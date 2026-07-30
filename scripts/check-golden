@@ -27,10 +27,15 @@ trap 'rm -f "$WORK"/* 2>/dev/null; rmdir "$WORK" 2>/dev/null || true' EXIT
 
 export GOCACHE="${GOCACHE:-$ROOT/artifacts/go-build-cache}"
 
-# Build the pin module once: `lake env lean --run` loads the existing .olean,
-# which can be stale relative to an edited term file within a single run
-# (2026-07-21 audit hardening — fail-closed means not relying on the next
-# run's self-heal).
+# Build BOTH sides once: `lake env lean --run` loads existing .oleans,
+# which can be stale relative to same-run edits (2026-07-21 audit
+# hardening for the pin module; extended to the DECODER 2026-07-30 after
+# the pre-merge audit found link 1 ran against a possibly stale
+# GoLean.NativeToIR .olean — the exact decoder-drift class the link
+# exists to catch could pass in the run that introduced it. Fail-closed
+# means not relying on the next run's self-heal, on either link.)
+lake build GoLean.NativeToIR > /dev/null \
+  || { echo "check-golden: FAIL — NativeToIR (decoder) build failed (fail closed)" >&2; exit 1; }
 (cd proofs && lake build GoLeanProofs.Specs.GoldenProgram > /dev/null) \
   || { echo "check-golden: FAIL — GoldenProgram build failed (fail closed)" >&2; exit 1; }
 

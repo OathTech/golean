@@ -209,10 +209,15 @@ any frame, into any caller target cell with any prior value — terminates
 only in states where the target cell received some `n` with `Q n`, beside
 `P`'s leftovers, the frame's bindings intact.* The return value is observed
 exactly where Go's call protocol delivers it: the caller's target cell,
-written at frame exit from the callee's named result locals — the same
-values `collectResults`/the differential runner reads, and the binding
-point that stays correct when `defer` (which may mutate named results
-after `return`) enters the fragment. -/
+written at frame exit from the callee's pinned result locations
+(`Step.frameReturn`/`frameFall` copy `loadMany results` into the targets,
+`Machine.lean`) — the same values the differential runner reads (its
+driver `runFunctionWithContextM` runs the subject under a targetless
+frame and loads the same pinned result locations from the terminal
+state, `StepFn.lean`; citation corrected 2026-07-30, pre-merge audit —
+the earlier text named a `collectResults` function that does not exist).
+This binding point stays correct when `defer` (which may mutate named
+results after `return`) enters the fragment. -/
 def GoFuncSpec (funcs : Array Func) (fid : FuncId) (kind : IntKind)
     (args : Array Expr) (P : HProp) (Q : Int → HProp) : Prop :=
   ∀ (ra : Nat) (w : GoValue),

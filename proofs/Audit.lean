@@ -178,19 +178,27 @@ walk. -/
 example := @GoLean.Iris.wp_frame_return_int
 example := @GoLean.Iris.wp_frame_return_int_inv
 /-- `✓` the unwinding/defer/call-value law families (proof-corpus
-catch-up arc, 2026-07-26) — witnessed AT ONCE by the recover-catch
-composition walk (`defer rec(&r); panic("boom")` provably returns 7:
-defer registration, panic entry, unwinding, the PANIC-path drain, the
-recover walk marking the chain, the write through the captured pointer,
-the cancelled unwind, and both frame exits), plus per-law instantiation
-witnesses for the paths the walk does not traverse (value-call entry,
-normal-path drains, unrecovered resume, chain merge, breakables).
-Proof-corpus entry: the defer/recover composition row
-(`docs/2026-07-24_proof-corpus.md` §5). -/
+catch-up arc, 2026-07-26; coverage wording corrected 2026-07-30 after
+the pre-merge audit) — the recover-catch composition walk (`defer
+rec(&r); panic("boom")` provably returns 7) traverses the
+defer/panic/recover SPINE (11 of the family's 21 laws); every law the
+walk does not traverse has a NAMED per-law instantiation witness in
+`Laws/Unwind.lean`, each referenced here so deleting any witness breaks
+this build (the audit found the previous anonymous `example` witnesses
+were invisible to this gate, and `wp_breakable_done` had no witness at
+all — `wp_breakable_done_witness` closes it). Proof-corpus entry: the
+defer/recover composition row (`docs/2026-07-24_proof-corpus.md` §5). -/
 example := @GoLean.Iris.wp_recover_catch_seven
 example := @GoLean.Iris.wp_call_value_enter_rec
 example := @GoLean.Iris.wp_frame_defer_return_rec
 example := @GoLean.Iris.wp_frame_defer_fall_rec
+example := @GoLean.Iris.wp_call_value_no_targets_witness
+example := @GoLean.Iris.wp_panic_resume_continue_witness
+example := @GoLean.Iris.wp_panic_frame_empty_witness
+example := @GoLean.Iris.wp_panic_resume_merge_witness
+example := @GoLean.Iris.wp_breakable_enter_witness
+example := @GoLean.Iris.wp_breakable_break_witness
+example := @GoLean.Iris.wp_breakable_done_witness
 /-- `✓` the same composition over the PINNED ACTUAL LOWERING
 (`GoldenRecover.recoverLowered`, `scripts/check-golden`'s second program;
 proof-corpus catch-up arc slice B, 2026-07-30): the walk additionally

@@ -1,21 +1,14 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-07-26  commit: 10a6c08  frontend: native  oracle: go run
-# manifest_cases: 785  pass: 469  fail: 316
-# Re-pin reason: PRE-MERGE AUDIT RESPONSE for wrong-answers-builtins
-# (11 sustained findings = 7 distinct, all addressed; see the arc doc
-# build log and BUGS.md). Drift: 2 NEW red pins for BUG-005 (map
-# iteration does not observe delete/clear — snapshot semantics; machine
-# fix is its own slice); 18 already-red cases move lean-observation ->
-# frontend-export (the interface-conversion guard extended to composite
-# literals, map-assign, returns, and map-element multi-assign targets
-# now refuses them at the boundary — they LEAVE the untriaged ledger,
-# 48 -> 30); ONE INTENTIONAL PASS->FAIL
-# (comparisons/short-circuit/struct-skips-interface-panic, listed in
-# BUG-006's Cases: accidentally green via short-circuit over a raw
-# interface field). Also: pointer-array value ranges read THROUGH the
-# pointer per iteration; ASSIGN-form range targets restricted to
-# identifiers; 3-index array slice message says length not capacity.
-# Corpus 783 -> 785, passing 470 -> 469 (the one intentional flip).
+# recorded: 2026-07-30  commit: e4fe9d4+audit-response (re-pinned in the
+#   same commit as the coverage change)  frontend: native  oracle: go run
+# manifest_cases: 787  pass: 471  fail: 316
+# Re-pin reason: PRE-MERGE AUDIT RESPONSE for proof-corpus-catchup —
+# two NEW cases pin Step.panicFrameDeferNil, previously validated only
+# by reading (a nil deferred callee invoked while a panic is already
+# unwinding): panic-recover/nil-defer-during-unwind (recovering twin,
+# ok/1) and panic-recover/nil-defer-during-unwind-abort (chain-order /
+# head-rendering twin). Both PASS; corpus 785 -> 787; every other row
+# identical to the 2026-07-26 baseline (drift = exactly the 2 new ids).
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
 PASS	arrays/array-copy	-
@@ -23,10 +16,10 @@ PASS	arrays/array-element-compound	-
 PASS	arrays/array-len-cap	-
 PASS	arrays/array-of-struct-field-write	-
 PASS	arrays/array-param-return	-
-PASS	arrays/array-slice-alias	-
-PASS	arrays/array-zero	-
 PASS	arrays/arrays	-
 PASS	arrays/arrays-are-values	-
+PASS	arrays/array-slice-alias	-
+PASS	arrays/array-zero	-
 PASS	arrays/defined-array-receiver	-
 PASS	arrays/index-eval-order	-
 PASS	arrays/keyed-literal-eval-order	-
@@ -90,9 +83,9 @@ FAIL	builtins/real-imag	frontend-export
 PASS	builtins/recover-outside-defer	-
 FAIL	channels/buffered-basic	frontend-export
 FAIL	channels/close-closed-panic	frontend-export
+FAIL	channels/closed-receive	frontend-export
 FAIL	channels/close-nil-panic	frontend-export
 FAIL	channels/close-send-only	frontend-export
-FAIL	channels/closed-receive	frontend-export
 FAIL	channels/directional-types	frontend-export
 FAIL	channels/make-directional	frontend-export
 FAIL	channels/make-edge/buffered-fifo	frontend-export
@@ -159,10 +152,10 @@ FAIL	complex/zero-value	frontend-export
 PASS	constants/array-bound	-
 PASS	constants/builtin-len-cap-constants	-
 PASS	constants/complex-constant	-
-PASS	constants/const-precision	-
 PASS	constants/constant-character-representability	-
 PASS	constants/constant-comparison	-
 PASS	constants/constant-division	-
+PASS	constants/const-precision	-
 PASS	constants/default-bool-string	-
 FAIL	constants/default-types	frontend-export
 PASS	constants/dependent-constants	-
@@ -298,8 +291,8 @@ FAIL	functions/closure-loop-var-capture	frontend-export
 PASS	functions/closure-nested-recapture	-
 PASS	functions/closure-param-shadows-capture	-
 PASS	functions/closure-recursion	-
-PASS	functions/closure-return-state	-
 PASS	functions/closure-returns-closure	-
+PASS	functions/closure-return-state	-
 PASS	functions/closure-share	-
 PASS	functions/closure-two-vars-one-closure	-
 PASS	functions/closure-value-reassigned	-
@@ -405,6 +398,12 @@ FAIL	interfaces/nil-interface	frontend-export
 FAIL	interfaces/type-assert-interface	frontend-export
 FAIL	interfaces/type-assertions/comma-ok	frontend-export
 FAIL	interfaces/type-assertions/panic	frontend-export
+FAIL	interfaces/typed-nil-channel	frontend-export
+FAIL	interfaces/typed-nil-composite	frontend-export
+FAIL	interfaces/typed-nil-func	frontend-export
+FAIL	interfaces/typed-nil-map	frontend-export
+FAIL	interfaces/typed-nil-pointer-compare	frontend-export
+FAIL	interfaces/typed-nil-slice	frontend-export
 FAIL	interfaces/type-switch-default-binding	frontend-export
 FAIL	interfaces/type-switch-default-binding-type	frontend-export
 FAIL	interfaces/type-switch-dynamic	frontend-export
@@ -420,12 +419,6 @@ FAIL	interfaces/type-switch-nil-multi-case	frontend-export
 FAIL	interfaces/type-switch-single-binding	frontend-export
 FAIL	interfaces/type-switch-typed-nil	frontend-export
 FAIL	interfaces/type-switch-typed-nil-binding	frontend-export
-FAIL	interfaces/typed-nil-channel	frontend-export
-FAIL	interfaces/typed-nil-composite	frontend-export
-FAIL	interfaces/typed-nil-func	frontend-export
-FAIL	interfaces/typed-nil-map	frontend-export
-FAIL	interfaces/typed-nil-pointer-compare	frontend-export
-FAIL	interfaces/typed-nil-slice	frontend-export
 PASS	ints/bitwise	-
 PASS	ints/break-continue	-
 PASS	ints/byte-conversion	-
@@ -434,16 +427,16 @@ PASS	ints/conversion-width-matrix	-
 PASS	ints/defined-int-conversion	-
 PASS	ints/defined-type-ops	-
 PASS	ints/defined-underlying-conversion	-
-PASS	ints/div-mod-signs	-
 PASS	ints/divide-by-zero	-
 PASS	ints/division-overflow	-
+PASS	ints/div-mod-signs	-
 PASS	ints/if-return	-
 PASS	ints/int8-wrap	-
 PASS	ints/multi-assign	-
 PASS	ints/negative-shift	-
 PASS	ints/scalars	-
-PASS	ints/shift-width-boundaries	-
 PASS	ints/shifts	-
+PASS	ints/shift-width-boundaries	-
 PASS	ints/signed-unsigned-conversion	-
 PASS	ints/signed-width-wrap	-
 PASS	ints/truncate-conversion	-
@@ -560,10 +553,12 @@ PASS	panic-recover/defer-arg-during-panic	-
 PASS	panic-recover/defer-panic-after-return	-
 PASS	panic-recover/defer-panic-recovered-after-return	-
 PASS	panic-recover/defer-recover-builtin	-
-PASS	panic-recover/defer-registered-during-unwind	-
 PASS	panic-recover/deferred-panic-replaces	-
+PASS	panic-recover/defer-registered-during-unwind	-
 PASS	panic-recover/named-result-preserved-after-recover	-
 PASS	panic-recover/nested-frame-recover	-
+PASS	panic-recover/nil-defer-during-unwind	-
+PASS	panic-recover/nil-defer-during-unwind-abort	-
 PASS	panic-recover/panic-bool-abort	-
 PASS	panic-recover/panic-defer-order	-
 PASS	panic-recover/panic-int-abort	-
@@ -605,10 +600,10 @@ PASS	pointers/pointer-identity	-
 PASS	pointers/pointer-param-alias	-
 PASS	pointers/pointer-slice-header	-
 PASS	pointers/pointer-to-pointer	-
+PASS	quorum/committed-index/all-acked	-
 PASS	quorum/committed-index-edges/all-unacked	-
 PASS	quorum/committed-index-edges/n1-acked	-
 PASS	quorum/committed-index-edges/n1-unacked	-
-PASS	quorum/committed-index/all-acked	-
 PASS	quorum/committed-index/empty-maxuint	-
 PASS	quorum/committed-index/heap	-
 PASS	quorum/committed-index/on-stack	-
@@ -619,17 +614,17 @@ PASS	quorum/joint/vote-both-pending	-
 PASS	quorum/joint/vote-both-win	-
 PASS	quorum/joint/vote-disagree-lost	-
 PASS	quorum/joint/vote-disagree-pending	-
+PASS	quorum/vote-result/empty-wins	-
+PASS	quorum/vote-result/even-one-short	-
+PASS	quorum/vote-result/even-won	-
+PASS	quorum/vote-result/lost	-
+PASS	quorum/vote-result/pending	-
 PASS	quorum/vote-result-small-n/n1-lost	-
 PASS	quorum/vote-result-small-n/n1-pending	-
 PASS	quorum/vote-result-small-n/n1-won	-
 PASS	quorum/vote-result-small-n/n2-one-missing-pending	-
 PASS	quorum/vote-result-small-n/n2-one-yes-lost	-
 PASS	quorum/vote-result-small-n/n2-won	-
-PASS	quorum/vote-result/empty-wins	-
-PASS	quorum/vote-result/even-one-short	-
-PASS	quorum/vote-result/even-won	-
-PASS	quorum/vote-result/lost	-
-PASS	quorum/vote-result/pending	-
 PASS	quorum/vote-result/tie-lost	-
 PASS	quorum/vote-result/won-exact	-
 PASS	range/range-array-copy	-
@@ -661,8 +656,8 @@ PASS	range/range-struct-copy	-
 PASS	returns/early-return-named	-
 PASS	returns/method-multi-result-arg	-
 PASS	returns/multi-result-argument	-
-PASS	returns/multi-result-assign-order	-
 PASS	returns/multi-result-assignment	-
+PASS	returns/multi-result-assign-order	-
 PASS	returns/multi-result-blank-forward	-
 PASS	returns/multi-result-forward	-
 PASS	returns/multi-result-forward-named	-
@@ -766,7 +761,6 @@ PASS	structs/pointer-hop-field-write	-
 PASS	structs/positional-literal	-
 PASS	structs/positional-literal-eval-order	-
 PASS	structs/recursive-pointer	-
-PASS	structs/selector-address-pointer	-
 PASS	structs/selector-addressability-edge/map-value-copy-then-assign	-
 PASS	structs/selector-addressability-edge/map-value-pointer-field-write	-
 PASS	structs/selector-addressability-edge/map-value-slice-field-write	-
@@ -774,6 +768,7 @@ PASS	structs/selector-addressability-edge/pointer-field-from-call-result	-
 PASS	structs/selector-addressability-edge/pointer-result-assign	-
 PASS	structs/selector-addressability-edge/read-call-result	-
 FAIL	structs/selector-addressability-edge/read-conversion-result	lean-observation
+PASS	structs/selector-address-pointer	-
 PASS	structs/selector-eval-once	-
 PASS	structs/struct-array-element-write	-
 PASS	structs/swap	-
