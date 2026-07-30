@@ -220,21 +220,26 @@ way an arc reaches `main`).
   verification of each finding, defaulting to *refute* if thin; (5) honest
   synthesis — drop refuted, spot-check the top survivors yourself.
 
-## Reference checkouts (`../deps/`, outside this repo)
+## Reference checkouts (`deps/`, in-repo and gitignored)
 
-Sibling checkouts available for reading — consult them instead of guessing or
-web-searching when a design question has prior art:
+Checkouts available for reading — consult them instead of guessing or
+web-searching when a design question has prior art. Moved from the old
+sibling `../deps/` into the gitignored in-repo `deps/` (2026-07-30, so
+the sandbox profile's workdir grant covers them; clone them yourself —
+they are not tracked):
 
-- `../deps/goose` — goose-lang/goose, the Go→Rocq translator. `goose.go` is the
+- `deps/goose` — goose-lang/goose, the Go→Rocq translator. `goose.go` is the
   whole translation (statement/expression handlers); `testdata/` is its
   supported-subset corpus.
-- `../deps/perennial` — the Rocq/Iris side. `new/golang/defn/*.v` is the Go
+- `deps/perennial` — the Rocq/Iris side. `new/golang/defn/*.v` is the Go
   model of record (`exception.v` = the return/break/continue "exception monad",
   `defer.v` = `wrap_defer`, `loop.v`, `chan.v`); `src/goose_lang/lang.v` is
   GooseLang itself.
-- `../deps/iris-lean` — the Lean Iris port we build against (also a Lake dep).
-- `../deps/raft` — etcd-io/raft, the north-star target.
-- `../deps/gobra`, `../deps/aeneas`, `../deps/strata` — other verification
+- `deps/iris-lean` — the Lean Iris port we build against (also a Lake dep;
+  keep the reading copy at the manifest's pinned rev).
+- `deps/raft` — etcd-io/raft, the north-star target (REQUIRED for the
+  quorum-pilot arc).
+- `deps/gobra`, `deps/aeneas`, `deps/strata` — other verification
   toolchains kept for comparison.
 
 Design comparisons against Goose/Perennial are recorded in the arc's design

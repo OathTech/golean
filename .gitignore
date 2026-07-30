@@ -6,3 +6,4 @@
 .claude/
 .cc-writes/
 /nativefrontend
+/deps/
