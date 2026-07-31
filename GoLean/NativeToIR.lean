@@ -496,6 +496,10 @@ partial def decodeStmt (results : Array Param) (path : String) (json : Json) : L
       let base ← decodeExpr s!"{path}.base" (← StrictJson.field path obj "base")
       let elemTy ← decodeTy s!"{path}.elem" (← StrictJson.field path obj "elem")
       pure (.clearSlice base elemTy)
+  | "sort-slice" =>
+      let base ← decodeExpr s!"{path}.base" (← StrictJson.field path obj "base")
+      let elemTy ← decodeTy s!"{path}.elem" (← StrictJson.field path obj "elem")
+      pure (.sortSlice base elemTy)
   | "append" =>
       let t ← decodeTarget s!"{path}.target" (← StrictJson.field path obj "target")
       let elemTy ← decodeTy s!"{path}.elem" (← StrictJson.field path obj "elem")

@@ -1,0 +1,3 @@
+# id	subject	args	expected_status	expected_reason	features
+uint64	slicesSortUint64	-	ok	-	slices,sort,externs,quorum
+ints	slicesSortInts	-	ok	-	slices,sort,externs,quorum

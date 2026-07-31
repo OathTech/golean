@@ -491,6 +491,7 @@ inductive StmtOp where
   | mapDelete (keyTy : Ty)
   | clearMap
   | clearSlice (elem : Ty)
+  | sortSlice (elem : Ty)
   deriving Repr, BEq
 
 /-- Classify a wide statement: the head, how many leading operands are
@@ -533,6 +534,7 @@ def stmtPlan : Stmt → Option (StmtOp × Nat × List Expr)
       return (.mapDelete keyTy, 0, [base, index])
   | .clearMap base => return (.clearMap, 0, [base])
   | .clearSlice base elem => return (.clearSlice elem, 0, [base])
+  | .sortSlice base elem => return (.sortSlice elem, 0, [base])
   | _ => none
 
 /-- Extract target locations from already-checked address values. -/
@@ -691,6 +693,32 @@ def applyStmtOp (s : ExecState) (choices : Choices) (op : StmtOp) (nt : Nat)
             current ← storeLoc current (← sliceIndexLoc slice (Int.ofNat i)) zero
           return (current, choices)
       | _ => stuck "malformed clearSlice operands"
+  | .sortSlice _ =>
+      -- Multi-cell read+write in one apply step (granularity-ledger
+      -- entry, like clearSlice): load the visible elements, insertion-
+      -- sort by INTEGER value (normalized ints compare exactly as Go's
+      -- unsigned/signed order; equal ints are indistinguishable, so
+      -- Go's sort instability is unobservable), store back. Non-int
+      -- elements fail closed — the frontend only emits this at integer
+      -- element kinds.
+      match vs with
+      | [baseV] => do
+          let slice ← valueAsSlice baseV
+          validateSlice slice
+          let mut loaded : Array (Int × IntKind) := #[]
+          let mut current := s
+          for i in [:slice.len] do
+            match ← loadLoc current (← sliceIndexLoc slice (Int.ofNat i)) with
+            | .int v kind => loaded := loaded.push (v, kind)
+            | other => stuck s!"sortSlice expected int element, got {repr other}"
+          let sorted := (loaded.toList.mergeSort (fun a b => a.1 ≤ b.1)).toArray
+          for i in [:slice.len] do
+            match sorted[i]? with
+            | some (v, kind) =>
+                current ← storeLoc current (← sliceIndexLoc slice (Int.ofNat i)) (.int v kind)
+            | none => stuck "sortSlice element count mismatch"
+          return (current, choices)
+      | _ => stuck "malformed sortSlice operands"
   | .copySlice =>
       match vs with
       | [tv, dstV, srcV] => do

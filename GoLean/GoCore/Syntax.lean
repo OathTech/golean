@@ -141,6 +141,12 @@ inductive Stmt where
   /-- `clear(s)`: zero the slice's visible elements IN PLACE (aliases
   observe it). -/
   | clearSlice (base : Expr) (elem : Ty)
+  /-- `slices.Sort(s)` at an INTEGER element kind: ascending in-place
+  sort of the visible elements (the quorum-pilot extern,
+  `docs/2026-07-30_quorum-extern-policy.md` — exact for integers, where
+  Go's instability is unobservable; every other `slices.*` use fails
+  closed at the frontend). -/
+  | sortSlice (base : Expr) (elem : Ty)
   | mapLookup (target okTarget : Assignee) (base index : Expr) (keyTy valueTy : Ty)
   | typeAssert (target okTarget : Assignee) (expr : Expr) (targetTy : Ty)
   | appendSlice (target : Assignee) (elem : Ty) (slice elems : Expr)

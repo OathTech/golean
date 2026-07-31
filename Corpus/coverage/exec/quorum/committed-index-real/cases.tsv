@@ -1,0 +1,18 @@
+# id	subject	args	expected_status	expected_reason	features
+empty	committedEmpty	-	ok	-	quorum,interfaces,defined_type,maps,sort,externs
+one-missing	committedOneMissing	-	ok	-	quorum,interfaces,defined_type,maps,sort,externs
+one-known	committedOneKnown	-	ok	-	quorum,interfaces,defined_type,maps,sort,externs
+two-missing	committedTwoMissing	-	ok	-	quorum,interfaces,defined_type,maps,sort,externs
+two-half	committedTwoHalf	-	ok	-	quorum,interfaces,defined_type,maps,sort,externs
+two-known	committedTwoKnown	-	ok	-	quorum,interfaces,defined_type,maps,sort,externs
+three-missing	committedThreeMissing	-	ok	-	quorum,interfaces,defined_type,maps,sort,externs
+three-one	committedThreeOne	-	ok	-	quorum,interfaces,defined_type,maps,sort,externs
+three-two	committedThreeTwo	-	ok	-	quorum,interfaces,defined_type,maps,sort,externs
+three-all	committedThreeAll	-	ok	-	quorum,interfaces,defined_type,maps,sort,externs
+three-all-low	committedThreeAllLow	-	ok	-	quorum,interfaces,defined_type,maps,sort,externs
+three-dup-two	committedThreeDupTwo	-	ok	-	quorum,interfaces,defined_type,maps,sort,externs
+three-dup-all	committedThreeDupAll	-	ok	-	quorum,interfaces,defined_type,maps,sort,externs
+three-spread	committedThreeSpread	-	ok	-	quorum,interfaces,defined_type,maps,sort,externs
+five-dup	committedFiveDup	-	ok	-	quorum,interfaces,defined_type,maps,sort,externs
+five-spread	committedFiveSpread	-	ok	-	quorum,interfaces,defined_type,maps,sort,externs
+sorted-slice	sortedSlice	-	ok	-	quorum,sort,externs,slices,range,append

@@ -445,6 +445,21 @@ func (e *emitter) emitStmt(s ast.Stmt) (any, error) {
 					}
 				}
 			}
+			// slices.Sort at an integer element kind: the quorum-pilot
+			// extern (docs/2026-07-30_quorum-extern-policy.md). Any other
+			// slices.*/sort.* member falls through to the normal call
+			// path and fails closed there (unresolvable package func).
+			if sel, ok := call.Fun.(*ast.SelectorExpr); ok {
+				if pkgIdent, ok := sel.X.(*ast.Ident); ok {
+					if pkgName, ok := e.info.Uses[pkgIdent].(*types.PkgName); ok &&
+						pkgName.Imported().Path() == "slices" {
+						if sel.Sel.Name != "Sort" {
+							return nil, unsup("slices.%s (only slices.Sort at integer elements is modeled)", sel.Sel.Name)
+						}
+						return e.emitSortStmt(call)
+					}
+				}
+			}
 			node, _, err := e.emitCallNode(call)
 			if err != nil {
 				return nil, err
@@ -2990,6 +3005,33 @@ func (e *emitter) emitDeleteStmt(c *ast.CallExpr) (any, error) {
 		return nil, err
 	}
 	return map[string]any{"stmt": "map-delete", "base": base, "index": index, "keyType": keyTy}, nil
+}
+
+// emitSortStmt lowers `slices.Sort(s)` at an INTEGER element kind onto the
+// machine's sortSlice op (exact for integers — equal elements are
+// indistinguishable, so Go's sort instability is unobservable). Everything
+// else fails closed (docs/2026-07-30_quorum-extern-policy.md).
+func (e *emitter) emitSortStmt(c *ast.CallExpr) (any, error) {
+	if len(c.Args) != 1 {
+		return nil, unsup("slices.Sort with %d arguments", len(c.Args))
+	}
+	sl, ok := e.info.TypeOf(c.Args[0]).Underlying().(*types.Slice)
+	if !ok {
+		return nil, unsup("slices.Sort on non-slice %s", e.info.TypeOf(c.Args[0]))
+	}
+	b, ok := sl.Elem().Underlying().(*types.Basic)
+	if !ok || b.Info()&types.IsInteger == 0 {
+		return nil, unsup("slices.Sort at non-integer element type %s", sl.Elem())
+	}
+	base, err := e.emitExpr(c.Args[0])
+	if err != nil {
+		return nil, err
+	}
+	elemTy, err := e.emitType(sl.Elem())
+	if err != nil {
+		return nil, err
+	}
+	return map[string]any{"stmt": "sort-slice", "base": base, "elem": elemTy}, nil
 }
 
 // emitClearStmt lowers `clear(m)` / `clear(s)` onto the machine's clear ops.

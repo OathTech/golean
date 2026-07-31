@@ -1,21 +1,15 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-07-30  commit: quorum-pilot interfaces-campaign (re-pinned
-#   in the same commit as the coverage change)  frontend: native  oracle: go run
-# manifest_cases: 787  pass: 525  fail: 262
-# Re-pin reason: THE INTERFACES CAMPAIGN (quorum-pilot phase 1, design of
-# record docs/2026-07-30_interfaces-campaign-design.md): identity-bearing
-# TypeDef.defined (BUG-004 item 2 fixed), structural dynamic-type box
-# tags, the interface-conversion wrap at every former guard site (BUG-006
-# FIXED — typed-nil-pointer-compare now PASSES), Ty-keyed method sets and
-# dispatch with pointer-box auto-deref, type asserts (both forms),
-# synthesized anchors for predeclared interfaces (error), package-
-# qualified TypeId keys with reflect-style unqualified observations,
-# unhashable-key prechecks with per-operation Go messages, string/
-# interface identity conversions. Drift = 54 FAIL->PASS + 6 stage moves
-# to VISIBLE machine gaps (the method-promotion class, triaged as
-# BUG-007 in this commit); ZERO PASS->FAIL. Untriaged set: 31 -> 27
-# (two map-key panics conformant; two embedding ids folded into
-# BUG-007's Cases line).
+# recorded: 2026-07-31  commit: quorum-pilot phases 2+3 (re-pinned in the
+#   same commit as the coverage change)  frontend: native  oracle: go run
+# manifest_cases: 806  pass: 544  fail: 262
+# Re-pin reason: QUORUM-PILOT PHASES 2+3 — 19 NEW ids, all PASS, every
+# other row identical to the interfaces-campaign baseline (drift =
+# exactly the new ids): slices/slices-sort (2 guardrails for the
+# sortSlice extern, docs/2026-07-30_quorum-extern-policy.md) and
+# quorum/committed-index-real (17 — the REAL etcd-io/raft
+# CommittedIndex/AckedIndexer/Slice vendored verbatim, driven by etcd's
+# own testdata/majority_commit.txt rows; go run on the real source is
+# the oracle).
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
 PASS	arrays/array-copy	-
@@ -614,6 +608,23 @@ PASS	quorum/committed-index-edges/n1-unacked	-
 PASS	quorum/committed-index/empty-maxuint	-
 PASS	quorum/committed-index/heap	-
 PASS	quorum/committed-index/on-stack	-
+PASS	quorum/committed-index-real/empty	-
+PASS	quorum/committed-index-real/five-dup	-
+PASS	quorum/committed-index-real/five-spread	-
+PASS	quorum/committed-index-real/one-known	-
+PASS	quorum/committed-index-real/one-missing	-
+PASS	quorum/committed-index-real/sorted-slice	-
+PASS	quorum/committed-index-real/three-all	-
+PASS	quorum/committed-index-real/three-all-low	-
+PASS	quorum/committed-index-real/three-dup-all	-
+PASS	quorum/committed-index-real/three-dup-two	-
+PASS	quorum/committed-index-real/three-missing	-
+PASS	quorum/committed-index-real/three-one	-
+PASS	quorum/committed-index-real/three-spread	-
+PASS	quorum/committed-index-real/three-two	-
+PASS	quorum/committed-index-real/two-half	-
+PASS	quorum/committed-index-real/two-known	-
+PASS	quorum/committed-index-real/two-missing	-
 PASS	quorum/committed-index/unacked	-
 PASS	quorum/joint/committed-min	-
 PASS	quorum/joint/ids-union	-
@@ -712,6 +723,8 @@ PASS	slices/slice-expr-eval-order	-
 PASS	slices/slice-header-by-value	-
 PASS	slices/slice-literal	-
 PASS	slices/slice-nil-empty	-
+PASS	slices/slices-sort/ints	-
+PASS	slices/slices-sort/uint64	-
 PASS	slices/three-index-slice	-
 PASS	strings/byte-slice-to-string-copy	-
 PASS	strings/concat-eval-order	-

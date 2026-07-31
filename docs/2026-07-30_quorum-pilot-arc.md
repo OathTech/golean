@@ -127,6 +127,25 @@ test values — the first "Verdi results, but on real code" artifact
      (`stk[:n]`), `make([]uint64, n)`, map range with order-insensitive
      fill (sort follows — the D2 observation shape), uint64
      conversions.
+- 2026-07-30/31: **Phases 1–3 LANDED** (see
+  `docs/2026-07-30_interfaces-campaign-design.md` and
+  `docs/2026-07-30_quorum-extern-policy.md` for the designs of record):
+  - Phase 1 (interfaces campaign, commit 85f3659): identity + boxing +
+    dispatch + asserts; corpus 471 → 525 passes, zero regressions;
+    BUG-006 fixed, BUG-004 item 2 fixed, BUG-007 (promotion) opened;
+    interim Opus mini-audit launched at exit per the plan.
+  - Phase 2: `math.MaxUint64` was free (constant folding);
+    `slices.Sort` landed as the `sortSlice` machine op (exact for
+    integer elements; everything else fails closed) with guardrail
+    cases first; single-package vendoring decided over true
+    multi-package for the pilot (extern-policy note §scoping).
+  - Phase 3: `quorum/committed-index-real` — the REAL etcd-io/raft
+    `CommittedIndex`/`AckedIndexer`/`Slice` vendored VERBATIM (README
+    records the delta), driven by etcd's own
+    `testdata/majority_commit.txt` rows: **17/17 PASS against `go run`
+    on the real source** — interface dispatch, defined-type identity,
+    nondet map ranges, the sort extern, MaxUint64, all through the one
+    chain.
 - 2026-07-30: **Phase 0 LANDED** — `Specs/QuorumTargets.lean`:
   `IsCommittedIndex` (committedness + maximality + empty-`MaxUint64`
   convention), executable reference `committedIndexRef` (structural
