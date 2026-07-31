@@ -10,6 +10,7 @@ import GoLeanProofs.Laws.Assign
 import GoLeanProofs.Laws.Call
 import GoLeanProofs.Laws.Loop
 import GoLeanProofs.Laws.Range
+import GoLeanProofs.Laws.QuorumOps
 import GoLeanProofs.Laws.Unwind
 import GoLeanProofs.Adequacy
 import GoLeanProofs.Specs.GoldenProgram

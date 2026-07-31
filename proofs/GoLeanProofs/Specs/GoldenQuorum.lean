@@ -33,7 +33,12 @@ def quorumLowered : Program :=
                    GoLean.GoCore.TypeDef.defined
                      (GoLean.GoCore.Ty.map
                        (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))
-                       (GoLean.GoCore.Ty.defined { key := "struct{}" })))],
+                       (GoLean.GoCore.Ty.defined { key := "struct{}" }))),
+                  ({ key := "main.AckedIndexer" },
+                   GoLean.GoCore.TypeDef.interfaceDef
+                     #[{ name := "AckedIndex",
+                         params := #[GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64)],
+                         results := #[GoLean.GoCore.Ty.defined { key := "main.Index" }, GoLean.GoCore.Ty.bool] }])],
     funcs := #[{ id := { key := "run" },
                  args := #[{ id := "c", typ := GoLean.GoCore.Ty.defined { key := "main.MajorityConfig" } },
                            { id := "l", typ := GoLean.GoCore.Ty.defined { key := "main.mapAckIndexer" } }],

@@ -167,6 +167,19 @@ open Lean in
 /-- info: 'GoLean.Quorum.not_committedIndex_acked3_101' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Quorum.not_committedIndex_acked3_101
 
+-- Quorum-pilot phase-4 per-construct laws (`Laws/QuorumOps.lean`,
+-- 2026-07-31): the wide-statement (`stmtOpK`) walk, `sortSlice`,
+-- `mapLookup`, and the map-range snapshot — each pinned on the walk it
+-- is witnessed by.
+/-- info: 'GoLean.Iris.wp_map_lookup' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.wp_map_lookup
+/-- info: 'GoLean.Iris.wp_sort_slice_srt' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.wp_sort_slice_srt
+/-- info: 'GoLean.Iris.wp_map_range_snapshot_committed' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.wp_map_range_snapshot_committed
+/-- info: 'GoLean.Iris.typeEnv_pin_is_load_bearing' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.typeEnv_pin_is_load_bearing
+
 /-! ## Non-vacuity gate — every user-facing WP law bound to a discharge
     witness (deleting a witness or a law breaks this build). -/
 
@@ -223,6 +236,51 @@ example := @GoLean.Iris.GoldenRecover.wp_recoverCall
 example := @GoLean.Iris.wp_frame_fall_int
 example := @GoLean.Surface.recoverFuncSpec
 
+/-- `✓` the quorum per-construct laws (`Laws/QuorumOps.lean`, quorum
+pilot phase 4 item 2, 2026-07-31), each witnessed SAME-COMMIT by a walk
+over a statement `rfl`-projected out of the pinned lowering
+(`QuorumPin.{rangeStmt,sortStmt,mapLookupStmt}` — edit the pin and the
+projections stop being `rfl`):
+
+- the wide-statement (`stmtOpK`) family — `wp_stmt_op_first`,
+  `wp_stmt_op_shift_target`, `wp_stmt_op_shift_plain`,
+  `wp_stmt_op_apply_store`, `wp_stmt_op_apply_read_store₂` — NOTHING
+  existed for `stmtOpK` before this file; witnessed by the `sortSlice`
+  and `mapLookup` statement walks below;
+- `wp_sort_slice` (the `slices.Sort` extern, one apply step over the
+  slice's single backing cell) — witness `wp_sort_slice_srt`, the REAL
+  `slices.Sort(srt)` statement on `[3,1,2] ↦ [1,2,3]`;
+- `wp_map_lookup` (comma-ok read: one cell read, two written) and its
+  new lifting core `wp_read_store_step₂` — witness
+  `wp_map_lookup_ackedIndex`, the REAL `idx, ok := m[id]` of
+  `main.mapAckIndexer.AckedIndex` (recorded divergence in its docstring:
+  the `idx` cell is `uint64`-typed, not `main.Index`-typed, because the
+  ghost state does not pin `σ.types`);
+- `wp_map_range_snapshot` (+ the nil form) — the state-reading step
+  feeding `Laws/Range`'s nondeterministic `mapIterK` law; witness
+  `wp_map_range_snapshot_committed` on the REAL voter loop.
+
+`◌ NOT CLAIMED: dynamic-dispatch frame entry.* `wp_call_dynamic_enter`
+is deliberately absent: `GoCoreGS` pins `functions` and `methods` but not
+`types`, and `bindParams`/`allocDecls`/`concreteMethodForDynamic?` on
+this program all resolve `.defined` names through `σ.types`. A house-style
+`∀ σ, …` premise about them is FALSE, so such a law would be vacuous.
+`typeEnv_pin_is_load_bearing` is the kernel-checked demonstration and the
+gate on that reasoning. -/
+example := @GoLean.Iris.wp_map_range_snapshot
+example := @GoLean.Iris.wp_sort_slice
+example := @GoLean.Iris.wp_map_lookup
+example := @GoLean.Iris.wp_stmt_op_first
+example := @GoLean.Iris.wp_stmt_op_shift_target
+example := @GoLean.Iris.wp_stmt_op_shift_plain
+example := @GoLean.Iris.wp_sort_slice_srt
+example := @GoLean.Iris.wp_map_lookup_ackedIndex
+example := @GoLean.Iris.wp_map_range_snapshot_committed
+example := @GoLean.Iris.wp_map_range_snapshot_nil
+example := @GoLean.Iris.wp_stmt_op_apply_store
+example := @GoLean.Iris.wp_stmt_op_apply_read_store₂
+example := @GoLean.Iris.wp_read_store_step₂
+example := @GoLean.Iris.typeEnv_pin_is_load_bearing
 /-- `✓` the golden walk and both its call forms. -/
 example := @GoLean.Iris.GoldenSlice.wp_inc_body
 example := @GoLean.Iris.GoldenSlice.wp_call_inc_stmt
