@@ -44,7 +44,7 @@ theorem wp_init {pid : String} {pty : Ty} {v : GoValue} {rest : List Stmt}
   iintro %σ₁ %ns %obs %obs' %nt Hσ
   simp only [stateInterp]
   icases Hσ with ⟨Hσ, %Hinv⟩
-  obtain ⟨hfns, hmeths, hwf⟩ := Hinv
+  obtain ⟨hfns, hmeths, htypes, hwf⟩ := Hinv
   have hstep : Step (.exec (.initialization ⟨pid, pty⟩) env (.seq rest env k)) σ₁
       (.next (.seq rest (env.declare pid (.base ⟨σ₁.nextAddr⟩)) k))
       { σ₁ with heap := Heap.set σ₁.heap (.base ⟨σ₁.nextAddr⟩) ⟨some pty, v⟩,
@@ -88,7 +88,7 @@ theorem wp_init {pid : String} {pty : Ty} {v : GoValue} {rest : List Stmt}
       · iapply (genHeapInterp_eqv
           (fun kk => (heapToMap_set_base σ₁.heap ⟨σ₁.nextAddr⟩ _ kk).symm)) $$ Hσ
       · ipureintro
-        exact ⟨hfns, hmeths, hwf.alloc⟩
+        exact ⟨hfns, hmeths, htypes, hwf.alloc⟩
     · isplitl [Hpt Hcont]
       · iapply Hcont $$ %(⟨σ₁.nextAddr⟩ : Addr) Hpt
       · itrivial

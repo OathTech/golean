@@ -179,11 +179,13 @@ SHAPE ONLY at phase 0: the discharge machinery (multi-target call
 dispatch, two-cell frame exit law) lands in phase 4, witness in the
 same commit — until then no theorem names this def and no docstring may
 claim it is dischargeable. -/
-def GoFuncSpec2 (funcs : Array Func) (fid : FuncId) (kind : IntKind)
-    (args : Array Expr) (P : HProp) (Q : Int → Bool → HProp) : Prop :=
+def GoFuncSpec2 (types : TypeEnv) (funcs : Array Func) (fid : FuncId)
+    (kind : IntKind) (args : Array Expr) (P : HProp)
+    (Q : Int → Bool → HProp) : Prop :=
   ∀ (ra rb : Nat) (w₁ w₂ : GoValue),
     ra ≠ rb →
-    GoSpec funcs [[("$callres0", Loc.base ⟨ra⟩), ("$callres1", Loc.base ⟨rb⟩)]]
+    GoSpec types funcs
+      [[("$callres0", Loc.base ⟨ra⟩), ("$callres1", Loc.base ⟨rb⟩)]]
       (.sep (.pointsTo ra ⟨some (.int kind), w₁⟩)
         (.sep (.pointsTo rb ⟨some .bool, w₂⟩) P))
       (.call #[.var "$callres0", .var "$callres1"] fid args)

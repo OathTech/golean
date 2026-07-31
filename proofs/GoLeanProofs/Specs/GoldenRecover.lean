@@ -209,7 +209,7 @@ theorem wp_recoverDirect_body {ra : Addr} {tl : Loc} {k}
   iapply (wp_assign_store
     (oldcell := ⟨some (.interface ⟨"any"⟩), .nil⟩)
     (newcell := ⟨some (.interface ⟨"any"⟩), payload⟩)
-    (fun σ₁ hlook => by
+    (fun σ₁ _ht hlook => by
       unfold storeLoc
       rw [hlook]
       simp [normalizeValueForTy, normalizeValueForTyFuel, panicPayload,
@@ -308,7 +308,7 @@ theorem wp_recoverDirect_body {ra : Addr} {tl : Loc} {k}
   iintro Hc37
   iapply (wp_assign_store (oldcell := ⟨some (.int .int), .int 0 .int⟩)
     (newcell := ⟨some (.int .int), .int (IntKind.normalize .int 7) .int⟩)
-    (fun σ₁ hlook => storeLoc_int_cell hlook 7))
+    (fun σ₁ _ht hlook => storeLoc_int_cell hlook 7))
   isplitl [Hr]
   · iexact Hr
   iintro Hr
@@ -367,7 +367,7 @@ theorem wp_recoverCall {ta : Addr} {w : GoValue} {x : String} {env k}
     (hnodisp := fun σ h => by
       simp [dynamicDispatch?, methodInfoByFuncId?, h, hmeths, Bind.bind,
         Except.bind])
-    (hdef := fun σ => by
+    (hdef := fun σ _ => by
       simp [defaultValue, defaultValueFuel, typeResolutionFuel]))
   iintro %ra Hres
   iapply (wp_recoverDirect_body hprog hmeths)
@@ -398,7 +398,8 @@ target): "`recoverDirect()` takes no arguments, needs no heap, and
 returns 7" — over the PINNED ACTUAL LOWERING, ∀-quantified over the
 caller's target cell, its prior value, and the frame. -/
 def recoverFuncSpec_statement : Prop :=
-  GoFuncSpec recoverLowered.funcs ⟨"recoverDirect"⟩ .int #[] .emp
+  GoFuncSpec recoverLowered.typeDefs.toList recoverLowered.funcs
+    ⟨"recoverDirect"⟩ .int #[] .emp
     (fun n => .pure (n = 7))
 
 /-- **The recover function spec, proven** — the composition walk applied
@@ -408,7 +409,7 @@ theorem recoverFuncSpec : recoverFuncSpec_statement := by
   unfold recoverFuncSpec_statement GoFuncSpec
   intro ra w
   refine goSpec_of_wp ?_
-  intro _inst hprog hmeths
+  intro _inst hprog hmeths _htypes
   simp only [embed]
   iintro ⟨H0, -⟩
   iapply (wp_recoverCall (w := w) (x := "$callres") rfl hprog hmeths)

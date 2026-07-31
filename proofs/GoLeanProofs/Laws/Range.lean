@@ -123,7 +123,7 @@ theorem wp_map_iter_next_key {kid : String} {keyTy valTy : Ty}
   iintro %σ₁ %ns %obs %obs' %nt Hσ
   simp only [stateInterp]
   icases Hσ with ⟨Hσ, %Hinv⟩
-  obtain ⟨hfns, hmeths, hwf⟩ := Hinv
+  obtain ⟨hfns, hmeths, htypes, hwf⟩ := Hinv
   have hbind : ∀ (i : Nat) (h : i < remaining.size),
       bindIterVars env.pushScope σ₁ (some kid) none keyTy valTy
         ((remaining[i]'h).1) ((remaining[i]'h).2)
@@ -163,7 +163,7 @@ theorem wp_map_iter_next_key {kid : String} {keyTy valTy : Ty}
         · iapply (genHeapInterp_eqv
             (fun kk => (heapToMap_set_base σ₁.heap ⟨σ₁.nextAddr⟩ _ kk).symm)) $$ Hσ
         · ipureintro
-          exact ⟨hfns, hmeths, hwf.alloc⟩
+          exact ⟨hfns, hmeths, htypes, hwf.alloc⟩
       · isplitl [Hpt Hcont]
         · iapply Hcont $$ %idx %hidx %(⟨σ₁.nextAddr⟩ : Addr) Hpt
         · itrivial

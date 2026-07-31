@@ -26,7 +26,7 @@ per-program work is exactly the WP proof: `wp_goldenDriver`. -/
 theorem goldenSpec : goldenSpec_statement := by
   unfold goldenSpec_statement
   refine goSpec_of_wp ?_
-  intro _inst hprog hmeths
+  intro _inst hprog hmeths _htypes
   exact wp_goldenDriver hprog hmeths
 
 /-- **The golden function spec, proven** — "`incViaCall()` needs no heap
@@ -36,7 +36,7 @@ theorem goldenFuncSpec : goldenFuncSpec_statement := by
   unfold goldenFuncSpec_statement GoFuncSpec
   intro ra w
   refine goSpec_of_wp ?_
-  intro _inst hprog hmeths
+  intro _inst hprog hmeths _htypes
   simp only [embed]
   iintro ⟨H0, -⟩
   iapply (wp_goldenCall (w := w) (x := "$callres") rfl hprog hmeths)
@@ -72,7 +72,7 @@ theorem goldenInvariant : goldenInvariant_statement := by
         cases h0)⟩
     exact ⟨hp, ∅, ⟨0, hp, ∅, hsat, ⟨Or.inl rfl, rfl⟩, hdisj, hcover⟩,
       rfl, hdisj, hcover⟩
-  · intro _inst hprog hmeths N
+  · intro _inst hprog hmeths _htypes N
     iintro ⟨HinvT, -⟩
     iapply (wp_goldenCall_inv (x := "r") (ta := ⟨0⟩)
       (S := fun cell => ∃ n : Int,

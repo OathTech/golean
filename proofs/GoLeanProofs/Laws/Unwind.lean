@@ -212,17 +212,18 @@ theorem enterFrame_cap1 {fid : FuncId} {func : Func} {pid : String}
     (hres : func.results = #[])
     (hnodisp : ∀ σ : ExecState, σ.methods = GoCoreGS.methods GF →
       dynamicDispatch? σ func #[cv] = .ok none)
-    (hnorm : ∀ σ : ExecState, normalizeValueForTy σ pty cv = .ok cv') :
+    (hnorm : ∀ σ : ExecState, σ.types = GoCoreGS.types GF →
+      normalizeValueForTy σ pty cv = .ok cv') :
     ∀ σ₁ : ExecState, σ₁.functions = GoCoreGS.prog GF →
-      σ₁.methods = GoCoreGS.methods GF →
+      σ₁.methods = GoCoreGS.methods GF → σ₁.types = GoCoreGS.types GF →
       enterFrame σ₁ fid [cv]
         = .ok (func, [[(pid, Loc.base ⟨σ₁.nextAddr⟩)]], [],
             { σ₁ with heap := Heap.set σ₁.heap (.base ⟨σ₁.nextAddr⟩) ⟨some pty, cv'⟩, nextAddr := σ₁.nextAddr + 1 }) := by
-  intro σ₁ hfns hmeths
+  intro σ₁ hfns hmeths htypes
   unfold enterFrame
   rw [hfns, hfind]
   simp [hargs, hres, Bind.bind, Except.bind, hnodisp σ₁ hmeths, bindParams,
-    hnorm σ₁, ExecState.alloc, ExecState.freshLoc, allocDecls, pinResultLocs,
+    hnorm σ₁ htypes, ExecState.alloc, ExecState.freshLoc, allocDecls, pinResultLocs,
     LocalEnv.declare]
   exact hfns
 
@@ -234,7 +235,7 @@ private theorem wp_enter_cap1_core {fid : FuncId} {func : Func}
     (hnv : ToVal.toVal c₀ = (none : Option Unit))
     (hcf : c₀.choiceFree)
     (henter : ∀ σ₁ : ExecState, σ₁.functions = GoCoreGS.prog GF →
-      σ₁.methods = GoCoreGS.methods GF →
+      σ₁.methods = GoCoreGS.methods GF → σ₁.types = GoCoreGS.types GF →
       enterFrame σ₁ fid [cv]
         = .ok (func, [[(pid, Loc.base ⟨σ₁.nextAddr⟩)]], [],
             { σ₁ with heap := Heap.set σ₁.heap (.base ⟨σ₁.nextAddr⟩) ⟨some pty, cv'⟩, nextAddr := σ₁.nextAddr + 1 }))
@@ -254,8 +255,8 @@ private theorem wp_enter_cap1_core {fid : FuncId} {func : Func}
   iintro %σ₁ %ns %obs %obs' %nt Hσ
   simp only [stateInterp]
   icases Hσ with ⟨Hσ, %Hinv⟩
-  obtain ⟨hfns, hmeths, hwf⟩ := Hinv
-  have hst := hstep σ₁ (henter σ₁ hfns hmeths)
+  obtain ⟨hfns, hmeths, htypes, hwf⟩ := Hinv
+  have hst := hstep σ₁ (henter σ₁ hfns hmeths htypes)
   have hdet : ∀ c' s', Step c₀ σ₁ c' s' →
       c' = Config.exec func.body [[(pid, Loc.base ⟨σ₁.nextAddr⟩)]] kof
         ∧ s' = { σ₁ with heap := Heap.set σ₁.heap (.base ⟨σ₁.nextAddr⟩) ⟨some pty, cv'⟩, nextAddr := σ₁.nextAddr + 1 } := by
@@ -284,7 +285,7 @@ private theorem wp_enter_cap1_core {fid : FuncId} {func : Func}
       · iapply (genHeapInterp_eqv
           (fun kk => (heapToMap_set_base σ₁.heap ⟨σ₁.nextAddr⟩ _ kk).symm)) $$ Hσ
       · ipureintro
-        exact ⟨hfns, hmeths, hwf.alloc⟩
+        exact ⟨hfns, hmeths, htypes, hwf.alloc⟩
     · isplitl [Hpt Hcont]
       · iapply Hcont $$ %(⟨σ₁.nextAddr⟩ : Addr) Hpt
       · itrivial
@@ -299,7 +300,8 @@ theorem wp_call_value_enter_cap1 {fid : FuncId} {func : Func}
     (hres : func.results = #[])
     (hnodisp : ∀ σ : ExecState, σ.methods = GoCoreGS.methods GF →
       dynamicDispatch? σ func #[cv] = .ok none)
-    (hnorm : ∀ σ : ExecState, normalizeValueForTy σ pty cv = .ok cv') :
+    (hnorm : ∀ σ : ExecState, σ.types = GoCoreGS.types GF →
+      normalizeValueForTy σ pty cv = .ok cv') :
     iprop(∀ pa : Addr, pa.id ↦ (⟨some pty, cv'⟩ : HeapCell) -∗
         WP (Config.exec func.body [[(pid, Loc.base pa)]] (.frame locs [] [] k))
           @ s ; E {{ Φ }})
@@ -321,7 +323,8 @@ theorem wp_frame_defer_return_cap1 {fid : FuncId} {func : Func}
     (hres : func.results = #[])
     (hnodisp : ∀ σ : ExecState, σ.methods = GoCoreGS.methods GF →
       dynamicDispatch? σ func #[cv] = .ok none)
-    (hnorm : ∀ σ : ExecState, normalizeValueForTy σ pty cv = .ok cv') :
+    (hnorm : ∀ σ : ExecState, σ.types = GoCoreGS.types GF →
+      normalizeValueForTy σ pty cv = .ok cv') :
     iprop(∀ pa : Addr, pa.id ↦ (⟨some pty, cv'⟩ : HeapCell) -∗
         WP (Config.exec func.body [[(pid, Loc.base pa)]]
               (.frame [] [] [] (.frame targets results ds k))) @ s ; E {{ Φ }})
@@ -342,7 +345,8 @@ theorem wp_frame_defer_fall_cap1 {fid : FuncId} {func : Func}
     (hres : func.results = #[])
     (hnodisp : ∀ σ : ExecState, σ.methods = GoCoreGS.methods GF →
       dynamicDispatch? σ func #[cv] = .ok none)
-    (hnorm : ∀ σ : ExecState, normalizeValueForTy σ pty cv = .ok cv') :
+    (hnorm : ∀ σ : ExecState, σ.types = GoCoreGS.types GF →
+      normalizeValueForTy σ pty cv = .ok cv') :
     iprop(∀ pa : Addr, pa.id ↦ (⟨some pty, cv'⟩ : HeapCell) -∗
         WP (Config.exec func.body [[(pid, Loc.base pa)]]
               (.frame [] [] [] (.frame targets results ds k))) @ s ; E {{ Φ }})
@@ -366,7 +370,8 @@ theorem wp_panic_frame_defer_cap1 {fid : FuncId} {func : Func}
     (hres : func.results = #[])
     (hnodisp : ∀ σ : ExecState, σ.methods = GoCoreGS.methods GF →
       dynamicDispatch? σ func #[cv] = .ok none)
-    (hnorm : ∀ σ : ExecState, normalizeValueForTy σ pty cv = .ok cv') :
+    (hnorm : ∀ σ : ExecState, σ.types = GoCoreGS.types GF →
+      normalizeValueForTy σ pty cv = .ok cv') :
     iprop(∀ pa : Addr, pa.id ↦ (⟨some pty, cv'⟩ : HeapCell) -∗
         WP (Config.exec func.body [[(pid, Loc.base pa)]]
               (.frame [] [] []
@@ -538,7 +543,7 @@ theorem wp_recover_catch_seven {ra : Addr} {k}
     (hnodisp := fun σ h => by
       simp [dynamicDispatch?, methodInfoByFuncId?, h, hmeths, Bind.bind,
         Except.bind])
-    (hnorm := fun σ => by
+    (hnorm := fun σ _ => by
       simp [normalizeValueForTy, normalizeValueForTyFuel]))
   iintro %pa Hp
   -- the deferred closure's body: if recover() != nil { *rp = 7 }
@@ -619,7 +624,7 @@ theorem wp_recover_catch_seven {ra : Addr} {k}
   iintro Hc26
   iapply (wp_assign_store (oldcell := ⟨some (.int .int), .int 0 .int⟩)
     (newcell := ⟨some (.int .int), .int (IntKind.normalize .int 7) .int⟩)
-    (fun σ₁ hlook => storeLoc_int_cell hlook 7))
+    (fun σ₁ _ht hlook => storeLoc_int_cell hlook 7))
   isplitl [Hr]
   · iexact Hr
   iintro Hr
@@ -680,7 +685,7 @@ theorem wp_call_value_enter_rec {ra : Addr} {locs : List Loc} {env k}
     (hnodisp := fun σ h => by
       simp [dynamicDispatch?, methodInfoByFuncId?, h, hmeths, Bind.bind,
         Except.bind])
-    (hnorm := fun σ => by
+    (hnorm := fun σ _ => by
       simp [normalizeValueForTy, normalizeValueForTyFuel])
 
 open RecoverWitness in
@@ -705,7 +710,7 @@ theorem wp_frame_defer_return_rec {ra : Addr}
     (hnodisp := fun σ h => by
       simp [dynamicDispatch?, methodInfoByFuncId?, h, hmeths, Bind.bind,
         Except.bind])
-    (hnorm := fun σ => by
+    (hnorm := fun σ _ => by
       simp [normalizeValueForTy, normalizeValueForTyFuel])
 
 open RecoverWitness in
@@ -730,7 +735,7 @@ theorem wp_frame_defer_fall_rec {ra : Addr}
     (hnodisp := fun σ h => by
       simp [dynamicDispatch?, methodInfoByFuncId?, h, hmeths, Bind.bind,
         Except.bind])
-    (hnorm := fun σ => by
+    (hnorm := fun σ _ => by
       simp [normalizeValueForTy, normalizeValueForTyFuel])
 
 /-- The remaining premise-carrying pure laws instantiated on concrete

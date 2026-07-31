@@ -298,3 +298,117 @@ using Goose/Perennial's design as the generality reference."
   `SurfaceExit.lean`'s construction sites. Nothing else about the laws
   changes: their `∀ σ` premises simply gain the `σ.types = …` hypothesis
   and become dischargeable by computation against the pin.
+- 2026-07-31: **Phase-4 types-pin slice LANDED** — the recorded blocker
+  above is FIXED, and a second, sharper one was found and fixed with it.
+  1. **The `σ.types` ghost pin** (trusted surface). `GoCoreGS` gains
+     `types : TypeEnv`; the state interpretation's pure conjunct becomes
+     `σ.functions = prog ∧ σ.methods = methods ∧ σ.types = types ∧
+     HeapWf σ`. Ripple size: **11 destructuring sites** across
+     `Lifting.lean` (4), `Laws/{Call,Init,Range,QuorumOps,Unwind}.lean`
+     (7), plus 4 `GoCoreGS` construction sites and 4 `Hwp`/`Hext`
+     premise lists in `Adequacy.lean`, the 4 `Hwp` premises in
+     `SurfaceExit.lean`, and the discharge sites in
+     `Specs/{GoldenSurface,GoldenRecover}.lean`. The `∀σ` premises of
+     `wp_store_step`, `wp_store_step₂`, `wp_read_store_step₂`,
+     `wp_assign_store`, `wp_call_enter_arg1`/`ret1`, `enterFrame_cap1`
+     and the `stmtOpK` apply cores now carry the pin hypothesis (strictly
+     weaker premises).
+     **The Surface judgments gained a `types : TypeEnv` parameter**
+     (`GoTriple`/`Progress`/`GoInvariant`/`GoSpec`/`GoFuncSpec`/
+     `GoFuncSpec2`) and the golden statements pin it to their program's
+     `typeDefs` — matching what the executable driver seeds
+     (`StepFn.runFunctionWithContextM`). The old empty default silently
+     restricted every surface judgment to programs with no named types;
+     all existing golden/recover statements stay TRUE and green.
+  2. **`wp_call_dynamic_enter₂`** (`Laws/Call.lean`) — frame entry
+     through an interface ANCHOR, with witness
+     `wp_call_dynamic_enter_ackedIndex` on the REAL
+     `main.AckedIndexer.AckedIndex` dispatch of the pinned lowering.
+     Supporting general machinery: `wp_alloc_step₄` (first
+     multi-allocation lifting core), `bindParams₂`/`allocDecls₂`,
+     `allocMany`/`HeapWf.allocMany`, `heapToMap_set_base₂`/`₄`,
+     `insert_eqv`, `execState_pin_eq`.
+  3. **SECOND BLOCKER, found and fixed: `BEq Ty` was OPAQUE.** `Ty` is a
+     nested inductive (`funcType` carries `List Ty`), and Lean's derived
+     `BEq` for nested inductives is an opaque function — no equation
+     lemmas, no `unfold`, no `decide`, not even `rfl` on two identical
+     closed types. Dynamic-type identity is decided by `==` on `Ty`
+     (`concreteMethodForDynamic?`, `typeAssert`, boxing, interface
+     satisfaction), so **no dispatch fact was kernel-provable at all** —
+     the entire interface half of the proof story was unreachable, and
+     the derived function was also a `partial`-flavoured definition in
+     the semantic core. Fix: `Ty.eqb`/`Ty.eqbFuel`/`Ty.eqbListFuel` in
+     `GoLean/GoCore/Value.lean` — total, transparent, fuel-bounded
+     (1024), fails CLOSED on exhaustion; `deriving BEq` dropped from
+     `Ty`. Runtime change, so the FULL differential was re-run:
+     **846/846 identical to `baselines/native-full.tsv`** (581 pass /
+     265 fail, unchanged set; negative lane 309/309). Baseline NOT
+     re-pinned — nothing moved.
+  4. **Phase-4 item 3 (the walk): the recorded FALLBACK, not the full
+     result.** `Specs/GoldenQuorumWP.lean` holds the target STATEMENTS
+     (`quorumOneKnownFuncSpec_statement`, its negative twin,
+     `quorumAckedIndexFuncSpec2_statement`) as `def … : Prop` in the
+     phase-0 idiom, plus the PROVEN math half:
+     `committedIndexRef_oneKnown` (`= 12`, `rfl`),
+     `isCommittedIndex_oneKnown` (via the proven
+     `committedIndexRef_meets_spec`), and the negative twin at 11. The
+     machine walk is NOT discharged; what it still needs is listed in
+     the file header and in the proof-corpus manifest's owed list
+     (allocating wide-op apply core for `makeMap`, `makeSlice`/
+     array-to-slice, two-result frame exit, ~200-step composition). No
+     `sorry`, no scaffold claiming more than it proves.
+
+  **Over-specialization check (standing item §STANDING CHECK), per new
+  law — is the STATEMENT target-free?**
+  - `wp_alloc_step₄` — TARGET-FREE. Any four cells, any successor config
+    as a function of the four fresh addresses. Narrowing: length fixed
+    at 4 (the general shape is a list; `allocMany` already is). Recorded
+    as owed.
+  - `bindParams₂` / `allocDecls₂` — TARGET-FREE. Any two params/results,
+    any state. Arity-specialized, widening owed.
+  - `wp_call_dynamic_enter₂` — TARGET-FREE. Anchor id, concrete callee,
+    dynamic type, parameter/result names and types, and all values are
+    law variables; only the arity (2 params / 2 results) is fixed, as in
+    the existing `wp_call_enter_arg1`/`ret1`/`cap1` family.
+  - `wp_read_store_step₂`, `wp_stmt_op_apply_*`, `wp_map_lookup`,
+    `wp_store_step`(`₂`), `wp_assign_store` premise widenings —
+    TARGET-FREE (they only GAINED the general `σ.types` pin hypothesis).
+  - `execState_pin_eq`, `insert_eqv`, `heapToMap_set_base₂/₄`,
+    `allocMany`, `HeapWf.allocMany` — TARGET-FREE, no program mentioned.
+  - `Ty.eqb` — TARGET-FREE: a language-level structural equality on Go
+    types.
+  - Quorum names appear ONLY in: `Laws/QuorumOps.lean`'s `QuorumPin`
+    projections and witnesses, and `Specs/GoldenQuorumWP.lean`'s target
+    statements. No law statement, machine rule or frontend path names
+    `main.*`.
+
+  **Goose/Perennial comparison, per new mechanism** (`deps/perennial`
+  `new/golang/defn/*.v`, `deps/goose`):
+  - *Dispatch entry*: Perennial resolves a method with the semantics
+    function `methods : go.type → go_string → val → func.t`
+    (`postlang.v:106`, used through the `rcvr @! type @! method`
+    notation) — receiver- and arity-generic, because the result is a
+    GooseLang closure and calls are curried, so no arity family arises
+    there. Ours is arity-specialized (2/2) for the
+    same reason the `cap1` family is: GoCore's `enterFrame` allocates one
+    cell per parameter and per result in ONE step, so the WP law must
+    name them. NARROWER; widening recorded (see `wp_alloc_step₄`'s scope
+    note).
+  - *Allocation core*: Perennial allocates via `ref`/`alloc` one
+    location at a time and composes with `wp_bind`; GoCore's frame entry
+    is atomic over 4 allocations, which has no Perennial analogue —
+    ours covers MORE per step (and is the granularity ledger's frame
+    entry entry).
+  - *Type identity*: Perennial boxes as `interface.mk_ok from v` and
+    compares dynamic types with a plain `EqDecision` on `go.type`
+    (`postlang.v:183`, `interface.v`'s `go_eq_interface`) — decidable and
+    fully reasoning-friendly in Rocq despite `go.Named`'s list argument.
+    Ours reaches the same place only AFTER replacing the derived opaque
+    `BEq Ty` with `Ty.eqb`; before that we were strictly WORSE than
+    Perennial on exactly this axis, which is the sharpest argument that
+    the fix was not optional. Ours additionally fails closed on depth
+    exhaustion, which Perennial's structural decision does not need.
+  - *`σ.types` pin*: Perennial's `go_type` resolution is syntactic (no
+    ambient type environment), so there is no analogue; the pin is a
+    consequence of GoCore carrying named-type declarations in the state.
+    Ours covers MORE state, at the cost of the pin.

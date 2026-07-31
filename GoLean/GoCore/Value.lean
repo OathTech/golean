@@ -157,7 +157,56 @@ inductive Ty where
   | interface (id : TypeId)
   | defined (id : TypeId)
   | unsupported (feature : String)
-  deriving Repr, BEq, Inhabited
+  deriving Repr, Inhabited
+
+/-- Fuel for structural `Ty` equality. Bounds COMBINED structural depth
+and (for `funcType`) parameter-list length; the same 1024 budget the type
+resolver uses (`typeResolutionFuel`, which lives downstream in `Ops.lean`
+and so cannot be referenced here). -/
+def tyEqFuel : Nat := 1024
+
+/-! **Why `Ty` does NOT `deriving BEq`** (quorum pilot phase 4,
+2026-07-31). `Ty` is a NESTED inductive (`funcType` carries `List Ty`), and
+for nested inductives Lean's `deriving BEq` emits an **opaque** equality
+function — no equation lemmas, no `unfold`, no `decide`, not even `rfl` on
+two syntactically identical closed types. Dynamic-type identity is decided
+by `==` on `Ty` (`concreteMethodForDynamic?`, `typeAssert`, boxing,
+interface satisfaction), so with the derived instance **no dispatch fact
+was kernel-provable at all** — every interface WP law would have had an
+undischargeable premise. (It is also a `partial`-flavoured definition
+sitting in the semantic core, which the "proof-facing code is total"
+contract does not want.) The replacement is an ordinary total, transparent,
+fuel-bounded structural equality that FAILS CLOSED (`false`) on exhaustion;
+it agrees with the derived one on every type a program can write. -/
+mutual
+
+def Ty.eqbFuel : Nat → Ty → Ty → Bool
+  | _, .bool, .bool => true
+  | _, .int k₁, .int k₂ => k₁ == k₂
+  | _, .string, .string => true
+  | f + 1, .array n₁ e₁, .array n₂ e₂ => n₁ == n₂ && Ty.eqbFuel f e₁ e₂
+  | f + 1, .slice e₁, .slice e₂ => Ty.eqbFuel f e₁ e₂
+  | f + 1, .map k₁ v₁, .map k₂ v₂ => Ty.eqbFuel f k₁ k₂ && Ty.eqbFuel f v₁ v₂
+  | f + 1, .pointer e₁, .pointer e₂ => Ty.eqbFuel f e₁ e₂
+  | f + 1, .funcType p₁ r₁, .funcType p₂ r₂ =>
+      Ty.eqbListFuel f p₁ p₂ && Ty.eqbListFuel f r₁ r₂
+  | _, .interface a, .interface b => a == b
+  | _, .defined a, .defined b => a == b
+  | _, .unsupported a, .unsupported b => a == b
+  | _, _, _ => false
+
+def Ty.eqbListFuel : Nat → List Ty → List Ty → Bool
+  | _, [], [] => true
+  | f + 1, a :: as, b :: bs => Ty.eqbFuel f a b && Ty.eqbListFuel f as bs
+  | _, _, _ => false
+
+end
+
+/-- Structural `Ty` equality — the identity relation dispatch and type
+asserts key on. -/
+def Ty.eqb (a b : Ty) : Bool := Ty.eqbFuel tyEqFuel a b
+
+instance : BEq Ty := ⟨Ty.eqb⟩
 
 /-- Structural rendering of a (canonical) dynamic type for the
 OBSERVATION channel only — identity never keys on this (S3). Named types

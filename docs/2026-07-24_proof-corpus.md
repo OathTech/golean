@@ -70,6 +70,10 @@ so the record starts honest rather than aspirational.
 | `control-flow/while-eq-single-iteration` | `GoLean.Iris.wp_while_eq_once` | the Löb loop rule with a real machine-walked condition |
 | `panic-recover/recover-direct` (core shape; eval-pin `GoCore recover catches panic-path defer`) | `GoLean.Iris.wp_recover_catch_seven` | **defer + panic + recover composed**: registration, unwinding, the panic-path drain, the recover continuation walk, a write through a captured pointer, the cancelled unwind — the W3/unwinding entry. Added 2026-07-26 (proof-corpus catch-up arc); the program is the hand-authored core shape sharing the case's structure (closure capturing the named result, recover guarding the write), like the `wp_while_eq_once` precedent. |
 | `panic-recover/recover-direct` (**PINNED ACTUAL LOWERING** — `GoldenRecover.recoverLowered`, `scripts/check-golden`'s second program) | `GoLean.Surface.recoverFuncSpec` | the same composition at `GoFuncSpec` strength over decoded(frontend(source)): block scopes, recover's value routed through the `$c0` interface-typed temporary (init + assign, the recover continuation walk crossing the assign frames), the cell-read `!= nil` guard, and the FALL-path value frame exit (`wp_frame_fall_int` — Go's "returns normally" after recovery; no `return` anywhere in the callee). Paid 2026-07-30 (slice B); retires the owed frontend-lowering-twin row below. |
+| `quorum/committed-index-real` (**PINNED ACTUAL LOWERING** — `GoldenQuorum.quorumLowered`, `scripts/check-golden`'s third program) | `GoLean.Iris.wp_call_dynamic_enter_ackedIndex` | **interface DYNAMIC DISPATCH frame entry on real etcd-io/raft code**: the callsite names the anchor `main.AckedIndexer.AckedIndex`, the receiver arrives as an interface box of dynamic type `.defined main.mapAckIndexer`, and one step redirects to `main.mapAckIndexer.AckedIndex` with the receiver unboxed, binds receiver+`id` normalized at their declared (named) types and defaults `$res0 : main.Index`/`$res1 : bool`. Every premise computed against the pin; only the three ghost pins external. Landed 2026-07-31 (phase-4 types-pin slice) together with the general law `wp_call_dynamic_enter₂`. |
+| `quorum/committed-index-real` (same pin) | `GoLean.Iris.wp_map_lookup_ackedIndex` | the REAL `idx, ok := m[id]` comma-ok read of `main.mapAckIndexer.AckedIndex`, now FAITHFUL to the lowering's `.defined main.Index` target cell (the recorded `uint64` divergence is closed by the `σ.types` pin). |
+| `quorum/committed-index-real` (same pin) | `GoLean.Quorum.isCommittedIndex_oneKnown` | the MATH half of the tier-1 claim on the one-voter instance: `committedIndexRef [1] ackedOneKnown = 12` (`rfl`) upgraded to the declarative `IsCommittedIndex` by the proven `committedIndexRef_meets_spec`, with the negative twin at 11. **OWED: the machine half** — `GoLean.Surface.quorumOneKnownFuncSpec_statement` is a stated TARGET, not a theorem (`Specs/GoldenQuorumWP.lean`); until it is discharged nothing here claims the machine lands on 12. |
+
 
 **Owed, in ladder order** (each becomes an entry when its rung lands; a
 rung is not "finished" until its entry exists, though slices need not
@@ -78,6 +82,17 @@ block on it):
 - W1 tuples — a multi-result function proved at `GoFuncSpec`; stresses
   whether the frame-exit law generalizes past one result. (Prediction 3
   confirmed 2026-07-26: this is where the arity widening binds.)
+  PARTIALLY PAID 2026-07-31: the two-result frame ENTRY exists
+  (`wp_call_dynamic_enter₂` + witness); the two-result frame EXIT law is
+  what remains, and the target is stated as
+  `GoLean.Surface.quorumAckedIndexFuncSpec2_statement`.
+- NEW (2026-07-31): the quorum DRIVER walk —
+  `GoLean.Surface.quorumOneKnownFuncSpec_statement` (`committedOneKnown()
+  = 12` at `GoFuncSpec` strength over the pinned real lowering) and its
+  negative twin. Needs, beyond what exists: an ALLOCATING wide-op apply
+  core (`makeMap`), `makeSlice`/array-to-slice laws, the two-result frame
+  exit, and the ~200-step composition. This is the tier-1 claim's only
+  missing link — the math half is proven.
 - W2 switch — `control-flow/switch-basic`'s `classify`; stresses the
   if-chain walk and whether case dispatch composes with early return.
   (The `wp_breakable_*` laws landed 2026-07-26; the composed entry

@@ -38,18 +38,41 @@ class GoCoreGS (hlc : outParam HasLC) (GF : BundledGFunctors) extends
   need it pinned — it is `Step`-invariant for the same reason functions
   are: no rule writes it). -/
   methods : Array MethodInfo
+  /-- The fixed **type environment**, pinned like `prog`/`methods` (quorum
+  pilot phase 4, 2026-07-31). This is not a quorum-specific convenience: it
+  is a general Go fact. Every `.defined`/named type in a Go program resolves
+  through the package's type declarations, and the machine routes that
+  resolution through `TypeEnv.lookup σ.types` — in `normalizeValueForTy`
+  (`bindParams` normalizes each argument at its DECLARED type), in
+  `defaultValue` (`allocDecls` defaults each result at its declared type),
+  in `canonicalTy` (`concreteMethodForDynamic?` canonicalizes a method
+  receiver, which in Go is ALWAYS a defined type), and in every store that
+  coerces at a named type. Each of those FAILS CLOSED on an unknown name,
+  so without this pin a house-style `∀ σ, σ.functions = … → σ.methods = …
+  → P σ` premise mentioning any named type is FALSE (pick a σ with those
+  pins and a hostile `types`) and the law carrying it is vacuous —
+  `Laws/QuorumOps.typeEnv_pin_is_load_bearing` is the kernel-checked
+  demonstration. `σ.types` is `Step`-invariant for exactly the reason
+  `functions`/`methods` are: no rule writes it. The pin's general contract
+  is "the pinned program's `typeDefs`", mirroring what the executable
+  drivers seed (`StepFn.runFunctionWithContextM`). -/
+  types : TypeEnv
 attribute [reducible, instance] GoCoreGS.heap
 
 variable {GF : BundledGFunctors} {hlc : HasLC} [GoCoreGS hlc GF]
 
-/-- State interpretation: gen_heap over the projected heap, plus the two pure
-step-invariants — `σ.functions` pinned to the fixed program and heap
-well-formedness (`docs/2026-07-20_call-law-design.md`). -/
+/-- State interpretation: gen_heap over the projected heap, plus the pure
+step-invariants — `σ.functions`/`σ.methods`/`σ.types` pinned to the fixed
+program, method table and type environment, and heap well-formedness
+(`docs/2026-07-20_call-law-design.md`; the `types` conjunct added by the
+quorum pilot, see `GoCoreGS.types`). Conjunct order is
+`functions, methods, types, wf`; the destructuring `obtain ⟨hfns, hmeths,
+htypes, hwf⟩` is the house pattern in `Lifting.lean`/`Laws/*`. -/
 instance : StateInterp ExecState Unit GF where
   stateInterp σ _ _ _ :=
     iprop(genHeapInterp (GF := GF) (H := GoHeapF) (heapToMap σ.heap)
       ∗ ⌜σ.functions = GoCoreGS.prog GF ∧ σ.methods = GoCoreGS.methods GF
-          ∧ HeapWf σ⌝)
+          ∧ σ.types = GoCoreGS.types GF ∧ HeapWf σ⌝)
 
 instance : IrisGS_gen hlc Config GF where
   numLatersPerStep _ := 0

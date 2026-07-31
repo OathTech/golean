@@ -225,17 +225,19 @@ whose cell is owned. `hstore` is the cell-conditioned store fact (for
 int-typed cells, `storeLoc_int_cell` discharges it). Instantiates the
 `wp_store_step` core; determinism is `step_det`. -/
 theorem wp_assign_store {a : Addr} {v : GoValue} {oldcell newcell : HeapCell} {k}
-    (hstore : ∀ σ₁ : ExecState, Heap.lookup σ₁.heap (.base a) = some oldcell →
+    (hstore : ∀ σ₁ : ExecState, σ₁.types = GoCoreGS.types GF →
+      Heap.lookup σ₁.heap (.base a) = some oldcell →
       storeLoc σ₁ (.base a) v
         = .ok { σ₁ with heap := Heap.set σ₁.heap (.base a) newcell }) :
     a.id ↦ oldcell
       ∗ (a.id ↦ newcell -∗ WP (Config.next k) @ s ; E {{ Φ }})
       ⊢ WP (Config.retV v (.assignStoreK (.base a) k)) @ s ; E {{ Φ }} := by
   iapply wp_store_step (hnv := rfl)
-  intro σ₁ hlook
-  refine ⟨Step.assignStore (hstore σ₁ hlook), ?_⟩
+  intro σ₁ hfns hmeths htypes hlook
+  refine ⟨Step.assignStore (hstore σ₁ htypes hlook), ?_⟩
   intro c' s' hst
-  obtain ⟨h1, h2⟩ := step_det (by trivial) (Step.assignStore (hstore σ₁ hlook)) hst
+  obtain ⟨h1, h2⟩ :=
+    step_det (by trivial) (Step.assignStore (hstore σ₁ htypes hlook)) hst
   exact ⟨h1.symm, h2.symm⟩
 
 end

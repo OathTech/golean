@@ -177,6 +177,79 @@ theorem HeapWf.alloc {σ : ExecState} (hwf : HeapWf σ) {c : HeapCell} :
     show σ.nextAddr ≠ n; omega)]
   exact hwf n (by omega)
 
+/-! ## Multi-write / multi-allocation heap algebra
+
+General machinery (no program, type or value is fixed here): a machine step
+may write or allocate SEVERAL cells atomically — `applyStmtOp`'s two-target
+ops, and above all `enterFrame`, which allocates one cell per parameter and
+one per result before the callee body runs. The projection lemmas below let
+those composed `Heap.set`s be read back as the composed `insert`s gen_heap
+produces. -/
+
+/-- `insert` respects pointwise map equality — the congruence that lets a
+projection equivalence be lifted under further inserts. -/
+theorem insert_eqv {m m' : GoHeapF HeapCell} (h : ∀ k, get? m k = get? m' k)
+    (k : Nat) (v : HeapCell) : ∀ kk, get? (insert m k v) kk = get? (insert m' k v) kk := by
+  intro kk
+  rw [LawfulPartialMap.get?_insert, LawfulPartialMap.get?_insert, h kk]
+
+/-- Bridge B for TWO successive base writes: the projection is the two
+inserts. -/
+theorem heapToMap_set_base₂ (h : Heap) (a₀ a₁ : Addr) (c₀ c₁ : HeapCell) :
+    heapToMap (Heap.set (Heap.set h (.base a₀) c₀) (.base a₁) c₁)
+      ≡ₘ insert (insert (heapToMap h) a₀.id c₀) a₁.id c₁ := by
+  intro kk
+  rw [(heapToMap_set_base (Heap.set h (.base a₀) c₀) a₁ c₁) kk,
+    LawfulPartialMap.get?_insert, LawfulPartialMap.get?_insert]
+  by_cases hk : a₁.id = kk
+  · simp [hk]
+  · simp [hk, (heapToMap_set_base h a₀ c₀) kk, LawfulPartialMap.get?_insert]
+
+/-- Bridge B for FOUR successive base writes — the shape a frame entry with
+two parameters and two results produces. -/
+theorem heapToMap_set_base₄ (h : Heap) (a₀ a₁ a₂ a₃ : Addr)
+    (c₀ c₁ c₂ c₃ : HeapCell) :
+    heapToMap (Heap.set (Heap.set (Heap.set (Heap.set h (.base a₀) c₀)
+        (.base a₁) c₁) (.base a₂) c₂) (.base a₃) c₃)
+      ≡ₘ insert (insert (insert (insert (heapToMap h) a₀.id c₀) a₁.id c₁)
+          a₂.id c₂) a₃.id c₃ := fun kk =>
+  (heapToMap_set_base₂ (Heap.set (Heap.set h (.base a₀) c₀) (.base a₁) c₁)
+      a₂ a₃ c₂ c₃ kk).trans
+    (insert_eqv (insert_eqv (heapToMap_set_base₂ h a₀ a₁ c₀ c₁) a₂.id c₂)
+      a₃.id c₃ kk)
+
+/-- The state after allocating a run of cells at consecutive fresh addresses
+— `ExecState.alloc` iterated, which is exactly what `bindParams`,
+`allocDecls` and `bindIterVars` do. General in the list. -/
+def allocMany : ExecState → List HeapCell → ExecState
+  | σ, [] => σ
+  | σ, c :: rest =>
+      allocMany { σ with heap := Heap.set σ.heap (.base ⟨σ.nextAddr⟩) c,
+                         nextAddr := σ.nextAddr + 1 } rest
+
+@[simp] theorem allocMany_nil (σ : ExecState) : allocMany σ [] = σ := rfl
+
+/-- Consecutive allocation preserves well-formedness. -/
+theorem HeapWf.allocMany : ∀ (cs : List HeapCell) {σ : ExecState}, HeapWf σ →
+    HeapWf (GoLean.Iris.allocMany σ cs)
+  | [], _, hwf => hwf
+  | _ :: rest, _, hwf => HeapWf.allocMany rest hwf.alloc
+
+/-- **The `∀σ`-premise closer.** `ExecState` has exactly five fields, so a
+state whose three PINNED fields are known IS the pinned state up to heap
+and allocation counter. Rewriting with this turns a house-style
+`∀ σ, σ.functions = … → σ.methods = … → σ.types = … → P σ` premise into a
+statement about a state with literal `types`/`functions`/`methods` — i.e.
+a CLOSED computation the kernel can run — which is what makes such
+premises dischargeable by `rfl` instead of by fighting `simp` through
+fuel-recursive resolution. General: no program is named. -/
+theorem execState_pin_eq {σ : ExecState} {T : TypeEnv} {F : Array Func}
+    {M : Array MethodInfo}
+    (ht : σ.types = T) (hf : σ.functions = F) (hm : σ.methods = M) :
+    σ = { types := T, functions := F, methods := M,
+          heap := σ.heap, nextAddr := σ.nextAddr } := by
+  cases σ; simp_all
+
 /-- `IntKind.normalize` is idempotent. The fact behind discharging the store
 witnesses' `hstore` to zero hypotheses: a store of an already-normalized int at
 a `.int kind`-typed cell re-normalizes to the same value. -/

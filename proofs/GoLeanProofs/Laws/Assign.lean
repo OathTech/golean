@@ -75,7 +75,7 @@ theorem wp_assign_lit {x : String} {a : Addr} {w : GoValue} {n : Int}
   iapply (wp_assign_store
     (oldcell := ⟨some (.int kind), w⟩)
     (newcell := ⟨some (.int kind), .int (kind.normalize n) kind⟩)
-    (fun σ₁ hlook => storeLoc_int_cell hlook n))
+    (fun σ₁ _ht hlook => storeLoc_int_cell hlook n))
   isplitl [Hpt]
   · iexact Hpt
   iintro Hpt

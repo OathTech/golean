@@ -131,7 +131,7 @@ theorem wp_inc_body {pa xa : Addr} {m : Int} {k} :
   iintro Hc11
   iapply (wp_assign_store (oldcell := ⟨some (.int .int), .int m .int⟩)
     (newcell := ⟨some (.int .int), .int (IntKind.normalize .int (m + 1)) .int⟩)
-    (fun σ₁ hlook => storeLoc_int_cell hlook (m + 1)))
+    (fun σ₁ _ht hlook => storeLoc_int_cell hlook (m + 1)))
   isplitl [Hx]
   · iexact Hx
   iintro Hx
@@ -285,7 +285,7 @@ theorem wp_incViaCall_body {ra : Addr} {k}
   iintro Hx
   iapply (wp_assign_store (oldcell := ⟨some (.int .int), .int 0 .int⟩)
     (newcell := ⟨some (.int .int), .int 2 .int⟩)
-    (fun σ₁ hlook => by
+    (fun σ₁ _ht hlook => by
       have h := storeLoc_int_any (mkind := .int) hlook 2
       rw [show IntKind.normalize .int 2 = 2 from by decide] at h
       exact h))

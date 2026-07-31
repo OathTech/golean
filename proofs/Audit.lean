@@ -253,20 +253,57 @@ projections stop being `rfl`):
 - `wp_map_lookup` (comma-ok read: one cell read, two written) and its
   new lifting core `wp_read_store_step₂` — witness
   `wp_map_lookup_ackedIndex`, the REAL `idx, ok := m[id]` of
-  `main.mapAckIndexer.AckedIndex` (recorded divergence in its docstring:
-  the `idx` cell is `uint64`-typed, not `main.Index`-typed, because the
-  ghost state does not pin `σ.types`);
+  `main.mapAckIndexer.AckedIndex`. The earlier recorded divergence (the
+  `idx` cell declared `uint64` where the lowering declares
+  `main.Index`) is CLOSED by the `σ.types` pin: the witness now names the
+  faithful `.defined main.Index` cell;
 - `wp_map_range_snapshot` (+ the nil form) — the state-reading step
   feeding `Laws/Range`'s nondeterministic `mapIterK` law; witness
   `wp_map_range_snapshot_committed` on the REAL voter loop.
 
-`◌ NOT CLAIMED: dynamic-dispatch frame entry.* `wp_call_dynamic_enter`
-is deliberately absent: `GoCoreGS` pins `functions` and `methods` but not
-`types`, and `bindParams`/`allocDecls`/`concreteMethodForDynamic?` on
-this program all resolve `.defined` names through `σ.types`. A house-style
-`∀ σ, …` premise about them is FALSE, so such a law would be vacuous.
-`typeEnv_pin_is_load_bearing` is the kernel-checked demonstration and the
-gate on that reasoning. -/
+`✓ Dynamic-dispatch frame entry` (2026-07-31, the phase-4 types-pin
+slice). The blocker recorded here previously — `GoCoreGS` pinned
+`functions` and `methods` but NOT `types`, so every `∀ σ` premise about
+`bindParams`/`allocDecls`/`concreteMethodForDynamic?` at a named type was
+false and any such law vacuous — is FIXED: `GoCoreGS.types` and the
+`σ.types = GoCoreGS.types GF` conjunct of the state interpretation now
+pin it, and `typeEnv_pin_is_load_bearing` remains as the kernel-checked
+demonstration of why the pin is load-bearing (it is a REGRESSION GUARD
+now, not a blocker note). On that pin:
+
+- `wp_call_dynamic_enter₂` — frame entry through an interface ANCHOR at
+  the two-parameter/two-result arity: `enterFrame` finds the anchor,
+  `dynamicDispatch?` redirects to the concrete method for the receiver
+  box's dynamic type with the receiver UNBOXED, `bindParams` allocates
+  the parameter cells normalized at the CONCRETE method's declared
+  types, `allocDecls` defaults the results, and the body runs under the
+  fresh frame. Statement is target-free (anchor id, concrete callee,
+  dynamic type, names, types and values are all law variables; only the
+  ARITY is fixed, as in the `wp_call_enter_arg1`/`cap1` family).
+  Witness: `wp_call_dynamic_enter_ackedIndex`, on the REAL
+  `main.AckedIndexer.AckedIndex` anchor of the pinned lowering, EVERY
+  premise discharged by computation against `quorumLowered` with only
+  the three ghost pins external.
+- the general machinery it rests on, all target-free: `wp_alloc_step₄`
+  (deterministic step allocating four fresh cells — the first
+  multi-allocation lifting core), `bindParams₂`/`allocDecls₂` (the
+  two-parameter/two-result computation equations), `allocMany` +
+  `HeapWf.allocMany` (consecutive allocation, general in the list),
+  `heapToMap_set_base₂`/`₄` + `insert_eqv` (the projection algebra), and
+  `execState_pin_eq` (the `∀σ`-premise closer: a state with the three
+  pinned fields known IS the pinned state up to heap and counter, which
+  is what makes such premises computable rather than simp-fought).
+
+`✓ Ty structural equality is total and transparent` (2026-07-31). `Ty` is
+a nested inductive (`funcType` carries `List Ty`), and Lean's derived
+`BEq` for nested inductives is OPAQUE — no equations, no `unfold`, no
+`decide`, not even `rfl` on two identical closed types. Dynamic-type
+identity is decided by `==` on `Ty`, so with the derived instance NO
+dispatch fact was kernel-provable at all. `Ty.eqb`/`Ty.eqbFuel`
+(`GoLean/GoCore/Value.lean`) replace it with an ordinary total,
+transparent, fuel-bounded structural equality that fails closed on
+exhaustion; the differential is unchanged by it (846/846 against the
+recorded baseline). -/
 example := @GoLean.Iris.wp_map_range_snapshot
 example := @GoLean.Iris.wp_sort_slice
 example := @GoLean.Iris.wp_map_lookup
@@ -281,6 +318,28 @@ example := @GoLean.Iris.wp_stmt_op_apply_store
 example := @GoLean.Iris.wp_stmt_op_apply_read_store₂
 example := @GoLean.Iris.wp_read_store_step₂
 example := @GoLean.Iris.typeEnv_pin_is_load_bearing
+example := @GoLean.Iris.wp_call_dynamic_enter₂
+example := @GoLean.Iris.wp_call_dynamic_enter_ackedIndex
+example := @GoLean.Iris.wp_alloc_step₄
+example := @GoLean.Iris.bindParams₂
+example := @GoLean.Iris.allocDecls₂
+example := @GoLean.Iris.HeapWf.allocMany
+example := @GoLean.Iris.heapToMap_set_base₄
+example := @GoLean.Iris.execState_pin_eq
+example := @GoLean.GoCore.Ty.eqb
+/-- `✓` the quorum walk's PROVEN math half, and `◌` its stated machine
+targets (quorum pilot phase 4, `Specs/GoldenQuorumWP.lean`). The value
+`12` the machine must land on IS `committedIndexRef [1] ackedOneKnown`
+(`rfl`), and `committedIndexRef_meets_spec` (proven) upgrades it to
+`IsCommittedIndex` — so the only missing link to the declarative quorum
+spec is the machine walk. `◌ NOT PROVEN:`
+`quorumOneKnownFuncSpec_statement`, its negative twin, and
+`quorumAckedIndexFuncSpec2_statement` are `def … : Prop` TARGETS; no
+theorem names them and nothing here claims they are dischargeable
+today. -/
+example := @GoLean.Quorum.committedIndexRef_oneKnown
+example := @GoLean.Quorum.isCommittedIndex_oneKnown
+example := @GoLean.Quorum.not_isCommittedIndex_oneKnown_11
 /-- `✓` the golden walk and both its call forms. -/
 example := @GoLean.Iris.GoldenSlice.wp_inc_body
 example := @GoLean.Iris.GoldenSlice.wp_call_inc_stmt

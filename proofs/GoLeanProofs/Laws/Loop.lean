@@ -235,7 +235,7 @@ theorem wp_while_eq_once {xa : Addr} {x : String} {env k}
       iintro Hb₇
       iapply (wp_assign_store (oldcell := ⟨some (.int .int), .int 0 .int⟩)
         (newcell := ⟨some (.int .int), .int 1 .int⟩)
-        (hstore := fun σ₁ hlook => by
+        (hstore := fun σ₁ _ht hlook => by
           have h := storeLoc_int_cell (kind := .int) hlook 1
           rw [show IntKind.normalize .int 1 = 1 from by decide] at h
           exact h))

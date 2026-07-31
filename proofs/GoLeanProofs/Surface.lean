@@ -128,14 +128,18 @@ form: it does not, and cannot, speak about intermediate configurations).
 (b) is the separation in separation logic: without it a triple is a
 statement about hermetic laboratory heaps, not call sites, and
 pointer-returning contracts could not promise freshness. Intuitionistic on the `Q` side (dead-frame
-cells framed away); `types`/`methods` at their empty defaults (v1 fragment
+cells framed away); the type environment is the PROGRAM's `typeDefs`
+(pinned explicitly since the quorum pilot — every named Go type resolves
+through it, so leaving it empty silently restricted the judgment to
+programs with no named types); `methods` at its empty default (v1 fragment
 scope); partial correctness — `Progress` below is the companion, and
 `GoSpec` bundles both. -/
-def GoTriple (funcs : Array Func) (env₀ : LocalEnv) (P : HProp) (prog : Stmt)
-    (Q : HProp) : Prop :=
+def GoTriple (types : TypeEnv) (funcs : Array Func) (env₀ : LocalEnv)
+    (P : HProp) (prog : Stmt) (Q : HProp) : Prop :=
   ∀ (hp : Heap) (na : Nat) (hP F : Heaplet), InitialSplit P hp na hP F →
     ∀ (fuel : Nat) (ch : Choices) (σf : ExecState) (ch' : Choices),
-      execStmt fuel env₀ { functions := funcs, heap := hp, nextAddr := na }
+      execStmt fuel env₀
+          { types := types, functions := funcs, heap := hp, nextAddr := na }
           ch prog = .ok (.normal σf, ch') →
       ∃ hQ : Heaplet, (∀ k, hQ.get? k = none ∨ F.get? k = none)
         ∧ hQ.sub (heapletOf σf.heap) ∧ F.sub (heapletOf σf.heap) ∧ sat hQ Q
@@ -151,12 +155,13 @@ run, `recover` may cancel it). So for programs whose WP is provable this
 implies no reachable *unrecovered* panics — the guarantee reads "safe
 execution that never aborts on a panic"; a recovered panic is an ordinary
 control path inside it. -/
-def Progress (funcs : Array Func) (env₀ : LocalEnv) (P : HProp)
-    (prog : Stmt) : Prop :=
+def Progress (types : TypeEnv) (funcs : Array Func) (env₀ : LocalEnv)
+    (P : HProp) (prog : Stmt) : Prop :=
   ∀ (hp : Heap) (na : Nat) (hP F : Heaplet), InitialSplit P hp na hP F →
     ∀ (c' : Config) (σ' : ExecState),
       Steps (.exec prog env₀ .stop)
-        { functions := funcs, heap := hp, nextAddr := na } c' σ' →
+        { types := types, functions := funcs, heap := hp, nextAddr := na }
+        c' σ' →
       c' = .next .stop ∨ ∃ (c'' : Config) (σ'' : ExecState), Step c' σ' c'' σ''
 
 /-- **The invariance judgment** (arc `invariant-readout`, design of record
@@ -173,12 +178,13 @@ sub-heaplet reading is `I ∗ true` — the rest of the heap (the program's
 working state) may be in any mid-computation shape, which is what makes
 invariance provable at all (§3: `I` is the protocol-governed portion of
 the state, never the whole mutated footprint). -/
-def GoInvariant (funcs : Array Func) (env₀ : LocalEnv) (P : HProp)
-    (prog : Stmt) (I : HProp) : Prop :=
+def GoInvariant (types : TypeEnv) (funcs : Array Func) (env₀ : LocalEnv)
+    (P : HProp) (prog : Stmt) (I : HProp) : Prop :=
   ∀ (hp : Heap) (na : Nat) (hP F : Heaplet), InitialSplit P hp na hP F →
     ∀ (c' : Config) (σ' : ExecState),
       Steps (.exec prog env₀ .stop)
-        { functions := funcs, heap := hp, nextAddr := na } c' σ' →
+        { types := types, functions := funcs, heap := hp, nextAddr := na }
+        c' σ' →
       ∃ hI : Heaplet, hI.sub (heapletOf σ'.heap) ∧ sat hI I
 
 /-- Precondition strengthening for `GoInvariant` (surface-level, Iris-free):
@@ -186,10 +192,10 @@ a stronger precondition proves the same invariance. Only `sat_pre` in
 `InitialSplit` mentions `P`, so this is a two-line record update. Used by
 discharges whose stated precondition (e.g. "the cell holds 0") entails the
 exit theorem's canonical `I ∗ P'` shape ("the cell satisfies I"). -/
-theorem goInvariant_mono_pre {funcs env₀ prog} {P Q I : HProp}
+theorem goInvariant_mono_pre {types funcs env₀ prog} {P Q I : HProp}
     (h : ∀ hp : Heaplet, sat hp P → sat hp Q)
-    (hinv : GoInvariant funcs env₀ Q prog I) :
-    GoInvariant funcs env₀ P prog I :=
+    (hinv : GoInvariant types funcs env₀ Q prog I) :
+    GoInvariant types funcs env₀ P prog I :=
   fun hp na hP F hin c' σ' hsteps =>
     hinv hp na hP F { hin with sat_pre := h hP hin.sat_pre } c' σ' hsteps
 
@@ -197,9 +203,9 @@ theorem goInvariant_mono_pre {funcs env₀ prog} {P Q I : HProp}
 "runs safely, and every terminating run delivers `Q` with the frame's
 bindings intact". This is the form specs should be stated in; a triple
 alone is satisfiable by a program that always crashes. -/
-def GoSpec (funcs : Array Func) (env₀ : LocalEnv) (P : HProp) (prog : Stmt)
-    (Q : HProp) : Prop :=
-  GoTriple funcs env₀ P prog Q ∧ Progress funcs env₀ P prog
+def GoSpec (types : TypeEnv) (funcs : Array Func) (env₀ : LocalEnv)
+    (P : HProp) (prog : Stmt) (Q : HProp) : Prop :=
+  GoTriple types funcs env₀ P prog Q ∧ Progress types funcs env₀ P prog
 
 /-- **The function-level quantified-testcase form** (v1: unary int result;
 `(T, error)` returns are queued behind the interface widening —
@@ -218,10 +224,10 @@ state, `StepFn.lean`; citation corrected 2026-07-30, pre-merge audit —
 the earlier text named a `collectResults` function that does not exist).
 This binding point stays correct when `defer` (which may mutate named
 results after `return`) enters the fragment. -/
-def GoFuncSpec (funcs : Array Func) (fid : FuncId) (kind : IntKind)
-    (args : Array Expr) (P : HProp) (Q : Int → HProp) : Prop :=
+def GoFuncSpec (types : TypeEnv) (funcs : Array Func) (fid : FuncId)
+    (kind : IntKind) (args : Array Expr) (P : HProp) (Q : Int → HProp) : Prop :=
   ∀ (ra : Nat) (w : GoValue),
-    GoSpec funcs [[("$callres", Loc.base ⟨ra⟩)]]
+    GoSpec types funcs [[("$callres", Loc.base ⟨ra⟩)]]
       (.sep (.pointsTo ra ⟨some (.int kind), w⟩) P)
       (.call #[.var "$callres"] fid args)
       (.ex fun (n : Int) =>
@@ -258,14 +264,16 @@ open GoLean.Iris.GoldenSlice in
 the pinned-observable form that (unlike the existential `*_computes`
 theorems) IS entitled to the name "lowering target" once proven. -/
 def goldenTriple_statement : Prop :=
-  GoTriple sliceLowered.funcs outEnv outCell0 goldenDriver outCell2
+  GoTriple sliceLowered.typeDefs.toList sliceLowered.funcs outEnv outCell0
+    goldenDriver outCell2
 
 open GoLean.Iris.GoldenSlice in
 /-- **Step-0 target A′: the full golden spec** — the frame-closed triple
 plus progress, as one judgment: safe non-panicking execution that delivers
 `r ↦ 2` and touches nothing outside its footprint. -/
 def goldenSpec_statement : Prop :=
-  GoSpec sliceLowered.funcs outEnv outCell0 goldenDriver outCell2
+  GoSpec sliceLowered.typeDefs.toList sliceLowered.funcs outEnv outCell0
+    goldenDriver outCell2
 
 open GoLean.Iris.GoldenSlice in
 /-- **Step-0 target A″: the golden FUNCTION spec** — the form an engineer
@@ -273,14 +281,16 @@ reads: "`incViaCall()` takes no arguments, needs no heap, and returns 2" —
 ∀-quantified over the caller's target cell, its prior value, and the
 frame. -/
 def goldenFuncSpec_statement : Prop :=
-  GoFuncSpec sliceLowered.funcs ⟨"incViaCall"⟩ .int #[] .emp
+  GoFuncSpec sliceLowered.typeDefs.toList sliceLowered.funcs
+    ⟨"incViaCall"⟩ .int #[] .emp
     (fun n => .pure (n = 2))
 
 open GoLean.Iris.GoldenSlice in
 /-- The concrete seeded initial state for the system-register statements:
 golden functions, the output cell at address 0, `r` bound to it. -/
 def goldenOut : ExecState :=
-  { functions := sliceLowered.funcs,
+  { types := sliceLowered.typeDefs.toList,
+    functions := sliceLowered.funcs,
     heap := [(.base ⟨0⟩, ⟨some (.int .int), .int 0 .int⟩)],
     nextAddr := 1 }
 
@@ -303,7 +313,8 @@ single write-step goes 0 → 2 atomically). A statement `GoTriple`
 structurally cannot make (terminal states only) and `Progress` does not
 (never-stuck only). -/
 def goldenInvariant_statement : Prop :=
-  GoInvariant sliceLowered.funcs outEnv outCell0 goldenDriver
+  GoInvariant sliceLowered.typeDefs.toList sliceLowered.funcs outEnv
+    outCell0 goldenDriver
     (.ex fun (n : Int) =>
       .sep (.pointsTo 0 ⟨some (.int .int), .int n .int⟩)
         (.pure (n = 0 ∨ n = 2)))

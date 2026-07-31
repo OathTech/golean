@@ -23,6 +23,7 @@ import GoLeanProofs.Specs.GoldenRecover
 import GoLeanProofs.Specs.GoldenQuorum
 import GoLeanProofs.Specs.QuorumTargets
 import GoLeanProofs.Specs.QuorumRefSpec
+import GoLeanProofs.Specs.GoldenQuorumWP
 import GoLeanProofs.NegativeSpecs
 
 /-!
