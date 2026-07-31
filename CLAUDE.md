@@ -203,6 +203,13 @@ way an arc reaches `main`).
   - **fail-closed classification** — an `unsupported` that should have been
     a supported-and-correct answer never appears as a failure anywhere.
   - **claim strength / vacuity** — whether a law says what it appears to.
+  - **over-specialization** (user direction 2026-07-31) — machinery
+    shaped by the current TARGET rather than by Go: semantics fixes
+    justified by corpus cases instead of Go probes, laws whose
+    statements (not witnesses) encode target names/values/fragments,
+    frontend special cases scoped to what the target calls rather than
+    to a language capability. Milestone pressure makes this the
+    default drift; audit for it explicitly.
   Secondary but audit-only: **gate honesty** — do commits/notes/re-pin
   reasons match the code, did a gate quietly fail open (the 2026-07-23
   purity-scan rename hole was invisible to eleven green steps).

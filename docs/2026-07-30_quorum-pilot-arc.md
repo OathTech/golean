@@ -71,6 +71,47 @@ test values — the first "Verdi results, but on real code" artifact
    discharge the phase-0 statements. Spec-surface widenings land here
    with witnesses in the same commit.
 
+## STANDING CHECK: over-specialization (user directive 2026-07-31)
+
+The pilot's danger mode is OVER-FITTING to the target: machinery that
+pattern-matches on exactly what `CommittedIndex` needs instead of
+modeling Go. The discipline, applied at every slice and EVERY audit
+loop (interim and final — it is an explicit audit dimension from now
+on):
+
+- **Semantics changes must be probe-derived from Go, never
+  case-derived from the corpus.** A fix whose justification is "makes
+  case X pass" without an independent Go probe is the anti-pattern
+  (the hash-phrasing fix is the positive example: 18-shape probe
+  first).
+- **Laws are stated at GENERAL Go shapes; the target appears only in
+  WITNESSES.** A law premise that hardcodes a quorum name, value, or
+  program fragment is over-fit (per-shape v1 scoping — key-only
+  range, unary GoFuncSpec — is fine when the scope is a general Go
+  shape and the widening is recorded as owed).
+- **Frontend special cases must be capability-scoped, not
+  target-scoped**: `slices.Sort`-at-integer-elements names a language
+  capability with a fail-closed boundary; "the function quorum calls"
+  would not be. The `calledIfaceMethods` anchor bug was exactly this
+  class (anchors for what the target happened to call) — caught by
+  the interim audit, fixed to declarations-to-fixpoint.
+- **Corpus balance**: every new capability gets NON-quorum edge cases
+  too, so green means "the capability works", not "the target works".
+
+- **The concrete generality test (user, 2026-07-31): compare against
+  Goose/Perennial's machinery** (`deps/goose`, `deps/perennial/new/
+  golang/defn/*.v`). For each piece we build, ask: is our shape at
+  least as general as their treatment of the same construct — and
+  where it is narrower, is the narrowing a RECORDED v1 scope with a
+  widening path, or an unacknowledged target-fit? (We may legitimately
+  cover MORE than they do — e.g. our nondet map-range order where
+  their model may fix one — that direction is fine; the failure
+  direction is narrower-than-Goose without a record.)
+
+Reviewers in every audit of this arc get this as a named dimension:
+"find where the machinery is shaped by the target rather than by Go,
+using Goose/Perennial's design as the generality reference."
+
 ## Out of scope
 
 - Goroutines / channels / R4-R5 (BUG-002 remains the recorded blocker).
