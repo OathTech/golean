@@ -146,6 +146,36 @@ test values — the first "Verdi results, but on real code" artifact
     on the real source** — interface dispatch, defined-type identity,
     nondet map ranges, the sort extern, MaxUint64, all through the one
     chain.
+- 2026-07-31: **Phase 4 OPENED.** Golden pin #3 landed:
+  `GoldenQuorum.quorumLowered` — the real CommittedIndex lowering
+  (1390-line repr, GENERATED literal file, byte-identical both links,
+  check-golden 3/3). Remaining phase-4 plan, in order:
+  1. **The nondet lifting core** — `mapIterNext` chooses ANY index of
+     the remaining snapshot AND allocates the iteration variables
+     (`bindIterVars` = pushScope + fresh cells): the first
+     nondeterministic WP law (the D2/D3 "bites at the first nondet
+     feature" moment). Shape: the law's premise supplies the
+     continuation for ALL (idx, allocated addresses); safety = one
+     witness successor. `wp_lift_step` already quantifies successors —
+     only the determinism-pinning (`step_det`) is replaced by the
+     ∀-successor obligation.
+  2. Per-construct laws with same-commit witnesses: `sortSlice` (the
+     spec is "cells hold a sorted permutation"; concrete instances
+     suffice for the walk), mapGet/mapLookup comma-ok, dispatch through
+     the interface anchor (`enterFrame`+`dynamicDispatch?` — a
+     `wp_call_dynamic` law), `Stmt.typeAssert`, uint64
+     conversion/normalization steps, map-literal build.
+  3. The walk: `committedThreeSpread() = 102` (or a smaller driver
+     first — `committedOneKnown() = 12` has a 1-entry map = trivial
+     nondeterminism; do THAT first, then the 3-voter with its 3!
+     orders) at `GoFuncSpec` strength over `quorumLowered`, through
+     `goSpec_of_wp`; negative twin; tie to `committedIndexRef` via the
+     phase-0 instances. The general
+     `committedIndexRef_meets_spec` math theorem is delegated
+     (in flight) and upgrades the concrete result to the declarative
+     spec.
+  4. Audit refs; manifest rows; gate; then the arc's FINAL pre-merge
+     audit ask (the stop point).
 - 2026-07-30: **Phase 0 LANDED** — `Specs/QuorumTargets.lean`:
   `IsCommittedIndex` (committedness + maximality + empty-`MaxUint64`
   convention), executable reference `committedIndexRef` (structural

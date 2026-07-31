@@ -19,6 +19,7 @@ cd "$ROOT"
 PINS=(
   "Corpus/coverage/exec/pointers/inc-via-call|baselines/golden/slice-lowered.repr|GoLean.Iris.GoldenSlice.sliceLowered"
   "Corpus/coverage/exec/panic-recover/recover-direct|baselines/golden/recover-lowered.repr|GoLean.Iris.GoldenRecover.recoverLowered"
+  "Corpus/coverage/exec/quorum/committed-index-real|baselines/golden/quorum-lowered.repr|GoLean.Iris.GoldenQuorum.quorumLowered"
 )
 
 WORK="${TMPDIR:-/tmp}/golden-check.$$"
@@ -36,8 +37,8 @@ export GOCACHE="${GOCACHE:-$ROOT/artifacts/go-build-cache}"
 # means not relying on the next run's self-heal, on either link.)
 lake build GoLean.NativeToIR > /dev/null \
   || { echo "check-golden: FAIL — NativeToIR (decoder) build failed (fail closed)" >&2; exit 1; }
-(cd proofs && lake build GoLeanProofs.Specs.GoldenProgram > /dev/null) \
-  || { echo "check-golden: FAIL — GoldenProgram build failed (fail closed)" >&2; exit 1; }
+(cd proofs && lake build GoLeanProofs.Specs.GoldenProgram GoLeanProofs.Specs.GoldenQuorum > /dev/null) \
+  || { echo "check-golden: FAIL — pin module build failed (fail closed)" >&2; exit 1; }
 
 for pin in "${PINS[@]}"; do
   IFS='|' read -r SRC_DIR BASE TERM <<< "$pin"
@@ -71,6 +72,7 @@ LEAN
   # Link 2: the checked-in Lean term prints the same repr.
   cat > "$WORK/term.lean" <<LEAN
 import GoLeanProofs.Specs.GoldenProgram
+import GoLeanProofs.Specs.GoldenQuorum
 def main : IO Unit :=
   IO.println (repr $TERM)
 LEAN
