@@ -36,8 +36,9 @@ Honest status, stated once and not softened anywhere below:
   a TWO-result frame exit.
 - **PROVEN, pure math**: the value the full `CommittedIndex` walk must
   land on, and its upgrade to the declarative spec.
-- **NOT PROVEN, and recorded as such**: the phase-0
-  `quorumOneKnownNotEleven_statement` — the UNCONDITIONAL
+- **NOT PROVEN, and recorded as such**: the
+  `quorumOneKnownNotEleven_statement` target (written in phase 4,
+  `39891ae` — see the provenance note on the def) — the UNCONDITIONAL
   `¬ GoFuncSpec … (n = 11)`. It is not refutable from the triple: a
   `GoTriple` is vacuously true of a program that fails to terminate, so
   refuting it demands EXHIBITING a terminating run (a kernel evaluation
@@ -928,7 +929,7 @@ theorem wp_ci_loop_one {na ca cba la lba sra sta : Addr}
   · iexact Hcb
   iintro Hcb
   iapply (wp_map_iter_next_key (hne := by decide)
-    (hnorm := fun σ i h => by
+    (hnorm := fun σ _htypes i h => by
       have hi : i = 0 := Nat.lt_one_iff.mp (by simpa using h)
       subst hi
       simp [normalizeValueForTy, normalizeValueForTyFuel,
@@ -2458,7 +2459,19 @@ def quorumOneKnownFuncSpec_statement : Prop :=
     (fun n => .pure (n = 12))
 
 /-- **TARGET — the negative twin, and the one thing this slice did NOT
-prove.** Stated in phase 0 as an UNCONDITIONAL refutation. It does not
+prove.** Stated as an UNCONDITIONAL refutation.
+
+*Provenance corrected 2026-07-31 (pre-merge audit, finding 6):* this def
+and `quorumOneKnownFuncSpec_statement` were repeatedly described as
+"phase-0" targets. Git says otherwise — neither exists at the phase-0
+commit `9bd409c`; both were first written in phase 4 at `39891ae`, one
+and two commits before their discharge. The statement-before-machinery
+discipline WAS honoured (target commits precede result commits), but in
+the weaker one-to-two-commit sense, not from phase 0. The genuine phase-0
+targets are `committedIndexRef_meets_spec_statement` and the
+`GoFuncSpec2` shape (`QuorumTargets.lean`).
+
+It does not
 follow from the positive discharge: `GoTriple` quantifies over
 TERMINATING runs, so both the `= 12` and the `= 11` spec are vacuously
 true of a program with no terminating run, and refuting this def requires
@@ -2492,7 +2505,10 @@ prior values), in any admissible heap with any frame, terminates only in
 states where those cells hold `12` and `true`.*
 
 **Statement corrected 2026-07-31 (recorded, not quietly patched).** The
-phase-0 form passed `#[]` arguments to a two-parameter method: the arity
+FIRST form of this statement — written at `39891ae`, in phase 4, not at
+phase 0 as this note previously said (provenance corrected same day,
+pre-merge audit finding 6) — passed `#[]` arguments to a two-parameter
+method: the arity
 check in `enterFrame` fails closed, so the configuration is STUCK, so
 `Progress` — and with it the whole statement — was FALSE, not merely
 unproven; and its postcondition `b = true → n = 12` was satisfiable by a
@@ -2695,7 +2711,7 @@ golden precedent's (`goldenReturnsTwo`/`goldenNotThree`) at the quorum
 driver: read the triple out at a pinned address, then refute 11 in two
 lines. Both are run-CONDITIONED — a `GoTriple` says nothing about a
 program that fails to terminate, so the unconditional `¬ GoFuncSpec` form
-of the phase-0 target `quorumOneKnownNotEleven_statement` is not
+of the target `quorumOneKnownNotEleven_statement` (phase 4, `39891ae`) is not
 refutable from the triple alone: refuting it demands EXHIBITING a
 terminating run (a kernel evaluation of the interpreter over the whole
 pinned program), which is a separate cost and stays recorded as owed. -/

@@ -41,7 +41,7 @@ func (e *emitter) emitProgram(files []*ast.File) (map[string]any, error) {
 					if ptr, ok := rt.(*types.Pointer); ok {
 						rt = ptr.Elem()
 					}
-					if rn, ok := namedTypeName(rt); ok {
+					if rn, ok := e.namedTypeName(rt); ok {
 						e.curFuncName = rn + "." + d.Name.Name
 					}
 				}
@@ -126,6 +126,7 @@ func (e *emitter) emitProgram(files []*ast.File) (map[string]any, error) {
 			"recv":      map[string]any{"id": "$recv", "type": map[string]any{"kind": "interface", "name": cm.ifaceName}},
 			"params":    params,
 			"results":   results,
+			"variadic":  cm.sig.Variadic(),
 			"interface": true,
 		})
 	}
@@ -167,8 +168,14 @@ func (e *emitter) emitProgram(files []*ast.File) (map[string]any, error) {
 				if err != nil {
 					return nil, err
 				}
+				// `variadic` is part of the SIGNATURE Go compares for
+				// method-set membership: `M(xs ...int)` and `M(xs []int)`
+				// are different methods (pre-merge audit 2026-07-31,
+				// finding 0). Carried on both sides — here for the
+				// requirement, on the `Func` for the implementation.
 				sigs = append(sigs, map[string]any{
-					"name": m.Name(), "params": params, "results": results})
+					"name": m.Name(), "params": params, "results": results,
+					"variadic": sig.Variadic()})
 			}
 			ifaceDefs[name] = map[string]any{"kind": "interface", "methods": sigs}
 		}
@@ -180,6 +187,12 @@ func (e *emitter) emitProgram(files []*ast.File) (map[string]any, error) {
 	sort.Strings(ifaceNames)
 	for _, name := range ifaceNames {
 		typeDefs = append(typeDefs, map[string]any{"name": name, "def": ifaceDefs[name]})
+	}
+
+	// The TypeId keys are built; refuse the export if two import paths
+	// collided on one package-name qualifier (findings 4/7).
+	if err := e.checkPackageNameCollisions(); err != nil {
+		return nil, err
 	}
 
 	return map[string]any{
@@ -225,7 +238,7 @@ func (e *emitter) emitGenDeclTypes(d *ast.GenDecl) ([]any, []any, error) {
 		if !ok {
 			continue
 		}
-		qname := qualifiedTypeName(named.Obj())
+		qname := e.qualifiedTypeName(named.Obj())
 		if st, isStruct := named.Underlying().(*types.Struct); isStruct {
 			fields := []any{}
 			for i := 0; i < st.NumFields(); i++ {
@@ -273,6 +286,7 @@ func (e *emitter) emitGenDeclTypes(d *ast.GenDecl) ([]any, []any, error) {
 					"recv":      map[string]any{"id": "$recv", "type": recvTy},
 					"params":    params,
 					"results":   results,
+					"variadic":  sig.Variadic(),
 					"interface": true,
 				})
 			}
@@ -317,6 +331,13 @@ func (e *emitter) emitFuncDecl(d *ast.FuncDecl) (map[string]any, error) {
 		"name":    d.Name.Name,
 		"params":  params,
 		"results": results,
+		// Go's variadic marker on the LAST parameter. Carried verbatim so
+		// interface satisfaction can compare it: `M(xs ...int)` and
+		// `M(xs []int)` have the same param TYPE (`[]int`) but are
+		// different method signatures, so a type declaring one does not
+		// implement an interface requiring the other (pre-merge audit
+		// 2026-07-31, finding 0).
+		"variadic": sig.Variadic(),
 	}
 
 	if d.Recv != nil {
@@ -329,7 +350,7 @@ func (e *emitter) emitFuncDecl(d *ast.FuncDecl) (map[string]any, error) {
 		if ptr, ok := defType.(*types.Pointer); ok {
 			defType = ptr.Elem()
 		}
-		name, ok := namedTypeName(defType)
+		name, ok := e.namedTypeName(defType)
 		if !ok {
 			return nil, unsup("method on anonymous type %s", defType)
 		}
@@ -1770,21 +1791,73 @@ func (e *emitter) emitSliceExpr(se *ast.SliceExpr) (any, error) {
 }
 
 // qualifiedTypeName renders a declared type's wire name PACKAGE-QUALIFIED
-// ("main.sliceError") — Go renders panic messages qualified, and
-// cross-package identity needs the package in the TypeId. Predeclared
-// (universe) types like `error` have no package and stay bare.
-func qualifiedTypeName(obj *types.TypeName) string {
-	if obj.Pkg() == nil {
+// ("main.sliceError") — Go renders panic messages qualified, and the TypeId
+// is what GoCore decides dynamic-type IDENTITY on. Predeclared (universe)
+// types like `error` have no package and stay bare.
+//
+// The qualifier is the package NAME, which is NOT Go's identity: Go keys
+// type identity on the IMPORT PATH, so `html/template.Template` and
+// `text/template.Template` — both in a package named `template` — are
+// distinct types that this prefix cannot tell apart (pre-merge audit
+// 2026-07-31, findings 4/7; the assert between them answered `true` where
+// Go answers `false`). Widening the key to the import path is the real
+// fix and is scoped in docs/2026-07-30_quorum-extern-policy.md; until
+// then every qualifier is RECORDED here and
+// `checkPackageNameCollisions` fails the export CLOSED when two distinct
+// import paths would produce the same prefix.
+func (e *emitter) qualifiedTypeName(obj *types.TypeName) string {
+	pkg := obj.Pkg()
+	if pkg == nil {
 		return obj.Name()
 	}
-	return obj.Pkg().Name() + "." + obj.Name()
+	if e.qualPkgPaths == nil {
+		e.qualPkgPaths = map[string][]string{}
+	}
+	name := pkg.Name()
+	paths := e.qualPkgPaths[name]
+	seen := false
+	for _, p := range paths {
+		if p == pkg.Path() {
+			seen = true
+			break
+		}
+	}
+	if !seen {
+		e.qualPkgPaths[name] = append(paths, pkg.Path())
+	}
+	return name + "." + obj.Name()
+}
+
+// checkPackageNameCollisions fails the export when two DISTINCT import
+// paths contributed type names under the same package-name qualifier: the
+// wire's TypeIds would collide and GoCore would decide two unrelated Go
+// types identical. Fail closed at the one boundary that constructs the key
+// (CLAUDE.md: "every mangling strip happens at exactly one boundary
+// constructor and collision-checks").
+func (e *emitter) checkPackageNameCollisions() error {
+	names := make([]string, 0, len(e.qualPkgPaths))
+	for name := range e.qualPkgPaths {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	for _, name := range names {
+		paths := e.qualPkgPaths[name]
+		if len(paths) > 1 {
+			sorted := append([]string(nil), paths...)
+			sort.Strings(sorted)
+			return unsup("package-name collision in TypeId keys: %q is the package name of %v — "+
+				"Go keys type identity on the import PATH, so these declare DISTINCT types that "+
+				"the name-qualified wire key cannot tell apart", name, sorted)
+		}
+	}
+	return nil
 }
 
 // namedTypeName returns the qualified declared name of a (possibly
 // pointer-wrapped) named type, for use as a GoCore struct TypeId.
-func namedTypeName(t types.Type) (string, bool) {
+func (e *emitter) namedTypeName(t types.Type) (string, bool) {
 	if named, ok := t.(*types.Named); ok {
-		return qualifiedTypeName(named.Obj()), true
+		return e.qualifiedTypeName(named.Obj()), true
 	}
 	return "", false
 }
@@ -1814,7 +1887,7 @@ func (e *emitter) fieldBase(sel *ast.SelectorExpr) (any, string, error) {
 		return nil, "", err
 	}
 	if ptr, ok := recvType.Underlying().(*types.Pointer); ok {
-		name, ok := namedTypeName(ptr.Elem())
+		name, ok := e.namedTypeName(ptr.Elem())
 		if !ok {
 			return nil, "", unsup("field selector on pointer to anonymous struct")
 		}
@@ -1824,7 +1897,7 @@ func (e *emitter) fieldBase(sel *ast.SelectorExpr) (any, string, error) {
 		}
 		return map[string]any{"expr": "deref", "ptr": base, "type": elemTy}, name, nil
 	}
-	name, ok := namedTypeName(recvType)
+	name, ok := e.namedTypeName(recvType)
 	if !ok {
 		return nil, "", unsup("field selector on anonymous struct type %s", recvType)
 	}
@@ -1855,7 +1928,7 @@ func (e *emitter) emitSelector(sel *ast.SelectorExpr) (any, error) {
 				defType = ptr.Elem()
 				pointerRecv = true
 			}
-			name, ok := namedTypeName(defType)
+			name, ok := e.namedTypeName(defType)
 			if !ok {
 				return nil, unsup("method on anonymous type %s", defType)
 			}
@@ -1946,7 +2019,7 @@ func (e *emitter) emitAddressOf(x ast.Expr) (any, error) {
 		if err != nil {
 			return nil, err
 		}
-		structName, ok := namedTypeName(defType)
+		structName, ok := e.namedTypeName(defType)
 		if !ok {
 			return nil, unsup("field address on anonymous struct type %s", defType)
 		}
@@ -2390,6 +2463,9 @@ func (e *emitter) emitFuncLit(lit *ast.FuncLit) (any, error) {
 
 	e.lifted = append(e.lifted, map[string]any{
 		"name": name, "params": params, "results": results, "body": body,
+		// A lifted literal's own signature keeps its variadic marker; the
+		// prepended capture pointers are never variadic.
+		"variadic": sig.Variadic(),
 	})
 	return map[string]any{"expr": "func-value", "func": name,
 		"captured": capturedArgs}, nil
@@ -2842,7 +2918,7 @@ func (e *emitter) emitMethodCall(c *ast.CallExpr, sel *ast.SelectorExpr) (any, b
 			// expression is not the interface value itself — deferred.
 			return nil, false, unsup("interface method dispatch through embedding (interfaces campaign, deferred)")
 		}
-		ifaceName, ok := namedTypeName(recvStatic)
+		ifaceName, ok := e.namedTypeName(recvStatic)
 		if !ok {
 			return nil, false, unsup("method call on anonymous interface type")
 		}
@@ -2880,7 +2956,7 @@ func (e *emitter) emitMethodCall(c *ast.CallExpr, sel *ast.SelectorExpr) (any, b
 		defType = ptr.Elem()
 		pointerRecv = true
 	}
-	name, ok := namedTypeName(defType)
+	name, ok := e.namedTypeName(defType)
 	if !ok {
 		return nil, false, unsup("method on anonymous type %s", defType)
 	}
@@ -3152,7 +3228,8 @@ func (e *emitter) emitDeferNoop() any {
 		e.deferNoopEmitted = true
 		e.lifted = append(e.lifted, map[string]any{
 			"name": deferNoopName, "params": []any{}, "results": []any{},
-			"body": map[string]any{"stmt": "block", "body": []any{}},
+			"variadic": false,
+			"body":     map[string]any{"stmt": "block", "body": []any{}},
 		})
 	}
 	return map[string]any{"stmt": "defer",

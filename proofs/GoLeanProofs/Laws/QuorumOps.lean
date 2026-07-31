@@ -706,9 +706,18 @@ theorem quorumMethods_eq :
         { name := "CommittedIndex", funcId := ⟨"main.MajorityConfig.CommittedIndex"⟩,
           recv := .defined ⟨"main.MajorityConfig"⟩ }] := rfl
 
-/-- Reflexivity of the derived `BEq Ty` at the receiver type the dispatch
-compares (`Ty` derives `BEq` without a `LawfulBEq` instance, so `simp`
-cannot discharge this generically). -/
+/-- Reflexivity of `BEq Ty` at the receiver type the dispatch compares.
+
+Docstring corrected 2026-07-31 (pre-merge audit, finding 11 — it was
+stale at birth, written in the very commit that changed the fact): `Ty`
+no longer `deriving BEq`. Its instance is the hand-written, TOTAL,
+transparent `Ty.eqb` (`GoLean/GoCore/Value.lean`, see this file's module
+header), so `rfl` closes this goal too — `decide` is no longer the only
+route. `simp` still makes no progress on it, and generic reflexivity
+`∀ t, t == t` is still not a theorem — but for a NEW reason: `Ty.eqb` is
+FUEL-BOUNDED (`tyEqFuel`) and answers `false` on exhaustion, so
+reflexivity holds only below the fuel depth, which is why the dispatch
+facts stay per-instance. -/
 theorem beq_mapAckIndexer_self :
     ((Ty.defined ⟨"main.mapAckIndexer"⟩) == (Ty.defined ⟨"main.mapAckIndexer"⟩))
       = true := by decide

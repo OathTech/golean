@@ -149,6 +149,18 @@ discipline:
   in the continuation, which is per-goroutine by construction, so they
   are interleaving-irrelevant at R4 (the reason the unwinding design
   put it there). All re-audited with everything else at the R4 gate.
+- **Added 2026-07-31 (pre-merge audit of `quorum-pilot`, finding 3 — the
+  extern-policy note claimed this row already existed; it did not):**
+  `sortSlice` (the `slices.Sort` extern) — a read LOOP then a store LOOP
+  over the slice's visible elements in ONE apply step, the same class as
+  `clearSlice`/`copySlice`. Precision, since two docs disagreed: a
+  slice's elements live in a SINGLE backing cell (`sliceIndexLoc` builds
+  `.index base (offset+i)` and both `loadLoc`/`storeLoc` recurse down to
+  the one `.base` cell holding the `.array`), so this is a single-CELL,
+  multi-WRITE step — not multi-cell. Same disposition as its siblings:
+  fine sequentially, must be decomposed or otherwise modeled before a
+  concurrency claim mentions it, and re-audited with every other apply
+  step at the R4 gate.
 
 ## 2. Locals unification: `ExecState.locals` dies
 

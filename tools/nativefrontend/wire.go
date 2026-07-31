@@ -63,6 +63,14 @@ type emitter struct {
 	// no call site had an EMPTY requirement list and every dynamic type
 	// vacuously satisfied it (pre-merge audit 2026-07-31, finding 0).
 	seenInterfaces map[string]*types.Interface
+
+	// Every package NAME that qualified a wire TypeId, mapped to the
+	// distinct import PATHs that used it. Go keys type identity on the
+	// path, the wire key on the name, so a name reached by two paths means
+	// two distinct Go types share one TypeId — `checkPackageNameCollisions`
+	// fails the export closed on that (pre-merge audit 2026-07-31,
+	// findings 4/7).
+	qualPkgPaths map[string][]string
 }
 
 // noteInterface records an interface type for the `interface` TypeDef pass.
@@ -120,11 +128,11 @@ func (e *emitter) emitType(t types.Type) (any, error) {
 		// are package-qualified ("main.T"); predeclared types (error) stay
 		// bare (no package).
 		if iface, ok := ty.Underlying().(*types.Interface); ok {
-			name := qualifiedTypeName(obj)
+			name := e.qualifiedTypeName(obj)
 			e.noteInterface(name, iface)
 			return map[string]any{"kind": "interface", "name": name}, nil
 		}
-		return map[string]any{"kind": "named", "name": qualifiedTypeName(obj)}, nil
+		return map[string]any{"kind": "named", "name": e.qualifiedTypeName(obj)}, nil
 	case *types.Pointer:
 		elem, err := e.emitType(ty.Elem())
 		if err != nil {

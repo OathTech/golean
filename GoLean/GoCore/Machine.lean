@@ -708,9 +708,11 @@ def applyStmtOp (s : ExecState) (choices : Choices) (op : StmtOp) (nt : Nat)
           return (current, choices)
       | _ => stuck "malformed clearSlice operands"
   | .sortSlice _ =>
-      -- Multi-cell read+write in one apply step (granularity-ledger
-      -- entry, like clearSlice): load the visible elements, insertion-
-      -- sort by INTEGER value (normalized ints compare exactly as Go's
+      -- SINGLE-cell read+write loop in one apply step (granularity-ledger
+      -- entry, like clearSlice — a slice's elements all live in ONE
+      -- backing cell, so "multi-cell" was the wrong word; corrected
+      -- 2026-07-31, pre-merge audit finding 3): load the visible
+      -- elements, MERGE-sort by INTEGER value (normalized ints compare exactly as Go's
       -- unsigned/signed order; equal ints are indistinguishable, so
       -- Go's sort instability is unobservable), store back. Non-int
       -- elements fail closed — the frontend only emits this at integer
@@ -848,7 +850,8 @@ def hasNoArgStringMethod (state : ExecState) (dynTy : Ty) (name : String) : Bool
   match concreteMethodForDynamic? state dynTy name with
   | some (info, _) =>
       match concreteMethodSignature? state info with
-      | some (params, results) => params.isEmpty && results == #[Ty.string]
+      | some (params, results, variadic) =>
+          params.isEmpty && results == #[Ty.string] && !variadic
       | none => false
   | none => false
 

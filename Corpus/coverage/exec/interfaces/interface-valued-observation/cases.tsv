@@ -1,0 +1,8 @@
+# id	subject	args	expected_status	expected_reason	features
+defined	interfaceObservationDefined	-	ok	-	interfaces,defined_type,identity,returns
+int	interfaceObservationInt	-	ok	-	interfaces,identity,returns,ints
+bool	interfaceObservationBool	-	ok	-	interfaces,identity,returns,bools
+string	interfaceObservationString	-	ok	-	interfaces,identity,returns,strings
+struct	interfaceObservationStruct	-	ok	-	interfaces,identity,returns,structs
+nil	interfaceObservationNil	-	ok	-	interfaces,nil,returns
+named-iface	interfaceObservationNamedIface	-	ok	-	interfaces,identity,returns,methods

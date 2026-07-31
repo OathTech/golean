@@ -290,6 +290,21 @@ projections stop being `rfl`):
   feeding `Laws/Range`'s nondeterministic `mapIterK` law; witness
   `wp_map_range_snapshot_committed` on the REAL voter loop.
 
+`✓ The nondeterministic map-iteration law is PINNED and WITNESSED`
+(2026-07-31, pre-merge audit finding 9). `wp_map_iter_next_key` shipped
+(2528b4f) with `hnorm : ∀ σ, …` and NO same-commit witness — the exact
+vacuity smell CLAUDE.md names. `normalizeValueForTy` resolves a
+`.defined` key type through `TypeEnv.lookup σ.types`, so the unpinned
+premise was FALSE at every NAMED key type (`map[Index]int` is literally
+in `deps/raft/quorum/quick_test.go`) and the law was VACUOUS there while
+reading as general; the sole instantiation was at a `uint64` key, i.e.
+the target's own shape, so no gate could see it. `hnorm` now carries the
+`σ.types` pin like every sibling law, and TWO named witnesses ship with
+it: `wp_map_iter_next_key_basic_key_witness` (basic key — the pin rides
+unused) and `wp_map_iter_next_key_defined_key_witness` (a DEFINED key
+type, the instance the unpinned form could not have had). Neither names
+the pilot target.
+
 `✓ Dynamic-dispatch frame entry` (2026-07-31, the phase-4 types-pin
 slice). The blocker recorded here previously — `GoCoreGS` pinned
 `functions` and `methods` but NOT `types`, so every `∀ σ` premise about
@@ -331,8 +346,8 @@ identity is decided by `==` on `Ty`, so with the derived instance NO
 dispatch fact was kernel-provable at all. `Ty.eqb`/`Ty.eqbFuel`
 (`GoLean/GoCore/Value.lean`) replace it with an ordinary total,
 transparent, fuel-bounded structural equality that fails closed on
-exhaustion; the differential is unchanged by it (846/846 against the
-recorded baseline). -/
+exhaustion; the differential is unchanged by it (872/872 against the
+recorded baseline, re-pinned by the final audit response). -/
 example := @GoLean.Iris.wp_map_range_snapshot
 example := @GoLean.Iris.wp_sort_slice
 example := @GoLean.Iris.wp_map_lookup
@@ -343,6 +358,9 @@ example := @GoLean.Iris.wp_sort_slice_srt
 example := @GoLean.Iris.wp_map_lookup_ackedIndex
 example := @GoLean.Iris.wp_map_range_snapshot_committed
 example := @GoLean.Iris.wp_map_range_snapshot_nil
+example := @GoLean.Iris.wp_map_iter_next_key
+example := @GoLean.Iris.wp_map_iter_next_key_basic_key_witness
+example := @GoLean.Iris.wp_map_iter_next_key_defined_key_witness
 example := @GoLean.Iris.wp_stmt_op_apply_store
 example := @GoLean.Iris.wp_stmt_op_apply_read_store₂
 example := @GoLean.Iris.wp_read_store_step₂
@@ -384,33 +402,50 @@ Vacuity guard, same commit: `quorumAckedIndexPre_satisfiable` exhibits a
 concrete four-cell heaplet satisfying the discharged precondition (a
 `GoSpec` over an unsatisfiable `InitialSplit` would be true of anything —
 the exact failure mode this file exists to catch). Statement-honesty
-note: the phase-0 `quorumAckedIndexFuncSpec2_statement` was FALSE, not
+note: the FIRST `quorumAckedIndexFuncSpec2_statement` (`39891ae`, phase
+4 — NOT phase 0, as this note said before the 2026-07-31 pre-merge audit's
+finding 6; only the `GoFuncSpec2` SHAPE is phase-0) was FALSE, not
 merely unproven (it passed `#[]` arguments to a two-parameter method, so
 `enterFrame`'s arity check leaves the configuration stuck and `Progress`
 fails); the correction is recorded in the statement's own docstring and
 in the arc doc, not smuggled.
 
 `✓` **THE ARC'S NAMED GOAL, first instance** (quorum pilot phase 4
-summit, 2026-07-31): `quorumOneKnownFuncSpec` DISCHARGES the phase-0
-target `quorumOneKnownFuncSpec_statement` — the pinned lowering of the
+summit, 2026-07-31): `quorumOneKnownFuncSpec` DISCHARGES the
+target `quorumOneKnownFuncSpec_statement` (written at `39891ae`, one
+commit earlier — phase 4, not phase 0) — the pinned lowering of the
 real etcd-io/raft driver returns `12` at `GoFuncSpec` strength — and
 `quorumOneKnownMeetsSpec` restates it with the DECLARATIVE quorum spec
 as the postcondition (`IsCommittedIndex [1] ackedOneKnown`, via the
 proven `committedIndexRef_meets_spec`). `quorumOneKnownReturnsTwelve` is
 the first-order readout and `quorumOneKnownNotEleven` its negative twin.
 
+The declarative reading is now MECHANIZED end to end (2026-07-31,
+pre-merge audit finding 5): `isCommittedIndex_unique` proves the spec
+determines `r` uniquely and `isCommittedIndex_iff` turns it into the
+characterization `IsCommittedIndex c acked r ↔ r = committedIndexRef c
+acked`. Before this, uniqueness — the very thing that upgrades "the
+machine's answer IS a committed index" to "the machine computes Go's
+`CommittedIndex`" — was asserted in `IsCommittedIndex`'s docstring and
+proven nowhere. Still UNMECHANIZED, and now marked so at the def: that
+etcd's SECOND implementation (`alternativeMajorityCommittedIndex`,
+`quick_test.go`) satisfies the spec — it is not modeled in Lean.
+
 Scope, honestly: **n = 1**, so the map range's nondeterminism is
 degenerate and the `len(stk) >= n` test takes the reslice branch. The
 three-voter walk is the recorded next widening.
 
 `◌ NOT PROVEN` (unchanged, recorded rather than quietly dropped): the
-phase-0 `quorumOneKnownNotEleven_statement` — the UNCONDITIONAL
+`quorumOneKnownNotEleven_statement` target (`39891ae`, phase 4) — the
+UNCONDITIONAL
 `¬ GoFuncSpec … (n = 11)` — is not refutable from the triple, because a
 `GoTriple` is vacuously true of a program that fails to terminate;
 refuting it demands exhibiting a terminating run (a kernel evaluation of
 the interpreter over the whole pinned program). The run-conditioned twin
 above is what the golden precedent proves, and is what is proven here. -/
 example := @GoLean.Quorum.committedIndexRef_oneKnown
+example := @GoLean.Quorum.isCommittedIndex_unique
+example := @GoLean.Quorum.isCommittedIndex_iff
 example := @GoLean.Quorum.isCommittedIndex_oneKnown
 example := @GoLean.Quorum.not_isCommittedIndex_oneKnown_11
 example := @GoLean.Surface.quorumAckedIndexFuncSpec2
@@ -486,8 +521,11 @@ example := @GoLean.GoCore.NegativeSpecs.div_nonzero_no_panic
   premise) is CLOSED exactly as its revisit note predicted.
 - The unrestricted driver-outcome parity statements (normal AND panic and
   stuck classification, wrapper vs relation) are NOT claimed as theorems;
-  the differential (zero drift on 718) is the operational evidence, and
-  the queued panic assembly is the proof-side gap on record.
+  the differential (zero drift on the full corpus — 872 cases as of
+  2026-07-31; the figure said "718" from 2026-07-23 until the final
+  pre-merge audit's finding 14 caught it four corpus growths later) is
+  the operational evidence, and the queued panic assembly is the
+  proof-side gap on record.
 -/
 
 end GoLean.Iris.Audit

@@ -5,5 +5,17 @@
 /.claude
 .claude/
 .cc-writes/
+# The compiled native frontend, at BOTH paths it has been built to. The
+# root-anchored `/nativefrontend` chosen when 234301e removed an
+# accidentally committed binary recorded the mitigation as a guarantee
+# ("now gitignored so the build artifact cannot be re-committed") — it was
+# not one: the anchor covers only the repo root, and the same artifact was
+# re-committed five days later at tools/nativefrontend/nativefrontend
+# (7.5 MB, stale, semantically divergent from the sources beside it —
+# pre-merge audit 2026-07-31, findings 10/13). Both paths are listed
+# explicitly rather than with a bare `nativefrontend`, which would also
+# ignore the SOURCE directory tools/nativefrontend/. Every gate invokes
+# `go run ./tools/nativefrontend`; nothing reads a prebuilt binary.
 /nativefrontend
+/tools/nativefrontend/nativefrontend
 /deps/

@@ -496,29 +496,62 @@ def hasConcreteMethod (state : ExecState) (dynTy : Ty) (methodName : String) : B
   (concreteMethodForDynamic? state dynTy methodName).isSome
 
 /-- A concrete method's declared signature: its executable `Func`'s
-parameters MINUS the receiver, and its results, canonicalized. `none` when
-no body is recorded (a dispatch anchor or a quarantined declaration) —
-which is a failure to match, never a silent pass. -/
+parameters MINUS the receiver, its results (both canonicalized), and its
+VARIADIC marker. `none` when no body is recorded (a dispatch anchor or a
+quarantined declaration) — which is a failure to match, never a silent
+pass. -/
 def concreteMethodSignature? (state : ExecState) (info : MethodInfo) :
-    Option (Array Ty × Array Ty) :=
+    Option (Array Ty × Array Ty × Bool) :=
   match findFunctionIn? state.functions info.funcId with
   | some f =>
       some ((f.args.extract 1 f.args.size).map (fun p => canonicalTy state p.typ),
-            f.results.map (fun p => canonicalTy state p.typ))
+            f.results.map (fun p => canonicalTy state p.typ),
+            f.variadic)
   | none => none
 
-/-- Does `dynTy` carry a method matching this REQUIREMENT — name AND
+/-- Does `dynTy` carry a method matching this REQUIREMENT — name AND full
 signature? Comparing names alone accepted a differently typed method
-(pre-merge audit 2026-07-31, finding 2). -/
+(pre-merge audit 2026-07-31, finding 2); comparing only the param/result
+TYPES accepted `M(xs []int)` for a required `M(xs ...int)` and vice versa,
+since both render the param as `[]int` — Go treats them as different
+methods, so the machine ran a dispatch on a program Go aborts (pre-merge
+audit 2026-07-31, finding 0). -/
 def satisfiesMethodSig (state : ExecState) (dynTy : Ty) (req : MethodSig) : Bool :=
   match concreteMethodForDynamic? state dynTy req.name with
   | some (info, _) =>
       match concreteMethodSignature? state info with
-      | some (params, results) =>
+      | some (params, results, variadic) =>
           params == req.params.map (canonicalTy state) &&
-            results == req.results.map (canonicalTy state)
+            results == req.results.map (canonicalTy state) &&
+            variadic == req.variadic
       | none => false
   | none => false
+
+/-- Is `dynTy`'s METHOD SET fully recorded on the wire?
+
+Methods can only be declared in their type's OWN package, and the frontend
+emits a `TypeDef` for every named type the analyzed package declares — so
+for a `.defined` name the type environment KNOWS, the method table holds
+that type's complete method set and a "no such method" answer is real
+information. For a `.defined` name it does NOT know (today: every
+imported/stdlib named type, which reaches GoCore as a bare `.defined` with
+no declaration — BUG-008's premise), the empty method table means UNKNOWN,
+not empty: `*strings.Builder` really does have `String() string`.
+Answering `false` from it was a definite answer derived from nothing —
+the wrong comma-ok boolean, and a FABRICATED `missing method` panic on a
+program Go runs to completion (pre-merge audit 2026-07-31, finding 8).
+
+Types that are not `.defined` (basics, slices, maps, pointers to those,
+`**T`) can carry no methods in Go at all, so an empty method set is
+correct — and a pointer inherits its POINTEE's declarations, so `*T` is
+known exactly when `T` is. -/
+def dynamicMethodSetRecorded (state : ExecState) (dynTy : Ty) : Bool :=
+  let base := match dynTy with
+    | .pointer elem => elem
+    | other => other
+  match base with
+  | .defined name => (TypeEnv.lookup state.types name).isSome
+  | _ => true
 
 /-- Could a method be PROMOTED into `dynTy`'s method set from an embedded
 field? Promotion is unmodeled (BUG-007), so a satisfaction check that would
@@ -541,12 +574,18 @@ def dynamicHasEmbeddedFields (state : ExecState) (dynTy : Ty) : Bool :=
 the interface's own (name-sorted) method order — `none` means it satisfies
 the interface. Go names exactly this method in its assert-panic message.
 
-Fails CLOSED, never vacuously true, in two situations:
+Fails CLOSED, never vacuously true, in three situations:
   * no declaration is recorded for a non-empty interface name (the wire
     carries one for every interface it mentions; an absent one means the
     program used an interface the frontend did not export);
+  * the answer would be "unsatisfied" on a type whose method set is not
+    RECORDED at all (an imported/stdlib named type — BUG-008/BUG-009);
   * the answer would be "unsatisfied" on a type whose method set may be
-    extended by unmodeled PROMOTION (BUG-007). -/
+    extended by unmodeled PROMOTION (BUG-007).
+
+The last two guard the `some name` (definite-FALSE) answer specifically:
+satisfaction found is still sound, since a recorded matching method really
+is in the method set. -/
 def firstUnsatisfiedMethod? (state : ExecState) (dynTy : Ty) (interfaceName : TypeId) :
     Except GoError (Option String) := do
   if isEmptyInterfaceName interfaceName then
@@ -564,7 +603,12 @@ def firstUnsatisfiedMethod? (state : ExecState) (dynTy : Ty) (interfaceName : Ty
       match missing with
       | none => return none
       | some name =>
-          if dynamicHasEmbeddedFields state dynTy then
+          if !dynamicMethodSetRecorded state dynTy then
+            unsupported s!"interface satisfaction for {goTypeNameForMessage state dynTy}: \
+its method set is NOT on the wire (an imported named type carries no \
+declaration), so `missing method {name}' would be an answer derived from \
+no information (BUG-009)"
+          else if dynamicHasEmbeddedFields state dynTy then
             unsupported s!"interface satisfaction for {goTypeNameForMessage state dynTy}: \
 method {name} may be PROMOTED from an embedded field (BUG-007, unmodeled)"
           else

@@ -1,0 +1,10 @@
+# id	subject	args	expected_status	expected_reason	features
+nil-slice	sortNilSlice	-	ok	-	slices,sort,externs,nil,zero_len
+empty-slice	sortEmptySlice	-	ok	-	slices,sort,externs,zero_len
+single-element	sortSingleElement	-	ok	-	slices,sort,externs
+already-sorted	sortAlreadySorted	-	ok	-	slices,sort,externs
+reverse-sorted	sortReverseSorted	-	ok	-	slices,sort,externs
+defined-elem-type	sortDefinedElemType	-	ok	-	slices,sort,externs,defined_type
+unsigned-above-half	sortUnsignedAboveHalf	-	ok	-	slices,sort,externs,widths,ints
+signed-negatives	sortSignedNegatives	-	ok	-	slices,sort,externs,widths,ints
+subslice-aliasing	sortSubsliceAliasing	-	ok	-	slices,sort,externs,slicing,aliasing

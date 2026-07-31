@@ -1,0 +1,6 @@
+# id	subject	args	expected_status	expected_reason	features
+req-variadic-impl-slice	variadicReqSliceImpl	-	ok	-	interfaces,type_assertions,comma_ok,methods,variadic
+req-variadic-impl-slice-panic	variadicReqSliceImplPanic	-	panic	interface conversion	interfaces,type_assertions,panic,methods,variadic
+req-slice-impl-variadic	sliceReqVariadicImpl	-	ok	-	interfaces,type_assertions,comma_ok,methods,variadic
+req-variadic-impl-variadic	variadicReqVariadicImpl	-	ok	-	interfaces,type_assertions,comma_ok,methods,variadic
+variadic-elem-mismatch	variadicElemMismatch	-	ok	-	interfaces,type_assertions,comma_ok,methods,variadic

@@ -1,30 +1,44 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-07-31  commit: interim-audit response (interfaces campaign)
+# recorded: 2026-07-31  commit: FINAL pre-merge audit response (quorum-pilot)
 #   frontend: native  oracle: go run
-# manifest_cases: 846  pass: 581  fail: 265
-# Re-pin reason: INTERIM PRE-MERGE AUDIT RESPONSE — 40 NEW guardrail ids
-# (one per confirmed audit finding, probes turned into cases) plus ONE
-# recorded flip. Drift vs the previous baseline is EXACTLY those 41 rows;
-# zero PASS->FAIL on pre-existing ids.
-#   36 of the 40 new ids PASS: vacuous interface satisfaction is fixed
-#   (wire-level `interface` TypeDefs carry the full method set, so
-#   `x.(error)` no longer depends on whether some unrelated line calls
-#   Error()), satisfaction now compares SIGNATURES, `**T` no longer
-#   inherits `*T`'s method set, the value-directed map-key hash walk finds
-#   unhashable values nested in struct/array keys, the two hash-panic
-#   phrasings are keyed on the map's live entry count, and the four real
-#   assert-panic shapes (incl. `missing method M` and the named source
-#   interface) are rendered.
-#   4 are DELIBERATE RED PINS, each an honest fail-closure replacing a
-#   silent wrong answer, each carrying a docs/BUGS.md entry:
-#   interfaces/promoted-method-assert-ok (BUG-007 — the falsified "never a
-#   wrong answer" claim), panic-recover/panic-defined-payload-methods/
-#   {error,stringer} (BUG-004 item 4 — Go's preprintpanics rewrite cannot
-#   be rendered without CALLING a method), maps/imported-named-key-
-#   unhashable (BUG-008 — unknown comparability of imported named types).
-#   The one flip: maps/delete-nil-interface-key-panic FAIL->PASS, an
-#   improvement — a NIL map still hashes its key in Go, and the precheck
-#   now runs on the nil-map paths too (it was already a red pin for it).
+# manifest_cases: 872  pass: 602  fail: 270
+# Re-pin reason: FINAL PRE-MERGE AUDIT RESPONSE — 26 NEW guardrail ids,
+# one per confirmed audit finding (probes turned into cases). Drift vs the
+# previous baseline is EXACTLY those 26 rows: no pre-existing id changed
+# result or stage, ZERO PASS->FAIL. 846 -> 872 cases, 581 -> 602 pass.
+#   21 of the 26 new ids PASS:
+#   - interfaces/method-set-variadic-mismatch (5) — interface satisfaction
+#     now compares VARIADIC-NESS, so `M(xs ...int)` and `M(xs []int)` are
+#     the different methods Go says they are, in both directions, with the
+#     positive variadic/variadic pair and a differing-element-type pair
+#     pinning that the fix neither over- nor under-fires (finding 0).
+#   - interfaces/interface-valued-observation (7) — the Go harness now
+#     observes results through a POINTER, so an interface-typed result
+#     keeps its static type and emits the boxed `{"tag":"interface",...}`
+#     shape. Before this NO case could exercise `Ty.dynamicName` at all:
+#     `reflect.ValueOf` on an `any` parameter collapses the box, so the
+#     machine's shape had no Go counterpart it could ever equal
+#     (finding 2).
+#   - slices/slices-sort-edges (9) — NON-target edges for the slices.Sort
+#     extern: nil/empty/single/sorted/reverse, a DEFINED element type,
+#     unsigned ordering above 2^63, signed negatives, sub-slice aliasing
+#     (finding 12).
+#   5 are DELIBERATE RED PINS, each carrying a docs/BUGS.md entry:
+#   - interfaces/assert-imported-method-set/{comma-ok,panic-form}
+#     (BUG-009, finding 8) — satisfaction answered a definite FALSE for a
+#     dynamic type whose method set is not on the wire; now an honest
+#     `unsupported`, replacing a wrong `ok` and a FABRICATED panic.
+#   - interfaces/imported-package-name-collision (BUG-010, findings 4/7) —
+#     two import paths sharing a package NAME collided on one TypeId and a
+#     type assert answered `true` where Go answers `false`; the frontend
+#     now refuses the export (stage frontend-export).
+#   - maps/update-during-range (BUG-005's third symptom, finding 1) — the
+#     range snapshot freezes VALUES, so an entry updated inside the loop
+#     reads stale (Go 109, machine 20, deterministic). Recorded red; the
+#     snapshot surgery stays BUG-005's own slice.
+#   - slices/slices-sort-non-integer-refusal (finding 12) — the extern's
+#     REFUSAL boundary pinned as frontend-export, so a silent WIDENING of
+#     the modeled surface shows up as drift.
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
 PASS	arrays/array-copy	-
@@ -389,6 +403,8 @@ PASS	interfaces/assert-error-satisfaction/no-call	-
 PASS	interfaces/assert-error-satisfaction/positive	-
 PASS	interfaces/assert-imported-interface/negative	-
 PASS	interfaces/assert-imported-interface/positive	-
+FAIL	interfaces/assert-imported-method-set/comma-ok	lean-observation
+FAIL	interfaces/assert-imported-method-set/panic-form	lean-observation
 PASS	interfaces/embedded-interface	-
 PASS	interfaces/embedded-interface-assertion	-
 PASS	interfaces/embedded-interface-duplicate-method	-
@@ -407,6 +423,7 @@ FAIL	interfaces/error-idioms/promoted-method	lean-observation
 PASS	interfaces/error-idioms/uncomparable-panic	-
 PASS	interfaces/error-idioms/value-equality	-
 PASS	interfaces/error-interface	-
+FAIL	interfaces/imported-package-name-collision	frontend-export
 PASS	interfaces/interface-array-compare-panic	-
 PASS	interfaces/interface-compare	-
 PASS	interfaces/interface-compare-panic	-
@@ -416,12 +433,24 @@ FAIL	interfaces/interface-method-value	frontend-export
 PASS	interfaces/interface-nested-struct-compare-panic	-
 PASS	interfaces/interface-storage-copy/pointer	-
 PASS	interfaces/interface-storage-copy/value	-
+PASS	interfaces/interface-valued-observation/bool	-
+PASS	interfaces/interface-valued-observation/defined	-
+PASS	interfaces/interface-valued-observation/int	-
+PASS	interfaces/interface-valued-observation/named-iface	-
+PASS	interfaces/interface-valued-observation/nil	-
+PASS	interfaces/interface-valued-observation/string	-
+PASS	interfaces/interface-valued-observation/struct	-
 PASS	interfaces/method-set-pointer-to-pointer/pointer-to-pointer	-
 PASS	interfaces/method-set-pointer-to-pointer/single-pointer	-
 PASS	interfaces/method-set-signature-mismatch/arity	-
 PASS	interfaces/method-set-signature-mismatch/exact	-
 PASS	interfaces/method-set-signature-mismatch/param-type	-
 PASS	interfaces/method-set-signature-mismatch/result-type	-
+PASS	interfaces/method-set-variadic-mismatch/req-slice-impl-variadic	-
+PASS	interfaces/method-set-variadic-mismatch/req-variadic-impl-slice	-
+PASS	interfaces/method-set-variadic-mismatch/req-variadic-impl-slice-panic	-
+PASS	interfaces/method-set-variadic-mismatch/req-variadic-impl-variadic	-
+PASS	interfaces/method-set-variadic-mismatch/variadic-elem-mismatch	-
 PASS	interfaces/nil-interface	-
 FAIL	interfaces/promoted-method-assert-ok	lean-observation
 PASS	interfaces/type-assert-from-named-interface-panic/nil-operand	-
@@ -554,6 +583,7 @@ FAIL	maps/tuple-assign-key-eval	frontend-export
 FAIL	maps/tuple-map-expr-targets	frontend-export
 FAIL	maps/tuple-rhs-before-target-write	frontend-export
 FAIL	maps/tuple-swap-values	frontend-export
+FAIL	maps/update-during-range	differential
 PASS	methods/defined-int-receiver	-
 PASS	methods/defined-map-receiver	-
 FAIL	methods/embedded-interface-satisfaction	lean-observation
@@ -778,6 +808,16 @@ PASS	slices/slice-expr-eval-order	-
 PASS	slices/slice-header-by-value	-
 PASS	slices/slice-literal	-
 PASS	slices/slice-nil-empty	-
+PASS	slices/slices-sort-edges/already-sorted	-
+PASS	slices/slices-sort-edges/defined-elem-type	-
+PASS	slices/slices-sort-edges/empty-slice	-
+PASS	slices/slices-sort-edges/nil-slice	-
+PASS	slices/slices-sort-edges/reverse-sorted	-
+PASS	slices/slices-sort-edges/signed-negatives	-
+PASS	slices/slices-sort-edges/single-element	-
+PASS	slices/slices-sort-edges/subslice-aliasing	-
+PASS	slices/slices-sort-edges/unsigned-above-half	-
+FAIL	slices/slices-sort-non-integer-refusal	frontend-export
 PASS	slices/slices-sort/ints	-
 PASS	slices/slices-sort/uint64	-
 PASS	slices/three-index-slice	-

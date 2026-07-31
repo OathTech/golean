@@ -33,4 +33,11 @@
 #   hashes its key in Go, and the hashability precheck now runs on the
 #   nil-map paths too. The four NEW red pins from this wave are all
 #   explained by BUG-004/007/008, so they do not enter the backlog.
+# 2026-07-31 (FINAL pre-merge audit response)  26 -> 26, unchanged. The
+#   wave added 26 corpus ids, 5 of them red; every red is explained by an
+#   entry (BUG-009 for the two imported-method-set pins, BUG-010 for the
+#   package-name collision, BUG-005 for maps/update-during-range) or is a
+#   frontend-export refusal pin, which is not a fidelity failure. No
+#   pre-existing id changed result or stage, so the backlog set is
+#   untouched.
 26

@@ -348,7 +348,9 @@ using Goose/Perennial's design as the generality reference."
      result.** `Specs/GoldenQuorumWP.lean` holds the target STATEMENTS
      (`quorumOneKnownFuncSpec_statement`, its negative twin,
      `quorumAckedIndexFuncSpec2_statement`) as `def … : Prop` in the
-     phase-0 idiom, plus the PROVEN math half:
+     phase-0 IDIOM — written HERE, in phase 4, not at phase 0 (see the
+     provenance correction under the audit-response entry below), plus
+     the PROVEN math half:
      `committedIndexRef_oneKnown` (`= 12`, `rfl`),
      `isCommittedIndex_oneKnown` (via the proven
      `committedIndexRef_meets_spec`), and the negative twin at 11. The
@@ -454,7 +456,9 @@ using Goose/Perennial's design as the generality reference."
      unchanged in content). `Adequacy.lean` needed nothing — it was
      already generic in `σ.methods`.
   4. **A FALSE target, found and corrected (recorded, not patched
-     quietly).** The phase-0 `quorumAckedIndexFuncSpec2_statement` passed
+     quietly).** The first `quorumAckedIndexFuncSpec2_statement`
+     (written at `39891ae`, one commit earlier — in phase 4, not at
+     phase 0 as this entry originally said) passed
      `#[]` arguments to a two-parameter method: `enterFrame`'s arity
      check fails closed, the configuration is STUCK, so `Progress` — and
      with it the whole statement — was FALSE, not merely unproven. Root
@@ -600,8 +604,9 @@ using Goose/Perennial's design as the generality reference."
      (`q ↦ v`, with the representability side-conditions explicit) and in
      the data cell's declared type; `quorumAckedIndexFuncSpec2` is
      unchanged, instantiated at `3 ↦ 12`.
-  5. **NOT proven, recorded rather than restated:** the phase-0
-     `quorumOneKnownNotEleven_statement` — the UNCONDITIONAL
+  5. **NOT proven, recorded rather than restated:** the
+     `quorumOneKnownNotEleven_statement` target (`39891ae`, phase 4) —
+     the UNCONDITIONAL
      `¬ GoFuncSpec … (n = 11)` — does NOT follow from the positive
      discharge. `GoTriple` quantifies over TERMINATING runs, so both the
      `= 12` and the `= 11` spec are vacuously true of a program with no
@@ -680,6 +685,28 @@ using Goose/Perennial's design as the generality reference."
     declarations in the state, so the `_pin` family exists. Ours covers
     MORE state; theirs needs no pin. Same tradeoff already recorded for
     `σ.types` and `methods`.
+  - *Interface SATISFACTION / method sets*: Perennial takes
+    `method_set : go.type → gmap go_string go.signature` as a semantics
+    PARAMETER (`new/golang/defn/postlang.v`), consulted by
+    `type_set_elem_contains` (`interface.v`) — so satisfaction is global,
+    not package-scoped. GoCore derives it from `state.methods`, which the
+    frontend fills for the ANALYZED package only, so for an imported
+    named type our method set is EMPTY where theirs would be populated.
+    We are strictly NARROWER here. Recorded, with the narrowing made
+    honest rather than silent: satisfaction now fails CLOSED on a dynamic
+    type whose declaration is not on the wire (BUG-009) instead of
+    answering a definite `false`, and the widening path — emit
+    declarations for imported named types, which the interface-declaration
+    pass already does for imported INTERFACES — is the owed sub-slice
+    shared with BUG-008. Added 2026-07-31 after the final pre-merge audit
+    (finding 8) observed this mechanism was missing from the comparison.
+  - *Type IDENTITY across packages*: Perennial's `go_type` descriptors
+    carry no package qualifier problem because a GooseLang program is a
+    single translated unit. Ours keys `.defined` identity on a wire
+    string built from the package NAME, which is NOT Go's identity
+    (import path) — a real divergence from Go, not merely from Perennial,
+    now fail-closed by a frontend collision check and tracked as BUG-010
+    (final pre-merge audit, findings 4/7).
   - *The composed function-level claim*: Perennial's closest analogue is
     a `WP (f #args) {{ ... }}` for a real Go function proved against its
     own spec; the etcd-io/raft quorum package is not in
@@ -691,3 +718,157 @@ using Goose/Perennial's design as the generality reference."
     `quorumOneKnownReturnsTwelve`). The exit pipe is the part Perennial
     has no counterpart for, and it is what makes the claim checkable
     without trusting the program logic.
+
+- 2026-07-31: **FINAL PRE-MERGE AUDIT RESPONSE — 16 confirmed findings,
+  all dispositioned.** Four adversarial reviewers (semantics, vacuity,
+  over-specialization, gate-honesty) plus independent verification of
+  every finding; 16 confirmed, 11 refuted, 4 unverifiable. Guardrail
+  case FIRST for every semantics finding — each one reproduced RED
+  against the branch tip before the fix, and the reds are recorded below
+  where the fix is a fail-closure rather than a correct answer.
+
+  **Three silent wrong answers CLOSED with real fixes:**
+  1. *Variadic-ness erased from interface satisfaction* (finding 0).
+     `MethodSig` and `Func` compared param/result TYPES only, and
+     `M(xs ...int)`/`M(xs []int)` render the same `[]int`, so a comma-ok
+     assert answered `true` where Go answers `false` and the panicking
+     form ran an ill-typed dispatch where Go aborts — BOTH directions,
+     invisible to every gate (`grep '\.\.\.'` over the interface corpus
+     returned nothing). Fixed properly rather than fail-closed, because
+     the fallback would block the north star: `deps/raft/logger.go`
+     declares an interface with twelve variadic methods. Both structures
+     carry `variadic`; the frontend emits `sig.Variadic()` for functions,
+     methods, lifted literals and interface method-set entries; the
+     decoder REQUIRES the field (a wire without it fails closed rather
+     than defaulting to non-variadic — the shape that would have
+     re-opened the bug silently); `satisfiesMethodSig` compares it.
+     Guardrail `interfaces/method-set-variadic-mismatch`, 5 cases: both
+     mismatch directions, the panicking form, the positive
+     variadic/variadic pair (which must keep dispatching), and a variadic
+     pair whose ELEMENT types differ (so the fix cannot degenerate into
+     comparing variadic-ness alone).
+  2. *Interface satisfaction answered a definite FALSE for a dynamic type
+     whose method set is not on the wire* (finding 8) — the exact mirror
+     of the interim audit's vacuously-TRUE finding, and inconsistent with
+     `tyUncomparable`, which this same branch made three-valued for the
+     identical hazard. `x.(fmt.Stringer)` on a `*strings.Builder` gave
+     `ok == false` and the panicking form FABRICATED a `missing method`
+     panic on a program Go runs to completion. Now three-valued:
+     `dynamicMethodSetRecorded` separates "the wire knows this type, so
+     an absent method really is absent" (sound — Go only allows methods
+     in a type's own package, and the frontend emits a `TypeDef` for
+     every named type the analyzed package declares) from "never
+     declared" (UNKNOWN → `unsupported`). BUG-009 + red pins
+     `interfaces/assert-imported-method-set/{comma-ok,panic-form}`.
+  3. *TypeId identity keyed on package NAME, not import PATH* (findings
+     4/7) — `html/template` + `text/template` in ONE `package main`
+     collapse to a single `template.Template` key, and the assert
+     answered `true` where Go answers `false`. Reachable today with
+     stdlib imports only; no multi-package work required. v1 fails
+     CLOSED at the one boundary constructor that builds the key
+     (`checkPackageNameCollisions`), which is the collision check
+     CLAUDE.md's boundary rule already required of `TypeId` and only
+     `FuncId` had. BUG-010 + red pin
+     `interfaces/imported-package-name-collision`; the real widening to
+     `Pkg().Path()` re-keys every pinned lowering and is scoped to the
+     multi-package slice in the extern-policy note.
+
+  **Vacuity:** `wp_map_iter_next_key`'s `hnorm` was `∀σ` with no
+  `σ.types` pin (finding 9), so the arc's first nondeterministic law was
+  VACUOUS at every NAMED key type — `map[Index]int` is literally in
+  `deps/raft/quorum/quick_test.go` — while its only instantiation was at
+  a `uint64` key, i.e. the target's own shape. The pin is added, and the
+  law now ships with the two witnesses it never had:
+  `wp_map_iter_next_key_basic_key_witness` and
+  `..._defined_key_witness` (the instance the unpinned form could not
+  have had), both referenced from `Audit.lean` so deleting one breaks the
+  build, neither naming the target.
+
+  **Claim strength:** `IsCommittedIndex`'s docstring asserted "it
+  determines `r` uniquely" — the very property that upgrades "the
+  machine's answer IS a committed index" to "the machine computes Go's
+  `CommittedIndex`" — and proved it nowhere (finding 5). Mechanized
+  rather than softened: `isCommittedIndex_unique` and the full
+  characterization `isCommittedIndex_iff`. The second, genuinely
+  unmechanized half ("both etcd implementations satisfy this" —
+  `alternativeMajorityCommittedIndex` is not modeled at all) is now
+  marked as unmechanized at the def.
+
+  **Recorded red, not fixed:** BUG-005's THIRD symptom (finding 1) —
+  the range snapshot freezes VALUES too, so an entry updated inside the
+  loop is read stale (Go 109, machine 20, deterministic under every
+  choice stream). BUG-005's entry enumerated removal and explicitly
+  dismissed creation, never mentioning update; its title, `Cases:` line
+  and prose are all amended and `maps/update-during-range` is the pin.
+  The snapshot surgery stays BUG-005's own slice.
+
+  **Observation-channel non-vacuity** (finding 2): the machine's
+  `{"tag":"interface","dynamic":…}` shape could NEVER equal the Go
+  oracle's, because the harness passed results through an `any`
+  parameter, which collapses the box — so `Ty.dynamicName` (an interim-
+  audit fix) was validated by nothing and a future interface-returning
+  case would have been misattributed to the machine. The harness now
+  observes through a POINTER and emits the boxed shape, failing closed on
+  an UNNAMED dynamic type (where `reflect.Type.Name()` is empty and the
+  channel's stated contract has no answer).
+  `interfaces/interface-valued-observation`, 7 cases, all green.
+
+  **Corpus balance** (finding 12): `slices.Sort`'s only cases were both
+  quorum-tagged and one is self-described as "CommittedIndex's exact
+  shape". `slices/slices-sort-edges` adds 9 non-target edges — nil,
+  empty, single, already-sorted, reverse-sorted, a DEFINED element type,
+  unsigned ordering ABOVE 2^63 (the load-bearing one: the comparator's
+  exactness rests entirely on normalized unsigned ints being
+  non-negative, and a regression to a two's-complement word compare
+  still sorts the signed case correctly), signed negatives, and
+  sub-slice aliasing — plus `slices/slices-sort-non-integer-refusal`,
+  a red `frontend-export` pin so a silent WIDENING of the refusal
+  boundary shows as drift.
+
+  **Record honesty** (findings 3, 6, 10/13, 11, 14, 15): the granularity
+  ledger gained the `sortSlice` row the extern-policy note claimed was
+  already there (and both the note and the code comment are corrected —
+  it is a SINGLE-cell multi-write step, and it merge-sorts, not
+  insertion-sorts); the "phase-0" provenance claims on three targets git
+  contradicts are corrected to phase 4 with commit ids (only the
+  `GoFuncSpec2` SHAPE and `committedIndexRef_meets_spec_statement` are
+  genuinely phase-0); the tracked 7.5 MB stale frontend binary is removed
+  and `.gitignore` fixed at BOTH paths (the 2026-07-25 removal recorded
+  its root-anchored rule as a guarantee that "the build artifact cannot
+  be re-committed" — it was not one, and the identical artifact returned
+  five days later); a docstring calling `Ty`'s `BEq` "derived" — stale in
+  the very commit that stopped deriving it — is corrected; `Audit.lean`'s
+  "zero drift on 718" is updated (the corpus had grown three times since
+  2026-07-23); and BUG-004's closing sentence, which offered a SHIPPED
+  item as the outstanding fix while omitting both genuinely open ones, is
+  rewritten.
+
+  **Over-specialization check (standing item §STANDING CHECK), per
+  change in this response:** the variadic flag is a Go signature
+  property carried verbatim from `go/types`, not a quorum need (raft's
+  `Logger` motivated fixing rather than fail-closing it, but the
+  mechanism is the language rule). `dynamicMethodSetRecorded` is stated
+  over `Ty`, keyed on whether a declaration exists — no target names.
+  The collision check is over any two import paths. `hnorm`'s pin is the
+  same one every sibling law carries, and its DEFINED-key witness
+  deliberately uses `pkg.Key`, not the pilot's `main.Index`. Every new
+  corpus directory except the BUG-005 pin is untagged for `quorum`.
+
+  **Validation:** guardrails RED first — 8 of the first 19 new ids failed
+  against the tip, each reproducing its finding's exact divergence (the
+  7 observation-channel ids were added with the harness fix, since the
+  shape they pin was structurally unreachable before it) — then the
+  fixes. `lake build` + `gocore-eval-tests` (44) green; proofs + the
+  in-build `Audit` gate green (6051 declarations, all axiom-clean); full
+  differential 872/872 with drift EXACTLY the 26 new ids and zero
+  pre-existing id changing result or stage; negative lane 309/309;
+  `scripts/ci` PASS end to end.
+
+  **Deliberate re-pins, both explained here per their guards' rules:**
+  `baselines/native-full.tsv` (846 → 872 cases; header carries the id-by-id
+  reason), and the THREE golden lowering baselines
+  (`baselines/golden/*.repr`) — `Func` and `MethodSig` gained the
+  `variadic` field, so every pinned `repr` prints one more line. The drift
+  is exactly `variadic := false` on every function and interface
+  requirement in the three pinned programs (none is variadic), and
+  `check-golden` re-verifies BOTH links afterwards.

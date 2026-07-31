@@ -15,7 +15,8 @@
                  GoLean.GoCore.TypeDef.interfaceDef
                    #[{ name := "AckedIndex",
                        params := #[GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64)],
-                       results := #[GoLean.GoCore.Ty.defined { key := "main.Index" }, GoLean.GoCore.Ty.bool] }])],
+                       results := #[GoLean.GoCore.Ty.defined { key := "main.Index" }, GoLean.GoCore.Ty.bool],
+                       variadic := false }])],
   funcs := #[{ id := { key := "run" },
                args := #[{ id := "c", typ := GoLean.GoCore.Ty.defined { key := "main.MajorityConfig" } },
                          { id := "l", typ := GoLean.GoCore.Ty.defined { key := "main.mapAckIndexer" } }],
@@ -39,7 +40,8 @@
                                  (GoLean.GoCore.Expr.convert
                                    (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))
                                    (GoLean.GoCore.Expr.var "$c3")),
-                               GoLean.GoCore.Stmt.returnStmt]] },
+                               GoLean.GoCore.Stmt.returnStmt]],
+               variadic := false },
              { id := { key := "committedEmpty" },
                args := #[],
                results := #[{ id := "$res0", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64) }],
@@ -78,7 +80,8 @@
                              #[GoLean.GoCore.Stmt.assign
                                  (GoLean.GoCore.Assignee.var "$res0")
                                  (GoLean.GoCore.Expr.var "$c6"),
-                               GoLean.GoCore.Stmt.returnStmt]] },
+                               GoLean.GoCore.Stmt.returnStmt]],
+               variadic := false },
              { id := { key := "committedOneMissing" },
                args := #[],
                results := #[{ id := "$res0", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64) }],
@@ -123,7 +126,8 @@
                              #[GoLean.GoCore.Stmt.assign
                                  (GoLean.GoCore.Assignee.var "$res0")
                                  (GoLean.GoCore.Expr.var "$c9"),
-                               GoLean.GoCore.Stmt.returnStmt]] },
+                               GoLean.GoCore.Stmt.returnStmt]],
+               variadic := false },
              { id := { key := "committedOneKnown" },
                args := #[],
                results := #[{ id := "$res0", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64) }],
@@ -174,7 +178,8 @@
                              #[GoLean.GoCore.Stmt.assign
                                  (GoLean.GoCore.Assignee.var "$res0")
                                  (GoLean.GoCore.Expr.var "$c12"),
-                               GoLean.GoCore.Stmt.returnStmt]] },
+                               GoLean.GoCore.Stmt.returnStmt]],
+               variadic := false },
              { id := { key := "committedTwoMissing" },
                args := #[],
                results := #[{ id := "$res0", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64) }],
@@ -225,7 +230,8 @@
                              #[GoLean.GoCore.Stmt.assign
                                  (GoLean.GoCore.Assignee.var "$res0")
                                  (GoLean.GoCore.Expr.var "$c15"),
-                               GoLean.GoCore.Stmt.returnStmt]] },
+                               GoLean.GoCore.Stmt.returnStmt]],
+               variadic := false },
              { id := { key := "committedTwoHalf" },
                args := #[],
                results := #[{ id := "$res0", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64) }],
@@ -282,7 +288,8 @@
                              #[GoLean.GoCore.Stmt.assign
                                  (GoLean.GoCore.Assignee.var "$res0")
                                  (GoLean.GoCore.Expr.var "$c18"),
-                               GoLean.GoCore.Stmt.returnStmt]] },
+                               GoLean.GoCore.Stmt.returnStmt]],
+               variadic := false },
              { id := { key := "committedTwoKnown" },
                args := #[],
                results := #[{ id := "$res0", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64) }],
@@ -345,7 +352,8 @@
                              #[GoLean.GoCore.Stmt.assign
                                  (GoLean.GoCore.Assignee.var "$res0")
                                  (GoLean.GoCore.Expr.var "$c21"),
-                               GoLean.GoCore.Stmt.returnStmt]] },
+                               GoLean.GoCore.Stmt.returnStmt]],
+               variadic := false },
              { id := { key := "committedThreeMissing" },
                args := #[],
                results := #[{ id := "$res0", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64) }],
@@ -402,7 +410,8 @@
                              #[GoLean.GoCore.Stmt.assign
                                  (GoLean.GoCore.Assignee.var "$res0")
                                  (GoLean.GoCore.Expr.var "$c24"),
-                               GoLean.GoCore.Stmt.returnStmt]] },
+                               GoLean.GoCore.Stmt.returnStmt]],
+               variadic := false },
              { id := { key := "committedThreeOne" },
                args := #[],
                results := #[{ id := "$res0", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64) }],
@@ -465,7 +474,8 @@
                              #[GoLean.GoCore.Stmt.assign
                                  (GoLean.GoCore.Assignee.var "$res0")
                                  (GoLean.GoCore.Expr.var "$c27"),
-                               GoLean.GoCore.Stmt.returnStmt]] },
+                               GoLean.GoCore.Stmt.returnStmt]],
+               variadic := false },
              { id := { key := "committedThreeTwo" },
                args := #[],
                results := #[{ id := "$res0", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64) }],
@@ -534,7 +544,8 @@
                              #[GoLean.GoCore.Stmt.assign
                                  (GoLean.GoCore.Assignee.var "$res0")
                                  (GoLean.GoCore.Expr.var "$c30"),
-                               GoLean.GoCore.Stmt.returnStmt]] },
+                               GoLean.GoCore.Stmt.returnStmt]],
+               variadic := false },
              { id := { key := "committedThreeAll" },
                args := #[],
                results := #[{ id := "$res0", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64) }],
@@ -609,7 +620,8 @@
                              #[GoLean.GoCore.Stmt.assign
                                  (GoLean.GoCore.Assignee.var "$res0")
                                  (GoLean.GoCore.Expr.var "$c33"),
-                               GoLean.GoCore.Stmt.returnStmt]] },
+                               GoLean.GoCore.Stmt.returnStmt]],
+               variadic := false },
              { id := { key := "committedThreeAllLow" },
                args := #[],
                results := #[{ id := "$res0", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64) }],
@@ -684,7 +696,8 @@
                              #[GoLean.GoCore.Stmt.assign
                                  (GoLean.GoCore.Assignee.var "$res0")
                                  (GoLean.GoCore.Expr.var "$c36"),
-                               GoLean.GoCore.Stmt.returnStmt]] },
+                               GoLean.GoCore.Stmt.returnStmt]],
+               variadic := false },
              { id := { key := "committedThreeDupTwo" },
                args := #[],
                results := #[{ id := "$res0", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64) }],
@@ -753,7 +766,8 @@
                              #[GoLean.GoCore.Stmt.assign
                                  (GoLean.GoCore.Assignee.var "$res0")
                                  (GoLean.GoCore.Expr.var "$c39"),
-                               GoLean.GoCore.Stmt.returnStmt]] },
+                               GoLean.GoCore.Stmt.returnStmt]],
+               variadic := false },
              { id := { key := "committedThreeDupAll" },
                args := #[],
                results := #[{ id := "$res0", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64) }],
@@ -828,7 +842,8 @@
                              #[GoLean.GoCore.Stmt.assign
                                  (GoLean.GoCore.Assignee.var "$res0")
                                  (GoLean.GoCore.Expr.var "$c42"),
-                               GoLean.GoCore.Stmt.returnStmt]] },
+                               GoLean.GoCore.Stmt.returnStmt]],
+               variadic := false },
              { id := { key := "committedThreeSpread" },
                args := #[],
                results := #[{ id := "$res0", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64) }],
@@ -903,7 +918,8 @@
                              #[GoLean.GoCore.Stmt.assign
                                  (GoLean.GoCore.Assignee.var "$res0")
                                  (GoLean.GoCore.Expr.var "$c45"),
-                               GoLean.GoCore.Stmt.returnStmt]] },
+                               GoLean.GoCore.Stmt.returnStmt]],
+               variadic := false },
              { id := { key := "committedFiveDup" },
                args := #[],
                results := #[{ id := "$res0", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64) }],
@@ -996,7 +1012,8 @@
                              #[GoLean.GoCore.Stmt.assign
                                  (GoLean.GoCore.Assignee.var "$res0")
                                  (GoLean.GoCore.Expr.var "$c48"),
-                               GoLean.GoCore.Stmt.returnStmt]] },
+                               GoLean.GoCore.Stmt.returnStmt]],
+               variadic := false },
              { id := { key := "committedFiveSpread" },
                args := #[],
                results := #[{ id := "$res0", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64) }],
@@ -1089,7 +1106,8 @@
                              #[GoLean.GoCore.Stmt.assign
                                  (GoLean.GoCore.Assignee.var "$res0")
                                  (GoLean.GoCore.Expr.var "$c51"),
-                               GoLean.GoCore.Stmt.returnStmt]] },
+                               GoLean.GoCore.Stmt.returnStmt]],
+               variadic := false },
              { id := { key := "sortedSlice" },
                args := #[],
                results := #[{ id := "$res0", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64) }],
@@ -1151,13 +1169,15 @@
                                    (GoLean.GoCore.Expr.indexGet
                                      (GoLean.GoCore.Expr.var "sl")
                                      (GoLean.GoCore.Expr.intLit 2 (GoLean.GoCore.IntKind.int)))),
-                               GoLean.GoCore.Stmt.returnStmt]] },
+                               GoLean.GoCore.Stmt.returnStmt]],
+               variadic := false },
              { id := { key := "main.AckedIndexer.AckedIndex" },
                args := #[{ id := "$recv", typ := GoLean.GoCore.Ty.interface { key := "main.AckedIndexer" } },
                          { id := "voterID", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64) }],
                results := #[{ id := "idx", typ := GoLean.GoCore.Ty.defined { key := "main.Index" } },
                             { id := "found", typ := GoLean.GoCore.Ty.bool }],
-               body := GoLean.GoCore.Stmt.call #[] { key := "$interface-method-unreachable" } #[] },
+               body := GoLean.GoCore.Stmt.call #[] { key := "$interface-method-unreachable" } #[],
+               variadic := false },
              { id := { key := "main.mapAckIndexer.AckedIndex" },
                args := #[{ id := "m", typ := GoLean.GoCore.Ty.defined { key := "main.mapAckIndexer" } },
                          { id := "id", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64) }],
@@ -1183,7 +1203,8 @@
                                GoLean.GoCore.Stmt.assign
                                  (GoLean.GoCore.Assignee.var "$res1")
                                  (GoLean.GoCore.Expr.var "ok"),
-                               GoLean.GoCore.Stmt.returnStmt]] },
+                               GoLean.GoCore.Stmt.returnStmt]],
+               variadic := false },
              { id := { key := "main.MajorityConfig.Slice" },
                args := #[{ id := "c", typ := GoLean.GoCore.Ty.defined { key := "main.MajorityConfig" } }],
                results := #[{ id := "$res0",
@@ -1240,7 +1261,8 @@
                              #[GoLean.GoCore.Stmt.assign
                                  (GoLean.GoCore.Assignee.var "$res0")
                                  (GoLean.GoCore.Expr.var "sl"),
-                               GoLean.GoCore.Stmt.returnStmt]] },
+                               GoLean.GoCore.Stmt.returnStmt]],
+               variadic := false },
              { id := { key := "main.MajorityConfig.CommittedIndex" },
                args := #[{ id := "c", typ := GoLean.GoCore.Ty.defined { key := "main.MajorityConfig" } },
                          { id := "l", typ := GoLean.GoCore.Ty.interface { key := "main.AckedIndexer" } }],
@@ -1380,7 +1402,8 @@
                                    (GoLean.GoCore.Expr.indexGet
                                      (GoLean.GoCore.Expr.var "srt")
                                      (GoLean.GoCore.Expr.var "pos"))),
-                               GoLean.GoCore.Stmt.returnStmt]] }],
+                               GoLean.GoCore.Stmt.returnStmt]],
+               variadic := false }],
   methods := #[{ name := "AckedIndex",
                  funcId := { key := "main.AckedIndexer.AckedIndex" },
                  recv := GoLean.GoCore.Ty.interface { key := "main.AckedIndexer" } },

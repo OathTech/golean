@@ -1,0 +1,3 @@
+# id	subject	args	expected_status	expected_reason	features
+comma-ok	assertImportedMethodSetCommaOk	-	ok	-	interfaces,type_assertions,comma_ok,methods,imports
+panic-form	assertImportedMethodSetPanicForm	-	ok	-	interfaces,type_assertions,methods,imports

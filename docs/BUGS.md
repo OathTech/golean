@@ -60,6 +60,97 @@ fields pervasively). GoCore already has the right primitives (`fieldAddr`,
 overclaims "field/index access" as working (true for reads, false for writes) —
 correct it when the lowering is fixed. Tracked in `TODO.md` (F1).
 
+## BUG-010 — TypeId keys are qualified by package NAME, not import PATH
+
+- Status: open
+- Pinned-by: differential
+- Cases: interfaces/imported-package-name-collision
+- Discovered: 2026-07-31 (final pre-merge adversarial audit of
+  `quorum-pilot`, findings 4/7)
+
+`qualifiedTypeName` (`tools/nativefrontend/emit.go`) builds every wire
+`TypeId` from `obj.Pkg().Name()`. Go keys type identity on the import
+PATH, so two packages that merely SHARE A NAME — `html/template` and
+`text/template`, `math/rand` and `crypto/rand`, the many generated
+`config`/`types`/`v1` packages — produced the SAME key, and `Ty.eqb`'s
+`.defined a, .defined b => a == b` arm then called two unrelated Go types
+identical. A single `package main` importing both stdlib templates was
+enough:
+
+    var p *ht.Template; var a any = p; _, ok := a.(*tt.Template)
+
+Go answers `false`; the machine answered `true`. The panicking form is
+worse — Go aborts with `interface conversion: interface {} is
+*template.Template, not *template.Template (types from different
+packages)`, its runtime message literally naming this class, and the
+machine returned a value. No multi-package lowering was needed: an
+imported named type needs no `TypeDef` to reach GoCore as `.defined`.
+
+**v1 fail-closure (2026-07-31)**: the frontend COLLISION-CHECKS at the
+one boundary constructor that builds the key
+(`emitter.checkPackageNameCollisions`) and refuses the export when two
+distinct import paths would share a qualifier — CLAUDE.md's "every
+mangling strip happens at exactly one boundary constructor and
+collision-checks", which `TypeId` (unlike `FuncId`) did not honour. The
+pinned case is now an honest `frontend-export` refusal naming both paths.
+
+The REAL fix is widening the key to `obj.Pkg().Path()`. It is deferred,
+not forgotten: it re-keys every `TypeId` — every pinned lowering, every
+`main.T(v)` panic rendering, every `TypeId.unqualified` observation — so
+it belongs with the multi-package slice, scoped in
+`docs/2026-07-30_quorum-extern-policy.md`. Escalate the moment
+multi-package lowering is claimed.
+
+## BUG-009 — an imported named type's METHOD SET is not on the wire, so interface satisfaction is UNKNOWN
+
+- Status: open
+- Pinned-by: differential
+- Cases: interfaces/assert-imported-method-set/comma-ok, interfaces/assert-imported-method-set/panic-form
+- Discovered: 2026-07-31 (final pre-merge adversarial audit of
+  `quorum-pilot`, finding 8)
+
+BUG-008's sibling in the other polarity, and the exact mirror of the
+interim audit's finding 0 (vacuously TRUE satisfaction) — this one was
+vacuously FALSE. `firstUnsatisfiedMethod?` derives satisfaction from
+`state.methods`, which the frontend populates only for the ANALYZED
+package. For an imported/stdlib named type the method table is empty and
+no `TypeDef` exists, so `satisfiesMethodSig` answered `false` and
+`dynamicHasEmbeddedFields` answered `false`, and the function returned a
+DEFINITE `some name` — an answer derived from no information:
+
+    var p *strings.Builder; var x any = p; _, ok := x.(fmt.Stringer)
+
+`*strings.Builder` really does implement `fmt.Stringer`. Go gives
+`ok == true`; the machine gave `false`. The panicking form `x.(fmt.Stringer)`
+FABRICATED `interface conversion: *strings.Builder is not fmt.Stringer:
+missing method String` on a program Go runs to completion. The sibling
+function `tyUncomparable` was made three-valued on this same branch for
+exactly this hazard ("Callers must fail CLOSED on `none`"); satisfaction
+was not.
+
+**Fail-closure (2026-07-31)**: `dynamicMethodSetRecorded` distinguishes
+"the wire KNOWS this type, so an absent method really is absent" from
+"this type was never declared, so the method set is UNKNOWN". Soundness
+of the first half rests on a Go rule: methods can only be declared in
+their type's own package, and the frontend emits a `TypeDef` for every
+named type the analyzed package declares — so for a known `.defined`
+name the recorded method set is COMPLETE. Non-`.defined` dynamic types
+(basics, slices, maps, `**T`) can carry no methods in Go at all, so an
+empty method set is correct for them; `*T` is known exactly when `T` is.
+Only the definite-FALSE answer is guarded — finding a matching recorded
+method is still sound.
+
+Residual, recorded: a method declared for a package-local type in a
+`_test.go` file is excluded by the frontend's `nonTestGoFile` filter,
+which would leave a KNOWN type with an incomplete method set. No corpus
+case has one (cases are single-file `main.go`), and the differential's
+own oracle would not compile such a subject either.
+
+The real fix is the same one BUG-008 names: emit declarations for
+imported named types. The mechanism already exists for imported
+INTERFACES (the interface-declaration pass); extending it to non-interface
+named types is the owed sub-slice, and it closes both bugs at once.
+
 ## BUG-008 — imported named types have no declaration on the wire, so their comparability is UNKNOWN
 
 - Status: open
@@ -81,7 +172,12 @@ wrong answer on a program the tool accepted end to end.
 hash precheck fails CLOSED on `none`, so the pinned case is an honest
 `unsupported` instead. Neighbouring paths (default value, conversion,
 same-type equality) already failed closed on unknown defined types; this
-closes the boxing/hash hole. The real fix is emitting declarations for
+closes the boxing/hash hole. **Correction 2026-07-31 (final pre-merge
+audit, finding 8): that enumeration was not exhaustive.** Interface
+SATISFACTION — the path this branch added — did NOT fail closed on an
+unknown defined type; it answered a definite `false`. Tracked separately
+as BUG-009, closed the same way, and both are fixed for good by the same
+owed sub-slice below. The real fix is emitting declarations for
 imported named types — which is also what the interface-declaration pass
 (finding 0's fix) now does for imported INTERFACES, so the mechanism
 exists; extending it to imported non-interface named types is the owed
@@ -155,11 +251,11 @@ on an earlier field before touching the raw payload — listed here per
 the re-pin guard. The guard treats an untyped-nil source as exact
 (a nil interface IS the raw nil).
 
-## BUG-005 — map iteration does not observe delete/clear (snapshot semantics)
+## BUG-005 — map iteration snapshots ENTRIES, so it observes neither delete/clear nor value updates
 
 - Status: open
 - Pinned-by: differential
-- Cases: maps/delete-during-range, maps/clear-during-range
+- Cases: maps/delete-during-range, maps/clear-during-range, maps/update-during-range
 - Discovered: 2026-07-26 (pre-merge adversarial audit of `wrong-answers-builtins`)
 
 `mapRange` snapshots the entry array once (the reshape's nondeterminism
@@ -172,6 +268,26 @@ probe (`for k := range m { n++; delete all }`) gets one iteration from Go
 and three from the machine, a silent wrong answer, now pinned red by the
 two Cases. (Entries CREATED during iteration may or may not be produced,
 so the snapshot's not-producing them is fine — removal is the defect.)
+
+**Third symptom, added 2026-07-31 (final pre-merge audit, finding 1):
+STALE VALUE READS.** The title and the paragraph above enumerate removal
+and explicitly dismiss creation, and never mention UPDATE — so a reader
+of this entry would not learn the symptom exists, and no case pinned it.
+The snapshot freezes each entry's VALUE as well as its key, and
+`Cont.mapIterK` hands both to `bindIterVars`, so a value written to an
+already-present key from inside the loop is never observed:
+
+    m := map[int]int{1: 10, 2: 10}
+    sum := 0
+    for _, v := range m { m[1] = 99; m[2] = 99; sum += v }
+
+Go returns 109 (the second iteration reads the update); the machine
+returns 20. Deterministic on BOTH sides — the two entries start equal and
+end equal, so iteration order is irrelevant and the machine gives 20
+under every choice stream — so this is a plain differential red, not a
+nondet case: `maps/update-during-range`. The prescribed fix below already
+covers it ("re-read values live"); this records the symptom and pins it.
+
 The fix is real machine surgery: `Cont.mapIterK` must carry the map's
 base location and the pick-next step must skip keys no longer present
 (and re-read values live), which touches the nondeterministic rule pair
@@ -232,8 +348,16 @@ printing a wrong first line:
    `/stringer` are the red ones).
 
 RECOVERING any of these payloads is fully supported — only the terminal
-abort line is restricted. The fix, if ever needed, is an allocation
-identity on boxed payloads (1) and a package-qualification story (2).
+abort line is restricted. The remaining fixes, if ever needed, are an
+allocation identity on boxed payloads (1), the multi-line `printindented`
+shape (3), and a way to render the `preprintpanics` rewrite without
+calling a method at abort time (4). (Corrected 2026-07-31, final
+pre-merge audit finding 15: this sentence used to offer "a
+package-qualification story (2)" as outstanding — item 2 SHIPPED on
+2026-07-30, as the body says and the baseline's PASS on
+`panic-recover/panic-named-type-abort` confirms — while omitting both
+items that really are open. `scripts/check-bugs.sh` parses Status/Cases
+and never prose, so no gate could catch it.)
 
 ## BUG-003 — for-clause per-iteration loop variables (Go 1.22) are not lowered
 

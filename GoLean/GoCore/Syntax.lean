@@ -26,17 +26,23 @@ structure FieldDef where
 
 /-- One method of an interface's method set: the name plus the signature
 with the RECEIVER excluded. Interface satisfaction compares these against a
-concrete method's `Func` (arguments minus the receiver, and results), both
-canonicalized — a name-only match reported satisfaction for a differently
-typed method (pre-merge audit 2026-07-31, finding 2).
+concrete method's `Func` (arguments minus the receiver, its results, AND
+its variadic marker), all canonicalized — a name-only match reported
+satisfaction for a differently typed method (pre-merge audit 2026-07-31,
+finding 2).
 
-KNOWN GAP: variadic-ness is not carried (a `Func` has no variadic flag to
-compare it against), so `M(xs ...int)` and `M(xs []int)` are
-indistinguishable here. -/
+`variadic` is Go's marker on the LAST parameter, and it is part of the
+signature Go compares for method-set membership: `M(xs ...int)` and
+`M(xs []int)` share the param TYPE `[]int` but are DIFFERENT methods, so
+neither type implements the other's interface. Comparing only the type
+lists accepted both directions — a silent wrong `ok` on the comma-ok
+assert and an ill-typed dispatch where Go panics (pre-merge audit
+2026-07-31, finding 0). -/
 structure MethodSig where
   name : String
   params : Array Ty
   results : Array Ty
+  variadic : Bool := false
   deriving Repr, BEq
 
 inductive TypeDef where
@@ -227,6 +233,14 @@ structure Func where
   args : Array Param
   results : Array Param
   body : Stmt
+  /-- Go's variadic marker on the LAST parameter, carried verbatim from the
+  frontend. It does NOT change how a call binds arguments — the frontend
+  already packs the spread into a slice at the call site — it is the half
+  of the signature interface satisfaction must compare against a
+  `MethodSig`'s own marker (pre-merge audit 2026-07-31, finding 0).
+  Defaults to `false` so hand-built GoCore programs (tests, proofs) stay
+  non-variadic; the wire always carries it explicitly. -/
+  variadic : Bool := false
   deriving Repr, BEq
 
 structure MethodInfo where

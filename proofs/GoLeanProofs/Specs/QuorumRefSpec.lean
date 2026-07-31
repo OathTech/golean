@@ -205,6 +205,43 @@ interface. -/
 theorem committedIndexRef_meets_spec : committedIndexRef_meets_spec_statement :=
   fun c acked _ => committedIndexRef_meets_spec_of_any c acked
 
+/-! ## 5. Uniqueness — the spec is a CHARACTERIZATION, mechanized
+
+`IsCommittedIndex`'s docstring asserted "it determines `r` uniquely".
+That is what upgrades `quorumOneKnownMeetsSpec` from "the machine's
+answer *is* a committed index" to "the machine computes Go's
+`CommittedIndex`" — and it was prose, proven nowhere (pre-merge audit
+2026-07-31, finding 5). It is mechanized here rather than softened,
+because it is true and cheap: maximality at each of two witnesses
+refutes the other being larger. -/
+
+/-- **Uniqueness**: at most one `r` satisfies the spec for a given
+config and acked data. -/
+theorem isCommittedIndex_unique {c : List Nat} {acked : Nat → Option Nat}
+    {r₁ r₂ : Nat} (h₁ : IsCommittedIndex c acked r₁)
+    (h₂ : IsCommittedIndex c acked r₂) : r₁ = r₂ := by
+  rcases h₁ with ⟨hc₁, hr₁⟩ | ⟨hne₁, hsup₁, hmax₁⟩
+  · rcases h₂ with ⟨_, hr₂⟩ | ⟨hne₂, _, _⟩
+    · omega
+    · exact absurd hc₁ hne₂
+  · rcases h₂ with ⟨hc₂, _⟩ | ⟨_, hsup₂, hmax₂⟩
+    · exact absurd hc₂ hne₁
+    · rcases Nat.lt_trichotomy r₁ r₂ with hlt | heq | hgt
+      · exact absurd hsup₂ (Nat.not_le.mpr (hmax₁ r₂ hlt))
+      · exact heq
+      · exact absurd hsup₁ (Nat.not_le.mpr (hmax₂ r₁ hgt))
+
+/-- **The characterization**: `IsCommittedIndex` holds of exactly the
+reference's answer. Existence is `committedIndexRef_meets_spec_of_any`,
+uniqueness is the theorem above — together they say the declarative spec
+and `majority.go`'s algorithm define the SAME function, so reading
+"`r` is a committed index" as "`r` is what Go computes" is now a
+theorem rather than a docstring. -/
+theorem isCommittedIndex_iff (c : List Nat) (acked : Nat → Option Nat) (r : Nat) :
+    IsCommittedIndex c acked r ↔ r = committedIndexRef c acked :=
+  ⟨fun h => isCommittedIndex_unique h (committedIndexRef_meets_spec_of_any c acked),
+   fun h => h ▸ committedIndexRef_meets_spec_of_any c acked⟩
+
 end GoLean.Quorum
 
 /-! ## Axiom pin

@@ -66,8 +66,23 @@ def uint64Max : Nat := 2 ^ 64 - 1
 /-- **THE SPEC**: `r` is the committed index for config `c` and acked
 data `acked`. Nonempty case: a quorum supports `r` (committedness) and
 no strictly larger index has quorum support (maximality). Empty case:
-the `math.MaxUint64` convention (joint-quorum identity). Both etcd
-implementations satisfy this; it determines `r` uniquely. -/
+the `math.MaxUint64` convention (joint-quorum identity).
+
+It determines `r` UNIQUELY — mechanized as
+`QuorumRefSpec.isCommittedIndex_unique`, with the full characterization
+(`IsCommittedIndex c acked r ↔ r = committedIndexRef c acked`) as
+`isCommittedIndex_iff`. That equivalence is what licenses reading "the
+machine's answer is a committed index" as "the machine computes Go's
+`CommittedIndex`"; before 2026-07-31 it was asserted here and proven
+nowhere (pre-merge audit, finding 5).
+
+UNMECHANIZED, and marked so: the claim that BOTH etcd implementations
+satisfy this. `majority.go`'s is discharged
+(`committedIndexRef_meets_spec`, via the verbatim-pinned reference);
+`quick_test.go`'s `alternativeMajorityCommittedIndex` is not modeled in
+Lean at all, so its agreement is an argued reading of the source ("the
+largest index acked by ≥ n/2+1 voters, 0 if none" is exactly the
+characterization above), not a theorem. -/
 def IsCommittedIndex (c : List Nat) (acked : Nat → Option Nat) (r : Nat) : Prop :=
   (c = [] ∧ r = uint64Max) ∨
   (c ≠ [] ∧
@@ -186,9 +201,12 @@ shape verbatim.
 recorded rather than quietly patched):* the phase-0 shape hardcoded the
 caller environment to the two `$callres` bindings, so an argument
 expression could denote nothing but a literal — and a method whose
-receiver is a heap value (every Go method) was UNSTATEABLE. The phase-0
-`quorumAckedIndexFuncSpec2_statement` consequently passed `#[]` arguments
-to a two-parameter method, which `enterFrame`'s arity check rejects: the
+receiver is a heap value (every Go method) was UNSTATEABLE. The FIRST
+`quorumAckedIndexFuncSpec2_statement` (written at `39891ae` — in phase 4,
+NOT at phase 0; provenance corrected 2026-07-31 per pre-merge audit
+finding 6, since only the SHAPE above is phase-0) consequently passed
+`#[]` arguments to a two-parameter method, which `enterFrame`'s arity
+check rejects: the
 configuration is STUCK, so `Progress` — hence the whole statement — was
 FALSE, not merely unproven. Widening the caller environment is the
 minimal fix that makes the intended claim stateable; the statement is

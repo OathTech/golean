@@ -245,7 +245,14 @@ func harnessSource(fset *token.FileSet, fn *ast.FuncDecl, subject string, argVal
 		fmt.Fprintf(&call, "\t_goleanValues := []any{}\n")
 		for _, name := range names {
 			fmt.Fprintf(&call, "\t{\n")
-			fmt.Fprintf(&call, "\t\t_goleanValue, _goleanErr := _goleanObservationValue(%s)\n", name)
+			// &r, not r: passing the result through an `any` parameter
+			// COLLAPSES an interface-typed result into its dynamic value,
+			// so `reflect` could never see Kind()==Interface and the
+			// machine's `{"tag":"interface",…}` shape had no Go
+			// counterpart it could ever equal (pre-merge audit
+			// 2026-07-31, finding 2). The pointer preserves the STATIC
+			// type; Elem() then reports the real kind.
+			fmt.Fprintf(&call, "\t\t_goleanValue, _goleanErr := _goleanObservationValue(&%s)\n", name)
 			fmt.Fprintf(&call, "\t\tif _goleanErr != nil {\n\t\t\t_goleanPrintError(_goleanErr.Error())\n\t\t\treturn\n\t\t}\n")
 			fmt.Fprintf(&call, "\t\t_goleanValues = append(_goleanValues, _goleanValue)\n")
 			fmt.Fprintf(&call, "\t}\n")
@@ -262,8 +269,11 @@ import (
 	_golean_reflect "reflect"
 )
 
-func _goleanObservationValue(value any) (any, error) {
-	return _goleanReflectValue(_golean_reflect.ValueOf(value))
+// _goleanObservationValue takes a POINTER to the observed result so the
+// result's static type survives: reflect.ValueOf(x) on an interface-typed
+// x reports the DYNAMIC value's kind, never reflect.Interface.
+func _goleanObservationValue(ptr any) (any, error) {
+	return _goleanReflectValue(_golean_reflect.ValueOf(ptr).Elem())
 }
 
 func _goleanReflectValue(value _golean_reflect.Value) (any, error) {
@@ -293,6 +303,28 @@ func _goleanReflectValue(value _golean_reflect.Value) (any, error) {
 			values = append(values, elem)
 		}
 		return map[string]any{"tag": "array", "values": values}, nil
+	case _golean_reflect.Interface:
+		// A BOXED value: Go's own model is (dynamic type, value), and the
+		// machine reports exactly that. A nil interface is the nil
+		// observation (no dynamic type at all).
+		if value.IsNil() {
+			return map[string]any{"tag": "nil"}, nil
+		}
+		inner := value.Elem()
+		name := inner.Type().Name()
+		if name == "" {
+			// An UNNAMED dynamic type (*T, []T, map[K]V, func(...)):
+			// reflect.Type.Name() is empty, and the observation channel's
+			// stated naming contract IS reflect.Type.Name(). Fail closed
+			// rather than invent a spelling the machine might or might not
+			// agree with.
+			return nil, _golean_fmt.Errorf("unsupported Go observation: interface holding unnamed dynamic type %%s", inner.Type())
+		}
+		innerValue, err := _goleanReflectValue(inner)
+		if err != nil {
+			return nil, err
+		}
+		return map[string]any{"tag": "interface", "dynamic": name, "value": innerValue}, nil
 	case _golean_reflect.Struct:
 		fields := []any{}
 		typ := value.Type()

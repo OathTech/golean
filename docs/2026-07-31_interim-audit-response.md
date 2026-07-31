@@ -52,6 +52,19 @@ because a `Func` has no variadic flag to compare against — `M(xs ...int)`
 and `M(xs []int)` are indistinguishable to the check. Documented on the
 structure.
 
+**CLOSED 2026-07-31 by the FINAL pre-merge audit's response (finding 0).**
+The gap was a live silent wrong answer, not a theoretical one: the
+comma-ok assert returned `true` where Go returns `false`, and the
+panicking form ran an ill-typed dispatch where Go aborts with `missing
+method M`. Both directions. `Func` and `MethodSig` now carry a `variadic`
+flag, the frontend emits `sig.Variadic()` for concrete functions,
+methods, lifted literals and interface method-set entries alike, the
+decoder REQUIRES the field (a wire without it fails closed rather than
+defaulting), and `satisfiesMethodSig` compares it. Guardrails:
+`Corpus/coverage/exec/interfaces/method-set-variadic-mismatch` — both
+mismatch directions, the panicking form, the positive variadic/variadic
+pair, and a variadic pair whose ELEMENT types differ.
+
 ## Fail-closures that replace silent wrong answers (deliberate red pins)
 
 Three findings have no correct answer available today. Each is now an

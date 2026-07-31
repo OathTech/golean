@@ -22,7 +22,8 @@
                                    #[GoLean.GoCore.Stmt.assign
                                        (GoLean.GoCore.Assignee.addr (GoLean.GoCore.Expr.var "result$cap"))
                                        (GoLean.GoCore.Expr.intLit 7 (GoLean.GoCore.IntKind.int))]])
-                             (GoLean.GoCore.Stmt.seqn #[])] },
+                             (GoLean.GoCore.Stmt.seqn #[])],
+               variadic := false },
              { id := { key := "recoverDirect" },
                args := #[],
                results := #[{ id := "result", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int) }],
@@ -38,5 +39,6 @@
                                (GoLean.GoCore.Ty.interface { key := "any" })
                                (GoLean.GoCore.Ty.string)
                                (GoLean.GoCore.Expr.stringLit
-                                 { bytes := #[98, 111, 111, 109, 45, 100, 105, 114, 101, 99, 116] }))] }],
+                                 { bytes := #[98, 111, 111, 109, 45, 100, 105, 114, 101, 99, 116] }))],
+               variadic := false }],
   methods := #[] }

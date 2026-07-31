@@ -866,16 +866,19 @@ private def decodeFieldDef (path : String) (json : Json) : LowerM FieldDef := do
   let embedded ← StrictJson.bool s!"{path}.embedded" (← StrictJson.field path obj "embedded")
   pure { name, typ, embedded }
 
-/-- One interface method REQUIREMENT: name plus the signature types, receiver
-excluded. -/
+/-- One interface method REQUIREMENT: name plus the signature types and the
+VARIADIC marker, receiver excluded. `variadic` is REQUIRED on the wire — a
+missing marker would silently default a variadic requirement to
+non-variadic and re-open finding 0's wrong `ok`. -/
 private def decodeMethodSig (path : String) (json : Json) : LowerM MethodSig := do
   let obj ← StrictJson.obj path json
   let name ← StrictJson.string s!"{path}.name" (← StrictJson.field path obj "name")
   let paramsJson ← StrictJson.array s!"{path}.params" (← StrictJson.field path obj "params")
   let resultsJson ← StrictJson.array s!"{path}.results" (← StrictJson.field path obj "results")
+  let variadic ← StrictJson.bool s!"{path}.variadic" (← StrictJson.field path obj "variadic")
   let params ← paramsJson.mapIdxM (fun i t => decodeTy s!"{path}.params[{i}]" t)
   let results ← resultsJson.mapIdxM (fun i t => decodeTy s!"{path}.results[{i}]" t)
-  pure { name, params, results }
+  pure { name, params, results, variadic }
 
 private def decodeTypeDef (path : String) (json : Json) : LowerM (TypeId × TypeDef) := do
   let obj ← StrictJson.obj path json
@@ -926,10 +929,14 @@ private def decodeFunc (path : String) (json : Json) : LowerM Func := do
   | none =>
   let params ← StrictJson.array s!"{path}.params" (← StrictJson.field path obj "params")
   let results ← StrictJson.array s!"{path}.results" (← StrictJson.field path obj "results")
+  -- REQUIRED: Go's variadic marker, the half of the signature interface
+  -- satisfaction compares (audit finding 0). A wire without it fails
+  -- closed rather than defaulting to non-variadic.
+  let variadic ← StrictJson.bool s!"{path}.variadic" (← StrictJson.field path obj "variadic")
   let args ← params.mapIdxM (fun i p => decodeParam s!"{path}.params[{i}]" p)
   let res ← results.mapIdxM (fun i p => decodeParam s!"{path}.results[{i}]" p)
   let body ← decodeStmt res s!"{path}.body" (← StrictJson.field path obj "body")
-  pure { id := ⟨name⟩, args, results := res, body }
+  pure { id := ⟨name⟩, args, results := res, body, variadic }
 
 /-- A method lowers to a receiver-scoped GoCore function (`RecvType.method`,
 receiver as the first parameter) plus a `MethodInfo` dispatch-table entry. -/
@@ -940,6 +947,7 @@ private def decodeMethod (path : String) (json : Json) : LowerM (Func × MethodI
   let recv ← decodeParam s!"{path}.recv" (← StrictJson.field path obj "recv")
   let params ← StrictJson.array s!"{path}.params" (← StrictJson.field path obj "params")
   let results ← StrictJson.array s!"{path}.results" (← StrictJson.field path obj "results")
+  let variadic ← StrictJson.bool s!"{path}.variadic" (← StrictJson.field path obj "variadic")
   let args ← params.mapIdxM (fun i p => decodeParam s!"{path}.params[{i}]" p)
   let res ← results.mapIdxM (fun i p => decodeParam s!"{path}.results[{i}]" p)
   let funcId : FuncId := ⟨s!"{recvType}.{name}"⟩
@@ -952,10 +960,12 @@ private def decodeMethod (path : String) (json : Json) : LowerM (Func × MethodI
       -- is unreachable and fails STUCK (call to a nonexistent function)
       -- if a dispatch bug ever reaches it — never a silent zero return.
       let stub : Stmt := .call #[] ⟨"$interface-method-unreachable"⟩ #[]
-      pure ({ id := funcId, args := #[recv] ++ args, results := res, body := stub }, info)
+      pure ({ id := funcId, args := #[recv] ++ args, results := res, body := stub,
+              variadic }, info)
   | none =>
       let body ← decodeStmt res s!"{path}.body" (← StrictJson.field path obj "body")
-      pure ({ id := funcId, args := #[recv] ++ args, results := res, body }, info)
+      pure ({ id := funcId, args := #[recv] ++ args, results := res, body,
+              variadic }, info)
 
 partial def decodeProgram (json : Json) : LowerM Program := do
   let obj ← StrictJson.obj "program" json
