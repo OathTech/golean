@@ -363,6 +363,87 @@ theorem allocDecls₂ {σ : ExecState} {env : LocalEnv} {r₀ r₁ : Param}
   simp [allocDecls, h0, h1, ExecState.alloc, ExecState.freshLoc,
     Bind.bind, Except.bind]
 
+/-- `allocDecls` at ONE result: a single default-valued allocation.
+General. -/
+theorem allocDecls₁ {σ : ExecState} {env : LocalEnv} {r₀ : Param} {d₀ : GoValue}
+    (h0 : defaultValue σ r₀.typ = .ok d₀) :
+    allocDecls env σ [r₀]
+      = .ok (env.declare r₀.id (Loc.base ⟨σ.nextAddr⟩),
+          allocMany σ [⟨some r₀.typ, d₀⟩]) := by
+  simp only [allocMany]
+  simp [allocDecls, h0, ExecState.alloc, ExecState.freshLoc,
+    Bind.bind, Except.bind]
+
+/-- **Frame entry, two arguments / ONE result, STATIC callee** — the
+arity of every quorum entry point (`run(c, l) Index`,
+`(MajorityConfig).CommittedIndex(l) Index`). Sibling of `wp_call_enter₂`
+with the result list shortened by one; three cells are allocated in the
+single step, so it rides the `wp_alloc_step₃` core. Callee, names, types
+and values are law variables; only the arity is fixed (the family's
+standing scope note, `wp_alloc_step₄`). -/
+theorem wp_call_enter₂₁ {fid : FuncId} {func : Func}
+    {v₀ v₁ w₀ w₁ dv₀ : GoValue}
+    {pid₀ pid₁ rid₀ : String} {pty₀ pty₁ rty₀ : Ty}
+    {locs : List Loc} {env k}
+    (hfind : findFunctionIn? (GoCoreGS.prog GF) fid = some func)
+    (hargs : func.args = #[⟨pid₀, pty₀⟩, ⟨pid₁, pty₁⟩])
+    (hres : func.results = #[⟨rid₀, rty₀⟩])
+    (hnodisp : ∀ σ : ExecState, σ.functions = GoCoreGS.prog GF →
+      σ.methods = GoCoreGS.methods GF → σ.types = GoCoreGS.types GF →
+      dynamicDispatch? σ func #[v₀, v₁] = .ok none)
+    (hnorm₀ : ∀ σ : ExecState, σ.types = GoCoreGS.types GF →
+      normalizeValueForTy σ pty₀ v₀ = .ok w₀)
+    (hnorm₁ : ∀ σ : ExecState, σ.types = GoCoreGS.types GF →
+      normalizeValueForTy σ pty₁ v₁ = .ok w₁)
+    (hdef₀ : ∀ σ : ExecState, σ.types = GoCoreGS.types GF →
+      defaultValue σ rty₀ = .ok dv₀) :
+    iprop(∀ a₀ : Addr, ∀ a₁ : Addr, ∀ a₂ : Addr,
+        a₀.id ↦ (⟨some pty₀, w₀⟩ : HeapCell)
+          ∗ a₁.id ↦ (⟨some pty₁, w₁⟩ : HeapCell)
+          ∗ a₂.id ↦ (⟨some rty₀, dv₀⟩ : HeapCell) -∗
+        WP (Config.exec func.body
+              [[(rid₀, Loc.base a₂), (pid₁, Loc.base a₁), (pid₀, Loc.base a₀)]]
+              (.frame locs [Loc.base a₂] [] k)) @ s ; E {{ Φ }})
+      ⊢ WP (Config.retV v₁ (.callArgsK fid locs [v₀] [] env k))
+          @ s ; E {{ Φ }} := by
+  have henter : ∀ σ : ExecState, σ.functions = GoCoreGS.prog GF →
+      σ.methods = GoCoreGS.methods GF → σ.types = GoCoreGS.types GF →
+      enterFrame σ fid [v₀, v₁]
+        = .ok (func,
+            [[(rid₀, Loc.base ⟨σ.nextAddr + 2⟩),
+              (pid₁, Loc.base ⟨σ.nextAddr + 1⟩), (pid₀, Loc.base ⟨σ.nextAddr⟩)]],
+            [Loc.base ⟨σ.nextAddr + 2⟩],
+            allocMany σ [⟨some pty₀, w₀⟩, ⟨some pty₁, w₁⟩, ⟨some rty₀, dv₀⟩]) := by
+    intro σ hfns hmeths htypes
+    have hbind := bindParams₂ (σ := σ) (p₀ := ⟨pid₀, pty₀⟩) (p₁ := ⟨pid₁, pty₁⟩)
+      (v₀ := v₀) (v₁ := v₁) (w₀ := w₀) (w₁ := w₁)
+      (hnorm₀ σ htypes) (hnorm₁ _ htypes)
+    have hdecl := allocDecls₁
+      (σ := allocMany σ [⟨some pty₀, w₀⟩, ⟨some pty₁, w₁⟩])
+      (env := [[(pid₁, Loc.base ⟨σ.nextAddr + 1⟩), (pid₀, Loc.base ⟨σ.nextAddr⟩)]])
+      (r₀ := ⟨rid₀, rty₀⟩) (d₀ := dv₀) (hdef₀ _ htypes)
+    simp only [allocMany] at hbind hdecl ⊢
+    unfold enterFrame
+    rw [hfns, hfind]
+    simp [hnodisp σ hfns hmeths htypes, hargs, hres, hbind, hdecl,
+      pinResultLocs, LocalEnv.declare, LocalEnv.lookup, Scope.lookup,
+      Bind.bind, Except.bind]
+    exact hfns
+  iintro Hcont
+  iapply (wp_alloc_step₃ (hnv := rfl)
+    (kof := fun a₀ a₁ a₂ => Config.exec func.body
+      [[(rid₀, Loc.base a₂), (pid₁, Loc.base a₁), (pid₀, Loc.base a₀)]]
+      (.frame locs [Loc.base a₂] [] k))
+    (hred := by
+      intro σ₁ hfns hmeths htypes
+      have hstep := Step.callArgsDoneEnter (vals := [v₀]) (locs := locs)
+        (env := env) (k := k) (by simpa using henter σ₁ hfns hmeths htypes)
+      refine ⟨hstep, ?_⟩
+      intro c' s' hst
+      obtain ⟨h1, h2⟩ := step_det (by trivial) hstep hst
+      exact ⟨h1.symm, h2.symm⟩))
+  iexact Hcont
+
 /-- **Frame entry through an interface anchor — two arguments (receiver +
 one) and two results.** The last argument value arrives at the
 `callArgsK` frame; ONE machine step looks the anchor up, redirects to the
@@ -700,6 +781,35 @@ theorem wp_read₂_store₂_step {ra₀ ra₁ ta₀ ta₁ : Addr}
     · isplitl [Hr0 Hr1 Ht0 Ht1 Hcont]
       · iapply Hcont $$ [$Hr0 $Hr1 $Ht0 $Ht1]
       · itrivial
+
+/-- **One-result frame exit, GENERAL in the cells' types**: `return` at a
+frame with one pinned result location and one caller target — read the
+result cell, store its value into the target. `wp_frame_return_int` is
+this law's int-typed special case (its store side-condition internalized
+by `storeLoc_int_any`); the general form is what a result at a NAMED Go
+type needs, because the coercion then resolves through `σ.types` and only
+the caller can compute it. -/
+theorem wp_frame_return₁ {ta ra : Addr} {rcell tcell tcell' : HeapCell} {k}
+    (hstore : ∀ σ : ExecState, σ.types = GoCoreGS.types GF →
+      Heap.lookup σ.heap (.base ta) = some tcell →
+      storeLoc σ (.base ta) rcell.value
+        = .ok { σ with heap := Heap.set σ.heap (.base ta) tcell' }) :
+    ra.id ↦ rcell ∗ ta.id ↦ tcell
+      ∗ (ra.id ↦ rcell ∗ ta.id ↦ tcell' -∗ WP (Config.next k) @ s ; E {{ Φ }})
+      ⊢ WP (Config.returning (.frame [.base ta] [.base ra] [] k))
+          @ s ; E {{ Φ }} := by
+  iapply wp_store_step₂ (hnv := rfl)
+  intro σ _hfns _hmeths htypes hlookr hlookt
+  have hload : loadMany σ [Loc.base ra] = .ok [rcell.value] := by
+    simp [loadMany, loadLoc, hlookr, Bind.bind, Except.bind]
+  have hstore' : storeMany σ [Loc.base ta] [rcell.value]
+      = .ok { σ with heap := Heap.set σ.heap (.base ta) tcell' } := by
+    simp [storeMany, hstore σ htypes hlookt, Bind.bind, Except.bind]
+  have hstep := Step.frameReturn (k := k) hload hstore'
+  refine ⟨hstep, ?_⟩
+  intro c' s' hst
+  obtain ⟨h1, h2⟩ := step_det (by trivial) hstep hst
+  exact ⟨h1.symm, h2.symm⟩
 
 /-- **Two-result frame exit**: `return` at a frame with TWO pinned result
 locations and TWO caller targets — read both result cells, store both

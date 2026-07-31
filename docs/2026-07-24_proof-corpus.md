@@ -73,7 +73,8 @@ so the record starts honest rather than aspirational.
 | `quorum/committed-index-real` (**PINNED ACTUAL LOWERING** — `GoldenQuorum.quorumLowered`, `scripts/check-golden`'s third program) | `GoLean.Iris.wp_call_dynamic_enter_ackedIndex` | **interface DYNAMIC DISPATCH frame entry on real etcd-io/raft code**: the callsite names the anchor `main.AckedIndexer.AckedIndex`, the receiver arrives as an interface box of dynamic type `.defined main.mapAckIndexer`, and one step redirects to `main.mapAckIndexer.AckedIndex` with the receiver unboxed, binds receiver+`id` normalized at their declared (named) types and defaults `$res0 : main.Index`/`$res1 : bool`. Every premise computed against the pin; only the three ghost pins external. Landed 2026-07-31 (phase-4 types-pin slice) together with the general law `wp_call_dynamic_enter₂`. |
 | `quorum/committed-index-real` (same pin) | `GoLean.Iris.wp_map_lookup_ackedIndex` | the REAL `idx, ok := m[id]` comma-ok read of `main.mapAckIndexer.AckedIndex`, now FAITHFUL to the lowering's `.defined main.Index` target cell (the recorded `uint64` divergence is closed by the `σ.types` pin). |
 | `quorum/committed-index-real` (same pin) | `GoLean.Surface.quorumAckedIndexFuncSpec2` | **W1 PAID — the first multi-result function spec.** `main.mapAckIndexer.AckedIndex` on a concrete one-entry receiver, at `GoFuncSpec2` strength over the pinned lowering: the caller's two cells receive `(12, true)`, in any admissible heap, beside any frame. Stresses the whole two-result protocol end to end — the two-target/two-argument call operand walk (`wp_call_target_next`/`targets_done_arg`/`arg_next`), the STATIC 2-param/2-result frame entry (`wp_call_enter₂` + witness `wp_call_enter_ackedIndexImpl`), `wp_init` at the DEFINED type `main.Index`, the comma-ok read, two stores at a defined type, and the TWO-result frame EXIT (`wp_frame_return₂` on the new `wp_read₂_store₂_step` core). Vacuity guard same commit: `quorumAckedIndexPre_satisfiable`. Landed 2026-07-31 (phase-4 slice 5); the phase-0 statement it replaces was FALSE (arity-stuck), which is recorded at the statement. |
-| `quorum/committed-index-real` (same pin) | `GoLean.Quorum.isCommittedIndex_oneKnown` | the MATH half of the tier-1 claim on the one-voter instance: `committedIndexRef [1] ackedOneKnown = 12` (`rfl`) upgraded to the declarative `IsCommittedIndex` by the proven `committedIndexRef_meets_spec`, with the negative twin at 11. **OWED: the machine half** — `GoLean.Surface.quorumOneKnownFuncSpec_statement` is a stated TARGET, not a theorem (`Specs/GoldenQuorumWP.lean`); until it is discharged nothing here claims the machine lands on 12. |
+| `quorum/committed-index-real` (same pin) | `GoLean.Quorum.isCommittedIndex_oneKnown` | the MATH half of the tier-1 claim on the one-voter instance: `committedIndexRef [1] ackedOneKnown = 12` (`rfl`) upgraded to the declarative `IsCommittedIndex` by the proven `committedIndexRef_meets_spec`, with the negative twin at 11. **The machine half is now PAID** — see the row below. |
+| `quorum/committed-index-real` (same pin) | `GoLean.Surface.quorumOneKnownFuncSpec` / `quorumOneKnownMeetsSpec` | **THE ARC'S NAMED GOAL, PAID (2026-07-31, phase-4 summit).** `committedOneKnown()` — the pinned lowering of the real etcd-io/raft driver — returns `12` at `GoFuncSpec` strength, and the same discharge restated with the DECLARATIVE quorum spec as its postcondition (`IsCommittedIndex [1] ackedOneKnown n.toNat`). The walk (`wp_oneKnownCall → wp_oneKnown_body → wp_run_body → wp_committedIndexCall → wp_committedIndex_body`) crosses: two `make(map…)`s that ALLOCATE inside the apply step and two `m[k]=v` writes, three frame entries at two arities, `len(c)` on a named map type, `var stk [7]uint64` and its reslice `stk[:n]`, the NONDETERMINISTIC map range, interface dynamic dispatch, comma-ok, a store THROUGH a slice index into the backing array, `slices.Sort`, and the `n - (n/2+1)` readout. First-order readout `quorumOneKnownReturnsTwelve` + run-conditioned negative twin `quorumOneKnownNotEleven`. **Scope: n = 1** (degenerate range nondeterminism, reslice branch); the 3-voter widening is owed. |
 
 
 **Owed, in ladder order** (each becomes an entry when its rung lands; a
@@ -90,14 +91,25 @@ block on it):
   recorded as owed there. Also owed from this rung: the FALL-path
   two-result exit (`wp_frame_fall`'s analogue for two results) — Go
   reaches it for a multi-result function that ends without `return`.
-- NEW (2026-07-31): the quorum DRIVER walk —
-  `GoLean.Surface.quorumOneKnownFuncSpec_statement` (`committedOneKnown()
-  = 12` at `GoFuncSpec` strength over the pinned real lowering) and its
-  negative twin. Needs, beyond what exists: an ALLOCATING wide-op apply
-  core (`makeMap`), `makeSlice`/array-to-slice laws, the nondeterministic
-  map-range composition, and the ~200-step assembly. (The two-result
-  frame exit it also needed is PAID, 2026-07-31.) This is the tier-1
-  claim's only missing link — the math half is proven.
+- ~~NEW (2026-07-31): the quorum DRIVER walk~~ — **PAID 2026-07-31**
+  (`quorumOneKnownFuncSpec`, manifest row above). The residue it leaves,
+  recorded rather than dropped:
+  - **the 3-VOTER walk.** At `n = 1` the map range's nondeterminism is
+    degenerate (one iteration order), the sort is over a one-element
+    window, and `pos = n - (n/2+1)` is `0`. Three voters make all three
+    bite — this is the next widening and the one that tests whether the
+    `∀ i` range law composes when the order genuinely varies.
+  - **the `make([]uint64, n)` branch of the fit test**, exercised only by
+    the law witness (`wp_make_slice_c2`), not by a composed walk.
+  - **the unconditional negative twin**
+    (`quorumOneKnownNotEleven_statement`): not refutable from the triple,
+    since a `GoTriple` is vacuous on a non-terminating program; refuting
+    it needs an EXHIBITED terminating run (kernel evaluation of the
+    interpreter over the whole pinned program). The run-conditioned twin
+    is proven.
+  - `newValue` and `appendSlice`'s spill path — the other two allocating
+    wide ops; the core (`wp_stmt_op_apply_alloc_store`) covers them, no
+    walk forces them yet.
 - W2 switch — `control-flow/switch-basic`'s `classify`; stresses the
   if-chain walk and whether case dispatch composes with early return.
   (The `wp_breakable_*` laws landed 2026-07-26; the composed entry

@@ -65,10 +65,13 @@ its `BEq` and, being a NESTED inductive, got an OPAQUE equality function
 all. `Ty.eqb` (`GoLean/GoCore/Value.lean`) is the total transparent
 replacement; the differential is unchanged by it.
 
-What the apply-step cores here do NOT cover: wide ops that ALLOCATE
-inside `applyStmtOp` (`makeMap`, `makeSlice`, `newValue`, `appendSlice`'s
-spill path) — those need an allocating apply core in the
-`wp_alloc_step₄` style, which the quorum DRIVER walk will force.
+6. **The ALLOCATING apply core** (§2b, added by the summit slice
+   2026-07-31): wide ops that allocate a fresh cell INSIDE `applyStmtOp`
+   and publish a handle to it in their target — `wp_stmt_op_apply_alloc_store`
+   on the general `wp_alloc_store_step` core (`Lifting.lean`), with
+   `wp_make_map` and `wp_make_slice` as its two instances. `newValue` and
+   `appendSlice`'s spill path are the same shape and stay owed (no walk
+   forces them yet).
 -/
 
 open Iris Iris.ProgramLogic Iris.Std Iris.Std.PartialMap
@@ -77,6 +80,30 @@ open GoLean GoLean.GoCore GoLean.GoCore.Machine
 namespace GoLean.Iris
 
 set_option linter.unusedSimpArgs false
+
+/-! ## Environment algebra the multi-declaration walks need
+
+`Laws/*` so far only ever resolved names in a CONCRETE environment
+literal, where `rfl` suffices. A walk through a body that DECLARES
+variables carries `env.declare id ℓ` layers over a quantified `env`, so
+resolution needs the three general equations below. Nothing about a
+program appears; this is `LocalEnv`'s own algebra. -/
+
+/-- A freshly declared name resolves to its new location. -/
+theorem lookup_declare_self {env : LocalEnv} {id : String} {l : Loc} :
+    LocalEnv.lookup (env.declare id l) id = some l := by
+  cases env <;> simp [LocalEnv.declare, LocalEnv.lookup, Scope.lookup]
+
+/-- Declaring a DIFFERENT name leaves a resolution unchanged. -/
+theorem lookup_declare_ne {env : LocalEnv} {id id' : String} {l : Loc}
+    (hne : (id' == id) = false) :
+    LocalEnv.lookup (env.declare id' l) id = LocalEnv.lookup env id := by
+  cases env <;> simp [LocalEnv.declare, LocalEnv.lookup, Scope.lookup, hne]
+
+/-- Entering a block (an empty pushed scope) leaves resolutions unchanged. -/
+theorem lookup_pushScope {env : LocalEnv} {id : String} :
+    LocalEnv.lookup env.pushScope id = LocalEnv.lookup env id := by
+  simp [LocalEnv.pushScope, LocalEnv.lookup, Scope.lookup]
 
 /-! ## Heap algebra the multi-write steps need
 
@@ -160,7 +187,7 @@ theorem wp_map_range_snapshot {ba : Addr} {mty : Option Ty}
   iapply wp_det_step_keep (P := iprop(ba.id ↦ (⟨mty, .mapData entries⟩ : HeapCell)))
     (c₁ := Config.next (.mapIterK keyVar valVar keyTy valTy body entries env k))
     (hnv := rfl)
-  intro σ₁
+  intro σ₁ _hfns _hmeths _htypes
   iintro ⟨Hσ, Hpt⟩
   ihave %Hmap : ⌜get? (heapToMap σ₁.heap) ba.id
       = some (⟨mty, .mapData entries⟩ : HeapCell)⌝ $$ [Hσ Hpt]
@@ -257,6 +284,123 @@ theorem wp_stmt_op_apply_store {op : StmtOp} {nt : Nat} {done : List GoValue}
   | @stmtOpApplyPanic _ _ _ _ _ _ _ _ ch hap =>
     rw [happly σ₁ ch htypes hlook] at hap
     exact absurd hap (by simp)
+
+/-! ## 2b. The ALLOCATING apply step (`makeMap`, `makeSlice`, `newValue`)
+
+The wide ops that allocate a fresh cell *inside* `applyStmtOp` and then
+publish a handle to it in their target — the class the earlier slices
+recorded as owed. One core (`wp_alloc_store_step`, `Lifting.lean`) and
+two instances; the continuation quantifies over the machine's chosen
+address, as everywhere fresh cells appear. -/
+
+/-- **The apply step, allocate-and-store form**: the last operand arrives
+and ONE step allocates `fcell` at a fresh address and writes the target
+cell (whose new content may name that address — hence `newcell : Addr →
+HeapCell`). `happly` is the wide op's cell-conditioned transition, in the
+`wp_stmt_op_apply_store` style, additionally given that the target is not
+the fresh address (true because it is already mapped). -/
+theorem wp_stmt_op_apply_alloc_store {op : StmtOp} {nt : Nat}
+    {done : List GoValue} {v : GoValue} {a : Addr} {fcell oldcell : HeapCell}
+    (newcell : Addr → HeapCell) {env k}
+    (happly : ∀ (σ : ExecState) (ch : Choices), σ.types = GoCoreGS.types GF →
+      Heap.lookup σ.heap (.base a) = some oldcell →
+      a.id ≠ σ.nextAddr →
+      applyStmtOp σ ch op nt (v :: done).reverse
+        = .ok ({ σ with
+                 heap := Heap.set (Heap.set σ.heap (.base ⟨σ.nextAddr⟩) fcell)
+                           (.base a) (newcell ⟨σ.nextAddr⟩),
+                 nextAddr := σ.nextAddr + 1 }, ch)) :
+    a.id ↦ oldcell
+      ∗ iprop(∀ fa : Addr, fa.id ↦ fcell ∗ a.id ↦ newcell fa -∗
+          WP (Config.next k) @ s ; E {{ Φ }})
+      ⊢ WP (Config.retV v (.stmtOpK op nt done [] env k)) @ s ; E {{ Φ }} := by
+  iapply (wp_alloc_store_step newcell (hnv := rfl))
+  intro σ₁ _hfns _hmeths htypes hlook hne
+  refine ⟨Step.stmtOpApply (ch := []) (happly σ₁ [] htypes hlook hne), ?_⟩
+  intro c' s' hst
+  cases hst with
+  | @stmtOpApply _ _ _ _ _ _ _ _ ch _ hap =>
+    rw [happly σ₁ ch htypes hlook hne] at hap
+    injection hap with hap
+    exact ⟨rfl, (Prod.mk.inj hap).1.symm⟩
+  | @stmtOpApplyPanic _ _ _ _ _ _ _ _ ch hap =>
+    rw [happly σ₁ ch htypes hlook hne] at hap
+    exact absurd hap (by simp)
+
+/-- **`m = make(map[K]V)`** as ONE step: allocate the map's data cell
+(empty, and UNTYPED — `applyStmtOp` allocates it with no declared type)
+and store a map handle naming it into the target. `hstore` is the
+cell-conditioned store fact, quantified over the fresh address because
+the stored value names it; the target's declared type is whatever the
+lowering gave it, so the coercion is the caller's to discharge (at a
+`.defined` map type it resolves through `σ.types` — hence the pin). -/
+theorem wp_make_map {a : Addr} {oldcell : HeapCell} (newcell : Addr → HeapCell)
+    {env k}
+    (hstore : ∀ (σ : ExecState) (fa : Addr), σ.types = GoCoreGS.types GF →
+      Heap.lookup σ.heap (.base a) = some oldcell →
+      storeLoc σ (.base a) (.map ⟨some (.base fa)⟩)
+        = .ok { σ with heap := Heap.set σ.heap (.base a) (newcell fa) }) :
+    a.id ↦ oldcell
+      ∗ iprop(∀ fa : Addr, fa.id ↦ (⟨none, .mapData #[]⟩ : HeapCell)
+          ∗ a.id ↦ newcell fa -∗ WP (Config.next k) @ s ; E {{ Φ }})
+      ⊢ WP (Config.retV (.addr (.base a))
+            (.stmtOpK (.makeMap false) 1 [] [] env k)) @ s ; E {{ Φ }} := by
+  iapply (wp_stmt_op_apply_alloc_store (done := [])
+    (fcell := (⟨none, .mapData #[]⟩ : HeapCell)) newcell)
+  intro σ ch htypes hlook hne
+  have hlook' : Heap.lookup
+      (Heap.set σ.heap (.base ⟨σ.nextAddr⟩) ⟨none, .mapData #[]⟩) (.base a)
+      = some oldcell := by
+    have := heap_lookup_set_base_ne (h := σ.heap) (n := a.id)
+      (b := (⟨σ.nextAddr⟩ : Addr)) (c := (⟨none, .mapData #[]⟩ : HeapCell))
+      (fun he => hne he.symm)
+    simpa using this.trans (by simpa using hlook)
+  have hst := hstore { σ with
+      heap := Heap.set σ.heap (.base ⟨σ.nextAddr⟩) ⟨none, .mapData #[]⟩,
+      nextAddr := σ.nextAddr + 1 } ⟨σ.nextAddr⟩ htypes hlook'
+  simp [applyStmtOp, valueAsLoc, ExecState.alloc, ExecState.freshLoc, hst,
+    Bind.bind, Except.bind]
+
+/-- **`s = make([]T, n)`** as ONE step: allocate the backing array (the
+default value at `[n]T`) and store a slice handle over it. Same core as
+`wp_make_map`; `hbacking` is the machine's own default-array computation
+(state-quantified under the type pin — `buildDefaultArrayValue` resolves
+named element types) and `hstore` the cell-conditioned store. The length
+operand is delivered as an `Int`; `hlen` fixes its non-negative reading,
+which is what makes the `makeslice` bounds checks pass. -/
+theorem wp_make_slice {elem : Ty} {a : Addr} {n : Nat} {oldcell : HeapCell}
+    {backing : GoValue} (newcell : Addr → HeapCell) {env k}
+    (hbacking : ∀ σ : ExecState, σ.types = GoCoreGS.types GF →
+      buildDefaultArrayValue σ n elem = .ok backing)
+    (hstore : ∀ (σ : ExecState) (fa : Addr), σ.types = GoCoreGS.types GF →
+      Heap.lookup σ.heap (.base a) = some oldcell →
+      storeLoc σ (.base a)
+          (.slice { base := some (.base fa), offset := 0, len := n, cap := n })
+        = .ok { σ with heap := Heap.set σ.heap (.base a) (newcell fa) }) :
+    a.id ↦ oldcell
+      ∗ iprop(∀ fa : Addr, fa.id ↦ (⟨some (.array n elem), backing⟩ : HeapCell)
+          ∗ a.id ↦ newcell fa -∗ WP (Config.next k) @ s ; E {{ Φ }})
+      ⊢ WP (Config.retV (.int (Int.ofNat n) .int)
+            (.stmtOpK (.makeSlice elem false) 1 [.addr (.base a)] [] env k))
+          @ s ; E {{ Φ }} := by
+  iapply (wp_stmt_op_apply_alloc_store (done := [.addr (.base a)])
+    (fcell := (⟨some (.array n elem), backing⟩ : HeapCell)) newcell)
+  intro σ ch htypes hlook hne
+  have hlook' : Heap.lookup
+      (Heap.set σ.heap (.base ⟨σ.nextAddr⟩) ⟨some (.array n elem), backing⟩)
+      (.base a) = some oldcell := by
+    have := heap_lookup_set_base_ne (h := σ.heap) (n := a.id)
+      (b := (⟨σ.nextAddr⟩ : Addr))
+      (c := (⟨some (.array n elem), backing⟩ : HeapCell))
+      (fun he => hne he.symm)
+    simpa using this.trans (by simpa using hlook)
+  have hst := hstore { σ with
+      heap := Heap.set σ.heap (.base ⟨σ.nextAddr⟩) ⟨some (.array n elem), backing⟩,
+      nextAddr := σ.nextAddr + 1 } ⟨σ.nextAddr⟩ htypes hlook'
+  have hn : ¬ ((n : Int) < 0) := by omega
+  simp [applyStmtOp, valueAsLoc, valueAsInt, natFromNonnegativeInt, hn,
+    hbacking σ htypes, ExecState.alloc, ExecState.freshLoc, hst,
+    Bind.bind, Except.bind]
 
 /-! ## 3. `sortSlice` — the `slices.Sort` extern -/
 
@@ -541,6 +685,10 @@ theorem typeEnv_mapAckIndexer :
     TypeEnv.lookup quorumLowered.typeDefs.toList ⟨"main.mapAckIndexer"⟩
       = some (.defined (.map (.int .uint64) (.defined ⟨"main.Index"⟩))) := rfl
 
+theorem typeEnv_structEmpty :
+    TypeEnv.lookup quorumLowered.typeDefs.toList ⟨"struct{}"⟩
+      = some (.struct #[]) := rfl
+
 theorem typeEnv_MajorityConfig :
     TypeEnv.lookup quorumLowered.typeDefs.toList ⟨"main.MajorityConfig"⟩
       = some (.defined (.map (.int .uint64) (.defined ⟨"struct{}"⟩))) := rfl
@@ -594,6 +742,214 @@ theorem ackedIndexImpl_body_eq :
         .seqn #[.assign (.var "$res0") (.var "idx"),
                 .assign (.var "$res1") (.var "ok"),
                 .returnStmt]] := rfl
+
+/-! ### The whole driver chain, `rfl`-projected out of the pin
+
+`committedOneKnown → run → main.MajorityConfig.CommittedIndex` — the three
+function bodies the summit walk traverses, each split into the statements
+the walk steps through. Every lemma below is `rfl` against
+`GoldenQuorum.quorumLowered`: edit the pin and they stop compiling, which
+is the whole point of naming them rather than inlining literals. -/
+
+def committedIndexImpl : Func :=
+  (findFunctionIn? quorumLowered.funcs ⟨"main.MajorityConfig.CommittedIndex"⟩).getD
+    missingFunc
+
+def runImpl : Func :=
+  (findFunctionIn? quorumLowered.funcs ⟨"run"⟩).getD missingFunc
+
+def oneKnownImpl : Func :=
+  (findFunctionIn? quorumLowered.funcs ⟨"committedOneKnown"⟩).getD missingFunc
+
+theorem committedIndexImpl_find :
+    findFunctionIn? quorumLowered.funcs ⟨"main.MajorityConfig.CommittedIndex"⟩
+      = some committedIndexImpl := rfl
+
+theorem runImpl_find :
+    findFunctionIn? quorumLowered.funcs ⟨"run"⟩ = some runImpl := rfl
+
+theorem oneKnownImpl_find :
+    findFunctionIn? quorumLowered.funcs ⟨"committedOneKnown"⟩
+      = some oneKnownImpl := rfl
+
+theorem committedIndexImpl_args :
+    committedIndexImpl.args = #[⟨"c", .defined ⟨"main.MajorityConfig"⟩⟩,
+                                ⟨"l", .interface ⟨"main.AckedIndexer"⟩⟩] := rfl
+
+theorem committedIndexImpl_results :
+    committedIndexImpl.results = #[⟨"$res0", .defined ⟨"main.Index"⟩⟩] := rfl
+
+theorem runImpl_args :
+    runImpl.args = #[⟨"c", .defined ⟨"main.MajorityConfig"⟩⟩,
+                     ⟨"l", .defined ⟨"main.mapAckIndexer"⟩⟩] := rfl
+
+theorem runImpl_results :
+    runImpl.results = #[⟨"$res0", .int .uint64⟩] := rfl
+
+theorem oneKnownImpl_args : oneKnownImpl.args = #[] := rfl
+
+theorem oneKnownImpl_results :
+    oneKnownImpl.results = #[⟨"$res0", .int .uint64⟩] := rfl
+
+theorem committedIndexImpl_body_eq :
+    committedIndexImpl.body = .block #[] committedIndexStmts := rfl
+
+/-! The nine statements of `CommittedIndex`, in order. -/
+
+def ciLenStmt : Stmt := (committedIndexStmts[0]?).getD (.seqn #[])
+def ciEmptyIf : Stmt := (committedIndexStmts[1]?).getD (.seqn #[])
+def ciStkDecl : Stmt := (committedIndexStmts[2]?).getD (.seqn #[])
+def ciSrtDecl : Stmt := (committedIndexStmts[3]?).getD (.seqn #[])
+def ciFitIf : Stmt := (committedIndexStmts[4]?).getD (.seqn #[])
+def ciLoopBlock : Stmt := (committedIndexStmts[5]?).getD (.seqn #[])
+def ciPosStmt : Stmt := (committedIndexStmts[7]?).getD (.seqn #[])
+def ciResStmt : Stmt := (committedIndexStmts[8]?).getD (.seqn #[])
+
+theorem committedIndexStmts_toList :
+    committedIndexStmts.toList =
+      [ciLenStmt, ciEmptyIf, ciStkDecl, ciSrtDecl, ciFitIf, ciLoopBlock,
+       sortStmt, ciPosStmt, ciResStmt] := rfl
+
+theorem ciLenStmt_eq :
+    ciLenStmt = .seqn #[.initialization ⟨"n", .int .int⟩,
+      .assign (.var "n")
+        (.length (.var "c") (some (.defined ⟨"main.MajorityConfig"⟩)))] := rfl
+
+theorem ciEmptyIf_eq :
+    ciEmptyIf = .ifThenElse (.eqCmp (.int .int) (.var "n") (.intLit 0 .int))
+      (.block #[] #[.seqn #[.assign (.var "$res0")
+        (.intLit 18446744073709551615 .uint64), .returnStmt]])
+      (.seqn #[]) := rfl
+
+theorem ciStkDecl_eq :
+    ciStkDecl = .seqn #[.initialization ⟨"stk", .array 7 (.int .uint64)⟩] := rfl
+
+theorem ciSrtDecl_eq :
+    ciSrtDecl = .seqn #[.initialization ⟨"srt", .slice (.int .uint64)⟩] := rfl
+
+/-- The `len(stk) >= n` fit test. The TAKEN branch reslices the on-stack
+array (`srt = stk[:n]`); the other allocates (`make([]uint64, n)`). -/
+theorem ciFitIf_eq :
+    ciFitIf = .ifThenElse (.atLeastCmp (.intLit 7 .int) (.var "n"))
+      (.block #[] #[.seqn #[.assign (.var "srt")
+        (.slice (.ref "stk") (.intLit 0 .int) (.var "n") none)]])
+      (.block #[]
+        #[.seqn #[.initialization ⟨"$c2", .slice (.int .uint64)⟩,
+                  .makeSlice (.var "$c2") (.int .uint64) (.var "n") none],
+          .seqn #[.assign (.var "srt") (.var "$c2")]]) := rfl
+
+/-- `$c2 = make([]uint64, n)` — the heap-allocating branch of the fit
+test (`len(stk) >= n` false). Not on the `n = 1` path, which is exactly
+why it is the right subject for the `makeSlice` witness: the law must be
+discharged on a real statement even where the summit walk does not go. -/
+def ciMakeSliceStmt : Stmt :=
+  match ciFitIf with
+  | .ifThenElse _ _ (.block _ inner) =>
+      match (inner[0]?).getD (.seqn #[]) with
+      | .seqn arr => (arr[1]?).getD (.seqn #[])
+      | _ => .seqn #[]
+  | _ => .seqn #[]
+
+theorem ciMakeSliceStmt_eq :
+    ciMakeSliceStmt = .makeSlice (.var "$c2") (.int .uint64) (.var "n") none :=
+  rfl
+
+def ciIDecl : Stmt :=
+  .seqn #[.initialization ⟨"i", .int .int⟩,
+          .assign (.var "i") (.sub (.var "n") (.intLit 1 .int))]
+
+theorem ciLoopBlock_eq : ciLoopBlock = .block #[] #[ciIDecl, rangeStmt] := rfl
+
+def ciCallSeq : Stmt :=
+  .seqn #[.initialization ⟨"idx", .defined ⟨"main.Index"⟩⟩,
+          .initialization ⟨"ok", .bool⟩,
+          .call #[.var "idx", .var "ok"] ⟨"main.AckedIndexer.AckedIndex"⟩
+            #[.var "l", .var "id"]]
+
+def ciOkThen : Stmt :=
+  .block #[]
+    #[.seqn #[.assign (.addr (.indexAddr (.var "srt") (.var "i")))
+                (.convert (.int .uint64) (.var "idx"))],
+      .assign (.var "i") (.sub (.var "i") (.intLit 1 .int))]
+
+def ciOkIf : Stmt := .ifThenElse (.var "ok") ciOkThen (.seqn #[])
+
+theorem rangeBody_eq :
+    rangeBody = .block #[] #[.block #[] #[ciCallSeq, ciOkIf]] := rfl
+
+theorem ciPosStmt_eq :
+    ciPosStmt = .seqn #[.initialization ⟨"pos", .int .int⟩,
+      .assign (.var "pos")
+        (.sub (.var "n") (.add (.div (.var "n") (.intLit 2 .int))
+          (.intLit 1 .int)))] := rfl
+
+theorem ciResStmt_eq :
+    ciResStmt = .seqn #[.assign (.var "$res0")
+        (.convert (.defined ⟨"main.Index"⟩) (.indexGet (.var "srt") (.var "pos"))),
+      .returnStmt] := rfl
+
+/-! `run`, the two-statement wrapper the driver calls. -/
+
+def runCallSeq : Stmt :=
+  .seqn #[.initialization ⟨"$c3", .defined ⟨"main.Index"⟩⟩,
+          .call #[.var "$c3"] ⟨"main.MajorityConfig.CommittedIndex"⟩
+            #[.var "c",
+              .toInterface (.interface ⟨"main.AckedIndexer"⟩)
+                (.defined ⟨"main.mapAckIndexer"⟩) (.var "l")]]
+
+def runResSeq : Stmt :=
+  .seqn #[.assign (.var "$res0") (.convert (.int .uint64) (.var "$c3")),
+          .returnStmt]
+
+theorem runImpl_body_eq : runImpl.body = .block #[] #[runCallSeq, runResSeq] := rfl
+
+/-! `committedOneKnown`, the driver: build `MajorityConfig{1:{}}` and
+`mapAckIndexer{1:12}`, call `run`, return. -/
+
+def okCfgSeq : Stmt :=
+  .seqn #[.initialization ⟨"$c10", .map (.int .uint64) (.defined ⟨"struct{}"⟩)⟩,
+          .makeMap (.var "$c10") (.int .uint64) (.defined ⟨"struct{}"⟩) none,
+          .mapAssign (.var "$c10") (.intLit 1 .uint64)
+            (.structLit (.defined ⟨"struct{}"⟩) #[])
+            (.int .uint64) (.defined ⟨"struct{}"⟩)]
+
+def okAckSeq : Stmt :=
+  .seqn #[.initialization ⟨"$c11", .map (.int .uint64) (.defined ⟨"main.Index"⟩)⟩,
+          .makeMap (.var "$c11") (.int .uint64) (.defined ⟨"main.Index"⟩) none,
+          .mapAssign (.var "$c11") (.intLit 1 .uint64) (.intLit 12 .uint64)
+            (.int .uint64) (.defined ⟨"main.Index"⟩)]
+
+def okCallSeq : Stmt :=
+  .seqn #[.initialization ⟨"$c12", .int .uint64⟩,
+          .call #[.var "$c12"] ⟨"run"⟩ #[.var "$c10", .var "$c11"]]
+
+def okResSeq : Stmt :=
+  .seqn #[.assign (.var "$res0") (.var "$c12"), .returnStmt]
+
+theorem oneKnownImpl_body_eq :
+    oneKnownImpl.body = .block #[] #[okCfgSeq, okAckSeq, okCallSeq, okResSeq] :=
+  rfl
+
+/-- `var stk [7]uint64` — the on-stack scratch array's zero value, the
+declaration's default (`majority.go`'s "use an on-stack slice to keep us
+off the heap" trick, verbatim in the pin). -/
+def stkZero : GoValue :=
+  .array #[.int 0 .uint64, .int 0 .uint64, .int 0 .uint64, .int 0 .uint64,
+           .int 0 .uint64, .int 0 .uint64, .int 0 .uint64]
+
+/-- The same array after the single voter's index has been written at
+slot 0 — the state `slices.Sort` then sorts (over a length-1 window, so
+it is the sorted image too). -/
+def stkOne (v : Int) : GoValue :=
+  .array #[.int v .uint64, .int 0 .uint64, .int 0 .uint64, .int 0 .uint64,
+           .int 0 .uint64, .int 0 .uint64, .int 0 .uint64]
+
+/-- The declaration default at `[7]uint64`, computed. -/
+theorem defaultValue_stk (σ : ExecState) :
+    defaultValue σ (.array 7 (.int .uint64)) = .ok stkZero := by
+  simp only [defaultValue, defaultValueFuel, typeResolutionFuel, stkZero,
+    Bind.bind, Except.bind]
+  rfl
 
 /-! The concrete cells the `sortSlice` witness sorts: a 3-element `uint64`
 backing array, unsorted, and its sorted image. -/
@@ -701,34 +1057,41 @@ theorem wp_sort_slice_srt {sa ba : Addr} {env k}
 
 /-- **Witness for `wp_map_lookup`** (and for the target/plain operand
 shifts) on the REAL `idx, ok := m[id]` of the pinned
-`main.mapAckIndexer.AckedIndex`: the whole statement walk on a one-entry
-`uint64 → Index` map, key present, `12` delivered with `ok = true`.
+`main.mapAckIndexer.AckedIndex`: the whole statement walk on a ONE-ENTRY
+`uint64 → Index` map, key present, the stored index delivered with
+`ok = true`.
+
+Generic in the entry (`q ↦ v`, any representable `uint64`s) and in the
+data cell's declared type — deliberately, per the standing
+over-specialization check: the earlier form hard-coded `3 ↦ 12` and a
+`some (.map …)`-typed data cell, neither of which is a property of Go.
+`makeMap` allocates the data cell with NO declared type, so a walk over
+the real driver could not have used the pinned-type version at all.
 
 FAITHFUL TO THE PIN as of the `σ.types` pin (quorum pilot phase 4): the
 `idx` target cell is declared `.defined main.Index`, exactly as the
 lowering declares it — the store's coercion at that named type resolves
-through `σ.types`, dischargeable now that the ghost state pins it. (The
-earlier version of this witness declared the cell `.int .uint64` and
-recorded the divergence; that gap is closed.) -/
-theorem wp_map_lookup_ackedIndex {ma ida mba ta oa : Addr} {env k}
+through `σ.types`, dischargeable now that the ghost state pins it. -/
+theorem wp_map_lookup_ackedIndex {ma ida mba ta oa : Addr} {mty : Option Ty}
+    {q v : Int} {env k}
     (htypes : GoCoreGS.types GF = GoldenQuorum.quorumLowered.typeDefs.toList)
+    (hq : IntKind.uint64.normalize q = q)
+    (hv : IntKind.uint64.normalize v = v)
     (hm : LocalEnv.lookup env "m" = some (.base ma))
     (hid : LocalEnv.lookup env "id" = some (.base ida))
     (hidx : LocalEnv.lookup env "idx" = some (.base ta))
     (hok : LocalEnv.lookup env "ok" = some (.base oa)) :
     ma.id ↦ (⟨some (.defined ⟨"main.mapAckIndexer"⟩),
               .map ⟨some (.base mba)⟩⟩ : HeapCell)
-      ∗ ida.id ↦ (⟨some (.int .uint64), .int 3 .uint64⟩ : HeapCell)
-      ∗ mba.id ↦ (⟨some (.map (.int .uint64) (.defined ⟨"main.Index"⟩)),
-                   .mapData #[(.int 3 .uint64, .int 12 .uint64)]⟩ : HeapCell)
+      ∗ ida.id ↦ (⟨some (.int .uint64), .int q .uint64⟩ : HeapCell)
+      ∗ mba.id ↦ (⟨mty, .mapData #[(.int q .uint64, .int v .uint64)]⟩ : HeapCell)
       ∗ ta.id ↦ (⟨some (.defined ⟨"main.Index"⟩), .int 0 .uint64⟩ : HeapCell)
       ∗ oa.id ↦ (⟨some .bool, .bool false⟩ : HeapCell)
       ∗ (ma.id ↦ (⟨some (.defined ⟨"main.mapAckIndexer"⟩),
                    .map ⟨some (.base mba)⟩⟩ : HeapCell)
-          ∗ ida.id ↦ (⟨some (.int .uint64), .int 3 .uint64⟩ : HeapCell)
-          ∗ mba.id ↦ (⟨some (.map (.int .uint64) (.defined ⟨"main.Index"⟩)),
-                       .mapData #[(.int 3 .uint64, .int 12 .uint64)]⟩ : HeapCell)
-          ∗ ta.id ↦ (⟨some (.defined ⟨"main.Index"⟩), .int 12 .uint64⟩ : HeapCell)
+          ∗ ida.id ↦ (⟨some (.int .uint64), .int q .uint64⟩ : HeapCell)
+          ∗ mba.id ↦ (⟨mty, .mapData #[(.int q .uint64, .int v .uint64)]⟩ : HeapCell)
+          ∗ ta.id ↦ (⟨some (.defined ⟨"main.Index"⟩), .int v .uint64⟩ : HeapCell)
           ∗ oa.id ↦ (⟨some .bool, .bool true⟩ : HeapCell)
           -∗ WP (Config.next k) @ s ; E {{ Φ }})
       ⊢ WP (Config.exec QuorumPin.mapLookupStmt env k) @ s ; E {{ Φ }} := by
@@ -770,30 +1133,27 @@ theorem wp_map_lookup_ackedIndex {ma ida mba ta oa : Addr} {env k}
   inext
   iapply fupd_intro
   iintro Hcm6
-  iapply (wp_eval_var (cell := ⟨some (.int .uint64), .int 3 .uint64⟩) hid)
+  iapply (wp_eval_var (cell := ⟨some (.int .uint64), .int q .uint64⟩) hid)
   isplitl [Hid]
   · iexact Hid
   iintro Hid
-  iapply (wp_map_lookup (mba := mba) (ta := ta) (oa := oa)
-    (mty := some (.map (.int .uint64) (.defined ⟨"main.Index"⟩)))
-    (entries := #[(.int 3 .uint64, .int 12 .uint64)])
-    (key := .int 3 .uint64) (val := .int 12 .uint64) (b := true)
+  iapply (wp_map_lookup (mba := mba) (ta := ta) (oa := oa) (mty := mty)
+    (entries := #[(.int q .uint64, .int v .uint64)])
+    (key := .int q .uint64) (val := .int v .uint64) (b := true)
     (tcell := ⟨some (.defined ⟨"main.Index"⟩), .int 0 .uint64⟩)
-    (tcell' := ⟨some (.defined ⟨"main.Index"⟩), .int 12 .uint64⟩)
+    (tcell' := ⟨some (.defined ⟨"main.Index"⟩), .int v .uint64⟩)
     (ocell := ⟨some .bool, .bool false⟩)
     (ocell' := ⟨some .bool, .bool true⟩)
     (hkey := fun σ _ht => by
-      have n3 : IntKind.uint64.normalize 3 = 3 := by rfl
-      simp [normalizeValueForTy, normalizeValueForTyFuel, n3])
+      simp [normalizeValueForTy, normalizeValueForTyFuel, hq])
     (hpair := fun σ _ht hl => by
       simp [mapLookupValue, mapEntries, loadLoc, hl, mapEntryIndex?, valueEq,
         valueEqFuel, checkKeyHashable, valueHashability, Bind.bind, Except.bind])
     (hstoret := fun σ ht hl => by
       rw [execState_pin_eq (ht.trans htypes) (rfl (a := σ.functions))
         (rfl (a := σ.methods))] at hl ⊢
-      have n12 : IntKind.uint64.normalize 12 = 12 := by rfl
       simp [storeLoc, hl, normalizeValueForTy, normalizeValueForTyFuel,
-        typeResolutionFuel, QuorumPin.typeEnv_Index, n12, Bind.bind, Except.bind])
+        typeResolutionFuel, QuorumPin.typeEnv_Index, hv, Bind.bind, Except.bind])
     (hstoreo := fun σ _ht hl => by
       simp [storeLoc, hl, normalizeValueForTy, normalizeValueForTyFuel,
         Bind.bind, Except.bind]))
@@ -805,6 +1165,63 @@ theorem wp_map_lookup_ackedIndex {ma ida mba ta oa : Addr} {env k}
   · iexact Ho
   iintro ⟨Hmb, Ht, Ho⟩
   iapply Hcont $$ [$Hm $Hid $Hmb $Ht $Ho]
+
+/-- **Witness for `wp_make_slice`** (and for the allocating apply core) on
+the REAL `$c2 = make([]uint64, n)` of the pinned `CommittedIndex` — the
+branch the on-stack scratch array normally avoids. At `n = 1`: the backing
+array `[1]uint64` is allocated at a machine-chosen address and a slice
+over it is stored in `$c2`. Every premise is discharged by computation. -/
+theorem wp_make_slice_c2 {c2a na : Addr} {env k}
+    (hres : LocalEnv.lookup env "$c2" = some (.base c2a))
+    (hn : LocalEnv.lookup env "n" = some (.base na)) :
+    c2a.id ↦ (⟨some (.slice (.int .uint64)),
+               .slice ⟨none, 0, 0, 0⟩⟩ : HeapCell)
+      ∗ na.id ↦ (⟨some (.int .int), .int 1 .int⟩ : HeapCell)
+      ∗ iprop(∀ fa : Addr,
+          fa.id ↦ (⟨some (.array 1 (.int .uint64)),
+                    .array #[.int 0 .uint64]⟩ : HeapCell)
+            ∗ c2a.id ↦ (⟨some (.slice (.int .uint64)),
+                         .slice ⟨some (.base fa), 0, 1, 1⟩⟩ : HeapCell)
+            ∗ na.id ↦ (⟨some (.int .int), .int 1 .int⟩ : HeapCell) -∗
+          WP (Config.next k) @ s ; E {{ Φ }})
+      ⊢ WP (Config.exec QuorumPin.ciMakeSliceStmt env k) @ s ; E {{ Φ }} := by
+  iintro ⟨Hc2, Hn, Hcont⟩
+  rw [QuorumPin.ciMakeSliceStmt_eq]
+  iapply (wp_stmt_op_first (op := .makeSlice (.int .uint64) false) (nt := 1)
+    (e := .ref "$c2") (rest := [.var "n"]) rfl)
+  iapply fupd_intro
+  inext
+  iapply fupd_intro
+  iintro Hm1
+  iapply (wp_eval_ref hres)
+  iapply fupd_intro
+  inext
+  iapply fupd_intro
+  iintro Hm2
+  iapply (wp_stmt_op_shift_target (loc := .base c2a) (by simp) rfl)
+  iapply fupd_intro
+  inext
+  iapply fupd_intro
+  iintro Hm3
+  iapply (wp_eval_var (a := na) (cell := ⟨some (.int .int), .int 1 .int⟩) hn)
+  isplitl [Hn]
+  · iexact Hn
+  iintro Hn
+  iapply (wp_make_slice (elem := .int .uint64) (a := c2a) (n := 1)
+    (backing := .array #[.int 0 .uint64])
+    (newcell := fun fa => ⟨some (.slice (.int .uint64)),
+                           .slice ⟨some (.base fa), 0, 1, 1⟩⟩)
+    (hbacking := fun σ _ht => by
+      simp [buildDefaultArrayValue, buildArrayValue, defaultValue,
+        defaultValueFuel, typeResolutionFuel, Bind.bind, Except.bind])
+    (oldcell := ⟨some (.slice (.int .uint64)), .slice ⟨none, 0, 0, 0⟩⟩)
+    (hstore := fun σ fa _ht hlk => by
+      simp [storeLoc, hlk, normalizeValueForTy, normalizeValueForTyFuel,
+        Bind.bind, Except.bind]))
+  isplitl [Hc2]
+  · iexact Hc2
+  iintro %fa ⟨Hfa, Hc2⟩
+  iapply Hcont $$ %fa [$Hfa $Hc2 $Hn]
 
 /-- **Witness for `wp_call_dynamic_enter₂`** on the REAL interface call
 `l.AckedIndex(id)` of the pinned `CommittedIndex`: the callsite names the

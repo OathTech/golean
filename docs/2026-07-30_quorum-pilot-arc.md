@@ -531,3 +531,163 @@ using Goose/Perennial's design as the generality reference."
     table and no pin; GoCore carries the table in the state, so the
     surface judgment must pin it or silently speak about a
     method-free program. Ours covers MORE state, at the cost of the pin.
+- 2026-07-31: **THE SUMMIT SLICE — THE GOAL's first instance REACHED.**
+  `GoLean.Surface.quorumOneKnownFuncSpec` is a THEOREM: the pinned
+  lowering of the real etcd-io/raft quorum driver, `committedOneKnown()`,
+  returns **12** at `GoFuncSpec` strength — into any caller cell, over any
+  prior value, in any admissible heap, beside any frame, through the exit
+  pipe (triple + progress). `quorumOneKnownMeetsSpec` restates the same
+  discharge with the DECLARATIVE spec as its postcondition:
+  `IsCommittedIndex [1] ackedOneKnown n.toNat` — so the chain **real Go
+  source → pinned frontend lowering → machine walk → declarative quorum
+  spec** is closed with no unproven link. `quorumOneKnownReturnsTwelve` is
+  the first-order readout and `quorumOneKnownNotEleven` its (run-
+  conditioned) negative twin.
+
+  **Honest scope: n = 1.** One voter, so the map range's nondeterminism is
+  degenerate (a single iteration order) and the `len(stk) >= n` test takes
+  the reslice branch. The **3-voter walk — real branching in the range, a
+  sort that reorders, `pos = n - (n/2+1)` biting — is the recorded next
+  widening** (`docs/2026-07-24_proof-corpus.md` owed-rows).
+
+  The walk, and what it crosses (all of it real `majority.go` machinery):
+  `wp_oneKnownCall → wp_oneKnown_body → wp_run_body →
+  wp_committedIndexCall → wp_committedIndex_body`, the last splitting into
+  `wp_ci_len / wp_ci_emptyIf / wp_ci_stkDecl / wp_ci_srtDecl /
+  wp_ci_fitIf_one / wp_ci_loop_one / wp_ci_tail_one`. Two `make(map…)`s
+  that ALLOCATE inside the apply step plus two `m[k]=v` writes; three frame
+  entries at two arities; `len(c)` at a NAMED map type; `var stk
+  [7]uint64` and the reslice `stk[:n]`; the nondeterministic map range;
+  interface dynamic dispatch into `main.mapAckIndexer.AckedIndex`; the
+  comma-ok; a store THROUGH a slice index into the on-stack backing array;
+  `slices.Sort`; the `n/2+1` arithmetic and the `Index(srt[pos])` readout.
+
+  1. **The recorded owed item PAID: the ALLOCATING wide-op apply core.**
+     `wp_alloc_store_step` (`Lifting.lean`) — one step that allocates a
+     fresh cell AND writes an owned cell whose new content names the fresh
+     address (`newcell : Addr → HeapCell`, continuation `∀ fa`). Its
+     wide-op face `wp_stmt_op_apply_alloc_store` and the two instances
+     `wp_make_map` / `wp_make_slice` (`Laws/QuorumOps.lean`), each
+     witnessed same-commit — `wp_make_slice_c2` deliberately on the
+     `make([]uint64, n)` branch the n=1 walk does NOT take.
+  2. **New general laws, all witnessed same-commit:** `wp_alloc_step₃`
+     (3-cell allocation) + `wp_call_enter₂₁` (2-param/1-result STATIC
+     frame entry — the arity of every quorum entry point);
+     `wp_frame_return₁` (one-result frame exit GENERAL in the cells'
+     types — `wp_frame_return_int` is its int special case, and a result
+     at a NAMED type needs the general form); `wp_strict_apply_read` (a
+     strict op that READS one owned cell — `len(m)`, `a[i]`, `x[lo:hi]`);
+     `wp_strict_apply_pin` and `wp_eval_strict_nullary_pin` (state-free
+     but TYPE-ENVIRONMENT-dependent: conversions and composite literals at
+     named types); `wp_assign_store_loc` (store at an arbitrary `Loc` while
+     owning the BASE cell — what `a[i] = e` needs, since a slice's
+     elements live in one backing cell); `heapToMap_set_base₃`;
+     `lookup_declare_self` / `lookup_declare_ne` / `lookup_pushScope`
+     (`LocalEnv` algebra the multi-declaration walks need).
+  3. **`wp_det_step_keep`'s premise widened** to carry the three ghost
+     pins (strictly weaker; four call sites gain three `_`s). Load-bearing,
+     not decoration: `len(m)` at a `.defined` map type and every
+     conversion at a named type resolve through `TypeEnv.lookup σ.types`,
+     so the unpinned `∀σ` form is false there — the same vacuity trap
+     `wp_init`'s premise hit in the previous slice.
+  4. **Over-specialization corrected, not added** (standing check): the
+     `AckedIndex` witnesses (`wp_map_lookup_ackedIndex`,
+     `wp_ackedIndex_body`, `wp_ackedIndexCall`) were hard-coded to the
+     entry `3 ↦ 12` AND to a `some (.map …)`-typed map DATA cell. Neither
+     is a property of Go, and the second was actively blocking: `makeMap`
+     allocates the data cell with NO declared type, so the driver walk
+     could not have used them at all. They are now generic in the entry
+     (`q ↦ v`, with the representability side-conditions explicit) and in
+     the data cell's declared type; `quorumAckedIndexFuncSpec2` is
+     unchanged, instantiated at `3 ↦ 12`.
+  5. **NOT proven, recorded rather than restated:** the phase-0
+     `quorumOneKnownNotEleven_statement` — the UNCONDITIONAL
+     `¬ GoFuncSpec … (n = 11)` — does NOT follow from the positive
+     discharge. `GoTriple` quantifies over TERMINATING runs, so both the
+     `= 12` and the `= 11` spec are vacuously true of a program with no
+     terminating run; refuting the def requires EXHIBITING one, i.e. a
+     kernel evaluation of the interpreter over the whole pinned program.
+     The run-conditioned twin (the `goldenNotThree` shape) is proven; the
+     def stays a target and no theorem names it.
+  Gate: `scripts/ci` PASS (846/846 differential unchanged, 309/309
+  negative, 44 eval tests, Audit sweep 6036 declarations axiom-clean, up
+  from 5792). **No runtime file changed in this slice** — proofs and docs
+  only.
+
+  **Over-specialization check (standing item §STANDING CHECK), per new
+  law — is the STATEMENT target-free?**
+  - `wp_alloc_store_step` / `wp_stmt_op_apply_alloc_store` — TARGET-FREE.
+    The allocated cell, the target address, and the written cell (as a
+    FUNCTION of the fresh address) are law variables; the transition is a
+    premise, so the law is general in the op. Nothing names a program.
+  - `wp_make_map` / `wp_make_slice` — TARGET-FREE. Key/value types never
+    appear (the machine's `makeMap` allocates an untyped data cell); the
+    element type, length and the target's declared type are variables, and
+    the store is a premise. Only the `hasSpace`/`hasCap` flag is fixed to
+    `false`, i.e. to a Go SURFACE FORM (`make(map[K]V)` /
+    `make([]T, n)`), not to the target — the capacity forms are owed.
+  - `wp_alloc_step₃` / `wp_call_enter₂₁` — TARGET-FREE, arity-bound (2
+    params, 1 result) exactly as the `arg1`/`ret1`/`cap1`/`₂` family;
+    the n-ary widening stays owed on `wp_alloc_step₄`'s scope note. The
+    arity was chosen because Go functions of that shape exist, not because
+    `run` has it — the same law serves `run` and `CommittedIndex`.
+  - `wp_frame_return₁` — TARGET-FREE and strictly MORE general than the
+    existing `wp_frame_return_int`: the store is a premise, so the law is
+    general in the cells' types.
+  - `wp_strict_apply_read` / `wp_strict_apply_pin` /
+    `wp_eval_strict_nullary_pin` — TARGET-FREE and OP-generic: one law per
+    dependency class (heap-reading, type-env-reading, neither), not per
+    operator. `len`, index-get, array-to-slice, deref and every named-type
+    conversion are instances.
+  - `wp_assign_store_loc` — TARGET-FREE; the previous `wp_assign_store`
+    is now its `.base` instance.
+  - `lookup_declare_self/_ne/_pushScope`, `heapToMap_set_base₃` —
+    TARGET-FREE `LocalEnv`/heap algebra.
+  - Quorum names appear ONLY in: `QuorumPin` projections (all `rfl`
+    against the pin), the witnesses, the walk theorems (`wp_ci_*`,
+    `wp_committedIndex_*`, `wp_run_body`, `wp_oneKnown*`) and the target
+    statements. No law statement, machine rule or frontend path names
+    `main.*`. **No runtime file changed at all this slice**, so no
+    semantics fix was justified by a corpus case.
+
+  **Goose/Perennial comparison, per new mechanism** (`deps/perennial`
+  `new/golang/defn/*.v`, `deps/goose`):
+  - *Allocating wide ops*: Perennial's `make(map…)`/`make([]T,n)` are
+    library functions (`new/golang/defn/map.v`, `slice.v`) that call
+    `alloc` and RETURN the handle; publishing it into a variable is a
+    separate `store`, so the two effects are composed with `wp_bind` and
+    each has its own small law. GoCore performs both in ONE
+    `applyStmtOp` step, so we need a core that allocates and stores
+    atomically. Ours is COARSER here (a granularity-ledger entry: a
+    concurrent observer can never see the fresh cell before the handle is
+    published — Go's own guarantee for a local `make`), and the price is
+    that the law must carry `newcell` as a function of the fresh address,
+    which Perennial's split never needs.
+  - *Array-to-slice (`stk[:n]`)*: Perennial models `[N]T` values and
+    slicing through `slice.slice`/`slice.full_slice` with a capacity
+    argument threaded explicitly (`new/golang/defn/slice.v`); the
+    resulting capacity is derived from the ORIGINAL slice's, and an
+    on-stack array is reified as a `loc` with a length. GoCore reads the
+    array cell to learn its size and computes `cap = size - low` inside
+    `applySlice`, so ours is a state-READING step where theirs is pure
+    over an explicit capacity. Ours covers MORE (the array's size is
+    discovered, not supplied) at the cost of needing the heap fact —
+    `wp_strict_apply_read` exists precisely for that class.
+  - *Type-environment-dependent pure steps*: no analogue. GooseLang's
+    `to_val`/type descriptors are syntactic (`go_type` is a closed term),
+    so a conversion or a `struct{}{}` literal never consults an ambient
+    environment and `wp_pure` suffices. GoCore carries named-type
+    declarations in the state, so the `_pin` family exists. Ours covers
+    MORE state; theirs needs no pin. Same tradeoff already recorded for
+    `σ.types` and `methods`.
+  - *The composed function-level claim*: Perennial's closest analogue is
+    a `WP (f #args) {{ ... }}` for a real Go function proved against its
+    own spec; the etcd-io/raft quorum package is not in
+    `deps/perennial`'s verified set, so there is no head-to-head. What is
+    comparable is the SHAPE: theirs is an Iris WP under a Go-model
+    program logic with `own`-based ghost state; ours lands the same shape
+    and then EXITS to a first-order, Iris-free statement about the
+    trusted relation (`goSpec_of_wp` → `GoTriple`/`Progress` →
+    `quorumOneKnownReturnsTwelve`). The exit pipe is the part Perennial
+    has no counterpart for, and it is what makes the claim checkable
+    without trusting the program logic.

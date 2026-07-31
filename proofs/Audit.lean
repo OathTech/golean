@@ -192,6 +192,23 @@ open Lean in
 /-- info: 'GoLean.Surface.quorumAckedIndexPre_satisfiable' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Surface.quorumAckedIndexPre_satisfiable
 
+-- Quorum-pilot phase-4 SUMMIT (2026-07-31): THE GOAL's first instance —
+-- the real `main.MajorityConfig.CommittedIndex` of the pinned lowering,
+-- walked end to end at n = 1, at `GoFuncSpec` strength, with the machine
+-- answer upgraded to the declarative quorum spec.
+/-- info: 'GoLean.Surface.quorumOneKnownFuncSpec' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Surface.quorumOneKnownFuncSpec
+/-- info: 'GoLean.Surface.quorumOneKnownMeetsSpec' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Surface.quorumOneKnownMeetsSpec
+/-- info: 'GoLean.Surface.quorumOneKnownReturnsTwelve' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Surface.quorumOneKnownReturnsTwelve
+/-- info: 'GoLean.Surface.quorumOneKnownNotEleven' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Surface.quorumOneKnownNotEleven
+/-- info: 'GoLean.Iris.GoldenQuorum.wp_committedIndex_body' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.GoldenQuorum.wp_committedIndex_body
+/-- info: 'GoLean.Iris.GoldenQuorum.wp_oneKnownCall' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.GoldenQuorum.wp_oneKnownCall
+
 /-! ## Non-vacuity gate — every user-facing WP law bound to a discharge
     witness (deleting a witness or a law breaks this build). -/
 
@@ -373,16 +390,26 @@ merely unproven (it passed `#[]` arguments to a two-parameter method, so
 fails); the correction is recorded in the statement's own docstring and
 in the arc doc, not smuggled.
 
-`✓` the quorum walk's PROVEN math half, and `◌` its remaining machine
-target. The value `12` the full walk must land on IS
-`committedIndexRef [1] ackedOneKnown` (`rfl`), and
-`committedIndexRef_meets_spec` (proven) upgrades it to
-`IsCommittedIndex`. `◌ NOT PROVEN:` `quorumOneKnownFuncSpec_statement`
-and its negative twin are still `def … : Prop` TARGETS (the
-`committedOneKnown` composition needs the allocating wide-op apply core,
-`makeSlice`/array-to-slice, and the nondeterministic range composition);
-no theorem names them and nothing here claims they are dischargeable
-today. -/
+`✓` **THE ARC'S NAMED GOAL, first instance** (quorum pilot phase 4
+summit, 2026-07-31): `quorumOneKnownFuncSpec` DISCHARGES the phase-0
+target `quorumOneKnownFuncSpec_statement` — the pinned lowering of the
+real etcd-io/raft driver returns `12` at `GoFuncSpec` strength — and
+`quorumOneKnownMeetsSpec` restates it with the DECLARATIVE quorum spec
+as the postcondition (`IsCommittedIndex [1] ackedOneKnown`, via the
+proven `committedIndexRef_meets_spec`). `quorumOneKnownReturnsTwelve` is
+the first-order readout and `quorumOneKnownNotEleven` its negative twin.
+
+Scope, honestly: **n = 1**, so the map range's nondeterminism is
+degenerate and the `len(stk) >= n` test takes the reslice branch. The
+three-voter walk is the recorded next widening.
+
+`◌ NOT PROVEN` (unchanged, recorded rather than quietly dropped): the
+phase-0 `quorumOneKnownNotEleven_statement` — the UNCONDITIONAL
+`¬ GoFuncSpec … (n = 11)` — is not refutable from the triple, because a
+`GoTriple` is vacuously true of a program that fails to terminate;
+refuting it demands exhibiting a terminating run (a kernel evaluation of
+the interpreter over the whole pinned program). The run-conditioned twin
+above is what the golden precedent proves, and is what is proven here. -/
 example := @GoLean.Quorum.committedIndexRef_oneKnown
 example := @GoLean.Quorum.isCommittedIndex_oneKnown
 example := @GoLean.Quorum.not_isCommittedIndex_oneKnown_11
@@ -398,6 +425,28 @@ example := @GoLean.Iris.wp_call_arg_next
 example := @GoLean.Iris.wp_frame_return₂
 example := @GoLean.Iris.wp_read₂_store₂_step
 example := @GoLean.Surface.sat_sep_insert
+example := @GoLean.Surface.quorumOneKnownFuncSpec
+example := @GoLean.Surface.quorumOneKnownMeetsSpec
+example := @GoLean.Surface.quorumOneKnownReturnsTwelve
+example := @GoLean.Surface.quorumOneKnownNotEleven
+example := @GoLean.Iris.GoldenQuorum.wp_committedIndex_body
+example := @GoLean.Iris.GoldenQuorum.wp_ci_loop_one
+example := @GoLean.Iris.GoldenQuorum.wp_committedIndexCall
+example := @GoLean.Iris.GoldenQuorum.wp_run_body
+example := @GoLean.Iris.GoldenQuorum.wp_oneKnown_body
+example := @GoLean.Iris.GoldenQuorum.wp_oneKnownCall
+example := @GoLean.Iris.wp_alloc_store_step
+example := @GoLean.Iris.wp_alloc_step₃
+example := @GoLean.Iris.wp_stmt_op_apply_alloc_store
+example := @GoLean.Iris.wp_make_map
+example := @GoLean.Iris.wp_make_slice
+example := @GoLean.Iris.wp_make_slice_c2
+example := @GoLean.Iris.wp_call_enter₂₁
+example := @GoLean.Iris.wp_frame_return₁
+example := @GoLean.Iris.wp_strict_apply_read
+example := @GoLean.Iris.wp_strict_apply_pin
+example := @GoLean.Iris.wp_eval_strict_nullary_pin
+example := @GoLean.Iris.wp_assign_store_loc
 /-- `✓` the golden walk and both its call forms. -/
 example := @GoLean.Iris.GoldenSlice.wp_inc_body
 example := @GoLean.Iris.GoldenSlice.wp_call_inc_stmt

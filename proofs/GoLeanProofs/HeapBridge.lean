@@ -205,6 +205,18 @@ theorem heapToMap_set_base₂ (h : Heap) (a₀ a₁ : Addr) (c₀ c₁ : HeapCel
   · simp [hk]
   · simp [hk, (heapToMap_set_base h a₀ c₀) kk, LawfulPartialMap.get?_insert]
 
+/-- Bridge B for THREE successive base writes — the shape a frame entry
+with two parameters and ONE result produces (every quorum entry point:
+`run`, `CommittedIndex`). -/
+theorem heapToMap_set_base₃ (h : Heap) (a₀ a₁ a₂ : Addr) (c₀ c₁ c₂ : HeapCell) :
+    heapToMap (Heap.set (Heap.set (Heap.set h (.base a₀) c₀) (.base a₁) c₁)
+        (.base a₂) c₂)
+      ≡ₘ insert (insert (insert (heapToMap h) a₀.id c₀) a₁.id c₁) a₂.id c₂ :=
+  fun kk =>
+    ((heapToMap_set_base (Heap.set (Heap.set h (.base a₀) c₀) (.base a₁) c₁)
+        a₂ c₂) kk).trans
+      (insert_eqv (heapToMap_set_base₂ h a₀ a₁ c₀ c₁) a₂.id c₂ kk)
+
 /-- Bridge B for FOUR successive base writes — the shape a frame entry with
 two parameters and two results produces. -/
 theorem heapToMap_set_base₄ (h : Heap) (a₀ a₁ a₂ a₃ : Addr)

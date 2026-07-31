@@ -239,6 +239,167 @@ theorem wp_alloc_step₄ {cell₀ cell₁ cell₂ cell₃ : HeapCell} {c₀ : Co
           [$Hp0 $Hp1 $Hp2 $Hp3]
       · itrivial
 
+/-- **Shared core: a deterministic step that ALLOCATES three fresh cells.**
+The `wp_alloc_step₄` engine at the other frame-entry arity the Go corpus
+forces: two parameters and ONE result (`func (c Config, l Indexer) Index`
+— every quorum entry point). Same discipline: the successor is a function
+of the machine-chosen addresses and the continuation must hold for all of
+them. (The list-indexed generalization stays owed; the honest position is
+that each arity that a real program forces gets its instance, and the
+scope note lives on `wp_alloc_step₄`.) -/
+theorem wp_alloc_step₃ {cell₀ cell₁ cell₂ : HeapCell} {c₀ : Config}
+    (kof : Addr → Addr → Addr → Config)
+    (hnv : ToVal.toVal c₀ = (none : Option Unit))
+    (hred : ∀ σ₁ : ExecState, σ₁.functions = GoCoreGS.prog GF →
+      σ₁.methods = GoCoreGS.methods GF → σ₁.types = GoCoreGS.types GF →
+      Step c₀ σ₁
+          (kof ⟨σ₁.nextAddr⟩ ⟨σ₁.nextAddr + 1⟩ ⟨σ₁.nextAddr + 2⟩)
+          (allocMany σ₁ [cell₀, cell₁, cell₂]) ∧
+      (∀ c' s', Step c₀ σ₁ c' s' →
+          c' = kof ⟨σ₁.nextAddr⟩ ⟨σ₁.nextAddr + 1⟩ ⟨σ₁.nextAddr + 2⟩ ∧
+          s' = allocMany σ₁ [cell₀, cell₁, cell₂])) :
+    iprop(∀ a₀ : Addr, ∀ a₁ : Addr, ∀ a₂ : Addr,
+        a₀.id ↦ cell₀ ∗ a₁.id ↦ cell₁ ∗ a₂.id ↦ cell₂ -∗
+          WP (kof a₀ a₁ a₂) @ s ; E {{ Φ }})
+      ⊢ WP c₀ @ s ; E {{ Φ }} := by
+  iintro Hcont
+  iapply wp_lift_step (h := hnv)
+  iintro %σ₁ %ns %obs %obs' %nt Hσ
+  simp only [stateInterp]
+  icases Hσ with ⟨Hσ, %Hinv⟩
+  obtain ⟨hfns, hmeths, htypes, hwf⟩ := Hinv
+  have hf0 : get? (heapToMap σ₁.heap) σ₁.nextAddr = none := hwf.fresh_get?
+  have hf1 : get? (insert (heapToMap σ₁.heap) σ₁.nextAddr cell₀)
+      (σ₁.nextAddr + 1) = none := by
+    rw [get?_insert_ne (by omega)]
+    rw [get?_heapToMap]; exact hwf _ (by omega)
+  have hf2 : get? (insert (insert (heapToMap σ₁.heap) σ₁.nextAddr cell₀)
+      (σ₁.nextAddr + 1) cell₁) (σ₁.nextAddr + 2) = none := by
+    rw [get?_insert_ne (by omega), get?_insert_ne (by omega)]
+    rw [get?_heapToMap]; exact hwf _ (by omega)
+  iapply fupd_mask_intro Std.LawfulSet.empty_subset
+  iintro Hclose
+  isplitr
+  · ipureintro
+    cases s
+    · exact ⟨[], _, _, [], GoPrimStep.step (hred σ₁ hfns hmeths htypes).1⟩
+    · trivial
+  inext
+  iintro %e₂ %σ₂ %eₜ %Hstep Hcred
+  cases Hstep with
+  | step st =>
+    obtain ⟨rfl, rfl⟩ := (hred σ₁ hfns hmeths htypes).2 _ _ st
+    simp only [allocMany]
+    imod (genHeap_alloc (v := cell₀) hf0) $$ Hσ with ⟨Hσ, Hp0, Ht0⟩
+    imod (genHeap_alloc (v := cell₁) hf1) $$ Hσ with ⟨Hσ, Hp1, Ht1⟩
+    imod (genHeap_alloc (v := cell₂) hf2) $$ Hσ with ⟨Hσ, Hp2, Ht2⟩
+    imod Hclose
+    imodintro
+    simp only [Algebra.BigOpL.bigOpL_nil]
+    isplitl [Hσ]
+    · isplitl [Hσ]
+      · iapply (genHeapInterp_eqv
+          (fun kk => (heapToMap_set_base₃ σ₁.heap ⟨σ₁.nextAddr⟩
+            ⟨σ₁.nextAddr + 1⟩ ⟨σ₁.nextAddr + 2⟩
+            cell₀ cell₁ cell₂ kk).symm)) $$ Hσ
+      · ipureintro
+        exact ⟨hfns, hmeths, htypes, HeapWf.allocMany [cell₀, cell₁, cell₂] hwf⟩
+    · isplitl [Hp0 Hp1 Hp2 Hcont]
+      · iapply Hcont $$ %(⟨σ₁.nextAddr⟩ : Addr) %(⟨σ₁.nextAddr + 1⟩ : Addr)
+          %(⟨σ₁.nextAddr + 2⟩ : Addr) [$Hp0 $Hp1 $Hp2]
+      · itrivial
+
+/-- **Shared core: a deterministic step that ALLOCATES one fresh cell and
+WRITES one already-owned cell.** The engine behind every wide statement
+whose `applyStmtOp` arm allocates *inside* the apply and then stores a
+handle to the new cell into its target (`makeMap` allocates the map data
+cell, `makeSlice` the backing array, `newValue` the pointee). Neither
+existing core fits: `wp_store_step` cannot allocate and `wp_alloc_step₄`
+cannot write a pre-existing cell.
+
+Two things make this more than the composition of the two: the step is
+ATOMIC (one machine step allocates AND stores — a granularity-ledger
+entry, since a concurrent observer can never see the fresh cell before
+the handle is published), and the written cell's new content generally
+MENTIONS the fresh address, so `newcell` is a *function* of it and the
+continuation must hold for every machine choice (`∀ fa`, the same
+discipline as `wp_alloc_step₄`/`wp_init`).
+
+The reduction premise gets `a.id ≠ σ₁.nextAddr` for free (the target is
+mapped, hence below `nextAddr` in a well-formed heap) — that is exactly
+what an allocating store needs to know to compute its post-heap. -/
+theorem wp_alloc_store_step {a : Addr} {fcell oldcell : HeapCell}
+    (newcell : Addr → HeapCell) {c₀ : Config} {k}
+    (hnv : ToVal.toVal c₀ = (none : Option Unit))
+    (hred : ∀ σ₁ : ExecState, σ₁.functions = GoCoreGS.prog GF →
+      σ₁.methods = GoCoreGS.methods GF → σ₁.types = GoCoreGS.types GF →
+      Heap.lookup σ₁.heap (.base a) = some oldcell →
+      a.id ≠ σ₁.nextAddr →
+      Step c₀ σ₁ (.next k)
+           { σ₁ with
+             heap := Heap.set (Heap.set σ₁.heap (.base ⟨σ₁.nextAddr⟩) fcell)
+                       (.base a) (newcell ⟨σ₁.nextAddr⟩),
+             nextAddr := σ₁.nextAddr + 1 } ∧
+      (∀ c' s', Step c₀ σ₁ c' s' →
+           c' = Config.next k ∧
+           s' = { σ₁ with
+                  heap := Heap.set (Heap.set σ₁.heap (.base ⟨σ₁.nextAddr⟩) fcell)
+                            (.base a) (newcell ⟨σ₁.nextAddr⟩),
+                  nextAddr := σ₁.nextAddr + 1 })) :
+    a.id ↦ oldcell
+      ∗ iprop(∀ fa : Addr, fa.id ↦ fcell ∗ a.id ↦ newcell fa -∗
+          WP (Config.next k) @ s ; E {{ Φ }})
+      ⊢ WP c₀ @ s ; E {{ Φ }} := by
+  iintro ⟨Hpt, Hcont⟩
+  iapply wp_lift_step (h := hnv)
+  iintro %σ₁ %ns %obs %obs' %nt Hσ
+  simp only [stateInterp]
+  icases Hσ with ⟨Hσ, %Hinv⟩
+  obtain ⟨hfns, hmeths, htypes, hwf⟩ := Hinv
+  ihave %Hmap : ⌜get? (heapToMap σ₁.heap) a.id = some oldcell⌝ $$ [Hσ Hpt]
+  · icases genHeap_valid $$ [$Hσ $Hpt] with >%h
+    itrivial
+  have hlook : Heap.lookup σ₁.heap (.base a) = some oldcell := by
+    rw [get?_heapToMap] at Hmap; simpa using Hmap
+  have hne : a.id ≠ σ₁.nextAddr := by
+    have := hwf.lt_of_lookup hlook; omega
+  have hfresh : get? (heapToMap σ₁.heap) σ₁.nextAddr = none := hwf.fresh_get?
+  have hlook' : Heap.lookup (Heap.set σ₁.heap (.base ⟨σ₁.nextAddr⟩) fcell)
+      (.base a) = some oldcell := by
+    have := heap_lookup_set_base_ne (h := σ₁.heap) (n := a.id)
+      (b := (⟨σ₁.nextAddr⟩ : Addr)) (c := fcell) (fun he => hne he.symm)
+    simpa using this.trans (by simpa using hlook)
+  iapply fupd_mask_intro Std.LawfulSet.empty_subset
+  iintro Hclose
+  isplitr
+  · ipureintro
+    cases s
+    · exact ⟨[], Config.next k, _, [],
+        GoPrimStep.step (hred σ₁ hfns hmeths htypes hlook hne).1⟩
+    · trivial
+  inext
+  iintro %e₂ %σ₂ %eₜ %Hstep Hcred
+  cases Hstep with
+  | step st =>
+    obtain ⟨rfl, rfl⟩ := (hred σ₁ hfns hmeths htypes hlook hne).2 _ _ st
+    imod (genHeap_alloc (v := fcell) hfresh) $$ Hσ with ⟨Hσ, Hf, Htok⟩
+    imod (genHeap_update (v₂ := newcell ⟨σ₁.nextAddr⟩)) $$ [$Hσ $Hpt]
+      with ⟨Hσ, Hpt⟩
+    imod Hclose
+    imodintro
+    simp only [Algebra.BigOpL.bigOpL_nil]
+    isplitl [Hσ]
+    · isplitl [Hσ]
+      · iapply (genHeapInterp_eqv
+          (fun kk => (heapToMap_set_base₂ σ₁.heap ⟨σ₁.nextAddr⟩ a fcell
+            (newcell ⟨σ₁.nextAddr⟩) kk).symm)) $$ Hσ
+      · ipureintro
+        exact ⟨hfns, hmeths, htypes,
+          (HeapWf.alloc (c := fcell) hwf).set_existing hlook'⟩
+    · isplitl [Hf Hpt Hcont]
+      · iapply Hcont $$ %(⟨σ₁.nextAddr⟩ : Addr) [$Hf $Hpt]
+      · itrivial
+
 /-- **Resource-conditioned deterministic non-mutating step core** (arc E
 rung B1, `docs/2026-07-22_arc-e-while-invariant.md` §2, generalized per
 user direction 2026-07-22 — mirror the general shape, don't specialize):
@@ -251,10 +412,20 @@ and its determinism follow. Neither existing core fits
 heap; `wp_store_step` writes). This is the engine for condition-branching
 steps (`while`/`if` conditions): the caller decides the successor `c₁`
 from `P`'s content BEFORE applying the core (e.g. by casing on the
-`Bool`-indexed loop invariant), so the core stays deterministic. -/
+`Bool`-indexed loop invariant), so the core stays deterministic.
+
+Premise widened 2026-07-31 (quorum pilot phase 4, the summit slice):
+`hred` now also receives the three ghost-state pins, exactly as
+`wp_store_step` always has. Strictly weaker, so every existing caller
+keeps working with three extra `_`s — and it is load-bearing for the
+state-READING strict operators (`len(m)` at a `.defined` map type
+resolves the name through `TypeEnv.lookup σ.types`, so the unpinned
+`∀σ` premise is false there, the same vacuity trap `wp_init`'s premise
+hit). -/
 theorem wp_det_step_keep {P : IProp GF} {c₀ c₁ : Config}
     (hnv : ToVal.toVal c₀ = (none : Option Unit))
-    (hred : ∀ σ₁ : ExecState,
+    (hred : ∀ σ₁ : ExecState, σ₁.functions = GoCoreGS.prog GF →
+      σ₁.methods = GoCoreGS.methods GF → σ₁.types = GoCoreGS.types GF →
       iprop(genHeapInterp (GF := GF) (H := GoHeapF) (heapToMap σ₁.heap) ∗ P)
         ⊢ |==> ⌜Step c₀ σ₁ c₁ σ₁ ∧
             (∀ c' s', Step c₀ σ₁ c' s' → c' = c₁ ∧ s' = σ₁)⌝) :
@@ -268,7 +439,7 @@ theorem wp_det_step_keep {P : IProp GF} {c₀ c₁ : Config}
   obtain ⟨hfns, hmeths, htypes, hwf⟩ := Hinv
   ihave %Hstep : ⌜Step c₀ σ₁ c₁ σ₁ ∧
       (∀ c' s', Step c₀ σ₁ c' s' → c' = c₁ ∧ s' = σ₁)⌝ $$ [Hσ HP]
-  · icases (hred σ₁) $$ [$Hσ $HP] with >%h
+  · icases (hred σ₁ hfns hmeths htypes) $$ [$Hσ $HP] with >%h
     ipureintro
     exact h
   obtain ⟨hstep, hdet⟩ := Hstep

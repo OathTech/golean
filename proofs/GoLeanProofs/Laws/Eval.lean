@@ -109,6 +109,99 @@ theorem wp_strict_apply_pure {op : StrictOp} {done : List GoValue}
       WP (Config.retV v (.strictK op done [] env k)) @ s ; E {{ Φ }} :=
   wp_pure_det rfl trivial (fun σ => Step.strictApply (happly σ))
 
+/-- **Apply a strict operator that is state-independent GIVEN the type
+environment.** Between `wp_strict_apply_pure` (no state at all) and
+`wp_strict_apply_read` (one owned heap cell): a conversion at a NAMED Go
+type resolves the target name through `TypeEnv.lookup σ.types`, so its
+`∀σ` premise is false without the pin — but it reads no heap cell, so
+demanding one would be a lie about what the step touches. Resource-free
+on both sides. -/
+theorem wp_strict_apply_pin {op : StrictOp} {done : List GoValue}
+    {v out : GoValue} {env k}
+    (happly : ∀ σ : ExecState, σ.types = GoCoreGS.types GF →
+      applyStrictOp σ op (v :: done).reverse = .ok (out, σ)) :
+    (WP (Config.retV out k) @ s ; E {{ Φ }})
+      ⊢ WP (Config.retV v (.strictK op done [] env k)) @ s ; E {{ Φ }} := by
+  iintro H
+  iapply (wp_det_step_keep (P := iprop(emp)) (c₁ := Config.retV out k)
+    (hnv := rfl))
+  · intro σ₁ _hfns _hmeths htypes
+    iintro ⟨Hσ, -⟩
+    imodintro
+    ipureintro
+    refine ⟨Step.strictApply (happly σ₁ htypes), ?_⟩
+    intro c' s' hst
+    obtain ⟨h1, h2⟩ :=
+      step_det (by trivial) (Step.strictApply (happly σ₁ htypes)) hst
+    exact ⟨h1.symm, h2.symm⟩
+  · isplitl []
+    · itrivial
+    · iintro -
+      iexact H
+
+/-- **A NULLARY strict form whose value depends on the type environment.**
+The pin-carrying sibling of `wp_eval_strict_nullary_pure`
+(`Laws/Unwind`): `struct{}{}` and every other composite literal with no
+operands is built by resolving its type through `σ.types`, so the
+unpinned `∀σ` premise is false at a named type. Resource-free. -/
+theorem wp_eval_strict_nullary_pin {e : Expr} {op : StrictOp}
+    {v : GoValue} {env k}
+    (hplan : strictPlan e = some (op, []))
+    (happly : ∀ σ : ExecState, σ.types = GoCoreGS.types GF →
+      applyStrictOp σ op [] = .ok (v, σ)) :
+    (WP (Config.retV v k) @ s ; E {{ Φ }})
+      ⊢ WP (Config.evalE e env k) @ s ; E {{ Φ }} := by
+  iintro H
+  iapply (wp_det_step_keep (P := iprop(emp)) (c₁ := Config.retV v k)
+    (hnv := rfl))
+  · intro σ₁ _hfns _hmeths htypes
+    iintro ⟨Hσ, -⟩
+    imodintro
+    ipureintro
+    refine ⟨Step.evalStrictNullary hplan (happly σ₁ htypes), ?_⟩
+    intro c' s' hst
+    obtain ⟨h1, h2⟩ := step_det (by simp [Config.choiceFree])
+      (Step.evalStrictNullary hplan (happly σ₁ htypes)) hst
+    exact ⟨h1.symm, h2.symm⟩
+  · isplitl []
+    · itrivial
+    · iintro -
+      iexact H
+
+/-- **Apply a strict operator whose result READS the heap but changes
+nothing.** The general form of `wp_strict_apply_deref`: the operator's
+answer is conditioned on ONE owned cell, which rides through unchanged
+(the state is literally `σ` on both sides of `applyStrictOp`). One law
+for the whole state-reading pure-op family — `len(m)` (loads the map's
+data cell), `a[i]` on a slice (loads the backing array), `x[lo:hi]` on an
+array address (loads the array to learn its size), `*p` — none of which
+`wp_strict_apply_pure` can serve, because their `∀σ` premise is false
+without the heap fact. -/
+theorem wp_strict_apply_read {op : StrictOp} {done : List GoValue}
+    {v out : GoValue} {a : Addr} {cell : HeapCell} {env k}
+    (happly : ∀ σ : ExecState, σ.types = GoCoreGS.types GF →
+      Heap.lookup σ.heap (.base a) = some cell →
+      applyStrictOp σ op (v :: done).reverse = .ok (out, σ)) :
+    a.id ↦ cell
+      ∗ (a.id ↦ cell -∗ WP (Config.retV out k) @ s ; E {{ Φ }})
+      ⊢ WP (Config.retV v (.strictK op done [] env k)) @ s ; E {{ Φ }} := by
+  iapply wp_det_step_keep (P := iprop(a.id ↦ cell))
+    (c₁ := Config.retV out k) (hnv := rfl)
+  intro σ₁ _hfns _hmeths htypes
+  iintro ⟨Hσ, Hpt⟩
+  ihave %Hmap : ⌜get? (heapToMap σ₁.heap) a.id = some cell⌝ $$ [Hσ Hpt]
+  · icases genHeap_valid $$ [$Hσ $Hpt] with >%h
+    itrivial
+  have hlook : Heap.lookup σ₁.heap (.base a) = some cell := by
+    rw [get?_heapToMap] at Hmap; simpa using Hmap
+  imodintro
+  ipureintro
+  refine ⟨Step.strictApply (happly σ₁ htypes hlook), ?_⟩
+  intro c' s' hst
+  obtain ⟨h1, h2⟩ :=
+    step_det (by trivial) (Step.strictApply (happly σ₁ htypes hlook)) hst
+  exact ⟨h1.symm, h2.symm⟩
+
 /-! ### Statement-glue pure steps -/
 
 /-- Begin an assignment: evaluate the target's address expression. -/
@@ -177,7 +270,7 @@ theorem wp_eval_var {id : String} {a : Addr} {cell : HeapCell} {env k}
       ⊢ WP (Config.evalE (.var id) env k) @ s ; E {{ Φ }} := by
   iapply wp_det_step_keep (P := iprop(a.id ↦ cell))
     (c₁ := Config.retV cell.value k) (hnv := rfl)
-  intro σ₁
+  intro σ₁ _hfns _hmeths _htypes
   iintro ⟨Hσ, Hpt⟩
   ihave %Hmap : ⌜get? (heapToMap σ₁.heap) a.id = some cell⌝ $$ [Hσ Hpt]
   · icases genHeap_valid $$ [$Hσ $Hpt] with >%h
@@ -202,7 +295,7 @@ theorem wp_strict_apply_deref {ty : Ty} {a : Addr} {cell : HeapCell} {env k} :
             (.strictK (.deref ty) [] [] env k)) @ s ; E {{ Φ }} := by
   iapply wp_det_step_keep (P := iprop(a.id ↦ cell))
     (c₁ := Config.retV cell.value k) (hnv := rfl)
-  intro σ₁
+  intro σ₁ _hfns _hmeths _htypes
   iintro ⟨Hσ, Hpt⟩
   ihave %Hmap : ⌜get? (heapToMap σ₁.heap) a.id = some cell⌝ $$ [Hσ Hpt]
   · icases genHeap_valid $$ [$Hσ $Hpt] with >%h
@@ -224,14 +317,15 @@ theorem wp_strict_apply_deref {ty : Ty} {a : Addr} {cell : HeapCell} {env k} :
 whose cell is owned. `hstore` is the cell-conditioned store fact (for
 int-typed cells, `storeLoc_int_cell` discharges it). Instantiates the
 `wp_store_step` core; determinism is `step_det`. -/
-theorem wp_assign_store {a : Addr} {v : GoValue} {oldcell newcell : HeapCell} {k}
+theorem wp_assign_store_loc {a : Addr} {tgt : Loc} {v : GoValue}
+    {oldcell newcell : HeapCell} {k}
     (hstore : ∀ σ₁ : ExecState, σ₁.types = GoCoreGS.types GF →
       Heap.lookup σ₁.heap (.base a) = some oldcell →
-      storeLoc σ₁ (.base a) v
+      storeLoc σ₁ tgt v
         = .ok { σ₁ with heap := Heap.set σ₁.heap (.base a) newcell }) :
     a.id ↦ oldcell
       ∗ (a.id ↦ newcell -∗ WP (Config.next k) @ s ; E {{ Φ }})
-      ⊢ WP (Config.retV v (.assignStoreK (.base a) k)) @ s ; E {{ Φ }} := by
+      ⊢ WP (Config.retV v (.assignStoreK tgt k)) @ s ; E {{ Φ }} := by
   iapply wp_store_step (hnv := rfl)
   intro σ₁ hfns hmeths htypes hlook
   refine ⟨Step.assignStore (hstore σ₁ htypes hlook), ?_⟩
@@ -239,6 +333,22 @@ theorem wp_assign_store {a : Addr} {v : GoValue} {oldcell newcell : HeapCell} {k
   obtain ⟨h1, h2⟩ :=
     step_det (by trivial) (Step.assignStore (hstore σ₁ htypes hlook)) hst
   exact ⟨h1.symm, h2.symm⟩
+
+/-- The base-location instance of `wp_assign_store_loc` — the shape every
+`x = e` takes. The general form exists because `a[i] = e` stores at a
+`Loc.index` whose write lands in the BASE cell (a slice's elements live
+in one backing cell): the owned resource and the store target are then
+different `Loc`s for the same address, which the base-only statement
+could not express. -/
+theorem wp_assign_store {a : Addr} {v : GoValue} {oldcell newcell : HeapCell} {k}
+    (hstore : ∀ σ₁ : ExecState, σ₁.types = GoCoreGS.types GF →
+      Heap.lookup σ₁.heap (.base a) = some oldcell →
+      storeLoc σ₁ (.base a) v
+        = .ok { σ₁ with heap := Heap.set σ₁.heap (.base a) newcell }) :
+    a.id ↦ oldcell
+      ∗ (a.id ↦ newcell -∗ WP (Config.next k) @ s ; E {{ Φ }})
+      ⊢ WP (Config.retV v (.assignStoreK (.base a) k)) @ s ; E {{ Φ }} :=
+  wp_assign_store_loc hstore
 
 end
 
