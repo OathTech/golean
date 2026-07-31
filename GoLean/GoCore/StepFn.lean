@@ -66,7 +66,7 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
       | .stop =>
           match chain with
           | first :: rest =>
-              match renderPanicHead first rest with
+              match renderPanicHead s first rest with
               | some msg => return (.panicked msg, s, choices)
               | none => throw (.unsupported
                   s!"panic abort rendering for payload {repr first.value}")

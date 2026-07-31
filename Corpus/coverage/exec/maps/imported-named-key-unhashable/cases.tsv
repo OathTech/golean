@@ -1,0 +1,2 @@
+# id	subject	args	expected_status	expected_reason	features
+-	importedNamedKeyAssign	-	panic	hash of unhashable type	maps,keys,interfaces,comparability,panic,imports,defined_type

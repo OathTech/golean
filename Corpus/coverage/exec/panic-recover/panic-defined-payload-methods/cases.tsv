@@ -1,0 +1,4 @@
+# id	subject	args	expected_status	expected_reason	features
+error	panicDefinedErrorPayload	-	panic	boom	panic,interfaces,defined_type,methods
+stringer	panicDefinedStringerPayload	-	panic	strung	panic,interfaces,defined_type,methods
+plain	panicDefinedPlainPayload	-	panic	main.payloadPlain	panic,interfaces,defined_type

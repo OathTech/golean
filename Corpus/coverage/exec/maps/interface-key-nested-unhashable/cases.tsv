@@ -1,0 +1,4 @@
+# id	subject	args	expected_status	expected_reason	features
+assign	nestedBoxAssign	-	panic	hash of unhashable type	maps,keys,interfaces,structs,comparability,panic
+access-empty	nestedBoxAccessEmpty	-	panic	hash of unhashable type	maps,keys,interfaces,structs,comparability,panic
+array-access-nonempty	nestedArrayBoxAccessNonEmpty	-	panic	hash of unhashable type	maps,keys,interfaces,arrays,comparability,panic

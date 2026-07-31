@@ -1,15 +1,30 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-07-31  commit: quorum-pilot phases 2+3 (re-pinned in the
-#   same commit as the coverage change)  frontend: native  oracle: go run
-# manifest_cases: 806  pass: 544  fail: 262
-# Re-pin reason: QUORUM-PILOT PHASES 2+3 — 19 NEW ids, all PASS, every
-# other row identical to the interfaces-campaign baseline (drift =
-# exactly the new ids): slices/slices-sort (2 guardrails for the
-# sortSlice extern, docs/2026-07-30_quorum-extern-policy.md) and
-# quorum/committed-index-real (17 — the REAL etcd-io/raft
-# CommittedIndex/AckedIndexer/Slice vendored verbatim, driven by etcd's
-# own testdata/majority_commit.txt rows; go run on the real source is
-# the oracle).
+# recorded: 2026-07-31  commit: interim-audit response (interfaces campaign)
+#   frontend: native  oracle: go run
+# manifest_cases: 846  pass: 581  fail: 265
+# Re-pin reason: INTERIM PRE-MERGE AUDIT RESPONSE — 40 NEW guardrail ids
+# (one per confirmed audit finding, probes turned into cases) plus ONE
+# recorded flip. Drift vs the previous baseline is EXACTLY those 41 rows;
+# zero PASS->FAIL on pre-existing ids.
+#   36 of the 40 new ids PASS: vacuous interface satisfaction is fixed
+#   (wire-level `interface` TypeDefs carry the full method set, so
+#   `x.(error)` no longer depends on whether some unrelated line calls
+#   Error()), satisfaction now compares SIGNATURES, `**T` no longer
+#   inherits `*T`'s method set, the value-directed map-key hash walk finds
+#   unhashable values nested in struct/array keys, the two hash-panic
+#   phrasings are keyed on the map's live entry count, and the four real
+#   assert-panic shapes (incl. `missing method M` and the named source
+#   interface) are rendered.
+#   4 are DELIBERATE RED PINS, each an honest fail-closure replacing a
+#   silent wrong answer, each carrying a docs/BUGS.md entry:
+#   interfaces/promoted-method-assert-ok (BUG-007 — the falsified "never a
+#   wrong answer" claim), panic-recover/panic-defined-payload-methods/
+#   {error,stringer} (BUG-004 item 4 — Go's preprintpanics rewrite cannot
+#   be rendered without CALLING a method), maps/imported-named-key-
+#   unhashable (BUG-008 — unknown comparability of imported named types).
+#   The one flip: maps/delete-nil-interface-key-panic FAIL->PASS, an
+#   improvement — a NIL map still hashes its key in Go, and the precheck
+#   now runs on the nil-map paths too (it was already a red pin for it).
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
 PASS	arrays/array-copy	-
@@ -17,10 +32,10 @@ PASS	arrays/array-element-compound	-
 PASS	arrays/array-len-cap	-
 PASS	arrays/array-of-struct-field-write	-
 PASS	arrays/array-param-return	-
-PASS	arrays/arrays	-
-PASS	arrays/arrays-are-values	-
 PASS	arrays/array-slice-alias	-
 PASS	arrays/array-zero	-
+PASS	arrays/arrays	-
+PASS	arrays/arrays-are-values	-
 PASS	arrays/defined-array-receiver	-
 PASS	arrays/index-eval-order	-
 PASS	arrays/keyed-literal-eval-order	-
@@ -84,9 +99,9 @@ FAIL	builtins/real-imag	frontend-export
 PASS	builtins/recover-outside-defer	-
 FAIL	channels/buffered-basic	frontend-export
 FAIL	channels/close-closed-panic	frontend-export
-FAIL	channels/closed-receive	frontend-export
 FAIL	channels/close-nil-panic	frontend-export
 FAIL	channels/close-send-only	frontend-export
+FAIL	channels/closed-receive	frontend-export
 FAIL	channels/directional-types	frontend-export
 FAIL	channels/make-directional	frontend-export
 FAIL	channels/make-edge/buffered-fifo	frontend-export
@@ -153,10 +168,10 @@ FAIL	complex/zero-value	frontend-export
 PASS	constants/array-bound	-
 PASS	constants/builtin-len-cap-constants	-
 PASS	constants/complex-constant	-
+PASS	constants/const-precision	-
 PASS	constants/constant-character-representability	-
 PASS	constants/constant-comparison	-
 PASS	constants/constant-division	-
-PASS	constants/const-precision	-
 PASS	constants/default-bool-string	-
 FAIL	constants/default-types	frontend-export
 PASS	constants/dependent-constants	-
@@ -292,8 +307,8 @@ FAIL	functions/closure-loop-var-capture	frontend-export
 PASS	functions/closure-nested-recapture	-
 PASS	functions/closure-param-shadows-capture	-
 PASS	functions/closure-recursion	-
-PASS	functions/closure-returns-closure	-
 PASS	functions/closure-return-state	-
+PASS	functions/closure-returns-closure	-
 PASS	functions/closure-share	-
 PASS	functions/closure-two-vars-one-closure	-
 PASS	functions/closure-value-reassigned	-
@@ -368,6 +383,12 @@ FAIL	init/package-init-order	lean-observation
 FAIL	init/var-init-sequence	lean-observation
 PASS	interfaces/acked-indexer/hit	-
 PASS	interfaces/acked-indexer/miss	-
+PASS	interfaces/assert-error-satisfaction/classify	-
+PASS	interfaces/assert-error-satisfaction/declared-not-called	-
+PASS	interfaces/assert-error-satisfaction/no-call	-
+PASS	interfaces/assert-error-satisfaction/positive	-
+PASS	interfaces/assert-imported-interface/negative	-
+PASS	interfaces/assert-imported-interface/positive	-
 PASS	interfaces/embedded-interface	-
 PASS	interfaces/embedded-interface-assertion	-
 PASS	interfaces/embedded-interface-duplicate-method	-
@@ -395,16 +416,23 @@ FAIL	interfaces/interface-method-value	frontend-export
 PASS	interfaces/interface-nested-struct-compare-panic	-
 PASS	interfaces/interface-storage-copy/pointer	-
 PASS	interfaces/interface-storage-copy/value	-
+PASS	interfaces/method-set-pointer-to-pointer/pointer-to-pointer	-
+PASS	interfaces/method-set-pointer-to-pointer/single-pointer	-
+PASS	interfaces/method-set-signature-mismatch/arity	-
+PASS	interfaces/method-set-signature-mismatch/exact	-
+PASS	interfaces/method-set-signature-mismatch/param-type	-
+PASS	interfaces/method-set-signature-mismatch/result-type	-
 PASS	interfaces/nil-interface	-
+FAIL	interfaces/promoted-method-assert-ok	lean-observation
+PASS	interfaces/type-assert-from-named-interface-panic/nil-operand	-
+PASS	interfaces/type-assert-from-named-interface-panic/to-pointer	-
 PASS	interfaces/type-assert-interface	-
+PASS	interfaces/type-assert-interface-panic/error-target	-
+PASS	interfaces/type-assert-interface-panic/missing-all	-
+PASS	interfaces/type-assert-interface-panic/missing-one	-
+PASS	interfaces/type-assert-interface-panic/nil	-
 PASS	interfaces/type-assertions/comma-ok	-
 PASS	interfaces/type-assertions/panic	-
-FAIL	interfaces/typed-nil-channel	frontend-export
-PASS	interfaces/typed-nil-composite	-
-PASS	interfaces/typed-nil-func	-
-PASS	interfaces/typed-nil-map	-
-PASS	interfaces/typed-nil-pointer-compare	-
-PASS	interfaces/typed-nil-slice	-
 FAIL	interfaces/type-switch-default-binding	frontend-export
 FAIL	interfaces/type-switch-default-binding-type	frontend-export
 FAIL	interfaces/type-switch-dynamic	frontend-export
@@ -420,6 +448,12 @@ FAIL	interfaces/type-switch-nil-multi-case	frontend-export
 FAIL	interfaces/type-switch-single-binding	frontend-export
 FAIL	interfaces/type-switch-typed-nil	frontend-export
 FAIL	interfaces/type-switch-typed-nil-binding	frontend-export
+FAIL	interfaces/typed-nil-channel	frontend-export
+PASS	interfaces/typed-nil-composite	-
+PASS	interfaces/typed-nil-func	-
+PASS	interfaces/typed-nil-map	-
+PASS	interfaces/typed-nil-pointer-compare	-
+PASS	interfaces/typed-nil-slice	-
 PASS	ints/bitwise	-
 PASS	ints/break-continue	-
 PASS	ints/byte-conversion	-
@@ -428,16 +462,16 @@ PASS	ints/conversion-width-matrix	-
 PASS	ints/defined-int-conversion	-
 PASS	ints/defined-type-ops	-
 PASS	ints/defined-underlying-conversion	-
+PASS	ints/div-mod-signs	-
 PASS	ints/divide-by-zero	-
 PASS	ints/division-overflow	-
-PASS	ints/div-mod-signs	-
 PASS	ints/if-return	-
 PASS	ints/int8-wrap	-
 PASS	ints/multi-assign	-
 PASS	ints/negative-shift	-
 PASS	ints/scalars	-
-PASS	ints/shifts	-
 PASS	ints/shift-width-boundaries	-
+PASS	ints/shifts	-
 PASS	ints/signed-unsigned-conversion	-
 PASS	ints/signed-width-wrap	-
 PASS	ints/truncate-conversion	-
@@ -447,6 +481,8 @@ PASS	ints/unsigned-right-shift	-
 PASS	ints/while1	-
 PASS	ints/wrap-width-boundaries	-
 PASS	maps/array-key	-
+PASS	maps/array-key-interface-elem-unhashable/access-empty	-
+PASS	maps/array-key-interface-elem-unhashable/assign	-
 PASS	maps/array-value-copy	-
 FAIL	maps/channel-key	frontend-export
 FAIL	maps/clear-during-range	differential
@@ -459,13 +495,25 @@ PASS	maps/delete-existing	-
 PASS	maps/delete-interface-dynamic-key	-
 PASS	maps/delete-interface-key-panic	-
 PASS	maps/delete-missing	-
-FAIL	maps/delete-nil-interface-key-panic	lean-observation
+PASS	maps/delete-nil-interface-key-panic	-
 FAIL	maps/delete-nil-key-types	frontend-export
 PASS	maps/delete-nil-map	-
 PASS	maps/delete-nil-value-types	-
+FAIL	maps/imported-named-key-unhashable	lean-observation
 PASS	maps/index-assign-eval-order	-
 PASS	maps/interface-dynamic-type-key	-
 PASS	maps/interface-key	-
+PASS	maps/interface-key-hash-phrasing/access-emptied	-
+PASS	maps/interface-key-hash-phrasing/access-empty	-
+PASS	maps/interface-key-hash-phrasing/access-nonempty	-
+PASS	maps/interface-key-hash-phrasing/assign-nonempty	-
+PASS	maps/interface-key-hash-phrasing/delete-empty	-
+PASS	maps/interface-key-hash-phrasing/delete-nonempty	-
+PASS	maps/interface-key-hash-phrasing/nil-map-access	-
+PASS	maps/interface-key-hash-phrasing/nil-map-delete	-
+PASS	maps/interface-key-nested-unhashable/access-empty	-
+PASS	maps/interface-key-nested-unhashable/array-access-nonempty	-
+PASS	maps/interface-key-nested-unhashable/assign	-
 PASS	maps/interface-slice-key-panic	-
 PASS	maps/literal-eval-order	-
 PASS	maps/map-alias	-
@@ -498,6 +546,10 @@ PASS	maps/pointer-key	-
 PASS	maps/set-membership	-
 PASS	maps/slice-value-element-write	-
 PASS	maps/struct-key	-
+PASS	maps/struct-key-interface-field-unhashable/access-empty	-
+PASS	maps/struct-key-interface-field-unhashable/access-nonempty	-
+PASS	maps/struct-key-interface-field-unhashable/assign	-
+PASS	maps/struct-key-interface-field-unhashable/delete-nonempty	-
 FAIL	maps/tuple-assign-key-eval	frontend-export
 FAIL	maps/tuple-map-expr-targets	frontend-export
 FAIL	maps/tuple-rhs-before-target-write	frontend-export
@@ -554,14 +606,17 @@ PASS	panic-recover/defer-arg-during-panic	-
 PASS	panic-recover/defer-panic-after-return	-
 PASS	panic-recover/defer-panic-recovered-after-return	-
 PASS	panic-recover/defer-recover-builtin	-
-PASS	panic-recover/deferred-panic-replaces	-
 PASS	panic-recover/defer-registered-during-unwind	-
+PASS	panic-recover/deferred-panic-replaces	-
 PASS	panic-recover/named-result-preserved-after-recover	-
 PASS	panic-recover/nested-frame-recover	-
 PASS	panic-recover/nil-defer-during-unwind	-
 PASS	panic-recover/nil-defer-during-unwind-abort	-
 PASS	panic-recover/panic-bool-abort	-
 PASS	panic-recover/panic-defer-order	-
+FAIL	panic-recover/panic-defined-payload-methods/error	lean-observation
+PASS	panic-recover/panic-defined-payload-methods/plain	-
+FAIL	panic-recover/panic-defined-payload-methods/stringer	lean-observation
 PASS	panic-recover/panic-int-abort	-
 PASS	panic-recover/panic-named-type-abort	-
 FAIL	panic-recover/panic-newline-abort	lean-observation
@@ -601,13 +656,9 @@ PASS	pointers/pointer-identity	-
 PASS	pointers/pointer-param-alias	-
 PASS	pointers/pointer-slice-header	-
 PASS	pointers/pointer-to-pointer	-
-PASS	quorum/committed-index/all-acked	-
 PASS	quorum/committed-index-edges/all-unacked	-
 PASS	quorum/committed-index-edges/n1-acked	-
 PASS	quorum/committed-index-edges/n1-unacked	-
-PASS	quorum/committed-index/empty-maxuint	-
-PASS	quorum/committed-index/heap	-
-PASS	quorum/committed-index/on-stack	-
 PASS	quorum/committed-index-real/empty	-
 PASS	quorum/committed-index-real/five-dup	-
 PASS	quorum/committed-index-real/five-spread	-
@@ -625,6 +676,10 @@ PASS	quorum/committed-index-real/three-two	-
 PASS	quorum/committed-index-real/two-half	-
 PASS	quorum/committed-index-real/two-known	-
 PASS	quorum/committed-index-real/two-missing	-
+PASS	quorum/committed-index/all-acked	-
+PASS	quorum/committed-index/empty-maxuint	-
+PASS	quorum/committed-index/heap	-
+PASS	quorum/committed-index/on-stack	-
 PASS	quorum/committed-index/unacked	-
 PASS	quorum/joint/committed-min	-
 PASS	quorum/joint/ids-union	-
@@ -632,17 +687,17 @@ PASS	quorum/joint/vote-both-pending	-
 PASS	quorum/joint/vote-both-win	-
 PASS	quorum/joint/vote-disagree-lost	-
 PASS	quorum/joint/vote-disagree-pending	-
-PASS	quorum/vote-result/empty-wins	-
-PASS	quorum/vote-result/even-one-short	-
-PASS	quorum/vote-result/even-won	-
-PASS	quorum/vote-result/lost	-
-PASS	quorum/vote-result/pending	-
 PASS	quorum/vote-result-small-n/n1-lost	-
 PASS	quorum/vote-result-small-n/n1-pending	-
 PASS	quorum/vote-result-small-n/n1-won	-
 PASS	quorum/vote-result-small-n/n2-one-missing-pending	-
 PASS	quorum/vote-result-small-n/n2-one-yes-lost	-
 PASS	quorum/vote-result-small-n/n2-won	-
+PASS	quorum/vote-result/empty-wins	-
+PASS	quorum/vote-result/even-one-short	-
+PASS	quorum/vote-result/even-won	-
+PASS	quorum/vote-result/lost	-
+PASS	quorum/vote-result/pending	-
 PASS	quorum/vote-result/tie-lost	-
 PASS	quorum/vote-result/won-exact	-
 PASS	range/range-array-copy	-
@@ -674,8 +729,8 @@ PASS	range/range-struct-copy	-
 PASS	returns/early-return-named	-
 PASS	returns/method-multi-result-arg	-
 PASS	returns/multi-result-argument	-
-PASS	returns/multi-result-assignment	-
 PASS	returns/multi-result-assign-order	-
+PASS	returns/multi-result-assignment	-
 PASS	returns/multi-result-blank-forward	-
 PASS	returns/multi-result-forward	-
 PASS	returns/multi-result-forward-named	-
@@ -781,6 +836,7 @@ PASS	structs/pointer-hop-field-write	-
 PASS	structs/positional-literal	-
 PASS	structs/positional-literal-eval-order	-
 PASS	structs/recursive-pointer	-
+PASS	structs/selector-address-pointer	-
 PASS	structs/selector-addressability-edge/map-value-copy-then-assign	-
 PASS	structs/selector-addressability-edge/map-value-pointer-field-write	-
 PASS	structs/selector-addressability-edge/map-value-slice-field-write	-
@@ -788,7 +844,6 @@ PASS	structs/selector-addressability-edge/pointer-field-from-call-result	-
 PASS	structs/selector-addressability-edge/pointer-result-assign	-
 PASS	structs/selector-addressability-edge/read-call-result	-
 FAIL	structs/selector-addressability-edge/read-conversion-result	lean-observation
-PASS	structs/selector-address-pointer	-
 PASS	structs/selector-eval-once	-
 PASS	structs/struct-array-element-write	-
 PASS	structs/swap	-

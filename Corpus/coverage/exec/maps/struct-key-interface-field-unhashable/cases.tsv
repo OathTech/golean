@@ -1,0 +1,5 @@
+# id	subject	args	expected_status	expected_reason	features
+assign	structKeyAssign	-	panic	hash of unhashable type	maps,structs,keys,interfaces,comparability,panic
+access-empty	structKeyAccessEmpty	-	panic	hash of unhashable type	maps,structs,keys,interfaces,comparability,panic
+access-nonempty	structKeyAccessNonEmpty	-	panic	hash of unhashable type	maps,structs,keys,interfaces,comparability,panic
+delete-nonempty	structKeyDeleteNonEmpty	-	panic	hash of unhashable type	maps,structs,keys,interfaces,comparability,panic,delete

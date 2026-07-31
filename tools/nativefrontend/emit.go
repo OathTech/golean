@@ -130,6 +130,58 @@ func (e *emitter) emitProgram(files []*ast.File) (map[string]any, error) {
 		})
 	}
 
+	// Interface DECLARATIONS: one `interface` TypeDef per interface type that
+	// reached the wire anywhere (declared here, predeclared `error`, or
+	// imported), carrying the FULL method set — embedded interfaces included,
+	// since *types.Interface.NumMethods/Method is the complete set. This is
+	// the machine's satisfaction requirement list, and its ABSENCE is what
+	// makes an unknown interface fail closed instead of being vacuously
+	// satisfied (pre-merge audit 2026-07-31, finding 0). Sorted for a
+	// deterministic wire; the canonical empty interface `any` is excluded
+	// (satisfied by design).
+	// A method signature can itself mention a fresh interface, so this runs to
+	// a FIXPOINT over the seen set rather than one pass.
+	ifaceDefs := map[string]any{}
+	for {
+		pending := []string{}
+		for k := range e.seenInterfaces {
+			if _, done := ifaceDefs[k]; !done {
+				pending = append(pending, k)
+			}
+		}
+		if len(pending) == 0 {
+			break
+		}
+		sort.Strings(pending)
+		for _, name := range pending {
+			iface := e.seenInterfaces[name]
+			sigs := []any{}
+			for i := 0; i < iface.NumMethods(); i++ {
+				m := iface.Method(i)
+				sig := m.Type().(*types.Signature)
+				params, err := e.emitTupleTypes(sig.Params())
+				if err != nil {
+					return nil, err
+				}
+				results, err := e.emitTupleTypes(sig.Results())
+				if err != nil {
+					return nil, err
+				}
+				sigs = append(sigs, map[string]any{
+					"name": m.Name(), "params": params, "results": results})
+			}
+			ifaceDefs[name] = map[string]any{"kind": "interface", "methods": sigs}
+		}
+	}
+	ifaceNames := make([]string, 0, len(ifaceDefs))
+	for k := range ifaceDefs {
+		ifaceNames = append(ifaceNames, k)
+	}
+	sort.Strings(ifaceNames)
+	for _, name := range ifaceNames {
+		typeDefs = append(typeDefs, map[string]any{"name": name, "def": ifaceDefs[name]})
+	}
+
 	return map[string]any{
 		"schema":  "golean-native-v1",
 		"package": e.pkg.Name(),
@@ -137,6 +189,20 @@ func (e *emitter) emitProgram(files []*ast.File) (map[string]any, error) {
 		"funcs":   funcs,
 		"methods": methods,
 	}, nil
+}
+
+// emitTupleTypes emits just the TYPES of a signature tuple (no parameter
+// names): the shape an interface method REQUIREMENT compares against.
+func (e *emitter) emitTupleTypes(t *types.Tuple) ([]any, error) {
+	out := []any{}
+	for i := 0; i < t.Len(); i++ {
+		ty, err := e.emitType(t.At(i).Type())
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, ty)
+	}
+	return out, nil
 }
 
 // emitGenDeclTypes emits type declarations (only defined struct types carry a
@@ -168,7 +234,13 @@ func (e *emitter) emitGenDeclTypes(d *ast.GenDecl) ([]any, []any, error) {
 				if err != nil {
 					return nil, nil, err
 				}
-				fields = append(fields, map[string]any{"name": fld.Name(), "type": fty})
+				// `embedded` records Go's ANONYMOUS field flag verbatim. The
+				// machine needs it to fail closed on possible method
+				// PROMOTION (BUG-007) instead of answering a satisfaction
+				// check false; deriving it from the field NAME would be a
+				// frontend heuristic in the semantic core.
+				fields = append(fields, map[string]any{
+					"name": fld.Name(), "type": fty, "embedded": fld.Anonymous()})
 			}
 			out = append(out, map[string]any{
 				"name": qname,
@@ -177,10 +249,12 @@ func (e *emitter) emitGenDeclTypes(d *ast.GenDecl) ([]any, []any, error) {
 			continue
 		}
 		if iface, isInterface := named.Underlying().(*types.Interface); isInterface {
-			// Interface types carry no GoCore TypeDef; their shape is the
-			// interface type at use sites. Dispatch goes through per-method
-			// table entries: same wire shape as a concrete method (recv +
-			// params + results), marked "interface": true, with NO body.
+			// Interface types get an `interface` TypeDef (the satisfaction
+			// requirements, emitted for the whole seen set in emitProgram).
+			// DISPATCH is separate: per-method table entries with the same
+			// wire shape as a concrete method (recv + params + results),
+			// marked "interface": true, with NO body.
+			e.noteInterface(qname, iface)
 			recvTy := map[string]any{"kind": "interface", "name": qname}
 			for i := 0; i < iface.NumMethods(); i++ {
 				m := iface.Method(i)
@@ -1633,7 +1707,17 @@ func (e *emitter) emitExprBare(x ast.Expr) (any, error) {
 		if err != nil {
 			return nil, err
 		}
-		return map[string]any{"expr": "type-assert", "operand": operand, "target": target}, nil
+		// The operand's STATIC interface type: Go's failed-assert message
+		// names it (`interface conversion: main.I is main.T, not *main.T`),
+		// and it is NOT recoverable from the runtime value (pre-merge audit
+		// 2026-07-31, finding 8). Only the single-result form panics, so only
+		// this form carries it.
+		source, err := e.emitType(e.info.TypeOf(ex.X))
+		if err != nil {
+			return nil, err
+		}
+		return map[string]any{"expr": "type-assert", "operand": operand,
+			"target": target, "source": source}, nil
 	default:
 		return nil, unsup("expression %T at %s", x, e.fset.Position(x.Pos()))
 	}
@@ -2751,7 +2835,7 @@ func (e *emitter) emitMethodCall(c *ast.CallExpr, sel *ast.SelectorExpr) (any, b
 	// first argument — AS IS, no address-of or copy adjustment (the boxed
 	// value carries its own receiver; methodReceiverArg's pointer logic is
 	// for concrete receivers only).
-	if _, isIface := recvType.Underlying().(*types.Interface); isIface {
+	if recvIface, isIface := recvType.Underlying().(*types.Interface); isIface {
 		recvStatic := e.info.TypeOf(sel.X)
 		if _, ok := recvStatic.Underlying().(*types.Interface); !ok {
 			// Promotion through an embedded interface field: the receiver
@@ -2765,6 +2849,7 @@ func (e *emitter) emitMethodCall(c *ast.CallExpr, sel *ast.SelectorExpr) (any, b
 		// Record the dispatch target so emitProgram can synthesize a table
 		// anchor when the interface is not declared in this package
 		// (predeclared error, imported interfaces).
+		e.noteInterface(ifaceName, recvIface)
 		if e.calledIfaceMethods == nil {
 			e.calledIfaceMethods = map[string]calledIfaceMethod{}
 		}

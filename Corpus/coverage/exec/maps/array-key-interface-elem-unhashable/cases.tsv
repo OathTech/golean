@@ -1,0 +1,3 @@
+# id	subject	args	expected_status	expected_reason	features
+assign	arrayKeyAssign	-	panic	hash of unhashable type	maps,arrays,keys,interfaces,comparability,panic
+access-empty	arrayKeyAccessEmpty	-	panic	hash of unhashable type	maps,arrays,keys,interfaces,comparability,panic

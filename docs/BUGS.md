@@ -60,11 +60,38 @@ fields pervasively). GoCore already has the right primitives (`fieldAddr`,
 overclaims "field/index access" as working (true for reads, false for writes) —
 correct it when the lowering is fixed. Tracked in `TODO.md` (F1).
 
+## BUG-008 — imported named types have no declaration on the wire, so their comparability is UNKNOWN
+
+- Status: open
+- Pinned-by: differential
+- Cases: maps/imported-named-key-unhashable
+- Discovered: 2026-07-31 (pre-merge adversarial audit of the interfaces
+  campaign, finding 11)
+
+The frontend emits `TypeDef`s only for types declared in the analyzed
+package, but it emits `{"kind":"named"}` for EVERY `*types.Named` — so any
+imported/stdlib named type reaches GoCore as a `.defined` name the type
+environment does not know. `tyUncomparable` used to answer `false`
+("comparable") for such a name, which skipped Go's hash panic:
+`m[sort.IntSlice{1,2}] = 1` inserted and returned len 1 where real Go
+panics `runtime error: hash of unhashable type sort.IntSlice`. A silent
+wrong answer on a program the tool accepted end to end.
+
+`tyUncomparable` is now three-valued (`none` = unknown) and the map-key
+hash precheck fails CLOSED on `none`, so the pinned case is an honest
+`unsupported` instead. Neighbouring paths (default value, conversion,
+same-type equality) already failed closed on unknown defined types; this
+closes the boxing/hash hole. The real fix is emitting declarations for
+imported named types — which is also what the interface-declaration pass
+(finding 0's fix) now does for imported INTERFACES, so the mechanism
+exists; extending it to imported non-interface named types is the owed
+sub-slice.
+
 ## BUG-007 — method PROMOTION through embedded fields is unmodeled
 
 - Status: open
 - Pinned-by: differential
-- Cases: interfaces/embedded-interface-shadowing/interface-field-dispatch, interfaces/embedded-interface-shadowing/interface-field-nil-panic, interfaces/embedded-interface-shadowing/nil-pointer-method-promoted, interfaces/embedded-interface-shadowing/pointer-method-promoted, interfaces/error-idioms/promoted-method, methods/embedded-interface-satisfaction, embedding/deep-promoted-method, embedding/embedded-method-promote
+- Cases: interfaces/embedded-interface-shadowing/interface-field-dispatch, interfaces/embedded-interface-shadowing/interface-field-nil-panic, interfaces/embedded-interface-shadowing/nil-pointer-method-promoted, interfaces/embedded-interface-shadowing/pointer-method-promoted, interfaces/error-idioms/promoted-method, interfaces/promoted-method-assert-ok, methods/embedded-interface-satisfaction, embedding/deep-promoted-method, embedding/embedded-method-promote
 - Discovered: 2026-07-30 (interfaces campaign — these cases were
   frontend-blocked before the campaign; the wrap/dispatch landing made
   the gap VISIBLE at the machine: `dynamic type main.T has no method m`)
@@ -73,9 +100,22 @@ Go promotes an embedded field's methods (and its interface's method
 set) to the embedding struct, with receiver adjustment through the
 field path — depth-first, shadowing by depth, ambiguity = compile
 error. The machine's method table has only DECLARED methods, so a
-promoted call finds no entry: dispatch fails stuck (fail-closed —
-never a wrong answer), and method-SET checks reject types whose
-interface satisfaction is via promotion. The two pre-existing
+promoted call finds no entry and dispatch fails stuck.
+
+**Correction 2026-07-31 (pre-merge audit, finding 5): this entry used to
+claim the gap was "fail-closed — never a wrong answer". That was FALSE on
+the ASSERT path.** All eight originally pinned cases are dispatch/call
+shapes; on `_, ok := any(Outer{…}).(I)` where `I` is satisfied via a
+promoted method, the missing table entry made the method-SET check answer
+`false`, and the comma-ok assert turned that into a silently WRONG boolean
+(Go: true) with `status: ok` — no stuck, no unsupported. The machine now
+fails CLOSED instead: a satisfaction check that would answer "unsatisfied"
+on a struct (or pointer-to-struct) with EMBEDDED fields raises
+`unsupported` naming the method and this bug, since promotion could supply
+it. Detecting promotion soundly is the real fix, not the fail-closure;
+until then `interfaces/promoted-method-assert-ok` is the added red pin, and
+the fail-closure is deliberately over-approximate (it fires on any embedded
+field, whether or not promotion would actually apply). The two pre-existing
 `embedding/` untriaged ids are the same root cause and are folded in
 here (untriaged 29 → 27 in the same commit). Fix direction (owed
 sub-slice, recorded in
@@ -142,11 +182,11 @@ audit response.
 
 - Status: open
 - Pinned-by: differential
-- Cases: panic-recover/repanic-same-value-abort, panic-recover/panic-newline-abort
+- Cases: panic-recover/repanic-same-value-abort, panic-recover/panic-newline-abort, panic-recover/panic-defined-payload-methods/error, panic-recover/panic-defined-payload-methods/stringer
 - Discovered: 2026-07-25 (pre-merge adversarial audit of `unwinding-arc`)
 
-Go's abort output makes three demands the machine's value-level state
-cannot meet, all found by the audit and now FAILING CLOSED instead of
+Go's abort output makes four demands the machine's value-level state
+cannot meet, all found by audits and now FAILING CLOSED instead of
 printing a wrong first line:
 
 1. **`[recovered, repanicked]` collapse is eface IDENTITY** (a bitwise
@@ -168,11 +208,28 @@ printing a wrong first line:
    `renderPanicPayload` renders the `main.Code(7)` form for
    int-underlying defined payloads (other underlyings stay closed).
    `panic-recover/panic-named-type-abort` flipped red→PASS with this.
-   Items 1 (eface identity) and 3 (multi-line payloads) remain open;
-   their pins stay red.
+   Items 1 (eface identity), 3 (multi-line payloads) and 4 (the
+   `preprintpanics` rewrite) remain open; their pins stay red.
 3. **Multi-line string payloads**: Go's first line stops at an embedded
    `\n` (`printindented`); `asciiString?` rejects the newline byte
    (`panic-newline-abort` is the red pin).
+4. **`preprintpanics` REWRITES the payload before printing**: a payload
+   implementing `error` prints `v.Error()`, one implementing
+   `fmt.Stringer` prints `v.String()`, and `printanycustomtype`'s
+   `main.T(v)` shape is reached only when the defined type has NEITHER.
+   Item 2's fix shipped an UNCONDITIONAL `main.T(v)` arm, so
+   `panic(Code(9))` with `func (Code) Error() string` rendered
+   `main.payloadCode(9)` where Go prints `boom` — a fail-closed →
+   wrong-answer regression (pre-merge audit 2026-07-31, finding 3).
+   Rendering the rewritten form means CALLING a method at abort time,
+   which the terminal rule cannot do, so the machine now checks the
+   payload's method set (`Error() string` / `String() string`, the
+   runtime's own two interfaces — checked directly, not through a wire
+   interface declaration, since the rewrite applies whether or not the
+   program mentions `error`) and returns `none` when either is present.
+   `main.T(v)` survives for the method-less case
+   (`panic-defined-payload-methods/plain` is the green pin; `/error` and
+   `/stringer` are the red ones).
 
 RECOVERING any of these payloads is fully supported — only the terminal
 abort line is restricted. The fix, if ever needed, is an allocation

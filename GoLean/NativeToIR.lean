@@ -233,7 +233,11 @@ partial def decodeExpr (path : String) (json : Json) : LowerM Expr := do
       -- Single-result assert `x.(T)` — panics on mismatch.
       let operand ← decodeExpr s!"{path}.operand" (← StrictJson.field path obj "operand")
       let target ← decodeTy s!"{path}.target" (← StrictJson.field path obj "target")
-      pure (.typeAssert operand target)
+      -- The operand's STATIC interface type, for Go's panic message.
+      let source ← match obj.get? "source" with
+        | some t => some <$> decodeTy s!"{path}.source" t
+        | none => pure none
+      pure (.typeAssert operand target source)
   | "call" => fail "call in expression position is not modeled (calls are statements)"
   | other => fail s!"unsupported expression {other} at {path}"
 where
@@ -859,7 +863,19 @@ private def decodeFieldDef (path : String) (json : Json) : LowerM FieldDef := do
   let obj ← StrictJson.obj path json
   let name ← StrictJson.string s!"{path}.name" (← StrictJson.field path obj "name")
   let typ ← decodeTy s!"{path}.type" (← StrictJson.field path obj "type")
-  pure { name, typ }
+  let embedded ← StrictJson.bool s!"{path}.embedded" (← StrictJson.field path obj "embedded")
+  pure { name, typ, embedded }
+
+/-- One interface method REQUIREMENT: name plus the signature types, receiver
+excluded. -/
+private def decodeMethodSig (path : String) (json : Json) : LowerM MethodSig := do
+  let obj ← StrictJson.obj path json
+  let name ← StrictJson.string s!"{path}.name" (← StrictJson.field path obj "name")
+  let paramsJson ← StrictJson.array s!"{path}.params" (← StrictJson.field path obj "params")
+  let resultsJson ← StrictJson.array s!"{path}.results" (← StrictJson.field path obj "results")
+  let params ← paramsJson.mapIdxM (fun i t => decodeTy s!"{path}.params[{i}]" t)
+  let results ← resultsJson.mapIdxM (fun i t => decodeTy s!"{path}.results[{i}]" t)
+  pure { name, params, results }
 
 private def decodeTypeDef (path : String) (json : Json) : LowerM (TypeId × TypeDef) := do
   let obj ← StrictJson.obj path json
@@ -877,6 +893,13 @@ private def decodeTypeDef (path : String) (json : Json) : LowerM (TypeId × Type
       -- (interfaces campaign S2): resolution stops here for identity
       -- purposes; operations resolve through `target`.
       pure (⟨name⟩, .defined (← decodeTy s!"{path}.def.target" (← StrictJson.field s!"{path}.def" defObj "target")))
+  | "interface" =>
+      -- An interface DECLARATION: the full method set (embedded interfaces
+      -- already flattened by the frontend). Satisfaction requirements come
+      -- from here; an interface name with no declaration fails closed.
+      let methods ← StrictJson.array s!"{path}.def.methods" (← StrictJson.field s!"{path}.def" defObj "methods")
+      pure (⟨name⟩, .interfaceDef (← methods.mapIdxM
+        (fun i m => decodeMethodSig s!"{path}.def.methods[{i}]" m)))
   | other => fail s!"unsupported type definition kind {other} at {path}"
 
 private def decodeFunc (path : String) (json : Json) : LowerM Func := do

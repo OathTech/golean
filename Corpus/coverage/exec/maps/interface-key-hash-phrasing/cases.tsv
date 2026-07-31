@@ -1,0 +1,9 @@
+# id	subject	args	expected_status	expected_reason	features
+access-empty	accessEmpty	-	panic	hash of unhashable type	maps,keys,interfaces,comparability,panic
+access-nonempty	accessNonEmpty	-	panic	hash of unhashable type	maps,keys,interfaces,comparability,panic
+access-emptied	accessEmptied	-	panic	hash of unhashable type	maps,keys,interfaces,comparability,panic,delete
+delete-empty	deleteEmpty	-	panic	hash of unhashable type	maps,keys,interfaces,comparability,panic,delete
+delete-nonempty	deleteNonEmpty	-	panic	hash of unhashable type	maps,keys,interfaces,comparability,panic,delete
+assign-nonempty	assignNonEmpty	-	panic	hash of unhashable type	maps,keys,interfaces,comparability,panic
+nil-map-access	nilMapAccess	-	panic	hash of unhashable type	maps,keys,interfaces,comparability,panic,nil
+nil-map-delete	nilMapDelete	-	panic	hash of unhashable type	maps,keys,interfaces,comparability,panic,nil,delete

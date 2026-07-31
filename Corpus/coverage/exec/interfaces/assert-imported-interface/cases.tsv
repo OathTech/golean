@@ -1,0 +1,3 @@
+# id	subject	args	expected_status	expected_reason	features
+negative	assertStringerNegative	-	ok	-	interfaces,type_assertions,comma_ok,imports
+positive	assertStringerPositive	-	ok	-	interfaces,type_assertions,comma_ok,imports

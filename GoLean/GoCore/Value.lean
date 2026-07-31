@@ -127,6 +127,14 @@ structure TypeId where
   key : String
   deriving Repr, BEq, DecidableEq, Inhabited
 
+/-- Strip the package qualifier from a `TypeId` key, matching Go's
+`reflect.Type.Name()` — the observation channel's naming contract
+(`GoLean/CLI.lean`). -/
+def TypeId.unqualified (id : TypeId) : String :=
+  match id.key.splitOn "." with
+  | [] => id.key
+  | parts => parts.getLast!
+
 namespace GoCore
 
 /-- Go types. Lives here (not `Syntax.lean`) since the interfaces
@@ -152,13 +160,17 @@ inductive Ty where
   deriving Repr, BEq, Inhabited
 
 /-- Structural rendering of a (canonical) dynamic type for the
-OBSERVATION channel only — identity never keys on this (S3). -/
+OBSERVATION channel only — identity never keys on this (S3). Named types
+render UNQUALIFIED, like the struct `typeName` field beside them: the
+observation channel's stated contract is `reflect.Type.Name()`, and the
+qualified spelling contradicted it inside a single JSON object
+(pre-merge audit 2026-07-31, finding 12). -/
 def Ty.dynamicName : Ty → String
   | .bool => "bool"
   | .int kind => kind.name
   | .string => "string"
-  | .defined id => id.key
-  | .interface id => id.key
+  | .defined id => id.unqualified
+  | .interface id => id.unqualified
   | .pointer e => "*" ++ Ty.dynamicName e
   | .slice e => "[]" ++ Ty.dynamicName e
   | .array n e => s!"[{n}]" ++ Ty.dynamicName e

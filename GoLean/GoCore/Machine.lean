@@ -105,7 +105,7 @@ inductive StrictOp where
   | structLit (ty : Ty)
   | arrayLit (length : Nat) (elem : Ty) (keys : List Int)
   | toInterface (target dynamic : Ty)
-  | typeAssert (target : Ty)
+  | typeAssert (target : Ty) (source : Option Ty)
   | indexGet | indexAddr
   | mapGet (keyTy valueTy : Ty)
   | sliceExpr (hasMax : Bool)
@@ -158,7 +158,7 @@ def strictPlan : Expr → Option (StrictOp × List Expr)
   | .arrayLit n elem args =>
       some (.arrayLit n elem (args.toList.map (·.1)), args.toList.map (·.2))
   | .toInterface target dynamic e => some (.toInterface target dynamic, [e])
-  | .typeAssert e target => some (.typeAssert target, [e])
+  | .typeAssert e target source => some (.typeAssert target source, [e])
   | .indexGet b i => some (.indexGet, [b, i])
   | .indexAddr b i => some (.indexAddr, [b, i])
   | .mapGet b i keyTy valueTy => some (.mapGet keyTy valueTy, [b, i])
@@ -281,12 +281,19 @@ def applyStrictOp (s : ExecState) : StrictOp → List GoValue → Except GoError
       match dynTy with
       | .interface _ => return (v, s)
       | _ => return (.interface dynTy v, s)
-  | .typeAssert targetTy, [v] => do
+  | .typeAssert targetTy sourceTy, [v] => do
       let result ← typeAssertValue s v targetTy
       if result.2 then
         return (result.1, s)
       else
-        panic (typeAssertPanicMessage s v targetTy)
+        -- Go names the first UNMET requirement when the target is an
+        -- interface; a nil operand has none to report.
+        let missing ←
+          match resolveDefinedAliases s targetTy, v with
+          | .interface interfaceName, .interface dynTy _ =>
+              firstUnsatisfiedMethod? s dynTy interfaceName
+          | _, _ => pure none
+        panic (typeAssertPanicMessage s v targetTy sourceTy missing)
   | .indexGet, [b, i] => do
       let indexValue ← valueAsInt i
       match b with
@@ -311,7 +318,10 @@ def applyStrictOp (s : ExecState) : StrictOp → List GoValue → Except GoError
       let map ← valueAsMap b
       let key ← normalizeValueForTy s keyTy i
       match map.base with
-      | none => return ((← defaultValue s valueTy), s)
+      -- A NIL map still hashes the key before returning the zero value.
+      | none => do
+          checkKeyHashable s key (isInsert := false) (nonEmpty := false)
+          return ((← defaultValue s valueTy), s)
       | some baseLoc =>
           match ← loadLoc s baseLoc with
           | .mapData entries =>
@@ -664,7 +674,11 @@ def applyStmtOp (s : ExecState) (choices : Choices) (op : StmtOp) (nt : Nat)
           let map ← valueAsMap baseV
           let key ← normalizeValueForTy s keyTy keyV
           match ← mapEntries s map with
-          | none => return (s, choices) -- nil map: no-op (the key evaluated)
+          -- Nil map: no-op (the key evaluated) — but Go still HASHES the
+          -- key, so an unhashable one panics here too (probed 2026-07-31).
+          | none => do
+              checkKeyHashable s key (isInsert := false) (nonEmpty := false)
+              return (s, choices)
           | some (baseLoc, entries) =>
               match ← mapEntryIndex? s keyTy entries key with
               | some i =>
@@ -783,12 +797,21 @@ structure PanicEntry where
   recovered : Bool
   deriving Repr, BEq
 
+/-- The machine-internal `TypeId` of a Go runtime error payload. `$` cannot
+appear in a Go identifier OR package name, so no source-level `TypeId` — now
+that they are package-QUALIFIED (`main.T`) — can collide with it. The old
+`"runtime.Error"` sentinel justified itself with "Go identifiers cannot
+contain `.`", which package qualification falsified: a package named
+`runtime` declaring `type Error string` produced the identical key, and
+`r.(Error)` then bound the runtime message as a user value (pre-merge audit
+2026-07-31, finding 9). -/
+def runtimeErrorTypeId : TypeId := ⟨"$runtime.Error"⟩
+
 /-- The payload of a Go runtime panic (nil dereference, division by zero,
-…): a `runtime.Error` interface value. The dotted dynamic name cannot
-collide with a source-level `TypeId` (Go identifiers cannot contain `.`),
-so type asserts against user types correctly fail on it. -/
+…): a `runtime.Error` interface value, tagged with a `TypeId` no source type
+can spell, so type asserts against user types correctly fail on it. -/
 def runtimeErrorValue (msg : String) : GoValue :=
-  .interface (.defined ⟨"runtime.Error"⟩) (.string (GoString.fromLeanString msg))
+  .interface (.defined runtimeErrorTypeId) (.string (GoString.fromLeanString msg))
 
 /-- Coerce a delivered `panic` argument to its chain payload — the
 identity: the oracle runs in GOPATH mode (no `go.mod`), where `panic(nil)`
@@ -815,17 +838,40 @@ def asciiString? (bytes : Array UInt8) : Option String :=
       if b < 0x80 && b != 0x0A then some (out.push (Char.ofNat b.toNat)) else none)
     (some "")
 
+/-- Does `dynTy` carry `name() string` — the shape of BOTH interfaces Go's
+`preprintpanics` consults (`error`'s `Error() string` and `stringer`'s
+`String() string`)? Checked against the METHOD SET directly rather than
+through a wire interface declaration: those two interfaces are built into
+the runtime, so the rewrite applies whether or not the program ever
+mentions `error`/`fmt.Stringer`. -/
+def hasNoArgStringMethod (state : ExecState) (dynTy : Ty) (name : String) : Bool :=
+  match concreteMethodForDynamic? state dynTy name with
+  | some (info, _) =>
+      match concreteMethodSignature? state info with
+      | some (params, results) => params.isEmpty && results == #[Ty.string]
+      | none => false
+  | none => false
+
+/-- The payload rewrite Go performs before printing: `v.Error()` for an
+`error`, `v.String()` for a `fmt.Stringer`. -/
+def panicPayloadIsRewritten (state : ExecState) (dynTy : Ty) : Bool :=
+  hasNoArgStringMethod state dynTy "Error" || hasNoArgStringMethod state dynTy "String"
+
 /-- Render a panic payload as Go's first abort line renders it (after
-`panic: `). Go prints the BARE value only for the predeclared types —
-a defined type renders via `printanycustomtype` as `main.T(v)`, which we
-do not model (package qualification; BUG-004) — so the dynamic name is
-CHECKED against the predeclared name, and everything else is `none`: the
-terminal rule fails closed rather than printing a bare value Go would
-qualify (pre-merge audit 2026-07-25 caught the wildcarded version doing
-exactly that). -/
-def renderPanicPayload : GoValue → Option String
+`panic: `).
+
+Go's `preprintpanics` REWRITES the payload to `v.Error()` / `v.String()`
+before `printpanicval` runs, so `printanycustomtype`'s `main.T(v)` shape
+applies only to a defined type with NEITHER method. The rewritten form
+would require CALLING a method at abort time — which the terminal rule
+cannot do — so a payload whose dynamic type implements either interface
+fails CLOSED here (pre-merge audit 2026-07-31, finding 3; the unconditional
+`main.T(v)` arm this replaces was a fail-closed → wrong-answer regression).
+Everything else not pinned is `none` for the same reason. -/
+def renderPanicPayload (state : ExecState) : GoValue → Option String
   | .nil => some "nil"
-  | .interface (.defined ⟨"runtime.Error"⟩) (.string s) => asciiString? s.bytes
+  | .interface (.defined id) (.string s) =>
+      if id == runtimeErrorTypeId then asciiString? s.bytes else none
   | .interface .string (.string s) => asciiString? s.bytes
   | .interface (.int dkind) (.int v kind) =>
       if dkind == kind then some (toString v) else none
@@ -836,7 +882,12 @@ def renderPanicPayload : GoValue → Option String
   -- package-qualified by the frontend, so it renders verbatim). Only
   -- the int-underlying form is pinned; other underlyings stay closed.
   | .interface (.defined name) (.int v _) =>
-      if name.key == "runtime.Error" then none else some s!"{name.key}({v})"
+      if name == runtimeErrorTypeId then
+        none
+      else if panicPayloadIsRewritten state (.defined name) then
+        none -- Error()/String() would have to be CALLED: fail closed
+      else
+        some s!"{name.key}({v})"
   | _ => none
 
 /-- Go's first abort line for a panic chain. The `[recovered, repanicked]`
@@ -850,8 +901,9 @@ share a box, so ` [recovered]` is certain there; structurally EQUAL
 payloads may or may not collapse (`panic(recover())` and constant
 literals do, runtime-computed equal values do not) — fail closed
 (BUG-004). -/
-def renderPanicHead (first : PanicEntry) (rest : List PanicEntry) : Option String :=
-  (renderPanicPayload first.value).bind fun base =>
+def renderPanicHead (state : ExecState) (first : PanicEntry) (rest : List PanicEntry) :
+    Option String :=
+  (renderPanicPayload state first.value).bind fun base =>
     if first.recovered then
       match rest with
       | e :: _ =>
@@ -1545,7 +1597,7 @@ inductive Step : Config → ExecState → Config → ExecState → Prop where
   Go's first `panic: ` line (arc doc §A3). Chains whose head payload has
   no pinned rendering have no rule — fail closed. -/
   | panicAbort {first rest msg s} :
-      renderPanicHead first rest = some msg →
+      renderPanicHead s first rest = some msg →
       Step (.panicking (first :: rest) .stop) s (.panicked msg) s
 
 /-- Reflexive-transitive closure of `Step`. -/

@@ -28,4 +28,9 @@
 #   map-key panic cases now conformant (unhashable-key prechecks); two
 #   embedding ids folded into BUG-007 (method promotion) with the six
 #   newly-visible promotion cases the campaign surfaced.
-27
+# 2026-07-31 (interim pre-merge audit response)  27 -> 26:
+#   maps/delete-nil-interface-key-panic became conformant — a NIL map still
+#   hashes its key in Go, and the hashability precheck now runs on the
+#   nil-map paths too. The four NEW red pins from this wave are all
+#   explained by BUG-004/007/008, so they do not enter the backlog.
+26

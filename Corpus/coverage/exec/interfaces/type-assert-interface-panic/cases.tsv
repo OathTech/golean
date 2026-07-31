@@ -1,0 +1,5 @@
+# id	subject	args	expected_status	expected_reason	features
+missing-all	assertInterfaceMissingAll	-	panic	interface conversion	interfaces,type_assertions,panic,methods
+missing-one	assertInterfaceMissingOne	-	panic	interface conversion	interfaces,type_assertions,panic,methods
+nil	assertInterfaceNil	-	panic	interface conversion	interfaces,type_assertions,panic,nil
+error-target	assertErrorMissingMethod	-	panic	interface conversion	interfaces,type_assertions,panic,methods

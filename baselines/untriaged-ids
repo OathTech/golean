@@ -16,7 +16,6 @@ init/init-sees-var-values
 init/multiple-init-order
 init/package-init-order
 init/var-init-sequence
-maps/delete-nil-interface-key-panic
 methods/value-auto-deref
 pointers/nil-array-index-panic
 pointers/nil-value-receiver-call-panic

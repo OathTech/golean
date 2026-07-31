@@ -274,9 +274,13 @@ def resolveDefinedAliases (state : ExecState) (typ : Ty) : Ty :=
 S3): resolve alias chains everywhere in the type structure, stopping at
 identity-bearing `.defined` names. Two types denote the same Go dynamic
 type iff their canonical forms are `BEq` — box tags, assert targets, and
-method-set receivers all compare in canonical form. Fuel bounds alias
-chains only (structure is finite); on exhaustion the type is returned
-as-is, matching `resolveDefinedAliasesFuel`'s convention. -/
+method-set receivers all compare in canonical form. EVERY arm consumes
+fuel, so the budget bounds COMBINED alias-and-structure depth, not alias
+chains alone (the docstring claimed otherwise until the pre-merge audit
+2026-07-31, finding 10, measured the real horizon at ~512 interleaved
+levels). Exhaustion yields `.unsupported`, which `canonicalDynamicTy`
+rejects at boxing time: identity must never be decided on a partly
+resolved type. -/
 def canonicalTyFuel : Nat → ExecState → Ty → Ty
   | fuel + 1, state, .defined name =>
       (match TypeEnv.lookup state.types name with
@@ -290,6 +294,13 @@ def canonicalTyFuel : Nat → ExecState → Ty → Ty
   | fuel + 1, state, .funcType ps rs =>
       .funcType (ps.map (canonicalTyFuel fuel state))
         (rs.map (canonicalTyFuel fuel state))
+  -- Fuel exhausted on a type that still needs resolving: fail closed.
+  | 0, _, .defined _ => .unsupported "canonical type: type nesting too deep"
+  | 0, _, .pointer _ => .unsupported "canonical type: type nesting too deep"
+  | 0, _, .slice _ => .unsupported "canonical type: type nesting too deep"
+  | 0, _, .array _ _ => .unsupported "canonical type: type nesting too deep"
+  | 0, _, .map _ _ => .unsupported "canonical type: type nesting too deep"
+  | 0, _, .funcType _ _ => .unsupported "canonical type: type nesting too deep"
   | _, _, other => other
 
 def canonicalTy (state : ExecState) (typ : Ty) : Ty :=
@@ -316,28 +327,89 @@ def canonicalDynamicTy (state : ExecState) (typ : Ty) : Except GoError Ty := do
   else
     return c
 
-/-- Is the type DEFINITELY uncomparable in Go's runtime sense (a slice,
-map, or func anywhere in its resolved structure)? Drives the
-`comparing uncomparable type` panic on interface equality. Struct
-fields and array elements recurse; interfaces themselves are
-comparable (their comparison may panic deeper, at their own dynamic
-types). Fuel bounds defined-type resolution. -/
-def tyUncomparableFuel : Nat → ExecState → Ty → Bool
-  | _, _, .slice _ => true
-  | _, _, .map _ _ => true
-  | _, _, .funcType _ _ => true
+/-- Is the type uncomparable in Go's runtime sense (a slice, map, or func
+anywhere in its resolved structure)? Drives the `comparing uncomparable
+type` panic on interface equality and the map hash panic. Struct fields
+and array elements recurse; interfaces themselves are comparable (their
+comparison may panic deeper, at their own dynamic types).
+
+Three-valued on purpose: `none` is UNKNOWN — a `.defined` name with no
+`TypeDef` (today: any imported/stdlib named type, since the frontend emits
+declarations only for the analyzed package) or fuel exhaustion. Callers
+must fail CLOSED on `none`; the old `Bool` version answered "comparable",
+which silently accepted `m[sort.IntSlice{1,2}] = 1` where Go panics
+(pre-merge audit 2026-07-31, finding 11). -/
+def tyUncomparableFuel : Nat → ExecState → Ty → Option Bool
+  | _, _, .slice _ => some true
+  | _, _, .map _ _ => some true
+  | _, _, .funcType _ _ => some true
   | fuel + 1, state, .defined name =>
       (match TypeEnv.lookup state.types name with
        | some (.alias t) => tyUncomparableFuel fuel state t
        | some (.defined t) => tyUncomparableFuel fuel state t
        | some (.struct fields) =>
-           fields.any (fun f => tyUncomparableFuel fuel state f.typ)
-       | _ => false)
+           -- Any DEFINITELY-uncomparable field decides it; otherwise an
+           -- unknown field leaves the whole struct unknown.
+           fields.foldl
+             (fun acc f =>
+               match acc, tyUncomparableFuel fuel state f.typ with
+               | some true, _ => some true
+               | _, some true => some true
+               | none, _ => none
+               | _, none => none
+               | some false, some false => some false)
+             (some false)
+       -- An interface-typed field is itself comparable (its own dynamic
+       -- type decides at comparison time), as is `.unsupported`-free
+       -- structure; an ABSENT declaration is unknown.
+       | some (.interfaceDef _) => some false
+       | some (.unsupported _) => none
+       | none => none)
   | fuel + 1, state, .array _ e => tyUncomparableFuel fuel state e
-  | _, _, _ => false
+  | 0, _, .defined _ => none
+  | 0, _, .array _ _ => none
+  | _, _, _ => some false
 
-def tyUncomparable (state : ExecState) (typ : Ty) : Bool :=
+def tyUncomparable (state : ExecState) (typ : Ty) : Option Bool :=
   tyUncomparableFuel typeResolutionFuel state typ
+
+/-- The canonical EMPTY interface: satisfied by every type BY DESIGN (Go's
+`any`), so it needs no wire declaration and renders as `interface {}`.
+`"any"` is what the native frontend emits; `"empty_interface"` is the legacy
+key still used by hand-written GoCore terms in `Tests/` and the proof
+layer. -/
+def isEmptyInterfaceName (id : TypeId) : Bool :=
+  id.key == "any" || id.key == "empty_interface"
+
+-- Total via fuel: recurses through both alias resolution and type subterms
+-- (pointer/slice/map/array elements), so fuel bounds combined depth. Only used
+-- for error-message rendering; on exhaustion it returns a placeholder.
+def goTypeNameForMessageFuel : Nat → ExecState → Ty → String
+  | fuel + 1, state, typ =>
+      match resolveDefinedAliases state typ with
+      | .bool => "bool"
+      | .int kind => kind.name
+      | .string => "string"
+      | .pointer elem => s!"*{goTypeNameForMessageFuel fuel state elem}"
+      | .slice elem => s!"[]{goTypeNameForMessageFuel fuel state elem}"
+      | .map key value => s!"map[{goTypeNameForMessageFuel fuel state key}]{goTypeNameForMessageFuel fuel state value}"
+      | .interface name => if isEmptyInterfaceName name then "interface {}" else name.key
+      | .defined name => name.key
+      | .array length elem => s!"[{length}]{goTypeNameForMessageFuel fuel state elem}"
+      | .funcType params results =>
+          -- Go renders the signature: `func()`, `func(int) bool`,
+          -- `func() (int, error)` (message-fidelity, 2026-07-30).
+          let ps := ", ".intercalate (params.map (goTypeNameForMessageFuel fuel state))
+          let base := s!"func({ps})"
+          match results with
+          | [] => base
+          | [r] => s!"{base} {goTypeNameForMessageFuel fuel state r}"
+          | rs => s!"{base} ({", ".intercalate (rs.map (goTypeNameForMessageFuel fuel state))})"
+      | .unsupported feature => feature
+  | 0, _, _ => "<type nesting too deep>"
+
+def goTypeNameForMessage (state : ExecState) (typ : Ty) : String :=
+  goTypeNameForMessageFuel typeResolutionFuel state typ
 
 def dynamicTypeName? (state : ExecState) (typ : Ty) : Option String :=
   match resolveDefinedAliases state typ with
@@ -356,6 +428,10 @@ def methodInfoByFuncId? (state : ExecState) (id : FuncId) : Option MethodInfo :=
       | none => if method.funcId == id then some method else none)
     none
 
+/-- An interface-RECEIVER method's interface name — the marker that a
+`MethodInfo` is a dispatch anchor (a requirement) rather than a concrete
+implementation. Used by `dynamicDispatch?`; satisfaction requirements come
+from the interface DECLARATION, not from this table. -/
 def methodRecvInterfaceName? (state : ExecState) (method : MethodInfo) : Option String :=
   match resolveDefinedAliases state method.recv with
   | .interface id => some id.key
@@ -369,19 +445,22 @@ def methodRecvDynamicTy? (state : ExecState) (method : MethodInfo) : Option Ty :
   | .interface _ => none
   | recv => some recv
 
-def interfaceMethodRequirements (state : ExecState) (interfaceName : String) : Array MethodInfo :=
-  state.methods.foldl
-    (fun out method =>
-      match methodRecvInterfaceName? state method with
-      | some name => if name == interfaceName then out.push method else out
-      | none => out)
-    #[]
+/-- The DECLARED method set of an interface name, or `none` when the program
+records no declaration for it — the distinction a `Bool`-shaped requirement
+list structurally could not make (pre-merge audit 2026-07-31, finding 0). -/
+def interfaceDeclaredMethods? (state : ExecState) (id : TypeId) : Option (Array MethodSig) :=
+  match TypeEnv.lookup state.types id with
+  | some (.interfaceDef methods) => some methods
+  | _ => none
 
 /-- Go's method-set rule: the method set of `*T` includes `T`'s value-
 receiver methods (the reverse is FALSE — a value box never satisfies a
-pointer-receiver method; probed 2026-07-30, design note Q3). The lookup
-result records whether the receiver must be auto-dereferenced (a
-pointer box dispatching to a value-receiver method). -/
+pointer-receiver method; probed 2026-07-30, design note Q3). The method set
+of `*T` exists only when `T` is a defined non-pointer, non-interface type —
+`**T` has an EMPTY method set, so the fallback declines a pointer pointee
+(pre-merge audit 2026-07-31, finding 4). The lookup result records whether
+the receiver must be auto-dereferenced (a pointer box dispatching to a
+value-receiver method). -/
 def concreteMethodForDynamic? (state : ExecState) (dynTy : Ty) (methodName : String) :
     Option (MethodInfo × Bool) :=
   let direct := state.methods.foldl
@@ -396,6 +475,10 @@ def concreteMethodForDynamic? (state : ExecState) (dynTy : Ty) (methodName : Str
     none
   match direct, dynTy with
   | some hit, _ => some hit
+  -- `*T` inherits `T`'s value-receiver methods — but ONLY when `T` is a
+  -- defined non-pointer, non-interface type. `**T`'s method set is empty.
+  | none, .pointer (.pointer _) => none
+  | none, .pointer (.interface _) => none
   | none, .pointer elem =>
       state.methods.foldl
         (fun found method =>
@@ -412,9 +495,84 @@ def concreteMethodForDynamic? (state : ExecState) (dynTy : Ty) (methodName : Str
 def hasConcreteMethod (state : ExecState) (dynTy : Ty) (methodName : String) : Bool :=
   (concreteMethodForDynamic? state dynTy methodName).isSome
 
-def dynamicImplementsInterface (state : ExecState) (dynTy : Ty) (interfaceName : String) : Bool :=
-  (interfaceMethodRequirements state interfaceName).all
-    (fun requirement => hasConcreteMethod state dynTy requirement.name)
+/-- A concrete method's declared signature: its executable `Func`'s
+parameters MINUS the receiver, and its results, canonicalized. `none` when
+no body is recorded (a dispatch anchor or a quarantined declaration) —
+which is a failure to match, never a silent pass. -/
+def concreteMethodSignature? (state : ExecState) (info : MethodInfo) :
+    Option (Array Ty × Array Ty) :=
+  match findFunctionIn? state.functions info.funcId with
+  | some f =>
+      some ((f.args.extract 1 f.args.size).map (fun p => canonicalTy state p.typ),
+            f.results.map (fun p => canonicalTy state p.typ))
+  | none => none
+
+/-- Does `dynTy` carry a method matching this REQUIREMENT — name AND
+signature? Comparing names alone accepted a differently typed method
+(pre-merge audit 2026-07-31, finding 2). -/
+def satisfiesMethodSig (state : ExecState) (dynTy : Ty) (req : MethodSig) : Bool :=
+  match concreteMethodForDynamic? state dynTy req.name with
+  | some (info, _) =>
+      match concreteMethodSignature? state info with
+      | some (params, results) =>
+          params == req.params.map (canonicalTy state) &&
+            results == req.results.map (canonicalTy state)
+      | none => false
+  | none => false
+
+/-- Could a method be PROMOTED into `dynTy`'s method set from an embedded
+field? Promotion is unmodeled (BUG-007), so a satisfaction check that would
+answer `false` on such a type must fail CLOSED rather than answer — the
+comma-ok assert turned that `false` into a silent wrong answer (pre-merge
+audit 2026-07-31, finding 5). Value and pointer forms both, since `*Outer`
+promotes too. -/
+def dynamicHasEmbeddedFields (state : ExecState) (dynTy : Ty) : Bool :=
+  let base := match dynTy with
+    | .pointer elem => elem
+    | other => other
+  match base with
+  | .defined name =>
+      match TypeEnv.lookup state.types name with
+      | some (.struct fields) => fields.any (fun f => f.embedded)
+      | _ => false
+  | _ => false
+
+/-- The FIRST requirement of `interfaceName` that `dynTy` does not meet, in
+the interface's own (name-sorted) method order — `none` means it satisfies
+the interface. Go names exactly this method in its assert-panic message.
+
+Fails CLOSED, never vacuously true, in two situations:
+  * no declaration is recorded for a non-empty interface name (the wire
+    carries one for every interface it mentions; an absent one means the
+    program used an interface the frontend did not export);
+  * the answer would be "unsatisfied" on a type whose method set may be
+    extended by unmodeled PROMOTION (BUG-007). -/
+def firstUnsatisfiedMethod? (state : ExecState) (dynTy : Ty) (interfaceName : TypeId) :
+    Except GoError (Option String) := do
+  if isEmptyInterfaceName interfaceName then
+    return none
+  match interfaceDeclaredMethods? state interfaceName with
+  | none =>
+      unsupported s!"interface {interfaceName.key} has no recorded declaration"
+  | some reqs =>
+      let missing := reqs.foldl
+        (fun found req =>
+          match found with
+          | some _ => found
+          | none => if satisfiesMethodSig state dynTy req then none else some req.name)
+        none
+      match missing with
+      | none => return none
+      | some name =>
+          if dynamicHasEmbeddedFields state dynTy then
+            unsupported s!"interface satisfaction for {goTypeNameForMessage state dynTy}: \
+method {name} may be PROMOTED from an embedded field (BUG-007, unmodeled)"
+          else
+            return (some name)
+
+def dynamicImplementsInterface (state : ExecState) (dynTy : Ty) (interfaceName : TypeId) :
+    Except GoError Bool := do
+  return (← firstUnsatisfiedMethod? state dynTy interfaceName).isNone
 
 -- Total via fuel: fuel is decremented only at `.defined` resolution; array and
 -- struct child recursion is structural through list helpers. The public
@@ -439,6 +597,7 @@ mutual
         | some (.defined target) => normalizeValueForTyFuel fuel state target value
         | some (.struct fields) => normalizeStructValueForFields fuel state name fields value
         | some (.unsupported feature) => unsupported s!"normalizing {feature}"
+        | some (.interfaceDef _) => unsupported s!"normalizing at interface type {name.key}"
         | none => unsupported s!"normalizing unknown defined type {name.key}"
     | 0, _, .defined _, _ => unsupported "normalizing: type nesting too deep"
     | _, _, .unsupported feature, _ => unsupported s!"normalizing {feature}"
@@ -542,6 +701,7 @@ def convertValueToTyFuel : Nat → ExecState → Ty → GoValue → Except GoErr
       | some (.defined target) => convertValueToTyFuel fuel state target value
       | some (.struct _) => unsupported s!"conversion to struct type {name.key}"
       | some (.unsupported feature) => unsupported s!"conversion to {feature}"
+      | some (.interfaceDef _) => unsupported s!"conversion to interface type {name.key}"
       | none => unsupported s!"conversion to unknown defined type {name.key}"
   -- Identity conversions Go permits at runtime with no representation
   -- change (`string(s)` — surfaced by interfaces/error-interface's
@@ -592,6 +752,7 @@ mutual
         | some (.alias target) => defaultValueFuel fuel state target
         | some (.defined target) => defaultValueFuel fuel state target
         | some (.unsupported feature) => unsupported s!"default value for {feature}"
+        | some (.interfaceDef _) => unsupported s!"default value at interface type {name.key}"
         | none => unsupported s!"default value for unknown defined type {name.key}"
     | 0, _, .defined _ => unsupported "default value: type nesting too deep"
     | _, _, .unsupported feature => unsupported s!"default value for {feature}"
@@ -634,6 +795,7 @@ def buildStructValueFuel : Nat → ExecState → Ty → Array GoValue → Except
       -- tagging for defined-over-defined-struct is unresolved; see the
       -- TypeDef.defined docstring).
       | some (.defined _) => unsupported s!"struct literal for defined type {name.key} over non-struct underlying"
+      | some (.interfaceDef _) => unsupported s!"struct literal for interface type {name.key}"
       | some (.unsupported feature) => unsupported s!"struct literal for {feature}"
       | none => unsupported s!"struct literal for unknown defined type {name.key}"
   | 0, _, .defined _, _ => unsupported "struct literal: type nesting too deep"
@@ -676,7 +838,7 @@ def typeAssertValue (state : ExecState) (value : GoValue) (targetTy : Ty) :
   | .interface dynTy inner =>
       match resolveDefinedAliases state targetTy with
       | .interface interfaceName =>
-          if dynamicImplementsInterface state dynTy interfaceName.key then
+          if ← dynamicImplementsInterface state dynTy interfaceName then
             return (.interface dynTy inner, true)
           else
             return (failed, false)
@@ -690,45 +852,49 @@ def typeAssertValue (state : ExecState) (value : GoValue) (targetTy : Ty) :
             return (failed, false)
   | other => unsupported s!"type assertion from non-interface value {repr other}"
 
--- Total via fuel: recurses through both alias resolution and type subterms
--- (pointer/slice/map/array elements), so fuel bounds combined depth. Only used
--- for error-message rendering; on exhaustion it returns a placeholder.
-def goTypeNameForMessageFuel : Nat → ExecState → Ty → String
-  | fuel + 1, state, typ =>
-      match resolveDefinedAliases state typ with
-      | .bool => "bool"
-      | .int kind => kind.name
-      | .string => "string"
-      | .pointer elem => s!"*{goTypeNameForMessageFuel fuel state elem}"
-      | .slice elem => s!"[]{goTypeNameForMessageFuel fuel state elem}"
-      | .map key value => s!"map[{goTypeNameForMessageFuel fuel state key}]{goTypeNameForMessageFuel fuel state value}"
-      | .interface ⟨"empty_interface"⟩ => "interface {}"
-      | .interface name => name.key
-      | .defined name => name.key
-      | .array length elem => s!"[{length}]{goTypeNameForMessageFuel fuel state elem}"
-      | .funcType params results =>
-          -- Go renders the signature: `func()`, `func(int) bool`,
-          -- `func() (int, error)` (message-fidelity, 2026-07-30).
-          let ps := ", ".intercalate (params.map (goTypeNameForMessageFuel fuel state))
-          let base := s!"func({ps})"
-          match results with
-          | [] => base
-          | [r] => s!"{base} {goTypeNameForMessageFuel fuel state r}"
-          | rs => s!"{base} ({", ".intercalate (rs.map (goTypeNameForMessageFuel fuel state))})"
-      | .unsupported feature => feature
-  | 0, _, _ => "<type nesting too deep>"
-
-def goTypeNameForMessage (state : ExecState) (typ : Ty) : String :=
-  goTypeNameForMessageFuel typeResolutionFuel state typ
-
 def dynamicTypeNameForMessage (state : ExecState) : GoValue → String
   | .interface dynTy _ => goTypeNameForMessage state dynTy
   | .nil => "nil"
   | other => s!"{repr other}"
 
-def typeAssertPanicMessage (state : ExecState) (value : GoValue) (targetTy : Ty) : String :=
-  "interface conversion: interface {} is " ++
-    dynamicTypeNameForMessage state value ++ ", not " ++ goTypeNameForMessage state targetTy
+/-- Go's failed-type-assert panic message, in all FOUR of its real shapes
+(probed 2026-07-31, `.tmp/fix/probe/assert`; the machine had one shape, with
+a hardcoded `interface {}` source and no missing-method form at all —
+pre-merge audit 2026-07-31, findings 7 and 8):
+
+  * interface target, non-nil operand:
+    `interface conversion: main.T is not main.J: missing method N`
+    (the source's static type is NOT printed; `missing` names the first
+    unmet requirement in the interface's method order)
+  * interface target, nil operand:
+    `interface conversion: interface is nil, not main.J`
+  * concrete target: `interface conversion: <source> is <dyn>, not <target>`,
+    where `<source>` is the operand's STATIC interface type — `interface {}`
+    only when that really is the empty interface.
+
+`sourceTy` is `none` when the lowering did not carry the operand's static
+type; the message then falls back to the empty-interface spelling, which is
+what every pre-existing GoCore term meant. -/
+def typeAssertPanicMessage (state : ExecState) (value : GoValue) (targetTy : Ty)
+    (sourceTy : Option Ty) (missingMethod : Option String) : String :=
+  let sourceName :=
+    match sourceTy with
+    | some t => goTypeNameForMessage state t
+    | none => "interface {}"
+  match resolveDefinedAliases state targetTy, value with
+  | .interface _, .nil =>
+      "interface conversion: interface is nil, not " ++ goTypeNameForMessage state targetTy
+  | .interface _, _ =>
+      let missing :=
+        match missingMethod with
+        | some m => s!": missing method {m}"
+        | none => ""
+      "interface conversion: " ++ dynamicTypeNameForMessage state value ++
+        " is not " ++ goTypeNameForMessage state targetTy ++ missing
+  | _, _ =>
+      "interface conversion: " ++ sourceName ++ " is " ++
+        dynamicTypeNameForMessage state value ++ ", not " ++
+        goTypeNameForMessage state targetTy
 
 def valueAsInt : GoValue → Except GoError Int
   | .int value _ => return value
@@ -824,10 +990,14 @@ mutual
         .interface dynL innerL, .interface dynR innerR =>
       if dynL != dynR then
         return false
-      else if tyUncomparable state dynL then
-        throw (.panic s!"runtime error: comparing uncomparable type {goTypeNameForMessage state dynL}")
       else
-        valueEqFuel fuel state dynL innerL innerR
+        match tyUncomparable state dynL with
+        | some true =>
+            throw (.panic s!"runtime error: comparing uncomparable type {goTypeNameForMessage state dynL}")
+        -- UNKNOWN comparability (an undeclared defined type) falls through
+        -- to `valueEqFuel`, whose `.defined` arm already fails closed with
+        -- the precise "unknown defined type" reason.
+        | _ => valueEqFuel fuel state dynL innerL innerR
     | 0, _, .interface _, .interface _ _, .interface _ _ =>
         unsupported "interface equality: type nesting too deep"
     | _, _, .interface _, left, right => unsupported s!"interface equality for {repr left} and {repr right}"
@@ -852,6 +1022,7 @@ mutual
                 valueEqStruct fuel state fields.toList leftFields.toList rightFields.toList
             | _, _ => stuck s!"struct equality expected struct {name.key} operands, got {repr left} and {repr right}"
         | some (.unsupported feature) => unsupported s!"equality for {feature}"
+        | some (.interfaceDef _) => unsupported s!"equality at interface type {name.key}"
         | none => unsupported s!"equality for unknown defined type {name.key}"
     | 0, _, .defined _, _, _ => unsupported "equality: type nesting too deep"
     | _, _, .unsupported feature, _, _ => unsupported s!"equality for {feature}"
@@ -885,24 +1056,84 @@ end
 def valueEq (state : ExecState) (ty : Ty) (left right : GoValue) : Except GoError Bool :=
   valueEqFuel typeResolutionFuel state ty left right
 
+/-- Go's `typehash` is VALUE-directed, not type-directed: it recurses into
+struct fields and array elements, so a statically COMPARABLE aggregate key
+panics when a box nested anywhere inside it has an uncomparable dynamic
+type — and the panic names that INNER type (probed 2026-07-31,
+`.tmp/fix/probe/hash`; the precheck used to match only a key that was itself
+a box — pre-merge audit 2026-07-31, finding 1).
+
+The walk is structural over the VALUE (fuel bounds only the type-level
+comparability check inside `tyUncomparable`), and stops at the first
+offending component in Go's own hashing order: struct fields in declaration
+order, array elements in index order. -/
+inductive KeyHashability where
+  /-- No unhashable component anywhere in the key. -/
+  | hashable
+  /-- Definitely unhashable; the name is what Go's panic prints. -/
+  | unhashable (typeName : String)
+  /-- Comparability of some component could not be decided (a defined type
+  with no declaration): the caller must fail CLOSED. -/
+  | unknown (typeName : String)
+  deriving Repr, BEq
+
+mutual
+  def valueHashability (state : ExecState) : GoValue → KeyHashability
+    | .interface dynTy inner =>
+        match tyUncomparable state dynTy with
+        | some true => .unhashable (goTypeNameForMessage state dynTy)
+        | some false => valueHashability state inner
+        | none => .unknown (goTypeNameForMessage state dynTy)
+    | .struct _ fields => valueHashabilityFields state fields.toList
+    | .array values => valueHashabilityList state values.toList
+    | _ => .hashable
+
+  /-- Struct fields in declaration order — Go hashes them in that order. -/
+  def valueHashabilityFields (state : ExecState) :
+      List (String × GoValue) → KeyHashability
+    | [] => .hashable
+    | (_, v) :: rest =>
+        match valueHashability state v with
+        | .hashable => valueHashabilityFields state rest
+        | other => other
+
+  def valueHashabilityList (state : ExecState) : List GoValue → KeyHashability
+    | [] => .hashable
+    | v :: rest =>
+        match valueHashability state v with
+        | .hashable => valueHashabilityList state rest
+        | other => other
+end
+
+/-- Go's TWO hash-panic phrasings, keyed on the map's CURRENT entry count —
+NOT on insert-vs-access (probed 2026-07-31; the previous rule was
+generalized from empty maps only — pre-merge audit 2026-07-31, finding 6).
+`mapassign` never short-circuits, so it always takes the `runtime error:`
+form; `mapaccess`/`mapdelete` take the `mapKeyError` shortcut — the colon
+form — only while `h == nil || h.count == 0`. A map emptied by `delete`
+returns to the colon form, so the predicate is the live entry count. -/
+def hashPanicMessage (typeName : String) (alwaysHashes : Bool) : String :=
+  if alwaysHashes then
+    s!"runtime error: hash of unhashable type {typeName}"
+  else
+    s!"hash of unhashable type: {typeName}"
+
+/-- The hashability precheck Go performs BEFORE any comparison. `nonEmpty`
+is the map's live entry count being nonzero; `isInsert` marks `mapassign`,
+which never short-circuits. Split out of `mapEntryIndex?` so the NIL-map
+paths (which never reach the entry scan) can run it too — Go panics there
+as well. -/
+def checkKeyHashable (state : ExecState) (key : GoValue)
+    (isInsert : Bool) (nonEmpty : Bool) : Except GoError Unit :=
+  match valueHashability state key with
+  | .unhashable name => throw (.panic (hashPanicMessage name (isInsert || nonEmpty)))
+  | .unknown name => unsupported s!"map key hashability for unknown defined type {name}"
+  | .hashable => pure ()
+
 -- Not recursive; total now that valueEq is. The for-loop is fine in a plain def.
 def mapEntryIndex? (state : ExecState) (keyTy : Ty) (entries : Array (GoValue × GoValue))
     (key : GoValue) (isInsert : Bool := false) : Except GoError (Option Nat) := do
-  -- Go hashes the key BEFORE any comparison: inserting or looking up a
-  -- box with an uncomparable dynamic type panics even on an empty map.
-  -- The runtime PHRASES the two paths differently (probed 2026-07-30):
-  -- mapassign says `runtime error: hash of unhashable type []int`;
-  -- mapaccess/mapdelete say `hash of unhashable type: []int`. Single
-  -- choke point: get/assign/delete all route through here.
-  match key with
-  | .interface dynTy _ =>
-      if tyUncomparable state dynTy then
-        let name := goTypeNameForMessage state dynTy
-        if isInsert then
-          throw (.panic s!"runtime error: hash of unhashable type {name}")
-        else
-          throw (.panic s!"hash of unhashable type: {name}")
-  | _ => pure ()
+  checkKeyHashable state key isInsert (!entries.isEmpty)
   let mut i := 0
   for (entryKey, _) in entries do
     if ← valueEq state keyTy entryKey key then
@@ -1045,7 +1276,12 @@ def mapEntries (state : ExecState) (map : MapValue) :
 def mapLookupValue (state : ExecState) (map : MapValue) (key : GoValue)
     (keyTy valueTy : Ty) : Except GoError (GoValue × Bool) := do
   match ← mapEntries state map with
-  | none => return (← defaultValue state valueTy, false)
+  -- A NIL map still hashes the key: Go panics `hash of unhashable type: X`
+  -- (the `h == nil` arm of mapKeyError; probed 2026-07-31) before returning
+  -- the zero value.
+  | none => do
+      checkKeyHashable state key (isInsert := false) (nonEmpty := false)
+      return (← defaultValue state valueTy, false)
   | some (_, entries) =>
       match ← mapEntryIndex? state keyTy entries key with
       | some i =>

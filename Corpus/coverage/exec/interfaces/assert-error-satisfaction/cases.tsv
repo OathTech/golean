@@ -1,0 +1,5 @@
+# id	subject	args	expected_status	expected_reason	features
+no-call	assertErrorNoCall	-	ok	-	interfaces,type_assertions,comma_ok,methods
+declared-not-called	assertErrorDeclaredNotCalled	-	ok	-	interfaces,type_assertions,comma_ok,methods
+positive	assertErrorPositive	-	ok	-	interfaces,type_assertions,comma_ok,methods
+classify	assertErrorClassify	-	ok	-	interfaces,type_assertions,comma_ok,methods

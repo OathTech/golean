@@ -52,6 +52,32 @@ type emitter struct {
 	// predeclared ones (error) and, later, imported ones have no decl here,
 	// so emitProgram synthesizes their table entries from this record.
 	calledIfaceMethods map[string]calledIfaceMethod
+
+	// EVERY interface type that reaches the wire, keyed by its wire name.
+	// Recorded at the single type choke point (emitType) plus the
+	// declaration loop, so an interface referenced only as an assert TARGET
+	// is captured too. emitProgram turns each into an `interface` TypeDef
+	// carrying the FULL method set — the machine's interface-satisfaction
+	// requirements. Before this, requirements were derived from the DISPATCH
+	// table, which holds only methods actually CALLED, so an interface with
+	// no call site had an EMPTY requirement list and every dynamic type
+	// vacuously satisfied it (pre-merge audit 2026-07-31, finding 0).
+	seenInterfaces map[string]*types.Interface
+}
+
+// noteInterface records an interface type for the `interface` TypeDef pass.
+// The canonical EMPTY interface (`any`) is excluded on purpose: it is
+// satisfied by every type BY DESIGN in the machine (Go's `any`), so it needs
+// no declaration — and keeping it off the wire keeps `any`-using programs'
+// lowering unchanged.
+func (e *emitter) noteInterface(name string, iface *types.Interface) {
+	if name == emptyInterfaceName {
+		return
+	}
+	if e.seenInterfaces == nil {
+		e.seenInterfaces = map[string]*types.Interface{}
+	}
+	e.seenInterfaces[name] = iface
 }
 
 // calledIfaceMethod records one interface-dispatch call target: the receiver
@@ -66,6 +92,10 @@ type calledIfaceMethod struct {
 // emptyStructName is the canonical GoCore type name for the empty struct
 // struct{} (the set-value idiom map[K]struct{}).
 const emptyStructName = "struct{}"
+
+// emptyInterfaceName is the canonical GoCore type name for the empty interface
+// (`any` / `interface{}`) — the one interface the machine satisfies by design.
+const emptyInterfaceName = "any"
 
 // unsupported is returned when a construct is not yet modeled. The pipeline
 // fails closed: the emitter never approximates.
@@ -89,8 +119,10 @@ func (e *emitter) emitType(t types.Type) (any, error) {
 		// otherwise it is a defined type. GoCore distinguishes the two. Names
 		// are package-qualified ("main.T"); predeclared types (error) stay
 		// bare (no package).
-		if _, ok := ty.Underlying().(*types.Interface); ok {
-			return map[string]any{"kind": "interface", "name": qualifiedTypeName(obj)}, nil
+		if iface, ok := ty.Underlying().(*types.Interface); ok {
+			name := qualifiedTypeName(obj)
+			e.noteInterface(name, iface)
+			return map[string]any{"kind": "interface", "name": name}, nil
 		}
 		return map[string]any{"kind": "named", "name": qualifiedTypeName(obj)}, nil
 	case *types.Pointer:
@@ -123,7 +155,7 @@ func (e *emitter) emitType(t types.Type) (any, error) {
 		return map[string]any{"kind": "map", "key": key, "value": val}, nil
 	case *types.Interface:
 		if ty.Empty() {
-			return map[string]any{"kind": "interface", "name": "any"}, nil
+			return map[string]any{"kind": "interface", "name": emptyInterfaceName}, nil
 		}
 		return nil, unsup("anonymous non-empty interface type %s", ty)
 	case *types.Signature:

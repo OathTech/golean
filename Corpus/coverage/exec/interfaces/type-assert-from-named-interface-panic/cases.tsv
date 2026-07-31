@@ -1,0 +1,3 @@
+# id	subject	args	expected_status	expected_reason	features
+to-pointer	assertFromNamedInterfaceToPointer	-	panic	interface conversion	interfaces,type_assertions,panic,pointers
+nil-operand	assertFromNamedInterfaceNil	-	panic	interface conversion	interfaces,type_assertions,panic,nil

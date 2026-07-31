@@ -15,11 +15,42 @@ structure Param where
 structure FieldDef where
   name : String
   typ : Ty
+  /-- Go's ANONYMOUS (embedded) field flag, carried verbatim from the
+  frontend. Method PROMOTION through embedded fields is unmodeled
+  (BUG-007), and this is what lets interface satisfaction fail CLOSED on a
+  type where promotion could apply instead of answering `false` — which was
+  a silent wrong answer on the comma-ok assert path (pre-merge audit
+  2026-07-31, finding 5). -/
+  embedded : Bool := false
+  deriving Repr, BEq
+
+/-- One method of an interface's method set: the name plus the signature
+with the RECEIVER excluded. Interface satisfaction compares these against a
+concrete method's `Func` (arguments minus the receiver, and results), both
+canonicalized — a name-only match reported satisfaction for a differently
+typed method (pre-merge audit 2026-07-31, finding 2).
+
+KNOWN GAP: variadic-ness is not carried (a `Func` has no variadic flag to
+compare it against), so `M(xs ...int)` and `M(xs []int)` are
+indistinguishable here. -/
+structure MethodSig where
+  name : String
+  params : Array Ty
+  results : Array Ty
   deriving Repr, BEq
 
 inductive TypeDef where
   | struct (fields : Array FieldDef)
   | alias (target : Ty)
+  /-- An INTERFACE declaration: its FULL method set (embedded interfaces
+  already flattened by the frontend). Satisfaction requirements come from
+  HERE, not from the dispatch table — the dispatch table records only
+  methods actually CALLED, so an interface with no call site had an empty
+  requirement list and every dynamic type satisfied it vacuously
+  (pre-merge audit 2026-07-31, finding 0). A name with no such declaration
+  therefore FAILS CLOSED; the canonical empty interface (`any`) is
+  satisfied by design and carries no declaration. -/
+  | interfaceDef (methods : Array MethodSig)
   /-- An identity-BEARING named type over a non-struct underlying
   (`type T int`, `type MC map[uint64]struct{}`) — BUG-004's fix
   (interfaces campaign S2, 2026-07-30). Runtime values share the
@@ -84,7 +115,13 @@ inductive Expr where
   | arrayLit (length : Nat) (elem : Ty) (args : Array (Int × Expr))
   | defaultValue (typ : Ty)
   | toInterface (target dynamic : Ty) (operand : Expr)
-  | typeAssert (operand : Expr) (target : Ty)
+  /-- Single-result assert `x.(T)` — panics on mismatch. `source` is the
+  operand's STATIC interface type, which Go's panic message names
+  (`interface conversion: main.I is main.T, not *main.T`) and which cannot
+  be recovered from the runtime value; `none` means the lowering did not
+  carry it and the message falls back to the empty-interface spelling
+  (pre-merge audit 2026-07-31, finding 8). -/
+  | typeAssert (operand : Expr) (target : Ty) (source : Option Ty := none)
   | indexGet (base index : Expr)
   | indexAddr (base index : Expr)
   | mapGet (base index : Expr) (keyTy valueTy : Ty)

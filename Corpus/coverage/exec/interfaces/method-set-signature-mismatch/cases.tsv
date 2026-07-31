@@ -1,0 +1,5 @@
+# id	subject	args	expected_status	expected_reason	features
+arity	signatureArityMismatch	-	ok	-	interfaces,type_assertions,comma_ok,methods
+param-type	signatureParamMismatch	-	ok	-	interfaces,type_assertions,comma_ok,methods
+result-type	signatureResultMismatch	-	ok	-	interfaces,type_assertions,comma_ok,methods
+exact	signatureExactMatch	-	ok	-	interfaces,type_assertions,comma_ok,methods

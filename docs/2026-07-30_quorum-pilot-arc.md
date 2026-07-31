@@ -146,6 +146,21 @@ test values — the first "Verdi results, but on real code" artifact
     on the real source** — interface dispatch, defined-type identity,
     nondet map ranges, the sort extern, MaxUint64, all through the one
     chain.
+- 2026-07-31: **Interim mini-audit RETURNED — 13 confirmed (1 critical,
+  6 major), 1 refuted; the audit-warranted call vindicated.** The
+  critical: interface satisfaction is VACUOUSLY TRUE for any interface
+  with no recorded method requirements — `x.(error)` answers true/false
+  depending on whether an unrelated line in the package calls
+  `.Error()` (probe: machine 1, Go 0; generalizes to every
+  non-package-declared interface; aimed square at the raft error
+  idiom). The differential was 806/806 GREEN through all 13 — the
+  "unexercised paths" class exactly as CLAUDE.md describes it. Fix
+  wave in flight (wire-level interface method-set declarations with
+  signature checking, fail-closed on unknown interfaces, compound
+  unhashable keys, Go-exact hash-panic phrasing by map emptiness,
+  render/message fidelity, **T method sets, BUG-007 comma-ok honesty),
+  guardrail-case-first, with a full-run re-pin. All findings and probe
+  evidence preserved for the final pre-merge audit's record.
 - 2026-07-31: **Phase 4 OPENED.** Golden pin #3 landed:
   `GoldenQuorum.quorumLowered` — the real CommittedIndex lowering
   (1390-line repr, GENERATED literal file, byte-identical both links,
@@ -187,3 +202,58 @@ test values — the first "Verdi results, but on real code" artifact
   `GoFuncSpec2` statement shape (discharge machinery = phase 4, no
   applicability claimed). Audit pins added for the instances; the
   `*_statement` defs stay unpinned targets by design.
+- 2026-07-31: **Phase-4 item 2 (per-construct laws) LANDED** —
+  `proofs/GoLeanProofs/Laws/QuorumOps.lean`, all witnessed same-commit
+  on statements `rfl`-projected out of `GoldenQuorum.quorumLowered`
+  (`QuorumPin.{rangeStmt,sortStmt,mapLookupStmt}`):
+  - the **wide-statement (`stmtOpK`) walk**, which had NO laws at all
+    (`wp_stmt_op_first`, `wp_stmt_op_shift_target`,
+    `wp_stmt_op_shift_plain`, `wp_stmt_op_apply_store`,
+    `wp_stmt_op_apply_read_store₂`) — every wide statement
+    (`makeSlice`/`appendSlice`/`mapAssign`/`clearSlice`/`typeAssert`…)
+    now enters through these;
+  - `wp_sort_slice` + witness `wp_sort_slice_srt` on the REAL
+    `slices.Sort(srt)`, `[3,1,2] ↦ [1,2,3]`. **Machine fact worth
+    recording:** a slice's elements live in ONE backing cell (element
+    locs are `Loc.index base i`, and `storeLoc` routes them through the
+    base cell), so `sortSlice` is a SINGLE-cell step — the planned
+    "own c0,c1,c2 individually / big-sep over element cells" shape is
+    not what the machine does;
+  - `wp_map_lookup` (comma-ok) + the new one-read/two-write lifting core
+    `wp_read_store_step₂` (`Lifting.lean` topped out at one read + one
+    write); the core derives the two targets' disequality from ownership
+    (`pointsTo_ne`), so callers need no aliasing side-condition;
+  - `wp_map_range_snapshot` (+ nil form) — the state-reading step that
+    feeds `Laws/Range`'s nondeterministic `mapIterK` law.
+- 2026-07-31: **BLOCKER RECORDED — the ghost state does not pin
+  `σ.types`, and the quorum walk cannot proceed without it.**
+  `GoCoreGS`/`stateInterp` pin `σ.functions` and `σ.methods` only. But
+  `bindParams` normalizes each argument at its DECLARED type,
+  `allocDecls` defaults results at theirs, and
+  `concreteMethodForDynamic?` compares a box's dynamic tag against
+  `canonicalTy σ method.recv` — all of which resolve `.defined` names
+  through `TypeEnv.lookup σ.types` and fail closed on an unknown name.
+  Every quorum entry point has `.defined`-typed parameters/results
+  (`main.MajorityConfig`, `main.mapAckIndexer`, `main.Index`), and a Go
+  method receiver is always a defined type. So a house-style premise
+  `∀ σ, σ.functions = … → σ.methods = … → P σ` about ANY of them is
+  FALSE (pick a σ with those pins and a hostile `types`), and a law
+  carrying one would be VACUOUS — exactly the class the non-vacuity gate
+  exists to catch. Consequences: (a) `wp_call_dynamic_enter` was NOT
+  written (a scaffold would have been vacuous); (b) NO frame-entry law
+  for this program is stateable today, so the `CommittedIndex` walk
+  (item 3) is blocked, not just the dispatch step; (c) the
+  `wp_map_lookup` witness stores into a `uint64`-typed cell where the
+  lowering declares `main.Index` (recorded in its docstring).
+  `typeEnv_pin_is_load_bearing` (`Laws/QuorumOps.lean`, Audit-pinned) is
+  the kernel-checked demonstration: the same value at the same declared
+  type normalizes to `.ok` under the program's type env and to
+  `unsupported` under an empty one.
+  **The fix** (arc-level, deliberately not smuggled into the laws
+  commit): add `types : TypeEnv` to `GoCoreGS`, add
+  `σ.types = GoCoreGS.types GF` to the state interpretation, and update
+  the `obtain ⟨hfns, hmeths, hwf⟩` destructurings in `Lifting.lean`,
+  `Laws/{Call,Range,Loop,Unwind}.lean` plus `Adequacy.lean`/
+  `SurfaceExit.lean`'s construction sites. Nothing else about the laws
+  changes: their `∀ σ` premises simply gain the `σ.types = …` hypothesis
+  and become dischargeable by computation against the pin.
