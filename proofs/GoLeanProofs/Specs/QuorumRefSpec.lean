@@ -43,6 +43,7 @@ theorem insertAsc_perm (x : Nat) : ∀ l : List Nat, (insertAsc x l).Perm (x :: 
   | y :: ys => by
       by_cases h : x ≤ y
       · simp only [insertAsc, if_pos h]
+        exact List.Perm.refl _
       · simp only [insertAsc, if_neg h]
         exact ((insertAsc_perm x ys).cons y).trans (List.Perm.swap x y ys)
 
@@ -87,8 +88,8 @@ theorem sortAsc_sorted : ∀ l : List Nat, (sortAsc l).Pairwise (· ≤ ·)
 
 /-- `supporters` — a `filter`/`length` over the *config* — is the count
 of acked-or-zero values `≥ j` in the *sorted* acked multiset. No
-distinctness of voters is used: `countP` counts occurrences, and the
-`map`+`sort` preserve them. -/
+distinctness of voters is used: `countP` counts occurrences, and both
+`map` and the sort preserve them. -/
 theorem supporters_eq_countP (c : List Nat) (acked : Nat → Option Nat) (j : Nat) :
     supporters c acked j
       = (sortAsc (c.map (ackedOrZero acked))).countP (fun x => decide (j ≤ x)) := by
@@ -114,8 +115,9 @@ theorem sorted_countP_ge (j : Nat) :
         omega
       have ht : t.countP (fun x => decide (j ≤ x)) = t.length :=
         List.countP_eq_length.2 hall
-      rw [List.countP_cons_of_pos _ (by simpa using hj), ht]
-      simp
+      rw [List.countP_cons_of_pos (by simp only [decide_eq_true_eq]; omega), ht]
+      simp only [List.length_cons]
+      omega
   | x :: t, k + 1, hp, hk, hj => by
       rw [List.getElem_cons_succ] at hj
       have hk' : k < t.length := by simpa using hk
@@ -123,7 +125,7 @@ theorem sorted_countP_ge (j : Nat) :
       have hmono : t.countP (fun x => decide (j ≤ x))
           ≤ (x :: t).countP (fun x => decide (j ≤ x)) := by
         rw [List.countP_cons]
-        omega
+        exact Nat.le_add_right _ _
       simp only [List.length_cons]
       omega
 
@@ -136,8 +138,8 @@ theorem sorted_countP_lt (j : Nat) :
   | [], _, _, hk, _ => absurd hk (by simp)
   | x :: t, 0, _, _, hj => by
       rw [List.getElem_cons_zero] at hj
-      rw [List.countP_cons_of_neg _ (by simp; omega)]
-      have := List.countP_le_length (p := fun x => decide (j ≤ x)) (l := t)
+      rw [List.countP_cons_of_neg (by simp only [decide_eq_true_eq]; omega)]
+      have hle := List.countP_le_length (p := fun x => decide (j ≤ x)) (l := t)
       simp only [List.length_cons]
       omega
   | x :: t, k + 1, hp, hk, hj => by
@@ -145,7 +147,7 @@ theorem sorted_countP_lt (j : Nat) :
       have hk' : k < t.length := by simpa using hk
       have hxt : x ≤ t[k] := (List.pairwise_cons.1 hp).1 _ (List.getElem_mem hk')
       have ih := sorted_countP_lt j t k (List.pairwise_cons.1 hp).2 hk' hj
-      rw [List.countP_cons_of_neg _ (by simp; omega)]
+      rw [List.countP_cons_of_neg (by simp only [decide_eq_true_eq]; omega)]
       simp only [List.length_cons]
       omega
 
@@ -154,34 +156,45 @@ theorem sorted_countP_lt (j : Nat) :
 /-- **The agreement theorem, in its strongest form**: the executable
 reference meets the declarative spec for *every* config — no
 duplicate-freeness required. `supporters` is a count, not a set
-cardinality, so repeated voters simply count repeatedly on both sides. -/
+cardinality, so repeated voters simply count repeatedly on both sides of
+the bridge. -/
 theorem committedIndexRef_meets_spec_of_any (c : List Nat) (acked : Nat → Option Nat) :
     IsCommittedIndex c acked (committedIndexRef c acked) := by
-  match c with
-  | [] => exact Or.inl ⟨rfl, rfl⟩
-  | v :: vs =>
-    set n := (v :: vs).length with hn
-    set s := sortAsc ((v :: vs).map (ackedOrZero acked)) with hs
-    have hslen : s.length = n := by simp [hs, hn]
-    have hnpos : 0 < n := by simp [hn]
-    have hk : n - quorumSize n < s.length := by
-      rw [hslen, quorumSize]; omega
-    have hr : committedIndexRef (v :: vs) acked = s[n - quorumSize n] := by
+  cases c with
+  | nil => exact Or.inl ⟨rfl, rfl⟩
+  | cons v vs =>
+    have hslen : (sortAsc ((v :: vs).map (ackedOrZero acked))).length = (v :: vs).length := by
+      simp
+    have hk : (v :: vs).length - quorumSize (v :: vs).length
+        < (sortAsc ((v :: vs).map (ackedOrZero acked))).length := by
+      rw [hslen]
+      simp only [List.length_cons, quorumSize]
+      omega
+    have hr : committedIndexRef (v :: vs) acked
+        = (sortAsc ((v :: vs).map (ackedOrZero acked)))[(v :: vs).length -
+            quorumSize (v :: vs).length]'hk := by
       rw [List.getElem_eq_getD 0]
       rfl
     refine Or.inr ⟨by simp, ?_, ?_⟩
-    · rw [supporters_eq_countP, ← hs, hr]
-      have := sorted_countP_ge s[n - quorumSize n] s (n - quorumSize n)
-        (hs ▸ sortAsc_sorted _) hk (Nat.le_refl _)
-      rw [hslen] at this
-      rw [quorumSize] at this ⊢
+    · -- committedness: the top `n/2+1` elements of the sorted multiset are all ≥ r
+      rw [supporters_eq_countP, hr]
+      have h2 := sorted_countP_ge
+        ((sortAsc ((v :: vs).map (ackedOrZero acked)))[(v :: vs).length -
+          quorumSize (v :: vs).length]'hk)
+        (sortAsc ((v :: vs).map (ackedOrZero acked)))
+        ((v :: vs).length - quorumSize (v :: vs).length)
+        (sortAsc_sorted _) hk (Nat.le_refl _)
+      rw [hslen] at h2
+      simp only [List.length_cons, quorumSize] at h2 ⊢
       omega
-    · intro j hj
-      rw [supporters_eq_countP, ← hs]
+    · -- maximality: anything above r lives strictly after position n-(n/2+1)
+      intro j hj
+      rw [supporters_eq_countP]
       rw [hr] at hj
-      have := sorted_countP_lt j s (n - quorumSize n) (hs ▸ sortAsc_sorted _) hk hj
-      rw [hslen] at this
-      rw [quorumSize] at this ⊢
+      have h2 := sorted_countP_lt j (sortAsc ((v :: vs).map (ackedOrZero acked)))
+        ((v :: vs).length - quorumSize (v :: vs).length) (sortAsc_sorted _) hk hj
+      rw [hslen] at h2
+      simp only [List.length_cons, quorumSize] at h2 ⊢
       omega
 
 /-- **The pinned target, discharged** (`QuorumTargets.lean` phase-0
@@ -194,6 +207,17 @@ theorem committedIndexRef_meets_spec : committedIndexRef_meets_spec_statement :=
 
 end GoLean.Quorum
 
-/-- info: 'GoLean.Quorum.committedIndexRef_meets_spec' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+/-! ## Axiom pin
+
+Strictly inside the allowlist `[propext, Classical.choice, Quot.sound]` —
+the proof is classical-choice-free (`Classical.choice` is not used;
+`Quot.sound` enters only through `List.Perm`/`omega` plumbing). No
+`sorry`, no `native_decide`, no new axioms. -/
+
+/-- info: 'GoLean.Quorum.committedIndexRef_meets_spec' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in
 #print axioms GoLean.Quorum.committedIndexRef_meets_spec
+
+/-- info: 'GoLean.Quorum.committedIndexRef_meets_spec_of_any' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in
+#print axioms GoLean.Quorum.committedIndexRef_meets_spec_of_any

@@ -9,6 +9,7 @@ import GoLeanProofs.Laws.Eval
 import GoLeanProofs.Laws.Assign
 import GoLeanProofs.Laws.Call
 import GoLeanProofs.Laws.Loop
+import GoLeanProofs.Laws.Range
 import GoLeanProofs.Laws.Unwind
 import GoLeanProofs.Adequacy
 import GoLeanProofs.Specs.GoldenProgram
@@ -20,6 +21,7 @@ import GoLeanProofs.Specs.GoldenSurface
 import GoLeanProofs.Specs.GoldenRecover
 import GoLeanProofs.Specs.GoldenQuorum
 import GoLeanProofs.Specs.QuorumTargets
+import GoLeanProofs.Specs.QuorumRefSpec
 import GoLeanProofs.NegativeSpecs
 
 /-!
