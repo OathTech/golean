@@ -582,6 +582,19 @@ theorem mapLookupStmt_eq :
     mapLookupStmt = .mapLookup (.var "idx") (.var "ok") (.var "m") (.var "id")
       (.int .uint64) (.defined ⟨"main.Index"⟩) := rfl
 
+/-- The CONCRETE method's whole body, `rfl`-projected out of the pin: a
+declaration-free block of two sequences — declare `idx : main.Index` and
+`ok : bool`, the comma-ok read, then the two result writes and `return`.
+Edit the pin and this stops being `rfl`. -/
+theorem ackedIndexImpl_body_eq :
+    ackedIndexImpl.body = .block #[]
+      #[.seqn #[.initialization ⟨"idx", .defined ⟨"main.Index"⟩⟩,
+                .initialization ⟨"ok", .bool⟩,
+                mapLookupStmt],
+        .seqn #[.assign (.var "$res0") (.var "idx"),
+                .assign (.var "$res1") (.var "ok"),
+                .returnStmt]] := rfl
+
 /-! The concrete cells the `sortSlice` witness sorts: a 3-element `uint64`
 backing array, unsorted, and its sorted image. -/
 
@@ -848,6 +861,68 @@ theorem wp_call_dynamic_enter_ackedIndex {mba : Addr} {n : Int}
         QuorumPin.ackedIndexAnchor_id, QuorumPin.ackedIndexImpl_find,
         QuorumPin.beq_mapAckIndexer_self,
         Bind.bind, Except.bind])
+    (hnorm₀ := fun σ ht => by
+      rw [execState_pin_eq (ht.trans htypes) (rfl (a := σ.functions))
+        (rfl (a := σ.methods))]
+      simp [normalizeValueForTy, normalizeValueForTyFuel, typeResolutionFuel,
+        QuorumPin.typeEnv_mapAckIndexer])
+    (hnorm₁ := fun σ _ => by
+      simp [normalizeValueForTy, normalizeValueForTyFuel])
+    (hdef₀ := fun σ ht => by
+      rw [execState_pin_eq (ht.trans htypes) (rfl (a := σ.functions))
+        (rfl (a := σ.methods))]
+      simp [defaultValue, defaultValueFuel, typeResolutionFuel,
+        QuorumPin.typeEnv_Index])
+    (hdef₁ := fun σ _ => by
+      simp [defaultValue, defaultValueFuel, typeResolutionFuel])
+
+/-- **Witness for `wp_call_enter₂`** (the STATIC two-argument/two-result
+frame entry) on the REAL `main.mapAckIndexer.AckedIndex` of the pinned
+lowering, called on a CONCRETE receiver (no interface box, so
+`dynamicDispatch?` must answer `none` — which it does because the
+method's recorded receiver `.defined main.mapAckIndexer` resolves to a
+map type, not an interface: the `methodRecvInterfaceName?` gate).
+
+This is the entry the `GoFuncSpec2` discharge walks, and it is the exact
+complement of `wp_call_dynamic_enter_ackedIndex`: same method, same
+parameter/result cells, the other dispatch answer. Every premise is
+discharged by computation against `quorumLowered`; the only external
+hypotheses are the three ghost-state pins. -/
+theorem wp_call_enter_ackedIndexImpl {mba : Addr} {n : Int}
+    {locs : List Loc} {env k}
+    (hprog : GoCoreGS.prog GF = GoldenQuorum.quorumLowered.funcs)
+    (hmeths : GoCoreGS.methods GF = GoldenQuorum.quorumLowered.methods)
+    (htypes : GoCoreGS.types GF = GoldenQuorum.quorumLowered.typeDefs.toList) :
+    iprop(∀ a₀ : Addr, ∀ a₁ : Addr, ∀ a₂ : Addr, ∀ a₃ : Addr,
+        a₀.id ↦ (⟨some (.defined ⟨"main.mapAckIndexer"⟩),
+                  .map ⟨some (.base mba)⟩⟩ : HeapCell)
+          ∗ a₁.id ↦ (⟨some (.int .uint64),
+                      .int (IntKind.uint64.normalize n) .uint64⟩ : HeapCell)
+          ∗ a₂.id ↦ (⟨some (.defined ⟨"main.Index"⟩),
+                      .int 0 .uint64⟩ : HeapCell)
+          ∗ a₃.id ↦ (⟨some .bool, .bool false⟩ : HeapCell) -∗
+        WP (Config.exec QuorumPin.ackedIndexImpl.body
+              [[("$res1", Loc.base a₃), ("$res0", Loc.base a₂),
+                ("id", Loc.base a₁), ("m", Loc.base a₀)]]
+              (.frame locs [Loc.base a₂, Loc.base a₃] [] k)) @ s ; E {{ Φ }})
+      ⊢ WP (Config.retV (.int n .uint64)
+            (.callArgsK ⟨"main.mapAckIndexer.AckedIndex"⟩ locs
+              [.map ⟨some (.base mba)⟩] [] env k)) @ s ; E {{ Φ }} :=
+  wp_call_enter₂
+    (func := QuorumPin.ackedIndexImpl)
+    (hfind := by rw [hprog]; exact QuorumPin.ackedIndexImpl_find)
+    (hargs := QuorumPin.ackedIndexImpl_args)
+    (hres := QuorumPin.ackedIndexImpl_results)
+    (hrid := by decide)
+    (hnodisp := fun σ hf hm ht => by
+      rw [execState_pin_eq (ht.trans htypes) (hf.trans hprog) (hm.trans hmeths)]
+      simp +decide [dynamicDispatch?, methodInfoByFuncId?, methodRecvInterfaceName?,
+        resolveDefinedAliases, resolveDefinedAliasesFuel,
+        QuorumPin.quorumMethods_eq, QuorumPin.typeEnv_mapAckIndexer,
+        Bind.bind, Except.bind]
+      -- the receiver resolves to a MAP type, never `.interface`, so both
+      -- arms of the remaining match answer "no dynamic dispatch".
+      split <;> rfl)
     (hnorm₀ := fun σ ht => by
       rw [execState_pin_eq (ht.trans htypes) (rfl (a := σ.functions))
         (rfl (a := σ.methods))]

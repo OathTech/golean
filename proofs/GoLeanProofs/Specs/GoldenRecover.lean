@@ -174,7 +174,7 @@ theorem wp_recoverDirect_body {ra : Addr} {tl : Loc} {k}
   iapply fupd_intro
   iintro Hc18
   -- var $c0 any (interface default: nil)
-  iapply (wp_init (v := .nil) (hdef := fun _ => by
+  iapply (wp_init (v := .nil) (hdef := fun _ _ => by
     simp [defaultValue, defaultValueFuel, typeResolutionFuel]))
   iintro %ca Hc
   iapply wp_seq_next
@@ -399,7 +399,7 @@ returns 7" — over the PINNED ACTUAL LOWERING, ∀-quantified over the
 caller's target cell, its prior value, and the frame. -/
 def recoverFuncSpec_statement : Prop :=
   GoFuncSpec recoverLowered.typeDefs.toList recoverLowered.funcs
-    ⟨"recoverDirect"⟩ .int #[] .emp
+    recoverLowered.methods ⟨"recoverDirect"⟩ .int #[] .emp
     (fun n => .pure (n = 7))
 
 /-- **The recover function spec, proven** — the composition walk applied

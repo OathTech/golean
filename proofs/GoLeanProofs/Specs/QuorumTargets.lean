@@ -167,25 +167,40 @@ open GoLean.GoCore
 
 /-- **The multi-result function-spec form** (the arity widening the
 pilot forces — `AckedIndex(id)` returns `(Index, bool)`; W1 owed row,
-prediction 3). `GoFuncSpec2 funcs fid kind args P Q` reads: *calling
-`fid(args)` into any two caller target cells (int-kind first, bool
-second, any prior values, distinct addresses) in any admissible heap
+prediction 3). `GoFuncSpec2 funcs fid kind argEnv args P Q` reads:
+*calling `fid(args)` into any two caller target cells (int-kind first,
+bool second, any prior values, distinct addresses) in any admissible heap
 satisfying `P` — with any frame — terminates only in states where the
 cells received `n` and `b` with `Q n b`, beside `P`'s leftovers, frame
 intact.* Binding point as in `GoFuncSpec`: the caller's target cells,
 written at frame exit from the callee's pinned result locations
-(`Step.frameReturn`/`frameFall` on the two-element lists). STATEMENT
-SHAPE ONLY at phase 0: the discharge machinery (multi-target call
-dispatch, two-cell frame exit law) lands in phase 4, witness in the
-same commit — until then no theorem names this def and no docstring may
-claim it is dischargeable. -/
-def GoFuncSpec2 (types : TypeEnv) (funcs : Array Func) (fid : FuncId)
-    (kind : IntKind) (args : Array Expr) (P : HProp)
+(`Step.frameReturn`/`frameFall` on the two-element lists).
+
+`argEnv` is the CALLER's ambient bindings that the argument expressions
+read — the receiver's cell for a method call, exactly as a Go callsite
+`m.AckedIndex(id)` names a local `m`. It sits in the same (innermost)
+scope as the two result-target bindings, and `argEnv = []` is the phase-0
+shape verbatim.
+
+*Why it exists (defect found and fixed 2026-07-31, phase 4 slice 5, and
+recorded rather than quietly patched):* the phase-0 shape hardcoded the
+caller environment to the two `$callres` bindings, so an argument
+expression could denote nothing but a literal — and a method whose
+receiver is a heap value (every Go method) was UNSTATEABLE. The phase-0
+`quorumAckedIndexFuncSpec2_statement` consequently passed `#[]` arguments
+to a two-parameter method, which `enterFrame`'s arity check rejects: the
+configuration is STUCK, so `Progress` — hence the whole statement — was
+FALSE, not merely unproven. Widening the caller environment is the
+minimal fix that makes the intended claim stateable; the statement is
+re-pinned in `Specs/GoldenQuorumWP.lean` and now PROVEN. -/
+def GoFuncSpec2 (types : TypeEnv) (funcs : Array Func)
+    (methods : Array MethodInfo) (fid : FuncId) (kind : IntKind)
+    (argEnv : Scope) (args : Array Expr) (P : HProp)
     (Q : Int → Bool → HProp) : Prop :=
   ∀ (ra rb : Nat) (w₁ w₂ : GoValue),
     ra ≠ rb →
-    GoSpec types funcs
-      [[("$callres0", Loc.base ⟨ra⟩), ("$callres1", Loc.base ⟨rb⟩)]]
+    GoSpec types funcs methods
+      [("$callres0", Loc.base ⟨ra⟩) :: ("$callres1", Loc.base ⟨rb⟩) :: argEnv]
       (.sep (.pointsTo ra ⟨some (.int kind), w₁⟩)
         (.sep (.pointsTo rb ⟨some .bool, w₂⟩) P))
       (.call #[.var "$callres0", .var "$callres1"] fid args)

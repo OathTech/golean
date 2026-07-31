@@ -29,12 +29,21 @@ variable {s : Stuckness} {E : CoPset} {Φ : Unit → IProp GF}
 inline-declaration step): allocates a fresh cell at the parameter type's
 default value and extends the *rest of the enclosing sequence*'s env with the
 new binding. Like the call law, the continuation receives the freshly
-allocated cell at a machine-chosen address (`∀ pa`). `hdef` is the pure
-default-value fact (state-independent for scalar types). Witness:
-`wp_init_int`. -/
+allocated cell at a machine-chosen address (`∀ pa`). `hdef` is the
+default-value fact, under the ghost state's type-environment pin —
+required, not decoration: `defaultValue` resolves a `.defined` name
+through `TypeEnv.lookup σ₁.types` and fails closed on an unknown one, so
+the unpinned `∀ σ₁` form is FALSE at every named Go type and a law
+carrying it would be vacuous there (`Laws/QuorumOps`'s
+`typeEnv_pin_is_load_bearing`; premise widened 2026-07-31 for the
+`main.Index`-typed declarations of the quorum lowering — strictly weaker,
+so every existing caller keeps working). Witnesses: `wp_init_int`
+(scalar, state-independent) and `wp_ackedIndex_body`'s
+`idx : main.Index` declaration (named type, pin-dependent). -/
 theorem wp_init {pid : String} {pty : Ty} {v : GoValue} {rest : List Stmt}
     {env k}
-    (hdef : ∀ σ₁ : ExecState, defaultValue σ₁ pty = .ok v) :
+    (hdef : ∀ σ₁ : ExecState, σ₁.types = GoCoreGS.types GF →
+      defaultValue σ₁ pty = .ok v) :
     iprop(∀ pa : Addr, pa.id ↦ (⟨some pty, v⟩ : HeapCell) -∗
         WP (Config.next (.seq rest (env.declare pid (.base pa)) k)) @ s ; E {{ Φ }})
       ⊢ WP (Config.exec (.initialization ⟨pid, pty⟩) env (.seq rest env k))
@@ -49,7 +58,7 @@ theorem wp_init {pid : String} {pty : Ty} {v : GoValue} {rest : List Stmt}
       (.next (.seq rest (env.declare pid (.base ⟨σ₁.nextAddr⟩)) k))
       { σ₁ with heap := Heap.set σ₁.heap (.base ⟨σ₁.nextAddr⟩) ⟨some pty, v⟩,
                 nextAddr := σ₁.nextAddr + 1 } :=
-    Step.initialization (hdef σ₁) (ExecState.alloc_eq σ₁ v (some pty))
+    Step.initialization (hdef σ₁ htypes) (ExecState.alloc_eq σ₁ v (some pty))
   have hdet : ∀ c' s',
       Step (.exec (.initialization ⟨pid, pty⟩) env (.seq rest env k)) σ₁ c' s' →
       c' = Config.next (.seq rest (env.declare pid (.base ⟨σ₁.nextAddr⟩)) k) ∧
@@ -60,7 +69,7 @@ theorem wp_init {pid : String} {pty : Ty} {v : GoValue} {rest : List Stmt}
     | stmtOpFirst hplan => simp [stmtPlan] at hplan
     | stmtOpNullary hplan _ => simp [stmtPlan] at hplan
     | initialization hd ha =>
-      rw [hdef σ₁] at hd
+      rw [hdef σ₁ htypes] at hd
       injection hd with hv
       rw [← hv, ExecState.alloc_eq] at ha
       injection ha with hloc hst'
@@ -100,7 +109,7 @@ theorem wp_init_int {pid : String} {kind : IntKind} {rest : List Stmt} {env k} :
         WP (Config.next (.seq rest (env.declare pid (.base pa)) k)) @ s ; E {{ Φ }})
       ⊢ WP (Config.exec (.initialization ⟨pid, .int kind⟩) env (.seq rest env k))
           @ s ; E {{ Φ }} :=
-  wp_init (fun _ => by
+  wp_init (fun _ _ => by
     simp [defaultValue, defaultValueFuel, typeResolutionFuel])
 
 end

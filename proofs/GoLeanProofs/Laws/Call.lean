@@ -448,6 +448,305 @@ theorem wp_call_dynamic_enter₂ {fid : FuncId} {anchor concrete : Func}
       exact ⟨h1.symm, h2.symm⟩))
   iexact Hcont
 
+/-! ## The multi-operand call walk (quorum pilot phase 4)
+
+Before this slice `Laws/Call` had the two ENTRY dispatch laws
+(`wp_call_first_target`, `wp_call_first_arg`) and nothing else on the
+operand walk, because the golden program's calls carry at most one
+operand of each kind. A general Go call `r₀, r₁ = f(a₀, a₁)` walks the
+target list, then the argument list, one machine step per operand
+handoff. The three laws below are exactly those handoffs — generic over
+the call form: function id, operand lists, values and continuations are
+all law variables, and nothing about a program appears.
+
+Comparison with Perennial (`deps/perennial`, `new/golang/defn/`): there
+is no analogue, because GooseLang calls are curried applications whose
+argument evaluation is `wp_bind`-composed out of the ordinary expression
+rules — a call form with an explicit operand-plan continuation is
+GoCore's (the CEK reshape's) shape, and multi-VALUE returns are handled
+by tupling rather than by caller target locations. Ours needs the
+handoff laws; theirs needs the (equally arity-bound) tuple projections. -/
+
+/-- Shift to the next TARGET operand: the delivered value must be an
+address (`hloc`), which is appended to the collected target locations. -/
+theorem wp_call_target_next {fid : FuncId} {locs : List Loc} {v : GoValue}
+    {loc : Loc} {te : Expr} {rest args : List Expr} {env k}
+    (hloc : valueAsLoc v = .ok loc) :
+    (|={E}[E]▷=> £ 1 -∗
+      WP (Config.evalE te env (.callTargetsK fid (locs ++ [loc]) rest args env k))
+        @ s ; E {{ Φ }}) ⊢
+      WP (Config.retV v (.callTargetsK fid locs (te :: rest) args env k))
+        @ s ; E {{ Φ }} :=
+  wp_pure_det rfl trivial (fun _ => Step.callTargetLoc hloc)
+
+/-- The last target arrives and arguments remain: record it and start the
+argument walk. -/
+theorem wp_call_targets_done_arg {fid : FuncId} {locs : List Loc} {v : GoValue}
+    {loc : Loc} {a : Expr} {rest : List Expr} {env k}
+    (hloc : valueAsLoc v = .ok loc) :
+    (|={E}[E]▷=> £ 1 -∗
+      WP (Config.evalE a env (.callArgsK fid (locs ++ [loc]) [] rest env k))
+        @ s ; E {{ Φ }}) ⊢
+      WP (Config.retV v (.callTargetsK fid locs [] (a :: rest) env k))
+        @ s ; E {{ Φ }} :=
+  wp_pure_det rfl trivial (fun _ => Step.callTargetsDoneArg hloc)
+
+/-- Shift to the next ARGUMENT operand (no address check — arguments are
+plain values). -/
+theorem wp_call_arg_next {fid : FuncId} {locs : List Loc} {vals : List GoValue}
+    {v : GoValue} {a : Expr} {rest : List Expr} {env k} :
+    (|={E}[E]▷=> £ 1 -∗
+      WP (Config.evalE a env (.callArgsK fid locs (vals ++ [v]) rest env k))
+        @ s ; E {{ Φ }}) ⊢
+      WP (Config.retV v (.callArgsK fid locs vals (a :: rest) env k))
+        @ s ; E {{ Φ }} :=
+  wp_pure_det rfl trivial (fun _ => Step.callArgNext)
+
+/-- **Frame entry, two arguments / two results, STATIC callee** — the
+non-dispatching sibling of `wp_call_dynamic_enter₂` (`hnodisp`: the
+callee is not an interface anchor, so `enterFrame` keeps the function it
+found). This is the shape of a Go method called on a CONCRETE receiver
+(`m.AckedIndex(id)` where `m`'s static type is the implementation type):
+the receiver is the first parameter, the results are the two pinned
+result cells. Arity is fixed at 2/2, exactly as in the
+`wp_call_enter_arg1`/`ret1`/`cap1`/`dynamic_enter₂` family (widening
+owed — see `wp_alloc_step₄`'s scope note); everything else — callee,
+names, types, values — is a law variable, and the `∀ σ` premises all
+carry the `σ.types` pin, without which they are false at any named type
+(`Laws/QuorumOps.typeEnv_pin_is_load_bearing`). -/
+theorem wp_call_enter₂ {fid : FuncId} {func : Func}
+    {v₀ v₁ w₀ w₁ dv₀ dv₁ : GoValue}
+    {pid₀ pid₁ rid₀ rid₁ : String} {pty₀ pty₁ rty₀ rty₁ : Ty}
+    {locs : List Loc} {env k}
+    (hfind : findFunctionIn? (GoCoreGS.prog GF) fid = some func)
+    (hargs : func.args = #[⟨pid₀, pty₀⟩, ⟨pid₁, pty₁⟩])
+    (hres : func.results = #[⟨rid₀, rty₀⟩, ⟨rid₁, rty₁⟩])
+    (hrid : (rid₁ == rid₀) = false)
+    (hnodisp : ∀ σ : ExecState, σ.functions = GoCoreGS.prog GF →
+      σ.methods = GoCoreGS.methods GF → σ.types = GoCoreGS.types GF →
+      dynamicDispatch? σ func #[v₀, v₁] = .ok none)
+    (hnorm₀ : ∀ σ : ExecState, σ.types = GoCoreGS.types GF →
+      normalizeValueForTy σ pty₀ v₀ = .ok w₀)
+    (hnorm₁ : ∀ σ : ExecState, σ.types = GoCoreGS.types GF →
+      normalizeValueForTy σ pty₁ v₁ = .ok w₁)
+    (hdef₀ : ∀ σ : ExecState, σ.types = GoCoreGS.types GF →
+      defaultValue σ rty₀ = .ok dv₀)
+    (hdef₁ : ∀ σ : ExecState, σ.types = GoCoreGS.types GF →
+      defaultValue σ rty₁ = .ok dv₁) :
+    iprop(∀ a₀ : Addr, ∀ a₁ : Addr, ∀ a₂ : Addr, ∀ a₃ : Addr,
+        a₀.id ↦ (⟨some pty₀, w₀⟩ : HeapCell)
+          ∗ a₁.id ↦ (⟨some pty₁, w₁⟩ : HeapCell)
+          ∗ a₂.id ↦ (⟨some rty₀, dv₀⟩ : HeapCell)
+          ∗ a₃.id ↦ (⟨some rty₁, dv₁⟩ : HeapCell) -∗
+        WP (Config.exec func.body
+              [[(rid₁, Loc.base a₃), (rid₀, Loc.base a₂),
+                (pid₁, Loc.base a₁), (pid₀, Loc.base a₀)]]
+              (.frame locs [Loc.base a₂, Loc.base a₃] [] k)) @ s ; E {{ Φ }})
+      ⊢ WP (Config.retV v₁ (.callArgsK fid locs [v₀] [] env k))
+          @ s ; E {{ Φ }} := by
+  have henter : ∀ σ : ExecState, σ.functions = GoCoreGS.prog GF →
+      σ.methods = GoCoreGS.methods GF → σ.types = GoCoreGS.types GF →
+      enterFrame σ fid [v₀, v₁]
+        = .ok (func,
+            [[(rid₁, Loc.base ⟨σ.nextAddr + 3⟩), (rid₀, Loc.base ⟨σ.nextAddr + 2⟩),
+              (pid₁, Loc.base ⟨σ.nextAddr + 1⟩), (pid₀, Loc.base ⟨σ.nextAddr⟩)]],
+            [Loc.base ⟨σ.nextAddr + 2⟩, Loc.base ⟨σ.nextAddr + 3⟩],
+            allocMany σ [⟨some pty₀, w₀⟩, ⟨some pty₁, w₁⟩,
+                         ⟨some rty₀, dv₀⟩, ⟨some rty₁, dv₁⟩]) := by
+    intro σ hfns hmeths htypes
+    have hbind := bindParams₂ (σ := σ) (p₀ := ⟨pid₀, pty₀⟩) (p₁ := ⟨pid₁, pty₁⟩)
+      (v₀ := v₀) (v₁ := v₁) (w₀ := w₀) (w₁ := w₁)
+      (hnorm₀ σ htypes) (hnorm₁ _ htypes)
+    have hdecl := allocDecls₂
+      (σ := allocMany σ [⟨some pty₀, w₀⟩, ⟨some pty₁, w₁⟩])
+      (env := [[(pid₁, Loc.base ⟨σ.nextAddr + 1⟩), (pid₀, Loc.base ⟨σ.nextAddr⟩)]])
+      (r₀ := ⟨rid₀, rty₀⟩) (r₁ := ⟨rid₁, rty₁⟩) (d₀ := dv₀) (d₁ := dv₁)
+      (hdef₀ _ htypes) (hdef₁ _ htypes)
+    simp only [allocMany] at hbind hdecl ⊢
+    unfold enterFrame
+    rw [hfns, hfind]
+    simp [hargs, hres, hnodisp σ hfns hmeths htypes, hbind, hdecl,
+      pinResultLocs, LocalEnv.declare, LocalEnv.lookup, Scope.lookup, hrid,
+      Bind.bind, Except.bind]
+    exact hfns
+  iintro Hcont
+  iapply (wp_alloc_step₄ (hnv := rfl)
+    (kof := fun a₀ a₁ a₂ a₃ => Config.exec func.body
+      [[(rid₁, Loc.base a₃), (rid₀, Loc.base a₂),
+        (pid₁, Loc.base a₁), (pid₀, Loc.base a₀)]]
+      (.frame locs [Loc.base a₂, Loc.base a₃] [] k))
+    (hred := by
+      intro σ₁ hfns hmeths htypes
+      have hstep := Step.callArgsDoneEnter (vals := [v₀]) (locs := locs)
+        (env := env) (k := k) (by simpa using henter σ₁ hfns hmeths htypes)
+      refine ⟨hstep, ?_⟩
+      intro c' s' hst
+      obtain ⟨h1, h2⟩ := step_det (by trivial) hstep hst
+      exact ⟨h1.symm, h2.symm⟩))
+  iexact Hcont
+
+/-! ## The TWO-RESULT frame exit (quorum pilot phase 4)
+
+`wp_frame_return_int`/`wp_frame_fall_int` cover the unary-result exit
+(`loadMany [r]` / `storeMany [t]`). Go's multi-value return walks the
+same single step over LISTS: `Step.frameReturn` reads every pinned result
+location and stores into every caller target, in order. Two of each is
+the arity the `(Index, bool)` comma-ok method forces; the general n-ary
+form is owed (recorded, not silently target-fitted — it needs the
+list-indexed store core, like `wp_alloc_step₄`'s widening).
+
+Perennial comparison: multi-value returns there are a TUPLE value
+returned by an ordinary GooseLang call, so no frame-exit law family
+arises — the caller destructures with pure projections. Ours writes the
+caller's cells inside the exit step, which is why the arity appears in
+the law; the granularity ledger's frame-exit entry covers both cells
+moving atomically. -/
+
+/-- Two owned full-fraction cells sit at distinct addresses (the
+disequality the second store's heap lookup needs; derived from ownership,
+so no caller-side aliasing side-condition). -/
+theorem pointsTo_addr_ne {a b : Addr} {c₁ c₂ : HeapCell} :
+    (iprop(a.id ↦ c₁ ∗ b.id ↦ c₂) : IProp GF) ⊢ ⌜a.id ≠ b.id⌝ := by
+  iintro ⟨H1, H2⟩
+  iapply pointsTo_ne $$ H1 H2
+
+/-- **Two-read/two-write step core**: a single step that READS two owned
+cells (riding through unchanged) and WRITES two others, in order — the
+composed `Heap.set` shape `storeMany` produces at a two-result frame
+exit. The general engine; `wp_frame_return₂` is its front. (Hosted here
+rather than in `Lifting.lean` for the same reason as
+`Laws/QuorumOps.wp_read_store_step₂`: it needs the `HeapBridge`
+projection algebra.) -/
+theorem wp_read₂_store₂_step {ra₀ ra₁ ta₀ ta₁ : Addr}
+    {rcell₀ rcell₁ tcell₀ tcell₀' tcell₁ tcell₁' : HeapCell} {c₀ : Config} {k}
+    (hnv : ToVal.toVal c₀ = (none : Option Unit))
+    (hred : ∀ σ₁ : ExecState, σ₁.functions = GoCoreGS.prog GF →
+      σ₁.methods = GoCoreGS.methods GF → σ₁.types = GoCoreGS.types GF →
+      ta₀.id ≠ ta₁.id →
+      Heap.lookup σ₁.heap (.base ra₀) = some rcell₀ →
+      Heap.lookup σ₁.heap (.base ra₁) = some rcell₁ →
+      Heap.lookup σ₁.heap (.base ta₀) = some tcell₀ →
+      Heap.lookup σ₁.heap (.base ta₁) = some tcell₁ →
+      Step c₀ σ₁ (.next k)
+          { σ₁ with heap := Heap.set (Heap.set σ₁.heap (.base ta₀) tcell₀')
+                              (.base ta₁) tcell₁' } ∧
+      (∀ c' s', Step c₀ σ₁ c' s' →
+          c' = Config.next k ∧
+          s' = { σ₁ with heap := Heap.set (Heap.set σ₁.heap (.base ta₀) tcell₀')
+                                   (.base ta₁) tcell₁' })) :
+    ra₀.id ↦ rcell₀ ∗ ra₁.id ↦ rcell₁ ∗ ta₀.id ↦ tcell₀ ∗ ta₁.id ↦ tcell₁
+      ∗ (ra₀.id ↦ rcell₀ ∗ ra₁.id ↦ rcell₁ ∗ ta₀.id ↦ tcell₀' ∗ ta₁.id ↦ tcell₁'
+          -∗ WP (Config.next k) @ s ; E {{ Φ }})
+      ⊢ WP c₀ @ s ; E {{ Φ }} := by
+  iintro ⟨Hr0, Hr1, Ht0, Ht1, Hcont⟩
+  iapply wp_lift_step (h := hnv)
+  iintro %σ₁ %ns %obs %obs' %nt Hσ
+  simp only [stateInterp]
+  icases Hσ with ⟨Hσ, %Hinv⟩
+  obtain ⟨hfns, hmeths, htypes, hwf⟩ := Hinv
+  ihave %Hmr0 : ⌜get? (heapToMap σ₁.heap) ra₀.id = some rcell₀⌝ $$ [Hσ Hr0]
+  · icases genHeap_valid $$ [$Hσ $Hr0] with >%h
+    itrivial
+  ihave %Hmr1 : ⌜get? (heapToMap σ₁.heap) ra₁.id = some rcell₁⌝ $$ [Hσ Hr1]
+  · icases genHeap_valid $$ [$Hσ $Hr1] with >%h
+    itrivial
+  ihave %Hmt0 : ⌜get? (heapToMap σ₁.heap) ta₀.id = some tcell₀⌝ $$ [Hσ Ht0]
+  · icases genHeap_valid $$ [$Hσ $Ht0] with >%h
+    itrivial
+  ihave %Hmt1 : ⌜get? (heapToMap σ₁.heap) ta₁.id = some tcell₁⌝ $$ [Hσ Ht1]
+  · icases genHeap_valid $$ [$Hσ $Ht1] with >%h
+    itrivial
+  ihave %Hne : ⌜ta₀.id ≠ ta₁.id⌝ $$ [Ht0 Ht1]
+  · icases pointsTo_addr_ne $$ [$Ht0 $Ht1] with %h
+    itrivial
+  have hlookr0 : Heap.lookup σ₁.heap (.base ra₀) = some rcell₀ := by
+    rw [get?_heapToMap] at Hmr0; simpa using Hmr0
+  have hlookr1 : Heap.lookup σ₁.heap (.base ra₁) = some rcell₁ := by
+    rw [get?_heapToMap] at Hmr1; simpa using Hmr1
+  have hlookt0 : Heap.lookup σ₁.heap (.base ta₀) = some tcell₀ := by
+    rw [get?_heapToMap] at Hmt0; simpa using Hmt0
+  have hlookt1 : Heap.lookup σ₁.heap (.base ta₁) = some tcell₁ := by
+    rw [get?_heapToMap] at Hmt1; simpa using Hmt1
+  iapply fupd_mask_intro Std.LawfulSet.empty_subset
+  iintro Hclose
+  isplitr
+  · ipureintro
+    cases s
+    · exact ⟨[], Config.next k, _, [],
+        GoPrimStep.step (hred σ₁ hfns hmeths htypes Hne hlookr0 hlookr1
+          hlookt0 hlookt1).1⟩
+    · trivial
+  inext
+  iintro %e₂ %σ₂ %eₜ %Hstep Hcred
+  cases Hstep with
+  | step st =>
+    obtain ⟨rfl, rfl⟩ :=
+      (hred σ₁ hfns hmeths htypes Hne hlookr0 hlookr1 hlookt0 hlookt1).2 _ _ st
+    imod (genHeap_update (v₂ := tcell₀')) $$ [$Hσ $Ht0] with ⟨Hσ, Ht0⟩
+    imod (genHeap_update (v₂ := tcell₁')) $$ [$Hσ $Ht1] with ⟨Hσ, Ht1⟩
+    imod Hclose
+    imodintro
+    simp only [Algebra.BigOpL.bigOpL_nil]
+    have hy : Heap.lookup (Heap.set σ₁.heap (.base ta₀) tcell₀') (.base ta₁)
+        = some tcell₁ := by
+      rw [heap_lookup_set_base_ne (b := ta₀) (n := ta₁.id) Hne]
+      exact hlookt1
+    isplitl [Hσ]
+    · isplitl [Hσ]
+      · iapply (genHeapInterp_eqv
+          (fun kk => (heapToMap_set_base₂ σ₁.heap ta₀ ta₁ tcell₀' tcell₁' kk).symm)) $$ Hσ
+      · ipureintro
+        exact ⟨hfns, hmeths, htypes, (hwf.set_existing hlookt0).set_existing hy⟩
+    · isplitl [Hr0 Hr1 Ht0 Ht1 Hcont]
+      · iapply Hcont $$ [$Hr0 $Hr1 $Ht0 $Ht1]
+      · itrivial
+
+/-- **Two-result frame exit**: `return` at a frame with TWO pinned result
+locations and TWO caller targets — read both result cells, store both
+into the caller's cells in order. The store facts are the machine's own
+cell-conditioned computations (in the `wp_assign_store`/`hstore` style),
+so the law is general in the cells' types: any pair of result cells and
+any pair of target cells whose stores compute. Go's `(T, bool)` comma-ok
+return is the instance the quorum pilot forces
+(`wp_frame_return_ackedIndex`, `Specs/GoldenQuorumWP.lean`). -/
+theorem wp_frame_return₂ {ta₀ ta₁ ra₀ ra₁ : Addr}
+    {rcell₀ rcell₁ tcell₀ tcell₀' tcell₁ tcell₁' : HeapCell} {k}
+    (hstore₀ : ∀ σ : ExecState, σ.types = GoCoreGS.types GF →
+      Heap.lookup σ.heap (.base ta₀) = some tcell₀ →
+      storeLoc σ (.base ta₀) rcell₀.value
+        = .ok { σ with heap := Heap.set σ.heap (.base ta₀) tcell₀' })
+    (hstore₁ : ∀ σ : ExecState, σ.types = GoCoreGS.types GF →
+      Heap.lookup σ.heap (.base ta₁) = some tcell₁ →
+      storeLoc σ (.base ta₁) rcell₁.value
+        = .ok { σ with heap := Heap.set σ.heap (.base ta₁) tcell₁' }) :
+    ra₀.id ↦ rcell₀ ∗ ra₁.id ↦ rcell₁ ∗ ta₀.id ↦ tcell₀ ∗ ta₁.id ↦ tcell₁
+      ∗ (ra₀.id ↦ rcell₀ ∗ ra₁.id ↦ rcell₁ ∗ ta₀.id ↦ tcell₀' ∗ ta₁.id ↦ tcell₁'
+          -∗ WP (Config.next k) @ s ; E {{ Φ }})
+      ⊢ WP (Config.returning
+            (.frame [.base ta₀, .base ta₁] [.base ra₀, .base ra₁] [] k))
+          @ s ; E {{ Φ }} := by
+  iapply wp_read₂_store₂_step (hnv := rfl)
+  intro σ _hfns _hmeths htypes hne hlr0 hlr1 hlt0 hlt1
+  have hload : loadMany σ [Loc.base ra₀, Loc.base ra₁]
+      = .ok [rcell₀.value, rcell₁.value] := by
+    simp [loadMany, loadLoc, hlr0, hlr1, Bind.bind, Except.bind]
+  have hlt1' : Heap.lookup (Heap.set σ.heap (.base ta₀) tcell₀') (.base ta₁)
+      = some tcell₁ := by
+    rw [heap_lookup_set_base_ne (b := ta₀) (n := ta₁.id) hne]
+    exact hlt1
+  have hstore : storeMany σ [Loc.base ta₀, Loc.base ta₁]
+      [rcell₀.value, rcell₁.value]
+      = .ok { σ with heap := Heap.set (Heap.set σ.heap (.base ta₀) tcell₀')
+                              (.base ta₁) tcell₁' } := by
+    simp [storeMany, hstore₀ σ htypes hlt0,
+      hstore₁ { σ with heap := Heap.set σ.heap (.base ta₀) tcell₀' } htypes hlt1',
+      Bind.bind, Except.bind]
+  have hstep := Step.frameReturn (k := k) hload hstore
+  refine ⟨hstep, ?_⟩
+  intro c' s' hst
+  obtain ⟨h1, h2⟩ := step_det (by trivial) hstep hst
+  exact ⟨h1.symm, h2.symm⟩
+
 /-! ### Non-vacuity witnesses on the golden functions -/
 
 

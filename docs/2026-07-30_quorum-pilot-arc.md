@@ -412,3 +412,122 @@ using Goose/Perennial's design as the generality reference."
     ambient type environment), so there is no analogue; the pin is a
     consequence of GoCore carrying named-type declarations in the state.
     Ours covers MORE state, at the cost of the pin.
+- 2026-07-31: **Phase-4 slice 5 LANDED — the FIRST `GoFuncSpec2`
+  discharge (W1 paid), the two-result frame exit, and the `methods`
+  ghost pin.** `GoLean.Surface.quorumAckedIndexFuncSpec2` is a THEOREM:
+  the real `main.mapAckIndexer.AckedIndex` of the pinned lowering, at
+  `GoFuncSpec2` strength on a concrete one-entry receiver — "in any
+  admissible heap, beside any frame, `m.AckedIndex(3)` leaves `12` and
+  `true` in the caller's two cells". The walk is
+  `wp_ackedIndexCall → wp_ackedIndex_body` (`Specs/GoldenQuorumWP.lean`),
+  composed only from general laws.
+  1. **New general laws** (`Laws/Call.lean`), each witnessed same-commit:
+     the multi-operand call walk `wp_call_target_next`,
+     `wp_call_targets_done_arg`, `wp_call_arg_next` (there were NO
+     operand-shift laws — the golden program has at most one operand per
+     kind); `wp_call_enter₂`, the STATIC 2-parameter/2-result frame entry
+     (witness `wp_call_enter_ackedIndexImpl` on the pinned method — the
+     exact complement of the dynamic-dispatch witness: same method, other
+     dispatch answer); and **`wp_frame_return₂`**, the two-result frame
+     exit, on the new one-step core `wp_read₂_store₂_step` (two owned
+     cells read, two written in order; the targets' disequality comes
+     from ownership, so no aliasing side-condition).
+  2. **`wp_init`'s premise widened** to carry the `σ.types` pin — the
+     unpinned `∀σ` form is FALSE at every named Go type (`defaultValue`
+     resolves `.defined` through `TypeEnv.lookup` and fails closed), so
+     the quorum body's `idx : main.Index` declaration was unreachable and
+     a scaffold would have been vacuous there. Same class as the
+     types-pin slice's finding; strictly weaker premise, all callers
+     unchanged but for an extra `_`.
+  3. **SECOND TRUSTED-SURFACE PIN: `methods`.** The Surface judgments
+     (`GoTriple`/`Progress`/`GoInvariant`/`GoSpec`/`GoFuncSpec`/
+     `GoFuncSpec2`) and the exit pipe (`SurfaceExit.lean`) built their
+     `ExecState` with `methods := #[]`. `enterFrame` consults the method
+     table on EVERY call, so every surface judgment was silently
+     restricted to programs with no methods — no interface dispatch at
+     all, which is precisely the fragment the raft target lives in. They
+     now carry the program's `methods`, matching what the executable
+     driver seeds (`StepFn.runFunctionWithContextM`). Ripple: 5 judgment
+     definitions, 4 exit-pipe premise lists + 2 `ExecState` constructions,
+     and the golden/recover/quorum statement sites (the golden and
+     recover programs' tables are `#[]`, so those statements are
+     unchanged in content). `Adequacy.lean` needed nothing — it was
+     already generic in `σ.methods`.
+  4. **A FALSE target, found and corrected (recorded, not patched
+     quietly).** The phase-0 `quorumAckedIndexFuncSpec2_statement` passed
+     `#[]` arguments to a two-parameter method: `enterFrame`'s arity
+     check fails closed, the configuration is STUCK, so `Progress` — and
+     with it the whole statement — was FALSE, not merely unproven. Root
+     cause: `GoFuncSpec2` hardcoded the caller environment to the two
+     `$callres` bindings, so an argument expression could denote nothing
+     but a literal and a method with a heap-carried receiver (i.e. every
+     Go method) was UNSTATEABLE. Fix: `GoFuncSpec2` gains a caller
+     `argEnv` (the receiver's binding, exactly as a Go callsite names a
+     local); `argEnv = []` is the phase-0 shape verbatim. The
+     postcondition was also strengthened from the one-sided
+     `b = true → n = 12` (satisfiable by a method that never finds
+     anything) to `n = 12 ∧ b = true`. Both corrections are recorded in
+     the statement's own docstring and in `proofs/Audit.lean`.
+  5. **Vacuity guard, same commit:** `quorumAckedIndexPre_satisfiable`
+     exhibits a concrete four-cell heaplet satisfying the discharged
+     precondition (a `GoSpec` whose `InitialSplit` no state can meet is
+     true of anything — the failure class the gate exists for), on the
+     new general `sat_sep_insert`.
+  6. **NOT done, still owed for the driver walk** (unchanged from the
+     previous entry minus the exit): the ALLOCATING wide-op apply core
+     (`makeMap`/`makeSlice` allocate inside `applyStmtOp`), array-to-slice
+     (`stk[:n]`), the nondeterministic map-range composition, and the
+     ~200-step assembly. Deliberately not half-landed here.
+  Gate: `scripts/ci` PASS (846/846 differential unchanged, 309/309
+  negative, 44 eval tests, Audit sweep 5792 declarations axiom-clean).
+  **No runtime file changed in this slice** — proofs and docs only.
+
+  **Over-specialization check (standing item §STANDING CHECK), per new
+  law — is the STATEMENT target-free?**
+  - `wp_call_target_next` / `wp_call_targets_done_arg` /
+    `wp_call_arg_next` — TARGET-FREE and arity-FREE: any function id, any
+    operand lists, any values, any continuation. These are the general
+    call-operand handoffs; nothing about a program appears.
+  - `wp_call_enter₂` — TARGET-FREE. Callee, parameter/result names and
+    types, values and the caller's target locations are law variables;
+    only the arity (2 params / 2 results) is fixed, as in the whole
+    `wp_call_enter_arg1`/`ret1`/`cap1`/`dynamic_enter₂` family. Widening
+    owed (recorded on `wp_alloc_step₄`).
+  - `wp_frame_return₂` / `wp_read₂_store₂_step` — TARGET-FREE. The store
+    facts are premises (the machine's own cell-conditioned computations),
+    so the law is general in the cells' TYPES, not just their values —
+    an `(int, bool)` pair is only how the witness instantiates it. Arity
+    2 fixed; n-ary widening owed. The FALL-path twin is owed too.
+  - `wp_init`'s widened premise, and the `methods` pin on the Surface
+    judgments — TARGET-FREE: both only add a general hypothesis about the
+    ghost state / the program's own tables.
+  - `sat_sep_insert`, `heaplet_get?_*` — TARGET-FREE heaplet algebra.
+  - Quorum names appear ONLY in: `QuorumPin` projections, the witnesses
+    (`wp_call_enter_ackedIndexImpl`), the walk
+    (`wp_ackedIndex_body`/`wp_ackedIndexCall`) and the target statement.
+    No law statement, machine rule or frontend path names `main.*`.
+
+  **Goose/Perennial comparison, per new mechanism** (`deps/perennial`
+  `new/golang/defn/`, `deps/goose`):
+  - *Call-operand handoffs*: no analogue. GooseLang calls are curried
+    applications whose argument evaluation is `wp_bind`-composed out of
+    the ordinary expression rules, so there is no operand-plan
+    continuation and no shift laws; GoCore's CEK call form makes each
+    handoff a machine step, so each needs a law. Ours is MORE
+    fine-grained (and the granularity is what makes the atomicity ledger
+    checkable); theirs is more compositional.
+  - *Two-result exit*: Perennial returns multi-value results as a TUPLE
+    value from an ordinary call, destructured by pure projections
+    (`new/golang/defn/` — no frame-exit family exists there at all).
+    GoCore writes the caller's cells INSIDE the exit step (Go's
+    call protocol as the machine models it), which is why the arity shows
+    up in the law and why both cells move atomically — a granularity
+    ledger entry, not an accident. Ours is NARROWER (arity-bound) and
+    covers MORE per step; the honest comparison is that Perennial pushed
+    the arity into the value language while we push it into the law.
+  - *`methods` pin*: same shape as the `σ.types` pin's comparison —
+    Perennial resolves methods syntactically (`methods : go.type →
+    go_string → val → func.t`, `postlang.v:106`), so no ambient method
+    table and no pin; GoCore carries the table in the state, so the
+    surface judgment must pin it or silently speak about a
+    method-free program. Ours covers MORE state, at the cost of the pin.

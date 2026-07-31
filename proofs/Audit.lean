@@ -180,6 +180,18 @@ open Lean in
 /-- info: 'GoLean.Iris.typeEnv_pin_is_load_bearing' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Iris.typeEnv_pin_is_load_bearing
 
+-- Quorum-pilot phase-4 slice 5 (2026-07-31): the first multi-result
+-- function-spec discharge over the pinned lowering, its walk, and the
+-- satisfiability guard on its precondition.
+/-- info: 'GoLean.Surface.quorumAckedIndexFuncSpec2' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Surface.quorumAckedIndexFuncSpec2
+/-- info: 'GoLean.Iris.GoldenQuorum.wp_ackedIndexCall' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.GoldenQuorum.wp_ackedIndexCall
+/-- info: 'GoLean.Iris.wp_call_enter_ackedIndexImpl' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.wp_call_enter_ackedIndexImpl
+/-- info: 'GoLean.Surface.quorumAckedIndexPre_satisfiable' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Surface.quorumAckedIndexPre_satisfiable
+
 /-! ## Non-vacuity gate — every user-facing WP law bound to a discharge
     witness (deleting a witness or a law breaks this build). -/
 
@@ -327,19 +339,65 @@ example := @GoLean.Iris.HeapWf.allocMany
 example := @GoLean.Iris.heapToMap_set_base₄
 example := @GoLean.Iris.execState_pin_eq
 example := @GoLean.GoCore.Ty.eqb
-/-- `✓` the quorum walk's PROVEN math half, and `◌` its stated machine
-targets (quorum pilot phase 4, `Specs/GoldenQuorumWP.lean`). The value
-`12` the machine must land on IS `committedIndexRef [1] ackedOneKnown`
-(`rfl`), and `committedIndexRef_meets_spec` (proven) upgrades it to
-`IsCommittedIndex` — so the only missing link to the declarative quorum
-spec is the machine walk. `◌ NOT PROVEN:`
-`quorumOneKnownFuncSpec_statement`, its negative twin, and
-`quorumAckedIndexFuncSpec2_statement` are `def … : Prop` TARGETS; no
-theorem names them and nothing here claims they are dischargeable
+/-- `✓` **the first `GoFuncSpec2` discharge** (quorum pilot phase 4
+slice 5, 2026-07-31): `quorumAckedIndexFuncSpec2` — the REAL
+`main.mapAckIndexer.AckedIndex` of the pinned lowering, at the
+multi-result surface judgment's strength, on a concrete one-entry
+receiver: the caller's two cells receive `(12, true)`, in any admissible
+heap, beside any frame. The W1 arity widening's first instance. The
+machine walk it rests on (`wp_ackedIndexCall` → `wp_ackedIndex_body`)
+traverses: the two-target/two-argument call operand walk, the STATIC
+two-parameter/two-result frame entry, `wp_init` at the DEFINED type
+`main.Index`, the comma-ok map read, two stores at a defined type, and
+the TWO-result frame exit — each a general law with its premises
+discharged by computation against `quorumLowered`.
+
+Trusted-surface change in the same slice (the `σ.types` pin's twin): the
+Surface judgments (`GoTriple`/`Progress`/`GoInvariant`/`GoSpec`/
+`GoFuncSpec`/`GoFuncSpec2`) and the exit pipe now carry the program's
+**method table** instead of an empty default. `enterFrame` consults it on
+every call, so the old default silently restricted every surface judgment
+to programs with NO methods — i.e. no interface dispatch, the fragment
+the raft target lives in. The golden/recover statements pin their own
+`.methods` (both `#[]`, so they are unchanged in content); the quorum
+statements pin `quorumLowered.methods`, which is what the executable
+driver seeds (`StepFn.runFunctionWithContextM`).
+
+Vacuity guard, same commit: `quorumAckedIndexPre_satisfiable` exhibits a
+concrete four-cell heaplet satisfying the discharged precondition (a
+`GoSpec` over an unsatisfiable `InitialSplit` would be true of anything —
+the exact failure mode this file exists to catch). Statement-honesty
+note: the phase-0 `quorumAckedIndexFuncSpec2_statement` was FALSE, not
+merely unproven (it passed `#[]` arguments to a two-parameter method, so
+`enterFrame`'s arity check leaves the configuration stuck and `Progress`
+fails); the correction is recorded in the statement's own docstring and
+in the arc doc, not smuggled.
+
+`✓` the quorum walk's PROVEN math half, and `◌` its remaining machine
+target. The value `12` the full walk must land on IS
+`committedIndexRef [1] ackedOneKnown` (`rfl`), and
+`committedIndexRef_meets_spec` (proven) upgrades it to
+`IsCommittedIndex`. `◌ NOT PROVEN:` `quorumOneKnownFuncSpec_statement`
+and its negative twin are still `def … : Prop` TARGETS (the
+`committedOneKnown` composition needs the allocating wide-op apply core,
+`makeSlice`/array-to-slice, and the nondeterministic range composition);
+no theorem names them and nothing here claims they are dischargeable
 today. -/
 example := @GoLean.Quorum.committedIndexRef_oneKnown
 example := @GoLean.Quorum.isCommittedIndex_oneKnown
 example := @GoLean.Quorum.not_isCommittedIndex_oneKnown_11
+example := @GoLean.Surface.quorumAckedIndexFuncSpec2
+example := @GoLean.Surface.quorumAckedIndexPre_satisfiable
+example := @GoLean.Iris.GoldenQuorum.wp_ackedIndexCall
+example := @GoLean.Iris.GoldenQuorum.wp_ackedIndex_body
+example := @GoLean.Iris.wp_call_enter₂
+example := @GoLean.Iris.wp_call_enter_ackedIndexImpl
+example := @GoLean.Iris.wp_call_target_next
+example := @GoLean.Iris.wp_call_targets_done_arg
+example := @GoLean.Iris.wp_call_arg_next
+example := @GoLean.Iris.wp_frame_return₂
+example := @GoLean.Iris.wp_read₂_store₂_step
+example := @GoLean.Surface.sat_sep_insert
 /-- `✓` the golden walk and both its call forms. -/
 example := @GoLean.Iris.GoldenSlice.wp_inc_body
 example := @GoLean.Iris.GoldenSlice.wp_call_inc_stmt
