@@ -7,12 +7,25 @@ compaction and agent switches; both are audit dimensions from now on.
 
 ## 1. The TCB doctrine: Iris stays fully outside
 
-**The core aim: a consumer of a top-level GoLean theorem must be able
-to UNDERSTAND the claim from 'base' definitions over the interpreter —
-never needing Iris, WP, or any 'fancy' theorem to know what was
-proven.** Trust-to-understand = the transitive definitions of the
-STATEMENT, not of the proof. Proofs may use anything (Iris is a proof
-device behind the exit pipes); statements may not.
+**The core aim, stated as the DELETION TEST (user sharpening,
+2026-08-01): top-level theorem statements must be SEMANTICALLY
+INTERPRETABLE without Iris — if Iris were deleted from the build, the
+statement must still elaborate and denote the same proposition in
+base definitions. "We can still ask the question and have it mean
+something."** This is stronger than human understandability and it is
+FORMAL: the transitive DEFINITIONAL CLOSURE of the statement (every
+constant its type unfolds through, by module of origin) must be
+disjoint from Iris — not merely import-hygienic (a statement that
+merely imports Iris unused survives deletion; one that unfolds through
+any Iris-defined constant does not, however innocent it looks). Proofs
+may use anything — Iris is a proof device behind the exit pipes, and
+proofs are deleted with it; the theorems' STATEMENTS remain and must
+still be the same questions.
+
+Under the deletion test today: `execStmt`/`loadLoc`/`Steps`,
+`HProp`/`sat`/`Heaplet` (our deep-embedded, Iris-free SL), and the
+Surface judgments all survive; anything mentioning `IProp`, `WP`,
+`iprop(...)`, invariant tokens, or ghost cameras does not.
 
 The statement-dependency ladder, from best to acceptable:
 
@@ -37,10 +50,13 @@ first-order readouts where possible) before the theorem is claimed.
 
 **Mechanization owed at close-out (not just discipline):**
 - A per-theorem statement-TCB gate in `proofs/Audit.lean`: for each
-  designated headline theorem, walk the constants of its TYPE
-  (statement closure, not proof closure) and FAIL the build if any
-  lives under the `Iris` namespace (same `#eval` style as the axiom
-  sweep). This turns the doctrine into a build error.
+  designated headline theorem, walk the TRANSITIVE constant closure of
+  its TYPE (statement closure, not proof closure — unfold through
+  definitions, exactly the deletion test) and FAIL the build if any
+  constant's module of origin is an Iris module (module-of-origin, not
+  namespace — the same discrimination the axiom sweep uses, so a
+  stray top-level or renamed constant cannot dodge it). This turns the
+  deletion test into a build error.
 - Extend the surface-purity ci scan from its two-file list to the full
   set of statement-bearing modules (today `QuorumTargets`,
   `QuorumRefSpec`, `AutomationTargets` are Iris-free by import chain
