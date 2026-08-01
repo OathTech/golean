@@ -127,7 +127,7 @@ type (`map[Index]bool`, `map[NodeID]struct{}`, the ordinary raft shape)
 the unpinned premise is FALSE for the hostile `σ` with an empty type
 env, and the law would be VACUOUS there while looking general (pre-merge
 audit 2026-07-31, finding 9; `Ghost.lean`'s rule, demonstrated by
-`Laws/QuorumOps.typeEnv_pin_is_load_bearing`). At a BASIC key type the
+`Specs/GoldenQuorumPin.typeEnv_pin_is_load_bearing`). At a BASIC key type the
 pin is simply unused, so `fun _ _ i h => by simp …` still discharges it.
 Witnesses: `wp_map_iter_next_key_basic_key_witness` (basic key) and
 `wp_map_iter_next_key_defined_key_witness` (DEFINED key — the instance

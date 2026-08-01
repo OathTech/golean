@@ -11,10 +11,11 @@ import GoLeanProofs.Laws.Call
 import GoLeanProofs.Laws.Loop
 import GoLeanProofs.Laws.Range
 import GoLeanProofs.Laws.Values
-import GoLeanProofs.Laws.QuorumOps
+import GoLeanProofs.Laws.StmtOps
 import GoLeanProofs.Laws.Unwind
 import GoLeanProofs.Adequacy
 import GoLeanProofs.Specs.GoldenProgram
+import GoLeanProofs.Specs.GoldenTargets
 import GoLeanProofs.Specs.GoldenSliceWP
 import GoLeanProofs.Surface
 import GoLeanProofs.SurfaceBridge
@@ -22,6 +23,7 @@ import GoLeanProofs.SurfaceExit
 import GoLeanProofs.Specs.GoldenSurface
 import GoLeanProofs.Specs.GoldenRecover
 import GoLeanProofs.Specs.GoldenQuorum
+import GoLeanProofs.Specs.GoldenQuorumPin
 import GoLeanProofs.Specs.QuorumTargets
 import GoLeanProofs.Specs.QuorumRefSpec
 import GoLeanProofs.Specs.GoldenQuorumWP

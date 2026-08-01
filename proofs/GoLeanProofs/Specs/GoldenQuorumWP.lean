@@ -1,7 +1,8 @@
 import GoLeanProofs.SurfaceExit
 import GoLeanProofs.Laws.Control
 import GoLeanProofs.Laws.Init
-import GoLeanProofs.Laws.QuorumOps
+import GoLeanProofs.Laws.StmtOps
+import GoLeanProofs.Specs.GoldenQuorumPin
 import GoLeanProofs.Laws.Unwind
 import GoLeanProofs.Specs.QuorumRefSpec
 import GoLeanProofs.Tactics.GoWalk

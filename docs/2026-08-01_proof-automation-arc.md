@@ -821,3 +821,62 @@ declarations, all axiom-clean; new `#guard_msgs` pins on
 statements and axiom sets are UNCHANGED by the two law widenings — the
 same acceptance shape phases 2 and 3 used. No runtime code was touched
 (proofs only), so no baseline re-pin and no `--diff` re-run is owed.
+
+---
+
+### Build log — 2026-08-01, CLOSE-OUT slice 1: **the layering restructure**
+
+Charter: `docs/2026-08-01_tcb-and-layering-doctrine.md` §2 + close-out
+checklist item 1. RELOCATION, NOT RENAMING: every theorem/def name
+survives (namespaces are unchanged; only module files moved), so every
+Audit `#guard_msgs` pin, witness reference and downstream use compiles
+untouched.
+
+**What moved where** (the misplacements the doctrine recorded, all three
+eliminated — plus the same class found in two more general modules):
+
+1. `Laws/QuorumOps.lean` is GONE, split two ways:
+   - **`Laws/StmtOps.lean`** (general; named for the Go construct — the
+     wide-statement `stmtOpK` family): the env/heap algebra, the operand
+     walk (`wp_stmt_op_first`/shifts), both apply cores + the allocating
+     one (`wp_make_map`/`wp_make_slice`), `wp_sort_slice` +
+     `applyStmtOp_sortSlice_ints`, `wp_map_lookup` +
+     `wp_read_store_step₂`, the map-range snapshot laws, the map-entry
+     search (`forIn_find_*`, `mapLookupValue_miss`/`_hit`), and
+     `mapLookupValue_singleton` (general, was stranded in the witness
+     section). Imports NO Specs module.
+   - **`Specs/GoldenQuorumPin.lean`** (target): the whole `QuorumPin`
+     namespace (`rfl` pin projections), the quorum witnesses
+     (`wp_map_range_snapshot_committed`, `wp_sort_slice_srt`,
+     `wp_map_lookup_ackedIndex[_entries]`, `wp_make_slice_c2`, the two
+     dispatch frame-entry witnesses) and `typeEnv_pin_is_load_bearing`.
+2. `Laws/Call.lean` no longer imports `Specs/GoldenProgram`: its two
+   golden witnesses (`wp_call_enter_inc`, `wp_call_enter_incViaCall`)
+   moved to `Specs/GoldenSliceWP.lean` (same `GoLean.Iris` namespace),
+   beside the walks that consume them.
+3. `Surface.lean` no longer imports `Specs/GoldenProgram`: the step-0
+   golden target statements (`outCell0/2`, `goldenDriver`, `outEnv`,
+   `goldenOut`, the six `golden*_statement` defs) moved to the new
+   **`Specs/GoldenTargets.lean`** (same `GoLean.Surface` namespace,
+   Iris-free import chain — it joins the surface-purity scan in slice 3).
+   `Surface.lean` is now purely the general judgment language.
+
+**The layer map** is written into `docs/architecture.md` ("Proof-layer
+map"): base defs (`GoLean.GoCore.*`) → machine (`Steps`/`execStmt`) →
+general laws/lifting/ghost/tactics/surface (`Lang`, `HeapBridge`,
+`Ghost`, `Lifting`, `Inversions`, `Laws/*`, `Tactics/GoWalk`,
+`Adequacy`, `Surface`, `SurfaceBridge`, `SurfaceExit`) → target layer
+(`Specs/*` only: pins, projections+witnesses, target statements, walks).
+Direction rule: target uses general, never the reverse.
+
+**The lint** (`scripts/ci`, "import-direction lint", fail-closed): no
+module under `proofs/GoLeanProofs/` outside `Specs/` may `import
+GoLeanProofs.Specs.*` (root aggregator + `Audit.lean` structurally
+exempt), and `Tactics/*` may not import `GoLean` at all. **Zero
+exceptions** — the end state the charter asked for; an exception
+requires a reason comment in the script and a note in
+`docs/architecture.md`.
+
+**Gate**: proofs build green, sweep 6636 declarations axiom-clean, no
+new warnings; full `scripts/ci` at the end of the close-out slices.
+Proofs-only change (no runtime code), so no baseline re-pin.

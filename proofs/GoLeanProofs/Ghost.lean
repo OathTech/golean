@@ -51,7 +51,7 @@ class GoCoreGS (hlc : outParam HasLC) (GF : BundledGFunctors) extends
   so without this pin a house-style `∀ σ, σ.functions = … → σ.methods = …
   → P σ` premise mentioning any named type is FALSE (pick a σ with those
   pins and a hostile `types`) and the law carrying it is vacuous —
-  `Laws/QuorumOps.typeEnv_pin_is_load_bearing` is the kernel-checked
+  `Specs/GoldenQuorumPin.typeEnv_pin_is_load_bearing` is the kernel-checked
   demonstration. `σ.types` is `Step`-invariant for exactly the reason
   `functions`/`methods` are: no rule writes it. The pin's general contract
   is "the pinned program's `typeDefs`", mirroring what the executable

@@ -156,6 +156,48 @@ else
   bad "surface purity violated (Iris reachable from the spec surface)"
 fi
 
+# 1d. Import-direction lint (layering doctrine,
+# docs/2026-08-01_tcb-and-layering-doctrine.md §2, mechanized at the
+# proof-automation close-out): the proof layer divides into GENERAL
+# infrastructure (laws, lifting, ghost state, tactics, the surface and its
+# exit pipes — everything under proofs/GoLeanProofs/ EXCEPT Specs/) and the
+# TARGET layer (Specs/*: program pins, walks, witnesses, per-target
+# statements). The direction rule: target depends on general, never the
+# reverse — a general module importing a Specs pin is how target shapes leak
+# into laws (the over-specialization standing check's structural form).
+#   Exceptions: NONE. The 2026-08-01 restructure eliminated all three that
+#   existed (Laws/QuorumOps.lean -> Laws/StmtOps.lean + Specs/GoldenQuorumPin;
+#   Laws/Call.lean witnesses -> Specs/GoldenSliceWP; Surface.lean step-0
+#   statements -> Specs/GoldenTargets). Add an exception ONLY with a reason
+#   comment here and a matching note in docs/architecture.md.
+#   (The root aggregator proofs/GoLeanProofs.lean and the gate proofs/Audit.lean
+#   import everything by design; they live outside proofs/GoLeanProofs/ and are
+#   structurally exempt.)
+# Second clause: Tactics/* must not import GoCore at all (a tactic that can
+# name Config constructors can grow target knowledge; GoWalk.lean imports only
+# Lean + the Iris proof mode/WP, by construction).
+step "import-direction lint (general proof modules import no Specs/*; Tactics import no GoCore)"
+dir_bad=0
+while IFS= read -r f; do
+  hits=$(grep -nE '^import GoLeanProofs\.Specs\.' "$f" || true)
+  if [ -n "$hits" ]; then
+    echo "  $f (general layer) imports target-layer Specs modules:" >&2
+    echo "$hits" | sed 's/^/    /' >&2
+    dir_bad=1
+  fi
+done < <(find proofs/GoLeanProofs -name '*.lean' -not -path '*/Specs/*' -not -path '*/.lake/*')
+tac_hits=$(grep -nE '^import GoLean' proofs/GoLeanProofs/Tactics/*.lean 2>/dev/null || true)
+if [ -n "$tac_hits" ]; then
+  echo "  Tactics/ imports GoCore/GoLean (a walk tactic must stay semantics-blind):" >&2
+  echo "$tac_hits" | sed 's/^/    /' >&2
+  dir_bad=1
+fi
+if [ "$dir_bad" = 0 ]; then
+  ok "import-direction (general ↛ Specs; Tactics ↛ GoCore)"
+else
+  bad "import-direction violated (move the pin/witness to Specs/, or record an exception with a reason)"
+fi
+
 # 2. Core build (the frontend / interpreter / relation).
 step "core build (lake build; must be WARNING-free — GoLean/ module warnings
 # replay into the runner's stdout and corrupt the JSON observation channel,

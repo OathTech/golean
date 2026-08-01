@@ -167,7 +167,7 @@ open Lean in
 /-- info: 'GoLean.Quorum.not_committedIndex_acked3_101' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Quorum.not_committedIndex_acked3_101
 
--- Quorum-pilot phase-4 per-construct laws (`Laws/QuorumOps.lean`,
+-- Quorum-pilot phase-4 per-construct laws (`Laws/StmtOps.lean` + `Specs/GoldenQuorumPin.lean`, né `Laws/QuorumOps.lean`,
 -- 2026-07-31): the wide-statement (`stmtOpK`) walk, `sortSlice`,
 -- `mapLookup`, and the map-range snapshot — each pinned on the walk it
 -- is witnessed by.
@@ -318,7 +318,7 @@ example := @GoLean.Iris.GoldenRecover.wp_recoverCall
 example := @GoLean.Iris.wp_frame_fall_int
 example := @GoLean.Surface.recoverFuncSpec
 
-/-- `✓` the quorum per-construct laws (`Laws/QuorumOps.lean`, quorum
+/-- `✓` the quorum per-construct laws (`Laws/StmtOps.lean`, witnesses in `Specs/GoldenQuorumPin.lean`; né `Laws/QuorumOps.lean` — quorum
 pilot phase 4 item 2, 2026-07-31), each witnessed SAME-COMMIT by a walk
 over a statement `rfl`-projected out of the pinned lowering
 (`QuorumPin.{rangeStmt,sortStmt,mapLookupStmt}` — edit the pin and the
@@ -771,7 +771,7 @@ WHAT IS NEW HERE, over the 3-voter rung:
   array (`forIn_find_none`/`forIn_find_some`).
 
 OVER-SPECIALIZATION CHECK, per new law. `Laws/Values.lean` and the new
-`Laws/QuorumOps.lean` material are TARGET-FREE by inspection:
+`Laws/StmtOps.lean` material (né `Laws/QuorumOps.lean`) are TARGET-FREE by inspection:
 `forIn_range'_yield`/`_inv` (any monad-free body, any invariant),
 `applyStmtOp_sortSlice_ints` (any int kind, any length, any tail),
 `buildDefaultArrayValue_int`, `checkSliceBounds_prefix`,

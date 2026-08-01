@@ -10,7 +10,6 @@ import Iris.Std.GenSetsInstances
 import GoLean.GoCore.MachineSound
 import GoLeanProofs.HeapBridge
 import GoLeanProofs.Laws.Eval
-import GoLeanProofs.Specs.GoldenProgram
 import GoLeanProofs.Tactics.GoWalk
 
 /-!
@@ -25,9 +24,11 @@ the golden program exercises — unary-argument void-result
 (`wp_call_enter_arg1`, the `inc(&x)` shape) and nullary-argument
 single-int-result (`wp_call_enter_ret1`, the `r = incViaCall()` shape) —
 each with its premises discharged on the CONCRETE golden functions as the
-non-vacuity witnesses (`wp_call_enter_inc`, `wp_call_enter_incViaCall`;
-the genuinely-external premises are the program/method-table pins, as in
-the old `wp_inc_call`). `wp_frame_return_int` is the value frame exit
+non-vacuity witnesses (`wp_call_enter_inc`, `wp_call_enter_incViaCall` —
+relocated to `Specs/GoldenSliceWP.lean` at the proof-automation close-out
+so this GENERAL module imports no `Specs/*` pin, per the layering
+doctrine; the genuinely-external premises are the program/method-table
+pins, as in the old `wp_inc_call`). `wp_frame_return_int` is the value frame exit
 (read the pinned result cell, store to the caller's target — the
 `wp_store_step₂` two-cell core), premise-free given the resources.
 
@@ -459,7 +460,7 @@ addresses.
 
 All the state-quantified premises carry the `σ.types = GoCoreGS.types GF`
 hypothesis: without it they would be false at any named type, and the law
-vacuous (`Laws/QuorumOps.typeEnv_pin_is_load_bearing`). -/
+vacuous (`Specs/GoldenQuorumPin.typeEnv_pin_is_load_bearing`). -/
 theorem wp_call_dynamic_enter₂ {fid : FuncId} {anchor concrete : Func}
     {recvBox recv v₁ w₀ w₁ dv₀ dv₁ : GoValue}
     {pid₀ pid₁ rid₀ rid₁ : String} {pty₀ pty₁ rty₀ rty₁ : Ty}
@@ -600,7 +601,7 @@ result cells. Arity is fixed at 2/2, exactly as in the
 owed — see `wp_alloc_step₄`'s scope note); everything else — callee,
 names, types, values — is a law variable, and the `∀ σ` premises all
 carry the `σ.types` pin, without which they are false at any named type
-(`Laws/QuorumOps.typeEnv_pin_is_load_bearing`). -/
+(`Specs/GoldenQuorumPin.typeEnv_pin_is_load_bearing`). -/
 theorem wp_call_enter₂ {fid : FuncId} {func : Func}
     {v₀ v₁ w₀ w₁ dv₀ dv₁ : GoValue}
     {pid₀ pid₁ rid₀ rid₁ : String} {pty₀ pty₁ rty₀ rty₁ : Ty}
@@ -702,7 +703,7 @@ cells (riding through unchanged) and WRITES two others, in order — the
 composed `Heap.set` shape `storeMany` produces at a two-result frame
 exit. The general engine; `wp_frame_return₂` is its front. (Hosted here
 rather than in `Lifting.lean` for the same reason as
-`Laws/QuorumOps.wp_read_store_step₂`: it needs the `HeapBridge`
+`Laws/StmtOps.wp_read_store_step₂`: it needs the `HeapBridge`
 projection algebra.) -/
 theorem wp_read₂_store₂_step {ra₀ ra₁ ta₀ ta₁ : Addr}
     {rcell₀ rcell₁ tcell₀ tcell₀' tcell₁ tcell₁' : HeapCell} {c₀ : Config} {k}
@@ -862,50 +863,6 @@ theorem wp_frame_return₂ {ta₀ ta₁ ra₀ ra₁ : Addr}
   intro c' s' hst
   obtain ⟨h1, h2⟩ := step_det (by trivial) hstep hst
   exact ⟨h1.symm, h2.symm⟩
-
-/-! ### Non-vacuity witnesses on the golden functions -/
-
-
-/-- Witness for `wp_call_enter_arg1` on the CONCRETE golden `inc`: every
-premise discharges by computation given the two genuinely-external pins
-(program and method table). -/
-theorem wp_call_enter_inc {xa : Addr} {locs : List Loc} {env k}
-    (hprog : GoCoreGS.prog GF = GoldenSlice.sliceLowered.funcs)
-    (hmeths : GoCoreGS.methods GF = #[]) :
-    iprop(∀ pa : Addr,
-        pa.id ↦ (⟨some (.pointer (.int .int)), .addr (.base xa)⟩ : HeapCell) -∗
-        WP (Config.exec GoldenSlice.incFunc.body [[("p", Loc.base pa)]] (.frame locs [] [] k))
-          @ s ; E {{ Φ }})
-      ⊢ WP (Config.retV (.addr (.base xa))
-            (.callArgsK ⟨"inc"⟩ locs [] [] env k)) @ s ; E {{ Φ }} :=
-  wp_call_enter_arg1
-    (hfind := by rw [hprog, GoldenSlice.sliceLowered_funcs_eq]; rfl)
-    (hargs := rfl)
-    (hres := rfl)
-    (hnodisp := fun σ h => by
-      simp [dynamicDispatch?, methodInfoByFuncId?, h, hmeths, Bind.bind, Except.bind])
-    (hnorm := fun σ _ => by
-      simp [normalizeValueForTy, normalizeValueForTyFuel])
-
-/-- Witness for `wp_call_enter_ret1` on the CONCRETE golden `incViaCall`
-(nullary, one int result `$res0` defaulting to 0). -/
-theorem wp_call_enter_incViaCall {tl : Loc} {env k}
-    (hprog : GoCoreGS.prog GF = GoldenSlice.sliceLowered.funcs)
-    (hmeths : GoCoreGS.methods GF = #[]) :
-    iprop(∀ ra : Addr,
-        ra.id ↦ (⟨some (.int .int), .int 0 .int⟩ : HeapCell) -∗
-        WP (Config.exec GoldenSlice.incViaCallFunc.body [[("$res0", Loc.base ra)]]
-              (.frame [tl] [Loc.base ra] [] k)) @ s ; E {{ Φ }})
-      ⊢ WP (Config.retV (.addr tl)
-            (.callTargetsK ⟨"incViaCall"⟩ [] [] [] env k)) @ s ; E {{ Φ }} :=
-  wp_call_enter_ret1
-    (hfind := by rw [hprog, GoldenSlice.sliceLowered_funcs_eq]; rfl)
-    (hargs := rfl)
-    (hres := rfl)
-    (hnodisp := fun σ h => by
-      simp [dynamicDispatch?, methodInfoByFuncId?, h, hmeths, Bind.bind, Except.bind])
-    (hdef := fun σ _ => by
-      simp [defaultValue, defaultValueFuel, typeResolutionFuel])
 
 end
 

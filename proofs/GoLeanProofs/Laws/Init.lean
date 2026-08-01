@@ -35,7 +35,7 @@ default-value fact, under the ghost state's type-environment pin —
 required, not decoration: `defaultValue` resolves a `.defined` name
 through `TypeEnv.lookup σ₁.types` and fails closed on an unknown one, so
 the unpinned `∀ σ₁` form is FALSE at every named Go type and a law
-carrying it would be vacuous there (`Laws/QuorumOps`'s
+carrying it would be vacuous there (`Specs/GoldenQuorumPin`'s
 `typeEnv_pin_is_load_bearing`; premise widened 2026-07-31 for the
 `main.Index`-typed declarations of the quorum lowering — strictly weaker,
 so every existing caller keeps working). Witnesses: `wp_init_int`

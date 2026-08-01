@@ -1,5 +1,4 @@
 import GoLean.GoCore.MachineSound
-import GoLeanProofs.Specs.GoldenProgram
 import Std.Data.ExtTreeMap
 
 /-!
@@ -9,9 +8,8 @@ Design of record: `docs/2026-07-21_native-spec-surface.md`. This module is
 the specification language humans read: heaplets, a deep-embedded assertion
 language `HProp` with standard heaplet satisfaction, the `GoTriple` judgment
 over `execStmt` runs (the F4 §2 wrapper: fuel-bounded iteration of the
-machine's `stepFn` under the old name and result shape — not a shim), and the spec-surface arc's **step-0
-intended statements** (widening loop: targets stated before the machinery
-that discharges them).
+machine's `stepFn` under the old name and result shape — not a shim), and
+the progress/invariance companions.
 
 **STRUCTURAL RULE (D1, the vocabulary criterion): this module and its
 transitive imports are Iris-free** — no `IProp`, no `WP`, no masks, credits,
@@ -19,10 +17,13 @@ or ghost state, ever. `scripts/ci` lints the direct imports. The Iris side
 consumes these definitions through the boundary layer (reflection/extraction,
 staged §5 of the design note); nothing here may ever import it.
 
-Status honesty: the `*_statement` definitions at the bottom are **stated
-step-0 targets, not theorems**. Each becomes a theorem only when the generic
-exit theorem (`goTriple_of_wp`, boundary layer) discharges it; nothing in
-this file or its docstrings claims otherwise.
+**LAYERING (proof-automation close-out, 2026-08-01)**: this module is
+GENERAL — no pinned program appears. The spec-surface arc's step-0
+statements over the golden lowering, which used to close this file,
+moved to `Specs/GoldenTargets.lean` (same `GoLean.Surface` namespace, so
+every name survived); target-naming statements are target-layer and a
+general module may not import `Specs/*` (`scripts/ci` lints the
+direction).
 -/
 
 open GoLean GoLean.GoCore GoLean.GoCore.Machine
@@ -246,102 +247,5 @@ def GoFuncSpec (types : TypeEnv) (funcs : Array Func) (methods : Array MethodInf
       (.call #[.var "$callres"] fid args)
       (.ex fun (n : Int) =>
         .sep (.pointsTo ra ⟨some (.int kind), .int n kind⟩) (Q n))
-
-/-! ## Step-0 intended statements (the spec-surface arc's targets)
-
-Stated FIRST, per the widening loop (`docs/2026-07-21_widening-loop.md`):
-these are the proofs the arc's machinery must discharge, plus the negative
-twin that must also hold. They are `def ... : Prop` — **targets, not
-results**. -/
-
-/-- The designated output cell: base address `0`, an int cell holding 0 —
-seeded in the initial state and named by the driver's environment. This is
-the observable-naming convention of design-note D5: the harness owns the
-observable cells; the subject runs against them (mirroring how the
-differential runner writes results into caller cells). -/
-def outCell0 : HProp := .pointsTo 0 ⟨some (.int .int), .int 0 .int⟩
-
-/-- ... and the same cell holding 2 (the intended final value). -/
-def outCell2 : HProp := .pointsTo 0 ⟨some (.int .int), .int 2 .int⟩
-
-/-- The seeded driver: call the subject function straight into the owned
-output cell (no allocation in the driver — the whole point: the observable's
-address is pinned by construction, not chosen by the machine). -/
-abbrev goldenDriver : Stmt := .call #[.var "r"] ⟨"incViaCall"⟩ #[]
-
-/-- The driver environment: `r` names the output cell. -/
-abbrev outEnv : LocalEnv := [[("r", .base ⟨0⟩)]]
-
-open GoLean.Iris.GoldenSlice in
-/-- **Step-0 target A (SL register): the golden triple.**
-`{r ↦ 0} r = incViaCall() {r ↦ 2}` over the frontend's actual lowering —
-the pinned-observable form that (unlike the existential `*_computes`
-theorems) IS entitled to the name "lowering target" once proven. -/
-def goldenTriple_statement : Prop :=
-  GoTriple sliceLowered.typeDefs.toList sliceLowered.funcs
-    sliceLowered.methods outEnv outCell0 goldenDriver outCell2
-
-open GoLean.Iris.GoldenSlice in
-/-- **Step-0 target A′: the full golden spec** — the frame-closed triple
-plus progress, as one judgment: safe non-panicking execution that delivers
-`r ↦ 2` and touches nothing outside its footprint. -/
-def goldenSpec_statement : Prop :=
-  GoSpec sliceLowered.typeDefs.toList sliceLowered.funcs
-    sliceLowered.methods outEnv outCell0 goldenDriver outCell2
-
-open GoLean.Iris.GoldenSlice in
-/-- **Step-0 target A″: the golden FUNCTION spec** — the form an engineer
-reads: "`incViaCall()` takes no arguments, needs no heap, and returns 2" —
-∀-quantified over the caller's target cell, its prior value, and the
-frame. -/
-def goldenFuncSpec_statement : Prop :=
-  GoFuncSpec sliceLowered.typeDefs.toList sliceLowered.funcs
-    sliceLowered.methods ⟨"incViaCall"⟩ .int #[] .emp
-    (fun n => .pure (n = 2))
-
-open GoLean.Iris.GoldenSlice in
-/-- The concrete seeded initial state for the system-register statements:
-golden functions, the output cell at address 0, `r` bound to it. -/
-def goldenOut : ExecState :=
-  { types := sliceLowered.typeDefs.toList,
-    functions := sliceLowered.funcs,
-    methods := sliceLowered.methods,
-    heap := [(.base ⟨0⟩, ⟨some (.int .int), .int 0 .int⟩)],
-    nextAddr := 1 }
-
-/-- **Step-0 target B (system register, plain predicate — the Verdi
-register): the output cell holds 2.** No `∃`, no SL, no Iris: the
-designated observable, by address, in every terminating run. -/
-def goldenReturnsTwo_statement : Prop :=
-  ∀ (fuel : Nat) (ch : Choices) (σf : ExecState) (ch' : Choices),
-    execStmt fuel outEnv goldenOut ch goldenDriver = .ok (.normal σf, ch') →
-    loadLoc σf (.base ⟨0⟩) = .ok (.int 2 .int)
-
-open GoLean.Iris.GoldenSlice in
-/-- **Step-0 target C (arc `invariant-readout`): the golden register
-invariant.** At EVERY relation-reachable configuration of the seeded
-golden driver — mid-call included — the output cell holds `int 0` or
-`int 2`: never 1, never garbage, never retyped. The miniature of a Verdi
-register invariant ("the register only ever holds values the state machine
-permits"); chosen so the physical invariant needs no ghost state (the
-single write-step goes 0 → 2 atomically). A statement `GoTriple`
-structurally cannot make (terminal states only) and `Progress` does not
-(never-stuck only). -/
-def goldenInvariant_statement : Prop :=
-  GoInvariant sliceLowered.typeDefs.toList sliceLowered.funcs
-    sliceLowered.methods outEnv outCell0 goldenDriver
-    (.ex fun (n : Int) =>
-      .sep (.pointsTo 0 ⟨some (.int .int), .int n .int⟩)
-        (.pure (n = 0 ∨ n = 2)))
-
-/-- **Step-0 negative twin: the output cell provably does NOT hold 3** in
-any terminating run. Once target B is proven this is a two-line corollary
-(`.ok`-injectivity + `2 ≠ 3`) — which is exactly the design-note point that
-pinning observables collapses the refutation twins from design problems to
-corollaries. Guards against spec-layer trivialization. -/
-def goldenNotThree_statement : Prop :=
-  ∀ (fuel : Nat) (ch : Choices) (σf : ExecState) (ch' : Choices),
-    execStmt fuel outEnv goldenOut ch goldenDriver = .ok (.normal σf, ch') →
-    ¬ loadLoc σf (.base ⟨0⟩) = .ok (.int 3 .int)
 
 end GoLean.Surface

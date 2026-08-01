@@ -7,6 +7,7 @@ import GoLeanProofs.Laws.Assign
 import GoLeanProofs.Laws.Call
 import GoLeanProofs.Laws.Init
 import GoLeanProofs.SurfaceBridge
+import GoLeanProofs.Specs.GoldenTargets
 
 /-!
 # The golden WP walk (R3 rewrite over the fine-grained machine)
@@ -26,6 +27,69 @@ is total).
 open Iris Iris.ProgramLogic Iris.Std Iris.Std.PartialMap
 open GoLean GoLean.GoCore GoLean.GoCore.Machine
 open GoLean.Surface (outCell0 outCell2 goldenDriver outEnv)
+
+namespace GoLean.Iris
+
+-- Uniform simp sets across law variants, as in `Laws/Call.lean` where
+-- these witnesses lived: the unused-arg linter misfires on them.
+set_option linter.unusedSimpArgs false
+
+section
+variable {GF : BundledGFunctors} {hlc : HasLC} [GoCoreGS hlc GF]
+variable {s : Stuckness} {E : CoPset} {Φ : Unit → IProp GF}
+
+/-! ### Non-vacuity witnesses for the frame-entry laws (`Laws/Call.lean`),
+on the CONCRETE golden functions — relocated here from `Laws/Call.lean`
+at the proof-automation close-out (layering doctrine: a GENERAL law
+module must not import a `Specs/*` pin; the witness lives with the
+pinned program it instantiates on). -/
+
+
+/-- Witness for `wp_call_enter_arg1` on the CONCRETE golden `inc`: every
+premise discharges by computation given the two genuinely-external pins
+(program and method table). -/
+theorem wp_call_enter_inc {xa : Addr} {locs : List Loc} {env k}
+    (hprog : GoCoreGS.prog GF = GoldenSlice.sliceLowered.funcs)
+    (hmeths : GoCoreGS.methods GF = #[]) :
+    iprop(∀ pa : Addr,
+        pa.id ↦ (⟨some (.pointer (.int .int)), .addr (.base xa)⟩ : HeapCell) -∗
+        WP (Config.exec GoldenSlice.incFunc.body [[("p", Loc.base pa)]] (.frame locs [] [] k))
+          @ s ; E {{ Φ }})
+      ⊢ WP (Config.retV (.addr (.base xa))
+            (.callArgsK ⟨"inc"⟩ locs [] [] env k)) @ s ; E {{ Φ }} :=
+  wp_call_enter_arg1
+    (hfind := by rw [hprog, GoldenSlice.sliceLowered_funcs_eq]; rfl)
+    (hargs := rfl)
+    (hres := rfl)
+    (hnodisp := fun σ h => by
+      simp [dynamicDispatch?, methodInfoByFuncId?, h, hmeths, Bind.bind, Except.bind])
+    (hnorm := fun σ _ => by
+      simp [normalizeValueForTy, normalizeValueForTyFuel])
+
+/-- Witness for `wp_call_enter_ret1` on the CONCRETE golden `incViaCall`
+(nullary, one int result `$res0` defaulting to 0). -/
+theorem wp_call_enter_incViaCall {tl : Loc} {env k}
+    (hprog : GoCoreGS.prog GF = GoldenSlice.sliceLowered.funcs)
+    (hmeths : GoCoreGS.methods GF = #[]) :
+    iprop(∀ ra : Addr,
+        ra.id ↦ (⟨some (.int .int), .int 0 .int⟩ : HeapCell) -∗
+        WP (Config.exec GoldenSlice.incViaCallFunc.body [[("$res0", Loc.base ra)]]
+              (.frame [tl] [Loc.base ra] [] k)) @ s ; E {{ Φ }})
+      ⊢ WP (Config.retV (.addr tl)
+            (.callTargetsK ⟨"incViaCall"⟩ [] [] [] env k)) @ s ; E {{ Φ }} :=
+  wp_call_enter_ret1
+    (hfind := by rw [hprog, GoldenSlice.sliceLowered_funcs_eq]; rfl)
+    (hargs := rfl)
+    (hres := rfl)
+    (hnodisp := fun σ h => by
+      simp [dynamicDispatch?, methodInfoByFuncId?, h, hmeths, Bind.bind, Except.bind])
+    (hdef := fun σ _ => by
+      simp [defaultValue, defaultValueFuel, typeResolutionFuel])
+
+
+end
+
+end GoLean.Iris
 
 namespace GoLean.Iris.GoldenSlice
 
