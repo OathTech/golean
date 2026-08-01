@@ -84,12 +84,39 @@ rider items.
 
 ## Exit criteria
 
-- Phase-0 statements proven (∀-config + 3-voter + rule); summit
-  re-derived through `go_walk` with identical statement + axioms;
-  every new law/rule witnessed same-commit; sweep clean; gate green;
-  ratchet not up.
+**Status 2026-08-01 (close-out): MET**, except the rider items, which
+are deliberately deferred (subsection below):
+
+- ~~Phase-0 statements proven (∀-config + 3-voter + rule)~~ **MET**:
+  `committedIndexAllConfigs` (phase 4), `quorumThreeAllFuncSpec`
+  (phase 3), `mapIterInvRule` (phase 1) each discharge their phase-0
+  `def … : Prop` target with the `theorem … : <the def>` statement-
+  identity check.
+- ~~Summit re-derived through `go_walk` with identical statement +
+  axioms~~ **MET** (phase 2): `summitStatement_holds` still inhabits
+  `summitStatement_pinned`, and the `#guard_msgs` axiom pin on
+  `quorumOneKnownFuncSpec` still reads the classical trio.
+- ~~Every new law/rule witnessed same-commit; sweep clean; gate green;
+  ratchet not up~~ **MET**: per-phase gate records in the build log;
+  close-out `scripts/ci` PASS (sweep 6636 declarations axiom-clean,
+  differential 873/873, negative 309/309, no drift, no re-pin).
 - Pre-merge audit ask (unconditional; over-specialization dimension
-  included) + merge sign-off.
+  included) + merge sign-off — **the remaining step**; both new
+  doctrines (`docs/2026-08-01_tcb-and-layering-doctrine.md`) are named
+  audit dimensions for it.
+
+### Deferred to future arcs (coordinator decision 2026-08-01)
+
+The plan's phase-4 RIDER items are moved out of this arc's merge scope —
+**not started, not blocked, deliberately excluded**; each is coverage
+work in the established guardrails-first pattern, independent of the
+∀-config theorem this arc existed to prove:
+
+- Method promotion (BUG-007).
+- BUG-005 snapshot fix (range reads the live map in Go, the snapshot in
+  GoCore — cross-referenced in `Laws/Range.lean`).
+- Import-path identity (BUG-010 widening).
+- Type switches.
 
 ## Build log
 
@@ -920,3 +947,51 @@ theorem. Tamper-tested in both directions: designating
 `GoLean.Iris.mapIterInvRule` (whose statement legitimately quantifies
 over `IProp` — it is a statement ABOUT the proof infrastructure, and is
 deliberately NOT designated) fails the build with 12+ named chains.
+
+### Build log — 2026-08-01, CLOSE-OUT slice 3: **the widened surface-purity scan + exit-criteria bookkeeping**
+
+Charter: close-out checklist item 2 (second half) + coordinator-
+delegated bookkeeping.
+
+**The scan** (`scripts/ci`, "surface purity"): widened from its two-file
+list to the full statement-bearing set, each file against its OWN
+exactly-anchored direct-import allowlist, missing-file behavior still
+fail-closed:
+
+- `Surface.lean` — GoLean core + Std only (tighter than before: the
+  restructure removed its pin import);
+- `Specs/GoldenProgram.lean`, `Specs/GoldenQuorum.lean` — GoLean core
+  only (the quorum pin was previously unscanned; added since the
+  headline statements unfold through `quorumLowered`);
+- `Specs/GoldenTargets.lean` (new, from slice 1) — Surface +
+  GoldenProgram;
+- `Specs/QuorumTargets.lean` — Surface; `Specs/QuorumRefSpec.lean` —
+  QuorumTargets. Every allowlisted GoLeanProofs module is itself in the
+  scan, so the Iris-free chain closes by induction, with the GoLean/
+  core no-Iris check unchanged as the base case.
+- `Specs/AutomationTargets.lean` — **recorded finding**: the doctrine's
+  "Iris-free by import chain" assessment was WRONG for this file. It is
+  mixed BY DESIGN (the range-rule target quantifies over `IProp`; the
+  phase-2 acceptance pins reference proven theorems), so an Iris-free
+  chain is impossible and is not claimed. What the gate pins instead is
+  its EXACT import list (`GoldenQuorumWP` + `Laws/Range`, nothing else —
+  any new import fails), while the Iris-freedom of its pure headline
+  targets is certified SEMANTICALLY by slice 2's statement-TCB gate.
+  Nothing was whitelisted around the deletion test itself.
+
+A docstring in the new `GoldenTargets.lean` beginning a line with
+"import" tripped the widened scan on first run — reworded the prose
+rather than loosening the grep (the scan is line-anchored on real
+import syntax and prose should not mimic it).
+
+**Bookkeeping**: the arc's Exit criteria are marked MET (∀-config +
+3-voter + rule proven; summit re-derived via `go_walk` with identical
+statement and axiom set; sweep/gate/ratchet clean), with the rider items
+(method promotion BUG-007, BUG-005 snapshot fix, BUG-010 import-path
+widening, type switches) moved to a labeled "Deferred to future arcs
+(coordinator decision 2026-08-01)" subsection — not started, not
+blocked, deliberately excluded from this arc's merge scope. The
+remaining exit step is the unconditional pre-merge audit ask + merge
+sign-off, with both 2026-08-01 doctrines as named audit dimensions.
+
+**Gate**: full `scripts/ci` PASS end to end at the close-out tip.

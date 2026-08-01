@@ -114,37 +114,74 @@ else
   bad "golden lowering DRIFTED (re-pin deliberately with the frontend change)"
 fi
 
-# 1c. Surface purity (docs/2026-07-21_native-spec-surface.md D1): the spec
-# surface and its dependency chain stay Iris-free — statements humans read
-# must never mention Iris machinery. Two checks close the chain (2026-07-21
-# audit hardening — the original checked only two files' direct imports
-# against an unanchored allowlist, which was fail-open):
-#   (a) the surface files' DIRECT imports against an exactly-anchored
-#       allowlist (GoLean core, Std, and the golden-term chain link);
+# 1c. Surface purity (docs/2026-07-21_native-spec-surface.md D1; widened to
+# the FULL statement-bearing set 2026-08-01 per the TCB doctrine,
+# docs/2026-08-01_tcb-and-layering-doctrine.md §1 — QuorumTargets/
+# QuorumRefSpec/AutomationTargets were Iris-free-by-chain-or-gated but
+# UNGATED here, the exact silent-reopen class the 2026-07-23 hardening note
+# below warns about): the spec surface and its dependency chain stay
+# Iris-free — statements humans read must never mention Iris machinery.
+# Checks that close the chain (2026-07-21 audit hardening — the original
+# checked only two files' direct imports against an unanchored allowlist,
+# which was fail-open):
+#   (a) each statement-bearing file's DIRECT imports against its own
+#       exactly-anchored allowlist; every allowlisted GoLeanProofs module is
+#       itself in this scan, so the chain closes by induction;
 #   (b) the GoLean/ core — the only allowlisted prefix with its own
 #       dependency freedom — contains NO Iris imports anywhere, so every
-#       transitive path from the surface stays Iris-free.
-step "surface purity (Iris-free spec surface)"
+#       transitive path from the surface stays Iris-free;
+#   (c) the SEMANTIC twin lives in proofs/Audit.lean (the statement-TCB
+#       gate): imports are per-module, meaning is per-theorem.
+step "surface purity (Iris-free spec surface, full statement-bearing set)"
 surface_ok=1
 # R3 audit fix (2026-07-23, sustained finding): the scan list follows the
 # GoldenSlice -> GoldenProgram rename (the half-completed rename left the
 # gate scanning a deleted file — a silent no-op — while the replacement,
 # imported by Surface.lean, was scanned by neither arm). Hardened
-# fail-closed: a listed file that does not exist now FAILS the gate, so a
+# fail-closed: a listed file that does not exist FAILS the gate, so a
 # future rename cannot silently reopen this hole.
-for f in proofs/GoLeanProofs/Surface.lean proofs/GoLeanProofs/Specs/GoldenProgram.lean; do
-  if [ ! -f "$f" ]; then
-    echo "  surface-purity scan target MISSING: $f (rename without re-pointing the gate?)" >&2
+check_surface_imports() {
+  # $1 = file, $2 = anchored allowlist regex for its direct imports
+  if [ ! -f "$1" ]; then
+    echo "  surface-purity scan target MISSING: $1 (rename without re-pointing the gate?)" >&2
     surface_ok=0
-    continue
+    return
   fi
-  bad_imports=$(grep -E '^import ' "$f" | grep -Ev '^import (GoLean\.|Std\.|GoLeanProofs\.Specs\.GoldenProgram$|GoLeanProofs\.Surface$)' || true)
+  local bad_imports
+  bad_imports=$(grep -E '^import ' "$1" | grep -Ev "$2" || true)
   if [ -n "$bad_imports" ]; then
-    echo "  $f has non-surface imports:" >&2
+    echo "  $1 has non-allowlisted imports:" >&2
     echo "$bad_imports" | sed 's/^/    /' >&2
     surface_ok=0
   fi
-done
+}
+# The general surface judgment language: GoLean core + Std only.
+check_surface_imports proofs/GoLeanProofs/Surface.lean \
+  '^import (GoLean\.|Std\.)'
+# The two program pins: GoLean core only.
+check_surface_imports proofs/GoLeanProofs/Specs/GoldenProgram.lean \
+  '^import GoLean\.'
+check_surface_imports proofs/GoLeanProofs/Specs/GoldenQuorum.lean \
+  '^import GoLean\.'
+# Statement modules over the surface + pins.
+check_surface_imports proofs/GoLeanProofs/Specs/GoldenTargets.lean \
+  '^import (GoLean\.|Std\.|GoLeanProofs\.Surface$|GoLeanProofs\.Specs\.GoldenProgram$)'
+check_surface_imports proofs/GoLeanProofs/Specs/QuorumTargets.lean \
+  '^import (GoLean\.|Std\.|GoLeanProofs\.Surface$)'
+check_surface_imports proofs/GoLeanProofs/Specs/QuorumRefSpec.lean \
+  '^import (GoLean\.|Std\.|GoLeanProofs\.Specs\.QuorumTargets$)'
+# AutomationTargets is statement-bearing but MIXED BY DESIGN: it holds the
+# range-rule target (a statement ABOUT the Iris-side proof infrastructure,
+# quantifying over IProp) and the phase-2 acceptance pins that reference
+# proven theorems — so an Iris-free import chain is impossible and is NOT
+# claimed for it. What IS pinned: its EXACT import list (any new import
+# fails here and must be justified), while the Iris-freedom of its pure
+# headline targets (the ∀-config and 3-voter statements) is certified
+# SEMANTICALLY by the statement-TCB gate in proofs/Audit.lean, which walks
+# those statements' closures. (Recorded finding, close-out 2026-08-01: the
+# doctrine's "Iris-free by import chain" note was wrong for this file.)
+check_surface_imports proofs/GoLeanProofs/Specs/AutomationTargets.lean \
+  '^import (GoLeanProofs\.Specs\.GoldenQuorumWP$|GoLeanProofs\.Laws\.Range$)'
 if grep -rEq '^import Iris' GoLean/ --include='*.lean'; then
   echo "  GoLean/ core has Iris imports (taints the surface chain):" >&2
   grep -rEl '^import Iris' GoLean/ --include='*.lean' | sed 's/^/    /' >&2

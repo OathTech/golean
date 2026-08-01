@@ -8,8 +8,8 @@ The step-0 intended statements over the PINNED golden lowering
 (`GoldenSlice.sliceLowered`) — relocated out of `Surface.lean` at the
 proof-automation close-out (layering doctrine,
 `docs/2026-08-01_tcb-and-layering-doctrine.md` §2): `Surface.lean` is the
-GENERAL spec surface (heaplets, `HProp`, the judgments) and must not
-import a `Specs/*` pin; the statements that name a pinned program are
+GENERAL spec surface (heaplets, `HProp`, the judgments) and may not
+depend on a `Specs/*` pin; the statements that name a pinned program are
 target-layer and live here. Namespace unchanged (`GoLean.Surface`), so
 every existing name survives.
 
