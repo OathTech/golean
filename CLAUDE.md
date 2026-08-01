@@ -203,6 +203,13 @@ way an arc reaches `main`).
   - **fail-closed classification** — an `unsupported` that should have been
     a supported-and-correct answer never appears as a failure anywhere.
   - **claim strength / vacuity** — whether a law says what it appears to.
+  - **statement TCB + layering** (user direction 2026-08-01,
+    `docs/2026-08-01_tcb-and-layering-doctrine.md`) — top-level
+    theorem STATEMENTS must be understandable from base definitions
+    over the interpreter (Iris and 'fancy' theorems are proof devices,
+    never statement dependencies; headline theorems ship first-order
+    readout corollaries), and general proof infrastructure must stay
+    cleanly separated from target-specific infrastructure.
   - **over-specialization** (user direction 2026-07-31) — machinery
     shaped by the current TARGET rather than by Go: semantics fixes
     justified by corpus cases instead of Go probes, laws whose
