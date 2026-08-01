@@ -31,11 +31,6 @@ namespace GoLean.Iris.GoldenSlice
 
 set_option linter.unusedSimpArgs false
 
-/-- The D1 splice, as a rewrite (same-env governing sequence). -/
-theorem seqCont_splice {ss rest : List Stmt} {env : LocalEnv} {k : Cont} :
-    seqCont ss env (.seq rest env k) = .seq (ss ++ rest) env k := by
-  simp [seqCont]
-
 section
 variable {GF : BundledGFunctors} {hlc : HasLC} [GoCoreGS hlc GF]
 variable {s : Stuckness} {E : CoPset} {Φ : Unit → IProp GF}

@@ -11,6 +11,7 @@ import GoLean.GoCore.MachineSound
 import GoLeanProofs.HeapBridge
 import GoLeanProofs.Laws.Eval
 import GoLeanProofs.Laws.Control
+import GoLeanProofs.Tactics.GoWalk
 
 /-!
 # Call-value, breakable, defer, and unwinding laws (proof-corpus catch-up)
@@ -50,6 +51,7 @@ variable {s : Stuckness} {E : CoPset} {Φ : Unit → IProp GF}
 /-! ### Call through a value (§8): dispatch -/
 
 /-- Dispatch a targetless value call: evaluate the callee expression. -/
+@[go_walk_law]
 theorem wp_call_value_no_targets {targets : Array Assignee} {callee : Expr}
     {args : Array Expr} {env k}
     (htargets : assigneesExprs targets.toList = some []) :
@@ -62,17 +64,20 @@ theorem wp_call_value_no_targets {targets : Array Assignee} {callee : Expr}
 
 /-! ### Breakable scopes (switch bodies) -/
 
+@[go_walk_law]
 theorem wp_breakable_enter {b : Stmt} {env k} :
     (|={E}[E]▷=> £ 1 -∗ WP (Config.exec b env (.breakableK k)) @ s ; E {{ Φ }}) ⊢
       WP (Config.exec (.breakable b) env k) @ s ; E {{ Φ }} :=
   wp_pure_det rfl (by simp [Config.choiceFree, stmtPlan])
     (fun _ => Step.breakableEnter)
 
+@[go_walk_law]
 theorem wp_breakable_done {k} :
     (|={E}[E]▷=> £ 1 -∗ WP (Config.next k) @ s ; E {{ Φ }}) ⊢
       WP (Config.next (.breakableK k)) @ s ; E {{ Φ }} :=
   wp_pure_det rfl (by simp [Config.choiceFree]) (fun _ => Step.breakableDone)
 
+@[go_walk_law]
 theorem wp_breakable_break {k} :
     (|={E}[E]▷=> £ 1 -∗ WP (Config.next k) @ s ; E {{ Φ }}) ⊢
       WP (Config.breaking (.breakableK k)) @ s ; E {{ Φ }} :=
@@ -81,6 +86,7 @@ theorem wp_breakable_break {k} :
 /-! ### Defer registration -/
 
 /-- `defer f(args)`: evaluate the callee expression first. -/
+@[go_walk_law]
 theorem wp_defer_stmt {callee : Expr} {args : Array Expr} {env k} :
     (|={E}[E]▷=> £ 1 -∗
       WP (Config.evalE callee env (.deferCalleeK args.toList env k))
@@ -91,6 +97,7 @@ theorem wp_defer_stmt {callee : Expr} {args : Array Expr} {env k} :
 
 /-- A nullary deferred callee value registers onto the innermost frame's
 chain (`pushDefer`, LIFO). -/
+@[go_walk_law]
 theorem wp_defer_register_noargs {cv : GoValue} {env k k'}
     (hcallee : deferrableCallee cv = true)
     (hpush : pushDefer (cv, []) k = some k') :
@@ -102,6 +109,7 @@ theorem wp_defer_register_noargs {cv : GoValue} {env k k'}
 /-! ### The unwinding family (the unwinding arc's proof face) -/
 
 /-- `panic(e)`: evaluate the payload. -/
+@[go_walk_law]
 theorem wp_panic_stmt {e : Expr} {env k} :
     (|={E}[E]▷=> £ 1 -∗
       WP (Config.evalE e env (.panicArgK k)) @ s ; E {{ Φ }}) ⊢
@@ -110,6 +118,7 @@ theorem wp_panic_stmt {e : Expr} {env k} :
     (fun _ => Step.panicStmt)
 
 /-- The payload arrives: unwinding starts with a fresh one-entry chain. -/
+@[go_walk_law]
 theorem wp_panic_value {v : GoValue} {k} :
     (|={E}[E]▷=> £ 1 -∗
       WP (Config.panicking [⟨panicPayload v, false⟩] k) @ s ; E {{ Φ }}) ⊢
@@ -117,6 +126,7 @@ theorem wp_panic_value {v : GoValue} {k} :
   wp_pure_det rfl (by simp [Config.choiceFree]) (fun _ => Step.panicArgValue)
 
 /-- Unwinding strips a non-frame, non-marker continuation. -/
+@[go_walk_law]
 theorem wp_panic_unwind {chain : List PanicEntry} {k k'}
     (hpass : panicPassthrough k = some k') :
     (|={E}[E]▷=> £ 1 -∗ WP (Config.panicking chain k') @ s ; E {{ Φ }}) ⊢
@@ -125,6 +135,7 @@ theorem wp_panic_unwind {chain : List PanicEntry} {k k'}
     (fun _ => Step.panicUnwind hpass)
 
 /-- Unwinding past a frame whose defers are exhausted: results NOT read. -/
+@[go_walk_law]
 theorem wp_panic_frame_empty {chain : List PanicEntry} {targets results k} :
     (|={E}[E]▷=> £ 1 -∗ WP (Config.panicking chain k) @ s ; E {{ Φ }}) ⊢
       WP (Config.panicking chain (.frame targets results [] k)) @ s ; E {{ Φ }} :=
@@ -133,6 +144,7 @@ theorem wp_panic_frame_empty {chain : List PanicEntry} {targets results k} :
 
 /-- A panic-path deferred call completed with the newest entry recovered:
 the unwind cancels and the frame below resumes its NORMAL exit path. -/
+@[go_walk_law]
 theorem wp_panic_resume_recovered {chain : List PanicEntry} {k}
     (hrec : chainNewestRecovered chain = true) :
     (|={E}[E]▷=> £ 1 -∗ WP (Config.next k) @ s ; E {{ Φ }}) ⊢
@@ -141,6 +153,7 @@ theorem wp_panic_resume_recovered {chain : List PanicEntry} {k}
     (fun _ => Step.panicResumeRecovered hrec)
 
 /-- …and with it unrecovered: unwinding resumes below. -/
+@[go_walk_law]
 theorem wp_panic_resume_continue {chain : List PanicEntry} {k}
     (hrec : chainNewestRecovered chain = false) :
     (|={E}[E]▷=> £ 1 -∗ WP (Config.panicking chain k) @ s ; E {{ Φ }}) ⊢
@@ -150,6 +163,7 @@ theorem wp_panic_resume_continue {chain : List PanicEntry} {k}
 
 /-- A NEW panic unwinding through a suspended chain's marker merges
 behind it. -/
+@[go_walk_law]
 theorem wp_panic_resume_merge {chain suspended : List PanicEntry} {k} :
     (|={E}[E]▷=> £ 1 -∗
       WP (Config.panicking (suspended ++ chain) k) @ s ; E {{ Φ }}) ⊢
@@ -160,6 +174,7 @@ theorem wp_panic_resume_merge {chain suspended : List PanicEntry} {k} :
 /-- `recover()`: the continuation walk, as one deterministic step — the
 whole called-directly-by-a-deferred-function rule is inside
 `recoverResult`'s equation, decidable on any concrete continuation. -/
+@[go_walk_law]
 theorem wp_recover {env k} {v : GoValue} {k'}
     (hrec : recoverResult k = (v, k')) :
     (|={E}[E]▷=> £ 1 -∗ WP (Config.retV v k') @ s ; E {{ Φ }}) ⊢
@@ -169,6 +184,7 @@ theorem wp_recover {env k} {v : GoValue} {k'}
 
 /-! ### Small pure gaps the composition walk needs -/
 
+@[go_walk_law]
 theorem wp_eval_stringLit {v : GoString} {env k} :
     (|={E}[E]▷=> £ 1 -∗ WP (Config.retV (.string v) k) @ s ; E {{ Φ }}) ⊢
       WP (Config.evalE (.stringLit v) env k) @ s ; E {{ Φ }} :=
@@ -177,6 +193,7 @@ theorem wp_eval_stringLit {v : GoString} {env k} :
 
 /-- A NULLARY strict form whose apply is state-independent (`nil`
 literals, default values). -/
+@[go_walk_law]
 theorem wp_eval_strict_nullary_pure {e : Expr} {op : StrictOp}
     {v : GoValue} {env k}
     (hplan : strictPlan e = some (op, []))
@@ -188,6 +205,7 @@ theorem wp_eval_strict_nullary_pure {e : Expr} {op : StrictOp}
 
 /-- `return` at a VOID pure-barrier frame (no targets, no results, no
 defers): resume the caller — the `.returning` twin of `wp_frame_fall`. -/
+@[go_walk_law]
 theorem wp_frame_return_void {k} :
     (|={E}[E]▷=> £ 1 -∗ WP (Config.next k) @ s ; E {{ Φ }}) ⊢
       WP (Config.returning (.frame [] [] [] k)) @ s ; E {{ Φ }} :=

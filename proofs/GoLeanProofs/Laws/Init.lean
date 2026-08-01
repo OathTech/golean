@@ -10,6 +10,7 @@ import Iris.Std.GenSetsInstances
 import GoLean.GoCore.MachineSound
 import GoLeanProofs.Lifting
 import GoLeanProofs.Inversions
+import GoLeanProofs.Tactics.GoWalk
 
 /-!
 # Declaration law + witness
@@ -104,6 +105,7 @@ theorem wp_init {pid : String} {pty : Ty} {v : GoValue} {rest : List Stmt}
 
 /-- Witness for `wp_init`: `x := 0` at an int kind — the slice's `x := 0`.
 Zero hypotheses (the int default is `0`, state-independently). -/
+@[go_walk_law]
 theorem wp_init_int {pid : String} {kind : IntKind} {rest : List Stmt} {env k} :
     iprop(∀ pa : Addr, pa.id ↦ (⟨some (.int kind), .int 0 kind⟩ : HeapCell) -∗
         WP (Config.next (.seq rest (env.declare pid (.base pa)) k)) @ s ; E {{ Φ }})

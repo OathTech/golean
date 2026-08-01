@@ -424,6 +424,19 @@ as the postcondition (`IsCommittedIndex [1] ackedOneKnown`, via the
 proven `committedIndexRef_meets_spec`). `quorumOneKnownReturnsTwelve` is
 the first-order readout and `quorumOneKnownNotEleven` its negative twin.
 
+**Re-derived by TACTIC (proof-automation arc phase 2, 2026-08-01)**: the
+whole walk chain under `quorumOneKnownFuncSpec` — `wp_ackedIndex_body`
+through `wp_oneKnownCall` — is now produced by `go_walk`
+(`GoLeanProofs/Tactics/GoWalk.lean`) instead of by hand-enumerated
+`iapply`/`isplitl` steps. **No statement changed**; the acceptance is
+exactly the two pins already in this file and in `AutomationTargets`: the
+`#print axioms` gate below still reads `[propext, Classical.choice,
+Quot.sound]` (a tactic-generated term is a kernel term like any other,
+and the whole-module sweep at the top of this file sees it), and
+`summitStatement_holds : summitStatement_pinned` still type-checks, so
+the re-derivation inhabits the same type. A tactic cannot weaken a claim
+it does not get to restate.
+
 The declarative reading is now MECHANIZED end to end (2026-07-31,
 pre-merge audit finding 5): `isCommittedIndex_unique` proves the spec
 determines `r` uniquely and `isCommittedIndex_iff` turns it into the

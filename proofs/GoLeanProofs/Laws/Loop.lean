@@ -10,6 +10,7 @@ import Iris.Std.GenSetsInstances
 import GoLean.GoCore.MachineSound
 import GoLeanProofs.HeapBridge
 import GoLeanProofs.Laws.Eval
+import GoLeanProofs.Tactics.GoWalk
 
 /-!
 # Loop laws (R3 rewrite; arc E rung B1 restored over the machine)
@@ -46,6 +47,7 @@ variable {s : Stuckness} {E : CoPset} {Φ : Unit → IProp GF}
 
 /-- The loop back edge: normal body completion re-enters the `while`
 (`Step.loopNext`). The `▷` slot is where the Löb hypothesis strips. -/
+@[go_walk_law]
 theorem wp_loop_next {c : Expr} {b : Stmt} {env k} :
     (|={E}[E]▷=> £ 1 -∗ WP (Config.exec (.while c b) env k) @ s ; E {{ Φ }}) ⊢
       WP (Config.next (.loop c b env k)) @ s ; E {{ Φ }} :=

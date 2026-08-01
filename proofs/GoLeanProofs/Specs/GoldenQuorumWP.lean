@@ -4,6 +4,7 @@ import GoLeanProofs.Laws.Init
 import GoLeanProofs.Laws.QuorumOps
 import GoLeanProofs.Laws.Unwind
 import GoLeanProofs.Specs.QuorumRefSpec
+import GoLeanProofs.Tactics.GoWalk
 
 /-!
 # The quorum walk — the FIRST machine discharge, and the math link
@@ -112,12 +113,6 @@ section
 variable {GF : BundledGFunctors} {hlc : HasLC} [GoCoreGS hlc GF]
 variable {s : Stuckness} {E : CoPset} {Φ : Unit → IProp GF}
 
-/-- The D1 splice (same-env governing sequence), restated locally so this
-file does not depend on the golden-slice walk. -/
-theorem seqCont_splice {ss rest : List Stmt} {env : LocalEnv} {k : Cont} :
-    seqCont ss env (.seq rest env k) = .seq (ss ++ rest) env k := by
-  simp [seqCont]
-
 /-- **The `AckedIndex` body walk** on the CONCRETE receiver map
 `{3 ↦ 12}`, under the frame environment frame entry produces. Declares
 `idx : main.Index` and `ok : bool` (the named-type declaration is what
@@ -145,99 +140,26 @@ theorem wp_ackedIndex_body {ma ida mba ra₀ ra₁ : Addr} {mty : Option Ty}
               ("id", Loc.base ida), ("m", Loc.base ma)]] k) @ s ; E {{ Φ }} := by
   iintro ⟨Hm, Hid, Hmb, Hr0, Hr1, Hcont⟩
   rw [QuorumPin.ackedIndexImpl_body_eq]
-  iapply wp_block_nil
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hc1
-  iapply wp_seq_next
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hc2
-  iapply wp_seqn
-  simp only [List.toList_toArray, seqCont_splice, List.cons_append,
-    List.nil_append]
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hc3
-  iapply wp_seq_next
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hc4
-  iapply (wp_init (v := .int 0 .uint64) (hdef := fun σ ht => by
+  go_walk
+  -- `var idx main.Index` — the NAMED-type default needs the `σ.types` pin
+  go_walk_step (wp_init (v := .int 0 .uint64) (hdef := fun σ ht => by
     rw [execState_pin_eq (ht.trans htypes) (rfl (a := σ.functions))
       (rfl (a := σ.methods))]
     simp [defaultValue, defaultValueFuel, typeResolutionFuel,
       QuorumPin.typeEnv_Index]))
-  iintro %ta Ht
-  iapply wp_seq_next
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hc5
-  iapply (wp_init (v := .bool false) (hdef := fun σ _ => by
+  go_walk
+  -- `var ok bool`
+  go_walk_step (wp_init (v := .bool false) (hdef := fun σ _ => by
     simp [defaultValue, defaultValueFuel, typeResolutionFuel]))
-  iintro %oa Ho
-  iapply wp_seq_next
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hc6
-  iapply (wp_map_lookup_ackedIndex (mba := mba) (mty := mty) (q := q) (v := v)
+  go_walk
+  -- the comma-ok map read (the walk stops in front of it: the operation law
+  -- covers the whole statement but its cells' contents are not determined
+  -- by the configuration)
+  go_walk_step (wp_map_lookup_ackedIndex (mba := mba) (mty := mty) (q := q) (v := v)
     htypes hq hv rfl rfl rfl rfl)
-  isplitl [Hm]
-  · iexact Hm
-  isplitl [Hid]
-  · iexact Hid
-  isplitl [Hmb]
-  · iexact Hmb
-  isplitl [Ht]
-  · iexact Ht
-  isplitl [Ho]
-  · iexact Ho
-  iintro ⟨Hm, Hid, Hmb, Ht, Ho⟩
-  iapply wp_seq_next
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hc7
-  iapply wp_seqn
-  simp only [List.toList_toArray, seqCont_splice, List.cons_append,
-    List.nil_append]
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hc8
-  iapply wp_seq_next
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hc9
-  -- `$res0 = idx` (a store at the DEFINED type `main.Index`)
-  iapply (wp_assign_start (te := .ref "$res0") rfl)
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hc10
-  iapply (wp_eval_ref (loc := Loc.base ra₀) rfl)
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hc11
-  iapply wp_assign_target
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hc12
-  iapply (wp_eval_var (cell := ⟨some (.defined ⟨"main.Index"⟩),
-    .int v .uint64⟩) rfl)
-  isplitl [Ht]
-  · iexact Ht
-  iintro Ht
-  iapply (wp_assign_store
+  go_walk
+  -- `$res0 = idx` — a store at the DEFINED type `main.Index`
+  go_walk_step (wp_assign_store
     (oldcell := ⟨some (.defined ⟨"main.Index"⟩), .int 0 .uint64⟩)
     (newcell := ⟨some (.defined ⟨"main.Index"⟩), .int v .uint64⟩)
     (fun σ ht hl => by
@@ -246,58 +168,14 @@ theorem wp_ackedIndex_body {ma ida mba ra₀ ra₁ : Addr} {mty : Option Ty}
       simp [storeLoc, hl, normalizeValueForTy, normalizeValueForTyFuel,
         typeResolutionFuel, QuorumPin.typeEnv_Index, hv, Bind.bind,
         Except.bind]))
-  isplitl [Hr0]
-  · iexact Hr0
-  iintro Hr0
-  iapply wp_seq_next
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hc13
+  go_walk
   -- `$res1 = ok`
-  iapply (wp_assign_start (te := .ref "$res1") rfl)
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hc14
-  iapply (wp_eval_ref (loc := Loc.base ra₁) rfl)
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hc15
-  iapply wp_assign_target
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hc16
-  iapply (wp_eval_var (cell := ⟨some .bool, .bool true⟩) rfl)
-  isplitl [Ho]
-  · iexact Ho
-  iintro Ho
-  iapply (wp_assign_store (oldcell := ⟨some .bool, .bool false⟩)
+  go_walk_step (wp_assign_store (oldcell := ⟨some .bool, .bool false⟩)
     (newcell := ⟨some .bool, .bool true⟩)
     (fun σ _ht hl => by
       simp [storeLoc, hl, normalizeValueForTy, normalizeValueForTyFuel,
         Bind.bind, Except.bind]))
-  isplitl [Hr1]
-  · iexact Hr1
-  iintro Hr1
-  iapply wp_seq_next
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hc17
-  iapply wp_return
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hc18
-  iapply wp_seq_return
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hc19
-  iapply Hcont $$ [$Hr0 $Hr1]
+  go_walk_finish Hcont
 
 /-- **The `AckedIndex` call walk**, end to end: two target addresses, the
 receiver and the index argument, the STATIC frame entry
@@ -328,66 +206,15 @@ theorem wp_ackedIndexCall {ma mba ta tb : Addr} {mty : Option Ty} {q v : Int}
               ⟨"main.mapAckIndexer.AckedIndex"⟩
               #[.var "m", .intLit q .uint64]) env k) @ s ; E {{ Φ }} := by
   iintro ⟨Hm, Hmb, Ht, Htb, Hcont⟩
-  iapply (wp_call_first_target (te := .ref "$callres0")
-    (rest := [.ref "$callres1"]) rfl)
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hc1
-  iapply (wp_eval_ref hres0)
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hc2
-  iapply (wp_call_target_next (loc := Loc.base ta) rfl)
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hc3
-  iapply (wp_eval_ref hres1)
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hc4
-  iapply (wp_call_targets_done_arg (loc := Loc.base tb) rfl)
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hc5
-  iapply (wp_eval_var (cell := ⟨some (.defined ⟨"main.mapAckIndexer"⟩),
-    .map ⟨some (.base mba)⟩⟩) hm)
-  isplitl [Hm]
-  · iexact Hm
-  iintro Hm
-  iapply wp_call_arg_next
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hc6
-  iapply wp_eval_intLit
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hc7
-  simp only [List.nil_append]
-  rw [hq]
-  iapply (wp_call_enter_ackedIndexImpl (n := q) (mba := mba) hprog hmeths htypes)
-  iintro %a₀ %a₁ %a₂ %a₃ ⟨Hp0, Hp1, Hq0, Hq1⟩
-  rw [hq]
-  iapply (wp_ackedIndex_body (mty := mty) (q := q) (v := v) htypes hq hv)
-  isplitl [Hp0]
-  · iexact Hp0
-  isplitl [Hp1]
-  · iexact Hp1
-  isplitl [Hmb]
-  · iexact Hmb
-  isplitl [Hq0]
-  · iexact Hq0
-  isplitl [Hq1]
-  · iexact Hq1
-  iintro ⟨Hq0, Hq1⟩
-  simp only [List.singleton_append, List.cons_append, List.nil_append]
-  iapply (wp_frame_return₂
+  -- the targets, the two arguments and the STATIC frame entry
+  -- (`wp_call_enter_ackedIndexImpl`, a registered law: its premises are the
+  -- three ghost pins, which are hypotheses here)
+  go_walk with [hq]
+  -- the body
+  go_walk_step (wp_ackedIndex_body (mty := mty) (q := q) (v := v)
+    htypes hq hv) with [hq]
+  -- the TWO-result frame exit
+  go_walk_step (wp_frame_return₂
     (rcell₀ := ⟨some (.defined ⟨"main.Index"⟩), .int v .uint64⟩)
     (rcell₁ := ⟨some .bool, .bool true⟩)
     (tcell₀ := ⟨some (.int .uint64), w₁⟩)
@@ -401,16 +228,7 @@ theorem wp_ackedIndexCall {ma mba ta tb : Addr} {mty : Option Ty} {q v : Int}
     (hstore₁ := fun σ _ht hl => by
       simp [storeLoc, hl, normalizeValueForTy, normalizeValueForTyFuel,
         Bind.bind, Except.bind]))
-  isplitl [Hq0]
-  · iexact Hq0
-  isplitl [Hq1]
-  · iexact Hq1
-  isplitl [Ht]
-  · iexact Ht
-  isplitl [Htb]
-  · iexact Htb
-  iintro ⟨Hq0, Hq1, Ht, Htb⟩
-  iapply Hcont $$ [$Ht $Htb]
+  go_walk_finish Hcont
 
 end
 
@@ -452,70 +270,21 @@ theorem wp_ci_len {ca cba : Addr} {cty : Option Ty}
       ⊢ WP (Config.exec ciLenStmt env (.seq rest env k)) @ s ; E {{ Φ }} := by
   iintro ⟨Hc, Hcb, Hcont⟩
   rw [ciLenStmt_eq]
-  iapply wp_seqn
-  simp only [List.toList_toArray, seqCont_splice, List.cons_append,
-    List.nil_append]
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hc1
-  iapply wp_seq_next
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hc2
-  iapply wp_init_int
-  iintro %na Hn
-  iapply wp_seq_next
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hc3
-  iapply (wp_assign_start (te := .ref "n") rfl)
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hc4
-  iapply (wp_eval_ref (loc := Loc.base na) lookup_declare_self)
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hc5
-  iapply wp_assign_target
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hc6
-  iapply (wp_eval_strict (op := .lengthOf (some (.defined ⟨"main.MajorityConfig"⟩)))
-    (e₁ := .var "c") (rest := []) rfl)
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hc7
-  iapply (wp_eval_var (cell := ⟨some (.defined ⟨"main.MajorityConfig"⟩),
-    .map ⟨some (.base cba)⟩⟩)
-    ((lookup_declare_ne (by decide)).trans hc))
-  isplitl [Hc]
-  · iexact Hc
-  iintro Hc
-  iapply (wp_strict_apply_read (a := cba) (cell := ⟨cty, .mapData entries⟩)
+  go_walk
+  -- `len(c)` — a state-READING strict op on the config's data cell
+  go_walk_step (wp_strict_apply_read (a := cba) (cell := ⟨cty, .mapData entries⟩)
     (out := .int (Int.ofNat entries.size) .int)
     (happly := fun σ _ht hl => by
       simp [applyStrictOp, loadLoc, hl, Bind.bind, Except.bind]))
-  isplitl [Hcb]
-  · iexact Hcb
-  iintro Hcb
-  iapply (wp_assign_store
+  -- the store into `n`
+  go_walk_step (wp_assign_store
     (oldcell := ⟨some (.int .int), .int 0 .int⟩)
     (newcell := ⟨some (.int .int), .int (Int.ofNat entries.size) .int⟩)
     (fun σ _ht hl => by
       have h := storeLoc_int_any (mkind := .int) hl (Int.ofNat entries.size)
       rw [hsize] at h
       simpa using h))
-  isplitl [Hn]
-  · iexact Hn
-  iintro Hn
-  iapply Hcont $$ %na [$Hc $Hcb $Hn]
+  go_walk_finish Hcont
 
 /-- `if n == 0 { return math.MaxUint64 }` — the empty-config early
 return, on the NOT-taken branch. Generic in `n`; the premise is the
@@ -531,50 +300,7 @@ theorem wp_ci_emptyIf {na : Addr} {n : Int} {rest env k}
       ⊢ WP (Config.exec ciEmptyIf env (.seq rest env k)) @ s ; E {{ Φ }} := by
   iintro ⟨Hn, Hcont⟩
   rw [ciEmptyIf_eq]
-  iapply wp_if_start
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro He1
-  iapply (wp_eval_strict (op := .eqCmp (.int .int)) (e₁ := .var "n")
-    (rest := [.intLit 0 .int]) rfl)
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro He2
-  iapply (wp_eval_var (cell := ⟨some (.int .int), .int n .int⟩) hn)
-  isplitl [Hn]
-  · iexact Hn
-  iintro Hn
-  iapply wp_strict_shift
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro He3
-  iapply wp_eval_intLit
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro He4
-  rw [show IntKind.int.normalize 0 = 0 from by decide]
-  iapply (wp_strict_apply_pure (out := .bool false) hcmp)
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro He5
-  iapply wp_if_bool
-  simp only [Bool.false_eq_true, if_false]
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro He6
-  iapply wp_seqn
-  simp only [List.toList_toArray, seqCont_splice, List.nil_append]
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro He7
-  iapply Hcont $$ Hn
+  go_walk_finish Hcont
 
 /-- `var stk [7]uint64` — the on-stack scratch declaration. Zero
 premises: the array default is state-independent. -/
@@ -585,20 +311,9 @@ theorem wp_ci_stkDecl {rest env k} :
       ⊢ WP (Config.exec ciStkDecl env (.seq rest env k)) @ s ; E {{ Φ }} := by
   iintro Hcont
   rw [ciStkDecl_eq]
-  iapply wp_seqn
-  simp only [List.toList_toArray, seqCont_splice, List.cons_append,
-    List.nil_append]
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hs1
-  iapply wp_seq_next
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hs2
-  iapply (wp_init (v := stkZero) (hdef := fun σ _ => defaultValue_stk σ))
-  iexact Hcont
+  go_walk
+  go_walk_step (wp_init (v := stkZero) (hdef := fun σ _ => defaultValue_stk σ))
+  go_walk_finish Hcont
 
 /-- `var srt []uint64` — the result slice declaration (nil slice). -/
 theorem wp_ci_srtDecl {rest env k} :
@@ -610,21 +325,10 @@ theorem wp_ci_srtDecl {rest env k} :
       ⊢ WP (Config.exec ciSrtDecl env (.seq rest env k)) @ s ; E {{ Φ }} := by
   iintro Hcont
   rw [ciSrtDecl_eq]
-  iapply wp_seqn
-  simp only [List.toList_toArray, seqCont_splice, List.cons_append,
-    List.nil_append]
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hs1
-  iapply wp_seq_next
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hs2
-  iapply (wp_init (v := .slice ⟨none, 0, 0, 0⟩) (hdef := fun σ _ => by
+  go_walk
+  go_walk_step (wp_init (v := .slice ⟨none, 0, 0, 0⟩) (hdef := fun σ _ => by
     simp [defaultValue, defaultValueFuel, typeResolutionFuel]))
-  iexact Hcont
+  go_walk_finish Hcont
 
 /-- `if len(stk) >= n { srt = stk[:n] }` at `n = 1` — the TAKEN branch:
 the on-stack array is resliced, so no allocation happens (the
@@ -646,136 +350,23 @@ theorem wp_ci_fitIf_one {na sta sra : Addr} {w : GoValue} {rest env k}
       ⊢ WP (Config.exec ciFitIf env (.seq rest env k)) @ s ; E {{ Φ }} := by
   iintro ⟨Hn, Hstk, Hsrt, Hcont⟩
   rw [ciFitIf_eq]
-  iapply wp_if_start
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hf1
-  iapply (wp_eval_strict (op := .atLeastCmp) (e₁ := .intLit 7 .int)
-    (rest := [.var "n"]) rfl)
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hf2
-  iapply wp_eval_intLit
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hf3
-  rw [show IntKind.int.normalize 7 = 7 from by decide]
-  iapply wp_strict_shift
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hf4
-  iapply (wp_eval_var (cell := ⟨some (.int .int), .int 1 .int⟩) hn)
-  isplitl [Hn]
-  · iexact Hn
-  iintro Hn
-  iapply (wp_strict_apply_pure (out := .bool true) (fun σ => rfl))
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hf5
-  iapply wp_if_bool
-  simp only [reduceIte]
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hf6
-  iapply wp_block_nil
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hf7
-  iapply wp_seq_next
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hf8
-  iapply wp_seqn
-  simp only [List.toList_toArray, seqCont_splice, List.cons_append,
-    List.nil_append]
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hf9
-  iapply wp_seq_next
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hf10
-  iapply (wp_assign_start (te := .ref "srt") rfl)
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hf11
-  iapply (wp_eval_ref (loc := Loc.base sra) (lookup_pushScope.trans hsrt))
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hf12
-  iapply wp_assign_target
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hf13
-  iapply (wp_eval_strict (op := .sliceExpr false) (e₁ := .ref "stk")
-    (rest := [.intLit 0 .int, .var "n"]) rfl)
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hf14
-  iapply (wp_eval_ref (loc := Loc.base sta) (lookup_pushScope.trans hstk))
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hf15
-  iapply wp_strict_shift
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hf16
-  iapply wp_eval_intLit
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hf17
-  rw [show IntKind.int.normalize 0 = 0 from by decide]
-  iapply wp_strict_shift
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hf18
-  iapply (wp_eval_var (cell := ⟨some (.int .int), .int 1 .int⟩)
-    (lookup_pushScope.trans hn))
-  isplitl [Hn]
-  · iexact Hn
-  iintro Hn
-  iapply (wp_strict_apply_read (a := sta) (cell := ⟨some (.array 7 (.int .uint64)), stkZero⟩)
+  go_walk
+  -- `stk[:n]` — a state-READING strict op: the array is loaded to learn its
+  -- size, which becomes the resulting slice's capacity
+  go_walk_step (wp_strict_apply_read (a := sta)
+    (cell := ⟨some (.array 7 (.int .uint64)), stkZero⟩)
     (out := .slice ⟨some (.base sta), 0, 1, 7⟩)
     (happly := fun σ _ht hl => by
       simp [applyStrictOp, applySlice, loadLoc, hl, stkZero, valueAsInt,
         sliceFromArray, checkSliceBounds, Bind.bind, Except.bind]))
-  isplitl [Hstk]
-  · iexact Hstk
-  iintro Hstk
-  iapply (wp_assign_store
+  go_walk_step (wp_assign_store
     (oldcell := ⟨some (.slice (.int .uint64)), w⟩)
     (newcell := ⟨some (.slice (.int .uint64)),
                  .slice ⟨some (.base sta), 0, 1, 7⟩⟩)
     (fun σ _ht hl => by
       simp [storeLoc, hl, normalizeValueForTy, normalizeValueForTyFuel,
         Bind.bind, Except.bind]))
-  isplitl [Hsrt]
-  · iexact Hsrt
-  iintro Hsrt
-  iapply wp_seq_done
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hf19
-  iapply Hcont $$ [$Hn $Hstk $Hsrt]
+  go_walk_finish Hcont
 
 /-- **The voter loop's BODY, one iteration** — `if idx, ok :=
 l.AckedIndex(id); ok { srt[i] = uint64(idx); i-- }` under the range's
@@ -828,120 +419,24 @@ theorem wp_ci_range_body_one {ia la lba sra sta pa : Addr}
               (.defined ⟨"struct{}"⟩) rangeBody #[] env k)) @ s ; E {{ Φ }} := by
   iintro ⟨Hid, Hl, Hlb, Hsr, Hi, Hst, Hk⟩
   rw [rangeBody_eq]
-  iapply wp_block_nil
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hb1
-  iapply wp_seq_next
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hb2
-  iapply wp_block_nil
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hb3
-  iapply wp_seq_next
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hb4
+  go_walk
   unfold ciCallSeq
-  iapply wp_seqn
-  simp only [List.toList_toArray, seqCont_splice, List.cons_append,
-    List.nil_append]
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hb5
-  iapply wp_seq_next
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hb6
-  iapply (wp_init (v := .int 0 .uint64) (hdef := fun σ ht => by
+  go_walk
+  -- `var idx main.Index` (named type ⇒ the `σ.types` pin) and `var ok bool`
+  go_walk_step (wp_init (v := .int 0 .uint64) (hdef := fun σ ht => by
     rw [execState_pin_eq (ht.trans htypes) (rfl (a := σ.functions))
       (rfl (a := σ.methods))]
     simp [defaultValue, defaultValueFuel, typeResolutionFuel,
       QuorumPin.typeEnv_Index]))
-  iintro %idxa Hidx
-  iapply wp_seq_next
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hb7
-  iapply (wp_init (v := .bool false) (hdef := fun σ _ => by
+  go_walk
+  go_walk_step (wp_init (v := .bool false) (hdef := fun σ _ => by
     simp [defaultValue, defaultValueFuel, typeResolutionFuel]))
-  iintro %oka Hok
-  iapply wp_seq_next
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hb8
-  -- `idx, ok = l.AckedIndex(id)` — the interface call
-  iapply (wp_call_first_target (te := .ref "idx") (rest := [.ref "ok"]) rfl)
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hb9
-  iapply (wp_eval_ref (loc := Loc.base idxa)
-    (by simp [LocalEnv.lookup, LocalEnv.declare, LocalEnv.pushScope, Scope.lookup]))
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hb10
-  iapply (wp_call_target_next (loc := Loc.base idxa) rfl)
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hb11
-  iapply (wp_eval_ref (loc := Loc.base oka) lookup_declare_self)
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hb12
-  iapply (wp_call_targets_done_arg (loc := Loc.base oka) rfl)
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hb13
-  iapply (wp_eval_var (a := la) (cell := ⟨some (.interface ⟨"main.AckedIndexer"⟩),
-    .interface (.defined ⟨"main.mapAckIndexer"⟩) (.map ⟨some (.base lba)⟩)⟩)
-    (by simp [LocalEnv.lookup, LocalEnv.declare, LocalEnv.pushScope, Scope.lookup, hl]))
-  isplitl [Hl]
-  · iexact Hl
-  iintro Hl
-  iapply wp_call_arg_next
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hb14
-  iapply (wp_eval_var (a := pa) (cell := ⟨some (.int .uint64), .int 1 .uint64⟩)
-    (by simp [LocalEnv.lookup, LocalEnv.declare, LocalEnv.pushScope, Scope.lookup]))
-  isplitl [Hid]
-  · iexact Hid
-  iintro Hid
-  simp only [List.nil_append, List.singleton_append, List.cons_append]
-  iapply (wp_call_dynamic_enter_ackedIndex (n := 1) (mba := lba)
-    hprog hmeths htypes)
-  iintro %a₀ %a₁ %a₂ %a₃ ⟨Hp0, Hp1, Hq0, Hq1⟩
-  rw [show IntKind.uint64.normalize 1 = 1 from by decide]
-  iapply (wp_ackedIndex_body (mty := lty) (q := 1) (v := 12) htypes
+  -- `idx, ok = l.AckedIndex(id)`: the two targets, the two arguments and the
+  -- INTERFACE dispatch (`wp_call_dynamic_enter_ackedIndex`, a registered law)
+  go_walk
+  go_walk_step (wp_ackedIndex_body (mty := lty) (q := 1) (v := 12) htypes
     (by decide) (by decide))
-  isplitl [Hp0]
-  · iexact Hp0
-  isplitl [Hp1]
-  · iexact Hp1
-  isplitl [Hlb]
-  · iexact Hlb
-  isplitl [Hq0]
-  · iexact Hq0
-  isplitl [Hq1]
-  · iexact Hq1
-  iintro ⟨Hq0, Hq1⟩
-  iapply (wp_frame_return₂
+  go_walk_step (wp_frame_return₂
     (rcell₀ := ⟨some (.defined ⟨"main.Index"⟩), .int 12 .uint64⟩)
     (rcell₁ := ⟨some .bool, .bool true⟩)
     (tcell₀ := ⟨some (.defined ⟨"main.Index"⟩), .int 0 .uint64⟩)
@@ -957,117 +452,14 @@ theorem wp_ci_range_body_one {ia la lba sra sta pa : Addr}
     (hstore₁ := fun σ _ht hlk => by
       simp [storeLoc, hlk, normalizeValueForTy, normalizeValueForTyFuel,
         Bind.bind, Except.bind]))
-  isplitl [Hq0]
-  · iexact Hq0
-  isplitl [Hq1]
-  · iexact Hq1
-  isplitl [Hidx]
-  · iexact Hidx
-  isplitl [Hok]
-  · iexact Hok
-  iintro ⟨Hq0, Hq1, Hidx, Hok⟩
-  iapply wp_seq_next
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hb15
   -- `if ok { srt[i] = uint64(idx); i-- }`
+  go_walk
   unfold ciOkIf
-  iapply wp_if_start
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hb16
-  iapply (wp_eval_var (cell := ⟨some .bool, .bool true⟩) lookup_declare_self)
-  isplitl [Hok]
-  · iexact Hok
-  iintro Hok
-  iapply wp_if_bool
-  simp only [reduceIte]
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hb17
+  go_walk
   unfold ciOkThen
-  iapply wp_block_nil
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hb18
-  iapply wp_seq_next
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hb19
-  iapply wp_seqn
-  simp only [List.toList_toArray, seqCont_splice, List.cons_append,
-    List.nil_append]
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hb20
-  iapply wp_seq_next
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hb21
-  -- `srt[i] = uint64(idx)`
-  iapply (wp_assign_start (te := .indexAddr (.var "srt") (.var "i")) rfl)
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hb22
-  iapply (wp_eval_strict (op := .indexAddr) (e₁ := .var "srt")
-    (rest := [.var "i"]) rfl)
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hb23
-  iapply (wp_eval_var (a := sra) (cell := ⟨some (.slice (.int .uint64)),
-    .slice ⟨some (.base sta), 0, 1, 7⟩⟩)
-    (by simp [LocalEnv.lookup, LocalEnv.declare, LocalEnv.pushScope, Scope.lookup, hsrt]))
-  isplitl [Hsr]
-  · iexact Hsr
-  iintro Hsr
-  iapply wp_strict_shift
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hb24
-  iapply (wp_eval_var (a := ia) (cell := ⟨some (.int .int), .int 0 .int⟩)
-    (by simp [LocalEnv.lookup, LocalEnv.declare, LocalEnv.pushScope, Scope.lookup, hi]))
-  isplitl [Hi]
-  · iexact Hi
-  iintro Hi
-  iapply (wp_strict_apply_pure (out := .addr (.index (.base sta) 0))
-    (fun σ => rfl))
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hb25
-  iapply wp_assign_target
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hb26
-  iapply (wp_eval_strict (op := .convert (.int .uint64)) (e₁ := .var "idx")
-    (rest := []) rfl)
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hb27
-  iapply (wp_eval_var (a := idxa) (cell := ⟨some (.defined ⟨"main.Index"⟩),
-    .int 12 .uint64⟩)
-    (by simp [LocalEnv.lookup, LocalEnv.declare, LocalEnv.pushScope, Scope.lookup]))
-  isplitl [Hidx]
-  · iexact Hidx
-  iintro Hidx
-  iapply (wp_strict_apply_pure (out := .int 12 .uint64) (fun σ => rfl))
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hb28
-  iapply (wp_assign_store_loc (a := sta)
+  go_walk
+  -- the store THROUGH A SLICE INDEX into the on-stack backing array
+  go_walk_step (wp_assign_store_loc (a := sta)
     (oldcell := ⟨some (.array 7 (.int .uint64)), stkZero⟩)
     (newcell := ⟨some (.array 7 (.int .uint64)), stkOne 12⟩)
     (fun σ _ht hlk => by
@@ -1076,85 +468,17 @@ theorem wp_ci_range_body_one {ia la lba sra sta pa : Addr}
         normalizeArrayForTy, Bind.bind, Except.bind, Functor.map, Except.map,
         show IntKind.uint64.normalize 12 = 12 from by decide,
         show IntKind.uint64.normalize 0 = 0 from by decide]))
-  isplitl [Hst]
-  · iexact Hst
-  iintro Hst
-  iapply wp_seq_next
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hb29
   -- `i--`
-  iapply (wp_assign_start (te := .ref "i") rfl)
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hb30
-  iapply (wp_eval_ref (loc := Loc.base ia)
-    (by simp [LocalEnv.lookup, LocalEnv.declare, LocalEnv.pushScope, Scope.lookup, hi]))
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hb31
-  iapply wp_assign_target
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hb32
-  iapply (wp_eval_strict (op := .sub) (e₁ := .var "i")
-    (rest := [.intLit 1 .int]) rfl)
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hb33
-  iapply (wp_eval_var (a := ia) (cell := ⟨some (.int .int), .int 0 .int⟩)
-    (by simp [LocalEnv.lookup, LocalEnv.declare, LocalEnv.pushScope, Scope.lookup, hi]))
-  isplitl [Hi]
-  · iexact Hi
-  iintro Hi
-  iapply wp_strict_shift
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hb34
-  iapply wp_eval_intLit
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hb35
-  rw [show IntKind.int.normalize 1 = 1 from by decide]
-  iapply (wp_strict_apply_pure (out := .int (-1) .int) (fun σ => rfl))
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hb36
-  iapply (wp_assign_store
+  go_walk
+  go_walk_step (wp_assign_store
     (oldcell := ⟨some (.int .int), .int 0 .int⟩)
     (newcell := ⟨some (.int .int), .int (-1) .int⟩)
     (fun σ _ht hlk => by
       have h := storeLoc_int_any (mkind := .int) hlk (-1)
       rw [show IntKind.int.normalize (-1) = -1 from by decide] at h
       exact h))
-  isplitl [Hi]
-  · iexact Hi
-  iintro Hi
-  -- unwind the two pushed scopes of the `if` body, the two of the range body
-  iapply wp_seq_done
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hb37
-  iapply wp_seq_done
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hb38
-  iapply wp_seq_done
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hb39
-  iapply Hk $$ [$Hl $Hsr $Hi $Hst]
+  -- unwind the two pushed scopes of the `if` body and the two of the range body
+  go_walk_finish Hk
 
 /-- **The voter loop at ONE entry** — `for id := range c { if idx, ok :=
 l.AckedIndex(id); ok { srt[i] = uint64(idx); i-- } }`. This is the walk's
@@ -1201,112 +525,26 @@ theorem wp_ci_loop_one {na ca cba la lba sra sta : Addr}
       ⊢ WP (Config.exec ciLoopBlock env (.seq rest env k)) @ s ; E {{ Φ }} := by
   iintro ⟨Hn, Hc, Hcb, Hl, Hlb, Hsr, Hst, Hcont⟩
   rw [ciLoopBlock_eq]
-  iapply wp_block_nil
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hl1
-  iapply wp_seq_next
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hl2
+  go_walk
   unfold ciIDecl
-  iapply wp_seqn
-  simp only [List.toList_toArray, seqCont_splice, List.cons_append,
-    List.nil_append]
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hl3
-  iapply wp_seq_next
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hl4
-  iapply wp_init_int
-  iintro %ia Hi
-  iapply wp_seq_next
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hl5
+  go_walk 2
+  -- `var i int` — named, because the range's INVARIANT below has to mention
+  -- the cell this declaration allocates
+  go_walk_step wp_init_int as [ia]
+  go_walk
   -- `i = n - 1`
-  iapply (wp_assign_start (te := .ref "i") rfl)
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hl6
-  iapply (wp_eval_ref (loc := Loc.base ia) lookup_declare_self)
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hl7
-  iapply wp_assign_target
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hl8
-  iapply (wp_eval_strict (op := .sub) (e₁ := .var "n")
-    (rest := [.intLit 1 .int]) rfl)
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hl9
-  iapply (wp_eval_var (a := na) (cell := ⟨some (.int .int), .int 1 .int⟩)
-    (by simp [LocalEnv.lookup, LocalEnv.declare, LocalEnv.pushScope, Scope.lookup, hn]))
-  isplitl [Hn]
-  · iexact Hn
-  iintro Hn
-  iapply wp_strict_shift
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hl10
-  iapply wp_eval_intLit
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hl11
-  rw [show IntKind.int.normalize 1 = 1 from by decide]
-  iapply (wp_strict_apply_pure (out := .int 0 .int) (fun σ => rfl))
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hl12
-  iapply (wp_assign_store
+  go_walk_step (wp_assign_store
     (oldcell := ⟨some (.int .int), .int 0 .int⟩)
     (newcell := ⟨some (.int .int), .int 0 .int⟩)
     (fun σ _ht hl' => by
       have h := storeLoc_int_any (mkind := .int) hl' 0
       rw [show IntKind.int.normalize 0 = 0 from by decide] at h
       exact h))
-  isplitl [Hi]
-  · iexact Hi
-  iintro Hi
-  iapply wp_seq_next
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hl13
-  -- the range itself
+  -- the range itself: dispatch, read the map cell, take the snapshot
   rw [rangeStmt_eq]
-  iapply wp_map_range_start
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hl14
-  iapply (wp_eval_var (a := ca) (cell := ⟨some (.defined ⟨"main.MajorityConfig"⟩),
-    .map ⟨some (.base cba)⟩⟩)
-    (by simp [LocalEnv.lookup, LocalEnv.declare, LocalEnv.pushScope, Scope.lookup, hc]))
-  isplitl [Hc]
-  · iexact Hc
-  iintro Hc
-  iapply (wp_map_range_snapshot (ba := cba) (mty := cty)
+  go_walk
+  go_walk_step (wp_map_range_snapshot (ba := cba) (mty := cty)
     (entries := #[(.int 1 .uint64, .struct ⟨"struct{}"⟩ #[])]))
-  isplitl [Hcb]
-  · iexact Hcb
-  iintro Hcb
   -- THE RANGE, through the INDUCTIVE RANGE RULE (`Laws/Range`,
   -- `wp_map_iter_inv`): one generic-iteration obligation
   -- (`wp_ci_range_body_one`) and an invariant over the REMAINING
@@ -1364,43 +602,19 @@ theorem wp_ci_loop_one {na ca cba la lba sra sta : Addr}
           Scope.lookup, hsrt])
         (by simp [LocalEnv.lookup, LocalEnv.declare, LocalEnv.pushScope,
           Scope.lookup]))
-      isplitl [Hid]
-      · iexact Hid
-      isplitl [Hl]
-      · iexact Hl
-      isplitl [Hlb]
-      · iexact Hlb
-      isplitl [Hsr]
-      · iexact Hsr
-      isplitl [Hi]
-      · iexact Hi
-      isplitl [Hst]
-      · iexact Hst
-      iintro ⟨Hl, Hsr, Hi, Hst⟩
-      iapply Hk $$ [$Hl $Hsr $Hi $Hst]))
+      -- every premise, the continuation wand included, is in the context
+      iframe))
   rw [if_neg (by decide : ¬ (#[((GoValue.int 1 .uint64),
       (GoValue.struct ⟨"struct{}"⟩ #[]))] : Array (GoValue × GoValue)).size = 0)]
-  isplitl [Hl Hlb Hsr Hi Hst]
-  · isplitl []
-    · ipureintro
-      rfl
-    · isplitl [Hl]
-      · iexact Hl
-      isplitl [Hlb]
-      · iexact Hlb
-      isplitl [Hsr]
-      · iexact Hsr
-      isplitl [Hi]
-      · iexact Hi
-      iexact Hst
+  -- the invariant at ENTRY: the reachable-snapshot fact, then the cells (by
+  -- framing — `go_walk` has renamed them, and the entailment does not care)
+  iframe
+  isplitl []
+  · ipureintro
+    rfl
   · rw [if_pos (by decide : (#[] : Array (GoValue × GoValue)).size = 0)]
     iintro ⟨Hl, Hsr, Hi, Hst⟩
-    iapply wp_seq_done
-    iapply fupd_intro
-    inext
-    iapply fupd_intro
-    iintro Hb42
-    iapply Hcont $$ [$Hn $Hc $Hcb $Hl $Hsr $Hst]
+    go_walk_finish Hcont
 
 /-- **The tail** — `slices.Sort(srt)`, `pos := n - (n/2+1)`,
 `return Index(srt[pos])`. At `n = 1` the sort is over a one-element
@@ -1422,20 +636,11 @@ theorem wp_ci_tail_one {na sra sta ra : Addr} {env k}
       ⊢ WP (Config.exec sortStmt env
             (.seq [ciPosStmt, ciResStmt] env k)) @ s ; E {{ Φ }} := by
   iintro ⟨Hn, Hsr, Hst, Hr, Hcont⟩
-  -- `slices.Sort(srt)`
+  -- `slices.Sort(srt)` — at n = 1 the window is one element, but the machine
+  -- still performs the sort
   rw [sortStmt_eq]
-  iapply (wp_stmt_op_first (op := .sortSlice (.int .uint64)) (nt := 0)
-    (e := .var "srt") (rest := []) rfl)
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Ht1
-  iapply (wp_eval_var (a := sra) (cell := ⟨some (.slice (.int .uint64)),
-    .slice ⟨some (.base sta), 0, 1, 7⟩⟩) hsrt)
-  isplitl [Hsr]
-  · iexact Hsr
-  iintro Hsr
-  iapply (wp_sort_slice (a := sta)
+  go_walk
+  go_walk_step (wp_sort_slice (a := sta)
     (oldcell := ⟨some (.array 7 (.int .uint64)), stkOne 12⟩)
     (newcell := ⟨some (.array 7 (.int .uint64)), stkOne 12⟩)
     (happly := by
@@ -1448,203 +653,28 @@ theorem wp_ci_tail_one {na sra sta ra : Addr} {env k}
         heap_set_set_of_lookup hlk, Functor.map, Except.map,
         show IntKind.uint64.normalize 12 = 12 from by decide,
         show IntKind.uint64.normalize 0 = 0 from by decide]))
-  isplitl [Hst]
-  · iexact Hst
-  iintro Hst
-  iapply wp_seq_next
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Ht2
-  -- `pos := n - (n/2 + 1)`
+  -- `pos := n - (n/2 + 1)` — pure integer arithmetic throughout
+  go_walk
   rw [ciPosStmt_eq]
-  iapply wp_seqn
-  simp only [List.toList_toArray, seqCont_splice, List.cons_append,
-    List.nil_append]
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Ht3
-  iapply wp_seq_next
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Ht4
-  iapply wp_init_int
-  iintro %pa Hp
-  iapply wp_seq_next
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Ht5
-  iapply (wp_assign_start (te := .ref "pos") rfl)
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Ht6
-  iapply (wp_eval_ref (loc := Loc.base pa) lookup_declare_self)
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Ht7
-  iapply wp_assign_target
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Ht8
-  iapply (wp_eval_strict (op := .sub) (e₁ := .var "n")
-    (rest := [.add (.div (.var "n") (.intLit 2 .int)) (.intLit 1 .int)]) rfl)
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Ht9
-  iapply (wp_eval_var (a := na) (cell := ⟨some (.int .int), .int 1 .int⟩)
-    ((lookup_declare_ne (by decide)).trans hn))
-  isplitl [Hn]
-  · iexact Hn
-  iintro Hn
-  iapply wp_strict_shift
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Ht10
-  iapply (wp_eval_strict (op := .add) (e₁ := .div (.var "n") (.intLit 2 .int))
-    (rest := [.intLit 1 .int]) rfl)
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Ht11
-  iapply (wp_eval_strict (op := .div) (e₁ := .var "n")
-    (rest := [.intLit 2 .int]) rfl)
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Ht12
-  iapply (wp_eval_var (a := na) (cell := ⟨some (.int .int), .int 1 .int⟩)
-    ((lookup_declare_ne (by decide)).trans hn))
-  isplitl [Hn]
-  · iexact Hn
-  iintro Hn
-  iapply wp_strict_shift
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Ht13
-  iapply wp_eval_intLit
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Ht14
-  rw [show IntKind.int.normalize 2 = 2 from by decide]
-  iapply (wp_strict_apply_pure (out := .int 0 .int) (fun σ => rfl))
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Ht15
-  iapply wp_strict_shift
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Ht16
-  iapply wp_eval_intLit
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Ht17
-  rw [show IntKind.int.normalize 1 = 1 from by decide]
-  iapply (wp_strict_apply_pure (out := .int 1 .int) (fun σ => rfl))
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Ht18
-  iapply (wp_strict_apply_pure (out := .int 0 .int) (fun σ => rfl))
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Ht19
-  iapply (wp_assign_store
+  go_walk
+  go_walk_step (wp_assign_store
     (oldcell := ⟨some (.int .int), .int 0 .int⟩)
     (newcell := ⟨some (.int .int), .int 0 .int⟩)
     (fun σ _ht hlk => by
       have h := storeLoc_int_any (mkind := .int) hlk 0
       rw [show IntKind.int.normalize 0 = 0 from by decide] at h
       exact h))
-  isplitl [Hp]
-  · iexact Hp
-  iintro Hp
-  iapply wp_seq_next
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Ht20
   -- `return Index(srt[pos])`
+  go_walk
   rw [ciResStmt_eq]
-  iapply wp_seqn
-  simp only [List.toList_toArray, seqCont_splice, List.cons_append,
-    List.nil_append]
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Ht21
-  iapply wp_seq_next
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Ht22
-  iapply (wp_assign_start (te := .ref "$res0") rfl)
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Ht23
-  iapply (wp_eval_ref (loc := Loc.base ra)
-    ((lookup_declare_ne (by decide)).trans hres))
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Ht24
-  iapply wp_assign_target
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Ht25
-  iapply (wp_eval_strict (op := .convert (.defined ⟨"main.Index"⟩))
-    (e₁ := .indexGet (.var "srt") (.var "pos")) (rest := []) rfl)
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Ht26
-  iapply (wp_eval_strict (op := .indexGet) (e₁ := .var "srt")
-    (rest := [.var "pos"]) rfl)
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Ht27
-  iapply (wp_eval_var (a := sra) (cell := ⟨some (.slice (.int .uint64)),
-    .slice ⟨some (.base sta), 0, 1, 7⟩⟩)
-    ((lookup_declare_ne (by decide)).trans hsrt))
-  isplitl [Hsr]
-  · iexact Hsr
-  iintro Hsr
-  iapply wp_strict_shift
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Ht28
-  iapply (wp_eval_var (a := pa) (cell := ⟨some (.int .int), .int 0 .int⟩)
-    lookup_declare_self)
-  isplitl [Hp]
-  · iexact Hp
-  iintro Hp
-  iapply (wp_strict_apply_read (a := sta)
+  go_walk
+  go_walk_step (wp_strict_apply_read (a := sta)
     (cell := ⟨some (.array 7 (.int .uint64)), stkOne 12⟩)
     (out := .int 12 .uint64)
     (happly := fun σ _ht hlk => by
       simp [applyStrictOp, valueAsInt, sliceIndexLoc, validateSlice, loadLoc,
         hlk, stkOne, arrayGet, arrayIndexNat, Bind.bind, Except.bind]))
-  isplitl [Hst]
-  · iexact Hst
-  iintro Hst
-  iapply (wp_strict_apply_pin (out := .int 12 .uint64)
+  go_walk_step (wp_strict_apply_pin (out := .int 12 .uint64)
     (happly := fun σ ht => by
       rw [execState_pin_eq (ht.trans htypes) (rfl (a := σ.functions))
         (rfl (a := σ.methods))]
@@ -1652,7 +682,7 @@ theorem wp_ci_tail_one {na sra sta ra : Addr} {env k}
         typeResolutionFuel, resolveDefinedAliases, resolveDefinedAliasesFuel,
         QuorumPin.typeEnv_Index, Bind.bind, Except.bind,
         show IntKind.uint64.normalize 12 = 12 from by decide]))
-  iapply (wp_assign_store
+  go_walk_step (wp_assign_store
     (oldcell := ⟨some (.defined ⟨"main.Index"⟩), .int 0 .uint64⟩)
     (newcell := ⟨some (.defined ⟨"main.Index"⟩), .int 12 .uint64⟩)
     (fun σ ht hlk => by
@@ -1661,25 +691,7 @@ theorem wp_ci_tail_one {na sra sta ra : Addr} {env k}
       simp [storeLoc, hlk, normalizeValueForTy, normalizeValueForTyFuel,
         typeResolutionFuel, QuorumPin.typeEnv_Index, Bind.bind, Except.bind,
         show IntKind.uint64.normalize 12 = 12 from by decide]))
-  isplitl [Hr]
-  · iexact Hr
-  iintro Hr
-  iapply wp_seq_next
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Ht29
-  iapply wp_return
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Ht30
-  iapply wp_seq_return
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Ht31
-  iapply Hcont $$ Hr
+  go_walk_finish Hcont
 
 /-- **THE `CommittedIndex` BODY WALK** — the real
 `main.MajorityConfig.CommittedIndex` of the pinned etcd-io/raft lowering,
@@ -1713,103 +725,39 @@ theorem wp_committedIndex_body {ca cba la lba ra : Addr}
           @ s ; E {{ Φ }} := by
   iintro ⟨Hc, Hcb, Hl, Hlb, Hr, Hcont⟩
   rw [committedIndexImpl_body_eq]
-  iapply wp_block_nil
-  simp only [committedIndexStmts_toList]
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hz1
-  iapply wp_seq_next
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hz2
-  iapply (wp_ci_len (cba := cba) (cty := cty)
+  go_walk with [committedIndexStmts_toList]
+  -- `n := len(c)`
+  go_walk_step (wp_ci_len (cba := cba) (cty := cty)
     (entries := #[(.int 1 .uint64, .struct ⟨"struct{}"⟩ #[])]) (by decide) rfl)
-  isplitl [Hc]
-  · iexact Hc
-  isplitl [Hcb]
-  · iexact Hcb
-  iintro %na ⟨Hc, Hcb, Hn⟩
-  iapply wp_seq_next
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hz3
-  iapply (wp_ci_emptyIf (na := na) (n := 1) rfl
+    as [na]
+  go_walk
+  -- `if n == 0 { return math.MaxUint64 }`, not taken
+  go_walk_step (wp_ci_emptyIf (na := na) (n := 1) rfl
     (fun σ => by
       simp [applyStrictOp, valueEq, valueEqFuel, typeResolutionFuel,
         Bind.bind, Except.bind]))
-  isplitl [Hn]
-  · iexact Hn
-  iintro Hn
-  iapply wp_seq_next
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hz4
-  iapply wp_ci_stkDecl
-  iintro %sta Hst
-  iapply wp_seq_next
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hz5
-  iapply wp_ci_srtDecl
-  iintro %sra Hsr
-  iapply wp_seq_next
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hz6
-  iapply (wp_ci_fitIf_one (na := na) (sta := sta) (sra := sra) rfl rfl rfl)
-  isplitl [Hn]
-  · iexact Hn
-  isplitl [Hst]
-  · iexact Hst
-  isplitl [Hsr]
-  · iexact Hsr
-  iintro ⟨Hn, Hst, Hsr⟩
-  iapply wp_seq_next
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hz7
-  iapply (wp_ci_loop_one (na := na) (ca := ca) (cba := cba) (la := la)
+  go_walk
+  -- `var stk [7]uint64` and `var srt []uint64`
+  go_walk_step wp_ci_stkDecl as [sta]
+  go_walk
+  go_walk_step wp_ci_srtDecl as [sra]
+  go_walk
+  -- `if len(stk) >= n { srt = stk[:n] }`, taken
+  go_walk_step (wp_ci_fitIf_one (na := na) (sta := sta) (sra := sra) rfl rfl rfl)
+  go_walk
+  -- the voter loop
+  go_walk_step (wp_ci_loop_one (na := na) (ca := ca) (cba := cba) (la := la)
     (lba := lba) (sra := sra) (sta := sta) (cty := cty) (lty := lty)
     hprog hmeths htypes rfl rfl rfl rfl)
-  isplitl [Hn]
-  · iexact Hn
-  isplitl [Hc]
-  · iexact Hc
-  isplitl [Hcb]
-  · iexact Hcb
-  isplitl [Hl]
-  · iexact Hl
-  isplitl [Hlb]
-  · iexact Hlb
-  isplitl [Hsr]
-  · iexact Hsr
-  isplitl [Hst]
-  · iexact Hst
-  iintro ⟨Hn, Hc, Hcb, Hl, Hsr, Hst⟩
-  iapply wp_seq_next
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hz8
-  iapply (wp_ci_tail_one (na := na) (sra := sra) (sta := sta) (ra := ra) htypes
-    rfl rfl rfl)
-  isplitl [Hn]
-  · iexact Hn
-  isplitl [Hsr]
-  · iexact Hsr
-  isplitl [Hst]
-  · iexact Hst
-  isplitl [Hr]
-  · iexact Hr
-  iintro Hr
-  iapply Hcont $$ Hr
+  -- ONE step (`wp_stmt_op_first` matches every `Config.exec`, so an
+  -- unbounded walk would descend into `slices.Sort` instead of taking the
+  -- tail segment whole)
+  go_walk 1
+  -- `slices.Sort`, `pos`, `return Index(srt[pos])`
+  -- (`wp_ci_tail_one`'s own continuation wand IS `Hcont`, so framing closes
+  -- the segment)
+  go_walk_step (wp_ci_tail_one (na := na) (sra := sra) (sta := sta) (ra := ra)
+    htypes rfl rfl rfl)
 
 /-- **The `CommittedIndex` callsite** inside `run` — the STATIC frame
 entry into a method on a concrete receiver, with the second argument BOXED
@@ -1843,45 +791,10 @@ theorem wp_committedIndexCall {ca cba la lba ta : Addr} {cty lty : Option Ty}
                   (.defined ⟨"main.mapAckIndexer"⟩) (.var "l")]) env k)
           @ s ; E {{ Φ }} := by
   iintro ⟨Hc, Hcb, Hl, Hlb, Ht, Hcont⟩
-  iapply (wp_call_first_target (te := .ref "$c3") (rest := []) rfl)
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hv1
-  iapply (wp_eval_ref hres)
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hv2
-  iapply (wp_call_targets_done_arg (loc := Loc.base ta) rfl)
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hv3
-  iapply (wp_eval_var (a := ca) (cell := ⟨some (.defined ⟨"main.MajorityConfig"⟩),
-    .map ⟨some (.base cba)⟩⟩) hc)
-  isplitl [Hc]
-  · iexact Hc
-  iintro Hc
-  iapply wp_call_arg_next
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hv4
-  iapply (wp_eval_strict
-    (op := .toInterface (.interface ⟨"main.AckedIndexer"⟩)
-      (.defined ⟨"main.mapAckIndexer"⟩))
-    (e₁ := .var "l") (rest := []) rfl)
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hv5
-  iapply (wp_eval_var (a := la) (cell := ⟨some (.defined ⟨"main.mapAckIndexer"⟩),
-    .map ⟨some (.base lba)⟩⟩) hl)
-  isplitl [Hl]
-  · iexact Hl
-  iintro Hl
-  iapply (wp_strict_apply_pin
+  -- the target and the receiver
+  go_walk
+  -- the second argument, BOXED at the callsite (`.toInterface`)
+  go_walk_step (wp_strict_apply_pin
     (out := .interface (.defined ⟨"main.mapAckIndexer"⟩)
       (.map ⟨some (.base lba)⟩))
     (happly := fun σ ht => by
@@ -1891,8 +804,8 @@ theorem wp_committedIndexCall {ca cba la lba ta : Addr} {cty lty : Option Ty}
         resolveDefinedAliases, resolveDefinedAliasesFuel, typeResolutionFuel,
         QuorumPin.typeEnv_mapAckIndexer, Ty.mentionsUnsupported,
         Bind.bind, Except.bind]))
-  simp only [List.nil_append, List.singleton_append, List.cons_append]
-  iapply (wp_call_enter₂₁ (func := QuorumPin.committedIndexImpl)
+  -- the STATIC frame entry (two arguments, one result, no dynamic dispatch)
+  go_walk_step (wp_call_enter₂₁ (func := QuorumPin.committedIndexImpl)
     (w₀ := .map ⟨some (.base cba)⟩)
     (w₁ := .interface (.defined ⟨"main.mapAckIndexer"⟩)
       (.map ⟨some (.base lba)⟩))
@@ -1918,22 +831,12 @@ theorem wp_committedIndexCall {ca cba la lba ta : Addr} {cty lty : Option Ty}
       rw [execState_pin_eq (ht.trans htypes) (rfl (a := σ.functions))
         (rfl (a := σ.methods))]
       simp [defaultValue, defaultValueFuel, typeResolutionFuel,
-        QuorumPin.typeEnv_Index]))
-  iintro %a₀ %a₁ %a₂ ⟨Hp0, Hp1, Hq0⟩
-  iapply (wp_committedIndex_body (ca := a₀) (cba := cba) (la := a₁) (lba := lba)
-    (ra := a₂) (cty := cty) (lty := lty) hprog hmeths htypes)
-  isplitl [Hp0]
-  · iexact Hp0
-  isplitl [Hcb]
-  · iexact Hcb
-  isplitl [Hp1]
-  · iexact Hp1
-  isplitl [Hlb]
-  · iexact Hlb
-  isplitl [Hq0]
-  · iexact Hq0
-  iintro Hq0
-  iapply (wp_frame_return₁ (ta := ta) (ra := a₂)
+        QuorumPin.typeEnv_Index])) as [a₀, a₁, a₂]
+  -- the body
+  go_walk_step (wp_committedIndex_body (ca := a₀) (cba := cba) (la := a₁)
+    (lba := lba) (ra := a₂) (cty := cty) (lty := lty) hprog hmeths htypes)
+  -- the one-result frame exit at a NAMED result type
+  go_walk_step (wp_frame_return₁ (ta := ta) (ra := a₂)
     (rcell := ⟨some (.defined ⟨"main.Index"⟩), .int 12 .uint64⟩)
     (tcell := ⟨some (.defined ⟨"main.Index"⟩), .int 0 .uint64⟩)
     (tcell' := ⟨some (.defined ⟨"main.Index"⟩), .int 12 .uint64⟩)
@@ -1943,12 +846,7 @@ theorem wp_committedIndexCall {ca cba la lba ta : Addr} {cty lty : Option Ty}
       simp [storeLoc, hlk, normalizeValueForTy, normalizeValueForTyFuel,
         typeResolutionFuel, QuorumPin.typeEnv_Index, Bind.bind, Except.bind,
         show IntKind.uint64.normalize 12 = 12 from by decide]))
-  isplitl [Hq0]
-  · iexact Hq0
-  isplitl [Ht]
-  · iexact Ht
-  iintro ⟨Hq0, Ht⟩
-  iapply Hcont $$ Ht
+  go_walk_finish Hcont
 
 /-- **`run`'s body** — the thin wrapper the corpus driver calls: declare
 `$c3 : main.Index`, call `c.CommittedIndex(l)`, convert the named result
@@ -1973,129 +871,35 @@ theorem wp_run_body {ca cba la lba ra : Addr} {cty lty : Option Ty} {k}
           @ s ; E {{ Φ }} := by
   iintro ⟨Hc, Hcb, Hl, Hlb, Hr, Hcont⟩
   rw [runImpl_body_eq]
-  iapply wp_block_nil
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hr1
-  iapply wp_seq_next
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hr2
+  go_walk
   unfold runCallSeq
-  iapply wp_seqn
-  simp only [List.toList_toArray, seqCont_splice, List.cons_append,
-    List.nil_append]
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hr3
-  iapply wp_seq_next
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hr4
-  iapply (wp_init (v := .int 0 .uint64) (hdef := fun σ ht => by
+  go_walk
+  -- `var $c3 main.Index` — named, because the callsite below takes its cell
+  go_walk_step (wp_init (v := .int 0 .uint64) (hdef := fun σ ht => by
     rw [execState_pin_eq (ht.trans htypes) (rfl (a := σ.functions))
       (rfl (a := σ.methods))]
     simp [defaultValue, defaultValueFuel, typeResolutionFuel,
-      QuorumPin.typeEnv_Index]))
-  iintro %c3a Hc3
-  iapply wp_seq_next
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hr5
-  iapply (wp_committedIndexCall (ca := ca) (cba := cba) (la := la) (lba := lba)
-    (ta := c3a) (cty := cty) (lty := lty) hprog hmeths htypes rfl rfl rfl)
-  isplitl [Hc]
-  · iexact Hc
-  isplitl [Hcb]
-  · iexact Hcb
-  isplitl [Hl]
-  · iexact Hl
-  isplitl [Hlb]
-  · iexact Hlb
-  isplitl [Hc3]
-  · iexact Hc3
-  iintro Hc3
-  iapply wp_seq_next
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hr6
+      QuorumPin.typeEnv_Index])) as [c3a]
+  -- ONE step: the callsite below is taken WHOLE, so the walk must not start
+  -- evaluating the call's target and arguments
+  go_walk 1
+  -- `$c3 = c.CommittedIndex(l)`
+  go_walk_step (wp_committedIndexCall (ca := ca) (cba := cba) (la := la)
+    (lba := lba) (ta := c3a) (cty := cty) (lty := lty) hprog hmeths htypes
+    rfl rfl rfl)
+  go_walk
   unfold runResSeq
-  iapply wp_seqn
-  simp only [List.toList_toArray, seqCont_splice, List.cons_append,
-    List.nil_append]
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hr7
-  iapply wp_seq_next
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hr8
-  iapply (wp_assign_start (te := .ref "$res0") rfl)
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hr9
-  iapply (wp_eval_ref (loc := Loc.base ra) rfl)
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hr10
-  iapply wp_assign_target
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hr11
-  iapply (wp_eval_strict (op := .convert (.int .uint64)) (e₁ := .var "$c3")
-    (rest := []) rfl)
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hr12
-  iapply (wp_eval_var (a := c3a) (cell := ⟨some (.defined ⟨"main.Index"⟩),
-    .int 12 .uint64⟩) rfl)
-  isplitl [Hc3]
-  · iexact Hc3
-  iintro Hc3
-  iapply (wp_strict_apply_pin (out := .int 12 .uint64)
-    (happly := fun σ _ht => by
-      simp [applyStrictOp, convertValueToTy, convertValueToTyFuel,
-        typeResolutionFuel, resolveDefinedAliases, resolveDefinedAliasesFuel,
-        Bind.bind, Except.bind,
-        show IntKind.uint64.normalize 12 = 12 from by decide]))
-  iapply (wp_assign_store
+  go_walk
+  -- `return uint64($c3)` — the conversion is state-independent at a BASIC
+  -- target type, so the walk takes it; only the store needs a witness
+  go_walk_step (wp_assign_store
     (oldcell := ⟨some (.int .uint64), .int 0 .uint64⟩)
     (newcell := ⟨some (.int .uint64), .int 12 .uint64⟩)
     (fun σ _ht hlk => by
       have h := storeLoc_int_any (mkind := .uint64) hlk 12
       rw [show IntKind.uint64.normalize 12 = 12 from by decide] at h
       exact h))
-  isplitl [Hr]
-  · iexact Hr
-  iintro Hr
-  iapply wp_seq_next
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hr13
-  iapply wp_return
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hr14
-  iapply wp_seq_return
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hr15
-  iapply Hcont $$ Hr
+  go_walk_finish Hcont
 
 /-- **The driver body** — `committedOneKnown`: build `MajorityConfig{1:{}}`
 and `mapAckIndexer{1:12}` with two `make(map…)`s (each ALLOCATING its data
@@ -2112,104 +916,31 @@ theorem wp_oneKnown_body {ra : Addr} {k}
           @ s ; E {{ Φ }} := by
   iintro ⟨Hr, Hcont⟩
   rw [oneKnownImpl_body_eq]
-  iapply wp_block_nil
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hd1
-  iapply wp_seq_next
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hd2
+  go_walk
   -- `c := MajorityConfig{1: {}}`
   unfold okCfgSeq
-  iapply wp_seqn
-  simp only [List.toList_toArray, seqCont_splice, List.cons_append,
-    List.nil_append]
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hd3
-  iapply wp_seq_next
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hd4
-  iapply (wp_init (v := .map ⟨none⟩) (hdef := fun σ _ => by
-    simp [defaultValue, defaultValueFuel, typeResolutionFuel]))
-  iintro %c10a Hc10
-  iapply wp_seq_next
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hd5
-  iapply (wp_stmt_op_first (op := .makeMap false) (nt := 1)
-    (e := .ref "$c10") (rest := []) rfl)
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hd6
-  iapply (wp_eval_ref (loc := Loc.base c10a) rfl)
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hd7
-  iapply (wp_make_map (a := c10a)
+  go_walk
+  go_walk_step (wp_init (v := .map ⟨none⟩) (hdef := fun σ _ => by
+    simp [defaultValue, defaultValueFuel, typeResolutionFuel])) as [c10a, Hc10]
+  go_walk
+  go_walk_step (wp_make_map (a := c10a)
     (oldcell := ⟨some (.map (.int .uint64) (.defined ⟨"struct{}"⟩)),
                  .map ⟨none⟩⟩)
     (newcell := fun fa => ⟨some (.map (.int .uint64) (.defined ⟨"struct{}"⟩)),
                            .map ⟨some (.base fa)⟩⟩)
     (hstore := fun σ fa _ht hlk => by
       simp [storeLoc, hlk, normalizeValueForTy, normalizeValueForTyFuel,
-        Bind.bind, Except.bind]))
-  isplitl [Hc10]
-  · iexact Hc10
-  iintro %cfgba ⟨Hcfgb, Hc10⟩
-  iapply wp_seq_next
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hd8
+        Bind.bind, Except.bind])) as [cfgba, Hcfgb, Hc10]
   -- `c[1] = struct{}{}`
-  iapply (wp_stmt_op_first
-    (op := .mapAssign (.int .uint64) (.defined ⟨"struct{}"⟩)) (nt := 0)
-    (e := .var "$c10")
-    (rest := [.intLit 1 .uint64, .structLit (.defined ⟨"struct{}"⟩) #[]]) rfl)
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hd9
-  iapply (wp_eval_var (a := c10a)
-    (cell := ⟨some (.map (.int .uint64) (.defined ⟨"struct{}"⟩)),
-              .map ⟨some (.base cfgba)⟩⟩) rfl)
-  isplitl [Hc10]
-  · iexact Hc10
-  iintro Hc10
-  iapply (wp_stmt_op_shift_plain (by simp))
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hd10
-  iapply wp_eval_intLit
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hd11
-  rw [show IntKind.uint64.normalize 1 = 1 from by decide]
-  iapply (wp_stmt_op_shift_plain (by simp))
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hd12
-  iapply (wp_eval_strict_nullary_pin (v := .struct ⟨"struct{}"⟩ #[]) rfl
+  go_walk
+  go_walk_step (wp_eval_strict_nullary_pin (v := .struct ⟨"struct{}"⟩ #[]) rfl
     (fun σ ht => by
       rw [execState_pin_eq (ht.trans htypes) (rfl (a := σ.functions))
         (rfl (a := σ.methods))]
       simp [applyStrictOp, buildStructValue, buildStructValueFuel,
         buildStructFields, typeResolutionFuel, QuorumPin.typeEnv_structEmpty,
         Functor.map, Except.map, Bind.bind, Except.bind]))
-  iapply (wp_stmt_op_apply_store (a := cfgba)
+  go_walk_step (wp_stmt_op_apply_store (a := cfgba)
     (oldcell := ⟨none, .mapData #[]⟩)
     (newcell := ⟨none, .mapData
       #[(.int 1 .uint64, .struct ⟨"struct{}"⟩ #[])]⟩)
@@ -2223,101 +954,25 @@ theorem wp_oneKnown_body {ra : Addr} {k}
         normalizeStructFieldsForTy, checkKeyHashable, valueHashability,
         coerceStoredValue, storeLoc, Functor.map, Except.map,
         Bind.bind, Except.bind,
-        show IntKind.uint64.normalize 1 = 1 from by decide]))
-  isplitl [Hcfgb]
-  · iexact Hcfgb
-  iintro Hcfgb
-  iapply wp_seq_next
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hd14
+        show IntKind.uint64.normalize 1 = 1 from by decide])) as [Hcfgb]
   -- `l := mapAckIndexer{1: 12}`
+  go_walk
   unfold okAckSeq
-  iapply wp_seqn
-  simp only [List.toList_toArray, seqCont_splice, List.cons_append,
-    List.nil_append]
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hd15
-  iapply wp_seq_next
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hd16
-  iapply (wp_init (v := .map ⟨none⟩) (hdef := fun σ _ => by
-    simp [defaultValue, defaultValueFuel, typeResolutionFuel]))
-  iintro %c11a Hc11
-  iapply wp_seq_next
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hd17
-  iapply (wp_stmt_op_first (op := .makeMap false) (nt := 1)
-    (e := .ref "$c11") (rest := []) rfl)
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hd18
-  iapply (wp_eval_ref (loc := Loc.base c11a) rfl)
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hd19
-  iapply (wp_make_map (a := c11a)
+  go_walk
+  go_walk_step (wp_init (v := .map ⟨none⟩) (hdef := fun σ _ => by
+    simp [defaultValue, defaultValueFuel, typeResolutionFuel])) as [c11a, Hc11]
+  go_walk
+  go_walk_step (wp_make_map (a := c11a)
     (oldcell := ⟨some (.map (.int .uint64) (.defined ⟨"main.Index"⟩)),
                  .map ⟨none⟩⟩)
     (newcell := fun fa => ⟨some (.map (.int .uint64) (.defined ⟨"main.Index"⟩)),
                            .map ⟨some (.base fa)⟩⟩)
     (hstore := fun σ fa _ht hlk => by
       simp [storeLoc, hlk, normalizeValueForTy, normalizeValueForTyFuel,
-        Bind.bind, Except.bind]))
-  isplitl [Hc11]
-  · iexact Hc11
-  iintro %ackba ⟨Hackb, Hc11⟩
-  iapply wp_seq_next
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hd20
-  iapply (wp_stmt_op_first
-    (op := .mapAssign (.int .uint64) (.defined ⟨"main.Index"⟩)) (nt := 0)
-    (e := .var "$c11")
-    (rest := [.intLit 1 .uint64, .intLit 12 .uint64]) rfl)
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hd21
-  iapply (wp_eval_var (a := c11a)
-    (cell := ⟨some (.map (.int .uint64) (.defined ⟨"main.Index"⟩)),
-              .map ⟨some (.base ackba)⟩⟩) rfl)
-  isplitl [Hc11]
-  · iexact Hc11
-  iintro Hc11
-  iapply (wp_stmt_op_shift_plain (by simp))
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hd22
-  iapply wp_eval_intLit
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hd23
-  rw [show IntKind.uint64.normalize 1 = 1 from by decide]
-  iapply (wp_stmt_op_shift_plain (by simp))
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hd24
-  iapply wp_eval_intLit
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hd25
-  rw [show IntKind.uint64.normalize 12 = 12 from by decide]
-  iapply (wp_stmt_op_apply_store (a := ackba)
+        Bind.bind, Except.bind])) as [ackba, Hackb, Hc11]
+  -- `l[1] = 12`
+  go_walk
+  go_walk_step (wp_stmt_op_apply_store (a := ackba)
     (oldcell := ⟨none, .mapData #[]⟩)
     (newcell := ⟨none, .mapData #[(.int 1 .uint64, .int 12 .uint64)]⟩)
     (happly := fun σ ch ht hlk => by
@@ -2328,70 +983,16 @@ theorem wp_oneKnown_body {ra : Addr} {k}
         QuorumPin.typeEnv_Index, checkKeyHashable, valueHashability,
         coerceStoredValue, storeLoc, Bind.bind, Except.bind,
         show IntKind.uint64.normalize 1 = 1 from by decide,
-        show IntKind.uint64.normalize 12 = 12 from by decide]))
-  isplitl [Hackb]
-  · iexact Hackb
-  iintro Hackb
-  iapply wp_seq_next
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hd26
+        show IntKind.uint64.normalize 12 = 12 from by decide])) as [Hackb]
   -- `r := run(c, l)`
+  go_walk
   unfold okCallSeq
-  iapply wp_seqn
-  simp only [List.toList_toArray, seqCont_splice, List.cons_append,
-    List.nil_append]
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hd27
-  iapply wp_seq_next
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hd28
-  iapply wp_init_int
-  iintro %c12a Hc12
-  iapply wp_seq_next
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hd29
-  iapply (wp_call_first_target (te := .ref "$c12") (rest := []) rfl)
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hd30
-  iapply (wp_eval_ref (loc := Loc.base c12a) rfl)
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hd31
-  iapply (wp_call_targets_done_arg (loc := Loc.base c12a) rfl)
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hd32
-  iapply (wp_eval_var (a := c10a)
-    (cell := ⟨some (.map (.int .uint64) (.defined ⟨"struct{}"⟩)),
-              .map ⟨some (.base cfgba)⟩⟩) rfl)
-  isplitl [Hc10]
-  · iexact Hc10
-  iintro Hc10
-  iapply wp_call_arg_next
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hd33
-  iapply (wp_eval_var (a := c11a)
-    (cell := ⟨some (.map (.int .uint64) (.defined ⟨"main.Index"⟩)),
-              .map ⟨some (.base ackba)⟩⟩) rfl)
-  isplitl [Hc11]
-  · iexact Hc11
-  iintro Hc11
-  simp only [List.nil_append, List.singleton_append, List.cons_append]
-  iapply (wp_call_enter₂₁ (func := QuorumPin.runImpl)
+  -- two steps, then `var r uint64` BY NAME (the callsite below takes its cell)
+  go_walk 2
+  go_walk_step wp_init_int as [c12a, Hc12]
+  -- the target and the two map arguments
+  go_walk
+  go_walk_step (wp_call_enter₂₁ (func := QuorumPin.runImpl)
     (w₀ := .map ⟨some (.base cfgba)⟩)
     (w₁ := .map ⟨some (.base ackba)⟩)
     (dv₀ := .int 0 .uint64)
@@ -2414,93 +1015,23 @@ theorem wp_oneKnown_body {ra : Addr} {k}
         QuorumPin.typeEnv_mapAckIndexer])
     (hdef₀ := fun σ _ => by
       simp [defaultValue, defaultValueFuel, typeResolutionFuel]))
-  iintro %b₀ %b₁ %b₂ ⟨Hq0, Hq1, Hq2⟩
-  iapply (wp_run_body (ca := b₀) (cba := cfgba) (la := b₁) (lba := ackba)
+    as [b₀, b₁, b₂]
+  go_walk_step (wp_run_body (ca := b₀) (cba := cfgba) (la := b₁) (lba := ackba)
     (ra := b₂) hprog hmeths htypes)
-  isplitl [Hq0]
-  · iexact Hq0
-  isplitl [Hcfgb]
-  · iexact Hcfgb
-  isplitl [Hq1]
-  · iexact Hq1
-  isplitl [Hackb]
-  · iexact Hackb
-  isplitl [Hq2]
-  · iexact Hq2
-  iintro Hq2
-  iapply (wp_frame_return_int (ta := c12a) (ra := b₂) (kind := .uint64)
+  go_walk_step (wp_frame_return_int (ta := c12a) (ra := b₂) (kind := .uint64)
     (tkind := .uint64) (m := 12))
-  isplitl [Hq2]
-  · iexact Hq2
-  isplitl [Hc12]
-  · iexact Hc12
-  iintro ⟨Hq2, Hc12⟩
-  rw [show IntKind.uint64.normalize 12 = 12 from by decide]
-  iapply wp_seq_next
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hd34
   -- `return r`
+  go_walk
   unfold okResSeq
-  iapply wp_seqn
-  simp only [List.toList_toArray, seqCont_splice, List.cons_append,
-    List.nil_append]
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hd35
-  iapply wp_seq_next
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hd36
-  iapply (wp_assign_start (te := .ref "$res0") rfl)
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hd37
-  iapply (wp_eval_ref (loc := Loc.base ra) rfl)
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hd38
-  iapply wp_assign_target
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hd39
-  iapply (wp_eval_var (a := c12a) (cell := ⟨some (.int .uint64),
-    .int 12 .uint64⟩) rfl)
-  isplitl [Hc12]
-  · iexact Hc12
-  iintro Hc12
-  iapply (wp_assign_store
+  go_walk
+  go_walk_step (wp_assign_store
     (oldcell := ⟨some (.int .uint64), .int 0 .uint64⟩)
     (newcell := ⟨some (.int .uint64), .int 12 .uint64⟩)
     (fun σ _ht hlk => by
       have h := storeLoc_int_any (mkind := .uint64) hlk 12
       rw [show IntKind.uint64.normalize 12 = 12 from by decide] at h
       exact h))
-  isplitl [Hr]
-  · iexact Hr
-  iintro Hr
-  iapply wp_seq_next
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hd40
-  iapply wp_return
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hd41
-  iapply wp_seq_return
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hd42
-  iapply Hcont $$ Hr
+  go_walk_finish Hcont
 
 /-- **The `committedOneKnown()` callsite** — the outermost frame: one
 target cell, no arguments, `wp_call_enter_ret1` in, the driver body, and
@@ -2516,17 +1047,10 @@ theorem wp_oneKnownCall {ta : Addr} {w : GoValue} {env k}
       ⊢ WP (Config.exec (.call #[.var "$callres"] ⟨"committedOneKnown"⟩ #[])
             env k) @ s ; E {{ Φ }} := by
   iintro ⟨Ht, Hcont⟩
-  iapply (wp_call_first_target (te := .ref "$callres") (rest := []) rfl)
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hk1
-  iapply (wp_eval_ref hres)
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hk2
-  iapply (wp_call_enter_ret1 (func := QuorumPin.oneKnownImpl)
+  -- the one target cell, no arguments
+  go_walk
+  -- the outermost frame entry
+  go_walk_step (wp_call_enter_ret1 (func := QuorumPin.oneKnownImpl)
     (dv := .int 0 .uint64)
     (hfind := by rw [hprog]; exact QuorumPin.oneKnownImpl_find)
     (hargs := QuorumPin.oneKnownImpl_args)
@@ -2535,21 +1059,12 @@ theorem wp_oneKnownCall {ta : Addr} {w : GoValue} {env k}
       simp only [dynamicDispatch?, methodInfoByFuncId?, hm.trans hmeths]
       simp +decide [QuorumPin.quorumMethods_eq, Bind.bind, Except.bind])
     (hdef := fun σ _ => by
-      simp [defaultValue, defaultValueFuel, typeResolutionFuel]))
-  iintro %rra Hrr
-  iapply (wp_oneKnown_body (ra := rra) hprog hmeths htypes)
-  isplitl [Hrr]
-  · iexact Hrr
-  iintro Hrr
-  iapply (wp_frame_return_int (ta := ta) (ra := rra) (kind := .uint64)
+      simp [defaultValue, defaultValueFuel, typeResolutionFuel])) as [rra]
+  -- the driver body, and the int frame exit
+  go_walk_step (wp_oneKnown_body (ra := rra) hprog hmeths htypes)
+  go_walk_step (wp_frame_return_int (ta := ta) (ra := rra) (kind := .uint64)
     (tkind := .uint64) (m := 12))
-  isplitl [Hrr]
-  · iexact Hrr
-  isplitl [Ht]
-  · iexact Ht
-  iintro ⟨Hrr, Ht⟩
-  rw [show IntKind.uint64.normalize 12 = 12 from by decide]
-  iapply Hcont $$ Ht
+  go_walk_finish Hcont
 
 end
 

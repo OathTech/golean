@@ -3,6 +3,7 @@ import GoLeanProofs.Laws.Unwind
 import GoLeanProofs.Laws.Call
 import GoLeanProofs.Laws.Init
 import GoLeanProofs.Specs.GoldenSliceWP
+import GoLeanProofs.Tactics.GoWalk
 
 /-!
 # The recover composition over the PINNED ACTUAL LOWERING
@@ -27,7 +28,6 @@ no heap and returns 7"), through the same exit pipe as `goldenFuncSpec`.
 
 open Iris Iris.ProgramLogic Iris.Std Iris.Std.PartialMap
 open GoLean GoLean.GoCore GoLean.GoCore.Machine
-open GoLean.Iris.GoldenSlice (seqCont_splice)
 
 namespace GoLean.Iris.GoldenRecover
 
@@ -60,85 +60,16 @@ theorem wp_recoverDirect_body {ra : Addr} {tl : Loc} {k}
               (.frame [tl] [.base ra] [] k)) @ s ; E {{ Φ }} := by
   iintro ⟨Hr, Hcont⟩
   simp only [recoverDirectFunc]
-  -- the body block: pushed scope over [defer, panic]
-  iapply wp_block_nil
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hc1
-  iapply wp_seq_next
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hc2
-  -- defer recoverDirect$lit0(&result): evaluate the closure, register
-  iapply wp_defer_stmt
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hc3
-  iapply (wp_eval_strict (hplan := rfl))
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hc4
-  iapply (wp_eval_ref (loc := Loc.base ra) rfl)
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hc5
-  iapply (wp_strict_apply_pure
-    (out := .funcVal ⟨"recoverDirect$lit0"⟩ [.addr (.base ra)])
-    (happly := fun σ => rfl))
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hc6
-  iapply (wp_defer_register_noargs (hcallee := rfl) (hpush := rfl))
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hc7
-  -- panic("boom-direct"): payload converts to any, unwinding starts
-  iapply wp_seq_next
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hc8
-  iapply wp_panic_stmt
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hc9
-  iapply (wp_eval_strict (hplan := rfl))
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hc10
-  iapply wp_eval_stringLit
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hc11
-  iapply (wp_strict_apply_pure (out := payload) (happly := fun σ => by
+  -- the body block, the defer registration, `panic("boom-direct")`
+  go_walk
+  -- the payload's conversion to `any`
+  go_walk_step (wp_strict_apply_pure (out := payload) (happly := fun σ => by
     simp [applyStrictOp, canonicalDynamicTy, canonicalTy, canonicalTyFuel,
       Ty.mentionsUnsupported, payload, Bind.bind, Except.bind]))
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hc12
-  iapply wp_panic_value
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hc13
-  -- unwind the statement spine, drain the deferred closure on the panic path
-  iapply (wp_panic_unwind (hpass := rfl))
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hc14
-  iapply (wp_panic_frame_defer_cap1
+  -- the unwind of the statement spine
+  go_walk
+  -- the deferred closure's frame, on the PANIC path
+  go_walk_step (wp_panic_frame_defer_cap1
     (func := litFunc)
     (cv' := .addr (.base ra))
     (hfind := by rw [hprog, recoverLowered_funcs_eq]; rfl)
@@ -147,66 +78,16 @@ theorem wp_recoverDirect_body {ra : Addr} {tl : Loc} {k}
       simp [dynamicDispatch?, methodInfoByFuncId?, h, hmeths, Bind.bind,
         Except.bind])
     (hnorm := fun σ => by
-      simp [normalizeValueForTy, normalizeValueForTyFuel]))
-  iintro %pa Hp
-  -- the closure body: block, then $c0 := recover()
+      simp [normalizeValueForTy, normalizeValueForTyFuel])) as [pa, Hp]
+  -- the closure body: block, then `var $c0 any` (interface default: nil)
   simp only [litFunc]
-  iapply wp_block_nil
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hc15
-  iapply wp_seq_next
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hc16
-  iapply wp_seqn
-  simp only [List.toList_toArray, seqCont_splice, List.cons_append,
-    List.nil_append]
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hc17
-  iapply wp_seq_next
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hc18
-  -- var $c0 any (interface default: nil)
-  iapply (wp_init (v := .nil) (hdef := fun _ _ => by
-    simp [defaultValue, defaultValueFuel, typeResolutionFuel]))
-  iintro %ca Hc
-  iapply wp_seq_next
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hc19
-  -- $c0 = recover(): the continuation walk crosses the assign frames,
-  -- lands on the marker under the drain frame, marks the chain
-  iapply (wp_assign_start (te := .ref "$c0") rfl)
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hc20
-  iapply (wp_eval_ref (loc := Loc.base ca) rfl)
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hc21
-  iapply wp_assign_target
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hc22
-  iapply (wp_recover (hrec := rfl))
-  simp only [recoverResult, markNewestRecovered, Bool.false_eq_true, reduceIte]
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hc23
-  -- store the recovered payload into $c0's interface-typed cell
-  iapply (wp_assign_store
+  go_walk
+  go_walk_step (wp_init (v := .nil) (hdef := fun _ _ => by
+    simp [defaultValue, defaultValueFuel, typeResolutionFuel])) as [ca, Hc]
+  -- `$c0 = recover()`: the walk crosses the assign frames, lands on the
+  -- marker under the drain frame and marks the chain
+  go_walk with [recoverResult, markNewestRecovered]
+  go_walk_step (wp_assign_store
     (oldcell := ⟨some (.interface ⟨"any"⟩), .nil⟩)
     (newcell := ⟨some (.interface ⟨"any"⟩), payload⟩)
     (fun σ₁ _ht hlook => by
@@ -214,127 +95,21 @@ theorem wp_recoverDirect_body {ra : Addr} {tl : Loc} {k}
       rw [hlook]
       simp [normalizeValueForTy, normalizeValueForTyFuel, panicPayload,
         Bind.bind, Except.bind]))
-  isplitl [Hc]
-  · iexact Hc
-  iintro Hc
-  -- if $c0 != nil: read the cell back, compare against nil
-  iapply wp_seq_next
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hc24
-  iapply wp_if_start
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hc25
-  iapply (wp_eval_strict (hplan := rfl))
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hc26
-  iapply (wp_eval_var
-    (cell := ⟨some (.interface ⟨"any"⟩), payload⟩) rfl)
-  isplitl [Hc]
-  · iexact Hc
-  iintro Hc
-  iapply wp_strict_shift
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hc27
-  iapply (wp_eval_strict_nullary_pure (hplan := rfl)
-    (happly := fun σ => rfl))
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hc28
-  iapply (wp_strict_apply_pure (out := .bool true)
+  -- `if $c0 != nil { *result$cap = 7 }`
+  go_walk
+  go_walk_step (wp_strict_apply_pure (out := .bool true)
     (happly := fun σ => by
       simp [applyStrictOp, panicPayload, valueEq, valueEqFuel,
         Bind.bind, Except.bind]))
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hc29
-  iapply wp_if_bool
-  simp only [reduceIte]
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hc30
-  -- the guarded branch block: *result$cap = 7 through the captured pointer
-  iapply wp_block_nil
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hc31
-  iapply wp_seq_next
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hc32
-  iapply wp_seqn
-  simp only [List.toList_toArray, seqCont_splice, List.cons_append,
-    List.nil_append]
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hc33
-  iapply wp_seq_next
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hc34
-  iapply (wp_assign_start (te := .var "result$cap") rfl)
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hc35
-  iapply (wp_eval_var
-    (cell := ⟨some (.pointer (.int .int)), .addr (.base ra)⟩) rfl)
-  isplitl [Hp]
-  · iexact Hp
-  iintro Hp
-  iapply wp_assign_target
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hc36
-  iapply wp_eval_intLit
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hc37
-  iapply (wp_assign_store (oldcell := ⟨some (.int .int), .int 0 .int⟩)
-    (newcell := ⟨some (.int .int), .int (IntKind.normalize .int 7) .int⟩)
-    (fun σ₁ _ht hlook => storeLoc_int_cell hlook 7))
-  isplitl [Hr]
-  · iexact Hr
-  iintro Hr
+  go_walk
+  go_walk_step (wp_assign_store (oldcell := ⟨some (.int .int), .int 0 .int⟩)
+    (newcell := ⟨some (.int .int), .int 7 .int⟩)
+    (fun σ₁ _ht hlook => by
+      have h := storeLoc_int_cell hlook 7
+      rw [show IntKind.normalize .int 7 = 7 from by decide] at h
+      exact h))
   -- the closure falls off its end; the recovered marker cancels the unwind
-  iapply wp_seq_done
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hc38
-  iapply wp_seq_done
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hc39
-  iapply wp_frame_fall
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hc40
-  iapply (wp_panic_resume_recovered (hrec := rfl))
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hc41
-  rw [show IntKind.normalize .int 7 = 7 from by decide]
-  iapply Hcont $$ Hr
+  go_walk_finish Hcont
 
 /-- **The generic recover call walk**: `x = recoverDirect()` into any
 target cell (any prior value), any environment binding, any continuation.

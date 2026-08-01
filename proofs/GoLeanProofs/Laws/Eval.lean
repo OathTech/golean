@@ -10,6 +10,7 @@ import Iris.Std.GenSetsInstances
 import GoLean.GoCore.MachineSound
 import GoLeanProofs.Lifting
 import GoLeanProofs.Inversions
+import GoLeanProofs.Tactics.GoWalk
 
 /-!
 # Expression-walk step laws (R3, new with the fine-grained machine)
@@ -29,6 +30,28 @@ open Iris Iris.ProgramLogic Iris.Std Iris.Std.PartialMap
 open GoLean GoLean.GoCore GoLean.GoCore.Machine
 
 namespace GoLean.Iris
+
+/-! ### The GoCore half of `go_walk`'s normalization set
+
+`go_walk` runs `simp only [go_walk_simp]` between steps. Machine-side, the
+one rewrite every hand walk needed there is the evaluation of
+`IntKind.normalize` at a literal: `wp_eval_intLit` delivers
+`.int (kind.normalize n) kind`, and the configuration only matches the next
+law once that is the literal again (the hand walks wrote
+`rw [show IntKind.int.normalize 0 = 0 from by decide]`). At a NON-literal
+the walk carries the normalization as a hypothesis instead
+(`go_walk with [hq]`). -/
+open Lean Meta in
+simproc [go_walk_simp] reduceIntKindNormalize (IntKind.normalize _ _) := fun e => do
+  if e.hasFVar || e.hasMVar then return .continue
+  let r ← withDefault <| Meta.reduce e
+  -- put the answer back in `OfNat`/`Neg` form — the shape a law statement's
+  -- literal has — so that the next configuration match stays syntactic
+  if let some n := (r.app1? ``Int.ofNat).bind (·.rawNatLit?) then
+    return .done { expr := ← mkNumeral (mkConst ``Int) n }
+  if let some n := (r.app1? ``Int.negSucc).bind (·.rawNatLit?) then
+    return .done { expr := ← mkAppM ``Neg.neg #[← mkNumeral (mkConst ``Int) (n + 1)] }
+  return .continue
 
 section
 variable {GF : BundledGFunctors} {hlc : HasLC} [GoCoreGS hlc GF]
@@ -60,12 +83,14 @@ theorem wp_pure_det {c₀ c₁ : Config}
 
 /-! ### Pure expression steps -/
 
+@[go_walk_law]
 theorem wp_eval_intLit {n : Int} {kind : IntKind} {env k} :
     (|={E}[E]▷=> £ 1 -∗
       WP (Config.retV (.int (kind.normalize n) kind) k) @ s ; E {{ Φ }}) ⊢
       WP (Config.evalE (.intLit n kind) env k) @ s ; E {{ Φ }} :=
   wp_pure_det rfl trivial (fun _ => Step.evalIntLit)
 
+@[go_walk_law]
 theorem wp_eval_boolLit {b : Bool} {env k} :
     (|={E}[E]▷=> £ 1 -∗ WP (Config.retV (.bool b) k) @ s ; E {{ Φ }}) ⊢
       WP (Config.evalE (.boolLit b) env k) @ s ; E {{ Φ }} :=
@@ -73,6 +98,7 @@ theorem wp_eval_boolLit {b : Bool} {env k} :
 
 /-- `&x`: resolution is control-side (CEK), so taking an address is a pure
 step. -/
+@[go_walk_law]
 theorem wp_eval_ref {id : String} {loc : Loc} {env k}
     (hres : LocalEnv.lookup env id = some loc) :
     (|={E}[E]▷=> £ 1 -∗ WP (Config.retV (.addr loc) k) @ s ; E {{ Φ }}) ⊢
@@ -81,6 +107,7 @@ theorem wp_eval_ref {id : String} {loc : Loc} {env k}
 
 /-- Enter a strict form: evaluate the first operand under the generic
 frame. -/
+@[go_walk_law]
 theorem wp_eval_strict {e : Expr} {op : StrictOp} {e₁ : Expr}
     {rest : List Expr} {env k}
     (hplan : strictPlan e = some (op, e₁ :: rest)) :
@@ -90,6 +117,7 @@ theorem wp_eval_strict {e : Expr} {op : StrictOp} {e₁ : Expr}
   wp_pure_det rfl trivial (fun _ => Step.evalStrict hplan)
 
 /-- Shift to the next strict operand. -/
+@[go_walk_law]
 theorem wp_strict_shift {op : StrictOp} {done : List GoValue} {v : GoValue}
     {e : Expr} {rest : List Expr} {env k} :
     (|={E}[E]▷=> £ 1 -∗
@@ -101,6 +129,7 @@ theorem wp_strict_shift {op : StrictOp} {done : List GoValue} {v : GoValue}
 operator: arithmetic, comparisons, logic — the premise quantifies the
 state, discharged by `simp`/`decide` at concrete operands). ONE law for
 the whole pure-op table. -/
+@[go_walk_law]
 theorem wp_strict_apply_pure {op : StrictOp} {done : List GoValue}
     {v out : GoValue} {env k}
     (happly : ∀ σ : ExecState,
@@ -116,6 +145,7 @@ type resolves the target name through `TypeEnv.lookup σ.types`, so its
 `∀σ` premise is false without the pin — but it reads no heap cell, so
 demanding one would be a lie about what the step touches. Resource-free
 on both sides. -/
+@[go_walk_law]
 theorem wp_strict_apply_pin {op : StrictOp} {done : List GoValue}
     {v out : GoValue} {env k}
     (happly : ∀ σ : ExecState, σ.types = GoCoreGS.types GF →
@@ -144,6 +174,7 @@ The pin-carrying sibling of `wp_eval_strict_nullary_pure`
 (`Laws/Unwind`): `struct{}{}` and every other composite literal with no
 operands is built by resolving its type through `σ.types`, so the
 unpinned `∀σ` premise is false at a named type. Resource-free. -/
+@[go_walk_law]
 theorem wp_eval_strict_nullary_pin {e : Expr} {op : StrictOp}
     {v : GoValue} {env k}
     (hplan : strictPlan e = some (op, []))
@@ -177,6 +208,7 @@ data cell), `a[i]` on a slice (loads the backing array), `x[lo:hi]` on an
 array address (loads the array to learn its size), `*p` — none of which
 `wp_strict_apply_pure` can serve, because their `∀σ` premise is false
 without the heap fact. -/
+@[go_walk_law]
 theorem wp_strict_apply_read {op : StrictOp} {done : List GoValue}
     {v out : GoValue} {a : Addr} {cell : HeapCell} {env k}
     (happly : ∀ σ : ExecState, σ.types = GoCoreGS.types GF →
@@ -205,6 +237,7 @@ theorem wp_strict_apply_read {op : StrictOp} {done : List GoValue}
 /-! ### Statement-glue pure steps -/
 
 /-- Begin an assignment: evaluate the target's address expression. -/
+@[go_walk_law]
 theorem wp_assign_start {lhs : Assignee} {te rhs : Expr} {env k}
     (hlhs : assigneeExpr lhs = some te) :
     (|={E}[E]▷=> £ 1 -∗
@@ -215,6 +248,7 @@ theorem wp_assign_start {lhs : Assignee} {te rhs : Expr} {env k}
     (fun _ => Step.assign hlhs)
 
 /-- Receive the target address: evaluate the RHS toward the store. -/
+@[go_walk_law]
 theorem wp_assign_target {loc : Loc} {rhs : Expr} {env k} :
     (|={E}[E]▷=> £ 1 -∗
       WP (Config.evalE rhs env (.assignStoreK loc k)) @ s ; E {{ Φ }}) ⊢
@@ -222,6 +256,7 @@ theorem wp_assign_target {loc : Loc} {rhs : Expr} {env k} :
   wp_pure_det rfl trivial (fun _ => Step.assignTargetLoc rfl)
 
 /-- Receive an `if` condition. -/
+@[go_walk_law]
 theorem wp_if_bool {b : Bool} {t e : Stmt} {env k} :
     (|={E}[E]▷=> £ 1 -∗
       WP (Config.exec (if b then t else e) env k) @ s ; E {{ Φ }}) ⊢
@@ -231,6 +266,7 @@ theorem wp_if_bool {b : Bool} {t e : Stmt} {env k} :
   · exact wp_pure_det rfl trivial (fun _ => Step.ifTrue)
 
 /-- Dispatch an `if`: evaluate the condition under its frame. -/
+@[go_walk_law]
 theorem wp_if_start {c : Expr} {t e : Stmt} {env k} :
     (|={E}[E]▷=> £ 1 -∗
       WP (Config.evalE c env (.ifK t e env k)) @ s ; E {{ Φ }}) ⊢
@@ -240,6 +276,7 @@ theorem wp_if_start {c : Expr} {t e : Stmt} {env k} :
     (fun _ => Step.ifStmt)
 
 /-- Dispatch a `while`: evaluate the condition under its frame. -/
+@[go_walk_law]
 theorem wp_while_start {c : Expr} {b : Stmt} {env k} :
     (|={E}[E]▷=> £ 1 -∗
       WP (Config.evalE c env (.whileK c b env k)) @ s ; E {{ Φ }}) ⊢
@@ -250,6 +287,7 @@ theorem wp_while_start {c : Expr} {b : Stmt} {env k} :
 
 /-- Receive a `while` condition: enter the body (`true`) or exit
 (`false`). -/
+@[go_walk_law]
 theorem wp_while_bool {b : Bool} {c : Expr} {body : Stmt} {env k} :
     (|={E}[E]▷=> £ 1 -∗
       WP (if b then Config.exec body env (.loop c body env k)
@@ -263,6 +301,7 @@ theorem wp_while_bool {b : Bool} {c : Expr} {body : Stmt} {env k} :
 
 /-- **The load step**: `x` reads its cell. Resolution is control-side; the
 read is conditioned on the owned cell, which rides through unchanged. -/
+@[go_walk_law]
 theorem wp_eval_var {id : String} {a : Addr} {cell : HeapCell} {env k}
     (hres : LocalEnv.lookup env id = some (.base a)) :
     a.id ↦ cell
@@ -288,6 +327,7 @@ theorem wp_eval_var {id : String} {a : Addr} {cell : HeapCell} {env k}
 
 /-- **The deref apply step**: the strict `deref` operator's application is
 a load through the delivered address. The read cell rides through. -/
+@[go_walk_law]
 theorem wp_strict_apply_deref {ty : Ty} {a : Addr} {cell : HeapCell} {env k} :
     a.id ↦ cell
       ∗ (a.id ↦ cell -∗ WP (Config.retV cell.value k) @ s ; E {{ Φ }})
@@ -340,6 +380,7 @@ theorem wp_assign_store_loc {a : Addr} {tgt : Loc} {v : GoValue}
 in one backing cell): the owned resource and the store target are then
 different `Loc`s for the same address, which the base-only statement
 could not express. -/
+@[go_walk_law]
 theorem wp_assign_store {a : Addr} {v : GoValue} {oldcell newcell : HeapCell} {k}
     (hstore : ∀ σ₁ : ExecState, σ₁.types = GoCoreGS.types GF →
       Heap.lookup σ₁.heap (.base a) = some oldcell →

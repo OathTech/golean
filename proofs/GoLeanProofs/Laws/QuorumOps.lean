@@ -90,17 +90,20 @@ resolution needs the three general equations below. Nothing about a
 program appears; this is `LocalEnv`'s own algebra. -/
 
 /-- A freshly declared name resolves to its new location. -/
+@[go_walk_simp]
 theorem lookup_declare_self {env : LocalEnv} {id : String} {l : Loc} :
     LocalEnv.lookup (env.declare id l) id = some l := by
   cases env <;> simp [LocalEnv.declare, LocalEnv.lookup, Scope.lookup]
 
 /-- Declaring a DIFFERENT name leaves a resolution unchanged. -/
+@[go_walk_simp]
 theorem lookup_declare_ne {env : LocalEnv} {id id' : String} {l : Loc}
     (hne : (id' == id) = false) :
     LocalEnv.lookup (env.declare id' l) id = LocalEnv.lookup env id := by
   cases env <;> simp [LocalEnv.declare, LocalEnv.lookup, Scope.lookup, hne]
 
 /-- Entering a block (an empty pushed scope) leaves resolutions unchanged. -/
+@[go_walk_simp]
 theorem lookup_pushScope {env : LocalEnv} {id : String} :
     LocalEnv.lookup env.pushScope id = LocalEnv.lookup env id := by
   simp [LocalEnv.pushScope, LocalEnv.lookup, Scope.lookup]
@@ -225,6 +228,7 @@ theorem wp_map_range_snapshot_nil {keyVar valVar : Option String}
 leading TARGET operands, and the operand expressions in evaluation order;
 the machine evaluates the first one under a `stmtOpK` frame. Generic over
 the whole `StmtOp` table. -/
+@[go_walk_law]
 theorem wp_stmt_op_first {stmt : Stmt} {op : StmtOp} {nt : Nat} {e : Expr}
     {rest : List Expr} {env k}
     (hplan : stmtPlan stmt = some (op, nt, e :: rest)) :
@@ -236,6 +240,7 @@ theorem wp_stmt_op_first {stmt : Stmt} {op : StmtOp} {nt : Nat} {e : Expr}
 /-- Shift to the next operand while still in the TARGET prefix: the
 delivered value must be an address (`hloc`), which is recorded and the
 next operand evaluated. -/
+@[go_walk_law]
 theorem wp_stmt_op_shift_target {op : StmtOp} {nt : Nat} {done : List GoValue}
     {v : GoValue} {loc : Loc} {e : Expr} {rest : List Expr} {env k}
     (hnt : done.length < nt) (hloc : valueAsLoc v = .ok loc) :
@@ -246,6 +251,7 @@ theorem wp_stmt_op_shift_target {op : StmtOp} {nt : Nat} {done : List GoValue}
 
 /-- Shift to the next operand past the target prefix (a plain value
 operand — no address check). -/
+@[go_walk_law]
 theorem wp_stmt_op_shift_plain {op : StmtOp} {nt : Nat} {done : List GoValue}
     {v : GoValue} {e : Expr} {rest : List Expr} {env k}
     (hnt : nt ≤ done.length) :
@@ -1081,6 +1087,7 @@ FAITHFUL TO THE PIN as of the `σ.types` pin (quorum pilot phase 4): the
 `idx` target cell is declared `.defined main.Index`, exactly as the
 lowering declares it — the store's coercion at that named type resolves
 through `σ.types`, dischargeable now that the ghost state pins it. -/
+@[go_walk_law]
 theorem wp_map_lookup_ackedIndex {ma ida mba ta oa : Addr} {mty : Option Ty}
     {q v : Int} {env k}
     (htypes : GoCoreGS.types GF = GoldenQuorum.quorumLowered.typeDefs.toList)
@@ -1248,6 +1255,7 @@ only external hypotheses are the three ghost-state pins. This is the law
 the pre-`types`-pin ghost state made unstateable: `bindParams` normalizes
 at `.defined main.mapAckIndexer` and `allocDecls` defaults at
 `.defined main.Index`, both `TypeEnv.lookup σ.types` resolutions. -/
+@[go_walk_law]
 theorem wp_call_dynamic_enter_ackedIndex {mba : Addr} {n : Int}
     {locs : List Loc} {env k}
     (hprog : GoCoreGS.prog GF = GoldenQuorum.quorumLowered.funcs)
@@ -1314,6 +1322,7 @@ complement of `wp_call_dynamic_enter_ackedIndex`: same method, same
 parameter/result cells, the other dispatch answer. Every premise is
 discharged by computation against `quorumLowered`; the only external
 hypotheses are the three ghost-state pins. -/
+@[go_walk_law]
 theorem wp_call_enter_ackedIndexImpl {mba : Addr} {n : Int}
     {locs : List Loc} {env k}
     (hprog : GoCoreGS.prog GF = GoldenQuorum.quorumLowered.funcs)

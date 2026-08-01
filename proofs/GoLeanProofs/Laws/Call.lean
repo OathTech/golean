@@ -11,6 +11,7 @@ import GoLean.GoCore.MachineSound
 import GoLeanProofs.HeapBridge
 import GoLeanProofs.Laws.Eval
 import GoLeanProofs.Specs.GoldenProgram
+import GoLeanProofs.Tactics.GoWalk
 
 /-!
 # Call laws (R3 rewrite over the fine-grained machine)
@@ -51,6 +52,7 @@ variable {s : Stuckness} {E : CoPset} {Φ : Unit → IProp GF}
 
 /-- Dispatch a call with at least one target: evaluate the first target
 address. -/
+@[go_walk_law]
 theorem wp_call_first_target {targets : Array Assignee} {fid : FuncId}
     {args : Array Expr} {te : Expr} {rest : List Expr} {env k}
     (hplan : assigneesExprs targets.toList = some (te :: rest)) :
@@ -63,6 +65,7 @@ theorem wp_call_first_target {targets : Array Assignee} {fid : FuncId}
 
 /-- Dispatch a targetless call with at least one argument: evaluate the
 first argument. -/
+@[go_walk_law]
 theorem wp_call_first_arg {targets : Array Assignee} {fid : FuncId}
     {args : Array Expr} {a : Expr} {rest : List Expr} {env k}
     (htargets : assigneesExprs targets.toList = some [])
@@ -550,6 +553,7 @@ handoff laws; theirs needs the (equally arity-bound) tuple projections. -/
 
 /-- Shift to the next TARGET operand: the delivered value must be an
 address (`hloc`), which is appended to the collected target locations. -/
+@[go_walk_law]
 theorem wp_call_target_next {fid : FuncId} {locs : List Loc} {v : GoValue}
     {loc : Loc} {te : Expr} {rest args : List Expr} {env k}
     (hloc : valueAsLoc v = .ok loc) :
@@ -562,6 +566,7 @@ theorem wp_call_target_next {fid : FuncId} {locs : List Loc} {v : GoValue}
 
 /-- The last target arrives and arguments remain: record it and start the
 argument walk. -/
+@[go_walk_law]
 theorem wp_call_targets_done_arg {fid : FuncId} {locs : List Loc} {v : GoValue}
     {loc : Loc} {a : Expr} {rest : List Expr} {env k}
     (hloc : valueAsLoc v = .ok loc) :
@@ -574,6 +579,7 @@ theorem wp_call_targets_done_arg {fid : FuncId} {locs : List Loc} {v : GoValue}
 
 /-- Shift to the next ARGUMENT operand (no address check — arguments are
 plain values). -/
+@[go_walk_law]
 theorem wp_call_arg_next {fid : FuncId} {locs : List Loc} {vals : List GoValue}
     {v : GoValue} {a : Expr} {rest : List Expr} {env k} :
     (|={E}[E]▷=> £ 1 -∗

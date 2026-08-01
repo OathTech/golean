@@ -256,3 +256,180 @@ rider items.
   resource splits and nondet branches. Everything below that boundary
   (the ~330-line body walk, and the pre/post segments of
   `wp_ci_loop_one`) is the pure deterministic spine `go_walk` v1 targets.
+
+- 2026-08-01: **phase 2 landed — `go_walk`, and the summit re-derived
+  through it.** The n = 1 `CommittedIndex` summit and the (non-quorum)
+  recover composition are now walked by tactic, with
+  `quorumOneKnownFuncSpec`'s statement and axiom set unchanged.
+
+  **THE TACTIC.** `proofs/GoLeanProofs/Tactics/GoWalk.lean` (601 lines,
+  ~230 of them the design note below). Four tactics: `go_walk` (the
+  loop; `go_walk n` bounds it, `go_walk with [h]` extends the
+  between-step normalization), `go_walk_step law as […] with […]` (one
+  law given as a TERM with its semantic side conditions supplied — the
+  replacement for a hand walk's `iapply (…) / isplitl [H] / iexact H /
+  iintro H` block), `go_walk_finish H` (walk until the goal is the one
+  the continuation hypothesis `H` delivers, then close it), and
+  `go_walk1` (one step, reporting which law fired — debugging only).
+
+  **ARCHITECTURE DECISION: (a), attribute-registered law table.** The
+  arc plan offered (a) attribute registration + goal matching, (b) a
+  hand-written match on `Config` constructors, (c) aesop/simp-style rule
+  sets. **(a) is chosen and (b) is explicitly rejected** — a `match` on
+  `Config` would put the law table INSIDE the tactic, so every new law
+  family would edit the tactic and the tactic would grow a dependency on
+  GoCore. As built, `@[go_walk_law]` on a theorem whose type ends in
+  `… ⊢ WP c @ s ; E {{ Φ }}` inserts `c` into a `DiscrTree` keyed by the
+  law's own conclusion, and `Tactics/GoWalk.lean` imports **only `Lean`,
+  `Iris.ProofMode` and `Iris.ProgramLogic.WeakestPre`**: it cannot name
+  GoCore, let alone quorum, because it cannot see them. (c) was rejected
+  because our step laws are ENTAILMENTS between `iProp`s with resource
+  premises, not rewrite rules; simp/aesop would have to be taught the
+  proof mode from scratch.
+
+  Three mechanisms are ours rather than inherited, each forced:
+  1. **Most-specific-first candidate order.** `DiscrTree.getMatch`
+     returns wildcard branches BEFORE literal ones, which is exactly
+     backwards here: a law like `wp_stmt_op_first`, whose conclusion is
+     `Config.exec stmt env k` with `stmt` a variable, matches every
+     statement and would fire in front of the composed operation law
+     that covers the statement whole. Entries carry a specificity (their
+     count of non-wildcard keys) and candidates are sorted by it.
+  2. **The boundary rule.** If a law matched the configuration and its
+     side conditions were mechanical but its resource premises could not
+     be framed against the Iris context, the walk STOPS there instead of
+     falling through to a more generic law. That is the honest reading —
+     the composed law covers this statement, the generic one would
+     descend into it — and it is what makes `go_walk; go_walk_step
+     (wp_map_lookup_ackedIndex …)` work without counting steps.
+  3. **Per-candidate heartbeat budgets.** A law that does not apply can
+     be arbitrarily expensive to reject (`isDefEq` on two large
+     configurations, `rfl` unfolding the interpreter). Match and side
+     conditions each run under their own small budget, so the failure is
+     "this law did not fire", not a timeout reported at a tactic that was
+     going to succeed.
+
+  **BOUNDARIES HONOURED (where it stops, by design).** No registered law
+  matches the configuration (reported with the configuration's head
+  shape); a side condition that is a real semantic obligation
+  (`wp_assign_store`'s `hstore`, `wp_init`'s `hdef`, the `applyStrictOp`
+  blobs) rather than `rfl`/`assumption`/normalization; invariant-carrying
+  rules (`wp_map_iter_inv` is deliberately NOT registered — its `I` is
+  human-supplied, and `wp_ci_loop_one` still writes the invariant and its
+  entry/exit split by hand, unchanged); a resource it cannot frame. It
+  never loops (explicit fuel), never `sorry`s, and every failed candidate
+  is fully backtracked.
+
+  **RESOURCE THREADING — v1 policy, as landed.** The COMMON case is
+  automatic: `iframe` cancels the law's resource premises against the
+  context and the continuation's wand is re-introduced. The cost, found
+  by building it: **framing renames**. A hypothesis `iframe` consumes
+  comes back inaccessible, so a walked proof cannot address its resources
+  by name afterwards. Two consequences, both now in the code: segment
+  endings are `go_walk_finish H` / `iframe` (name-free) instead of
+  `isplitl [H₁ … Hₙ]`, and `go_walk_step … as [x, H, …]` exists for the
+  few cells a later obligation genuinely must name (the range invariant's
+  `i` cell in `wp_ci_loop_one`, the `$c3`/`r` target cells at the two
+  callsites). This is the arc plan's "fallback" outcome reached from the
+  ambitious side: automatic where unambiguous, explicit where the human
+  needs a name.
+
+  **NORMALIZATION.** `simp only [go_walk_simp]` runs between steps. The
+  Lean-core half (`List` append/length/reverse normal forms, `reduceIte`,
+  `String.reduceBEq`, `Option.isSome_none`/`toList`) is tagged in
+  `Laws/Control.lean` beside `seqCont_splice`, which is HOISTED there
+  from the two spec files that each restated it. Two simprocs were needed
+  and are the only new semantic content: `reduceIntKindNormalize`
+  (`Laws/Eval.lean`) evaluates `IntKind.normalize` at a literal and puts
+  the answer back in `OfNat` form — the hand walks wrote
+  `rw [show IntKind.int.normalize 0 = 0 from by decide]` twelve times;
+  and `reduceGroundDecide` (`Laws/Control.lean`) reduces a ground
+  `decide p`, because `wp_strict_apply_pure` now COMPUTES a comparison's
+  answer instead of being told it (`(out := .bool true)` was the hand
+  walks' guess). At a non-literal the walk carries the normalization as a
+  hypothesis instead: `go_walk with [hq]`.
+
+  **ACCEPTANCE (the phase-0 checkable facts).**
+  - *Statement identity*: `summitStatement_pinned` /
+    `summitStatement_holds` in `Specs/AutomationTargets.lean` compile
+    unchanged — the re-derivation inhabits exactly
+    `quorumOneKnownFuncSpec_statement`. Not one theorem STATEMENT in
+    `Specs/GoldenQuorumWP.lean` changed; only the tactic scripts did.
+  - *Axiom identity*: the `#guard_msgs in #print axioms
+    GoLean.Surface.quorumOneKnownFuncSpec` pin in `Audit.lean` still
+    reads `[propext, Classical.choice, Quot.sound]`, and the whole-module
+    sweep is green at **6227 declarations, all axiom-clean** (was 6126;
+    the growth is the tactic's own definitions).
+  - *Coverage identity*: `wp_committedIndex_body` and every body lemma it
+    composes are still the things being proven; the
+    `example := @…wp_committedIndex_body` reference compiles.
+
+  **RETIREMENTS.** The superseded content is the hand-walk TACTIC TEXT,
+  not any lemma: all 15 walks in `Specs/GoldenQuorumWP.lean` and
+  `wp_recoverDirect_body` in `Specs/GoldenRecover.lean` were rewritten in
+  place, so every name, statement and downstream use survives and nothing
+  is orphaned. The one deletion is the two local restatements of
+  `seqCont_splice` (`GoldenQuorumWP`, `GoldenSliceWP`), replaced by the
+  single `GoLean.Iris.seqCont_splice` in `Laws/Control.lean`;
+  `GoldenRecover`'s `open … (seqCont_splice)` went with it.
+
+  **LINE COUNTS (evidence, not the criterion).**
+  `Specs/GoldenQuorumWP.lean` 2914 → 1429 (−51%);
+  `Specs/GoldenRecover.lean` 426 → 201 (−53%). Counting only the tactic
+  scripts of the 15 quorum walks: **1891 → 506 lines (−73%)**. The
+  largest single walk, `wp_ci_range_body_one`, went 329 → 62; the driver
+  body `wp_oneKnown_body` 391 → 118; `wp_ci_emptyIf` 46 → 3
+  (`go_walk; go_walk_finish Hcont`). Against that, +601 lines of tactic
+  and +130 of law-module registration/normalization — machinery that is
+  paid once and amortized over every future walk. NOTE the arc plan's
+  "≤ ~100 lines" acceptance is NOT met at the summit taken as a whole
+  (506), and should not be: what did not shrink is exactly the semantic
+  content — the `storeLoc`/`applyStmtOp`/`defaultValue` witnesses and the
+  frame-entry pins — which is proof obligation, not walking.
+
+  **GENERALITY DEMONSTRATION (non-quorum).**
+  `wp_recoverDirect_body` (`Specs/GoldenRecover.lean`) — the recover
+  composition over the pinned lowering: defer registration, `panic`, the
+  panic-path drain of the lambda-lifted closure, `recover()`, the guarded
+  write through the captured pointer, the recovered marker cancelling the
+  unwind. Re-derived at 277 → 52 tactic lines with the SAME tactic and no
+  new mechanism; the only additions were `@[go_walk_law]` on three unwind
+  laws (`wp_defer_register_noargs`, `wp_panic_unwind`, `wp_recover`) and
+  `List.reverse_cons`/`reverse_nil` in the normalization set. That the
+  panic/defer/recover family registered without touching the tactic is
+  the evidence the table is general.
+
+  **OVER-SPECIALIZATION CHECK (standing item).** The tactic core imports
+  `Lean`, `Iris.ProofMode`, `Iris.ProgramLogic.WeakestPre` and NOTHING
+  else — no GoCore, so no `Config` constructor, no statement form, no
+  program name occurs in it; `grep -E 'quorum|GoCore|Config\.' ` matches
+  only prose in the module docstring. Law registration is at each law's
+  own definition site. The QUORUM-specific composites that are registered
+  (`wp_map_lookup_ackedIndex`, the two `AckedIndex` frame entries) are
+  entries in a table, not tactic code, and were registered because a walk
+  needed to STOP at them; the three witness lemmas that were briefly
+  tagged (`wp_sort_slice_srt`, `wp_make_slice_c2`,
+  `wp_map_range_snapshot_committed`) were untagged again — a witness is
+  not a law.
+
+  **Gate**: `scripts/ci` PASS — escape-hatch preflight, proofs-file audit
+  coverage, golden lowering, surface purity, warning-free core build,
+  proofs + in-build `Audit` gate (6227 declarations, axiom-clean), 44/44
+  eval tests, negative baseline 309/309 and differential baseline 873/873
+  with no drift. No runtime code was touched (proofs only), so no
+  baseline re-pin and no `--diff` re-run is owed.
+
+  **What phase 3 needs to know.** (i) A walk that must stop in front of a
+  segment the human takes whole needs `go_walk n` with a small explicit
+  `n`, because `wp_stmt_op_first`'s conclusion matches every
+  `Config.exec`; three such sites exist in the summit and each is
+  commented. Making that unnecessary means either splitting
+  `wp_stmt_op_first` per `StmtOp` or teaching the walk a "stop before an
+  opaque pin projection" rule — worth doing before the 3-voter rung
+  multiplies the sites. (ii) `go_walk_step`'s law term is elaborated
+  AGAINST the goal's weakest precondition, so its `by simp …` side
+  conditions see real goals; that path silently falls back to an
+  unconstrained elaboration if the law is given with explicit arguments
+  still open. (iii) Nothing in the tactic knows about `k`-ary anything —
+  the 3-voter rung's cost is the invariant and the resource split, both
+  already human territory.

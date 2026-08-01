@@ -10,6 +10,7 @@ import Iris.Std.GenSetsInstances
 import GoLean.GoCore.MachineSound
 import GoLeanProofs.HeapBridge
 import GoLeanProofs.Laws.Eval
+import GoLeanProofs.Tactics.GoWalk
 
 /-!
 # Map-range laws — THE FIRST NONDETERMINISTIC WP LAW (quorum pilot
@@ -87,6 +88,7 @@ private theorem wp_pure_det' {c₀ c₁ : Config}
 /-- Deterministic despite the conservative `choiceFree`: an exhausted
 snapshot pops the iteration context (`mapIterNext` needs an index below
 zero to fire here). -/
+@[go_walk_law]
 theorem wp_map_iter_done {kid : Option String} {vv : Option String}
     {keyTy valTy : Ty} {body : Stmt} {env k} :
     (|={E}[E]▷=> £ 1 -∗ WP (Config.next k) @ s ; E {{ Φ }}) ⊢
@@ -99,6 +101,7 @@ theorem wp_map_iter_done {kid : Option String} {vv : Option String}
       | mapIterNext hidx _ => exact absurd hidx (by simp))
 
 /-- Dispatch a map range: evaluate the map expression. -/
+@[go_walk_law]
 theorem wp_map_range_start {keyVar valVar : Option String}
     {mapExpr : Expr} {keyTy valTy : Ty} {body : Stmt} {env k} :
     (|={E}[E]▷=> £ 1 -∗
