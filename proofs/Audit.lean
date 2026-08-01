@@ -213,6 +213,29 @@ open Lean in
 /-- info: 'GoLean.Iris.GoldenQuorum.wp_oneKnownCall' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Iris.GoldenQuorum.wp_oneKnownCall
 
+-- Proof-automation arc phase 3 (2026-08-01): THE 3-VOTER RUNG — the same
+-- real `CommittedIndex`, at a config whose map range has 3! = 6 iteration
+-- orders, discharged by ONE generic iteration through `wp_map_iter_inv`
+-- plus a permutation invariant, and an ORDER-BLIND sort.
+/-- info: 'GoLean.Surface.quorumThreeAllFuncSpec' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Surface.quorumThreeAllFuncSpec
+/-- info: 'GoLean.Surface.quorumThreeAllMeetsSpec' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Surface.quorumThreeAllMeetsSpec
+/-- info: 'GoLean.Surface.quorumThreeAllReturnsSix' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Surface.quorumThreeAllReturnsSix
+/-- info: 'GoLean.Surface.quorumThreeAllNotTwelve' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Surface.quorumThreeAllNotTwelve
+/-- info: 'GoLean.Iris.GoldenQuorum.wp_ci_loop' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.GoldenQuorum.wp_ci_loop
+/-- info: 'GoLean.Iris.GoldenQuorum.wp_ci_range_body' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.GoldenQuorum.wp_ci_range_body
+/-- info: 'GoLean.Iris.mergeSort_eq_of_perm' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.mergeSort_eq_of_perm
+/-- info: 'GoLean.Iris.arraySet_middle' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.arraySet_middle
+/-- info: 'GoLean.Quorum.storeLoc_stk_fill' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Quorum.storeLoc_stk_fill
+
 /-! ## Non-vacuity gate — every user-facing WP law bound to a discharge
     witness (deleting a witness or a law breaks this build). -/
 
@@ -548,8 +571,10 @@ example := @GoLean.Iris.keyIntSum_eraseIdx
 example := @GoLean.Iris.keyIntSum_nonneg
 example := @GoLean.Iris.int_normalize_of_nonneg_lt
 example := @GoLean.Iris.mapIterInvRule
-/-- `◌` **The proof-automation arc's phase-0 TARGETS** — stated, not
-proven, and that is their job (`Specs/AutomationTargets.lean`):
+/-- `◌`/`✓` **The proof-automation arc's phase-0 TARGETS**
+(`Specs/AutomationTargets.lean`). The 3-voter pair is now DISCHARGED
+(phase 3, 2026-08-01 — see the block below); the `∀`-config target is
+still a target, which is its job:
 
 * `committedIndexAllConfigs_statement` — THE GOAL: for every config and
   acked map, and every heap snapshot pair ENCODING them
@@ -560,11 +585,13 @@ proven, and that is their job (`Specs/AutomationTargets.lean`):
   INPUTS in the heap and speak about the METHOD, rather than quantify
   over a synthesized driver family) is recorded in the module docstring
   and the arc build log.
-* `quorumThreeAllFuncSpec_statement` + `quorumThreeAllNotTwelve_statement`
-  — the 3-voter rung and its negative twin (the twin carries the same
-  honesty note as `quorumOneKnownNotEleven_statement`: an unconditional
-  refutation needs a terminating run exhibited, so it is a target, not a
-  corollary).
+* `quorumThreeAllFuncSpec_statement` — the 3-voter rung. **DISCHARGED
+  2026-08-01** by `quorumThreeAllFuncSpec`; the statement is unchanged.
+  `quorumThreeAllNotTwelve_statement` (its UNCONDITIONAL negative twin)
+  stays a target and carries the same honesty note as
+  `quorumOneKnownNotEleven_statement`: an unconditional refutation needs
+  a terminating run exhibited, so it is a target, not a corollary. The
+  run-conditioned twin `quorumThreeAllNotTwelve` IS proven.
 
 Non-vacuity of the TARGETS themselves is pinned in the same file: an
 encoding is exhibited (`encodesConfig_three`), the value the 3-voter rung
@@ -594,6 +621,92 @@ example := @GoLean.Surface.committedIndex_types_in_pin
 example := @GoLean.Surface.summitStatement_pinned
 example := @GoLean.Surface.summitStatement_holds
 example := @GoLean.Iris.GoldenQuorum.wp_ci_range_body_one
+/-- `✓` **THE 3-VOTER RUNG — proof-automation arc phase 3, 2026-08-01.**
+`quorumThreeAllFuncSpec` DISCHARGES the phase-0 target
+`quorumThreeAllFuncSpec_statement` (the `theorem … : <the def>` IS the
+statement-identity check): etcd's own `committedThreeAll` driver —
+`MajorityConfig{1,2,3}` with `mapAckIndexer{1:12, 2:5, 3:6}` — returns
+`6` over the PINNED lowering, at `GoFuncSpec` strength.
+`quorumThreeAllMeetsSpec` restates it with the DECLARATIVE quorum spec
+(`IsCommittedIndex [1,2,3] ackedThreeAll`); `quorumThreeAllReturnsSix` is
+the first-order readout and `quorumThreeAllNotTwelve` its
+run-conditioned negative twin (`12`, the largest acked index — the answer
+a "returns something a voter acked" bug would give).
+
+WHAT IS NEW HERE, and why it is not "n = 1 with bigger numbers":
+
+* **The range costs ONE generic iteration.** At n = 3 there are `3! = 6`
+  iteration orders. `wp_ci_loop` — stated for an ARBITRARY voter list
+  `ks₀` and an arbitrary acked function `ack`, so it is the n-voter law,
+  not the 3-voter one — discharges the whole range through
+  `wp_map_iter_inv` with the invariant
+  `∃ ks filled, ⌜rem = cfgSnapshot ks ∧ ks ⊆ ks₀ ∧ (ks.map ack ++ filled) ~ ks₀.map ack⌝ ∗ …`.
+  The single `List.Perm` IS the order-insensitivity: what is still to
+  come plus what has been written is the whole multiset, and nothing says
+  in which order `filled` was built. No iteration order is enumerated
+  anywhere in this file.
+* **The body is a general law.** `wp_ci_range_body` is one iteration of
+  `majority.go`'s fill loop at an ARBITRARY voter id, an ARBITRARY acked
+  index, an ARBITRARY `AckedIndexer` snapshot (the lookup's answer is the
+  `hpair` premise) and an ARBITRARY scratch-array shape
+  (`zeros`/`filled`/`trail` over any backing length `cap`, any slice
+  length). It writes at a SYMBOLIC index — the first walk in the project
+  to do so.
+* **The sort is order-blind.** After the loop the array holds a
+  permutation of `[12,5,6]` and which one is genuinely undetermined.
+  `mergeSort_eq_of_perm` (general) and `mergeSort_intKind_eq_of_perm`
+  (the machine's `(Int × IntKind)` comparison, antisymmetric on elements
+  of one kind) collapse that to one transition, so the six orders never
+  reach `applyStmtOp`.
+
+OVER-SPECIALIZATION CHECK, per new law. `Laws/Values.lean` is entirely
+TARGET-FREE — `arraySet_middle`/`arrayGet_middle` (positional read/write
+at any prefix length), `normalizeArrayForTy_int`/
+`normalizeValueForTy_intArray` (any kind, any fuel, any state),
+`int_normalize_of_range` (any `Int` in range),
+`eq_of_perm_of_pairwise`/`mergeSort_eq_of_perm` (any element type, any
+comparison) — no program, lowering, config or acked value occurs in any
+statement. `storeLoc_stk_fill` is about a fill loop over any array, at
+any position. The two WALK laws (`wp_ci_range_body`, `wp_ci_loop`) name
+the pinned lowering's statements — they are walks OF the target and
+cannot avoid that — but their DATA is fully quantified: no voter count,
+no config, no acked value and no `n` occurs in either statement. The
+3-voter numbers enter only at the instantiation sites
+(`wp_committedIndex_body_three` onward).
+
+`◌ NOT PROVEN` (recorded, not quietly dropped): the UNCONDITIONAL
+`quorumThreeAllNotTwelve_statement`, for the reason the whole family
+carries — a `GoTriple` is vacuously true of a non-terminating program, so
+refuting it demands EXHIBITING a terminating run. And
+`committedIndexAllConfigs_statement` — THE ARC GOAL — remains a target;
+the arc build log states exactly which obligations remain. -/
+example := @GoLean.Surface.quorumThreeAllFuncSpec
+example := @GoLean.Surface.quorumThreeAllMeetsSpec
+example := @GoLean.Surface.quorumThreeAllReturnsSix
+example := @GoLean.Surface.quorumThreeAllNotTwelve
+example := @GoLean.Iris.GoldenQuorum.wp_ci_loop
+example := @GoLean.Iris.GoldenQuorum.wp_ci_range_body
+example := @GoLean.Iris.GoldenQuorum.wp_committedIndex_body_three
+example := @GoLean.Iris.GoldenQuorum.wp_ci_fitIf_three
+example := @GoLean.Iris.GoldenQuorum.wp_ci_tail_three
+example := @GoLean.Iris.GoldenQuorum.wp_committedIndexCall_three
+example := @GoLean.Iris.GoldenQuorum.wp_run_body_three
+example := @GoLean.Iris.GoldenQuorum.wp_threeAll_body
+example := @GoLean.Iris.GoldenQuorum.wp_threeAllCall
+example := @GoLean.Iris.GoldenQuorum.wp_ackedIndex_body_entries
+example := @GoLean.Iris.wp_map_lookup_ackedIndex_entries
+example := @GoLean.Iris.mapLookupValue_singleton
+example := @GoLean.Iris.arraySet_middle
+example := @GoLean.Iris.arrayGet_middle
+example := @GoLean.Iris.normalizeArrayForTy_int
+example := @GoLean.Iris.normalizeValueForTy_intArray
+example := @GoLean.Iris.int_normalize_of_range
+example := @GoLean.Iris.eq_of_perm_of_pairwise
+example := @GoLean.Iris.mergeSort_eq_of_perm
+example := @GoLean.Iris.mergeSort_intKind_eq_of_perm
+example := @GoLean.Quorum.storeLoc_stk_fill
+example := @GoLean.Quorum.perm_eraseIdx_append
+example := @GoLean.Quorum.mergeSort_three_all
 /-- `✓` the negative pins (trivialization guards). -/
 example := @GoLean.GoCore.NegativeSpecs.unbound_ref_stuck
 example := @GoLean.GoCore.NegativeSpecs.unbound_var_stuck

@@ -124,8 +124,14 @@ reslice AND the `make([]uint64, n)` heap allocation at more than seven
 voters. `c.Nodup` is the map-key uniqueness a `MajorityConfig` has by
 construction.
 
-Unproven by design. The discharge is phase 3 (the inductive range rule of
-`Laws/Range` + the walk tactic), and it is the arc's exit criterion. -/
+Unproven by design. STILL UNPROVEN as of the phase-3 slice
+(2026-08-01): the 3-voter rung and the n-VOTER loop law
+(`GoldenQuorum.wp_ci_loop`, arbitrary voter list and acked function) are
+proven, and the remaining obligations are stated precisely in the arc
+build log — the general-`n` fit test (both branches), the general-`n`
+`sortSlice` transition and the `sortAsc`-vs-`mergeSort` agreement, and
+the bridge from `EncodesConfig`/`EncodesAcked` to `cfgSnapshot`/`hlook`.
+It remains the arc's exit criterion. -/
 def committedIndexAllConfigs_statement : Prop :=
   ∀ (c : List Nat) (acked : Nat → Option Nat)
     (ce ae : Array (GoValue × GoValue)) (cty lty : Option Ty)
@@ -250,7 +256,14 @@ index.
 
 `6` is `committedIndexRef [1,2,3] ackedThreeAll` (`rfl`, above), so this
 discharge plus `committedIndexRef_meets_spec` yields `IsCommittedIndex`,
-exactly as `quorumOneKnownMeetsSpec` packages the n = 1 rung. -/
+exactly as `quorumOneKnownMeetsSpec` packages the n = 1 rung.
+
+**DISCHARGED 2026-08-01** (phase 3) by
+`Specs/GoldenQuorumThree.quorumThreeAllFuncSpec`, whose type IS this def
+— that application is the statement-identity check, so weakening the
+statement to fit the proof would break this file. The declarative
+restatement is `quorumThreeAllMeetsSpec`. This def is left exactly as
+written. -/
 def quorumThreeAllFuncSpec_statement : Prop :=
   GoFuncSpec quorumLowered.typeDefs.toList quorumLowered.funcs
     quorumLowered.methods ⟨"committedThreeAll"⟩ .uint64 #[] .emp
@@ -267,8 +280,9 @@ says the same): `GoTriple` quantifies over TERMINATING runs, so both the
 terminating run. Refuting this needs a terminating run EXHIBITED — a
 kernel evaluation of the interpreter over the pinned program. The
 cheap, honest twin is the run-conditioned one
-(`quorumOneKnownNotEleven`'s shape), which phase 3 should land beside the
-positive result. -/
+(`quorumOneKnownNotEleven`'s shape), which phase 3 landed beside the
+positive result: `Specs/GoldenQuorumThree.quorumThreeAllNotTwelve`. This
+def stays a TARGET and no theorem names it. -/
 def quorumThreeAllNotTwelve_statement : Prop :=
   ¬ GoFuncSpec quorumLowered.typeDefs.toList quorumLowered.funcs
       quorumLowered.methods ⟨"committedThreeAll"⟩ .uint64 #[] .emp

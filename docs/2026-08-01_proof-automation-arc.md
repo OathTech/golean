@@ -433,3 +433,198 @@ rider items.
   still open. (iii) Nothing in the tactic knows about `k`-ary anything —
   the 3-voter rung's cost is the invariant and the resource split, both
   already human territory.
+
+- 2026-08-01: **phase 3, part 1 — THE 3-VOTER THEOREM, and the n-voter
+  loop law.** `quorumThreeAllFuncSpec` discharges the phase-0 target
+  `quorumThreeAllFuncSpec_statement`: etcd's own `majority_commit.txt`
+  row — `committedThreeAll()` over `MajorityConfig{1,2,3}` with
+  `mapAckIndexer{1:12, 2:5, 3:6}` — returns `6` over the PINNED lowering,
+  at `GoFuncSpec` strength, with the declarative restatement
+  `quorumThreeAllMeetsSpec` (`IsCommittedIndex [1,2,3] ackedThreeAll`),
+  the first-order readout `quorumThreeAllReturnsSix` and the
+  run-conditioned negative twin `quorumThreeAllNotTwelve` (at `12`, the
+  largest acked index). New file: `Specs/GoldenQuorumThree.lean` (1457
+  lines) plus `Laws/Values.lean` (245).
+
+  **THE POINT OF THE EXERCISE, MET: no iteration order is enumerated
+  anywhere.** At n = 3 the map range has `3! = 6` orders. The whole range
+  is discharged by `GoldenQuorum.wp_ci_loop` — stated for an ARBITRARY
+  voter list `ks₀` and an ARBITRARY acked function `ack`, i.e. it is the
+  **n-voter** law, not the 3-voter one — through
+  `Laws/Range.wp_map_iter_inv`, with ONE generic-iteration obligation
+  (`wp_ci_range_body`).
+
+  **INVARIANT DESIGN 1 — the range.** Over the remaining snapshot `rem`:
+
+  ```
+  ∃ ks filled,
+    ⌜rem = cfgSnapshot ks ∧ (∀ x ∈ ks, x ∈ ks₀)
+      ∧ ((ks.map ack) ++ filled).Perm (ks₀.map ack)⌝
+    ∗ l ↦ … ∗ lData ↦ … ∗ srt ↦ … ∗ i ↦ ⟨int, ks.length - 1⟩
+    ∗ stk ↦ stkArr ks.length filled trail
+  ```
+
+  Three decisions, each forced:
+  1. **`ks`, a LIST of the voters still to come, not a set.**
+     `Array.eraseIdx` preserves order, so `rem` is always
+     `cfgSnapshot ks` for the corresponding `ks`, and one step is exactly
+     `ks ↦ ks.eraseIdx i` (`cfgSnapshot_eraseIdx`). A set would have
+     needed a reachability relation the rule deliberately does not have.
+  2. **ONE `List.Perm` carries the whole order-insensitivity.** "What is
+     still to come (`ks.map ack`) plus what has been written (`filled`)
+     is the full multiset" — and NOTHING says in which order `filled` was
+     built, which is the honest state of affairs. The step lemma is
+     `perm_eraseIdx_append` (`(l.eraseIdx i) ++ (l[i] :: t) ~ l ++ t`).
+     The alternative — a disjunction over reachable states — is 16
+     disjuncts at n = 3 and factorial in general; this is one line.
+  3. **`i` is pinned to `ks.length - 1`**, the slot the NEXT write
+     targets. That is what turns the body's `srt[i] = …` into a
+     POSITIONAL write at a prefix length, which is the shape
+     `Laws/Values.arraySet_middle` handles at a symbolic index.
+
+  **INVARIANT DESIGN 2 — the sort.** After the loop `ks = []`, so the
+  scratch array holds an arbitrary permutation of `[12, 5, 6]`: the
+  contents are genuinely undetermined and no invariant can determine
+  them. `Laws/Values.mergeSort_eq_of_perm` says `List.mergeSort` returns
+  the SAME list on every permutation of its input (given transitivity,
+  totality, and antisymmetry ON THE ELEMENTS PRESENT), and
+  `mergeSort_intKind_eq_of_perm` instantiates that at the machine's own
+  comparison `fun a b => a.1 ≤ b.1` over `(Int × IntKind)` — a relation
+  that is NOT globally antisymmetric, which is exactly why the
+  antisymmetry hypothesis is membership-restricted. So `slices.Sort`'s
+  transition is computed once and the six orders never reach
+  `applyStmtOp`. After it the array is the literal `[5,6,12,0,0,0,0]` and
+  the rest of the tail (`pos = 3 - (3/2+1) = 1`, `srt[1] = 6`) is
+  ordinary walking.
+
+  **NEW GENERAL LAWS/LEMMAS.** `Laws/Values.lean` — entirely
+  target-free, no program/lowering/config/acked value in any statement:
+  `list_map_eraseIdx`, `list_getElem?_middle`, `list_set_middle`;
+  `arraySet_middle`/`arraySet_middle'` and `arrayGet_middle`/`_middle'`
+  (the machine's positional read/write at index `pre.length` of
+  `pre ++ x :: rest` — what a right-to-left fill loop needs when the
+  index is a variable); `normalizeArrayForTy_int` and
+  `normalizeValueForTy_intArray` (an array of already-normalized ints of
+  one kind normalizes to itself, at ANY fuel and ANY state — without this
+  a store into a SYMBOLIC array is unreachable, since `simp` can only
+  compute `normalizeArrayForTy` on a literal); `int_normalize_of_range`
+  (the signed half of `Laws/Range.int_normalize_of_nonneg_lt`, needed
+  because the fill index reaches `-1`); `eq_of_perm_of_pairwise`,
+  `mergeSort_eq_of_perm`, `mergeSort_intKind_eq_of_perm`.
+  In `Specs/GoldenQuorumThree.lean`: `cfgSnapshot`/`stkArr`/`stkCell`
+  and their lemmas, `perm_eraseIdx_append`, `sliceIndexLoc_base`, and
+  **`storeLoc_stk_fill`** — one iteration of `majority.go`'s
+  right-to-left fill as a store fact, general in the backing array's
+  length, the number of unwritten slots, the values already written and
+  the untouched tail.
+
+  **TWO SPEC-SURFACE GENERALIZATIONS, both with the old statement kept.**
+  `wp_map_lookup_ackedIndex` and `wp_ackedIndex_body` were stated for a
+  ONE-ENTRY receiver map — an artefact of the n = 1 walk, not a property
+  of Go. Both now have general forms (`…_entries`) over an ARBITRARY
+  entry array with the lookup's answer as a `hpair` premise (exactly
+  `wp_map_lookup`'s, so no new obligation shape), and the one-entry forms
+  are DERIVED from them with their statements byte-identical, via the new
+  general `mapLookupValue_singleton`. `wp_ackedIndex_body_entries` also
+  hands the receiver's DATA cell back to its continuation — the n = 1
+  version dropped it affinely, which is fine when there is no next
+  iteration and fatal when there is.
+
+  **A `go_walk` FINDING, worth recording** (it cost an hour and it will
+  recur). A law registered `@[go_walk_law]` whose premise is a
+  state-quantified SEMANTIC fact gets fired by `go_walk_side`'s
+  `assumption` whenever that fact happens to sit in the ambient Lean
+  context — so the widened `wp_map_lookup_ackedIndex` started firing
+  inside `wp_ackedIndex_body`, the walk ran past the statement the human
+  meant to take by hand, and the failure surfaced as a heartbeat timeout
+  several steps later. **Rule adopted: a general law with a human-supplied
+  semantic premise stays OUT of the table** (as `wp_map_iter_inv` already
+  does); what gets registered is a specialization all of whose premises
+  are `rfl`/pin facts. That also restores the intended behaviour at the
+  general law's own use site: the registered one-entry law matches, fails
+  to FRAME its `{q ↦ v}` data cell against an arbitrary `entries`, and
+  the boundary rule stops the walk exactly where the general law is
+  handed over.
+
+  **GOOSE/PERENNIAL COMPARISON** (verbatim citations). The range-rule
+  comparison is unchanged (`wp_map_for_range`,
+  `deps/perennial/new/golang/theory/map.v:213`); what this rung adds is
+  the *use*. Their invariant is `P keys i` — indexed by a key ORDER
+  committed to up front (`∀ keys, ⌜list_to_set keys = dom m ∧ length keys
+  = size m ∧ NoDup keys⌝`, :215-217) and a POSITION in it. A proof whose
+  final obligation is order-INSENSITIVE (ours: the array's contents
+  depend on the fill order, the ANSWER does not) must therefore carry the
+  order to the end and quotient it there; our `List.Perm` invariant
+  quotients it at the start. That is a proof-engineering difference, not
+  a strength claim — their `P keys i` can express order-DEPENDENT
+  invariants ours cannot state at all. Second, honestly: **Perennial has
+  no model of `slices.Sort`** — `grep -rn "sort" deps/perennial/new/golang/theory/*.v`
+  is empty — so the order-blind-sort lemma has no counterpart there to
+  compare against; and they handle `break`/`continue`/`return` in ranges
+  via `for_map_postcondition` (`map.v:207`) where we still do not (the
+  v1 narrowing recorded in phase 1, unchanged).
+
+  **OVER-SPECIALIZATION CHECK, per new law (standing item).**
+  `Laws/Values.lean`: TARGET-FREE by inspection — every statement
+  quantifies over the list/array/kind/comparison and no program name,
+  lowering, config or acked value occurs. `storeLoc_stk_fill`,
+  `sliceIndexLoc_base`, `stkArr`/`stkCell`: about a fill loop over an
+  array of any length at any position; no `7`, no `3`, no voter. The two
+  WALK laws `wp_ci_range_body` and `wp_ci_loop` DO name the pinned
+  lowering's statements — they are walks OF the target and cannot avoid
+  that — but their DATA is fully quantified: arbitrary voter id,
+  arbitrary acked index and snapshot, arbitrary scratch-array shape and
+  backing length, arbitrary voter list and acked function. **No voter
+  count, no config, no acked value and no `n` occurs in either
+  statement**; the 3-voter numbers first appear at
+  `wp_committedIndex_body_three`. This was deliberate and is the reason
+  `wp_ci_loop` is reusable for ∀-config as it stands.
+
+  **SCOPE, STATED HONESTLY — the ∀-config theorem did NOT land.**
+  `committedIndexAllConfigs_statement` remains a target. This is the
+  arc plan's recorded fallback line, taken deliberately, with the
+  remaining obligations named precisely rather than hand-waved:
+  1. **The fit test at general `n`.** `wp_ci_fitIf_three` is the n = 3
+     reslice instance; ∀-config needs BOTH branches — the reslice at
+     `n ≤ 7` (a `checkSliceBounds`/`sliceFromArray` computation at a
+     symbolic `n`) and the `make([]uint64, n)` allocation at `n > 7`
+     (`wp_make_slice` exists and is witnessed on that branch, but no
+     composed walk goes through it).
+  2. **The tail at general `n`.** `wp_ci_tail_three` computes the
+     machine's `sortSlice` transition on a 3-slot window by unrolling
+     `for i in [:slice.len]`. At symbolic `n` that unrolling is not
+     available, so a GENERAL characterization of `applyStmtOp`'s
+     `sortSlice` is owed: "loading `n` normalized ints, mergeSorting and
+     storing back replaces the first `n` slots by the sorted image". Then
+     the readout needs `mergeSort`-vs-`sortAsc` AGREEMENT — both sort the
+     same multiset and both are sorted, so `eq_of_perm_of_pairwise` (in
+     hand) closes it, but the `sortAsc` side must be lifted from
+     `List Nat` (`Specs/QuorumRefSpec.lean`) to the machine's `Int`
+     values. Finally `pos = n - (n/2+1)` must be shown to be the index
+     `committedIndexRef` reads, at symbolic `n` — the arithmetic
+     `quorumSize` already states.
+  3. **The encoding bridge.** `EncodesConfig ce c` says the snapshot's
+     keys are exactly `c`'s ids IN SOME ORDER; the loop law consumes
+     `cfgSnapshot ks`. A lemma turning the former into "`ce = cfgSnapshot ks`
+     for some permutation `ks` of `c`" is owed, and likewise
+     `EncodesAcked ae acked` ⟹ the `hlook` premise. Neither looks hard;
+     both are unwritten.
+  4. **The `GoSpec` shell.** The ∀-config target is stated as the
+     `GoSpec` at the METHOD with a heap-carried receiver (design (a),
+     phase 0), so its discharge needs the caller-environment frame entry
+     that `GoFuncSpec2` has and unary `GoFuncSpec` does not — the
+     `GoFuncSpec`-with-`argEnv` widening already recorded as OWED at the
+     target.
+  None of this is blocked on a missing idea; all of it is unwritten Lean.
+  The n-voter loop law — the piece the arc plan called "the one that
+  makes ∀-config reachable at all" — is done.
+
+  **Gate**: `scripts/ci` PASS. Proofs build + in-build `Audit` sweep
+  (6417 declarations, all axiom-clean; new `#guard_msgs` pins on
+  `quorumThreeAllFuncSpec`, `quorumThreeAllMeetsSpec`,
+  `quorumThreeAllReturnsSix`, `quorumThreeAllNotTwelve`, `wp_ci_loop`,
+  `wp_ci_range_body`, `mergeSort_eq_of_perm`, `arraySet_middle`,
+  `storeLoc_stk_fill`). `quorumOneKnownFuncSpec`'s statement and axiom
+  set are UNCHANGED by the two spec-surface generalizations, which is the
+  same acceptance shape phase 2 used. No runtime code was touched (proofs
+  only), so no baseline re-pin and no `--diff` re-run is owed.

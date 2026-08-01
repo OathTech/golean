@@ -75,6 +75,8 @@ so the record starts honest rather than aspirational.
 | `quorum/committed-index-real` (same pin) | `GoLean.Surface.quorumAckedIndexFuncSpec2` | **W1 PAID — the first multi-result function spec.** `main.mapAckIndexer.AckedIndex` on a concrete one-entry receiver, at `GoFuncSpec2` strength over the pinned lowering: the caller's two cells receive `(12, true)`, in any admissible heap, beside any frame. Stresses the whole two-result protocol end to end — the two-target/two-argument call operand walk (`wp_call_target_next`/`targets_done_arg`/`arg_next`), the STATIC 2-param/2-result frame entry (`wp_call_enter₂` + witness `wp_call_enter_ackedIndexImpl`), `wp_init` at the DEFINED type `main.Index`, the comma-ok read, two stores at a defined type, and the TWO-result frame EXIT (`wp_frame_return₂` on the new `wp_read₂_store₂_step` core). Vacuity guard same commit: `quorumAckedIndexPre_satisfiable`. Landed 2026-07-31 (phase-4 slice 5); the phase-0 statement it replaces was FALSE (arity-stuck), which is recorded at the statement. |
 | `quorum/committed-index-real` (same pin) | `GoLean.Quorum.isCommittedIndex_oneKnown` | the MATH half of the tier-1 claim on the one-voter instance: `committedIndexRef [1] ackedOneKnown = 12` (`rfl`) upgraded to the declarative `IsCommittedIndex` by the proven `committedIndexRef_meets_spec`, with the negative twin at 11. **The machine half is now PAID** — see the row below. |
 | `quorum/committed-index-real` (same pin) | `GoLean.Surface.quorumOneKnownFuncSpec` / `quorumOneKnownMeetsSpec` | **THE ARC'S NAMED GOAL, PAID (2026-07-31, phase-4 summit).** `committedOneKnown()` — the pinned lowering of the real etcd-io/raft driver — returns `12` at `GoFuncSpec` strength, and the same discharge restated with the DECLARATIVE quorum spec as its postcondition (`IsCommittedIndex [1] ackedOneKnown n.toNat`). The walk (`wp_oneKnownCall → wp_oneKnown_body → wp_run_body → wp_committedIndexCall → wp_committedIndex_body`) crosses: two `make(map…)`s that ALLOCATE inside the apply step and two `m[k]=v` writes, three frame entries at two arities, `len(c)` on a named map type, `var stk [7]uint64` and its reslice `stk[:n]`, the NONDETERMINISTIC map range, interface dynamic dispatch, comma-ok, a store THROUGH a slice index into the backing array, `slices.Sort`, and the `n - (n/2+1)` readout. First-order readout `quorumOneKnownReturnsTwelve` + run-conditioned negative twin `quorumOneKnownNotEleven`. **Scope: n = 1** (degenerate range nondeterminism, reslice branch); the 3-voter widening is owed. |
+| `quorum/committed-index-real/three-all` (same pin) | `GoLean.Iris.wp_map_iter_inv` (applied) / `GoLean.Iris.GoldenQuorum.wp_ci_loop` | **the n-VOTER voter loop, order-insensitively.** `wp_ci_loop` walks `var i int; i = n-1; for id := range c { … }` for an ARBITRARY voter list and an ARBITRARY acked function, discharging the whole nondeterministic range through the inductive range rule with the invariant `∃ ks filled, ⌜rem = cfgSnapshot ks ∧ ks ⊆ ks₀ ∧ (ks.map ack ++ filled) ~ ks₀.map ack⌝ ∗ …` — one `List.Perm` carrying the entire order-insensitivity. Its body obligation `wp_ci_range_body` is one iteration at an arbitrary voter, arbitrary acked snapshot and arbitrary scratch-array shape, writing at a SYMBOLIC index (the first such walk in the project). Landed 2026-08-01, proof-automation arc phase 3. |
+| `quorum/committed-index-real/three-all` (same pin) | `GoLean.Surface.quorumThreeAllFuncSpec` / `quorumThreeAllMeetsSpec` | **THE 3-VOTER RUNG, PAID (2026-08-01, proof-automation arc phase 3).** etcd's own `majority_commit.txt` row — `committedThreeAll()` over `MajorityConfig{1,2,3}` with `mapAckIndexer{1:12, 2:5, 3:6}` — returns `6` at `GoFuncSpec` strength, restated with the declarative spec (`IsCommittedIndex [1,2,3] ackedThreeAll`). What n = 1 could not test and this does: the map range has `3! = 6` iteration orders and NONE is enumerated (one generic iteration + the permutation invariant); `slices.Sort` does real work over an array whose contents are known only as a MULTISET, collapsed by `mergeSort_eq_of_perm`; and `pos = n - (n/2+1)` lands at a nonzero index (1), so the readout is the middle element, not the only one. First-order readout `quorumThreeAllReturnsSix` + run-conditioned negative twin `quorumThreeAllNotTwelve` (at `12`, the largest acked index). **Owed from this rung:** the `make([]uint64, n)` fit branch (still witness-only), the general-`n` sort/readout, and the ∀-config theorem itself. |
 
 
 **Owed, in ladder order** (each becomes an entry when its rung lands; a
@@ -94,11 +96,16 @@ block on it):
 - ~~NEW (2026-07-31): the quorum DRIVER walk~~ — **PAID 2026-07-31**
   (`quorumOneKnownFuncSpec`, manifest row above). The residue it leaves,
   recorded rather than dropped:
-  - **the 3-VOTER walk.** At `n = 1` the map range's nondeterminism is
-    degenerate (one iteration order), the sort is over a one-element
-    window, and `pos = n - (n/2+1)` is `0`. Three voters make all three
-    bite — this is the next widening and the one that tests whether the
-    `∀ i` range law composes when the order genuinely varies.
+  - ~~**the 3-VOTER walk.**~~ **PAID 2026-08-01** (`quorumThreeAllFuncSpec`,
+    manifest row above). It did test what it was predicted to test: the
+    range law composes when the order genuinely varies (one generic
+    iteration, no order enumerated), the sort needed a NEW general fact
+    (`mergeSort_eq_of_perm` — the machine's sort is order-blind) because
+    the array contents are determined only as a multiset, and
+    `pos = n - (n/2+1)` at a nonzero index made the readout a real
+    selection. Residue: the general-`n` sort and readout (the machine's
+    `sortSlice` at a symbolic length is not yet characterized), and the
+    `∀`-config theorem.
   - **the `make([]uint64, n)` branch of the fit test**, exercised only by
     the law witness (`wp_make_slice_c2`), not by a composed walk.
   - **the unconditional negative twin**
