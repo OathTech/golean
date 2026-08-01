@@ -114,10 +114,22 @@ Specs/* is target — with known debt:
 ## Close-out checklist (this arc)
 
 1. Move general laws out of `QuorumOps.lean`; layer map documented.
-2. Statement-TCB gate + widened surface-purity scan (above); the
-   gate's designated-theorem list doubles as the Comparator Challenge
-   module (build it; wire an invocation script; binaries pending
-   user fetch).
+2. Statement-TCB gate + widened surface-purity scan (above).
+
+## The Comparator sprint (DEFERRED post-merge — user decision 2026-08-01)
+
+Comparator integration is its OWN short focused sprint after this
+arc merges, not a close-out item: reify the statement-TCB gate's
+designated-theorem list as the Challenge module (sorry-bodied, in the
+gated Iris-free closure); wire the config + fresh-clone wrapper
+script; validate the landrun/systemd-run invocation paths (an
+UNSANDBOXED agent does the setup/mechanics portion — it has network
+and can exercise systemd-run; the golean loop lands the tracked
+artifacts). Prerequisites already in place: deps/comparator @ the
+v4.31.0-toolchain commit fd2e25d, deps/lean4export built @ v4.31.0,
+landrun installed (profile draft v1.5.0 grants $HOME/go/bin, pending
+promote); remaining fetch: comparator's Lake deps (one outside-sandbox
+`lake build`), optional nanoda.
 3. Both doctrines as named dimensions in the final pre-merge audit
    (alongside semantics / vacuity / over-specialization /
    gate-honesty): "is any top-level statement's meaning dependent on
