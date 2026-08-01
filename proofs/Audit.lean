@@ -204,6 +204,10 @@ open Lean in
 #guard_msgs in #print axioms GoLean.Surface.quorumOneKnownReturnsTwelve
 /-- info: 'GoLean.Surface.quorumOneKnownNotEleven' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Surface.quorumOneKnownNotEleven
+/-- info: 'GoLean.Iris.wp_map_iter_inv' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.wp_map_iter_inv
+/-- info: 'GoLean.Iris.wp_map_iter_inv_key_sum_witness' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.wp_map_iter_inv_key_sum_witness
 /-- info: 'GoLean.Iris.GoldenQuorum.wp_committedIndex_body' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Iris.GoldenQuorum.wp_committedIndex_body
 /-- info: 'GoLean.Iris.GoldenQuorum.wp_oneKnownCall' depends on axioms: [propext, Classical.choice, Quot.sound] -/
@@ -488,6 +492,95 @@ example := @GoLean.Iris.GoldenSlice.wp_call_inc_stmt
 example := @GoLean.Iris.GoldenSlice.wp_incViaCall_body
 example := @GoLean.Iris.GoldenSlice.wp_goldenCall
 example := @GoLean.Iris.GoldenSlice.wp_goldenCall_inv
+/-- `✓` **THE INDUCTIVE RANGE RULE** (proof-automation arc phase 1,
+2026-08-01). `wp_map_iter_inv` — the loop-invariant rule for the
+NONDETERMINISTIC key-only map range, and the piece that makes k-voter
+(and eventually ∀-config) quorum proofs reachable at all: ONE
+generic-iteration obligation over an arbitrary remaining snapshot and an
+arbitrary pick, plus an invariant, in place of the `k!` pick orders
+`wp_map_iter_next_key` alone would force. Proven by ordinary Nat
+induction on `remaining.size` (the snapshot strictly shrinks, so no Löb
+is needed — the deterministic analogue `wp_while_inv` does need it).
+
+STATEMENT IS TARGET-FREE (standing over-specialization check): key
+variable, key/value types, body, snapshot, environment, continuation and
+invariant are all law variables; no quorum name, value or program
+fragment appears. RECORDED v1 narrowings, with widening paths in the
+law's docstring: key-only iteration (inherited from
+`wp_map_iter_next_key`), and normally-completing bodies only —
+`break`/`continue` bodies cannot discharge the body premise (a
+completeness scope, not a soundness side-condition; `continue` needs one
+pure-step law, `break` needs a second exit wand).
+
+TWO WITNESSES, per the arc's explicit requirement that the FIRST one be
+non-quorum:
+
+* `wp_map_iter_inv_key_sum_witness` — `for k := range m { sum = sum + k }`
+  over an ARBITRARY snapshot of nonnegative `int` keys, with the
+  invariant "`sum` holds the total of the entries consumed so far". Its
+  guardrail is the corpus case `range/range-map-key-sum` (differential
+  PASS, added in the same commit); the body term in the witness is
+  HAND-BUILT and says so — it is evidence the premises are jointly
+  satisfiable by a real program shape, not a claim about a lowering.
+* the QUORUM instance, not a separate theorem but a REWIRING: the n = 1
+  summit's voter loop (`wp_ci_loop_one`) now discharges its range
+  segment THROUGH this rule, with the body obligation extracted as
+  `wp_ci_range_body_one` and an invariant naming the reachable snapshots
+  (`#[voter 1]` before, `#[]` after). `quorumOneKnownFuncSpec`'s
+  statement and axiom set are unchanged by the rewiring — which is
+  exactly the acceptance shape phase 2 will need for `go_walk`. -/
+example := @GoLean.Iris.wp_map_iter_inv
+example := @GoLean.Iris.wp_map_iter_inv_key_sum_witness
+example := @GoLean.Iris.keyIntSum_eraseIdx
+example := @GoLean.Iris.keyIntSum_nonneg
+example := @GoLean.Iris.int_normalize_of_nonneg_lt
+example := @GoLean.Iris.mapIterInvRule
+/-- `◌` **The proof-automation arc's phase-0 TARGETS** — stated, not
+proven, and that is their job (`Specs/AutomationTargets.lean`):
+
+* `committedIndexAllConfigs_statement` — THE GOAL: for every config and
+  acked map, and every heap snapshot pair ENCODING them
+  (`EncodesConfig`/`EncodesAcked`), the pinned lowering of the real
+  `main.MajorityConfig.CommittedIndex` satisfies `IsCommittedIndex`.
+  Nothing bounds `c.length`, so it covers both sides of
+  `if len(stk) >= n`. The design decision behind the shape (encode the
+  INPUTS in the heap and speak about the METHOD, rather than quantify
+  over a synthesized driver family) is recorded in the module docstring
+  and the arc build log.
+* `quorumThreeAllFuncSpec_statement` + `quorumThreeAllNotTwelve_statement`
+  — the 3-voter rung and its negative twin (the twin carries the same
+  honesty note as `quorumOneKnownNotEleven_statement`: an unconditional
+  refutation needs a terminating run exhibited, so it is a target, not a
+  corollary).
+
+Non-vacuity of the TARGETS themselves is pinned in the same file: an
+encoding is exhibited (`encodesConfig_three`), the value the 3-voter rung
+must produce is computed (`committedIndexRef_threeAll`, `rfl`) and
+upgraded to the spec (`isCommittedIndex_threeAll`) with two negative
+twins; and the shape traps that made an earlier statement FALSE rather
+than unproven are pinned by `rfl` against the lowering
+(`committedIndex_arity_in_pin`, `committedIndex_types_in_pin` —
+the arity mismatch class of the first `GoFuncSpec2` statement).
+
+`summitStatement_pinned`/`summitStatement_holds` are the phase-2
+ACCEPTANCE criteria as checkable facts: the `go_walk` re-derivation must
+inhabit the SAME statement, and the axiom gate above must still read the
+classical trio. No line-count assertion is encoded — a budget is not a
+correctness property. -/
+example := @GoLean.Quorum.committedIndexAllConfigs_statement
+example := @GoLean.Quorum.encodesConfig_three
+example := @GoLean.Quorum.committedIndexRef_threeAll
+example := @GoLean.Quorum.isCommittedIndex_threeAll
+example := @GoLean.Quorum.not_isCommittedIndex_threeAll_12
+example := @GoLean.Quorum.not_isCommittedIndex_threeAll_5
+example := @GoLean.Surface.quorumThreeAllFuncSpec_statement
+example := @GoLean.Surface.quorumThreeAllNotTwelve_statement
+example := @GoLean.Surface.committedThreeAll_in_pin
+example := @GoLean.Surface.committedIndex_arity_in_pin
+example := @GoLean.Surface.committedIndex_types_in_pin
+example := @GoLean.Surface.summitStatement_pinned
+example := @GoLean.Surface.summitStatement_holds
+example := @GoLean.Iris.GoldenQuorum.wp_ci_range_body_one
 /-- `✓` the negative pins (trivialization guards). -/
 example := @GoLean.GoCore.NegativeSpecs.unbound_ref_stuck
 example := @GoLean.GoCore.NegativeSpecs.unbound_var_stuck

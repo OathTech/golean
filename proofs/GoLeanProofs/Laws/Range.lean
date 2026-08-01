@@ -269,6 +269,382 @@ theorem wp_map_iter_next_key_defined_key_witness {kid : String}
         normalizeValueForTyFuel, hty, TypeEnv.lookup, typeResolutionFuel,
         show IntKind.uint64.normalize 7 = 7 from by decide])
 
+/-! ## THE INDUCTIVE RANGE RULE (proof-automation arc phase 1, 2026-08-01)
+
+`wp_map_iter_next_key` discharges ONE iteration and leaves a WP over the
+shrunk snapshot; a k-entry range walked with it alone costs k! branches
+(one per pick order), which is why the n = 1 summit could be walked by
+hand and n = 3 could not. `wp_map_iter_inv` is the loop-invariant rule
+that collapses that: ONE generic-iteration obligation over an arbitrary
+remaining snapshot and an arbitrary pick, plus the invariant at entry
+and exit.
+
+It is the NONDETERMINISTIC analogue of `wp_while_inv` (`Laws/Loop.lean`),
+and the shapes deliberately match: the body premise receives the
+invariant plus a wand for "the rest of the loop", the conclusion consumes
+the invariant at entry and hands the exit continuation the invariant at
+the end. Two differences, both forced by the construct:
+
+* the invariant is indexed by the REMAINING SNAPSHOT
+  (`I : Array (GoValue × GoValue) → IProp`), not by a condition bit —
+  the range's "how much is left" is data, not a Boolean;
+* the induction is ORDINARY NAT INDUCTION on `remaining.size`, not Löb.
+  The snapshot strictly shrinks at every `mapIterNext` (`eraseIdx`), so
+  the loop is structurally terminating and needs no step-index; the
+  `▷` that `wp_while_inv` spends its Löb hypothesis on is spent here by
+  `wp_map_iter_next_key`'s own lifting.
+
+Scope, RECORDED (v1):
+
+* **key-only** (`for id := range c`), inherited from
+  `wp_map_iter_next_key`; the key/value form lands with the law it needs.
+* **normally-completing bodies only.** A body that `break`s or
+  `continue`s cannot discharge `Hbody`: `Step.mapIterBreak` takes
+  `.breaking (mapIterK …)` to `Config.next k` and
+  `Step.mapIterContinue` takes `.continuing (mapIterK …)` back to
+  `Config.next (mapIterK …)`, and the only exit `Hbody` is handed is the
+  normal one (the shrunk `mapIterK`). This is a completeness scope, NOT
+  a soundness side-condition — the rule is sound for any body; bodies
+  with `break`/`continue` simply have no route through this premise.
+  `continue` is the cheap widening (its target IS the normal one, so it
+  needs only a `wp_map_iter_continue` pure-step law); `break` needs the
+  rule to carry a second, break-time exit wand `∀ rem, I rem -∗ WP
+  (Config.next k)`. Both are owed, neither is needed by the walks in
+  flight.
+* the per-iteration KEY CELL is the body's, affinely: `Hbody` receives
+  `pa.id ↦ ⟨keyTy, key⟩` fresh at every iteration and is NOT asked to
+  give it back, so `I` never mentions it. That is the honest model of
+  the machine — `bindIterVars` allocates a NEW cell per iteration and
+  nothing ever frees it — and it is what keeps `I` a function of the
+  snapshot alone.
+
+`Hbody` quantifies over EVERY array `rem`, not only over the snapshots
+reachable from `entries` by erasure. That is not a strengthening of the
+user's obligation in practice: `I rem` is an ANTECEDENT there, so an
+invariant that carries its own reachability fact (⌜`rem` is a
+sub-multiset of `entries`⌝, or an explicit disjunction over the
+snapshots that can occur) discharges the unreachable instances from a
+false hypothesis. The alternative — indexing the premise by a
+reachability relation — buys nothing and costs a relation.
+
+**Goose/Perennial comparison** (standing generality check). The prior art
+is `wp_map_for_range` in `deps/perennial/new/golang/theory/map.v:213`
+(with `wp_InternalMapForRange` at :24 and the `wp_for` family in
+`theory/loop.v:71`). Read verbatim, its shape is: own the map
+(`mref ↦{dq} m`), then quantify ONCE over an arbitrary key ORDER
+(`∀ keys, list_to_set keys = dom m ∧ length keys = size m ∧ NoDup keys`)
+and give an invariant `P keys i` indexed by that order and a POSITION in
+it, with a `□`-boxed one-iteration obligation from `P keys i` to
+`P keys (i+1)` and an exit from `P keys (size m)`. Four honest deltas:
+
+1. **Where the nondeterminism is quantified.** Theirs is up-front: the
+   model produces one key list and the proof then walks it in order.
+   Ours is per-step — `Step.mapIterNext` picks ANY remaining index at
+   EVERY step, and the body premise is discharged for an arbitrary pick
+   each time. Our conclusion therefore covers interleavings a
+   commit-to-a-list-first model cannot express; this is the direction the
+   standing check calls fine (we may cover more).
+2. **Invariant indexing.** `P keys i` (order + position) vs our
+   `I remaining` (the multiset still to come). Same information given a
+   fixed `entries`, but ours is what `Cont.mapIterK` already carries, so
+   no ghost order needs to be introduced or maintained.
+3. **Body reuse.** Their `□` is our Lean-level `∀`-quantified entailment
+   premise — reusable for free, exactly as recorded for `wp_while_inv`.
+4. **`break`/`continue`/`return`.** Theirs handles all three through
+   `for_map_postcondition` (`map.v:207`) and the exception monad
+   (`defn/exception.v`); ours v1 handles normal completion only. This is
+   a real NARROWING, recorded above with its widening path — the failure
+   direction the standing check names, acknowledged rather than hidden.
+
+One further difference, not a generality claim: their rule takes map
+ownership and reads the live map, while ours consumes the SNAPSHOT the
+machine took at range entry. That is BUG-005 (`docs/BUGS.md`), already
+cross-referenced in this module's header, and it is a semantics gap, not
+a proof-rule gap. -/
+theorem wp_map_iter_inv {kid : String} {keyTy valTy : Ty} {body : Stmt}
+    {entries : Array (GoValue × GoValue)} {env k}
+    {I : Array (GoValue × GoValue) → IProp GF}
+    (hnorm : ∀ (σ : ExecState), σ.types = GoCoreGS.types GF →
+      ∀ p ∈ entries, normalizeValueForTy σ keyTy p.1 = .ok p.1)
+    (Hbody : ∀ (rem : Array (GoValue × GoValue)) (i : Nat) (h : i < rem.size)
+        (pa : Addr),
+      iprop(I rem
+        ∗ pa.id ↦ (⟨some keyTy, (rem[i]'h).1⟩ : HeapCell)
+        ∗ (I (rem.eraseIdx i h) -∗
+            WP (Config.next (.mapIterK (some kid) none keyTy valTy body
+                  (rem.eraseIdx i h) env k)) @ s ; E {{ Φ }}))
+      ⊢ WP (Config.exec body (env.pushScope.declare kid (.base pa))
+              (.mapIterK (some kid) none keyTy valTy body
+                (rem.eraseIdx i h) env k)) @ s ; E {{ Φ }}) :
+    iprop(I entries ∗ (I #[] -∗ WP (Config.next k) @ s ; E {{ Φ }}))
+      ⊢ WP (Config.next (.mapIterK (some kid) none keyTy valTy body entries env k))
+          @ s ; E {{ Φ }} := by
+  -- Generalize over the snapshot and induct on a size bound: every
+  -- `mapIterNext` erases one entry, so the recursion is structural.
+  suffices hgen : ∀ (n : Nat) (rem : Array (GoValue × GoValue)), rem.size ≤ n →
+      (∀ (σ : ExecState), σ.types = GoCoreGS.types GF →
+        ∀ p ∈ rem, normalizeValueForTy σ keyTy p.1 = .ok p.1) →
+      iprop(I rem ∗ (I #[] -∗ WP (Config.next k) @ s ; E {{ Φ }}))
+        ⊢ WP (Config.next (.mapIterK (some kid) none keyTy valTy body rem env k))
+            @ s ; E {{ Φ }} from
+    hgen entries.size entries (Nat.le_refl _) hnorm
+  intro n
+  induction n with
+  | zero =>
+    intro rem hsz _
+    obtain rfl : rem = #[] := Array.eq_empty_of_size_eq_zero (Nat.le_zero.mp hsz)
+    iintro ⟨HI, Hexit⟩
+    iapply wp_map_iter_done
+    iapply fupd_intro
+    inext
+    iapply fupd_intro
+    iintro _Hcred
+    iapply Hexit $$ HI
+  | succ n ih =>
+    intro rem hsz hn
+    rcases Nat.eq_zero_or_pos rem.size with h0 | hne
+    · obtain rfl : rem = #[] := Array.eq_empty_of_size_eq_zero h0
+      iintro ⟨HI, Hexit⟩
+      iapply wp_map_iter_done
+      iapply fupd_intro
+      inext
+      iapply fupd_intro
+      iintro _Hcred
+      iapply Hexit $$ HI
+    · iintro ⟨HI, Hexit⟩
+      iapply (wp_map_iter_next_key (hne := hne)
+        (hnorm := fun σ hσ i h => hn σ hσ _ (Array.getElem_mem h)))
+      iintro %i %h %pa Hpt
+      iapply (Hbody rem i h pa)
+      isplitl [HI]
+      · iexact HI
+      isplitl [Hpt]
+      · iexact Hpt
+      iintro HI'
+      iapply (ih (rem.eraseIdx i h)
+        (by rw [Array.size_eraseIdx]; omega)
+        (fun σ hσ p hp => hn σ hσ p (Array.mem_of_mem_eraseIdx hp)))
+      isplitl [HI']
+      · iexact HI'
+      · iexact Hexit
+
+/-! ### Witness 1 for `wp_map_iter_inv` — a NON-QUORUM program
+
+Arc requirement (`docs/2026-08-01_proof-automation-arc.md` phase 1, and
+the standing over-specialization check): the inductive range rule's FIRST
+witness is not a quorum program. It is the key-only sum-over-map fold
+
+```go
+for k := range m { sum = sum + k }
+```
+
+— corpus case `range/range-map-key-sum` (differential PASS, added in this
+same commit as the guardrail). The witness runs the rule over an
+ARBITRARY snapshot `entries` of nonnegative `int` keys, with the
+invariant "`sum` holds the total of the entries already consumed"; the
+conclusion is order-independent, which is exactly what a k-entry range
+walked by `wp_map_iter_next_key` alone could not have delivered without
+k! branches.
+
+Honest scope of the witness: the body statement below is a HAND-BUILT
+GoCore term, not a projection of the frontend's lowering of that corpus
+case. It is a witness — evidence that the rule's premises are
+simultaneously satisfiable by a real program shape and that the rule
+composes with the ordinary assignment/eval laws — not a claim about any
+lowering (the pinned-lowering claims in `Specs/` are the ones that carry
+that weight). -/
+
+/-- The witness body: `sum = sum + k`, the loop body of
+`range/range-map-key-sum`. -/
+def keySumBody : Stmt := .assign (.var "sum") (.add (.var "sum") (.var "k"))
+
+/-- The int payload of a key value (0 at a non-int value — the witness's
+hypotheses rule that case out). -/
+def keyInt : GoValue → Int
+  | .int n _ => n
+  | _ => 0
+
+/-- The fold the witness's invariant tracks: the sum of a snapshot's key
+payloads. Order-independent by construction, which is what makes it a
+legitimate invariant for a nondeterministic range. -/
+def keyIntSum (a : Array (GoValue × GoValue)) : Int :=
+  (a.toList.map (fun p => keyInt p.1)).sum
+
+private theorem list_map_sum_eraseIdx {α : Type _} (f : α → Int) :
+    ∀ (l : List α) (i : Nat) (h : i < l.length),
+      ((l.eraseIdx i).map f).sum = (l.map f).sum - f (l[i]'h)
+  | _ :: t, 0, _ => by simp; omega
+  | a :: t, i + 1, h => by
+    have ih := list_map_sum_eraseIdx f t i (by simpa using h)
+    simp only [List.eraseIdx_cons_succ, List.map_cons, List.sum_cons, ih,
+      List.getElem_cons_succ]
+    omega
+  | [], _, h => absurd h (by simp)
+
+private theorem list_map_sum_nonneg {α : Type _} (f : α → Int) :
+    ∀ (l : List α), (∀ x ∈ l, 0 ≤ f x) → 0 ≤ (l.map f).sum
+  | [], _ => by simp
+  | a :: t, h => by
+    have ht := list_map_sum_nonneg f t (fun x hx => h x (by simp [hx]))
+    have ha := h a (by simp)
+    simp only [List.map_cons, List.sum_cons]
+    omega
+
+/-- Erasing one entry drops exactly its key from the fold. -/
+theorem keyIntSum_eraseIdx {a : Array (GoValue × GoValue)} {i : Nat}
+    (h : i < a.size) :
+    keyIntSum (a.eraseIdx i h) = keyIntSum a - keyInt (a[i]'h).1 := by
+  unfold keyIntSum
+  rw [Array.toList_eraseIdx]
+  exact list_map_sum_eraseIdx _ a.toList i (by simpa using h)
+
+/-- A snapshot of nonnegative keys has a nonnegative fold. -/
+theorem keyIntSum_nonneg {a : Array (GoValue × GoValue)}
+    (h : ∀ p ∈ a, 0 ≤ keyInt p.1) : 0 ≤ keyIntSum a :=
+  list_map_sum_nonneg _ a.toList (fun x hx => h x (Array.mem_def.mpr hx))
+
+/-- `int` is 64-bit two's complement; a nonnegative value below `2^63`
+rides through `IntKind.normalize` unchanged. -/
+theorem int_normalize_of_nonneg_lt {v : Int} (h0 : 0 ≤ v) (h1 : v < 2 ^ 63) :
+    IntKind.int.normalize v = v := by
+  have hmod : v % (2 : Int) ^ 64 = v := Int.emod_eq_of_lt h0 (by omega)
+  simp only [IntKind.normalize, IntKind.bits?, IntKind.signed, hmod, if_true,
+    if_neg (show ¬ (v ≥ (2 : Int) ^ (64 - 1)) by omega)]
+
+/-- **WITNESS 1 (non-quorum): `for k := range m { sum = sum + k }`.**
+Over an ARBITRARY snapshot of nonnegative `int` keys whose total fits in
+an `int`, the range leaves `sum` holding that total — for every one of
+the `entries.size!` iteration orders the machine may choose, discharged
+through `wp_map_iter_inv` by ONE generic-iteration obligation.
+
+The per-iteration key cell is used (the body reads `k`) and then dropped
+affinely, which is the rule's stated treatment of it; the invariant
+mentions only `sum` and the snapshot. -/
+theorem wp_map_iter_inv_key_sum_witness {acc : Addr} {valTy : Ty} {env k}
+    {entries : Array (GoValue × GoValue)}
+    (hkeys : ∀ p ∈ entries, ∃ m : Int, p.1 = .int m .int ∧ 0 ≤ m ∧ m < 2 ^ 63)
+    (hbound : keyIntSum entries < 2 ^ 63)
+    (hacc : LocalEnv.lookup env "sum" = some (.base acc)) :
+    acc.id ↦ (⟨some (.int .int), .int 0 .int⟩ : HeapCell)
+      ∗ (acc.id ↦ (⟨some (.int .int), .int (keyIntSum entries) .int⟩ : HeapCell)
+          -∗ WP (Config.next k) @ s ; E {{ Φ }})
+      ⊢ WP (Config.next (.mapIterK (some "k") none (.int .int) valTy keySumBody
+              entries env k)) @ s ; E {{ Φ }} := by
+  iintro ⟨Hacc, Hexit⟩
+  iapply (wp_map_iter_inv
+    (I := fun rem => iprop(∃ v : Int,
+      ⌜v = keyIntSum entries - keyIntSum rem
+        ∧ 0 ≤ keyIntSum rem ∧ keyIntSum rem ≤ keyIntSum entries
+        ∧ ∀ p ∈ rem, ∃ m : Int, p.1 = .int m .int ∧ 0 ≤ m ∧ m < 2 ^ 63⌝
+        ∗ acc.id ↦ (⟨some (.int .int), .int v .int⟩ : HeapCell)))
+    (hnorm := by
+      intro σ _hσ p hp
+      obtain ⟨m, hm, hm0, hm1⟩ := hkeys p hp
+      rw [hm]
+      simp [normalizeValueForTy, normalizeValueForTyFuel,
+        int_normalize_of_nonneg_lt hm0 hm1])
+    (Hbody := by
+      intro rem i h pa
+      iintro ⟨⟨%v, %hv, Hacc⟩, Hkey, Hk⟩
+      obtain ⟨hv0, hnn, hle, hmem⟩ := hv
+      obtain ⟨m, hm, hm0, hm1⟩ := hmem (rem[i]'h) (Array.getElem_mem h)
+      -- the fold after this iteration, and the two bounds the store needs
+      have herase : keyIntSum (rem.eraseIdx i h) = keyIntSum rem - m := by
+        rw [keyIntSum_eraseIdx h, hm]; rfl
+      have hmem' : ∀ p ∈ rem.eraseIdx i h,
+          ∃ m : Int, p.1 = .int m .int ∧ 0 ≤ m ∧ m < 2 ^ 63 :=
+        fun p hp => hmem p (Array.mem_of_mem_eraseIdx hp)
+      have hnn' : 0 ≤ keyIntSum (rem.eraseIdx i h) :=
+        keyIntSum_nonneg (fun p hp => by
+          obtain ⟨m', hm', hm0', -⟩ := hmem' p hp
+          rw [hm']; exact hm0')
+      have hsum : v + m = keyIntSum entries - keyIntSum (rem.eraseIdx i h) := by
+        omega
+      have hlo : 0 ≤ v + m := by omega
+      have hhi : v + m < 2 ^ 63 := by omega
+      rw [hm]
+      -- `sum = sum + k`
+      unfold keySumBody
+      iapply (wp_assign_start (te := .ref "sum") rfl)
+      iapply fupd_intro
+      inext
+      iapply fupd_intro
+      iintro Hc₁
+      iapply (wp_eval_ref (loc := Loc.base acc)
+        (by simp [LocalEnv.lookup, LocalEnv.declare, LocalEnv.pushScope,
+          Scope.lookup, hacc]))
+      iapply fupd_intro
+      inext
+      iapply fupd_intro
+      iintro Hc₂
+      iapply wp_assign_target
+      iapply fupd_intro
+      inext
+      iapply fupd_intro
+      iintro Hc₃
+      iapply (wp_eval_strict (op := .add) (e₁ := .var "sum")
+        (rest := [.var "k"]) rfl)
+      iapply fupd_intro
+      inext
+      iapply fupd_intro
+      iintro Hc₄
+      iapply (wp_eval_var (a := acc) (cell := ⟨some (.int .int), .int v .int⟩)
+        (by simp [LocalEnv.lookup, LocalEnv.declare, LocalEnv.pushScope,
+          Scope.lookup, hacc]))
+      isplitl [Hacc]
+      · iexact Hacc
+      iintro Hacc
+      iapply wp_strict_shift
+      iapply fupd_intro
+      inext
+      iapply fupd_intro
+      iintro Hc₅
+      iapply (wp_eval_var (a := pa) (cell := ⟨some (.int .int), .int m .int⟩)
+        (by simp [LocalEnv.lookup, LocalEnv.declare, LocalEnv.pushScope,
+          Scope.lookup]))
+      isplitl [Hkey]
+      · iexact Hkey
+      iintro Hkey
+      iapply (wp_strict_apply_pure (out := .int (v + m) .int) (happly := by
+        intro σ
+        simp [applyStrictOp, intBinaryResult, valueAsIntValue,
+          show IntKind.compatibleResult .int .int = some .int from rfl,
+          int_normalize_of_nonneg_lt hlo hhi, Bind.bind, Except.bind]))
+      iapply fupd_intro
+      inext
+      iapply fupd_intro
+      iintro Hc₆
+      iapply (wp_assign_store
+        (oldcell := ⟨some (.int .int), .int v .int⟩)
+        (newcell := ⟨some (.int .int), .int (v + m) .int⟩)
+        (hstore := fun σ _ht hlook => by
+          have hst := storeLoc_int_any (mkind := .int) hlook (v + m)
+          rw [int_normalize_of_nonneg_lt hlo hhi] at hst
+          exact hst))
+      isplitl [Hacc]
+      · iexact Hacc
+      iintro Hacc
+      iapply Hk
+      iexists (v + m)
+      isplitl []
+      · ipureintro
+        exact ⟨hsum, hnn', by omega, hmem'⟩
+      · iexact Hacc))
+  isplitl [Hacc]
+  · iexists (0 : Int)
+    isplitl []
+    · ipureintro
+      exact ⟨by omega, keyIntSum_nonneg (fun p hp => by
+        obtain ⟨m, hm, hm0, -⟩ := hkeys p hp
+        rw [hm]; exact hm0), Int.le_refl _, hkeys⟩
+    · iexact Hacc
+  · iintro ⟨%v, %hv, Hacc⟩
+    obtain ⟨hv0, -, -, -⟩ := hv
+    have : v = keyIntSum entries := by
+      simpa [keyIntSum] using hv0
+    subst this
+    iapply Hexit $$ Hacc
+
 end
 
 end GoLean.Iris

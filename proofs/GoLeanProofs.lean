@@ -24,6 +24,7 @@ import GoLeanProofs.Specs.GoldenQuorum
 import GoLeanProofs.Specs.QuorumTargets
 import GoLeanProofs.Specs.QuorumRefSpec
 import GoLeanProofs.Specs.GoldenQuorumWP
+import GoLeanProofs.Specs.AutomationTargets
 import GoLeanProofs.NegativeSpecs
 
 /-!

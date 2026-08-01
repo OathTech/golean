@@ -1,44 +1,16 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-07-31  commit: FINAL pre-merge audit response (quorum-pilot)
+# recorded: 2026-08-01  commit: proof-automation arc phase 0+1 (inductive range rule)
 #   frontend: native  oracle: go run
-# manifest_cases: 872  pass: 602  fail: 270
-# Re-pin reason: FINAL PRE-MERGE AUDIT RESPONSE — 26 NEW guardrail ids,
-# one per confirmed audit finding (probes turned into cases). Drift vs the
-# previous baseline is EXACTLY those 26 rows: no pre-existing id changed
-# result or stage, ZERO PASS->FAIL. 846 -> 872 cases, 581 -> 602 pass.
-#   21 of the 26 new ids PASS:
-#   - interfaces/method-set-variadic-mismatch (5) — interface satisfaction
-#     now compares VARIADIC-NESS, so `M(xs ...int)` and `M(xs []int)` are
-#     the different methods Go says they are, in both directions, with the
-#     positive variadic/variadic pair and a differing-element-type pair
-#     pinning that the fix neither over- nor under-fires (finding 0).
-#   - interfaces/interface-valued-observation (7) — the Go harness now
-#     observes results through a POINTER, so an interface-typed result
-#     keeps its static type and emits the boxed `{"tag":"interface",...}`
-#     shape. Before this NO case could exercise `Ty.dynamicName` at all:
-#     `reflect.ValueOf` on an `any` parameter collapses the box, so the
-#     machine's shape had no Go counterpart it could ever equal
-#     (finding 2).
-#   - slices/slices-sort-edges (9) — NON-target edges for the slices.Sort
-#     extern: nil/empty/single/sorted/reverse, a DEFINED element type,
-#     unsigned ordering above 2^63, signed negatives, sub-slice aliasing
-#     (finding 12).
-#   5 are DELIBERATE RED PINS, each carrying a docs/BUGS.md entry:
-#   - interfaces/assert-imported-method-set/{comma-ok,panic-form}
-#     (BUG-009, finding 8) — satisfaction answered a definite FALSE for a
-#     dynamic type whose method set is not on the wire; now an honest
-#     `unsupported`, replacing a wrong `ok` and a FABRICATED panic.
-#   - interfaces/imported-package-name-collision (BUG-010, findings 4/7) —
-#     two import paths sharing a package NAME collided on one TypeId and a
-#     type assert answered `true` where Go answers `false`; the frontend
-#     now refuses the export (stage frontend-export).
-#   - maps/update-during-range (BUG-005's third symptom, finding 1) — the
-#     range snapshot freezes VALUES, so an entry updated inside the loop
-#     reads stale (Go 109, machine 20, deterministic). Recorded red; the
-#     snapshot surgery stays BUG-005's own slice.
-#   - slices/slices-sort-non-integer-refusal (finding 12) — the extern's
-#     REFUSAL boundary pinned as frontend-export, so a silent WIDENING of
-#     the modeled surface shows up as drift.
+# manifest_cases: 873  pass: 603  fail: 270
+# Re-pin reason: ONE new guardrail id, and nothing else moved.
+# `range/range-map-key-sum` (PASS) is the KEY-ONLY map range
+# `for k := range m { sum = sum + k }` — the guardrails-first case for the
+# inductive range rule `wp_map_iter_inv` (proofs/GoLeanProofs/Laws/Range.lean),
+# whose FIRST discharge witness must be a non-quorum program (standing
+# over-specialization check). Its result is order-independent, so the case is
+# stable under the machine's nondeterministic iteration pick.
+# Drift vs the previous baseline is EXACTLY that one row: no pre-existing id
+# changed result or stage, ZERO PASS->FAIL. 872 -> 873 cases, 602 -> 603 pass.
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
 PASS	arrays/array-copy	-
@@ -749,6 +721,7 @@ PASS	range/range-int-typed	-
 PASS	range/range-int-zero	-
 PASS	range/range-loop-var-capture	-
 PASS	range/range-map-delete-current	-
+PASS	range/range-map-key-sum	-
 PASS	range/range-map-sum	-
 PASS	range/range-map-value-copy	-
 PASS	range/range-nil-map	-
