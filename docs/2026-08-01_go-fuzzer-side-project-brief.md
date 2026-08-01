@@ -33,11 +33,15 @@ not signal — the boundary refusals are already pinned by hand).
 
 The fuzzer treats GoLean as an external system-under-test:
 
-1. **Private clone, pinned commit.** The fuzzer project clones
-   github/local GoLean into its own workspace and checks out a PINNED
-   commit (recorded in the fuzzer's config; bump deliberately). It
-   builds once (`lake build`, `go build ./tools/nativefrontend`) and
-   never edits the clone. The GoLean working repo is never touched.
+1. **Private clone; HEAD by default, pinned when it matters.** The
+   project lives at `side/gofuzz/` in the GoLean directory (own git
+   repo; gitignored by GoLean; placed there so the sandbox workdir
+   grant covers it). Its `golean-sut/` clone of the local GoLean repo
+   is refreshed to HEAD at session start (finds land on fixable code);
+   a specific commit is pinned only to reproduce a reported finding or
+   to run the M2 rediscovery windows. The clone is never edited; the
+   GoLean working repo is never touched. Day-to-day process:
+   `side/gofuzz/CLAUDE.md`.
 2. **The invocation.** From the clone root:
    `scripts/diff-coverage <manifest.tsv>` — the manifest is the entire
    input interface. Row format (TAB-separated):
