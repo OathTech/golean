@@ -186,7 +186,9 @@ way an arc reaches `main`).
 - **Reviewer model: Opus** — pre-merge audit reviewers and their verifiers run
   on Opus-class models (user direction 2026-07-21); don't silently downgrade.
   **Worker model: Fable** — delegated workers on complex tasks (proof slices,
-  semantics/tactic work) run on Fable (user direction 2026-08-01).
+  semantics/tactic work) run on Fable (user direction 2026-08-01; both model
+  rules encode the 2026-08 landscape — revisit on new model releases rather
+  than applying blindly).
 - **THE SEMANTICS IS THE PRIMARY DIMENSION — always audit it** (user
   direction 2026-07-24). GoCore's machine and relation are the trust
   surface everything else rests on: proofs, specs, and the differential all
