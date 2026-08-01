@@ -1070,6 +1070,21 @@ theorem wp_sort_slice_srt {sa ba : Addr} {env k}
   iintro Hb
   iapply Hcont $$ [$Hs $Hb]
 
+/-- The comma-ok lookup's answer on a ONE-ENTRY int-keyed map: the key is
+present, so the stored value comes back with `found = true`. General in
+the key, the value, the value TYPE and the data cell's declared type —
+this is the `hpair` premise of `wp_map_lookup`/`wp_map_lookup_ackedIndex`
+at the instance the n = 1 walk uses, factored out when those were widened
+to arbitrary entry arrays (proof-automation arc phase 3). -/
+theorem mapLookupValue_singleton {mba : Addr} {mty : Option Ty} {q v : Int}
+    {valTy : Ty} (σ : ExecState)
+    (hl : Heap.lookup σ.heap (.base mba)
+      = some ⟨mty, .mapData #[(.int q .uint64, .int v .uint64)]⟩) :
+    mapLookupValue σ ⟨some (.base mba)⟩ (.int q .uint64) (.int .uint64) valTy
+      = .ok (.int v .uint64, true) := by
+  simp [mapLookupValue, mapEntries, loadLoc, hl, mapEntryIndex?, valueEq,
+    valueEqFuel, checkKeyHashable, valueHashability, Bind.bind, Except.bind]
+
 /-- **Witness for `wp_map_lookup`** (and for the target/plain operand
 shifts) on the REAL `idx, ok := m[id]` of the pinned
 `main.mapAckIndexer.AckedIndex`: the whole statement walk on a ONE-ENTRY
@@ -1086,13 +1101,35 @@ the real driver could not have used the pinned-type version at all.
 FAITHFUL TO THE PIN as of the `σ.types` pin (quorum pilot phase 4): the
 `idx` target cell is declared `.defined main.Index`, exactly as the
 lowering declares it — the store's coercion at that named type resolves
-through `σ.types`, dischargeable now that the ghost state pins it. -/
-@[go_walk_law]
-theorem wp_map_lookup_ackedIndex {ma ida mba ta oa : Addr} {mty : Option Ty}
-    {q v : Int} {env k}
+through `σ.types`, dischargeable now that the ghost state pins it.
+
+**Generalized 2026-08-01 (proof-automation arc phase 3)** from a
+ONE-ENTRY receiver map to an ARBITRARY entry array plus a `hpair` premise
+naming the lookup's answer — the machine's own computation, in the
+`wp_assign_store`/`hstore` style. The one-entry map was not a property of
+Go but of the n = 1 walk: at any config with more than one voter the
+`AckedIndexer` holds several entries and the SAME statement must be
+walked with the key found at an arbitrary position. `hpair` is exactly
+`wp_map_lookup`'s, so the generalization adds no new obligation shape.
+
+NOT in the `@[go_walk_law]` table, deliberately: its `hpair` is a
+human-supplied semantic fact, exactly like `wp_map_iter_inv`'s invariant,
+and a registered law whose premise happens to sit in the ambient context
+would be discharged by `go_walk_side`'s `assumption` and fire where the
+walk should hand back. The one-entry SPECIALIZATION below is the
+registered law (its premises are all `rfl`/pin facts), and it is derived
+from this one. -/
+theorem wp_map_lookup_ackedIndex_entries {ma ida mba ta oa : Addr}
+    {mty : Option Ty}
+    {entries : Array (GoValue × GoValue)} {q v : Int} {env k}
     (htypes : GoCoreGS.types GF = GoldenQuorum.quorumLowered.typeDefs.toList)
     (hq : IntKind.uint64.normalize q = q)
     (hv : IntKind.uint64.normalize v = v)
+    (hpair : ∀ σ : ExecState, σ.types = GoCoreGS.types GF →
+      Heap.lookup σ.heap (.base mba) = some ⟨mty, .mapData entries⟩ →
+      mapLookupValue σ ⟨some (.base mba)⟩ (.int q .uint64) (.int .uint64)
+          (.defined ⟨"main.Index"⟩)
+        = .ok (.int v .uint64, true))
     (hm : LocalEnv.lookup env "m" = some (.base ma))
     (hid : LocalEnv.lookup env "id" = some (.base ida))
     (hidx : LocalEnv.lookup env "idx" = some (.base ta))
@@ -1100,13 +1137,13 @@ theorem wp_map_lookup_ackedIndex {ma ida mba ta oa : Addr} {mty : Option Ty}
     ma.id ↦ (⟨some (.defined ⟨"main.mapAckIndexer"⟩),
               .map ⟨some (.base mba)⟩⟩ : HeapCell)
       ∗ ida.id ↦ (⟨some (.int .uint64), .int q .uint64⟩ : HeapCell)
-      ∗ mba.id ↦ (⟨mty, .mapData #[(.int q .uint64, .int v .uint64)]⟩ : HeapCell)
+      ∗ mba.id ↦ (⟨mty, .mapData entries⟩ : HeapCell)
       ∗ ta.id ↦ (⟨some (.defined ⟨"main.Index"⟩), .int 0 .uint64⟩ : HeapCell)
       ∗ oa.id ↦ (⟨some .bool, .bool false⟩ : HeapCell)
       ∗ (ma.id ↦ (⟨some (.defined ⟨"main.mapAckIndexer"⟩),
                    .map ⟨some (.base mba)⟩⟩ : HeapCell)
           ∗ ida.id ↦ (⟨some (.int .uint64), .int q .uint64⟩ : HeapCell)
-          ∗ mba.id ↦ (⟨mty, .mapData #[(.int q .uint64, .int v .uint64)]⟩ : HeapCell)
+          ∗ mba.id ↦ (⟨mty, .mapData entries⟩ : HeapCell)
           ∗ ta.id ↦ (⟨some (.defined ⟨"main.Index"⟩), .int v .uint64⟩ : HeapCell)
           ∗ oa.id ↦ (⟨some .bool, .bool true⟩ : HeapCell)
           -∗ WP (Config.next k) @ s ; E {{ Φ }})
@@ -1154,7 +1191,7 @@ theorem wp_map_lookup_ackedIndex {ma ida mba ta oa : Addr} {mty : Option Ty}
   · iexact Hid
   iintro Hid
   iapply (wp_map_lookup (mba := mba) (ta := ta) (oa := oa) (mty := mty)
-    (entries := #[(.int q .uint64, .int v .uint64)])
+    (entries := entries)
     (key := .int q .uint64) (val := .int v .uint64) (b := true)
     (tcell := ⟨some (.defined ⟨"main.Index"⟩), .int 0 .uint64⟩)
     (tcell' := ⟨some (.defined ⟨"main.Index"⟩), .int v .uint64⟩)
@@ -1162,9 +1199,7 @@ theorem wp_map_lookup_ackedIndex {ma ida mba ta oa : Addr} {mty : Option Ty}
     (ocell' := ⟨some .bool, .bool true⟩)
     (hkey := fun σ _ht => by
       simp [normalizeValueForTy, normalizeValueForTyFuel, hq])
-    (hpair := fun σ _ht hl => by
-      simp [mapLookupValue, mapEntries, loadLoc, hl, mapEntryIndex?, valueEq,
-        valueEqFuel, checkKeyHashable, valueHashability, Bind.bind, Except.bind])
+    (hpair := hpair)
     (hstoret := fun σ ht hl => by
       rw [execState_pin_eq (ht.trans htypes) (rfl (a := σ.functions))
         (rfl (a := σ.methods))] at hl ⊢
@@ -1181,6 +1216,38 @@ theorem wp_map_lookup_ackedIndex {ma ida mba ta oa : Addr} {mty : Option Ty}
   · iexact Ho
   iintro ⟨Hmb, Ht, Ho⟩
   iapply Hcont $$ [$Hm $Hid $Hmb $Ht $Ho]
+
+/-- **The ONE-ENTRY specialization — the registered law.** Its `hpair` is
+`mapLookupValue_singleton`, so every premise is a pin fact or a
+normalization the walk can discharge mechanically; that is what makes it
+safe to register. The n = 1 summit walk uses exactly this instance and its
+statement is unchanged by the 2026-08-01 generalization above. -/
+@[go_walk_law]
+theorem wp_map_lookup_ackedIndex {ma ida mba ta oa : Addr} {mty : Option Ty}
+    {q v : Int} {env k}
+    (htypes : GoCoreGS.types GF = GoldenQuorum.quorumLowered.typeDefs.toList)
+    (hq : IntKind.uint64.normalize q = q)
+    (hv : IntKind.uint64.normalize v = v)
+    (hm : LocalEnv.lookup env "m" = some (.base ma))
+    (hid : LocalEnv.lookup env "id" = some (.base ida))
+    (hidx : LocalEnv.lookup env "idx" = some (.base ta))
+    (hok : LocalEnv.lookup env "ok" = some (.base oa)) :
+    ma.id ↦ (⟨some (.defined ⟨"main.mapAckIndexer"⟩),
+              .map ⟨some (.base mba)⟩⟩ : HeapCell)
+      ∗ ida.id ↦ (⟨some (.int .uint64), .int q .uint64⟩ : HeapCell)
+      ∗ mba.id ↦ (⟨mty, .mapData #[(.int q .uint64, .int v .uint64)]⟩ : HeapCell)
+      ∗ ta.id ↦ (⟨some (.defined ⟨"main.Index"⟩), .int 0 .uint64⟩ : HeapCell)
+      ∗ oa.id ↦ (⟨some .bool, .bool false⟩ : HeapCell)
+      ∗ (ma.id ↦ (⟨some (.defined ⟨"main.mapAckIndexer"⟩),
+                   .map ⟨some (.base mba)⟩⟩ : HeapCell)
+          ∗ ida.id ↦ (⟨some (.int .uint64), .int q .uint64⟩ : HeapCell)
+          ∗ mba.id ↦ (⟨mty, .mapData #[(.int q .uint64, .int v .uint64)]⟩ : HeapCell)
+          ∗ ta.id ↦ (⟨some (.defined ⟨"main.Index"⟩), .int v .uint64⟩ : HeapCell)
+          ∗ oa.id ↦ (⟨some .bool, .bool true⟩ : HeapCell)
+          -∗ WP (Config.next k) @ s ; E {{ Φ }})
+      ⊢ WP (Config.exec QuorumPin.mapLookupStmt env k) @ s ; E {{ Φ }} :=
+  wp_map_lookup_ackedIndex_entries htypes hq hv
+    (fun σ _ht hl => mapLookupValue_singleton σ hl) hm hid hidx hok
 
 /-- **Witness for `wp_make_slice`** (and for the allocating apply core) on
 the REAL `$c2 = make([]uint64, n)` of the pinned `CommittedIndex` — the

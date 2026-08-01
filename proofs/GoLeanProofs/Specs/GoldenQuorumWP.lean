@@ -113,26 +113,39 @@ section
 variable {GF : BundledGFunctors} {hlc : HasLC} [GoCoreGS hlc GF]
 variable {s : Stuckness} {E : CoPset} {Φ : Unit → IProp GF}
 
-/-- **The `AckedIndex` body walk** on the CONCRETE receiver map
-`{3 ↦ 12}`, under the frame environment frame entry produces. Declares
-`idx : main.Index` and `ok : bool` (the named-type declaration is what
-needs `wp_init`'s type-environment pin), performs the comma-ok read
-(`wp_map_lookup_ackedIndex`, the witness on the REAL statement), writes
-both results and returns. The parameter and map cells are dropped
-affinely at the end; the two RESULT cells are handed to the continuation
-holding `12` and `true`. -/
-theorem wp_ackedIndex_body {ma ida mba ra₀ ra₁ : Addr} {mty : Option Ty}
-    {q v : Int} {k}
+/-- **The `AckedIndex` body walk** on an arbitrary receiver map, under the
+frame environment frame entry produces. Declares `idx : main.Index` and
+`ok : bool` (the named-type declaration is what needs `wp_init`'s
+type-environment pin), performs the comma-ok read
+(`wp_map_lookup_ackedIndex_entries`, the general law on the REAL
+statement), writes both results and returns. The parameter and map cells
+are dropped affinely at the end; the two RESULT cells are handed to the
+continuation holding the looked-up index and `true`.
+
+**Generalized 2026-08-01 (proof-automation arc phase 3)** from the
+one-entry receiver `{q ↦ v}` to an ARBITRARY entry array plus `hpair`,
+the lookup's answer. The one-entry receiver was an artefact of the n = 1
+walk, not of Go: at any config with more than one voter the same method
+body is walked against a multi-entry `AckedIndexer`. The one-entry form
+survives verbatim as `wp_ackedIndex_body` below, derived from this. -/
+theorem wp_ackedIndex_body_entries {ma ida mba ra₀ ra₁ : Addr} {mty : Option Ty}
+    {entries : Array (GoValue × GoValue)} {q v : Int} {k}
     (htypes : GoCoreGS.types GF = quorumLowered.typeDefs.toList)
     (hq : IntKind.uint64.normalize q = q)
-    (hv : IntKind.uint64.normalize v = v) :
+    (hv : IntKind.uint64.normalize v = v)
+    (hpair : ∀ σ : ExecState, σ.types = GoCoreGS.types GF →
+      Heap.lookup σ.heap (.base mba) = some ⟨mty, .mapData entries⟩ →
+      mapLookupValue σ ⟨some (.base mba)⟩ (.int q .uint64) (.int .uint64)
+          (.defined ⟨"main.Index"⟩)
+        = .ok (.int v .uint64, true)) :
     ma.id ↦ (⟨some (.defined ⟨"main.mapAckIndexer"⟩),
               .map ⟨some (.base mba)⟩⟩ : HeapCell)
       ∗ ida.id ↦ (⟨some (.int .uint64), .int q .uint64⟩ : HeapCell)
-      ∗ mba.id ↦ (⟨mty, .mapData #[(.int q .uint64, .int v .uint64)]⟩ : HeapCell)
+      ∗ mba.id ↦ (⟨mty, .mapData entries⟩ : HeapCell)
       ∗ ra₀.id ↦ (⟨some (.defined ⟨"main.Index"⟩), .int 0 .uint64⟩ : HeapCell)
       ∗ ra₁.id ↦ (⟨some .bool, .bool false⟩ : HeapCell)
-      ∗ (ra₀.id ↦ (⟨some (.defined ⟨"main.Index"⟩), .int v .uint64⟩ : HeapCell)
+      ∗ (mba.id ↦ (⟨mty, .mapData entries⟩ : HeapCell)
+          ∗ ra₀.id ↦ (⟨some (.defined ⟨"main.Index"⟩), .int v .uint64⟩ : HeapCell)
           ∗ ra₁.id ↦ (⟨some .bool, .bool true⟩ : HeapCell)
           -∗ WP (Config.returning k) @ s ; E {{ Φ }})
       ⊢ WP (Config.exec QuorumPin.ackedIndexImpl.body
@@ -152,11 +165,12 @@ theorem wp_ackedIndex_body {ma ida mba ra₀ ra₁ : Addr} {mty : Option Ty}
   go_walk_step (wp_init (v := .bool false) (hdef := fun σ _ => by
     simp [defaultValue, defaultValueFuel, typeResolutionFuel]))
   go_walk
-  -- the comma-ok map read (the walk stops in front of it: the operation law
-  -- covers the whole statement but its cells' contents are not determined
-  -- by the configuration)
-  go_walk_step (wp_map_lookup_ackedIndex (mba := mba) (mty := mty) (q := q) (v := v)
-    htypes hq hv rfl rfl rfl rfl)
+  -- the comma-ok map read. The walk stops in front of it at the REGISTERED
+  -- one-entry law's resource boundary (its `{q ↦ v}` data cell cannot be
+  -- framed against this theorem's arbitrary `entries`), which is exactly
+  -- where the general law is handed over.
+  go_walk_step (wp_map_lookup_ackedIndex_entries (mba := mba) (mty := mty)
+    (entries := entries) (q := q) (v := v) htypes hq hv hpair rfl rfl rfl rfl)
   go_walk
   -- `$res0 = idx` — a store at the DEFINED type `main.Index`
   go_walk_step (wp_assign_store
@@ -176,6 +190,37 @@ theorem wp_ackedIndex_body {ma ida mba ra₀ ra₁ : Addr} {mty : Option Ty}
       simp [storeLoc, hl, normalizeValueForTy, normalizeValueForTyFuel,
         Bind.bind, Except.bind]))
   go_walk_finish Hcont
+
+/-- **The one-entry instance**, the n = 1 summit's `AckedIndex` body walk,
+unchanged in statement: receiver map `{q ↦ v}`, the key present. Derived
+from the general form above by `mapLookupValue_singleton`. -/
+theorem wp_ackedIndex_body {ma ida mba ra₀ ra₁ : Addr} {mty : Option Ty}
+    {q v : Int} {k}
+    (htypes : GoCoreGS.types GF = quorumLowered.typeDefs.toList)
+    (hq : IntKind.uint64.normalize q = q)
+    (hv : IntKind.uint64.normalize v = v) :
+    ma.id ↦ (⟨some (.defined ⟨"main.mapAckIndexer"⟩),
+              .map ⟨some (.base mba)⟩⟩ : HeapCell)
+      ∗ ida.id ↦ (⟨some (.int .uint64), .int q .uint64⟩ : HeapCell)
+      ∗ mba.id ↦ (⟨mty, .mapData #[(.int q .uint64, .int v .uint64)]⟩ : HeapCell)
+      ∗ ra₀.id ↦ (⟨some (.defined ⟨"main.Index"⟩), .int 0 .uint64⟩ : HeapCell)
+      ∗ ra₁.id ↦ (⟨some .bool, .bool false⟩ : HeapCell)
+      ∗ (ra₀.id ↦ (⟨some (.defined ⟨"main.Index"⟩), .int v .uint64⟩ : HeapCell)
+          ∗ ra₁.id ↦ (⟨some .bool, .bool true⟩ : HeapCell)
+          -∗ WP (Config.returning k) @ s ; E {{ Φ }})
+      ⊢ WP (Config.exec QuorumPin.ackedIndexImpl.body
+            [[("$res1", Loc.base ra₁), ("$res0", Loc.base ra₀),
+              ("id", Loc.base ida), ("m", Loc.base ma)]] k) @ s ; E {{ Φ }} :=
+  by
+  iintro ⟨Hm, Hid, Hmb, Hr0, Hr1, Hcont⟩
+  iapply (wp_ackedIndex_body_entries (mba := mba) (mty := mty)
+    (entries := #[(.int q .uint64, .int v .uint64)]) (q := q) (v := v)
+    htypes hq hv (fun σ _ht hl => mapLookupValue_singleton σ hl))
+  iframe
+  -- the receiver's DATA cell rides back out of the general law and is dropped
+  -- here, which is what keeps the one-entry statement unchanged
+  iintro ⟨-, Hr0', Hr1'⟩
+  iapply Hcont $$ [$Hr0' $Hr1']
 
 /-- **The `AckedIndex` call walk**, end to end: two target addresses, the
 receiver and the index argument, the STATIC frame entry
