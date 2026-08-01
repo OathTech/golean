@@ -1,5 +1,13 @@
 # Go differential fuzzer — side-project brief (2026-08-01)
 
+> **SUPERSEDED as master (2026-08-01, same day):** the side project
+> (now **`grossmith`**, `side/gofuzz/PLAN.md`) has taken ownership of
+> its own spec; where this document and `PLAN.md` disagree, `PLAN.md`
+> wins. This file remains the FOUNDING RECORD plus GoLean's
+> CONSUMER-SIDE contract (the parts GoLean relies on — see the
+> supersession section at the end). The original text below is kept
+> unedited as history.
+
 The founding spec for a SEPARATE project (own repo, own agent loop): a
 csmith/rustlantis-class differential fuzzer for Go, testing GoLean's
 interpreter against `go run`. This document is the ONLY coupling to the
@@ -171,3 +179,48 @@ change, not a code change.
 - The pinned-commit discipline is what keeps the projects decoupled;
   resist any convenience edit inside the clone (if the harness needs a
   change, it is a GoLean change, made in GoLean, and the pin bumps).
+
+
+## SUPERSESSION RECORD (2026-08-01, GoLean-loop entry)
+
+The side project's first working day overturned three founding
+assumptions and generalized the product; all recorded in its
+`PLAN.md`, which is now the master. What changed, from GoLean's side
+of the fence:
+
+1. **Microsmith cannot be forked and the fork premise was wrong
+   anyway.** It ships NO license (no copy grant), and reading it
+   showed it lacks the substance we assumed: compile-only (no
+   observation layer), unbounded loops, near-no configuration. The
+   recorded plan B is now the plan: a from-scratch generator
+   (`grossmith`, Apache-2.0), with microsmith as a read-only
+   ARCHITECTURAL reference enforced by a token-level no-copy gate
+   with self-tests.
+2. **The generator is the product; GoLean is its first consumer.**
+   GoLean's fragment is their milestone G5, not the north star. Their
+   architecture reserves room for nondeterministic profiles up to
+   concurrency (G6) — relevant to our R5 Choices-harness work later.
+3. **Milestones M0–M3 fold into their G0–G6** (M-track = the consumer
+   track inside G0/G5). G0 passed same-day: 1,000 programs, 100%
+   compile / 100% deterministic / 100% in-fragment. Our M2
+   historical-rediscovery test survives as ONE external validation of
+   their tier-4 "detection power" gate (mutation kill rate +
+   cross-version discrimination) — their generalization of our
+   non-vacuity discipline, and the right answer to green-and-useless.
+
+**What GoLean still relies on (the consumer contract, UNCHANGED):**
+findings arrive as minimized corpus-format case dirs in their
+`outbox/` (their G5 commits to this); `FINDINGS.md` is the ledger;
+`scripts/diff-coverage <manifest>` at a SUT clone is one pluggable
+backend behind their SUT seam; nothing of theirs enters GoLean's CI
+or merge gate. New consumer-relevant addition: every case ships a
+`contract.json` (oracle class, guaranteed invariances, declared
+dependencies) — when `scripts/fuzz-import` is eventually built it
+should read the contract, not re-infer it.
+
+**Read-only dependencies of theirs on us, noted:** their tier-3 gate
+audits their tagger against our hand-tagged corpus; their oracle-class
+taxonomy references our observation conventions. Both read-only; no
+action owed. Their §11 records that the `side/gofuzz` directory name
+now lags the project name — renaming waits for their eventual
+move-out and is their call.
