@@ -122,14 +122,16 @@ statement), writes both results and returns. The parameter and map cells
 are dropped affinely at the end; the two RESULT cells are handed to the
 continuation holding the looked-up index and `true`.
 
-**Generalized 2026-08-01 (proof-automation arc phase 3)** from the
+**Generalized 2026-08-01 (proof-automation arc, phases 3 and 4)** from the
 one-entry receiver `{q ↦ v}` to an ARBITRARY entry array plus `hpair`,
-the lookup's answer. The one-entry receiver was an artefact of the n = 1
+the lookup's answer, and then from a FOUND key to the comma-ok pair
+`(v, b)` at an arbitrary `b`: a voter with no entry is Go's "has not
+reported yet", and the `∀`-config walk takes that iteration too. The one-entry receiver was an artefact of the n = 1
 walk, not of Go: at any config with more than one voter the same method
 body is walked against a multi-entry `AckedIndexer`. The one-entry form
 survives verbatim as `wp_ackedIndex_body` below, derived from this. -/
 theorem wp_ackedIndex_body_entries {ma ida mba ra₀ ra₁ : Addr} {mty : Option Ty}
-    {entries : Array (GoValue × GoValue)} {q v : Int} {k}
+    {entries : Array (GoValue × GoValue)} {q v : Int} {b : Bool} {k}
     (htypes : GoCoreGS.types GF = quorumLowered.typeDefs.toList)
     (hq : IntKind.uint64.normalize q = q)
     (hv : IntKind.uint64.normalize v = v)
@@ -137,7 +139,7 @@ theorem wp_ackedIndex_body_entries {ma ida mba ra₀ ra₁ : Addr} {mty : Option
       Heap.lookup σ.heap (.base mba) = some ⟨mty, .mapData entries⟩ →
       mapLookupValue σ ⟨some (.base mba)⟩ (.int q .uint64) (.int .uint64)
           (.defined ⟨"main.Index"⟩)
-        = .ok (.int v .uint64, true)) :
+        = .ok (.int v .uint64, b)) :
     ma.id ↦ (⟨some (.defined ⟨"main.mapAckIndexer"⟩),
               .map ⟨some (.base mba)⟩⟩ : HeapCell)
       ∗ ida.id ↦ (⟨some (.int .uint64), .int q .uint64⟩ : HeapCell)
@@ -146,7 +148,7 @@ theorem wp_ackedIndex_body_entries {ma ida mba ra₀ ra₁ : Addr} {mty : Option
       ∗ ra₁.id ↦ (⟨some .bool, .bool false⟩ : HeapCell)
       ∗ (mba.id ↦ (⟨mty, .mapData entries⟩ : HeapCell)
           ∗ ra₀.id ↦ (⟨some (.defined ⟨"main.Index"⟩), .int v .uint64⟩ : HeapCell)
-          ∗ ra₁.id ↦ (⟨some .bool, .bool true⟩ : HeapCell)
+          ∗ ra₁.id ↦ (⟨some .bool, .bool b⟩ : HeapCell)
           -∗ WP (Config.returning k) @ s ; E {{ Φ }})
       ⊢ WP (Config.exec QuorumPin.ackedIndexImpl.body
             [[("$res1", Loc.base ra₁), ("$res0", Loc.base ra₀),
@@ -170,7 +172,8 @@ theorem wp_ackedIndex_body_entries {ma ida mba ra₀ ra₁ : Addr} {mty : Option
   -- framed against this theorem's arbitrary `entries`), which is exactly
   -- where the general law is handed over.
   go_walk_step (wp_map_lookup_ackedIndex_entries (mba := mba) (mty := mty)
-    (entries := entries) (q := q) (v := v) htypes hq hv hpair rfl rfl rfl rfl)
+    (entries := entries) (q := q) (v := v) (b := b) htypes hq hv hpair
+    rfl rfl rfl rfl)
   go_walk
   -- `$res0 = idx` — a store at the DEFINED type `main.Index`
   go_walk_step (wp_assign_store
@@ -185,7 +188,7 @@ theorem wp_ackedIndex_body_entries {ma ida mba ra₀ ra₁ : Addr} {mty : Option
   go_walk
   -- `$res1 = ok`
   go_walk_step (wp_assign_store (oldcell := ⟨some .bool, .bool false⟩)
-    (newcell := ⟨some .bool, .bool true⟩)
+    (newcell := ⟨some .bool, .bool b⟩)
     (fun σ _ht hl => by
       simp [storeLoc, hl, normalizeValueForTy, normalizeValueForTyFuel,
         Bind.bind, Except.bind]))

@@ -118,25 +118,47 @@ This is machine-side generality matching `committedIndexRef_meets_spec`'s
 math-side generality: `quorumOneKnownFuncSpec` is the single point
 `c = [1]`, `acked = {1 ↦ 12}` of this surface.
 
-Note what is NOT assumed: nothing bounds `c.length`, so the statement
-covers BOTH branches of `if len(stk) >= n` — the on-stack `[7]uint64`
-reslice AND the `make([]uint64, n)` heap allocation at more than seven
-voters. `c.Nodup` is the map-key uniqueness a `MajorityConfig` has by
-construction.
+Note what is NOT assumed: no *small* bound on `c.length`, so the
+statement covers BOTH branches of `if len(stk) >= n` — the on-stack
+`[7]uint64` reslice AND the `make([]uint64, n)` heap allocation at more
+than seven voters. `c.Nodup` is the map-key uniqueness a
+`MajorityConfig` has by construction. Nothing is assumed about `acked`:
+a voter with no entry is Go's "has not reported yet", which
+`AckedIndex` answers with `(0, false)` and `majority.go` treats as a
+zero — the walk takes that iteration too.
 
-Unproven by design. STILL UNPROVEN as of the phase-3 slice
-(2026-08-01): the 3-voter rung and the n-VOTER loop law
-(`GoldenQuorum.wp_ci_loop`, arbitrary voter list and acked function) are
-proven, and the remaining obligations are stated precisely in the arc
-build log — the general-`n` fit test (both branches), the general-`n`
-`sortSlice` transition and the `sortAsc`-vs-`mergeSort` agreement, and
-the bridge from `EncodesConfig`/`EncodesAcked` to `cfgSnapshot`/`hlook`.
-It remains the arc's exit criterion. -/
+**STATEMENT CORRECTED 2026-08-01 (phase 4) — recorded, not quietly
+patched.** The original form had NO bound on `c.length` at all, and in
+that form it is FALSE, not merely unproven: at `c.length ≥ 2^63` the
+lowering's `n := len(c)` is a Go `int`, so `IntKind.int.normalize` wraps
+it NEGATIVE; `n == 0` is then false, `len(stk) >= n` is TRUE (7 ≥ a
+negative), and `srt = stk[:n]` hits `checkSliceBounds`' negative-high
+arm — a panic, i.e. a configuration that `Progress` counts as stuck. The
+`c.length < 2 ^ 63` hypothesis is the REPRESENTABILITY side condition
+that says the config fits in the machine `int` the lowering counts it
+with (the same bound `GoldenQuorumThree.wp_ci_loop` already carried as
+`hsmall`); it is a property of Go's `int`, not of the target. Not
+mechanized as a refutation — exhibiting the panicking run at 2^63
+entries is a separate cost and is recorded as owed, exactly as the
+`quorumAckedIndexFuncSpec2_statement` correction was.
+
+**DISCHARGED 2026-08-01** (phase 4) by
+`Specs/GoldenQuorumAll.committedIndexAllConfigs`, whose type IS this def
+— that application is the statement-identity check, so weakening the
+statement to fit the proof would break this file. No separate
+"meets-spec" corollary is needed: the postcondition here IS the
+declarative spec (`IsCommittedIndex`), unlike the concrete-instance
+targets which pin a number and get their declarative restatement
+separately. The first-order readout and the negative twin at the 3-voter
+encoding are `committedIndexAllReturnsSix` / `committedIndexAllNotTwelve`
+in the same file. This def is left exactly as written apart from the
+recorded representability correction above. -/
 def committedIndexAllConfigs_statement : Prop :=
   ∀ (c : List Nat) (acked : Nat → Option Nat)
     (ce ae : Array (GoValue × GoValue)) (cty lty : Option Ty)
     (ca cba la lba ra : Nat) (w : GoValue),
     c.Nodup →
+    c.length < 2 ^ 63 →
     EncodesConfig ce c →
     EncodesAcked ae acked →
     [ra, ca, cba, la, lba].Nodup →

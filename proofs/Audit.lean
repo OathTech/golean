@@ -236,6 +236,32 @@ open Lean in
 /-- info: 'GoLean.Quorum.storeLoc_stk_fill' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Quorum.storeLoc_stk_fill
 
+-- Proof-automation arc phase 4 (2026-08-01): THE ∀-CONFIG THEOREM — the
+-- same real `CommittedIndex`, at EVERY config and EVERY acked map, with
+-- the inputs supplied through the caller's heap. Both branches of the fit
+-- test, voters that never reported, and a `slices.Sort` computed at a
+-- SYMBOLIC length by induction over the machine's own loops.
+/-- info: 'GoLean.Surface.committedIndexAllConfigs' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Surface.committedIndexAllConfigs
+/-- info: 'GoLean.Surface.committedIndexAllReturnsSix' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Surface.committedIndexAllReturnsSix
+/-- info: 'GoLean.Surface.committedIndexAllNotTwelve' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Surface.committedIndexAllNotTwelve
+/-- info: 'GoLean.Iris.GoldenQuorum.wp_ci_loop_all' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.GoldenQuorum.wp_ci_loop_all
+/-- info: 'GoLean.Iris.GoldenQuorum.wp_ci_fitIf_all' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.GoldenQuorum.wp_ci_fitIf_all
+/-- info: 'GoLean.Iris.applyStmtOp_sortSlice_ints' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.applyStmtOp_sortSlice_ints
+/-- info: 'GoLean.Iris.forIn_range'_inv' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.forIn_range'_inv
+/-- info: 'GoLean.Iris.mergeSort_pairs_eq_of_perm' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.mergeSort_pairs_eq_of_perm
+/-- info: 'GoLean.Iris.mapLookupValue_hit' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.mapLookupValue_hit
+/-- info: 'GoLean.Quorum.encodesConfig_cfgSnapshot' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Quorum.encodesConfig_cfgSnapshot
+
 /-! ## Non-vacuity gate — every user-facing WP law bound to a discharge
     witness (deleting a witness or a law breaks this build). -/
 
@@ -571,20 +597,26 @@ example := @GoLean.Iris.keyIntSum_eraseIdx
 example := @GoLean.Iris.keyIntSum_nonneg
 example := @GoLean.Iris.int_normalize_of_nonneg_lt
 example := @GoLean.Iris.mapIterInvRule
-/-- `◌`/`✓` **The proof-automation arc's phase-0 TARGETS**
-(`Specs/AutomationTargets.lean`). The 3-voter pair is now DISCHARGED
-(phase 3, 2026-08-01 — see the block below); the `∀`-config target is
-still a target, which is its job:
+/-- `✓` **The proof-automation arc's phase-0 TARGETS**
+(`Specs/AutomationTargets.lean`). Both are now DISCHARGED (phases 3 and
+4, 2026-08-01 — see the blocks below):
 
 * `committedIndexAllConfigs_statement` — THE GOAL: for every config and
   acked map, and every heap snapshot pair ENCODING them
   (`EncodesConfig`/`EncodesAcked`), the pinned lowering of the real
   `main.MajorityConfig.CommittedIndex` satisfies `IsCommittedIndex`.
-  Nothing bounds `c.length`, so it covers both sides of
-  `if len(stk) >= n`. The design decision behind the shape (encode the
-  INPUTS in the heap and speak about the METHOD, rather than quantify
-  over a synthesized driver family) is recorded in the module docstring
-  and the arc build log.
+  No SMALL bound on `c.length`, so it covers both sides of
+  `if len(stk) >= n`. **DISCHARGED 2026-08-01** by
+  `committedIndexAllConfigs`. The statement carries ONE recorded
+  correction (phase 4): a `c.length < 2 ^ 63` REPRESENTABILITY
+  hypothesis, without which the statement is FALSE rather than unproven
+  — at `2 ^ 63` voters the lowering's `n := len(c)` wraps negative in
+  Go's `int` and `stk[:n]` panics, which `Progress` counts as stuck. The
+  correction is recorded in full at the target's docstring, in the same
+  form as the earlier `quorumAckedIndexFuncSpec2_statement` correction.
+  The design decision behind the shape (encode the INPUTS in the heap and
+  speak about the METHOD, rather than quantify over a synthesized driver
+  family) is recorded in the module docstring and the arc build log.
 * `quorumThreeAllFuncSpec_statement` — the 3-voter rung. **DISCHARGED
   2026-08-01** by `quorumThreeAllFuncSpec`; the statement is unchanged.
   `quorumThreeAllNotTwelve_statement` (its UNCONDITIONAL negative twin)
@@ -677,9 +709,9 @@ no config, no acked value and no `n` occurs in either statement. The
 `◌ NOT PROVEN` (recorded, not quietly dropped): the UNCONDITIONAL
 `quorumThreeAllNotTwelve_statement`, for the reason the whole family
 carries — a `GoTriple` is vacuously true of a non-terminating program, so
-refuting it demands EXHIBITING a terminating run. And
-`committedIndexAllConfigs_statement` — THE ARC GOAL — remains a target;
-the arc build log states exactly which obligations remain. -/
+refuting it demands EXHIBITING a terminating run. (THE ARC GOAL,
+`committedIndexAllConfigs_statement`, is DISCHARGED in phase 4 — the
+block below.) -/
 example := @GoLean.Surface.quorumThreeAllFuncSpec
 example := @GoLean.Surface.quorumThreeAllMeetsSpec
 example := @GoLean.Surface.quorumThreeAllReturnsSix
@@ -698,6 +730,87 @@ example := @GoLean.Iris.wp_map_lookup_ackedIndex_entries
 example := @GoLean.Iris.mapLookupValue_singleton
 example := @GoLean.Iris.arraySet_middle
 example := @GoLean.Iris.arrayGet_middle
+/-- `✓` **THE ∀-CONFIG THEOREM — proof-automation arc phase 4,
+2026-08-01.** `committedIndexAllConfigs` DISCHARGES the arc's GOAL
+(`committedIndexAllConfigs_statement`, phase 0; the `theorem … : <the
+def>` IS the statement-identity check): for EVERY voter list, EVERY acked
+map and every heap snapshot pair encoding them, the pinned lowering of
+the real `main.MajorityConfig.CommittedIndex` — called on a heap-carried
+receiver and a heap-carried `AckedIndexer` — delivers a value satisfying
+the DECLARATIVE quorum spec `IsCommittedIndex`, at `GoSpec` strength.
+`committedIndexAllReturnsSix` reads it out first-order at the 3-voter
+encoding (also its non-vacuity witness: an admissible initial state
+exists) and `committedIndexAllNotTwelve` is the run-conditioned negative
+twin; `committedIndexAll_refutes_wrong` is the ∀-quantified refutation
+(the postcondition pins the answer uniquely, via
+`isCommittedIndex_iff`).
+
+WHAT IS NEW HERE, over the 3-voter rung:
+
+* **BOTH branches of `if len(stk) >= n`** (`wp_ci_fitIf_all`): the
+  on-stack `[7]uint64` reslice at `n ≤ 7` and the `make([]uint64, n)`
+  allocation above it. The scratch array's ADDRESS and CAPACITY become
+  existential and nothing downstream knows which branch ran.
+* **Voters that never reported** (`wp_ci_range_body_miss`,
+  `wp_ci_loop_all`): `AckedIndex` answers `(0, false)`, the `if` is not
+  taken and NEITHER the slot NOR the fill index moves — so the missing
+  voters' zeros end up in the LOW slots, which is exactly `ackedOrZero`.
+  The invariant carries the zero count explicitly (`zeros + filled.length
+  = n`, `ks.length ≤ zeros`) and its `List.Perm` is over the REPORTED
+  values (`reduceOption`).
+* **`slices.Sort` at a SYMBOLIC length** (`applyStmtOp_sortSlice_ints`):
+  the machine's two `for i in [:len]` loops discharged by induction
+  (`forIn_range'_inv`) rather than unrolled, with the sort's ANSWER a
+  premise — any sorted permutation of the loaded values IS the answer
+  (`mergeSort_pairs_eq_of_perm`), which is how the reference's `sortAsc`
+  enters.
+* **The encoding bridge** (`encodesConfig_cfgSnapshot`,
+  `encodesAcked_lookup`): the map SNAPSHOT predicates become the loop
+  law's `cfgSnapshot` and per-voter lookup answers — the latter through
+  `mapLookupValue_hit`/`_miss`, the map-entry SEARCH at a symbolic entry
+  array (`forIn_find_none`/`forIn_find_some`).
+
+OVER-SPECIALIZATION CHECK, per new law. `Laws/Values.lean` and the new
+`Laws/QuorumOps.lean` material are TARGET-FREE by inspection:
+`forIn_range'_yield`/`_inv` (any monad-free body, any invariant),
+`applyStmtOp_sortSlice_ints` (any int kind, any length, any tail),
+`buildDefaultArrayValue_int`, `checkSliceBounds_prefix`,
+`mergeSort_pairs_eq_of_perm`, `perm_replicate_reduceOption`,
+`perm_eraseIdx_reduceOption`, `mem_reduceOption_map`,
+`list_split_first_match`, `forIn_find_none`/`_some`,
+`mapLookupValue_hit`/`_miss` — no program, lowering, config or acked
+value occurs in any statement. The WALK laws (`wp_ci_fitIf_all`,
+`wp_ci_range_body_miss`, `wp_ci_loop_all`, `wp_ci_tail_all`,
+`wp_committedIndex_body_all`, `wp_committedIndexCall_all`) name the
+pinned lowering's statements — they are walks OF the target — but their
+DATA is fully quantified: no voter count, no config and no acked value
+occurs; `7` appears only where `majority.go` writes it (the on-stack
+array's length), and the ONE numeric constant in a statement,
+`18446744073709551615`, is `math.MaxUint64` from the source. -/
+example := @GoLean.Surface.committedIndexAllConfigs
+example := @GoLean.Surface.committedIndexAllReturnsSix
+example := @GoLean.Surface.committedIndexAllNotTwelve
+example := @GoLean.Surface.committedIndexAll_refutes_wrong
+example := @GoLean.Iris.GoldenQuorum.wp_ci_fitIf_all
+example := @GoLean.Iris.GoldenQuorum.wp_ci_range_body_miss
+example := @GoLean.Iris.GoldenQuorum.wp_ci_loop_all
+example := @GoLean.Iris.GoldenQuorum.wp_ci_tail_all
+example := @GoLean.Iris.GoldenQuorum.wp_committedIndex_body_all
+example := @GoLean.Iris.GoldenQuorum.wp_committedIndex_body_empty
+example := @GoLean.Iris.GoldenQuorum.wp_committedIndexCall_all
+example := @GoLean.Iris.applyStmtOp_sortSlice_ints
+example := @GoLean.Iris.forIn_range'_inv
+example := @GoLean.Iris.forIn_find_none
+example := @GoLean.Iris.forIn_find_some
+example := @GoLean.Iris.mapLookupValue_hit
+example := @GoLean.Iris.mapLookupValue_miss
+example := @GoLean.Iris.mergeSort_pairs_eq_of_perm
+example := @GoLean.Iris.perm_replicate_reduceOption
+example := @GoLean.Iris.perm_eraseIdx_reduceOption
+example := @GoLean.Quorum.encodesConfig_cfgSnapshot
+example := @GoLean.Quorum.encodesAcked_lookup
+example := @GoLean.Quorum.sortedAcked_perm
+example := @GoLean.Quorum.sortedAcked_get
 example := @GoLean.Iris.normalizeArrayForTy_int
 example := @GoLean.Iris.normalizeValueForTy_intArray
 example := @GoLean.Iris.int_normalize_of_range

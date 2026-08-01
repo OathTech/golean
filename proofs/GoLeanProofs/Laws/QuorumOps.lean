@@ -13,6 +13,7 @@ import GoLeanProofs.Laws.Eval
 import GoLeanProofs.Laws.Range
 import GoLeanProofs.Laws.Call
 import GoLeanProofs.Specs.GoldenQuorum
+import GoLeanProofs.Laws.Values
 
 /-!
 # Quorum-op laws — the per-construct laws the `CommittedIndex` walk needs
@@ -410,6 +411,206 @@ theorem wp_make_slice {elem : Ty} {a : Addr} {n : Nat} {oldcell : HeapCell}
 
 /-! ## 3. `sortSlice` — the `slices.Sort` extern -/
 
+/-- **The machine's `slices.Sort` transition at a SYMBOLIC length.** A
+slice over the first `vals.length` slots of a backing array whose
+elements are normalized ints of one kind: the apply step replaces those
+slots by the sorted image and leaves the tail alone. `hsorted` hands over
+the sort's ANSWER — the machine mergeSorts `(Int × IntKind)` pairs by
+their `Int`, and any characterization of that list (e.g. via
+sorted-permutation uniqueness) may be supplied. -/
+theorem applyStmtOp_sortSlice_ints {σ : ExecState} {ch : Choices} {sta : Addr}
+    {kind : IntKind} {cap : Nat} {vals sorted : List Int} {tail : List GoValue}
+    (hcap : vals.length + tail.length = cap)
+    (hnormv : ∀ v ∈ vals, kind.normalize v = v)
+    (htail : ∀ x ∈ tail, ∃ w : Int, x = .int w kind ∧ kind.normalize w = w)
+    (hsorted : (vals.map (fun v => (v, kind))).mergeSort (fun a b => decide (a.1 ≤ b.1))
+      = sorted.map (fun v => (v, kind)))
+    (hlook : Heap.lookup σ.heap (.base sta)
+      = some (intArrayCell cap kind (intVals kind vals ++ tail))) :
+    applyStmtOp σ ch (.sortSlice (.int kind)) 0
+        [.slice ⟨some (.base sta), 0, vals.length, cap⟩]
+      = .ok ({ σ with heap := Heap.set σ.heap (.base sta)
+                        (intArrayCell cap kind (intVals kind sorted ++ tail)) },
+             ch) := by
+  -- the sorted list is a permutation of the input, hence same length and
+  -- same (normalized) elements
+  have hperm : (sorted.map (fun v => (v, kind))).Perm (vals.map (fun v => (v, kind))) := by
+    rw [← hsorted]; exact List.mergeSort_perm _ _
+  have hmem : ∀ v ∈ sorted, v ∈ vals := by
+    intro v hv
+    have hm : (v, kind) ∈ vals.map (fun v => (v, kind)) :=
+      hperm.mem_iff.mp (List.mem_map_of_mem hv)
+    obtain ⟨w, hw, hwe⟩ := List.mem_map.1 hm
+    cases hwe; exact hw
+  have hlens : sorted.length = vals.length := by
+    have h := hperm.length_eq; simpa using h
+  have hnorms : ∀ v ∈ sorted, kind.normalize v = v := fun v hv => hnormv v (hmem v hv)
+  have hstage_len : ∀ i, i ≤ vals.length →
+      (sortStage kind sorted vals tail i).length = cap := by
+    intro i hi
+    simp only [sortStage, intVals, List.length_append, List.length_map,
+      List.length_take, List.length_drop]
+    omega
+  have hstage_norm : ∀ i, ∀ x ∈ sortStage kind sorted vals tail i,
+      ∃ w : Int, x = .int w kind ∧ kind.normalize w = w := by
+    intro i x hx
+    simp only [sortStage, intVals, List.mem_append] at hx
+    rcases hx with hx | hx | hx
+    · obtain ⟨v, hv, rfl⟩ := List.mem_map.1 hx
+      exact ⟨v, rfl, hnorms v (List.mem_of_mem_take hv)⟩
+    · obtain ⟨v, hv, rfl⟩ := List.mem_map.1 hx
+      exact ⟨v, rfl, hnormv v (List.mem_of_mem_drop hv)⟩
+    · exact htail x hx
+  have hstage0 : sortStage kind sorted vals tail 0 = intVals kind vals ++ tail := by
+    simp [sortStage, intVals]
+  have hstagen : sortStage kind sorted vals tail vals.length
+      = intVals kind sorted ++ tail := by
+    simp only [sortStage, intVals]
+    rw [show sorted.take vals.length = sorted from by
+      rw [← hlens]; exact List.take_length,
+      show vals.drop vals.length = [] from List.drop_length]
+    simp
+  have hres : sortStageState σ sta cap kind sorted vals tail vals.length
+      = { σ with
+          heap := Heap.set σ.heap (.base sta)
+            (intArrayCell cap kind (intVals kind sorted ++ tail)) } := by
+    rw [sortStageState, hstagen]
+  -- the operand, the slice validation, and the two `for i in [:len]` loops
+  simp only [applyStmtOp, valueAsSlice, Std.Legacy.Range.forIn_eq_forIn_range',
+    validateSlice, Bind.bind, Except.bind, pure, Except.pure,
+    if_neg (show ¬ (vals.length > cap) by omega)]
+  rw [show ([:vals.length] : Std.Legacy.Range).size = vals.length from by
+    simp [Std.Legacy.Range.size]]
+  -- LOOP 1 — load the visible elements
+  rw [forIn_range'_inv (N := vals.length)
+    (Q := fun i r => r = ((vals.take i).map (fun v => (v, kind))).toArray)
+    (out := fun i r => r.push ((vals[i]!), kind))
+    (res := (vals.map (fun v => (v, kind))).toArray) ?hload (by omega) (by simp)
+    (by intro b' hb'; rw [hb']; simp)]
+  · -- LOOP 2 — store the sorted image back
+    dsimp only
+    rw [hsorted]
+    rw [forIn_range'_inv (N := vals.length) (n := vals.length) (j := 0) (b := σ)
+      (Q := fun i b => b = sortStageState σ sta cap kind sorted vals tail i)
+      (out := fun i _ => sortStageState σ sta cap kind sorted vals tail (i + 1))
+      (res := sortStageState σ sta cap kind sorted vals tail vals.length)
+      ?hstore (by omega) ?hinit (by intro b' h; rw [h, Nat.zero_add])]
+    · rw [hres]
+    · case hstore =>
+        intro i b' hi hb'
+        subst hb'
+        have hilen : i < sorted.length := by omega
+        have hget : (sorted.map (fun v => (v, kind))).toArray[i]?
+            = some ((sorted[i]'hilen), kind) := by
+          rw [Array.getElem?_eq_getElem (by simpa using hilen)]
+          simp
+        rw [hget]
+        dsimp only
+        rw [sliceIndexLoc_prefix hi (by omega)]
+        dsimp only
+        refine ⟨?_, rfl⟩
+        have hilev : i < vals.length := hi
+        have hdrop : intVals kind (vals.drop i)
+            = GoValue.int (vals[i]'hilev) kind :: intVals kind (vals.drop (i + 1)) := by
+          rw [intVals, intVals, List.drop_eq_getElem_cons hilev, List.map_cons]
+        have hsplit : sortStage kind sorted vals tail i
+            = intVals kind (sorted.take i)
+                ++ (GoValue.int (vals[i]'hilev) kind
+                    :: (intVals kind (vals.drop (i + 1)) ++ tail)) := by
+          rw [sortStage, hdrop, List.cons_append]
+        have htake : intVals kind (sorted.take (i + 1))
+            = intVals kind (sorted.take i) ++ [GoValue.int (sorted[i]'hilen) kind] := by
+          rw [intVals, intVals,
+            show sorted.take (i + 1) = sorted.take i ++ [sorted[i]'hilen] from by
+              rw [List.take_add_one, List.getElem?_eq_getElem hilen]; rfl,
+            List.map_append]
+          rfl
+        have hsplit' : sortStage kind sorted vals tail (i + 1)
+            = intVals kind (sorted.take i)
+                ++ (GoValue.int (sorted[i]'hilen) kind
+                    :: (intVals kind (vals.drop (i + 1)) ++ tail)) := by
+          rw [sortStage, htake, List.append_assoc, List.cons_append, List.nil_append]
+        have hlen : (intVals kind (sorted.take i)).length = i := by
+          simp [intVals]; omega
+        have hlk : Heap.lookup (sortStageState σ sta cap kind sorted vals tail i).heap
+            (.base sta) = some (intArrayCell cap kind (sortStage kind sorted vals tail i)) := by
+          rw [sortStageState]
+          exact heap_lookup_set_base_self _ _ _
+        have hset : arraySet (sortStage kind sorted vals tail i).toArray (Int.ofNat i)
+            (GoValue.int (sorted[i]'hilen) kind)
+            = .ok (sortStage kind sorted vals tail (i + 1)).toArray := by
+          rw [hsplit, hsplit', Int.ofNat_eq_natCast]
+          exact arraySet_middle' hlen.symm (by simp [coerceStoredValue, hnorms _ (List.getElem_mem hilen)])
+        have hnormarr : normalizeValueForTy (sortStageState σ sta cap kind sorted vals tail i)
+            (.array cap (.int kind)) (.array (sortStage kind sorted vals tail (i + 1)).toArray)
+            = .ok (.array (sortStage kind sorted vals tail (i + 1)).toArray) :=
+          normalizeValueForTy_intArray (hstage_len (i + 1) (by omega))
+            (hstage_norm (i + 1))
+        simp only [storeLoc, loadLoc, hlk, intArrayCell, hset, hnormarr,
+          Bind.bind, Except.bind, pure, Except.pure]
+        rw [sortStageState, sortStageState]
+        simp only [heap_set_set_of_lookup hlook, intArrayCell]
+    · case hinit =>
+        rw [sortStageState, hstage0, heap_set_self_of_lookup hlook]
+  · case hload =>
+      intro i b' hi hb'
+      subst hb'
+      have hsplit : intVals kind vals ++ tail
+          = intVals kind (vals.take i)
+              ++ (GoValue.int (vals[i]'hi) kind
+                  :: (intVals kind (vals.drop (i + 1)) ++ tail)) := by
+        rw [intVals, intVals, intVals, list_map_split (fun v => GoValue.int v kind) vals i hi]
+        simp
+      have hlen : (intVals kind (vals.take i)).length = i := by
+        simp [intVals]; omega
+      have hload : loadLoc σ (.index (.base sta) (Int.ofNat i))
+          = .ok (GoValue.int (vals[i]'hi) kind) := by
+        simp only [loadLoc, hlook, intArrayCell, Bind.bind, Except.bind, pure,
+          Except.pure, Int.ofNat_eq_natCast]
+        rw [hsplit]
+        exact arrayGet_middle' hlen.symm
+      rw [sliceIndexLoc_prefix hi (by omega)]
+      dsimp only
+      rw [hload]
+      have hval : vals[i]! = vals[i]'hi := getElem!_pos vals i hi
+      rw [hval]
+      refine ⟨rfl, ?_⟩
+      simp only [List.map_take]
+      rw [List.take_add_one, List.getElem?_map, List.getElem?_eq_getElem hi]
+      simp
+
+/-- The default `[n]uint64` at a SYMBOLIC length: `n` zeros. -/
+theorem buildDefaultArrayValue_int (σ : ExecState) (kind : IntKind) (n : Nat) :
+    buildDefaultArrayValue σ n (.int kind)
+      = .ok (.array (List.replicate n (.int 0 kind)).toArray) := by
+  simp only [buildDefaultArrayValue, buildArrayValue,
+    Std.Legacy.Range.forIn_eq_forIn_range', Bind.bind, Except.bind, pure,
+    Except.pure]
+  rw [show ([:n] : Std.Legacy.Range).size = n from by simp [Std.Legacy.Range.size]]
+  rw [forIn_range'_inv (N := n) (n := n) (j := 0) (b := (#[] : Array GoValue))
+    (Q := fun i acc => acc = (List.replicate i (GoValue.int 0 kind)).toArray)
+    (out := fun _ acc => acc.push (.int 0 kind))
+    (res := (List.replicate n (GoValue.int 0 kind)).toArray)
+    ?hfill (by omega) (by simp) (by intro b' h; rw [h, Nat.zero_add])]
+  · rfl
+  · case hfill =>
+      intro i acc hi hacc
+      refine ⟨by simp [defaultValue, defaultValueFuel, typeResolutionFuel], ?_⟩
+      rw [hacc, List.replicate_succ']
+      simp [← List.toArray_replicate]
+
+/-- Go's `a[:n]` bounds check on a prefix of a long-enough array. -/
+theorem checkSliceBounds_prefix {limit n : Nat} (h : n ≤ limit) :
+    checkSliceBounds "length" limit 0 (n : Int) = .ok (0, n) := by
+  simp only [checkSliceBounds, Bind.bind, Except.bind, pure, Except.pure]
+  rw [if_neg (by omega : ¬ ((n : Int) < 0)),
+    if_neg (by omega : ¬ ((n : Int) > (limit : Int))),
+    if_neg (by omega : ¬ ((0 : Int) < 0)),
+    if_neg (by omega : ¬ ((0 : Int) > (n : Int)))]
+  simp
+
+
+
 /-- **`slices.Sort` on an integer slice**, as ONE apply step. A slice's
 elements live in a single backing cell (`Loc.index base i` stores go
 through `storeLoc`'s array path), so the whole multi-element read+sort+
@@ -427,6 +628,151 @@ theorem wp_sort_slice {elem : Ty} {slice : SliceValue} {a : Addr}
       ⊢ WP (Config.retV (.slice slice)
             (.stmtOpK (.sortSlice elem) 0 [] [] env k)) @ s ; E {{ Φ }} :=
   wp_stmt_op_apply_store (done := []) happly
+
+/-! ### The map-entry SEARCH at a symbolic entry array
+
+`mapEntryIndex?` is a `for … do if … then return i` loop over the
+snapshot: at a LITERAL entry array `simp` unrolls it, at a symbolic one
+nothing does. These two lemmas are the induction — stated over an
+abstract loop body so the caller's actual one unifies — and the two
+`mapLookupValue` characterizations they buy: the key is absent (Go's zero
+value and `false`), or SOME entry carries it (that entry's value and
+`true`). Target-free: no program, no lowering, no quorum value. -/
+
+/-- The search loop when NO entry matches: it runs to the end with the
+early-return slot still empty. -/
+theorem forIn_find_none {α ε : Type}
+    {f : α → (MProd (Option (Option Nat)) Nat) → Except ε (ForInStep (MProd (Option (Option Nat)) Nat))} :
+    ∀ (l : List α) (j : Nat),
+      (∀ a ∈ l, ∀ i : Nat, f a ⟨none, i⟩ = .ok (.yield ⟨none, i + 1⟩)) →
+      forIn l (⟨none, j⟩ : MProd (Option (Option Nat)) Nat) f
+        = .ok ⟨none, j + l.length⟩
+  | [], j, _ => by simp
+  | a :: t, j, h => by
+    rw [List.forIn_cons, h a (by simp) j]
+    simp only [Bind.bind, Except.bind]
+    rw [forIn_find_none t (j + 1) (fun x hx i => h x (by simp [hx]) i),
+      show j + 1 + t.length = j + (a :: t).length from by simp; omega]
+
+/-- The search loop when the FIRST matching entry is at `pre.length`: the
+prefix all misses, then the body returns that index. -/
+theorem forIn_find_some {α ε : Type}
+    {f : α → (MProd (Option (Option Nat)) Nat) → Except ε (ForInStep (MProd (Option (Option Nat)) Nat))}
+    (p : α) (rest : List α)
+    (hhit : ∀ i : Nat, f p ⟨none, i⟩ = .ok (.done ⟨some (some i), i⟩)) :
+    ∀ (pre : List α) (j : Nat),
+      (∀ a ∈ pre, ∀ i : Nat, f a ⟨none, i⟩ = .ok (.yield ⟨none, i + 1⟩)) →
+      forIn (pre ++ p :: rest) (⟨none, j⟩ : MProd (Option (Option Nat)) Nat) f
+        = .ok ⟨some (some (j + pre.length)), j + pre.length⟩
+  | [], j, _ => by
+    rw [List.nil_append, List.forIn_cons, hhit j]
+    simp only [Bind.bind, Except.bind, List.length_nil, Nat.add_zero, pure,
+      Except.pure]
+  | a :: t, j, h => by
+    rw [List.cons_append, List.forIn_cons, h a (by simp) j]
+    simp only [Bind.bind, Except.bind]
+    rw [forIn_find_some p rest hhit t (j + 1) (fun x hx i => h x (by simp [hx]) i),
+      show j + 1 + t.length = j + (a :: t).length from by simp; omega]
+
+section
+
+variable {σ : ExecState} {mba : Addr} {mty : Option Ty} {valTy : Ty}
+variable {entries : Array (GoValue × GoValue)} {q : Int}
+
+/-- Splitting a list at its FIRST element satisfying a decidable
+property — the shape the map-entry search needs (all earlier entries
+miss, this one hits). -/
+theorem list_split_first_match {α : Type _} (P : α → Prop) :
+    ∀ (l : List α), (∃ x ∈ l, P x) →
+      ∃ pre p rest, l = pre ++ p :: rest ∧ (∀ a ∈ pre, ¬ P a) ∧ P p
+  | [], h => by simp at h
+  | a :: t, h => by
+    by_cases ha : P a
+    · exact ⟨[], a, t, rfl, by simp, ha⟩
+    · have h' : ∃ x ∈ t, P x := by
+        obtain ⟨x, hx, hpx⟩ := h
+        rcases List.mem_cons.1 hx with rfl | hx'
+        · exact absurd hpx ha
+        · exact ⟨x, hx', hpx⟩
+      obtain ⟨pre, p, rest, hsplit, hpre, hp⟩ := list_split_first_match P t h'
+      refine ⟨a :: pre, p, rest, by rw [List.cons_append, hsplit], ?_, hp⟩
+      intro x hx
+      rcases List.mem_cons.1 hx with rfl | hx'
+      · exact ha
+      · exact hpre x hx'
+
+/-- Integer key comparison, as the search loop performs it. -/
+theorem valueEq_int {kind kind' : IntKind} {a b : Int} :
+    valueEq σ (.int kind) (.int a kind') (.int b kind') = .ok (a == b) := by
+  simp only [valueEq, valueEqFuel, typeResolutionFuel, pure, Except.pure]
+
+/-- **The comma-ok read, key ABSENT**: every entry's key is an `int` that
+differs from the looked-up one, so Go delivers the value type's zero and
+`false`. -/
+theorem mapLookupValue_miss {dv : GoValue}
+    (hl : Heap.lookup σ.heap (.base mba) = some ⟨mty, .mapData entries⟩)
+    (hdef : defaultValue σ valTy = .ok dv)
+    (hall : ∀ p ∈ entries.toList, ∃ w : Int, p.1 = .int w .uint64 ∧ w ≠ q) :
+    mapLookupValue σ ⟨some (.base mba)⟩ (.int q .uint64) (.int .uint64) valTy
+      = .ok (dv, false) := by
+  simp only [mapLookupValue, mapEntries, loadLoc, hl, mapEntryIndex?,
+    checkKeyHashable, valueHashability, Bind.bind, Except.bind, pure,
+    Except.pure]
+  rw [← Array.forIn_toList, forIn_find_none entries.toList 0 ?hmiss]
+  · simp only [hdef]
+  · case hmiss =>
+      intro a ha i
+      obtain ⟨w, hw, hne⟩ := hall a ha
+      rw [hw]
+      simp only [valueEq_int, Bind.bind, Except.bind]
+      rw [if_neg (by simpa using hne)]
+
+/-- **The comma-ok read, key PRESENT**: the first entry carrying the key
+answers, and any entry carrying it answers the same when the snapshot is
+FUNCTIONAL at that key (`hfun`) — which is what an encoding predicate
+supplies. -/
+theorem mapLookupValue_hit {v : GoValue}
+    (hl : Heap.lookup σ.heap (.base mba) = some ⟨mty, .mapData entries⟩)
+    (hkeys : ∀ p ∈ entries.toList, ∃ w : Int, p.1 = .int w .uint64)
+    (hfun : ∀ p ∈ entries.toList, p.1 = .int q .uint64 → p.2 = v)
+    (hmem : ∃ p ∈ entries.toList, p.1 = .int q .uint64) :
+    mapLookupValue σ ⟨some (.base mba)⟩ (.int q .uint64) (.int .uint64) valTy
+      = .ok (v, true) := by
+  -- split the snapshot at the FIRST entry carrying the key
+  obtain ⟨pre, p, rest, hsplit, hpre, hp⟩ :
+      ∃ pre p rest, entries.toList = pre ++ p :: rest
+        ∧ (∀ a ∈ pre, a.1 ≠ .int q .uint64) ∧ p.1 = .int q .uint64 :=
+    list_split_first_match (fun a => a.1 = GoValue.int q .uint64) entries.toList hmem
+  have hpv : p.2 = v := hfun p (by rw [hsplit]; simp) hp
+  simp only [mapLookupValue, mapEntries, loadLoc, hl, mapEntryIndex?,
+    checkKeyHashable, valueHashability, Bind.bind, Except.bind, pure,
+    Except.pure]
+  rw [← Array.forIn_toList, hsplit, forIn_find_some p rest ?hhit pre 0 ?hmiss]
+  · simp only [Nat.zero_add]
+    rw [show entries[pre.length]? = some p from by
+      rw [← Array.getElem?_toList, hsplit]
+      exact list_getElem?_middle pre p rest]
+    obtain ⟨pk, pv⟩ := p
+    dsimp only at hpv ⊢
+    rw [hpv]
+  · case hhit =>
+      intro i
+      rw [hp]
+      simp only [valueEq_int, Bind.bind, Except.bind]
+      rw [if_pos (by simp)]
+  · case hmiss =>
+      intro a ha i
+      obtain ⟨w, hw⟩ := hkeys a (by rw [hsplit]; simp [ha])
+      rw [hw]
+      simp only [valueEq_int, Bind.bind, Except.bind]
+      rw [if_neg (by
+        have hne : a.1 ≠ .int q .uint64 := hpre a ha
+        rw [hw] at hne
+        simp only [beq_iff_eq, decide_eq_true_eq]
+        intro hcon
+        exact hne (by rw [hcon]))]
+
+end
 
 /-! ## 4. `mapLookup` — the comma-ok read
 
@@ -1103,9 +1449,14 @@ FAITHFUL TO THE PIN as of the `σ.types` pin (quorum pilot phase 4): the
 lowering declares it — the store's coercion at that named type resolves
 through `σ.types`, dischargeable now that the ghost state pins it.
 
-**Generalized 2026-08-01 (proof-automation arc phase 3)** from a
-ONE-ENTRY receiver map to an ARBITRARY entry array plus a `hpair` premise
-naming the lookup's answer — the machine's own computation, in the
+**Generalized twice, 2026-08-01 (proof-automation arc, phases 3 and 4)**:
+first from a ONE-ENTRY receiver map to an ARBITRARY entry array plus a
+`hpair` premise naming the lookup's answer, then (phase 4) from a FOUND
+key to the comma-ok answer `(v, b)` at an arbitrary `b` — a voter with no
+`AckedIndexer` entry is Go's "has not reported yet" and the `∀`-config
+theorem must walk that iteration too (`hpair` then reads
+`(defaultValue Index, false)`). Neither is a property of Go; both were
+artefacts of the walks that came first — the machine's own computation, in the
 `wp_assign_store`/`hstore` style. The one-entry map was not a property of
 Go but of the n = 1 walk: at any config with more than one voter the
 `AckedIndexer` holds several entries and the SAME statement must be
@@ -1121,7 +1472,7 @@ registered law (its premises are all `rfl`/pin facts), and it is derived
 from this one. -/
 theorem wp_map_lookup_ackedIndex_entries {ma ida mba ta oa : Addr}
     {mty : Option Ty}
-    {entries : Array (GoValue × GoValue)} {q v : Int} {env k}
+    {entries : Array (GoValue × GoValue)} {q v : Int} {b : Bool} {env k}
     (htypes : GoCoreGS.types GF = GoldenQuorum.quorumLowered.typeDefs.toList)
     (hq : IntKind.uint64.normalize q = q)
     (hv : IntKind.uint64.normalize v = v)
@@ -1129,7 +1480,7 @@ theorem wp_map_lookup_ackedIndex_entries {ma ida mba ta oa : Addr}
       Heap.lookup σ.heap (.base mba) = some ⟨mty, .mapData entries⟩ →
       mapLookupValue σ ⟨some (.base mba)⟩ (.int q .uint64) (.int .uint64)
           (.defined ⟨"main.Index"⟩)
-        = .ok (.int v .uint64, true))
+        = .ok (.int v .uint64, b))
     (hm : LocalEnv.lookup env "m" = some (.base ma))
     (hid : LocalEnv.lookup env "id" = some (.base ida))
     (hidx : LocalEnv.lookup env "idx" = some (.base ta))
@@ -1145,7 +1496,7 @@ theorem wp_map_lookup_ackedIndex_entries {ma ida mba ta oa : Addr}
           ∗ ida.id ↦ (⟨some (.int .uint64), .int q .uint64⟩ : HeapCell)
           ∗ mba.id ↦ (⟨mty, .mapData entries⟩ : HeapCell)
           ∗ ta.id ↦ (⟨some (.defined ⟨"main.Index"⟩), .int v .uint64⟩ : HeapCell)
-          ∗ oa.id ↦ (⟨some .bool, .bool true⟩ : HeapCell)
+          ∗ oa.id ↦ (⟨some .bool, .bool b⟩ : HeapCell)
           -∗ WP (Config.next k) @ s ; E {{ Φ }})
       ⊢ WP (Config.exec QuorumPin.mapLookupStmt env k) @ s ; E {{ Φ }} := by
   iintro ⟨Hm, Hid, Hmb, Ht, Ho, Hcont⟩
@@ -1192,11 +1543,11 @@ theorem wp_map_lookup_ackedIndex_entries {ma ida mba ta oa : Addr}
   iintro Hid
   iapply (wp_map_lookup (mba := mba) (ta := ta) (oa := oa) (mty := mty)
     (entries := entries)
-    (key := .int q .uint64) (val := .int v .uint64) (b := true)
+    (key := .int q .uint64) (val := .int v .uint64) (b := b)
     (tcell := ⟨some (.defined ⟨"main.Index"⟩), .int 0 .uint64⟩)
     (tcell' := ⟨some (.defined ⟨"main.Index"⟩), .int v .uint64⟩)
     (ocell := ⟨some .bool, .bool false⟩)
-    (ocell' := ⟨some .bool, .bool true⟩)
+    (ocell' := ⟨some .bool, .bool b⟩)
     (hkey := fun σ _ht => by
       simp [normalizeValueForTy, normalizeValueForTyFuel, hq])
     (hpair := hpair)

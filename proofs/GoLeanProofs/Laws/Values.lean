@@ -34,9 +34,24 @@ Three groups:
    Antisymmetry is required only ON THE ELEMENTS PRESENT, which is what
    makes it usable at `(Int × IntKind)` — a type where the machine's
    comparison `fun a b => a.1 ≤ b.1` is NOT globally antisymmetric.
+4. **The machine's bounded loops and its `slices.Sort` transition at a
+   SYMBOLIC length** (`forIn_range'_inv`, `applyStmtOp_sortSlice_ints`,
+   `buildDefaultArrayValue_int`; proof-automation arc phase 4,
+   2026-08-01). `applyStmtOp`'s wide ops are written as `for i in [:n]`
+   loops over the machine state; at a LITERAL `n` `simp` unrolls them,
+   at a symbolic one nothing does. `forIn_range'_inv` is the induction
+   those loops need — a bounded `List.range'` fold with a
+   step-indexed invariant, stated over an arbitrary monad-free `f` so
+   the caller's actual loop body unifies with it — and
+   `applyStmtOp_sortSlice_ints` is what it buys: `slices.Sort` over a
+   slice of already-normalized ints replaces the visible slots by the
+   sorted image and leaves the tail alone, for ANY length. The sort's
+   ANSWER is a premise (`hsorted`), so the caller may characterize it
+   however it likes; `mergeSort_pairs_eq_of_perm` is the usable form —
+   any sorted permutation of the loaded values IS the machine's answer.
 -/
 
-open GoLean GoLean.GoCore
+open GoLean GoLean.GoCore GoLean.GoCore.Machine
 
 namespace GoLean.Iris
 
@@ -241,5 +256,240 @@ theorem mergeSort_intKind_eq_of_perm {l₁ l₂ : List (Int × IntKind)}
   have h1 : a.1 = b.1 := by omega
   have h2 : a.2 = b.2 := hkind a ha b hb
   exact Prod.ext h1 h2
+
+
+/-! ### Sorted-permutation bridge for the machine's sort -/
+
+/-- **Any sorted permutation IS the machine's sort answer.** The machine
+mergeSorts `(Int × IntKind)` pairs by their `Int`; if `srt` is a sorted
+permutation of the loaded values, the sort returns exactly `srt`'s image.
+Target-free: no program, no config, no quorum value. -/
+theorem mergeSort_pairs_eq_of_perm {kind : IntKind} {vals srt : List Int}
+    (hp : vals.Perm srt) (hsorted : srt.Pairwise (· ≤ ·)) :
+    (vals.map (fun v => (v, kind))).mergeSort (fun a b => decide (a.1 ≤ b.1))
+      = srt.map (fun v => (v, kind)) := by
+  have htrans : ∀ a b c : Int × IntKind,
+      decide (a.1 ≤ b.1) = true → decide (b.1 ≤ c.1) = true → decide (a.1 ≤ c.1) = true := by
+    intro a b c hab hbc
+    simp only [decide_eq_true_eq] at hab hbc ⊢
+    omega
+  have htotal : ∀ a b : Int × IntKind,
+      (decide (a.1 ≤ b.1) || decide (b.1 ≤ a.1)) = true := by
+    intro a b
+    simp only [Bool.or_eq_true, decide_eq_true_eq]
+    omega
+  refine eq_of_perm_of_pairwise (le := fun a b => decide (a.1 ≤ b.1) = true)
+    (((List.mergeSort_perm _ _).trans (hp.map _)))
+    (List.pairwise_mergeSort htrans htotal _) ?_ ?_
+  · rw [List.pairwise_map]
+    exact hsorted.imp (by intro a b h; simpa using h)
+  · intro a ha b hb hab hba
+    simp only [decide_eq_true_eq] at hab hba
+    have h1 : a.1 = b.1 := by omega
+    have hka : a.2 = kind := by
+      obtain ⟨x, _, rfl⟩ := List.mem_map.1 ((List.mergeSort_perm _ _).mem_iff.mp ha)
+      rfl
+    have hkb : b.2 = kind := by
+      obtain ⟨x, _, rfl⟩ := List.mem_map.1 ((List.mergeSort_perm _ _).mem_iff.mp hb)
+      rfl
+    exact Prod.ext h1 (hka.trans hkb.symm)
+
+/-- The `some` entries are no more numerous than the entries. -/
+theorem reduceOption_length_le {α : Type _} :
+    ∀ l : List (Option α), (l.reduceOption).length ≤ l.length
+  | [] => Nat.le_refl _
+  | none :: t => by
+    have ih := reduceOption_length_le t
+    have hcons : (none :: t).reduceOption = t.reduceOption := rfl
+    rw [hcons, List.length_cons]; omega
+  | some v :: t => by
+    have ih := reduceOption_length_le t
+    have hcons : (some v :: t).reduceOption = v :: t.reduceOption := rfl
+    rw [hcons, List.length_cons, List.length_cons]; omega
+
+/-- **Zeros for the missing entries.** A right-to-left fill writes only
+the `some` entries and leaves the low slots zero, so the slots the sort
+sees are the multiset of `getD 0`s. Target-free. -/
+theorem perm_replicate_reduceOption (d : Int) :
+    ∀ l : List (Option Int),
+      (List.replicate (l.length - (l.reduceOption).length) d
+        ++ l.reduceOption).Perm (l.map (fun o => o.getD d))
+  | [] => List.Perm.refl _
+  | none :: t => by
+    have ih := perm_replicate_reduceOption d t
+    have hle : (t.reduceOption).length ≤ t.length := reduceOption_length_le t
+    have hcons : (none :: t).reduceOption = t.reduceOption := rfl
+    rw [hcons, List.length_cons, List.map_cons,
+      show t.length + 1 - (t.reduceOption).length
+          = (t.length - (t.reduceOption).length) + 1 from by omega,
+      List.replicate_succ, List.cons_append]
+    exact ih.cons _
+  | some v :: t => by
+    have ih := perm_replicate_reduceOption d t
+    have hcons : (some v :: t).reduceOption = v :: t.reduceOption := rfl
+    rw [hcons, List.length_cons, List.map_cons, List.length_cons,
+      show t.length + 1 - ((t.reduceOption).length + 1)
+          = t.length - (t.reduceOption).length from by omega]
+    exact (List.perm_middle).trans (ih.cons _)
+
+/-- Membership in the reported values: a value that survives
+`reduceOption ∘ map f` came from an element the map sends to `some`. -/
+theorem mem_reduceOption_map {α β : Type _} {f : α → Option β} {b : β} :
+    ∀ {l : List α}, b ∈ (l.map f).reduceOption → ∃ a ∈ l, f a = some b
+  | [], h => by simp [List.reduceOption] at h
+  | a :: t, h => by
+    cases hfa : f a with
+    | none =>
+      have h' : b ∈ (t.map f).reduceOption := by
+        rw [List.map_cons, hfa] at h
+        exact h
+      obtain ⟨x, hx, hfx⟩ := mem_reduceOption_map h'
+      exact ⟨x, List.mem_cons_of_mem _ hx, hfx⟩
+    | some c =>
+      have h' : b ∈ c :: (t.map f).reduceOption := by
+        rw [List.map_cons, hfa] at h
+        exact h
+      rcases List.mem_cons.1 h' with rfl | h''
+      · exact ⟨a, by simp, hfa⟩
+      · obtain ⟨x, hx, hfx⟩ := mem_reduceOption_map h''
+        exact ⟨x, List.mem_cons_of_mem _ hx, hfx⟩
+
+/-- Erasing a `none` leaves the `some`s alone — exactly, not just up to
+permutation. -/
+theorem reduceOption_eraseIdx_none {α : Type _} :
+    ∀ (l : List (Option α)) (i : Nat), l[i]? = some none →
+      (l.eraseIdx i).reduceOption = l.reduceOption
+  | [], _, h => by simp at h
+  | none :: _, 0, _ => rfl
+  | some _ :: _, 0, h => by simp at h
+  | a :: t, i + 1, h => by
+    have ih := reduceOption_eraseIdx_none t i (by simpa using h)
+    cases a with
+    | none => exact ih
+    | some v =>
+      show v :: (t.eraseIdx i).reduceOption = v :: t.reduceOption
+      rw [ih]
+
+/-- **The multiset-conservation step for a PARTIAL acked map.** Erasing
+position `i` (whose entry is `some v`) from the "still to come" list and
+prepending `v` to the "already written" list preserves the total
+multiset of reported values — the `List.Perm` the ∀-config voter loop's
+invariant carries. -/
+theorem perm_eraseIdx_reduceOption {α : Type _} (t : List α) :
+    ∀ (l : List (Option α)) (i : Nat) (v : α), l[i]? = some (some v) →
+      ((l.eraseIdx i).reduceOption ++ (v :: t)).Perm (l.reduceOption ++ t)
+  | [], _, _, h => by simp at h
+  | some w :: rest, 0, v, h => by
+    have hw : w = v := by simpa using h
+    subst hw
+    show (rest.reduceOption ++ w :: t).Perm (w :: rest.reduceOption ++ t)
+    rw [List.cons_append]
+    exact List.perm_middle
+  | none :: _, 0, _, h => by simp at h
+  | a :: rest, i + 1, v, h => by
+    have ih := perm_eraseIdx_reduceOption t rest i v (by simpa using h)
+    cases a with
+    | none => exact ih
+    | some w =>
+      show (w :: ((rest.eraseIdx i).reduceOption ++ (v :: t))).Perm
+        (w :: (rest.reduceOption ++ t))
+      exact ih.cons w
+
+/-! ## 4. Bounded machine loops: `forIn` over `[:n]`, and `sortSlice`
+
+The machine's wide statement ops (`sortSlice`, `makeSlice`'s default
+array) are `for i in [:n]` loops in the `Except` monad. These are the
+lemmas that let a walk pass through one at a SYMBOLIC `n`. Target-free:
+no program, no lowering, no quorum value occurs. -/
+
+theorem forIn_range'_yield {β ε : Type} {f : Nat → β → Except ε (ForInStep β)}
+    {Q : Nat → β → Prop} {out : Nat → β → β} {N : Nat}
+    (hstep : ∀ (i : Nat) (b : β), i < N → Q i b →
+      f i b = .ok (.yield (out i b)) ∧ Q (i + 1) (out i b)) :
+    ∀ (n j : Nat), j + n ≤ N → ∀ b : β, Q j b →
+      ∃ b', forIn (List.range' j n 1) b f = .ok b' ∧ Q (j + n) b'
+  | 0, j, _, b, hb => ⟨b, rfl, by simpa using hb⟩
+  | n + 1, j, hjn, b, hb => by
+    obtain ⟨hf, hQ⟩ := hstep j b (by omega) hb
+    have ih := forIn_range'_yield hstep n (j + 1) (by omega) (out j b) hQ
+    obtain ⟨b', hb', hQ'⟩ := ih
+    refine ⟨b', ?_, by rw [show j + (n + 1) = j + 1 + n by omega]; exact hQ'⟩
+    rw [show List.range' j (n + 1) 1 = j :: List.range' (j + 1) n 1 from rfl,
+      List.forIn_cons, hf]
+    simp only [Bind.bind, Except.bind]
+    exact hb'
+
+/-- Overwriting a location with the value it already holds is a no-op. -/
+theorem heap_set_self_of_lookup {h : Heap} {l : Loc} {c : HeapCell}
+    (hl : Heap.lookup h l = some c) : Heap.set h l c = h := by
+  induction h with
+  | nil => simp [Heap.lookup] at hl
+  | cons p rest ih =>
+    obtain ⟨loc, old⟩ := p
+    simp only [Heap.lookup] at hl
+    cases hb : (loc == l) with
+    | true =>
+      simp only [hb, if_true] at hl
+      injection hl with hl
+      simp [Heap.set, hb, hl]
+    | false =>
+      simp only [hb, Bool.false_eq_true, if_false] at hl
+      simp only [Heap.set, hb, Bool.false_eq_true, if_false]
+      exact congrArg _ (ih hl)
+
+theorem forIn_range'_inv {β ε : Type} {f : Nat → β → Except ε (ForInStep β)}
+    (Q : Nat → β → Prop) (out : Nat → β → β) {N n j : Nat} {b res : β}
+    (hstep : ∀ (i : Nat) (b' : β), i < N → Q i b' →
+      f i b' = .ok (.yield (out i b')) ∧ Q (i + 1) (out i b'))
+    (hjn : j + n ≤ N) (hb : Q j b) (hdet : ∀ b', Q (j + n) b' → b' = res) :
+    forIn (List.range' j n 1) b f = .ok res := by
+  obtain ⟨b', hb', hQ'⟩ := forIn_range'_yield hstep n j hjn b hb
+  rw [hb', hdet b' hQ']
+
+/-- The slice index location of a slice over the whole backing array. -/
+theorem sliceIndexLoc_prefix {sta : Addr} {n cap j : Nat} (hj : j < n) (hnc : n ≤ cap) :
+    sliceIndexLoc ⟨some (.base sta), 0, n, cap⟩ (Int.ofNat j)
+      = .ok (.index (.base sta) (Int.ofNat j)) := by
+  simp only [sliceIndexLoc, validateSlice, if_neg (by omega : ¬ n > cap),
+    Bind.bind, Except.bind, pure, Except.pure, Int.ofNat_eq_natCast]
+  simp only [if_neg (by omega : ¬ ((j : Int) < 0)),
+    Int.toNat_natCast, if_pos hj, Nat.zero_add]
+
+/-- Splitting a mapped list at a position — the `middle` shape the
+positional read/write laws want. -/
+theorem list_map_split {α β : Type _} (f : α → β) (l : List α) (i : Nat)
+    (h : i < l.length) :
+    l.map f = (l.take i).map f ++ f (l[i]'h) :: (l.drop (i + 1)).map f := by
+  have h1 : l.take i ++ l.drop i = l := List.take_append_drop i l
+  have h2 : l.drop i = l[i] :: l.drop (i + 1) := List.drop_eq_getElem_cons h
+  calc l.map f = (l.take i ++ l.drop i).map f := by rw [h1]
+    _ = (l.take i).map f ++ (l.drop i).map f := List.map_append ..
+    _ = (l.take i).map f ++ f (l[i]'h) :: (l.drop (i + 1)).map f := by
+        rw [h2, List.map_cons]
+
+theorem length_take_of_le {α : Type _} {l : List α} {i : Nat} (h : i ≤ l.length) :
+    (l.take i).length = i := by simp; omega
+
+/-- A heap cell holding an array of `cap` ints of one kind. -/
+def intArrayCell (cap : Nat) (kind : IntKind) (l : List GoValue) : HeapCell :=
+  ⟨some (.array cap (.int kind)), .array l.toArray⟩
+
+/-- The int list as machine values. -/
+def intVals (kind : IntKind) (l : List Int) : List GoValue :=
+  l.map (fun v => .int v kind)
+
+/-- The backing array's contents when the sort has written back its first
+`i` slots: the sorted prefix, then the still-unwritten original suffix,
+then the untouched tail. -/
+def sortStage (kind : IntKind) (sorted vals : List Int) (tail : List GoValue)
+    (i : Nat) : List GoValue :=
+  intVals kind (sorted.take i) ++ (intVals kind (vals.drop i) ++ tail)
+
+/-- ... and the state that array sits in, mid-writeback. -/
+def sortStageState (σ : ExecState) (sta : Addr) (cap : Nat) (kind : IntKind)
+    (sorted vals : List Int) (tail : List GoValue) (i : Nat) : ExecState :=
+  { σ with
+    heap := Heap.set σ.heap (.base sta)
+      (intArrayCell cap kind (sortStage kind sorted vals tail i)) }
 
 end GoLean.Iris

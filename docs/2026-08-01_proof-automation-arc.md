@@ -628,3 +628,196 @@ rider items.
   set are UNCHANGED by the two spec-surface generalizations, which is the
   same acceptance shape phase 2 used. No runtime code was touched (proofs
   only), so no baseline re-pin and no `--diff` re-run is owed.
+
+---
+
+### Build log — 2026-08-01, phase 4: **THE ∀-CONFIG THEOREM — the arc's GOAL, reached**
+
+`Specs/AutomationTargets.committedIndexAllConfigs_statement` — the arc's
+exit criterion, a `def … : Prop` written at phase 0 — is **DISCHARGED**
+by `Specs/GoldenQuorumAll.committedIndexAllConfigs`. For EVERY voter list
+`c`, EVERY acked map `acked : Nat → Option Nat` and every heap snapshot
+pair encoding them (`EncodesConfig`/`EncodesAcked`), the PINNED LOWERING
+of the real etcd-io/raft `main.MajorityConfig.CommittedIndex` — called on
+a heap-carried receiver and a heap-carried `AckedIndexer`, from the
+caller's environment — delivers a value satisfying the DECLARATIVE quorum
+spec `IsCommittedIndex c acked`, at `GoSpec` strength (triple +
+progress, any admissible heap, any frame). The `theorem … : <the def>`
+application IS the statement-identity check.
+
+**THE STATEMENT WAS CORRECTED — recorded, not quietly patched.** In its
+phase-0 form the target has NO bound on `c.length`, and in that form it
+is **FALSE, not merely unproven**: at `c.length ≥ 2^63` the lowering's
+`n := len(c)` is a Go `int`, so `IntKind.int.normalize` wraps it
+NEGATIVE; `n == 0` is then false, `len(stk) >= n` is TRUE (7 ≥ a
+negative), and `srt = stk[:n]` hits `checkSliceBounds`' negative-high
+arm — a panic, which `Progress` counts as stuck. The added hypothesis is
+`c.length < 2 ^ 63`, a REPRESENTABILITY side condition about Go's `int`
+(the same bound phase 3's `wp_ci_loop` already carried as `hsmall`), not
+about the target. The falsity is argued, not mechanized — exhibiting the
+panicking run at 2^63 entries is a separate cost — and that is recorded
+at the target's docstring, in the same shape as the earlier
+`quorumAckedIndexFuncSpec2_statement` correction. Everything else in the
+statement is byte-identical.
+
+**THE FIFTH OBLIGATION, which phase 3's list did not name.** The four
+recorded obligations (fit test at general `n`; general `sortSlice` +
+`sortAsc` agreement + the `pos` arithmetic; the encoding bridge; the
+surface shell) were all real. A fifth was hiding inside the loop law:
+`wp_ci_loop` takes `ack : Int → Int`, i.e. it promises **every voter has
+reported**. `majority.go` does not — `if idx, ok := l.AckedIndex(id); ok
+{ srt[i] = …; i-- }` skips BOTH the write and the decrement for a voter
+with no entry, which is why the missing voters' zeros end up in the LOW
+slots and get sorted in among the acked values (exactly `ackedOrZero`).
+Every concrete rung so far (n = 1, n = 3) used a TOTAL acked map, so no
+walk had ever taken that branch; the ∀-config statement quantifies over
+`acked : Nat → Option Nat` with no such promise. This is the
+over-specialization check paying for itself: the omission was invisible
+to the green gates and to the corpus, and was found by reading the Go.
+
+**WHAT LANDED, obligation by obligation.**
+
+1. **The fit test, BOTH branches** — `wp_ci_fitIf_all`. `n ≤ 7`: the
+   on-stack `[7]uint64` resliced (`checkSliceBounds_prefix`, general).
+   `n > 7`: `make([]uint64, n)` allocating a backing array of `n` zeros
+   (`buildDefaultArrayValue_int`, the machine's default-array `for` loop
+   at a symbolic length). The continuation is `∀ ba cap trail, ⌜n + trail
+   = cap⌝ ∗ …` — the scratch array's ADDRESS and CAPACITY are
+   existential, so nothing downstream knows which branch ran. That is the
+   right interface: the branches differ in exactly those two things.
+2. **The sort and the readout at symbolic `n`** — `wp_ci_tail_all`, on
+   `Laws/QuorumOps.applyStmtOp_sortSlice_ints`: `slices.Sort` over a
+   slice of already-normalized ints replaces the visible slots by the
+   sorted image and leaves the tail alone, AT ANY LENGTH. `applyStmtOp`'s
+   `sortSlice` is two `for i in [:slice.len]` loops over the machine
+   state; at a literal length `simp` unrolls them, at a symbolic one
+   nothing does, so the loops are discharged by INDUCTION
+   (`Laws/Values.forIn_range'_inv`: a bounded `List.range'` fold with a
+   step-indexed invariant, stated over an abstract body so the caller's
+   actual loop unifies with it). The sort's ANSWER is a premise, and
+   `mergeSort_pairs_eq_of_perm` is the usable form: **any sorted
+   permutation of the loaded values IS the machine's answer** — which is
+   how the reference's `sortAsc` enters, with no `mergeSort`-vs-`sortAsc`
+   agreement lemma needed at all (sorted-permutation uniqueness does the
+   whole job). `pos = n - (n/2+1)` is Go `int` arithmetic through
+   `Int.tdiv`, shown in range and equal to `committedIndexRef`'s index.
+3. **The encoding bridge** — `encodesConfig_cfgSnapshot` (an
+   `EncodesConfig` snapshot IS `cfgSnapshot` of the voter list it
+   carries, and that list is a permutation of `c` — this is where
+   `c.Nodup` is used) and `encodesAcked_lookup` (the snapshot answers
+   Go's comma-ok pair for `acked` at every voter). The latter needed the
+   map-entry SEARCH at a SYMBOLIC entry array: `mapEntryIndex?` is a
+   `for … do if … then return i` loop, so `forIn_find_none`/
+   `forIn_find_some` (its two shapes, by induction) and the two
+   characterizations `mapLookupValue_miss`/`_hit` — the hit form asks
+   only that the snapshot be FUNCTIONAL at the key, which is what an
+   encoding predicate supplies.
+4. **The surface shell** — NOT the owed `GoFuncSpec`-with-`argEnv`
+   widening. The target is stated directly as the `GoSpec` it unfolds to,
+   and `SurfaceExit.goSpec_of_wp` already takes an arbitrary `env₀`, `P`
+   and `prog`: the discharge is `goSpec_of_wp` + `wp_committedIndexCall_all`
+   + `wp_value'`, exactly the `quorumAckedIndexFuncSpec2` shape. The
+   unary-`GoFuncSpec`-with-`argEnv` widening therefore remains OWED as a
+   convenience (nothing now needs it), which is a better outcome than
+   widening a surface for one statement.
+5. **The missing-voter branch** — `wp_ci_range_body_miss` (one iteration
+   that finds nothing: the comma-ok read delivers the `Index` zero and
+   `false`, the `if` is not taken, and the law's footprint is only the
+   receiver's cells and the key cell — demanding the scratch array would
+   be a lie about the step) and `wp_ci_loop_all`, the partial-ack voter
+   loop.
+
+   **Recorded duplication.** `wp_ci_loop_all` (partial `ack`) strictly
+   generalizes phase 3's `wp_ci_loop` (total `ack`): the latter is the
+   former at `ack q = some (f q)`, where `zeros` ends at `0` and the
+   `reduceOption` perm collapses to phase 3's. It was NOT re-derived from
+   it — that would mean editing `Specs/GoldenQuorumThree.lean`'s green
+   3-voter walk for no new claim, and the two laws' proofs share their
+   body obligation (`wp_ci_range_body`) already. The derivation is a
+   recorded cleanup, not a hidden one: if a third loop law ever appears,
+   collapse all three.
+
+**INVARIANT DESIGN — the partial-ack loop.** Over the remaining snapshot
+`rem`:
+
+```
+∃ ks filled zeros,
+  ⌜rem = cfgSnapshot ks ∧ ks ⊆ ks₀
+    ∧ ((ks.map ack).reduceOption ++ filled) ~ (ks₀.map ack).reduceOption
+    ∧ zeros + filled.length = ks₀.length ∧ ks.length ≤ zeros⌝
+  ∗ … ∗ i ↦ ⟨int, zeros - 1⟩ ∗ stk ↦ stkArr zeros filled trail
+```
+
+Three changes from phase 3's total-ack invariant, each forced: the
+`List.Perm` is over the REPORTED values only (`reduceOption`); the number
+of unwritten slots `zeros` is its OWN existential — it is no longer
+`ks.length`, because a missing voter shrinks `ks` and leaves `zeros`
+alone — pinned to the fill index by `i = zeros - 1`; and `ks.length ≤
+zeros` is what keeps the next write in bounds. At exhaustion `filled`
+permutes the whole reported multiset and `zeros` counts the silent
+voters, so `replicate zeros 0 ++ filled ~ ks₀.map (ackedOrZero)` — one
+list lemma (`perm_replicate_reduceOption`), and the sort sees exactly the
+reference's multiset.
+
+**NEW GENERAL LAWS/LEMMAS.** `Laws/Values.lean` (target-free by
+inspection): `forIn_range'_yield`/`forIn_range'_inv` (bounded machine
+loops with a step-indexed invariant, abstract body),
+`heap_set_self_of_lookup`, `sliceIndexLoc_prefix`, `list_map_split`,
+`intArrayCell`/`intVals`/`sortStage`/`sortStageState`,
+`mergeSort_pairs_eq_of_perm`, `reduceOption_length_le`,
+`perm_replicate_reduceOption`, `reduceOption_eraseIdx_none`,
+`perm_eraseIdx_reduceOption`, `mem_reduceOption_map`.
+`Laws/QuorumOps.lean`: `applyStmtOp_sortSlice_ints`,
+`buildDefaultArrayValue_int`, `checkSliceBounds_prefix`,
+`list_split_first_match`, `valueEq_int`, `forIn_find_none`/`_some`,
+`mapLookupValue_miss`/`_hit`. Two existing laws were WIDENED with their
+statements otherwise unchanged — `wp_map_lookup_ackedIndex_entries` and
+`wp_ackedIndex_body_entries` now carry the comma-ok flag `b : Bool`
+instead of a hard-coded `true` (the one-entry registered law
+`wp_map_lookup_ackedIndex` and the n = 1/n = 3 walks are unaffected;
+their `#print axioms` pins are unchanged).
+
+**OVER-SPECIALIZATION CHECK, per new law (standing item).** Every lemma
+listed above quantifies over the list/array/kind/index/monad involved and
+mentions no program, lowering, config or acked value. The WALK laws
+(`wp_ci_fitIf_all`, `wp_ci_range_body_miss`, `wp_ci_loop_all`,
+`wp_ci_tail_all`, `wp_committedIndex_body_all`, `wp_committedIndex_body_empty`,
+`wp_committedIndexCall_all`) name the pinned lowering's statements —
+they are walks OF the target and cannot avoid that — but their DATA is
+fully quantified: no voter count, no config, no acked value. The two
+numeric constants that DO appear in statements are the source's own: `7`
+(the length of `majority.go`'s on-stack array, which the fit test
+compares against) and `18446744073709551615` (`math.MaxUint64`, the
+empty-config return). Nothing was shaped by the 3-voter instance: the
+concrete data appears only at instantiation sites and in the readout
+twin.
+
+**GOOSE/PERENNIAL COMPARISON.** Unchanged where phase 3 recorded it (the
+range rule vs `wp_map_for_range`, `deps/perennial/new/golang/theory/map.v:213`).
+Two additions, both honest about scope: (a) Perennial still has no model
+of `slices.Sort` (`grep -rn "sort" deps/perennial/new/golang/defn/*.v
+deps/perennial/new/golang/theory/*.v` finds nothing), so the symbolic-length
+sort transition has no counterpart to compare against; (b) the `for i in
+[:n]` loops inside `applyStmtOp` are OUR artifact — GooseLang models a Go
+builtin as a primitive with an axiomatized spec, where GoCore transcribes
+the interpreter's loop, which is what forces `forIn_range'_inv` to exist.
+That is the price of the differential-first design (the interpreter is
+the spec), and it is paid once per wide op.
+
+**RIDER ITEMS: UNTOUCHED.** Method promotion (BUG-007), the BUG-005
+snapshot fix, import-path identity (BUG-010 widening) and type switches
+(arc plan §4) were not started in this phase and are not blocked by it —
+they are coverage work in the guardrails-first pattern, independent of
+the ∀-config theorem. They fall to the coordinator's close-out decision:
+either their own slices on this branch or a follow-on arc.
+
+**Gate**: `scripts/ci` PASS. Proofs build + in-build `Audit` sweep (6614
+declarations, all axiom-clean; new `#guard_msgs` pins on
+`committedIndexAllConfigs`, `committedIndexAllReturnsSix`,
+`committedIndexAllNotTwelve`, `wp_ci_loop_all`, `wp_ci_fitIf_all`,
+`applyStmtOp_sortSlice_ints`, `forIn_range'_inv`,
+`mergeSort_pairs_eq_of_perm`, `mapLookupValue_hit`,
+`encodesConfig_cfgSnapshot`). The n = 1 and n = 3 discharges'
+statements and axiom sets are UNCHANGED by the two law widenings — the
+same acceptance shape phases 2 and 3 used. No runtime code was touched
+(proofs only), so no baseline re-pin and no `--diff` re-run is owed.
