@@ -85,6 +85,148 @@ open Lean in
     throwError "audit sweep FAILED — declarations with disallowed axioms \
       (a `sorry`, `native_decide`, or new postulate?):\n{String.intercalate "\n" lines.toList}"
 
+/-! ## Statement-TCB gate — the DELETION TEST, mechanized
+
+Doctrine of record: `docs/2026-08-01_tcb-and-layering-doctrine.md` §1.
+Top-level theorem STATEMENTS must be semantically interpretable without
+Iris: if Iris were deleted from the build, every designated headline
+statement must still elaborate and denote the same proposition in base
+definitions. Proofs may use anything — they are deleted with Iris; the
+statements remain and must still be the same questions.
+
+Mechanization: for each DESIGNATED theorem below, walk the transitive
+STATEMENT CLOSURE of its type and fail the build if any constant reached
+originates in an Iris module (module-of-origin via `getModuleIdxFor?`,
+root name `Iris` — the same discrimination the axiom sweep uses, so a
+stray top-level or renamed constant cannot dodge it; note this
+deliberately includes `Iris.Std.*`).
+
+**The closure, precisely** (the deletion test needs every constant the
+statement's MEANING depends on):
+- seed: the constants of the theorem's TYPE expression;
+- for every constant reached, the constants of its own TYPE — a
+  statement means nothing if something it mentions no longer elaborates;
+- for a DEFINITION reached (`defnInfo` — incl. `def`/`abbrev`/matchers/
+  well-founded auxiliaries), additionally the constants of its VALUE:
+  the statement's meaning unfolds through definitions, so a `def` whose
+  body mentions Iris smuggles Iris into the proposition even when the
+  type looks clean;
+- for an INDUCTIVE reached, its constructors (and hence their types):
+  the denoted proposition quantifies over the type's inhabitants, which
+  the constructors determine;
+- for a THEOREM or AXIOM reached, its type only — proof terms are
+  irrelevant to what the statement SAYS (they are exactly what the
+  deletion deletes).
+
+This is stronger than the surface-purity import scan (an unused Iris
+import survives deletion; a statement unfolding through one Iris
+constant does not) and complements it: imports are checked per-module,
+meaning is checked per-theorem. On success it prints the audited count
+and the per-theorem closure sizes, so growth is visible in the log.
+Fail-closed everywhere: a missing designated name, a non-theorem, an
+unresolvable constant, or an exhausted walk budget all FAIL the build —
+whitelist nothing. -/
+
+open Lean in
+#eval show CoreM Unit from do
+  let env ← getEnv
+  let mods := env.header.moduleNames
+  let isIris : Array Bool := mods.map (fun m => m.getRoot == `Iris)
+  -- The designated headline theorems (the summit family + the golden and
+  -- recover surfaces + the math bridge). Extend this list when a new
+  -- headline theorem is claimed; never remove without a recorded reason.
+  let designated : List Name := [
+    ``GoLean.Surface.quorumOneKnownFuncSpec,
+    ``GoLean.Surface.quorumOneKnownMeetsSpec,
+    ``GoLean.Surface.quorumOneKnownReturnsTwelve,
+    ``GoLean.Surface.quorumOneKnownNotEleven,
+    ``GoLean.Surface.quorumThreeAllFuncSpec,
+    ``GoLean.Surface.quorumThreeAllMeetsSpec,
+    ``GoLean.Surface.quorumThreeAllReturnsSix,
+    ``GoLean.Surface.quorumThreeAllNotTwelve,
+    ``GoLean.Surface.committedIndexAllConfigs,
+    ``GoLean.Surface.committedIndexAllReturnsSix,
+    ``GoLean.Surface.committedIndexAllNotTwelve,
+    ``GoLean.Surface.committedIndexAll_refutes_wrong,
+    ``GoLean.Surface.quorumAckedIndexFuncSpec2,
+    ``GoLean.Surface.recoverFuncSpec,
+    ``GoLean.Surface.goldenFuncSpec,
+    ``GoLean.Surface.goldenSpec,
+    ``GoLean.Surface.goldenTriple,
+    ``GoLean.Surface.goldenReturnsTwo,
+    ``GoLean.Surface.goldenNotThree,
+    ``GoLean.Quorum.committedIndexRef_meets_spec]
+  let mut lines : Array String := #[]
+  let mut violations : Array String := #[]
+  for t in designated do
+    let some tinfo := env.find? t
+      | throwError "statement-TCB gate: designated theorem {t} is MISSING \
+          (renamed without re-pointing the gate?)"
+    unless tinfo matches ConstantInfo.thmInfo _ do
+      throwError "statement-TCB gate: {t} is not a theorem"
+    -- Worklist walk of the statement closure, with parent pointers so a
+    -- violation reports its dependency chain, and an explicit budget so
+    -- the walk is total and fails loud rather than spinning.
+    let mut queue : Array Name := tinfo.type.getUsedConstants
+    let mut parent : Std.HashMap Name Name := {}
+    for c in queue do
+      parent := parent.insert c t
+    let mut visited : NameSet := {}
+    let mut exhausted := true
+    for _ in [0:2000000] do
+      if queue.isEmpty then
+        exhausted := false
+        break
+      let c := queue.back!
+      queue := queue.pop
+      if visited.contains c then
+        continue
+      visited := visited.insert c
+      match env.getModuleIdxFor? c with
+      | some idx =>
+        if isIris[idx.toNat]! then
+          -- Reconstruct the reach chain for the report, then stop at the
+          -- boundary (no recursion INTO Iris — one constant is the proof).
+          let mut chain := s!"{c}"
+          let mut cur := c
+          for _ in [0:100000] do
+            match parent.get? cur with
+            | some p =>
+              chain := s!"{p} → " ++ chain
+              cur := p
+              if p == t then break
+            | none => break
+          violations := violations.push
+            s!"  {t}: statement closure reaches Iris constant {c} \
+              (module {mods[idx.toNat]!})\n    chain: {chain}"
+          continue
+      | none => pure ()
+      let some ci := env.find? c
+        | throwError "statement-TCB gate: {c} (reached from {t}) not found"
+      let mut next : Array Name := ci.type.getUsedConstants
+      match ci with
+      | .defnInfo v => next := next ++ v.value.getUsedConstants
+      | .inductInfo v => next := next ++ v.ctors.toArray
+      | _ => pure ()
+      for n in next do
+        unless visited.contains n do
+          if !(parent.contains n) then
+            parent := parent.insert n c
+          queue := queue.push n
+    if exhausted then
+      throwError "statement-TCB gate: walk budget exhausted at {t} — \
+        raise the bound deliberately, never silently"
+    lines := lines.push s!"  {t}: {visited.size} statement constants"
+  if violations.isEmpty then
+    IO.println s!"statement-TCB gate: {designated.length} designated theorems, \
+      all statement closures Iris-free"
+    for l in lines do
+      IO.println l
+  else
+    throwError "statement-TCB gate FAILED — a headline STATEMENT depends on \
+      Iris (the deletion test; reformulate the statement, do not whitelist):\n\
+      {String.intercalate "\n" violations.toList}"
+
 /-! ## Axiom gates — the recorded axiom set of every proof-facing declaration.
     A change to any set fails the build until this file is deliberately updated.
     (R3 REBUILD, 2026-07-23: the reshape's S4 PRUNED block — the per-theorem

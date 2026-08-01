@@ -880,3 +880,43 @@ requires a reason comment in the script and a note in
 **Gate**: proofs build green, sweep 6636 declarations axiom-clean, no
 new warnings; full `scripts/ci` at the end of the close-out slices.
 Proofs-only change (no runtime code), so no baseline re-pin.
+
+### Build log — 2026-08-01, CLOSE-OUT slice 2: **the statement-TCB gate (the deletion test, mechanized)**
+
+Charter: `docs/2026-08-01_tcb-and-layering-doctrine.md` §1 + close-out
+checklist item 2 (first half). New `#eval` gate in `proofs/Audit.lean`,
+in the axiom sweep's style: for a DESIGNATED list of 20 headline
+theorems (the summit family `quorumOneKnown*`/`quorumThreeAll*`/
+`committedIndexAll*` incl. `committedIndexAll_refutes_wrong`,
+`quorumAckedIndexFuncSpec2`, `recoverFuncSpec`, the five golden
+theorems, and `committedIndexRef_meets_spec`), walk the transitive
+STATEMENT CLOSURE of each theorem's TYPE and FAIL the build if any
+constant reached originates in an Iris module.
+
+**The closure definition, recorded** (the design decision): seed = the
+type's constants; every reached constant contributes its own TYPE's
+constants; a DEFINITION (`defnInfo` — `def`/`abbrev`/matchers/WF
+auxiliaries) additionally contributes its VALUE's constants (the
+statement's meaning unfolds through definition bodies); an INDUCTIVE
+contributes its constructors (the denoted proposition quantifies over
+the inhabitants the constructors determine); a THEOREM/AXIOM reached
+contributes its type only (proofs are exactly what deletion deletes).
+Iris-ness is MODULE-OF-ORIGIN (`getModuleIdxFor?`, root `Iris`), the
+axiom sweep's discrimination — deliberately including `Iris.Std.*`, and
+immune to namespace dressing (the tamper test flagged
+`Std.ExtTreeMap.instPartialMapCompare`, an Iris-declared instance in the
+`Std` NAMESPACE, which an import- or namespace-based check would have
+missed). Violations report the full parent chain
+(`theorem → def → … → Iris constant`). Fail-closed everywhere: missing
+designated name, non-theorem, unresolvable constant, or exhausted walk
+budget all fail the build; there is no whitelist.
+
+**Result on the current codebase: PASS** — 20/20 statement closures
+Iris-free, per-theorem closure sizes printed in the build log (326–2600
+constants; the ~2,000-constant floor is `execStmt`/`Steps` + the
+`Std.ExtTreeMap` heaplet machinery the surface judgments legitimately
+mean). The doctrine's assessment is confirmed for every designated
+theorem. Tamper-tested in both directions: designating
+`GoLean.Iris.mapIterInvRule` (whose statement legitimately quantifies
+over `IProp` — it is a statement ABOUT the proof infrastructure, and is
+deliberately NOT designated) fails the build with 12+ named chains.
