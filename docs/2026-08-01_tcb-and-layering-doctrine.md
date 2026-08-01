@@ -115,6 +115,17 @@ Specs/* is target — with known debt:
 
 1. Move general laws out of `QuorumOps.lean`; layer map documented.
 2. Statement-TCB gate + widened surface-purity scan (above).
+3. Both doctrines as named dimensions in the final pre-merge audit
+   (alongside semantics / vacuity / over-specialization /
+   gate-honesty): "is any top-level statement's meaning dependent on
+   Iris or on target-specific machinery it shouldn't need?"
+
+(Placement restored at the 2026-08-01 audit response: the Comparator
+deferral below was inserted between items 2 and 3, orphaning item 3 —
+the one CLAUDE.md-mandated unconditional close-out obligation — inside
+a section headed DEFERRED, where CommonMark absorbed it into the
+preceding paragraph. The insertion was mechanical, not a decision; the
+audit ask was in fact made.)
 
 ## The Comparator sprint (DEFERRED post-merge — user decision 2026-08-01)
 
@@ -130,7 +141,3 @@ v4.31.0-toolchain commit fd2e25d, deps/lean4export built @ v4.31.0,
 landrun installed (profile draft v1.5.0 grants $HOME/go/bin, pending
 promote); remaining fetch: comparator's Lake deps (one outside-sandbox
 `lake build`), optional nanoda.
-3. Both doctrines as named dimensions in the final pre-merge audit
-   (alongside semantics / vacuity / over-specialization /
-   gate-honesty): "is any top-level statement's meaning dependent on
-   Iris or on target-specific machinery it shouldn't need?"

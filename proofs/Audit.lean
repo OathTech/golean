@@ -116,7 +116,20 @@ statement's MEANING depends on):
   the constructors determine;
 - for a THEOREM or AXIOM reached, its type only — proof terms are
   irrelevant to what the statement SAYS (they are exactly what the
-  deletion deletes).
+  deletion deletes);
+- for an OPAQUE constant reached (`opaqueInfo` — `opaque` defs, and the
+  kernel-level `default` stubs Lean emits for `partial def` and for
+  derived nested-inductive `BEq`/`Repr` instances), additionally the
+  constants of its VALUE, same as a definition: an
+  `opaque x : Prop := <Iris term>` smuggles Iris exactly as a `def`
+  would. (Audit response 2026-08-01, pre-merge finding: the first form's
+  `| _ => pure ()` catch-all silently truncated this kind to type-only —
+  a constructed `opaque … := Nonempty CoPset` statement passed the gate.
+  Decision recorded here: constructors, recursors and the `Quot`
+  primitives have no separate value and contribute their types only; the
+  match below is EXHAUSTIVE, no wildcard, so a `ConstantInfo` kind this
+  gate has not explicitly considered is a COMPILE ERROR — fail closed —
+  never a silent type-only fallback.)
 
 This is stronger than the surface-purity import scan (an unused Iris
 import survives deletion; a statement unfolding through one Iris
@@ -135,6 +148,13 @@ open Lean in
   -- The designated headline theorems (the summit family + the golden and
   -- recover surfaces + the math bridge). Extend this list when a new
   -- headline theorem is claimed; never remove without a recorded reason.
+  -- (Audit response 2026-08-01: `goldenInvariant` added — the sixth
+  -- step-0 target, axiom-gated below and named "all six" there, but
+  -- omitted here since the list's introduction with no recorded reason;
+  -- plus the two new first-order readouts `recoverReturnsSeven` and
+  -- `quorumAckedIndexReturnsTwelveTrue`, the doctrine's mandatory
+  -- rung-2 readout twins for `recoverFuncSpec` /
+  -- `quorumAckedIndexFuncSpec2`.)
   let designated : List Name := [
     ``GoLean.Surface.quorumOneKnownFuncSpec,
     ``GoLean.Surface.quorumOneKnownMeetsSpec,
@@ -149,10 +169,13 @@ open Lean in
     ``GoLean.Surface.committedIndexAllNotTwelve,
     ``GoLean.Surface.committedIndexAll_refutes_wrong,
     ``GoLean.Surface.quorumAckedIndexFuncSpec2,
+    ``GoLean.Surface.quorumAckedIndexReturnsTwelveTrue,
     ``GoLean.Surface.recoverFuncSpec,
+    ``GoLean.Surface.recoverReturnsSeven,
     ``GoLean.Surface.goldenFuncSpec,
     ``GoLean.Surface.goldenSpec,
     ``GoLean.Surface.goldenTriple,
+    ``GoLean.Surface.goldenInvariant,
     ``GoLean.Surface.goldenReturnsTwo,
     ``GoLean.Surface.goldenNotThree,
     ``GoLean.Quorum.committedIndexRef_meets_spec]
@@ -204,10 +227,17 @@ open Lean in
       let some ci := env.find? c
         | throwError "statement-TCB gate: {c} (reached from {t}) not found"
       let mut next : Array Name := ci.type.getUsedConstants
+      -- EXHAUSTIVE over ConstantInfo — no wildcard (fail-closed; see the
+      -- docstring's opaque-constant rule, audit response 2026-08-01).
       match ci with
       | .defnInfo v => next := next ++ v.value.getUsedConstants
+      | .opaqueInfo v => next := next ++ v.value.getUsedConstants
       | .inductInfo v => next := next ++ v.ctors.toArray
-      | _ => pure ()
+      | .thmInfo _ => pure ()   -- type only, deliberate (docstring rule)
+      | .axiomInfo _ => pure () -- type only, deliberate (docstring rule)
+      | .ctorInfo _ => pure ()  -- no value; type already walked
+      | .recInfo _ => pure ()   -- no value; type already walked
+      | .quotInfo _ => pure ()  -- primitive; type already walked
       for n in next do
         unless visited.contains n do
           if !(parent.contains n) then
@@ -297,6 +327,10 @@ open Lean in
 -- twin of `wp_recover_catch_seven`).
 /-- info: 'GoLean.Surface.recoverFuncSpec' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Surface.recoverFuncSpec
+-- Its first-order readout twin (audit response 2026-08-01 — the
+-- doctrine's mandatory rung-2 readout, previously missing).
+/-- info: 'GoLean.Surface.recoverReturnsSeven' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Surface.recoverReturnsSeven
 
 -- Quorum-pilot phase-0 pins (statement-first targets; the *_statement
 -- defs are TARGETS and are deliberately not pinned as results — these
@@ -327,6 +361,10 @@ open Lean in
 -- satisfiability guard on its precondition.
 /-- info: 'GoLean.Surface.quorumAckedIndexFuncSpec2' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Surface.quorumAckedIndexFuncSpec2
+-- Its two-cell first-order readout twin (audit response 2026-08-01 —
+-- the doctrine's mandatory rung-2 readout, previously missing).
+/-- info: 'GoLean.Surface.quorumAckedIndexReturnsTwelveTrue' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Surface.quorumAckedIndexReturnsTwelveTrue
 /-- info: 'GoLean.Iris.GoldenQuorum.wp_ackedIndexCall' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Iris.GoldenQuorum.wp_ackedIndexCall
 /-- info: 'GoLean.Iris.wp_call_enter_ackedIndexImpl' depends on axioms: [propext, Classical.choice, Quot.sound] -/
@@ -920,7 +958,11 @@ OVER-SPECIALIZATION CHECK, per new law. `Laws/Values.lean` and the new
 `mergeSort_pairs_eq_of_perm`, `perm_replicate_reduceOption`,
 `perm_eraseIdx_reduceOption`, `mem_reduceOption_map`,
 `list_split_first_match`, `forIn_find_none`/`_some`,
-`mapLookupValue_hit`/`_miss` — no program, lowering, config or acked
+`mapLookupValue_hit`/`_miss` (any int key KIND — the `{kind : IntKind}`
+axis was generalized at the 2026-08-01 pre-merge audit response from a
+`.uint64` pin, which was exactly the target's `map[uint64]Index` key type
+and which nothing in the proofs required; same for
+`mapLookupValue_singleton`) — no program, lowering, config or acked
 value occurs in any statement. The WALK laws (`wp_ci_fitIf_all`,
 `wp_ci_range_body_miss`, `wp_ci_loop_all`, `wp_ci_tail_all`,
 `wp_committedIndex_body_all`, `wp_committedIndexCall_all`) name the

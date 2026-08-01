@@ -359,11 +359,22 @@ it, with a `□`-boxed one-iteration obligation from `P keys i` to
    a real NARROWING, recorded above with its widening path — the failure
    direction the standing check names, acknowledged rather than hidden.
 
-One further difference, not a generality claim: their rule takes map
-ownership and reads the live map, while ours consumes the SNAPSHOT the
-machine took at range entry. That is BUG-005 (`docs/BUGS.md`), already
-cross-referenced in this module's header, and it is a semantics gap, not
-a proof-rule gap. -/
+One further difference, not a generality claim — CORRECTED at the
+2026-08-01 pre-merge audit (the first form of this note said their rule
+"reads the live map"; it does not): GooseLang's `map.for_range` ALSO
+iterates a snapshot — it binds `"mv" := StartRead "m"` and folds the body
+over that value (`deps/perennial/new/golang/defn/map.v:40-48`, with the
+verbatim source comment "Does not support modifications to the map during
+the loop"), and `StartRead`'s read-lock makes a mid-loop store STUCK
+(`PrepareWrite` steps only from `Reading 0`, `src/goose_lang/lang.v`).
+The honest delta is therefore about mid-loop MUTATION, not about
+snapshotting: Perennial EXCLUDES it (fail-closed — the program gets
+stuck), while our machine PERMITS it and silently serves the stale
+snapshot where Go would observe the mutation. That permissiveness is
+BUG-005 (`docs/BUGS.md`), already cross-referenced in this module's
+header — a semantics gap, not a proof-rule gap — and when its snapshot
+surgery is scoped, Perennial offers NO live-map-iteration prior art to
+copy; their model shares the snapshot design. -/
 theorem wp_map_iter_inv {kid : String} {keyTy valTy : Ty} {body : Stmt}
     {entries : Array (GoValue × GoValue)} {env k}
     {I : Array (GoValue × GoValue) → IProp GF}

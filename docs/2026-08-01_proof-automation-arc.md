@@ -91,11 +91,24 @@ are deliberately deferred (subsection below):
   `committedIndexAllConfigs` (phase 4), `quorumThreeAllFuncSpec`
   (phase 3), `mapIterInvRule` (phase 1) each discharge their phase-0
   `def … : Prop` target with the `theorem … : <the def>` statement-
-  identity check.
+  identity check. Caveat this summary must carry (audit response
+  2026-08-01 — the correction was recorded in four places but not
+  here): the ∀-config phase-0 statement was AMENDED mid-arc — phase 4
+  added the `c.length < 2 ^ 63` representability hypothesis, without
+  which the statement is FALSE, not merely unproven (argued, not yet
+  mechanized; recorded as owed) — so "the statement written at phase 0
+  is the statement proven" holds for two of the three targets, and for
+  the third with that one recorded, justified amendment (full record:
+  the def's docstring in `AutomationTargets.lean`, the phase-4
+  build-log entry below, `proofs/Audit.lean`'s phase-0 ledger, and the
+  proof-corpus manifest row).
 - ~~Summit re-derived through `go_walk` with identical statement +
   axioms~~ **MET** (phase 2): `summitStatement_holds` still inhabits
   `summitStatement_pinned`, and the `#guard_msgs` axiom pin on
-  `quorumOneKnownFuncSpec` still reads the classical trio.
+  `quorumOneKnownFuncSpec` still reads the classical trio. (What the
+  pin does and does not check is stated precisely at the pin, audit
+  response 2026-08-01; the load-bearing statement-identity evidence is
+  the git-level signature diff recorded in the phase-2 entry.)
 - ~~Every new law/rule witnessed same-commit; sweep clean; gate green;
   ratchet not up~~ **MET**: per-phase gate records in the build log;
   close-out `scripts/ci` PASS (sweep 6636 declarations axiom-clean,
@@ -262,10 +275,17 @@ work in the established guardrails-first pattern, independent of the
   ghost order to maintain; (iii) their `□` is our Lean-level `∀`, free;
   (iv) they handle `break`/`continue`/`return` via
   `for_map_postcondition` (`map.v:207`) and the exception monad, we do
-  not — a REAL narrowing, recorded with its widening path. Separately,
-  they read the LIVE map while we consume the machine's snapshot: that is
-  BUG-005, a semantics gap already cross-referenced in `Laws/Range.lean`,
-  not a proof-rule gap.
+  not — a REAL narrowing, recorded with its widening path. Separately —
+  CORRECTED at the 2026-08-01 pre-merge audit (this entry first said
+  they "read the LIVE map"; false): GooseLang's `map.for_range` ALSO
+  iterates a snapshot (`"mv" := StartRead "m"`, folded over that value,
+  with the source comment "Does not support modifications to the map
+  during the loop", `defn/map.v:40-48`), and `StartRead`'s read-lock
+  makes a mid-loop store STUCK. The honest delta: they EXCLUDE mid-loop
+  mutation (fail-closed), our machine PERMITS it and silently serves
+  stale values — that permissiveness is BUG-005, a semantics gap already
+  cross-referenced in `Laws/Range.lean`, not a proof-rule gap, and its
+  eventual surgery has NO live-map prior art in Perennial to copy.
 
   **Gate**: `scripts/ci` green; proofs build + in-build `Audit` sweep
   (6126 declarations, all axiom-clean, new `#guard_msgs` pins on
@@ -289,7 +309,9 @@ work in the established guardrails-first pattern, independent of the
   recover composition are now walked by tactic, with
   `quorumOneKnownFuncSpec`'s statement and axiom set unchanged.
 
-  **THE TACTIC.** `proofs/GoLeanProofs/Tactics/GoWalk.lean` (601 lines,
+  **THE TACTIC.** `proofs/GoLeanProofs/Tactics/GoWalk.lean` (603 lines —
+  count corrected from 601 at the 2026-08-01 audit response; `wc -l` is
+  603 both at the introducing commit and at close-out,
   ~230 of them the design note below). Four tactics: `go_walk` (the
   loop; `go_walk n` bounds it, `go_walk with [h]` extends the
   between-step normalization), `go_walk_step law as […] with […]` (one
@@ -406,7 +428,8 @@ work in the established guardrails-first pattern, independent of the
   scripts of the 15 quorum walks: **1891 → 506 lines (−73%)**. The
   largest single walk, `wp_ci_range_body_one`, went 329 → 62; the driver
   body `wp_oneKnown_body` 391 → 118; `wp_ci_emptyIf` 46 → 3
-  (`go_walk; go_walk_finish Hcont`). Against that, +601 lines of tactic
+  (`go_walk; go_walk_finish Hcont`). Against that, +603 lines of tactic
+  (corrected from 601, audit response 2026-08-01)
   and +130 of law-module registration/normalization — machinery that is
   paid once and amortized over every future walk. NOTE the arc plan's
   "≤ ~100 lines" acceptance is NOT met at the summit taken as a whole
@@ -584,12 +607,28 @@ work in the established guardrails-first pattern, independent of the
   order to the end and quotient it there; our `List.Perm` invariant
   quotients it at the start. That is a proof-engineering difference, not
   a strength claim — their `P keys i` can express order-DEPENDENT
-  invariants ours cannot state at all. Second, honestly: **Perennial has
-  no model of `slices.Sort`** — `grep -rn "sort" deps/perennial/new/golang/theory/*.v`
-  is empty — so the order-blind-sort lemma has no counterpart there to
-  compare against; and they handle `break`/`continue`/`return` in ranges
-  via `for_map_postcondition` (`map.v:207`) where we still do not (the
-  v1 narrowing recorded in phase 1, unchanged).
+  invariants ours cannot state at all. Second — **CORRECTED at the
+  2026-08-01 pre-merge audit**: this entry originally said "Perennial has
+  no model of `slices.Sort`", justified by a grep of
+  `deps/perennial/new/golang/{defn,theory}/*.v` — a directory that could
+  not contain package proofs. Perennial's sort development lives at
+  `deps/perennial/new/proof/slices_proof/sort.v:28`: `wp_SortFunc`, a WP
+  spec for `slices.SortFunc` with permutation + sortedness
+  postconditions, for an ARBITRARY strict weak order supplied as a
+  comparator, proven against the translated Go pdqsort source
+  (`new/proof/slices_proof/pdqSort/`, ~3,100 lines; one transitive
+  `Admitted.` remains in `pdqSort/partition.v`). That IS the counterpart
+  to our sort machinery, and it is strictly MORE general than ours
+  (int elements, the machine's built-in `≤` comparator) — a
+  narrower-than-the-reference construct, deliberate per the extern
+  policy (`docs/2026-07-30_quorum-extern-policy.md`: `slices.SortFunc`,
+  non-integer elements etc. fail closed; the general widening is
+  recorded there as the rejected-for-now alternative). Hyper-literally
+  Perennial specs `SortFunc`, not `Sort` itself — but the comparison the
+  standing check demands exists and points the wrong way from what this
+  entry first recorded. They also handle `break`/`continue`/`return` in
+  ranges via `for_map_postcondition` (`map.v:207`) where we still do not
+  (the v1 narrowing recorded in phase 1, unchanged).
 
   **OVER-SPECIALIZATION CHECK, per new law (standing item).**
   `Laws/Values.lean`: TARGET-FREE by inspection — every statement
@@ -806,7 +845,13 @@ their `#print axioms` pins are unchanged).
 
 **OVER-SPECIALIZATION CHECK, per new law (standing item).** Every lemma
 listed above quantifies over the list/array/kind/index/monad involved and
-mentions no program, lowering, config or acked value. The WALK laws
+mentions no program, lowering, config or acked value. (Certification
+corrected 2026-08-01, pre-merge audit: as first shipped this sentence was
+FALSE for `mapLookupValue_miss`/`_hit`/`_singleton`, which pinned the key
+kind to `.uint64` — exactly the target's `map[uint64]Index` key type,
+with nothing in the proofs requiring it. The audit response generalized
+all three to a quantified `{kind : IntKind}` with byte-identical proof
+bodies, so the sentence is now true as written.) The WALK laws
 (`wp_ci_fitIf_all`, `wp_ci_range_body_miss`, `wp_ci_loop_all`,
 `wp_ci_tail_all`, `wp_committedIndex_body_all`, `wp_committedIndex_body_empty`,
 `wp_committedIndexCall_all`) name the pinned lowering's statements —
@@ -821,10 +866,14 @@ twin.
 
 **GOOSE/PERENNIAL COMPARISON.** Unchanged where phase 3 recorded it (the
 range rule vs `wp_map_for_range`, `deps/perennial/new/golang/theory/map.v:213`).
-Two additions, both honest about scope: (a) Perennial still has no model
-of `slices.Sort` (`grep -rn "sort" deps/perennial/new/golang/defn/*.v
-deps/perennial/new/golang/theory/*.v` finds nothing), so the symbolic-length
-sort transition has no counterpart to compare against; (b) the `for i in
+Two additions: (a) — **CORRECTED at the 2026-08-01 pre-merge audit**;
+this item originally repeated the "no model of `slices.Sort`" claim on
+the same mis-scoped grep. Perennial DOES have the counterpart:
+`wp_SortFunc` (`deps/perennial/new/proof/slices_proof/sort.v:28`),
+arbitrary strict weak order over the translated pdqsort source — MORE
+general than our int-only, fixed-comparator sort, which is deliberately
+narrower per the extern policy (`docs/2026-07-30_quorum-extern-policy.md`;
+see the corrected phase-4 entry above for the full record); (b) the `for i in
 [:n]` loops inside `applyStmtOp` are OUR artifact — GooseLang models a Go
 builtin as a primitive with an axiomatized spec, where GoCore transcribes
 the interpreter's loop, which is what forces `forIn_range'_inv` to exist.
@@ -995,3 +1044,56 @@ remaining exit step is the unconditional pre-merge audit ask + merge
 sign-off, with both 2026-08-01 doctrines as named audit dimensions.
 
 **Gate**: full `scripts/ci` PASS end to end at the close-out tip.
+
+- 2026-08-01: **pre-merge audit response.** The commissioned adversarial
+  audit (six decorrelated Opus reviewers — semantics, vacuity,
+  over-specialization, gate-honesty, statement-TCB, layering — each
+  finding independently verified, refute-by-default) returned **no
+  critical or major findings**: 17 confirmed (2 minor, 15 note), the
+  rest refuted on verification. The headline results stand as claimed
+  (∀-config theorem genuine, statements unweakened, axioms the classical
+  trio, no vacuity). Every confirmed finding was fixed in ONE
+  audit-response commit (this entry; per-finding dispositions in the
+  commit message):
+
+  * **Generalization** — `mapLookupValue_miss`/`_hit`/`_singleton`
+    dropped their `.uint64` key-kind pin (the target's key type; the
+    verifier PROVED the `{kind : IntKind}` form compiles with
+    byte-identical proof bodies). Call sites now instantiate the kind
+    explicitly; the Audit ledger and the phase-4 over-specialization
+    certification above record the correction.
+  * **Doctrine compliance** — the two missing mandatory rung-2 readouts
+    added: `recoverReturnsSeven` (`GoldenRecover.lean`) and the two-cell
+    `quorumAckedIndexReturnsTwelveTrue` (`GoldenQuorumWP.lean`), both
+    short derivations from the existing spec theorems via the
+    established readout pattern, both axiom-pinned and designated.
+  * **Gate hardening** — `scripts/ci`'s import scans share a tolerant
+    `IMPORT_RE` (leading-whitespace / multi-space / `public import`
+    forms all compiled while being invisible to the old `^import `
+    anchors); the Tactics lint clause is find-based, recursive, and
+    fail-closed on a missing/renamed/empty directory (tamper-tested).
+    The statement-TCB gate walks `opaqueInfo` VALUES (the constructed
+    `opaque … := <Iris term>` leak is closed) and its `ConstantInfo`
+    match is exhaustive — an unhandled kind is a compile error, never a
+    silent type-only fallback. `goldenInvariant` — the sixth step-0
+    target, omitted from the designated list since its introduction
+    with no recorded reason — is designated and PASSES (2528 statement
+    constants, Iris-free); with the two new readouts the gate now
+    certifies 23 designated theorems.
+  * **Record corrections** — the two inaccurate Perennial comparisons
+    rewritten in place with the correction flagged (`slices.Sort`:
+    `wp_SortFunc` exists and is MORE general than ours, deliberately so
+    per the extern policy; map range: GooseLang snapshots too, the real
+    delta is mid-loop mutation stuck-vs-permitted = BUG-005); the stale
+    `summitStatement_holds` docstring (phase 2 landed); the
+    statement-identity pin's docstring now says exactly what it checks
+    (name + theorem-side type; def-side edits are guarded by record,
+    not build); the exit-criteria bullet carries the ∀-config statement
+    amendment; GoWalk line count 601 → 603; the doctrine's close-out
+    item 3 restored from under the DEFERRED heading; the layer tree
+    draws the target layer resting on the general layer + surface; and
+    `NegativeSpecs.lean` is classified in the map (general layer).
+
+  **Gate**: `scripts/ci` PASS end to end after the response (proofs +
+  scripts + docs only — no runtime code touched; the differential
+  baseline is untouched).

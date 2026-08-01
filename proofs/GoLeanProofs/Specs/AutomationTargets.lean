@@ -407,8 +407,22 @@ advisory). Prose acceptance criteria rot; these do not.
 
 1. **Statement identity** is `summitStatement_pinned` below: the
    re-derived summit must inhabit exactly `quorumOneKnownFuncSpec_statement`.
-   If phase 2 weakens the statement to make the tactic close it, this
-   file stops compiling.
+   Claim strength, stated precisely (audit response 2026-08-01 — the
+   original text overclaimed): what the pin CHECKS is that the NAME
+   `quorumOneKnownFuncSpec` still resolves, is a theorem, and has the
+   type the `def` denotes — since the theorem is already declared at
+   that exact type one file earlier, the pin type-checks by unfolding
+   the `def` and adds the deletion/rename guard plus a THEOREM-side
+   weakening guard (a re-typed `quorumOneKnownFuncSpec` breaks this
+   file while its own file still compiles). What it CANNOT catch is a
+   DEF-side edit — amending `quorumOneKnownFuncSpec_statement` itself
+   together with the proof compiles clean, which is exactly what phase 4
+   legitimately did to `committedIndexAllConfigs_statement` (the
+   recorded `c.length < 2 ^ 63` correction below); that channel is
+   guarded by record, not by the build. The honest phase-2 evidence of
+   statement identity is the git-level diff (0 of 32 theorem signatures
+   in `GoldenQuorumWP.lean` changed across the rewrite), recorded in the
+   arc build log.
 2. **Axiom identity** is the `#guard_msgs in #print axioms` gate on
    `quorumOneKnownFuncSpec` in `proofs/Audit.lean`, which must still read
    `[propext, Classical.choice, Quot.sound]` after the re-derivation. A
@@ -426,9 +440,13 @@ gaming it. -/
 re-derivation must inhabit, unchanged. -/
 def summitStatement_pinned : Prop := quorumOneKnownFuncSpec_statement
 
-/-- It holds TODAY, by the hand-written walk. Phase 2 must reproduce this
-inhabitation with `go_walk`; the type on the left is what may not
-change. -/
+/-- **DISCHARGED 2026-08-01 (phase 2, `7fbaf9e`)**: the inhabitation on
+the right is now the `go_walk`-derived summit — `quorumOneKnownFuncSpec`'s
+walk chain (`wp_oneKnownCall` → … → `wp_committedIndex_body`) is
+tactic-driven, with this type unchanged. (Docstring corrected at the
+2026-08-01 audit response; the phase-0 text still said the hand-written
+walk held it and phase 2 "must reproduce" it.) The type on the left is
+what may not change. -/
 theorem summitStatement_holds : summitStatement_pinned := quorumOneKnownFuncSpec
 
 /-- **ACCEPTANCE 3 (coverage identity)**: the summit's body walk is still

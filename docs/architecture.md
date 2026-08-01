@@ -50,18 +50,26 @@ base defs            GoLean.GoCore.* (Syntax/Value/Machine/MachineSound; Iris-fr
               Range, Unwind, Values, StmtOps — per-construct WP laws),
             GoLeanProofs.Tactics.GoWalk (imports only Lean + Iris proof
               mode/WP — no GoCore, so it cannot name a target),
-            GoLeanProofs.Adequacy
+            GoLeanProofs.Adequacy,
+            GoLeanProofs.NegativeSpecs (machine-level negative guardrails
+              — stuck/no-panic refutations over the bare machine;
+              Iris-free, no target pin — classified here at the
+              2026-08-01 audit response, previously absent from this map)
        └─ surface statements (Iris-free judgment language humans read)
             GoLeanProofs.Surface (Heaplet/HProp/sat, GoTriple, Progress,
               GoInvariant, GoSpec, GoFuncSpec) + the exit pipes
               (SurfaceBridge, SurfaceExit — Iris-side, general)
-  └─ target layer    GoLeanProofs.Specs.* ONLY: program pins
-       (GoldenProgram, GoldenQuorum), pin projections + witnesses
-       (GoldenQuorumPin, and the witnesses in GoldenSliceWP), target
-       statements (GoldenTargets, QuorumTargets, QuorumRefSpec,
-       AutomationTargets), and the walks/discharges (GoldenSliceWP,
-       GoldenSurface, GoldenRecover, GoldenQuorumWP, GoldenQuorumThree,
-       GoldenQuorumAll)
+            └─ target layer (rests on the general layer + surface —
+                 drawn as their sibling until the 2026-08-01 audit
+                 response, contradicting the direction rule below)
+                 GoLeanProofs.Specs.* ONLY: program pins
+                 (GoldenProgram, GoldenQuorum), pin projections +
+                 witnesses (GoldenQuorumPin, and the witnesses in
+                 GoldenSliceWP), target statements (GoldenTargets,
+                 QuorumTargets, QuorumRefSpec, AutomationTargets), and
+                 the walks/discharges (GoldenSliceWP, GoldenSurface,
+                 GoldenRecover, GoldenQuorumWP, GoldenQuorumThree,
+                 GoldenQuorumAll)
 ```
 
 **Direction rule**: the target layer *uses* the general layer, never the

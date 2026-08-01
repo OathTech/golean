@@ -1475,4 +1475,99 @@ theorem quorumOneKnownNotEleven
   injection hval with hn _
   exact absurd hn (by decide)
 
+/-! ### The two-cell readout for the `GoFuncSpec2` result (audit
+response 2026-08-01)
+
+The TCB/layering doctrine (`docs/2026-08-01_tcb-and-layering-doctrine.md`
+§1, ladder rung 2) makes the first-order readout mandatory beside any
+`GoFuncSpec*` headline; `quorumAckedIndexFuncSpec2` predates the doctrine
+and shipped without one (pre-merge audit finding). This is the
+`quorumOneKnownReturnsTwelve` pattern at the two-result protocol: a
+concrete four-cell instance (the satisfiability witness's addresses), the
+triple read out at BOTH pinned target cells. -/
+
+/-- The initial heap the two-cell readout runs against: the two caller
+target cells (0: `Index`-kind int, 1: bool), the receiver box at 2, and
+the `{3 ↦ 12}` map data at 3 — exactly `quorumAckedIndexPre_satisfiable`'s
+witness shape, as a machine heap. -/
+def ackedIndexOut : Heap :=
+  [(Loc.base ⟨0⟩, ⟨some (.int .uint64), .int 0 .uint64⟩),
+   (Loc.base ⟨1⟩, ⟨some .bool, .bool false⟩),
+   (Loc.base ⟨2⟩, ⟨some (.defined ⟨"main.mapAckIndexer"⟩),
+                   .map ⟨some (.base ⟨3⟩)⟩⟩),
+   (Loc.base ⟨3⟩, ⟨some (.map (.int .uint64) (.defined ⟨"main.Index"⟩)),
+                   .mapData #[(.int 3 .uint64, .int 12 .uint64)]⟩)]
+
+/-- The caller environment: the two result targets plus the receiver
+binding `m`, exactly as `GoFuncSpec2`'s caller scope quantifies them. -/
+def ackedIndexOutEnv : LocalEnv :=
+  [[("$callres0", Loc.base ⟨0⟩), ("$callres1", Loc.base ⟨1⟩),
+    ("m", Loc.base ⟨2⟩)]]
+
+/-- **The two-cell first-order readout**: every terminating run of
+`$callres0, $callres1 = m.AckedIndex(3)` from the seeded four-cell state
+leaves `uint64(12)` at base address 0 AND `true` at base address 1 — the
+comma-ok pair, observed by `execStmt`/`loadLoc` with no separation logic
+in the statement. -/
+theorem quorumAckedIndexReturnsTwelveTrue
+    (fuel : Nat) (ch : Choices) (σf : ExecState) (ch' : Choices)
+    (hrun : execStmt fuel ackedIndexOutEnv
+        { types := quorumLowered.typeDefs.toList,
+          functions := quorumLowered.funcs, methods := quorumLowered.methods,
+          heap := ackedIndexOut, nextAddr := 4 } ch
+        (.call #[.var "$callres0", .var "$callres1"]
+          ⟨"main.mapAckIndexer.AckedIndex"⟩ #[.var "m", .intLit 3 .uint64])
+      = .ok (.normal σf, ch')) :
+    loadLoc σf (.base ⟨0⟩) = .ok (.int 12 .uint64)
+      ∧ loadLoc σf (.base ⟨1⟩) = .ok (.bool true) := by
+  have htriple := (quorumAckedIndexFuncSpec2 2 3 0 1 (.int 0 .uint64)
+    (.bool false) (by omega)).1
+  have hres := htriple ackedIndexOut 4 (heapletOf ackedIndexOut) (∅ : Heaplet)
+    { bounded := by
+        intro n hn
+        obtain ⟨m, rfl⟩ : ∃ m, n = m + 4 := ⟨n - 4, by omega⟩
+        rfl
+      disj := fun k => .inr heaplet_get?_empty
+      cover := fun k c => by
+        constructor
+        · exact fun h => .inl h
+        · rintro (h | h)
+          · exact h
+          · rw [heaplet_get?_empty] at h
+            cases h
+      sat_pre := by
+        show sat (((((∅ : Heaplet).insert 3
+            ⟨some (.map (.int .uint64) (.defined ⟨"main.Index"⟩)),
+             .mapData #[(.int 3 .uint64, .int 12 .uint64)]⟩).insert 2
+            ⟨some (.defined ⟨"main.mapAckIndexer"⟩),
+             .map ⟨some (.base ⟨3⟩)⟩⟩).insert 1
+            ⟨some .bool, .bool false⟩).insert 0
+            ⟨some (.int .uint64), .int 0 .uint64⟩) _
+        refine sat_sep_insert ?_ (sat_sep_insert ?_ (sat_sep_insert ?_ rfl))
+        · rw [heaplet_get?_insert_ne (by omega),
+            heaplet_get?_insert_ne (by omega),
+            heaplet_get?_insert_ne (by omega), heaplet_get?_empty]
+        · rw [heaplet_get?_insert_ne (by omega),
+            heaplet_get?_insert_ne (by omega), heaplet_get?_empty]
+        · rw [heaplet_get?_insert_ne (by omega), heaplet_get?_empty] }
+    fuel ch σf ch' hrun
+  obtain ⟨h, _hd, hsub, _hF, hsat⟩ := hres
+  obtain ⟨n, b, h₁, h₂, hp1, hp2, _hdisj, hcov⟩ := hsat
+  obtain ⟨h₃, h₄, hp3, hp4, _hdisj2, hcov2⟩ := hp2
+  obtain ⟨⟨hn12, hbt⟩, rfl⟩ := hp4
+  subst hn12
+  subst hbt
+  have hget0 : h.get? 0 = some ⟨some (.int .uint64), .int 12 .uint64⟩ := by
+    rw [hcov]
+    exact Or.inl (by rw [hp1]; exact heaplet_get?_insert_self)
+  have hget1 : h.get? 1 = some ⟨some .bool, .bool true⟩ := by
+    rw [hcov]
+    refine Or.inr ?_
+    rw [hcov2]
+    exact Or.inl (by rw [hp3]; exact heaplet_get?_insert_self)
+  have h0 := hsub 0 ⟨some (.int .uint64), .int 12 .uint64⟩ hget0
+  have h1 := hsub 1 ⟨some .bool, .bool true⟩ hget1
+  rw [heaplet_get?_eq, heapletOf_eq_heapToMap, get?_heapToMap] at h0 h1
+  exact ⟨loadLoc_base_of_lookup h0, loadLoc_base_of_lookup h1⟩
+
 end GoLean.Surface

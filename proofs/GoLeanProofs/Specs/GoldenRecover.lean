@@ -198,4 +198,70 @@ theorem recoverFuncSpec : recoverFuncSpec_statement := by
   · ipureintro
     rfl
 
+/-! ### The first-order readout (audit response 2026-08-01)
+
+The TCB/layering doctrine (`docs/2026-08-01_tcb-and-layering-doctrine.md`
+§1, ladder rung 2) makes the first-order readout mandatory beside any
+`GoFuncSpec*` headline; `recoverFuncSpec` predates the doctrine and
+shipped without one (pre-merge audit finding). This is `goldenReturnsTwo`'s
+shape over the recover pin: read the triple out at a pinned address. -/
+
+/-- The initial heap the readout runs against: one cell at base 0 holding
+the caller's target, exactly as `GoFuncSpec` quantifies it. -/
+def recoverOut : Heap := [(Loc.base ⟨0⟩, ⟨some (.int .int), .int 0 .int⟩)]
+
+def recoverOutEnv : LocalEnv := [[("$callres", Loc.base ⟨0⟩)]]
+
+/-- **The first-order readout**: every terminating run of
+`$callres = recoverDirect()` from the seeded one-cell state leaves
+`int(7)` at base address 0 — the recover-caught write, observed by
+`execStmt`/`loadLoc` with no separation logic in the statement. -/
+theorem recoverReturnsSeven
+    (fuel : Nat) (ch : Choices) (σf : ExecState) (ch' : Choices)
+    (hrun : execStmt fuel recoverOutEnv
+        { types := recoverLowered.typeDefs.toList,
+          functions := recoverLowered.funcs, methods := recoverLowered.methods,
+          heap := recoverOut, nextAddr := 1 } ch
+        (.call #[.var "$callres"] ⟨"recoverDirect"⟩ #[])
+      = .ok (.normal σf, ch')) :
+    loadLoc σf (.base ⟨0⟩) = .ok (.int 7 .int) := by
+  have htriple := (recoverFuncSpec 0 (.int 0 .int)).1
+  have hres := htriple recoverOut 1 (heapletOf recoverOut) (∅ : Heaplet)
+    { bounded := by
+        intro n hn
+        obtain ⟨m, rfl⟩ : ∃ m, n = m + 1 := ⟨n - 1, by omega⟩
+        rfl
+      disj := fun k => .inr (by
+        rw [heaplet_get?_eq]
+        exact LawfulPartialMap.get?_empty (M := GoHeapF) (k := k))
+      cover := fun k c => by
+        constructor
+        · exact fun h => .inl h
+        · rintro (h | h)
+          · exact h
+          · rw [heaplet_get?_eq,
+              LawfulPartialMap.get?_empty (M := GoHeapF) (k := k)] at h
+            cases h
+      sat_pre := ⟨heapletOf recoverOut, ∅, rfl, rfl,
+        fun k => .inr (by
+          rw [heaplet_get?_eq]
+          exact LawfulPartialMap.get?_empty (M := GoHeapF) (k := k)),
+        fun k c => ⟨fun h => .inl h, fun h => h.elim id (fun h0 => by
+          rw [heaplet_get?_eq,
+            LawfulPartialMap.get?_empty (M := GoHeapF) (k := k)] at h0
+          cases h0)⟩⟩ }
+    fuel ch σf ch' hrun
+  obtain ⟨h, _hd, hsub, _hF, hsat⟩ := hres
+  obtain ⟨n, h₁, h₂, hp1, hp2, _hdisj, hcov⟩ := hsat
+  obtain ⟨hn7, rfl⟩ := hp2
+  subst hn7
+  have hget : h.get? 0 = some ⟨some (.int .int), .int 7 .int⟩ := by
+    rw [hcov]
+    exact Or.inl (by
+      rw [hp1, heaplet_get?_eq, heaplet_insert_eq]
+      exact LawfulPartialMap.get?_insert_eq rfl)
+  have := hsub 0 ⟨some (.int .int), .int 7 .int⟩ hget
+  rw [heaplet_get?_eq, heapletOf_eq_heapToMap, get?_heapToMap] at this
+  exact loadLoc_base_of_lookup this
+
 end GoLean.Surface

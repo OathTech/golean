@@ -23,6 +23,16 @@ cd "$ROOT"
 RUN_DIFF=0
 [ "${1:-}" = "--diff" ] && RUN_DIFF=1
 
+# Lean import matcher, shared by every import-scanning gate below.
+# Whitespace- and `public`-tolerant (audit response 2026-08-01, pre-merge
+# findings): the previous '^import ' anchors were fail-open — Lean accepts
+# leading whitespace before `import`, extra whitespace after it, and (under
+# the 4.31 module system) `public import`; all three forms compiled while
+# being INVISIBLE to the scans, so a violation was not merely allowed but
+# unseen. Matched lines are normalized to canonical 'import X' before any
+# allowlist check, so odd formatting is judged, never skipped.
+IMPORT_RE='^[[:space:]]*(public[[:space:]]+)?import[[:space:]]+'
+
 fail=0
 declare -a RESULTS
 step() { printf '\n\033[1m── %s\033[0m\n' "$1"; }
@@ -77,7 +87,7 @@ while [ "$grow" -eq 1 ]; do
   for m in $closure; do
     mf="proofs/$(echo "$m" | tr '.' '/').lean"
     [ -f "$mf" ] || continue
-    for imp in $(grep -E '^import ' "$mf" | sed 's/^import //'); do
+    for imp in $(grep -E "$IMPORT_RE" "$mf" | sed -E "s/$IMPORT_RE//"); do
       impf="proofs/$(echo "$imp" | tr '.' '/').lean"
       [ -f "$impf" ] || continue   # external import (Iris, GoLean core) — not ours
       case " $closure " in *" $imp "*) ;; *) closure="$closure $imp"; grow=1 ;; esac
@@ -148,7 +158,10 @@ check_surface_imports() {
     return
   fi
   local bad_imports
-  bad_imports=$(grep -E '^import ' "$1" | grep -Ev "$2" || true)
+  # Tolerant match + normalization (see IMPORT_RE above): an indented or
+  # `public` import is normalized to 'import X' and judged by the
+  # allowlist, never invisible to the first-stage grep.
+  bad_imports=$(grep -E "$IMPORT_RE" "$1" | sed -E "s/$IMPORT_RE/import /" | grep -Ev "$2" || true)
   if [ -n "$bad_imports" ]; then
     echo "  $1 has non-allowlisted imports:" >&2
     echo "$bad_imports" | sed 's/^/    /' >&2
@@ -182,9 +195,9 @@ check_surface_imports proofs/GoLeanProofs/Specs/QuorumRefSpec.lean \
 # doctrine's "Iris-free by import chain" note was wrong for this file.)
 check_surface_imports proofs/GoLeanProofs/Specs/AutomationTargets.lean \
   '^import (GoLeanProofs\.Specs\.GoldenQuorumWP$|GoLeanProofs\.Laws\.Range$)'
-if grep -rEq '^import Iris' GoLean/ --include='*.lean'; then
+if grep -rEq "${IMPORT_RE}Iris" GoLean/ --include='*.lean'; then
   echo "  GoLean/ core has Iris imports (taints the surface chain):" >&2
-  grep -rEl '^import Iris' GoLean/ --include='*.lean' | sed 's/^/    /' >&2
+  grep -rEl "${IMPORT_RE}Iris" GoLean/ --include='*.lean' | sed 's/^/    /' >&2
   surface_ok=0
 fi
 if [ "$surface_ok" = 1 ]; then
@@ -216,18 +229,40 @@ fi
 step "import-direction lint (general proof modules import no Specs/*; Tactics import no GoCore)"
 dir_bad=0
 while IFS= read -r f; do
-  hits=$(grep -nE '^import GoLeanProofs\.Specs\.' "$f" || true)
+  hits=$(grep -nE "${IMPORT_RE}GoLeanProofs\\.Specs\\." "$f" || true)
   if [ -n "$hits" ]; then
     echo "  $f (general layer) imports target-layer Specs modules:" >&2
     echo "$hits" | sed 's/^/    /' >&2
     dir_bad=1
   fi
 done < <(find proofs/GoLeanProofs -name '*.lean' -not -path '*/Specs/*' -not -path '*/.lake/*')
-tac_hits=$(grep -nE '^import GoLean' proofs/GoLeanProofs/Tactics/*.lean 2>/dev/null || true)
-if [ -n "$tac_hits" ]; then
-  echo "  Tactics/ imports GoCore/GoLean (a walk tactic must stay semantics-blind):" >&2
-  echo "$tac_hits" | sed 's/^/    /' >&2
+# Tactics clause — hardened at the 2026-08-01 audit response (pre-merge
+# findings): the previous form was a NON-recursive shell glob with grep
+# errors swallowed (`Tactics/*.lean 2>/dev/null || true`), so a renamed or
+# moved Tactics/ directory made the clause a silent no-op, and a nested
+# Tactics/Sub/*.lean escaped it with the directory fully intact — the same
+# silent-reopen class the surface scan's 2026-07-23 hardening note warns
+# about, reproduced in a gate introduced on the same branch. Fail closed:
+# a missing directory or zero enumerated .lean files FAILS the lint; files
+# are enumerated recursively via find (depth-proof, matching this script's
+# own stated standard); imports matched via the tolerant IMPORT_RE.
+TACTICS_DIR=proofs/GoLeanProofs/Tactics
+if [ ! -d "$TACTICS_DIR" ]; then
+  echo "  Tactics directory MISSING: $TACTICS_DIR (renamed without re-pointing the lint?)" >&2
   dir_bad=1
+else
+  tac_files=$(find "$TACTICS_DIR" -name '*.lean' -not -path '*/.lake/*')
+  if [ -z "$tac_files" ]; then
+    echo "  Tactics directory has NO .lean files: $TACTICS_DIR (moved without re-pointing the lint?)" >&2
+    dir_bad=1
+  else
+    tac_hits=$(printf '%s\n' "$tac_files" | xargs grep -nE "${IMPORT_RE}GoLean" || true)
+    if [ -n "$tac_hits" ]; then
+      echo "  Tactics/ imports GoCore/GoLean (a walk tactic must stay semantics-blind):" >&2
+      echo "$tac_hits" | sed 's/^/    /' >&2
+      dir_bad=1
+    fi
+  fi
 fi
 if [ "$dir_bad" = 0 ]; then
   ok "import-direction (general ↛ Specs; Tactics ↛ GoCore)"

@@ -623,7 +623,11 @@ nothing does. These two lemmas are the induction — stated over an
 abstract loop body so the caller's actual one unifies — and the two
 `mapLookupValue` characterizations they buy: the key is absent (Go's zero
 value and `false`), or SOME entry carries it (that entry's value and
-`true`). Target-free: no program, no lowering, no quorum value. -/
+`true`). Target-free: no program, no lowering, no quorum value; the key
+KIND is a quantified `{kind : IntKind}` (generalized at the 2026-08-01
+pre-merge audit response — the first form pinned `.uint64`, the target's
+key type, though nothing in the proofs needed it: `valueEqFuel`'s int arm
+compares payloads and ignores kinds). -/
 
 /-- The search loop when NO entry matches: it runs to the end with the
 early-return slot still empty. -/
@@ -695,11 +699,11 @@ theorem valueEq_int {kind kind' : IntKind} {a b : Int} :
 /-- **The comma-ok read, key ABSENT**: every entry's key is an `int` that
 differs from the looked-up one, so Go delivers the value type's zero and
 `false`. -/
-theorem mapLookupValue_miss {dv : GoValue}
+theorem mapLookupValue_miss {dv : GoValue} {kind : IntKind}
     (hl : Heap.lookup σ.heap (.base mba) = some ⟨mty, .mapData entries⟩)
     (hdef : defaultValue σ valTy = .ok dv)
-    (hall : ∀ p ∈ entries.toList, ∃ w : Int, p.1 = .int w .uint64 ∧ w ≠ q) :
-    mapLookupValue σ ⟨some (.base mba)⟩ (.int q .uint64) (.int .uint64) valTy
+    (hall : ∀ p ∈ entries.toList, ∃ w : Int, p.1 = .int w kind ∧ w ≠ q) :
+    mapLookupValue σ ⟨some (.base mba)⟩ (.int q kind) (.int kind) valTy
       = .ok (dv, false) := by
   simp only [mapLookupValue, mapEntries, loadLoc, hl, mapEntryIndex?,
     checkKeyHashable, valueHashability, Bind.bind, Except.bind, pure,
@@ -717,18 +721,18 @@ theorem mapLookupValue_miss {dv : GoValue}
 answers, and any entry carrying it answers the same when the snapshot is
 FUNCTIONAL at that key (`hfun`) — which is what an encoding predicate
 supplies. -/
-theorem mapLookupValue_hit {v : GoValue}
+theorem mapLookupValue_hit {v : GoValue} {kind : IntKind}
     (hl : Heap.lookup σ.heap (.base mba) = some ⟨mty, .mapData entries⟩)
-    (hkeys : ∀ p ∈ entries.toList, ∃ w : Int, p.1 = .int w .uint64)
-    (hfun : ∀ p ∈ entries.toList, p.1 = .int q .uint64 → p.2 = v)
-    (hmem : ∃ p ∈ entries.toList, p.1 = .int q .uint64) :
-    mapLookupValue σ ⟨some (.base mba)⟩ (.int q .uint64) (.int .uint64) valTy
+    (hkeys : ∀ p ∈ entries.toList, ∃ w : Int, p.1 = .int w kind)
+    (hfun : ∀ p ∈ entries.toList, p.1 = .int q kind → p.2 = v)
+    (hmem : ∃ p ∈ entries.toList, p.1 = .int q kind) :
+    mapLookupValue σ ⟨some (.base mba)⟩ (.int q kind) (.int kind) valTy
       = .ok (v, true) := by
   -- split the snapshot at the FIRST entry carrying the key
   obtain ⟨pre, p, rest, hsplit, hpre, hp⟩ :
       ∃ pre p rest, entries.toList = pre ++ p :: rest
-        ∧ (∀ a ∈ pre, a.1 ≠ .int q .uint64) ∧ p.1 = .int q .uint64 :=
-    list_split_first_match (fun a => a.1 = GoValue.int q .uint64) entries.toList hmem
+        ∧ (∀ a ∈ pre, a.1 ≠ .int q kind) ∧ p.1 = .int q kind :=
+    list_split_first_match (fun a => a.1 = GoValue.int q kind) entries.toList hmem
   have hpv : p.2 = v := hfun p (by rw [hsplit]; simp) hp
   simp only [mapLookupValue, mapEntries, loadLoc, hl, mapEntryIndex?,
     checkKeyHashable, valueHashability, Bind.bind, Except.bind, pure,
@@ -752,7 +756,7 @@ theorem mapLookupValue_hit {v : GoValue}
       rw [hw]
       simp only [valueEq_int, Bind.bind, Except.bind]
       rw [if_neg (by
-        have hne : a.1 ≠ .int q .uint64 := hpre a ha
+        have hne : a.1 ≠ .int q kind := hpre a ha
         rw [hw] at hne
         simp only [beq_iff_eq, decide_eq_true_eq]
         intro hcon
@@ -939,16 +943,19 @@ entry arrays — proof-automation arc phase 3). -/
 
 /-- The comma-ok lookup's answer on a ONE-ENTRY int-keyed map: the key is
 present, so the stored value comes back with `found = true`. General in
-the key, the value, the value TYPE and the data cell's declared type —
-this is the `hpair` premise of `wp_map_lookup`/`wp_map_lookup_ackedIndex`
-at the instance the n = 1 walk uses, factored out when those were widened
-to arbitrary entry arrays (proof-automation arc phase 3). -/
+the key, the value, the KIND (the quantified `{kind : IntKind}` —
+generalized at the 2026-08-01 pre-merge audit response from a `.uint64`
+pin nothing in the proof needed), the value TYPE and the data cell's
+declared type — this is the `hpair` premise of
+`wp_map_lookup`/`wp_map_lookup_ackedIndex` at the instance the n = 1 walk
+uses, factored out when those were widened to arbitrary entry arrays
+(proof-automation arc phase 3). -/
 theorem mapLookupValue_singleton {mba : Addr} {mty : Option Ty} {q v : Int}
-    {valTy : Ty} (σ : ExecState)
+    {kind : IntKind} {valTy : Ty} (σ : ExecState)
     (hl : Heap.lookup σ.heap (.base mba)
-      = some ⟨mty, .mapData #[(.int q .uint64, .int v .uint64)]⟩) :
-    mapLookupValue σ ⟨some (.base mba)⟩ (.int q .uint64) (.int .uint64) valTy
-      = .ok (.int v .uint64, true) := by
+      = some ⟨mty, .mapData #[(.int q kind, .int v kind)]⟩) :
+    mapLookupValue σ ⟨some (.base mba)⟩ (.int q kind) (.int kind) valTy
+      = .ok (.int v kind, true) := by
   simp [mapLookupValue, mapEntries, loadLoc, hl, mapEntryIndex?, valueEq,
     valueEqFuel, checkKeyHashable, valueHashability, Bind.bind, Except.bind]
 

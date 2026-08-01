@@ -972,7 +972,7 @@ theorem encodesAcked_lookup {ae : Array (GoValue × GoValue)}
         (rfl (a := σ.functions)) (rfl (a := σ.methods))]
       simp [defaultValue, defaultValueFuel, typeResolutionFuel,
         QuorumPin.typeEnv_Index]
-    rw [mapLookupValue_miss hl hdef hmiss]
+    rw [mapLookupValue_miss (kind := .uint64) hl hdef hmiss]
     simp [ackOf, hack]
   | some i =>
     have hqq : ((q.toNat : Nat) : Int) = q := by omega
@@ -993,7 +993,7 @@ theorem encodesAcked_lookup {ae : Array (GoValue × GoValue)}
         by simpa using hmem0, ?_⟩
       show GoValue.int ((q.toNat : Nat) : Int) .uint64 = .int q .uint64
       rw [hqq]
-    rw [mapLookupValue_hit hl hkeys hfun hmem]
+    rw [mapLookupValue_hit (kind := .uint64) hl hkeys hfun hmem]
     simp [ackOf, hack]
 
 end GoLean.Quorum
