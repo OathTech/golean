@@ -63,6 +63,33 @@ first-order readouts where possible) before the theorem is claimed.
   but UNGATED — found 2026-08-01, the exact silent-reopen class the
   gate's own 2026-07-23 hardening comment warns about).
 
+### Operational enforcement: Comparator (noted by the user, 2026-08-01)
+
+The Comparator tool (trustworthy Lean proof judge: a CHALLENGE module
+with sorry-bodied theorem statements in a trusted import closure; a
+SOLUTION judged from outside via lean4export + the Lean kernel and
+optionally the independent nanoda kernel, landrun-sandboxed) is the
+operational completion of this doctrine. Our in-build gates run INSIDE
+the proof layer's elaboration environment — sufficient against honest
+error, but agent-built proof trees could in principle compromise their
+own checking environment (Comparator's "never previously compiled the
+Solution" assumption names the hole). The mapping onto our
+architecture is exact: Challenge = the deletion-test layer (the
+statement-bearing Iris-free modules over GoCore base definitions —
+the same designated-theorem list the statement-TCB gate certifies);
+Solution = the entire proof tree, Iris and tactics included. Composed
+trust: Challenge closure + kernel(s) — agents, Iris, go_walk, and the
+elaboration environment all OUTSIDE the judge.
+
+Integration (queued for close-out, binaries user-fetched like deps/):
+build the Challenge module (falls out of the statement-TCB gate's
+designated list); run at pre-merge/milestone cadence from a fresh
+clone (the "never compiled the Solution" discipline — the fuzzer's
+disposable-clone pattern); landrun + lean4export@4.31-compatible +
+optionally nanoda in PATH; OPEN QUESTION to test empirically: whether
+landrun/systemd-run nest inside the nono sandbox or Comparator runs
+stay user-invoked outside the agent session.
+
 ## 2. The layering doctrine: general infra / target infra
 
 **Ideal division of labor: (1) generalized proof infrastructure that
@@ -87,7 +114,10 @@ Specs/* is target — with known debt:
 ## Close-out checklist (this arc)
 
 1. Move general laws out of `QuorumOps.lean`; layer map documented.
-2. Statement-TCB gate + widened surface-purity scan (above).
+2. Statement-TCB gate + widened surface-purity scan (above); the
+   gate's designated-theorem list doubles as the Comparator Challenge
+   module (build it; wire an invocation script; binaries pending
+   user fetch).
 3. Both doctrines as named dimensions in the final pre-merge audit
    (alongside semantics / vacuity / over-specialization /
    gate-honesty): "is any top-level statement's meaning dependent on
