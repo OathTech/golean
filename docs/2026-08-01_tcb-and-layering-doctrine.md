@@ -92,9 +92,12 @@ First runs 2026-08-02: **all 23 designated theorems certified** (kernel
 replay, axiom allowlist `propext`/`Quot.sound`/`Classical.choice`).
 The wrapper's DEFAULT is the fresh-clone discipline (comparator's
 "never compiled the Solution" assumption 2, made structural at a user
-catch): clone at committed HEAD, seed dep packages only, pre-build the
-pair (the README's blessed pre-built-`.lake` path), judge — measured
-~88 s wall, of which 35 s is the judged export+replay phase; a
+catch, then made TRUE at the pre-merge audit — the first version still
+pre-built Solution before the Challenge export): clone at committed
+HEAD, seed dep packages only, pre-build ONLY the trusted side
+(`Challenge` + its closure; the README's blessed pre-built-`.lake`
+path), judge — the untrusted Solution is elaborated exclusively inside
+comparator's landrun sandbox, after the Challenge export is taken. A
 warm-tree `--in-place` run exists for iteration and labels itself
 non-authoritative. The former open question is answered empirically:
 landrun nests inside the nono sandbox (Landlock domains compose) and

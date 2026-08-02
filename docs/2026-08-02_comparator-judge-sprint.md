@@ -163,7 +163,11 @@ the standing rule); reshape the judge project instead and record it.
   across FIVE Iris-reaching modules (`GoldenQuorumWP` 8, `AutomationTargets`
   9 incl. the `NotTwelve`/`NotEleven` unproven-twin targets kept with their
   families, `GoldenQuorumAll` 2, `GoldenQuorumThree` 1, `GoldenRecover` 3).
-  All moved verbatim (docstrings included; positional phrases like "below"
+  (Counts corrected at the pre-merge audit: the move is **24 defs** — the
+  22 measured statement constants plus the 2 unproven-twin `_statement`
+  targets — with per-module breakdown WP 9 / AutomationTargets 9 / All 2 /
+  Three 1 / Recover 3; the original text said 22 and a breakdown summing
+  to 23.) All moved verbatim (docstrings included; positional phrases like "below"
   corrected to file references — recorded, not silent) into the new
   `Specs/Statements.lean`, import closure 9 modules, measured clean. After
   the move the partition is exact: every statement-referenced constant is
@@ -224,9 +228,70 @@ the standing rule); reshape the judge project instead and record it.
   exported BEFORE Solution is touched, and the sandboxed builds are
   no-ops. Clone removed on success, kept for inspection on failure.
   `--in-place` keeps the warm-tree run for iteration, verdict-labelled
-  NOT authoritative. **Measured authoritative cost: ~88 s wall** (clone +
-  seed + cold pre-build ≈ 53 s; judged phase 35 s), PASS 23/23 at
-  `72cfdb23639f`, from inside the nono sandbox.
+  NOT authoritative. **Measured authoritative cost (post-audit flow,
+  trusted-side-only pre-build): ~2 min wall** — clone + seed + Challenge
+  pre-build ≈ 50 s, judged phase 69 s (comparator's sandboxed cold
+  Solution build + both exports + kernel replay). PASS 23/23 at
+  `3ba989d31aa6`, from inside the nono sandbox. (The first-iteration flow
+  measured 88 s but pre-built the Solution unsandboxed — retired at the
+  audit, finding 2.)
+
+## Pre-merge audit + response (2026-08-02)
+
+Two decorrelated Opus reviewers (proof/statement side; gate/tooling side,
+user-trimmed from six) + one refute-by-default Opus verifier per deduped
+finding, over final state `3ba989d`: **14 findings raised, 12 confirmed, 2
+refuted.** Hoist fidelity, Challenge faithfulness (each `Judge.*` statement
+vs the real theorem), and the three `scripts/ci` gate edits survived
+scrutiny; every confirmed finding was in the NEW wrapper/docs, majors
+first:
+
+1. **[major] The wrapper's closure walk re-introduced the retired
+   fail-open `^import` anchor, and `Challenge.lean` was in NO `scripts/ci`
+   scan** — an indented/`public` import of Iris into Challenge would have
+   passed both gates while Challenge.lean claimed otherwise. FIXED: the
+   canonical matcher + comment stripper now live once in
+   `scripts/lean-scan.sh`, sourced by both `scripts/ci` and the wrapper
+   (ends the drift class); the wrapper walk uses `lean_imports` and FAILS
+   on unknown module roots instead of skipping; `scripts/ci` now pins
+   `Challenge.lean`'s direct imports to exactly the two clean statement
+   modules. Probe recorded: an indented `import Iris.ProofMode` is now
+   seen; commented phantoms are dropped.
+2. **[major→doc] "Challenge exported before Solution is touched" was false
+   of the fresh-clone flow**: the pre-build compiled Solution unsandboxed
+   in the shared `.lake` BEFORE comparator ran — precisely assumption 2,
+   which the docs claimed was now structural. FIXED structurally: the
+   pre-build covers ONLY the trusted side (`lake build Challenge` — core +
+   clean chain, the README's blessed pre-built path and the reason the
+   layered write-grant works); the untrusted Solution is elaborated
+   exclusively inside comparator's landrun sandbox, after the Challenge
+   export has already been taken.
+3. **[minor] Preflight checks read the working tree while the judge ran
+   the HEAD clone.** FIXED: all artifact checks (config, lockstep, closure
+   walk) run against `CHECK_ROOT` = the judged tree.
+4. **[minor] `judge-config.json`'s `challenge_module`/`solution_module`/
+   `permitted_axioms` were unvalidated.** FIXED: pinned in the wrapper
+   (an axiom-set widening must edit the script, visibly). The fix's own
+   first run fail-closed on a sed-range bug in the new check
+   (`/start/,/end/` swallowing to EOF) — corrected to single-bracket
+   extraction; recorded because the failure was the check working.
+5. **[minor] lean4export's rev was never checked; binaries live outside
+   the pristine check.** FIXED: lean4export package pinned by rev + clean
+   tree; the binaries-are-built-artifacts residual trust is now stated
+   honestly in the script header (rebuild via `comparator-setup` if in
+   doubt).
+6. **[note] Lockstep compared flattened short names with no collision
+   guard.** FIXED: duplicate short names across designated namespaces now
+   fail the run.
+7. **[note ×3] Doc corrections**: hoist counts (24 = 22 measured + 2
+   twins; WP 9/AT 9/All 2/Three 1/Recover 3), the "same walk as the
+   statement-TCB gate" overclaim, and the assumption-2 claims — all
+   corrected in place above.
+
+Refuted (recorded): a claimed weaker-restatement hole in the `Judge.*`
+scheme (Solution's by-reference proofs ARE the mechanical tie), and a
+claimed fail-open in `strip_lean_comments` for unbalanced `/-` (it
+over-flags, fail-closed).
 
 ## Exit criteria — all MET 2026-08-02 (close-out)
 
@@ -235,9 +300,14 @@ the standing rule); reshape the judge project instead and record it.
   `fd2e25d`, lean4export `8554815`, landrun `5283024a2f49`) — **MET**
   (23/23 certified in 69 s warm, from inside the nono sandbox, under the
   systemd-run guard).
-- Challenge's import closure is measured Iris-free by the same walk that
-  enforces the statement-TCB gate — **MET** (the wrapper re-runs the walk
-  before every judge invocation; scripts/ci gates the chain).
+- Challenge's import closure is measured Iris-free — **MET**, wording
+  corrected at the pre-merge audit: the wrapper runs a MODULE-level import
+  walk (hardened post-audit: canonical comment-stripped tolerant
+  extraction, unknown roots fail), which is deliberately weaker than the
+  statement-TCB gate's constant-level walk in `Audit.lean` — that gate
+  remains the in-build authority; the wrapper's walk is judge-side defense
+  in depth, and `scripts/ci` now pins `Challenge.lean`'s direct imports
+  too.
 - Cost of a judge run is measured and recorded; cadence policy is written
   into the doctrine doc — **MET** (landmark cadence; CLAUDE.md
   merge-protocol step 2 now names the judge for headline-statement arcs).
