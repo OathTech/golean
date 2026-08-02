@@ -850,8 +850,11 @@ corrected 2026-08-01, pre-merge audit: as first shipped this sentence was
 FALSE for `mapLookupValue_miss`/`_hit`/`_singleton`, which pinned the key
 kind to `.uint64` — exactly the target's `map[uint64]Index` key type,
 with nothing in the proofs requiring it. The audit response generalized
-all three to a quantified `{kind : IntKind}` with byte-identical proof
-bodies, so the sentence is now true as written.) The WALK laws
+all three to a quantified `{kind : IntKind}` — `_miss`/`_singleton`
+with byte-identical proof bodies, `_hit` with three in-body kind
+occurrences rewritten (delta-audit correction 2026-08-01: the earlier
+"all three byte-identical" wording here was false for `_hit`) — so the
+sentence is now true as written.) The WALK laws
 (`wp_ci_fitIf_all`, `wp_ci_range_body_miss`, `wp_ci_loop_all`,
 `wp_ci_tail_all`, `wp_committedIndex_body_all`, `wp_committedIndex_body_empty`,
 `wp_committedIndexCall_all`) name the pinned lowering's statements —
@@ -1058,8 +1061,9 @@ sign-off, with both 2026-08-01 doctrines as named audit dimensions.
 
   * **Generalization** — `mapLookupValue_miss`/`_hit`/`_singleton`
     dropped their `.uint64` key-kind pin (the target's key type; the
-    verifier PROVED the `{kind : IntKind}` form compiles with
-    byte-identical proof bodies). Call sites now instantiate the kind
+    verifier PROVED the `{kind : IntKind}` form compiles — proof bodies
+    byte-identical for `_miss`/`_singleton`, three in-body kind rewrites
+    for `_hit`; delta-audit correction 2026-08-01). Call sites now instantiate the kind
     explicitly; the Audit ledger and the phase-4 over-specialization
     certification above record the correction.
   * **Doctrine compliance** — the two missing mandatory rung-2 readouts

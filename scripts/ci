@@ -32,6 +32,28 @@ RUN_DIFF=0
 # unseen. Matched lines are normalized to canonical 'import X' before any
 # allowlist check, so odd formatting is judged, never skipped.
 IMPORT_RE='^[[:space:]]*(public[[:space:]]+)?import[[:space:]]+'
+# Strip Lean comments before extracting CLOSURE EDGES (delta-audit
+# 2026-08-01: at the closure walk a match is evidence of a BUILD EDGE, so
+# an import line quoted in a /- -/ block or docstring injected a phantom
+# edge — fail-OPEN. Depth-counting handles nested block comments; `--`
+# line comments truncate at depth 0. The allowlist/lint sites keep the
+# raw tolerant match: over-matching there only over-FLAGS (fail-closed).
+strip_lean_comments() {
+  awk '{
+    line=$0; out=""; i=1
+    while (i <= length(line)) {
+      two = substr(line, i, 2)
+      if (two == "/-") { d++; i += 2; continue }
+      if (two == "-/" && d > 0) { d--; i += 2; continue }
+      if (d == 0) {
+        if (two == "--") break
+        out = out substr(line, i, 1)
+      }
+      i++
+    }
+    print out
+  }'
+}
 
 fail=0
 declare -a RESULTS
@@ -87,7 +109,7 @@ while [ "$grow" -eq 1 ]; do
   for m in $closure; do
     mf="proofs/$(echo "$m" | tr '.' '/').lean"
     [ -f "$mf" ] || continue
-    for imp in $(grep -E "$IMPORT_RE" "$mf" | sed -E "s/$IMPORT_RE//"); do
+    for imp in $(strip_lean_comments < "$mf" | grep -E "$IMPORT_RE" | sed -E "s/$IMPORT_RE//"); do
       impf="proofs/$(echo "$imp" | tr '.' '/').lean"
       [ -f "$impf" ] || continue   # external import (Iris, GoLean core) — not ours
       case " $closure " in *" $imp "*) ;; *) closure="$closure $imp"; grow=1 ;; esac
@@ -256,7 +278,22 @@ else
     echo "  Tactics directory has NO .lean files: $TACTICS_DIR (moved without re-pointing the lint?)" >&2
     dir_bad=1
   else
-    tac_hits=$(printf '%s\n' "$tac_files" | xargs grep -nE "${IMPORT_RE}GoLean" || true)
+    # Per-file grep so exit codes are unambiguous: 1 = clean no-match,
+    # >=2 = unscannable file -> fail CLOSED (delta-audit 2026-08-01: the
+    # previous `xargs ... || true` swallowed read errors as "ok").
+    tac_hits=""
+    while IFS= read -r tf; do
+      hits=$(grep -nE "${IMPORT_RE}GoLean" "$tf"); rc=$?
+      if [ "$rc" -ge 2 ]; then
+        echo "  Tactics import scan ERRORED on $tf (rc=$rc) — failing closed" >&2
+        dir_bad=1
+      elif [ "$rc" -eq 0 ]; then
+        tac_hits="$tac_hits$tf: $hits
+"
+      fi
+    done <<EOF_TACFILES
+$tac_files
+EOF_TACFILES
     if [ -n "$tac_hits" ]; then
       echo "  Tactics/ imports GoCore/GoLean (a walk tactic must stay semantics-blind):" >&2
       echo "$tac_hits" | sed 's/^/    /' >&2
