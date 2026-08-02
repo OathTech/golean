@@ -4,13 +4,16 @@
 # exact fail-open '^import ' anchor scripts/ci was hardened away from — the
 # canonical definitions live HERE, once, so a gate cannot drift from them.
 
-# Whitespace- and `public`-tolerant import matcher (audit response
-# 2026-08-01): Lean accepts leading whitespace before `import`, extra
-# whitespace after it, and (under the 4.31 module system) `public import` —
-# all invisible to a bare '^import ' anchor. Matched lines are normalized to
-# canonical 'import X' before any allowlist check, so odd formatting is
-# judged, never skipped.
-IMPORT_RE='^[[:space:]]*(public[[:space:]]+)?import[[:space:]]+'
+# Whitespace-, `public`- and `meta`-tolerant import matcher (audit response
+# 2026-08-01; `meta` slot added at the 2026-08-02 delta-review): Lean
+# accepts leading whitespace before `import`, extra whitespace after it,
+# and — under the 4.31 module system — `public import`, `meta import` and
+# `public meta import` (the form iris-lean itself uses; requires a `module`
+# header, which no golean file has yet — the slot closes the hole before
+# the first module-system opt-in can open it). All were invisible to a bare
+# '^import ' anchor. Matched lines are normalized to canonical 'import X'
+# before any allowlist check, so odd formatting is judged, never skipped.
+IMPORT_RE='^[[:space:]]*(public[[:space:]]+)?(meta[[:space:]]+)?import[[:space:]]+'
 
 # Strip Lean comments before extracting CLOSURE EDGES (delta-audit
 # 2026-08-01): at a closure walk a match is evidence of a BUILD EDGE, so an

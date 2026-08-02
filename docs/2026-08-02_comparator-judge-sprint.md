@@ -221,12 +221,16 @@ the standing rule); reshape the judge project instead and record it.
   the Lake dependency packages (network-free `lake update` reproduction —
   feeds nothing trusted: Challenge's closure contains no fetched dep, and
   the packages serve the untrusted Solution side, which the kernel replay
-  re-checks), pre-build the pair ourselves (the README's blessed
-  "pre-built `.lake` obtained without compromising your checking
-  environment" — also what makes our layered packages fit comparator's
-  proofs/.lake-only write grant), then run the guarded judge: Challenge is
-  exported BEFORE Solution is touched, and the sandboxed builds are
-  no-ops. Clone removed on success, kept for inspection on failure.
+  re-checks), pre-build ONLY the trusted side — `lake build Challenge`,
+  core + clean chain (the README's blessed "pre-built `.lake` obtained
+  without compromising your checking environment" — also what makes our
+  layered packages fit comparator's proofs/.lake-only write grant) — then
+  run the guarded judge: comparator's Challenge build is a no-op, the
+  Challenge is exported BEFORE Solution is touched, and the untrusted
+  Solution is a real cold build inside the landrun sandbox. (Prose
+  corrected at the delta-review — the first flow pre-built the pair,
+  retired at audit finding 2.) Clone removed on success, kept for
+  inspection on failure.
   `--in-place` keeps the warm-tree run for iteration, verdict-labelled
   NOT authoritative. **Measured authoritative cost (post-audit flow,
   trusted-side-only pre-build): ~2 min wall** — clone + seed + Challenge
@@ -292,6 +296,31 @@ Refuted (recorded): a claimed weaker-restatement hole in the `Judge.*`
 scheme (Solution's by-reference proofs ARE the mechanical tie), and a
 claimed fail-open in `strip_lean_comments` for unbalanced `/-` (it
 over-flags, fail-closed).
+
+### Delta-review of the audit-response commit (`cc8395d`, user-requested)
+
+One Opus reviewer over the response diff + refute-by-default verifiers:
+6 findings, 5 confirmed, 1 refuted (a claimed off-by-one in the count
+correction — 24 stands). Fixed in the follow-up commit:
+
+1. **[major, latent → minor per verifier]** the canonical `IMPORT_RE` had
+   no `meta` slot — `meta import` / `public meta import` (the form
+   iris-lean itself uses; legal only under a `module` header, which no
+   golean file has yet) was invisible to every gate. Slot added; probe:
+   all three module-system forms now extracted.
+2. **[minor]** the slice-4b prose above still described the retired
+   pre-build-the-pair flow — corrected in place.
+3. **[note]** `scripts/ci`'s audit-coverage walk open-coded the import
+   pipeline — now calls `lean_imports` (the lib is now used at every
+   build-edge reader).
+4. **[note]** the trusted-side pre-build silently relies on Challenge's
+   closure covering every core module the proofs need — documented at the
+   pre-build: the failure mode is a LOUD landrun write denial, and the
+   remedy is widening the pre-build (trusted side), never comparator's
+   sandbox.
+5. **[note]** the `permitted_axioms` extraction was layout-fragile
+   (fail-closed but misleading after a JSON reflow) — now
+   newline-flattened before the single-bracket match.
 
 ## Exit criteria — all MET 2026-08-02 (close-out)
 

@@ -112,9 +112,12 @@ cm=$(grep -oE '"challenge_module"[[:space:]]*:[[:space:]]*"[^"]*"' "$CHECK_ROOT/
 sm=$(grep -oE '"solution_module"[[:space:]]*:[[:space:]]*"[^"]*"' "$CHECK_ROOT/proofs/judge-config.json" | sed -E 's/.*:\s*"//; s/"//')
 [ "$cm" = "Challenge" ] || fail "judge-config challenge_module is '$cm', expected Challenge"
 [ "$sm" = "Solution" ] || fail "judge-config solution_module is '$sm', expected Solution"
-# Single-bracket extraction (a /start/,/end/ sed range swallows to EOF when
-# both match one line — caught by this check's own first fail-closed run).
-cfg_axioms=$(grep -oE '"permitted_axioms"[[:space:]]*:[[:space:]]*\[[^]]*\]' "$CHECK_ROOT/proofs/judge-config.json" \
+# Newline-flattened single-bracket extraction: layout-independent (a
+# /start/,/end/ sed range swallowed to EOF when both matched one line —
+# caught by this check's own first fail-closed run; a line-based grep would
+# extract nothing after a routine JSON reflow — delta-review 2026-08-02).
+cfg_axioms=$(tr -d '\n' < "$CHECK_ROOT/proofs/judge-config.json" \
+  | grep -oE '"permitted_axioms"[[:space:]]*:[[:space:]]*\[[^]]*\]' \
   | grep -oE '"[A-Za-z0-9_.]+"' | sed -E 's/"//g' | grep -v '^permitted_axioms$' | sort | tr '\n' ' ' | sed 's/ $//')
 want_axioms=$(echo "$PERMITTED_AXIOMS" | tr ' ' '\n' | sort | tr '\n' ' ' | sed 's/ $//')
 [ "$cfg_axioms" = "$want_axioms" ] || fail "judge-config permitted_axioms [$cfg_axioms] != pinned [$want_axioms]"
@@ -184,6 +187,13 @@ echo "  statement-TCB gate; Challenge closure Iris-free (${walk#CLEAN:} modules)
 # ── 4. Pre-build the TRUSTED side only ──────────────────────────────────
 if [ "$MODE" = fresh ]; then
   echo "comparator-judge: pre-building the trusted side (Challenge + closure) in the clone"
+  # Write-set note (delta-review 2026-08-02): the sandboxed Solution build
+  # may write only proofs/.lake, so any GoLean CORE module the proofs need
+  # must already be built here. `lake build Challenge` covers core modules
+  # in Challenge's closure; if the proof layer ever needs core modules
+  # outside it, the judge fails LOUDLY with a landrun write denial on the
+  # core .lake — widen this pre-build to the full core lib then
+  # (trusted side: the core is the TCB), never widen comparator's sandbox.
   (cd "$JUDGE_DIR" && lake build Challenge) \
     || fail "pre-build of Challenge in the fresh clone failed"
 fi

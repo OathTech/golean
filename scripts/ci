@@ -101,7 +101,7 @@ while [ "$grow" -eq 1 ]; do
   for m in $closure; do
     mf="proofs/$(echo "$m" | tr '.' '/').lean"
     [ -f "$mf" ] || continue
-    for imp in $(strip_lean_comments < "$mf" | grep -E "$IMPORT_RE" | sed -E "s/$IMPORT_RE//"); do
+    for imp in $(lean_imports "$mf"); do
       impf="proofs/$(echo "$imp" | tr '.' '/').lean"
       [ -f "$impf" ] || continue   # external import (Iris, GoLean core) — not ours
       case " $closure " in *" $imp "*) ;; *) closure="$closure $imp"; grow=1 ;; esac
