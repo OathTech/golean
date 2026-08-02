@@ -219,7 +219,13 @@ run_case_rows() {
     report_fail "$id" "$features" "go-source" "missing $go_file"
     return 0
   fi
-  if ! rg -q "func[[:space:]]+$function_name[[:space:]]*\\(" "$go_file"; then
+  # grep -E, not rg (2026-08-02): ripgrep is absent on the GitHub runner, and
+  # a missing tool's exit 127 was inverted into "no match" — every case
+  # reported FAIL/litmus-contract and the nightly differential never actually
+  # ran (12+ red nightlies misattributed to corpus drift). grep is in POSIX;
+  # the pattern is plain ERE. A tool this check depends on must either be
+  # universally present or preflighted like `go` is at the top of this script.
+  if ! grep -Eq "func[[:space:]]+$function_name[[:space:]]*\\(" "$go_file"; then
     report_fail "$id" "$features" "litmus-contract" "manifest function $function_name is not defined in $go_file"
     return 0
   fi
