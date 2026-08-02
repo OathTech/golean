@@ -101,17 +101,61 @@ echo "comparator-judge: pins OK (comparator @ ${COMPARATOR_REV:0:7} pristine,"
 echo "  landrun $LANDRUN_MODVER), $n_theorems theorems in lockstep with the"
 echo "  statement-TCB gate, Challenge closure Iris-free (${walk#CLEAN:} modules)."
 
-# ── 4. The run — exactly the README's guarded invocation ────────────────
+# ── 4. The judged tree: FRESH CLONE by default ──────────────────────────
+# Comparator's assumption 2 (README): the judge must not run against a
+# .lake that previously compiled the Solution (or any untrusted file) —
+# stale or crafted incremental state could poison the CHALLENGE's
+# elaboration. Standard practice, and our default: clone the repo at HEAD
+# into a disposable tree, so every artifact the judge sees comes from a
+# virgin elaboration of COMMITTED sources. We then pre-build the pair
+# ourselves — the README's blessed alternative ("a fully pre-built .lake
+# obtained without compromising your checking environment"), which also
+# fits our layered packages (comparator's sandbox grants write only to
+# proofs/.lake, not the core package's) — and comparator's own sandboxed
+# builds become no-ops: the judging is export + kernel replay, with the
+# Challenge exported BEFORE the Solution is touched.
+#
+# --in-place skips the clone and judges the working tree's warm .lake:
+# iteration-grade ONLY, never authoritative; the verdict line says so.
+MODE=fresh
+[ "${1:-}" = "--in-place" ] && MODE=in-place
+if [ "$MODE" = fresh ]; then
+  rev=$(git -C "$ROOT" rev-parse HEAD)
+  [ -z "$(git -C "$ROOT" status --porcelain)" ] \
+    || echo "comparator-judge: NOTE working tree is dirty — judging committed HEAD $rev, not the dirty tree" >&2
+  CLONE="$ROOT/artifacts/judge/clone-${rev:0:12}"
+  rm -rf "$CLONE"
+  mkdir -p "$ROOT/artifacts/judge"
+  echo "comparator-judge: fresh clone of $rev -> ${CLONE#"$ROOT"/}"
+  git clone --quiet --no-hardlinks "$ROOT" "$CLONE"
+  # Seed ONLY the Lake dependency packages (iris + its deps, at the
+  # manifest's pinned revs) — network-free reproduction of `lake update`.
+  # This feeds nothing trusted: Challenge's import closure contains no
+  # fetched dependency (GoLean core is dependency-free, Std ships with the
+  # toolchain); the packages serve the UNTRUSTED Solution side, which the
+  # kernel replay re-checks from scratch.
+  mkdir -p "$CLONE/proofs/.lake"
+  cp -a "$ROOT/proofs/.lake/packages" "$CLONE/proofs/.lake/packages"
+  echo "comparator-judge: pre-building the pair in the clone (cold — this is the honest cost)"
+  (cd "$CLONE/proofs" && lake build Challenge Solution) \
+    || fail "pre-build of the fresh clone failed"
+  JUDGE_DIR="$CLONE/proofs"
+else
+  echo "comparator-judge: --in-place: judging the WARM working tree (iteration-grade, NOT authoritative)"
+  JUDGE_DIR="$ROOT/proofs"
+fi
+
+# ── 5. The run — exactly the README's guarded invocation ────────────────
 # systemd-run confines the judge with RestrictAddressFamilies=~AF_UNIX (the
 # landrun-escape guard the comparator README prescribes); comparator then
-# builds and exports Challenge and Solution inside landrun sandboxes and
-# replays the Solution into the kernel. Works from inside the nono sandbox
-# too (validated 2026-08-02; the unit carries the same confinement).
+# (re-)builds and exports Challenge and Solution inside landrun sandboxes
+# and replays the Solution into the kernel. Works from inside the nono
+# sandbox too (validated 2026-08-02; the unit carries the same confinement).
 CMD=(systemd-run --property=RestrictAddressFamilies=~AF_UNIX --user --pipe --wait
   -E PATH="$HOME/go/bin:$PATH"
   -E COMPARATOR_LANDRUN="$LANDRUN_BIN"
   -E COMPARATOR_LEAN4EXPORT="$LEAN4EXPORT_BIN"
-  --working-directory "$ROOT/proofs"
+  --working-directory "$JUDGE_DIR"
   -- bash -c "lake env '$COMPARATOR_BIN' judge-config.json")
 echo "comparator-judge: running:"
 printf '  %q' "${CMD[@]}"; echo
@@ -120,8 +164,14 @@ start=$(date +%s)
 status=$?
 elapsed=$(( $(date +%s) - start ))
 if [ $status -eq 0 ]; then
-  echo "comparator-judge: PASS — $n_theorems theorems certified in ${elapsed}s"
+  if [ "$MODE" = fresh ]; then
+    echo "comparator-judge: PASS — $n_theorems theorems certified in ${elapsed}s (fresh clone @ ${rev:0:12})"
+    rm -rf "$CLONE"
+  else
+    echo "comparator-judge: PASS (IN-PLACE, iteration-grade — not authoritative) — $n_theorems theorems, ${elapsed}s"
+  fi
 else
   echo "comparator-judge: FAIL (exit $status, ${elapsed}s) — the judge did NOT accept" >&2
+  [ "$MODE" = fresh ] && echo "comparator-judge: clone kept for inspection: $CLONE" >&2
 fi
 exit $status

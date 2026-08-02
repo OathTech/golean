@@ -205,10 +205,28 @@ the standing rule); reshape the judge project instead and record it.
   build; the sandboxed steps were Challenge elaborate+export, Solution
   elaborate+export, kernel replay), from INSIDE the nono sandbox, under
   `systemd-run` with `RestrictAddressFamilies=~AF_UNIX`. Full `scripts/ci`
-  PASS after the exemptions, 873/873 baseline unchanged. Caveat recorded:
-  a warm-.lake run leans on Lake incrementality for the SOLUTION build
-  (assumption 2 of comparator's README is about adversarial solutions,
-  not ours); authoritative-grade claims should judge a fresh clone.
+  PASS after the exemptions, 873/873 baseline unchanged.
+
+- **Slice 4b (fresh-clone discipline) — DONE 2026-08-02, user catch.** The
+  first run judged the WARM `proofs/.lake` — the exact state comparator's
+  assumption 2 ("never previously compiled the Solution") exists to
+  exclude: stale or crafted incremental artifacts could poison the
+  CHALLENGE's elaboration, and our working `.lake` is written by ordinary
+  agent-driven builds. Standard practice made the wrapper's DEFAULT: clone
+  the repo at committed HEAD into `artifacts/judge/clone-<rev>`, seed only
+  the Lake dependency packages (network-free `lake update` reproduction —
+  feeds nothing trusted: Challenge's closure contains no fetched dep, and
+  the packages serve the untrusted Solution side, which the kernel replay
+  re-checks), pre-build the pair ourselves (the README's blessed
+  "pre-built `.lake` obtained without compromising your checking
+  environment" — also what makes our layered packages fit comparator's
+  proofs/.lake-only write grant), then run the guarded judge: Challenge is
+  exported BEFORE Solution is touched, and the sandboxed builds are
+  no-ops. Clone removed on success, kept for inspection on failure.
+  `--in-place` keeps the warm-tree run for iteration, verdict-labelled
+  NOT authoritative. **Measured authoritative cost: ~88 s wall** (clone +
+  seed + cold pre-build ≈ 53 s; judged phase 35 s), PASS 23/23 at
+  `72cfdb23639f`, from inside the nono sandbox.
 
 ## Exit criteria — all MET 2026-08-02 (close-out)
 

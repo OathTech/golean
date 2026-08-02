@@ -88,16 +88,21 @@ elaboration environment all OUTSIDE the judge.
 fail-closes on trust-tool version/pristine-ness, on designated-list
 lockstep with the statement-TCB gate, and on Challenge-closure
 Iris-freedom, then runs the README's guarded systemd-run invocation.
-First run 2026-08-02: **all 23 designated theorems certified** (kernel
-replay, axiom allowlist `propext`/`Quot.sound`/`Classical.choice`),
-69 s on a warm proofs build. The former open question is answered
-empirically: landrun nests inside the nono sandbox (Landlock domains
-compose) and systemd-run works from inside it too, so judge runs are
-agent-invokable; an authoritative-grade run should still use a fresh
-clone (the "never compiled the Solution" discipline). **Cadence (user
-direction 2026-08-02): a LANDMARK gate, not an iteration gate** — run
-before merging any arc that adds/changes a designated headline
-statement and before external claims; never part of `scripts/ci`.
+First runs 2026-08-02: **all 23 designated theorems certified** (kernel
+replay, axiom allowlist `propext`/`Quot.sound`/`Classical.choice`).
+The wrapper's DEFAULT is the fresh-clone discipline (comparator's
+"never compiled the Solution" assumption 2, made structural at a user
+catch): clone at committed HEAD, seed dep packages only, pre-build the
+pair (the README's blessed pre-built-`.lake` path), judge — measured
+~88 s wall, of which 35 s is the judged export+replay phase; a
+warm-tree `--in-place` run exists for iteration and labels itself
+non-authoritative. The former open question is answered empirically:
+landrun nests inside the nono sandbox (Landlock domains compose) and
+systemd-run works from inside it too, so judge runs are
+agent-invokable. **Cadence (user direction 2026-08-02): a LANDMARK
+gate, not an iteration gate** — run before merging any arc that
+adds/changes a designated headline statement and before external
+claims; never part of `scripts/ci`.
 
 ## 2. The layering doctrine: general infra / target infra
 
