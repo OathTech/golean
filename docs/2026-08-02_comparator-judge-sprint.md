@@ -210,14 +210,25 @@ the standing rule); reshape the judge project instead and record it.
   (assumption 2 of comparator's README is about adversarial solutions,
   not ours); authoritative-grade claims should judge a fresh clone.
 
-## Exit criteria
+## Exit criteria — all MET 2026-08-02 (close-out)
 
 - All designated theorems pass the judge end-to-end on this machine with
   every trust component at a pristine, recorded version (comparator
-  `fd2e25d`, lean4export `8554815`, landrun `5283024a2f49`).
+  `fd2e25d`, lean4export `8554815`, landrun `5283024a2f49`) — **MET**
+  (23/23 certified in 69 s warm, from inside the nono sandbox, under the
+  systemd-run guard).
 - Challenge's import closure is measured Iris-free by the same walk that
-  enforces the statement-TCB gate.
+  enforces the statement-TCB gate — **MET** (the wrapper re-runs the walk
+  before every judge invocation; scripts/ci gates the chain).
 - Cost of a judge run is measured and recorded; cadence policy is written
-  into the doctrine doc.
-- The wrapper fails closed on: missing/wrong-version binaries, designated-list
-  mismatch between `config.json` and `Audit.lean`, or any judge error.
+  into the doctrine doc — **MET** (landmark cadence; CLAUDE.md
+  merge-protocol step 2 now names the judge for headline-statement arcs).
+- The wrapper fails closed on: missing/wrong-version binaries,
+  designated-list mismatch between `judge-config.json` and `Audit.lean`,
+  or any judge error — **MET** (plus a pristine-tree check on
+  deps/comparator, per the standing trust-tools rule).
+- Added at close-out: `scripts/comparator-setup` reproduces the judge
+  environment from a clean `deps/` at the recorded pins (clone, build,
+  landrun install, upstream smoke pair). Needs network, so it runs
+  user-side; its steps are exactly what this session performed and
+  verified piecewise.

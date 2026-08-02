@@ -153,7 +153,11 @@ way an arc reaches `main`).
    at user direction; the old "process amendments may land directly" carve-out
    is revoked).
 2. **Arc complete → run the gate:** `scripts/ci` (add `--diff` when runtime
-   code changed). Must be green before anything else.
+   code changed). Must be green before anything else. If the arc added or
+   changed a designated headline theorem statement (the statement-TCB
+   gate's list), also run `scripts/comparator-judge` — the independent
+   kernel-replay judge (landmark cadence only, never part of `scripts/ci`;
+   comparator-judge sprint 2026-08-02).
 3. **THE AUDIT CHECK — NEVER, EVER SKIPPED.** Before any merge, explicitly ask
    the user about a pre-merge adversarial audit: propose scope + scale
    (dimensions, agent count, model, cost) and get sign-off on that plan before

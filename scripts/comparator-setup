@@ -1,0 +1,59 @@
+#!/usr/bin/env bash
+# Reproduce the Comparator judge environment from a clean checkout
+# (comparator-judge sprint, 2026-08-02; docs/2026-08-02_comparator-judge-sprint.md).
+#
+# NEEDS NETWORK (git clone + lake dep fetch + go module fetch) — run outside
+# the agent sandbox. Idempotent: each step is skipped when already satisfied.
+# Installs NOTHING outside the repo except landrun into $HOME/go/bin (the
+# user-approved pin). TRUST TOOLS ARE NEVER MODIFIED: everything is cloned
+# and built pristine at recorded pins; scripts/comparator-judge refuses to
+# run against anything else.
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+COMPARATOR_URL=https://github.com/leanprover/comparator
+COMPARATOR_REV=fd2e25de155523dbce1f35d410511f9f63998461
+# landrun: cli-v2-era main. v0.1.16+ (urfave/cli v3) eats the `--` separator
+# comparator's lean4export invocation relies on; the v0.1.15 tag's -ldd
+# misses the ELF interpreter line. Full finding: the sprint doc.
+LANDRUN_MOD=github.com/zouuup/landrun
+LANDRUN_REV=5283024a2f49b28046c3b4a06d7d775c058d4d80
+LANDRUN_MODVER=v0.1.16-0.20260127195639-5283024a2f49
+
+echo "== deps/comparator @ ${COMPARATOR_REV:0:7}"
+if [ ! -d "$ROOT/deps/comparator/.git" ]; then
+  git clone "$COMPARATOR_URL" "$ROOT/deps/comparator"
+fi
+git -C "$ROOT/deps/comparator" fetch --quiet origin
+git -C "$ROOT/deps/comparator" checkout --quiet "$COMPARATOR_REV"
+dirty=$(git -C "$ROOT/deps/comparator" status --porcelain)
+[ -z "$dirty" ] || { echo "deps/comparator is not pristine — refusing:"; echo "$dirty"; exit 1; }
+
+echo "== build comparator + its lean4export (lake, may fetch pinned deps)"
+(cd "$ROOT/deps/comparator" && lake build lean4export comparator)
+
+echo "== landrun @ $LANDRUN_MODVER -> \$HOME/go/bin"
+have=$(go version -m "$HOME/go/bin/landrun" 2>/dev/null \
+  | awk '$1=="mod" && $2 ~ /landrun/ {print $3}' || true)
+if [ "$have" != "$LANDRUN_MODVER" ]; then
+  GOBIN="$HOME/go/bin" go install "$LANDRUN_MOD/cmd/landrun@$LANDRUN_REV"
+fi
+
+echo "== smoke: comparator's own simple_match / simple_mismatch"
+SMOKE=$(mktemp -d)
+trap 'rm -rf "$SMOKE"' EXIT
+for t in simple_match simple_mismatch; do
+  mkdir -p "$SMOKE/$t"
+  cp "$ROOT/deps/comparator/tests/projects/$t"/{Challenge.lean,Solution.lean,config.json} "$SMOKE/$t/"
+  cp "$ROOT/deps/comparator/lean-toolchain" "$SMOKE/$t/"
+  printf 'name = "comparatortest"\nversion = "0.1.0"\n\n[[lean_lib]]\nname = "Solution"\n\n[[lean_lib]]\nname = "Challenge"\n' \
+    > "$SMOKE/$t/lakefile.toml"
+done
+run_one() {
+  (cd "$SMOKE/$1" && PATH="$HOME/go/bin:$PATH" \
+    COMPARATOR_LEAN4EXPORT="$ROOT/deps/comparator/.lake/packages/lean4export/.lake/build/bin/lean4export" \
+    lake env "$ROOT/deps/comparator/.lake/build/bin/comparator" config.json >/dev/null 2>&1)
+}
+if ! run_one simple_match; then echo "SMOKE FAIL: simple_match should be ACCEPTED"; exit 1; fi
+if run_one simple_mismatch; then echo "SMOKE FAIL: simple_mismatch should be REJECTED"; exit 1; fi
+echo "== setup complete; scripts/comparator-judge is ready"
