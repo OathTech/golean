@@ -48,6 +48,10 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version: stable
+          # No module cache to manage: the repo has no go.mod/go.sum (the
+          # differential harness runs GO111MODULE=off with a repo-local
+          # GOCACHE), so the default cache:true only emits a go.sum warning.
+          cache: false
 
       - name: Full gate incl. differential corpus (scripts/ci --diff)
         if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
