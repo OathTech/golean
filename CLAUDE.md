@@ -161,7 +161,12 @@ way an arc reaches `main`).
    their call to make, never ours — but the *ask itself is unconditional*. No
    green gate, no prior audit of an earlier state, no urgency, and no "it's
    only docs" reasoning ever substitutes for asking. If an audit runs: findings
-   are fixed on the branch, then re-run step 2.
+   are fixed on the branch, then re-run step 2. **Audit-response commits**
+   get a focused DELTA-REVIEW of their own diff when substantive —
+   especially when they touch gates/lints/trust surface; purely schematic
+   fixes (doc corrections, pre-verified mechanical edits) may be waived
+   from it (user policy 2026-08-01, resolving the final-state-vs-fixes
+   tension explicitly).
 4. **Pause, report, ask for merge sign-off.** Merge only on explicit approval
    given *at that moment, for that specific merge*. Approval is never inferred
    from an earlier "merge it", a green gate, a passed audit, or any broad "go
