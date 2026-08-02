@@ -5,6 +5,7 @@ import GoLeanProofs.Laws.StmtOps
 import GoLeanProofs.Specs.GoldenQuorumPin
 import GoLeanProofs.Laws.Unwind
 import GoLeanProofs.Specs.QuorumRefSpec
+import GoLeanProofs.Specs.Statements
 import GoLeanProofs.Tactics.GoWalk
 
 /-!
@@ -70,9 +71,8 @@ namespace GoLean.Quorum
 These are theorems, not targets. They pin the value the machine walk must
 land on and immediately upgrade it to the declarative spec. -/
 
-/-- The one-voter instance's acked data: voter `1` reported index `12`
-(the `committedOneKnown` driver's map literal). -/
-def ackedOneKnown : Nat → Option Nat := fun v => if v = 1 then some 12 else none
+-- `ackedOneKnown` moved to `Specs/Statements.lean` — the Iris-free
+-- statement layer (comparator-judge sprint, 2026-08-02).
 
 /-- **The value the machine must produce**, from the reference — `rfl`,
 so it is a computation, not a claim. -/
@@ -1123,92 +1123,11 @@ namespace GoLean.Surface
 
 open GoLean.GoCore GoLean.Quorum
 
-/-- **THE ARC'S NAMED GOAL — now a THEOREM** (`quorumOneKnownFuncSpec`
-below, quorum pilot phase 4 summit, 2026-07-31). The `GoFuncSpec` form
-over the PINNED ACTUAL LOWERING of the real etcd-io/raft quorum source:
-"`committedOneKnown()` takes no arguments, needs no heap, and returns
-12" — ∀-quantified over the caller's target cell, its prior value, and
-the frame, exactly as `recoverFuncSpec_statement`/
-`goldenFuncSpec_statement`. The driver builds `MajorityConfig{1:{}}` and
-`mapAckIndexer{1:12}` and calls `run → CommittedIndex`, so discharging
-this walks the real interface dispatch, the real map range, the real sort
-extern and the real defined-type conversions.
-
-`12` is `committedIndexRef [1] ackedOneKnown` (`committedIndexRef_oneKnown`,
-`rfl`), so this discharge plus `committedIndexRef_meets_spec` (PROVEN)
-yields `IsCommittedIndex` on this instance — the tier-1 claim, packaged
-as `quorumOneKnownMeetsSpec`. -/
-def quorumOneKnownFuncSpec_statement : Prop :=
-  GoFuncSpec quorumLowered.typeDefs.toList quorumLowered.funcs
-    quorumLowered.methods ⟨"committedOneKnown"⟩ .uint64 #[] .emp
-    (fun n => .pure (n = 12))
-
-/-- **TARGET — the negative twin, and the one thing this slice did NOT
-prove.** Stated as an UNCONDITIONAL refutation.
-
-*Provenance corrected 2026-07-31 (pre-merge audit, finding 6):* this def
-and `quorumOneKnownFuncSpec_statement` were repeatedly described as
-"phase-0" targets. Git says otherwise — neither exists at the phase-0
-commit `9bd409c`; both were first written in phase 4 at `39891ae`, one
-and two commits before their discharge. The statement-before-machinery
-discipline WAS honoured (target commits precede result commits), but in
-the weaker one-to-two-commit sense, not from phase 0. The genuine phase-0
-targets are `committedIndexRef_meets_spec_statement` and the
-`GoFuncSpec2` shape (`QuorumTargets.lean`).
-
-It does not
-follow from the positive discharge: `GoTriple` quantifies over
-TERMINATING runs, so both the `= 12` and the `= 11` spec are vacuously
-true of a program with no terminating run, and refuting this def requires
-exhibiting one — a kernel evaluation of the interpreter over the whole
-pinned program, a separate cost. The run-conditioned twin
-`quorumOneKnownNotEleven` (the `goldenNotThree` shape) IS proven below;
-this def stays a target and no theorem names it. Recorded, not
-quietly restated. -/
-def quorumOneKnownNotEleven_statement : Prop :=
-  ¬ GoFuncSpec quorumLowered.typeDefs.toList quorumLowered.funcs
-      quorumLowered.methods ⟨"committedOneKnown"⟩ .uint64 #[] .emp
-      (fun n => .pure (n = 11))
-
-/-- The concrete receiver the `AckedIndex` spec is stated on: a
-`mapAckIndexer` cell at `ma` holding a map whose data cell at `mba` is
-the single entry `3 ↦ 12` — the smallest instance that makes the comma-ok
-answer non-trivial (a HIT, so the `found` result is `true` and the value
-is the map's, not the zero default). -/
-def ackedIndexerPre (ma mba : Nat) : HProp :=
-  .sep (.pointsTo ma ⟨some (.defined ⟨"main.mapAckIndexer"⟩),
-                      .map ⟨some (.base ⟨mba⟩)⟩⟩)
-    (.pointsTo mba ⟨some (.map (.int .uint64) (.defined ⟨"main.Index"⟩)),
-                    .mapData #[(.int 3 .uint64, .int 12 .uint64)]⟩)
-
-/-- **TARGET, now PROVEN below** (`quorumAckedIndexFuncSpec2`): the
-implementation method `main.mapAckIndexer.AckedIndex` of the PINNED
-lowering at `GoFuncSpec2` strength — its `(Index, bool)` result pair is
-the arity widening the pilot forces. Reads: *`m.AckedIndex(3)` on the
-`{3 ↦ 12}` receiver, into any two caller cells (int-kind and bool, any
-prior values), in any admissible heap with any frame, terminates only in
-states where those cells hold `12` and `true`.*
-
-**Statement corrected 2026-07-31 (recorded, not quietly patched).** The
-FIRST form of this statement — written at `39891ae`, in phase 4, not at
-phase 0 as this note previously said (provenance corrected same day,
-pre-merge audit finding 6) — passed `#[]` arguments to a two-parameter
-method: the arity
-check in `enterFrame` fails closed, so the configuration is STUCK, so
-`Progress` — and with it the whole statement — was FALSE, not merely
-unproven; and its postcondition `b = true → n = 12` was satisfiable by a
-method that never finds anything. Both are fixed here: the receiver and
-index are real arguments (`GoFuncSpec2`'s new caller-environment
-parameter is what makes a heap-carried receiver denotable at all), and
-the postcondition pins BOTH results positively. -/
-def quorumAckedIndexFuncSpec2_statement : Prop :=
-  ∀ ma mba : Nat,
-    GoFuncSpec2 quorumLowered.typeDefs.toList quorumLowered.funcs
-      quorumLowered.methods ⟨"main.mapAckIndexer.AckedIndex"⟩ .uint64
-      [("m", Loc.base ⟨ma⟩)] #[.var "m", .intLit 3 .uint64]
-      (ackedIndexerPre ma mba)
-      (fun n b => .pure (n = 12 ∧ b = true))
-
+/- `quorumOneKnownFuncSpec_statement`, `quorumOneKnownNotEleven_statement`,
+`ackedIndexerPre` and `quorumAckedIndexFuncSpec2_statement` moved to
+`Specs/Statements.lean` — the Iris-free statement layer (comparator-judge
+sprint, 2026-08-02): headline statements must be importable without Iris
+in the import closure. The theorems that discharge them stay below. -/
 
 /-! ### Non-vacuity of the discharge
 
@@ -1401,11 +1320,8 @@ refutable from the triple alone: refuting it demands EXHIBITING a
 terminating run (a kernel evaluation of the interpreter over the whole
 pinned program), which is a separate cost and stays recorded as owed. -/
 
-/-- The initial heap the readout runs against: one cell at base 0 holding
-the caller's target, exactly as `GoFuncSpec` quantifies it. -/
-def quorumOut : Heap := [(Loc.base ⟨0⟩, ⟨some (.int .uint64), .int 0 .uint64⟩)]
-
-def quorumOutEnv : LocalEnv := [[("$callres", Loc.base ⟨0⟩)]]
+/- `quorumOut`/`quorumOutEnv` (the readout's seeded state) moved to
+`Specs/Statements.lean` — the readout THEOREM statement references them. -/
 
 /-- **The first-order readout**: every terminating run of
 `$callres = committedOneKnown()` from the seeded one-cell state leaves
@@ -1486,23 +1402,8 @@ and shipped without one (pre-merge audit finding). This is the
 concrete four-cell instance (the satisfiability witness's addresses), the
 triple read out at BOTH pinned target cells. -/
 
-/-- The initial heap the two-cell readout runs against: the two caller
-target cells (0: `Index`-kind int, 1: bool), the receiver box at 2, and
-the `{3 ↦ 12}` map data at 3 — exactly `quorumAckedIndexPre_satisfiable`'s
-witness shape, as a machine heap. -/
-def ackedIndexOut : Heap :=
-  [(Loc.base ⟨0⟩, ⟨some (.int .uint64), .int 0 .uint64⟩),
-   (Loc.base ⟨1⟩, ⟨some .bool, .bool false⟩),
-   (Loc.base ⟨2⟩, ⟨some (.defined ⟨"main.mapAckIndexer"⟩),
-                   .map ⟨some (.base ⟨3⟩)⟩⟩),
-   (Loc.base ⟨3⟩, ⟨some (.map (.int .uint64) (.defined ⟨"main.Index"⟩)),
-                   .mapData #[(.int 3 .uint64, .int 12 .uint64)]⟩)]
-
-/-- The caller environment: the two result targets plus the receiver
-binding `m`, exactly as `GoFuncSpec2`'s caller scope quantifies them. -/
-def ackedIndexOutEnv : LocalEnv :=
-  [[("$callres0", Loc.base ⟨0⟩), ("$callres1", Loc.base ⟨1⟩),
-    ("m", Loc.base ⟨2⟩)]]
+/- `ackedIndexOut`/`ackedIndexOutEnv` (the two-cell readout's seeded state)
+moved to `Specs/Statements.lean`. -/
 
 /-- **The two-cell first-order readout**: every terminating run of
 `$callres0, $callres1 = m.AckedIndex(3)` from the seeded four-cell state

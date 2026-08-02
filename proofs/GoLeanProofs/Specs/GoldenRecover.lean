@@ -1,4 +1,5 @@
 import GoLeanProofs.SurfaceExit
+import GoLeanProofs.Specs.Statements
 import GoLeanProofs.Laws.Unwind
 import GoLeanProofs.Laws.Call
 import GoLeanProofs.Laws.Init
@@ -168,14 +169,8 @@ open Iris Iris.ProgramLogic
 open GoLean.GoCore GoLean.GoCore.Machine
 open GoLean.Iris GoLean.Iris.GoldenRecover
 
-/-- **The recover function spec, as a statement** (the arc's slice-B
-target): "`recoverDirect()` takes no arguments, needs no heap, and
-returns 7" — over the PINNED ACTUAL LOWERING, ∀-quantified over the
-caller's target cell, its prior value, and the frame. -/
-def recoverFuncSpec_statement : Prop :=
-  GoFuncSpec recoverLowered.typeDefs.toList recoverLowered.funcs
-    recoverLowered.methods ⟨"recoverDirect"⟩ .int #[] .emp
-    (fun n => .pure (n = 7))
+/- `recoverFuncSpec_statement` moved to `Specs/Statements.lean` — the
+Iris-free statement layer (comparator-judge sprint, 2026-08-02). -/
 
 /-- **The recover function spec, proven** — the composition walk applied
 at the quantified target through the generic exit pipe (`goSpec_of_wp`),
@@ -206,11 +201,8 @@ The TCB/layering doctrine (`docs/2026-08-01_tcb-and-layering-doctrine.md`
 shipped without one (pre-merge audit finding). This is `goldenReturnsTwo`'s
 shape over the recover pin: read the triple out at a pinned address. -/
 
-/-- The initial heap the readout runs against: one cell at base 0 holding
-the caller's target, exactly as `GoFuncSpec` quantifies it. -/
-def recoverOut : Heap := [(Loc.base ⟨0⟩, ⟨some (.int .int), .int 0 .int⟩)]
-
-def recoverOutEnv : LocalEnv := [[("$callres", Loc.base ⟨0⟩)]]
+/- `recoverOut`/`recoverOutEnv` (the readout's seeded state) moved to
+`Specs/Statements.lean`. -/
 
 /-- **The first-order readout**: every terminating run of
 `$callres = recoverDirect()` from the seeded one-cell state leaves

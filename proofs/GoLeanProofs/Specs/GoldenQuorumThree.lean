@@ -1,4 +1,5 @@
 import GoLeanProofs.Specs.AutomationTargets
+import GoLeanProofs.Specs.Statements
 import GoLeanProofs.Laws.Values
 
 /-!
@@ -1384,7 +1385,8 @@ that fails to terminate, so the UNCONDITIONAL `¬ GoFuncSpec` form of
 alone — it demands EXHIBITING a terminating run. That cost stays
 recorded as owed; the honest twin is below. -/
 
-def threeOutEnv : LocalEnv := [[("$callres", Loc.base ⟨0⟩)]]
+/- `threeOutEnv` moved to `Specs/Statements.lean` (its heap is `quorumOut`,
+already there). -/
 
 /-- **The first-order readout**: every terminating run of
 `$callres = committedThreeAll()` from the seeded one-cell state leaves

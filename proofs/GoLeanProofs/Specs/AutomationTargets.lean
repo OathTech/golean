@@ -1,4 +1,5 @@
 import GoLeanProofs.Specs.GoldenQuorumWP
+import GoLeanProofs.Specs.Statements
 import GoLeanProofs.Laws.Range
 
 /-!
@@ -62,142 +63,21 @@ open GoLean.Iris GoLean.Iris.GoldenQuorum
 
 namespace GoLean.Quorum
 
-/-! ## The encoding predicates
+/-! ## TARGET 1 — the arc's GOAL: `CommittedIndex` for EVERY config
 
-They say what a heap map-snapshot has to look like to MEAN a
-`MajorityConfig` / `AckedIndexer` pair. Both are stated over the entry
-array the machine's `mapRangeEntries`/`mapLookup` see, at `uint64`
-values — no address, no cell, no program appears in them. -/
-
-/-- A `MajorityConfig`'s snapshot encodes the voter list `c`: the keys are
-exactly `c`'s ids as `uint64` values (in some order — a map has no
-order), every value is the empty struct, and the ids are in range. -/
-def EncodesConfig (entries : Array (GoValue × GoValue)) (c : List Nat) : Prop :=
-  (∀ p ∈ entries, ∃ v : Nat, v < 2 ^ 64 ∧ p.1 = .int (v : Int) .uint64
-      ∧ p.2 = .struct ⟨"struct{}"⟩ #[] ∧ v ∈ c)
-  ∧ (∀ v ∈ c, ∃ p ∈ entries, p.1 = .int (v : Int) .uint64)
-  ∧ entries.size = c.length
-
-/-- A `mapAckIndexer`'s snapshot encodes the partial map `acked`: entry
-`v ↦ i` is present exactly when `acked v = some i`. A voter with no entry
-is Go's "hasn't reported yet", which `ackedOrZero` reads as `0`. -/
-def EncodesAcked (entries : Array (GoValue × GoValue))
-    (acked : Nat → Option Nat) : Prop :=
-  (∀ p ∈ entries, ∃ v i : Nat, i < 2 ^ 64 ∧ p = (.int (v : Int) .uint64,
-      .int (i : Int) .uint64) ∧ acked v = some i)
-  ∧ (∀ v i : Nat, acked v = some i →
-      ((.int (v : Int) .uint64, .int (i : Int) .uint64) : GoValue × GoValue) ∈ entries)
-
-/-- The heap footprint the `∀`-config statement hands the method: the
-receiver `MajorityConfig` cell and its data cell, and the
-`AckedIndexer`-typed argument cell holding a BOXED `mapAckIndexer`
-(exactly the shape the n = 1 walk carries at `l`) with its data cell.
-The two data cells' declared types are left as parameters — the walk
-never reads them, so pinning them would narrow the claim for nothing. -/
-def configPre (ca cba la lba : Nat) (cty lty : Option Ty)
-    (ce ae : Array (GoValue × GoValue)) : Surface.HProp :=
-  .sep (.pointsTo ca ⟨some (.defined ⟨"main.MajorityConfig"⟩),
-                      .map ⟨some (.base ⟨cba⟩)⟩⟩)
-    (.sep (.pointsTo cba ⟨cty, .mapData ce⟩)
-      (.sep (.pointsTo la ⟨some (.interface ⟨"main.AckedIndexer"⟩),
-                           .interface (.defined ⟨"main.mapAckIndexer"⟩)
-                             (.map ⟨some (.base ⟨lba⟩)⟩)⟩)
-        (.pointsTo lba ⟨lty, .mapData ae⟩)))
-
-/-! ## TARGET 1 — the arc's GOAL: `CommittedIndex` for EVERY config -/
-
-/-- **THE ∀-CONFIG TARGET** (`docs/2026-08-01_proof-automation-arc.md`
-§THE GOAL). For every voter list `c`, every acked map `acked`, and every
-heap snapshot pair encoding them, the PINNED LOWERING of the real
-etcd-io/raft `main.MajorityConfig.CommittedIndex`, called on that
-receiver and that `AckedIndexer`, delivers a value satisfying the
-DECLARATIVE quorum spec `IsCommittedIndex` — safely (`GoSpec` = triple +
-progress), in any admissible heap, with any frame intact.
-
-This is machine-side generality matching `committedIndexRef_meets_spec`'s
-math-side generality: `quorumOneKnownFuncSpec` is the single point
-`c = [1]`, `acked = {1 ↦ 12}` of this surface.
-
-Note what is NOT assumed: no *small* bound on `c.length`, so the
-statement covers BOTH branches of `if len(stk) >= n` — the on-stack
-`[7]uint64` reslice AND the `make([]uint64, n)` heap allocation at more
-than seven voters. `c.Nodup` is the map-key uniqueness a
-`MajorityConfig` has by construction. Nothing is assumed about `acked`:
-a voter with no entry is Go's "has not reported yet", which
-`AckedIndex` answers with `(0, false)` and `majority.go` treats as a
-zero — the walk takes that iteration too.
-
-**STATEMENT CORRECTED 2026-08-01 (phase 4) — recorded, not quietly
-patched.** The original form had NO bound on `c.length` at all, and in
-that form it is FALSE, not merely unproven: at `c.length ≥ 2^63` the
-lowering's `n := len(c)` is a Go `int`, so `IntKind.int.normalize` wraps
-it NEGATIVE; `n == 0` is then false, `len(stk) >= n` is TRUE (7 ≥ a
-negative), and `srt = stk[:n]` hits `checkSliceBounds`' negative-high
-arm — a panic, i.e. a configuration that `Progress` counts as stuck. The
-`c.length < 2 ^ 63` hypothesis is the REPRESENTABILITY side condition
-that says the config fits in the machine `int` the lowering counts it
-with (the same bound `GoldenQuorumThree.wp_ci_loop` already carried as
-`hsmall`); it is a property of Go's `int`, not of the target. Not
-mechanized as a refutation — exhibiting the panicking run at 2^63
-entries is a separate cost and is recorded as owed, exactly as the
-`quorumAckedIndexFuncSpec2_statement` correction was.
-
-**DISCHARGED 2026-08-01** (phase 4) by
-`Specs/GoldenQuorumAll.committedIndexAllConfigs`, whose type IS this def
-— that application is the statement-identity check, so weakening the
-statement to fit the proof would break this file. No separate
-"meets-spec" corollary is needed: the postcondition here IS the
-declarative spec (`IsCommittedIndex`), unlike the concrete-instance
-targets which pin a number and get their declarative restatement
-separately. The first-order readout and the negative twin at the 3-voter
-encoding are `committedIndexAllReturnsSix` / `committedIndexAllNotTwelve`
-in the same file. This def is left exactly as written apart from the
-recorded representability correction above. -/
-def committedIndexAllConfigs_statement : Prop :=
-  ∀ (c : List Nat) (acked : Nat → Option Nat)
-    (ce ae : Array (GoValue × GoValue)) (cty lty : Option Ty)
-    (ca cba la lba ra : Nat) (w : GoValue),
-    c.Nodup →
-    c.length < 2 ^ 63 →
-    EncodesConfig ce c →
-    EncodesAcked ae acked →
-    [ra, ca, cba, la, lba].Nodup →
-    Surface.GoSpec quorumLowered.typeDefs.toList quorumLowered.funcs
-      quorumLowered.methods
-      [[("$callres", Loc.base ⟨ra⟩), ("c", Loc.base ⟨ca⟩),
-        ("l", Loc.base ⟨la⟩)]]
-      (.sep (.pointsTo ra ⟨some (.int .uint64), w⟩)
-        (configPre ca cba la lba cty lty ce ae))
-      (.call #[.var "$callres"] ⟨"main.MajorityConfig.CommittedIndex"⟩
-        #[.var "c", .var "l"])
-      (.ex fun (n : Int) =>
-        .sep (.pointsTo ra ⟨some (.int .uint64), .int n .uint64⟩)
-          (.ex fun (r : Nat) =>
-            .pure (n = (r : Int) ∧ IsCommittedIndex c acked r)))
+The encoding predicates (`EncodesConfig`/`EncodesAcked`), `configPre`,
+the `∀`-config statement itself and the 3-voter instance data moved to
+`Specs/Statements.lean` — the Iris-free statement layer (comparator-judge
+sprint, 2026-08-02): headline statements must be importable without Iris
+in the import closure. The non-vacuity/consistency THEOREMS about them
+stay here, with the provenance record above. -/
 
 /-! ### Non-vacuity of the ∀-config statement's HYPOTHESES
 
 A `∀`-statement over encodings is worthless if no encoding exists. These
-exhibit one (the 3-voter instance the next target names), so the target
-is not satisfiable by an empty premise set. -/
-
-/-- The 3-voter config `{1,2,3}` and the snapshot that encodes it. -/
-def threeConfigEntries : Array (GoValue × GoValue) :=
-  #[(.int 1 .uint64, .struct ⟨"struct{}"⟩ #[]),
-    (.int 2 .uint64, .struct ⟨"struct{}"⟩ #[]),
-    (.int 3 .uint64, .struct ⟨"struct{}"⟩ #[])]
-
-/-- `mapAckIndexer{1:12, 2:5, 3:6}` — etcd's own `committedThreeAll` row
-(`testdata/majority_commit.txt`), as a snapshot. -/
-def threeAckedEntries : Array (GoValue × GoValue) :=
-  #[(.int 1 .uint64, .int 12 .uint64),
-    (.int 2 .uint64, .int 5 .uint64),
-    (.int 3 .uint64, .int 6 .uint64)]
-
-/-- The same data as a math-level partial map. -/
-def ackedThreeAll : Nat → Option Nat :=
-  fun v => if v = 1 then some 12 else if v = 2 then some 5
-           else if v = 3 then some 6 else none
+exhibit one (the 3-voter instance the next target names, data in
+`Specs/Statements.lean`), so the target is not satisfiable by an empty
+premise set. -/
 
 theorem encodesConfig_three : EncodesConfig threeConfigEntries [1, 2, 3] := by
   refine ⟨?_, ?_, rfl⟩
@@ -262,53 +142,12 @@ namespace GoLean.Surface
 
 open GoLean.GoCore GoLean.Quorum
 
-/-! ## TARGET 2 — the 3-voter CONCRETE instance -/
+/-! ## TARGET 2 — the 3-voter CONCRETE instance
 
-/-- **TARGET (phase 3, the first widening past n = 1)**: the pinned
-lowering of etcd's own `committedThreeAll` driver — `MajorityConfig{1,2,3}`
-with `mapAckIndexer{1:12, 2:5, 3:6}` — returns `6`.
-
-Why it is the right next rung and not just a bigger number: at n = 3 the
-map range has `3! = 6` iteration orders and `wp_map_iter_next_key` alone
-would need every one of them walked; the whole point of
-`Laws/Range.wp_map_iter_inv` is that this target costs ONE generic
-iteration plus an invariant. It also makes `slices.Sort` do real work
-(the n = 1 sort is a no-op) and puts `pos = n - (n/2+1)` at a nonzero
-index.
-
-`6` is `committedIndexRef [1,2,3] ackedThreeAll` (`rfl`, above), so this
-discharge plus `committedIndexRef_meets_spec` yields `IsCommittedIndex`,
-exactly as `quorumOneKnownMeetsSpec` packages the n = 1 rung.
-
-**DISCHARGED 2026-08-01** (phase 3) by
-`Specs/GoldenQuorumThree.quorumThreeAllFuncSpec`, whose type IS this def
-— that application is the statement-identity check, so weakening the
-statement to fit the proof would break this file. The declarative
-restatement is `quorumThreeAllMeetsSpec`. This def is left exactly as
-written. -/
-def quorumThreeAllFuncSpec_statement : Prop :=
-  GoFuncSpec quorumLowered.typeDefs.toList quorumLowered.funcs
-    quorumLowered.methods ⟨"committedThreeAll"⟩ .uint64 #[] .emp
-    (fun n => .pure (n = 6))
-
-/-- **TARGET — the 3-voter negative twin.** Stated as an UNCONDITIONAL
-refutation at `12` (the largest acked index — the answer a
-"returns something a voter acked" bug would give).
-
-It does NOT follow from the positive discharge, and the reason is
-recorded once for the whole family (`quorumOneKnownNotEleven_statement`
-says the same): `GoTriple` quantifies over TERMINATING runs, so both the
-`= 6` and the `= 12` spec are vacuously true of a program with no
-terminating run. Refuting this needs a terminating run EXHIBITED — a
-kernel evaluation of the interpreter over the pinned program. The
-cheap, honest twin is the run-conditioned one
-(`quorumOneKnownNotEleven`'s shape), which phase 3 landed beside the
-positive result: `Specs/GoldenQuorumThree.quorumThreeAllNotTwelve`. This
-def stays a TARGET and no theorem names it. -/
-def quorumThreeAllNotTwelve_statement : Prop :=
-  ¬ GoFuncSpec quorumLowered.typeDefs.toList quorumLowered.funcs
-      quorumLowered.methods ⟨"committedThreeAll"⟩ .uint64 #[] .emp
-      (fun n => .pure (n = 12))
+`quorumThreeAllFuncSpec_statement` and `quorumThreeAllNotTwelve_statement`
+moved to `Specs/Statements.lean` (the Iris-free statement layer,
+comparator-judge sprint, 2026-08-02). The pin-consistency theorems below
+stay with the provenance record. -/
 
 /-- The driver this target names is really in the pinned lowering (and
 takes no arguments, so the `GoFuncSpec` shape fits) — `rfl` against the

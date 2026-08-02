@@ -1,5 +1,6 @@
 import GoLeanProofs.Specs.GoldenQuorumThree
 import GoLeanProofs.Specs.QuorumRefSpec
+import GoLeanProofs.Specs.Statements
 
 /-!
 # `CommittedIndex` for EVERY config — the ∀-config theorem
@@ -1321,22 +1322,9 @@ that fails to terminate, so the unconditional `¬ GoSpec` form demands
 EXHIBITING a terminating run (a kernel evaluation of the interpreter over
 the pinned program), which stays owed. -/
 
-/-- The seeded heap the readout runs against: the caller's result cell at
-`0`, the `MajorityConfig{1,2,3}` receiver at `1`/`2`, and the
-`mapAckIndexer{1:12, 2:5, 3:6}` argument, boxed at the `AckedIndexer`
-interface, at `3`/`4`. -/
-def allOut : Heap :=
-  [(Loc.base ⟨0⟩, ⟨some (.int .uint64), .int 0 .uint64⟩),
-   (Loc.base ⟨1⟩, ⟨some (.defined ⟨"main.MajorityConfig"⟩),
-                   .map ⟨some (.base ⟨2⟩)⟩⟩),
-   (Loc.base ⟨2⟩, ⟨none, .mapData threeConfigEntries⟩),
-   (Loc.base ⟨3⟩, ⟨some (.interface ⟨"main.AckedIndexer"⟩),
-                   .interface (.defined ⟨"main.mapAckIndexer"⟩)
-                     (.map ⟨some (.base ⟨4⟩)⟩)⟩),
-   (Loc.base ⟨4⟩, ⟨none, .mapData threeAckedEntries⟩)]
-
-def allOutEnv : LocalEnv :=
-  [[("$callres", Loc.base ⟨0⟩), ("c", Loc.base ⟨1⟩), ("l", Loc.base ⟨3⟩)]]
+/- `allOut`/`allOutEnv` (the ∀-config readout's seeded state) moved to
+`Specs/Statements.lean` — the Iris-free statement layer (comparator-judge
+sprint, 2026-08-02): the readout THEOREM statements reference them. -/
 
 theorem encodesAcked_three : EncodesAcked threeAckedEntries ackedThreeAll := by
   constructor

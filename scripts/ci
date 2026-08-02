@@ -182,8 +182,12 @@ check_surface_imports() {
   local bad_imports
   # Tolerant match + normalization (see IMPORT_RE above): an indented or
   # `public` import is normalized to 'import X' and judged by the
-  # allowlist, never invisible to the first-stage grep.
-  bad_imports=$(grep -E "$IMPORT_RE" "$1" | sed -E "s/$IMPORT_RE/import /" | grep -Ev "$2" || true)
+  # allowlist, never invisible to the first-stage grep. Comments are
+  # stripped first (2026-08-02, same class as the closure-walk fix at
+  # b27e608→3c1b4bf: a docstring line beginning 'import ...' is not an
+  # import — here it was a false POSITIVE, noisy rather than fail-open,
+  # but the blindness is the same).
+  bad_imports=$(strip_lean_comments < "$1" | grep -E "$IMPORT_RE" | sed -E "s/$IMPORT_RE/import /" | grep -Ev "$2" || true)
   if [ -n "$bad_imports" ]; then
     echo "  $1 has non-allowlisted imports:" >&2
     echo "$bad_imports" | sed 's/^/    /' >&2
@@ -205,18 +209,26 @@ check_surface_imports proofs/GoLeanProofs/Specs/QuorumTargets.lean \
   '^import (GoLean\.|Std\.|GoLeanProofs\.Surface$)'
 check_surface_imports proofs/GoLeanProofs/Specs/QuorumRefSpec.lean \
   '^import (GoLean\.|Std\.|GoLeanProofs\.Specs\.QuorumTargets$)'
+# Statements.lean is THE Iris-free statement layer (comparator-judge sprint,
+# 2026-08-02): every def a designated headline STATEMENT references and that
+# formerly lived in an Iris-reaching module was hoisted here, so that the
+# judge's Challenge import closure — and any skeptic reading it — never
+# touches Iris. Allowlist: core + Std + the clean statement chain.
+check_surface_imports proofs/GoLeanProofs/Specs/Statements.lean \
+  '^import (GoLean\.|Std\.|GoLeanProofs\.Surface$|GoLeanProofs\.Specs\.QuorumTargets$|GoLeanProofs\.Specs\.GoldenQuorum$|GoLeanProofs\.Specs\.GoldenProgram$)'
 # AutomationTargets is statement-bearing but MIXED BY DESIGN: it holds the
 # range-rule target (a statement ABOUT the Iris-side proof infrastructure,
 # quantifying over IProp) and the phase-2 acceptance pins that reference
 # proven theorems — so an Iris-free import chain is impossible and is NOT
 # claimed for it. What IS pinned: its EXACT import list (any new import
-# fails here and must be justified), while the Iris-freedom of its pure
-# headline targets (the ∀-config and 3-voter statements) is certified
-# SEMANTICALLY by the statement-TCB gate in proofs/Audit.lean, which walks
-# those statements' closures. (Recorded finding, close-out 2026-08-01: the
-# doctrine's "Iris-free by import chain" note was wrong for this file.)
+# fails here and must be justified). Since 2026-08-02 its pure headline
+# targets (the ∀-config and 3-voter statements) live in Specs/Statements
+# (Iris-free by import chain, scanned above); what remains here is the
+# range-rule target, the non-vacuity/pin-consistency theorems, and the
+# acceptance pins. (Recorded finding, close-out 2026-08-01: the doctrine's
+# "Iris-free by import chain" note was wrong for this file pre-hoist.)
 check_surface_imports proofs/GoLeanProofs/Specs/AutomationTargets.lean \
-  '^import (GoLeanProofs\.Specs\.GoldenQuorumWP$|GoLeanProofs\.Laws\.Range$)'
+  '^import (GoLeanProofs\.Specs\.GoldenQuorumWP$|GoLeanProofs\.Specs\.Statements$|GoLeanProofs\.Laws\.Range$)'
 if grep -rEq "${IMPORT_RE}Iris" GoLean/ --include='*.lean'; then
   echo "  GoLean/ core has Iris imports (taints the surface chain):" >&2
   grep -rEl "${IMPORT_RE}Iris" GoLean/ --include='*.lean' | sed 's/^/    /' >&2

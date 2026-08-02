@@ -153,6 +153,30 @@ the standing rule); reshape the judge project instead and record it.
    one-liner if warranted, pre-merge audit ask (protocol step 3), merge on
    sign-off.
 
+## Build log
+
+- **Slice 2 (the hoist) — DONE 2026-08-02.** The measured map (a `#eval`
+  mirroring the statement-TCB gate's walk, grouped by module of origin)
+  replaced the plan's guess: `GoldenQuorumPin` needed NOTHING (its pins are
+  proof-side, not statement-side) and the pinned-program module
+  `Specs/GoldenQuorum` was already clean; the real hoist set was 22 defs
+  across FIVE Iris-reaching modules (`GoldenQuorumWP` 8, `AutomationTargets`
+  9 incl. the `NotTwelve`/`NotEleven` unproven-twin targets kept with their
+  families, `GoldenQuorumAll` 2, `GoldenQuorumThree` 1, `GoldenRecover` 3).
+  All moved verbatim (docstrings included; positional phrases like "below"
+  corrected to file references — recorded, not silent) into the new
+  `Specs/Statements.lean`, import closure 9 modules, measured clean. After
+  the move the partition is exact: every statement-referenced constant is
+  either in a clean module or IS one of the 23 designated theorems (which
+  the Challenge restates, never imports). Gate changes, justified:
+  `Statements.lean` registered in the surface-purity scan (clean-chain
+  allowlist); `AutomationTargets`' pinned import list gained
+  `Specs.Statements` and its "mixed by design" rationale was updated;
+  `check_surface_imports` now strips comments before matching (same
+  blindness class as the b27e608→3c1b4bf closure-walk fix — a docstring
+  line starting "import closure…" false-positived; noisy, not fail-open).
+  Full `scripts/ci` PASS, zero baseline drift (873/873).
+
 ## Exit criteria
 
 - All designated theorems pass the judge end-to-end on this machine with
