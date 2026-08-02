@@ -177,6 +177,39 @@ the standing rule); reshape the judge project instead and record it.
   line starting "import closure…" false-positived; noisy, not fail-open).
   Full `scripts/ci` PASS, zero baseline drift (873/873).
 
+- **Slices 3 + 4 (the judge pair + first real run) — DONE 2026-08-02.**
+  Design revision, recorded: the planned separate `judge/` Lake workspace
+  would need its own network fetch of the iris dep (sandbox-hostile, and a
+  second copy to keep pinned); instead `Challenge`/`Solution` are extra
+  libs of the EXISTING proofs package (never default targets — `lake
+  build` doesn't touch them; the trusted lakefile is `proofs/lakefile.toml`
+  itself). Challenge (23 sorry-bodied theorems, `Judge.*` namespace to
+  avoid colliding with the real names in Solution's environment) imports
+  only `Specs.Statements` + `Specs.GoldenTargets` — closure measured
+  Iris-free. Solution restates each statement verbatim and proves by
+  reference; it builds with ZERO sorries, which is itself the transcription
+  check (every restated type accepted the real proof term). Statements the
+  repo phrases via `_statement` defs use the same defs; readouts are
+  written out in full — the best artifact for a skeptic. Gate exemptions,
+  justified and documented in-line: Challenge alone exempt from the
+  escape-hatch sorry-scan (its sorries are its function; Comparator
+  re-elaborates it authoritatively); Challenge+Solution on the audit-
+  coverage standalone allowlist (outside the audited build BY DESIGN —
+  the judge's own axiom check + kernel replay is the stronger,
+  independent check; the preflight still scans Solution's text).
+  `scripts/comparator-judge` fail-closes on: comparator rev+pristine tree,
+  landrun module pseudo-version, lean4export built, designated-list
+  lockstep (short-name set diff vs `Audit.lean`), Challenge-closure
+  Iris-freedom (transitive walk) — then runs the guarded invocation.
+  **First run: PASS, all 23 theorems certified in 69 s** (warm proofs
+  build; the sandboxed steps were Challenge elaborate+export, Solution
+  elaborate+export, kernel replay), from INSIDE the nono sandbox, under
+  `systemd-run` with `RestrictAddressFamilies=~AF_UNIX`. Full `scripts/ci`
+  PASS after the exemptions, 873/873 baseline unchanged. Caveat recorded:
+  a warm-.lake run leans on Lake incrementality for the SOLUTION build
+  (assumption 2 of comparator's README is about adversarial solutions,
+  not ours); authoritative-grade claims should judge a fresh clone.
+
 ## Exit criteria
 
 - All designated theorems pass the judge end-to-end on this machine with

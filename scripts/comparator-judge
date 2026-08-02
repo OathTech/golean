@@ -1,0 +1,127 @@
+#!/usr/bin/env bash
+# The Comparator judge — independent, kernel-level certification of the
+# designated headline theorems (comparator-judge sprint, 2026-08-02;
+# docs/2026-08-02_comparator-judge-sprint.md).
+#
+# CADENCE: a LANDMARK gate, not an iteration gate (user direction
+# 2026-08-02). Run before merging any arc that adds or changes a designated
+# headline theorem statement, and before any external claim about a headline
+# result. It is deliberately NOT part of scripts/ci.
+#
+# What a PASS certifies (see deps/comparator/README.md for the full trust
+# statement): every theorem in proofs/judge-config.json, as STATED in the
+# trusted proofs/Challenge.lean (import closure: the Iris-free chain), is
+# proven in proofs/Solution.lean using no axioms beyond the allowlist, as
+# re-checked by exporting both environments and replaying the Solution into
+# the Lean kernel — independent of our proof scripts, Audit pins, and Lake's
+# incremental state.
+#
+# TRUST TOOLS ARE NEVER MODIFIED (standing rule, 2026-08-02): this script
+# verifies the pinned pristine versions and REFUSES to run otherwise.
+set -u -o pipefail
+
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+COMPARATOR_DIR="$ROOT/deps/comparator"
+COMPARATOR_REV=fd2e25de155523dbce1f35d410511f9f63998461
+LANDRUN_BIN="${LANDRUN_BIN:-$HOME/go/bin/landrun}"
+# landrun pin: cli-v2-era main (v0.1.16+ eats the `--` separator comparator
+# relies on; the v0.1.15 tag's -ldd misses the ELF interpreter). NB the
+# binary self-reports "0.1.15" — the module pseudo-version is the identity.
+LANDRUN_MODVER=v0.1.16-0.20260127195639-5283024a2f49
+
+fail() { echo "comparator-judge: FAIL-CLOSED: $*" >&2; exit 1; }
+
+# ── 1. Trust-tool pins ──────────────────────────────────────────────────
+[ -d "$COMPARATOR_DIR/.git" ] || fail "deps/comparator missing (clone it; see CLAUDE.md deps section)"
+rev=$(git -C "$COMPARATOR_DIR" rev-parse HEAD)
+[ "$rev" = "$COMPARATOR_REV" ] || fail "deps/comparator at $rev, pinned $COMPARATOR_REV"
+dirty=$(git -C "$COMPARATOR_DIR" status --porcelain)
+[ -z "$dirty" ] || fail "deps/comparator tree is NOT pristine:
+$dirty"
+COMPARATOR_BIN="$COMPARATOR_DIR/.lake/build/bin/comparator"
+LEAN4EXPORT_BIN="$COMPARATOR_DIR/.lake/packages/lean4export/.lake/build/bin/lean4export"
+[ -x "$COMPARATOR_BIN" ] || fail "comparator not built (cd deps/comparator && lake build lean4export comparator)"
+[ -x "$LEAN4EXPORT_BIN" ] || fail "lean4export not built (cd deps/comparator && lake build lean4export comparator)"
+[ -x "$LANDRUN_BIN" ] || fail "landrun not found at $LANDRUN_BIN"
+modver=$(go version -m "$LANDRUN_BIN" 2>/dev/null | awk '$1=="mod" && $2 ~ /landrun/ {print $3}')
+[ "$modver" = "$LANDRUN_MODVER" ] || fail "landrun at '$modver', pinned $LANDRUN_MODVER (see sprint doc for the install command)"
+
+# ── 2. Designated-list lockstep: judge-config vs the statement-TCB gate ──
+# The judge must speak about EXACTLY the theorems the in-build gate
+# designates (short names compared; Audit uses GoLean.* names, the judge
+# pair uses Judge.*).
+audit_names=$(sed -n '/let designated : List Name := \[/,/\]/p' "$ROOT/proofs/Audit.lean" \
+  | grep -oE '``[A-Za-z0-9_.]+' | sed -E 's/^``//; s/.*\.//' | sort)
+config_names=$(grep -oE '"Judge\.[A-Za-z0-9_]+"' "$ROOT/proofs/judge-config.json" \
+  | sed -E 's/"Judge\.//; s/"$//' | sort)
+[ -n "$audit_names" ] || fail "could not parse the designated list from proofs/Audit.lean"
+[ -n "$config_names" ] || fail "could not parse theorem_names from proofs/judge-config.json"
+if [ "$audit_names" != "$config_names" ]; then
+  echo "designated list (Audit.lean) vs judge-config.json differ:" >&2
+  diff <(echo "$audit_names") <(echo "$config_names") | sed 's/^/  /' >&2
+  fail "judge theorem list is out of lockstep with the statement-TCB gate"
+fi
+n_theorems=$(echo "$config_names" | wc -l)
+
+# ── 3. Challenge import-closure Iris-freedom (module-level walk) ────────
+# Same walk shape as scripts/ci's surface-purity chain check, applied
+# transitively from Challenge.lean: no Iris.* module may be reachable.
+closure_walk() {
+  local queue=("$@") m f
+  declare -A seen
+  while ((${#queue[@]})); do
+    m="${queue[0]}"; queue=("${queue[@]:1}")
+    [[ -n "${seen[$m]:-}" ]] && continue
+    seen[$m]=1
+    case "$m" in
+      Iris*) echo "IRIS:$m"; return 0 ;;
+      Std*|Init*|Lean*|Batteries*|Qq*) continue ;;
+    esac
+    if [[ "$m" == GoLean.* ]]; then f="$ROOT/GoLean/${m#GoLean.}"
+    elif [[ "$m" == GoLeanProofs* ]]; then f="$ROOT/proofs/GoLeanProofs/${m#GoLeanProofs.}"
+    else continue; fi
+    f="${f//.//}.lean"
+    [ -f "$f" ] || { echo "MISSING:$m"; return 0; }
+    while read -r imp; do queue+=("$imp"); done \
+      < <(grep -E '^(public )?import ' "$f" | sed -E 's/^(public )?import //')
+  done
+  echo "CLEAN:${#seen[@]}"
+}
+challenge_imports=$(grep -E '^(public )?import ' "$ROOT/proofs/Challenge.lean" | sed -E 's/^(public )?import //')
+[ -n "$challenge_imports" ] || fail "no imports parsed from Challenge.lean"
+walk=$(closure_walk $challenge_imports)
+case "$walk" in
+  CLEAN:*) : ;;
+  IRIS:*) fail "Challenge import closure reaches ${walk#IRIS:} — the deletion test is violated at module level" ;;
+  MISSING:*) fail "Challenge import closure names missing module ${walk#MISSING:}" ;;
+  *) fail "closure walk returned '$walk'" ;;
+esac
+
+echo "comparator-judge: pins OK (comparator @ ${COMPARATOR_REV:0:7} pristine,"
+echo "  landrun $LANDRUN_MODVER), $n_theorems theorems in lockstep with the"
+echo "  statement-TCB gate, Challenge closure Iris-free (${walk#CLEAN:} modules)."
+
+# ── 4. The run — exactly the README's guarded invocation ────────────────
+# systemd-run confines the judge with RestrictAddressFamilies=~AF_UNIX (the
+# landrun-escape guard the comparator README prescribes); comparator then
+# builds and exports Challenge and Solution inside landrun sandboxes and
+# replays the Solution into the kernel. Works from inside the nono sandbox
+# too (validated 2026-08-02; the unit carries the same confinement).
+CMD=(systemd-run --property=RestrictAddressFamilies=~AF_UNIX --user --pipe --wait
+  -E PATH="$HOME/go/bin:$PATH"
+  -E COMPARATOR_LANDRUN="$LANDRUN_BIN"
+  -E COMPARATOR_LEAN4EXPORT="$LEAN4EXPORT_BIN"
+  --working-directory "$ROOT/proofs"
+  -- bash -c "lake env '$COMPARATOR_BIN' judge-config.json")
+echo "comparator-judge: running:"
+printf '  %q' "${CMD[@]}"; echo
+start=$(date +%s)
+"${CMD[@]}"
+status=$?
+elapsed=$(( $(date +%s) - start ))
+if [ $status -eq 0 ]; then
+  echo "comparator-judge: PASS — $n_theorems theorems certified in ${elapsed}s"
+else
+  echo "comparator-judge: FAIL (exit $status, ${elapsed}s) — the judge did NOT accept" >&2
+fi
+exit $status

@@ -81,14 +81,23 @@ Solution = the entire proof tree, Iris and tactics included. Composed
 trust: Challenge closure + kernel(s) — agents, Iris, go_walk, and the
 elaboration environment all OUTSIDE the judge.
 
-Integration (queued for close-out, binaries user-fetched like deps/):
-build the Challenge module (falls out of the statement-TCB gate's
-designated list); run at pre-merge/milestone cadence from a fresh
-clone (the "never compiled the Solution" discipline — the fuzzer's
-disposable-clone pattern); landrun + lean4export@4.31-compatible +
-optionally nanoda in PATH; OPEN QUESTION to test empirically: whether
-landrun/systemd-run nest inside the nono sandbox or Comparator runs
-stay user-invoked outside the agent session.
+**LIVE as of 2026-08-02** (comparator-judge sprint,
+`docs/2026-08-02_comparator-judge-sprint.md`): `proofs/Challenge.lean`
+(sorry-bodied, import closure measured Iris-free) + `proofs/Solution.lean`
+(proofs by reference), judged by `scripts/comparator-judge` — which
+fail-closes on trust-tool version/pristine-ness, on designated-list
+lockstep with the statement-TCB gate, and on Challenge-closure
+Iris-freedom, then runs the README's guarded systemd-run invocation.
+First run 2026-08-02: **all 23 designated theorems certified** (kernel
+replay, axiom allowlist `propext`/`Quot.sound`/`Classical.choice`),
+69 s on a warm proofs build. The former open question is answered
+empirically: landrun nests inside the nono sandbox (Landlock domains
+compose) and systemd-run works from inside it too, so judge runs are
+agent-invokable; an authoritative-grade run should still use a fresh
+clone (the "never compiled the Solution" discipline). **Cadence (user
+direction 2026-08-02): a LANDMARK gate, not an iteration gate** — run
+before merging any arc that adds/changes a designated headline
+statement and before external claims; never part of `scripts/ci`.
 
 ## 2. The layering doctrine: general infra / target infra
 

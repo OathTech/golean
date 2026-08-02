@@ -1,0 +1,31 @@
+{
+    "challenge_module": "Challenge",
+    "solution_module": "Solution",
+    "theorem_names": [
+        "Judge.goldenTriple",
+        "Judge.goldenSpec",
+        "Judge.goldenFuncSpec",
+        "Judge.goldenInvariant",
+        "Judge.goldenReturnsTwo",
+        "Judge.goldenNotThree",
+        "Judge.recoverFuncSpec",
+        "Judge.recoverReturnsSeven",
+        "Judge.quorumOneKnownFuncSpec",
+        "Judge.quorumOneKnownMeetsSpec",
+        "Judge.quorumOneKnownReturnsTwelve",
+        "Judge.quorumOneKnownNotEleven",
+        "Judge.quorumAckedIndexFuncSpec2",
+        "Judge.quorumAckedIndexReturnsTwelveTrue",
+        "Judge.quorumThreeAllFuncSpec",
+        "Judge.quorumThreeAllMeetsSpec",
+        "Judge.quorumThreeAllReturnsSix",
+        "Judge.quorumThreeAllNotTwelve",
+        "Judge.committedIndexAllConfigs",
+        "Judge.committedIndexAllReturnsSix",
+        "Judge.committedIndexAllNotTwelve",
+        "Judge.committedIndexAll_refutes_wrong",
+        "Judge.committedIndexRef_meets_spec"
+    ],
+    "permitted_axioms": ["propext", "Quot.sound", "Classical.choice"],
+    "enable_nanoda": false
+}

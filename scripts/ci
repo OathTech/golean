@@ -74,7 +74,13 @@ step "escape-hatch preflight (sorry / admit / native_decide / axiom in proof-fac
 # includes sorryAx/ofReduceBool (the axioms behind sorry/native_decide, which
 # dodge the surface-syntax tokens). Docstring prose is tolerated only via
 # backticked mentions. The in-build Audit sweep remains authoritative.
-hatch="$(find GoLean proofs -name '*.lean' -not -path '*/.lake/*' -print0 2>/dev/null \
+# proofs/Challenge.lean is exempt BY FUNCTION (comparator-judge sprint,
+# 2026-08-02): it is the Comparator judge's sorry-bodied challenge — the
+# sorries ARE the artifact. It is outside the audited import closure (see
+# the standalone allowlist below) and Comparator re-elaborates it itself;
+# nothing else in proofs/ may carry a sorry.
+hatch="$(find GoLean proofs -name '*.lean' -not -path '*/.lake/*' \
+         -not -path 'proofs/Challenge.lean' -print0 2>/dev/null \
          | xargs -0 grep -nE 'sorry|admit|native_decide|ofReduceBool|^[[:space:]]*axiom ' 2>/dev/null \
          | sed 's/--.*$//' \
          | grep -E 'sorry|\badmit\b|native_decide|ofReduceBool|^[^:]*:[0-9]*:[[:space:]]*axiom ' \
@@ -94,7 +100,17 @@ fi
 # Audit.lean, whose root import is GoLeanProofs) or on the explicit standalone
 # allowlist below (deliberate, documented exceptions only).
 step "proofs-file audit coverage (every proofs/**/*.lean in the audited import closure or allowlisted)"
-STANDALONE_PROOFS="SliceSpike"  # SliceSpike: superseded spike kept as record (structure audit P1-3: an allowlist entry must name an existing, documented file — no pre-authorized holes)
+STANDALONE_PROOFS="SliceSpike Challenge Solution"
+# SliceSpike: superseded spike kept as record (structure audit P1-3: an
+#   allowlist entry must name an existing, documented file — no
+#   pre-authorized holes).
+# Challenge, Solution: the Comparator judge pair (comparator-judge sprint,
+#   2026-08-02) — deliberately OUTSIDE the audited build: Challenge is
+#   sorry-bodied by function and must never enter the Audit environment;
+#   Solution's axiom discipline is checked by the judge itself
+#   (permitted_axioms + kernel replay, scripts/comparator-judge), which is
+#   the stronger, independent check. The escape-hatch preflight still scans
+#   Solution.lean text.
 # Transitive import closure from the build roots (Audit, GoLeanProofs), over
 # ALL .lean files under proofs/ including subdirectories — module names derived
 # from paths (proofs/GoLeanProofs/Foo.lean -> GoLeanProofs.Foo). A module

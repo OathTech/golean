@@ -27,3 +27,20 @@ name = "GoLeanProofs"
 # witness references. A weakening of the proof layer's claims fails THIS build.
 [[lean_lib]]
 name = "Audit"
+
+# The Comparator judge pair (comparator-judge sprint, 2026-08-02; invoked by
+# scripts/comparator-judge, config in judge-config.json — NOT default
+# targets, so `lake build` here never touches them):
+#   Challenge — TRUSTED: sorry-bodied restatements of the designated headline
+#     theorems; its module imports are restricted to the measured Iris-free
+#     chain (scripts/ci surface purity). A judge run's trust boundary is
+#     exactly Challenge.lean's import closure plus this lakefile.
+#   Solution — untrusted by the judge: the same statements proven by
+#     reference to GoLeanProofs; Comparator re-elaborates, exports, and
+#     kernel-replays it sandboxed, enforcing statement identity and the
+#     axiom allowlist.
+[[lean_lib]]
+name = "Challenge"
+
+[[lean_lib]]
+name = "Solution"
