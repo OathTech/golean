@@ -701,7 +701,7 @@ theorem wp_ci_tail_one {na sra sta ra : Addr} {env k}
         normalizeValueForTyFuel, normalizeListWith, sortLe, insertLe,
         heap_set_set_of_lookup hlk, Functor.map, Except.map,
         show IntKind.uint64.normalize 12 = 12 from by decide,
-        show IntKind.uint64.normalize 0 = 0 from by decide, typeResolutionFuel]))
+        show IntKind.uint64.normalize 0 = 0 from by decide, typeResolutionFuel, applyStmtOpCore]))
   -- `pos := n - (n/2 + 1)` — pure integer arithmetic throughout
   go_walk
   rw [ciPosStmt_eq]
@@ -1003,7 +1003,7 @@ theorem wp_oneKnown_body {ra : Addr} {k}
         normalizeFieldsWith, checkKeyHashable, valueHashability,
         coerceStoredValue, storeLoc, Functor.map, Except.map,
         Bind.bind, Except.bind,
-        show IntKind.uint64.normalize 1 = 1 from by decide])) as [Hcfgb]
+        show IntKind.uint64.normalize 1 = 1 from by decide, applyStmtOpCore])) as [Hcfgb]
   -- `l := mapAckIndexer{1: 12}`
   go_walk
   unfold okAckSeq
@@ -1032,7 +1032,7 @@ theorem wp_oneKnown_body {ra : Addr} {k}
         QuorumPin.typeEnv_Index, checkKeyHashable, valueHashability,
         coerceStoredValue, storeLoc, Bind.bind, Except.bind,
         show IntKind.uint64.normalize 1 = 1 from by decide,
-        show IntKind.uint64.normalize 12 = 12 from by decide])) as [Hackb]
+        show IntKind.uint64.normalize 12 = 12 from by decide, applyStmtOpCore])) as [Hackb]
   -- `r := run(c, l)`
   go_walk
   unfold okCallSeq

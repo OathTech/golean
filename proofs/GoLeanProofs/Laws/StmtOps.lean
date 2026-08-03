@@ -352,7 +352,7 @@ theorem wp_make_map {a : Addr} {oldcell : HeapCell} (newcell : Addr → HeapCell
       heap := Heap.set σ.heap (.base ⟨σ.nextAddr⟩) ⟨none, .mapData #[]⟩,
       nextAddr := σ.nextAddr + 1 } ⟨σ.nextAddr⟩ htypes hlook'
   simp [applyStmtOp, valueAsLoc, ExecState.alloc, ExecState.freshLoc, hst,
-    Bind.bind, Except.bind]
+    Bind.bind, Except.bind, applyStmtOpCore]
 
 /-- **`s = make([]T, n)`** as ONE step: allocate the backing array (the
 default value at `[n]T`) and store a slice handle over it. Same core as
@@ -393,7 +393,7 @@ theorem wp_make_slice {elem : Ty} {a : Addr} {n : Nat} {oldcell : HeapCell}
   have hn : ¬ ((n : Int) < 0) := by omega
   simp [applyStmtOp, valueAsLoc, valueAsInt, natFromNonnegativeInt, hn,
     hbacking σ htypes, ExecState.alloc, ExecState.freshLoc, hst,
-    Bind.bind, Except.bind]
+    Bind.bind, Except.bind, applyStmtOpCore]
 
 /-! ## 3. `sortSlice` — the `slices.Sort` extern -/
 
@@ -464,7 +464,7 @@ theorem applyStmtOp_sortSlice_ints {σ : ExecState} {ch : Choices} {sta : Addr}
   -- the operand, the slice validation, and the two `for i in [:len]` loops
   simp only [applyStmtOp, valueAsSlice, Std.Legacy.Range.forIn_eq_forIn_range',
     validateSlice, Bind.bind, Except.bind, pure, Except.pure,
-    if_neg (show ¬ (vals.length > cap) by omega)]
+    if_neg (show ¬ (vals.length > cap) by omega), applyStmtOpCore]
   rw [show ([:vals.length] : Std.Legacy.Range).size = vals.length from by
     simp [Std.Legacy.Range.size]]
   -- LOOP 1 — load the visible elements
@@ -933,7 +933,7 @@ theorem wp_map_lookup {keyTy valTy : Ty} {mba ta oa : Addr} {mty : Option Ty}
   have hstore2 := hstoreo { σ with heap := Heap.set σ.heap (.base ta) tcell' }
     htypes hlooko'
   simp [applyStmtOp, valueAsMap, valueAsLoc, hkey σ htypes, hpair σ htypes hlookm,
-    hstoret σ htypes hlookt, hstore2, Bind.bind, Except.bind]
+    hstoret σ htypes hlookt, hstore2, Bind.bind, Except.bind, applyStmtOpCore]
 
 end
 

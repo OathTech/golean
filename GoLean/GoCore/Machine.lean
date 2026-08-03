@@ -552,23 +552,26 @@ def locsOf : List GoValue → Except GoError (List Loc)
   | [] => return []
   | v :: vs => do return (← valueAsLoc v) :: (← locsOf vs)
 
-/-- Apply a wide statement's head to its evaluated operands (`nt` leading
-target addresses, then values). One state-update step; transcribed from the
-big-step interpreter's exec helpers minus the operand recursion.
-`appendSlice`'s spill path consumes a capacity choice — the second
-nondeterministic point, threaded exactly as the interpreter does. -/
-def applyStmtOp (s : ExecState) (choices : Choices) (op : StmtOp) (nt : Nat)
-    (vs : List GoValue) : Except GoError (ExecState × Choices) := do
+/-- The choices-FREE core of `applyStmtOp`: every wide-op arm except
+`appendSlice` (whose spill path consumes a capacity choice). Extracted at
+the sem-adequacy arc's notions slice (2026-08-03) so that
+choices-obliviousness of wide-op success is TRUE BY CONSTRUCTION — the
+correspondence kit's `∀ choices` lemmas dispatch through this core rather
+than a per-arm congruence bash. Arms are verbatim from the old
+`applyStmtOp` minus the trailing `choices` threading.
+-/
+def applyStmtOpCore (s : ExecState) (op : StmtOp) (nt : Nat)
+    (vs : List GoValue) : Except GoError ExecState := do
   match op with
   | .assignMany => do
       let locs ← locsOf (vs.take nt)
-      return ((← storeMany s locs (vs.drop nt)), choices)
+      return ((← storeMany s locs (vs.drop nt)))
   | .newValue typ =>
       match vs with
       | [tv, value] => do
           let loc ← valueAsLoc tv
           let (nloc, s₁) := s.alloc value typ
-          return ((← storeLoc s₁ loc (.addr nloc)), choices)
+          return ((← storeLoc s₁ loc (.addr nloc)))
       | _ => stuck "malformed newValue operands"
   | .makeSlice elem hasCap => do
       let (tv, lenV, capV?) ←
@@ -588,7 +591,7 @@ def applyStmtOp (s : ExecState) (choices : Choices) (op : StmtOp) (nt : Nat)
       let backing ← buildDefaultArrayValue s cap elem
       let (base, s₁) := s.alloc backing (some (.array cap elem))
       let loc ← valueAsLoc tv
-      return ((← storeLoc s₁ loc (.slice { base := some base, offset := 0, len, cap })), choices)
+      return ((← storeLoc s₁ loc (.slice { base := some base, offset := 0, len, cap })))
   | .makeMap hasSpace => do
       let (tv, spaceV?) ←
         match vs, hasSpace with
@@ -602,7 +605,7 @@ def applyStmtOp (s : ExecState) (choices : Choices) (op : StmtOp) (nt : Nat)
           let _ ← natFromNonnegativeInt "makemap: size out of range" size
       let (base, s₁) := s.alloc (.mapData #[])
       let loc ← valueAsLoc tv
-      return ((← storeLoc s₁ loc (.map { base := some base })), choices)
+      return ((← storeLoc s₁ loc (.map { base := some base })))
   | .mapAssign keyTy valueTy =>
       match vs with
       | [baseV, keyV, valueV] => do
@@ -616,7 +619,7 @@ def applyStmtOp (s : ExecState) (choices : Choices) (op : StmtOp) (nt : Nat)
                 match ← mapEntryIndex? s keyTy entries key (isInsert := true) with
                 | some i => pure (entries.set! i (key, value))
                 | none => pure (entries.push (key, value))
-              return ((← storeLoc s baseLoc (.mapData entries)), choices)
+              return ((← storeLoc s baseLoc (.mapData entries)))
       | _ => stuck "malformed mapAssign operands"
   | .mapLookup keyTy valueTy =>
       match vs with
@@ -627,7 +630,7 @@ def applyStmtOp (s : ExecState) (choices : Choices) (op : StmtOp) (nt : Nat)
           let tloc ← valueAsLoc tv
           let okloc ← valueAsLoc okv
           let s₁ ← storeLoc s tloc pair.1
-          return ((← storeLoc s₁ okloc (.bool pair.2)), choices)
+          return ((← storeLoc s₁ okloc (.bool pair.2)))
       | _ => stuck "malformed mapLookup operands"
   | .typeAssertStmt targetTy =>
       match vs with
@@ -636,38 +639,8 @@ def applyStmtOp (s : ExecState) (choices : Choices) (op : StmtOp) (nt : Nat)
           let tloc ← valueAsLoc tv
           let okloc ← valueAsLoc okv
           let s₁ ← storeLoc s tloc result.1
-          return ((← storeLoc s₁ okloc (.bool result.2)), choices)
+          return ((← storeLoc s₁ okloc (.bool result.2)))
       | _ => stuck "malformed typeAssert operands"
-  | .appendSlice elem =>
-      match vs with
-      | [tv, sliceV, elemsV] => do
-          let slice ← valueAsSlice sliceV
-          let elems ← valueAsSlice elemsV
-          validateSlice slice
-          validateSlice elems
-          let elemValues ← sliceVisibleValues s elems
-          let newLen := slice.len + elemValues.size
-          let tloc ← valueAsLoc tv
-          if newLen <= slice.cap then
-            let mut current := s
-            let mut i := 0
-            for value in elemValues do
-              match slice.base with
-              | some base =>
-                  current ← storeLoc current
-                    (.index base (Int.ofNat (slice.offset + slice.len + i))) value
-                  i := i + 1
-              | none => stuck s!"cannot append {elemValues.size} element(s) into nil slice in place"
-            return ((← storeLoc current tloc (.slice { slice with len := newLen })), choices)
-          else
-            let oldValues ← sliceVisibleValues s slice
-            let (extra, choices) := choices.consume 8
-            let newCap := appendGrowthCap slice.cap newLen + extra
-            let backing ← buildAppendBackingValue s elem oldValues elemValues newCap
-            let (base, current) := s.alloc backing (some (.array newCap elem))
-            return ((← storeLoc current tloc
-              (.slice { base := some base, offset := 0, len := newLen, cap := newCap })), choices)
-      | _ => stuck "malformed appendSlice operands"
   | .mapDelete keyTy =>
       match vs with
       | [baseV, keyV] => do
@@ -678,21 +651,21 @@ def applyStmtOp (s : ExecState) (choices : Choices) (op : StmtOp) (nt : Nat)
           -- key, so an unhashable one panics here too (probed 2026-07-31).
           | none => do
               checkKeyHashable s key (isInsert := false) (nonEmpty := false)
-              return (s, choices)
+              return (s)
           | some (baseLoc, entries) =>
               match ← mapEntryIndex? s keyTy entries key with
               | some i =>
-                  return ((← storeLoc s baseLoc (.mapData (entries.eraseIdx! i))), choices)
-              | none => return (s, choices)
+                  return ((← storeLoc s baseLoc (.mapData (entries.eraseIdx! i))))
+              | none => return (s)
       | _ => stuck "malformed mapDelete operands"
   | .clearMap =>
       match vs with
       | [baseV] => do
           let map ← valueAsMap baseV
           match ← mapEntries s map with
-          | none => return (s, choices) -- nil map: no-op
+          | none => return (s) -- nil map: no-op
           | some (baseLoc, _) =>
-              return ((← storeLoc s baseLoc (.mapData #[])), choices)
+              return ((← storeLoc s baseLoc (.mapData #[])))
       | _ => stuck "malformed clearMap operands"
   | .clearSlice elem =>
       -- Multi-cell in one apply step, like copySlice: a granularity-ledger
@@ -705,7 +678,7 @@ def applyStmtOp (s : ExecState) (choices : Choices) (op : StmtOp) (nt : Nat)
           let mut current := s
           for i in [:slice.len] do
             current ← storeLoc current (← sliceIndexLoc slice (Int.ofNat i)) zero
-          return (current, choices)
+          return (current)
       | _ => stuck "malformed clearSlice operands"
   | .sortSlice _ =>
       -- SINGLE-cell read+write loop in one apply step (granularity-ledger
@@ -737,7 +710,7 @@ def applyStmtOp (s : ExecState) (choices : Choices) (op : StmtOp) (nt : Nat)
             | some (v, kind) =>
                 current ← storeLoc current (← sliceIndexLoc slice (Int.ofNat i)) (.int v kind)
             | none => stuck "sortSlice element count mismatch"
-          return (current, choices)
+          return (current)
       | _ => stuck "malformed sortSlice operands"
   | .copySlice =>
       match vs with
@@ -756,8 +729,50 @@ def applyStmtOp (s : ExecState) (choices : Choices) (op : StmtOp) (nt : Nat)
             current ← storeLoc current (← sliceIndexLoc dstSlice (Int.ofNat i)) value
             i := i + 1
           let tloc ← valueAsLoc tv
-          return ((← storeLoc current tloc (.int (Int.ofNat count))), choices)
+          return ((← storeLoc current tloc (.int (Int.ofNat count))))
       | _ => stuck "malformed copySlice operands"
+  | .appendSlice _ =>
+      throw (.internal "applyStmtOpCore: appendSlice dispatches through applyStmtOp")
+
+/-- Apply a wide statement's head to its evaluated operands (`nt` leading
+target addresses, then values). One state-update step. `appendSlice`'s
+spill path consumes a capacity choice — the second nondeterministic point
+— and is the ONLY arm that touches the stream; everything else dispatches
+to the choices-free `applyStmtOpCore`. -/
+def applyStmtOp (s : ExecState) (choices : Choices) (op : StmtOp) (nt : Nat)
+    (vs : List GoValue) : Except GoError (ExecState × Choices) := do
+  match op with
+  | .appendSlice elem =>
+      match vs with
+      | [tv, sliceV, elemsV] => do
+          let slice ← valueAsSlice sliceV
+          let elems ← valueAsSlice elemsV
+          validateSlice slice
+          validateSlice elems
+          let elemValues ← sliceVisibleValues s elems
+          let newLen := slice.len + elemValues.size
+          let tloc ← valueAsLoc tv
+          if newLen <= slice.cap then
+            let mut current := s
+            let mut i := 0
+            for value in elemValues do
+              match slice.base with
+              | some base =>
+                  current ← storeLoc current
+                    (.index base (Int.ofNat (slice.offset + slice.len + i))) value
+                  i := i + 1
+              | none => stuck s!"cannot append {elemValues.size} element(s) into nil slice in place"
+            return ((← storeLoc current tloc (.slice { slice with len := newLen })), choices)
+          else
+            let oldValues ← sliceVisibleValues s slice
+            let (extra, choices) := choices.consume 8
+            let newCap := appendGrowthCap slice.cap newLen + extra
+            let backing ← buildAppendBackingValue s elem oldValues elemValues newCap
+            let (base, current) := s.alloc backing (some (.array newCap elem))
+            return ((← storeLoc current tloc
+              (.slice { base := some base, offset := 0, len := newLen, cap := newCap })), choices)
+      | _ => stuck "malformed appendSlice operands"
+  | op => do return ((← applyStmtOpCore s op nt vs), choices)
 
 /-- The entries a `mapRange` iterates: snapshot of the map's data cell
 (empty for a nil map). -/

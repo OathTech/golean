@@ -507,7 +507,7 @@ theorem wp_sort_slice_srt {sa ba : Addr} {env k}
         arraySet, coerceStoredValue, normalizeValueForTy,
         normalizeValueForTyFuel, typeResolutionFuel, normalizeListWith,
         sortLe, insertLe,
-        heap_set_set_of_lookup hlook, Functor.map, Except.map, n1, n2, n3]))
+        heap_set_set_of_lookup hlook, Functor.map, Except.map, n1, n2, n3, applyStmtOpCore]))
   isplitl [Hb]
   · iexact Hb
   iintro Hb
