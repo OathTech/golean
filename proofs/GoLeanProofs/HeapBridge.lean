@@ -284,8 +284,10 @@ theorem storeLoc_int_cell {σ : ExecState} {a : Addr} {kind : IntKind}
   rw [h]
   -- The `fuel + 1` equations don't fire without the budget literal exposed
   -- (de-WF restructure, 2026-08-03) — `typeResolutionFuel` in the simp set
-  -- lets simp's Nat offset-matching bind the successor pattern.
-  simp [normalizeValueForTy, normalizeValueForTyFuel, typeResolutionFuel,
+  -- lets simp's Nat offset-matching bind the successor pattern. `simp only`
+  -- (audit response: a trusted bridge lemma must not lean on the ambient
+  -- default simp set).
+  simp only [normalizeValueForTy, normalizeValueForTyFuel, typeResolutionFuel,
     intKind_normalize_idem]
   rfl
 
@@ -301,7 +303,7 @@ theorem storeLoc_int_any {σ : ExecState} {a : Addr} {kind mkind : IntKind}
       = .ok { σ with heap := Heap.set σ.heap (.base a) ⟨some (.int kind), .int (kind.normalize m) kind⟩ } := by
   unfold storeLoc
   rw [h]
-  simp [normalizeValueForTy, normalizeValueForTyFuel, typeResolutionFuel]
+  simp only [normalizeValueForTy, normalizeValueForTyFuel, typeResolutionFuel]
   rfl
 
 end GoLean.Iris

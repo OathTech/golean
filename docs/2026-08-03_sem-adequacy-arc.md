@@ -124,7 +124,17 @@ adopted so long as the user's form above is a supported case.
      statement quantifies `c.length < 2^63`). Shipped shape: parameterized
      list/field helpers (`normalizeListWith` etc.) taking the
      already-decremented recursive function — structural, kernel-reducible,
-     and DEPTH-only accounting exactly as before (budget unchanged).
+     and DEPTH-only accounting. (Precision, from the sub-branch audit's
+     measured old-vs-new differential: depth-ONLY holds — elements and
+     fields never charge — but not "exactly as before", as an earlier
+     draft of this entry claimed: array LEVELS and the leaf now cost one
+     unit each where they were free, a pure `.defined` chain supports
+     1023 links instead of 1024, and `Ty.mentionsUnsupported`, previously
+     budget-free total recursion, now shares the budget failing CLOSED.
+     Every divergence is old-ok→new-fail-closed at nesting depth ≥ 1023,
+     unreachable from Go source; the audit's ~180k-case probe found ZERO
+     divergences at the real 1024 seed. Normative statement:
+     `typeResolutionFuel`'s docstring in `Ops.lean`.)
   2. **Elaborator sealing.** Reducible fuel towers made `whnf`/`isDefEq`
      dive 1024 literals deep (heartbeat blowups; one uncapped reduction ate
      system RAM in seconds — twice took the whole session stack down via
@@ -151,7 +161,8 @@ adopted so long as the user's form above is a supported case.
   config→6) — in ≈4 s total under a 16 GiB cap, `decide +kernel`, no
   `native_decide`. `Terminates` discharge is VIABLE for the whole summit
   family. Differential: 873/873 no-drift after the de-WF families
-  (fresh full run); the sort-swap re-run is recorded below when green.
+  (fresh full run) AND again after the sort swap (fresh full run,
+  873/873, `scripts/ci --diff` PASS at 4dddf7b).
 
 ## Exit criteria
 

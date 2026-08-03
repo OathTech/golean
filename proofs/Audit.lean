@@ -415,6 +415,13 @@ open Lean in
 #guard_msgs in #print axioms GoLean.Iris.GoldenQuorum.wp_ci_range_body
 /-- info: 'GoLean.Iris.mergeSort_eq_of_perm' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Iris.mergeSort_eq_of_perm
+-- The MACHINE-sort twins (sub-branch audit 2026-08-03: the machine sorts
+-- with the structural `sortLe` since the de-WF restructure; the mergeSort
+-- lemmas above stay for the math layer's `sortAsc`).
+/-- info: 'GoLean.Iris.sortLe_perm' does not depend on any axioms -/
+#guard_msgs in #print axioms GoLean.Iris.sortLe_perm
+/-- info: 'GoLean.Iris.pairwise_sortLe' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.pairwise_sortLe
 /-- info: 'GoLean.Iris.arraySet_middle' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Iris.arraySet_middle
 /-- info: 'GoLean.Quorum.storeLoc_stk_fill' depends on axioms: [propext, Quot.sound] -/
@@ -441,6 +448,8 @@ open Lean in
 #guard_msgs in #print axioms GoLean.Iris.forIn_range'_inv
 /-- info: 'GoLean.Iris.mergeSort_pairs_eq_of_perm' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Iris.mergeSort_pairs_eq_of_perm
+/-- info: 'GoLean.Iris.sortLe_pairs_eq_of_perm' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.sortLe_pairs_eq_of_perm
 /-- info: 'GoLean.Iris.mapLookupValue_hit' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Iris.mapLookupValue_hit
 /-- info: 'GoLean.Quorum.encodesConfig_cfgSnapshot' depends on axioms: [propext, Quot.sound] -/
@@ -870,10 +879,11 @@ WHAT IS NEW HERE, and why it is not "n = 1 with bigger numbers":
   to do so.
 * **The sort is order-blind.** After the loop the array holds a
   permutation of `[12,5,6]` and which one is genuinely undetermined.
-  `mergeSort_eq_of_perm` (general) and `mergeSort_intKind_eq_of_perm`
-  (the machine's `(Int × IntKind)` comparison, antisymmetric on elements
-  of one kind) collapse that to one transition, so the six orders never
-  reach `applyStmtOp`.
+  `sortLe_pairs_eq_of_perm` (the machine's structural `sortLe` at the
+  `(Int × IntKind)` comparison, antisymmetric on elements of one kind;
+  since the de-WF restructure 2026-08-03 — the mergeSort twins remain for
+  the math layer) collapses that to one transition, so the six orders
+  never reach `applyStmtOp`.
 
 OVER-SPECIALIZATION CHECK, per new law. `Laws/Values.lean` is entirely
 TARGET-FREE — `arraySet_middle`/`arrayGet_middle` (positional read/write
@@ -946,8 +956,8 @@ WHAT IS NEW HERE, over the 3-voter rung:
   the machine's two `for i in [:len]` loops discharged by induction
   (`forIn_range'_inv`) rather than unrolled, with the sort's ANSWER a
   premise — any sorted permutation of the loaded values IS the answer
-  (`mergeSort_pairs_eq_of_perm`), which is how the reference's `sortAsc`
-  enters.
+  (`sortLe_pairs_eq_of_perm` at the machine's `sortLe`; the reference's
+  `sortAsc` stays mergeSort-based on the math side).
 * **The encoding bridge** (`encodesConfig_cfgSnapshot`,
   `encodesAcked_lookup`): the map SNAPSHOT predicates become the loop
   law's `cfgSnapshot` and per-voter lookup answers — the latter through
@@ -959,7 +969,8 @@ OVER-SPECIALIZATION CHECK, per new law. `Laws/Values.lean` and the new
 `forIn_range'_yield`/`_inv` (any monad-free body, any invariant),
 `applyStmtOp_sortSlice_ints` (any int kind, any length, any tail),
 `buildDefaultArrayValue_int`, `checkSliceBounds_prefix`,
-`mergeSort_pairs_eq_of_perm`, `perm_replicate_reduceOption`,
+`sortLe_pairs_eq_of_perm` (and the retained math-layer
+`mergeSort_pairs_eq_of_perm`), `perm_replicate_reduceOption`,
 `perm_eraseIdx_reduceOption`, `mem_reduceOption_map`,
 `list_split_first_match`, `forIn_find_none`/`_some`,
 `mapLookupValue_hit`/`_miss` (any int key KIND — the `{kind : IntKind}`

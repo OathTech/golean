@@ -4,15 +4,24 @@ namespace GoLean.GoCore
 
 open GoLean
 
-/-- Depth bound for defined-type resolution in the type-directed operations
-(`normalizeValueForTy`, `valueEq`, `defaultValue`). It is decremented *only*
-when a `.defined` name is resolved through the type environment, so it bounds
-type-nesting depth, not value size — array/struct child recursion is structural
-and never consumes it, so no valid value can spuriously exhaust it. Go type
-definitions cannot form value-containment cycles, so any well-formed program
-stays far under this bound. Chosen over a type-environment-acyclicity
-well-formedness proof for uniformity with `execStmt`'s fuel (design decision
-2026-07-18; see docs/2026-07-18_totality-fuel-decision.md). -/
+/-- Depth bound for the type-directed operations (`normalizeValueForTy`,
+`valueEq`, `defaultValue`, `Ty.mentionsUnsupported`). Since the de-WF
+restructure (2026-08-03, sub-branch audit wording) it is decremented once
+per NESTING LEVEL — a `.defined` resolution, an `.array` descent, or the
+leaf itself — never per element or field (siblings share the decremented
+budget through the parameterized list helpers), so it still bounds nesting
+DEPTH, not value size. Measured budget shifts vs the pre-restructure
+accounting, all fail-closed and unreachable from Go source: a pure
+`.defined` chain now supports 1023 links (was 1024); `[1]…[1]int` array
+nesting now bounded at depth 1023 (was unbounded); flat leaves at literal
+fuel 0 now fail (previously succeeded — the wrappers always seed 1024, so
+only direct fuel-0 calls see this). `Ty.mentionsUnsupported`, previously
+budget-free total recursion, now shares this budget and fails CLOSED
+(`true`) at depth 1024+ types. Go type definitions cannot form
+value-containment cycles, so any well-formed program stays far under the
+bound. Chosen over a type-environment-acyclicity well-formedness proof for
+uniformity with `execStmt`'s fuel (design decision 2026-07-18; see
+docs/2026-07-18_totality-fuel-decision.md). -/
 def typeResolutionFuel : Nat := 1024
 
 def indexOutOfRangePanic (index : Int) (length : Nat) : Except GoError α :=
@@ -325,15 +334,16 @@ def Ty.mentionsUnsupportedFuel : Nat → Ty → Bool
           || rs.any (fun t => Ty.mentionsUnsupportedFuel fuel t)
     | _ => false
 
-/-- Does the type mention an `.unsupported` leaf? Used to fail closed at
-boxing time (an unrenderable dynamic type must never become a tag).
-Type syntax is small, so `typeResolutionFuel` node-budget is ample; the
-worker fails CLOSED (`true`) on exhaustion. -/
-
-
+-- Downstream-unfolding pin: the wrapper+worker+budget simp pattern every
+-- proof site uses must keep working (literal offset-matching included).
 example : Ty.mentionsUnsupportedFuel 3 (.pointer .bool) = false := by
   simp [Ty.mentionsUnsupportedFuel]
 
+/-- Does the type mention an `.unsupported` leaf? Used to fail closed at
+boxing time (an unrenderable dynamic type must never become a tag).
+Type syntax is small, so the `typeResolutionFuel` DEPTH budget is ample
+(one unit per nesting level, siblings share); the worker fails CLOSED
+(`true`) on exhaustion. -/
 def Ty.mentionsUnsupported (ty : Ty) : Bool :=
   Ty.mentionsUnsupportedFuel typeResolutionFuel ty
 
@@ -1454,12 +1464,20 @@ def insertLe {α : Type _} (le : α → α → Bool) (x : α) : List α → List
   | [] => [x]
   | y :: ys => if le x y then x :: y :: ys else y :: insertLe le x ys
 
-/-- Structural insertion sort — the machine's `sortSlice` sort. At the
-machine's use (int elements of one kind) the output provably AGREES with
-the previous `List.mergeSort`: both are `le`-sorted permutations of the
-input, and sorted permutations are unique when equal-keyed elements are
-equal (`Laws/Values.eq_of_perm_of_pairwise`); the differential (873/873)
-confirms behavioral neutrality against real Go. -/
+/-- Structural insertion sort — the machine's `sortSlice` sort.
+
+Relation to the previous `List.mergeSort`, stated honestly (audit wording,
+2026-08-03): both produce `le`-sorted permutations of the input, and by
+sorted-permutation uniqueness (`Laws/Values.eq_of_perm_of_pairwise`) the
+outputs are EQUAL whenever equal-keyed elements are equal — which holds at
+the machine's call site because an int slice's backing array is normalized
+to one element kind on store, making the loaded `(Int × IntKind)` pairs
+equal-kinded. That argument is carried by the lemma layer
+(`sortLe_pairs_eq_of_perm` mirrors `mergeSort_pairs_eq_of_perm`), not by a
+theorem literally equating the two sorts; the differential (fresh 873/873
+after the swap) checks the behavior against real Go. Complexity note,
+accepted: O(n²) worst case vs mergeSort's O(n log n) — irrelevant at
+corpus/raft sizes and invisible to the oracle. -/
 def sortLe {α : Type _} (le : α → α → Bool) : List α → List α
   | [] => []
   | x :: xs => insertLe le x (sortLe le xs)
@@ -1481,3 +1499,25 @@ to the kernel); an elaboration site that genuinely wants full reduction
 opts in with `with_unfolding_all`. -/
 attribute [irreducible] Ty.mentionsUnsupported normalizeValueForTy
   defaultValue valueEq
+
+-- POST-SEAL pins: the exact wrapper+worker+budget simp pattern every
+-- downstream proof site relies on (sub-branch audit, 2026-08-03 — the
+-- per-family pins above exercise only the workers at small literals; these
+-- exercise the sealed wrappers at the real seed, so a change to the seal
+-- design or the equation-generation behavior fails HERE, in the defining
+-- module, not at some distant proof).
+example (σ : ExecState) (kind : IntKind) (v : Int) :
+    normalizeValueForTy σ (.int kind) (.int v kind)
+      = .ok (.int (kind.normalize v) kind) := by
+  simp [normalizeValueForTy, normalizeValueForTyFuel, typeResolutionFuel]
+  rfl
+example (σ : ExecState) (kind : IntKind) :
+    defaultValue σ (.int kind) = .ok (.int 0 kind) := by
+  simp [defaultValue, defaultValueFuel, typeResolutionFuel]
+  rfl
+example (σ : ExecState) (a b : Bool) :
+    valueEq σ .bool (.bool a) (.bool b) = .ok (a == b) := by
+  simp [valueEq, valueEqFuel, typeResolutionFuel]
+  rfl
+example : Ty.mentionsUnsupported (.pointer .bool) = false := by
+  simp [Ty.mentionsUnsupported, Ty.mentionsUnsupportedFuel, typeResolutionFuel]

@@ -20,17 +20,23 @@ Three groups:
    machine's `arraySet`/`arrayGet` at index `pre.length` of
    `pre ++ x :: rest`. This is what a right-to-left fill loop needs when
    the number of already-filled slots is a variable.
-2. **Normalization of an int array** (`normalizeArrayForTy_int`): an
-   array all of whose elements are already-normalized ints of one kind
-   normalizes to itself, at ANY fuel and ANY state. Without this a store
-   into a symbolic array is unreachable by `simp`, which can only compute
-   `normalizeListWith` on a literal.
+2. **Normalization of an int array** (`normalizeListWith_id` +
+   `normalizeValueForTy_intArray`; renamed at the de-WF restructure,
+   2026-08-03): an array all of whose elements are already-normalized
+   ints of one kind normalizes to itself, in any state (the element walk
+   is the fuel-free parameterized `normalizeListWith`). Without this a
+   store into a symbolic array is unreachable by `simp`, which can only
+   compute the walk on a literal.
 3. **Sorted-permutation uniqueness** (`eq_of_perm_of_pairwise`) and its
-   corollary for the machine's sort (`mergeSort_eq_of_perm`): two sorted
+   corollaries — for the MACHINE's sort (`sortLe_pairs_eq_of_perm`; the
+   machine sorts with the structural `sortLe` since the de-WF
+   restructure) and for the MATH layer's `List.mergeSort`
+   (`mergeSort_eq_of_perm`, kept for `sortAsc`): two sorted
    lists that are permutations of each other are equal, hence
    `List.mergeSort` gives the SAME answer on every permutation of its
-   input. This is what lets a proof about a nondeterministically-filled
-   array reach the sort without enumerating the fill orders.
+   input (either sort). This is what lets a proof about a
+   nondeterministically-filled array reach the sort without enumerating
+   the fill orders.
    Antisymmetry is required only ON THE ELEMENTS PRESENT, which is what
    makes it usable at `(Int × IntKind)` — a type where the machine's
    comparison `fun a b => a.1 ≤ b.1` is NOT globally antisymmetric.
@@ -47,7 +53,7 @@ Three groups:
    slice of already-normalized ints replaces the visible slots by the
    sorted image and leaves the tail alone, for ANY length. The sort's
    ANSWER is a premise (`hsorted`), so the caller may characterize it
-   however it likes; `mergeSort_pairs_eq_of_perm` is the usable form —
+   however it likes; `sortLe_pairs_eq_of_perm` is the usable form —
    any sorted permutation of the loaded values IS the machine's answer.
 -/
 

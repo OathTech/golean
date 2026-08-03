@@ -712,9 +712,11 @@ def applyStmtOp (s : ExecState) (choices : Choices) (op : StmtOp) (nt : Nat)
       -- entry, like clearSlice — a slice's elements all live in ONE
       -- backing cell, so "multi-cell" was the wrong word; corrected
       -- 2026-07-31, pre-merge audit finding 3): load the visible
-      -- elements, MERGE-sort by INTEGER value (normalized ints compare exactly as Go's
-      -- unsigned/signed order; equal ints are indistinguishable, so
-      -- Go's sort instability is unobservable), store back. Non-int
+      -- elements, sort by INTEGER value with the structural `sortLe`
+      -- (insertion sort — de-WF 2026-08-03; normalized ints compare
+      -- exactly as Go's unsigned/signed order; equal ints are
+      -- indistinguishable, so sort stability is unobservable), store
+      -- back. Non-int
       -- elements fail closed — the frontend only emits this at integer
       -- element kinds.
       match vs with
