@@ -353,7 +353,11 @@ open Lean in
 #guard_msgs in #print axioms GoLean.Iris.wp_sort_slice_srt
 /-- info: 'GoLean.Iris.wp_map_range_snapshot_committed' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Iris.wp_map_range_snapshot_committed
-/-- info: 'GoLean.Iris.typeEnv_pin_is_load_bearing' depends on axioms: [propext, Quot.sound] -/
+-- (Axiom set SHRANK [propext, Quot.sound] → [propext] at the de-WF
+-- restructure 2026-08-03 — the refuting counterexample's evaluation no
+-- longer routes through Quot-based machinery. Shrinking is the safe
+-- direction; re-pinned to the actual set.)
+/-- info: 'GoLean.Iris.typeEnv_pin_is_load_bearing' depends on axioms: [propext] -/
 #guard_msgs in #print axioms GoLean.Iris.typeEnv_pin_is_load_bearing
 
 -- Quorum-pilot phase-4 slice 5 (2026-07-31): the first multi-result
@@ -995,7 +999,7 @@ example := @GoLean.Quorum.encodesConfig_cfgSnapshot
 example := @GoLean.Quorum.encodesAcked_lookup
 example := @GoLean.Quorum.sortedAcked_perm
 example := @GoLean.Quorum.sortedAcked_get
-example := @GoLean.Iris.normalizeArrayForTy_int
+example := @GoLean.Iris.normalizeListWith_id
 example := @GoLean.Iris.normalizeValueForTy_intArray
 example := @GoLean.Iris.int_normalize_of_range
 example := @GoLean.Iris.eq_of_perm_of_pairwise

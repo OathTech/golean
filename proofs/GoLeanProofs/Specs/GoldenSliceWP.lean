@@ -64,7 +64,7 @@ theorem wp_call_enter_inc {xa : Addr} {locs : List Loc} {env k}
     (hnodisp := fun σ h => by
       simp [dynamicDispatch?, methodInfoByFuncId?, h, hmeths, Bind.bind, Except.bind])
     (hnorm := fun σ _ => by
-      simp [normalizeValueForTy, normalizeValueForTyFuel])
+      simp [normalizeValueForTy, normalizeValueForTyFuel, typeResolutionFuel])
 
 /-- Witness for `wp_call_enter_ret1` on the CONCRETE golden `incViaCall`
 (nullary, one int result `$res0` defaulting to 0). -/

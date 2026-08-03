@@ -192,7 +192,7 @@ theorem wp_ackedIndex_body_entries {ma ida mba ra₀ ra₁ : Addr} {mty : Option
     (newcell := ⟨some .bool, .bool b⟩)
     (fun σ _ht hl => by
       simp [storeLoc, hl, normalizeValueForTy, normalizeValueForTyFuel,
-        Bind.bind, Except.bind]))
+        Bind.bind, Except.bind, typeResolutionFuel]))
   go_walk_finish Hcont
 
 /-- **The one-entry instance**, the n = 1 summit's `AckedIndex` body walk,
@@ -276,7 +276,7 @@ theorem wp_ackedIndexCall {ma mba ta tb : Addr} {mty : Option Ty} {q v : Int}
       exact h)
     (hstore₁ := fun σ _ht hl => by
       simp [storeLoc, hl, normalizeValueForTy, normalizeValueForTyFuel,
-        Bind.bind, Except.bind]))
+        Bind.bind, Except.bind, typeResolutionFuel]))
   go_walk_finish Hcont
 
 end
@@ -414,7 +414,7 @@ theorem wp_ci_fitIf_one {na sta sra : Addr} {w : GoValue} {rest env k}
                  .slice ⟨some (.base sta), 0, 1, 7⟩⟩)
     (fun σ _ht hl => by
       simp [storeLoc, hl, normalizeValueForTy, normalizeValueForTyFuel,
-        Bind.bind, Except.bind]))
+        Bind.bind, Except.bind, typeResolutionFuel]))
   go_walk_finish Hcont
 
 /-- **The voter loop's BODY, one iteration** — `if idx, ok :=
@@ -500,7 +500,7 @@ theorem wp_ci_range_body_one {ia la lba sra sta pa : Addr}
         show IntKind.uint64.normalize 12 = 12 from by decide])
     (hstore₁ := fun σ _ht hlk => by
       simp [storeLoc, hlk, normalizeValueForTy, normalizeValueForTyFuel,
-        Bind.bind, Except.bind]))
+        Bind.bind, Except.bind, typeResolutionFuel]))
   -- `if ok { srt[i] = uint64(idx); i-- }`
   go_walk
   unfold ciOkIf
@@ -514,9 +514,9 @@ theorem wp_ci_range_body_one {ia la lba sra sta pa : Addr}
     (fun σ _ht hlk => by
       simp [storeLoc, loadLoc, hlk, stkZero, stkOne, arrayIndexNat, arraySet,
         coerceStoredValue, normalizeValueForTy, normalizeValueForTyFuel,
-        normalizeArrayForTy, Bind.bind, Except.bind, Functor.map, Except.map,
+        normalizeListWith, Bind.bind, Except.bind, Functor.map, Except.map,
         show IntKind.uint64.normalize 12 = 12 from by decide,
-        show IntKind.uint64.normalize 0 = 0 from by decide]))
+        show IntKind.uint64.normalize 0 = 0 from by decide, typeResolutionFuel]))
   -- `i--`
   go_walk
   go_walk_step (wp_assign_store
@@ -630,7 +630,7 @@ theorem wp_ci_loop_one {na ca cba la lba sra sta : Addr}
       obtain rfl : p = ((GoValue.int 1 .uint64),
           (GoValue.struct ⟨"struct{}"⟩ #[])) := by simpa using hp
       simp [normalizeValueForTy, normalizeValueForTyFuel,
-        show IntKind.uint64.normalize 1 = 1 from by decide])
+        show IntKind.uint64.normalize 1 = 1 from by decide, typeResolutionFuel])
     (Hbody := by
       intro rem i hidx pa
       rw [if_neg (by omega : ¬ rem.size = 0)]
@@ -698,10 +698,10 @@ theorem wp_ci_tail_one {na sra sta ra : Addr} {env k}
         hlk, stkOne, heap_lookup_set_base_self, Bind.bind, Except.bind,
         List.range', List.forIn_cons, List.forIn_nil, arrayGet, arrayIndexNat,
         storeLoc, arraySet, coerceStoredValue, normalizeValueForTy,
-        normalizeValueForTyFuel, normalizeArrayForTy, List.mergeSort,
+        normalizeValueForTyFuel, normalizeListWith, List.mergeSort,
         heap_set_set_of_lookup hlk, Functor.map, Except.map,
         show IntKind.uint64.normalize 12 = 12 from by decide,
-        show IntKind.uint64.normalize 0 = 0 from by decide]))
+        show IntKind.uint64.normalize 0 = 0 from by decide, typeResolutionFuel]))
   -- `pos := n - (n/2 + 1)` — pure integer arithmetic throughout
   go_walk
   rw [ciPosStmt_eq]
@@ -852,7 +852,7 @@ theorem wp_committedIndexCall {ca cba la lba ta : Addr} {cty lty : Option Ty}
       simp [applyStrictOp, canonicalDynamicTy, canonicalTy, canonicalTyFuel,
         resolveDefinedAliases, resolveDefinedAliasesFuel, typeResolutionFuel,
         QuorumPin.typeEnv_mapAckIndexer, Ty.mentionsUnsupported,
-        Bind.bind, Except.bind]))
+        Bind.bind, Except.bind, Ty.mentionsUnsupportedFuel]))
   -- the STATIC frame entry (two arguments, one result, no dynamic dispatch)
   go_walk_step (wp_call_enter₂₁ (func := QuorumPin.committedIndexImpl)
     (w₀ := .map ⟨some (.base cba)⟩)
@@ -875,7 +875,7 @@ theorem wp_committedIndexCall {ca cba la lba ta : Addr} {cty lty : Option Ty}
       simp [normalizeValueForTy, normalizeValueForTyFuel, typeResolutionFuel,
         QuorumPin.typeEnv_MajorityConfig])
     (hnorm₁ := fun σ _ => by
-      simp [normalizeValueForTy, normalizeValueForTyFuel])
+      simp [normalizeValueForTy, normalizeValueForTyFuel, typeResolutionFuel])
     (hdef₀ := fun σ ht => by
       rw [execState_pin_eq (ht.trans htypes) (rfl (a := σ.functions))
         (rfl (a := σ.methods))]
@@ -979,7 +979,7 @@ theorem wp_oneKnown_body {ra : Addr} {k}
                            .map ⟨some (.base fa)⟩⟩)
     (hstore := fun σ fa _ht hlk => by
       simp [storeLoc, hlk, normalizeValueForTy, normalizeValueForTyFuel,
-        Bind.bind, Except.bind])) as [cfgba, Hcfgb, Hc10]
+        Bind.bind, Except.bind, typeResolutionFuel])) as [cfgba, Hcfgb, Hc10]
   -- `c[1] = struct{}{}`
   go_walk
   go_walk_step (wp_eval_strict_nullary_pin (v := .struct ⟨"struct{}"⟩ #[]) rfl
@@ -999,8 +999,8 @@ theorem wp_oneKnown_body {ra : Addr} {k}
       simp +decide [applyStmtOp, valueAsMap, mapEntries, loadLoc, hlk,
         mapEntryIndex?,
         normalizeValueForTy, normalizeValueForTyFuel, typeResolutionFuel,
-        QuorumPin.typeEnv_structEmpty, normalizeStructValueForFields,
-        normalizeStructFieldsForTy, checkKeyHashable, valueHashability,
+        QuorumPin.typeEnv_structEmpty, normalizeStructValueWith,
+        normalizeFieldsWith, checkKeyHashable, valueHashability,
         coerceStoredValue, storeLoc, Functor.map, Except.map,
         Bind.bind, Except.bind,
         show IntKind.uint64.normalize 1 = 1 from by decide])) as [Hcfgb]
@@ -1018,7 +1018,7 @@ theorem wp_oneKnown_body {ra : Addr} {k}
                            .map ⟨some (.base fa)⟩⟩)
     (hstore := fun σ fa _ht hlk => by
       simp [storeLoc, hlk, normalizeValueForTy, normalizeValueForTyFuel,
-        Bind.bind, Except.bind])) as [ackba, Hackb, Hc11]
+        Bind.bind, Except.bind, typeResolutionFuel])) as [ackba, Hackb, Hc11]
   -- `l[1] = 12`
   go_walk
   go_walk_step (wp_stmt_op_apply_store (a := ackba)

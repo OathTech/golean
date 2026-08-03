@@ -306,18 +306,36 @@ def canonicalTyFuel : Nat → ExecState → Ty → Ty
 def canonicalTy (state : ExecState) (typ : Ty) : Ty :=
   canonicalTyFuel typeResolutionFuel state typ
 
+/-- Fuel-structural worker for `Ty.mentionsUnsupported` (de-WF restructure,
+2026-08-03: the `attach`-based nested recursion compiled well-founded, which
+the kernel cannot reduce). Recursion is structural on the fuel; exhaustion
+answers `true` — FAIL CLOSED, an unresolvable type must never become a
+boxing tag. -/
+def Ty.mentionsUnsupportedFuel : Nat → Ty → Bool
+  | 0, _ => true
+  | fuel + 1, ty =>
+    match ty with
+    | .unsupported _ => true
+    | .pointer e => Ty.mentionsUnsupportedFuel fuel e
+    | .slice e => Ty.mentionsUnsupportedFuel fuel e
+    | .array _ e => Ty.mentionsUnsupportedFuel fuel e
+    | .map k v => Ty.mentionsUnsupportedFuel fuel k || Ty.mentionsUnsupportedFuel fuel v
+    | .funcType ps rs =>
+        ps.any (fun t => Ty.mentionsUnsupportedFuel fuel t)
+          || rs.any (fun t => Ty.mentionsUnsupportedFuel fuel t)
+    | _ => false
+
 /-- Does the type mention an `.unsupported` leaf? Used to fail closed at
-boxing time (an unrenderable dynamic type must never become a tag). -/
-def Ty.mentionsUnsupported : Ty → Bool
-  | .unsupported _ => true
-  | .pointer e => Ty.mentionsUnsupported e
-  | .slice e => Ty.mentionsUnsupported e
-  | .array _ e => Ty.mentionsUnsupported e
-  | .map k v => Ty.mentionsUnsupported k || Ty.mentionsUnsupported v
-  | .funcType ps rs =>
-      ps.attach.any (fun ⟨t, _⟩ => Ty.mentionsUnsupported t)
-        || rs.attach.any (fun ⟨t, _⟩ => Ty.mentionsUnsupported t)
-  | _ => false
+boxing time (an unrenderable dynamic type must never become a tag).
+Type syntax is small, so `typeResolutionFuel` node-budget is ample; the
+worker fails CLOSED (`true`) on exhaustion. -/
+
+
+example : Ty.mentionsUnsupportedFuel 3 (.pointer .bool) = false := by
+  simp [Ty.mentionsUnsupportedFuel]
+
+def Ty.mentionsUnsupported (ty : Ty) : Bool :=
+  Ty.mentionsUnsupportedFuel typeResolutionFuel ty
 
 /-- The canonical dynamic-type tag for boxing, fail-closed. -/
 def canonicalDynamicTy (state : ExecState) (typ : Ty) : Except GoError Ty := do
@@ -618,66 +636,87 @@ def dynamicImplementsInterface (state : ExecState) (dynTy : Ty) (interfaceName :
     Except GoError Bool := do
   return (← firstUnsatisfiedMethod? state dynTy interfaceName).isNone
 
--- Total via fuel: fuel is decremented only at `.defined` resolution; array and
--- struct child recursion is structural through list helpers. The public
+/-- Apply the (already fuel-decremented) element normalizer to each list
+element in order; fail-closed on the first error. Structural on the LIST and
+parameterized over `f` rather than mutually recursive — the de-WF recipe
+(2026-08-03): the old mutual block (list helpers recursing at unchanged
+fuel) had no common structural argument, so Lean compiled it well-founded,
+and `Acc.rec` reduces nowhere — which blocked kernel evaluation of the
+interpreter (`docs/2026-08-03_sem-adequacy-arc.md`, slice-1 spike).
+Crucially the fuel still bounds only NESTING DEPTH, not node count: a first
+de-WF attempt charged fuel per element and was caught making `Progress` —
+and with it the ∀-config theorem — false at configs past the budget. -/
+def normalizeListWith (f : GoValue → Except GoError GoValue) :
+    List GoValue → Except GoError (Array GoValue)
+  | value :: rest => do
+      let head ← f value
+      let tail ← normalizeListWith f rest
+      return #[head] ++ tail
+  | [] => return #[]
+
+/-- Normalize struct field values pairwise with the (already
+fuel-decremented) normalizer, checking field-name alignment. -/
+def normalizeFieldsWith (f : Ty → GoValue → Except GoError GoValue) :
+    List FieldDef → List (String × GoValue) →
+    Except GoError (Array (String × GoValue))
+  | field :: fieldRest, (actualField, value) :: valueRest => do
+      if actualField != field.name then
+        stuck s!"struct value field mismatch: expected {field.name}, got {actualField}"
+      let head ← f field.typ value
+      let tail ← normalizeFieldsWith f fieldRest valueRest
+      return #[(field.name, head)] ++ tail
+  | _, _ => return #[]
+
+/-- Struct-shape checks for normalization at a defined struct type, with the
+(already fuel-decremented) field normalizer. -/
+def normalizeStructValueWith (f : Ty → GoValue → Except GoError GoValue)
+    (name : TypeId) (fields : Array FieldDef) : GoValue → Except GoError GoValue
+  | .struct actual fieldsValue => do
+      if actual != name then
+        stuck s!"struct value type mismatch: expected {name.key}, got {actual.key}"
+      if fieldsValue.size != fields.size then
+        stuck s!"struct value field count mismatch: expected {fields.size}, got {fieldsValue.size}"
+      .struct name <$> normalizeFieldsWith f fields.toList fieldsValue.toList
+  | value => stuck s!"expected struct {name.key} value, got {repr value}"
+
+-- Total via fuel, STRUCTURALLY on the fuel: recursion into child values goes
+-- through the parameterized list/field helpers above at DECREMENTED fuel, so
+-- the definition is plain structural recursion (kernel-reducible) while the
+-- fuel still bounds nesting DEPTH only — one unit per array/struct level or
+-- defined-type resolution, never per element. The public
 -- `normalizeValueForTy` seeds `typeResolutionFuel` and keeps its signature.
-mutual
-  def normalizeValueForTyFuel : Nat → ExecState → Ty → GoValue → Except GoError GoValue
-    | _, _, .int kind, .int value _ => return .int (kind.normalize value) kind
-    | _, _, .int kind, value => stuck s!"expected {kind.name} value, got {repr value}"
-    | fuel, state, .array length elem, .array values => do
-        if values.size != length then
-          stuck s!"array value length mismatch: expected {length}, got {values.size}"
-        .array <$> normalizeArrayForTy fuel state elem values.toList
-    | _, _, .array length _, value => stuck s!"expected array({length}) value, got {repr value}"
-    | _, _, .interface _, value => return value
-    -- Func values carry their own identity; nil is the zero value.
-    | _, _, .funcType _ _, .funcVal fid captured => return .funcVal fid captured
-    | _, _, .funcType _ _, .nil => return .nil
-    | _, _, .funcType _ _, value => stuck s!"expected func value, got {repr value}"
-    | fuel + 1, state, .defined name, value => do
-        match TypeEnv.lookup state.types name with
-        | some (.alias target) => normalizeValueForTyFuel fuel state target value
-        | some (.defined target) => normalizeValueForTyFuel fuel state target value
-        | some (.struct fields) => normalizeStructValueForFields fuel state name fields value
-        | some (.unsupported feature) => unsupported s!"normalizing {feature}"
-        | some (.interfaceDef _) => unsupported s!"normalizing at interface type {name.key}"
-        | none => unsupported s!"normalizing unknown defined type {name.key}"
-    | 0, _, .defined _, _ => unsupported "normalizing: type nesting too deep"
-    | _, _, .unsupported feature, _ => unsupported s!"normalizing {feature}"
-    | _, _, _, value => return value
+def normalizeValueForTyFuel : Nat → ExecState → Ty → GoValue → Except GoError GoValue
+  | 0, _, _, _ => unsupported "normalizing: type nesting too deep"
+  | _ + 1, _, .int kind, .int value _ => return .int (kind.normalize value) kind
+  | _ + 1, _, .int kind, value => stuck s!"expected {kind.name} value, got {repr value}"
+  | fuel + 1, state, .array length elem, .array values => do
+      if values.size != length then
+        stuck s!"array value length mismatch: expected {length}, got {values.size}"
+      .array <$> normalizeListWith (normalizeValueForTyFuel fuel state elem) values.toList
+  | _ + 1, _, .array length _, value => stuck s!"expected array({length}) value, got {repr value}"
+  | _ + 1, _, .interface _, value => return value
+  -- Func values carry their own identity; nil is the zero value.
+  | _ + 1, _, .funcType _ _, .funcVal fid captured => return .funcVal fid captured
+  | _ + 1, _, .funcType _ _, .nil => return .nil
+  | _ + 1, _, .funcType _ _, value => stuck s!"expected func value, got {repr value}"
+  | fuel + 1, state, .defined name, value => do
+      match TypeEnv.lookup state.types name with
+      | some (.alias target) => normalizeValueForTyFuel fuel state target value
+      | some (.defined target) => normalizeValueForTyFuel fuel state target value
+      | some (.struct fields) =>
+          normalizeStructValueWith (normalizeValueForTyFuel fuel state) name fields value
+      | some (.unsupported feature) => unsupported s!"normalizing {feature}"
+      | some (.interfaceDef _) => unsupported s!"normalizing at interface type {name.key}"
+      | none => unsupported s!"normalizing unknown defined type {name.key}"
+  | _ + 1, _, .unsupported feature, _ => unsupported s!"normalizing {feature}"
+  | _ + 1, _, _, value => return value
 
-  /-- Normalize array elements against the element type; equal length checked. -/
-  def normalizeArrayForTy (fuel : Nat) (state : ExecState) (elem : Ty) :
-      List GoValue → Except GoError (Array GoValue)
-    | value :: rest => do
-        let head ← normalizeValueForTyFuel fuel state elem value
-        let tail ← normalizeArrayForTy fuel state elem rest
-        return #[head] ++ tail
-    | [] => return #[]
 
-  def normalizeStructValueForFields (fuel : Nat) (state : ExecState) (name : TypeId)
-      (fields : Array FieldDef) : GoValue → Except GoError GoValue
-    | .struct actual fieldsValue => do
-        if actual != name then
-          stuck s!"struct value type mismatch: expected {name.key}, got {actual.key}"
-        if fieldsValue.size != fields.size then
-          stuck s!"struct value field count mismatch: expected {fields.size}, got {fieldsValue.size}"
-        .struct name <$> normalizeStructFieldsForTy fuel state fields.toList fieldsValue.toList
-    | value => stuck s!"expected struct {name.key} value, got {repr value}"
 
-  /-- Normalize struct field values pairwise, checking field-name alignment. -/
-  def normalizeStructFieldsForTy (fuel : Nat) (state : ExecState) :
-      List FieldDef → List (String × GoValue) →
-      Except GoError (Array (String × GoValue))
-    | field :: fieldRest, (actualField, value) :: valueRest => do
-        if actualField != field.name then
-          stuck s!"struct value field mismatch: expected {field.name}, got {actualField}"
-        let head ← normalizeValueForTyFuel fuel state field.typ value
-        let tail ← normalizeStructFieldsForTy fuel state fieldRest valueRest
-        return #[(field.name, head)] ++ tail
-    | _, _ => return #[]
-end
+example (σ : ExecState) (kind : IntKind) :
+    normalizeValueForTyFuel 5 σ (.int kind) (.int 3 kind)
+      = .ok (.int (kind.normalize 3) kind) := by
+  simp [normalizeValueForTyFuel]; rfl
 
 def normalizeValueForTy (state : ExecState) (ty : Ty) (value : GoValue) :
     Except GoError GoValue :=
@@ -768,48 +807,53 @@ def convertValueToTy (state : ExecState) (typ : Ty) (value : GoValue) :
     Except GoError GoValue :=
   convertValueToTyFuel typeResolutionFuel state typ value
 
--- Total via fuel: `defaultValueFuel` decrements fuel only at `.defined`
--- resolution. The array case computes the element default once and replicates
--- it (`defaultValue` is pure, so all elements are equal); the `length == 0`
--- guard preserves the original behavior of not evaluating the element type for
--- an empty array. Struct fields recurse through the `defaultStructFields`
--- list helper.
-mutual
-  def defaultValueFuel : Nat → ExecState → Ty → Except GoError GoValue
-    | _, _, .bool => return .bool false
-    | _, _, .int kind => return .int 0 kind
-    | _, _, .string => return .string GoString.empty
-    | fuel, state, .array length elem => do
-        if length == 0 then
-          return .array #[]
-        let elemDefault ← defaultValueFuel fuel state elem
-        return .array (Array.replicate length elemDefault)
-    | _, _, .slice _ => return .slice { base := none, offset := 0, len := 0, cap := 0 }
-    | _, _, .map _ _ => return .map { base := none }
-    | _, _, .pointer _ => return .nil
-    | _, _, .funcType _ _ => return .nil
-    | _, _, .interface _ => return .nil
-    | fuel + 1, state, .defined name => do
-        match TypeEnv.lookup state.types name with
-        | some (.struct fields) =>
-            .struct name <$> defaultStructFields fuel state fields.toList
-        | some (.alias target) => defaultValueFuel fuel state target
-        | some (.defined target) => defaultValueFuel fuel state target
-        | some (.unsupported feature) => unsupported s!"default value for {feature}"
-        | some (.interfaceDef _) => unsupported s!"default value at interface type {name.key}"
-        | none => unsupported s!"default value for unknown defined type {name.key}"
-    | 0, _, .defined _ => unsupported "default value: type nesting too deep"
-    | _, _, .unsupported feature => unsupported s!"default value for {feature}"
+/-- Default value for each struct field with the (already fuel-decremented)
+default builder, in declaration order. Structural on the list; part of the
+de-WF recipe (see `normalizeListWith`). -/
+def defaultFieldsWith (f : Ty → Except GoError GoValue) :
+    List FieldDef → Except GoError (Array (String × GoValue))
+  | field :: rest => do
+      let head ← f field.typ
+      let tail ← defaultFieldsWith f rest
+      return #[(field.name, head)] ++ tail
+  | [] => return #[]
 
-  /-- Default value for each struct field, in declaration order. -/
-  def defaultStructFields (fuel : Nat) (state : ExecState) :
-      List FieldDef → Except GoError (Array (String × GoValue))
-    | field :: rest => do
-        let head ← defaultValueFuel fuel state field.typ
-        let tail ← defaultStructFields fuel state rest
-        return #[(field.name, head)] ++ tail
-    | [] => return #[]
-end
+-- Total via fuel, STRUCTURALLY on the fuel (de-WF recipe — see the
+-- normalize block; fuel bounds nesting DEPTH only). The array case computes
+-- the element default once and replicates it (`defaultValue` is pure, so all
+-- elements are equal); the `length == 0` guard preserves the original
+-- behavior of not evaluating the element type for an empty array.
+def defaultValueFuel : Nat → ExecState → Ty → Except GoError GoValue
+  | 0, _, _ => unsupported "default value: type nesting too deep"
+  | _ + 1, _, .bool => return .bool false
+  | _ + 1, _, .int kind => return .int 0 kind
+  | _ + 1, _, .string => return .string GoString.empty
+  | fuel + 1, state, .array length elem => do
+      if length == 0 then
+        return .array #[]
+      let elemDefault ← defaultValueFuel fuel state elem
+      return .array (Array.replicate length elemDefault)
+  | _ + 1, _, .slice _ => return .slice { base := none, offset := 0, len := 0, cap := 0 }
+  | _ + 1, _, .map _ _ => return .map { base := none }
+  | _ + 1, _, .pointer _ => return .nil
+  | _ + 1, _, .funcType _ _ => return .nil
+  | _ + 1, _, .interface _ => return .nil
+  | fuel + 1, state, .defined name => do
+      match TypeEnv.lookup state.types name with
+      | some (.struct fields) =>
+          .struct name <$> defaultFieldsWith (defaultValueFuel fuel state) fields.toList
+      | some (.alias target) => defaultValueFuel fuel state target
+      | some (.defined target) => defaultValueFuel fuel state target
+      | some (.unsupported feature) => unsupported s!"default value for {feature}"
+      | some (.interfaceDef _) => unsupported s!"default value at interface type {name.key}"
+      | none => unsupported s!"default value for unknown defined type {name.key}"
+  | _ + 1, _, .unsupported feature => unsupported s!"default value for {feature}"
+
+
+
+example (σ : ExecState) (kind : IntKind) :
+    defaultValueFuel 5 σ (.int kind) = .ok (.int 0 kind) := by
+  simp [defaultValueFuel]; rfl
 
 def defaultValue (state : ExecState) (ty : Ty) : Except GoError GoValue :=
   defaultValueFuel typeResolutionFuel state ty
@@ -965,39 +1009,66 @@ def valueAsLoc : GoValue → Except GoError Loc
   | .nil => panic "runtime error: invalid memory address or nil pointer dereference"
   | other => stuck s!"expected address value, got {repr other}"
 
--- Total via fuel: `valueEqFuel` decrements fuel only when resolving a
--- `.defined` name through the type environment; array/struct element recursion
--- is structural (list helpers `valueEqArray`/`valueEqStruct`). The public
--- `valueEq` seeds `typeResolutionFuel`, keeping its original signature so call
--- sites are unchanged.
-mutual
-  def valueEqFuel : Nat → ExecState → Ty → GoValue → GoValue → Except GoError Bool
-    | _, _, .bool, .bool left, .bool right => return left == right
-    | _, _, .bool, left, right => stuck s!"bool equality expected bool operands, got {repr left} and {repr right}"
-    | _, _, .int _, .int left _, .int right _ => return left == right
-    | _, _, .int kind, left, right => stuck s!"{kind.name} equality expected int operands, got {repr left} and {repr right}"
-    | _, _, .string, .string left, .string right => return left == right
-    | _, _, .string, left, right => stuck s!"string equality expected string operands, got {repr left} and {repr right}"
+/-- Compare list elements pairwise with the (already fuel-decremented)
+comparator; callers guarantee equal, checked lengths. Structural on the
+list; part of the de-WF recipe (see `normalizeListWith`). -/
+def valueEqListWith (f : GoValue → GoValue → Except GoError Bool) :
+    List GoValue → List GoValue → Except GoError Bool
+  | leftValue :: leftRest, rightValue :: rightRest => do
+      if ← f leftValue rightValue then
+        valueEqListWith f leftRest rightRest
+      else
+        return false
+  | _, _ => return true
+
+/-- Compare struct fields pairwise with the (already fuel-decremented)
+comparator, checking field-name alignment on both sides. -/
+def valueEqFieldsWith (f : Ty → GoValue → GoValue → Except GoError Bool) :
+    List FieldDef → List (String × GoValue) → List (String × GoValue) →
+    Except GoError Bool
+  | field :: fieldRest, (leftName, leftValue) :: leftRest, (rightName, rightValue) :: rightRest => do
+      if leftName != field.name then
+        stuck s!"left struct equality field mismatch: expected {field.name}, got {leftName}"
+      if rightName != field.name then
+        stuck s!"right struct equality field mismatch: expected {field.name}, got {rightName}"
+      if ← f field.typ leftValue rightValue then
+        valueEqFieldsWith f fieldRest leftRest rightRest
+      else
+        return false
+  | _, _, _ => return true
+
+-- Total via fuel, STRUCTURALLY on the fuel (de-WF recipe — see the
+-- normalize block; fuel bounds nesting DEPTH only). The public `valueEq`
+-- seeds `typeResolutionFuel`, keeping its original signature so call sites
+-- are unchanged.
+def valueEqFuel : Nat → ExecState → Ty → GoValue → GoValue → Except GoError Bool
+    | 0, _, _, _, _ => unsupported "equality: type nesting too deep"
+    | _ + 1, _, .bool, .bool left, .bool right => return left == right
+    | _ + 1, _, .bool, left, right => stuck s!"bool equality expected bool operands, got {repr left} and {repr right}"
+    | _ + 1, _, .int _, .int left _, .int right _ => return left == right
+    | _ + 1, _, .int kind, left, right => stuck s!"{kind.name} equality expected int operands, got {repr left} and {repr right}"
+    | _ + 1, _, .string, .string left, .string right => return left == right
+    | _ + 1, _, .string, left, right => stuck s!"string equality expected string operands, got {repr left} and {repr right}"
     -- Go: func values are comparable only against nil.
-    | _, _, .funcType _ _, .nil, .nil => return true
-    | _, _, .funcType _ _, .funcVal _ _, .nil => return false
-    | _, _, .funcType _ _, .nil, .funcVal _ _ => return false
-    | _, _, .funcType _ _, left, right =>
+    | _ + 1, _, .funcType _ _, .nil, .nil => return true
+    | _ + 1, _, .funcType _ _, .funcVal _ _, .nil => return false
+    | _ + 1, _, .funcType _ _, .nil, .funcVal _ _ => return false
+    | _ + 1, _, .funcType _ _, left, right =>
         stuck s!"func values are not comparable: {repr left} and {repr right}"
-    | _, _, .pointer _, .addr left, .addr right => return left == right
-    | _, _, .pointer _, .nil, .nil => return true
-    | _, _, .pointer _, .addr _, .nil => return false
-    | _, _, .pointer _, .nil, .addr _ => return false
-    | _, _, .pointer _, left, right => stuck s!"pointer equality expected pointer/nil operands, got {repr left} and {repr right}"
-    | fuel, state, .array length elem, .array left, .array right => do
+    | _ + 1, _, .pointer _, .addr left, .addr right => return left == right
+    | _ + 1, _, .pointer _, .nil, .nil => return true
+    | _ + 1, _, .pointer _, .addr _, .nil => return false
+    | _ + 1, _, .pointer _, .nil, .addr _ => return false
+    | _ + 1, _, .pointer _, left, right => stuck s!"pointer equality expected pointer/nil operands, got {repr left} and {repr right}"
+    | fuel + 1, state, .array length elem, .array left, .array right => do
         if left.size != length then
           stuck s!"left array equality length mismatch: expected {length}, got {left.size}"
         if right.size != length then
           stuck s!"right array equality length mismatch: expected {length}, got {right.size}"
-        valueEqArray fuel state elem left.toList right.toList
-    | _, _, .array length _, left, right =>
+        valueEqListWith (valueEqFuel fuel state elem) left.toList right.toList
+    | _ + 1, _, .array length _, left, right =>
         stuck s!"array equality expected array({length}) operands, got {repr left} and {repr right}"
-    | _, _, .slice _, .slice left, .slice right => do
+    | _ + 1, _, .slice _, .slice left, .slice right => do
         validateSlice left
         validateSlice right
         match left.base, right.base with
@@ -1005,25 +1076,25 @@ mutual
         | none, some _ => return false
         | some _, none => return false
         | some _, some _ => stuck "non-nil slices are not comparable"
-    | _, _, .slice _, .slice left, .nil => do
+    | _ + 1, _, .slice _, .slice left, .nil => do
         validateSlice left
         return left.base.isNone
-    | _, _, .slice _, .nil, .slice right => do
+    | _ + 1, _, .slice _, .nil, .slice right => do
         validateSlice right
         return right.base.isNone
-    | _, _, .slice _, left, right => stuck s!"slice equality expected slice/nil operands, got {repr left} and {repr right}"
-    | _, _, .map _ _, .map left, .map right =>
+    | _ + 1, _, .slice _, left, right => stuck s!"slice equality expected slice/nil operands, got {repr left} and {repr right}"
+    | _ + 1, _, .map _ _, .map left, .map right =>
         match left.base, right.base with
         | none, none => return true
         | none, some _ => return false
         | some _, none => return false
         | some _, some _ => stuck "non-nil maps are not comparable"
-    | _, _, .map _ _, .map left, .nil => return left.base.isNone
-    | _, _, .map _ _, .nil, .map right => return right.base.isNone
-    | _, _, .map _ _, left, right => stuck s!"map equality expected map/nil operands, got {repr left} and {repr right}"
-    | _, _, .interface _, .nil, .nil => return true
-    | _, _, .interface _, .nil, _ => return false
-    | _, _, .interface _, _, .nil => return false
+    | _ + 1, _, .map _ _, .map left, .nil => return left.base.isNone
+    | _ + 1, _, .map _ _, .nil, .map right => return right.base.isNone
+    | _ + 1, _, .map _ _, left, right => stuck s!"map equality expected map/nil operands, got {repr left} and {repr right}"
+    | _ + 1, _, .interface _, .nil, .nil => return true
+    | _ + 1, _, .interface _, .nil, _ => return false
+    | _ + 1, _, .interface _, _, .nil => return false
     -- Box-vs-box (S3, Perennial `go_eq_interface` shape): different
     -- canonical dynamic types → false, no value comparison. Same dynamic
     -- type → Go first checks the DYNAMIC type's comparability (resolved
@@ -1042,9 +1113,7 @@ mutual
         -- to `valueEqFuel`, whose `.defined` arm already fails closed with
         -- the precise "unknown defined type" reason.
         | _ => valueEqFuel fuel state dynL innerL innerR
-    | 0, _, .interface _, .interface _ _, .interface _ _ =>
-        unsupported "interface equality: type nesting too deep"
-    | _, _, .interface _, left, right => unsupported s!"interface equality for {repr left} and {repr right}"
+    | _ + 1, _, .interface _, left, right => unsupported s!"interface equality for {repr left} and {repr right}"
     | fuel + 1, state, .defined name, left, right => do
         match TypeEnv.lookup state.types name with
         | some (.alias target) => valueEqFuel fuel state target left right
@@ -1063,39 +1132,18 @@ mutual
                   stuck s!"left struct equality field count mismatch: expected {fields.size}, got {leftFields.size}"
                 if rightFields.size != fields.size then
                   stuck s!"right struct equality field count mismatch: expected {fields.size}, got {rightFields.size}"
-                valueEqStruct fuel state fields.toList leftFields.toList rightFields.toList
+                valueEqFieldsWith (valueEqFuel fuel state) fields.toList leftFields.toList rightFields.toList
             | _, _ => stuck s!"struct equality expected struct {name.key} operands, got {repr left} and {repr right}"
         | some (.unsupported feature) => unsupported s!"equality for {feature}"
         | some (.interfaceDef _) => unsupported s!"equality at interface type {name.key}"
         | none => unsupported s!"equality for unknown defined type {name.key}"
-    | 0, _, .defined _, _, _ => unsupported "equality: type nesting too deep"
-    | _, _, .unsupported feature, _, _ => unsupported s!"equality for {feature}"
+    | _ + 1, _, .unsupported feature, _, _ => unsupported s!"equality for {feature}"
 
-  /-- Compare array elements pairwise; callers guarantee equal, checked lengths. -/
-  def valueEqArray (fuel : Nat) (state : ExecState) (elem : Ty) :
-      List GoValue → List GoValue → Except GoError Bool
-    | leftValue :: leftRest, rightValue :: rightRest => do
-        if ← valueEqFuel fuel state elem leftValue rightValue then
-          valueEqArray fuel state elem leftRest rightRest
-        else
-          return false
-    | _, _ => return true
 
-  /-- Compare struct fields pairwise, checking field-name alignment on both sides. -/
-  def valueEqStruct (fuel : Nat) (state : ExecState) :
-      List FieldDef → List (String × GoValue) → List (String × GoValue) →
-      Except GoError Bool
-    | field :: fieldRest, (leftName, leftValue) :: leftRest, (rightName, rightValue) :: rightRest => do
-        if leftName != field.name then
-          stuck s!"left struct equality field mismatch: expected {field.name}, got {leftName}"
-        if rightName != field.name then
-          stuck s!"right struct equality field mismatch: expected {field.name}, got {rightName}"
-        if ← valueEqFuel fuel state field.typ leftValue rightValue then
-          valueEqStruct fuel state fieldRest leftRest rightRest
-        else
-          return false
-    | _, _, _ => return true
-end
+
+example (σ : ExecState) (a b : Bool) :
+    valueEqFuel 5 σ .bool (.bool a) (.bool b) = .ok (a == b) := by
+  simp [valueEqFuel]; rfl
 
 def valueEq (state : ExecState) (ty : Ty) (left right : GoValue) : Except GoError Bool :=
   valueEqFuel typeResolutionFuel state ty left right
@@ -1397,3 +1445,21 @@ def dynamicDispatch? (state : ExecState) (func : Func) (argValues : Array GoValu
           | some GoValue.nil =>
               throw (.panic "runtime error: invalid memory address or nil pointer dereference")
           | _ => return none
+
+/-! ## Elaborator sealing of the value-walk WRAPPERS (de-WF, 2026-08-03)
+
+The fuel families above are structurally recursive so the KERNEL can
+evaluate the interpreter (`Terminates` discharge; the old well-founded
+compilation's `Acc.rec` reduced nowhere). Left fully reducible, though, the
+ELABORATOR's `whnf`/`isDefEq` dives into 1024-literal fuel towers during
+unification — heartbeat blowups and perturbed `go_walk` matching. Sealing
+the FUEL functions is unworkable (equation-lemma generation is per-module
+and blocked by irreducibility), so the WRAPPERS are sealed instead: goals
+only ever contain wrapper applications (via `storeLoc`/`applyStrictOp`/…),
+so defeq stops before any literal budget is exposed, while
+`simp [<wrapper>, <fuel fn>, typeResolutionFuel]` still unfolds both by
+their equations. Kernel evaluation is unaffected (attributes are invisible
+to the kernel); an elaboration site that genuinely wants full reduction
+opts in with `with_unfolding_all`. -/
+attribute [irreducible] Ty.mentionsUnsupported normalizeValueForTy
+  defaultValue valueEq

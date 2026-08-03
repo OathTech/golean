@@ -957,6 +957,7 @@ theorem mapLookupValue_singleton {mba : Addr} {mty : Option Ty} {q v : Int}
     mapLookupValue σ ⟨some (.base mba)⟩ (.int q kind) (.int kind) valTy
       = .ok (.int v kind, true) := by
   simp [mapLookupValue, mapEntries, loadLoc, hl, mapEntryIndex?, valueEq,
-    valueEqFuel, checkKeyHashable, valueHashability, Bind.bind, Except.bind]
+    valueEqFuel, typeResolutionFuel, checkKeyHashable, valueHashability,
+    Bind.bind, Except.bind]
 
 end GoLean.Iris

@@ -66,7 +66,8 @@ theorem wp_recoverDirect_body {ra : Addr} {tl : Loc} {k}
   -- the payload's conversion to `any`
   go_walk_step (wp_strict_apply_pure (out := payload) (happly := fun σ => by
     simp [applyStrictOp, canonicalDynamicTy, canonicalTy, canonicalTyFuel,
-      Ty.mentionsUnsupported, payload, Bind.bind, Except.bind]))
+      Ty.mentionsUnsupported, Ty.mentionsUnsupportedFuel, typeResolutionFuel,
+      payload, Bind.bind, Except.bind]))
   -- the unwind of the statement spine
   go_walk
   -- the deferred closure's frame, on the PANIC path
@@ -79,7 +80,7 @@ theorem wp_recoverDirect_body {ra : Addr} {tl : Loc} {k}
       simp [dynamicDispatch?, methodInfoByFuncId?, h, hmeths, Bind.bind,
         Except.bind])
     (hnorm := fun σ => by
-      simp [normalizeValueForTy, normalizeValueForTyFuel])) as [pa, Hp]
+      simp [normalizeValueForTy, normalizeValueForTyFuel, typeResolutionFuel])) as [pa, Hp]
   -- the closure body: block, then `var $c0 any` (interface default: nil)
   simp only [litFunc]
   go_walk
@@ -95,13 +96,13 @@ theorem wp_recoverDirect_body {ra : Addr} {tl : Loc} {k}
       unfold storeLoc
       rw [hlook]
       simp [normalizeValueForTy, normalizeValueForTyFuel, panicPayload,
-        Bind.bind, Except.bind]))
+        Bind.bind, Except.bind, typeResolutionFuel]))
   -- `if $c0 != nil { *result$cap = 7 }`
   go_walk
   go_walk_step (wp_strict_apply_pure (out := .bool true)
     (happly := fun σ => by
       simp [applyStrictOp, panicPayload, valueEq, valueEqFuel,
-        Bind.bind, Except.bind]))
+        Bind.bind, Except.bind, typeResolutionFuel]))
   go_walk
   go_walk_step (wp_assign_store (oldcell := ⟨some (.int .int), .int 0 .int⟩)
     (newcell := ⟨some (.int .int), .int 7 .int⟩)

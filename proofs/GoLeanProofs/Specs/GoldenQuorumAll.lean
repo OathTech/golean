@@ -118,7 +118,7 @@ theorem wp_ci_fitIf_all {na sta sra : Addr} {w : GoValue} {n : Nat} {rest env k}
                    .slice ⟨some (.base sta), 0, n, 7⟩⟩)
       (fun σ _ht hl => by
         simp [storeLoc, hl, normalizeValueForTy, normalizeValueForTyFuel,
-          Bind.bind, Except.bind]))
+          Bind.bind, Except.bind, typeResolutionFuel]))
     go_walk 1
     rw [stkZero_split hfit]
     iapply Hcont $$ %sta %7 %(7 - n)
@@ -144,7 +144,7 @@ theorem wp_ci_fitIf_all {na sta sra : Addr} {w : GoValue} {n : Nat} {rest env k}
       (oldcell := ⟨some (.slice (.int .uint64)), .slice ⟨none, 0, 0, 0⟩⟩)
       (hstore := fun σ fa _ht hlk => by
         simp [storeLoc, hlk, normalizeValueForTy, normalizeValueForTyFuel,
-          Bind.bind, Except.bind])) as [fa, Hfa, Hc2]
+          Bind.bind, Except.bind, typeResolutionFuel])) as [fa, Hfa, Hc2]
     go_walk
     go_walk_step (wp_assign_store
       (oldcell := ⟨some (.slice (.int .uint64)), w⟩)
@@ -152,7 +152,7 @@ theorem wp_ci_fitIf_all {na sta sra : Addr} {w : GoValue} {n : Nat} {rest env k}
                    .slice ⟨some (.base fa), 0, n, n⟩⟩)
       (fun σ _ht hl => by
         simp [storeLoc, hl, normalizeValueForTy, normalizeValueForTyFuel,
-          Bind.bind, Except.bind]))
+          Bind.bind, Except.bind, typeResolutionFuel]))
     go_walk 1
     rw [makeSlice_cell (n := n)]
     iapply Hcont $$ %fa %n %0
@@ -242,7 +242,7 @@ theorem wp_ci_range_body_miss {la lba pa : Addr} {lty : Option Ty}
         show IntKind.uint64.normalize 0 = 0 from by decide])
     (hstore₁ := fun σ _ht hlk => by
       simp [storeLoc, hlk, normalizeValueForTy, normalizeValueForTyFuel,
-        Bind.bind, Except.bind]))
+        Bind.bind, Except.bind, typeResolutionFuel]))
   -- `if ok { … }` — NOT taken
   go_walk
   unfold ciOkIf
@@ -373,7 +373,7 @@ theorem wp_ci_loop_all {na ca cba la lba sra sta : Addr} {cty lty : Option Ty}
     (hnorm := fun σ _htypes p hp => by
       obtain ⟨x, hx, rfl⟩ := List.mem_map.1 (by simpa [cfgSnapshot] using hp)
       simp [voterEntry, u64, normalizeValueForTy, normalizeValueForTyFuel,
-        hnormk x hx])
+        hnormk x hx, typeResolutionFuel])
     (Hbody := by
       intro rem i hidx pa
       iintro ⟨⟨%ks, %filled, %zeros, %hpure, Hl, Hlb, Hsr, Hi, Hst⟩, Hid, Hk⟩
@@ -1079,7 +1079,7 @@ theorem wp_committedIndexCall_all {ca cba la lba ta : Addr}
       simp [normalizeValueForTy, normalizeValueForTyFuel, typeResolutionFuel,
         QuorumPin.typeEnv_MajorityConfig])
     (hnorm₁ := fun σ _ => by
-      simp [normalizeValueForTy, normalizeValueForTyFuel])
+      simp [normalizeValueForTy, normalizeValueForTyFuel, typeResolutionFuel])
     (hdef₀ := fun σ ht => by
       rw [execState_pin_eq (ht.trans htypes) (rfl (a := σ.functions))
         (rfl (a := σ.methods))]

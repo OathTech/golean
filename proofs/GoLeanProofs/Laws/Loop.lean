@@ -169,7 +169,8 @@ theorem wp_while_eq_once {xa : Addr} {x : String} {env k}
       rw [show IntKind.normalize .int 0 = 0 from by decide]
       iapply (wp_strict_apply_pure (out := .bool (n == 0)) (happly := by
         intro σ
-        simp [applyStrictOp, valueEq, valueEqFuel, Bind.bind, Except.bind]))
+        simp [applyStrictOp, valueEq, valueEqFuel, typeResolutionFuel,
+          Bind.bind, Except.bind]))
       iapply fupd_intro
       inext
       iapply fupd_intro

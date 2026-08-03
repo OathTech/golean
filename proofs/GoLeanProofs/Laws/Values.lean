@@ -24,7 +24,7 @@ Three groups:
    array all of whose elements are already-normalized ints of one kind
    normalizes to itself, at ANY fuel and ANY state. Without this a store
    into a symbolic array is unreachable by `simp`, which can only compute
-   `normalizeArrayForTy` on a literal.
+   `normalizeListWith` on a literal.
 3. **Sorted-permutation uniqueness** (`eq_of_perm_of_pairwise`) and its
    corollary for the machine's sort (`mergeSort_eq_of_perm`): two sorted
    lists that are permutations of each other are equal, hence
@@ -134,34 +134,48 @@ theorem arrayGet_middle' {pre rest : List GoValue} {x : GoValue} {j : Nat}
 
 /-! ## 2. Normalization of an already-normalized int array -/
 
-/-- An array of already-normalized ints of one kind normalizes to itself,
-at any fuel and in any state — so a store into a SYMBOLIC array is
+/-- A normalizer that fixes every element of `l` maps `l` to itself —
+fuel-free, since the de-WF recipe (2026-08-03) made the element walk the
+parameterized `normalizeListWith`. A store into a SYMBOLIC array is thus
 computable where `simp` alone (which needs a literal) is not. -/
-theorem normalizeArrayForTy_int (fuel : Nat) (σ : ExecState) (kind : IntKind) :
-    ∀ l : List GoValue,
-      (∀ x ∈ l, ∃ v : Int, x = .int v kind ∧ kind.normalize v = v) →
-      normalizeArrayForTy fuel σ (.int kind) l = .ok l.toArray := by
+theorem normalizeListWith_id {f : GoValue → Except GoError GoValue} :
+    ∀ l : List GoValue, (∀ x ∈ l, f x = .ok x) →
+      normalizeListWith f l = .ok l.toArray := by
   intro l
   induction l with
-  | nil => intro _; simp only [normalizeArrayForTy]; rfl
+  | nil => intro _; rfl
   | cons a t ih =>
     intro h
-    obtain ⟨v, rfl, hv⟩ := h a (by simp)
+    have ha := h a (by simp)
     have ht := ih (fun x hx => h x (by simp [hx]))
     rw [List.toArray_cons]
-    simp only [normalizeArrayForTy, normalizeValueForTyFuel, ht, hv,
-      Bind.bind, Except.bind, pure, Except.pure]
+    simp only [normalizeListWith, ha, ht, Bind.bind, Except.bind, pure,
+      Except.pure]
 
-/-- The same fact at the public entry point, packaged for an ARRAY value
-at an array type: `normalizeValueForTy` at `[n]kind`. -/
+/-- Already-normalized ints of one kind ride through the element
+normalizer at any positive fuel. -/
+theorem normalizeValueForTyFuel_int_id {σ : ExecState} {kind : IntKind}
+    {fuel : Nat} {v : Int} (hv : kind.normalize v = v) :
+    normalizeValueForTyFuel (fuel + 1) σ (.int kind) (.int v kind)
+      = .ok (.int v kind) := by
+  simp [normalizeValueForTyFuel, hv, typeResolutionFuel]
+
+/-- The packaged fact at the public entry point, for an ARRAY value at an
+array type: `normalizeValueForTy` at `[n]kind`. -/
 theorem normalizeValueForTy_intArray {σ : ExecState} {kind : IntKind} {n : Nat}
     {l : List GoValue} (hlen : l.length = n)
     (hall : ∀ x ∈ l, ∃ v : Int, x = .int v kind ∧ kind.normalize v = v) :
     normalizeValueForTy σ (.array n (.int kind)) (.array l.toArray)
       = .ok (.array l.toArray) := by
   have hsize : (l.toArray.size != n) = false := by simp [hlen]
-  simp only [normalizeValueForTy, normalizeValueForTyFuel, hsize,
-    Bool.false_eq_true, if_false, normalizeArrayForTy_int _ σ kind l hall,
+  have helems : ∀ x ∈ l,
+      normalizeValueForTyFuel 1023 σ (.int kind) x = .ok x := by
+    intro x hx
+    obtain ⟨v, rfl, hv⟩ := hall x hx
+    exact normalizeValueForTyFuel_int_id hv
+  simp only [normalizeValueForTy, typeResolutionFuel, normalizeValueForTyFuel,
+    hsize, Bool.false_eq_true, if_false, List.toList_toArray,
+    normalizeListWith_id l helems,
     Bind.bind, Except.bind, pure, Except.pure, Functor.map, Except.map]
 
 /-! ## 2b. `int` normalization on the representable range -/

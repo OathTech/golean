@@ -537,7 +537,8 @@ theorem wp_recover_catch_seven {ra : Addr} {k}
   iapply (wp_strict_apply_pure (out := RecoverWitness.payload)
     (happly := fun σ => by
       simp [applyStrictOp, canonicalDynamicTy, canonicalTy, canonicalTyFuel,
-        Ty.mentionsUnsupported, RecoverWitness.payload, Bind.bind, Except.bind]))
+        Ty.mentionsUnsupported, Ty.mentionsUnsupportedFuel, typeResolutionFuel,
+        RecoverWitness.payload, Bind.bind, Except.bind]))
   iapply fupd_intro
   inext
   iapply fupd_intro
@@ -562,7 +563,7 @@ theorem wp_recover_catch_seven {ra : Addr} {k}
       simp [dynamicDispatch?, methodInfoByFuncId?, h, hmeths, Bind.bind,
         Except.bind])
     (hnorm := fun σ _ => by
-      simp [normalizeValueForTy, normalizeValueForTyFuel]))
+      simp [normalizeValueForTy, normalizeValueForTyFuel, typeResolutionFuel]))
   iintro %pa Hp
   -- the deferred closure's body: if recover() != nil { *rp = 7 }
   iapply wp_seqn
@@ -607,7 +608,7 @@ theorem wp_recover_catch_seven {ra : Addr} {k}
   iintro Hc21
   iapply (wp_strict_apply_pure (out := .bool true)
     (happly := fun σ => by
-      simp [applyStrictOp, panicPayload, valueEq, valueEqFuel,
+      simp [applyStrictOp, panicPayload, valueEq, valueEqFuel, typeResolutionFuel,
         Bind.bind, Except.bind]))
   iapply fupd_intro
   inext
@@ -704,7 +705,7 @@ theorem wp_call_value_enter_rec {ra : Addr} {locs : List Loc} {env k}
       simp [dynamicDispatch?, methodInfoByFuncId?, h, hmeths, Bind.bind,
         Except.bind])
     (hnorm := fun σ _ => by
-      simp [normalizeValueForTy, normalizeValueForTyFuel])
+      simp [normalizeValueForTy, normalizeValueForTyFuel, typeResolutionFuel])
 
 open RecoverWitness in
 /-- Normal-path defer drain (return exit) witnessed on `rec$0`. -/
@@ -729,7 +730,7 @@ theorem wp_frame_defer_return_rec {ra : Addr}
       simp [dynamicDispatch?, methodInfoByFuncId?, h, hmeths, Bind.bind,
         Except.bind])
     (hnorm := fun σ _ => by
-      simp [normalizeValueForTy, normalizeValueForTyFuel])
+      simp [normalizeValueForTy, normalizeValueForTyFuel, typeResolutionFuel])
 
 open RecoverWitness in
 /-- Normal-path defer drain (fall exit), same instance. -/
@@ -754,7 +755,7 @@ theorem wp_frame_defer_fall_rec {ra : Addr}
       simp [dynamicDispatch?, methodInfoByFuncId?, h, hmeths, Bind.bind,
         Except.bind])
     (hnorm := fun σ _ => by
-      simp [normalizeValueForTy, normalizeValueForTyFuel])
+      simp [normalizeValueForTy, normalizeValueForTyFuel, typeResolutionFuel])
 
 /-- The remaining premise-carrying pure laws instantiated on concrete
 shapes: dispatch, an unrecovered marker resuming the unwind, unwinding

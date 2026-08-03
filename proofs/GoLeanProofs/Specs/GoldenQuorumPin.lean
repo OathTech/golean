@@ -505,7 +505,8 @@ theorem wp_sort_slice_srt {sa ba : Addr} {env k}
         heap_lookup_set_base_self, Bind.bind, Except.bind, List.range',
         List.forIn_cons, List.forIn_nil, arrayGet, arrayIndexNat, storeLoc,
         arraySet, coerceStoredValue, normalizeValueForTy,
-        normalizeValueForTyFuel, normalizeArrayForTy, List.mergeSort,
+        normalizeValueForTyFuel, typeResolutionFuel, normalizeListWith,
+        List.mergeSort,
         heap_set_set_of_lookup hlook, Functor.map, Except.map, n1, n2, n3]))
   isplitl [Hb]
   · iexact Hb
@@ -630,7 +631,7 @@ theorem wp_map_lookup_ackedIndex_entries {ma ida mba ta oa : Addr}
     (ocell := ⟨some .bool, .bool false⟩)
     (ocell' := ⟨some .bool, .bool b⟩)
     (hkey := fun σ _ht => by
-      simp [normalizeValueForTy, normalizeValueForTyFuel, hq])
+      simp [normalizeValueForTy, normalizeValueForTyFuel, hq, typeResolutionFuel])
     (hpair := hpair)
     (hstoret := fun σ ht hl => by
       rw [execState_pin_eq (ht.trans htypes) (rfl (a := σ.functions))
@@ -639,7 +640,7 @@ theorem wp_map_lookup_ackedIndex_entries {ma ida mba ta oa : Addr}
         typeResolutionFuel, QuorumPin.typeEnv_Index, hv, Bind.bind, Except.bind])
     (hstoreo := fun σ _ht hl => by
       simp [storeLoc, hl, normalizeValueForTy, normalizeValueForTyFuel,
-        Bind.bind, Except.bind]))
+        Bind.bind, Except.bind, typeResolutionFuel]))
   isplitl [Hmb]
   · iexact Hmb
   isplitl [Ht]
@@ -732,7 +733,7 @@ theorem wp_make_slice_c2 {c2a na : Addr} {env k}
     (oldcell := ⟨some (.slice (.int .uint64)), .slice ⟨none, 0, 0, 0⟩⟩)
     (hstore := fun σ fa _ht hlk => by
       simp [storeLoc, hlk, normalizeValueForTy, normalizeValueForTyFuel,
-        Bind.bind, Except.bind]))
+        Bind.bind, Except.bind, typeResolutionFuel]))
   isplitl [Hc2]
   · iexact Hc2
   iintro %fa ⟨Hfa, Hc2⟩
@@ -800,7 +801,7 @@ theorem wp_call_dynamic_enter_ackedIndex {mba : Addr} {n : Int}
       simp [normalizeValueForTy, normalizeValueForTyFuel, typeResolutionFuel,
         QuorumPin.typeEnv_mapAckIndexer])
     (hnorm₁ := fun σ _ => by
-      simp [normalizeValueForTy, normalizeValueForTyFuel])
+      simp [normalizeValueForTy, normalizeValueForTyFuel, typeResolutionFuel])
     (hdef₀ := fun σ ht => by
       rw [execState_pin_eq (ht.trans htypes) (rfl (a := σ.functions))
         (rfl (a := σ.methods))]
@@ -863,7 +864,7 @@ theorem wp_call_enter_ackedIndexImpl {mba : Addr} {n : Int}
       simp [normalizeValueForTy, normalizeValueForTyFuel, typeResolutionFuel,
         QuorumPin.typeEnv_mapAckIndexer])
     (hnorm₁ := fun σ _ => by
-      simp [normalizeValueForTy, normalizeValueForTyFuel])
+      simp [normalizeValueForTy, normalizeValueForTyFuel, typeResolutionFuel])
     (hdef₀ := fun σ ht => by
       rw [execState_pin_eq (ht.trans htypes) (rfl (a := σ.functions))
         (rfl (a := σ.methods))]

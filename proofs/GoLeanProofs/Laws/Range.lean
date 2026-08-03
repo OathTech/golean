@@ -247,7 +247,7 @@ theorem wp_map_iter_next_key_basic_key_witness {kid : String}
     (fun _σ _htypes i h => by
       obtain rfl := witnessSnapshot_index_zero h
       simp [witnessSnapshot, normalizeValueForTy, normalizeValueForTyFuel,
-        show IntKind.uint64.normalize 7 = 7 from by decide])
+        typeResolutionFuel, show IntKind.uint64.normalize 7 = 7 from by decide])
 
 /-- **Witness at a DEFINED key type — the instance the unpinned law did
 not have.** `hnorm` is discharged only BECAUSE the pin lets it read the
@@ -555,7 +555,7 @@ theorem wp_map_iter_inv_key_sum_witness {acc : Addr} {valTy : Ty} {env k}
       intro σ _hσ p hp
       obtain ⟨m, hm, hm0, hm1⟩ := hkeys p hp
       rw [hm]
-      simp [normalizeValueForTy, normalizeValueForTyFuel,
+      simp [normalizeValueForTy, normalizeValueForTyFuel, typeResolutionFuel,
         int_normalize_of_nonneg_lt hm0 hm1])
     (Hbody := by
       intro rem i h pa

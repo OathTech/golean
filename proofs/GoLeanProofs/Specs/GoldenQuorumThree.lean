@@ -393,7 +393,7 @@ theorem wp_ci_range_body {ia la lba sra sta pa : Addr} {lty : Option Ty}
         typeResolutionFuel, QuorumPin.typeEnv_Index, Bind.bind, Except.bind, hv])
     (hstore₁ := fun σ _ht hlk => by
       simp [storeLoc, hlk, normalizeValueForTy, normalizeValueForTyFuel,
-        Bind.bind, Except.bind]))
+        Bind.bind, Except.bind, typeResolutionFuel]))
   -- `if ok { srt[i] = uint64(idx); i-- }`
   go_walk
   unfold ciOkIf
@@ -547,7 +547,7 @@ theorem wp_ci_loop {na ca cba la lba sra sta : Addr} {cty lty : Option Ty}
     (hnorm := fun σ _htypes p hp => by
       obtain ⟨x, hx, rfl⟩ := List.mem_map.1 (by simpa [cfgSnapshot] using hp)
       simp [voterEntry, u64, normalizeValueForTy, normalizeValueForTyFuel,
-        hnormk x hx])
+        hnormk x hx, typeResolutionFuel])
     (Hbody := by
       intro rem i hidx pa
       iintro ⟨⟨%ks, %filled, %hpure, Hl, Hlb, Hsr, Hi, Hst⟩, Hid, Hk⟩
@@ -732,12 +732,12 @@ theorem wp_ci_tail_three {na sra sta ra : Addr} {filled : List Int} {env k}
         hlk, u64, heap_lookup_set_base_self, Bind.bind, Except.bind,
         List.range', List.forIn_cons, List.forIn_nil, arrayGet, arrayIndexNat,
         storeLoc, arraySet, coerceStoredValue, normalizeValueForTy,
-        normalizeValueForTyFuel, normalizeArrayForTy, hmerge,
+        normalizeValueForTyFuel, normalizeListWith, hmerge,
         heap_set_set_of_lookup hlk, Functor.map, Except.map, hna, hnb, hnc,
         show IntKind.uint64.normalize 0 = 0 from by decide,
         show IntKind.uint64.normalize 5 = 5 from by decide,
         show IntKind.uint64.normalize 6 = 6 from by decide,
-        show IntKind.uint64.normalize 12 = 12 from by decide]))
+        show IntKind.uint64.normalize 12 = 12 from by decide, typeResolutionFuel]))
   -- `pos := n - (n/2 + 1)` — pure integer arithmetic throughout
   go_walk
   rw [ciPosStmt_eq]
@@ -812,7 +812,7 @@ theorem ackedThree_lookup {lba : Addr} {lty : Option Ty} :
   rcases hq' with rfl | rfl | rfl <;>
     simp [ack3, mapLookupValue, mapEntries, loadLoc, hl, threeAckedEntries,
       mapEntryIndex?, valueEq, valueEqFuel, checkKeyHashable, valueHashability,
-      Bind.bind, Except.bind]
+      Bind.bind, Except.bind, typeResolutionFuel]
 
 end GoLean.Quorum
 
@@ -855,7 +855,7 @@ theorem wp_ci_fitIf_three {na sta sra : Addr} {w : GoValue} {rest env k}
                  .slice ⟨some (.base sta), 0, 3, 7⟩⟩)
     (fun σ _ht hl => by
       simp [storeLoc, hl, normalizeValueForTy, normalizeValueForTyFuel,
-        Bind.bind, Except.bind]))
+        Bind.bind, Except.bind, typeResolutionFuel]))
   go_walk_finish Hcont
 
 /-- **THE `CommittedIndex` BODY WALK AT 3 VOTERS** — the real
@@ -976,7 +976,7 @@ theorem wp_committedIndexCall_three {ca cba la lba ta : Addr}
       simp [applyStrictOp, canonicalDynamicTy, canonicalTy, canonicalTyFuel,
         resolveDefinedAliases, resolveDefinedAliasesFuel, typeResolutionFuel,
         QuorumPin.typeEnv_mapAckIndexer, Ty.mentionsUnsupported,
-        Bind.bind, Except.bind]))
+        Bind.bind, Except.bind, Ty.mentionsUnsupportedFuel]))
   go_walk_step (wp_call_enter₂₁ (func := QuorumPin.committedIndexImpl)
     (w₀ := .map ⟨some (.base cba)⟩)
     (w₁ := .interface (.defined ⟨"main.mapAckIndexer"⟩)
@@ -998,7 +998,7 @@ theorem wp_committedIndexCall_three {ca cba la lba ta : Addr}
       simp [normalizeValueForTy, normalizeValueForTyFuel, typeResolutionFuel,
         QuorumPin.typeEnv_MajorityConfig])
     (hnorm₁ := fun σ _ => by
-      simp [normalizeValueForTy, normalizeValueForTyFuel])
+      simp [normalizeValueForTy, normalizeValueForTyFuel, typeResolutionFuel])
     (hdef₀ := fun σ ht => by
       rw [execState_pin_eq (ht.trans htypes) (rfl (a := σ.functions))
         (rfl (a := σ.methods))]
@@ -1101,7 +1101,7 @@ theorem wp_threeAll_body {ra : Addr} {k}
                            .map ⟨some (.base fa)⟩⟩)
     (hstore := fun σ fa _ht hlk => by
       simp [storeLoc, hlk, normalizeValueForTy, normalizeValueForTyFuel,
-        Bind.bind, Except.bind])) as [cfgba, Hcfgb, Hc31]
+        Bind.bind, Except.bind, typeResolutionFuel])) as [cfgba, Hcfgb, Hc31]
   go_walk
   go_walk_step (wp_eval_strict_nullary_pin (v := .struct ⟨"struct{}"⟩ #[]) rfl
     (fun σ ht => by
@@ -1120,7 +1120,7 @@ theorem wp_threeAll_body {ra : Addr} {k}
       simp +decide [applyStmtOp, valueAsMap, mapEntries, loadLoc, hlk,
         mapEntryIndex?, normalizeValueForTy, normalizeValueForTyFuel,
         typeResolutionFuel, QuorumPin.typeEnv_structEmpty,
-        normalizeStructValueForFields, normalizeStructFieldsForTy,
+        normalizeStructValueWith, normalizeFieldsWith,
         checkKeyHashable, valueHashability, coerceStoredValue, storeLoc,
         Functor.map, Except.map, Bind.bind, Except.bind,
         show IntKind.uint64.normalize 1 = 1 from by decide])) as [Hcfgb]
@@ -1143,8 +1143,8 @@ theorem wp_threeAll_body {ra : Addr} {k}
       simp +decide [applyStmtOp, valueAsMap, mapEntries, loadLoc, hlk,
         mapEntryIndex?, valueEq, valueEqFuel, normalizeValueForTy,
         normalizeValueForTyFuel, typeResolutionFuel,
-        QuorumPin.typeEnv_structEmpty, normalizeStructValueForFields,
-        normalizeStructFieldsForTy, checkKeyHashable, valueHashability,
+        QuorumPin.typeEnv_structEmpty, normalizeStructValueWith,
+        normalizeFieldsWith, checkKeyHashable, valueHashability,
         coerceStoredValue, storeLoc, Functor.map, Except.map, Bind.bind,
         Except.bind, show IntKind.uint64.normalize 2 = 2 from by decide])) as [Hcfgb]
   go_walk
@@ -1166,8 +1166,8 @@ theorem wp_threeAll_body {ra : Addr} {k}
       simp +decide [applyStmtOp, valueAsMap, mapEntries, loadLoc, hlk,
         mapEntryIndex?, valueEq, valueEqFuel, threeConfigEntries,
         normalizeValueForTy, normalizeValueForTyFuel, typeResolutionFuel,
-        QuorumPin.typeEnv_structEmpty, normalizeStructValueForFields,
-        normalizeStructFieldsForTy, checkKeyHashable, valueHashability,
+        QuorumPin.typeEnv_structEmpty, normalizeStructValueWith,
+        normalizeFieldsWith, checkKeyHashable, valueHashability,
         coerceStoredValue, storeLoc, Functor.map, Except.map, Bind.bind,
         Except.bind, show IntKind.uint64.normalize 3 = 3 from by decide])) as [Hcfgb]
   -- `l := mapAckIndexer{1: 12, 2: 5, 3: 6}`
@@ -1184,7 +1184,7 @@ theorem wp_threeAll_body {ra : Addr} {k}
                            .map ⟨some (.base fa)⟩⟩)
     (hstore := fun σ fa _ht hlk => by
       simp [storeLoc, hlk, normalizeValueForTy, normalizeValueForTyFuel,
-        Bind.bind, Except.bind])) as [ackba, Hackb, Hc32]
+        Bind.bind, Except.bind, typeResolutionFuel])) as [ackba, Hackb, Hc32]
   go_walk
   go_walk_step (wp_stmt_op_apply_store (a := ackba)
     (oldcell := ⟨none, .mapData #[]⟩)
