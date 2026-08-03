@@ -164,6 +164,19 @@ adopted so long as the user's form above is a supported case.
   (fresh full run) AND again after the sort swap (fresh full run,
   873/873, `scripts/ci --diff` PASS at 4dddf7b).
 
+- **Slice 2 (`fuelOut` refinement) — DONE 2026-08-03.** `GoError.fuelOut`
+  is its own constructor (status `"fuel-out"`), thrown at the two
+  fuel-exhaustion sites (`runConfig`, `execStmtLoop`); `.stuck` no longer
+  doubles as the fuel marker (the old shape distinguished them only by
+  message text — unusable as the basis of interpreter-side `Progress`).
+  Guardrails-first honored: the two eval-tests were authored FIRST and
+  shown red against the old core ("expected fuel-out, got stuck"), then
+  the refinement landed them green. CLI observation schema extended with
+  the new status (fail-closed unknown-status handling unchanged). Proofs
+  layer: zero fallout (no proof matched GoError exhaustively). Gate:
+  `scripts/ci --diff` PASS, fresh 873/873, zero drift — corpus cases never
+  exhaust fuel, by construction.
+
 ## Exit criteria
 
 - `Terminates` and the total-correctness form exist, with the user's

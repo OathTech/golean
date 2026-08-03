@@ -283,7 +283,7 @@ private def decodeObservation (path raw : String) : Except String Json := do
       let _ ← StrictJson.mapArrayIdx values (fun i value => do
         decodeGoValueObservation s!"{path}.values[{i}]" value)
       return json
-  | "panic" | "unsupported" | "stuck" | "error" =>
+  | "panic" | "unsupported" | "stuck" | "error" | "fuel-out" =>
       StrictJson.requireExactKeys path obj ["message", "schema", "status"]
       let _ ← StrictJson.string s!"{path}.message" (← StrictJson.field path obj "message")
       return json

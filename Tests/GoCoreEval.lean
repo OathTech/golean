@@ -882,6 +882,16 @@ def main : IO UInt32 := do
       #[coreRecoverBodyFunction, coreRecoverNormalNilFunction] coreRecoverNormalNilFunction #[]) 5)
   passed := passed && (← expectErrorStatus "GoCore unrecovered panic aborts"
     (GoCore.Machine.runFunctionM 100000 corePanicAbortFunction #[]) "panic")
+  -- Fuel exhaustion is its OWN classification, distinct from stuck
+  -- (sem-adequacy arc slice 2, 2026-08-03: interpreter-side Progress says
+  -- "only .ok or fuel-out" — that reading is meaningless if the machine
+  -- reports running out of fuel as being stuck). Guardrail authored
+  -- BEFORE the GoError.fuelOut refinement; red against the old core.
+  passed := passed && (← expectErrorStatus "GoCore fuel exhaustion is fuel-out, not stuck"
+    (GoCore.Machine.runFunctionWithContextM 1 []
+      #[coreClosureBodyFunction, coreClosureShareFunction] coreClosureShareFunction #[]) "fuel-out")
+  passed := passed && (← expectErrorStatus "GoCore zero fuel is fuel-out"
+    (GoCore.Machine.runFunctionM 0 corePanicAbortFunction #[]) "fuel-out")
   if passed then
     return 0
   else

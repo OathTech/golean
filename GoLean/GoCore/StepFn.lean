@@ -450,7 +450,7 @@ def runConfig : Nat → ExecState → Config → Choices → Except GoError (Exe
       | .panicked msg => throw (.panic msg)
       | c =>
           match fuel with
-          | 0 => throw (.stuck "GoCore execution fuel exhausted")
+          | 0 => throw .fuelOut
           | fuel + 1 => do
               let (c', s', choices') ← stepFn s c choices
               runConfig fuel s' c' choices'
@@ -495,7 +495,7 @@ def execStmtLoop : Nat → ExecState → Config → Choices →
       | .panicked msg => throw (.panic msg)
       | c =>
           match fuel with
-          | 0 => throw (.stuck "GoCore execution fuel exhausted")
+          | 0 => throw .fuelOut
           | fuel + 1 => do
               let (c', σ', choices') ← stepFn σ c choices
               execStmtLoop fuel σ' c' choices'

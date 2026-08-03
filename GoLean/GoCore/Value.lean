@@ -100,6 +100,13 @@ inductive GoError where
   | unsupported (feature : String)
   | stuck (message : String)
   | internal (message : String)
+  /-- Fuel exhaustion — a MODEL artifact, not a program behavior: the
+  bounded run ended before the program did. Distinct from `.stuck` (sem-
+  adequacy arc slice 2, 2026-08-03) so interpreter-level safety can say
+  "every run ends `.ok` or `.fuelOut`, never stuck/panicked" and mean it;
+  conflating the two (the old shape distinguished them only by message
+  text) would make that reading unstatable. -/
+  | fuelOut
   deriving Repr, BEq, Inhabited
 
 def GoError.status : GoError → String
@@ -107,12 +114,14 @@ def GoError.status : GoError → String
   | .unsupported _ => "unsupported"
   | .stuck _ => "stuck"
   | .internal _ => "error"
+  | .fuelOut => "fuel-out"
 
 def GoError.message : GoError → String
   | .panic message => message
   | .unsupported feature => feature
   | .stuck message => message
   | .internal message => message
+  | .fuelOut => "GoCore execution fuel exhausted"
 
 structure Addr where
   id : Nat
