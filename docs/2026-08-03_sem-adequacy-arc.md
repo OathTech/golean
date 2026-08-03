@@ -177,6 +177,29 @@ adopted so long as the user's form above is a supported case.
   `scripts/ci --diff` PASS, fresh 873/873, zero drift — corpus cases never
   exhaust fuel, by construction.
 
+- **Slice 3 (sub-branch `sem-adequacy-notions`) — IN PROGRESS, paused at a
+  design choice point (2026-08-03).** Landed: the choices-discipline
+  refactor (`applyStmtOpCore` — the stream now syntactically touches
+  exactly two machine sites, both total); Surface's `Terminates` /
+  `ProgressExec` / `GoSpecT` / `goSpecT_assumed_form`; `execStmt_mono`;
+  `step_panicked_elim`. **BLOCKED, honestly:** the worker's ∀-choices kit
+  proof hit a machine-checked obstruction — `appendSlice`'s spill path
+  allocates fresh backing at `s.nextAddr` sized by the consumed capacity
+  choice, so a DANGLING target loc aliasing into the fresh cell makes
+  step success depend on the choice stream (witness: same state, target
+  `.index (.base nextAddr) 8` — `.ok` at stream `[1]`, index-panic at
+  `[0]`; a nested variant gives panic-vs-STUCK). No machine-reachable
+  well-formed state contains a dangling loc (allocator freshness; real Go
+  has no dangling addresses — fidelity unaffected, differential can never
+  see it), but `InitialSplit.HeapBounded` bounds heap KEYS only, so the
+  ∀-state notions (`ProgressExec` from relation-`Progress`, the transport
+  chain) are FALSE at these pathological unreachable states. The candidate
+  resolutions (user decision pending): (a) a `StateWf` invariant — every
+  loc occurring in heap values / env / config is below `nextAddr` —
+  proved preserved by `Step` and threaded into admissibility
+  (`InitialSplit`), strengthening every surface statement's premise; or
+  (b) reshape the spill arm to decouple ok-ness from the capacity choice.
+
 ## Exit criteria
 
 - `Terminates` and the total-correctness form exist, with the user's
