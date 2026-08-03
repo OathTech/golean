@@ -47,3 +47,21 @@ The differential runner already does this for normal coverage runs by setting
 If a command fails because the sandbox blocked network access, rerun that exact
 needed command with an explicit escalation request and a narrow justification.
 Do not preemptively request broad network or filesystem access.
+
+## Kernel-evaluation experiments: contain OOM (2026-08-03)
+
+Kernel/elaborator reduction of interpreter runs (`Terminates` discharge,
+`decide +kernel`, `with_unfolding_all rfl`) can explode memory FAST — an
+uncapped run ate through system RAM in seconds and the OOM killer took the
+whole zellij → sandbox → agent stack down with it (sem-adequacy arc,
+2026-08-03; user directive: OOMs must become LEAN failures, not
+stack-killers). Standing convention for ANY reduction-heavy `lake env lean`
+invocation:
+
+- run it under `ulimit -v` in a subshell — 16 GiB (`ulimit -v 16777216`)
+  is the default cap; below ~8 GiB Lean fails at startup ("failed to
+  create thread");
+- add a `timeout`, and run it as a BACKGROUND task so a blowup kills the
+  capped process, never the session;
+- one experiment per invocation (a stuck reduction reports per-file, and
+  isolation keeps the blast radius one example).
