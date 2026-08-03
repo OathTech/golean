@@ -401,7 +401,7 @@ theorem wp_make_slice {elem : Ty} {a : Addr} {n : Nat} {oldcell : HeapCell}
 slice over the first `vals.length` slots of a backing array whose
 elements are normalized ints of one kind: the apply step replaces those
 slots by the sorted image and leaves the tail alone. `hsorted` hands over
-the sort's ANSWER — the machine mergeSorts `(Int × IntKind)` pairs by
+the sort's ANSWER — the machine sorts (`sortLe`) `(Int × IntKind)` pairs by
 their `Int`, and any characterization of that list (e.g. via
 sorted-permutation uniqueness) may be supplied. -/
 theorem applyStmtOp_sortSlice_ints {σ : ExecState} {ch : Choices} {sta : Addr}
@@ -409,7 +409,7 @@ theorem applyStmtOp_sortSlice_ints {σ : ExecState} {ch : Choices} {sta : Addr}
     (hcap : vals.length + tail.length = cap)
     (hnormv : ∀ v ∈ vals, kind.normalize v = v)
     (htail : ∀ x ∈ tail, ∃ w : Int, x = .int w kind ∧ kind.normalize w = w)
-    (hsorted : (vals.map (fun v => (v, kind))).mergeSort (fun a b => decide (a.1 ≤ b.1))
+    (hsorted : sortLe (fun a b => decide (a.1 ≤ b.1)) (vals.map (fun v => (v, kind)))
       = sorted.map (fun v => (v, kind)))
     (hlook : Heap.lookup σ.heap (.base sta)
       = some (intArrayCell cap kind (intVals kind vals ++ tail))) :
@@ -421,7 +421,7 @@ theorem applyStmtOp_sortSlice_ints {σ : ExecState} {ch : Choices} {sta : Addr}
   -- the sorted list is a permutation of the input, hence same length and
   -- same (normalized) elements
   have hperm : (sorted.map (fun v => (v, kind))).Perm (vals.map (fun v => (v, kind))) := by
-    rw [← hsorted]; exact List.mergeSort_perm _ _
+    rw [← hsorted]; exact sortLe_perm _ _
   have hmem : ∀ v ∈ sorted, v ∈ vals := by
     intro v hv
     have hm : (v, kind) ∈ vals.map (fun v => (v, kind)) :=

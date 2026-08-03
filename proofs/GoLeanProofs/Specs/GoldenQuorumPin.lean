@@ -506,7 +506,7 @@ theorem wp_sort_slice_srt {sa ba : Addr} {env k}
         List.forIn_cons, List.forIn_nil, arrayGet, arrayIndexNat, storeLoc,
         arraySet, coerceStoredValue, normalizeValueForTy,
         normalizeValueForTyFuel, typeResolutionFuel, normalizeListWith,
-        List.mergeSort,
+        sortLe, insertLe,
         heap_set_set_of_lookup hlook, Functor.map, Except.map, n1, n2, n3]))
   isplitl [Hb]
   · iexact Hb

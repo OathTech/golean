@@ -532,7 +532,7 @@ open QuorumPin GoLean.Quorum GoLean.Iris
 
 The array the loop leaves holds an arbitrary permutation of the
 acked-or-zero multiset; `srt` is ANY sorted permutation of it, which by
-sorted-permutation uniqueness (`Laws/Values.mergeSort_pairs_eq_of_perm`)
+sorted-permutation uniqueness (`Laws/Values.sortLe_pairs_eq_of_perm`)
 is what the machine's `slices.Sort` computes — at any length, through
 the machine's own `for i in [:len]` loops
 (`Laws/Values.applyStmtOp_sortSlice_ints`), with no unrolling. -/
@@ -564,7 +564,7 @@ theorem wp_ci_tail_all {na sra sta ra : Addr} {filled srt : List Int}
       IntKind.uint64.normalize v = v := by
     intro v hv
     exact hnorm v (hperm.mem_iff.mp hv)
-  have hmerge := mergeSort_pairs_eq_of_perm (kind := IntKind.uint64) hperm hsorted
+  have hmerge := sortLe_pairs_eq_of_perm (kind := IntKind.uint64) hperm hsorted
   iintro ⟨Hn, Hsr, Hst, Hr, Hcont⟩
   rw [stkCell_as_intArray, sortStmt_eq]
   go_walk

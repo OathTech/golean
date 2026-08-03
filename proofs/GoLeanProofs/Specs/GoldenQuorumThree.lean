@@ -46,8 +46,8 @@ write goes to, which is what makes the write a `list_set_middle` at
 
 **The sort** (`wp_ci_tail_three`). After the loop `ks = []`, so `filled`
 is an arbitrary permutation of `[12, 5, 6]` — the array contents are
-genuinely not determined. `Laws/Values.mergeSort_intKind_eq_of_perm` says
-the machine's `mergeSort` returns the same list on every permutation of
+genuinely not determined. `Laws/Values.sortLe_pairs_eq_of_perm` says
+the machine's sort returns the same list on every permutation of
 its input, so the sort's transition is computed ONCE and the six orders
 never appear.
 
@@ -646,22 +646,17 @@ theorem stkCell_three (a b c : Int) :
 
 /-- **The sort, order-blind.** The three loaded values are a permutation
 of `[12, 5, 6]` and nothing more is known about them; the machine's
-`mergeSort` nevertheless returns one fixed list, by
-`Laws/Values.mergeSort_intKind_eq_of_perm`. This is the step that would
+the sort nevertheless returns one fixed list, by
+`Laws/Values.sortLe_pairs_eq_of_perm`. This is the step that would
 otherwise force the six fill orders into the proof. -/
-theorem mergeSort_three_all {a b c : Int} (hperm : [a, b, c].Perm [12, 5, 6]) :
-    ([(a, IntKind.uint64), (b, IntKind.uint64), (c, IntKind.uint64)] :
-        List (Int × IntKind)).mergeSort (fun x y => decide (x.1 ≤ y.1))
+theorem sortLe_three_all {a b c : Int} (hperm : [a, b, c].Perm [12, 5, 6]) :
+    sortLe (fun x y => decide (x.1 ≤ y.1))
+        ([(a, IntKind.uint64), (b, IntKind.uint64), (c, IntKind.uint64)] :
+          List (Int × IntKind))
       = [(5, IntKind.uint64), (6, IntKind.uint64), (12, IntKind.uint64)] := by
-  have hp : ([(a, IntKind.uint64), (b, IntKind.uint64), (c, IntKind.uint64)] :
-      List (Int × IntKind)).Perm
-      [(12, IntKind.uint64), (5, IntKind.uint64), (6, IntKind.uint64)] := by
-    simpa using hperm.map (fun v : Int => (v, IntKind.uint64))
-  rw [mergeSort_intKind_eq_of_perm hp (by
-    intro x hx y hy
-    simp only [List.mem_cons, List.not_mem_nil, or_false] at hx hy
-    rcases hx with rfl | rfl | rfl <;> rcases hy with rfl | rfl | rfl <;> rfl)]
-  simp [List.mergeSort, List.merge]
+  have hp2 : [a, b, c].Perm [5, 6, 12] :=
+    hperm.trans (by decide)
+  simpa using sortLe_pairs_eq_of_perm (kind := IntKind.uint64) hp2 (by decide)
 
 /-- The three fill values at the 3-voter instance are `12`, `5`, `6` in
 some order, so each is a normalized `uint64`. -/
@@ -692,7 +687,7 @@ open QuorumPin GoLean.Quorum
 The array the loop leaves holds a PERMUTATION of `[12, 5, 6]` in its
 first three slots, and which permutation is genuinely undetermined. The
 sort's transition is nevertheless computed once, through
-`mergeSort_three_all`; after it the array is the literal
+`sortLe_three_all`; after it the array is the literal
 `[5, 6, 12, 0, 0, 0, 0]` and the rest of the tail is ordinary walking:
 `pos = 3 - (3/2 + 1) = 1` and `srt[1] = 6` — Go's `n/2+1`-th largest. -/
 theorem wp_ci_tail_three {na sra sta ra : Addr} {filled : List Int} {env k}
@@ -715,7 +710,7 @@ theorem wp_ci_tail_three {na sra sta ra : Addr} {filled : List Int} {env k}
     match filled, hlen with
     | [a, b, c], _ => exact ⟨a, b, c, rfl⟩
   obtain ⟨hna, hnb, hnc⟩ := three_all_normalized hperm
-  have hmerge := mergeSort_three_all hperm
+  have hmerge := sortLe_three_all hperm
   rw [stkCell_three]
   iintro ⟨Hn, Hsr, Hst, Hr, Hcont⟩
   -- `slices.Sort(srt)` — the ORDER-BLIND step

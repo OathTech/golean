@@ -698,7 +698,7 @@ theorem wp_ci_tail_one {na sra sta ra : Addr} {env k}
         hlk, stkOne, heap_lookup_set_base_self, Bind.bind, Except.bind,
         List.range', List.forIn_cons, List.forIn_nil, arrayGet, arrayIndexNat,
         storeLoc, arraySet, coerceStoredValue, normalizeValueForTy,
-        normalizeValueForTyFuel, normalizeListWith, List.mergeSort,
+        normalizeValueForTyFuel, normalizeListWith, sortLe, insertLe,
         heap_set_set_of_lookup hlk, Functor.map, Except.map,
         show IntKind.uint64.normalize 12 = 12 from by decide,
         show IntKind.uint64.normalize 0 = 0 from by decide, typeResolutionFuel]))

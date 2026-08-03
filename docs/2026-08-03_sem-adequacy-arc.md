@@ -114,6 +114,45 @@ adopted so long as the user's form above is a supported case.
   CLAUDE.md "prefer structural recursion so the proof direction stays
   reachable" principle cashing out, three weeks after it was written.
 
+- **Slice 1 executed (sub-branch `sem-adequacy-dewf`) — the de-WF
+  restructure + spike completion, 2026-08-03.** Chronicle, including two
+  design corrections the process forced:
+  1. **Node-count fuel rejected (soundness catch).** The first structural
+     recipe charged fuel per element; threading its side condition into the
+     sort walk showed it would make `Progress` — and hence
+     `committedIndexAllConfigs` — FALSE for configs past the budget (the
+     statement quantifies `c.length < 2^63`). Shipped shape: parameterized
+     list/field helpers (`normalizeListWith` etc.) taking the
+     already-decremented recursive function — structural, kernel-reducible,
+     and DEPTH-only accounting exactly as before (budget unchanged).
+  2. **Elaborator sealing.** Reducible fuel towers made `whnf`/`isDefEq`
+     dive 1024 literals deep (heartbeat blowups; one uncapped reduction ate
+     system RAM in seconds — twice took the whole session stack down via
+     the OOM killer; containment convention now in
+     `docs/agent-sandbox.md`). Sealing the FUEL functions is unworkable
+     (equation generation is per-module and blocked by irreducibility —
+     found empirically); the WRAPPERS are sealed instead, restoring the
+     old equations-only proof discipline; kernel unaffected.
+  3. **`List.mergeSort` is kernel-irreducible** (WF-compiled in core Lean;
+     the elaborator's smart unfolding had hidden this). The machine's
+     `sortSlice` now uses the structural `sortLe` (insertion sort), with
+     the `Laws/Values` lemma surface mirrored (`sortLe_perm`,
+     `pairwise_sortLe`, `sortLe_pairs_eq_of_perm`); output provably
+     agrees (sorted-permutation uniqueness) and the mergeSort lemmas stay
+     for the math layer (`sortAsc`).
+  4. **The derived `BEq GoValue` is WF-compiled too** (nested `Array`) —
+     it stuck the first end-to-end kernel probes and cost a fuel-bisect to
+     localize; kernel-side checks must project to primitive types (the
+     readout statements' `loadLoc … = .ok (.int v k)` form is already
+     right; only Bool-level probes need care).
+  **RESULT: all four pinned programs kernel-evaluate end to end** —
+  recover→7 (296-step quorum: oneKnown→12; threeAll→6; the real
+  `main.MajorityConfig.CommittedIndex` on the heap-encoded 3-voter
+  config→6) — in ≈4 s total under a 16 GiB cap, `decide +kernel`, no
+  `native_decide`. `Terminates` discharge is VIABLE for the whole summit
+  family. Differential: 873/873 no-drift after the de-WF families
+  (fresh full run); the sort-swap re-run is recorded below when green.
+
 ## Exit criteria
 
 - `Terminates` and the total-correctness form exist, with the user's

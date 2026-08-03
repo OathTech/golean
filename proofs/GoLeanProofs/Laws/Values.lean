@@ -308,6 +308,99 @@ theorem mergeSort_pairs_eq_of_perm {kind : IntKind} {vals srt : List Int}
       rfl
     exact Prod.ext h1 (hka.trans hkb.symm)
 
+/-! ### The structural sort (`sortLe`) — permutation, sortedness, bridge
+
+`sortLe` replaced `List.mergeSort` in the machine's `sortSlice` (de-WF,
+2026-08-03: `mergeSort` is well-founded-compiled in core Lean, hence
+kernel-irreducible — it blocked `Terminates` discharge on every sorting
+program). Same lemma surface as the mergeSort block above, which STAYS for
+the math layer (`sortAsc` in the quorum spec is Prop-side, where the
+elaborator's smart unfolding suffices). -/
+
+theorem insertLe_perm {α : Type _} (le : α → α → Bool) (x : α) :
+    ∀ l : List α, (insertLe le x l).Perm (x :: l)
+  | [] => List.Perm.refl _
+  | y :: ys => by
+    simp only [insertLe]
+    by_cases h : le x y
+    · rw [if_pos h]
+    · rw [if_neg h]
+      exact ((insertLe_perm le x ys).cons y).trans (List.Perm.swap x y ys)
+
+theorem sortLe_perm {α : Type _} (le : α → α → Bool) :
+    ∀ l : List α, (sortLe le l).Perm l
+  | [] => List.Perm.refl _
+  | x :: xs =>
+    (insertLe_perm le x (sortLe le xs)).trans ((sortLe_perm le xs).cons x)
+
+theorem pairwise_insertLe {α : Type _} {le : α → α → Bool}
+    (htrans : ∀ a b c : α, le a b = true → le b c = true → le a c = true)
+    (htotal : ∀ a b : α, (le a b || le b a) = true) (x : α) :
+    ∀ {l : List α}, l.Pairwise (fun a b => le a b = true) →
+      (insertLe le x l).Pairwise (fun a b => le a b = true)
+  | [], _ => by simp [insertLe]
+  | y :: ys, h => by
+    obtain ⟨hhead, htail⟩ := List.pairwise_cons.1 h
+    simp only [insertLe]
+    by_cases hxy : le x y
+    · rw [if_pos hxy]
+      refine List.pairwise_cons.2 ⟨?_, h⟩
+      intro b hb
+      rcases List.mem_cons.1 hb with rfl | hb'
+      · exact hxy
+      · exact htrans x y b hxy (hhead b hb')
+    · rw [if_neg hxy]
+      have hyx : le y x = true := by
+        have := htotal x y
+        simp only [Bool.or_eq_true] at this
+        rcases this with h' | h'
+        · exact absurd h' hxy
+        · exact h'
+      refine List.pairwise_cons.2 ⟨?_, pairwise_insertLe htrans htotal x htail⟩
+      intro b hb
+      rcases (insertLe_perm le x ys).mem_iff.mp hb |> List.mem_cons.1 with rfl | hb'
+      · exact hyx
+      · exact hhead b hb'
+
+theorem pairwise_sortLe {α : Type _} {le : α → α → Bool}
+    (htrans : ∀ a b c : α, le a b = true → le b c = true → le a c = true)
+    (htotal : ∀ a b : α, (le a b || le b a) = true) :
+    ∀ l : List α, (sortLe le l).Pairwise (fun a b => le a b = true)
+  | [] => List.Pairwise.nil
+  | x :: xs => pairwise_insertLe htrans htotal x (pairwise_sortLe htrans htotal xs)
+
+/-- **Any sorted permutation IS the machine's sort answer** — the
+`sortLe` twin of `mergeSort_pairs_eq_of_perm`. Target-free. -/
+theorem sortLe_pairs_eq_of_perm {kind : IntKind} {vals srt : List Int}
+    (hp : vals.Perm srt) (hsorted : srt.Pairwise (· ≤ ·)) :
+    sortLe (fun a b => decide (a.1 ≤ b.1)) (vals.map (fun v => (v, kind)))
+      = srt.map (fun v => (v, kind)) := by
+  have htrans : ∀ a b c : Int × IntKind,
+      decide (a.1 ≤ b.1) = true → decide (b.1 ≤ c.1) = true → decide (a.1 ≤ c.1) = true := by
+    intro a b c hab hbc
+    simp only [decide_eq_true_eq] at hab hbc ⊢
+    omega
+  have htotal : ∀ a b : Int × IntKind,
+      (decide (a.1 ≤ b.1) || decide (b.1 ≤ a.1)) = true := by
+    intro a b
+    simp only [Bool.or_eq_true, decide_eq_true_eq]
+    omega
+  refine eq_of_perm_of_pairwise (le := fun a b => decide (a.1 ≤ b.1) = true)
+    ((sortLe_perm _ _).trans (hp.map _))
+    (pairwise_sortLe htrans htotal _) ?_ ?_
+  · rw [List.pairwise_map]
+    exact hsorted.imp (by intro a b h; simpa using h)
+  · intro a ha b hb hab hba
+    simp only [decide_eq_true_eq] at hab hba
+    have h1 : a.1 = b.1 := by omega
+    have hka : a.2 = kind := by
+      obtain ⟨x, _, rfl⟩ := List.mem_map.1 ((sortLe_perm _ _).mem_iff.mp ha)
+      rfl
+    have hkb : b.2 = kind := by
+      obtain ⟨x, _, rfl⟩ := List.mem_map.1 ((sortLe_perm _ _).mem_iff.mp hb)
+      rfl
+    exact Prod.ext h1 (hka.trans hkb.symm)
+
 /-- The `some` entries are no more numerous than the entries. -/
 theorem reduceOption_length_le {α : Type _} :
     ∀ l : List (Option α), (l.reduceOption).length ≤ l.length

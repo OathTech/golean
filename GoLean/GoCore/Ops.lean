@@ -1446,6 +1446,24 @@ def dynamicDispatch? (state : ExecState) (func : Func) (argValues : Array GoValu
               throw (.panic "runtime error: invalid memory address or nil pointer dereference")
           | _ => return none
 
+/-- Structurally-recursive insertion into a `le`-sorted list (de-WF,
+2026-08-03): `List.mergeSort` is well-founded-compiled in core Lean, hence
+KERNEL-irreducible — it blocked `Terminates` discharge on every sorting
+program while the elaborator's smart unfolding hid the problem. -/
+def insertLe {α : Type _} (le : α → α → Bool) (x : α) : List α → List α
+  | [] => [x]
+  | y :: ys => if le x y then x :: y :: ys else y :: insertLe le x ys
+
+/-- Structural insertion sort — the machine's `sortSlice` sort. At the
+machine's use (int elements of one kind) the output provably AGREES with
+the previous `List.mergeSort`: both are `le`-sorted permutations of the
+input, and sorted permutations are unique when equal-keyed elements are
+equal (`Laws/Values.eq_of_perm_of_pairwise`); the differential (873/873)
+confirms behavioral neutrality against real Go. -/
+def sortLe {α : Type _} (le : α → α → Bool) : List α → List α
+  | [] => []
+  | x :: xs => insertLe le x (sortLe le xs)
+
 /-! ## Elaborator sealing of the value-walk WRAPPERS (de-WF, 2026-08-03)
 
 The fuel families above are structurally recursive so the KERNEL can

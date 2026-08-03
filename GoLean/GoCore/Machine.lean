@@ -727,7 +727,9 @@ def applyStmtOp (s : ExecState) (choices : Choices) (op : StmtOp) (nt : Nat)
             match ← loadLoc current (← sliceIndexLoc slice (Int.ofNat i)) with
             | .int v kind => loaded := loaded.push (v, kind)
             | other => stuck s!"sortSlice expected int element, got {repr other}"
-          let sorted := (loaded.toList.mergeSort (fun a b => a.1 ≤ b.1)).toArray
+          -- `sortLe`, not `List.mergeSort`: the latter is WF-compiled and
+          -- kernel-irreducible (de-WF, 2026-08-03; output provably agrees).
+          let sorted := (sortLe (fun a b => a.1 ≤ b.1) loaded.toList).toArray
           for i in [:slice.len] do
             match sorted[i]? with
             | some (v, kind) =>

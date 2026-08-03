@@ -1007,7 +1007,7 @@ example := @GoLean.Iris.mergeSort_eq_of_perm
 example := @GoLean.Iris.mergeSort_intKind_eq_of_perm
 example := @GoLean.Quorum.storeLoc_stk_fill
 example := @GoLean.Quorum.perm_eraseIdx_append
-example := @GoLean.Quorum.mergeSort_three_all
+example := @GoLean.Quorum.sortLe_three_all
 /-- `✓` the negative pins (trivialization guards). -/
 example := @GoLean.GoCore.NegativeSpecs.unbound_ref_stuck
 example := @GoLean.GoCore.NegativeSpecs.unbound_var_stuck
