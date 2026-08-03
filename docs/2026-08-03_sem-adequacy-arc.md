@@ -94,6 +94,26 @@ adopted so long as the user's form above is a supported case.
    landed; Audit gates updated; **Comparator landmark run mandatory**
    (designated statements change) before the merge ask.
 
+## Build log
+
+- **Slice 1 spike — VERDICT (2026-08-03): tractable after a bounded core
+  restructure.** Phase A (compiled): all four pinned programs terminate
+  with correct readouts (recover→7, oneKnown→12, threeAll→6, allConfig→6)
+  at fuel ≤ 4000, milliseconds. Phase B (kernel `rfl`): stuck — `#reduce`
+  tracing found `Acc.rec`, i.e. well-founded recursion, which never
+  reduces definitionally. Environment scan of every `GoLean.*` constant
+  for `WellFounded.fix`/`Acc.rec`/`._unary` found the COMPLETE
+  kernel-irreducible set is four definition families:
+  `Ty.mentionsUnsupported`, `defaultValueFuel` (mutual),
+  `normalizeValueForTyFuel` (mutual), `valueEqFuel` (mutual) — every one a
+  bounded type/value helper, none of them `stepFn`'s spine. Fix: uniform
+  depth-structural recursion (`| d+1 => … d` on an explicit Nat), which
+  the kernel reduces; signatures preserved via the existing fuel-constant
+  wrappers; behavior change confined to how fast internal resolution
+  depth is consumed (differential validates neutrality). This is the
+  CLAUDE.md "prefer structural recursion so the proof direction stays
+  reachable" principle cashing out, three weeks after it was written.
+
 ## Exit criteria
 
 - `Terminates` and the total-correctness form exist, with the user's
