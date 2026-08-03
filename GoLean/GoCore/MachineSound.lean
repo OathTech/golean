@@ -383,4 +383,49 @@ theorem execStmt_sound_normal {fuel : Nat} {env : LocalEnv} {σ : ExecState}
     Steps (.exec prog env .stop) σ (.next .stop) σf :=
   execStmtLoop_sound_normal h
 
+
+/-! ### The sem() correspondence kit (sem-adequacy arc slice 3, 2026-08-03)
+
+Interpreter-level `Terminates`/`ProgressExec` (`Surface.lean`) rest on
+three machine facts: fuel monotonicity of completed runs, choices-
+obliviousness of step SUCCESS (the machine consumes the stream at exactly
+two sites, both total — `applyStmtOpCore` makes this structural), and the
+transport from relation-Progress to per-run non-stuckness. -/
+
+/-- A completed bounded run is stable under more fuel: the loop stops at
+the terminal before consulting the surplus. -/
+theorem execStmtLoop_mono :
+    ∀ (fuel fuel' : Nat) (σ : ExecState) (c : Config) (ch : Choices)
+      (r : ExecOutcome × Choices),
+    fuel ≤ fuel' → execStmtLoop fuel σ c ch = .ok r →
+    execStmtLoop fuel' σ c ch = .ok r := by
+  intro fuel
+  induction fuel with
+  | zero =>
+    intro fuel' σ c ch r _ h
+    unfold execStmtLoop at h ⊢
+    split at h <;> simp_all
+  | succ n ih =>
+    intro fuel' σ c ch r hle h
+    obtain ⟨m, rfl⟩ : ∃ m, fuel' = m + 1 := ⟨fuel' - 1, by omega⟩
+    unfold execStmtLoop at h ⊢
+    split at h <;> try simp_all
+    -- the non-terminal arm: one step then recurse at smaller fuel
+    simp only [Bind.bind] at h ⊢
+    cases hstep : stepFn σ c ch with
+    | error e => rw [hstep] at h; simp [Except.bind] at h
+    | ok trip =>
+      obtain ⟨c', σ', ch'⟩ := trip
+      rw [hstep] at h
+      simp only [Except.bind] at h ⊢
+      exact ih _ _ _ _ _ _ (by omega) h
+
+@[inherit_doc execStmtLoop_mono]
+theorem execStmt_mono {fuel fuel' : Nat} {env : LocalEnv} {σ : ExecState}
+    {ch : Choices} {prog : Stmt} {r : ExecOutcome × Choices}
+    (hle : fuel ≤ fuel')
+    (h : execStmt fuel env σ ch prog = .ok r) :
+    execStmt fuel' env σ ch prog = .ok r :=
+  execStmtLoop_mono fuel fuel' _ _ _ _ hle h
+
 end GoLean.GoCore.Machine

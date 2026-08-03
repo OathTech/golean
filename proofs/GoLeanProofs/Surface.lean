@@ -248,4 +248,82 @@ def GoFuncSpec (types : TypeEnv) (funcs : Array Func) (methods : Array MethodInf
       (.ex fun (n : Int) =>
         .sep (.pointsTo ra ⟨some (.int kind), .int n kind⟩) (Q n))
 
+/-! ## The sem() idiom's first-class notions (sem-adequacy arc slice 3,
+2026-08-03; plan of record `docs/2026-08-03_sem-adequacy-arc.md`)
+
+Termination and safety as INTERPRETER-level notions — no Iris, no
+relation: the statement language is `execStmt` alone. `Progress` above
+(relation-quantified) remains during the transition and is retired at the
+arc's eviction slice. -/
+
+/-- **Termination, interpreter-level**: the run from `σ₀` completes —
+one fuel bound works for EVERY choices stream (uniform: the machine's
+branching is finite — a map pick is bounded by the snapshot size, a spill
+choice only sizes a capacity — so a per-stream bound lifts to a uniform
+one; taking the uniform form keeps the notion a single `∃`).
+"Completes" means the bounded iteration reaches `.ok` at ANY of the four
+unwound terminals; which terminal — and with what state — is a
+postcondition's business, not termination's. Discharge routes: kernel
+evaluation at one fuel (`decide +kernel` on a primitive projection —
+slice-1 spike) plus `execStmt_mono` lifts to all larger fuels. -/
+def Terminates (env₀ : LocalEnv) (σ₀ : ExecState) (prog : Stmt) : Prop :=
+  ∃ N : Nat, ∀ fuel : Nat, N ≤ fuel → ∀ ch : Choices,
+    ∃ (out : ExecOutcome) (ch' : Choices),
+      execStmt fuel env₀ σ₀ ch prog = .ok (out, ch')
+
+/-- **Safety, interpreter-level** (the arc's replacement for the
+relation-quantified `Progress`): from any admissible framed initial
+state, EVERY bounded run ends `.ok` or `.fuelOut` — never stuck, never an
+unrecovered panic, never `unsupported`, never an internal error. Read
+with `GoTriple`: "however long you run it, it has either finished
+cleanly or merely not finished yet." -/
+def ProgressExec (types : TypeEnv) (funcs : Array Func)
+    (methods : Array MethodInfo) (env₀ : LocalEnv)
+    (P : HProp) (prog : Stmt) : Prop :=
+  ∀ (hp : Heap) (na : Nat) (hP F : Heaplet), InitialSplit P hp na hP F →
+    ∀ (fuel : Nat) (ch : Choices),
+      (∃ (out : ExecOutcome) (ch' : Choices),
+        execStmt fuel env₀
+          { types := types, functions := funcs, methods := methods,
+            heap := hp, nextAddr := na }
+          ch prog = .ok (out, ch'))
+      ∨ execStmt fuel env₀
+          { types := types, functions := funcs, methods := methods,
+            heap := hp, nextAddr := na }
+          ch prog = .error .fuelOut
+
+/-- **The TOTAL surface judgment** — the sem() idiom's headline default:
+triple + interpreter-level safety + proven termination from every
+admissible initial state. Strictly stronger than `GoSpec`: a diverging
+program satisfies a `GoSpec` vacuously on the triple side; it cannot
+satisfy this. -/
+def GoSpecT (types : TypeEnv) (funcs : Array Func)
+    (methods : Array MethodInfo) (env₀ : LocalEnv)
+    (P : HProp) (prog : Stmt) (Q : HProp) : Prop :=
+  GoTriple types funcs methods env₀ P prog Q
+    ∧ ProgressExec types funcs methods env₀ P prog
+    ∧ ∀ (hp : Heap) (na : Nat) (hP F : Heaplet), InitialSplit P hp na hP F →
+        Terminates env₀
+          { types := types, functions := funcs, methods := methods,
+            heap := hp, nextAddr := na }
+          prog
+
+/-- The user-form specification — ⟨terminates⟩ ∧ ⟨pre⟩ → post — as a
+DERIVED case: a total judgment yields it directly (and `GoSpec` +
+assumed termination yields the analogous read). Recorded as a theorem so
+the plan-of-record's "the sketch form is a supported case" is a checked
+fact rather than prose. -/
+theorem goSpecT_assumed_form {types funcs methods env₀} {P Q : HProp}
+    {prog : Stmt}
+    (h : GoSpecT types funcs methods env₀ P prog Q) :
+    ∀ (hp : Heap) (na : Nat) (hP F : Heaplet), InitialSplit P hp na hP F →
+      ∀ (fuel : Nat) (ch : Choices) (σf : ExecState) (ch' : Choices),
+        execStmt fuel env₀
+            { types := types, functions := funcs, methods := methods,
+              heap := hp, nextAddr := na }
+            ch prog = .ok (.normal σf, ch') →
+        ∃ hQ : Heaplet, (∀ k, hQ.get? k = none ∨ F.get? k = none)
+          ∧ hQ.sub (heapletOf σf.heap) ∧ F.sub (heapletOf σf.heap) ∧ sat hQ Q :=
+  fun hp na hP F hin => h.1 hp na hP F hin
+
 end GoLean.Surface
