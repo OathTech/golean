@@ -390,7 +390,31 @@ Interpreter-level `Terminates`/`ProgressExec` (`Surface.lean`) rest on
 three machine facts: fuel monotonicity of completed runs, choices-
 obliviousness of step SUCCESS (the machine consumes the stream at exactly
 two sites, both total — `applyStmtOpCore` makes this structural), and the
-transport from relation-Progress to per-run non-stuckness. -/
+transport from relation-Progress to per-run non-stuckness.
+
+**Slice-3 obstruction (2026-08-03, machine-checked): step SUCCESS is NOT
+choices-oblivious over arbitrary states.** `applyStmtOp`'s appendSlice
+spill path allocates the new backing at `s.nextAddr` and THEN stores the
+result slice through the target address; a target `Loc` that aliases into
+that fresh cell (base id = `s.nextAddr` — a dangling address no reachable
+well-formed state contains, but nothing in these theorems' hypotheses
+excludes) makes the outcome depend on the consumed capacity choice:
+`extra` sizes the fresh backing array, so an index along the target path
+can be in range at one stream and out of range (panic) — or land on a
+non-array element (stuck) — at another. Concrete witness (state: heap
+`{0 ↦ array[4], 1 ↦ array[1]}`, `nextAddr = 2`, spill `4+1 > cap 4`,
+growth base `appendGrowthCap 4 5 = 8`, target `.index (.base 2) 8`):
+`.ok` under stream `[1]` (newCap 9) vs `.error (.panic "index out of
+range")` under `[0]` (newCap 8); with target `.index (.index (.base 2) 8)
+0` it is panic-vs-STUCK. So `applyStmtOp`-ok-at-one-stream →
+ok-at-every-stream is FALSE, and with it per-rule completeness-at-every-
+stream and the unconditioned relation-Progress → `ProgressExec`
+transport. `buildAppendBackingValue` itself is NOT the obstruction (its
+cap-check never fires for the caps this arm passes, and its padding
+`defaultValue` is derivable from the arm's normalize successes); the
+final aliasing store is. The transport needs a dangling-loc
+well-formedness side condition (locs below `nextAddr`, preserved by
+`Step`) — a design decision recorded for the arc doc, not forced here. -/
 
 /-- A completed bounded run is stable under more fuel: the loop stops at
 the terminal before consulting the surplus. -/
@@ -427,5 +451,14 @@ theorem execStmt_mono {fuel fuel' : Nat} {env : LocalEnv} {σ : ExecState}
     (h : execStmt fuel env σ ch prog = .ok r) :
     execStmt fuel' env σ ch prog = .ok r :=
   execStmtLoop_mono fuel fuel' _ _ _ _ hle h
+
+/-- `.panicked` is genuinely terminal for the relation, not just for the
+driver: no rule's source configuration is `.panicked` (every conclusion
+starts from an eval/ret/exec/unwind shape), so a reachable `.panicked`
+can never be discharged by "it still steps" in a progress hypothesis. -/
+theorem step_panicked_elim {msg : String} {σ : ExecState} {c' : Config}
+    {σ' : ExecState} : ¬ Step (.panicked msg) σ c' σ' := by
+  intro h
+  cases h
 
 end GoLean.GoCore.Machine
