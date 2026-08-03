@@ -83,9 +83,12 @@ quirks must stay inside adapters.
 - Differential testing is a first-class design constraint, not a later add-on.
 - The Lean-side executable semantics should be small, explicit, and fail-closed
   on unsupported or surprising inputs.
-- The proof-facing semantics should be relational, with the executable
-  interpreter treated as a differential-testing implementation of that relation
-  for supported concrete runs.
+- The executable interpreter is the semantic authority and the statement
+  language: headline theorems are stated over `execStmt`/`stepFn` alone
+  (termination, safety, and pre/post all interpreter-level). The Prop-level
+  relation exists for Iris's sake, is proven equivalent to the executable
+  step, and never appears in statements (sem-adequacy arc, 2026-08-03 —
+  this inverts the earlier framing of this bullet).
 - GoCore should model Go behavior, not Gobra's internal IR.
 - Gobra-specific assertions, specifications, predicates, invariants, and ghost
   artifacts are not GoCore runtime semantics. They are decoded only as strict
@@ -106,9 +109,13 @@ quirks must stay inside adapters.
 - Slice semantics should use a descriptor over backing locations, not copied
   vectors. This follows the Goose/Perennial shape and leaves room for
   `own_slice`/`own_slice_cap` predicates in Iris-Lean.
-- Where Go leaves implementation latitude, keep the relation broader than the
-  executable interpreter and use differential testing on real programs to
-  decide which deterministic policies matter for the test runner.
+- Where Go leaves implementation latitude, model it as explicit
+  nondeterminism in the interpreter's `Choices` stream (map iteration order
+  today; scheduler interleaving when concurrency lands) — statements
+  ∀-quantify the stream, the relation tracks the interpreter exactly, and
+  differential testing decides which resolved policies the oracle can
+  observe. (Reframed 2026-08-03; the old bullet kept the relation broader
+  than the interpreter, which the two-sided correspondence now forbids.)
 
 ## Hardening Gate
 

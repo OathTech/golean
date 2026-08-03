@@ -199,9 +199,13 @@ way an arc reaches `main`).
   rules encode the 2026-08 landscape — revisit on new model releases rather
   than applying blindly).
 - **THE SEMANTICS IS THE PRIMARY DIMENSION — always audit it** (user
-  direction 2026-07-24). GoCore's machine and relation are the trust
-  surface everything else rests on: proofs, specs, and the differential all
-  inherit their errors. Do NOT reason "semantic dimensions returned zero
+  direction 2026-07-24). GoCore's interpreter (`stepFn`/`execStmt`) is the
+  trust surface everything else rests on: it is both the differentially
+  validated model and the statement language (sem-adequacy framing,
+  2026-08-03); proofs, specs, and the differential all inherit its errors.
+  The Prop-level relation is proof infrastructure verified against it —
+  audit their CORRESPONDENCE (a divergence is a proof-layer bug), not the
+  relation as an independent authority. Do NOT reason "semantic dimensions returned zero
   findings, so semantics is low-risk" — that is dropping a check because it
   passes, and the worst defect this project has had (BUG-002, expression-step
   atomicity) was a semantics defect **no test could catch**, found by

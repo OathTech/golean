@@ -37,16 +37,20 @@ The statement-dependency ladder, from best to acceptable:
    `HProp`/`sat`/heaplets): acceptable — the deep-embedded SL is small
    and self-contained — but it is already more than "base", so the
    readout corollary stays mandatory alongside it.
-3. **Relation-quantified statements** (`Steps` — needed for
-   invariance/mid-run properties, later for trace/refinement claims):
-   acceptable when the property is genuinely about mid-run states;
-   the machine relation joins the statement TCB, Iris still must not.
+3. **[DEPRECATED 2026-08-03 — sem-adequacy arc]** ~~Relation-quantified
+   statements~~: this rung is eliminated. Mid-run/invariance properties
+   restate over `stepFn` ITERATES (the executable step the differential
+   validates), never the Prop-level relation, which joins Iris outside
+   the statement TCB (see the 2026-08-03 extension below). Until the arc
+   lands, existing relation-quantified statements (`Progress`,
+   `goldenInvariant`) are recorded debt, not precedent.
 
 **For Raft:** ghost state, history variables, linearization points,
 and prophecy-style machinery are PROOF devices. The moment one appears
 in a top-level STATEMENT, the doctrine is violated — the statement
-must be reformulated (trace properties over the machine relation;
-first-order readouts where possible) before the theorem is claimed.
+must be reformulated (trace properties over `stepFn` iterates — wording
+updated 2026-08-03, formerly "over the machine relation"; first-order
+readouts where possible) before the theorem is claimed.
 
 **Mechanization owed at close-out (not just discipline):**
 - A per-theorem statement-TCB gate in `proofs/Audit.lean`: for each
@@ -62,6 +66,21 @@ first-order readouts where possible) before the theorem is claimed.
   `QuorumRefSpec`, `AutomationTargets` are Iris-free by import chain
   but UNGATED — found 2026-08-01, the exact silent-reopen class the
   gate's own 2026-07-23 hardening comment warns about).
+
+### Extension (2026-08-03, sem-adequacy arc): the relation joins Iris outside the statement TCB
+
+The deletion test as stated above names Iris. The 2026-08-03 baselining
+conversation extends it: the Prop-level relation (`Rel.lean`) is proof
+infrastructure of the same kind — needed because WP wants a transition
+relation, verified against the executable step (two-sided), and after the
+sem-adequacy arc absent from every headline statement's closure
+(`Progress` restates as interpreter error-freedom; invariance restates
+over `stepFn` iterates; termination becomes the first-class
+interpreter-level `Terminates`). End state: deleting `Rel.lean` — like
+deleting Iris — must not change what any headline theorem says, and the
+statement-TCB gate enforces relation-freedom mechanically. The statement
+ladder's "relation-quantified" rung is deprecated accordingly. Plan of
+record: `docs/2026-08-03_sem-adequacy-arc.md`.
 
 ### Operational enforcement: Comparator (noted by the user, 2026-08-01)
 
