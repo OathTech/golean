@@ -139,6 +139,81 @@ theorem quorumThreeAllNotTwelveRun
     loadLoc σf (.base ⟨0⟩) ≠ .ok (.int 12 .uint64) :=
   GoLean.Surface.quorumThreeAllNotTwelveRun fuel ch σf ch' hrun
 
+/-! ## The per-seed total pins -/
+
+theorem goldenTerminates : Terminates outEnv goldenOut goldenDriver :=
+  GoLean.Surface.goldenTerminates
+
+theorem recoverTerminates :
+    Terminates recoverOutEnv
+      { types := recoverLowered.typeDefs.toList,
+        functions := recoverLowered.funcs, methods := recoverLowered.methods,
+        heap := recoverOut, nextAddr := 1 }
+      (.call #[.var "$callres"] ⟨"recoverDirect"⟩ #[]) :=
+  GoLean.Surface.recoverTerminates
+
+theorem quorumOneKnownTerminates :
+    Terminates quorumOutEnv
+      { types := quorumLowered.typeDefs.toList,
+        functions := quorumLowered.funcs, methods := quorumLowered.methods,
+        heap := quorumOut, nextAddr := 1 }
+      (.call #[.var "$callres"] ⟨"committedOneKnown"⟩ #[]) :=
+  GoLean.Surface.quorumOneKnownTerminates
+
+theorem quorumThreeAllTerminates :
+    Terminates threeOutEnv
+      { types := quorumLowered.typeDefs.toList,
+        functions := quorumLowered.funcs, methods := quorumLowered.methods,
+        heap := quorumOut, nextAddr := 1 }
+      (.call #[.var "$callres"] ⟨"committedThreeAll"⟩ #[]) :=
+  GoLean.Surface.quorumThreeAllTerminates
+
+theorem goldenTotalReadout :
+    ∃ N : Nat, ∀ fuel : Nat, N ≤ fuel → ∀ ch : Choices,
+      ∃ (σf : ExecState) (ch' : Choices),
+        execStmt fuel outEnv goldenOut ch goldenDriver = .ok (.normal σf, ch')
+        ∧ loadLoc σf (.base ⟨0⟩) = .ok (.int 2 .int) :=
+  GoLean.Surface.goldenTotalReadout
+
+theorem recoverTotalReadout :
+    ∃ N : Nat, ∀ fuel : Nat, N ≤ fuel → ∀ ch : Choices,
+      ∃ (σf : ExecState) (ch' : Choices),
+        execStmt fuel recoverOutEnv
+            { types := recoverLowered.typeDefs.toList,
+              functions := recoverLowered.funcs,
+              methods := recoverLowered.methods,
+              heap := recoverOut, nextAddr := 1 } ch
+            (.call #[.var "$callres"] ⟨"recoverDirect"⟩ #[])
+          = .ok (.normal σf, ch')
+        ∧ loadLoc σf (.base ⟨0⟩) = .ok (.int 7 .int) :=
+  GoLean.Surface.recoverTotalReadout
+
+theorem quorumOneKnownTotalReadout :
+    ∃ N : Nat, ∀ fuel : Nat, N ≤ fuel → ∀ ch : Choices,
+      ∃ (σf : ExecState) (ch' : Choices),
+        execStmt fuel quorumOutEnv
+            { types := quorumLowered.typeDefs.toList,
+              functions := quorumLowered.funcs,
+              methods := quorumLowered.methods,
+              heap := quorumOut, nextAddr := 1 } ch
+            (.call #[.var "$callres"] ⟨"committedOneKnown"⟩ #[])
+          = .ok (.normal σf, ch')
+        ∧ loadLoc σf (.base ⟨0⟩) = .ok (.int 12 .uint64) :=
+  GoLean.Surface.quorumOneKnownTotalReadout
+
+theorem quorumThreeAllTotalReadout :
+    ∃ N : Nat, ∀ fuel : Nat, N ≤ fuel → ∀ ch : Choices,
+      ∃ (σf : ExecState) (ch' : Choices),
+        execStmt fuel threeOutEnv
+            { types := quorumLowered.typeDefs.toList,
+              functions := quorumLowered.funcs,
+              methods := quorumLowered.methods,
+              heap := quorumOut, nextAddr := 1 } ch
+            (.call #[.var "$callres"] ⟨"committedThreeAll"⟩ #[])
+          = .ok (.normal σf, ch')
+        ∧ loadLoc σf (.base ⟨0⟩) = .ok (.int 6 .uint64) :=
+  GoLean.Surface.quorumThreeAllTotalReadout
+
 /-! ## The ∀-config summit -/
 
 theorem committedIndexAllConfigs : committedIndexAllConfigs_statement :=

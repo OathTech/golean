@@ -145,6 +145,80 @@ theorem quorumThreeAllNotTwelveRun
       = .ok (.normal σf, ch')) :
     loadLoc σf (.base ⟨0⟩) ≠ .ok (.int 12 .uint64) := sorry
 
+/-! ## The per-seed total pins (sem-adequacy slice 5; designated at the
+2026-08-04 audit response)
+
+`Terminates` quantifies EVERY choice stream at one uniform fuel bound;
+the `TotalReadout` forms additionally pin the completion terminal to
+`.normal` and read the pinned value out of the final state. All four
+seeds and programs are the readouts' own (above); `Terminates` is the
+Iris-free, relation-free `execStmt` notion from the surface layer. -/
+
+theorem goldenTerminates : Terminates outEnv goldenOut goldenDriver := sorry
+
+theorem recoverTerminates :
+    Terminates recoverOutEnv
+      { types := recoverLowered.typeDefs.toList,
+        functions := recoverLowered.funcs, methods := recoverLowered.methods,
+        heap := recoverOut, nextAddr := 1 }
+      (.call #[.var "$callres"] ⟨"recoverDirect"⟩ #[]) := sorry
+
+theorem quorumOneKnownTerminates :
+    Terminates quorumOutEnv
+      { types := quorumLowered.typeDefs.toList,
+        functions := quorumLowered.funcs, methods := quorumLowered.methods,
+        heap := quorumOut, nextAddr := 1 }
+      (.call #[.var "$callres"] ⟨"committedOneKnown"⟩ #[]) := sorry
+
+theorem quorumThreeAllTerminates :
+    Terminates threeOutEnv
+      { types := quorumLowered.typeDefs.toList,
+        functions := quorumLowered.funcs, methods := quorumLowered.methods,
+        heap := quorumOut, nextAddr := 1 }
+      (.call #[.var "$callres"] ⟨"committedThreeAll"⟩ #[]) := sorry
+
+theorem goldenTotalReadout :
+    ∃ N : Nat, ∀ fuel : Nat, N ≤ fuel → ∀ ch : Choices,
+      ∃ (σf : ExecState) (ch' : Choices),
+        execStmt fuel outEnv goldenOut ch goldenDriver = .ok (.normal σf, ch')
+        ∧ loadLoc σf (.base ⟨0⟩) = .ok (.int 2 .int) := sorry
+
+theorem recoverTotalReadout :
+    ∃ N : Nat, ∀ fuel : Nat, N ≤ fuel → ∀ ch : Choices,
+      ∃ (σf : ExecState) (ch' : Choices),
+        execStmt fuel recoverOutEnv
+            { types := recoverLowered.typeDefs.toList,
+              functions := recoverLowered.funcs,
+              methods := recoverLowered.methods,
+              heap := recoverOut, nextAddr := 1 } ch
+            (.call #[.var "$callres"] ⟨"recoverDirect"⟩ #[])
+          = .ok (.normal σf, ch')
+        ∧ loadLoc σf (.base ⟨0⟩) = .ok (.int 7 .int) := sorry
+
+theorem quorumOneKnownTotalReadout :
+    ∃ N : Nat, ∀ fuel : Nat, N ≤ fuel → ∀ ch : Choices,
+      ∃ (σf : ExecState) (ch' : Choices),
+        execStmt fuel quorumOutEnv
+            { types := quorumLowered.typeDefs.toList,
+              functions := quorumLowered.funcs,
+              methods := quorumLowered.methods,
+              heap := quorumOut, nextAddr := 1 } ch
+            (.call #[.var "$callres"] ⟨"committedOneKnown"⟩ #[])
+          = .ok (.normal σf, ch')
+        ∧ loadLoc σf (.base ⟨0⟩) = .ok (.int 12 .uint64) := sorry
+
+theorem quorumThreeAllTotalReadout :
+    ∃ N : Nat, ∀ fuel : Nat, N ≤ fuel → ∀ ch : Choices,
+      ∃ (σf : ExecState) (ch' : Choices),
+        execStmt fuel threeOutEnv
+            { types := quorumLowered.typeDefs.toList,
+              functions := quorumLowered.funcs,
+              methods := quorumLowered.methods,
+              heap := quorumOut, nextAddr := 1 } ch
+            (.call #[.var "$callres"] ⟨"committedThreeAll"⟩ #[])
+          = .ok (.normal σf, ch')
+        ∧ loadLoc σf (.base ⟨0⟩) = .ok (.int 6 .uint64) := sorry
+
 /-! ## The ∀-config summit -/
 
 theorem committedIndexAllConfigs : committedIndexAllConfigs_statement := sorry

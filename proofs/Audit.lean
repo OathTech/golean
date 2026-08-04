@@ -184,6 +184,10 @@ open Lean in
   -- phase-4 `*_statement` targets (`Specs/TotalPins.lean`). Both forms
   -- stay designated: the run-conditioned twins remain the readouts'
   -- negative rung; the unconditional ones are the new headline claims.)
+  -- (Audit response 2026-08-04: the eight slice-5 headline deliverables
+  -- — the four per-seed `<pin>Terminates` and the four normal-pinned
+  -- `<pin>TotalReadout` forms — were shipped WITHOUT designation; added
+  -- here, to Challenge/Solution, and to judge-config.json. 25 → 33.)
   let designated : List Name := [
     ``GoLean.Surface.quorumOneKnownFuncSpec,
     ``GoLean.Surface.quorumOneKnownMeetsSpec,
@@ -209,6 +213,14 @@ open Lean in
     ``GoLean.Surface.goldenInvariant,
     ``GoLean.Surface.goldenReturnsTwo,
     ``GoLean.Surface.goldenNotThree,
+    ``GoLean.Surface.goldenTerminates,
+    ``GoLean.Surface.recoverTerminates,
+    ``GoLean.Surface.quorumOneKnownTerminates,
+    ``GoLean.Surface.quorumThreeAllTerminates,
+    ``GoLean.Surface.goldenTotalReadout,
+    ``GoLean.Surface.recoverTotalReadout,
+    ``GoLean.Surface.quorumOneKnownTotalReadout,
+    ``GoLean.Surface.quorumThreeAllTotalReadout,
     ``GoLean.Quorum.committedIndexRef_meets_spec]
   let mut lines : Array String := #[]
   let mut violations : Array String := #[]
@@ -739,13 +751,42 @@ example := @GoLean.Surface.ReachableExec
 example := @GoLean.Surface.steps_of_reachableExec
 example := @GoLean.Surface.InitialSplit.heapBounded
 example := @GoLean.Surface.goSpec_of_triple_progressRel
-example := @GoLean.Surface.goldenTotalReadout
-example := @GoLean.Surface.recoverTotalReadout
-example := @GoLean.Surface.quorumOneKnownTotalReadout
-example := @GoLean.Surface.quorumThreeAllTotalReadout
 example := @GoLean.GoCore.Machine.allStreamsOk
 example := @GoLean.GoCore.Machine.execStmtLoop_step
 example := @GoLean.GoCore.Machine.stepFn_mapIter_pick
+
+/-! ### Audit response 2026-08-04 (pre-merge, this branch): the
+`.normal` pin. `ProgressExec`'s success disjunct — and with it
+`execStmtLoop_ok_or_fuelOut`'s — is pinned to the `.normal` terminal
+(the ∃-outcome form silently accepted top-level `.returned`/`.broke`/
+`.continued` completions the relation-Progress form rejects; the three
+`step_*_stop_elim` lemmas prove no relation rule steps from an
+unwound-`.stop` configuration). The four `<pin>TotalReadout` forms are
+STRENGTHENED to normal-pinned completion (`TerminatesNormally` =
+`Terminates` × `ProgressExec` at the seeded frameless split,
+`terminatesNormally_of_progressExec`), and all eight slice-5 headline
+deliverables are designated above. Axiom pins + deletion guards: -/
+/-- info: 'GoLean.GoCore.Machine.step_returning_stop_elim' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.GoCore.Machine.step_returning_stop_elim
+/-- info: 'GoLean.GoCore.Machine.step_breaking_stop_elim' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.GoCore.Machine.step_breaking_stop_elim
+/-- info: 'GoLean.GoCore.Machine.step_continuing_stop_elim' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.GoCore.Machine.step_continuing_stop_elim
+/-- info: 'GoLean.Surface.goldenTotalReadout' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Surface.goldenTotalReadout
+/-- info: 'GoLean.Surface.recoverTotalReadout' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Surface.recoverTotalReadout
+/-- info: 'GoLean.Surface.quorumOneKnownTotalReadout' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Surface.quorumOneKnownTotalReadout
+/-- info: 'GoLean.Surface.quorumThreeAllTotalReadout' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Surface.quorumThreeAllTotalReadout
+example := @GoLean.Surface.TerminatesNormally
+example := @GoLean.Surface.terminatesNormally_of_progressExec
+example := @GoLean.Surface.InitialSplit.noFrame
+example := @GoLean.Surface.goldenTerminatesNormally
+example := @GoLean.Surface.recoverTerminatesNormally
+example := @GoLean.Surface.quorumOneKnownTerminatesNormally
+example := @GoLean.Surface.quorumThreeAllTerminatesNormally
 /-- `✓` **the first `GoFuncSpec2` discharge** (quorum pilot phase 4
 slice 5, 2026-07-31): `quorumAckedIndexFuncSpec2` — the REAL
 `main.mapAckIndexer.AckedIndex` of the pinned lowering, at the
