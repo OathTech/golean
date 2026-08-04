@@ -203,8 +203,10 @@ static resolution. Reject (precise `unsup` reason) when:
 1. a goto target label is not at the function body's top level (legal in
    Go — label in any enclosing block — but outside this envelope);
 2. a hoisted (top-level-declared) variable is captured by a func literal
-   or has its address taken anywhere in the body (`&x` / capture makes
-   cell identity observable across a backward jump);
+   or has its address taken anywhere in the body — explicitly (`&x`) or
+   implicitly as a pointer-receiver method's receiver (`x.M()` takes
+   `&x`); capture/escape makes cell identity observable across a
+   backward jump;
 3. a hoisted variable's name is ALSO used in the body resolving to an
    OUTER object (param/result/package-level) — hoisting would shadow the
    outer use (`x := x + 1` with `x` a parameter, uses before the
@@ -230,7 +232,8 @@ type table).
   channel-blocked (its own arc). The label machinery here is what their
   eventual lowering will target.
 - goto outside the envelope above: visible `unsup` with the reason
-  strings `goto target label not at function body top level`,
-  `goto function hoists a captured/addressed variable`,
-  `goto function hoists a variable shadowing an outer name` — never a
-  silent approximation.
+  strings `goto target label ... not at function body top level`,
+  `goto function hoists a captured variable ...` /
+  `... an address-taken variable ...` /
+  `... used as a pointer-method receiver` /
+  `... shadowing an outer name in use` — never a silent approximation.

@@ -12,6 +12,7 @@ import (
 	"go/token"
 	"go/types"
 	"sort"
+	"strings"
 )
 
 // ---- program ----
@@ -46,6 +47,8 @@ func (e *emitter) emitProgram(files []*ast.File) (map[string]any, error) {
 					}
 				}
 				e.liftSeq = 0
+				localTypesMark := len(e.localTypeDefs)
+				localIfaceMark := len(e.localIfaceMethods)
 				fn, err := e.emitFuncDecl(d)
 				if err != nil {
 					// Per-decl quarantine: an UNSUPPORTED plain function
@@ -57,6 +60,11 @@ func (e *emitter) emitProgram(files []*ast.File) (map[string]any, error) {
 					var u unsupported
 					if errors.As(err, &u) && d.Recv == nil {
 						e.lifted = nil
+						// Drop any local type defs the quarantined body
+						// half-registered (a leak could spuriously collide
+						// with another function's local type).
+						e.localTypeDefs = e.localTypeDefs[:localTypesMark]
+						e.localIfaceMethods = e.localIfaceMethods[:localIfaceMark]
 						arity := 0
 						if d.Type.Params != nil {
 							for _, f := range d.Type.Params.List {
@@ -90,6 +98,13 @@ func (e *emitter) emitProgram(files []*ast.File) (map[string]any, error) {
 			}
 		}
 	}
+
+	// Function-local type declarations, registered during body emission
+	// (emitDeclStmt): they join the global table — Go type declarations
+	// have no runtime effect — with the duplicate-TypeId refusal below
+	// guarding collisions.
+	typeDefs = append(typeDefs, e.localTypeDefs...)
+	methods = append(methods, e.localIfaceMethods...)
 
 	// Interface-dispatch anchors for interfaces NOT declared in this package
 	// (predeclared error; imported interfaces later): every emitted
@@ -193,6 +208,20 @@ func (e *emitter) emitProgram(files []*ast.File) (map[string]any, error) {
 	// collided on one package-name qualifier (findings 4/7).
 	if err := e.checkPackageNameCollisions(); err != nil {
 		return nil, err
+	}
+	// Duplicate TypeIds (e.g. two functions each declaring a local
+	// `type T int`, or a local type shadowing a package-level one) would
+	// silently alias in GoCore's global type table — refuse.
+	seenTypeIds := map[string]bool{}
+	for _, td := range typeDefs {
+		if m, ok := td.(map[string]any); ok {
+			if n, ok := m["name"].(string); ok {
+				if seenTypeIds[n] {
+					return nil, unsup("duplicate TypeId %s (a function-local type collides with another declaration)", n)
+				}
+				seenTypeIds[n] = true
+			}
+		}
 	}
 
 	return map[string]any{
@@ -362,11 +391,20 @@ func (e *emitter) emitFuncDecl(d *ast.FuncDecl) (map[string]any, error) {
 		return nil, unsup("bodyless function %s", d.Name.Name)
 	}
 	savedBranch, savedGoto := e.branchLabels, e.gotoLabels
+	savedSeg, savedPC, savedLoop := e.gotoSeg, e.gotoPC, e.gotoLoop
 	e.branchLabels, e.gotoLabels = scanLabelUses(d.Body)
-	body, err := e.emitBlock(d.Body)
+	e.gotoSeg, e.gotoPC, e.gotoLoop = nil, "", ""
+	var body any
+	var berr error
+	if len(e.gotoLabels) > 0 {
+		body, berr = e.emitGotoBody(d.Body)
+	} else {
+		body, berr = e.emitBlock(d.Body)
+	}
 	e.branchLabels, e.gotoLabels = savedBranch, savedGoto
-	if err != nil {
-		return nil, err
+	e.gotoSeg, e.gotoPC, e.gotoLoop = savedSeg, savedPC, savedLoop
+	if berr != nil {
+		return nil, berr
 	}
 	fn["body"] = body
 	return fn, nil
@@ -405,9 +443,14 @@ func scanLabelUses(body *ast.BlockStmt) (branch, gotos map[string]bool) {
 func (e *emitter) emitLabeled(st *ast.LabeledStmt) (any, error) {
 	name := st.Label.Name
 	if e.gotoLabels[name] {
-		// Reaching emitStmt means the label is NOT at the top level of a
-		// restructured body (emitGotoBody consumes those positions).
-		return nil, unsup("goto target label %s not at function body top level", name)
+		// A goto-target label reaching emitStmt is either a registered
+		// segment start whose statement ALSO carries break/continue uses
+		// (emitGotoBody keeps the label on the statement for the branch
+		// wrapper below), or a label NOT at the top level of the
+		// restructured body — outside the envelope, fail closed.
+		if _, consumed := e.gotoSeg[name]; !consumed {
+			return nil, unsup("goto target label %s not at function body top level", name)
+		}
 	}
 	if !e.branchLabels[name] {
 		if _, isEmpty := st.Stmt.(*ast.EmptyStmt); isEmpty {
@@ -448,6 +491,311 @@ func (e *emitter) emitLabeled(st *ast.LabeledStmt) (any, error) {
 		// select is channel-blocked, anything else is defensive.
 		return nil, unsup("labeled break/continue target %T", st.Stmt)
 	}
+}
+
+// degradeGotoTarget rewrites a "declare" wire target of a SOURCE-level
+// name to a plain "var" target: under the goto restructuring the cell is
+// pre-declared by the hoist, and re-executing the statement (a backward
+// jump) re-assigns it. Lowering temps ($-prefixed) keep their declares —
+// they are declared and consumed within one statement's lowering, inside
+// one sweep.
+func degradeGotoTarget(t any) any {
+	m, ok := t.(map[string]any)
+	if !ok {
+		return t
+	}
+	if m["target"] == "declare" {
+		if id, ok := m["id"].(string); ok && !strings.HasPrefix(id, "$") {
+			return map[string]any{"target": "var", "id": id}
+		}
+	}
+	return t
+}
+
+// degradeGotoDeclares post-processes a segment's top-level wire nodes:
+// source declarations become assignments to the hoisted cells ("var"
+// nodes turn into default/init assignments; declare targets in
+// assign/type-assert/make/append/... nodes become var targets). Only the
+// TOP level is touched — deeper blocks re-execute wholesale with their
+// own scopes, which is Go's re-declaration semantics.
+func degradeGotoDeclares(stmts []any) []any {
+	out := make([]any, 0, len(stmts))
+	for _, s := range stmts {
+		m, ok := s.(map[string]any)
+		if !ok {
+			out = append(out, s)
+			continue
+		}
+		if m["stmt"] == "var" {
+			decls, _ := m["decls"].([]any)
+			conv := []any{}
+			for _, d := range decls {
+				dm, ok := d.(map[string]any)
+				if !ok {
+					continue
+				}
+				id, _ := dm["id"].(string)
+				rhs := dm["init"]
+				if rhs == nil {
+					// `var x T` re-executed resets to the zero value (Go:
+					// a fresh variable).
+					rhs = map[string]any{"expr": "default", "type": dm["type"]}
+				}
+				conv = append(conv, map[string]any{"stmt": "assign",
+					"lhs": []any{map[string]any{"target": "var", "id": id}},
+					"rhs": []any{rhs}})
+			}
+			out = append(out, map[string]any{"stmt": "block", "body": conv})
+			continue
+		}
+		for _, key := range []string{"target", "okTarget"} {
+			if t, has := m[key]; has {
+				m[key] = degradeGotoTarget(t)
+			}
+		}
+		if lhs, ok := m["lhs"].([]any); ok {
+			for i := range lhs {
+				lhs[i] = degradeGotoTarget(lhs[i])
+			}
+		}
+		out = append(out, m)
+	}
+	return out
+}
+
+// emitGotoBody lowers a function body containing `goto` into a
+// program-counter dispatch loop over the body's top-level segments,
+// riding on the stage-2 machine labels
+// (docs/2026-08-04_control-flow-design.md, stage 3):
+//
+//	{ var <hoisted top-level decls>; $pc := 0
+//	  $gotoN: for { if $pc <= 0 { seg0 }; if $pc <= 1 { seg1 }; ...; break } }
+//
+// `goto L` (any depth, same function) becomes
+// `$pc = seg(L); continue-to $gotoN`. Segments share the hoisted scope
+// across sweeps; top-level declarations become assignments. The fidelity
+// ENVELOPE is checked here and fails closed (the design note's three
+// rejections): goto targets must be top-level labels; hoisted variables
+// must not be captured, address-taken (incl. as pointer-method
+// receivers), or shadow an outer name that the body also uses.
+func (e *emitter) emitGotoBody(b *ast.BlockStmt) (map[string]any, error) {
+	seq := e.tmpSeq
+	e.tmpSeq++
+	pcVar := "$pc" + itoa(seq)
+	loopLabel := "$goto" + itoa(seq)
+
+	// 1. Split into segments at top-level goto-target labels.
+	type segment struct{ stmts []ast.Stmt }
+	segs := []segment{{}}
+	segIdx := map[string]int{}
+	for _, s := range b.List {
+		inner := s
+		segLabels := []string{}
+		for {
+			ls, ok := inner.(*ast.LabeledStmt)
+			if !ok || !e.gotoLabels[ls.Label.Name] {
+				break
+			}
+			segLabels = append(segLabels, ls.Label.Name)
+			if e.branchLabels[ls.Label.Name] {
+				// keep the label on the statement: emitLabeled wraps it
+				// for break/continue (it sees the label as consumed).
+				break
+			}
+			inner = ls.Stmt
+		}
+		if len(segLabels) > 0 {
+			segs = append(segs, segment{})
+			for _, l := range segLabels {
+				segIdx[l] = len(segs) - 1
+			}
+		}
+		segs[len(segs)-1].stmts = append(segs[len(segs)-1].stmts, inner)
+	}
+	for name := range e.gotoLabels {
+		if _, ok := segIdx[name]; !ok {
+			return nil, unsup("goto target label %s not at function body top level", name)
+		}
+	}
+
+	// 2. Collect the top-level declared variables (the hoist set).
+	type hoistVar struct {
+		obj  types.Object
+		name string
+	}
+	hoisted := []hoistVar{}
+	seenObj := map[types.Object]bool{}
+	collect := func(id *ast.Ident) {
+		if id.Name == "_" {
+			return
+		}
+		if obj := e.info.Defs[id]; obj != nil && !seenObj[obj] {
+			seenObj[obj] = true
+			hoisted = append(hoisted, hoistVar{obj: obj, name: id.Name})
+		}
+	}
+	for _, seg := range segs {
+		for _, s := range seg.stmts {
+			stmt := s
+			for {
+				ls, ok := stmt.(*ast.LabeledStmt)
+				if !ok {
+					break
+				}
+				stmt = ls.Stmt
+			}
+			switch d := stmt.(type) {
+			case *ast.AssignStmt:
+				if d.Tok == token.DEFINE {
+					for _, l := range d.Lhs {
+						if id, ok := l.(*ast.Ident); ok {
+							collect(id)
+						}
+					}
+				}
+			case *ast.DeclStmt:
+				if gd, ok := d.Decl.(*ast.GenDecl); ok && gd.Tok == token.VAR {
+					for _, spec := range gd.Specs {
+						if vs, ok := spec.(*ast.ValueSpec); ok {
+							for _, n := range vs.Names {
+								collect(n)
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+	// 3. The fidelity envelope, fail-closed.
+	hoistedObjs := map[types.Object]bool{}
+	for _, hv := range hoisted {
+		hoistedObjs[hv.obj] = true
+	}
+	var envErr error
+	ast.Inspect(b, func(n ast.Node) bool {
+		if envErr != nil {
+			return false
+		}
+		switch nn := n.(type) {
+		case *ast.FuncLit:
+			// A capture makes per-execution cell identity observable: a
+			// backward jump re-executing the declaration gives Go a FRESH
+			// cell but the hoisted lowering one shared cell.
+			ast.Inspect(nn, func(m ast.Node) bool {
+				if id, ok := m.(*ast.Ident); ok {
+					if obj := e.info.Uses[id]; obj != nil && hoistedObjs[obj] {
+						envErr = unsup("goto function hoists a captured variable %s", id.Name)
+					}
+				}
+				return envErr == nil
+			})
+			return false
+		case *ast.UnaryExpr:
+			if nn.Op == token.AND {
+				if id, ok := nn.X.(*ast.Ident); ok {
+					if obj := e.info.Uses[id]; obj != nil && hoistedObjs[obj] {
+						envErr = unsup("goto function hoists an address-taken variable %s", id.Name)
+					}
+				}
+			}
+		case *ast.SelectorExpr:
+			// Implicit address: a pointer-receiver method on a hoisted
+			// variable takes &x.
+			if id, ok := nn.X.(*ast.Ident); ok {
+				if obj := e.info.Uses[id]; obj != nil && hoistedObjs[obj] {
+					if selInfo, ok := e.info.Selections[nn]; ok && selInfo.Kind() != types.FieldVal {
+						if fn, isFn := selInfo.Obj().(*types.Func); isFn {
+							if sig, isSig := fn.Type().(*types.Signature); isSig && sig.Recv() != nil {
+								if _, isPtr := sig.Recv().Type().(*types.Pointer); isPtr {
+									envErr = unsup("goto function hoists variable %s used as a pointer-method receiver", id.Name)
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+		return envErr == nil
+	})
+	if envErr != nil {
+		return nil, envErr
+	}
+	// Shadow check: hoisting a name to the body's head would capture uses
+	// that Go statically resolves to an OUTER object of the same name
+	// (params/results/package scope) — including a define's own RHS.
+	names := map[string]types.Object{}
+	for _, hv := range hoisted {
+		names[hv.name] = hv.obj
+	}
+	ancestors := map[*types.Scope]bool{}
+	if len(hoisted) > 0 {
+		for sc := hoisted[0].obj.Parent(); sc != nil; sc = sc.Parent() {
+			ancestors[sc] = true
+		}
+	}
+	ast.Inspect(b, func(n ast.Node) bool {
+		if envErr != nil {
+			return false
+		}
+		if id, ok := n.(*ast.Ident); ok {
+			if v, isHoistedName := names[id.Name]; isHoistedName {
+				if obj := e.info.Uses[id]; obj != nil && obj != v && obj.Parent() != nil && ancestors[obj.Parent()] {
+					envErr = unsup("goto function hoists variable %s shadowing an outer name in use", id.Name)
+				}
+			}
+		}
+		return envErr == nil
+	})
+	if envErr != nil {
+		return nil, envErr
+	}
+
+	// 4. Hoisted declarations (default values) + program counter.
+	outer := []any{}
+	for _, hv := range hoisted {
+		ty, err := e.emitType(hv.obj.Type())
+		if err != nil {
+			return nil, err
+		}
+		outer = append(outer, map[string]any{"stmt": "var",
+			"decls": []any{map[string]any{"id": hv.name, "type": ty}}})
+	}
+	intTy := map[string]any{"kind": "int", "int": "int"}
+	outer = append(outer, map[string]any{"stmt": "assign", "define": true,
+		"lhs": []any{map[string]any{"target": "declare", "id": pcVar, "type": intTy}},
+		"rhs": []any{map[string]any{"expr": "int", "value": "0", "type": intTy}}})
+
+	// 5. Segments under the goto context; `$pc <= i` guards give normal
+	// sequential fall-through within a sweep (pc changes only via goto,
+	// which immediately re-enters the loop).
+	savedSeg, savedPC, savedLoop := e.gotoSeg, e.gotoPC, e.gotoLoop
+	e.gotoSeg, e.gotoPC, e.gotoLoop = segIdx, pcVar, loopLabel
+	dispatch := []any{}
+	var segErr error
+	for i, seg := range segs {
+		stmts, err := e.emitStmtList(seg.stmts)
+		if err != nil {
+			segErr = err
+			break
+		}
+		stmts = degradeGotoDeclares(stmts)
+		guard := map[string]any{"expr": "binary", "op": "<=",
+			"x": map[string]any{"expr": "ident", "name": pcVar, "type": intTy},
+			"y": map[string]any{"expr": "int", "value": itoa(i), "type": intTy}}
+		dispatch = append(dispatch, map[string]any{"stmt": "if", "cond": guard,
+			"then": map[string]any{"stmt": "block", "body": stmts}})
+	}
+	e.gotoSeg, e.gotoPC, e.gotoLoop = savedSeg, savedPC, savedLoop
+	if segErr != nil {
+		return nil, segErr
+	}
+	dispatch = append(dispatch, map[string]any{"stmt": "break"})
+	loop := map[string]any{"stmt": "labeled", "label": loopLabel,
+		"body": map[string]any{"stmt": "for",
+			"body": map[string]any{"stmt": "block", "body": dispatch}}}
+	outer = append(outer, loop)
+	return map[string]any{"stmt": "block", "body": outer}, nil
 }
 
 func (e *emitter) emitParams(t *types.Tuple) ([]any, error) {
@@ -695,6 +1043,27 @@ func (e *emitter) emitStmt(s ast.Stmt) (any, error) {
 				return map[string]any{"stmt": "continue-to", "label": st.Label.Name}, nil
 			}
 			return map[string]any{"stmt": "continue"}, nil
+		case token.GOTO:
+			// `goto L` under the dispatch-loop restructuring
+			// (emitGotoBody): set the program counter to L's segment and
+			// re-enter the dispatch loop via the stage-2 machine signal —
+			// which unwinds out of any enclosing blocks/loops/switches,
+			// exactly Go's out-of-block jump. No context (or a label that
+			// is not a registered top-level segment) fails closed.
+			if st.Label == nil {
+				return nil, unsup("goto without label")
+			}
+			idx, ok := e.gotoSeg[st.Label.Name]
+			if !ok {
+				return nil, unsup("goto target label %s not at function body top level", st.Label.Name)
+			}
+			intTy := map[string]any{"kind": "int", "int": "int"}
+			return map[string]any{"stmt": "block", "body": []any{
+				map[string]any{"stmt": "assign",
+					"lhs": []any{map[string]any{"target": "var", "id": e.gotoPC}},
+					"rhs": []any{map[string]any{"expr": "int", "value": itoa(idx), "type": intTy}}},
+				map[string]any{"stmt": "continue-to", "label": e.gotoLoop},
+			}}, nil
 		default:
 			return nil, unsup("branch statement %s", st.Tok)
 		}
@@ -1092,6 +1461,20 @@ func (e *emitter) emitDeclStmt(st *ast.DeclStmt) (any, error) {
 	// A const declaration is a no-op statement: go/types folds every USE
 	// of the constant to its value (emitIdent), so nothing lowers here.
 	if ok && gd.Tok == token.CONST {
+		return map[string]any{"stmt": "block", "body": []any{}}, nil
+	}
+	// A function-LOCAL type declaration registers in the global type
+	// table (a Go type declaration has no runtime effect — jumping over
+	// one with goto is legal) and lowers to a no-op statement.
+	// emitProgram refuses duplicate TypeIds, so a local type colliding
+	// with another declaration fails closed rather than aliasing.
+	if ok && gd.Tok == token.TYPE {
+		tds, ims, err := e.emitGenDeclTypes(gd)
+		if err != nil {
+			return nil, err
+		}
+		e.localTypeDefs = append(e.localTypeDefs, tds...)
+		e.localIfaceMethods = append(e.localIfaceMethods, ims...)
 		return map[string]any{"stmt": "block", "body": []any{}}, nil
 	}
 	if !ok || gd.Tok != token.VAR {
@@ -2717,13 +3100,22 @@ func (e *emitter) emitFuncLit(lit *ast.FuncLit) (any, error) {
 	savedCapture, savedHoisted, savedName := e.captureParam, e.hoisted, e.curFuncName
 	savedResults := e.curResults
 	savedBranch, savedGoto := e.branchLabels, e.gotoLabels
+	savedSeg, savedPC, savedLoop := e.gotoSeg, e.gotoPC, e.gotoLoop
 	e.captureParam, e.hoisted = newCapture, nil
 	e.curResults = sig.Results()
 	e.branchLabels, e.gotoLabels = scanLabelUses(lit.Body)
-	body, berr := e.emitBlock(lit.Body)
+	e.gotoSeg, e.gotoPC, e.gotoLoop = nil, "", ""
+	var body any
+	var berr error
+	if len(e.gotoLabels) > 0 {
+		body, berr = e.emitGotoBody(lit.Body)
+	} else {
+		body, berr = e.emitBlock(lit.Body)
+	}
 	e.captureParam, e.hoisted, e.curFuncName = savedCapture, savedHoisted, savedName
 	e.curResults = savedResults
 	e.branchLabels, e.gotoLabels = savedBranch, savedGoto
+	e.gotoSeg, e.gotoPC, e.gotoLoop = savedSeg, savedPC, savedLoop
 	if berr != nil {
 		return nil, berr
 	}

@@ -1,16 +1,21 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-04  commit: general-coverage-cf stage 2 (labeled break/continue)
+# recorded: 2026-08-04  commit: general-coverage-cf stage 3 (goto dispatch-loop restructuring)
 #   frontend: native  oracle: go run
-# manifest_cases: 874  pass: 617  fail: 257
-# Re-pin reason: DELIBERATE coverage change, control-flow slice stage 2
-# (docs/2026-08-04_control-flow-design.md): machine-level labels
-# (Stmt.labeled/breakTo/continueTo, Cont.labelK, Config.breakingTo/
-# continuingTo) + frontend labeled-statement lowering. Five FAIL->PASS
-# (labeled-break, labeled-break-defer, labeled-continue,
-# continue-label-post, nested-labeled-break) and ONE new guardrail id
-# (labeled-branch-range-map, PASS — labeled break/continue over a map
-# range, the mapIterK label paths; order-independent observables).
-# ZERO PASS->FAIL, no stage moves. 611 -> 617 pass, 873 -> 874 cases.
+# manifest_cases: 875  pass: 627  fail: 248
+# Re-pin reason: DELIBERATE coverage change, control-flow slice stage 3
+# (docs/2026-08-04_control-flow-design.md): goto lowers to a program-counter
+# dispatch loop over the body's top-level segments riding on the stage-2
+# machine labels; function-local type declarations register globally with a
+# duplicate-TypeId refusal. Ten FAIL->PASS (goto-backward-redeclare,
+# goto-defer-return, goto-forward, goto-loop, goto-out-of-block,
+# goto-out-of-for, goto-out-of-switch, goto-over-type-decl,
+# labeled-empty-statement, labeled-statement-scope) and ONE new id,
+# goto-backward-capture, DELIBERATELY red (FAIL/frontend-export): it pins the
+# restructuring envelope's visible refusal — a backward goto over a captured
+# declaration is where the hoisted-cell lowering would diverge from Go's
+# fresh-cell-per-execution semantics, so the frontend rejects it. The two
+# select cases (break-label-select, goto-out-of-select) stay channel-blocked.
+# ZERO PASS->FAIL, no stage moves. 617 -> 627 pass, 874 -> 875 cases.
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
 PASS	arrays/array-copy	-
@@ -191,22 +196,23 @@ PASS	control-flow/for-continue-post-plain	-
 PASS	control-flow/for-continue-runs-post	-
 PASS	control-flow/for-loopvar-escape	-
 PASS	control-flow/for-post-side-effects	-
-FAIL	control-flow/goto-backward-redeclare	frontend-export
-FAIL	control-flow/goto-defer-return	frontend-export
-FAIL	control-flow/goto-forward	frontend-export
-FAIL	control-flow/goto-loop	frontend-export
-FAIL	control-flow/goto-out-of-block	frontend-export
-FAIL	control-flow/goto-out-of-for	frontend-export
+FAIL	control-flow/goto-backward-capture	frontend-export
+PASS	control-flow/goto-backward-redeclare	-
+PASS	control-flow/goto-defer-return	-
+PASS	control-flow/goto-forward	-
+PASS	control-flow/goto-loop	-
+PASS	control-flow/goto-out-of-block	-
+PASS	control-flow/goto-out-of-for	-
 FAIL	control-flow/goto-out-of-select	frontend-export
-FAIL	control-flow/goto-out-of-switch	frontend-export
-FAIL	control-flow/goto-over-type-decl	frontend-export
+PASS	control-flow/goto-out-of-switch	-
+PASS	control-flow/goto-over-type-decl	-
 PASS	control-flow/infinite-loop-return	-
 PASS	control-flow/labeled-branch-range-map	-
 PASS	control-flow/labeled-break	-
 PASS	control-flow/labeled-break-defer	-
 PASS	control-flow/labeled-continue	-
-FAIL	control-flow/labeled-empty-statement	frontend-export
-FAIL	control-flow/labeled-statement-scope	frontend-export
+PASS	control-flow/labeled-empty-statement	-
+PASS	control-flow/labeled-statement-scope	-
 PASS	control-flow/nested-labeled-break	-
 PASS	control-flow/switch-basic	-
 PASS	control-flow/switch-break	-

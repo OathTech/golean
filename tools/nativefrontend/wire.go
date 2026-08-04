@@ -54,6 +54,22 @@ type emitter struct {
 	branchLabels map[string]bool
 	gotoLabels   map[string]bool
 
+	// Goto dispatch context (stage 3, emitGotoBody): segment index per
+	// top-level goto-target label, the program-counter variable, and the
+	// dispatch loop's machine label. A `goto` lowers to
+	// `$pc = seg(L); continue-to $gotoN`. Nil outside a restructured
+	// body, so a goto with no context fails closed.
+	gotoSeg  map[string]int
+	gotoPC   string
+	gotoLoop string
+
+	// Function-LOCAL type declarations (`type T ...` in a body): they
+	// register in the global type table (type declarations have no
+	// runtime effect — legal for goto to jump over), with a program-wide
+	// duplicate-TypeId refusal in emitProgram.
+	localTypeDefs     []any
+	localIfaceMethods []any
+
 	// Interface-receiver methods CALLED somewhere in the package, keyed
 	// "<IfaceName>.<Method>" (the exact func id the call emits). Interfaces
 	// declared in the package anchor their methods via emitGenDeclTypes;
