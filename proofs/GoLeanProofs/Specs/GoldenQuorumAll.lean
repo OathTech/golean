@@ -1395,7 +1395,8 @@ theorem committedIndexAllReturnsSix
         · rfl
         · rfl
         · rfl
-        · rfl }
+        · rfl
+      wf := by decide +kernel }
     fuel ch σf ch' hrun
   obtain ⟨h, _hd, hsub, _hF, hsat⟩ := hres
   obtain ⟨n, h₁, h₂, hp1, hp2, _hdisj, hcov⟩ := hsat

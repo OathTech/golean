@@ -214,6 +214,43 @@ adopted so long as the user's form above is a supported case.
   policy). One-time preservation induction, then a single premise
   conjunct forever; also the invariant concurrency will need.
 
+- **Slice 3, StateWf preservation (2026-08-04, in progress on
+  `sem-adequacy-notions`).** The decided (a)-resolution implemented:
+  `GoLean/GoCore/StateWf.lean` — kernel-reducible `locSup` checker family
+  (strict sup of location root-bases; structural recursion incl. nested
+  inductives, verified no `WellFounded.fix`/`Acc.rec`), Prop wrappers
+  `StateWf`/`ConfigWf`/`MachineWf` (decidable, so concrete seeds discharge
+  by `decide`), the helper-preservation layer (load/store/alloc/enterFrame/
+  bind-iter/op tables), and `step_preserves_wf` over every `Step` rule.
+  TWO carrier findings beyond the plan: `Expr.locLit` means program TEXT
+  carries locations (so `Stmt`/`Expr`/`Func`-body checkers exist and
+  `StateWf` covers `σ.functions` bodies — `enterFrame` moves them into the
+  configuration). `InitialSplit` gained `(funcs env₀ prog)` parameters and
+  a `wf : MachineWf …` field; all Golden* readout seeds discharge it by
+  kernel `decide`.
+- **Slice 3 — SECOND ∀-choices obstruction, machine-checked (2026-08-04):
+  `mapIterNext` resists ∀-streams even under StateWf.** Witness
+  (`.tmp/probe_mapiter.lean`): a loc-free (hence trivially wf) state with a
+  `mapIterK` snapshot holding HETEROGENEOUS entries `#[(int 1, _),
+  (bool true, _)]` at `keyTy = int`: the relation steps (pick 0 binds), but
+  `stepFn` at stream `[1]` picks entry 1 and `bindIterVars`'s
+  `normalizeValueForTy` rejects the bool key — `.error .stuck`. Since
+  snapshots come from heap `mapData` cells and neither cells nor the
+  `mapRange` statement's `keyTy` are constrained by loc-wf, `step_complete_any_wf`
+  as specified is FALSE; and with a diverging loop body the bad `.next
+  (.mapIterK …)` re-entry is unreachable, so relation-`Progress` holds
+  while a bad stream still errors — `execStmtLoop_ok_or_fuelOut` and the
+  unconditional `Progress → ProgressExec` transport are FALSE as
+  specified too. This is a VALUE-SHAPE (typing) condition, not a
+  loc-boundedness one: candidate resolutions are (a) an explicit
+  per-snapshot bindability side condition on the reachable set (honest but
+  reachability-quantified), or (b) reshaping `mapRangeSnapshot` to
+  normalize entries at snapshot time (stream-independent fail-closed
+  point; a semantics change needing its own differential run) — user
+  decision pending, recorded here per the fail-closed/no-silent-weakening
+  contract. `appendSlice`, by contrast, resolves exactly as the wf design
+  predicted (the spill target provably addresses an existing cell).
+
 ## Exit criteria
 
 - `Terminates` and the total-correctness form exist, with the user's

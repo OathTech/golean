@@ -242,7 +242,8 @@ theorem recoverReturnsSeven
         fun k c => ⟨fun h => .inl h, fun h => h.elim id (fun h0 => by
           rw [heaplet_get?_eq,
             LawfulPartialMap.get?_empty (M := GoHeapF) (k := k)] at h0
-          cases h0)⟩⟩ }
+          cases h0)⟩⟩
+      wf := by decide }
     fuel ch σf ch' hrun
   obtain ⟨h, _hd, hsub, _hF, hsat⟩ := hres
   obtain ⟨n, h₁, h₂, hp1, hp2, _hdisj, hcov⟩ := hsat

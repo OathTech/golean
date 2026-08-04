@@ -1,4 +1,5 @@
 import GoLean.GoCore.StepFn
+import GoLean.GoCore.StateWf
 
 /-!
 # Per-rule soundness of the executable step (reshape S5)
@@ -15,21 +16,9 @@ namespace GoLean.GoCore.Machine
 
 open GoLean
 
-/-! ### Except-monad reduction helpers (the house idiom, formerly in
-`Correspondence.lean`) -/
-
-@[simp] theorem pure_eq_ok {ε α : Type} (a : α) :
-    (pure a : Except ε α) = .ok a := rfl
-@[simp] theorem stuck_def {α : Type} (m : String) :
-    (GoCore.stuck m : Except GoError α) = .error (.stuck m) := rfl
-@[simp] theorem panic_def {α : Type} (m : String) :
-    (GoCore.panic m : Except GoError α) = .error (.panic m) := rfl
-@[simp] theorem unsupported_def {α : Type} (m : String) :
-    (GoCore.unsupported m : Except GoError α) = .error (.unsupported m) := rfl
-
-theorem bind_eq_ok {ε α β : Type} {x : Except ε α} {f : α → Except ε β} {b : β} :
-    x >>= f = .ok b ↔ ∃ a, x = .ok a ∧ f a = .ok b := by
-  cases x <;> simp [Bind.bind, Except.bind]
+/-! The Except-monad reduction helpers (`pure_eq_ok`, `stuck_def`,
+`panic_def`, `unsupported_def`, `bind_eq_ok`) moved upstream to
+`StateWf.lean` (sem-adequacy slice 3) — same names, same namespace. -/
 
 /-- Inverting a successful bool coercion: only `.bool` values pass. -/
 theorem valueAsBool_ok {v : GoValue} {b : Bool} (h : valueAsBool v = .ok b) :
@@ -460,5 +449,63 @@ theorem step_panicked_elim {msg : String} {σ : ExecState} {c' : Config}
     {σ' : ExecState} : ¬ Step (.panicked msg) σ c' σ' := by
   intro h
   cases h
+
+/-! ### Well-formedness preservation at the machine level (StateWf arc,
+2026-08-04; `GoLean/GoCore/StateWf.lean`)
+
+The dangling-loc side condition the slice-3 obstruction note above asked
+for now EXISTS: `MachineWf` (state + configuration location-boundedness)
+is preserved by every rule, and the executable inherits it through
+`stepFn_sound`.
+
+**Status of the ∀-choices kit under wf (recorded honestly):**
+* `appendSlice` resolves exactly as predicted: under `MachineWf` the spill
+  target's root base addresses an EXISTING cell, so ok-ness cannot depend
+  on the consumed capacity choice (the remaining lemma is scaffolding in
+  progress — see the arc doc).
+* **A SECOND obstruction is machine-checked** (`.tmp/probe_mapiter.lean`):
+  `mapIterNext` resists ∀-streams EVEN UNDER `MachineWf` — a `mapIterK`
+  snapshot with heterogeneous entries (`#[(int, _), (bool, _)]` at
+  `keyTy = int`) is loc-free hence wf, the relation steps by picking the
+  good entry, but `stepFn` at a stream picking the bad entry fails in
+  `bindIterVars`'s normalization. Loc-wf cannot exclude it (snapshots are
+  heap `mapData` contents; neither they nor the statement's `keyTy` carry
+  locations), so `step_complete_any_wf` / `execStmtLoop_ok_or_fuelOut` /
+  the unconditional `Progress → ProgressExec` transport are FALSE as
+  specified. Resolution (bindability side condition vs snapshot-time
+  normalization reshape) is a user decision — arc doc, slice-3 entry. -/
+
+@[inherit_doc step_preserves_wf]
+theorem Step.preserves_wf {c : Config} {σ : ExecState} {c' : Config}
+    {σ' : ExecState} (h : Step c σ c' σ') (hwf : MachineWf σ c) :
+    MachineWf σ' c' :=
+  step_preserves_wf h hwf
+
+/-- Executable-side preservation: an `.ok` step of `stepFn` keeps the
+machine well-formed (`stepFn_sound` + `step_preserves_wf`). This is the
+fact `execStmtLoop`-level inductions thread along a run. -/
+theorem stepFn_preserves_wf {s : ExecState} {c : Config} {ch : Choices}
+    {c' : Config} {s' : ExecState} {ch' : Choices}
+    (h : stepFn s c ch = .ok (c', s', ch')) (hwf : MachineWf s c) :
+    MachineWf s' c' :=
+  step_preserves_wf (stepFn_sound h) hwf
+
+/-- Every wide op that dispatches through the choices-free core succeeds
+identically under EVERY stream (the stream passes through untouched):
+the non-`appendSlice` half of the ∀-choices kit, true by construction
+since the `applyStmtOpCore` refactor. -/
+theorem applyStmtOp_ok_any_ch_core {σ : ExecState} {ch : Choices}
+    {op : StmtOp} {nt : Nat} {vs : List GoValue} {σ' : ExecState}
+    {ch' : Choices} (hop : ∀ elem, op ≠ .appendSlice elem)
+    (h : applyStmtOp σ ch op nt vs = .ok (σ', ch')) :
+    ∀ ch₂ : Choices, applyStmtOp σ ch₂ op nt vs = .ok (σ', ch₂) := by
+  intro ch₂
+  cases op <;>
+    first
+    | exact absurd rfl (hop _)
+    | (simp only [applyStmtOp, bind_eq_ok, pure_eq_ok, Except.ok.injEq,
+        Prod.mk.injEq] at h ⊢
+       obtain ⟨σ₂, hcore, rfl, rfl⟩ := h
+       exact ⟨σ₂, hcore, rfl, trivial⟩)
 
 end GoLean.GoCore.Machine

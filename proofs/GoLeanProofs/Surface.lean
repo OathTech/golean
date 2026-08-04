@@ -100,22 +100,38 @@ the boundary layer holds the agreement). -/
 def HeapBounded (hp : Heap) (na : Nat) : Prop :=
   ∀ n : Nat, na ≤ n → Heap.lookup hp (.base ⟨n⟩) = none
 
-/-- An admissible framed initial state for `P`: well-formed (`bounded`),
-and its heaplet splits into the `P`-footprint `hP` and a frame `F` — the
-cells the program is NOT given. `F` is the "in any heap where the
+/-- An admissible framed initial state for `P`: well-formed (`bounded`,
+`wf`), and its heaplet splits into the `P`-footprint `hP` and a frame `F`
+— the cells the program is NOT given. `F` is the "in any heap where the
 footprint is allocated" quantifier of a quantified testcase
 (`docs/2026-07-21_spec-space.md` §2). (Reshape R3: the old `frag`
 fragment-scoping field — `Correspondence.HeapFrag` — is RETIRED: the
 machine's soundness theorems are total over the full fragment, so the
 side-condition it discharged no longer exists. Statements got strictly
-stronger.) -/
+stronger.)
+
+The `wf` conjunct (sem-adequacy arc StateWf decision, 2026-08-04;
+`docs/2026-08-03_sem-adequacy-arc.md` slice-3 entry): admissible initial
+states are LEGITIMATE machine states — every location's root base id lies
+strictly below the allocator's `nextAddr`, wherever that location occurs:
+in the heap (keys and stored values), in the initial environment `env₀`,
+in the program text (`Expr.locLit`), and in the function bodies of
+`funcs`. This is `Machine.MachineWf` over the seeded state and the
+initial configuration `.exec prog env₀ .stop`; at concrete seeds it is
+discharged by `decide` (the checker is kernel-reducible). The `ExecState`
+record literal omits `types`/`methods` (their defaults): `MachineWf`
+provably ignores them — `ExecState.locSup` inspects only `heap` and
+`functions` — so the omission is definitionally interchangeable with a
+literal that includes them. -/
 structure InitialSplit (P : HProp) (hp : Heap) (na : Nat)
-    (hP F : Heaplet) : Prop where
+    (hP F : Heaplet) (funcs : Array Func) (env₀ : LocalEnv) (prog : Stmt) : Prop where
   bounded : HeapBounded hp na
   disj : ∀ k, hP.get? k = none ∨ F.get? k = none
   cover : ∀ k c, (heapletOf hp).get? k = some c
     ↔ (hP.get? k = some c ∨ F.get? k = some c)
   sat_pre : sat hP P
+  wf : Machine.MachineWf { functions := funcs, heap := hp, nextAddr := na }
+    (.exec prog env₀ .stop)
 
 /-- **The surface Hoare judgment — FRAME-CLOSED** (the quantified-testcase
 form: "give the program any inputs, in ANY heap where the `P`-cells are
@@ -143,7 +159,7 @@ raft target lives in; the executable driver seeds `program.methods`,
 def GoTriple (types : TypeEnv) (funcs : Array Func) (methods : Array MethodInfo)
     (env₀ : LocalEnv)
     (P : HProp) (prog : Stmt) (Q : HProp) : Prop :=
-  ∀ (hp : Heap) (na : Nat) (hP F : Heaplet), InitialSplit P hp na hP F →
+  ∀ (hp : Heap) (na : Nat) (hP F : Heaplet), InitialSplit P hp na hP F funcs env₀ prog →
     ∀ (fuel : Nat) (ch : Choices) (σf : ExecState) (ch' : Choices),
       execStmt fuel env₀
           { types := types, functions := funcs, methods := methods,
@@ -166,7 +182,7 @@ control path inside it. -/
 def Progress (types : TypeEnv) (funcs : Array Func) (methods : Array MethodInfo)
     (env₀ : LocalEnv)
     (P : HProp) (prog : Stmt) : Prop :=
-  ∀ (hp : Heap) (na : Nat) (hP F : Heaplet), InitialSplit P hp na hP F →
+  ∀ (hp : Heap) (na : Nat) (hP F : Heaplet), InitialSplit P hp na hP F funcs env₀ prog →
     ∀ (c' : Config) (σ' : ExecState),
       Steps (.exec prog env₀ .stop)
         { types := types, functions := funcs, methods := methods,
@@ -191,7 +207,7 @@ the state, never the whole mutated footprint). -/
 def GoInvariant (types : TypeEnv) (funcs : Array Func) (methods : Array MethodInfo)
     (env₀ : LocalEnv)
     (P : HProp) (prog : Stmt) (I : HProp) : Prop :=
-  ∀ (hp : Heap) (na : Nat) (hP F : Heaplet), InitialSplit P hp na hP F →
+  ∀ (hp : Heap) (na : Nat) (hP F : Heaplet), InitialSplit P hp na hP F funcs env₀ prog →
     ∀ (c' : Config) (σ' : ExecState),
       Steps (.exec prog env₀ .stop)
         { types := types, functions := funcs, methods := methods,
@@ -280,7 +296,7 @@ cleanly or merely not finished yet." -/
 def ProgressExec (types : TypeEnv) (funcs : Array Func)
     (methods : Array MethodInfo) (env₀ : LocalEnv)
     (P : HProp) (prog : Stmt) : Prop :=
-  ∀ (hp : Heap) (na : Nat) (hP F : Heaplet), InitialSplit P hp na hP F →
+  ∀ (hp : Heap) (na : Nat) (hP F : Heaplet), InitialSplit P hp na hP F funcs env₀ prog →
     ∀ (fuel : Nat) (ch : Choices),
       (∃ (out : ExecOutcome) (ch' : Choices),
         execStmt fuel env₀
@@ -302,7 +318,7 @@ def GoSpecT (types : TypeEnv) (funcs : Array Func)
     (P : HProp) (prog : Stmt) (Q : HProp) : Prop :=
   GoTriple types funcs methods env₀ P prog Q
     ∧ ProgressExec types funcs methods env₀ P prog
-    ∧ ∀ (hp : Heap) (na : Nat) (hP F : Heaplet), InitialSplit P hp na hP F →
+    ∧ ∀ (hp : Heap) (na : Nat) (hP F : Heaplet), InitialSplit P hp na hP F funcs env₀ prog →
         Terminates env₀
           { types := types, functions := funcs, methods := methods,
             heap := hp, nextAddr := na }
@@ -316,7 +332,7 @@ fact rather than prose. -/
 theorem goSpecT_assumed_form {types funcs methods env₀} {P Q : HProp}
     {prog : Stmt}
     (h : GoSpecT types funcs methods env₀ P prog Q) :
-    ∀ (hp : Heap) (na : Nat) (hP F : Heaplet), InitialSplit P hp na hP F →
+    ∀ (hp : Heap) (na : Nat) (hP F : Heaplet), InitialSplit P hp na hP F funcs env₀ prog →
       ∀ (fuel : Nat) (ch : Choices) (σf : ExecState) (ch' : Choices),
         execStmt fuel env₀
             { types := types, functions := funcs, methods := methods,

@@ -139,7 +139,8 @@ theorem goldenReturnsTwo : goldenReturnsTwo_statement := by
           · rw [heaplet_get?_eq,
               LawfulPartialMap.get?_empty (M := GoHeapF) (k := k)] at h
             cases h
-      sat_pre := by rfl }
+      sat_pre := by rfl
+      wf := by decide }
     fuel ch σf ch' hrun
   obtain ⟨h, _hd, hsub, _hF, hsat⟩ := hres
   rw [show h = (∅ : Heaplet).insert 0 ⟨some (.int .int), .int 2 .int⟩

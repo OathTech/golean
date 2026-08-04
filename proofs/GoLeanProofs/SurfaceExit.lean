@@ -42,7 +42,7 @@ private theorem goSpec_adequate
       embed (GF := GoCoreS) P
         ⊢ WP (Config.exec prog env₀ .stop) {{ _v, embed Q }})
     {hp : Heap} {na : Nat} {hP F : Heaplet}
-    (hinit : InitialSplit P hp na hP F) :
+    (hinit : InitialSplit P hp na hP F funcs env₀ prog) :
     adequate .NotStuck (Config.exec prog env₀ .stop)
       (ExecState.mk (types := types) (functions := funcs) (methods := methods)
         (heap := hp) (nextAddr := na))
