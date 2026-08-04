@@ -1384,7 +1384,7 @@ theorem quorumThreeAllMeetsSpec :
 /-! ### The first-order readout, and the negative twin
 
 Both run-CONDITIONED, for the reason recorded once for the whole family
-(`quorumOneKnownNotEleven`): a `GoTriple` says nothing about a program
+(`quorumOneKnownNotElevenRun`): a `GoTriple` says nothing about a program
 that fails to terminate, so the UNCONDITIONAL `¬ GoFuncSpec` form of
 `quorumThreeAllNotTwelve_statement` is not refutable from the triple
 alone — it demands EXHIBITING a terminating run. That cost stays
@@ -1442,7 +1442,7 @@ theorem quorumThreeAllReturnsSix
 /-- **The negative twin** — no terminating run leaves `12`, the LARGEST
 acked index (the answer a "returns something a voter acked" bug would
 give, and the value `quorumThreeAllNotTwelve_statement` names). -/
-theorem quorumThreeAllNotTwelve
+theorem quorumThreeAllNotTwelveRun
     (fuel : Nat) (ch : Choices) (σf : ExecState) (ch' : Choices)
     (hrun : execStmt fuel threeOutEnv
         { types := quorumLowered.typeDefs.toList,

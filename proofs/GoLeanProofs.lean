@@ -31,6 +31,7 @@ import GoLeanProofs.Specs.GoldenQuorumWP
 import GoLeanProofs.Specs.AutomationTargets
 import GoLeanProofs.Specs.GoldenQuorumThree
 import GoLeanProofs.Specs.GoldenQuorumAll
+import GoLeanProofs.Specs.TotalPins
 import GoLeanProofs.NegativeSpecs
 
 /-!

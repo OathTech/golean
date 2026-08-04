@@ -105,7 +105,7 @@ golden driver — mid-call included — the output cell holds `int 0` or
 register invariant ("the register only ever holds values the state machine
 permits"); chosen so the physical invariant needs no ghost state (the
 single write-step goes 0 → 2 atomically). A statement `GoTriple`
-structurally cannot make (terminal states only) and `Progress` does not
+structurally cannot make (terminal states only) and `ProgressExec` does not
 (never-stuck only). -/
 def goldenInvariant_statement : Prop :=
   GoInvariant sliceLowered.typeDefs.toList sliceLowered.funcs

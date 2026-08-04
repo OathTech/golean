@@ -69,7 +69,10 @@ theorem quorumOneKnownReturnsTwelve
     loadLoc σf (.base ⟨0⟩) = .ok (.int 12 .uint64) :=
   GoLean.Surface.quorumOneKnownReturnsTwelve fuel ch σf ch' hrun
 
-theorem quorumOneKnownNotEleven
+theorem quorumOneKnownNotEleven : quorumOneKnownNotEleven_statement :=
+  GoLean.Surface.quorumOneKnownNotEleven
+
+theorem quorumOneKnownNotElevenRun
     (fuel : Nat) (ch : Choices) (σf : ExecState) (ch' : Choices)
     (hrun : execStmt fuel quorumOutEnv
         { types := quorumLowered.typeDefs.toList,
@@ -78,7 +81,7 @@ theorem quorumOneKnownNotEleven
         (.call #[.var "$callres"] ⟨"committedOneKnown"⟩ #[])
       = .ok (.normal σf, ch')) :
     loadLoc σf (.base ⟨0⟩) ≠ .ok (.int 11 .uint64) :=
-  GoLean.Surface.quorumOneKnownNotEleven fuel ch σf ch' hrun
+  GoLean.Surface.quorumOneKnownNotElevenRun fuel ch σf ch' hrun
 
 /-! ## The comma-ok method -/
 
@@ -122,7 +125,10 @@ theorem quorumThreeAllReturnsSix
     loadLoc σf (.base ⟨0⟩) = .ok (.int 6 .uint64) :=
   GoLean.Surface.quorumThreeAllReturnsSix fuel ch σf ch' hrun
 
-theorem quorumThreeAllNotTwelve
+theorem quorumThreeAllNotTwelve : quorumThreeAllNotTwelve_statement :=
+  GoLean.Surface.quorumThreeAllNotTwelve
+
+theorem quorumThreeAllNotTwelveRun
     (fuel : Nat) (ch : Choices) (σf : ExecState) (ch' : Choices)
     (hrun : execStmt fuel threeOutEnv
         { types := quorumLowered.typeDefs.toList,
@@ -131,7 +137,7 @@ theorem quorumThreeAllNotTwelve
         (.call #[.var "$callres"] ⟨"committedThreeAll"⟩ #[])
       = .ok (.normal σf, ch')) :
     loadLoc σf (.base ⟨0⟩) ≠ .ok (.int 12 .uint64) :=
-  GoLean.Surface.quorumThreeAllNotTwelve fuel ch σf ch' hrun
+  GoLean.Surface.quorumThreeAllNotTwelveRun fuel ch σf ch' hrun
 
 /-! ## The ∀-config summit -/
 

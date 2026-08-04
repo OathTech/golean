@@ -101,7 +101,9 @@ that form it is FALSE, not merely unproven: at `c.length ≥ 2^63` the
 lowering's `n := len(c)` is a Go `int`, so `IntKind.int.normalize` wraps
 it NEGATIVE; `n == 0` is then false, `len(stk) >= n` is TRUE (7 ≥ a
 negative), and `srt = stk[:n]` hits `checkSliceBounds`' negative-high
-arm — a panic, i.e. a configuration that `Progress` counts as stuck. The
+arm — a panic, i.e. a run that `ProgressExec` (the safety half of
+`GoSpec` since sem-adequacy slice 4; the run ends neither `.ok` nor
+`.fuelOut`) rejects. The
 `c.length < 2 ^ 63` hypothesis is the REPRESENTABILITY side condition
 that says the config fits in the machine `int` the lowering counts it
 with (the same bound `GoldenQuorumThree.wp_ci_loop` already carried as
@@ -198,8 +200,13 @@ def quorumOneKnownFuncSpec_statement : Prop :=
     quorumLowered.methods ⟨"committedOneKnown"⟩ .uint64 #[] .emp
     (fun n => .pure (n = 12))
 
-/-- **TARGET — the negative twin, and the one thing this slice did NOT
-prove.** Stated as an UNCONDITIONAL refutation.
+/-- **The negative twin — DISCHARGED at sem-adequacy slice 5
+(2026-08-04) by `quorumOneKnownNotEleven` (`Specs/TotalPins.lean`).**
+Stated as an UNCONDITIONAL refutation; the discharge exhibits the
+terminating run this note below said it demands (the ∀-streams
+termination checker `allStreamsOk`, kernel-evaluated) and refutes the
+wrong spec's triple against `quorumOneKnownReturnsTwelve`. The history
+below is retained as the record of why it was once out of reach.
 
 *Provenance corrected 2026-07-31 (pre-merge audit, finding 6):* this def
 and `quorumOneKnownFuncSpec_statement` were repeatedly described as
@@ -216,10 +223,9 @@ follow from the positive discharge: `GoTriple` quantifies over
 TERMINATING runs, so both the `= 12` and the `= 11` spec are vacuously
 true of a program with no terminating run, and refuting this def requires
 exhibiting one — a kernel evaluation of the interpreter over the whole
-pinned program, a separate cost. The run-conditioned twin
-`quorumOneKnownNotEleven` (the `goldenNotThree` shape) IS proven in
-`Specs/GoldenQuorumWP`; this def stays a target and no theorem names it.
-Recorded, not quietly restated. -/
+pinned program, which is exactly what slice 5 paid. The run-conditioned
+twin (the `goldenNotThree` shape) remains proven in
+`Specs/GoldenQuorumWP` as `quorumOneKnownNotElevenRun`. -/
 def quorumOneKnownNotEleven_statement : Prop :=
   ¬ GoFuncSpec quorumLowered.typeDefs.toList quorumLowered.funcs
       quorumLowered.methods ⟨"committedOneKnown"⟩ .uint64 #[] .emp
@@ -250,8 +256,9 @@ FIRST form of this statement — written at `39891ae`, in phase 4, not at
 phase 0 as this note previously said (provenance corrected same day,
 pre-merge audit finding 6) — passed `#[]` arguments to a two-parameter
 method: the arity
-check in `enterFrame` fails closed, so the configuration is STUCK, so
-`Progress` — and with it the whole statement — was FALSE, not merely
+check in `enterFrame` fails closed, so the configuration is STUCK (the
+run errors, which interpreter-side safety — today `ProgressExec` —
+rejects), so the whole statement was FALSE, not merely
 unproven; and its postcondition `b = true → n = 12` was satisfiable by a
 method that never finds anything. Both are fixed here: the receiver and
 index are real arguments (`GoFuncSpec2`'s new caller-environment
@@ -293,20 +300,22 @@ def quorumThreeAllFuncSpec_statement : Prop :=
     quorumLowered.methods ⟨"committedThreeAll"⟩ .uint64 #[] .emp
     (fun n => .pure (n = 6))
 
-/-- **TARGET — the 3-voter negative twin.** Stated as an UNCONDITIONAL
-refutation at `12` (the largest acked index — the answer a
-"returns something a voter acked" bug would give).
+/-- **The 3-voter negative twin — DISCHARGED at sem-adequacy slice 5
+(2026-08-04) by `quorumThreeAllNotTwelve` (`Specs/TotalPins.lean`).**
+Stated as an UNCONDITIONAL refutation at `12` (the largest acked index —
+the answer a "returns something a voter acked" bug would give); the
+discharge exhibits a terminating run at every stream (all 3! = 6 pick
+orders kernel-explored by `allStreamsOk`) and refutes the wrong spec's
+triple against `quorumThreeAllReturnsSix`.
 
 It does NOT follow from the positive discharge, and the reason is
 recorded once for the whole family (`quorumOneKnownNotEleven_statement`
 says the same): `GoTriple` quantifies over TERMINATING runs, so both the
 `= 6` and the `= 12` spec are vacuously true of a program with no
 terminating run. Refuting this needs a terminating run EXHIBITED — a
-kernel evaluation of the interpreter over the pinned program. The
-cheap, honest twin is the run-conditioned one
-(`quorumOneKnownNotEleven`'s shape), which phase 3 landed beside the
-positive result: `Specs/GoldenQuorumThree.quorumThreeAllNotTwelve`. This
-def stays a TARGET and no theorem names it. -/
+kernel evaluation of the interpreter over the pinned program, which
+slice 5 paid. The run-conditioned twin phase 3 landed remains proven as
+`Specs/GoldenQuorumThree.quorumThreeAllNotTwelveRun`. -/
 def quorumThreeAllNotTwelve_statement : Prop :=
   ¬ GoFuncSpec quorumLowered.typeDefs.toList quorumLowered.funcs
       quorumLowered.methods ⟨"committedThreeAll"⟩ .uint64 #[] .emp

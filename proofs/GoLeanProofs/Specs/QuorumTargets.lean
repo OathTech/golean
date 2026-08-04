@@ -207,7 +207,8 @@ NOT at phase 0; provenance corrected 2026-07-31 per pre-merge audit
 finding 6, since only the SHAPE above is phase-0) consequently passed
 `#[]` arguments to a two-parameter method, which `enterFrame`'s arity
 check rejects: the
-configuration is STUCK, so `Progress` — hence the whole statement — was
+configuration is STUCK, so the judgment's safety half (`ProgressExec`
+since sem-adequacy slice 4) — hence the whole statement — was
 FALSE, not merely unproven. Widening the caller environment is the
 minimal fix that makes the intended claim stateable; the statement is
 re-pinned in `Specs/GoldenQuorumWP.lean` and now PROVEN. -/

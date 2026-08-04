@@ -46,7 +46,9 @@ Honest status, stated once and not softened anywhere below:
   `GoTriple` is vacuously true of a program that fails to terminate, so
   refuting it demands EXHIBITING a terminating run (a kernel evaluation
   of the interpreter over the whole pinned program). The run-conditioned
-  twin `quorumOneKnownNotEleven` — the golden precedent's shape
+  twin `quorumOneKnownNotElevenRun` — the golden precedent's shape
+  (renamed from `quorumOneKnownNotEleven` at sem-adequacy slice 5, which
+  name now belongs to the UNCONDITIONAL twin in `Specs/TotalPins.lean`)
   (`goldenNotThree`) — is proven below instead.
 
 The claim shape, for the record: the machine result `12` equals
@@ -1373,7 +1375,7 @@ theorem quorumOneKnownReturnsTwelve
 /-- **The negative twin** — the two-line corollary the golden precedent
 predicts: no terminating run leaves `11`. This is what stops a trivialized
 postcondition from passing for the real one. -/
-theorem quorumOneKnownNotEleven
+theorem quorumOneKnownNotElevenRun
     (fuel : Nat) (ch : Choices) (σf : ExecState) (ch' : Choices)
     (hrun : execStmt fuel quorumOutEnv
         { types := quorumLowered.typeDefs.toList,

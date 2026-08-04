@@ -160,8 +160,9 @@ theorem committedThreeAll_in_pin :
 `rfl` against the lowering. This is not decoration: the FIRST
 `quorumAckedIndexFuncSpec2_statement` was FALSE — not merely unproven —
 because it passed the wrong number of arguments, `enterFrame`'s arity
-check failed closed, and the configuration was stuck, which makes
-`Progress` false (`Specs/QuorumTargets.lean`, the recorded correction).
+check failed closed, and the configuration was stuck, which falsifies
+the judgment's safety half (`ProgressExec` since sem-adequacy slice 4;
+`Specs/QuorumTargets.lean`, the recorded correction).
 `committedIndexAllConfigs_statement` passes two arguments into two
 parameters and one target into one result; that is what this says. -/
 theorem committedIndex_arity_in_pin :

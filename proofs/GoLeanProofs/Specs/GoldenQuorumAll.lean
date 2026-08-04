@@ -1327,7 +1327,7 @@ called with heap-carried inputs; the corpus-facing claim is first-order
 out at the 3-voter encoding — a genuine INSTANCE of the ∀-config
 theorem, not a re-proof — and refutes `12` from it. Both are
 run-CONDITIONED, for the reason recorded once for the whole family
-(`quorumOneKnownNotEleven`): a `GoTriple` says nothing about a program
+(`quorumOneKnownNotElevenRun`): a `GoTriple` says nothing about a program
 that fails to terminate, so the unconditional `¬ GoSpec` form demands
 EXHIBITING a terminating run (a kernel evaluation of the interpreter over
 the pinned program), which stays owed. -/
@@ -1424,7 +1424,7 @@ theorem committedIndexAllReturnsSix
 /-- **The ∀-config negative twin** — no terminating run leaves `12`, the
 LARGEST acked index (the answer a "returns something a voter acked" bug
 would give). Two lines from the readout, exactly as
-`quorumThreeAllNotTwelve` is from `quorumThreeAllReturnsSix`. -/
+`quorumThreeAllNotTwelveRun` is from `quorumThreeAllReturnsSix`. -/
 theorem committedIndexAllNotTwelve
     (fuel : Nat) (ch : Choices) (σf : ExecState) (ch' : Choices)
     (hrun : execStmt fuel allOutEnv

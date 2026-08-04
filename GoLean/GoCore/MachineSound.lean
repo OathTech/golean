@@ -70,8 +70,7 @@ theorem stepFn_sound {s : ExecState} {c : Config} {ch : Choices}
     obtain ⟨⟨env', s₁⟩, hd, rfl, rfl, rfl⟩ := h
     exact Step.block hd
   case case14 =>
-    simp_all only [stepFn, reduceIte, bind_eq_ok, pure_eq_ok, Except.ok.injEq,
-      Prod.mk.injEq]
+    simp_all [stepFn, bind_eq_ok]
     obtain ⟨v, hd, rfl, rfl, rfl⟩ := h
     exact Step.initialization hd rfl
   case case34 =>
@@ -2091,4 +2090,525 @@ theorem execStmtLoop_ok_or_fuelOut {σ₀ : ExecState} {c₀ : Config}
           (hreach.trans (Steps.single (stepFn_sound hstepFn)))
           (stepFn_preserves_wf hstepFn hwfc) ch₂
 
-end GoLean.GoCore.Machine
+/-! ### The ∀-streams termination checker (sem-adequacy arc slice 5,
+2026-08-04)
+
+`Terminates` (Surface) quantifies EVERY choice stream at one uniform fuel
+bound, but a kernel evaluation exhibits one stream. The bridge is the
+machine's choices discipline (structural since `applyStmtOpCore`): the
+stream is consumed at exactly TWO sites — the `mapIterK` pick (bound =
+snapshot size, part of the CONFIGURATION) and `applyStmtOp`'s
+`appendSlice` spill (bound 8) — and every other arm both ignores the
+stream and computes a stream-independent successor. So a single
+kernel-checked exploration certifies the ∀-streams claim:
+`allStreamsOk` walks the run, treating every non-consuming step as the
+oblivious step it provably is (`stepFn_oblivious`), BRANCHING over every
+possible pick at a nonempty `mapIterK` (the choice is `head % size` —
+finitely many), and FAILING CLOSED (false) at any `appendSlice` apply
+position (a genuinely stream-sized allocation; no pinned program hits
+one, and a future one turns the checker false, never unsound).
+`execStmtLoop_ok_of_allStreamsOk` is the soundness theorem: checker true
+at fuel `N` ⇒ every stream's run completes within `N`. -/
+
+/-- Is this configuration about to dispatch `applyStmtOp` with an
+`appendSlice` op (the one stream-consuming wide op)? Conservative
+shape check on the two `applyStmtOp` call sites in `stepFn`: the
+`stmtOpK` apply position and the nullary wide-statement arm. -/
+def consumesAppendSlice : Config → Bool
+  | .retV _ (.stmtOpK op _ _ [] _ _) =>
+      match op with
+      | .appendSlice _ => true
+      | _ => false
+  | .exec stmt _ _ =>
+      match stmtPlan stmt with
+      | some (op, _, []) =>
+          match op with
+          | .appendSlice _ => true
+          | _ => false
+      | _ => false
+  | _ => false
+
+/-- The kernel-evaluable ∀-streams run explorer (docstring above). At a
+nonempty `mapIterK` it checks EVERY pick; elsewhere it probes one step
+at the canonical stream `[0]` and relies on `stepFn_oblivious`. `false`
+is always safe (fail closed): at fuel 0, at any error, at any
+`appendSlice` apply position. -/
+def allStreamsOk : Nat → ExecState → Config → Bool
+  | 0, _, _ => false
+  | fuel + 1, σ, c =>
+      match c with
+      | .next .stop => true
+      | .returning .stop => true
+      | .breaking .stop => true
+      | .continuing .stop => true
+      | .next (.mapIterK keyVar valVar keyTy valTy body remaining env k) =>
+          if remaining.isEmpty then
+            match stepFn σ (.next (.mapIterK keyVar valVar keyTy valTy body
+                remaining env k)) [0] with
+            | .ok (c', σ', _) => allStreamsOk fuel σ' c'
+            | .error _ => false
+          else
+            (List.range remaining.size).all fun i =>
+              match stepFn σ (.next (.mapIterK keyVar valVar keyTy valTy body
+                  remaining env k)) [i] with
+              | .ok (c', σ', _) => allStreamsOk fuel σ' c'
+              | .error _ => false
+      | c =>
+          if consumesAppendSlice c then false
+          else
+            match stepFn σ c [0] with
+            | .ok (c', σ', _) => allStreamsOk fuel σ' c'
+            | .error _ => false
+
+/-- Non-`appendSlice` wide ops dispatch through the choices-free core:
+the result is the core's, with the stream threaded through untouched —
+on success AND on error. -/
+theorem applyStmtOp_eq_core {σ : ExecState} {ch : Choices} {op : StmtOp}
+    {nt : Nat} {vs : List GoValue} (hop : ∀ e, op ≠ .appendSlice e) :
+    applyStmtOp σ ch op nt vs
+      = (fun σ₂ => (σ₂, ch)) <$> applyStmtOpCore σ op nt vs := by
+  cases op <;>
+    first
+    | exact absurd rfl (hop _)
+    | (simp only [applyStmtOp, Bind.bind, Except.bind, Functor.map, Except.map,
+         pure, Except.pure]
+       all_goals (cases applyStmtOpCore σ _ nt vs <;> rfl))
+
+/-- Mapping cannot manufacture or change an error. -/
+theorem map_eq_error {ε α β : Type} {g : α → β} {x : Except ε α} {e : ε} :
+    g <$> x = .error e ↔ x = .error e := by
+  cases x <;> simp [Functor.map, Except.map]
+
+/-- The `stmtOpK` apply-position shape flag transfers to the op. -/
+theorem consumesAppendSlice_stmtOpK {v : GoValue} {op : StmtOp} {nt : Nat}
+    {done : List GoValue} {env : LocalEnv} {k : Cont}
+    (h : consumesAppendSlice (.retV v (.stmtOpK op nt done [] env k)) = false) :
+    ∀ e, op ≠ .appendSlice e := by
+  intro e he
+  subst he
+  simp [consumesAppendSlice] at h
+
+/-- The nullary wide-statement shape flag transfers to the planned op. -/
+theorem consumesAppendSlice_execPlan {stmt : Stmt} {env : LocalEnv} {k : Cont}
+    {op : StmtOp} {nt : Nat}
+    (hplan : stmtPlan stmt = some (op, nt, []))
+    (h : consumesAppendSlice (.exec stmt env k) = false) :
+    ∀ e, op ≠ .appendSlice e := by
+  intro e he
+  subst he
+  simp [consumesAppendSlice, hplan] at h
+
+/-- The `stepFn` equation at a nullary wide-statement configuration: with
+the plan pinned (`some (op, nt, [])`), the arm is exactly the immediate
+`applyStmtOp` dispatch. Proved by statement cases: non-wide constructors
+refute the plan hypothesis; wide constructors reduce and rewrite. -/
+theorem stepFn_exec_plan_nullary {σ : ExecState} {stmt : Stmt}
+    {env : LocalEnv} {k : Cont} {op : StmtOp} {nt : Nat} {ch : Choices}
+    (hplan : stmtPlan stmt = some (op, nt, [])) :
+    stepFn σ (.exec stmt env k) ch
+      = (do
+          let (s', choices') ← applyStmtOp σ ch op nt []
+          pure (.next k, s', choices')) := by
+  cases stmt <;>
+    first
+    | (simp [stmtPlan] at hplan; done)
+    | (simp only [stepFn]
+       rw [hplan])
+
+set_option maxHeartbeats 1600000 in
+set_option linter.unusedSimpArgs false in
+/-- **Stream obliviousness of the non-consuming arms**: away from the two
+consuming shapes (a `mapIterK` at the `.next` position — excluded by
+`hmi` — and an `appendSlice` apply position — excluded by `hnc`), a step
+that succeeds under one stream succeeds under EVERY stream, with the SAME
+successor and the stream returned untouched. Sweep over `stepFn`'s case
+tree; a newly added stream-consuming arm breaks this proof loudly rather
+than silently unsounding the checker. -/
+theorem stepFn_oblivious {σ : ExecState} {c : Config} {ch₀ : Choices}
+    {c' : Config} {σ' : ExecState} {ch₀' : Choices}
+    (hmi : ∀ (kv vv : Option String) (kt vt : Ty) (body : Stmt)
+      (rem : Array (GoValue × GoValue)) (env : LocalEnv) (k : Cont),
+      c ≠ .next (.mapIterK kv vv kt vt body rem env k))
+    (hnc : consumesAppendSlice c = false)
+    (h : stepFn σ c ch₀ = .ok (c', σ', ch₀')) :
+    ch₀' = ch₀ ∧ ∀ ch : Choices, stepFn σ c ch = .ok (c', σ', ch) := by
+  fun_cases stepFn σ c ch₀
+  all_goals first
+    | exact absurd rfl (hmi _ _ _ _ _ _ _ _)
+    | (refine ⟨?_, fun ch => ?_⟩ <;> (simp_all [stepFn]; done))
+    | skip
+  -- 23 arms remain: every one binds through a choices-free helper
+  -- (enterFrame / allocDecls / defaultValue / loadLoc / valueAsBool /
+  -- mapRangeSnapshotEntries / loadMany+storeMany) or dispatches a
+  -- non-appendSlice applyStmtOp (`hnc`). Uniform recipe: reduce the probe
+  -- equation, invert its bind, replay the same bind at the arbitrary
+  -- stream (the helpers never see the stream).
+  case case3 =>
+    simp_all only [stepFn, bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq]
+    obtain ⟨⟨func, frameEnv, resultLocs, s₂⟩, hd, rfl, rfl, rfl⟩ := h
+    refine ⟨by simp, fun ch => ?_⟩
+    simp only [stepFn, bind_eq_ok]
+    refine ⟨⟨func, frameEnv, resultLocs, s₂⟩, hd, ?_⟩
+    simp
+  case case13 =>
+    simp_all only [stepFn, bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq]
+    obtain ⟨⟨env', s₁⟩, hd, rfl, rfl, rfl⟩ := h
+    refine ⟨by simp, fun ch => ?_⟩
+    simp only [stepFn, bind_eq_ok]
+    refine ⟨⟨env', s₁⟩, hd, ?_⟩
+    simp
+  case case14 =>
+    simp_all [stepFn, bind_eq_ok]
+    obtain ⟨v, hd, h1, h2, h3⟩ := h
+    exact ⟨h3.symm, v, hd, h1, h2⟩
+
+  case case34 =>
+    simp_all only [stepFn, bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq]
+    obtain ⟨⟨func, frameEnv, resultLocs, s₂⟩, hd, rfl, rfl, rfl⟩ := h
+    refine ⟨by simp, fun ch => ?_⟩
+    simp only [stepFn, bind_eq_ok]
+    refine ⟨⟨func, frameEnv, resultLocs, s₂⟩, hd, ?_⟩
+    simp
+  case case39 =>
+    rename_i op nt hplan
+    have hop := consumesAppendSlice_execPlan hplan hnc
+    rw [stepFn_exec_plan_nullary hplan, applyStmtOp_eq_core hop] at h
+    simp only [bind_eq_ok, map_eq_ok] at h
+    obtain ⟨a, ⟨σ₂, hcore, rfl⟩, hrest⟩ := h
+    simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at hrest
+    obtain ⟨rfl, rfl, rfl⟩ := hrest
+    refine ⟨by simp, fun ch => ?_⟩
+    rw [stepFn_exec_plan_nullary hplan, applyStmtOp_eq_core hop, hcore]
+    rfl
+  case case43 =>
+    simp_all only [stepFn, bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq]
+    obtain ⟨v, hd, rfl, rfl, rfl⟩ := h
+    refine ⟨by simp, fun ch => ?_⟩
+    simp only [stepFn, bind_eq_ok]
+    refine ⟨v, hd, ?_⟩
+    simp
+  case case64 =>
+    simp only [stepFn, bind_eq_ok] at h
+    obtain ⟨b, hb, h⟩ := h
+    obtain rfl := valueAsBool_ok hb
+    cases b <;>
+      (simp only [Bool.false_eq_true, reduceIte, pure_eq_ok, Except.ok.injEq,
+         Prod.mk.injEq] at h
+       obtain ⟨rfl, rfl, rfl⟩ := h
+       refine ⟨by simp, fun ch => ?_⟩
+       simp [stepFn, valueAsBool, Bind.bind, Except.bind])
+  case case65 =>
+    simp only [stepFn, bind_eq_ok] at h
+    obtain ⟨b, hb, h⟩ := h
+    obtain rfl := valueAsBool_ok hb
+    cases b <;>
+      (simp only [Bool.false_eq_true, reduceIte, pure_eq_ok, Except.ok.injEq,
+         Prod.mk.injEq] at h
+       obtain ⟨rfl, rfl, rfl⟩ := h
+       refine ⟨by simp, fun ch => ?_⟩
+       simp [stepFn, valueAsBool, Bind.bind, Except.bind])
+  case case66 =>
+    simp_all only [stepFn, bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq]
+    obtain ⟨b, hb, rfl, rfl, rfl⟩ := h
+    refine ⟨by simp, fun ch => ?_⟩
+    simp only [stepFn, bind_eq_ok]
+    refine ⟨b, hb, ?_⟩
+    simp
+  case case67 =>
+    simp only [stepFn, bind_eq_ok] at h
+    obtain ⟨b, hb, h⟩ := h
+    obtain rfl := valueAsBool_ok hb
+    cases b <;>
+      (simp only [Bool.false_eq_true, reduceIte, pure_eq_ok, Except.ok.injEq,
+         Prod.mk.injEq] at h
+       obtain ⟨rfl, rfl, rfl⟩ := h
+       refine ⟨by simp, fun ch => ?_⟩
+       simp [stepFn, valueAsBool, Bind.bind, Except.bind])
+  case case68 =>
+    simp only [stepFn, bind_eq_ok] at h
+    obtain ⟨b, hb, h⟩ := h
+    obtain rfl := valueAsBool_ok hb
+    cases b <;>
+      (simp only [Bool.false_eq_true, reduceIte, pure_eq_ok, Except.ok.injEq,
+         Prod.mk.injEq] at h
+       obtain ⟨rfl, rfl, rfl⟩ := h
+       refine ⟨by simp, fun ch => ?_⟩
+       simp [stepFn, valueAsBool, Bind.bind, Except.bind])
+  case case79 =>
+    simp_all only [stepFn, bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq]
+    obtain ⟨⟨func, frameEnv, resultLocs, s₂⟩, hd, rfl, rfl, rfl⟩ := h
+    refine ⟨by simp, fun ch => ?_⟩
+    simp only [stepFn, bind_eq_ok]
+    refine ⟨⟨func, frameEnv, resultLocs, s₂⟩, hd, ?_⟩
+    simp
+  case case81 =>
+    simp_all only [stepFn, bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq]
+    obtain ⟨⟨func, frameEnv, resultLocs, s₂⟩, hd, rfl, rfl, rfl⟩ := h
+    refine ⟨by simp, fun ch => ?_⟩
+    simp only [stepFn, bind_eq_ok]
+    refine ⟨⟨func, frameEnv, resultLocs, s₂⟩, hd, ?_⟩
+    simp
+  case case85 =>
+    rename_i hlt
+    simp only [stepFn, if_neg hlt, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl, rfl⟩ := h
+    refine ⟨by simp, fun ch => ?_⟩
+    simp only [stepFn, if_neg hlt]
+    rfl
+  case case86 =>
+    rename_i s₂ ch₂ happly
+    have hop := consumesAppendSlice_stmtOpK hnc
+    simp only [stepFn, happly, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl, rfl⟩ := h
+    rw [applyStmtOp_eq_core hop, map_eq_ok] at happly
+    obtain ⟨σ₂, hcore, heq⟩ := happly
+    injection heq with h1 h2
+    subst h1
+    subst h2
+    refine ⟨by simp, fun ch => ?_⟩
+    simp only [stepFn]
+    rw [applyStmtOp_eq_core hop, hcore]
+    rfl
+  case case87 =>
+    rename_i msg happly
+    have hop := consumesAppendSlice_stmtOpK hnc
+    simp only [stepFn, happly, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl, rfl⟩ := h
+    rw [applyStmtOp_eq_core hop, map_eq_error] at happly
+    refine ⟨by simp, fun ch => ?_⟩
+    simp only [stepFn]
+    rw [applyStmtOp_eq_core hop, happly]
+    rfl
+  case case93 =>
+    simp_all only [stepFn, bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq]
+    obtain ⟨⟨func, frameEnv, resultLocs, s₂⟩, hd, rfl, rfl, rfl⟩ := h
+    refine ⟨by simp, fun ch => ?_⟩
+    simp only [stepFn, bind_eq_ok]
+    refine ⟨⟨func, frameEnv, resultLocs, s₂⟩, hd, ?_⟩
+    simp
+  case case99 =>
+    simp_all only [stepFn, bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq]
+    obtain ⟨⟨func, frameEnv, resultLocs, s₂⟩, hd, rfl, rfl, rfl⟩ := h
+    refine ⟨by simp, fun ch => ?_⟩
+    simp only [stepFn, bind_eq_ok]
+    refine ⟨⟨func, frameEnv, resultLocs, s₂⟩, hd, ?_⟩
+    simp
+  case case109 =>
+    simp_all only [stepFn, bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq]
+    obtain ⟨entries, hd, rfl, rfl, rfl⟩ := h
+    refine ⟨by simp, fun ch => ?_⟩
+    simp only [stepFn, bind_eq_ok]
+    refine ⟨entries, hd, ?_⟩
+    simp
+  case case117 =>
+    simp_all only [stepFn, bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq]
+    obtain ⟨vs, hload, s₂, hstore, rfl, rfl, rfl⟩ := h
+    refine ⟨by simp, fun ch => ?_⟩
+    simp only [stepFn, bind_eq_ok]
+    refine ⟨vs, hload, ?_⟩
+    simp [hstore, Bind.bind, Except.bind]
+  case case118 =>
+    simp_all only [stepFn, bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq]
+    obtain ⟨⟨func, frameEnv, resultLocs, s₂⟩, hd, rfl, rfl, rfl⟩ := h
+    refine ⟨by simp, fun ch => ?_⟩
+    simp only [stepFn, bind_eq_ok]
+    refine ⟨⟨func, frameEnv, resultLocs, s₂⟩, hd, ?_⟩
+    simp
+  case case146 =>
+    simp_all only [stepFn, bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq]
+    obtain ⟨vs, hload, s₂, hstore, rfl, rfl, rfl⟩ := h
+    refine ⟨by simp, fun ch => ?_⟩
+    simp only [stepFn, bind_eq_ok]
+    refine ⟨vs, hload, ?_⟩
+    simp [hstore, Bind.bind, Except.bind]
+  case case147 =>
+    simp_all only [stepFn, bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq]
+    obtain ⟨⟨func, frameEnv, resultLocs, s₂⟩, hd, rfl, rfl, rfl⟩ := h
+    refine ⟨by simp, fun ch => ?_⟩
+    simp only [stepFn, bind_eq_ok]
+    refine ⟨⟨func, frameEnv, resultLocs, s₂⟩, hd, ?_⟩
+    simp
+
+/-- The empty-snapshot `mapIterK` step is oblivious: it pops the
+continuation at every stream. -/
+theorem stepFn_mapIter_empty {σ : ExecState} {kv vv : Option String}
+    {kt vt : Ty} {body : Stmt} {remaining : Array (GoValue × GoValue)}
+    {env : LocalEnv} {k : Cont} (hemp : remaining.isEmpty = true) :
+    ∀ ch : Choices,
+      stepFn σ (.next (.mapIterK kv vv kt vt body remaining env k)) ch
+        = .ok (.next k, σ, ch) := by
+  intro ch
+  simp [stepFn, hemp]
+
+set_option linter.unusedSimpArgs false in
+/-- The nonempty `mapIterK` step, factored through the consumed choice:
+the successor is a function of the PICK INDEX alone (`bindIterVars` never
+sees the stream), and the stream moves to the consume's tail. This is the
+equation that lets one probe per index cover every stream whose choice
+reduces to that index. -/
+theorem stepFn_mapIter_pick {σ : ExecState} {kv vv : Option String}
+    {kt vt : Ty} {body : Stmt} {remaining : Array (GoValue × GoValue)}
+    {env : LocalEnv} {k : Cont} {ch : Choices} {idx : Nat} {tail : Choices}
+    (hne : ¬ remaining.isEmpty = true)
+    (hcons : Choices.consume ch remaining.size = (idx, tail))
+    (hlt : idx < remaining.size) :
+    stepFn σ (.next (.mapIterK kv vv kt vt body remaining env k)) ch
+      = ((bindIterVars env.pushScope σ kv vv kt vt
+            remaining[idx].1 remaining[idx].2).map
+          fun p => (.exec body p.1
+            (.mapIterK kv vv kt vt body (remaining.eraseIdx idx hlt) env k),
+            p.2, tail)) := by
+  simp only [stepFn]
+  rw [if_neg hne]
+  split
+  · rename_i heq
+    rw [hcons] at heq
+    simp only at heq
+    rw [Array.getElem?_eq_getElem hlt] at heq
+    cases heq
+  · rename_i key value heq
+    rw [hcons] at heq
+    simp only at heq
+    rw [Array.getElem?_eq_getElem hlt] at heq
+    injection heq with heq
+    have h1 : remaining[idx].1 = key := congrArg Prod.fst heq
+    have h2 : remaining[idx].2 = value := congrArg Prod.snd heq
+    subst h1
+    subst h2
+    simp only [hcons]
+    cases hbind : bindIterVars env.pushScope σ kv vv kt vt
+        remaining[idx].1 remaining[idx].2 <;>
+      simp [hbind, Except.map, Bind.bind, Except.bind]
+
+/-- The one-layer unfolding of `execStmtLoop`, as an EQUATION (the loop
+is fuel-structural, so the definitional unfolding needs the fuel
+constructor exposed — `cases fuel` then `rfl`). -/
+theorem execStmtLoop_unfold (fuel : Nat) (σ : ExecState) (c : Config)
+    (ch : Choices) :
+    execStmtLoop fuel σ c ch
+      = (match c with
+         | .next .stop => .ok (.normal σ, ch)
+         | .returning .stop => .ok (.returned σ, ch)
+         | .breaking .stop => .ok (.broke σ, ch)
+         | .continuing .stop => .ok (.continued σ, ch)
+         | .panicked msg => throw (.panic msg)
+         | c =>
+             match fuel with
+             | 0 => throw .fuelOut
+             | fuel + 1 => do
+                 let (c', σ', choices') ← stepFn σ c ch
+                 execStmtLoop fuel σ' c' choices') := by
+  rw [execStmtLoop.eq_def]
+  rfl
+
+/-- One non-terminal step folds into the loop: `stepFn` throws on every
+terminal shape, so a successful step means the loop at `fuel + 1` is
+exactly the step followed by the loop at `fuel`. -/
+theorem execStmtLoop_step {fuel : Nat} {σ : ExecState} {c : Config}
+    {ch : Choices} {c₁ : Config} {σ₁ : ExecState} {ch₁ : Choices}
+    (h : stepFn σ c ch = .ok (c₁, σ₁, ch₁)) :
+    execStmtLoop (fuel + 1) σ c ch = execStmtLoop fuel σ₁ c₁ ch₁ := by
+  rw [execStmtLoop_unfold (fuel + 1) σ c ch]
+  split
+  · simp [stepFn, throw, throwThe, MonadExceptOf.throw] at h
+  · simp [stepFn, throw, throwThe, MonadExceptOf.throw] at h
+  · simp [stepFn, throw, throwThe, MonadExceptOf.throw] at h
+  · simp [stepFn, throw, throwThe, MonadExceptOf.throw] at h
+  · simp [stepFn, throw, throwThe, MonadExceptOf.throw] at h
+  · simp only [Bind.bind]
+    rw [h]
+    rfl
+
+/-- **Checker soundness**: `allStreamsOk fuel σ c = true` certifies that
+EVERY choice stream's run from `(σ, c)` completes `.ok` within `fuel`.
+One kernel evaluation of the checker plus `execStmt_mono` therefore
+discharges `Surface.Terminates` — ∀-streams quantifier included — at a
+concrete seeded program. -/
+theorem execStmtLoop_ok_of_allStreamsOk :
+    ∀ {fuel : Nat} {σ : ExecState} {c : Config},
+      allStreamsOk fuel σ c = true →
+      ∀ ch : Choices, ∃ (out : ExecOutcome) (ch' : Choices),
+        execStmtLoop fuel σ c ch = .ok (out, ch') := by
+  intro fuel
+  induction fuel with
+  | zero =>
+    intro σ c hall ch
+    simp [allStreamsOk] at hall
+  | succ n ih =>
+    intro σ c hall ch
+    unfold allStreamsOk at hall
+    split at hall
+    · exact ⟨.normal σ, ch, rfl⟩
+    · exact ⟨.returned σ, ch, rfl⟩
+    · exact ⟨.broke σ, ch, rfl⟩
+    · exact ⟨.continued σ, ch, rfl⟩
+    · -- the mapIterK pick point
+      rename_i keyVar valVar keyTy valTy body remaining env k
+      split at hall
+      · -- empty snapshot: oblivious pop
+        rename_i hemp
+        split at hall
+        · rename_i c₁ σ₁ ch₁ hprobe
+          rw [stepFn_mapIter_empty hemp [0]] at hprobe
+          obtain ⟨rfl, rfl, rfl⟩ :
+              c₁ = .next k ∧ σ₁ = σ ∧ ch₁ = [0] := by
+            have h1 := congrArg (fun r => match r with
+              | Except.ok (c, _, _) => c | _ => c₁) hprobe
+            have h2 := congrArg (fun r => match r with
+              | Except.ok (_, s, _) => s | _ => σ₁) hprobe
+            have h3 := congrArg (fun r => match r with
+              | Except.ok (_, _, l) => l | _ => ch₁) hprobe
+            simp only at h1 h2 h3
+            exact ⟨h1.symm, h2.symm, h3.symm⟩
+          obtain ⟨out, ch', hrun⟩ := ih hall ch
+          exact ⟨out, ch',
+            by rw [execStmtLoop_step (stepFn_mapIter_empty hemp ch)]; exact hrun⟩
+        · exact absurd hall (by simp)
+      · -- nonempty: every pick was checked; the stream's choice is one
+        rename_i hne
+        rw [List.all_eq_true] at hall
+        rcases hcons : Choices.consume ch remaining.size with ⟨idx, tail⟩
+        have hpos : 0 < remaining.size := by
+          rcases Nat.eq_zero_or_pos remaining.size with hz | hp
+          · exact absurd (by simpa [Array.isEmpty_iff, Array.size_eq_zero_iff]
+              using hz) hne
+          · exact hp
+        have hlt : idx < remaining.size := by
+          have hb := consume_fst_lt (ch := ch) hpos
+          rw [hcons] at hb
+          exact hb
+        have hidx := hall idx (by simpa using List.mem_range.mpr hlt)
+        have hconsi : Choices.consume [idx] remaining.size = (idx, []) := by
+          simp [Choices.consume,
+            Nat.mod_eq_of_lt (show idx < max 1 remaining.size by omega)]
+        rw [stepFn_mapIter_pick hne hconsi hlt] at hidx
+        cases hbind : bindIterVars env.pushScope σ keyVar valVar keyTy valTy
+            remaining[idx].1 remaining[idx].2 with
+        | error e =>
+          rw [hbind] at hidx
+          simp [Except.map] at hidx
+        | ok p =>
+          rw [hbind] at hidx
+          simp only [Except.map] at hidx
+          obtain ⟨out, ch', hrun⟩ := ih hidx tail
+          refine ⟨out, ch', ?_⟩
+          rw [execStmtLoop_step
+            (by rw [stepFn_mapIter_pick hne hcons hlt, hbind]; rfl)]
+          exact hrun
+    · -- the oblivious catch-all
+      rename_i hx1 hx2 hx3 hx4 hx5
+      cases hnc : consumesAppendSlice c with
+      | true =>
+        rw [hnc] at hall
+        simp at hall
+      | false =>
+        rw [hnc] at hall
+        simp only [Bool.false_eq_true, if_false] at hall
+        split at hall
+        · rename_i c₁ σ₁ ch₁ hprobe
+          obtain ⟨-, hobl⟩ := stepFn_oblivious
+            (fun kv vv kt vt b r e kk heq => hx5 kv vv kt vt b r e kk heq)
+            hnc hprobe
+          obtain ⟨out, ch', hrun⟩ := ih hall ch
+          exact ⟨out, ch', by rw [execStmtLoop_step (hobl ch)]; exact hrun⟩
+        · exact absurd hall (by simp)

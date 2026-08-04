@@ -84,7 +84,9 @@ theorem quorumOneKnownReturnsTwelve
       = .ok (.normal σf, ch')) :
     loadLoc σf (.base ⟨0⟩) = .ok (.int 12 .uint64) := sorry
 
-theorem quorumOneKnownNotEleven
+theorem quorumOneKnownNotEleven : quorumOneKnownNotEleven_statement := sorry
+
+theorem quorumOneKnownNotElevenRun
     (fuel : Nat) (ch : Choices) (σf : ExecState) (ch' : Choices)
     (hrun : execStmt fuel quorumOutEnv
         { types := quorumLowered.typeDefs.toList,
@@ -131,7 +133,9 @@ theorem quorumThreeAllReturnsSix
       = .ok (.normal σf, ch')) :
     loadLoc σf (.base ⟨0⟩) = .ok (.int 6 .uint64) := sorry
 
-theorem quorumThreeAllNotTwelve
+theorem quorumThreeAllNotTwelve : quorumThreeAllNotTwelve_statement := sorry
+
+theorem quorumThreeAllNotTwelveRun
     (fuel : Nat) (ch : Choices) (σf : ExecState) (ch' : Choices)
     (hrun : execStmt fuel threeOutEnv
         { types := quorumLowered.typeDefs.toList,

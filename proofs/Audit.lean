@@ -178,14 +178,22 @@ open Lean in
   -- `quorumAckedIndexReturnsTwelveTrue`, the doctrine's mandatory
   -- rung-2 readout twins for `recoverFuncSpec` /
   -- `quorumAckedIndexFuncSpec2`.)
+  -- (Sem-adequacy slice 5, 2026-08-04: the run-conditioned negative twins
+  -- were RENAMED `*Run` — their statements are unchanged — and the clean
+  -- names now belong to the NEW UNCONDITIONAL twins discharging the
+  -- phase-4 `*_statement` targets (`Specs/TotalPins.lean`). Both forms
+  -- stay designated: the run-conditioned twins remain the readouts'
+  -- negative rung; the unconditional ones are the new headline claims.)
   let designated : List Name := [
     ``GoLean.Surface.quorumOneKnownFuncSpec,
     ``GoLean.Surface.quorumOneKnownMeetsSpec,
     ``GoLean.Surface.quorumOneKnownReturnsTwelve,
+    ``GoLean.Surface.quorumOneKnownNotElevenRun,
     ``GoLean.Surface.quorumOneKnownNotEleven,
     ``GoLean.Surface.quorumThreeAllFuncSpec,
     ``GoLean.Surface.quorumThreeAllMeetsSpec,
     ``GoLean.Surface.quorumThreeAllReturnsSix,
+    ``GoLean.Surface.quorumThreeAllNotTwelveRun,
     ``GoLean.Surface.quorumThreeAllNotTwelve,
     ``GoLean.Surface.committedIndexAllConfigs,
     ``GoLean.Surface.committedIndexAllReturnsSix,
@@ -428,8 +436,8 @@ open Lean in
 #guard_msgs in #print axioms GoLean.Surface.quorumOneKnownMeetsSpec
 /-- info: 'GoLean.Surface.quorumOneKnownReturnsTwelve' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Surface.quorumOneKnownReturnsTwelve
-/-- info: 'GoLean.Surface.quorumOneKnownNotEleven' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs in #print axioms GoLean.Surface.quorumOneKnownNotEleven
+/-- info: 'GoLean.Surface.quorumOneKnownNotElevenRun' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Surface.quorumOneKnownNotElevenRun
 /-- info: 'GoLean.Iris.wp_map_iter_inv' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Iris.wp_map_iter_inv
 /-- info: 'GoLean.Iris.wp_map_iter_inv_key_sum_witness' depends on axioms: [propext, Classical.choice, Quot.sound] -/
@@ -449,8 +457,8 @@ open Lean in
 #guard_msgs in #print axioms GoLean.Surface.quorumThreeAllMeetsSpec
 /-- info: 'GoLean.Surface.quorumThreeAllReturnsSix' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Surface.quorumThreeAllReturnsSix
-/-- info: 'GoLean.Surface.quorumThreeAllNotTwelve' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs in #print axioms GoLean.Surface.quorumThreeAllNotTwelve
+/-- info: 'GoLean.Surface.quorumThreeAllNotTwelveRun' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Surface.quorumThreeAllNotTwelveRun
 /-- info: 'GoLean.Iris.GoldenQuorum.wp_ci_loop' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Iris.GoldenQuorum.wp_ci_loop
 /-- info: 'GoLean.Iris.GoldenQuorum.wp_ci_range_body' depends on axioms: [propext, Classical.choice, Quot.sound] -/
@@ -693,6 +701,51 @@ example := @GoLean.Iris.HeapWf.allocMany
 example := @GoLean.Iris.heapToMap_set_base₄
 example := @GoLean.Iris.execState_pin_eq
 example := @GoLean.GoCore.Ty.eqb
+
+/-! ### sem-adequacy slices 4+5: the statement re-land (2026-08-04).
+Slice 4 — relation eviction: `GoSpec := GoTriple ∧ ProgressExec`
+(interpreter-side safety; the relation-quantified progress is the
+PROOF-layer `ProgressRel`, transported by `goSpec_of_triple_progressRel`),
+`GoInvariant` over executable reachability (`ReachableExec`/`stepFnIter`,
+transport `stepFnIter_sound`/`steps_of_reachableExec`),
+`InitialSplit.bounded` removed (redundant under `wf`;
+`InitialSplit.heapBounded` is the derivation), and the statement-TCB gate
+above enforces relation-freedom by forbidden constant names.
+Slice 5 — the ∀-streams termination checker (`allStreamsOk` +
+`stepFn_oblivious` + `execStmtLoop_ok_of_allStreamsOk`, MachineSound):
+kernel-checked `Terminates` for all four pinned programs (stream
+quantifier discharged by branching the mapIter picks), the per-seed
+total forms, and the two UNCONDITIONAL negative twins discharging their
+phase-4 `_statement` targets. Axiom pins + deletion-guard references: -/
+/-- info: 'GoLean.GoCore.Machine.stepFnIter_sound' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.GoCore.Machine.stepFnIter_sound
+/-- info: 'GoLean.GoCore.Machine.stepFn_oblivious' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.GoCore.Machine.stepFn_oblivious
+/-- info: 'GoLean.GoCore.Machine.execStmtLoop_ok_of_allStreamsOk' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.GoCore.Machine.execStmtLoop_ok_of_allStreamsOk
+/-- info: 'GoLean.Surface.goldenTerminates' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Surface.goldenTerminates
+/-- info: 'GoLean.Surface.recoverTerminates' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Surface.recoverTerminates
+/-- info: 'GoLean.Surface.quorumOneKnownTerminates' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Surface.quorumOneKnownTerminates
+/-- info: 'GoLean.Surface.quorumThreeAllTerminates' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Surface.quorumThreeAllTerminates
+/-- info: 'GoLean.Surface.quorumOneKnownNotEleven' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Surface.quorumOneKnownNotEleven
+/-- info: 'GoLean.Surface.quorumThreeAllNotTwelve' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Surface.quorumThreeAllNotTwelve
+example := @GoLean.Surface.ReachableExec
+example := @GoLean.Surface.steps_of_reachableExec
+example := @GoLean.Surface.InitialSplit.heapBounded
+example := @GoLean.Surface.goSpec_of_triple_progressRel
+example := @GoLean.Surface.goldenTotalReadout
+example := @GoLean.Surface.recoverTotalReadout
+example := @GoLean.Surface.quorumOneKnownTotalReadout
+example := @GoLean.Surface.quorumThreeAllTotalReadout
+example := @GoLean.GoCore.Machine.allStreamsOk
+example := @GoLean.GoCore.Machine.execStmtLoop_step
+example := @GoLean.GoCore.Machine.stepFn_mapIter_pick
 /-- `✓` **the first `GoFuncSpec2` discharge** (quorum pilot phase 4
 slice 5, 2026-07-31): `quorumAckedIndexFuncSpec2` — the REAL
 `main.mapAckIndexer.AckedIndex` of the pinned lowering, at the
@@ -737,7 +790,8 @@ real etcd-io/raft driver returns `12` at `GoFuncSpec` strength — and
 `quorumOneKnownMeetsSpec` restates it with the DECLARATIVE quorum spec
 as the postcondition (`IsCommittedIndex [1] ackedOneKnown`, via the
 proven `committedIndexRef_meets_spec`). `quorumOneKnownReturnsTwelve` is
-the first-order readout and `quorumOneKnownNotEleven` its negative twin.
+the first-order readout and `quorumOneKnownNotElevenRun` its
+run-conditioned negative twin.
 
 **Re-derived by TACTIC (proof-automation arc phase 2, 2026-08-01)**: the
 whole walk chain under `quorumOneKnownFuncSpec` — `wp_ackedIndex_body`
@@ -767,14 +821,14 @@ Scope, honestly: **n = 1**, so the map range's nondeterminism is
 degenerate and the `len(stk) >= n` test takes the reslice branch. The
 three-voter walk is the recorded next widening.
 
-`◌ NOT PROVEN` (unchanged, recorded rather than quietly dropped): the
+`✓ DISCHARGED (sem-adequacy slice 5, 2026-08-04)`: the
 `quorumOneKnownNotEleven_statement` target (`39891ae`, phase 4) — the
-UNCONDITIONAL
-`¬ GoFuncSpec … (n = 11)` — is not refutable from the triple, because a
-`GoTriple` is vacuously true of a program that fails to terminate;
-refuting it demands exhibiting a terminating run (a kernel evaluation of
-the interpreter over the whole pinned program). The run-conditioned twin
-above is what the golden precedent proves, and is what is proven here. -/
+UNCONDITIONAL `¬ GoFuncSpec … (n = 11)` — is now the theorem
+`quorumOneKnownNotEleven` (`Specs/TotalPins.lean`): the ∀-streams
+termination checker (`allStreamsOk`, kernel-evaluated) exhibits the
+terminating run the old note said this needed, and the wrong spec's
+triple at that run contradicts `quorumOneKnownReturnsTwelve`. The
+run-conditioned twin is retained as `quorumOneKnownNotElevenRun`. -/
 example := @GoLean.Quorum.committedIndexRef_oneKnown
 example := @GoLean.Quorum.isCommittedIndex_unique
 example := @GoLean.Quorum.isCommittedIndex_iff
@@ -795,7 +849,7 @@ example := @GoLean.Surface.sat_sep_insert
 example := @GoLean.Surface.quorumOneKnownFuncSpec
 example := @GoLean.Surface.quorumOneKnownMeetsSpec
 example := @GoLean.Surface.quorumOneKnownReturnsTwelve
-example := @GoLean.Surface.quorumOneKnownNotEleven
+example := @GoLean.Surface.quorumOneKnownNotElevenRun
 example := @GoLean.Iris.GoldenQuorum.wp_committedIndex_body
 example := @GoLean.Iris.GoldenQuorum.wp_ci_loop_one
 example := @GoLean.Iris.GoldenQuorum.wp_committedIndexCall
@@ -886,10 +940,11 @@ example := @GoLean.Iris.mapIterInvRule
 * `quorumThreeAllFuncSpec_statement` — the 3-voter rung. **DISCHARGED
   2026-08-01** by `quorumThreeAllFuncSpec`; the statement is unchanged.
   `quorumThreeAllNotTwelve_statement` (its UNCONDITIONAL negative twin)
-  stays a target and carries the same honesty note as
-  `quorumOneKnownNotEleven_statement`: an unconditional refutation needs
-  a terminating run exhibited, so it is a target, not a corollary. The
-  run-conditioned twin `quorumThreeAllNotTwelve` IS proven.
+  is DISCHARGED at sem-adequacy slice 5 (2026-08-04) by
+  `quorumThreeAllNotTwelve` in `Specs/TotalPins.lean` — the terminating
+  run its honesty note demanded is now kernel-exhibited (∀-streams, via
+  `allStreamsOk`). The run-conditioned twin is retained as
+  `quorumThreeAllNotTwelveRun`.
 
 Non-vacuity of the TARGETS themselves is pinned in the same file: an
 encoding is exhibited (`encodesConfig_three`), the value the 3-voter rung
@@ -927,7 +982,7 @@ statement-identity check): etcd's own `committedThreeAll` driver —
 `6` over the PINNED lowering, at `GoFuncSpec` strength.
 `quorumThreeAllMeetsSpec` restates it with the DECLARATIVE quorum spec
 (`IsCommittedIndex [1,2,3] ackedThreeAll`); `quorumThreeAllReturnsSix` is
-the first-order readout and `quorumThreeAllNotTwelve` its
+the first-order readout and `quorumThreeAllNotTwelveRun` its
 run-conditioned negative twin (`12`, the largest acked index — the answer
 a "returns something a voter acked" bug would give).
 
@@ -973,16 +1028,17 @@ no config, no acked value and no `n` occurs in either statement. The
 3-voter numbers enter only at the instantiation sites
 (`wp_committedIndex_body_three` onward).
 
-`◌ NOT PROVEN` (recorded, not quietly dropped): the UNCONDITIONAL
-`quorumThreeAllNotTwelve_statement`, for the reason the whole family
-carries — a `GoTriple` is vacuously true of a non-terminating program, so
-refuting it demands EXHIBITING a terminating run. (THE ARC GOAL,
-`committedIndexAllConfigs_statement`, is DISCHARGED in phase 4 — the
-block below.) -/
+`✓ DISCHARGED (sem-adequacy slice 5, 2026-08-04)`: the UNCONDITIONAL
+`quorumThreeAllNotTwelve_statement` — the family's honesty note said it
+demands EXHIBITING a terminating run; the ∀-streams checker now exhibits
+one (all 3! = 6 pick orders explored by kernel evaluation), and
+`quorumThreeAllNotTwelve` (`Specs/TotalPins.lean`) discharges the
+target. (THE ARC GOAL, `committedIndexAllConfigs_statement`, was
+DISCHARGED in phase 4 — the block below.) -/
 example := @GoLean.Surface.quorumThreeAllFuncSpec
 example := @GoLean.Surface.quorumThreeAllMeetsSpec
 example := @GoLean.Surface.quorumThreeAllReturnsSix
-example := @GoLean.Surface.quorumThreeAllNotTwelve
+example := @GoLean.Surface.quorumThreeAllNotTwelveRun
 example := @GoLean.Iris.GoldenQuorum.wp_ci_loop
 example := @GoLean.Iris.GoldenQuorum.wp_ci_range_body
 example := @GoLean.Iris.GoldenQuorum.wp_committedIndex_body_three
