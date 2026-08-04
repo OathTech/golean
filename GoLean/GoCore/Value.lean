@@ -427,7 +427,80 @@ inductive GoValue where
   over one variable sharing it. Method values and (later) deferred calls use
   the same shape. The zero value of a func type is `nil`, not this. -/
   | funcVal (fid : GoCore.FuncId) (captured : List GoValue)
-  deriving Repr, BEq
+  deriving Repr
+
+
+/-! ## Structural `GoValue` equality (arc-final audit, 2026-08-04)
+
+`GoValue` is a NESTED inductive (arrays/lists of itself), so `deriving
+BEq` compiles to a `partial`-class OPAQUE stub — a constant whose LOGICAL
+value is an arbitrary inhabitant (`fun _ _ => default`), even though its
+COMPILED behavior is real structural equality. That is the worst shape
+for this project: the differential validates the compiled function while
+theorems quantify the logical one, and at any semantic use the two can
+disagree (found at `renderPanicHead`'s recovered-collapse check; same
+class `Ty.eqb` fixed for `Ty` in the interfaces campaign, whose recipe
+this mirrors). The replacement is total, transparent, fuel-structural
+(depth-only — the parameterized list helpers keep elements free, the
+de-WF recipe), kernel-reducible, and FAILS CLOSED (`false`) on depth
+exhaustion; it agrees with the derived instance's compiled behavior on
+every value a program can build. -/
+
+/-- Depth budget for structural value equality; nesting depth, never node
+count (list helpers are parameterized). 1024 mirrors `typeResolutionFuel`
+— no real Go value nests deeper. -/
+def valueEqbFuel : Nat := 1024
+
+/-- Pairwise equality over a list with the already-decremented element
+comparator. -/
+def GoValue.eqbListWith (f : GoValue → GoValue → Bool) :
+    List GoValue → List GoValue → Bool
+  | [], [] => true
+  | a :: as, b :: bs => f a b && GoValue.eqbListWith f as bs
+  | _, _ => false
+
+/-- Pairwise equality over entry pairs. -/
+def GoValue.eqbPairsWith (f : GoValue → GoValue → Bool) :
+    List (GoValue × GoValue) → List (GoValue × GoValue) → Bool
+  | [], [] => true
+  | (k₁, v₁) :: as, (k₂, v₂) :: bs =>
+      f k₁ k₂ && f v₁ v₂ && GoValue.eqbPairsWith f as bs
+  | _, _ => false
+
+/-- Pairwise equality over named fields. -/
+def GoValue.eqbFieldsWith (f : GoValue → GoValue → Bool) :
+    List (String × GoValue) → List (String × GoValue) → Bool
+  | [], [] => true
+  | (n₁, v₁) :: as, (n₂, v₂) :: bs =>
+      n₁ == n₂ && f v₁ v₂ && GoValue.eqbFieldsWith f as bs
+  | _, _ => false
+
+def GoValue.eqbFuel : Nat → GoValue → GoValue → Bool
+  | _, .unit, .unit => true
+  | _, .bool a, .bool b => a == b
+  | _, .int v₁ k₁, .int v₂ k₂ => v₁ == v₂ && k₁ == k₂
+  | _, .string a, .string b => a == b
+  | _, .addr a, .addr b => a == b
+  | _, .nil, .nil => true
+  | f + 1, .interface t₁ v₁, .interface t₂ v₂ =>
+      GoCore.Ty.eqb t₁ t₂ && GoValue.eqbFuel f v₁ v₂
+  | f + 1, .struct id₁ fs₁, .struct id₂ fs₂ =>
+      id₁ == id₂ && GoValue.eqbFieldsWith (GoValue.eqbFuel f) fs₁.toList fs₂.toList
+  | f + 1, .array a, .array b =>
+      GoValue.eqbListWith (GoValue.eqbFuel f) a.toList b.toList
+  | _, .slice a, .slice b => a == b
+  | _, .map a, .map b => a == b
+  | f + 1, .mapData a, .mapData b =>
+      GoValue.eqbPairsWith (GoValue.eqbFuel f) a.toList b.toList
+  | f + 1, .funcVal id₁ c₁, .funcVal id₂ c₂ =>
+      id₁ == id₂ && GoValue.eqbListWith (GoValue.eqbFuel f) c₁ c₂
+  | _, _, _ => false
+
+/-- Structural `GoValue` equality — THE `BEq GoValue` instance (replacing
+the logically-opaque derived one). -/
+def GoValue.eqb (a b : GoValue) : Bool := GoValue.eqbFuel valueEqbFuel a b
+
+instance : BEq GoValue := ⟨GoValue.eqb⟩
 
 namespace GoCore
 

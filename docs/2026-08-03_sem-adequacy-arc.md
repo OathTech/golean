@@ -29,12 +29,12 @@ adopted so long as the user's form above is a supported case.
    (`execStmt` is exactly that wrapper — post-reshape there is no second
    interpreter). This is the differentially validated artifact and the ONLY
    semantics allowed in headline statements.
-2. **The Prop-level relation (`Rel.lean` `Step`/`Steps`) is proof
+2. **The Prop-level relation (`Step`/`Steps`, defined inside `Machine.lean` since the reshape deleted `Rel.lean`) is proof
    infrastructure**, exactly like Iris: required because WP needs a
    transition relation, verified against `stepFn` (two-sided at step level:
    `stepFn_sound`/`step_complete`), and — after this arc — absent from
    every headline statement's closure. The deletion test extends to it:
-   deleting `Rel.lean` must not change what any headline theorem *says*.
+   deleting the relation (`Step`/`Steps` and everything about them) must not change what any headline theorem *says* — enforced at CONSTANT level by the statement-TCB gate, since the relation shares `Machine.lean` with the interpreter and module-level deletion is not the operative test.
    (This INVERTS the pre-reshape framing "relational semantics = the proof
    authority, interpreter = its test implementation"; see §Supersessions.)
 3. **Termination is a first-class interpreter-level notion.**
@@ -471,6 +471,24 @@ adopted so long as the user's form above is a supported case.
        designated list, Challenge/Solution, judge-config: 25 → 33; gate
        green (Iris-free, relation-free).
 
+- **Owed-list addition (arc-final audit, 2026-08-04):** the unconditional
+  ∀-config-instance twin (the `¬ GoSpec`-at-`12` form at the 3-voter
+  encoding, `GoldenQuorumAll`'s readout seed) is now PAYABLE by the
+  TotalPins recipe and deliberately deferred. Also recorded from the
+  final audit: the slice-1 spike's "complete kernel-irreducible set is
+  four families" verdict was WRONG as a completeness claim — the scan
+  (WellFounded.fix/Acc.rec) structurally cannot see `partial`-class
+  OPAQUE stubs, and the derived `BEq GoValue` was exactly that: logically
+  `fun _ _ => default`, compiled as real structural equality — the
+  differential-vs-logic divergence class at its purest, live at ONE
+  semantic site (`renderPanicHead`'s recovered-collapse check). FIXED at
+  the audit response: hand-written fuel-structural `GoValue.eqb`
+  installed as THE `BEq GoValue` instance (the `Ty.eqb` recipe;
+  compiled behavior identical, logical behavior now defined,
+  kernel-reducible; differential re-certified). The promised post-side
+  wf corollary also landed (`execStmt_preserves_wf`). Future scans for
+  kernel-irreducibility must ALSO flag opaque constants.
+
 ## Exit criteria
 
 - `Terminates` and the total-correctness form exist, with the user's
@@ -480,8 +498,7 @@ adopted so long as the user's form above is a supported case.
   recorded reason why not; unconditional negative twins proven for
   whatever the spike makes payable.
 - Zero headline statements reference `Rel.*` modules; the statement-TCB
-  gate enforces it; `Rel.lean` is deletable-without-meaning-change,
-  mechanically.
+  gate enforces it; the relation (`Step`/`Steps`) is deletable-without-meaning-change, mechanically (constant-level gate; `Rel.lean` itself was deleted at the reshape).
 - `scripts/ci` green throughout; differential 873/873 (plus new fuelOut
   cases); Comparator fresh-clone PASS on the upgraded Challenge.
 - The spike's cost numbers and the tractability verdict are recorded here.

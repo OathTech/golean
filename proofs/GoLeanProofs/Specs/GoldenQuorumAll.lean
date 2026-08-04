@@ -1326,11 +1326,16 @@ called with heap-carried inputs; the corpus-facing claim is first-order
 ("this run leaves 6 at this address"). The pair below reads the triple
 out at the 3-voter encoding — a genuine INSTANCE of the ∀-config
 theorem, not a re-proof — and refutes `12` from it. Both are
-run-CONDITIONED, for the reason recorded once for the whole family
-(`quorumOneKnownNotElevenRun`): a `GoTriple` says nothing about a program
-that fails to terminate, so the unconditional `¬ GoSpec` form demands
-EXHIBITING a terminating run (a kernel evaluation of the interpreter over
-the pinned program), which stays owed. -/
+run-CONDITIONED. Status update (arc-final audit, 2026-08-04): the
+capability that once made the unconditional form unpayable — kernel
+evaluation of the interpreter over the pinned program — is now PAID for
+this very seed (`allOut` kernel-evaluates; slice-1 spike and the
+`TotalPins` twins use exactly this recipe), so the unconditional
+`¬ GoSpec` twin at the 3-voter encoding is now PAYABLE and simply not
+yet built — deliberately deferred, recorded in the arc doc's owed list,
+not impossible. The unconditional twins for the one-voter and 3-voter
+DRIVERS are proven (`TotalPins.quorumOneKnownNotEleven` /
+`quorumThreeAllNotTwelve`). -/
 
 /- `allOut`/`allOutEnv` (the ∀-config readout's seeded state) moved to
 `Specs/Statements.lean` — the Iris-free statement layer (comparator-judge

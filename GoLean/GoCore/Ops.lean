@@ -5,7 +5,10 @@ namespace GoLean.GoCore
 open GoLean
 
 /-- Depth bound for the type-directed operations (`normalizeValueForTy`,
-`valueEq`, `defaultValue`, `Ty.mentionsUnsupported`). Since the de-WF
+`valueEq`, `defaultValue`, `Ty.mentionsUnsupported`, and — since the
+snapshot-validation slice — `isNormalForTy`, whose depth accounting must
+stay in lockstep with `normalizeValueForTyFuel`'s arm-for-arm; arc-final
+audit addition 2026-08-04). Since the de-WF
 restructure (2026-08-03, sub-branch audit wording) it is decremented once
 per NESTING LEVEL — a `.defined` resolution, an `.array` descent, or the
 leaf itself — never per element or field (siblings share the decremented
