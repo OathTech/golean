@@ -417,8 +417,10 @@ adopted so long as the user's form above is a supported case.
      `recoverTerminates`, `quorumOneKnownTerminates`,
      `quorumThreeAllTerminates` (all 3! = 6 pick orders explored) —
      measured ≈ 6 s total kernel time for all four under the 16 GiB cap
-     — plus the per-seed `<pin>TotalReadout` forms (Terminates ∧ the
-     proven readout). **Recorded as OWED, not attempted:** full per-pin
+     — plus the per-seed `<pin>TotalReadout` forms (originally
+     Terminates ∧ the proven readout; STRENGTHENED to normal-pinned
+     completion at the 2026-08-04 audit response — see the entry below).
+     **Recorded as OWED, not attempted:** full per-pin
      `GoSpecT` — symbolic termination over ALL admissible initial states
      — the ∀-config statements stay at (new) `GoSpec` strength.
   4. **Unconditional negative twins (slice 5).**
@@ -434,6 +436,40 @@ adopted so long as the user's form above is a supported case.
      designated statements changed shape (`GoSpec`/`GoInvariant`
      redefinition, `InitialSplit` field removal) and grew by two — the
      judge run precedes the arc's merge ask (coordinator runs it).
+  5. **Pre-merge audit response (2026-08-04).** Confirmed findings,
+     fixed on the branch:
+     - **`.normal` pin (MAJOR, claim strength).** Slice 4's
+       `ProgressExec` left the completion outcome existential, silently
+       accepting top-level `.returned`/`.broke`/`.continued` completions
+       the old relation-Progress rejected (no relation rule steps from
+       an unwound-`.stop` configuration — new lemmas
+       `step_returning_stop_elim`/`step_breaking_stop_elim`/
+       `step_continuing_stop_elim`, so `GoSpec … prog False` had become
+       satisfiable for such programs). `ProgressExec`'s and
+       `execStmtLoop_ok_or_fuelOut`'s success disjuncts are now
+       `.ok (.normal …)`; every consumer compiled unchanged.
+     - **TotalReadout terminal pin.** `allStreamsOk` deliberately
+       certifies completion at ANY of the four terminals (`Terminates`
+       stays the outcome-agnostic primitive), so "per-seed total
+       correctness" needed the pin from elsewhere: new
+       `TerminatesNormally` (= `Terminates` × `.normal`-pinned
+       `ProgressExec` at the seeded frameless split,
+       `terminatesNormally_of_progressExec` / `InitialSplit.noFrame`);
+       the four `<pin>TotalReadout` statements are now
+       `∃ N, ∀ fuel ≥ N, ∀ ch, ∃ σf ch', run = .ok (.normal σf, ch') ∧
+       readout σf`.
+     - **Reachability wording.** Three docstrings (incl.
+       `goldenInvariant_statement`, inside the Challenge's trusted
+       closure) still said "relation-reachable" where the statements
+       quantify `ReachableExec`; fixed to the honest
+       executable-reachability wording (`ReachableExec ⊆
+       Steps`-reachable proven; converse owed). Stale "NOT PROVEN"
+       honesty blocks for the unconditional twins updated to
+       discharged-with-history.
+     - **Designation.** The eight slice-5 headline deliverables (four
+       `<pin>Terminates`, four `<pin>TotalReadout`) added to the
+       designated list, Challenge/Solution, judge-config: 25 → 33; gate
+       green (Iris-free, relation-free).
 
 ## Exit criteria
 
