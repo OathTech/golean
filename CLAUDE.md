@@ -220,6 +220,12 @@ way an arc reaches `main`).
   - **fail-closed classification** — an `unsupported` that should have been
     a supported-and-correct answer never appears as a failure anywhere.
   - **claim strength / vacuity** — whether a law says what it appears to.
+  - **nondeterminism-envelope fidelity** (2026-08-04,
+    `docs/2026-08-04_nondeterminism-doctrine.md`) — each choice-consumption
+    site's envelope argued against the Go SPEC TEXT: the too-wide direction
+    has no oracle (go run cannot exhibit a behavior it never has), so
+    review is the only check; too-narrow breaks theorem transfer and is
+    the membership lane's job.
   - **statement TCB + layering** (user direction 2026-08-01,
     `docs/2026-08-01_tcb-and-layering-doctrine.md`) — top-level
     theorem STATEMENTS must be understandable from base definitions

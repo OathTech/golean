@@ -32,6 +32,14 @@ observation — the membership-lane motivator).
 - The de-WF discipline holds for new core code: structural recursion,
   kernel-reducible, no opaque derived instances on semantic paths (the
   `GoValue.eqb` lesson), choices touched only at named sites.
+- The nondeterminism doctrine binds
+  (`docs/2026-08-04_nondeterminism-doctrine.md`): every new
+  choice-consumption site ships a spec-anchored ENVELOPE STATEMENT;
+  envelope fidelity is a standing audit dimension; claims stay
+  possibilistic. Slice 3 (membership lane) implements the doctrine's
+  testing half; the doctrine's concurrency inputs (DRF-SC, -race oracle,
+  litmus corpus, fairness quantifier) bind that future arc's design
+  note.
 
 ## Slices
 
