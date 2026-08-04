@@ -329,21 +329,31 @@ def Terminates (env₀ : LocalEnv) (σ₀ : ExecState) (prog : Stmt) : Prop :=
 
 /-- **Safety, interpreter-level** (since slice 4 the safety half of
 `GoSpec`, replacing the relation-quantified progress): from any
-admissible framed initial state, EVERY bounded run ends `.ok` or
-`.fuelOut` — never stuck, never an unrecovered panic, never
-`unsupported`, never an internal error. Read with `GoTriple`: "however
-long you run it, it has either finished cleanly or merely not finished
-yet." -/
+admissible framed initial state, EVERY bounded run ends `.ok (.normal …)`
+or `.fuelOut` — never stuck, never an unrecovered panic, never
+`unsupported`, never an internal error, and never a completion at a
+non-`.normal` terminal. Read with `GoTriple`: "however long you run it,
+it has either finished cleanly or merely not finished yet."
+
+**Success is `.normal`-pinned** (audit response 2026-08-04): the first
+slice-4 form left the completion outcome existential (`∃ out`), which
+silently accepted top-level `.returned`/`.broke`/`.continued`
+completions — outcomes the old relation-Progress form REJECTED (they are
+not `.next .stop`, and no relation rule steps from an unwound-`.stop`
+configuration — `step_returning_stop_elim` and siblings). That made
+`GoSpec … prog False` satisfiable for such programs, a silent weakening.
+The strengthened transport `execStmtLoop_ok_or_fuelOut` proves this form
+from relation-Progress unchanged. -/
 def ProgressExec (types : TypeEnv) (funcs : Array Func)
     (methods : Array MethodInfo) (env₀ : LocalEnv)
     (P : HProp) (prog : Stmt) : Prop :=
   ∀ (hp : Heap) (na : Nat) (hP F : Heaplet), InitialSplit P hp na hP F funcs env₀ prog →
     ∀ (fuel : Nat) (ch : Choices),
-      (∃ (out : ExecOutcome) (ch' : Choices),
+      (∃ (σf : ExecState) (ch' : Choices),
         execStmt fuel env₀
           { types := types, functions := funcs, methods := methods,
             heap := hp, nextAddr := na }
-          ch prog = .ok (out, ch'))
+          ch prog = .ok (.normal σf, ch'))
       ∨ execStmt fuel env₀
           { types := types, functions := funcs, methods := methods,
             heap := hp, nextAddr := na }

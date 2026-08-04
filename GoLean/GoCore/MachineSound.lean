@@ -477,6 +477,34 @@ theorem step_panicked_elim {msg : String} {σ : ExecState} {c' : Config}
   intro h
   cases h
 
+/-! The three unwound-`.stop` terminals are ALSO genuinely terminal for
+the relation (audit response 2026-08-04): every `.returning`/`.breaking`/
+`.continuing`-source rule matches a specific non-`.stop` continuation
+constructor (`.seq`/`.loop`/`.breakableK`/`.mapIterK`/`.frame`), so none
+applies at `.stop`. With `step_panicked_elim` these pin
+`execStmtLoop_ok_or_fuelOut`'s success disjunct to the `.normal`
+terminal: under a relation-Progress hypothesis (every reachable
+configuration is `.next .stop` or steps), a reachable unwound-`.stop`
+configuration is a CONTRADICTION, not a successful completion. -/
+
+@[inherit_doc step_panicked_elim]
+theorem step_returning_stop_elim {σ : ExecState} {c' : Config}
+    {σ' : ExecState} : ¬ Step (.returning .stop) σ c' σ' := by
+  intro h
+  cases h
+
+@[inherit_doc step_panicked_elim]
+theorem step_breaking_stop_elim {σ : ExecState} {c' : Config}
+    {σ' : ExecState} : ¬ Step (.breaking .stop) σ c' σ' := by
+  intro h
+  cases h
+
+@[inherit_doc step_panicked_elim]
+theorem step_continuing_stop_elim {σ : ExecState} {c' : Config}
+    {σ' : ExecState} : ¬ Step (.continuing .stop) σ c' σ' := by
+  intro h
+  cases h
+
 /-! ### Well-formedness preservation at the machine level (StateWf arc,
 2026-08-04; `GoLean/GoCore/StateWf.lean`)
 
@@ -2028,24 +2056,30 @@ theorem step_complete_any_wf {c : Config} {σ : ExecState} {c' : Config}
 /-- **Interpreter-side safety from relation-Progress + well-formedness**:
 if every relation-reachable configuration from a well-formed start is
 the sequential terminal or can step, then every bounded `execStmtLoop`
-run — under EVERY choice stream — returns `.ok` or `.error .fuelOut`;
-never stuck, never an unrecovered panic, never unsupported/internal.
-Fuel induction carrying reachability (to keep the progress hypothesis
-applicable) and `MachineWf` (via `stepFn_preserves_wf`); `.panicked` is
-excluded by progress + `step_panicked_elim`, and the non-`.stop` unwound
-terminals return `.ok` directly. -/
+run — under EVERY choice stream — returns `.ok (.normal …)` or
+`.error .fuelOut`; never stuck, never an unrecovered panic, never
+unsupported/internal, and never a completion at a non-`.normal`
+terminal. Fuel induction carrying reachability (to keep the progress
+hypothesis applicable) and `MachineWf` (via `stepFn_preserves_wf`);
+`.panicked` is excluded by progress + `step_panicked_elim`, and the
+three non-`.stop` unwound terminals are excluded the same way
+(`step_returning_stop_elim` and siblings — audit response 2026-08-04:
+they used to return `.ok` with the outcome unconstrained, which silently
+weakened `ProgressExec`-based statements to accepting top-level
+`.returned`/`.broke`/`.continued` completions the relation-Progress
+hypothesis actually rules out). -/
 theorem execStmtLoop_ok_or_fuelOut {σ₀ : ExecState} {c₀ : Config}
     (hprog : ∀ (c' : Config) (σ' : ExecState), Steps c₀ σ₀ c' σ' →
       c' = .next .stop ∨ ∃ (c'' : Config) (σ'' : ExecState), Step c' σ' c'' σ'')
     (hwf : MachineWf σ₀ c₀) :
     ∀ (fuel : Nat) (ch : Choices),
-      (∃ (out : ExecOutcome) (ch' : Choices),
-        execStmtLoop fuel σ₀ c₀ ch = .ok (out, ch'))
+      (∃ (σf : ExecState) (ch' : Choices),
+        execStmtLoop fuel σ₀ c₀ ch = .ok (.normal σf, ch'))
       ∨ execStmtLoop fuel σ₀ c₀ ch = .error .fuelOut := by
   suffices haux : ∀ (fuel : Nat) (c : Config) (σ : ExecState),
       Steps c₀ σ₀ c σ → MachineWf σ c → ∀ ch : Choices,
-      (∃ (out : ExecOutcome) (ch' : Choices),
-        execStmtLoop fuel σ c ch = .ok (out, ch'))
+      (∃ (σf : ExecState) (ch' : Choices),
+        execStmtLoop fuel σ c ch = .ok (.normal σf, ch'))
         ∨ execStmtLoop fuel σ c ch = .error .fuelOut by
     intro fuel ch
     exact haux fuel c₀ σ₀ (Steps.refl _ _) hwf ch
@@ -2056,9 +2090,15 @@ theorem execStmtLoop_ok_or_fuelOut {σ₀ : ExecState} {c₀ : Config}
     unfold execStmtLoop
     split
     · exact .inl ⟨_, _, rfl⟩
-    · exact .inl ⟨_, _, rfl⟩
-    · exact .inl ⟨_, _, rfl⟩
-    · exact .inl ⟨_, _, rfl⟩
+    · rcases hprog _ _ hreach with hstop | ⟨c'', σ'', hstep⟩
+      · exact absurd hstop (by simp)
+      · exact absurd hstep step_returning_stop_elim
+    · rcases hprog _ _ hreach with hstop | ⟨c'', σ'', hstep⟩
+      · exact absurd hstop (by simp)
+      · exact absurd hstep step_breaking_stop_elim
+    · rcases hprog _ _ hreach with hstop | ⟨c'', σ'', hstep⟩
+      · exact absurd hstop (by simp)
+      · exact absurd hstep step_continuing_stop_elim
     · rename_i msg
       rcases hprog _ _ hreach with hstop | ⟨c'', σ'', hstep⟩
       · exact absurd hstop (by simp)
@@ -2069,9 +2109,15 @@ theorem execStmtLoop_ok_or_fuelOut {σ₀ : ExecState} {c₀ : Config}
     unfold execStmtLoop
     split
     · exact .inl ⟨_, _, rfl⟩
-    · exact .inl ⟨_, _, rfl⟩
-    · exact .inl ⟨_, _, rfl⟩
-    · exact .inl ⟨_, _, rfl⟩
+    · rcases hprog _ _ hreach with hstop | ⟨c'', σ'', hstep⟩
+      · exact absurd hstop (by simp)
+      · exact absurd hstep step_returning_stop_elim
+    · rcases hprog _ _ hreach with hstop | ⟨c'', σ'', hstep⟩
+      · exact absurd hstop (by simp)
+      · exact absurd hstep step_breaking_stop_elim
+    · rcases hprog _ _ hreach with hstop | ⟨c'', σ'', hstep⟩
+      · exact absurd hstop (by simp)
+      · exact absurd hstep step_continuing_stop_elim
     · rename_i msg
       rcases hprog _ _ hreach with hstop | ⟨c'', σ'', hstep⟩
       · exact absurd hstop (by simp)
