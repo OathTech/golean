@@ -1,20 +1,19 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-04  commit: general-coverage-cf audit response F2 (per-iteration capture scan covers cond/post)
+# recorded: 2026-08-04  commit: general-coverage-cf audit response F3 (labelK/mapIterK skip-arm coverage)
 #   frontend: native  oracle: go run
-# manifest_cases: 881  pass: 629  fail: 252
-# Re-pin reason: DELIBERATE coverage change, pre-merge audit response F2
-# (docs/2026-08-04_control-flow-design.md): the Go >= 1.22 per-iteration
-# loop-variable trigger scanned only the for BODY for a capturing func
-# literal, so a capture in the CONDITION (reachable once condPre accepted
-# calls there, this slice) or in the POST statement (a hole predating the
-# slice, same mechanism) took the shared-cell lowering — silent wrong
-# answer (3333/333 vs Go's 123). The scan now covers body, condition, and
-# post; the carrier-pointer desugar is correct for those positions (post of
-# iteration k and cond/body of k+1 share k+1's fresh cell, exactly the
-# desugar's top-of-iteration cell). TWO new ids, both PASS with the go-run
-# oracle: for-loopvar-cond-capture, for-loopvar-post-capture.
-# ZERO PASS->FAIL, no stage moves on existing ids.
-# 627 -> 629 pass, 879 -> 881 cases.
+# manifest_cases: 884  pass: 632  fail: 252
+# Re-pin reason: DELIBERATE coverage change, pre-merge audit response F3
+# (docs/2026-08-04_control-flow-design.md): four stage-2 machine arms had no
+# differential coverage — labelContinue (bare continue through a labelK),
+# breakToLabelSkip, continueToLabelSkip, continueToMapIterSkip. THREE new
+# corpus-only ids exercise them (no machine change; PASS + wire structure
+# force the arms — the alternative to each firing is a stuck FAIL):
+# labeled-cross-inner-labeled (continue/break outer across an inner LABELED
+# loop, oracle 234), labeled-continue-range-map-block (continue outer from
+# an unlabeled range-over-map, order-independent oracle 3),
+# labeled-switch-bare-continue (labeled switch in a for with bare continue
+# and break sw, oracle 13233). ZERO PASS->FAIL, no stage moves on existing
+# ids. 629 -> 632 pass, 881 -> 884 cases.
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
 PASS	arrays/array-copy	-
@@ -216,8 +215,11 @@ PASS	control-flow/labeled-branch-range-map	-
 PASS	control-flow/labeled-break	-
 PASS	control-flow/labeled-break-defer	-
 PASS	control-flow/labeled-continue	-
+PASS	control-flow/labeled-continue-range-map-block	-
+PASS	control-flow/labeled-cross-inner-labeled	-
 PASS	control-flow/labeled-empty-statement	-
 PASS	control-flow/labeled-statement-scope	-
+PASS	control-flow/labeled-switch-bare-continue	-
 PASS	control-flow/nested-labeled-break	-
 PASS	control-flow/switch-basic	-
 PASS	control-flow/switch-break	-
