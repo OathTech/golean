@@ -101,19 +101,29 @@ Also stage 1 (for-loop corners in the red set):
   `continue` (which re-enters the while) carries the current cell's
   final value into the next iteration via `$lvp` — the spec's
   "initialized to the value of the previous iteration's variable".
-  Captures see one distinct cell per iteration. Applied when a func
-  literal ANYWHERE in the for statement — body, condition, or post
-  statement — captures a for-clause variable (audit-response 2026-08-04,
+  Captures see one distinct cell per iteration. Applied when, ANYWHERE
+  in the for statement — body, condition, or post statement — a
+  for-clause variable is captured by a func literal OR its cell
+  identity escapes by address: explicit `&i`, slicing an array loop
+  variable (`a[:]`), or a pointer-receiver method on a chain rooting at
+  the loop variable — the same escape shapes as the goto envelope,
+  traced by the shared `findAddrEscape`. (Audit-response 2026-08-04,
   F2: the trigger originally scanned only the body, so a capturing
   literal in the condition — reachable once condPre accepted calls
   there — or in the post took the shared-cell lowering silently; the
-  post hole predates this slice). Per Go >= 1.22, iteration k's post
-  runs on iteration k+1's freshly declared variable and that same cell
-  serves k+1's condition and body — exactly the desugar's
-  top-of-iteration fresh cell, so cond/post captures are correct on the
-  same path (differential pins: `for-loopvar-cond-capture` = 123,
-  `for-loopvar-post-capture` = 123, go-run oracle). The ordinary
-  desugar stays untouched when nothing captures.
+  post hole predates this slice. Delta-review round 2, 2026-08-04: it
+  also detected only func-literal captures, so all three ADDRESS escape
+  shapes took the shared-cell lowering silently — 333 vs Go's 12; the
+  capture-only predicate also predates the slice.) Per Go >= 1.22,
+  iteration k's post runs on iteration k+1's freshly declared variable
+  and that same cell serves k+1's condition and body — exactly the
+  desugar's top-of-iteration fresh cell, so cond/post captures and
+  per-iteration address escapes are correct on the same path
+  (differential pins: `for-loopvar-cond-capture` = 123,
+  `for-loopvar-post-capture` = 123, `for-loopvar-addr-escape` =
+  `for-loopvar-ptr-recv` = `for-loopvar-array-slice` = 12, go-run
+  oracle; range loops are per-iteration natively and unaffected). The
+  ordinary desugar stays untouched when nothing captures or escapes.
 
 ## Stage 2 — labeled break/continue: label-carrying continuations
 
@@ -309,3 +319,22 @@ corpus case(s) added and classified BEFORE the fix landed:
    in the conversion block's scope each sweep
    (tools/nativefrontend/emit.go:539), matching the non-goto blank
    path's observable semantics. Pin: `goto-blank-var-decl` (15).
+
+### Delta-review round 2, 2026-08-04 (residual on the F2 fix)
+
+**Critical (silent wrong answer): the per-iteration trigger detected
+only func-literal CAPTURES.** F2 widened its locations (body/cond/post)
+but not its kinds: a for-clause variable whose cell identity escapes by
+ADDRESS — explicit `&i`, a pointer-receiver method on the loop variable
+(`s.self()`), or array slicing (`a[:]`) — took the plain shared-cell
+lowering, Lean 333 vs Go 12 on all three shapes. The capture-only
+predicate predates this slice. Fix: the trigger now fires on capture OR
+address escape, reusing the goto envelope's root tracing via the shared
+`findAddrEscape` (tools/nativefrontend/emit.go:674, applied in emitFor
+at :1804-1807; the goto envelope's three inspect arms collapsed onto the
+same helper, refusal reason strings unchanged). The carrier-pointer
+desugar is correct for these escapes — each iteration's escape observes
+that iteration's own fresh cell — so no refusal is needed; range loops
+are per-iteration natively (negative control verified). Pins:
+`for-loopvar-addr-escape`, `for-loopvar-ptr-recv`,
+`for-loopvar-array-slice` (all 12, go-run oracle).

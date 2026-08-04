@@ -1,19 +1,22 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-04  commit: general-coverage-cf audit response F4 (blank var decl under goto)
+# recorded: 2026-08-04  commit: general-coverage-cf delta-review round 2 (loop-var address-escape trigger)
 #   frontend: native  oracle: go run
-# manifest_cases: 885  pass: 633  fail: 252
-# Re-pin reason: DELIBERATE coverage change, pre-merge audit response F4
-# (docs/2026-08-04_control-flow-design.md): `var _ T = e` at the top level
-# of a goto-restructured body was degraded by degradeGotoDeclares to an
-# assignment to the UNBOUND name `_` — a machine-level stuck ("unbound
-# GoCore variable address: _") instead of correct execution or a boundary
-# refusal. Blank decls now stay DECLARATIONS, re-executed wholesale in the
-# conversion block's scope each sweep (the non-goto blank path's observable
-# semantics: initializer runs per sweep, value discarded). ONE new id,
-# PASS with the go-run oracle (15): goto-blank-var-decl (backward goto over
-# `var _ int = f(c)` with an observable heap side effect in f).
+# manifest_cases: 888  pass: 636  fail: 252
+# Re-pin reason: DELIBERATE coverage change, delta-review round 2 of the
+# audit response (docs/2026-08-04_control-flow-design.md): the Go >= 1.22
+# per-iteration loop-variable trigger detected only func-literal CAPTURES
+# (a predicate predating the control-flow slice), so a for-clause variable
+# whose CELL IDENTITY escapes by address — explicit &i, a pointer-receiver
+# method on the loop variable, or array slicing a[:] — took the shared-cell
+# lowering: silent wrong answers, Lean 333 vs Go 12 on all three shapes.
+# The trigger now fires on capture OR address escape over body/cond/post,
+# reusing the goto envelope's root tracing (shared findAddrEscape); the
+# carrier-pointer desugar is correct for these escapes (each iteration's
+# escape observes that iteration's own fresh cell). THREE new ids, all
+# PASS with the go-run oracle (12): for-loopvar-addr-escape,
+# for-loopvar-ptr-recv, for-loopvar-array-slice.
 # ZERO PASS->FAIL, no stage moves on existing ids.
-# 632 -> 633 pass, 884 -> 885 cases.
+# 633 -> 636 pass, 885 -> 888 cases.
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
 PASS	arrays/array-copy	-
@@ -192,9 +195,12 @@ PASS	control-flow/for-break-skips-post	-
 PASS	control-flow/for-condition-eval	-
 PASS	control-flow/for-continue-post-plain	-
 PASS	control-flow/for-continue-runs-post	-
+PASS	control-flow/for-loopvar-addr-escape	-
+PASS	control-flow/for-loopvar-array-slice	-
 PASS	control-flow/for-loopvar-cond-capture	-
 PASS	control-flow/for-loopvar-escape	-
 PASS	control-flow/for-loopvar-post-capture	-
+PASS	control-flow/for-loopvar-ptr-recv	-
 PASS	control-flow/for-post-side-effects	-
 FAIL	control-flow/goto-backward-array-slice	frontend-export
 FAIL	control-flow/goto-backward-capture	frontend-export

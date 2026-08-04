@@ -1,0 +1,2 @@
+# id	subject	args	expected_status	expected_reason	features
+-	forLoopvarAddrEscape	-	ok	-	control_flow,loops,pointers,escapes,scoping

@@ -643,6 +643,87 @@ func (e *emitter) hoistedAddrEscape(x ast.Expr, hoisted map[types.Object]bool) *
 	return nil
 }
 
+// Kinds of address escape found by findAddrEscape.
+const (
+	escapeAddr  = "address-taken"
+	escapeSlice = "array-sliced"
+	escapeRecv  = "pointer-method-receiver"
+)
+
+type addrEscape struct {
+	id   *ast.Ident
+	kind string
+}
+
+// findAddrEscape scans root for the first position that observes the
+// address of storage rooted (via addrEscapeRoot) in one of vars:
+// explicit `&expr`; slice expressions on array operands (`a[:]` is
+// `(&a)[:]`; slicing a slice/string/*array reads a header or derefs);
+// pointer-receiver METHOD calls and method values, whose receiver chain
+// is addressed implicitly — including nested field paths (`s.f.M()`)
+// and parens, skipped when the operand is itself pointer-typed (the
+// pointer value IS the receiver — no implicit address of its cell).
+// Conservative corner (recorded in the design note): a pointer-receiver
+// method promoted through an embedded POINTER field of a non-pointer
+// root is reported although the address taken is behind that pointer.
+// Shared by the goto restructuring's fidelity envelope and the
+// Go >= 1.22 per-iteration loop-variable trigger (delta-review round 2,
+// 2026-08-04: the trigger detected only func-literal captures, so an
+// address escape of a for-clause variable took the shared-cell lowering
+// silently).
+func (e *emitter) findAddrEscape(root ast.Node, vars map[types.Object]bool) *addrEscape {
+	var found *addrEscape
+	ast.Inspect(root, func(n ast.Node) bool {
+		if found != nil {
+			return false
+		}
+		switch nn := n.(type) {
+		case *ast.UnaryExpr:
+			if nn.Op == token.AND {
+				if id := e.hoistedAddrEscape(nn.X, vars); id != nil {
+					found = &addrEscape{id: id, kind: escapeAddr}
+				}
+			}
+		case *ast.SliceExpr:
+			isArr := true // missing type info: conservative
+			if t := e.info.TypeOf(nn.X); t != nil {
+				_, isArr = t.Underlying().(*types.Array)
+			}
+			if isArr {
+				if id := e.hoistedAddrEscape(nn.X, vars); id != nil {
+					found = &addrEscape{id: id, kind: escapeSlice}
+				}
+			}
+		case *ast.SelectorExpr:
+			selInfo, ok := e.info.Selections[nn]
+			if !ok || selInfo.Kind() != types.MethodVal {
+				break
+			}
+			fn, isFn := selInfo.Obj().(*types.Func)
+			if !isFn {
+				break
+			}
+			sig, isSig := fn.Type().(*types.Signature)
+			if !isSig || sig.Recv() == nil {
+				break
+			}
+			if _, isPtr := sig.Recv().Type().Underlying().(*types.Pointer); !isPtr {
+				break
+			}
+			if ot := e.info.TypeOf(nn.X); ot != nil {
+				if _, opIsPtr := ot.Underlying().(*types.Pointer); opIsPtr {
+					break
+				}
+			}
+			if id := e.hoistedAddrEscape(nn.X, vars); id != nil {
+				found = &addrEscape{id: id, kind: escapeRecv}
+			}
+		}
+		return found == nil
+	})
+	return found
+}
+
 // emitGotoBody lowers a function body containing `goto` into a
 // program-counter dispatch loop over the body's top-level segments,
 // riding on the stage-2 machine labels
@@ -757,11 +838,12 @@ func (e *emitter) emitGotoBody(b *ast.BlockStmt) (map[string]any, error) {
 		if envErr != nil {
 			return false
 		}
-		switch nn := n.(type) {
-		case *ast.FuncLit:
+		if nn, ok := n.(*ast.FuncLit); ok {
 			// A capture makes per-execution cell identity observable: a
 			// backward jump re-executing the declaration gives Go a FRESH
-			// cell but the hoisted lowering one shared cell.
+			// cell but the hoisted lowering one shared cell. ANY use
+			// inside a literal is a capture, so address escapes inside
+			// literals are subsumed here.
 			ast.Inspect(nn, func(m ast.Node) bool {
 				if id, ok := m.(*ast.Ident); ok {
 					if obj := e.info.Uses[id]; obj != nil && hoistedObjs[obj] {
@@ -771,57 +853,23 @@ func (e *emitter) emitGotoBody(b *ast.BlockStmt) (map[string]any, error) {
 				return envErr == nil
 			})
 			return false
-		case *ast.UnaryExpr:
-			// Explicit `&expr`: refuse when the addressed storage roots
-			// in a hoisted cell (through parens/fields/array elements).
-			if nn.Op == token.AND {
-				if id := e.hoistedAddrEscape(nn.X, hoistedObjs); id != nil {
-					envErr = unsup("goto function hoists an address-taken variable %s", id.Name)
-				}
-			}
-		case *ast.SliceExpr:
-			// Slicing an addressable ARRAY takes its address implicitly
-			// (`a[:]` is `(&a)[:]`); slicing a slice/string/*array reads
-			// a header or derefs — no local cell's address.
-			if t := e.info.TypeOf(nn.X); t == nil || func() bool {
-				_, isArr := t.Underlying().(*types.Array)
-				return isArr
-			}() {
-				if id := e.hoistedAddrEscape(nn.X, hoistedObjs); id != nil {
-					envErr = unsup("goto function hoists variable %s whose array storage is sliced", id.Name)
-				}
-			}
-		case *ast.SelectorExpr:
-			// Implicit address: a pointer-receiver METHOD (call or method
-			// value) takes the address of its receiver chain. Refuse when
-			// that chain roots in a hoisted cell — including nested field
-			// paths (`s.f.M()`) and parens, which the pre-audit check
-			// missed. Conservative corner (recorded in the design note):
-			// a pointer-receiver method promoted through an embedded
-			// POINTER field of a hoisted root is refused although the
-			// address taken is behind that pointer.
-			if selInfo, ok := e.info.Selections[nn]; ok && selInfo.Kind() == types.MethodVal {
-				if fn, isFn := selInfo.Obj().(*types.Func); isFn {
-					if sig, isSig := fn.Type().(*types.Signature); isSig && sig.Recv() != nil {
-						if _, isPtr := sig.Recv().Type().Underlying().(*types.Pointer); isPtr {
-							// A pointer-typed operand IS the receiver
-							// value — no implicit address of its cell.
-							opIsPtr := false
-							if ot := e.info.TypeOf(nn.X); ot != nil {
-								_, opIsPtr = ot.Underlying().(*types.Pointer)
-							}
-							if !opIsPtr {
-								if id := e.hoistedAddrEscape(nn.X, hoistedObjs); id != nil {
-									envErr = unsup("goto function hoists variable %s used as a pointer-method receiver", id.Name)
-								}
-							}
-						}
-					}
-				}
-			}
 		}
 		return envErr == nil
 	})
+	if envErr == nil {
+		// Address escapes (explicit &, array slicing, pointer-receiver
+		// methods) — the shared tracer, findAddrEscape.
+		if esc := e.findAddrEscape(b, hoistedObjs); esc != nil {
+			switch esc.kind {
+			case escapeSlice:
+				envErr = unsup("goto function hoists variable %s whose array storage is sliced", esc.id.Name)
+			case escapeRecv:
+				envErr = unsup("goto function hoists variable %s used as a pointer-method receiver", esc.id.Name)
+			default:
+				envErr = unsup("goto function hoists an address-taken variable %s", esc.id.Name)
+			}
+		}
+	}
 	if envErr != nil {
 		return nil, envErr
 	}
@@ -1742,7 +1790,22 @@ func (e *emitter) emitFor(st *ast.ForStmt) (any, error) {
 			if st.Post != nil {
 				scanForCapture(st.Post)
 			}
-			if captured {
+			// Cell identity also escapes WITHOUT a func literal:
+			// explicit &i, slicing an array loop variable, or a
+			// pointer-receiver method on (a chain rooting at) the loop
+			// variable — the same escape shapes as the goto envelope,
+			// traced by the shared findAddrEscape. The func-literal-only
+			// predicate PRE-DATES this slice; delta-review round 2
+			// (2026-08-04) exhibited silent wrong answers (333 vs Go's
+			// 12) for all three shapes. The carrier-pointer desugar is
+			// correct for them: each iteration's escape observes that
+			// iteration's own fresh cell (differentially pinned by
+			// for-loopvar-addr-escape / -ptr-recv / -array-slice).
+			escaped := captured ||
+				e.findAddrEscape(st.Body, loopVars) != nil ||
+				(st.Cond != nil && e.findAddrEscape(st.Cond, loopVars) != nil) ||
+				(st.Post != nil && e.findAddrEscape(st.Post, loopVars) != nil)
+			if escaped {
 				return e.emitForPerIteration(st, loopVarIdents)
 			}
 		}
