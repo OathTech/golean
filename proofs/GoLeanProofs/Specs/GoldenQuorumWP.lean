@@ -39,17 +39,23 @@ Honest status, stated once and not softened anywhere below:
   a TWO-result frame exit.
 - **PROVEN, pure math**: the value the full `CommittedIndex` walk must
   land on, and its upgrade to the declarative spec.
-- **NOT PROVEN, and recorded as such**: the
-  `quorumOneKnownNotEleven_statement` target (written in phase 4,
-  `39891ae` — see the provenance note on the def) — the UNCONDITIONAL
-  `¬ GoFuncSpec … (n = 11)`. It is not refutable from the triple: a
-  `GoTriple` is vacuously true of a program that fails to terminate, so
-  refuting it demands EXHIBITING a terminating run (a kernel evaluation
-  of the interpreter over the whole pinned program). The run-conditioned
-  twin `quorumOneKnownNotElevenRun` — the golden precedent's shape
-  (renamed from `quorumOneKnownNotEleven` at sem-adequacy slice 5, which
-  name now belongs to the UNCONDITIONAL twin in `Specs/TotalPins.lean`)
-  (`goldenNotThree`) — is proven below instead.
+- **PROVEN (sem-adequacy slice 5, 2026-08-04) — after a recorded period
+  as not-payable**: the `quorumOneKnownNotEleven_statement` target
+  (written in phase 4, `39891ae` — see the provenance note on the def) —
+  the UNCONDITIONAL `¬ GoFuncSpec … (n = 11)` — is discharged as
+  `quorumOneKnownNotEleven` in `Specs/TotalPins.lean`. The history of
+  WHY it was once out of reach stays on record: it is not refutable from
+  the triple alone — a `GoTriple` is vacuously true of a program that
+  fails to terminate, so refuting it demands EXHIBITING a terminating
+  run, a cost this file could not pay when it was written. Slice 5 paid
+  it (a `decide +kernel` evaluation of the interpreter over the whole
+  pinned program, ∀-streams via `allStreamsOk`), and the exhibited
+  `.normal` run plus `quorumOneKnownReturnsTwelve` refutes the `= 11`
+  spec's triple. The run-conditioned twin `quorumOneKnownNotElevenRun` —
+  the golden precedent's shape (`goldenNotThree`; renamed from
+  `quorumOneKnownNotEleven` at slice 5, which name now belongs to the
+  unconditional twin) — remains proven below as the readout's negative
+  rung.
 
 The claim shape, for the record: the machine result `12` equals
 `GoLean.Quorum.committedIndexRef [1] (fun v => if v = 1 then some 12

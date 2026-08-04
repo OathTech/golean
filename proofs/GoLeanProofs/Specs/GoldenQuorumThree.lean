@@ -1387,8 +1387,14 @@ Both run-CONDITIONED, for the reason recorded once for the whole family
 (`quorumOneKnownNotElevenRun`): a `GoTriple` says nothing about a program
 that fails to terminate, so the UNCONDITIONAL `¬ GoFuncSpec` form of
 `quorumThreeAllNotTwelve_statement` is not refutable from the triple
-alone — it demands EXHIBITING a terminating run. That cost stays
-recorded as owed; the honest twin is below. -/
+alone — it demands EXHIBITING a terminating run. That cost was PAID at
+sem-adequacy slice 5 (2026-08-04): the unconditional twin is now proven
+as `quorumThreeAllNotTwelve` in `Specs/TotalPins.lean` (kernel-exhibited
+`.normal` run, all 3! = 6 pick orders explored by `allStreamsOk`,
+refuted against `quorumThreeAllReturnsSix`). The run-conditioned twin
+below remains proven as the readout's negative rung; this note kept the
+"recorded as owed" wording past the discharge until the 2026-08-04
+audit response corrected it. -/
 
 /- `threeOutEnv` moved to `Specs/Statements.lean` (its heap is `quorumOut`,
 already there). -/

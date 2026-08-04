@@ -50,11 +50,16 @@ theorem goldenFuncSpec : goldenFuncSpec_statement := by
   · ipureintro
     rfl
 
-/-- **The golden register invariant, proven**: at EVERY relation-reachable
-configuration of the seeded driver, the output cell holds `int 0` or
-`int 2` — through the invariance exit pipe, with the WP obligation the
-invariant-form walk (`wp_goldenCall_inv`: the single register write opens
-and re-closes the invariant at 2). -/
+/-- **The golden register invariant, proven**: at EVERY `stepFn`-reachable
+configuration of the seeded driver (`ReachableExec` — the statement
+quantifies EXECUTABLE reachability since sem-adequacy slice 4; wording
+corrected at the 2026-08-04 audit response), the output cell holds
+`int 0` or `int 2` — through the invariance exit pipe, with the WP
+obligation the invariant-form walk (`wp_goldenCall_inv`: the single
+register write opens and re-closes the invariant at 2). The pipe's
+relation-side trace covers the executable-reachable set via
+`steps_of_reachableExec` (`ReachableExec` ⊆ `Steps`-reachable, proven;
+the converse is not built — recorded as owed). -/
 theorem goldenInvariant : goldenInvariant_statement := by
   unfold goldenInvariant_statement
   refine goInvariant_mono_pre ?_ (goInvariant_of_wp (P' := .emp) ?_)

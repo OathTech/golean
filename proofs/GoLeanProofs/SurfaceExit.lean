@@ -8,8 +8,12 @@ import Iris.Instances.Lib.Invariants
 `goSpec_of_wp`: an Iris WP proof of `⟦P⟧ ⊢ WP prog {{ ⟦Q⟧ }}` discharges
 the full NATIVE judgment `GoSpec` — the **frame-closed** triple (any heap
 where the footprint is allocated; the frame survives untouched) plus
-**progress** (every relation-reachable configuration is terminal or can
-step). The once-proven pipe: correspondence witness → trace erasure →
+**interpreter-side safety** (`ProgressExec` since sem-adequacy slice 4:
+every bounded `execStmt` run ends `.ok (.normal …)` or `.fuelOut`; the
+pipe internally produces the relation-quantified `ProgressRel` and
+transports it — wording corrected at the 2026-08-04 audit response, the
+old text still described the relation-quantified progress as the
+conclusion). The once-proven pipe: correspondence witness → trace erasure →
 initial-heap-handover adequacy, with `reflect` feeding the precondition
 in, Iris's frame rule (`wp_frame_l`) carrying the frame — the user's WP
 obligation never mentions it — and `extract` reading the postcondition

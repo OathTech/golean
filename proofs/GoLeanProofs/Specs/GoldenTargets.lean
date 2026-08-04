@@ -99,9 +99,17 @@ def goldenReturnsTwo_statement : Prop :=
 
 open GoLean.Iris.GoldenSlice in
 /-- **Step-0 target C (arc `invariant-readout`): the golden register
-invariant.** At EVERY relation-reachable configuration of the seeded
-golden driver — mid-call included — the output cell holds `int 0` or
-`int 2`: never 1, never garbage, never retyped. The miniature of a Verdi
+invariant.** At EVERY `stepFn`-reachable configuration of the seeded
+golden driver (`ReachableExec`: reached by some number of `stepFnIter`
+iterations under some choice stream — the sem-adequacy slice-4
+restatement; wording corrected at the 2026-08-04 audit response, the
+old text still said "relation-reachable") — mid-call included — the
+output cell holds `int 0` or `int 2`: never 1, never garbage, never
+retyped. The executable-reachable set is PROVEN contained in the
+relation-reachable set (`steps_of_reachableExec`); the converse — every
+`Steps`-reachable configuration realized by some stream — is not built
+and is recorded as owed in the arc doc, so this statement claims exactly
+the tested presentation of the model, no more. The miniature of a Verdi
 register invariant ("the register only ever holds values the state machine
 permits"); chosen so the physical invariant needs no ghost state (the
 single write-step goes 0 → 2 atomically). A statement `GoTriple`
