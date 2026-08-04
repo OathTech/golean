@@ -108,7 +108,7 @@ skip a case, or edit canonical Go to make something pass.
 
 ## Proof-facing code is total; keep it that way
 
-New relational/proof-facing definitions (`Rel.lean`, `Correspondence.lean`) are
+New relational/proof-facing definitions (the relation in `Machine.lean`, the surface layer) are
 total — no `partial`, no `sorry`, no `native_decide`. The executable
 interpreter's big-step cluster is ALSO total (arc `eval-totalization`,
 2026-07-21 — GoCore has 0 `partial def`s; the remaining `partial`s are

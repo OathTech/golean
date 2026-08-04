@@ -70,13 +70,13 @@ readouts where possible) before the theorem is claimed.
 ### Extension (2026-08-03, sem-adequacy arc): the relation joins Iris outside the statement TCB
 
 The deletion test as stated above names Iris. The 2026-08-03 baselining
-conversation extends it: the Prop-level relation (`Rel.lean`) is proof
+conversation extends it: the Prop-level relation (`Step`/`Steps` in `Machine.lean`; the old `Rel.lean` was deleted at the reshape) is proof
 infrastructure of the same kind — needed because WP wants a transition
 relation, verified against the executable step (two-sided), and after the
 sem-adequacy arc absent from every headline statement's closure
 (`Progress` restates as interpreter error-freedom; invariance restates
 over `stepFn` iterates; termination becomes the first-class
-interpreter-level `Terminates`). End state: deleting `Rel.lean` — like
+interpreter-level `Terminates`). End state: deleting the relation — like
 deleting Iris — must not change what any headline theorem says, and the
 statement-TCB gate enforces relation-freedom mechanically. The statement
 ladder's "relation-quantified" rung is deprecated accordingly. Plan of

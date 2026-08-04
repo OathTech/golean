@@ -13,7 +13,7 @@
   (`stepFn` and its fuel iteration `execStmt`) as BOTH the differentially
   validated model and the statement language** → machine-checked,
   kernel-judged theorems stated entirely over it. The Prop-level relation
-  (`Rel.lean`) is proof infrastructure — required because Iris WP needs a
+  (`Step`/`Steps` in `Machine.lean`) is proof infrastructure — required because Iris WP needs a
   transition relation, proven equivalent to `stepFn` (two-sided step
   correspondence), and absent from headline statements like Iris itself
   (sem-adequacy arc, 2026-08-03, superseding the earlier
@@ -32,7 +32,7 @@
   dynamic values, typed nils, and comparability rules.
 - Stable semantic identity is `TypeId`/`FuncId`, not raw source strings.
 - **Merge invariant (from the 2026-07 design review):** the proof-facing
-  relation (`Rel.lean`) and its premises must stay total and keep pace with the
+  relation (`Step`/`Steps`, `Machine.lean`) and its premises must stay total and keep pace with the
   interpreter. Do not add an interpreter feature without its relational rule
   shape (total premises; nondeterminism permitted where Go has it). Do not hide
   a semantic choice in evaluator recursion just to pass a case. See
