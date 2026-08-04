@@ -100,8 +100,8 @@ the boundary layer holds the agreement). -/
 def HeapBounded (hp : Heap) (na : Nat) : Prop :=
   ∀ n : Nat, na ≤ n → Heap.lookup hp (.base ⟨n⟩) = none
 
-/-- An admissible framed initial state for `P`: well-formed (`bounded`,
-`wf`), and its heaplet splits into the `P`-footprint `hP` and a frame `F`
+/-- An admissible framed initial state for `P`: well-formed (`wf`), and
+its heaplet splits into the `P`-footprint `hP` and a frame `F`
 — the cells the program is NOT given. `F` is the "in any heap where the
 footprint is allocated" quantifier of a quantified testcase
 (`docs/2026-07-21_spec-space.md` §2). (Reshape R3: the old `frag`
@@ -126,16 +126,45 @@ component (sem-adequacy slice 3, 2026-08-04), though `types`-dependent
 in general, is trivially true at the initial configuration (an `.exec`
 over `.stop` carries no `mapIterK`), so the omission stays
 definitionally interchangeable with a literal that includes them
-(`progressExec_of_progress` transports it). -/
+(`progressExec_of_progress` transports it).
+
+The old `bounded : HeapBounded hp na` field was REMOVED at the
+sem-adequacy statement re-land (slice 5, 2026-08-04): it is provably
+redundant under `wf` — `StateWf` bounds every heap KEY's root base
+strictly below `nextAddr` (`Heap.locSup` counts keys), so no base address
+at or beyond `nextAddr` can be mapped. The derivation is
+`InitialSplit.heapBounded` below; consumers that need the `HeapBounded`
+shape (the adequacy pipe's `HeapWf` premise) use it. One field fewer to
+discharge at every concrete seed, no strength change. -/
 structure InitialSplit (P : HProp) (hp : Heap) (na : Nat)
     (hP F : Heaplet) (funcs : Array Func) (env₀ : LocalEnv) (prog : Stmt) : Prop where
-  bounded : HeapBounded hp na
   disj : ∀ k, hP.get? k = none ∨ F.get? k = none
   cover : ∀ k c, (heapletOf hp).get? k = some c
     ↔ (hP.get? k = some c ∨ F.get? k = some c)
   sat_pre : sat hP P
   wf : Machine.MachineWf { functions := funcs, heap := hp, nextAddr := na }
     (.exec prog env₀ .stop)
+
+/-- `HeapBounded` is derivable from the `wf` field: a mapped base address
+is a heap KEY, keys contribute their `locSup` to `Heap.locSup`
+(`Heap.lookup_key_locSup`), and `StateWf` caps that sup at `nextAddr`.
+This is the redundancy that retired the old `bounded` field. -/
+theorem InitialSplit.heapBounded {P : HProp} {hp : Heap} {na : Nat}
+    {hP F : Heaplet} {funcs : Array Func} {env₀ : LocalEnv} {prog : Stmt}
+    (h : InitialSplit P hp na hP F funcs env₀ prog) : HeapBounded hp na := by
+  intro n hn
+  cases hl : Heap.lookup hp (.base ⟨n⟩) with
+  | none => rfl
+  | some c =>
+    exfalso
+    have hkey := Machine.Heap.lookup_key_locSup hl
+    have hstate : Machine.ExecState.locSup
+        { functions := funcs, heap := hp, nextAddr := na } ≤ na := h.wf.1
+    simp only [Machine.ExecState.locSup, Nat.max_le] at hstate
+    have : Machine.Loc.locSup (.base ⟨n⟩) ≤ na :=
+      Nat.le_trans hkey hstate.1
+    simp only [Machine.Loc.locSup, Machine.Loc.rootBase] at this
+    omega
 
 /-- **The surface Hoare judgment — FRAME-CLOSED** (the quantified-testcase
 form: "give the program any inputs, in ANY heap where the `P`-cells are
@@ -158,8 +187,8 @@ phase 4, 2026-07-31: `enterFrame` consults it on every call — an empty
 default silently restricted every surface judgment to programs with no
 methods, i.e. no interface dispatch, which is exactly the fragment the
 raft target lives in; the executable driver seeds `program.methods`,
-`StepFn.runFunctionWithContextM`); partial correctness — `Progress` below is the companion, and
-`GoSpec` bundles both. -/
+`StepFn.runFunctionWithContextM`); partial correctness — `ProgressExec`
+below is the safety companion, and `GoSpec` bundles both. -/
 def GoTriple (types : TypeEnv) (funcs : Array Func) (methods : Array MethodInfo)
     (env₀ : LocalEnv)
     (P : HProp) (prog : Stmt) (Q : HProp) : Prop :=
@@ -172,10 +201,20 @@ def GoTriple (types : TypeEnv) (funcs : Array Func) (methods : Array MethodInfo)
       ∃ hQ : Heaplet, (∀ k, hQ.get? k = none ∨ F.get? k = none)
         ∧ hQ.sub (heapletOf σf.heap) ∧ F.sub (heapletOf σf.heap) ∧ sat hQ Q
 
-/-- **The progress companion**: from any admissible framed initial state,
-every relation-reachable configuration is either the terminal value or can
-step — never stuck. Stated over the trusted relation (`Steps`/`Step`,
-Iris-free). Scope note (tracked as #24, sharpened by the unwinding arc,
+/-- **PROOF-LAYER progress over the relation** (renamed from `Progress`
+at the sem-adequacy statement re-land, slice 4, 2026-08-04): from any
+admissible framed initial state, every relation-reachable configuration
+is either the terminal value or can step — never stuck.
+
+**This is proof infrastructure, not a statement notion.** It is the shape
+the WP pipe's adequacy theorem outputs (`goSpec_of_wp`'s progress half),
+quantified over the Prop-level relation (`Steps`/`Step`) — which is
+itself proof infrastructure verified against `stepFn`
+(`stepFn_sound`/`step_complete`). Headline statements state safety
+interpreter-side (`ProgressExec` below); the transport is
+`progressExec_of_progress`, and the statement-TCB gate forbids
+`Step`/`Steps` from any designated statement closure. Scope note
+(tracked as #24, sharpened by the unwinding arc,
 `docs/2026-07-25_unwinding-arc.md`): `.panicked` — the terminal an
 UNRECOVERED panic chain reaches at `.stop` — counts as stuck in this
 reading, while a `.panicking` configuration mid-unwind can step (defers
@@ -183,7 +222,7 @@ run, `recover` may cancel it). So for programs whose WP is provable this
 implies no reachable *unrecovered* panics — the guarantee reads "safe
 execution that never aborts on a panic"; a recovered panic is an ordinary
 control path inside it. -/
-def Progress (types : TypeEnv) (funcs : Array Func) (methods : Array MethodInfo)
+def ProgressRel (types : TypeEnv) (funcs : Array Func) (methods : Array MethodInfo)
     (env₀ : LocalEnv)
     (P : HProp) (prog : Stmt) : Prop :=
   ∀ (hp : Heap) (na : Nat) (hP F : Heaplet), InitialSplit P hp na hP F funcs env₀ prog →
@@ -194,14 +233,46 @@ def Progress (types : TypeEnv) (funcs : Array Func) (methods : Array MethodInfo)
         c' σ' →
       c' = .next .stop ∨ ∃ (c'' : Config) (σ'' : ExecState), Step c' σ' c'' σ''
 
+/-- **Executable reachability**: configuration `c` with state `σ` is
+reached from `(σ₀, c₀)` by some number of `stepFn` iterations under some
+choice stream (sem-adequacy arc slice 4, 2026-08-04). This is the
+reachability notion headline invariance statements quantify over — the
+EXECUTABLE step, no relation. Every `ReachableExec` configuration is
+`Steps`-reachable (`stepFnIter_sound`), which is how relation-side
+discharges transport in. -/
+def ReachableExec (σ₀ : ExecState) (c₀ : Config) (c : Config) (σ : ExecState) : Prop :=
+  ∃ (n : Nat) (ch ch' : Choices), stepFnIter n σ₀ c₀ ch = .ok (c, σ, ch')
+
+/-- The easy transport direction: `stepFnIter`-reachable ⇒
+`Steps`-reachable (`stepFn_sound` chained; `stepFnIter_sound`). -/
+theorem steps_of_reachableExec {σ₀ : ExecState} {c₀ : Config} {c : Config}
+    {σ : ExecState} (h : ReachableExec σ₀ c₀ c σ) : Steps c₀ σ₀ c σ := by
+  obtain ⟨n, ch, ch', hiter⟩ := h
+  exact stepFnIter_sound hiter
+
 /-- **The invariance judgment** (arc `invariant-readout`, design of record
-`docs/2026-07-22_invariant-readout-design.md`): from any admissible framed
-initial state, EVERY relation-reachable configuration — mid-call,
-mid-expression, wherever control is — has a sub-heaplet satisfying `I`.
+`docs/2026-07-22_invariant-readout-design.md`; restated over the
+EXECUTABLE step at the sem-adequacy statement re-land, slice 4,
+2026-08-04): from any admissible framed initial state, EVERY
+`stepFn`-reachable configuration — mid-call, mid-expression, wherever
+control is, under every choice stream — has a sub-heaplet satisfying `I`.
+
+The statement mentions ONLY interpreter notions (`stepFnIter` via
+`ReachableExec`); the old form quantified relation reachability
+(`Steps`), which the sem-adequacy arc evicted from every headline
+statement (the relation is proof infrastructure — the deletion test).
+Relation-side discharges still land here through
+`steps_of_reachableExec`: the executable-reachable set is contained in
+the relation-reachable set, so a relation-∀ fact covers it. (The
+containment is one-directional as PROVEN; the converse — every
+`Steps`-reachable configuration realized by some stream — is true on
+paper via `step_complete` but needs an unbuilt stream-stitching argument,
+recorded in the arc doc. Stating over the executable set is the arc's
+point: the claim rests on the tested presentation of the model.)
 
 Tradition honesty (design note §1): this is NOT a separation-logic notion
 — Reynolds/O'Hearn triples speak only of terminal states. It is
-**Verdi-style invariance over the transition system** (`Rel.Step`), the
+**Verdi-style invariance over the transition system**, the
 native shape of safety properties of non-terminating programs (for which
 `GoTriple` is vacuous). `HProp` is only the assertion language; the
 sub-heaplet reading is `I ∗ true` — the rest of the heap (the program's
@@ -213,10 +284,10 @@ def GoInvariant (types : TypeEnv) (funcs : Array Func) (methods : Array MethodIn
     (P : HProp) (prog : Stmt) (I : HProp) : Prop :=
   ∀ (hp : Heap) (na : Nat) (hP F : Heaplet), InitialSplit P hp na hP F funcs env₀ prog →
     ∀ (c' : Config) (σ' : ExecState),
-      Steps (.exec prog env₀ .stop)
+      ReachableExec
         { types := types, functions := funcs, methods := methods,
           heap := hp, nextAddr := na }
-        c' σ' →
+        (.exec prog env₀ .stop) c' σ' →
       ∃ hI : Heaplet, hI.sub (heapletOf σ'.heap) ∧ sat hI I
 
 /-- Precondition strengthening for `GoInvariant` (surface-level, Iris-free):
@@ -231,15 +302,99 @@ theorem goInvariant_mono_pre {types funcs methods env₀ prog} {P Q I : HProp}
   fun hp na hP F hin c' σ' hsteps =>
     hinv hp na hP F { hin with sat_pre := h hP hin.sat_pre } c' σ' hsteps
 
-/-- **The full surface judgment**: the frame-closed triple AND progress —
-"runs safely, and every terminating run delivers `Q` with the frame's
-bindings intact". This is the form specs should be stated in; a triple
-alone is satisfiable by a program that always crashes. -/
+/-! ## The sem() idiom's first-class notions (sem-adequacy arc slice 3,
+2026-08-03; plan of record `docs/2026-08-03_sem-adequacy-arc.md`)
+
+Termination and safety as INTERPRETER-level notions — no Iris, no
+relation: the statement language is `execStmt` alone. Since slice 4
+(2026-08-04) these are not a parallel track but THE statement notions:
+`GoSpec` bundles `ProgressExec`, and `ProgressRel` above is proof-layer
+only. -/
+
+/-- **Termination, interpreter-level**: the run from `σ₀` completes —
+one fuel bound works for EVERY choices stream (uniform: the machine's
+branching is finite — a map pick is bounded by the snapshot size, a spill
+choice only sizes a capacity — so a per-stream bound lifts to a uniform
+one; taking the uniform form keeps the notion a single `∃`).
+"Completes" means the bounded iteration reaches `.ok` at ANY of the four
+unwound terminals; which terminal — and with what state — is a
+postcondition's business, not termination's. Discharge routes: kernel
+evaluation at one fuel (`decide +kernel` on a primitive projection —
+slice-1 spike; the ∀-streams checker `allStreamsOk` covers the stream
+quantifier) plus `execStmt_mono` lifts to all larger fuels. -/
+def Terminates (env₀ : LocalEnv) (σ₀ : ExecState) (prog : Stmt) : Prop :=
+  ∃ N : Nat, ∀ fuel : Nat, N ≤ fuel → ∀ ch : Choices,
+    ∃ (out : ExecOutcome) (ch' : Choices),
+      execStmt fuel env₀ σ₀ ch prog = .ok (out, ch')
+
+/-- **Safety, interpreter-level** (since slice 4 the safety half of
+`GoSpec`, replacing the relation-quantified progress): from any
+admissible framed initial state, EVERY bounded run ends `.ok` or
+`.fuelOut` — never stuck, never an unrecovered panic, never
+`unsupported`, never an internal error. Read with `GoTriple`: "however
+long you run it, it has either finished cleanly or merely not finished
+yet." -/
+def ProgressExec (types : TypeEnv) (funcs : Array Func)
+    (methods : Array MethodInfo) (env₀ : LocalEnv)
+    (P : HProp) (prog : Stmt) : Prop :=
+  ∀ (hp : Heap) (na : Nat) (hP F : Heaplet), InitialSplit P hp na hP F funcs env₀ prog →
+    ∀ (fuel : Nat) (ch : Choices),
+      (∃ (out : ExecOutcome) (ch' : Choices),
+        execStmt fuel env₀
+          { types := types, functions := funcs, methods := methods,
+            heap := hp, nextAddr := na }
+          ch prog = .ok (out, ch'))
+      ∨ execStmt fuel env₀
+          { types := types, functions := funcs, methods := methods,
+            heap := hp, nextAddr := na }
+          ch prog = .error .fuelOut
+
+/-- **Relation-progress transports to interpreter-side safety** (the
+sem-adequacy slice-3 kit's surface-level theorem): the proof-layer
+`ProgressRel` implies `ProgressExec`. `InitialSplit`'s `wf` field
+supplies the machine well-formedness the ∀-choices kit needs (`MachineWf`
+at the typeless seed transfers to the seeded state definitionally on the
+loc components; the map-iteration typing component is trivially true at
+the initial configuration, which carries no `mapIterK`), and
+`execStmt fuel env₀ σ ch prog = execStmtLoop fuel σ (.exec prog env₀
+.stop) ch` holds definitionally. -/
+theorem progressExec_of_progress {types : TypeEnv} {funcs : Array Func}
+    {methods : Array MethodInfo} {env₀ : LocalEnv} {P : HProp} {prog : Stmt}
+    (h : ProgressRel types funcs methods env₀ P prog) :
+    ProgressExec types funcs methods env₀ P prog := by
+  intro hp na hP F hin fuel ch
+  obtain ⟨hs, hc, _⟩ := hin.wf
+  have hwf : Machine.MachineWf
+      { types := types, functions := funcs, methods := methods,
+        heap := hp, nextAddr := na } (.exec prog env₀ .stop) :=
+    ⟨hs, hc, rfl⟩
+  exact execStmtLoop_ok_or_fuelOut (h hp na hP F hin) hwf fuel ch
+
+/-- **The full surface judgment**: the frame-closed triple AND
+interpreter-side safety — "runs safely, and every terminating run
+delivers `Q` with the frame's bindings intact". This is the form specs
+should be stated in; a triple alone is satisfiable by a program that
+always crashes. (Sem-adequacy slice 4, 2026-08-04: the safety half is
+`ProgressExec` — stated over `execStmt` alone — where it used to be the
+relation-quantified progress; the relation is proof infrastructure and
+appears in no headline statement.) -/
 def GoSpec (types : TypeEnv) (funcs : Array Func) (methods : Array MethodInfo)
     (env₀ : LocalEnv)
     (P : HProp) (prog : Stmt) (Q : HProp) : Prop :=
   GoTriple types funcs methods env₀ P prog Q
-    ∧ Progress types funcs methods env₀ P prog
+    ∧ ProgressExec types funcs methods env₀ P prog
+
+/-- The proof-layer assembly pipe: a triple plus relation-progress (what
+the WP exit pipe produces) yields the statement-layer `GoSpec` — the
+safety half transports through `progressExec_of_progress`. This is the
+one-line change that kept `goSpec_of_wp` working across the slice-4
+`GoSpec` redefinition. -/
+theorem goSpec_of_triple_progressRel {types : TypeEnv} {funcs : Array Func}
+    {methods : Array MethodInfo} {env₀ : LocalEnv} {P Q : HProp} {prog : Stmt}
+    (ht : GoTriple types funcs methods env₀ P prog Q)
+    (hp : ProgressRel types funcs methods env₀ P prog) :
+    GoSpec types funcs methods env₀ P prog Q :=
+  ⟨ht, progressExec_of_progress hp⟩
 
 /-- **The function-level quantified-testcase form** (v1: unary int result;
 `(T, error)` returns are queued behind the interface widening —
@@ -268,50 +423,6 @@ def GoFuncSpec (types : TypeEnv) (funcs : Array Func) (methods : Array MethodInf
       (.ex fun (n : Int) =>
         .sep (.pointsTo ra ⟨some (.int kind), .int n kind⟩) (Q n))
 
-/-! ## The sem() idiom's first-class notions (sem-adequacy arc slice 3,
-2026-08-03; plan of record `docs/2026-08-03_sem-adequacy-arc.md`)
-
-Termination and safety as INTERPRETER-level notions — no Iris, no
-relation: the statement language is `execStmt` alone. `Progress` above
-(relation-quantified) remains during the transition and is retired at the
-arc's eviction slice. -/
-
-/-- **Termination, interpreter-level**: the run from `σ₀` completes —
-one fuel bound works for EVERY choices stream (uniform: the machine's
-branching is finite — a map pick is bounded by the snapshot size, a spill
-choice only sizes a capacity — so a per-stream bound lifts to a uniform
-one; taking the uniform form keeps the notion a single `∃`).
-"Completes" means the bounded iteration reaches `.ok` at ANY of the four
-unwound terminals; which terminal — and with what state — is a
-postcondition's business, not termination's. Discharge routes: kernel
-evaluation at one fuel (`decide +kernel` on a primitive projection —
-slice-1 spike) plus `execStmt_mono` lifts to all larger fuels. -/
-def Terminates (env₀ : LocalEnv) (σ₀ : ExecState) (prog : Stmt) : Prop :=
-  ∃ N : Nat, ∀ fuel : Nat, N ≤ fuel → ∀ ch : Choices,
-    ∃ (out : ExecOutcome) (ch' : Choices),
-      execStmt fuel env₀ σ₀ ch prog = .ok (out, ch')
-
-/-- **Safety, interpreter-level** (the arc's replacement for the
-relation-quantified `Progress`): from any admissible framed initial
-state, EVERY bounded run ends `.ok` or `.fuelOut` — never stuck, never an
-unrecovered panic, never `unsupported`, never an internal error. Read
-with `GoTriple`: "however long you run it, it has either finished
-cleanly or merely not finished yet." -/
-def ProgressExec (types : TypeEnv) (funcs : Array Func)
-    (methods : Array MethodInfo) (env₀ : LocalEnv)
-    (P : HProp) (prog : Stmt) : Prop :=
-  ∀ (hp : Heap) (na : Nat) (hP F : Heaplet), InitialSplit P hp na hP F funcs env₀ prog →
-    ∀ (fuel : Nat) (ch : Choices),
-      (∃ (out : ExecOutcome) (ch' : Choices),
-        execStmt fuel env₀
-          { types := types, functions := funcs, methods := methods,
-            heap := hp, nextAddr := na }
-          ch prog = .ok (out, ch'))
-      ∨ execStmt fuel env₀
-          { types := types, functions := funcs, methods := methods,
-            heap := hp, nextAddr := na }
-          ch prog = .error .fuelOut
-
 /-- **The TOTAL surface judgment** — the sem() idiom's headline default:
 triple + interpreter-level safety + proven termination from every
 admissible initial state. Strictly stronger than `GoSpec`: a diverging
@@ -327,27 +438,6 @@ def GoSpecT (types : TypeEnv) (funcs : Array Func)
           { types := types, functions := funcs, methods := methods,
             heap := hp, nextAddr := na }
           prog
-
-/-- **Relation-Progress transports to interpreter-side safety** (the
-sem-adequacy slice-3 kit's surface-level theorem): the relation-quantified
-`Progress` implies `ProgressExec`. `InitialSplit`'s `wf` field supplies
-the machine well-formedness the ∀-choices kit needs (`MachineWf` at the
-typeless seed transfers to the seeded state definitionally on the loc
-components; the map-iteration typing component is trivially true at the
-initial configuration, which carries no `mapIterK`), and
-`execStmt fuel env₀ σ ch prog = execStmtLoop fuel σ (.exec prog env₀
-.stop) ch` holds definitionally. -/
-theorem progressExec_of_progress {types : TypeEnv} {funcs : Array Func}
-    {methods : Array MethodInfo} {env₀ : LocalEnv} {P : HProp} {prog : Stmt}
-    (h : Progress types funcs methods env₀ P prog) :
-    ProgressExec types funcs methods env₀ P prog := by
-  intro hp na hP F hin fuel ch
-  obtain ⟨hs, hc, _⟩ := hin.wf
-  have hwf : Machine.MachineWf
-      { types := types, functions := funcs, methods := methods,
-        heap := hp, nextAddr := na } (.exec prog env₀ .stop) :=
-    ⟨hs, hc, rfl⟩
-  exact execStmtLoop_ok_or_fuelOut (h hp na hP F hin) hwf fuel ch
 
 /-- **The user-form specification — ⟨P terminates⟩ ∧ ⟨pre⟩ → post — as a
 genuinely DERIVED case** (statement corrected at the 2026-08-04

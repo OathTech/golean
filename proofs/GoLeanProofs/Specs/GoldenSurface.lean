@@ -124,11 +124,7 @@ theorem goldenReturnsTwo : goldenReturnsTwo_statement := by
   unfold goldenTriple_statement at htriple
   have hres := htriple goldenOut.heap 1 (heapletOf goldenOut.heap)
     (∅ : Heaplet)
-    { bounded := by
-        intro n hn
-        obtain ⟨m, rfl⟩ : ∃ m, n = m + 1 := ⟨n - 1, by omega⟩
-        rfl
-      disj := fun k => .inr (by
+    { disj := fun k => .inr (by
         rw [heaplet_get?_eq]
         exact LawfulPartialMap.get?_empty (M := GoHeapF) (k := k))
       cover := fun k c => by

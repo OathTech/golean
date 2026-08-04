@@ -56,7 +56,7 @@ private theorem goSpec_adequate
       (∀ k, hQ.get? k = none ∨ F.get? k = none)
       ∧ Heaplet.sub hQ (heapToMap σ2.heap)
       ∧ Heaplet.sub F (heapToMap σ2.heap) ∧ sat hQ Q)
-    hinit.bounded ?_ ?_
+    hinit.heapBounded ?_ ?_
   · intro _inst hprog hmeths htypes
     have hsplit : ownHeaplet (GF := GoCoreS) (heapToMap hp)
         ⊢ embed P ∗ ownHeaplet F := by
@@ -84,14 +84,18 @@ private theorem goSpec_adequate
   embedded postcondition, over the concrete bundle `GoCoreS` with the
   function table pinned. The frame never appears — Iris's frame rule
   carries it inside the pipe.
-Conclusion: the full native judgment — frame-closed triple + progress. -/
+Conclusion: the full native judgment — frame-closed triple +
+interpreter-side safety. (Sem-adequacy slice 4, 2026-08-04: `GoSpec`'s
+safety half is now `ProgressExec`; the adequacy pipe still yields the
+relation-quantified `ProgressRel`, and the last step transports it with
+`goSpec_of_triple_progressRel` — the recorded one-line change.) -/
 theorem goSpec_of_wp
     (Hwp : ∀ [GoCoreGS .hasLC GoCoreS], GoCoreGS.prog GoCoreS = funcs →
       GoCoreGS.methods GoCoreS = methods → GoCoreGS.types GoCoreS = types →
       embed (GF := GoCoreS) P
         ⊢ WP (Config.exec prog env₀ .stop) {{ _v, embed Q }}) :
     GoSpec types funcs methods env₀ P prog Q := by
-  constructor
+  refine goSpec_of_triple_progressRel ?_ ?_
   · -- the frame-closed triple
     intro hp na hP F hinit fuel ch σf ch' hrun
     have hsteps := execStmt_sound_normal hrun
@@ -100,7 +104,7 @@ theorem goSpec_of_wp
     obtain ⟨hQ, hd, h1, h2, hs⟩ := hres
     exact ⟨hQ, hd, by rw [heapletOf_eq_heapToMap]; exact h1,
       by rw [heapletOf_eq_heapToMap]; exact h2, hs⟩
-  · -- progress
+  · -- relation-progress (transported to `ProgressExec` by the refine)
     intro hp na hP F hinit c' σ' hsteps
     have htp := steps_erased hsteps
     have hns := (goSpec_adequate Hwp hinit).adequate_not_stuck
@@ -119,8 +123,10 @@ theorem goSpec_of_wp
 record `docs/2026-07-22_invariant-readout-design.md` §6): from a WP proof
 with **trivial postcondition** that works with `I` held in an Iris
 invariant (∀-quantified namespace) beside the residual precondition `P'`,
-the NATIVE invariance judgment `GoInvariant`: every relation-reachable
-configuration has a sub-heaplet satisfying `I`.
+the NATIVE invariance judgment `GoInvariant`: every `stepFn`-reachable
+configuration (`ReachableExec`, slice 4) has a sub-heaplet satisfying
+`I` — the relation trace the pipe internally produces covers it via
+`steps_of_reachableExec`.
 
 The once-proven pipe: reflect the initial split; allocate
 `inv nroot (embed I)` from `I`'s footprint — **persistence is the
@@ -139,7 +145,11 @@ theorem goInvariant_of_wp {I P' : HProp}
         iprop(Iris.inv N (embed (GF := GoCoreS) I) ∗ embed (GF := GoCoreS) P')
           ⊢ WP (Config.exec prog env₀ .stop) {{ _v, iprop(True) }}) :
     GoInvariant types funcs methods env₀ (.sep I P') prog I := by
-  intro hp na hP F hinit c' σ' hsteps
+  intro hp na hP F hinit c' σ' hreach
+  -- The judgment quantifies EXECUTABLE reachability (slice 4); the
+  -- adequacy pipe speaks relation traces — transport is `stepFn_sound`
+  -- chained (`steps_of_reachableExec`), the easy containment direction.
+  have hsteps := steps_of_reachableExec hreach
   have htp := steps_erased hsteps
   suffices h : ∃ hI : Heaplet, Heaplet.sub hI (heapToMap σ'.heap) ∧ sat hI I by
     obtain ⟨hI, hsub, hsat⟩ := h
@@ -148,7 +158,7 @@ theorem goInvariant_of_wp {I P' : HProp}
     (Config.exec prog env₀ .stop)
     (ExecState.mk (types := types) (functions := funcs) (methods := methods)
       (heap := hp) (nextAddr := na))
-    [c'] σ' _ hinit.bounded ?_ htp
+    [c'] σ' _ hinit.heapBounded ?_ htp
   intro _inst hprog hmeths htypes
   have hsplit : ownHeaplet (GF := GoCoreS) (heapToMap hp)
       ⊢ iprop((embed I ∗ embed P') ∗ ownHeaplet F) := by

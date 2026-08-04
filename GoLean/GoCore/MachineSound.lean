@@ -372,6 +372,34 @@ theorem execStmt_sound_normal {fuel : Nat} {env : LocalEnv} {σ : ExecState}
     Steps (.exec prog env .stop) σ (.next .stop) σf :=
   execStmtLoop_sound_normal h
 
+/-- **Executable reachability is relation reachability** (sem-adequacy
+arc slice 4): a successful `stepFnIter` prefix is a `Steps` trace —
+`stepFn_sound` chained. This is the transport the interpreter-level
+invariance judgment (`Surface.GoInvariant` over `Surface.ReachableExec`)
+rides to consume relation-side discharges: every `stepFnIter`-reachable
+configuration is `Steps`-reachable. The CONVERSE (every `Steps`-reachable
+configuration is `stepFnIter`-reachable under some stream) is true on
+paper — `step_complete` realizes each rule at some stream — but chaining
+its per-step witness streams into ONE `stepFnIter` stream needs a
+stream-stitching lemma that is not built; it is not needed for any
+current discharge and is recorded in the arc doc, not claimed. -/
+theorem stepFnIter_sound :
+    ∀ {n : Nat} {σ₀ : ExecState} {c₀ : Config} {ch : Choices}
+      {c : Config} {σ : ExecState} {ch' : Choices},
+    stepFnIter n σ₀ c₀ ch = .ok (c, σ, ch') → Steps c₀ σ₀ c σ := by
+  intro n
+  induction n with
+  | zero =>
+    intro σ₀ c₀ ch c σ ch' h
+    simp only [stepFnIter, Except.ok.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl, rfl⟩ := h
+    exact Steps.refl _ _
+  | succ n ih =>
+    intro σ₀ c₀ ch c σ ch' h
+    simp only [stepFnIter, bind_eq_ok] at h
+    obtain ⟨⟨c₁, σ₁, ch₁⟩, hstep, hiter⟩ := h
+    exact (Steps.single (stepFn_sound hstep)).trans (ih hiter)
+
 
 /-! ### The sem() correspondence kit (sem-adequacy arc slice 3, 2026-08-03)
 

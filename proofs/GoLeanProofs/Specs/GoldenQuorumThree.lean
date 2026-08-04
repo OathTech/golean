@@ -1407,11 +1407,7 @@ theorem quorumThreeAllReturnsSix
     loadLoc σf (.base ⟨0⟩) = .ok (.int 6 .uint64) := by
   have htriple := (quorumThreeAllFuncSpec 0 (.int 0 .uint64)).1
   have hres := htriple quorumOut 1 (heapletOf quorumOut) (∅ : Heaplet)
-    { bounded := by
-        intro n hn
-        obtain ⟨m, rfl⟩ : ∃ m, n = m + 1 := ⟨n - 1, by omega⟩
-        rfl
-      disj := fun k => .inr (by
+    { disj := fun k => .inr (by
         rw [heaplet_get?_eq]
         exact LawfulPartialMap.get?_empty (M := GoHeapF) (k := k))
       cover := fun k c => by

@@ -1338,11 +1338,7 @@ theorem quorumOneKnownReturnsTwelve
     loadLoc σf (.base ⟨0⟩) = .ok (.int 12 .uint64) := by
   have htriple := (quorumOneKnownFuncSpec 0 (.int 0 .uint64)).1
   have hres := htriple quorumOut 1 (heapletOf quorumOut) (∅ : Heaplet)
-    { bounded := by
-        intro n hn
-        obtain ⟨m, rfl⟩ : ∃ m, n = m + 1 := ⟨n - 1, by omega⟩
-        rfl
-      disj := fun k => .inr (by
+    { disj := fun k => .inr (by
         rw [heaplet_get?_eq]
         exact LawfulPartialMap.get?_empty (M := GoHeapF) (k := k))
       cover := fun k c => by
@@ -1426,11 +1422,7 @@ theorem quorumAckedIndexReturnsTwelveTrue
   have htriple := (quorumAckedIndexFuncSpec2 2 3 0 1 (.int 0 .uint64)
     (.bool false) (by omega)).1
   have hres := htriple ackedIndexOut 4 (heapletOf ackedIndexOut) (∅ : Heaplet)
-    { bounded := by
-        intro n hn
-        obtain ⟨m, rfl⟩ : ∃ m, n = m + 4 := ⟨n - 4, by omega⟩
-        rfl
-      disj := fun k => .inr heaplet_get?_empty
+    { disj := fun k => .inr heaplet_get?_empty
       cover := fun k c => by
         constructor
         · exact fun h => .inl h

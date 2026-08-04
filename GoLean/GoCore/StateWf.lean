@@ -642,6 +642,26 @@ theorem Heap.lookup_locSup {h : Heap} {l : Loc} {c : HeapCell}
       simp only [Heap.locSup]
       omega
 
+/-- The KEY side of `Heap.lookup_locSup`: a mapped location's own root
+base is bounded by the heap's sup (keys contribute to `Heap.locSup`
+alongside cell values). Feeds `InitialSplit.heapBounded` — the derivation
+that made the old `bounded` field redundant (sem-adequacy slice 5). -/
+theorem Heap.lookup_key_locSup {h : Heap} {l : Loc} {c : HeapCell}
+    (hl : Heap.lookup h l = some c) : Loc.locSup l ≤ Heap.locSup h := by
+  induction h with
+  | nil => simp [Heap.lookup] at hl
+  | cons p rest ih =>
+    obtain ⟨l', c'⟩ := p
+    simp only [Heap.lookup] at hl
+    split at hl
+    · rename_i hbeq
+      obtain rfl := eq_of_beq hbeq
+      simp only [Heap.locSup]
+      omega
+    · refine Nat.le_trans (ih hl) ?_
+      simp only [Heap.locSup]
+      omega
+
 theorem Heap.set_locSup {h : Heap} {l : Loc} {c : HeapCell} :
     Heap.locSup (Heap.set h l c)
       ≤ max (Heap.locSup h) (max (Loc.locSup l) (HeapCell.locSup c)) := by

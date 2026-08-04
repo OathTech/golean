@@ -1382,11 +1382,7 @@ theorem committedIndexAllReturnsSix
     (.int 0 .uint64) (by decide) (by decide) encodesConfig_three
     encodesAcked_three (by decide)).1
   have hres := htriple allOut 5 (heapletOf allOut) (∅ : Heaplet)
-    { bounded := by
-        intro n hn
-        obtain ⟨m, rfl⟩ : ∃ m, n = m + 5 := ⟨n - 5, by omega⟩
-        rfl
-      disj := fun k => .inr (by
+    { disj := fun k => .inr (by
         rw [heaplet_get?_eq]
         exact LawfulPartialMap.get?_empty (M := GoHeapF) (k := k))
       cover := fun k c => by

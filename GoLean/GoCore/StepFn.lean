@@ -505,6 +505,22 @@ def execStmt (fuel : Nat) (env : LocalEnv) (σ : ExecState) (choices : Choices)
     (prog : Stmt) : Except GoError (ExecOutcome × Choices) :=
   execStmtLoop fuel σ (.exec prog env .stop) choices
 
+/-- Raw `n`-fold iteration of `stepFn` — NO terminal check and no outcome
+classification (sem-adequacy arc slice 4, 2026-08-04). `stepFn` itself
+throws on every terminal configuration (`.next .stop`, the unwound
+`.stop` shapes, `.panicked`), so a successful iterate is a genuine
+`n`-step prefix of a run, never an over-run past a terminal. This is the
+reachability carrier for the interpreter-level invariance judgment
+(`Surface.ReachableExec`): "configuration reachable by the EXECUTABLE
+step", with the choice stream threaded exactly as `execStmtLoop` threads
+it. -/
+def stepFnIter : Nat → ExecState → Config → Choices →
+    Except GoError (Config × ExecState × Choices)
+  | 0, σ, c, choices => .ok (c, σ, choices)
+  | n + 1, σ, c, choices => do
+      let (c', σ', choices') ← stepFn σ c choices
+      stepFnIter n σ' c' choices'
+
 def runFunctionWithTypesM (fuel : Nat) (types : TypeEnv) (func : Func)
     (args : Array GoValue) : Except GoError Result :=
   runFunctionWithContextM fuel types #[func] func args

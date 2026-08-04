@@ -220,11 +220,7 @@ theorem recoverReturnsSeven
     loadLoc σf (.base ⟨0⟩) = .ok (.int 7 .int) := by
   have htriple := (recoverFuncSpec 0 (.int 0 .int)).1
   have hres := htriple recoverOut 1 (heapletOf recoverOut) (∅ : Heaplet)
-    { bounded := by
-        intro n hn
-        obtain ⟨m, rfl⟩ : ∃ m, n = m + 1 := ⟨n - 1, by omega⟩
-        rfl
-      disj := fun k => .inr (by
+    { disj := fun k => .inr (by
         rw [heaplet_get?_eq]
         exact LawfulPartialMap.get?_empty (M := GoHeapF) (k := k))
       cover := fun k c => by
