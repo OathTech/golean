@@ -371,6 +371,70 @@ adopted so long as the user's form above is a supported case.
   changed every designated statement's closure, so slice 5's judge run
   is mandatory before the arc's merge ask.
 
+- **Slices 4+5 (branch `sem-adequacy-eviction`) — the statement re-land,
+  DONE 2026-08-04.** Three commits (stage A eviction, stage A gate, stage
+  B totals+twins); `scripts/ci` PASS end to end.
+  1. **Relation eviction (slice 4).** `GoSpec := GoTriple ∧ ProgressExec`
+     — the safety half is interpreter-side; the relation-quantified
+     progress survives as the PROOF-layer `ProgressRel` (the WP adequacy
+     pipe's output shape) and `goSpec_of_triple_progressRel` is the
+     assembly pipe (`goSpec_of_wp`'s last step — the predicted one-line
+     change; every existing discharge went through untouched).
+     `GoInvariant` restates over EXECUTABLE reachability: new core
+     `stepFnIter` (raw n-fold `stepFn`; terminals throw, so a successful
+     iterate is a genuine run prefix), `Surface.ReachableExec`, transport
+     `stepFnIter_sound`/`steps_of_reachableExec` (`stepFn_sound` chained
+     — the containment direction discharges need; `goldenInvariant`'s
+     proof text unchanged). **Recorded as NOT built:** the converse
+     realization (`Steps`-reachable ⇒ reachable at some stream) is true
+     on paper via `step_complete` but chaining per-step witness streams
+     into one `stepFnIter` stream needs a stream-stitching lemma no
+     current discharge needs; the executable-reachable set is the honest
+     statement carrier regardless (the tested presentation).
+     `InitialSplit.bounded` REMOVED as bundled: heap KEYS count into
+     `StateWf`'s sup, so `Heap.lookup_key_locSup` + `wf` derive
+     `HeapBounded` (`InitialSplit.heapBounded`); the six seed sites
+     dropped the field, the adequacy pipe consumes the derivation.
+  2. **Gate (slice 4).** The statement-TCB walk now forbids the relation
+     from designated statement closures exactly as it forbids Iris — by
+     explicit forbidden NAMES (`…Machine.Step`/`…Machine.Steps` + their
+     namespaces; module-of-origin cannot discriminate — the relation
+     lives in Machine.lean). All 25 designated closures pass with ZERO
+     eviction debt after stage A; a negative test confirmed the walk DOES
+     reach `Steps` from a `ProgressRel`-shaped statement (the check is
+     live, not vacuous).
+  3. **∀-streams termination (slice 5).** The checker `allStreamsOk`
+     (MachineSound) + soundness `execStmtLoop_ok_of_allStreamsOk`:
+     `Terminates` quantifies every stream, a kernel run exhibits one; the
+     bridge is the choices discipline made a proof — `stepFn_oblivious`
+     (a `fun_cases` sweep: every arm that is not the `mapIterK` pick or
+     an `appendSlice` apply is stream-oblivious with the SAME successor;
+     a future consuming arm breaks the sweep loudly, never unsounds the
+     checker), the pick BRANCHED over every index (`stepFn_mapIter_pick`
+     — the successor is a function of the index alone), `appendSlice`
+     apply positions failing closed. The whole chain is CONSTRUCTIVE
+     (`[propext, Quot.sound]`). Landed: `goldenTerminates`,
+     `recoverTerminates`, `quorumOneKnownTerminates`,
+     `quorumThreeAllTerminates` (all 3! = 6 pick orders explored) —
+     measured ≈ 6 s total kernel time for all four under the 16 GiB cap
+     — plus the per-seed `<pin>TotalReadout` forms (Terminates ∧ the
+     proven readout). **Recorded as OWED, not attempted:** full per-pin
+     `GoSpecT` — symbolic termination over ALL admissible initial states
+     — the ∀-config statements stay at (new) `GoSpec` strength.
+  4. **Unconditional negative twins (slice 5).**
+     `quorumOneKnownNotEleven_statement` / `quorumThreeAllNotTwelve_statement`
+     — targets since phase 4, honestly out of reach until a terminating
+     run existed — DISCHARGED (`Specs/TotalPins.lean`): the
+     kernel-exhibited `.normal` run + the run-conditioned readout at the
+     true value (12/6) contradict the wrong spec's triple. The
+     run-conditioned twins were renamed `*Run` (statements unchanged,
+     still designated); the clean names now carry the unconditional
+     claims. Designated list 23 → 25; Challenge/Solution/judge-config
+     updated in lockstep. **The armed Comparator landmark is now due**:
+     designated statements changed shape (`GoSpec`/`GoInvariant`
+     redefinition, `InitialSplit` field removal) and grew by two — the
+     judge run precedes the arc's merge ask (coordinator runs it).
+
 ## Exit criteria
 
 - `Terminates` and the total-correctness form exist, with the user's
