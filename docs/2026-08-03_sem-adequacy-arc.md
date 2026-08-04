@@ -337,6 +337,40 @@ adopted so long as the user's form above is a supported case.
      `mapIterK` `#eval`s behave as before BY DESIGN (the per-pick path is
      untouched; the state is simply illegitimate now).
 
+- **Sub-branch audit + response (`sem-adequacy-notions`, 2026-08-04).**
+  2 Opus reviewers + refute-by-default verifiers over the 7-commit diff:
+  13 findings, 9 confirmed. Fixed: [major] MachineSound's module doc
+  still declared the kit theorems FALSE/open (stale as of the very
+  commit that closed them) — rewritten to the resolved status with
+  history; [major] `goSpecT_assumed_form` was an eta-expansion of
+  `GoSpecT.1` that never used `Terminates` — replaced by the honest
+  `goSpecT_terminates_and_post` (termination + normal-run post,
+  completion outcome deliberately quantified); [minor] the Audit ledger
+  gained the slice-3 section (axiom pins for `step_preserves_wf`,
+  `step_complete_any_wf`, `execStmtLoop_ok_or_fuelOut`,
+  `progressExec_of_progress`, `goSpecT_terminates_and_post` +
+  deletion-guard references) and the `wp_map_range_snapshot` witness
+  ledger prose was updated (premise propagated by the symbolic witness,
+  discharged at both shapes by its callers); [note] the unused `StateWf`
+  hypothesis on `applyStmtOp_appendSlice_congr` dropped with corrected
+  credit; [note] `applyStmtOpCore`'s docstring now names its fail-closed
+  internal appendSlice arm; [note] BUG-005 coupling recorded in BUGS.md
+  (the live-iteration fix must replay the stream-obliviousness
+  analysis); [note] NEW pre-existing fidelity bug found by audit
+  probing, filed as **BUG-011** (anonymous `struct{}{}` stuck at named
+  empty-struct types — Go assignability vs our identity check;
+  fail-closed, corpus case owed first per the standing rule). Recorded
+  decisions: values-unconditional snapshot checking kept (legit states
+  pass identically — `mapAssign` normalizes both; conditioning on
+  `valVar` rejected as complexity without fidelity gain);
+  `InitialSplit.bounded` is now provably redundant under `wf` — its
+  REMOVAL is bundled into slice 5's statement re-land (one statement
+  churn, one Comparator re-landmark); the notions' real witnesses ARE
+  the slice-5 retrofits (deferral recorded, not a toy witness); the
+  **Comparator landmark trigger is armed**: `InitialSplit`'s reshape
+  changed every designated statement's closure, so slice 5's judge run
+  is mandatory before the arc's merge ask.
+
 ## Exit criteria
 
 - `Terminates` and the total-correctness form exist, with the user's

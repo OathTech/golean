@@ -294,6 +294,18 @@ base location and the pick-next step must skip keys no longer present
 and `MachineSound` — scheduled as its own slice, not rushed into an
 audit response.
 
+
+COUPLING (sem-adequacy arc, 2026-08-04): the snapshot-time key/value
+self-normalization check (`mapRangeSnapshotEntries`) and `MachineWf`'s
+`itersNormalized` component are built ON the snapshot design this bug
+schedules for replacement. The prescribed live-iteration fix
+(`Cont.mapIterK` carrying the map's base loc, pick-next skipping absent
+keys and re-reading values) must REPLAY the stream-obliviousness
+analysis: the per-pick lookups it introduces must stay
+choices-independent in ok-ness, and the wf typing component must move
+from the snapshot to the live map cell. Do not land the BUG-005 surgery
+without re-running `step_complete_any_wf`'s mapIterNext case.
+
 ## BUG-004 — panic abort rendering: boxing identity and defined-type payloads unmodeled
 
 - Status: open
@@ -477,3 +489,25 @@ differential plus 40/40 eval tests. Still open before this bug CLOSES
 re-audit of multi-cell apply steps (`appendSlice` spill, `copySlice`) —
 coarse-but-recorded, fine sequentially, must not silently enter
 concurrency claims.
+
+## BUG-011 — anonymous `struct{}{}` literal stuck at named empty-struct types
+
+- Status: open
+- Pinned-by: probe (no corpus case yet — adding one is the first step of the fix)
+- Cases: (owed) structs/empty-struct-literal-at-named-type
+- Discovered: 2026-08-04 (sem-adequacy notions sub-branch audit, semantics
+  reviewer probing beyond the diff; verifier reproduced independently)
+
+`normalizeStructValueWith` (Ops.lean, the struct arm of value
+normalization) compares the VALUE's carried `TypeId` against the target
+defined type with raw disequality — Go type IDENTITY — where Go
+assignment applies ASSIGNABILITY: an anonymous `struct{}{}` composite
+literal is assignable to any defined type whose underlying type is
+`struct{}`, so `var x T = struct{}{}` succeeds in Go and goes `.stuck`
+here ("struct value type mismatch: expected main.T, got struct{}").
+Same class as the conversion/assignability distinctions the interfaces
+campaign handled elsewhere; fail-closed direction (visible red, no wrong
+answer). Fix shape: assignability-aware normalization for identical
+underlying struct types (or frontend-side retagging of untyped
+composite literals at their assignment type); guardrail corpus case
+FIRST per the standing rule.

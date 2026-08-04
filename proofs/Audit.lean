@@ -534,7 +534,15 @@ projections stop being `rfl`):
   faithful `.defined main.Index` cell;
 - `wp_map_range_snapshot` (+ the nil form) — the state-reading step
   feeding `Laws/Range`'s nondeterministic `mapIterK` law; witness
-  `wp_map_range_snapshot_committed` on the REAL voter loop.
+  `wp_map_range_snapshot_committed` on the REAL voter loop. (Ledger
+  update, sub-branch audit 2026-08-04: the law gained the snapshot
+  self-normalization premise `hnorm` — the law-side twin of the
+  SEMANTICS' own snapshot-time validation, sem-adequacy slice 3 — and
+  the committed witness now PROPAGATES that premise to its callers,
+  who discharge it at pinned data by `decide +kernel` and at symbolic
+  voter lists from their `hnormk` facts; both discharge shapes are in
+  the walk files, so the premise is exhibited satisfiable, not just
+  forwarded.)
 
 `✓ The nondeterministic map-iteration law is PINNED and WITNESSED`
 (2026-07-31, pre-merge audit finding 9). `wp_map_iter_next_key` shipped
@@ -610,6 +618,29 @@ example := @GoLean.Iris.wp_map_iter_next_key_defined_key_witness
 example := @GoLean.Iris.wp_stmt_op_apply_store
 example := @GoLean.Iris.wp_stmt_op_apply_read_store₂
 example := @GoLean.Iris.wp_read_store_step₂
+
+/-! ### sem-adequacy slice 3: the legitimacy invariant and the
+stream-obliviousness kit (2026-08-04). The SEMANTICS gained the mapRange
+snapshot-time self-normalization check (`mapRangeSnapshotEntries`,
+differential-validated 873/873); `MachineWf` is the legitimacy invariant
+(locs bounded + in-flight snapshots typed) with per-rule preservation;
+the kit transports relation-Progress to the interpreter-level
+`ProgressExec`. Axiom pins + deletion-guard references: -/
+/-- info: 'GoLean.GoCore.Machine.step_preserves_wf' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.GoCore.Machine.step_preserves_wf
+/-- info: 'GoLean.GoCore.Machine.step_complete_any_wf' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.GoCore.Machine.step_complete_any_wf
+/-- info: 'GoLean.GoCore.Machine.execStmtLoop_ok_or_fuelOut' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.GoCore.Machine.execStmtLoop_ok_or_fuelOut
+/-- info: 'GoLean.Surface.progressExec_of_progress' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Surface.progressExec_of_progress
+/-- info: 'GoLean.Surface.goSpecT_terminates_and_post' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Surface.goSpecT_terminates_and_post
+example := @GoLean.GoCore.Machine.applyStmtOp_ok_any_ch_wf
+example := @GoLean.GoCore.Machine.execStmt_mono
+example := @GoLean.Surface.Terminates
+example := @GoLean.Surface.ProgressExec
+example := @GoLean.Surface.GoSpecT
 example := @GoLean.Iris.typeEnv_pin_is_load_bearing
 example := @GoLean.Iris.wp_call_dynamic_enter₂
 example := @GoLean.Iris.wp_call_dynamic_enter_ackedIndex

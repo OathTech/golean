@@ -349,22 +349,39 @@ theorem progressExec_of_progress {types : TypeEnv} {funcs : Array Func}
     ⟨hs, hc, rfl⟩
   exact execStmtLoop_ok_or_fuelOut (h hp na hP F hin) hwf fuel ch
 
-/-- The user-form specification — ⟨terminates⟩ ∧ ⟨pre⟩ → post — as a
-DERIVED case: a total judgment yields it directly (and `GoSpec` +
-assumed termination yields the analogous read). Recorded as a theorem so
-the plan-of-record's "the sketch form is a supported case" is a checked
-fact rather than prose. -/
-theorem goSpecT_assumed_form {types funcs methods env₀} {P Q : HProp}
-    {prog : Stmt}
+/-- **The user-form specification — ⟨P terminates⟩ ∧ ⟨pre⟩ → post — as a
+genuinely DERIVED case** (statement corrected at the 2026-08-04
+sub-branch audit: the first version was an eta-expansion of `GoSpecT.1`
+that never touched `Terminates`, so the plan-of-record's "the sketch
+form is a supported case" was NOT the checked fact it claimed to be).
+What a total judgment actually yields at every admissible initial state:
+the run COMPLETES past some fuel bound on every choices stream, and any
+completion at the `.normal` terminal satisfies the postcondition beside
+the intact frame. The completion outcome is quantified, not pinned to
+`.normal` — `Terminates` deliberately does not choose the terminal (a
+bare `return`-ending program completes at `.returned`); the driver
+statements of the headline family end `.normal`, and their retrofits
+will pin that per-program, not here. -/
+theorem goSpecT_terminates_and_post {types funcs methods env₀}
+    {P Q : HProp} {prog : Stmt}
     (h : GoSpecT types funcs methods env₀ P prog Q) :
-    ∀ (hp : Heap) (na : Nat) (hP F : Heaplet), InitialSplit P hp na hP F funcs env₀ prog →
-      ∀ (fuel : Nat) (ch : Choices) (σf : ExecState) (ch' : Choices),
-        execStmt fuel env₀
+    ∀ (hp : Heap) (na : Nat) (hP F : Heaplet),
+      InitialSplit P hp na hP F funcs env₀ prog →
+      (∃ N : Nat, ∀ fuel : Nat, N ≤ fuel → ∀ ch : Choices,
+        ∃ (out : ExecOutcome) (ch' : Choices),
+          execStmt fuel env₀
             { types := types, functions := funcs, methods := methods,
-              heap := hp, nextAddr := na }
-            ch prog = .ok (.normal σf, ch') →
-        ∃ hQ : Heaplet, (∀ k, hQ.get? k = none ∨ F.get? k = none)
-          ∧ hQ.sub (heapletOf σf.heap) ∧ F.sub (heapletOf σf.heap) ∧ sat hQ Q :=
-  fun hp na hP F hin => h.1 hp na hP F hin
+              heap := hp, nextAddr := na } ch prog = .ok (out, ch'))
+      ∧ (∀ (fuel : Nat) (ch : Choices) (σf : ExecState) (ch' : Choices),
+          execStmt fuel env₀
+              { types := types, functions := funcs, methods := methods,
+                heap := hp, nextAddr := na }
+              ch prog = .ok (.normal σf, ch') →
+          ∃ hQ : Heaplet, (∀ k, hQ.get? k = none ∨ F.get? k = none)
+            ∧ hQ.sub (heapletOf σf.heap) ∧ F.sub (heapletOf σf.heap)
+            ∧ sat hQ Q) :=
+  fun hp na hP F hin =>
+    ⟨h.2.2 hp na hP F hin, fun fuel ch σf ch' hrun =>
+      h.1 hp na hP F hin fuel ch σf ch' hrun⟩
 
 end GoLean.Surface

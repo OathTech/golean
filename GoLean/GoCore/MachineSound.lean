@@ -458,22 +458,25 @@ for now EXISTS: `MachineWf` (state + configuration location-boundedness)
 is preserved by every rule, and the executable inherits it through
 `stepFn_sound`.
 
-**Status of the ∀-choices kit under wf (recorded honestly):**
-* `appendSlice` resolves exactly as predicted: under `MachineWf` the spill
-  target's root base addresses an EXISTING cell, so ok-ness cannot depend
-  on the consumed capacity choice (the remaining lemma is scaffolding in
-  progress — see the arc doc).
-* **A SECOND obstruction is machine-checked** (`.tmp/probe_mapiter.lean`):
-  `mapIterNext` resists ∀-streams EVEN UNDER `MachineWf` — a `mapIterK`
-  snapshot with heterogeneous entries (`#[(int, _), (bool, _)]` at
-  `keyTy = int`) is loc-free hence wf, the relation steps by picking the
-  good entry, but `stepFn` at a stream picking the bad entry fails in
-  `bindIterVars`'s normalization. Loc-wf cannot exclude it (snapshots are
-  heap `mapData` contents; neither they nor the statement's `keyTy` carry
-  locations), so `step_complete_any_wf` / `execStmtLoop_ok_or_fuelOut` /
-  the unconditional `Progress → ProgressExec` transport are FALSE as
-  specified. Resolution (bindability side condition vs snapshot-time
-  normalization reshape) is a user decision — arc doc, slice-3 entry. -/
+**Status of the ∀-choices kit under wf — CLOSED (history preserved):**
+* `appendSlice` resolved exactly as predicted: under bounded operands the
+  spill target's root base addresses an EXISTING cell, so ok-ness cannot
+  depend on the consumed capacity choice (`applyStmtOp_ok_any_ch_wf`
+  below).
+* A SECOND obstruction was machine-checked mid-slice
+  (`.tmp/probe_mapiter.lean`): `mapIterNext` resisted ∀-streams even
+  under loc-wf — an ill-TYPED `mapIterK` snapshot (`#[(int,_),(bool,_)]`
+  at `keyTy = int`) is loc-free, the relation steps by picking the good
+  entry, but a stream picking the bad one fails `bindIterVars`'
+  normalization. Loc-wf structurally cannot exclude it. RESOLVED (user
+  decision, arc doc slice-3 entry): the mapRange SNAPSHOT step now
+  fail-closes unless every snapshot key AND value is self-normalized at
+  the range types (`mapRangeSnapshotEntries`), and `MachineWf` carries
+  the matching `itersNormalized` typing component for in-flight
+  snapshots — so `step_complete_any_wf`, `execStmtLoop_ok_or_fuelOut`,
+  and `progressExec_of_progress` (Surface) hold as stated below; the old
+  witness now fails `MachineWf` and its snapshot is rejected identically
+  at every stream (`.tmp/probe_mapiter2.lean`). -/
 
 @[inherit_doc step_preserves_wf]
 theorem Step.preserves_wf {c : Config} {σ : ExecState} {c' : Config}
@@ -1687,14 +1690,16 @@ theorem buildAppendBackingValue_congr {σ : ExecState} {elem : Ty}
             simp [hd, Bind.bind, Except.bind, pure, Except.pure]⟩) _ _
 
 set_option maxHeartbeats 3200000 in
-/-- **The appendSlice ∀-choices lemma** (spill obstruction resolved under
-well-formedness): under `StateWf` and bounded operands, the outcome CLASS
-of the appendSlice apply step is the same under every choice stream. The
-choice only sizes the fresh backing (allocated ABOVE every well-formed
-location) and the result slice's `cap` — `storeLoc_congr` transports the
-final store across both. -/
+/-- **The appendSlice ∀-choices lemma** (spill obstruction resolved):
+under bounded OPERANDS the outcome CLASS of the appendSlice apply step is
+the same under every choice stream — operand boundedness alone suffices
+(audit correction 2026-08-04: an earlier draft also took `StateWf σ` and
+credited it, but the proof never uses it; the fresh backing is allocated
+above every OPERAND-reachable location, which is what the store transport
+needs). The choice only sizes the fresh backing and the result slice's
+`cap` — `storeLoc_congr` transports the final store across both. -/
 theorem applyStmtOp_appendSlice_congr {σ : ExecState} {elem : Ty} {nt : Nat}
-    {vs : List GoValue} (_hw : StateWf σ) (hb : goValueListSup vs ≤ σ.nextAddr)
+    {vs : List GoValue} (hb : goValueListSup vs ≤ σ.nextAddr)
     (ch₁ ch₂ : Choices) :
     exceptCong (fun _ _ : ExecState × Choices => True)
       (applyStmtOp σ ch₁ (.appendSlice elem) nt vs)
@@ -1773,41 +1778,45 @@ theorem applyStmtOp_appendSlice_congr {σ : ExecState} {elem : Ty} {nt : Nat}
       · exact ⟨rfl, rfl, rfl⟩
       · exact trivial
 
-/-- The full wide-op table's outcome class is choice-independent under
-well-formedness: everything but appendSlice is choices-free by
-construction, and appendSlice is the lemma above. -/
+/-- The full wide-op table's outcome class is choice-independent given
+bounded operands: everything but appendSlice is choices-free by
+construction, and appendSlice is the lemma above (which needs only the
+operand bound — audit correction 2026-08-04, `StateWf` dropped here
+too). -/
 theorem applyStmtOp_congr_any_ch {σ : ExecState} {op : StmtOp} {nt : Nat}
-    {vs : List GoValue} (hw : StateWf σ) (hb : goValueListSup vs ≤ σ.nextAddr)
+    {vs : List GoValue} (hb : goValueListSup vs ≤ σ.nextAddr)
     (ch₁ ch₂ : Choices) :
     exceptCong (fun _ _ : ExecState × Choices => True)
       (applyStmtOp σ ch₁ op nt vs) (applyStmtOp σ ch₂ op nt vs) := by
   cases op
-  case appendSlice elem => exact applyStmtOp_appendSlice_congr hw hb ch₁ ch₂
+  case appendSlice elem => exact applyStmtOp_appendSlice_congr hb ch₁ ch₂
   all_goals
     refine exceptCong.bind_congr (R := Eq) (exceptCong.self fun _ => rfl)
       fun a a' ha => ?_
   all_goals exact trivial
 
 /-- The recorded missing lemma, closed: a wide op that succeeds under one
-stream succeeds under EVERY stream (under `StateWf` + bounded operands). -/
+stream succeeds under EVERY stream, given bounded operands (audit
+correction 2026-08-04: `StateWf` dropped — the operand bound is the whole
+requirement). -/
 theorem applyStmtOp_ok_any_ch_wf {σ : ExecState} {ch₀ : Choices}
     {op : StmtOp} {nt : Nat} {vs : List GoValue} {r : ExecState × Choices}
-    (hw : StateWf σ) (hb : goValueListSup vs ≤ σ.nextAddr)
+    (hb : goValueListSup vs ≤ σ.nextAddr)
     (h : applyStmtOp σ ch₀ op nt vs = .ok r) :
     ∀ ch : Choices, ∃ r', applyStmtOp σ ch op nt vs = .ok r' := by
   intro ch
   obtain ⟨r', hr', _⟩ :=
-    exceptCong.ok_left (applyStmtOp_congr_any_ch hw hb ch₀ ch) h
+    exceptCong.ok_left (applyStmtOp_congr_any_ch hb ch₀ ch) h
   exact ⟨r', hr'⟩
 
 /-- Panic twin: a wide op that panics under one stream panics under every
 stream. -/
 theorem applyStmtOp_panic_any_ch_wf {σ : ExecState} {ch₀ : Choices}
     {op : StmtOp} {nt : Nat} {vs : List GoValue} {m : String}
-    (hw : StateWf σ) (hb : goValueListSup vs ≤ σ.nextAddr)
+    (hb : goValueListSup vs ≤ σ.nextAddr)
     (h : applyStmtOp σ ch₀ op nt vs = .error (.panic m)) :
     ∀ ch : Choices, ∃ m', applyStmtOp σ ch op nt vs = .error (.panic m') :=
-  fun ch => exceptCong.panic_left (applyStmtOp_congr_any_ch hw hb ch₀ ch) h
+  fun ch => exceptCong.panic_left (applyStmtOp_congr_any_ch hb ch₀ ch) h
 
 /-! ### Completeness at EVERY stream, under `MachineWf` -/
 
@@ -1902,7 +1911,7 @@ theorem step_complete_any_wf_aux {c : Config} {σ : ExecState} {c' : Config}
         | (rename_i o; cases o <;>
             (simp_all [stepFn, stmtPlan, Bind.bind, Except.bind]; done))
   case stmtOpNullary stmt op nt env k ch₀ ch₁ hplan happly =>
-    obtain ⟨⟨σ₂, ch₂⟩, hr⟩ := applyStmtOp_ok_any_ch_wf hs
+    obtain ⟨⟨σ₂, ch₂⟩, hr⟩ := applyStmtOp_ok_any_ch_wf
       (by simp [goValueListSup]) happly ch
     cases stmt <;>
       first
@@ -1916,7 +1925,7 @@ theorem step_complete_any_wf_aux {c : Config} {σ : ExecState} {c' : Config}
         exprListSup, Nat.max_le] at hc
       simp only [goValueListSup]
       omega
-    obtain ⟨⟨σ₂, ch₂⟩, hr⟩ := applyStmtOp_ok_any_ch_wf hs hop happly ch
+    obtain ⟨⟨σ₂, ch₂⟩, hr⟩ := applyStmtOp_ok_any_ch_wf hop happly ch
     simp only [List.reverse_cons] at hr
     simp [stepFn, hr]
   case stmtOpApplyPanic op nt done v msg env k ch₀ happly =>
@@ -1926,7 +1935,7 @@ theorem step_complete_any_wf_aux {c : Config} {σ : ExecState} {c' : Config}
         exprListSup, Nat.max_le] at hc
       simp only [goValueListSup]
       omega
-    obtain ⟨m', hm'⟩ := applyStmtOp_panic_any_ch_wf hs hop happly ch
+    obtain ⟨m', hm'⟩ := applyStmtOp_panic_any_ch_wf hop happly ch
     simp only [List.reverse_cons] at hm'
     simp [stepFn, hm']
   case stmtOpShiftPlain op nt done v e rest env k hle =>

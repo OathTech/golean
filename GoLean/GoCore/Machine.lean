@@ -553,7 +553,9 @@ def locsOf : List GoValue → Except GoError (List Loc)
   | v :: vs => do return (← valueAsLoc v) :: (← locsOf vs)
 
 /-- The choices-FREE core of `applyStmtOp`: every wide-op arm except
-`appendSlice` (whose spill path consumes a capacity choice). Extracted at
+`appendSlice` (whose spill path consumes a capacity choice; its arm HERE
+is an unreachable fail-closed `.internal` — real dispatch happens in the
+wrapper, and the wrapper never routes `appendSlice` here). Extracted at
 the sem-adequacy arc's notions slice (2026-08-03) so that
 choices-obliviousness of wide-op success is TRUE BY CONSTRUCTION — the
 correspondence kit's `∀ choices` lemmas dispatch through this core rather
