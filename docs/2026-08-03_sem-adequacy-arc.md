@@ -251,6 +251,24 @@ adopted so long as the user's form above is a supported case.
   contract. `appendSlice`, by contrast, resolves exactly as the wf design
   predicted (the spill target provably addresses an existing cell).
 
+- **mapIter obstruction — RESOLVED BY DESIGN (2026-08-04, recorded):
+  snapshot-time validation (the worker's option (b)), chosen because (i)
+  the refuting state — an ill-typed key in a map snapshot — is not a
+  legitimate Go state any more than a dangling loc is (`mapAssign` only
+  ever stores normalized keys), and (ii) it is the choices-discipline
+  principle again: moving the per-pick typing check to the pick-FREE
+  snapshot step makes stream-independence of iteration success
+  structural, not proven. Shape: the `mapRange` snapshot step (stepFn AND
+  the relation rule) fails CLOSED unless every snapshot key is
+  self-normalized at the range key type (`normalizeValueForTy σ keyTy k =
+  .ok k` — the self-normalized CHECK, not a re-normalization, so no
+  idempotency metatheory is needed and `bindIterVars`' per-pick normalize
+  then provably succeeds unchanged). Legitimate states pass the check
+  identically → differential-neutral by intent, `--diff` mandatory.
+  `MachineWf` gains the matching typing component for in-flight
+  `mapIterK` continuations, established by the snapshot rule and
+  preserved by shrinkage.
+
 ## Exit criteria
 
 - `Terminates` and the total-correctness form exist, with the user's
