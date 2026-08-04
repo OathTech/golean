@@ -203,10 +203,24 @@ static resolution. Reject (precise `unsup` reason) when:
 1. a goto target label is not at the function body's top level (legal in
    Go — label in any enclosing block — but outside this envelope);
 2. a hoisted (top-level-declared) variable is captured by a func literal
-   or has its address taken anywhere in the body — explicitly (`&x`) or
-   implicitly as a pointer-receiver method's receiver (`x.M()` takes
-   `&x`); capture/escape makes cell identity observable across a
-   backward jump;
+   or has its address (or the address of a SUB-OBJECT of its storage)
+   observed anywhere in the body; capture/escape makes cell identity
+   observable across a backward jump. The check (audit-response
+   2026-08-04 — the original only caught `&x` / `x.M()` on a BARE
+   identifier, so `&(x)`, `&s.f`, `&a[0]`, `a[:]`, and `s.f.M()` all
+   escaped silently) traces each address-taking position to its storage
+   root through parens, field selections on non-pointer bases, and
+   array indexing, stopping at pointer indirections (deref, selector
+   through a pointer, slice/map indexing — those reach heap storage,
+   whose identity hoisting does not change). Positions checked:
+   explicit `&expr`; slice expressions on array operands (`a[:]` takes
+   `&a` implicitly); pointer-receiver method calls AND method values
+   whose receiver chain roots at a hoisted cell (skipped when the
+   operand is itself pointer-typed — the pointer value is the
+   receiver). Recorded conservative narrowing: a pointer-receiver
+   method promoted through an embedded POINTER field of a hoisted
+   non-pointer root is refused although the address taken is behind
+   that pointer;
 3. a hoisted variable's name is ALSO used in the body resolving to an
    OUTER object (param/result/package-level) — hoisting would shadow the
    outer use (`x := x + 1` with `x` a parameter, uses before the
@@ -235,5 +249,12 @@ type table).
   strings `goto target label ... not at function body top level`,
   `goto function hoists a captured variable ...` /
   `... an address-taken variable ...` /
+  `... whose array storage is sliced` /
   `... used as a pointer-method receiver` /
   `... shadowing an outer name in use` — never a silent approximation.
+  Envelope pins (expected red, FAIL/frontend-export):
+  `goto-backward-capture`, and audit-response 2026-08-04
+  `goto-backward-field-addr` (`&s.v`), `goto-backward-elem-addr`
+  (`&(a[0])`), `goto-backward-array-slice` (`a[:]`),
+  `goto-backward-nested-recv` (pointer-receiver method on a field of a
+  hoisted struct).

@@ -1,21 +1,21 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-04  commit: general-coverage-cf stage 3 (goto dispatch-loop restructuring)
+# recorded: 2026-08-04  commit: general-coverage-cf audit response F1 (goto address-escape envelope)
 #   frontend: native  oracle: go run
-# manifest_cases: 875  pass: 627  fail: 248
-# Re-pin reason: DELIBERATE coverage change, control-flow slice stage 3
-# (docs/2026-08-04_control-flow-design.md): goto lowers to a program-counter
-# dispatch loop over the body's top-level segments riding on the stage-2
-# machine labels; function-local type declarations register globally with a
-# duplicate-TypeId refusal. Ten FAIL->PASS (goto-backward-redeclare,
-# goto-defer-return, goto-forward, goto-loop, goto-out-of-block,
-# goto-out-of-for, goto-out-of-switch, goto-over-type-decl,
-# labeled-empty-statement, labeled-statement-scope) and ONE new id,
-# goto-backward-capture, DELIBERATELY red (FAIL/frontend-export): it pins the
-# restructuring envelope's visible refusal — a backward goto over a captured
-# declaration is where the hoisted-cell lowering would diverge from Go's
-# fresh-cell-per-execution semantics, so the frontend rejects it. The two
-# select cases (break-label-select, goto-out-of-select) stay channel-blocked.
-# ZERO PASS->FAIL, no stage moves. 617 -> 627 pass, 874 -> 875 cases.
+# manifest_cases: 879  pass: 627  fail: 252
+# Re-pin reason: DELIBERATE coverage change, pre-merge audit response F1
+# (docs/2026-08-04_control-flow-design.md): the goto fidelity envelope's
+# address-taken check previously matched only `&x` / `x.M()` on a BARE
+# identifier, so parenthesized operands, field/element addresses of hoisted
+# variables, array slicing, and nested pointer-receiver chains escaped a
+# hoisted cell SILENTLY (status ok, wrong values vs go run). The check now
+# traces every address-taking position (explicit `&`, array slice
+# expressions, pointer-receiver method calls/values) to its storage root,
+# stopping at pointer indirections. FOUR new ids, all DELIBERATELY red
+# (FAIL/frontend-export) pinning the refusal: goto-backward-field-addr
+# (&s.v), goto-backward-elem-addr (&(a[0])), goto-backward-array-slice
+# (a[:]), goto-backward-nested-recv (pointer-receiver method on a field of
+# a hoisted struct). ZERO PASS->FAIL, no stage moves on existing ids.
+# 627 pass unchanged, 875 -> 879 cases.
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
 PASS	arrays/array-copy	-
@@ -196,7 +196,11 @@ PASS	control-flow/for-continue-post-plain	-
 PASS	control-flow/for-continue-runs-post	-
 PASS	control-flow/for-loopvar-escape	-
 PASS	control-flow/for-post-side-effects	-
+FAIL	control-flow/goto-backward-array-slice	frontend-export
 FAIL	control-flow/goto-backward-capture	frontend-export
+FAIL	control-flow/goto-backward-elem-addr	frontend-export
+FAIL	control-flow/goto-backward-field-addr	frontend-export
+FAIL	control-flow/goto-backward-nested-recv	frontend-export
 PASS	control-flow/goto-backward-redeclare	-
 PASS	control-flow/goto-defer-return	-
 PASS	control-flow/goto-forward	-

@@ -563,6 +563,72 @@ func degradeGotoDeclares(stmts []any) []any {
 	return out
 }
 
+// addrEscapeRoot unwraps an expression whose ADDRESS is being taken
+// (explicitly by `&`, or implicitly by slicing an array or by a
+// pointer-receiver method's receiver) to the storage root: parens,
+// field selections on non-pointer bases, and index expressions on
+// arrays denote SUB-OBJECTS of their operand's storage, so the walk
+// continues; a pointer indirection (explicit `*p`, a selector through a
+// pointer, or slice/map indexing) reaches heap storage — no local
+// cell's address is observed — so the walk stops (nil). Returns the
+// root identifier when the addressed storage is (part of) that
+// identifier's own cell. Missing type info walks CONSERVATIVELY toward
+// the root (over-refusing is a narrowed envelope; under-refusing is
+// unsound). Audit-response 2026-08-04: the previous check matched only
+// `&x` / `x.M()` on a BARE identifier, so `&(x)`, `&s.f`, `&a[0]`,
+// `a[:]`, and `s.f.M()` all escaped a hoisted cell silently.
+func (e *emitter) addrEscapeRoot(x ast.Expr) *ast.Ident {
+	for {
+		switch v := x.(type) {
+		case *ast.Ident:
+			return v
+		case *ast.ParenExpr:
+			x = v.X
+		case *ast.SelectorExpr:
+			// Field selection on a value: sub-object of the base's
+			// storage. Through a pointer: heap. (Method selections are
+			// handled at their own inspect site, not here.)
+			if bt := e.info.TypeOf(v.X); bt != nil {
+				if _, isPtr := bt.Underlying().(*types.Pointer); isPtr {
+					return nil
+				}
+			}
+			x = v.X
+		case *ast.IndexExpr:
+			// Indexing an ARRAY value: sub-object storage. Slice, map,
+			// and pointer-to-array indexing indirect to heap cells.
+			if bt := e.info.TypeOf(v.X); bt != nil {
+				if _, isArr := bt.Underlying().(*types.Array); !isArr {
+					return nil
+				}
+			}
+			x = v.X
+		case *ast.StarExpr:
+			// Explicit deref: the addressed storage is behind a pointer.
+			return nil
+		default:
+			// Go's addressability rules limit `&` operands to the shapes
+			// above plus composite literals / rvalue chains, which denote
+			// FRESH storage per evaluation in both Go and the lowering.
+			return nil
+		}
+	}
+}
+
+// hoistedAddrEscape reports the hoisted variable whose cell (or
+// sub-object of it) would have its address observed by taking the
+// address of x, or nil.
+func (e *emitter) hoistedAddrEscape(x ast.Expr, hoisted map[types.Object]bool) *ast.Ident {
+	id := e.addrEscapeRoot(x)
+	if id == nil {
+		return nil
+	}
+	if obj := e.info.Uses[id]; obj != nil && hoisted[obj] {
+		return id
+	}
+	return nil
+}
+
 // emitGotoBody lowers a function body containing `goto` into a
 // program-counter dispatch loop over the body's top-level segments,
 // riding on the stage-2 machine labels
@@ -692,22 +758,46 @@ func (e *emitter) emitGotoBody(b *ast.BlockStmt) (map[string]any, error) {
 			})
 			return false
 		case *ast.UnaryExpr:
+			// Explicit `&expr`: refuse when the addressed storage roots
+			// in a hoisted cell (through parens/fields/array elements).
 			if nn.Op == token.AND {
-				if id, ok := nn.X.(*ast.Ident); ok {
-					if obj := e.info.Uses[id]; obj != nil && hoistedObjs[obj] {
-						envErr = unsup("goto function hoists an address-taken variable %s", id.Name)
-					}
+				if id := e.hoistedAddrEscape(nn.X, hoistedObjs); id != nil {
+					envErr = unsup("goto function hoists an address-taken variable %s", id.Name)
+				}
+			}
+		case *ast.SliceExpr:
+			// Slicing an addressable ARRAY takes its address implicitly
+			// (`a[:]` is `(&a)[:]`); slicing a slice/string/*array reads
+			// a header or derefs — no local cell's address.
+			if t := e.info.TypeOf(nn.X); t == nil || func() bool {
+				_, isArr := t.Underlying().(*types.Array)
+				return isArr
+			}() {
+				if id := e.hoistedAddrEscape(nn.X, hoistedObjs); id != nil {
+					envErr = unsup("goto function hoists variable %s whose array storage is sliced", id.Name)
 				}
 			}
 		case *ast.SelectorExpr:
-			// Implicit address: a pointer-receiver method on a hoisted
-			// variable takes &x.
-			if id, ok := nn.X.(*ast.Ident); ok {
-				if obj := e.info.Uses[id]; obj != nil && hoistedObjs[obj] {
-					if selInfo, ok := e.info.Selections[nn]; ok && selInfo.Kind() != types.FieldVal {
-						if fn, isFn := selInfo.Obj().(*types.Func); isFn {
-							if sig, isSig := fn.Type().(*types.Signature); isSig && sig.Recv() != nil {
-								if _, isPtr := sig.Recv().Type().(*types.Pointer); isPtr {
+			// Implicit address: a pointer-receiver METHOD (call or method
+			// value) takes the address of its receiver chain. Refuse when
+			// that chain roots in a hoisted cell — including nested field
+			// paths (`s.f.M()`) and parens, which the pre-audit check
+			// missed. Conservative corner (recorded in the design note):
+			// a pointer-receiver method promoted through an embedded
+			// POINTER field of a hoisted root is refused although the
+			// address taken is behind that pointer.
+			if selInfo, ok := e.info.Selections[nn]; ok && selInfo.Kind() == types.MethodVal {
+				if fn, isFn := selInfo.Obj().(*types.Func); isFn {
+					if sig, isSig := fn.Type().(*types.Signature); isSig && sig.Recv() != nil {
+						if _, isPtr := sig.Recv().Type().Underlying().(*types.Pointer); isPtr {
+							// A pointer-typed operand IS the receiver
+							// value — no implicit address of its cell.
+							opIsPtr := false
+							if ot := e.info.TypeOf(nn.X); ot != nil {
+								_, opIsPtr = ot.Underlying().(*types.Pointer)
+							}
+							if !opIsPtr {
+								if id := e.hoistedAddrEscape(nn.X, hoistedObjs); id != nil {
 									envErr = unsup("goto function hoists variable %s used as a pointer-method receiver", id.Name)
 								}
 							}

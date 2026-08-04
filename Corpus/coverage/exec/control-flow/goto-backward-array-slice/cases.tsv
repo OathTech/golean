@@ -1,0 +1,2 @@
+# id	subject	args	expected_status	expected_reason	features
+-	gotoBackwardArraySlice	-	ok	-	control_flow,goto,labels,arrays,slices,escapes
