@@ -199,6 +199,20 @@ adopted so long as the user's form above is a supported case.
   proved preserved by `Step` and threaded into admissibility
   (`InitialSplit`), strengthening every surface statement's premise; or
   (b) reshape the spill arm to decouple ok-ness from the capacity choice.
+  **DECIDED (user, 2026-08-04): (a) — well-formedness.** The judgments
+  should capture reasoning about LEGITIMATE Go states: `{P ∧ wf} prog
+  {Q ∧ wf}` with per-step preservation `{wf} cmd {wf}`; the post-side wf
+  is a corollary of preservation, never a per-spec obligation. Recorded
+  rationale from the design discussion: Goose/Perennial obtain the same
+  discipline IMPLICITLY (opaque locations + iProp-only statements +
+  state-interpretation invariants); our explicit conjunct is that
+  discipline made visible, and the price of the two deliberate choices
+  that surface it — a DETERMINISTIC allocator (the semantics must
+  EXECUTE: the differential's trust root, "the absolutely most important"
+  property per the user) and faithful quantification over Go's
+  append-capacity latitude (observable via `cap()`; Goose hardcodes one
+  policy). One-time preservation induction, then a single premise
+  conjunct forever; also the invariant concurrency will need.
 
 ## Exit criteria
 
