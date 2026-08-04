@@ -269,6 +269,74 @@ adopted so long as the user's form above is a supported case.
   `mapIterK` continuations, established by the snapshot rule and
   preserved by shrinkage.
 
+- **Slice 3 — the ∀-choices kit COMPLETED (2026-08-04, on
+  `sem-adequacy-notions`).** The recorded snapshot-time-validation design
+  implemented end to end; every piece landed, differential-neutral
+  (fresh full run 873/873, zero drift vs `baselines/native-full.tsv`).
+  1. **Semantics**: `mapRangeSnapshotEntries` (Machine.lean) — the
+     snapshot premise function shared verbatim by `stepFn`'s `mapRangeK`
+     arm and rule `Step.mapRangeSnapshot` — fails closed unless every
+     snapshot entry is self-normalized at the range key/value types
+     (`snapshotEntriesSelfNormalized`, over the kernel-reducible
+     `isNormalForTy` checker family in Ops.lean, which decides
+     `normalizeValueForTy σ ty v = .ok v` without a generic `GoValue`
+     equality — the derived `BEq GoValue` is WF-compiled/opaque and must
+     stay off kernel-evaluation paths). **Deviation from the recorded
+     shape, forced by a machine-checked gap:** the design named only the
+     KEYS, but `bindIterVars` also normalizes the VALUE at `valTy`
+     whenever a value variable is bound, so key-only validation leaves a
+     values-variant of the same probe refuting `step_complete_any_wf`
+     (heterogeneous VALUES, `valVar = some`). The check therefore covers
+     keys AND values — same legitimacy argument (`mapAssign` stores both
+     normalized), differential-confirmed neutral.
+  2. **Wf extension**: `MachineWf` gains a third conjunct —
+     `Config.itersNormalized σ.types c` (StateWf.lean), the per-`mapIterK`
+     snapshot check over the whole continuation. Parameterized by the
+     `TypeEnv` directly so types-invariance is a rewrite; the old
+     preservation theorem became `step_preserves_wf_loc` (now also
+     concluding `σ'.types = σ.types` — no rule mutates `types`),
+     `step_preserves_iters` proves the typing half (snapshot rule
+     establishes, `eraseIdx` shrinkage preserves, everything else is
+     structural; `seqCont`/`pushDefer`/`panicPassthrough`/`recoverResult`
+     mirror lemmas), and `step_preserves_wf` recombines under the old
+     name/statement. Concrete seeds still `decide` (initial configs carry
+     no `mapIterK`); all six `InitialSplit` sites unchanged.
+  3. **The kit (MachineSound.lean)**: the appendSlice spill half closed
+     via the three recorded lemmas —
+     `defaultValueFuel_ok_of_normalize_ok` (padding defaults from any
+     element's normalize success), `Heap.lookup_set_ne` +
+     `loadLoc_root_congr` under new `LawfulBEq Addr/Loc` instances
+     (load/store agreement below `nextAddr`), and a `capCong`
+     (values-equal-up-to-slice-`cap`) congruence family through
+     `normalizeValueForTyFuel`/`coerceStoredValue`/`StructFields.set`/
+     `arraySet`/`storeLoc` (`storeLoc_congr`: outcome CLASS — ok / panic
+     / neither — independent of the fresh backing and the stored cap).
+     Headliners: `applyStmtOp_ok_any_ch_wf` (+ `_panic_` twin, via
+     `applyStmtOp_congr_any_ch`), `step_complete_any_wf`,
+     `execStmtLoop_ok_or_fuelOut`, and Surface's
+     `progressExec_of_progress` (InitialSplit's wf field supplies the
+     premise; `execStmt` unfolds to `execStmtLoop` definitionally).
+  4. **Law fallout**: `wp_map_range_snapshot` gained the matching
+     `hnorm` premise (ghost-pinned via `GoCoreGS.types GF`, like
+     `wp_map_iter_next_key`'s); `wp_map_range_snapshot_nil` unchanged in
+     statement (empty snapshot passes trivially). Repaired sites:
+     `GoldenQuorumPin.wp_map_range_snapshot_committed` (gains the
+     hypothesis — its entries are symbolic), `GoldenQuorumWP` (discharged
+     `by rw [htypes]; decide +kernel` at the pinned snapshot),
+     `GoldenQuorumThree`/`GoldenQuorumAll` (symbolic voter lists:
+     per-entry via `snapshotEntriesSelfNormalizedList_of_mem` + the
+     walks' existing `hnormk`, constant value part by `decide +kernel`).
+     `wp_map_iter_next_key`'s `hnorm` premise is now REDUNDANT for
+     machine-produced snapshots (subsumed by the snapshot-time check) but
+     its statement is left untouched (statement stability); simplification
+     opportunity recorded, not taken.
+  5. **Probe**: `.tmp/probe_mapiter2.lean` — the old witness state now
+     fails `MachineWf` (`decide +kernel`), the snapshot step rejects the
+     ill-typed cell at every stream, and a well-typed snapshot still
+     steps with a well-formed result. `.tmp/probe_mapiter.lean`'s raw
+     `mapIterK` `#eval`s behave as before BY DESIGN (the per-pick path is
+     untouched; the state is simply illegitimate now).
+
 ## Exit criteria
 
 - `Terminates` and the total-correctness form exist, with the user's

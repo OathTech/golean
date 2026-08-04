@@ -341,6 +341,64 @@ def Config.locSup : Config → Nat
 def ExecState.locSup (σ : ExecState) : Nat :=
   max (Heap.locSup σ.heap) (funcListSup σ.functions.toList)
 
+/-! ## The map-iteration typing component (sem-adequacy slice 3, 2026-08-04)
+
+Loc-boundedness alone cannot exclude the second recorded ∀-choices
+obstruction (`.tmp/probe_mapiter.lean`): a `mapIterK` snapshot whose
+entries are not self-normalized at the range key/value types is loc-free
+(trivially bounded) yet makes `mapIterNext`'s success depend on the pick.
+The joint invariant therefore also carries: every in-flight `mapIterK`
+continuation's snapshot passes `snapshotEntriesSelfNormalized` at the
+state's type environment. Established by the (now fail-closed) snapshot
+step, preserved by shrinkage (`eraseIdx`), and invariant along every
+other rule because no rule mutates `σ.types` and continuations are only
+ever decomposed structurally. Parameterized by the `TypeEnv` directly so
+types-preservation is a rewrite, never a congruence induction. -/
+
+/-- Every `mapIterK` snapshot along the continuation is self-normalized
+at its own key/value types under `types`. Each constructor forwards to
+its (unique) continuation tail; only `mapIterK` contributes a check. -/
+def Cont.itersNormalized (types : TypeEnv) : Cont → Bool
+  | .stop => true
+  | .seq _ _ k => Cont.itersNormalized types k
+  | .loop _ _ _ k => Cont.itersNormalized types k
+  | .frame _ _ _ k => Cont.itersNormalized types k
+  | .deferCalleeK _ _ k => Cont.itersNormalized types k
+  | .deferArgsK _ _ _ _ k => Cont.itersNormalized types k
+  | .breakableK k => Cont.itersNormalized types k
+  | .callValTargetsK _ _ _ _ _ k => Cont.itersNormalized types k
+  | .callValCalleeK _ _ _ k => Cont.itersNormalized types k
+  | .callValArgsK _ _ _ _ _ k => Cont.itersNormalized types k
+  | .strictK _ _ _ _ k => Cont.itersNormalized types k
+  | .andK _ _ k => Cont.itersNormalized types k
+  | .orK _ _ k => Cont.itersNormalized types k
+  | .boolK k => Cont.itersNormalized types k
+  | .ifK _ _ _ k => Cont.itersNormalized types k
+  | .whileK _ _ _ k => Cont.itersNormalized types k
+  | .assignTargetK _ _ k => Cont.itersNormalized types k
+  | .assignStoreK _ k => Cont.itersNormalized types k
+  | .callTargetsK _ _ _ _ _ k => Cont.itersNormalized types k
+  | .callArgsK _ _ _ _ _ k => Cont.itersNormalized types k
+  | .stmtOpK _ _ _ _ _ k => Cont.itersNormalized types k
+  | .mapRangeK _ _ _ _ _ _ k => Cont.itersNormalized types k
+  | .mapIterK _ _ keyTy valTy _ remaining _ k =>
+      snapshotEntriesSelfNormalized types keyTy valTy remaining
+        && Cont.itersNormalized types k
+  | .panicArgK k => Cont.itersNormalized types k
+  | .panicResumeK _ k => Cont.itersNormalized types k
+
+@[inherit_doc Cont.itersNormalized]
+def Config.itersNormalized (types : TypeEnv) : Config → Bool
+  | .exec _ _ k => Cont.itersNormalized types k
+  | .evalE _ _ k => Cont.itersNormalized types k
+  | .retV _ k => Cont.itersNormalized types k
+  | .next k => Cont.itersNormalized types k
+  | .breaking k => Cont.itersNormalized types k
+  | .continuing k => Cont.itersNormalized types k
+  | .returning k => Cont.itersNormalized types k
+  | .panicking _ k => Cont.itersNormalized types k
+  | .panicked _ => true
+
 /-! ## The Prop wrappers -/
 
 /-- State well-formedness: no location in the heap (keys or values) or in
@@ -352,9 +410,12 @@ def StateWf (σ : ExecState) : Prop :=
 def ConfigWf (bound : Nat) (c : Config) : Prop :=
   Config.locSup c ≤ bound
 
-/-- The bundled invariant `Step` preserves. -/
+/-- The bundled invariant `Step` preserves: loc-boundedness of state and
+configuration, plus the map-iteration typing component (the two recorded
+∀-choices obstructions, in order). -/
 def MachineWf (σ : ExecState) (c : Config) : Prop :=
   StateWf σ ∧ ConfigWf σ.nextAddr c
+    ∧ Config.itersNormalized σ.types c = true
 
 instance (σ : ExecState) : Decidable (StateWf σ) := by unfold StateWf; infer_instance
 instance (bound : Nat) (c : Config) : Decidable (ConfigWf bound c) := by
@@ -1057,6 +1118,127 @@ theorem convertValueToTyFuel_locSup :
         | (simp [convertValueToTyFuel] at h; done)
         | (simp only [convertValueToTyFuel, pure_eq_ok, Except.ok.injEq] at h;
            subst h; first | exact Nat.le_refl _ | simp [GoValue.locSup])
+
+/-! ## Soundness of the self-normalization check
+
+`isNormalForTyFuel` (Ops.lean) mirrors the normalizer arm-for-arm; here
+is the direction every theorem consumes: check true ⇒ the normalizer
+returns the value UNCHANGED. Stated against an arbitrary state whose
+`types` is the checker's environment. -/
+
+theorem isNormalListWith_sound {f : GoValue → Bool}
+    {g : GoValue → Except GoError GoValue}
+    (hfg : ∀ v, f v = true → g v = .ok v) :
+    ∀ {l : List GoValue}, isNormalListWith f l = true →
+      normalizeListWith g l = .ok l.toArray := by
+  intro l
+  induction l with
+  | nil => intro _; simp [normalizeListWith, pure, Except.pure]
+  | cons v rest ih =>
+    intro h
+    simp only [isNormalListWith, Bool.and_eq_true] at h
+    simp [normalizeListWith, hfg v h.1, ih h.2, Bind.bind, Except.bind,
+      pure, Except.pure]
+
+theorem isNormalFieldsWith_sound {f : Ty → GoValue → Bool}
+    {g : Ty → GoValue → Except GoError GoValue}
+    (hfg : ∀ ty v, f ty v = true → g ty v = .ok v) :
+    ∀ {fds : List FieldDef} {vals : List (String × GoValue)},
+      isNormalFieldsWith f fds vals = true →
+      normalizeFieldsWith g fds vals = .ok vals.toArray := by
+  intro fds
+  induction fds with
+  | nil =>
+    intro vals h
+    cases vals with
+    | nil => simp [normalizeFieldsWith, pure, Except.pure]
+    | cons _ _ => simp [isNormalFieldsWith] at h
+  | cons fd fdRest ih =>
+    intro vals h
+    cases vals with
+    | nil => simp [isNormalFieldsWith] at h
+    | cons p valRest =>
+      obtain ⟨actual, v⟩ := p
+      simp only [isNormalFieldsWith, Bool.and_eq_true, decide_eq_true_eq] at h
+      obtain ⟨⟨hname, hv⟩, hrest⟩ := h
+      subst hname
+      simp [normalizeFieldsWith, hfg _ _ hv, ih hrest, Bind.bind, Except.bind,
+        pure, Except.pure]
+
+theorem isNormalForTyFuel_sound {σ : ExecState} :
+    ∀ (fuel : Nat) (ty : Ty) (v : GoValue),
+      isNormalForTyFuel fuel σ.types ty v = true →
+      normalizeValueForTyFuel fuel σ ty v = .ok v := by
+  intro fuel
+  induction fuel with
+  | zero => intro ty v h; simp [isNormalForTyFuel] at h
+  | succ f ih =>
+    intro ty v h
+    cases ty with
+    | int kind =>
+      cases v
+      case int value k =>
+        simp only [isNormalForTyFuel, Bool.and_eq_true, decide_eq_true_eq] at h
+        obtain ⟨h1, h2⟩ := h
+        subst h2
+        simp [normalizeValueForTyFuel, h1, pure, Except.pure]
+      all_goals exact absurd h (by simp [isNormalForTyFuel])
+    | array length elem =>
+      cases v
+      case array values =>
+        simp only [isNormalForTyFuel, Bool.and_eq_true, decide_eq_true_eq] at h
+        obtain ⟨hsz, hels⟩ := h
+        have hlist := isNormalListWith_sound (fun w hw => ih elem w hw) hels
+        simp [normalizeValueForTyFuel, hsz, hlist, Bind.bind, Except.bind,
+          Except.map, Functor.map, pure, Except.pure]
+      all_goals exact absurd h (by simp [isNormalForTyFuel])
+    | interface _ => simp [normalizeValueForTyFuel, pure, Except.pure]
+    | funcType params results =>
+      cases v
+      case funcVal fid captured =>
+        simp [normalizeValueForTyFuel, pure, Except.pure]
+      case nil => simp [normalizeValueForTyFuel, pure, Except.pure]
+      all_goals exact absurd h (by simp [isNormalForTyFuel])
+    | defined name =>
+      simp only [isNormalForTyFuel] at h
+      cases hlook : TypeEnv.lookup σ.types name with
+      | none => rw [hlook] at h; exact absurd h (by simp)
+      | some td =>
+        rw [hlook] at h
+        cases td with
+        | alias target =>
+          simpa [normalizeValueForTyFuel, hlook] using ih target v h
+        | defined target =>
+          simpa [normalizeValueForTyFuel, hlook] using ih target v h
+        | struct fields =>
+          cases v
+          case struct actual fieldsValue =>
+            simp only [Bool.and_eq_true, decide_eq_true_eq] at h
+            obtain ⟨⟨hname, hsz⟩, hflds⟩ := h
+            subst hname
+            have hf := isNormalFieldsWith_sound
+              (fun t w hw => ih t w hw) hflds
+            simp [normalizeValueForTyFuel, hlook, normalizeStructValueWith,
+              hsz, hf, Bind.bind, Except.bind, Except.map, Functor.map,
+              pure, Except.pure]
+          all_goals exact absurd h (by simp)
+        | unsupported _ => exact absurd h (by simp)
+        | interfaceDef _ => exact absurd h (by simp)
+    | unsupported _ => simp [isNormalForTyFuel] at h
+    | bool => simp [normalizeValueForTyFuel, pure, Except.pure]
+    | string => simp [normalizeValueForTyFuel, pure, Except.pure]
+    | slice _ => simp [normalizeValueForTyFuel, pure, Except.pure]
+    | map _ _ => simp [normalizeValueForTyFuel, pure, Except.pure]
+    | pointer _ => simp [normalizeValueForTyFuel, pure, Except.pure]
+
+/-- The wrapper form: check at `σ.types` ⇒ `normalizeValueForTy` is the
+identity (in `.ok`) at `σ`. -/
+theorem isNormalForTy_sound {σ : ExecState} {ty : Ty} {v : GoValue}
+    (h : isNormalForTy σ.types ty v = true) :
+    normalizeValueForTy σ ty v = .ok v := by
+  unfold normalizeValueForTy
+  unfold isNormalForTy at h
+  exact isNormalForTyFuel_sound _ _ _ h
 
 theorem convertValueToTy_locSup {s : ExecState} {ty : Ty} {v r : GoValue}
     (h : convertValueToTy s ty v = .ok r) :
@@ -1966,6 +2148,30 @@ theorem mapRangeEntries_locSup {σ : ExecState} {v : GoValue}
       have := loadLoc_locSup hbv
       simpa [GoValue.locSup] using this
     · simp at h
+
+/-- Inversion of the validated snapshot premise (sem-adequacy slice 3):
+a successful `mapRangeSnapshotEntries` is exactly a successful raw
+snapshot whose entries pass the self-normalization check. -/
+theorem mapRangeSnapshotEntries_ok {σ : ExecState} {keyTy valTy : Ty}
+    {v : GoValue} {entries : Array (GoValue × GoValue)}
+    (h : mapRangeSnapshotEntries σ keyTy valTy v = .ok entries) :
+    mapRangeEntries σ v = .ok entries
+      ∧ snapshotEntriesSelfNormalized σ.types keyTy valTy entries = true := by
+  unfold mapRangeSnapshotEntries at h
+  simp only [bind_eq_ok] at h
+  obtain ⟨es, hes, h⟩ := h
+  split at h
+  · rename_i hchk
+    simp only [pure_eq_ok, Except.ok.injEq] at h
+    subst h
+    exact ⟨hes, hchk⟩
+  · simp [throw, throwThe, MonadExceptOf.throw] at h
+
+theorem mapRangeSnapshotEntries_locSup {σ : ExecState} {keyTy valTy : Ty}
+    {v : GoValue} {entries : Array (GoValue × GoValue)}
+    (h : mapRangeSnapshotEntries σ keyTy valTy v = .ok entries) :
+    goValueEntriesSup entries.toList ≤ Heap.locSup σ.heap :=
+  mapRangeEntries_locSup (mapRangeSnapshotEntries_ok h).1
 
 /-! ## Literal/aggregate builders -/
 
@@ -3650,17 +3856,20 @@ theorem runtimeErrorValue_locSup {msg : String} :
 
 
 set_option maxHeartbeats 4000000 in
-/-- **The preservation theorem**: one machine step keeps the state and the
-configuration well-formed (every location root strictly below `nextAddr`). -/
-theorem step_preserves_wf {c : Config} {σ : ExecState} {c' : Config}
-    {σ' : ExecState} (h : Step c σ c' σ') (hwf : MachineWf σ c) :
-    MachineWf σ' c' := by
-  obtain ⟨hs, hc⟩ := hwf
+/-- The LOC half of the preservation theorem: one machine step keeps the
+state and the configuration loc-bounded (every location root strictly
+below `nextAddr`), and never mutates the type environment. The combined
+`step_preserves_wf` below adds the map-iteration typing component. -/
+theorem step_preserves_wf_loc {c : Config} {σ : ExecState} {c' : Config}
+    {σ' : ExecState} (h : Step c σ c' σ')
+    (hs : StateWf σ) (hc : ConfigWf σ.nextAddr c) :
+    StateWf σ' ∧ ConfigWf σ'.nextAddr c' ∧ σ'.types = σ.types := by
+
   have hheap := hs.heap_le
   have hfuncs := hs.funcs_le
   cases h
   all_goals try (
-    refine ⟨hs, ?_⟩
+    refine ⟨hs, ?_, rfl⟩
     simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
       GoValue.locSup, optLocSup, panicChainSup, goValueListSup, exprListSup,
       stmtListSup, locListSup, deferListSup, assigneeListSup, optExprSup,
@@ -3670,13 +3879,13 @@ theorem step_preserves_wf {c : Config} {σ : ExecState} {c' : Config}
       Nat.max_le] at hc ⊢
     omega)
   case evalRef id loc env k hlook =>
-    refine ⟨hs, ?_⟩
+    refine ⟨hs, ?_, rfl⟩
     have h1 := LocalEnv.lookup_locSup hlook
     simp only [ConfigWf, Config.locSup, Cont.locSup, Expr.locSup,
       GoValue.locSup, Nat.max_le] at hc ⊢
     omega
   case evalVar id loc v env k hlook hload =>
-    refine ⟨hs, ?_⟩
+    refine ⟨hs, ?_, rfl⟩
     have h1 := loadLoc_locSup hload
     simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
       GoValue.locSup, optLocSup, panicChainSup, goValueListSup, exprListSup,
@@ -3687,7 +3896,7 @@ theorem step_preserves_wf {c : Config} {σ : ExecState} {c' : Config}
       Nat.max_le] at hc ⊢
     omega
   case evalStrict e op e₁ rest env k hplan =>
-    refine ⟨hs, ?_⟩
+    refine ⟨hs, ?_, rfl⟩
     have h1 := strictPlan_locSup hplan
     simp only [exprListSup] at h1
     simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
@@ -3701,7 +3910,7 @@ theorem step_preserves_wf {c : Config} {σ : ExecState} {c' : Config}
   case evalStrictNullary e op v env k hplan happly =>
     obtain ⟨w1, w2, w3, w4, w5, w6⟩ := applyStrictOp_wf hs
       (by simp [goValueListSup]) happly
-    refine ⟨w1, ?_⟩
+    refine ⟨w1, ?_, w4⟩
     simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
       GoValue.locSup, optLocSup, panicChainSup, goValueListSup, exprListSup,
       stmtListSup, locListSup, deferListSup, assigneeListSup, optExprSup,
@@ -3712,7 +3921,7 @@ theorem step_preserves_wf {c : Config} {σ : ExecState} {c' : Config}
     omega
   case evalRecover env k v k' hrec =>
     obtain ⟨r1, r2⟩ := recoverResult_locSup hrec
-    refine ⟨hs, ?_⟩
+    refine ⟨hs, ?_, rfl⟩
     simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
       GoValue.locSup, optLocSup, panicChainSup, goValueListSup, exprListSup,
       stmtListSup, locListSup, deferListSup, assigneeListSup, optExprSup,
@@ -3734,7 +3943,7 @@ theorem step_preserves_wf {c : Config} {σ : ExecState} {c' : Config}
       simp only [goValueListSup]
       omega
     obtain ⟨w1, w2, w3, w4, w5, w6⟩ := applyStrictOp_wf hs hop happly
-    refine ⟨w1, ?_⟩
+    refine ⟨w1, ?_, w4⟩
     simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
       GoValue.locSup, optLocSup, panicChainSup, goValueListSup, exprListSup,
       stmtListSup, locListSup, deferListSup, assigneeListSup, optExprSup,
@@ -3744,7 +3953,7 @@ theorem step_preserves_wf {c : Config} {σ : ExecState} {c' : Config}
       Nat.max_le] at hc ⊢
     omega
   case seqn ss env k =>
-    refine ⟨hs, ?_⟩
+    refine ⟨hs, ?_, rfl⟩
     have h1 := seqCont_locSup (ss := ss.toList) (env := env) (k := k)
     simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
       GoValue.locSup, optLocSup, panicChainSup, goValueListSup, exprListSup,
@@ -3765,7 +3974,7 @@ theorem step_preserves_wf {c : Config} {σ : ExecState} {c' : Config}
       runtimeErrorValue_locSup, panicPayload, LocalEnv.pushScope_locSup,
       Nat.max_le] at hc
       omega)
-    refine ⟨w1, ?_⟩
+    refine ⟨w1, ?_, w4⟩
     simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
       GoValue.locSup, optLocSup, panicChainSup, goValueListSup, exprListSup,
       stmtListSup, locListSup, deferListSup, assigneeListSup, optExprSup,
@@ -3779,7 +3988,7 @@ theorem step_preserves_wf {c : Config} {σ : ExecState} {c' : Config}
     obtain ⟨w1, w2, w3, w4⟩ := alloc_wf hs (by omega) halloc
     obtain ⟨d1, d2, d3, d4, d5, _⟩ := alloc_shape halloc
     have hdecl := LocalEnv.declare_locSup (env := env) (id := p.id) (l := loc)
-    refine ⟨w1, ?_⟩
+    refine ⟨w1, ?_, d3⟩
     simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
       GoValue.locSup, optLocSup, panicChainSup, goValueListSup, exprListSup,
       stmtListSup, locListSup, deferListSup, assigneeListSup, optExprSup,
@@ -3789,7 +3998,7 @@ theorem step_preserves_wf {c : Config} {σ : ExecState} {c' : Config}
       Nat.max_le] at hc ⊢
     omega
   case assign lhs te rhs env k hte =>
-    refine ⟨hs, ?_⟩
+    refine ⟨hs, ?_, rfl⟩
     have h1 := assigneeExpr_locSup hte
     simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
       GoValue.locSup, optLocSup, panicChainSup, goValueListSup, exprListSup,
@@ -3800,7 +4009,7 @@ theorem step_preserves_wf {c : Config} {σ : ExecState} {c' : Config}
       Nat.max_le] at hc ⊢
     omega
   case assignTargetLoc v loc rhs env k hloc =>
-    refine ⟨hs, ?_⟩
+    refine ⟨hs, ?_, rfl⟩
     have h1 := valueAsLoc_locSup hloc
     simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
       GoValue.locSup, optLocSup, panicChainSup, goValueListSup, exprListSup,
@@ -3821,7 +4030,7 @@ theorem step_preserves_wf {c : Config} {σ : ExecState} {c' : Config}
       Nat.max_le] at hc
       omega
     obtain ⟨w1, w2, w3⟩ := storeLoc_wf hs hb.1 hb.2 hstore
-    refine ⟨w1, ?_⟩
+    refine ⟨w1, ?_, (storeLoc_shape hstore).1⟩
     simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
       GoValue.locSup, optLocSup, panicChainSup, goValueListSup, exprListSup,
       stmtListSup, locListSup, deferListSup, assigneeListSup, optExprSup,
@@ -3831,7 +4040,7 @@ theorem step_preserves_wf {c : Config} {σ : ExecState} {c' : Config}
       Nat.max_le] at hc ⊢
     omega
   case callFirstTarget targets fid args te rest env k hplan =>
-    refine ⟨hs, ?_⟩
+    refine ⟨hs, ?_, rfl⟩
     have h1 := assigneesExprs_locSup hplan
     simp only [exprListSup] at h1
     simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
@@ -3843,7 +4052,7 @@ theorem step_preserves_wf {c : Config} {σ : ExecState} {c' : Config}
       Nat.max_le] at hc h1 ⊢
     omega
   case callFirstArg targets fid args a rest env k hplan hargs =>
-    refine ⟨hs, ?_⟩
+    refine ⟨hs, ?_, rfl⟩
     have h2 : exprListSup (a :: rest) = exprListSup args.toList := by rw [hargs]
     simp only [exprListSup] at h2
     simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
@@ -3858,7 +4067,7 @@ theorem step_preserves_wf {c : Config} {σ : ExecState} {c' : Config}
  hplan hargs henter =>
     obtain ⟨w1, w2, w3, w4, w5, w6, w7, w8⟩ := enterFrame_wf hs
       (by simp [goValueListSup]) henter
-    refine ⟨w1, ?_⟩
+    refine ⟨w1, ?_, w3⟩
     simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
       GoValue.locSup, optLocSup, panicChainSup, goValueListSup, exprListSup,
       stmtListSup, locListSup, deferListSup, assigneeListSup, optExprSup,
@@ -3868,7 +4077,7 @@ theorem step_preserves_wf {c : Config} {σ : ExecState} {c' : Config}
       Nat.max_le] at hc ⊢
     omega
   case callTargetLoc v loc fid locs te rest args env k hloc =>
-    refine ⟨hs, ?_⟩
+    refine ⟨hs, ?_, rfl⟩
     have h1 := valueAsLoc_locSup hloc
     simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
       GoValue.locSup, optLocSup, panicChainSup, goValueListSup, exprListSup,
@@ -3879,7 +4088,7 @@ theorem step_preserves_wf {c : Config} {σ : ExecState} {c' : Config}
       Nat.max_le] at hc ⊢
     omega
   case callTargetsDoneArg v loc fid locs a rest env k hloc =>
-    refine ⟨hs, ?_⟩
+    refine ⟨hs, ?_, rfl⟩
     have h1 := valueAsLoc_locSup hloc
     simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
       GoValue.locSup, optLocSup, panicChainSup, goValueListSup, exprListSup,
@@ -3894,7 +4103,7 @@ theorem step_preserves_wf {c : Config} {σ : ExecState} {c' : Config}
     have h1 := valueAsLoc_locSup hloc
     obtain ⟨w1, w2, w3, w4, w5, w6, w7, w8⟩ := enterFrame_wf hs
       (by simp [goValueListSup]) henter
-    refine ⟨w1, ?_⟩
+    refine ⟨w1, ?_, w3⟩
     simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
       GoValue.locSup, optLocSup, panicChainSup, goValueListSup, exprListSup,
       stmtListSup, locListSup, deferListSup, assigneeListSup, optExprSup,
@@ -3917,7 +4126,7 @@ theorem step_preserves_wf {c : Config} {σ : ExecState} {c' : Config}
       simp only [goValueListSup]
       omega
     obtain ⟨w1, w2, w3, w4, w5, w6, w7, w8⟩ := enterFrame_wf hs hargb henter
-    refine ⟨w1, ?_⟩
+    refine ⟨w1, ?_, w3⟩
     simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
       GoValue.locSup, optLocSup, panicChainSup, goValueListSup, exprListSup,
       stmtListSup, locListSup, deferListSup, assigneeListSup, optExprSup,
@@ -3927,7 +4136,7 @@ theorem step_preserves_wf {c : Config} {σ : ExecState} {c' : Config}
       Nat.max_le] at hc ⊢
     omega
   case stmtOpFirst stmt op nt e rest env k hplan =>
-    refine ⟨hs, ?_⟩
+    refine ⟨hs, ?_, rfl⟩
     have h1 := stmtPlan_locSup hplan
     simp only [exprListSup] at h1
     simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
@@ -3941,7 +4150,7 @@ theorem step_preserves_wf {c : Config} {σ : ExecState} {c' : Config}
   case stmtOpNullary stmt op nt env k ch ch' hplan happly =>
     obtain ⟨w1, w2, w3, w4, w5⟩ := applyStmtOp_wf hs
       (by simp [goValueListSup]) happly
-    refine ⟨w1, ?_⟩
+    refine ⟨w1, ?_, w4⟩
     simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
       GoValue.locSup, optLocSup, panicChainSup, goValueListSup, exprListSup,
       stmtListSup, locListSup, deferListSup, assigneeListSup, optExprSup,
@@ -3963,7 +4172,7 @@ theorem step_preserves_wf {c : Config} {σ : ExecState} {c' : Config}
       simp only [goValueListSup]
       omega
     obtain ⟨w1, w2, w3, w4, w5⟩ := applyStmtOp_wf hs hop happly
-    refine ⟨w1, ?_⟩
+    refine ⟨w1, ?_, w4⟩
     simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
       GoValue.locSup, optLocSup, panicChainSup, goValueListSup, exprListSup,
       stmtListSup, locListSup, deferListSup, assigneeListSup, optExprSup,
@@ -3973,8 +4182,8 @@ theorem step_preserves_wf {c : Config} {σ : ExecState} {c' : Config}
       Nat.max_le] at hc ⊢
     omega
   case mapRangeSnapshot v entries keyVar valVar keyTy valTy body env k hsnap =>
-    refine ⟨hs, ?_⟩
-    have h1 := mapRangeEntries_locSup hsnap
+    refine ⟨hs, ?_, rfl⟩
+    have h1 := mapRangeSnapshotEntries_locSup hsnap
     simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
       GoValue.locSup, optLocSup, panicChainSup, goValueListSup, exprListSup,
       stmtListSup, locListSup, deferListSup, assigneeListSup, optExprSup,
@@ -4011,7 +4220,7 @@ theorem step_preserves_wf {c : Config} {σ : ExecState} {c' : Config}
       (by omega) (by omega) hbind
     have herase : goValueEntriesSup ((remaining.eraseIdx idx hidx).toList)
         ≤ goValueEntriesSup remaining.toList := goValueEntriesSup_eraseIdx
-    refine ⟨w1, ?_⟩
+    refine ⟨w1, ?_, w4⟩
     simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
       GoValue.locSup, optLocSup, panicChainSup, goValueListSup, exprListSup,
       stmtListSup, locListSup, deferListSup, assigneeListSup, optExprSup,
@@ -4021,7 +4230,7 @@ theorem step_preserves_wf {c : Config} {σ : ExecState} {c' : Config}
       Nat.max_le] at hc ⊢
     omega
   case callValueFirstTarget targets callee args te rest env k hplan =>
-    refine ⟨hs, ?_⟩
+    refine ⟨hs, ?_, rfl⟩
     have h1 := assigneesExprs_locSup hplan
     simp only [exprListSup] at h1
     simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
@@ -4033,7 +4242,7 @@ theorem step_preserves_wf {c : Config} {σ : ExecState} {c' : Config}
       Nat.max_le] at hc h1 ⊢
     omega
   case callValTargetLoc v loc callee locs te rest args env k hloc =>
-    refine ⟨hs, ?_⟩
+    refine ⟨hs, ?_, rfl⟩
     have h1 := valueAsLoc_locSup hloc
     simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
       GoValue.locSup, optLocSup, panicChainSup, goValueListSup, exprListSup,
@@ -4044,7 +4253,7 @@ theorem step_preserves_wf {c : Config} {σ : ExecState} {c' : Config}
       Nat.max_le] at hc ⊢
     omega
   case callValTargetsDone v loc callee locs args env k hloc =>
-    refine ⟨hs, ?_⟩
+    refine ⟨hs, ?_, rfl⟩
     have h1 := valueAsLoc_locSup hloc
     simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
       GoValue.locSup, optLocSup, panicChainSup, goValueListSup, exprListSup,
@@ -4066,7 +4275,7 @@ theorem step_preserves_wf {c : Config} {σ : ExecState} {c' : Config}
       Nat.max_le] at hc
       omega
     obtain ⟨w1, w2, w3, w4, w5, w6, w7, w8⟩ := enterFrame_wf hs hargb henter
-    refine ⟨w1, ?_⟩
+    refine ⟨w1, ?_, w3⟩
     simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
       GoValue.locSup, optLocSup, panicChainSup, goValueListSup, exprListSup,
       stmtListSup, locListSup, deferListSup, assigneeListSup, optExprSup,
@@ -4089,7 +4298,7 @@ theorem step_preserves_wf {c : Config} {σ : ExecState} {c' : Config}
       simp only [goValueListSup]
       omega
     obtain ⟨w1, w2, w3, w4, w5, w6, w7, w8⟩ := enterFrame_wf hs hargb henter
-    refine ⟨w1, ?_⟩
+    refine ⟨w1, ?_, w3⟩
     simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
       GoValue.locSup, optLocSup, panicChainSup, goValueListSup, exprListSup,
       stmtListSup, locListSup, deferListSup, assigneeListSup, optExprSup,
@@ -4111,7 +4320,7 @@ theorem step_preserves_wf {c : Config} {σ : ExecState} {c' : Config}
       omega
     have p := storeMany_pres hs hb (by omega) hstore
     obtain ⟨w1, w2, w3, w4, w5⟩ := p
-    refine ⟨w1, ?_⟩
+    refine ⟨w1, ?_, w4⟩
     simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
       GoValue.locSup, optLocSup, panicChainSup, goValueListSup, exprListSup,
       stmtListSup, locListSup, deferListSup, assigneeListSup, optExprSup,
@@ -4133,7 +4342,7 @@ theorem step_preserves_wf {c : Config} {σ : ExecState} {c' : Config}
       omega
     have p := storeMany_pres hs hb (by omega) hstore
     obtain ⟨w1, w2, w3, w4, w5⟩ := p
-    refine ⟨w1, ?_⟩
+    refine ⟨w1, ?_, w4⟩
     simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
       GoValue.locSup, optLocSup, panicChainSup, goValueListSup, exprListSup,
       stmtListSup, locListSup, deferListSup, assigneeListSup, optExprSup,
@@ -4155,7 +4364,7 @@ theorem step_preserves_wf {c : Config} {σ : ExecState} {c' : Config}
       Nat.max_le] at hc
       omega
     obtain ⟨w1, w2, w3, w4, w5, w6, w7, w8⟩ := enterFrame_wf hs hargb henter
-    refine ⟨w1, ?_⟩
+    refine ⟨w1, ?_, w3⟩
     simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
       GoValue.locSup, optLocSup, panicChainSup, goValueListSup, exprListSup,
       stmtListSup, locListSup, deferListSup, assigneeListSup, optExprSup,
@@ -4177,7 +4386,7 @@ theorem step_preserves_wf {c : Config} {σ : ExecState} {c' : Config}
       Nat.max_le] at hc
       omega
     obtain ⟨w1, w2, w3, w4, w5, w6, w7, w8⟩ := enterFrame_wf hs hargb henter
-    refine ⟨w1, ?_⟩
+    refine ⟨w1, ?_, w3⟩
     simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
       GoValue.locSup, optLocSup, panicChainSup, goValueListSup, exprListSup,
       stmtListSup, locListSup, deferListSup, assigneeListSup, optExprSup,
@@ -4187,7 +4396,7 @@ theorem step_preserves_wf {c : Config} {σ : ExecState} {c' : Config}
       Nat.max_le] at hc ⊢
     omega
   case deferCalleeNoArgs cv env k k' hdc hpush =>
-    refine ⟨hs, ?_⟩
+    refine ⟨hs, ?_, rfl⟩
     have h1 := pushDefer_locSup hpush
     simp only [Nat.max_le] at h1
     simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
@@ -4200,7 +4409,7 @@ theorem step_preserves_wf {c : Config} {σ : ExecState} {c' : Config}
     simp only [goValueListSup] at h1
     omega
   case deferArgsDone v cv vals env k k' hpush =>
-    refine ⟨hs, ?_⟩
+    refine ⟨hs, ?_, rfl⟩
     have h1 := pushDefer_locSup hpush
     simp only [Nat.max_le, goValueListSup_append, goValueListSup] at h1
     simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
@@ -4212,7 +4421,7 @@ theorem step_preserves_wf {c : Config} {σ : ExecState} {c' : Config}
       Nat.max_le] at hc ⊢
     omega
   case panicUnwind chain k k' hpass =>
-    refine ⟨hs, ?_⟩
+    refine ⟨hs, ?_, rfl⟩
     have h1 := panicPassthrough_locSup hpass
     simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
       GoValue.locSup, optLocSup, panicChainSup, goValueListSup, exprListSup,
@@ -4235,7 +4444,7 @@ theorem step_preserves_wf {c : Config} {σ : ExecState} {c' : Config}
       Nat.max_le] at hc
       omega
     obtain ⟨w1, w2, w3, w4, w5, w6, w7, w8⟩ := enterFrame_wf hs hargb henter
-    refine ⟨w1, ?_⟩
+    refine ⟨w1, ?_, w3⟩
     simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
       GoValue.locSup, optLocSup, panicChainSup, goValueListSup, exprListSup,
       stmtListSup, locListSup, deferListSup, assigneeListSup, optExprSup,
@@ -4246,5 +4455,192 @@ theorem step_preserves_wf {c : Config} {σ : ExecState} {c' : Config}
     omega
 
 
+/-! ## Preservation of the map-iteration typing component -/
+
+theorem snapshotEntriesSelfNormalizedList_mem {types : TypeEnv} {kt vt : Ty} :
+    ∀ {l : List (GoValue × GoValue)},
+      snapshotEntriesSelfNormalizedList types kt vt l = true →
+      ∀ {e : GoValue × GoValue}, e ∈ l →
+        isNormalForTy types kt e.1 = true ∧ isNormalForTy types vt e.2 = true := by
+  intro l
+  induction l with
+  | nil => intro _ e he; cases he
+  | cons p rest ih =>
+    intro h e he
+    obtain ⟨k, v⟩ := p
+    simp only [snapshotEntriesSelfNormalizedList, Bool.and_eq_true] at h
+    cases he with
+    | head => exact ⟨h.1.1, h.1.2⟩
+    | tail _ ht => exact ih h.2 ht
+
+theorem snapshotEntriesSelfNormalizedList_of_mem {types : TypeEnv} {kt vt : Ty} :
+    ∀ {l : List (GoValue × GoValue)},
+      (∀ e ∈ l, isNormalForTy types kt e.1 = true
+        ∧ isNormalForTy types vt e.2 = true) →
+      snapshotEntriesSelfNormalizedList types kt vt l = true := by
+  intro l
+  induction l with
+  | nil => intro _; rfl
+  | cons p rest ih =>
+    intro h
+    obtain ⟨k, v⟩ := p
+    have hp := h (k, v) List.mem_cons_self
+    simp only [snapshotEntriesSelfNormalizedList, Bool.and_eq_true]
+    exact ⟨⟨hp.1, hp.2⟩, ih fun e he => h e (List.mem_cons_of_mem _ he)⟩
+
+/-- Snapshot shrinkage preserves the typing check (`mapIterNext`'s
+`eraseIdx` keeps a sub-multiset of the entries). -/
+theorem snapshotEntriesSelfNormalized_eraseIdx {types : TypeEnv} {kt vt : Ty}
+    {arr : Array (GoValue × GoValue)} {i : Nat} {h : i < arr.size}
+    (hall : snapshotEntriesSelfNormalized types kt vt arr = true) :
+    snapshotEntriesSelfNormalized types kt vt (arr.eraseIdx i h) = true := by
+  unfold snapshotEntriesSelfNormalized at hall ⊢
+  rw [Array.toList_eraseIdx]
+  exact snapshotEntriesSelfNormalizedList_of_mem fun e he =>
+    snapshotEntriesSelfNormalizedList_mem hall (List.mem_of_mem_eraseIdx he)
+
+theorem seqCont_itersNormalized {types : TypeEnv} {ss : List Stmt}
+    {env : LocalEnv} {k : Cont} :
+    Cont.itersNormalized types (seqCont ss env k)
+      = Cont.itersNormalized types k := by
+  cases k <;> first
+    | rfl
+    | (simp only [seqCont]; split <;> rfl)
+
+theorem pushDefer_itersNormalized {types : TypeEnv} {d : GoValue × List GoValue} :
+    ∀ {k k' : Cont}, pushDefer d k = some k' →
+      Cont.itersNormalized types k' = Cont.itersNormalized types k := by
+  intro k
+  induction k <;> intro k' h <;>
+    simp only [pushDefer, Option.map_eq_some_iff, Option.some.injEq] at h
+  case frame targets results defers k _ =>
+    subst h
+    rfl
+  all_goals
+    first
+    | (obtain ⟨k₂, hk₂, rfl⟩ := h
+       rename_i ih
+       simp only [Cont.itersNormalized, ih hk₂])
+    | cases h
+
+theorem panicPassthrough_itersNormalized {types : TypeEnv} {k k' : Cont}
+    (h : panicPassthrough k = some k')
+    (hk : Cont.itersNormalized types k = true) :
+    Cont.itersNormalized types k' = true := by
+  cases k <;>
+    simp_all [panicPassthrough, Cont.itersNormalized, Bool.and_eq_true]
+
+theorem recoverResult_itersNormalized {types : TypeEnv} :
+    ∀ {k : Cont} {v : GoValue} {k' : Cont}, recoverResult k = (v, k') →
+      Cont.itersNormalized types k = true →
+      Cont.itersNormalized types k' = true := by
+  intro k
+  induction k <;> intro v k' h hk
+  case stop =>
+    simp only [recoverResult, Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl⟩ := h
+    exact hk
+  case panicResumeK chain k _ =>
+    simp only [recoverResult, Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl⟩ := h
+    exact hk
+  case frame targets results defers k _ =>
+    rw [recoverResult.eq_def] at h
+    split at h
+    · rename_i t r ds chainE kx heqf
+      injection heqf with h1 h2 h3 h4
+      subst h1
+      subst h2
+      subst h3
+      subst h4
+      split at h
+      · rename_i v₀ chain' hmark
+        simp only [Prod.mk.injEq] at h
+        obtain ⟨rfl, rfl⟩ := h
+        exact hk
+      · simp only [Prod.mk.injEq] at h
+        obtain ⟨rfl, rfl⟩ := h
+        exact hk
+    · rename_i t r ds kx hnc heqf
+      injection heqf with h1 h2 h3 h4
+      subst h1
+      subst h2
+      subst h3
+      subst h4
+      simp only [Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl⟩ := h
+      exact hk
+    all_goals
+      rename_i heqbad
+      cases heqbad
+  all_goals
+    rename_i ih
+    have hi := ih (v := _) (k' := _) rfl
+    have hv := congrArg Prod.fst h
+    have hk2 := congrArg Prod.snd h
+    simp only [recoverResult] at hv hk2
+    try dsimp only at hv hk2
+    subst hv
+    subst hk2
+    simp only [Cont.itersNormalized, Bool.and_eq_true] at hk ⊢
+    first
+      | exact hi hk
+      | exact ⟨hk.1, hi hk.2⟩
+
+/-- The TYPING half of the preservation theorem, at the (unchanged) type
+environment of the source state: the snapshot rule ESTABLISHES the check
+for the `mapIterK` it creates (its premise is the fail-closed validation),
+`mapIterNext` shrinks a checked snapshot, and every other rule only
+decomposes continuations structurally. -/
+theorem step_preserves_iters {c : Config} {σ : ExecState} {c' : Config}
+    {σ' : ExecState} (h : Step c σ c' σ')
+    (hi : Config.itersNormalized σ.types c = true) :
+    Config.itersNormalized σ.types c' = true := by
+  cases h
+  all_goals try (exact hi)
+  all_goals try (
+    simp_all only [Config.itersNormalized, Cont.itersNormalized,
+      Bool.and_eq_true]
+    done)
+  case seqn ss env k =>
+    simp only [Config.itersNormalized] at hi ⊢
+    rw [seqCont_itersNormalized]
+    exact hi
+  case mapRangeSnapshot v entries keyVar valVar keyTy valTy body env k hsnap =>
+    simp only [Config.itersNormalized, Cont.itersNormalized,
+      Bool.and_eq_true] at hi ⊢
+    exact ⟨(mapRangeSnapshotEntries_ok hsnap).2, hi⟩
+  case mapIterNext keyVar valVar keyTy valTy body remaining idx env env' k
+      hidx hbind =>
+    simp only [Config.itersNormalized, Cont.itersNormalized,
+      Bool.and_eq_true] at hi ⊢
+    exact ⟨snapshotEntriesSelfNormalized_eraseIdx hi.1, hi.2⟩
+  case deferCalleeNoArgs cv env k k' hdc hpush =>
+    simp only [Config.itersNormalized, Cont.itersNormalized] at hi ⊢
+    rw [pushDefer_itersNormalized hpush]
+    exact hi
+  case deferArgsDone v cv vals env k k' hpush =>
+    simp only [Config.itersNormalized, Cont.itersNormalized] at hi ⊢
+    rw [pushDefer_itersNormalized hpush]
+    exact hi
+  case panicUnwind chain k k' hpass =>
+    simp only [Config.itersNormalized] at hi ⊢
+    exact panicPassthrough_itersNormalized hpass hi
+  case evalRecover env k v k' hrec =>
+    simp only [Config.itersNormalized] at hi ⊢
+    exact recoverResult_itersNormalized hrec hi
+
+/-- **The preservation theorem**: one machine step keeps the joint
+invariant — loc-boundedness of state and configuration, plus the
+map-iteration typing component (transported along the step's types
+invariance). -/
+theorem step_preserves_wf {c : Config} {σ : ExecState} {c' : Config}
+    {σ' : ExecState} (h : Step c σ c' σ') (hwf : MachineWf σ c) :
+    MachineWf σ' c' := by
+  obtain ⟨hs, hc, hi⟩ := hwf
+  obtain ⟨hs', hc', ht⟩ := step_preserves_wf_loc h hs hc
+  refine ⟨hs', hc', ?_⟩
+  rw [ht]
+  exact step_preserves_iters h hi
 
 end GoLean.GoCore.Machine

@@ -119,10 +119,14 @@ in the program text (`Expr.locLit`), and in the function bodies of
 `funcs`. This is `Machine.MachineWf` over the seeded state and the
 initial configuration `.exec prog env₀ .stop`; at concrete seeds it is
 discharged by `decide` (the checker is kernel-reducible). The `ExecState`
-record literal omits `types`/`methods` (their defaults): `MachineWf`
-provably ignores them — `ExecState.locSup` inspects only `heap` and
-`functions` — so the omission is definitionally interchangeable with a
-literal that includes them. -/
+record literal omits `types`/`methods` (their defaults): the loc
+components provably ignore them — `ExecState.locSup` inspects only
+`heap` and `functions` — and `MachineWf`'s map-iteration typing
+component (sem-adequacy slice 3, 2026-08-04), though `types`-dependent
+in general, is trivially true at the initial configuration (an `.exec`
+over `.stop` carries no `mapIterK`), so the omission stays
+definitionally interchangeable with a literal that includes them
+(`progressExec_of_progress` transports it). -/
 structure InitialSplit (P : HProp) (hp : Heap) (na : Nat)
     (hP F : Heaplet) (funcs : Array Func) (env₀ : LocalEnv) (prog : Stmt) : Prop where
   bounded : HeapBounded hp na
@@ -323,6 +327,27 @@ def GoSpecT (types : TypeEnv) (funcs : Array Func)
           { types := types, functions := funcs, methods := methods,
             heap := hp, nextAddr := na }
           prog
+
+/-- **Relation-Progress transports to interpreter-side safety** (the
+sem-adequacy slice-3 kit's surface-level theorem): the relation-quantified
+`Progress` implies `ProgressExec`. `InitialSplit`'s `wf` field supplies
+the machine well-formedness the ∀-choices kit needs (`MachineWf` at the
+typeless seed transfers to the seeded state definitionally on the loc
+components; the map-iteration typing component is trivially true at the
+initial configuration, which carries no `mapIterK`), and
+`execStmt fuel env₀ σ ch prog = execStmtLoop fuel σ (.exec prog env₀
+.stop) ch` holds definitionally. -/
+theorem progressExec_of_progress {types : TypeEnv} {funcs : Array Func}
+    {methods : Array MethodInfo} {env₀ : LocalEnv} {P : HProp} {prog : Stmt}
+    (h : Progress types funcs methods env₀ P prog) :
+    ProgressExec types funcs methods env₀ P prog := by
+  intro hp na hP F hin fuel ch
+  obtain ⟨hs, hc, _⟩ := hin.wf
+  have hwf : Machine.MachineWf
+      { types := types, functions := funcs, methods := methods,
+        heap := hp, nextAddr := na } (.exec prog env₀ .stop) :=
+    ⟨hs, hc, rfl⟩
+  exact execStmtLoop_ok_or_fuelOut (h hp na hP F hin) hwf fuel ch
 
 /-- The user-form specification — ⟨terminates⟩ ∧ ⟨pre⟩ → post — as a
 DERIVED case: a total judgment yields it directly (and `GoSpec` +

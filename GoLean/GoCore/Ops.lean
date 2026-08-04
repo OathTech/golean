@@ -732,6 +732,79 @@ def normalizeValueForTy (state : ExecState) (ty : Ty) (value : GoValue) :
     Except GoError GoValue :=
   normalizeValueForTyFuel typeResolutionFuel state ty value
 
+/-! ### Self-normalization check (sem-adequacy arc slice 3, 2026-08-04)
+
+`isNormalForTyFuel types ty v` decides `normalizeValueForTyFuel fuel σ ty v
+= .ok v` (for any `σ` with `σ.types = types`) WITHOUT a generic `GoValue`
+equality: it mirrors the normalizer arm-for-arm and compares only at the
+leaves (`Int`/`IntKind`/`TypeId`/`String` — all `DecidableEq`, so the
+whole family is kernel-reducible; the derived `BEq GoValue` is
+WF-compiled/opaque and must never sit on a kernel-evaluation path). It is
+deliberately parameterized by the TYPE ENVIRONMENT, not the state: the
+normalizer provably reads nothing else, and taking `TypeEnv` makes the
+well-formedness component built on this check invariant along
+types-preserving steps BY REWRITING rather than by a congruence lemma.
+
+The proved direction is soundness (`isNormalForTyFuel_sound`,
+`StateWf.lean`): check true ⇒ the normalizer returns the value UNCHANGED.
+The converse (the check never rejects a value the normalizer would fix)
+is not needed by any theorem; the machine's snapshot validation built on
+this check is differential-validated instead (arc doc, slice-3 entry). -/
+
+/-- Element-wise check, parameterized over the (already fuel-decremented)
+element checker — the de-WF recipe's shape, mirroring `normalizeListWith`. -/
+def isNormalListWith (f : GoValue → Bool) : List GoValue → Bool
+  | [] => true
+  | v :: rest => f v && isNormalListWith f rest
+
+/-- Field-wise check mirroring `normalizeFieldsWith`: field-name alignment
+plus the per-field value check. Length mismatch fails closed (the struct
+wrapper checks sizes first, exactly like the normalizer). -/
+def isNormalFieldsWith (f : Ty → GoValue → Bool) :
+    List FieldDef → List (String × GoValue) → Bool
+  | [], [] => true
+  | field :: fieldRest, (actualField, v) :: valueRest =>
+      decide (actualField = field.name) && f field.typ v
+        && isNormalFieldsWith f fieldRest valueRest
+  | _, _ => false
+
+/-- Does `normalizeValueForTyFuel fuel σ ty v` (for `σ.types = types`)
+return `.ok v` — i.e. is `v` self-normalized at `ty`? Structural on the
+fuel, mirroring the normalizer arm-for-arm. -/
+def isNormalForTyFuel : Nat → TypeEnv → Ty → GoValue → Bool
+  | 0, _, _, _ => false
+  | _ + 1, _, .int kind, .int value k =>
+      decide (kind.normalize value = value) && decide (kind = k)
+  | _ + 1, _, .int _, _ => false
+  | fuel + 1, types, .array length elem, .array values =>
+      decide (values.size = length)
+        && isNormalListWith (isNormalForTyFuel fuel types elem) values.toList
+  | _ + 1, _, .array _ _, _ => false
+  | _ + 1, _, .interface _, _ => true
+  | _ + 1, _, .funcType _ _, .funcVal _ _ => true
+  | _ + 1, _, .funcType _ _, .nil => true
+  | _ + 1, _, .funcType _ _, _ => false
+  | fuel + 1, types, .defined name, value =>
+      match TypeEnv.lookup types name with
+      | some (.alias target) => isNormalForTyFuel fuel types target value
+      | some (.defined target) => isNormalForTyFuel fuel types target value
+      | some (.struct fields) =>
+          match value with
+          | .struct actual fieldsValue =>
+              decide (actual = name) && decide (fieldsValue.size = fields.size)
+                && isNormalFieldsWith (isNormalForTyFuel fuel types)
+                    fields.toList fieldsValue.toList
+          | _ => false
+      | some (.unsupported _) => false
+      | some (.interfaceDef _) => false
+      | none => false
+  | _ + 1, _, .unsupported _, _ => false
+  | _ + 1, _, _, _ => true
+
+@[inherit_doc isNormalForTyFuel]
+def isNormalForTy (types : TypeEnv) (ty : Ty) (value : GoValue) : Bool :=
+  isNormalForTyFuel typeResolutionFuel types ty value
+
 -- Total: structural recursion on the `Loc` argument (field/index bases are
 -- strict subterms). loadLoc depends only on itself and total helpers, so it is
 -- a genuine `def` — the premise of the eventual `wp_load` proof rule.
@@ -1498,7 +1571,7 @@ their equations. Kernel evaluation is unaffected (attributes are invisible
 to the kernel); an elaboration site that genuinely wants full reduction
 opts in with `with_unfolding_all`. -/
 attribute [irreducible] Ty.mentionsUnsupported normalizeValueForTy
-  defaultValue valueEq
+  defaultValue valueEq isNormalForTy
 
 -- POST-SEAL pins: the exact wrapper+worker+budget simp pattern every
 -- downstream proof site relies on (sub-branch audit, 2026-08-03 — the

@@ -593,7 +593,8 @@ theorem wp_ci_loop_one {na ca cba la lba sra sta : Addr}
   rw [rangeStmt_eq]
   go_walk
   go_walk_step (wp_map_range_snapshot (ba := cba) (mty := cty)
-    (entries := #[(.int 1 .uint64, .struct ⟨"struct{}"⟩ #[])]))
+    (entries := #[(.int 1 .uint64, .struct ⟨"struct{}"⟩ #[])])
+    (hnorm := by rw [htypes]; decide +kernel))
   -- THE RANGE, through the INDUCTIVE RANGE RULE (`Laws/Range`,
   -- `wp_map_iter_inv`): one generic-iteration obligation
   -- (`wp_ci_range_body_one`) and an invariant over the REMAINING

@@ -786,6 +786,44 @@ def mapRangeEntries (s : ExecState) (v : GoValue) :
       | .mapData es => return es
       | other => stuck s!"expected map data for range, got {repr other}"
 
+/-- Are all entries of a `mapRange` snapshot self-normalized at the range
+key/value types — keys at `keyTy`, values at `valTy`? The pick-free
+typing check the snapshot step fails closed on (sem-adequacy arc slice 3,
+2026-08-04): `mapAssign` only ever stores normalized keys AND values, so
+every legitimate snapshot passes identically (differential-validated),
+while an ill-typed entry — which would make `mapIterNext`'s per-pick
+`bindIterVars` normalization succeed at one pick and fail at another —
+is rejected before any pick exists. Structural over the entry list;
+kernel-reducible (`isNormalForTyFuel`'s contract). Note the recorded
+design named only the KEYS; the value check is forced by the same
+obstruction one constructor over — `bindIterVars` normalizes the VALUE
+at `valTy` whenever a value variable is bound, so key-only validation
+leaves iteration success pick-dependent through the values. -/
+def snapshotEntriesSelfNormalizedList (types : TypeEnv) (keyTy valTy : Ty) :
+    List (GoValue × GoValue) → Bool
+  | [] => true
+  | (k, v) :: rest =>
+      isNormalForTy types keyTy k && isNormalForTy types valTy v
+        && snapshotEntriesSelfNormalizedList types keyTy valTy rest
+
+@[inherit_doc snapshotEntriesSelfNormalizedList]
+def snapshotEntriesSelfNormalized (types : TypeEnv) (keyTy valTy : Ty)
+    (entries : Array (GoValue × GoValue)) : Bool :=
+  snapshotEntriesSelfNormalizedList types keyTy valTy entries.toList
+
+/-- The validated snapshot step's premise function, shared VERBATIM by
+`stepFn`'s `mapRangeK` arm and rule `Step.mapRangeSnapshot`: read the
+ranged map's entries, then fail CLOSED unless every entry is
+self-normalized at the range key/value types. -/
+def mapRangeSnapshotEntries (s : ExecState) (keyTy valTy : Ty) (v : GoValue) :
+    Except GoError (Array (GoValue × GoValue)) := do
+  let entries ← mapRangeEntries s v
+  if snapshotEntriesSelfNormalized s.types keyTy valTy entries then
+    return entries
+  else
+    throw (.stuck s!"map range snapshot entry not self-normalized at range \
+key/value types ({repr keyTy}, {repr valTy})")
+
 /-- Declare a `mapRange` iteration's key/value variables in a fresh scope
 (normalized at the range types), mirroring the interpreter's per-iteration
 `declareLocal`s. -/
@@ -1434,7 +1472,7 @@ inductive Step : Config → ExecState → Config → ExecState → Prop where
       Step (.exec (.mapRange keyVar valVar mapExpr keyTy valTy body) env k) s
         (.evalE mapExpr env (.mapRangeK keyVar valVar keyTy valTy body env k)) s
   | mapRangeSnapshot {v entries keyVar valVar keyTy valTy body env k s} :
-      mapRangeEntries s v = .ok entries →
+      mapRangeSnapshotEntries s keyTy valTy v = .ok entries →
       Step (.retV v (.mapRangeK keyVar valVar keyTy valTy body env k)) s
         (.next (.mapIterK keyVar valVar keyTy valTy body entries env k)) s
   | mapIterDone {keyVar valVar keyTy valTy body env k s} :

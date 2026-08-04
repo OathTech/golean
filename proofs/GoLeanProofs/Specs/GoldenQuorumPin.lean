@@ -431,10 +431,16 @@ variable {s : Stuckness} {E : CoPset} {Φ : Unit → IProp GF}
 (`QuorumPin.rangeStmt`, `rfl`-projected out of the pin): dispatch the
 range, load `c`, snapshot its data cell — landing exactly on the
 `mapIterK` that `Laws/Range`'s nondeterministic law consumes. Premise-free
-beyond the environment resolution and the two owned cells. -/
+beyond the environment resolution, the two owned cells, and — since the
+snapshot step's fail-closed validation (sem-adequacy slice 3, 2026-08-04)
+— the self-normalization of the (here symbolic) entries at the range
+key/value types, which concrete walks discharge by `decide` at their
+pinned snapshots. -/
 theorem wp_map_range_snapshot_committed {ca mba : Addr}
     {entries : Array (GoValue × GoValue)} {env k}
-    (hres : LocalEnv.lookup env "c" = some (.base ca)) :
+    (hres : LocalEnv.lookup env "c" = some (.base ca))
+    (hnorm : snapshotEntriesSelfNormalized (GoCoreGS.types GF) (.int .uint64)
+      (.defined ⟨"struct{}"⟩) entries = true) :
     ca.id ↦ (⟨some (.defined ⟨"main.MajorityConfig"⟩),
               .map ⟨some (.base mba)⟩⟩ : HeapCell)
       ∗ mba.id ↦ (⟨some (.map (.int .uint64) (.defined ⟨"struct{}"⟩)),
@@ -459,7 +465,7 @@ theorem wp_map_range_snapshot_committed {ca mba : Addr}
   isplitl [Hc]
   · iexact Hc
   iintro Hc
-  iapply wp_map_range_snapshot
+  iapply (wp_map_range_snapshot hnorm)
   isplitl [Hm]
   · iexact Hm
   iintro Hm

@@ -336,7 +336,7 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
               | some k'' => return (.next k'', s, choices)
               | none => throw (.stuck "defer outside a call frame")
       | .mapRangeK keyVar valVar keyTy valTy body env k' => do
-          let entries ← mapRangeEntries s v
+          let entries ← mapRangeSnapshotEntries s keyTy valTy v
           return (.next (.mapIterK keyVar valVar keyTy valTy body entries env k'), s, choices)
       | .panicArgK k' =>
           return (.panicking [⟨panicPayload v, false⟩] k', s, choices)

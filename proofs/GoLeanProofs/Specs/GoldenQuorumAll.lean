@@ -355,7 +355,17 @@ theorem wp_ci_loop_all {na ca cba la lba sra sta : Addr} {cty lty : Option Ty}
   rw [rangeStmt_eq]
   go_walk
   go_walk_step (wp_map_range_snapshot (ba := cba) (mty := cty)
-    (entries := cfgSnapshot ks₀))
+    (entries := cfgSnapshot ks₀)
+    (hnorm := by
+      rw [htypes]
+      refine snapshotEntriesSelfNormalizedList_of_mem fun e he => ?_
+      obtain ⟨q, hq, rfl⟩ : ∃ q, q ∈ ks₀ ∧ voterEntry q = e := by
+        simpa [cfgSnapshot] using he
+      refine ⟨?_, show isNormalForTy quorumLowered.typeDefs.toList
+        (.defined ⟨"struct{}"⟩) (.struct ⟨"struct{}"⟩ #[]) = true
+        by decide +kernel⟩
+      simp [voterEntry, u64, isNormalForTy, isNormalForTyFuel,
+        typeResolutionFuel, hnormk q hq]))
   -- THE RANGE, through the INDUCTIVE RANGE RULE
   iapply (wp_map_iter_inv
     (I := fun rem => iprop(∃ ks : List Int, ∃ filled : List Int, ∃ zeros : Nat,

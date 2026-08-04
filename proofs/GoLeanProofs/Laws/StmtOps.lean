@@ -164,10 +164,20 @@ non-nil map value loads the map's data cell and installs its entries as
 the iteration snapshot. The data cell rides through unchanged (`mapRange`
 snapshots — later writes to the map do not affect the iteration), so this
 is a `wp_det_step_keep` read, exactly like `wp_eval_var`. `Laws/Range`
-picks up from the `mapIterK` this produces. -/
+picks up from the `mapIterK` this produces.
+
+`hnorm` is the snapshot step's fail-closed validation (sem-adequacy
+slice 3, 2026-08-04): every snapshot entry must be self-normalized at the
+range key/value types — true of the already-normalized entries `mapAssign`
+stores. It carries the `σ.types` GHOST PIN through `GoCoreGS.types GF`,
+exactly like `wp_map_iter_next_key`'s `hnorm` (its per-pick twin, which
+this snapshot-time check now subsumes machine-side); at pinned data it
+discharges by `decide`. -/
 theorem wp_map_range_snapshot {ba : Addr} {mty : Option Ty}
     {entries : Array (GoValue × GoValue)} {keyVar valVar : Option String}
-    {keyTy valTy : Ty} {body : Stmt} {env k} :
+    {keyTy valTy : Ty} {body : Stmt} {env k}
+    (hnorm : snapshotEntriesSelfNormalized (GoCoreGS.types GF) keyTy valTy
+      entries = true) :
     ba.id ↦ (⟨mty, .mapData entries⟩ : HeapCell)
       ∗ (ba.id ↦ (⟨mty, .mapData entries⟩ : HeapCell) -∗
           WP (Config.next (.mapIterK keyVar valVar keyTy valTy body entries env k))
@@ -177,7 +187,7 @@ theorem wp_map_range_snapshot {ba : Addr} {mty : Option Ty}
   iapply wp_det_step_keep (P := iprop(ba.id ↦ (⟨mty, .mapData entries⟩ : HeapCell)))
     (c₁ := Config.next (.mapIterK keyVar valVar keyTy valTy body entries env k))
     (hnv := rfl)
-  intro σ₁ _hfns _hmeths _htypes
+  intro σ₁ _hfns _hmeths htypes
   iintro ⟨Hσ, Hpt⟩
   ihave %Hmap : ⌜get? (heapToMap σ₁.heap) ba.id
       = some (⟨mty, .mapData entries⟩ : HeapCell)⌝ $$ [Hσ Hpt]
@@ -187,11 +197,16 @@ theorem wp_map_range_snapshot {ba : Addr} {mty : Option Ty}
     rw [get?_heapToMap] at Hmap; simpa using Hmap
   have hentries : mapRangeEntries σ₁ (.map ⟨some (.base ba)⟩) = .ok entries := by
     simp [mapRangeEntries, valueAsMap, loadLoc, hlook, Bind.bind, Except.bind]
+  have hsnap : mapRangeSnapshotEntries σ₁ keyTy valTy (.map ⟨some (.base ba)⟩)
+      = .ok entries := by
+    unfold mapRangeSnapshotEntries
+    rw [htypes]
+    simp [hentries, hnorm, Bind.bind, Except.bind]
   imodintro
   ipureintro
-  refine ⟨Step.mapRangeSnapshot hentries, ?_⟩
+  refine ⟨Step.mapRangeSnapshot hsnap, ?_⟩
   intro c' s' hst
-  obtain ⟨h1, h2⟩ := step_det (by trivial) (Step.mapRangeSnapshot hentries) hst
+  obtain ⟨h1, h2⟩ := step_det (by trivial) (Step.mapRangeSnapshot hsnap) hst
   exact ⟨h1.symm, h2.symm⟩
 
 /-- **The nil-map snapshot step (pure)**: a nil map has no data cell, so
@@ -207,7 +222,9 @@ theorem wp_map_range_snapshot_nil {keyVar valVar : Option String}
             (.mapRangeK keyVar valVar keyTy valTy body env k)) @ s ; E {{ Φ }} :=
   wp_pure_det rfl trivial
     (fun _ => Step.mapRangeSnapshot
-      (by simp [mapRangeEntries, valueAsMap, Bind.bind, Except.bind]))
+      (by simp [mapRangeSnapshotEntries, mapRangeEntries, valueAsMap,
+        snapshotEntriesSelfNormalized, snapshotEntriesSelfNormalizedList,
+        Bind.bind, Except.bind]))
 
 /-! ## 2. The wide-statement (`stmtOpK`) walk -/
 

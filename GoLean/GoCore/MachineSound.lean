@@ -508,4 +508,1550 @@ theorem applyStmtOp_ok_any_ch_core {σ : ExecState} {ch : Choices}
        obtain ⟨σ₂, hcore, rfl, rfl⟩ := h
        exact ⟨σ₂, hcore, rfl, trivial⟩)
 
+/-! ### The appendSlice half of the ∀-choices kit (sem-adequacy slice 3,
+2026-08-04)
+
+The spill path's outcome CLASS (ok / panic / neither) is independent of
+the consumed capacity choice, under `StateWf` + bounded operands. The
+three previously-recorded missing lemmas are here:
+`defaultValueFuel_ok_of_normalize_ok` (padding defaults derivable from
+any element's normalize success), `Heap.lookup_set_ne` +
+`loadLoc_root_congr` (load/store agreement below `nextAddr` across the
+fresh-backing alloc), and the `capCong` congruence family (normalize-ok
+uniformity: store success cannot depend on the stored slice's CAP, the
+only value component the choice reaches). -/
+
+/-- The root `.base` location of an access path — the only heap KEY
+`loadLoc`/`storeLoc` ever look up along the path. -/
+def Loc.rootLoc (l : Loc) : Loc := .base ⟨Loc.rootBase l⟩
+
+theorem Heap.lookup_set_ne {h : Heap} {k l : Loc} {c : HeapCell}
+    (hne : k ≠ l) :
+    Heap.lookup (Heap.set h k c) l = Heap.lookup h l := by
+  induction h with
+  | nil => simp [Heap.set, Heap.lookup, beq_eq_false_iff_ne.mpr hne]
+  | cons p rest ih =>
+    obtain ⟨loc, old⟩ := p
+    simp only [Heap.set]
+    cases hb : (loc == k) with
+    | true =>
+      obtain rfl := eq_of_beq hb
+      simp [Heap.lookup, beq_eq_false_iff_ne.mpr hne]
+    | false => simp [Heap.lookup, ih]
+
+/-- `loadLoc` is determined by the ROOT cell: two states agreeing on the
+path's root cell load identically along the whole path. -/
+theorem loadLoc_root_congr {σ₁ σ₂ : ExecState} :
+    ∀ {l : Loc},
+      Heap.lookup σ₂.heap (Loc.rootLoc l) = Heap.lookup σ₁.heap (Loc.rootLoc l) →
+      loadLoc σ₂ l = loadLoc σ₁ l := by
+  intro l
+  induction l with
+  | base a =>
+    intro hl
+    have hl' : Heap.lookup σ₂.heap (.base a) = Heap.lookup σ₁.heap (.base a) := hl
+    simp only [loadLoc]
+    rw [hl']
+  | field b t f ih =>
+    intro hl
+    simp only [loadLoc]
+    rw [ih hl]
+  | index b i ih =>
+    intro hl
+    simp only [loadLoc]
+    rw [ih hl]
+
+/-! #### `capCong`: values congruent up to slice capacity -/
+
+mutual
+
+/-- Values identical except that SLICE values may differ in their `cap`
+(base, offset, and len must agree). The capacity choice reaches exactly
+one value component — the result slice's `cap` — so this is the
+congruence the spill path's store transports along. -/
+def GoValue.capCong : GoValue → GoValue → Prop
+  | .slice a, .slice b => a.base = b.base ∧ a.offset = b.offset ∧ a.len = b.len
+  | .struct t fs, .struct t' gs => t = t' ∧ capCongFields fs.toList gs.toList
+  | .array vs, .array ws => capCongList vs.toList ws.toList
+  | v, w => v = w
+
+def capCongList : List GoValue → List GoValue → Prop
+  | [], [] => True
+  | v :: vs, w :: ws => GoValue.capCong v w ∧ capCongList vs ws
+  | _, _ => False
+
+def capCongFields : List (String × GoValue) → List (String × GoValue) → Prop
+  | [], [] => True
+  | (n, v) :: vs, (m, w) :: ws => n = m ∧ GoValue.capCong v w ∧ capCongFields vs ws
+  | _, _ => False
+
+end
+
+mutual
+
+theorem GoValue.capCong_refl : ∀ v : GoValue, GoValue.capCong v v
+  | .unit => rfl
+  | .bool _ => rfl
+  | .int _ _ => rfl
+  | .string _ => rfl
+  | .addr _ => rfl
+  | .nil => rfl
+  | .interface _ _ => rfl
+  | .map _ => rfl
+  | .mapData _ => rfl
+  | .funcVal _ _ => rfl
+  | .slice _ => ⟨rfl, rfl, rfl⟩
+  | .struct _ fs => ⟨rfl, capCongFields_refl fs.toList⟩
+  | .array vs => capCongList_refl vs.toList
+
+theorem capCongList_refl : ∀ l : List GoValue, capCongList l l
+  | [] => trivial
+  | v :: vs => ⟨GoValue.capCong_refl v, capCongList_refl vs⟩
+
+theorem capCongFields_refl : ∀ l : List (String × GoValue), capCongFields l l
+  | [] => trivial
+  | (_, v) :: vs => ⟨rfl, GoValue.capCong_refl v, capCongFields_refl vs⟩
+
+end
+
+theorem capCongList_length :
+    ∀ {l₁ l₂ : List GoValue}, capCongList l₁ l₂ → l₁.length = l₂.length := by
+  intro l₁
+  induction l₁ with
+  | nil => intro l₂ h; cases l₂ <;> simp_all [capCongList]
+  | cons v vs ih =>
+    intro l₂ h
+    cases l₂ with
+    | nil => exact absurd h (by simp [capCongList])
+    | cons w ws => simpa using ih h.2
+
+theorem capCongFields_length :
+    ∀ {l₁ l₂ : List (String × GoValue)}, capCongFields l₁ l₂ →
+      l₁.length = l₂.length := by
+  intro l₁
+  induction l₁ with
+  | nil => intro l₂ h; cases l₂ <;> simp_all [capCongFields]
+  | cons p vs ih =>
+    intro l₂ h
+    obtain ⟨n, v⟩ := p
+    cases l₂ with
+    | nil => exact absurd h (by simp [capCongFields])
+    | cons q ws =>
+      obtain ⟨m, w⟩ := q
+      simpa using ih h.2.2
+
+theorem capCongList_set :
+    ∀ {l : List GoValue} {i : Nat} {a b : GoValue}, GoValue.capCong a b →
+      capCongList (l.set i a) (l.set i b) := by
+  intro l
+  induction l with
+  | nil => intro i a b _; simp [capCongList]
+  | cons v vs ih =>
+    intro i a b hab
+    cases i with
+    | zero => exact ⟨hab, capCongList_refl vs⟩
+    | succ n => exact ⟨GoValue.capCong_refl v, ih hab⟩
+
+theorem capCongFields_append :
+    ∀ {l₁ l₂ r₁ r₂ : List (String × GoValue)}, capCongFields l₁ l₂ →
+      capCongFields r₁ r₂ → capCongFields (l₁ ++ r₁) (l₂ ++ r₂) := by
+  intro l₁
+  induction l₁ with
+  | nil =>
+    intro l₂ r₁ r₂ h hr
+    cases l₂ <;> simp_all [capCongFields]
+  | cons p vs ih =>
+    intro l₂ r₁ r₂ h hr
+    obtain ⟨n, v⟩ := p
+    cases l₂ with
+    | nil => exact absurd h (by simp [capCongFields])
+    | cons q ws =>
+      obtain ⟨m, w⟩ := q
+      obtain ⟨rfl, hvw, hrest⟩ := h
+      exact ⟨rfl, hvw, ih hrest hr⟩
+
+/-- The constructors `capCong` treats specially (everything else is
+related only to itself). -/
+def GoValue.isCapStructural : GoValue → Bool
+  | .slice _ | .struct _ _ | .array _ => true
+  | _ => false
+
+set_option maxHeartbeats 1600000 in
+/-- Non-slice/struct/array values are `capCong`-related only to
+themselves. -/
+theorem GoValue.capCong_eq {v w : GoValue} (h : GoValue.capCong v w)
+    (hv : GoValue.isCapStructural v = false) :
+    v = w := by
+  cases v <;> cases w <;>
+    first
+    | rfl
+    | exact h
+    | exact GoValue.noConfusion h
+    | exact Bool.noConfusion hv
+
+theorem GoValue.capCong_slice_left {a : SliceValue} {w : GoValue}
+    (h : GoValue.capCong (.slice a) w) :
+    ∃ b, w = .slice b ∧ a.base = b.base ∧ a.offset = b.offset ∧ a.len = b.len := by
+  cases w <;>
+    first
+    | exact ⟨_, rfl, h.1, h.2.1, h.2.2⟩
+    | exact GoValue.noConfusion h
+
+theorem GoValue.capCong_struct_left {t : TypeId} {fs : Array (String × GoValue)}
+    {w : GoValue} (h : GoValue.capCong (.struct t fs) w) :
+    ∃ gs, w = .struct t gs ∧ capCongFields fs.toList gs.toList := by
+  cases w <;>
+    first
+    | (obtain ⟨rfl, hf⟩ := h; exact ⟨_, rfl, hf⟩)
+    | exact GoValue.noConfusion h
+
+theorem GoValue.capCong_array_left {vs : Array GoValue} {w : GoValue}
+    (h : GoValue.capCong (.array vs) w) :
+    ∃ ws, w = .array ws ∧ capCongList vs.toList ws.toList := by
+  cases w <;>
+    first
+    | exact ⟨_, rfl, h⟩
+    | exact GoValue.noConfusion h
+
+/-! #### Outcome-class congruence: `exceptCong` -/
+
+def _root_.GoLean.GoError.isPanic : GoError → Bool
+  | .panic _ => true
+  | _ => false
+
+/-- Two results agree up to `R` on success and up to PANIC-CLASS on
+error (`stepFn` turns a `.panic` into a legal `.panicking` step and
+throws on everything else, so panic-vs-not is the only error distinction
+the completeness kit needs; error MESSAGES may differ — `repr` of a
+slice prints its cap). -/
+def exceptCong {α β : Type} (R : α → β → Prop) :
+    Except GoError α → Except GoError β → Prop
+  | .ok a, .ok b => R a b
+  | .error e₁, .error e₂ => e₁.isPanic = e₂.isPanic
+  | _, _ => False
+
+theorem exceptCong.bind_congr {α β γ δ : Type} {R : α → β → Prop}
+    {S : γ → δ → Prop} {x : Except GoError α} {y : Except GoError β}
+    {f : α → Except GoError γ} {g : β → Except GoError δ}
+    (hxy : exceptCong R x y)
+    (hfg : ∀ a b, R a b → exceptCong S (f a) (g b)) :
+    exceptCong S (x >>= f) (y >>= g) := by
+  cases x with
+  | error e₁ =>
+    cases y with
+    | error e₂ => exact hxy
+    | ok b => exact hxy.elim
+  | ok a =>
+    cases y with
+    | error e₂ => exact hxy.elim
+    | ok b => exact hfg a b hxy
+
+theorem exceptCong.map_congr {α β γ δ : Type} {R : α → β → Prop}
+    {S : γ → δ → Prop} {x : Except GoError α} {y : Except GoError β}
+    {f : α → γ} {g : β → δ}
+    (hxy : exceptCong R x y) (hfg : ∀ a b, R a b → S (f a) (g b)) :
+    exceptCong S (f <$> x) (g <$> y) := by
+  cases x with
+  | error e₁ =>
+    cases y with
+    | error e₂ => exact hxy
+    | ok b => exact hxy.elim
+  | ok a =>
+    cases y with
+    | error e₂ => exact hxy.elim
+    | ok b => exact hfg a b hxy
+
+theorem exceptCong.self {α : Type} {R : α → α → Prop} {x : Except GoError α}
+    (h : ∀ a, R a a) : exceptCong R x x := by
+  cases x with
+  | ok a => exact h a
+  | error e => rfl
+
+theorem exceptCong.ok_left {α β : Type} {R : α → β → Prop}
+    {x : Except GoError α} {y : Except GoError β} {a : α}
+    (h : exceptCong R x y) (hx : x = .ok a) : ∃ b, y = .ok b ∧ R a b := by
+  subst hx
+  cases y with
+  | ok b => exact ⟨b, rfl, h⟩
+  | error e => exact h.elim
+
+theorem exceptCong.panic_left {α β : Type} {R : α → β → Prop}
+    {x : Except GoError α} {y : Except GoError β} {m : String}
+    (h : exceptCong R x y) (hx : x = .error (.panic m)) :
+    ∃ m', y = .error (.panic m') := by
+  subst hx
+  cases y with
+  | ok b => exact h.elim
+  | error e =>
+    cases e <;>
+      first
+      | exact ⟨_, rfl⟩
+      | exact Bool.noConfusion (h : true = false)
+
+theorem exceptCong.of_ok_bind {α₁ α₂ β₁ β₂ : Type} {S : β₁ → β₂ → Prop}
+    {x₁ : α₁} {x₂ : α₂} {f : α₁ → Except GoError β₁}
+    {g : α₂ → Except GoError β₂}
+    (h : exceptCong S (f x₁) (g x₂)) :
+    exceptCong S (Except.ok x₁ >>= f) (Except.ok x₂ >>= g) := h
+
+theorem exceptCong.ite_congr {α β : Type} {R : α → β → Prop} {c : Prop}
+    [Decidable c] {x₁ y₁ : Except GoError α} {x₂ y₂ : Except GoError β}
+    (ht : c → exceptCong R x₁ x₂) (he : ¬c → exceptCong R y₁ y₂) :
+    exceptCong R (if c then x₁ else y₁) (if c then x₂ else y₂) := by
+  by_cases h : c
+  · simp only [if_pos h]
+    exact ht h
+  · simp only [if_neg h]
+    exact he h
+
+/-! #### Congruence of the value walks along `capCong` -/
+
+theorem normalizeListWith_congr {f g : GoValue → Except GoError GoValue}
+    (hfg : ∀ v w, GoValue.capCong v w → exceptCong GoValue.capCong (f v) (g w)) :
+    ∀ {l₁ l₂ : List GoValue}, capCongList l₁ l₂ →
+      exceptCong (fun a b : Array GoValue => capCongList a.toList b.toList)
+        (normalizeListWith f l₁) (normalizeListWith g l₂) := by
+  intro l₁
+  induction l₁ with
+  | nil =>
+    intro l₂ h
+    cases l₂ with
+    | nil => exact trivial
+    | cons w ws => exact h.elim
+  | cons v vs ih =>
+    intro l₂ h
+    cases l₂ with
+    | nil => exact h.elim
+    | cons w ws =>
+      obtain ⟨hvw, hrest⟩ := h
+      simp only [normalizeListWith]
+      refine exceptCong.bind_congr (hfg v w hvw) fun a b hab => ?_
+      refine exceptCong.bind_congr (ih hrest) fun as bs habs => ?_
+      show capCongList (#[a] ++ as).toList (#[b] ++ bs).toList
+      rw [Array.toList_append, Array.toList_append]
+      exact ⟨hab, habs⟩
+
+theorem normalizeFieldsWith_congr {f g : Ty → GoValue → Except GoError GoValue}
+    (hfg : ∀ ty v w, GoValue.capCong v w →
+      exceptCong GoValue.capCong (f ty v) (g ty w)) :
+    ∀ (fds : List FieldDef) {l₁ l₂ : List (String × GoValue)},
+      capCongFields l₁ l₂ →
+      exceptCong (fun a b : Array (String × GoValue) =>
+          capCongFields a.toList b.toList)
+        (normalizeFieldsWith f fds l₁) (normalizeFieldsWith g fds l₂) := by
+  intro fds
+  induction fds with
+  | nil =>
+    intro l₁ l₂ h
+    cases l₁ with
+    | nil =>
+      cases l₂ with
+      | nil => exact trivial
+      | cons q ws => exact h.elim
+    | cons p vs =>
+      cases l₂ with
+      | nil =>
+        obtain ⟨n, v⟩ := p
+        exact h.elim
+      | cons q ws => exact trivial
+  | cons fd rest ih =>
+    intro l₁ l₂ h
+    cases l₁ with
+    | nil =>
+      cases l₂ with
+      | nil => exact trivial
+      | cons q ws =>
+        obtain ⟨m, w⟩ := q
+        exact h.elim
+    | cons p vs =>
+      obtain ⟨n, v⟩ := p
+      cases l₂ with
+      | nil => exact h.elim
+      | cons q ws =>
+        obtain ⟨m, w⟩ := q
+        obtain ⟨rfl, hvw, hrest⟩ := h
+        simp only [normalizeFieldsWith]
+        refine exceptCong.ite_congr (fun _ => rfl) fun _ => ?_
+        refine exceptCong.bind_congr
+          (R := fun (_ : PUnit) (_ : PUnit) => True)
+          (exceptCong.self fun _ => trivial) fun _ _ _ => ?_
+        refine exceptCong.bind_congr (hfg _ v w hvw) fun a b hab => ?_
+        refine exceptCong.bind_congr (ih hrest) fun as bs habs => ?_
+        show capCongFields (#[(fd.name, a)] ++ as).toList
+          (#[(fd.name, b)] ++ bs).toList
+        rw [Array.toList_append, Array.toList_append]
+        exact ⟨rfl, hab, habs⟩
+
+set_option maxHeartbeats 3200000 in
+/-- Normalization congruence: along `capCong` values AND states agreeing
+on `types`, normalization results agree up to `capCong` (successes) or
+panic-class (errors — normalization never panics, but the statement does
+not need that fact). -/
+theorem normalizeValueForTyFuel_congr {σ₁ σ₂ : ExecState}
+    (htypes : σ₂.types = σ₁.types) :
+    ∀ (fuel : Nat) (ty : Ty) (v w : GoValue), GoValue.capCong v w →
+      exceptCong GoValue.capCong (normalizeValueForTyFuel fuel σ₁ ty v)
+        (normalizeValueForTyFuel fuel σ₂ ty w) := by
+  intro fuel
+  induction fuel with
+  | zero =>
+    intro ty v w hcc
+    simp [normalizeValueForTyFuel, exceptCong, GoError.isPanic]
+  | succ f ih =>
+    intro ty v w hcc
+    cases ty with
+    | int kind =>
+      cases v <;>
+        first
+        | (obtain ⟨b, rfl, _, _, _⟩ := GoValue.capCong_slice_left hcc
+           exact rfl)
+        | (obtain ⟨gs, rfl, _⟩ := GoValue.capCong_struct_left hcc
+           exact rfl)
+        | (obtain ⟨ws, rfl, _⟩ := GoValue.capCong_array_left hcc
+           exact rfl)
+        | (obtain rfl := GoValue.capCong_eq hcc rfl
+           exact exceptCong.self fun a => GoValue.capCong_refl a)
+    | array length elem =>
+      cases v <;>
+        first
+        | (obtain ⟨b, rfl, _, _, _⟩ := GoValue.capCong_slice_left hcc
+           exact rfl)
+        | (obtain ⟨gs, rfl, _⟩ := GoValue.capCong_struct_left hcc
+           exact rfl)
+        | (obtain rfl := GoValue.capCong_eq hcc rfl
+           exact exceptCong.self fun a => GoValue.capCong_refl a)
+        | skip
+      case array vs =>
+        obtain ⟨ws, rfl, hl⟩ := GoValue.capCong_array_left hcc
+        have hlen : ws.size = vs.size := (capCongList_length hl).symm
+        simp only [normalizeValueForTyFuel, hlen]
+        refine exceptCong.ite_congr (fun _ => rfl) fun _ => ?_
+        refine exceptCong.bind_congr
+          (R := fun (_ : PUnit) (_ : PUnit) => True)
+          (exceptCong.self fun _ => trivial) fun _ _ _ => ?_
+        refine exceptCong.map_congr
+          (normalizeListWith_congr (fun a b hab => ih elem a b hab) hl)
+          fun as bs habs => ?_
+        exact habs
+    | interface _ =>
+      cases v <;>
+        first
+        | (obtain ⟨b, rfl, hb, ho, hle⟩ := GoValue.capCong_slice_left hcc
+           exact hcc)
+        | (obtain ⟨gs, rfl, hf⟩ := GoValue.capCong_struct_left hcc
+           exact hcc)
+        | (obtain ⟨ws, rfl, hl⟩ := GoValue.capCong_array_left hcc
+           exact hcc)
+        | (obtain rfl := GoValue.capCong_eq hcc rfl
+           exact exceptCong.self fun a => GoValue.capCong_refl a)
+    | funcType params results =>
+      cases v <;>
+        first
+        | (obtain ⟨b, rfl, _, _, _⟩ := GoValue.capCong_slice_left hcc
+           exact rfl)
+        | (obtain ⟨gs, rfl, _⟩ := GoValue.capCong_struct_left hcc
+           exact rfl)
+        | (obtain ⟨ws, rfl, _⟩ := GoValue.capCong_array_left hcc
+           exact rfl)
+        | (obtain rfl := GoValue.capCong_eq hcc rfl
+           exact exceptCong.self fun a => GoValue.capCong_refl a)
+    | defined name =>
+      simp only [normalizeValueForTyFuel, htypes]
+      cases hlook : TypeEnv.lookup σ₁.types name with
+      | none => exact rfl
+      | some td =>
+        cases td with
+        | alias target => exact ih target v w hcc
+        | defined target => exact ih target v w hcc
+        | unsupported _ => exact rfl
+        | interfaceDef _ => exact rfl
+        | struct fields =>
+          cases v <;>
+            first
+            | (obtain ⟨b, rfl, _, _, _⟩ := GoValue.capCong_slice_left hcc
+               exact rfl)
+            | (obtain ⟨ws, rfl, _⟩ := GoValue.capCong_array_left hcc
+               exact rfl)
+            | (obtain rfl := GoValue.capCong_eq hcc rfl
+               exact exceptCong.self fun a => GoValue.capCong_refl a)
+            | skip
+          case struct t fs =>
+            obtain ⟨gs, rfl, hf⟩ := GoValue.capCong_struct_left hcc
+            have hlen : gs.size = fs.size := (capCongFields_length hf).symm
+            simp only [normalizeStructValueWith, hlen]
+            refine exceptCong.ite_congr (fun _ => rfl) fun _ => ?_
+            refine exceptCong.bind_congr
+              (R := fun (_ : PUnit) (_ : PUnit) => True)
+              (exceptCong.self fun _ => trivial) fun _ _ _ => ?_
+            refine exceptCong.ite_congr (fun _ => rfl) fun _ => ?_
+            refine exceptCong.bind_congr
+              (R := fun (_ : PUnit) (_ : PUnit) => True)
+              (exceptCong.self fun _ => trivial) fun _ _ _ => ?_
+            refine exceptCong.map_congr
+              (normalizeFieldsWith_congr
+                (fun ty a b hab => ih ty a b hab) fields.toList hf)
+              fun as bs habs => ?_
+            exact ⟨rfl, habs⟩
+    | unsupported _ => exact rfl
+    | bool => exact hcc
+    | string => exact hcc
+    | slice _ => exact hcc
+    | map _ _ => exact hcc
+    | pointer _ => exact hcc
+
+theorem normalizeValueForTy_congr {σ₁ σ₂ : ExecState}
+    (htypes : σ₂.types = σ₁.types) {ty : Ty} {v w : GoValue}
+    (hcc : GoValue.capCong v w) :
+    exceptCong GoValue.capCong (normalizeValueForTy σ₁ ty v)
+      (normalizeValueForTy σ₂ ty w) := by
+  unfold normalizeValueForTy
+  exact normalizeValueForTyFuel_congr htypes _ ty v w hcc
+
+/-! Right-sided inversions (the catch-all arms of `coerceStoredValue`
+case on the OLD/NEW pair, so the third value's constructor must be read
+off from the right). -/
+
+theorem GoValue.capCong_eq_right {v w : GoValue} (h : GoValue.capCong v w)
+    (hw : GoValue.isCapStructural w = false) : v = w := by
+  cases v <;> cases w <;>
+    first
+    | rfl
+    | exact h
+    | exact GoValue.noConfusion h
+    | exact Bool.noConfusion hw
+
+theorem GoValue.capCong_struct_right {t : TypeId} {gs : Array (String × GoValue)}
+    {v : GoValue} (h : GoValue.capCong v (.struct t gs)) :
+    ∃ fs, v = .struct t fs ∧ capCongFields fs.toList gs.toList := by
+  cases v <;>
+    first
+    | (obtain ⟨rfl, hf⟩ := h; exact ⟨_, rfl, hf⟩)
+    | exact GoValue.noConfusion h
+
+theorem GoValue.capCong_array_right {ws : Array GoValue} {v : GoValue}
+    (h : GoValue.capCong v (.array ws)) :
+    ∃ vs, v = .array vs ∧ capCongList vs.toList ws.toList := by
+  cases v <;>
+    first
+    | exact ⟨_, rfl, h⟩
+    | exact GoValue.noConfusion h
+
+set_option maxHeartbeats 1600000 in
+/-- Stored-value coercion congruence along `capCong` (the OLD cell value
+is fixed — both runs read the same cell below `nextAddr`). -/
+theorem coerceStoredValue_congr :
+    ∀ (old v : GoValue) {w : GoValue}, GoValue.capCong v w →
+      exceptCong GoValue.capCong (coerceStoredValue old v)
+        (coerceStoredValue old w) := by
+  refine fun old v => coerceStoredValue.induct
+    (motive_1 := fun old v => ∀ {w}, GoValue.capCong v w →
+      exceptCong GoValue.capCong (coerceStoredValue old v)
+        (coerceStoredValue old w))
+    (motive_2 := fun oldFs vFs => ∀ {wFs}, capCongFields vFs wFs →
+      exceptCong (fun a b : Array (String × GoValue) =>
+          capCongFields a.toList b.toList)
+        (coerceStruct oldFs vFs) (coerceStruct oldFs wFs))
+    (motive_3 := fun oldL vL => ∀ {wL}, capCongList vL wL →
+      exceptCong (fun a b : Array GoValue => capCongList a.toList b.toList)
+        (coerceArray oldL vL) (coerceArray oldL wL))
+    ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ old v
+  · -- int / int
+    intro iv k v' k' w hcc
+    obtain rfl := GoValue.capCong_eq hcc rfl
+    exact rfl
+  · -- array / array, size mismatch
+    intro o n hne w hcc
+    obtain ⟨ws, rfl, hl⟩ := GoValue.capCong_array_left hcc
+    have hlen : ws.size = n.size := (capCongList_length hl).symm
+    simp only [coerceStoredValue, hlen]
+    exact exceptCong.ite_congr (fun _ => rfl) fun hno => absurd hne hno
+  · -- array / array, sizes agree
+    intro o n hne ih w hcc
+    obtain ⟨ws, rfl, hl⟩ := GoValue.capCong_array_left hcc
+    have hlen : ws.size = n.size := (capCongList_length hl).symm
+    simp only [coerceStoredValue, hlen]
+    refine exceptCong.ite_congr (fun hyes => absurd hyes hne) fun _ => ?_
+    exact exceptCong.map_congr (ih hl) fun as bs habs => habs
+  · -- struct / struct, type mismatch
+    intro ot ofs nt nfs hne w hcc
+    obtain ⟨gs, rfl, hf⟩ := GoValue.capCong_struct_left hcc
+    simp only [coerceStoredValue]
+    exact exceptCong.ite_congr (fun _ => rfl) fun hno => absurd hne hno
+  · -- struct / struct, field-count mismatch
+    intro ot ofs nt nfs hne hsz w hcc
+    obtain ⟨gs, rfl, hf⟩ := GoValue.capCong_struct_left hcc
+    have hlen : gs.size = nfs.size := (capCongFields_length hf).symm
+    simp only [coerceStoredValue, hlen]
+    refine exceptCong.ite_congr (fun hyes => absurd hyes hne) fun _ => ?_
+    exact exceptCong.ite_congr (fun _ => rfl) fun hno => absurd hsz hno
+  · -- struct / struct, aligned
+    intro ot ofs nt nfs hne hsz ih w hcc
+    obtain ⟨gs, rfl, hf⟩ := GoValue.capCong_struct_left hcc
+    have hlen : gs.size = nfs.size := (capCongFields_length hf).symm
+    simp only [coerceStoredValue, hlen]
+    refine exceptCong.ite_congr (fun hyes => absurd hyes hne) fun _ => ?_
+    refine exceptCong.ite_congr (fun hyes => absurd hyes hsz) fun _ => ?_
+    refine exceptCong.map_congr (ih hf) fun as bs habs => ?_
+    exact ⟨rfl, habs⟩
+  · -- catch-all: the value passes through
+    intro t x hint harr hstruct w hcc
+    have hx : coerceStoredValue t x = pure x := by
+      rw [coerceStoredValue.eq_def]
+      split
+      · exact (hint _ _ _ _ rfl rfl).elim
+      · exact (harr _ _ rfl rfl).elim
+      · exact (hstruct _ _ _ _ rfl rfl).elim
+      · rfl
+    have hw : coerceStoredValue t w = pure w := by
+      rw [coerceStoredValue.eq_def]
+      split
+      · obtain rfl := GoValue.capCong_eq_right hcc rfl
+        exact (hint _ _ _ _ rfl rfl).elim
+      · obtain ⟨vs, rfl, _⟩ := GoValue.capCong_array_right hcc
+        exact (harr _ _ rfl rfl).elim
+      · obtain ⟨fs, rfl, _⟩ := GoValue.capCong_struct_right hcc
+        exact (hstruct _ _ _ _ rfl rfl).elim
+      · rfl
+    rw [hx, hw]
+    exact hcc
+  · -- coerceArray cons
+    intro ov orest nv nrest ih1 ih3 wL hl
+    cases wL with
+    | nil => exact hl.elim
+    | cons wv wrest =>
+      obtain ⟨hvw, hrest⟩ := hl
+      simp only [coerceArray]
+      refine exceptCong.bind_congr (ih1 hvw) fun a b hab => ?_
+      refine exceptCong.bind_congr (ih3 hrest) fun as bs habs => ?_
+      show capCongList (#[a] ++ as).toList (#[b] ++ bs).toList
+      rw [Array.toList_append, Array.toList_append]
+      exact ⟨hab, habs⟩
+  · -- coerceArray catch-all
+    intro t x hnc wL hl
+    have hx : coerceArray t x = pure #[] := by
+      rw [coerceArray.eq_def]
+      split
+      · exact (hnc _ _ _ _ rfl rfl).elim
+      · rfl
+    have hw : coerceArray t wL = pure #[] := by
+      rw [coerceArray.eq_def]
+      split
+      · rename_i ov orest nv nrest
+        cases x with
+        | nil => exact hl.elim
+        | cons a as => exact (hnc _ _ _ _ rfl rfl).elim
+      · rfl
+    rw [hx, hw]
+    exact trivial
+  · -- coerceStruct cons, name mismatch
+    intro on ov orest nn nv nrest hname _ih1 _ih2 wFs hf
+    cases wFs with
+    | nil => exact hf.elim
+    | cons q wrest =>
+      obtain ⟨m, wv⟩ := q
+      obtain ⟨rfl, hvw, hrest⟩ := hf
+      simp only [coerceStruct]
+      exact exceptCong.ite_congr (fun _ => rfl) fun hno => absurd hname hno
+  · -- coerceStruct cons, names equal
+    intro on ov orest nn nv nrest hname ih1 ih2 wFs hf
+    cases wFs with
+    | nil => exact hf.elim
+    | cons q wrest =>
+      obtain ⟨m, wv⟩ := q
+      obtain ⟨rfl, hvw, hrest⟩ := hf
+      simp only [coerceStruct]
+      refine exceptCong.ite_congr (fun hyes => absurd hyes hname) fun _ => ?_
+      refine exceptCong.bind_congr
+        (R := fun (_ : PUnit) (_ : PUnit) => True)
+        (exceptCong.self fun _ => trivial) fun _ _ _ => ?_
+      refine exceptCong.bind_congr (ih1 hvw) fun a b hab => ?_
+      refine exceptCong.bind_congr (ih2 hrest) fun as bs habs => ?_
+      show capCongFields (#[(on, a)] ++ as).toList (#[(on, b)] ++ bs).toList
+      rw [Array.toList_append, Array.toList_append]
+      exact ⟨rfl, hab, habs⟩
+  · -- coerceStruct catch-all
+    intro t x hnc wFs hf
+    have hx : coerceStruct t x = pure #[] := by
+      rw [coerceStruct.eq_def]
+      split
+      · exact (hnc _ _ _ _ _ _ rfl rfl).elim
+      · rfl
+    have hw : coerceStruct t wFs = pure #[] := by
+      rw [coerceStruct.eq_def]
+      split
+      · rename_i on ov orest nn nv nrest
+        cases x with
+        | nil => exact hf.elim
+        | cons a as =>
+          obtain ⟨an, av⟩ := a
+          exact (hnc _ _ _ _ _ _ rfl rfl).elim
+      · rfl
+    rw [hx, hw]
+    exact trivial
+
+/-! #### Store congruence: the final spill store cannot depend on the cap -/
+
+/-- `ForInStep` congruence: same step kind, related payloads. -/
+def forInStepCong {β₁ β₂ : Type} (R : β₁ → β₂ → Prop) :
+    ForInStep β₁ → ForInStep β₂ → Prop
+  | .yield y₁, .yield y₂ => R y₁ y₂
+  | .done y₁, .done y₂ => R y₁ y₂
+  | _, _ => False
+
+/-- Generic `forIn` congruence over `Except` for related loop states. -/
+theorem forIn_congr_except {α β₁ β₂ : Type} {R : β₁ → β₂ → Prop}
+    {body₁ : α → β₁ → Except GoError (ForInStep β₁)}
+    {body₂ : α → β₂ → Except GoError (ForInStep β₂)}
+    (hbody : ∀ a b₁ b₂, R b₁ b₂ →
+      exceptCong (forInStepCong R) (body₁ a b₁) (body₂ a b₂)) :
+    ∀ (l : List α) {b₁ b₂}, R b₁ b₂ →
+      exceptCong R (forIn l b₁ body₁) (forIn l b₂ body₂) := by
+  intro l
+  induction l with
+  | nil =>
+    intro b₁ b₂ hb
+    rw [List.forIn_nil, List.forIn_nil]
+    exact hb
+  | cons a as ih =>
+    intro b₁ b₂ hb
+    rw [List.forIn_cons, List.forIn_cons]
+    refine exceptCong.bind_congr (hbody a b₁ b₂ hb) fun s₁ s₂ hs => ?_
+    cases s₁ with
+    | done y₁ =>
+      cases s₂ with
+      | done y₂ => exact hs
+      | yield y₂ => exact hs.elim
+    | yield y₁ =>
+      cases s₂ with
+      | done y₂ => exact hs.elim
+      | yield y₂ => exact ih hs
+
+@[inherit_doc forIn_congr_except]
+theorem forIn_congr_except_array {α β₁ β₂ : Type} {R : β₁ → β₂ → Prop}
+    {body₁ : α → β₁ → Except GoError (ForInStep β₁)}
+    {body₂ : α → β₂ → Except GoError (ForInStep β₂)}
+    (hbody : ∀ a b₁ b₂, R b₁ b₂ →
+      exceptCong (forInStepCong R) (body₁ a b₁) (body₂ a b₂))
+    (l : Array α) {b₁ b₂ : _} (hb : R b₁ b₂) :
+    exceptCong R (forIn l b₁ body₁) (forIn l b₂ body₂) := by
+  rw [← Array.forIn_toList, ← Array.forIn_toList]
+  exact forIn_congr_except hbody l.toList hb
+
+set_option maxHeartbeats 800000 in
+/-- `StructFields.set` congruence: the fields are fixed (loaded from the
+shared cell), only the inserted value varies up to `capCong`. -/
+theorem StructFields.set_congr {fields : Array (String × GoValue)}
+    {needle : String} {v w : GoValue} (hcc : GoValue.capCong v w) :
+    exceptCong (fun a b : Array (String × GoValue) =>
+        capCongFields a.toList b.toList)
+      (StructFields.set fields needle v) (StructFields.set fields needle w) := by
+  unfold StructFields.set
+  refine exceptCong.bind_congr
+    (R := fun (r₁ r₂ : MProd Bool (Array (String × GoValue))) =>
+      r₁.fst = r₂.fst ∧ capCongFields r₁.snd.toList r₂.snd.toList)
+    (forIn_congr_except_array ?_ fields ⟨rfl, trivial⟩) fun r₁ r₂ hr => ?_
+  · intro p r₁ r₂ hr
+    obtain ⟨hfnd, hout⟩ := hr
+    obtain ⟨name, old⟩ := p
+    dsimp only
+    by_cases hn : (name == needle) = true
+    · rw [if_pos hn, if_pos hn]
+      have hpush : capCongFields (r₁.snd.push (name, v)).toList
+          (r₂.snd.push (name, w)).toList := by
+        rw [Array.toList_push, Array.toList_push]
+        exact capCongFields_append hout ⟨rfl, hcc, trivial⟩
+      exact ⟨rfl, hpush⟩
+    · rw [if_neg hn, if_neg hn]
+      have hpush : capCongFields (r₁.snd.push (name, old)).toList
+          (r₂.snd.push (name, old)).toList := by
+        rw [Array.toList_push, Array.toList_push]
+        exact capCongFields_append hout ⟨rfl, GoValue.capCong_refl old, trivial⟩
+      exact ⟨hfnd, hpush⟩
+  · obtain ⟨f₁, o₁⟩ := r₁
+    obtain ⟨f₂, o₂⟩ := r₂
+    obtain ⟨hfnd, hout⟩ := hr
+    dsimp only at hfnd hout ⊢
+    subst hfnd
+    by_cases hf : f₁ = true
+    · rw [if_pos hf, if_pos hf]
+      exact hout
+    · rw [if_neg hf, if_neg hf]
+      exact rfl
+
+theorem arraySet_congr {values : Array GoValue} {i : Int} {v w : GoValue}
+    (hcc : GoValue.capCong v w) :
+    exceptCong (fun a b : Array GoValue => capCongList a.toList b.toList)
+      (arraySet values i v) (arraySet values i w) := by
+  unfold arraySet
+  refine exceptCong.bind_congr (R := Eq) (exceptCong.self fun _ => rfl)
+    fun n n' hn => ?_
+  subst hn
+  cases hidx : values[n]? with
+  | none =>
+    show exceptCong _ (indexOutOfRangePanic i values.size)
+      (indexOutOfRangePanic i values.size)
+    exact exceptCong.self fun a => capCongList_refl a.toList
+  | some old =>
+    refine exceptCong.bind_congr (coerceStoredValue_congr old v hcc)
+      fun a b hab => ?_
+    show capCongList (values.set! n a).toList (values.set! n b).toList
+    rw [Array.set!, Array.set!, Array.toList_setIfInBounds,
+      Array.toList_setIfInBounds]
+    exact capCongList_set hab
+
+set_option maxHeartbeats 1600000 in
+/-- **Store class-congruence**: two states agreeing on `types` and on the
+target path's root cell, storing `capCong`-related values, succeed
+together, panic together, or fail (non-panic) together. This is the fact
+that makes the spill store's outcome class independent of the fresh
+backing (which lives at `nextAddr`, above every well-formed target) and
+of the result slice's capacity. -/
+theorem storeLoc_congr {σ₁ σ₂ : ExecState} (htypes : σ₂.types = σ₁.types) :
+    ∀ {l : Loc} {v w : GoValue},
+      Heap.lookup σ₂.heap (Loc.rootLoc l) = Heap.lookup σ₁.heap (Loc.rootLoc l) →
+      GoValue.capCong v w →
+      exceptCong (fun _ _ : ExecState => True) (storeLoc σ₁ l v)
+        (storeLoc σ₂ l w) := by
+  intro l
+  induction l with
+  | base a =>
+    intro v w hl hcc
+    have hl' : Heap.lookup σ₂.heap (.base a) = Heap.lookup σ₁.heap (.base a) := hl
+    simp only [storeLoc]
+    rw [hl']
+    cases hlook : Heap.lookup σ₁.heap (.base a) with
+    | none => exact trivial
+    | some cell =>
+      dsimp only
+      cases hdt : cell.declaredTy with
+      | some ty =>
+        dsimp only
+        refine exceptCong.bind_congr (normalizeValueForTy_congr htypes hcc)
+          fun _ _ _ => ?_
+        exact trivial
+      | none =>
+        dsimp only
+        refine exceptCong.bind_congr (coerceStoredValue_congr _ _ hcc)
+          fun _ _ _ => ?_
+        exact trivial
+  | field b tid fname ih =>
+    intro v w hl hcc
+    simp only [storeLoc]
+    rw [loadLoc_root_congr (l := b) hl]
+    cases hload : loadLoc σ₁ b with
+    | error e => exact rfl
+    | ok bv =>
+      cases bv <;> try exact rfl
+      case struct actual fields =>
+        refine exceptCong.of_ok_bind ?_
+        refine exceptCong.ite_congr (fun _ => rfl) fun _ => ?_
+        refine exceptCong.bind_congr
+          (R := fun (_ : PUnit) (_ : PUnit) => True)
+          (exceptCong.self fun _ => trivial) fun _ _ _ => ?_
+        refine exceptCong.bind_congr (StructFields.set_congr hcc)
+          fun u₁ u₂ hu => ?_
+        exact ih hl ⟨rfl, hu⟩
+  | index b i ih =>
+    intro v w hl hcc
+    simp only [storeLoc]
+    rw [loadLoc_root_congr (l := b) hl]
+    cases hload : loadLoc σ₁ b with
+    | error e => exact rfl
+    | ok bv =>
+      cases bv <;> try exact rfl
+      case array values =>
+        refine exceptCong.of_ok_bind ?_
+        refine exceptCong.bind_congr (arraySet_congr hcc) fun a₁ a₂ ha => ?_
+        exact ih hl ha
+
+/-! #### Loop-shape facts for the spill path -/
+
+/-- A loop whose every successful step yields a one-element push grows
+the accumulator by exactly the list length. -/
+theorem forIn_yield_push_size {α : Type}
+    {body : α → Array GoValue → Except GoError (ForInStep (Array GoValue))}
+    (hshape : ∀ a r out, body a r = .ok out → ∃ v, out = .yield (r.push v)) :
+    ∀ (l : List α) {acc out : Array GoValue},
+      forIn l acc body = .ok out → out.size = acc.size + l.length := by
+  intro l
+  induction l with
+  | nil =>
+    intro acc out h
+    rw [List.forIn_nil] at h
+    obtain rfl : acc = out := by simpa [pure_eq_ok] using h
+    simp
+  | cons a as ih =>
+    intro acc out h
+    rw [List.forIn_cons, bind_eq_ok] at h
+    obtain ⟨s, hs, hrest⟩ := h
+    obtain ⟨v, rfl⟩ := hshape a acc s hs
+    cases (rfl : ForInStep.yield (acc.push v) = .yield (acc.push v)) with
+    | _ =>
+      simp only at hrest
+      have := ih hrest
+      simp only [Array.size_push] at this
+      simp [this, List.length_cons]
+      omega
+
+/-- A loop whose body always succeeds (with a yield) succeeds. -/
+theorem forIn_ok_of_body_ok {α β : Type}
+    {body : α → β → Except GoError (ForInStep β)}
+    (hok : ∀ a b, ∃ r, body a b = .ok (.yield r)) :
+    ∀ (l : List α) (acc : β), ∃ out, forIn l acc body = .ok out := by
+  intro l
+  induction l with
+  | nil => intro acc; exact ⟨acc, by rw [List.forIn_nil]; rfl⟩
+  | cons a as ih =>
+    intro acc
+    obtain ⟨r, hr⟩ := hok a acc
+    obtain ⟨out, hout⟩ := ih r
+    refine ⟨out, ?_⟩
+    rw [List.forIn_cons, hr]
+    exact hout
+
+/-- A successful nonempty loop's first step succeeded. -/
+theorem forIn_head_ok {α β : Type}
+    {body : α → β → Except GoError (ForInStep β)} {a : α} {l : List α}
+    {acc : β} {out : β} (h : forIn (a :: l) acc body = .ok out) :
+    ∃ r, body a acc = .ok r := by
+  rw [List.forIn_cons, bind_eq_ok] at h
+  obtain ⟨r, hr, _⟩ := h
+  exact ⟨r, hr⟩
+
+/-- Padding defaults are derivable from any normalization success: if
+SOME value normalizes at `ty` (at the same fuel), `ty` has a default.
+The two walks refuse the same type shapes (`unsupported`/unknown
+defined/interface-def), so a normalizable type is defaultable. -/
+theorem defaultValueFuel_ok_of_normalize_ok {σ : ExecState} :
+    ∀ (fuel : Nat) (ty : Ty) (v r : GoValue),
+      normalizeValueForTyFuel fuel σ ty v = .ok r →
+      ∃ d, defaultValueFuel fuel σ ty = .ok d := by
+  intro fuel
+  induction fuel with
+  | zero => intro ty v r h; simp [normalizeValueForTyFuel] at h
+  | succ f ih =>
+    intro ty v r h
+    cases ty with
+    | int kind =>
+      exact ⟨.int 0 kind, by simp [defaultValueFuel, pure, Except.pure]⟩
+    | bool =>
+      exact ⟨.bool false, by simp [defaultValueFuel, pure, Except.pure]⟩
+    | string =>
+      exact ⟨.string GoString.empty, by
+        simp [defaultValueFuel, pure, Except.pure]⟩
+    | slice elem =>
+      exact ⟨.slice { base := none, offset := 0, len := 0, cap := 0 }, by
+        simp [defaultValueFuel, pure, Except.pure]⟩
+    | map kt vt =>
+      exact ⟨.map { base := none }, by
+        simp [defaultValueFuel, pure, Except.pure]⟩
+    | pointer _ =>
+      exact ⟨.nil, by simp [defaultValueFuel, pure, Except.pure]⟩
+    | funcType _ _ =>
+      exact ⟨.nil, by simp [defaultValueFuel, pure, Except.pure]⟩
+    | interface _ =>
+      exact ⟨.nil, by simp [defaultValueFuel, pure, Except.pure]⟩
+    | unsupported _ => simp [normalizeValueForTyFuel] at h
+    | array length elem =>
+      by_cases hlen : length = 0
+      · exact ⟨.array #[], by
+          simp [defaultValueFuel, hlen, pure, Except.pure]⟩
+      · cases v
+        case array values =>
+          simp only [normalizeValueForTyFuel] at h
+          by_cases hsz : (values.size != length) = true
+          · rw [if_pos hsz] at h
+            simp [Bind.bind, Except.bind, stuck_def] at h
+          · rw [if_neg hsz] at h
+            have h' : GoValue.array <$> normalizeListWith
+                (normalizeValueForTyFuel f σ elem) values.toList = .ok r := h
+            have hsz' : values.size = length := by simpa [bne_iff_ne] using hsz
+            cases hvl : values.toList with
+            | nil =>
+              exfalso
+              have h0 : values.size = 0 := congrArg List.length hvl
+              omega
+            | cons v₀ rest =>
+              rw [hvl] at h'
+              rw [map_eq_ok] at h'
+              obtain ⟨arr, harr, _⟩ := h'
+              simp only [normalizeListWith, bind_eq_ok] at harr
+              obtain ⟨head, hhead, _⟩ := harr
+              obtain ⟨d, hd⟩ := ih elem v₀ head hhead
+              exact ⟨.array (Array.replicate length d), by
+                simp [defaultValueFuel, hlen, hd, Bind.bind, Except.bind, pure,
+                  Except.pure]⟩
+        all_goals simp [normalizeValueForTyFuel] at h
+    | defined name =>
+      simp only [normalizeValueForTyFuel] at h
+      cases hlook : TypeEnv.lookup σ.types name with
+      | none => rw [hlook] at h; simp at h
+      | some td =>
+        rw [hlook] at h
+        cases td with
+        | alias target =>
+          obtain ⟨d, hd⟩ := ih target v r h
+          exact ⟨d, by simp [defaultValueFuel, hlook, hd]⟩
+        | defined target =>
+          obtain ⟨d, hd⟩ := ih target v r h
+          exact ⟨d, by simp [defaultValueFuel, hlook, hd]⟩
+        | unsupported _ => simp at h
+        | interfaceDef _ => simp at h
+        | struct fields =>
+          have h' : normalizeStructValueWith (normalizeValueForTyFuel f σ)
+              name fields v = .ok r := h
+          clear h
+          cases v
+          case struct actual fieldsValue =>
+            simp only [normalizeStructValueWith] at h'
+            by_cases hty : (actual != name) = true
+            · rw [if_pos hty] at h'
+              simp [Bind.bind, Except.bind, stuck_def] at h'
+            · rw [if_neg hty] at h'
+              by_cases hsz : (fieldsValue.size != fields.size) = true
+              · rw [if_pos hsz] at h'
+                simp [Bind.bind, Except.bind, stuck_def] at h'
+              · rw [if_neg hsz] at h'
+                have h'' : GoValue.struct name <$> normalizeFieldsWith
+                    (normalizeValueForTyFuel f σ) fields.toList
+                    fieldsValue.toList = .ok r := h'
+                rw [map_eq_ok] at h''
+                obtain ⟨arr, harr, _⟩ := h''
+                suffices haux : ∀ (fds : List FieldDef)
+                    (vals : List (String × GoValue))
+                    (out : Array (String × GoValue)),
+                    normalizeFieldsWith (normalizeValueForTyFuel f σ) fds vals
+                      = .ok out →
+                    vals.length = fds.length →
+                    ∃ ds, defaultFieldsWith (defaultValueFuel f σ) fds = .ok ds by
+                  have hlen : fieldsValue.toList.length = fields.toList.length :=
+                    (by simpa [bne_iff_ne] using hsz :
+                      fieldsValue.size = fields.size)
+                  obtain ⟨ds, hds⟩ := haux fields.toList fieldsValue.toList arr
+                    harr hlen
+                  exact ⟨.struct name ds, by
+                    simp [defaultValueFuel, hlook, hds, map_eq_ok]⟩
+                intro fds
+                induction fds with
+                | nil =>
+                  intro vals out _ _
+                  exact ⟨#[], by simp [defaultFieldsWith, pure, Except.pure]⟩
+                | cons fd fdRest ihf =>
+                  intro vals out hnorm hlen
+                  cases vals with
+                  | nil => simp at hlen
+                  | cons p valRest =>
+                    obtain ⟨pn, pv⟩ := p
+                    simp only [normalizeFieldsWith] at hnorm
+                    by_cases hname : (pn != fd.name) = true
+                    · rw [if_pos hname] at hnorm
+                      simp [Bind.bind, Except.bind, stuck_def] at hnorm
+                    · rw [if_neg hname] at hnorm
+                      have hnorm' : (normalizeValueForTyFuel f σ fd.typ pv >>=
+                          fun head =>
+                            normalizeFieldsWith (normalizeValueForTyFuel f σ)
+                                fdRest valRest >>= fun tail =>
+                              pure (#[(fd.name, head)] ++ tail)) = .ok out := hnorm
+                      rw [bind_eq_ok] at hnorm'
+                      obtain ⟨head, hhead, hrest⟩ := hnorm'
+                      rw [bind_eq_ok] at hrest
+                      obtain ⟨tail, htail, _⟩ := hrest
+                      obtain ⟨d, hd⟩ := ih fd.typ pv head hhead
+                      obtain ⟨ds, hds⟩ := ihf valRest tail htail
+                        (by simpa using hlen)
+                      exact ⟨#[(fd.name, d)] ++ ds, by
+                        simp [defaultFieldsWith, hd, hds, Bind.bind, Except.bind,
+                          pure, Except.pure]⟩
+          all_goals exact absurd h' (by simp [normalizeStructValueWith])
+
+/-- The growth policy never shrinks below the requested length. -/
+theorem appendGrowthCap_ge {oldCap newLen : Nat} (h : oldCap < newLen) :
+    newLen ≤ appendGrowthCap oldCap newLen := by
+  unfold appendGrowthCap
+  rw [if_neg (by omega)]
+  split
+  · omega
+  · split
+    · omega
+    · split
+      · omega
+      · have hloop : ∀ cap, newLen ≤ appendGrowthCap.loop newLen cap := by
+          intro cap
+          fun_induction appendGrowthCap.loop with
+          | case1 c hge => simpa using hge
+          | case2 c hlt ih => exact ih
+        exact hloop oldCap
+
+/-- A valid slice's visible length is below its capacity. -/
+theorem validateSlice_le {sl : SliceValue} {u : Unit}
+    (h : validateSlice sl = .ok u) : sl.len ≤ sl.cap := by
+  unfold validateSlice at h
+  by_cases hlc : sl.len ≤ sl.cap
+  · exact hlc
+  · rw [if_pos (by simpa using Nat.lt_of_not_le hlc)] at h
+    split at h <;> simp_all [Bind.bind, Except.bind, stuck_def] <;>
+      split at h <;> simp_all
+
+/-- The visible-values read returns exactly `len` values. -/
+theorem sliceVisibleValues_size {σ : ExecState} {sl : SliceValue}
+    {vs : Array GoValue} (h : sliceVisibleValues σ sl = .ok vs) :
+    vs.size = sl.len := by
+  unfold sliceVisibleValues at h
+  rw [bind_eq_ok] at h
+  obtain ⟨u, hu, h⟩ := h
+  rw [bind_eq_ok] at h
+  obtain ⟨out, hout, hpure⟩ := h
+  obtain rfl : out = vs := by simpa [pure_eq_ok] using hpure
+  rw [Std.Legacy.Range.forIn_eq_forIn_range'] at hout
+  have hsz := forIn_yield_push_size (body := _)
+    (fun a r o hbody => by
+      simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, true_and] at hbody
+      obtain ⟨l, hl, v, hv, hs⟩ := hbody
+      obtain ⟨_, hs⟩ := hs
+      exact ⟨v, hs.symm⟩) _ hout
+  simpa [List.length_range'] using hsz
+
+/-- `exceptCong.self` strengthened with a success postcondition. -/
+theorem exceptCong.self_post {α : Type} {P : α → Prop} {x : Except GoError α}
+    (h : ∀ a, x = .ok a → P a) :
+    exceptCong (fun a b : α => a = b ∧ P a) x x := by
+  cases x with
+  | ok a => exact ⟨rfl, h a rfl⟩
+  | error e => rfl
+
+/-- Two successes are trivially outcome-congruent. -/
+theorem exceptCong.of_oks {α β : Type} {x : Except GoError α}
+    {y : Except GoError β} (hx : ∃ a, x = .ok a) (hy : ∃ b, y = .ok b) :
+    exceptCong (fun _ _ => True) x y := by
+  obtain ⟨a, rfl⟩ := hx
+  obtain ⟨b, rfl⟩ := hy
+  exact trivial
+
+theorem bind_isOk {α β : Type} {x : Except GoError α}
+    {f : α → Except GoError β} (hx : ∃ a, x = .ok a)
+    (hf : ∀ a, ∃ b, f a = .ok b) : ∃ b, x >>= f = .ok b := by
+  obtain ⟨a, rfl⟩ := hx
+  simpa [Bind.bind, Except.bind] using hf a
+
+set_option maxHeartbeats 1600000 in
+/-- The backing build succeeds/fails in the same class at ANY sufficient
+capacity: the normalize loop is capacity-independent, the capacity check
+passes at both (both ≥ the element count), and the padding default is
+derivable from any element's normalize success (`e` is nonempty on the
+spill path). -/
+theorem buildAppendBackingValue_congr {σ : ExecState} {elem : Ty}
+    {o e : Array GoValue} {cap₁ cap₂ : Nat}
+    (h₁ : o.size + e.size ≤ cap₁) (h₂ : o.size + e.size ≤ cap₂)
+    (hne : e.size ≠ 0) :
+    exceptCong (fun _ _ : GoValue => True)
+      (buildAppendBackingValue σ elem o e cap₁)
+      (buildAppendBackingValue σ elem o e cap₂) := by
+  unfold buildAppendBackingValue
+  refine exceptCong.bind_congr
+    (exceptCong.self_post (P := fun out : Array GoValue =>
+      out.size = o.size + e.size ∧ ∃ d, defaultValue σ elem = .ok d) ?_)
+    fun values values' hv => ?_
+  · intro out hout
+    rw [← Array.forIn_toList] at hout
+    constructor
+    · have hsz := forIn_yield_push_size (body := _)
+        (fun a r s hbody => by
+          simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, true_and] at hbody
+          obtain ⟨v, hv, hs⟩ := hbody
+          obtain ⟨_, hs⟩ := hs
+          exact ⟨v, hs.symm⟩) _ hout
+      have h' : out.size = 0 + (o ++ e).size := hsz
+      rw [Array.size_append] at h'
+      omega
+    · have hnil : (o ++ e).toList ≠ [] := by
+        intro hcontra
+        have hz : (o ++ e).size = 0 := congrArg List.length hcontra
+        rw [Array.size_append] at hz
+        omega
+      obtain ⟨v₀, rest, hcons⟩ := List.exists_cons_of_ne_nil hnil
+      rw [hcons] at hout
+      obtain ⟨r, hr⟩ := forIn_head_ok hout
+      simp only [bind_eq_ok, pure_eq_ok] at hr
+      obtain ⟨nv, hnv, _⟩ := hr
+      unfold normalizeValueForTy at hnv
+      obtain ⟨d, hd⟩ := defaultValueFuel_ok_of_normalize_ok _ _ _ _ hnv
+      exact ⟨d, by unfold defaultValue; exact hd⟩
+  · obtain ⟨rfl, hsz, d, hd⟩ := hv
+    rw [if_neg (by omega), if_neg (by omega)]
+    refine exceptCong.of_oks ?_ ?_ <;>
+      · refine bind_isOk ⟨PUnit.unit, rfl⟩ fun _ => ?_
+        refine bind_isOk ?_ fun vs => ⟨.array vs, rfl⟩
+        rw [Std.Legacy.Range.forIn_eq_forIn_range']
+        exact forIn_ok_of_body_ok
+          (fun a b => ⟨b.push d, by
+            simp [hd, Bind.bind, Except.bind, pure, Except.pure]⟩) _ _
+
+set_option maxHeartbeats 3200000 in
+/-- **The appendSlice ∀-choices lemma** (spill obstruction resolved under
+well-formedness): under `StateWf` and bounded operands, the outcome CLASS
+of the appendSlice apply step is the same under every choice stream. The
+choice only sizes the fresh backing (allocated ABOVE every well-formed
+location) and the result slice's `cap` — `storeLoc_congr` transports the
+final store across both. -/
+theorem applyStmtOp_appendSlice_congr {σ : ExecState} {elem : Ty} {nt : Nat}
+    {vs : List GoValue} (_hw : StateWf σ) (hb : goValueListSup vs ≤ σ.nextAddr)
+    (ch₁ ch₂ : Choices) :
+    exceptCong (fun _ _ : ExecState × Choices => True)
+      (applyStmtOp σ ch₁ (.appendSlice elem) nt vs)
+      (applyStmtOp σ ch₂ (.appendSlice elem) nt vs) := by
+  match vs, hb with
+  | [], _ => exact rfl
+  | [_], _ => exact rfl
+  | [_, _], _ => exact rfl
+  | _ :: _ :: _ :: _ :: _, _ => exact rfl
+  | [tv, sliceV, elemsV], hb =>
+    have htv : GoValue.locSup tv ≤ σ.nextAddr := by
+      simp only [goValueListSup] at hb
+      omega
+    simp only [applyStmtOp]
+    refine exceptCong.bind_congr (R := Eq) (exceptCong.self fun _ => rfl)
+      fun slice slice' hs => ?_
+    subst hs
+    refine exceptCong.bind_congr (R := Eq) (exceptCong.self fun _ => rfl)
+      fun elems elems' hs => ?_
+    subst hs
+    refine exceptCong.bind_congr
+      (exceptCong.self_post (P := fun _ : Unit => slice.len ≤ slice.cap)
+        (fun u hu => validateSlice_le hu)) fun _ _ hvs => ?_
+    obtain ⟨_, hslice_le⟩ := hvs
+    refine exceptCong.bind_congr (R := Eq) (exceptCong.self fun _ => rfl)
+      fun _ _ _ => ?_
+    refine exceptCong.bind_congr (R := Eq) (exceptCong.self fun _ => rfl)
+      fun elemValues elemValues' hs => ?_
+    subst hs
+    refine exceptCong.bind_congr
+      (exceptCong.self_post (P := fun l : Loc => Loc.locSup l ≤ σ.nextAddr)
+        (fun l hl => Nat.le_trans (valueAsLoc_locSup hl) htv))
+      fun tloc tloc' htl => ?_
+    obtain ⟨heq, htloc⟩ := htl
+    subst heq
+    refine exceptCong.ite_congr (fun _ => ?_) (fun hspill => ?_)
+    · -- in-place: choice-free, streams pass through untouched
+      refine exceptCong.bind_congr (R := Eq) (exceptCong.self fun _ => rfl)
+        fun st st' hs => ?_
+      subst hs
+      refine exceptCong.bind_congr (R := Eq) (exceptCong.self fun _ => rfl)
+        fun σ' σ'' hs => ?_
+      subst hs
+      exact trivial
+    · -- spill
+      refine exceptCong.bind_congr
+        (exceptCong.self_post (P := fun o : Array GoValue => o.size = slice.len)
+          (fun o ho => sliceVisibleValues_size ho))
+        fun oldValues oldValues' ho => ?_
+      obtain ⟨heq, holdsz⟩ := ho
+      subst heq
+      rcases hc1 : Choices.consume ch₁ 8 with ⟨e₁, r₁⟩
+      rcases hc2 : Choices.consume ch₂ 8 with ⟨e₂, r₂⟩
+      have hgrow : slice.len + elemValues.size
+          ≤ appendGrowthCap slice.cap (slice.len + elemValues.size) :=
+        appendGrowthCap_ge (by omega)
+      have hne : elemValues.size ≠ 0 := by omega
+      refine exceptCong.bind_congr
+        (buildAppendBackingValue_congr (by omega) (by omega) hne)
+        fun b₁ b₂ _ => ?_
+      have hkey : (Loc.base ⟨σ.nextAddr⟩ : Loc) ≠ Loc.rootLoc tloc := by
+        intro hkeq
+        have hroot := congrArg Loc.rootBase hkeq
+        simp only [Loc.rootBase, Loc.rootLoc] at hroot
+        simp only [Loc.locSup] at htloc
+        omega
+      refine exceptCong.bind_congr
+        (storeLoc_congr ?_ (l := tloc) ?_ ?_)
+        fun _ _ _ => ?_
+      · exact rfl
+      · show Heap.lookup (Heap.set σ.heap (.base ⟨σ.nextAddr⟩) _)
+            (Loc.rootLoc tloc)
+          = Heap.lookup (Heap.set σ.heap (.base ⟨σ.nextAddr⟩) _)
+            (Loc.rootLoc tloc)
+        rw [Heap.lookup_set_ne hkey, Heap.lookup_set_ne hkey]
+      · exact ⟨rfl, rfl, rfl⟩
+      · exact trivial
+
+/-- The full wide-op table's outcome class is choice-independent under
+well-formedness: everything but appendSlice is choices-free by
+construction, and appendSlice is the lemma above. -/
+theorem applyStmtOp_congr_any_ch {σ : ExecState} {op : StmtOp} {nt : Nat}
+    {vs : List GoValue} (hw : StateWf σ) (hb : goValueListSup vs ≤ σ.nextAddr)
+    (ch₁ ch₂ : Choices) :
+    exceptCong (fun _ _ : ExecState × Choices => True)
+      (applyStmtOp σ ch₁ op nt vs) (applyStmtOp σ ch₂ op nt vs) := by
+  cases op
+  case appendSlice elem => exact applyStmtOp_appendSlice_congr hw hb ch₁ ch₂
+  all_goals
+    refine exceptCong.bind_congr (R := Eq) (exceptCong.self fun _ => rfl)
+      fun a a' ha => ?_
+  all_goals exact trivial
+
+/-- The recorded missing lemma, closed: a wide op that succeeds under one
+stream succeeds under EVERY stream (under `StateWf` + bounded operands). -/
+theorem applyStmtOp_ok_any_ch_wf {σ : ExecState} {ch₀ : Choices}
+    {op : StmtOp} {nt : Nat} {vs : List GoValue} {r : ExecState × Choices}
+    (hw : StateWf σ) (hb : goValueListSup vs ≤ σ.nextAddr)
+    (h : applyStmtOp σ ch₀ op nt vs = .ok r) :
+    ∀ ch : Choices, ∃ r', applyStmtOp σ ch op nt vs = .ok r' := by
+  intro ch
+  obtain ⟨r', hr', _⟩ :=
+    exceptCong.ok_left (applyStmtOp_congr_any_ch hw hb ch₀ ch) h
+  exact ⟨r', hr'⟩
+
+/-- Panic twin: a wide op that panics under one stream panics under every
+stream. -/
+theorem applyStmtOp_panic_any_ch_wf {σ : ExecState} {ch₀ : Choices}
+    {op : StmtOp} {nt : Nat} {vs : List GoValue} {m : String}
+    (hw : StateWf σ) (hb : goValueListSup vs ≤ σ.nextAddr)
+    (h : applyStmtOp σ ch₀ op nt vs = .error (.panic m)) :
+    ∀ ch : Choices, ∃ m', applyStmtOp σ ch op nt vs = .error (.panic m') :=
+  fun ch => exceptCong.panic_left (applyStmtOp_congr_any_ch hw hb ch₀ ch) h
+
+/-! ### Completeness at EVERY stream, under `MachineWf` -/
+
+/-- Under the wf typing component, a snapshot entry's variables always
+bind: the keys/values are self-normalized, so `bindIterVars`' per-pick
+normalization succeeds (returning them unchanged) at every pick. -/
+theorem bindIterVars_ok_of_normal {env : LocalEnv} {σ : ExecState}
+    {kv vv : Option String} {kt vt : Ty} {key value : GoValue}
+    (hk : isNormalForTy σ.types kt key = true)
+    (hv : isNormalForTy σ.types vt value = true) :
+    ∃ env' σ', bindIterVars env σ kv vv kt vt key value = .ok (env', σ') := by
+  unfold bindIterVars
+  cases kv with
+  | none =>
+    cases vv with
+    | none => exact ⟨env, σ, rfl⟩
+    | some nv =>
+      refine ⟨env.declare nv (.base ⟨σ.nextAddr⟩),
+        { σ with
+          heap := Heap.set σ.heap (.base ⟨σ.nextAddr⟩)
+            { declaredTy := some vt, value := value },
+          nextAddr := σ.nextAddr + 1 }, ?_⟩
+      simp [isNormalForTy_sound hv, Bind.bind, Except.bind, ExecState.alloc,
+        ExecState.freshLoc, pure, Except.pure]
+  | some nk =>
+    cases vv with
+    | none =>
+      refine ⟨env.declare nk (.base ⟨σ.nextAddr⟩),
+        { σ with
+          heap := Heap.set σ.heap (.base ⟨σ.nextAddr⟩)
+            { declaredTy := some kt, value := key },
+          nextAddr := σ.nextAddr + 1 }, ?_⟩
+      simp [isNormalForTy_sound hk, Bind.bind, Except.bind, ExecState.alloc,
+        ExecState.freshLoc, pure, Except.pure]
+    | some nv =>
+      have hv' : normalizeValueForTy
+          { σ with
+            heap := Heap.set σ.heap (.base ⟨σ.nextAddr⟩)
+              { declaredTy := some kt, value := key },
+            nextAddr := σ.nextAddr + 1 } vt value = .ok value :=
+        isNormalForTy_sound hv
+      refine ⟨(env.declare nk (.base ⟨σ.nextAddr⟩)).declare nv
+          (.base ⟨σ.nextAddr + 1⟩),
+        { σ with
+          heap := Heap.set
+            (Heap.set σ.heap (.base ⟨σ.nextAddr⟩)
+              { declaredTy := some kt, value := key })
+            (.base ⟨σ.nextAddr + 1⟩)
+            { declaredTy := some vt, value := value },
+          nextAddr := σ.nextAddr + 1 + 1 }, ?_⟩
+      simp [isNormalForTy_sound hk, hv', Bind.bind, Except.bind,
+        ExecState.alloc, ExecState.freshLoc, pure, Except.pure]
+
+set_option maxHeartbeats 1600000 in
+set_option linter.unusedSimpArgs false in
+/-- `step_complete_any_wf`, ∃-packaged (the per-case scripts close a
+single existential over the whole result). -/
+theorem step_complete_any_wf_aux {c : Config} {σ : ExecState} {c' : Config}
+    {σ' : ExecState} (h : Step c σ c' σ') (hwf : MachineWf σ c) :
+    ∀ ch : Choices, ∃ out, stepFn σ c ch = .ok out := by
+  obtain ⟨hs, hc, hi⟩ := hwf
+  intro ch
+  cases h
+  case evalStrict e op e₁ rest env k hplan =>
+    cases e <;>
+      first
+        | (simp_all [stepFn, strictPlan]; done)
+        | (rename_i o; cases o <;> (simp_all [stepFn, strictPlan]; done))
+        | (simp only [strictPlan, Option.some.injEq, Prod.mk.injEq] at hplan
+           obtain ⟨rfl, hargs⟩ := hplan
+           simp_all [stepFn, strictPlan])
+  case evalStrictNullary e op v env k hplan happly =>
+    cases e <;>
+      first
+        | (simp_all [stepFn, strictPlan]; done)
+        | (rename_i o; cases o <;> (simp_all [stepFn, strictPlan]; done))
+        | (simp only [strictPlan, Option.some.injEq, Prod.mk.injEq] at hplan
+           obtain ⟨rfl, hargs⟩ := hplan
+           simp_all [stepFn, strictPlan])
+  case evalStrictNullaryPanic e op msg env k hplan happly =>
+    cases e <;>
+      first
+        | (simp_all [stepFn, strictPlan]; done)
+        | (rename_i o; cases o <;> (simp_all [stepFn, strictPlan]; done))
+        | (simp only [strictPlan, Option.some.injEq, Prod.mk.injEq] at hplan
+           obtain ⟨rfl, hargs⟩ := hplan
+           simp_all [stepFn, strictPlan])
+  case stmtOpFirst stmt op nt e rest env k hplan =>
+    cases stmt <;>
+      first
+        | (simp_all [stepFn, stmtPlan, Bind.bind, Except.bind]; done)
+        | (rename_i o; cases o <;>
+            (simp_all [stepFn, stmtPlan, Bind.bind, Except.bind]; done))
+  case stmtOpNullary stmt op nt env k ch₀ ch₁ hplan happly =>
+    obtain ⟨⟨σ₂, ch₂⟩, hr⟩ := applyStmtOp_ok_any_ch_wf hs
+      (by simp [goValueListSup]) happly ch
+    cases stmt <;>
+      first
+        | (simp_all [stepFn, stmtPlan, Bind.bind, Except.bind]; done)
+        | (rename_i o; cases o <;>
+            (simp_all [stepFn, stmtPlan, Bind.bind, Except.bind]; done))
+  case stmtOpApply op nt done v env k ch₀ ch₁ happly =>
+    have hop : goValueListSup (v :: done).reverse ≤ σ.nextAddr := by
+      rw [goValueListSup_reverse]
+      simp only [ConfigWf, Config.locSup, Cont.locSup, goValueListSup,
+        exprListSup, Nat.max_le] at hc
+      simp only [goValueListSup]
+      omega
+    obtain ⟨⟨σ₂, ch₂⟩, hr⟩ := applyStmtOp_ok_any_ch_wf hs hop happly ch
+    simp only [List.reverse_cons] at hr
+    simp [stepFn, hr]
+  case stmtOpApplyPanic op nt done v msg env k ch₀ happly =>
+    have hop : goValueListSup (v :: done).reverse ≤ σ.nextAddr := by
+      rw [goValueListSup_reverse]
+      simp only [ConfigWf, Config.locSup, Cont.locSup, goValueListSup,
+        exprListSup, Nat.max_le] at hc
+      simp only [goValueListSup]
+      omega
+    obtain ⟨m', hm'⟩ := applyStmtOp_panic_any_ch_wf hs hop happly ch
+    simp only [List.reverse_cons] at hm'
+    simp [stepFn, hm']
+  case stmtOpShiftPlain op nt done v e rest env k hle =>
+    simp only [stepFn]
+    rw [if_neg (Nat.not_lt.mpr hle)]
+    exact ⟨_, rfl⟩
+  case mapIterNext keyVar valVar keyTy valTy body remaining idx env env' k
+      hidx hbind =>
+    have hne : ¬remaining.isEmpty = true := by
+      simp only [Array.isEmpty_iff]
+      rintro rfl
+      simp at hidx
+    have hsnap : snapshotEntriesSelfNormalized σ.types keyTy valTy remaining
+        = true := by
+      simp only [Config.itersNormalized, Cont.itersNormalized,
+        Bool.and_eq_true] at hi
+      exact hi.1
+    simp only [stepFn]
+    rw [if_neg hne]
+    rcases hcons : Choices.consume ch remaining.size with ⟨idx', rest'⟩
+    have hlt : idx' < remaining.size := by
+      have hpos : 0 < remaining.size := by
+        have hne' := hne
+        simp only [Array.isEmpty_iff] at hne'
+        exact Array.size_pos_iff.mpr hne'
+      have hb := consume_fst_lt (ch := ch) hpos
+      rw [hcons] at hb
+      exact hb
+    split
+    · rename_i heq
+      rw [Array.getElem?_eq_getElem hlt] at heq
+      cases heq
+    · rename_i key' value' heq
+      rw [Array.getElem?_eq_getElem hlt] at heq
+      have hkv : remaining[idx'] = (key', value') := by simpa using heq
+      have hmem := snapshotEntriesSelfNormalizedList_mem
+        (types := σ.types) (kt := keyTy) (vt := valTy)
+        (l := remaining.toList) hsnap
+        (e := remaining[idx'])
+        (List.mem_of_getElem? (by
+          rw [Array.getElem?_toList]
+          exact Array.getElem?_eq_getElem hlt))
+      rw [hkv] at hmem
+      obtain ⟨env₂, σ₂, hbind₂⟩ := bindIterVars_ok_of_normal
+        (env := env.pushScope) (kv := keyVar) (vv := valVar)
+        hmem.1 hmem.2
+      simp [hbind₂, Bind.bind, Except.bind]
+  case panicUnwind chain k k' hpass =>
+    cases k <;> simp_all [stepFn, panicPassthrough]
+  all_goals simp_all [stepFn, Bind.bind, Except.bind, valueAsBool]
+
+/-- **Completeness at every stream** (the recorded kit obligation): a
+configuration the relation can step from is one the executable steps
+from under EVERY choice stream, provided the machine is well-formed. -/
+theorem step_complete_any_wf {c : Config} {σ : ExecState} {c' : Config}
+    {σ' : ExecState} (h : Step c σ c' σ') (hwf : MachineWf σ c) :
+    ∀ ch : Choices, ∃ (c₂ : Config) (σ₂ : ExecState) (ch₂ : Choices),
+      stepFn σ c ch = .ok (c₂, σ₂, ch₂) := by
+  intro ch
+  obtain ⟨⟨c₂, σ₂, ch₂⟩, hout⟩ := step_complete_any_wf_aux h hwf ch
+  exact ⟨c₂, σ₂, ch₂, hout⟩
+
+/-- **Interpreter-side safety from relation-Progress + well-formedness**:
+if every relation-reachable configuration from a well-formed start is
+the sequential terminal or can step, then every bounded `execStmtLoop`
+run — under EVERY choice stream — returns `.ok` or `.error .fuelOut`;
+never stuck, never an unrecovered panic, never unsupported/internal.
+Fuel induction carrying reachability (to keep the progress hypothesis
+applicable) and `MachineWf` (via `stepFn_preserves_wf`); `.panicked` is
+excluded by progress + `step_panicked_elim`, and the non-`.stop` unwound
+terminals return `.ok` directly. -/
+theorem execStmtLoop_ok_or_fuelOut {σ₀ : ExecState} {c₀ : Config}
+    (hprog : ∀ (c' : Config) (σ' : ExecState), Steps c₀ σ₀ c' σ' →
+      c' = .next .stop ∨ ∃ (c'' : Config) (σ'' : ExecState), Step c' σ' c'' σ'')
+    (hwf : MachineWf σ₀ c₀) :
+    ∀ (fuel : Nat) (ch : Choices),
+      (∃ (out : ExecOutcome) (ch' : Choices),
+        execStmtLoop fuel σ₀ c₀ ch = .ok (out, ch'))
+      ∨ execStmtLoop fuel σ₀ c₀ ch = .error .fuelOut := by
+  suffices haux : ∀ (fuel : Nat) (c : Config) (σ : ExecState),
+      Steps c₀ σ₀ c σ → MachineWf σ c → ∀ ch : Choices,
+      (∃ (out : ExecOutcome) (ch' : Choices),
+        execStmtLoop fuel σ c ch = .ok (out, ch'))
+        ∨ execStmtLoop fuel σ c ch = .error .fuelOut by
+    intro fuel ch
+    exact haux fuel c₀ σ₀ (Steps.refl _ _) hwf ch
+  intro fuel
+  induction fuel with
+  | zero =>
+    intro c σ hreach hwfc ch
+    unfold execStmtLoop
+    split
+    · exact .inl ⟨_, _, rfl⟩
+    · exact .inl ⟨_, _, rfl⟩
+    · exact .inl ⟨_, _, rfl⟩
+    · exact .inl ⟨_, _, rfl⟩
+    · rename_i msg
+      rcases hprog _ _ hreach with hstop | ⟨c'', σ'', hstep⟩
+      · exact absurd hstop (by simp)
+      · exact absurd hstep step_panicked_elim
+    · exact .inr rfl
+  | succ n ih =>
+    intro c σ hreach hwfc ch
+    unfold execStmtLoop
+    split
+    · exact .inl ⟨_, _, rfl⟩
+    · exact .inl ⟨_, _, rfl⟩
+    · exact .inl ⟨_, _, rfl⟩
+    · exact .inl ⟨_, _, rfl⟩
+    · rename_i msg
+      rcases hprog _ _ hreach with hstop | ⟨c'', σ'', hstep⟩
+      · exact absurd hstop (by simp)
+      · exact absurd hstep step_panicked_elim
+    · rcases hprog _ _ hreach with hstop | ⟨c'', σ'', hstep⟩
+      · rename_i harm1 harm2 harm3 harm4 harm5
+        first
+          | exact absurd hstop harm1
+          | exact absurd hstop.symm harm1
+          | exact (harm1 hstop).elim
+          | exact (harm1 hstop.symm).elim
+      · obtain ⟨c₂, σ₂, ch₂, hstepFn⟩ := step_complete_any_wf hstep hwfc ch
+        rw [hstepFn]
+        simp only [Bind.bind, Except.bind]
+        exact ih c₂ σ₂
+          (hreach.trans (Steps.single (stepFn_sound hstepFn)))
+          (stepFn_preserves_wf hstepFn hwfc) ch₂
+
 end GoLean.GoCore.Machine

@@ -14,7 +14,7 @@ inductive IntKind where
   | int64
   | uint64
   | unbounded (name : String)
-  deriving Repr, BEq, Inhabited
+  deriving Repr, BEq, Inhabited, DecidableEq
 
 def IntKind.name : IntKind → String
   | .int => "int"
@@ -136,6 +136,20 @@ structure TypeId where
   key : String
   deriving Repr, BEq, DecidableEq, Inhabited
 
+/-- The derived `BEq` is the field's (lawful) `String` equality; recording
+lawfulness lets `simp` discharge `id == id` / `id != id` goals (needed by
+the self-normalization soundness proofs, sem-adequacy slice 3). -/
+instance : LawfulBEq TypeId where
+  eq_of_beq {a b} h := by
+    obtain ⟨k1⟩ := a
+    obtain ⟨k2⟩ := b
+    have hk : k1 == k2 := h
+    simpa using hk
+  rfl {a} := by
+    obtain ⟨k⟩ := a
+    show (k == k) = true
+    simp
+
 /-- Strip the package qualifier from a `TypeId` key, matching Go's
 `reflect.Type.Name()` — the observation channel's naming contract
 (`GoLean/CLI.lean`). -/
@@ -243,6 +257,51 @@ inductive Loc where
   | field (base : Loc) (typeId : TypeId) (fieldName : String)
   | index (base : Loc) (index : Int)
   deriving Repr, BEq, DecidableEq
+
+/-- The derived `BEq Addr` is the field's `Nat` equality — lawful. Needed
+so heap-key disequalities (`Heap.set` at a FRESH address leaves bounded
+lookups unchanged) are provable (∀-choices kit, sem-adequacy slice 3). -/
+instance : LawfulBEq Addr where
+  eq_of_beq {a b} h := by
+    obtain ⟨i⟩ := a
+    obtain ⟨j⟩ := b
+    have hij : i == j := h
+    simpa using hij
+  rfl {a} := by
+    obtain ⟨i⟩ := a
+    show (i == i) = true
+    simp
+
+/-- Lawfulness of the derived `BEq Loc` (componentwise from `Addr`/
+`TypeId`/`String`/`Int`) — same motivation as `LawfulBEq Addr` above. -/
+instance : LawfulBEq Loc where
+  eq_of_beq {a b} h := by
+    induction a generalizing b <;> cases b
+    case base.base x y =>
+      have hx : x == y := h
+      simp [eq_of_beq hx]
+    case field.field ba ta fa ih bb tb fb =>
+      have h' : (ba == bb && (ta == tb && fa == fb)) = true := h
+      simp only [Bool.and_eq_true] at h'
+      obtain ⟨h1, h2, h3⟩ := h'
+      simp [ih h1, eq_of_beq h2, eq_of_beq h3]
+    case index.index ba ia ih bb ib =>
+      have h' : (ba == bb && ia == ib) = true := h
+      simp only [Bool.and_eq_true] at h'
+      obtain ⟨h1, h2⟩ := h'
+      simp [ih h1, eq_of_beq h2]
+    all_goals exact Bool.noConfusion (h : false = true)
+  rfl {a} := by
+    induction a
+    case base x =>
+      show (x == x) = true
+      simp
+    case field b t f ih =>
+      show (b == b && (t == t && f == f)) = true
+      simp [ih]
+    case index b i ih =>
+      show (b == b && i == i) = true
+      simp [ih]
 
 structure SliceValue where
   base : Option Loc
