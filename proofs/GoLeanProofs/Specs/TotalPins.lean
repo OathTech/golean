@@ -25,11 +25,25 @@ total under the 16 GiB kernel cap — the slice-1 spike's tractability
 verdict carries over to the branched exploration (threeAll explores all
 3! = 6 pick orders).
 
-**Scope honesty**: these are PER-SEED total results (`Terminates` at the
-pinned initial state, conjoined with the proven run-conditioned readout
-as `<pin>TotalReadout`). The ∀-config statements stay at `GoSpec`
-strength — symbolic termination over every admissible state (full
-`GoSpecT`) is recorded as owed in the arc doc, not attempted.
+**Scope honesty**: these are PER-SEED total results — `Terminates` at
+the pinned initial state, upgraded to NORMAL-PINNED completion
+(`TerminatesNormally`: safety × termination, audit response 2026-08-04)
+and conjoined with the proven readout as `<pin>TotalReadout`. The
+∀-config statements stay at `GoSpec` strength — symbolic termination
+over every admissible state (full `GoSpecT`) is recorded as owed in the
+arc doc, not attempted.
+
+**Why the completion terminal is pinned** (audit response 2026-08-04):
+`allStreamsOk` certifies completion at SOME unwound terminal — which one
+is deliberately not the checker's business (`Terminates` is
+outcome-agnostic by design). Billing `Terminates ∧ run-conditioned
+readout` as "per-seed total correctness" therefore under-claimed: a
+`.returned`/`.broke`/`.continued` completion would satisfy it while
+slipping past the `.normal`-conditioned readout. Each pin's proven
+`GoSpec`-strength judgment supplies the missing half: `ProgressExec`
+(success `.normal`-pinned) at the seeded frameless split forbids every
+completion except `.normal`, and `terminatesNormally_of_progressExec`
+conjoins the two.
 
 **The unconditional twins**: `quorumOneKnownNotEleven_statement` /
 `quorumThreeAllNotTwelve_statement` (targets since phase 4, then
@@ -117,71 +131,142 @@ theorem quorumThreeAllTerminates :
   obtain ⟨out, ch', hrun⟩ := execStmtLoop_ok_of_allStreamsOk hall ch
   exact ⟨out, ch', execStmtLoop_mono 4000 fuel _ _ _ _ hfuel hrun⟩
 
-/-! ## The per-seed total forms: termination ∧ readout
+/-! ## Normal-pinned termination per pin (safety × termination)
 
-The honest per-seed total-correctness statement (the mission's
-`<pin>TotalReadout` shape): the seeded run COMPLETES at every stream past
-the bound, and every `.normal` completion delivers the pinned value.
-NOT full `GoSpecT` — that quantifies all admissible states and needs
-symbolic termination (recorded as owed). -/
+The checker certifies completion at SOME terminal; each pin's proven
+`GoSpec`-strength judgment (its `ProgressExec` half, `.normal`-pinned)
+at the seeded frameless split forbids every completion but `.normal` —
+`terminatesNormally_of_progressExec` conjoins the two (module docstring
+above; audit response 2026-08-04). -/
 
-theorem goldenTotalReadout :
-    Terminates outEnv goldenOut goldenDriver ∧ goldenReturnsTwo_statement :=
-  ⟨goldenTerminates, goldenReturnsTwo⟩
+theorem goldenTerminatesNormally :
+    TerminatesNormally outEnv goldenOut goldenDriver := by
+  have hspec : GoSpec sliceLowered.typeDefs.toList sliceLowered.funcs
+      sliceLowered.methods outEnv outCell0 goldenDriver outCell2 :=
+    GoLean.Surface.goldenSpec
+  have hsat : sat (heapletOf [(.base ⟨0⟩, ⟨some (.int .int), .int 0 .int⟩)])
+      outCell0 := rfl
+  exact terminatesNormally_of_progressExec
+    (InitialSplit.noFrame hsat (by decide +kernel)) hspec.2 goldenTerminates
 
-theorem recoverTotalReadout :
-    Terminates recoverOutEnv
+theorem recoverTerminatesNormally :
+    TerminatesNormally recoverOutEnv
       { types := recoverLowered.typeDefs.toList,
         functions := recoverLowered.funcs, methods := recoverLowered.methods,
         heap := recoverOut, nextAddr := 1 }
-      (.call #[.var "$callres"] ⟨"recoverDirect"⟩ #[])
-    ∧ ∀ (fuel : Nat) (ch : Choices) (σf : ExecState) (ch' : Choices),
+      (.call #[.var "$callres"] ⟨"recoverDirect"⟩ #[]) := by
+  have hspec := GoLean.Surface.recoverFuncSpec 0 (.int 0 .int)
+  have hsat : sat (heapletOf recoverOut)
+      (.sep (.pointsTo 0 ⟨some (.int .int), .int 0 .int⟩) .emp) :=
+    ⟨heapletOf recoverOut, ∅, rfl, rfl,
+      fun k => .inr (by simp),
+      fun k c => ⟨fun h => .inl h,
+        fun h => h.elim id (fun h0 => by simp at h0)⟩⟩
+  exact terminatesNormally_of_progressExec
+    (InitialSplit.noFrame hsat (by decide +kernel)) hspec.2 recoverTerminates
+
+theorem quorumOneKnownTerminatesNormally :
+    TerminatesNormally quorumOutEnv
+      { types := quorumLowered.typeDefs.toList,
+        functions := quorumLowered.funcs, methods := quorumLowered.methods,
+        heap := quorumOut, nextAddr := 1 }
+      (.call #[.var "$callres"] ⟨"committedOneKnown"⟩ #[]) := by
+  have hspec := GoLean.Surface.quorumOneKnownFuncSpec 0 (.int 0 .uint64)
+  have hsat : sat (heapletOf quorumOut)
+      (.sep (.pointsTo 0 ⟨some (.int .uint64), .int 0 .uint64⟩) .emp) :=
+    ⟨heapletOf quorumOut, ∅, rfl, rfl,
+      fun k => .inr (by simp),
+      fun k c => ⟨fun h => .inl h,
+        fun h => h.elim id (fun h0 => by simp at h0)⟩⟩
+  exact terminatesNormally_of_progressExec
+    (InitialSplit.noFrame hsat (by decide +kernel)) hspec.2
+    quorumOneKnownTerminates
+
+theorem quorumThreeAllTerminatesNormally :
+    TerminatesNormally threeOutEnv
+      { types := quorumLowered.typeDefs.toList,
+        functions := quorumLowered.funcs, methods := quorumLowered.methods,
+        heap := quorumOut, nextAddr := 1 }
+      (.call #[.var "$callres"] ⟨"committedThreeAll"⟩ #[]) := by
+  have hspec := GoLean.Surface.quorumThreeAllFuncSpec 0 (.int 0 .uint64)
+  have hsat : sat (heapletOf quorumOut)
+      (.sep (.pointsTo 0 ⟨some (.int .uint64), .int 0 .uint64⟩) .emp) :=
+    ⟨heapletOf quorumOut, ∅, rfl, rfl,
+      fun k => .inr (by simp),
+      fun k c => ⟨fun h => .inl h,
+        fun h => h.elim id (fun h0 => by simp at h0)⟩⟩
+  exact terminatesNormally_of_progressExec
+    (InitialSplit.noFrame hsat (by decide +kernel)) hspec.2
+    quorumThreeAllTerminates
+
+/-! ## The per-seed total forms: normal-pinned completion ∧ readout
+
+The honest per-seed total-correctness statement (the mission's
+`<pin>TotalReadout` shape, STRENGTHENED at the 2026-08-04 audit
+response): past the bound, EVERY stream's run completes at the `.normal`
+terminal — not merely at some terminal — and the final state delivers
+the pinned value. Previously stated as `Terminates ∧ run-conditioned
+readout`, which a non-`.normal` completion could satisfy while slipping
+past the readout's hypothesis. NOT full `GoSpecT` — that quantifies all
+admissible states and needs symbolic termination (recorded as owed). -/
+
+theorem goldenTotalReadout :
+    ∃ N : Nat, ∀ fuel : Nat, N ≤ fuel → ∀ ch : Choices,
+      ∃ (σf : ExecState) (ch' : Choices),
+        execStmt fuel outEnv goldenOut ch goldenDriver = .ok (.normal σf, ch')
+        ∧ loadLoc σf (.base ⟨0⟩) = .ok (.int 2 .int) := by
+  obtain ⟨N, hN⟩ := goldenTerminatesNormally
+  refine ⟨N, fun fuel hfuel ch => ?_⟩
+  obtain ⟨σf, ch', hrun⟩ := hN fuel hfuel ch
+  exact ⟨σf, ch', hrun, goldenReturnsTwo fuel ch σf ch' hrun⟩
+
+theorem recoverTotalReadout :
+    ∃ N : Nat, ∀ fuel : Nat, N ≤ fuel → ∀ ch : Choices,
+      ∃ (σf : ExecState) (ch' : Choices),
         execStmt fuel recoverOutEnv
             { types := recoverLowered.typeDefs.toList,
               functions := recoverLowered.funcs,
               methods := recoverLowered.methods,
               heap := recoverOut, nextAddr := 1 } ch
             (.call #[.var "$callres"] ⟨"recoverDirect"⟩ #[])
-          = .ok (.normal σf, ch') →
-        loadLoc σf (.base ⟨0⟩) = .ok (.int 7 .int) :=
-  ⟨recoverTerminates, fun fuel ch σf ch' h =>
-    recoverReturnsSeven fuel ch σf ch' h⟩
+          = .ok (.normal σf, ch')
+        ∧ loadLoc σf (.base ⟨0⟩) = .ok (.int 7 .int) := by
+  obtain ⟨N, hN⟩ := recoverTerminatesNormally
+  refine ⟨N, fun fuel hfuel ch => ?_⟩
+  obtain ⟨σf, ch', hrun⟩ := hN fuel hfuel ch
+  exact ⟨σf, ch', hrun, recoverReturnsSeven fuel ch σf ch' hrun⟩
 
 theorem quorumOneKnownTotalReadout :
-    Terminates quorumOutEnv
-      { types := quorumLowered.typeDefs.toList,
-        functions := quorumLowered.funcs, methods := quorumLowered.methods,
-        heap := quorumOut, nextAddr := 1 }
-      (.call #[.var "$callres"] ⟨"committedOneKnown"⟩ #[])
-    ∧ ∀ (fuel : Nat) (ch : Choices) (σf : ExecState) (ch' : Choices),
+    ∃ N : Nat, ∀ fuel : Nat, N ≤ fuel → ∀ ch : Choices,
+      ∃ (σf : ExecState) (ch' : Choices),
         execStmt fuel quorumOutEnv
             { types := quorumLowered.typeDefs.toList,
               functions := quorumLowered.funcs,
               methods := quorumLowered.methods,
               heap := quorumOut, nextAddr := 1 } ch
             (.call #[.var "$callres"] ⟨"committedOneKnown"⟩ #[])
-          = .ok (.normal σf, ch') →
-        loadLoc σf (.base ⟨0⟩) = .ok (.int 12 .uint64) :=
-  ⟨quorumOneKnownTerminates, fun fuel ch σf ch' h =>
-    quorumOneKnownReturnsTwelve fuel ch σf ch' h⟩
+          = .ok (.normal σf, ch')
+        ∧ loadLoc σf (.base ⟨0⟩) = .ok (.int 12 .uint64) := by
+  obtain ⟨N, hN⟩ := quorumOneKnownTerminatesNormally
+  refine ⟨N, fun fuel hfuel ch => ?_⟩
+  obtain ⟨σf, ch', hrun⟩ := hN fuel hfuel ch
+  exact ⟨σf, ch', hrun, quorumOneKnownReturnsTwelve fuel ch σf ch' hrun⟩
 
 theorem quorumThreeAllTotalReadout :
-    Terminates threeOutEnv
-      { types := quorumLowered.typeDefs.toList,
-        functions := quorumLowered.funcs, methods := quorumLowered.methods,
-        heap := quorumOut, nextAddr := 1 }
-      (.call #[.var "$callres"] ⟨"committedThreeAll"⟩ #[])
-    ∧ ∀ (fuel : Nat) (ch : Choices) (σf : ExecState) (ch' : Choices),
+    ∃ N : Nat, ∀ fuel : Nat, N ≤ fuel → ∀ ch : Choices,
+      ∃ (σf : ExecState) (ch' : Choices),
         execStmt fuel threeOutEnv
             { types := quorumLowered.typeDefs.toList,
               functions := quorumLowered.funcs,
               methods := quorumLowered.methods,
               heap := quorumOut, nextAddr := 1 } ch
             (.call #[.var "$callres"] ⟨"committedThreeAll"⟩ #[])
-          = .ok (.normal σf, ch') →
-        loadLoc σf (.base ⟨0⟩) = .ok (.int 6 .uint64) :=
-  ⟨quorumThreeAllTerminates, fun fuel ch σf ch' h =>
-    quorumThreeAllReturnsSix fuel ch σf ch' h⟩
+          = .ok (.normal σf, ch')
+        ∧ loadLoc σf (.base ⟨0⟩) = .ok (.int 6 .uint64) := by
+  obtain ⟨N, hN⟩ := quorumThreeAllTerminatesNormally
+  refine ⟨N, fun fuel hfuel ch => ?_⟩
+  obtain ⟨σf, ch', hrun⟩ := hN fuel hfuel ch
+  exact ⟨σf, ch', hrun, quorumThreeAllReturnsSix fuel ch σf ch' hrun⟩
 
 /-! ## The UNCONDITIONAL negative twins -/
 

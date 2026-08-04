@@ -164,7 +164,7 @@ theorem normalizeValueForTyFuel_int_id {σ : ExecState} {kind : IntKind}
     {fuel : Nat} {v : Int} (hv : kind.normalize v = v) :
     normalizeValueForTyFuel (fuel + 1) σ (.int kind) (.int v kind)
       = .ok (.int v kind) := by
-  simp [normalizeValueForTyFuel, hv, typeResolutionFuel]
+  simp [normalizeValueForTyFuel, hv]
 
 /-- The packaged fact at the public entry point, for an ARRAY value at an
 array type: `normalizeValueForTy` at `[n]kind`. -/
@@ -180,7 +180,7 @@ theorem normalizeValueForTy_intArray {σ : ExecState} {kind : IntKind} {n : Nat}
     obtain ⟨v, rfl, hv⟩ := hall x hx
     exact normalizeValueForTyFuel_int_id hv
   simp only [normalizeValueForTy, typeResolutionFuel, normalizeValueForTyFuel,
-    hsize, Bool.false_eq_true, if_false, List.toList_toArray,
+    hsize, Bool.false_eq_true, if_false,
     normalizeListWith_id l helems,
     Bind.bind, Except.bind, pure, Except.pure, Functor.map, Except.map]
 

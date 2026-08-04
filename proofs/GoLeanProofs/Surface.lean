@@ -166,6 +166,23 @@ theorem InitialSplit.heapBounded {P : HProp} {hp : Heap} {na : Nat}
     simp only [Machine.Loc.locSup, Machine.Loc.rootBase] at this
     omega
 
+/-- The frameless admissible split at a seeded state: footprint = the
+whole seed heaplet, frame = `∅`. The `disj`/`cover` obligations are
+generic (everything is disjoint from the empty frame); callers supply
+satisfaction of `P` at the seed heaplet and machine well-formedness —
+at concrete seeds, `decide +kernel`. This is the split the per-seed
+total pins instantiate `ProgressExec` at. -/
+theorem InitialSplit.noFrame {P : HProp} {hp : Heap} {na : Nat}
+    {funcs : Array Func} {env₀ : LocalEnv} {prog : Stmt}
+    (hsat : sat (heapletOf hp) P)
+    (hwf : Machine.MachineWf { functions := funcs, heap := hp, nextAddr := na }
+      (.exec prog env₀ .stop)) :
+    InitialSplit P hp na (heapletOf hp) ∅ funcs env₀ prog where
+  disj _ := .inr (by simp)
+  cover _ _ := by simp
+  sat_pre := hsat
+  wf := hwf
+
 /-- **The surface Hoare judgment — FRAME-CLOSED** (the quantified-testcase
 form: "give the program any inputs, in ANY heap where the `P`-cells are
 allocated"). Over any admissible initial state whose heaplet is
@@ -318,14 +335,33 @@ choice only sizes a capacity — so a per-stream bound lifts to a uniform
 one; taking the uniform form keeps the notion a single `∃`).
 "Completes" means the bounded iteration reaches `.ok` at ANY of the four
 unwound terminals; which terminal — and with what state — is a
-postcondition's business, not termination's. Discharge routes: kernel
-evaluation at one fuel (`decide +kernel` on a primitive projection —
-slice-1 spike; the ∀-streams checker `allStreamsOk` covers the stream
-quantifier) plus `execStmt_mono` lifts to all larger fuels. -/
+postcondition's business, not termination's. This outcome-agnostic form
+is deliberately the PRIMITIVE (a bare `return`-ending program
+legitimately completes at `.returned`, and the ∀-streams checker
+`allStreamsOk` certifies exactly this notion); the terminal-pinned
+strengthening is `TerminatesNormally` below, derived by conjoining
+safety (`ProgressExec`) rather than baked in here. Discharge routes:
+kernel evaluation at one fuel (`decide +kernel` on a primitive
+projection — slice-1 spike; `allStreamsOk` covers the stream quantifier)
+plus `execStmt_mono` lifts to all larger fuels. -/
 def Terminates (env₀ : LocalEnv) (σ₀ : ExecState) (prog : Stmt) : Prop :=
   ∃ N : Nat, ∀ fuel : Nat, N ≤ fuel → ∀ ch : Choices,
     ∃ (out : ExecOutcome) (ch' : Choices),
       execStmt fuel env₀ σ₀ ch prog = .ok (out, ch')
+
+/-- **Normal-pinned termination** (audit response 2026-08-04): the run
+completes at the `.normal` terminal — one fuel bound for EVERY choices
+stream. This is what "per-seed total correctness" needs `Terminates` to
+mean at the driver pins (their runs fall off the end of the driver
+statement, `.next .stop`): completion at `.returned`/`.broke`/
+`.continued` would slip past a `.normal`-conditioned readout. Derived,
+never assumed: `terminatesNormally_of_progressExec` conjoins
+outcome-agnostic `Terminates` with safety (`ProgressExec`, whose success
+disjunct is `.normal`-pinned), which forbids every other completion. -/
+def TerminatesNormally (env₀ : LocalEnv) (σ₀ : ExecState) (prog : Stmt) : Prop :=
+  ∃ N : Nat, ∀ fuel : Nat, N ≤ fuel → ∀ ch : Choices,
+    ∃ (σf : ExecState) (ch' : Choices),
+      execStmt fuel env₀ σ₀ ch prog = .ok (.normal σf, ch')
 
 /-- **Safety, interpreter-level** (since slice 4 the safety half of
 `GoSpec`, replacing the relation-quantified progress): from any
@@ -379,6 +415,32 @@ theorem progressExec_of_progress {types : TypeEnv} {funcs : Array Func}
         heap := hp, nextAddr := na } (.exec prog env₀ .stop) :=
     ⟨hs, hc, rfl⟩
   exact execStmtLoop_ok_or_fuelOut (h hp na hP F hin) hwf fuel ch
+
+/-- **Safety pins the terminal** (audit response 2026-08-04):
+outcome-agnostic termination (`Terminates`, the kernel checker's notion)
+plus interpreter-level safety (`ProgressExec`, success `.normal`-pinned)
+at any admissible split of the same seed yields `TerminatesNormally`.
+The per-seed total pins ride this: `allStreamsOk` certifies completion
+at SOME terminal; the pin's proven `GoSpec` forbids every completion but
+`.normal`. -/
+theorem terminatesNormally_of_progressExec {types : TypeEnv}
+    {funcs : Array Func} {methods : Array MethodInfo} {env₀ : LocalEnv}
+    {P : HProp} {prog : Stmt} {hp : Heap} {na : Nat} {hP F : Heaplet}
+    (hin : InitialSplit P hp na hP F funcs env₀ prog)
+    (hsafe : ProgressExec types funcs methods env₀ P prog)
+    (hterm : Terminates env₀
+      { types := types, functions := funcs, methods := methods,
+        heap := hp, nextAddr := na } prog) :
+    TerminatesNormally env₀
+      { types := types, functions := funcs, methods := methods,
+        heap := hp, nextAddr := na } prog := by
+  obtain ⟨N, hN⟩ := hterm
+  refine ⟨N, fun fuel hfuel ch => ?_⟩
+  obtain ⟨out, ch', hrun⟩ := hN fuel hfuel ch
+  rcases hsafe hp na hP F hin fuel ch with hok | hfuelOut
+  · exact hok
+  · rw [hrun] at hfuelOut
+    exact absurd hfuelOut (by simp)
 
 /-- **The full surface judgment**: the frame-closed triple AND
 interpreter-side safety — "runs safely, and every terminating run
