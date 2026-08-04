@@ -993,6 +993,11 @@ func (e *emitter) emitAssignTarget(l ast.Expr, define bool) (any, error) {
 				return map[string]any{"target": "declare", "id": id.Name, "type": ty}, nil
 			}
 		}
+		// Writes to package-level variables fail closed like reads do
+		// (emitIdent): globals have no frame cell until the init slice.
+		if v, isVar := e.info.Uses[id].(*types.Var); isVar && v.Parent() == e.pkg.Scope() {
+			return nil, unsup("package-level variable %s (globals await the init slice)", id.Name)
+		}
 		return map[string]any{"target": "var", "id": id.Name}, nil
 	}
 	// Non-ident lvalue (field, index, deref): emit as an addressed location.
@@ -1111,18 +1116,21 @@ func (e *emitter) emitIf(st *ast.IfStmt) (any, error) {
 func (e *emitter) emitFor(st *ast.ForStmt) (any, error) {
 	// Go >= 1.22: each ForClause iteration has its OWN loop variable, so a
 	// func literal in the body capturing it must see a per-iteration cell.
-	// Our lowering declares the variable once outside the loop (one shared
-	// cell) — a silent wrong answer for escaping captures (pre-merge audit
-	// 2026-07-25; range loops are per-iteration already and are fine). Fail
-	// closed until the per-iteration desugar lands. `defer f(i)` is fine —
-	// args evaluate at defer time; only literal BODIES capture.
+	// The plain lowering declares the variable once outside the loop (one
+	// shared cell) — a silent wrong answer for escaping captures
+	// (pre-merge audit 2026-07-25; range loops are per-iteration already
+	// and are fine). Loops whose for-clause variables are captured by a
+	// literal BODY take the per-iteration desugar (`emitForPerIteration`);
+	// `defer f(i)` is fine on the plain path — args evaluate at defer time.
 	if st.Init != nil {
 		loopVars := map[types.Object]bool{}
+		loopVarIdents := []*ast.Ident{}
 		if as, ok := st.Init.(*ast.AssignStmt); ok && as.Tok == token.DEFINE {
 			for _, l := range as.Lhs {
-				if id, ok := l.(*ast.Ident); ok {
+				if id, ok := l.(*ast.Ident); ok && id.Name != "_" {
 					if obj := e.info.Defs[id]; obj != nil {
 						loopVars[obj] = true
+						loopVarIdents = append(loopVarIdents, id)
 					}
 				}
 			}
@@ -1145,7 +1153,7 @@ func (e *emitter) emitFor(st *ast.ForStmt) (any, error) {
 				return !captured
 			})
 			if captured {
-				return nil, unsup("func literal captures a for-clause loop variable (Go 1.22 per-iteration semantics not yet lowered)")
+				return e.emitForPerIteration(st, loopVarIdents)
 			}
 		}
 	}
@@ -1158,13 +1166,22 @@ func (e *emitter) emitFor(st *ast.ForStmt) (any, error) {
 		node["init"] = init
 	}
 	if st.Cond != nil {
-		// The loop condition is re-evaluated each iteration; a hoist would move
-		// it before the loop.
-		cond, err := e.emitGuarded(true, "loop condition", st.Cond)
+		// The loop condition is re-evaluated each iteration. Its hoists
+		// (calls/allocations) are legal because the decoder re-tests the
+		// condition INSIDE the loop body: they travel as `condPre`,
+		// spliced immediately before each test.
+		saved := e.hoisted
+		e.hoisted = nil
+		cond, err := e.emitExpr(st.Cond)
+		condHoists := e.hoisted
+		e.hoisted = saved
 		if err != nil {
 			return nil, err
 		}
 		node["cond"] = cond
+		if len(condHoists) > 0 {
+			node["condPre"] = condHoists
+		}
 	}
 	if st.Post != nil {
 		// The post statement runs every iteration; hoists from it must stay
@@ -1190,6 +1207,136 @@ func (e *emitter) emitFor(st *ast.ForStmt) (any, error) {
 	}
 	node["body"] = body
 	return node, nil
+}
+
+// emitForPerIteration lowers a ForClause loop whose loop variables are
+// captured by a func literal in the body. Go >= 1.22: each iteration has
+// its OWN copy of the variables, "declared before executing the post
+// statement and initialized to the value of the previous iteration's
+// variable at that moment". Desugar with a carrier POINTER so `continue`
+// needs no copy-back path (docs/2026-08-04_control-flow-design.md):
+//
+//	{ i := <init>; $lvp := &i; $lvf := true
+//	  for { block {
+//	    i := *$lvp; $lvp = &i            // fresh cell per iteration
+//	    if $lvf { $lvf = false } else { post }   // post on the fresh i
+//	    condPre...; if cond {} else { break }
+//	    body } } }
+//
+// Everything per-iteration happens at the TOP of the iteration, so a
+// `continue` (which re-enters the loop) carries the current cell's final
+// value into the next iteration through the pointer. Captures see one
+// distinct cell per iteration.
+func (e *emitter) emitForPerIteration(st *ast.ForStmt, vars []*ast.Ident) (any, error) {
+	seq := e.tmpSeq
+	e.tmpSeq++
+	boolTy := map[string]any{"kind": "bool"}
+	outer := []any{}
+	// Seed cells: the init statement runs once, declaring the variables
+	// under their own names in the outer scope (iteration 0's source).
+	{
+		saved := e.hoisted
+		e.hoisted = nil
+		initW, err := e.emitStmt(st.Init)
+		hoists := e.hoisted
+		e.hoisted = saved
+		if err != nil {
+			return nil, err
+		}
+		outer = append(outer, hoists...)
+		outer = append(outer, initW)
+	}
+	type loopVar struct {
+		name, ptr string
+		ty, ptrTy any
+	}
+	lvs := []loopVar{}
+	for j, id := range vars {
+		obj := e.info.Defs[id]
+		ty, err := e.emitType(obj.Type())
+		if err != nil {
+			return nil, err
+		}
+		ptrTy := map[string]any{"kind": "pointer", "elem": ty}
+		ptr := "$lvp" + itoa(seq) + "_" + itoa(j)
+		lvs = append(lvs, loopVar{name: id.Name, ptr: ptr, ty: ty, ptrTy: ptrTy})
+		outer = append(outer, map[string]any{
+			"stmt":   "assign",
+			"define": true,
+			"lhs":    []any{map[string]any{"target": "declare", "id": ptr, "type": ptrTy}},
+			"rhs":    []any{map[string]any{"expr": "ref", "id": id.Name}},
+		})
+	}
+	firstVar := "$lvf" + itoa(seq)
+	if st.Post != nil {
+		outer = append(outer, map[string]any{
+			"stmt":   "assign",
+			"define": true,
+			"lhs":    []any{map[string]any{"target": "declare", "id": firstVar, "type": boolTy}},
+			"rhs":    []any{map[string]any{"expr": "bool", "value": true}},
+		})
+	}
+	iter := []any{}
+	// Fresh per-iteration cells, initialized from the previous iteration's
+	// cell; the carrier pointer then addresses THIS iteration's cell.
+	for _, v := range lvs {
+		iter = append(iter, map[string]any{
+			"stmt":   "assign",
+			"define": true,
+			"lhs":    []any{map[string]any{"target": "declare", "id": v.name, "type": v.ty}},
+			"rhs": []any{map[string]any{"expr": "deref",
+				"ptr":  map[string]any{"expr": "ident", "name": v.ptr, "type": v.ptrTy},
+				"type": v.ty}},
+		})
+		iter = append(iter, map[string]any{
+			"stmt": "assign",
+			"lhs":  []any{map[string]any{"target": "var", "id": v.ptr}},
+			"rhs":  []any{map[string]any{"expr": "ref", "id": v.name}},
+		})
+	}
+	if st.Post != nil {
+		saved := e.hoisted
+		e.hoisted = nil
+		post, err := e.emitStmt(st.Post)
+		postHoists := e.hoisted
+		e.hoisted = saved
+		if err != nil {
+			return nil, err
+		}
+		if len(postHoists) > 0 {
+			post = map[string]any{"stmt": "block",
+				"body": append(append([]any{}, postHoists...), post)}
+		}
+		iter = append(iter, map[string]any{"stmt": "if",
+			"cond": map[string]any{"expr": "ident", "name": firstVar, "type": boolTy},
+			"then": map[string]any{"stmt": "assign",
+				"lhs": []any{map[string]any{"target": "var", "id": firstVar}},
+				"rhs": []any{map[string]any{"expr": "bool", "value": false}}},
+			"else": post,
+		})
+	}
+	if st.Cond != nil {
+		saved := e.hoisted
+		e.hoisted = nil
+		cond, err := e.emitExpr(st.Cond)
+		condHoists := e.hoisted
+		e.hoisted = saved
+		if err != nil {
+			return nil, err
+		}
+		iter = append(iter, condHoists...)
+		iter = append(iter, map[string]any{"stmt": "if", "cond": cond,
+			"then": map[string]any{"stmt": "block", "body": []any{}},
+			"else": map[string]any{"stmt": "break"}})
+	}
+	bodyW, err := e.emitBlock(st.Body)
+	if err != nil {
+		return nil, err
+	}
+	iter = append(iter, bodyW)
+	loop := map[string]any{"stmt": "for",
+		"body": map[string]any{"stmt": "block", "body": iter}}
+	return map[string]any{"stmt": "block", "body": append(outer, loop)}, nil
 }
 
 // rangeVarName returns the loop-variable name, or "" for absent/blank (`_`).
@@ -1496,17 +1643,19 @@ func (e *emitter) emitIncDec(st *ast.IncDecStmt) (any, error) {
 
 // ---- expressions ----
 
-// emitSwitch (W2 slice 1, docs/2026-07-24_sequential-coverage-scoping.md):
-// an expression switch desugars to a nested if-chain inside a fresh block —
-// the init statement and the once-evaluated tag temp scope to the switch;
-// one branch per case VALUE in source order (lazy case-expression
-// evaluation, so a panicking case expression fires exactly when Go's
-// would); bodies duplicated across a multi-value case's values; default
-// spliced as the final else regardless of source position. Fail-closed
-// residue for later slices: fallthrough (BranchStmt default arm), bare
-// break targeting the switch (breakStack), calls in case expressions
-// (lazy position — hoisting would evaluate them eagerly), type switches
-// (interfaces lane).
+// emitSwitch (W2 slice 1, rewritten by the control-flow slice,
+// docs/2026-08-04_control-flow-design.md): an expression switch desugars
+// to a SELECTION-INDEX form inside a fresh block — the init statement and
+// the once-evaluated tag temp scope to the switch; a test chain (nested
+// else-blocks, textual order over case values, each case expression's
+// hoists spliced immediately before its own test — Go's lazy
+// left-to-right evaluation and panic timing) selects a clause index; a
+// dispatch chain in SOURCE order (default in position) runs the selected
+// clause's body as a SIBLING block, with a fallthrough flag chaining a
+// falling-through clause into the next clause's body. Sibling-block
+// bodies are Go's actual clause scoping, so fallthrough into/out of
+// declaring clauses needs no restriction. Fail-closed residue: type
+// switches (interfaces lane, slice 2 of the arc).
 func (e *emitter) emitSwitch(st *ast.SwitchStmt) (any, error) {
 	body := []any{}
 	if st.Init != nil {
@@ -1543,14 +1692,17 @@ func (e *emitter) emitSwitch(st *ast.SwitchStmt) (any, error) {
 		})
 		tagRef = map[string]any{"expr": "ident", "name": name, "type": ty}
 	}
+	type swCase struct {
+		clause int
+		expr   ast.Expr
+	}
 	type swClause struct {
-		conds       []any // nil for default
-		stmts       []any
-		fallsThru   bool
-		declares    bool
-		effective   any // filled in reverse, chaining fallthrough targets
+		isDefault bool
+		stmts     []any
+		fallsThru bool
 	}
 	clauses := []swClause{}
+	cases := []swCase{} // case VALUES in textual order (default has none)
 	for _, raw := range st.Body.List {
 		cc, ok := raw.(*ast.CaseClause)
 		if !ok {
@@ -1564,83 +1716,112 @@ func (e *emitter) emitSwitch(st *ast.SwitchStmt) (any, error) {
 				list = list[:n-1]
 			}
 		}
-		declares := false
-		for _, s := range list {
-			switch d := s.(type) {
-			case *ast.DeclStmt:
-				declares = true
-			case *ast.AssignStmt:
-				if d.Tok == token.DEFINE {
-					declares = true
-				}
-			}
-		}
 		cbody, err := e.emitStmtList(list)
 		if err != nil {
 			return nil, err
 		}
-		cl := swClause{stmts: cbody, fallsThru: fallsThru, declares: declares}
-		if cc.List != nil {
-			conds := []any{}
-			for _, ce := range cc.List {
-				cw, err := e.emitGuarded(true, "switch case expression", ce)
-				if err != nil {
-					return nil, err
-				}
-				var cond any
-				if st.Tag == nil {
-					cond = cw
-				} else {
-					cond = map[string]any{"expr": "binary", "op": "==", "x": tagRef, "y": cw, "operandType": tagTy}
-				}
-				conds = append(conds, cond)
-			}
-			cl.conds = conds
+		idx := len(clauses)
+		cl := swClause{isDefault: cc.List == nil, stmts: cbody, fallsThru: fallsThru}
+		for _, ce := range cc.List {
+			cases = append(cases, swCase{clause: idx, expr: ce})
 		}
 		clauses = append(clauses, cl)
 	}
-	// Effective bodies, built in reverse: `fallthrough` runs the NEXT
-	// clause's body without testing its case expression, so the effective
-	// body of a falling-through clause is its own statements followed by
-	// the next clause's effective body. Fail closed when the
-	// falling-through clause declares names: inlining the next clause's
-	// body inside this clause's scope would let those declarations shadow
-	// what Go resolves in the outer scope (Go's clause scopes are
-	// siblings, not nested).
-	for i := len(clauses) - 1; i >= 0; i-- {
-		stmts := clauses[i].stmts
-		if clauses[i].fallsThru {
-			if i+1 >= len(clauses) {
-				return nil, unsup("fallthrough in final switch clause")
-			}
-			if clauses[i].declares {
-				return nil, unsup("fallthrough out of a clause that declares names")
-			}
-			stmts = append(append([]any{}, stmts...), clauses[i+1].effective)
-		}
-		clauses[i].effective = map[string]any{"stmt": "block", "body": stmts}
+	seq := e.tmpSeq
+	e.tmpSeq++
+	idxVar := "$swi" + itoa(seq)
+	fallVar := "$swf" + itoa(seq)
+	intTy := map[string]any{"kind": "int", "int": "int"}
+	boolTy := map[string]any{"kind": "bool"}
+	intLit := func(v int) any {
+		return map[string]any{"expr": "int", "value": itoa(v), "type": intTy}
 	}
-	var defaultBody any
-	chainClauses := []swClause{}
-	for _, cl := range clauses {
-		if cl.conds == nil {
-			defaultBody = cl.effective
-			continue
+	// The selected clause index: the default clause's if nothing matches,
+	// or the no-body sentinel len(clauses).
+	defaultIdx := len(clauses)
+	for i, cl := range clauses {
+		if cl.isDefault {
+			defaultIdx = i
 		}
-		chainClauses = append(chainClauses, cl)
 	}
-	chain := defaultBody
-	for i := len(chainClauses) - 1; i >= 0; i-- {
-		for j := len(chainClauses[i].conds) - 1; j >= 0; j-- {
-			node := map[string]any{"stmt": "if", "cond": chainClauses[i].conds[j], "then": chainClauses[i].effective}
-			if chain != nil {
-				node["else"] = chain
-			}
-			chain = node
+	body = append(body, map[string]any{
+		"stmt":   "assign",
+		"define": true,
+		"lhs":    []any{map[string]any{"target": "declare", "id": idxVar, "type": intTy}},
+		"rhs":    []any{intLit(defaultIdx)},
+	})
+	// Test chain, built innermost-first: each case value's hoists run in
+	// its own block, only if every earlier test failed.
+	var chain any
+	for k := len(cases) - 1; k >= 0; k-- {
+		saved := e.hoisted
+		e.hoisted = nil
+		cw, err := e.emitExpr(cases[k].expr)
+		hoists := e.hoisted
+		e.hoisted = saved
+		if err != nil {
+			return nil, err
 		}
+		var cond any
+		if st.Tag == nil {
+			cond = cw
+		} else {
+			cond = map[string]any{"expr": "binary", "op": "==", "x": tagRef, "y": cw, "operandType": tagTy}
+		}
+		ifNode := map[string]any{"stmt": "if", "cond": cond,
+			"then": map[string]any{
+				"stmt": "assign",
+				"lhs":  []any{map[string]any{"target": "var", "id": idxVar}},
+				"rhs":  []any{intLit(cases[k].clause)},
+			}}
+		if chain != nil {
+			ifNode["else"] = chain
+		}
+		chain = map[string]any{"stmt": "block",
+			"body": append(append([]any{}, hoists...), ifNode)}
 	}
 	if chain != nil {
 		body = append(body, chain)
+	}
+	// Dispatch chain, source order. `$swf` chains fallthrough: a clause
+	// ending in `fallthrough` completes normally and arms the next
+	// clause's guard; a body exiting via break/return/panic never reaches
+	// the arming statement — Go's rule.
+	body = append(body, map[string]any{
+		"stmt":   "assign",
+		"define": true,
+		"lhs":    []any{map[string]any{"target": "declare", "id": fallVar, "type": boolTy}},
+		"rhs":    []any{map[string]any{"expr": "bool", "value": false}},
+	})
+	for i, cl := range clauses {
+		if cl.fallsThru && i+1 >= len(clauses) {
+			// go/types rejects this upstream; defensive fail-closed.
+			return nil, unsup("fallthrough in final switch clause")
+		}
+		guard := map[string]any{"expr": "binary", "op": "||",
+			"x": map[string]any{"expr": "ident", "name": fallVar, "type": boolTy},
+			"y": map[string]any{"expr": "binary", "op": "==",
+				"x":           map[string]any{"expr": "ident", "name": idxVar, "type": intTy},
+				"y":           intLit(i),
+				"operandType": intTy}}
+		thenStmts := []any{
+			map[string]any{
+				"stmt": "assign",
+				"lhs":  []any{map[string]any{"target": "var", "id": fallVar}},
+				"rhs":  []any{map[string]any{"expr": "bool", "value": false}},
+			},
+			// The clause body is a SIBLING block (Go's clause scoping).
+			map[string]any{"stmt": "block", "body": cl.stmts},
+		}
+		if cl.fallsThru {
+			thenStmts = append(thenStmts, map[string]any{
+				"stmt": "assign",
+				"lhs":  []any{map[string]any{"target": "var", "id": fallVar}},
+				"rhs":  []any{map[string]any{"expr": "bool", "value": true}},
+			})
+		}
+		body = append(body, map[string]any{"stmt": "if", "cond": guard,
+			"then": map[string]any{"stmt": "block", "body": thenStmts}})
 	}
 	// The switch is a BREAKABLE SCOPE (Go): a bare `break` in any clause
 	// exits it, while `continue`/`return` unwind past to the enclosing
@@ -2521,6 +2702,13 @@ func (e *emitter) emitIdent(id *ast.Ident) (any, error) {
 			return map[string]any{"expr": "deref",
 				"ptr":  map[string]any{"expr": "ident", "name": pname},
 				"type": ty}, nil
+		}
+		// A package-level VARIABLE has no cell in any frame environment:
+		// globals are unmodeled until the init slice. Fail closed at the
+		// boundary (an emitted ident would surface as a misclassified
+		// machine-level "unbound variable" stuck at run time).
+		if v, isVar := obj.(*types.Var); isVar && v.Parent() == e.pkg.Scope() {
+			return nil, unsup("package-level variable %s (globals await the init slice)", id.Name)
 		}
 	}
 	return map[string]any{"expr": "ident", "name": id.Name}, nil

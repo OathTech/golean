@@ -835,6 +835,14 @@ partial def decodeFor (results : Array Param) (path : String) (obj : StrictJson.
   let post ← (match obj.get? "post" with
     | some p => decodeStmt results s!"{path}.post" p
     | none => pure (.seqn #[]))
+  -- `condPre`: the condition's hoisted call/alloc temps, re-run before
+  -- EVERY test (the test happens inside the loop body, so hoists are
+  -- legal here — control-flow slice, docs/2026-08-04_control-flow-design.md).
+  let condPre ← (match obj.get? "condPre" with
+    | some cp => do
+        let arr ← StrictJson.array s!"{path}.condPre" cp
+        arr.mapIdxM (fun i s => decodeStmt results s!"{path}.condPre[{i}]" s)
+    | none => pure #[])
   -- `continue` must still run the post statement, but GoCore's `while` re-runs
   -- its whole body on continue. So run post at the top of the body except on
   -- the first iteration (guarded by a flag), then re-check the condition; this
@@ -843,6 +851,7 @@ partial def decodeFor (results : Array Param) (path : String) (obj : StrictJson.
     .ifThenElse (.var "$forFirst")
       (.assign (.var "$forFirst") (.boolLit false))
       post,
+    .seqn condPre,
     .ifThenElse cond (.seqn #[]) .breakStmt,
     body
   ]
