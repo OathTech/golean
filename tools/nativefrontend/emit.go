@@ -535,6 +535,20 @@ func degradeGotoDeclares(stmts []any) []any {
 					continue
 				}
 				id, _ := dm["id"].(string)
+				if id == "_" {
+					// Blank decl: no cell exists (the hoist collector
+					// skips blanks — there is no variable), but the
+					// initializer must still run each sweep. Keep the
+					// DECLARATION, scoped to this conversion block,
+					// which re-executes wholesale per sweep — the
+					// non-goto blank path's observable semantics.
+					// (Audit-response 2026-08-04, F4: degrading to an
+					// assignment produced an UNBOUND `_` — machine
+					// stuck instead of a boundary refusal.)
+					conv = append(conv, map[string]any{"stmt": "var",
+						"decls": []any{d}})
+					continue
+				}
 				rhs := dm["init"]
 				if rhs == nil {
 					// `var x T` re-executed resets to the zero value (Go:
