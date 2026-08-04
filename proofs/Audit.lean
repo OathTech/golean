@@ -101,6 +101,21 @@ root name `Iris` — the same discrimination the axiom sweep uses, so a
 stray top-level or renamed constant cannot dodge it; note this
 deliberately includes `Iris.Std.*`).
 
+**RELATION-freedom (sem-adequacy arc slice 4, 2026-08-04)**: the gate
+additionally forbids the Prop-level transition relation from any
+designated statement closure — the arc's deletion test extends to it
+(the relation is proof infrastructure exactly like Iris; headline
+statements speak `stepFn`/`execStmt` only). The relation lives INSIDE
+`GoLean.GoCore.Machine` (same module as `stepFn`'s premise functions),
+so module-of-origin cannot discriminate; the check is by constant NAME
+instead: an explicit forbidden set — the inductives
+`GoLean.GoCore.Machine.Step` / `GoLean.GoCore.Machine.Steps` — plus
+everything namespaced under them (constructors, recursors, `casesOn`/
+`below`/`noConfusion` auxiliaries: name-prefix match, which cannot
+confuse `Step` with `Steps` because prefixes match whole components).
+Reaching one is exactly eviction debt: reformulate the statement, never
+whitelist.
+
 **The closure, precisely** (the deletion test needs every constant the
 statement's MEANING depends on):
 - seed: the constants of the theorem's TYPE expression;
@@ -145,6 +160,14 @@ open Lean in
   let env ← getEnv
   let mods := env.header.moduleNames
   let isIris : Array Bool := mods.map (fun m => m.getRoot == `Iris)
+  -- The relation's defining constants (see the docstring's
+  -- RELATION-freedom block): the two inductives, matched with everything
+  -- in their namespaces. `Name.isPrefixOf` matches whole components, so
+  -- `…Machine.Step` does NOT match `…Machine.Steps` (nor `…Machine.stepFn`).
+  let forbiddenRoots : List Name :=
+    [`GoLean.GoCore.Machine.Step, `GoLean.GoCore.Machine.Steps]
+  let isRelation : Name → Bool := fun n =>
+    forbiddenRoots.any (fun r => r == n || r.isPrefixOf n)
   -- The designated headline theorems (the summit family + the golden and
   -- recover surfaces + the math bridge). Extend this list when a new
   -- headline theorem is claimed; never remove without a recorded reason.
@@ -205,6 +228,24 @@ open Lean in
       if visited.contains c then
         continue
       visited := visited.insert c
+      if isRelation c then
+        -- Relation constant reached: report with the dependency chain and
+        -- stop at the boundary (no recursion into the relation — one
+        -- constant is the proof of the violation).
+        let mut chain := s!"{c}"
+        let mut cur := c
+        for _ in [0:100000] do
+          match parent.get? cur with
+          | some p =>
+            chain := s!"{p} → " ++ chain
+            cur := p
+            if p == t then break
+          | none => break
+        violations := violations.push
+          s!"  {t}: statement closure reaches RELATION constant {c} \
+            (Step/Steps are proof infrastructure — sem-adequacy slice 4)\
+            \n    chain: {chain}"
+        continue
       match env.getModuleIdxFor? c with
       | some idx =>
         if isIris[idx.toNat]! then
@@ -249,12 +290,13 @@ open Lean in
     lines := lines.push s!"  {t}: {visited.size} statement constants"
   if violations.isEmpty then
     IO.println s!"statement-TCB gate: {designated.length} designated theorems, \
-      all statement closures Iris-free"
+      all statement closures Iris-free and relation-free"
     for l in lines do
       IO.println l
   else
     throwError "statement-TCB gate FAILED — a headline STATEMENT depends on \
-      Iris (the deletion test; reformulate the statement, do not whitelist):\n\
+      Iris or the relation (the deletion test; reformulate the statement, \
+      do not whitelist):\n\
       {String.intercalate "\n" violations.toList}"
 
 /-! ## Axiom gates — the recorded axiom set of every proof-facing declaration.
