@@ -268,3 +268,44 @@ type table).
   (`&(a[0])`), `goto-backward-array-slice` (`a[:]`),
   `goto-backward-nested-recv` (pointer-receiver method on a field of a
   hoisted struct).
+
+## Audit response, 2026-08-04 (pre-merge adversarial audit of this slice)
+
+Four confirmed findings, each fixed on this branch with its guardrail
+corpus case(s) added and classified BEFORE the fix landed:
+
+1. **F1, critical (silent wrong answer): the envelope's address-taken
+   check was syntactic.** It matched only `&x` / `x.M()` on a BARE
+   identifier, so `&(x)`, `&s.f`, `&a[0]`, `a[:]`, and `s.f.M()` all
+   aliased a hoisted cell with status `ok` and wrong values. Fix:
+   `addrEscapeRoot`/`hoistedAddrEscape`
+   (tools/nativefrontend/emit.go:594, :635) trace every address-taking
+   position — explicit `&` (:779), array slice expressions (:791),
+   pointer-receiver method calls/values (:815) — to the storage root,
+   stopping at pointer indirections. Recorded envelope narrowing:
+   pointer-receiver methods promoted through an embedded POINTER field
+   of a hoisted non-pointer root are refused conservatively. Pins:
+   `goto-backward-{field-addr,elem-addr,array-slice,nested-recv}`.
+2. **F2, major (silent wrong answer): the per-iteration loop-variable
+   trigger scanned only the for BODY.** A capturing literal in the
+   CONDITION (reachable since condPre) or POST (pre-existing hole, both
+   branches) took the shared-cell lowering. Fix: the scan covers body,
+   cond, and post (tools/nativefrontend/emit.go:1721-1744); the
+   carrier-pointer desugar is correct for those positions (stage-1
+   section above). Pins: `for-loopvar-cond-capture`,
+   `for-loopvar-post-capture` (both 123, go-run oracle).
+3. **F3, minor (coverage gap): four stage-2 machine arms had no
+   differential coverage** — `labelContinue`, `breakToLabelSkip`,
+   `continueToLabelSkip`, `continueToMapIterSkip`
+   (GoLean/GoCore/Machine.lean:1432/:1448/:1460/:1473). Corpus-only fix:
+   `labeled-cross-inner-labeled` (234),
+   `labeled-continue-range-map-block` (3, order-independent under map
+   nondeterminism), `labeled-switch-bare-continue` (13233). No machine
+   change.
+4. **F4, note (misclassification): `var _ T = e` under the goto
+   restructuring degraded to an assignment to an UNBOUND `_`** —
+   machine-level stuck, not a boundary refusal. Fix:
+   `degradeGotoDeclares` keeps blank decls as declarations, re-executed
+   in the conversion block's scope each sweep
+   (tools/nativefrontend/emit.go:539), matching the non-goto blank
+   path's observable semantics. Pin: `goto-blank-var-decl` (15).
