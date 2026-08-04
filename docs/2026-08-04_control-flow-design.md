@@ -101,9 +101,19 @@ Also stage 1 (for-loop corners in the red set):
   `continue` (which re-enters the while) carries the current cell's
   final value into the next iteration via `$lvp` — the spec's
   "initialized to the value of the previous iteration's variable".
-  Captures see one distinct cell per iteration. Applied only when a
-  literal captures a for-clause variable (the previously-rejected path);
-  the ordinary desugar stays untouched otherwise.
+  Captures see one distinct cell per iteration. Applied when a func
+  literal ANYWHERE in the for statement — body, condition, or post
+  statement — captures a for-clause variable (audit-response 2026-08-04,
+  F2: the trigger originally scanned only the body, so a capturing
+  literal in the condition — reachable once condPre accepted calls
+  there — or in the post took the shared-cell lowering silently; the
+  post hole predates this slice). Per Go >= 1.22, iteration k's post
+  runs on iteration k+1's freshly declared variable and that same cell
+  serves k+1's condition and body — exactly the desugar's
+  top-of-iteration fresh cell, so cond/post captures are correct on the
+  same path (differential pins: `for-loopvar-cond-capture` = 123,
+  `for-loopvar-post-capture` = 123, go-run oracle). The ordinary
+  desugar stays untouched when nothing captures.
 
 ## Stage 2 — labeled break/continue: label-carrying continuations
 

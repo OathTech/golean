@@ -1,0 +1,2 @@
+# id	subject	args	expected_status	expected_reason	features
+-	forLoopvarPostCapture	-	ok	-	control_flow,loops,closures,scoping,escapes,calls

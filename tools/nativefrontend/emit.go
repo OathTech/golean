@@ -1692,22 +1692,42 @@ func (e *emitter) emitFor(st *ast.ForStmt) (any, error) {
 			}
 		}
 		if len(loopVars) > 0 {
+			// The scan covers the body AND the condition and post
+			// statement (audit-response 2026-08-04, F2: it scanned only
+			// the body, so a capturing literal in the condition — newly
+			// accepted since condPre — or in the post, a hole predating
+			// this slice, took the shared-cell lowering silently). Per
+			// Go >= 1.22, iteration k's post runs on iteration k+1's
+			// freshly declared variable, and the condition and body of
+			// iteration k+1 use that same cell — exactly the desugar's
+			// top-of-iteration fresh cell, so cond/post captures ride
+			// the same per-iteration path (differentially pinned by
+			// for-loopvar-cond-capture / for-loopvar-post-capture).
 			captured := false
-			ast.Inspect(st.Body, func(n ast.Node) bool {
-				lit, ok := n.(*ast.FuncLit)
-				if !ok {
-					return true
-				}
-				ast.Inspect(lit, func(m ast.Node) bool {
-					if id, ok := m.(*ast.Ident); ok {
-						if obj := e.info.Uses[id]; obj != nil && loopVars[obj] {
-							captured = true
-						}
+			scanForCapture := func(root ast.Node) {
+				ast.Inspect(root, func(n ast.Node) bool {
+					lit, ok := n.(*ast.FuncLit)
+					if !ok {
+						return !captured
 					}
-					return !captured
+					ast.Inspect(lit, func(m ast.Node) bool {
+						if id, ok := m.(*ast.Ident); ok {
+							if obj := e.info.Uses[id]; obj != nil && loopVars[obj] {
+								captured = true
+							}
+						}
+						return !captured
+					})
+					return false
 				})
-				return !captured
-			})
+			}
+			scanForCapture(st.Body)
+			if st.Cond != nil {
+				scanForCapture(st.Cond)
+			}
+			if st.Post != nil {
+				scanForCapture(st.Post)
+			}
 			if captured {
 				return e.emitForPerIteration(st, loopVarIdents)
 			}
