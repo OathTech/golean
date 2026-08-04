@@ -10,12 +10,7 @@ embedding/deep-promoted-field
 embedding/embedded-pointer-field
 embedding/embedded-pointer-nil-panic
 embedding/promoted-field-depth-shadow
-init/blank-var-init
-init/global-zero-before-init
-init/init-sees-var-values
 init/multiple-init-order
-init/package-init-order
-init/var-init-sequence
 methods/value-auto-deref
 pointers/nil-array-index-panic
 pointers/nil-value-receiver-call-panic

@@ -575,24 +575,51 @@ partial def decodeStmt (results : Array Param) (path : String) (json : Json) : L
       pure (.seqn stmts)
   | "break" => pure .breakStmt
   | "continue" => pure .continueStmt
+  | "break-to" =>
+      pure (.breakTo (← StrictJson.string s!"{path}.label" (← StrictJson.field path obj "label")))
+  | "continue-to" =>
+      pure (.continueTo (← StrictJson.string s!"{path}.label" (← StrictJson.field path obj "label")))
+  | "labeled" =>
+      -- A break/continue-targetable label. The machine label must sit
+      -- DIRECTLY on the loop-forming statement (`contHeadLabel`'s
+      -- placement invariant), so for/range push it inside their desugar;
+      -- a switch's breakable is wrapped whole. Anything else fails
+      -- closed (go/types only accepts these targets).
+      let name ← StrictJson.string s!"{path}.label" (← StrictJson.field path obj "label")
+      let bodyJson ← StrictJson.field path obj "body"
+      let bobj ← StrictJson.obj s!"{path}.body" bodyJson
+      let btag ← StrictJson.string s!"{path}.body.stmt"
+        (← StrictJson.field s!"{path}.body" bobj "stmt")
+      match btag with
+      | "for" => decodeFor results s!"{path}.body" bobj (some name)
+      | "range" => decodeRange results s!"{path}.body" bobj (some name)
+      | "breakable" => pure (.labeled name (← decodeStmt results s!"{path}.body" bodyJson))
+      | other => fail s!"labeled statement over unsupported form {other} at {path}"
   | other => fail s!"unsupported statement {other} at {path}"
 
 /-- Lower `for k, v := range X`. Map range is the `mapRange` primitive; index
 ranges (slice/array/int) desugar to an index `while` loop. The index is
 incremented at the top of the loop body (guarded by a first-iteration flag) so
-`continue` still advances it, matching Go. -/
-partial def decodeRange (results : Array Param) (path : String) (obj : StrictJson.Obj) : LowerM Stmt := do
+`continue` still advances it, matching Go. A `label` (from a wire "labeled"
+wrapper) attaches DIRECTLY to the loop-forming statement — the machine's
+`contHeadLabel` placement invariant. -/
+partial def decodeRange (results : Array Param) (path : String) (obj : StrictJson.Obj)
+    (label : Option String := none) : LowerM Stmt := do
   let kind ← StrictJson.string s!"{path}.kind" (← StrictJson.field path obj "kind")
   let keyVar := optString obj "keyVar"
   let valVar := optString obj "valVar"
   let collJson ← StrictJson.field path obj "collection"
   let coll ← decodeExpr s!"{path}.collection" collJson
   let body ← decodeStmt results s!"{path}.body" (← StrictJson.field path obj "body")
+  let lab : Stmt → Stmt := fun st =>
+    match label with
+    | some l => .labeled l st
+    | none => st
   match kind with
   | "map" =>
       let keyTy ← decodeTy s!"{path}.keyType" (← StrictJson.field path obj "keyType")
       let valTy ← decodeTy s!"{path}.valueType" (← StrictJson.field path obj "valueType")
-      pure (.mapRange keyVar valVar coll keyTy valTy body)
+      pure (lab (.mapRange keyVar valVar coll keyTy valTy body))
   | "slice" | "array" | "int" | "array-pointer" =>
       let collTy ← exprTypeOf s!"{path}.collection" collJson
       let intTy : Ty := .int .int
@@ -642,7 +669,7 @@ partial def decodeRange (results : Array Param) (path : String) (obj : StrictJso
         .initialization { id := "$rlen", typ := intTy }, .assign (.var "$rlen") lenExpr,
         .initialization { id := "$ridx", typ := intTy }, .assign (.var "$ridx") (.intLit 0 .int),
         .initialization { id := "$rfirst", typ := .bool }, .assign (.var "$rfirst") (.boolLit true),
-        .while (.boolLit true) (.block #[] iter)
+        lab (.while (.boolLit true) (.block #[] iter))
       ])
   | "string" =>
       -- Rune iteration: the key is the rune's starting BYTE offset, the
@@ -671,7 +698,7 @@ partial def decodeRange (results : Array Param) (path : String) (obj : StrictJso
       pure (.block #[] #[
         .initialization { id := "$rcoll", typ := .string }, .assign (.var "$rcoll") coll,
         .initialization { id := "$rnext", typ := intTy }, .assign (.var "$rnext") (.intLit 0 .int),
-        .while (.boolLit true) (.block #[] iter)
+        lab (.while (.boolLit true) (.block #[] iter))
       ])
   | other => fail s!"unsupported range kind {other} at {path}"
 
@@ -827,7 +854,8 @@ partial def decodeIf (results : Array Param) (path : String) (obj : StrictJson.O
       pure (.block #[] #[← decodeStmt results s!"{path}.init" initE, core])
   | none => pure core
 
-partial def decodeFor (results : Array Param) (path : String) (obj : StrictJson.Obj) : LowerM Stmt := do
+partial def decodeFor (results : Array Param) (path : String) (obj : StrictJson.Obj)
+    (label : Option String := none) : LowerM Stmt := do
   let cond ← (match obj.get? "cond" with
     | some c => decodeExpr s!"{path}.cond" c
     | none => pure (.boolLit true))
@@ -855,10 +883,16 @@ partial def decodeFor (results : Array Param) (path : String) (obj : StrictJson.
     .ifThenElse cond (.seqn #[]) .breakStmt,
     body
   ]
+  -- A label (from a wire "labeled" wrapper) attaches DIRECTLY to the
+  -- `.while` — the machine's `contHeadLabel` placement invariant.
+  let whileStmt : Stmt :=
+    match label with
+    | some l => .labeled l (.while (.boolLit true) loopBody)
+    | none => .while (.boolLit true) loopBody
   let loop := Stmt.block #[] #[
     .initialization { id := "$forFirst", typ := .bool },
     .assign (.var "$forFirst") (.boolLit true),
-    .while (.boolLit true) loopBody
+    whileStmt
   ]
   match obj.get? "init" with
   | some initE => pure (.block #[] #[← decodeStmt results s!"{path}.init" initE, loop])

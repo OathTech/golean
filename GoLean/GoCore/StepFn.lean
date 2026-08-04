@@ -103,6 +103,9 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
       | .breakStmt => return (.breaking k, s, choices)
       | .continueStmt => return (.continuing k, s, choices)
       | .label _ => return (.next k, s, choices)
+      | .labeled name b => return (.exec b env (.labelK name k), s, choices)
+      | .breakTo name => return (.breakingTo name k, s, choices)
+      | .continueTo name => return (.continuingTo name k, s, choices)
       | .breakable b => return (.exec b env (.breakableK k), s, choices)
       | .deferCall callee args =>
           return (.evalE callee env (.deferCalleeK args.toList env k), s, choices)
@@ -375,6 +378,7 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
           else
             return (.panicking chain k', s, choices)
       | .breakableK k' => return (.next k', s, choices)
+      | .labelK _ k' => return (.next k', s, choices)
       | .mapIterK keyVar valVar keyTy valTy body remaining env k' =>
           if remaining.isEmpty then
             return (.next k', s, choices)
@@ -396,6 +400,7 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
       | .seq _ _ k' => return (.breaking k', s, choices)
       | .loop _ _ _ k' => return (.next k', s, choices)
       | .breakableK k' => return (.next k', s, choices)
+      | .labelK _ k' => return (.breaking k', s, choices)
       | .mapIterK _ _ _ _ _ _ _ k' => return (.next k', s, choices)
       | .frame _ _ _ _ => throw (.stuck "function body escaped with break")
       | .stop => throw (.stuck "break outside loop")
@@ -404,6 +409,7 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
       match k with
       | .seq _ _ k' => return (.continuing k', s, choices)
       | .breakableK k' => return (.continuing k', s, choices)
+      | .labelK _ k' => return (.continuing k', s, choices)
       | .loop c b env k' => return (.exec (.while c b) env k', s, choices)
       | .mapIterK keyVar valVar keyTy valTy body remaining env k' =>
           return (.next (.mapIterK keyVar valVar keyTy valTy body remaining env k'), s, choices)
@@ -414,6 +420,7 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
       match k with
       | .seq _ _ k' => return (.returning k', s, choices)
       | .breakableK k' => return (.returning k', s, choices)
+      | .labelK _ k' => return (.returning k', s, choices)
       | .loop _ _ _ k' => return (.returning k', s, choices)
       | .mapIterK _ _ _ _ _ _ _ k' => return (.returning k', s, choices)
       | .frame targets results [] k' => do
@@ -437,6 +444,36 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
           | other => throw (.stuck s!"deferred callee is not a function value: {repr other}")
       | .stop => throw (.internal "return unwound past the entry frame")
       | _ => throw (.internal "return delivered to expression continuation")
+  | .breakingTo L k =>
+      match k with
+      | .seq _ _ k' => return (.breakingTo L k', s, choices)
+      | .loop _ _ _ k' => return (.breakingTo L k', s, choices)
+      | .breakableK k' => return (.breakingTo L k', s, choices)
+      | .mapIterK _ _ _ _ _ _ _ k' => return (.breakingTo L k', s, choices)
+      | .labelK name k' =>
+          if name = L then return (.next k', s, choices)
+          else return (.breakingTo L k', s, choices)
+      | .frame _ _ _ _ => throw (.stuck "function body escaped with labeled break")
+      | .stop => throw (.stuck s!"labeled break escaped its label: {L}")
+      | _ => throw (.internal "labeled break delivered to expression continuation")
+  | .continuingTo L k =>
+      match k with
+      | .seq _ _ k' => return (.continuingTo L k', s, choices)
+      | .breakableK k' => return (.continuingTo L k', s, choices)
+      | .labelK name k' =>
+          if name = L then throw (.stuck s!"continue to non-loop label {L}")
+          else return (.continuingTo L k', s, choices)
+      | .loop c b env k' =>
+          if contHeadLabel k' = some L then
+            return (.exec (.while c b) env k', s, choices)
+          else return (.continuingTo L k', s, choices)
+      | .mapIterK keyVar valVar keyTy valTy body remaining env k' =>
+          if contHeadLabel k' = some L then
+            return (.next (.mapIterK keyVar valVar keyTy valTy body remaining env k'), s, choices)
+          else return (.continuingTo L k', s, choices)
+      | .frame _ _ _ _ => throw (.stuck "function body escaped with labeled continue")
+      | .stop => throw (.stuck s!"labeled continue escaped its label: {L}")
+      | _ => throw (.internal "labeled continue delivered to expression continuation")
 
 /-- Fuel-bounded iteration of `stepFn` to a terminal configuration. Fuel
 counts machine steps; the terminal check precedes the fuel check so a

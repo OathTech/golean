@@ -216,6 +216,19 @@ inductive Stmt where
   | returnStmt
   | breakStmt
   | continueStmt
+  /-- A LABELED statement (control-flow slice,
+  `docs/2026-08-04_control-flow-design.md`): the label a `breakTo`/
+  `continueTo` targets. The frontend attaches it DIRECTLY around the
+  loop-forming statement (the desugared `while`, the `mapRange`, the
+  switch's `breakable`) — the machine's `contHeadLabel` test relies on
+  that placement. Inert labels (goto-only or unreferenced) never lower
+  to this. -/
+  | labeled (label : String) (body : Stmt)
+  /-- `break L`: terminate the enclosing statement labeled `L`. -/
+  | breakTo (label : String)
+  /-- `continue L`: advance the enclosing loop labeled `L` (post/cond
+  re-run by the loop's own desugar). -/
+  | continueTo (label : String)
   /-- The `panic(v)` builtin: evaluate the payload, then start unwinding
   with a fresh one-entry panic chain. The payload expression carries the
   Go `any`-conversion (lowering wraps non-interface arguments in

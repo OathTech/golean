@@ -35,16 +35,24 @@ type emitter struct {
 	// is explicit in the lowering. `lifted` accumulates them; `captureParam`
 	// maps a captured variable to its pointer-parameter name while emitting a
 	// lifted body, so references to it become derefs.
-	lifted        []any
-	liftSeq       int
-	curFuncName   string
-	captureParam  map[types.Object]string
+	lifted       []any
+	liftSeq      int
+	curFuncName  string
+	captureParam map[types.Object]string
 	// The enclosing function's result tuple, for the return-site
 	// interface-conversion wrap.
 	curResults *types.Tuple
 
 	// Whether the `defer recover()` no-op function has been registered.
 	deferNoopEmitted bool
+
+	// Label usage of the CURRENT function body (control-flow slice,
+	// docs/2026-08-04_control-flow-design.md), computed by scanLabelUses
+	// before the body is emitted and saved/restored around nested func
+	// literals (a label's scope never crosses a function boundary):
+	// labels referenced by labeled break/continue, and by goto.
+	branchLabels map[string]bool
+	gotoLabels   map[string]bool
 
 	// Interface-receiver methods CALLED somewhere in the package, keyed
 	// "<IfaceName>.<Method>" (the exact func id the call emits). Interfaces

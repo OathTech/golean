@@ -40,4 +40,9 @@
 #   frontend-export refusal pin, which is not a fidelity failure. No
 #   pre-existing id changed result or stage, so the backlog set is
 #   untouched.
-26
+# 2026-08-04 (control-flow slice, stages 1-2)  26 -> 21: the five init/*
+#   package-level-variable cases moved to a FRONTEND-boundary refusal
+#   (globals fail closed at emitIdent/emitAssignTarget until the init
+#   slice) — they were surfacing as machine-level "unbound variable"
+#   stucks, a misclassified stage, not a fidelity ledger entry.
+21

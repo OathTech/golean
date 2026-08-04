@@ -373,10 +373,16 @@ and never prose, so no gate could catch it.)
 
 ## BUG-003 — for-clause per-iteration loop variables (Go 1.22) are not lowered
 
-- Status: open
+- Status: fixed
 - Pinned-by: differential
 - Cases: control-flow/for-loopvar-escape, functions/closure-loop-var-capture
 - Discovered: 2026-07-25 (pre-merge adversarial audit of `seq-coverage-scoping`)
+- Fixed: 2026-08-04 (control-flow slice stage 1,
+  `docs/2026-08-04_control-flow-design.md`): `emitForPerIteration` desugars a
+  captured-loop-var for-clause with a carrier POINTER — a fresh cell per
+  iteration copied in at the TOP of the body, the carrier re-aimed at it, post
+  running on the fresh cell — so `continue` needs no copy-back path and each
+  iteration's captures see a distinct cell. Both pinned cases green.
 
 A three-clause `for` declares its variable ONCE outside the loop in our
 lowering, but Go ≥1.22 gives each iteration its own variable — a closure

@@ -1027,6 +1027,13 @@ inductive Cont where
   /-- Breakable scope (`Stmt.breakable`): catches `breaking`, passes
   `continuing`/`returning` through. -/
   | breakableK (k : Cont)
+  /-- Label scope (`Stmt.labeled`, control-flow slice): catches
+  `breakingTo` at a matching label; a `loop`/`mapIterK` whose IMMEDIATE
+  continuation is a matching `labelK` is the labeled loop `continuingTo`
+  targets (`contHeadLabel`). Bare `breaking`/`continuing`/`returning`
+  pass through — a bare break targets the innermost for/switch
+  regardless of labels. -/
+  | labelK (label : String) (k : Cont)
   /-- Call-through-value (§8): awaiting a target address; then remaining
   targets, then the callee expression. -/
   | callValTargetsK (callee : Expr) (locs : List Loc) (pending : List Expr)
@@ -1105,6 +1112,15 @@ def seqCont (ss : List Stmt) (env : LocalEnv) : Cont → Cont
                         else .seq ss env (.seq rest env' k)
   | k => .seq ss env k
 
+/-- The label carried by the HEAD of a continuation, if it is a `labelK`.
+The labeled-loop test for `continuingTo`: the frontend attaches
+`Stmt.labeled` directly around the loop-forming statement, so a labeled
+loop's `Cont.loop`/`Cont.mapIterK` has its `labelK` as the immediate
+continuation — and ONLY labeled loops do. -/
+def contHeadLabel : Cont → Option String
+  | .labelK name _ => some name
+  | _ => none
+
 /-- A value that may sit in callee position: a function value, or nil
 (which panics at INVOCATION, not at evaluation/registration). -/
 def deferrableCallee : GoValue → Bool
@@ -1121,6 +1137,7 @@ def pushDefer (d : GoValue × List GoValue) : Cont → Option Cont
   | .seq rest env k => (pushDefer d k).map (Cont.seq rest env)
   | .loop c b env k => (pushDefer d k).map (Cont.loop c b env)
   | .breakableK k => (pushDefer d k).map Cont.breakableK
+  | .labelK name k => (pushDefer d k).map (Cont.labelK name)
   | .mapIterK kv vv kt vt b rem env k =>
       (pushDefer d k).map (Cont.mapIterK kv vv kt vt b rem env)
   | _ => none
@@ -1134,6 +1151,7 @@ def panicPassthrough : Cont → Option Cont
   | .seq _ _ k => some k
   | .loop _ _ _ k => some k
   | .breakableK k => some k
+  | .labelK _ k => some k
   | .mapIterK _ _ _ _ _ _ _ k => some k
   | .strictK _ _ _ _ k => some k
   | .andK _ _ k => some k
@@ -1176,6 +1194,7 @@ def recoverResult : Cont → GoValue × Cont
   | .seq a b k => let (v, k') := recoverResult k; (v, .seq a b k')
   | .loop a b c k => let (v, k') := recoverResult k; (v, .loop a b c k')
   | .breakableK k => let (v, k') := recoverResult k; (v, .breakableK k')
+  | .labelK a k => let (v, k') := recoverResult k; (v, .labelK a k')
   | .mapIterK a b c d e f g k =>
       let (v, k') := recoverResult k; (v, .mapIterK a b c d e f g k')
   | .strictK a b c d k => let (v, k') := recoverResult k; (v, .strictK a b c d k')
@@ -1217,6 +1236,15 @@ inductive Config where
   | breaking (k : Cont)
   | continuing (k : Cont)
   | returning (k : Cont)
+  /-- `break L` travelling outward to the `labelK` for `L` (control-flow
+  slice). Strips statement frames like `.breaking`, but is caught only by
+  the MATCHING label; never crosses a call frame (`go/types` guarantees
+  enclosure — the machine fails closed there). -/
+  | breakingTo (label : String) (k : Cont)
+  /-- `continue L` travelling outward to the loop labeled `L`: caught by a
+  `loop`/`mapIterK` whose immediate continuation is the matching
+  `labelK` (`contHeadLabel`). -/
+  | continuingTo (label : String) (k : Cont)
   /-- Unwinding: a panic (chain, arc doc §A1) travelling outward through
   the continuation. Frames strip; call frames run their defers (which is
   where `recover` can catch it); `.stop` renders the terminal abort. -/
@@ -1386,6 +1414,66 @@ inductive Step : Config → ExecState → Config → ExecState → Prop where
       Step (.exec .continueStmt env k) s (.continuing k) s
   | label {name env k s} :
       Step (.exec (.label name) env k) s (.next k) s
+  -- Labeled statements and labeled break/continue (control-flow slice,
+  -- docs/2026-08-04_control-flow-design.md). The label scope catches
+  -- `breakingTo` at a match; bare signals pass through it; `continuingTo`
+  -- is caught by a loop whose immediate continuation is the matching
+  -- label (`contHeadLabel` — the frontend's placement invariant).
+  | labeledEnter {name b env k s} :
+      Step (.exec (.labeled name b) env k) s (.exec b env (.labelK name k)) s
+  | breakToStmt {name env k s} :
+      Step (.exec (.breakTo name) env k) s (.breakingTo name k) s
+  | continueToStmt {name env k s} :
+      Step (.exec (.continueTo name) env k) s (.continuingTo name k) s
+  | labelDone {name k s} :
+      Step (.next (.labelK name k)) s (.next k) s
+  | labelBreak {name k s} :
+      Step (.breaking (.labelK name k)) s (.breaking k) s
+  | labelContinue {name k s} :
+      Step (.continuing (.labelK name k)) s (.continuing k) s
+  | labelReturn {name k s} :
+      Step (.returning (.labelK name k)) s (.returning k) s
+  | breakToSeq {L rest env k s} :
+      Step (.breakingTo L (.seq rest env k)) s (.breakingTo L k) s
+  | breakToLoop {L c b env k s} :
+      Step (.breakingTo L (.loop c b env k)) s (.breakingTo L k) s
+  | breakToBreakable {L k s} :
+      Step (.breakingTo L (.breakableK k)) s (.breakingTo L k) s
+  | breakToMapIter {L keyVar valVar keyTy valTy body remaining env k s} :
+      Step (.breakingTo L (.mapIterK keyVar valVar keyTy valTy body remaining env k)) s
+        (.breakingTo L k) s
+  | breakToLabelMatch {L name k s} :
+      name = L →
+      Step (.breakingTo L (.labelK name k)) s (.next k) s
+  | breakToLabelSkip {L name k s} :
+      name ≠ L →
+      Step (.breakingTo L (.labelK name k)) s (.breakingTo L k) s
+  | continueToSeq {L rest env k s} :
+      Step (.continuingTo L (.seq rest env k)) s (.continuingTo L k) s
+  | continueToBreakable {L k s} :
+      Step (.continuingTo L (.breakableK k)) s (.continuingTo L k) s
+  /-- A `labelK` reached by `continuingTo` is never the target: `continue
+  L` targets a LOOP labeled `L`, caught one frame earlier at the loop
+  whose head is the matching label. A non-matching label is stripped; a
+  MATCHING one not guarded by a loop head has no rule (statically
+  impossible in Go — fail closed). -/
+  | continueToLabelSkip {L name k s} :
+      name ≠ L →
+      Step (.continuingTo L (.labelK name k)) s (.continuingTo L k) s
+  | continueToLoopMatch {L c b env k s} :
+      contHeadLabel k = some L →
+      Step (.continuingTo L (.loop c b env k)) s (.exec (.while c b) env k) s
+  | continueToLoopSkip {L c b env k s} :
+      contHeadLabel k ≠ some L →
+      Step (.continuingTo L (.loop c b env k)) s (.continuingTo L k) s
+  | continueToMapIterMatch {L keyVar valVar keyTy valTy body remaining env k s} :
+      contHeadLabel k = some L →
+      Step (.continuingTo L (.mapIterK keyVar valVar keyTy valTy body remaining env k)) s
+        (.next (.mapIterK keyVar valVar keyTy valTy body remaining env k)) s
+  | continueToMapIterSkip {L keyVar valVar keyTy valTy body remaining env k s} :
+      contHeadLabel k ≠ some L →
+      Step (.continuingTo L (.mapIterK keyVar valVar keyTy valTy body remaining env k)) s
+        (.continuingTo L k) s
   -- Calls: resolve target addresses left-to-right (each an evaluated
   -- expression via `assigneeExpr`), then arguments left-to-right, then
   -- frame entry — Go's order, one machine step per operand plus one per

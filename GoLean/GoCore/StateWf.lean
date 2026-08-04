@@ -190,10 +190,11 @@ mutual
 
 def Stmt.locSup : Stmt → Nat
   | .initialization _ | .returnStmt | .breakStmt | .continueStmt
-  | .label _ | .unsupported _ => 0
+  | .label _ | .breakTo _ | .continueTo _ | .unsupported _ => 0
   | .seqn ss => stmtListSup ss.toList
   | .block _ ss => stmtListSup ss.toList
   | .breakable body => Stmt.locSup body
+  | .labeled _ body => Stmt.locSup body
   | .assign l r => max (Assignee.locSup l) (Expr.locSup r)
   | .assignMany ls rs =>
       max (assigneeListSup ls.toList) (exprListSup rs.toList)
@@ -280,6 +281,7 @@ def Cont.locSup : Cont → Nat
       max (max (GoValue.locSup callee) (goValueListSup vals))
         (max (exprListSup pending) (max (LocalEnv.locSup env) (Cont.locSup k)))
   | .breakableK k => Cont.locSup k
+  | .labelK _ k => Cont.locSup k
   | .callValTargetsK callee locs pending args env k =>
       max (max (Expr.locSup callee) (locListSup locs))
         (max (max (exprListSup pending) (exprListSup args))
@@ -333,6 +335,7 @@ def Config.locSup : Config → Nat
       max (max (Expr.locSup e) (LocalEnv.locSup env)) (Cont.locSup k)
   | .retV v k => max (GoValue.locSup v) (Cont.locSup k)
   | .next k | .breaking k | .continuing k | .returning k => Cont.locSup k
+  | .breakingTo _ k | .continuingTo _ k => Cont.locSup k
   | .panicking chain k => max (panicChainSup chain) (Cont.locSup k)
   | .panicked _ => 0
 
@@ -366,6 +369,7 @@ def Cont.itersNormalized (types : TypeEnv) : Cont → Bool
   | .deferCalleeK _ _ k => Cont.itersNormalized types k
   | .deferArgsK _ _ _ _ k => Cont.itersNormalized types k
   | .breakableK k => Cont.itersNormalized types k
+  | .labelK _ k => Cont.itersNormalized types k
   | .callValTargetsK _ _ _ _ _ k => Cont.itersNormalized types k
   | .callValCalleeK _ _ _ k => Cont.itersNormalized types k
   | .callValArgsK _ _ _ _ _ k => Cont.itersNormalized types k
@@ -396,6 +400,8 @@ def Config.itersNormalized (types : TypeEnv) : Config → Bool
   | .breaking k => Cont.itersNormalized types k
   | .continuing k => Cont.itersNormalized types k
   | .returning k => Cont.itersNormalized types k
+  | .breakingTo _ k => Cont.itersNormalized types k
+  | .continuingTo _ k => Cont.itersNormalized types k
   | .panicking _ k => Cont.itersNormalized types k
   | .panicked _ => true
 

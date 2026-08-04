@@ -361,12 +361,93 @@ func (e *emitter) emitFuncDecl(d *ast.FuncDecl) (map[string]any, error) {
 	if d.Body == nil {
 		return nil, unsup("bodyless function %s", d.Name.Name)
 	}
+	savedBranch, savedGoto := e.branchLabels, e.gotoLabels
+	e.branchLabels, e.gotoLabels = scanLabelUses(d.Body)
 	body, err := e.emitBlock(d.Body)
+	e.branchLabels, e.gotoLabels = savedBranch, savedGoto
 	if err != nil {
 		return nil, err
 	}
 	fn["body"] = body
 	return fn, nil
+}
+
+// scanLabelUses collects the labels a function body references by labeled
+// break/continue and by goto, WITHOUT descending into nested func literals
+// (a label's scope never crosses a function boundary — go/types enforces
+// it; each literal body gets its own scan).
+func scanLabelUses(body *ast.BlockStmt) (branch, gotos map[string]bool) {
+	branch = map[string]bool{}
+	gotos = map[string]bool{}
+	ast.Inspect(body, func(n ast.Node) bool {
+		if _, isLit := n.(*ast.FuncLit); isLit {
+			return false
+		}
+		if br, ok := n.(*ast.BranchStmt); ok && br.Label != nil {
+			switch br.Tok {
+			case token.BREAK, token.CONTINUE:
+				branch[br.Label.Name] = true
+			case token.GOTO:
+				gotos[br.Label.Name] = true
+			}
+		}
+		return true
+	})
+	return branch, gotos
+}
+
+// emitLabeled lowers a labeled statement by how its label is USED:
+// goto targets go through the dispatch-loop restructuring (stage 3);
+// labeled-break/continue targets wrap the loop-forming statement in a
+// wire "labeled" node (the decoder attaches the machine label DIRECTLY
+// around the loop — the contHeadLabel placement invariant); an inert
+// label (unreferenced) has no runtime meaning and drops.
+func (e *emitter) emitLabeled(st *ast.LabeledStmt) (any, error) {
+	name := st.Label.Name
+	if e.gotoLabels[name] {
+		// Reaching emitStmt means the label is NOT at the top level of a
+		// restructured body (emitGotoBody consumes those positions).
+		return nil, unsup("goto target label %s not at function body top level", name)
+	}
+	if !e.branchLabels[name] {
+		if _, isEmpty := st.Stmt.(*ast.EmptyStmt); isEmpty {
+			return map[string]any{"stmt": "block", "body": []any{}}, nil
+		}
+		return e.emitStmt(st.Stmt)
+	}
+	switch st.Stmt.(type) {
+	case *ast.ForStmt, *ast.RangeStmt, *ast.SwitchStmt:
+		w, err := e.emitStmt(st.Stmt)
+		if err != nil {
+			return nil, err
+		}
+		m, ok := w.(map[string]any)
+		if !ok {
+			return nil, unsup("labeled statement lowering shape")
+		}
+		switch m["stmt"] {
+		case "for", "range", "breakable":
+			return map[string]any{"stmt": "labeled", "label": name, "body": m}, nil
+		case "block":
+			// The per-iteration for desugar wraps its loop in a block of
+			// seed statements; the label belongs on the inner loop node.
+			if list, ok := m["body"].([]any); ok && len(list) > 0 {
+				if inner, ok := list[len(list)-1].(map[string]any); ok && inner["stmt"] == "for" {
+					list[len(list)-1] = map[string]any{
+						"stmt": "labeled", "label": name, "body": inner}
+					m["body"] = list
+					return m, nil
+				}
+			}
+			return nil, unsup("labeled statement lowering shape (block without trailing loop)")
+		default:
+			return nil, unsup("labeled statement lowering shape %v", m["stmt"])
+		}
+	default:
+		// go/types only accepts break/continue labels on for/switch/select;
+		// select is channel-blocked, anything else is defensive.
+		return nil, unsup("labeled break/continue target %T", st.Stmt)
+	}
 }
 
 func (e *emitter) emitParams(t *types.Tuple) ([]any, error) {
@@ -600,16 +681,18 @@ func (e *emitter) emitStmt(s ast.Stmt) (any, error) {
 			return nil, err
 		}
 		return map[string]any{"stmt": "defer", "callee": callee, "args": args}, nil
+	case *ast.LabeledStmt:
+		return e.emitLabeled(st)
 	case *ast.BranchStmt:
 		switch st.Tok {
 		case token.BREAK:
 			if st.Label != nil {
-				return nil, unsup("labeled break")
+				return map[string]any{"stmt": "break-to", "label": st.Label.Name}, nil
 			}
 			return map[string]any{"stmt": "break"}, nil
 		case token.CONTINUE:
 			if st.Label != nil {
-				return nil, unsup("labeled continue")
+				return map[string]any{"stmt": "continue-to", "label": st.Label.Name}, nil
 			}
 			return map[string]any{"stmt": "continue"}, nil
 		default:
@@ -2633,11 +2716,14 @@ func (e *emitter) emitFuncLit(lit *ast.FuncLit) (any, error) {
 	// Emit the body with the capture map in force and a fresh hoist context.
 	savedCapture, savedHoisted, savedName := e.captureParam, e.hoisted, e.curFuncName
 	savedResults := e.curResults
+	savedBranch, savedGoto := e.branchLabels, e.gotoLabels
 	e.captureParam, e.hoisted = newCapture, nil
 	e.curResults = sig.Results()
+	e.branchLabels, e.gotoLabels = scanLabelUses(lit.Body)
 	body, berr := e.emitBlock(lit.Body)
 	e.captureParam, e.hoisted, e.curFuncName = savedCapture, savedHoisted, savedName
 	e.curResults = savedResults
+	e.branchLabels, e.gotoLabels = savedBranch, savedGoto
 	if berr != nil {
 		return nil, berr
 	}
