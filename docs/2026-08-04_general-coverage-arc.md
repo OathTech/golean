@@ -95,6 +95,18 @@ observation — the membership-lane motivator).
    deliberate divergence from Goose, recorded in the note's §6. The
    note also corrects the accounting: 75 generics-blocked reds, of
    which 57 flip on generics alone.)
+   (Landed 2026-08-05, branch general-coverage-generics, stages G0–G4
+   per the note's §8, build log in its §10: 749 → 823 pass — 63
+   pre-existing reds flipped (44 generics + 4 bools + 8 scattered
+   builtins/new/variadic + 7 floats/generic-type-set, single-blocked
+   once floats landed) plus 12 new guardrail ids (11 green) and 1
+   negative probe. GoCore/wire schema untouched; one sanctioned Lean
+   rendering fix (`TypeId.unqualified`). Still red with reasons:
+   type-parameter-channel-ops (channels arc), type-aliases/struct-literal
+   (anonymous non-empty struct — pre-existing gap, the note's flip
+   count was over by one), instantiated-type-assert/name (BUG-013, the
+   CLI.lean duplicate renderer — charter-deferred one-liner),
+   complex/generic-type-set ×9 (complex domain; generics side ready).)
 
 Channels/goroutines remain their own arc (the sem-adequacy arc's
 concurrency posture: Choices as scheduler, fork/join statements,
