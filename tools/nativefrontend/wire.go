@@ -128,8 +128,13 @@ type emitter struct {
 	// Method declarations on GENERIC types, keyed by the receiver's
 	// ORIGIN named type: skipped by the declaration loop (a generic
 	// method has no uninstantiated runtime form) and stenciled per
-	// receiver instantiation when instantiated types land (G3).
+	// receiver instantiation (flushTypeInsts).
 	genericMethodDecls map[*types.Named][]*ast.FuncDecl
+	// Instantiated-type declarations: dedup map + pending queue of
+	// TypeDef/method stencils, one per mangled TypeId that reaches the
+	// wire (instTypeIdForWire).
+	typeInsts     map[string]*typeInstWork
+	typeInstQueue []*typeInstWork
 
 	// Every package NAME that qualified a wire TypeId, mapped to the
 	// distinct import PATHs that used it. Go keys type identity on the
@@ -379,11 +384,33 @@ func floatType(kind string) map[string]any {
 }
 
 // emitInstantiatedNamed is the wire arm for INSTANTIATED generic named
-// types. G2 (function instantiation) refuses them loudly; instantiated
-// type declarations land in the next stage (G3), which replaces this
-// refusal with mangled-TypeId emission + stenciled typeDefs/methods.
+// types (mono.go): the type names by its mangled key, and its TypeDef —
+// with the full stenciled method set — is enqueued for emission from the
+// instantiation worklist. Instantiated INTERFACES need no TypeDef stencil
+// of their own: go/types' instance Underlying() carries the substituted
+// method set, and the seenInterfaces declaration pass emits it like any
+// other interface (satisfaction requirements), with dispatch anchors
+// synthesized from recorded calls.
 func (e *emitter) emitInstantiatedNamed(ty *types.Named) (any, error) {
-	return nil, unsup("instantiated generic named type %s (generic type declarations are not yet monomorphized)", ty)
+	if mentionsTypeParam(ty, nil) {
+		return nil, unsup("instantiated type %s still mentions a type parameter", ty)
+	}
+	if iface, isIface := ty.Underlying().(*types.Interface); isIface {
+		if !iface.IsMethodSet() {
+			return nil, unsup("constraint interface %s used as a value type", ty)
+		}
+		key, err := e.instTypeId(ty)
+		if err != nil {
+			return nil, err
+		}
+		e.noteInterface(key, iface)
+		return map[string]any{"kind": "interface", "name": key}, nil
+	}
+	key, err := e.instTypeIdForWire(ty)
+	if err != nil {
+		return nil, err
+	}
+	return map[string]any{"kind": "named", "name": key}, nil
 }
 
 // typeOf returns the emitted wire type of an expression from go/types.

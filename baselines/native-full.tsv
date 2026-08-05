@@ -1,43 +1,31 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-05  commit: general-coverage-generics (G2 function instantiation closure)
+# recorded: 2026-08-05  commit: general-coverage-generics (G3 instantiated types, methods, interfaces)
 #   frontend: native  oracle: go run (strict lane) / go-run membership in the
 #   machine-enumerated observation set (membership lane; go1.26.5 samples)
-# manifest_cases: 950  pass: 807  fail: 143
-# Re-pin reason: DELIBERATE coverage change — generics G2, frontend
-# monomorphization of FUNCTION instantiations (design note
-# docs/2026-08-05_generics-design.md §8 G2, decisions §9.1/§9.6): 57 flips,
-# all FAIL/frontend-export -> PASS, zero movement otherwise. Per cluster:
-# - generics function-level (28): identity, inference, zero-values,
-#   zero-composite, map-slice, comparable-constraint,
-#   comparable-runtime-edge/* (8 — comparable-at-any reduces to the
-#   machine's existing uncomparable-dynamic-type panic, §4.2),
-#   type-set-constraint, constraint-embedding, higher-order-inference/*
-#   (6 — go/types' Instances carries the full inference),
-#   type-parameter-{slice,map,composite-literal,conversion}-ops,
-#   method-constraint-call, method-and-type-set-constraint (constraint
-#   method calls re-resolve at the substituted receiver,
-#   LookupFieldOrMethod), recursive-constraints/* (4 — F-bounded
-#   constraints are static-only; nothing survives to runtime).
-#   method-constraint-call/method-and-type-set/recursive-constraints were
-#   listed under G3 in the note's sketch but are function-level (concrete
-#   receiver types) — they flip here.
-# - G0 probes, function-level (4): structural-transparency,
-#   derived-instantiation (the substitution-closure walk),
-#   self-recursive, generic-closure + shared-capture (5 ids with the
-#   closure pair).
-# - bools/generic-type-set (4): includes the underlying-bool conversion
-#   retyping (bool(x) at ~bool is static-only; frontend emits the operand).
-# - floats/generic-type-set (7): floats semantics landed in slice 4, so
-#   these were single-blocked on generics; explicit-constant pins the
-#   §4.1 constant-NON-refolding rule differentially (emission over the
-#   ORIGINAL types.Info).
-# - scattered builtins/new/variadic (8): clear/delete/copy/min/max/new/
-#   variadic at ~-constrained type parameters — instantiation composes
-#   with existing builtin semantics, no new machinery.
-# Still red (expected, stages unchanged): generics instantiated-TYPE
-# clusters (G3), generics/type-aliases/* (G4 gotypesalias),
-# generics/type-parameter-channel-ops (channels arc),
-# complex/generic-type-set (9; complex domain semantics not landed).
+# manifest_cases: 950  pass: 819  fail: 131
+# Re-pin reason: DELIBERATE coverage change — generics G3, instantiated
+# TYPE declarations + per-instantiation method stenciling + instantiated
+# interfaces (design note §8 G3): 12 flips FAIL/frontend-export -> PASS
+# (generic-struct, defined-slice-type, generic-map-type,
+# recursive-generic-type, type-method-dispatch, instantiated-method-value,
+# generic-interface-value, nested-instantiation, instantiated-map-key,
+# instantiated-type-assert/{ok,comma-ok,panic}), plus one stage move:
+# - generics/instantiated-type-assert/name: FAIL/frontend-export ->
+#   FAIL/differential — BUG-013 (docs/BUGS.md): GoLean/CLI.lean's private
+#   duplicate of the pre-fix TypeId.unqualified logic truncates mangled
+#   TypeIds in STRUCT observations ("assertInner]" vs Go's
+#   "assertBox[main.assertInner]"); the interface DYNAMIC name beside it
+#   (the fixed Value.lean renderer) matches Go verbatim. Left red BY THE
+#   SLICE CHARTER (single sanctioned Lean-side change); one-line fix
+#   recorded in the bug entry.
+# Recording run made after the diff-coverage go-run-dir flattening fix
+# (nested ids raced the per-id harness RemoveAll under the parallel
+# runner — spurious go-run FAIL on generic-closure/shared-capture in
+# full runs; runner fix in the same commit, ids unchanged).
+# Standing expected reds (unchanged): generics/type-aliases/* (G4
+# gotypesalias, next stage), generics/type-parameter-channel-ops
+# (channels arc), complex/generic-type-set (9; complex domain semantics
+# not landed).
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
 PASS	arrays/array-copy	-
@@ -385,13 +373,13 @@ PASS	generics/comparable-runtime-edge/array-interface-panic	-
 PASS	generics/comparable-runtime-edge/struct-interface-panic	-
 PASS	generics/comparable-runtime-edge/struct-skips-interface-panic	-
 PASS	generics/constraint-embedding	-
-FAIL	generics/defined-slice-type	frontend-export
+PASS	generics/defined-slice-type	-
 PASS	generics/derived-instantiation	-
 PASS	generics/generic-closure	-
 PASS	generics/generic-closure/shared-capture	-
-FAIL	generics/generic-interface-value	frontend-export
-FAIL	generics/generic-map-type	frontend-export
-FAIL	generics/generic-struct	frontend-export
+PASS	generics/generic-interface-value	-
+PASS	generics/generic-map-type	-
+PASS	generics/generic-struct	-
 PASS	generics/higher-order-inference/assignment-target	-
 PASS	generics/higher-order-inference/named-function-type	-
 PASS	generics/higher-order-inference/partial-instantiation-target	-
@@ -401,21 +389,21 @@ PASS	generics/higher-order-inference/return-target	-
 PASS	generics/identity	-
 PASS	generics/inference	-
 PASS	generics/instantiated-function-value	-
-FAIL	generics/instantiated-map-key	frontend-export
-FAIL	generics/instantiated-method-value	frontend-export
-FAIL	generics/instantiated-type-assert/comma-ok	frontend-export
-FAIL	generics/instantiated-type-assert/name	frontend-export
-FAIL	generics/instantiated-type-assert/ok	frontend-export
-FAIL	generics/instantiated-type-assert/panic	frontend-export
+PASS	generics/instantiated-map-key	-
+PASS	generics/instantiated-method-value	-
+PASS	generics/instantiated-type-assert/comma-ok	-
+FAIL	generics/instantiated-type-assert/name	differential
+PASS	generics/instantiated-type-assert/ok	-
+PASS	generics/instantiated-type-assert/panic	-
 PASS	generics/map-slice	-
 PASS	generics/method-and-type-set-constraint	-
 PASS	generics/method-constraint-call	-
-FAIL	generics/nested-instantiation	frontend-export
+PASS	generics/nested-instantiation	-
 PASS	generics/recursive-constraints/argument-method	-
 PASS	generics/recursive-constraints/clone	-
 PASS	generics/recursive-constraints/comparable	-
 PASS	generics/recursive-constraints/pointer-self	-
-FAIL	generics/recursive-generic-type	frontend-export
+PASS	generics/recursive-generic-type	-
 PASS	generics/self-recursive	-
 PASS	generics/structural-transparency	-
 FAIL	generics/type-aliases/func-type	frontend-export
@@ -423,7 +411,7 @@ FAIL	generics/type-aliases/map-literal	frontend-export
 FAIL	generics/type-aliases/nested-map	frontend-export
 FAIL	generics/type-aliases/slice-same-type	frontend-export
 FAIL	generics/type-aliases/struct-literal	frontend-export
-FAIL	generics/type-method-dispatch	frontend-export
+PASS	generics/type-method-dispatch	-
 FAIL	generics/type-parameter-channel-ops	frontend-export
 PASS	generics/type-parameter-composite-literal	-
 PASS	generics/type-parameter-conversion	-

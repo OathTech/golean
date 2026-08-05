@@ -368,6 +368,141 @@ func (e *emitter) registerFuncInst(mangled string, fn *types.Func, targs []types
 	return nil
 }
 
+// ---- instantiated TYPE declarations (G3) ----
+
+// typeInstWork is one pending instantiated-type declaration: the concrete
+// instance and the mangled TypeId it declares under. Emission produces
+// the TypeDef (struct fields / defined target already substituted by
+// go/types in the instance's Underlying) plus one stenciled method per
+// declared method of the origin — the FULL method set, so interface
+// satisfaction and promotion stay complete (the D2 wire contract).
+type typeInstWork struct {
+	key  string
+	inst *types.Named
+}
+
+// instTypeIdForWire is instTypeId plus the TypeDef enqueue: use it
+// whenever the mangled name actually REACHES the wire (a value type, a
+// receiver TypeId), so every mentioned TypeId gets a declaration.
+// (renderTypeArg deliberately uses bare instTypeId: a type that occurs
+// only inside another mangled key does not need its own TypeDef.)
+func (e *emitter) instTypeIdForWire(inst *types.Named) (string, error) {
+	key, err := e.instTypeId(inst)
+	if err != nil {
+		return "", err
+	}
+	if err := e.enqueueTypeInst(inst, key); err != nil {
+		return "", err
+	}
+	return key, nil
+}
+
+func (e *emitter) enqueueTypeInst(inst *types.Named, key string) error {
+	obj := inst.Obj()
+	if obj.Pkg() == nil || obj.Pkg() != e.pkg {
+		return unsup("instantiation of imported generic type %s", key)
+	}
+	// Instantiated INTERFACES get no TypeDef stencil here: their
+	// declaration (the satisfaction requirement list, with go/types'
+	// already-substituted method set) comes from the seenInterfaces pass,
+	// and a second entry under the same key would trip the duplicate-
+	// TypeId refusal (caught by generics/generic-interface-value).
+	if iface, isIface := inst.Underlying().(*types.Interface); isIface {
+		if !iface.IsMethodSet() {
+			return unsup("constraint interface %s used as a value type", key)
+		}
+		e.noteInterface(key, iface)
+		return nil
+	}
+	if e.typeInsts == nil {
+		e.typeInsts = map[string]*typeInstWork{}
+	}
+	if _, done := e.typeInsts[key]; done {
+		return nil
+	}
+	work := &typeInstWork{key: key, inst: inst}
+	e.typeInsts[key] = work
+	e.typeInstQueue = append(e.typeInstQueue, work)
+	return nil
+}
+
+// flushTypeInsts drains the instantiated-type queue, appending TypeDefs,
+// stenciled methods, and their lifted literals. Method stencils follow
+// the standing method policy: an unsupported method fails the whole
+// export (methods have no per-decl quarantine).
+func (e *emitter) flushTypeInsts(typeDefs, methods, funcs []any) ([]any, []any, []any, bool, error) {
+	did := false
+	for len(e.typeInstQueue) > 0 {
+		work := e.typeInstQueue[0]
+		e.typeInstQueue = e.typeInstQueue[1:]
+		did = true
+		underlying := work.inst.Underlying()
+		if st, isStruct := underlying.(*types.Struct); isStruct {
+			fields := []any{}
+			for i := 0; i < st.NumFields(); i++ {
+				fld := st.Field(i)
+				fty, err := e.emitType(fld.Type())
+				if err != nil {
+					return nil, nil, nil, did, err
+				}
+				fields = append(fields, map[string]any{
+					"name": fld.Name(), "type": fty, "embedded": fld.Anonymous()})
+			}
+			typeDefs = append(typeDefs, map[string]any{
+				"name": work.key,
+				"def":  map[string]any{"kind": "struct", "fields": fields},
+			})
+			// Promotion-wrapper candidate, like any declared struct type.
+			e.namedStructTypes = append(e.namedStructTypes, work.inst)
+		} else {
+			target, err := e.emitType(underlying)
+			if err != nil {
+				return nil, nil, nil, did, err
+			}
+			typeDefs = append(typeDefs, map[string]any{
+				"name": work.key,
+				"def":  map[string]any{"kind": "defined", "target": target},
+			})
+		}
+		for _, d := range e.genericMethodDecls[work.inst.Origin()] {
+			m, err := e.emitMethodInst(work, d)
+			if err != nil {
+				return nil, nil, nil, did, err
+			}
+			funcs = append(funcs, e.lifted...)
+			e.lifted = nil
+			methods = append(methods, m)
+		}
+	}
+	return typeDefs, methods, funcs, did, nil
+}
+
+// emitMethodInst stencils one method declaration at a receiver
+// instantiation: the environment binds the method's RECEIVER type
+// parameters (the only kind Go has — methods cannot add their own, spec
+// §Method declarations) to the instance's arguments; the FuncId is
+// receiverTypeId + "." + name, produced by the ordinary emitFuncDecl
+// receiver path through the substitution-aware namedTypeName.
+func (e *emitter) emitMethodInst(work *typeInstWork, d *ast.FuncDecl) (map[string]any, error) {
+	fn, ok := e.info.Defs[d.Name].(*types.Func)
+	if !ok {
+		return nil, unsup("generic method %s has no definition object", d.Name.Name)
+	}
+	sig := fn.Type().(*types.Signature)
+	rtp := sig.RecvTypeParams()
+	targs := work.inst.TypeArgs()
+	if rtp.Len() != targs.Len() {
+		return nil, unsup("receiver arity mismatch stenciling %s.%s: %d receiver params, %d args",
+			work.key, d.Name.Name, rtp.Len(), targs.Len())
+	}
+	env := map[*types.TypeParam]types.Type{}
+	for i := 0; i < rtp.Len(); i++ {
+		env[rtp.At(i)] = targs.At(i)
+	}
+	return e.emitFuncInst(&funcInstWork{
+		mangled: work.key + "." + d.Name.Name, decl: d, env: env})
+}
+
 // recordGenericMethod indexes a generic-receiver method declaration by
 // its receiver's origin type, for per-instantiation stenciling.
 func (e *emitter) recordGenericMethod(d *ast.FuncDecl) {
@@ -470,8 +605,36 @@ func (e *emitter) emitFuncInst(work *funcInstWork) (map[string]any, error) {
 		e.namedStructTypes = e.namedStructTypes[:namedStructMark]
 		return nil, err
 	}
-	fn["name"] = work.mangled
+	// Plain functions are keyed by the mangled FuncId directly; METHOD
+	// stencils keep their declared name — their wire key is
+	// recvType + "." + name, and recvType is already the mangled receiver
+	// TypeId (namedTypeName under the active substitution).
+	if work.decl.Recv == nil {
+		fn["name"] = work.mangled
+	}
 	return fn, nil
+}
+
+// drainMono drains BOTH instantiation queues to a joint fixpoint:
+// function stencils can reach new instantiated types, and type stencils
+// (fields, methods) can reach new function instantiations. Termination:
+// every registration passes the capped mangled-key registry.
+func (e *emitter) drainMono(funcs, typeDefs, methods []any) ([]any, []any, []any, error) {
+	for {
+		var err error
+		funcs, err = e.flushFuncInsts(funcs)
+		if err != nil {
+			return nil, nil, nil, err
+		}
+		var did bool
+		typeDefs, methods, funcs, did, err = e.flushTypeInsts(typeDefs, methods, funcs)
+		if err != nil {
+			return nil, nil, nil, err
+		}
+		if !did && len(e.funcInstQueue) == 0 {
+			return funcs, typeDefs, methods, nil
+		}
+	}
 }
 
 // monoRegistryCap bounds the number of distinct mangled keys (decision

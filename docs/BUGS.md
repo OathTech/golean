@@ -27,6 +27,36 @@ differential-pinned) `- Cases: <id>, <id>, …` (baseline case ids), then prose.
 
 ---
 
+## BUG-013 — CLI struct-observation typeName truncates mangled generic TypeIds
+
+- Status: open
+- Pinned-by: differential
+- Cases: generics/instantiated-type-assert/name
+- Discovered: 2026-08-05 (generics slice G3 — flagged as latent in the G1
+  commit, became differentially observable the moment instantiated
+  struct values entered observations)
+
+`GoLean/CLI.lean` has a private `unqualifiedTypeName` (used for the
+struct observation `typeName` and `fieldAddr` rendering) that duplicates
+the OLD `TypeId.unqualified` logic: `splitOn "." |>.getLast!`. For a
+mangled instantiation key with a package-qualified type ARGUMENT —
+`main.assertBox[main.assertInner]` — it renders `"assertInner]"` instead
+of the `reflect.Type.Name()` contract's `"assertBox[main.assertInner]"`.
+The pinned case observes exactly this through the INNER struct value of
+an interface observation (the interface's `dynamic` name, rendered by
+the FIXED `Ty.dynamicName`/`TypeId.unqualified` path in
+`GoLean/GoCore/Value.lean`, matches Go verbatim in the same output —
+the two renderers disagree inside one JSON object, the same
+contract-inconsistency class as pre-merge-audit-2026-07-31 finding 12).
+
+Fix shape (one line): `unqualifiedTypeName` delegates to
+`TypeId.unqualified`. NOT fixed in the generics slice by its charter
+constraint — the slice's sanctioned Lean-side change is exactly the
+`Value.lean` fix, and anything further is a stop-and-report item
+(reported in the slice hand-back; the fix needs its own reviewed
+commit). Rendering-only; keys with at most one `.` and no brackets —
+every pre-generics key — render identically in both.
+
 ## BUG-012 — a bare call statement discarding results goes stuck ("extra GoCore assignment value")
 
 - Status: open

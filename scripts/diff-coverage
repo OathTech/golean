@@ -256,7 +256,13 @@ run_case_rows() {
     return 0
   fi
 
-  go_run_dir="$OUT/go-run/$id"
+  # FLATTENED per-id dir (id slashes -> __, like the negative runner's
+  # binary names): the harness RemoveAll-s this dir per case, and with
+  # id-shaped NESTED paths a parent id's harness deletes a child id's dir
+  # in flight under the parallel runner (first hit: generics/generic-closure
+  # vs generics/generic-closure/shared-capture, 2026-08-05 — a spurious
+  # go-run FAIL). Flattening removes the hazard class.
+  go_run_dir="$OUT/go-run/${id//\//__}"
   if [[ "$go_run_dir" == /* ]]; then
     go_run_pkg="$go_run_dir"
   else

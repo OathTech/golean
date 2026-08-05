@@ -171,22 +171,18 @@ func (e *emitter) emitProgram(files []*ast.File) (map[string]any, error) {
 		funcs = append(funcs, pkginit)
 	}
 
-	// Drain the instantiation worklist (mono.go): stencils for every
-	// generic-function instantiation reachable from the emitted bodies
-	// (subjects, helpers, $pkginit), including derived instantiations
-	// registered DURING stenciling. Unsupported stencils quarantine into
-	// fail-closed stubs exactly like unsupported plain declarations.
-	funcs, err = e.flushFuncInsts(funcs)
+	// Drain the instantiation worklists (mono.go): function stencils for
+	// every generic-function instantiation reachable from the emitted
+	// bodies (subjects, helpers, $pkginit), plus TypeDef/method stencils
+	// for every instantiated type that reached the wire — including
+	// derived instantiations registered DURING stenciling, to a joint
+	// fixpoint. Unsupported FUNCTION stencils quarantine into fail-closed
+	// stubs exactly like unsupported plain declarations; type and method
+	// stencils follow the standing whole-export policy.
+	funcs, typeDefs, methods, err = e.drainMono(funcs, typeDefs, methods)
 	if err != nil {
 		return nil, err
 	}
-
-	// Function-local type declarations, registered during body emission
-	// (emitDeclStmt): they join the global table — Go type declarations
-	// have no runtime effect — with the duplicate-TypeId refusal below
-	// guarding collisions.
-	typeDefs = append(typeDefs, e.localTypeDefs...)
-	methods = append(methods, e.localIfaceMethods...)
 
 	// Promotion wrappers (design note 2026-08-05 D1.3): one synthesized
 	// forwarding method per PROMOTED method-set entry of every declared
@@ -199,6 +195,14 @@ func (e *emitter) emitProgram(files []*ast.File) (map[string]any, error) {
 		return nil, err
 	}
 	methods = append(methods, wrappers...)
+	// Wrapper signatures can mention instantiated types: drain again.
+	// (An instantiated STRUCT first appearing here would miss its own
+	// wrapper pass — that shape can only make a promoted method visibly
+	// MISSING at the differential, never silently wrong.)
+	funcs, typeDefs, methods, err = e.drainMono(funcs, typeDefs, methods)
+	if err != nil {
+		return nil, err
+	}
 
 	// Interface-dispatch anchors for interfaces NOT declared in this package
 	// (predeclared error; imported interfaces later): every emitted
@@ -259,8 +263,14 @@ func (e *emitter) emitProgram(files []*ast.File) (map[string]any, error) {
 	// (satisfied by design).
 	// A method signature can itself mention a fresh interface, so this runs to
 	// a FIXPOINT over the seen set rather than one pass.
+	// Instantiated types can surface inside interface method signatures
+	// and vice versa, so the fixpoint interleaves the mono drain.
 	ifaceDefs := map[string]any{}
 	for {
+		funcs, typeDefs, methods, err = e.drainMono(funcs, typeDefs, methods)
+		if err != nil {
+			return nil, err
+		}
 		pending := []string{}
 		for k := range e.seenInterfaces {
 			if _, done := ifaceDefs[k]; !done {
@@ -305,6 +315,14 @@ func (e *emitter) emitProgram(files []*ast.File) (map[string]any, error) {
 	for _, name := range ifaceNames {
 		typeDefs = append(typeDefs, map[string]any{"name": name, "def": ifaceDefs[name]})
 	}
+
+	// Function-local type declarations, registered during body emission
+	// (emitDeclStmt, including stenciled bodies — hence appended after the
+	// LAST mono drain): they join the global table — Go type declarations
+	// have no runtime effect — with the duplicate-TypeId refusal below
+	// guarding collisions.
+	typeDefs = append(typeDefs, e.localTypeDefs...)
+	methods = append(methods, e.localIfaceMethods...)
 
 	// The TypeId keys are built; refuse the export if two import paths
 	// collided on one package-name qualifier (findings 4/7).
@@ -3306,9 +3324,23 @@ func (e *emitter) checkPackageNameCollisions() error {
 }
 
 // namedTypeName returns the qualified declared name of a (possibly
-// pointer-wrapped) named type, for use as a GoCore struct TypeId.
+// pointer-wrapped) named type, for use as a GoCore struct TypeId. It is
+// substitution- and instantiation-aware (mono.go): inside a stencil the
+// name is resolved at the current instantiation, and an instantiated
+// generic type names by its mangled key (which also enqueues its TypeDef
+// stencil — every TypeId the wire mentions must be declared).
 func (e *emitter) namedTypeName(t types.Type) (string, bool) {
+	t = e.applySubst(t)
 	if named, ok := t.(*types.Named); ok {
+		if named.TypeArgs().Len() > 0 {
+			key, err := e.instTypeIdForWire(named)
+			if err != nil {
+				// Callers refuse on false; the loud per-key reason is
+				// re-raised when the type itself reaches emitType.
+				return "", false
+			}
+			return key, true
+		}
 		return e.qualifiedTypeName(named.Obj()), true
 	}
 	return "", false
@@ -3444,7 +3476,12 @@ func (e *emitter) synthesizePromotionWrappers() ([]any, error) {
 	out := []any{}
 	seen := map[string]bool{}
 	for _, named := range e.namedStructTypes {
-		tName := e.qualifiedTypeName(named.Obj())
+		// Instantiated structs (mono.go) name by their mangled key; the
+		// substitution-aware namedTypeName covers both spellings.
+		tName, okName := e.namedTypeName(named)
+		if !okName {
+			tName = e.qualifiedTypeName(named.Obj())
+		}
 		valSet := types.NewMethodSet(named)
 		ptrSet := types.NewMethodSet(types.NewPointer(named))
 		for i := 0; i < ptrSet.Len(); i++ {
@@ -3871,6 +3908,28 @@ func (e *emitter) emitSelector(sel *ast.SelectorExpr) (any, error) {
 			if !ok {
 				return nil, unsup("method %s is not a func", sel.Sel.Name)
 			}
+			index := seln.Index()
+			// Method value on a TYPE-PARAMETER operand: re-resolve at the
+			// substituted receiver, same rule as emitMethodCall (§4.3) —
+			// without this the constraint interface would be mistaken for
+			// the receiver and the UNBOXED operand fed to interface
+			// dispatch.
+			if e.curSubst != nil {
+				opBase := e.info.TypeOf(sel.X)
+				if ptr, isPtr := opBase.(*types.Pointer); isPtr {
+					opBase = ptr.Elem()
+				}
+				if _, isTP := opBase.(*types.TypeParam); isTP {
+					concrete := e.goTypeOf(sel.X)
+					obj, idx, _ := types.LookupFieldOrMethod(concrete, true, e.pkg, sel.Sel.Name)
+					m, isFunc := obj.(*types.Func)
+					if !isFunc {
+						return nil, unsup("method %s not found on substituted receiver %s",
+							sel.Sel.Name, concrete)
+					}
+					fn, index = m, idx
+				}
+			}
 			recvType := fn.Type().(*types.Signature).Recv().Type()
 			if recvIface, isIface := recvType.Underlying().(*types.Interface); isIface {
 				// Interface METHOD VALUE (design note D6): capture the BOX
@@ -3881,7 +3940,7 @@ func (e *emitter) emitSelector(sel *ast.SelectorExpr) (any, error) {
 				// first cut's wrong panic-at-call assumption, audit F6).
 				// Promotion through an embedded interface field walks to
 				// the field value first.
-				hops := seln.Index()[:len(seln.Index())-1]
+				hops := index[:len(index)-1]
 				var recvArg any
 				var ifaceStatic types.Type
 				var err error
@@ -3950,7 +4009,7 @@ func (e *emitter) emitSelector(sel *ast.SelectorExpr) (any, error) {
 			// The receiver is captured AT METHOD-VALUE TIME, adjusted
 			// through any embedded hops NOW (design note D1.2 — pinned by
 			// embedding/promoted-method-value/{snapshot,live}).
-			recvArg, err := e.promotedReceiverArg(sel, seln.Index()[:len(seln.Index())-1], pointerRecv)
+			recvArg, err := e.promotedReceiverArg(sel, index[:len(index)-1], pointerRecv)
 			if err != nil {
 				return nil, err
 			}
