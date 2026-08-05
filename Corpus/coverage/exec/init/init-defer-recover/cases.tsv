@@ -1,0 +1,2 @@
+# id	subject	args	expected_status	expected_reason	features
+-	initDeferRecover	-	ok	-	init,globals,defer,recover

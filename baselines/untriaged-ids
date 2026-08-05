@@ -8,9 +8,14 @@
 # floats/to-int-out-of-range/{nan,range}: DELIBERATE fail-closed
 #   refusal pins (floats design note §3.3), permanently red — see
 #   baselines/untriaged-count 2026-08-05 entry.
+# init/init-defer-recover, init/multiple-init-order: the duplicate-init
+#   FuncId export refusal, red-first guardrails of the init slice
+#   (docs/2026-08-05_init-design.md); both flip PASS in the slice's
+#   frontend commit.
 arrays/pointer-array
 floats/to-int-out-of-range/nan
 floats/to-int-out-of-range/range
+init/init-defer-recover
 init/multiple-init-order
 methods/value-auto-deref
 pointers/nil-array-index-panic

@@ -1,0 +1,2 @@
+# expected_substring	features
+initialization cycle	init,globals,compile_error

@@ -65,4 +65,9 @@
 #   conversion — the red IS the pin (baseline header of the same
 #   commit; machine half pinned by the float_to_int_refusal_F eval
 #   test) — not untriaged fidelity bugs, and they never flip PASS.
-15
+# 2026-08-05 (init slice, guardrails commit)  15 -> 16, TRANSIENT:
+#   init/init-defer-recover added red-first (two init() functions export
+#   as duplicate FuncId "init" — the same recorded refusal as
+#   init/multiple-init-order); it flips PASS in this slice's frontend
+#   commit, which lowers the ceiling back.
+16

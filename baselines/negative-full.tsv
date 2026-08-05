@@ -1,6 +1,6 @@
 # GoLean negative-corpus (compile-rejection) baseline
-# recorded: 2026-07-21  commit: c097928  oracle: go build (rejection) + frontend fail-closed
-# manifest_cases: 309  pass: 309  fail: 0
+# recorded: 2026-08-05  commit: general-coverage-init (init slice guardrails; +initialization-cycle)  oracle: go build (rejection) + frontend fail-closed
+# manifest_cases: 310  pass: 310  fail: 0
 # Columns: result<TAB>id<TAB>stage (sorted by id); detail omitted (churns).
 # Regression = any flip/stage change vs this file (scripts/coverage-baseline-diff
 # --baseline baselines/negative-full.tsv artifacts/coverage/negative-latest.tsv).
@@ -174,6 +174,7 @@ PASS	init/call-init	-
 PASS	init/duplicate-global	-
 PASS	init/init-return-value	-
 PASS	init/init-with-params	-
+PASS	init/initialization-cycle	-
 PASS	interfaces/ambiguous-promoted-method-interface	-
 PASS	interfaces/duplicate-method	-
 PASS	interfaces/embedded-conflicting-method	-

@@ -1,36 +1,21 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-05  commit: general-coverage-floats (F3 frontend — floats land)
+# recorded: 2026-08-05  commit: general-coverage-init (slice 5 guardrails)
 #   frontend: native  oracle: go run (strict lane) / go-run membership in the
 #   machine-enumerated observation set (membership lane; go1.26.5 samples)
-# manifest_cases: 925  pass: 733  fail: 192
-# Re-pin reason: DELIBERATE coverage change — floats slice F3 (arc slice 4,
-# docs/2026-08-04_floats-design.md; frontend float emission + exact-rational
-# constants + Expr.neg + observation bits). 21 FAIL->PASS, 2 designed stage
-# moves, ZERO PASS->FAIL:
-# - the 12 original non-generic floats reds: frontend-export -> PASS
-#   (finite-arithmetic, division-specials, nan-comparisons, signed-zero,
-#   precision-rounding, float32-conversion-rounding, float32-specials,
-#   to-int-truncation, to-uint-truncation, compound-assign,
-#   defined-type-ops, typed-constant-adaptation).
-# - the 5 positive F0 guardrails: frontend-export -> PASS (nan-map-key,
-#   signed-zero-map-key, fma-shape [the §3.1 envelope tripwire — its
-#   going red on an FMA-emitting runner is the tripwire firing, not
-#   noise], incdec, int64-to-float-rounding).
-# - 4 bonus flips, all previously float-emission-blocked, none needing
-#   new semantics: floats/generic-type-set/zero-value (NOT generics-
-#   dependent after all — its subject calls no generic function; the
-#   design note's double-blocked accounting corrected in its build log),
-#   builtins/min-max-edge/untyped-float-context (go/types folds the
-#   constant min/max; RUNTIME float min/max still refuses, decision 8),
-#   constants/untyped-adaptation, maps/map-literal-nan-keys.
-# - floats/to-int-out-of-range/{range,nan}: frontend-export ->
-#   lean-observation/unsupported — the PERMANENT §3.3 negative pins
-#   (implementation-dependent conversion refused at runtime; deliberate
-#   fail-closed refusals, ceiling-listed in baselines/untriaged-count,
-#   never expected to PASS).
-# - the 7 remaining floats/generic-type-set/* ids stay red at
-#   frontend-export until arc slice 6 (generics).
-# 712 -> 733 pass on 925 cases.
+# manifest_cases: 933  pass: 733  fail: 200
+# Re-pin reason: DELIBERATE coverage change — init slice guardrails
+# (docs/2026-08-05_init-design.md §5): 8 NEW ids, all red before the
+# implementation lands, ZERO other drift (verified against the previous
+# pin, floats F3):
+# - init/{spec-dependency-example,hidden-dep-order,multi-value-var-init,
+#   global-shared-mutation,global-composite,global-addr-taken,
+#   global-in-closure}: FAIL/frontend-export (the package-level-variable
+#   refusal, as designed).
+# - init/init-defer-recover: FAIL/lean-observation (two init() functions
+#   export as duplicate FuncId "init" — the same recorded reason as
+#   init/multiple-init-order).
+# Also added (not in this lane): negative/compile/init/initialization-cycle
+# (PASS in the compile-negative lane, 310/310).
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
 PASS	arrays/array-copy	-
@@ -418,10 +403,18 @@ PASS	if/else-if-first-match	-
 PASS	if/if-init-scope	-
 PASS	if/init-before-condition	-
 FAIL	init/blank-var-init	frontend-export
+FAIL	init/global-addr-taken	frontend-export
+FAIL	init/global-composite	frontend-export
+FAIL	init/global-in-closure	frontend-export
+FAIL	init/global-shared-mutation	frontend-export
 FAIL	init/global-zero-before-init	frontend-export
+FAIL	init/hidden-dep-order	frontend-export
+FAIL	init/init-defer-recover	lean-observation
 FAIL	init/init-sees-var-values	frontend-export
 FAIL	init/multiple-init-order	lean-observation
+FAIL	init/multi-value-var-init	frontend-export
 FAIL	init/package-init-order	frontend-export
+FAIL	init/spec-dependency-example	frontend-export
 FAIL	init/var-init-sequence	frontend-export
 PASS	interfaces/acked-indexer/hit	-
 PASS	interfaces/acked-indexer/miss	-
