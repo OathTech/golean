@@ -628,6 +628,76 @@ def runNamedFunctionM (fuel : Nat) (program : Program) (name : String)
   runFunctionWithContextM fuel program.typeDefs.toList program.funcs func args
     program.methods choices
 
+/-! ## Package initialization (init slice, `docs/2026-08-05_init-design.md`)
+
+Globals are ordinary base heap cells seeded by the DRIVER as the first
+`n` allocations — cell `i` at `Loc.base ⟨i⟩`, wire declaration order —
+so the frontend's statically resolved `Expr.locLit` references land on
+them. `$pkginit` (variable initializers in `go/types`' `InitOrder`, then
+the `$initN` functions) runs to completion before the subject, in the
+same state, consuming from the same choice stream. Driver-level
+composition only: no new machine rule, no Surface change. -/
+
+/-- Seed one zero-valued cell per package-level variable, checking the
+allocation lands exactly on its statically resolved address (the
+executable analogue of Perennial's `GlobalAlloc` address pin; can only
+fire if seeding ever stops being the first allocations from a fresh
+state — an internal invariant break, never Go behavior). -/
+def seedGlobals (state : ExecState) (globals : Array GlobalDef) :
+    Except GoError ExecState := do
+  if state.nextAddr != 0 then
+    throw (.internal "global seeding requires a fresh state")
+  let mut s := state
+  for g in globals, i in [0:globals.size] do
+    let v ← defaultValue s g.typ
+    let (loc, s') := s.alloc v (some g.typ)
+    if loc != .base ⟨i⟩ then
+      throw (.internal s!"global {g.name} seeded at {repr loc}, expected base {i}")
+    s := s'
+  return s
+
+/-- Run `$pkginit` if the program has one: a nullary, resultless run to
+termination under a targetless barrier frame. Malformed shapes fail
+closed; a panic during initialization aborts the run (Go: a panicking
+initializer kills the program before `main`), surfacing through
+`runConfig`'s `.panicked` terminal as `GoError.panic`. -/
+def runPkgInitM (fuel : Nat) (state : ExecState) (choices : Choices) :
+    Except GoError (ExecState × Choices) := do
+  match findFunctionIn? state.functions pkgInitFuncId with
+  | none => return (state, choices)
+  | some initF =>
+      if initF.args.size != 0 || initF.results.size != 0 then
+        throw (.stuck s!"malformed {pkgInitFuncId.key}: expected no parameters and no results")
+      runConfig fuel state (.exec initF.body [] (.frame [] [] [] .stop)) choices
+
+/-- The whole-PROGRAM entry: seed globals, run `$pkginit`, then the
+subject from the initialized state with the leftover choice stream.
+`fuel` bounds each phase (a bound, not a budget split). For a program
+with no globals and no `$pkginit` this is exactly `runNamedFunctionM`. -/
+def runProgramM (fuel : Nat) (program : Program) (name : String)
+    (args : Array GoValue) (choices : Choices := []) : Except GoError Result := do
+  let func ←
+    match findFunctionIn? program.funcs ⟨name⟩ with
+    | some func => pure func
+    | none => throw (.stuck s!"GoCore function not found: {name}")
+  let state : ExecState :=
+    { types := program.typeDefs.toList, functions := program.funcs
+      methods := program.methods }
+  let s₀ ← seedGlobals state program.globals
+  let (s₁, choices₁) ← runPkgInitM fuel s₀ choices
+  if func.args.size != args.size then
+    throw (.stuck s!"expected {func.args.size} argument(s), got {args.size}")
+  let (env, s₂) ← bindParams [] s₁ func.args.toList args.toList
+  let (frameEnv, s₃) ← allocDecls env s₂ func.results.toList
+  let resultLocs ← pinResultLocs frameEnv func.results.toList
+  let c₀ : Config := .exec func.body frameEnv (.frame [] [] [] .stop)
+  let (sF, _) ← runConfig fuel s₃ c₀ choices₁
+  return { values := (← loadMany sF resultLocs).toArray }
+
+def runProgramIntsM (fuel : Nat) (program : Program) (name : String)
+    (args : Array Int) (choices : List Nat := []) : Except GoError Result :=
+  runProgramM fuel program name (args.map GoValue.int) choices
+
 def runNamedFunctionIntsM (fuel : Nat) (program : Program) (name : String)
     (args : Array Int) (choices : List Nat := []) : Except GoError Result :=
   runNamedFunctionM fuel program name (args.map GoValue.int) choices

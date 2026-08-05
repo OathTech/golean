@@ -836,14 +836,16 @@ spill extra 3): the machine panics under streams Go can never realize,
 and an `--expect-status ok` enumeration must FAIL loud, never bury the
 panic member in the set.
 
-F5: driver-agreement pins — `CLI.enumSetup`/`CLI.enumRun` COPY
-`runFunctionWithContextM`/`runConfig` (GoCore stays bit-identical, so no
-shared helper); these tests pin the copies against the originals: the
-single-run driver's observation (`observationOfRun ∘ runNamedFunctionM`,
-the exact engine behind `native-json-run`) must be a member of the
-enumerated set, per consumption-site class (append spill; map-range
-pick-next, including the panic-observation path). The go-side half of
-this pin is the harness's per-case coupling check in
+F5: driver-agreement pins — `CLI.enumSetup`/`CLI.enumRunProgram`/
+`CLI.enumRun`/`CLI.enumInitRun` COPY `runProgramM`/`runConfig` (GoCore
+stays bit-identical, so no shared driver helper; `seedGlobals` IS shared
+— stream-independent setup); these tests pin the copies against the
+originals: the single-run driver's observation (`observationOfRun ∘
+runProgramM`, the exact engine behind `native-json-run`) must be a
+member of the enumerated set, per consumption-site class (append spill;
+map-range pick-next, including the panic-observation path; the
+`$pkginit` init phase since the init slice). The go-side half of this
+pin is the harness's per-case coupling check in
 `scripts/diff-coverage`. -/
 
 private def coreEnumCapPanicFunction : GoCore.Func := {
@@ -892,12 +894,52 @@ private def coreEnumFirstKeyFunction : GoCore.Func := {
 private def enumCapPanicProgram : GoCore.Program := { funcs := #[coreEnumCapPanicFunction] }
 private def enumFirstKeyProgram : GoCore.Program := { funcs := #[coreEnumFirstKeyFunction] }
 
+/-- Init-slice driver-agreement shape: `$pkginit` consumes choices (a
+map-range pick) and writes the picked key into global cell 0; the
+subject only reads the global. Pins that BOTH drivers run `$pkginit`
+per stream — an enumerator that ran init once with a fixed stream, or a
+driver that skipped seeding, diverges loudly here. -/
+private def coreEnumInitPickInit : GoCore.Func := {
+  id := GoCore.pkgInitFuncId,
+  args := #[],
+  results := #[],
+  body := .block
+    #[
+      { id := "m", typ := .map .int .int },
+      { id := "first", typ := .int }
+    ]
+    #[
+      .makeMap (.var "m") .int .int none,
+      .mapAssign (.var "m") (.intLit 1) (.intLit 10) .int .int,
+      .mapAssign (.var "m") (.intLit 2) (.intLit 20) .int .int,
+      .mapAssign (.var "m") (.intLit 3) (.intLit 30) .int .int,
+      .assign (.var "first") (.intLit (-1)),
+      .mapRange (some "k") none (.var "m") .int .int
+        (.ifThenElse (.lessCmp (.var "first") (.intLit 0))
+          (.assign (.var "first") (.var "k"))
+          (.seqn #[])),
+      .assign (.addr (.locLit (.base ⟨0⟩))) (.var "first")
+    ]
+}
+
+private def coreEnumInitReadFunction : GoCore.Func := {
+  id := ⟨"enum_init_read_F"⟩,
+  args := #[],
+  results := #[coreParam "z"],
+  body := .assign (.var "z") (.deref (.locLit (.base ⟨0⟩)) .int)
+}
+
+private def enumInitPickProgram : GoCore.Program := {
+  funcs := #[coreEnumInitReadFunction, coreEnumInitPickInit],
+  globals := #[{ name := "g", typ := .int }]
+}
+
 private def enumerate (program : GoCore.Program) (name : String)
     (expectStatus : Option String) : Except String CLI.EnumOutcome :=
   match CLI.enumSetup program name #[] with
   | .error err => .error s!"setup failed: {repr err}"
-  | .ok (σ₀, c₀, resultLocs) =>
-      CLI.exploreLoop resultLocs 1000000 σ₀ c₀ 16 8 64 expectStatus 100000 [#[]] {}
+  | .ok ep =>
+      CLI.exploreLoop ep 1000000 16 8 64 expectStatus 100000 [#[]] {}
 
 private def expectNatEq (name : String) (actual expected : Nat) : IO Bool := do
   if actual == expected then
@@ -947,7 +989,7 @@ private def expectDriverAgreement (name : String) (program : GoCore.Program)
   | .ok out =>
       for s in streams do
         let obs := CLI.observationOfRun
-          (GoCore.Machine.runNamedFunctionM 1000000 program fname #[] s)
+          (GoCore.Machine.runProgramM 1000000 program fname #[] s)
         if !out.observations.contains obs then
           IO.eprintln s!"FAIL: {name}: driver observation under stream {s} is not in the enumerated set: {obs.compress}"
           return false
@@ -1290,6 +1332,12 @@ def main : IO UInt32 := do
     enumCapPanicProgram "enum_cap_panic_F" none [[], [1], [3], [7], [12, 9]])
   passed := passed && (← expectDriverAgreement "GoCore enumerator agrees with the single-run driver (map-range pick-next)"
     enumFirstKeyProgram "enum_first_key_F" (some "ok") [[], [1], [2], [5, 3, 1], [9, 8, 7, 6]])
+  -- Init slice: $pkginit's choice consumption is part of the run in
+  -- BOTH drivers (globals seeded, init run per stream).
+  passed := passed && (← expectEnumMembers "GoCore enumerator init-phase pick set is {1,2,3}"
+    (enumerate enumInitPickProgram "enum_init_read_F" (some "ok")) 3)
+  passed := passed && (← expectDriverAgreement "GoCore enumerator agrees with the whole-program driver ($pkginit map-range pick)"
+    enumInitPickProgram "enum_init_read_F" (some "ok") [[], [1], [2], [5, 3, 1], [9, 8, 7, 6]])
   if passed then
     return 0
   else

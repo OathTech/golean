@@ -378,8 +378,11 @@ private def runNativeJsonRun (args : List String) : IO UInt32 := do
               | .ok program =>
                   -- Reshape S3 flip (2026-07-23): the machine interpreter
                   -- (iterated stepFn) is the executable; the big-step
-                  -- interpreter is deleted at S4.
-                  match GoLean.GoCore.Machine.runNamedFunctionIntsM cfg.fuel program functionName cfg.args cfg.choices with
+                  -- interpreter is deleted at S4. Since the init slice the
+                  -- entry is the whole-PROGRAM driver: seed globals, run
+                  -- $pkginit, then the subject (identical to the old entry
+                  -- for globals-free programs).
+                  match GoLean.GoCore.Machine.runProgramIntsM cfg.fuel program functionName cfg.args cfg.choices with
                   | .ok result =>
                       IO.println (runJson result).compress
                       return 0
@@ -394,11 +397,15 @@ private def runNativeJsonRun (args : List String) : IO UInt32 := do
 
 CLI layer ONLY (arc slice 3, `docs/2026-08-04_membership-lane-design.md`):
 what is REUSED from the semantic core is `stepFn` — every machine step is
-the machine's own. What is COPIED (not shared) is the driver layer:
-`enumSetup` hand-mirrors `runFunctionWithContextM`'s entry wiring and
-`enumRun` hand-mirrors `runConfig`'s terminal handling (audit F5/F7,
-2026-08-05 — a shared helper would touch GoCore, which stays
-bit-identical). The copies are PINNED two ways: the driver-agreement
+the machine's own — plus, since the init slice, `seedGlobals` (globals
+seeding is stream-independent setup shared with `runProgramM`). What is
+COPIED (not shared) is the driver layer: `enumSetup`/`enumRunProgram`
+hand-mirror `runProgramM`'s wiring (subject lookup, `$pkginit` shape
+check, per-stream init-then-subject composition — init consumes choices,
+so it runs per enumerated stream) and `enumRun`/`enumInitRun`
+hand-mirror `runConfig`'s terminal handling (audit F5/F7, 2026-08-05 — a
+shared helper would touch GoCore, which stays bit-identical). The copies
+are PINNED two ways: the driver-agreement
 eval tests in `Tests/GoCoreEval.lean` (the `native-json-run` engine's
 observation must be a member of the enumerated set, per consumption-site
 class), and the harness's per-case coupling check in
@@ -490,13 +497,25 @@ private def parseEnumArgs : List String → EnumArgs → Except String EnumArgs
 private def renderGoError (err : GoError) : String :=
   s!"{err.status}: {err.message}"
 
-/-- Mirror of `runFunctionWithContextM`'s entry wiring, split out so every
-enumeration run restarts from the SAME initial state and configuration
-(all values are pure). Non-`private` so the driver-agreement eval tests
-can pin the copy against the original (audit F5). -/
+/-- The per-run-invariant half of the enumeration driver: subject lookup,
+arity check, global seeding, and the `$pkginit` lookup/shape check — a
+mirror of `runProgramM`'s pre-stream wiring (the seeding itself is the
+SHARED `GoCore.Machine.seedGlobals`, which is stream-independent; the
+stream-consuming phases live in `enumRunProgram`, run per stream).
+Non-`private` so the driver-agreement eval tests can pin the copy
+against the original (audit F5). -/
+structure EnumProgram where
+  /-- Globals-seeded initial state (pre-`$pkginit`). -/
+  σ₀ : GoCore.ExecState
+  /-- The `$pkginit` body, when the program has one — run PER STREAM
+  (its choice consumption is part of the run; init slice,
+  `docs/2026-08-05_init-design.md`). -/
+  initBody? : Option GoCore.Stmt
+  func : GoCore.Func
+  args : Array GoValue
+
 def enumSetup (program : GoCore.Program) (name : String)
-    (args : Array GoValue) :
-    Except GoError (GoCore.ExecState × GoCore.Machine.Config × List Loc) := do
+    (args : Array GoValue) : Except GoError EnumProgram := do
   let func ←
     match GoCore.findFunctionIn? program.funcs ⟨name⟩ with
     | some func => pure func
@@ -504,13 +523,17 @@ def enumSetup (program : GoCore.Program) (name : String)
   let state : GoCore.ExecState :=
     { types := program.typeDefs.toList, functions := program.funcs
       methods := program.methods }
+  let σ₀ ← GoCore.Machine.seedGlobals state program.globals
   if func.args.size != args.size then
     throw (.stuck s!"expected {func.args.size} argument(s), got {args.size}")
-  let (env, s₁) ← GoCore.Machine.bindParams [] state func.args.toList args.toList
-  let (frameEnv, s₂) ← GoCore.Machine.allocDecls env s₁ func.results.toList
-  let resultLocs ← GoCore.Machine.pinResultLocs frameEnv func.results.toList
-  let c₀ : GoCore.Machine.Config := .exec func.body frameEnv (.frame [] [] [] .stop)
-  return (s₂, c₀, resultLocs)
+  let initBody? ←
+    match GoCore.findFunctionIn? program.funcs GoCore.pkgInitFuncId with
+    | none => pure none
+    | some initF =>
+        if initF.args.size != 0 || initF.results.size != 0 then
+          throw (.stuck s!"malformed {GoCore.pkgInitFuncId.key}: expected no parameters and no results")
+        else pure (some initF.body)
+  return { σ₀, initBody?, func, args }
 
 /-- One machine run to a terminal configuration: the observation JSON plus
 the LEFTOVER choice stream. `Choices.consume` pops exactly one element
@@ -534,6 +557,45 @@ def enumRun (resultLocs : List Loc) :
   | fuel + 1, σ, c, choices => do
       let (c', σ', choices') ← GoCore.Machine.stepFn σ c choices
       enumRun resultLocs fuel σ' c' choices'
+
+/-- The `$pkginit` phase of an enumeration run (init slice): `enumRun`'s
+terminal handling, but returning the FINAL STATE (the subject runs from
+it) instead of a result observation. A panic terminal is the run's
+observation (a panicking initializer aborts the program before the
+subject), reported with the leftover stream like any panic member. -/
+def enumInitRun :
+    Nat → GoCore.ExecState → GoCore.Machine.Config → GoCore.Choices →
+    Except GoError (Sum (GoCore.ExecState × GoCore.Choices) (String × GoCore.Choices))
+  | _, σ, .next .stop, choices => return .inl (σ, choices)
+  | _, _, .panicked msg, choices => return .inr (msg, choices)
+  | 0, _, _, _ => throw .fuelOut
+  | fuel + 1, σ, c, choices => do
+      let (c', σ', choices') ← GoCore.Machine.stepFn σ c choices
+      enumInitRun fuel σ' c' choices'
+
+/-- One whole-PROGRAM enumeration run under one stream: `$pkginit` (when
+present) consumes from the stream first, then the subject entry wiring
+(the `runProgramM` mirror — `bindParams`/`allocDecls`/`pinResultLocs`
+are deterministic and choice-free, but the post-init STATE they extend
+can differ per stream, so they run here, per stream, not in setup) and
+the subject itself on the leftover. The returned leftover is the
+composite run's — init sites and subject sites are all sites of the
+run, which is what the explore loop's probe semantics count. -/
+def enumRunProgram (ep : EnumProgram) (runFuel : Nat)
+    (stream : GoCore.Choices) : Except GoError (String × Json × GoCore.Choices) := do
+  let (σ₁, choices₁) ←
+    match ep.initBody? with
+    | none => pure (ep.σ₀, stream)
+    | some body =>
+        match ← enumInitRun runFuel ep.σ₀
+            (.exec body [] (.frame [] [] [] .stop)) stream with
+        | .inl r => pure r
+        | .inr (msg, leftover) => return ("panic", errorJson (.panic msg), leftover)
+  let (env, s₂) ← GoCore.Machine.bindParams [] σ₁ ep.func.args.toList ep.args.toList
+  let (frameEnv, s₃) ← GoCore.Machine.allocDecls env s₂ ep.func.results.toList
+  let resultLocs ← GoCore.Machine.pinResultLocs frameEnv ep.func.results.toList
+  enumRun resultLocs runFuel s₃
+    (.exec ep.func.body frameEnv (.frame [] [] [] .stop)) choices₁
 
 /-- The observation `native-json-run` prints for a driver result — public
 so the driver-agreement eval tests compare the two drivers on the SAME
@@ -562,8 +624,7 @@ leftover proves a site exists at depth `|p|` (extend with every pick in
 zero with the frontier non-empty (seeded with exactly the cap — audit
 F8). `expectStatus`: every recorded member must carry it (audit F1 — a
 wrong-status member is a machine bug, not an envelope point). -/
-def exploreLoop (resultLocs : List Loc) (runFuel : Nat)
-    (σ₀ : GoCore.ExecState) (c₀ : GoCore.Machine.Config)
+def exploreLoop (ep : EnumProgram) (runFuel : Nat)
     (width sites cap : Nat) (expectStatus : Option String) :
     Nat → List (Array Nat) → EnumOutcome → Except String EnumOutcome
   | _, [], out => .ok out
@@ -571,7 +632,7 @@ def exploreLoop (resultLocs : List Loc) (runFuel : Nat)
       .error s!"work cap exceeded after {out.runs} run(s) with prefixes still unexplored — raise --work-cap or narrow the case"
   | work + 1, p :: rest, out => do
       let stream := p.toList ++ [0]
-      match enumRun resultLocs runFuel σ₀ c₀ stream with
+      match enumRunProgram ep runFuel stream with
       | .error err =>
           .error s!"machine run failed under pick prefix {p.toList} — cannot certify the observation set: {renderGoError err}"
       | .ok (status, obs, leftover) =>
@@ -587,7 +648,7 @@ def exploreLoop (resultLocs : List Loc) (runFuel : Nat)
             if observations.size > cap then
               .error s!"observation cap N={cap} exceeded — the case is too wide for enumeration (design note: needs a per-case predicate)"
             else
-              exploreLoop resultLocs runFuel σ₀ c₀ width sites cap expectStatus work rest
+              exploreLoop ep runFuel width sites cap expectStatus work rest
                 { out with observations, leaves := out.leaves.push p }
           else
             -- Probe consumed: a site exists at depth |p|.
@@ -595,7 +656,7 @@ def exploreLoop (resultLocs : List Loc) (runFuel : Nat)
               .error s!"run consumes more than --max-sites {sites} choice site(s) — raise the case's sites bound (never truncated silently)"
             else
               let children := (List.range width).map (fun b => p.push b)
-              exploreLoop resultLocs runFuel σ₀ c₀ width sites cap expectStatus work
+              exploreLoop ep runFuel width sites cap expectStatus work
                 (children ++ rest) out
 
 /-- The alias guard — a HEURISTIC cross-check of the author-asserted
@@ -625,20 +686,19 @@ residue is enumerated, so all rungs are necessarily silent — that is
 the expected behavior of a correct assertion, not a blind spot.
 Mechanical bound certification needs a core-adjacent instrumentation
 hook, deferred per the design note. -/
-def aliasProbeLoop (resultLocs : List Loc) (runFuel : Nat)
-    (σ₀ : GoCore.ExecState) (c₀ : GoCore.Machine.Config) (width : Nat)
+def aliasProbeLoop (ep : EnumProgram) (runFuel : Nat) (width : Nat)
     (observations : Array Json) :
     Nat → List (List Nat) → Nat → Except String Nat
   | _, [], probes => .ok probes
   | 0, _ :: _, probes =>
       .error s!"work cap exceeded during alias probes (after {probes} probe(s)) — raise --work-cap"
   | work + 1, stream :: rest, probes => do
-      match enumRun resultLocs runFuel σ₀ c₀ stream with
+      match enumRunProgram ep runFuel stream with
       | .error err =>
           .error s!"alias-guard probe {stream} failed — width assertion not certified at B={width}: {renderGoError err}"
       | .ok (_, obs, _) =>
           if observations.contains obs then
-            aliasProbeLoop resultLocs runFuel σ₀ c₀ width observations work rest (probes + 1)
+            aliasProbeLoop ep runFuel width observations work rest (probes + 1)
           else
             .error s!"alias guard: probe pick ≥ B (stream {stream}) produced an observation OUTSIDE the enumerated set — the case's width assertion is REFUTED (B={width} is smaller than some consumption site's bound); raise the case's width metadata. Probe observation: {obs.compress}"
 
@@ -682,8 +742,8 @@ private def runCoverageObservations (args : List String) : IO UInt32 := do
                   | .error err =>
                       IO.eprintln s!"coverage-observations: setup failed: {renderGoError err}"
                       return 1
-                  | .ok (σ₀, c₀, resultLocs) =>
-                      match exploreLoop resultLocs cfg.fuel σ₀ c₀
+                  | .ok ep =>
+                      match exploreLoop ep cfg.fuel
                           cfg.maxWidth cfg.maxSites cfg.cap cfg.expectStatus
                           cfg.workCap [#[]] {} with
                       | .error err =>
@@ -692,7 +752,7 @@ private def runCoverageObservations (args : List String) : IO UInt32 := do
                       | .ok out =>
                           let probeStreams := aliasProbeStreams cfg.maxWidth out.leaves
                           let workLeft := cfg.workCap - out.runs
-                          match aliasProbeLoop resultLocs cfg.fuel σ₀ c₀
+                          match aliasProbeLoop ep cfg.fuel
                               cfg.maxWidth out.observations workLeft probeStreams 0 with
                           | .error err =>
                               IO.eprintln s!"coverage-observations: {err}"

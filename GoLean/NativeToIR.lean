@@ -169,6 +169,14 @@ partial def decodeExpr (path : String) (json : Json) : LowerM Expr := do
       pure (.stringFromRune (← decodeExpr s!"{path}.x" (← StrictJson.field path obj "x")))
   | "ref" =>
       pure (.ref (← StrictJson.string s!"{path}.id" (← StrictJson.field path obj "id")))
+  | "globaladdr" =>
+      -- A statically resolved package-level variable address (init slice,
+      -- docs/2026-08-05_init-design.md §2): global `gid` (wire declaration
+      -- order) lives at the driver-seeded cell `Loc.base ⟨gid⟩`. The gid
+      -- assignment is the emitter's single collection loop (dense by
+      -- construction); a dangling gid dereferences a missing cell and the
+      -- machine goes stuck — closed, never a silent value.
+      pure (.locLit (.base ⟨← StrictJson.nat s!"{path}.gid" (← StrictJson.field path obj "gid")⟩))
   | "deref" =>
       let ptr ← decodeExpr s!"{path}.ptr" (← StrictJson.field path obj "ptr")
       let typ ← decodeTy s!"{path}.type" (← StrictJson.field path obj "type")
@@ -1105,6 +1113,27 @@ partial def decodeProgram (json : Json) : LowerM Program := do
     if seen.contains f.id.key then
       fail s!"duplicate function id {f.id.key} in program"
     seen := seen.insert f.id.key
-  pure { typeDefs, funcs := allFuncs, methods := methodPairs.map Prod.snd }
+  -- Package-level variables (init slice): declaration order; the driver
+  -- seeds cell i at `Loc.base ⟨i⟩`. Optional key — a globals-free wire
+  -- decodes exactly as before. Duplicate names are impossible in a
+  -- type-checked package; refuse anyway (boundary collision-check).
+  let globals ←
+    match obj.get? "globals" with
+    | none => pure #[]
+    | some gj => do
+        let arr ← StrictJson.array "program.globals" gj
+        arr.mapIdxM (fun i g => do
+          let gobj ← StrictJson.obj s!"program.globals[{i}]" g
+          let name ← StrictJson.string s!"program.globals[{i}].name"
+            (← StrictJson.field s!"program.globals[{i}]" gobj "name")
+          let typ ← decodeTy s!"program.globals[{i}].type"
+            (← StrictJson.field s!"program.globals[{i}]" gobj "type")
+          pure ({ name, typ } : GlobalDef))
+  let mut seenGlobals : Std.HashSet String := {}
+  for g in globals do
+    if seenGlobals.contains g.name then
+      fail s!"duplicate global {g.name} in program"
+    seenGlobals := seenGlobals.insert g.name
+  pure { typeDefs, funcs := allFuncs, methods := methodPairs.map Prod.snd, globals }
 
 end GoLean.NativeToIR

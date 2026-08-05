@@ -121,11 +121,14 @@ inductive Expr where
   reference; §8 of the coverage-scoping note). Operands evaluate left to
   right like any strict form. -/
   | funcVal (fid : FuncId) (captured : Array Expr)
-  /-- A resolved location literal — evaluates to its address. Proof-facing:
-  introduced only by the relation's name-resolution substitution (`substLoc`),
-  never emitted by the frontend. The location-resolved core (Goose-aligned;
-  `docs/2026-07-19_reshape-mechanics-design.md`) rewrites `var`/`ref` into this
-  so the relation performs no runtime name lookup. -/
+  /-- A resolved location literal — evaluates to its address. Two
+  producers: the relation's name-resolution substitution (`substLoc`; the
+  location-resolved core of `docs/2026-07-19_reshape-mechanics-design.md`),
+  and — since the init slice (`docs/2026-08-05_init-design.md` §2, revising
+  the original "never emitted by the frontend") — the frontend's statically
+  resolved PACKAGE-LEVEL variable references: global `i` (wire declaration
+  order) lives at the driver-seeded cell `Loc.base ⟨i⟩`. It remains unused
+  for anything env-resolved. -/
   | locLit (l : Loc)
   | deref (ptr : Expr) (typ : Ty)
   | structLit (typ : Ty) (args : Array Expr)
@@ -275,10 +278,25 @@ structure MethodInfo where
   recv : Ty
   deriving Repr, BEq
 
+/-- A package-level variable declaration (init slice,
+`docs/2026-08-05_init-design.md` §2): the driver seeds one heap cell per
+entry — zero value at the declared type — as the FIRST allocations, in
+array order, so entry `i`'s cell is exactly `Loc.base ⟨i⟩` and the
+frontend can resolve every reference statically (`Expr.locLit`). `name`
+is carried for diagnostics only; runtime resolution never consults it. -/
+structure GlobalDef where
+  name : String
+  typ : Ty
+  deriving Repr, BEq
+
 structure Program where
   typeDefs : Array (TypeId × TypeDef) := #[]
   funcs : Array Func
   methods : Array MethodInfo := #[]
+  /-- Package-level variables, in declaration order (files in lexical
+  filename order). Empty for globals-free programs — every existing
+  construction site is untouched. -/
+  globals : Array GlobalDef := #[]
   deriving Repr, BEq
 
 def findFunctionIn? (funcs : Array Func) (id : FuncId) : Option Func :=
@@ -300,3 +318,12 @@ contain `.`", which package qualification falsified: a package named
 so the wire decoder can synthesize runtime-panic payloads (the
 nil-interface method-value creation check) without importing the machine. -/
 def runtimeErrorTypeId : TypeId := ⟨"$runtime.Error"⟩
+
+/-- The reserved id of the synthesized package-initialization function
+(init slice, `docs/2026-08-05_init-design.md`): the frontend emits it —
+package-level variable initializers in `go/types`' `InitOrder`, then the
+`init()` functions (exported as `$init0`, `$init1`, … in source order) —
+and the driver runs it to completion before the subject. The same
+`$`-cannot-appear-in-a-Go-identifier argument as `runtimeErrorTypeId`
+keeps every `$`-prefixed id collision-free against user code. -/
+def pkgInitFuncId : FuncId := ⟨"$pkginit"⟩
