@@ -76,6 +76,15 @@ directions are asymmetric:
    oldCap, newLen) triple, not the site's envelope. The deliberate
    widening is in flight in the same audit response; this caution is
    replaced by the widened statement in that commit.
+   SINGLETON NARROWINGS (added at the arc-final audit, F8/F15
+   2026-08-06): a spec-declared or spec-SILENT latitude that the model
+   resolves to a single point WITHOUT a Choices site is still an
+   envelope decision and ships the same statement + transfer caveat at
+   its site. Current recorded singletons: `[]byte(s)` capacity pinned
+   to len (Machine.lean `bytesFromString` arm — gc's escaping path
+   realizes roundupsize(len), outside the singleton; caveat at the
+   arm); map-key retention on overwrite pinned to gc's `needkeyupdate`
+   (floats design note §"Map keys", spec-silent).
 2. **Envelope fidelity is a standing audit dimension** (like
    over-specialization): reviewers argue each envelope against the spec
    TEXT, because the too-wide direction has no oracle.

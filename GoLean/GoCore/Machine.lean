@@ -270,6 +270,21 @@ def applyStrictOp (s : ExecState) : StrictOp → List GoValue → Except GoError
   | .lessCmp, [l, r] => do return (.bool (← valueLess l r), s)
   | .greaterCmp, [l, r] => do return (.bool (← valueGreater l r), s)
   | .convert ty, [v] => do return ((← convertValueToTy s ty v), s)
+  -- ENVELOPE STATEMENT (recorded narrowing, arc-final audit F8,
+  -- 2026-08-06). Spec §Conversions on `[]byte(s)`: "The capacity of the
+  -- resulting slice is implementation-specific and may be larger than
+  -- the slice length" — a declared latitude. The model resolves it to
+  -- the SINGLETON cap = len, with no Choices consumption. gc's realized
+  -- point depends on escape analysis: cap = len when the backing does
+  -- not escape (probe go1.26.5: len 5 → cap 5, len 6 → cap 6), but
+  -- roundupsize(len) when it escapes (len 5 → cap 8, len 33 → cap 48,
+  -- len 100 → cap 112). TRANSFER CAVEAT: a theorem asserting
+  -- cap([]byte(s)) = len(s) does NOT transfer to gc executions where
+  -- the conversion escapes; the green version-tracking pin
+  -- (strings/byte-conversion-cap, a non-escaping shape) tracks the
+  -- agreeing point only. Widening this to a Choices site is deliberate
+  -- future work if a cap-observing escaping shape ever needs to pass —
+  -- do not silently match one compiler mode.
   | .bytesFromString, [v] =>
       match v with
       | .string value =>
