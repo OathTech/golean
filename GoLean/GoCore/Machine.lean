@@ -95,6 +95,13 @@ inductive StrictOp where
   | add | sub | mul | div | mod
   | shiftLeft | shiftRight | bitAnd | bitOr | bitXor | bitClear
   | bitNeg | not
+  /-- Value-directed unary minus (floats slice): int `0 - v`; float IEEE
+  sign-bit flip. -/
+  | neg
+  /-- A float constant's exact rational, rounded ONCE here at evaluation
+  (nullary strict form, like `defaultValueOf`/`nilLit` — no new rule
+  shapes; design note decision 5). -/
+  | floatLit (num : Int) (den : Nat) (kind : FloatKind)
   | eqCmp (ty : Ty) | neqCmp (ty : Ty)
   | atMostCmp | atLeastCmp | lessCmp | greaterCmp
   | convert (ty : Ty)
@@ -144,6 +151,8 @@ def strictPlan : Expr → Option (StrictOp × List Expr)
   | .bitXor l r => some (.bitXor, [l, r])
   | .bitClear l r => some (.bitClear, [l, r])
   | .bitNeg e => some (.bitNeg, [e])
+  | .neg e => some (.neg, [e])
+  | .floatLit num den kind => some (.floatLit num den kind, [])
   | .not e => some (.not, [e])
   | .eqCmp ty l r => some (.eqCmp ty, [l, r])
   | .neqCmp ty l r => some (.neqCmp ty, [l, r])
@@ -204,15 +213,33 @@ def applyStrictOp (s : ExecState) : StrictOp → List GoValue → Except GoError
   | .add, [l, r] =>
       match l, r with
       | .int .., .int .. => do return ((← intBinaryResult "+" (· + ·) l r), s)
+      | .float .., .float .. => do
+          return ((← floatBinaryResult "+" FloatBits.fadd64 FloatBits.fadd32 l r), s)
       | .string lv, .string rv => return (.string (GoString.append lv rv), s)
       | _, _ => stuck s!"mismatched + operands: {repr l} and {repr r}"
-  | .sub, [l, r] => do return ((← intBinaryResult "-" (· - ·) l r), s)
-  | .mul, [l, r] => do return ((← intBinaryResult "*" (· * ·) l r), s)
-  | .div, [l, r] => do
-      let divisor ← valueAsInt r
-      if divisor == 0 then
-        panic "runtime error: integer divide by zero"
-      return ((← intBinaryResult "/" Int.tdiv l r), s)
+  | .sub, [l, r] =>
+      match l, r with
+      | .float .., .float .. => do
+          return ((← floatBinaryResult "-" FloatBits.fsub64 FloatBits.fsub32 l r), s)
+      | _, _ => do return ((← intBinaryResult "-" (· - ·) l r), s)
+  | .mul, [l, r] =>
+      match l, r with
+      | .float .., .float .. => do
+          return ((← floatBinaryResult "*" FloatBits.fmul64 FloatBits.fmul32 l r), s)
+      | _, _ => do return ((← intBinaryResult "*" (· * ·) l r), s)
+  | .div, [l, r] =>
+      match l, r with
+      -- Float division dispatches BEFORE the integer divide-by-zero
+      -- check: it NEVER panics — IEEE ±Inf/NaN results (design note
+      -- §3.2, an envelope narrowing matching gc everywhere; pinned by
+      -- floats/division-specials).
+      | .float .., .float .. => do
+          return ((← floatBinaryResult "/" FloatBits.fdiv64 FloatBits.fdiv32 l r), s)
+      | _, _ => do
+          let divisor ← valueAsInt r
+          if divisor == 0 then
+            panic "runtime error: integer divide by zero"
+          return ((← intBinaryResult "/" Int.tdiv l r), s)
   | .mod, [l, r] => do
       let divisor ← valueAsInt r
       if divisor == 0 then
@@ -225,6 +252,16 @@ def applyStrictOp (s : ExecState) : StrictOp → List GoValue → Except GoError
   | .bitXor, [l, r] => do return ((← intBitwiseBinaryResult "^" Nat.xor l r), s)
   | .bitClear, [l, r] => do return ((← intBitClearResult l r), s)
   | .bitNeg, [v] => do return ((← intBitNegResult v), s)
+  | .neg, [v] =>
+      match v with
+      | .int value kind => return (.int (kind.normalize (0 - value)) kind, s)
+      -- IEEE negation is the sign-bit flip, never 0 - x (wrong at +0).
+      | .float bits kind => return (.float (kind.normalizeBits (kind.negBits bits)) kind, s)
+      | other => stuck s!"mismatched unary - operand: {repr other}"
+  | .floatLit num den kind, [] =>
+      -- Malformed rationals fail closed at the decoder; defensive here.
+      if den == 0 then stuck "malformed float literal: zero denominator"
+      else return (.float (kind.normalizeBits (kind.ratToBits num den)) kind, s)
   | .not, [v] => do return (.bool (!(← valueAsBool v)), s)
   | .eqCmp ty, [l, r] => do return (.bool (← valueEq s ty l r), s)
   | .neqCmp ty, [l, r] => do return (.bool (!(← valueEq s ty l r)), s)
@@ -371,18 +408,27 @@ def applyStrictOp (s : ExecState) : StrictOp → List GoValue → Except GoError
               validateSlice slice *> return (.int slice.cap, s)
           | other => unsupported s!"cap for non-array/slice value {repr other}"
   | .funcValOf fid, vs => return (.funcVal fid vs, s)
-  | .minOf, v :: vs => do
-      let mut best := v
-      for w in vs do
-        if ← valueLess w best then
-          best := w
-      return (best, s)
-  | .maxOf, v :: vs => do
-      let mut best := v
-      for w in vs do
-        if ← valueLess best w then
-          best := w
-      return (best, s)
+  | .minOf, v :: vs =>
+      -- Float min/max stays FAIL-CLOSED (design note §9): Go's builtin
+      -- is NaN-propagating with -0 < +0 — a valueLess fold would get
+      -- NaN silently wrong, and no corpus case pins it yet.
+      if anyFloatOperand (v :: vs) then
+        unsupported "min builtin over float operands"
+      else do
+        let mut best := v
+        for w in vs do
+          if ← valueLess w best then
+            best := w
+        return (best, s)
+  | .maxOf, v :: vs =>
+      if anyFloatOperand (v :: vs) then
+        unsupported "max builtin over float operands"
+      else do
+        let mut best := v
+        for w in vs do
+          if ← valueLess best w then
+            best := w
+        return (best, s)
   | .runeAt, [sv, ov] => do
       match sv with
       | .string str => do

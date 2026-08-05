@@ -71,6 +71,30 @@ def IntKind.isFlexible : IntKind → Bool
   | .unbounded _ => true
   | _ => false
 
+/-- Go's floating-point kinds (floats slice F2, 2026-08-05;
+`docs/2026-08-04_floats-design.md` decision 6). Unlike `IntKind` there is
+no flexible/unbounded member: the frontend types every float constant
+(go/types), so a float value's kind is always concrete. -/
+inductive FloatKind where
+  | float32
+  | float64
+  deriving Repr, BEq, Inhabited, DecidableEq
+
+def FloatKind.name : FloatKind → String
+  | .float32 => "float32"
+  | .float64 => "float64"
+
+def FloatKind.bits : FloatKind → Nat
+  | .float32 => 32
+  | .float64 => 64
+
+/-- The width invariant's enforcement mask, exactly parallel to
+`IntKind.normalize`: a stored `GoValue.float`'s bit pattern is always
+`< 2^width` (design note §6; `FloatBits`' raw-encoding comparisons and
+sign XORs assume it). Idempotent on well-formed patterns. -/
+def FloatKind.normalizeBits (kind : FloatKind) (bits : Nat) : Nat :=
+  bits % 2 ^ kind.bits
+
 /-- Semantic function identity. The key is a canonical name produced only by
 the frontend symbol map (source-level function name; receiver-scoped method
 key; synthetic `F$litN` for a lifted func literal). Raw frontend names must
@@ -169,6 +193,7 @@ repr pins print `GoLean.GoCore.Ty.…`). -/
 inductive Ty where
   | bool
   | int (kind : IntKind := IntKind.int)
+  | float (kind : FloatKind)
   | string
   | array (length : Nat) (elem : Ty)
   | slice (elem : Ty)
@@ -206,6 +231,7 @@ mutual
 def Ty.eqbFuel : Nat → Ty → Ty → Bool
   | _, .bool, .bool => true
   | _, .int k₁, .int k₂ => k₁ == k₂
+  | _, .float k₁, .float k₂ => k₁ == k₂
   | _, .string, .string => true
   | f + 1, .array n₁ e₁, .array n₂ e₂ => n₁ == n₂ && Ty.eqbFuel f e₁ e₂
   | f + 1, .slice e₁, .slice e₂ => Ty.eqbFuel f e₁ e₂
@@ -240,6 +266,7 @@ qualified spelling contradicted it inside a single JSON object
 def Ty.dynamicName : Ty → String
   | .bool => "bool"
   | .int kind => kind.name
+  | .float kind => kind.name
   | .string => "string"
   | .defined id => id.unqualified
   | .interface id => id.unqualified
@@ -404,6 +431,14 @@ inductive GoValue where
   | unit
   | bool (value : Bool)
   | int (value : Int) (kind : GoCore.IntKind := .int)
+  /-- An IEEE-754 float as its BIT PATTERN (floats slice, design note
+  decision 6): `bits < 2^kind.bits`, enforced by
+  `FloatKind.normalizeBits` at every construction/normalization site.
+  Semantics of the pattern live in `GoCore/FloatBits.lean`. NOTE the
+  three equalities (note §4): Go `==` is `valueEq`'s IEEE arm
+  (NaN ≠ NaN, +0 == -0); `GoValue.eqb` below is BIT equality
+  (proof/infrastructure identity, never Go `==`). -/
+  | float (bits : Nat) (kind : GoCore.FloatKind)
   | string (value : GoString)
   | addr (loc : Loc)
   | nil
@@ -479,6 +514,9 @@ def GoValue.eqbFuel : Nat → GoValue → GoValue → Bool
   | _, .unit, .unit => true
   | _, .bool a, .bool b => a == b
   | _, .int v₁ k₁, .int v₂ k₂ => v₁ == v₂ && k₁ == k₂
+  -- BIT equality on purpose (note §4): NaN == NaN at identical bits,
+  -- +0 ≠ -0 — structural identity, never Go's ==.
+  | _, .float b₁ k₁, .float b₂ k₂ => b₁ == b₂ && k₁ == k₂
   | _, .string a, .string b => a == b
   | _, .addr a, .addr b => a == b
   | _, .nil, .nil => true

@@ -1059,9 +1059,129 @@ private def expectFloatVectors (name : String) : IO Bool := do
   IO.println s!"ok: {name} ({checked} vectors)"
   return true
 
+/-! ## Float machine-arm tests (floats slice F2)
+
+Hand-built GoCore terms driving the new arms through the MACHINE (the
+corpus stays frontend-export red until F3): literal rounding, per-op
+arithmetic, IEEE equality/ordering (NaN, ±0), value-directed negation,
+no-panic float division, conversions (f64→f32 rounding, in-range
+float→int truncation, the int64→float32 single-rounding discriminator),
+the fail-closed out-of-range refusal, and NaN map-key identity. -/
+
+private def floatTy : GoCore.Ty := .float .float64
+private def float32Ty : GoCore.Ty := .float .float32
+
+private def f64Lit (num : Int) (den : Nat := 1) : GoCore.Expr :=
+  .floatLit num den .float64
+
+private def coreFloatArithFunction : GoCore.Func := {
+  id := ⟨"float_arith_F"⟩,
+  args := #[],
+  results := #[coreParam "z"],
+  body := .block
+    #[
+      { id := "a", typ := floatTy }, { id := "b", typ := floatTy },
+      { id := "c", typ := floatTy }, { id := "zero", typ := floatTy },
+      { id := "nan", typ := floatTy }, { id := "negz", typ := floatTy },
+      { id := "d", typ := floatTy }
+    ]
+    #[
+      .assign (.var "a") (f64Lit 1),
+      .assign (.var "b") (f64Lit 3),
+      .assign (.var "c") (.div (.var "a") (.var "b")),
+      .ifThenElse (.lessCmp (.var "c") (f64Lit 1 2))
+        (.assign (.var "z") (.add (.var "z") (.intLit 1))) (.seqn #[]),
+      .assign (.var "zero") (.sub (.var "a") (.var "a")),
+      -- 0.0/0.0: NaN, never a panic (design note §3.2)
+      .assign (.var "nan") (.div (.var "zero") (.var "zero")),
+      .ifThenElse (.neqCmp floatTy (.var "nan") (.var "nan"))
+        (.assign (.var "z") (.add (.var "z") (.intLit 10))) (.seqn #[]),
+      -- proper negation: -(+0) = -0; +0 == -0 under Go ==
+      .assign (.var "negz") (.neg (.var "zero")),
+      .ifThenElse (.eqCmp floatTy (.var "negz") (.var "zero"))
+        (.assign (.var "z") (.add (.var "z") (.intLit 100))) (.seqn #[]),
+      -- 1 / -0 = -Inf < 0
+      .assign (.var "d") (.div (.var "a") (.var "negz")),
+      .ifThenElse (.lessCmp (.var "d") (f64Lit 0))
+        (.assign (.var "z") (.add (.var "z") (.intLit 1000))) (.seqn #[])
+    ]
+}
+
+private def coreFloatConvertFunction : GoCore.Func := {
+  id := ⟨"float_convert_F"⟩,
+  args := #[],
+  results := #[coreParam "z"],
+  body := .block
+    #[
+      { id := "big", typ := floatTy }, { id := "f32", typ := float32Ty },
+      { id := "u", typ := .int .uint8 },
+      { id := "g", typ := float32Ty }, { id := "h", typ := float32Ty }
+    ]
+    #[
+      -- f64→f32 conversion rounding: 16777217.0 → 16777216.0f
+      .assign (.var "big") (f64Lit 16777217),
+      .assign (.var "f32") (.convert float32Ty (.var "big")),
+      .ifThenElse (.eqCmp float32Ty (.var "f32") (.floatLit 16777216 1 .float32))
+        (.assign (.var "z") (.add (.var "z") (.intLit 1))) (.seqn #[]),
+      -- in-range float→int truncates toward zero: 253.5 → 253 at uint8
+      .assign (.var "u") (.convert (.int .uint8) (f64Lit 507 2)),
+      .ifThenElse (.eqCmp (.int .uint8) (.var "u") (.intLit 253 .uint8))
+        (.assign (.var "z") (.add (.var "z") (.intLit 10))) (.seqn #[]),
+      -- int64→float32 single rounding (the probed discriminator):
+      -- 9007199791611905 → 0x5A000001 ≠ float32(2^53)
+      .assign (.var "g") (.convert float32Ty (.intLit 9007199791611905 .int64)),
+      .assign (.var "h") (.convert float32Ty (.intLit 9007199254740992 .int64)),
+      .ifThenElse (.neqCmp float32Ty (.var "g") (.var "h"))
+        (.assign (.var "z") (.add (.var "z") (.intLit 100))) (.seqn #[])
+    ]
+}
+
+/-- The §3.3 refusal at machine level — the negative pin's core half
+(the corpus half is `floats/to-int-out-of-range`, permanently red). -/
+private def coreFloatToIntRefusalFunction : GoCore.Func := {
+  id := ⟨"float_to_int_refusal_F"⟩,
+  args := #[],
+  results := #[coreParam "z"],
+  body := .block
+    #[{ id := "big", typ := floatTy }]
+    #[
+      .assign (.var "big") (f64Lit 1000000000000000000000),  -- 1e21
+      .assign (.var "z") (.convert (.int .int64) (.var "big"))
+    ]
+}
+
+/-- NaN map keys at machine level: two inserts append two DISTINCT
+entries (valueEq's IEEE arm inside `mapEntryIndex?`). -/
+private def coreFloatNaNMapFunction : GoCore.Func := {
+  id := ⟨"float_nan_map_F"⟩,
+  args := #[],
+  results := #[coreParam "z"],
+  body := .block
+    #[
+      { id := "m", typ := .map floatTy .int },
+      { id := "zero", typ := floatTy }, { id := "nan", typ := floatTy }
+    ]
+    #[
+      .makeMap (.var "m") floatTy .int none,
+      .assign (.var "zero") (f64Lit 0),
+      .assign (.var "nan") (.div (.var "zero") (.var "zero")),
+      .mapAssign (.var "m") (.var "nan") (.intLit 1) floatTy .int,
+      .mapAssign (.var "m") (.var "nan") (.intLit 2) floatTy .int,
+      .assign (.var "z") (.length (.var "m") none)
+    ]
+}
+
 def main : IO UInt32 := do
   let mut passed := true
   passed := passed && (← expectFloatVectors "FloatBits hardware-oracle vectors")
+  passed := passed && (← expectIntResult "GoCore float arithmetic/compare/neg (IEEE, no div panic)"
+    (GoCore.Machine.runFunctionM 100000 coreFloatArithFunction #[]) 1111)
+  passed := passed && (← expectIntResult "GoCore float conversions (round-once paths)"
+    (GoCore.Machine.runFunctionM 100000 coreFloatConvertFunction #[]) 111)
+  passed := passed && (← expectErrorStatus "GoCore float→int out-of-range refuses (fail closed)"
+    (GoCore.Machine.runFunctionM 100000 coreFloatToIntRefusalFunction #[]) "unsupported")
+  passed := passed && (← expectIntResult "GoCore NaN map keys are distinct entries"
+    (GoCore.Machine.runFunctionM 100000 coreFloatNaNMapFunction #[]) 2)
   passed := passed && (← expectIntResult "GoCore add function" (GoCore.Machine.runFunctionM 100000 coreAddFunction #[.int 2, .int 3]) 5)
   passed := passed && (← expectBoolResult "GoCore pointer identity" (GoCore.Machine.runFunctionM 100000 corePointerIdentityFunction #[]) false)
   passed := passed && (← expectIntResult "GoCore struct field update" (GoCore.Machine.runFunctionWithTypesM 100000 coreCellTypes coreStructFunction #[]) 17)

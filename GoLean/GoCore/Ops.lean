@@ -1,3 +1,4 @@
+import GoLean.GoCore.FloatBits
 import GoLean.GoCore.State
 
 namespace GoLean.GoCore
@@ -27,6 +28,67 @@ uniformity with `execStmt`'s fuel (design decision 2026-07-18; see
 docs/2026-07-18_totality-fuel-decision.md). -/
 def typeResolutionFuel : Nat := 1024
 
+/-! ## Float kind dispatch (floats slice F2, 2026-08-05)
+
+Width dispatch from `FloatKind` into the `FloatBits` kernel. Float
+operands are STRICT about kinds everywhere below: Go has no implicit
+float conversions, so a kind mismatch (or a float32 bits pattern under a
+float64 kind) is a lowering bug and fails closed — never a silent
+reinterpretation. This is a deliberate divergence from the int arms'
+flexible-kind adoption (`IntKind.compatibleResult` exists for UNTYPED
+int literals; float literals always arrive typed). -/
+
+/-- The correctly-rounded rational→format kernel at this kind (constants
+and int→float, design note decision 5; float32 single-rounds, never via
+binary64). -/
+def FloatKind.ratToBits : FloatKind → Int → Nat → Nat
+  | .float64, num, den => FloatBits.ratToFloat64 num den
+  | .float32, num, den => FloatBits.ratToFloat32 num den
+
+/-- IEEE negation — the sign-bit flip (`fneg`), never `0 - x`. -/
+def FloatKind.negBits : FloatKind → Nat → Nat
+  | .float64, bits => FloatBits.fneg64 bits
+  | .float32, bits => FloatBits.fneg32 bits
+
+/-- Per-op-rounded arithmetic result at matching float kinds (the §3.1
+envelope point: every operation rounds to the operand type). float32
+computes by exact widening through binary64 and one rounding back —
+softfloat64.go:506-517's own definition (innocuous double rounding for
+`+ - * /`; design note §6). -/
+def floatBinaryResult (opName : String) (op64 op32 : Nat → Nat → Nat)
+    (left right : GoValue) : Except GoError GoValue := do
+  match left, right with
+  | .float lb lk, .float rb rk =>
+      if lk == rk then
+        match lk with
+        | .float64 => return .float (FloatKind.float64.normalizeBits (op64 lb rb)) .float64
+        | .float32 => return .float (FloatKind.float32.normalizeBits (op32 lb rb)) .float32
+      else
+        stuck s!"mismatched {opName} float kinds: {lk.name} and {rk.name}"
+  | _, _ => stuck s!"mismatched {opName} operands: {repr left} and {repr right}"
+
+/-- IEEE comparison at matching float kinds: NaN is UNORDERED — every
+ordering answers false on a NaN operand (note §4; the corpus pin is
+`floats/nan-comparisons`). -/
+def floatCompareResult (opName : String) (cmp64 cmp32 : Nat → Nat → Bool)
+    (left right : GoValue) : Except GoError Bool := do
+  match left, right with
+  | .float lb lk, .float rb rk =>
+      if lk == rk then
+        match lk with
+        | .float64 => return cmp64 lb rb
+        | .float32 => return cmp32 lb rb
+      else
+        stuck s!"mismatched {opName} float kinds: {lk.name} and {rk.name}"
+  | _, _ => stuck s!"mismatched {opName} operands: {repr left} and {repr right}"
+
+/-- Is any operand a float value? Guard for `min`/`max`, which stay
+FAIL-CLOSED on floats (design note §9: NaN-propagating, `-0 < +0`
+builtin semantics are spec-pinned but have zero corpus coverage — a
+`valueLess`-based fold would silently get NaN wrong). -/
+def anyFloatOperand (vs : List GoValue) : Bool :=
+  vs.any fun v => match v with | .float _ _ => true | _ => false
+
 def indexOutOfRangePanic (index : Int) (length : Nat) : Except GoError α :=
   if index < 0 then
     panic s!"runtime error: index out of range [{index}]"
@@ -55,6 +117,12 @@ def arrayGet (values : Array GoValue) (index : Int) : Except GoError GoValue := 
 mutual
   def coerceStoredValue : GoValue → GoValue → Except GoError GoValue
     | .int _ kind, .int value _ => return .int (kind.normalize value) kind
+    -- Kind-strict on purpose (unlike the int arm): float values always
+    -- arrive typed, so a kind mismatch is a lowering bug and masking the
+    -- bits would be a silent reinterpretation (F2 header note above).
+    | .float _ kind, .float bits k =>
+        if k == kind then return .float (kind.normalizeBits bits) kind
+        else stuck s!"float store kind mismatch: expected {kind.name}, got {k.name}"
     | .array oldValues, .array newValues =>
         if oldValues.size != newValues.size then
           stuck s!"array store length mismatch: {oldValues.size} vs {newValues.size}"
@@ -420,6 +488,7 @@ def goTypeNameForMessageFuel : Nat → ExecState → Ty → String
       match resolveDefinedAliases state typ with
       | .bool => "bool"
       | .int kind => kind.name
+      | .float kind => kind.name
       | .string => "string"
       | .pointer elem => s!"*{goTypeNameForMessageFuel fuel state elem}"
       | .slice elem => s!"[]{goTypeNameForMessageFuel fuel state elem}"
@@ -448,6 +517,7 @@ def dynamicTypeName? (state : ExecState) (typ : Ty) : Option String :=
   | .pointer (.defined id) => some s!"*{id.key}"
   | .bool => some "bool"
   | .int kind => some kind.name
+  | .float kind => some kind.name
   | .string => some "string"
   | _ => none
 
@@ -743,6 +813,12 @@ def normalizeValueForTyFuel : Nat → ExecState → Ty → GoValue → Except Go
   | 0, _, _, _ => unsupported "normalizing: type nesting too deep"
   | _ + 1, _, .int kind, .int value _ => return .int (kind.normalize value) kind
   | _ + 1, _, .int kind, value => stuck s!"expected {kind.name} value, got {repr value}"
+  -- Kind-strict (F2 header note): mask-enforce the width invariant, never
+  -- adopt a mismatched kind (LOCKSTEP with isNormalForTyFuel's arm).
+  | _ + 1, _, .float kind, .float bits k =>
+      if k == kind then return .float (kind.normalizeBits bits) kind
+      else stuck s!"expected {kind.name} value, got {k.name}"
+  | _ + 1, _, .float kind, value => stuck s!"expected {kind.name} value, got {repr value}"
   | fuel + 1, state, .array length elem, .array values => do
       if values.size != length then
         stuck s!"array value length mismatch: expected {length}, got {values.size}"
@@ -820,6 +896,9 @@ def isNormalForTyFuel : Nat → TypeEnv → Ty → GoValue → Bool
   | _ + 1, _, .int kind, .int value k =>
       decide (kind.normalize value = value) && decide (kind = k)
   | _ + 1, _, .int _, _ => false
+  | _ + 1, _, .float kind, .float bits k =>
+      decide (kind.normalizeBits bits = bits) && decide (kind = k)
+  | _ + 1, _, .float _, _ => false
   | fuel + 1, types, .array length elem, .array values =>
       decide (values.size = length)
         && isNormalListWith (isNormalForTyFuel fuel types elem) values.toList
@@ -904,7 +983,37 @@ def storeLoc (state : ExecState) : Loc → GoValue → Except GoError ExecState
 -- Total via fuel: only the `.defined → .alias` chain recurses; fuel bounds it.
 def convertValueToTyFuel : Nat → ExecState → Ty → GoValue → Except GoError GoValue
   | _, _, .int kind, .int value _ => return .int (kind.normalize value) kind
+  -- Float → int (design note §3.3, decision 4): the spec pins truncation
+  -- toward zero; an out-of-range or NaN source is IMPLEMENTATION-
+  -- DEPENDENT in Go (amd64 1<<63, arm64 saturates), so it FAILS CLOSED
+  -- at runtime — never a modeled platform value. In-range means the
+  -- exact truncation is representable in the TARGET kind unchanged.
+  | _, _, .int kind, .float bits fk =>
+      let n? := match fk with
+        | .float64 => FloatBits.f64truncInt? bits
+        | .float32 => FloatBits.f32truncInt? bits
+      match n? with
+      | some n =>
+          if kind.normalize n == n then return .int n kind
+          else unsupported
+            "float-to-int conversion out of range/NaN (implementation-dependent in Go)"
+      | none => unsupported
+          "float-to-int conversion out of range/NaN (implementation-dependent in Go)"
   | _, _, .int kind, other => stuck s!"expected integer operand for conversion to {kind.name}, got {repr other}"
+  -- Float targets (floats slice F2): float↔float via the softfloat
+  -- (widening exact, narrowing the ONE rounding); int→float via the
+  -- rational kernel's den=1 case — the single correctly-rounded step
+  -- (float32 targets NEVER round via binary64; note §6).
+  | _, _, .float kind, .float bits fk =>
+      (match kind, fk with
+       | .float64, .float64 => return .float (kind.normalizeBits bits) kind
+       | .float32, .float32 => return .float (kind.normalizeBits bits) kind
+       | .float64, .float32 => return .float (kind.normalizeBits (FloatBits.f32to64 bits)) kind
+       | .float32, .float64 => return .float (kind.normalizeBits (FloatBits.f64to32 bits)) kind)
+  | _, _, .float kind, .int value _ =>
+      return .float (kind.normalizeBits (kind.ratToBits value 1)) kind
+  | _, _, .float kind, other =>
+      stuck s!"expected numeric operand for conversion to {kind.name}, got {repr other}"
   | fuel + 1, state, .defined name, value =>
       match TypeEnv.lookup state.types name with
       | some (.alias target) => convertValueToTyFuel fuel state target value
@@ -978,6 +1087,7 @@ def defaultValueFuel : Nat → ExecState → Ty → Except GoError GoValue
   | 0, _, _ => unsupported "default value: type nesting too deep"
   | _ + 1, _, .bool => return .bool false
   | _ + 1, _, .int kind => return .int 0 kind
+  | _ + 1, _, .float kind => return .float 0 kind  -- +0 bits
   | _ + 1, _, .string => return .string GoString.empty
   | fuel + 1, state, .array length elem => do
       if length == 0 then
@@ -1198,6 +1308,17 @@ def valueEqFuel : Nat → ExecState → Ty → GoValue → GoValue → Except Go
     | _ + 1, _, .bool, left, right => stuck s!"bool equality expected bool operands, got {repr left} and {repr right}"
     | _ + 1, _, .int _, .int left _, .int right _ => return left == right
     | _ + 1, _, .int kind, left, right => stuck s!"{kind.name} equality expected int operands, got {repr left} and {repr right}"
+    -- Go == on floats is IEEE equality (note §4): NaN ≠ NaN even at
+    -- identical bits, +0 == -0 across different bits — NEVER bit
+    -- equality (that is `GoValue.eqb`, the structural identity).
+    | _ + 1, _, .float kind, .float lb lk, .float rb rk =>
+        if lk == kind && rk == kind then
+          match kind with
+          | .float64 => return FloatBits.feq64 lb rb
+          | .float32 => return FloatBits.feq32 lb rb
+        else
+          stuck s!"{kind.name} equality on mismatched float kinds: {lk.name} and {rk.name}"
+    | _ + 1, _, .float kind, left, right => stuck s!"{kind.name} equality expected float operands, got {repr left} and {repr right}"
     | _ + 1, _, .string, .string left, .string right => return left == right
     | _ + 1, _, .string, left, right => stuck s!"string equality expected string operands, got {repr left} and {repr right}"
     -- Go: func values are comparable only against nil.
@@ -1401,23 +1522,32 @@ def mapEntryIndex? (state : ExecState) (keyTy : Ty) (entries : Array (GoValue ×
     i := i + 1
   return none
 
+-- The float arms are IEEE-unordered on NaN (note §4): a NaN operand
+-- makes < <= > >= ALL false, so > is lt with swapped operands and >= is
+-- le swapped — NOT the negation of <=/<.
 def valueLess : GoValue → GoValue → Except GoError Bool
   | .int left _, .int right _ => return left < right
+  | left@(.float _ _), right => floatCompareResult "<" FloatBits.flt64 FloatBits.flt32 left right
   | .string left, .string right => return GoString.compare left right == .lt
   | left, right => stuck s!"mismatched < operands: {repr left} and {repr right}"
 
 def valueAtMost : GoValue → GoValue → Except GoError Bool
   | .int left _, .int right _ => return left <= right
+  | left@(.float _ _), right => floatCompareResult "<=" FloatBits.fle64 FloatBits.fle32 left right
   | .string left, .string right => return GoString.compare left right != .gt
   | left, right => stuck s!"mismatched <= operands: {repr left} and {repr right}"
 
 def valueGreater : GoValue → GoValue → Except GoError Bool
   | .int left _, .int right _ => return left > right
+  | left@(.float _ _), right =>
+      floatCompareResult ">" (fun l r => FloatBits.flt64 r l) (fun l r => FloatBits.flt32 r l) left right
   | .string left, .string right => return GoString.compare left right == .gt
   | left, right => stuck s!"mismatched > operands: {repr left} and {repr right}"
 
 def valueAtLeast : GoValue → GoValue → Except GoError Bool
   | .int left _, .int right _ => return left >= right
+  | left@(.float _ _), right =>
+      floatCompareResult ">=" (fun l r => FloatBits.fle64 r l) (fun l r => FloatBits.fle32 r l) left right
   | .string left, .string right => return GoString.compare left right != .lt
   | left, right => stuck s!"mismatched >= operands: {repr left} and {repr right}"
 

@@ -75,6 +75,14 @@ inductive Expr where
   | var (id : String)
   | nil (typ : Option Ty)
   | intLit (value : Int) (kind : IntKind := .unbounded "integer")
+  /-- A float constant as its EXACT RATIONAL (floats slice, design note
+  decision 5): go/constant's folded value travels un-rounded
+  (`num/den`, `den > 0` — the decoder fails closed on malformed), and
+  the machine performs the ONE spec-mandated rounding to `kind` via the
+  `FloatBits` rational kernel at evaluation. Keeping the rounding in
+  GoCore keeps it differentially validated (a go/constant quirk would
+  surface as a red case, not be silently shared with the oracle). -/
+  | floatLit (num : Int) (den : Nat) (kind : FloatKind)
   | stringLit (value : GoString)
   | boolLit (value : Bool)
   | convert (typ : Ty) (operand : Expr)
@@ -93,6 +101,11 @@ inductive Expr where
   | bitXor (left right : Expr)
   | bitClear (left right : Expr)
   | bitNeg (operand : Expr)
+  /-- Unary minus, VALUE-directed (floats slice, note §4 rider): ints
+  negate as `0 - v` at the operand's kind; floats are the IEEE sign-bit
+  flip (`fneg`) — lowering `-x` as `0 - x` is WRONG at `x = +0`
+  (`0 - (+0) = +0`, Go gives `-0`; pinned by `floats/signed-zero`). -/
+  | neg (operand : Expr)
   | eqCmp (typ : Ty) (left right : Expr)
   | neqCmp (typ : Ty) (left right : Expr)
   | atMostCmp (left right : Expr)

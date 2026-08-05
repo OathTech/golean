@@ -88,9 +88,11 @@ def optLocSup : Option Loc → Nat
 
 mutual
 
-/-- Strict sup of every location root occurring in the value. -/
+/-- Strict sup of every location root occurring in the value. Floats are
+LOC-FREE scalars (a bit pattern plus a kind — no heap reference can hide
+in one), so they sit in the zero arm with the other leaves. -/
 def GoValue.locSup : GoValue → Nat
-  | .unit | .bool _ | .int _ _ | .string _ | .nil => 0
+  | .unit | .bool _ | .int _ _ | .float _ _ | .string _ | .nil => 0
   | .addr l => Loc.locSup l
   | .interface _ v => GoValue.locSup v
   | .struct _ fields => goValueFieldsSup fields.toList
@@ -141,11 +143,12 @@ mutual
 never frontend-emitted) — every other field is loc-free; the recursion
 covers every `Expr`-carrying position. -/
 def Expr.locSup : Expr → Nat
-  | .var _ | .nil _ | .intLit _ _ | .stringLit _ | .boolLit _ | .ref _
+  | .var _ | .nil _ | .intLit _ _ | .floatLit _ _ _ | .stringLit _
+  | .boolLit _ | .ref _
   | .defaultValue _ | .recoverCall | .unsupported _ => 0
   | .locLit l => Loc.locSup l
   | .convert _ e | .bytesFromString e | .stringFromByteSlice e
-  | .stringFromRune e | .bitNeg e | .not e | .deref e _
+  | .stringFromRune e | .bitNeg e | .neg e | .not e | .deref e _
   | .fieldGet e _ _ | .fieldAddr e _ _ | .toInterface _ _ e
   | .typeAssert e _ _ | .length e _ | .capacity e _ =>
       Expr.locSup e
@@ -768,6 +771,15 @@ theorem arrayGet_locSup {values : Array GoValue} {i : Int} {v : GoValue}
   · unfold indexOutOfRangePanic at h
     split at h <;> simp at h
 
+/-- Strip a fail-closed guard (floats slice F2): an `ite` whose THEN
+branch is an error can be `.ok` only through its ELSE branch. -/
+theorem guard_ite_eq_ok {ε α : Type} {c : Prop} [Decidable c]
+    {a b : Except ε α} {x : α} (ha : ∀ y, a ≠ .ok y)
+    (h : (if c then a else b) = .ok x) : b = .ok x := by
+  split at h
+  · exact absurd h (ha x)
+  · exact h
+
 /-- `f <$> x` inversion, Except-side. -/
 theorem map_eq_ok {ε α β : Type} {g : α → β} {x : Except ε α} {b : β} :
     g <$> x = .ok b ↔ ∃ a, x = .ok a ∧ g a = b := by
@@ -783,12 +795,30 @@ theorem coerceStoredValue_locSup' :
       goValueFieldsSup r.toList ≤ goValueFieldsSup newFs)
     (motive_3 := fun oldL newL => ∀ r, coerceArray oldL newL = .ok r →
       goValueListSup r.toList ≤ goValueListSup newL)
-    ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ old new
+    ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ old new
   · -- int / int
     intro v k v' k' r h
     simp only [coerceStoredValue, pure_eq_ok, Except.ok.injEq] at h
     subst h
     simp [GoValue.locSup]
+  · -- float / float, kinds equal (loc-free scalar out)
+    intro ob kind bits k hk r h
+    simp only [coerceStoredValue] at h
+    split at h <;>
+      first
+      | (simp [Bind.bind, Except.bind] at h; done)
+      | (simp only [pure_eq_ok, Except.ok.injEq] at h; subst h;
+         simp [GoValue.locSup])
+      | (subst h; simp [GoValue.locSup])
+  · -- float / float, kind mismatch: stuck
+    intro ob kind bits k hk r h
+    simp only [coerceStoredValue] at h
+    split at h <;>
+      first
+      | (simp [Bind.bind, Except.bind] at h; done)
+      | (simp only [pure_eq_ok, Except.ok.injEq] at h; subst h;
+         simp [GoValue.locSup])
+      | (subst h; simp [GoValue.locSup])
   · -- array size mismatch: stuck
     intro o n hne r h
     simp only [coerceStoredValue] at h
@@ -818,10 +848,11 @@ theorem coerceStoredValue_locSup' :
       obtain ⟨fs, hfs, rfl⟩ := h
       simpa [GoValue.locSup] using ih fs hfs
   · -- catch-all: pass the new value through
-    intro t v hint harr hstruct r h
+    intro t v hint hfloat harr hstruct r h
     rw [coerceStoredValue.eq_def] at h
     split at h
     · exact (hint _ _ _ _ rfl rfl).elim
+    · exact (hfloat _ _ _ _ rfl rfl).elim
     · exact (harr _ _ rfl rfl).elim
     · exact (hstruct _ _ _ _ rfl rfl).elim
     · simp only [pure_eq_ok, Except.ok.injEq] at h
@@ -1011,6 +1042,15 @@ theorem normalizeValueForTyFuel_locSup :
     case int kind =>
       cases v <;> simp [normalizeValueForTyFuel] at h <;> subst h <;>
         simp [GoValue.locSup]
+    case float kind =>
+      cases v <;> try (simp [normalizeValueForTyFuel] at h; done)
+      rename_i bits k
+      simp only [normalizeValueForTyFuel] at h
+      split at h
+      · simp only [pure_eq_ok, Except.ok.injEq] at h
+        subst h
+        simp [GoValue.locSup]
+      · simp [Bind.bind, Except.bind] at h
     case array length elem =>
       cases v <;> try (simp [normalizeValueForTyFuel] at h; done)
       rename_i values
@@ -1132,6 +1172,19 @@ theorem convertValueToTyFuel_locSup :
       | (simp [convertValueToTyFuel] at h; done)
       | (simp only [convertValueToTyFuel, pure_eq_ok, Except.ok.injEq] at h;
          subst h; first | exact Nat.le_refl _ | simp [GoValue.locSup])
+      | -- float arms (floats slice F2): nested kind/range dispatch, every
+        -- ok result a loc-free scalar
+        (simp only [convertValueToTyFuel] at h;
+         split at h <;>
+           first
+           | (simp at h; done)
+           | (split at h <;>
+               first
+               | (simp at h; done)
+               | (simp only [pure_eq_ok, Except.ok.injEq] at h; subst h;
+                  simp [GoValue.locSup]))
+           | (simp only [pure_eq_ok, Except.ok.injEq] at h; subst h;
+              simp [GoValue.locSup]))
   | succ n ih =>
     intro s ty v r h
     cases ty
@@ -1164,6 +1217,18 @@ theorem convertValueToTyFuel_locSup :
         | (simp [convertValueToTyFuel] at h; done)
         | (simp only [convertValueToTyFuel, pure_eq_ok, Except.ok.injEq] at h;
            subst h; first | exact Nat.le_refl _ | simp [GoValue.locSup])
+        | -- float arms (floats slice F2), as in the zero case
+          (simp only [convertValueToTyFuel] at h;
+           split at h <;>
+             first
+             | (simp at h; done)
+             | (split at h <;>
+                 first
+                 | (simp at h; done)
+                 | (simp only [pure_eq_ok, Except.ok.injEq] at h; subst h;
+                    simp [GoValue.locSup]))
+             | (simp only [pure_eq_ok, Except.ok.injEq] at h; subst h;
+                simp [GoValue.locSup]))
 
 /-! ## Soundness of the self-normalization check
 
@@ -1228,6 +1293,16 @@ theorem isNormalForTyFuel_sound {σ : ExecState} :
         obtain ⟨h1, h2⟩ := h
         subst h2
         simp [normalizeValueForTyFuel, h1, pure, Except.pure]
+      all_goals exact absurd h (by simp [isNormalForTyFuel])
+    | float kind =>
+      cases v
+      case float bits k =>
+        simp only [isNormalForTyFuel, Bool.and_eq_true, decide_eq_true_eq] at h
+        obtain ⟨h1, h2⟩ := h
+        subst h2
+        simp only [normalizeValueForTyFuel, h1, pure, Except.pure]
+        have hbeq : (kind == kind) = true := by cases kind <;> rfl
+        simp [hbeq, h1]
       all_goals exact absurd h (by simp [isNormalForTyFuel])
     | array length elem =>
       cases v
@@ -2478,6 +2553,17 @@ theorem intBinaryResult_locSup {nm : String} {op : Int → Int → Int}
     rfl
   · simp [Bind.bind, Except.bind] at h
 
+theorem floatBinaryResult_locSup {nm : String} {op64 op32 : Nat → Nat → Nat}
+    {l r v : GoValue} (h : floatBinaryResult nm op64 op32 l r = .ok v) :
+    GoValue.locSup v = 0 := by
+  unfold floatBinaryResult at h
+  split at h
+  · split at h
+    · split at h <;>
+        (simp only [pure_eq_ok, Except.ok.injEq] at h; subst h; rfl)
+    · simp [Bind.bind, Except.bind] at h
+  · simp [Bind.bind, Except.bind] at h
+
 theorem intBitwiseBinaryResult_locSup {nm : String} {op : Nat → Nat → Nat}
     {l r v : GoValue} (h : intBitwiseBinaryResult nm op l r = .ok v) :
     GoValue.locSup v = 0 := by
@@ -2566,27 +2652,46 @@ theorem applyStrictOp_wf {σ : ExecState} {op : StrictOp} {vs : List GoValue}
       simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
       obtain ⟨iv, hiv, rfl, rfl⟩ := h
       exact strictWfSame hw (by rw [intBinaryResult_locSup hiv]; omega)
+    · -- float + float
+      simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+      obtain ⟨fv, hfv, rfl, rfl⟩ := h
+      exact strictWfSame hw (by rw [floatBinaryResult_locSup hfv]; omega)
     · -- string + string
       simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
       exact strictWfSame hw (by simp [GoValue.locSup])
     · simp at h
   · -- sub
-    simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-    obtain ⟨iv, hiv, rfl, rfl⟩ := h
-    exact strictWfSame hw (by rw [intBinaryResult_locSup hiv]; omega)
-  · -- mul
-    simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-    obtain ⟨iv, hiv, rfl, rfl⟩ := h
-    exact strictWfSame hw (by rw [intBinaryResult_locSup hiv]; omega)
-  · -- div
-    simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-    obtain ⟨d, hd, h⟩ := h
     split at h
-    · simp [Bind.bind, Except.bind] at h
+    · -- float - float
+      simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+      obtain ⟨fv, hfv, rfl, rfl⟩ := h
+      exact strictWfSame hw (by rw [floatBinaryResult_locSup hfv]; omega)
     · simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-      obtain ⟨_, _, iv, hiv, rfl, rfl⟩ := h
+      obtain ⟨iv, hiv, rfl, rfl⟩ := h
       exact strictWfSame hw (by rw [intBinaryResult_locSup hiv]; omega)
+  · -- mul
+    split at h
+    · -- float * float
+      simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+      obtain ⟨fv, hfv, rfl, rfl⟩ := h
+      exact strictWfSame hw (by rw [floatBinaryResult_locSup hfv]; omega)
+    · simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+      obtain ⟨iv, hiv, rfl, rfl⟩ := h
+      exact strictWfSame hw (by rw [intBinaryResult_locSup hiv]; omega)
+  · -- div
+    split at h
+    · -- float / float (dispatches BEFORE the int zero check; never panics)
+      simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+      obtain ⟨fv, hfv, rfl, rfl⟩ := h
+      exact strictWfSame hw (by rw [floatBinaryResult_locSup hfv]; omega)
+    · simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+      obtain ⟨d, hd, h⟩ := h
+      split at h
+      · simp [Bind.bind, Except.bind] at h
+      · simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+        obtain ⟨_, _, iv, hiv, rfl, rfl⟩ := h
+        exact strictWfSame hw (by rw [intBinaryResult_locSup hiv]; omega)
   · -- mod
     simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
     obtain ⟨d, hd, h⟩ := h
@@ -2623,6 +2728,19 @@ theorem applyStrictOp_wf {σ : ExecState} {op : StrictOp} {vs : List GoValue}
     simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
     obtain ⟨iv, hiv, rfl, rfl⟩ := h
     exact strictWfSame hw (by rw [intBitNegResult_locSup hiv]; omega)
+  · -- neg (value-directed unary minus): int/float scalars out
+    split at h <;>
+      first
+      | (simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h;
+         obtain ⟨rfl, rfl⟩ := h;
+         exact strictWfSame hw (by simp [GoValue.locSup]))
+      | simp [Bind.bind, Except.bind] at h
+  · -- floatLit (nullary; the rational kernel's scalar out)
+    split at h
+    · simp [Bind.bind, Except.bind] at h
+    · simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl⟩ := h
+      exact strictWfSame hw (by simp [GoValue.locSup])
   · -- not
     simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
     obtain ⟨b, hb, rfl, rfl⟩ := h
@@ -2968,6 +3086,9 @@ theorem applyStrictOp_wf {σ : ExecState} {op : StrictOp} {vs : List GoValue}
     omega
   · -- minOf
     rename_i v₀ rest
+    -- the float guard (floats slice F2): the refusing branch is never
+    -- ok; the passing branch is the pre-float fold verbatim
+    replace h := guard_ite_eq_ok (fun y => by simp [unsupported]) h
     simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
     obtain ⟨best, hbest, rfl, rfl⟩ := h
     simp only [goValueListSup] at hvs
@@ -2990,6 +3111,9 @@ theorem applyStrictOp_wf {σ : ExecState} {op : StrictOp} {vs : List GoValue}
               omega))
   · -- maxOf
     rename_i v₀ rest
+    -- the float guard (floats slice F2): the refusing branch is never
+    -- ok; the passing branch is the pre-float fold verbatim
+    replace h := guard_ite_eq_ok (fun y => by simp [unsupported]) h
     simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
     obtain ⟨best, hbest, rfl, rfl⟩ := h
     simp only [goValueListSup] at hvs

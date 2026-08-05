@@ -722,6 +722,7 @@ theorem GoValue.capCong_refl : ∀ v : GoValue, GoValue.capCong v v
   | .map _ => rfl
   | .mapData _ => rfl
   | .funcVal _ _ => rfl
+  | .float _ _ => rfl
   | .slice _ => ⟨rfl, rfl, rfl⟩
   | .struct _ fs => ⟨rfl, capCongFields_refl fs.toList⟩
   | .array vs => capCongList_refl vs.toList
@@ -1033,6 +1034,17 @@ theorem normalizeValueForTyFuel_congr {σ₁ σ₂ : ExecState}
            exact rfl)
         | (obtain rfl := GoValue.capCong_eq hcc rfl
            exact exceptCong.self fun a => GoValue.capCong_refl a)
+    | float kind =>
+      cases v <;>
+        first
+        | (obtain ⟨b, rfl, _, _, _⟩ := GoValue.capCong_slice_left hcc
+           exact rfl)
+        | (obtain ⟨gs, rfl, _⟩ := GoValue.capCong_struct_left hcc
+           exact rfl)
+        | (obtain ⟨ws, rfl, _⟩ := GoValue.capCong_array_left hcc
+           exact rfl)
+        | (obtain rfl := GoValue.capCong_eq hcc rfl
+           exact exceptCong.self fun a => GoValue.capCong_refl a)
     | array length elem =>
       cases v <;>
         first
@@ -1183,11 +1195,19 @@ theorem coerceStoredValue_congr :
     (motive_3 := fun oldL vL => ∀ {wL}, capCongList vL wL →
       exceptCong (fun a b : Array GoValue => capCongList a.toList b.toList)
         (coerceArray oldL vL) (coerceArray oldL wL))
-    ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ old v
+    ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ old v
   · -- int / int
     intro iv k v' k' w hcc
     obtain rfl := GoValue.capCong_eq hcc rfl
     exact rfl
+  · -- float / float, kinds equal (capCong on scalars is equality)
+    intro ob kind bits k hk w hcc
+    obtain rfl := GoValue.capCong_eq hcc rfl
+    exact exceptCong.self fun a => GoValue.capCong_refl a
+  · -- float / float, kind mismatch
+    intro ob kind bits k hk w hcc
+    obtain rfl := GoValue.capCong_eq hcc rfl
+    exact exceptCong.self fun a => GoValue.capCong_refl a
   · -- array / array, size mismatch
     intro o n hne w hcc
     obtain ⟨ws, rfl, hl⟩ := GoValue.capCong_array_left hcc
@@ -1223,11 +1243,12 @@ theorem coerceStoredValue_congr :
     refine exceptCong.map_congr (ih hf) fun as bs habs => ?_
     exact ⟨rfl, habs⟩
   · -- catch-all: the value passes through
-    intro t x hint harr hstruct w hcc
+    intro t x hint hfloat harr hstruct w hcc
     have hx : coerceStoredValue t x = pure x := by
       rw [coerceStoredValue.eq_def]
       split
       · exact (hint _ _ _ _ rfl rfl).elim
+      · exact (hfloat _ _ _ _ rfl rfl).elim
       · exact (harr _ _ rfl rfl).elim
       · exact (hstruct _ _ _ _ rfl rfl).elim
       · rfl
@@ -1236,6 +1257,8 @@ theorem coerceStoredValue_congr :
       split
       · obtain rfl := GoValue.capCong_eq_right hcc rfl
         exact (hint _ _ _ _ rfl rfl).elim
+      · obtain rfl := GoValue.capCong_eq_right hcc rfl
+        exact (hfloat _ _ _ _ rfl rfl).elim
       · obtain ⟨vs, rfl, _⟩ := GoValue.capCong_array_right hcc
         exact (harr _ _ rfl rfl).elim
       · obtain ⟨fs, rfl, _⟩ := GoValue.capCong_struct_right hcc
@@ -1563,6 +1586,8 @@ theorem defaultValueFuel_ok_of_normalize_ok {σ : ExecState} :
     cases ty with
     | int kind =>
       exact ⟨.int 0 kind, by simp [defaultValueFuel, pure, Except.pure]⟩
+    | float kind =>
+      exact ⟨.float 0 kind, by simp [defaultValueFuel, pure, Except.pure]⟩
     | bool =>
       exact ⟨.bool false, by simp [defaultValueFuel, pure, Except.pure]⟩
     | string =>

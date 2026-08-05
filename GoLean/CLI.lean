@@ -98,10 +98,38 @@ private def locJson : Loc → Json
         ("index", Lean.toJson index)
       ]
 
+/-- Canonicalize a float observation's bit pattern (floats design note
+§5): NaN payloads/signs are platform- and path-dependent in real Go and
+unobservable in the language proper, so BOTH encoders (this one and the
+Go harness) map any NaN to the canonical quiet NaN before emission.
+Signed zero is NOT canonicalized (Go distinguishes it via `1/z`). If
+`math.Float64bits` ever enters the supported surface, payload
+propagation becomes observable and this decision must be revisited
+(then: fail closed on NaN-payload-observing programs). -/
+private def canonFloatObsBits (kind : GoCore.FloatKind) (bits : Nat) : Nat :=
+  match kind with
+  | .float64 =>
+      if (bits >>> 52) &&& 0x7FF == 0x7FF && bits &&& ((1 <<< 52) - 1) != 0 then
+        GoCore.FloatBits.nan64
+      else bits
+  | .float32 =>
+      if (bits >>> 23) &&& 0xFF == 0xFF && bits &&& ((1 <<< 23) - 1) != 0 then
+        GoCore.FloatBits.nan32
+      else bits
+
 private partial def goValueJson : GoValue → Json
   | .unit => Json.mkObj [("tag", Json.str "unit")]
   | .bool value => Json.mkObj [("tag", Json.str "bool"), ("value", Lean.toJson value)]
   | .int value _ => Json.mkObj [("tag", Json.str "int"), ("value", Lean.toJson value)]
+  -- Bit patterns, never decimal strings (note §5): equality is bit-exact
+  -- modulo the NaN canonicalization above; Go's shortest-representation
+  -- printing stays outside the trust surface.
+  | .float bits kind =>
+      Json.mkObj [
+        ("tag", Json.str "float"),
+        ("kind", Json.str kind.name),
+        ("bits", Lean.toJson (canonFloatObsBits kind bits))
+      ]
   | .string value => Json.mkObj [("tag", Json.str "string"), ("bytes", Lean.toJson value.byteNats)]
   | .addr loc => locJson loc
   | .nil => Json.mkObj [("tag", Json.str "nil")]
@@ -217,6 +245,20 @@ private partial def decodeGoValueObservation (path : String) (json : Json) : Exc
   | "int" =>
       StrictJson.requireExactKeys path obj ["tag", "value"]
       let _ ← StrictJson.int s!"{path}.value" (← StrictJson.field path obj "value")
+      pure ()
+  | "float" =>
+      -- Bit-pattern observation (floats note §5/§7): exact keys, kind
+      -- restricted to the two float kinds, bits range-checked per kind —
+      -- fail closed on anything else.
+      StrictJson.requireExactKeys path obj ["bits", "kind", "tag"]
+      let kind ← StrictJson.string s!"{path}.kind" (← StrictJson.field path obj "kind")
+      let bits ← StrictJson.nat s!"{path}.bits" (← StrictJson.field path obj "bits")
+      let width ← match kind with
+        | "float64" => pure 64
+        | "float32" => pure 32
+        | other => throw s!"{path}.kind: unknown float kind {repr other}"
+      if bits ≥ 2 ^ width then
+        throw s!"{path}.bits: {bits} out of range for {kind}"
       pure ()
   | "string" =>
       StrictJson.requireExactKeys path obj ["bytes", "tag"]
