@@ -1,13 +1,12 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-06  commit: general-coverage (arc-final audit response, F11 bare-call fix)
+# recorded: 2026-08-06  commit: general-coverage (arc-final audit response, F4 mixed-comparison wrap)
 #   frontend: native  oracle: go run (strict lane) / go-run membership in the
 #   machine-enumerated observation set (membership lane; go1.26.5 samples)
-# manifest_cases: 1025  pass: 854  fail: 171
-# Re-pin reason: BUG-012 fixed (decoder discard temps for bare
-#   value-returning calls) — exactly its six pinned ids flip FAIL ->
-#   PASS (functions/bare-call-discard-result, functions/bare-call-chain/
-#   {chain,helper,func-value,multi-result}, init/bare-call-in-init).
-#   Zero PASS->FAIL, zero other stage moves.
+# manifest_cases: 1025  pass: 861  fail: 164
+# Re-pin reason: BUG-017 fixed (interface wrap at comparison operands
+#   and switch-case slots) — exactly its seven pinned ids flip FAIL ->
+#   PASS (interfaces/mixed-compare/*). Zero PASS->FAIL, zero other
+#   stage moves.
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
 PASS	arrays/array-copy	-
@@ -510,13 +509,13 @@ PASS	interfaces/method-set-variadic-mismatch/req-variadic-impl-slice-panic	-
 PASS	interfaces/method-set-variadic-mismatch/req-variadic-impl-variadic	-
 PASS	interfaces/method-set-variadic-mismatch/variadic-elem-mismatch	-
 PASS	interfaces/mixed-compare/ctl-iface-iface	-
-FAIL	interfaces/mixed-compare/eq-int-lit	lean-observation
-FAIL	interfaces/mixed-compare/eq-int-lit-reversed	lean-observation
-FAIL	interfaces/mixed-compare/neq-miss	lean-observation
-FAIL	interfaces/mixed-compare/sentinel-error	lean-observation
-FAIL	interfaces/mixed-compare/sentinel-error-reversed	lean-observation
-FAIL	interfaces/mixed-compare/struct-both-orders	lean-observation
-FAIL	interfaces/mixed-compare/switch-case	lean-observation
+PASS	interfaces/mixed-compare/eq-int-lit	-
+PASS	interfaces/mixed-compare/eq-int-lit-reversed	-
+PASS	interfaces/mixed-compare/neq-miss	-
+PASS	interfaces/mixed-compare/sentinel-error	-
+PASS	interfaces/mixed-compare/sentinel-error-reversed	-
+PASS	interfaces/mixed-compare/struct-both-orders	-
+PASS	interfaces/mixed-compare/switch-case	-
 PASS	interfaces/nil-interface	-
 PASS	interfaces/promoted-method-assert-ok	-
 PASS	interfaces/quarantined-anonymous-interface	-

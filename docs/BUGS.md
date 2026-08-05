@@ -132,7 +132,12 @@ literals already use), collision-checked at the one boundary.
 
 ## BUG-017 — mixed interface/non-interface comparison is unsupported (no wrap at comparison operands)
 
-- Status: open
+- Status: fixed (2026-08-06, arc-final audit response F4 — emitBinary
+  boxes the non-interface operand of a mixed ==/!= into the interface
+  side's type and carries the interface side as the GoCore operand
+  type; emitSwitch does the same at interface-tagged case slots, incl.
+  the reverse shape where the CASE value is the interface. The wrap
+  no-ops on untyped nil, so `i == nil` lowerings are unchanged.)
 - Pinned-by: differential
 - Cases: interfaces/mixed-compare/eq-int-lit, interfaces/mixed-compare/eq-int-lit-reversed, interfaces/mixed-compare/neq-miss, interfaces/mixed-compare/switch-case, interfaces/mixed-compare/sentinel-error, interfaces/mixed-compare/sentinel-error-reversed, interfaces/mixed-compare/struct-both-orders
 - Discovered: 2026-08-06 (arc-final audit F4; pre-existing — emitBinary

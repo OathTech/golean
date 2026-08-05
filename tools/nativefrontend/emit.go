@@ -3060,7 +3060,33 @@ func (e *emitter) emitSwitch(st *ast.SwitchStmt) (any, error) {
 		if st.Tag == nil {
 			cond = cw
 		} else {
-			cond = map[string]any{"expr": "binary", "op": "==", "x": tagRef, "y": cw, "operandType": tagTy}
+			// Switch-case slot of an interface-tagged switch: box a
+			// non-interface case value into the tag's interface type —
+			// the same spec rule as emitBinary's mixed comparison
+			// (BUG-017, arc-final audit F4). The reverse shape
+			// (non-interface tag, interface case value) boxes the TAG
+			// reference per-case and compares at the case's type.
+			condTagRef := tagRef
+			condTagTy := tagTy
+			tagGo := e.applySubst(e.goTypeOf(st.Tag))
+			caseGo := e.applySubst(e.goTypeOf(cases[k].expr))
+			tagIsIface := tagGo != nil && types.IsInterface(tagGo)
+			caseIsIface := caseGo != nil && types.IsInterface(caseGo)
+			if tagIsIface && !caseIsIface {
+				if cw, err = e.wrapInterfaceConversion(tagGo, e.goTypeOf(cases[k].expr), cw); err != nil {
+					return nil, err
+				}
+			} else if caseIsIface && !tagIsIface {
+				if condTagRef, err = e.wrapInterfaceConversion(caseGo, e.goTypeOf(st.Tag), condTagRef); err != nil {
+					return nil, err
+				}
+				cty, err := e.typeOf(cases[k].expr)
+				if err != nil {
+					return nil, err
+				}
+				condTagTy = cty
+			}
+			cond = map[string]any{"expr": "binary", "op": "==", "x": condTagRef, "y": cw, "operandType": condTagTy}
 		}
 		ifNode := map[string]any{"stmt": "if", "cond": cond,
 			"then": map[string]any{
@@ -4890,10 +4916,35 @@ func (e *emitter) emitBinary(b *ast.BinaryExpr) (any, error) {
 	if err != nil {
 		return nil, err
 	}
+	// Mixed interface/non-interface comparison (spec §Comparison
+	// operators: "A value x of non-interface type X and a value t of
+	// interface type T can be compared if type X is comparable and X
+	// implements T") — box the non-interface operand into the interface
+	// type, exactly like every other interface-typed slot (BUG-017,
+	// arc-final audit F4, 2026-08-06; the wrap itself no-ops on untyped
+	// nil, so `i == nil` keeps its bare-nil lowering). The operand type
+	// carried to GoCore is the INTERFACE side's.
+	operandTypeExpr := b.X
+	if op == "==" || op == "!=" {
+		tx := e.applySubst(e.goTypeOf(b.X))
+		ty := e.applySubst(e.goTypeOf(b.Y))
+		xIsIface := tx != nil && types.IsInterface(tx)
+		yIsIface := ty != nil && types.IsInterface(ty)
+		if xIsIface && !yIsIface {
+			if y, err = e.wrapInterfaceConversion(tx, e.goTypeOf(b.Y), y); err != nil {
+				return nil, err
+			}
+		} else if yIsIface && !xIsIface {
+			if x, err = e.wrapInterfaceConversion(ty, e.goTypeOf(b.X), x); err != nil {
+				return nil, err
+			}
+			operandTypeExpr = b.Y
+		}
+	}
 	node := map[string]any{"expr": "binary", "op": op, "x": x, "y": y}
 	// Comparisons need the operand type in GoCore; carry it explicitly.
 	if isComparison(op) {
-		oty, err := e.typeOf(b.X)
+		oty, err := e.typeOf(operandTypeExpr)
 		if err != nil {
 			return nil, err
 		}
