@@ -29,16 +29,42 @@ consumption depth `D`, deduplicating observations.
 
 Key design point — NO semantics changes: `Choices.consume` takes picks
 modulo the site's bound, so exploring values `0..B-1` at each position
-covers every behavior PROVIDED `B ≥` every site's bound in the case.
-`B` is per-case metadata (default 16 — covers append's 8 and small
-maps); the enumerator FAILS CLOSED if it cannot certify coverage
-(a case whose map could exceed `B` keys must raise `B` explicitly, and
-the enumerator cross-checks by probing one value ≥ B for changed
-observation — a cheap alias-detection guard). `N` caps the observation
-set (fail loud if exceeded — such a case is too wide for enumeration and
-needs a per-case predicate instead; none expected in the current
-corpus). Exploration reuses `execStmt` verbatim — the enumerator is CLI
-layer, the semantic core is untouched.
+covers every behavior IF AND ONLY IF `B ≥` every site's bound in the
+case. `B` (`width`) is per-case metadata and EXPLICIT — no silent
+default (audit F2a, 2026-08-05): the coverage claim rests on the
+author-asserted width, so every membership row declares it and argues
+the site bound in its `why`. The enumerator FAILS CLOSED wherever it
+cannot certify: the alias guard probes each explored pick position with
+a small ladder of values ≥ B (`+B`, `+2B`, `+4B`) — an observation
+outside the enumerated set REFUTES the width assertion ("raise width").
+The guard is a HEURISTIC cross-check, not a proof: a bound > B whose
+extra residues alias existing observations escapes the ladder. `N` caps
+the observation set (fail loud if exceeded — such a case is too wide for
+enumeration and needs a per-case predicate instead; none expected in the
+current corpus). Every enumerated member must carry the case's expected
+status (audit F1): a member whose status differs — e.g. a panic under a
+stream Go can never realize — is by construction a machine bug, not an
+envelope point, and fails the enumeration loudly.
+
+What the enumerator REUSES vs COPIES (audit F7 correction — this note
+originally claimed "reuses `execStmt` verbatim", which was wrong):
+reused is `stepFn`, the semantic core's step function, so every machine
+step is the machine's own; COPIED (hand-mirrored, not shared — a shared
+helper would touch GoCore, which stays bit-identical) are the driver
+layers: `enumSetup` mirrors `runFunctionWithContextM`'s entry wiring and
+`enumRun` mirrors `runConfig`'s terminal handling. The copies are pinned
+by the driver-agreement eval tests in `Tests/GoCoreEval.lean` (per
+consumption-site class, incl. the panic-observation path) and by the
+harness's per-case coupling check (`native-json-run --choices <s>`'s
+observation ∈ enumerated set, four streams, every membership case, every
+differential run).
+
+Deferred decision (recorded, audit F2): MECHANICAL bound certification —
+the enumerator reading each consumption site's actual bound instead of
+trusting the author's width — would need a core-adjacent instrumentation
+hook (e.g. `Choices` recording site bounds as it consumes). That touches
+the semantic core's surface and is explicitly NOT taken unilaterally in
+this slice; it goes to the arc-final audit as a candidate.
 
 ## The Go side
 
@@ -79,7 +105,8 @@ criterion above (metadata, never a pass criterion):
   |enumerated| = 8 — observations 14912..21912, i.e. caps 4..11 =
   `appendGrowthCap` + extra ∈ [0,8). Go exhibits exactly 1 member
   (14912, cap 4 = extra 0); 7 members unexhibited. Enumerator: 17 runs
-  + 16 alias probes, 16 leaves at depth 1. REVIEW VERDICT: not a flag —
+  + 16 alias probes, 16 leaves at depth 1 (48 probes after the audit's
+  F2c ladder). REVIEW VERDICT: not a flag —
   deterministic-inside-a-window BY DESIGN. The append envelope is the
   doctrine's declared pragmatic subset of the spec's "any sufficient
   capacity" latitude; a single Go version necessarily sits at one point
@@ -91,7 +118,8 @@ criterion above (metadata, never a pass criterion):
   envelope statement: all permutations of the snapshot ⊇ any Go).
   Go exhibited 2 of 3 in the recorded run's samples (1 and 3;
   unexhibited {2}). Enumerator: 4369 runs + 12288 alias probes, 4096
-  leaves at depth 3 (the size-1 tail site consumes a pick too), 0.3 s.
+  leaves at depth 3 (the size-1 tail site consumes a pick too), 0.3 s
+  (36864 probes after the audit's F2c ladder, still ~0.4 s).
   REVIEW VERDICT: not a flag — per-run randomization re-explores, the
   unexhibited member is sampling noise, not an unreachable corner (other
   runs during development exhibited it).
@@ -100,6 +128,22 @@ No gratuitous width found: the only never-touched corners are the append
 window's 7 upper slots, which the nondeterminism doctrine's envelope
 statement already argues against the spec text and the version-tracking
 mode polices.
+
+Machine-side regression pin for version-tracking cases (audit F3,
+decision recorded): before the lane, a machine-side `appendGrowthCap`
+change moved cap-zero nondet→differential in the baseline; under the
+lane, Go staying inside the (moved) window would keep the case PASS. The
+restored pin is the `appendGrowthCap` value tests in
+`Tests/GoCoreEval.lean` (one per formula regime, incl. the (0,1)=4
+window base) — the Lean side, which is the direction the baseline used
+to catch. The optional per-case exhibited-member pin (`pin=<member>`
+params, compared at run time) was considered and DECLINED: within-window
+toolchain drift is by design a PASS (the envelope is the claim, not the
+point Go currently occupies), the exhibited member is already recorded
+per run in the membership artifacts and the PASS detail, and a run-time
+member pin would re-introduce exactly the single-point equality
+brittleness the lane exists to remove. Revisit only if a real toolchain
+bump inside the window needs to be surfaced as more than metadata.
 
 Enumerator cross-evidence from landing, kept for the record: on
 `maps/delete-during-range` (a BUG-005 strict differential red, NOT in
