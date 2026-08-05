@@ -3583,12 +3583,9 @@ func (e *emitter) synthesizeWrapper(named *types.Named, tName string, msel *type
 			return nil, unsup("promotion from anonymous interface field in %s", tName)
 		}
 		e.noteInterface(ifaceName, origIface)
-		if e.calledIfaceMethods == nil {
-			e.calledIfaceMethods = map[string]calledIfaceMethod{}
-		}
-		e.calledIfaceMethods[ifaceName+"."+mfn.Name()] = calledIfaceMethod{
+		e.noteCalledIfaceMethod(ifaceName+"."+mfn.Name(), calledIfaceMethod{
 			ifaceName: ifaceName, method: mfn.Name(), sig: sig,
-		}
+		})
 		innerFunc = ifaceName + "." + mfn.Name()
 		innerRecvArg = node
 	} else {
@@ -3979,13 +3976,10 @@ func (e *emitter) emitSelector(sel *ast.SelectorExpr) (any, error) {
 					return nil, unsup("method value on unnameable interface type %s", ifaceStatic)
 				}
 				e.noteInterface(ifaceName, recvIface)
-				if e.calledIfaceMethods == nil {
-					e.calledIfaceMethods = map[string]calledIfaceMethod{}
-				}
-				e.calledIfaceMethods[ifaceName+"."+fn.Name()] = calledIfaceMethod{
+				e.noteCalledIfaceMethod(ifaceName+"."+fn.Name(), calledIfaceMethod{
 					ifaceName: ifaceName, method: fn.Name(),
 					sig: fn.Type().(*types.Signature),
-				}
+				})
 				// Go panics AT CREATION if the interface is nil (the itab
 				// load) — the first cut panicked at CALL time and the
 				// oracle said created=0 (interface-method-value-nil). Hoist
@@ -4051,12 +4045,9 @@ func (e *emitter) emitSelector(sel *ast.SelectorExpr) (any, error) {
 					return nil, unsup("method expression on unnameable interface type %s", ifaceStatic)
 				}
 				e.noteInterface(ifaceName, recvIface)
-				if e.calledIfaceMethods == nil {
-					e.calledIfaceMethods = map[string]calledIfaceMethod{}
-				}
-				e.calledIfaceMethods[ifaceName+"."+fn.Name()] = calledIfaceMethod{
+				e.noteCalledIfaceMethod(ifaceName+"."+fn.Name(), calledIfaceMethod{
 					ifaceName: ifaceName, method: fn.Name(), sig: sig,
-				}
+				})
 				return map[string]any{"expr": "func-value",
 					"func": ifaceName + "." + fn.Name(), "captured": []any{}}, nil
 			}
@@ -4066,11 +4057,16 @@ func (e *emitter) emitSelector(sel *ast.SelectorExpr) (any, error) {
 			// T when the method is in T's own set, else *T. The one
 			// mismatching shape — `(*T).M` over a method whose wire Func
 			// takes T by value — needs a deref adapter; refuse precisely.
-			exprRecv := e.goTypeOf(sel.X)
+			// Unalias throughout (delta-review R3): under gotypesalias=1
+			// a method expression named through an alias (`wrapAlias.Get`)
+			// reaches here as a *types.Alias, and the raw Pointer/Named
+			// assertions below mis-refused it (pinned by
+			// methods/alias-promoted-method-expression).
+			exprRecv := types.Unalias(e.goTypeOf(sel.X))
 			baseT := exprRecv
 			_, exprPtr := baseT.(*types.Pointer)
 			if ptr, isPtr := baseT.(*types.Pointer); isPtr {
-				baseT = ptr.Elem()
+				baseT = types.Unalias(ptr.Elem())
 			}
 			name, ok := e.namedTypeName(baseT)
 			if !ok {
@@ -4519,10 +4515,16 @@ func (e *emitter) emitMapLit(cl *ast.CompositeLit, m *types.Map) (any, error) {
 		// (audit response M1: the first cut typed EVERY non-interface
 		// element and regressed func-typed and defined-typed elements,
 		// whose typed nil the machine rejects "nil literal for non-nilable
-		// type"; those keep the base bare-nil emission, which the
-		// maps/nil-literal-values pins show behaves correctly). Interface
-		// elements keep the bare nil too (a nil interface IS the raw nil).
-		// First pinned by generics/type-aliases/nested-map (G4).
+		// type"; those keep the base bare-nil emission). Base behavior is
+		// correct for func and defined-pointer/func elements, but
+		// defined-SLICE/-MAP elements stay STUCK either way (len on the
+		// raw nil) — a pre-existing MACHINE-side gap, out of this
+		// frontend's reach: BUG-014, red-pinned by
+		// maps/nil-literal-values/defined-{slice,map}-element
+		// (delta-review R2 corrected the first cut's "behaves correctly"
+		// overclaim here). Interface elements keep the bare nil (a nil
+		// interface IS the raw nil). First pinned by
+		// generics/type-aliases/nested-map (G4).
 		if b, isB := e.goTypeOf(kv.Value).(*types.Basic); isB && b.Kind() == types.UntypedNil {
 			switch types.Unalias(e.applySubst(m.Elem())).(type) {
 			case *types.Slice, *types.Map, *types.Pointer:
@@ -5368,13 +5370,10 @@ func (e *emitter) emitMethodCall(c *ast.CallExpr, sel *ast.SelectorExpr) (any, b
 		// anchor when the interface is not declared in this package
 		// (predeclared error, imported interfaces).
 		e.noteInterface(ifaceName, recvIface)
-		if e.calledIfaceMethods == nil {
-			e.calledIfaceMethods = map[string]calledIfaceMethod{}
-		}
-		e.calledIfaceMethods[ifaceName+"."+sel.Sel.Name] = calledIfaceMethod{
+		e.noteCalledIfaceMethod(ifaceName+"."+sel.Sel.Name, calledIfaceMethod{
 			ifaceName: ifaceName, method: sel.Sel.Name,
 			sig: fn.Type().(*types.Signature),
-		}
+		})
 		args, err := e.emitCallArgs(fn.Type().(*types.Signature), c)
 		if err != nil {
 			return nil, false, err

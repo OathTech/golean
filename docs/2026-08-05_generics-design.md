@@ -706,15 +706,25 @@ having already flipped with floats).
     ("nil literal for non-nilable type"), invisible to the corpus until
     pinned. Restricted to direct slice/map/pointer elements; everything
     else keeps the base bare-nil emission. Pins:
-    `maps/nil-literal-values/*` (6 — the three regressed shapes plus the
+    `maps/nil-literal-values/*` (the three regressed shapes plus the
     three rewrite-active ones). §10's deviation-5 text above described
     the first cut as a pure latent-gap fix — that was wrong as shipped;
-    it both fixed one shape and regressed three.
+    it both fixed one shape and regressed three. *Delta-review R2
+    corrected a residual overclaim:* base behavior is NOT "correct" for
+    every kept shape — defined-SLICE and defined-MAP elements are stuck
+    either way (len on the raw nil), a PRE-EXISTING machine-side gap
+    (verified pre-existing on the merge base) that this slice's charter
+    cannot fix (GoCore change). Recorded as BUG-014 and red-pinned by
+    `maps/nil-literal-values/defined-{slice,map}-element`.
   - *M2*: gotypesalias=1 regressed NON-generic alias-to-anonymous-
     interface dispatch — `ifaceWireName`'s structural fallback asserted
     without `types.Unalias`. Fixed + assertion sweep (two more Unalias
     at the type-parameter operand checks); pinned by
-    `interfaces/anonymous-alias-dispatch`.
+    `interfaces/anonymous-alias-dispatch`. *Delta-review R3:* the sweep
+    had missed the METHOD-EXPRESSION concrete path (raw Pointer/Named
+    assertions on the receiver-type expression) — a method expression
+    named through an alias mis-refused; unaliased and pinned by
+    `methods/alias-promoted-method-expression/{promoted,direct}`.
   - *M3*: function-local defined types as type arguments now REFUSE (see
     the §3.2 scope correction); mono_test pins both the refusal and that
     the registry would have caught the two-same-named-locals collision
@@ -725,7 +735,21 @@ having already flipped with floats).
   - *m5*: mono registrations are journaled and ROLLED BACK by the
     per-decl quarantine (both sites) — previously a refused body's
     surviving TYPE stencil could kill the whole export; pinned by
-    `generics/quarantined-instantiation`.
+    `generics/quarantined-instantiation`. *Delta-review R1 completed the
+    scope:* the first cut journaled only mangled keys and the two
+    stencil queues — `seenInterfaces`/`calledIfaceMethods` registrations
+    survived rollback, and the interface DECLARATION pass (or anchor
+    synthesis) then refused the whole export on an unsupported method
+    signature (order-sensitive; reproduced by the reviewer on the
+    etcd-raft `Ready() <-chan Ready` shape). Interface notes and
+    dispatch records are now journaled on FIRST registration (re-notes
+    of an existing name are not, so rollback never deletes an entry a
+    successful declaration also owns) and undone at both rollback
+    sites; pinned by `generics/quarantined-instantiation-interface`
+    (generic-interface variant) and
+    `interfaces/quarantined-anonymous-interface` (the anonymous-
+    interface path the reviewer hit), plus a mono_test rollback unit
+    standing in for the order-flip assertion.
   - *m6*: the gotypesalias enablement is a shared helper called by both
     `run()` and the unit tests' `TestMain` (tests previously ran under
     gotypesalias=0).

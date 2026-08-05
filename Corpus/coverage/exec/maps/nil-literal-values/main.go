@@ -4,6 +4,10 @@ type nlvPtr *int
 
 type nlvFunc func(int) int
 
+type nlvSlice []int
+
+type nlvMap map[string]int
+
 func mapNilFuncElement() int {
 	m := map[string]func(int) int{"f": nil}
 	if m["f"] == nil {
@@ -46,6 +50,16 @@ func mapNilSliceElement() int {
 	return len(m)*100 + len(m["a"])*10 + len(m["b"])
 }
 
+func mapNilDefinedSliceElement() int {
+	m := map[string]nlvSlice{"s": nil}
+	return len(m)*10 + len(m["s"])
+}
+
+func mapNilDefinedMapElement() int {
+	m := map[string]nlvMap{"m": nil}
+	return len(m)*10 + len(m["m"])
+}
+
 func main() {
 	mapNilFuncElement()
 	mapNilDefinedPointerElement()
@@ -53,4 +67,6 @@ func main() {
 	mapNilPointerElement()
 	mapNilMapElement()
 	mapNilSliceElement()
+	mapNilDefinedSliceElement()
+	mapNilDefinedMapElement()
 }

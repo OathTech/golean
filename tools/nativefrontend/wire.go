@@ -169,6 +169,12 @@ type emitter struct {
 // satisfied by every type BY DESIGN in the machine (Go's `any`), so it needs
 // no declaration — and keeping it off the wire keeps `any`-using programs'
 // lowering unchanged.
+// FIRST-time registrations are journaled for the quarantine rollback
+// (delta-review R1): an interface noted only by a refused body must not
+// survive into the declaration pass, whose failure (an unsupported
+// method signature) refuses the WHOLE export. Re-notes of an existing
+// name are not journaled, so a rollback never deletes an entry a
+// SUCCESSFUL declaration also owns.
 func (e *emitter) noteInterface(name string, iface *types.Interface) {
 	if name == emptyInterfaceName {
 		return
@@ -176,7 +182,24 @@ func (e *emitter) noteInterface(name string, iface *types.Interface) {
 	if e.seenInterfaces == nil {
 		e.seenInterfaces = map[string]*types.Interface{}
 	}
+	if _, seen := e.seenInterfaces[name]; !seen {
+		e.monoLog = append(e.monoLog, monoLogEntry{monoLogSeenIface, name})
+	}
 	e.seenInterfaces[name] = iface
+}
+
+// noteCalledIfaceMethod records one interface-dispatch call target (the
+// anchor-synthesis input), journaled like noteInterface (delta-review
+// R1): a dispatch recorded only by a refused body must not force a
+// synthesized anchor whose signature emission would refuse the export.
+func (e *emitter) noteCalledIfaceMethod(key string, cm calledIfaceMethod) {
+	if e.calledIfaceMethods == nil {
+		e.calledIfaceMethods = map[string]calledIfaceMethod{}
+	}
+	if _, seen := e.calledIfaceMethods[key]; !seen {
+		e.monoLog = append(e.monoLog, monoLogEntry{monoLogCalledIface, key})
+	}
+	e.calledIfaceMethods[key] = cm
 }
 
 // calledIfaceMethod records one interface-dispatch call target: the receiver

@@ -286,6 +286,32 @@ func main() { _, _ = first(), second() }
 	}
 }
 
+// TestRollbackUndoesInterfaceNotes (delta-review R1): interface and
+// dispatch-target registrations made past a quarantine mark roll back —
+// and a re-note of a PRE-existing name is not journaled, so rollback
+// never deletes an entry a successful declaration also owns (the
+// order-sensitivity the review verified, as a standing assertion).
+func TestRollbackUndoesInterfaceNotes(t *testing.T) {
+	e, _ := checkSource(t, monoTestSrc)
+	iface := types.NewInterfaceType(nil, nil)
+	iface.Complete()
+	e.noteInterface("main.Pre", iface)
+	m := e.markMono()
+	e.noteInterface("main.Pre", iface) // re-note: must not be journaled
+	e.noteInterface("main.Fresh", iface)
+	e.noteCalledIfaceMethod("main.Fresh.M", calledIfaceMethod{ifaceName: "main.Fresh", method: "M"})
+	e.rollbackMono(m)
+	if _, ok := e.seenInterfaces["main.Pre"]; !ok {
+		t.Errorf("pre-existing interface note deleted by rollback")
+	}
+	if _, ok := e.seenInterfaces["main.Fresh"]; ok {
+		t.Errorf("quarantine-scoped interface note survived rollback")
+	}
+	if _, ok := e.calledIfaceMethods["main.Fresh.M"]; ok {
+		t.Errorf("quarantine-scoped dispatch record survived rollback")
+	}
+}
+
 // collectTypeNames returns every *types.TypeName in info.Defs.
 func collectTypeNames(e *emitter) []*types.TypeName {
 	out := []*types.TypeName{}

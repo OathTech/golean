@@ -1,0 +1,3 @@
+# id	subject	args	expected_status	expected_reason	features
+promoted	aliasPromotedMethodExpression	-	ok	-	methods,aliases,embedding,functions
+direct	aliasDirectMethodExpression	-	ok	-	methods,aliases,functions

@@ -5,3 +5,5 @@ defined-func-element	mapNilDefinedFuncElement	-	ok	-	maps,literals,nil,functions
 pointer-element	mapNilPointerElement	-	ok	-	maps,literals,nil,pointers
 map-element	mapNilMapElement	-	ok	-	maps,literals,nil,len
 slice-element	mapNilSliceElement	-	ok	-	maps,literals,nil,slices,len
+defined-slice-element	mapNilDefinedSliceElement	-	ok	-	maps,literals,nil,slices,defined_type,len
+defined-map-element	mapNilDefinedMapElement	-	ok	-	maps,literals,nil,defined_type,len

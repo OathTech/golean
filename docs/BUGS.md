@@ -27,6 +27,33 @@ differential-pinned) `- Cases: <id>, <id>, …` (baseline case ids), then prose.
 
 ---
 
+## BUG-014 — untyped nil at defined-slice/defined-map map-literal elements stays a raw nil (stuck at len/ops)
+
+- Status: open
+- Pinned-by: differential
+- Cases: maps/nil-literal-values/defined-slice-element, maps/nil-literal-values/defined-map-element
+- Discovered: 2026-08-05 (delta-review R2 of the generics-branch audit
+  response — PRE-EXISTING on the merge base, verified by the reviewer;
+  not a regression of this branch)
+
+A map literal whose element type is a DEFINED slice/map type
+(`type S []int; map[string]S{"s": nil}`) stores the untyped-nil value as
+a RAW `.nil`: the frontend cannot emit a typed nil for it because the
+machine's nil-literal arm rejects `.defined` targets ("nil literal for
+non-nilable type GoLean.GoCore.Ty.defined …"), and the raw nil then goes
+unsupported at use (`len for non-array/slice/map value GoValue.nil`).
+Legal, ordinary Go; wrongly-stuck on a supported construct — a fidelity
+bug, fail-closed in direction (visible red, never a wrong value).
+
+Fix shape (NOT in the generics slice, deliberately — it is a GoCore
+change, outside that slice's charter): the machine's nil-literal arm
+resolves `.defined` targets through their underlying to decide
+nilability (and the nil-comparison/len paths accept the resulting typed
+nil), OR a defined-type-aware typed-nil representation. When it lands,
+the frontend's map-literal rewrite (emitMapLit, audit-response M1
+restriction) can extend to defined slice/map elements and the two pinned
+cases flip.
+
 ## BUG-013 — CLI struct-observation typeName truncates mangled generic TypeIds
 
 - Status: fixed

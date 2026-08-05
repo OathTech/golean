@@ -1,34 +1,38 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-05  commit: general-coverage-generics (audit response M1-M3, m4-m6, n7-n8)
+# recorded: 2026-08-05  commit: general-coverage-generics (delta-review response R1-R3)
 #   frontend: native  oracle: go run (strict lane) / go-run membership in the
 #   machine-enumerated observation set (membership lane; go1.26.5 samples)
-# manifest_cases: 960  pass: 833  fail: 127
-# Re-pin reason: DELIBERATE coverage change — audit-response guardrails
-# (10 NEW ids, ZERO movement on existing ids; per-finding record in
+# manifest_cases: 966  pass: 837  fail: 129
+# Re-pin reason: DELIBERATE coverage change — delta-review response (6
+# NEW ids, ZERO movement on existing ids; per-finding record in
 # docs/2026-08-05_generics-design.md §10):
-# - maps/nil-literal-values/* (6, PASS) — M1: the G4 typed-nil
-#   map-literal rewrite had regressed base-passing func-typed and
-#   defined-typed nil elements (machine nil-literal arm rejects them),
-#   invisible to the corpus; now restricted to direct slice/map/pointer
-#   elements, with the three regressed shapes AND the three
-#   rewrite-active shapes pinned.
-# - interfaces/anonymous-alias-dispatch (PASS) — M2: gotypesalias=1 had
-#   regressed non-generic alias-to-anonymous-interface dispatch
-#   (ifaceWireName asserted without Unalias).
-# - generics/local-type-argument (FAIL/frontend-export, RED BY DESIGN) —
-#   M3: function-local defined types as type arguments are REFUSED (gc
-#   names them with a compiler-internal unique suffix, main.score·1,
-#   that a source-derived key can neither reproduce nor keep injective;
-#   recorded narrowing — flips only if exact-rendering support ever
-#   lands).
-# - generics/empty-struct-argument (PASS) — m4: the canonical empty
-#   struct is admitted as a type argument, reflect spelling "struct {}".
-# - generics/quarantined-instantiation (PASS) — m5: mono registrations
-#   journaled + rolled back by the per-decl quarantine, so a refused
-#   body's instantiations no longer poison the whole export.
+# - generics/quarantined-instantiation-interface and
+#   interfaces/quarantined-anonymous-interface (PASS) — R1: the m5
+#   quarantine rollback now also journals seenInterfaces and
+#   calledIfaceMethods registrations (first-registration entries only,
+#   undone at both rollback sites), so an interface or dispatch target
+#   recorded ONLY by a refused body no longer survives into the
+#   interface-declaration/anchor passes, whose unsupported-signature
+#   failure refuses the whole export (the etcd-raft Ready() <-chan Ready
+#   shape). SCOPE, stated precisely (the previous header's
+#   "instantiations no longer poison the whole export" was broader than
+#   delivered): rollback now covers mangled keys, function/type stencil
+#   queues+maps, interface notes, and dispatch records — the registration
+#   classes that exist today; a future registration class must be
+#   journaled or it recreates the hazard.
+# - maps/nil-literal-values/defined-{slice,map}-element
+#   (FAIL/lean-observation, RED BY DESIGN) — R2: defined-slice/map
+#   elements with nil literal values are stuck at len on a raw nil —
+#   PRE-EXISTING on the merge base (machine-side: the nil-literal arm
+#   rejects .defined targets), NOT fixable in this slice's charter;
+#   BUG-014 in docs/BUGS.md carries the fix shape.
+# - methods/alias-promoted-method-expression/{promoted,direct} (PASS) —
+#   R3: the M2 Unalias sweep had missed the method-expression concrete
+#   path; fixed, both alias spellings pinned.
 # Standing expected reds (unchanged): generics/type-parameter-channel-ops
 # (channels arc), generics/type-aliases/struct-literal (anonymous
 # non-empty struct — pre-existing generics-independent gap),
+# generics/local-type-argument (M3 recorded narrowing),
 # complex/generic-type-set (9; complex domain semantics not landed).
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
@@ -406,6 +410,7 @@ PASS	generics/method-and-type-set-constraint	-
 PASS	generics/method-constraint-call	-
 PASS	generics/nested-instantiation	-
 PASS	generics/quarantined-instantiation	-
+PASS	generics/quarantined-instantiation-interface	-
 PASS	generics/recursive-constraints/argument-method	-
 PASS	generics/recursive-constraints/clone	-
 PASS	generics/recursive-constraints/comparable	-
@@ -510,6 +515,7 @@ PASS	interfaces/method-set-variadic-mismatch/req-variadic-impl-variadic	-
 PASS	interfaces/method-set-variadic-mismatch/variadic-elem-mismatch	-
 PASS	interfaces/nil-interface	-
 PASS	interfaces/promoted-method-assert-ok	-
+PASS	interfaces/quarantined-anonymous-interface	-
 PASS	interfaces/recover-nil-dispatch/nil-interface	-
 PASS	interfaces/recover-nil-dispatch/nil-pointer-box	-
 PASS	interfaces/type-assert-from-named-interface-panic/nil-operand	-
@@ -630,7 +636,9 @@ PASS	maps/map-value-inner-write	-
 PASS	maps/nil-assign-eval-before-panic	-
 FAIL	maps/nil-channel-key	frontend-export
 PASS	maps/nil-literal-values/defined-func-element	-
+FAIL	maps/nil-literal-values/defined-map-element	lean-observation
 PASS	maps/nil-literal-values/defined-pointer-element	-
+FAIL	maps/nil-literal-values/defined-slice-element	lean-observation
 PASS	maps/nil-literal-values/func-element	-
 PASS	maps/nil-literal-values/map-element	-
 PASS	maps/nil-literal-values/pointer-element	-
@@ -653,6 +661,8 @@ FAIL	maps/tuple-map-expr-targets	frontend-export
 FAIL	maps/tuple-rhs-before-target-write	frontend-export
 FAIL	maps/tuple-swap-values	frontend-export
 FAIL	maps/update-during-range	differential
+PASS	methods/alias-promoted-method-expression/direct	-
+PASS	methods/alias-promoted-method-expression/promoted	-
 PASS	methods/defined-int-receiver	-
 PASS	methods/defined-map-receiver	-
 PASS	methods/embedded-interface-satisfaction	-

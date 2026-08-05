@@ -669,6 +669,14 @@ const (
 	monoLogMangled monoLogKind = iota
 	monoLogFuncInst
 	monoLogTypeInst
+	// Delta-review R1: interfaces and dispatch targets recorded by a
+	// refused body must roll back too — the seenInterfaces declaration
+	// pass and the anchor synthesis FAIL THE WHOLE EXPORT on an
+	// unsupported signature, so a surviving registration poisons subjects
+	// the refused declaration never touched (the etcd-raft
+	// `Ready() <-chan Ready` shape).
+	monoLogSeenIface
+	monoLogCalledIface
 )
 
 type monoLogEntry struct {
@@ -699,6 +707,10 @@ func (e *emitter) rollbackMono(m monoMarks) {
 			delete(e.funcInsts, entry.key)
 		case monoLogTypeInst:
 			delete(e.typeInsts, entry.key)
+		case monoLogSeenIface:
+			delete(e.seenInterfaces, entry.key)
+		case monoLogCalledIface:
+			delete(e.calledIfaceMethods, entry.key)
 		}
 	}
 	e.monoLog = e.monoLog[:m.log]
