@@ -1,18 +1,18 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-05  commit: general-coverage-embed slice-2 stage 1 (BUG-011 fix + guardrail corpus)
+# recorded: 2026-08-05  commit: general-coverage-embed slice-2 stage 2 (field promotion through embedding)
 #   frontend: native  oracle: go run
-# manifest_cases: 906  pass: 642  fail: 264
+# manifest_cases: 906  pass: 648  fail: 258
 # Re-pin reason: DELIBERATE coverage change, general-coverage slice 2
-# stage 0+1 (docs/2026-08-05_embedding-interfaces-design.md). Eighteen NEW
-# ids: twelve slice-2 guardrail pins recorded RED ahead of their fixes
-# (embedding/promoted-* promotion pins, interfaces/interface-method-value-nil,
-# interfaces/type-switch-init-stmt, interfaces/type-switch-labeled-break/*),
-# and the six BUG-011 subjects (structs/empty-struct-literal-at-named-type/*)
-# which PASS with the stage-1 fix: assignability-aware empty-struct
-# normalization/equality (emptyStructAssignable, Ops.lean; design note D4;
-# corpus case landed first and classified red, per the standing rule).
-# ZERO PASS->FAIL, no stage moves on existing ids.
-# 636 -> 642 pass, 888 -> 906 cases.
+# stage 2 (docs/2026-08-05_embedding-interfaces-design.md D1.1): promoted
+# FIELD access flattens at emission — go/types Selection.Index() paths
+# become field-get/deref chains (reads) and field-addr chains from the
+# addressable root (writes/addresses), auto-dereferencing embedded
+# pointer hops (nil panics at the deref, Go's behavior). Six FAIL->PASS:
+# embedding/deep-promoted-field, embedding/embedded-pointer-field,
+# embedding/embedded-pointer-nil-panic,
+# embedding/promoted-field-depth-shadow, structs/anonymous-field,
+# structs/tag-embedded-field. ZERO PASS->FAIL, no other stage moves.
+# 642 -> 648 pass, 906 cases unchanged.
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
 PASS	arrays/array-copy	-
@@ -273,14 +273,14 @@ PASS	defer/defer-pointer-receiver-live	-
 PASS	defer/multiple-lifo	-
 PASS	defer/recover-normal-return	-
 PASS	defer/unnamed-return	-
-FAIL	embedding/deep-promoted-field	lean-observation
+PASS	embedding/deep-promoted-field	-
 FAIL	embedding/deep-promoted-method	lean-observation
 PASS	embedding/embedded-field-shadow	-
 FAIL	embedding/embedded-method-promote	lean-observation
-FAIL	embedding/embedded-pointer-field	lean-observation
-FAIL	embedding/embedded-pointer-nil-panic	lean-observation
+PASS	embedding/embedded-pointer-field	-
+PASS	embedding/embedded-pointer-nil-panic	-
 FAIL	embedding/promoted-ambiguous-not-satisfied	lean-observation
-FAIL	embedding/promoted-field-depth-shadow	lean-observation
+PASS	embedding/promoted-field-depth-shadow	-
 PASS	embedding/promoted-method-shadow	-
 FAIL	embedding/promoted-method-value/live	lean-observation
 FAIL	embedding/promoted-method-value/snapshot	lean-observation
@@ -863,7 +863,7 @@ PASS	strings/string-slice-bounds	-
 PASS	strings/string-slice-low-high-panic	-
 PASS	strings/string-slice-panic-eval-order	-
 FAIL	strings/string-to-rune-copy	lean-observation
-FAIL	structs/anonymous-field	lean-observation
+PASS	structs/anonymous-field	-
 PASS	structs/blank-field	-
 PASS	structs/comparable	-
 PASS	structs/copy-value	-
@@ -898,7 +898,7 @@ PASS	structs/swap	-
 PASS	structs/tag-basic	-
 PASS	structs/tag-comparable	-
 FAIL	structs/tag-defined-conversion	lean-observation
-FAIL	structs/tag-embedded-field	lean-observation
+PASS	structs/tag-embedded-field	-
 FAIL	structs/tag-nested-conversion	frontend-export
 FAIL	structs/tag-pointer-conversion	lean-observation
 FAIL	structs/tag-unnamed-conversion	frontend-export

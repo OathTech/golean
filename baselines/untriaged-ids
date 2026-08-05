@@ -6,10 +6,6 @@
 # branch itself swapped 3 fixed strings conversions for 3 newly-visible
 # interface-key delete gaps, invisible to the count).
 arrays/pointer-array
-embedding/deep-promoted-field
-embedding/embedded-pointer-field
-embedding/embedded-pointer-nil-panic
-embedding/promoted-field-depth-shadow
 init/multiple-init-order
 methods/value-auto-deref
 pointers/nil-array-index-panic
@@ -21,8 +17,6 @@ strings/rune-slice-conversion
 strings/rune-slice-to-string-copy
 strings/rune-string-conversion
 strings/string-to-rune-copy
-structs/anonymous-field
 structs/selector-addressability-edge/read-conversion-result
 structs/tag-defined-conversion
-structs/tag-embedded-field
 structs/tag-pointer-conversion

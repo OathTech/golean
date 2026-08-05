@@ -2714,6 +2714,98 @@ func (e *emitter) methodReceiverArg(sel *ast.SelectorExpr, pointerRecv bool) (an
 	return e.emitAddressOf(sel.X)
 }
 
+// ---- promotion (embedded fields; design note 2026-08-05 D1) ----
+//
+// go/types resolves every promoted selection to a field/method path through
+// embedded fields (`Selection.Index()`); the frontend FLATTENS that path at
+// emission, so GoCore's field access and method table stay single-hop/flat.
+
+// fieldPathValue walks `index` (each entry a field index, embedded hops
+// included) from a VALUE node of type t, emitting field-get hops and
+// auto-dereferencing pointer hops (a nil embedded pointer panics at the
+// deref — Go's promoted-access panic). Returns the final field's value node
+// and type.
+func (e *emitter) fieldPathValue(node any, t types.Type, index []int) (any, types.Type, error) {
+	for _, i := range index {
+		base := t
+		if ptr, ok := base.Underlying().(*types.Pointer); ok {
+			elem := ptr.Elem()
+			elemTy, err := e.emitType(elem)
+			if err != nil {
+				return nil, nil, err
+			}
+			node = map[string]any{"expr": "deref", "ptr": node, "type": elemTy}
+			base = elem
+		}
+		st, ok := base.Underlying().(*types.Struct)
+		if !ok {
+			return nil, nil, unsup("promoted field path through non-struct type %s", base)
+		}
+		name, ok := e.namedTypeName(base)
+		if !ok {
+			return nil, nil, unsup("field selector on anonymous struct type %s", base)
+		}
+		f := st.Field(i)
+		node = map[string]any{"expr": "field-get", "recv": node, "typeId": name, "field": f.Name()}
+		t = f.Type()
+	}
+	return node, t, nil
+}
+
+// fieldPathAddr walks `index` from expression x, emitting the ADDRESS of
+// the final field: field-addr hops from the addressable root (or the
+// pointer value when the base/hop is already a pointer). Loop invariant:
+// node's value is a pointer to a cell of (non-pointer) type cur.
+func (e *emitter) fieldPathAddr(x ast.Expr, index []int) (any, types.Type, error) {
+	t := e.info.TypeOf(x)
+	var node any
+	var err error
+	var cur types.Type
+	if ptr, ok := t.Underlying().(*types.Pointer); ok {
+		node, err = e.emitExpr(x)
+		cur = ptr.Elem()
+	} else {
+		node, err = e.emitAddressOf(x)
+		cur = t
+	}
+	if err != nil {
+		return nil, nil, err
+	}
+	for k, i := range index {
+		st, ok := cur.Underlying().(*types.Struct)
+		if !ok {
+			return nil, nil, unsup("promoted field path through non-struct type %s", cur)
+		}
+		name, ok := e.namedTypeName(cur)
+		if !ok {
+			return nil, nil, unsup("field address on anonymous struct type %s", cur)
+		}
+		f := st.Field(i)
+		node = map[string]any{"expr": "field-addr", "base": node, "typeId": name, "field": f.Name()}
+		cur = f.Type()
+		if ptr, ok := cur.Underlying().(*types.Pointer); ok && k+1 < len(index) {
+			// An embedded POINTER hop: the pointer's VALUE is the address
+			// of the next level (loading a nil one panics — Go).
+			fTy, err := e.emitType(cur)
+			if err != nil {
+				return nil, nil, err
+			}
+			node = map[string]any{"expr": "deref", "ptr": node, "type": fTy}
+			cur = ptr.Elem()
+		}
+	}
+	return node, cur, nil
+}
+
+// promotedFieldIndex returns the go/types selection path when sel is a
+// PROMOTED field selection (an embedded hop exists), else nil.
+func (e *emitter) promotedFieldIndex(sel *ast.SelectorExpr) []int {
+	if seln, ok := e.info.Selections[sel]; ok && seln.Kind() == types.FieldVal && len(seln.Index()) > 1 {
+		return seln.Index()
+	}
+	return nil
+}
+
 func (e *emitter) fieldBase(sel *ast.SelectorExpr) (any, string, error) {
 	recvType := e.info.TypeOf(sel.X)
 	base, err := e.emitExpr(sel.X)
@@ -2775,6 +2867,19 @@ func (e *emitter) emitSelector(sel *ast.SelectorExpr) (any, error) {
 		}
 		return nil, unsup("non-field selector %s (method/expr)", sel.Sel.Name)
 	}
+	// PROMOTED field read (BUG-007, design note D1): flatten the embedded
+	// hop path into field-get/deref chains.
+	if index := e.promotedFieldIndex(sel); index != nil {
+		base, err := e.emitExpr(sel.X)
+		if err != nil {
+			return nil, err
+		}
+		node, _, err := e.fieldPathValue(base, e.info.TypeOf(sel.X), index)
+		if err != nil {
+			return nil, err
+		}
+		return node, nil
+	}
 	base, structName, err := e.fieldBase(sel)
 	if err != nil {
 		return nil, err
@@ -2833,6 +2938,13 @@ func (e *emitter) emitAddressOf(x ast.Expr) (any, error) {
 	case *ast.Ident:
 		return map[string]any{"expr": "ref", "id": ex.Name}, nil
 	case *ast.SelectorExpr:
+		// PROMOTED field address (BUG-007, design note D1): the embedded
+		// hop path flattens to a field-addr chain from the addressable
+		// root (pointer hops read the pointer VALUE — heap identity).
+		if index := e.promotedFieldIndex(ex); index != nil {
+			node, _, err := e.fieldPathAddr(ex.X, index)
+			return node, err
+		}
 		// Field ADDRESS: the machine's fieldAddr builds Loc.field on an
 		// address operand (W4). A pointer base already IS the address (Go
 		// auto-derefs p.n); an addressable value base recurses — so a.b.c

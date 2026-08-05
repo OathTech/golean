@@ -45,4 +45,10 @@
 #   (globals fail closed at emitIdent/emitAssignTarget until the init
 #   slice) — they were surfacing as machine-level "unbound variable"
 #   stucks, a misclassified stage, not a fidelity ledger entry.
-21
+# 2026-08-05 (general-coverage slice 2, field promotion)  21 -> 15: six
+#   promoted-field cases conformant (frontend flattening of embedded
+#   field paths, design note 2026-08-05 D1.1): deep-promoted-field,
+#   embedded-pointer-field, embedded-pointer-nil-panic,
+#   promoted-field-depth-shadow, structs/anonymous-field,
+#   structs/tag-embedded-field.
+15
