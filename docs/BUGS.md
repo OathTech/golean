@@ -109,7 +109,16 @@ named empty structs (defined types) keep their names.
 
 ## BUG-018 — a type declared INSIDE a generic function gets an un-parameterized TypeId
 
-- Status: open
+- Status: fixed (2026-08-06, arc-final audit response F3 —
+  qualifiedTypeName parameterizes function-local TypeIds with the
+  enclosing instantiation's rendered type arguments (the ordered targs
+  threaded through the stencil work items), matching gc's
+  reflect.Name() "box[int]" spelling; the duplicate-TypeId gate remains
+  the collision boundary and still refuses two same-named locals at the
+  same instantiation across functions — probe-verified. The
+  two-instantiation shape now exports and runs;
+  generics/local-type-argument stays red as M3's separate recorded
+  refusal of the type-ARGUMENT direction.)
 - Pinned-by: differential
 - Cases: generics/local-type-in-generic/dynamic-name, generics/local-type-in-generic/assert-panic
 - Discovered: 2026-08-06 (arc-final audit F3)

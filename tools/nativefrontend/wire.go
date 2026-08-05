@@ -120,6 +120,11 @@ type emitter struct {
 	// funcInsts/funcInstQueue are the dedup map and pending queue of
 	// stencils; monoCtxt is the shared types.Instantiate context.
 	curSubst         map[*types.TypeParam]types.Type
+	// curTargs mirrors curSubst as the ORDERED argument list of the
+	// active instantiation (nil outside stenciling) — consumed by
+	// qualifiedTypeName to parameterize TypeIds of function-local type
+	// declarations (arc-final audit F3).
+	curTargs []types.Type
 	substErr         error
 	genericFuncDecls map[*types.Func]*ast.FuncDecl
 	funcInsts        map[string]*funcInstWork

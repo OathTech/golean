@@ -1,14 +1,14 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-06  commit: general-coverage (arc-final audit response, F5 anchor substitution)
+# recorded: 2026-08-06  commit: general-coverage (arc-final audit response, F3 local-type TypeIds)
 #   frontend: native  oracle: go run (strict lane) / go-run membership in the
 #   machine-enumerated observation set (membership lane; go1.26.5 samples)
-# manifest_cases: 1025  pass: 873  fail: 152
-# Re-pin reason: F5 fixed (interface-dispatch anchors emit under the
-#   call site's stencil substitution; interfaces recorded at the active
-#   instantiation; substType learned method-signature substitution for
-#   bare interfaces) — exactly the two generics/generic-interface-param
-#   ids flip frontend-export FAIL -> PASS. Zero PASS->FAIL, zero other
-#   stage moves.
+# manifest_cases: 1025  pass: 876  fail: 149
+# Re-pin reason: BUG-018 fixed (function-local TypeIds inside stencils
+#   parameterized with the enclosing instantiation's type arguments) —
+#   its two differential ids plus the two-instantiation export refusal
+#   flip FAIL -> PASS. Zero PASS->FAIL, zero other stage moves;
+#   generics/local-type-argument stays red (M3's recorded refusal of
+#   the type-ARGUMENT direction, unchanged).
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
 PASS	arrays/array-copy	-
@@ -398,9 +398,9 @@ PASS	generics/instantiated-type-assert/name	-
 PASS	generics/instantiated-type-assert/ok	-
 PASS	generics/instantiated-type-assert/panic	-
 FAIL	generics/local-type-argument	frontend-export
-FAIL	generics/local-type-in-generic/assert-panic	differential
-FAIL	generics/local-type-in-generic/dynamic-name	differential
-FAIL	generics/local-type-two-instantiations	frontend-export
+PASS	generics/local-type-in-generic/assert-panic	-
+PASS	generics/local-type-in-generic/dynamic-name	-
+PASS	generics/local-type-two-instantiations	-
 PASS	generics/map-slice	-
 PASS	generics/method-and-type-set-constraint	-
 PASS	generics/method-constraint-call	-

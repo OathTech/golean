@@ -40,6 +40,12 @@ type funcInstWork struct {
 	mangled string
 	decl    *ast.FuncDecl
 	env     map[*types.TypeParam]types.Type
+	// The instantiation's type arguments IN DECLARATION ORDER (the env is
+	// an unordered map): the suffix source for TypeIds of types DECLARED
+	// INSIDE the stencil (arc-final audit F3, 2026-08-06 — gc names a
+	// local type with the enclosing instantiation's arguments,
+	// reflect.Name() "box[int]").
+	targs []types.Type
 }
 
 // applySubst applies the ACTIVE stencil substitution to a type reaching a
@@ -389,7 +395,7 @@ func (e *emitter) registerFuncInst(mangled string, fn *types.Func, targs []types
 	if e.funcInsts == nil {
 		e.funcInsts = map[string]*funcInstWork{}
 	}
-	work := &funcInstWork{mangled: mangled, decl: decl, env: env}
+	work := &funcInstWork{mangled: mangled, decl: decl, env: env, targs: targs}
 	e.funcInsts[mangled] = work
 	e.funcInstQueue = append(e.funcInstQueue, work)
 	e.monoLog = append(e.monoLog, monoLogEntry{monoLogFuncInst, mangled})
@@ -525,11 +531,13 @@ func (e *emitter) emitMethodInst(work *typeInstWork, d *ast.FuncDecl) (map[strin
 			work.key, d.Name.Name, rtp.Len(), targs.Len())
 	}
 	env := map[*types.TypeParam]types.Type{}
+	targsList := make([]types.Type, targs.Len())
 	for i := 0; i < rtp.Len(); i++ {
 		env[rtp.At(i)] = targs.At(i)
+		targsList[i] = targs.At(i)
 	}
 	return e.emitFuncInst(&funcInstWork{
-		mangled: work.key + "." + d.Name.Name, decl: d, env: env})
+		mangled: work.key + "." + d.Name.Name, decl: d, env: env, targs: targsList})
 }
 
 // recordGenericMethod indexes a generic-receiver method declaration by
@@ -614,7 +622,9 @@ func (e *emitter) flushFuncInsts(funcs []any) ([]any, error) {
 // quarantine in emitProgram.
 func (e *emitter) emitFuncInst(work *funcInstWork) (map[string]any, error) {
 	savedSubst, savedName, savedErr := e.curSubst, e.curFuncName, e.substErr
+	savedTargs := e.curTargs
 	e.curSubst, e.curFuncName, e.substErr = work.env, work.mangled, nil
+	e.curTargs = work.targs
 	e.liftSeq = 0
 	liftedMark := len(e.lifted)
 	localTypesMark := len(e.localTypeDefs)
@@ -628,6 +638,7 @@ func (e *emitter) emitFuncInst(work *funcInstWork) (map[string]any, error) {
 		err = e.substErr
 	}
 	e.curSubst, e.curFuncName, e.substErr = savedSubst, savedName, savedErr
+	e.curTargs = savedTargs
 	if err != nil {
 		e.lifted = e.lifted[:liftedMark]
 		e.localTypeDefs = e.localTypeDefs[:localTypesMark]

@@ -249,7 +249,9 @@ func (e *emitter) emitProgram(files []*ast.File) (map[string]any, error) {
 		// substitution (arc-final audit F5): the key is
 		// substitution-aware, the recorded origin sig is not.
 		savedSubst, savedName, savedErr := e.curSubst, e.curFuncName, e.substErr
+		savedTargs := e.curTargs
 		e.curSubst, e.curFuncName, e.substErr = cm.subst, k, nil
+		e.curTargs = nil
 		params, err := e.emitParams(cm.sig.Params())
 		if err == nil {
 			var rerr error
@@ -258,6 +260,7 @@ func (e *emitter) emitProgram(files []*ast.File) (map[string]any, error) {
 			}
 		}
 		e.curSubst, e.curFuncName, e.substErr = savedSubst, savedName, savedErr
+		e.curTargs = savedTargs
 		if err != nil {
 			return nil, err
 		}
@@ -3371,7 +3374,36 @@ func (e *emitter) qualifiedTypeName(obj *types.TypeName) string {
 	if !seen {
 		e.qualPkgPaths[name] = append(paths, pkg.Path())
 	}
-	return name + "." + obj.Name()
+	base := name + "." + obj.Name()
+	// A type DECLARED INSIDE a generic function (its scope is not the
+	// package scope) is named by gc with the ENCLOSING INSTANTIATION's
+	// type arguments — probe-verified go1.26.5: reflect.Name() =
+	// "box[int]", String() = "main.box[int]" — so the TypeId
+	// parameterizes the same way (arc-final audit F3, 2026-08-06;
+	// BUG-018: the bare key aliased instantiations, reporting wrong
+	// dynamic names at one instantiation and refusing legal Go at two).
+	// Rendering failures record substErr (fail closed at the stencil
+	// boundary, like applySubst) and keep the bare name for the refusal
+	// message.
+	if e.curTargs != nil && obj.Parent() != pkg.Scope() {
+		rendered := make([]string, len(e.curTargs))
+		ok := true
+		for i, t := range e.curTargs {
+			r, err := e.renderTypeArg(t)
+			if err != nil {
+				if e.substErr == nil {
+					e.substErr = err
+				}
+				ok = false
+				break
+			}
+			rendered[i] = r
+		}
+		if ok {
+			base += "[" + strings.Join(rendered, ",") + "]"
+		}
+	}
+	return base
 }
 
 // checkPackageNameCollisions fails the export when two DISTINCT import
