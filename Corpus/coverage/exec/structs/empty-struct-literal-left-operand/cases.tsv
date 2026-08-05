@@ -1,0 +1,4 @@
+# id	subject	args	expected_status	expected_reason	features
+eq	emptyStructLeftEq	-	ok	-	structs,assignment,comparisons,equality
+neq	emptyStructLeftNeq	-	ok	-	structs,assignment,comparisons,equality
+switch	emptyStructLeftSwitch	-	ok	-	structs,assignment,comparisons,switch
