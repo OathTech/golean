@@ -3165,16 +3165,27 @@ func (e *emitter) synthesizeWrapper(named *types.Named, tName string, msel *type
 		}
 		ftPtr, ftIsPtr := ft.Underlying().(*types.Pointer)
 		if innerPtr && !ftIsPtr {
-			// The field's ADDRESS: only in *T's method set, so the wrapper
-			// receiver is a pointer (method-set rule).
-			if !recvIsPtr {
-				return nil, unsup("pointer-receiver promotion reached a value-receiver wrapper for %s", tName)
+			// The field's ADDRESS. Two legal sources (audit F2, 2026-08-05
+			// — the first cut wrongly claimed only *T's method set can hold
+			// this shape and refused, killing whole exports): a POINTER
+			// wrapper receiver supplies the root address; or the hop chain
+			// crosses an embedded POINTER field, which puts the method in
+			// the VALUE method set too (spec: embedding *T contributes
+			// both receiver kinds) and whose pointer VALUE supplies the
+			// address mid-chain.
+			if recvIsPtr {
+				node, _, err := e.fieldPathAddrFrom(recvIdent, named, hops)
+				if err != nil {
+					return nil, err
+				}
+				innerRecvArg = node
+			} else {
+				node, err := e.valueRootedFieldAddr(recvIdent, named, hops)
+				if err != nil {
+					return nil, err
+				}
+				innerRecvArg = node
 			}
-			node, _, err := e.fieldPathAddrFrom(recvIdent, named, hops)
-			if err != nil {
-				return nil, err
-			}
-			innerRecvArg = node
 		} else {
 			node, _, err := e.fieldPathValue(recvIdent, rootT, hops)
 			if err != nil {
@@ -3239,6 +3250,35 @@ func (e *emitter) ifaceWireName(t types.Type) (string, bool) {
 		return name, true
 	}
 	return "", false
+}
+
+// valueRootedFieldAddr emits the ADDRESS of the field at `hops` starting
+// from a VALUE node of (non-pointer) type t — legal exactly when the
+// chain crosses an embedded POINTER hop, whose pointer VALUE is a heap
+// address the rest of the chain roots at (Go's method-set rule: embedding
+// *T contributes pointer-receiver methods to the VALUE method set, audit
+// F2). Value-mode field-gets to the first pointer hop, address-mode
+// beyond it; copying the value prefix is unobservable — it is only read
+// to reach the pointer, and the address obtained is the shared heap cell.
+func (e *emitter) valueRootedFieldAddr(node any, t types.Type, hops []int) (any, error) {
+	for i, idx := range hops {
+		st, ok := t.Underlying().(*types.Struct)
+		if !ok {
+			return nil, unsup("promoted field path through non-struct type %s", t)
+		}
+		name, ok := e.namedTypeName(t)
+		if !ok {
+			return nil, unsup("field selector on anonymous struct type %s", t)
+		}
+		f := st.Field(idx)
+		node = map[string]any{"expr": "field-get", "recv": node, "typeId": name, "field": f.Name()}
+		t = f.Type()
+		if ptr, isPtr := t.Underlying().(*types.Pointer); isPtr {
+			addr, _, err := e.fieldPathAddrFrom(node, ptr.Elem(), hops[i+1:])
+			return addr, err
+		}
+	}
+	return nil, unsup("pointer-receiver promotion from a value receiver without a pointer hop (not in the value method set)")
 }
 
 // hopFinalType statically walks the embedded-hop types (no emission): the
