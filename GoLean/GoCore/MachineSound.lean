@@ -57,9 +57,17 @@ theorem stepFn_sound {s : ExecState} {c : Config} {ch : Choices}
     obtain ⟨rfl, rfl, rfl⟩ := h
     exact Step.panicFrameEmpty
   case case3 =>
-    simp_all only [stepFn, bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq]
-    obtain ⟨⟨func, frameEnv, resultLocs, s₂⟩, hd, rfl, rfl, rfl⟩ := h
-    exact Step.panicFrameDefer hd
+    simp_all only [stepFn, enterFrameDeferPanicking]
+    split at h
+    · rename_i func frameEnv resultLocs s₂ hd
+      simp only [Except.ok.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl, rfl⟩ := h
+      exact Step.panicFrameDefer hd
+    · rename_i msg hd
+      simp only [Except.ok.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl, rfl⟩ := h
+      exact Step.panicFrameDeferEnterPanic hd
+    · simp at h
   case case125 =>
     rename_i hrec
     simp_all only [stepFn, Except.ok.injEq, Prod.mk.injEq]
@@ -207,13 +215,29 @@ theorem stepFn_sound {s : ExecState} {c : Config} {ch : Choices}
     obtain ⟨vs, hload, s₂, hstore, rfl, rfl, rfl⟩ := h
     exact Step.frameFall hload hstore
   case case121 =>
-    simp_all only [stepFn, bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq]
-    obtain ⟨⟨func, frameEnv, resultLocs, s₂⟩, hd, rfl, rfl, rfl⟩ := h
-    exact Step.frameDeferFall hd
+    simp_all only [stepFn, enterFrameStep]
+    split at h
+    · rename_i func frameEnv resultLocs s₂ hd
+      simp only [Except.ok.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl, rfl⟩ := h
+      exact Step.frameDeferFall hd
+    · rename_i msg hd
+      simp only [Except.ok.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl, rfl⟩ := h
+      exact Step.frameDeferFallEnterPanic hd
+    · simp at h
   case case154 =>
-    simp_all only [stepFn, bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq]
-    obtain ⟨⟨func, frameEnv, resultLocs, s₂⟩, hd, rfl, rfl, rfl⟩ := h
-    exact Step.frameDeferReturn hd
+    simp_all only [stepFn, enterFrameStep]
+    split at h
+    · rename_i func frameEnv resultLocs s₂ hd
+      simp only [Except.ok.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl, rfl⟩ := h
+      exact Step.frameDeferReturn hd
+    · rename_i msg hd
+      simp only [Except.ok.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl, rfl⟩ := h
+      exact Step.frameDeferReturnEnterPanic hd
+    · simp at h
   case case128 =>
     rename_i hempty
     obtain rfl : _ = (#[] : Array (GoValue × GoValue)) := Array.isEmpty_iff.mp hempty
@@ -354,7 +378,7 @@ theorem step_complete {c : Config} {s : ExecState} {c' : Config} {s' : ExecState
     refine ⟨[], [], ?_⟩
     cases k <;> simp_all [stepFn, panicPassthrough]
   all_goals
-    exact ⟨[], [], by simp_all [stepFn, enterFrameStep, Bind.bind, Except.bind, valueAsBool]⟩
+    exact ⟨[], [], by simp_all [stepFn, enterFrameStep, enterFrameDeferPanicking, Bind.bind, Except.bind, valueAsBool]⟩
 
 /-! ### Driver-level soundness -/
 
@@ -2099,7 +2123,7 @@ theorem step_complete_any_wf_aux {c : Config} {σ : ExecState} {c' : Config}
       simp [hbind₂, Bind.bind, Except.bind]
   case panicUnwind chain k k' hpass =>
     cases k <;> simp_all [stepFn, panicPassthrough]
-  all_goals simp_all [stepFn, enterFrameStep, Bind.bind, Except.bind, valueAsBool]
+  all_goals simp_all [stepFn, enterFrameStep, enterFrameDeferPanicking, Bind.bind, Except.bind, valueAsBool]
 
 /-- **Completeness at every stream** (the recorded kit obligation): a
 configuration the relation can step from is one the executable steps
@@ -2349,12 +2373,19 @@ theorem stepFn_oblivious {σ : ExecState} {c : Config} {ch₀ : Choices}
   -- equation, invert its bind, replay the same bind at the arbitrary
   -- stream (the helpers never see the stream).
   case case3 =>
-    simp_all only [stepFn, bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq]
-    obtain ⟨⟨func, frameEnv, resultLocs, s₂⟩, hd, rfl, rfl, rfl⟩ := h
-    refine ⟨by simp, fun ch => ?_⟩
-    simp only [stepFn, bind_eq_ok]
-    refine ⟨⟨func, frameEnv, resultLocs, s₂⟩, hd, ?_⟩
-    simp
+    simp_all only [stepFn, enterFrameDeferPanicking]
+    split at h
+    · rename_i func frameEnv resultLocs s₂ hd
+      simp only [Except.ok.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl, rfl⟩ := h
+      refine ⟨rfl, fun ch => ?_⟩
+      simp only [stepFn, enterFrameDeferPanicking, hd]
+    · rename_i msg hd
+      simp only [Except.ok.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl, rfl⟩ := h
+      refine ⟨rfl, fun ch => ?_⟩
+      simp only [stepFn, enterFrameDeferPanicking, hd]
+    · simp at h
   case case13 =>
     simp_all only [stepFn, bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq]
     obtain ⟨⟨env', s₁⟩, hd, rfl, rfl, rfl⟩ := h
@@ -2548,12 +2579,19 @@ theorem stepFn_oblivious {σ : ExecState} {c : Config} {ch₀ : Choices}
     refine ⟨vs, hload, ?_⟩
     simp [hstore, Bind.bind, Except.bind]
   case case121 =>
-    simp_all only [stepFn, bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq]
-    obtain ⟨⟨func, frameEnv, resultLocs, s₂⟩, hd, rfl, rfl, rfl⟩ := h
-    refine ⟨by simp, fun ch => ?_⟩
-    simp only [stepFn, bind_eq_ok]
-    refine ⟨⟨func, frameEnv, resultLocs, s₂⟩, hd, ?_⟩
-    simp
+    simp_all only [stepFn, enterFrameStep]
+    split at h
+    · rename_i func frameEnv resultLocs s₂ hd
+      simp only [Except.ok.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl, rfl⟩ := h
+      refine ⟨rfl, fun ch => ?_⟩
+      simp only [stepFn, enterFrameStep, hd]
+    · rename_i msg hd
+      simp only [Except.ok.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl, rfl⟩ := h
+      refine ⟨rfl, fun ch => ?_⟩
+      simp only [stepFn, enterFrameStep, hd]
+    · simp at h
   case case153 =>
     simp_all only [stepFn, bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq]
     obtain ⟨vs, hload, s₂, hstore, rfl, rfl, rfl⟩ := h
@@ -2562,12 +2600,19 @@ theorem stepFn_oblivious {σ : ExecState} {c : Config} {ch₀ : Choices}
     refine ⟨vs, hload, ?_⟩
     simp [hstore, Bind.bind, Except.bind]
   case case154 =>
-    simp_all only [stepFn, bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq]
-    obtain ⟨⟨func, frameEnv, resultLocs, s₂⟩, hd, rfl, rfl, rfl⟩ := h
-    refine ⟨by simp, fun ch => ?_⟩
-    simp only [stepFn, bind_eq_ok]
-    refine ⟨⟨func, frameEnv, resultLocs, s₂⟩, hd, ?_⟩
-    simp
+    simp_all only [stepFn, enterFrameStep]
+    split at h
+    · rename_i func frameEnv resultLocs s₂ hd
+      simp only [Except.ok.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl, rfl⟩ := h
+      refine ⟨rfl, fun ch => ?_⟩
+      simp only [stepFn, enterFrameStep, hd]
+    · rename_i msg hd
+      simp only [Except.ok.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl, rfl⟩ := h
+      refine ⟨rfl, fun ch => ?_⟩
+      simp only [stepFn, enterFrameStep, hd]
+    · simp at h
 
 /-- The empty-snapshot `mapIterK` step is oblivious: it pops the
 continuation at every stream. -/

@@ -1750,9 +1750,9 @@ inductive Step : Config → ExecState → Config → ExecState → Prop where
   any other panic — pinned by `interfaces/recover-nil-dispatch/*`). One
   twin per ordinary call-entry rule, appended at the END of the inductive
   so existing positional case tags in the correspondence proofs keep
-  their numbering; entry for a DEFERRED call (the drain rules above)
-  deliberately has no such twin — a panic there is a panic DURING
-  unwinding/drain, a recorded modeling narrowing (design note D6). -/
+  their numbering. DEFERRED-call entry has its own twins further below
+  (`frameDeferFallEnterPanic` and friends — audit F1+F5, 2026-08-05;
+  the original narrowing here was scoped too widely). -/
   | callImmediatePanic {targets fid args msg env k s} :
       assigneesExprs targets.toList = some [] →
       args.toList = [] →
@@ -1776,6 +1776,32 @@ inductive Step : Config → ExecState → Config → ExecState → Prop where
       enterFrame s fid (captured ++ vals ++ [v]) = .error (.panic msg) →
       Step (.retV v (.callValArgsK (.funcVal fid captured) locs vals [] env k)) s
         (.panicking [⟨runtimeErrorValue msg, false⟩] k) s
+  /-- DEFERRED-call frame-ENTRY panics (audit F1+F5, 2026-08-05): a
+  dispatch panic entering a deferred call is a panic of the deferred
+  INVOCATION — exactly the class the `.nil`-callee drain rules already
+  model (differentially pinned by `defer/defer-nil-function-recover-order`
+  there and `defer/deferred-dispatch-entry-panic/*` here). On the normal
+  drains it starts unwinding AT THIS FRAME with its remaining defers
+  (mirror of `frameDeferNilFall`/`frameDeferNilReturn`); DURING an
+  unwinding panic it JOINS the chain newest-last and draining continues
+  (mirror of `panicFrameDeferNil` — Go appends the new panic and
+  `recover` answers the newest entry, which `chainNewestRecovered`
+  implements; the `during-panic` pin discriminates newest-vs-original by
+  asserting the recovered value). Appended at the END of the inductive
+  so the correspondence proofs' positional case tags stay stable. -/
+  | frameDeferFallEnterPanic {targets results fid captured args ds k s msg} :
+      enterFrame s fid (captured ++ args) = .error (.panic msg) →
+      Step (.next (.frame targets results ((.funcVal fid captured, args) :: ds) k)) s
+        (.panicking [⟨runtimeErrorValue msg, false⟩] (.frame targets results ds k)) s
+  | frameDeferReturnEnterPanic {targets results fid captured args ds k s msg} :
+      enterFrame s fid (captured ++ args) = .error (.panic msg) →
+      Step (.returning (.frame targets results ((.funcVal fid captured, args) :: ds) k)) s
+        (.panicking [⟨runtimeErrorValue msg, false⟩] (.frame targets results ds k)) s
+  | panicFrameDeferEnterPanic {chain targets results fid captured args ds k s msg} :
+      enterFrame s fid (captured ++ args) = .error (.panic msg) →
+      Step (.panicking chain (.frame targets results ((.funcVal fid captured, args) :: ds) k)) s
+        (.panicking (chain ++ [⟨runtimeErrorValue msg, false⟩])
+          (.frame targets results ds k)) s
 
 /-- Reflexive-transitive closure of `Step`. -/
 inductive Steps : Config → ExecState → Config → ExecState → Prop where

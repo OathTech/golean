@@ -42,15 +42,33 @@ box) is an ordinary RECOVERABLE panic in Go, so it steps to `.panicking`
 under the caller's continuation `k` — pinned by
 `interfaces/recover-nil-dispatch/*`. Kept as ONE helper so each stepFn
 call site remains a single `fun_cases` branch (the correspondence
-proofs' case numbering is positional). Entry for a DEFERRED call does
-NOT use this helper — a panic there is a panic during unwinding/drain,
-a recorded modeling narrowing (design note D6). -/
+proofs' case numbering is positional). The NORMAL-drain deferred-call
+entries reuse it too (audit F1+F5, 2026-08-05: the entry panic is the
+deferred invocation's panic and starts unwinding at the draining frame
+— pass `k := .frame targets results ds k'`); the PANIC-PATH drain uses
+`enterFrameDeferPanicking` below (chain join). -/
 def enterFrameStep (s : ExecState) (fid : FuncId) (args : List GoValue)
     (mk : Func → LocalEnv → List Loc → Config) (k : Cont)
     (choices : Choices) : Except GoError (Config × ExecState × Choices) :=
   match enterFrame s fid args with
   | .ok (func, frameEnv, resultLocs, s') => .ok (mk func frameEnv resultLocs, s', choices)
   | .error (.panic msg) => .ok (.panicking [⟨runtimeErrorValue msg, false⟩] k, s, choices)
+  | .error err => .error err
+
+/-- DEFERRED-call frame entry ON THE PANIC PATH (audit F1+F5,
+2026-08-05): an entry panic is the deferred INVOCATION's panic and JOINS
+the suspended chain newest-last, exactly like the `.nil`-callee drain arm
+below — remaining defers keep draining and `recover` answers the newest
+entry. One helper so the stepFn site stays a single `fun_cases` branch.
+The two NORMAL drain sites reuse `enterFrameStep` (no chain in flight —
+their panic starts unwinding at this frame with its remaining defers). -/
+def enterFrameDeferPanicking (s : ExecState) (fid : FuncId) (args : List GoValue)
+    (mk : Func → LocalEnv → Config) (chain : List PanicEntry) (krest : Cont)
+    (choices : Choices) : Except GoError (Config × ExecState × Choices) :=
+  match enterFrame s fid args with
+  | .ok (func, frameEnv, _resultLocs, s') => .ok (mk func frameEnv, s', choices)
+  | .error (.panic msg) =>
+      .ok (.panicking (chain ++ [⟨runtimeErrorValue msg, false⟩]) krest, s, choices)
   | .error err => .error err
 
 /-- One machine step. `.ok` is a step the relation permits (including
@@ -65,13 +83,16 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
       | .frame _targets _results [] k' => return (.panicking chain k', s, choices)
       | .frame targets results ((cv, args) :: ds) k' =>
           match cv with
-          | .funcVal fid captured => do
+          | .funcVal fid captured =>
               -- Defers run on the panic path, above the suspended chain's
-              -- marker (the shape `recover`'s walk detects).
-              let (func, frameEnv, _resultLocs, s') ← enterFrame s fid (captured ++ args)
-              return (.exec func.body frameEnv
-                (.frame [] [] [] (.panicResumeK chain
-                  (.frame targets results ds k'))), s', choices)
+              -- marker (the shape `recover`'s walk detects). An ENTRY
+              -- panic joins the chain (audit F1+F5).
+              enterFrameDeferPanicking s fid (captured ++ args)
+                (fun func frameEnv =>
+                  .exec func.body frameEnv
+                    (.frame [] [] [] (.panicResumeK chain
+                      (.frame targets results ds k'))))
+                chain (.frame targets results ds k') choices
           | .nil =>
               -- The nil invocation's panic joins the chain; remaining
               -- defers keep draining.
@@ -379,12 +400,17 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
           return (.next k', s', choices)
       | .frame targets results ((cv, args) :: ds) k' =>
           match cv with
-          | .funcVal fid captured => do
+          | .funcVal fid captured =>
               -- A deferred call's results are DISCARDED (Go); only effects
-              -- matter, so the inner frame reads and stores nothing.
-              let (func, frameEnv, _resultLocs, s') ← enterFrame s fid (captured ++ args)
-              return (.exec func.body frameEnv
-                (.frame [] [] [] (.frame targets results ds k')), s', choices)
+              -- matter, so the inner frame reads and stores nothing. An
+              -- ENTRY panic is the invocation's panic: it starts unwinding
+              -- at this frame with its remaining defers (audit F1+F5,
+              -- mirroring the .nil arm below).
+              enterFrameStep s fid (captured ++ args)
+                (fun func frameEnv _ =>
+                  .exec func.body frameEnv
+                    (.frame [] [] [] (.frame targets results ds k')))
+                (.frame targets results ds k') choices
           | .nil =>
               -- Registration succeeded; the INVOCATION panics (Go), and
               -- this frame's remaining defers run on the panic path.
@@ -451,12 +477,17 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
           return (.next k', s', choices)
       | .frame targets results ((cv, args) :: ds) k' =>
           match cv with
-          | .funcVal fid captured => do
+          | .funcVal fid captured =>
               -- A deferred call's results are DISCARDED (Go); only effects
-              -- matter, so the inner frame reads and stores nothing.
-              let (func, frameEnv, _resultLocs, s') ← enterFrame s fid (captured ++ args)
-              return (.exec func.body frameEnv
-                (.frame [] [] [] (.frame targets results ds k')), s', choices)
+              -- matter, so the inner frame reads and stores nothing. An
+              -- ENTRY panic is the invocation's panic: it starts unwinding
+              -- at this frame with its remaining defers (audit F1+F5,
+              -- mirroring the .nil arm below).
+              enterFrameStep s fid (captured ++ args)
+                (fun func frameEnv _ =>
+                  .exec func.body frameEnv
+                    (.frame [] [] [] (.frame targets results ds k')))
+                (.frame targets results ds k') choices
           | .nil =>
               -- Registration succeeded; the INVOCATION panics (Go), and
               -- this frame's remaining defers run on the panic path.
