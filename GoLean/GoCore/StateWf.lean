@@ -275,7 +275,7 @@ def Cont.locSup : Cont → Nat
   | .loop cond body env k =>
       max (max (Expr.locSup cond) (Stmt.locSup body))
         (max (LocalEnv.locSup env) (Cont.locSup k))
-  | .frame targets results defers k =>
+  | .frame targets results defers k _ =>
       max (max (locListSup targets) (locListSup results))
         (max (deferListSup defers) (Cont.locSup k))
   | .deferCalleeK args env k =>
@@ -368,7 +368,7 @@ def Cont.itersNormalized (types : TypeEnv) : Cont → Bool
   | .stop => true
   | .seq _ _ k => Cont.itersNormalized types k
   | .loop _ _ _ k => Cont.itersNormalized types k
-  | .frame _ _ _ k => Cont.itersNormalized types k
+  | .frame _ _ _ k _ => Cont.itersNormalized types k
   | .deferCalleeK _ _ k => Cont.itersNormalized types k
   | .deferArgsK _ _ _ _ k => Cont.itersNormalized types k
   | .breakableK k => Cont.itersNormalized types k
@@ -3936,6 +3936,46 @@ theorem markNewestRecovered_locSup :
       omega
 
 set_option maxHeartbeats 1600000 in
+/-- Companion to `recoverResult_locSup` for the below-the-frame walk
+(wrapper transparency, arc-final audit F1). -/
+theorem recoverThroughWrappers_locSup :
+    ∀ {k : Cont} {v : GoValue} {k' : Cont}, recoverThroughWrappers k = some (v, k') →
+      GoValue.locSup v ≤ Cont.locSup k ∧ Cont.locSup k' ≤ Cont.locSup k := by
+  intro k
+  induction k <;> intro v k' h
+  case stop => simp [recoverThroughWrappers] at h
+  case panicResumeK chain k _ =>
+    simp only [recoverThroughWrappers, Option.map_eq_some_iff] at h
+    obtain ⟨⟨v₀, chain'⟩, hmark, heq⟩ := h
+    simp only [Prod.mk.injEq] at heq
+    obtain ⟨rfl, rfl⟩ := heq
+    obtain ⟨m1, m2⟩ := markNewestRecovered_locSup hmark
+    constructor <;> (simp only [Cont.locSup, Nat.max_le] at m1 m2 ⊢; omega)
+  case frame targets results defers k w ih =>
+    cases w
+    · simp [recoverThroughWrappers] at h
+    · simp only [recoverThroughWrappers, Option.map_eq_some_iff] at h
+      obtain ⟨⟨v₀, k₀⟩, hin, heq⟩ := h
+      simp only [Prod.mk.injEq] at heq
+      obtain ⟨rfl, rfl⟩ := heq
+      obtain ⟨i1, i2⟩ := ih hin
+      constructor <;> (simp only [Cont.locSup, Nat.max_le] at i1 i2 ⊢; omega)
+  all_goals
+    rename_i ih
+    simp only [recoverThroughWrappers, Option.map_eq_some_iff] at h
+    obtain ⟨⟨v₀, k₀⟩, hin, heq⟩ := h
+    simp only [Prod.mk.injEq] at heq
+    obtain ⟨rfl, rfl⟩ := heq
+    obtain ⟨i1, i2⟩ := ih hin
+    constructor
+    · simp only [Cont.locSup, Nat.max_le] at i1 i2 ⊢
+      omega
+    · simp only [Cont.locSup, Nat.max_le] at i1 i2 ⊢
+      first
+        | omega
+        | (constructor <;> omega)
+
+set_option maxHeartbeats 1600000 in
 theorem recoverResult_locSup :
     ∀ {k : Cont} {v : GoValue} {k' : Cont}, recoverResult k = (v, k') →
       GoValue.locSup v ≤ Cont.locSup k ∧ Cont.locSup k' ≤ Cont.locSup k := by
@@ -3949,42 +3989,32 @@ theorem recoverResult_locSup :
     simp only [recoverResult, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
     simp [GoValue.locSup]
-  case frame targets results defers k _ =>
-    rw [recoverResult.eq_def] at h
-    split at h
-    · -- marker directly below the frame
-      rename_i t r ds chainE kx heqf
-      injection heqf with h1 h2 h3 h4
-      subst h1
-      subst h2
-      subst h3
-      subst h4
-      split at h
-      · rename_i v₀ chain' hmark
-        simp only [Prod.mk.injEq] at h
-        obtain ⟨rfl, rfl⟩ := h
-        obtain ⟨m1, m2⟩ := markNewestRecovered_locSup hmark
-        constructor
-        · simp only [Cont.locSup, Nat.max_le]
-          omega
-        · simp only [Cont.locSup, Nat.max_le]
-          omega
-      · simp only [Prod.mk.injEq] at h
-        obtain ⟨rfl, rfl⟩ := h
-        simp [GoValue.locSup]
-    · -- plain frame: no recovery
-      rename_i t r ds kx hnc heqf
-      injection heqf with h1 h2 h3 h4
-      subst h1
-      subst h2
-      subst h3
-      subst h4
-      simp only [Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
-      simp [GoValue.locSup]
-    all_goals
-      rename_i heqbad
-      cases heqbad
+  case frame targets results defers k w ih =>
+    cases w
+    · -- non-wrapper frame: the below-frame walk decides
+      simp only [recoverResult] at h
+      cases hin : recoverThroughWrappers k with
+      | none =>
+          rw [hin] at h
+          simp only [Prod.mk.injEq] at h
+          obtain ⟨rfl, rfl⟩ := h
+          simp [GoValue.locSup]
+      | some p =>
+          obtain ⟨v₀, k₀⟩ := p
+          rw [hin] at h
+          simp only [Prod.mk.injEq] at h
+          obtain ⟨rfl, rfl⟩ := h
+          obtain ⟨m1, m2⟩ := recoverThroughWrappers_locSup hin
+          constructor <;> (simp only [Cont.locSup, Nat.max_le] at m1 m2 ⊢; omega)
+    · -- wrapper frame above the walk start: transparent
+      simp only [recoverResult] at h
+      cases hrk : recoverResult k with
+      | mk v₀ k₀ =>
+          rw [hrk] at h
+          simp only [Prod.mk.injEq] at h
+          obtain ⟨rfl, rfl⟩ := h
+          obtain ⟨i1, i2⟩ := ih hrk
+          constructor <;> (simp only [Cont.locSup, Nat.max_le] at i1 i2 ⊢; omega)
   all_goals
     rename_i ih
     obtain ⟨i1, i2⟩ := ih (v := _) (k' := _) rfl
@@ -4495,7 +4525,7 @@ theorem step_preserves_wf_loc {c : Config} {σ : ExecState} {c' : Config}
       runtimeErrorValue_locSup, panicPayload, LocalEnv.pushScope_locSup,
       Nat.max_le] at hc ⊢
     omega
-  case frameReturn targets results k vs hload hstore =>
+  case frameReturn targets results k w vs hload hstore =>
     have h1 := loadMany_locSup hload
     have hb : locListSup targets ≤ σ.nextAddr := by
       simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
@@ -4517,7 +4547,7 @@ theorem step_preserves_wf_loc {c : Config} {σ : ExecState} {c' : Config}
       runtimeErrorValue_locSup, panicPayload, LocalEnv.pushScope_locSup,
       Nat.max_le] at hc ⊢
     omega
-  case frameFall targets results k vs hload hstore =>
+  case frameFall targets results k w vs hload hstore =>
     have h1 := loadMany_locSup hload
     have hb : locListSup targets ≤ σ.nextAddr := by
       simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
@@ -4539,7 +4569,7 @@ theorem step_preserves_wf_loc {c : Config} {σ : ExecState} {c' : Config}
       runtimeErrorValue_locSup, panicPayload, LocalEnv.pushScope_locSup,
       Nat.max_le] at hc ⊢
     omega
-  case frameDeferFall targets results fid captured args ds k func frameEnv
+  case frameDeferFall targets results fid captured args ds k w func frameEnv
  resultLocs henter =>
     have hargb : goValueListSup (captured ++ args) ≤ σ.nextAddr := by
       rw [goValueListSup_append]
@@ -4561,7 +4591,7 @@ theorem step_preserves_wf_loc {c : Config} {σ : ExecState} {c' : Config}
       runtimeErrorValue_locSup, panicPayload, LocalEnv.pushScope_locSup,
       Nat.max_le] at hc ⊢
     omega
-  case frameDeferReturn targets results fid captured args ds k func frameEnv
+  case frameDeferReturn targets results fid captured args ds k w func frameEnv
  resultLocs henter =>
     have hargb : goValueListSup (captured ++ args) ≤ σ.nextAddr := by
       rw [goValueListSup_append]
@@ -4619,7 +4649,7 @@ theorem step_preserves_wf_loc {c : Config} {σ : ExecState} {c' : Config}
       runtimeErrorValue_locSup, panicPayload, LocalEnv.pushScope_locSup,
       Nat.max_le] at hc ⊢
     omega
-  case panicFrameDefer chain targets results fid captured args ds k func
+  case panicFrameDefer chain targets results fid captured args ds k w func
  frameEnv resultLocs henter =>
     have hargb : goValueListSup (captured ++ args) ≤ σ.nextAddr := by
       rw [goValueListSup_append]
@@ -4718,6 +4748,41 @@ theorem panicPassthrough_itersNormalized {types : TypeEnv} {k k' : Cont}
   cases k <;>
     simp_all [panicPassthrough, Cont.itersNormalized, Bool.and_eq_true]
 
+/-- Companion to `recoverResult_itersNormalized` for the below-the-frame
+walk (wrapper transparency, arc-final audit F1). -/
+theorem recoverThroughWrappers_itersNormalized {types : TypeEnv} :
+    ∀ {k : Cont} {v : GoValue} {k' : Cont}, recoverThroughWrappers k = some (v, k') →
+      Cont.itersNormalized types k = true →
+      Cont.itersNormalized types k' = true := by
+  intro k
+  induction k <;> intro v k' h hk
+  case stop => simp [recoverThroughWrappers] at h
+  case panicResumeK chain k _ =>
+    simp only [recoverThroughWrappers, Option.map_eq_some_iff] at h
+    obtain ⟨⟨v₀, chain'⟩, hmark, heq⟩ := h
+    simp only [Prod.mk.injEq] at heq
+    obtain ⟨rfl, rfl⟩ := heq
+    exact hk
+  case frame targets results defers k w ih =>
+    cases w
+    · simp [recoverThroughWrappers] at h
+    · simp only [recoverThroughWrappers, Option.map_eq_some_iff] at h
+      obtain ⟨⟨v₀, k₀⟩, hin, heq⟩ := h
+      simp only [Prod.mk.injEq] at heq
+      obtain ⟨rfl, rfl⟩ := heq
+      simp only [Cont.itersNormalized] at hk ⊢
+      exact ih hin hk
+  all_goals
+    rename_i ih
+    simp only [recoverThroughWrappers, Option.map_eq_some_iff] at h
+    obtain ⟨⟨v₀, k₀⟩, hin, heq⟩ := h
+    simp only [Prod.mk.injEq] at heq
+    obtain ⟨rfl, rfl⟩ := heq
+    simp only [Cont.itersNormalized, Bool.and_eq_true] at hk ⊢
+    first
+      | exact ih hin hk
+      | exact ⟨hk.1, ih hin hk.2⟩
+
 theorem recoverResult_itersNormalized {types : TypeEnv} :
     ∀ {k : Cont} {v : GoValue} {k' : Cont}, recoverResult k = (v, k') →
       Cont.itersNormalized types k = true →
@@ -4732,35 +4797,30 @@ theorem recoverResult_itersNormalized {types : TypeEnv} :
     simp only [recoverResult, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
     exact hk
-  case frame targets results defers k _ =>
-    rw [recoverResult.eq_def] at h
-    split at h
-    · rename_i t r ds chainE kx heqf
-      injection heqf with h1 h2 h3 h4
-      subst h1
-      subst h2
-      subst h3
-      subst h4
-      split at h
-      · rename_i v₀ chain' hmark
-        simp only [Prod.mk.injEq] at h
-        obtain ⟨rfl, rfl⟩ := h
-        exact hk
-      · simp only [Prod.mk.injEq] at h
-        obtain ⟨rfl, rfl⟩ := h
-        exact hk
-    · rename_i t r ds kx hnc heqf
-      injection heqf with h1 h2 h3 h4
-      subst h1
-      subst h2
-      subst h3
-      subst h4
-      simp only [Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
-      exact hk
-    all_goals
-      rename_i heqbad
-      cases heqbad
+  case frame targets results defers k w ih =>
+    cases w
+    · simp only [recoverResult] at h
+      cases hin : recoverThroughWrappers k with
+      | none =>
+          rw [hin] at h
+          simp only [Prod.mk.injEq] at h
+          obtain ⟨rfl, rfl⟩ := h
+          exact hk
+      | some p =>
+          obtain ⟨v₀, k₀⟩ := p
+          rw [hin] at h
+          simp only [Prod.mk.injEq] at h
+          obtain ⟨rfl, rfl⟩ := h
+          simp only [Cont.itersNormalized] at hk ⊢
+          exact recoverThroughWrappers_itersNormalized hin hk
+    · simp only [recoverResult] at h
+      cases hrk : recoverResult k with
+      | mk v₀ k₀ =>
+          rw [hrk] at h
+          simp only [Prod.mk.injEq] at h
+          obtain ⟨rfl, rfl⟩ := h
+          simp only [Cont.itersNormalized] at hk ⊢
+          exact ih hrk hk
   all_goals
     rename_i ih
     have hi := ih (v := _) (k' := _) rfl

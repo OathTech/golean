@@ -1106,6 +1106,12 @@ private def decodeMethod (path : String) (json : Json) : LowerM (Func × MethodI
   let res ← results.mapIdxM (fun i p => decodeParam s!"{path}.results[{i}]" p)
   let funcId : FuncId := ⟨s!"{recvType}.{name}"⟩
   let info : MethodInfo := { name, funcId, recv := recv.typ }
+  -- Declared schema addition (arc-final audit F1 / BUG-015): the
+  -- synthesized-promotion-wrapper marker. Decoded STRICTLY when present
+  -- (bool or refuse); absent means a concrete non-wrapper method.
+  let wrapper ← match obj.get? "wrapper" with
+    | some flag => StrictJson.bool s!"{path}.wrapper" flag
+    | none => pure false
   -- A declaration-only STUB (imported named types, design note D5): the
   -- REAL signature — `satisfiesMethodSig` compares it — over a fail-closed
   -- body, so satisfaction answers while a CALL refuses with the reason.
@@ -1114,7 +1120,7 @@ private def decodeMethod (path : String) (json : Json) : LowerM (Func × MethodI
       let reason ← StrictJson.string s!"{path}.unsupported" r
       pure ({ id := funcId, args := #[recv] ++ args, results := res,
               body := .unsupported s!"frontend-quarantined: {reason}",
-              variadic }, info)
+              variadic, wrapper }, info)
   | none =>
   -- A present `interface` key is decoded STRICTLY (delta-review R2,
   -- 2026-08-05 — same class as the F7 `runtimeError` fix; this presence-only
@@ -1131,11 +1137,11 @@ private def decodeMethod (path : String) (json : Json) : LowerM (Func × MethodI
       -- if a dispatch bug ever reaches it — never a silent zero return.
       let stub : Stmt := .call #[] ⟨"$interface-method-unreachable"⟩ #[]
       pure ({ id := funcId, args := #[recv] ++ args, results := res, body := stub,
-              variadic }, info)
+              variadic, wrapper }, info)
   else
       let body ← decodeStmt res s!"{path}.body" (← StrictJson.field path obj "body")
       pure ({ id := funcId, args := #[recv] ++ args, results := res, body,
-              variadic }, info)
+              variadic, wrapper }, info)
 
 /-- Decode the whole wire program. Runs OUTSIDE `LowerM`: the globals
 table decodes FIRST, and its size is the reader context every

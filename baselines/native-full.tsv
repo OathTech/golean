@@ -1,15 +1,14 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-06  commit: general-coverage (arc-final audit response, F2 append envelope widening)
+# recorded: 2026-08-06  commit: general-coverage (arc-final audit response, F1 wrapper-transparent recover)
 #   frontend: native  oracle: go run (strict lane) / go-run membership in the
 #   machine-enumerated observation set (membership lane; go1.26.5 samples)
-# manifest_cases: 1025  pass: 893  fail: 132
-# Re-pin reason: BUG-021 fixed (append-spill envelope widened to
-#   [newLen, max(32, 2*growth)]; empty stream keeps the growth point so
-#   the strict lane is unchanged) — exactly the three membership pins
-#   flip FAIL -> PASS with Go's realized points now members
-#   (stack-buffer 32 in [4,32], below-formula 2 in [2,32], size-class
-#   224 in [101,400]). Zero PASS->FAIL, zero other stage moves;
-#   full-slice-cap-zero stays green at width 32.
+# manifest_cases: 1025  pass: 897  fail: 128
+# Re-pin reason: BUG-015 fixed (synthesized promotion wrappers marked on
+#   the wire, frames carry the marker, the recover walk skips wrapper
+#   frames per gc's exactly-one-non-wrapper-frame rule) — exactly its
+#   four pinned ids flip FAIL -> PASS; the four controls (direct
+#   dispatch, concrete promoted call, method value, chain-join) hold.
+#   Zero PASS->FAIL, zero other stage moves.
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
 PASS	arrays/array-copy	-
@@ -528,10 +527,10 @@ PASS	interfaces/recover-promoted-wrapper/ctl-chain-join	-
 PASS	interfaces/recover-promoted-wrapper/ctl-concrete-promoted	-
 PASS	interfaces/recover-promoted-wrapper/ctl-direct-iface	-
 PASS	interfaces/recover-promoted-wrapper/ctl-method-value	-
-FAIL	interfaces/recover-promoted-wrapper/silent-iface-embed	differential
-FAIL	interfaces/recover-promoted-wrapper/silent-pointer-embed	differential
-FAIL	interfaces/recover-promoted-wrapper/silent-value-embed	differential
-FAIL	interfaces/recover-promoted-wrapper/status-value-embed	lean-observation
+PASS	interfaces/recover-promoted-wrapper/silent-iface-embed	-
+PASS	interfaces/recover-promoted-wrapper/silent-pointer-embed	-
+PASS	interfaces/recover-promoted-wrapper/silent-value-embed	-
+PASS	interfaces/recover-promoted-wrapper/status-value-embed	-
 PASS	interfaces/type-assert-from-named-interface-panic/nil-operand	-
 PASS	interfaces/type-assert-from-named-interface-panic/to-pointer	-
 PASS	interfaces/type-assert-interface	-

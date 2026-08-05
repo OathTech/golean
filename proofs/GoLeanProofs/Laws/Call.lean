@@ -93,7 +93,8 @@ theorem wp_call_enter_arg1 {fid : FuncId} {func : Func} {pid : String}
     (hnorm : ∀ σ : ExecState, σ.types = GoCoreGS.types GF →
       normalizeValueForTy σ pty v = .ok v') :
     iprop(∀ pa : Addr, pa.id ↦ (⟨some pty, v'⟩ : HeapCell) -∗
-        WP (Config.exec func.body [[(pid, Loc.base pa)]] (.frame locs [] [] k))
+        WP (Config.exec func.body [[(pid, Loc.base pa)]]
+              (.frame locs [] [] k func.wrapper))
           @ s ; E {{ Φ }})
       ⊢ WP (Config.retV v (.callArgsK fid locs [] [] env k)) @ s ; E {{ Φ }} := by
   have henter : ∀ σ₁ : ExecState, σ₁.functions = GoCoreGS.prog GF →
@@ -119,7 +120,7 @@ theorem wp_call_enter_arg1 {fid : FuncId} {func : Func} {pid : String}
   have hdet : ∀ c' s',
       Step (.retV v (.callArgsK fid locs [] [] env k)) σ₁ c' s' →
       c' = Config.exec func.body [[(pid, Loc.base ⟨σ₁.nextAddr⟩)]]
-             (.frame locs [] [] k)
+             (.frame locs [] [] k func.wrapper)
         ∧ s' = { σ₁ with heap := Heap.set σ₁.heap (.base ⟨σ₁.nextAddr⟩) ⟨some pty, v'⟩, nextAddr := σ₁.nextAddr + 1 } := by
     intro c' s' hst
     obtain ⟨h1, h2⟩ := step_det (by trivial) hstep hst
@@ -166,7 +167,7 @@ theorem wp_call_enter_ret1 {fid : FuncId} {func : Func} {rid : String}
       defaultValue σ rty = .ok dv) :
     iprop(∀ ra : Addr, ra.id ↦ (⟨some rty, dv⟩ : HeapCell) -∗
         WP (Config.exec func.body [[(rid, Loc.base ra)]]
-              (.frame [tl] [Loc.base ra] [] k)) @ s ; E {{ Φ }})
+              (.frame [tl] [Loc.base ra] [] k func.wrapper)) @ s ; E {{ Φ }})
       ⊢ WP (Config.retV (.addr tl) (.callTargetsK fid [] [] [] env k))
           @ s ; E {{ Φ }} := by
   have henter : ∀ σ₁ : ExecState, σ₁.functions = GoCoreGS.prog GF →
@@ -192,7 +193,7 @@ theorem wp_call_enter_ret1 {fid : FuncId} {func : Func} {rid : String}
   have hdet : ∀ c' s',
       Step (.retV (.addr tl) (.callTargetsK fid [] [] [] env k)) σ₁ c' s' →
       c' = Config.exec func.body [[(rid, Loc.base ⟨σ₁.nextAddr⟩)]]
-             (.frame ([] ++ [tl]) [Loc.base ⟨σ₁.nextAddr⟩] [] k)
+             (.frame ([] ++ [tl]) [Loc.base ⟨σ₁.nextAddr⟩] [] k func.wrapper)
         ∧ s' = { σ₁ with heap := Heap.set σ₁.heap (.base ⟨σ₁.nextAddr⟩) ⟨some rty, dv⟩, nextAddr := σ₁.nextAddr + 1 } := by
     intro c' s' hst
     obtain ⟨h1, h2⟩ := step_det (by trivial) hstep hst
@@ -232,13 +233,13 @@ result cell is read-only, the target is written. Premise-free given the
 resources (the store side-condition is internalized by
 `storeLoc_int_any`). -/
 theorem wp_frame_return_int {ta ra : Addr} {kind tkind : IntKind}
-    {m : Int} {w : GoValue} {k}
+    {m : Int} {w : GoValue} {k} {wf : Bool}
     : ra.id ↦ (⟨some (.int kind), .int m kind⟩ : HeapCell)
       ∗ ta.id ↦ (⟨some (.int tkind), w⟩ : HeapCell)
       ∗ (ra.id ↦ (⟨some (.int kind), .int m kind⟩ : HeapCell)
           ∗ ta.id ↦ (⟨some (.int tkind), .int (tkind.normalize m) tkind⟩ : HeapCell)
           -∗ WP (Config.next k) @ s ; E {{ Φ }})
-      ⊢ WP (Config.returning (.frame [.base ta] [.base ra] [] k))
+      ⊢ WP (Config.returning (.frame [.base ta] [.base ra] [] k wf))
           @ s ; E {{ Φ }} := by
   iapply wp_store_step₂ (hnv := rfl)
   intro σ₁ _hfns _hmeths _htypes hlookr hlookt
@@ -247,7 +248,7 @@ theorem wp_frame_return_int {ta ra : Addr} {kind tkind : IntKind}
   have hstore : storeMany σ₁ [Loc.base ta] [GoValue.int m kind]
       = .ok { σ₁ with heap := Heap.set σ₁.heap (.base ta) ⟨some (.int tkind), .int (tkind.normalize m) tkind⟩ } := by
     simp [storeMany, storeLoc_int_any hlookt m, Bind.bind, Except.bind]
-  have hstep := Step.frameReturn (k := k) hload hstore
+  have hstep := Step.frameReturn (k := k) (w := wf) hload hstore
   refine ⟨hstep, ?_⟩
   intro c' s' hst
   obtain ⟨h1, h2⟩ := step_det (by trivial) hstep hst
@@ -262,13 +263,13 @@ panic (`panicResumeRecovered` resumes the frame on its fall path), and
 the exit of any result-carrying function that falls off its end. Witness:
 the recover composition walk (`Specs/GoldenRecover.lean`, `m := 7`). -/
 theorem wp_frame_fall_int {ta ra : Addr} {kind tkind : IntKind}
-    {m : Int} {w : GoValue} {k}
+    {m : Int} {w : GoValue} {k} {wf : Bool}
     : ra.id ↦ (⟨some (.int kind), .int m kind⟩ : HeapCell)
       ∗ ta.id ↦ (⟨some (.int tkind), w⟩ : HeapCell)
       ∗ (ra.id ↦ (⟨some (.int kind), .int m kind⟩ : HeapCell)
           ∗ ta.id ↦ (⟨some (.int tkind), .int (tkind.normalize m) tkind⟩ : HeapCell)
           -∗ WP (Config.next k) @ s ; E {{ Φ }})
-      ⊢ WP (Config.next (.frame [.base ta] [.base ra] [] k))
+      ⊢ WP (Config.next (.frame [.base ta] [.base ra] [] k wf))
           @ s ; E {{ Φ }} := by
   iapply wp_store_step₂ (hnv := rfl)
   intro σ₁ _hfns _hmeths _htypes hlookr hlookt
@@ -277,7 +278,7 @@ theorem wp_frame_fall_int {ta ra : Addr} {kind tkind : IntKind}
   have hstore : storeMany σ₁ [Loc.base ta] [GoValue.int m kind]
       = .ok { σ₁ with heap := Heap.set σ₁.heap (.base ta) ⟨some (.int tkind), .int (tkind.normalize m) tkind⟩ } := by
     simp [storeMany, storeLoc_int_any hlookt m, Bind.bind, Except.bind]
-  have hstep := Step.frameFall (k := k) hload hstore
+  have hstep := Step.frameFall (k := k) (w := wf) hload hstore
   refine ⟨hstep, ?_⟩
   intro c' s' hst
   obtain ⟨h1, h2⟩ := step_det (by trivial) hstep hst
@@ -289,7 +290,7 @@ content `Icnt` (`S`-shaped int cells, per `hint`), opened around the
 single frame-exit store and closed at the written value. On the
 `wp_store_step₂_inv` core. -/
 theorem wp_frame_return_int_inv {ta ra : Addr} {kind tkind : IntKind}
-    {m : Int} {S : HeapCell → Prop} {Icnt : IProp GF} {k} {N : Namespace}
+    {m : Int} {S : HeapCell → Prop} {Icnt : IProp GF} {k} {wf : Bool} {N : Namespace}
     (hN : ↑N ⊆ E)
     (hint : ∀ cell, S cell → ∃ w', cell = ⟨some (.int tkind), w'⟩)
     (hopen : Icnt ⊢ iprop(∃ cell, ⌜S cell⌝ ∗ ta.id ↦ cell))
@@ -298,7 +299,7 @@ theorem wp_frame_return_int_inv {ta ra : Addr} {kind tkind : IntKind}
       ∗ ra.id ↦ (⟨some (.int kind), .int m kind⟩ : HeapCell)
       ∗ (ra.id ↦ (⟨some (.int kind), .int m kind⟩ : HeapCell)
           -∗ WP (Config.next k) @ s ; E {{ Φ }})
-      ⊢ WP (Config.returning (.frame [.base ta] [.base ra] [] k))
+      ⊢ WP (Config.returning (.frame [.base ta] [.base ra] [] k wf))
           @ s ; E {{ Φ }} := by
   iapply wp_store_step₂_inv (hN := hN) (hnv := rfl) (hopen := hopen)
     (hclose := hclose)
@@ -309,7 +310,7 @@ theorem wp_frame_return_int_inv {ta ra : Addr} {kind tkind : IntKind}
   have hstore : storeMany σ₁ [Loc.base ta] [GoValue.int m kind]
       = .ok { σ₁ with heap := Heap.set σ₁.heap (.base ta) ⟨some (.int tkind), .int (tkind.normalize m) tkind⟩ } := by
     simp [storeMany, storeLoc_int_any hlookt m, Bind.bind, Except.bind]
-  have hstep := Step.frameReturn (k := k) hload hstore
+  have hstep := Step.frameReturn (k := k) (w := wf) hload hstore
   refine ⟨hstep, ?_⟩
   intro c' s' hst
   obtain ⟨h1, h2⟩ := step_det (by trivial) hstep hst
@@ -407,7 +408,7 @@ theorem wp_call_enter₂₁ {fid : FuncId} {func : Func}
           ∗ a₂.id ↦ (⟨some rty₀, dv₀⟩ : HeapCell) -∗
         WP (Config.exec func.body
               [[(rid₀, Loc.base a₂), (pid₁, Loc.base a₁), (pid₀, Loc.base a₀)]]
-              (.frame locs [Loc.base a₂] [] k)) @ s ; E {{ Φ }})
+              (.frame locs [Loc.base a₂] [] k func.wrapper)) @ s ; E {{ Φ }})
       ⊢ WP (Config.retV v₁ (.callArgsK fid locs [v₀] [] env k))
           @ s ; E {{ Φ }} := by
   have henter : ∀ σ : ExecState, σ.functions = GoCoreGS.prog GF →
@@ -437,7 +438,7 @@ theorem wp_call_enter₂₁ {fid : FuncId} {func : Func}
   iapply (wp_alloc_step₃ (hnv := rfl)
     (kof := fun a₀ a₁ a₂ => Config.exec func.body
       [[(rid₀, Loc.base a₂), (pid₁, Loc.base a₁), (pid₀, Loc.base a₀)]]
-      (.frame locs [Loc.base a₂] [] k))
+      (.frame locs [Loc.base a₂] [] k func.wrapper))
     (hred := by
       intro σ₁ hfns hmeths htypes
       have hstep := Step.callArgsDoneEnter (vals := [v₀]) (locs := locs)
@@ -489,7 +490,7 @@ theorem wp_call_dynamic_enter₂ {fid : FuncId} {anchor concrete : Func}
         WP (Config.exec concrete.body
               [[(rid₁, Loc.base a₃), (rid₀, Loc.base a₂),
                 (pid₁, Loc.base a₁), (pid₀, Loc.base a₀)]]
-              (.frame locs [Loc.base a₂, Loc.base a₃] [] k)) @ s ; E {{ Φ }})
+              (.frame locs [Loc.base a₂, Loc.base a₃] [] k concrete.wrapper)) @ s ; E {{ Φ }})
       ⊢ WP (Config.retV v₁ (.callArgsK fid locs [recvBox] [] env k))
           @ s ; E {{ Φ }} := by
   have henter : ∀ σ : ExecState, σ.functions = GoCoreGS.prog GF →
@@ -522,7 +523,7 @@ theorem wp_call_dynamic_enter₂ {fid : FuncId} {anchor concrete : Func}
     (kof := fun a₀ a₁ a₂ a₃ => Config.exec concrete.body
       [[(rid₁, Loc.base a₃), (rid₀, Loc.base a₂),
         (pid₁, Loc.base a₁), (pid₀, Loc.base a₀)]]
-      (.frame locs [Loc.base a₂, Loc.base a₃] [] k))
+      (.frame locs [Loc.base a₂, Loc.base a₃] [] k concrete.wrapper))
     (hred := by
       intro σ₁ hfns hmeths htypes
       have hstep := Step.callArgsDoneEnter (vals := [recvBox]) (locs := locs)
@@ -629,7 +630,7 @@ theorem wp_call_enter₂ {fid : FuncId} {func : Func}
         WP (Config.exec func.body
               [[(rid₁, Loc.base a₃), (rid₀, Loc.base a₂),
                 (pid₁, Loc.base a₁), (pid₀, Loc.base a₀)]]
-              (.frame locs [Loc.base a₂, Loc.base a₃] [] k)) @ s ; E {{ Φ }})
+              (.frame locs [Loc.base a₂, Loc.base a₃] [] k func.wrapper)) @ s ; E {{ Φ }})
       ⊢ WP (Config.retV v₁ (.callArgsK fid locs [v₀] [] env k))
           @ s ; E {{ Φ }} := by
   have henter : ∀ σ : ExecState, σ.functions = GoCoreGS.prog GF →
@@ -662,7 +663,7 @@ theorem wp_call_enter₂ {fid : FuncId} {func : Func}
     (kof := fun a₀ a₁ a₂ a₃ => Config.exec func.body
       [[(rid₁, Loc.base a₃), (rid₀, Loc.base a₂),
         (pid₁, Loc.base a₁), (pid₀, Loc.base a₀)]]
-      (.frame locs [Loc.base a₂, Loc.base a₃] [] k))
+      (.frame locs [Loc.base a₂, Loc.base a₃] [] k func.wrapper))
     (hred := by
       intro σ₁ hfns hmeths htypes
       have hstep := Step.callArgsDoneEnter (vals := [v₀]) (locs := locs)
@@ -796,14 +797,14 @@ this law's int-typed special case (its store side-condition internalized
 by `storeLoc_int_any`); the general form is what a result at a NAMED Go
 type needs, because the coercion then resolves through `σ.types` and only
 the caller can compute it. -/
-theorem wp_frame_return₁ {ta ra : Addr} {rcell tcell tcell' : HeapCell} {k}
+theorem wp_frame_return₁ {ta ra : Addr} {rcell tcell tcell' : HeapCell} {k} {wf : Bool}
     (hstore : ∀ σ : ExecState, σ.types = GoCoreGS.types GF →
       Heap.lookup σ.heap (.base ta) = some tcell →
       storeLoc σ (.base ta) rcell.value
         = .ok { σ with heap := Heap.set σ.heap (.base ta) tcell' }) :
     ra.id ↦ rcell ∗ ta.id ↦ tcell
       ∗ (ra.id ↦ rcell ∗ ta.id ↦ tcell' -∗ WP (Config.next k) @ s ; E {{ Φ }})
-      ⊢ WP (Config.returning (.frame [.base ta] [.base ra] [] k))
+      ⊢ WP (Config.returning (.frame [.base ta] [.base ra] [] k wf))
           @ s ; E {{ Φ }} := by
   iapply wp_store_step₂ (hnv := rfl)
   intro σ _hfns _hmeths htypes hlookr hlookt
@@ -812,7 +813,7 @@ theorem wp_frame_return₁ {ta ra : Addr} {rcell tcell tcell' : HeapCell} {k}
   have hstore' : storeMany σ [Loc.base ta] [rcell.value]
       = .ok { σ with heap := Heap.set σ.heap (.base ta) tcell' } := by
     simp [storeMany, hstore σ htypes hlookt, Bind.bind, Except.bind]
-  have hstep := Step.frameReturn (k := k) hload hstore'
+  have hstep := Step.frameReturn (k := k) (w := wf) hload hstore'
   refine ⟨hstep, ?_⟩
   intro c' s' hst
   obtain ⟨h1, h2⟩ := step_det (by trivial) hstep hst
@@ -827,7 +828,7 @@ any pair of target cells whose stores compute. Go's `(T, bool)` comma-ok
 return is the instance the quorum pilot forces
 (`wp_frame_return_ackedIndex`, `Specs/GoldenQuorumWP.lean`). -/
 theorem wp_frame_return₂ {ta₀ ta₁ ra₀ ra₁ : Addr}
-    {rcell₀ rcell₁ tcell₀ tcell₀' tcell₁ tcell₁' : HeapCell} {k}
+    {rcell₀ rcell₁ tcell₀ tcell₀' tcell₁ tcell₁' : HeapCell} {k} {wf : Bool}
     (hstore₀ : ∀ σ : ExecState, σ.types = GoCoreGS.types GF →
       Heap.lookup σ.heap (.base ta₀) = some tcell₀ →
       storeLoc σ (.base ta₀) rcell₀.value
@@ -840,7 +841,7 @@ theorem wp_frame_return₂ {ta₀ ta₁ ra₀ ra₁ : Addr}
       ∗ (ra₀.id ↦ rcell₀ ∗ ra₁.id ↦ rcell₁ ∗ ta₀.id ↦ tcell₀' ∗ ta₁.id ↦ tcell₁'
           -∗ WP (Config.next k) @ s ; E {{ Φ }})
       ⊢ WP (Config.returning
-            (.frame [.base ta₀, .base ta₁] [.base ra₀, .base ra₁] [] k))
+            (.frame [.base ta₀, .base ta₁] [.base ra₀, .base ra₁] [] k wf))
           @ s ; E {{ Φ }} := by
   iapply wp_read₂_store₂_step (hnv := rfl)
   intro σ _hfns _hmeths htypes hne hlr0 hlr1 hlt0 hlt1
@@ -858,7 +859,7 @@ theorem wp_frame_return₂ {ta₀ ta₁ ra₀ ra₁ : Addr}
     simp [storeMany, hstore₀ σ htypes hlt0,
       hstore₁ { σ with heap := Heap.set σ.heap (.base ta₀) tcell₀' } htypes hlt1',
       Bind.bind, Except.bind]
-  have hstep := Step.frameReturn (k := k) hload hstore
+  have hstep := Step.frameReturn (k := k) (w := wf) hload hstore
   refine ⟨hstep, ?_⟩
   intro c' s' hst
   obtain ⟨h1, h2⟩ := step_det (by trivial) hstep hst

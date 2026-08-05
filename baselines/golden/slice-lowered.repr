@@ -13,7 +13,8 @@
                                      (GoLean.GoCore.Expr.var "p")
                                      (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int)))
                                    (GoLean.GoCore.Expr.intLit 1 (GoLean.GoCore.IntKind.int)))]],
-               variadic := false },
+               variadic := false,
+               wrapper := false },
              { id := { key := "incViaCall" },
                args := #[],
                results := #[{ id := "$res0", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.int) }],
@@ -32,6 +33,7 @@
                                  (GoLean.GoCore.Assignee.var "$res0")
                                  (GoLean.GoCore.Expr.var "x"),
                                GoLean.GoCore.Stmt.returnStmt]],
-               variadic := false }],
+               variadic := false,
+               wrapper := false }],
   methods := #[],
   globals := #[] }

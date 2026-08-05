@@ -230,7 +230,21 @@ boundary).
 
 ## BUG-015 — recover() inside a PROMOTED method reached via a synthesized wrapper returns nil (wrapper frame breaks the recover walk)
 
-- Status: open
+- Status: fixed (2026-08-06, arc-final audit response F1 — the faithful
+  machine-level fix, gc's own rule: synthesized wrappers are marked on
+  the wire ("wrapper": true, a declared schema addition emitted only by
+  synthesizeWrapper), `Func.wrapper` threads the flag into the frame
+  continuation (`Cont.frame` gains a trailing `wrapper` marker,
+  defaulted false so every pre-existing construction is unchanged), and
+  the recover walk — and ONLY it — treats wrapper frames as transparent
+  (`recoverThroughWrappers`; "exactly one non-wrapper frame between
+  gopanic and gorecover"). Full lockstep: Step rules and stepFn carry
+  the flag through frame exit/drain/panic paths, StateWf gains
+  wrapper-aware recoverResult lemmas, MachineSound absorbed the arity
+  change, and the WP frame laws generalize over the marker; designated
+  statements untouched. All four divergence pins flip green; the four
+  controls — direct dispatch, concrete promoted call, method value,
+  chain-JOINING through the same wrapper — hold.)
 - Pinned-by: differential
 - Cases: interfaces/recover-promoted-wrapper/silent-value-embed, interfaces/recover-promoted-wrapper/status-value-embed, interfaces/recover-promoted-wrapper/silent-pointer-embed, interfaces/recover-promoted-wrapper/silent-iface-embed
 - Discovered: 2026-08-06 (arc-final audit F1 — found by reading the

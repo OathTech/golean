@@ -3771,7 +3771,14 @@ func (e *emitter) synthesizeWrapper(named *types.Named, tName string, msel *type
 		"params":   params,
 		"results":  results,
 		"variadic": sig.Variadic(),
-		"body":     map[string]any{"stmt": "block", "body": bodyStmts},
+		// Declared schema addition (arc-final audit F1 / BUG-015,
+		// 2026-08-06): a SYNTHESIZED promotion wrapper is marked so the
+		// machine's recover walk can treat its frame as transparent —
+		// gc's abi.FuncIDWrapper, verbatim ("there must be exactly one
+		// non-wrapper frame between gopanic and gorecover",
+		// runtime/panic.go). Only this constructor emits it.
+		"wrapper": true,
+		"body":    map[string]any{"stmt": "block", "body": bodyStmts},
 	}, nil
 }
 

@@ -70,9 +70,9 @@ body with no results and no targets resumes the caller (`Step.frameFall`
 with empty read/store legs — D2-proper: value-returning frame exits are
 state-reading and get their own law in `Laws/Call`). -/
 @[go_walk_law]
-theorem wp_frame_fall {k} :
+theorem wp_frame_fall {k} {w : Bool} :
     (|={E}[E]▷=> £ 1 -∗ WP (Config.next k) @ s ; E {{ Φ }}) ⊢
-      WP (Config.next (.frame [] [] [] k)) @ s ; E {{ Φ }} := by
+      WP (Config.next (.frame [] [] [] k w)) @ s ; E {{ Φ }} := by
   iintro H
   iapply (wp_lift_pure_det_step_no_fork (E₂ := E)
     (e₂ := Config.next k)

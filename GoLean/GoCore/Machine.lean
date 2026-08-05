@@ -1087,9 +1087,20 @@ inductive Cont where
   /-- Call frame: at frame exit, run the `defers` chain (LIFO), THEN read
   `results` (call-time-pinned frame cell locations) and store into
   `targets`. Running defers before the read is what makes a deferred call's
-  mutation of a named result observable (W3 §9). -/
+  mutation of a named result observable (W3 §9).
+  `wrapper` marks a frame entered through a
+  compiler-SYNTHESIZED promotion wrapper (wire flag `"wrapper": true`,
+  design note 2026-08-05 D1.3): gc marks the same frames
+  `abi.FuncIDWrapper`, and its recover walk skips them ("there must be
+  exactly one non-wrapper frame between gopanic and gorecover",
+  runtime/panic.go) — `recoverResult` is the ONLY consumer; every other
+  rule treats a wrapper frame as an ordinary frame (BUG-015, arc-final
+  audit F1, 2026-08-06). Defaults to `false` so hand-built programs and
+  user-code frames are unmarked; call entries pass the resolved
+  callee's flag. Positioned after `k` so the default applies at every
+  pre-existing construction site. -/
   | frame (targets : List Loc) (results : List Loc)
-      (defers : List (GoValue × List GoValue)) (k : Cont)
+      (defers : List (GoValue × List GoValue)) (k : Cont) (wrapper : Bool := false)
   /-- Awaiting a deferred call's callee value. -/
   | deferCalleeK (args : List Expr) (env : LocalEnv) (k : Cont)
   /-- Awaiting a deferred call's arguments; they are evaluated AT DEFER
@@ -1208,7 +1219,7 @@ def deferrableCallee : GoValue → Bool
 outside any frame (or under an expression frame, which cannot contain a
 statement) has no rule — fail closed. -/
 def pushDefer (d : GoValue × List GoValue) : Cont → Option Cont
-  | .frame t r ds k => some (.frame t r (d :: ds) k)
+  | .frame t r ds k w => some (.frame t r (d :: ds) k w)
   | .seq rest env k => (pushDefer d k).map (Cont.seq rest env)
   | .loop c b env k => (pushDefer d k).map (Cont.loop c b env)
   | .breakableK k => (pushDefer d k).map Cont.breakableK
@@ -1246,24 +1257,88 @@ def panicPassthrough : Cont → Option Cont
   | .deferCalleeK _ _ k => some k
   | .deferArgsK _ _ _ _ k => some k
   | .panicArgK k => some k
-  | .frame _ _ _ _ => none
+  | .frame _ _ _ _ _ => none
   | .panicResumeK _ _ => none
   | .stop => none
 
-/-- The `recover()` builtin (arc doc §A1): walk the continuation without
-crossing more than one call frame; recover applies exactly when the
-continuation directly under the first `.frame` is a `panicResumeK` whose
-newest entry is not yet recovered — the shape the panic-drain rule builds
-and nothing else builds. Returns the recovered payload and the
-continuation with the entry marked, or `.nil` and the continuation
+/-- Below the ONE non-wrapper frame of the recover walk: statement glue
+and WRAPPER frames are transparent on the way down to the
+suspended-chain marker (`recoverResult`'s docstring has the rule). A
+non-wrapper frame or `.stop` refutes; `.panicResumeK` resolves. Returns
+the payload and the rebuilt continuation with the newest entry marked.
+Glue must be skipped here because a wrapper's BODY glue sits between the
+promoted method's frame and the wrapper's frame; for wrapper-free
+continuations this arm is only ever reached with the marker DIRECTLY
+below (the panic-drain rule constructs the deferred frame on the marker,
+and nothing inserts glue below an entered frame), so behavior on
+wrapper-free programs is unchanged. -/
+def recoverThroughWrappers : Cont → Option (GoValue × Cont)
+  | .panicResumeK chain k =>
+      (markNewestRecovered chain).map (fun (v, chain') => (v, .panicResumeK chain' k))
+  | .frame t r ds k true =>
+      (recoverThroughWrappers k).map (fun (v, k') => (v, .frame t r ds k' true))
+  | .frame _ _ _ _ false => none
+  | .stop => none
+  | .seq a b k => (recoverThroughWrappers k).map (fun (v, k') => (v, .seq a b k'))
+  | .loop a b c k => (recoverThroughWrappers k).map (fun (v, k') => (v, .loop a b c k'))
+  | .breakableK k => (recoverThroughWrappers k).map (fun (v, k') => (v, .breakableK k'))
+  | .labelK a k => (recoverThroughWrappers k).map (fun (v, k') => (v, .labelK a k'))
+  | .mapIterK a b c d e f g k =>
+      (recoverThroughWrappers k).map (fun (v, k') => (v, .mapIterK a b c d e f g k'))
+  | .strictK a b c d k =>
+      (recoverThroughWrappers k).map (fun (v, k') => (v, .strictK a b c d k'))
+  | .andK a b k => (recoverThroughWrappers k).map (fun (v, k') => (v, .andK a b k'))
+  | .orK a b k => (recoverThroughWrappers k).map (fun (v, k') => (v, .orK a b k'))
+  | .boolK k => (recoverThroughWrappers k).map (fun (v, k') => (v, .boolK k'))
+  | .ifK a b c k => (recoverThroughWrappers k).map (fun (v, k') => (v, .ifK a b c k'))
+  | .whileK a b c k => (recoverThroughWrappers k).map (fun (v, k') => (v, .whileK a b c k'))
+  | .assignTargetK a b k =>
+      (recoverThroughWrappers k).map (fun (v, k') => (v, .assignTargetK a b k'))
+  | .assignStoreK a k =>
+      (recoverThroughWrappers k).map (fun (v, k') => (v, .assignStoreK a k'))
+  | .callTargetsK a b c d e k =>
+      (recoverThroughWrappers k).map (fun (v, k') => (v, .callTargetsK a b c d e k'))
+  | .callArgsK a b c d e k =>
+      (recoverThroughWrappers k).map (fun (v, k') => (v, .callArgsK a b c d e k'))
+  | .stmtOpK a b c d e k =>
+      (recoverThroughWrappers k).map (fun (v, k') => (v, .stmtOpK a b c d e k'))
+  | .mapRangeK a b c d e f k =>
+      (recoverThroughWrappers k).map (fun (v, k') => (v, .mapRangeK a b c d e f k'))
+  | .callValTargetsK a b c d e k =>
+      (recoverThroughWrappers k).map (fun (v, k') => (v, .callValTargetsK a b c d e k'))
+  | .callValCalleeK a b c k =>
+      (recoverThroughWrappers k).map (fun (v, k') => (v, .callValCalleeK a b c k'))
+  | .callValArgsK a b c d e k =>
+      (recoverThroughWrappers k).map (fun (v, k') => (v, .callValArgsK a b c d e k'))
+  | .deferCalleeK a b k =>
+      (recoverThroughWrappers k).map (fun (v, k') => (v, .deferCalleeK a b k'))
+  | .deferArgsK a b c d k =>
+      (recoverThroughWrappers k).map (fun (v, k') => (v, .deferArgsK a b c d k'))
+  | .panicArgK k => (recoverThroughWrappers k).map (fun (v, k') => (v, .panicArgK k'))
+
+/-- The `recover()` builtin (arc doc §A1; wrapper transparency added at
+the arc-final audit F1/BUG-015, 2026-08-06): walk the continuation to the
+first NON-WRAPPER call frame — gc's rule, verbatim from runtime/panic.go
+(`gorecover`): "there must be exactly one non-wrapper frame between
+gopanic and gorecover", with compiler-synthesized wrapper frames
+(`abi.FuncIDWrapper`; our wire's `"wrapper": true` promotion wrappers)
+skipped. Recover applies exactly when that frame sits on a `panicResumeK`
+whose newest entry is not yet recovered, with only glue and wrapper
+frames between — the shape the panic-drain rule builds (directly, or
+through the wrapper's forwarding call). Returns the recovered payload and
+the continuation with the entry marked, or `.nil` and the continuation
 unchanged (never stuck: `recover` outside a panic-run deferred function
-is a defined no-op in Go). -/
+is a defined no-op in Go). A wrapper frame ABOVE the walk's start cannot
+occur from lowered Go (`recover()` never appears textually inside a
+synthesized wrapper); for totality it is transparent there too. -/
 def recoverResult : Cont → GoValue × Cont
-  | .frame t r ds (.panicResumeK chain k) =>
-      match markNewestRecovered chain with
-      | some (v, chain') => (v, .frame t r ds (.panicResumeK chain' k))
-      | none => (.nil, .frame t r ds (.panicResumeK chain k))
-  | k@(.frame _ _ _ _) => (.nil, k)
+  | .frame t r ds k false =>
+      (match recoverThroughWrappers k with
+       | some (v, k') => (v, .frame t r ds k' false)
+       | none => (.nil, .frame t r ds k false))
+  | .frame t r ds k true =>
+      let (v, k') := recoverResult k
+      (v, .frame t r ds k' true)
   | k@.stop => (.nil, k)
   | k@(.panicResumeK _ _) => (.nil, k)
   | .seq a b k => let (v, k') := recoverResult k; (v, .seq a b k')
@@ -1567,7 +1642,7 @@ inductive Step : Config → ExecState → Config → ExecState → Prop where
       args.toList = [] →
       enterFrame s fid [] = .ok (func, frameEnv, resultLocs, s') →
       Step (.exec (.call targets fid args) env k) s
-        (.exec func.body frameEnv (.frame [] resultLocs [] k)) s'
+        (.exec func.body frameEnv (.frame [] resultLocs [] k func.wrapper)) s'
   | callTargetLoc {v loc fid locs te rest args env k s} :
       valueAsLoc v = .ok loc →
       Step (.retV v (.callTargetsK fid locs (te :: rest) args env k)) s
@@ -1580,7 +1655,7 @@ inductive Step : Config → ExecState → Config → ExecState → Prop where
       valueAsLoc v = .ok loc →
       enterFrame s fid [] = .ok (func, frameEnv, resultLocs, s') →
       Step (.retV v (.callTargetsK fid locs [] [] env k)) s
-        (.exec func.body frameEnv (.frame (locs ++ [loc]) resultLocs [] k)) s'
+        (.exec func.body frameEnv (.frame (locs ++ [loc]) resultLocs [] k func.wrapper)) s'
   | callTargetPanic {v msg fid locs pending args env k s} :
       valueAsLoc v = .error (.panic msg) →
       Step (.retV v (.callTargetsK fid locs pending args env k)) s
@@ -1591,7 +1666,7 @@ inductive Step : Config → ExecState → Config → ExecState → Prop where
   | callArgsDoneEnter {v fid locs vals func frameEnv resultLocs env k s s'} :
       enterFrame s fid (vals ++ [v]) = .ok (func, frameEnv, resultLocs, s') →
       Step (.retV v (.callArgsK fid locs vals [] env k)) s
-        (.exec func.body frameEnv (.frame locs resultLocs [] k)) s'
+        (.exec func.body frameEnv (.frame locs resultLocs [] k func.wrapper)) s'
   -- Wide statements (S2): one generic operand-plan frame; targets are
   -- checked as their addresses arrive (interpreter order), and the final
   -- state update is one `applyStmtOp` step. The `ch`/`ch'` choice streams
@@ -1692,7 +1767,7 @@ inductive Step : Config → ExecState → Config → ExecState → Prop where
   | callValCalleeEnter {fid captured locs func frameEnv resultLocs env k s s'} :
       enterFrame s fid captured = .ok (func, frameEnv, resultLocs, s') →
       Step (.retV (.funcVal fid captured) (.callValCalleeK locs [] env k)) s
-        (.exec func.body frameEnv (.frame locs resultLocs [] k)) s'
+        (.exec func.body frameEnv (.frame locs resultLocs [] k func.wrapper)) s'
   /-- Nullary call of a nil function value: nothing to evaluate, panic. -/
   | callValCalleeNil {locs env k s} :
       Step (.retV .nil (.callValCalleeK locs [] env k)) s
@@ -1704,7 +1779,7 @@ inductive Step : Config → ExecState → Config → ExecState → Prop where
   | callValArgsEnter {v fid captured locs vals func frameEnv resultLocs env k s s'} :
       enterFrame s fid (captured ++ vals ++ [v]) = .ok (func, frameEnv, resultLocs, s') →
       Step (.retV v (.callValArgsK (.funcVal fid captured) locs vals [] env k)) s
-        (.exec func.body frameEnv (.frame locs resultLocs [] k)) s'
+        (.exec func.body frameEnv (.frame locs resultLocs [] k func.wrapper)) s'
   /-- All arguments evaluated, callee is nil: NOW the invocation panics. -/
   | callValArgsNil {v locs vals env k s} :
       Step (.retV v (.callValArgsK .nil locs vals [] env k)) s
@@ -1712,43 +1787,43 @@ inductive Step : Config → ExecState → Config → ExecState → Prop where
           "runtime error: invalid memory address or nil pointer dereference", false⟩] k) s
   -- Frame exit: explicit return and fall-through perform the same
   -- pinned-location result read and caller-target stores.
-  | frameReturn {targets results k s vs s'} :
+  | frameReturn {targets results k w s vs s'} :
       loadMany s results = .ok vs →
       storeMany s targets vs = .ok s' →
-      Step (.returning (.frame targets results [] k)) s (.next k) s'
-  | frameFall {targets results k s vs s'} :
+      Step (.returning (.frame targets results [] k w)) s (.next k) s'
+  | frameFall {targets results k w s vs s'} :
       loadMany s results = .ok vs →
       storeMany s targets vs = .ok s' →
-      Step (.next (.frame targets results [] k)) s (.next k) s'
+      Step (.next (.frame targets results [] k w)) s (.next k) s'
   -- Draining the defer chain: one deferred call per step, each in its own
   -- frame whose continuation is this frame with the rest of the chain, so
   -- both exit paths converge on the rules above once the chain is empty.
   -- The inner frame has NO targets and NO results: a deferred call's
   -- results are discarded in Go (`defer/defer-function-result-discard`).
-  | frameDeferFall {targets results fid captured args ds k s func frameEnv resultLocs s'} :
+  | frameDeferFall {targets results fid captured args ds k w s func frameEnv resultLocs s'} :
       enterFrame s fid (captured ++ args) = .ok (func, frameEnv, resultLocs, s') →
-      Step (.next (.frame targets results ((.funcVal fid captured, args) :: ds) k)) s
+      Step (.next (.frame targets results ((.funcVal fid captured, args) :: ds) k w)) s
         (.exec func.body frameEnv
-          (.frame [] [] [] (.frame targets results ds k))) s'
-  | frameDeferReturn {targets results fid captured args ds k s func frameEnv resultLocs s'} :
+          (.frame [] [] [] (.frame targets results ds k w) func.wrapper)) s'
+  | frameDeferReturn {targets results fid captured args ds k w s func frameEnv resultLocs s'} :
       enterFrame s fid (captured ++ args) = .ok (func, frameEnv, resultLocs, s') →
-      Step (.returning (.frame targets results ((.funcVal fid captured, args) :: ds) k)) s
+      Step (.returning (.frame targets results ((.funcVal fid captured, args) :: ds) k w)) s
         (.exec func.body frameEnv
-          (.frame [] [] [] (.frame targets results ds k))) s'
+          (.frame [] [] [] (.frame targets results ds k w) func.wrapper)) s'
   /-- Invoking a nil deferred call panics at DRAIN time (Go: registration
   succeeded; the panic belongs to the invocation). The panic starts
   unwinding AT THIS FRAME with its remaining defers — which run, and may
   recover (`defer/defer-nil-function-recover-order` pins the order). -/
-  | frameDeferNilFall {targets results args ds k s} :
-      Step (.next (.frame targets results ((.nil, args) :: ds) k)) s
+  | frameDeferNilFall {targets results args ds k w s} :
+      Step (.next (.frame targets results ((.nil, args) :: ds) k w)) s
         (.panicking [⟨runtimeErrorValue
           "runtime error: invalid memory address or nil pointer dereference", false⟩]
-          (.frame targets results ds k)) s
-  | frameDeferNilReturn {targets results args ds k s} :
-      Step (.returning (.frame targets results ((.nil, args) :: ds) k)) s
+          (.frame targets results ds k w)) s
+  | frameDeferNilReturn {targets results args ds k w s} :
+      Step (.returning (.frame targets results ((.nil, args) :: ds) k w)) s
         (.panicking [⟨runtimeErrorValue
           "runtime error: invalid memory address or nil pointer dereference", false⟩]
-          (.frame targets results ds k)) s
+          (.frame targets results ds k w)) s
   -- Registering a deferred call: callee, then arguments, evaluated NOW.
   | deferStmt {callee args env k s} :
       Step (.exec (.deferCall callee args) env k) s
@@ -1781,25 +1856,25 @@ inductive Step : Config → ExecState → Config → ExecState → Prop where
       Step (.panicking chain k) s (.panicking chain k') s
   /-- Unwinding past a frame with no (remaining) defers: results are NOT
   read — the call did not return. -/
-  | panicFrameEmpty {chain targets results k s} :
-      Step (.panicking chain (.frame targets results [] k)) s
+  | panicFrameEmpty {chain targets results k w s} :
+      Step (.panicking chain (.frame targets results [] k w)) s
         (.panicking chain k) s
   /-- Defers RUN on the panic path: the deferred call executes above a
   `panicResumeK` carrying the suspended chain — the shape `recover`'s
   walk detects. Results discarded, as on the normal drain. -/
-  | panicFrameDefer {chain targets results fid captured args ds k s func frameEnv resultLocs s'} :
+  | panicFrameDefer {chain targets results fid captured args ds k w s func frameEnv resultLocs s'} :
       enterFrame s fid (captured ++ args) = .ok (func, frameEnv, resultLocs, s') →
-      Step (.panicking chain (.frame targets results ((.funcVal fid captured, args) :: ds) k)) s
+      Step (.panicking chain (.frame targets results ((.funcVal fid captured, args) :: ds) k w)) s
         (.exec func.body frameEnv
-          (.frame [] [] [] (.panicResumeK chain (.frame targets results ds k)))) s'
+          (.frame [] [] [] (.panicResumeK chain (.frame targets results ds k w)) func.wrapper)) s'
   /-- A nil deferred callee invoked DURING unwinding: the invocation's
   nil-dereference panic joins the chain (newest last) and this frame's
   remaining defers keep draining. -/
-  | panicFrameDeferNil {chain targets results args ds k s} :
-      Step (.panicking chain (.frame targets results ((.nil, args) :: ds) k)) s
+  | panicFrameDeferNil {chain targets results args ds k w s} :
+      Step (.panicking chain (.frame targets results ((.nil, args) :: ds) k w)) s
         (.panicking (chain ++ [⟨runtimeErrorValue
           "runtime error: invalid memory address or nil pointer dereference", false⟩])
-          (.frame targets results ds k)) s
+          (.frame targets results ds k w)) s
   /-- A NEW panic unwinding through a suspended chain's marker merges
   behind it — this single rule produces Go's chained abort output
   (`panic: first ⏎ panic: second`, `… [recovered] ⏎ …`). -/
@@ -1869,19 +1944,19 @@ inductive Step : Config → ExecState → Config → ExecState → Prop where
   implements; the `during-panic` pin discriminates newest-vs-original by
   asserting the recovered value). Appended at the END of the inductive
   so the correspondence proofs' positional case tags stay stable. -/
-  | frameDeferFallEnterPanic {targets results fid captured args ds k s msg} :
+  | frameDeferFallEnterPanic {targets results fid captured args ds k w s msg} :
       enterFrame s fid (captured ++ args) = .error (.panic msg) →
-      Step (.next (.frame targets results ((.funcVal fid captured, args) :: ds) k)) s
-        (.panicking [⟨runtimeErrorValue msg, false⟩] (.frame targets results ds k)) s
-  | frameDeferReturnEnterPanic {targets results fid captured args ds k s msg} :
+      Step (.next (.frame targets results ((.funcVal fid captured, args) :: ds) k w)) s
+        (.panicking [⟨runtimeErrorValue msg, false⟩] (.frame targets results ds k w)) s
+  | frameDeferReturnEnterPanic {targets results fid captured args ds k w s msg} :
       enterFrame s fid (captured ++ args) = .error (.panic msg) →
-      Step (.returning (.frame targets results ((.funcVal fid captured, args) :: ds) k)) s
-        (.panicking [⟨runtimeErrorValue msg, false⟩] (.frame targets results ds k)) s
-  | panicFrameDeferEnterPanic {chain targets results fid captured args ds k s msg} :
+      Step (.returning (.frame targets results ((.funcVal fid captured, args) :: ds) k w)) s
+        (.panicking [⟨runtimeErrorValue msg, false⟩] (.frame targets results ds k w)) s
+  | panicFrameDeferEnterPanic {chain targets results fid captured args ds k w s msg} :
       enterFrame s fid (captured ++ args) = .error (.panic msg) →
-      Step (.panicking chain (.frame targets results ((.funcVal fid captured, args) :: ds) k)) s
+      Step (.panicking chain (.frame targets results ((.funcVal fid captured, args) :: ds) k w)) s
         (.panicking (chain ++ [⟨runtimeErrorValue msg, false⟩])
-          (.frame targets results ds k)) s
+          (.frame targets results ds k w)) s
 
 /-- Reflexive-transitive closure of `Step`. -/
 inductive Steps : Config → ExecState → Config → ExecState → Prop where

@@ -51,14 +51,14 @@ pointer, the recovered marker cancelling the unwind — ending at the
 frame's FALL exit still pending (`Config.next` at the frame), with the
 result cell holding 7. The `$c0` cell and the capture-parameter cell are
 dropped (affine). -/
-theorem wp_recoverDirect_body {ra : Addr} {tl : Loc} {k}
+theorem wp_recoverDirect_body {ra : Addr} {tl : Loc} {k} {wf : Bool}
     (hprog : GoCoreGS.prog GF = recoverLowered.funcs)
     (hmeths : GoCoreGS.methods GF = #[]) :
     ra.id ↦ (⟨some (.int .int), .int 0 .int⟩ : HeapCell)
       ∗ (ra.id ↦ (⟨some (.int .int), .int 7 .int⟩ : HeapCell)
-          -∗ WP (Config.next (.frame [tl] [.base ra] [] k)) @ s ; E {{ Φ }})
+          -∗ WP (Config.next (.frame [tl] [.base ra] [] k wf)) @ s ; E {{ Φ }})
       ⊢ WP (Config.exec recoverDirectFunc.body [[("result", Loc.base ra)]]
-              (.frame [tl] [.base ra] [] k)) @ s ; E {{ Φ }} := by
+              (.frame [tl] [.base ra] [] k wf)) @ s ; E {{ Φ }} := by
   iintro ⟨Hr, Hcont⟩
   simp only [recoverDirectFunc]
   -- the body block, the defer registration, `panic("boom-direct")`

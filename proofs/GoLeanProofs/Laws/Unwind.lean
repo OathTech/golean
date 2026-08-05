@@ -206,9 +206,9 @@ theorem wp_eval_strict_nullary_pure {e : Expr} {op : StrictOp}
 /-- `return` at a VOID pure-barrier frame (no targets, no results, no
 defers): resume the caller — the `.returning` twin of `wp_frame_fall`. -/
 @[go_walk_law]
-theorem wp_frame_return_void {k} :
+theorem wp_frame_return_void {k} {w : Bool} :
     (|={E}[E]▷=> £ 1 -∗ WP (Config.next k) @ s ; E {{ Φ }}) ⊢
-      WP (Config.returning (.frame [] [] [] k)) @ s ; E {{ Φ }} :=
+      WP (Config.returning (.frame [] [] [] k w)) @ s ; E {{ Φ }} :=
   wp_pure_det rfl (by simp [Config.choiceFree])
     (fun _ => Step.frameReturn (targets := []) (results := []) rfl rfl)
 
@@ -321,13 +321,14 @@ theorem wp_call_value_enter_cap1 {fid : FuncId} {func : Func}
     (hnorm : ∀ σ : ExecState, σ.types = GoCoreGS.types GF →
       normalizeValueForTy σ pty cv = .ok cv') :
     iprop(∀ pa : Addr, pa.id ↦ (⟨some pty, cv'⟩ : HeapCell) -∗
-        WP (Config.exec func.body [[(pid, Loc.base pa)]] (.frame locs [] [] k))
+        WP (Config.exec func.body [[(pid, Loc.base pa)]]
+              (.frame locs [] [] k func.wrapper))
           @ s ; E {{ Φ }})
       ⊢ WP (Config.retV (.funcVal fid [cv]) (.callValCalleeK locs [] env k))
           @ s ; E {{ Φ }} :=
   wp_enter_cap1_core rfl (by trivial)
     (enterFrame_cap1 hfind hargs hres hnodisp hnorm)
-    (.frame locs [] [] k)
+    (.frame locs [] [] k func.wrapper)
     (fun _ henter => Step.callValCalleeEnter henter)
 
 /-- **Defer drain on the RETURN path**, one capture / no arguments: the
@@ -336,6 +337,7 @@ discarded (`[] [] []`). -/
 theorem wp_frame_defer_return_cap1 {fid : FuncId} {func : Func}
     {pid : String} {pty : Ty} {cv cv' : GoValue}
     {targets results : List Loc} {ds : List (GoValue × List GoValue)} {k}
+    {wsrc : Bool}
     (hfind : findFunctionIn? (GoCoreGS.prog GF) fid = some func)
     (hargs : func.args = #[⟨pid, pty⟩])
     (hres : func.results = #[])
@@ -345,19 +347,21 @@ theorem wp_frame_defer_return_cap1 {fid : FuncId} {func : Func}
       normalizeValueForTy σ pty cv = .ok cv') :
     iprop(∀ pa : Addr, pa.id ↦ (⟨some pty, cv'⟩ : HeapCell) -∗
         WP (Config.exec func.body [[(pid, Loc.base pa)]]
-              (.frame [] [] [] (.frame targets results ds k))) @ s ; E {{ Φ }})
+              (.frame [] [] [] (.frame targets results ds k wsrc) func.wrapper))
+          @ s ; E {{ Φ }})
       ⊢ WP (Config.returning
-            (.frame targets results ((.funcVal fid [cv], []) :: ds) k))
+            (.frame targets results ((.funcVal fid [cv], []) :: ds) k wsrc))
           @ s ; E {{ Φ }} :=
   wp_enter_cap1_core rfl (by trivial)
     (enterFrame_cap1 hfind hargs hres hnodisp hnorm)
-    (.frame [] [] [] (.frame targets results ds k))
+    (.frame [] [] [] (.frame targets results ds k wsrc) func.wrapper)
     (fun _ henter => Step.frameDeferReturn (by simpa using henter))
 
 /-- **Defer drain on the FALL path** (normal completion), same shape. -/
 theorem wp_frame_defer_fall_cap1 {fid : FuncId} {func : Func}
     {pid : String} {pty : Ty} {cv cv' : GoValue}
     {targets results : List Loc} {ds : List (GoValue × List GoValue)} {k}
+    {wsrc : Bool}
     (hfind : findFunctionIn? (GoCoreGS.prog GF) fid = some func)
     (hargs : func.args = #[⟨pid, pty⟩])
     (hres : func.results = #[])
@@ -367,20 +371,21 @@ theorem wp_frame_defer_fall_cap1 {fid : FuncId} {func : Func}
       normalizeValueForTy σ pty cv = .ok cv') :
     iprop(∀ pa : Addr, pa.id ↦ (⟨some pty, cv'⟩ : HeapCell) -∗
         WP (Config.exec func.body [[(pid, Loc.base pa)]]
-              (.frame [] [] [] (.frame targets results ds k))) @ s ; E {{ Φ }})
+              (.frame [] [] [] (.frame targets results ds k wsrc) func.wrapper))
+          @ s ; E {{ Φ }})
       ⊢ WP (Config.next
-            (.frame targets results ((.funcVal fid [cv], []) :: ds) k))
+            (.frame targets results ((.funcVal fid [cv], []) :: ds) k wsrc))
           @ s ; E {{ Φ }} :=
   wp_enter_cap1_core rfl (by trivial)
     (enterFrame_cap1 hfind hargs hres hnodisp hnorm)
-    (.frame [] [] [] (.frame targets results ds k))
+    (.frame [] [] [] (.frame targets results ds k wsrc) func.wrapper)
     (fun _ henter => Step.frameDeferFall (by simpa using henter))
 
 /-- **Defer drain on the PANIC path**: the deferred closure runs above
 the suspended chain's marker — the configuration `recover`'s walk
 detects. The unwinding arc's central stateful law. -/
 theorem wp_panic_frame_defer_cap1 {fid : FuncId} {func : Func}
-    {pid : String} {pty : Ty} {cv cv' : GoValue}
+    {pid : String} {pty : Ty} {cv cv' : GoValue} {wsrc : Bool}
     {chain : List PanicEntry}
     {targets results : List Loc} {ds : List (GoValue × List GoValue)} {k}
     (hfind : findFunctionIn? (GoCoreGS.prog GF) fid = some func)
@@ -393,14 +398,15 @@ theorem wp_panic_frame_defer_cap1 {fid : FuncId} {func : Func}
     iprop(∀ pa : Addr, pa.id ↦ (⟨some pty, cv'⟩ : HeapCell) -∗
         WP (Config.exec func.body [[(pid, Loc.base pa)]]
               (.frame [] [] []
-                (.panicResumeK chain (.frame targets results ds k))))
+                (.panicResumeK chain (.frame targets results ds k wsrc))
+                func.wrapper))
           @ s ; E {{ Φ }})
       ⊢ WP (Config.panicking chain
-            (.frame targets results ((.funcVal fid [cv], []) :: ds) k))
+            (.frame targets results ((.funcVal fid [cv], []) :: ds) k wsrc))
           @ s ; E {{ Φ }} :=
   wp_enter_cap1_core rfl (by trivial)
     (enterFrame_cap1 hfind hargs hres hnodisp hnorm)
-    (.frame [] [] [] (.panicResumeK chain (.frame targets results ds k)))
+    (.frame [] [] [] (.panicResumeK chain (.frame targets results ds k wsrc)) func.wrapper)
     (fun _ henter => Step.panicFrameDefer (by simpa using henter))
 
 end
@@ -590,7 +596,8 @@ theorem wp_recover_catch_seven {ra : Addr} {k}
   -- recover(): the walk crosses the strict/if/seq frames, lands on the
   -- marker under the drain frame, marks the chain, returns the payload
   iapply (wp_recover (hrec := rfl))
-  simp only [recoverResult, markNewestRecovered, Bool.false_eq_true, reduceIte]
+  simp only [recoverResult, recoverThroughWrappers, markNewestRecovered,
+    Option.map, Bool.false_eq_true, reduceIte]
   iapply fupd_intro
   inext
   iapply fupd_intro

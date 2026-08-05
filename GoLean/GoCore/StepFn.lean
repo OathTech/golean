@@ -84,25 +84,26 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
   | .panicked _ => throw (.internal "step on terminal panicked configuration")
   | .panicking chain k =>
       match k with
-      | .frame _targets _results [] k' => return (.panicking chain k', s, choices)
-      | .frame targets results ((cv, args) :: ds) k' =>
+      | .frame _targets _results [] k' _ => return (.panicking chain k', s, choices)
+      | .frame targets results ((cv, args) :: ds) k' w =>
           match cv with
           | .funcVal fid captured =>
               -- Defers run on the panic path, above the suspended chain's
               -- marker (the shape `recover`'s walk detects). An ENTRY
-              -- panic joins the chain (audit F1+F5).
+              -- panic joins the chain (audit F1+F5). The deferred
+              -- callee's frame carries ITS wrapper flag (BUG-015).
               enterFrameDeferPanicking s fid (captured ++ args)
                 (fun func frameEnv =>
                   .exec func.body frameEnv
                     (.frame [] [] [] (.panicResumeK chain
-                      (.frame targets results ds k'))))
-                chain (.frame targets results ds k') choices
+                      (.frame targets results ds k' w)) func.wrapper))
+                chain (.frame targets results ds k' w) choices
           | .nil =>
               -- The nil invocation's panic joins the chain; remaining
               -- defers keep draining.
               return (.panicking (chain ++ [⟨runtimeErrorValue
                 "runtime error: invalid memory address or nil pointer dereference", false⟩])
-                (.frame targets results ds k'), s, choices)
+                (.frame targets results ds k' w), s, choices)
           | other => throw (.stuck s!"deferred callee is not a function value: {repr other}")
       | .panicResumeK suspended k' =>
           return (.panicking (suspended ++ chain) k', s, choices)
@@ -172,7 +173,7 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
               | [] =>
                   enterFrameStep s fid []
                     (fun func frameEnv resultLocs =>
-                      .exec func.body frameEnv (.frame [] resultLocs [] k)) k choices
+                      .exec func.body frameEnv (.frame [] resultLocs [] k func.wrapper)) k choices
           | none => throw (.unsupported "unsupported call target assignee")
       | .mapRange keyVar valVar mapExpr keyTy valTy body =>
           return (.evalE mapExpr env
@@ -288,7 +289,7 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
                       enterFrameStep s fid []
                         (fun func frameEnv resultLocs =>
                           .exec func.body frameEnv
-                            (.frame (locs ++ [loc]) resultLocs [] k')) k' choices
+                            (.frame (locs ++ [loc]) resultLocs [] k' func.wrapper)) k' choices
       | .callArgsK fid locs vals pending env k' =>
           match pending with
           | a :: rest =>
@@ -297,7 +298,7 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
           | [] =>
               enterFrameStep s fid (vals ++ [v])
                 (fun func frameEnv resultLocs =>
-                  .exec func.body frameEnv (.frame locs resultLocs [] k')) k' choices
+                  .exec func.body frameEnv (.frame locs resultLocs [] k' func.wrapper)) k' choices
       | .stmtOpK op nt done pending env k' =>
           -- Target addresses are checked as they arrive ONLY when more
           -- operands follow (interpreter panic timing); at the apply
@@ -338,7 +339,7 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
           | .funcVal fid captured, [] =>
               enterFrameStep s fid captured
                 (fun func frameEnv resultLocs =>
-                  .exec func.body frameEnv (.frame locs resultLocs [] k')) k' choices
+                  .exec func.body frameEnv (.frame locs resultLocs [] k' func.wrapper)) k' choices
           | .nil, [] =>
               return (.panicking [⟨runtimeErrorValue
                 "runtime error: invalid memory address or nil pointer dereference", false⟩]
@@ -360,7 +361,7 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
               | .funcVal fid captured =>
                   enterFrameStep s fid (captured ++ vals ++ [v])
                     (fun func frameEnv resultLocs =>
-                      .exec func.body frameEnv (.frame locs resultLocs [] k')) k' choices
+                      .exec func.body frameEnv (.frame locs resultLocs [] k' func.wrapper)) k' choices
               | .nil =>
                   return (.panicking [⟨runtimeErrorValue
                     "runtime error: invalid memory address or nil pointer dereference", false⟩]
@@ -398,11 +399,11 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
       | .seq (t :: rest) env k' => return (.exec t env (.seq rest env k'), s, choices)
       | .seq [] _ k' => return (.next k', s, choices)
       | .loop c b env k' => return (.exec (.while c b) env k', s, choices)
-      | .frame targets results [] k' => do
+      | .frame targets results [] k' _ => do
           let vs ← loadMany s results
           let s' ← storeMany s targets vs
           return (.next k', s', choices)
-      | .frame targets results ((cv, args) :: ds) k' =>
+      | .frame targets results ((cv, args) :: ds) k' w =>
           match cv with
           | .funcVal fid captured =>
               -- A deferred call's results are DISCARDED (Go); only effects
@@ -413,14 +414,14 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
               enterFrameStep s fid (captured ++ args)
                 (fun func frameEnv _ =>
                   .exec func.body frameEnv
-                    (.frame [] [] [] (.frame targets results ds k')))
-                (.frame targets results ds k') choices
+                    (.frame [] [] [] (.frame targets results ds k' w) func.wrapper))
+                (.frame targets results ds k' w) choices
           | .nil =>
               -- Registration succeeded; the INVOCATION panics (Go), and
               -- this frame's remaining defers run on the panic path.
               return (.panicking [⟨runtimeErrorValue
                 "runtime error: invalid memory address or nil pointer dereference", false⟩]
-                (.frame targets results ds k'), s, choices)
+                (.frame targets results ds k' w), s, choices)
           | other => throw (.stuck s!"deferred callee is not a function value: {repr other}")
       | .panicResumeK chain k' =>
           if chainNewestRecovered chain then
@@ -454,7 +455,7 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
       | .breakableK k' => return (.next k', s, choices)
       | .labelK _ k' => return (.breaking k', s, choices)
       | .mapIterK _ _ _ _ _ _ _ k' => return (.next k', s, choices)
-      | .frame _ _ _ _ => throw (.stuck "function body escaped with break")
+      | .frame _ _ _ _ _ => throw (.stuck "function body escaped with break")
       | .stop => throw (.stuck "break outside loop")
       | _ => throw (.internal "break delivered to expression continuation")
   | .continuing k =>
@@ -465,7 +466,7 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
       | .loop c b env k' => return (.exec (.while c b) env k', s, choices)
       | .mapIterK keyVar valVar keyTy valTy body remaining env k' =>
           return (.next (.mapIterK keyVar valVar keyTy valTy body remaining env k'), s, choices)
-      | .frame _ _ _ _ => throw (.stuck "function body escaped with continue")
+      | .frame _ _ _ _ _ => throw (.stuck "function body escaped with continue")
       | .stop => throw (.stuck "continue outside loop")
       | _ => throw (.internal "continue delivered to expression continuation")
   | .returning k =>
@@ -475,11 +476,11 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
       | .labelK _ k' => return (.returning k', s, choices)
       | .loop _ _ _ k' => return (.returning k', s, choices)
       | .mapIterK _ _ _ _ _ _ _ k' => return (.returning k', s, choices)
-      | .frame targets results [] k' => do
+      | .frame targets results [] k' _ => do
           let vs ← loadMany s results
           let s' ← storeMany s targets vs
           return (.next k', s', choices)
-      | .frame targets results ((cv, args) :: ds) k' =>
+      | .frame targets results ((cv, args) :: ds) k' w =>
           match cv with
           | .funcVal fid captured =>
               -- A deferred call's results are DISCARDED (Go); only effects
@@ -490,14 +491,14 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
               enterFrameStep s fid (captured ++ args)
                 (fun func frameEnv _ =>
                   .exec func.body frameEnv
-                    (.frame [] [] [] (.frame targets results ds k')))
-                (.frame targets results ds k') choices
+                    (.frame [] [] [] (.frame targets results ds k' w) func.wrapper))
+                (.frame targets results ds k' w) choices
           | .nil =>
               -- Registration succeeded; the INVOCATION panics (Go), and
               -- this frame's remaining defers run on the panic path.
               return (.panicking [⟨runtimeErrorValue
                 "runtime error: invalid memory address or nil pointer dereference", false⟩]
-                (.frame targets results ds k'), s, choices)
+                (.frame targets results ds k' w), s, choices)
           | other => throw (.stuck s!"deferred callee is not a function value: {repr other}")
       | .stop => throw (.internal "return unwound past the entry frame")
       | _ => throw (.internal "return delivered to expression continuation")
@@ -510,7 +511,7 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
       | .labelK name k' =>
           if name = L then return (.next k', s, choices)
           else return (.breakingTo L k', s, choices)
-      | .frame _ _ _ _ => throw (.stuck "function body escaped with labeled break")
+      | .frame _ _ _ _ _ => throw (.stuck "function body escaped with labeled break")
       | .stop => throw (.stuck s!"labeled break escaped its label: {L}")
       | _ => throw (.internal "labeled break delivered to expression continuation")
   | .continuingTo L k =>
@@ -528,7 +529,7 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
           if contHeadLabel k' = some L then
             return (.next (.mapIterK keyVar valVar keyTy valTy body remaining env k'), s, choices)
           else return (.continuingTo L k', s, choices)
-      | .frame _ _ _ _ => throw (.stuck "function body escaped with labeled continue")
+      | .frame _ _ _ _ _ => throw (.stuck "function body escaped with labeled continue")
       | .stop => throw (.stuck s!"labeled continue escaped its label: {L}")
       | _ => throw (.internal "labeled continue delivered to expression continuation")
 

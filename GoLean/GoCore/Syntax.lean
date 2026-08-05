@@ -271,6 +271,14 @@ structure Func where
   Defaults to `false` so hand-built GoCore programs (tests, proofs) stay
   non-variadic; the wire always carries it explicitly. -/
   variadic : Bool := false
+  /-- A compiler-SYNTHESIZED promotion wrapper (wire `"wrapper": true`,
+  design note 2026-08-05 D1.3): the frame it enters is marked so the
+  recover walk treats it as transparent, exactly gc's
+  `abi.FuncIDWrapper` (BUG-015, arc-final audit F1, 2026-08-06).
+  Defaults to `false` — hand-built programs and every user-declared
+  function are non-wrappers; only the frontend's synthesized promotion
+  wrappers set it. -/
+  wrapper : Bool := false
   deriving Repr, BEq
 
 structure MethodInfo where

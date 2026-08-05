@@ -126,6 +126,22 @@ Mechanics:
    fails the whole export, the existing policy for methods — so a
    method table that IS on the wire is complete, which is what the
    machine's satisfaction logic relies on (D2).
+   ADDENDUM (arc-final audit F1 / BUG-015, 2026-08-06): this note never
+   considered the wrapper frame's consequence for the RECOVER WALK. gc
+   marks the same synthesized wrappers `abi.FuncIDWrapper` and its
+   gorecover skips them ("there must be exactly one non-wrapper frame
+   between gopanic and gorecover", runtime/panic.go) — an unmarked
+   wrapper frame made `recover()` inside a promoted method return nil
+   (silent value divergence + status flip; the audit's decisive
+   finding). DECLARED SCHEMA ADDITION: synthesized wrappers carry
+   `"wrapper": true` on the wire (only `synthesizeWrapper` emits it);
+   `Func.wrapper` (Syntax.lean, default false) threads it into the
+   frame continuation (`Cont.frame`'s trailing marker), and
+   `recoverResult` — and ONLY the recover walk; chain joining, defer
+   draining, and panic status treat wrapper frames as ordinary — skips
+   wrapper frames (`recoverThroughWrappers`). Pinned by
+   `interfaces/recover-promoted-wrapper/*`: all three wrapper paths
+   plus four agreeing controls.
 4. **Embedded-interface dispatch at static call sites**
    (`emitMethodCall`'s deferred branch): the receiver expression walks
    to the interface FIELD value, then dispatches `Iface.M` — same shape
