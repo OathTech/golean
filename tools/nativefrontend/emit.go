@@ -476,7 +476,7 @@ func (e *emitter) emitLabeled(st *ast.LabeledStmt) (any, error) {
 		return e.emitStmt(st.Stmt)
 	}
 	switch st.Stmt.(type) {
-	case *ast.ForStmt, *ast.RangeStmt, *ast.SwitchStmt:
+	case *ast.ForStmt, *ast.RangeStmt, *ast.SwitchStmt, *ast.TypeSwitchStmt:
 		w, err := e.emitStmt(st.Stmt)
 		if err != nil {
 			return nil, err
@@ -1166,6 +1166,8 @@ func (e *emitter) emitStmt(s ast.Stmt) (any, error) {
 		return map[string]any{"stmt": "expr", "expr": expr}, nil
 	case *ast.SwitchStmt:
 		return e.emitSwitch(st)
+	case *ast.TypeSwitchStmt:
+		return e.emitTypeSwitch(st)
 	case *ast.DeferStmt:
 		// `defer f(args)`: the callee and arguments are evaluated NOW; the
 		// pending call is prepended to the frame's chain and runs at frame
@@ -2326,6 +2328,200 @@ func (e *emitter) emitIncDec(st *ast.IncDecStmt) (any, error) {
 // bodies are Go's actual clause scoping, so fallthrough into/out of
 // declaring clauses needs no restriction. Fail-closed residue: type
 // switches (interfaces lane, slice 2 of the arc).
+// ---- type switches (design note 2026-08-05 D3) ----
+
+// emitTypeSwitch desugars `switch [init;] [v :=] guard.(type) { ... }` to a
+// breakable block: the guard evaluated ONCE into a temp, then a first-match
+// if-chain in SOURCE order (default in the final else position). Case tests
+// are comma-ok asserts (`case nil` compares against the nil interface) —
+// effect-free, so eager per-clause test evaluation inside the nested chain
+// is observationally silent and only first-match order is load-bearing
+// (type-switch-first-match). Clause bodies are their own blocks; the
+// per-clause binding (go/types Implicits) is declared at block top — the
+// asserted value in a single-type clause, the guard temp otherwise (Go's
+// static-type rule). No fallthrough exists in a type switch (spec).
+func (e *emitter) emitTypeSwitch(st *ast.TypeSwitchStmt) (any, error) {
+	body := []any{}
+	if st.Init != nil {
+		sub, err := e.emitStmtList([]ast.Stmt{st.Init})
+		if err != nil {
+			return nil, err
+		}
+		body = append(body, sub...)
+	}
+	var guardExpr ast.Expr
+	switch a := st.Assign.(type) {
+	case *ast.ExprStmt:
+		ta, ok := ast.Unparen(a.X).(*ast.TypeAssertExpr)
+		if !ok {
+			return nil, unsup("type switch guard shape %T", a.X)
+		}
+		guardExpr = ta.X
+	case *ast.AssignStmt:
+		if len(a.Rhs) != 1 {
+			return nil, unsup("type switch guard arity")
+		}
+		ta, ok := ast.Unparen(a.Rhs[0]).(*ast.TypeAssertExpr)
+		if !ok {
+			return nil, unsup("type switch guard shape %T", a.Rhs[0])
+		}
+		guardExpr = ta.X
+	default:
+		return nil, unsup("type switch guard statement %T", st.Assign)
+	}
+	guardTy := e.info.TypeOf(guardExpr)
+	gty, err := e.emitType(guardTy)
+	if err != nil {
+		return nil, err
+	}
+	saved := e.hoisted
+	e.hoisted = nil
+	guardW, err := e.emitExpr(guardExpr)
+	hoists := e.hoisted
+	e.hoisted = saved
+	if err != nil {
+		return nil, err
+	}
+	seq := e.tmpSeq
+	e.tmpSeq++
+	tsVar := "$ts" + itoa(seq)
+	body = append(body, hoists...)
+	body = append(body, map[string]any{
+		"stmt": "assign", "define": true,
+		"lhs":  []any{map[string]any{"target": "declare", "id": tsVar, "type": gty}},
+		"rhs":  []any{guardW},
+	})
+	tsRef := map[string]any{"expr": "ident", "name": tsVar, "type": gty}
+
+	// Split clauses: SOURCE order for the chain, default kept for the
+	// innermost else (Go: default position in source is irrelevant).
+	ordered := []*ast.CaseClause{}
+	var defaultClause *ast.CaseClause
+	for _, raw := range st.Body.List {
+		cc, ok := raw.(*ast.CaseClause)
+		if !ok {
+			return nil, unsup("type switch body statement %T", raw)
+		}
+		if cc.List == nil {
+			defaultClause = cc
+			continue
+		}
+		ordered = append(ordered, cc)
+	}
+	var chain any
+	if defaultClause != nil {
+		b, err := e.typeSwitchClauseBody(defaultClause, tsRef)
+		if err != nil {
+			return nil, err
+		}
+		chain = b
+	}
+	for k := len(ordered) - 1; k >= 0; k-- {
+		cc := ordered[k]
+		pre := []any{}
+		var cond any
+		var boundVal any
+		if len(cc.List) == 1 {
+			c1, bv, p1, err := e.typeSwitchTest(cc.List[0], tsRef, gty)
+			if err != nil {
+				return nil, err
+			}
+			cond, boundVal, pre = c1, bv, p1
+		} else {
+			for _, texpr := range cc.List {
+				c1, _, p1, err := e.typeSwitchTest(texpr, tsRef, gty)
+				if err != nil {
+					return nil, err
+				}
+				pre = append(pre, p1...)
+				if cond == nil {
+					cond = c1
+				} else {
+					cond = map[string]any{"expr": "binary", "op": "||", "x": cond, "y": c1}
+				}
+			}
+			boundVal = nil // multi-type clause binds the guard value
+		}
+		if boundVal == nil {
+			boundVal = tsRef
+		}
+		b, err := e.typeSwitchClauseBody(cc, boundVal)
+		if err != nil {
+			return nil, err
+		}
+		ifNode := map[string]any{"stmt": "if", "cond": cond, "then": b}
+		if chain != nil {
+			ifNode["else"] = chain
+		}
+		chain = map[string]any{"stmt": "block", "body": append(pre, ifNode)}
+	}
+	if chain != nil {
+		body = append(body, chain)
+	}
+	return map[string]any{"stmt": "breakable",
+		"body": map[string]any{"stmt": "block", "body": body}}, nil
+}
+
+// typeSwitchTest emits one case-type test against the guard temp: a
+// comma-ok assert into fresh temps (cond = the ok temp, boundVal = the
+// value temp), or a nil-interface comparison for `case nil` (cond only,
+// boundVal = nil meaning "bind the guard value").
+func (e *emitter) typeSwitchTest(texpr ast.Expr, tsRef any, gty any) (any, any, []any, error) {
+	if tv, ok := e.info.Types[texpr]; ok && tv.IsNil() {
+		// Bare (untyped) nil: the nil interface IS the raw nil value; a
+		// typed nil BOX correctly compares unequal (type-switch-typed-nil).
+		cond := map[string]any{"expr": "binary", "op": "==",
+			"x":           tsRef,
+			"y":           map[string]any{"expr": "nil"},
+			"operandType": gty}
+		return cond, nil, nil, nil
+	}
+	target := e.info.TypeOf(texpr)
+	tw, err := e.emitType(target)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	seq := e.tmpSeq
+	e.tmpSeq++
+	vVar := "$tsv" + itoa(seq)
+	okVar := "$tso" + itoa(seq)
+	boolTy := map[string]any{"kind": "bool"}
+	pre := []any{map[string]any{
+		"stmt":       "type-assert",
+		"target":     map[string]any{"target": "declare", "id": vVar, "type": tw},
+		"okTarget":   map[string]any{"target": "declare", "id": okVar, "type": boolTy},
+		"expr":       tsRef,
+		"targetType": tw,
+	}}
+	cond := map[string]any{"expr": "ident", "name": okVar, "type": boolTy}
+	boundVal := map[string]any{"expr": "ident", "name": vVar, "type": tw}
+	return cond, boundVal, pre, nil
+}
+
+// typeSwitchClauseBody emits a clause body block, prefixed by the clause's
+// implicit binding (go/types Implicits) initialized to boundVal.
+func (e *emitter) typeSwitchClauseBody(cc *ast.CaseClause, boundVal any) (any, error) {
+	stmts := []any{}
+	if obj, ok := e.info.Implicits[cc]; ok {
+		if v, isVar := obj.(*types.Var); isVar {
+			vty, err := e.emitType(v.Type())
+			if err != nil {
+				return nil, err
+			}
+			stmts = append(stmts, map[string]any{
+				"stmt": "assign", "define": true,
+				"lhs":  []any{map[string]any{"target": "declare", "id": v.Name(), "type": vty}},
+				"rhs":  []any{boundVal},
+			})
+		}
+	}
+	bodyStmts, err := e.emitStmtList(cc.Body)
+	if err != nil {
+		return nil, err
+	}
+	return map[string]any{"stmt": "block", "body": append(stmts, bodyStmts...)}, nil
+}
+
 func (e *emitter) emitSwitch(st *ast.SwitchStmt) (any, error) {
 	body := []any{}
 	if st.Init != nil {
@@ -3018,6 +3214,25 @@ func (e *emitter) synthesizeWrapper(named *types.Named, tName string, msel *type
 	}, nil
 }
 
+// ifaceWireName returns the wire TypeId for an interface-typed static
+// type: the qualified name for a named interface, the canonical structural
+// rendering for an anonymous one (which it registers for the declaration
+// pass — same naming as emitType's anonymous-interface arm).
+func (e *emitter) ifaceWireName(t types.Type) (string, bool) {
+	if name, ok := e.namedTypeName(t); ok {
+		return name, true
+	}
+	if iface, ok := t.(*types.Interface); ok && iface.IsMethodSet() {
+		if iface.Empty() {
+			return emptyInterfaceName, true
+		}
+		name := types.TypeString(iface, func(p *types.Package) string { return p.Name() })
+		e.noteInterface(name, iface)
+		return name, true
+	}
+	return "", false
+}
+
 // hopFinalType statically walks the embedded-hop types (no emission): the
 // type of the field reached by `hops` from t.
 func hopFinalType(t types.Type, hops []int) (types.Type, error) {
@@ -3587,6 +3802,15 @@ func (e *emitter) freeCaptures(lit *ast.FuncLit) []*types.Var {
 	ast.Inspect(lit, func(n ast.Node) bool {
 		if id, ok := n.(*ast.Ident); ok {
 			if obj, isDef := e.info.Defs[id]; isDef && obj != nil {
+				inner[obj] = true
+			}
+		}
+		// A type-switch clause's implicit binding (`switch r := x.(type)`)
+		// is declared INSIDE the literal but recorded in Implicits, not
+		// Defs — without this it was mis-captured as an OUTER variable
+		// (caught by panic-recover/recover-value's stage move).
+		if cc, ok := n.(*ast.CaseClause); ok {
+			if obj, ok2 := e.info.Implicits[cc]; ok2 {
 				inner[obj] = true
 			}
 		}
@@ -4176,9 +4400,9 @@ func (e *emitter) emitMethodCall(c *ast.CallExpr, sel *ast.SelectorExpr) (any, b
 			}
 			recvArg, ifaceStatic = node, ft
 		}
-		ifaceName, ok := e.namedTypeName(ifaceStatic)
+		ifaceName, ok := e.ifaceWireName(ifaceStatic)
 		if !ok {
-			return nil, false, unsup("method call on anonymous interface type")
+			return nil, false, unsup("method call on unnameable interface type %s", ifaceStatic)
 		}
 		// Record the dispatch target so emitProgram can synthesize a table
 		// anchor when the interface is not declared in this package

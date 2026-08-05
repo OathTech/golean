@@ -60,6 +60,10 @@ func run() error {
 		Defs:       map[*ast.Ident]types.Object{},
 		Uses:       map[*ast.Ident]types.Object{},
 		Selections: map[*ast.SelectorExpr]*types.Selection{},
+		// Implicits carries the per-clause type-switch variable
+		// (`switch v := x.(type)`) — each CaseClause maps to its own
+		// implicitly declared *types.Var (design note 2026-08-05 D3).
+		Implicits: map[ast.Node]types.Object{},
 	}
 	conf := types.Config{Importer: importer.Default()}
 	tpkg, err := conf.Check(files[0].Name.Name, fset, files, info)

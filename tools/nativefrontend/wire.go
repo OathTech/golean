@@ -197,7 +197,20 @@ func (e *emitter) emitType(t types.Type) (any, error) {
 		if ty.Empty() {
 			return map[string]any{"kind": "interface", "name": emptyInterfaceName}, nil
 		}
-		return nil, unsup("anonymous non-empty interface type %s", ty)
+		// Anonymous non-empty interface (a `case interface{ M() }`, an
+		// assert target, a variable type): canonical wire name from the
+		// type's own rendering — SOUND because Go interface identity is
+		// structural, so structurally identical spellings are one type
+		// (design note 2026-08-05 D3). Qualified with package NAMES like
+		// every other TypeId (the package-name collision check covers the
+		// same hazard class). Registered like named interfaces, so the
+		// declaration pass emits its full method set.
+		if !ty.IsMethodSet() {
+			return nil, unsup("non-method-set interface type %s (type constraints are not interface values)", ty)
+		}
+		name := types.TypeString(ty, func(p *types.Package) string { return p.Name() })
+		e.noteInterface(name, ty)
+		return map[string]any{"kind": "interface", "name": name}, nil
 	case *types.Signature:
 		params := []any{}
 		for i := 0; i < ty.Params().Len(); i++ {

@@ -1,23 +1,24 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-05  commit: general-coverage-embed slice-2 stage 3 (method promotion + wrappers; BUG-007 closed)
+# recorded: 2026-08-05  commit: general-coverage-embed slice-2 stage 4 (type switches + anonymous interfaces)
 #   frontend: native  oracle: go run
-# manifest_cases: 906  pass: 665  fail: 241
+# manifest_cases: 906  pass: 686  fail: 220
 # Re-pin reason: DELIBERATE coverage change, general-coverage slice 2
-# stage 3 (docs/2026-08-05_embedding-interfaces-design.md D1.2-D1.4, D2):
-# promoted METHOD calls and method values adjust the receiver through the
-# embedded hop path at the call/value moment; dynamic dispatch and
-# interface satisfaction resolve through synthesized forwarding wrappers
-# (one per promoted method-set entry, receiver T/*T per Go's method-set
-# asymmetry), making the flat method table COMPLETE; the machine's
-# over-approximate BUG-007 satisfaction fail-closure is retired under
-# that wire contract. Seventeen FAIL->PASS: the whole BUG-007 case list
-# (embedding/deep-promoted-method, embedding/embedded-method-promote,
-# interfaces/embedded-interface-shadowing/*4, interfaces/error-idioms/
-# promoted-method, interfaces/promoted-method-assert-ok,
-# methods/embedded-interface-satisfaction) plus the ten stage-0 guardrail
-# pins (promoted-ambiguous-not-satisfied, promoted-method-value/*2,
-# promoted-nil-embedded-pointer/*3, promoted-pointer-receiver-method-set/*2).
-# ZERO PASS->FAIL, no other stage moves. 648 -> 665 pass, 906 cases.
+# stage 4 (docs/2026-08-05_embedding-interfaces-design.md D3): type
+# switches desugar in the frontend to a breakable block — guard evaluated
+# once into a temp, comma-ok assert tests in a first-match SOURCE-order
+# if-chain (default in the final else position), per-clause implicit
+# bindings from go/types Implicits declared at clause-block top; `case
+# nil` compares against the bare nil interface (a typed-nil box correctly
+# mismatches). Anonymous non-empty interface types get canonical
+# structural wire names (sound: Go interface identity IS structural).
+# The lambda-lifter's capture analysis learned that Implicits-declared
+# clause bindings are INNER declarations (they were mis-captured as outer
+# variables — caught by panic-recover/recover-value's stage move on the
+# first full run of this stage, fixed before this re-pin).
+# Twenty-one FAIL->PASS: the 18 interfaces/type-switch-* ids (incl. the 3
+# stage-0 pins), scoping/type-switch-guard-shadow,
+# methods/nil-receiver-interface-dispatch, panic-recover/recover-value.
+# ZERO PASS->FAIL, no other stage moves. 665 -> 686 pass, 906 cases.
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
 PASS	arrays/array-copy	-
@@ -465,24 +466,24 @@ PASS	interfaces/type-assert-interface-panic/missing-one	-
 PASS	interfaces/type-assert-interface-panic/nil	-
 PASS	interfaces/type-assertions/comma-ok	-
 PASS	interfaces/type-assertions/panic	-
-FAIL	interfaces/type-switch-default-binding	frontend-export
-FAIL	interfaces/type-switch-default-binding-type	frontend-export
-FAIL	interfaces/type-switch-dynamic	frontend-export
-FAIL	interfaces/type-switch-eval-once	frontend-export
-FAIL	interfaces/type-switch-first-match	frontend-export
-FAIL	interfaces/type-switch-init-stmt	frontend-export
-FAIL	interfaces/type-switch-interface-binding	frontend-export
-FAIL	interfaces/type-switch-interface-case	frontend-export
-FAIL	interfaces/type-switch-labeled-break/loop	frontend-export
-FAIL	interfaces/type-switch-labeled-break/self	frontend-export
-FAIL	interfaces/type-switch-multi-binding	frontend-export
-FAIL	interfaces/type-switch-multi-case	frontend-export
-FAIL	interfaces/type-switch-nil	frontend-export
-FAIL	interfaces/type-switch-nil-binding	frontend-export
-FAIL	interfaces/type-switch-nil-multi-case	frontend-export
-FAIL	interfaces/type-switch-single-binding	frontend-export
-FAIL	interfaces/type-switch-typed-nil	frontend-export
-FAIL	interfaces/type-switch-typed-nil-binding	frontend-export
+PASS	interfaces/type-switch-default-binding	-
+PASS	interfaces/type-switch-default-binding-type	-
+PASS	interfaces/type-switch-dynamic	-
+PASS	interfaces/type-switch-eval-once	-
+PASS	interfaces/type-switch-first-match	-
+PASS	interfaces/type-switch-init-stmt	-
+PASS	interfaces/type-switch-interface-binding	-
+PASS	interfaces/type-switch-interface-case	-
+PASS	interfaces/type-switch-labeled-break/loop	-
+PASS	interfaces/type-switch-labeled-break/self	-
+PASS	interfaces/type-switch-multi-binding	-
+PASS	interfaces/type-switch-multi-case	-
+PASS	interfaces/type-switch-nil	-
+PASS	interfaces/type-switch-nil-binding	-
+PASS	interfaces/type-switch-nil-multi-case	-
+PASS	interfaces/type-switch-single-binding	-
+PASS	interfaces/type-switch-typed-nil	-
+PASS	interfaces/type-switch-typed-nil-binding	-
 FAIL	interfaces/typed-nil-channel	frontend-export
 PASS	interfaces/typed-nil-composite	-
 PASS	interfaces/typed-nil-func	-
@@ -600,7 +601,7 @@ PASS	methods/method-value-read	-
 PASS	methods/multi-return-method	-
 PASS	methods/nil-pointer-method-value	-
 PASS	methods/nil-receiver	-
-FAIL	methods/nil-receiver-interface-dispatch	frontend-export
+PASS	methods/nil-receiver-interface-dispatch	-
 PASS	methods/pointer-auto-address	-
 FAIL	methods/pointer-method-expression	frontend-export
 PASS	methods/pointer-method-value	-
@@ -669,7 +670,7 @@ PASS	panic-recover/recover-outside-defer	-
 PASS	panic-recover/recover-repanic	-
 PASS	panic-recover/recover-store-local	-
 PASS	panic-recover/recover-twice	-
-FAIL	panic-recover/recover-value	frontend-export
+PASS	panic-recover/recover-value	-
 PASS	panic-recover/repanic-recovered-by-outer	-
 FAIL	panic-recover/repanic-same-value-abort	lean-observation
 PASS	panic-recover/return-expression-panic-recovered	-
@@ -790,7 +791,7 @@ PASS	scoping/shadowing	-
 PASS	scoping/short-decl-mixing	-
 PASS	scoping/switch-clause-scope	-
 PASS	scoping/switch-init-shadow	-
-FAIL	scoping/type-switch-guard-shadow	frontend-export
+PASS	scoping/type-switch-guard-shadow	-
 PASS	scoping/var-shadow-init	-
 PASS	slices/append-nil	-
 PASS	slices/append-overlap	-
