@@ -41,4 +41,5 @@
                                (GoLean.GoCore.Expr.stringLit
                                  { bytes := #[98, 111, 111, 109, 45, 100, 105, 114, 101, 99, 116] }))],
                variadic := false }],
-  methods := #[] }
+  methods := #[],
+  globals := #[] }

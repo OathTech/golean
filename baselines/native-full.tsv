@@ -1,21 +1,24 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-05  commit: general-coverage-init (slice 5 guardrails)
+# recorded: 2026-08-05  commit: general-coverage-init (init slice frontend — globals land)
 #   frontend: native  oracle: go run (strict lane) / go-run membership in the
 #   machine-enumerated observation set (membership lane; go1.26.5 samples)
-# manifest_cases: 933  pass: 733  fail: 200
-# Re-pin reason: DELIBERATE coverage change — init slice guardrails
-# (docs/2026-08-05_init-design.md §5): 8 NEW ids, all red before the
-# implementation lands, ZERO other drift (verified against the previous
-# pin, floats F3):
-# - init/{spec-dependency-example,hidden-dep-order,multi-value-var-init,
-#   global-shared-mutation,global-composite,global-addr-taken,
-#   global-in-closure}: FAIL/frontend-export (the package-level-variable
-#   refusal, as designed).
-# - init/init-defer-recover: FAIL/lean-observation (two init() functions
-#   export as duplicate FuncId "init" — the same recorded reason as
-#   init/multiple-init-order).
-# Also added (not in this lane): negative/compile/init/initialization-cycle
-# (PASS in the compile-negative lane, 310/310).
+# manifest_cases: 933  pass: 747  fail: 186
+# Re-pin reason: DELIBERATE coverage change — init slice frontend
+# (docs/2026-08-05_init-design.md; globals table + globaladdr resolution +
+# $pkginit/$initN synthesis; driver seeding landed in the prior commit).
+# 14 FAIL->PASS, 1 designed stage move, ZERO PASS->FAIL:
+# - the 6 original init reds: init/{blank-var-init,global-zero-before-init,
+#   init-sees-var-values,multiple-init-order,package-init-order,
+#   var-init-sequence} -> PASS.
+# - 7 of the 8 slice guardrails: init/{spec-dependency-example,
+#   multi-value-var-init,global-shared-mutation,global-composite,
+#   global-addr-taken,global-in-closure,init-defer-recover} -> PASS.
+# - control-flow/expressionless-switch-order -> PASS (switch semantics from
+#   slice 1; was blocked only on its package-level trace variable).
+# - init/hidden-dep-order: frontend-export -> FAIL/differential, the
+#   DESIGNED PERMANENT deviation record (design note §1: hidden-dependency
+#   init order is spec-unspecified; go/types' conforming order != gc's).
+#   Tracked in baselines/untriaged-ids with the same justification.
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
 PASS	arrays/array-copy	-
@@ -189,7 +192,7 @@ FAIL	constants/untyped-complex-context	frontend-export
 FAIL	control-flow/break-label-select	frontend-export
 PASS	control-flow/continue-in-switch	-
 PASS	control-flow/continue-label-post	-
-FAIL	control-flow/expressionless-switch-order	frontend-export
+PASS	control-flow/expressionless-switch-order	-
 PASS	control-flow/for-break-skips-post	-
 PASS	control-flow/for-condition-eval	-
 PASS	control-flow/for-continue-post-plain	-
@@ -402,20 +405,20 @@ PASS	if/condition-evaluated-once	-
 PASS	if/else-if-first-match	-
 PASS	if/if-init-scope	-
 PASS	if/init-before-condition	-
-FAIL	init/blank-var-init	frontend-export
-FAIL	init/global-addr-taken	frontend-export
-FAIL	init/global-composite	frontend-export
-FAIL	init/global-in-closure	frontend-export
-FAIL	init/global-shared-mutation	frontend-export
-FAIL	init/global-zero-before-init	frontend-export
-FAIL	init/hidden-dep-order	frontend-export
-FAIL	init/init-defer-recover	lean-observation
-FAIL	init/init-sees-var-values	frontend-export
-FAIL	init/multiple-init-order	lean-observation
-FAIL	init/multi-value-var-init	frontend-export
-FAIL	init/package-init-order	frontend-export
-FAIL	init/spec-dependency-example	frontend-export
-FAIL	init/var-init-sequence	frontend-export
+PASS	init/blank-var-init	-
+PASS	init/global-addr-taken	-
+PASS	init/global-composite	-
+PASS	init/global-in-closure	-
+PASS	init/global-shared-mutation	-
+PASS	init/global-zero-before-init	-
+FAIL	init/hidden-dep-order	differential
+PASS	init/init-defer-recover	-
+PASS	init/init-sees-var-values	-
+PASS	init/multiple-init-order	-
+PASS	init/multi-value-var-init	-
+PASS	init/package-init-order	-
+PASS	init/spec-dependency-example	-
+PASS	init/var-init-sequence	-
 PASS	interfaces/acked-indexer/hit	-
 PASS	interfaces/acked-indexer/miss	-
 PASS	interfaces/assert-error-satisfaction/classify	-

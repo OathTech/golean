@@ -1415,4 +1415,5 @@
                  recv := GoLean.GoCore.Ty.defined { key := "main.MajorityConfig" } },
                { name := "CommittedIndex",
                  funcId := { key := "main.MajorityConfig.CommittedIndex" },
-                 recv := GoLean.GoCore.Ty.defined { key := "main.MajorityConfig" } }] }
+                 recv := GoLean.GoCore.Ty.defined { key := "main.MajorityConfig" } }],
+  globals := #[] }

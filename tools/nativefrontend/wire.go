@@ -111,6 +111,22 @@ type emitter struct {
 	// fails the export closed on that (pre-merge audit 2026-07-31,
 	// findings 4/7).
 	qualPkgPaths map[string][]string
+
+	// Package-level variables (init slice, docs/2026-08-05_init-design.md):
+	// `collectGlobals` is the SINGLE place gids come from — a dense index
+	// per package-scope *types.Var in declaration order (files in lexical
+	// filename order), matching the driver's seeding of cell gid at
+	// Loc.base(gid). Blank package-level vars have no cell and no gid
+	// (their initializers still run via InitOrder). `globalInitStmt` maps
+	// each initializer's RHS expression to a fabricated assignment whose
+	// Lhs are the ORIGINAL declaring idents, so `$pkginit` synthesis
+	// reuses the ordinary emitAssign machinery (hoists, interface boxing,
+	// multi-value calls, blank targets). `initFuncNames` are the mangled
+	// `$initN` ids of the package's init() functions, source order.
+	globalVars     map[*types.Var]int
+	globalDefs     []any
+	globalInitStmt map[ast.Expr]*ast.AssignStmt
+	initFuncNames  []string
 }
 
 // noteInterface records an interface type for the `interface` TypeDef pass.

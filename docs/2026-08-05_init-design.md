@@ -86,16 +86,27 @@ statements):**
    lexical analysis cannot see). A conforming compiler may order such
    variables differently. **We pin go/types' `InitOrder`** — a single
    conforming resolution, i.e. a deterministic PRAGMATIC SUBSET of the
-   spec's latitude, the append-spill precedent: sound for theorem
-   transfer as long as real Go's order lands on ours, which it does by
-   construction today (gc's initorder implements the same lexical
-   algorithm, and the differential oracle is gc). No `Choices` site is
-   spent on it: the too-narrow risk is tracked by the corpus pin
-   `init/hidden-dep-order` (the spec's own example shape), which goes
-   visibly red if a toolchain ever diverges — the membership-lane
-   version-tracking pattern. Widening to "all orders admissible under
-   the stepwise rule" would need an envelope discussion and a named
-   choice site; deliberately not taken now.
+   spec's latitude, the append-spill precedent. **Implementation
+   finding (probe-verified, go1.26.5): gc's own initorder is a SEPARATE,
+   COARSER analysis and already diverges from go/types on exactly this
+   shape** — for `init/hidden-dep-order`, go/types orders
+   `[hiddenX, hiddenB, hiddenA]` (an interface-typed receiver's method
+   is NOT a spec "reference", so `hiddenX` has no dependencies and is
+   earliest-declared-ready), while `go run` initializes `hiddenX` after
+   `a`/`b` (observations 4242 vs 4624242 — gc conservatively pulls
+   method-body dependencies through the conversion). Both orders
+   conform; the spec text says so explicitly. Consequences, decided:
+   the case stays in the corpus as an EXPECTED RED
+   (`FAIL/differential`) — the visible, version-tracked record that on
+   hidden-dependency programs our realized order is a different
+   conforming member of the spec's set than gc's. Matching gc would
+   mean re-implementing cmd/compile's unspecified internal analysis
+   (over-specialization to an implementation, not to Go); widening the
+   model to admit all conforming orders needs a named `Choices` site
+   and an envelope discussion — deliberately deferred, recorded here.
+   For programs WITHOUT hidden dependencies (everything else in the
+   family) the two analyses agree, since both implement the spec's
+   lexical-reference rule.
 2. **Multi-file declaration order.** The spec defers to "the order in
    which the files are presented to the compiler" and encourages build
    systems to present files "in lexical file name order". The frontend
@@ -314,7 +325,10 @@ implementation lands:
   by declaration order, values proving each step's timing.
 - `init/hidden-dep-order` — the spec's hidden-dependency shape
   (interface method reaching globals the lexical analysis cannot see):
-  the §1 envelope pin; goes red if go/types' order and gc's ever split.
+  the §1 envelope pin. EXPECTED RED (`FAIL/differential`): go/types'
+  order and gc's ALREADY split on this shape (§1 finding); the red is
+  the recorded deviation, re-checked on every run and every toolchain
+  bump.
 - `init/multi-value-var-init` — `var a, b = two()` initialized together
   in one step, ordered against a dependent third variable.
 - `init/global-shared-mutation` — the subject calls helpers that
@@ -342,6 +356,9 @@ passes green through package-level declarations.
 
 ## 6. What stays red / out of scope
 
+- `init/hidden-dep-order`: FAIL/differential by design — the §1
+  hidden-dependency deviation record (our conforming order ≠ gc's
+  conforming order; the spec leaves it unspecified).
 - Imported-package globals and stdlib package state: the extern-policy
   lane; nothing here changes it.
 - Any initializer/init body using unmodeled features: whole-export

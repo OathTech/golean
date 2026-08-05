@@ -22,6 +22,12 @@ func (e *emitter) emitProgram(files []*ast.File) (map[string]any, error) {
 	methods := []any{}
 	typeDefs := []any{}
 
+	// Package-level variables first (init slice): gids assigned here are
+	// what every `globaladdr` in the emitted bodies refers to.
+	if err := e.collectGlobals(files); err != nil {
+		return nil, err
+	}
+
 	for _, f := range files {
 		for _, decl := range f.Decls {
 			switch d := decl.(type) {
@@ -30,6 +36,30 @@ func (e *emitter) emitProgram(files []*ast.File) (map[string]any, error) {
 				// `go run`); GoCore runs the named subject, never main. Skip it,
 				// matching the coverage harness.
 				if d.Recv == nil && d.Name.Name == "main" {
+					continue
+				}
+				// init() functions (init slice): exported under reserved
+				// mangled ids `$initN` (source order, files in lexical
+				// filename order — the spec's presentation order), called
+				// by the synthesized $pkginit after the variable
+				// initializers. go/types enforces the declaration rules
+				// (no params/results, not callable, not referenceable).
+				// NO per-decl quarantine: init runs before every subject,
+				// so an unsupported init body refuses the whole export
+				// (design note §2).
+				if d.Recv == nil && d.Name.Name == "init" {
+					mangled := "$init" + itoa(len(e.initFuncNames))
+					e.initFuncNames = append(e.initFuncNames, mangled)
+					e.curFuncName = mangled
+					e.liftSeq = 0
+					fn, err := e.emitFuncDecl(d)
+					if err != nil {
+						return nil, err
+					}
+					fn["name"] = mangled
+					funcs = append(funcs, e.lifted...)
+					e.lifted = nil
+					funcs = append(funcs, fn)
 					continue
 				}
 				// Lifted-literal names must be unique program-wide: methods
@@ -101,6 +131,20 @@ func (e *emitter) emitProgram(files []*ast.File) (map[string]any, error) {
 				methods = append(methods, ims...)
 			}
 		}
+	}
+
+	// The synthesized $pkginit (init slice): variable initializers in
+	// go/types' InitOrder, then the $initN calls. After the FuncDecl loop
+	// so initFuncNames is complete; its lifted literals flush like any
+	// other function's.
+	pkginit, err := e.synthesizePkgInit()
+	if err != nil {
+		return nil, err
+	}
+	if pkginit != nil {
+		funcs = append(funcs, e.lifted...)
+		e.lifted = nil
+		funcs = append(funcs, pkginit)
 	}
 
 	// Function-local type declarations, registered during body emission
@@ -248,12 +292,143 @@ func (e *emitter) emitProgram(files []*ast.File) (map[string]any, error) {
 		}
 	}
 
-	return map[string]any{
+	program := map[string]any{
 		"schema":  "golean-native-v1",
 		"package": e.pkg.Name(),
 		"types":   typeDefs,
 		"funcs":   funcs,
 		"methods": methods,
+	}
+	// Only when the package has package-level variables — a globals-free
+	// wire stays byte-identical to before the init slice.
+	if len(e.globalDefs) > 0 {
+		program["globals"] = e.globalDefs
+	}
+	return program, nil
+}
+
+// ---- package initialization (init slice, docs/2026-08-05_init-design.md) ----
+
+// collectGlobals assigns every package-level variable its dense gid in
+// declaration order (files already in lexical filename order) and builds
+// the wire globals table plus the fabricated per-initializer assignment
+// statements $pkginit emission reuses. The SINGLE gid source: the driver
+// seeds cell gid at Loc.base(gid) in the same order. An unsupported
+// global TYPE refuses the whole export — initialization must zero-seed
+// every global before any subject runs, so there is no per-decl
+// quarantine for init code (design note §2).
+func (e *emitter) collectGlobals(files []*ast.File) error {
+	e.globalVars = map[*types.Var]int{}
+	e.globalInitStmt = map[ast.Expr]*ast.AssignStmt{}
+	for _, f := range files {
+		for _, decl := range f.Decls {
+			gd, ok := decl.(*ast.GenDecl)
+			if !ok || gd.Tok != token.VAR {
+				continue
+			}
+			for _, spec := range gd.Specs {
+				vs, ok := spec.(*ast.ValueSpec)
+				if !ok {
+					continue
+				}
+				for i, name := range vs.Names {
+					if name.Name != "_" {
+						obj, isVar := e.info.Defs[name].(*types.Var)
+						if !isVar || obj == nil {
+							return unsup("package-level variable %s has no type object", name.Name)
+						}
+						ty, err := e.emitType(obj.Type())
+						if err != nil {
+							return err
+						}
+						e.globalVars[obj] = len(e.globalDefs)
+						e.globalDefs = append(e.globalDefs, map[string]any{
+							"name": name.Name, "type": ty})
+					}
+					// Fabricated assignment per initializer value, keyed by
+					// the RHS expression (pointer identity — types.Initializer
+					// carries the same node): Lhs are the ORIGINAL declaring
+					// idents, so emitAssign's machinery (hoists, interface
+					// boxing, blank targets, multi-value calls) applies
+					// unchanged. One n:n spec fabricates per-pair; a
+					// multi-value spec fabricates once with every name.
+					switch {
+					case len(vs.Values) == len(vs.Names) && i < len(vs.Values):
+						e.globalInitStmt[vs.Values[i]] = &ast.AssignStmt{
+							Lhs: []ast.Expr{name}, Tok: token.ASSIGN,
+							Rhs: []ast.Expr{vs.Values[i]}}
+					case len(vs.Values) == 1 && len(vs.Names) > 1 && i == 0:
+						lhs := make([]ast.Expr, len(vs.Names))
+						for j, n := range vs.Names {
+							lhs[j] = n
+						}
+						e.globalInitStmt[vs.Values[0]] = &ast.AssignStmt{
+							Lhs: lhs, Tok: token.ASSIGN,
+							Rhs: []ast.Expr{vs.Values[0]}}
+					}
+				}
+			}
+		}
+	}
+	return nil
+}
+
+// globalAddr returns the wire address node for a package-level variable,
+// when it has a seeded cell.
+func (e *emitter) globalAddr(v *types.Var) (any, bool) {
+	gid, ok := e.globalVars[v]
+	if !ok {
+		return nil, false
+	}
+	return map[string]any{"expr": "globaladdr", "gid": gid}, true
+}
+
+// isPackageVar classifies an object as a package-level variable of THIS
+// package (the frontend's static half of global resolution; go/types did
+// the name resolution).
+func (e *emitter) isPackageVar(obj types.Object) (*types.Var, bool) {
+	v, isVar := obj.(*types.Var)
+	if !isVar || v == nil || v.Parent() != e.pkg.Scope() {
+		return nil, false
+	}
+	return v, true
+}
+
+// synthesizePkgInit builds the reserved $pkginit function: the package's
+// variable initializers in go/types' InitOrder (the spec's stepwise
+// dependency order — trust surface argument in the design note §1), then
+// the init() functions in source order. Returns nil when the package has
+// neither. Failures refuse the whole export (no per-decl quarantine for
+// init code).
+func (e *emitter) synthesizePkgInit() (map[string]any, error) {
+	if len(e.info.InitOrder) == 0 && len(e.initFuncNames) == 0 {
+		return nil, nil
+	}
+	e.curFuncName = "$pkginit"
+	e.liftSeq = 0
+	e.curResults = nil
+	stmts := make([]ast.Stmt, 0, len(e.info.InitOrder))
+	for _, ini := range e.info.InitOrder {
+		as, ok := e.globalInitStmt[ini.Rhs]
+		if !ok {
+			return nil, unsup("package-level initializer with no declaration site")
+		}
+		stmts = append(stmts, as)
+	}
+	body, err := e.emitStmtList(stmts)
+	if err != nil {
+		return nil, err
+	}
+	for _, name := range e.initFuncNames {
+		body = append(body, map[string]any{"stmt": "expr", "expr": map[string]any{
+			"expr": "call", "func": name, "args": []any{}, "resultTypes": []any{}}})
+	}
+	return map[string]any{
+		"name":     "$pkginit",
+		"params":   []any{},
+		"results":  []any{},
+		"variadic": false,
+		"body":     map[string]any{"stmt": "block", "body": body},
 	}, nil
 }
 
@@ -1624,10 +1799,20 @@ func (e *emitter) emitAssignTarget(l ast.Expr, define bool) (any, error) {
 				return map[string]any{"target": "declare", "id": id.Name, "type": ty}, nil
 			}
 		}
-		// Writes to package-level variables fail closed like reads do
-		// (emitIdent): globals have no frame cell until the init slice.
-		if v, isVar := e.info.Uses[id].(*types.Var); isVar && v.Parent() == e.pkg.Scope() {
-			return nil, unsup("package-level variable %s (globals await the init slice)", id.Name)
+		// A package-level variable writes through its statically resolved
+		// cell address (init slice). Uses covers ordinary writes; Defs
+		// covers the synthesized $pkginit assignments, whose Lhs are the
+		// ORIGINAL declaring idents.
+		obj := e.info.Uses[id]
+		if obj == nil {
+			obj = e.info.Defs[id]
+		}
+		if v, ok := e.isPackageVar(obj); ok {
+			ga, ok := e.globalAddr(v)
+			if !ok {
+				return nil, unsup("package-level variable %s has no seeded cell", id.Name)
+			}
+			return map[string]any{"target": "addr", "expr": ga}, nil
 		}
 		return map[string]any{"target": "var", "id": id.Name}, nil
 	}
@@ -3701,6 +3886,17 @@ func (e *emitter) emitAddressOf(x ast.Expr) (any, error) {
 	}
 	switch ex := x.(type) {
 	case *ast.Ident:
+		// &global is the statically resolved cell address itself (init
+		// slice) — cell identity is the driver-seeded location, so
+		// aliasing through the pointer observes the same cell as direct
+		// reads (pinned by init/global-addr-taken).
+		if v, ok := e.isPackageVar(e.info.Uses[ex]); ok {
+			ga, ok := e.globalAddr(v)
+			if !ok {
+				return nil, unsup("package-level variable %s has no seeded cell", ex.Name)
+			}
+			return ga, nil
+		}
 		return map[string]any{"expr": "ref", "id": ex.Name}, nil
 	case *ast.SelectorExpr:
 		// PROMOTED field address (BUG-007, design note D1): the embedded
@@ -3799,6 +3995,15 @@ func (e *emitter) emitLValue(x ast.Expr) (any, error) {
 	if id, ok := x.(*ast.Ident); ok {
 		if id.Name == "_" {
 			return map[string]any{"target": "blank"}, nil
+		}
+		// Package-level variables assign through their cell address
+		// (init slice), like every other addressed location.
+		if v, ok := e.isPackageVar(e.info.Uses[id]); ok {
+			ga, ok := e.globalAddr(v)
+			if !ok {
+				return nil, unsup("package-level variable %s has no seeded cell", id.Name)
+			}
+			return map[string]any{"target": "addr", "expr": ga}, nil
 		}
 		return map[string]any{"target": "var", "id": id.Name}, nil
 	}
@@ -4106,8 +4311,10 @@ func (e *emitter) freeCaptures(lit *ast.FuncLit) []*types.Var {
 		if !isVar || inner[v] || seen[v] || v.IsField() {
 			return true
 		}
-		// Package-level variables are not captures (globals are unsupported
-		// today and would fail closed elsewhere).
+		// Package-level variables are not captures: they resolve
+		// statically to their driver-seeded cell (`globaladdr`, init
+		// slice), so a literal's body reads and writes the shared cell
+		// with no capture machinery (pinned by init/global-in-closure).
 		if v.Parent() == nil || v.Parent() == e.pkg.Scope() {
 			return true
 		}
@@ -4254,12 +4461,20 @@ func (e *emitter) emitIdent(id *ast.Ident) (any, error) {
 				"ptr":  map[string]any{"expr": "ident", "name": pname},
 				"type": ty}, nil
 		}
-		// A package-level VARIABLE has no cell in any frame environment:
-		// globals are unmodeled until the init slice. Fail closed at the
-		// boundary (an emitted ident would surface as a misclassified
-		// machine-level "unbound variable" stuck at run time).
-		if v, isVar := obj.(*types.Var); isVar && v.Parent() == e.pkg.Scope() {
-			return nil, unsup("package-level variable %s (globals await the init slice)", id.Name)
+		// A package-level VARIABLE reads as a typed load from its
+		// statically resolved, driver-seeded cell (init slice,
+		// docs/2026-08-05_init-design.md §2). No frame-environment cell
+		// exists for it, so a missing gid fails closed at the boundary.
+		if v, ok := e.isPackageVar(obj); ok {
+			ga, ok := e.globalAddr(v)
+			if !ok {
+				return nil, unsup("package-level variable %s has no seeded cell", id.Name)
+			}
+			ty, err := e.emitType(v.Type())
+			if err != nil {
+				return nil, err
+			}
+			return map[string]any{"expr": "deref", "ptr": ga, "type": ty}, nil
 		}
 	}
 	return map[string]any{"expr": "ident", "name": id.Name}, nil

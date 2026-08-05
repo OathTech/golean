@@ -33,4 +33,5 @@
                                  (GoLean.GoCore.Expr.var "x"),
                                GoLean.GoCore.Stmt.returnStmt]],
                variadic := false }],
-  methods := #[] }
+  methods := #[],
+  globals := #[] }

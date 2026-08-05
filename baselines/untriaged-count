@@ -70,4 +70,12 @@
 #   as duplicate FuncId "init" — the same recorded refusal as
 #   init/multiple-init-order); it flips PASS in this slice's frontend
 #   commit, which lowers the ceiling back.
-16
+# 2026-08-05 (init slice, frontend commit)  16 -> 15:
+#   init/init-defer-recover and init/multiple-init-order flipped PASS
+#   (init() functions export as $initN, called by $pkginit);
+#   init/hidden-dep-order ENTERS as a PERMANENT differential-stage
+#   deviation record (design note §1: the spec leaves hidden-dependency
+#   initialization order unspecified; go/types' conforming order — ours
+#   — differs from gc's conforming order on exactly this shape; never
+#   expected to flip PASS, re-checked every toolchain bump).
+15
