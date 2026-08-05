@@ -292,6 +292,18 @@ func (e *emitter) emitProgram(files []*ast.File) (map[string]any, error) {
 		}
 	}
 
+	// Transitive quarantine check (audit response 2026-08-05, C3): if
+	// $pkginit's CALL GRAPH reaches a per-decl-quarantined function, the
+	// whole export refuses — the same rule as a directly-unsupported
+	// initializer, extended transitively. Without this, $pkginit hit the
+	// stub at RUNTIME, poisoning every subject in the package with a
+	// runtime-shaped refusal instead of the export-time one (the shape is
+	// raft-real: `var ErrX = errors.New(...)` calling into a quarantined
+	// helper). Runs after wrappers/stubs so the name->body map is complete.
+	if err := checkInitQuarantine(funcs, methods); err != nil {
+		return nil, err
+	}
+
 	program := map[string]any{
 		"schema":  "golean-native-v1",
 		"package": e.pkg.Name(),
@@ -366,6 +378,88 @@ func (e *emitter) collectGlobals(files []*ast.File) error {
 							Lhs: lhs, Tok: token.ASSIGN,
 							Rhs: []ast.Expr{vs.Values[0]}}
 					}
+				}
+			}
+		}
+	}
+	return nil
+}
+
+// collectCalledFuncs walks a wire subtree recording every function NAME it
+// references — "func" is the one key carrying callee/func-value identities
+// (call, func-value, method-call nodes). Conservative on purpose: a
+// func-value merely STORED during init counts as reachable even if init
+// never invokes it (the lexical-dependency-rule analog; recorded in the
+// design note §2).
+func collectCalledFuncs(node any, out map[string]bool) {
+	switch n := node.(type) {
+	case map[string]any:
+		if fn, ok := n["func"].(string); ok {
+			out[fn] = true
+		}
+		for _, v := range n {
+			collectCalledFuncs(v, out)
+		}
+	case []any:
+		for _, v := range n {
+			collectCalledFuncs(v, out)
+		}
+	}
+}
+
+// checkInitQuarantine refuses the export when $pkginit's call graph
+// (transitively, through emitted function and method bodies) reaches a
+// quarantined declaration (audit response 2026-08-05, C3).
+func checkInitQuarantine(funcs, methods []any) error {
+	bodies := map[string]any{}
+	quarantined := map[string]string{}
+	record := func(key string, m map[string]any) {
+		if reason, ok := m["unsupported"].(string); ok {
+			quarantined[key] = reason
+			return
+		}
+		bodies[key] = m["body"]
+	}
+	for _, f := range funcs {
+		if m, ok := f.(map[string]any); ok {
+			if name, ok := m["name"].(string); ok {
+				record(name, m)
+			}
+		}
+	}
+	for _, f := range methods {
+		if m, ok := f.(map[string]any); ok {
+			name, _ := m["name"].(string)
+			rt, _ := m["recvType"].(string)
+			if name != "" && rt != "" {
+				record(rt+"."+name, m)
+			}
+		}
+	}
+	start, ok := bodies["$pkginit"]
+	if !ok {
+		return nil
+	}
+	seen := map[string]bool{"$pkginit": true}
+	frontier := []any{start}
+	for len(frontier) > 0 {
+		node := frontier[0]
+		frontier = frontier[1:]
+		called := map[string]bool{}
+		collectCalledFuncs(node, called)
+		names := make([]string, 0, len(called))
+		for name := range called {
+			names = append(names, name)
+		}
+		sort.Strings(names) // deterministic refusal message
+		for _, name := range names {
+			if reason, bad := quarantined[name]; bad {
+				return unsup("package initialization reaches quarantined function %s (%s)", name, reason)
+			}
+			if !seen[name] {
+				seen[name] = true
+				if b, ok := bodies[name]; ok {
+					frontier = append(frontier, b)
 				}
 			}
 		}

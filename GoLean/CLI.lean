@@ -516,16 +516,25 @@ structure EnumProgram where
 
 def enumSetup (program : GoCore.Program) (name : String)
     (args : Array GoValue) : Except GoError EnumProgram := do
+  -- Pre-init step ORDER (find → arity → seed → init-shape) is shared
+  -- verbatim with `runProgramM` (audit response 2026-08-05, C6:
+  -- divergent orders gave divergent fail-closed errors on the
+  -- arity+init-failure intersection; pinned by the driver-agreement
+  -- eval test on the wrong-arity shape).
   let func ←
     match GoCore.findFunctionIn? program.funcs ⟨name⟩ with
     | some func => pure func
     | none => throw (.stuck s!"GoCore function not found: {name}")
+  if func.args.size != args.size then
+    throw (.stuck s!"expected {func.args.size} argument(s), got {args.size}")
   let state : GoCore.ExecState :=
     { types := program.typeDefs.toList, functions := program.funcs
       methods := program.methods }
   let σ₀ ← GoCore.Machine.seedGlobals state program.globals
-  if func.args.size != args.size then
-    throw (.stuck s!"expected {func.args.size} argument(s), got {args.size}")
+  -- Defense-in-depth behind the decoder's globaladdr bound check
+  -- (audit response, C1): mirror of `runProgramM`'s post-seed assert.
+  if GoCore.Machine.StateWf σ₀ then pure () else
+    throw (.internal "seeded state ill-formed: a location in a global cell or function body dangles beyond the allocator bound")
   let initBody? ←
     match GoCore.findFunctionIn? program.funcs GoCore.pkgInitFuncId with
     | none => pure none
@@ -587,10 +596,14 @@ def enumRunProgram (ep : EnumProgram) (runFuel : Nat)
     match ep.initBody? with
     | none => pure (ep.σ₀, stream)
     | some body =>
-        match ← enumInitRun runFuel ep.σ₀
+        -- Diagnostic errors carry the `package init:` phase marker,
+        -- mirroring `runPkgInitM` (audit response 2026-08-05, C6); the
+        -- panic member's message stays unmarked (Go-observable).
+        match enumInitRun runFuel ep.σ₀
             (.exec body [] (.frame [] [] [] .stop)) stream with
-        | .inl r => pure r
-        | .inr (msg, leftover) => return ("panic", errorJson (.panic msg), leftover)
+        | .error e => throw (GoCore.Machine.markInitPhase e)
+        | .ok (.inl r) => pure r
+        | .ok (.inr (msg, leftover)) => return ("panic", errorJson (.panic msg), leftover)
   let (env, s₂) ← GoCore.Machine.bindParams [] σ₁ ep.func.args.toList ep.args.toList
   let (frameEnv, s₃) ← GoCore.Machine.allocDecls env s₂ ep.func.results.toList
   let resultLocs ← GoCore.Machine.pinResultLocs frameEnv ep.func.results.toList

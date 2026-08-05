@@ -28,11 +28,20 @@ namespace GoLean.NativeToIR
 open Lean GoLean GoLean.GoCore
 open GoLean.StrictJson
 
-/-- A GoCore statement plus the result parameters of the enclosing function,
-threaded so `return` can assign the named result locals. -/
-private abbrev LowerM := Except String
+/-- The lowering monad: failure plus a reader carrying the PROGRAM's
+package-level-variable count (audit response 2026-08-05, C1): every
+`globaladdr` gid must be strictly below it, checked AT THE DECODE
+BOUNDARY — the one-boundary-constructor collision-check rule. Without
+the check a malformed wire's dangling gid did NOT go stuck as
+originally claimed: `Heap.set` materializes cells for unseeded
+locations, so an out-of-range gid aliased onto whatever the allocator
+handed out next (e.g. the subject's result cell) and produced a silent
+wrong answer. The driver-level `StateWf` assert after seeding
+(`runProgramM`/`enumSetup`) is the defense-in-depth second net. -/
+private abbrev LowerM := ReaderT Nat (Except String)
 
-private def fail {α} (msg : String) : LowerM α := .error s!"native lowering: {msg}"
+private def fail {α} (msg : String) : LowerM α :=
+  fun _ => .error s!"native lowering: {msg}"
 
 /-! ## Types -/
 
@@ -174,9 +183,17 @@ partial def decodeExpr (path : String) (json : Json) : LowerM Expr := do
       -- docs/2026-08-05_init-design.md §2): global `gid` (wire declaration
       -- order) lives at the driver-seeded cell `Loc.base ⟨gid⟩`. The gid
       -- assignment is the emitter's single collection loop (dense by
-      -- construction); a dangling gid dereferences a missing cell and the
-      -- machine goes stuck — closed, never a silent value.
-      pure (.locLit (.base ⟨← StrictJson.nat s!"{path}.gid" (← StrictJson.field path obj "gid")⟩))
+      -- construction), and the BOUND CHECK here is the decode-boundary
+      -- collision check (audit response 2026-08-05, C1): a dangling gid
+      -- does NOT go stuck at runtime — `Heap.set` materializes cells for
+      -- unseeded locations, so it would alias the next allocation — a
+      -- malformed wire refuses loud here instead.
+      let gid ← StrictJson.nat s!"{path}.gid" (← StrictJson.field path obj "gid")
+      let nGlobals ← read
+      if gid < nGlobals then
+        pure (.locLit (.base ⟨gid⟩))
+      else
+        fail s!"globaladdr gid {gid} out of range at {path} (program declares {nGlobals} global(s))"
   | "deref" =>
       let ptr ← decodeExpr s!"{path}.ptr" (← StrictJson.field path obj "ptr")
       let typ ← decodeTy s!"{path}.type" (← StrictJson.field path obj "type")
@@ -307,7 +324,7 @@ map to `.var`; addressable forms (deref/field/index) are added incrementally. -/
 private def exprAsAssignee (path : String) : Expr → LowerM Assignee
   | .var id => pure (.var id)
   | .deref e _ => pure (.addr e)
-  | other => .error s!"native lowering: expression at {path} is not an assignable location ({repr other})"
+  | other => fail s!"expression at {path} is not an assignable location ({repr other})"
 
 /-- Combine a compound-assignment target and rhs (`x op= e` → `x op e`). Only
 arithmetic/bitwise/shift operators are valid here. -/
@@ -324,7 +341,7 @@ private def decodeCompound (op : String) (lhs rhs : Expr) : LowerM Expr :=
   | "&^" => pure (.bitClear lhs rhs)
   | "<<" => pure (.shiftLeft lhs rhs)
   | ">>" => pure (.shiftRight lhs rhs)
-  | other => .error s!"native lowering: unsupported compound operator {other}"
+  | other => fail s!"unsupported compound operator {other}"
 
 /-- A decoded assignment target and whether it introduces a fresh local. -/
 private structure Target where
@@ -1088,31 +1105,15 @@ private def decodeMethod (path : String) (json : Json) : LowerM (Func × MethodI
       pure ({ id := funcId, args := #[recv] ++ args, results := res, body,
               variadic }, info)
 
-partial def decodeProgram (json : Json) : LowerM Program := do
+/-- Decode the whole wire program. Runs OUTSIDE `LowerM`: the globals
+table decodes FIRST, and its size is the reader context every
+body-decoding call runs under — that is what arms the `globaladdr`
+bound check (audit response 2026-08-05, C1). -/
+partial def decodeProgram (json : Json) : Except String Program := do
   let obj ← StrictJson.obj "program" json
   let schema ← StrictJson.string "program.schema" (← StrictJson.field "program" obj "schema")
   if schema != "golean-native-v1" then
-    fail s!"unexpected schema {schema}"
-  let funcsJson ← StrictJson.array "program.funcs" (← StrictJson.field "program" obj "funcs")
-  let funcs ← funcsJson.mapIdxM (fun i f => decodeFunc s!"program.funcs[{i}]" f)
-  let typesJson ← StrictJson.array "program.types" (← StrictJson.field "program" obj "types")
-  let declaredDefs ← typesJson.mapIdxM (fun i t => decodeTypeDef s!"program.types[{i}]" t)
-  -- The canonical empty struct (map[K]struct{} set idiom) is always available.
-  let typeDefs := #[(⟨"struct{}"⟩, TypeDef.struct #[])] ++ declaredDefs
-  let methodsJson ← StrictJson.array "program.methods" (← StrictJson.field "program" obj "methods")
-  let methodPairs ← methodsJson.mapIdxM (fun i m => decodeMethod s!"program.methods[{i}]" m)
-  -- Method bodies are executable functions (looked up by FuncId on call);
-  -- MethodInfo is the dispatch table.
-  let allFuncs := funcs ++ methodPairs.map Prod.fst
-  -- Collision check at the boundary (CLAUDE.md: every identity constructor
-  -- collision-checks). Duplicate FuncIds would make findFunctionIn? silently
-  -- run the FIRST body for BOTH callers — the 2026-07-25 pre-merge audit
-  -- found exactly that via same-named methods' lifted literals.
-  let mut seen : Std.HashSet String := {}
-  for f in allFuncs do
-    if seen.contains f.id.key then
-      fail s!"duplicate function id {f.id.key} in program"
-    seen := seen.insert f.id.key
+    throw s!"native lowering: unexpected schema {schema}"
   -- Package-level variables (init slice): declaration order; the driver
   -- seeds cell i at `Loc.base ⟨i⟩`. Optional key — a globals-free wire
   -- decodes exactly as before. Duplicate names are impossible in a
@@ -1126,14 +1127,35 @@ partial def decodeProgram (json : Json) : LowerM Program := do
           let gobj ← StrictJson.obj s!"program.globals[{i}]" g
           let name ← StrictJson.string s!"program.globals[{i}].name"
             (← StrictJson.field s!"program.globals[{i}]" gobj "name")
-          let typ ← decodeTy s!"program.globals[{i}].type"
-            (← StrictJson.field s!"program.globals[{i}]" gobj "type")
+          let typ ← (decodeTy s!"program.globals[{i}].type"
+            (← StrictJson.field s!"program.globals[{i}]" gobj "type")).run 0
           pure ({ name, typ } : GlobalDef))
   let mut seenGlobals : Std.HashSet String := {}
   for g in globals do
     if seenGlobals.contains g.name then
-      fail s!"duplicate global {g.name} in program"
+      throw s!"native lowering: duplicate global {g.name} in program"
     seenGlobals := seenGlobals.insert g.name
+  let ng := globals.size
+  let funcsJson ← StrictJson.array "program.funcs" (← StrictJson.field "program" obj "funcs")
+  let funcs ← funcsJson.mapIdxM (fun i f => (decodeFunc s!"program.funcs[{i}]" f).run ng)
+  let typesJson ← StrictJson.array "program.types" (← StrictJson.field "program" obj "types")
+  let declaredDefs ← typesJson.mapIdxM (fun i t => (decodeTypeDef s!"program.types[{i}]" t).run ng)
+  -- The canonical empty struct (map[K]struct{} set idiom) is always available.
+  let typeDefs := #[(⟨"struct{}"⟩, TypeDef.struct #[])] ++ declaredDefs
+  let methodsJson ← StrictJson.array "program.methods" (← StrictJson.field "program" obj "methods")
+  let methodPairs ← methodsJson.mapIdxM (fun i m => (decodeMethod s!"program.methods[{i}]" m).run ng)
+  -- Method bodies are executable functions (looked up by FuncId on call);
+  -- MethodInfo is the dispatch table.
+  let allFuncs := funcs ++ methodPairs.map Prod.fst
+  -- Collision check at the boundary (CLAUDE.md: every identity constructor
+  -- collision-checks). Duplicate FuncIds would make findFunctionIn? silently
+  -- run the FIRST body for BOTH callers — the 2026-07-25 pre-merge audit
+  -- found exactly that via same-named methods' lifted literals.
+  let mut seen : Std.HashSet String := {}
+  for f in allFuncs do
+    if seen.contains f.id.key then
+      throw s!"native lowering: duplicate function id {f.id.key} in program"
+    seen := seen.insert f.id.key
   pure { typeDefs, funcs := allFuncs, methods := methodPairs.map Prod.snd, globals }
 
 end GoLean.NativeToIR

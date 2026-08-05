@@ -934,6 +934,23 @@ private def enumInitPickProgram : GoCore.Program := {
   globals := #[{ name := "g", typ := .int }]
 }
 
+/-- Init-panic shape (audit response 2026-08-05, C4): `$pkginit` panics
+before the subject can run — the enumerator's init-phase panic branch
+(`enumRunProgram`'s `.inr` arm) must surface it as the run's (only)
+member, and the whole-program driver must agree. -/
+private def coreEnumInitPanicInit : GoCore.Func := {
+  id := GoCore.pkgInitFuncId,
+  args := #[],
+  results := #[],
+  body := .panicStmt (.toInterface (.interface ⟨"empty_interface"⟩) .string
+    (.stringLit { bytes := "init boom".toUTF8.data }))
+}
+
+private def enumInitPanicProgram : GoCore.Program := {
+  funcs := #[coreEnumInitReadFunction, coreEnumInitPanicInit],
+  globals := #[{ name := "g", typ := .int }]
+}
+
 private def enumerate (program : GoCore.Program) (name : String)
     (expectStatus : Option String) : Except String CLI.EnumOutcome :=
   match CLI.enumSetup program name #[] with
@@ -1338,6 +1355,38 @@ def main : IO UInt32 := do
     (enumerate enumInitPickProgram "enum_init_read_F" (some "ok")) 3)
   passed := passed && (← expectDriverAgreement "GoCore enumerator agrees with the whole-program driver ($pkginit map-range pick)"
     enumInitPickProgram "enum_init_read_F" (some "ok") [[], [1], [2], [5, 3, 1], [9, 8, 7, 6]])
+  -- Audit response 2026-08-05, C4: the enumerator's init-phase PANIC
+  -- branch — a panicking $pkginit is the run's single (panic) member,
+  -- and both drivers surface the same observation.
+  passed := passed && (← expectEnumMembers "GoCore enumerator surfaces the $pkginit panic member"
+    (enumerate enumInitPanicProgram "enum_init_read_F" (some "panic")) 1)
+  passed := passed && (← expectDriverAgreement "GoCore enumerator agrees with the whole-program driver ($pkginit panic)"
+    enumInitPanicProgram "enum_init_read_F" (some "panic") [[], [3], [7, 1]])
+  -- Audit response 2026-08-05, C6: the two drivers' pre-init wiring is
+  -- ORDER-IDENTICAL (find -> arity -> seed -> init-shape) — the
+  -- wrong-arity error on a globals+init program must be the same
+  -- fail-closed error from both, evaluated BEFORE the init phase.
+  passed := passed && (← do
+    let name := "GoCore drivers agree on wrong-arity refusal before the init phase"
+    let fromRun :=
+      match GoCore.Machine.runProgramM 1000000 enumInitPickProgram "enum_init_read_F" #[.int 1] [] with
+      | .error e => some (repr e).pretty
+      | .ok _ => none
+    let fromEnum :=
+      match CLI.enumSetup enumInitPickProgram "enum_init_read_F" #[.int 1] with
+      | .error e => some (repr e).pretty
+      | .ok _ => none
+    match fromRun, fromEnum with
+    | some a, some b =>
+        if a == b then
+          IO.println s!"ok: {name}"
+          pure true
+        else do
+          IO.eprintln s!"FAIL: {name}: driver errors diverge: {a} vs {b}"
+          pure false
+    | _, _ => do
+        IO.eprintln s!"FAIL: {name}: expected both drivers to refuse the wrong-arity call"
+        pure false)
   if passed then
     return 0
   else

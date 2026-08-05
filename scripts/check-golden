@@ -85,3 +85,29 @@ LEAN
   fi
   echo "check-golden: ok [$NAME] — proof subject = decoded(frontend(source)), both links"
 done
+
+# ---- Deviation-observation pin (init slice audit response 2026-08-05, C2) ----
+# init/hidden-dep-order is the recorded hidden-dependency initialization-order
+# deviation: the spec leaves the order unspecified, our realized order
+# (go/types InitOrder) differs from gc's, and the differential red only says
+# "≠ gc" — a drift to ANY third order would read identically there. This pin
+# asserts the order WE realize, end-to-end (frontend InitOrder emission →
+# decoder → seeded driver run), against the checked-in observation (4242).
+# Re-pin deliberately, with the reason, only on a DECIDED order change.
+DEV_SRC="Corpus/coverage/exec/init/hidden-dep-order"
+DEV_BASE="baselines/golden/hidden-dep-order.observation.json"
+DEV_FUNC="hiddenDepOrder"
+[ -f "$DEV_BASE" ] || { echo "check-golden: FAIL — no baseline at $DEV_BASE" >&2; exit 1; }
+lake build golean > /dev/null \
+  || { echo "check-golden: FAIL — golean build failed (fail closed)" >&2; exit 1; }
+GO111MODULE=off go run ./tools/nativefrontend --dir "$DEV_SRC" --out "$WORK/deviation.wire.json" \
+  || { echo "check-golden: FAIL [hidden-dep-order] — frontend emit failed (fail closed)" >&2; exit 1; }
+.lake/build/bin/golean native-json-run --input "$WORK/deviation.wire.json" --function "$DEV_FUNC" \
+  > "$WORK/deviation.obs" \
+  || { echo "check-golden: FAIL [hidden-dep-order] — machine run failed (fail closed)" >&2; exit 1; }
+if ! diff -q "$DEV_BASE" "$WORK/deviation.obs" > /dev/null; then
+  echo "check-golden: FAIL [hidden-dep-order] — the REALIZED hidden-dependency init order drifted from the recorded deviation pin:" >&2
+  diff "$DEV_BASE" "$WORK/deviation.obs" | head -10 >&2
+  exit 1
+fi
+echo "check-golden: ok [hidden-dep-order] — realized deviation order matches the recorded pin"

@@ -85,25 +85,41 @@ statements):**
    I(T{}).ab()` reaching variables through an interface method the
    lexical analysis cannot see). A conforming compiler may order such
    variables differently. **We pin go/types' `InitOrder`** — a single
-   conforming resolution, i.e. a deterministic PRAGMATIC SUBSET of the
-   spec's latitude, the append-spill precedent. **Implementation
-   finding (probe-verified, go1.26.5): gc's own initorder is a SEPARATE,
-   COARSER analysis and already diverges from go/types on exactly this
-   shape** — for `init/hidden-dep-order`, go/types orders
+   conforming resolution. **Implementation finding (probe-verified,
+   go1.26.5): gc's own initorder is a SEPARATE, COARSER analysis and
+   already diverges from go/types on exactly this shape** — for
+   `init/hidden-dep-order`, go/types orders
    `[hiddenX, hiddenB, hiddenA]` (an interface-typed receiver's method
    is NOT a spec "reference", so `hiddenX` has no dependencies and is
    earliest-declared-ready), while `go run` initializes `hiddenX` after
    `a`/`b` (observations 4242 vs 4624242 — gc conservatively pulls
    method-body dependencies through the conversion). Both orders
-   conform; the spec text says so explicitly. Consequences, decided:
-   the case stays in the corpus as an EXPECTED RED
-   (`FAIL/differential`) — the visible, version-tracked record that on
-   hidden-dependency programs our realized order is a different
-   conforming member of the spec's set than gc's. Matching gc would
-   mean re-implementing cmd/compile's unspecified internal analysis
-   (over-specialization to an implementation, not to Go); widening the
-   model to admit all conforming orders needs a named `Choices` site
-   and an envelope discussion — deliberately deferred, recorded here.
+   conform; the spec text says so explicitly.
+
+   **Classification, stated honestly (audit response 2026-08-05, C2 —
+   the original cited the append-spill precedent, which is WRONG in
+   kind: the append envelope CONTAINS real Go's behavior, this
+   singleton is KNOWN NOT TO — gc's realized order lies outside it).
+   This is the doctrine's TOO-NARROW, soundness-relevant direction: for
+   a program with hidden initialization dependencies, theorems proved
+   over our semantics do NOT transfer to a gc-compiled execution.** No
+   frontend check detects the hidden-dependency shape — the deferral is
+   UNGUARDED: such a program exports, runs, and (if its observable
+   depends on the order) simply diverges from gc at the differential.
+   The north-star target is exposed in principle: etcd-io/raft has
+   package-level variables (`ErrCompacted`-style error values,
+   `globalRand`), so whether its initializers harbor hidden
+   dependencies must be checked when the target lane gets there.
+   Decided nonetheless, recorded for the arc-final audit: the case
+   stays an EXPECTED RED (`FAIL/differential`) — the visible,
+   version-tracked deviation record — and the realized order itself is
+   pinned mechanically (check-golden's deviation-observation pin,
+   asserting our 4242 end-to-end), so a drift to any THIRD order, even
+   a non-conforming one, is caught rather than reading as the same red.
+   Matching gc would mean re-implementing cmd/compile's unspecified
+   internal analysis (over-specialization to an implementation, not to
+   Go); widening the model to admit all conforming orders needs a named
+   `Choices` site and an envelope discussion — deliberately deferred.
    For programs WITHOUT hidden dependencies (everything else in the
    family) the two analyses agree, since both implement the spec's
    lexical-reference rule.
@@ -112,14 +128,17 @@ statements):**
    systems to present files "in lexical file name order". The frontend
    presents files sorted by filename (`tools/nativefrontend/main.go`,
    `sort.Strings`), which is the go command's documented behavior — so
-   model and oracle agree exactly. Today the exported package is
-   SINGLE-FILE anyway (the differential exports the case dir, whose only
-   `.go` file is `main.go`; the harness file exists only on the go-run
-   side), so the pin is currently unexercised; when a multi-file case
-   arrives it is already the recorded behavior: declaration order and
-   `init()` order across files = lexical filename order. A conforming
-   NON-go-command build system could present files differently — outside
-   our envelope, recorded here, revisit only if a target ever ships one.
+   model and oracle agree exactly: a recorded NARROWING of "as presented
+   to the compiler" to the go command's sorted-file presentation (a
+   conforming NON-go-command build system could present files
+   differently — outside our envelope, revisit only if a target ever
+   ships one). CORRECTED (audit response 2026-08-05, C5 — this
+   paragraph originally claimed the exported package is single-file and
+   the pin unexercised, which was WRONG: both the frontend and the
+   go-run harness glob the case directory, so multi-file cases work
+   today): the pin is EXERCISED by `init/multi-file-order` — two files,
+   file-name-order-observable via initializer and `init()` side
+   effects, green against `go run`.
 3. **`init()` order within the model** is spec-fixed (source order,
    files in presentation order) — no latitude once (2) is pinned.
 
@@ -204,11 +223,32 @@ names impossible in a type-checked package). The driver seeds from a
 fresh state (`nextAddr = 0`, checked) and verifies each allocated cell
 is exactly `.base gid` (internal error otherwise — the executable
 analogue of Perennial's `GlobalAlloc` angelic check that the fresh loc
-equals `global_addr v`). A `globaladdr` that somehow escapes seeding
-(wire edited by hand, driver bug) dereferences a missing cell → machine
-stuck (closed, never a silent value). A wire program with globals run
-through a NON-seeding entry point (`runNamedFunctionM`) likewise goes
-stuck at first access, never wrong.
+equals `global_addr v`).
+
+CORRECTED (audit response 2026-08-05, C1 — the original paragraph
+claimed a dangling `globaladdr` "goes stuck at first access, never
+wrong", which is FALSE): `Heap.set` materializes cells at unseeded
+locations, and the low base ids a globals-bearing program's `locLit`s
+name are exactly what a fresh allocator hands to the subject's
+parameter/result cells — so both a malformed wire (short/missing
+globals table) and a globals-bearing program run through a non-seeding
+entry produced SILENT WRONG ANSWERS (verified: a hand-edited wire
+aliased a global onto the subject's result cell). The actual
+fail-closed mechanisms, all boundary/driver-level (machine untouched):
+
+1. **Decode-boundary bound check** (`NativeToIR.decodeExpr`,
+   `globaladdr` arm): the globals table decodes first and every gid is
+   checked `< globals.size` (the lowering monad carries the count) —
+   a malformed wire refuses loud at decode.
+2. **Non-seeding entries refuse globals-bearing programs**
+   (`runNamedFunctionM`): seeding there would be worse than refusing —
+   that entry has no `$pkginit` phase, so it would hand the subject
+   zero-valued, never-initialized globals. Precise `stuck` message
+   pointing at `runProgramM`.
+3. **Post-seed `StateWf` assert** (`runProgramM` / `CLI.enumSetup`,
+   kernel-decidable): any location in a global cell or stored function
+   body dangling beyond the allocator bound refuses before anything
+   runs — defense in depth behind check 1.
 
 ### Driver composition (statement TCB untouched)
 
@@ -227,7 +267,14 @@ initialization is driver-level composition, exactly like
 stream (init consumes choices from the same stream as the subject — a
 global map literal's iteration behavior is part of the run), and the
 driver-agreement eval tests pin the two compositions against each other
-as they pin the existing pair.
+as they pin the existing pair. Audit response 2026-08-05, C6: the two
+drivers' pre-init wiring is ORDER-IDENTICAL (find → arity → seed →
+init-shape; pinned by the wrong-arity agreement eval test), `fuel`
+bounds each phase separately (a run may take up to 2× `fuel` steps
+total), and init-phase DIAGNOSTIC errors (`stuck`/`unsupported`/
+`internal`) carry a `package init:` marker — panic messages stay
+unmarked (they are the Go-observable abort line) and `fuelOut` carries
+no message.
 
 ### `init()` functions
 
@@ -251,9 +298,23 @@ an `init()` body, or in a global's TYPE fails the WHOLE export
 (fail-closed `unsup`, frontend-export stage) — not the per-decl
 quarantine stub path. Rationale: initialization runs before every
 subject; a stubbed initializer would let every subject in the package
-run against silently-uninitialized state. This can only turn cases red
-that were red already (today the same package refuses at the
-package-level-variable read), and honest reds are the contract.
+run against silently-uninitialized state.
+
+**Extended TRANSITIVELY (audit response 2026-08-05, C3 — the original
+"can only turn cases red that were red already" claim was false for
+this shape):** an initializer that lexically supports export but CALLS
+a per-decl-quarantined function (`var x = helper()` with `helper`
+using channels — raft-real: `var ErrCompacted = errors.New(...)`,
+`var globalRand = &lockedRand{}`) used to export fine and then hit the
+stub at RUNTIME inside `$pkginit`, poisoning every subject with a
+runtime-shaped refusal. Now `checkInitQuarantine` (emit.go) walks
+`$pkginit`'s call graph transitively through emitted function and
+method bodies — including `func-value` references, conservatively: a
+function value merely STORED during init counts (the
+lexical-dependency-rule analog; slightly over-closed, recorded) — and
+refuses the whole export at emit time when it reaches a quarantined
+declaration. Pinned by `init/quarantined-init-dep`
+(FAIL/frontend-export by design).
 
 ## 3. Ordering inside `$pkginit` — what is emitted
 
@@ -349,6 +410,22 @@ implementation lands:
 - `Corpus/coverage/negative/compile/init/initialization-cycle` —
   `var a = b; var b = a`: go/types rejects (the spec's "program is not
   valid"); pins that cycles never reach the lowering.
+
+Added by the 2026-08-05 audit response:
+
+- `init/init-panic` (C4) — a panicking package-level initializer: `go
+  run` dies before `main`, the drivers surface the abort as the run's
+  panic observation (both drivers' init-panic branches also pinned by
+  eval tests on a hand-built `$pkginit`).
+- `init/multi-file-order` (C5) — two files; initializer and `init()`
+  side effects observe lexical file-name presentation order (the §1
+  point-2 envelope pin, exercised).
+- `init/quarantined-init-dep` (C3) — EXPECTED RED
+  (FAIL/frontend-export): the transitive init-quarantine refusal.
+- `functions/bare-call-discard-result` (C5, incidental) — EXPECTED RED
+  (FAIL/lean-observation): pre-existing BUG-012 (a bare call
+  discarding results goes stuck), found by the audit's multi-file
+  probe, deliberately NOT fixed in this slice.
 
 Package-level `const` needs no new machinery or case: constants fold at
 every use (`emitConstValue`), and the `constants/*` family already

@@ -1,24 +1,21 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-05  commit: general-coverage-init (init slice frontend — globals land)
+# recorded: 2026-08-05  commit: general-coverage-init (init-slice audit response C1-C6)
 #   frontend: native  oracle: go run (strict lane) / go-run membership in the
 #   machine-enumerated observation set (membership lane; go1.26.5 samples)
-# manifest_cases: 933  pass: 747  fail: 186
-# Re-pin reason: DELIBERATE coverage change — init slice frontend
-# (docs/2026-08-05_init-design.md; globals table + globaladdr resolution +
-# $pkginit/$initN synthesis; driver seeding landed in the prior commit).
-# 14 FAIL->PASS, 1 designed stage move, ZERO PASS->FAIL:
-# - the 6 original init reds: init/{blank-var-init,global-zero-before-init,
-#   init-sees-var-values,multiple-init-order,package-init-order,
-#   var-init-sequence} -> PASS.
-# - 7 of the 8 slice guardrails: init/{spec-dependency-example,
-#   multi-value-var-init,global-shared-mutation,global-composite,
-#   global-addr-taken,global-in-closure,init-defer-recover} -> PASS.
-# - control-flow/expressionless-switch-order -> PASS (switch semantics from
-#   slice 1; was blocked only on its package-level trace variable).
-# - init/hidden-dep-order: frontend-export -> FAIL/differential, the
-#   DESIGNED PERMANENT deviation record (design note §1: hidden-dependency
-#   init order is spec-unspecified; go/types' conforming order != gc's).
-#   Tracked in baselines/untriaged-ids with the same justification.
+# manifest_cases: 937  pass: 749  fail: 188
+# Re-pin reason: DELIBERATE coverage change — audit-response guardrails
+# (docs/2026-08-05_init-design.md §5 audit addendum): 4 NEW ids, zero
+# movement on existing ids:
+# - init/init-panic: PASS (panic during initialization aborts before the
+#   subject; both drivers' init-panic branches also eval-pinned) [C4].
+# - init/multi-file-order: PASS (multi-file cases work — the harness and
+#   frontend glob the case dir; pins lexical file-name presentation
+#   order) [C5].
+# - init/quarantined-init-dep: FAIL/frontend-export BY DESIGN — the
+#   transitive init-quarantine refusal (checkInitQuarantine) [C3].
+# - functions/bare-call-discard-result: FAIL/lean-observation — BUG-012
+#   (pre-existing: a bare call discarding results goes stuck), pinned
+#   red, deliberately not fixed in this slice [C5 incidental].
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
 PASS	arrays/array-copy	-
@@ -328,6 +325,7 @@ FAIL	floats/to-int-out-of-range/range	lean-observation
 PASS	floats/to-int-truncation	-
 PASS	floats/to-uint-truncation	-
 PASS	floats/typed-constant-adaptation	-
+FAIL	functions/bare-call-discard-result	lean-observation
 PASS	functions/closure-arg-and-capture	-
 PASS	functions/closure-block-scope-capture	-
 PASS	functions/closure-captures-named-result	-
@@ -413,10 +411,13 @@ PASS	init/global-shared-mutation	-
 PASS	init/global-zero-before-init	-
 FAIL	init/hidden-dep-order	differential
 PASS	init/init-defer-recover	-
+PASS	init/init-panic	-
 PASS	init/init-sees-var-values	-
+PASS	init/multi-file-order	-
 PASS	init/multiple-init-order	-
 PASS	init/multi-value-var-init	-
 PASS	init/package-init-order	-
+FAIL	init/quarantined-init-dep	frontend-export
 PASS	init/spec-dependency-example	-
 PASS	init/var-init-sequence	-
 PASS	interfaces/acked-indexer/hit	-

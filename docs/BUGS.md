@@ -27,6 +27,31 @@ differential-pinned) `- Cases: <id>, <id>, …` (baseline case ids), then prose.
 
 ---
 
+## BUG-012 — a bare call statement discarding results goes stuck ("extra GoCore assignment value")
+
+- Status: open
+- Pinned-by: differential
+- Cases: functions/bare-call-discard-result
+- Discovered: 2026-08-05 (init-slice audit, C5 — the multi-file verifier
+  probe's init() bodies used bare `mark(x)` calls and hit it; the shape
+  is pre-existing and UNRELATED to init: the diff under audit does not
+  touch it)
+
+A call statement with NO targets to a function that RETURNS values —
+`f()` for `func f() int` — lowers to a targetless GoCore `call`, and the
+machine's frame-exit write-back (`storeMany` on `targets=[]` vs one
+result value) goes `.stuck "extra GoCore assignment value"`
+(`Machine.lean`, `storeMany`'s arity arm). Legal, ubiquitous Go
+(discarding a return value needs no `_ =`); wrongly-stuck on a supported
+construct, hence a fidelity bug, though fail-closed in direction (a
+visible red, never a wrong value). Until now no corpus case exercised
+the shape — every bare call in the corpus called a void function.
+Fix shape (NOT in the init slice, deliberately): either the frontend
+lowers a result-discarding bare call with blank targets per result, or
+the machine's frame exit tolerates `targets=[]` with nonempty results
+(store nothing); either way the guardrail case flips and the pin moves
+to the fix commit. Deferred to its own small slice.
+
 ## BUG-001 — struct-field / array-element WRITE lowers an address base as a value
 
 - Status: fixed

@@ -1,4 +1,5 @@
 import GoLean.GoCore.Machine
+import GoLean.GoCore.StateWf
 
 /-!
 # The executable step function (reshape R2, S2c)
@@ -621,6 +622,16 @@ def runFunctionM (fuel : Nat) (func : Func) (args : Array GoValue) :
 
 def runNamedFunctionM (fuel : Nat) (program : Program) (name : String)
     (args : Array GoValue) (choices : List Nat := []) : Except GoError Result := do
+  -- Non-seeding entry: REFUSE globals-bearing programs (audit response
+  -- 2026-08-05, C1). Running one from a fresh state does NOT go stuck at
+  -- first access as originally claimed — the subject's own allocations
+  -- occupy the low base ids the frontend resolved the globals to, so
+  -- `globaladdr` references silently alias parameter/result cells.
+  -- Seeding here would be worse than refusing: this entry has no
+  -- `$pkginit` phase, so it would hand the subject zero-valued,
+  -- never-initialized globals. `runProgramM` is the globals-capable entry.
+  if program.globals.size > 0 then
+    throw (.stuck s!"program declares {program.globals.size} package-level variable(s); use the whole-program driver (runProgramM)")
   let func ←
     match findFunctionIn? program.funcs ⟨name⟩ with
     | some func => pure func
@@ -656,11 +667,26 @@ def seedGlobals (state : ExecState) (globals : Array GlobalDef) :
     s := s'
   return s
 
+/-- Mark a DIAGNOSTIC error as originating in the `$pkginit` phase
+(audit response 2026-08-05, C6): `stuck`/`unsupported`/`internal`
+messages get a `package init:` prefix so fuel-out/stuck triage can tell
+phases apart. `panic` is NOT marked — its message is the Go-observable
+abort line the differential compares — and `fuelOut` carries no message
+(an init-phase fuel exhaustion is indistinguishable by design; the
+docstrings say so). -/
+def markInitPhase : GoError → GoError
+  | .stuck msg => .stuck s!"package init: {msg}"
+  | .unsupported msg => .unsupported s!"package init: {msg}"
+  | .internal msg => .internal s!"package init: {msg}"
+  | e => e
+
 /-- Run `$pkginit` if the program has one: a nullary, resultless run to
 termination under a targetless barrier frame. Malformed shapes fail
 closed; a panic during initialization aborts the run (Go: a panicking
 initializer kills the program before `main`), surfacing through
-`runConfig`'s `.panicked` terminal as `GoError.panic`. -/
+`runConfig`'s `.panicked` terminal as `GoError.panic` (message
+unmarked — it is the Go-observable abort). Diagnostic errors carry the
+`package init:` marker (`markInitPhase`). -/
 def runPkgInitM (fuel : Nat) (state : ExecState) (choices : Choices) :
     Except GoError (ExecState × Choices) := do
   match findFunctionIn? state.functions pkgInitFuncId with
@@ -668,25 +694,39 @@ def runPkgInitM (fuel : Nat) (state : ExecState) (choices : Choices) :
   | some initF =>
       if initF.args.size != 0 || initF.results.size != 0 then
         throw (.stuck s!"malformed {pkgInitFuncId.key}: expected no parameters and no results")
-      runConfig fuel state (.exec initF.body [] (.frame [] [] [] .stop)) choices
+      match runConfig fuel state (.exec initF.body [] (.frame [] [] [] .stop)) choices with
+      | .ok r => pure r
+      | .error e => throw (markInitPhase e)
 
-/-- The whole-PROGRAM entry: seed globals, run `$pkginit`, then the
-subject from the initialized state with the leftover choice stream.
-`fuel` bounds each phase (a bound, not a budget split). For a program
-with no globals and no `$pkginit` this is exactly `runNamedFunctionM`. -/
+/-- The whole-PROGRAM entry: subject lookup and arity check, seed
+globals, run `$pkginit`, then the subject from the initialized state
+with the leftover choice stream. The pre-init step ORDER (find → arity
+→ seed → init-shape) is shared verbatim with the enumeration driver's
+`CLI.enumSetup` — divergent orders gave divergent fail-closed errors on
+the arity+init-failure intersection (audit response 2026-08-05, C6).
+`fuel` bounds EACH phase separately — a run may take up to 2× `fuel`
+machine steps total (a bound, not a budget split). After seeding, the
+seeded state is asserted `StateWf` (kernel-decidable): the
+defense-in-depth net behind the decoder's `globaladdr` bound check —
+a dangling location in a function body or global cell refuses here
+instead of aliasing a later allocation (audit response, C1). For a
+program with no globals and no `$pkginit` this is exactly
+`runNamedFunctionM`. -/
 def runProgramM (fuel : Nat) (program : Program) (name : String)
     (args : Array GoValue) (choices : Choices := []) : Except GoError Result := do
   let func ←
     match findFunctionIn? program.funcs ⟨name⟩ with
     | some func => pure func
     | none => throw (.stuck s!"GoCore function not found: {name}")
+  if func.args.size != args.size then
+    throw (.stuck s!"expected {func.args.size} argument(s), got {args.size}")
   let state : ExecState :=
     { types := program.typeDefs.toList, functions := program.funcs
       methods := program.methods }
   let s₀ ← seedGlobals state program.globals
+  if StateWf s₀ then pure () else
+    throw (.internal "seeded state ill-formed: a location in a global cell or function body dangles beyond the allocator bound")
   let (s₁, choices₁) ← runPkgInitM fuel s₀ choices
-  if func.args.size != args.size then
-    throw (.stuck s!"expected {func.args.size} argument(s), got {args.size}")
   let (env, s₂) ← bindParams [] s₁ func.args.toList args.toList
   let (frameEnv, s₃) ← allocDecls env s₂ func.results.toList
   let resultLocs ← pinResultLocs frameEnv func.results.toList
