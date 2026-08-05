@@ -20,7 +20,8 @@
 //	t32 x z                  -- f64to32 x = z
 //	t64 x z                  -- f32to64 x = z
 //	n64 x z                  -- fneg64 x = z
-//	i64 x n                  -- f64truncInt? x = some n (in-range only)
+//	i64 x n                  -- f64truncInt? x = some n (full int64 range)
+//	i32 x n                  -- f32truncInt? x = some n (full int64 range)
 //	r64|r32 num den z        -- ratToFloat64/32 num/den = z (num signed)
 //
 // NaN outputs are canonicalized to 0x7FF8000000000000 / 0x7FC00000 on
@@ -141,6 +142,28 @@ func main() {
 	for i := 0; i < 12; i++ {
 		rand64 = append(rand64, rng.Uint64()) // raw patterns: every class
 	}
+	// Truncation-range coverage 2^25..2^63 (audit A2, 2026-08-05: the
+	// base list had nothing between ~2^25 and 2^62, so f64truncInt?'s
+	// LEFT-SHIFT branch — exponent past the mantissa — had zero
+	// vectors). Includes the audit verifier's probed boundaries
+	// (2^52±, 2^53±, 2^62, MinInt64) and the largest float64 below
+	// 2^63. Appended to rand64: full unary/i64 coverage plus
+	// core-paired binop coverage.
+	for _, f := range []float64{
+		33554432.5,           // 2^25 + 0.5: shift-right branch, big magnitude
+		4503599627370495.5,   // 2^52 - 0.5
+		4503599627370496,     // 2^52
+		4503599627370497,     // 2^52 + 1 (odd, exact)
+		9007199254740991,     // 2^53 - 1
+		9007199254740992,     // 2^53: first even-only magnitude
+		1e15, -1e18,          // decimal magnitudes inside the gap
+		4611686018427387904,  // 2^62
+		-4611686018427387904, // -2^62
+		9223372036854774784,  // largest float64 below 2^63
+		-9223372036854775808, // MinInt64 = -2^63 exactly (in range)
+	} {
+		rand64 = append(rand64, math.Float64bits(f))
+	}
 	// Core subset for random pairing: zero, -0, ±1, NaN, ±Inf, a
 	// non-dyadic, first normal, min subnormal, a large and a tiny power.
 	core := []uint64{}
@@ -167,6 +190,15 @@ func main() {
 	add32(0x80000001)
 	add32(0x7F800001) // NaN payload
 	add32(0xFFC00000)
+	// Truncation-range float32 values (audit A2): 2^23+1 (last odd
+	// magnitude), 2^24±, 2^31, 2^62, ±2^63-adjacent.
+	for _, f := range []float32{
+		8388609, 16777215, 16777218, 2147483648, 4611686018427387904,
+		9223371487098961920, // largest float32 below 2^63
+		-9223372036854775808,
+	} {
+		add32(math.Float32bits(f))
+	}
 	rand32 := []uint32{}
 	for i := 0; i < 12; i++ {
 		rand32 = append(rand32, rng.Uint32())
@@ -243,22 +275,33 @@ func main() {
 			pair32(y, x)
 		}
 	}
-	// Unary over the 64-bit lists (grid + randoms).
+	// Unary over the 64-bit lists (grid + randoms). The i64 guard is the
+	// FULL int64 range (audit A2 — the old `|fx| < 2^62` guard silently
+	// dropped the 2^62..2^63 boundary): every float64 in [-2^63, 2^63)
+	// truncates in range, and both bounds are exact float64 values.
 	for _, x := range append(append([]uint64{}, vals...), rand64...) {
 		fx := math.Float64frombits(x)
 		out("t32 %d %d\n", x, uint64(c32(math.Float32bits(float32(fx)))))
 		out("n64 %d %d\n", x, math.Float64bits(fx)^(1<<63))
 		count += 2
-		if !math.IsNaN(fx) && !math.IsInf(fx, 0) && math.Abs(fx) < (1<<62) {
+		if !math.IsNaN(fx) && !math.IsInf(fx, 0) &&
+			fx >= -9223372036854775808 && fx < 9223372036854775808 {
 			out("i64 %d %d\n", x, int64(fx))
 			count++
 		}
 	}
-	// Widening over the 32-bit lists.
+	// Widening + DIRECT f32truncInt? vectors over the 32-bit lists
+	// (audit A2: truncation from float32 previously had only indirect
+	// coverage through the widening class).
 	for _, x := range append(append([]uint32{}, vals32...), rand32...) {
 		fx := math.Float32frombits(x)
 		out("t64 %d %d\n", x, c64(math.Float64bits(float64(fx))))
 		count++
+		if fx == fx && !math.IsInf(float64(fx), 0) &&
+			float64(fx) >= -9223372036854775808 && float64(fx) < 9223372036854775808 {
+			out("i32 %d %d\n", x, int64(fx))
+			count++
+		}
 	}
 	// Rational kernel, den = 1 (int→float): boundaries + random int64.
 	ints := []int64{

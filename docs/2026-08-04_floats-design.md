@@ -745,3 +745,37 @@ discoveries only (what went exactly as designed is not repeated).
   justification naming them as deliberate fail-closed refusal pins, not
   untriaged fidelity bugs; the machine half of the same pin is the
   `float_to_int_refusal_F` eval test.
+
+### Audit response, 2026-08-05 (independent branch audit; 4 note-severity findings confirmed, 7 refuted with live probes)
+
+- **A1 (fpack denormal fall-through — transcription deviation, now
+  flagged).** `fpack64`/`fpack32`'s rounding-carried-into-normal-range
+  arm hardcodes the biased exponent field to 1 where Go computes
+  `exp - bias` after the denormal loop. Equivalent on every reachable
+  input (a divergence needs `exp0 > bias` with `mant0 ≥ 2^53 − 1`,
+  which forces the normalized exponent past the `exp < bias + 1` guard
+  — proved function-local by the audit's verifier and probed on 7.7M
+  inputs, zero mismatches). Belongs in the F1 deviations list beside
+  mullu/divlu; both code sites now carry the deviation comment
+  (fpack32 previously had none).
+- **A2 (truncation vector gap closed).** The i64 vector class's value
+  lists had nothing between ~2^25 and 2^62 and its guard (`|x| < 2^62`)
+  silently dropped the top boundary — `f64truncInt?`'s left-shift
+  branch had ZERO vectors (empirically correct: the verifier probed 7
+  boundary values end-to-end). Generator extended: 12 truncation-range
+  float64 values (2^25+0.5 … MinInt64 exactly, incl. the verifier's
+  probes and the largest float64 below 2^63), 7 float32 analogues, the
+  i64 guard widened to the full int64 range, and a DIRECT `i32` class
+  for `f32truncInt?` (previously only indirect via widening).
+  Regenerated: 28 571 → 33 004 vectors, all passing.
+- **A3 (correction of record — smoke count).** The F1 build-log entry
+  above and commit 4c99f1b's message say "20 by-decide examples"; the
+  file had NINETEEN. The commit message is immutable; this line is the
+  correction. A 20th example was added in this response — the
+  `ratToFloat64 (-1) (10^400) = 0` underflow pin for the −0 → +0
+  constant-typing simplification, a genuinely decide-uncovered path —
+  so the count now reads 20 going forward.
+- **A4 (fsub32 provenance).** softfloat64.go has NO `fsub32`; ours is
+  an in-house `fadd32 ∘ fneg32` composition (fsub64's shape at
+  binary32). The section header's citation tightened to 506-517 and
+  the definition now says so.

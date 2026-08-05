@@ -1033,6 +1033,13 @@ private def checkFloatVector (parts : List String) : Option String :=
           | some got => if got == n then none else some s!"got {got}, want {n}"
           | none => some s!"got none, want {n}"
       | _, _ => some "unparsable operands"
+  | ["i32", xs, ns] =>
+      match xs.toNat?, ns.toInt? with
+      | some x, some n =>
+          match f32truncInt? x with
+          | some got => if got == n then none else some s!"got {got}, want {n}"
+          | none => some s!"got none, want {n}"
+      | _, _ => some "unparsable operands"
   | ["r64", num, den, z] => rat canon64 ratToFloat64 num den z
   | ["r32", num, den, z] => rat canon32 ratToFloat32 num den z
   | _ => some "malformed vector line"

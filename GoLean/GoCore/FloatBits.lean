@@ -213,7 +213,18 @@ def fpack64 (sign mant0 : Nat) (exp0 : Int) (trunc0 : Nat) : Nat :=
         let mant := mant >>> 1
         if mant < 1 <<< mantbits64 then sign ||| mant
         else
-          -- rounding carried into the normal range: exp = bias64 + 1 here
+          -- TRANSCRIPTION DEVIATION (audit A1, 2026-08-05; recorded in
+          -- the design note's F1 build-log deviations): Go's fpack64
+          -- falls through to the shared `(exp-bias)<<mantbits` return
+          -- with `exp++` applied; this arm HARDCODES the biased exponent
+          -- field to 1 (i.e. exp = bias + 1). Equivalent on every
+          -- reachable input: rounding carried into the normal range can
+          -- only leave the denormal loop with exp = bias (a divergence
+          -- would need exp0 > bias with mant0 ≥ 2^53 − 1, which forces
+          -- the NORMALIZED exponent past the `exp < bias + 1` guard, so
+          -- this branch is never entered there) — proved function-local
+          -- by the audit's verifier and probed on 7.7M inputs with zero
+          -- mismatches.
           sign ||| (1 <<< mantbits64) ||| (mant &&& ((1 <<< mantbits64) - 1))
     else
       sign ||| ((exp - bias64).toNat <<< mantbits64)
@@ -248,6 +259,10 @@ def fpack32 (sign mant0 : Nat) (exp0 : Int) (trunc0 : Nat) : Nat :=
         let mant := mant >>> 1
         if mant < 1 <<< mantbits32 then sign ||| mant
         else
+          -- TRANSCRIPTION DEVIATION (audit A1): biased exponent field
+          -- hardcoded to 1 where Go computes `exp - bias` — equivalent
+          -- on every reachable input; see fpack64's arm for the full
+          -- reachability argument (identical at 23/8 with bias -127).
           sign ||| (1 <<< mantbits32) ||| (mant &&& ((1 <<< mantbits32) - 1))
     else
       sign ||| ((exp - bias32).toNat <<< mantbits32)
@@ -413,7 +428,7 @@ def f32to64 (f : Nat) : Nat :=
     if uf.inf then fs64 ^^^ inf64
     else fpack64 fs64 (uf.mant <<< d) uf.exp 0
 
-/-! ## Binary32 arithmetic — softfloat64.go:506-532
+/-! ## Binary32 arithmetic — softfloat64.go:506-517
 
 Go's own softfloat computes float32 arithmetic by exact widening,
 binary64 computation, and one rounding back: correct (not a
@@ -423,6 +438,9 @@ risk (design note §6). Conversions INTO float32 from wide values must
 NOT take this path — the rational kernel below single-rounds. -/
 
 def fadd32 (x y : Nat) : Nat := f64to32 (fadd64 (f32to64 x) (f32to64 y))
+/-- No `fsub32` exists in softfloat64.go (audit A4): this is an in-house
+composition with `fsub64`'s shape (softfloat64.go:250) at binary32 —
+`fadd32 ∘ fneg32`, correct by the same widening argument. -/
 def fsub32 (x y : Nat) : Nat := fadd32 x (fneg32 y)
 def fmul32 (x y : Nat) : Nat := f64to32 (fmul64 (f32to64 x) (f32to64 y))
 def fdiv32 (x y : Nat) : Nat := f64to32 (fdiv64 (f32to64 x) (f32to64 y))
@@ -556,6 +574,18 @@ example : f64to32 0x4170000010000000 = 0x4B800000 := by decide
 -- rational kernel: 1/10 at both widths (the classic non-dyadic constant)
 example : ratToFloat64 1 10 = 0x3FB999999999999A := by decide
 example : ratToFloat32 1 10 = 0x3DCCCCCD := by decide
+-- rational kernel: a NEGATIVE rational underflowing to zero takes the
+-- spec's constant-typing simplification -0 → +0 (the kernel's one
+-- deliberate divergence from raw IEEE rounding; probed against gc —
+-- `var f float64 = -1e-500` has bits 0). 10^400 is far past binary64's
+-- underflow-to-zero threshold. (Added in the 2026-08-05 audit response,
+-- A3 — this path had vector coverage but no decide-class pin.)
+-- (`maxRecDepth`: the elaborator's decide-evaluation recurses once per
+-- `bitLenFuel` step — ~1330 for a 10^400 denominator; kernel evaluation
+-- itself is unaffected.)
+set_option exponentiation.threshold 401 in
+set_option maxRecDepth 100000 in
+example : ratToFloat64 (-1) (10 ^ 400) = 0 := by decide
 -- int→float (den = 1): 2^53 + 1 ties to even; 2^53 + 3 rounds up
 example : ratToFloat64 9007199254740993 1 = 0x4340000000000000 := by decide
 example : ratToFloat64 9007199254740995 1 = 0x4340000000000002 := by decide
