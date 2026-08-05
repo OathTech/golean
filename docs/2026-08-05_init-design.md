@@ -240,11 +240,13 @@ fail-closed mechanisms, all boundary/driver-level (machine untouched):
    `globaladdr` arm): the globals table decodes first and every gid is
    checked `< globals.size` (the lowering monad carries the count) —
    a malformed wire refuses loud at decode.
-2. **Non-seeding entries refuse globals-bearing programs**
-   (`runNamedFunctionM`): seeding there would be worse than refusing —
-   that entry has no `$pkginit` phase, so it would hand the subject
-   zero-valued, never-initialized globals. Precise `stuck` message
-   pointing at `runProgramM`.
+2. **The non-seeding Program-level entries are DELETED**
+   (delta-review N4, 2026-08-05, superseding the audit response's
+   refusal guard: `runNamedFunctionM`/`runNamedFunctionIntsM` had zero
+   callers once `runProgramM` became the driver everywhere, so the
+   refusal was dead trust surface — removed outright). `runProgramM`
+   is THE Program-level entry; on globals-free programs its init
+   phases are no-ops and it is the old wiring exactly.
 3. **Post-seed `StateWf` assert** (`runProgramM` / `CLI.enumSetup`,
    kernel-decidable): any location in a global cell or stored function
    body dangling beyond the allocator bound refuses before anything
@@ -269,7 +271,12 @@ global map literal's iteration behavior is part of the run), and the
 driver-agreement eval tests pin the two compositions against each other
 as they pin the existing pair. Audit response 2026-08-05, C6: the two
 drivers' pre-init wiring is ORDER-IDENTICAL (find → arity → seed →
-init-shape; pinned by the wrong-arity agreement eval test), `fuel`
+init-shape; pinned by the wrong-arity agreement eval tests — the
+PANICKING-init shape is the discriminating witness (delta-review M2:
+on a succeeding-init program the old divergent orders already agreed,
+so that pin alone was vacuous), with the succeeding-init shape kept as
+a second assertion, both also requiring the shared error to BE the
+arity error), `fuel`
 bounds each phase separately (a run may take up to 2× `fuel` steps
 total), and init-phase DIAGNOSTIC errors (`stuck`/`unsupported`/
 `internal`) carry a `package init:` marker — panic messages stay
@@ -309,12 +316,28 @@ using channels — raft-real: `var ErrCompacted = errors.New(...)`,
 stub at RUNTIME inside `$pkginit`, poisoning every subject with a
 runtime-shaped refusal. Now `checkInitQuarantine` (emit.go) walks
 `$pkginit`'s call graph transitively through emitted function and
-method bodies — including `func-value` references, conservatively: a
-function value merely STORED during init counts (the
-lexical-dependency-rule analog; slightly over-closed, recorded) — and
-refuses the whole export at emit time when it reaches a quarantined
-declaration. Pinned by `init/quarantined-init-dep`
-(FAIL/frontend-export by design).
+method bodies and refuses the whole export at emit time when it
+reaches a quarantined declaration.
+
+The closure's exact shape (corrected by delta-review M1/N3,
+2026-08-05): it is full STATIC reachability, deliberately over-closed
+in three recorded ways — (i) a quarantined function on a branch init
+never takes at runtime still refuses; (ii) a `func-value` merely
+STORED during init counts as reachable even if never invoked (the
+lexical-dependency-rule analog); (iii) an INTERFACE-DISPATCH anchor
+`I.M` in the graph expands to EVERY emitted concrete method named `M`,
+whatever its receiver type (M1: the first version stored the anchor's
+nil body and never visited any implementation, so an
+interface-dispatched initializer reaching a quarantined function —
+exactly the `hidden-dep-order` initializer shape — exported cleanly
+and poisoned every subject at runtime; the runtime poisoning was still
+classified frontend-export by the quarantine marker, so soundness
+held, but the export-time closure claimed here was false). Residual
+conservatism: name-based dispatch expansion ignores receiver method
+sets. Pinned by `init/quarantined-init-dep` and
+`init/quarantined-init-iface` (both FAIL/frontend-export by design;
+the iface pin verified discriminating — the pre-M1 checker exports
+it cleanly).
 
 ## 3. Ordering inside `$pkginit` — what is emitted
 
@@ -422,6 +445,10 @@ Added by the 2026-08-05 audit response:
   point-2 envelope pin, exercised).
 - `init/quarantined-init-dep` (C3) — EXPECTED RED
   (FAIL/frontend-export): the transitive init-quarantine refusal.
+- `init/quarantined-init-iface` (delta-review M1) — EXPECTED RED
+  (FAIL/frontend-export): the same refusal through an
+  INTERFACE-DISPATCHED initializer (the dispatch-anchor expansion;
+  verified discriminating against the pre-M1 checker).
 - `functions/bare-call-discard-result` (C5, incidental) — EXPECTED RED
   (FAIL/lean-observation): pre-existing BUG-012 (a bare call
   discarding results goes stuck), found by the audit's multi-file

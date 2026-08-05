@@ -409,10 +409,24 @@ func collectCalledFuncs(node any, out map[string]bool) {
 
 // checkInitQuarantine refuses the export when $pkginit's call graph
 // (transitively, through emitted function and method bodies) reaches a
-// quarantined declaration (audit response 2026-08-05, C3).
+// quarantined declaration (audit response 2026-08-05, C3). This is full
+// STATIC reachability — a quarantined function on a branch init never
+// takes at runtime still refuses the export (deliberate over-closure,
+// recorded in the design note). An interface-dispatch anchor `I.M` in
+// the graph (a bodyless method-table entry) expands conservatively to
+// EVERY emitted concrete method named `M`, whatever its receiver
+// (delta-review M1, 2026-08-05: the BFS previously stored the anchor's
+// nil body and never visited any implementation, so an
+// interface-dispatched initializer reaching a quarantined function
+// exported cleanly and poisoned every subject at runtime).
 func checkInitQuarantine(funcs, methods []any) error {
 	bodies := map[string]any{}
 	quarantined := map[string]string{}
+	// Interface dispatch anchors: "I.M" -> method name M; and per method
+	// NAME, every CONCRETE method-table key ("T.M"), body-bearing or
+	// quarantined-stub, an anchor expands to.
+	anchors := map[string]string{}
+	methodKeysByName := map[string][]string{}
 	record := func(key string, m map[string]any) {
 		if reason, ok := m["unsupported"].(string); ok {
 			quarantined[key] = reason
@@ -431,9 +445,16 @@ func checkInitQuarantine(funcs, methods []any) error {
 		if m, ok := f.(map[string]any); ok {
 			name, _ := m["name"].(string)
 			rt, _ := m["recvType"].(string)
-			if name != "" && rt != "" {
-				record(rt+"."+name, m)
+			if name == "" || rt == "" {
+				continue
 			}
+			key := rt + "." + name
+			if isIface, _ := m["interface"].(bool); isIface {
+				anchors[key] = name
+				continue
+			}
+			methodKeysByName[name] = append(methodKeysByName[name], key)
+			record(key, m)
 		}
 	}
 	start, ok := bodies["$pkginit"]
@@ -455,6 +476,22 @@ func checkInitQuarantine(funcs, methods []any) error {
 		for _, name := range names {
 			if reason, bad := quarantined[name]; bad {
 				return unsup("package initialization reaches quarantined function %s (%s)", name, reason)
+			}
+			if mname, isAnchor := anchors[name]; isAnchor {
+				// Conservative dispatch expansion: every concrete method
+				// with the anchor's name is a candidate implementation.
+				for _, key := range methodKeysByName[mname] {
+					if reason, bad := quarantined[key]; bad {
+						return unsup("package initialization reaches quarantined method %s via interface dispatch %s (%s)", key, name, reason)
+					}
+					if !seen[key] {
+						seen[key] = true
+						if b, ok := bodies[key]; ok {
+							frontier = append(frontier, b)
+						}
+					}
+				}
+				continue
 			}
 			if !seen[name] {
 				seen[name] = true

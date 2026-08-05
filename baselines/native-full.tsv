@@ -1,21 +1,16 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-05  commit: general-coverage-init (init-slice audit response C1-C6)
+# recorded: 2026-08-05  commit: general-coverage-init (delta-review M1-M2/N3-N4 response)
 #   frontend: native  oracle: go run (strict lane) / go-run membership in the
 #   machine-enumerated observation set (membership lane; go1.26.5 samples)
-# manifest_cases: 937  pass: 749  fail: 188
-# Re-pin reason: DELIBERATE coverage change — audit-response guardrails
-# (docs/2026-08-05_init-design.md §5 audit addendum): 4 NEW ids, zero
-# movement on existing ids:
-# - init/init-panic: PASS (panic during initialization aborts before the
-#   subject; both drivers' init-panic branches also eval-pinned) [C4].
-# - init/multi-file-order: PASS (multi-file cases work — the harness and
-#   frontend glob the case dir; pins lexical file-name presentation
-#   order) [C5].
-# - init/quarantined-init-dep: FAIL/frontend-export BY DESIGN — the
-#   transitive init-quarantine refusal (checkInitQuarantine) [C3].
-# - functions/bare-call-discard-result: FAIL/lean-observation — BUG-012
-#   (pre-existing: a bare call discarding results goes stuck), pinned
-#   red, deliberately not fixed in this slice [C5 incidental].
+# manifest_cases: 938  pass: 749  fail: 189
+# Re-pin reason: DELIBERATE coverage change — delta-review response
+# (docs/2026-08-05_init-design.md §2/§5): 1 NEW id, zero movement
+# otherwise:
+# - init/quarantined-init-iface: FAIL/frontend-export BY DESIGN — the
+#   transitive init-quarantine refusal through an INTERFACE-DISPATCHED
+#   initializer (M1: dispatch anchors now expand to every same-named
+#   concrete method; the pin is verified discriminating — the pre-M1
+#   checker exported it cleanly).
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
 PASS	arrays/array-copy	-
@@ -418,6 +413,7 @@ PASS	init/multiple-init-order	-
 PASS	init/multi-value-var-init	-
 PASS	init/package-init-order	-
 FAIL	init/quarantined-init-dep	frontend-export
+FAIL	init/quarantined-init-iface	frontend-export
 PASS	init/spec-dependency-example	-
 PASS	init/var-init-sequence	-
 PASS	interfaces/acked-indexer/hit	-

@@ -21,13 +21,16 @@ the big-step interpreter did — the relation's corresponding rules
 quantify over the choice.
 
 Execution is fuel-bounded iteration (`runConfig`); fuel counts machine
-steps (design note §5 — the CLI default retunes at S3). The whole-program
-drivers (`runFunctionWithContextM`, `runNamedFunctionM`) mirror the
-big-step entry points: bind arguments, allocate results, pin their
-locations, run the body inside a targetless `frame`, and read the pinned
-result locations at the terminal configuration. They use the machine's
-env-in-config representation throughout — `ExecState.locals` is never
-touched (it is deleted at S4).
+steps (design note §5 — the CLI default retunes at S3). The function
+driver `runFunctionWithContextM` mirrors the big-step entry point: bind
+arguments, allocate results, pin their locations, run the body inside a
+targetless `frame`, and read the pinned result locations at the terminal
+configuration. The PROGRAM driver `runProgramM` (init slice) composes
+global seeding and the `$pkginit` phase in front of the same wiring —
+it is the only Program-level entry (the non-seeding
+`runNamedFunctionM` pair was deleted, delta-review N4 2026-08-05).
+Everything uses the machine's env-in-config representation throughout —
+`ExecState.locals` is never touched (it is deleted at S4).
 
 Per-rule soundness/completeness lemmas against `Machine.Step` land at S5.
 -/
@@ -620,24 +623,15 @@ def runFunctionM (fuel : Nat) (func : Func) (args : Array GoValue) :
     Except GoError Result :=
   runFunctionWithTypesM fuel [] func args
 
-def runNamedFunctionM (fuel : Nat) (program : Program) (name : String)
-    (args : Array GoValue) (choices : List Nat := []) : Except GoError Result := do
-  -- Non-seeding entry: REFUSE globals-bearing programs (audit response
-  -- 2026-08-05, C1). Running one from a fresh state does NOT go stuck at
-  -- first access as originally claimed — the subject's own allocations
-  -- occupy the low base ids the frontend resolved the globals to, so
-  -- `globaladdr` references silently alias parameter/result cells.
-  -- Seeding here would be worse than refusing: this entry has no
-  -- `$pkginit` phase, so it would hand the subject zero-valued,
-  -- never-initialized globals. `runProgramM` is the globals-capable entry.
-  if program.globals.size > 0 then
-    throw (.stuck s!"program declares {program.globals.size} package-level variable(s); use the whole-program driver (runProgramM)")
-  let func ←
-    match findFunctionIn? program.funcs ⟨name⟩ with
-    | some func => pure func
-    | none => throw (.stuck s!"GoCore function not found: {name}")
-  runFunctionWithContextM fuel program.typeDefs.toList program.funcs func args
-    program.methods choices
+-- `runNamedFunctionM`/`runNamedFunctionIntsM` DELETED (delta-review N4,
+-- 2026-08-05): the Program-level non-seeding entries had zero callers
+-- left once `runProgramM` became the driver behind `native-json-run`
+-- and the driver-agreement tests — and a globals-bearing program run
+-- through them would NOT have gone stuck at first access (the subject's
+-- allocations occupy the low base ids the frontend resolved globals
+-- to — silent aliasing, audit response C1). Deleting the pair removes
+-- the dead trust surface outright; `runProgramM` is THE Program-level
+-- entry, and behaves identically on globals-free programs.
 
 /-! ## Package initialization (init slice, `docs/2026-08-05_init-design.md`)
 
@@ -710,8 +704,9 @@ seeded state is asserted `StateWf` (kernel-decidable): the
 defense-in-depth net behind the decoder's `globaladdr` bound check —
 a dangling location in a function body or global cell refuses here
 instead of aliasing a later allocation (audit response, C1). For a
-program with no globals and no `$pkginit` this is exactly
-`runNamedFunctionM`. -/
+program with no globals and no `$pkginit` the init phases are no-ops
+and this is exactly the old named-function entry wiring
+(`runFunctionWithContextM`'s, over a `Program`). -/
 def runProgramM (fuel : Nat) (program : Program) (name : String)
     (args : Array GoValue) (choices : Choices := []) : Except GoError Result := do
   let func ←
@@ -737,9 +732,5 @@ def runProgramM (fuel : Nat) (program : Program) (name : String)
 def runProgramIntsM (fuel : Nat) (program : Program) (name : String)
     (args : Array Int) (choices : List Nat := []) : Except GoError Result :=
   runProgramM fuel program name (args.map GoValue.int) choices
-
-def runNamedFunctionIntsM (fuel : Nat) (program : Program) (name : String)
-    (args : Array Int) (choices : List Nat := []) : Except GoError Result :=
-  runNamedFunctionM fuel program name (args.map GoValue.int) choices
 
 end GoLean.GoCore.Machine
