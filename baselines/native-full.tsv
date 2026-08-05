@@ -1,13 +1,14 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-06  commit: general-coverage (arc-final audit response, F6 untyped-nil sinks)
+# recorded: 2026-08-06  commit: general-coverage (arc-final audit response, F5 anchor substitution)
 #   frontend: native  oracle: go run (strict lane) / go-run membership in the
 #   machine-enumerated observation set (membership lane; go1.26.5 samples)
-# manifest_cases: 1025  pass: 871  fail: 154
-# Re-pin reason: BUG-016 fixed (one-mechanism untyped-nil typing at
-#   every assignable context via wrapInterfaceConversion, incl. the
-#   spread-call path) — exactly its ten pinned ids flip FAIL -> PASS
-#   (functions/untyped-nil-sinks/*). Zero PASS->FAIL, zero other stage
-#   moves; BUG-014's defined-typed pins stay red as recorded.
+# manifest_cases: 1025  pass: 873  fail: 152
+# Re-pin reason: F5 fixed (interface-dispatch anchors emit under the
+#   call site's stencil substitution; interfaces recorded at the active
+#   instantiation; substType learned method-signature substitution for
+#   bare interfaces) — exactly the two generics/generic-interface-param
+#   ids flip frontend-export FAIL -> PASS. Zero PASS->FAIL, zero other
+#   stage moves.
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
 PASS	arrays/array-copy	-
@@ -376,8 +377,8 @@ PASS	generics/derived-instantiation	-
 PASS	generics/empty-struct-argument	-
 PASS	generics/generic-closure	-
 PASS	generics/generic-closure/shared-capture	-
-FAIL	generics/generic-interface-param/call	frontend-export
-FAIL	generics/generic-interface-param/unrelated	frontend-export
+PASS	generics/generic-interface-param/call	-
+PASS	generics/generic-interface-param/unrelated	-
 PASS	generics/generic-interface-value	-
 PASS	generics/generic-map-type	-
 PASS	generics/generic-struct	-

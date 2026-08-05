@@ -243,15 +243,25 @@ func (e *emitter) emitProgram(files []*ast.File) (map[string]any, error) {
 		if declaredIface[k] {
 			continue
 		}
+		var resultsW []any
 		cm := e.calledIfaceMethods[k]
+		// Emit the anchor signature under the CALL SITE's stencil
+		// substitution (arc-final audit F5): the key is
+		// substitution-aware, the recorded origin sig is not.
+		savedSubst, savedName, savedErr := e.curSubst, e.curFuncName, e.substErr
+		e.curSubst, e.curFuncName, e.substErr = cm.subst, k, nil
 		params, err := e.emitParams(cm.sig.Params())
+		if err == nil {
+			var rerr error
+			if resultsW, rerr = e.emitResults(cm.sig.Results()); rerr != nil {
+				err = rerr
+			}
+		}
+		e.curSubst, e.curFuncName, e.substErr = savedSubst, savedName, savedErr
 		if err != nil {
 			return nil, err
 		}
-		results, err := e.emitResults(cm.sig.Results())
-		if err != nil {
-			return nil, err
-		}
+		results := resultsW
 		methods = append(methods, map[string]any{
 			"name":      cm.method,
 			"recvType":  cm.ifaceName,
@@ -3643,6 +3653,7 @@ func (e *emitter) synthesizeWrapper(named *types.Named, tName string, msel *type
 		e.noteInterface(ifaceName, origIface)
 		e.noteCalledIfaceMethod(ifaceName+"."+mfn.Name(), calledIfaceMethod{
 			ifaceName: ifaceName, method: mfn.Name(), sig: sig,
+			subst: e.curSubst,
 		})
 		innerFunc = ifaceName + "." + mfn.Name()
 		innerRecvArg = node
@@ -4036,7 +4047,8 @@ func (e *emitter) emitSelector(sel *ast.SelectorExpr) (any, error) {
 				e.noteInterface(ifaceName, recvIface)
 				e.noteCalledIfaceMethod(ifaceName+"."+fn.Name(), calledIfaceMethod{
 					ifaceName: ifaceName, method: fn.Name(),
-					sig: fn.Type().(*types.Signature),
+					sig:   fn.Type().(*types.Signature),
+					subst: e.curSubst,
 				})
 				// Go panics AT CREATION if the interface is nil (the itab
 				// load) — the first cut panicked at CALL time and the
@@ -4105,6 +4117,7 @@ func (e *emitter) emitSelector(sel *ast.SelectorExpr) (any, error) {
 				e.noteInterface(ifaceName, recvIface)
 				e.noteCalledIfaceMethod(ifaceName+"."+fn.Name(), calledIfaceMethod{
 					ifaceName: ifaceName, method: fn.Name(), sig: sig,
+					subst: e.curSubst,
 				})
 				return map[string]any{"expr": "func-value",
 					"func": ifaceName + "." + fn.Name(), "captured": []any{}}, nil
@@ -5444,7 +5457,8 @@ func (e *emitter) emitMethodCall(c *ast.CallExpr, sel *ast.SelectorExpr) (any, b
 		e.noteInterface(ifaceName, recvIface)
 		e.noteCalledIfaceMethod(ifaceName+"."+sel.Sel.Name, calledIfaceMethod{
 			ifaceName: ifaceName, method: sel.Sel.Name,
-			sig: fn.Type().(*types.Signature),
+			sig:   fn.Type().(*types.Signature),
+			subst: e.curSubst,
 		})
 		args, err := e.emitCallArgs(fn.Type().(*types.Signature), c)
 		if err != nil {

@@ -179,6 +179,26 @@ func (e *emitter) noteInterface(name string, iface *types.Interface) {
 	if name == emptyInterfaceName {
 		return
 	}
+	// Record the interface AT THE ACTIVE INSTANTIATION (arc-final audit
+	// F5, 2026-08-06): the wire NAME is substitution-aware
+	// (ifaceWireName), but a dispatch through a generic interface used
+	// at the enclosing function's type parameter hands this the ORIGIN
+	// interface, whose method signatures still mention T — the
+	// declaration pass then emits them with curSubst cleared and refuses
+	// the WHOLE export ("type parameter T outside an instantiation").
+	// Substituting here keys the substituted method set under the
+	// substituted name. applySubst is identity outside stenciling; a
+	// substitution failure keeps the origin (fail-closed downstream).
+	if e.curSubst != nil {
+		savedErr := e.substErr
+		if sub, ok := types.Unalias(e.applySubst(iface)).(*types.Interface); ok {
+			iface = sub
+		}
+		// A failed attempt keeps the origin (the declaration pass then
+		// refuses loudly on the unsubstituted signature, as before) and
+		// must not poison substErr for unrelated emission.
+		e.substErr = savedErr
+	}
 	if e.seenInterfaces == nil {
 		e.seenInterfaces = map[string]*types.Interface{}
 	}
@@ -209,6 +229,16 @@ type calledIfaceMethod struct {
 	ifaceName string
 	method    string
 	sig       *types.Signature
+	// The stencil substitution ACTIVE at the call site (nil outside an
+	// instantiation). The recorded sig is the ORIGIN method's — for a
+	// generic interface used at the enclosing function's type parameter
+	// (`gipVisitor[T].Visit` inside `gipApply[T]`) it still mentions T,
+	// while the KEY is substitution-aware; the anchor pass must emit the
+	// signature under THIS substitution, not with curSubst cleared
+	// (arc-final audit F5, 2026-08-06: the un-substituted emission
+	// refused the WHOLE export with "type parameter T outside an
+	// instantiation", poisoning unrelated subjects in the package).
+	subst map[*types.TypeParam]types.Type
 }
 
 // emptyStructName is the canonical GoCore type name for the empty struct

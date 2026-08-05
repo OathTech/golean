@@ -253,7 +253,30 @@ func (e *emitter) substType(t types.Type) (types.Type, error) {
 		if !mentionsTypeParam(ty, nil) {
 			return ty, nil
 		}
-		return nil, unsup("anonymous interface mentioning a type parameter (%s)", ty)
+		// An interface whose METHOD SIGNATURES mention a type parameter
+		// (the origin interface of a generic-interface dispatch,
+		// arc-final audit F5, 2026-08-06 — previously refused outright):
+		// substitute each method signature. Embedded type-set
+		// constraints never reach emission; refuse rather than guess.
+		if ty.NumEmbeddeds() > 0 {
+			return nil, unsup("interface with embedded constraints mentioning a type parameter (%s)", ty)
+		}
+		fns := make([]*types.Func, ty.NumMethods())
+		for i := 0; i < ty.NumMethods(); i++ {
+			m := ty.Method(i)
+			sub, err := e.substType(m.Type())
+			if err != nil {
+				return nil, err
+			}
+			sig, ok := sub.(*types.Signature)
+			if !ok {
+				return nil, unsup("interface method substitution produced non-signature for %s", m.Name())
+			}
+			fns[i] = types.NewFunc(m.Pos(), m.Pkg(), m.Name(), sig)
+		}
+		ni := types.NewInterfaceType(fns, nil)
+		ni.Complete()
+		return ni, nil
 	default:
 		return nil, unsup("substitution into %T (%s)", t, t)
 	}
