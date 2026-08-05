@@ -320,7 +320,18 @@ func main() {
 	// Rational kernel, decimal rationals: strconv/ParseFloat is the
 	// correctly-rounded independent oracle (compiled float literals go
 	// through the same gc path). num/10^k from random digit strings,
-	// spanning normals, subnormals, underflow-to-zero, and overflow.
+	// spanning normals, subnormals, and (at binary32) underflow-to-zero.
+	// NOT spanned here (arc-final audit F17, 2026-08-06): overflow —
+	// |digits| < 1e18 and den = 10^k, k >= 0, so |value| < 1e18, below
+	// both widths' overflow thresholds (and 0 of the checked-in rational
+	// vectors expect an infinity); binary64 underflow-to-zero — the
+	// deepest r64 vector is a subnormal (~2.2e-322), and the r64
+	// zero-flush path is pinned by the `decide` example in
+	// FloatBits.lean instead. fpack's overflow arms are exercised by the
+	// pair-arithmetic families (hundreds of finite-operand d/m/a/s
+	// vectors), so no kernel arm rests on this family; a rational
+	// constant that overflows its float type is a compile error in Go,
+	// so the arm is unreachable from valid Go via ratToFloat anyway.
 	for i := 0; i < 300; i++ {
 		digits := rng.Int63n(1_000_000_000_000_000_000)
 		if rng.Intn(2) == 0 {

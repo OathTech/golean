@@ -1023,12 +1023,16 @@ def convertValueToTyFuel : Nat → ExecState → Ty → GoValue → Except GoErr
           -- note D6): legal exactly when the underlying struct types are
           -- identical. The wire strips tags (Go's conversions IGNORE
           -- them), so wire `FieldDef` equality is the identity rule —
-          -- with `embedded` flags compared too, a recorded CONSERVATIVE
-          -- narrowing (the spec ignores embeddedness for identity). The
-          -- result is a retagged COPY, Go's value-conversion semantics.
-          -- Pointer-to-struct conversions stay refused elsewhere: they
-          -- ALIAS one cell under two tags, which field access cannot
-          -- honor yet (structs/tag-pointer-conversion stays red).
+          -- with `embedded` flags compared too, which is SPEC-EXACT
+          -- (corrected, arc-final audit F20 2026-08-06: §Type identity
+          -- requires fields "either both embedded or both not embedded",
+          -- §Conversions relaxes ONLY struct tags, and go/types compares
+          -- embeddedness unconditionally even under IdenticalIgnoreTags
+          -- — the old docstring called this a "conservative narrowing
+          -- (the spec ignores embeddedness for identity)", inviting a
+          -- future relaxation that would accept conversions gc rejects).
+          -- The result is a retagged COPY, Go's value-conversion
+          -- semantics.
           match value with
           | .struct actual actualFields =>
               if actual == name then

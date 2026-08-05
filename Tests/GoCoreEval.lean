@@ -837,8 +837,11 @@ and an `--expect-status ok` enumeration must FAIL loud, never bury the
 panic member in the set.
 
 F5: driver-agreement pins — `CLI.enumSetup`/`CLI.enumRunProgram`/
-`CLI.enumRun`/`CLI.enumInitRun` COPY `runProgramM`/`runConfig` (GoCore
-stays bit-identical, so no shared driver helper; `seedGlobals` IS shared
+`CLI.enumRun`/`CLI.enumInitRun` COPY `runProgramM`/`runConfig` (no
+shared driver helper BY POLICY — the lane adds nothing to GoCore; the
+old "GoCore stays bit-identical" wording was the membership slice's
+own constraint, stale as a standing fact — arc-final audit F16,
+2026-08-06; `seedGlobals` IS shared
 — stream-independent setup); these tests pin the copies against the
 originals: the single-run driver's observation (`observationOfRun ∘
 runProgramM`, the exact engine behind `native-json-run`) must be a

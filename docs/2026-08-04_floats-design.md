@@ -336,6 +336,18 @@ matches gc's `needkeyupdate = true` for float kinds (assigning
 `m[-0.0]` after `m[+0.0]` leaves `-0.0` as the stored key). Both
 behaviors need guardrail cases (§8 F0) since none exist — observed via
 entry counts and `1/k` sign probes, both int-valued.
+TRANSFER CAVEAT (arc-final audit F15, 2026-08-06): which of two
+`==`-equal keys is RETAINED on overwrite is spec-SILENT (the spec
+constrains only that `==`/`!=` be defined on the key type), so
+key-overwrite is a fifth latitude point alongside §3.1–§3.3's four —
+pinned to gc's `needkeyupdate` choice rather than spec text. A
+conforming implementation that retains the ORIGINAL key would give the
+other `1/k` sign; claims over the stored-key identity do not transfer
+to such an implementation. The green pin
+(`floats/signed-zero-map-key`) version-tracks gc's choice; overwrite
+is unobservable for every key kind where `==` implies bit-equality
+(`needkeyupdate = false`), so the exposure is exactly
+float/complex/string/interface/array/struct keys.
 
 Hashability: floats fall into `valueHashability`'s `.hashable`
 catch-all (`Ops.lean:1259-1267`) — correct, floats are hashable in Go.

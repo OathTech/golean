@@ -58,11 +58,24 @@ directions are asymmetric:
    argument that the set contains every behavior conforming Go can
    exhibit (the soundness direction). Current sites' statements: map
    iteration — spec says unspecified order, envelope = all permutations
-   of the snapshot (⊇ any Go); append spill — spec allows any sufficient
-   capacity, envelope = growth formula + [0,8) extra (a PRAGMATIC SUBSET
-   of the spec's latitude: sound for transfer as long as real Go's policy
-   lands inside, which the membership lane version-tracks; widen
-   deliberately if a toolchain leaves the window).
+   of the snapshot, which is ⊇ any Go ONLY for programs that do not
+   mutate the map during iteration: the spec MANDATES that an entry
+   removed before being reached "will not be produced", and the snapshot
+   model still produces it (and stale values) — the known, triple-pinned
+   divergence BUG-005, deliberately deferred to its live-iteration fix;
+   until then the map envelope statement is scoped to mutation-free
+   iteration (arc-final audit F14, 2026-08-06); append spill — spec
+   allows any sufficient capacity, envelope = growth formula + [0,8)
+   extra (a PRAGMATIC SUBSET of the spec's latitude: sound for transfer
+   as long as real Go's policy lands inside, which the membership lane
+   version-tracks; widen deliberately if a toolchain leaves the window).
+   CAUTION (arc-final audit F2, 2026-08-06): the append statement is
+   FALSE on go1.26.5 — the oracle toolchain realizes capacities outside
+   the window in both directions (BUG-021, three membership pins red) —
+   and a samples=1 membership case version-tracks its one (elem,
+   oldCap, newLen) triple, not the site's envelope. The deliberate
+   widening is in flight in the same audit response; this caution is
+   replaced by the widened statement in that commit.
 2. **Envelope fidelity is a standing audit dimension** (like
    over-specialization): reviewers argue each envelope against the spec
    TEXT, because the too-wide direction has no oracle.

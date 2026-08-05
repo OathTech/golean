@@ -205,8 +205,19 @@ func (e *emitter) emitProgram(files []*ast.File) (map[string]any, error) {
 	methods = append(methods, wrappers...)
 	// Wrapper signatures can mention instantiated types: drain again.
 	// (An instantiated STRUCT first appearing here would miss its own
-	// wrapper pass — that shape can only make a promoted method visibly
-	// MISSING at the differential, never silently wrong.)
+	// wrapper pass. CORRECTED, arc-final audit F13 2026-08-06: the old
+	// claim that this "can only make a promoted method visibly MISSING,
+	// never silently wrong" was unsound — under D2 a missing wrapper
+	// entry makes firstUnsatisfiedMethod? answer a definite FALSE, and a
+	// comma-ok assert turns that into a silently wrong boolean, exactly
+	// BUG-007's recorded finding-5 mode (verified by wire surgery on
+	// promoted-method-assert-ok). No REACHABLE instance is known: every
+	// type a wrapper's substituted signature can mention is also
+	// mentioned by the corresponding method stencil, which the FIRST
+	// drain's fixpoint flushes, and imported generic instantiation is
+	// refused. If late-registered structs ever become reachable here,
+	// the wrapper pass must move inside the drain fixpoint — do not
+	// lean on the old safety claim.)
 	funcs, typeDefs, methods, err = e.drainMono(funcs, typeDefs, methods)
 	if err != nil {
 		return nil, err

@@ -403,8 +403,15 @@ COPIED (not shared) is the driver layer: `enumSetup`/`enumRunProgram`
 hand-mirror `runProgramM`'s wiring (subject lookup, `$pkginit` shape
 check, per-stream init-then-subject composition — init consumes choices,
 so it runs per enumerated stream) and `enumRun`/`enumInitRun`
-hand-mirror `runConfig`'s terminal handling (audit F5/F7, 2026-08-05 — a
-shared helper would touch GoCore, which stays bit-identical). The copies
+hand-mirror `runConfig`'s terminal handling (audit F5/F7, 2026-08-05).
+Rationale updated at the arc-final audit (F16, 2026-08-06): the original
+clause "a shared helper would touch GoCore, which stays bit-identical"
+was the MEMBERSHIP SLICE's constraint (that slice touched zero GoCore
+files) and is false as a standing fact — later slices changed GoCore
+freely. The standing rationale is a POLICY: the membership lane
+deliberately adds no driver helper to GoCore (the lane is CLI-layer
+tooling; GoCore carries only what the semantics needs), and the copies
+are pinned instead. The copies
 are PINNED two ways: the driver-agreement
 eval tests in `Tests/GoCoreEval.lean` (the `native-json-run` engine's
 observation must be a member of the enumerated set, per consumption-site

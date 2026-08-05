@@ -83,7 +83,14 @@ reused is `stepFn`, the semantic core's step function, so every machine
 step is the machine's own; COPIED (hand-mirrored, not shared — a shared
 helper would touch GoCore, which stays bit-identical) are the driver
 layers: `enumSetup` mirrors `runFunctionWithContextM`'s entry wiring and
-`enumRun` mirrors `runConfig`'s terminal handling. The copies are pinned
+`enumRun` mirrors `runConfig`'s terminal handling. (Dated addendum,
+arc-final audit F16 2026-08-06: "GoCore stays bit-identical" was TRUE
+of this slice — `git diff eeb0b74..f8c3687 -- GoLean/GoCore/` is empty
+— but it is a slice-scoped fact, not a standing constraint; later
+slices changed GoCore freely, and the init slice shared `seedGlobals`
+with the CLI. The standing rationale is the POLICY stated in
+`GoLean/CLI.lean`: the lane adds no driver helper to GoCore, and the
+copies stay pinned by the two mechanisms below.) The copies are pinned
 by the driver-agreement eval tests in `Tests/GoCoreEval.lean` (per
 consumption-site class, incl. the panic-observation path) and by the
 harness's per-case coupling check (`native-json-run --choices <s>`'s
