@@ -1,0 +1,7 @@
+# id	subject	args	expected_status	expected_reason	features
+func-element	mapNilFuncElement	-	ok	-	maps,literals,nil,functions
+defined-pointer-element	mapNilDefinedPointerElement	-	ok	-	maps,literals,nil,pointers,defined_type
+defined-func-element	mapNilDefinedFuncElement	-	ok	-	maps,literals,nil,functions,defined_type
+pointer-element	mapNilPointerElement	-	ok	-	maps,literals,nil,pointers
+map-element	mapNilMapElement	-	ok	-	maps,literals,nil,len
+slice-element	mapNilSliceElement	-	ok	-	maps,literals,nil,slices,len

@@ -16,9 +16,13 @@ package main
 // Arguments render the way reflect/the runtime spell them — package-NAME
 // qualifiers, "," separators with no space (types.TypeString uses ", ";
 // reflect.Type.Name() does not), canonical basic names (byte→uint8,
-// rune→int32), "interface {}" for the empty interface — so Go panic texts
-// contain the key VERBATIM and TypeId.unqualified reproduces
-// reflect.Type.Name() (the observation channel's contract).
+// rune→int32), "interface {}" for the empty interface, "struct {}" for
+// the empty struct — so Go panic texts contain the key VERBATIM and
+// TypeId.unqualified reproduces reflect.Type.Name() (the observation
+// channel's contract). SCOPE of that claim (audit response M3): it holds
+// exactly on the ADMITTED argument surface; function-local defined types
+// — which gc names with a compiler-internal unique suffix (main.score·1)
+// no source-derived key can reproduce — are refused, not approximated.
 
 import (
 	"errors"
@@ -365,6 +369,7 @@ func (e *emitter) registerFuncInst(mangled string, fn *types.Func, targs []types
 	work := &funcInstWork{mangled: mangled, decl: decl, env: env}
 	e.funcInsts[mangled] = work
 	e.funcInstQueue = append(e.funcInstQueue, work)
+	e.monoLog = append(e.monoLog, monoLogEntry{monoLogFuncInst, mangled})
 	return nil
 }
 
@@ -423,6 +428,7 @@ func (e *emitter) enqueueTypeInst(inst *types.Named, key string) error {
 	work := &typeInstWork{key: key, inst: inst}
 	e.typeInsts[key] = work
 	e.typeInstQueue = append(e.typeInstQueue, work)
+	e.monoLog = append(e.monoLog, monoLogEntry{monoLogTypeInst, key})
 	return nil
 }
 
@@ -591,6 +597,7 @@ func (e *emitter) emitFuncInst(work *funcInstWork) (map[string]any, error) {
 	localTypesMark := len(e.localTypeDefs)
 	localIfaceMark := len(e.localIfaceMethods)
 	namedStructMark := len(e.namedStructTypes)
+	monoMark := e.markMono()
 	fn, err := e.emitFuncDecl(work.decl)
 	if err == nil && e.substErr != nil {
 		// A substitution failure that surfaced as an Invalid type but was
@@ -603,6 +610,7 @@ func (e *emitter) emitFuncInst(work *funcInstWork) (map[string]any, error) {
 		e.localTypeDefs = e.localTypeDefs[:localTypesMark]
 		e.localIfaceMethods = e.localIfaceMethods[:localIfaceMark]
 		e.namedStructTypes = e.namedStructTypes[:namedStructMark]
+		e.rollbackMono(monoMark)
 		return nil, err
 	}
 	// Plain functions are keyed by the mangled FuncId directly; METHOD
@@ -645,6 +653,59 @@ func (e *emitter) drainMono(funcs, typeDefs, methods []any) ([]any, []any, []any
 // truncation.
 const monoRegistryCap = 10000
 
+// ---- quarantine rollback (audit response m5) ----
+//
+// Every mono registration (mangled key, function stencil, type stencil)
+// is journaled so the per-decl quarantine can UNDO registrations made by
+// a declaration that is then refused: without this, a quarantined body's
+// instantiations survived into the worklists, and one unsupported TYPE
+// stencil (which has no quarantine) killed the whole export — poisoning
+// subjects the refused declaration never touched (pinned by
+// generics/quarantined-instantiation).
+
+type monoLogKind int
+
+const (
+	monoLogMangled monoLogKind = iota
+	monoLogFuncInst
+	monoLogTypeInst
+)
+
+type monoLogEntry struct {
+	kind monoLogKind
+	key  string
+}
+
+// monoMarks snapshots the journal and both queues; take one BEFORE
+// emitting a quarantinable body.
+type monoMarks struct {
+	log, funcQ, typeQ int
+}
+
+func (e *emitter) markMono() monoMarks {
+	return monoMarks{log: len(e.monoLog), funcQ: len(e.funcInstQueue), typeQ: len(e.typeInstQueue)}
+}
+
+// rollbackMono undoes every registration journaled after the marks.
+// Queue truncation to the recorded lengths is exact: pops happen only
+// between emissions (flushFuncInsts), never inside one, so entries past
+// the mark are exactly this emission's appends.
+func (e *emitter) rollbackMono(m monoMarks) {
+	for _, entry := range e.monoLog[m.log:] {
+		switch entry.kind {
+		case monoLogMangled:
+			delete(e.mangledKeys, entry.key)
+		case monoLogFuncInst:
+			delete(e.funcInsts, entry.key)
+		case monoLogTypeInst:
+			delete(e.typeInsts, entry.key)
+		}
+	}
+	e.monoLog = e.monoLog[:m.log]
+	e.funcInstQueue = e.funcInstQueue[:m.funcQ]
+	e.typeInstQueue = e.typeInstQueue[:m.typeQ]
+}
+
 // registerMangledKey records key → t in the collision registry. Two
 // NON-Identical types under one key would let GoCore decide two distinct
 // Go types identical — refuse the export (belt and suspenders behind the
@@ -666,6 +727,7 @@ func (e *emitter) registerMangledKey(key string, t types.Type) error {
 		return unsup("instantiation registry exceeded %d distinct mangled keys (monomorphization cap, design note §2e)", monoRegistryCap)
 	}
 	e.mangledKeys[key] = t
+	e.monoLog = append(e.monoLog, monoLogEntry{monoLogMangled, key})
 	return nil
 }
 
@@ -727,6 +789,20 @@ func (e *emitter) renderTypeArg(t types.Type) (string, error) {
 	case *types.Basic:
 		return renderBasicArg(ty)
 	case *types.Named:
+		// FUNCTION-LOCAL defined types refuse (audit response M3, a
+		// recorded narrowing): gc names them in instantiation renderings
+		// with a compiler-internal, globally-unique suffix (probe
+		// 2026-08-05: two same-named locals render `main.score·1` /
+		// `main.score·2`), which a bare `pkg.Name` key can neither
+		// reproduce (observation/panic-text divergence) nor keep
+		// injective (two same-named locals in different functions would
+		// share one key — the collision registry catches the two-type
+		// case loud, mono_test pins it, but the single-type divergence is
+		// silent). Refusing beats shipping a guessed numbering.
+		if obj := ty.Obj(); obj.Pkg() != nil && obj.Parent() != obj.Pkg().Scope() {
+			return "", unsup("function-local defined type %s as a type argument (gc renders these with a compiler-internal unique suffix, e.g. %s·1 — refused rather than guessed)",
+				obj.Name(), obj.Name())
+		}
 		if ty.TypeArgs().Len() > 0 {
 			return e.instTypeId(ty)
 		}
@@ -772,6 +848,16 @@ func (e *emitter) renderTypeArg(t types.Type) (string, error) {
 			return "interface {}", nil
 		}
 		return "", unsup("anonymous non-empty interface as a type argument (%s)", ty)
+	case *types.Struct:
+		if ty.NumFields() == 0 {
+			// The canonical EMPTY struct is inside the admitted type
+			// surface (the map[K]struct{} set idiom) and reflect spells
+			// it "struct {}" in instantiation names (audit response m4,
+			// probe 2026-08-05: Bx[struct{}] names as "Bx[struct {}]").
+			// The first cut's default arm over-refused it.
+			return "struct {}", nil
+		}
+		return "", unsup("anonymous non-empty struct as a type argument (%s)", ty)
 	case *types.TypeParam:
 		return "", unsup("unsubstituted type parameter %s as a type argument", ty)
 	default:

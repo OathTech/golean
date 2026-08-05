@@ -11,9 +11,20 @@ import (
 	"go/parser"
 	"go/token"
 	"go/types"
+	"os"
 	"strconv"
 	"testing"
 )
+
+// TestMain runs the whole package's tests under the SAME type-check
+// configuration as the frontend binary (audit response m6): run() is
+// never called by `go test`, so without this the alias arms
+// (types.Unalias paths, materialized *types.Alias) were unreachable in
+// tests and a future alias unit would have pinned gotypesalias=0.
+func TestMain(m *testing.M) {
+	enableMaterializedAliases()
+	os.Exit(m.Run())
+}
 
 // checkSource type-checks a single-file package and returns a fresh
 // emitter over it plus the package scope.
@@ -192,6 +203,98 @@ func TestInstFuncIdRenderings(t *testing.T) {
 	if err != nil || got != "mk[*main.Inner]" {
 		t.Errorf("mk[*main.Inner]: got %q, err %v", got, err)
 	}
+	// The canonical EMPTY struct is admitted (audit response m4; reflect
+	// probe 2026-08-05: Bx[struct{}] names as "Bx[struct {}]").
+	got, err = e.instFuncId("esId", []types.Type{types.NewStruct(nil, nil)})
+	if err != nil || got != "esId[struct {}]" {
+		t.Errorf("esId[struct {}]: got %q, err %v", got, err)
+	}
+}
+
+// TestLocalTypeArgumentRefuses (audit response M3): a FUNCTION-LOCAL
+// defined type as a type argument refuses — gc names these with a
+// compiler-internal globally-unique suffix (main.score·1) that a bare
+// pkg.Name key can neither reproduce nor keep injective.
+func TestLocalTypeArgumentRefuses(t *testing.T) {
+	src := `package main
+
+func withLocal() any {
+	type score int
+	var s score = 4
+	return s
+}
+
+func main() { _ = withLocal() }
+`
+	e, pkg := checkSource(t, src)
+	var local *types.Named
+	for _, obj := range collectTypeNames(e) {
+		if obj.Name() == "score" {
+			local = obj.Type().(*types.Named)
+		}
+	}
+	if local == nil {
+		t.Fatalf("no local type score in Defs")
+	}
+	if _, err := e.instFuncId("f", []types.Type{local}); err == nil {
+		t.Fatalf("function-local defined type mangled instead of refusing")
+	}
+	_ = pkg
+}
+
+// TestLocalTypeCollisionWouldBeCaught (audit response M3): had local
+// types been admitted, two same-named locals from different functions
+// would render one key — the belt-and-suspenders registry refuses that
+// pair LOUD (types.Identical is false for distinct declarations). The
+// refusal in renderTypeArg prevents even the single-type divergence the
+// registry cannot see.
+func TestLocalTypeCollisionWouldBeCaught(t *testing.T) {
+	src := `package main
+
+func first() any {
+	type score int
+	var s score = 1
+	return s
+}
+
+func second() any {
+	type score int
+	var s score = 2
+	return s
+}
+
+func main() { _, _ = first(), second() }
+`
+	e, _ := checkSource(t, src)
+	locals := []*types.Named{}
+	for _, obj := range collectTypeNames(e) {
+		if obj.Name() == "score" {
+			locals = append(locals, obj.Type().(*types.Named))
+		}
+	}
+	if len(locals) != 2 {
+		t.Fatalf("expected 2 local score types, got %d", len(locals))
+	}
+	if types.Identical(locals[0], locals[1]) {
+		t.Fatalf("distinct local declarations reported Identical")
+	}
+	if err := e.registerMangledKey("main.score", locals[0]); err != nil {
+		t.Fatalf("first registration: %v", err)
+	}
+	if err := e.registerMangledKey("main.score", locals[1]); err == nil {
+		t.Fatalf("same-named distinct local types shared a key silently")
+	}
+}
+
+// collectTypeNames returns every *types.TypeName in info.Defs.
+func collectTypeNames(e *emitter) []*types.TypeName {
+	out := []*types.TypeName{}
+	for _, obj := range e.info.Defs {
+		if tn, ok := obj.(*types.TypeName); ok {
+			out = append(out, tn)
+		}
+	}
+	return out
 }
 
 // TestManglingSurfaceFailsClosed: type arguments outside the admitted

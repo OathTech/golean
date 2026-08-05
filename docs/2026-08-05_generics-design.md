@@ -277,8 +277,13 @@ All fail closed, none silently:
   (extern-policy territory); would be the one true dictionary-forcing
   feature. Fail-closed as today.
 - **Type args outside the supported type surface** (anonymous non-empty
-  structs/interfaces as arguments): the existing `emitType` refusals fire
-  on the substituted types — same boundary, same message, nothing new.
+  structs/interfaces as arguments): refused. *Correction (audit m4,
+  2026-08-05):* the original "same boundary, same message" phrasing was
+  imprecise — the MANGLER is its own boundary and refuses these before
+  `emitType` would; its first cut also over-refused the canonical EMPTY
+  struct (inside the admitted surface — the `map[K]struct{}` idiom),
+  fixed with reflect's probed spelling `struct {}` and pinned by
+  `generics/empty-struct-argument`.
 - **Separate compilation / plugins**: monomorphization is whole-program;
   the frontend already type-checks whole programs, and the corpus is
   single-package. Multi-package targets (raft) monomorphize from the root
@@ -325,7 +330,13 @@ machinery — producing exactly `main.Pair[main.Inner]`, `main.box[int]`,
 - **Matches Go's observable renderings**: panic messages use the full key
   verbatim (`goTypeNameForMessage`, `Ops.lean:429` renders `.defined name
   => name.key`) — parity with `main.Pair[main.Inner]` panic text for free;
-  `Name()` parity after the §3.4 fix.
+  `Name()` parity after the §3.4 fix. *Scope correction (audit M3,
+  2026-08-05):* the verbatim claim holds on the ADMITTED argument surface
+  only — gc renders FUNCTION-LOCAL defined types with a compiler-internal
+  globally-unique suffix (`main.score·1`), which a source-derived key can
+  neither reproduce nor keep injective across same-named locals; such
+  arguments are REFUSED (recorded narrowing, envelope pin
+  `generics/local-type-argument`).
 - **Injective against source names**: `[` cannot occur in a Go identifier,
   so no mangled key can collide with any declared type's key. Distinct
   instantiations render distinct keys because `TypeString` is injective on
@@ -686,3 +697,39 @@ having already flipped with floats).
   node, the variadic zero-pack precedent). The sibling shapes
   (slice/array/struct literals with nil elements) remain latent and
   unpinned — recorded for a future corpus edge pass.
+- **Audit response** (2026-08-05, independent audit of the branch; 8
+  findings, 1 refuted, all fixed frontend/scripts/docs-side — GoCore and
+  proofs untouched):
+  - *M1*: the G4 typed-nil map-literal rewrite had fired for EVERY
+    non-interface element and REGRESSED base-passing shapes — the
+    machine's nil-literal arm rejects func-typed and defined-typed nils
+    ("nil literal for non-nilable type"), invisible to the corpus until
+    pinned. Restricted to direct slice/map/pointer elements; everything
+    else keeps the base bare-nil emission. Pins:
+    `maps/nil-literal-values/*` (6 — the three regressed shapes plus the
+    three rewrite-active ones). §10's deviation-5 text above described
+    the first cut as a pure latent-gap fix — that was wrong as shipped;
+    it both fixed one shape and regressed three.
+  - *M2*: gotypesalias=1 regressed NON-generic alias-to-anonymous-
+    interface dispatch — `ifaceWireName`'s structural fallback asserted
+    without `types.Unalias`. Fixed + assertion sweep (two more Unalias
+    at the type-parameter operand checks); pinned by
+    `interfaces/anonymous-alias-dispatch`.
+  - *M3*: function-local defined types as type arguments now REFUSE (see
+    the §3.2 scope correction); mono_test pins both the refusal and that
+    the registry would have caught the two-same-named-locals collision
+    loud.
+  - *m4*: empty-struct type arguments admitted, spelling `struct {}`
+    (see the §2e correction); pinned by
+    `generics/empty-struct-argument`.
+  - *m5*: mono registrations are journaled and ROLLED BACK by the
+    per-decl quarantine (both sites) — previously a refused body's
+    surviving TYPE stencil could kill the whole export; pinned by
+    `generics/quarantined-instantiation`.
+  - *m6*: the gotypesalias enablement is a shared helper called by both
+    `run()` and the unit tests' `TestMain` (tests previously ran under
+    gotypesalias=0).
+  - *n7*: ids containing `__` are refused by both manifest validators
+    (the artifact-path flattening could alias `a/b__c` with `a__b/c`).
+  - Refuted by the audit's own verifier (no action): the
+    nil-element-recording complaint.

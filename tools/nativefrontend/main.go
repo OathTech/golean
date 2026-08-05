@@ -26,20 +26,28 @@ func main() {
 	}
 }
 
-func run() error {
-	// Materialized type aliases (generics G4, design-note decision §9.5):
-	// a GOPATH-mode binary inherits the toolchain's COMPATIBILITY default
-	// gotypesalias=0, under which go/types ABORTS on generic type alias
-	// declarations ("requires GODEBUG=gotypesalias=1 or unset"). The
-	// GODEBUG environment variable overrides that default and is watched
-	// at runtime, so setting it here — before any go/types use — enables
-	// materialized *types.Alias everywhere (probe-verified 2026-08-05).
-	// Existing settings are preserved; the LAST occurrence of a key wins.
+// enableMaterializedAliases turns on materialized *types.Alias (generics
+// G4, design-note decision §9.5): a GOPATH-mode binary inherits the
+// toolchain's COMPATIBILITY default gotypesalias=0, under which go/types
+// ABORTS on generic type alias declarations ("requires
+// GODEBUG=gotypesalias=1 or unset"). The GODEBUG environment variable
+// overrides that default and is watched at runtime, so calling this
+// before any go/types use enables materialized aliases everywhere
+// (probe-verified 2026-08-05). Existing settings are preserved; the LAST
+// occurrence of a key wins. Shared by run() and the unit tests' TestMain
+// (audit response m6 — `go test` never calls run(), so tests that
+// type-check alias-bearing sources would otherwise pin the WRONG
+// configuration).
+func enableMaterializedAliases() {
 	if g := os.Getenv("GODEBUG"); g != "" {
 		os.Setenv("GODEBUG", g+",gotypesalias=1")
 	} else {
 		os.Setenv("GODEBUG", "gotypesalias=1")
 	}
+}
+
+func run() error {
+	enableMaterializedAliases()
 
 	dir := flag.String("dir", "", "package directory to type-check and emit")
 	out := flag.String("out", "", "output wire JSON path (default stdout)")

@@ -104,6 +104,7 @@ func (e *emitter) emitProgram(files []*ast.File) (map[string]any, error) {
 				localTypesMark := len(e.localTypeDefs)
 				localIfaceMark := len(e.localIfaceMethods)
 				namedStructMark := len(e.namedStructTypes)
+				monoMark := e.markMono()
 				fn, err := e.emitFuncDecl(d)
 				if err != nil {
 					// Per-decl quarantine: an UNSUPPORTED plain function
@@ -123,6 +124,13 @@ func (e *emitter) emitProgram(files []*ast.File) (map[string]any, error) {
 						// A wrapper for a rolled-back local type would
 						// reference a TypeDef that never ships.
 						e.namedStructTypes = e.namedStructTypes[:namedStructMark]
+						// Instantiations the refused body registered roll
+						// back too (audit response m5): a surviving TYPE
+						// stencil has no quarantine of its own and would
+						// refuse the WHOLE export from a body that was
+						// already stubbed out (pinned by
+						// generics/quarantined-instantiation).
+						e.rollbackMono(monoMark)
 						arity := 0
 						if d.Type.Params != nil {
 							for _, f := range d.Type.Params.List {
@@ -3674,6 +3682,13 @@ func (e *emitter) synthesizeWrapper(named *types.Named, tName string, msel *type
 // rendering for an anonymous one (which it registers for the declaration
 // pass — same naming as emitType's anonymous-interface arm).
 func (e *emitter) ifaceWireName(t types.Type) (string, bool) {
+	// Aliases materialize globally under gotypesalias=1 (G4), so the
+	// STRUCTURAL fallback must unalias before asserting — a non-generic
+	// `type R = interface{ M() int }` static type is a *types.Alias, and
+	// the raw assertion returned not-found, quarantining every dispatch
+	// through it (audit response M2; pinned by
+	// interfaces/anonymous-alias-dispatch).
+	t = types.Unalias(t)
 	if name, ok := e.namedTypeName(t); ok {
 		return name, true
 	}
@@ -3917,9 +3932,9 @@ func (e *emitter) emitSelector(sel *ast.SelectorExpr) (any, error) {
 			// the receiver and the UNBOXED operand fed to interface
 			// dispatch.
 			if e.curSubst != nil {
-				opBase := e.info.TypeOf(sel.X)
+				opBase := types.Unalias(e.info.TypeOf(sel.X))
 				if ptr, isPtr := opBase.(*types.Pointer); isPtr {
-					opBase = ptr.Elem()
+					opBase = types.Unalias(ptr.Elem())
 				}
 				if _, isTP := opBase.(*types.TypeParam); isTP {
 					concrete := e.goTypeOf(sel.X)
@@ -4499,11 +4514,18 @@ func (e *emitter) emitMapLit(cl *ast.CompositeLit, m *types.Map) (any, error) {
 		// composite-literal values are assignable to the element type), so
 		// the machine stores a TYPED nil (a nil slice/map/pointer — len 0,
 		// == nil) rather than the raw nil that emitExpr's best-effort type
-		// attachment leaves behind. Interface elements keep the bare nil
-		// (a nil interface IS the raw nil value). Latent for any map
-		// literal; first pinned by generics/type-aliases/nested-map (G4).
+		// attachment leaves behind. RESTRICTED to the lowered kinds the
+		// machine's nil-literal arm accepts — DIRECT slice/map/pointer
+		// (audit response M1: the first cut typed EVERY non-interface
+		// element and regressed func-typed and defined-typed elements,
+		// whose typed nil the machine rejects "nil literal for non-nilable
+		// type"; those keep the base bare-nil emission, which the
+		// maps/nil-literal-values pins show behaves correctly). Interface
+		// elements keep the bare nil too (a nil interface IS the raw nil).
+		// First pinned by generics/type-aliases/nested-map (G4).
 		if b, isB := e.goTypeOf(kv.Value).(*types.Basic); isB && b.Kind() == types.UntypedNil {
-			if !types.IsInterface(e.applySubst(m.Elem())) {
+			switch types.Unalias(e.applySubst(m.Elem())).(type) {
+			case *types.Slice, *types.Map, *types.Pointer:
 				v = map[string]any{"expr": "nil", "type": valTy}
 			}
 		}
@@ -5288,9 +5310,9 @@ func (e *emitter) emitMethodCall(c *ast.CallExpr, sel *ast.SelectorExpr) (any, b
 	// LookupFieldOrMethod and then takes the ordinary paths below (the
 	// interface path only when the type ARGUMENT itself is an interface).
 	if e.curSubst != nil {
-		opBase := e.info.TypeOf(sel.X)
+		opBase := types.Unalias(e.info.TypeOf(sel.X))
 		if ptr, isPtr := opBase.(*types.Pointer); isPtr {
-			opBase = ptr.Elem()
+			opBase = types.Unalias(ptr.Elem())
 		}
 		if _, isTP := opBase.(*types.TypeParam); isTP {
 			concrete := e.goTypeOf(sel.X)

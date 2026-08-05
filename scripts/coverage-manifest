@@ -214,6 +214,13 @@ has_tag() {
 validate_path_id() {
   local value="$1"
   local part
+  # A literal "__" in any id is refused: per-id artifact paths flatten id
+  # slashes to "__" (diff-coverage go-run dirs, negative-lane binaries), so
+  # an id containing "__" could alias another id's flattened path
+  # (audit response n7 — closes the class; no current id uses "__").
+  if [[ "$value" == *__* ]]; then
+    return 1
+  fi
   IFS='/' read -r -a parts <<< "$value"
   for part in "${parts[@]}"; do
     if [[ ! "$part" =~ ^[a-z0-9][a-z0-9_-]*$ ]]; then
@@ -344,7 +351,9 @@ while IFS= read -r cases_file; do
       bad=1
       continue
     fi
-    if [[ "$row_id" != "-" && ! "$row_id" =~ ^[a-z0-9][a-z0-9_-]*$ ]]; then
+    if [[ "$row_id" != "-" && ( ! "$row_id" =~ ^[a-z0-9][a-z0-9_-]*$ || "$row_id" == *__* ) ]]; then
+      # "__" refused for the same flattened-path aliasing reason as in
+      # validate_path_id (audit response n7).
       echo "coverage-manifest: $cases_file: invalid row id: $row_id" >&2
       bad=1
       continue

@@ -135,6 +135,9 @@ type emitter struct {
 	// wire (instTypeIdForWire).
 	typeInsts     map[string]*typeInstWork
 	typeInstQueue []*typeInstWork
+	// Journal of every mono registration, for the per-decl quarantine
+	// rollback (audit response m5; see rollbackMono).
+	monoLog []monoLogEntry
 
 	// Every package NAME that qualified a wire TypeId, mapped to the
 	// distinct import PATHs that used it. Go keys type identity on the

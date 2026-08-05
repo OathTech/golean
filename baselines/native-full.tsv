@@ -1,16 +1,31 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-05  commit: general-coverage-generics (BUG-013 fix: CLI renderer delegation)
+# recorded: 2026-08-05  commit: general-coverage-generics (audit response M1-M3, m4-m6, n7-n8)
 #   frontend: native  oracle: go run (strict lane) / go-run membership in the
 #   machine-enumerated observation set (membership lane; go1.26.5 samples)
-# manifest_cases: 950  pass: 824  fail: 126
-# Re-pin reason: DELIBERATE fix — BUG-013 closed (coordinator-authorized
-# follow-up to the generics slice's stop-and-report): GoLean/CLI.lean's
-# private duplicate of the pre-fix TypeId.unqualified logic is deleted;
-# both observation-encoder use sites (struct typeName, fieldAddr) now
-# call TypeId.unqualified — ONE copy of the stripping logic remains, in
-# GoCore/Value.lean. Exactly one movement:
-# - generics/instantiated-type-assert/name: FAIL/differential -> PASS
-#   (the bug's differential pin; docs/BUGS.md BUG-013, now Status: fixed).
+# manifest_cases: 960  pass: 833  fail: 127
+# Re-pin reason: DELIBERATE coverage change — audit-response guardrails
+# (10 NEW ids, ZERO movement on existing ids; per-finding record in
+# docs/2026-08-05_generics-design.md §10):
+# - maps/nil-literal-values/* (6, PASS) — M1: the G4 typed-nil
+#   map-literal rewrite had regressed base-passing func-typed and
+#   defined-typed nil elements (machine nil-literal arm rejects them),
+#   invisible to the corpus; now restricted to direct slice/map/pointer
+#   elements, with the three regressed shapes AND the three
+#   rewrite-active shapes pinned.
+# - interfaces/anonymous-alias-dispatch (PASS) — M2: gotypesalias=1 had
+#   regressed non-generic alias-to-anonymous-interface dispatch
+#   (ifaceWireName asserted without Unalias).
+# - generics/local-type-argument (FAIL/frontend-export, RED BY DESIGN) —
+#   M3: function-local defined types as type arguments are REFUSED (gc
+#   names them with a compiler-internal unique suffix, main.score·1,
+#   that a source-derived key can neither reproduce nor keep injective;
+#   recorded narrowing — flips only if exact-rendering support ever
+#   lands).
+# - generics/empty-struct-argument (PASS) — m4: the canonical empty
+#   struct is admitted as a type argument, reflect spelling "struct {}".
+# - generics/quarantined-instantiation (PASS) — m5: mono registrations
+#   journaled + rolled back by the per-decl quarantine, so a refused
+#   body's instantiations no longer poison the whole export.
 # Standing expected reds (unchanged): generics/type-parameter-channel-ops
 # (channels arc), generics/type-aliases/struct-literal (anonymous
 # non-empty struct — pre-existing generics-independent gap),
@@ -364,6 +379,7 @@ PASS	generics/comparable-runtime-edge/struct-skips-interface-panic	-
 PASS	generics/constraint-embedding	-
 PASS	generics/defined-slice-type	-
 PASS	generics/derived-instantiation	-
+PASS	generics/empty-struct-argument	-
 PASS	generics/generic-closure	-
 PASS	generics/generic-closure/shared-capture	-
 PASS	generics/generic-interface-value	-
@@ -384,10 +400,12 @@ PASS	generics/instantiated-type-assert/comma-ok	-
 PASS	generics/instantiated-type-assert/name	-
 PASS	generics/instantiated-type-assert/ok	-
 PASS	generics/instantiated-type-assert/panic	-
+FAIL	generics/local-type-argument	frontend-export
 PASS	generics/map-slice	-
 PASS	generics/method-and-type-set-constraint	-
 PASS	generics/method-constraint-call	-
 PASS	generics/nested-instantiation	-
+PASS	generics/quarantined-instantiation	-
 PASS	generics/recursive-constraints/argument-method	-
 PASS	generics/recursive-constraints/clone	-
 PASS	generics/recursive-constraints/comparable	-
@@ -434,6 +452,7 @@ PASS	init/spec-dependency-example	-
 PASS	init/var-init-sequence	-
 PASS	interfaces/acked-indexer/hit	-
 PASS	interfaces/acked-indexer/miss	-
+PASS	interfaces/anonymous-alias-dispatch	-
 PASS	interfaces/assert-error-satisfaction/classify	-
 PASS	interfaces/assert-error-satisfaction/declared-not-called	-
 PASS	interfaces/assert-error-satisfaction/no-call	-
@@ -610,6 +629,12 @@ PASS	maps/map-nil-eq	-
 PASS	maps/map-value-inner-write	-
 PASS	maps/nil-assign-eval-before-panic	-
 FAIL	maps/nil-channel-key	frontend-export
+PASS	maps/nil-literal-values/defined-func-element	-
+PASS	maps/nil-literal-values/defined-pointer-element	-
+PASS	maps/nil-literal-values/func-element	-
+PASS	maps/nil-literal-values/map-element	-
+PASS	maps/nil-literal-values/pointer-element	-
+PASS	maps/nil-literal-values/slice-element	-
 FAIL	maps/nil-read-key-types	frontend-export
 PASS	maps/nil-read-value-types	-
 PASS	maps/nil-value-comma-ok	-
