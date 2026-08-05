@@ -14,9 +14,11 @@ so a bug can neither rot in prose nor silently outlive its evidence:
    fixed-but-not-closed (or the case no longer pins it), and the check fails;
 2. every `Status: open` + `Pinned-by: differential` bug lists ≥1 case;
 3. (warning) the check reports how many baseline **fidelity failures**
-   (`stage=lean-observation` or `stage=differential` — wrong/stuck answers, not
-   frontend-coverage gaps) are **not** yet explained by any bug entry — the
-   omission surface to ratchet toward zero.
+   (`stage=lean-observation`, `stage=differential`, or `stage=membership` —
+   wrong/stuck answers and membership-lane alarms, not frontend-coverage
+   gaps; membership added at the arc-final audit, F9 2026-08-06) are **not**
+   yet explained by any bug entry — the omission surface to ratchet toward
+   zero.
 
 Bugs that cannot yet be mechanically pinned use `Pinned-by: none (<reason>)` and
 are exempt from (1)/(2) — but still listed, so they cannot disappear.
