@@ -185,7 +185,23 @@ sub-slice.
 
 ## BUG-007 — method PROMOTION through embedded fields is unmodeled
 
-- Status: open
+- Status: fixed (2026-08-05, general-coverage slice 2 — the recorded fix
+  direction landed: promotion is FLATTENED at emission
+  (docs/2026-08-05_embedding-interfaces-design.md D1). Field promotion:
+  Selection.Index() paths become field-get/deref chains (reads) and
+  field-addr chains (writes/addresses). Method promotion: call sites and
+  method values adjust the receiver through the hop path AT THAT MOMENT
+  (evaluation order and capture moment pinned by
+  embedding/promoted-nil-embedded-pointer/before-args and
+  embedding/promoted-method-value/{snapshot,live}); dynamic dispatch and
+  satisfaction go through synthesized forwarding WRAPPERS
+  (synthesizePromotionWrappers, one per promoted method-set entry,
+  receiver T or *T per Go's method-set asymmetry — mirroring gc's
+  wrappers), so GoCore's method table stays flat and COMPLETE. The
+  machine's over-approximate embedded-fields satisfaction fail-closure is
+  retired under that wire contract (D2), with the definite-FALSE polarity
+  pinned by embedding/promoted-ambiguous-not-satisfied and
+  embedding/promoted-pointer-receiver-method-set/value-box.)
 - Pinned-by: differential
 - Cases: interfaces/embedded-interface-shadowing/interface-field-dispatch, interfaces/embedded-interface-shadowing/interface-field-nil-panic, interfaces/embedded-interface-shadowing/nil-pointer-method-promoted, interfaces/embedded-interface-shadowing/pointer-method-promoted, interfaces/error-idioms/promoted-method, interfaces/promoted-method-assert-ok, methods/embedded-interface-satisfaction, embedding/deep-promoted-method, embedding/embedded-method-promote, embedding/promoted-ambiguous-not-satisfied, embedding/promoted-method-value/live, embedding/promoted-method-value/snapshot, embedding/promoted-nil-embedded-pointer/before-args, embedding/promoted-nil-embedded-pointer/call, embedding/promoted-nil-embedded-pointer/nil-panic, embedding/promoted-pointer-receiver-method-set/pointer-box, embedding/promoted-pointer-receiver-method-set/value-box
 - Discovered: 2026-07-30 (interfaces campaign — these cases were

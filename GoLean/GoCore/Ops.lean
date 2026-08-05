@@ -584,39 +584,26 @@ def dynamicMethodSetRecorded (state : ExecState) (dynTy : Ty) : Bool :=
   | .defined name => (TypeEnv.lookup state.types name).isSome
   | _ => true
 
-/-- Could a method be PROMOTED into `dynTy`'s method set from an embedded
-field? Promotion is unmodeled (BUG-007), so a satisfaction check that would
-answer `false` on such a type must fail CLOSED rather than answer — the
-comma-ok assert turned that `false` into a silent wrong answer (pre-merge
-audit 2026-07-31, finding 5). Value and pointer forms both, since `*Outer`
-promotes too. -/
-def dynamicHasEmbeddedFields (state : ExecState) (dynTy : Ty) : Bool :=
-  let base := match dynTy with
-    | .pointer elem => elem
-    | other => other
-  match base with
-  | .defined name =>
-      match TypeEnv.lookup state.types name with
-      | some (.struct fields) => fields.any (fun f => f.embedded)
-      | _ => false
-  | _ => false
-
 /-- The FIRST requirement of `interfaceName` that `dynTy` does not meet, in
 the interface's own (name-sorted) method order — `none` means it satisfies
 the interface. Go names exactly this method in its assert-panic message.
 
-Fails CLOSED, never vacuously true, in three situations:
+Fails CLOSED, never vacuously true, in two situations:
   * no declaration is recorded for a non-empty interface name (the wire
     carries one for every interface it mentions; an absent one means the
     program used an interface the frontend did not export);
   * the answer would be "unsatisfied" on a type whose method set is not
-    RECORDED at all (an imported/stdlib named type — BUG-008/BUG-009);
-  * the answer would be "unsatisfied" on a type whose method set may be
-    extended by unmodeled PROMOTION (BUG-007).
+    RECORDED at all (an imported/stdlib named type — BUG-008/BUG-009).
 
-The last two guard the `some name` (definite-FALSE) answer specifically:
+The second guards the `some name` (definite-FALSE) answer specifically:
 satisfaction found is still sound, since a recorded matching method really
-is in the method set. -/
+is in the method set. A third guard — types with EMBEDDED fields, whose
+method set unmodeled promotion could extend (BUG-007) — was retired
+2026-08-05 (general-coverage slice 2, design note D2): the wire contract
+now requires the emitted method table to carry the FULL method set of
+every declared named type, promoted methods included (the frontend
+synthesizes forwarding wrappers), so a missing method on an
+embedded-field type is real information. -/
 def firstUnsatisfiedMethod? (state : ExecState) (dynTy : Ty) (interfaceName : TypeId) :
     Except GoError (Option String) := do
   if isEmptyInterfaceName interfaceName then
@@ -639,9 +626,6 @@ def firstUnsatisfiedMethod? (state : ExecState) (dynTy : Ty) (interfaceName : Ty
 its method set is NOT on the wire (an imported named type carries no \
 declaration), so `missing method {name}' would be an answer derived from \
 no information (BUG-009)"
-          else if dynamicHasEmbeddedFields state dynTy then
-            unsupported s!"interface satisfaction for {goTypeNameForMessage state dynTy}: \
-method {name} may be PROMOTED from an embedded field (BUG-007, unmodeled)"
           else
             return (some name)
 

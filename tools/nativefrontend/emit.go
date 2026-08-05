@@ -49,6 +49,7 @@ func (e *emitter) emitProgram(files []*ast.File) (map[string]any, error) {
 				e.liftSeq = 0
 				localTypesMark := len(e.localTypeDefs)
 				localIfaceMark := len(e.localIfaceMethods)
+				namedStructMark := len(e.namedStructTypes)
 				fn, err := e.emitFuncDecl(d)
 				if err != nil {
 					// Per-decl quarantine: an UNSUPPORTED plain function
@@ -65,6 +66,9 @@ func (e *emitter) emitProgram(files []*ast.File) (map[string]any, error) {
 						// with another function's local type).
 						e.localTypeDefs = e.localTypeDefs[:localTypesMark]
 						e.localIfaceMethods = e.localIfaceMethods[:localIfaceMark]
+						// A wrapper for a rolled-back local type would
+						// reference a TypeDef that never ships.
+						e.namedStructTypes = e.namedStructTypes[:namedStructMark]
 						arity := 0
 						if d.Type.Params != nil {
 							for _, f := range d.Type.Params.List {
@@ -105,6 +109,18 @@ func (e *emitter) emitProgram(files []*ast.File) (map[string]any, error) {
 	// guarding collisions.
 	typeDefs = append(typeDefs, e.localTypeDefs...)
 	methods = append(methods, e.localIfaceMethods...)
+
+	// Promotion wrappers (design note 2026-08-05 D1.3): one synthesized
+	// forwarding method per PROMOTED method-set entry of every declared
+	// named struct type, so the machine's flat method table is COMPLETE
+	// (the D2 wire contract). Runs BEFORE the interface-anchor pass below:
+	// a wrapper forwarding to an embedded interface field records its
+	// dispatch target in calledIfaceMethods.
+	wrappers, err := e.synthesizePromotionWrappers()
+	if err != nil {
+		return nil, err
+	}
+	methods = append(methods, wrappers...)
 
 	// Interface-dispatch anchors for interfaces NOT declared in this package
 	// (predeclared error; imported interfaces later): every emitted
@@ -276,11 +292,11 @@ func (e *emitter) emitGenDeclTypes(d *ast.GenDecl) ([]any, []any, error) {
 				if err != nil {
 					return nil, nil, err
 				}
-				// `embedded` records Go's ANONYMOUS field flag verbatim. The
-				// machine needs it to fail closed on possible method
-				// PROMOTION (BUG-007) instead of answering a satisfaction
-				// check false; deriving it from the field NAME would be a
-				// frontend heuristic in the semantic core.
+				// `embedded` records Go's ANONYMOUS field flag verbatim —
+				// honest struct-shape information (it is part of struct
+				// identity for conversions). The machine no longer needs it
+				// for satisfaction: promotion is flattened at emission and
+				// the method table is complete (design note 2026-08-05 D2).
 				fields = append(fields, map[string]any{
 					"name": fld.Name(), "type": fty, "embedded": fld.Anonymous()})
 			}
@@ -288,6 +304,7 @@ func (e *emitter) emitGenDeclTypes(d *ast.GenDecl) ([]any, []any, error) {
 				"name": qname,
 				"def":  map[string]any{"kind": "struct", "fields": fields},
 			})
+			e.namedStructTypes = append(e.namedStructTypes, named)
 			continue
 		}
 		if iface, isInterface := named.Underlying().(*types.Interface); isInterface {
@@ -2754,8 +2771,7 @@ func (e *emitter) fieldPathValue(node any, t types.Type, index []int) (any, type
 
 // fieldPathAddr walks `index` from expression x, emitting the ADDRESS of
 // the final field: field-addr hops from the addressable root (or the
-// pointer value when the base/hop is already a pointer). Loop invariant:
-// node's value is a pointer to a cell of (non-pointer) type cur.
+// pointer value when the base/hop is already a pointer).
 func (e *emitter) fieldPathAddr(x ast.Expr, index []int) (any, types.Type, error) {
 	t := e.info.TypeOf(x)
 	var node any
@@ -2771,6 +2787,13 @@ func (e *emitter) fieldPathAddr(x ast.Expr, index []int) (any, types.Type, error
 	if err != nil {
 		return nil, nil, err
 	}
+	return e.fieldPathAddrFrom(node, cur, index)
+}
+
+// fieldPathAddrFrom is fieldPathAddr's node-based core (also used by the
+// synthesized promotion wrappers, whose root is the $recv parameter). Loop
+// invariant: node's value is a pointer to a cell of (non-pointer) type cur.
+func (e *emitter) fieldPathAddrFrom(node any, cur types.Type, index []int) (any, types.Type, error) {
 	for k, i := range index {
 		st, ok := cur.Underlying().(*types.Struct)
 		if !ok {
@@ -2804,6 +2827,251 @@ func (e *emitter) promotedFieldIndex(sel *ast.SelectorExpr) []int {
 		return seln.Index()
 	}
 	return nil
+}
+
+// synthesizePromotionWrappers builds one forwarding method per PROMOTED
+// method-set entry (multi-hop Selection.Index) of every declared named
+// struct type: receiver `T` when the method is in T's own method set
+// (value promotion), `*T` when it is only in *T's (pointer-receiver
+// promotion through value embedding — Go's method-set asymmetry). The
+// machine's method table is flat; these wrappers are what make it
+// COMPLETE, which is the wire contract that lets interface satisfaction
+// answer a definite "no" on embedded-field types (design note D2 — the
+// retired BUG-007 fail-closure). A wrapper that cannot be emitted fails
+// the whole export, the standing policy for methods.
+func (e *emitter) synthesizePromotionWrappers() ([]any, error) {
+	out := []any{}
+	seen := map[string]bool{}
+	for _, named := range e.namedStructTypes {
+		tName := e.qualifiedTypeName(named.Obj())
+		valSet := types.NewMethodSet(named)
+		ptrSet := types.NewMethodSet(types.NewPointer(named))
+		for i := 0; i < ptrSet.Len(); i++ {
+			msel := ptrSet.At(i)
+			if len(msel.Index()) <= 1 {
+				continue // declared directly on T, not promoted
+			}
+			mfn, ok := msel.Obj().(*types.Func)
+			if !ok {
+				return nil, unsup("promoted method-set entry %s is not a func", msel.Obj().Name())
+			}
+			key := tName + "." + mfn.Name()
+			if seen[key] {
+				continue
+			}
+			seen[key] = true
+			useSel := msel
+			recvIsPtr := true
+			if vs := valSet.Lookup(mfn.Pkg(), mfn.Name()); vs != nil {
+				useSel = vs
+				recvIsPtr = false
+			}
+			w, err := e.synthesizeWrapper(named, tName, useSel, recvIsPtr)
+			if err != nil {
+				return nil, err
+			}
+			out = append(out, w)
+		}
+	}
+	return out, nil
+}
+
+// synthesizeWrapper emits one forwarding wrapper method: body = walk the
+// embedded hops from $recv, call the original method (or dispatch on the
+// embedded interface field's value), return its results.
+func (e *emitter) synthesizeWrapper(named *types.Named, tName string, msel *types.Selection, recvIsPtr bool) (map[string]any, error) {
+	mfn := msel.Obj().(*types.Func)
+	sig := mfn.Type().(*types.Signature)
+	index := msel.Index()
+	hops := index[:len(index)-1]
+
+	valueTy, err := e.emitType(named)
+	if err != nil {
+		return nil, err
+	}
+	recvTy := valueTy
+	var rootT types.Type = named
+	if recvIsPtr {
+		recvTy = map[string]any{"kind": "pointer", "elem": valueTy}
+		rootT = types.NewPointer(named)
+	}
+	recvIdent := map[string]any{"expr": "ident", "name": "$recv", "type": recvTy}
+
+	params := []any{}
+	argIdents := []any{}
+	for i := 0; i < sig.Params().Len(); i++ {
+		pt, err := e.emitType(sig.Params().At(i).Type())
+		if err != nil {
+			return nil, err
+		}
+		id := "$p" + itoa(i)
+		params = append(params, map[string]any{"id": id, "type": pt})
+		argIdents = append(argIdents, map[string]any{"expr": "ident", "name": id, "type": pt})
+	}
+	results := []any{}
+	resultTypes := []any{}
+	for i := 0; i < sig.Results().Len(); i++ {
+		rt, err := e.emitType(sig.Results().At(i).Type())
+		if err != nil {
+			return nil, err
+		}
+		results = append(results, map[string]any{"id": syntheticResult(i), "type": rt})
+		resultTypes = append(resultTypes, rt)
+	}
+
+	origRecv := sig.Recv().Type()
+	var innerFunc string
+	var innerRecvArg any
+	if origIface, isIface := origRecv.Underlying().(*types.Interface); isIface {
+		// Promoted from an embedded INTERFACE field: forward as dynamic
+		// dispatch on the field value (nil field panics at dispatch — Go's
+		// nil-interface method call).
+		node, ft, err := e.fieldPathValue(recvIdent, rootT, hops)
+		if err != nil {
+			return nil, err
+		}
+		ifaceName, ok := e.namedTypeName(ft)
+		if !ok {
+			return nil, unsup("promotion from anonymous interface field in %s", tName)
+		}
+		e.noteInterface(ifaceName, origIface)
+		if e.calledIfaceMethods == nil {
+			e.calledIfaceMethods = map[string]calledIfaceMethod{}
+		}
+		e.calledIfaceMethods[ifaceName+"."+mfn.Name()] = calledIfaceMethod{
+			ifaceName: ifaceName, method: mfn.Name(), sig: sig,
+		}
+		innerFunc = ifaceName + "." + mfn.Name()
+		innerRecvArg = node
+	} else {
+		defType := origRecv
+		innerPtr := false
+		if ptr, ok := origRecv.(*types.Pointer); ok {
+			defType = ptr.Elem()
+			innerPtr = true
+		}
+		defName, ok := e.namedTypeName(defType)
+		if !ok {
+			return nil, unsup("promoted method on anonymous type %s", defType)
+		}
+		innerFunc = defName + "." + mfn.Name()
+		ft, err := hopFinalType(rootT, hops)
+		if err != nil {
+			return nil, err
+		}
+		ftPtr, ftIsPtr := ft.Underlying().(*types.Pointer)
+		if innerPtr && !ftIsPtr {
+			// The field's ADDRESS: only in *T's method set, so the wrapper
+			// receiver is a pointer (method-set rule).
+			if !recvIsPtr {
+				return nil, unsup("pointer-receiver promotion reached a value-receiver wrapper for %s", tName)
+			}
+			node, _, err := e.fieldPathAddrFrom(recvIdent, named, hops)
+			if err != nil {
+				return nil, err
+			}
+			innerRecvArg = node
+		} else {
+			node, _, err := e.fieldPathValue(recvIdent, rootT, hops)
+			if err != nil {
+				return nil, err
+			}
+			if !innerPtr && ftIsPtr {
+				elemTy, err := e.emitType(ftPtr.Elem())
+				if err != nil {
+					return nil, err
+				}
+				node = map[string]any{"expr": "deref", "ptr": node, "type": elemTy}
+			}
+			innerRecvArg = node
+		}
+	}
+
+	callNode := map[string]any{"expr": "call", "func": innerFunc,
+		"args": append([]any{innerRecvArg}, argIdents...), "resultTypes": resultTypes}
+	bodyStmts := []any{}
+	if len(results) == 0 {
+		bodyStmts = append(bodyStmts,
+			map[string]any{"stmt": "expr", "expr": callNode},
+			map[string]any{"stmt": "return", "results": []any{}})
+	} else {
+		lhs := []any{}
+		rets := []any{}
+		for i := range results {
+			id := "$w" + itoa(i)
+			rm := results[i].(map[string]any)
+			lhs = append(lhs, map[string]any{"target": "declare", "id": id, "type": rm["type"]})
+			rets = append(rets, map[string]any{"expr": "ident", "name": id, "type": rm["type"]})
+		}
+		bodyStmts = append(bodyStmts,
+			map[string]any{"stmt": "assign", "define": true, "lhs": lhs, "rhs": []any{callNode}},
+			map[string]any{"stmt": "return", "results": rets})
+	}
+	return map[string]any{
+		"name":     mfn.Name(),
+		"recvType": tName,
+		"recv":     map[string]any{"id": "$recv", "type": recvTy},
+		"params":   params,
+		"results":  results,
+		"variadic": sig.Variadic(),
+		"body":     map[string]any{"stmt": "block", "body": bodyStmts},
+	}, nil
+}
+
+// hopFinalType statically walks the embedded-hop types (no emission): the
+// type of the field reached by `hops` from t.
+func hopFinalType(t types.Type, hops []int) (types.Type, error) {
+	for _, i := range hops {
+		if ptr, ok := t.Underlying().(*types.Pointer); ok {
+			t = ptr.Elem()
+		}
+		st, ok := t.Underlying().(*types.Struct)
+		if !ok {
+			return nil, unsup("promoted hop through non-struct type %s", t)
+		}
+		t = st.Field(i).Type()
+	}
+	return t, nil
+}
+
+// promotedReceiverArg emits the receiver operand for a (possibly promoted)
+// concrete-receiver method call or method value. With no hops it is
+// methodReceiverArg; with hops the receiver is adjusted through the
+// embedded path AT THIS MOMENT (design note D1.2 — the faithful evaluation
+// order for calls, and the faithful capture moment for method values):
+//   pointer receiver reached at a pointer field  -> the field's VALUE
+//   pointer receiver reached at a value field    -> the field's ADDRESS
+//   value receiver reached at a pointer field    -> deref of the VALUE
+//   value receiver reached at a value field      -> the field's VALUE
+func (e *emitter) promotedReceiverArg(sel *ast.SelectorExpr, hops []int, pointerRecv bool) (any, error) {
+	if len(hops) == 0 {
+		return e.methodReceiverArg(sel, pointerRecv)
+	}
+	ft, err := hopFinalType(e.info.TypeOf(sel.X), hops)
+	if err != nil {
+		return nil, err
+	}
+	ftPtr, ftIsPtr := ft.Underlying().(*types.Pointer)
+	if pointerRecv && !ftIsPtr {
+		node, _, err := e.fieldPathAddr(sel.X, hops)
+		return node, err
+	}
+	base, err := e.emitExpr(sel.X)
+	if err != nil {
+		return nil, err
+	}
+	node, _, err := e.fieldPathValue(base, e.info.TypeOf(sel.X), hops)
+	if err != nil {
+		return nil, err
+	}
+	if !pointerRecv && ftIsPtr {
+		elemTy, err := e.emitType(ftPtr.Elem())
+		if err != nil {
+			return nil, err
+		}
+		node = map[string]any{"expr": "deref", "ptr": node, "type": elemTy}
+	}
+	return node, nil
 }
 
 func (e *emitter) fieldBase(sel *ast.SelectorExpr) (any, string, error) {
@@ -2858,7 +3126,10 @@ func (e *emitter) emitSelector(sel *ast.SelectorExpr) (any, error) {
 			if !ok {
 				return nil, unsup("method on anonymous type %s", defType)
 			}
-			recvArg, err := e.methodReceiverArg(sel, pointerRecv)
+			// The receiver is captured AT METHOD-VALUE TIME, adjusted
+			// through any embedded hops NOW (design note D1.2 — pinned by
+			// embedding/promoted-method-value/{snapshot,live}).
+			recvArg, err := e.promotedReceiverArg(sel, seln.Index()[:len(seln.Index())-1], pointerRecv)
 			if err != nil {
 				return nil, err
 			}
@@ -3877,13 +4148,35 @@ func (e *emitter) emitMethodCall(c *ast.CallExpr, sel *ast.SelectorExpr) (any, b
 	// value carries its own receiver; methodReceiverArg's pointer logic is
 	// for concrete receivers only).
 	if recvIface, isIface := recvType.Underlying().(*types.Interface); isIface {
-		recvStatic := e.info.TypeOf(sel.X)
-		if _, ok := recvStatic.Underlying().(*types.Interface); !ok {
-			// Promotion through an embedded interface field: the receiver
-			// expression is not the interface value itself — deferred.
-			return nil, false, unsup("interface method dispatch through embedding (interfaces campaign, deferred)")
+		// The interface VALUE being dispatched on: the receiver expression
+		// itself, or — promotion through an embedded interface FIELD
+		// (design note D1.4) — the field value reached by the hop walk (a
+		// nil field then panics at dispatch, Go's nil-interface call).
+		hops := seln.Index()[:len(seln.Index())-1]
+		var recvArg any
+		var ifaceStatic types.Type
+		if len(hops) == 0 {
+			ifaceStatic = e.info.TypeOf(sel.X)
+			if _, ok := ifaceStatic.Underlying().(*types.Interface); !ok {
+				return nil, false, unsup("interface method dispatch shape (non-interface receiver, no embedded hops)")
+			}
+			var err error
+			recvArg, err = e.emitExpr(sel.X)
+			if err != nil {
+				return nil, false, err
+			}
+		} else {
+			base, err := e.emitExpr(sel.X)
+			if err != nil {
+				return nil, false, err
+			}
+			node, ft, err := e.fieldPathValue(base, e.info.TypeOf(sel.X), hops)
+			if err != nil {
+				return nil, false, err
+			}
+			recvArg, ifaceStatic = node, ft
 		}
-		ifaceName, ok := e.namedTypeName(recvStatic)
+		ifaceName, ok := e.namedTypeName(ifaceStatic)
 		if !ok {
 			return nil, false, unsup("method call on anonymous interface type")
 		}
@@ -3897,10 +4190,6 @@ func (e *emitter) emitMethodCall(c *ast.CallExpr, sel *ast.SelectorExpr) (any, b
 		e.calledIfaceMethods[ifaceName+"."+sel.Sel.Name] = calledIfaceMethod{
 			ifaceName: ifaceName, method: sel.Sel.Name,
 			sig: fn.Type().(*types.Signature),
-		}
-		recvArg, err := e.emitExpr(sel.X)
-		if err != nil {
-			return nil, false, err
 		}
 		args, err := e.emitCallArgs(fn.Type().(*types.Signature), c)
 		if err != nil {
@@ -3925,8 +4214,9 @@ func (e *emitter) emitMethodCall(c *ast.CallExpr, sel *ast.SelectorExpr) (any, b
 	if !ok {
 		return nil, false, unsup("method on anonymous type %s", defType)
 	}
-	// Receiver argument (see methodReceiverArg for Go's rule).
-	recvArg, err := e.methodReceiverArg(sel, pointerRecv)
+	// Receiver argument, adjusted through any embedded-field hops at the
+	// call site (design note D1.2; see promotedReceiverArg for the rule).
+	recvArg, err := e.promotedReceiverArg(sel, seln.Index()[:len(seln.Index())-1], pointerRecv)
 	if err != nil {
 		return nil, false, err
 	}

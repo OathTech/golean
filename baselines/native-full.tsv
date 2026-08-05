@@ -1,18 +1,23 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-05  commit: general-coverage-embed slice-2 stage 2 (field promotion through embedding)
+# recorded: 2026-08-05  commit: general-coverage-embed slice-2 stage 3 (method promotion + wrappers; BUG-007 closed)
 #   frontend: native  oracle: go run
-# manifest_cases: 906  pass: 648  fail: 258
+# manifest_cases: 906  pass: 665  fail: 241
 # Re-pin reason: DELIBERATE coverage change, general-coverage slice 2
-# stage 2 (docs/2026-08-05_embedding-interfaces-design.md D1.1): promoted
-# FIELD access flattens at emission — go/types Selection.Index() paths
-# become field-get/deref chains (reads) and field-addr chains from the
-# addressable root (writes/addresses), auto-dereferencing embedded
-# pointer hops (nil panics at the deref, Go's behavior). Six FAIL->PASS:
-# embedding/deep-promoted-field, embedding/embedded-pointer-field,
-# embedding/embedded-pointer-nil-panic,
-# embedding/promoted-field-depth-shadow, structs/anonymous-field,
-# structs/tag-embedded-field. ZERO PASS->FAIL, no other stage moves.
-# 642 -> 648 pass, 906 cases unchanged.
+# stage 3 (docs/2026-08-05_embedding-interfaces-design.md D1.2-D1.4, D2):
+# promoted METHOD calls and method values adjust the receiver through the
+# embedded hop path at the call/value moment; dynamic dispatch and
+# interface satisfaction resolve through synthesized forwarding wrappers
+# (one per promoted method-set entry, receiver T/*T per Go's method-set
+# asymmetry), making the flat method table COMPLETE; the machine's
+# over-approximate BUG-007 satisfaction fail-closure is retired under
+# that wire contract. Seventeen FAIL->PASS: the whole BUG-007 case list
+# (embedding/deep-promoted-method, embedding/embedded-method-promote,
+# interfaces/embedded-interface-shadowing/*4, interfaces/error-idioms/
+# promoted-method, interfaces/promoted-method-assert-ok,
+# methods/embedded-interface-satisfaction) plus the ten stage-0 guardrail
+# pins (promoted-ambiguous-not-satisfied, promoted-method-value/*2,
+# promoted-nil-embedded-pointer/*3, promoted-pointer-receiver-method-set/*2).
+# ZERO PASS->FAIL, no other stage moves. 648 -> 665 pass, 906 cases.
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
 PASS	arrays/array-copy	-
@@ -274,21 +279,21 @@ PASS	defer/multiple-lifo	-
 PASS	defer/recover-normal-return	-
 PASS	defer/unnamed-return	-
 PASS	embedding/deep-promoted-field	-
-FAIL	embedding/deep-promoted-method	lean-observation
+PASS	embedding/deep-promoted-method	-
 PASS	embedding/embedded-field-shadow	-
-FAIL	embedding/embedded-method-promote	lean-observation
+PASS	embedding/embedded-method-promote	-
 PASS	embedding/embedded-pointer-field	-
 PASS	embedding/embedded-pointer-nil-panic	-
-FAIL	embedding/promoted-ambiguous-not-satisfied	lean-observation
+PASS	embedding/promoted-ambiguous-not-satisfied	-
 PASS	embedding/promoted-field-depth-shadow	-
 PASS	embedding/promoted-method-shadow	-
-FAIL	embedding/promoted-method-value/live	lean-observation
-FAIL	embedding/promoted-method-value/snapshot	lean-observation
-FAIL	embedding/promoted-nil-embedded-pointer/before-args	lean-observation
-FAIL	embedding/promoted-nil-embedded-pointer/call	lean-observation
-FAIL	embedding/promoted-nil-embedded-pointer/nil-panic	lean-observation
-FAIL	embedding/promoted-pointer-receiver-method-set/pointer-box	lean-observation
-FAIL	embedding/promoted-pointer-receiver-method-set/value-box	lean-observation
+PASS	embedding/promoted-method-value/live	-
+PASS	embedding/promoted-method-value/snapshot	-
+PASS	embedding/promoted-nil-embedded-pointer/before-args	-
+PASS	embedding/promoted-nil-embedded-pointer/call	-
+PASS	embedding/promoted-nil-embedded-pointer/nil-panic	-
+PASS	embedding/promoted-pointer-receiver-method-set/pointer-box	-
+PASS	embedding/promoted-pointer-receiver-method-set/value-box	-
 FAIL	floats/compound-assign	frontend-export
 FAIL	floats/defined-type-ops	frontend-export
 FAIL	floats/division-specials	frontend-export
@@ -406,17 +411,17 @@ PASS	interfaces/embedded-interface	-
 PASS	interfaces/embedded-interface-assertion	-
 PASS	interfaces/embedded-interface-duplicate-method	-
 PASS	interfaces/embedded-interface-shadowing/explicit-duplicate	-
-FAIL	interfaces/embedded-interface-shadowing/interface-field-dispatch	lean-observation
-FAIL	interfaces/embedded-interface-shadowing/interface-field-nil-panic	lean-observation
+PASS	interfaces/embedded-interface-shadowing/interface-field-dispatch	-
+PASS	interfaces/embedded-interface-shadowing/interface-field-nil-panic	-
 PASS	interfaces/embedded-interface-shadowing/interface-field-shadowed	-
-FAIL	interfaces/embedded-interface-shadowing/nil-pointer-method-promoted	lean-observation
-FAIL	interfaces/embedded-interface-shadowing/pointer-method-promoted	lean-observation
+PASS	interfaces/embedded-interface-shadowing/nil-pointer-method-promoted	-
+PASS	interfaces/embedded-interface-shadowing/pointer-method-promoted	-
 PASS	interfaces/error-idioms/any-round-trip	-
 FAIL	interfaces/error-idioms/extra-interface-assertion	frontend-export
 PASS	interfaces/error-idioms/nil-error	-
 PASS	interfaces/error-idioms/nil-pointer-method	-
 PASS	interfaces/error-idioms/pointer-identity	-
-FAIL	interfaces/error-idioms/promoted-method	lean-observation
+PASS	interfaces/error-idioms/promoted-method	-
 PASS	interfaces/error-idioms/uncomparable-panic	-
 PASS	interfaces/error-idioms/value-equality	-
 PASS	interfaces/error-interface	-
@@ -450,7 +455,7 @@ PASS	interfaces/method-set-variadic-mismatch/req-variadic-impl-slice-panic	-
 PASS	interfaces/method-set-variadic-mismatch/req-variadic-impl-variadic	-
 PASS	interfaces/method-set-variadic-mismatch/variadic-elem-mismatch	-
 PASS	interfaces/nil-interface	-
-FAIL	interfaces/promoted-method-assert-ok	lean-observation
+PASS	interfaces/promoted-method-assert-ok	-
 PASS	interfaces/type-assert-from-named-interface-panic/nil-operand	-
 PASS	interfaces/type-assert-from-named-interface-panic/to-pointer	-
 PASS	interfaces/type-assert-interface	-
@@ -587,7 +592,7 @@ FAIL	maps/tuple-swap-values	frontend-export
 FAIL	maps/update-during-range	differential
 PASS	methods/defined-int-receiver	-
 PASS	methods/defined-map-receiver	-
-FAIL	methods/embedded-interface-satisfaction	lean-observation
+PASS	methods/embedded-interface-satisfaction	-
 PASS	methods/interface-dispatch	-
 FAIL	methods/method-expression	frontend-export
 PASS	methods/method-value-copy	-

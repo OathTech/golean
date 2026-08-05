@@ -88,6 +88,14 @@ type emitter struct {
 	// vacuously satisfied it (pre-merge audit 2026-07-31, finding 0).
 	seenInterfaces map[string]*types.Interface
 
+	// Every NAMED STRUCT type declared in the package (package-level and
+	// function-local), collected by emitGenDeclTypes for the promotion
+	// wrapper pass (design note 2026-08-05 D1.3): emitProgram synthesizes
+	// forwarding wrappers for each promoted entry of the type's method
+	// set, so the machine's flat method table is COMPLETE and a missing
+	// method is real information (D2).
+	namedStructTypes []*types.Named
+
 	// Every package NAME that qualified a wire TypeId, mapped to the
 	// distinct import PATHs that used it. Go keys type identity on the
 	// path, the wire key on the name, so a name reached by two paths means
