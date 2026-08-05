@@ -111,6 +111,26 @@ type emitter struct {
 	// spelling.
 	mangledKeys map[string]types.Type
 
+	// Monomorphization state (mono.go, generics design note 2026-08-05).
+	// curSubst is the ACTIVE stencil substitution (declaration type
+	// parameter → concrete argument), nil outside stenciling; substErr
+	// records the first substitution failure surfaced as an Invalid type
+	// (emitType refuses on it — fail closed). genericFuncDecls maps each
+	// generic function object to its declaration for the worklist;
+	// funcInsts/funcInstQueue are the dedup map and pending queue of
+	// stencils; monoCtxt is the shared types.Instantiate context.
+	curSubst         map[*types.TypeParam]types.Type
+	substErr         error
+	genericFuncDecls map[*types.Func]*ast.FuncDecl
+	funcInsts        map[string]*funcInstWork
+	funcInstQueue    []*funcInstWork
+	monoCtxt         *types.Context
+	// Method declarations on GENERIC types, keyed by the receiver's
+	// ORIGIN named type: skipped by the declaration loop (a generic
+	// method has no uninstantiated runtime form) and stenciled per
+	// receiver instantiation when instantiated types land (G3).
+	genericMethodDecls map[*types.Named][]*ast.FuncDecl
+
 	// Every package NAME that qualified a wire TypeId, mapped to the
 	// distinct import PATHs that used it. Go keys type identity on the
 	// path, the wire key on the name, so a name reached by two paths means
@@ -181,10 +201,30 @@ func unsup(format string, args ...any) error {
 // ---- types ----
 
 func (e *emitter) emitType(t types.Type) (any, error) {
+	// The single type choke point applies the ACTIVE stencil substitution
+	// (mono.go): every wire type inside a stencil is emitted at the
+	// current instantiation. Identity outside stenciling.
+	if e.curSubst != nil {
+		t = e.applySubst(t)
+	}
 	switch ty := t.(type) {
 	case *types.Basic:
+		if ty.Kind() == types.Invalid && e.substErr != nil {
+			// applySubst surfaced a substitution failure as Invalid;
+			// report the recorded cause, not a generic message.
+			return nil, e.substErr
+		}
 		return e.emitBasic(ty)
+	case *types.TypeParam:
+		// Reachable only OUTSIDE a stencil (inside one, applySubst above
+		// either resolves it or records substErr): a generic declaration
+		// being emitted un-instantiated — fail closed (this is also the
+		// per-decl quarantine trigger for generic declarations).
+		return nil, unsup("type parameter %s outside an instantiation", ty)
 	case *types.Named:
+		if ty.TypeArgs().Len() > 0 {
+			return e.emitInstantiatedNamed(ty)
+		}
 		obj := ty.Obj()
 		// A named type whose underlying is an interface is an interface type;
 		// otherwise it is a defined type. GoCore distinguishes the two. Names
@@ -336,6 +376,14 @@ func intType(kind string) map[string]any {
 
 func floatType(kind string) map[string]any {
 	return map[string]any{"kind": "float", "float": kind}
+}
+
+// emitInstantiatedNamed is the wire arm for INSTANTIATED generic named
+// types. G2 (function instantiation) refuses them loudly; instantiated
+// type declarations land in the next stage (G3), which replaces this
+// refusal with mangled-TypeId emission + stenciled typeDefs/methods.
+func (e *emitter) emitInstantiatedNamed(ty *types.Named) (any, error) {
+	return nil, unsup("instantiated generic named type %s (generic type declarations are not yet monomorphized)", ty)
 }
 
 // typeOf returns the emitted wire type of an expression from go/types.

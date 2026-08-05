@@ -64,6 +64,13 @@ func run() error {
 		// (`switch v := x.(type)`) — each CaseClause maps to its own
 		// implicitly declared *types.Var (design note 2026-08-05 D3).
 		Implicits: map[ast.Node]types.Object{},
+		// Instances maps each identifier denoting a generic function/type
+		// at a USE site to its (fully inferred) type arguments and
+		// instantiated type — the input to frontend monomorphization
+		// (generics design note 2026-08-05 §2a). Inside generic bodies the
+		// recorded arguments still mention the ENCLOSING type parameters;
+		// the substitution closure resolves those per stencil (mono.go).
+		Instances: map[*ast.Ident]types.Instance{},
 	}
 	conf := types.Config{Importer: importer.Default()}
 	tpkg, err := conf.Check(files[0].Name.Name, fset, files, info)

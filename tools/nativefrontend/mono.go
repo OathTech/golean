@@ -21,9 +21,458 @@ package main
 // reflect.Type.Name() (the observation channel's contract).
 
 import (
+	"errors"
+	"go/ast"
 	"go/types"
 	"strings"
 )
+
+// ---- substitution (G2: the instantiation closure) ----
+
+// funcInstWork is one pending function stencil: the generic declaration,
+// the substitution environment (declaration type parameter → concrete type
+// argument), and the mangled FuncId it emits under.
+type funcInstWork struct {
+	mangled string
+	decl    *ast.FuncDecl
+	env     map[*types.TypeParam]types.Type
+}
+
+// applySubst applies the ACTIVE stencil substitution to a type reaching a
+// decision or emission point. Identity outside stenciling and for types
+// that mention no type parameter. On a substitution failure it records the
+// error and returns Invalid, which every downstream consumer refuses
+// (emitType has an explicit Invalid arm returning the recorded error) —
+// fail closed, never a silent approximation.
+func (e *emitter) applySubst(t types.Type) types.Type {
+	if t == nil || e.curSubst == nil || !mentionsTypeParam(t, nil) {
+		return t
+	}
+	st, err := e.substType(t)
+	if err != nil {
+		if e.substErr == nil {
+			e.substErr = err
+		}
+		return types.Typ[types.Invalid]
+	}
+	return st
+}
+
+// goTypeOf is the substitution-aware replacement for info.TypeOf: every
+// type-driven DECISION during emission (underlying-kind switches,
+// interface checks, tuple detection) must see the type at the CURRENT
+// instantiation, never the raw type-parameter form.
+func (e *emitter) goTypeOf(x ast.Expr) types.Type {
+	return e.applySubst(e.info.TypeOf(x))
+}
+
+// typesEntry is the substitution-aware replacement for info.Types[x]:
+// the TYPE is substituted, the constant VALUE is the original one —
+// emission stays over the ORIGINAL types.Info (design note §4.1: a
+// constant converted to a type parameter is a NON-constant, and
+// re-type-checking substituted source would re-fold it; go/types encodes
+// that in Value == nil, which substitution must preserve).
+func (e *emitter) typesEntry(x ast.Expr) (types.TypeAndValue, bool) {
+	tv, ok := e.info.Types[x]
+	if ok && tv.Type != nil {
+		tv.Type = e.applySubst(tv.Type)
+	}
+	return tv, ok
+}
+
+// mentionsTypeParam reports whether t structurally mentions any
+// *types.TypeParam. Named types are entered only through their type
+// ARGUMENTS (a non-generic named type cannot capture an outer parameter),
+// so the walk terminates without a seen-set.
+func mentionsTypeParam(t types.Type, _ map[types.Type]bool) bool {
+	switch ty := t.(type) {
+	case *types.TypeParam:
+		return true
+	case *types.Basic:
+		return false
+	case *types.Named:
+		args := ty.TypeArgs()
+		for i := 0; i < args.Len(); i++ {
+			if mentionsTypeParam(args.At(i), nil) {
+				return true
+			}
+		}
+		return false
+	case *types.Alias:
+		return mentionsTypeParam(types.Unalias(ty), nil)
+	case *types.Pointer:
+		return mentionsTypeParam(ty.Elem(), nil)
+	case *types.Slice:
+		return mentionsTypeParam(ty.Elem(), nil)
+	case *types.Array:
+		return mentionsTypeParam(ty.Elem(), nil)
+	case *types.Chan:
+		return mentionsTypeParam(ty.Elem(), nil)
+	case *types.Map:
+		return mentionsTypeParam(ty.Key(), nil) || mentionsTypeParam(ty.Elem(), nil)
+	case *types.Signature:
+		return mentionsTypeParam(ty.Params(), nil) || mentionsTypeParam(ty.Results(), nil)
+	case *types.Tuple:
+		for i := 0; i < ty.Len(); i++ {
+			if mentionsTypeParam(ty.At(i).Type(), nil) {
+				return true
+			}
+		}
+		return false
+	case *types.Struct:
+		for i := 0; i < ty.NumFields(); i++ {
+			if mentionsTypeParam(ty.Field(i).Type(), nil) {
+				return true
+			}
+		}
+		return false
+	case *types.Interface:
+		// Anonymous interfaces mentioning a type parameter in a method
+		// signature are conservatively reported (substType then refuses);
+		// constraint interfaces never reach emission.
+		for i := 0; i < ty.NumMethods(); i++ {
+			if mentionsTypeParam(ty.Method(i).Type(), nil) {
+				return true
+			}
+		}
+		return false
+	default:
+		// Unknown shapes: report a mention so substType refuses loudly
+		// rather than silently passing an unsubstituted type through.
+		return true
+	}
+}
+
+// substType substitutes the active environment into t. Named/Alias
+// instantiations route through types.Instantiate — go/types' own subster —
+// with a small structural walker for the composite shells (note §8 G2:
+// prefer keeping substitution inside go/types wherever the API allows).
+func (e *emitter) substType(t types.Type) (types.Type, error) {
+	switch ty := t.(type) {
+	case *types.TypeParam:
+		sub, ok := e.curSubst[ty]
+		if !ok {
+			return nil, unsup("unbound type parameter %s during instantiation", ty)
+		}
+		return sub, nil
+	case *types.Basic:
+		return ty, nil
+	case *types.Named:
+		args := ty.TypeArgs()
+		if args.Len() == 0 {
+			return ty, nil
+		}
+		newArgs := make([]types.Type, args.Len())
+		changed := false
+		for i := 0; i < args.Len(); i++ {
+			sub, err := e.substType(args.At(i))
+			if err != nil {
+				return nil, err
+			}
+			if sub != args.At(i) {
+				changed = true
+			}
+			newArgs[i] = sub
+		}
+		if !changed {
+			return ty, nil
+		}
+		inst, err := types.Instantiate(e.instCtxt(), ty.Origin(), newArgs, false)
+		if err != nil {
+			return nil, unsup("instantiate %s: %v", ty.Origin(), err)
+		}
+		return inst, nil
+	case *types.Alias:
+		// Aliases are identity-transparent (§3.2): substitute the aliased
+		// type; the alias name never reaches the wire.
+		return e.substType(types.Unalias(ty))
+	case *types.Pointer:
+		elem, err := e.substType(ty.Elem())
+		if err != nil {
+			return nil, err
+		}
+		return types.NewPointer(elem), nil
+	case *types.Slice:
+		elem, err := e.substType(ty.Elem())
+		if err != nil {
+			return nil, err
+		}
+		return types.NewSlice(elem), nil
+	case *types.Array:
+		elem, err := e.substType(ty.Elem())
+		if err != nil {
+			return nil, err
+		}
+		return types.NewArray(elem, ty.Len()), nil
+	case *types.Chan:
+		elem, err := e.substType(ty.Elem())
+		if err != nil {
+			return nil, err
+		}
+		return types.NewChan(ty.Dir(), elem), nil
+	case *types.Map:
+		key, err := e.substType(ty.Key())
+		if err != nil {
+			return nil, err
+		}
+		val, err := e.substType(ty.Elem())
+		if err != nil {
+			return nil, err
+		}
+		return types.NewMap(key, val), nil
+	case *types.Signature:
+		params, err := e.substTuple(ty.Params())
+		if err != nil {
+			return nil, err
+		}
+		results, err := e.substTuple(ty.Results())
+		if err != nil {
+			return nil, err
+		}
+		return types.NewSignatureType(nil, nil, nil, params, results, ty.Variadic()), nil
+	case *types.Tuple:
+		return e.substTuple(ty)
+	case *types.Struct:
+		fields := make([]*types.Var, ty.NumFields())
+		tags := make([]string, ty.NumFields())
+		for i := 0; i < ty.NumFields(); i++ {
+			f := ty.Field(i)
+			ft, err := e.substType(f.Type())
+			if err != nil {
+				return nil, err
+			}
+			fields[i] = types.NewField(f.Pos(), f.Pkg(), f.Name(), ft, f.Anonymous())
+			tags[i] = ty.Tag(i)
+		}
+		return types.NewStruct(fields, tags), nil
+	case *types.Interface:
+		if !mentionsTypeParam(ty, nil) {
+			return ty, nil
+		}
+		return nil, unsup("anonymous interface mentioning a type parameter (%s)", ty)
+	default:
+		return nil, unsup("substitution into %T (%s)", t, t)
+	}
+}
+
+func (e *emitter) substTuple(t *types.Tuple) (*types.Tuple, error) {
+	vars := make([]*types.Var, t.Len())
+	for i := 0; i < t.Len(); i++ {
+		v := t.At(i)
+		vt, err := e.substType(v.Type())
+		if err != nil {
+			return nil, err
+		}
+		vars[i] = types.NewVar(v.Pos(), v.Pkg(), v.Name(), vt)
+	}
+	return types.NewTuple(vars...), nil
+}
+
+// instCtxt is the shared instantiation context: types.Instantiate
+// deduplicates identical instantiations through it, so repeated
+// substitution yields pointer-shared (and always Identical) instances.
+func (e *emitter) instCtxt() *types.Context {
+	if e.monoCtxt == nil {
+		e.monoCtxt = types.NewContext()
+	}
+	return e.monoCtxt
+}
+
+// ---- the function-instantiation worklist ----
+
+// funcInstanceAt resolves the instantiation at a use-site identifier of a
+// generic function: reads the Instances entry (go/types' full inference —
+// the frontend re-implements none of it), substitutes the ACTIVE stencil
+// bindings into the recorded arguments (derived instantiations inside
+// generic bodies mention the enclosing parameters, note §2a), mangles,
+// registers the stencil work item, and returns the mangled FuncId plus
+// the fully concrete instantiated signature.
+func (e *emitter) funcInstanceAt(id *ast.Ident, fn *types.Func) (string, *types.Signature, error) {
+	inst, ok := e.info.Instances[id]
+	if !ok {
+		return "", nil, unsup("generic function %s has no instantiation record at %s",
+			fn.Name(), e.fset.Position(id.Pos()))
+	}
+	gsig, ok := fn.Type().(*types.Signature)
+	if !ok {
+		return "", nil, unsup("generic non-signature function %s", fn.Name())
+	}
+	n := inst.TypeArgs.Len()
+	if n != gsig.TypeParams().Len() {
+		return "", nil, unsup("instantiation arity mismatch for %s: %d args for %d params",
+			fn.Name(), n, gsig.TypeParams().Len())
+	}
+	targs := make([]types.Type, n)
+	for i := 0; i < n; i++ {
+		arg := inst.TypeArgs.At(i)
+		if mentionsTypeParam(arg, nil) {
+			if e.curSubst == nil {
+				return "", nil, unsup("free type parameter in instantiation of %s outside a stencil", fn.Name())
+			}
+			sub, err := e.substType(arg)
+			if err != nil {
+				return "", nil, err
+			}
+			arg = sub
+		}
+		targs[i] = arg
+	}
+	mangled, err := e.instFuncId(fn.Name(), targs)
+	if err != nil {
+		return "", nil, err
+	}
+	// The concrete signature comes from types.Instantiate over the GENERIC
+	// signature (not from substituting inst.Type, which mentions the
+	// enclosing parameters in derived entries).
+	csigT, err := types.Instantiate(e.instCtxt(), gsig, targs, false)
+	if err != nil {
+		return "", nil, unsup("instantiate %s%v: %v", fn.Name(), targs, err)
+	}
+	csig := csigT.(*types.Signature)
+	if err := e.registerFuncInst(mangled, fn, targs); err != nil {
+		return "", nil, err
+	}
+	return mangled, csig, nil
+}
+
+// registerFuncInst enqueues one stencil per distinct mangled FuncId. The
+// mangled key is also entered in the collision registry against the
+// instantiated signature — a FuncId collision (same rendered key, two
+// non-Identical instantiations) refuses the export like a TypeId one.
+func (e *emitter) registerFuncInst(mangled string, fn *types.Func, targs []types.Type) error {
+	gsig := fn.Type().(*types.Signature)
+	csigT, err := types.Instantiate(e.instCtxt(), gsig, targs, false)
+	if err != nil {
+		return unsup("instantiate %s: %v", fn.Name(), err)
+	}
+	if err := e.registerMangledKey(mangled, csigT); err != nil {
+		return err
+	}
+	if _, done := e.funcInsts[mangled]; done {
+		return nil
+	}
+	decl, ok := e.genericFuncDecls[fn]
+	if !ok {
+		return unsup("generic function %s has no declaration in this package (imported generics are not modeled)", fn.Name())
+	}
+	env := map[*types.TypeParam]types.Type{}
+	for i := 0; i < gsig.TypeParams().Len(); i++ {
+		env[gsig.TypeParams().At(i)] = targs[i]
+	}
+	if e.funcInsts == nil {
+		e.funcInsts = map[string]*funcInstWork{}
+	}
+	work := &funcInstWork{mangled: mangled, decl: decl, env: env}
+	e.funcInsts[mangled] = work
+	e.funcInstQueue = append(e.funcInstQueue, work)
+	return nil
+}
+
+// recordGenericMethod indexes a generic-receiver method declaration by
+// its receiver's origin type, for per-instantiation stenciling.
+func (e *emitter) recordGenericMethod(d *ast.FuncDecl) {
+	fn, ok := e.info.Defs[d.Name].(*types.Func)
+	if !ok {
+		return
+	}
+	recv := fn.Type().(*types.Signature).Recv().Type()
+	if ptr, isPtr := recv.(*types.Pointer); isPtr {
+		recv = ptr.Elem()
+	}
+	named, ok := recv.(*types.Named)
+	if !ok {
+		return
+	}
+	if e.genericMethodDecls == nil {
+		e.genericMethodDecls = map[*types.Named][]*ast.FuncDecl{}
+	}
+	origin := named.Origin()
+	e.genericMethodDecls[origin] = append(e.genericMethodDecls[origin], d)
+}
+
+// genericFuncObj reports the generic *types.Func a use-site identifier
+// denotes, or nil.
+func (e *emitter) genericFuncObj(id *ast.Ident) *types.Func {
+	fn, ok := e.info.Uses[id].(*types.Func)
+	if !ok {
+		return nil
+	}
+	sig, ok := fn.Type().(*types.Signature)
+	if !ok || sig.TypeParams().Len() == 0 {
+		return nil
+	}
+	return fn
+}
+
+// flushFuncInsts drains the stencil worklist (stencils can enqueue more —
+// derived instantiations; the registry cap bounds the loop via
+// registerMangledKey). An UNSUPPORTED stencil becomes a fail-closed stub
+// exactly like a quarantined plain declaration: it refuses when CALLED,
+// so one unsupported instantiation does not poison unrelated subjects in
+// the same package. Non-unsupported errors fail the export.
+func (e *emitter) flushFuncInsts(funcs []any) ([]any, error) {
+	for len(e.funcInstQueue) > 0 {
+		work := e.funcInstQueue[0]
+		e.funcInstQueue = e.funcInstQueue[1:]
+		fn, err := e.emitFuncInst(work)
+		if err != nil {
+			var u unsupported
+			if errors.As(err, &u) {
+				arity := 0
+				if work.decl.Type.Params != nil {
+					for _, f := range work.decl.Type.Params.List {
+						n := len(f.Names)
+						if n == 0 {
+							n = 1
+						}
+						arity += n
+					}
+				}
+				funcs = append(funcs, map[string]any{
+					"name": work.mangled, "unsupported": u.what, "arity": arity})
+				continue
+			}
+			return nil, err
+		}
+		funcs = append(funcs, e.lifted...)
+		e.lifted = nil
+		funcs = append(funcs, fn)
+	}
+	return funcs, nil
+}
+
+// emitFuncInst emits one stencil: the generic declaration's body under the
+// work item's substitution, named by the mangled FuncId. Lifted literals
+// inherit the mangled name (curFuncName), so `outer[int]$lit0` and
+// `outer[string]$lit0` stay distinct program-wide. On failure every
+// half-registered artifact of the stencil (lifted literals, local type
+// defs, wrapper candidates) rolls back, exactly like the per-decl
+// quarantine in emitProgram.
+func (e *emitter) emitFuncInst(work *funcInstWork) (map[string]any, error) {
+	savedSubst, savedName, savedErr := e.curSubst, e.curFuncName, e.substErr
+	e.curSubst, e.curFuncName, e.substErr = work.env, work.mangled, nil
+	e.liftSeq = 0
+	liftedMark := len(e.lifted)
+	localTypesMark := len(e.localTypeDefs)
+	localIfaceMark := len(e.localIfaceMethods)
+	namedStructMark := len(e.namedStructTypes)
+	fn, err := e.emitFuncDecl(work.decl)
+	if err == nil && e.substErr != nil {
+		// A substitution failure that surfaced as an Invalid type but was
+		// swallowed by an emission path: refuse anyway (fail closed).
+		err = e.substErr
+	}
+	e.curSubst, e.curFuncName, e.substErr = savedSubst, savedName, savedErr
+	if err != nil {
+		e.lifted = e.lifted[:liftedMark]
+		e.localTypeDefs = e.localTypeDefs[:localTypesMark]
+		e.localIfaceMethods = e.localIfaceMethods[:localIfaceMark]
+		e.namedStructTypes = e.namedStructTypes[:namedStructMark]
+		return nil, err
+	}
+	fn["name"] = work.mangled
+	return fn, nil
+}
 
 // monoRegistryCap bounds the number of distinct mangled keys (decision
 // §9.4): go/types' mono check guarantees the instantiation closure is

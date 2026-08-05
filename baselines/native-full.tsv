@@ -1,22 +1,43 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-05  commit: general-coverage-generics (G0 generics guardrails)
+# recorded: 2026-08-05  commit: general-coverage-generics (G2 function instantiation closure)
 #   frontend: native  oracle: go run (strict lane) / go-run membership in the
 #   machine-enumerated observation set (membership lane; go1.26.5 samples)
-# manifest_cases: 950  pass: 750  fail: 200
-# Re-pin reason: DELIBERATE coverage change — generics slice G0 guardrails
-# (docs/2026-08-05_generics-design.md §8, decision §9.7): 12 NEW ids, zero
-# movement otherwise. Eleven classify FAIL/frontend-export (correct
-# fail-closed classification pre-implementation): instantiated-type-assert
-# {ok,comma-ok,panic,name}, structural-transparency, nested-instantiation,
-# derived-instantiation, self-recursive, generic-closure{,/shared-capture},
-# instantiated-map-key. One classifies PASS: unused-generic-helper (a
-# passing subject beside a never-instantiated generic helper — pinned to
-# stay green through the whole generics transition).
-# Standing expected reds (unchanged): generics/type-parameter-channel-ops
-# is double-blocked on the channels arc; floats/generic-type-set (7) and
-# complex/generic-type-set (9) are double-blocked on their domain slices
-# (floats semantics landed — those 7 flip with THIS slice; complex has no
-# domain semantics yet).
+# manifest_cases: 950  pass: 807  fail: 143
+# Re-pin reason: DELIBERATE coverage change — generics G2, frontend
+# monomorphization of FUNCTION instantiations (design note
+# docs/2026-08-05_generics-design.md §8 G2, decisions §9.1/§9.6): 57 flips,
+# all FAIL/frontend-export -> PASS, zero movement otherwise. Per cluster:
+# - generics function-level (28): identity, inference, zero-values,
+#   zero-composite, map-slice, comparable-constraint,
+#   comparable-runtime-edge/* (8 — comparable-at-any reduces to the
+#   machine's existing uncomparable-dynamic-type panic, §4.2),
+#   type-set-constraint, constraint-embedding, higher-order-inference/*
+#   (6 — go/types' Instances carries the full inference),
+#   type-parameter-{slice,map,composite-literal,conversion}-ops,
+#   method-constraint-call, method-and-type-set-constraint (constraint
+#   method calls re-resolve at the substituted receiver,
+#   LookupFieldOrMethod), recursive-constraints/* (4 — F-bounded
+#   constraints are static-only; nothing survives to runtime).
+#   method-constraint-call/method-and-type-set/recursive-constraints were
+#   listed under G3 in the note's sketch but are function-level (concrete
+#   receiver types) — they flip here.
+# - G0 probes, function-level (4): structural-transparency,
+#   derived-instantiation (the substitution-closure walk),
+#   self-recursive, generic-closure + shared-capture (5 ids with the
+#   closure pair).
+# - bools/generic-type-set (4): includes the underlying-bool conversion
+#   retyping (bool(x) at ~bool is static-only; frontend emits the operand).
+# - floats/generic-type-set (7): floats semantics landed in slice 4, so
+#   these were single-blocked on generics; explicit-constant pins the
+#   §4.1 constant-NON-refolding rule differentially (emission over the
+#   ORIGINAL types.Info).
+# - scattered builtins/new/variadic (8): clear/delete/copy/min/max/new/
+#   variadic at ~-constrained type parameters — instantiation composes
+#   with existing builtin semantics, no new machinery.
+# Still red (expected, stages unchanged): generics instantiated-TYPE
+# clusters (G3), generics/type-aliases/* (G4 gotypesalias),
+# generics/type-parameter-channel-ops (channels arc),
+# complex/generic-type-set (9; complex domain semantics not landed).
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
 PASS	arrays/array-copy	-
@@ -36,10 +57,10 @@ PASS	arrays/nested-arrays	-
 PASS	arrays/nested-copy-value	-
 PASS	arrays/nil-pointer-len-cap	-
 FAIL	arrays/pointer-array	lean-observation
-FAIL	bools/generic-type-set/and-or	frontend-export
-FAIL	bools/generic-type-set/equality	frontend-export
-FAIL	bools/generic-type-set/inference	frontend-export
-FAIL	bools/generic-type-set/not-defined	frontend-export
+PASS	bools/generic-type-set/and-or	-
+PASS	bools/generic-type-set/equality	-
+PASS	bools/generic-type-set/inference	-
+PASS	bools/generic-type-set/not-defined	-
 PASS	bools/generic-type-set/zero-value	-
 FAIL	bools/left-to-right	frontend-export
 PASS	bools/logical-ops	-
@@ -52,13 +73,13 @@ PASS	builtins/clear-delete-edge/clear-array-slice	-
 PASS	builtins/clear-delete-edge/clear-defined-map	-
 PASS	builtins/clear-delete-edge/clear-defined-slice	-
 PASS	builtins/clear-delete-edge/clear-eval-order	-
-FAIL	builtins/clear-delete-edge/clear-generic-map	frontend-export
-FAIL	builtins/clear-delete-edge/clear-generic-slice	frontend-export
+PASS	builtins/clear-delete-edge/clear-generic-map	-
+PASS	builtins/clear-delete-edge/clear-generic-slice	-
 PASS	builtins/clear-delete-edge/clear-nil-map	-
 PASS	builtins/clear-delete-edge/clear-nil-slice	-
 PASS	builtins/clear-delete-edge/clear-slice-alias-visible	-
 PASS	builtins/clear-delete-edge/delete-defined-map	-
-FAIL	builtins/clear-delete-edge/delete-generic-map	frontend-export
+PASS	builtins/clear-delete-edge/delete-generic-map	-
 PASS	builtins/clear-delete-edge/delete-map-expr-panic-before-key	-
 PASS	builtins/clear-delete-edge/delete-nil-map-evaluates-key	-
 PASS	builtins/clear-map	-
@@ -69,7 +90,7 @@ PASS	builtins/copy-edge/defined-slices	-
 PASS	builtins/copy-edge/empty-string-to-bytes	-
 PASS	builtins/copy-edge/eval-order	-
 PASS	builtins/copy-edge/forward-overlap	-
-FAIL	builtins/copy-edge/generic-slices	frontend-export
+PASS	builtins/copy-edge/generic-slices	-
 PASS	builtins/copy-edge/nil-destination	-
 PASS	builtins/copy-edge/nil-source	-
 PASS	builtins/copy-edge/string-prefix	-
@@ -81,8 +102,8 @@ PASS	builtins/min-max-edge/defined-int	-
 PASS	builtins/min-max-edge/defined-string	-
 PASS	builtins/min-max-edge/eval-order	-
 PASS	builtins/min-max-edge/expressions	-
-FAIL	builtins/min-max-edge/generic-ints	frontend-export
-FAIL	builtins/min-max-edge/generic-strings	frontend-export
+PASS	builtins/min-max-edge/generic-ints	-
+PASS	builtins/min-max-edge/generic-strings	-
 PASS	builtins/min-max-edge/one-arg	-
 PASS	builtins/min-max-edge/untyped-float-context	-
 PASS	builtins/min-max-ints	-
@@ -306,13 +327,13 @@ PASS	floats/finite-arithmetic	-
 PASS	floats/float32-conversion-rounding	-
 PASS	floats/float32-specials	-
 PASS	floats/fma-shape	-
-FAIL	floats/generic-type-set/compound-assign	frontend-export
-FAIL	floats/generic-type-set/conversion-to-int	frontend-export
-FAIL	floats/generic-type-set/defined-float32-sum	frontend-export
-FAIL	floats/generic-type-set/defined-float64-sum	frontend-export
-FAIL	floats/generic-type-set/explicit-constant	frontend-export
-FAIL	floats/generic-type-set/inference	frontend-export
-FAIL	floats/generic-type-set/ordering	frontend-export
+PASS	floats/generic-type-set/compound-assign	-
+PASS	floats/generic-type-set/conversion-to-int	-
+PASS	floats/generic-type-set/defined-float32-sum	-
+PASS	floats/generic-type-set/defined-float64-sum	-
+PASS	floats/generic-type-set/explicit-constant	-
+PASS	floats/generic-type-set/inference	-
+PASS	floats/generic-type-set/ordering	-
 PASS	floats/generic-type-set/zero-value	-
 PASS	floats/incdec	-
 PASS	floats/int64-to-float-rounding	-
@@ -354,49 +375,49 @@ PASS	functions/method-value-callback	-
 PASS	functions/nil-function-call-panic	-
 PASS	functions/recursion	-
 PASS	functions/return-function	-
-FAIL	generics/comparable-constraint	frontend-export
-FAIL	generics/comparable-runtime-edge/any-different-dynamic-types	frontend-export
-FAIL	generics/comparable-runtime-edge/any-equal-ints	frontend-export
-FAIL	generics/comparable-runtime-edge/any-func-panic	frontend-export
-FAIL	generics/comparable-runtime-edge/any-map-panic	frontend-export
-FAIL	generics/comparable-runtime-edge/any-slice-panic	frontend-export
-FAIL	generics/comparable-runtime-edge/array-interface-panic	frontend-export
-FAIL	generics/comparable-runtime-edge/struct-interface-panic	frontend-export
-FAIL	generics/comparable-runtime-edge/struct-skips-interface-panic	frontend-export
-FAIL	generics/constraint-embedding	frontend-export
+PASS	generics/comparable-constraint	-
+PASS	generics/comparable-runtime-edge/any-different-dynamic-types	-
+PASS	generics/comparable-runtime-edge/any-equal-ints	-
+PASS	generics/comparable-runtime-edge/any-func-panic	-
+PASS	generics/comparable-runtime-edge/any-map-panic	-
+PASS	generics/comparable-runtime-edge/any-slice-panic	-
+PASS	generics/comparable-runtime-edge/array-interface-panic	-
+PASS	generics/comparable-runtime-edge/struct-interface-panic	-
+PASS	generics/comparable-runtime-edge/struct-skips-interface-panic	-
+PASS	generics/constraint-embedding	-
 FAIL	generics/defined-slice-type	frontend-export
-FAIL	generics/derived-instantiation	frontend-export
-FAIL	generics/generic-closure	frontend-export
-FAIL	generics/generic-closure/shared-capture	frontend-export
+PASS	generics/derived-instantiation	-
+PASS	generics/generic-closure	-
+PASS	generics/generic-closure/shared-capture	-
 FAIL	generics/generic-interface-value	frontend-export
 FAIL	generics/generic-map-type	frontend-export
 FAIL	generics/generic-struct	frontend-export
-FAIL	generics/higher-order-inference/assignment-target	frontend-export
-FAIL	generics/higher-order-inference/named-function-type	frontend-export
-FAIL	generics/higher-order-inference/partial-instantiation-target	frontend-export
-FAIL	generics/higher-order-inference/pass-to-concrete	frontend-export
-FAIL	generics/higher-order-inference/pass-to-generic	frontend-export
-FAIL	generics/higher-order-inference/return-target	frontend-export
-FAIL	generics/identity	frontend-export
-FAIL	generics/inference	frontend-export
-FAIL	generics/instantiated-function-value	frontend-export
+PASS	generics/higher-order-inference/assignment-target	-
+PASS	generics/higher-order-inference/named-function-type	-
+PASS	generics/higher-order-inference/partial-instantiation-target	-
+PASS	generics/higher-order-inference/pass-to-concrete	-
+PASS	generics/higher-order-inference/pass-to-generic	-
+PASS	generics/higher-order-inference/return-target	-
+PASS	generics/identity	-
+PASS	generics/inference	-
+PASS	generics/instantiated-function-value	-
 FAIL	generics/instantiated-map-key	frontend-export
 FAIL	generics/instantiated-method-value	frontend-export
 FAIL	generics/instantiated-type-assert/comma-ok	frontend-export
 FAIL	generics/instantiated-type-assert/name	frontend-export
 FAIL	generics/instantiated-type-assert/ok	frontend-export
 FAIL	generics/instantiated-type-assert/panic	frontend-export
-FAIL	generics/map-slice	frontend-export
-FAIL	generics/method-and-type-set-constraint	frontend-export
-FAIL	generics/method-constraint-call	frontend-export
+PASS	generics/map-slice	-
+PASS	generics/method-and-type-set-constraint	-
+PASS	generics/method-constraint-call	-
 FAIL	generics/nested-instantiation	frontend-export
-FAIL	generics/recursive-constraints/argument-method	frontend-export
-FAIL	generics/recursive-constraints/clone	frontend-export
-FAIL	generics/recursive-constraints/comparable	frontend-export
-FAIL	generics/recursive-constraints/pointer-self	frontend-export
+PASS	generics/recursive-constraints/argument-method	-
+PASS	generics/recursive-constraints/clone	-
+PASS	generics/recursive-constraints/comparable	-
+PASS	generics/recursive-constraints/pointer-self	-
 FAIL	generics/recursive-generic-type	frontend-export
-FAIL	generics/self-recursive	frontend-export
-FAIL	generics/structural-transparency	frontend-export
+PASS	generics/self-recursive	-
+PASS	generics/structural-transparency	-
 FAIL	generics/type-aliases/func-type	frontend-export
 FAIL	generics/type-aliases/map-literal	frontend-export
 FAIL	generics/type-aliases/nested-map	frontend-export
@@ -404,14 +425,14 @@ FAIL	generics/type-aliases/slice-same-type	frontend-export
 FAIL	generics/type-aliases/struct-literal	frontend-export
 FAIL	generics/type-method-dispatch	frontend-export
 FAIL	generics/type-parameter-channel-ops	frontend-export
-FAIL	generics/type-parameter-composite-literal	frontend-export
-FAIL	generics/type-parameter-conversion	frontend-export
-FAIL	generics/type-parameter-map-ops	frontend-export
-FAIL	generics/type-parameter-slice-ops	frontend-export
-FAIL	generics/type-set-constraint	frontend-export
+PASS	generics/type-parameter-composite-literal	-
+PASS	generics/type-parameter-conversion	-
+PASS	generics/type-parameter-map-ops	-
+PASS	generics/type-parameter-slice-ops	-
+PASS	generics/type-set-constraint	-
 PASS	generics/unused-generic-helper	-
-FAIL	generics/zero-composite	frontend-export
-FAIL	generics/zero-values	frontend-export
+PASS	generics/zero-composite	-
+PASS	generics/zero-values	-
 PASS	if/condition-evaluated-once	-
 PASS	if/else-if-first-match	-
 PASS	if/if-init-scope	-
@@ -671,7 +692,7 @@ PASS	new/new-distinct-allocations	-
 PASS	new/new-expr/composite-operand	-
 PASS	new/new-expr/distinct-pointers	-
 PASS	new/new-expr/eval-once	-
-FAIL	new/new-expr/generic-operand	frontend-export
+PASS	new/new-expr/generic-operand	-
 PASS	new/new-expr/typed-value	-
 FAIL	new/new-expr/untyped-defaults	frontend-export
 PASS	new/new-map-vs-make	-
@@ -962,7 +983,7 @@ PASS	variadic/no-args-vs-empty-spread	-
 PASS	variadic/spread-aliasing	-
 PASS	variadic/variadic	-
 PASS	variadic/variadic-function-value	-
-FAIL	variadic/variadic-generic	frontend-export
+PASS	variadic/variadic-generic	-
 PASS	variadic/variadic-interface-dispatch	-
 PASS	variadic/variadic-method	-
 PASS	variadic/variadic-method-expression	-
