@@ -96,6 +96,14 @@ type emitter struct {
 	// method is real information (D2).
 	namedStructTypes []*types.Named
 
+	// Every IMPORTED named non-interface type whose identity reached the
+	// wire (design note 2026-08-05 D5): emitProgram emits, per type whose
+	// EXPORTED method set is fully emittable, an `unsupported`-marker
+	// TypeDef (existence only — structural use keeps failing closed) plus
+	// signature-carrying method STUBS, so interface satisfaction can
+	// answer instead of refusing (BUG-009's polarity).
+	importedNamed map[string]*types.Named
+
 	// Every package NAME that qualified a wire TypeId, mapped to the
 	// distinct import PATHs that used it. Go keys type identity on the
 	// path, the wire key on the name, so a name reached by two paths means
@@ -164,7 +172,16 @@ func (e *emitter) emitType(t types.Type) (any, error) {
 			e.noteInterface(name, iface)
 			return map[string]any{"kind": "interface", "name": name}, nil
 		}
-		return map[string]any{"kind": "named", "name": e.qualifiedTypeName(obj)}, nil
+		qname := e.qualifiedTypeName(obj)
+		if obj.Pkg() != nil && obj.Pkg() != e.pkg {
+			// An imported concrete named type: record it for the
+			// method-set stub pass (D5).
+			if e.importedNamed == nil {
+				e.importedNamed = map[string]*types.Named{}
+			}
+			e.importedNamed[qname] = ty
+		}
+		return map[string]any{"kind": "named", "name": qname}, nil
 	case *types.Pointer:
 		elem, err := e.emitType(ty.Elem())
 		if err != nil {

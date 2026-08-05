@@ -103,7 +103,21 @@ multi-package lowering is claimed.
 
 ## BUG-009 — an imported named type's METHOD SET is not on the wire, so interface satisfaction is UNKNOWN
 
-- Status: open
+- Status: fixed (2026-08-05, general-coverage slice 2 stage 6 — design
+  note D5: for every imported concrete named type whose EXPORTED method
+  set is fully emittable, the frontend emits an existence-marker TypeDef
+  (`kind: unsupported` — structural use keeps failing closed) plus
+  declaration-only method STUBS carrying the real signatures
+  (`importedTypeDecls`/`importedMethodStubs`; NativeToIR decodes them as
+  Funcs with fail-closed bodies), so `satisfiesMethodSig` answers from
+  real information and a CALL still refuses. Fail-closed residue, both
+  deliberate: a type with any un-emittable exported signature is skipped
+  whole (satisfaction keeps refusing via `dynamicMethodSetRecorded`), and
+  an UNEXPORTED requirement against a marker type refuses
+  (`dynamicIsImportedMarker` guard in `firstUnsatisfiedMethod?` —
+  cross-package unexported method identity is not expressible on the
+  name-keyed wire). Both pinned cases green (`*strings.Builder`
+  implements `fmt.Stringer`: comma-ok true, panic-form completes).)
 - Pinned-by: differential
 - Cases: interfaces/assert-imported-method-set/comma-ok, interfaces/assert-imported-method-set/panic-form
 - Discovered: 2026-07-31 (final pre-merge adversarial audit of

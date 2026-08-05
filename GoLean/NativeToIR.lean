@@ -956,6 +956,14 @@ private def decodeTypeDef (path : String) (json : Json) : LowerM (TypeId × Type
       let methods ← StrictJson.array s!"{path}.def.methods" (← StrictJson.field s!"{path}.def" defObj "methods")
       pure (⟨name⟩, .interfaceDef (← methods.mapIdxM
         (fun i m => decodeMethodSig s!"{path}.def.methods[{i}]" m)))
+  | "unsupported" =>
+      -- An EXISTENCE-only marker (imported named types, design note D5):
+      -- the type is KNOWN to the wire — its method-set stubs make
+      -- satisfaction answerable — while every structural use (defaults,
+      -- normalization, conversion) keeps failing closed on the reason.
+      let feature ← StrictJson.string s!"{path}.def.feature"
+        (← StrictJson.field s!"{path}.def" defObj "feature")
+      pure (⟨name⟩, .unsupported feature)
   | other => fail s!"unsupported type definition kind {other} at {path}"
 
 private def decodeFunc (path : String) (json : Json) : LowerM Func := do
@@ -1005,6 +1013,16 @@ private def decodeMethod (path : String) (json : Json) : LowerM (Func × MethodI
   let res ← results.mapIdxM (fun i p => decodeParam s!"{path}.results[{i}]" p)
   let funcId : FuncId := ⟨s!"{recvType}.{name}"⟩
   let info : MethodInfo := { name, funcId, recv := recv.typ }
+  -- A declaration-only STUB (imported named types, design note D5): the
+  -- REAL signature — `satisfiesMethodSig` compares it — over a fail-closed
+  -- body, so satisfaction answers while a CALL refuses with the reason.
+  match obj.get? "unsupported" with
+  | some r =>
+      let reason ← StrictJson.string s!"{path}.unsupported" r
+      pure ({ id := funcId, args := #[recv] ++ args, results := res,
+              body := .unsupported s!"frontend-quarantined: {reason}",
+              variadic }, info)
+  | none =>
   match obj.get? "interface" with
   | some _ =>
       -- An INTERFACE method: a signature-only dispatch anchor.

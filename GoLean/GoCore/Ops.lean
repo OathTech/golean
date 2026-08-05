@@ -584,6 +584,28 @@ def dynamicMethodSetRecorded (state : ExecState) (dynTy : Ty) : Bool :=
   | .defined name => (TypeEnv.lookup state.types name).isSome
   | _ => true
 
+/-- Is `dynTy` an IMPORTED named type known only through its
+existence-marker TypeDef (design note 2026-08-05 D5)? Its wire method
+set carries the EXPORTED methods only — cross-package UNEXPORTED method
+identity is inexpressible on the name-keyed wire — so a satisfaction
+check may answer definitively only for exported requirements. -/
+def dynamicIsImportedMarker (state : ExecState) (dynTy : Ty) : Bool :=
+  let base := match dynTy with
+    | .pointer elem => elem
+    | other => other
+  match base with
+  | .defined name =>
+      match TypeEnv.lookup state.types name with
+      | some (.unsupported _) => true
+      | _ => false
+  | _ => false
+
+/-- Go exportedness: the first character is upper case. -/
+def isExportedName (s : String) : Bool :=
+  match s.data with
+  | c :: _ => c.isUpper
+  | [] => false
+
 /-- The FIRST requirement of `interfaceName` that `dynTy` does not meet, in
 the interface's own (name-sorted) method order — `none` means it satisfies
 the interface. Go names exactly this method in its assert-panic message.
@@ -626,6 +648,13 @@ def firstUnsatisfiedMethod? (state : ExecState) (dynTy : Ty) (interfaceName : Ty
 its method set is NOT on the wire (an imported named type carries no \
 declaration), so `missing method {name}' would be an answer derived from \
 no information (BUG-009)"
+          else if dynamicIsImportedMarker state dynTy && !isExportedName name then
+            -- An imported type's stubs cover EXPORTED methods only; an
+            -- unexported requirement could still be met inside the type's
+            -- own package — refuse rather than answer (D5).
+            unsupported s!"interface satisfaction for {goTypeNameForMessage state dynTy}: \
+requirement {name} is UNEXPORTED and the dynamic type is imported — \
+cross-package unexported method identity is not modeled"
           else
             return (some name)
 

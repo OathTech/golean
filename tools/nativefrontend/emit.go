@@ -162,6 +162,14 @@ func (e *emitter) emitProgram(files []*ast.File) (map[string]any, error) {
 		})
 	}
 
+	// Imported-type method-set declarations (design note D5, BUG-009's
+	// satisfaction polarity): marker TypeDefs + signature stubs. BEFORE
+	// the interface-declaration pass — a stub signature can mention a
+	// fresh interface.
+	importedDefs, importedStubs := e.importedTypeDecls()
+	typeDefs = append(typeDefs, importedDefs...)
+	methods = append(methods, importedStubs...)
+
 	// Interface DECLARATIONS: one `interface` TypeDef per interface type that
 	// reached the wire anywhere (declared here, predeclared `error`, or
 	// imported), carrying the FULL method set — embedded interfaces included,
@@ -3289,6 +3297,93 @@ func (e *emitter) promotedReceiverArg(sel *ast.SelectorExpr, hops []int, pointer
 	return node, nil
 }
 
+
+// importedTypeDecls emits, for every IMPORTED concrete named type whose
+// identity reached the wire and whose EXPORTED method set is fully
+// emittable, an `unsupported`-marker TypeDef (existence only) plus
+// signature-carrying method STUBS (design note D5) — so interface
+// satisfaction gets a real method set to answer from (BUG-009's
+// polarity) while structural use and CALLS keep failing closed. A type
+// with any un-emittable exported signature is skipped WHOLE (no marker,
+// no stubs): the machine then keeps refusing satisfaction for it, never
+// answering from a partial set. Unexported methods are skipped — the
+// wire cannot express cross-package unexported method identity — and the
+// machine fails closed when an UNEXPORTED requirement would decide
+// satisfaction against a marker type (Ops.firstUnsatisfiedMethod?).
+// Runs to fixpoint: a stub's signature may itself mention fresh imported
+// types.
+func (e *emitter) importedTypeDecls() ([]any, []any) {
+	tds := []any{}
+	stubs := []any{}
+	done := map[string]bool{}
+	for {
+		pending := []string{}
+		for n := range e.importedNamed {
+			if !done[n] {
+				pending = append(pending, n)
+			}
+		}
+		if len(pending) == 0 {
+			return tds, stubs
+		}
+		sort.Strings(pending)
+		for _, qname := range pending {
+			done[qname] = true
+			ms, ok := e.importedMethodStubs(qname, e.importedNamed[qname])
+			if !ok {
+				continue
+			}
+			tds = append(tds, map[string]any{
+				"name": qname,
+				"def":  map[string]any{"kind": "unsupported", "feature": "imported named type " + qname},
+			})
+			stubs = append(stubs, ms...)
+		}
+	}
+}
+
+func (e *emitter) importedMethodStubs(qname string, named *types.Named) ([]any, bool) {
+	valSet := types.NewMethodSet(named)
+	ptrSet := types.NewMethodSet(types.NewPointer(named))
+	out := []any{}
+	for i := 0; i < ptrSet.Len(); i++ {
+		mfn, ok := ptrSet.At(i).Obj().(*types.Func)
+		if !ok {
+			return nil, false
+		}
+		if !mfn.Exported() {
+			continue
+		}
+		sig := mfn.Type().(*types.Signature)
+		valueTy, err := e.emitType(named)
+		if err != nil {
+			return nil, false
+		}
+		recvTy := any(valueTy)
+		if valSet.Lookup(mfn.Pkg(), mfn.Name()) == nil {
+			recvTy = map[string]any{"kind": "pointer", "elem": valueTy}
+		}
+		params, err := e.emitParams(sig.Params())
+		if err != nil {
+			return nil, false
+		}
+		results, err := e.emitResults(sig.Results())
+		if err != nil {
+			return nil, false
+		}
+		out = append(out, map[string]any{
+			"name":     mfn.Name(),
+			"recvType": qname,
+			"recv":     map[string]any{"id": "$recv", "type": recvTy},
+			"params":   params,
+			"results":  results,
+			"variadic": sig.Variadic(),
+			"unsupported": "imported method " + qname + "." + mfn.Name() +
+				" (declaration-only stub: satisfaction answers, calls fail closed)",
+		})
+	}
+	return out, true
+}
 
 // stringLitNode emits a string literal wire node (the machine's GoString
 // byte representation).

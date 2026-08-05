@@ -1,32 +1,19 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-05  commit: general-coverage-embed slice-2 stage 5 (interface method values/expressions, func-field calls, recoverable frame-entry panics)
+# recorded: 2026-08-05  commit: general-coverage-embed slice-2 stage 6 (imported method-set stubs; BUG-009 closed)
 #   frontend: native  oracle: go run
-# manifest_cases: 908  pass: 697  fail: 211
+# manifest_cases: 908  pass: 699  fail: 209
 # Re-pin reason: DELIBERATE coverage change, general-coverage slice 2
-# stage 5 (docs/2026-08-05_embedding-interfaces-design.md D6). Interface
-# METHOD VALUES capture the box at creation and dispatch through the
-# anchor; Go panics at CREATION on a nil interface (itab load) — the
-# differential caught the first cut capturing nil and panicking at CALL
-# (Lean 12 vs Go 2 on interface-method-value-nil); the lowering now
-# nil-checks at creation with the machine's runtime-error payload
-# (wire "panic"+runtimeError; runtimeErrorTypeId moved to Syntax so the
-# decoder can name it). METHOD EXPRESSIONS T.M/(*T).M/I.M emit the
-# receiver-first method function/wrapper/anchor as a captureless func
-# value ((*T).M over a value-receiver wire Func refused: deref adapter
-# unmodeled). Calls through func-typed struct FIELDS route to
-# call-value. MACHINE (relation+stepFn lockstep, appended Step rules
-# call*EnterPanic x5 + enterFrameStep helper): frame-ENTRY panics
-# (nil-interface dispatch, nil pointer-box auto-deref) are ordinary
-# RECOVERABLE panics — previously raw thrown errors on every call path,
-# correct only when never recovered; MachineSound/StateWf extended,
-# proofs/ untouched. Eleven moves, all green: nine FAIL->PASS
-# (defer/defer-interface-value-eval, functions/composite-function-values/
-# {struct-call,struct-reassign}, interfaces/{interface-method-expression,
-# interface-method-value,interface-method-value-nil},
-# methods/{method-expression,pointer-method-expression},
-# variadic/variadic-method-expression) and two NEW PASS pins
-# (interfaces/recover-nil-dispatch/{nil-interface,nil-pointer-box}).
-# ZERO PASS->FAIL, no other stage moves. 686 -> 697 pass, 906 -> 908.
+# stage 6 (docs/2026-08-05_embedding-interfaces-design.md D5): every
+# imported concrete named type whose EXPORTED method set is fully
+# emittable ships an existence-marker TypeDef plus declaration-only
+# method stubs (real signatures, fail-closed bodies), so interface
+# satisfaction answers from real information while structural use and
+# calls keep refusing. Unexported requirements against marker types
+# refuse (cross-package unexported identity is not on the wire); a type
+# with any un-emittable exported signature is skipped whole. Two
+# FAIL->PASS: interfaces/assert-imported-method-set/{comma-ok,panic-form}
+# (*strings.Builder implements fmt.Stringer). ZERO PASS->FAIL, no other
+# stage moves. 697 -> 699 pass, 908 cases.
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
 PASS	arrays/array-copy	-
@@ -414,8 +401,8 @@ PASS	interfaces/assert-error-satisfaction/no-call	-
 PASS	interfaces/assert-error-satisfaction/positive	-
 PASS	interfaces/assert-imported-interface/negative	-
 PASS	interfaces/assert-imported-interface/positive	-
-FAIL	interfaces/assert-imported-method-set/comma-ok	lean-observation
-FAIL	interfaces/assert-imported-method-set/panic-form	lean-observation
+PASS	interfaces/assert-imported-method-set/comma-ok	-
+PASS	interfaces/assert-imported-method-set/panic-form	-
 PASS	interfaces/embedded-interface	-
 PASS	interfaces/embedded-interface-assertion	-
 PASS	interfaces/embedded-interface-duplicate-method	-
