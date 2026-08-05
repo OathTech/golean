@@ -1,12 +1,13 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-06  commit: general-coverage (arc-final audit response, F4 mixed-comparison wrap)
+# recorded: 2026-08-06  commit: general-coverage (arc-final audit response, F6 untyped-nil sinks)
 #   frontend: native  oracle: go run (strict lane) / go-run membership in the
 #   machine-enumerated observation set (membership lane; go1.26.5 samples)
-# manifest_cases: 1025  pass: 861  fail: 164
-# Re-pin reason: BUG-017 fixed (interface wrap at comparison operands
-#   and switch-case slots) — exactly its seven pinned ids flip FAIL ->
-#   PASS (interfaces/mixed-compare/*). Zero PASS->FAIL, zero other
-#   stage moves.
+# manifest_cases: 1025  pass: 871  fail: 154
+# Re-pin reason: BUG-016 fixed (one-mechanism untyped-nil typing at
+#   every assignable context via wrapInterfaceConversion, incl. the
+#   spread-call path) — exactly its ten pinned ids flip FAIL -> PASS
+#   (functions/untyped-nil-sinks/*). Zero PASS->FAIL, zero other stage
+#   moves; BUG-014's defined-typed pins stay red as recorded.
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
 PASS	arrays/array-copy	-
@@ -348,18 +349,18 @@ PASS	functions/method-value-callback	-
 PASS	functions/nil-function-call-panic	-
 PASS	functions/recursion	-
 PASS	functions/return-function	-
-FAIL	functions/untyped-nil-sinks/array-lit-elem	lean-observation
-FAIL	functions/untyped-nil-sinks/call-arg	lean-observation
+PASS	functions/untyped-nil-sinks/array-lit-elem	-
+PASS	functions/untyped-nil-sinks/call-arg	-
 PASS	functions/untyped-nil-sinks/ctl-map-lit-value	-
 PASS	functions/untyped-nil-sinks/ctl-zero-value	-
-FAIL	functions/untyped-nil-sinks/nested-map-value	lean-observation
-FAIL	functions/untyped-nil-sinks/plain-assign	lean-observation
-FAIL	functions/untyped-nil-sinks/return-nil	lean-observation
-FAIL	functions/untyped-nil-sinks/slice-lit-elem	lean-observation
-FAIL	functions/untyped-nil-sinks/struct-lit-append	lean-observation
-FAIL	functions/untyped-nil-sinks/struct-lit-field	lean-observation
-FAIL	functions/untyped-nil-sinks/struct-lit-map-field	lean-observation
-FAIL	functions/untyped-nil-sinks/variadic-spread	lean-observation
+PASS	functions/untyped-nil-sinks/nested-map-value	-
+PASS	functions/untyped-nil-sinks/plain-assign	-
+PASS	functions/untyped-nil-sinks/return-nil	-
+PASS	functions/untyped-nil-sinks/slice-lit-elem	-
+PASS	functions/untyped-nil-sinks/struct-lit-append	-
+PASS	functions/untyped-nil-sinks/struct-lit-field	-
+PASS	functions/untyped-nil-sinks/struct-lit-map-field	-
+PASS	functions/untyped-nil-sinks/variadic-spread	-
 PASS	generics/comparable-constraint	-
 PASS	generics/comparable-runtime-edge/any-different-dynamic-types	-
 PASS	generics/comparable-runtime-edge/any-equal-ints	-

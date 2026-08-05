@@ -159,7 +159,13 @@ interface side.
 
 ## BUG-016 — untyped nil into a nilable slot stays a RAW nil everywhere except map-literal elements
 
-- Status: open
+- Status: fixed (2026-08-06, arc-final audit response F6 — ONE
+  mechanism: `wrapInterfaceConversion`, the shared normalizer already
+  called at every assignable-context emission site, now types an
+  untyped nil at direct slice/map/pointer targets; the M1 map-literal
+  special case folded into it, and the spread-call path (`f(nil...)`)
+  routed through the same wrap. Func-typed, defined-typed, and
+  interface slots keep their prior disposition — BUG-014's boundary.)
 - Pinned-by: differential
 - Cases: functions/untyped-nil-sinks/struct-lit-field, functions/untyped-nil-sinks/struct-lit-append, functions/untyped-nil-sinks/struct-lit-map-field, functions/untyped-nil-sinks/slice-lit-elem, functions/untyped-nil-sinks/array-lit-elem, functions/untyped-nil-sinks/return-nil, functions/untyped-nil-sinks/call-arg, functions/untyped-nil-sinks/plain-assign, functions/untyped-nil-sinks/variadic-spread, functions/untyped-nil-sinks/nested-map-value
 - Discovered: 2026-08-06 (arc-final audit F6, widening the disclosure at

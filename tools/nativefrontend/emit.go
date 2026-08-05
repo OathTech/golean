@@ -1731,6 +1731,27 @@ func (e *emitter) wrapInterfaceConversion(target types.Type, rhs types.Type, ope
 	// slot at `T = any` boxes; at `T = int` it does not).
 	target = e.applySubst(target)
 	rhs = e.applySubst(rhs)
+	// Untyped nil into a NILABLE NON-INTERFACE slot takes the slot's
+	// type (spec §Assignability: nil is assignable to pointer, function,
+	// slice, map, channel, and interface types) — ONE mechanism for
+	// every assignable context that flows through this wrap (BUG-016,
+	// arc-final audit F6, 2026-08-06; generalizes the audit-response M1
+	// map-literal fix). Same kind restriction as M1: DIRECT
+	// slice/map/pointer only — func-typed and defined-typed slots keep
+	// the bare-nil base emission (the machine's nil-literal arm rejects
+	// their typed nil, BUG-014's boundary); interface slots keep the
+	// bare nil below (a nil interface IS nil).
+	if b, ok := rhs.(*types.Basic); ok && b.Kind() == types.UntypedNil && target != nil && !types.IsInterface(target) {
+		switch types.Unalias(target).(type) {
+		case *types.Slice, *types.Map, *types.Pointer:
+			tw, err := e.emitType(target)
+			if err != nil {
+				return nil, err
+			}
+			return map[string]any{"expr": "nil", "type": tw}, nil
+		}
+		return operand, nil
+	}
 	if target == nil || !types.IsInterface(target) {
 		return operand, nil
 	}
@@ -4543,31 +4564,13 @@ func (e *emitter) emitMapLit(cl *ast.CompositeLit, m *types.Map) (any, error) {
 		if err != nil {
 			return nil, err
 		}
-		// An untyped-nil VALUE takes the map's element type (spec:
-		// composite-literal values are assignable to the element type), so
-		// the machine stores a TYPED nil (a nil slice/map/pointer — len 0,
-		// == nil) rather than the raw nil that emitExpr's best-effort type
-		// attachment leaves behind. RESTRICTED to the lowered kinds the
-		// machine's nil-literal arm accepts — DIRECT slice/map/pointer
-		// (audit response M1: the first cut typed EVERY non-interface
-		// element and regressed func-typed and defined-typed elements,
-		// whose typed nil the machine rejects "nil literal for non-nilable
-		// type"; those keep the base bare-nil emission). Base behavior is
-		// correct for func and defined-pointer/func elements, but
-		// defined-SLICE/-MAP elements stay STUCK either way (len on the
-		// raw nil) — a pre-existing MACHINE-side gap, out of this
-		// frontend's reach: BUG-014, red-pinned by
-		// maps/nil-literal-values/defined-{slice,map}-element
-		// (delta-review R2 corrected the first cut's "behaves correctly"
-		// overclaim here). Interface elements keep the bare nil (a nil
-		// interface IS the raw nil). First pinned by
-		// generics/type-aliases/nested-map (G4).
-		if b, isB := e.goTypeOf(kv.Value).(*types.Basic); isB && b.Kind() == types.UntypedNil {
-			switch types.Unalias(e.applySubst(m.Elem())).(type) {
-			case *types.Slice, *types.Map, *types.Pointer:
-				v = map[string]any{"expr": "nil", "type": valTy}
-			}
-		}
+		// An untyped-nil VALUE takes the map's element type: handled by
+		// wrapInterfaceConversion above since the arc-final audit (F6 /
+		// BUG-016 — the M1 site-local fix generalized to every
+		// assignable context, same slice/map/pointer kind restriction;
+		// BUG-014's defined-slice/-map elements stay the machine-side
+		// gap, red-pinned by maps/nil-literal-values/defined-*-element).
+		// First pinned by generics/type-aliases/nested-map (G4).
 		entries = append(entries, map[string]any{"key": k, "value": v})
 	}
 	name := "$c" + itoa(e.tmpSeq)
@@ -5268,8 +5271,11 @@ func (e *emitter) emitCallArgs(sig *types.Signature, c *ast.CallExpr) ([]any, er
 	}
 	if sig == nil || !sig.Variadic() || c.Ellipsis != token.NoPos {
 		// Interface-typed params: box non-interface arguments (a spread
-		// argument is exact — the slice type already matches, no wrap).
-		if sig != nil && c.Ellipsis == token.NoPos {
+		// argument's SLICE is exact — no interface wrap — but an untyped
+		// NIL spread, `f(nil...)`, takes the variadic slice type itself:
+		// the same one-mechanism nil typing as every other slot, BUG-016 /
+		// arc-final audit F6).
+		if sig != nil {
 			params := sig.Params()
 			args := []any{}
 			for i, a := range c.Args {
@@ -5277,9 +5283,13 @@ func (e *emitter) emitCallArgs(sig *types.Signature, c *ast.CallExpr) ([]any, er
 				if err != nil {
 					return nil, err
 				}
-				if i < params.Len() {
+				pi := i
+				if pi >= params.Len() {
+					pi = params.Len() - 1
+				}
+				if pi >= 0 {
 					w, err = e.wrapInterfaceConversion(
-						params.At(i).Type(), e.goTypeOf(a), w)
+						params.At(pi).Type(), e.goTypeOf(a), w)
 					if err != nil {
 						return nil, err
 					}
