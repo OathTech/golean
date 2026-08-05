@@ -1,39 +1,19 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-05  commit: general-coverage-generics (delta-review response R1-R3)
+# recorded: 2026-08-06  commit: general-coverage (arc-final audit response, guardrail pins)
 #   frontend: native  oracle: go run (strict lane) / go-run membership in the
 #   machine-enumerated observation set (membership lane; go1.26.5 samples)
-# manifest_cases: 966  pass: 837  fail: 129
-# Re-pin reason: DELIBERATE coverage change — delta-review response (6
-# NEW ids, ZERO movement on existing ids; per-finding record in
-# docs/2026-08-05_generics-design.md §10):
-# - generics/quarantined-instantiation-interface and
-#   interfaces/quarantined-anonymous-interface (PASS) — R1: the m5
-#   quarantine rollback now also journals seenInterfaces and
-#   calledIfaceMethods registrations (first-registration entries only,
-#   undone at both rollback sites), so an interface or dispatch target
-#   recorded ONLY by a refused body no longer survives into the
-#   interface-declaration/anchor passes, whose unsupported-signature
-#   failure refuses the whole export (the etcd-raft Ready() <-chan Ready
-#   shape). SCOPE, stated precisely (the previous header's
-#   "instantiations no longer poison the whole export" was broader than
-#   delivered): rollback now covers mangled keys, function/type stencil
-#   queues+maps, interface notes, and dispatch records — the registration
-#   classes that exist today; a future registration class must be
-#   journaled or it recreates the hazard.
-# - maps/nil-literal-values/defined-{slice,map}-element
-#   (FAIL/lean-observation, RED BY DESIGN) — R2: defined-slice/map
-#   elements with nil literal values are stuck at len on a raw nil —
-#   PRE-EXISTING on the merge base (machine-side: the nil-literal arm
-#   rejects .defined targets), NOT fixable in this slice's charter;
-#   BUG-014 in docs/BUGS.md carries the fix shape.
-# - methods/alias-promoted-method-expression/{promoted,direct} (PASS) —
-#   R3: the M2 Unalias sweep had missed the method-expression concrete
-#   path; fixed, both alias spellings pinned.
-# Standing expected reds (unchanged): generics/type-parameter-channel-ops
-# (channels arc), generics/type-aliases/struct-literal (anonymous
-# non-empty struct — pre-existing generics-independent gap),
-# generics/local-type-argument (M3 recorded narrowing),
-# complex/generic-type-set (9; complex domain semantics not landed).
+# manifest_cases: 1025  pass: 848  fail: 177
+# Re-pin reason: 59 NEW guardrail ids land red-first for the arc-final audit
+#   findings (F1-F12): BUG-015 recover-through-wrapper (4 red), BUG-016
+#   untyped-nil sinks (10 red), BUG-017 mixed interface comparison (7 red),
+#   BUG-018 generic-local-type identity (2 red + 1 frontend-export),
+#   BUG-019 struct{} typeName (3 red), BUG-020 unnamed conversion targets
+#   (7 red), BUG-021 append-spill envelope (3 membership red), BUG-012
+#   blast-radius pins (5 red), F5 generic-interface poisoning (2
+#   frontend-export), F12 &T elision (4 frontend-export), plus agreeing
+#   controls and the F8 cap([]byte) version-tracking pin (green). Zero
+#   PASS->FAIL on existing ids; every fidelity-stage red is on a BUGS.md
+#   Cases line.
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
 PASS	arrays/array-copy	-
@@ -41,10 +21,10 @@ PASS	arrays/array-element-compound	-
 PASS	arrays/array-len-cap	-
 PASS	arrays/array-of-struct-field-write	-
 PASS	arrays/array-param-return	-
-PASS	arrays/arrays	-
-PASS	arrays/arrays-are-values	-
 PASS	arrays/array-slice-alias	-
 PASS	arrays/array-zero	-
+PASS	arrays/arrays	-
+PASS	arrays/arrays-are-values	-
 PASS	arrays/defined-array-receiver	-
 PASS	arrays/index-eval-order	-
 PASS	arrays/keyed-literal-eval-order	-
@@ -108,9 +88,9 @@ FAIL	builtins/real-imag	frontend-export
 PASS	builtins/recover-outside-defer	-
 FAIL	channels/buffered-basic	frontend-export
 FAIL	channels/close-closed-panic	frontend-export
-FAIL	channels/closed-receive	frontend-export
 FAIL	channels/close-nil-panic	frontend-export
 FAIL	channels/close-send-only	frontend-export
+FAIL	channels/closed-receive	frontend-export
 FAIL	channels/directional-types	frontend-export
 FAIL	channels/make-directional	frontend-export
 FAIL	channels/make-edge/buffered-fifo	frontend-export
@@ -177,10 +157,10 @@ FAIL	complex/zero-value	frontend-export
 PASS	constants/array-bound	-
 PASS	constants/builtin-len-cap-constants	-
 PASS	constants/complex-constant	-
+PASS	constants/const-precision	-
 PASS	constants/constant-character-representability	-
 PASS	constants/constant-comparison	-
 PASS	constants/constant-division	-
-PASS	constants/const-precision	-
 PASS	constants/default-bool-string	-
 FAIL	constants/default-types	frontend-export
 PASS	constants/dependent-constants	-
@@ -343,6 +323,10 @@ FAIL	floats/to-int-out-of-range/range	lean-observation
 PASS	floats/to-int-truncation	-
 PASS	floats/to-uint-truncation	-
 PASS	floats/typed-constant-adaptation	-
+FAIL	functions/bare-call-chain/chain	lean-observation
+FAIL	functions/bare-call-chain/func-value	lean-observation
+FAIL	functions/bare-call-chain/helper	lean-observation
+FAIL	functions/bare-call-chain/multi-result	lean-observation
 FAIL	functions/bare-call-discard-result	lean-observation
 PASS	functions/closure-arg-and-capture	-
 PASS	functions/closure-block-scope-capture	-
@@ -353,8 +337,8 @@ PASS	functions/closure-loop-var-capture	-
 PASS	functions/closure-nested-recapture	-
 PASS	functions/closure-param-shadows-capture	-
 PASS	functions/closure-recursion	-
-PASS	functions/closure-returns-closure	-
 PASS	functions/closure-return-state	-
+PASS	functions/closure-returns-closure	-
 PASS	functions/closure-share	-
 PASS	functions/closure-two-vars-one-closure	-
 PASS	functions/closure-value-reassigned	-
@@ -371,6 +355,18 @@ PASS	functions/method-value-callback	-
 PASS	functions/nil-function-call-panic	-
 PASS	functions/recursion	-
 PASS	functions/return-function	-
+FAIL	functions/untyped-nil-sinks/array-lit-elem	lean-observation
+FAIL	functions/untyped-nil-sinks/call-arg	lean-observation
+PASS	functions/untyped-nil-sinks/ctl-map-lit-value	-
+PASS	functions/untyped-nil-sinks/ctl-zero-value	-
+FAIL	functions/untyped-nil-sinks/nested-map-value	lean-observation
+FAIL	functions/untyped-nil-sinks/plain-assign	lean-observation
+FAIL	functions/untyped-nil-sinks/return-nil	lean-observation
+FAIL	functions/untyped-nil-sinks/slice-lit-elem	lean-observation
+FAIL	functions/untyped-nil-sinks/struct-lit-append	lean-observation
+FAIL	functions/untyped-nil-sinks/struct-lit-field	lean-observation
+FAIL	functions/untyped-nil-sinks/struct-lit-map-field	lean-observation
+FAIL	functions/untyped-nil-sinks/variadic-spread	lean-observation
 PASS	generics/comparable-constraint	-
 PASS	generics/comparable-runtime-edge/any-different-dynamic-types	-
 PASS	generics/comparable-runtime-edge/any-equal-ints	-
@@ -386,6 +382,8 @@ PASS	generics/derived-instantiation	-
 PASS	generics/empty-struct-argument	-
 PASS	generics/generic-closure	-
 PASS	generics/generic-closure/shared-capture	-
+FAIL	generics/generic-interface-param/call	frontend-export
+FAIL	generics/generic-interface-param/unrelated	frontend-export
 PASS	generics/generic-interface-value	-
 PASS	generics/generic-map-type	-
 PASS	generics/generic-struct	-
@@ -405,6 +403,9 @@ PASS	generics/instantiated-type-assert/name	-
 PASS	generics/instantiated-type-assert/ok	-
 PASS	generics/instantiated-type-assert/panic	-
 FAIL	generics/local-type-argument	frontend-export
+FAIL	generics/local-type-in-generic/assert-panic	differential
+FAIL	generics/local-type-in-generic/dynamic-name	differential
+FAIL	generics/local-type-two-instantiations	frontend-export
 PASS	generics/map-slice	-
 PASS	generics/method-and-type-set-constraint	-
 PASS	generics/method-constraint-call	-
@@ -437,6 +438,7 @@ PASS	if/condition-evaluated-once	-
 PASS	if/else-if-first-match	-
 PASS	if/if-init-scope	-
 PASS	if/init-before-condition	-
+FAIL	init/bare-call-in-init	lean-observation
 PASS	init/blank-var-init	-
 PASS	init/global-addr-taken	-
 PASS	init/global-composite	-
@@ -448,8 +450,8 @@ PASS	init/init-defer-recover	-
 PASS	init/init-panic	-
 PASS	init/init-sees-var-values	-
 PASS	init/multi-file-order	-
-PASS	init/multiple-init-order	-
 PASS	init/multi-value-var-init	-
+PASS	init/multiple-init-order	-
 PASS	init/package-init-order	-
 FAIL	init/quarantined-init-dep	frontend-export
 FAIL	init/quarantined-init-iface	frontend-export
@@ -513,11 +515,27 @@ PASS	interfaces/method-set-variadic-mismatch/req-variadic-impl-slice	-
 PASS	interfaces/method-set-variadic-mismatch/req-variadic-impl-slice-panic	-
 PASS	interfaces/method-set-variadic-mismatch/req-variadic-impl-variadic	-
 PASS	interfaces/method-set-variadic-mismatch/variadic-elem-mismatch	-
+PASS	interfaces/mixed-compare/ctl-iface-iface	-
+FAIL	interfaces/mixed-compare/eq-int-lit	lean-observation
+FAIL	interfaces/mixed-compare/eq-int-lit-reversed	lean-observation
+FAIL	interfaces/mixed-compare/neq-miss	lean-observation
+FAIL	interfaces/mixed-compare/sentinel-error	lean-observation
+FAIL	interfaces/mixed-compare/sentinel-error-reversed	lean-observation
+FAIL	interfaces/mixed-compare/struct-both-orders	lean-observation
+FAIL	interfaces/mixed-compare/switch-case	lean-observation
 PASS	interfaces/nil-interface	-
 PASS	interfaces/promoted-method-assert-ok	-
 PASS	interfaces/quarantined-anonymous-interface	-
 PASS	interfaces/recover-nil-dispatch/nil-interface	-
 PASS	interfaces/recover-nil-dispatch/nil-pointer-box	-
+PASS	interfaces/recover-promoted-wrapper/ctl-chain-join	-
+PASS	interfaces/recover-promoted-wrapper/ctl-concrete-promoted	-
+PASS	interfaces/recover-promoted-wrapper/ctl-direct-iface	-
+PASS	interfaces/recover-promoted-wrapper/ctl-method-value	-
+FAIL	interfaces/recover-promoted-wrapper/silent-iface-embed	differential
+FAIL	interfaces/recover-promoted-wrapper/silent-pointer-embed	differential
+FAIL	interfaces/recover-promoted-wrapper/silent-value-embed	differential
+FAIL	interfaces/recover-promoted-wrapper/status-value-embed	lean-observation
 PASS	interfaces/type-assert-from-named-interface-panic/nil-operand	-
 PASS	interfaces/type-assert-from-named-interface-panic/to-pointer	-
 PASS	interfaces/type-assert-interface	-
@@ -527,12 +545,6 @@ PASS	interfaces/type-assert-interface-panic/missing-one	-
 PASS	interfaces/type-assert-interface-panic/nil	-
 PASS	interfaces/type-assertions/comma-ok	-
 PASS	interfaces/type-assertions/panic	-
-FAIL	interfaces/typed-nil-channel	frontend-export
-PASS	interfaces/typed-nil-composite	-
-PASS	interfaces/typed-nil-func	-
-PASS	interfaces/typed-nil-map	-
-PASS	interfaces/typed-nil-pointer-compare	-
-PASS	interfaces/typed-nil-slice	-
 PASS	interfaces/type-switch-default-binding	-
 PASS	interfaces/type-switch-default-binding-type	-
 PASS	interfaces/type-switch-dynamic	-
@@ -551,6 +563,12 @@ PASS	interfaces/type-switch-nil-multi-case	-
 PASS	interfaces/type-switch-single-binding	-
 PASS	interfaces/type-switch-typed-nil	-
 PASS	interfaces/type-switch-typed-nil-binding	-
+FAIL	interfaces/typed-nil-channel	frontend-export
+PASS	interfaces/typed-nil-composite	-
+PASS	interfaces/typed-nil-func	-
+PASS	interfaces/typed-nil-map	-
+PASS	interfaces/typed-nil-pointer-compare	-
+PASS	interfaces/typed-nil-slice	-
 PASS	ints/bitwise	-
 PASS	ints/break-continue	-
 PASS	ints/byte-conversion	-
@@ -559,16 +577,16 @@ PASS	ints/conversion-width-matrix	-
 PASS	ints/defined-int-conversion	-
 PASS	ints/defined-type-ops	-
 PASS	ints/defined-underlying-conversion	-
+PASS	ints/div-mod-signs	-
 PASS	ints/divide-by-zero	-
 PASS	ints/division-overflow	-
-PASS	ints/div-mod-signs	-
 PASS	ints/if-return	-
 PASS	ints/int8-wrap	-
 PASS	ints/multi-assign	-
 PASS	ints/negative-shift	-
 PASS	ints/scalars	-
-PASS	ints/shifts	-
 PASS	ints/shift-width-boundaries	-
+PASS	ints/shifts	-
 PASS	ints/signed-unsigned-conversion	-
 PASS	ints/signed-width-wrap	-
 PASS	ints/truncate-conversion	-
@@ -715,8 +733,8 @@ PASS	panic-recover/defer-arg-during-panic	-
 PASS	panic-recover/defer-panic-after-return	-
 PASS	panic-recover/defer-panic-recovered-after-return	-
 PASS	panic-recover/defer-recover-builtin	-
-PASS	panic-recover/deferred-panic-replaces	-
 PASS	panic-recover/defer-registered-during-unwind	-
+PASS	panic-recover/deferred-panic-replaces	-
 PASS	panic-recover/named-result-preserved-after-recover	-
 PASS	panic-recover/nested-frame-recover	-
 PASS	panic-recover/nil-defer-during-unwind	-
@@ -765,13 +783,9 @@ PASS	pointers/pointer-identity	-
 PASS	pointers/pointer-param-alias	-
 PASS	pointers/pointer-slice-header	-
 PASS	pointers/pointer-to-pointer	-
-PASS	quorum/committed-index/all-acked	-
 PASS	quorum/committed-index-edges/all-unacked	-
 PASS	quorum/committed-index-edges/n1-acked	-
 PASS	quorum/committed-index-edges/n1-unacked	-
-PASS	quorum/committed-index/empty-maxuint	-
-PASS	quorum/committed-index/heap	-
-PASS	quorum/committed-index/on-stack	-
 PASS	quorum/committed-index-real/empty	-
 PASS	quorum/committed-index-real/five-dup	-
 PASS	quorum/committed-index-real/five-spread	-
@@ -789,6 +803,10 @@ PASS	quorum/committed-index-real/three-two	-
 PASS	quorum/committed-index-real/two-half	-
 PASS	quorum/committed-index-real/two-known	-
 PASS	quorum/committed-index-real/two-missing	-
+PASS	quorum/committed-index/all-acked	-
+PASS	quorum/committed-index/empty-maxuint	-
+PASS	quorum/committed-index/heap	-
+PASS	quorum/committed-index/on-stack	-
 PASS	quorum/committed-index/unacked	-
 PASS	quorum/joint/committed-min	-
 PASS	quorum/joint/ids-union	-
@@ -796,17 +814,17 @@ PASS	quorum/joint/vote-both-pending	-
 PASS	quorum/joint/vote-both-win	-
 PASS	quorum/joint/vote-disagree-lost	-
 PASS	quorum/joint/vote-disagree-pending	-
-PASS	quorum/vote-result/empty-wins	-
-PASS	quorum/vote-result/even-one-short	-
-PASS	quorum/vote-result/even-won	-
-PASS	quorum/vote-result/lost	-
-PASS	quorum/vote-result/pending	-
 PASS	quorum/vote-result-small-n/n1-lost	-
 PASS	quorum/vote-result-small-n/n1-pending	-
 PASS	quorum/vote-result-small-n/n1-won	-
 PASS	quorum/vote-result-small-n/n2-one-missing-pending	-
 PASS	quorum/vote-result-small-n/n2-one-yes-lost	-
 PASS	quorum/vote-result-small-n/n2-won	-
+PASS	quorum/vote-result/empty-wins	-
+PASS	quorum/vote-result/even-one-short	-
+PASS	quorum/vote-result/even-won	-
+PASS	quorum/vote-result/lost	-
+PASS	quorum/vote-result/pending	-
 PASS	quorum/vote-result/tie-lost	-
 PASS	quorum/vote-result/won-exact	-
 PASS	range/range-array-copy	-
@@ -839,8 +857,8 @@ PASS	range/range-struct-copy	-
 PASS	returns/early-return-named	-
 PASS	returns/method-multi-result-arg	-
 PASS	returns/multi-result-argument	-
-PASS	returns/multi-result-assignment	-
 PASS	returns/multi-result-assign-order	-
+PASS	returns/multi-result-assignment	-
 PASS	returns/multi-result-blank-forward	-
 PASS	returns/multi-result-forward	-
 PASS	returns/multi-result-forward-named	-
@@ -869,6 +887,9 @@ PASS	slices/append-nil	-
 PASS	slices/append-overlap	-
 PASS	slices/append-overlap-window	-
 PASS	slices/append-self	-
+FAIL	slices/append-spill-below-formula	membership
+FAIL	slices/append-spill-size-class	membership
+FAIL	slices/append-spill-stack-buffer	membership
 PASS	slices/array-to-slice-conditional	-
 PASS	slices/copy-min	-
 PASS	slices/copy-nil	-
@@ -897,10 +918,11 @@ PASS	slices/slices-sort-edges/signed-negatives	-
 PASS	slices/slices-sort-edges/single-element	-
 PASS	slices/slices-sort-edges/subslice-aliasing	-
 PASS	slices/slices-sort-edges/unsigned-above-half	-
-PASS	slices/slices-sort/ints	-
 FAIL	slices/slices-sort-non-integer-refusal	frontend-export
+PASS	slices/slices-sort/ints	-
 PASS	slices/slices-sort/uint64	-
 PASS	slices/three-index-slice	-
+PASS	strings/byte-conversion-cap	-
 PASS	strings/byte-slice-to-string-copy	-
 PASS	strings/concat-eval-order	-
 FAIL	strings/defined-slice-string-conversion	lean-observation
@@ -954,6 +976,10 @@ PASS	structs/empty-struct-literal-at-named-type/var-init	-
 PASS	structs/empty-struct-literal-left-operand/eq	-
 PASS	structs/empty-struct-literal-left-operand/neq	-
 PASS	structs/empty-struct-literal-left-operand/switch	-
+FAIL	structs/empty-struct-observation/array	differential
+PASS	structs/empty-struct-observation/ctl-named	-
+FAIL	structs/empty-struct-observation/direct	differential
+FAIL	structs/empty-struct-observation/field	differential
 PASS	structs/field-incdec	-
 PASS	structs/field-write-aliased-pointer	-
 PASS	structs/interface-field-compare-panic	-
@@ -962,9 +988,16 @@ PASS	structs/keyed-literal-eval-order	-
 PASS	structs/nested-field-write	-
 PASS	structs/pointer-field	-
 PASS	structs/pointer-hop-field-write	-
+PASS	structs/pointer-literal-elision/ctl-explicit	-
+PASS	structs/pointer-literal-elision/map-key	-
+FAIL	structs/pointer-literal-elision/map-value	frontend-export
+FAIL	structs/pointer-literal-elision/ptr-key	frontend-export
+FAIL	structs/pointer-literal-elision/slice-elem	frontend-export
+FAIL	structs/pointer-literal-elision/spec-example	frontend-export
 PASS	structs/positional-literal	-
 PASS	structs/positional-literal-eval-order	-
 PASS	structs/recursive-pointer	-
+PASS	structs/selector-address-pointer	-
 PASS	structs/selector-addressability-edge/map-value-copy-then-assign	-
 PASS	structs/selector-addressability-edge/map-value-pointer-field-write	-
 PASS	structs/selector-addressability-edge/map-value-slice-field-write	-
@@ -972,7 +1005,6 @@ PASS	structs/selector-addressability-edge/pointer-field-from-call-result	-
 PASS	structs/selector-addressability-edge/pointer-result-assign	-
 PASS	structs/selector-addressability-edge/read-call-result	-
 PASS	structs/selector-addressability-edge/read-conversion-result	-
-PASS	structs/selector-address-pointer	-
 PASS	structs/selector-eval-once	-
 PASS	structs/struct-array-element-write	-
 PASS	structs/swap	-
@@ -984,6 +1016,13 @@ FAIL	structs/tag-nested-conversion	frontend-export
 FAIL	structs/tag-pointer-conversion	lean-observation
 FAIL	structs/tag-unnamed-conversion	frontend-export
 PASS	structs/tuple-field-swap	-
+FAIL	structs/unnamed-conversion-targets/func	lean-observation
+FAIL	structs/unnamed-conversion-targets/func-from-defined	lean-observation
+FAIL	structs/unnamed-conversion-targets/map	lean-observation
+FAIL	structs/unnamed-conversion-targets/pointer	lean-observation
+FAIL	structs/unnamed-conversion-targets/pointer-nil	lean-observation
+FAIL	structs/unnamed-conversion-targets/slice	lean-observation
+FAIL	structs/unnamed-conversion-targets/slice-to-defined	lean-observation
 PASS	structs/zero-value	-
 PASS	variadic/defined-slice-spread	-
 PASS	variadic/forwarding	-

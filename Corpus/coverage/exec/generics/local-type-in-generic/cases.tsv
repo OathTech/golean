@@ -1,0 +1,3 @@
+# id	subject	args	expected_status	expected_reason	features
+dynamic-name	localTypeDynamicName	-	ok	-	generics,structs,interfaces,identity
+assert-panic	localTypeAssertPanic	-	panic	interface conversion	generics,structs,interfaces,type_assertions,panic,identity

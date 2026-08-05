@@ -1,0 +1,9 @@
+# id	subject	args	expected_status	expected_reason	features
+eq-int-lit	mixedEqIntLit	-	ok	-	interfaces,comparisons,equality
+eq-int-lit-reversed	mixedEqIntLitReversed	-	ok	-	interfaces,comparisons,equality
+neq-miss	mixedNeqMiss	-	ok	-	interfaces,comparisons,equality
+switch-case	mixedSwitchCase	-	ok	-	interfaces,comparisons,switch,equality
+sentinel-error	mixedSentinelError	-	ok	-	interfaces,comparisons,equality,pointers,globals
+sentinel-error-reversed	mixedSentinelErrorReversed	-	ok	-	interfaces,comparisons,equality,pointers,globals
+struct-both-orders	mixedStructBothOrders	-	ok	-	interfaces,comparisons,equality,structs
+ctl-iface-iface	mixedCtlIfaceIface	-	ok	-	interfaces,comparisons,equality

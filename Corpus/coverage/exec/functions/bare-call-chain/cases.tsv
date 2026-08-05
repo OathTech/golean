@@ -1,0 +1,5 @@
+# id	subject	args	expected_status	expected_reason	features
+chain	bareCallChain	-	ok	-	calls,methods,pointers,functions
+helper	bareCallHelper	-	ok	-	calls,functions,globals
+func-value	bareCallFuncValue	-	ok	-	calls,closures,functions,globals
+multi-result	bareCallMultiResult	-	ok	-	calls,functions,multi_assign,globals

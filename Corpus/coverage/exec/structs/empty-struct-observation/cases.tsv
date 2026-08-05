@@ -1,0 +1,5 @@
+# id	subject	args	expected_status	expected_reason	features
+direct	emptyStructDirect	-	ok	-	structs,empty,zero_values
+field	emptyStructField	-	ok	-	structs,empty,fields
+array	emptyStructArray	-	ok	-	structs,empty,arrays
+ctl-named	emptyStructNamed	-	ok	-	structs,empty,defined_type

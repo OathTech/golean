@@ -1,0 +1,7 @@
+# id	subject	args	expected_status	expected_reason	features
+map-value	elisionMapValue	-	ok	-	structs,literals,maps,pointers
+slice-elem	elisionSliceElem	-	ok	-	structs,literals,slices,pointers
+spec-example	elisionSpecExample	-	ok	-	structs,literals,arrays,pointers,floats
+map-key	elisionMapKey	-	ok	-	structs,literals,maps,keys
+ptr-key	elisionPtrKey	-	ok	-	structs,literals,maps,keys,pointers,range
+ctl-explicit	elisionCtlExplicit	-	ok	-	structs,literals,maps,pointers

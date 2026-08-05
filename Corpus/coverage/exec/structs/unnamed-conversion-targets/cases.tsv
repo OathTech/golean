@@ -1,0 +1,8 @@
+# id	subject	args	expected_status	expected_reason	features
+pointer	uctPointer	-	ok	-	conversions,pointers,structs,defined_type
+pointer-nil	uctPointerNil	-	ok	-	conversions,pointers,nil,defined_type
+slice	uctSlice	-	ok	-	conversions,slices,defined_type
+slice-to-defined	uctSliceToDefined	-	ok	-	conversions,slices,defined_type
+map	uctMap	-	ok	-	conversions,maps,defined_type
+func	uctFunc	-	ok	-	conversions,functions,closures,defined_type
+func-from-defined	uctFuncFromDefined	-	ok	-	conversions,functions,defined_type

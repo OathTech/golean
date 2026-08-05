@@ -1,0 +1,13 @@
+# id	subject	args	expected_status	expected_reason	features
+struct-lit-field	unsStructLitField	-	ok	-	nil,untyped,structs,literals,slices,len
+struct-lit-append	unsStructLitAppend	-	ok	-	nil,untyped,structs,literals,slices,append
+struct-lit-map-field	unsStructLitMapField	-	ok	-	nil,untyped,structs,literals,maps,range
+slice-lit-elem	unsSliceLitElem	-	ok	-	nil,untyped,slices,literals,len
+array-lit-elem	unsArrayLitElem	-	ok	-	nil,untyped,arrays,literals,slices,len
+return-nil	unsReturn	-	ok	-	nil,untyped,returns,slices,len
+call-arg	unsCallArg	-	ok	-	nil,untyped,calls,slices,len
+plain-assign	unsPlainAssign	-	ok	-	nil,untyped,assignment,slices,len
+variadic-spread	unsVariadicSpread	-	ok	-	nil,untyped,variadic,slices
+nested-map-value	unsNestedMapValue	-	ok	-	nil,untyped,maps,structs,literals,slices
+ctl-map-lit-value	unsCtlMapLitValue	-	ok	-	nil,untyped,maps,literals,slices,len
+ctl-zero-value	unsCtlZeroValue	-	ok	-	nil,zero_values,slices,len

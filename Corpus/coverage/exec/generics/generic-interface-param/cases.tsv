@@ -1,0 +1,3 @@
+# id	subject	args	expected_status	expected_reason	features
+call	genericInterfaceParam	-	ok	-	generics,interfaces,constraints,calls
+unrelated	gipUnrelated	-	ok	-	generics,functions

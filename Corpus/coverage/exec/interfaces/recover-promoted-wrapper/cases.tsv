@@ -1,0 +1,9 @@
+# id	subject	args	expected_status	expected_reason	features
+silent-value-embed	rwSilentValueEmbed	-	ok	-	interfaces,embedding,methods,defer,recover,panic
+status-value-embed	rwStatusValueEmbed	-	ok	-	interfaces,embedding,methods,defer,recover,panic
+silent-pointer-embed	rwSilentPointerEmbed	-	ok	-	interfaces,embedding,methods,defer,recover,panic,pointers
+silent-iface-embed	rwSilentIfaceEmbed	-	ok	-	interfaces,embedding,methods,defer,recover,panic
+ctl-direct-iface	rwCtlDirectIface	-	ok	-	interfaces,methods,defer,recover,panic
+ctl-concrete-promoted	rwCtlConcretePromoted	-	ok	-	embedding,methods,defer,recover,panic
+ctl-method-value	rwCtlMethodValue	-	ok	-	methods,closures,defer,recover,panic
+ctl-chain-join	rwCtlChainJoin	-	ok	-	interfaces,embedding,methods,defer,recover,panic

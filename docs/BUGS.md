@@ -27,6 +27,183 @@ differential-pinned) `- Cases: <id>, <id>, …` (baseline case ids), then prose.
 
 ---
 
+## BUG-021 — append-spill capacity envelope is TOO NARROW on the oracle toolchain (gc realizes points outside growth+[0,8))
+
+- Status: open
+- Pinned-by: differential
+- Cases: slices/append-spill-stack-buffer, slices/append-spill-below-formula, slices/append-spill-size-class
+- Discovered: 2026-08-06 (arc-final audit F2 — probe sweep over element
+  sizes/shapes on go1.26.5, the differential oracle's own toolchain)
+
+The append-spill Choices site models `newCap = growthFormula(oldCap,
+newLen) + extra`, `extra ∈ [0,8)` — but gc's realized capacity is
+element-size dependent (runtime/slice.go re-derives it from the
+size-class-rounded allocation, `roundupsize`; cmd/compile additionally
+stack-buffers small non-escaping appends in a 32-byte buffer), and the
+formula has no element-size parameter. Probe-measured escapes, all three
+directions: cap 32 for a byte append at oldCap 3 → newLen 4 (stack
+buffer; window was [6,14)); cap 2 for nil []string → len 2 (BELOW the
+formula's max(4,newLen)=4 — the spec's only floor is newLen); cap 224
+for []int oldCap 100 → newLen 101 (size-class rounding; window was
+[200,208)). This is the nondeterminism doctrine's too-narrow,
+SOUNDNESS-relevant direction: ∀-stream theorems do not transfer while a
+real behavior sits outside the envelope (no shipped theorem walks the
+spill path yet — StmtOps.lean records it as owed — so the hole is
+latent, not realized). The three membership pins fire the lane's
+too-narrow alarm today. Fix shape: widen the envelope to
+[newLen, max(32, 2·growthFormula)] — lower end the spec floor, upper
+end covering both gc mechanisms (32-byte stack buffer at element size
+≥ 1; size-class step ratio < 1.5 for allocations over 32 bytes) — with
+the doctrine's envelope statement updated in the same commit. The
+version-tracking pin (`full-slice-cap-zero`, samples=1) sat INSIDE the
+old window for its one ([]int, oldCap 0, newLen 1) point, which is why
+the lane never fired: it version-tracks one triple, not the site's
+envelope; these three pins cover the escaping regimes.
+
+## BUG-020 — conversions to UNNAMED composite targets (pointer/slice/map/func) are refused (missing kernel arms)
+
+- Status: open
+- Pinned-by: differential
+- Cases: structs/unnamed-conversion-targets/pointer, structs/unnamed-conversion-targets/pointer-nil, structs/unnamed-conversion-targets/slice, structs/unnamed-conversion-targets/slice-to-defined, structs/unnamed-conversion-targets/map, structs/unnamed-conversion-targets/func, structs/unnamed-conversion-targets/func-from-defined
+- Discovered: 2026-08-06 (arc-final audit F10; pre-existing — the
+  catch-all predates the general-coverage arc)
+
+`convertValueToTyFuel` has arms for int/float/string/defined/struct/
+interface targets only; a conversion whose target's RESOLVED shape is a
+pointer, slice, map, or func falls into the catch-all `unsupported` —
+including the spec's own canonical examples `(*Point)(p)`,
+`(func() int)(x)`, `(*int)(nil)`, and BOTH directions through defined
+types (`[]int(namedSlice)` and `uctInts(ys)` both resolve into the
+missing arm). Fail-closed (never a wrong answer), but a refusal of
+legal, idiomatic Go — `(*T)(nil)` occurs 12× in deps/raft. The five
+untriaged `strings/*-conversion` reds (rune/string conversions) fail at
+the SAME catch-all but need real conversion logic, not a retag — they
+stay untriaged. NOTE the mis-scoped rationale at the struct arm
+("pointer-to-struct conversions stay refused elsewhere: they ALIAS one
+cell under two tags") — identity retags like `(*Cell)(&c)` alias
+nothing; the true cause is that no target-kind arm exists. Fix shape:
+identical-underlying retag arms for the four kinds (pass the runtime
+value through; fail closed on shape mismatch), and correct the
+rationale comment.
+
+## BUG-019 — observation channel renders anonymous struct{} typeName as "struct{}" (reflect.Name() gives "")
+
+- Status: open
+- Pinned-by: differential
+- Cases: structs/empty-struct-observation/direct, structs/empty-struct-observation/field, structs/empty-struct-observation/array
+- Discovered: 2026-08-06 (arc-final audit F7; pre-existing — the old
+  `unqualifiedTypeName` produced the same string)
+
+`goValueJson` renders a struct's typeName as `TypeId.unqualified`, which
+for the canonical anonymous empty struct is the literal internal key
+"struct{}". The channel's stated contract is `reflect.Type.Name()`,
+which is "" for ANY non-defined type — the Go harness renders "".
+Fail-safe (a false RED, never a false green), but a live guardrail hole
+in the area the arc extended (BUG-011 empty-struct assignability,
+`Pair[struct{}]`): any case observing a bare struct{} fails on naming
+alone. Fix shape: render "" for the canonical anonymous-empty-struct
+key at the observation boundary (CLI renderer), both sides consistent;
+named empty structs (defined types) keep their names.
+
+## BUG-018 — a type declared INSIDE a generic function gets an un-parameterized TypeId
+
+- Status: open
+- Pinned-by: differential
+- Cases: generics/local-type-in-generic/dynamic-name, generics/local-type-in-generic/assert-panic
+- Discovered: 2026-08-06 (arc-final audit F3)
+
+gc names a type declared inside a generic function with the enclosing
+instantiation's type arguments (`reflect.Type.Name()` = "ltgBox[int]",
+probe-verified go1.26.5). Local type decls in stenciled bodies bypass
+mono.go's mangling boundary and mint the bare key `pkg.Name`: with ONE
+instantiation the export succeeds and the observation channel and
+interface-conversion panic text report the WRONG type name (the two
+pinned differential reds — wrong answers on legal Go); with TWO
+instantiations the name-only duplicate-TypeId gate refuses legal Go
+with a misdiagnosis ("a function-local type collides with another
+declaration" — there is ONE declaration at two instantiations;
+`generics/local-type-two-instantiations`, a frontend-export red). The
+mangled-key injectivity registry is never consulted on this path. Fix
+shape: parameterize local-type TypeIds inside generic functions with
+the enclosing instantiation's type arguments (the mechanism lifted func
+literals already use), collision-checked at the one boundary.
+
+## BUG-017 — mixed interface/non-interface comparison is unsupported (no wrap at comparison operands)
+
+- Status: open
+- Pinned-by: differential
+- Cases: interfaces/mixed-compare/eq-int-lit, interfaces/mixed-compare/eq-int-lit-reversed, interfaces/mixed-compare/neq-miss, interfaces/mixed-compare/switch-case, interfaces/mixed-compare/sentinel-error, interfaces/mixed-compare/sentinel-error-reversed, interfaces/mixed-compare/struct-both-orders
+- Discovered: 2026-08-06 (arc-final audit F4; pre-existing — emitBinary
+  is untouched by the general-coverage arc)
+
+The spec's own bullet (§Comparison operators): "A value x of
+non-interface type X and a value t of interface type T can be compared
+if type X is comparable and X implements T." The interface-conversion
+wrap (BUG-006's fix) is emitted at every assignable slot EXCEPT
+comparison operands and switch-case slots, so the machine's equality
+arms receive one box and one raw value and refuse — every mixed shape
+fails closed (`i == 5`, both orders, `switch i { case 5: }`, the
+sentinel-error idiom `err == ErrSentinel`). A whole spec bullet
+including two dominant idioms, invisible to the corpus (zero mixed
+comparisons existed — verified by a go/types scan). Fix shape: box the
+non-interface operand at comparison and switch-case slots exactly like
+every other slot (`wrapInterfaceConversion`), operand type = the
+interface side.
+
+## BUG-016 — untyped nil into a nilable slot stays a RAW nil everywhere except map-literal elements
+
+- Status: open
+- Pinned-by: differential
+- Cases: functions/untyped-nil-sinks/struct-lit-field, functions/untyped-nil-sinks/struct-lit-append, functions/untyped-nil-sinks/struct-lit-map-field, functions/untyped-nil-sinks/slice-lit-elem, functions/untyped-nil-sinks/array-lit-elem, functions/untyped-nil-sinks/return-nil, functions/untyped-nil-sinks/call-arg, functions/untyped-nil-sinks/plain-assign, functions/untyped-nil-sinks/variadic-spread, functions/untyped-nil-sinks/nested-map-value
+- Discovered: 2026-08-06 (arc-final audit F6, widening the disclosure at
+  the generics design note §"local types" — the audit's verifier showed
+  the class is every assignability sink, not just composite literals)
+
+The frontend types an untyped-nil map-literal VALUE to the element type
+(the audit-response M1 fix) but nothing else: struct-literal fields,
+slice/array-literal elements, `return nil` from a []T function, call
+arguments, plain assignment, and variadic spread all emit a bare
+`{"expr":"nil"}`, which the machine stores as a raw `.nil` — the first
+`len`/`append`/index on it goes unsupported/stuck. Legal, ubiquitous Go
+(`return nil` is verbatim etcd-raft's `log_unstable.nextEntries`, on
+the north star's critical path). Fail-closed in direction (visible red,
+never a wrong value — probed across the divergence surface). Distinct
+from BUG-014 (DEFINED slice/map element types, blocked on the machine's
+nil-literal arm): these sinks are plain slice/map/pointer slots the
+machine already supports typed nils for; the frontend just never types
+them. Fix shape: ONE mechanism — type the untyped nil to the target at
+every assignable-context emission site (the sites that already call the
+interface wrap), for slice/map/pointer targets; `func`-typed and
+defined-typed slots keep their current disposition (BUG-014's
+boundary).
+
+## BUG-015 — recover() inside a PROMOTED method reached via a synthesized wrapper returns nil (wrapper frame breaks the recover walk)
+
+- Status: open
+- Pinned-by: differential
+- Cases: interfaces/recover-promoted-wrapper/silent-value-embed, interfaces/recover-promoted-wrapper/status-value-embed, interfaces/recover-promoted-wrapper/silent-pointer-embed, interfaces/recover-promoted-wrapper/silent-iface-embed
+- Discovered: 2026-08-06 (arc-final audit F1 — found by reading the
+  slice-2 wrapper design against the pre-existing defer/recover
+  machinery; invisible to the whole corpus)
+
+Slice 2 lowers dynamic dispatch of a PROMOTED method through a
+synthesized forwarding wrapper — an ordinary GoCore call frame. gc
+emits the same wrappers but marks them `abi.FuncIDWrapper`, and the
+runtime's recover walk skips them (runtime/panic.go, gorecover: "there
+must be exactly one non-wrapper frame between gopanic and gorecover").
+`recoverResult` requires the deferred function's frame DIRECTLY above
+the suspended-chain marker, so the wrapper's extra frame makes
+`recover()` inside the promoted method return nil: the panic is NOT
+recovered where Go recovers it — a SILENT value divergence (both sides
+status ok, values differ) and a status-level flip, across all three
+wrapper paths (value embed, embedded pointer, embedded interface
+field). Introduced by this arc (before slice 2 the same shape refused
+via the BUG-007 satisfaction fail-closure). Chain-JOINING through the
+same wrapper is correct (pinned as a control). Fix shape, faithful to
+gc: mark synthesized wrappers on the wire, thread the marker into the
+frame continuation, and make the recover walk (and ONLY it) treat
+wrapper frames as transparent.
+
 ## BUG-014 — untyped nil at defined-slice/defined-map map-literal elements stays a raw nil (stuck at len/ops)
 
 - Status: open
@@ -98,7 +275,7 @@ every pre-generics key — render identically in both.
 
 - Status: open
 - Pinned-by: differential
-- Cases: functions/bare-call-discard-result
+- Cases: functions/bare-call-discard-result, functions/bare-call-chain/chain, functions/bare-call-chain/helper, functions/bare-call-chain/func-value, functions/bare-call-chain/multi-result, init/bare-call-in-init
 - Discovered: 2026-08-05 (init-slice audit, C5 — the multi-file verifier
   probe's init() bodies used bare `mark(x)` calls and hit it; the shape
   is pre-existing and UNRELATED to init: the diff under audit does not
