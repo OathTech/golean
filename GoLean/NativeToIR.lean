@@ -529,15 +529,47 @@ partial def decodeStmt (results : Array Param) (path : String) (json : Json) : L
       let combined ← decodeCompound op read rhs
       pure (.assign t.assignee combined)
   | "expr" =>
+      -- A bare statement-position call DISCARDS its results (spec
+      -- §Expression statements: no `_ =` required). The machine's frame
+      -- exit stores results into targets positionally and goes stuck on
+      -- arity mismatch, so a value-returning callee needs typed discard
+      -- temps — exactly decodeAssign's blank-target mechanism, driven by
+      -- the call node's `resultTypes` (BUG-012 fix, arc-final audit F11,
+      -- 2026-08-06). A wire without `resultTypes` keeps the old
+      -- targetless lowering (fail-closed: stuck at frame exit if the
+      -- callee returns values).
       let e ← StrictJson.field path obj "expr"
+      let discardTemps (prefixName : String) (callJson : Json) :
+          LowerM (Array Stmt × Array Assignee) := do
+        let callObj ← StrictJson.obj s!"{path}.expr" callJson
+        match callObj.get? "resultTypes" with
+        | none => pure (#[], #[])
+        | some rt => do
+            let arr ← StrictJson.array s!"{path}.expr.resultTypes" rt
+            let tys ← arr.mapIdxM (fun i t => decodeTy s!"{path}.expr.resultTypes[{i}]" t)
+            let decls := tys.mapIdx (fun i ty =>
+              Stmt.initialization { id := s!"{prefixName}{i}", typ := ty })
+            let assignees := tys.mapIdx (fun i _ =>
+              Assignee.var s!"{prefixName}{i}")
+            pure (decls, assignees)
       match ← asCall? e with
       | some (name, args) =>
-          pure (.call #[] ⟨name⟩ (← args.mapIdxM (fun i a => decodeExpr s!"{path}.expr.args[{i}]" a)))
+          let (decls, assignees) ← discardTemps "$cr" e
+          let argsE ← args.mapIdxM (fun i a => decodeExpr s!"{path}.expr.args[{i}]" a)
+          if decls.isEmpty then
+            pure (.call #[] ⟨name⟩ argsE)
+          else
+            pure (.seqn (decls.push (.call assignees ⟨name⟩ argsE)))
       | none =>
           match ← asCallValue? e with
           | some (callee, args) =>
-              pure (.callValue #[] (← decodeExpr s!"{path}.expr.callee" callee)
-                (← args.mapIdxM (fun i a => decodeExpr s!"{path}.expr.args[{i}]" a)))
+              let (decls, assignees) ← discardTemps "$cv" e
+              let calleeE ← decodeExpr s!"{path}.expr.callee" callee
+              let argsE ← args.mapIdxM (fun i a => decodeExpr s!"{path}.expr.args[{i}]" a)
+              if decls.isEmpty then
+                pure (.callValue #[] calleeE argsE)
+              else
+                pure (.seqn (decls.push (.callValue assignees calleeE argsE)))
           | none => fail s!"expression statement is not a call at {path} (calls are the only effectful expressions modeled)"
   | "range" =>
       decodeRange results path obj

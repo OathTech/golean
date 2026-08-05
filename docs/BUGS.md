@@ -275,7 +275,14 @@ every pre-generics key — render identically in both.
 
 ## BUG-012 — a bare call statement discarding results goes stuck ("extra GoCore assignment value")
 
-- Status: open
+- Status: fixed (2026-08-06, arc-final audit response F11 — the decoder
+  lowers a bare value-returning call with typed discard temps per
+  result, decodeAssign's own blank-target mechanism driven by the call
+  node's `resultTypes`; covers plain calls, method chaining, func-value
+  calls, multi-result callees, and bare calls inside `init()` through
+  `$pkginit`. The audit re-priced this from "deferred to its own small
+  slice" after its novel-program sweep found it the single most
+  frequent failure — 16 of 153 probes.)
 - Pinned-by: differential
 - Cases: functions/bare-call-discard-result, functions/bare-call-chain/chain, functions/bare-call-chain/helper, functions/bare-call-chain/func-value, functions/bare-call-chain/multi-result, init/bare-call-in-init
 - Discovered: 2026-08-05 (init-slice audit, C5 — the multi-file verifier
@@ -296,7 +303,8 @@ Fix shape (NOT in the init slice, deliberately): either the frontend
 lowers a result-discarding bare call with blank targets per result, or
 the machine's frame exit tolerates `targets=[]` with nonempty results
 (store nothing); either way the guardrail case flips and the pin moves
-to the fix commit. Deferred to its own small slice.
+to the fix commit. (Resolved via the frontend/decoder path — the
+machine's frame exit is untouched.)
 
 ## BUG-001 — struct-field / array-element WRITE lowers an address base as a value
 

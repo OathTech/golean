@@ -1,19 +1,13 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-06  commit: general-coverage (arc-final audit response, guardrail pins)
+# recorded: 2026-08-06  commit: general-coverage (arc-final audit response, F11 bare-call fix)
 #   frontend: native  oracle: go run (strict lane) / go-run membership in the
 #   machine-enumerated observation set (membership lane; go1.26.5 samples)
-# manifest_cases: 1025  pass: 848  fail: 177
-# Re-pin reason: 59 NEW guardrail ids land red-first for the arc-final audit
-#   findings (F1-F12): BUG-015 recover-through-wrapper (4 red), BUG-016
-#   untyped-nil sinks (10 red), BUG-017 mixed interface comparison (7 red),
-#   BUG-018 generic-local-type identity (2 red + 1 frontend-export),
-#   BUG-019 struct{} typeName (3 red), BUG-020 unnamed conversion targets
-#   (7 red), BUG-021 append-spill envelope (3 membership red), BUG-012
-#   blast-radius pins (5 red), F5 generic-interface poisoning (2
-#   frontend-export), F12 &T elision (4 frontend-export), plus agreeing
-#   controls and the F8 cap([]byte) version-tracking pin (green). Zero
-#   PASS->FAIL on existing ids; every fidelity-stage red is on a BUGS.md
-#   Cases line.
+# manifest_cases: 1025  pass: 854  fail: 171
+# Re-pin reason: BUG-012 fixed (decoder discard temps for bare
+#   value-returning calls) — exactly its six pinned ids flip FAIL ->
+#   PASS (functions/bare-call-discard-result, functions/bare-call-chain/
+#   {chain,helper,func-value,multi-result}, init/bare-call-in-init).
+#   Zero PASS->FAIL, zero other stage moves.
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
 PASS	arrays/array-copy	-
@@ -323,11 +317,11 @@ FAIL	floats/to-int-out-of-range/range	lean-observation
 PASS	floats/to-int-truncation	-
 PASS	floats/to-uint-truncation	-
 PASS	floats/typed-constant-adaptation	-
-FAIL	functions/bare-call-chain/chain	lean-observation
-FAIL	functions/bare-call-chain/func-value	lean-observation
-FAIL	functions/bare-call-chain/helper	lean-observation
-FAIL	functions/bare-call-chain/multi-result	lean-observation
-FAIL	functions/bare-call-discard-result	lean-observation
+PASS	functions/bare-call-chain/chain	-
+PASS	functions/bare-call-chain/func-value	-
+PASS	functions/bare-call-chain/helper	-
+PASS	functions/bare-call-chain/multi-result	-
+PASS	functions/bare-call-discard-result	-
 PASS	functions/closure-arg-and-capture	-
 PASS	functions/closure-block-scope-capture	-
 PASS	functions/closure-captures-named-result	-
@@ -438,7 +432,7 @@ PASS	if/condition-evaluated-once	-
 PASS	if/else-if-first-match	-
 PASS	if/if-init-scope	-
 PASS	if/init-before-condition	-
-FAIL	init/bare-call-in-init	lean-observation
+PASS	init/bare-call-in-init	-
 PASS	init/blank-var-init	-
 PASS	init/global-addr-taken	-
 PASS	init/global-composite	-
