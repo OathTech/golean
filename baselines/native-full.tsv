@@ -1,12 +1,14 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-06  commit: general-coverage (arc-final audit response, F7 struct{} typeName)
+# recorded: 2026-08-06  commit: general-coverage (arc-final audit response, F10 conversion arms)
 #   frontend: native  oracle: go run (strict lane) / go-run membership in the
 #   machine-enumerated observation set (membership lane; go1.26.5 samples)
-# manifest_cases: 1025  pass: 883  fail: 142
-# Re-pin reason: BUG-019 fixed (CLI renders "" for the canonical
-#   anonymous empty struct, the reflect.Name() contract) — exactly its
-#   three pinned ids flip FAIL -> PASS. Zero PASS->FAIL, zero other
-#   stage moves.
+# manifest_cases: 1025  pass: 890  fail: 135
+# Re-pin reason: BUG-020 fixed (identical-underlying pass-through arms
+#   for pointer/slice/map/func conversion targets) — exactly its seven
+#   pinned ids flip FAIL -> PASS. Zero PASS->FAIL, zero other stage
+#   moves; structs/tag-pointer-conversion stays red at the same stage
+#   (now the downstream struct-tag check), rune/string conversion reds
+#   unchanged.
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
 PASS	arrays/array-copy	-
@@ -1009,13 +1011,13 @@ FAIL	structs/tag-nested-conversion	frontend-export
 FAIL	structs/tag-pointer-conversion	lean-observation
 FAIL	structs/tag-unnamed-conversion	frontend-export
 PASS	structs/tuple-field-swap	-
-FAIL	structs/unnamed-conversion-targets/func	lean-observation
-FAIL	structs/unnamed-conversion-targets/func-from-defined	lean-observation
-FAIL	structs/unnamed-conversion-targets/map	lean-observation
-FAIL	structs/unnamed-conversion-targets/pointer	lean-observation
-FAIL	structs/unnamed-conversion-targets/pointer-nil	lean-observation
-FAIL	structs/unnamed-conversion-targets/slice	lean-observation
-FAIL	structs/unnamed-conversion-targets/slice-to-defined	lean-observation
+PASS	structs/unnamed-conversion-targets/func	-
+PASS	structs/unnamed-conversion-targets/func-from-defined	-
+PASS	structs/unnamed-conversion-targets/map	-
+PASS	structs/unnamed-conversion-targets/pointer	-
+PASS	structs/unnamed-conversion-targets/pointer-nil	-
+PASS	structs/unnamed-conversion-targets/slice	-
+PASS	structs/unnamed-conversion-targets/slice-to-defined	-
 PASS	structs/zero-value	-
 PASS	variadic/defined-slice-spread	-
 PASS	variadic/forwarding	-

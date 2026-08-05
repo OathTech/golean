@@ -64,7 +64,18 @@ envelope; these three pins cover the escaping regimes.
 
 ## BUG-020 — conversions to UNNAMED composite targets (pointer/slice/map/func) are refused (missing kernel arms)
 
-- Status: open
+- Status: fixed (2026-08-06, arc-final audit response F10 —
+  identical-underlying pass-through arms for pointer/slice/map/func
+  targets (plus typed nil for each); go/types owns the
+  identical-underlying check, the machine passes the unchanged runtime
+  representation through and every other value shape stays at the
+  fail-closed catch-all, so string→[]rune/[]byte remain refused and the
+  five untriaged strings/*-conversion reds are unchanged. The
+  tag-CHANGING pointer shape stays fail-closed downstream at the
+  struct-tag check (structs/tag-pointer-conversion red, now stuck at
+  field access rather than refused at the conversion). The mis-scoped
+  "alias one cell under two tags" rationale at the struct arm was
+  corrected under F20.)
 - Pinned-by: differential
 - Cases: structs/unnamed-conversion-targets/pointer, structs/unnamed-conversion-targets/pointer-nil, structs/unnamed-conversion-targets/slice, structs/unnamed-conversion-targets/slice-to-defined, structs/unnamed-conversion-targets/map, structs/unnamed-conversion-targets/func, structs/unnamed-conversion-targets/func-from-defined
 - Discovered: 2026-08-06 (arc-final audit F10; pre-existing — the

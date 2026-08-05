@@ -1054,6 +1054,27 @@ from {actual.key} (non-identical underlying)"
   -- change (`string(s)` — surfaced by interfaces/error-interface's
   -- `string(e.Error())` shape, 2026-07-30).
   | _, _, .string, .string s => return .string s
+  -- Unnamed-composite conversion targets (BUG-020, arc-final audit F10,
+  -- 2026-08-06): a conversion whose RESOLVED target shape is a pointer,
+  -- slice, map, or func — the spec's own canonical examples
+  -- `(*Point)(p)`, `(func() int)(x)`, `(*int)(nil)` — is legal exactly
+  -- when the underlying types are identical, which go/types has already
+  -- checked (both directions through defined types resolve here via the
+  -- `.defined` arm). The runtime representation is unchanged: pass the
+  -- value through; any other value shape falls to the fail-closed
+  -- catch-all (so string→[]rune/[]byte stay refused here — real
+  -- conversion logic, not a retag). The pointee-retag hazard the old
+  -- struct-arm comment feared ((*B)(pa) aliasing one cell under two
+  -- tags) stays fail-closed DOWNSTREAM: every field load/store checks
+  -- the stored struct tag (structs/tag-pointer-conversion stays red).
+  | _, _, .pointer _, value@(.addr _) => return value
+  | _, _, .pointer _, .nil => return .nil
+  | _, _, .slice _, value@(.slice _) => return value
+  | _, _, .slice _, .nil => return .nil
+  | _, _, .map _ _, value@(.map _) => return value
+  | _, _, .map _ _, .nil => return .nil
+  | _, _, .funcType _ _, value@(.funcVal _ _) => return value
+  | _, _, .funcType _ _, .nil => return .nil
   -- Conversion INTO an interface type at a machine site (map key slots,
   -- assert results): a box or nil interface passes as-is (the frontend's
   -- to-interface wrap already built the box); a raw value here is a
