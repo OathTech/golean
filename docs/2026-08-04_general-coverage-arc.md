@@ -173,3 +173,16 @@ membership lane's deferred mechanical-width-certification decision.
   the completion note, F18: guardrails-first commits legitimately hold
   it flat); every new capability's corpus cases classify correctly
   before its implementation lands.
+
+## Arc-final audit response (2026-08-06)
+
+The arc-final pre-merge audit's 21 confirmed findings were all resolved
+on-branch — 20 fixed (incl. all six majors: the wrapper-transparent
+recover walk, the widened append envelope, generic-local-type identity,
+mixed interface comparison, per-decl anchor substitution, uniform
+untyped-nil typing) and one recorded narrowing (cap([]byte(s))), plus
+the nine record corrections and the modern panic(nil) decision. 59
+guardrail ids landed red-first; final state 897/1025 with zero
+PASS→FAIL on pre-existing ids across the whole series. Full record:
+`docs/2026-08-06_arc-final-audit-response.md`; BUG-015..BUG-021 filed
+and closed (BUG-012 also closed; BUG-014's boundary unchanged).
