@@ -966,6 +966,14 @@ private def expectNatEq (name : String) (actual expected : Nat) : IO Bool := do
     IO.eprintln s!"FAIL: {name}: expected {expected}, got {actual}"
     return false
 
+private def expectStrEq (name : String) (actual expected : String) : IO Bool := do
+  if actual == expected then
+    IO.println s!"ok: {name}"
+    return true
+  else
+    IO.eprintln s!"FAIL: {name}: expected {repr expected}, got {repr actual}"
+    return false
+
 private def expectEnumFailure (name : String) (result : Except String CLI.EnumOutcome)
     (needle : String) : IO Bool := do
   match result with
@@ -1321,6 +1329,29 @@ def main : IO UInt32 := do
   -- comment above the enum shapes).
   -- F3: appendGrowthCap value pins — the machine side of the cap-zero
   -- envelope (base of the [0,8) window) plus the formula's other regimes.
+  -- TypeId.unqualified: the observation channel's reflect.Type.Name()
+  -- contract, extended to MANGLED generic-instantiation keys (generics
+  -- design note 2026-08-05 §3.1/§3.4 — probe outputs pinned verbatim).
+  -- Only the LEADING package segment strips; type-argument qualifiers
+  -- inside the brackets are part of Name().
+  passed := passed && (← expectStrEq "TypeId.unqualified plain qualified key"
+    (TypeId.unqualified ⟨"main.T"⟩) "T")
+  passed := passed && (← expectStrEq "TypeId.unqualified unqualified key unchanged"
+    (TypeId.unqualified ⟨"struct{}"⟩) "struct{}")
+  passed := passed && (← expectStrEq "TypeId.unqualified predeclared key unchanged"
+    (TypeId.unqualified ⟨"error"⟩) "error")
+  passed := passed && (← expectStrEq "TypeId.unqualified mangled key, builtin arg"
+    (TypeId.unqualified ⟨"main.Pair[int]"⟩) "Pair[int]")
+  passed := passed && (← expectStrEq "TypeId.unqualified mangled key, package-qualified arg"
+    (TypeId.unqualified ⟨"main.Pair[main.Inner]"⟩) "Pair[main.Inner]")
+  passed := passed && (← expectStrEq "TypeId.unqualified mangled key, pointer arg"
+    (TypeId.unqualified ⟨"main.Pair[*main.Inner]"⟩) "Pair[*main.Inner]")
+  passed := passed && (← expectStrEq "TypeId.unqualified mangled key, nested instantiation"
+    (TypeId.unqualified ⟨"main.Pair[main.Pair[int]]"⟩) "Pair[main.Pair[int]]")
+  passed := passed && (← expectStrEq "TypeId.unqualified mangled key, two args"
+    (TypeId.unqualified ⟨"main.keyPair[int,string]"⟩) "keyPair[int,string]")
+  passed := passed && (← expectStrEq "TypeId.unqualified mangled key, map arg with qualified value"
+    (TypeId.unqualified ⟨"main.Vec[map[string]main.Inner]"⟩) "Vec[map[string]main.Inner]")
   passed := passed && (← expectNatEq "GoCore appendGrowthCap zero-cap single elem (cap-zero window base)"
     (GoCore.appendGrowthCap 0 1) 4)
   passed := passed && (← expectNatEq "GoCore appendGrowthCap zero-cap beyond floor"

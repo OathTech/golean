@@ -104,6 +104,13 @@ type emitter struct {
 	// answer instead of refusing (BUG-009's polarity).
 	importedNamed map[string]*types.Named
 
+	// Mangled instantiation key → the types.Type it names (mono.go, the
+	// generics slice): the belt-and-suspenders collision registry behind
+	// the mangling injectivity argument, capped at monoRegistryCap. Every
+	// mangled key passes through registerMangledKey exactly once per
+	// spelling.
+	mangledKeys map[string]types.Type
+
 	// Every package NAME that qualified a wire TypeId, mapped to the
 	// distinct import PATHs that used it. Go keys type identity on the
 	// path, the wire key on the name, so a name reached by two paths means

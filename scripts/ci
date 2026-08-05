@@ -354,6 +354,19 @@ fi
 step "proofs build incl. Audit gate (axiom allowlist + non-vacuity)"
 if ( cd proofs && lake build 2>&1 | tail -4 ); then ok "proofs + Audit gate"; else bad "proofs + Audit gate"; fi
 
+# 3b. Frontend unit tests (generics slice, 2026-08-05): the monomorphization
+#     identity layer (mono.go — mangled-key renderings pinned against the
+#     reflect probes, registry collision/cap refusals) is exercised by
+#     `go test`, not by the differential, so it gets its own step.
+step "frontend unit tests (go test ./tools/nativefrontend)"
+if ftout="$(GO111MODULE=off GOCACHE="$PWD/artifacts/go-build-cache" go test ./tools/nativefrontend 2>&1)"; then
+  echo "$ftout" | tail -2
+  ok "frontend unit tests"
+else
+  echo "$ftout" | tail -20
+  bad "frontend unit tests"
+fi
+
 # 4. Interpreter unit tests.
 step "interpreter eval tests (gocore-eval-tests)"
 evout="$(lake exe gocore-eval-tests 2>&1)"; evrc=$?

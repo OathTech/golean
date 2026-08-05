@@ -174,13 +174,23 @@ instance : LawfulBEq TypeId where
     show (k == k) = true
     simp
 
-/-- Strip the package qualifier from a `TypeId` key, matching Go's
+/-- Strip the LEADING package qualifier from a `TypeId` key, matching Go's
 `reflect.Type.Name()` — the observation channel's naming contract
-(`GoLean/CLI.lean`). -/
+(`GoLean/CLI.lean`). Generic instantiation keys (`main.Pair[main.Inner]`,
+generics slice 2026-08-05, design note §3.4) qualify their type ARGUMENTS
+inside the brackets too, and `Name()` keeps those qualifiers
+(`Pair[main.Inner]`) — so only the package segment BEFORE the first `[` is
+stripped. The old `splitOn "." |>.getLast!` truncated such keys to
+`"Inner]"`. For every pre-generics key (`main.T`, `struct{}`, `any`) the
+behavior is unchanged. -/
 def TypeId.unqualified (id : TypeId) : String :=
-  match id.key.splitOn "." with
+  -- The key prefix before any type-argument bracket; a `.` in it is the
+  -- package qualifier (Go identifiers cannot contain `.` or `[`).
+  let head := ((id.key.splitOn "[").headD id.key).splitOn "."
+  match head with
   | [] => id.key
-  | parts => parts.getLast!
+  | [_] => id.key
+  | first :: _ => (id.key.drop (first.length + 1)).toString
 
 namespace GoCore
 
