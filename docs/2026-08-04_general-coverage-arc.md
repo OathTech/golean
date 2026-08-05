@@ -118,6 +118,29 @@ must replay the snapshot-validation stream-obliviousness analysis
 the membership lane exists (its three differential reds are
 order-observing by nature).
 
+## Arc completion (2026-08-06)
+
+All six slices landed on `general-coverage` (each through the full
+sub-branch cycle: independent 2-reviewer adversarial audit with
+refute-by-default verification, audit-response fixes, focused
+delta-review(s), fast-forward merge). **603/873 → 837/966**; zero
+PASS→FAIL at every one of the ~20 re-pins; pass count strictly
+monotone; every new capability's cases classified correctly before its
+implementation landed. Every exit criterion below is met; the remaining
+129 reds are exactly the recorded non-targets: channels 38+ (own arc),
+complex 20 (deferred, floats note §9), range-over-func 9 (Go 1.23
+iterators, pre-existing gap), the pre-existing rune-conversion and
+tuple-assign backlog clusters, BUG-005's 3 differential reds (deferred
+behind the membership lane by plan), BUG-012/BUG-014 pins, and the
+designed-red envelope/deviation pins (goto capture/address family,
+local-type-argument, hidden-dep-order, to-int-out-of-range,
+quarantined-init deps). New bugs filed during the arc: BUG-012
+(bare-call discard), BUG-013 (fixed in-arc), BUG-014 (defined-slice/map
+nil elements). Flagged for the arc-final audit: the four decided design
+notes (floats §11, generics §9, membership lane, init — envelope
+statements especially), the hidden-dep-order too-narrow record, and the
+membership lane's deferred mechanical-width-certification decision.
+
 ## Exit criteria
 
 - Slices 1–2 fully green (control-flow, embedding, interfaces, structs
