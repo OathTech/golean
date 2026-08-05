@@ -400,6 +400,16 @@ partial def decodeStmt (results : Array Param) (path : String) (json : Json) : L
       -- unsupported dynamics); no "wrap" means the argument is already an
       -- interface (or the untyped-nil payload).
       let value ← decodeExpr s!"{path}.value" (← StrictJson.field path obj "value")
+      -- "runtimeError": the lowering SYNTHESIZED a Go runtime panic (today:
+      -- the nil-interface method-value creation check, design note D6) —
+      -- the payload boxes as the machine's `runtime.Error` sentinel so
+      -- recover values, type asserts, and abort rendering all match Go's
+      -- runtime errors, never a user string.
+      match obj.get? "runtimeError" with
+      | some (.bool true) =>
+          pure (.panicStmt (.toInterface (.interface ⟨"any"⟩)
+            (.defined runtimeErrorTypeId) value))
+      | _ =>
       match obj.get? "wrap" with
       | some t =>
           let ty ← decodeTy s!"{path}.wrap" t

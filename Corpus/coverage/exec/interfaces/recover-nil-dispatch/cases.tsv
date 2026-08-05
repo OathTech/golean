@@ -1,0 +1,3 @@
+# id	subject	args	expected_status	expected_reason	features
+nil-interface	recoverNilInterfaceDispatch	-	ok	-	interfaces,nil,panic,recover,methods
+nil-pointer-box	recoverNilPointerBoxDispatch	-	ok	-	interfaces,nil,pointers,panic,recover,methods

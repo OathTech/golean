@@ -275,3 +275,15 @@ def findFunctionIn? (funcs : Array Func) (id : FuncId) : Option Func :=
       | some f => some f
       | none => if func.id == id then some func else none)
     none
+
+/-- The machine-internal `TypeId` of a Go runtime error payload. `$` cannot
+appear in a Go identifier OR package name, so no source-level `TypeId` — now
+that they are package-QUALIFIED (`main.T`) — can collide with it. The old
+`"runtime.Error"` sentinel justified itself with "Go identifiers cannot
+contain `.`", which package qualification falsified: a package named
+`runtime` declaring `type Error string` produced the identical key, and
+`r.(Error)` then bound the runtime message as a user value (pre-merge audit
+2026-07-31, finding 9). Lives in Syntax (moved from Machine, 2026-08-05)
+so the wire decoder can synthesize runtime-panic payloads (the
+nil-interface method-value creation check) without importing the machine. -/
+def runtimeErrorTypeId : TypeId := ⟨"$runtime.Error"⟩

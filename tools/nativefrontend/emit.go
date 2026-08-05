@@ -3289,6 +3289,18 @@ func (e *emitter) promotedReceiverArg(sel *ast.SelectorExpr, hops []int, pointer
 	return node, nil
 }
 
+
+// stringLitNode emits a string literal wire node (the machine's GoString
+// byte representation).
+func stringLitNode(s string) map[string]any {
+	bytes := []byte(s)
+	vals := make([]any, len(bytes))
+	for i, b := range bytes {
+		vals[i] = int64(b)
+	}
+	return map[string]any{"expr": "string", "bytes": vals}
+}
+
 func (e *emitter) fieldBase(sel *ast.SelectorExpr) (any, string, error) {
 	recvType := e.info.TypeOf(sel.X)
 	base, err := e.emitExpr(sel.X)
@@ -3328,8 +3340,69 @@ func (e *emitter) emitSelector(sel *ast.SelectorExpr) (any, error) {
 				return nil, unsup("method %s is not a func", sel.Sel.Name)
 			}
 			recvType := fn.Type().(*types.Signature).Recv().Type()
-			if _, isIface := recvType.Underlying().(*types.Interface); isIface {
-				return nil, unsup("interface method value %s", sel.Sel.Name)
+			if recvIface, isIface := recvType.Underlying().(*types.Interface); isIface {
+				// Interface METHOD VALUE (design note D6): capture the BOX
+				// now; the call goes through the dispatch anchor, so a nil
+				// box panics at CALL time, not at value creation
+				// (interfaces/interface-method-value-nil), and the box is
+				// fixed at value time (defer/defer-interface-value-eval).
+				// Promotion through an embedded interface field walks to
+				// the field value first.
+				hops := seln.Index()[:len(seln.Index())-1]
+				var recvArg any
+				var ifaceStatic types.Type
+				var err error
+				if len(hops) == 0 {
+					ifaceStatic = e.info.TypeOf(sel.X)
+					recvArg, err = e.emitExpr(sel.X)
+				} else {
+					var base any
+					base, err = e.emitExpr(sel.X)
+					if err == nil {
+						recvArg, ifaceStatic, err = e.fieldPathValue(base, e.info.TypeOf(sel.X), hops)
+					}
+				}
+				if err != nil {
+					return nil, err
+				}
+				ifaceName, ok := e.ifaceWireName(ifaceStatic)
+				if !ok {
+					return nil, unsup("method value on unnameable interface type %s", ifaceStatic)
+				}
+				e.noteInterface(ifaceName, recvIface)
+				if e.calledIfaceMethods == nil {
+					e.calledIfaceMethods = map[string]calledIfaceMethod{}
+				}
+				e.calledIfaceMethods[ifaceName+"."+fn.Name()] = calledIfaceMethod{
+					ifaceName: ifaceName, method: fn.Name(),
+					sig: fn.Type().(*types.Signature),
+				}
+				// Go panics AT CREATION if the interface is nil (the itab
+				// load) — the first cut panicked at CALL time and the
+				// oracle said created=0 (interface-method-value-nil). Hoist
+				// the box once, nil-check it with the machine's runtime
+				// panic payload, capture the temp.
+				if e.hoistForbidden != "" {
+					return nil, unsup("interface method value in %s", e.hoistForbidden)
+				}
+				gty, err := e.emitType(ifaceStatic)
+				if err != nil {
+					return nil, err
+				}
+				mvName := "$mv" + itoa(e.tmpSeq)
+				e.tmpSeq++
+				mvIdent := map[string]any{"expr": "ident", "name": mvName, "type": gty}
+				e.hoisted = append(e.hoisted,
+					map[string]any{"stmt": "assign", "define": true,
+						"lhs": []any{map[string]any{"target": "declare", "id": mvName, "type": gty}},
+						"rhs": []any{recvArg}},
+					map[string]any{"stmt": "if",
+						"cond": map[string]any{"expr": "binary", "op": "==",
+							"x": mvIdent, "y": map[string]any{"expr": "nil"}, "operandType": gty},
+						"then": map[string]any{"stmt": "panic", "runtimeError": true,
+							"value": stringLitNode("runtime error: invalid memory address or nil pointer dereference")}})
+				return map[string]any{"expr": "func-value",
+					"func": ifaceName + "." + fn.Name(), "captured": []any{mvIdent}}, nil
 			}
 			defType := recvType
 			pointerRecv := false
@@ -3350,6 +3423,66 @@ func (e *emitter) emitSelector(sel *ast.SelectorExpr) (any, error) {
 			}
 			return map[string]any{"expr": "func-value",
 				"func": name + "." + fn.Name(), "captured": []any{recvArg}}, nil
+		}
+		if seln.Kind() == types.MethodExpr {
+			// A METHOD EXPRESSION `T.M` / `I.M` (design note D6): the
+			// receiver-first GoCore method function (declared method,
+			// promotion wrapper, or interface dispatch anchor) IS the
+			// method expression — a func value with no captures.
+			fn, ok := seln.Obj().(*types.Func)
+			if !ok {
+				return nil, unsup("method expression %s is not a func", sel.Sel.Name)
+			}
+			sig := fn.Type().(*types.Signature)
+			recvType := sig.Recv().Type()
+			if recvIface, isIface := recvType.Underlying().(*types.Interface); isIface {
+				ifaceStatic := e.info.TypeOf(sel.X)
+				ifaceName, ok := e.ifaceWireName(ifaceStatic)
+				if !ok {
+					return nil, unsup("method expression on unnameable interface type %s", ifaceStatic)
+				}
+				e.noteInterface(ifaceName, recvIface)
+				if e.calledIfaceMethods == nil {
+					e.calledIfaceMethods = map[string]calledIfaceMethod{}
+				}
+				e.calledIfaceMethods[ifaceName+"."+fn.Name()] = calledIfaceMethod{
+					ifaceName: ifaceName, method: fn.Name(), sig: sig,
+				}
+				return map[string]any{"expr": "func-value",
+					"func": ifaceName + "." + fn.Name(), "captured": []any{}}, nil
+			}
+			// Concrete receiver: the wire Func's receiver form must match
+			// the expression's first parameter. Declared methods carry
+			// their declaration receiver; a promoted entry's wrapper takes
+			// T when the method is in T's own set, else *T. The one
+			// mismatching shape — `(*T).M` over a method whose wire Func
+			// takes T by value — needs a deref adapter; refuse precisely.
+			exprRecv := e.info.TypeOf(sel.X)
+			baseT := exprRecv
+			_, exprPtr := baseT.(*types.Pointer)
+			if ptr, isPtr := baseT.(*types.Pointer); isPtr {
+				baseT = ptr.Elem()
+			}
+			name, ok := e.namedTypeName(baseT)
+			if !ok {
+				return nil, unsup("method expression on anonymous type %s", baseT)
+			}
+			wireRecvPtr := false
+			if _, isPtr := recvType.(*types.Pointer); isPtr {
+				wireRecvPtr = true
+			}
+			if len(seln.Index()) > 1 {
+				named, isNamed := baseT.(*types.Named)
+				if !isNamed {
+					return nil, unsup("promoted method expression on non-named type %s", baseT)
+				}
+				wireRecvPtr = types.NewMethodSet(named).Lookup(fn.Pkg(), fn.Name()) == nil
+			}
+			if exprPtr && !wireRecvPtr {
+				return nil, unsup("method expression (*%s).%s over a value-receiver method (deref adapter not modeled)", name, fn.Name())
+			}
+			return map[string]any{"expr": "func-value",
+				"func": name + "." + fn.Name(), "captured": []any{}}, nil
 		}
 		return nil, unsup("non-field selector %s (method/expr)", sel.Sel.Name)
 	}
@@ -4359,6 +4492,27 @@ func (e *emitter) emitCallArgs(sig *types.Signature, c *ast.CallExpr) ([]any, er
 func (e *emitter) emitMethodCall(c *ast.CallExpr, sel *ast.SelectorExpr) (any, bool, error) {
 	seln, ok := e.info.Selections[sel]
 	if !ok || seln.Kind() != types.MethodVal {
+		// A call through a FUNC-TYPED FIELD (possibly promoted): an
+		// ordinary call through the field's value (design note D6 —
+		// functions/composite-function-values).
+		if ok && seln.Kind() == types.FieldVal {
+			if vsig, isSig := e.info.TypeOf(sel).Underlying().(*types.Signature); isSig {
+				callee, err := e.emitSelector(sel)
+				if err != nil {
+					return nil, false, err
+				}
+				args, err := e.emitCallArgs(vsig, c)
+				if err != nil {
+					return nil, false, err
+				}
+				resultTypes, err := e.emitResultTypes(vsig)
+				if err != nil {
+					return nil, false, err
+				}
+				return map[string]any{"expr": "call-value", "callee": callee,
+					"args": args, "resultTypes": resultTypes}, true, nil
+			}
+		}
 		return nil, false, unsup("selector call %s is not a method value", sel.Sel.Name)
 	}
 	fn, ok := seln.Obj().(*types.Func)

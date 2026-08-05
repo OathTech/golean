@@ -858,15 +858,10 @@ structure PanicEntry where
   recovered : Bool
   deriving Repr, BEq
 
-/-- The machine-internal `TypeId` of a Go runtime error payload. `$` cannot
-appear in a Go identifier OR package name, so no source-level `TypeId` — now
-that they are package-QUALIFIED (`main.T`) — can collide with it. The old
-`"runtime.Error"` sentinel justified itself with "Go identifiers cannot
-contain `.`", which package qualification falsified: a package named
-`runtime` declaring `type Error string` produced the identical key, and
-`r.(Error)` then bound the runtime message as a user value (pre-merge audit
-2026-07-31, finding 9). -/
-def runtimeErrorTypeId : TypeId := ⟨"$runtime.Error"⟩
+-- `runtimeErrorTypeId` moved to Syntax.lean (2026-08-05, slice-2 stage 5):
+-- the decoder synthesizes the runtime-panic payload for the nil-interface
+-- method-value creation check and must name the sentinel without importing
+-- the machine. It resolves here unqualified via namespace ascent.
 
 /-- The payload of a Go runtime panic (nil dereference, division by zero,
 …): a `runtime.Error` interface value, tagged with a `TypeId` no source type
@@ -1749,6 +1744,38 @@ inductive Step : Config → ExecState → Config → ExecState → Prop where
   | panicAbort {first rest msg s} :
       renderPanicHead s first rest = some msg →
       Step (.panicking (first :: rest) .stop) s (.panicked msg) s
+  /-- Frame-ENTRY panics are ordinary recoverable panics (2026-08-05,
+  slice-2 stage 5: dynamic dispatch on a nil interface or the auto-deref
+  of a nil pointer box raises inside `enterFrame`; Go recovers these like
+  any other panic — pinned by `interfaces/recover-nil-dispatch/*`). One
+  twin per ordinary call-entry rule, appended at the END of the inductive
+  so existing positional case tags in the correspondence proofs keep
+  their numbering; entry for a DEFERRED call (the drain rules above)
+  deliberately has no such twin — a panic there is a panic DURING
+  unwinding/drain, a recorded modeling narrowing (design note D6). -/
+  | callImmediatePanic {targets fid args msg env k s} :
+      assigneesExprs targets.toList = some [] →
+      args.toList = [] →
+      enterFrame s fid [] = .error (.panic msg) →
+      Step (.exec (.call targets fid args) env k) s
+        (.panicking [⟨runtimeErrorValue msg, false⟩] k) s
+  | callTargetsDoneEnterPanic {v loc fid locs msg env k s} :
+      valueAsLoc v = .ok loc →
+      enterFrame s fid [] = .error (.panic msg) →
+      Step (.retV v (.callTargetsK fid locs [] [] env k)) s
+        (.panicking [⟨runtimeErrorValue msg, false⟩] k) s
+  | callArgsDoneEnterPanic {v fid locs vals msg env k s} :
+      enterFrame s fid (vals ++ [v]) = .error (.panic msg) →
+      Step (.retV v (.callArgsK fid locs vals [] env k)) s
+        (.panicking [⟨runtimeErrorValue msg, false⟩] k) s
+  | callValCalleeEnterPanic {fid captured locs msg env k s} :
+      enterFrame s fid captured = .error (.panic msg) →
+      Step (.retV (.funcVal fid captured) (.callValCalleeK locs [] env k)) s
+        (.panicking [⟨runtimeErrorValue msg, false⟩] k) s
+  | callValArgsEnterPanic {v fid captured locs vals msg env k s} :
+      enterFrame s fid (captured ++ vals ++ [v]) = .error (.panic msg) →
+      Step (.retV v (.callValArgsK (.funcVal fid captured) locs vals [] env k)) s
+        (.panicking [⟨runtimeErrorValue msg, false⟩] k) s
 
 /-- Reflexive-transitive closure of `Step`. -/
 inductive Steps : Config → ExecState → Config → ExecState → Prop where

@@ -35,6 +35,24 @@ namespace GoLean.GoCore.Machine
 
 open GoLean
 
+/-- Ordinary call-frame entry with the frame-entry panic rule folded in
+(2026-08-05, slice-2 stage 5): a `.panic` raised inside `enterFrame`
+(dynamic dispatch on a nil interface; the auto-deref of a nil pointer
+box) is an ordinary RECOVERABLE panic in Go, so it steps to `.panicking`
+under the caller's continuation `k` — pinned by
+`interfaces/recover-nil-dispatch/*`. Kept as ONE helper so each stepFn
+call site remains a single `fun_cases` branch (the correspondence
+proofs' case numbering is positional). Entry for a DEFERRED call does
+NOT use this helper — a panic there is a panic during unwinding/drain,
+a recorded modeling narrowing (design note D6). -/
+def enterFrameStep (s : ExecState) (fid : FuncId) (args : List GoValue)
+    (mk : Func → LocalEnv → List Loc → Config) (k : Cont)
+    (choices : Choices) : Except GoError (Config × ExecState × Choices) :=
+  match enterFrame s fid args with
+  | .ok (func, frameEnv, resultLocs, s') => .ok (mk func frameEnv resultLocs, s', choices)
+  | .error (.panic msg) => .ok (.panicking [⟨runtimeErrorValue msg, false⟩] k, s, choices)
+  | .error err => .error err
+
 /-- One machine step. `.ok` is a step the relation permits (including
 steps *to* `.panicked`); `.error` means the machine is stuck here, with
 the reason. Never call on a terminal configuration (the driver guards). -/
@@ -126,9 +144,10 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
               match args.toList with
               | a :: rest =>
                   return (.evalE a env (.callArgsK fid [] [] rest env k), s, choices)
-              | [] => do
-                  let (func, frameEnv, resultLocs, s') ← enterFrame s fid []
-                  return (.exec func.body frameEnv (.frame [] resultLocs [] k), s', choices)
+              | [] =>
+                  enterFrameStep s fid []
+                    (fun func frameEnv resultLocs =>
+                      .exec func.body frameEnv (.frame [] resultLocs [] k)) k choices
           | none => throw (.unsupported "unsupported call target assignee")
       | .mapRange keyVar valVar mapExpr keyTy valTy body =>
           return (.evalE mapExpr env
@@ -240,18 +259,20 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
                   | a :: rest =>
                       return (.evalE a env
                         (.callArgsK fid (locs ++ [loc]) [] rest env k'), s, choices)
-                  | [] => do
-                      let (func, frameEnv, resultLocs, s') ← enterFrame s fid []
-                      return (.exec func.body frameEnv
-                        (.frame (locs ++ [loc]) resultLocs [] k'), s', choices)
+                  | [] =>
+                      enterFrameStep s fid []
+                        (fun func frameEnv resultLocs =>
+                          .exec func.body frameEnv
+                            (.frame (locs ++ [loc]) resultLocs [] k')) k' choices
       | .callArgsK fid locs vals pending env k' =>
           match pending with
           | a :: rest =>
               return (.evalE a env
                 (.callArgsK fid locs (vals ++ [v]) rest env k'), s, choices)
-          | [] => do
-              let (func, frameEnv, resultLocs, s') ← enterFrame s fid (vals ++ [v])
-              return (.exec func.body frameEnv (.frame locs resultLocs [] k'), s', choices)
+          | [] =>
+              enterFrameStep s fid (vals ++ [v])
+                (fun func frameEnv resultLocs =>
+                  .exec func.body frameEnv (.frame locs resultLocs [] k')) k' choices
       | .stmtOpK op nt done pending env k' =>
           -- Target addresses are checked as they arrive ONLY when more
           -- operands follow (interpreter panic timing); at the apply
@@ -289,9 +310,10 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
                     (.callValCalleeK (locs ++ [loc]) args env k'), s, choices)
       | .callValCalleeK locs args env k' =>
           match v, args with
-          | .funcVal fid captured, [] => do
-              let (func, frameEnv, resultLocs, s') ← enterFrame s fid captured
-              return (.exec func.body frameEnv (.frame locs resultLocs [] k'), s', choices)
+          | .funcVal fid captured, [] =>
+              enterFrameStep s fid captured
+                (fun func frameEnv resultLocs =>
+                  .exec func.body frameEnv (.frame locs resultLocs [] k')) k' choices
           | .nil, [] =>
               return (.panicking [⟨runtimeErrorValue
                 "runtime error: invalid memory address or nil pointer dereference", false⟩]
@@ -310,10 +332,10 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
                 (.callValArgsK cv locs (vals ++ [v]) rest env k'), s, choices)
           | [] =>
               match cv with
-              | .funcVal fid captured => do
-                  let (func, frameEnv, resultLocs, s') ←
-                    enterFrame s fid (captured ++ vals ++ [v])
-                  return (.exec func.body frameEnv (.frame locs resultLocs [] k'), s', choices)
+              | .funcVal fid captured =>
+                  enterFrameStep s fid (captured ++ vals ++ [v])
+                    (fun func frameEnv resultLocs =>
+                      .exec func.body frameEnv (.frame locs resultLocs [] k')) k' choices
               | .nil =>
                   return (.panicking [⟨runtimeErrorValue
                     "runtime error: invalid memory address or nil pointer dereference", false⟩]

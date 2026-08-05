@@ -1,24 +1,32 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-05  commit: general-coverage-embed slice-2 stage 4 (type switches + anonymous interfaces)
+# recorded: 2026-08-05  commit: general-coverage-embed slice-2 stage 5 (interface method values/expressions, func-field calls, recoverable frame-entry panics)
 #   frontend: native  oracle: go run
-# manifest_cases: 906  pass: 686  fail: 220
+# manifest_cases: 908  pass: 697  fail: 211
 # Re-pin reason: DELIBERATE coverage change, general-coverage slice 2
-# stage 4 (docs/2026-08-05_embedding-interfaces-design.md D3): type
-# switches desugar in the frontend to a breakable block — guard evaluated
-# once into a temp, comma-ok assert tests in a first-match SOURCE-order
-# if-chain (default in the final else position), per-clause implicit
-# bindings from go/types Implicits declared at clause-block top; `case
-# nil` compares against the bare nil interface (a typed-nil box correctly
-# mismatches). Anonymous non-empty interface types get canonical
-# structural wire names (sound: Go interface identity IS structural).
-# The lambda-lifter's capture analysis learned that Implicits-declared
-# clause bindings are INNER declarations (they were mis-captured as outer
-# variables — caught by panic-recover/recover-value's stage move on the
-# first full run of this stage, fixed before this re-pin).
-# Twenty-one FAIL->PASS: the 18 interfaces/type-switch-* ids (incl. the 3
-# stage-0 pins), scoping/type-switch-guard-shadow,
-# methods/nil-receiver-interface-dispatch, panic-recover/recover-value.
-# ZERO PASS->FAIL, no other stage moves. 665 -> 686 pass, 906 cases.
+# stage 5 (docs/2026-08-05_embedding-interfaces-design.md D6). Interface
+# METHOD VALUES capture the box at creation and dispatch through the
+# anchor; Go panics at CREATION on a nil interface (itab load) — the
+# differential caught the first cut capturing nil and panicking at CALL
+# (Lean 12 vs Go 2 on interface-method-value-nil); the lowering now
+# nil-checks at creation with the machine's runtime-error payload
+# (wire "panic"+runtimeError; runtimeErrorTypeId moved to Syntax so the
+# decoder can name it). METHOD EXPRESSIONS T.M/(*T).M/I.M emit the
+# receiver-first method function/wrapper/anchor as a captureless func
+# value ((*T).M over a value-receiver wire Func refused: deref adapter
+# unmodeled). Calls through func-typed struct FIELDS route to
+# call-value. MACHINE (relation+stepFn lockstep, appended Step rules
+# call*EnterPanic x5 + enterFrameStep helper): frame-ENTRY panics
+# (nil-interface dispatch, nil pointer-box auto-deref) are ordinary
+# RECOVERABLE panics — previously raw thrown errors on every call path,
+# correct only when never recovered; MachineSound/StateWf extended,
+# proofs/ untouched. Eleven moves, all green: nine FAIL->PASS
+# (defer/defer-interface-value-eval, functions/composite-function-values/
+# {struct-call,struct-reassign}, interfaces/{interface-method-expression,
+# interface-method-value,interface-method-value-nil},
+# methods/{method-expression,pointer-method-expression},
+# variadic/variadic-method-expression) and two NEW PASS pins
+# (interfaces/recover-nil-dispatch/{nil-interface,nil-pointer-box}).
+# ZERO PASS->FAIL, no other stage moves. 686 -> 697 pass, 906 -> 908.
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
 PASS	arrays/array-copy	-
@@ -269,7 +277,7 @@ PASS	defer/defer-arg-panic-before-register	-
 PASS	defer/defer-function-result-discard	-
 PASS	defer/defer-function-value-eval	-
 PASS	defer/defer-in-loop	-
-FAIL	defer/defer-interface-value-eval	frontend-export
+PASS	defer/defer-interface-value-eval	-
 PASS	defer/defer-method-receiver-eval	-
 PASS	defer/defer-named-result-lifo	-
 PASS	defer/defer-named-return	-
@@ -331,8 +339,8 @@ PASS	functions/closure-two-vars-one-closure	-
 PASS	functions/closure-value-reassigned	-
 PASS	functions/composite-function-values/map-call	-
 PASS	functions/composite-function-values/slice-call	-
-FAIL	functions/composite-function-values/struct-call	frontend-export
-FAIL	functions/composite-function-values/struct-reassign	frontend-export
+PASS	functions/composite-function-values/struct-call	-
+PASS	functions/composite-function-values/struct-reassign	-
 PASS	functions/function-in-interface	-
 PASS	functions/function-interface-compare-panic	-
 PASS	functions/function-nil-compare	-
@@ -431,9 +439,9 @@ PASS	interfaces/interface-array-compare-panic	-
 PASS	interfaces/interface-compare	-
 PASS	interfaces/interface-compare-panic	-
 PASS	interfaces/interface-defined-type-identity	-
-FAIL	interfaces/interface-method-expression	frontend-export
-FAIL	interfaces/interface-method-value	frontend-export
-FAIL	interfaces/interface-method-value-nil	frontend-export
+PASS	interfaces/interface-method-expression	-
+PASS	interfaces/interface-method-value	-
+PASS	interfaces/interface-method-value-nil	-
 PASS	interfaces/interface-nested-struct-compare-panic	-
 PASS	interfaces/interface-storage-copy/pointer	-
 PASS	interfaces/interface-storage-copy/value	-
@@ -457,6 +465,8 @@ PASS	interfaces/method-set-variadic-mismatch/req-variadic-impl-variadic	-
 PASS	interfaces/method-set-variadic-mismatch/variadic-elem-mismatch	-
 PASS	interfaces/nil-interface	-
 PASS	interfaces/promoted-method-assert-ok	-
+PASS	interfaces/recover-nil-dispatch/nil-interface	-
+PASS	interfaces/recover-nil-dispatch/nil-pointer-box	-
 PASS	interfaces/type-assert-from-named-interface-panic/nil-operand	-
 PASS	interfaces/type-assert-from-named-interface-panic/to-pointer	-
 PASS	interfaces/type-assert-interface	-
@@ -595,7 +605,7 @@ PASS	methods/defined-int-receiver	-
 PASS	methods/defined-map-receiver	-
 PASS	methods/embedded-interface-satisfaction	-
 PASS	methods/interface-dispatch	-
-FAIL	methods/method-expression	frontend-export
+PASS	methods/method-expression	-
 PASS	methods/method-value-copy	-
 PASS	methods/method-value-read	-
 PASS	methods/multi-return-method	-
@@ -603,7 +613,7 @@ PASS	methods/nil-pointer-method-value	-
 PASS	methods/nil-receiver	-
 PASS	methods/nil-receiver-interface-dispatch	-
 PASS	methods/pointer-auto-address	-
-FAIL	methods/pointer-method-expression	frontend-export
+PASS	methods/pointer-method-expression	-
 PASS	methods/pointer-method-value	-
 PASS	methods/pointer-method-value-live	-
 PASS	methods/pointer-method-value-read	-
@@ -923,5 +933,5 @@ PASS	variadic/variadic-function-value	-
 FAIL	variadic/variadic-generic	frontend-export
 PASS	variadic/variadic-interface-dispatch	-
 PASS	variadic/variadic-method	-
-FAIL	variadic/variadic-method-expression	frontend-export
+PASS	variadic/variadic-method-expression	-
 PASS	variadic/variadic-method-value-copy	-
