@@ -1028,8 +1028,14 @@ private def decodeMethod (path : String) (json : Json) : LowerM (Func × MethodI
               body := .unsupported s!"frontend-quarantined: {reason}",
               variadic }, info)
   | none =>
-  match obj.get? "interface" with
-  | some _ =>
+  -- A present `interface` key is decoded STRICTLY (delta-review R2,
+  -- 2026-08-05 — same class as the F7 `runtimeError` fix; this presence-only
+  -- match is 2026-07-30 vintage, surfaced by adjacency): bool or refuse;
+  -- `false` is well-formed and means a concrete method.
+  let ifaceFlag ← match obj.get? "interface" with
+    | some flag => StrictJson.bool s!"{path}.interface" flag
+    | none => pure false
+  if ifaceFlag then
       -- An INTERFACE method: a signature-only dispatch anchor.
       -- `enterFrame` finds this Func, `dynamicDispatch?` redirects on the
       -- receiver box (or raises Go's nil-interface panic); the stub body
@@ -1038,7 +1044,7 @@ private def decodeMethod (path : String) (json : Json) : LowerM (Func × MethodI
       let stub : Stmt := .call #[] ⟨"$interface-method-unreachable"⟩ #[]
       pure ({ id := funcId, args := #[recv] ++ args, results := res, body := stub,
               variadic }, info)
-  | none =>
+  else
       let body ← decodeStmt res s!"{path}.body" (← StrictJson.field path obj "body")
       pure ({ id := funcId, args := #[recv] ++ args, results := res, body,
               variadic }, info)

@@ -1278,20 +1278,23 @@ def valueEqFuel : Nat → ExecState → Ty → GoValue → GoValue → Except Go
                 -- A mixed comparison is legal exactly when one operand is
                 -- ASSIGNABLE to the other's type; the wire's only unnamed
                 -- struct is the canonical `struct{}` (BUG-011 escape).
-                -- Tightened at THIS site (audit F4, 2026-08-05): an
-                -- operand may mismatch the context only when ITS OWN tag
-                -- is the canonical `struct{}`, or when the context is the
-                -- canonical `struct{}` and both operands carry the SAME
-                -- defined type — two DIFFERENT defined types never
-                -- compare, even at an empty-struct context (reachable
-                -- only from hand-written GoCore terms).
+                -- The escape is PAIR-level (audit F4 + delta-review R1,
+                -- 2026-08-05): a mismatching operand is admitted when the
+                -- operand PAIR is Go-comparable — equal tags, or EITHER
+                -- side tagged the canonical `struct{}` (the frontend emits
+                -- the LEFT operand's static type as the context, so the
+                -- anonymous literal can sit on either side of the
+                -- mismatch). Two DIFFERENT defined types never compare,
+                -- at any context — F4's target, still held.
                 if leftType != name &&
                     !(emptyStructAssignable leftType name fields leftFields &&
-                      (leftType.key == "struct{}" || leftType == rightType)) then
+                      (leftType == rightType || leftType.key == "struct{}" ||
+                        rightType.key == "struct{}")) then
                   stuck s!"left struct equality type mismatch: expected {name.key}, got {leftType.key}"
                 if rightType != name &&
                     !(emptyStructAssignable rightType name fields rightFields &&
-                      (rightType.key == "struct{}" || rightType == leftType)) then
+                      (leftType == rightType || leftType.key == "struct{}" ||
+                        rightType.key == "struct{}")) then
                   stuck s!"right struct equality type mismatch: expected {name.key}, got {rightType.key}"
                 if leftFields.size != fields.size then
                   stuck s!"left struct equality field count mismatch: expected {fields.size}, got {leftFields.size}"

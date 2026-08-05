@@ -1,20 +1,20 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-05  commit: general-coverage-embed audit response (F1-F8)
+# recorded: 2026-08-05  commit: general-coverage-embed delta-review round 2 (R1 pair-level equality escape; R2 strict interface flag)
 #   frontend: native  oracle: go run
-# manifest_cases: 914  pass: 707  fail: 207
-# Re-pin reason: DELIBERATE coverage change, slice-2 pre-merge audit
-# response (docs/2026-08-05_embedding-interfaces-design.md, audit
-# section). Six NEW ids, all PASS after their fixes (each landed RED
-# first in the guardrail commit):
-# defer/deferred-dispatch-entry-panic/{return-drain,fallthrough-drain,
-# during-panic} — F1+F5, deferred-call frame-entry panics recoverable at
-# all three drain sites (normal drains mirror the nil-callee rules; the
-# panic-path drain joins the chain newest-last);
-# embedding/value-embedded-pointer-promotion/{static-call,
-# value-box-satisfies,dynamic-dispatch} — F2, value-receiver wrappers
-# for pointer-receiver promotion through an embedded pointer hop (the
-# refusal used to kill whole exports). ZERO PASS->FAIL, no stage moves
-# on existing ids. 701 -> 707 pass, 908 -> 914 cases.
+# manifest_cases: 917  pass: 710  fail: 207
+# Re-pin reason: DELIBERATE coverage change, slice-2 delta-review round 2
+# (docs/2026-08-05_embedding-interfaces-design.md, audit section F4
+# entry). The a1e3b5a F4 tightening over-tightened: with the anonymous
+# empty-struct literal as the LEFT operand the context is the unnamed
+# struct{} and the DEFINED-typed operand is the mismatching one — legal
+# Go went stuck (an intra-branch regression vs pre-a1e3b5a). The escape
+# is now PAIR-level: a mismatching operand is admitted iff the pair is
+# Go-comparable (equal tags, or either side tagged the canonical
+# struct{}); two DIFFERENT defined types still stick at every context
+# (F4's target). Three NEW ids, all PASS:
+# structs/empty-struct-literal-left-operand/{eq,neq,switch} (landed RED
+# first). ZERO PASS->FAIL, no stage moves on existing ids.
+# 707 -> 710 pass, 914 -> 917 cases.
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
 PASS	arrays/array-copy	-
@@ -883,6 +883,9 @@ PASS	structs/empty-struct-literal-at-named-type/param	-
 PASS	structs/empty-struct-literal-at-named-type/return	-
 PASS	structs/empty-struct-literal-at-named-type/reverse	-
 PASS	structs/empty-struct-literal-at-named-type/var-init	-
+PASS	structs/empty-struct-literal-left-operand/eq	-
+PASS	structs/empty-struct-literal-left-operand/neq	-
+PASS	structs/empty-struct-literal-left-operand/switch	-
 PASS	structs/field-incdec	-
 PASS	structs/field-write-aliased-pointer	-
 PASS	structs/interface-field-compare-panic	-

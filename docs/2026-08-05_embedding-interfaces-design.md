@@ -426,9 +426,18 @@ proofs build in the gate).
   argument.
 - **F4 (NOTE): the equality-site empty-struct escape fired on the
   CONTEXT key too**, letting two DIFFERENT defined empty types compare
-  equal at a `struct{}` context (hand-written-terms-only reachability).
-  Tightened: the operand's OWN tag must be canonical, or both operands
-  must share one defined type at a canonical context.
+  equal at a `struct{}` context (that wrong-answer path is
+  hand-written-terms-only). First tightening (a1e3b5a) required the
+  mismatching operand's OWN tag to be canonical — which over-tightened a
+  FRONTEND-reachable case: with the anonymous literal as the LEFT
+  operand, the context is the unnamed `struct{}` and the DEFINED-typed
+  operand is the mismatching one (`struct{}{} == m` went stuck;
+  delta-review R1, pinned by
+  `structs/empty-struct-literal-left-operand/{eq,neq,switch}`). Final
+  guard is PAIR-level: a mismatching operand is admitted iff the operand
+  pair is Go-comparable — equal tags, or either side tagged the
+  canonical `struct{}`; two DIFFERENT defined types are rejected at
+  every context.
 - **F6 (NOTE):** the emit.go interface-method-value comment and the D6
   bullet still asserted the falsified panic-at-call claim; both
   corrected (the build log had recorded the discovery, the shipped
