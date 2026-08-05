@@ -1,25 +1,32 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-05  commit: general-coverage-membership (membership lane landed)
+# recorded: 2026-08-05  commit: general-coverage-floats (F0 guardrails)
 #   frontend: native  oracle: go run (strict lane) / go-run membership in the
 #   machine-enumerated observation set (membership lane; go1.26.5 samples)
-# manifest_cases: 918  pass: 712  fail: 206
-# Re-pin reason: DELIBERATE coverage change — the membership testing lane
-# (arc slice 3, docs/2026-08-04_membership-lane-design.md). Two movements,
-# both membership-lane classifications; ZERO PASS->FAIL, no other stage
-# moves on existing ids:
-# - slices/full-slice-cap-zero: FAIL/nondet -> PASS/membership. Genuinely
-#   choice-dependent cap() observation; enumerated set has 8 members
-#   (append-spill extra in [0,8)); Go (1.26.5) exhibits member 14912.
-#   samples=1 = version-tracking mode: a toolchain whose append capacity
-#   leaves the envelope turns this red deliberately.
-# - maps/range-first-key: NEW id -> PASS/membership (landed RED first as
-#   the lane's guardrail, stage flaky differential/nondet by nature —
-#   exactly the equality-oracle mismatch the lane fixes). Enumerated set
-#   {1,2,3}; Go explores it across 5 per-run-randomized samples.
-# BUG-005's three order-observing reds (maps/{delete,clear,update}-during-
-# range) stay OUT of the lane and remain FAIL/differential (verified this
-# run) — the lane must not launder a known divergence.
-# 710 -> 712 pass, 917 -> 918 cases.
+# manifest_cases: 925  pass: 712  fail: 213
+# Re-pin reason: DELIBERATE coverage change — floats slice F0 guardrails
+# (arc slice 4, docs/2026-08-04_floats-design.md §8: guardrails FIRST, no
+# runtime code in this change). Seven NEW ids, all entering RED at
+# frontend-export (the frontend's float fail-closed refusal); ZERO
+# movement on any existing id:
+# - floats/nan-map-key, floats/signed-zero-map-key: the map-key equality
+#   pins (note §4 — NaN inserts distinct entries; ±0 one key with
+#   stored-key overwrite).
+# - floats/fma-shape: the fusion-envelope tripwire (note §3.1) —
+#   PLATFORM-SENSITIVE BY DESIGN; green on the amd64 oracle once floats
+#   land, and going red on an FMA-emitting platform is the tripwire
+#   firing, not noise.
+# - floats/incdec: f++/f-- float-kinded synthetic literal + absorption.
+# - floats/int64-to-float-rounding: runtime int64→float64/float32
+#   rounding above 2^53/2^24 incl. the probed single-vs-double-rounding
+#   discriminator 9007199791611905 for float32(int64).
+# - floats/to-int-out-of-range/{range,nan}: EXPECTED-UNSUPPORTED negative
+#   pins (note §3.3, decision 4) — these two stay red PERMANENTLY: after
+#   the floats slices land they move frontend-export → lean-observation
+#   with status `unsupported` (the deliberate fail-closed refusal of the
+#   implementation-dependent conversion), never PASS.
+# The 12 non-generic floats reds are this slice's flip target (F3); the 8
+# floats/generic-type-set/* stay red until arc slice 6 (generics).
+# 918 -> 925 cases; pass count unchanged at 712.
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
 PASS	arrays/array-copy	-
@@ -27,10 +34,10 @@ PASS	arrays/array-element-compound	-
 PASS	arrays/array-len-cap	-
 PASS	arrays/array-of-struct-field-write	-
 PASS	arrays/array-param-return	-
-PASS	arrays/array-slice-alias	-
-PASS	arrays/array-zero	-
 PASS	arrays/arrays	-
 PASS	arrays/arrays-are-values	-
+PASS	arrays/array-slice-alias	-
+PASS	arrays/array-zero	-
 PASS	arrays/defined-array-receiver	-
 PASS	arrays/index-eval-order	-
 PASS	arrays/keyed-literal-eval-order	-
@@ -94,9 +101,9 @@ FAIL	builtins/real-imag	frontend-export
 PASS	builtins/recover-outside-defer	-
 FAIL	channels/buffered-basic	frontend-export
 FAIL	channels/close-closed-panic	frontend-export
+FAIL	channels/closed-receive	frontend-export
 FAIL	channels/close-nil-panic	frontend-export
 FAIL	channels/close-send-only	frontend-export
-FAIL	channels/closed-receive	frontend-export
 FAIL	channels/directional-types	frontend-export
 FAIL	channels/make-directional	frontend-export
 FAIL	channels/make-edge/buffered-fifo	frontend-export
@@ -163,10 +170,10 @@ FAIL	complex/zero-value	frontend-export
 PASS	constants/array-bound	-
 PASS	constants/builtin-len-cap-constants	-
 PASS	constants/complex-constant	-
-PASS	constants/const-precision	-
 PASS	constants/constant-character-representability	-
 PASS	constants/constant-comparison	-
 PASS	constants/constant-division	-
+PASS	constants/const-precision	-
 PASS	constants/default-bool-string	-
 FAIL	constants/default-types	frontend-export
 PASS	constants/dependent-constants	-
@@ -308,6 +315,7 @@ FAIL	floats/division-specials	frontend-export
 FAIL	floats/finite-arithmetic	frontend-export
 FAIL	floats/float32-conversion-rounding	frontend-export
 FAIL	floats/float32-specials	frontend-export
+FAIL	floats/fma-shape	frontend-export
 FAIL	floats/generic-type-set/compound-assign	frontend-export
 FAIL	floats/generic-type-set/conversion-to-int	frontend-export
 FAIL	floats/generic-type-set/defined-float32-sum	frontend-export
@@ -316,9 +324,15 @@ FAIL	floats/generic-type-set/explicit-constant	frontend-export
 FAIL	floats/generic-type-set/inference	frontend-export
 FAIL	floats/generic-type-set/ordering	frontend-export
 FAIL	floats/generic-type-set/zero-value	frontend-export
+FAIL	floats/incdec	frontend-export
+FAIL	floats/int64-to-float-rounding	frontend-export
 FAIL	floats/nan-comparisons	frontend-export
+FAIL	floats/nan-map-key	frontend-export
 FAIL	floats/precision-rounding	frontend-export
 FAIL	floats/signed-zero	frontend-export
+FAIL	floats/signed-zero-map-key	frontend-export
+FAIL	floats/to-int-out-of-range/nan	frontend-export
+FAIL	floats/to-int-out-of-range/range	frontend-export
 FAIL	floats/to-int-truncation	frontend-export
 FAIL	floats/to-uint-truncation	frontend-export
 FAIL	floats/typed-constant-adaptation	frontend-export
@@ -331,8 +345,8 @@ PASS	functions/closure-loop-var-capture	-
 PASS	functions/closure-nested-recapture	-
 PASS	functions/closure-param-shadows-capture	-
 PASS	functions/closure-recursion	-
-PASS	functions/closure-return-state	-
 PASS	functions/closure-returns-closure	-
+PASS	functions/closure-return-state	-
 PASS	functions/closure-share	-
 PASS	functions/closure-two-vars-one-closure	-
 PASS	functions/closure-value-reassigned	-
@@ -475,6 +489,12 @@ PASS	interfaces/type-assert-interface-panic/missing-one	-
 PASS	interfaces/type-assert-interface-panic/nil	-
 PASS	interfaces/type-assertions/comma-ok	-
 PASS	interfaces/type-assertions/panic	-
+FAIL	interfaces/typed-nil-channel	frontend-export
+PASS	interfaces/typed-nil-composite	-
+PASS	interfaces/typed-nil-func	-
+PASS	interfaces/typed-nil-map	-
+PASS	interfaces/typed-nil-pointer-compare	-
+PASS	interfaces/typed-nil-slice	-
 PASS	interfaces/type-switch-default-binding	-
 PASS	interfaces/type-switch-default-binding-type	-
 PASS	interfaces/type-switch-dynamic	-
@@ -493,12 +513,6 @@ PASS	interfaces/type-switch-nil-multi-case	-
 PASS	interfaces/type-switch-single-binding	-
 PASS	interfaces/type-switch-typed-nil	-
 PASS	interfaces/type-switch-typed-nil-binding	-
-FAIL	interfaces/typed-nil-channel	frontend-export
-PASS	interfaces/typed-nil-composite	-
-PASS	interfaces/typed-nil-func	-
-PASS	interfaces/typed-nil-map	-
-PASS	interfaces/typed-nil-pointer-compare	-
-PASS	interfaces/typed-nil-slice	-
 PASS	ints/bitwise	-
 PASS	ints/break-continue	-
 PASS	ints/byte-conversion	-
@@ -507,16 +521,16 @@ PASS	ints/conversion-width-matrix	-
 PASS	ints/defined-int-conversion	-
 PASS	ints/defined-type-ops	-
 PASS	ints/defined-underlying-conversion	-
-PASS	ints/div-mod-signs	-
 PASS	ints/divide-by-zero	-
 PASS	ints/division-overflow	-
+PASS	ints/div-mod-signs	-
 PASS	ints/if-return	-
 PASS	ints/int8-wrap	-
 PASS	ints/multi-assign	-
 PASS	ints/negative-shift	-
 PASS	ints/scalars	-
-PASS	ints/shift-width-boundaries	-
 PASS	ints/shifts	-
+PASS	ints/shift-width-boundaries	-
 PASS	ints/signed-unsigned-conversion	-
 PASS	ints/signed-width-wrap	-
 PASS	ints/truncate-conversion	-
@@ -653,8 +667,8 @@ PASS	panic-recover/defer-arg-during-panic	-
 PASS	panic-recover/defer-panic-after-return	-
 PASS	panic-recover/defer-panic-recovered-after-return	-
 PASS	panic-recover/defer-recover-builtin	-
-PASS	panic-recover/defer-registered-during-unwind	-
 PASS	panic-recover/deferred-panic-replaces	-
+PASS	panic-recover/defer-registered-during-unwind	-
 PASS	panic-recover/named-result-preserved-after-recover	-
 PASS	panic-recover/nested-frame-recover	-
 PASS	panic-recover/nil-defer-during-unwind	-
@@ -703,9 +717,13 @@ PASS	pointers/pointer-identity	-
 PASS	pointers/pointer-param-alias	-
 PASS	pointers/pointer-slice-header	-
 PASS	pointers/pointer-to-pointer	-
+PASS	quorum/committed-index/all-acked	-
 PASS	quorum/committed-index-edges/all-unacked	-
 PASS	quorum/committed-index-edges/n1-acked	-
 PASS	quorum/committed-index-edges/n1-unacked	-
+PASS	quorum/committed-index/empty-maxuint	-
+PASS	quorum/committed-index/heap	-
+PASS	quorum/committed-index/on-stack	-
 PASS	quorum/committed-index-real/empty	-
 PASS	quorum/committed-index-real/five-dup	-
 PASS	quorum/committed-index-real/five-spread	-
@@ -723,10 +741,6 @@ PASS	quorum/committed-index-real/three-two	-
 PASS	quorum/committed-index-real/two-half	-
 PASS	quorum/committed-index-real/two-known	-
 PASS	quorum/committed-index-real/two-missing	-
-PASS	quorum/committed-index/all-acked	-
-PASS	quorum/committed-index/empty-maxuint	-
-PASS	quorum/committed-index/heap	-
-PASS	quorum/committed-index/on-stack	-
 PASS	quorum/committed-index/unacked	-
 PASS	quorum/joint/committed-min	-
 PASS	quorum/joint/ids-union	-
@@ -734,17 +748,17 @@ PASS	quorum/joint/vote-both-pending	-
 PASS	quorum/joint/vote-both-win	-
 PASS	quorum/joint/vote-disagree-lost	-
 PASS	quorum/joint/vote-disagree-pending	-
+PASS	quorum/vote-result/empty-wins	-
+PASS	quorum/vote-result/even-one-short	-
+PASS	quorum/vote-result/even-won	-
+PASS	quorum/vote-result/lost	-
+PASS	quorum/vote-result/pending	-
 PASS	quorum/vote-result-small-n/n1-lost	-
 PASS	quorum/vote-result-small-n/n1-pending	-
 PASS	quorum/vote-result-small-n/n1-won	-
 PASS	quorum/vote-result-small-n/n2-one-missing-pending	-
 PASS	quorum/vote-result-small-n/n2-one-yes-lost	-
 PASS	quorum/vote-result-small-n/n2-won	-
-PASS	quorum/vote-result/empty-wins	-
-PASS	quorum/vote-result/even-one-short	-
-PASS	quorum/vote-result/even-won	-
-PASS	quorum/vote-result/lost	-
-PASS	quorum/vote-result/pending	-
 PASS	quorum/vote-result/tie-lost	-
 PASS	quorum/vote-result/won-exact	-
 PASS	range/range-array-copy	-
@@ -777,8 +791,8 @@ PASS	range/range-struct-copy	-
 PASS	returns/early-return-named	-
 PASS	returns/method-multi-result-arg	-
 PASS	returns/multi-result-argument	-
-PASS	returns/multi-result-assign-order	-
 PASS	returns/multi-result-assignment	-
+PASS	returns/multi-result-assign-order	-
 PASS	returns/multi-result-blank-forward	-
 PASS	returns/multi-result-forward	-
 PASS	returns/multi-result-forward-named	-
@@ -835,8 +849,8 @@ PASS	slices/slices-sort-edges/signed-negatives	-
 PASS	slices/slices-sort-edges/single-element	-
 PASS	slices/slices-sort-edges/subslice-aliasing	-
 PASS	slices/slices-sort-edges/unsigned-above-half	-
-FAIL	slices/slices-sort-non-integer-refusal	frontend-export
 PASS	slices/slices-sort/ints	-
+FAIL	slices/slices-sort-non-integer-refusal	frontend-export
 PASS	slices/slices-sort/uint64	-
 PASS	slices/three-index-slice	-
 PASS	strings/byte-slice-to-string-copy	-
@@ -903,7 +917,6 @@ PASS	structs/pointer-hop-field-write	-
 PASS	structs/positional-literal	-
 PASS	structs/positional-literal-eval-order	-
 PASS	structs/recursive-pointer	-
-PASS	structs/selector-address-pointer	-
 PASS	structs/selector-addressability-edge/map-value-copy-then-assign	-
 PASS	structs/selector-addressability-edge/map-value-pointer-field-write	-
 PASS	structs/selector-addressability-edge/map-value-slice-field-write	-
@@ -911,6 +924,7 @@ PASS	structs/selector-addressability-edge/pointer-field-from-call-result	-
 PASS	structs/selector-addressability-edge/pointer-result-assign	-
 PASS	structs/selector-addressability-edge/read-call-result	-
 PASS	structs/selector-addressability-edge/read-conversion-result	-
+PASS	structs/selector-address-pointer	-
 PASS	structs/selector-eval-once	-
 PASS	structs/struct-array-element-write	-
 PASS	structs/swap	-

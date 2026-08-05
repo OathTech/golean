@@ -1,0 +1,3 @@
+# id	subject	args	expected_status	expected_reason	features
+range	floatToIntOutOfRange	-	ok	-	floats,conversions
+nan	floatToIntNaN	-	ok	-	floats,conversions,division
