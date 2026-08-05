@@ -76,7 +76,14 @@ observation — the membership-lane motivator).
    note scopes it out.
 5. **init ordering.** Package-level variable initialization order +
    `init()` functions (the 6 `lean-observation` reds). Small,
-   self-contained.
+   self-contained. (Landed 2026-08-05, `docs/2026-08-05_init-design.md`,
+   branch general-coverage-init: 733 → 747 — the 6 init reds, 7 new
+   guardrails, and `control-flow/expressionless-switch-order` green;
+   `init/hidden-dep-order` is a designed permanent differential red —
+   the spec leaves hidden-dependency init order unspecified and
+   go/types' conforming order differs from gc's; recorded in the note
+   §1 and `baselines/untriaged-ids`. Zero machine change: globals are
+   driver-seeded base cells statically resolved by the frontend.)
 6. **Generics.** The largest: design note comparing monomorphization at
    the frontend (keeps GoCore generic-free) vs semantic dictionaries;
    expected outcome is frontend monomorphization with GoCore untouched —
