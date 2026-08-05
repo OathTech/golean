@@ -706,8 +706,11 @@ def normalizeFieldsWith (f : Ty → GoValue → Except GoError GoValue) :
 empty struct `struct{}` is assignable to/from any defined type whose
 underlying type is `struct{}` (identical underlying types, at least one
 side not a defined type). Both field lists empty ⟺ identical underlying
-here, so the check is exact. Two DIFFERENT defined types never take this
-escape — Go requires an explicit conversion for those. -/
+here, so the check is exact. At the NORMALIZATION site (one candidate tag
+against the target) two DIFFERENT defined types never take this escape —
+Go requires an explicit conversion for those; the EQUALITY site layers an
+extra operand-tag condition on top, because there the context type can
+itself be the canonical `struct{}` (audit F4, 2026-08-05). -/
 def emptyStructAssignable (actual name : TypeId)
     (fields : Array FieldDef) (fieldsValue : Array (String × GoValue)) : Bool :=
   (actual.key == "struct{}" || name.key == "struct{}") &&
@@ -1274,13 +1277,21 @@ def valueEqFuel : Nat → ExecState → Ty → GoValue → GoValue → Except Go
             | .struct leftType leftFields, .struct rightType rightFields => do
                 -- A mixed comparison is legal exactly when one operand is
                 -- ASSIGNABLE to the other's type; the wire's only unnamed
-                -- struct is the canonical `struct{}` (BUG-011 escape, same
-                -- rule as normalization).
+                -- struct is the canonical `struct{}` (BUG-011 escape).
+                -- Tightened at THIS site (audit F4, 2026-08-05): an
+                -- operand may mismatch the context only when ITS OWN tag
+                -- is the canonical `struct{}`, or when the context is the
+                -- canonical `struct{}` and both operands carry the SAME
+                -- defined type — two DIFFERENT defined types never
+                -- compare, even at an empty-struct context (reachable
+                -- only from hand-written GoCore terms).
                 if leftType != name &&
-                    !emptyStructAssignable leftType name fields leftFields then
+                    !(emptyStructAssignable leftType name fields leftFields &&
+                      (leftType.key == "struct{}" || leftType == rightType)) then
                   stuck s!"left struct equality type mismatch: expected {name.key}, got {leftType.key}"
                 if rightType != name &&
-                    !emptyStructAssignable rightType name fields rightFields then
+                    !(emptyStructAssignable rightType name fields rightFields &&
+                      (rightType.key == "struct{}" || rightType == leftType)) then
                   stuck s!"right struct equality type mismatch: expected {name.key}, got {rightType.key}"
                 if leftFields.size != fields.size then
                   stuck s!"left struct equality field count mismatch: expected {fields.size}, got {leftFields.size}"

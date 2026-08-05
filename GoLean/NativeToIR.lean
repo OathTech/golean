@@ -404,12 +404,17 @@ partial def decodeStmt (results : Array Param) (path : String) (json : Json) : L
       -- the nil-interface method-value creation check, design note D6) —
       -- the payload boxes as the machine's `runtime.Error` sentinel so
       -- recover values, type asserts, and abort rendering all match Go's
-      -- runtime errors, never a user string.
-      match obj.get? "runtimeError" with
-      | some (.bool true) =>
-          pure (.panicStmt (.toInterface (.interface ⟨"any"⟩)
-            (.defined runtimeErrorTypeId) value))
-      | _ =>
+      -- runtime errors, never a user string. A PRESENT key is decoded
+      -- STRICTLY (audit F7: a malformed flag used to fall open to a
+      -- user-string payload); `false` is well-formed and means "not a
+      -- runtime error".
+      let runtimeErr ← match obj.get? "runtimeError" with
+        | some flag => StrictJson.bool s!"{path}.runtimeError" flag
+        | none => pure false
+      if runtimeErr then
+        pure (.panicStmt (.toInterface (.interface ⟨"any"⟩)
+          (.defined runtimeErrorTypeId) value))
+      else
       match obj.get? "wrap" with
       | some t =>
           let ty ← decodeTy s!"{path}.wrap" t
