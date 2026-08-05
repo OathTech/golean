@@ -250,8 +250,11 @@ while IFS= read -r case_file; do
       bad=1
       continue
     fi
-    if has_tag "$features" "nondet" && [[ "${GOLEAN_ALLOW_NONDET:-0}" != "1" ]]; then
-      echo "coverage-negative-manifest: $case_file: nondet cases require GOLEAN_ALLOW_NONDET=1 and a relation-style oracle" >&2
+    # The nondet tag marks executable membership-lane cases (arc slice 3);
+    # a compile-rejection witness has no runtime observable, so nondet has
+    # no meaning in this lane — fail closed.
+    if has_tag "$features" "nondet"; then
+      echo "coverage-negative-manifest: $case_file: nondet has no meaning in the compile-negative lane (it marks executable membership-lane cases)" >&2
       bad=1
       continue
     fi

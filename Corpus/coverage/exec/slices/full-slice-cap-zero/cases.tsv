@@ -1,2 +1,2 @@
-# id	subject	args	expected_status	expected_reason	features
--	fullSliceCapZero	-	ok	-	slices,full_slice,append,cap,aliasing
+# id	subject	args	expected_status	expected_reason	features	lane	why	params
+-	fullSliceCapZero	-	ok	-	slices,full_slice,append,cap,aliasing,nondet	membership	cap() after append spills a zero-cap full-slice window, observing the append-capacity choice site (growth formula + [0,8) extra); Go picks one capacity deterministically per toolchain, so samples=1 version-tracks the envelope	samples=1

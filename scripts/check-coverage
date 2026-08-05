@@ -29,12 +29,11 @@ TAGS = "Corpus/coverage/tags.tsv"
 BASE = "baselines/native-full.tsv"
 
 # Canonical tags that legitimately have no default-lane case. Each needs a reason.
-RESERVED = {
-    # nondet cases require GOLEAN_ALLOW_NONDET=1 + a relation-style oracle
-    # (map-iteration order is not differentially testable against `go run`), so
-    # they never appear in the default manifest. Reserved, not dead.
-    "nondet",
-}
+# (Empty since 2026-08-05: the membership lane made `nondet` a live tag —
+# lane=membership rows carry it, run in the default manifest, and are
+# oracled by set membership. Keep the set for future genuinely
+# default-lane-untestable tags; each entry needs a reason.)
+RESERVED = set()
 
 # Canonical vocabulary.
 with open(TAGS) as f:

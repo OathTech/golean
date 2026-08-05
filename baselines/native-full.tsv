@@ -1,20 +1,25 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-05  commit: general-coverage-embed delta-review round 2 (R1 pair-level equality escape; R2 strict interface flag)
-#   frontend: native  oracle: go run
-# manifest_cases: 917  pass: 710  fail: 207
-# Re-pin reason: DELIBERATE coverage change, slice-2 delta-review round 2
-# (docs/2026-08-05_embedding-interfaces-design.md, audit section F4
-# entry). The a1e3b5a F4 tightening over-tightened: with the anonymous
-# empty-struct literal as the LEFT operand the context is the unnamed
-# struct{} and the DEFINED-typed operand is the mismatching one — legal
-# Go went stuck (an intra-branch regression vs pre-a1e3b5a). The escape
-# is now PAIR-level: a mismatching operand is admitted iff the pair is
-# Go-comparable (equal tags, or either side tagged the canonical
-# struct{}); two DIFFERENT defined types still stick at every context
-# (F4's target). Three NEW ids, all PASS:
-# structs/empty-struct-literal-left-operand/{eq,neq,switch} (landed RED
-# first). ZERO PASS->FAIL, no stage moves on existing ids.
-# 707 -> 710 pass, 914 -> 917 cases.
+# recorded: 2026-08-05  commit: general-coverage-membership (membership lane landed)
+#   frontend: native  oracle: go run (strict lane) / go-run membership in the
+#   machine-enumerated observation set (membership lane; go1.26.5 samples)
+# manifest_cases: 918  pass: 712  fail: 206
+# Re-pin reason: DELIBERATE coverage change — the membership testing lane
+# (arc slice 3, docs/2026-08-04_membership-lane-design.md). Two movements,
+# both membership-lane classifications; ZERO PASS->FAIL, no other stage
+# moves on existing ids:
+# - slices/full-slice-cap-zero: FAIL/nondet -> PASS/membership. Genuinely
+#   choice-dependent cap() observation; enumerated set has 8 members
+#   (append-spill extra in [0,8)); Go (1.26.5) exhibits member 14912.
+#   samples=1 = version-tracking mode: a toolchain whose append capacity
+#   leaves the envelope turns this red deliberately.
+# - maps/range-first-key: NEW id -> PASS/membership (landed RED first as
+#   the lane's guardrail, stage flaky differential/nondet by nature —
+#   exactly the equality-oracle mismatch the lane fixes). Enumerated set
+#   {1,2,3}; Go explores it across 5 per-run-randomized samples.
+# BUG-005's three order-observing reds (maps/{delete,clear,update}-during-
+# range) stay OUT of the lane and remain FAIL/differential (verified this
+# run) — the lane must not launder a known divergence.
+# 710 -> 712 pass, 917 -> 918 cases.
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
 PASS	arrays/array-copy	-
@@ -583,6 +588,7 @@ PASS	maps/nil-read-value-types	-
 PASS	maps/nil-value-comma-ok	-
 PASS	maps/overwrite	-
 PASS	maps/pointer-key	-
+PASS	maps/range-first-key	membership
 PASS	maps/set-membership	-
 PASS	maps/slice-value-element-write	-
 PASS	maps/struct-key	-
@@ -808,7 +814,7 @@ PASS	slices/copy-overlap-backward	-
 PASS	slices/copy-short	-
 PASS	slices/full-slice	-
 PASS	slices/full-slice-bounds	-
-FAIL	slices/full-slice-cap-zero	nondet
+PASS	slices/full-slice-cap-zero	membership
 PASS	slices/gotcha-append-aliasing	-
 PASS	slices/make-slice	-
 PASS	slices/make-slice-cap-bounds	-

@@ -13,6 +13,9 @@ GO_BUILD_CACHE="$ROOT/artifacts/go-build-cache"
 LAKE_BUILD_TIMEOUT_SECONDS="${LAKE_BUILD_TIMEOUT_SECONDS:-120}"
 GO_TIMEOUT_SECONDS="${GO_TIMEOUT_SECONDS:-30}"
 LEAN_TIMEOUT_SECONDS="${LEAN_TIMEOUT_SECONDS:-30}"
+# The membership-lane enumerator explores the whole choice tree in one
+# process (thousands of machine runs), so it gets its own, larger budget.
+LEAN_ENUM_TIMEOUT_SECONDS="${LEAN_ENUM_TIMEOUT_SECONDS:-120}"
 
 run_with_timeout() {
   local seconds="$1"
@@ -142,6 +145,22 @@ report_pass() {
   printf 'PASS\t%s\t%s\t-\t-\n' "$id" "$features" >> "$CASE_OUT"
 }
 
+# Membership-lane PASS rows carry stage "membership" (the baseline records
+# result+stage, so the lane classification is part of the regression
+# signal) and a detail with the WIDTH SIGNAL — |enumerated set|,
+# |Go-exhibited subset| — which is recorded METADATA, never a pass
+# criterion (docs/2026-08-04_membership-lane-design.md).
+report_pass_lane() {
+  local id="$1"
+  local features="$2"
+  local stage="$3"
+  local detail="$4"
+  local flat_detail
+  flat_detail="$(one_line "$detail")"
+  printf 'PASS\t%s\t%s\tstage=%s\tdetail=%s\n' "$id" "$features" "$stage" "$flat_detail"
+  printf 'PASS\t%s\t%s\t%s\t%s\n' "$id" "$features" "$stage" "$flat_detail" >> "$CASE_OUT"
+}
+
 one_line() {
   local value="$1"
   value="${value//$'\t'/ }"
@@ -180,18 +199,25 @@ run_case() {
 
 run_case_rows() {
   local rowfile="$1"
-  local id go_dir function_name arg_ints expected_status features expected_reason extra
-  IFS=$'\t' read -r id go_dir function_name arg_ints expected_status features expected_reason extra < "$rowfile"
+  local id go_dir function_name arg_ints expected_status features expected_reason lane why params extra
+  IFS=$'\t' read -r id go_dir function_name arg_ints expected_status features expected_reason lane why params extra < "$rowfile"
   local failed=0
 
   if [[ -n "${extra:-}" ]]; then
     report_fail "$id" "${features:-unknown}" "manifest" "too many tab-separated fields"
     return 0
   fi
-  if [[ -z "${go_dir:-}" || -z "${function_name:-}" || -z "${arg_ints:-}" || -z "${expected_status:-}" || -z "${features:-}" || -z "${expected_reason:-}" ]]; then
-    report_fail "$id" "${features:-unknown}" "manifest" "expected 7 tab-separated fields"
+  if [[ -z "${go_dir:-}" || -z "${function_name:-}" || -z "${arg_ints:-}" || -z "${expected_status:-}" || -z "${features:-}" || -z "${expected_reason:-}" || -z "${lane:-}" || -z "${why:-}" || -z "${params:-}" ]]; then
+    report_fail "$id" "${features:-unknown}" "manifest" "expected 10 tab-separated fields"
     return 0
   fi
+  case "$lane" in
+    strict|membership) ;;
+    *)
+      report_fail "$id" "$features" "manifest" "invalid lane: $lane (use strict or membership)"
+      return 0
+      ;;
+  esac
   case "$expected_status" in
     ok|panic) ;;
     *)
@@ -243,6 +269,16 @@ run_case_rows() {
       --expected-status "$expected_status" \
       --args "$arg_ints" 2>&1)"; then
     report_fail "$id" "$features" "go-harness" "$harness_output"
+    return 0
+  fi
+
+  # Membership lane: for observables that genuinely depend on the Choices
+  # stream, equality against one go run is the wrong oracle — dispatch to
+  # the membership path (enumerated machine set ⊇ every Go sample). The
+  # strict path below, INCLUDING its three-stream invariance check, is
+  # untouched.
+  if [[ "$lane" == "membership" ]]; then
+    run_membership_case_rows
     return 0
   fi
 
@@ -360,6 +396,173 @@ run_case_rows() {
   report_pass "$id" "$features"
 }
 
+# One `go run` of the generated harness, classified under the SAME status /
+# panic policy as the strict lane. On success prints the sample's canonical
+# observation JSON and returns 0; on any failure prints the error detail
+# and returns 1. Uses run_case_rows' locals (go_run_pkg, expected_status,
+# expected_reason).
+membership_go_observation() {
+  local out
+  if out="$(run_with_timeout "$GO_TIMEOUT_SECONDS" env GO111MODULE=off GOCACHE="$GO_BUILD_CACHE" go run "$go_run_pkg" 2>&1)"; then
+    if [[ "$expected_status" == "panic" ]]; then
+      printf 'go sample: expected panic, but Go exited successfully: %s' "$out"
+      return 1
+    fi
+    if ! lean observation-eq --left "$out" --right "$out" >/dev/null 2>&1; then
+      printf 'go sample is not a valid observation: %s' "$out"
+      return 1
+    fi
+    if [[ "$out" != *"\"status\":\"$expected_status\""* ]]; then
+      printf 'go sample: expected status %s, got %s' "$expected_status" "$out"
+      return 1
+    fi
+    printf '%s' "$out"
+    return 0
+  fi
+  if [[ "$expected_status" == "panic" ]]; then
+    if [[ "$out" != *"panic:"* ]]; then
+      printf 'go sample: expected Go panic, got: %s' "$out"
+      return 1
+    fi
+    if [[ "$out" != *"$expected_reason"* ]]; then
+      printf 'go sample: Go panic did not contain expected reason %s: %s' "$expected_reason" "$out"
+      return 1
+    fi
+    local msg escaped
+    if ! msg="$(printf '%s\n' "$out" | panic_message)"; then
+      printf 'go sample: could not extract Go panic message: %s' "$out"
+      return 1
+    fi
+    escaped="$(json_string_literal "$msg")"
+    printf '{"message":%s,"schema":"golean-observation-v1","status":"panic"}' "$escaped"
+    return 0
+  fi
+  printf 'go sample run failed: %s' "$out"
+  return 1
+}
+
+# The membership lane (arc slice 3, docs/2026-08-04_membership-lane-design.md).
+# PASS = every Go sample ∈ the machine's enumerated observation set
+# (possibilistic membership — the nondeterminism doctrine's testing half).
+# Fail-closed guards: enumerator failure (width/depth/cap/work — coverage
+# not certified) fails the case; a SINGLETON enumerated set fails
+# classification (the case belongs in the strict lane); a Go sample outside
+# the set is the too-narrow soundness alarm. The width signal
+# (|enumerated|, |exhibited|, the unexhibited members) is recorded as
+# metadata in the PASS detail and under $OUT/membership/<id>/ — never a
+# pass criterion. Runs inside run_case_rows' scope (uses its locals).
+run_membership_case_rows() {
+  # Per-case enumerator/sampler params (validated by coverage-manifest).
+  local width=16 sites=8 obs_cap=64 samples=5 work=200000
+  if [[ "$params" != "-" ]]; then
+    local kv key value
+    IFS=',' read -r -a kvs <<< "$params"
+    for kv in "${kvs[@]}"; do
+      key="${kv%%=*}"
+      value="${kv#*=}"
+      case "$key" in
+        width) width="$value" ;;
+        sites) sites="$value" ;;
+        cap) obs_cap="$value" ;;
+        samples) samples="$value" ;;
+        work) work="$value" ;;
+        *)
+          report_fail "$id" "$features" "manifest" "unknown lane param key: $kv"
+          return 0
+          ;;
+      esac
+    done
+  fi
+
+  local mem_dir="$OUT/membership/$id"
+  mkdir -p "$mem_dir"
+
+  # Go side: R samples (samples=1 is the version-tracking mode for features
+  # Go decides deterministically per toolchain, e.g. append capacity).
+  local i sample
+  : > "$mem_dir/samples.txt"
+  for ((i = 1; i <= samples; i++)); do
+    if ! sample="$(membership_go_observation)"; then
+      report_fail "$id" "$features" "membership" "$sample"
+      return 0
+    fi
+    printf '%s\n' "$sample" >> "$mem_dir/samples.txt"
+  done
+
+  # Machine side: export the wire and enumerate the observation set.
+  local wire_json="$OUT/native/$id/wire.json"
+  mkdir -p "$(dirname "$wire_json")"
+  local native_export
+  if ! native_export="$(run_with_timeout "$GO_TIMEOUT_SECONDS" env GO111MODULE=off GOCACHE="$GO_BUILD_CACHE" go run ./tools/nativefrontend --dir "$go_dir" --out "$wire_json" 2>&1)"; then
+    report_fail "$id" "$features" "frontend-export" "native frontend: $native_export"
+    return 0
+  fi
+  local enum_args=(coverage-observations --input "$wire_json" --function "$function_name"
+    --max-width "$width" --max-sites "$sites" --cap "$obs_cap" --work-cap "$work")
+  if [[ "$arg_ints" != "-" ]]; then
+    local ints value
+    IFS=',' read -r -a ints <<< "$arg_ints"
+    for value in "${ints[@]}"; do
+      if [[ ! "$value" =~ ^-?[0-9]+$ ]]; then
+        report_fail "$id" "$features" "manifest" "invalid integer argument: $value"
+        return 0
+      fi
+      enum_args+=(--arg-int "$value")
+    done
+  fi
+  if ! run_with_timeout "$LEAN_ENUM_TIMEOUT_SECONDS" "$GOLEAN_BIN" "${enum_args[@]}" \
+      > "$mem_dir/observations.txt" 2> "$mem_dir/enum-stats.txt"; then
+    report_fail "$id" "$features" "membership" "enumerator failed (coverage not certified): $(cat "$mem_dir/enum-stats.txt")"
+    return 0
+  fi
+
+  local member_count
+  member_count="$(grep -c . "$mem_dir/observations.txt" || true)"
+  if [[ "$member_count" -le 1 ]]; then
+    report_fail "$id" "$features" "membership" "enumerated observation set is a singleton ($member_count member) — the case belongs in the strict lane"
+    return 0
+  fi
+
+  # Membership check: every Go sample must be a member. Track which members
+  # Go exhibited (by member line number) for the width signal.
+  local exhibited="" n member found
+  while IFS= read -r sample; do
+    found=0
+    n=0
+    while IFS= read -r member; do
+      n=$((n + 1))
+      if lean observation-eq --left "$member" --right "$sample" >/dev/null 2>&1; then
+        found=1
+        case " $exhibited " in
+          *" $n "*) ;;
+          *) exhibited="$exhibited $n" ;;
+        esac
+        break
+      fi
+    done < "$mem_dir/observations.txt"
+    if [[ "$found" -ne 1 ]]; then
+      report_fail "$id" "$features" "membership" "Go observation is NOT in the machine's enumerated set (the too-narrow soundness alarm): $sample enumerated=$member_count"
+      return 0
+    fi
+  done < "$mem_dir/samples.txt"
+
+  local exhibited_count unexhibited_count
+  exhibited_count="$(printf '%s\n' $exhibited | grep -c . || true)"
+  n=0
+  : > "$mem_dir/unexhibited.txt"
+  while IFS= read -r member; do
+    n=$((n + 1))
+    case " $exhibited " in
+      *" $n "*) ;;
+      *) printf '%s\n' "$member" >> "$mem_dir/unexhibited.txt" ;;
+    esac
+  done < "$mem_dir/observations.txt"
+  unexhibited_count="$(grep -c . "$mem_dir/unexhibited.txt" || true)"
+
+  report_pass_lane "$id" "$features" "membership" \
+    "enumerated=$member_count exhibited=$exhibited_count unexhibited=$unexhibited_count samples=$samples (members in $mem_dir)"
+}
+
 # ---- the parallel driver: one row file per manifest case, a worker pool
 # over them, results assembled in manifest order (byte-identical to the
 # sequential runner's output). GOLEAN_COVERAGE_JOBS=1 restores strictly
@@ -379,9 +582,10 @@ done < "$MANIFEST"
 case_count="$row_i"
 
 export CASE_OUT ROOT OUT FRONTEND GO_BUILD_CACHE GOLEAN_BIN \
-  GO_TIMEOUT_SECONDS LEAN_TIMEOUT_SECONDS
+  GO_TIMEOUT_SECONDS LEAN_TIMEOUT_SECONDS LEAN_ENUM_TIMEOUT_SECONDS
 export -f run_case run_case_rows run_with_timeout lean json_string_literal \
-  panic_message report_pass report_fail one_line
+  panic_message report_pass report_pass_lane report_fail one_line \
+  membership_go_observation run_membership_case_rows
 
 # Record the concurrency the run used (audit finding: a load-induced
 # timeout drift was indistinguishable from a real one after the fact).

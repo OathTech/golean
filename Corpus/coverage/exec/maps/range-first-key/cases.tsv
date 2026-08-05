@@ -1,2 +1,2 @@
-# id	subject	args	expected_status	expected_reason	features
--	rangeFirstKey	-	ok	-	maps,range,keys,loops
+# id	subject	args	expected_status	expected_reason	features	lane	why	params
+-	rangeFirstKey	-	ok	-	maps,range,keys,loops,nondet	membership	the first key produced by range over a 3-key map observes the map-iteration pick-next choice site; Go randomizes iteration order per run, so repeated samples explore the admitted set {1,2,3}	-

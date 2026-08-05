@@ -101,6 +101,32 @@ Columns:
 id<TAB>subject<TAB>args<TAB>expected_status<TAB>expected_reason<TAB>features
 ```
 
+Optional lane columns (membership lane, arc slice 3,
+`docs/2026-08-04_membership-lane-design.md`) may follow `features`:
+
+```text
+...<TAB>lane<TAB>why<TAB>params
+```
+
+- `lane` is `strict` (the default when the columns are absent or `-`) or
+  `membership`. Membership cases are oracled by SET MEMBERSHIP — every
+  `go run` sample must lie in the machine-enumerated observation set
+  (`golean coverage-observations`) — instead of equality against one run.
+- `why` is mandatory free text for `membership` (which observable depends
+  on which consumption site); it must be `-` for `strict`.
+- `params` is `-` or comma-separated `key=value` overrides:
+  `width` (enumerator pick alphabet `[0,B)`, default 16 — must cover every
+  consumption-site bound in the case), `sites` (max consumption depth,
+  default 8), `cap` (max distinct observations, default 64), `samples`
+  (Go-side sample count, default 5; `samples=1` is the version-tracking
+  mode for features Go decides deterministically per toolchain), `work`
+  (enumerator work cap, default 200000).
+- Fail-closed both ways: `lane=membership` requires the `nondet` feature
+  tag and a `why`; a `nondet`-tagged case requires `lane=membership`; a
+  membership case whose enumerated set is a singleton fails ("belongs in
+  the strict lane"); a strict case that varies across the adversarial
+  choice streams keeps failing at stage `nondet`.
+
 Rules:
 
 - `id` is `-` for a one-case package, otherwise a kebab-case suffix.
@@ -153,8 +179,10 @@ the `frontend-export` stage until a package-aware frontend adapter exists.
 Feature tags are controlled by `Corpus/coverage/tags.tsv`. The manifest
 generator rejects unknown tags, malformed tags, and duplicate entries in the
 vocabulary. Add tags intentionally; do not use ad hoc spellings in case files.
-The `nondet` tag is reserved for future relation-style or repeated-run oracles
-and is rejected by the default equality lane.
+The `nondet` tag marks membership-lane cases (it was reserved for a future
+relation-style oracle until 2026-08-05, when the membership lane landed):
+a `nondet`-tagged executable case must declare `lane=membership`, and vice
+versa. The compile-negative lane rejects the tag outright.
 
 ## Runner UX
 

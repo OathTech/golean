@@ -223,6 +223,50 @@ validate_path_id() {
   return 0
 }
 
+# Membership-lane params (docs/2026-08-04_membership-lane-design.md): "-" or
+# comma-separated key=value overrides of the enumerator/sampler defaults.
+#   width   = B, the pick alphabet [0,B) (default 16; must cover every
+#             consumption-site bound in the case)
+#   sites   = D, max consumption sites per run (default 8)
+#   cap     = N, max distinct observations (default 64)
+#   samples = Go-side go-run sample count (default 5; 1 = version-tracking
+#             for features Go decides deterministically per toolchain)
+#   work    = enumerator work cap on total machine runs (default 200000)
+validate_lane_params() {
+  local cases_file="$1"
+  local params="$2"
+  local kv key value seen=""
+  if [[ "$params" == "-" ]]; then
+    return 0
+  fi
+  IFS=',' read -r -a kvs <<< "$params"
+  for kv in "${kvs[@]}"; do
+    if [[ "$kv" != *=* ]]; then
+      echo "coverage-manifest: $cases_file: lane param is not key=value: $kv" >&2
+      return 1
+    fi
+    key="${kv%%=*}"
+    value="${kv#*=}"
+    case "$key" in
+      width|sites|cap|samples|work) ;;
+      *)
+        echo "coverage-manifest: $cases_file: unknown lane param key: $kv" >&2
+        return 1
+        ;;
+    esac
+    if [[ " $seen " == *" $key "* ]]; then
+      echo "coverage-manifest: $cases_file: duplicate lane param key: $key" >&2
+      return 1
+    fi
+    seen="$seen $key"
+    if [[ ! "$value" =~ ^[1-9][0-9]*$ ]]; then
+      echo "coverage-manifest: $cases_file: lane param $key must be a positive integer: $kv" >&2
+      return 1
+    fi
+  done
+  return 0
+}
+
 validate_features() {
   local cases_file="$1"
   local features="$2"
@@ -285,7 +329,7 @@ while IFS= read -r cases_file; do
     continue
   fi
 
-  while IFS=$'\t' read -r row_id subject args expected_status expected_reason features extra; do
+  while IFS=$'\t' read -r row_id subject args expected_status expected_reason features lane why params extra; do
     if [[ -z "${row_id:-}" || "$row_id" == \#* ]]; then
       continue
     fi
@@ -295,7 +339,7 @@ while IFS= read -r cases_file; do
       continue
     fi
     if [[ -z "${subject:-}" || -z "${args:-}" || -z "${expected_status:-}" || -z "${expected_reason:-}" || -z "${features:-}" ]]; then
-      echo "coverage-manifest: $cases_file: expected 6 tab-separated fields" >&2
+      echo "coverage-manifest: $cases_file: expected 6 tab-separated fields (plus optional lane/why/params)" >&2
       bad=1
       continue
     fi
@@ -318,11 +362,56 @@ while IFS= read -r cases_file; do
       bad=1
       continue
     fi
-    if has_tag "$features" "nondet" && [[ "${GOLEAN_ALLOW_NONDET:-0}" != "1" ]]; then
-      echo "coverage-manifest: $cases_file: nondet cases require GOLEAN_ALLOW_NONDET=1 and a relation-style oracle" >&2
-      bad=1
-      continue
+    # Lane classification (membership lane, arc slice 3,
+    # docs/2026-08-04_membership-lane-design.md): optional columns 7-9 are
+    # lane / why / params. Absent or "-" lane is strict (the default
+    # equality lane). Fail closed BOTH ways: lane=membership requires the
+    # nondet feature tag and a free-text why (which observable depends on
+    # which consumption site); a nondet-tagged case requires
+    # lane=membership (the strict equality lane cannot oracle it — this
+    # replaces the old GOLEAN_ALLOW_NONDET rejection, which predates the
+    # membership oracle).
+    lane="${lane:--}"
+    why="${why:--}"
+    params="${params:--}"
+    if [[ "$lane" == "-" ]]; then
+      lane="strict"
     fi
+    case "$lane" in
+      strict)
+        if [[ "$why" != "-" || "$params" != "-" ]]; then
+          echo "coverage-manifest: $cases_file: strict-lane rows must leave why/params as -" >&2
+          bad=1
+          continue
+        fi
+        if has_tag "$features" "nondet"; then
+          echo "coverage-manifest: $cases_file: nondet-tagged case must declare lane=membership (strict equality against one go run cannot oracle it)" >&2
+          bad=1
+          continue
+        fi
+        ;;
+      membership)
+        if [[ "$why" == "-" ]]; then
+          echo "coverage-manifest: $cases_file: lane=membership requires a why (which observable depends on which consumption site)" >&2
+          bad=1
+          continue
+        fi
+        if ! has_tag "$features" "nondet"; then
+          echo "coverage-manifest: $cases_file: lane=membership requires the nondet feature tag" >&2
+          bad=1
+          continue
+        fi
+        if ! validate_lane_params "$cases_file" "$params"; then
+          bad=1
+          continue
+        fi
+        ;;
+      *)
+        echo "coverage-manifest: $cases_file: invalid lane: $lane (use strict or membership)" >&2
+        bad=1
+        continue
+        ;;
+    esac
     case "$expected_status" in
       ok|panic) ;;
       *)
@@ -365,14 +454,17 @@ while IFS= read -r cases_file; do
     if [[ "$LIST_ONLY" -eq 1 ]]; then
       printf '%s\t%s\t%s\t%s\t%s\n' "$full_id" "$expected_status" "$features" "$go_dir" "$subject"
     else
-      printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
+      printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
         "$full_id" \
         "$go_dir" \
         "$subject" \
         "$args" \
         "$expected_status" \
         "$features" \
-        "$expected_reason"
+        "$expected_reason" \
+        "$lane" \
+        "$why" \
+        "$params"
     fi
   done < "$cases_file"
 done < <(find "$EXEC_ROOT" -name cases.tsv -print | sort)
