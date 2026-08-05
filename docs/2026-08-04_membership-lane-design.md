@@ -20,6 +20,17 @@ on which consumption site). Guards, both directions:
   fails classification ("belongs in the strict lane") — no lazy
   demotions of deterministic cases to the weaker oracle.
 
+Gate self-test (delta-review T2, 2026-08-05): the lane's shell gates are
+covered by `scripts/test-lane-validation`, wired into `scripts/ci` — the
+bad-shape fixtures hand-run at landing (nine manifest rejections incl.
+the explicit-width requirement, three acceptances) run on every gate,
+and the go-dependent harness half (samples=0 re-validation, the
+non-native-frontend guard) runs under `--diff`. This deliberately stops
+short of a tamper-test framework: shell-gate integrity remains the
+pre-merge audit's dimension, per repo practice; the script only keeps
+the landing-time fixtures runnable instead of leaving them in commit
+messages.
+
 ## The machine-side enumerator
 
 New CLI subcommand (`lean coverage-observations --input <wire> --max-width B
@@ -38,7 +49,27 @@ cannot certify: the alias guard probes each explored pick position with
 a small ladder of values ≥ B (`+B`, `+2B`, `+4B`) — an observation
 outside the enumerated set REFUTES the width assertion ("raise width").
 The guard is a HEURISTIC cross-check, not a proof: a bound > B whose
-extra residues alias existing observations escapes the ladder. `N` caps
+extra residues alias existing observations escapes the ladder.
+
+Correction of record (delta-review T1, 2026-08-05): commit e2141ca's
+message (and the guard's docstring as first shipped) claimed "bounds
+beyond 5B are unprobed" — BACKWARDS. For a true bound M ≥ 5B every
+rung's probe value is its own residue, a live unenumerated one (the
+most informative case); what a rung cannot reach is residues its offset
+never lands on. The real inert condition: a rung of offset d is
+provably inert at a site of true bound M when d ≡ 0 (mod M) — with the
+original +B/+2B/+4B ladder that alignment happened whenever M divides
+m·B (concretely the shipped cap-zero configuration, width 16 over bound
+8: all 48 probes inert — harmless there because width ≥ bound means
+enumeration itself covers every residue and rung silence is exactly a
+correct assertion's expected behavior, but the prose claimed the wrong
+condition). The ladder offsets are now +B, +2B+1, +4B+3 (upper rungs
+de-aligned from divisor coincidences; probe counts unchanged at 48 /
+36864, both lane cases re-verified green, refutation at width 2 over
+the bound-3 map site re-verified firing). When width ≥ the true bound,
+ALL rungs are necessarily silent — expected, not a blind spot.
+
+`N` caps
 the observation set (fail loud if exceeded — such a case is too wide for
 enumeration and needs a per-case predicate instead; none expected in the
 current corpus). Every enumerated member must carry the case's expected

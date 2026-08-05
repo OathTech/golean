@@ -379,7 +379,7 @@ the precondition is AUTHOR-ASSERTED per-case metadata (`width`,
 explicit — no silent default at the harness; the case's `why` must argue
 the bound). The ALIAS GUARD is a heuristic cross-check of that
 assertion, not a proof: it probes each explored pick position with a
-small ladder of values `≥ B` (`+B`, `+2B`, `+4B`); if the enumeration is
+small ladder of values `≥ B` (`+B`, `+2B+1`, `+4B+3`); if the enumeration is
 complete, EVERY stream's observation is in the set, so a probe landing
 outside the set REFUTES the width assertion (fail closed, "raise
 width"). A bound `> B` whose extra residues alias existing observations
@@ -559,15 +559,30 @@ def exploreLoop (resultLocs : List Loc) (runFuel : Nat)
 /-- The alias guard — a HEURISTIC cross-check of the author-asserted
 width, not a proof (audit F2): for every explored complete assignment
 and every pick position, re-run with that pick bumped through a small
-ladder (`+B`, `+2B`, `+4B` — one probe per rung). If the enumeration is
-complete (`B ≥` every site's bound), every stream's observation — probe
-streams included — lies in the enumerated set; an observation outside it
-REFUTES the width assertion, so coverage is not certified and the
-enumeration fails closed ("raise width"). The converse does not hold —
-a bound `> B` whose extra residues alias existing observations escapes
-the ladder (e.g. any bound beyond `5B` is entirely unprobed). Mechanical
-bound certification needs a core-adjacent instrumentation hook, deferred
-per the design note. -/
+ladder of offsets `≥ B` (`+B`, `+2B+1`, `+4B+3` — one probe per rung).
+If the enumeration is complete (`B ≥` every site's bound), every
+stream's observation — probe streams included — lies in the enumerated
+set; an observation outside it REFUTES the width assertion, so coverage
+is not certified and the enumeration fails closed ("raise width").
+
+When the guard can and cannot refute (delta-review T1, 2026-08-05 —
+this doc originally claimed "any bound beyond 5B is entirely unprobed",
+which is BACKWARDS: for a true bound `M ≥ 5B` every rung's probe value
+is its own residue, a live unenumerated one — the most informative
+case). Precisely: a rung with offset `d` probes residue
+`(pick + d) mod M` at a site of true bound `M`; it can refute ONLY if
+that residue lies outside the enumerated residues `[0, min(B, M))`, and
+even then only if the residue's behavior yields an observation outside
+the set (aliased observations still escape). A rung is provably INERT
+when `d ≡ 0 (mod M)` — the probe lands back on the enumerated residue —
+which with the original `+B/+2B/+4B` ladder happened whenever
+`M ∣ m·B` (e.g. width 16 over the append site's bound 8: all rungs
+`≡ 0`); the `+2B+1`/`+4B+3` offsets de-align the upper rungs from such
+divisor coincidences. When `B ≥ M` (the width assertion TRUE) every
+residue is enumerated, so all rungs are necessarily silent — that is
+the expected behavior of a correct assertion, not a blind spot.
+Mechanical bound certification needs a core-adjacent instrumentation
+hook, deferred per the design note. -/
 def aliasProbeLoop (resultLocs : List Loc) (runFuel : Nat)
     (σ₀ : GoCore.ExecState) (c₀ : GoCore.Machine.Config) (width : Nat)
     (observations : Array Json) :
@@ -586,12 +601,16 @@ def aliasProbeLoop (resultLocs : List Loc) (runFuel : Nat)
             .error s!"alias guard: probe pick ≥ B (stream {stream}) produced an observation OUTSIDE the enumerated set — the case's width assertion is REFUTED (B={width} is smaller than some consumption site's bound); raise the case's width metadata. Probe observation: {obs.compress}"
 
 /-- The alias-guard probe streams for a set of explored leaves: each pick
-position bumped through the heuristic ladder `+B`, `+2B`, `+4B`. -/
+position bumped through the heuristic ladder `+B`, `+2B+1`, `+4B+3`
+(offsets all `≥ B`; the upper rungs are offset off multiples of `B` so
+rung inertness cannot align with `M ∣ m·B` divisor coincidences —
+delta-review T1). -/
 def aliasProbeStreams (width : Nat) (leaves : Array (Array Nat)) :
     List (List Nat) :=
   leaves.toList.flatMap (fun p =>
     (List.range p.size).flatMap (fun i =>
-      [1, 2, 4].map (fun m => (p.set! i (p[i]! + m * width)).toList)))
+      [width, 2 * width + 1, 4 * width + 3].map
+        (fun d => (p.set! i (p[i]! + d)).toList)))
 
 private def runCoverageObservations (args : List String) : IO UInt32 := do
   let cwd ← IO.currentDir

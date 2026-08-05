@@ -131,6 +131,20 @@ if bugout="$(./scripts/check-bugs.sh 2>&1)"; then echo "$bugout" | sed 's/^/  /'
 step "feature-coverage cross-check (scripts/check-coverage)"
 if covout="$(./scripts/check-coverage 2>&1)"; then echo "$covout" | tail -2 | sed 's/^/  /'; ok "feature-coverage (no dead tags)"; else echo "$covout"; bad "feature-coverage (dead tag — see above)"; fi
 
+# 1c2. Membership-lane gate self-test (delta-review T2, 2026-08-05): the
+# lane's shell gates (manifest lane validation incl. the explicit-width
+# requirement) exercised against the recorded bad-shape fixtures. Pure
+# shell, no build. The go-dependent half (harness param re-validation,
+# frontend guard) runs under --diff below.
+step "membership-lane gate self-test (scripts/test-lane-validation)"
+if laneout="$(./scripts/test-lane-validation 2>&1)"; then
+  echo "$laneout" | tail -1 | sed 's/^/  /'
+  ok "lane-validation fixtures (manifest gates reject bad shapes)"
+else
+  echo "$laneout"
+  bad "lane-validation fixtures (a lane gate went quiet — see above)"
+fi
+
 step "golden-lowering staleness (scripts/check-golden)"
 if ./scripts/check-golden; then
   ok "golden lowering (proof subject = decoded(frontend(source)))"
@@ -364,6 +378,16 @@ if [ "$RUN_DIFF" -eq 1 ]; then
     0|1) ok "differential run completed (exit $drc; failing-set judged by baseline diff)" ;;
     *)   bad "differential run BROKE (exit $drc — not a case failure; see output)" ;;
   esac
+fi
+if [ "$RUN_DIFF" -eq 1 ]; then
+  step "membership-lane gate self-test, go-dependent half (--with-go: F4 param re-validation, F6 frontend guard)"
+  if laneout="$(./scripts/test-lane-validation --with-go 2>&1)"; then
+    echo "$laneout" | grep -E "F4|F6|^test-lane" | sed 's/^/  /'
+    ok "lane-validation fixtures incl. harness half (F4/F6)"
+  else
+    echo "$laneout"
+    bad "lane-validation fixtures, harness half (a lane gate went quiet — see above)"
+  fi
 fi
 # 5n. Negative corpus (structure audit P1-1): 309 compile-rejection guardrails,
 # previously attached to nothing. Fresh run under --diff (cheap: go build per

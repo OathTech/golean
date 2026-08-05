@@ -1,0 +1,139 @@
+#!/usr/bin/env bash
+# Negative tests for the membership-lane shell gates (delta-review T2,
+# 2026-08-05). Repo-wide, shell gates are checked by pre-merge audit, not a
+# tamper-test framework — this script only captures the bad-shape fixtures
+# that were hand-run when the gates landed, so they stay runnable instead of
+# living in commit messages.
+#
+#   Part A (always; pure shell, no build, no go): scripts/coverage-manifest
+#   must REJECT each bad lane row shape (audit F2a + the R2 lane rules) and
+#   ACCEPT the good ones.
+#   Part B (--with-go only; needs go + the built golean binary, so ci runs
+#   it under --diff): scripts/diff-coverage's IN-HARNESS lane checks — the
+#   param re-validation (F4: a samples=0 row that somehow bypasses the
+#   manifest must fail loud, never a zero-oracle pass) and the non-native
+#   frontend guard (F6: membership under GOLEAN_FRONTEND != native fails
+#   closed at frontend-export, no native frontend shelled).
+#
+# Exit 0 = all fixtures behave; nonzero = a gate went quiet.
+set -uo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+cd "$ROOT"
+
+WITH_GO=0
+[ "${1:-}" = "--with-go" ] && WITH_GO=1
+
+TMP="$(mktemp -d "${TMPDIR:-/tmp}/golean-lane-validation.XXXXXX")"
+trap 'rm -rf "$TMP"' EXIT
+fail=0
+
+CASE_DIR="$TMP/exec/det/case"
+mkdir -p "$CASE_DIR"
+# Any real corpus source with a known subject works as the fixture body.
+cp Corpus/coverage/exec/maps/range-first-key/main.go "$CASE_DIR/main.go"
+
+HDR='# id\tsubject\targs\texpected_status\texpected_reason\tfeatures'
+
+expect_reject() {
+  local name="$1" row="$2" needle="$3" out
+  printf "$HDR\n$row\n" > "$CASE_DIR/cases.tsv"
+  if out="$(scripts/coverage-manifest --exec-root "$TMP/exec" 2>&1 >/dev/null)"; then
+    echo "FAIL: $name: coverage-manifest ACCEPTED a bad lane shape"
+    fail=1
+  elif [[ "$out" != *"$needle"* ]]; then
+    echo "FAIL: $name: rejected, but without the expected message ($needle): $out"
+    fail=1
+  else
+    echo "ok: $name"
+  fi
+}
+
+expect_accept() {
+  local name="$1" row="$2" out
+  printf "$HDR\n$row\n" > "$CASE_DIR/cases.tsv"
+  if out="$(scripts/coverage-manifest --exec-root "$TMP/exec" 2>&1 >/dev/null)"; then
+    echo "ok: $name"
+  else
+    echo "FAIL: $name: coverage-manifest REJECTED a good shape: $out"
+    fail=1
+  fi
+}
+
+# ---- Part A: manifest-level lane validation (the 8 bad shapes hand-run at
+# the lane's landing commit, plus F2a's width requirement).
+expect_reject "membership without why" \
+  '-\trangeFirstKey\t-\tok\t-\tmaps,nondet\tmembership\t-\t-' \
+  "requires a why"
+expect_reject "nondet tag on a strict row" \
+  '-\trangeFirstKey\t-\tok\t-\tmaps,nondet' \
+  "must declare lane=membership"
+expect_reject "strict row with why text" \
+  '-\trangeFirstKey\t-\tok\t-\tmaps\tstrict\tsome text\t-' \
+  "must leave why/params as -"
+expect_reject "unknown param key" \
+  '-\trangeFirstKey\t-\tok\t-\tmaps,nondet\tmembership\twhy text\tbogus=3' \
+  "unknown lane param key"
+expect_reject "invalid lane value" \
+  '-\trangeFirstKey\t-\tok\t-\tmaps\tfuzzy\t-\t-' \
+  "invalid lane"
+expect_reject "duplicate param key" \
+  '-\trangeFirstKey\t-\tok\t-\tmaps,nondet\tmembership\twhy text\twidth=16,samples=1,samples=2' \
+  "duplicate lane param key"
+expect_reject "non-positive param value" \
+  '-\trangeFirstKey\t-\tok\t-\tmaps,nondet\tmembership\twhy text\twidth=0' \
+  "must be a positive integer"
+expect_reject "membership without the nondet tag" \
+  '-\trangeFirstKey\t-\tok\t-\tmaps\tmembership\twhy text\twidth=16' \
+  "requires the nondet feature tag"
+expect_reject "membership without explicit width (F2a)" \
+  '-\trangeFirstKey\t-\tok\t-\tmaps,nondet\tmembership\twhy text\tsamples=5' \
+  "explicit width"
+expect_accept "bare 6-column strict row" \
+  '-\trangeFirstKey\t-\tok\t-\tmaps'
+expect_accept "explicit strict row" \
+  '-\trangeFirstKey\t-\tok\t-\tmaps\tstrict\t-\t-'
+expect_accept "well-formed membership row" \
+  '-\trangeFirstKey\t-\tok\t-\tmaps,nondet\tmembership\twhy text\twidth=16'
+
+# ---- Part B: diff-coverage's in-harness lane checks (need go: the
+# dispatch sits after the shared go-harness generation).
+if [ "$WITH_GO" -eq 1 ]; then
+  if ! command -v go >/dev/null 2>&1; then
+    echo "FAIL: --with-go requested but go is not on PATH"
+    fail=1
+  else
+    ART="$TMP/artifacts"
+    GO_DIR="Corpus/coverage/exec/maps/range-first-key"
+
+    # F4: a samples=0 manifest row (hand-built — the manifest generator
+    # rejects it, so this exercises the harness's own re-validation).
+    printf 'lane-f4\t%s\trangeFirstKey\t-\tok\tmaps,range,keys,loops,nondet\t-\tmembership\twhy\twidth=16,samples=0\n' "$GO_DIR" > "$TMP/manifest-f4.tsv"
+    GOLEAN_COVERAGE_ARTIFACTS="$ART" scripts/diff-coverage "$TMP/manifest-f4.tsv" >/dev/null 2>&1
+    row="$(tail -1 "$ART/latest.tsv" 2>/dev/null || true)"
+    if [[ "$row" == FAIL*positive\ integer* ]]; then
+      echo "ok: harness re-validation rejects samples=0 (F4)"
+    else
+      echo "FAIL: harness re-validation did not reject samples=0 (F4); row: ${row:-<none>}"
+      fail=1
+    fi
+
+    # F6: membership under a non-native frontend fails closed at
+    # frontend-export (before any native-frontend shell-out).
+    printf 'lane-f6\t%s\trangeFirstKey\t-\tok\tmaps,range,keys,loops,nondet\t-\tmembership\twhy\twidth=16\n' "$GO_DIR" > "$TMP/manifest-f6.tsv"
+    GOLEAN_FRONTEND=other GOLEAN_COVERAGE_ARTIFACTS="$ART" scripts/diff-coverage "$TMP/manifest-f6.tsv" >/dev/null 2>&1
+    row="$(tail -1 "$ART/latest.tsv" 2>/dev/null || true)"
+    if [[ "$row" == FAIL*frontend-export* ]]; then
+      echo "ok: membership under non-native frontend fails closed (F6)"
+    else
+      echo "FAIL: membership under non-native frontend did not fail at frontend-export (F6); row: ${row:-<none>}"
+      fail=1
+    fi
+  fi
+fi
+
+if [ "$fail" -ne 0 ]; then
+  echo "test-lane-validation: FAIL"
+  exit 1
+fi
+echo "test-lane-validation: ok"
