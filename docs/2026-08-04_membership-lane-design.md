@@ -69,6 +69,49 @@ reason; BUG-005's three order-observing differential reds stay OUT until
 their live-iteration fix (recorded coupling) — the lane must not be used
 to launder a known divergence.
 
+## Envelope-width review — recorded at landing (2026-08-05)
+
+The lane run on its two cases (full run 918: 712/206; both PASS with
+stage `membership`; go1.26.5 samples). The width signal, per the pass
+criterion above (metadata, never a pass criterion):
+
+- `slices/full-slice-cap-zero` (version-tracking mode, `samples=1`):
+  |enumerated| = 8 — observations 14912..21912, i.e. caps 4..11 =
+  `appendGrowthCap` + extra ∈ [0,8). Go exhibits exactly 1 member
+  (14912, cap 4 = extra 0); 7 members unexhibited. Enumerator: 17 runs
+  + 16 alias probes, 16 leaves at depth 1. REVIEW VERDICT: not a flag —
+  deterministic-inside-a-window BY DESIGN. The append envelope is the
+  doctrine's declared pragmatic subset of the spec's "any sufficient
+  capacity" latitude; a single Go version necessarily sits at one point
+  of it, and the `samples=1` mode turns a toolchain whose policy leaves
+  the window into a red (the deliberate-widening alarm).
+- `maps/range-first-key` (sampling mode, `samples=5` default):
+  |enumerated| = 3 — exactly {1,2,3}, every key of the 3-key map, so the
+  envelope is the full permutation set's first-key projection (the map
+  envelope statement: all permutations of the snapshot ⊇ any Go).
+  Go exhibited 2 of 3 in the recorded run's samples (1 and 3;
+  unexhibited {2}). Enumerator: 4369 runs + 12288 alias probes, 4096
+  leaves at depth 3 (the size-1 tail site consumes a pick too), 0.3 s.
+  REVIEW VERDICT: not a flag — per-run randomization re-explores, the
+  unexhibited member is sampling noise, not an unreachable corner (other
+  runs during development exhibited it).
+
+No gratuitous width found: the only never-touched corners are the append
+window's 7 upper slots, which the nondeterminism doctrine's envelope
+statement already argues against the spec text and the version-tracking
+mode polices.
+
+Enumerator cross-evidence from landing, kept for the record: on
+`maps/delete-during-range` (a BUG-005 strict differential red, NOT in
+the lane) the enumerator collapses 4096 leaves to the SINGLETON {30} —
+the machine's wrong answer — while Go observes 10: had that case been
+laundered into the lane it would FAIL membership, and as a singleton it
+would fail lane classification anyway. Both fail-closed directions were
+also exercised live: width below a site bound trips the alias guard
+(probe observation outside the set), depth/cap/work overruns fail loud,
+and a deliberately misclassified order-independent case fails as a
+singleton ("belongs in the strict lane").
+
 ## Out of scope (recorded)
 
 Distributional claims (never); scheduling membership (the concurrency
