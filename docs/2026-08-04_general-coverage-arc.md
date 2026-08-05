@@ -78,10 +78,16 @@ observation — the membership-lane motivator).
    `init()` functions (the 6 `lean-observation` reds). Small,
    self-contained.
 6. **Generics.** The largest: design note comparing monomorphization at
-   the frontend (Goose-style, keeps GoCore generic-free) vs semantic
-   dictionaries; expected outcome is frontend monomorphization with
-   GoCore untouched — which keeps the semantic core small and the proof
-   surface stable. 46 cases + the 4 generic bools.
+   the frontend (keeps GoCore generic-free) vs semantic dictionaries;
+   expected outcome is frontend monomorphization with GoCore untouched —
+   which keeps the semantic core small and the proof surface stable.
+   46 cases + the 4 generic bools. (Decided 2026-08-05, see
+   `docs/2026-08-05_generics-design.md`. Correction to this entry's
+   original wording: "Goose-style" was inaccurate — present-day Goose
+   translates generics POLYMORPHICALLY, so monomorphization is a
+   deliberate divergence from Goose, recorded in the note's §6. The
+   note also corrects the accounting: 75 generics-blocked reds, of
+   which 57 flip on generics alone.)
 
 Channels/goroutines remain their own arc (the sem-adequacy arc's
 concurrency posture: Choices as scheduler, fork/join statements,
