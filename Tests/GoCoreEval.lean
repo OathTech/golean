@@ -1,4 +1,5 @@
 import GoLean.GoCore
+import GoLean.CLI
 
 namespace Tests.GoCoreEval
 
@@ -821,6 +822,137 @@ def corePanicAbortFunction : GoCore.Func := {
     .returnStmt]
 }
 
+/-! ## Membership-lane enumerator pins (audit response, 2026-08-05)
+
+F3: `appendGrowthCap` value pins. Before the membership lane, a
+machine-side growth-formula regression flipped `slices/full-slice-cap-zero`
+nondet→differential in the baseline; under the lane, Go staying inside the
+window keeps the case PASS, so the formula needs its own machine-side pin.
+
+F1: the status-discipline guardrail — a shape that appends into a
+zero-cap window and panics on one specific capacity (`cap == 7`, i.e.
+spill extra 3): the machine panics under streams Go can never realize,
+and an `--expect-status ok` enumeration must FAIL loud, never bury the
+panic member in the set.
+
+F5: driver-agreement pins — `CLI.enumSetup`/`CLI.enumRun` COPY
+`runFunctionWithContextM`/`runConfig` (GoCore stays bit-identical, so no
+shared helper); these tests pin the copies against the originals: the
+single-run driver's observation (`observationOfRun ∘ runNamedFunctionM`,
+the exact engine behind `native-json-run`) must be a member of the
+enumerated set, per consumption-site class (append spill; map-range
+pick-next, including the panic-observation path). The go-side half of
+this pin is the harness's per-case coupling check in
+`scripts/diff-coverage`. -/
+
+private def coreEnumCapPanicFunction : GoCore.Func := {
+  id := ⟨"enum_cap_panic_F"⟩,
+  args := #[],
+  results := #[coreParam "z"],
+  body := .block
+    #[
+      { id := "s", typ := .slice .int },
+      { id := "e", typ := .slice .int }
+    ]
+    #[
+      .makeSlice (.var "s") .int (.intLit 0) (some (.intLit 0)),
+      .makeSlice (.var "e") .int (.intLit 1) none,
+      .appendSlice (.var "s") .int (.var "s") (.var "e"),
+      .ifThenElse (.eqCmp .int (.capacity (.var "s")) (.intLit 7))
+        (.panicStmt (.toInterface (.interface ⟨"empty_interface"⟩) (.int .int) (.intLit 7 .int)))
+        (.seqn #[]),
+      .assign (.var "z") (.capacity (.var "s"))
+    ]
+}
+
+private def coreEnumFirstKeyFunction : GoCore.Func := {
+  id := ⟨"enum_first_key_F"⟩,
+  args := #[],
+  results := #[coreParam "z"],
+  body := .block
+    #[
+      { id := "m", typ := .map .int .int },
+      { id := "first", typ := .int }
+    ]
+    #[
+      .makeMap (.var "m") .int .int none,
+      .mapAssign (.var "m") (.intLit 1) (.intLit 10) .int .int,
+      .mapAssign (.var "m") (.intLit 2) (.intLit 20) .int .int,
+      .mapAssign (.var "m") (.intLit 3) (.intLit 30) .int .int,
+      .assign (.var "first") (.intLit (-1)),
+      .mapRange (some "k") none (.var "m") .int .int
+        (.ifThenElse (.lessCmp (.var "first") (.intLit 0))
+          (.assign (.var "first") (.var "k"))
+          (.seqn #[])),
+      .assign (.var "z") (.var "first")
+    ]
+}
+
+private def enumCapPanicProgram : GoCore.Program := { funcs := #[coreEnumCapPanicFunction] }
+private def enumFirstKeyProgram : GoCore.Program := { funcs := #[coreEnumFirstKeyFunction] }
+
+private def enumerate (program : GoCore.Program) (name : String)
+    (expectStatus : Option String) : Except String CLI.EnumOutcome :=
+  match CLI.enumSetup program name #[] with
+  | .error err => .error s!"setup failed: {repr err}"
+  | .ok (σ₀, c₀, resultLocs) =>
+      CLI.exploreLoop resultLocs 1000000 σ₀ c₀ 16 8 64 expectStatus 100000 [#[]] {}
+
+private def expectNatEq (name : String) (actual expected : Nat) : IO Bool := do
+  if actual == expected then
+    IO.println s!"ok: {name}"
+    return true
+  else
+    IO.eprintln s!"FAIL: {name}: expected {expected}, got {actual}"
+    return false
+
+private def expectEnumFailure (name : String) (result : Except String CLI.EnumOutcome)
+    (needle : String) : IO Bool := do
+  match result with
+  | .error msg =>
+      if (msg.splitOn needle).length > 1 then
+        IO.println s!"ok: {name}"
+        return true
+      else
+        IO.eprintln s!"FAIL: {name}: enumeration failed but without {repr needle}: {msg}"
+        return false
+  | .ok out =>
+      IO.eprintln s!"FAIL: {name}: expected loud enumeration failure, got {out.observations.size} member(s)"
+      return false
+
+private def expectEnumMembers (name : String) (result : Except String CLI.EnumOutcome)
+    (expected : Nat) : IO Bool := do
+  match result with
+  | .error msg =>
+      IO.eprintln s!"FAIL: {name}: enumeration failed: {msg}"
+      return false
+  | .ok out =>
+      if out.observations.size == expected then
+        IO.println s!"ok: {name}"
+        return true
+      else
+        IO.eprintln s!"FAIL: {name}: expected {expected} member(s), got {out.observations.size}"
+        return false
+
+/-- The F5 pin proper: for each stream, the single-run driver's canonical
+observation must be a member of the enumerated set. -/
+private def expectDriverAgreement (name : String) (program : GoCore.Program)
+    (fname : String) (expectStatus : Option String)
+    (streams : List (List Nat)) : IO Bool := do
+  match enumerate program fname expectStatus with
+  | .error msg =>
+      IO.eprintln s!"FAIL: {name}: enumeration failed: {msg}"
+      return false
+  | .ok out =>
+      for s in streams do
+        let obs := CLI.observationOfRun
+          (GoCore.Machine.runNamedFunctionM 1000000 program fname #[] s)
+        if !out.observations.contains obs then
+          IO.eprintln s!"FAIL: {name}: driver observation under stream {s} is not in the enumerated set: {obs.compress}"
+          return false
+      IO.println s!"ok: {name}"
+      return true
+
 def main : IO UInt32 := do
   let mut passed := true
   passed := passed && (← expectIntResult "GoCore add function" (GoCore.Machine.runFunctionM 100000 coreAddFunction #[.int 2, .int 3]) 5)
@@ -892,6 +1024,38 @@ def main : IO UInt32 := do
       #[coreClosureBodyFunction, coreClosureShareFunction] coreClosureShareFunction #[]) "fuel-out")
   passed := passed && (← expectErrorStatus "GoCore zero fuel is fuel-out"
     (GoCore.Machine.runFunctionM 0 corePanicAbortFunction #[]) "fuel-out")
+  -- Membership-lane pins (audit response 2026-08-05; see the section
+  -- comment above the enum shapes).
+  -- F3: appendGrowthCap value pins — the machine side of the cap-zero
+  -- envelope (base of the [0,8) window) plus the formula's other regimes.
+  passed := passed && (← expectNatEq "GoCore appendGrowthCap zero-cap single elem (cap-zero window base)"
+    (GoCore.appendGrowthCap 0 1) 4)
+  passed := passed && (← expectNatEq "GoCore appendGrowthCap zero-cap beyond floor"
+    (GoCore.appendGrowthCap 0 7) 7)
+  passed := passed && (← expectNatEq "GoCore appendGrowthCap small doubling"
+    (GoCore.appendGrowthCap 1 2) 2)
+  passed := passed && (← expectNatEq "GoCore appendGrowthCap doubling regime"
+    (GoCore.appendGrowthCap 4 5) 8)
+  passed := passed && (← expectNatEq "GoCore appendGrowthCap overshoot takes newLen"
+    (GoCore.appendGrowthCap 2 5) 5)
+  passed := passed && (← expectNatEq "GoCore appendGrowthCap large-cap 1.25x regime"
+    (GoCore.appendGrowthCap 256 257) 512)
+  -- F1 guardrail: the stream-panicking shape (panic iff spill capacity
+  -- lands on 7) must FAIL an expect-status=ok enumeration loudly.
+  passed := passed && (← expectEnumFailure "GoCore enumerator rejects stream-dependent panic under expect-status ok"
+    (enumerate enumCapPanicProgram "enum_cap_panic_F" (some "ok")) "status divergence")
+  -- Without a status expectation the same shape enumerates 8 members
+  -- (7 ok capacities + the cap-7 panic observation).
+  passed := passed && (← expectEnumMembers "GoCore enumerator admits the panic member without a status expectation"
+    (enumerate enumCapPanicProgram "enum_cap_panic_F" none) 8)
+  passed := passed && (← expectEnumMembers "GoCore enumerator first-key set is {1,2,3}"
+    (enumerate enumFirstKeyProgram "enum_first_key_F" (some "ok")) 3)
+  -- F5: driver-agreement pins, per consumption-site class (incl. the
+  -- panic-observation path via stream [3] on the append shape).
+  passed := passed && (← expectDriverAgreement "GoCore enumerator agrees with the single-run driver (append spill incl. panic path)"
+    enumCapPanicProgram "enum_cap_panic_F" none [[], [1], [3], [7], [12, 9]])
+  passed := passed && (← expectDriverAgreement "GoCore enumerator agrees with the single-run driver (map-range pick-next)"
+    enumFirstKeyProgram "enum_first_key_F" (some "ok") [[], [1], [2], [5, 3, 1], [9, 8, 7, 6]])
   if passed then
     return 0
   else
