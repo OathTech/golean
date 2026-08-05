@@ -600,11 +600,19 @@ def dynamicIsImportedMarker (state : ExecState) (dynTy : Ty) : Bool :=
       | _ => false
   | _ => false
 
-/-- Go exportedness: the first character is upper case. -/
+/-- Go exportedness, decided CONSTRUCTIVELY at the byte level: the first
+UTF-8 byte is an ASCII upper-case letter. Core's char-level String APIs
+(`toList`/`front`/`get`) depend on `Classical.choice` through their UTF-8
+decoding proofs, and the machine-correspondence theorems are pinned
+constructive (proofs/Audit.lean) — the same constraint the abort renderer
+records at `asciiString?`. Recorded narrowing: a NON-ASCII exported
+method name (Unicode upper-case first rune) answers `false` here, which
+makes the imported-marker satisfaction guard REFUSE rather than answer —
+fail-closed, never wrong. -/
 def isExportedName (s : String) : Bool :=
-  match s.data with
-  | c :: _ => c.isUpper
-  | [] => false
+  match s.toUTF8[0]? with
+  | some b => 65 ≤ b && b ≤ 90
+  | none => false
 
 /-- The FIRST requirement of `interfaceName` that `dynTy` does not meet, in
 the interface's own (name-sorted) method order — `none` means it satisfies
