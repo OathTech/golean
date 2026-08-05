@@ -1,9 +1,12 @@
 package main
 
 // Promotion through an embedded POINTER field: a non-nil path dispatches
-// (call), a nil path panics at the receiver adjustment's implicit deref —
-// and that panic happens when the method OPERAND is evaluated, BEFORE the
-// call's arguments (before-args pins the evaluation order: calls stays 0).
+// (call), a nil path panics at the receiver adjustment's implicit deref.
+// before-args pins the panic timing RELATIVE TO ARGUMENT EFFECTS: gc runs
+// an argument-position call before the receiver's auto-deref panic
+// (calls becomes 1, r = 11), and the lowering agrees because ANF hoists
+// argument calls ahead of the call statement. (Comment corrected per
+// audit F3, 2026-08-05 — an earlier version claimed calls stays 0.)
 
 type nilRecvInner struct {
 	n int

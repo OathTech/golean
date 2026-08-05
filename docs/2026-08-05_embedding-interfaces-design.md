@@ -102,12 +102,18 @@ Mechanics:
    `field-get`; final receiver: value, deref, or `field-addr` per the
    receiver kind vs reaching-field kind), and the call targets the
    ORIGINAL method's FuncId. Call-site adjustment, not a wrapper call,
-   because it is the faithful evaluation order: Go evaluates the
-   receiver (function operand) before the arguments, so a nil embedded
-   pointer must panic BEFORE argument effects; and a method VALUE
-   captures the ADJUSTED receiver at value-creation time (a wrapper
-   would re-walk the path at call time — observably different when an
-   embedded pointer field is reassigned between the two).
+   because a method VALUE captures the ADJUSTED receiver at
+   value-creation time (a wrapper would re-walk the path at call time —
+   observably different when an embedded pointer field is reassigned
+   between the two; `promoted-method-value/{snapshot,live}`). Panic
+   timing vs argument effects (corrected per audit F3, 2026-08-05: an
+   earlier draft claimed gc panics the receiver's auto-deref BEFORE
+   argument effects — FALSE; probed, gc runs an argument-position call
+   first, `calls = 1`): the lowering agrees with gc because ANF hoists
+   argument calls ahead of the whole call statement, so they run before
+   the receiver walk's deref either way —
+   `promoted-nil-embedded-pointer/before-args` pins the agreement, not a
+   receiver-first order.
 3. **Wrappers for dynamic dispatch**: for every named struct type
    declared in the package (package-level and function-local) the
    frontend computes `types.NewMethodSet(T)` and `NewMethodSet(*T)`;
@@ -248,9 +254,11 @@ Taken (each with the failing case(s) as guardrails, plus edges):
 - **Interface method values** (`x.M` with `x` an interface):
   `func-value { func: "Iface.M", captured: [x] }` — the dispatch anchor
   is already a real `Func`, and `enterFrame`/`dynamicDispatch?` resolve
-  through it on the call, so a nil interface panics at CALL time (Go's
-  behavior — pinned with a new edge case) and the box is captured at
-  value time (`defer/defer-interface-value-eval`'s pin).
+  through it on the call; the box is captured at value time
+  (`defer/defer-interface-value-eval`'s pin). A NIL interface panics at
+  CREATION — the itab load — via a hoisted nil check (corrected per the
+  build log and audit F6: this bullet originally claimed panic at CALL
+  time, which the oracle refuted on `interface-method-value-nil`).
 - **Method expressions** (`I.M`, `T.M` in expression position) —
   `interfaces/interface-method-expression`: `T.M` is a func value taking
   the receiver first, which is EXACTLY the GoCore method function;
@@ -366,11 +374,10 @@ proofs build in the gate).
   `fun_cases` branch); `stepFn_sound` / `step_complete` /
   `step_complete_any_wf` / `stepFn_oblivious` extended,
   `step_preserves_wf` and `step_det` (proofs/, bit-identical) absorbed
-  the new rules unchanged. **Recorded narrowing:** frame entry for a
-  DEFERRED call (the drain rules) keeps the thrown behavior — a panic
-  there is a panic during unwinding/drain, whose Go semantics
-  (chain-joining order) deserves its own pinned design pass before
-  modeling.
+  the new rules unchanged. A narrowing was recorded here for
+  DEFERRED-call frame entry — **retired by the audit response below
+  (F1+F5): its justification (chain-joining semantics) only ever applied
+  to the panic-path drain, and all three drain sites are now modeled.**
 - **Stage 5 bonus:** the method-expression lowering turned three
   long-red ids green that were not in this slice's target list
   (`methods/method-expression`, `methods/pointer-method-expression`,
@@ -382,3 +389,59 @@ proofs build in the gate).
   definite answer against a marker type.
 - **Stage 7.** As designed; `structs/tag-pointer-conversion` stays red
   with the aliasing reason recorded in the convert arm's comment.
+
+## Audit response, 2026-08-05 (independent audit of the branch; 8 confirmed findings)
+
+- **F1+F5 (MAJOR): deferred-call frame-entry panics were unrecoverable.**
+  The stage-5 fix covered the five ordinary call-entry sites only; the
+  three drain sites still threw raw errors — status `panic` on programs
+  Go completes, a shape the stage-5 method-value lowering itself
+  unlocked. The recorded narrowing's justification applied only to the
+  panic-path drain. Fixed in lockstep at all three sites: normal drains
+  mirror the `.nil`-callee rules (the entry panic is the deferred
+  INVOCATION's panic — unwinds at the draining frame with its remaining
+  defers); the panic-path drain JOINS the chain newest-last (mirror of
+  `panicFrameDeferNil`; Go appends the new panic and `recover` answers
+  the newest entry, which `chainNewestRecovered` implements). Pins
+  (fresh canonical Go, red first):
+  `defer/deferred-dispatch-entry-panic/{return-drain, fallthrough-drain,
+  during-panic}` — the last discriminates newest-vs-original by
+  asserting the recovered value.
+- **F2 (MAJOR): wrapper synthesis refused a legal method-set shape and
+  killed whole exports.** A pointer-receiver method promoted through an
+  embedded POINTER hop is in the VALUE method set (spec: embedding `*T`
+  contributes both receiver kinds); the wrapper path lacked a
+  value-rooted walker and refused, failing the entire package on mere
+  declaration (raft-relevant shape). Fixed: `valueRootedFieldAddr`
+  (value-walk to the pointer hop, address-walk beyond); the in-code
+  method-set claim corrected. Pins:
+  `embedding/value-embedded-pointer-promotion/{static-call,
+  value-box-satisfies, dynamic-dispatch}`.
+- **F3 (MINOR): D1's evaluation-order rationale was false for gc** — an
+  argument-position call runs BEFORE the receiver's auto-deref panic
+  (probed: `calls = 1`); the lowering agrees with gc through ANF
+  hoisting, not receiver-first ordering. D1 item 2 and the
+  `promoted-nil-embedded-pointer` case comment corrected; the call-site
+  adjustment decision stands on the method-value capture-moment
+  argument.
+- **F4 (NOTE): the equality-site empty-struct escape fired on the
+  CONTEXT key too**, letting two DIFFERENT defined empty types compare
+  equal at a `struct{}` context (hand-written-terms-only reachability).
+  Tightened: the operand's OWN tag must be canonical, or both operands
+  must share one defined type at a canonical context.
+- **F6 (NOTE):** the emit.go interface-method-value comment and the D6
+  bullet still asserted the falsified panic-at-call claim; both
+  corrected (the build log had recorded the discovery, the shipped
+  comments had not).
+- **F7 (NOTE):** a present-but-malformed `runtimeError` wire flag fell
+  open to a user-string panic payload; the decoder now decodes a present
+  key strictly.
+- **F8 (NOTE, record correction):** commit 5c2f725's baseline header
+  says "the ten stage-0 guardrail pins" where eight are enumerated
+  (promoted-ambiguous-not-satisfied, promoted-method-value ×2,
+  promoted-nil-embedded-pointer ×3,
+  promoted-pointer-receiver-method-set ×2); the total of seventeen
+  FAIL→PASS is correct (9 BUG-007-list ids + 8 pins). History is not
+  rewritten; this line is the correction of record.
+- Refuted by verification, no action: the D2 contract-marking,
+  anonymous-interface naming, and stage-0 re-pin complaints.

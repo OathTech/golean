@@ -3477,10 +3477,11 @@ func (e *emitter) emitSelector(sel *ast.SelectorExpr) (any, error) {
 			recvType := fn.Type().(*types.Signature).Recv().Type()
 			if recvIface, isIface := recvType.Underlying().(*types.Interface); isIface {
 				// Interface METHOD VALUE (design note D6): capture the BOX
-				// now; the call goes through the dispatch anchor, so a nil
-				// box panics at CALL time, not at value creation
-				// (interfaces/interface-method-value-nil), and the box is
-				// fixed at value time (defer/defer-interface-value-eval).
+				// now — fixed at value time (defer/defer-interface-value-eval)
+				// — and dispatch through the anchor at the call. A NIL box
+				// panics AT CREATION (the itab load; the hoisted check
+				// below — interfaces/interface-method-value-nil pinned the
+				// first cut's wrong panic-at-call assumption, audit F6).
 				// Promotion through an embedded interface field walks to
 				// the field value first.
 				hops := seln.Index()[:len(seln.Index())-1]
