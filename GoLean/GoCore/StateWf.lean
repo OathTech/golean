@@ -3661,8 +3661,13 @@ theorem applyStmtOp_wf {σ : ExecState} {ch : Choices} {op : StmtOp} {nt : Nat}
           omega
         have hbb := buildAppendBackingValue_locSup hbacking
         cases halloc : σ.alloc backing
-            (some (Ty.array (appendGrowthCap slice.cap
-              (slice.len + elemValues.size) + (ch.consume 8).fst) elem)) with
+            (some (Ty.array (slice.len + elemValues.size +
+              ((appendGrowthCap slice.cap (slice.len + elemValues.size)
+                  - (slice.len + elemValues.size)
+                  + (ch.consume (appendSpillWidth slice.cap
+                      (slice.len + elemValues.size))).fst)
+                % appendSpillWidth slice.cap (slice.len + elemValues.size)))
+              elem)) with
         | mk base σa =>
           rw [halloc] at h
           dsimp only at h

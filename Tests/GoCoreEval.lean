@@ -959,7 +959,11 @@ private def enumerate (program : GoCore.Program) (name : String)
   match CLI.enumSetup program name #[] with
   | .error err => .error s!"setup failed: {repr err}"
   | .ok ep =>
-      CLI.exploreLoop ep 1000000 16 8 64 expectStatus 100000 [#[]] {}
+      -- Width 32: the append-spill site's bound at the cap-panic shape
+      -- (oldCap 0, newLen 1) is appendSpillWidth 0 1 = 32 since the F2
+      -- envelope widening (arc-final audit, 2026-08-06); map shapes
+      -- need at most 3.
+      CLI.exploreLoop ep 1000000 32 8 64 expectStatus 100000 [#[]] {}
 
 private def expectNatEq (name : String) (actual expected : Nat) : IO Bool := do
   if actual == expected then
@@ -1371,14 +1375,18 @@ def main : IO UInt32 := do
   -- lands on 7) must FAIL an expect-status=ok enumeration loudly.
   passed := passed && (← expectEnumFailure "GoCore enumerator rejects stream-dependent panic under expect-status ok"
     (enumerate enumCapPanicProgram "enum_cap_panic_F" (some "ok")) "status divergence")
-  -- Without a status expectation the same shape enumerates 8 members
-  -- (7 ok capacities + the cap-7 panic observation).
+  -- Without a status expectation the same shape enumerates 32 members:
+  -- the widened envelope [newLen, max(32, 2*growth)] = [1, 32] gives 31
+  -- ok capacities + the cap-7 panic observation (arc-final audit F2 —
+  -- was 8 under the old growth+[0,8) window).
   passed := passed && (← expectEnumMembers "GoCore enumerator admits the panic member without a status expectation"
-    (enumerate enumCapPanicProgram "enum_cap_panic_F" none) 8)
+    (enumerate enumCapPanicProgram "enum_cap_panic_F" none) 32)
   passed := passed && (← expectEnumMembers "GoCore enumerator first-key set is {1,2,3}"
     (enumerate enumFirstKeyProgram "enum_first_key_F" (some "ok")) 3)
   -- F5: driver-agreement pins, per consumption-site class (incl. the
-  -- panic-observation path via stream [3] on the append shape).
+  -- panic-observation path via stream [3] on the append shape: the
+  -- envelope offset keeps extra 3 landing on cap 7 — newLen 1 +
+  -- ((growth 4 - 1 + 3) % 32) = 7).
   passed := passed && (← expectDriverAgreement "GoCore enumerator agrees with the single-run driver (append spill incl. panic path)"
     enumCapPanicProgram "enum_cap_panic_F" none [[], [1], [3], [7], [12, 9]])
   passed := passed && (← expectDriverAgreement "GoCore enumerator agrees with the single-run driver (map-range pick-next)"

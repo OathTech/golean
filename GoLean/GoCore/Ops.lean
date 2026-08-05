@@ -1705,6 +1705,11 @@ def mapLookupValue (state : ExecState) (map : MapValue) (key : GoValue)
           | none => stuck s!"missing map entry at index {i}"
       | none => return (← defaultValue state valueTy, false)
 
+/-- gc's amortized growth POLICY (runtime/slice.go `nextslicecap`,
+element-size-independent part): the CENTER of the spill envelope and the
+default-stream (strict-lane) point. gc's REALIZED capacity additionally
+depends on element size (size-class rounding, stack buffering) — the
+envelope below, not this formula, is the admitted set. -/
 def appendGrowthCap (oldCap newLen : Nat) : Nat :=
   if newLen <= oldCap then
     oldCap
@@ -1721,6 +1726,37 @@ def appendGrowthCap (oldCap newLen : Nat) : Nat :=
       else
         loop (cap + (cap + 3 * 256) / 4)
     loop oldCap
+
+/-- ENVELOPE upper end for the append-spill capacity choice (arc-final
+audit F2 / BUG-021, 2026-08-06; spec §Appending: append "allocates a
+new, sufficiently large underlying array" — ANY capacity ≥ newLen is
+conforming, so the envelope is a pragmatic SUBSET of that latitude).
+The admitted set is `[newLen, appendSpillUpper]`:
+- LOWER end `newLen` — the spec floor, and gc realizes it (probe
+  go1.26.5: nil []string + 2 elems → cap 2, below the growth formula's
+  max(4,newLen); nil []struct{3 ints} + 1 → cap 1).
+- UPPER end `max 32 (2 * growth)` — contains BOTH of gc's
+  element-size-dependent mechanisms, which the element-size-free
+  formula cannot see:
+  (a) the compiler's 32-BYTE STACK BUFFER for small non-escaping
+      appends: at most 32 bytes / elemsize ≤ 32 elements (probe: []byte
+      cap 3 → len 4 realizes cap 32; []bool nil + 1 → 32);
+  (b) SIZE-CLASS ROUNDING (runtime `roundupsize`): for allocations
+      ≤ 32 bytes the realized capacity is ≤ 32 bytes / elemsize ≤ 32
+      elements, covered by the floor; above 32 bytes the worst class
+      step ratio is 48/33 < 1.5 < 2, so realized ≤ 2·growth (probes:
+      []int cap 100 → len 101 realizes 224 ≤ 400; []int cap 130 → 131
+      realizes 288 ≤ 520; []string cap 256 → 257 realizes 591 ≤ 1024).
+Version-tracked by the membership pins slices/append-spill-* (the three
+escaping regimes) and slices/full-slice-cap-zero (the formula point).
+Widen deliberately if a toolchain leaves this window; never narrow to
+one compiler mode. -/
+def appendSpillUpper (oldCap newLen : Nat) : Nat :=
+  max 32 (2 * appendGrowthCap oldCap newLen)
+
+/-- The append-spill site's stream bound: |[newLen, upper]|. -/
+def appendSpillWidth (oldCap newLen : Nat) : Nat :=
+  appendSpillUpper oldCap newLen - newLen + 1
 
 def buildAppendBackingValue (state : ExecState) (elem : Ty)
     (oldValues elemValues : Array GoValue) (newCap : Nat) : Except GoError GoValue := do

@@ -462,8 +462,10 @@ structure EnumArgs where
   args : Array Int := #[]
   fuel : Nat := 10000000
   /-- `B`: the pick alphabet is `[0, B)` at every consumption site. Must be
-  `≥` every site's bound in the case (per-case metadata; default 16 covers
-  append's 8 and small maps). -/
+  `≥` every site's bound in the case (per-case metadata; default 16
+  covers small maps, but NOT the append spill since the F2 envelope
+  widening — its bound is `appendSpillWidth oldCap newLen`, at least 32;
+  a membership case observing a spill must assert its width). -/
   maxWidth : Nat := 16
   /-- `D`: maximum consumption sites per run. A run consuming more fails
   loud — it is never silently truncated to a prefix. -/

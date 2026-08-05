@@ -1,14 +1,15 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-06  commit: general-coverage (arc-final audit response, F10 conversion arms)
+# recorded: 2026-08-06  commit: general-coverage (arc-final audit response, F2 append envelope widening)
 #   frontend: native  oracle: go run (strict lane) / go-run membership in the
 #   machine-enumerated observation set (membership lane; go1.26.5 samples)
-# manifest_cases: 1025  pass: 890  fail: 135
-# Re-pin reason: BUG-020 fixed (identical-underlying pass-through arms
-#   for pointer/slice/map/func conversion targets) — exactly its seven
-#   pinned ids flip FAIL -> PASS. Zero PASS->FAIL, zero other stage
-#   moves; structs/tag-pointer-conversion stays red at the same stage
-#   (now the downstream struct-tag check), rune/string conversion reds
-#   unchanged.
+# manifest_cases: 1025  pass: 893  fail: 132
+# Re-pin reason: BUG-021 fixed (append-spill envelope widened to
+#   [newLen, max(32, 2*growth)]; empty stream keeps the growth point so
+#   the strict lane is unchanged) — exactly the three membership pins
+#   flip FAIL -> PASS with Go's realized points now members
+#   (stack-buffer 32 in [4,32], below-formula 2 in [2,32], size-class
+#   224 in [101,400]). Zero PASS->FAIL, zero other stage moves;
+#   full-slice-cap-zero stays green at width 32.
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
 PASS	arrays/array-copy	-
@@ -882,9 +883,9 @@ PASS	slices/append-nil	-
 PASS	slices/append-overlap	-
 PASS	slices/append-overlap-window	-
 PASS	slices/append-self	-
-FAIL	slices/append-spill-below-formula	membership
-FAIL	slices/append-spill-size-class	membership
-FAIL	slices/append-spill-stack-buffer	membership
+PASS	slices/append-spill-below-formula	membership
+PASS	slices/append-spill-size-class	membership
+PASS	slices/append-spill-stack-buffer	membership
 PASS	slices/array-to-slice-conditional	-
 PASS	slices/copy-min	-
 PASS	slices/copy-nil	-

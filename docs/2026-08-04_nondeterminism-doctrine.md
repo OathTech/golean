@@ -65,17 +65,22 @@ directions are asymmetric:
    divergence BUG-005, deliberately deferred to its live-iteration fix;
    until then the map envelope statement is scoped to mutation-free
    iteration (arc-final audit F14, 2026-08-06); append spill — spec
-   allows any sufficient capacity, envelope = growth formula + [0,8)
-   extra (a PRAGMATIC SUBSET of the spec's latitude: sound for transfer
-   as long as real Go's policy lands inside, which the membership lane
-   version-tracks; widen deliberately if a toolchain leaves the window).
-   CAUTION (arc-final audit F2, 2026-08-06): the append statement is
-   FALSE on go1.26.5 — the oracle toolchain realizes capacities outside
-   the window in both directions (BUG-021, three membership pins red) —
-   and a samples=1 membership case version-tracks its one (elem,
-   oldCap, newLen) triple, not the site's envelope. The deliberate
-   widening is in flight in the same audit response; this caution is
-   replaced by the widened statement in that commit.
+   allows any sufficient capacity ("a new, sufficiently large
+   underlying array"), envelope = [newLen, max(32, 2·growth formula)]
+   (WIDENED deliberately at the arc-final audit, F2/BUG-021 2026-08-06:
+   go1.26.5 — the oracle toolchain itself — realizes capacities outside
+   the old growth+[0,8) window in both directions, because gc's
+   realized capacity is element-size dependent — size-class rounding
+   and the compiler's 32-byte stack buffer — while the formula is not.
+   The containment argument for the widened bound lives on
+   `appendSpillUpper`, GoCore/Ops.lean; the empty stream still resolves
+   to the growth-formula point, so strict-lane behavior is unchanged).
+   Still a PRAGMATIC SUBSET of the spec's latitude, sound for transfer
+   as long as real Go's policy lands inside. Version-tracking is
+   per-point, not per-envelope — a samples=1 membership case tracks its
+   one (elem, oldCap, newLen) triple — so the escaping REGIMES carry
+   their own pins (slices/append-spill-{stack-buffer,below-formula,
+   size-class}) alongside the formula point (full-slice-cap-zero).
    SINGLETON NARROWINGS (added at the arc-final audit, F8/F15
    2026-08-06): a spec-declared or spec-SILENT latitude that the model
    resolves to a single point WITHOUT a Choices site is still an

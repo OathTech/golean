@@ -31,7 +31,19 @@ differential-pinned) `- Cases: <id>, <id>, …` (baseline case ids), then prose.
 
 ## BUG-021 — append-spill capacity envelope is TOO NARROW on the oracle toolchain (gc realizes points outside growth+[0,8))
 
-- Status: open
+- Status: fixed (2026-08-06, arc-final audit response F2 — envelope
+  widened to [newLen, max(32, 2·growth)], the containment argument on
+  `appendSpillUpper` (Ops.lean): the lower end is the spec floor gc
+  realizes, the upper end covers both element-size-dependent gc
+  mechanisms (32-byte stack buffer ≤ 32 elements; size-class step ratio
+  < 1.5 < 2 above 32 bytes). The choice is offset so the empty stream
+  keeps the growth-formula point (strict lane unchanged — zero baseline
+  drift outside the three pins); the site bound consumed from the
+  stream is now the shape-dependent `appendSpillWidth`, absorbed by the
+  shared applyStmtOp (relation and stepFn move in lockstep) and the
+  obliviousness metatheory; enumerator width metadata updated
+  (full-slice-cap-zero width 32, eval pins re-pinned to the 32-member
+  set with the offset-preserved cap-7 panic member).)
 - Pinned-by: differential
 - Cases: slices/append-spill-stack-buffer, slices/append-spill-below-formula, slices/append-spill-size-class
 - Discovered: 2026-08-06 (arc-final audit F2 — probe sweep over element

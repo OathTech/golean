@@ -828,8 +828,18 @@ def applyStmtOp (s : ExecState) (choices : Choices) (op : StmtOp) (nt : Nat)
             return ((← storeLoc current tloc (.slice { slice with len := newLen })), choices)
           else
             let oldValues ← sliceVisibleValues s slice
-            let (extra, choices) := choices.consume 8
-            let newCap := appendGrowthCap slice.cap newLen + extra
+            -- The capacity ENVELOPE is [newLen, appendSpillUpper] (the
+            -- statement and containment argument live on
+            -- `appendSpillUpper`, Ops.lean — arc-final audit F2 /
+            -- BUG-021, replacing growth+[0,8), which go1.26.5 escapes
+            -- in both directions). The choice is offset so the EMPTY
+            -- stream (extra = 0) keeps the growth-formula point — the
+            -- strict lane's deterministic behavior is unchanged — while
+            -- extra ranges bijectively over the whole envelope.
+            let width := appendSpillWidth slice.cap newLen
+            let (extra, choices) := choices.consume width
+            let newCap := newLen +
+              ((appendGrowthCap slice.cap newLen - newLen + extra) % width)
             let backing ← buildAppendBackingValue s elem oldValues elemValues newCap
             let (base, current) := s.alloc backing (some (.array newCap elem))
             return ((← storeLoc current tloc
