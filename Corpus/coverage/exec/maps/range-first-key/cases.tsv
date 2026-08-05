@@ -1,2 +1,2 @@
 # id	subject	args	expected_status	expected_reason	features	lane	why	params
--	rangeFirstKey	-	ok	-	maps,range,keys,loops,nondet	membership	the first key produced by range over a 3-key map observes the map-iteration pick-next choice site; Go randomizes iteration order per run, so repeated samples explore the admitted set {1,2,3}	-
+-	rangeFirstKey	-	ok	-	maps,range,keys,loops,nondet	membership	the first key produced by range over a 3-key map observes the map-iteration pick-next choice site; Go randomizes iteration order per run, so repeated samples explore the admitted set {1,2,3}. Width bound: the pick-next site's bound is the remaining snapshot size, at most 3 (then 2, then 1) — width 16 >= 3	width=16

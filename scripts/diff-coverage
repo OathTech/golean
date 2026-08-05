@@ -276,8 +276,15 @@ run_case_rows() {
   # stream, equality against one go run is the wrong oracle — dispatch to
   # the membership path (enumerated machine set ⊇ every Go sample). The
   # strict path below, INCLUDING its three-stream invariance check, is
-  # untouched.
+  # untouched. Audit F6: the non-native-frontend fail-closed guard applies
+  # to this lane exactly like the strict one, BEFORE the dispatch — the
+  # membership path shells the native frontend and must never do so under
+  # an unsupported frontend.
   if [[ "$lane" == "membership" ]]; then
+    if [[ "$FRONTEND" != "native" ]]; then
+      report_fail "$id" "$features" "frontend-export" "unsupported frontend '$FRONTEND' (only 'native' is supported)"
+      return 0
+    fi
     run_membership_case_rows
     return 0
   fi
@@ -452,14 +459,22 @@ membership_go_observation() {
 # metadata in the PASS detail and under $OUT/membership/<id>/ — never a
 # pass criterion. Runs inside run_case_rows' scope (uses its locals).
 run_membership_case_rows() {
-  # Per-case enumerator/sampler params (validated by coverage-manifest).
-  local width=16 sites=8 obs_cap=64 samples=5 work=200000
+  # Per-case enumerator/sampler params. Validated by coverage-manifest AND
+  # re-validated here (audit F4: a value that reaches this function
+  # malformed — e.g. samples=0 — must fail loud, never degrade to a
+  # zero-oracle pass). Width has NO default (audit F2a: the coverage claim
+  # rests on the author-asserted width, so it is always explicit).
+  local width="" sites=8 obs_cap=64 samples=5 work=200000
   if [[ "$params" != "-" ]]; then
     local kv key value
     IFS=',' read -r -a kvs <<< "$params"
     for kv in "${kvs[@]}"; do
       key="${kv%%=*}"
       value="${kv#*=}"
+      if [[ ! "$value" =~ ^[1-9][0-9]*$ ]]; then
+        report_fail "$id" "$features" "manifest" "lane param $key must be a positive integer: $kv"
+        return 0
+      fi
       case "$key" in
         width) width="$value" ;;
         sites) sites="$value" ;;
@@ -472,6 +487,10 @@ run_membership_case_rows() {
           ;;
       esac
     done
+  fi
+  if [[ -z "$width" ]]; then
+    report_fail "$id" "$features" "manifest" "membership case must declare an explicit width=<B> (author-asserted >= every consumption-site bound)"
+    return 0
   fi
 
   local mem_dir="$OUT/membership/$id"
@@ -488,6 +507,13 @@ run_membership_case_rows() {
     fi
     printf '%s\n' "$sample" >> "$mem_dir/samples.txt"
   done
+  # Audit F4: never pass with zero oracle — however the loop above was
+  # reached, an empty samples file means no Go observation constrains the
+  # machine set, and the case must fail loud, not report a lane PASS.
+  if ! grep -q . "$mem_dir/samples.txt"; then
+    report_fail "$id" "$features" "membership" "no Go samples produced (samples=$samples) — refusing to pass with zero oracle"
+    return 0
+  fi
 
   # Machine side: export the wire and enumerate the observation set.
   local wire_json="$OUT/native/$id/wire.json"
@@ -497,8 +523,7 @@ run_membership_case_rows() {
     report_fail "$id" "$features" "frontend-export" "native frontend: $native_export"
     return 0
   fi
-  local enum_args=(coverage-observations --input "$wire_json" --function "$function_name"
-    --max-width "$width" --max-sites "$sites" --cap "$obs_cap" --work-cap "$work")
+  local int_flags=()
   if [[ "$arg_ints" != "-" ]]; then
     local ints value
     IFS=',' read -r -a ints <<< "$arg_ints"
@@ -507,9 +532,15 @@ run_membership_case_rows() {
         report_fail "$id" "$features" "manifest" "invalid integer argument: $value"
         return 0
       fi
-      enum_args+=(--arg-int "$value")
+      int_flags+=(--arg-int "$value")
     done
   fi
+  # --expect-status (audit F1): a member whose status differs from the
+  # case's expected status is a machine bug, not an envelope point — the
+  # enumerator fails loud on it instead of burying it in the set.
+  local enum_args=(coverage-observations --input "$wire_json" --function "$function_name"
+    --max-width "$width" --max-sites "$sites" --cap "$obs_cap" --work-cap "$work"
+    --expect-status "$expected_status" ${int_flags+"${int_flags[@]}"})
   if ! run_with_timeout "$LEAN_ENUM_TIMEOUT_SECONDS" "$GOLEAN_BIN" "${enum_args[@]}" \
       > "$mem_dir/observations.txt" 2> "$mem_dir/enum-stats.txt"; then
     report_fail "$id" "$features" "membership" "enumerator failed (coverage not certified): $(cat "$mem_dir/enum-stats.txt")"
@@ -522,6 +553,32 @@ run_membership_case_rows() {
     report_fail "$id" "$features" "membership" "enumerated observation set is a singleton ($member_count member) — the case belongs in the strict lane"
     return 0
   fi
+
+  # Driver-coupling pin (audit F5): the enumerator COPIES native-json-run's
+  # driver layer (entry wiring + run loop, see GoLean/CLI.lean). Pin the
+  # copy against the original on every run: the single-run driver's
+  # observation under the default and the three adversarial streams must
+  # be a member of the enumerated set. A miss is copied-driver drift (or a
+  # width the enumeration missed) — fail loud either way.
+  local cs coupling_obs member m_found
+  for cs in "" "9,8,7,6,5,4,3,2,1,0" "1,3,5,7,9,2,4,6,8,0" "5,5,5,5,5,5,5,5"; do
+    local run_args=(native-json-run --input "$wire_json" --function "$function_name" ${int_flags+"${int_flags[@]}"})
+    if [[ -n "$cs" ]]; then
+      run_args+=(--choices "$cs")
+    fi
+    if coupling_obs="$(lean "${run_args[@]}" 2>&1)"; then :; fi
+    m_found=0
+    while IFS= read -r member; do
+      if lean observation-eq --left "$member" --right "$coupling_obs" >/dev/null 2>&1; then
+        m_found=1
+        break
+      fi
+    done < "$mem_dir/observations.txt"
+    if [[ "$m_found" -ne 1 ]]; then
+      report_fail "$id" "$features" "membership" "driver-coupling pin: native-json-run observation under stream [$cs] is NOT in the enumerated set (copied-driver drift, or a behavior the enumeration missed): $coupling_obs"
+      return 0
+    fi
+  done
 
   # Membership check: every Go sample must be a member. Track which members
   # Go exhibited (by member line number) for the width signal.

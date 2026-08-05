@@ -114,13 +114,15 @@ Optional lane columns (membership lane, arc slice 3,
   (`golean coverage-observations`) — instead of equality against one run.
 - `why` is mandatory free text for `membership` (which observable depends
   on which consumption site); it must be `-` for `strict`.
-- `params` is `-` or comma-separated `key=value` overrides:
-  `width` (enumerator pick alphabet `[0,B)`, default 16 — must cover every
-  consumption-site bound in the case), `sites` (max consumption depth,
-  default 8), `cap` (max distinct observations, default 64), `samples`
-  (Go-side sample count, default 5; `samples=1` is the version-tracking
-  mode for features Go decides deterministically per toolchain), `work`
-  (enumerator work cap, default 200000).
+- `params` is comma-separated `key=value` settings: `width` (enumerator
+  pick alphabet `[0,B)`; REQUIRED for membership rows, no silent default —
+  author-asserted to cover every consumption-site bound in the case, with
+  the bound argued in `why`; the enumerator's alias-guard ladder is a
+  heuristic cross-check of the assertion, not a proof), `sites` (max
+  consumption depth, default 8), `cap` (max distinct observations,
+  default 64), `samples` (Go-side sample count, default 5; `samples=1` is
+  the version-tracking mode for features Go decides deterministically per
+  toolchain), `work` (enumerator work cap, default 200000).
 - Fail-closed both ways: `lane=membership` requires the `nondet` feature
   tag and a `why`; a `nondet`-tagged case requires `lane=membership`; a
   membership case whose enumerated set is a singleton fails ("belongs in

@@ -225,8 +225,9 @@ validate_path_id() {
 
 # Membership-lane params (docs/2026-08-04_membership-lane-design.md): "-" or
 # comma-separated key=value overrides of the enumerator/sampler defaults.
-#   width   = B, the pick alphabet [0,B) (default 16; must cover every
-#             consumption-site bound in the case)
+#   width   = B, the pick alphabet [0,B) (REQUIRED for membership rows —
+#             audit F2a, no silent default; author-asserted to cover every
+#             consumption-site bound in the case, argued in why)
 #   sites   = D, max consumption sites per run (default 8)
 #   cap     = N, max distinct observations (default 64)
 #   samples = Go-side go-run sample count (default 5; 1 = version-tracking
@@ -405,6 +406,19 @@ while IFS= read -r cases_file; do
           bad=1
           continue
         fi
+        # Audit F2a: the enumerator's coverage claim is certified only by
+        # the author-asserted width (>= every consumption-site bound in
+        # the case; the alias guard is a heuristic cross-check, not a
+        # proof). No silent default: every membership case declares width
+        # explicitly, and its why must argue the bound.
+        case ",$params," in
+          *,width=*) ;;
+          *)
+            echo "coverage-manifest: $cases_file: lane=membership requires an explicit width=<B> in params (author-asserted >= every consumption-site bound; argue the bound in why)" >&2
+            bad=1
+            continue
+            ;;
+        esac
         ;;
       *)
         echo "coverage-manifest: $cases_file: invalid lane: $lane (use strict or membership)" >&2
