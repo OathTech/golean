@@ -9,6 +9,12 @@ name = "GoLean"
 name = "golean"
 root = "Main"
 
+[[lean_lib]]
+# Generated oracle-vector data modules (tools/floatvectors); a lib so the
+# eval-test exe's import resolves to a buildable target.
+name = "TestsData"
+globs = ["Tests.FloatVectors"]
+
 [[lean_exe]]
 name = "gocore-eval-tests"
 root = "Tests.GoCoreEval"
