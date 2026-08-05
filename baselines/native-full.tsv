@@ -1,16 +1,22 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-05  commit: general-coverage-init (delta-review M1-M2/N3-N4 response)
+# recorded: 2026-08-05  commit: general-coverage-generics (G0 generics guardrails)
 #   frontend: native  oracle: go run (strict lane) / go-run membership in the
 #   machine-enumerated observation set (membership lane; go1.26.5 samples)
-# manifest_cases: 938  pass: 749  fail: 189
-# Re-pin reason: DELIBERATE coverage change — delta-review response
-# (docs/2026-08-05_init-design.md §2/§5): 1 NEW id, zero movement
-# otherwise:
-# - init/quarantined-init-iface: FAIL/frontend-export BY DESIGN — the
-#   transitive init-quarantine refusal through an INTERFACE-DISPATCHED
-#   initializer (M1: dispatch anchors now expand to every same-named
-#   concrete method; the pin is verified discriminating — the pre-M1
-#   checker exported it cleanly).
+# manifest_cases: 950  pass: 750  fail: 200
+# Re-pin reason: DELIBERATE coverage change — generics slice G0 guardrails
+# (docs/2026-08-05_generics-design.md §8, decision §9.7): 12 NEW ids, zero
+# movement otherwise. Eleven classify FAIL/frontend-export (correct
+# fail-closed classification pre-implementation): instantiated-type-assert
+# {ok,comma-ok,panic,name}, structural-transparency, nested-instantiation,
+# derived-instantiation, self-recursive, generic-closure{,/shared-capture},
+# instantiated-map-key. One classifies PASS: unused-generic-helper (a
+# passing subject beside a never-instantiated generic helper — pinned to
+# stay green through the whole generics transition).
+# Standing expected reds (unchanged): generics/type-parameter-channel-ops
+# is double-blocked on the channels arc; floats/generic-type-set (7) and
+# complex/generic-type-set (9) are double-blocked on their domain slices
+# (floats semantics landed — those 7 flip with THIS slice; complex has no
+# domain semantics yet).
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
 PASS	arrays/array-copy	-
@@ -359,6 +365,9 @@ FAIL	generics/comparable-runtime-edge/struct-interface-panic	frontend-export
 FAIL	generics/comparable-runtime-edge/struct-skips-interface-panic	frontend-export
 FAIL	generics/constraint-embedding	frontend-export
 FAIL	generics/defined-slice-type	frontend-export
+FAIL	generics/derived-instantiation	frontend-export
+FAIL	generics/generic-closure	frontend-export
+FAIL	generics/generic-closure/shared-capture	frontend-export
 FAIL	generics/generic-interface-value	frontend-export
 FAIL	generics/generic-map-type	frontend-export
 FAIL	generics/generic-struct	frontend-export
@@ -371,15 +380,23 @@ FAIL	generics/higher-order-inference/return-target	frontend-export
 FAIL	generics/identity	frontend-export
 FAIL	generics/inference	frontend-export
 FAIL	generics/instantiated-function-value	frontend-export
+FAIL	generics/instantiated-map-key	frontend-export
 FAIL	generics/instantiated-method-value	frontend-export
+FAIL	generics/instantiated-type-assert/comma-ok	frontend-export
+FAIL	generics/instantiated-type-assert/name	frontend-export
+FAIL	generics/instantiated-type-assert/ok	frontend-export
+FAIL	generics/instantiated-type-assert/panic	frontend-export
 FAIL	generics/map-slice	frontend-export
 FAIL	generics/method-and-type-set-constraint	frontend-export
 FAIL	generics/method-constraint-call	frontend-export
+FAIL	generics/nested-instantiation	frontend-export
 FAIL	generics/recursive-constraints/argument-method	frontend-export
 FAIL	generics/recursive-constraints/clone	frontend-export
 FAIL	generics/recursive-constraints/comparable	frontend-export
 FAIL	generics/recursive-constraints/pointer-self	frontend-export
 FAIL	generics/recursive-generic-type	frontend-export
+FAIL	generics/self-recursive	frontend-export
+FAIL	generics/structural-transparency	frontend-export
 FAIL	generics/type-aliases/func-type	frontend-export
 FAIL	generics/type-aliases/map-literal	frontend-export
 FAIL	generics/type-aliases/nested-map	frontend-export
@@ -392,6 +409,7 @@ FAIL	generics/type-parameter-conversion	frontend-export
 FAIL	generics/type-parameter-map-ops	frontend-export
 FAIL	generics/type-parameter-slice-ops	frontend-export
 FAIL	generics/type-set-constraint	frontend-export
+PASS	generics/unused-generic-helper	-
 FAIL	generics/zero-composite	frontend-export
 FAIL	generics/zero-values	frontend-export
 PASS	if/condition-evaluated-once	-

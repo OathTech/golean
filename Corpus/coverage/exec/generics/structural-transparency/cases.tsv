@@ -1,0 +1,2 @@
+# id	subject	args	expected_status	expected_reason	features
+-	genericStructuralTransparency	-	ok	-	generics,type_assertions,slices,maps,identity

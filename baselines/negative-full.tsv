@@ -1,9 +1,12 @@
 # GoLean negative-corpus (compile-rejection) baseline
-# recorded: 2026-08-05  commit: general-coverage-init (init slice guardrails; +initialization-cycle)  oracle: go build (rejection) + frontend fail-closed
-# manifest_cases: 310  pass: 310  fail: 0
+# recorded: 2026-08-05  commit: general-coverage-generics (G0: +instantiation-cycle)  oracle: go build (rejection) + frontend fail-closed
+# manifest_cases: 311  pass: 311  fail: 0
 # Columns: result<TAB>id<TAB>stage (sorted by id); detail omitted (churns).
 # Regression = any flip/stage change vs this file (scripts/coverage-baseline-diff
 # --baseline baselines/negative-full.tsv artifacts/coverage/negative-latest.tsv).
+# Re-pin reason: 1 NEW id — generics/instantiation-cycle (G0 negative probe:
+# unbounded recursive instantiation is rejected by go/types' mono check at
+# compile time on BOTH sides of the differential; design note §2b/§2e).
 result	id	stage
 PASS	arrays/array-compare-different-length	-
 PASS	arrays/array-index-float	-
@@ -128,11 +131,11 @@ PASS	defer/defer-len-result	-
 PASS	defer/defer-non-call	-
 PASS	defer/defer-receive-expression	-
 PASS	floats/defined-type-mixed-add	-
+PASS	floats/float32-constant-overflow	-
 PASS	floats/float-bitwise-and	-
 PASS	floats/float-modulo	-
 PASS	floats/float-shift	-
 PASS	floats/float-to-string	-
-PASS	floats/float32-constant-overflow	-
 PASS	floats/generic-float-bitwise	-
 PASS	floats/generic-float-modulo	-
 PASS	floats/generic-float-shift	-
@@ -156,6 +159,7 @@ PASS	generics/field-select-type-parameter	-
 PASS	generics/generic-method	-
 PASS	generics/higher-order-inference-impossible	-
 PASS	generics/inference-mismatch	-
+PASS	generics/instantiation-cycle	-
 PASS	generics/map-key-unconstrained	-
 PASS	generics/missing-method-constraint	-
 PASS	generics/noncomparable-constraint	-
@@ -172,9 +176,9 @@ PASS	imports/package-mismatch	-
 PASS	imports/unused-import	-
 PASS	init/call-init	-
 PASS	init/duplicate-global	-
+PASS	init/initialization-cycle	-
 PASS	init/init-return-value	-
 PASS	init/init-with-params	-
-PASS	init/initialization-cycle	-
 PASS	interfaces/ambiguous-promoted-method-interface	-
 PASS	interfaces/duplicate-method	-
 PASS	interfaces/embedded-conflicting-method	-
@@ -271,8 +275,8 @@ PASS	slices/slice-unaddressable-array	-
 PASS	strings/cap-string	-
 PASS	strings/compare-string-bytes	-
 PASS	strings/hex-escape-too-short	-
-PASS	strings/int-slice-to-string	-
 PASS	strings/interpreted-string-newline	-
+PASS	strings/int-slice-to-string	-
 PASS	strings/invalid-string-escape	-
 PASS	strings/octal-escape-overflow	-
 PASS	strings/raw-string-backquote	-

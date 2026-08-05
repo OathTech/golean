@@ -1,0 +1,5 @@
+# id	subject	args	expected_status	expected_reason	features
+ok	genericInstantiatedTypeAssertOk	-	ok	-	generics,type_assertions,interfaces,structs
+comma-ok	genericInstantiatedTypeAssertCommaOk	-	ok	-	generics,type_assertions,interfaces,comma_ok
+panic	genericInstantiatedTypeAssertPanic	-	panic	interface conversion: interface {} is main.assertBox[int], not main.assertBox[string]	generics,type_assertions,interfaces,panic
+name	genericInstantiatedTypeAssertName	-	ok	-	generics,structs,interfaces,identity

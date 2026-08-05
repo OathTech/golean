@@ -1,0 +1,3 @@
+# id	subject	args	expected_status	expected_reason	features
+-	genericClosure	-	ok	-	generics,closures,functions,higher_order
+shared-capture	genericClosureSharedCapture	-	ok	-	generics,closures,aliasing,type_sets

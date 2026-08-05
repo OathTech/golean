@@ -1,0 +1,2 @@
+# expected_substring	features
+instantiation cycle	generics,recursion,compile_error
