@@ -1,19 +1,20 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-05  commit: general-coverage-embed slice-2 stage 7 (struct value conversions)
+# recorded: 2026-08-05  commit: general-coverage-embed audit response (F1-F8)
 #   frontend: native  oracle: go run
-# manifest_cases: 908  pass: 701  fail: 207
-# Re-pin reason: DELIBERATE coverage change, general-coverage slice 2
-# stage 7 (docs/2026-08-05_embedding-interfaces-design.md D6): struct
-# VALUE conversions between types with identical underlying (wire
-# FieldDef equality — tags are already stripped, Go's conversions ignore
-# them; embedded flags compared, a recorded conservative narrowing)
-# retag a COPY in convertValueToTyFuel. Two FAIL->PASS:
-# structs/tag-defined-conversion,
-# structs/selector-addressability-edge/read-conversion-result.
-# structs/tag-pointer-conversion deliberately stays red (pointer
-# conversion aliases one cell under two tags — needs its own design
-# pass; reason recorded in the convert arm). ZERO PASS->FAIL, no other
-# stage moves. 699 -> 701 pass, 908 cases.
+# manifest_cases: 914  pass: 707  fail: 207
+# Re-pin reason: DELIBERATE coverage change, slice-2 pre-merge audit
+# response (docs/2026-08-05_embedding-interfaces-design.md, audit
+# section). Six NEW ids, all PASS after their fixes (each landed RED
+# first in the guardrail commit):
+# defer/deferred-dispatch-entry-panic/{return-drain,fallthrough-drain,
+# during-panic} — F1+F5, deferred-call frame-entry panics recoverable at
+# all three drain sites (normal drains mirror the nil-callee rules; the
+# panic-path drain joins the chain newest-last);
+# embedding/value-embedded-pointer-promotion/{static-call,
+# value-box-satisfies,dynamic-dispatch} — F2, value-receiver wrappers
+# for pointer-receiver promotion through an embedded pointer hop (the
+# refusal used to kill whole exports). ZERO PASS->FAIL, no stage moves
+# on existing ids. 701 -> 707 pass, 908 -> 914 cases.
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
 PASS	arrays/array-copy	-
@@ -271,6 +272,9 @@ PASS	defer/defer-named-return	-
 PASS	defer/defer-nil-function-panic	-
 PASS	defer/defer-nil-function-recover-order	-
 PASS	defer/defer-pointer-receiver-live	-
+PASS	defer/deferred-dispatch-entry-panic/during-panic	-
+PASS	defer/deferred-dispatch-entry-panic/fallthrough-drain	-
+PASS	defer/deferred-dispatch-entry-panic/return-drain	-
 PASS	defer/multiple-lifo	-
 PASS	defer/recover-normal-return	-
 PASS	defer/unnamed-return	-
@@ -290,6 +294,9 @@ PASS	embedding/promoted-nil-embedded-pointer/call	-
 PASS	embedding/promoted-nil-embedded-pointer/nil-panic	-
 PASS	embedding/promoted-pointer-receiver-method-set/pointer-box	-
 PASS	embedding/promoted-pointer-receiver-method-set/value-box	-
+PASS	embedding/value-embedded-pointer-promotion/dynamic-dispatch	-
+PASS	embedding/value-embedded-pointer-promotion/static-call	-
+PASS	embedding/value-embedded-pointer-promotion/value-box-satisfies	-
 FAIL	floats/compound-assign	frontend-export
 FAIL	floats/defined-type-ops	frontend-export
 FAIL	floats/division-specials	frontend-export
