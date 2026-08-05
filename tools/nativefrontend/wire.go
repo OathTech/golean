@@ -220,6 +220,12 @@ func (e *emitter) emitType(t types.Type) (any, error) {
 			return nil, e.substErr
 		}
 		return e.emitBasic(ty)
+	case *types.Alias:
+		// Aliases — generic ones included (gotypesalias=1, G4) — are
+		// IDENTITY-TRANSPARENT (spec §Alias declarations; design-note
+		// §3.2 "aliases never mint TypeIds"): the wire sees the aliased
+		// type directly, e.g. aliasSlice[int] emits as []int.
+		return e.emitType(types.Unalias(ty))
 	case *types.TypeParam:
 		// Reachable only OUTSIDE a stencil (inside one, applySubst above
 		// either resolves it or records substErr): a generic declaration

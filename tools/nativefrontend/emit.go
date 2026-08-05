@@ -3330,7 +3330,9 @@ func (e *emitter) checkPackageNameCollisions() error {
 // generic type names by its mangled key (which also enqueues its TypeDef
 // stencil — every TypeId the wire mentions must be declared).
 func (e *emitter) namedTypeName(t types.Type) (string, bool) {
-	t = e.applySubst(t)
+	// Aliases are identity-transparent (G4): the NAME belongs to the
+	// aliased type, never the alias.
+	t = types.Unalias(e.applySubst(t))
 	if named, ok := t.(*types.Named); ok {
 		if named.TypeArgs().Len() > 0 {
 			key, err := e.instTypeIdForWire(named)
@@ -4492,6 +4494,18 @@ func (e *emitter) emitMapLit(cl *ast.CompositeLit, m *types.Map) (any, error) {
 		v, err = e.wrapInterfaceConversion(m.Elem(), e.goTypeOf(kv.Value), v)
 		if err != nil {
 			return nil, err
+		}
+		// An untyped-nil VALUE takes the map's element type (spec:
+		// composite-literal values are assignable to the element type), so
+		// the machine stores a TYPED nil (a nil slice/map/pointer — len 0,
+		// == nil) rather than the raw nil that emitExpr's best-effort type
+		// attachment leaves behind. Interface elements keep the bare nil
+		// (a nil interface IS the raw nil value). Latent for any map
+		// literal; first pinned by generics/type-aliases/nested-map (G4).
+		if b, isB := e.goTypeOf(kv.Value).(*types.Basic); isB && b.Kind() == types.UntypedNil {
+			if !types.IsInterface(e.applySubst(m.Elem())) {
+				v = map[string]any{"expr": "nil", "type": valTy}
+			}
 		}
 		entries = append(entries, map[string]any{"key": k, "value": v})
 	}

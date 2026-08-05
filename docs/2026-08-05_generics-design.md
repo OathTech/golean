@@ -607,3 +607,82 @@ the arc-final audit can re-argue from the same ground:
    int-observable proxy for constant-non-refolding exists (§4.1). The
    floats/complex generic cases pin it differentially once both land.
 7. **G0 case list: the nine proposed probes adopted** as scoped in §8.
+
+---
+
+## 10. Build log (slice 6 implementation, 2026-08-05, branch `general-coverage-generics`)
+
+Stage-by-stage record; deviations from the note's sketch called out
+explicitly. Accounting is against the post-floats baseline (the note's
+§1 numbers predate the floats merge — 7 of the 8 `floats/generic-type-set`
+ids were single-blocked on generics by implementation time, `zero-value`
+having already flipped with floats).
+
+- **G0** (guardrails): the nine probes landed as 12 exec ids + 1 negative
+  id; all classified correctly pre-implementation (11 FAIL/frontend-export,
+  `unused-generic-helper` PASS, `instantiation-cycle` both-sides refusal).
+  Baselines re-pinned from a full run: 950 cases, 750/200.
+- **G1** (identity layer): `mono.go` mangler + registry per §3.2/§9.2/§9.4,
+  `go test` pins, new `scripts/ci` step "frontend unit tests"; the
+  `TypeId.unqualified` leading-strip fix with 9 eval-test pins (§9.3).
+  Zero corpus movement (full `ci --diff`).
+  *Deviation (recorded, deliberate):* mangled keys join type arguments
+  with `","` (reflect/runtime spelling, probe-verified `Pair[int,string]`),
+  NOT `types.TypeString`'s `", "` — the §3.2 text said "TypeString with
+  package-NAME qualifier", which is exact for single-argument keys but
+  would diverge from `reflect.Type.Name()` on multi-argument ones; the
+  renderer is a small reflect-faithful walker (byte→uint8, rune→int32,
+  `interface {}` for `any`) with fail-closed arms outside the admitted
+  surface. *Finding:* `GoLean/CLI.lean` carries a private DUPLICATE of the
+  old `unqualified` logic (struct-observation `typeName`/`fieldAddr`);
+  flagged, not fixed (single-Lean-change constraint) — became BUG-013 at G3.
+- **G2** (function instantiation closure): 57 flips, all
+  FAIL/frontend-export → PASS, zero other movement (807/143). Clusters in
+  the baseline header. *Deviations:* `method-constraint-call`,
+  `method-and-type-set-constraint`, `recursive-constraints/*` flipped HERE,
+  not G3 — they are function-level (concrete receivers; constraint method
+  calls re-resolve via `LookupFieldOrMethod`, §4.3). Two shapes the note
+  under-called: (i) underlying-bool conversions (`bool(x)` at `~bool`) —
+  the machine's convert op fails closed on bool targets, so the frontend
+  emits the operand (a pure static retyping; bool has no representation
+  kinds); (ii) constraint-only interfaces must NOT emit interface TypeDefs
+  (an empty requirement list would be vacuously satisfiable — the
+  audit-finding-0 class); `emitGenDeclTypes` skips non-method-set
+  interfaces.
+- **G3** (generic types/methods/instantiated interfaces): instantiated
+  TypeDefs + full per-instantiation method stenciling from a joint
+  worklist fixpoint; instantiated interfaces route through the
+  seenInterfaces declaration pass (a first cut double-emitted
+  `main.valueGetter[int]` — caught by the duplicate-TypeId gate, exactly
+  the belt-and-suspenders behavior §3.2 wanted). 12 flips + 1 stage move:
+  `instantiated-type-assert/name` FAIL/frontend-export → FAIL/differential,
+  the now-observable CLI.lean duplicate renderer — **BUG-013**, left red
+  by the slice charter (the sanctioned Lean change is `Value.lean` only;
+  fix is a one-line delegation needing its own reviewed commit).
+  *Runner fix:* the G0 `generic-closure` file produced the corpus's first
+  NESTED ids (`…/generic-closure` + `…/generic-closure/shared-capture`),
+  and the parallel runner's per-id harness `os.RemoveAll` of
+  `go-run/<id>` deletes a child id's dir in flight (observed as a
+  spurious go-run FAIL on shared-capture in full runs, not in focused
+  ones). Fixed at the hazard class: `scripts/diff-coverage` flattens the
+  per-id go-run dir (`/`→`__`, the negative runner's existing
+  convention). An id RENAME was tried first and correctly REFUSED by the
+  re-pin guard (a dropped PASS id is indistinguishable from a laundered
+  regression) — the guard working as designed.
+- **G4** (generic aliases): `gotypesalias=1` enabled via `os.Setenv` at
+  frontend startup (§9.5 API check: probe-verified that a GOPATH-mode
+  binary + `os.Setenv` before `conf.Check` materializes `*types.Alias`
+  instances; the quirk's cause is the toolchain's GOPATH-mode
+  compatibility default `gotypesalias=0`); `emitType` Unalias arm.
+  *Deviation from the §8 flip count:* `type-aliases/struct-literal` does
+  NOT flip — `aliasPair[T] = struct{…}` instantiates to an ANONYMOUS
+  non-empty struct, a pre-existing generics-independent frontend gap
+  (`emitType` refuses; same red as any anonymous-struct program). 4 of 5
+  alias ids flip; struct-literal stays FAIL/frontend-export until
+  anonymous structs land. *Second exposed latent gap:* an untyped-nil
+  VALUE in a map literal was stored as RAW nil (len panicked-unsupported
+  at runtime) — generics-independent, first pinned by
+  `type-aliases/nested-map`; fixed at the pinned site (typed-nil wire
+  node, the variadic zero-pack precedent). The sibling shapes
+  (slice/array/struct literals with nil elements) remain latent and
+  unpinned — recorded for a future corpus edge pass.
