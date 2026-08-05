@@ -1,2 +1,2 @@
 # id	subject	args	expected_status	expected_reason	features
--	panicNilAbort	-	panic	nil	panic,nil
+-	panicNilAbort	-	panic	panic called with nil argument	panic,nil

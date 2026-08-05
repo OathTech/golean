@@ -930,14 +930,23 @@ can spell, so type asserts against user types correctly fail on it. -/
 def runtimeErrorValue (msg : String) : GoValue :=
   .interface (.defined runtimeErrorTypeId) (.string (GoString.fromLeanString msg))
 
-/-- Coerce a delivered `panic` argument to its chain payload — the
-identity: the oracle runs in GOPATH mode (no `go.mod`), where `panic(nil)`
-keeps its LEGACY semantics — `recover()` returns nil and the abort line
-renders `nil` (differentially pinned by `panic-recover/panic-nil-recover`,
-Go answer 0, and `panic-recover/panic-nil-abort`). Go 1.21's
-`*runtime.PanicNilError` applies only under a module declaring go ≥ 1.21;
-if the oracle ever moves to module mode this is the knob (arc doc §A2). -/
+/-- Coerce a delivered `panic` argument to its chain payload. MODERN
+(Go 1.21+) semantics since the arc-final audit (F21, 2026-08-06): the
+spec says "calling panic with a nil interface value (or an untyped nil)
+causes a run-time panic", so a nil payload becomes the
+`*runtime.PanicNilError` runtime error (message verbatim from gc's
+realized behavior; our runtime-error payloads share one machine-internal
+dynamic type, `$runtime.Error`). The differential oracle is aligned by
+`GODEBUG=panicnil=0` on every `go run` (scripts/diff-coverage
+`go_run_oracle`) — GOPATH mode otherwise defaults to the LEGACY
+behavior (recover() returns nil), which the model previously matched
+only by that config coincidence (recorded, unwinding arc §A2).
+Differentially pinned by `panic-recover/panic-nil-recover` (Go answer 1
+under the modern config) and `panic-recover/panic-nil-abort`. A TYPED
+nil payload (`panic((*T)(nil))`) is a non-nil interface and passes
+through unchanged (`panic-typed-nil-recover`). -/
 def panicPayload : GoValue → GoValue
+  | .nil => runtimeErrorValue "panic called with nil argument"
   | v => v
 
 /-- Constructive ASCII decode for abort rendering. Core's

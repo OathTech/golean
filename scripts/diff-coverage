@@ -414,8 +414,13 @@ run_case_rows() {
 # panic-expected case reported the misleading "expected Go panic, got:
 # ... cannot import absolute path"). Run from inside the package dir
 # instead — `go run .` resolves in GOPATH mode for both path shapes.
+# GODEBUG=panicnil=0 (arc-final audit F21, 2026-08-06): the machine
+# models the MODERN (Go 1.21+) panic(nil) semantics — recover() returns
+# *runtime.PanicNilError — while GOPATH mode defaults to the legacy
+# behavior; the knob aligns the oracle with the model instead of
+# agreeing by config coincidence (unwinding arc §A2's recorded knob).
 go_run_oracle() {
-  run_with_timeout "$GO_TIMEOUT_SECONDS" env GO111MODULE=off GOCACHE="$GO_BUILD_CACHE" \
+  run_with_timeout "$GO_TIMEOUT_SECONDS" env GO111MODULE=off GODEBUG=panicnil=0 GOCACHE="$GO_BUILD_CACHE" \
     bash -c 'cd "$1" && exec go run .' go-run-oracle "$go_run_dir"
 }
 

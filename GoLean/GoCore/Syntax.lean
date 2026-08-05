@@ -248,9 +248,10 @@ inductive Stmt where
   /-- The `panic(v)` builtin: evaluate the payload, then start unwinding
   with a fresh one-entry panic chain. The payload expression carries the
   Go `any`-conversion (lowering wraps non-interface arguments in
-  `.toInterface`); a nil-interface payload stays nil — the oracle runs in
-  GOPATH mode, where `panic(nil)` keeps its legacy semantics (`recover()`
-  returns nil; see `panicPayload`). The unwinding arc,
+  `.toInterface`); a nil-interface payload becomes the Go 1.21+
+  `PanicNilError` runtime error at the panic step (`panicPayload`,
+  modern semantics adopted at the arc-final audit F21 2026-08-06; the
+  oracle is aligned with `GODEBUG=panicnil=0`). The unwinding arc,
   `docs/2026-07-25_unwinding-arc.md`. -/
   | panicStmt (payload : Expr)
   | label (name : String)

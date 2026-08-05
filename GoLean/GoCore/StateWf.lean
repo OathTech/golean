@@ -4024,6 +4024,13 @@ theorem goValueEntriesSup_eraseIdxA {arr : Array (GoValue × GoValue)} {i : Nat}
 theorem runtimeErrorValue_locSup {msg : String} :
     GoValue.locSup (runtimeErrorValue msg) = 0 := rfl
 
+/-- `panicPayload` never introduces locations: the nil arm's runtime
+error is loc-free, every other payload passes through (modern
+`panic(nil)` semantics, arc-final audit F21 2026-08-06). -/
+theorem panicPayload_locSup {v : GoValue} :
+    GoValue.locSup (panicPayload v) ≤ GoValue.locSup v := by
+  cases v <;> simp [panicPayload, runtimeErrorValue_locSup, GoValue.locSup]
+
 
 set_option maxHeartbeats 4000000 in
 /-- The LOC half of the preservation theorem: one machine step keeps the
@@ -4048,6 +4055,12 @@ theorem step_preserves_wf_loc {c : Config} {σ : ExecState} {c' : Config}
       runtimeErrorValue_locSup, panicPayload, LocalEnv.pushScope_locSup,
       Nat.max_le] at hc ⊢
     omega)
+  case panicArgValue v k =>
+    refine ⟨hs, ?_, rfl⟩
+    have hp := panicPayload_locSup (v := v)
+    simp only [ConfigWf, Config.locSup, Cont.locSup, Expr.locSup,
+      GoValue.locSup, panicChainSup, Nat.max_le] at hc ⊢
+    omega
   case evalRef id loc env k hlook =>
     refine ⟨hs, ?_, rfl⟩
     have h1 := LocalEnv.lookup_locSup hlook

@@ -195,6 +195,22 @@ The in-file comment in `panic-nil-recover/main.go` claiming the 1.21
 behavior predates this finding — the oracle, not the comment, is the
 record.
 
+**Superseded (arc-final audit F21, 2026-08-06):** the knob was turned,
+in the MODERN direction. The audit judged the GOPATH-mode agreement an
+agree-by-config-coincidence the differential structurally cannot see
+(the north star's go.mod declares go 1.26, where the answer flips), and
+`GODEBUG=panicnil=0` turns on the modern behavior in GOPATH mode
+without touching module mode or anything else (probe-verified;
+loop-variable semantics are language-version-driven and already modern
+in GOPATH mode, BUG-003). So: `panicPayload` now maps a nil payload to
+the `*runtime.PanicNilError` runtime error ("panic called with nil
+argument"), every oracle `go run` sets `GODEBUG=panicnil=0`
+(`scripts/diff-coverage` `go_run_oracle`), and the two tripwire cases
+were re-pinned to the modern answers (`panic-nil-recover` → 1,
+`panic-nil-abort` → "panic called with nil argument").
+`panic-typed-nil-recover` (this section's own shape) is unaffected — a
+typed nil is a non-nil interface either way.
+
 Existing machinery this leans on, verified: `normalizeValueForTy` passes
 any value through interface-typed cells (`r := recover()` stores fine);
 `valueEq` at interface types discriminates exactly nil vs non-nil (what
