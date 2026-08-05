@@ -263,11 +263,6 @@ run_case_rows() {
   # vs generics/generic-closure/shared-capture, 2026-08-05 — a spurious
   # go-run FAIL). Flattening removes the hazard class.
   go_run_dir="$OUT/go-run/${id//\//__}"
-  if [[ "$go_run_dir" == /* ]]; then
-    go_run_pkg="$go_run_dir"
-  else
-    go_run_pkg="./$go_run_dir"
-  fi
   if ! harness_output="$(run_with_timeout "$GO_TIMEOUT_SECONDS" env GO111MODULE=off GOCACHE="$GO_BUILD_CACHE" go run ./tools/coverageharness \
       --input "$go_file" \
       --out "$go_run_dir" \
@@ -295,7 +290,7 @@ run_case_rows() {
     return 0
   fi
 
-  if go_observation="$(run_with_timeout "$GO_TIMEOUT_SECONDS" env GO111MODULE=off GOCACHE="$GO_BUILD_CACHE" go run "$go_run_pkg" 2>&1)"; then
+  if go_observation="$(go_run_oracle 2>&1)"; then
     if [[ "$expected_status" == "panic" ]]; then
       report_fail "$id" "$features" "go-observation" "expected panic, but Go exited successfully: $go_observation"
       failed=1
@@ -409,14 +404,29 @@ run_case_rows() {
   report_pass "$id" "$features"
 }
 
+# The go-run oracle invocation for the CURRENT case (uses run_case_rows'
+# local go_run_dir). Arc-final audit F19 (2026-08-06): with an ABSOLUTE
+# $OUT (GOLEAN_COVERAGE_ARTIFACTS set to an absolute path — exactly
+# scripts/test-lane-validation's mktemp configuration), the old
+# `go run $go_run_pkg` passed an absolute path, which GOPATH mode rejects
+# with "cannot import absolute path": every case reaching this stage
+# failed at stage go-run regardless of the property under test (and a
+# panic-expected case reported the misleading "expected Go panic, got:
+# ... cannot import absolute path"). Run from inside the package dir
+# instead — `go run .` resolves in GOPATH mode for both path shapes.
+go_run_oracle() {
+  run_with_timeout "$GO_TIMEOUT_SECONDS" env GO111MODULE=off GOCACHE="$GO_BUILD_CACHE" \
+    bash -c 'cd "$1" && exec go run .' go-run-oracle "$go_run_dir"
+}
+
 # One `go run` of the generated harness, classified under the SAME status /
 # panic policy as the strict lane. On success prints the sample's canonical
 # observation JSON and returns 0; on any failure prints the error detail
-# and returns 1. Uses run_case_rows' locals (go_run_pkg, expected_status,
+# and returns 1. Uses run_case_rows' locals (go_run_dir, expected_status,
 # expected_reason).
 membership_go_observation() {
   local out
-  if out="$(run_with_timeout "$GO_TIMEOUT_SECONDS" env GO111MODULE=off GOCACHE="$GO_BUILD_CACHE" go run "$go_run_pkg" 2>&1)"; then
+  if out="$(go_run_oracle 2>&1)"; then
     if [[ "$expected_status" == "panic" ]]; then
       printf 'go sample: expected panic, but Go exited successfully: %s' "$out"
       return 1
@@ -648,7 +658,7 @@ export CASE_OUT ROOT OUT FRONTEND GO_BUILD_CACHE GOLEAN_BIN \
   GO_TIMEOUT_SECONDS LEAN_TIMEOUT_SECONDS LEAN_ENUM_TIMEOUT_SECONDS
 export -f run_case run_case_rows run_with_timeout lean json_string_literal \
   panic_message report_pass report_pass_lane report_fail one_line \
-  membership_go_observation run_membership_case_rows
+  membership_go_observation run_membership_case_rows go_run_oracle
 
 # Record the concurrency the run used (audit finding: a load-induced
 # timeout drift was indistinguishable from a real one after the fact).
