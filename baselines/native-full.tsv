@@ -1,13 +1,12 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-06  commit: general-coverage (arc-final audit response, F12 elided &T)
+# recorded: 2026-08-06  commit: general-coverage (arc-final audit response, F7 struct{} typeName)
 #   frontend: native  oracle: go run (strict lane) / go-run membership in the
 #   machine-enumerated observation set (membership lane; go1.26.5 samples)
-# manifest_cases: 1025  pass: 880  fail: 145
-# Re-pin reason: F12 fixed (spec-mandated composite-literal &T elision
-#   lowered like the explicit form via the shared hoisted-new helper) —
-#   exactly the four structs/pointer-literal-elision ids flip
-#   frontend-export FAIL -> PASS. Zero PASS->FAIL, zero other stage
-#   moves.
+# manifest_cases: 1025  pass: 883  fail: 142
+# Re-pin reason: BUG-019 fixed (CLI renders "" for the canonical
+#   anonymous empty struct, the reflect.Name() contract) — exactly its
+#   three pinned ids flip FAIL -> PASS. Zero PASS->FAIL, zero other
+#   stage moves.
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
 PASS	arrays/array-copy	-
@@ -970,10 +969,10 @@ PASS	structs/empty-struct-literal-at-named-type/var-init	-
 PASS	structs/empty-struct-literal-left-operand/eq	-
 PASS	structs/empty-struct-literal-left-operand/neq	-
 PASS	structs/empty-struct-literal-left-operand/switch	-
-FAIL	structs/empty-struct-observation/array	differential
+PASS	structs/empty-struct-observation/array	-
 PASS	structs/empty-struct-observation/ctl-named	-
-FAIL	structs/empty-struct-observation/direct	differential
-FAIL	structs/empty-struct-observation/field	differential
+PASS	structs/empty-struct-observation/direct	-
+PASS	structs/empty-struct-observation/field	-
 PASS	structs/field-incdec	-
 PASS	structs/field-write-aliased-pointer	-
 PASS	structs/interface-field-compare-panic	-

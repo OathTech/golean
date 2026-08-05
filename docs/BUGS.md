@@ -90,7 +90,13 @@ rationale comment.
 
 ## BUG-019 — observation channel renders anonymous struct{} typeName as "struct{}" (reflect.Name() gives "")
 
-- Status: open
+- Status: fixed (2026-08-06, arc-final audit response F7 — the CLI
+  renderer emits "" for the canonical anonymous-empty-struct key,
+  matching reflect.Type.Name()'s non-defined-type contract; named empty
+  structs keep their names, pinned by the ctl-named control. The
+  interface-holding-anonymous-struct{} path is out of scope: the Go
+  harness fails closed there by disposition, so no observation
+  compares.)
 - Pinned-by: differential
 - Cases: structs/empty-struct-observation/direct, structs/empty-struct-observation/field, structs/empty-struct-observation/array
 - Discovered: 2026-08-06 (arc-final audit F7; pre-existing — the old

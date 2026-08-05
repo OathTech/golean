@@ -145,9 +145,16 @@ private partial def goValueJson : GoValue → Json
         ("value", goValueJson value)
       ]
   | .struct typeId fields =>
+      -- `reflect.Type.Name()` returns "" for any NON-DEFINED type
+      -- (reflect/type.go); the canonical anonymous empty struct is the
+      -- one unnamed struct TypeId the wire mints (`emptyStructName`,
+      -- tools/nativefrontend/wire.go), so it renders as "" — the
+      -- internal key "struct{}" leaked verbatim before (BUG-019,
+      -- arc-final audit F7, 2026-08-06). Named empty structs are
+      -- defined types and keep their names.
       Json.mkObj [
         ("tag", Json.str "struct"),
-        ("typeName", Json.str typeId.unqualified),
+        ("typeName", Json.str (if typeId.key == "struct{}" then "" else typeId.unqualified)),
         ("fields", Json.arr (fields.map (fun (name, value) =>
           Json.mkObj [("name", Json.str name), ("value", goValueJson value)])))
       ]
