@@ -1,0 +1,3 @@
+# id	subject	args	expected_status	expected_reason	features
+loop	typeSwitchBreakOutOfLoop	-	ok	-	interfaces,type_switch,switch,labels,break,loops
+self	typeSwitchLabeledSelf	-	ok	-	interfaces,type_switch,switch,labels,break,strings

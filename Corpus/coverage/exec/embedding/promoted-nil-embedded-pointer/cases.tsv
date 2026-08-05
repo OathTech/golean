@@ -1,0 +1,4 @@
+# id	subject	args	expected_status	expected_reason	features
+call	promotedThroughPointerCall	-	ok	-	embedding,methods,pointers,calls
+nil-panic	promotedNilEmbeddedCallPanics	-	panic	runtime error: invalid memory address or nil pointer dereference	embedding,methods,pointers,nil,panic
+before-args	promotedNilEmbeddedBeforeArgs	-	ok	-	embedding,methods,pointers,nil,panic,recover,evaluation_order

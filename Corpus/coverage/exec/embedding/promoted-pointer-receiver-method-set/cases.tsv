@@ -1,0 +1,3 @@
+# id	subject	args	expected_status	expected_reason	features
+value-box	promotedPointerReceiverValueBox	-	ok	-	embedding,interfaces,type_assertions,comma_ok,methods,pointers
+pointer-box	promotedPointerReceiverPointerBox	-	ok	-	embedding,interfaces,type_assertions,comma_ok,methods,pointers,calls

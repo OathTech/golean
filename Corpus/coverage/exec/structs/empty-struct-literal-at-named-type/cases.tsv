@@ -1,0 +1,7 @@
+# id	subject	args	expected_status	expected_reason	features
+var-init	emptyStructVarInit	-	ok	-	structs,assignment
+param	emptyStructParam	-	ok	-	structs,assignment,calls
+return	emptyStructReturn	-	ok	-	structs,assignment,returns
+map-store	emptyStructMapStore	-	ok	-	structs,assignment,maps
+reverse	emptyStructReverse	-	ok	-	structs,assignment
+compare	emptyStructCompare	-	ok	-	structs,assignment,comparisons,equality

@@ -1,0 +1,3 @@
+# id	subject	args	expected_status	expected_reason	features
+snapshot	promotedMethodValueSnapshot	-	ok	-	embedding,methods,pointers,closures,evaluation_order
+live	promotedPtrMethodValueLive	-	ok	-	embedding,methods,pointers,closures,evaluation_order
