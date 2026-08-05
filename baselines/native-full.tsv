@@ -1,27 +1,20 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-05  commit: general-coverage-generics (G4 generic aliases; slice complete)
+# recorded: 2026-08-05  commit: general-coverage-generics (BUG-013 fix: CLI renderer delegation)
 #   frontend: native  oracle: go run (strict lane) / go-run membership in the
 #   machine-enumerated observation set (membership lane; go1.26.5 samples)
-# manifest_cases: 950  pass: 823  fail: 127
-# Re-pin reason: DELIBERATE coverage change — generics G4, generic type
-# aliases (gotypesalias=1 via os.Setenv at frontend startup, decision
-# §9.5; *types.Alias identity-transparent through types.Unalias): 4 flips
-# FAIL/frontend-export -> PASS (type-aliases/{slice-same-type,map-literal,
-# func-type,nested-map}), zero movement otherwise — in particular the
-# alias MATERIALIZATION change moved no pre-existing case. nested-map
-# additionally needed the untyped-nil-in-map-literal fix (a value `nil`
-# now takes the ELEMENT type on the wire — a generics-independent latent
-# gap this case is the first pin for).
-# NOT flipped, by design (stated per the slice hand-back):
-# - generics/type-aliases/struct-literal: aliasPair[T] = struct{...}
-#   instantiates to an ANONYMOUS non-empty struct — a pre-existing,
-#   generics-independent frontend gap (fail-closed refusal); flips when
-#   anonymous structs land, not with generics.
-# - generics/type-parameter-channel-ops: channels arc.
-# - generics/instantiated-type-assert/name: FAIL/differential — BUG-013
-#   (CLI.lean duplicate renderer; see docs/BUGS.md), charter-deferred.
-# - complex/generic-type-set (9): complex domain semantics not landed;
-#   generics side is ready (same stencil path as floats).
+# manifest_cases: 950  pass: 824  fail: 126
+# Re-pin reason: DELIBERATE fix — BUG-013 closed (coordinator-authorized
+# follow-up to the generics slice's stop-and-report): GoLean/CLI.lean's
+# private duplicate of the pre-fix TypeId.unqualified logic is deleted;
+# both observation-encoder use sites (struct typeName, fieldAddr) now
+# call TypeId.unqualified — ONE copy of the stripping logic remains, in
+# GoCore/Value.lean. Exactly one movement:
+# - generics/instantiated-type-assert/name: FAIL/differential -> PASS
+#   (the bug's differential pin; docs/BUGS.md BUG-013, now Status: fixed).
+# Standing expected reds (unchanged): generics/type-parameter-channel-ops
+# (channels arc), generics/type-aliases/struct-literal (anonymous
+# non-empty struct — pre-existing generics-independent gap),
+# complex/generic-type-set (9; complex domain semantics not landed).
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
 PASS	arrays/array-copy	-
@@ -388,7 +381,7 @@ PASS	generics/instantiated-function-value	-
 PASS	generics/instantiated-map-key	-
 PASS	generics/instantiated-method-value	-
 PASS	generics/instantiated-type-assert/comma-ok	-
-FAIL	generics/instantiated-type-assert/name	differential
+PASS	generics/instantiated-type-assert/name	-
 PASS	generics/instantiated-type-assert/ok	-
 PASS	generics/instantiated-type-assert/panic	-
 PASS	generics/map-slice	-

@@ -29,7 +29,17 @@ differential-pinned) `- Cases: <id>, <id>, …` (baseline case ids), then prose.
 
 ## BUG-013 — CLI struct-observation typeName truncates mangled generic TypeIds
 
-- Status: open
+- Status: fixed
+- Closed: 2026-08-05 (generics slice, branch `general-coverage-generics`,
+  coordinator-authorized follow-up to the slice's stop-and-report)
+- Fix: the private duplicate in `GoLean/CLI.lean` is DELETED — both use
+  sites (struct observation `typeName`, `fieldAddr` rendering) now call
+  `TypeId.unqualified` directly, leaving exactly ONE copy of the
+  stripping logic in the codebase (`GoCore/Value.lean`; grep confirms no
+  other `splitOn "."` renderer). The pinned case
+  `generics/instantiated-type-assert/name` flips FAIL/differential →
+  PASS; nothing else moves (full-run re-pin in the fix commit).
+- Original status: open
 - Pinned-by: differential
 - Cases: generics/instantiated-type-assert/name
 - Discovered: 2026-08-05 (generics slice G3 — flagged as latent in the G1

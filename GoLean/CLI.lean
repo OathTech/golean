@@ -72,15 +72,15 @@ private def parseRunArgs : List String → RunArgs → Except String RunArgs
       parseRunArgs rest { cfg with choices }
   | flag :: _, _ => .error s!"unknown or incomplete option: {flag}\n{usage}"
 
-/-- The OBSERVATION channel renders type names the way Go's
-`reflect.Type.Name()` does — WITHOUT the package qualifier — while
-`TypeId` keys are package-qualified for identity (interfaces campaign,
-2026-07-30: cross-package identity + Go-exact panic messages need the
-qualifier; the observation comparator needs it stripped). -/
-private def unqualifiedTypeName (typeId : TypeId) : String :=
-  match typeId.key.splitOn "." with
-  | [] => typeId.key
-  | parts => parts.getLast!
+-- The OBSERVATION channel renders type names the way Go's
+-- `reflect.Type.Name()` does — WITHOUT the leading package qualifier —
+-- while `TypeId` keys stay package-qualified for identity (interfaces
+-- campaign, 2026-07-30). The renderer is `TypeId.unqualified`
+-- (`GoCore/Value.lean`), THE one copy of the stripping logic: a private
+-- duplicate here predated the generics slice's leading-strip fix and
+-- kept truncating mangled instantiation keys after Value.lean was fixed
+-- (BUG-013, pinned by generics/instantiated-type-assert/name — the
+-- uncoupled-copy drift class).
 
 private def locJson : Loc → Json
   | .base addr => Json.mkObj [("tag", Json.str "addr"), ("id", Lean.toJson addr.id)]
@@ -88,7 +88,7 @@ private def locJson : Loc → Json
       Json.mkObj [
         ("tag", Json.str "fieldAddr"),
         ("base", locJson base),
-        ("typeName", Json.str (unqualifiedTypeName typeId)),
+        ("typeName", Json.str typeId.unqualified),
         ("fieldName", Json.str fieldName)
       ]
   | .index base index =>
@@ -147,7 +147,7 @@ private partial def goValueJson : GoValue → Json
   | .struct typeId fields =>
       Json.mkObj [
         ("tag", Json.str "struct"),
-        ("typeName", Json.str (unqualifiedTypeName typeId)),
+        ("typeName", Json.str typeId.unqualified),
         ("fields", Json.arr (fields.map (fun (name, value) =>
           Json.mkObj [("name", Json.str name), ("value", goValueJson value)])))
       ]
