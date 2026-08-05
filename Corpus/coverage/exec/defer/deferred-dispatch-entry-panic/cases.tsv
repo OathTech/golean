@@ -1,0 +1,4 @@
+# id	subject	args	expected_status	expected_reason	features
+return-drain	deferredEntryPanicReturn	-	ok	-	defer,interfaces,methods,nil,pointers,panic,recover
+fallthrough-drain	deferredEntryPanicFallthrough	-	ok	-	defer,interfaces,methods,nil,pointers,panic,recover,calls
+during-panic	deferredEntryPanicDuringPanic	-	ok	-	defer,interfaces,methods,nil,pointers,panic,recover,type_assertions
