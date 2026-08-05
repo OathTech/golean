@@ -1,19 +1,19 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-05  commit: general-coverage-embed slice-2 stage 6 (imported method-set stubs; BUG-009 closed)
+# recorded: 2026-08-05  commit: general-coverage-embed slice-2 stage 7 (struct value conversions)
 #   frontend: native  oracle: go run
-# manifest_cases: 908  pass: 699  fail: 209
+# manifest_cases: 908  pass: 701  fail: 207
 # Re-pin reason: DELIBERATE coverage change, general-coverage slice 2
-# stage 6 (docs/2026-08-05_embedding-interfaces-design.md D5): every
-# imported concrete named type whose EXPORTED method set is fully
-# emittable ships an existence-marker TypeDef plus declaration-only
-# method stubs (real signatures, fail-closed bodies), so interface
-# satisfaction answers from real information while structural use and
-# calls keep refusing. Unexported requirements against marker types
-# refuse (cross-package unexported identity is not on the wire); a type
-# with any un-emittable exported signature is skipped whole. Two
-# FAIL->PASS: interfaces/assert-imported-method-set/{comma-ok,panic-form}
-# (*strings.Builder implements fmt.Stringer). ZERO PASS->FAIL, no other
-# stage moves. 697 -> 699 pass, 908 cases.
+# stage 7 (docs/2026-08-05_embedding-interfaces-design.md D6): struct
+# VALUE conversions between types with identical underlying (wire
+# FieldDef equality — tags are already stripped, Go's conversions ignore
+# them; embedded flags compared, a recorded conservative narrowing)
+# retag a COPY in convertValueToTyFuel. Two FAIL->PASS:
+# structs/tag-defined-conversion,
+# structs/selector-addressability-edge/read-conversion-result.
+# structs/tag-pointer-conversion deliberately stays red (pointer
+# conversion aliases one cell under two tags — needs its own design
+# pass; reason recorded in the convert arm). ZERO PASS->FAIL, no other
+# stage moves. 699 -> 701 pass, 908 cases.
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
 PASS	arrays/array-copy	-
@@ -894,13 +894,13 @@ PASS	structs/selector-addressability-edge/map-value-slice-field-write	-
 PASS	structs/selector-addressability-edge/pointer-field-from-call-result	-
 PASS	structs/selector-addressability-edge/pointer-result-assign	-
 PASS	structs/selector-addressability-edge/read-call-result	-
-FAIL	structs/selector-addressability-edge/read-conversion-result	lean-observation
+PASS	structs/selector-addressability-edge/read-conversion-result	-
 PASS	structs/selector-eval-once	-
 PASS	structs/struct-array-element-write	-
 PASS	structs/swap	-
 PASS	structs/tag-basic	-
 PASS	structs/tag-comparable	-
-FAIL	structs/tag-defined-conversion	lean-observation
+PASS	structs/tag-defined-conversion	-
 PASS	structs/tag-embedded-field	-
 FAIL	structs/tag-nested-conversion	frontend-export
 FAIL	structs/tag-pointer-conversion	lean-observation

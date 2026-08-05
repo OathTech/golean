@@ -17,6 +17,4 @@ strings/rune-slice-conversion
 strings/rune-slice-to-string-copy
 strings/rune-string-conversion
 strings/string-to-rune-copy
-structs/selector-addressability-edge/read-conversion-result
-structs/tag-defined-conversion
 structs/tag-pointer-conversion

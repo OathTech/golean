@@ -326,3 +326,59 @@ internals); `proofs/` stays untouched (its simp sets unfold
 `normalizeStructValueWith` only at concrete `actual == name` instances,
 which the changed mismatch branch does not affect — verified by the
 proofs build in the gate).
+
+## Build log — deviations and discoveries (recorded as they happened)
+
+- **Stage 1 (BUG-011).** The Ops change rippled into core metatheory as
+  predicted-but-underestimated: `normalizeStructValueWith_locSup`
+  (StateWf) and MachineSound's capCong-congruence and default-value
+  lemmas needed the escape branch — all in the same commit; `proofs/`
+  itself needed nothing.
+- **Stage 4 (type switches).** Two frontend defects found by the
+  differential during the stage, fixed before its re-pin: (a) the
+  type-checker config never requested `Implicits`, so clause bindings
+  were absent (silent wrong answer on `scoping/type-switch-guard-shadow`:
+  outer `v` resolved inside clauses); (b) `freeCaptures` classified
+  Implicits-declared clause bindings as OUTER captures — a func literal
+  containing `switch r := recover().(type)` captured a nonexistent outer
+  `r` (`panic-recover/recover-value` moved stages, then went green).
+- **Stage 5 (method values) — the oracle earned its keep twice.**
+  (a) Go panics at method-value CREATION on a nil interface (the itab
+  load), not at the call: the first lowering captured the nil box and
+  panicked at call time — Lean 12 vs Go 2 on the stage-0 pin
+  `interfaces/interface-method-value-nil`, whose in-file comment had
+  encoded the same wrong assumption (both corrected). The lowering now
+  hoists the box once and nil-checks it at creation, panicking with the
+  machine's runtime-error payload — new wire form `panic` +
+  `runtimeError: true`, decoded as a box at `runtimeErrorTypeId` (the
+  sentinel moved Machine.lean → Syntax.lean so the decoder can name it).
+  (b) A PRE-EXISTING machine gap surfaced: frame-entry panics
+  (`dynamicDispatch?`'s nil-interface and nil-pointer-box-deref panics
+  inside `enterFrame`) were raw thrown errors on EVERY call path —
+  correct panic status when unrecovered, wrong under `recover`. Pinned
+  first (`interfaces/recover-nil-dispatch/{nil-interface,
+  nil-pointer-box}`, red), then fixed in LOCKSTEP: five `Step` twins
+  (`callImmediatePanic`, `callTargetsDoneEnterPanic`,
+  `callArgsDoneEnterPanic`, `callValCalleeEnterPanic`,
+  `callValArgsEnterPanic`) appended at the END of the inductive (the
+  correspondence proofs' positional case tags keep their numbering) and
+  a single `enterFrameStep` helper in stepFn (each call site stays ONE
+  `fun_cases` branch); `stepFn_sound` / `step_complete` /
+  `step_complete_any_wf` / `stepFn_oblivious` extended,
+  `step_preserves_wf` and `step_det` (proofs/, bit-identical) absorbed
+  the new rules unchanged. **Recorded narrowing:** frame entry for a
+  DEFERRED call (the drain rules) keeps the thrown behavior — a panic
+  there is a panic during unwinding/drain, whose Go semantics
+  (chain-joining order) deserves its own pinned design pass before
+  modeling.
+- **Stage 5 bonus:** the method-expression lowering turned three
+  long-red ids green that were not in this slice's target list
+  (`methods/method-expression`, `methods/pointer-method-expression`,
+  `variadic/variadic-method-expression`).
+- **Stage 6 (imported stubs).** The unexported-method identity hazard
+  (D5's "cross-package unexported" case) got an explicit machine guard:
+  `dynamicIsImportedMarker` + `isExportedName` in
+  `firstUnsatisfiedMethod?` — an unexported requirement never gets a
+  definite answer against a marker type.
+- **Stage 7.** As designed; `structs/tag-pointer-conversion` stays red
+  with the aliasing reason recorded in the convert arm's comment.

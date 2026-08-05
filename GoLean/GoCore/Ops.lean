@@ -898,7 +898,31 @@ def convertValueToTyFuel : Nat → ExecState → Ty → GoValue → Except GoErr
       match TypeEnv.lookup state.types name with
       | some (.alias target) => convertValueToTyFuel fuel state target value
       | some (.defined target) => convertValueToTyFuel fuel state target value
-      | some (.struct _) => unsupported s!"conversion to struct type {name.key}"
+      | some (.struct targetFields) =>
+          -- Struct VALUE conversion (2026-08-05, slice-2 stage 7, design
+          -- note D6): legal exactly when the underlying struct types are
+          -- identical. The wire strips tags (Go's conversions IGNORE
+          -- them), so wire `FieldDef` equality is the identity rule —
+          -- with `embedded` flags compared too, a recorded CONSERVATIVE
+          -- narrowing (the spec ignores embeddedness for identity). The
+          -- result is a retagged COPY, Go's value-conversion semantics.
+          -- Pointer-to-struct conversions stay refused elsewhere: they
+          -- ALIAS one cell under two tags, which field access cannot
+          -- honor yet (structs/tag-pointer-conversion stays red).
+          match value with
+          | .struct actual actualFields =>
+              if actual == name then
+                return value
+              else
+                match TypeEnv.lookup state.types actual with
+                | some (.struct sourceFields) =>
+                    if sourceFields == targetFields then
+                      return .struct name actualFields
+                    else
+                      unsupported s!"conversion to struct type {name.key} \
+from {actual.key} (non-identical underlying)"
+                | _ => unsupported s!"conversion to struct type {name.key} from {actual.key}"
+          | _ => unsupported s!"conversion to struct type {name.key}"
       | some (.unsupported feature) => unsupported s!"conversion to {feature}"
       | some (.interfaceDef _) => unsupported s!"conversion to interface type {name.key}"
       | none => unsupported s!"conversion to unknown defined type {name.key}"

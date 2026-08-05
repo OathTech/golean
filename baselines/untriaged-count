@@ -51,4 +51,9 @@
 #   embedded-pointer-field, embedded-pointer-nil-panic,
 #   promoted-field-depth-shadow, structs/anonymous-field,
 #   structs/tag-embedded-field.
-15
+# 2026-08-05 (general-coverage slice 2, struct value conversions)
+#   15 -> 13: identical-underlying struct value conversions conformant
+#   (retagged copy in convertValueToTyFuel, design note 2026-08-05 D6):
+#   structs/tag-defined-conversion,
+#   structs/selector-addressability-edge/read-conversion-result.
+13

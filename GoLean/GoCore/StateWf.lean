@@ -1140,7 +1140,21 @@ theorem convertValueToTyFuel_locSup :
       split at h
       · exact ih h
       · exact ih h
-      · simp at h
+      · -- struct conversion (stage 7): identity, or a retagged copy with
+        -- the SAME fields — locSup is over the fields either way.
+        split at h
+        · split at h
+          · simp only [pure_eq_ok, Except.ok.injEq] at h
+            subst h
+            exact Nat.le_refl _
+          · split at h
+            · split at h
+              · simp only [pure_eq_ok, Except.ok.injEq] at h
+                subst h
+                simp [GoValue.locSup]
+              · simp at h
+            · simp at h
+        · simp at h
       · simp at h
       · simp at h
       · simp at h
