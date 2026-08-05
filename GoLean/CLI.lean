@@ -30,7 +30,9 @@ structure RunArgs where
 private def usage : String :=
   "usage:\n" ++
   "  golean native-json-run --input <file> --function <name> [--arg-int <n> ...] [--fuel <n>] [--choices <n,n,...>]\n" ++
-  "  golean observation-eq --left <json> --right <json>\n"
+  "  golean observation-eq --left <json> --right <json>\n" ++
+  "  golean coverage-observations --input <file> --function <name> [--arg-int <n> ...] [--fuel <n>]\n" ++
+  "      [--max-width <B>] [--max-sites <D>] [--cap <N>] [--work-cap <W>]\n"
 
 private def absoluteFrom (base : FilePath) (path : FilePath) : FilePath :=
   if path.isRelative then (base / path).normalize else path.normalize
@@ -346,6 +348,243 @@ private def runNativeJsonRun (args : List String) : IO UInt32 := do
           IO.eprintln s!"provide --input <file> and --function <name>\n{usage}"
           return 2
 
+/-! ## `coverage-observations` — the membership lane's machine-side enumerator
+
+CLI layer ONLY (arc slice 3, `docs/2026-08-04_membership-lane-design.md`):
+the semantic core is reused verbatim (`stepFn` iterated exactly as
+`runConfig` iterates it; the entry wiring mirrors
+`runFunctionWithContextM`). For a case whose observable genuinely depends
+on the `Choices` stream, this enumerates the DISTINCT observations over
+all stream prefixes on alphabet `[0, B)` to consumption depth `D`,
+deduplicating canonical observation JSON.
+
+Coverage argument: `Choices.consume` takes each pick modulo the site's
+bound, so `[0, B)` at every position covers every behavior PROVIDED
+`B ≥` every site's bound reached in the case. The enumerator cannot read
+a site's bound, so `B` is per-case metadata certified by the case author;
+the ALIAS GUARD cross-checks it cheaply (probe picks `≥ B`: if the
+enumeration is complete, EVERY stream's observation is in the set, so a
+probe landing outside the set proves `B` too small — fail closed). Depth
+`D`, the observation cap `N`, and the work cap all fail LOUD, never
+truncate silently. -/
+
+structure EnumArgs where
+  input : Option FilePath := none
+  functionName : Option String := none
+  args : Array Int := #[]
+  fuel : Nat := 10000000
+  /-- `B`: the pick alphabet is `[0, B)` at every consumption site. Must be
+  `≥` every site's bound in the case (per-case metadata; default 16 covers
+  append's 8 and small maps). -/
+  maxWidth : Nat := 16
+  /-- `D`: maximum consumption sites per run. A run consuming more fails
+  loud — it is never silently truncated to a prefix. -/
+  maxSites : Nat := 8
+  /-- `N`: cap on the DISTINCT observation set. Exceeding it fails loud —
+  such a case is too wide for enumeration (needs a per-case predicate,
+  out of scope per the design note). -/
+  cap : Nat := 64
+  /-- Work cap on total machine runs (exploration + alias probes): the
+  `B^D` blowup guard. Exceeding it fails loud. -/
+  workCap : Nat := 200000
+  deriving Repr
+
+private def parseEnumArgs : List String → EnumArgs → Except String EnumArgs
+  | [], cfg => .ok cfg
+  | "--input" :: path :: rest, cfg =>
+      parseEnumArgs rest { cfg with input := some (FilePath.mk path) }
+  | "--function" :: name :: rest, cfg =>
+      parseEnumArgs rest { cfg with functionName := some name }
+  | "--arg-int" :: value :: rest, cfg => do
+      parseEnumArgs rest { cfg with args := cfg.args.push (← parseJsonInt "--arg-int" value) }
+  | "--fuel" :: value :: rest, cfg => do
+      parseEnumArgs rest { cfg with fuel := (← parseJsonNat "--fuel" value) }
+  | "--max-width" :: value :: rest, cfg => do
+      parseEnumArgs rest { cfg with maxWidth := (← parseJsonNat "--max-width" value) }
+  | "--max-sites" :: value :: rest, cfg => do
+      parseEnumArgs rest { cfg with maxSites := (← parseJsonNat "--max-sites" value) }
+  | "--cap" :: value :: rest, cfg => do
+      parseEnumArgs rest { cfg with cap := (← parseJsonNat "--cap" value) }
+  | "--work-cap" :: value :: rest, cfg => do
+      parseEnumArgs rest { cfg with workCap := (← parseJsonNat "--work-cap" value) }
+  | flag :: _, _ => .error s!"unknown or incomplete option: {flag}\n{usage}"
+
+private def renderGoError (err : GoError) : String :=
+  s!"{err.status}: {err.message}"
+
+/-- Mirror of `runFunctionWithContextM`'s entry wiring, split out so every
+enumeration run restarts from the SAME initial state and configuration
+(all values are pure). -/
+private def enumSetup (program : GoCore.Program) (name : String)
+    (args : Array GoValue) :
+    Except GoError (GoCore.ExecState × GoCore.Machine.Config × List Loc) := do
+  let func ←
+    match GoCore.findFunctionIn? program.funcs ⟨name⟩ with
+    | some func => pure func
+    | none => throw (.stuck s!"GoCore function not found: {name}")
+  let state : GoCore.ExecState :=
+    { types := program.typeDefs.toList, functions := program.funcs
+      methods := program.methods }
+  if func.args.size != args.size then
+    throw (.stuck s!"expected {func.args.size} argument(s), got {args.size}")
+  let (env, s₁) ← GoCore.Machine.bindParams [] state func.args.toList args.toList
+  let (frameEnv, s₂) ← GoCore.Machine.allocDecls env s₁ func.results.toList
+  let resultLocs ← GoCore.Machine.pinResultLocs frameEnv func.results.toList
+  let c₀ : GoCore.Machine.Config := .exec func.body frameEnv (.frame [] [] [] .stop)
+  return (s₂, c₀, resultLocs)
+
+/-- One machine run to a terminal configuration: the observation JSON plus
+the LEFTOVER choice stream. `Choices.consume` pops exactly one element
+while the stream is non-empty (exhaustion consumes nothing and yields the
+default 0), so `provided − |leftover|` is the exact number of consumption
+sites reached whenever the leftover is non-empty — the enumerator's
+consumption meter. Terminal handling mirrors `runConfig` exactly, except
+the panic terminal KEEPS the stream (its observation is a member too)
+instead of throwing it away; all other `GoError`s (stuck, unsupported,
+internal, fuel-out) propagate and the enumeration fails loud on them. -/
+private def enumRun (resultLocs : List Loc) :
+    Nat → GoCore.ExecState → GoCore.Machine.Config → GoCore.Choices →
+    Except GoError (Json × GoCore.Choices)
+  | _, σ, .next .stop, choices =>
+      return (runJson { values := (← GoCore.Machine.loadMany σ resultLocs).toArray }, choices)
+  | _, _, .panicked msg, choices => return (errorJson (.panic msg), choices)
+  | 0, _, _, _ => throw .fuelOut
+  | fuel + 1, σ, c, choices => do
+      let (c', σ', choices') ← GoCore.Machine.stepFn σ c choices
+      enumRun resultLocs fuel σ' c' choices'
+
+private structure EnumOutcome where
+  /-- Distinct observations (canonical `Json`, deduplicated by structural
+  equality — the same equality `observation-eq` decides). -/
+  observations : Array Json := #[]
+  /-- Complete pick assignments (one per explored leaf; exact consumption
+  = length). The alias guard probes these. -/
+  leaves : Array (Array Nat) := #[]
+  runs : Nat := 0
+
+/-- Depth-first exploration of the choice tree over prefixes on `[0, B)`.
+Invariant on every frontier entry `p`: the run's first `|p|` consumption
+sites exist and consume exactly `p` (established by the parent's probe).
+Each pop runs the machine once with stream `p ++ [0]` — the probe pick:
+a leftover of exactly one element proves the run finished consuming `|p|`
+sites (record the observation; `p` is a complete assignment), an empty
+leftover proves a site exists at depth `|p|` (extend with every pick in
+`[0, B)`). Fuel is the work cap: decrements once per run, fails loud at
+zero with the frontier non-empty. -/
+private def exploreLoop (resultLocs : List Loc) (runFuel : Nat)
+    (σ₀ : GoCore.ExecState) (c₀ : GoCore.Machine.Config)
+    (width sites cap : Nat) :
+    Nat → List (Array Nat) → EnumOutcome → Except String EnumOutcome
+  | _, [], out => .ok out
+  | 0, _ :: _, out =>
+      .error s!"work cap exceeded after {out.runs} run(s) with prefixes still unexplored — raise --work-cap or narrow the case"
+  | work + 1, p :: rest, out => do
+      let stream := p.toList ++ [0]
+      match enumRun resultLocs runFuel σ₀ c₀ stream with
+      | .error err =>
+          .error s!"machine run failed under pick prefix {p.toList} — cannot certify the observation set: {renderGoError err}"
+      | .ok (obs, leftover) =>
+          let out := { out with runs := out.runs + 1 }
+          if leftover.length ≥ 1 then
+            -- Probe untouched: `p` is a complete assignment.
+            let observations :=
+              if out.observations.contains obs then out.observations
+              else out.observations.push obs
+            if observations.size > cap then
+              .error s!"observation cap N={cap} exceeded — the case is too wide for enumeration (design note: needs a per-case predicate)"
+            else
+              exploreLoop resultLocs runFuel σ₀ c₀ width sites cap work rest
+                { out with observations, leaves := out.leaves.push p }
+          else
+            -- Probe consumed: a site exists at depth |p|.
+            if p.size + 1 > sites then
+              .error s!"run consumes more than --max-sites {sites} choice site(s) — raise the case's sites bound (never truncated silently)"
+            else
+              let children := (List.range width).map (fun b => p.push b)
+              exploreLoop resultLocs runFuel σ₀ c₀ width sites cap work
+                (children ++ rest) out
+
+/-- The alias guard: for every explored complete assignment and every pick
+position, re-run with that pick bumped by `B`. If the enumeration is
+complete (`B ≥` every site's bound), every stream's observation — probe
+streams included — lies in the enumerated set; an observation outside it
+proves `B` is smaller than some site's bound, so coverage is NOT
+certified and the enumeration fails closed. (The converse does not hold —
+an aliased bound can escape one probe — so this is the design note's
+cheap cross-check on the per-case `B` metadata, not a proof.) -/
+private def aliasProbeLoop (resultLocs : List Loc) (runFuel : Nat)
+    (σ₀ : GoCore.ExecState) (c₀ : GoCore.Machine.Config) (width : Nat)
+    (observations : Array Json) :
+    Nat → List (List Nat) → Nat → Except String Nat
+  | _, [], probes => .ok probes
+  | 0, _ :: _, probes =>
+      .error s!"work cap exceeded during alias probes (after {probes} probe(s)) — raise --work-cap"
+  | work + 1, stream :: rest, probes => do
+      match enumRun resultLocs runFuel σ₀ c₀ stream with
+      | .error err =>
+          .error s!"alias-guard probe {stream} failed — cannot certify coverage at width B={width}: {renderGoError err}"
+      | .ok (obs, _) =>
+          if observations.contains obs then
+            aliasProbeLoop resultLocs runFuel σ₀ c₀ width observations work rest (probes + 1)
+          else
+            .error s!"alias guard: probe pick ≥ B (stream {stream}) produced an observation OUTSIDE the enumerated set — width B={width} is smaller than some consumption site's bound; raise the case's width metadata. Probe observation: {obs.compress}"
+
+private def runCoverageObservations (args : List String) : IO UInt32 := do
+  let cwd ← IO.currentDir
+  match parseEnumArgs args {} with
+  | .error err =>
+      IO.eprintln err
+      return 2
+  | .ok cfg =>
+      match cfg.input, cfg.functionName with
+      | some input, some functionName =>
+          if cfg.maxWidth < 1 then
+            IO.eprintln "coverage-observations: --max-width must be >= 1 (an empty pick alphabet explores nothing)"
+            return 2
+          let input := absoluteFrom cwd input
+          let contents ← IO.FS.readFile input
+          match Lean.Json.parse contents with
+          | .error err =>
+              IO.eprintln s!"coverage-observations: {input}: JSON parse error: {err}"
+              return 1
+          | .ok json =>
+              match GoLean.NativeToIR.decodeProgram json with
+              | .error err =>
+                  IO.eprintln s!"coverage-observations: {input}: {err}"
+                  return 1
+              | .ok program =>
+                  match enumSetup program functionName (cfg.args.map GoValue.int) with
+                  | .error err =>
+                      IO.eprintln s!"coverage-observations: setup failed: {renderGoError err}"
+                      return 1
+                  | .ok (σ₀, c₀, resultLocs) =>
+                      match exploreLoop resultLocs cfg.fuel σ₀ c₀
+                          cfg.maxWidth cfg.maxSites cfg.cap (cfg.workCap + 1) [#[]] {} with
+                      | .error err =>
+                          IO.eprintln s!"coverage-observations: {err}"
+                          return 1
+                      | .ok out =>
+                          let probeStreams : List (List Nat) :=
+                            out.leaves.toList.flatMap (fun p =>
+                              (List.range p.size).map (fun i =>
+                                (p.set! i (p[i]! + cfg.maxWidth)).toList))
+                          let workLeft := cfg.workCap + 1 - out.runs
+                          match aliasProbeLoop resultLocs cfg.fuel σ₀ c₀
+                              cfg.maxWidth out.observations workLeft probeStreams 0 with
+                          | .error err =>
+                              IO.eprintln s!"coverage-observations: {err}"
+                              return 1
+                          | .ok probes =>
+                              let lines :=
+                                (out.observations.map (·.compress)).qsort (· < ·)
+                              for line in lines do
+                                IO.println line
+                              IO.eprintln s!"coverage-observations: observations={out.observations.size} runs={out.runs} probes={probes} width={cfg.maxWidth} sites={cfg.maxSites} leaves={out.leaves.size}"
+                              return 0
+      | _, _ =>
+          IO.eprintln s!"provide --input <file> and --function <name>\n{usage}"
+          return 2
+
 def main (args : List String) : IO UInt32 := do
   match args with
   | ["--help"] | ["-h"] =>
@@ -353,6 +592,7 @@ def main (args : List String) : IO UInt32 := do
       return 0
   | "native-json-run" :: rest => runNativeJsonRun rest
   | "observation-eq" :: rest => runObservationEq rest
+  | "coverage-observations" :: rest => runCoverageObservations rest
   | [] =>
       IO.println usage
       return 0
