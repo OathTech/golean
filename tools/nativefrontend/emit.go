@@ -2282,6 +2282,16 @@ func (e *emitter) emitMapCompound(ix *ast.IndexExpr, mt *types.Map, op string, r
 	}
 	var rhs any = map[string]any{"expr": "int", "value": "1",
 		"type": map[string]any{"kind": "int", "int": "int"}}
+	// m[k]++ over FLOAT values: the synthetic 1 must be float-kinded
+	// (floats slice F3 — an int literal would be a kind-mismatched
+	// operand in the machine).
+	if vb, ok := mt.Elem().Underlying().(*types.Basic); ok && vb.Info()&types.IsFloat != 0 {
+		vt, err := e.emitBasic(vb)
+		if err != nil {
+			return nil, err
+		}
+		rhs = map[string]any{"expr": "float", "num": "1", "den": "1", "type": vt}
+	}
 	if rhsExpr != nil {
 		rhs, err = e.emitExpr(rhsExpr)
 		if err != nil {
@@ -4261,6 +4271,26 @@ func (e *emitter) emitBasicLit(lit *ast.BasicLit) (any, error) {
 }
 
 func (e *emitter) emitConstValue(tv types.TypeAndValue) (any, error) {
+	// A FLOAT-typed constant travels as its EXACT RATIONAL (floats design
+	// note 2026-08-04, decision 5): num/den decimal strings from
+	// go/constant's ExactString — every literal and every folded result is
+	// exactly a rational — and GoCore performs the single spec-mandated
+	// rounding at the typing boundary. Checked on the TYPE, not the value
+	// kind: go/constant stores 3.0 with Int kind, which previously fell to
+	// the int arm and emitted an untyped int literal into a float slot.
+	if b, ok := tv.Type.Underlying().(*types.Basic); ok && b.Info()&types.IsFloat != 0 {
+		switch tv.Value.Kind() {
+		case constant.Int, constant.Float:
+			num, den := exactRational(tv.Value)
+			ty, err := e.emitBasic(b)
+			if err != nil {
+				return nil, err
+			}
+			return map[string]any{"expr": "float", "num": num, "den": den, "type": ty}, nil
+		default:
+			return nil, unsup("float-typed constant of kind %s", tv.Value.Kind())
+		}
+	}
 	switch tv.Value.Kind() {
 	case constant.Int:
 		node := map[string]any{"expr": "int", "value": tv.Value.ExactString()}
@@ -4292,6 +4322,19 @@ func (e *emitter) emitConstValue(tv types.TypeAndValue) (any, error) {
 	default:
 		return nil, unsup("constant kind %s", tv.Value.Kind())
 	}
+}
+
+// exactRational renders a go/constant Int or Float value as exact
+// numerator/denominator decimal strings. ExactString of those kinds is
+// either "n" or "n/d" with d > 0 (go/constant normalizes the sign into
+// the numerator); the Lean decoder re-checks both fields and fails
+// closed on any other shape.
+func exactRational(v constant.Value) (string, string) {
+	s := v.ExactString()
+	if i := strings.IndexByte(s, '/'); i >= 0 {
+		return s[:i], s[i+1:]
+	}
+	return s, "1"
 }
 
 func (e *emitter) emitBinary(b *ast.BinaryExpr) (any, error) {

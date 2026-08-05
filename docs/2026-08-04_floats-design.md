@@ -663,3 +663,85 @@ Rider decided with §4: the `-x` mislowering (`NativeToIR.lean:216`,
 `0 - x`, wrong at `+0`) is fixed in slice F3 via a proper negation
 form, pinned by the existing `signed-zero` case — recorded here as
 the bug's file-of-record until then.
+
+---
+
+## Build log — slice 4 implementation (2026-08-05, recorded as it happened)
+
+Branch `general-coverage-floats`, stages F0–F3 per §8; deviations and
+discoveries only (what went exactly as designed is not repeated).
+
+- **F0.** `to-int-out-of-range` landed as TWO rows (`range`, `nan`) —
+  distinct refusal branches, one package. Both return a constant after
+  the conversion so the platform-dependent converted value never enters
+  the observation (amd64/arm64 would otherwise disagree on the Go side
+  of the NaN row). FMA discriminator probed: x = y = 1 + 2⁻²⁷,
+  z = −(1 + 2⁻²⁶) (unfused r = 0, fused r = 2⁻⁵⁴); values scaled by an
+  argument to defeat compile-time constant folding on EVERY platform, so
+  the tripwire tests codegen, not the folder. int64→float32
+  double-rounding discriminator probed: 9007199791611905 =
+  (2²⁴+1)·2²⁹ + 1 (single: 0x5A000001; via binary64: 0x5A000000).
+- **F1 transcription notes.** `mullu`/`divlu` (the Hacker's Delight limb
+  algorithms) are NOT transcribed: with `Nat` the 128-bit product and
+  the 128/64 division are exact single operations — the same
+  mathematical functions on the used domain, recorded at both call
+  sites (`fdiv64` keeps `divlu`'s u1 ≥ v overflow arm verbatim although
+  unreachable for unpacked operands). Loops are fuel-structural with
+  bounds derived from the width invariant in comments (`normUp` 64,
+  `normDownSticky` 64, `denormShift` 128). go1.26.5's `nan64` constant
+  is exactly the canonical 0x7FF8_0000_0000_0000 — the "low-bit quirk"
+  §4 hedged about is gone in this toolchain; `by decide` examples pin
+  both canonical NaN constants. The kernel-reduction smoke (20
+  decide-class examples over divide/round/denormal/rational paths)
+  passed at birth with no OOM (probe-compiled under `ulimit -v 16GiB`).
+- **F1 oracle discovery.** gc's CONSTANT typing simplifies an
+  underflowed negative zero to +0 (probed: `var f float32 = -1e-103`
+  has bits 0) — the spec's "-0 further simplified to an unsigned zero"
+  — while `strconv.ParseFloat` keeps −0. The vector generator applies
+  the same simplification to the rational vectors' expected side; the
+  RUNTIME `float64→float32` conversion keeps −0 (also probed) and is a
+  different code path (`f64to32`), unaffected.
+- **F1 vectors.** 28 571 vectors (`Tests/FloatVectors.lean`, generated
+  by `tools/floatvectors`, seed 20260805): softfloat64_test.go's base
+  list + value-class specials on a full grid, seeded randoms against a
+  core subset, ParseFloat as the independent correctly-rounded oracle
+  for the rational kernel. All passed against the transcription on the
+  first complete run (after the −0 generator fix above). A first
+  checker draft validated in the Option monad and silently PASSED on
+  parse failure; rewritten fail-closed before shipping (parse failure =
+  vector failure) with the count pinned against truncation.
+- **F2 deviations.** (a) The float arms of `coerceStoredValue` /
+  `normalizeValueForTyFuel` are kind-STRICT (mismatch fails closed)
+  where the int arms adopt the target kind — ints need flexibility for
+  UNTYPED literals; float literals always arrive typed, so a mismatch
+  is a lowering bug and a mask would silently reinterpret bits.
+  (b) `Expr.neg` is value-directed for INTS TOO (`0 − v` at the
+  operand's kind) — the old frontend lowering minted the zero literal
+  at a type-attachment-dependent kind; `.neg` is strictly more robust
+  and the diff gate showed zero movement. (c) The min/max float guard
+  is a top-level if-else (not a do-guard) so `applyStrictOp_wf` splits
+  it cleanly (`guard_ite_eq_ok`). Metatheory absorb: StateWf/
+  MachineSound arm additions only — `proofs/` needed ZERO changes
+  (verified by the proofs build in the gate).
+- **F3 discovery — go/constant stores 3.0 with Int KIND.** `var f
+  float64 = 3` has `tv.Value.Kind() == constant.Int`, so float-constant
+  detection must key on the TYPE (`Info()&IsFloat`), never the value
+  kind; keying on kind would have emitted untyped INT literals into
+  float slots (caught in design, before the differential could).
+  `exactRational` splits `ExactString()` ("n" or "n/d", sign always in
+  the numerator); the Lean decoder re-parses and fails closed on
+  malformed shapes (zero den, non-integer strings, missing kind).
+- **F3 accounting correction.** §1 called all 8
+  `floats/generic-type-set/*` ids double-blocked; `zero-value` is NOT —
+  its subject never calls a generic function (defined-over-float64 zero
+  value + comparison), and per-declaration quarantine means it was only
+  floats-blocked. It flipped green with this slice: 13 flips total
+  (12 non-generic + zero-value), 7 generic ids stay red for arc
+  slice 6.
+- **F0/F3 ledger note.** The two `to-int-out-of-range` rows moved
+  frontend-export → lean-observation/`unsupported` at F3 and stay there
+  PERMANENTLY (the §3.3 refusal pin). They enter check-bugs' untriaged
+  surface mechanically, so the ceiling moves 13 → 15 with the
+  justification naming them as deliberate fail-closed refusal pins, not
+  untriaged fidelity bugs; the machine half of the same pin is the
+  `float_to_int_refusal_F` eval test.

@@ -56,4 +56,13 @@
 #   (retagged copy in convertValueToTyFuel, design note 2026-08-05 D6):
 #   structs/tag-defined-conversion,
 #   structs/selector-addressability-edge/read-conversion-result.
-13
+# 2026-08-05 (general-coverage slice 4, floats)  13 -> 15: the two
+#   EXPECTED-UNSUPPORTED negative pins floats/to-int-out-of-range/
+#   {range,nan} (floats design note §3.3, decision 4) moved
+#   frontend-export -> lean-observation/unsupported when the frontend
+#   learned floats. They are DELIBERATE fail-closed refusals of the
+#   spec's implementation-dependent out-of-range/NaN float->int
+#   conversion — the red IS the pin (baseline header of the same
+#   commit; machine half pinned by the float_to_int_refusal_F eval
+#   test) — not untriaged fidelity bugs, and they never flip PASS.
+15

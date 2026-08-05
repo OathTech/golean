@@ -5,7 +5,12 @@
 # builtins: the count-only ratchet cannot see equal-sized swaps — this
 # branch itself swapped 3 fixed strings conversions for 3 newly-visible
 # interface-key delete gaps, invisible to the count).
+# floats/to-int-out-of-range/{nan,range}: DELIBERATE fail-closed
+#   refusal pins (floats design note §3.3), permanently red — see
+#   baselines/untriaged-count 2026-08-05 entry.
 arrays/pointer-array
+floats/to-int-out-of-range/nan
+floats/to-int-out-of-range/range
 init/multiple-init-order
 methods/value-auto-deref
 pointers/nil-array-index-panic

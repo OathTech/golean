@@ -265,6 +265,7 @@ func harnessSource(fset *token.FileSet, fn *ast.FuncDecl, subject string, argVal
 import (
 	_golean_json "encoding/json"
 	_golean_fmt "fmt"
+	_golean_math "math"
 	_golean_os "os"
 	_golean_reflect "reflect"
 )
@@ -287,6 +288,25 @@ func _goleanReflectValue(value _golean_reflect.Value) (any, error) {
 		return map[string]any{"tag": "int", "value": value.Int()}, nil
 	case _golean_reflect.Uint, _golean_reflect.Uint8, _golean_reflect.Uint16, _golean_reflect.Uint32, _golean_reflect.Uint64, _golean_reflect.Uintptr:
 		return map[string]any{"tag": "int", "value": value.Uint()}, nil
+	case _golean_reflect.Float64:
+		// BIT-pattern observation (floats design note S5/S7): bit-exact
+		// modulo NaN canonicalization — NaN payload/sign are platform- and
+		// path-dependent and unobservable in the language proper, so both
+		// encoders canonicalize; signed zero stays exact. Revisit if
+		// math.Float64bits ever enters the supported surface.
+		f := value.Float()
+		bits := _golean_math.Float64bits(f)
+		if f != f {
+			bits = 0x7FF8000000000000
+		}
+		return map[string]any{"tag": "float", "kind": "float64", "bits": bits}, nil
+	case _golean_reflect.Float32:
+		f := float32(value.Float())
+		bits := _golean_math.Float32bits(f)
+		if f != f {
+			bits = 0x7FC00000
+		}
+		return map[string]any{"tag": "float", "kind": "float32", "bits": bits}, nil
 	case _golean_reflect.String:
 		bytes := []int{}
 		for _, b := range []byte(value.String()) {

@@ -62,6 +62,12 @@ partial def decodeTy (path : String) (json : Json) : LowerM Ty := do
   | "int" =>
       let name ← StrictJson.string s!"{path}.int" (← StrictJson.field path obj "int")
       pure (.int (← intKindOfName name))
+  | "float" =>
+      let name ← StrictJson.string s!"{path}.float" (← StrictJson.field path obj "float")
+      match name with
+      | "float32" => pure (.float .float32)
+      | "float64" => pure (.float .float64)
+      | other => fail s!"unsupported float kind {other}"
   | "pointer" => pure (.pointer (← decodeTy s!"{path}.elem" (← StrictJson.field path obj "elem")))
   | "slice" => pure (.slice (← decodeTy s!"{path}.elem" (← StrictJson.field path obj "elem")))
   | "array" =>
@@ -120,6 +126,22 @@ partial def decodeExpr (path : String) (json : Json) : LowerM Expr := do
       match s.toInt? with
       | some v => pure (.intLit v (intKindOfOptType (← optType path obj)))
       | none => fail s!"invalid integer literal {s} at {path}"
+  | "float" =>
+      -- The EXACT RATIONAL of a float-typed constant (floats design note
+      -- decision 5); the machine performs the single rounding. Fail
+      -- closed on malformed rationals: non-integer strings, zero
+      -- denominator, a missing/non-float kind.
+      let numS ← StrictJson.string s!"{path}.num" (← StrictJson.field path obj "num")
+      let denS ← StrictJson.string s!"{path}.den" (← StrictJson.field path obj "den")
+      let kind ← match (← optType path obj) with
+        | some (.float k) => pure k
+        | some other => fail s!"float literal at {path} typed non-float ({repr other})"
+        | none => fail s!"float literal at {path} carries no type"
+      match numS.toInt?, denS.toNat? with
+      | some num, some den =>
+          if den == 0 then fail s!"float literal at {path} has zero denominator"
+          else pure (.floatLit num den kind)
+      | _, _ => fail s!"invalid float literal {numS}/{denS} at {path}"
   | "bool" =>
       pure (.boolLit (← StrictJson.bool s!"{path}.value" (← StrictJson.field path obj "value")))
   | "string" =>
@@ -213,7 +235,11 @@ partial def decodeExpr (path : String) (json : Json) : LowerM Expr := do
       let op ← StrictJson.string s!"{path}.op" (← StrictJson.field path obj "op")
       let x ← decodeExpr s!"{path}.x" (← StrictJson.field path obj "x")
       match op with
-      | "-" => pure (.sub (.intLit 0 (intKindOfOptType (← optType path obj))) x)
+      -- Proper negation (floats design note §4 rider): value-directed
+      -- Expr.neg — int stays 0 - v at the OPERAND's kind, float is the
+      -- IEEE sign-bit flip. The old `.sub (intLit 0) x` lowering was
+      -- wrong at x = +0 (gave +0; Go gives -0 — floats/signed-zero).
+      | "-" => pure (.neg x)
       | "!" => pure (.not x)
       | "^" => pure (.bitNeg x)
       | other => fail s!"unsupported unary operator {other}"
@@ -462,7 +488,12 @@ partial def decodeStmt (results : Array Param) (path : String) (json : Json) : L
       let op ← StrictJson.string s!"{path}.op" (← StrictJson.field path obj "op")
       let t ← decodeTarget s!"{path}.target" (← StrictJson.field path obj "target")
       let read ← decodeExpr s!"{path}.read" (← StrictJson.field path obj "read")
-      let one : Expr := .intLit 1 (intKindOfOptType (← optType path obj))
+      -- The synthetic 1 takes the OPERAND's kind: float operands get a
+      -- float-kinded literal (floats slice F3 — an int 1 would be a
+      -- kind-mismatched operand in the machine; floats/incdec pins it).
+      let one : Expr := match (← optType path obj) with
+        | some (.float k) => .floatLit 1 1 k
+        | t => .intLit 1 (intKindOfOptType t)
       let rhs := if op == "-" then Expr.sub read one else Expr.add read one
       pure (.assign t.assignee rhs)
   | "compound-assign" =>

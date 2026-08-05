@@ -287,10 +287,17 @@ func (e *emitter) emitBasic(b *types.Basic) (any, error) {
 		return intType("uint64"), nil
 	case types.Uintptr:
 		return intType("uintptr"), nil
+	case types.Float32:
+		return floatType("float32"), nil
+	case types.Float64:
+		return floatType("float64"), nil
 	// Untyped constants carry their default type at use sites; go/types has
 	// usually already resolved them, but guard the bare kinds.
 	case types.UntypedInt:
 		return intType("int"), nil
+	case types.UntypedFloat:
+		// The spec's default type for an untyped float constant.
+		return floatType("float64"), nil
 	case types.UntypedBool:
 		return map[string]any{"kind": "bool"}, nil
 	case types.UntypedString:
@@ -302,6 +309,10 @@ func (e *emitter) emitBasic(b *types.Basic) (any, error) {
 
 func intType(kind string) map[string]any {
 	return map[string]any{"kind": "int", "int": kind}
+}
+
+func floatType(kind string) map[string]any {
+	return map[string]any{"kind": "float", "float": kind}
 }
 
 // typeOf returns the emitted wire type of an expression from go/types.

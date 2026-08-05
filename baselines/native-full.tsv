@@ -1,32 +1,36 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-05  commit: general-coverage-floats (F0 guardrails)
+# recorded: 2026-08-05  commit: general-coverage-floats (F3 frontend — floats land)
 #   frontend: native  oracle: go run (strict lane) / go-run membership in the
 #   machine-enumerated observation set (membership lane; go1.26.5 samples)
-# manifest_cases: 925  pass: 712  fail: 213
-# Re-pin reason: DELIBERATE coverage change — floats slice F0 guardrails
-# (arc slice 4, docs/2026-08-04_floats-design.md §8: guardrails FIRST, no
-# runtime code in this change). Seven NEW ids, all entering RED at
-# frontend-export (the frontend's float fail-closed refusal); ZERO
-# movement on any existing id:
-# - floats/nan-map-key, floats/signed-zero-map-key: the map-key equality
-#   pins (note §4 — NaN inserts distinct entries; ±0 one key with
-#   stored-key overwrite).
-# - floats/fma-shape: the fusion-envelope tripwire (note §3.1) —
-#   PLATFORM-SENSITIVE BY DESIGN; green on the amd64 oracle once floats
-#   land, and going red on an FMA-emitting platform is the tripwire
-#   firing, not noise.
-# - floats/incdec: f++/f-- float-kinded synthetic literal + absorption.
-# - floats/int64-to-float-rounding: runtime int64→float64/float32
-#   rounding above 2^53/2^24 incl. the probed single-vs-double-rounding
-#   discriminator 9007199791611905 for float32(int64).
-# - floats/to-int-out-of-range/{range,nan}: EXPECTED-UNSUPPORTED negative
-#   pins (note §3.3, decision 4) — these two stay red PERMANENTLY: after
-#   the floats slices land they move frontend-export → lean-observation
-#   with status `unsupported` (the deliberate fail-closed refusal of the
-#   implementation-dependent conversion), never PASS.
-# The 12 non-generic floats reds are this slice's flip target (F3); the 8
-# floats/generic-type-set/* stay red until arc slice 6 (generics).
-# 918 -> 925 cases; pass count unchanged at 712.
+# manifest_cases: 925  pass: 733  fail: 192
+# Re-pin reason: DELIBERATE coverage change — floats slice F3 (arc slice 4,
+# docs/2026-08-04_floats-design.md; frontend float emission + exact-rational
+# constants + Expr.neg + observation bits). 21 FAIL->PASS, 2 designed stage
+# moves, ZERO PASS->FAIL:
+# - the 12 original non-generic floats reds: frontend-export -> PASS
+#   (finite-arithmetic, division-specials, nan-comparisons, signed-zero,
+#   precision-rounding, float32-conversion-rounding, float32-specials,
+#   to-int-truncation, to-uint-truncation, compound-assign,
+#   defined-type-ops, typed-constant-adaptation).
+# - the 5 positive F0 guardrails: frontend-export -> PASS (nan-map-key,
+#   signed-zero-map-key, fma-shape [the §3.1 envelope tripwire — its
+#   going red on an FMA-emitting runner is the tripwire firing, not
+#   noise], incdec, int64-to-float-rounding).
+# - 4 bonus flips, all previously float-emission-blocked, none needing
+#   new semantics: floats/generic-type-set/zero-value (NOT generics-
+#   dependent after all — its subject calls no generic function; the
+#   design note's double-blocked accounting corrected in its build log),
+#   builtins/min-max-edge/untyped-float-context (go/types folds the
+#   constant min/max; RUNTIME float min/max still refuses, decision 8),
+#   constants/untyped-adaptation, maps/map-literal-nan-keys.
+# - floats/to-int-out-of-range/{range,nan}: frontend-export ->
+#   lean-observation/unsupported — the PERMANENT §3.3 negative pins
+#   (implementation-dependent conversion refused at runtime; deliberate
+#   fail-closed refusals, ceiling-listed in baselines/untriaged-count,
+#   never expected to PASS).
+# - the 7 remaining floats/generic-type-set/* ids stay red at
+#   frontend-export until arc slice 6 (generics).
+# 712 -> 733 pass on 925 cases.
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
 PASS	arrays/array-copy	-
@@ -94,7 +98,7 @@ PASS	builtins/min-max-edge/expressions	-
 FAIL	builtins/min-max-edge/generic-ints	frontend-export
 FAIL	builtins/min-max-edge/generic-strings	frontend-export
 PASS	builtins/min-max-edge/one-arg	-
-FAIL	builtins/min-max-edge/untyped-float-context	frontend-export
+PASS	builtins/min-max-edge/untyped-float-context	-
 PASS	builtins/min-max-ints	-
 PASS	builtins/min-max-strings	-
 FAIL	builtins/real-imag	frontend-export
@@ -195,7 +199,7 @@ PASS	constants/typed-iota	-
 PASS	constants/typed-iota-offset	-
 PASS	constants/typed-string-binary	-
 PASS	constants/typed-untyped-binary	-
-FAIL	constants/untyped-adaptation	frontend-export
+PASS	constants/untyped-adaptation	-
 FAIL	constants/untyped-complex-context	frontend-export
 FAIL	control-flow/break-label-select	frontend-export
 PASS	control-flow/continue-in-switch	-
@@ -309,13 +313,13 @@ PASS	embedding/promoted-pointer-receiver-method-set/value-box	-
 PASS	embedding/value-embedded-pointer-promotion/dynamic-dispatch	-
 PASS	embedding/value-embedded-pointer-promotion/static-call	-
 PASS	embedding/value-embedded-pointer-promotion/value-box-satisfies	-
-FAIL	floats/compound-assign	frontend-export
-FAIL	floats/defined-type-ops	frontend-export
-FAIL	floats/division-specials	frontend-export
-FAIL	floats/finite-arithmetic	frontend-export
-FAIL	floats/float32-conversion-rounding	frontend-export
-FAIL	floats/float32-specials	frontend-export
-FAIL	floats/fma-shape	frontend-export
+PASS	floats/compound-assign	-
+PASS	floats/defined-type-ops	-
+PASS	floats/division-specials	-
+PASS	floats/finite-arithmetic	-
+PASS	floats/float32-conversion-rounding	-
+PASS	floats/float32-specials	-
+PASS	floats/fma-shape	-
 FAIL	floats/generic-type-set/compound-assign	frontend-export
 FAIL	floats/generic-type-set/conversion-to-int	frontend-export
 FAIL	floats/generic-type-set/defined-float32-sum	frontend-export
@@ -323,19 +327,19 @@ FAIL	floats/generic-type-set/defined-float64-sum	frontend-export
 FAIL	floats/generic-type-set/explicit-constant	frontend-export
 FAIL	floats/generic-type-set/inference	frontend-export
 FAIL	floats/generic-type-set/ordering	frontend-export
-FAIL	floats/generic-type-set/zero-value	frontend-export
-FAIL	floats/incdec	frontend-export
-FAIL	floats/int64-to-float-rounding	frontend-export
-FAIL	floats/nan-comparisons	frontend-export
-FAIL	floats/nan-map-key	frontend-export
-FAIL	floats/precision-rounding	frontend-export
-FAIL	floats/signed-zero	frontend-export
-FAIL	floats/signed-zero-map-key	frontend-export
-FAIL	floats/to-int-out-of-range/nan	frontend-export
-FAIL	floats/to-int-out-of-range/range	frontend-export
-FAIL	floats/to-int-truncation	frontend-export
-FAIL	floats/to-uint-truncation	frontend-export
-FAIL	floats/typed-constant-adaptation	frontend-export
+PASS	floats/generic-type-set/zero-value	-
+PASS	floats/incdec	-
+PASS	floats/int64-to-float-rounding	-
+PASS	floats/nan-comparisons	-
+PASS	floats/nan-map-key	-
+PASS	floats/precision-rounding	-
+PASS	floats/signed-zero	-
+PASS	floats/signed-zero-map-key	-
+FAIL	floats/to-int-out-of-range/nan	lean-observation
+FAIL	floats/to-int-out-of-range/range	lean-observation
+PASS	floats/to-int-truncation	-
+PASS	floats/to-uint-truncation	-
+PASS	floats/typed-constant-adaptation	-
 PASS	functions/closure-arg-and-capture	-
 PASS	functions/closure-block-scope-capture	-
 PASS	functions/closure-captures-named-result	-
@@ -591,7 +595,7 @@ PASS	maps/map-literal-empty	-
 PASS	maps/map-literal-interface-distinct-dynamic-type	-
 PASS	maps/map-literal-interface-duplicate-key	-
 PASS	maps/map-literal-interface-key-panic	-
-FAIL	maps/map-literal-nan-keys	frontend-export
+PASS	maps/map-literal-nan-keys	-
 PASS	maps/map-nil-assign	-
 PASS	maps/map-nil-eq	-
 PASS	maps/map-value-inner-write	-
