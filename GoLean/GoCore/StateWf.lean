@@ -983,7 +983,13 @@ theorem normalizeStructValueWith_locSup {f : Ty → GoValue → Except GoError G
   rename_i actual fieldsValue
   simp only [normalizeStructValueWith] at h
   split at h
-  · simp [Bind.bind, Except.bind] at h
+  · -- tag mismatch: the empty-struct assignability escape yields the
+    -- retagged EMPTY struct (locSup 0); the stuck arm is vacuous.
+    split at h
+    · simp only [pure_eq_ok, Except.ok.injEq] at h
+      subst h
+      simp [GoValue.locSup, goValueFieldsSup]
+    · simp [Bind.bind, Except.bind] at h
   · simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq] at h
     obtain ⟨_, _, h⟩ := h
     split at h

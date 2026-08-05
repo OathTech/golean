@@ -1036,8 +1036,15 @@ theorem normalizeValueForTyFuel_congr {σ₁ σ₂ : ExecState}
           case struct t fs =>
             obtain ⟨gs, rfl, hf⟩ := GoValue.capCong_struct_left hcc
             have hlen : gs.size = fs.size := (capCongFields_length hf).symm
-            simp only [normalizeStructValueWith, hlen]
-            refine exceptCong.ite_congr (fun _ => rfl) fun _ => ?_
+            simp only [normalizeStructValueWith, emptyStructAssignable,
+              Array.isEmpty, hlen]
+            refine exceptCong.ite_congr (fun _ => ?_) fun _ => ?_
+            · -- Tag mismatch: after rewriting the sizes equal, the
+              -- assignability-escape condition is the SAME on both sides;
+              -- its ok arm returns the identical retagged empty struct and
+              -- its stuck arm the identical error.
+              refine exceptCong.ite_congr (fun _ => ?_) fun _ => rfl
+              exact exceptCong.self fun a => GoValue.capCong_refl a
             refine exceptCong.bind_congr
               (R := fun (_ : PUnit) (_ : PUnit) => True)
               (exceptCong.self fun _ => trivial) fun _ _ _ => ?_
@@ -1564,7 +1571,19 @@ theorem defaultValueFuel_ok_of_normalize_ok {σ : ExecState} :
             simp only [normalizeStructValueWith] at h'
             by_cases hty : (actual != name) = true
             · rw [if_pos hty] at h'
-              simp [Bind.bind, Except.bind, stuck_def] at h'
+              -- Tag mismatch: only the empty-struct assignability escape
+              -- succeeds, and it forces the TARGET field list empty, so the
+              -- default value exists trivially.
+              by_cases hesc :
+                  emptyStructAssignable actual name fields fieldsValue = true
+              · have h3 : fields = #[] := by
+                  simp [emptyStructAssignable, Array.isEmpty] at hesc
+                  exact hesc.1.2
+                exact ⟨.struct name #[], by
+                  simp [defaultValueFuel, hlook, h3, defaultFieldsWith,
+                    pure, Except.pure, Functor.map, Except.map]⟩
+              · rw [if_neg hesc] at h'
+                simp [Bind.bind, Except.bind, stuck_def] at h'
             · rw [if_neg hty] at h'
               by_cases hsz : (fieldsValue.size != fields.size) = true
               · rw [if_pos hsz] at h'

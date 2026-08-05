@@ -187,7 +187,7 @@ sub-slice.
 
 - Status: open
 - Pinned-by: differential
-- Cases: interfaces/embedded-interface-shadowing/interface-field-dispatch, interfaces/embedded-interface-shadowing/interface-field-nil-panic, interfaces/embedded-interface-shadowing/nil-pointer-method-promoted, interfaces/embedded-interface-shadowing/pointer-method-promoted, interfaces/error-idioms/promoted-method, interfaces/promoted-method-assert-ok, methods/embedded-interface-satisfaction, embedding/deep-promoted-method, embedding/embedded-method-promote
+- Cases: interfaces/embedded-interface-shadowing/interface-field-dispatch, interfaces/embedded-interface-shadowing/interface-field-nil-panic, interfaces/embedded-interface-shadowing/nil-pointer-method-promoted, interfaces/embedded-interface-shadowing/pointer-method-promoted, interfaces/error-idioms/promoted-method, interfaces/promoted-method-assert-ok, methods/embedded-interface-satisfaction, embedding/deep-promoted-method, embedding/embedded-method-promote, embedding/promoted-ambiguous-not-satisfied, embedding/promoted-method-value/live, embedding/promoted-method-value/snapshot, embedding/promoted-nil-embedded-pointer/before-args, embedding/promoted-nil-embedded-pointer/call, embedding/promoted-nil-embedded-pointer/nil-panic, embedding/promoted-pointer-receiver-method-set/pointer-box, embedding/promoted-pointer-receiver-method-set/value-box
 - Discovered: 2026-07-30 (interfaces campaign — these cases were
   frontend-blocked before the campaign; the wrap/dispatch landing made
   the gap VISIBLE at the machine: `dynamic type main.T has no method m`)
@@ -498,9 +498,18 @@ concurrency claims.
 
 ## BUG-011 — anonymous `struct{}{}` literal stuck at named empty-struct types
 
-- Status: open
-- Pinned-by: probe (no corpus case yet — adding one is the first step of the fix)
-- Cases: (owed) structs/empty-struct-literal-at-named-type
+- Status: fixed (2026-08-05, general-coverage slice 2 — corpus case FIRST
+  (classified red, all six subjects), then the assignability-aware
+  normalization: `emptyStructAssignable` (Ops.lean) retags the canonical
+  unnamed `struct{}` value at a defined empty-underlying target (and the
+  reverse direction) in `normalizeStructValueWith`, plus the same escape
+  in `valueEqFuel`'s struct-tag checks for the mixed-operand comparison.
+  Metatheory in the same commit: `normalizeStructValueWith_locSup`
+  (StateWf) and the congruence/default-value lemmas (MachineSound) gained
+  the escape branch. Design note D4,
+  `docs/2026-08-05_embedding-interfaces-design.md`.)
+- Pinned-by: differential
+- Cases: structs/empty-struct-literal-at-named-type/var-init, structs/empty-struct-literal-at-named-type/param, structs/empty-struct-literal-at-named-type/return, structs/empty-struct-literal-at-named-type/map-store, structs/empty-struct-literal-at-named-type/reverse, structs/empty-struct-literal-at-named-type/compare
 - Discovered: 2026-08-04 (sem-adequacy notions sub-branch audit, semantics
   reviewer probing beyond the diff; verifier reproduced independently)
 

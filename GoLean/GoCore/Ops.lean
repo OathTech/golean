@@ -680,13 +680,30 @@ def normalizeFieldsWith (f : Ty → GoValue → Except GoError GoValue) :
       return #[(field.name, head)] ++ tail
   | _, _ => return #[]
 
+/-- Go ASSIGNABILITY at the one UNNAMED struct type the wire can carry
+(BUG-011, fixed 2026-08-05 — design note D4): the canonical anonymous
+empty struct `struct{}` is assignable to/from any defined type whose
+underlying type is `struct{}` (identical underlying types, at least one
+side not a defined type). Both field lists empty ⟺ identical underlying
+here, so the check is exact. Two DIFFERENT defined types never take this
+escape — Go requires an explicit conversion for those. -/
+def emptyStructAssignable (actual name : TypeId)
+    (fields : Array FieldDef) (fieldsValue : Array (String × GoValue)) : Bool :=
+  (actual.key == "struct{}" || name.key == "struct{}") &&
+    fields.isEmpty && fieldsValue.isEmpty
+
 /-- Struct-shape checks for normalization at a defined struct type, with the
-(already fuel-decremented) field normalizer. -/
+(already fuel-decremented) field normalizer. A mismatched tag is accepted
+only through the empty-struct ASSIGNABILITY escape (retagged copy — Go's
+assignment); anything else stays stuck. -/
 def normalizeStructValueWith (f : Ty → GoValue → Except GoError GoValue)
     (name : TypeId) (fields : Array FieldDef) : GoValue → Except GoError GoValue
   | .struct actual fieldsValue => do
       if actual != name then
-        stuck s!"struct value type mismatch: expected {name.key}, got {actual.key}"
+        if emptyStructAssignable actual name fields fieldsValue then
+          return .struct name #[]
+        else
+          stuck s!"struct value type mismatch: expected {name.key}, got {actual.key}"
       if fieldsValue.size != fields.size then
         stuck s!"struct value field count mismatch: expected {fields.size}, got {fieldsValue.size}"
       .struct name <$> normalizeFieldsWith f fields.toList fieldsValue.toList
@@ -1210,9 +1227,15 @@ def valueEqFuel : Nat → ExecState → Ty → GoValue → GoValue → Except Go
         | some (.struct fields) =>
             match left, right with
             | .struct leftType leftFields, .struct rightType rightFields => do
-                if leftType != name then
+                -- A mixed comparison is legal exactly when one operand is
+                -- ASSIGNABLE to the other's type; the wire's only unnamed
+                -- struct is the canonical `struct{}` (BUG-011 escape, same
+                -- rule as normalization).
+                if leftType != name &&
+                    !emptyStructAssignable leftType name fields leftFields then
                   stuck s!"left struct equality type mismatch: expected {name.key}, got {leftType.key}"
-                if rightType != name then
+                if rightType != name &&
+                    !emptyStructAssignable rightType name fields rightFields then
                   stuck s!"right struct equality type mismatch: expected {name.key}, got {rightType.key}"
                 if leftFields.size != fields.size then
                   stuck s!"left struct equality field count mismatch: expected {fields.size}, got {leftFields.size}"

@@ -1,22 +1,18 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-04  commit: general-coverage-cf delta-review round 2 (loop-var address-escape trigger)
+# recorded: 2026-08-05  commit: general-coverage-embed slice-2 stage 1 (BUG-011 fix + guardrail corpus)
 #   frontend: native  oracle: go run
-# manifest_cases: 888  pass: 636  fail: 252
-# Re-pin reason: DELIBERATE coverage change, delta-review round 2 of the
-# audit response (docs/2026-08-04_control-flow-design.md): the Go >= 1.22
-# per-iteration loop-variable trigger detected only func-literal CAPTURES
-# (a predicate predating the control-flow slice), so a for-clause variable
-# whose CELL IDENTITY escapes by address — explicit &i, a pointer-receiver
-# method on the loop variable, or array slicing a[:] — took the shared-cell
-# lowering: silent wrong answers, Lean 333 vs Go 12 on all three shapes.
-# The trigger now fires on capture OR address escape over body/cond/post,
-# reusing the goto envelope's root tracing (shared findAddrEscape); the
-# carrier-pointer desugar is correct for these escapes (each iteration's
-# escape observes that iteration's own fresh cell). THREE new ids, all
-# PASS with the go-run oracle (12): for-loopvar-addr-escape,
-# for-loopvar-ptr-recv, for-loopvar-array-slice.
+# manifest_cases: 906  pass: 642  fail: 264
+# Re-pin reason: DELIBERATE coverage change, general-coverage slice 2
+# stage 0+1 (docs/2026-08-05_embedding-interfaces-design.md). Eighteen NEW
+# ids: twelve slice-2 guardrail pins recorded RED ahead of their fixes
+# (embedding/promoted-* promotion pins, interfaces/interface-method-value-nil,
+# interfaces/type-switch-init-stmt, interfaces/type-switch-labeled-break/*),
+# and the six BUG-011 subjects (structs/empty-struct-literal-at-named-type/*)
+# which PASS with the stage-1 fix: assignability-aware empty-struct
+# normalization/equality (emptyStructAssignable, Ops.lean; design note D4;
+# corpus case landed first and classified red, per the standing rule).
 # ZERO PASS->FAIL, no stage moves on existing ids.
-# 633 -> 636 pass, 885 -> 888 cases.
+# 636 -> 642 pass, 888 -> 906 cases.
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
 PASS	arrays/array-copy	-
@@ -283,8 +279,16 @@ PASS	embedding/embedded-field-shadow	-
 FAIL	embedding/embedded-method-promote	lean-observation
 FAIL	embedding/embedded-pointer-field	lean-observation
 FAIL	embedding/embedded-pointer-nil-panic	lean-observation
+FAIL	embedding/promoted-ambiguous-not-satisfied	lean-observation
 FAIL	embedding/promoted-field-depth-shadow	lean-observation
 PASS	embedding/promoted-method-shadow	-
+FAIL	embedding/promoted-method-value/live	lean-observation
+FAIL	embedding/promoted-method-value/snapshot	lean-observation
+FAIL	embedding/promoted-nil-embedded-pointer/before-args	lean-observation
+FAIL	embedding/promoted-nil-embedded-pointer/call	lean-observation
+FAIL	embedding/promoted-nil-embedded-pointer/nil-panic	lean-observation
+FAIL	embedding/promoted-pointer-receiver-method-set/pointer-box	lean-observation
+FAIL	embedding/promoted-pointer-receiver-method-set/value-box	lean-observation
 FAIL	floats/compound-assign	frontend-export
 FAIL	floats/defined-type-ops	frontend-export
 FAIL	floats/division-specials	frontend-export
@@ -423,6 +427,7 @@ PASS	interfaces/interface-compare-panic	-
 PASS	interfaces/interface-defined-type-identity	-
 FAIL	interfaces/interface-method-expression	frontend-export
 FAIL	interfaces/interface-method-value	frontend-export
+FAIL	interfaces/interface-method-value-nil	frontend-export
 PASS	interfaces/interface-nested-struct-compare-panic	-
 PASS	interfaces/interface-storage-copy/pointer	-
 PASS	interfaces/interface-storage-copy/value	-
@@ -460,8 +465,11 @@ FAIL	interfaces/type-switch-default-binding-type	frontend-export
 FAIL	interfaces/type-switch-dynamic	frontend-export
 FAIL	interfaces/type-switch-eval-once	frontend-export
 FAIL	interfaces/type-switch-first-match	frontend-export
+FAIL	interfaces/type-switch-init-stmt	frontend-export
 FAIL	interfaces/type-switch-interface-binding	frontend-export
 FAIL	interfaces/type-switch-interface-case	frontend-export
+FAIL	interfaces/type-switch-labeled-break/loop	frontend-export
+FAIL	interfaces/type-switch-labeled-break/self	frontend-export
 FAIL	interfaces/type-switch-multi-binding	frontend-export
 FAIL	interfaces/type-switch-multi-case	frontend-export
 FAIL	interfaces/type-switch-nil	frontend-export
@@ -859,6 +867,12 @@ FAIL	structs/anonymous-field	lean-observation
 PASS	structs/blank-field	-
 PASS	structs/comparable	-
 PASS	structs/copy-value	-
+PASS	structs/empty-struct-literal-at-named-type/compare	-
+PASS	structs/empty-struct-literal-at-named-type/map-store	-
+PASS	structs/empty-struct-literal-at-named-type/param	-
+PASS	structs/empty-struct-literal-at-named-type/return	-
+PASS	structs/empty-struct-literal-at-named-type/reverse	-
+PASS	structs/empty-struct-literal-at-named-type/var-init	-
 PASS	structs/field-incdec	-
 PASS	structs/field-write-aliased-pointer	-
 PASS	structs/interface-field-compare-panic	-
