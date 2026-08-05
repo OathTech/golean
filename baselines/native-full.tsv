@@ -1,14 +1,13 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-06  commit: general-coverage (arc-final audit response, F3 local-type TypeIds)
+# recorded: 2026-08-06  commit: general-coverage (arc-final audit response, F12 elided &T)
 #   frontend: native  oracle: go run (strict lane) / go-run membership in the
 #   machine-enumerated observation set (membership lane; go1.26.5 samples)
-# manifest_cases: 1025  pass: 876  fail: 149
-# Re-pin reason: BUG-018 fixed (function-local TypeIds inside stencils
-#   parameterized with the enclosing instantiation's type arguments) —
-#   its two differential ids plus the two-instantiation export refusal
-#   flip FAIL -> PASS. Zero PASS->FAIL, zero other stage moves;
-#   generics/local-type-argument stays red (M3's recorded refusal of
-#   the type-ARGUMENT direction, unchanged).
+# manifest_cases: 1025  pass: 880  fail: 145
+# Re-pin reason: F12 fixed (spec-mandated composite-literal &T elision
+#   lowered like the explicit form via the shared hoisted-new helper) —
+#   exactly the four structs/pointer-literal-elision ids flip
+#   frontend-export FAIL -> PASS. Zero PASS->FAIL, zero other stage
+#   moves.
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
 PASS	arrays/array-copy	-
@@ -985,10 +984,10 @@ PASS	structs/pointer-field	-
 PASS	structs/pointer-hop-field-write	-
 PASS	structs/pointer-literal-elision/ctl-explicit	-
 PASS	structs/pointer-literal-elision/map-key	-
-FAIL	structs/pointer-literal-elision/map-value	frontend-export
-FAIL	structs/pointer-literal-elision/ptr-key	frontend-export
-FAIL	structs/pointer-literal-elision/slice-elem	frontend-export
-FAIL	structs/pointer-literal-elision/spec-example	frontend-export
+PASS	structs/pointer-literal-elision/map-value	-
+PASS	structs/pointer-literal-elision/ptr-key	-
+PASS	structs/pointer-literal-elision/slice-elem	-
+PASS	structs/pointer-literal-elision/spec-example	-
 PASS	structs/positional-literal	-
 PASS	structs/positional-literal-eval-order	-
 PASS	structs/recursive-pointer	-

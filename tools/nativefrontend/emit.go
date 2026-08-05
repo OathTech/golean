@@ -4342,20 +4342,7 @@ func (e *emitter) emitAddressOf(x ast.Expr) (any, error) {
 		if err != nil {
 			return nil, err
 		}
-		elemTy, err := e.emitType(e.goTypeOf(ex))
-		if err != nil {
-			return nil, err
-		}
-		ptrTy := map[string]any{"kind": "pointer", "elem": elemTy}
-		name := "$c" + itoa(e.tmpSeq)
-		e.tmpSeq++
-		e.hoisted = append(e.hoisted, map[string]any{
-			"stmt":     "new",
-			"target":   map[string]any{"target": "declare", "id": name, "type": ptrTy},
-			"value":    val,
-			"elemType": elemTy,
-		})
-		return map[string]any{"expr": "ident", "name": name, "type": ptrTy}, nil
+		return e.hoistNewFromValue(val, e.goTypeOf(ex))
 	default:
 		return nil, unsup("address-of %T", x)
 	}
@@ -4411,9 +4398,57 @@ func (e *emitter) emitCompositeLit(cl *ast.CompositeLit) (any, error) {
 		return e.emitSliceLit(cl, u)
 	case *types.Map:
 		return e.emitMapLit(cl, u)
+	case *types.Pointer:
+		// ELIDED &T (spec §Composite literals: "elements or keys that
+		// are addresses of composite literals may elide the &T when the
+		// element or key type is *T") — go/types gives the elided
+		// literal the pointer type; lower it exactly like the explicit
+		// &T{...} spelling (arc-final audit F12, 2026-08-06).
+		if e.hoistForbidden != "" {
+			return nil, unsup("&composite (elided) in %s", e.hoistForbidden)
+		}
+		elem := e.applySubst(u.Elem())
+		var val any
+		var err error
+		switch eu := elem.Underlying().(type) {
+		case *types.Struct:
+			val, err = e.emitStructLit(cl, elem, eu)
+		case *types.Array:
+			val, err = e.emitArrayLit(cl, eu)
+		case *types.Slice:
+			val, err = e.emitSliceLit(cl, eu)
+		case *types.Map:
+			val, err = e.emitMapLit(cl, eu)
+		default:
+			return nil, unsup("composite literal of type %s", t)
+		}
+		if err != nil {
+			return nil, err
+		}
+		return e.hoistNewFromValue(val, elem)
 	default:
 		return nil, unsup("composite literal of type %s", t)
 	}
+}
+
+// hoistNewFromValue allocates an emitted composite value and returns the
+// pointer temp (the shared lowering of explicit `&T{...}` and the elided
+// composite-literal form).
+func (e *emitter) hoistNewFromValue(val any, elem types.Type) (any, error) {
+	elemTy, err := e.emitType(elem)
+	if err != nil {
+		return nil, err
+	}
+	ptrTy := map[string]any{"kind": "pointer", "elem": elemTy}
+	name := "$c" + itoa(e.tmpSeq)
+	e.tmpSeq++
+	e.hoisted = append(e.hoisted, map[string]any{
+		"stmt":     "new",
+		"target":   map[string]any{"target": "declare", "id": name, "type": ptrTy},
+		"value":    val,
+		"elemType": elemTy,
+	})
+	return map[string]any{"expr": "ident", "name": name, "type": ptrTy}, nil
 }
 
 // containsCall reports whether an expression performs a call (and so has an
