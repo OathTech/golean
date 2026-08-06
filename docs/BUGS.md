@@ -29,6 +29,82 @@ differential-pinned) `- Cases: <id>, <id>, …` (baseline case ids), then prose.
 
 ---
 
+## BUG-025 — multi-target assignment phase 2 is all-or-nothing, not left-to-right (earlier stores lost when a later store panics)
+
+- Status: open
+- Pinned-by: differential
+- Cases: multi-assign/store-order-plain, channels/recv-edge/second-target-panic-stores-first
+- Discovered: 2026-08-06 (channels-arc-s1 delta review D3, generalized
+  by the verifier: pre-existing on main, NOT channel-specific)
+
+Spec §Assignments: "Second, the assignments are carried out in
+left-to-right order", with the spec's own example making an earlier
+store observable before a later target's panic (`x[1], x[3] = 4, 5 //
+set x[1] = 4, then panic setting x[3] = 5`). The machine's generic
+multi-assign apply (`locsOf` + `storeMany` after all target addresses)
+stores all-or-nothing: `v, *nilp = 7, 9` recovered leaves `v == 0`
+where Go leaves 7. The RECEIVE-statement instance of the same defect
+(delivery through `selectRecvK`) was fixed on the channels-arc-s1
+branch (per-target store-then-next; pin
+channels/recv-edge/second-target-panic-stores-first); this entry tracks
+the GENERAL path (`applyStmtOpCore .assignMany`, frame-exit
+`storeMany`), untouched.
+
+## BUG-026 — BUG-023's statement-level receive flag misses for-init/for-cond/else-if/switch-case positions (regression vs the deleted binary pre-bind)
+
+- Status: open
+- Pinned-by: differential
+- Cases: channels/recv-order/for-init, channels/recv-order/for-cond, channels/recv-order/else-if, channels/recv-order/switch-case
+- Discovered: 2026-08-06 (channels-arc-s1 delta review D2, verified
+  critical: silent wrong answers vs base in four positions)
+
+The BUG-023 fix set its receive flag only in `emitStmtList`, but
+for-init/for-cond (condPre), else-if chains, and switch case
+expressions are emitted OUTSIDE that path — `len(ch)` stays inline
+there while the receive hoists, reading post-receive state; the deleted
+binary pre-bind had covered the binary shapes among these. The fix's
+justifying comment ("for-loop conditions are hoist-forbidden") was
+FALSE — `hoistForbidden` guards only short-circuit RHS. Fix: a
+position-independent flag (receive anywhere in the enclosing function
+body, nested func literals scanned separately) — over-hoisting `len`/
+`cap` is unobservable (pure, non-panicking, lexically placed), so the
+coarser scope cannot reorder anything.
+
+## BUG-027 — $deferClose<N> collides across functions (liftSeq resets per function): whole-package error
+
+- Status: open
+- Pinned-by: differential
+- Cases: channels/defer-close-two/first, channels/defer-close-two/second, channels/defer-close-two/unrelated
+- Discovered: 2026-08-06 (channels-arc-s1 delta review D1)
+
+The S6 closer is named `"$deferClose" + liftSeq` UNQUALIFIED, while
+every other lifted function is qualified by the enclosing function
+(`$lit` path); `liftSeq` resets per function, so two functions each
+containing `defer close(ch)` mint two `$deferClose0` entries and the
+decoder rejects the whole package (`duplicate function id` — status
+`error`, unrelated functions unrunnable, misclassified in the ledger as
+a machine gap). The blast-radius class BUG-024 just fixed, reintroduced
+by the S6 fix. Fix: qualify with the enclosing function name.
+
+## BUG-028 — map-element receive targets pre-bind a panicking non-call key BEFORE the communication (gc drains first)
+
+- Status: open
+- Pinned-by: differential
+- Cases: channels/recv-map-elem/key-panic-drains
+- Discovered: 2026-08-06 (channels-arc-s1 delta review D5)
+
+The S4 lowering hoists the map base and key ahead of the chan-recv
+statement, so a key whose evaluation panics (a non-call operand — an
+out-of-range index, a nil deref) fires BEFORE the receive; gc receives
+first and drains. Spec leaves a non-call index operand's order against
+a receive UNSPECIFIED (only calls/receives/binary-logical ops are
+lexically ordered), so this is inside the spec envelope but outside
+gc's realized point — and inconsistent with the sibling pointer/slice
+target arm, which BUG-022's fix moved to communication-first. Fix: emit
+base/key INLINE into the post-receive map-assign (calls still auto-
+hoist pre-receive via A-normal form; `len(ch)` keys still hoist via the
+receive flag), aligning both target kinds with gc.
+
 ## BUG-022 — chan-recv statement inverts spec §Assignments' phases: target-address panics fire BEFORE the communication
 
 - Status: fixed (2026-08-06, audit response: the receive statement now

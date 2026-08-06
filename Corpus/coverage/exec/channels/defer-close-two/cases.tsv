@@ -1,0 +1,4 @@
+# id	subject	args	expected_status	expected_reason	features
+first	deferCloseFirst	-	ok	-	channels,close,defer
+second	deferCloseSecond	-	ok	-	channels,close,defer,strings
+unrelated	deferCloseUnrelated	-	ok	-	channels,close,defer

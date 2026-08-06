@@ -3,3 +3,4 @@ nil-deref-target-recovered	recvNilDerefTargetRecovered	-	ok	-	channels,pointers,
 nil-deref-target-drains	recvNilDerefTargetDrains	-	ok	-	channels,pointers,panic,recover,len,evaluation_order
 oob-target-drains	recvOobTargetDrains	-	ok	-	channels,slices,indexing,panic,recover,len,evaluation_order
 bad-target-blocks	recvBadTargetBlocks	-	deadlock	-	channels,pointers,deadlock,evaluation_order
+second-target-panic-stores-first	recvSecondTargetPanicStoresFirst	-	ok	-	channels,pointers,multi_assign,panic,recover,evaluation_order

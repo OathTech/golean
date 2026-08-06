@@ -19,3 +19,22 @@ func recvMapElem() int {
 func main() {
 	recvMapElem()
 }
+
+// Delta-review pin (D5): a panicking NON-call map key (spec leaves its
+// order against the receive unspecified; gc receives first) must not
+// prevent the drain.
+func mapKeyPanicDrains() int {
+	ch := make(chan int, 1)
+	ch <- 7
+	m := map[int]int{}
+	xs := []int{1}
+	func() {
+		defer func() {
+			if recover() == nil {
+				panic("expected a key panic")
+			}
+		}()
+		m[xs[9]] = <-ch
+	}()
+	return 100 + len(ch)
+}

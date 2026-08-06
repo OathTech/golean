@@ -1,0 +1,2 @@
+# id	subject	args	expected_status	expected_reason	features
+-	plainSecondTargetPanicStoresFirst	-	ok	-	multi_assign,pointers,panic,recover,evaluation_order

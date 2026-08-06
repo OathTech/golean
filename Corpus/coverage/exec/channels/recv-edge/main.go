@@ -63,3 +63,26 @@ func recvBadTargetBlocks() int {
 func main() {
 	recvNilDerefTargetRecovered()
 }
+
+// Delta-review pin (D3): spec §Assignments phase 2 carries the stores
+// out LEFT-TO-RIGHT — the first target's store is observable even when
+// the second target's store panics (the spec's own x[1], x[3] = 4, 5
+// example shape, with the receive drained first).
+func recvIntoTwo(vp *int, okp *bool, ch chan int) (hit int) {
+	defer func() {
+		if recover() != nil {
+			hit = 1
+		}
+	}()
+	*vp, *okp = <-ch
+	return 0
+}
+
+func recvSecondTargetPanicStoresFirst() int {
+	ch := make(chan int, 1)
+	ch <- 5
+	v := 0
+	var okp *bool
+	hit := recvIntoTwo(&v, okp, ch)
+	return hit*1000 + v*10 + len(ch)
+}

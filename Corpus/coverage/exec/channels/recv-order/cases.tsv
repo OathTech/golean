@@ -4,3 +4,7 @@ return-list	recvOrderReturnList	-	ok	-	channels,returns,multi_result,len,evaluat
 composite-lit	recvOrderCompositeLit	-	ok	-	channels,literals,slices,len,evaluation_order
 multi-assign	recvOrderMultiAssign	-	ok	-	channels,multi_assign,len,evaluation_order
 binary	recvOrderBinary	-	ok	-	channels,len,evaluation_order
+for-init	recvOrderForInit	-	ok	-	channels,loops,len,evaluation_order
+for-cond	recvOrderForCond	-	ok	-	channels,loops,len,evaluation_order
+else-if	recvOrderElseIf	-	ok	-	channels,if,len,evaluation_order
+switch-case	recvOrderSwitchCase	-	ok	-	channels,switch,len,evaluation_order

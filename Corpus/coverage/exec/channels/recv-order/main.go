@@ -50,3 +50,54 @@ func recvOrderBinary() int {
 func main() {
 	recvOrderCallArg()
 }
+
+// Delta-review pins (audit-response delta D2): the ordered len/cap
+// evaluation must hold in STATEMENT-emission positions too — for-init,
+// for-cond (re-evaluated per iteration), else-if chains, and switch
+// case expressions.
+
+func recvOrderForInit() int {
+	ch := make(chan int, 3)
+	ch <- 5
+	ch <- 6
+	for v := len(ch)*100 + <-ch; ; {
+		return v
+	}
+}
+
+func recvOrderForCond() int {
+	ch := make(chan int, 3)
+	ch <- 5
+	ch <- 6
+	n := 0
+	for len(ch)*100+<-ch == 205 {
+		n++
+		if n == 2 {
+			break
+		}
+	}
+	return n
+}
+
+func recvOrderElseIf() int {
+	ch := make(chan int, 3)
+	ch <- 5
+	ch <- 6
+	if false {
+		return 9
+	} else if len(ch)*100+<-ch == 205 {
+		return 2
+	}
+	return 3
+}
+
+func recvOrderSwitchCase() int {
+	ch := make(chan int, 3)
+	ch <- 5
+	ch <- 6
+	switch 205 {
+	case len(ch)*100 + <-ch:
+		return 1
+	}
+	return 2
+}

@@ -1,14 +1,24 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-06  commit: channels-arc-s1 (audit response: S4 + S6 supported)
+# recorded: 2026-08-06  commit: channels-arc-s1 (delta-review guardrails, red-first)
 #   frontend: native  oracle: go run (strict lane) / go-run membership in the
 #   machine-enumerated observation set (membership lane; go1.26.5 samples)
-# manifest_cases: 1059  pass: 980  fail: 79
-# Re-pin reason: audit minors implemented — S4: m[k] = <-ch lowers with
-#   phase-1 pre-bound base/key, receive into a temp, phase-2 map-assign
-#   (channels/recv-map-elem flips); S6: defer close(ch) defers a
-#   synthetic one-parameter closer through the ordinary defer machinery
-#   (channels/close-edge/defer-close flips). Both FAIL/frontend-export
-#   -> PASS; zero drift on all other ids.
+# manifest_cases: 1069  pass: 980  fail: 89
+# Re-pin reason: delta-review response, guardrails first — 10 NEW
+#   red-first pins (all go-run-verified):
+#   BUG-026 (D2, the BUG-023 flag misses statement-emission positions):
+#     channels/recv-order/{for-init,for-cond,else-if,switch-case}
+#     [differential].
+#   BUG-027 (D1, $deferClose<N> cross-function collision):
+#     channels/defer-close-two/{first,second,unrelated}
+#     [lean-observation: whole-package duplicate-id error].
+#   BUG-025 (D3, phase-2 stores not left-to-right — general +
+#     receive instance): multi-assign/store-order-plain,
+#     channels/recv-edge/second-target-panic-stores-first
+#     [differential].
+#   BUG-028 (D5, map-key pre-bind vs gc's receive-first on panicking
+#     non-call keys): channels/recv-map-elem/key-panic-drains
+#     [differential].
+#   Zero drift on all 1059 pre-existing ids.
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
 PASS	arrays/array-copy	-
@@ -104,6 +114,9 @@ PASS	channels/deadlock/select-empty	-
 PASS	channels/deadlock/send-full	-
 PASS	channels/deadlock/send-nil	-
 PASS	channels/deadlock/send-unbuffered	-
+FAIL	channels/defer-close-two/first	lean-observation
+FAIL	channels/defer-close-two/second	lean-observation
+FAIL	channels/defer-close-two/unrelated	lean-observation
 PASS	channels/directional-types	-
 PASS	channels/make-directional	-
 PASS	channels/make-edge/buffered-fifo	-
@@ -124,12 +137,18 @@ PASS	channels/recv-edge/bad-target-blocks	-
 PASS	channels/recv-edge/nil-deref-target-drains	-
 PASS	channels/recv-edge/nil-deref-target-recovered	-
 PASS	channels/recv-edge/oob-target-drains	-
+FAIL	channels/recv-edge/second-target-panic-stores-first	differential
 PASS	channels/recv-map-elem	-
+FAIL	channels/recv-map-elem/key-panic-drains	differential
 PASS	channels/recv-order/binary	-
 PASS	channels/recv-order/call-arg	-
 PASS	channels/recv-order/composite-lit	-
+FAIL	channels/recv-order/else-if	differential
+FAIL	channels/recv-order/for-cond	differential
+FAIL	channels/recv-order/for-init	differential
 PASS	channels/recv-order/multi-assign	-
 PASS	channels/recv-order/return-list	-
+FAIL	channels/recv-order/switch-case	differential
 PASS	channels/recv-stmt	-
 PASS	channels/select-deterministic/channel-operands-eval-order	-
 PASS	channels/select-deterministic/closed-buffered-receive	-
@@ -739,6 +758,7 @@ PASS	multi-assign/repeated-index-write	-
 PASS	multi-assign/repeated-variable-write	-
 PASS	multi-assign/rhs-before-writes	-
 PASS	multi-assign/selector-target-before-rhs	-
+FAIL	multi-assign/store-order-plain	differential
 PASS	multi-assign/target-eval-before-call	-
 PASS	multi-assign/tuple-assign-order	-
 PASS	native-smoke/arith	-
