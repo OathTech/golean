@@ -118,3 +118,32 @@ func recvOrderDeadRecvLenOperand(j int) int {
 	}
 	return iv.(int) + len(b[j])
 }
+
+// Round-4 pins (BUG-039): panicFreeOperand must see IMPLICIT
+// indirection — a selector chain through an EMBEDDED POINTER field can
+// nil-deref, so hoisting len over it drags that panic ahead of the
+// spec-unordered type-assertion panic to its left (the BUG-032
+// signature, one hole deeper). The receive-free control stays green.
+type roInner struct{ xs []int }
+
+type roOuter struct{ *roInner }
+
+func recvOrderDeadRecvLenEmbedded(j int) int {
+	var o roOuter
+	var iv interface{} = "s"
+	if j < -100 {
+		ch := make(chan int, 1)
+		ch <- 1
+		return <-ch
+	}
+	return iv.(int) + len(o.xs)
+}
+
+func recvOrderLenEmbeddedNoRecv(j int) int {
+	var o roOuter
+	var iv interface{} = "s"
+	if j < -100 {
+		return j
+	}
+	return iv.(int) + len(o.xs)
+}

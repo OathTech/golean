@@ -1,0 +1,6 @@
+# id	subject	args	expected_status	expected_reason	features
+-	chainFieldOverIndex	-	ok	-	multi_assign,slices,structs,indexing,panic,recover,evaluation_order
+nil-slice-field	chainNilSliceField	-	ok	-	multi_assign,slices,structs,nil,panic,recover,evaluation_order
+array-field	chainArrayField	-	ok	-	multi_assign,arrays,structs,indexing,panic,recover,evaluation_order
+array-nested	chainArrayNested	-	ok	-	multi_assign,arrays,indexing,panic,recover,evaluation_order
+inner-value-guard	chainInnerValueGuard	-	ok	-	multi_assign,slices,indexing,panic,recover,evaluation_order

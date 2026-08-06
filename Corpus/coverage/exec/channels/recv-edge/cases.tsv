@@ -8,3 +8,4 @@ dep-index-target	recvDepIndexTarget	-	ok	-	channels,slices,indexing,multi_assign
 nil-index-base-second	recvNilIndexBaseSecond	-	ok	-	channels,pointers,slices,indexing,multi_assign,panic,recover,evaluation_order
 field-second-target-stores-first	recvFieldSecondTarget	-	ok	-	channels,pointers,structs,multi_assign,panic,recover,evaluation_order
 oob-second-target-stores-first	recvOobSecondTarget	-	ok	-	channels,slices,indexing,multi_assign,panic,recover,evaluation_order
+chain-field-over-index	recvChainFieldOverIndex	-	ok	-	channels,slices,structs,indexing,multi_assign,panic,recover,evaluation_order

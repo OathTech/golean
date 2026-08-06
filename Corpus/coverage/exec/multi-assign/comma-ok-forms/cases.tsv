@@ -1,0 +1,4 @@
+# id	subject	args	expected_status	expected_reason	features
+map-oob	commaOkMapOob	-	ok	-	multi_assign,maps,comma_ok,slices,indexing,panic,recover,evaluation_order
+assert-nil-field	commaOkAssertNilField	-	ok	-	multi_assign,interfaces,comma_ok,pointers,structs,panic,recover,evaluation_order
+dep-index	commaOkDepIndex	-	ok	-	multi_assign,maps,comma_ok,slices,indexing,evaluation_order

@@ -29,6 +29,134 @@ differential-pinned) `- Cases: <id>, <id>, …` (baseline case ids), then prose.
 
 ---
 
+## BUG-033 — targetPlan defers only the OUTERMOST address op: `a[i].f` fires the inner index check in phase 1
+
+- Status: open
+- Pinned-by: differential
+- Cases: multi-assign/chain-field-over-index, multi-assign/chain-field-over-index/nil-slice-field, multi-assign/chain-field-over-index/array-field, channels/recv-edge/chain-field-over-index, channels/select-recv-edge/chain-field-over-index
+- Discovered: 2026-08-06 (round-4 convergence check, verified critical;
+  pre-existing behavior — the round-3 spine closed the outermost level
+  and left the same class one nesting level deeper — but the round-3
+  prose claimed the boundary exact)
+
+gc treats a target's whole address CHAIN — every `indexAddr`/
+`fieldAddr` step from the anchor outward — as ONE phase-2 address
+computation: its bounds/nil checks fire AT THE STORE, after earlier
+targets' stores landed (probed: `x, a[9].f = 5, 1` go 105 on the
+plain, receive-statement and select paths; nil-slice, array-index and
+nested-array `arr[1][j]` variants all 105). `targetPlan` decomposes
+one level, so the inner `indexAddr` rides the strict-op evaluator and
+panics in phase 1 (ours 100). The probed CONTRAST boundary: a VALUE
+step in the base — `aa[9][0]` on `[][]int`, whose inner element is an
+index-GET producing a slice value — is an index-expression OPERAND and
+stays phase 1 (go 100; `inner-value-guard` and `array-nested` pin the
+green directions). Fix: recurse `targetPlan` through the address-former
+chain, evaluating only the anchor and index operands in phase 1 and
+replaying the chain (checks included) in `storeTarget`.
+
+## BUG-034 — comma-ok `v, ok = m[k]` / `v, ok = x.(T)` still ride the eager stmtPlan path
+
+- Status: open
+- Pinned-by: differential
+- Cases: multi-assign/comma-ok-forms/map-oob, multi-assign/comma-ok-forms/assert-nil-field
+- Discovered: 2026-08-06 (round-4 convergence check, verified major;
+  pre-existing — outside the round-3 migration's enumeration, inside
+  its "every multi-target store path" claim)
+
+`stmtPlan` still classifies `.mapLookup`/`.typeAssert` with
+`ntargets = 2`: both target addresses resolve eagerly (checks
+included) and store all-or-nothing, so `xs[0], bs[9] = m[1]` and
+`xs[0], p.b = iv.(int)` lose the first store gc performs before the
+deferred oob/nil-field check (go 1007/1005, ours 1000/1000). The
+phase-1 operand-capture half is correct (`dep-index` guard green).
+Fix: route both forms onto the tgtOpK/storeK spine, applying the
+lookup/assert after the RHS operands as the value source.
+
+## BUG-035 — a blank among the targets diverts multi-assign off the spine (phase-1 capture lost)
+
+- Status: open
+- Pinned-by: differential
+- Cases: multi-assign/blank-dep-index
+- Discovered: 2026-08-06 (round-4 convergence check, verified major;
+  pre-existing decoder lowering, vintage bca14c5)
+
+The decoder's blank-containing multi-assign lowering (RHS temps +
+per-target single assigns) evaluates a later target's index operands
+AFTER earlier stores: `i, _, a[i] = 2, 0, 99` reads the POST-store `i`
+(go 29920-class value vs ours) — the spec's own `i, a[i]` phase-1 rule,
+silently wrong whenever ≥1 blank and ≥2 real targets with a
+dependence. Fix: declare fresh discard temps for blank positions and
+emit ONE `.assignMany` so the statement rides the spine.
+
+## BUG-036 — select temp-fallback lowering retains the phase collapse (silent, not fail-closed)
+
+- Status: open
+- Pinned-by: differential
+- Cases: channels/select-recv-edge/fallback-call-index
+- Discovered: 2026-08-06 (round-4 convergence check, verified major;
+  the fallback is the pre-existing lowering — round 3 shrank its
+  domain but left it silently collapsing)
+
+When a clause target's emission hoists (a call in an index) or needs
+boxing, `selectRecvClause` falls back to temps + body-side SINGLE
+assigns: target 1's store lands before target 2's address operands
+evaluate (go 101 vs ours 102). Clause locality demands the temps, not
+the collapse: the fallback can emit ONE body-side multi-assign (the
+spine, post-BUG-025) and keep the phase split inside the clause.
+
+## BUG-037 — single assignment fires the target's phase-2 check before evaluating the RHS
+
+- Status: open
+- Pinned-by: differential
+- Cases: assign-order/target-check-vs-rhs/index-target, assign-order/target-check-vs-rhs/nil-field-target, assign-order/target-check-vs-rhs/nil-deref-target
+- Discovered: 2026-08-06 (round-4 convergence check, verified major;
+  pre-existing — the round-3 doctrine was applied only to multi-target
+  statements)
+
+`.assign` evaluates the full target address (bounds/nil checks
+included) BEFORE the RHS; spec §Assignments puts the RHS in phase 1
+and the assignment's own check in phase 2, and gc realizes exactly
+that: `a[9] = 1/z`, `p.f = 1/z` (nil p), `*p = 1/z` all panic with the
+RHS's divide-by-zero in gc, with our index/nil-deref panic — a wrong,
+recover-observable panic identity on the most common statement shape.
+Adding a second target already flips us correct (the migrated path).
+Fix: route `.assign` through the same tgtOpK/rhsK/storeK spine
+(1-target multi-assign) and retire the assignTargetK/assignStoreK
+frames.
+
+## BUG-038 — storing through a nil pointer-to-array element goes STUCK instead of panicking
+
+- Status: open
+- Pinned-by: differential
+- Cases: pointers/nil-array-elem-store, pointers/nil-array-elem-store/second-target
+- Discovered: 2026-08-06 (round-4 convergence check, verified minor;
+  pre-existing — the round-3 factoring only moved the arm)
+
+`indexTargetLoc` has arms for `.slice` and `.addr` bases only; a nil
+`*[N]T` base falls to the stuck arm where gc panics with the
+recoverable nil-pointer dereference (at the STORE — go 1 recovered,
+105 in the second-target shape). Fail-closed in direction but a
+wrongly-stuck supported construct. Fix: a `.nil` arm mapping to the
+nil-pointer-dereference panic, the `valueAsLoc` convention.
+
+## BUG-039 — panicFreeOperand misses IMPLICIT indirection through embedded pointer fields (BUG-032's hole)
+
+- Status: open
+- Pinned-by: differential
+- Cases: channels/recv-order/dead-recv-len-embedded
+- Discovered: 2026-08-06 (round-4 convergence check, verified major:
+  the predicate BUG-032 shipped is fail-open one route deeper)
+
+The `SelectorExpr` arm walks the SYNTACTIC chain and checks
+pointer-ness of visible bases only; a selector through an EMBEDDED
+POINTER field (`o.xs` with `o.Inner` a `*Inner`) is claimed panic-free,
+so the len hoist drags its nil deref ahead of the spec-unordered
+type-assertion panic to its left — BUG-032's exact signature (a DEAD
+receive elsewhere flips which panic fires; the receive-free control
+`len-embedded-no-recv` is green). Fix: consult go/types
+`Selections[…].Indirect()` — any implicit indirection makes the
+operand non-panic-free (then the BUG-032 refusal applies).
+
 ## BUG-029 — receive/select delivery collapses spec §Assignments' two phases: target k's store happens before target k+1's ADDRESS evaluates
 
 - Status: fixed (2026-08-06, convergence response, two movements. The
@@ -163,21 +291,27 @@ hoist further.
 
 ## BUG-025 — multi-target assignment phase 2 is all-or-nothing, not left-to-right (earlier stores lost when a later store panics)
 
-- Status: fixed (2026-08-06, convergence response: the general
-  multi-assign no longer rides `stmtPlan`/`applyStmtOp` — `assignMany`
-  enters the SAME phase-split delivery machinery as the receive
-  (BUG-029): `tgtOpK` resolves every target's operands left-to-right
-  with the outer nil/bounds/nil-map check deferred, the new `rhsK`
-  frame evaluates the right-hand expressions left-to-right, and
-  `storeK` stores one step per target with the deferred check firing at
-  the store. `StmtOp.assignMany` and `locsOf` were removed outright,
-  not left dead. Both pins flip green: store-order-plain (the spec's
-  own `x[1], x[3] = 4, 5` shape — earlier store survives) and
-  field-nil-store-time (a nil FIELD target's check is store-time, so
-  `xs[0]` keeps its store). All twelve other multi-assign
-  order/aliasing pins stay green.)
+- Status: open (REOPENED at the round-4 convergence check: the round-3
+  closure was over-broad. FIXED half — the `assignMany` STATEMENT no
+  longer rides `stmtPlan`/`applyStmtOp`: it enters the phase-split
+  spine (`tgtOpK` target operands with deferred checks, `rhsK` RHS
+  left-to-right, `storeK` one store per step) — pinned GREEN by
+  multi-assign/{store-order-plain,field-nil-store-time} and the twelve
+  order/aliasing guards; `StmtOp.assignMany` and `locsOf` removed
+  outright. OPEN half — the entry's own scope line always named
+  "frame-exit `storeMany`": the multi-value CALL write-back path
+  (`callTargetsK`/`callValTargetsK` → frame-exit `storeMany`) still
+  resolves target addresses (checks INCLUDED) before the call and
+  stores all-or-nothing, so a bad target SUPPRESSES the call and its
+  side effects (go 117 vs ours 100), the call's own panic loses to our
+  target check (wrong panic value), and a nil FIELD target on the call
+  path loses the first result's store (go 107 vs ours 100). Migrating
+  it means carrying `TargetRef`s through `Cont.frame` and routing
+  frame exit through `storeK` — deliberately scoped to the next
+  machine slice rather than rushed; the three pins keep it red and
+  visible.)
 - Pinned-by: differential
-- Cases: multi-assign/store-order-plain, multi-assign/field-nil-store-time
+- Cases: multi-assign/call-write-back/effects-suppressed, multi-assign/call-write-back/panic-identity, multi-assign/call-write-back/nil-field-store
 - Discovered: 2026-08-06 (channels-arc-s1 delta review D3, generalized
   by the verifier: pre-existing on main, NOT channel-specific)
 

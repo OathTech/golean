@@ -1,0 +1,4 @@
+# id	subject	args	expected_status	expected_reason	features
+effects-suppressed	callTargetSuppressesEffects	-	ok	-	multi_assign,calls,multi_result,slices,indexing,panic,recover,evaluation_order
+panic-identity	callPanicIdentity	-	panic	from-call	multi_assign,calls,multi_result,panic,evaluation_order
+nil-field-store	callNilFieldStore	-	ok	-	multi_assign,calls,multi_result,pointers,structs,panic,recover,evaluation_order

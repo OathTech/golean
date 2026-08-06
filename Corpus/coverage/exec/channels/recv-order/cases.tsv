@@ -9,3 +9,5 @@ for-cond	recvOrderForCond	-	ok	-	channels,loops,len,evaluation_order
 else-if	recvOrderElseIf	-	ok	-	channels,if,len,evaluation_order
 switch-case	recvOrderSwitchCase	-	ok	-	channels,switch,len,evaluation_order
 dead-recv-len-operand	recvOrderDeadRecvLenOperand	7	panic	interface conversion	channels,interfaces,slices,indexing,len,panic,evaluation_order
+dead-recv-len-embedded	recvOrderDeadRecvLenEmbedded	7	panic	interface conversion	channels,interfaces,structs,embedding,len,panic,evaluation_order
+len-embedded-no-recv	recvOrderLenEmbeddedNoRecv	7	panic	interface conversion	interfaces,structs,embedding,len,panic

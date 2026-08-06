@@ -1,14 +1,19 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-06  commit: channels-arc-s1 (convergence: BUG-025 closed — assignMany rides the phase-split plan)
+# recorded: 2026-08-06  commit: channels-arc-s1 (round-4 guardrails: 22 pins, BUG-033..039 filed, BUG-025 reopened)
 #   frontend: native  oracle: go run (strict lane) / go-run membership in the
 #   machine-enumerated observation set (membership lane; go1.26.5 samples)
-# manifest_cases: 1080  pass: 1000  fail: 80
-# Re-pin reason: BUG-025 closed — the general multi-assign left
-#   stmtPlan/applyStmtOp for the tgtOpK/rhsK/storeK phase-split
-#   machinery (targets' outer checks deferred to phase-2 per-step
-#   stores; RHS evaluated left-to-right between). Flips
-#   multi-assign/{store-order-plain,field-nil-store-time}
-#   [differential] -> PASS. Zero drift on all other ids.
+# manifest_cases: 1102  pass: 1004  fail: 98
+# Re-pin reason: round-4 convergence-check guardrails — 22 new pins,
+#   all go-run-verified. 18 land RED: the BUG-033 chain discriminators
+#   (a[i].f on the plain/receive/select paths + nil-slice/array
+#   variants), the BUG-025 REOPENED call write-back trio
+#   (effects-suppressed / panic-identity / nil-field-store), BUG-034
+#   comma-ok (map-oob / assert-nil-field), BUG-035 blank-dep-index,
+#   BUG-036 select fallback-call-index, BUG-037 single-assign
+#   target-check-vs-rhs trio, BUG-038 nil-array-elem-store pair,
+#   BUG-039 dead-recv-len-embedded. 4 land GREEN as boundary guards
+#   (chain array-nested + inner-value-guard, comma-ok dep-index,
+#   len-embedded-no-recv). Zero drift on all 1080 pre-existing ids.
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
 PASS	arrays/array-copy	-
@@ -28,6 +33,9 @@ PASS	arrays/nested-arrays	-
 PASS	arrays/nested-copy-value	-
 PASS	arrays/nil-pointer-len-cap	-
 FAIL	arrays/pointer-array	lean-observation
+FAIL	assign-order/target-check-vs-rhs/index-target	differential
+FAIL	assign-order/target-check-vs-rhs/nil-deref-target	differential
+FAIL	assign-order/target-check-vs-rhs/nil-field-target	differential
 PASS	bools/generic-type-set/and-or	-
 PASS	bools/generic-type-set/equality	-
 PASS	bools/generic-type-set/inference	-
@@ -124,6 +132,7 @@ PASS	channels/range-closed	-
 PASS	channels/range-edge/break	-
 PASS	channels/range-edge/no-var	-
 PASS	channels/recv-edge/bad-target-blocks	-
+FAIL	channels/recv-edge/chain-field-over-index	differential
 PASS	channels/recv-edge/dep-index-target	-
 PASS	channels/recv-edge/field-second-target-stores-first	-
 PASS	channels/recv-edge/nil-deref-target-drains	-
@@ -138,10 +147,12 @@ PASS	channels/recv-map-elem/key-panic-drains	-
 PASS	channels/recv-order/binary	-
 PASS	channels/recv-order/call-arg	-
 PASS	channels/recv-order/composite-lit	-
+FAIL	channels/recv-order/dead-recv-len-embedded	differential
 FAIL	channels/recv-order/dead-recv-len-operand	frontend-export
 PASS	channels/recv-order/else-if	-
 PASS	channels/recv-order/for-cond	-
 PASS	channels/recv-order/for-init	-
+PASS	channels/recv-order/len-embedded-no-recv	-
 PASS	channels/recv-order/multi-assign	-
 PASS	channels/recv-order/return-list	-
 PASS	channels/recv-order/switch-case	-
@@ -165,7 +176,9 @@ FAIL	channels/select-multi-ready	lean-observation
 PASS	channels/select-nil-default	-
 PASS	channels/select-ready-receive	-
 PASS	channels/select-ready-send	-
+FAIL	channels/select-recv-edge/chain-field-over-index	differential
 PASS	channels/select-recv-edge/dep-index-target	-
+FAIL	channels/select-recv-edge/fallback-call-index	lean-observation
 PASS	channels/select-recv-edge/field-second-target-stores-first	-
 PASS	channels/select-recv-edge/nil-index-base-second	-
 PASS	channels/send-closed-panic	-
@@ -749,8 +762,20 @@ PASS	methods/pointer-receiver-slice-element	-
 PASS	methods/recursive-method	-
 PASS	methods/same-name-method-closures	-
 FAIL	methods/value-auto-deref	lean-observation
+FAIL	multi-assign/blank-dep-index	differential
 PASS	multi-assign/blank-discard-nonint	-
 PASS	multi-assign/call-return-assignment	-
+FAIL	multi-assign/call-write-back/effects-suppressed	differential
+FAIL	multi-assign/call-write-back/nil-field-store	differential
+FAIL	multi-assign/call-write-back/panic-identity	differential
+FAIL	multi-assign/chain-field-over-index	differential
+FAIL	multi-assign/chain-field-over-index/array-field	differential
+PASS	multi-assign/chain-field-over-index/array-nested	-
+PASS	multi-assign/chain-field-over-index/inner-value-guard	-
+FAIL	multi-assign/chain-field-over-index/nil-slice-field	differential
+FAIL	multi-assign/comma-ok-forms/assert-nil-field	differential
+PASS	multi-assign/comma-ok-forms/dep-index	-
+FAIL	multi-assign/comma-ok-forms/map-oob	differential
 PASS	multi-assign/deref-target-before-rhs	-
 PASS	multi-assign/field-nil-store-time	-
 PASS	multi-assign/index-target-rhs-call-order	-
@@ -820,6 +845,8 @@ PASS	pointers/composite-literal-address	-
 PASS	pointers/deref-assign	-
 PASS	pointers/deref-target-rhs-call-order	-
 PASS	pointers/inc-via-call	-
+FAIL	pointers/nil-array-elem-store	lean-observation
+FAIL	pointers/nil-array-elem-store/second-target	lean-observation
 FAIL	pointers/nil-array-index-panic	lean-observation
 PASS	pointers/nil-deref-panic	-
 PASS	pointers/nil-selector-panic	-

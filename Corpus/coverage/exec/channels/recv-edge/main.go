@@ -176,3 +176,25 @@ func recvOobSecondTarget() int {
 	}()
 	return hit*1000 + xs[0]*50
 }
+
+// Round-4 pin (BUG-033, receive-statement path): the second target's
+// address CHAIN (index-under-field) defers WHOLLY to phase 2 — the
+// inner index check fires at the store, after xs[0]'s store landed.
+type chainT struct{ b bool }
+
+func recvChainFieldOverIndex() int {
+	ch := make(chan int, 1)
+	ch <- 3
+	xs := []int{0}
+	a := []chainT{}
+	hit := 0
+	func() {
+		defer func() {
+			if recover() != nil {
+				hit = 1
+			}
+		}()
+		xs[0], a[9].b = <-ch
+	}()
+	return hit*1000 + xs[0]*50
+}

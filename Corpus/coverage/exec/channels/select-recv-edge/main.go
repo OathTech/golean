@@ -69,3 +69,51 @@ func selFieldSecondTarget() int {
 func main() {
 	selDepIndexTarget()
 }
+
+// Round-4 pin (BUG-033, select path): same chain deferral through the
+// clause-head machine targets.
+type selChainT struct{ b bool }
+
+func selChainFieldOverIndex() int {
+	ch := make(chan int, 1)
+	ch <- 3
+	xs := []int{0}
+	a := []selChainT{}
+	hit := 0
+	func() {
+		defer func() {
+			if recover() != nil {
+				hit = 1
+			}
+		}()
+		select {
+		case xs[0], a[9].b = <-ch:
+		}
+	}()
+	return hit*1000 + xs[0]*50
+}
+
+// Round-4 pin (BUG-036): the temp-FALLBACK lowering (taken when a
+// clause target's emission hoists — here idx() in the second target's
+// index) must preserve the phase split: idx() reads the PRE-store gi.
+// Per-target single assigns store gi before evaluating idx().
+var selGi int
+
+func selIdx() int { return selGi }
+
+func selFallbackCallIndex() int {
+	ch := make(chan int, 1)
+	ch <- 3
+	selGi = 1
+	xs := []bool{false, false, false}
+	select {
+	case selGi, xs[selIdx()] = <-ch:
+	}
+	n := selGi * 10
+	for j := range xs {
+		if xs[j] {
+			n += j + 1
+		}
+	}
+	return n
+}

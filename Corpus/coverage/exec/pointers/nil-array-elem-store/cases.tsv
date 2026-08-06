@@ -1,0 +1,3 @@
+# id	subject	args	expected_status	expected_reason	features
+-	nilArrayElemStore	-	ok	-	pointers,arrays,nil,indexing,panic,recover
+second-target	nilArrayElemStoreSecond	-	ok	-	pointers,arrays,nil,indexing,multi_assign,panic,recover,evaluation_order

@@ -1,0 +1,4 @@
+# id	subject	args	expected_status	expected_reason	features
+index-target	indexTargetRhsPanic	-	panic	integer divide by zero	assignment,slices,indexing,division,panic,evaluation_order
+nil-field-target	nilFieldTargetRhsPanic	-	panic	integer divide by zero	assignment,pointers,structs,division,panic,evaluation_order
+nil-deref-target	nilDerefTargetRhsPanic	-	panic	integer divide by zero	assignment,pointers,division,panic,evaluation_order
