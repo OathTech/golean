@@ -1012,7 +1012,8 @@ theorem wp_oneKnown_body {ra : Addr} {k}
         normalizeFieldsWith, checkKeyHashable, valueHashability,
         coerceStoredValue, storeLoc, Functor.map, Except.map,
         Bind.bind, Except.bind,
-        show IntKind.uint64.normalize 1 = 1 from by decide, applyStmtOpCore])) as [Hcfgb]
+        show IntKind.uint64.normalize 1 = 1 from by decide, applyStmtOpCore,
+        mapAssignValue])) as [Hcfgb]
   -- `l := mapAckIndexer{1: 12}`
   go_walk
   unfold okAckSeq
@@ -1041,7 +1042,8 @@ theorem wp_oneKnown_body {ra : Addr} {k}
         QuorumPin.typeEnv_Index, checkKeyHashable, valueHashability,
         coerceStoredValue, storeLoc, Bind.bind, Except.bind,
         show IntKind.uint64.normalize 1 = 1 from by decide,
-        show IntKind.uint64.normalize 12 = 12 from by decide, applyStmtOpCore])) as [Hackb]
+        show IntKind.uint64.normalize 12 = 12 from by decide, applyStmtOpCore,
+        mapAssignValue])) as [Hackb]
   -- `r := run(c, l)`
   go_walk
   unfold okCallSeq

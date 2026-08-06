@@ -405,7 +405,7 @@ theorem wp_ci_range_body {ia la lba sra sta pa : Addr} {lty : Option Ty}
   go_walk_step (wp_strict_apply_pure
     (out := .addr (.index (.base sta) (zeros : Int)))
     (happly := fun σ => by
-      simp [applyStrictOp, valueAsInt,
+      simp [applyStrictOp, indexTargetLoc, valueAsInt,
         sliceIndexLoc_base (sta := sta) (n := slen)
           (cap := cap) (j := zeros) hzlt hsle,
         Bind.bind, Except.bind]))
@@ -742,7 +742,7 @@ theorem wp_ci_tail_three {na sra sta ra : Addr} {filled : List Int} {env k}
         show IntKind.uint64.normalize 0 = 0 from by decide,
         show IntKind.uint64.normalize 5 = 5 from by decide,
         show IntKind.uint64.normalize 6 = 6 from by decide,
-        show IntKind.uint64.normalize 12 = 12 from by decide, typeResolutionFuel, applyStmtOpCore]))
+        show IntKind.uint64.normalize 12 = 12 from by decide, typeResolutionFuel, applyStmtOpCore, mapAssignValue]))
   -- `pos := n - (n/2 + 1)` — pure integer arithmetic throughout
   go_walk
   rw [ciPosStmt_eq]
@@ -1128,7 +1128,7 @@ theorem wp_threeAll_body {ra : Addr} {k}
         normalizeStructValueWith, normalizeFieldsWith,
         checkKeyHashable, valueHashability, coerceStoredValue, storeLoc,
         Functor.map, Except.map, Bind.bind, Except.bind,
-        show IntKind.uint64.normalize 1 = 1 from by decide, applyStmtOpCore])) as [Hcfgb]
+        show IntKind.uint64.normalize 1 = 1 from by decide, applyStmtOpCore, mapAssignValue])) as [Hcfgb]
   go_walk
   go_walk_step (wp_eval_strict_nullary_pin (v := .struct ⟨"struct{}"⟩ #[]) rfl
     (fun σ ht => by
@@ -1151,7 +1151,7 @@ theorem wp_threeAll_body {ra : Addr} {k}
         QuorumPin.typeEnv_structEmpty, normalizeStructValueWith,
         normalizeFieldsWith, checkKeyHashable, valueHashability,
         coerceStoredValue, storeLoc, Functor.map, Except.map, Bind.bind,
-        Except.bind, show IntKind.uint64.normalize 2 = 2 from by decide, applyStmtOpCore])) as [Hcfgb]
+        Except.bind, show IntKind.uint64.normalize 2 = 2 from by decide, applyStmtOpCore, mapAssignValue])) as [Hcfgb]
   go_walk
   go_walk_step (wp_eval_strict_nullary_pin (v := .struct ⟨"struct{}"⟩ #[]) rfl
     (fun σ ht => by
@@ -1174,7 +1174,7 @@ theorem wp_threeAll_body {ra : Addr} {k}
         QuorumPin.typeEnv_structEmpty, normalizeStructValueWith,
         normalizeFieldsWith, checkKeyHashable, valueHashability,
         coerceStoredValue, storeLoc, Functor.map, Except.map, Bind.bind,
-        Except.bind, show IntKind.uint64.normalize 3 = 3 from by decide, applyStmtOpCore])) as [Hcfgb]
+        Except.bind, show IntKind.uint64.normalize 3 = 3 from by decide, applyStmtOpCore, mapAssignValue])) as [Hcfgb]
   -- `l := mapAckIndexer{1: 12, 2: 5, 3: 6}`
   go_walk
   unfold taAckSeq
@@ -1202,7 +1202,7 @@ theorem wp_threeAll_body {ra : Addr} {k}
         QuorumPin.typeEnv_Index, checkKeyHashable, valueHashability,
         coerceStoredValue, storeLoc, Bind.bind, Except.bind,
         show IntKind.uint64.normalize 1 = 1 from by decide,
-        show IntKind.uint64.normalize 12 = 12 from by decide, applyStmtOpCore])) as [Hackb]
+        show IntKind.uint64.normalize 12 = 12 from by decide, applyStmtOpCore, mapAssignValue])) as [Hackb]
   go_walk
   go_walk_step (wp_stmt_op_apply_store (a := ackba)
     (oldcell := ⟨none, .mapData #[(.int 1 .uint64, .int 12 .uint64)]⟩)
@@ -1217,7 +1217,7 @@ theorem wp_threeAll_body {ra : Addr} {k}
         checkKeyHashable, valueHashability, coerceStoredValue, storeLoc,
         Bind.bind, Except.bind,
         show IntKind.uint64.normalize 2 = 2 from by decide,
-        show IntKind.uint64.normalize 5 = 5 from by decide, applyStmtOpCore])) as [Hackb]
+        show IntKind.uint64.normalize 5 = 5 from by decide, applyStmtOpCore, mapAssignValue])) as [Hackb]
   go_walk
   go_walk_step (wp_stmt_op_apply_store (a := ackba)
     (oldcell := ⟨none, .mapData
@@ -1232,7 +1232,7 @@ theorem wp_threeAll_body {ra : Addr} {k}
         QuorumPin.typeEnv_Index, checkKeyHashable, valueHashability,
         coerceStoredValue, storeLoc, Bind.bind, Except.bind,
         show IntKind.uint64.normalize 3 = 3 from by decide,
-        show IntKind.uint64.normalize 6 = 6 from by decide, applyStmtOpCore])) as [Hackb]
+        show IntKind.uint64.normalize 6 = 6 from by decide, applyStmtOpCore, mapAssignValue])) as [Hackb]
   -- `r := run(c, l)`
   go_walk
   unfold taCallSeq
