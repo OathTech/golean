@@ -1439,22 +1439,97 @@ func (e *emitter) emitBlock(b *ast.BlockStmt) (map[string]any, error) {
 
 func (e *emitter) emitStmtList(list []ast.Stmt) ([]any, error) {
 	out := []any{}
+	savedRecv := e.stmtHasRecv
 	for _, s := range list {
 		// A-normal form: emit each statement with a fresh hoist accumulator, then
 		// emit the hoisted temp bindings (from calls/allocs in its expressions)
 		// immediately before it.
 		saved := e.hoisted
 		e.hoisted = nil
+		// Per-statement receive flag (BUG-023): drives the len/cap hoist
+		// that keeps spec-ordered evaluations lexically ordered against
+		// hoisted receives.
+		e.stmtHasRecv = stmtSweepContainsRecv(s)
 		w, err := e.emitStmt(s)
 		hoists := e.hoisted
 		e.hoisted = saved
 		if err != nil {
+			e.stmtHasRecv = savedRecv
 			return nil, err
 		}
 		out = append(out, hoists...)
 		out = append(out, w)
 	}
+	e.stmtHasRecv = savedRecv
 	return out, nil
+}
+
+// stmtSweepContainsRecv reports whether a statement's OWN operand sweep
+// (the expressions its emission evaluates ahead of / within the statement
+// — not nested statements, which get their own flag) contains a channel
+// receive. Statement kinds not listed evaluate no expressions in their
+// own sweep that could co-occur with a receive (for-loop conditions are
+// hoist-forbidden, so a receive there refuses outright and inline len/cap
+// stay correct).
+func stmtSweepContainsRecv(s ast.Stmt) bool {
+	switch st := s.(type) {
+	case *ast.ExprStmt:
+		return containsRecv(st.X)
+	case *ast.AssignStmt:
+		for _, x := range st.Rhs {
+			if containsRecv(x) {
+				return true
+			}
+		}
+		for _, x := range st.Lhs {
+			if containsRecv(x) {
+				return true
+			}
+		}
+		return false
+	case *ast.ReturnStmt:
+		for _, x := range st.Results {
+			if containsRecv(x) {
+				return true
+			}
+		}
+		return false
+	case *ast.SendStmt:
+		return containsRecv(st.Chan) || containsRecv(st.Value)
+	case *ast.IncDecStmt:
+		return containsRecv(st.X)
+	case *ast.IfStmt:
+		if st.Init != nil && stmtSweepContainsRecv(st.Init) {
+			return true
+		}
+		return containsRecv(st.Cond)
+	case *ast.SwitchStmt:
+		if st.Init != nil && stmtSweepContainsRecv(st.Init) {
+			return true
+		}
+		return st.Tag != nil && containsRecv(st.Tag)
+	case *ast.RangeStmt:
+		return containsRecv(st.X)
+	case *ast.DeferStmt:
+		return containsRecv(st.Call)
+	case *ast.DeclStmt:
+		if gen, ok := st.Decl.(*ast.GenDecl); ok {
+			for _, spec := range gen.Specs {
+				if vs, ok := spec.(*ast.ValueSpec); ok {
+					for _, x := range vs.Values {
+						if containsRecv(x) {
+							return true
+						}
+					}
+				}
+			}
+		}
+		return false
+	case *ast.LabeledStmt:
+		return stmtSweepContainsRecv(st.Stmt)
+	default:
+		return false
+	}
 }
 
 // hoist binds an effectful node (call/alloc) to a fresh temp before the current
@@ -5055,16 +5130,9 @@ func (e *emitter) emitBinary(b *ast.BinaryExpr) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	// A receive in the RIGHT operand hoists to a statement; pre-bind the
-	// LEFT operand so its ordered evaluations (calls — len/cap included)
-	// stay before the receive (spec §Order of evaluation; channels arc
-	// slice 1 — see containsRecv).
-	if b.Op != token.LAND && b.Op != token.LOR && containsRecv(b.Y) {
-		x, err = e.hoist(x, e.goTypeOf(b.X))
-		if err != nil {
-			return nil, err
-		}
-	}
+	// (The binary-position left-operand pre-bind for receives was replaced
+	// by the ONE-mechanism len/cap hoist under `stmtHasRecv` — BUG-023,
+	// audit response: every operand position, not just binary operands.)
 	// The RHS of a short-circuit operator is only conditionally evaluated, so a
 	// call there cannot be hoisted ahead of the operator.
 	y, err := e.emitGuarded(op == "&&" || op == "||", "short-circuit operand", b.Y)
@@ -5677,7 +5745,21 @@ func (e *emitter) emitBuiltin(c *ast.CallExpr, name string) (any, bool, error) {
 		if name == "cap" {
 			tag = "builtin-cap"
 		}
-		return map[string]any{"expr": tag, "operand": operand, "operandType": opTy}, false, nil
+		node := any(map[string]any{"expr": tag, "operand": operand, "operandType": opTy})
+		// A statement whose operand sweep contains a receive (BUG-023):
+		// len/cap are spec-ordered calls but are emitted inline, while the
+		// receive hoists to a statement — hoisting len/cap too keeps the
+		// lexical left-to-right order (hoists append in emission order).
+		// Under hoistForbidden the sweep cannot contain a receive (the
+		// receive itself refuses there), so inline stays correct.
+		if e.stmtHasRecv && e.hoistForbidden == "" {
+			hoisted, err := e.hoist(node, e.goTypeOf(c))
+			if err != nil {
+				return nil, false, err
+			}
+			return hoisted, false, nil
+		}
+		return node, false, nil
 	case "make":
 		return e.emitMake(c)
 	case "new":

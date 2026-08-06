@@ -1,27 +1,14 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-06  commit: channels-arc-s1 (audit-response guardrails, red-first)
+# recorded: 2026-08-06  commit: channels-arc-s1 (audit response: BUG-023 fixed)
 #   frontend: native  oracle: go run (strict lane) / go-run membership in the
 #   machine-enumerated observation set (membership lane; go1.26.5 samples)
-# manifest_cases: 1059  pass: 970  fail: 89
-# Re-pin reason: channels-arc-s1 pre-merge audit response, guardrails
-#   first — 12 NEW audit pins (all go-run-verified), 10 red:
-#   BUG-022 (recv-statement phase inversion, audit S1+S7):
-#     channels/recv-edge/{nil-deref-target-drains [differential],
-#     oob-target-drains [differential], bad-target-blocks
-#     [lean-observation: deadlock misclassified as panic]};
-#     nil-deref-target-recovered lands green (recoverability companion).
-#   BUG-023 (len(ch) reordered past a hoisted receive, audit S2+S9):
-#     channels/recv-order/{call-arg,return-list,composite-lit,
-#     multi-assign} [differential]; binary lands green (the one
-#     pre-bound position).
-#   BUG-024 (bare receive statement -> whole-program error, audit
-#     S3+S8): channels/recv-stmt [lean-observation].
-#   S4 (m[k] = <-ch refused with misleading reason):
-#     channels/recv-map-elem [frontend-export].
-#   S6 (defer close(ch) unsupported):
-#     channels/close-edge/defer-close [frontend-export].
-#   All fixed in the following commits of this branch; zero drift on
-#   all 1047 pre-existing ids.
+# manifest_cases: 1059  pass: 974  fail: 85
+# Re-pin reason: BUG-023 fixed (audit S2+S9) — the binary-only receive
+#   pre-bind replaced by the ONE-mechanism len/cap hoist under the
+#   per-statement receive flag; the four red order pins
+#   channels/recv-order/{call-arg,return-list,composite-lit,
+#   multi-assign} flip FAIL/differential -> PASS. Zero drift on all
+#   other ids.
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
 PASS	arrays/array-copy	-
@@ -139,10 +126,10 @@ PASS	channels/recv-edge/nil-deref-target-recovered	-
 FAIL	channels/recv-edge/oob-target-drains	differential
 FAIL	channels/recv-map-elem	frontend-export
 PASS	channels/recv-order/binary	-
-FAIL	channels/recv-order/call-arg	differential
-FAIL	channels/recv-order/composite-lit	differential
-FAIL	channels/recv-order/multi-assign	differential
-FAIL	channels/recv-order/return-list	differential
+PASS	channels/recv-order/call-arg	-
+PASS	channels/recv-order/composite-lit	-
+PASS	channels/recv-order/multi-assign	-
+PASS	channels/recv-order/return-list	-
 FAIL	channels/recv-stmt	lean-observation
 PASS	channels/select-deterministic/channel-operands-eval-order	-
 PASS	channels/select-deterministic/closed-buffered-receive	-

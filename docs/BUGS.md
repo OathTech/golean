@@ -54,7 +54,14 @@ the receive.
 
 ## BUG-023 — hoisted receive reorders ahead of inline len(ch) in every operand list except binary operands
 
-- Status: open
+- Status: fixed (2026-08-06, audit response: the binary-only left-operand
+  pre-bind was replaced by ONE mechanism — `emitStmtList` flags each
+  statement whose operand sweep contains a receive
+  (`stmtSweepContainsRecv`), and `emitBuiltin` then HOISTS `len`/`cap`
+  so every spec-ordered evaluation rides the same lexical hoist order as
+  the receive, in every operand position. Under `hoistForbidden` the
+  sweep cannot contain a receive, so inline stays correct. All four
+  red pins plus the binary pin pass.)
 - Pinned-by: differential
 - Cases: channels/recv-order/call-arg, channels/recv-order/return-list, channels/recv-order/composite-lit, channels/recv-order/multi-assign
 - Discovered: 2026-08-06 (channels-arc-s1 pre-merge audit S2+S9,
