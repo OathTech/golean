@@ -2399,7 +2399,14 @@ theorem Steps.trans {a b c : Config} {sa sb sc : ExecState} :
   | refl => exact hab
   | tail _ hstep ih => exact .tail ih hstep
 
-/-- A configuration the sequential machine considers finished. -/
+/-- A configuration the sequential machine considers FINISHED. The
+blocked configurations (channels arc slice 1) are deliberately NOT here
+(audit S12): they are relation-terminal in the per-goroutine relation
+(no outgoing rule — `step_blocked*_elim`) and the sequential driver
+classifies them as the deadlocked run, but they are not "finished" —
+slice 2's pool machine steps them (pairing/wake), so extending this
+predicate would be the wrong edit. Its only current consumer is the
+`go_adequacy` scope prose. -/
 def Config.terminal : Config → Prop
   | .next .stop => True
   | .panicked _ => True

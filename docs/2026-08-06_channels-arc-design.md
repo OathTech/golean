@@ -251,11 +251,68 @@ sites). Decisions made DURING the build, recorded here:
   repairs (step_det simp set, wp-law rule sweeps + `wp_init`'s
   `chanStFirst` refutation arm); NO designated statement changed.
 
-Validation: 5 new machine eval-test pins (82 total); full corpus
-1046 exec + 311 negative; ALL 38 pre-existing `channels/` reds + 19
-slice-1 guardrail pins + 8 channel-blocked singletons
-(builtins/make-channel-len-cap, control-flow/{break-label-select,
-goto-out-of-select}, generics/type-parameter-channel-ops,
-interfaces/typed-nil-channel, maps/{channel-key,nil-channel-key},
-scoping/select-clause-scope) flipped FAIL→PASS — 65 flips, zero
-regressions; baseline re-pinned from the full run in the flip commit.
+Validation (corrected at the audit response — S5/S10: the original
+paragraph undercounted 65/8 and omitted four flips and the 1047th
+case): 5 new machine eval-test pins (82 total); full corpus 1047 exec
+(after the multi-ready refusal pin below) + 311 negative; ALL 38
+pre-existing `channels/` reds + 19 slice-1 guardrail pins + **12**
+channel-blocked singletons (builtins/make-channel-len-cap,
+control-flow/{break-label-select,goto-out-of-select},
+generics/type-parameter-channel-ops, interfaces/typed-nil-channel,
+maps/{channel-key,nil-channel-key,delete-nil-key-types,
+nil-read-key-types}, scoping/select-clause-scope,
+init/{quarantined-init-dep,quarantined-init-iface} — the last four
+were quarantined solely on a chan type; this arc released the init/
+quarantine) flipped FAIL→PASS — **69** flips, zero regressions;
+baseline re-pinned from the full run in the flip commit. One
+deliberate red-first pin landed after: `channels/select-multi-ready` —
+the L2 multi-ready choice is REFUSED (fail closed) until slice 4.
+
+### Audit response (2026-08-06, pre-merge audit of this slice)
+
+Twelve confirmed findings (two refuted), all addressed on the branch —
+guardrails first (12 new go-run-verified pins), then fixes:
+
+- **BUG-022 (S1+S7, major)**: the receive STATEMENT inverted spec
+  §Assignments' phases — target-address panics fired BEFORE the
+  communication (Go receives first; drains the channel even when the
+  store then panics; blocks — deadlock — where we panicked). Fixed by
+  reordering the statement form to the select path's shape:
+  `ChanStOp.recv` carries its targets, `applyChanOp` communicates
+  first and delivers through `selectRecvK` (empty body); the
+  target-first machinery was REMOVED, not left dead. Pins:
+  `channels/recv-edge/*` (drain discriminators + the
+  deadlock-not-panic classification).
+- **BUG-023 (S2+S9, major)**: the receive hoist reordered ahead of
+  inline `len(ch)` in every operand list except binary operands. Fixed
+  with ONE mechanism replacing the binary-only pre-bind: `emitStmtList`
+  flags statements whose operand sweep contains a receive
+  (`stmtSweepContainsRecv`) and `emitBuiltin` hoists `len`/`cap` under
+  the flag, restoring lexical order everywhere. Pins:
+  `channels/recv-order/*` (five positions).
+- **BUG-024 (S3+S8, major)**: bare `<-ch` statement emitted a wire node
+  the decoder rejected — a whole-package `status:error` where the base
+  per-decl-quarantined. Fixed: the ExprStmt arm emits the zero-target
+  chan-recv (receive-and-discard). Pin: `channels/recv-stmt`.
+- **S4/S11 (minor)**: `m[k] = <-ch` was refused with a misleading
+  reason (and the naive dispatch reorder would have been a silent
+  wrong answer — verifier's adjacent finding). Implemented instead:
+  map-element receive targets pre-bind base/key in phase-1 order,
+  receive into a temp, map-assign in phase 2. Pin:
+  `channels/recv-map-elem` (`m[len(ch)] = <-ch`).
+- **S6 (note)**: `defer close(ch)` implemented via a synthetic
+  one-parameter closer through the existing defer machinery. Pin:
+  `channels/close-edge/defer-close`.
+- **S5/S10 (minor)**: this note's flip accounting corrected above
+  (69/12, corpus 1047 at slice tip — 1059 after the audit pins).
+- **S12 (note)**: terminal-class prose extended — `go_adequacy`'s scope
+  caveat now names the blocked/deadlocked class (the guarantee got
+  STRONGER); `Config.terminal`'s docstring records why blocked configs
+  are deliberately not "finished" (slice 2's pool steps them);
+  `enumRun`/`enumInitRun` classify blocked configurations as
+  `deadlock` BEFORE the fuel check (the incidental fuel-out
+  misclassification), and their docstring lists the new error class.
+
+Interface-typed receive targets in the `=` statement form remain
+fail-closed with a precise reason (unchanged narrow scope);
+`m[k], ok = <-ch` comma-ok map-element forms ride the S4 arm.

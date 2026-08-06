@@ -587,16 +587,22 @@ sites reached whenever the leftover is non-empty — the enumerator's
 consumption meter. Terminal handling mirrors `runConfig` exactly, except
 the panic terminal KEEPS the stream (its observation is a member too,
 returned with status `"panic"`) instead of throwing it away; all other
-`GoError`s (stuck, unsupported, internal, fuel-out) propagate and the
-enumeration fails loud on them. Returns (status, observation, leftover);
-non-`private` so the driver-agreement eval tests can pin it against the
-originals it copies (audit F5). -/
+`GoError`s (stuck, unsupported, internal, fuel-out, and — channels arc
+slice 1 — `deadlock` from a blocked configuration, classified before the
+fuel check like `runConfig` does) propagate and the enumeration fails
+loud on them (a deadlocking member has no membership handling yet).
+Returns (status, observation, leftover); non-`private` so the
+driver-agreement eval tests can pin it against the originals it copies
+(audit F5). -/
 def enumRun (resultLocs : List Loc) :
     Nat → GoCore.ExecState → GoCore.Machine.Config → GoCore.Choices →
     Except GoError (String × Json × GoCore.Choices)
   | _, σ, .next .stop, choices =>
       return ("ok", runJson { values := (← GoCore.Machine.loadMany σ resultLocs).toArray }, choices)
   | _, _, .panicked msg, choices => return ("panic", errorJson (.panic msg), choices)
+  | _, _, .blockedSend _ _ _, _ => throw .deadlock
+  | _, _, .blockedRecv _ _ _ _ _, _ => throw .deadlock
+  | _, _, .blockedSelect _ _ _, _ => throw .deadlock
   | 0, _, _, _ => throw .fuelOut
   | fuel + 1, σ, c, choices => do
       let (c', σ', choices') ← GoCore.Machine.stepFn σ c choices
@@ -612,6 +618,9 @@ def enumInitRun :
     Except GoError (Sum (GoCore.ExecState × GoCore.Choices) (String × GoCore.Choices))
   | _, σ, .next .stop, choices => return .inl (σ, choices)
   | _, _, .panicked msg, choices => return .inr (msg, choices)
+  | _, _, .blockedSend _ _ _, _ => throw .deadlock
+  | _, _, .blockedRecv _ _ _ _ _, _ => throw .deadlock
+  | _, _, .blockedSelect _ _ _, _ => throw .deadlock
   | 0, _, _, _ => throw .fuelOut
   | fuel + 1, σ, c, choices => do
       let (c', σ', choices') ← GoCore.Machine.stepFn σ c choices

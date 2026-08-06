@@ -73,7 +73,13 @@ this guarantee covers. What remains outside it is the unrecovered abort: that
 makes `Hwp` unprovable rather than being a permitted terminal. Modelling the
 abort as a value/observation in the Iris layer is deferred — until then read
 the guarantee as "`φ`-correct, never-stuck execution *among runs that do not
-abort on an unrecovered panic*". -/
+abort on an unrecovered panic*". Since the channels arc (slice 1) the blocked
+configurations (`.blockedSend`/`.blockedRecv`/`.blockedSelect` — the
+deadlocked terminal class) are a SECOND `toVal = none`, no-outgoing-`Step`
+class in exactly the same position: a provable `Hwp` additionally rules them
+out, so the honest reading is "…among runs that do not abort on an
+unrecovered panic *and do not deadlock*" — the guarantee got STRONGER, never
+looser (audit S12). -/
 theorem go_adequacy [GoCoreGpreS .hasLC GF] (c : Config) (σ : ExecState)
     (φ : Unit → Prop) (hσwf : HeapWf σ)
     (Hwp : ∀ [GoCoreGS .hasLC GF], GoCoreGS.prog GF = σ.functions →
