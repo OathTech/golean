@@ -345,6 +345,21 @@ func (e *emitter) emitType(t types.Type) (any, error) {
 			return nil, err
 		}
 		return map[string]any{"kind": "map", "key": key, "value": val}, nil
+	case *types.Chan:
+		// Direction is a static type property and part of type IDENTITY
+		// (channels arc slice 1): carried on the wire type verbatim.
+		elem, err := e.emitType(ty.Elem())
+		if err != nil {
+			return nil, err
+		}
+		dir := "both"
+		switch ty.Dir() {
+		case types.SendOnly:
+			dir = "send"
+		case types.RecvOnly:
+			dir = "recv"
+		}
+		return map[string]any{"kind": "chan", "dir": dir, "elem": elem}, nil
 	case *types.Interface:
 		if ty.Empty() {
 			return map[string]any{"kind": "interface", "name": emptyInterfaceName}, nil

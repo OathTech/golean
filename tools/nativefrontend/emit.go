@@ -892,7 +892,7 @@ func (e *emitter) emitLabeled(st *ast.LabeledStmt) (any, error) {
 		return e.emitStmt(st.Stmt)
 	}
 	switch st.Stmt.(type) {
-	case *ast.ForStmt, *ast.RangeStmt, *ast.SwitchStmt, *ast.TypeSwitchStmt:
+	case *ast.ForStmt, *ast.RangeStmt, *ast.SwitchStmt, *ast.TypeSwitchStmt, *ast.SelectStmt:
 		w, err := e.emitStmt(st.Stmt)
 		if err != nil {
 			return nil, err
@@ -921,7 +921,7 @@ func (e *emitter) emitLabeled(st *ast.LabeledStmt) (any, error) {
 		}
 	default:
 		// go/types only accepts break/continue labels on for/switch/select;
-		// select is channel-blocked, anything else is defensive.
+		// anything else is defensive.
 		return nil, unsup("labeled break/continue target %T", st.Stmt)
 	}
 }
@@ -1551,6 +1551,8 @@ func (e *emitter) emitStmt(s ast.Stmt) (any, error) {
 						return e.emitDeleteStmt(call)
 					case "clear":
 						return e.emitClearStmt(call)
+					case "close":
+						return e.emitCloseStmt(call)
 					}
 				}
 			}
@@ -1584,6 +1586,34 @@ func (e *emitter) emitStmt(s ast.Stmt) (any, error) {
 		return e.emitSwitch(st)
 	case *ast.TypeSwitchStmt:
 		return e.emitTypeSwitch(st)
+	case *ast.SendStmt:
+		// `ch <- v` (channels arc slice 1): channel then value, evaluated
+		// in that order (spec §Send statements; pinned by
+		// channels/make-edge/ordinary-send-eval-order — effectful operands
+		// ride the A-normal-form hoists, which preserve source order).
+		ch, ok := e.applySubst(e.goTypeOf(st.Chan)).Underlying().(*types.Chan)
+		if !ok {
+			return nil, unsup("send on non-channel %s", e.goTypeOf(st.Chan))
+		}
+		chW, err := e.emitExpr(st.Chan)
+		if err != nil {
+			return nil, err
+		}
+		valW, err := e.emitExpr(st.Value)
+		if err != nil {
+			return nil, err
+		}
+		valW, err = e.wrapInterfaceConversion(ch.Elem(), e.goTypeOf(st.Value), valW)
+		if err != nil {
+			return nil, err
+		}
+		elemTy, err := e.emitType(ch.Elem())
+		if err != nil {
+			return nil, err
+		}
+		return map[string]any{"stmt": "chan-send", "ch": chW, "value": valW, "elem": elemTy}, nil
+	case *ast.SelectStmt:
+		return e.emitSelect(st)
 	case *ast.DeferStmt:
 		// `defer f(args)`: the callee and arguments are evaluated NOW; the
 		// pending call is prepended to the frame's chain and runs at frame
@@ -1857,6 +1887,16 @@ func (e *emitter) emitAssign(st *ast.AssignStmt) (any, error) {
 			}
 			return map[string]any{"stmt": "type-assert", "target": target,
 				"okTarget": okTarget, "expr": operand, "targetType": targetTy}, nil
+		}
+	}
+
+	// Channel receive statement forms `v = <-ch` / `v, ok := <-ch` / …
+	// (channels arc slice 1): the dedicated chan-recv statement carries
+	// Go's assignment operand order (target addresses first, then the
+	// channel — pinned by ordinary-receive-eval-order).
+	if len(st.Lhs) >= 1 && len(st.Lhs) <= 2 && len(st.Rhs) == 1 {
+		if ux, isU := ast.Unparen(st.Rhs[0]).(*ast.UnaryExpr); isU && ux.Op == token.ARROW {
+			return e.emitChanRecvAssign(st, ux, define)
 		}
 	}
 
@@ -2622,6 +2662,21 @@ func (e *emitter) emitRange(rs *ast.RangeStmt) (any, error) {
 			} else {
 				return nil, unsup("range over %s", u)
 			}
+		case *types.Chan:
+			// Range over a channel (channels arc slice 1): ONE iteration
+			// variable (the received value — rs.Key); the decoder desugars
+			// to a comma-ok receive loop (non-snapshot: an open, drained
+			// channel blocks, which the sequential slice classifies as the
+			// deadlocked run — probe p16).
+			if valName != "" {
+				return nil, unsup("range over channel with a second iteration variable")
+			}
+			et, err := e.emitType(u.Elem())
+			if err != nil {
+				return nil, err
+			}
+			kindFields["kind"] = "chan"
+			kindFields["elemType"] = et
 		default:
 			return nil, unsup("range over %s", e.goTypeOf(rs.X))
 		}
@@ -5000,6 +5055,16 @@ func (e *emitter) emitBinary(b *ast.BinaryExpr) (any, error) {
 	if err != nil {
 		return nil, err
 	}
+	// A receive in the RIGHT operand hoists to a statement; pre-bind the
+	// LEFT operand so its ordered evaluations (calls — len/cap included)
+	// stay before the receive (spec §Order of evaluation; channels arc
+	// slice 1 — see containsRecv).
+	if b.Op != token.LAND && b.Op != token.LOR && containsRecv(b.Y) {
+		x, err = e.hoist(x, e.goTypeOf(b.X))
+		if err != nil {
+			return nil, err
+		}
+	}
 	// The RHS of a short-circuit operator is only conditionally evaluated, so a
 	// call there cannot be hoisted ahead of the operator.
 	y, err := e.emitGuarded(op == "&&" || op == "||", "short-circuit operand", b.Y)
@@ -5062,10 +5127,14 @@ func (e *emitter) emitUnary(u *ast.UnaryExpr) (any, error) {
 	}
 }
 
-// emitUnaryExpr dispatches unary operators, routing & to address-of.
+// emitUnaryExpr dispatches unary operators, routing & to address-of and
+// <- (a receive in expression position) to the chan-recv hoist.
 func (e *emitter) emitUnaryExpr(u *ast.UnaryExpr) (any, error) {
 	if u.Op == token.AND {
 		return e.emitAddressOf(u.X)
+	}
+	if u.Op == token.ARROW {
+		return e.hoistChanRecv(u)
 	}
 	return e.emitUnary(u)
 }
@@ -6014,9 +6083,332 @@ func (e *emitter) emitMake(c *ast.CallExpr) (any, bool, error) {
 		}
 		e.hoisted = append(e.hoisted, map[string]any{"stmt": "make-map", "target": target, "keyType": keyTy, "valueType": valTy})
 		return ref, false, nil
+	case *types.Chan:
+		// make(chan T[, n]) (channels arc slice 1). A negative runtime n
+		// is the machine's recoverable "makechan: size out of range"
+		// panic; the type argument may itself be directional
+		// (make(<-chan int, 2) is legal — a channel nothing can send on).
+		elemTy, err := e.emitType(u.Elem())
+		if err != nil {
+			return nil, false, err
+		}
+		node := map[string]any{"stmt": "make-chan", "target": target, "elem": elemTy}
+		if len(c.Args) >= 2 {
+			capArg, err := e.emitExpr(c.Args[1])
+			if err != nil {
+				return nil, false, err
+			}
+			node["cap"] = capArg
+		}
+		e.hoisted = append(e.hoisted, node)
+		return ref, false, nil
 	default:
 		return nil, false, unsup("make of %s", t)
 	}
+}
+
+// ---- channels (channels arc slice 1) ----
+
+// containsRecv reports whether an expression syntactically contains a
+// channel receive, WITHOUT descending into func literals (their bodies
+// evaluate at call time, not here). Spec §Order of evaluation: function
+// calls AND receive operations are ordered lexically left-to-right — a
+// receive hoists to a statement (it can block), so any operand LEFT of it
+// whose evaluation the spec orders (a call — len/cap included) must be
+// pre-bound ahead of the hoisted receive or the receive's channel-state
+// effect would be observed early (caught by select-ready-send's
+// `len(ch)*10 + <-ch`).
+func containsRecv(x ast.Expr) bool {
+	found := false
+	ast.Inspect(x, func(n ast.Node) bool {
+		if found {
+			return false
+		}
+		switch n := n.(type) {
+		case *ast.FuncLit:
+			return false
+		case *ast.UnaryExpr:
+			if n.Op == token.ARROW {
+				found = true
+				return false
+			}
+		}
+		return true
+	})
+	return found
+}
+
+// chanElem resolves an expression's channel element type (substitution-
+// aware for stencils).
+func (e *emitter) chanElem(chExpr ast.Expr) (types.Type, error) {
+	if ch, ok := e.applySubst(e.goTypeOf(chExpr)).Underlying().(*types.Chan); ok {
+		return ch.Elem(), nil
+	}
+	return nil, unsup("receive from non-channel %s", e.goTypeOf(chExpr))
+}
+
+// emitCloseStmt lowers the builtin close(ch) statement.
+func (e *emitter) emitCloseStmt(c *ast.CallExpr) (any, error) {
+	if len(c.Args) != 1 {
+		return nil, unsup("close with %d arguments", len(c.Args))
+	}
+	chW, err := e.emitExpr(c.Args[0])
+	if err != nil {
+		return nil, err
+	}
+	return map[string]any{"stmt": "chan-close", "ch": chW}, nil
+}
+
+// hoistChanRecv lowers a receive in EXPRESSION position: a receive is a
+// STATEMENT in GoCore (it may block or panic), so it hoists into a fresh
+// temp bound by a chan-recv statement; the A-normal-form hoist discipline
+// preserves Go's left-to-right evaluation order (pinned by
+// channels/make-edge/ordinary-receive-eval-order).
+func (e *emitter) hoistChanRecv(u *ast.UnaryExpr) (any, error) {
+	if e.hoistForbidden != "" {
+		return nil, unsup("channel receive in %s (would change evaluation order)", e.hoistForbidden)
+	}
+	elemGo, err := e.chanElem(u.X)
+	if err != nil {
+		return nil, err
+	}
+	elemTy, err := e.emitType(elemGo)
+	if err != nil {
+		return nil, err
+	}
+	chW, err := e.emitExpr(u.X)
+	if err != nil {
+		return nil, err
+	}
+	name := "$c" + itoa(e.tmpSeq)
+	e.tmpSeq++
+	e.hoisted = append(e.hoisted, map[string]any{
+		"stmt":    "chan-recv",
+		"targets": []any{map[string]any{"target": "declare", "id": name, "type": elemTy}},
+		"ch":      chW,
+		"elem":    elemTy,
+	})
+	return map[string]any{"expr": "ident", "name": name, "type": elemTy}, nil
+}
+
+// emitChanRecvAssign lowers the receive STATEMENT forms `v = <-ch`,
+// `v, ok := <-ch`, … to the dedicated chan-recv statement, whose machine
+// operand order — target addresses first, then the channel — is Go's
+// assignment order. A blank ok drops to the 1-target form (the flag is
+// unobservable); a blank value receives into a fresh temp (the receive
+// itself must still happen).
+func (e *emitter) emitChanRecvAssign(st *ast.AssignStmt, ux *ast.UnaryExpr, define bool) (any, error) {
+	elemGo, err := e.chanElem(ux.X)
+	if err != nil {
+		return nil, err
+	}
+	elemTy, err := e.emitType(elemGo)
+	if err != nil {
+		return nil, err
+	}
+	targets := []any{}
+	if id, ok := st.Lhs[0].(*ast.Ident); ok && id.Name == "_" {
+		name := "$c" + itoa(e.tmpSeq)
+		e.tmpSeq++
+		targets = append(targets, map[string]any{"target": "declare", "id": name, "type": elemTy})
+	} else {
+		// The statement form stores the RAW element value; an
+		// interface-typed target would need the boxing wrap the statement
+		// does not carry — fail closed (the := forms always type the
+		// target at the element type).
+		tgtTy := e.applySubst(e.assignTargetType(st.Lhs[0], define))
+		if tgtTy != nil && types.IsInterface(tgtTy) && !types.IsInterface(elemGo) {
+			return nil, unsup("channel receive into interface-typed target")
+		}
+		w, err := e.emitAssignTarget(st.Lhs[0], define)
+		if err != nil {
+			return nil, err
+		}
+		targets = append(targets, w)
+	}
+	if len(st.Lhs) == 2 {
+		if id, ok := st.Lhs[1].(*ast.Ident); ok && id.Name == "_" {
+			// blank ok: drop to the 1-target form (unobservable)
+		} else {
+			tgtTy := e.applySubst(e.assignTargetType(st.Lhs[1], define))
+			if tgtTy != nil && types.IsInterface(tgtTy) {
+				return nil, unsup("channel receive ok-flag into interface-typed target")
+			}
+			w, err := e.emitAssignTarget(st.Lhs[1], define)
+			if err != nil {
+				return nil, err
+			}
+			targets = append(targets, w)
+		}
+	}
+	chW, err := e.emitExpr(ux.X)
+	if err != nil {
+		return nil, err
+	}
+	return map[string]any{"stmt": "chan-recv", "targets": targets, "ch": chW, "elem": elemTy}, nil
+}
+
+// selectRecvClause builds one receive clause of a select: the received
+// value (and ok flag) land in fresh pre-declared temps — the machine's
+// post-selection targets — and the USER assignment happens at the top of
+// the clause body (spec §Select statements step 4: LHS expressions are
+// evaluated only after the communication, so their side effects stay
+// inside the selected clause — pinned by
+// channels/select-deterministic/{unselected-receive-lhs-not-eval,
+// selected-receive-lhs-eval}).
+func (e *emitter) selectRecvClause(ux *ast.UnaryExpr, lhs []ast.Expr, define bool, bodyNode any) (any, error) {
+	elemGo, err := e.chanElem(ux.X)
+	if err != nil {
+		return nil, err
+	}
+	elemTy, err := e.emitType(elemGo)
+	if err != nil {
+		return nil, err
+	}
+	chW, err := e.emitExpr(ux.X)
+	if err != nil {
+		return nil, err
+	}
+	boolTy := map[string]any{"kind": "bool"}
+	targets := []any{}
+	prefix := []any{}
+	if len(lhs) > 0 {
+		vName := "$c" + itoa(e.tmpSeq)
+		e.tmpSeq++
+		targets = append(targets, map[string]any{"target": "declare", "id": vName, "type": elemTy})
+		if id, ok := lhs[0].(*ast.Ident); !ok || id.Name != "_" {
+			// The user assignment's own operand hoists (an effectful LHS
+			// index, an interface boxing) must stay INSIDE the clause body.
+			saved := e.hoisted
+			e.hoisted = nil
+			w, err := e.emitAssignTarget(lhs[0], define)
+			if err != nil {
+				e.hoisted = saved
+				return nil, err
+			}
+			rhs := any(map[string]any{"expr": "ident", "name": vName, "type": elemTy})
+			rhs, err = e.wrapInterfaceConversion(e.applySubst(e.assignTargetType(lhs[0], define)), elemGo, rhs)
+			if err != nil {
+				e.hoisted = saved
+				return nil, err
+			}
+			prefix = append(prefix, e.hoisted...)
+			e.hoisted = saved
+			prefix = append(prefix, map[string]any{"stmt": "assign", "define": define,
+				"lhs": []any{w}, "rhs": []any{rhs}})
+		}
+		if len(lhs) == 2 {
+			okName := "$c" + itoa(e.tmpSeq)
+			e.tmpSeq++
+			targets = append(targets, map[string]any{"target": "declare", "id": okName, "type": boolTy})
+			if id, ok := lhs[1].(*ast.Ident); !ok || id.Name != "_" {
+				saved := e.hoisted
+				e.hoisted = nil
+				w, err := e.emitAssignTarget(lhs[1], define)
+				if err != nil {
+					e.hoisted = saved
+					return nil, err
+				}
+				prefix = append(prefix, e.hoisted...)
+				e.hoisted = saved
+				prefix = append(prefix, map[string]any{"stmt": "assign", "define": define,
+					"lhs": []any{w},
+					"rhs": []any{map[string]any{"expr": "ident", "name": okName, "type": boolTy}}})
+			}
+		}
+	}
+	body := bodyNode
+	if len(prefix) > 0 {
+		body = map[string]any{"stmt": "block", "body": append(prefix, bodyNode)}
+	}
+	return map[string]any{"clause": "recv", "targets": targets, "ch": chW, "elem": elemTy, "body": body}, nil
+}
+
+// emitSelect lowers a select statement (channels arc slice 1): clause
+// channel operands and send RHS values are emitted in source order — their
+// effectful subexpressions ride the statement-level hoists, realizing the
+// spec's entry-time once-in-source-order evaluation (step 1) — and the
+// whole statement wraps in "breakable" (a select body's `break` exits the
+// select, like switch). The machine commits exactly-one-ready or default;
+// multi-ready fails closed there (slice 4).
+func (e *emitter) emitSelect(st *ast.SelectStmt) (any, error) {
+	clauses := []any{}
+	var defaultBody any
+	for _, s := range st.Body.List {
+		cc, ok := s.(*ast.CommClause)
+		if !ok {
+			return nil, unsup("select clause %T", s)
+		}
+		body, err := e.emitStmtList(cc.Body)
+		if err != nil {
+			return nil, err
+		}
+		bodyNode := any(map[string]any{"stmt": "block", "body": body})
+		if cc.Comm == nil {
+			if defaultBody != nil {
+				return nil, unsup("select with multiple default cases")
+			}
+			defaultBody = bodyNode
+			continue
+		}
+		switch comm := cc.Comm.(type) {
+		case *ast.SendStmt:
+			ch, ok := e.applySubst(e.goTypeOf(comm.Chan)).Underlying().(*types.Chan)
+			if !ok {
+				return nil, unsup("select send on non-channel %s", e.goTypeOf(comm.Chan))
+			}
+			chW, err := e.emitExpr(comm.Chan)
+			if err != nil {
+				return nil, err
+			}
+			valW, err := e.emitExpr(comm.Value)
+			if err != nil {
+				return nil, err
+			}
+			valW, err = e.wrapInterfaceConversion(ch.Elem(), e.goTypeOf(comm.Value), valW)
+			if err != nil {
+				return nil, err
+			}
+			elemTy, err := e.emitType(ch.Elem())
+			if err != nil {
+				return nil, err
+			}
+			clauses = append(clauses, map[string]any{"clause": "send", "ch": chW, "value": valW, "elem": elemTy, "body": bodyNode})
+		case *ast.ExprStmt:
+			ux, isU := ast.Unparen(comm.X).(*ast.UnaryExpr)
+			if !isU || ux.Op != token.ARROW {
+				return nil, unsup("select receive clause shape %T", comm.X)
+			}
+			node, err := e.selectRecvClause(ux, nil, false, bodyNode)
+			if err != nil {
+				return nil, err
+			}
+			clauses = append(clauses, node)
+		case *ast.AssignStmt:
+			if len(comm.Rhs) != 1 {
+				return nil, unsup("select receive clause arity")
+			}
+			ux, isU := ast.Unparen(comm.Rhs[0]).(*ast.UnaryExpr)
+			if !isU || ux.Op != token.ARROW {
+				return nil, unsup("select receive clause shape %T", comm.Rhs[0])
+			}
+			if len(comm.Lhs) < 1 || len(comm.Lhs) > 2 {
+				return nil, unsup("select receive with %d targets", len(comm.Lhs))
+			}
+			node, err := e.selectRecvClause(ux, comm.Lhs, comm.Tok == token.DEFINE, bodyNode)
+			if err != nil {
+				return nil, err
+			}
+			clauses = append(clauses, node)
+		default:
+			return nil, unsup("select communication %T", cc.Comm)
+		}
+	}
+	node := map[string]any{"stmt": "select", "clauses": clauses}
+	if defaultBody != nil {
+		node["default"] = defaultBody
+	}
+	return map[string]any{"stmt": "breakable", "body": node}, nil
 }
 
 func (e *emitter) emitArgs(as []ast.Expr) ([]any, error) {

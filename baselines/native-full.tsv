@@ -1,15 +1,22 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-06  commit: channels-arc-s1 (slice-1 guardrails)
+# recorded: 2026-08-06  commit: channels-arc-s1 (slice-1 machine + lowering)
 #   frontend: native  oracle: go run (strict lane) / go-run membership in the
 #   machine-enumerated observation set (membership lane; go1.26.5 samples)
-# manifest_cases: 1046  pass: 899  fail: 147
-# Re-pin reason: channels-arc slice 1 guardrails — 19 NEW red-first pins
-#   (channels/{deadlock/*,close-edge/*,comparison/*,range-edge/*}), all
-#   FAIL/frontend-export (expected native-frontend coverage gaps until the
-#   machine + lowering land later in this slice). The 8 deadlock cases also
-#   land the harness's new "deadlock" expected_status (go exit 2, fixed
-#   "all goroutines are asleep - deadlock!" fatal; never combined with
-#   -race). Zero drift on all 1027 pre-existing ids.
+# manifest_cases: 1046  pass: 968  fail: 78
+# Re-pin reason: channels arc slice 1 lands the channel machine
+#   (chanData cells, make/send/recv/close/len/cap, deterministic select,
+#   blocked configs -> deadlocked terminal) and the native lowering
+#   (chan types, send/recv/close/select/range-over-channel, receive
+#   hoisting). 69 FAIL/frontend-export -> PASS flips: all 57 channels/*
+#   (38 pre-existing + 19 slice-1 guardrails incl. the 8 deadlock
+#   differentials), plus the channel-blocked singletons
+#   builtins/make-channel-len-cap, control-flow/{break-label-select,
+#   goto-out-of-select}, generics/type-parameter-channel-ops,
+#   interfaces/typed-nil-channel, maps/{channel-key,nil-channel-key,
+#   delete-nil-key-types,nil-read-key-types}, scoping/select-clause-scope,
+#   init/{quarantined-init-dep,quarantined-init-iface} (each was
+#   quarantined solely on a chan type). Zero PASS->FAIL, zero stage
+#   drift on the remaining 78 (all pre-existing non-channel gaps).
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
 PASS	arrays/array-copy	-
@@ -68,7 +75,7 @@ PASS	builtins/copy-edge/nil-source	-
 PASS	builtins/copy-edge/string-prefix	-
 PASS	builtins/copy-string-to-bytes	-
 PASS	builtins/len-cap-array-pointer	-
-FAIL	builtins/make-channel-len-cap	frontend-export
+PASS	builtins/make-channel-len-cap	-
 PASS	builtins/make-map-hint	-
 PASS	builtins/min-max-edge/defined-int	-
 PASS	builtins/min-max-edge/defined-string	-
@@ -82,63 +89,63 @@ PASS	builtins/min-max-ints	-
 PASS	builtins/min-max-strings	-
 FAIL	builtins/real-imag	frontend-export
 PASS	builtins/recover-outside-defer	-
-FAIL	channels/buffered-basic	frontend-export
-FAIL	channels/close-closed-panic	frontend-export
-FAIL	channels/closed-receive	frontend-export
-FAIL	channels/close-edge/drain-zero-after-close	frontend-export
-FAIL	channels/close-edge/recover-close-closed	frontend-export
-FAIL	channels/close-edge/recover-close-nil	frontend-export
-FAIL	channels/close-edge/recover-negative-make	frontend-export
-FAIL	channels/close-edge/recover-send-closed	frontend-export
-FAIL	channels/close-nil-panic	frontend-export
-FAIL	channels/close-send-only	frontend-export
-FAIL	channels/comparison/chan-of-chan	frontend-export
-FAIL	channels/comparison/directional-equal	frontend-export
-FAIL	channels/comparison/identity	frontend-export
-FAIL	channels/comparison/map-key-alias	frontend-export
-FAIL	channels/deadlock/range-open-drained	frontend-export
-FAIL	channels/deadlock/recv-empty-open	frontend-export
-FAIL	channels/deadlock/recv-nil	frontend-export
-FAIL	channels/deadlock/select-all-nil	frontend-export
-FAIL	channels/deadlock/select-empty	frontend-export
-FAIL	channels/deadlock/send-full	frontend-export
-FAIL	channels/deadlock/send-nil	frontend-export
-FAIL	channels/deadlock/send-unbuffered	frontend-export
-FAIL	channels/directional-types	frontend-export
-FAIL	channels/make-directional	frontend-export
-FAIL	channels/make-edge/buffered-fifo	frontend-export
-FAIL	channels/make-edge/close-does-not-drain	frontend-export
-FAIL	channels/make-edge/close-eval-order	frontend-export
-FAIL	channels/make-edge/len-cap-directional	frontend-export
-FAIL	channels/make-edge/len-expression	frontend-export
-FAIL	channels/make-edge/negative-buffer-panic	frontend-export
-FAIL	channels/make-edge/ordinary-receive-eval-order	frontend-export
-FAIL	channels/make-edge/ordinary-send-eval-order	frontend-export
-FAIL	channels/make-edge/receive-comma-ok-open	frontend-export
-FAIL	channels/make-edge/zero-buffer	frontend-export
-FAIL	channels/nil-values	frontend-export
-FAIL	channels/range-closed	frontend-export
-FAIL	channels/range-edge/break	frontend-export
-FAIL	channels/range-edge/no-var	frontend-export
-FAIL	channels/select-deterministic/channel-operands-eval-order	frontend-export
-FAIL	channels/select-deterministic/closed-buffered-receive	frontend-export
-FAIL	channels/select-deterministic/closed-drained-receive	frontend-export
-FAIL	channels/select-deterministic/closed-receive-declare	frontend-export
-FAIL	channels/select-deterministic/default-only	frontend-export
-FAIL	channels/select-deterministic/nil-and-ready-receive	frontend-export
-FAIL	channels/select-deterministic/nil-and-ready-send	frontend-export
-FAIL	channels/select-deterministic/recv-chan-panic-before-default	frontend-export
-FAIL	channels/select-deterministic/selected-receive-lhs-eval	frontend-export
-FAIL	channels/select-deterministic/send-closed-panic	frontend-export
-FAIL	channels/select-deterministic/send-rhs-eval-unselected	frontend-export
-FAIL	channels/select-deterministic/send-rhs-panic-before-default	frontend-export
-FAIL	channels/select-deterministic/unselected-receive-lhs-not-eval	frontend-export
-FAIL	channels/select-empty-receive-default	frontend-export
-FAIL	channels/select-full-send-default	frontend-export
-FAIL	channels/select-nil-default	frontend-export
-FAIL	channels/select-ready-receive	frontend-export
-FAIL	channels/select-ready-send	frontend-export
-FAIL	channels/send-closed-panic	frontend-export
+PASS	channels/buffered-basic	-
+PASS	channels/close-closed-panic	-
+PASS	channels/closed-receive	-
+PASS	channels/close-edge/drain-zero-after-close	-
+PASS	channels/close-edge/recover-close-closed	-
+PASS	channels/close-edge/recover-close-nil	-
+PASS	channels/close-edge/recover-negative-make	-
+PASS	channels/close-edge/recover-send-closed	-
+PASS	channels/close-nil-panic	-
+PASS	channels/close-send-only	-
+PASS	channels/comparison/chan-of-chan	-
+PASS	channels/comparison/directional-equal	-
+PASS	channels/comparison/identity	-
+PASS	channels/comparison/map-key-alias	-
+PASS	channels/deadlock/range-open-drained	-
+PASS	channels/deadlock/recv-empty-open	-
+PASS	channels/deadlock/recv-nil	-
+PASS	channels/deadlock/select-all-nil	-
+PASS	channels/deadlock/select-empty	-
+PASS	channels/deadlock/send-full	-
+PASS	channels/deadlock/send-nil	-
+PASS	channels/deadlock/send-unbuffered	-
+PASS	channels/directional-types	-
+PASS	channels/make-directional	-
+PASS	channels/make-edge/buffered-fifo	-
+PASS	channels/make-edge/close-does-not-drain	-
+PASS	channels/make-edge/close-eval-order	-
+PASS	channels/make-edge/len-cap-directional	-
+PASS	channels/make-edge/len-expression	-
+PASS	channels/make-edge/negative-buffer-panic	-
+PASS	channels/make-edge/ordinary-receive-eval-order	-
+PASS	channels/make-edge/ordinary-send-eval-order	-
+PASS	channels/make-edge/receive-comma-ok-open	-
+PASS	channels/make-edge/zero-buffer	-
+PASS	channels/nil-values	-
+PASS	channels/range-closed	-
+PASS	channels/range-edge/break	-
+PASS	channels/range-edge/no-var	-
+PASS	channels/select-deterministic/channel-operands-eval-order	-
+PASS	channels/select-deterministic/closed-buffered-receive	-
+PASS	channels/select-deterministic/closed-drained-receive	-
+PASS	channels/select-deterministic/closed-receive-declare	-
+PASS	channels/select-deterministic/default-only	-
+PASS	channels/select-deterministic/nil-and-ready-receive	-
+PASS	channels/select-deterministic/nil-and-ready-send	-
+PASS	channels/select-deterministic/recv-chan-panic-before-default	-
+PASS	channels/select-deterministic/selected-receive-lhs-eval	-
+PASS	channels/select-deterministic/send-closed-panic	-
+PASS	channels/select-deterministic/send-rhs-eval-unselected	-
+PASS	channels/select-deterministic/send-rhs-panic-before-default	-
+PASS	channels/select-deterministic/unselected-receive-lhs-not-eval	-
+PASS	channels/select-empty-receive-default	-
+PASS	channels/select-full-send-default	-
+PASS	channels/select-nil-default	-
+PASS	channels/select-ready-receive	-
+PASS	channels/select-ready-send	-
+PASS	channels/send-closed-panic	-
 PASS	comparisons/short-circuit/array-reaches-interface-panic	-
 PASS	comparisons/short-circuit/array-skips-interface-panic	-
 PASS	comparisons/short-circuit/nested-array-struct-reaches-panic	-
@@ -199,7 +206,7 @@ PASS	constants/typed-string-binary	-
 PASS	constants/typed-untyped-binary	-
 PASS	constants/untyped-adaptation	-
 FAIL	constants/untyped-complex-context	frontend-export
-FAIL	control-flow/break-label-select	frontend-export
+PASS	control-flow/break-label-select	-
 PASS	control-flow/continue-in-switch	-
 PASS	control-flow/continue-label-post	-
 PASS	control-flow/expressionless-switch-order	-
@@ -226,7 +233,7 @@ PASS	control-flow/goto-forward	-
 PASS	control-flow/goto-loop	-
 PASS	control-flow/goto-out-of-block	-
 PASS	control-flow/goto-out-of-for	-
-FAIL	control-flow/goto-out-of-select	frontend-export
+PASS	control-flow/goto-out-of-select	-
 PASS	control-flow/goto-out-of-switch	-
 PASS	control-flow/goto-over-type-decl	-
 PASS	control-flow/infinite-loop-return	-
@@ -440,7 +447,7 @@ PASS	generics/type-aliases/nested-map	-
 PASS	generics/type-aliases/slice-same-type	-
 FAIL	generics/type-aliases/struct-literal	frontend-export
 PASS	generics/type-method-dispatch	-
-FAIL	generics/type-parameter-channel-ops	frontend-export
+PASS	generics/type-parameter-channel-ops	-
 PASS	generics/type-parameter-composite-literal	-
 PASS	generics/type-parameter-conversion	-
 PASS	generics/type-parameter-map-ops	-
@@ -468,8 +475,8 @@ PASS	init/multi-file-order	-
 PASS	init/multiple-init-order	-
 PASS	init/multi-value-var-init	-
 PASS	init/package-init-order	-
-FAIL	init/quarantined-init-dep	frontend-export
-FAIL	init/quarantined-init-iface	frontend-export
+PASS	init/quarantined-init-dep	-
+PASS	init/quarantined-init-iface	-
 PASS	init/spec-dependency-example	-
 PASS	init/var-init-sequence	-
 PASS	interfaces/acked-indexer/hit	-
@@ -560,7 +567,7 @@ PASS	interfaces/type-assert-interface-panic/missing-one	-
 PASS	interfaces/type-assert-interface-panic/nil	-
 PASS	interfaces/type-assertions/comma-ok	-
 PASS	interfaces/type-assertions/panic	-
-FAIL	interfaces/typed-nil-channel	frontend-export
+PASS	interfaces/typed-nil-channel	-
 PASS	interfaces/typed-nil-composite	-
 PASS	interfaces/typed-nil-func	-
 PASS	interfaces/typed-nil-map	-
@@ -614,7 +621,7 @@ PASS	maps/array-key	-
 PASS	maps/array-key-interface-elem-unhashable/access-empty	-
 PASS	maps/array-key-interface-elem-unhashable/assign	-
 PASS	maps/array-value-copy	-
-FAIL	maps/channel-key	frontend-export
+PASS	maps/channel-key	-
 FAIL	maps/clear-during-range	differential
 PASS	maps/compound-assign-eval-once	-
 PASS	maps/defined-map-value	-
@@ -626,7 +633,7 @@ PASS	maps/delete-interface-dynamic-key	-
 PASS	maps/delete-interface-key-panic	-
 PASS	maps/delete-missing	-
 PASS	maps/delete-nil-interface-key-panic	-
-FAIL	maps/delete-nil-key-types	frontend-export
+PASS	maps/delete-nil-key-types	-
 PASS	maps/delete-nil-map	-
 PASS	maps/delete-nil-value-types	-
 FAIL	maps/imported-named-key-unhashable	lean-observation
@@ -667,7 +674,7 @@ PASS	maps/map-nil-assign	-
 PASS	maps/map-nil-eq	-
 PASS	maps/map-value-inner-write	-
 PASS	maps/nil-assign-eval-before-panic	-
-FAIL	maps/nil-channel-key	frontend-export
+PASS	maps/nil-channel-key	-
 PASS	maps/nil-literal-values/defined-func-element	-
 FAIL	maps/nil-literal-values/defined-map-element	lean-observation
 PASS	maps/nil-literal-values/defined-pointer-element	-
@@ -676,7 +683,7 @@ PASS	maps/nil-literal-values/func-element	-
 PASS	maps/nil-literal-values/map-element	-
 PASS	maps/nil-literal-values/pointer-element	-
 PASS	maps/nil-literal-values/slice-element	-
-FAIL	maps/nil-read-key-types	frontend-export
+PASS	maps/nil-read-key-types	-
 PASS	maps/nil-read-value-types	-
 PASS	maps/nil-value-comma-ok	-
 PASS	maps/overwrite	-
@@ -891,7 +898,7 @@ PASS	scoping/block-shadow	-
 PASS	scoping/closure-shadow-binding	-
 PASS	scoping/for-body-shadow	-
 PASS	scoping/for-init-scope	-
-FAIL	scoping/select-clause-scope	frontend-export
+PASS	scoping/select-clause-scope	-
 PASS	scoping/shadowing	-
 PASS	scoping/short-decl-mixing	-
 PASS	scoping/switch-clause-scope	-

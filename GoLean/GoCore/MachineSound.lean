@@ -1238,7 +1238,14 @@ theorem normalizeValueForTyFuel_congr {σ₁ σ₂ : ExecState}
     | string => exact hcc
     | slice _ => exact hcc
     | map _ _ => exact hcc
-    | chan _ _ => exact hcc
+    | chan _ _ =>
+      -- Chan-typed normalization is state-independent and canonicalizes
+      -- nil; capCong on channel values is equality (the catch-all), and
+      -- the cap-divergent shapes (slice/struct/array values at a chan
+      -- type) fail closed on BOTH sides with the same error class.
+      cases v <;> cases w <;>
+        simp_all [GoValue.capCong, normalizeValueForTyFuel, exceptCong,
+          GoError.isPanic]
     | pointer _ => exact hcc
 
 theorem normalizeValueForTy_congr {σ₁ σ₂ : ExecState}

@@ -82,6 +82,14 @@ partial def decodeTy (path : String) (json : Json) : LowerM Ty := do
   | "array" =>
       let len ← StrictJson.nat s!"{path}.len" (← StrictJson.field path obj "len")
       pure (.array len (← decodeTy s!"{path}.elem" (← StrictJson.field path obj "elem")))
+  | "chan" =>
+      let dir ← StrictJson.string s!"{path}.dir" (← StrictJson.field path obj "dir")
+      let elem ← decodeTy s!"{path}.elem" (← StrictJson.field path obj "elem")
+      match dir with
+      | "both" => pure (.chan .both elem)
+      | "send" => pure (.chan .send elem)
+      | "recv" => pure (.chan .recv elem)
+      | other => fail s!"unsupported channel direction {other} at {path}"
   | "map" =>
       let key ← decodeTy s!"{path}.key" (← StrictJson.field path obj "key")
       let value ← decodeTy s!"{path}.value" (← StrictJson.field path obj "value")
@@ -592,6 +600,66 @@ partial def decodeStmt (results : Array Param) (path : String) (json : Json) : L
       let keyTy ← decodeTy s!"{path}.keyType" (← StrictJson.field path obj "keyType")
       let valTy ← decodeTy s!"{path}.valueType" (← StrictJson.field path obj "valueType")
       pure (.seqn ((← declaresOf #[t]).push (.makeMap t.assignee keyTy valTy none)))
+  -- Channel statements (channels arc slice 1). All decode arms fail
+  -- closed on malformed shapes (target counts, clause kinds, directions).
+  | "make-chan" =>
+      let t ← decodeTarget s!"{path}.target" (← StrictJson.field path obj "target")
+      let elemTy ← decodeTy s!"{path}.elem" (← StrictJson.field path obj "elem")
+      let capE ← (match obj.get? "cap" with
+        | some c => do pure (some (← decodeExpr s!"{path}.cap" c))
+        | none => pure none)
+      pure (.seqn ((← declaresOf #[t]).push (.makeChan t.assignee elemTy capE)))
+  | "chan-send" =>
+      let chE ← decodeExpr s!"{path}.ch" (← StrictJson.field path obj "ch")
+      let value ← decodeExpr s!"{path}.value" (← StrictJson.field path obj "value")
+      let elemTy ← decodeTy s!"{path}.elem" (← StrictJson.field path obj "elem")
+      pure (.chanSend chE value elemTy)
+  | "chan-recv" =>
+      let targetsJ ← StrictJson.array s!"{path}.targets" (← StrictJson.field path obj "targets")
+      if targetsJ.size > 2 then
+        fail s!"channel receive with {targetsJ.size} targets at {path}"
+      let ts ← targetsJ.mapIdxM (fun i t => decodeTarget s!"{path}.targets[{i}]" t)
+      let chE ← decodeExpr s!"{path}.ch" (← StrictJson.field path obj "ch")
+      let elemTy ← decodeTy s!"{path}.elem" (← StrictJson.field path obj "elem")
+      pure (.seqn ((← declaresOf ts).push (.chanRecv (ts.map (·.assignee)) chE elemTy)))
+  | "chan-close" =>
+      pure (.closeChan (← decodeExpr s!"{path}.ch" (← StrictJson.field path obj "ch")))
+  | "select" =>
+      -- Receive-clause targets are the frontend's fresh temps; their
+      -- declares lift OUT in front of the select (fresh names — the
+      -- pre-declaration is unobservable), leaving plain var targets for
+      -- the machine's post-selection stores.
+      let clausesJ ← StrictJson.array s!"{path}.clauses" (← StrictJson.field path obj "clauses")
+      let mut decls : Array Stmt := #[]
+      let mut cls : Array (SelectClauseHead × Stmt) := #[]
+      for i in [:clausesJ.size] do
+        match clausesJ[i]? with
+        | some cJ =>
+            let cpath := s!"{path}.clauses[{i}]"
+            let co ← StrictJson.obj cpath cJ
+            let ckind ← StrictJson.string s!"{cpath}.clause" (← StrictJson.field cpath co "clause")
+            let body ← decodeStmt results s!"{cpath}.body" (← StrictJson.field cpath co "body")
+            match ckind with
+            | "send" =>
+                let chE ← decodeExpr s!"{cpath}.ch" (← StrictJson.field cpath co "ch")
+                let value ← decodeExpr s!"{cpath}.value" (← StrictJson.field cpath co "value")
+                let elemTy ← decodeTy s!"{cpath}.elem" (← StrictJson.field cpath co "elem")
+                cls := cls.push (.send chE value elemTy, body)
+            | "recv" =>
+                let targetsJ ← StrictJson.array s!"{cpath}.targets" (← StrictJson.field cpath co "targets")
+                if targetsJ.size > 2 then
+                  fail s!"select receive with {targetsJ.size} targets at {cpath}"
+                let ts ← targetsJ.mapIdxM (fun j t => decodeTarget s!"{cpath}.targets[{j}]" t)
+                decls := decls ++ (← declaresOf ts)
+                let chE ← decodeExpr s!"{cpath}.ch" (← StrictJson.field cpath co "ch")
+                let elemTy ← decodeTy s!"{cpath}.elem" (← StrictJson.field cpath co "elem")
+                cls := cls.push (.recv (ts.map (·.assignee)) chE elemTy, body)
+            | other => fail s!"unsupported select clause kind {other} at {cpath}"
+        | none => pure ()
+      let default? ← (match obj.get? "default" with
+        | some dJ => do pure (some (← decodeStmt results s!"{path}.default" dJ))
+        | none => pure none)
+      pure (.seqn (decls.push (.selectStmt cls default?)))
   | "map-delete" =>
       let base ← decodeExpr s!"{path}.base" (← StrictJson.field path obj "base")
       let index ← decodeExpr s!"{path}.index" (← StrictJson.field path obj "index")
@@ -723,6 +791,32 @@ partial def decodeRange (results : Array Param) (path : String) (obj : StrictJso
       let keyTy ← decodeTy s!"{path}.keyType" (← StrictJson.field path obj "keyType")
       let valTy ← decodeTy s!"{path}.valueType" (← StrictJson.field path obj "valueType")
       pure (lab (.mapRange keyVar valVar coll keyTy valTy body))
+  | "chan" =>
+      -- Range over a channel (channels arc slice 1): a comma-ok receive
+      -- loop until closed-and-drained (spec §For statements; pinned by
+      -- channels/range-closed and channels/range-edge/*). NON-snapshot —
+      -- each iteration receives from the live channel; an open, drained
+      -- channel blocks (the sequential slice's deadlocked run, probe
+      -- p16). `keyVar` is the single iteration variable, freshly bound
+      -- per iteration; the pattern follows the index-able ranges, which
+      -- also desugar to `while` (only `mapRange` is primitive, for its
+      -- nondeterministic order).
+      let collTy ← exprTypeOf s!"{path}.collection" collJson
+      let elemTy ← decodeTy s!"{path}.elemType" (← StrictJson.field path obj "elemType")
+      let mut iter : Array Stmt := #[
+        .chanRecv #[.var "$rrecv", .var "$rok"] (.var "$rcoll") elemTy,
+        .ifThenElse (.not (.var "$rok")) .breakStmt (.seqn #[])
+      ]
+      match keyVar with
+      | some k => iter := iter ++ #[.initialization { id := k, typ := elemTy }, .assign (.var k) (.var "$rrecv")]
+      | none => pure ()
+      iter := iter.push body
+      pure (.block #[] #[
+        .initialization { id := "$rcoll", typ := collTy }, .assign (.var "$rcoll") coll,
+        .initialization { id := "$rrecv", typ := elemTy },
+        .initialization { id := "$rok", typ := .bool },
+        lab (.while (.boolLit true) (.block #[] iter))
+      ])
   | "slice" | "array" | "int" | "array-pointer" =>
       let collTy ← exprTypeOf s!"{path}.collection" collJson
       let intTy : Ty := .int .int

@@ -1136,6 +1136,11 @@ theorem normalizeValueForTyFuel_locSup :
       · simp at h
       · simp at h
     case unsupported f => simp [normalizeValueForTyFuel] at h
+    case chan d elem =>
+      cases v <;>
+        simp_all [normalizeValueForTyFuel, GoValue.locSup, optLocSup] <;>
+        subst h <;>
+        simp [GoValue.locSup, optLocSup]
     all_goals
       simp only [normalizeValueForTyFuel, pure_eq_ok, Except.ok.injEq] at h
       subst h
@@ -1408,7 +1413,10 @@ theorem isNormalForTyFuel_sound {σ : ExecState} :
     | string => simp [normalizeValueForTyFuel, pure, Except.pure]
     | slice _ => simp [normalizeValueForTyFuel, pure, Except.pure]
     | map _ _ => simp [normalizeValueForTyFuel, pure, Except.pure]
-    | chan _ _ => simp [normalizeValueForTyFuel, pure, Except.pure]
+    | chan _ _ =>
+      cases v
+      case chan cv => simp [normalizeValueForTyFuel, pure, Except.pure]
+      all_goals exact absurd h (by simp [isNormalForTyFuel])
     | pointer _ => simp [normalizeValueForTyFuel, pure, Except.pure]
 
 /-- The wrapper form: check at `σ.types` ⇒ `normalizeValueForTy` is the

@@ -165,3 +165,97 @@ upstream — executable validation is this project's differentiator.
 Owed early probes (slice 2/3 entry): iris-lean ghost ergonomics under
 real protocols; waiter-wake observability at scale; mover-lemma
 difficulty on appendSlice; nil-mixed select corners.
+
+## Slice-1 build log (2026-08-06, branch `channels-arc-s1`)
+
+Executed as decided (channels-only, zero scheduler, zero new `Choices`
+sites). Decisions made DURING the build, recorded here:
+
+- **Range-over-channel is a frontend/decoder DESUGAR, not a machine
+  frame** (deviation from the machine-shape note §6's "dedicated
+  iteration frame in the `mapIterK` mold"): a channel range is exactly
+  repeated comma-ok receive until closed-and-drained, and the index-able
+  ranges already desugar to `while` — only `mapRange` is primitive, for
+  its nondeterministic order. The desugar lives in `decodeRange`'s
+  `"chan"` kind (fresh `$rcoll`/`$rrecv`/`$rok` cells; per-iteration
+  fresh user variable; `break`/`continue`/labels via the ordinary loop
+  machinery). This also avoids a blocked-RANGE Config shape whose
+  slice-2 resume semantics would have been bespoke.
+- **`SelectClauseHead` + `Array (SelectClauseHead × Stmt)`** rather than
+  a mutual `Stmt`/clause inductive: the `Prod`-nested shape is the
+  `arrayLit`/`mapData` precedent and keeps `Stmt` a plain nested
+  inductive (no mutual-`deriving` risk on the heavily-proved syntax
+  type).
+- **Channel ops are ONE new `Cont` family** (`chanStK`, mirroring
+  `stmtOpK`'s target-checked operand discipline) ending in `applyChanOp
+  : … → Except GoError (Config × ExecState)` — the apply's outcome is a
+  CONFIGURATION because a channel op may proceed, panic, or BLOCK.
+  Select adds `selectOpsK` (entry-time operands, spec step 1) +
+  `applySelect` (readiness/commit, step 2-3) + `selectRecvK`
+  (post-selection targets, step 4). Select recv clauses always target
+  fresh frontend temps; user LHS (including `:=` declares and effectful
+  index expressions) becomes a body-side assignment, which is what makes
+  step 4's "LHS after communication" hold structurally.
+- **Blocked configurations** `.blockedSend/.blockedRecv/.blockedSelect`
+  are relation-SILENT (no outgoing per-goroutine rules — pairing is the
+  slice-2 pool's job); `stepFn` and the drivers classify them as the new
+  `GoError.deadlock` terminal (status `deadlock`, message the detector's
+  fixed line), BEFORE the fuel check. Payloads carry what pairing needs
+  (channel loc, in-flight value, target locs / evaluated clauses).
+  OPEN for slice 2 (recorded): the pool's wake step for a blocked
+  RECEIVE resumes by storing to the pinned locs + `.next k`; select
+  wake commits against `.blockedSelect`'s evaluated clauses.
+- **Panic-message narrowing** (L9): the channel panics carry gc's
+  realized strings ("send on closed channel", "close of closed channel",
+  "close of nil channel", "makechan: size out of range") as
+  `runtimeErrorValue` payloads — the spec pins only THAT a run-time
+  panic occurs; this matches the repo's standing makemap/makeslice
+  narrowing and is what the differential compares.
+- **Deadlock differential**: new `expected_status: deadlock`
+  (coverage-manifest / diff-coverage / coverageharness) — go run must
+  print the fixed `fatal error: all goroutines are asleep - deadlock!`;
+  both sides compare the synthesized
+  `{"status":"deadlock","message":"all goroutines are asleep -
+  deadlock!"}` observation. Strict-lane only, and NEVER combined with
+  `-race` (detector suppressed there — ground-truth note §5). The
+  membership enumerator fails LOUD on a deadlock member (no silent
+  handling).
+- **Nil-channel canonicalization**: `normalizeValueForTyFuel` gained
+  REAL chan arms (`.chan` passes, `.nil` → the canonical nil channel,
+  else fail closed) — a raw untyped `return nil` at a channel-typed
+  result otherwise reached channel ops as `.nil` (caught by
+  select-deterministic/channel-operands-eval-order). Lockstep
+  `isNormalForTyFuel` arms; congruence/locSup/soundness lemmas extended.
+- **Receive vs. call ordering** (spec §Order of evaluation: calls AND
+  receives are lexically ordered): a receive hoists to a statement, so
+  `emitBinary` pre-binds its LEFT operand to a temp when the RIGHT
+  operand contains a receive (caught by select-ready-send's
+  `len(ch)*10 + <-ch`). KNOWN NARROWER SCOPE: call-ARGUMENT positions
+  (`f(len(ch), <-ch)`) do not yet pre-bind — no corpus case pins the
+  shape; a future one would fail visibly at the differential, never
+  silently.
+- **Interface-typed receive targets fail closed** in the `=` statement
+  form (`x = <-ch` with `x` an interface and a non-interface element):
+  the chan-recv statement stores the raw element value and carries no
+  boxing wrap. The `:=` forms are unaffected (target typed at the
+  element type). Precise unsup reason; no corpus case needs it.
+- **Proof-repair shape** (the fun_cases positional-tag cost the
+  machine-shape note §6 predicted): stepFn's new arms renumbered the
+  correspondence proofs' `case caseN` tags; the mapping was recovered
+  empirically (probe file over `fun_cases stepFn`) and the named
+  handlers renamed; new explicit handlers were needed only for the
+  chanRecv-entry plan match, the chan/select apply-panic arms, the
+  plain-shift `if_neg`, and selectRecvFinish. `step_det` gained the
+  `stmtPlan_of_chanPlan` disjointness lemma (the one generic-statement
+  cross pair simp cannot refute). proofs/ changes are three mechanical
+  repairs (step_det simp set, wp-law rule sweeps + `wp_init`'s
+  `chanStFirst` refutation arm); NO designated statement changed.
+
+Validation: 5 new machine eval-test pins (82 total); full corpus
+1046 exec + 311 negative; ALL 38 pre-existing `channels/` reds + 19
+slice-1 guardrail pins + 8 channel-blocked singletons
+(builtins/make-channel-len-cap, control-flow/{break-label-select,
+goto-out-of-select}, generics/type-parameter-channel-ops,
+interfaces/typed-nil-channel, maps/{channel-key,nil-channel-key},
+scoping/select-clause-scope) flipped FAIL→PASS — 65 flips, zero
+regressions; baseline re-pinned from the full run in the flip commit.

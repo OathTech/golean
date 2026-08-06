@@ -835,6 +835,15 @@ def normalizeValueForTyFuel : Nat → ExecState → Ty → GoValue → Except Go
   | _ + 1, _, .funcType _ _, .funcVal fid captured => return .funcVal fid captured
   | _ + 1, _, .funcType _ _, .nil => return .nil
   | _ + 1, _, .funcType _ _, value => stuck s!"expected func value, got {repr value}"
+  -- Channel cells canonicalize the nil representation (channels arc
+  -- slice 1): a raw `.nil` reaching a channel-typed slot (an untyped
+  -- `return nil`, a nil literal the frontend left untyped) becomes the
+  -- machine's own nil channel, the same value the typed nil literal and
+  -- `defaultValue` produce — the map/slice conversion-arm precedent
+  -- (delta-review D3). Anything else non-channel fails closed.
+  | _ + 1, _, .chan _ _, .chan cv => return .chan cv
+  | _ + 1, _, .chan _ _, .nil => return .chan { base := none }
+  | _ + 1, _, .chan _ _, value => stuck s!"expected channel value, got {repr value}"
   | fuel + 1, state, .defined name, value => do
       match TypeEnv.lookup state.types name with
       | some (.alias target) => normalizeValueForTyFuel fuel state target value
@@ -913,6 +922,10 @@ def isNormalForTyFuel : Nat → TypeEnv → Ty → GoValue → Bool
   | _ + 1, _, .funcType _ _, .funcVal _ _ => true
   | _ + 1, _, .funcType _ _, .nil => true
   | _ + 1, _, .funcType _ _, _ => false
+  -- LOCKSTEP with the normalizer's chan arms: only a `.chan` value is
+  -- self-normalized (a raw `.nil` normalizes to the canonical form).
+  | _ + 1, _, .chan _ _, .chan _ => true
+  | _ + 1, _, .chan _ _, _ => false
   | fuel + 1, types, .defined name, value =>
       match TypeEnv.lookup types name with
       | some (.alias target) => isNormalForTyFuel fuel types target value
