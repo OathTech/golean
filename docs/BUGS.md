@@ -163,7 +163,19 @@ hoist further.
 
 ## BUG-025 — multi-target assignment phase 2 is all-or-nothing, not left-to-right (earlier stores lost when a later store panics)
 
-- Status: open
+- Status: fixed (2026-08-06, convergence response: the general
+  multi-assign no longer rides `stmtPlan`/`applyStmtOp` — `assignMany`
+  enters the SAME phase-split delivery machinery as the receive
+  (BUG-029): `tgtOpK` resolves every target's operands left-to-right
+  with the outer nil/bounds/nil-map check deferred, the new `rhsK`
+  frame evaluates the right-hand expressions left-to-right, and
+  `storeK` stores one step per target with the deferred check firing at
+  the store. `StmtOp.assignMany` and `locsOf` were removed outright,
+  not left dead. Both pins flip green: store-order-plain (the spec's
+  own `x[1], x[3] = 4, 5` shape — earlier store survives) and
+  field-nil-store-time (a nil FIELD target's check is store-time, so
+  `xs[0]` keeps its store). All twelve other multi-assign
+  order/aliasing pins stay green.)
 - Pinned-by: differential
 - Cases: multi-assign/store-order-plain, multi-assign/field-nil-store-time
 - Discovered: 2026-08-06 (channels-arc-s1 delta review D3, generalized

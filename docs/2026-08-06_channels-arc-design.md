@@ -362,3 +362,85 @@ pre-existing non-channel gaps, the deliberate multi-ready refusal pin
 (`channels/select-multi-ready`, slice 4), and BUG-025's general-path
 pin (`multi-assign/store-order-plain`, pre-existing machinery) — plus
 311 negative cases, all green.
+
+### Convergence-round response (2026-08-06, review of the delta-response commits)
+
+The convergence verifier confirmed five findings — headline: the D3
+per-target store-then-next fix had traded BUG-025's phase-2 collapse
+for the OPPOSITE one (storing target k before target k+1's ADDRESS
+evaluates: `i, bs[i] = <-ch` go 301/ours 304 with NO panic involved,
+both statement and select forms). Per the round's structural directive
+("no more patches trading divergence classes"), spec §Assignments' two
+phases are now EXPLICIT machine structure, and every multi-target
+store path rides it. Eleven red-first pins (all go-run-verified; three
+land green as collapse-direction guards), five movements:
+
+- **BUG-029 (critical), machine movement**: `tgtOpK` (phase 1)
+  evaluates every target's OPERANDS left-to-right after the
+  communication, resolving each target to a store-ready `TargetRef`
+  (`targetPlan`/`completeTargetRef`: direct / index / field / mapElem)
+  with the OUTER address operation's check DEFERRED; `storeK` (phase 2,
+  `.next`-driven) stores ONE target per rule step, left-to-right,
+  `storeTarget` firing the deferred nil/bounds/nil-map check at the
+  store. The phase boundary is exactly gc's realized point, pinned from
+  both directions: operand panics are phase-1
+  (`nil-index-base-second`: `(*bp)[0]`'s deref fires before any store,
+  go 1000) and the assignment's own checks are phase-2
+  (`{field,oob}-second-target-stores-first`: go 1150, earlier store
+  survives — these were green under store-then-next and had to STAY
+  green through the split). Relation/stepFn lockstep; positional case
+  tags re-derived by compiler probe; no new Choices sites.
+- **BUG-029 select half, frontend movement**: `machineSelectTargets`
+  passes plain-lvalue clause targets straight into the clause head
+  (the machine's step-4 delivery), replacing body-side single assigns
+  whose address-then-store interleaving was the same collapse; falls
+  back to the temp lowering exactly where step-4 clause-locality or
+  machine expressiveness demands (`:=`, blanks, interface boxing,
+  hoisting targets — unselected-lhs pins stay green).
+- **BUG-030 (major)**: a TWO-target receive's map-element target rides
+  the plan as `Assignee.mapElem` ("map" wire target) — its store is a
+  phase-2 step and survives a later target's panic
+  (`recv-map-elem/first-store-lands`, go 1050). Single-target
+  `m[k] = <-ch` keeps the post-statement map-assign (one store; carries
+  the boxing wrap); interface-valued maps in the two-target form fail
+  closed. BUG-025's false "receive instance IS fixed" prose corrected.
+- **BUG-025 CLOSED (the "open half"), machine movement**: the check
+  "does the phase-split machinery naturally fix the general path"
+  came back YES — `assignMany` left `stmtPlan`/`applyStmtOp` entirely
+  and enters the same `tgtOpK` phase with its RHS expressions carried
+  through; the new `rhsK` frame evaluates them left-to-right after the
+  targets, then `storeK` stores per step. `StmtOp.assignMany` and
+  `locsOf` removed outright (no inert dead arms). Pins flip:
+  `store-order-plain` (the spec's own `x[1], x[3] = 4, 5`) and the new
+  `field-nil-store-time` (a plain assign's nil FIELD check is
+  store-time — probed: go 1150). All twelve other multi-assign
+  order/aliasing pins stay green.
+- **BUG-032 (minor)**: the fnHasRecv `len`/`cap` hoist's justifying
+  claim ("over-hoisting is unobservable") was FALSE for the OPERAND —
+  hoisting drags its panic ahead of spec-unordered panics to its left
+  (a DEAD receive elsewhere in the function changed which panic
+  fired). Choice argued: restricting the hoist to syntactically
+  PANIC-FREE operands (`panicFreeOperand`: identifiers, literals,
+  pointer-free selector chains) and FAILING CLOSED on the rest beats
+  both alternatives — inline silently loses the len-vs-receive order
+  (BUG-023 returns), and full-statement ANF linearization (hoisting
+  every panicking operand of receive-bearing statements) is a large
+  emitter rework deferred until a real target needs the shape. The
+  discriminator pin `recv-order/dead-recv-len-operand` becomes a
+  PERMANENT fail-closed refusal (differential → frontend-export), like
+  `select-multi-ready`; the false claims in wire.go and
+  BUG-023/BUG-026 are corrected in place.
+- **BUG-031 (minor, pre-existing)**: `deferNoopEmitted` now
+  saves/restores with each declaration/stencil emission, so the
+  `$deferRecoverNoop` registration rolls back WITH `e.lifted` on both
+  quarantine paths (`defer/recover-noop-after-quarantine` flips
+  green).
+- **NOTE finding**: `emitChanRecvAssign`'s stale pre-bind docstring
+  (describing the behavior BUG-028 deleted) rewritten with the fix.
+
+Convergence-tip counts: 1080 exec cases, 1000 pass / 80 fail — the 78
+pre-existing non-channel gaps, the deliberate multi-ready refusal, the
+BUG-032 fail-closed refusal marker, and zero open convergence
+findings — plus 311 negative cases, all green. check-bugs green
+(BUG-025/029/030/031/032 all fixed-with-green-pins or
+refusal-reclassified; untriaged ledger unchanged at 16).

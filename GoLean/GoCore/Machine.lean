@@ -54,7 +54,7 @@ mid-arc audit):
   emits initializations inside `.seqn`/`.block` statement lists.
 
 Statement-side coverage (S2): the full interpreter fragment. Wide
-statements (`assignMany`, `newValue`, make/assign/lookup for maps and
+statements (`newValue`, make/assign/lookup for maps and
 slices, `typeAssert`, `appendSlice`, `copySlice`) go through one generic
 `stmtOpK` frame — an operand plan (`stmtPlan`) whose leading `ntargets`
 operands are target addresses, checked as they arrive (preserving the
@@ -597,7 +597,6 @@ def enterFrame (s : ExecState) (fid : FuncId) (argVals : List GoValue) :
 addresses, then the value operands), then perform the state update in one
 `applyStmtOp` step. -/
 inductive StmtOp where
-  | assignMany
   | newValue (typ : Option Ty)
   | makeSlice (elem : Ty) (hasCap : Bool)
   | makeMap (hasSpace : Bool)
@@ -620,14 +619,12 @@ inductive StmtOp where
 /-- Classify a wide statement: the head, how many leading operands are
 target addresses, and the operand expressions in evaluation order (the
 interpreter's order: all targets, then the value operands). `none` for
-statements with their own rules, for unsupported assignees, and for
-`assignMany` arity mismatch (the executable reports those with the
-interpreter's messages). -/
+statements with their own rules and for unsupported assignees.
+`assignMany` no longer rides this plan: the convergence round (BUG-025)
+moved it onto the phase-split delivery machinery (`tgtOpK`/`rhsK`/
+`storeK`), whose per-store phase 2 the one-shot `applyStmtOp` cannot
+express. -/
 def stmtPlan : Stmt → Option (StmtOp × Nat × List Expr)
-  | .assignMany left right => do
-      if left.size != right.size then none else
-      let tes ← assigneesExprs left.toList
-      return (.assignMany, left.size, tes ++ right.toList)
   | .newValue target value typ => do
       let te ← assigneeExpr target
       return (.newValue typ, 1, [te, value])
@@ -663,11 +660,6 @@ def stmtPlan : Stmt → Option (StmtOp × Nat × List Expr)
   | .sortSlice base elem => return (.sortSlice elem, 0, [base])
   | _ => none
 
-/-- Extract target locations from already-checked address values. -/
-def locsOf : List GoValue → Except GoError (List Loc)
-  | [] => return []
-  | v :: vs => do return (← valueAsLoc v) :: (← locsOf vs)
-
 /-- The choices-FREE core of `applyStmtOp`: every wide-op arm except
 `appendSlice` (whose spill path consumes a capacity choice; its arm HERE
 is an unreachable fail-closed `.internal` — real dispatch happens in the
@@ -678,12 +670,9 @@ correspondence kit's `∀ choices` lemmas dispatch through this core rather
 than a per-arm congruence bash. Arms are verbatim from the old
 `applyStmtOp` minus the trailing `choices` threading.
 -/
-def applyStmtOpCore (s : ExecState) (op : StmtOp) (nt : Nat)
+def applyStmtOpCore (s : ExecState) (op : StmtOp) (_nt : Nat)
     (vs : List GoValue) : Except GoError ExecState := do
   match op with
-  | .assignMany => do
-      let locs ← locsOf (vs.take nt)
-      return ((← storeMany s locs (vs.drop nt)))
   | .newValue typ =>
       match vs with
       | [tv, value] => do
@@ -1466,12 +1455,23 @@ inductive Cont where
   value of the CURRENT target. `sh`/`ops`/`pending` are the current
   target's shape, evaluated operands (most recent first) and remaining
   operand expressions; `refs` the targets already resolved (in order);
-  `targets` the target plans still to evaluate; `vals` the delivery
-  values phase 2 will store. Each target completes into a store-ready
+  `targets` the target plans still to evaluate. For the RECEIVE paths
+  `vals` carries the delivery values phase 2 will store (`rhs = []`);
+  for the general multi-assign (BUG-025) `rhs` carries the right-hand
+  expressions, evaluated under `rhsK` after the targets (`vals = []`).
+  Each target completes into a store-ready
   `TargetRef` — the OUTER nil/bounds check stays deferred to phase 2. -/
   | tgtOpK (sh : TargetShape) (ops : List GoValue) (pending : List Expr)
       (refs : List TargetRef) (targets : List (TargetShape × List Expr))
-      (vals : List GoValue) (body : Stmt) (env : LocalEnv) (k : Cont)
+      (rhs : List Expr) (vals : List GoValue) (body : Stmt)
+      (env : LocalEnv) (k : Cont)
+  /-- The general multi-assign's RHS evaluation (convergence round,
+  BUG-025): after phase 1 resolved every target (`rhs` carried through
+  `tgtOpK`), the right-hand expressions evaluate left-to-right into
+  `done`; the last value enters phase 2 (`storeK`). The receive path
+  never uses this frame (its delivery values are already known). -/
+  | rhsK (refs : List TargetRef) (done : List GoValue) (pending : List Expr)
+      (body : Stmt) (env : LocalEnv) (k : Cont)
   /-- Receive delivery, PHASE 2 (`.next`-driven, one store per step,
   LEFT-TO-RIGHT — an earlier target's store is observable before a
   later target's store-time panic; pinned by
@@ -1550,7 +1550,8 @@ def panicPassthrough : Cont → Option Cont
   | .panicArgK k => some k
   | .chanStK _ _ _ _ k => some k
   | .selectOpsK _ _ _ _ _ k => some k
-  | .tgtOpK _ _ _ _ _ _ _ _ k => some k
+  | .tgtOpK _ _ _ _ _ _ _ _ _ k => some k
+  | .rhsK _ _ _ _ _ k => some k
   | .storeK _ _ _ _ k => some k
   | .frame _ _ _ _ _ => none
   | .panicResumeK _ _ => none
@@ -1614,8 +1615,10 @@ def recoverThroughWrappers : Cont → Option (GoValue × Cont)
       (recoverThroughWrappers k).map (fun (v, k') => (v, .chanStK a b c d k'))
   | .selectOpsK a b c d e k =>
       (recoverThroughWrappers k).map (fun (v, k') => (v, .selectOpsK a b c d e k'))
-  | .tgtOpK a b c d e f g h k =>
-      (recoverThroughWrappers k).map (fun (v, k') => (v, .tgtOpK a b c d e f g h k'))
+  | .tgtOpK a b c d e f g h i k =>
+      (recoverThroughWrappers k).map (fun (v, k') => (v, .tgtOpK a b c d e f g h i k'))
+  | .rhsK a b c d e k =>
+      (recoverThroughWrappers k).map (fun (v, k') => (v, .rhsK a b c d e k'))
   | .storeK a b c d k =>
       (recoverThroughWrappers k).map (fun (v, k') => (v, .storeK a b c d k'))
 
@@ -1679,8 +1682,10 @@ def recoverResult : Cont → GoValue × Cont
       let (v, k') := recoverResult k; (v, .chanStK a b c d k')
   | .selectOpsK a b c d e k =>
       let (v, k') := recoverResult k; (v, .selectOpsK a b c d e k')
-  | .tgtOpK a b c d e f g h k =>
-      let (v, k') := recoverResult k; (v, .tgtOpK a b c d e f g h k')
+  | .tgtOpK a b c d e f g h i k =>
+      let (v, k') := recoverResult k; (v, .tgtOpK a b c d e f g h i k')
+  | .rhsK a b c d e k =>
+      let (v, k') := recoverResult k; (v, .rhsK a b c d e k')
   | .storeK a b c d k =>
       let (v, k') := recoverResult k; (v, .storeK a b c d k')
 
@@ -1742,7 +1747,7 @@ def enterRecvTargets (s : ExecState) (targets : List Assignee)
     Except GoError (Config × ExecState) := do
   match targetsPlan targets with
   | some ((sh, e :: ops) :: rest) =>
-      return (.evalE e env (.tgtOpK sh [] ops [] rest vals body env k), s)
+      return (.evalE e env (.tgtOpK sh [] ops [] rest [] vals body env k), s)
   | _ => stuck "malformed receive target plan"
 
 /-- Apply a channel statement's head to its evaluated pre-communication
@@ -2167,9 +2172,9 @@ inductive Step : Config → ExecState → Config → ExecState → Prop where
       Step (.retV v (.stmtOpK op nt done (e :: rest) env k)) s
         (.evalE e env (.stmtOpK op nt (v :: done) rest env k)) s
   -- (Restricted to a nonempty pending list: at the apply position the same
-  -- nil-target panic surfaces through `applyStmtOp`'s `locsOf` — rule
-  -- `stmtOpApplyPanic` — keeping the rules in one-to-one correspondence
-  -- with `stepFn`'s arms.)
+  -- nil-target panic surfaces through `applyStmtOp`'s per-arm
+  -- `valueAsLoc` checks — rule `stmtOpApplyPanic` — keeping the rules
+  -- in one-to-one correspondence with `stepFn`'s arms.)
   | stmtOpTargetPanic {op nt done v msg e rest env k s} :
       done.length < nt →
       valueAsLoc v = .error (.panic msg) →
@@ -2496,17 +2501,37 @@ inductive Step : Config → ExecState → Config → ExecState → Prop where
   -- nil/bounds check DEFERRED; phase 2 (`storeK`, `.next`-driven)
   -- stores left-to-right, ONE step per target, store-time panics
   -- firing after earlier stores landed.
-  | tgtOpShift {sh ops v e pending refs targets vals body env k s} :
-      Step (.retV v (.tgtOpK sh ops (e :: pending) refs targets vals body env k)) s
-        (.evalE e env (.tgtOpK sh (v :: ops) pending refs targets vals body env k)) s
-  | tgtOpNext {sh ops v r sh' e ops' targets refs vals body env k s} :
+  | tgtOpShift {sh ops v e pending refs targets rhs vals body env k s} :
+      Step (.retV v (.tgtOpK sh ops (e :: pending) refs targets rhs vals body env k)) s
+        (.evalE e env (.tgtOpK sh (v :: ops) pending refs targets rhs vals body env k)) s
+  | tgtOpNext {sh ops v r sh' e ops' targets refs rhs vals body env k s} :
       completeTargetRef sh (v :: ops).reverse = some r →
-      Step (.retV v (.tgtOpK sh ops [] refs ((sh', e :: ops') :: targets) vals body env k)) s
-        (.evalE e env (.tgtOpK sh' [] ops' (refs ++ [r]) targets vals body env k)) s
+      Step (.retV v (.tgtOpK sh ops [] refs ((sh', e :: ops') :: targets) rhs vals body env k)) s
+        (.evalE e env (.tgtOpK sh' [] ops' (refs ++ [r]) targets rhs vals body env k)) s
   | tgtOpStores {sh ops v r refs vals body env k s} :
       completeTargetRef sh (v :: ops).reverse = some r →
-      Step (.retV v (.tgtOpK sh ops [] refs [] vals body env k)) s
+      Step (.retV v (.tgtOpK sh ops [] refs [] [] vals body env k)) s
         (.next (.storeK (refs ++ [r]) vals body env k)) s
+  -- General multi-assign (convergence round, BUG-025): phase 1 resolves
+  -- the targets, the RHS evaluates left-to-right (`rhsK`), phase 2
+  -- stores one step per target — same machinery, same store-time
+  -- checks, so the spec's own `x[1], x[3] = 4, 5` shape keeps its
+  -- earlier store when the later one panics.
+  | tgtOpRhs {sh ops v r refs e rest vals body env k s} :
+      completeTargetRef sh (v :: ops).reverse = some r →
+      Step (.retV v (.tgtOpK sh ops [] refs [] (e :: rest) vals body env k)) s
+        (.evalE e env (.rhsK (refs ++ [r]) [] rest body env k)) s
+  | rhsShift {refs done v e rest body env k s} :
+      Step (.retV v (.rhsK refs done (e :: rest) body env k)) s
+        (.evalE e env (.rhsK refs (v :: done) rest body env k)) s
+  | rhsStores {refs done v body env k s} :
+      Step (.retV v (.rhsK refs done [] body env k)) s
+        (.next (.storeK refs (v :: done).reverse body env k)) s
+  | assignManyFirst {left right sh e ops rest env k s} :
+      left.size = right.size →
+      targetsPlan left.toList = some ((sh, e :: ops) :: rest) →
+      Step (.exec (.assignMany left right) env k) s
+        (.evalE e env (.tgtOpK sh [] ops [] rest right.toList [] (.seqn #[]) env k)) s
   | storeStep {r rs val vals body env k s s'} :
       storeTarget s r val = .ok s' →
       Step (.next (.storeK (r :: rs) (val :: vals) body env k)) s

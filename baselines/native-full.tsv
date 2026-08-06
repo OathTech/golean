@@ -1,16 +1,14 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-06  commit: channels-arc-s1 (convergence minors: BUG-031 + BUG-032)
+# recorded: 2026-08-06  commit: channels-arc-s1 (convergence: BUG-025 closed — assignMany rides the phase-split plan)
 #   frontend: native  oracle: go run (strict lane) / go-run membership in the
 #   machine-enumerated observation set (membership lane; go1.26.5 samples)
-# manifest_cases: 1080  pass: 998  fail: 82
-# Re-pin reason: BUG-031 (deferNoopEmitted rolls back with e.lifted on
-#   both quarantine paths) flips defer/recover-noop-after-quarantine
-#   [lean-observation] -> PASS. BUG-032 (fnHasRecv len/cap hoist
-#   restricted to panic-free operands; the rest fail closed) moves
-#   channels/recv-order/dead-recv-len-operand [differential]
-#   -> [frontend-export]: the silent wrong-panic answer becomes a
-#   visible refusal — a permanent fail-closed marker. Zero drift on all
-#   other ids.
+# manifest_cases: 1080  pass: 1000  fail: 80
+# Re-pin reason: BUG-025 closed — the general multi-assign left
+#   stmtPlan/applyStmtOp for the tgtOpK/rhsK/storeK phase-split
+#   machinery (targets' outer checks deferred to phase-2 per-step
+#   stores; RHS evaluated left-to-right between). Flips
+#   multi-assign/{store-order-plain,field-nil-store-time}
+#   [differential] -> PASS. Zero drift on all other ids.
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
 PASS	arrays/array-copy	-
@@ -754,14 +752,14 @@ FAIL	methods/value-auto-deref	lean-observation
 PASS	multi-assign/blank-discard-nonint	-
 PASS	multi-assign/call-return-assignment	-
 PASS	multi-assign/deref-target-before-rhs	-
-FAIL	multi-assign/field-nil-store-time	differential
+PASS	multi-assign/field-nil-store-time	-
 PASS	multi-assign/index-target-rhs-call-order	-
 PASS	multi-assign/lhs-index-eval-order	-
 PASS	multi-assign/repeated-index-write	-
 PASS	multi-assign/repeated-variable-write	-
 PASS	multi-assign/rhs-before-writes	-
 PASS	multi-assign/selector-target-before-rhs	-
-FAIL	multi-assign/store-order-plain	differential
+PASS	multi-assign/store-order-plain	-
 PASS	multi-assign/target-eval-before-call	-
 PASS	multi-assign/tuple-assign-order	-
 PASS	native-smoke/arith	-

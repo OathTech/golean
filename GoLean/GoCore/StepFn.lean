@@ -210,22 +210,30 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
               | some d => return (.exec d env k, s, choices)
               | none => return (.blockedSelect [] env k, s, choices)
       | .unsupported feature => throw (.unsupported feature)
+      | .assignMany left right =>
+          -- Convergence round (BUG-025): the general multi-assign rides
+          -- the SAME phase-split delivery machinery as the receive —
+          -- phase-1 target operands (outer checks deferred), then the
+          -- RHS values (`rhsK`), then phase-2 left-to-right stores.
+          if left.size = right.size then
+            match targetsPlan left.toList with
+            | some ((sh, e :: ops) :: rest) =>
+                return (.evalE e env
+                  (.tgtOpK sh [] ops [] rest right.toList [] (.seqn #[]) env k), s, choices)
+            | some _ => throw (.stuck "malformed multi-assignment target plan")
+            | none => throw (.unsupported "unsupported multi-assignment target assignee")
+          else
+            throw (.stuck s!"multi-assignment expected {left.size} value(s), got {right.size}")
       | wide =>
-          -- assignMany / newValue / makeSlice / makeMap / mapAssign /
-          -- mapLookup / typeAssert / appendSlice / copySlice
+          -- newValue / makeSlice / makeMap / mapAssign / mapLookup /
+          -- typeAssert / appendSlice / copySlice
           match stmtPlan wide with
           | some (op, nt, e :: rest) =>
               return (.evalE e env (.stmtOpK op nt [] rest env k), s, choices)
           | some (op, nt, []) => do
               let (s', choices') ← applyStmtOp s choices op nt []
               return (.next k, s', choices')
-          | none =>
-              match wide with
-              | .assignMany left right =>
-                  if left.size != right.size then
-                    throw (.stuck s!"multi-assignment expected {left.size} value(s), got {right.size}")
-                  else throw (.unsupported "unsupported multi-assignment target assignee")
-              | _ => throw (.unsupported "unsupported statement target assignee")
+          | none => throw (.unsupported "unsupported statement target assignee")
   | .evalE e env k =>
       match e with
       | .var id =>
@@ -446,15 +454,18 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
               | .error (.panic msg) =>
                   return (.panicking [⟨runtimeErrorValue msg, false⟩] k', s, choices)
               | .error err => throw err
-      | .tgtOpK sh ops pending refs targets vals body env k' =>
+      | .tgtOpK sh ops pending refs targets rhs vals body env k' =>
           -- Delivery PHASE 1 (convergence round, BUG-029): operand
           -- values accumulate; each target completes into a
           -- store-ready TargetRef (its outer nil/bounds check
-          -- DEFERRED); phase 2 stores under `.next (.storeK ...)`.
+          -- DEFERRED). Targets done: the receive paths (rhs = [])
+          -- store their delivery values under `.next (.storeK ...)`;
+          -- the general multi-assign (BUG-025) evaluates its RHS
+          -- under `rhsK` first.
           match pending with
           | e :: rest =>
               return (.evalE e env
-                (.tgtOpK sh (v :: ops) rest refs targets vals body env k'), s, choices)
+                (.tgtOpK sh (v :: ops) rest refs targets rhs vals body env k'), s, choices)
           | [] =>
               match completeTargetRef sh (v :: ops).reverse with
               | none => throw (.internal "malformed receive target operands")
@@ -462,10 +473,22 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
                   match targets with
                   | (sh', e :: ops') :: rest =>
                       return (.evalE e env
-                        (.tgtOpK sh' [] ops' (refs ++ [r]) rest vals body env k'), s, choices)
+                        (.tgtOpK sh' [] ops' (refs ++ [r]) rest rhs vals body env k'), s, choices)
                   | (_, []) :: _ => throw (.internal "malformed receive target plan")
                   | [] =>
-                      return (.next (.storeK (refs ++ [r]) vals body env k'), s, choices)
+                      match rhs with
+                      | e :: rest =>
+                          return (.evalE e env
+                            (.rhsK (refs ++ [r]) [] rest body env k'), s, choices)
+                      | [] =>
+                          return (.next (.storeK (refs ++ [r]) vals body env k'), s, choices)
+      | .rhsK refs done pending body env k' =>
+          -- BUG-025 RHS values, left-to-right; the last enters phase 2.
+          match pending with
+          | e :: rest =>
+              return (.evalE e env (.rhsK refs (v :: done) rest body env k'), s, choices)
+          | [] =>
+              return (.next (.storeK refs (v :: done).reverse body env k'), s, choices)
       | .stop => throw (.internal "value delivered to empty continuation")
       | _ => throw (.internal "value delivered to statement continuation")
   | .next k =>
