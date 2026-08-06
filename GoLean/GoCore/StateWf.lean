@@ -1622,6 +1622,8 @@ theorem indexTargetLoc_locSup {s : ExecState} {b i : GoValue} {l : Loc}
     have h2 := sliceIndexLoc_locSup h
     have h3 : GoValue.locSup (GoValue.slice sl) = optLocSup sl.base := rfl
     omega
+  · -- nil base: the BUG-038 panic arm — no `.ok` result
+    simp [GoCore.panic, throw, throwThe, MonadExceptOf.throw] at h
   · -- addr base
     rename_i baseLoc
     simp only [bind_eq_ok] at h

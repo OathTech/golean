@@ -1,15 +1,16 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-06  commit: channels-arc-s1 (round 4: BUG-035 + BUG-036 — lowerings route onto the spine)
+# recorded: 2026-08-06  commit: channels-arc-s1 (round-4 minors: BUG-038 + BUG-039)
 #   frontend: native  oracle: go run (strict lane) / go-run membership in the
 #   machine-enumerated observation set (membership lane; go1.26.5 samples)
-# manifest_cases: 1102  pass: 1016  fail: 86
-# Re-pin reason: the two lowerings that bypassed the spine now route
-#   onto it — blank-containing multi-assigns become one .assignMany
-#   with discard locals (decoder, BUG-035) and the select
-#   temp-fallback write-back becomes one body-side multi-assign
-#   (emitter, BUG-036). Flips multi-assign/blank-dep-index and
-#   channels/select-recv-edge/fallback-call-index -> PASS. Zero drift
-#   on all other ids.
+# manifest_cases: 1102  pass: 1018  fail: 84
+# Re-pin reason: BUG-038 (indexTargetLoc .nil arm — nil pointer-to-
+#   array store panics recoverably instead of going stuck) flips
+#   pointers/nil-array-elem-store{,/second-target} -> PASS. BUG-039
+#   (panicFreeOperand consults Selections[..].Indirect() — the
+#   embedded-pointer fail-open hole) moves
+#   channels/recv-order/dead-recv-len-embedded [differential]
+#   -> [frontend-export]: a permanent fail-closed refusal marker.
+#   Zero drift on all other ids.
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
 PASS	arrays/array-copy	-
@@ -143,7 +144,7 @@ PASS	channels/recv-map-elem/key-panic-drains	-
 PASS	channels/recv-order/binary	-
 PASS	channels/recv-order/call-arg	-
 PASS	channels/recv-order/composite-lit	-
-FAIL	channels/recv-order/dead-recv-len-embedded	differential
+FAIL	channels/recv-order/dead-recv-len-embedded	frontend-export
 FAIL	channels/recv-order/dead-recv-len-operand	frontend-export
 PASS	channels/recv-order/else-if	-
 PASS	channels/recv-order/for-cond	-
@@ -841,8 +842,8 @@ PASS	pointers/composite-literal-address	-
 PASS	pointers/deref-assign	-
 PASS	pointers/deref-target-rhs-call-order	-
 PASS	pointers/inc-via-call	-
-FAIL	pointers/nil-array-elem-store	lean-observation
-FAIL	pointers/nil-array-elem-store/second-target	lean-observation
+PASS	pointers/nil-array-elem-store	-
+PASS	pointers/nil-array-elem-store/second-target	-
 FAIL	pointers/nil-array-index-panic	lean-observation
 PASS	pointers/nil-deref-panic	-
 PASS	pointers/nil-selector-panic	-

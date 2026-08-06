@@ -213,6 +213,10 @@ def indexTargetLoc (s : ExecState) (b i : GoValue) : Except GoError Loc := do
   let indexValue ← valueAsInt i
   match b with
   | .slice slice => sliceIndexLoc slice indexValue
+  -- A nil pointer-to-array base is gc's recoverable nil-pointer
+  -- dereference, at exactly this point (round 4, BUG-038 — the
+  -- `valueAsLoc` convention; previously a wrongly-stuck fall-through).
+  | .nil => panic "runtime error: invalid memory address or nil pointer dereference"
   | .addr baseLoc =>
       match ← loadLoc s baseLoc with
       | .array values => do

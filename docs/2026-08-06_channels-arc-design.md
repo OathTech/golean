@@ -450,3 +450,64 @@ BUG-032 fail-closed refusal marker, and zero open convergence
 findings — plus 311 negative cases, all green. check-bugs green
 (BUG-025/029/030/031/032 all fixed-with-green-pins or
 refusal-reclassified; untriaged ledger unchanged at 16).
+
+### Round-4 convergence-check response (2026-08-06)
+
+The round-4 verification confirmed the phase-split SHAPE (contrast
+matrix green on every migrated form; all 11 round-3 pins replayed
+green) but found the MIGRATION incomplete and two closure claims
+overclaimed — with every headline divergence verified PRE-EXISTING
+(base behaves identically; the round-3 diff narrowed the class while
+the prose said "every multi-target store path"). Nine confirmed
+findings, zero refuted; 22 red-first pins (18 red, 4 boundary guards);
+five movements:
+
+- **BUG-033 (critical): the address CHAIN.** `targetPlan` deferred
+  only the outermost address op — `a[i].f` fired the inner index
+  check in phase 1 (go 105 / ours 100, all three migrated paths). Now
+  `targetSpine` decomposes the full `indexAddr`/`fieldAddr` spine
+  (anchor + index operands = phase 1) and `resolveChain` replays it at
+  the store. The probed boundary: a VALUE step in the base (index-GET
+  inner slice element `aa[9][0]` on `[][]int`, a deref) is an operand,
+  phase 1 — pinned green from both directions (`inner-value-guard`,
+  `array-nested`). The round-3 ":exact gc point" claim is corrected in
+  place above.
+- **BUG-037 + BUG-034: the remaining eager stmtPlan assignment forms.**
+  Single `.assign` rides the spine as a one-target multi-assign
+  (`assignFirst` — a[9] = 1/z now panics with gc's divide-by-zero, not
+  our index check), and the comma-ok `v, ok = m[k]` / `x.(T)` forms
+  enter `tgtOpK` with the source as an `RhsOp` applied at the end of
+  phase 1 (`applyRhsOp`). `assignTargetK`/`assignStoreK` and
+  `StmtOp.mapLookup`/`.typeAssertStmt` removed outright.
+- **BUG-035 + BUG-036: the lowerings that bypassed the spine.**
+  Blank-containing multi-assigns become ONE `.assignMany` with typed
+  discard locals (decoder); the select temp-fallback's write-back
+  becomes ONE body-side multi-assign (emitter) — clause locality
+  unchanged, both targets' hoists before both stores.
+- **BUG-038 + BUG-039 (minors):** `indexTargetLoc` gains the `.nil`
+  panic arm (nil pointer-to-array store was wrongly stuck);
+  `panicFreeOperand` consults `Selections[…].Indirect()` (the
+  embedded-pointer fail-open hole — the discriminator becomes a
+  permanent fail-closed refusal like dead-recv-len-operand). BUG-032's
+  entry carries both amendments plus the assignment-path
+  unordered-envelope note (spec-legal, pre-existing, recorded).
+- **BUG-025 REOPENED (the honest disposition for the call write-back).**
+  Its own scope line always named frame-exit `storeMany`: the
+  multi-value CALL path still resolves target checks BEFORE the call
+  (suppressing the call and its effects — go 117/ours 100), loses the
+  call's own panic to our target check, and stores all-or-nothing.
+  Migrating it means carrying `TargetRef`s through `Cont.frame` (the
+  most-threaded frame: defers, panic paths, recover walk) and routing
+  frame exit through `storeK` — deliberately scoped to the NEXT
+  machine slice rather than rushed into this round; three pins
+  (`multi-assign/call-write-back/*`) keep it red and visible, and the
+  spine machinery (TargetRef/storeK/targetsPlan) is call-path-agnostic
+  and ready for it.
+
+Round-4-tip counts: 1102 exec cases, 1018 pass / 84 fail — the 78
+pre-existing non-channel gaps, the two deliberate refusal markers
+(select-multi-ready, dead-recv-len-operand + dead-recv-len-embedded),
+and BUG-025's three call-write-back pins — plus 311 negative, all
+green. check-bugs green (39 bugs; untriaged ledger unchanged at 16 —
+the READ-position pointers/nil-array-index-panic stays there: a
+different, index-GET path).

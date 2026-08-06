@@ -158,7 +158,13 @@ frames.
 
 ## BUG-038 — storing through a nil pointer-to-array element goes STUCK instead of panicking
 
-- Status: open
+- Status: fixed (2026-08-06, round-4 response: `indexTargetLoc` gains
+  the `.nil` arm mapping to gc's recoverable nil-pointer-dereference
+  panic — the `valueAsLoc` convention — which fires at the store on
+  the phase-2 path (second-target pin: earlier store lands first,
+  go 105). The READ-position sibling `pointers/nil-array-index-panic`
+  takes a different path (index-GET) and remains in the untriaged
+  ledger, unchanged.)
 - Pinned-by: differential
 - Cases: pointers/nil-array-elem-store, pointers/nil-array-elem-store/second-target
 - Discovered: 2026-08-06 (round-4 convergence check, verified minor;
@@ -173,9 +179,15 @@ nil-pointer-dereference panic, the `valueAsLoc` convention.
 
 ## BUG-039 — panicFreeOperand misses IMPLICIT indirection through embedded pointer fields (BUG-032's hole)
 
-- Status: open
-- Pinned-by: differential
-- Cases: channels/recv-order/dead-recv-len-embedded
+- Status: fixed (2026-08-06, round-4 response: the `SelectorExpr` arm
+  consults go/types `Selections[…].Indirect()` first — ANY implicit
+  indirection makes the operand non-panic-free, so the BUG-032
+  refusal applies. The pin moves differential -> frontend-export: a
+  permanent fail-closed refusal marker like dead-recv-len-operand,
+  never a silent wrong answer; the receive-free control stays green.)
+- Pinned-by: none (the discriminating shape now fails closed at the
+  frontend — channels/recv-order/dead-recv-len-embedded is a permanent
+  frontend-export refusal, tracked as coverage, not a fidelity pin)
 - Discovered: 2026-08-06 (round-4 convergence check, verified major:
   the predicate BUG-032 shipped is fail-open one route deeper)
 
@@ -299,7 +311,17 @@ alongside every `e.lifted` rollback (both paths).
   reclassified differential -> frontend refusal — a permanent
   fail-closed marker like channels/select-multi-ready, not a silent
   wrong answer. The false "over-hoisting is unobservable" claims in
-  wire.go and BUG-023/BUG-026 are corrected in place.)
+  wire.go and BUG-023/BUG-026 are corrected in place.
+  ROUND-4 AMENDMENTS: (a) the predicate was fail-open one route deeper
+  — implicit indirection through embedded pointer fields — closed by
+  BUG-039 (go/types `Selections[…].Indirect()`); (b) the same
+  unordered-panic ENVELOPE class exists in the assignment path's
+  phase-1 order (targets' operands then RHS — `xs[ys[9]], b = zs[7],
+  2` realizes the LHS-operand panic where gc realizes the RHS's; both
+  points spec-legal, pre-existing, identical on the single-assign
+  path, and realizing gc's exact point needs the same full-statement
+  linearization this entry already records as deliberately not
+  built).)
 - Pinned-by: none (the discriminating shape now fails closed at the
   frontend — channels/recv-order/dead-recv-len-operand is a permanent
   frontend-export refusal, tracked as coverage, not a fidelity pin)

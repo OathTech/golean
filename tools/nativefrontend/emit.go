@@ -6256,6 +6256,13 @@ func (e *emitter) panicFreeOperand(x ast.Expr) bool {
 	case *ast.BasicLit:
 		return true
 	case *ast.SelectorExpr:
+		// Round 4 (BUG-039): a selection can dereference IMPLICITLY —
+		// promotion through an embedded POINTER field nil-derefs with no
+		// pointer visible in the syntax. go/types knows: any selection
+		// that indirects is not panic-free.
+		if sel, ok := e.info.Selections[v]; ok && sel.Indirect() {
+			return false
+		}
 		t := e.goTypeOf(v.X)
 		if t == nil {
 			// Package qualifier: the selector reads a package-level
