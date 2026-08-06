@@ -1,19 +1,14 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-06  commit: channels-arc-s1 (round-4 guardrails: 22 pins, BUG-033..039 filed, BUG-025 reopened)
+# recorded: 2026-08-06  commit: channels-arc-s1 (round 4: BUG-033 chain spine)
 #   frontend: native  oracle: go run (strict lane) / go-run membership in the
 #   machine-enumerated observation set (membership lane; go1.26.5 samples)
-# manifest_cases: 1102  pass: 1004  fail: 98
-# Re-pin reason: round-4 convergence-check guardrails — 22 new pins,
-#   all go-run-verified. 18 land RED: the BUG-033 chain discriminators
-#   (a[i].f on the plain/receive/select paths + nil-slice/array
-#   variants), the BUG-025 REOPENED call write-back trio
-#   (effects-suppressed / panic-identity / nil-field-store), BUG-034
-#   comma-ok (map-oob / assert-nil-field), BUG-035 blank-dep-index,
-#   BUG-036 select fallback-call-index, BUG-037 single-assign
-#   target-check-vs-rhs trio, BUG-038 nil-array-elem-store pair,
-#   BUG-039 dead-recv-len-embedded. 4 land GREEN as boundary guards
-#   (chain array-nested + inner-value-guard, comma-ok dep-index,
-#   len-embedded-no-recv). Zero drift on all 1080 pre-existing ids.
+# manifest_cases: 1102  pass: 1009  fail: 93
+# Re-pin reason: BUG-033 fixed — targetPlan defers the FULL
+#   address-former chain (targetSpine phase-1 operands; resolveChain
+#   replays the spine at the store). Flips the five chain pins
+#   (multi-assign/chain-field-over-index{,/nil-slice-field,/array-field}
+#   + channels/{recv-edge,select-recv-edge}/chain-field-over-index)
+#   [differential] -> PASS. Zero drift on all other ids.
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
 PASS	arrays/array-copy	-
@@ -132,7 +127,7 @@ PASS	channels/range-closed	-
 PASS	channels/range-edge/break	-
 PASS	channels/range-edge/no-var	-
 PASS	channels/recv-edge/bad-target-blocks	-
-FAIL	channels/recv-edge/chain-field-over-index	differential
+PASS	channels/recv-edge/chain-field-over-index	-
 PASS	channels/recv-edge/dep-index-target	-
 PASS	channels/recv-edge/field-second-target-stores-first	-
 PASS	channels/recv-edge/nil-deref-target-drains	-
@@ -176,7 +171,7 @@ FAIL	channels/select-multi-ready	lean-observation
 PASS	channels/select-nil-default	-
 PASS	channels/select-ready-receive	-
 PASS	channels/select-ready-send	-
-FAIL	channels/select-recv-edge/chain-field-over-index	differential
+PASS	channels/select-recv-edge/chain-field-over-index	-
 PASS	channels/select-recv-edge/dep-index-target	-
 FAIL	channels/select-recv-edge/fallback-call-index	lean-observation
 PASS	channels/select-recv-edge/field-second-target-stores-first	-
@@ -768,11 +763,11 @@ PASS	multi-assign/call-return-assignment	-
 FAIL	multi-assign/call-write-back/effects-suppressed	differential
 FAIL	multi-assign/call-write-back/nil-field-store	differential
 FAIL	multi-assign/call-write-back/panic-identity	differential
-FAIL	multi-assign/chain-field-over-index	differential
-FAIL	multi-assign/chain-field-over-index/array-field	differential
+PASS	multi-assign/chain-field-over-index	-
+PASS	multi-assign/chain-field-over-index/array-field	-
 PASS	multi-assign/chain-field-over-index/array-nested	-
 PASS	multi-assign/chain-field-over-index/inner-value-guard	-
-FAIL	multi-assign/chain-field-over-index/nil-slice-field	differential
+PASS	multi-assign/chain-field-over-index/nil-slice-field	-
 FAIL	multi-assign/comma-ok-forms/assert-nil-field	differential
 PASS	multi-assign/comma-ok-forms/dep-index	-
 FAIL	multi-assign/comma-ok-forms/map-oob	differential

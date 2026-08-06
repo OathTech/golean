@@ -382,13 +382,19 @@ land green as collapse-direction guards), five movements:
   with the OUTER address operation's check DEFERRED; `storeK` (phase 2,
   `.next`-driven) stores ONE target per rule step, left-to-right,
   `storeTarget` firing the deferred nil/bounds/nil-map check at the
-  store. The phase boundary is exactly gc's realized point, pinned from
-  both directions: operand panics are phase-1
-  (`nil-index-base-second`: `(*bp)[0]`'s deref fires before any store,
-  go 1000) and the assignment's own checks are phase-2
-  (`{field,oob}-second-target-stores-first`: go 1150, earlier store
-  survives — these were green under store-then-next and had to STAY
-  green through the split). Relation/stepFn lockstep; positional case
+  store. CORRECTED at round 4 (BUG-033): the round-3 claim that this
+  one-level boundary "is exactly gc's realized point" was FALSE for
+  nested chains — `a[i].f` fires the inner index check in phase 1
+  where gc defers the WHOLE address-former chain to the store. The
+  now-probed boundary: every `indexAddr`/`fieldAddr` step of the
+  target's spine is phase-2 (`targetSpine`/`resolveChain`), while
+  VALUE operations in the base (an index-GET inner slice element, a
+  deref) are index-expression operands and stay phase 1. Pinned from
+  both directions: `nil-index-base-second` (phase-1 operand panic, go
+  1000), `{field,oob}-second-target-stores-first` (phase-2 store-time
+  checks, go 1150), `multi-assign/chain-field-over-index/*` (chain
+  deferral, go 105) and its `inner-value-guard`/`array-nested` green
+  contrasts. Relation/stepFn lockstep; positional case
   tags re-derived by compiler probe; no new Choices sites.
 - **BUG-029 select half, frontend movement**: `machineSelectTargets`
   passes plain-lvalue clause targets straight into the clause head

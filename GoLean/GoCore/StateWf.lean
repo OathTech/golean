@@ -297,11 +297,10 @@ def chanStOpSup : ChanStOp → Nat
   | .recv targets _ => assigneeListSup targets
   | .close => 0
 
-/-- A phase-1-resolved target's loc positions (its operand VALUES). -/
+/-- A phase-1-resolved target's loc positions (its operand VALUES;
+`TargetStep`s are loc-free). -/
 def TargetRef.locSup : TargetRef → Nat
-  | .direct v => GoValue.locSup v
-  | .index b i => max (GoValue.locSup b) (GoValue.locSup i)
-  | .field b _ _ => GoValue.locSup b
+  | .chain anchor idxs _ => max (GoValue.locSup anchor) (goValueListSup idxs)
   | .mapElem b k _ _ => max (GoValue.locSup b) (GoValue.locSup k)
 
 def targetRefListSup : List TargetRef → Nat
@@ -3395,8 +3394,53 @@ theorem mapAssignValue_pres {σ : ExecState} {keyTy valueTy : Ty}
       simp only at *
       omega
 
-/-- `storeTarget` preservation (convergence round, BUG-029): one
-phase-2 store keeps the loc invariant. -/
+/-- `resolveChain` output bound (round 4, BUG-033): the replayed
+chain's cursor value stays bounded by the inputs and the heap (index
+steps may read cells). The chain never allocates. -/
+theorem resolveChain_locSup {σ : ExecState} :
+    ∀ {steps : List TargetStep} {cur : GoValue} {idxs : List GoValue}
+      {out : GoValue}, resolveChain σ cur steps idxs = .ok out →
+      GoValue.locSup out ≤
+        max (max (GoValue.locSup cur) (goValueListSup idxs))
+          (Heap.locSup σ.heap) := by
+  intro steps
+  induction steps with
+  | nil =>
+    intro cur idxs out h
+    unfold resolveChain at h
+    split at h
+    · simp only [pure_eq_ok, Except.ok.injEq] at h
+      subst h
+      omega
+    · simp_all
+    · simp_all
+    · simp [stuck, throw, throwThe, MonadExceptOf.throw] at h
+  | cons st rest ih =>
+    intro cur idxs out h
+    unfold resolveChain at h
+    cases st with
+    | index =>
+      cases idxs with
+      | nil => simp [stuck, throw, throwThe, MonadExceptOf.throw] at h
+      | cons i irest =>
+        simp only [bind_eq_ok] at h
+        obtain ⟨l, hl, h⟩ := h
+        have h2 := indexTargetLoc_locSup hl
+        have h3 := ih h
+        have h4 : GoValue.locSup (GoValue.addr l) = Loc.locSup l := rfl
+        simp only [goValueListSup] at *
+        omega
+    | field tid f =>
+      simp only [bind_eq_ok] at h
+      obtain ⟨l, hl, h⟩ := h
+      have h2 := valueAsLoc_locSup hl
+      have h3 := ih h
+      have h4 : GoValue.locSup (GoValue.addr (Loc.field l tid f))
+          = Loc.locSup l := rfl
+      omega
+
+/-- `storeTarget` preservation (convergence round, BUG-029; chain form
+round 4, BUG-033): one phase-2 store keeps the loc invariant. -/
 theorem storeTarget_pres {σ : ExecState} {r : TargetRef} {v : GoValue}
     {σ' : ExecState}
     (hw : StateWf σ) (hr : TargetRef.locSup r ≤ σ.nextAddr)
@@ -3406,24 +3450,12 @@ theorem storeTarget_pres {σ : ExecState} {r : TargetRef} {v : GoValue}
   have hheap := hw.heap_le
   unfold storeTarget at h
   cases r with
-  | direct addr =>
+  | chain anchor idxs steps =>
     simp only [bind_eq_ok] at h
-    obtain ⟨l, hl, h⟩ := h
-    have h2 := valueAsLoc_locSup hl
-    simp only [TargetRef.locSup] at hr
-    exact storeLoc_pres hw (by omega) hv h
-  | index b i =>
-    simp only [bind_eq_ok] at h
-    obtain ⟨l, hl, h⟩ := h
-    have h2 := indexTargetLoc_locSup hl
+    obtain ⟨cur, hres, l, hl, h⟩ := h
+    have h2 := resolveChain_locSup hres
+    have h3 := valueAsLoc_locSup hl
     simp only [TargetRef.locSup, Nat.max_le] at hr
-    exact storeLoc_pres hw (by omega) hv h
-  | field b tid f =>
-    simp only [bind_eq_ok] at h
-    obtain ⟨l, hl, h⟩ := h
-    have h2 := valueAsLoc_locSup hl
-    simp only [TargetRef.locSup] at hr
-    have h4 : Loc.locSup (Loc.field l tid f) = Loc.locSup l := rfl
     exact storeLoc_pres hw (by omega) hv h
   | mapElem b k kt vt =>
     simp only [TargetRef.locSup, Nat.max_le] at hr
@@ -3904,6 +3936,28 @@ theorem assigneeExpr_locSup {a : Assignee} {e : Expr}
   | mapElem b k kt vt => simp [assigneeExpr] at h
   | unsupported f => simp [assigneeExpr] at h
 
+theorem exprListSup_append {a b : List Expr} :
+    exprListSup (a ++ b) = max (exprListSup a) (exprListSup b) := by
+  simp [exprListSup_eq, supBy_append]
+
+/-- The spine's operand expressions are bounded by the target
+expression (round 4, BUG-033). -/
+theorem targetSpine_locSup : ∀ (e : Expr),
+    exprListSup (targetSpine e).2 ≤ Expr.locSup e := by
+  intro e
+  fun_induction targetSpine e with
+  | case1 b i st ops heq ih =>
+    rw [heq] at ih
+    simp only [exprListSup_append, exprListSup, Expr.locSup, Nat.max_le] at ih ⊢
+    omega
+  | case2 b tid f st ops heq ih =>
+    rw [heq] at ih
+    simp only [exprListSup_append, exprListSup, Expr.locSup, Nat.max_le] at ih ⊢
+    omega
+  | case3 e _ _ =>
+    simp only [exprListSup]
+    omega
+
 /-- One target plan's operand expressions are bounded by the assignee
 (convergence round, BUG-029: phase-1 operand lists). -/
 theorem targetPlan_locSup {a : Assignee} {sh : TargetShape} {ops : List Expr}
@@ -3916,10 +3970,10 @@ theorem targetPlan_locSup {a : Assignee} {sh : TargetShape} {ops : List Expr}
     subst h
     simp [Assignee.locSup, exprListSup, Expr.locSup]
   | addr e' =>
-    cases e' <;>
-      simp only [targetPlan, Option.some.injEq, Prod.mk.injEq] at h <;>
-      obtain ⟨_, h⟩ := h <;> subst h <;>
-      simp [Assignee.locSup, exprListSup, Expr.locSup] <;> omega
+    simp only [targetPlan, Option.some.injEq, Prod.mk.injEq] at h
+    obtain ⟨_, h⟩ := h
+    subst h
+    exact targetSpine_locSup e'
   | mapElem b k kt vt =>
     simp only [targetPlan, Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨_, h⟩ := h
@@ -3989,18 +4043,23 @@ theorem completeTargetRef_locSup {sh : TargetShape} {ops : List GoValue}
     TargetRef.locSup r ≤ goValueListSup ops := by
   unfold completeTargetRef at h
   split at h
-  all_goals first
-    | (simp only [Option.some.injEq] at h; subst h;
-       simp only [TargetRef.locSup, goValueListSup]; omega)
-    | simp at h
+  · -- chain: the arity-checked if
+    split at h
+    · simp only [Option.some.injEq] at h
+      subst h
+      simp only [TargetRef.locSup, goValueListSup]
+      omega
+    · simp at h
+  · -- mapElem
+    simp only [Option.some.injEq] at h
+    subst h
+    simp only [TargetRef.locSup, goValueListSup]
+    omega
+  · simp at h
 
 theorem optExprSup_toList {e : Option Expr} :
     exprListSup e.toList ≤ optExprSup e := by
   cases e <;> simp [exprListSup, optExprSup]
-
-theorem exprListSup_append {a b : List Expr} :
-    exprListSup (a ++ b) = max (exprListSup a) (exprListSup b) := by
-  simp [exprListSup_eq, supBy_append]
 
 set_option maxHeartbeats 800000 in
 theorem strictPlan_locSup {e : Expr} {op : StrictOp} {args : List Expr}

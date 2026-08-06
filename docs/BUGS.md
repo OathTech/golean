@@ -31,7 +31,15 @@ differential-pinned) `- Cases: <id>, <id>, …` (baseline case ids), then prose.
 
 ## BUG-033 — targetPlan defers only the OUTERMOST address op: `a[i].f` fires the inner index check in phase 1
 
-- Status: open
+- Status: fixed (2026-08-06, round-4 response: `targetPlan` now
+  decomposes the FULL address-former spine — `targetSpine` collects
+  the `indexAddr`/`fieldAddr` steps inner-first with the anchor and
+  index operands as the phase-1 expressions, and `storeTarget`
+  replays the chain (`resolveChain`) at the store, every bounds/nil
+  check included. The probed boundary is preserved exactly: a VALUE
+  step in the base (index-GET on `[][]int`, a deref) is an operand and
+  stays phase 1 — the `inner-value-guard`/`array-nested` guards and
+  all prior discriminators stay green. All five chain pins flip.)
 - Pinned-by: differential
 - Cases: multi-assign/chain-field-over-index, multi-assign/chain-field-over-index/nil-slice-field, multi-assign/chain-field-over-index/array-field, channels/recv-edge/chain-field-over-index, channels/select-recv-edge/chain-field-over-index
 - Discovered: 2026-08-06 (round-4 convergence check, verified critical;

@@ -984,45 +984,70 @@ deadlock!`). Buffer FIFO is SPEC ("Channels act as first-in-first-out
 queues") — deterministic, no `Choices` consumption anywhere in this
 module's channel machinery. -/
 
-/-- The phase-1 SHAPE of a receive delivery target (convergence round,
-BUG-029): which operand expressions phase 1 evaluates for it, and which
-store operation phase 2 performs. Spec §Assignments evaluates the
-target's OPERANDS in phase 1 but the outer address operation's own
-check — a nil implicit indirection (`p.b`), an index bounds check
-(`bs[9]`), a nil map — is the assignment's, deferred to the STORE in
-phase 2, after earlier stores landed (pinned by
-`channels/recv-edge/{field,oob}-second-target-stores-first` and
-`channels/recv-map-elem/first-store-lands`). -/
-inductive TargetShape where
-  | direct
+/-- One step of a target's address-former CHAIN (round 4, BUG-033):
+an index step (consumes one evaluated index operand) or a field step.
+gc treats the target's WHOLE chain as one phase-2 address computation —
+every step's bounds/nil check fires AT THE STORE, after earlier
+targets' stores landed. -/
+inductive TargetStep where
   | index
   | field (typeId : TypeId) (fieldName : String)
+  deriving Repr, BEq
+
+/-- The phase-1 SHAPE of an assignment target: which operand
+expressions phase 1 evaluates for it, and how phase 2 stores through
+it. Spec §Assignments evaluates the target's OPERANDS in phase 1; the
+address CHAIN's own checks — nil implicit indirections (`p.b`), index
+bounds (`bs[9]`, and the INNER `a[9]` of `a[9].f` — BUG-033), a nil
+map — are the assignment's, deferred to the STORE in phase 2 (pinned
+by `channels/recv-edge/{field,oob}-second-target-stores-first`,
+`multi-assign/chain-field-over-index/*` and
+`channels/recv-map-elem/first-store-lands`). -/
+inductive TargetShape where
+  | chain (steps : List TargetStep)
   | mapElem (keyTy valueTy : Ty)
   deriving Repr, BEq
 
 /-- A target resolved by phase 1: its operands' VALUES, store-ready.
-The outer nil/bounds/nil-map check lives in `storeTarget` (phase 2). -/
+The chain's checks live in `storeTarget`/`resolveChain` (phase 2). -/
 inductive TargetRef where
-  | direct (addr : GoValue)
-  | index (base idx : GoValue)
-  | field (base : GoValue) (typeId : TypeId) (fieldName : String)
+  | chain (anchor : GoValue) (idxs : List GoValue) (steps : List TargetStep)
   | mapElem (base key : GoValue) (keyTy valueTy : Ty)
   deriving Repr, BEq
 
-/-- Classify one delivery target: its shape plus the operand
-expressions phase 1 evaluates for it, left-to-right (always ≥ 1). The
-OUTERMOST address-forming operation of an `.addr` target is decomposed
-(its check is phase 2's); operations nested INSIDE the operands
-evaluate fully in phase 1, checks included — spec: phase 1 evaluates
-"the operands of index expressions and pointer indirections", and an
-inner deref/index IS such an operand (pinned by
-`channels/recv-edge/nil-index-base-second`: `(*bp)[0]`'s nil deref is
-a phase-1 event, before any store). `none` fails closed. -/
+/-- The number of index operands a chain consumes (field steps take
+none). -/
+def indexStepCount : List TargetStep → Nat
+  | [] => 0
+  | .index :: rest => indexStepCount rest + 1
+  | .field _ _ :: rest => indexStepCount rest
+
+/-- Decompose a target address expression into its address-former SPINE
+(the `indexAddr`/`fieldAddr` steps from the anchor outward, inner
+first) and the operand expressions phase 1 evaluates: the ANCHOR (the
+first non-address-former sub-expression) followed by the index
+operands in lexical order. The probed gc boundary (round 4, BUG-033):
+the chain's own checks are phase-2 store-time events, while any VALUE
+operation in the base — an index-GET producing an inner slice value
+(`aa[9]` of `aa[9][0]` on `[][]int`), a deref (`(*bp)[0]`) — is an
+index-expression OPERAND, evaluated (checks included) in phase 1. -/
+def targetSpine : Expr → List TargetStep × List Expr
+  | .indexAddr b i =>
+      let (st, ops) := targetSpine b
+      (st ++ [.index], ops ++ [i])
+  | .fieldAddr b tid f =>
+      let (st, ops) := targetSpine b
+      (st ++ [.field tid f], ops)
+  | e => ([], [e])
+
+/-- Classify one assignment target: its shape plus the operand
+expressions phase 1 evaluates for it, left-to-right (always ≥ 1).
+`none` fails closed. -/
 def targetPlan : Assignee → Option (TargetShape × List Expr)
-  | .var id => some (.direct, [.ref id])
-  | .addr (.indexAddr b i) => some (.index, [b, i])
-  | .addr (.fieldAddr b tid f) => some (.field tid f, [b])
-  | .addr e => some (.direct, [e])
+  | .var id => some (.chain [], [.ref id])
+  | .addr e =>
+      let (st, ops) := targetSpine e
+      some (.chain st, ops)
   | .mapElem b k kt vt => some (.mapElem kt vt, [b, k])
   | .unsupported _ => none
 
@@ -1033,22 +1058,35 @@ def targetsPlan (targets : List Assignee) : Option (List (TargetShape × List Ex
 operands (arity-checked; `none` is a malformed frame — no rule, fail
 closed). -/
 def completeTargetRef : TargetShape → List GoValue → Option TargetRef
-  | .direct, [v] => some (.direct v)
-  | .index, [b, i] => some (.index b i)
-  | .field tid f, [v] => some (.field v tid f)
+  | .chain steps, anchor :: idxs =>
+      if idxs.length = indexStepCount steps then
+        some (.chain anchor idxs steps)
+      else none
   | .mapElem kt vt, [b, k] => some (.mapElem b k kt vt)
   | _, _ => none
 
-/-- Phase 2, one target, one step: the store, with the target's OWN
-check — nil address (`valueAsLoc`), bounds (`indexTargetLoc`), nil
-field base, nil map — firing HERE, after earlier targets' stores
-landed (spec §Assignments: "the assignments are carried out in
-left-to-right order"). -/
+/-- Replay a resolved chain at STORE time (phase 2): starting from the
+anchor value, apply each index/field step — bounds checks
+(`indexTargetLoc`) and nil-pointer checks (`valueAsLoc`) fire HERE,
+after earlier targets' stores landed (BUG-029/BUG-033). Structural on
+`steps`; arity mismatches are malformed frames (fail closed). -/
+def resolveChain (s : ExecState) : GoValue → List TargetStep → List GoValue →
+    Except GoError GoValue
+  | cur, [], [] => return cur
+  | cur, .index :: steps, i :: idxs => do
+      resolveChain s (.addr (← indexTargetLoc s cur i)) steps idxs
+  | cur, .field tid f :: steps, idxs => do
+      resolveChain s (.addr (.field (← valueAsLoc cur) tid f)) steps idxs
+  | _, _, _ => stuck "malformed target chain"
+
+/-- Phase 2, one target, one step: the store, with the target chain's
+OWN checks — nil address (`valueAsLoc`), bounds (`indexTargetLoc`),
+nil field bases, nil map — firing HERE (spec §Assignments: "the
+assignments are carried out in left-to-right order"). -/
 def storeTarget (s : ExecState) (r : TargetRef) (v : GoValue) : Except GoError ExecState := do
   match r with
-  | .direct addr => storeLoc s (← valueAsLoc addr) v
-  | .index b i => storeLoc s (← indexTargetLoc s b i) v
-  | .field base tid f => storeLoc s (.field (← valueAsLoc base) tid f) v
+  | .chain anchor idxs steps =>
+      storeLoc s (← valueAsLoc (← resolveChain s anchor steps idxs)) v
   | .mapElem b k kt vt => mapAssignValue s kt vt b k v
 
 /-- Head of a channel statement (send/receive/close). `elem` is the
