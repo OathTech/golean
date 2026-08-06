@@ -1,14 +1,14 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-06  commit: general-coverage (arc-final audit response, F1 wrapper-transparent recover)
+# recorded: 2026-08-06  commit: general-coverage (delta-review response D1-D4)
 #   frontend: native  oracle: go run (strict lane) / go-run membership in the
 #   machine-enumerated observation set (membership lane; go1.26.5 samples)
-# manifest_cases: 1025  pass: 897  fail: 128
-# Re-pin reason: BUG-015 fixed (synthesized promotion wrappers marked on
-#   the wire, frames carry the marker, the recover walk skips wrapper
-#   frames per gc's exactly-one-non-wrapper-frame rule) — exactly its
-#   four pinned ids flip FAIL -> PASS; the four controls (direct
-#   dispatch, concrete promoted call, method value, chain-join) hold.
-#   Zero PASS->FAIL, zero other stage moves.
+# manifest_cases: 1027  pass: 899  fail: 128
+# Re-pin reason: delta-review D3 — two NEW red-first pins
+#   (structs/unnamed-conversion-targets/{slice-nil,map-nil}) land green
+#   in the same commit as their fix (nil operands at slice/map
+#   conversion targets now produce the machine's nil-slice/nil-map
+#   shapes). Zero PASS->FAIL, zero stage moves on all 1025 existing
+#   ids.
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
 PASS	arrays/array-copy	-
@@ -1014,9 +1014,11 @@ PASS	structs/tuple-field-swap	-
 PASS	structs/unnamed-conversion-targets/func	-
 PASS	structs/unnamed-conversion-targets/func-from-defined	-
 PASS	structs/unnamed-conversion-targets/map	-
+PASS	structs/unnamed-conversion-targets/map-nil	-
 PASS	structs/unnamed-conversion-targets/pointer	-
 PASS	structs/unnamed-conversion-targets/pointer-nil	-
 PASS	structs/unnamed-conversion-targets/slice	-
+PASS	structs/unnamed-conversion-targets/slice-nil	-
 PASS	structs/unnamed-conversion-targets/slice-to-defined	-
 PASS	structs/zero-value	-
 PASS	variadic/defined-slice-spread	-

@@ -2252,7 +2252,10 @@ bound, but a kernel evaluation exhibits one stream. The bridge is the
 machine's choices discipline (structural since `applyStmtOpCore`): the
 stream is consumed at exactly TWO sites — the `mapIterK` pick (bound =
 snapshot size, part of the CONFIGURATION) and `applyStmtOp`'s
-`appendSlice` spill (bound 8) — and every other arm both ignores the
+`appendSlice` spill (bound = `appendSpillWidth oldCap newLen` ≥ 32,
+derived from the operand slice — F2's envelope widening, arc-final
+audit 2026-08-06; BOTH sites' bounds are configuration-dependent, not
+constants) — and every other arm both ignores the
 stream and computes a stream-independent successor. So a single
 kernel-checked exploration certifies the ∀-streams claim:
 `allStreamsOk` walks the run, treating every non-consuming step as the

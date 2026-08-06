@@ -6,3 +6,5 @@ slice-to-defined	uctSliceToDefined	-	ok	-	conversions,slices,defined_type
 map	uctMap	-	ok	-	conversions,maps,defined_type
 func	uctFunc	-	ok	-	conversions,functions,closures,defined_type
 func-from-defined	uctFuncFromDefined	-	ok	-	conversions,functions,defined_type
+slice-nil	uctSliceNil	-	ok	-	conversions,slices,nil,bytes,append
+map-nil	uctMapNil	-	ok	-	conversions,maps,nil,len

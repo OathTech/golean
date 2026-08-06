@@ -1335,7 +1335,10 @@ def main : IO UInt32 := do
   -- Membership-lane pins (audit response 2026-08-05; see the section
   -- comment above the enum shapes).
   -- F3: appendGrowthCap value pins — the machine side of the cap-zero
-  -- envelope (base of the [0,8) window) plus the formula's other regimes.
+  -- envelope (the growth formula is the envelope's CENTER and the
+  -- empty-stream point since F2's widening to [newLen, max(32,
+  -- 2*growth)]; the old [0,8) window is gone) plus the formula's other
+  -- regimes.
   -- TypeId.unqualified: the observation channel's reflect.Type.Name()
   -- contract, extended to MANGLED generic-instantiation keys (generics
   -- design note 2026-08-05 §3.1/§3.4 — probe outputs pinned verbatim).

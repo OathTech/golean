@@ -27,8 +27,11 @@ check-bugs: 21 entries, untriaged backlog unchanged at 15/15.
   Full lockstep: rules/stepFn wrapper-polymorphic (each pattern audited
   — optParam defaults silently narrow patterns to `false`), StateWf
   lemmas extended, MachineSound absorbed, WP frame laws generalized
-  over the marker, golden repr baselines re-pinned for the schema
-  addition. Pins: 4 divergences flip green; 4 controls hold
+  over the marker (delta-review D1 caught one miss:
+  `wp_panic_frame_empty`, the remaining @[go_walk_law] frame law, had
+  taken the optParam default and was pinned to wrapper=false —
+  generalized in the delta-response commit), golden repr baselines
+  re-pinned for the schema addition. Pins: 4 divergences flip green; 4 controls hold
   (`interfaces/recover-promoted-wrapper/*`). Metatheory cost: moderate
   (one new walk helper + two StateWf lemmas + binder threading); no
   designated statement changed. Commit 785958e.
@@ -130,3 +133,31 @@ check-bugs: 21 entries, untriaged backlog unchanged at 15/15.
 globals-outside-theorems; FloatBits TCB quantification; init-order
 caveat placement; &&/|| RHS calls (recorded ANF decision);
 imported-selector refusal message; goto-envelope conservatism.
+
+## Delta-review response (2026-08-06, same branch)
+
+Four confirmed minor findings (six refuted, no action — notably the
+wrapper wire-flag validation and comparator-judge-trigger concerns
+failed verification):
+- **D1**: `wp_panic_frame_empty` missed by F1's law generalization
+  (the optParam default pinned the only remaining @[go_walk_law] frame
+  law to wrapper=false) — generalized over the marker like its
+  siblings; designated statement files still byte-untouched, Audit
+  gate green.
+- **D2**: three stale "bound 8" prose sites rewritten for F2's
+  shape-dependent bound (MachineSound's ∀-streams narrative — both
+  consumption sites' bounds are configuration-dependent now; the CLI
+  alias-guard illustration; the eval-test F3 comment, which had been
+  left inconsistent with the already-updated line below it).
+- **D3**: F10's slice/map conversion arms returned RAW nil for a nil
+  operand, so []byte(nil)/[]int(nil)/map[K]V(nil) still failed at
+  first use — fixed to the machine's own nil-slice/nil-map shapes
+  (the typed-nil-literal values); red-first pins slice-nil/map-nil
+  flip green; BUG-020's entry made honest.
+- **D4**: emitPanicStmt's docstring still recorded legacy panic(nil)
+  semantics (this exact site was corrected once before in the OTHER
+  direction — unwinding-arc §A3 finding 4 — hence the pointer to
+  panicPayload as the single decision site); rewritten to the F21
+  decision, and the §A3 abort-rendering row for panic(nil) gains a
+  superseded note. Repo-wide grep: no other pre-1.21 panic(nil) prose
+  outside dated at-landing records.

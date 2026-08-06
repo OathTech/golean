@@ -136,9 +136,10 @@ theorem wp_panic_unwind {chain : List PanicEntry} {k k'}
 
 /-- Unwinding past a frame whose defers are exhausted: results NOT read. -/
 @[go_walk_law]
-theorem wp_panic_frame_empty {chain : List PanicEntry} {targets results k} :
+theorem wp_panic_frame_empty {chain : List PanicEntry} {targets results k}
+    {w : Bool} :
     (|={E}[E]▷=> £ 1 -∗ WP (Config.panicking chain k) @ s ; E {{ Φ }}) ⊢
-      WP (Config.panicking chain (.frame targets results [] k)) @ s ; E {{ Φ }} :=
+      WP (Config.panicking chain (.frame targets results [] k w)) @ s ; E {{ Φ }} :=
   wp_pure_det rfl (by simp [Config.choiceFree])
     (fun _ => Step.panicFrameEmpty)
 

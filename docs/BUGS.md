@@ -87,9 +87,15 @@ envelope; these three pins cover the escaping regimes.
   struct-tag check (structs/tag-pointer-conversion red, now stuck at
   field access rather than refused at the conversion). The mis-scoped
   "alias one cell under two tags" rationale at the struct arm was
-  corrected under F20.)
+  corrected under F20. DELTA-REVIEW D3 (2026-08-06): the first cut's
+  slice/map arms returned the RAW machine nil for a nil operand, so
+  []byte(nil)/[]int(nil)/map[K]V(nil) still failed at first use
+  (fail-closed) — fixed to produce the machine's own nil-slice/nil-map
+  representation (the typed-nil-literal shapes), pinned red-first by
+  the slice-nil/map-nil cases; pointer/func targets were correct from
+  the start, raw nil IS their representation.)
 - Pinned-by: differential
-- Cases: structs/unnamed-conversion-targets/pointer, structs/unnamed-conversion-targets/pointer-nil, structs/unnamed-conversion-targets/slice, structs/unnamed-conversion-targets/slice-to-defined, structs/unnamed-conversion-targets/map, structs/unnamed-conversion-targets/func, structs/unnamed-conversion-targets/func-from-defined
+- Cases: structs/unnamed-conversion-targets/pointer, structs/unnamed-conversion-targets/pointer-nil, structs/unnamed-conversion-targets/slice, structs/unnamed-conversion-targets/slice-to-defined, structs/unnamed-conversion-targets/map, structs/unnamed-conversion-targets/func, structs/unnamed-conversion-targets/func-from-defined, structs/unnamed-conversion-targets/slice-nil, structs/unnamed-conversion-targets/map-nil
 - Discovered: 2026-08-06 (arc-final audit F10; pre-existing — the
   catch-all predates the general-coverage arc)
 

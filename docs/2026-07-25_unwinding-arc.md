@@ -226,6 +226,11 @@ dynamic-name match.
 - Abort renderings: `panic("s")` → `s`; `panic(4)` → `4`; `panic(true)` →
   `true`; `panic(nil)` → **`nil`** (Go 1.26 prints the PanicNilError as
   `nil`); runtime-error payloads → their message (unchanged from today).
+  [Superseded for `panic(nil)`, arc-final audit F21 2026-08-06: under
+  the adopted modern semantics + `GODEBUG=panicnil=0` oracle the abort
+  line is `panic: panic called with nil argument` — the raw-nil
+  rendering row no longer describes a reachable `panic(nil)` abort;
+  see the §A2 addendum.]
 - Typed nil pointer aborting: `panic: (*main.T) 0x0` — package-qualified;
   our dynamic names are not. Rendering a pointer payload at ABORT fails
   closed (unsupported) rather than approximating; recovering one works

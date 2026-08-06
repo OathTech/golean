@@ -5704,9 +5704,12 @@ func (e *emitter) emitBuiltin(c *ast.CallExpr, name string) (any, bool, error) {
 // converted to `any` exactly as Go converts it: a non-interface argument
 // carries its static type ("wrap") for the interface conversion; an argument
 // already of interface type passes through bare; an untyped nil literal is a
-// bare nil, which STAYS nil — the GOPATH-mode oracle keeps legacy panic(nil)
-// semantics (recover() returns nil; the machine's panicPayload is the
-// identity, arc doc §A2 correction).
+// bare nil ON THE WIRE — the MACHINE's panicPayload then maps a nil
+// payload to the Go 1.21+ *runtime.PanicNilError runtime error, and the
+// oracle runs with GODEBUG=panicnil=0 to match (arc-final audit F21,
+// 2026-08-06, superseding §A2's legacy record — this docstring was
+// corrected once before in the OTHER direction, unwinding-arc §A3
+// finding 4; the semantics decision lives in panicPayload, not here).
 func (e *emitter) emitPanicStmt(c *ast.CallExpr) (any, error) {
 	if len(c.Args) != 1 {
 		return nil, unsup("panic with %d arguments", len(c.Args))

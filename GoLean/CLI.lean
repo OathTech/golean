@@ -708,8 +708,10 @@ even then only if the residue's behavior yields an observation outside
 the set (aliased observations still escape). A rung is provably INERT
 when `d ≡ 0 (mod M)` — the probe lands back on the enumerated residue —
 which with the original `+B/+2B/+4B` ladder happened whenever
-`M ∣ m·B` (e.g. width 16 over the append site's bound 8: all rungs
-`≡ 0`); the `+2B+1`/`+4B+3` offsets de-align the upper rungs from such
+`M ∣ m·B` (e.g. a width that is a multiple of a site's true bound
+makes all `+m·B` rungs `≡ 0` — concretely, width 16 over the append
+site's OLD fixed bound 8, before F2 widened it to the shape-dependent
+`appendSpillWidth` ≥ 32); the `+2B+1`/`+4B+3` offsets de-align the upper rungs from such
 divisor coincidences. When `B ≥ M` (the width assertion TRUE) every
 residue is enumerated, so all rungs are necessarily silent — that is
 the expected behavior of a correct assertion, not a blind spot.

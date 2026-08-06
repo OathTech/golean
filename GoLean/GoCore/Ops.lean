@@ -1070,9 +1070,17 @@ from {actual.key} (non-identical underlying)"
   | _, _, .pointer _, value@(.addr _) => return value
   | _, _, .pointer _, .nil => return .nil
   | _, _, .slice _, value@(.slice _) => return value
-  | _, _, .slice _, .nil => return .nil
+  -- A nil operand at a slice/map target produces the machine's OWN
+  -- nil-slice/nil-map representation — exactly what the typed nil
+  -- literal (`.nilLit`, via `defaultValueFuel`) produces — NOT the raw
+  -- `.nil` (delta-review D3, 2026-08-06: the first arms returned raw
+  -- nil, so `[]byte(nil)`/`map[K]V(nil)` still failed at first use;
+  -- pointer/func targets are different — raw nil IS their
+  -- representation).
+  | _, _, .slice _, .nil =>
+      return .slice { base := none, offset := 0, len := 0, cap := 0 }
   | _, _, .map _ _, value@(.map _) => return value
-  | _, _, .map _ _, .nil => return .nil
+  | _, _, .map _ _, .nil => return .map { base := none }
   | _, _, .funcType _ _, value@(.funcVal _ _) => return value
   | _, _, .funcType _ _, .nil => return .nil
   -- Conversion INTO an interface type at a machine site (map key slots,
