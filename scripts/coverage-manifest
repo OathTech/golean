@@ -128,9 +128,9 @@ while [[ "$#" -gt 0 ]]; do
 done
 
 case "$STATUS_FILTER" in
-  ""|ok|panic) ;;
+  ""|ok|panic|deadlock) ;;
   *)
-    echo "coverage-manifest: invalid --status $STATUS_FILTER; use ok or panic" >&2
+    echo "coverage-manifest: invalid --status $STATUS_FILTER; use ok, panic, or deadlock" >&2
     exit 2
     ;;
 esac
@@ -411,6 +411,14 @@ while IFS= read -r cases_file; do
           bad=1
           continue
         fi
+        if [[ "$expected_status" == "deadlock" ]]; then
+          # Fail closed: the membership enumerator has no deadlock-member
+          # handling (a blocked run fails its enumeration loudly), and the
+          # oracle's deadlock detector is schedule/mode-sensitive.
+          echo "coverage-manifest: $cases_file: deadlock-expectation cases are strict-lane only" >&2
+          bad=1
+          continue
+        fi
         if ! validate_lane_params "$cases_file" "$params"; then
           bad=1
           continue
@@ -435,10 +443,17 @@ while IFS= read -r cases_file; do
         continue
         ;;
     esac
+    # deadlock (channels arc slice 1): the subject blocks with every
+    # goroutine asleep — Go's runtime detector aborts with the FIXED
+    # message "fatal error: all goroutines are asleep - deadlock!" (exit
+    # status 2), so no per-case expected_reason exists (leave it "-").
+    # These cases must never run under -race: the detector does not fire
+    # there (probed; ground-truth note §5) — the modes are mutually
+    # exclusive by construction when a -race lane arrives.
     case "$expected_status" in
-      ok|panic) ;;
+      ok|panic|deadlock) ;;
       *)
-        echo "coverage-manifest: $cases_file: invalid expected Go status $expected_status; use ok or panic" >&2
+        echo "coverage-manifest: $cases_file: invalid expected Go status $expected_status; use ok, panic, or deadlock" >&2
         bad=1
         continue
         ;;

@@ -218,10 +218,15 @@ run_case_rows() {
       return 0
       ;;
   esac
+  # deadlock (channels arc slice 1): Go's whole-program detector aborts
+  # with the FIXED "fatal error: all goroutines are asleep - deadlock!"
+  # (exit status 2); expected_reason stays "-" (nothing case-specific to
+  # pin). NEVER combine these cases with -race builds — the detector does
+  # not fire there (probed; ground-truth note §5).
   case "$expected_status" in
-    ok|panic) ;;
+    ok|panic|deadlock) ;;
     *)
-      report_fail "$id" "$features" "manifest" "invalid expected Go status: $expected_status; use ok or panic"
+      report_fail "$id" "$features" "manifest" "invalid expected Go status: $expected_status; use ok, panic, or deadlock"
       return 0
       ;;
   esac
@@ -286,13 +291,17 @@ run_case_rows() {
       report_fail "$id" "$features" "frontend-export" "unsupported frontend '$FRONTEND' (only 'native' is supported)"
       return 0
     fi
+    if [[ "$expected_status" == "deadlock" ]]; then
+      report_fail "$id" "$features" "manifest" "deadlock-expectation cases are strict-lane only"
+      return 0
+    fi
     run_membership_case_rows
     return 0
   fi
 
   if go_observation="$(go_run_oracle 2>&1)"; then
-    if [[ "$expected_status" == "panic" ]]; then
-      report_fail "$id" "$features" "go-observation" "expected panic, but Go exited successfully: $go_observation"
+    if [[ "$expected_status" == "panic" || "$expected_status" == "deadlock" ]]; then
+      report_fail "$id" "$features" "go-observation" "expected $expected_status, but Go exited successfully: $go_observation"
       failed=1
     elif ! lean observation-eq --left "$go_observation" --right "$go_observation" >/dev/null 2>&1; then
       report_fail "$id" "$features" "go-observation" "Go output is not a valid observation: $go_observation"
@@ -302,7 +311,17 @@ run_case_rows() {
       failed=1
     fi
   else
-    if [[ "$expected_status" == "panic" ]]; then
+    if [[ "$expected_status" == "deadlock" ]]; then
+      # The detector's message is FIXED; the observation both sides
+      # compare carries it verbatim (the Lean machine's deadlocked
+      # terminal renders the identical status/message).
+      if [[ "$go_observation" != *"fatal error: all goroutines are asleep - deadlock!"* ]]; then
+        report_fail "$id" "$features" "go-run" "expected Go deadlock fatal error, got: $go_observation"
+        failed=1
+      else
+        go_observation="{\"message\":\"all goroutines are asleep - deadlock!\",\"schema\":\"golean-observation-v1\",\"status\":\"deadlock\"}"
+      fi
+    elif [[ "$expected_status" == "panic" ]]; then
       if [[ "$go_observation" != *"panic:"* ]]; then
         report_fail "$id" "$features" "go-run" "expected Go panic, got: $go_observation"
         failed=1

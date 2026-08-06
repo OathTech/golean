@@ -30,7 +30,7 @@ func main() {
 	flag.StringVar(&cfg.out, "out", "", "output directory")
 	flag.StringVar(&cfg.subject, "subject", "", "subject function")
 	flag.StringVar(&cfg.args, "args", "-", "comma-separated integer args or -")
-	flag.StringVar(&cfg.status, "expected-status", "ok", "expected Go status: ok or panic")
+	flag.StringVar(&cfg.status, "expected-status", "ok", "expected Go status: ok, panic, or deadlock")
 	flag.Parse()
 
 	if err := run(cfg); err != nil {
@@ -48,7 +48,11 @@ func run(cfg config) error {
 		return err
 	}
 
-	if cfg.status != "ok" && cfg.status != "panic" {
+	// "deadlock" (channels arc slice 1): the subject blocks every goroutine
+	// and the runtime detector aborts the run — like "panic", the subject
+	// never returns, so no observable result is required. Deadlock cases
+	// must never be built with -race (the detector does not fire there).
+	if cfg.status != "ok" && cfg.status != "panic" && cfg.status != "deadlock" {
 		return fmt.Errorf("invalid --expected-status %q", cfg.status)
 	}
 

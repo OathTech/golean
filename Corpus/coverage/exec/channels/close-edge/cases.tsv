@@ -1,0 +1,6 @@
+# id	subject	args	expected_status	expected_reason	features
+drain-zero-after-close	channelDrainZeroAfterClose	-	ok	-	channels,close,comma_ok,zero_values,len,cap
+recover-negative-make	channelRecoverNegativeMake	-1	ok	-	channels,make,panic,recover,defer
+recover-send-closed	channelRecoverSendClosed	-	ok	-	channels,close,panic,recover,defer
+recover-close-closed	channelRecoverCloseClosed	-	ok	-	channels,close,panic,recover,defer
+recover-close-nil	channelRecoverCloseNil	-	ok	-	channels,close,nil,panic,recover,defer

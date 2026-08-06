@@ -1,0 +1,5 @@
+# id	subject	args	expected_status	expected_reason	features
+identity	channelComparisonIdentity	-	ok	-	channels,comparisons,identity,nil
+directional-equal	channelDirectionalEqual	-	ok	-	channels,comparisons,conversions,typed
+chan-of-chan	channelOfChanIdentity	-	ok	-	channels,comparisons,identity,nested
+map-key-alias	channelMapKeyAlias	-	ok	-	channels,maps,keys,identity

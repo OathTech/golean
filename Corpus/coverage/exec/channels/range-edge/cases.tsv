@@ -1,0 +1,3 @@
+# id	subject	args	expected_status	expected_reason	features
+break	channelRangeBreak	-	ok	-	channels,range,break,close,len
+no-var	channelRangeNoVar	-	ok	-	channels,range,close,len

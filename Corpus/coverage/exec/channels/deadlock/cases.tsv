@@ -1,0 +1,9 @@
+# id	subject	args	expected_status	expected_reason	features
+send-nil	deadlockSendNil	-	deadlock	-	channels,nil,deadlock
+recv-nil	deadlockRecvNil	-	deadlock	-	channels,nil,deadlock
+select-empty	deadlockSelectEmpty	-	deadlock	-	channels,select,deadlock
+select-all-nil	deadlockSelectAllNil	-	deadlock	-	channels,select,nil,deadlock
+send-unbuffered	deadlockSendUnbuffered	-	deadlock	-	channels,make,deadlock
+recv-empty-open	deadlockRecvEmptyOpen	-	deadlock	-	channels,make,deadlock
+send-full	deadlockSendFull	-	deadlock	-	channels,make,deadlock
+range-open-drained	deadlockRangeOpenDrained	-	deadlock	-	channels,range,deadlock
