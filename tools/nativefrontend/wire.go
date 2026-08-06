@@ -55,10 +55,13 @@ type emitter struct {
 	// keep the spec's lexical left-to-right order for calls and receives
 	// (§Order of evaluation). The flag is FUNCTION-scoped on purpose
 	// (BUG-026: a per-statement sweep missed for-init/for-cond/else-if/
-	// switch-case emission paths): over-hoisting `len`/`cap` is
-	// unobservable — they are pure, never panic, and the hoist keeps
-	// their lexical position — so the coarser scope cannot reorder
-	// anything, and new statement-emission paths cannot rot it.
+	// switch-case emission paths), and new statement-emission paths
+	// cannot rot it. Over-hoisting the BUILTIN is order-transparent only
+	// while its OPERAND cannot panic: the hoist drags the operand's
+	// evaluation — and its panic — ahead of spec-unordered inline panics
+	// to its left (BUG-032), so emitBuiltin hoists only syntactically
+	// panic-free operands (panicFreeOperand) and fails closed on the
+	// rest in receive-bearing functions.
 	fnHasRecv bool
 
 	// Label usage of the CURRENT function body (control-flow slice,

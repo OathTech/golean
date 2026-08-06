@@ -100,7 +100,11 @@ this the one place a map-element multi-target silently answers wrong.
 
 ## BUG-031 — $deferRecoverNoop registration outlives a quarantined declaration: later `defer recover()` references a never-emitted function
 
-- Status: open
+- Status: fixed (2026-08-06, convergence response: the flag is
+  saved before each declaration/stencil emission and restored on the
+  same rollback paths that truncate `e.lifted` (per-decl quarantine and
+  the mono stencil error path), so registration and emission stay
+  atomic; the next `defer recover()` re-registers the no-op.)
 - Pinned-by: differential
 - Cases: defer/recover-noop-after-quarantine
 - Discovered: 2026-08-06 (channels-arc-s1 convergence round, verified;
@@ -122,9 +126,23 @@ alongside every `e.lifted` rollback (both paths).
 
 ## BUG-032 — the fnHasRecv len/cap hoist drags its OPERAND's panic ahead of spec-unordered panics to its left
 
-- Status: open
-- Pinned-by: differential
-- Cases: channels/recv-order/dead-recv-len-operand
+- Status: fixed (2026-08-06, convergence response: the hoist is
+  restricted to syntactically PANIC-FREE operands — identifiers,
+  literals, pointer-free selector chains (`panicFreeOperand`); a
+  potentially-panicking operand in a receive-bearing function now FAILS
+  CLOSED (`unsupported`) rather than picking between the two misorders
+  (inline loses the len-vs-receive order, hoisted loses the
+  operand-panic order — realizing gc's exact point for that shape needs
+  full-statement linearization of the panicking operands to its left,
+  deliberately not built this round; the refusal keeps it visible). The
+  pin channels/recv-order/dead-recv-len-operand accordingly stays RED,
+  reclassified differential -> frontend refusal — a permanent
+  fail-closed marker like channels/select-multi-ready, not a silent
+  wrong answer. The false "over-hoisting is unobservable" claims in
+  wire.go and BUG-023/BUG-026 are corrected in place.)
+- Pinned-by: none (the discriminating shape now fails closed at the
+  frontend — channels/recv-order/dead-recv-len-operand is a permanent
+  frontend-export refusal, tracked as coverage, not a fidelity pin)
 - Discovered: 2026-08-06 (channels-arc-s1 convergence round, verified —
   severity minor: both realized orders are spec-legal, but the
   justifying claim in BUG-023/BUG-026 and wire.go was FALSE and the
@@ -175,12 +193,15 @@ frame-exit `storeMany`).
   and its false justifying comment — were deleted; the flag is now
   FUNCTION-scoped (`fnHasRecv`, set at emitFuncDecl / emitFuncLit /
   synthesizePkgInit from a body scan that stops at nested literals).
-  Over-hoisting `len`/`cap` is unobservable (pure, non-panicking,
-  lexically placed via the hoist stream; for-conditions re-evaluate
-  their condPre per iteration), so the coarser scope covers every
-  statement-emission path — including ones added later — by
-  construction. All four regression pins plus the original five flip
-  green.)
+  For-conditions re-evaluate their condPre per iteration, and the
+  coarser scope covers every statement-emission path — including ones
+  added later — by construction. All four regression pins plus the
+  original five flip green. CLAIM CORRECTED at the convergence round:
+  the original scope argument said over-hoisting `len`/`cap` is
+  unobservable — TRUE of the builtin, FALSE of its OPERAND, whose panic
+  the hoist drags ahead of spec-unordered panics to its left; BUG-032
+  restricts the hoist to panic-free operands and fails closed on the
+  rest.)
 - Pinned-by: differential
 - Cases: channels/recv-order/for-init, channels/recv-order/for-cond, channels/recv-order/else-if, channels/recv-order/switch-case
 - Discovered: 2026-08-06 (channels-arc-s1 delta review D2, verified
@@ -194,9 +215,10 @@ binary pre-bind had covered the binary shapes among these. The fix's
 justifying comment ("for-loop conditions are hoist-forbidden") was
 FALSE — `hoistForbidden` guards only short-circuit RHS. Fix: a
 position-independent flag (receive anywhere in the enclosing function
-body, nested func literals scanned separately) — over-hoisting `len`/
-`cap` is unobservable (pure, non-panicking, lexically placed), so the
-coarser scope cannot reorder anything.
+body, nested func literals scanned separately). The scope argument's
+"over-hoisting is unobservable" clause was itself FALSE for panicking
+operands — see BUG-032 for the correction (panic-free operands only;
+fail closed otherwise).
 
 ## BUG-027 — $deferClose<N> collides across functions (liftSeq resets per function): whole-package error
 

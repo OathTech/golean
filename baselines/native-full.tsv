@@ -1,15 +1,16 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-06  commit: channels-arc-s1 (convergence: delivery targets ride the machine plan — BUG-029 select half, BUG-030)
+# recorded: 2026-08-06  commit: channels-arc-s1 (convergence minors: BUG-031 + BUG-032)
 #   frontend: native  oracle: go run (strict lane) / go-run membership in the
 #   machine-enumerated observation set (membership lane; go1.26.5 samples)
-# manifest_cases: 1080  pass: 997  fail: 83
-# Re-pin reason: select receive-clause user targets now ride the
-#   machine's delivery plan (machineSelectTargets; fallback to the temp
-#   lowering for :=/blank/boxing/hoisting targets), and a TWO-target
-#   receive's map-element target is an Assignee.mapElem "map" wire
-#   target (BUG-030). Flips channels/select-recv-edge/{dep-index-target,
-#   nil-index-base-second} and channels/recv-map-elem/first-store-lands
-#   [differential] -> PASS. Zero drift on all other ids.
+# manifest_cases: 1080  pass: 998  fail: 82
+# Re-pin reason: BUG-031 (deferNoopEmitted rolls back with e.lifted on
+#   both quarantine paths) flips defer/recover-noop-after-quarantine
+#   [lean-observation] -> PASS. BUG-032 (fnHasRecv len/cap hoist
+#   restricted to panic-free operands; the rest fail closed) moves
+#   channels/recv-order/dead-recv-len-operand [differential]
+#   -> [frontend-export]: the silent wrong-panic answer becomes a
+#   visible refusal — a permanent fail-closed marker. Zero drift on all
+#   other ids.
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
 PASS	arrays/array-copy	-
@@ -139,7 +140,7 @@ PASS	channels/recv-map-elem/key-panic-drains	-
 PASS	channels/recv-order/binary	-
 PASS	channels/recv-order/call-arg	-
 PASS	channels/recv-order/composite-lit	-
-FAIL	channels/recv-order/dead-recv-len-operand	differential
+FAIL	channels/recv-order/dead-recv-len-operand	frontend-export
 PASS	channels/recv-order/else-if	-
 PASS	channels/recv-order/for-cond	-
 PASS	channels/recv-order/for-init	-
@@ -321,7 +322,7 @@ PASS	defer/deferred-dispatch-entry-panic/during-panic	-
 PASS	defer/deferred-dispatch-entry-panic/fallthrough-drain	-
 PASS	defer/deferred-dispatch-entry-panic/return-drain	-
 PASS	defer/multiple-lifo	-
-FAIL	defer/recover-noop-after-quarantine	lean-observation
+PASS	defer/recover-noop-after-quarantine	-
 PASS	defer/recover-normal-return	-
 PASS	defer/unnamed-return	-
 PASS	embedding/deep-promoted-field	-

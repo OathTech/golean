@@ -104,6 +104,10 @@ func (e *emitter) emitProgram(files []*ast.File) (map[string]any, error) {
 				localTypesMark := len(e.localTypeDefs)
 				localIfaceMark := len(e.localIfaceMethods)
 				namedStructMark := len(e.namedStructTypes)
+				// The $deferRecoverNoop registration rides e.lifted, so it
+				// must roll back WITH it (BUG-031: a sticky flag left later
+				// `defer recover()`s referencing a never-emitted function).
+				deferNoopMark := e.deferNoopEmitted
 				monoMark := e.markMono()
 				fn, err := e.emitFuncDecl(d)
 				if err != nil {
@@ -116,6 +120,7 @@ func (e *emitter) emitProgram(files []*ast.File) (map[string]any, error) {
 					var u unsupported
 					if errors.As(err, &u) && d.Recv == nil {
 						e.lifted = nil
+						e.deferNoopEmitted = deferNoopMark
 						// Drop any local type defs the quarantined body
 						// half-registered (a leak could spuriously collide
 						// with another function's local type).
@@ -5713,13 +5718,27 @@ func (e *emitter) emitBuiltin(c *ast.CallExpr, name string) (any, bool, error) {
 			tag = "builtin-cap"
 		}
 		node := any(map[string]any{"expr": tag, "operand": operand, "operandType": opTy})
-		// A statement whose operand sweep contains a receive (BUG-023):
-		// len/cap are spec-ordered calls but are emitted inline, while the
-		// receive hoists to a statement — hoisting len/cap too keeps the
-		// lexical left-to-right order (hoists append in emission order).
-		// Under hoistForbidden the sweep cannot contain a receive (the
-		// receive itself refuses there), so inline stays correct.
+		// A function containing a receive (BUG-023/BUG-026): len/cap are
+		// spec-ordered calls but are emitted inline, while the receive
+		// hoists to a statement — hoisting len/cap too keeps the lexical
+		// left-to-right order (hoists append in emission order). Under
+		// hoistForbidden the sweep cannot contain a receive (the receive
+		// itself refuses there), so inline stays correct.
+		//
+		// The hoist is restricted to syntactically PANIC-FREE operands
+		// (BUG-032): hoisting evaluates the operand ahead of the whole
+		// statement, dragging its panic ahead of spec-unordered inline
+		// panics to its left (`iv.(int) + len(b[j])` must realize gc's
+		// left-to-right interface-conversion panic, dead receive or no).
+		// A potentially-panicking operand in a receive-bearing function
+		// FAILS CLOSED rather than picking between the two misorders
+		// (inline loses the len-vs-receive order, hoisted loses the
+		// operand-panic order) — pinned by
+		// channels/recv-order/dead-recv-len-operand.
 		if e.fnHasRecv && e.hoistForbidden == "" {
+			if !e.panicFreeOperand(c.Args[0]) {
+				return nil, false, unsup("%s of a potentially-panicking operand in a receive-bearing function (hoisting would reorder its panic — BUG-032)", name)
+			}
 			hoisted, err := e.hoist(node, e.goTypeOf(c))
 			if err != nil {
 				return nil, false, err
@@ -6222,6 +6241,33 @@ func containsRecv(x ast.Node) bool {
 		return true
 	})
 	return found
+}
+
+// panicFreeOperand reports whether evaluating x can NEVER panic —
+// conservatively syntactic: identifiers, basic literals, parens, and
+// selector chains free of pointer indirection (an implicit nil deref
+// can panic). Used to keep the fnHasRecv len/cap hoist
+// order-transparent (BUG-032): only a panic-free operand may move ahead
+// of the statement without reordering a spec-unordered panic.
+func (e *emitter) panicFreeOperand(x ast.Expr) bool {
+	switch v := ast.Unparen(x).(type) {
+	case *ast.Ident:
+		return true
+	case *ast.BasicLit:
+		return true
+	case *ast.SelectorExpr:
+		t := e.goTypeOf(v.X)
+		if t == nil {
+			// Package qualifier: the selector reads a package-level
+			// variable — no indirection, no panic.
+			return true
+		}
+		if _, isPtr := e.applySubst(t).Underlying().(*types.Pointer); isPtr {
+			return false
+		}
+		return e.panicFreeOperand(v.X)
+	}
+	return false
 }
 
 // chanElem resolves an expression's channel element type (substitution-

@@ -630,6 +630,9 @@ func (e *emitter) emitFuncInst(work *funcInstWork) (map[string]any, error) {
 	localTypesMark := len(e.localTypeDefs)
 	localIfaceMark := len(e.localIfaceMethods)
 	namedStructMark := len(e.namedStructTypes)
+	// BUG-031: the $deferRecoverNoop registration rides e.lifted and must
+	// roll back with it.
+	deferNoopMark := e.deferNoopEmitted
 	monoMark := e.markMono()
 	fn, err := e.emitFuncDecl(work.decl)
 	if err == nil && e.substErr != nil {
@@ -641,6 +644,7 @@ func (e *emitter) emitFuncInst(work *funcInstWork) (map[string]any, error) {
 	e.curTargs = savedTargs
 	if err != nil {
 		e.lifted = e.lifted[:liftedMark]
+		e.deferNoopEmitted = deferNoopMark
 		e.localTypeDefs = e.localTypeDefs[:localTypesMark]
 		e.localIfaceMethods = e.localIfaceMethods[:localIfaceMark]
 		e.namedStructTypes = e.namedStructTypes[:namedStructMark]
