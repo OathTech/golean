@@ -1,14 +1,15 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-06  commit: channels-arc-s1 (round 4: BUG-034 + BUG-037 — comma-ok and single assign onto the spine)
+# recorded: 2026-08-06  commit: channels-arc-s1 (round 4: BUG-035 + BUG-036 — lowerings route onto the spine)
 #   frontend: native  oracle: go run (strict lane) / go-run membership in the
 #   machine-enumerated observation set (membership lane; go1.26.5 samples)
-# manifest_cases: 1102  pass: 1014  fail: 88
-# Re-pin reason: the remaining eager stmtPlan ASSIGNMENT forms ride the
-#   phase-split spine — .assign (assignFirst, BUG-037) and the comma-ok
-#   .mapLookup/.typeAssert (RhsOp/applyRhsOp, BUG-034). Flips
-#   assign-order/target-check-vs-rhs/{index,nil-field,nil-deref}-target
-#   and multi-assign/comma-ok-forms/{map-oob,assert-nil-field}
-#   [differential] -> PASS. Zero drift on all other ids.
+# manifest_cases: 1102  pass: 1016  fail: 86
+# Re-pin reason: the two lowerings that bypassed the spine now route
+#   onto it — blank-containing multi-assigns become one .assignMany
+#   with discard locals (decoder, BUG-035) and the select
+#   temp-fallback write-back becomes one body-side multi-assign
+#   (emitter, BUG-036). Flips multi-assign/blank-dep-index and
+#   channels/select-recv-edge/fallback-call-index -> PASS. Zero drift
+#   on all other ids.
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
 PASS	arrays/array-copy	-
@@ -173,7 +174,7 @@ PASS	channels/select-ready-receive	-
 PASS	channels/select-ready-send	-
 PASS	channels/select-recv-edge/chain-field-over-index	-
 PASS	channels/select-recv-edge/dep-index-target	-
-FAIL	channels/select-recv-edge/fallback-call-index	lean-observation
+PASS	channels/select-recv-edge/fallback-call-index	-
 PASS	channels/select-recv-edge/field-second-target-stores-first	-
 PASS	channels/select-recv-edge/nil-index-base-second	-
 PASS	channels/send-closed-panic	-
@@ -757,7 +758,7 @@ PASS	methods/pointer-receiver-slice-element	-
 PASS	methods/recursive-method	-
 PASS	methods/same-name-method-closures	-
 FAIL	methods/value-auto-deref	lean-observation
-FAIL	multi-assign/blank-dep-index	differential
+PASS	multi-assign/blank-dep-index	-
 PASS	multi-assign/blank-discard-nonint	-
 PASS	multi-assign/call-return-assignment	-
 FAIL	multi-assign/call-write-back/effects-suppressed	differential

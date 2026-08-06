@@ -1005,24 +1005,35 @@ partial def decodeAssign (results : Array Param) (path : String) (obj : StrictJs
     fail s!"assignment arity {lhs.size} != {rhs.size} at {path}"
   else if lhs.any targetIsBlank then
     -- Blank targets discard their value but must still evaluate the RHS (so a
-    -- panic in `_ = a/b` fires). Evaluate every RHS left-to-right into a fresh
-    -- temp, then write back the non-blank targets from their temps.
-    let mut stmts : Array Stmt := #[]
-    let mut i := 0
-    for r in rhs do
-      let ty ← exprTypeOf s!"{path}.rhs[{i}]" r
-      let tmp := s!"$t{i}"
-      stmts := stmts.push (.initialization { id := tmp, typ := ty })
-      stmts := stmts.push (.assign (.var tmp) (← decodeExpr s!"{path}.rhs[{i}]" r))
-      i := i + 1
-    i := 0
-    for l in lhs do
-      if !targetIsBlank l then
-        let t ← decodeTarget s!"{path}.lhs[{i}]" l
-        stmts := stmts ++ (← declaresOf #[t])
-        stmts := stmts.push (.assign t.assignee (.var s!"$t{i}"))
-      i := i + 1
-    pure (.seqn stmts)
+    -- panic in `_ = a/b` fires). Round 4 (BUG-035): the old lowering
+    -- (RHS temps + per-target single assigns) collapsed spec
+    -- §Assignments' phase 1 — a later target's index operands read an
+    -- EARLIER store (`i, _, a[i]` saw the post-store `i`). Blanks now
+    -- become fresh DISCARD locals (typed from the matching RHS
+    -- expression) inside ONE `.assignMany`, so the whole statement
+    -- rides the phase-split spine.
+    if lhs.size == 1 then
+      -- `_ = e`: evaluate for effect into a discard local.
+      let ty ← exprTypeOf s!"{path}.rhs[0]" rhs[0]!
+      pure (.seqn #[.initialization { id := "$blank0", typ := ty },
+        .assign (.var "$blank0") (← decodeExpr s!"{path}.rhs[0]" rhs[0]!)])
+    else do
+      let mut decls : Array Stmt := #[]
+      let mut assignees : Array Assignee := #[]
+      let mut i := 0
+      for l in lhs do
+        if targetIsBlank l then
+          let ty ← exprTypeOf s!"{path}.rhs[{i}]" rhs[i]!
+          let tmp := s!"$blank{i}"
+          decls := decls.push (.initialization { id := tmp, typ := ty })
+          assignees := assignees.push (.var tmp)
+        else
+          let t ← decodeTarget s!"{path}.lhs[{i}]" l
+          decls := decls ++ (← declaresOf #[t])
+          assignees := assignees.push t.assignee
+        i := i + 1
+      let exprs ← rhs.mapIdxM (fun i e => decodeExpr s!"{path}.rhs[{i}]" e)
+      pure (.seqn (decls.push (.assignMany assignees exprs)))
   else
     -- No blanks: declarations first, then a simultaneous multi-assign so swaps
     -- are correct.

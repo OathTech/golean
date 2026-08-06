@@ -90,7 +90,12 @@ lookup/assert after the RHS operands as the value source.
 
 ## BUG-035 — a blank among the targets diverts multi-assign off the spine (phase-1 capture lost)
 
-- Status: open
+- Status: fixed (2026-08-06, round-4 response: blank positions become
+  fresh DISCARD locals (typed from the matching RHS expression) inside
+  ONE `.assignMany`, so blank-containing statements ride the
+  phase-split spine like every other multi-assign; `_ = e` keeps a
+  single effect-evaluating assign. The pin flips;
+  blank-discard-nonint stays green.)
 - Pinned-by: differential
 - Cases: multi-assign/blank-dep-index
 - Discovered: 2026-08-06 (round-4 convergence check, verified major;
@@ -106,7 +111,12 @@ emit ONE `.assignMany` so the statement rides the spine.
 
 ## BUG-036 — select temp-fallback lowering retains the phase collapse (silent, not fail-closed)
 
-- Status: open
+- Status: fixed (2026-08-06, round-4 response: the fallback's user
+  write-back is ONE body-side multi-assign — clause locality holds
+  (temps, hoists and the write-back all inside the clause body, BOTH
+  targets' hoists before both stores) and the statement rides the
+  spine. The pin flips; unselected/selected-receive-lhs and
+  closed-receive-declare guards stay green.)
 - Pinned-by: differential
 - Cases: channels/select-recv-edge/fallback-call-index
 - Discovered: 2026-08-06 (round-4 convergence check, verified major;

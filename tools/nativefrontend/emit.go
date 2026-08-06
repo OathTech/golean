@@ -6588,9 +6588,18 @@ func (e *emitter) selectRecvClause(ux *ast.UnaryExpr, lhs []ast.Expr, define boo
 				"elem": elemTy, "body": bodyNode}, nil
 		}
 	}
+	// Temp-fallback lowering. Round 4 (BUG-036): the user write-back is
+	// ONE body-side multi-assign — per-target single assigns interleaved
+	// an earlier store with a later target's address operands, the exact
+	// phase collapse the spine removed; a single "assign" statement rides
+	// the machine's phase-split plan, and clause locality still holds
+	// (temps, hoists and the write-back all sit inside the clause body,
+	// hoists of BOTH targets before both stores).
 	boolTy := map[string]any{"kind": "bool"}
 	targets := []any{}
 	prefix := []any{}
+	userLhs := []any{}
+	userRhs := []any{}
 	if len(lhs) > 0 {
 		vName := "$c" + itoa(e.tmpSeq)
 		e.tmpSeq++
@@ -6613,8 +6622,8 @@ func (e *emitter) selectRecvClause(ux *ast.UnaryExpr, lhs []ast.Expr, define boo
 			}
 			prefix = append(prefix, e.hoisted...)
 			e.hoisted = saved
-			prefix = append(prefix, map[string]any{"stmt": "assign", "define": define,
-				"lhs": []any{w}, "rhs": []any{rhs}})
+			userLhs = append(userLhs, w)
+			userRhs = append(userRhs, rhs)
 		}
 		if len(lhs) == 2 {
 			okName := "$c" + itoa(e.tmpSeq)
@@ -6630,11 +6639,14 @@ func (e *emitter) selectRecvClause(ux *ast.UnaryExpr, lhs []ast.Expr, define boo
 				}
 				prefix = append(prefix, e.hoisted...)
 				e.hoisted = saved
-				prefix = append(prefix, map[string]any{"stmt": "assign", "define": define,
-					"lhs": []any{w},
-					"rhs": []any{map[string]any{"expr": "ident", "name": okName, "type": boolTy}}})
+				userLhs = append(userLhs, w)
+				userRhs = append(userRhs, map[string]any{"expr": "ident", "name": okName, "type": boolTy})
 			}
 		}
+	}
+	if len(userLhs) > 0 {
+		prefix = append(prefix, map[string]any{"stmt": "assign", "define": define,
+			"lhs": userLhs, "rhs": userRhs})
 	}
 	body := bodyNode
 	if len(prefix) > 0 {
