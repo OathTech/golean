@@ -1,0 +1,6 @@
+# id	subject	args	expected_status	expected_reason	features
+call-arg	recvOrderCallArg	-	ok	-	channels,calls,len,evaluation_order
+return-list	recvOrderReturnList	-	ok	-	channels,returns,multi_result,len,evaluation_order
+composite-lit	recvOrderCompositeLit	-	ok	-	channels,literals,slices,len,evaluation_order
+multi-assign	recvOrderMultiAssign	-	ok	-	channels,multi_assign,len,evaluation_order
+binary	recvOrderBinary	-	ok	-	channels,len,evaluation_order

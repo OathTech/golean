@@ -4,3 +4,4 @@ recover-negative-make	channelRecoverNegativeMake	-1	ok	-	channels,make,panic,rec
 recover-send-closed	channelRecoverSendClosed	-	ok	-	channels,close,panic,recover,defer
 recover-close-closed	channelRecoverCloseClosed	-	ok	-	channels,close,panic,recover,defer
 recover-close-nil	channelRecoverCloseNil	-	ok	-	channels,close,nil,panic,recover,defer
+defer-close	channelDeferClose	-	ok	-	channels,close,defer,comma_ok

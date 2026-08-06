@@ -1,15 +1,27 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-06  commit: channels-arc-s1 (slice-1 final: multi-ready guardrail)
+# recorded: 2026-08-06  commit: channels-arc-s1 (audit-response guardrails, red-first)
 #   frontend: native  oracle: go run (strict lane) / go-run membership in the
 #   machine-enumerated observation set (membership lane; go1.26.5 samples)
-# manifest_cases: 1047  pass: 968  fail: 79
-# Re-pin reason: ONE new red-first pin, channels/select-multi-ready —
-#   a select with more than one ready case is the L2 latitude point the
-#   deterministic slice REFUSES (fail closed, FAIL/lean-observation with
-#   the precise unsupported reason), never answers silently; the
-#   scheduler arc's slice 4 flips it via the membership-lane choice
-#   envelope. Zero drift on all 1046 prior ids (69 channel flips
-#   recorded in the previous re-pin).
+# manifest_cases: 1059  pass: 970  fail: 89
+# Re-pin reason: channels-arc-s1 pre-merge audit response, guardrails
+#   first — 12 NEW audit pins (all go-run-verified), 10 red:
+#   BUG-022 (recv-statement phase inversion, audit S1+S7):
+#     channels/recv-edge/{nil-deref-target-drains [differential],
+#     oob-target-drains [differential], bad-target-blocks
+#     [lean-observation: deadlock misclassified as panic]};
+#     nil-deref-target-recovered lands green (recoverability companion).
+#   BUG-023 (len(ch) reordered past a hoisted receive, audit S2+S9):
+#     channels/recv-order/{call-arg,return-list,composite-lit,
+#     multi-assign} [differential]; binary lands green (the one
+#     pre-bound position).
+#   BUG-024 (bare receive statement -> whole-program error, audit
+#     S3+S8): channels/recv-stmt [lean-observation].
+#   S4 (m[k] = <-ch refused with misleading reason):
+#     channels/recv-map-elem [frontend-export].
+#   S6 (defer close(ch) unsupported):
+#     channels/close-edge/defer-close [frontend-export].
+#   All fixed in the following commits of this branch; zero drift on
+#   all 1047 pre-existing ids.
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
 PASS	arrays/array-copy	-
@@ -85,6 +97,7 @@ PASS	builtins/recover-outside-defer	-
 PASS	channels/buffered-basic	-
 PASS	channels/close-closed-panic	-
 PASS	channels/closed-receive	-
+FAIL	channels/close-edge/defer-close	frontend-export
 PASS	channels/close-edge/drain-zero-after-close	-
 PASS	channels/close-edge/recover-close-closed	-
 PASS	channels/close-edge/recover-close-nil	-
@@ -120,6 +133,17 @@ PASS	channels/nil-values	-
 PASS	channels/range-closed	-
 PASS	channels/range-edge/break	-
 PASS	channels/range-edge/no-var	-
+FAIL	channels/recv-edge/bad-target-blocks	lean-observation
+FAIL	channels/recv-edge/nil-deref-target-drains	differential
+PASS	channels/recv-edge/nil-deref-target-recovered	-
+FAIL	channels/recv-edge/oob-target-drains	differential
+FAIL	channels/recv-map-elem	frontend-export
+PASS	channels/recv-order/binary	-
+FAIL	channels/recv-order/call-arg	differential
+FAIL	channels/recv-order/composite-lit	differential
+FAIL	channels/recv-order/multi-assign	differential
+FAIL	channels/recv-order/return-list	differential
+FAIL	channels/recv-stmt	lean-observation
 PASS	channels/select-deterministic/channel-operands-eval-order	-
 PASS	channels/select-deterministic/closed-buffered-receive	-
 PASS	channels/select-deterministic/closed-drained-receive	-

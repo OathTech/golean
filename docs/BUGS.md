@@ -29,6 +29,68 @@ differential-pinned) `- Cases: <id>, <id>, …` (baseline case ids), then prose.
 
 ---
 
+## BUG-022 — chan-recv statement inverts spec §Assignments' phases: target-address panics fire BEFORE the communication
+
+- Status: open
+- Pinned-by: differential
+- Cases: channels/recv-edge/nil-deref-target-drains, channels/recv-edge/oob-target-drains, channels/recv-edge/bad-target-blocks
+- Discovered: 2026-08-06 (channels-arc-s1 pre-merge audit S1+S7,
+  independently verified; probes reproduced against go1.26.5)
+
+`chanPlan` orders the receive STATEMENT as target-addresses-first and
+`chanStK`/`applyChanOp` panic on a failing target (nil deref, index out
+of range) before the channel operand is evaluated. Go's §Assignments is
+two-phase: phase 1 evaluates LHS index/indirection OPERANDS and the RHS
+(the receive); phase 2 performs the stores — where those panics live.
+Consequences, all pinned: the channel is NOT drained when the store
+panic is recovered (Go consumes the value); and a bad target turns a
+BLOCKING receive (deadlock in the single-goroutine slice) into a panic.
+The select-clause path (`commitClause` → `selectRecvK`) is correct —
+communication before target evaluation — only the plain statement form
+is inverted. Fix: reorder the statement form to the select shape
+(receive first, then targets, then stores), with the frontend's ordered
+pre-binds keeping spec-ordered `len(ch)` reads inside targets ahead of
+the receive.
+
+## BUG-023 — hoisted receive reorders ahead of inline len(ch) in every operand list except binary operands
+
+- Status: open
+- Pinned-by: differential
+- Cases: channels/recv-order/call-arg, channels/recv-order/return-list, channels/recv-order/composite-lit, channels/recv-order/multi-assign
+- Discovered: 2026-08-06 (channels-arc-s1 pre-merge audit S2+S9,
+  independently verified; go oracle 205 in all five positions)
+
+A receive lowers to a hoisted statement placed before the enclosing
+statement, so any inline (non-hoisted) spec-ordered evaluation lexically
+LEFT of it — `len(ch)` is the observable one; ordinary calls hoist and
+keep their order — reads POST-receive channel state. Spec §Order of
+evaluation mandates lexical left-to-right for "all function calls,
+method calls, receive operations" in expression, assignment, and return
+statements. Slice 1 pre-bound only `emitBinary`'s left operand; call
+arguments, composite-literal elements, multi-assign RHS lists, and
+return lists still reorder (silent wrong answers vs the oracle). Fix:
+one uniform mechanism — hoist `len`/`cap` operands whenever the emitted
+statement's operand sweep contains a receive — replacing the
+binary-only pre-bind.
+
+## BUG-024 — bare `<-ch` statement emits a wire node the decoder rejects: whole-program error instead of receive-and-discard
+
+- Status: open
+- Pinned-by: differential
+- Cases: channels/recv-stmt
+- Discovered: 2026-08-06 (channels-arc-s1 pre-merge audit S3+S8,
+  independently verified)
+
+`emitUnaryExpr` routes `<-` to the expression-position hoist, which
+leaves a residual `$c` ident that the ExprStmt fallback wraps as
+`{"stmt":"expr"}`; `NativeToIR` rejects it ("expression statement is
+not a call") with status `error` — aborting the WHOLE package's
+lowering (every unrelated function dies too), where the base commit
+per-decl-quarantined the same source. Spec §Expression statements
+lists `<-ch` and `(<-ch)` explicitly; `<-done` is the idiomatic
+synchronization barrier (deps/raft/node.go:340). Fix: an ExprStmt arm
+emitting the zero-target chan-recv statement directly.
+
 ## BUG-021 — append-spill capacity envelope is TOO NARROW on the oracle toolchain (gc realizes points outside growth+[0,8))
 
 - Status: fixed (2026-08-06, arc-final audit response F2 — envelope

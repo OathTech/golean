@@ -1,0 +1,5 @@
+# id	subject	args	expected_status	expected_reason	features
+nil-deref-target-recovered	recvNilDerefTargetRecovered	-	ok	-	channels,pointers,panic,recover,evaluation_order
+nil-deref-target-drains	recvNilDerefTargetDrains	-	ok	-	channels,pointers,panic,recover,len,evaluation_order
+oob-target-drains	recvOobTargetDrains	-	ok	-	channels,slices,indexing,panic,recover,len,evaluation_order
+bad-target-blocks	recvBadTargetBlocks	-	deadlock	-	channels,pointers,deadlock,evaluation_order

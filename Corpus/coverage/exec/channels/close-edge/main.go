@@ -74,6 +74,23 @@ func channelRecoverCloseNil() (out int) {
 	return 0
 }
 
+// Audit pin (channels-arc-s1 audit S6): `defer close(ch)` — the channel
+// operand evaluates at defer time, the close runs (and would panic) at
+// frame exit, before the caller's receives observe the closed channel.
+func channelDeferClose() int {
+	ch := make(chan int, 2)
+	func() {
+		defer close(ch)
+		ch <- 5
+	}()
+	v, ok1 := <-ch
+	_, ok2 := <-ch
+	if ok1 && !ok2 {
+		return v
+	}
+	return -1
+}
+
 func main() {
 	channelDrainZeroAfterClose()
 }
