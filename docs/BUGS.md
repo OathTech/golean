@@ -138,9 +138,11 @@ spine, post-BUG-025) and keep the phase split inside the clause.
   `assignStoreK` frames) WAS built and validated — all three pins
   flipped, zero corpus drift — and then REVERTED in the same round:
   those frames anchor the entire shipped WP assignment law family
-  (`wp_assign_start`/`wp_assign_target` in `Laws/Eval.lean`,
-  `wp_assign_store*` in `Laws/Assign.lean` with the `wp_assign_lit`
-  non-vacuity witness, and every golden walk's store steps).
+  (`wp_assign_start`/`wp_assign_target`/`wp_assign_store*` in
+  `Laws/Eval.lean`, with the `wp_assign_lit` non-vacuity witness in
+  `Laws/Assign.lean`, and every golden walk's store steps; file
+  pointer corrected 2026-08-06 final check — b86993e's commit message
+  carries the old wording).
   Restating that family over the spine is the same coordinated
   machine+laws slice as BUG-025's call write-back and BUG-034;
   the three pins stay red and visible until it lands.)
@@ -326,7 +328,18 @@ alongside every `e.lifted` rollback (both paths).
   points spec-legal, pre-existing, identical on the single-assign
   path, and realizing gc's exact point needs the same full-statement
   linearization this entry already records as deliberately not
-  built).)
+  built). Amendment widened at the 2026-08-06 final check: the class
+  also has an early-STORE manifestation crossing the phase boundary —
+  `x, a[i].f = 1, 7/z` (z=0, recovered): gc lands the x=1 store before
+  the phase-1 division panic; we follow the spec's literal two-phase
+  order (x stays 0). Both spec-legal (§Order of evaluation orders only
+  calls/receives/binary-logical), both sides panic identically when
+  unrecovered, pre-existing on both the spine and pre-spine paths, no
+  pin. Distinct mechanism from the panic-selection example above —
+  a fix would need the store held back, not panics linearized; its
+  natural home is the BUG-025 retirement slice. A future pin in this
+  shape must use the membership/envelope treatment, not strict
+  equality.)
 - Pinned-by: none (the discriminating shape now fails closed at the
   frontend — channels/recv-order/dead-recv-len-operand is a permanent
   frontend-export refusal, tracked as coverage, not a fidelity pin)
