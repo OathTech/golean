@@ -316,3 +316,49 @@ guardrails first (12 new go-run-verified pins), then fixes:
 Interface-typed receive targets in the `=` statement form remain
 fail-closed with a precise reason (unchanged narrow scope);
 `m[k], ok = <-ch` comma-ok map-element forms ride the S4 arm.
+
+### Delta-review response (2026-08-06, review of the audit-response commits)
+
+Five confirmed findings on the audit-response delta, all fixed with
+red-first pins (10 new, all go-run-verified):
+
+- **BUG-026 (D2, critical)**: the BUG-023 per-statement receive flag
+  was NARROWER than the binary pre-bind it deleted — for-init,
+  for-cond (condPre), else-if chains, and switch case expressions
+  reordered receives past inline `len(ch)` (silent wrong answers vs
+  base), and the sweep's justifying comment ("for conditions are
+  hoist-forbidden", D4) was false. Fixed by deleting the sweep and
+  making the flag FUNCTION-scoped (`fnHasRecv`, set at emitFuncDecl /
+  emitFuncLit / synthesizePkgInit): over-hoisting `len`/`cap` is
+  unobservable (pure, non-panicking, lexically placed; condPre
+  re-evaluates per iteration), so the coarse scope covers every
+  statement-emission path — including future ones — by construction.
+  Pins: `channels/recv-order/{for-init,for-cond,else-if,switch-case}`.
+- **BUG-027 (D1, major)**: `$deferClose<N>` was unqualified while
+  `liftSeq` resets per function — two `defer close` functions collided
+  into a whole-package duplicate-id error. Fixed: qualified by the
+  enclosing function like every lifted literal. Pins:
+  `channels/defer-close-two/*` (including the unrelated-subject
+  blast-radius companion).
+- **BUG-025 (D3, minor — generalized by the verifier)**: spec
+  §Assignments phase 2 is LEFT-TO-RIGHT; the machine's multi-target
+  stores were all-or-nothing. The RECEIVE path is fixed (`selectRecvK`
+  carries remaining delivery values and stores each target immediately
+  as its address arrives; machine+stepFn lockstep) — pin
+  `channels/recv-edge/second-target-panic-stores-first` green. The
+  GENERAL path (plain multi-assign, pre-existing on main) is filed
+  OPEN as BUG-025 with the still-red `multi-assign/store-order-plain`
+  pin.
+- **BUG-028 (D5, minor)**: map-element receive keys pre-bound a
+  panicking non-call operand pre-receive (spec-unordered; gc drains
+  first, and the sibling pointer/slice arm had just moved to
+  communication-first). Fixed: base/key emit inline into the
+  post-receive map-assign; calls and `len(ch)` keys stay pre-receive
+  via the existing hoists. Pin:
+  `channels/recv-map-elem/key-panic-drains`.
+
+Final slice-tip counts: 1069 exec cases, 989 pass / 80 fail — the 78
+pre-existing non-channel gaps, the deliberate multi-ready refusal pin
+(`channels/select-multi-ready`, slice 4), and BUG-025's general-path
+pin (`multi-assign/store-order-plain`, pre-existing machinery) — plus
+311 negative cases, all green.
