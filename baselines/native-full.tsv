@@ -1,13 +1,13 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-06  commit: channels-arc-s1 (round 4: BUG-033 chain spine)
+# recorded: 2026-08-06  commit: channels-arc-s1 (round 4: BUG-034 + BUG-037 — comma-ok and single assign onto the spine)
 #   frontend: native  oracle: go run (strict lane) / go-run membership in the
 #   machine-enumerated observation set (membership lane; go1.26.5 samples)
-# manifest_cases: 1102  pass: 1009  fail: 93
-# Re-pin reason: BUG-033 fixed — targetPlan defers the FULL
-#   address-former chain (targetSpine phase-1 operands; resolveChain
-#   replays the spine at the store). Flips the five chain pins
-#   (multi-assign/chain-field-over-index{,/nil-slice-field,/array-field}
-#   + channels/{recv-edge,select-recv-edge}/chain-field-over-index)
+# manifest_cases: 1102  pass: 1014  fail: 88
+# Re-pin reason: the remaining eager stmtPlan ASSIGNMENT forms ride the
+#   phase-split spine — .assign (assignFirst, BUG-037) and the comma-ok
+#   .mapLookup/.typeAssert (RhsOp/applyRhsOp, BUG-034). Flips
+#   assign-order/target-check-vs-rhs/{index,nil-field,nil-deref}-target
+#   and multi-assign/comma-ok-forms/{map-oob,assert-nil-field}
 #   [differential] -> PASS. Zero drift on all other ids.
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
@@ -28,9 +28,9 @@ PASS	arrays/nested-arrays	-
 PASS	arrays/nested-copy-value	-
 PASS	arrays/nil-pointer-len-cap	-
 FAIL	arrays/pointer-array	lean-observation
-FAIL	assign-order/target-check-vs-rhs/index-target	differential
-FAIL	assign-order/target-check-vs-rhs/nil-deref-target	differential
-FAIL	assign-order/target-check-vs-rhs/nil-field-target	differential
+PASS	assign-order/target-check-vs-rhs/index-target	-
+PASS	assign-order/target-check-vs-rhs/nil-deref-target	-
+PASS	assign-order/target-check-vs-rhs/nil-field-target	-
 PASS	bools/generic-type-set/and-or	-
 PASS	bools/generic-type-set/equality	-
 PASS	bools/generic-type-set/inference	-
@@ -768,9 +768,9 @@ PASS	multi-assign/chain-field-over-index/array-field	-
 PASS	multi-assign/chain-field-over-index/array-nested	-
 PASS	multi-assign/chain-field-over-index/inner-value-guard	-
 PASS	multi-assign/chain-field-over-index/nil-slice-field	-
-FAIL	multi-assign/comma-ok-forms/assert-nil-field	differential
+PASS	multi-assign/comma-ok-forms/assert-nil-field	-
 PASS	multi-assign/comma-ok-forms/dep-index	-
-FAIL	multi-assign/comma-ok-forms/map-oob	differential
+PASS	multi-assign/comma-ok-forms/map-oob	-
 PASS	multi-assign/deref-target-before-rhs	-
 PASS	multi-assign/field-nil-store-time	-
 PASS	multi-assign/index-target-rhs-call-order	-

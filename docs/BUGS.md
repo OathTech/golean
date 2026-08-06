@@ -64,7 +64,15 @@ replaying the chain (checks included) in `storeTarget`.
 
 ## BUG-034 — comma-ok `v, ok = m[k]` / `v, ok = x.(T)` still ride the eager stmtPlan path
 
-- Status: open
+- Status: fixed (2026-08-06, round-4 response: both forms left
+  `stmtPlan` for the spine — new rules `mapLookupFirst`/
+  `typeAssertFirst` enter `tgtOpK` with the source carried as an
+  `RhsOp` (`applyRhsOp`: map lookup / type assert applied to the
+  evaluated RHS operands at the END of phase 1 — an unhashable-key
+  panic fires there, before any store), then `storeK` stores
+  left-to-right with deferred target checks. `StmtOp.mapLookup`/
+  `.typeAssertStmt` removed outright. Both pins flip; the dep-index
+  capture guard and every existing maps/interfaces case stay green.)
 - Pinned-by: differential
 - Cases: multi-assign/comma-ok-forms/map-oob, multi-assign/comma-ok-forms/assert-nil-field
 - Discovered: 2026-08-06 (round-4 convergence check, verified major;
@@ -114,7 +122,13 @@ spine, post-BUG-025) and keep the phase split inside the clause.
 
 ## BUG-037 — single assignment fires the target's phase-2 check before evaluating the RHS
 
-- Status: open
+- Status: fixed (2026-08-06, round-4 response: `.assign` rides the
+  spine as a one-target multi-assign (rule `assignFirst` — target
+  chain operands phase 1, RHS phase 1 under `rhsK`, the chain's checks
+  at the `storeK` store), realizing gc's panic identity
+  (divide-by-zero, not index/nil-deref) on all three pinned shapes.
+  The `assignTargetK`/`assignStoreK` frames and their rules were
+  removed outright.)
 - Pinned-by: differential
 - Cases: assign-order/target-check-vs-rhs/index-target, assign-order/target-check-vs-rhs/nil-field-target, assign-order/target-check-vs-rhs/nil-deref-target
 - Discovered: 2026-08-06 (round-4 convergence check, verified major;
