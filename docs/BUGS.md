@@ -29,11 +29,102 @@ differential-pinned) `- Cases: <id>, <id>, …` (baseline case ids), then prose.
 
 ---
 
+## BUG-029 — receive/select delivery collapses spec §Assignments' two phases: target k's store happens before target k+1's ADDRESS evaluates
+
+- Status: open
+- Pinned-by: differential
+- Cases: channels/recv-edge/dep-index-target, channels/recv-edge/nil-index-base-second, channels/select-recv-edge/dep-index-target, channels/select-recv-edge/nil-index-base-second
+- Discovered: 2026-08-06 (channels-arc-s1 convergence round; introduced
+  by the D3 fix, commit 12f2d42 — a regression of the OPPOSITE phase)
+
+Spec §Assignments is two-phase: phase 1 evaluates the LHS
+index/indirection OPERANDS (and the RHS) in the usual order; phase 2
+carries the assignments out left-to-right. The D3 per-target
+store-then-next rule (`selectRecvStore`) INTERLEAVES them: it stores
+target k and only then evaluates target k+1's address expression. Two
+silent wrong answers, no panic involved on the first: `i, bs[i] = <-ch`
+reads the POST-store `i` for the index (go 301, ours 304), and
+`xs[0], (*bp)[0] = <-ch` with nil `bp` stores `xs[0]` before the index
+BASE's phase-1 nil deref (go 1000, ours 1050) — both on the
+receive-statement AND select-clause paths. The pre-D3 shape
+(all addresses, then one `storeMany`) got phase 1 right and phase 2
+wrong; the two collapse directions can only trade divergence classes.
+The fix must SPLIT the phases: phase 1 resolves every target to a
+store-ready reference (operands evaluated left-to-right, the OUTER
+nil/bounds check deferred), phase 2 stores left-to-right one step per
+target — the deferral is pinned by the currently-green discriminators
+channels/recv-edge/{field,oob}-second-target-stores-first and
+channels/select-recv-edge/field-second-target-stores-first (gc fires a
+nil FIELD target's and an out-of-range index's check AT THE STORE,
+after earlier stores landed).
+
+## BUG-030 — map-element FIRST target's store is lost when a later receive target's store panics (post-statement map-assign lowering)
+
+- Status: open
+- Pinned-by: differential
+- Cases: channels/recv-map-elem/first-store-lands
+- Discovered: 2026-08-06 (channels-arc-s1 convergence round, verified
+  major; lowering shape pre-existing, S4)
+
+`m[0], *okp = <-ch` with nil `okp`: gc stores `m[0]` (phase 2 is
+left-to-right) and then panics storing `*okp` — the map store SURVIVES
+(go 1050). The S4 lowering emits the map-assign AFTER the whole
+chan-recv statement, so the later target's store panic skips it
+entirely (ours 1000). This is the receive-path instance BUG-025's
+original prose wrongly declared fixed: the general multi-assign
+sibling (`m[0], *okp = 4, true`) fails closed at the frontend, making
+this the one place a map-element multi-target silently answers wrong.
+
+## BUG-031 — $deferRecoverNoop registration outlives a quarantined declaration: later `defer recover()` references a never-emitted function
+
+- Status: open
+- Pinned-by: differential
+- Cases: defer/recover-noop-after-quarantine
+- Discovered: 2026-08-06 (channels-arc-s1 convergence round, verified;
+  pre-existing — `deferNoopEmitted` dates to 2026-07-25, untouched by
+  this arc)
+
+`deferNoopEmitted` is a sticky emitter flag set when the synthetic
+no-op is appended to `e.lifted`, but `e.lifted` is rolled back
+wholesale on the per-decl quarantine path (`e.lifted = nil`) and
+truncated on the stencil path (`e.lifted[:liftedMark]`) — registration
+and emission are non-atomic. If the FIRST `defer recover()` sits in a
+declaration that is later quarantined (e.g. it also contains a `go`
+statement), every subsequent `defer recover()` in the package
+references a function that was never emitted: an unrelated, fully
+supported subject is wedged (`GoCore function not found:
+$deferRecoverNoop`, status stuck). Fail-closed (never a wrong answer),
+but the BUG-024/BUG-027 blast-radius class. Fix: save/restore the flag
+alongside every `e.lifted` rollback (both paths).
+
+## BUG-032 — the fnHasRecv len/cap hoist drags its OPERAND's panic ahead of spec-unordered panics to its left
+
+- Status: open
+- Pinned-by: differential
+- Cases: channels/recv-order/dead-recv-len-operand
+- Discovered: 2026-08-06 (channels-arc-s1 convergence round, verified —
+  severity minor: both realized orders are spec-legal, but the
+  justifying claim in BUG-023/BUG-026 and wire.go was FALSE and the
+  trigger is non-local)
+
+The BUG-026 scope argument — "over-hoisting len/cap is unobservable
+(pure, non-panicking, lexically placed)" — is true of the BUILTIN but
+not of its OPERAND: `emitBuiltin` hoists the whole `len(b[j])` node,
+dragging the operand's index panic ahead of a spec-unordered panicking
+operand to its left. `return iv.(int) + len(b[j])` panics with gc's
+interface-conversion message in a receive-free function but with our
+index-out-of-range message as soon as a DEAD receive exists anywhere in
+the enclosing function. Within the spec envelope (only calls, receives
+and binary-logical ops are ordered) but outside gc's realized
+left-to-right point, a regression against the per-statement sweep, and
+the false comment is exactly what a maintainer would cite to widen the
+hoist further.
+
 ## BUG-025 — multi-target assignment phase 2 is all-or-nothing, not left-to-right (earlier stores lost when a later store panics)
 
 - Status: open
 - Pinned-by: differential
-- Cases: multi-assign/store-order-plain
+- Cases: multi-assign/store-order-plain, multi-assign/field-nil-store-time
 - Discovered: 2026-08-06 (channels-arc-s1 delta review D3, generalized
   by the verifier: pre-existing on main, NOT channel-specific)
 
@@ -43,14 +134,17 @@ store observable before a later target's panic (`x[1], x[3] = 4, 5 //
 set x[1] = 4, then panic setting x[3] = 5`). The machine's generic
 multi-assign apply (`locsOf` + `storeMany` after all target addresses)
 stores all-or-nothing: `v, *nilp = 7, 9` recovered leaves `v == 0`
-where Go leaves 7. The RECEIVE-statement instance of the same defect
-(delivery through `selectRecvK`) IS fixed on the channels-arc-s1
-branch: `selectRecvK` now carries the remaining delivery values and
-stores each target IMMEDIATELY as its address arrives (per-target
-store-then-next), so an earlier store survives a later target's panic —
-pinned GREEN by channels/recv-edge/second-target-panic-stores-first.
+where Go leaves 7. It ALSO fires the outer address check of an
+index/field target at ADDRESS-evaluation time where gc defers it to
+the store (phase 2): `xs[0], p.b = 3, true` with nil `p` loses the
+`xs[0]` store (go 1150, ours 1000 — multi-assign/field-nil-store-time).
+The receive-path instances are BUG-029 (phase collapse in the delivery
+frames — the D3 store-then-next fix traded one collapse for the other;
+this entry's earlier claim that the receive instance "IS fixed" was
+WRONG in both directions: over-claimed granularity for map-element
+targets, BUG-030, and the fix itself regressed phase 1) and BUG-030.
 This entry tracks the GENERAL path (`applyStmtOpCore .assignMany`,
-frame-exit `storeMany`), untouched.
+frame-exit `storeMany`).
 
 ## BUG-026 — BUG-023's statement-level receive flag misses for-init/for-cond/else-if/switch-case positions (regression vs the deleted binary pre-bind)
 

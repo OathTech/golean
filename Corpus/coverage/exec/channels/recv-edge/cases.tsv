@@ -4,3 +4,7 @@ nil-deref-target-drains	recvNilDerefTargetDrains	-	ok	-	channels,pointers,panic,
 oob-target-drains	recvOobTargetDrains	-	ok	-	channels,slices,indexing,panic,recover,len,evaluation_order
 bad-target-blocks	recvBadTargetBlocks	-	deadlock	-	channels,pointers,deadlock,evaluation_order
 second-target-panic-stores-first	recvSecondTargetPanicStoresFirst	-	ok	-	channels,pointers,multi_assign,panic,recover,evaluation_order
+dep-index-target	recvDepIndexTarget	-	ok	-	channels,slices,indexing,multi_assign,evaluation_order
+nil-index-base-second	recvNilIndexBaseSecond	-	ok	-	channels,pointers,slices,indexing,multi_assign,panic,recover,evaluation_order
+field-second-target-stores-first	recvFieldSecondTarget	-	ok	-	channels,pointers,structs,multi_assign,panic,recover,evaluation_order
+oob-second-target-stores-first	recvOobSecondTarget	-	ok	-	channels,slices,indexing,multi_assign,panic,recover,evaluation_order

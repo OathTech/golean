@@ -1,0 +1,4 @@
+# id	subject	args	expected_status	expected_reason	features
+dep-index-target	selDepIndexTarget	-	ok	-	channels,select,slices,indexing,multi_assign,evaluation_order
+nil-index-base-second	selNilIndexBaseSecond	-	ok	-	channels,select,pointers,slices,indexing,multi_assign,panic,recover,evaluation_order
+field-second-target-stores-first	selFieldSecondTarget	-	ok	-	channels,select,pointers,structs,multi_assign,panic,recover,evaluation_order

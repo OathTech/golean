@@ -1,3 +1,4 @@
 # id	subject	args	expected_status	expected_reason	features
 -	recvMapElem	-	ok	-	channels,maps,len,evaluation_order
 key-panic-drains	mapKeyPanicDrains	-	ok	-	channels,maps,indexing,panic,recover,evaluation_order
+first-store-lands	mapFirstStoreLands	-	ok	-	channels,maps,pointers,multi_assign,panic,recover,evaluation_order

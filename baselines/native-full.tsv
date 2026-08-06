@@ -1,14 +1,20 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-06  commit: channels-arc-s1 (delta response: BUG-028 fixed)
+# recorded: 2026-08-06  commit: channels-arc-s1 (convergence round: 11 red-first pins, BUG-029/030/031/032 filed)
 #   frontend: native  oracle: go run (strict lane) / go-run membership in the
 #   machine-enumerated observation set (membership lane; go1.26.5 samples)
-# manifest_cases: 1069  pass: 989  fail: 80
-# Re-pin reason: delta review D5 / BUG-028 — map-element receive
-#   targets emit base/key INLINE into the post-receive map-assign
-#   (calls and len(ch) keys stay pre-receive via the existing hoists;
-#   panicking non-call operands now fire post-receive, gc's realized
-#   point); flips channels/recv-map-elem/key-panic-drains
-#   [differential] -> PASS. Zero drift on all other ids.
+# manifest_cases: 1080  pass: 992  fail: 88
+# Re-pin reason: convergence-round guardrails — 11 new pins, all
+#   go-run-verified. 8 land RED: the BUG-029 phase-collapse
+#   discriminators (recv-edge + select-recv-edge dep-index-target /
+#   nil-index-base-second), BUG-030 (recv-map-elem/first-store-lands),
+#   BUG-031 (defer/recover-noop-after-quarantine), BUG-032
+#   (recv-order/dead-recv-len-operand), and the BUG-025 companion
+#   (multi-assign/field-nil-store-time). 3 land GREEN as
+#   collapse-direction guards (field/oob-second-target-stores-first:
+#   the outer nil/bounds check is STORE-time — they must survive the
+#   phase split). Zero drift on all 1069 pre-existing ids.
+PASS	arrays/array-bounds	arrays,indexing,panic	-	-
+PASS	arrays/array-comparable	arrays,equality,comparability	-	-
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
 PASS	arrays/array-copy	-
@@ -124,15 +130,21 @@ PASS	channels/range-closed	-
 PASS	channels/range-edge/break	-
 PASS	channels/range-edge/no-var	-
 PASS	channels/recv-edge/bad-target-blocks	-
+FAIL	channels/recv-edge/dep-index-target	differential
+PASS	channels/recv-edge/field-second-target-stores-first	-
 PASS	channels/recv-edge/nil-deref-target-drains	-
 PASS	channels/recv-edge/nil-deref-target-recovered	-
+FAIL	channels/recv-edge/nil-index-base-second	differential
+PASS	channels/recv-edge/oob-second-target-stores-first	-
 PASS	channels/recv-edge/oob-target-drains	-
 PASS	channels/recv-edge/second-target-panic-stores-first	-
 PASS	channels/recv-map-elem	-
+FAIL	channels/recv-map-elem/first-store-lands	differential
 PASS	channels/recv-map-elem/key-panic-drains	-
 PASS	channels/recv-order/binary	-
 PASS	channels/recv-order/call-arg	-
 PASS	channels/recv-order/composite-lit	-
+FAIL	channels/recv-order/dead-recv-len-operand	differential
 PASS	channels/recv-order/else-if	-
 PASS	channels/recv-order/for-cond	-
 PASS	channels/recv-order/for-init	-
@@ -159,6 +171,9 @@ FAIL	channels/select-multi-ready	lean-observation
 PASS	channels/select-nil-default	-
 PASS	channels/select-ready-receive	-
 PASS	channels/select-ready-send	-
+FAIL	channels/select-recv-edge/dep-index-target	differential
+PASS	channels/select-recv-edge/field-second-target-stores-first	-
+FAIL	channels/select-recv-edge/nil-index-base-second	differential
 PASS	channels/send-closed-panic	-
 PASS	comparisons/short-circuit/array-reaches-interface-panic	-
 PASS	comparisons/short-circuit/array-skips-interface-panic	-
@@ -311,6 +326,7 @@ PASS	defer/deferred-dispatch-entry-panic/during-panic	-
 PASS	defer/deferred-dispatch-entry-panic/fallthrough-drain	-
 PASS	defer/deferred-dispatch-entry-panic/return-drain	-
 PASS	defer/multiple-lifo	-
+FAIL	defer/recover-noop-after-quarantine	lean-observation
 PASS	defer/recover-normal-return	-
 PASS	defer/unnamed-return	-
 PASS	embedding/deep-promoted-field	-
@@ -742,6 +758,7 @@ FAIL	methods/value-auto-deref	lean-observation
 PASS	multi-assign/blank-discard-nonint	-
 PASS	multi-assign/call-return-assignment	-
 PASS	multi-assign/deref-target-before-rhs	-
+FAIL	multi-assign/field-nil-store-time	differential
 PASS	multi-assign/index-target-rhs-call-order	-
 PASS	multi-assign/lhs-index-eval-order	-
 PASS	multi-assign/repeated-index-write	-

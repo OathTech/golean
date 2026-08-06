@@ -101,3 +101,20 @@ func recvOrderSwitchCase() int {
 	}
 	return 2
 }
+
+// Convergence-round pin (BUG-026 claim correction): the len/cap
+// receive-ordering hoist is only order-transparent when its OPERAND
+// cannot panic — hoisting drags the operand's panic ahead of
+// spec-unordered panics to its left. gc realizes left-to-right here:
+// the type-assertion panic fires, not the index panic, and a DEAD
+// receive elsewhere in the function must not change that.
+func recvOrderDeadRecvLenOperand(j int) int {
+	var iv interface{} = "s"
+	b := make([][]int, 0)
+	if j < -100 {
+		ch := make(chan int, 1)
+		ch <- 1
+		return <-ch
+	}
+	return iv.(int) + len(b[j])
+}
