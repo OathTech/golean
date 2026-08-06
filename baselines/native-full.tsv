@@ -1,15 +1,14 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-06  commit: channels-arc-s1 (audit response: BUG-022 fixed)
+# recorded: 2026-08-06  commit: channels-arc-s1 (audit response: S4 + S6 supported)
 #   frontend: native  oracle: go run (strict lane) / go-run membership in the
 #   machine-enumerated observation set (membership lane; go1.26.5 samples)
-# manifest_cases: 1059  pass: 978  fail: 81
-# Re-pin reason: BUG-022 fixed (audit S1+S7) — the receive statement is
-#   reordered to spec §Assignments' two phases (communication first,
-#   target stores and their panics after, via the select path's
-#   selectRecvK frames); channels/recv-edge/{nil-deref-target-drains,
-#   oob-target-drains} [differential] and bad-target-blocks
-#   [lean-observation: deadlock was misreported as panic] flip to PASS.
-#   Zero drift on all other ids.
+# manifest_cases: 1059  pass: 980  fail: 79
+# Re-pin reason: audit minors implemented — S4: m[k] = <-ch lowers with
+#   phase-1 pre-bound base/key, receive into a temp, phase-2 map-assign
+#   (channels/recv-map-elem flips); S6: defer close(ch) defers a
+#   synthetic one-parameter closer through the ordinary defer machinery
+#   (channels/close-edge/defer-close flips). Both FAIL/frontend-export
+#   -> PASS; zero drift on all other ids.
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
 PASS	arrays/array-copy	-
@@ -85,7 +84,7 @@ PASS	builtins/recover-outside-defer	-
 PASS	channels/buffered-basic	-
 PASS	channels/close-closed-panic	-
 PASS	channels/closed-receive	-
-FAIL	channels/close-edge/defer-close	frontend-export
+PASS	channels/close-edge/defer-close	-
 PASS	channels/close-edge/drain-zero-after-close	-
 PASS	channels/close-edge/recover-close-closed	-
 PASS	channels/close-edge/recover-close-nil	-
@@ -125,7 +124,7 @@ PASS	channels/recv-edge/bad-target-blocks	-
 PASS	channels/recv-edge/nil-deref-target-drains	-
 PASS	channels/recv-edge/nil-deref-target-recovered	-
 PASS	channels/recv-edge/oob-target-drains	-
-FAIL	channels/recv-map-elem	frontend-export
+PASS	channels/recv-map-elem	-
 PASS	channels/recv-order/binary	-
 PASS	channels/recv-order/call-arg	-
 PASS	channels/recv-order/composite-lit	-

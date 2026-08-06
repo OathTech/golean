@@ -1726,6 +1726,15 @@ func (e *emitter) emitStmt(s ast.Stmt) (any, error) {
 				if id.Name == "recover" && len(st.Call.Args) == 0 {
 					return e.emitDeferNoop(), nil
 				}
+				// `defer close(ch)` (audit S6 — the canonical channel
+				// defer idiom): defer a synthetic one-parameter closer,
+				// which gives Go's semantics exactly through the existing
+				// defer machinery — the channel operand evaluates NOW, the
+				// close (and any close-of-closed/nil panic) fires at frame
+				// exit as the deferred invocation's panic.
+				if id.Name == "close" && len(st.Call.Args) == 1 {
+					return e.emitDeferClose(st.Call)
+				}
 				return nil, unsup("defer of builtin %s", id.Name)
 			}
 		}
@@ -6011,6 +6020,41 @@ func (e *emitter) emitDeferNoop() any {
 		"args": []any{}}
 }
 
+// emitDeferClose lowers `defer close(ch)` (audit S6): a synthetic
+// per-site closer function taking the channel as its one parameter, so
+// the operand evaluates at defer time and the close runs at frame exit
+// through the ordinary defer machinery.
+func (e *emitter) emitDeferClose(c *ast.CallExpr) (any, error) {
+	chGo := e.applySubst(e.goTypeOf(c.Args[0]))
+	if _, ok := chGo.Underlying().(*types.Chan); !ok {
+		return nil, unsup("defer close of non-channel %s", chGo)
+	}
+	chTy, err := e.emitType(chGo)
+	if err != nil {
+		return nil, err
+	}
+	chW, err := e.emitExpr(c.Args[0])
+	if err != nil {
+		return nil, err
+	}
+	name := "$deferClose" + itoa(e.liftSeq)
+	e.liftSeq++
+	e.lifted = append(e.lifted, map[string]any{
+		"name": name,
+		"params": []any{map[string]any{"id": "$ch", "type": chTy}},
+		"results":  []any{},
+		"variadic": false,
+		"body": map[string]any{"stmt": "block", "body": []any{
+			map[string]any{"stmt": "chan-close",
+				"ch": map[string]any{"expr": "ident", "name": "$ch", "type": chTy}},
+		}},
+	})
+	return map[string]any{"stmt": "defer",
+		"callee": map[string]any{"expr": "func-value", "func": name,
+			"captured": []any{}},
+		"args": []any{chW}}, nil
+}
+
 // isByteSlice reports whether an underlying type is []byte/[]uint8.
 func isByteSlice(t types.Type) bool {
 	sl, ok := t.(*types.Slice)
@@ -6295,11 +6339,15 @@ func (e *emitter) hoistChanRecv(u *ast.UnaryExpr) (any, error) {
 }
 
 // emitChanRecvAssign lowers the receive STATEMENT forms `v = <-ch`,
-// `v, ok := <-ch`, … to the dedicated chan-recv statement, whose machine
-// operand order — target addresses first, then the channel — is Go's
-// assignment order. A blank ok drops to the 1-target form (the flag is
-// unobservable); a blank value receives into a fresh temp (the receive
-// itself must still happen).
+// `v, ok := <-ch`, … to the dedicated chan-recv statement (spec
+// §Assignments' two phases: the machine performs the COMMUNICATION
+// first and evaluates/stores targets after — BUG-022). A blank ok drops
+// to the 1-target form (the flag is unobservable); a blank value
+// receives into a fresh temp (the receive itself must still happen). A
+// MAP-element target (`m[k] = <-ch` — audit S4) pre-binds its base and
+// key in phase-1 lexical order, receives into a fresh temp, and
+// map-assigns afterwards (maps are not addressable, so the dedicated
+// statement cannot target them directly).
 func (e *emitter) emitChanRecvAssign(st *ast.AssignStmt, ux *ast.UnaryExpr, define bool) (any, error) {
 	elemGo, err := e.chanElem(ux.X)
 	if err != nil {
@@ -6309,46 +6357,100 @@ func (e *emitter) emitChanRecvAssign(st *ast.AssignStmt, ux *ast.UnaryExpr, defi
 	if err != nil {
 		return nil, err
 	}
+	boolTy := map[string]any{"kind": "bool"}
 	targets := []any{}
-	if id, ok := st.Lhs[0].(*ast.Ident); ok && id.Name == "_" {
-		name := "$c" + itoa(e.tmpSeq)
-		e.tmpSeq++
-		targets = append(targets, map[string]any{"target": "declare", "id": name, "type": elemTy})
-	} else {
-		// The statement form stores the RAW element value; an
-		// interface-typed target would need the boxing wrap the statement
-		// does not carry — fail closed (the := forms always type the
-		// target at the element type).
-		tgtTy := e.applySubst(e.assignTargetType(st.Lhs[0], define))
-		if tgtTy != nil && types.IsInterface(tgtTy) && !types.IsInterface(elemGo) {
-			return nil, unsup("channel receive into interface-typed target")
+	post := []any{}
+	// One target position: pos 0 receives the element (type elemGo/elemTy),
+	// pos 1 the ok flag (bool).
+	emitPos := func(lv ast.Expr, posGo types.Type, posTy any) error {
+		if id, ok := lv.(*ast.Ident); ok && id.Name == "_" {
+			if len(st.Lhs) == 2 && lv == st.Lhs[1] {
+				// blank ok: drop to the 1-target form (unobservable)
+				return nil
+			}
+			name := "$c" + itoa(e.tmpSeq)
+			e.tmpSeq++
+			targets = append(targets, map[string]any{"target": "declare", "id": name, "type": posTy})
+			return nil
 		}
-		w, err := e.emitAssignTarget(st.Lhs[0], define)
+		if ix, ok := ast.Unparen(lv).(*ast.IndexExpr); ok {
+			if m, ok := e.applySubst(e.goTypeOf(ix.X)).Underlying().(*types.Map); ok {
+				// Map-element target: pre-bind base and key (phase 1,
+				// lexical order — before the receive), store post-receive
+				// via map-assign (phase 2).
+				baseW, err := e.emitExpr(ix.X)
+				if err != nil {
+					return err
+				}
+				baseRef, err := e.hoist(baseW, e.goTypeOf(ix.X))
+				if err != nil {
+					return err
+				}
+				idxW, err := e.emitExpr(ix.Index)
+				if err != nil {
+					return err
+				}
+				idxW, err = e.wrapInterfaceConversion(m.Key(), e.goTypeOf(ix.Index), idxW)
+				if err != nil {
+					return err
+				}
+				idxRef, err := e.hoist(idxW, m.Key())
+				if err != nil {
+					return err
+				}
+				name := "$c" + itoa(e.tmpSeq)
+				e.tmpSeq++
+				targets = append(targets, map[string]any{"target": "declare", "id": name, "type": posTy})
+				valW, err := e.wrapInterfaceConversion(m.Elem(), posGo,
+					any(map[string]any{"expr": "ident", "name": name, "type": posTy}))
+				if err != nil {
+					return err
+				}
+				keyTy, err := e.emitType(m.Key())
+				if err != nil {
+					return err
+				}
+				valTy, err := e.emitType(m.Elem())
+				if err != nil {
+					return err
+				}
+				post = append(post, map[string]any{"stmt": "map-assign", "base": baseRef,
+					"index": idxRef, "value": valW, "keyType": keyTy, "valueType": valTy})
+				return nil
+			}
+		}
+		// The statement form stores the RAW value; an interface-typed
+		// target would need the boxing wrap the statement does not carry —
+		// fail closed (the := forms always type the target at the element
+		// type; map-element targets above box through map-assign).
+		tgtTy := e.applySubst(e.assignTargetType(lv, define))
+		if tgtTy != nil && types.IsInterface(tgtTy) && !types.IsInterface(posGo) {
+			return unsup("channel receive into interface-typed target")
+		}
+		w, err := e.emitAssignTarget(lv, define)
 		if err != nil {
-			return nil, err
+			return err
 		}
 		targets = append(targets, w)
+		return nil
+	}
+	if err := emitPos(st.Lhs[0], elemGo, elemTy); err != nil {
+		return nil, err
 	}
 	if len(st.Lhs) == 2 {
-		if id, ok := st.Lhs[1].(*ast.Ident); ok && id.Name == "_" {
-			// blank ok: drop to the 1-target form (unobservable)
-		} else {
-			tgtTy := e.applySubst(e.assignTargetType(st.Lhs[1], define))
-			if tgtTy != nil && types.IsInterface(tgtTy) {
-				return nil, unsup("channel receive ok-flag into interface-typed target")
-			}
-			w, err := e.emitAssignTarget(st.Lhs[1], define)
-			if err != nil {
-				return nil, err
-			}
-			targets = append(targets, w)
+		if err := emitPos(st.Lhs[1], types.Typ[types.Bool], boolTy); err != nil {
+			return nil, err
 		}
 	}
 	chW, err := e.emitExpr(ux.X)
 	if err != nil {
 		return nil, err
 	}
-	return map[string]any{"stmt": "chan-recv", "targets": targets, "ch": chW, "elem": elemTy}, nil
+	node := any(map[string]any{"stmt": "chan-recv", "targets": targets, "ch": chW, "elem": elemTy})
+	if len(post) > 0 {
+		node = map[string]any{"stmt": "block", "body": append([]any{node}, post...)}
+	}
+	return node, nil
 }
 
 // selectRecvClause builds one receive clause of a select: the received
