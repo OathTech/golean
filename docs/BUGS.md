@@ -82,7 +82,10 @@ binary-only pre-bind.
 
 ## BUG-024 — bare `<-ch` statement emits a wire node the decoder rejects: whole-program error instead of receive-and-discard
 
-- Status: open
+- Status: fixed (2026-08-06, audit response: `emitStmt`'s ExprStmt arm
+  intercepts `<-ch` / `(<-ch)` ahead of the generic path and emits the
+  ZERO-target chan-recv statement directly — receive-and-discard, no
+  residual ident, no whole-package decode abort.)
 - Pinned-by: differential
 - Cases: channels/recv-stmt
 - Discovered: 2026-08-06 (channels-arc-s1 pre-merge audit S3+S8,

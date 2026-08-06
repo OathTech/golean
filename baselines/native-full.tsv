@@ -1,14 +1,13 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-06  commit: channels-arc-s1 (audit response: BUG-023 fixed)
+# recorded: 2026-08-06  commit: channels-arc-s1 (audit response: BUG-024 fixed)
 #   frontend: native  oracle: go run (strict lane) / go-run membership in the
 #   machine-enumerated observation set (membership lane; go1.26.5 samples)
-# manifest_cases: 1059  pass: 974  fail: 85
-# Re-pin reason: BUG-023 fixed (audit S2+S9) — the binary-only receive
-#   pre-bind replaced by the ONE-mechanism len/cap hoist under the
-#   per-statement receive flag; the four red order pins
-#   channels/recv-order/{call-arg,return-list,composite-lit,
-#   multi-assign} flip FAIL/differential -> PASS. Zero drift on all
-#   other ids.
+# manifest_cases: 1059  pass: 975  fail: 84
+# Re-pin reason: BUG-024 fixed (audit S3+S8) — bare receive statement
+#   emits the zero-target chan-recv (receive-and-discard) instead of a
+#   residual ident the decoder rejected package-wide;
+#   channels/recv-stmt flips FAIL/lean-observation -> PASS. Zero drift
+#   on all other ids.
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
 PASS	arrays/array-copy	-
@@ -130,7 +129,7 @@ PASS	channels/recv-order/call-arg	-
 PASS	channels/recv-order/composite-lit	-
 PASS	channels/recv-order/multi-assign	-
 PASS	channels/recv-order/return-list	-
-FAIL	channels/recv-stmt	lean-observation
+PASS	channels/recv-stmt	-
 PASS	channels/select-deterministic/channel-operands-eval-order	-
 PASS	channels/select-deterministic/closed-buffered-receive	-
 PASS	channels/select-deterministic/closed-drained-receive	-

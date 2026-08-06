@@ -1614,6 +1614,27 @@ func (e *emitter) emitStmt(s ast.Stmt) (any, error) {
 	case *ast.IncDecStmt:
 		return e.emitIncDec(st)
 	case *ast.ExprStmt:
+		// A bare receive statement `<-ch` / `(<-ch)` (spec §Expression
+		// statements: "receive operations can appear in statement
+		// context") is receive-and-discard: the ZERO-target chan-recv
+		// statement (BUG-024, audit S3+S8 — the expression-position hoist
+		// left a residual ident the decoder rejected, taking the whole
+		// package down).
+		if ux, ok := ast.Unparen(st.X).(*ast.UnaryExpr); ok && ux.Op == token.ARROW {
+			elemGo, err := e.chanElem(ux.X)
+			if err != nil {
+				return nil, err
+			}
+			elemTy, err := e.emitType(elemGo)
+			if err != nil {
+				return nil, err
+			}
+			chW, err := e.emitExpr(ux.X)
+			if err != nil {
+				return nil, err
+			}
+			return map[string]any{"stmt": "chan-recv", "targets": []any{}, "ch": chW, "elem": elemTy}, nil
+		}
 		// A call in statement position lowers directly to a GoCore call
 		// statement (no value needed, so no hoist).
 		if call, ok := st.X.(*ast.CallExpr); ok {
