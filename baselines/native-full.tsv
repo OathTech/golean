@@ -1,16 +1,14 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-06  commit: channels-arc-s1 (delta response: D3 receive-path store order fixed)
+# recorded: 2026-08-06  commit: channels-arc-s1 (delta response: BUG-028 fixed)
 #   frontend: native  oracle: go run (strict lane) / go-run membership in the
 #   machine-enumerated observation set (membership lane; go1.26.5 samples)
-# manifest_cases: 1069  pass: 988  fail: 81
-# Re-pin reason: delta review D3 — the receive delivery path stores
-#   per-target LEFT-TO-RIGHT (selectRecvK carries the remaining delivery
-#   values; each address stores immediately), so an earlier target's
-#   store survives a later target's panic; flips
-#   channels/recv-edge/second-target-panic-stores-first
-#   [differential] -> PASS. The GENERAL multi-assign path stays
-#   all-or-nothing (BUG-025 open, multi-assign/store-order-plain red).
-#   Zero drift on all other ids.
+# manifest_cases: 1069  pass: 989  fail: 80
+# Re-pin reason: delta review D5 / BUG-028 — map-element receive
+#   targets emit base/key INLINE into the post-receive map-assign
+#   (calls and len(ch) keys stay pre-receive via the existing hoists;
+#   panicking non-call operands now fire post-receive, gc's realized
+#   point); flips channels/recv-map-elem/key-panic-drains
+#   [differential] -> PASS. Zero drift on all other ids.
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
 PASS	arrays/array-copy	-
@@ -131,7 +129,7 @@ PASS	channels/recv-edge/nil-deref-target-recovered	-
 PASS	channels/recv-edge/oob-target-drains	-
 PASS	channels/recv-edge/second-target-panic-stores-first	-
 PASS	channels/recv-map-elem	-
-FAIL	channels/recv-map-elem/key-panic-drains	differential
+PASS	channels/recv-map-elem/key-panic-drains	-
 PASS	channels/recv-order/binary	-
 PASS	channels/recv-order/call-arg	-
 PASS	channels/recv-order/composite-lit	-

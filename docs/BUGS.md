@@ -102,7 +102,12 @@ by the S6 fix. Fix: qualify with the enclosing function name.
 
 ## BUG-028 — map-element receive targets pre-bind a panicking non-call key BEFORE the communication (gc drains first)
 
-- Status: open
+- Status: fixed (2026-08-06, delta response: base and key are emitted
+  INLINE into the post-receive map-assign — calls in them still
+  auto-hoist pre-receive via A-normal form and len(ch) keys still hoist
+  via the fnHasRecv flag (both spec-ordered), while panicking non-call
+  operands now fire post-receive, matching gc's receive-first point and
+  the sibling pointer/slice target arm.)
 - Pinned-by: differential
 - Cases: channels/recv-map-elem/key-panic-drains
 - Discovered: 2026-08-06 (channels-arc-s1 delta review D5)

@@ -6314,14 +6314,17 @@ func (e *emitter) emitChanRecvAssign(st *ast.AssignStmt, ux *ast.UnaryExpr, defi
 		}
 		if ix, ok := ast.Unparen(lv).(*ast.IndexExpr); ok {
 			if m, ok := e.applySubst(e.goTypeOf(ix.X)).Underlying().(*types.Map); ok {
-				// Map-element target: pre-bind base and key (phase 1,
-				// lexical order — before the receive), store post-receive
-				// via map-assign (phase 2).
+				// Map-element target: the receive lands in a fresh temp;
+				// the map-assign stores it AFTER the communication. Base
+				// and key are emitted INLINE into that post-receive store
+				// (BUG-028): calls in them auto-hoist pre-receive
+				// (A-normal form) and len(ch) keys hoist via the
+				// fnHasRecv flag — both spec-ordered, both pre-receive —
+				// while a panicking NON-call operand (spec-unordered
+				// against the receive) fires post-receive, matching gc's
+				// receive-first realization like the sibling
+				// pointer/slice target arm.
 				baseW, err := e.emitExpr(ix.X)
-				if err != nil {
-					return err
-				}
-				baseRef, err := e.hoist(baseW, e.goTypeOf(ix.X))
 				if err != nil {
 					return err
 				}
@@ -6330,10 +6333,6 @@ func (e *emitter) emitChanRecvAssign(st *ast.AssignStmt, ux *ast.UnaryExpr, defi
 					return err
 				}
 				idxW, err = e.wrapInterfaceConversion(m.Key(), e.goTypeOf(ix.Index), idxW)
-				if err != nil {
-					return err
-				}
-				idxRef, err := e.hoist(idxW, m.Key())
 				if err != nil {
 					return err
 				}
@@ -6353,8 +6352,8 @@ func (e *emitter) emitChanRecvAssign(st *ast.AssignStmt, ux *ast.UnaryExpr, defi
 				if err != nil {
 					return err
 				}
-				post = append(post, map[string]any{"stmt": "map-assign", "base": baseRef,
-					"index": idxRef, "value": valW, "keyType": keyTy, "valueType": valTy})
+				post = append(post, map[string]any{"stmt": "map-assign", "base": baseW,
+					"index": idxW, "value": valW, "keyType": keyTy, "valueType": valTy})
 				return nil
 			}
 		}
