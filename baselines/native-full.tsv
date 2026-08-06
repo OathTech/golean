@@ -1,20 +1,15 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-06  commit: channels-arc-s1 (convergence round: 11 red-first pins, BUG-029/030/031/032 filed)
+# recorded: 2026-08-06  commit: channels-arc-s1 (convergence: BUG-029 machine phase split)
 #   frontend: native  oracle: go run (strict lane) / go-run membership in the
 #   machine-enumerated observation set (membership lane; go1.26.5 samples)
-# manifest_cases: 1080  pass: 992  fail: 88
-# Re-pin reason: convergence-round guardrails — 11 new pins, all
-#   go-run-verified. 8 land RED: the BUG-029 phase-collapse
-#   discriminators (recv-edge + select-recv-edge dep-index-target /
-#   nil-index-base-second), BUG-030 (recv-map-elem/first-store-lands),
-#   BUG-031 (defer/recover-noop-after-quarantine), BUG-032
-#   (recv-order/dead-recv-len-operand), and the BUG-025 companion
-#   (multi-assign/field-nil-store-time). 3 land GREEN as
-#   collapse-direction guards (field/oob-second-target-stores-first:
-#   the outer nil/bounds check is STORE-time — they must survive the
-#   phase split). Zero drift on all 1069 pre-existing ids.
-PASS	arrays/array-bounds	arrays,indexing,panic	-	-
-PASS	arrays/array-comparable	arrays,equality,comparability	-	-
+# manifest_cases: 1080  pass: 994  fail: 86
+# Re-pin reason: BUG-029 machine fix — receive delivery phases SPLIT
+#   (tgtOpK phase-1 operand evaluation with deferred outer checks;
+#   storeK phase-2 one-store-per-step). Flips the two STATEMENT-form
+#   discriminators channels/recv-edge/{dep-index-target,
+#   nil-index-base-second} [differential] -> PASS. Select-form and
+#   map-element siblings stay red until the frontend movements. Zero
+#   drift on all other ids.
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
 PASS	arrays/array-copy	-
@@ -130,11 +125,11 @@ PASS	channels/range-closed	-
 PASS	channels/range-edge/break	-
 PASS	channels/range-edge/no-var	-
 PASS	channels/recv-edge/bad-target-blocks	-
-FAIL	channels/recv-edge/dep-index-target	differential
+PASS	channels/recv-edge/dep-index-target	-
 PASS	channels/recv-edge/field-second-target-stores-first	-
 PASS	channels/recv-edge/nil-deref-target-drains	-
 PASS	channels/recv-edge/nil-deref-target-recovered	-
-FAIL	channels/recv-edge/nil-index-base-second	differential
+PASS	channels/recv-edge/nil-index-base-second	-
 PASS	channels/recv-edge/oob-second-target-stores-first	-
 PASS	channels/recv-edge/oob-target-drains	-
 PASS	channels/recv-edge/second-target-panic-stores-first	-

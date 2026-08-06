@@ -31,9 +31,13 @@ differential-pinned) `- Cases: <id>, <id>, …` (baseline case ids), then prose.
 
 ## BUG-029 — receive/select delivery collapses spec §Assignments' two phases: target k's store happens before target k+1's ADDRESS evaluates
 
-- Status: open
+- Status: open (machine HALF fixed — the statement-form discriminators
+  channels/recv-edge/{dep-index-target,nil-index-base-second} flipped
+  green with the phase split below; the SELECT forms stay red until the
+  frontend passes user clause targets into the machine's delivery plan
+  instead of body-side single assigns)
 - Pinned-by: differential
-- Cases: channels/recv-edge/dep-index-target, channels/recv-edge/nil-index-base-second, channels/select-recv-edge/dep-index-target, channels/select-recv-edge/nil-index-base-second
+- Cases: channels/select-recv-edge/dep-index-target, channels/select-recv-edge/nil-index-base-second
 - Discovered: 2026-08-06 (channels-arc-s1 convergence round; introduced
   by the D3 fix, commit 12f2d42 — a regression of the OPPOSITE phase)
 

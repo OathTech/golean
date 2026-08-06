@@ -446,28 +446,26 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
               | .error (.panic msg) =>
                   return (.panicking [⟨runtimeErrorValue msg, false⟩] k', s, choices)
               | .error err => throw err
-      | .selectRecvK vals pending body env k' =>
-          -- Per-target store-then-next (delta review D3): phase 2 is
-          -- left-to-right, so each address stores immediately.
-          match valueAsLoc v with
-          | .error (.panic msg) =>
-              return (.panicking [⟨runtimeErrorValue msg, false⟩] k', s, choices)
-          | .error err => throw err
-          | .ok loc =>
-              match pending with
-              | e :: rest =>
-                  match vals with
-                  | val :: vrest => do
-                      let s' ← storeLoc s loc val
+      | .tgtOpK sh ops pending refs targets vals body env k' =>
+          -- Delivery PHASE 1 (convergence round, BUG-029): operand
+          -- values accumulate; each target completes into a
+          -- store-ready TargetRef (its outer nil/bounds check
+          -- DEFERRED); phase 2 stores under `.next (.storeK ...)`.
+          match pending with
+          | e :: rest =>
+              return (.evalE e env
+                (.tgtOpK sh (v :: ops) rest refs targets vals body env k'), s, choices)
+          | [] =>
+              match completeTargetRef sh (v :: ops).reverse with
+              | none => throw (.internal "malformed receive target operands")
+              | some r =>
+                  match targets with
+                  | (sh', e :: ops') :: rest =>
                       return (.evalE e env
-                        (.selectRecvK vrest rest body env k'), s', choices)
-                  | [] => throw (.internal "select receive value/target arity mismatch")
-              | [] =>
-                  match vals with
-                  | [val] => do
-                      let s' ← storeLoc s loc val
-                      return (.exec body env k', s', choices)
-                  | _ => throw (.internal "select receive value/target arity mismatch")
+                        (.tgtOpK sh' [] ops' (refs ++ [r]) rest vals body env k'), s, choices)
+                  | (_, []) :: _ => throw (.internal "malformed receive target plan")
+                  | [] =>
+                      return (.next (.storeK (refs ++ [r]) vals body env k'), s, choices)
       | .stop => throw (.internal "value delivered to empty continuation")
       | _ => throw (.internal "value delivered to statement continuation")
   | .next k =>
@@ -524,6 +522,19 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
                 return (.exec body env'
                   (.mapIterK keyVar valVar keyTy valTy body
                     (remaining.eraseIdx idx hlt) env k'), s', choices')
+      | .storeK refs vals body env k' =>
+          -- Delivery PHASE 2 (convergence round, BUG-029): one store
+          -- per step, LEFT-TO-RIGHT; a store-time panic (nil address,
+          -- bounds, nil map) fires AFTER earlier stores landed.
+          match refs, vals with
+          | r :: rs, val :: vrest =>
+              match storeTarget s r val with
+              | .ok s' => return (.next (.storeK rs vrest body env k'), s', choices)
+              | .error (.panic msg) =>
+                  return (.panicking [⟨runtimeErrorValue msg, false⟩] k', s, choices)
+              | .error err => throw err
+          | [], [] => return (.exec body env k', s, choices)
+          | _, _ => throw (.internal "receive delivery value/target arity mismatch")
       | _ => throw (.internal "completion delivered to expression continuation")
   | .breaking k =>
       match k with

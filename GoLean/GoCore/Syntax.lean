@@ -170,6 +170,15 @@ inductive Expr where
 inductive Assignee where
   | var (id : String)
   | addr (loc : Expr)
+  /-- A MAP-element target `m[k] = v` (convergence round, BUG-030): maps
+  are not addressable, so a map-element assignment target cannot be an
+  address expression — it carries the base and key expressions and the
+  map's key/value types (the `mapAssign` normalization discipline).
+  Only the channel-receive delivery path consumes it (`targetPlan`);
+  every other assignee position resolves through `assigneeExpr`, which
+  is `none` here — those statements fail closed, exactly as before this
+  constructor existed. -/
+  | mapElem (base index : Expr) (keyTy valueTy : Ty)
   | unsupported (feature : String)
   deriving Repr, BEq, Inhabited
 

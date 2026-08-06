@@ -81,6 +81,7 @@ target *address* (`.var id` is exactly `.ref id`; `.addr e` is `e`).
 def assigneeExpr : Assignee → Option Expr
   | .var id => some (.ref id)
   | .addr e => some e
+  | .mapElem _ _ _ _ => none
   | .unsupported _ => none
 
 def assigneesExprs (targets : List Assignee) : Option (List Expr) :=
@@ -201,6 +202,44 @@ def applySlice (s : ExecState) (b : GoValue) (lowValue highValue : Int)
   | .array values =>
       unsupported s!"slice expression over non-addressable array value of length {values.size}"
   | other => stuck s!"expected array or slice value for slice expression, got {repr other}"
+
+/-- The element location of an index-addressed target: bounds-checked
+against the base. Shared verbatim between the `indexAddr` strict op
+(address in expression position — the check fires at evaluation) and
+`storeTarget` (an assignment's OWN index target — spec §Assignments
+defers the check to the STORE, phase 2; convergence round BUG-029,
+pinned by `channels/recv-edge/oob-second-target-stores-first`). -/
+def indexTargetLoc (s : ExecState) (b i : GoValue) : Except GoError Loc := do
+  let indexValue ← valueAsInt i
+  match b with
+  | .slice slice => sliceIndexLoc slice indexValue
+  | .addr baseLoc =>
+      match ← loadLoc s baseLoc with
+      | .array values => do
+          let _ ← arrayIndexNat values indexValue
+          return .index baseLoc indexValue
+      | .slice slice => sliceIndexLoc slice indexValue
+      | other => stuck s!"expected array or slice base for index address, got {repr other}"
+  | other => stuck s!"expected array or slice base for index address, got {repr other}"
+
+/-- Store into a map element: normalize key and value at the map's
+types, insert-or-overwrite; a NIL map is the run-time panic. Shared
+verbatim between the `mapAssign` wide op and `storeTarget`'s
+map-element arm (convergence round BUG-030 — a map-element receive
+target's store is a phase-2 event like any other). -/
+def mapAssignValue (s : ExecState) (keyTy valueTy : Ty)
+    (baseV keyV valueV : GoValue) : Except GoError ExecState := do
+  let map ← valueAsMap baseV
+  let key ← normalizeValueForTy s keyTy keyV
+  let value ← normalizeValueForTy s valueTy valueV
+  match ← mapEntries s map with
+  | none => panic "assignment to entry in nil map"
+  | some (baseLoc, entries) =>
+      let entries ←
+        match ← mapEntryIndex? s keyTy entries key (isInsert := true) with
+        | some i => pure (entries.set! i (key, value))
+        | none => pure (entries.push (key, value))
+      storeLoc s baseLoc (.mapData entries)
 
 /-- Apply a strict operator to its (already evaluated, in evaluation order)
 operand values. The single op table shared by the relation (as a rule
@@ -355,17 +394,7 @@ def applyStrictOp (s : ExecState) : StrictOp → List GoValue → Except GoError
           return ((← loadLoc s (← sliceIndexLoc slice indexValue)), s)
       | other => stuck s!"expected array, slice, or string value for index access, got {repr other}"
   | .indexAddr, [b, i] => do
-      let indexValue ← valueAsInt i
-      match b with
-      | .slice slice => return (.addr (← sliceIndexLoc slice indexValue), s)
-      | .addr baseLoc =>
-          match ← loadLoc s baseLoc with
-          | .array values =>
-              let _ ← arrayIndexNat values indexValue
-              return (.addr (.index baseLoc indexValue), s)
-          | .slice slice => return (.addr (← sliceIndexLoc slice indexValue), s)
-          | other => stuck s!"expected array or slice base for index address, got {repr other}"
-      | other => stuck s!"expected array or slice base for index address, got {repr other}"
+      return (.addr (← indexTargetLoc s b i), s)
   | .mapGet keyTy valueTy, [b, i] => do
       let map ← valueAsMap b
       let key ← normalizeValueForTy s keyTy i
@@ -716,18 +745,7 @@ def applyStmtOpCore (s : ExecState) (op : StmtOp) (nt : Nat)
       return ((← storeLoc s₁ loc (.chan { base := some base })))
   | .mapAssign keyTy valueTy =>
       match vs with
-      | [baseV, keyV, valueV] => do
-          let map ← valueAsMap baseV
-          let key ← normalizeValueForTy s keyTy keyV
-          let value ← normalizeValueForTy s valueTy valueV
-          match ← mapEntries s map with
-          | none => panic "assignment to entry in nil map"
-          | some (baseLoc, entries) =>
-              let entries ←
-                match ← mapEntryIndex? s keyTy entries key (isInsert := true) with
-                | some i => pure (entries.set! i (key, value))
-                | none => pure (entries.push (key, value))
-              return ((← storeLoc s baseLoc (.mapData entries)))
+      | [baseV, keyV, valueV] => mapAssignValue s keyTy valueTy baseV keyV valueV
       | _ => stuck "malformed mapAssign operands"
   | .mapLookup keyTy valueTy =>
       match vs with
@@ -977,17 +995,84 @@ deadlock!`). Buffer FIFO is SPEC ("Channels act as first-in-first-out
 queues") — deterministic, no `Choices` consumption anywhere in this
 module's channel machinery. -/
 
+/-- The phase-1 SHAPE of a receive delivery target (convergence round,
+BUG-029): which operand expressions phase 1 evaluates for it, and which
+store operation phase 2 performs. Spec §Assignments evaluates the
+target's OPERANDS in phase 1 but the outer address operation's own
+check — a nil implicit indirection (`p.b`), an index bounds check
+(`bs[9]`), a nil map — is the assignment's, deferred to the STORE in
+phase 2, after earlier stores landed (pinned by
+`channels/recv-edge/{field,oob}-second-target-stores-first` and
+`channels/recv-map-elem/first-store-lands`). -/
+inductive TargetShape where
+  | direct
+  | index
+  | field (typeId : TypeId) (fieldName : String)
+  | mapElem (keyTy valueTy : Ty)
+  deriving Repr, BEq
+
+/-- A target resolved by phase 1: its operands' VALUES, store-ready.
+The outer nil/bounds/nil-map check lives in `storeTarget` (phase 2). -/
+inductive TargetRef where
+  | direct (addr : GoValue)
+  | index (base idx : GoValue)
+  | field (base : GoValue) (typeId : TypeId) (fieldName : String)
+  | mapElem (base key : GoValue) (keyTy valueTy : Ty)
+  deriving Repr, BEq
+
+/-- Classify one delivery target: its shape plus the operand
+expressions phase 1 evaluates for it, left-to-right (always ≥ 1). The
+OUTERMOST address-forming operation of an `.addr` target is decomposed
+(its check is phase 2's); operations nested INSIDE the operands
+evaluate fully in phase 1, checks included — spec: phase 1 evaluates
+"the operands of index expressions and pointer indirections", and an
+inner deref/index IS such an operand (pinned by
+`channels/recv-edge/nil-index-base-second`: `(*bp)[0]`'s nil deref is
+a phase-1 event, before any store). `none` fails closed. -/
+def targetPlan : Assignee → Option (TargetShape × List Expr)
+  | .var id => some (.direct, [.ref id])
+  | .addr (.indexAddr b i) => some (.index, [b, i])
+  | .addr (.fieldAddr b tid f) => some (.field tid f, [b])
+  | .addr e => some (.direct, [e])
+  | .mapElem b k kt vt => some (.mapElem kt vt, [b, k])
+  | .unsupported _ => none
+
+def targetsPlan (targets : List Assignee) : Option (List (TargetShape × List Expr)) :=
+  targets.mapM targetPlan
+
+/-- Rebuild a store-ready reference from a shape and its evaluated
+operands (arity-checked; `none` is a malformed frame — no rule, fail
+closed). -/
+def completeTargetRef : TargetShape → List GoValue → Option TargetRef
+  | .direct, [v] => some (.direct v)
+  | .index, [b, i] => some (.index b i)
+  | .field tid f, [v] => some (.field v tid f)
+  | .mapElem kt vt, [b, k] => some (.mapElem b k kt vt)
+  | _, _ => none
+
+/-- Phase 2, one target, one step: the store, with the target's OWN
+check — nil address (`valueAsLoc`), bounds (`indexTargetLoc`), nil
+field base, nil map — firing HERE, after earlier targets' stores
+landed (spec §Assignments: "the assignments are carried out in
+left-to-right order"). -/
+def storeTarget (s : ExecState) (r : TargetRef) (v : GoValue) : Except GoError ExecState := do
+  match r with
+  | .direct addr => storeLoc s (← valueAsLoc addr) v
+  | .index b i => storeLoc s (← indexTargetLoc s b i) v
+  | .field base tid f => storeLoc s (.field (← valueAsLoc base) tid f) v
+  | .mapElem b k kt vt => mapAssignValue s kt vt b k v
+
 /-- Head of a channel statement (send/receive/close). `elem` is the
 element type: sends normalize the value at it (the `mapAssign` key/value
 discipline, so buffered values are self-normalized); receives build the
 closed-channel zero value from it. The receive head CARRIES its target
-expressions (audit response BUG-022): spec §Assignments is two-phase —
-the RECEIVE is phase 1, the target stores (and their nil-deref /
-out-of-range panics) are phase 2 — so targets are evaluated only AFTER
-the communication, exactly like the select path's step 4. -/
+assignees (audit response BUG-022): spec §Assignments is two-phase —
+the RECEIVE is phase 1's communication, target operands evaluate after
+it, and the stores (with their nil-deref / out-of-range panics) are
+phase 2 — exactly like the select path's step 4. -/
 inductive ChanStOp where
   | send (elem : Ty)
-  | recv (targets : List Expr) (elem : Ty)
+  | recv (targets : List Assignee) (elem : Ty)
   | close
   deriving Repr, BEq
 
@@ -1002,8 +1087,8 @@ def chanPlan : Stmt → Option (ChanStOp × List Expr)
   | .chanSend ch value elem => some (.send elem, [ch, value])
   | .chanRecv targets ch elem => do
       if targets.size > 2 then none else
-      let tes ← assigneesExprs targets.toList
-      return (.recv tes elem, [ch])
+      let _ ← targetsPlan targets.toList
+      return (.recv targets.toList elem, [ch])
   | .closeChan ch => some (.close, [ch])
   | _ => none
 
@@ -1037,7 +1122,7 @@ only after selection (step 4). The payload of the readiness step and of
 the `.blockedSelect` configuration. -/
 inductive EvClause where
   | sendEv (chv v : GoValue) (elem : Ty) (body : Stmt)
-  | recvEv (chv : GoValue) (targets : List Expr) (elem : Ty) (body : Stmt)
+  | recvEv (chv : GoValue) (targets : List Assignee) (elem : Ty) (body : Stmt)
   deriving Repr, BEq
 
 /-- The entry-time operand list of a `select` (step 1, source order): per
@@ -1056,8 +1141,8 @@ def evalClauses : List (SelectClauseHead × Stmt) → List GoValue →
   | (.send _ _ elem, body) :: rest, chv :: vv :: vs => do
       return .sendEv chv vv elem body :: (← evalClauses rest vs)
   | (.recv targets _ elem, body) :: rest, chv :: vs => do
-      match assigneesExprs targets.toList with
-      | some tes => return .recvEv chv tes elem body :: (← evalClauses rest vs)
+      match targetsPlan targets.toList with
+      | some _ => return .recvEv chv targets.toList elem body :: (← evalClauses rest vs)
       | none => throw (.unsupported "unsupported select receive target assignee")
   | _, _ => stuck "malformed select operand values"
 
@@ -1364,28 +1449,37 @@ inductive Cont where
   /-- Channel-statement operand evaluation (channels arc slice 1): the
   pre-communication operands (send: channel then value; receive: the
   channel; close: the channel), ending in one `applyChanOp` step whose
-  outcome may be next / panicking / blocked / a `selectRecvK`
-  target-evaluation entry (a receive's targets evaluate only AFTER the
-  communication — BUG-022, spec §Assignments phase 2). Appended at the
-  END of the inductive (with its two select siblings) so positional case
-  tags in the correspondence proofs stay stable. -/
+  outcome may be next / panicking / blocked / a receive's phase-1
+  target entry (`tgtOpK` — a receive's targets evaluate only AFTER the
+  communication — BUG-022/BUG-029, spec §Assignments). Appended at the
+  END of the inductive (with its select/delivery siblings) so
+  positional case tags in the correspondence proofs stay stable. -/
   | chanStK (op : ChanStOp) (done : List GoValue)
       (pending : List Expr) (env : LocalEnv) (k : Cont)
   /-- `select` entry-time operand evaluation (spec step 1, source order);
   ends in one `applySelect` readiness/commit step. -/
   | selectOpsK (clauses : List (SelectClauseHead × Stmt)) (default? : Option Stmt)
       (done : List GoValue) (pending : List Expr) (env : LocalEnv) (k : Cont)
-  /-- A selected receive clause's target evaluation (spec step 4: LHS
-  evaluated only AFTER the communication committed). `vals` are the
-  REMAINING delivery values, head-aligned with the target address being
-  evaluated: each arriving address is stored IMMEDIATELY (spec
-  §Assignments phase 2 carries assignments out in LEFT-TO-RIGHT order —
-  an earlier target's store is observable before a later target's
-  panic; delta review D3, pinned by
-  channels/recv-edge/second-target-panic-stores-first), then the next
-  target evaluates; the last store enters the clause body. -/
-  | selectRecvK (vals : List GoValue)
-      (pending : List Expr) (body : Stmt) (env : LocalEnv) (k : Cont)
+  /-- Receive delivery, PHASE 1 (convergence round, BUG-029; spec
+  §Assignments' two phases split — targets evaluate only AFTER the
+  communication, spec §Select step 4 / BUG-022): awaiting one operand
+  value of the CURRENT target. `sh`/`ops`/`pending` are the current
+  target's shape, evaluated operands (most recent first) and remaining
+  operand expressions; `refs` the targets already resolved (in order);
+  `targets` the target plans still to evaluate; `vals` the delivery
+  values phase 2 will store. Each target completes into a store-ready
+  `TargetRef` — the OUTER nil/bounds check stays deferred to phase 2. -/
+  | tgtOpK (sh : TargetShape) (ops : List GoValue) (pending : List Expr)
+      (refs : List TargetRef) (targets : List (TargetShape × List Expr))
+      (vals : List GoValue) (body : Stmt) (env : LocalEnv) (k : Cont)
+  /-- Receive delivery, PHASE 2 (`.next`-driven, one store per step,
+  LEFT-TO-RIGHT — an earlier target's store is observable before a
+  later target's store-time panic; pinned by
+  channels/recv-edge/second-target-panic-stores-first and the
+  field/oob-second-target-stores-first discriminators). The last store
+  enters `body` (the clause body; `.seqn #[]` for the statement form). -/
+  | storeK (refs : List TargetRef) (vals : List GoValue)
+      (body : Stmt) (env : LocalEnv) (k : Cont)
 
 /-- The continuation for entering a `.seqn`: under a same-env governing
 sequence, SPLICE the statements into it (D1) — Go statement lists splice
@@ -1456,7 +1550,8 @@ def panicPassthrough : Cont → Option Cont
   | .panicArgK k => some k
   | .chanStK _ _ _ _ k => some k
   | .selectOpsK _ _ _ _ _ k => some k
-  | .selectRecvK _ _ _ _ k => some k
+  | .tgtOpK _ _ _ _ _ _ _ _ k => some k
+  | .storeK _ _ _ _ k => some k
   | .frame _ _ _ _ _ => none
   | .panicResumeK _ _ => none
   | .stop => none
@@ -1519,8 +1614,10 @@ def recoverThroughWrappers : Cont → Option (GoValue × Cont)
       (recoverThroughWrappers k).map (fun (v, k') => (v, .chanStK a b c d k'))
   | .selectOpsK a b c d e k =>
       (recoverThroughWrappers k).map (fun (v, k') => (v, .selectOpsK a b c d e k'))
-  | .selectRecvK a b c d k =>
-      (recoverThroughWrappers k).map (fun (v, k') => (v, .selectRecvK a b c d k'))
+  | .tgtOpK a b c d e f g h k =>
+      (recoverThroughWrappers k).map (fun (v, k') => (v, .tgtOpK a b c d e f g h k'))
+  | .storeK a b c d k =>
+      (recoverThroughWrappers k).map (fun (v, k') => (v, .storeK a b c d k'))
 
 /-- The `recover()` builtin (arc doc §A1; wrapper transparency added at
 the arc-final audit F1/BUG-015, 2026-08-06): walk the continuation to the
@@ -1582,8 +1679,10 @@ def recoverResult : Cont → GoValue × Cont
       let (v, k') := recoverResult k; (v, .chanStK a b c d k')
   | .selectOpsK a b c d e k =>
       let (v, k') := recoverResult k; (v, .selectOpsK a b c d e k')
-  | .selectRecvK a b c d k =>
-      let (v, k') := recoverResult k; (v, .selectRecvK a b c d k')
+  | .tgtOpK a b c d e f g h k =>
+      let (v, k') := recoverResult k; (v, .tgtOpK a b c d e f g h k')
+  | .storeK a b c d k =>
+      let (v, k') := recoverResult k; (v, .storeK a b c d k')
 
 /-- Control configurations (the Iris `Expr` projection; the `ExecState` is
 the paired `Step` component, as before). New over the old relation:
@@ -1628,8 +1727,23 @@ inductive Config where
   -- (channel identity, in-flight value, delivery targets); `ch = none` is
   -- the nil channel (blocks forever — no partner can exist).
   | blockedSend (ch : Option Loc) (v : GoValue) (k : Cont)
-  | blockedRecv (ch : Option Loc) (targets : List Expr) (elem : Ty) (env : LocalEnv) (k : Cont)
+  | blockedRecv (ch : Option Loc) (targets : List Assignee) (elem : Ty) (env : LocalEnv) (k : Cont)
   | blockedSelect (clauses : List EvClause) (env : LocalEnv) (k : Cont)
+
+/-- Enter a receive's TARGET phase (nonempty targets; convergence
+round, BUG-029): resolve the target plan and start phase 1 on the
+first target's first operand. Shared verbatim by `applyChanOp` (both
+dequeue arms) and `commitClause` — and by `stepFn` through them. The
+malformed arms (an empty plan for nonempty targets, a zero-operand
+shape) cannot arise from `targetsPlan` — fail closed, never a silent
+default. -/
+def enterRecvTargets (s : ExecState) (targets : List Assignee)
+    (vals : List GoValue) (body : Stmt) (env : LocalEnv) (k : Cont) :
+    Except GoError (Config × ExecState) := do
+  match targetsPlan targets with
+  | some ((sh, e :: ops) :: rest) =>
+      return (.evalE e env (.tgtOpK sh [] ops [] rest vals body env k), s)
+  | _ => stuck "malformed receive target plan"
 
 /-- Apply a channel statement's head to its evaluated pre-communication
 operands. One step; the outcome is a configuration — `.next k` on
@@ -1637,14 +1751,14 @@ success, `.panicking` for the channel panics (send-on-closed /
 close-of-closed / close-of-nil — REAL recoverable Go panics, D4;
 messages are gc's realized strings, probes p01-p03), a `.blocked*`
 shape where Go blocks (nil channel; unbuffered/full send; open-empty
-receive), or — for a receive with targets — the `selectRecvK`
-target-evaluation entry: the COMMUNICATION happens in this step and the
-target addresses (whose nil-deref / out-of-range panics are spec
-§Assignments PHASE-2 events) evaluate after it, exactly like the select
-path's step 4 (BUG-022; pinned by `channels/recv-edge/*` — the drain
-discriminators and the blocks-not-panics classification). Shared
-verbatim by rule `Step.chanStApply` and `stepFn`'s `chanStK` apply
-arm. -/
+receive), or — for a receive with targets — the phase-1 target entry
+(`enterRecvTargets`): the COMMUNICATION happens in this step, target
+OPERANDS evaluate after it, and the stores (with their nil-deref /
+out-of-range panics, spec §Assignments PHASE-2 events) follow
+left-to-right, exactly like the select path's step 4 (BUG-022/BUG-029;
+pinned by `channels/recv-edge/*` — the drain discriminators and the
+blocks-not-panics classification). Shared verbatim by rule
+`Step.chanStApply` and `stepFn`'s `chanStK` apply arm. -/
 def applyChanOp (s : ExecState) (op : ChanStOp) (vs : List GoValue)
     (env : LocalEnv) (k : Cont) : Except GoError (Config × ExecState) := do
   match op, vs with
@@ -1677,19 +1791,17 @@ def applyChanOp (s : ExecState) (op : ChanStOp) (vs : List GoValue)
               let s₁ ← storeLoc s loc (.chanData (buf.eraseIdx! 0) capacity closed)
               match targets with
               | [] => return (.next k, s₁)
-              | te :: rest =>
-                  return (.evalE te env
-                    (.selectRecvK (recvStores v true (rest.length + 1))
-                      rest (.seqn #[]) env k), s₁)
+              | _ :: _ =>
+                  enterRecvTargets s₁ targets (recvStores v true targets.length)
+                    (.seqn #[]) env k
           | none =>
               if closed then do
                 let zero ← defaultValue s elem
                 match targets with
                 | [] => return (.next k, s)
-                | te :: rest =>
-                    return (.evalE te env
-                      (.selectRecvK (recvStores zero false (rest.length + 1))
-                        rest (.seqn #[]) env k), s)
+                | _ :: _ =>
+                    enterRecvTargets s targets (recvStores zero false targets.length)
+                      (.seqn #[]) env k
               else
                 return (.blockedRecv (some loc) targets elem env k, s)
   | .close, [chv] => do
@@ -1706,12 +1818,12 @@ def applyChanOp (s : ExecState) (op : ChanStOp) (vs : List GoValue)
   | op, vs => stuck s!"malformed channel-operator application: {repr op} on {vs.length} operand(s)"
 
 /-- Commit the ONE ready clause of a `select` (spec step 3): perform its
-communication, then enter the body — for a receive with targets, via the
-`selectRecvK` target-evaluation frames (spec step 4: LHS after the
-communication). A committed SEND on a closed channel panics (probe p23 —
-closed counts as ready). The "unready" stuck arms are unreachable from
-`applySelect` (which commits only ready clauses) — fail closed, never a
-silent default. -/
+communication, then enter the body — for a receive with targets, via
+the phase-1/phase-2 delivery frames (`enterRecvTargets`; spec step 4:
+LHS after the communication). A committed SEND on a closed channel
+panics (probe p23 — closed counts as ready). The "unready" stuck arms
+are unreachable from `applySelect` (which commits only ready clauses) —
+fail closed, never a silent default. -/
 def commitClause (s : ExecState) (env : LocalEnv) (k : Cont) :
     EvClause → Except GoError (Config × ExecState)
   | .sendEv chv vv elem body => do
@@ -1745,9 +1857,8 @@ def commitClause (s : ExecState) (env : LocalEnv) (k : Cont) :
                 else stuck "select committed an unready receive clause"
           match targets with
           | [] => return (.exec body env k, s₁)
-          | te :: rest =>
-              return (.evalE te env
-                (.selectRecvK (recvStores v ok (rest.length + 1)) rest body env k), s₁)
+          | _ :: _ =>
+              enterRecvTargets s₁ targets (recvStores v ok targets.length) body env k
 
 /-- The `select` READINESS step (spec step 2, deterministic slice): pair
 the evaluated entry operands with their clauses, compute the ready set;
@@ -2326,9 +2437,10 @@ inductive Step : Config → ExecState → Config → ExecState → Prop where
   /-- Channel statements (channels arc slice 1; receive reordered at the
   audit response, BUG-022): pre-communication operand entry, plain
   shifts, one apply step — the apply's outcome a full CONFIGURATION
-  (`applyChanOp`: next / panicking / blocked / a receive's
-  `selectRecvK` target entry — targets evaluate AFTER the communication,
-  spec §Assignments phase 2, the select path's shape). Appended at the
+  (`applyChanOp`: next / panicking / blocked / a receive's phase-1
+  target entry — targets evaluate AFTER the communication, then store
+  left-to-right, spec §Assignments via BUG-029's split phases, the
+  select path's shape). Appended at the
   END of the inductive so the correspondence proofs' positional case
   tags stay stable. The blocked configurations these can step TO have no
   outgoing rules (relation-silent): pairing is the slice-2 pool's job,
@@ -2351,7 +2463,8 @@ inductive Step : Config → ExecState → Config → ExecState → Prop where
   -- readiness and commits (steps 2-3, `applySelect` — deterministic in
   -- this slice: one ready clause or default; multi-ready is
   -- relation-silent/unsupported); a selected receive's targets evaluate
-  -- after the communication (step 4, `selectRecvK`); the body enters
+  -- after the communication (step 4, the `tgtOpK`/`storeK` phases); the
+  -- body enters
   -- under the plain continuation (step 5 — the frontend wraps the whole
   -- select in `.breakable`, so `break` needs no select-side rule).
   | selectFirst {clauses default? e rest env k s} :
@@ -2377,24 +2490,33 @@ inductive Step : Config → ExecState → Config → ExecState → Prop where
       applySelect s clauses default? (v :: done).reverse env k = .error (.panic msg) →
       Step (.retV v (.selectOpsK clauses default? done [] env k)) s
         (.panicking [⟨runtimeErrorValue msg, false⟩] k) s
-  -- Per-target store-then-next (delta review D3): spec §Assignments
-  -- phase 2 is LEFT-TO-RIGHT — each arriving target address stores its
-  -- delivery value immediately, so an earlier store is observable
-  -- before a later target's panic.
-  | selectRecvStore {val vrest v loc e rest body env k s s'} :
-      valueAsLoc v = .ok loc →
-      storeLoc s loc val = .ok s' →
-      Step (.retV v (.selectRecvK (val :: vrest) (e :: rest) body env k)) s
-        (.evalE e env (.selectRecvK vrest rest body env k)) s'
-  | selectRecvTargetPanic {vals v msg pending body env k s} :
-      valueAsLoc v = .error (.panic msg) →
-      Step (.retV v (.selectRecvK vals pending body env k)) s
+  -- Receive delivery, phases SPLIT (convergence round, BUG-029): phase
+  -- 1 (`tgtOpK`) evaluates every target's OPERANDS left-to-right,
+  -- resolving each target to a store-ready `TargetRef` with its outer
+  -- nil/bounds check DEFERRED; phase 2 (`storeK`, `.next`-driven)
+  -- stores left-to-right, ONE step per target, store-time panics
+  -- firing after earlier stores landed.
+  | tgtOpShift {sh ops v e pending refs targets vals body env k s} :
+      Step (.retV v (.tgtOpK sh ops (e :: pending) refs targets vals body env k)) s
+        (.evalE e env (.tgtOpK sh (v :: ops) pending refs targets vals body env k)) s
+  | tgtOpNext {sh ops v r sh' e ops' targets refs vals body env k s} :
+      completeTargetRef sh (v :: ops).reverse = some r →
+      Step (.retV v (.tgtOpK sh ops [] refs ((sh', e :: ops') :: targets) vals body env k)) s
+        (.evalE e env (.tgtOpK sh' [] ops' (refs ++ [r]) targets vals body env k)) s
+  | tgtOpStores {sh ops v r refs vals body env k s} :
+      completeTargetRef sh (v :: ops).reverse = some r →
+      Step (.retV v (.tgtOpK sh ops [] refs [] vals body env k)) s
+        (.next (.storeK (refs ++ [r]) vals body env k)) s
+  | storeStep {r rs val vals body env k s s'} :
+      storeTarget s r val = .ok s' →
+      Step (.next (.storeK (r :: rs) (val :: vals) body env k)) s
+        (.next (.storeK rs vals body env k)) s'
+  | storeStepPanic {r rs val vals msg body env k s} :
+      storeTarget s r val = .error (.panic msg) →
+      Step (.next (.storeK (r :: rs) (val :: vals) body env k)) s
         (.panicking [⟨runtimeErrorValue msg, false⟩] k) s
-  | selectRecvFinish {val v loc body env k s s'} :
-      valueAsLoc v = .ok loc →
-      storeLoc s loc val = .ok s' →
-      Step (.retV v (.selectRecvK [val] [] body env k)) s
-        (.exec body env k) s'
+  | storeDone {body env k s} :
+      Step (.next (.storeK [] [] body env k)) s (.exec body env k) s
 
 /-- Reflexive-transitive closure of `Step`. -/
 inductive Steps : Config → ExecState → Config → ExecState → Prop where
