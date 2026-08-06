@@ -13,7 +13,11 @@
 #   spec-unspecified; the model realizes go/types' conforming order, gc
 #   realizes a different conforming order. The differential red IS the
 #   version-tracked pin; it never flips PASS.
+# channels/select-multi-ready: DELIBERATE fail-closed refusal pin
+#   (multi-ready select = the L2 choice envelope, scheduler arc slice 4);
+#   permanently red until that slice — see untriaged-count 2026-08-06.
 arrays/pointer-array
+channels/select-multi-ready
 floats/to-int-out-of-range/nan
 floats/to-int-out-of-range/range
 init/hidden-dep-order

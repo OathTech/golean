@@ -78,4 +78,12 @@
 #   initialization order unspecified; go/types' conforming order — ours
 #   — differs from gc's conforming order on exactly this shape; never
 #   expected to flip PASS, re-checked every toolchain bump).
-15
+# 2026-08-06 (channels arc slice 1)  15 -> 16:
+#   channels/select-multi-ready ENTERS as a DELIBERATE fail-closed
+#   refusal pin (design of record D4/slice 4): a select with more than
+#   one ready case is the L2 "uniform pseudo-random" latitude — the
+#   deterministic slice REFUSES it (unsupported at the readiness step)
+#   rather than picking silently; the scheduler arc's slice 4 flips it
+#   via the membership-lane choice envelope. Same class as the floats
+#   refusal pins: permanently red until its slice lands.
+16

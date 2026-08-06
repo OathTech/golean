@@ -1,22 +1,15 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-06  commit: channels-arc-s1 (slice-1 machine + lowering)
+# recorded: 2026-08-06  commit: channels-arc-s1 (slice-1 final: multi-ready guardrail)
 #   frontend: native  oracle: go run (strict lane) / go-run membership in the
 #   machine-enumerated observation set (membership lane; go1.26.5 samples)
-# manifest_cases: 1046  pass: 968  fail: 78
-# Re-pin reason: channels arc slice 1 lands the channel machine
-#   (chanData cells, make/send/recv/close/len/cap, deterministic select,
-#   blocked configs -> deadlocked terminal) and the native lowering
-#   (chan types, send/recv/close/select/range-over-channel, receive
-#   hoisting). 69 FAIL/frontend-export -> PASS flips: all 57 channels/*
-#   (38 pre-existing + 19 slice-1 guardrails incl. the 8 deadlock
-#   differentials), plus the channel-blocked singletons
-#   builtins/make-channel-len-cap, control-flow/{break-label-select,
-#   goto-out-of-select}, generics/type-parameter-channel-ops,
-#   interfaces/typed-nil-channel, maps/{channel-key,nil-channel-key,
-#   delete-nil-key-types,nil-read-key-types}, scoping/select-clause-scope,
-#   init/{quarantined-init-dep,quarantined-init-iface} (each was
-#   quarantined solely on a chan type). Zero PASS->FAIL, zero stage
-#   drift on the remaining 78 (all pre-existing non-channel gaps).
+# manifest_cases: 1047  pass: 968  fail: 79
+# Re-pin reason: ONE new red-first pin, channels/select-multi-ready —
+#   a select with more than one ready case is the L2 latitude point the
+#   deterministic slice REFUSES (fail closed, FAIL/lean-observation with
+#   the precise unsupported reason), never answers silently; the
+#   scheduler arc's slice 4 flips it via the membership-lane choice
+#   envelope. Zero drift on all 1046 prior ids (69 channel flips
+#   recorded in the previous re-pin).
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
 PASS	arrays/array-copy	-
@@ -142,6 +135,7 @@ PASS	channels/select-deterministic/send-rhs-panic-before-default	-
 PASS	channels/select-deterministic/unselected-receive-lhs-not-eval	-
 PASS	channels/select-empty-receive-default	-
 PASS	channels/select-full-send-default	-
+FAIL	channels/select-multi-ready	lean-observation
 PASS	channels/select-nil-default	-
 PASS	channels/select-ready-receive	-
 PASS	channels/select-ready-send	-
