@@ -1,24 +1,14 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-06  commit: channels-arc-s1 (delta-review guardrails, red-first)
+# recorded: 2026-08-06  commit: channels-arc-s1 (delta response: BUG-026 + BUG-027 fixed)
 #   frontend: native  oracle: go run (strict lane) / go-run membership in the
 #   machine-enumerated observation set (membership lane; go1.26.5 samples)
-# manifest_cases: 1069  pass: 980  fail: 89
-# Re-pin reason: delta-review response, guardrails first — 10 NEW
-#   red-first pins (all go-run-verified):
-#   BUG-026 (D2, the BUG-023 flag misses statement-emission positions):
-#     channels/recv-order/{for-init,for-cond,else-if,switch-case}
-#     [differential].
-#   BUG-027 (D1, $deferClose<N> cross-function collision):
-#     channels/defer-close-two/{first,second,unrelated}
-#     [lean-observation: whole-package duplicate-id error].
-#   BUG-025 (D3, phase-2 stores not left-to-right — general +
-#     receive instance): multi-assign/store-order-plain,
-#     channels/recv-edge/second-target-panic-stores-first
-#     [differential].
-#   BUG-028 (D5, map-key pre-bind vs gc's receive-first on panicking
-#     non-call keys): channels/recv-map-elem/key-panic-drains
-#     [differential].
-#   Zero drift on all 1059 pre-existing ids.
+# manifest_cases: 1069  pass: 987  fail: 82
+# Re-pin reason: delta-review majors fixed — BUG-026 (D2): the receive
+#   flag is FUNCTION-scoped now (per-statement sweep deleted with its
+#   false premise), flipping channels/recv-order/{for-init,for-cond,
+#   else-if,switch-case}; BUG-027 (D1): $deferClose qualified by the
+#   enclosing function, flipping channels/defer-close-two/{first,
+#   second,unrelated}. Zero drift on all other ids.
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
 PASS	arrays/array-copy	-
@@ -114,9 +104,9 @@ PASS	channels/deadlock/select-empty	-
 PASS	channels/deadlock/send-full	-
 PASS	channels/deadlock/send-nil	-
 PASS	channels/deadlock/send-unbuffered	-
-FAIL	channels/defer-close-two/first	lean-observation
-FAIL	channels/defer-close-two/second	lean-observation
-FAIL	channels/defer-close-two/unrelated	lean-observation
+PASS	channels/defer-close-two/first	-
+PASS	channels/defer-close-two/second	-
+PASS	channels/defer-close-two/unrelated	-
 PASS	channels/directional-types	-
 PASS	channels/make-directional	-
 PASS	channels/make-edge/buffered-fifo	-
@@ -143,12 +133,12 @@ FAIL	channels/recv-map-elem/key-panic-drains	differential
 PASS	channels/recv-order/binary	-
 PASS	channels/recv-order/call-arg	-
 PASS	channels/recv-order/composite-lit	-
-FAIL	channels/recv-order/else-if	differential
-FAIL	channels/recv-order/for-cond	differential
-FAIL	channels/recv-order/for-init	differential
+PASS	channels/recv-order/else-if	-
+PASS	channels/recv-order/for-cond	-
+PASS	channels/recv-order/for-init	-
 PASS	channels/recv-order/multi-assign	-
 PASS	channels/recv-order/return-list	-
-FAIL	channels/recv-order/switch-case	differential
+PASS	channels/recv-order/switch-case	-
 PASS	channels/recv-stmt	-
 PASS	channels/select-deterministic/channel-operands-eval-order	-
 PASS	channels/select-deterministic/closed-buffered-receive	-

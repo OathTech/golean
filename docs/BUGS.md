@@ -52,7 +52,16 @@ the GENERAL path (`applyStmtOpCore .assignMany`, frame-exit
 
 ## BUG-026 — BUG-023's statement-level receive flag misses for-init/for-cond/else-if/switch-case positions (regression vs the deleted binary pre-bind)
 
-- Status: open
+- Status: fixed (2026-08-06, delta response: the per-statement sweep —
+  and its false justifying comment — were deleted; the flag is now
+  FUNCTION-scoped (`fnHasRecv`, set at emitFuncDecl / emitFuncLit /
+  synthesizePkgInit from a body scan that stops at nested literals).
+  Over-hoisting `len`/`cap` is unobservable (pure, non-panicking,
+  lexically placed via the hoist stream; for-conditions re-evaluate
+  their condPre per iteration), so the coarser scope covers every
+  statement-emission path — including ones added later — by
+  construction. All four regression pins plus the original five flip
+  green.)
 - Pinned-by: differential
 - Cases: channels/recv-order/for-init, channels/recv-order/for-cond, channels/recv-order/else-if, channels/recv-order/switch-case
 - Discovered: 2026-08-06 (channels-arc-s1 delta review D2, verified
@@ -72,7 +81,10 @@ coarser scope cannot reorder anything.
 
 ## BUG-027 — $deferClose<N> collides across functions (liftSeq resets per function): whole-package error
 
-- Status: open
+- Status: fixed (2026-08-06, delta response: the closer is qualified by
+  the enclosing function name like every lifted literal —
+  `<fn>$deferClose<N>`; the two-function pin and its unrelated-subject
+  companion flip green, and the original single-site pin stays green.)
 - Pinned-by: differential
 - Cases: channels/defer-close-two/first, channels/defer-close-two/second, channels/defer-close-two/unrelated
 - Discovered: 2026-08-06 (channels-arc-s1 delta review D1)
@@ -139,14 +151,13 @@ the receive.
 
 ## BUG-023 — hoisted receive reorders ahead of inline len(ch) in every operand list except binary operands
 
-- Status: fixed (2026-08-06, audit response: the binary-only left-operand
-  pre-bind was replaced by ONE mechanism — `emitStmtList` flags each
-  statement whose operand sweep contains a receive
-  (`stmtSweepContainsRecv`), and `emitBuiltin` then HOISTS `len`/`cap`
-  so every spec-ordered evaluation rides the same lexical hoist order as
-  the receive, in every operand position. Under `hoistForbidden` the
-  sweep cannot contain a receive, so inline stays correct. All four
-  red pins plus the binary pin pass.)
+- Status: fixed (2026-08-06, audit response, REVISED at the delta
+  review: the first fix's per-statement sweep missed statement-emission
+  paths — BUG-026 — so the mechanism is now the FUNCTION-scoped
+  `fnHasRecv` flag driving `emitBuiltin`'s `len`/`cap` hoist; see
+  BUG-026 for the scope argument. Under `hoistForbidden` (short-circuit
+  RHS — the only such position) len/cap stay inline, which is correct
+  because a receive there refuses outright.)
 - Pinned-by: differential
 - Cases: channels/recv-order/call-arg, channels/recv-order/return-list, channels/recv-order/composite-lit, channels/recv-order/multi-assign
 - Discovered: 2026-08-06 (channels-arc-s1 pre-merge audit S2+S9,

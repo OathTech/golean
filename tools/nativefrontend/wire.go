@@ -46,16 +46,20 @@ type emitter struct {
 	// Whether the `defer recover()` no-op function has been registered.
 	deferNoopEmitted bool
 
-	// Whether the operand sweep of the statement currently being emitted
-	// contains a channel receive (set per statement by emitStmtList,
-	// channels arc slice 1 audit response BUG-023): a receive hoists to a
+	// Whether the function BODY currently being emitted contains a
+	// channel receive anywhere (nested func literals excluded — each
+	// scans its own body; set at emitFuncDecl/emitFuncLit/
+	// synthesizePkgInit — BUG-023/BUG-026): a receive hoists to a
 	// statement, so every spec-ordered evaluation that is NOT itself
 	// hoisted — `len`/`cap`, the only such builtins — must hoist too to
 	// keep the spec's lexical left-to-right order for calls and receives
-	// (§Order of evaluation). ONE mechanism for every operand position
-	// (binary operands, call arguments, composite literals, multi-assign
-	// RHS lists, return lists, assignment targets).
-	stmtHasRecv bool
+	// (§Order of evaluation). The flag is FUNCTION-scoped on purpose
+	// (BUG-026: a per-statement sweep missed for-init/for-cond/else-if/
+	// switch-case emission paths): over-hoisting `len`/`cap` is
+	// unobservable — they are pure, never panic, and the hoist keeps
+	// their lexical position — so the coarser scope cannot reorder
+	// anything, and new statement-emission paths cannot rot it.
+	fnHasRecv bool
 
 	// Label usage of the CURRENT function body (control-flow slice,
 	// docs/2026-08-04_control-flow-design.md), computed by scanLabelUses

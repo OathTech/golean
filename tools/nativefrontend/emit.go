@@ -623,10 +623,14 @@ func (e *emitter) synthesizePkgInit() (map[string]any, error) {
 	e.liftSeq = 0
 	e.curResults = nil
 	stmts := make([]ast.Stmt, 0, len(e.info.InitOrder))
+	e.fnHasRecv = false
 	for _, ini := range e.info.InitOrder {
 		as, ok := e.globalInitStmt[ini.Rhs]
 		if !ok {
 			return nil, unsup("package-level initializer with no declaration site")
+		}
+		if containsRecv(as) {
+			e.fnHasRecv = true
 		}
 		stmts = append(stmts, as)
 	}
@@ -779,6 +783,10 @@ func (e *emitter) emitGenDeclTypes(d *ast.GenDecl) ([]any, []any, error) {
 func (e *emitter) emitFuncDecl(d *ast.FuncDecl) (map[string]any, error) {
 	sig := e.info.Defs[d.Name].Type().(*types.Signature)
 	e.curResults = sig.Results()
+	// Function-scoped receive flag (BUG-023/BUG-026): drives the len/cap
+	// hoist that keeps spec-ordered evaluations lexically ordered against
+	// hoisted receives, in every emission path of this body.
+	e.fnHasRecv = d.Body != nil && containsRecv(d.Body)
 
 	params, err := e.emitParams(sig.Params())
 	if err != nil {
@@ -1439,97 +1447,22 @@ func (e *emitter) emitBlock(b *ast.BlockStmt) (map[string]any, error) {
 
 func (e *emitter) emitStmtList(list []ast.Stmt) ([]any, error) {
 	out := []any{}
-	savedRecv := e.stmtHasRecv
 	for _, s := range list {
 		// A-normal form: emit each statement with a fresh hoist accumulator, then
 		// emit the hoisted temp bindings (from calls/allocs in its expressions)
 		// immediately before it.
 		saved := e.hoisted
 		e.hoisted = nil
-		// Per-statement receive flag (BUG-023): drives the len/cap hoist
-		// that keeps spec-ordered evaluations lexically ordered against
-		// hoisted receives.
-		e.stmtHasRecv = stmtSweepContainsRecv(s)
 		w, err := e.emitStmt(s)
 		hoists := e.hoisted
 		e.hoisted = saved
 		if err != nil {
-			e.stmtHasRecv = savedRecv
 			return nil, err
 		}
 		out = append(out, hoists...)
 		out = append(out, w)
 	}
-	e.stmtHasRecv = savedRecv
 	return out, nil
-}
-
-// stmtSweepContainsRecv reports whether a statement's OWN operand sweep
-// (the expressions its emission evaluates ahead of / within the statement
-// — not nested statements, which get their own flag) contains a channel
-// receive. Statement kinds not listed evaluate no expressions in their
-// own sweep that could co-occur with a receive (for-loop conditions are
-// hoist-forbidden, so a receive there refuses outright and inline len/cap
-// stay correct).
-func stmtSweepContainsRecv(s ast.Stmt) bool {
-	switch st := s.(type) {
-	case *ast.ExprStmt:
-		return containsRecv(st.X)
-	case *ast.AssignStmt:
-		for _, x := range st.Rhs {
-			if containsRecv(x) {
-				return true
-			}
-		}
-		for _, x := range st.Lhs {
-			if containsRecv(x) {
-				return true
-			}
-		}
-		return false
-	case *ast.ReturnStmt:
-		for _, x := range st.Results {
-			if containsRecv(x) {
-				return true
-			}
-		}
-		return false
-	case *ast.SendStmt:
-		return containsRecv(st.Chan) || containsRecv(st.Value)
-	case *ast.IncDecStmt:
-		return containsRecv(st.X)
-	case *ast.IfStmt:
-		if st.Init != nil && stmtSweepContainsRecv(st.Init) {
-			return true
-		}
-		return containsRecv(st.Cond)
-	case *ast.SwitchStmt:
-		if st.Init != nil && stmtSweepContainsRecv(st.Init) {
-			return true
-		}
-		return st.Tag != nil && containsRecv(st.Tag)
-	case *ast.RangeStmt:
-		return containsRecv(st.X)
-	case *ast.DeferStmt:
-		return containsRecv(st.Call)
-	case *ast.DeclStmt:
-		if gen, ok := st.Decl.(*ast.GenDecl); ok {
-			for _, spec := range gen.Specs {
-				if vs, ok := spec.(*ast.ValueSpec); ok {
-					for _, x := range vs.Values {
-						if containsRecv(x) {
-							return true
-						}
-					}
-				}
-			}
-		}
-		return false
-	case *ast.LabeledStmt:
-		return stmtSweepContainsRecv(st.Stmt)
-	default:
-		return false
-	}
 }
 
 // hoist binds an effectful node (call/alloc) to a fresh temp before the current
@@ -4964,6 +4897,8 @@ func (e *emitter) emitFuncLit(lit *ast.FuncLit) (any, error) {
 
 	// Emit the body with the capture map in force and a fresh hoist context.
 	savedCapture, savedHoisted, savedName := e.captureParam, e.hoisted, e.curFuncName
+	savedFnRecv := e.fnHasRecv
+	e.fnHasRecv = containsRecv(lit.Body)
 	savedResults := e.curResults
 	savedBranch, savedGoto := e.branchLabels, e.gotoLabels
 	savedSeg, savedPC, savedLoop := e.gotoSeg, e.gotoPC, e.gotoLoop
@@ -4979,6 +4914,7 @@ func (e *emitter) emitFuncLit(lit *ast.FuncLit) (any, error) {
 		body, berr = e.emitBlock(lit.Body)
 	}
 	e.captureParam, e.hoisted, e.curFuncName = savedCapture, savedHoisted, savedName
+	e.fnHasRecv = savedFnRecv
 	e.curResults = savedResults
 	e.branchLabels, e.gotoLabels = savedBranch, savedGoto
 	e.gotoSeg, e.gotoPC, e.gotoLoop = savedSeg, savedPC, savedLoop
@@ -5161,8 +5097,9 @@ func (e *emitter) emitBinary(b *ast.BinaryExpr) (any, error) {
 		return nil, err
 	}
 	// (The binary-position left-operand pre-bind for receives was replaced
-	// by the ONE-mechanism len/cap hoist under `stmtHasRecv` — BUG-023,
-	// audit response: every operand position, not just binary operands.)
+	// by the ONE-mechanism len/cap hoist under the function-scoped
+	// `fnHasRecv` flag — BUG-023/BUG-026: every operand AND
+	// statement-emission position, not just binary operands.)
 	// The RHS of a short-circuit operator is only conditionally evaluated, so a
 	// call there cannot be hoisted ahead of the operator.
 	y, err := e.emitGuarded(op == "&&" || op == "||", "short-circuit operand", b.Y)
@@ -5782,7 +5719,7 @@ func (e *emitter) emitBuiltin(c *ast.CallExpr, name string) (any, bool, error) {
 		// lexical left-to-right order (hoists append in emission order).
 		// Under hoistForbidden the sweep cannot contain a receive (the
 		// receive itself refuses there), so inline stays correct.
-		if e.stmtHasRecv && e.hoistForbidden == "" {
+		if e.fnHasRecv && e.hoistForbidden == "" {
 			hoisted, err := e.hoist(node, e.goTypeOf(c))
 			if err != nil {
 				return nil, false, err
@@ -6037,7 +5974,10 @@ func (e *emitter) emitDeferClose(c *ast.CallExpr) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	name := "$deferClose" + itoa(e.liftSeq)
+	// Qualified by the enclosing function like every lifted literal
+	// (BUG-027: liftSeq resets per function, so the bare name collided
+	// across two functions and killed the whole package).
+	name := e.curFuncName + "$deferClose" + itoa(e.liftSeq)
 	e.liftSeq++
 	e.lifted = append(e.lifted, map[string]any{
 		"name": name,
@@ -6256,16 +6196,15 @@ func (e *emitter) emitMake(c *ast.CallExpr) (any, bool, error) {
 
 // ---- channels (channels arc slice 1) ----
 
-// containsRecv reports whether an expression syntactically contains a
-// channel receive, WITHOUT descending into func literals (their bodies
-// evaluate at call time, not here). Spec §Order of evaluation: function
-// calls AND receive operations are ordered lexically left-to-right — a
-// receive hoists to a statement (it can block), so any operand LEFT of it
-// whose evaluation the spec orders (a call — len/cap included) must be
-// pre-bound ahead of the hoisted receive or the receive's channel-state
-// effect would be observed early (caught by select-ready-send's
-// `len(ch)*10 + <-ch`).
-func containsRecv(x ast.Expr) bool {
+// containsRecv reports whether a node syntactically contains a channel
+// receive, WITHOUT descending into func literals (their bodies evaluate
+// at call time and scan their own bodies at emitFuncLit). Spec §Order of
+// evaluation: function calls AND receive operations are ordered
+// lexically left-to-right — a receive hoists to a statement (it can
+// block), so any spec-ordered evaluation LEFT of it that is not itself
+// hoisted (len/cap) must hoist too, which is what the function-scoped
+// `fnHasRecv` flag drives (BUG-023/BUG-026).
+func containsRecv(x ast.Node) bool {
 	found := false
 	ast.Inspect(x, func(n ast.Node) bool {
 		if found {
