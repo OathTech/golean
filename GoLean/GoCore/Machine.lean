@@ -408,6 +408,15 @@ def applyStrictOp (s : ExecState) : StrictOp → List GoValue → Except GoError
                   match ← loadLoc s baseLoc with
                   | .mapData entries => return (.int entries.size, s)
                   | other => stuck s!"expected map data, got {repr other}"
+          -- len(ch) = elements queued in the buffer; nil channel = 0
+          -- (spec §Length and capacity). Never panics, never blocks.
+          | .chan ch =>
+              match ch.base with
+              | none => return (.int 0, s)
+              | some baseLoc =>
+                  match ← loadLoc s baseLoc with
+                  | .chanData buf _ _ => return (.int buf.size, s)
+                  | other => stuck s!"expected channel data, got {repr other}"
           | other => unsupported s!"len for non-array/slice/map value {repr other}"
   | .capacityOf typ, [v] => do
       match typ with
@@ -421,6 +430,14 @@ def applyStrictOp (s : ExecState) : StrictOp → List GoValue → Except GoError
               | other => unsupported s!"cap for non-array pointer value {repr other}"
           | .slice slice =>
               validateSlice slice *> return (.int slice.cap, s)
+          -- cap(ch) = buffer capacity; nil channel = 0.
+          | .chan ch =>
+              match ch.base with
+              | none => return (.int 0, s)
+              | some baseLoc =>
+                  match ← loadLoc s baseLoc with
+                  | .chanData _ capacity _ => return (.int capacity, s)
+                  | other => stuck s!"expected channel data, got {repr other}"
           | other => unsupported s!"cap for non-array/slice value {repr other}"
   | .funcValOf fid, vs => return (.funcVal fid vs, s)
   | .minOf, v :: vs =>
@@ -468,6 +485,7 @@ def applyStrictOp (s : ExecState) : StrictOp → List GoValue → Except GoError
           match ty with
           | .slice _ => do return ((← defaultValue s ty), s)
           | .map _ _ => do return ((← defaultValue s ty), s)
+          | .chan _ _ => do return ((← defaultValue s ty), s)
           | .pointer _ => return (.nil, s)
           | .unsupported feature => unsupported s!"nil literal for {feature}"
           | other => stuck s!"nil literal for non-nilable type {repr other}"
@@ -554,6 +572,11 @@ inductive StmtOp where
   | newValue (typ : Option Ty)
   | makeSlice (elem : Ty) (hasCap : Bool)
   | makeMap (hasSpace : Bool)
+  /-- `make(chan T[, n])` (channels arc slice 1): allocate an empty
+  `chanData` cell (the `makeMap` shape; the cell is untyped, like
+  `mapData`). Negative capacity ⇒ the recoverable run-time panic
+  `makechan: size out of range` (probe p21). -/
+  | makeChan (hasCap : Bool)
   | mapAssign (keyTy valueTy : Ty)
   | mapLookup (keyTy valueTy : Ty)
   | typeAssertStmt (targetTy : Ty)
@@ -585,6 +608,9 @@ def stmtPlan : Stmt → Option (StmtOp × Nat × List Expr)
   | .makeMap target _ _ space => do
       let te ← assigneeExpr target
       return (.makeMap space.isSome, 1, [te] ++ space.toList)
+  | .makeChan target _ capacity => do
+      let te ← assigneeExpr target
+      return (.makeChan capacity.isSome, 1, [te] ++ capacity.toList)
   | .mapAssign base index value keyTy valueTy =>
       return (.mapAssign keyTy valueTy, 0, [base, index, value])
   | .mapLookup target okTarget base index keyTy valueTy => do
@@ -669,6 +695,25 @@ def applyStmtOpCore (s : ExecState) (op : StmtOp) (nt : Nat)
       let (base, s₁) := s.alloc (.mapData #[])
       let loc ← valueAsLoc tv
       return ((← storeLoc s₁ loc (.map { base := some base })))
+  | .makeChan hasCap => do
+      let (tv, capV?) ←
+        match vs, hasCap with
+        | [tv], false => pure (tv, none)
+        | [tv, capV], true => pure (tv, some capV)
+        | _, _ => stuck "malformed makeChan operands"
+      let capacity ←
+        match capV? with
+        | none => pure 0
+        | some capV => do
+            let size ← valueAsInt capV
+            -- Negative ⇒ run-time panic; the message is gc's realized
+            -- string (probe p21) — spec pins only THAT a panic occurs
+            -- (runtime error values are unspecified), matching the
+            -- repo's existing makemap/makeslice narrowing.
+            natFromNonnegativeInt "makechan: size out of range" size
+      let (base, s₁) := s.alloc (.chanData #[] capacity false)
+      let loc ← valueAsLoc tv
+      return ((← storeLoc s₁ loc (.chan { base := some base })))
   | .mapAssign keyTy valueTy =>
       match vs with
       | [baseV, keyV, valueV] => do
@@ -916,6 +961,127 @@ def bindIterVars (env : LocalEnv) (s : ExecState) (keyVar valVar : Option String
       let (loc, s') := s.alloc vv (some valTy)
       pure (env.declare name loc, s')
   | none => pure (env, s)
+
+/-! ## Channel statements (channels arc slice 1,
+`docs/2026-08-06_channels-arc-design.md` D4/D7)
+
+Send/receive/close follow the wide-statement pattern (an operand plan
+evaluated under one frame, `Cont.chanStK`, targets first as checked
+addresses) but end in `applyChanOp` — whose outcome is a CONFIGURATION,
+not just a state, because a channel op may proceed (`.next`), panic
+(`.panicking`), or BLOCK (a `.blocked*` configuration: relation-silent,
+step-function-terminal; in this zero-scheduler slice a blocked
+configuration is classified as the deadlocked run — exactly Go's
+single-goroutine behavior, `fatal error: all goroutines are asleep -
+deadlock!`). Buffer FIFO is SPEC ("Channels act as first-in-first-out
+queues") — deterministic, no `Choices` consumption anywhere in this
+module's channel machinery. -/
+
+/-- Head of a channel statement (send/receive/close). `elem` is the
+element type: sends normalize the value at it (the `mapAssign` key/value
+discipline, so buffered values are self-normalized); receives build the
+closed-channel zero value from it. -/
+inductive ChanStOp where
+  | send (elem : Ty)
+  | recv (elem : Ty)
+  | close
+  deriving Repr, BEq
+
+/-- Classify a channel statement: op head, leading target-address count,
+operands in evaluation order — channel THEN value for a send (pinned by
+`ordinary-send-eval-order`), target addresses THEN channel for a receive
+(Go's assignment operand order, pinned by `ordinary-receive-eval-order`).
+`none` for unsupported assignees and >2 receive targets (fail closed). -/
+def chanPlan : Stmt → Option (ChanStOp × Nat × List Expr)
+  | .chanSend ch value elem => some (.send elem, 0, [ch, value])
+  | .chanRecv targets ch elem => do
+      if targets.size > 2 then none else
+      let tes ← assigneesExprs targets.toList
+      return (.recv elem, targets.size, tes ++ [ch])
+  | .closeChan ch => some (.close, 0, [ch])
+  | _ => none
+
+/-- The channel-statement plan and the wide-statement plan classify
+DISJOINT statements: a statement `chanPlan` recognizes is never one
+`stmtPlan` recognizes. `step_det`'s rule-disjointness sweep cites this
+(as a conditional simp lemma) to refute the generic-statement cross
+pairs without casing the statement. -/
+theorem stmtPlan_of_chanPlan {stmt : Stmt} {p : ChanStOp × Nat × List Expr}
+    (h : chanPlan stmt = some p) : stmtPlan stmt = none := by
+  cases stmt <;> simp_all [chanPlan, stmtPlan]
+
+/-- Load a channel's data cell: (buffer, capacity, closed). -/
+def chanCell (s : ExecState) (loc : Loc) :
+    Except GoError (Array GoValue × Nat × Bool) := do
+  match ← loadLoc s loc with
+  | .chanData buf capacity closed => return (buf, capacity, closed)
+  | other => stuck s!"expected channel data, got {repr other}"
+
+/-- The values a receive delivers to its target list: the received value,
+plus the comma-ok Bool when the form has two targets. -/
+def recvStores (v : GoValue) (ok : Bool) : Nat → List GoValue
+  | 2 => [v, .bool ok]
+  | 1 => [v]
+  | _ => []
+
+/-- One `select` clause with its entry-time operands EVALUATED (spec
+§Select statements, step 1): the channel value (and send value) are
+pinned; receive targets stay as their assignee expressions — evaluated
+only after selection (step 4). The payload of the readiness step and of
+the `.blockedSelect` configuration. -/
+inductive EvClause where
+  | sendEv (chv v : GoValue) (elem : Ty) (body : Stmt)
+  | recvEv (chv : GoValue) (targets : List Expr) (elem : Ty) (body : Stmt)
+  deriving Repr, BEq
+
+/-- The entry-time operand list of a `select` (step 1, source order): per
+clause the channel operand, plus the RHS value for send clauses. -/
+def selectOperands : List (SelectClauseHead × Stmt) → List Expr
+  | [] => []
+  | (.send ch v _, _) :: rest => ch :: v :: selectOperands rest
+  | (.recv _ ch _, _) :: rest => ch :: selectOperands rest
+
+/-- Zip the evaluated entry operands back onto the clauses (the inverse
+of `selectOperands`' flattening). Fails closed on arity drift and on
+unsupported receive-target assignees. -/
+def evalClauses : List (SelectClauseHead × Stmt) → List GoValue →
+    Except GoError (List EvClause)
+  | [], [] => return []
+  | (.send _ _ elem, body) :: rest, chv :: vv :: vs => do
+      return .sendEv chv vv elem body :: (← evalClauses rest vs)
+  | (.recv targets _ elem, body) :: rest, chv :: vs => do
+      match assigneesExprs targets.toList with
+      | some tes => return .recvEv chv tes elem body :: (← evalClauses rest vs)
+      | none => throw (.unsupported "unsupported select receive target assignee")
+  | _, _ => stuck "malformed select operand values"
+
+/-- Clause readiness — a pure function of the channel cells (spec step 2
+"can proceed", with one runtime-pinned subtlety: a SEND on a closed
+channel counts as READY and panics when selected — probe p23;
+`select.go`'s pass-1 send check tests closed first). A nil channel is
+never ready. -/
+def clauseReady (s : ExecState) : EvClause → Except GoError Bool
+  | .sendEv chv _ _ _ => do
+      let ch ← valueAsChan chv
+      match ch.base with
+      | none => return false
+      | some loc => do
+          let (buf, capacity, closed) ← chanCell s loc
+          return closed || buf.size < capacity
+  | .recvEv chv _ _ _ => do
+      let ch ← valueAsChan chv
+      match ch.base with
+      | none => return false
+      | some loc => do
+          let (buf, _, closed) ← chanCell s loc
+          return buf.size > 0 || closed
+
+/-- The ready sublist, in clause order. -/
+def readyClauses (s : ExecState) : List EvClause → Except GoError (List EvClause)
+  | [] => return []
+  | c :: rest => do
+      let tail ← readyClauses s rest
+      if ← clauseReady s c then return c :: tail else return tail
 
 /-! ## The panic chain (the unwinding arc, `docs/2026-07-25_unwinding-arc.md` §A1–A3) -/
 
@@ -1189,6 +1355,24 @@ inductive Cont where
   A NEW panic unwinding through the marker merges behind the suspended
   chain. -/
   | panicResumeK (chain : List PanicEntry) (k : Cont)
+  /-- Channel-statement operand evaluation (channels arc slice 1): the
+  `stmtOpK` discipline — leading `ntargets` operands are target
+  addresses, checked as they arrive — ending in one `applyChanOp` step
+  whose outcome may be next / panicking / blocked. Appended at the END
+  of the inductive (with its two select siblings) so positional case
+  tags in the correspondence proofs stay stable. -/
+  | chanStK (op : ChanStOp) (ntargets : Nat) (done : List GoValue)
+      (pending : List Expr) (env : LocalEnv) (k : Cont)
+  /-- `select` entry-time operand evaluation (spec step 1, source order);
+  ends in one `applySelect` readiness/commit step. -/
+  | selectOpsK (clauses : List (SelectClauseHead × Stmt)) (default? : Option Stmt)
+      (done : List GoValue) (pending : List Expr) (env : LocalEnv) (k : Cont)
+  /-- A selected receive clause's target evaluation (spec step 4: LHS
+  evaluated only AFTER the communication committed): the received value
+  and ok flag are pinned; target addresses accumulate; the final step
+  stores and enters the clause body. -/
+  | selectRecvK (v : GoValue) (ok : Bool) (locs : List Loc)
+      (pending : List Expr) (body : Stmt) (env : LocalEnv) (k : Cont)
 
 /-- The continuation for entering a `.seqn`: under a same-env governing
 sequence, SPLICE the statements into it (D1) — Go statement lists splice
@@ -1257,6 +1441,9 @@ def panicPassthrough : Cont → Option Cont
   | .deferCalleeK _ _ k => some k
   | .deferArgsK _ _ _ _ k => some k
   | .panicArgK k => some k
+  | .chanStK _ _ _ _ _ k => some k
+  | .selectOpsK _ _ _ _ _ k => some k
+  | .selectRecvK _ _ _ _ _ _ k => some k
   | .frame _ _ _ _ _ => none
   | .panicResumeK _ _ => none
   | .stop => none
@@ -1315,6 +1502,12 @@ def recoverThroughWrappers : Cont → Option (GoValue × Cont)
   | .deferArgsK a b c d k =>
       (recoverThroughWrappers k).map (fun (v, k') => (v, .deferArgsK a b c d k'))
   | .panicArgK k => (recoverThroughWrappers k).map (fun (v, k') => (v, .panicArgK k'))
+  | .chanStK a b c d e k =>
+      (recoverThroughWrappers k).map (fun (v, k') => (v, .chanStK a b c d e k'))
+  | .selectOpsK a b c d e k =>
+      (recoverThroughWrappers k).map (fun (v, k') => (v, .selectOpsK a b c d e k'))
+  | .selectRecvK a b c d e f k =>
+      (recoverThroughWrappers k).map (fun (v, k') => (v, .selectRecvK a b c d e f k'))
 
 /-- The `recover()` builtin (arc doc §A1; wrapper transparency added at
 the arc-final audit F1/BUG-015, 2026-08-06): walk the continuation to the
@@ -1372,6 +1565,12 @@ def recoverResult : Cont → GoValue × Cont
   | .deferArgsK a b c d k =>
       let (v, k') := recoverResult k; (v, .deferArgsK a b c d k')
   | .panicArgK k => let (v, k') := recoverResult k; (v, .panicArgK k')
+  | .chanStK a b c d e k =>
+      let (v, k') := recoverResult k; (v, .chanStK a b c d e k')
+  | .selectOpsK a b c d e k =>
+      let (v, k') := recoverResult k; (v, .selectOpsK a b c d e k')
+  | .selectRecvK a b c d e f k =>
+      let (v, k') := recoverResult k; (v, .selectRecvK a b c d e f k')
 
 /-- Control configurations (the Iris `Expr` projection; the `ExecState` is
 the paired `Step` component, as before). New over the old relation:
@@ -1404,6 +1603,151 @@ inductive Config where
   no UNRECOVERED panic" (the unwinding arc retired panic-as-teleport;
   `.panicking` is the recoverable, non-terminal form). -/
   | panicked (msg : String)
+  -- Blocked configurations (channels arc slice 1, design of record D7:
+  -- "blocked goroutines are blocked-Config shapes; NO waiter queues in
+  -- channel state"). NO outgoing rules in the per-goroutine relation — in
+  -- slice 2's ThreadPool the PAIRING/wake steps live at the pool level,
+  -- and per-goroutine relation-silence here is what makes that extension
+  -- additive. In this zero-scheduler slice the driver classifies any
+  -- blocked configuration as the deadlocked run (`GoError.deadlock`):
+  -- one blocked goroutine with no siblings IS Go's "all goroutines are
+  -- asleep" state. Payloads carry what a future pairing step needs
+  -- (channel identity, in-flight value, delivery targets); `ch = none` is
+  -- the nil channel (blocks forever — no partner can exist).
+  | blockedSend (ch : Option Loc) (v : GoValue) (k : Cont)
+  | blockedRecv (ch : Option Loc) (locs : List Loc) (elem : Ty) (k : Cont)
+  | blockedSelect (clauses : List EvClause) (env : LocalEnv) (k : Cont)
+
+/-- Apply a channel statement's head to its evaluated operands (`nt`
+leading target addresses, then values; the receive's channel operand is
+LAST). One step; the outcome is a configuration — `.next k` on success,
+`.panicking` for the channel panics (send-on-closed / close-of-closed /
+close-of-nil — REAL recoverable Go panics, D4; messages are gc's realized
+strings, probes p01-p03), or a `.blocked*` shape where Go blocks (nil
+channel; unbuffered/full send; open-empty receive). Shared verbatim by
+rule `Step.chanStApply` and `stepFn`'s `chanStK` apply arm. An `.error
+(.panic msg)` result (a nil TARGET address surfacing through `locsOf`)
+becomes `.panicking` at the caller, mirroring `stmtOpApplyPanic`. -/
+def applyChanOp (s : ExecState) (op : ChanStOp) (nt : Nat) (vs : List GoValue)
+    (k : Cont) : Except GoError (Config × ExecState) := do
+  match op, vs with
+  | .send elem, [chv, vv] => do
+      let ch ← valueAsChan chv
+      -- Normalize at the element type up front (the mapAssign discipline;
+      -- for the blocked shapes the pinned value travels normalized).
+      let v' ← normalizeValueForTy s elem vv
+      match ch.base with
+      | none => return (.blockedSend none v' k, s)
+      | some loc => do
+          let (buf, capacity, closed) ← chanCell s loc
+          if closed then
+            return (.panicking [⟨runtimeErrorValue "send on closed channel", false⟩] k, s)
+          else if buf.size < capacity then do
+            let s' ← storeLoc s loc (.chanData (buf.push v') capacity closed)
+            return (.next k, s')
+          else
+            return (.blockedSend (some loc) v' k, s)
+  | .recv elem, vs => do
+      let locs ← locsOf (vs.take nt)
+      match vs.drop nt with
+      | [chv] => do
+          let ch ← valueAsChan chv
+          match ch.base with
+          | none => return (.blockedRecv none locs elem k, s)
+          | some loc => do
+              let (buf, capacity, closed) ← chanCell s loc
+              match buf[0]? with
+              | some v => do
+                  -- FIFO dequeue; a closed channel drains its buffer
+                  -- with ok = true before yielding zeros (probe p06).
+                  let s₁ ← storeLoc s loc (.chanData (buf.eraseIdx! 0) capacity closed)
+                  let s₂ ← storeMany s₁ locs (recvStores v true locs.length)
+                  return (.next k, s₂)
+              | none =>
+                  if closed then do
+                    let zero ← defaultValue s elem
+                    let s₁ ← storeMany s locs (recvStores zero false locs.length)
+                    return (.next k, s₁)
+                  else
+                    return (.blockedRecv (some loc) locs elem k, s)
+      | _ => stuck "malformed chanRecv operands"
+  | .close, [chv] => do
+      let ch ← valueAsChan chv
+      match ch.base with
+      | none => return (.panicking [⟨runtimeErrorValue "close of nil channel", false⟩] k, s)
+      | some loc => do
+          let (buf, capacity, closed) ← chanCell s loc
+          if closed then
+            return (.panicking [⟨runtimeErrorValue "close of closed channel", false⟩] k, s)
+          else do
+            let s' ← storeLoc s loc (.chanData buf capacity true)
+            return (.next k, s')
+  | op, vs => stuck s!"malformed channel-operator application: {repr op} on {vs.length} operand(s)"
+
+/-- Commit the ONE ready clause of a `select` (spec step 3): perform its
+communication, then enter the body — for a receive with targets, via the
+`selectRecvK` target-evaluation frames (spec step 4: LHS after the
+communication). A committed SEND on a closed channel panics (probe p23 —
+closed counts as ready). The "unready" stuck arms are unreachable from
+`applySelect` (which commits only ready clauses) — fail closed, never a
+silent default. -/
+def commitClause (s : ExecState) (env : LocalEnv) (k : Cont) :
+    EvClause → Except GoError (Config × ExecState)
+  | .sendEv chv vv elem body => do
+      let ch ← valueAsChan chv
+      match ch.base with
+      | none => stuck "select committed an unready send clause"
+      | some loc => do
+          let (buf, capacity, closed) ← chanCell s loc
+          if closed then
+            return (.panicking [⟨runtimeErrorValue "send on closed channel", false⟩] k, s)
+          else if buf.size < capacity then do
+            let v' ← normalizeValueForTy s elem vv
+            let s' ← storeLoc s loc (.chanData (buf.push v') capacity closed)
+            return (.exec body env k, s')
+          else stuck "select committed an unready send clause"
+  | .recvEv chv targets elem body => do
+      let ch ← valueAsChan chv
+      match ch.base with
+      | none => stuck "select committed an unready receive clause"
+      | some loc => do
+          let (buf, capacity, closed) ← chanCell s loc
+          let (v, ok, s₁) ←
+            match buf[0]? with
+            | some v => do
+                let s₁ ← storeLoc s loc (.chanData (buf.eraseIdx! 0) capacity closed)
+                pure (v, true, s₁)
+            | none =>
+                if closed then do
+                  let zero ← defaultValue s elem
+                  pure (zero, false, s)
+                else stuck "select committed an unready receive clause"
+          match targets with
+          | [] => return (.exec body env k, s₁)
+          | te :: rest =>
+              return (.evalE te env (.selectRecvK v ok [] rest body env k), s₁)
+
+/-- The `select` READINESS step (spec step 2, deterministic slice): pair
+the evaluated entry operands with their clauses, compute the ready set;
+none ready → `default` (consuming NOTHING) or block; exactly one ready →
+commit it. MULTIPLE ready clauses FAIL CLOSED (`.unsupported`) — the
+spec's "uniform pseudo-random" choice is the L2 envelope, a `Choices`
+site deliberately deferred to the scheduler arc (slice 4); refusing here
+keeps this slice free of new nondeterminism-consumption sites. Shared by
+rule `Step.selectApply` and `stepFn`. -/
+def applySelect (s : ExecState) (clauses : List (SelectClauseHead × Stmt))
+    (default? : Option Stmt) (vs : List GoValue) (env : LocalEnv) (k : Cont) :
+    Except GoError (Config × ExecState) := do
+  let evs ← evalClauses clauses vs
+  match ← readyClauses s evs with
+  | [] =>
+      match default? with
+      | some d => return (.exec d env k, s)
+      | none => return (.blockedSelect evs env k, s)
+  | [c] => commitClause s env k c
+  | _ :: _ :: _ =>
+      throw (.unsupported
+        "select with multiple ready cases (deterministic slice; the choice envelope is the scheduler arc's slice 4)")
 
 /-! ## The step relation -/
 
@@ -1957,6 +2301,82 @@ inductive Step : Config → ExecState → Config → ExecState → Prop where
       Step (.panicking chain (.frame targets results ((.funcVal fid captured, args) :: ds) k w)) s
         (.panicking (chain ++ [⟨runtimeErrorValue msg, false⟩])
           (.frame targets results ds k w)) s
+  /-- Channel statements (channels arc slice 1): the `stmtOpK` rule shape
+  — operand-plan entry, target-checked shifts, one apply step — with the
+  apply's outcome a full CONFIGURATION (`applyChanOp`: next / panicking /
+  blocked). Appended at the END of the inductive so the correspondence
+  proofs' positional case tags stay stable. The blocked configurations
+  these can step TO have no outgoing rules (relation-silent): pairing is
+  the slice-2 pool's job, and the sequential driver classifies them as
+  the deadlocked run. -/
+  | chanStFirst {stmt op nt e rest env k s} :
+      chanPlan stmt = some (op, nt, e :: rest) →
+      Step (.exec stmt env k) s (.evalE e env (.chanStK op nt [] rest env k)) s
+  | chanStShiftTarget {op nt done v loc e rest env k s} :
+      done.length < nt →
+      valueAsLoc v = .ok loc →
+      Step (.retV v (.chanStK op nt done (e :: rest) env k)) s
+        (.evalE e env (.chanStK op nt (v :: done) rest env k)) s
+  | chanStShiftPlain {op nt done v e rest env k s} :
+      nt ≤ done.length →
+      Step (.retV v (.chanStK op nt done (e :: rest) env k)) s
+        (.evalE e env (.chanStK op nt (v :: done) rest env k)) s
+  | chanStTargetPanic {op nt done v msg e rest env k s} :
+      done.length < nt →
+      valueAsLoc v = .error (.panic msg) →
+      Step (.retV v (.chanStK op nt done (e :: rest) env k)) s
+        (.panicking [⟨runtimeErrorValue msg, false⟩] k) s
+  | chanStApply {op nt done v c' env k s s'} :
+      applyChanOp s op nt (v :: done).reverse k = .ok (c', s') →
+      Step (.retV v (.chanStK op nt done [] env k)) s c' s'
+  | chanStApplyPanic {op nt done v msg env k s} :
+      applyChanOp s op nt (v :: done).reverse k = .error (.panic msg) →
+      Step (.retV v (.chanStK op nt done [] env k)) s
+        (.panicking [⟨runtimeErrorValue msg, false⟩] k) s
+  -- `select` (spec's five steps): entry evaluates the clause operands in
+  -- source order under `selectOpsK` (step 1); the apply step computes
+  -- readiness and commits (steps 2-3, `applySelect` — deterministic in
+  -- this slice: one ready clause or default; multi-ready is
+  -- relation-silent/unsupported); a selected receive's targets evaluate
+  -- after the communication (step 4, `selectRecvK`); the body enters
+  -- under the plain continuation (step 5 — the frontend wraps the whole
+  -- select in `.breakable`, so `break` needs no select-side rule).
+  | selectFirst {clauses default? e rest env k s} :
+      selectOperands clauses.toList = e :: rest →
+      Step (.exec (.selectStmt clauses default?) env k) s
+        (.evalE e env (.selectOpsK clauses.toList default? [] rest env k)) s
+  | selectNoClausesDefault {clauses d env k s} :
+      selectOperands clauses.toList = [] →
+      Step (.exec (.selectStmt clauses (some d)) env k) s (.exec d env k) s
+  /-- `select {}` (and the degenerate no-clause, no-default form): blocks
+  forever (spec: "a select with ... no default case blocks forever"). -/
+  | selectNoClausesBlock {clauses env k s} :
+      selectOperands clauses.toList = [] →
+      Step (.exec (.selectStmt clauses none) env k) s
+        (.blockedSelect [] env k) s
+  | selectOpsShift {clauses default? done v e rest env k s} :
+      Step (.retV v (.selectOpsK clauses default? done (e :: rest) env k)) s
+        (.evalE e env (.selectOpsK clauses default? (v :: done) rest env k)) s
+  | selectApply {clauses default? done v c' env k s s'} :
+      applySelect s clauses default? (v :: done).reverse env k = .ok (c', s') →
+      Step (.retV v (.selectOpsK clauses default? done [] env k)) s c' s'
+  | selectApplyPanic {clauses default? done v msg env k s} :
+      applySelect s clauses default? (v :: done).reverse env k = .error (.panic msg) →
+      Step (.retV v (.selectOpsK clauses default? done [] env k)) s
+        (.panicking [⟨runtimeErrorValue msg, false⟩] k) s
+  | selectRecvTargetLoc {v0 ok locs v loc e rest body env k s} :
+      valueAsLoc v = .ok loc →
+      Step (.retV v (.selectRecvK v0 ok locs (e :: rest) body env k)) s
+        (.evalE e env (.selectRecvK v0 ok (locs ++ [loc]) rest body env k)) s
+  | selectRecvTargetPanic {v0 ok locs v msg pending body env k s} :
+      valueAsLoc v = .error (.panic msg) →
+      Step (.retV v (.selectRecvK v0 ok locs pending body env k)) s
+        (.panicking [⟨runtimeErrorValue msg, false⟩] k) s
+  | selectRecvFinish {v0 ok locs v loc body env k s s'} :
+      valueAsLoc v = .ok loc →
+      storeMany s (locs ++ [loc]) (recvStores v0 ok (locs ++ [loc]).length) = .ok s' →
+      Step (.retV v (.selectRecvK v0 ok locs [] body env k)) s
+        (.exec body env k) s'
 
 /-- Reflexive-transitive closure of `Step`. -/
 inductive Steps : Config → ExecState → Config → ExecState → Prop where

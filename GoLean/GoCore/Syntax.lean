@@ -173,6 +173,21 @@ inductive Assignee where
   | unsupported (feature : String)
   deriving Repr, BEq, Inhabited
 
+/-- One communication clause HEAD of a `select` statement (channels arc
+slice 1): the operands evaluated at select ENTRY (channel operand; send
+RHS), with the clause BODY carried beside it in the `selectStmt` pair
+array (a nested-inductive shape via `Prod`, the `arrayLit` precedent —
+no mutual inductive). Receive targets are Assignees evaluated only AFTER
+selection (spec §Select statements, step 4); the frontend lowers
+short-variable-declaration and effectful LHS forms into fresh pre-declared
+temps plus a body-side assignment, so step-4 side effects stay inside the
+selected clause. `elem` is the channel's element type (zero value on
+closed receive; send-value normalization). -/
+inductive SelectClauseHead where
+  | send (ch value : Expr) (elem : Ty)
+  | recv (targets : Array Assignee) (ch : Expr) (elem : Ty)
+  deriving Repr, BEq, Inhabited
+
 inductive Stmt where
   | seqn (stmts : Array Stmt)
   | block (decls : Array Param) (stmts : Array Stmt)
@@ -255,6 +270,44 @@ inductive Stmt where
   `docs/2026-07-25_unwinding-arc.md`. -/
   | panicStmt (payload : Expr)
   | label (name : String)
+  -- Channel statements (channels arc slice 1,
+  -- `docs/2026-08-06_channels-arc-design.md` D7). Range-over-channel is a
+  -- FRONTEND desugar to a receive loop (recorded in the design note's
+  -- build log): the corpus's other range forms already desugar to `while`
+  -- (`mapRange` is primitive only for its nondeterministic order), and a
+  -- channel range is exactly repeated comma-ok receive until closed —
+  -- no snapshot, no new iteration frame.
+  /-- `make(chan T, n)`: allocate a `chanData` cell (empty buffer,
+  capacity `n`, open). Negative `n` is the recoverable run-time panic
+  `makechan: size out of range` (spec §Making slices, maps and channels;
+  probe p21). Routed through the wide-statement (`StmtOp`) machinery like
+  `makeMap`. -/
+  | makeChan (target : Assignee) (elem : Ty) (capacity : Option Expr)
+  /-- `ch <- v`: channel then value, evaluated in that order (pinned by
+  `channels/make-edge/ordinary-send-eval-order`), then ONE send step:
+  nil → block; closed → panic "send on closed channel"; room → FIFO
+  enqueue (normalized at `elem`); full → block. -/
+  | chanSend (ch value : Expr) (elem : Ty)
+  /-- Receive statement covering `<-ch` (0 targets), `x = <-ch`
+  (1 target), and `x, ok = <-ch` (2 targets): target ADDRESSES first (in
+  order), then the channel (Go's assignment operand order, pinned by
+  `ordinary-receive-eval-order`), then ONE receive step: nil → block;
+  buffered value → dequeue, `ok = true`; closed-and-drained → zero value
+  at `elem`, `ok = false`; open-and-empty → block. Receive in expression
+  position lowers frontend-side into a temp via this statement. -/
+  | chanRecv (targets : Array Assignee) (ch : Expr) (elem : Ty)
+  /-- `close(ch)`: nil → panic "close of nil channel"; already closed →
+  panic "close of closed channel"; else set the closed flag (buffered
+  values remain receivable — close does not drain). -/
+  | closeChan (ch : Expr)
+  /-- `select`: clause operands (channel; send RHS) evaluate once, in
+  source order, at ENTRY (spec step 1); one readiness step follows —
+  exactly-one-ready commits it, none-ready takes `default` (consuming
+  NOTHING — deterministic) or blocks without one. MULTI-ready select
+  fails closed in this slice (slice 4 adds the L2 choice envelope). A
+  send clause on a CLOSED channel counts as READY and panics when
+  selected (probe p23; `select.go` checks closed first). -/
+  | selectStmt (clauses : Array (SelectClauseHead × Stmt)) (default? : Option Stmt)
   | unsupported (feature : String)
   deriving Repr, BEq, Inhabited
 

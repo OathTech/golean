@@ -178,6 +178,37 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
       | .mapRange keyVar valVar mapExpr keyTy valTy body =>
           return (.evalE mapExpr env
             (.mapRangeK keyVar valVar keyTy valTy body env k), s, choices)
+      -- Channel statements (channels arc slice 1): operand-plan entry
+      -- mirroring the wide-statement arm; the plans always carry ≥ 1
+      -- operand (send: channel; recv: targets then channel; close:
+      -- channel), so there is no nullary case.
+      | .chanSend ch value elem =>
+          return (.evalE ch env (.chanStK (.send elem) 0 [] [value] env k), s, choices)
+      | .closeChan ch =>
+          return (.evalE ch env (.chanStK .close 0 [] [] env k), s, choices)
+      | .chanRecv targets ch elem =>
+          -- Named scrutinee on purpose: the equation is what the
+          -- correspondence proofs' `fun_cases` branches rewrite with.
+          match _hplan : chanPlan (.chanRecv targets ch elem) with
+          | some (op, nt, e :: rest) =>
+              return (.evalE e env (.chanStK op nt [] rest env k), s, choices)
+          | some (_, _, []) => throw (.internal "empty channel-receive operand plan")
+          | none =>
+              if targets.size > 2 then
+                throw (.stuck s!"channel receive with {targets.size} targets")
+              else
+                throw (.unsupported "unsupported channel-receive target assignee")
+      | .selectStmt clauses default? =>
+          match selectOperands clauses.toList with
+          | e :: rest =>
+              return (.evalE e env
+                (.selectOpsK clauses.toList default? [] rest env k), s, choices)
+          | [] =>
+              -- No communication clauses: `default` runs immediately;
+              -- otherwise `select {}` blocks forever (spec).
+              match default? with
+              | some d => return (.exec d env k, s, choices)
+              | none => return (.blockedSelect [] env k, s, choices)
       | .unsupported feature => throw (.unsupported feature)
       | wide =>
           -- assignMany / newValue / makeSlice / makeMap / mapAssign /
@@ -391,6 +422,52 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
           return (.next (.mapIterK keyVar valVar keyTy valTy body entries env k'), s, choices)
       | .panicArgK k' =>
           return (.panicking [⟨panicPayload v, false⟩] k', s, choices)
+      | .chanStK op nt done pending env k' =>
+          -- Target addresses checked as they arrive (stmtOpK discipline);
+          -- at the apply position the same check surfaces through
+          -- `applyChanOp`'s `locsOf`, becoming `.panicking` below.
+          match pending with
+          | e :: rest =>
+              if done.length < nt then
+                match valueAsLoc v with
+                | .error (.panic msg) =>
+                    return (.panicking [⟨runtimeErrorValue msg, false⟩] k', s, choices)
+                | .error err => throw err
+                | .ok _ =>
+                    return (.evalE e env (.chanStK op nt (v :: done) rest env k'), s, choices)
+              else
+                return (.evalE e env (.chanStK op nt (v :: done) rest env k'), s, choices)
+          | [] =>
+              match applyChanOp s op nt (v :: done).reverse k' with
+              | .ok (c', s') => return (c', s', choices)
+              | .error (.panic msg) =>
+                  return (.panicking [⟨runtimeErrorValue msg, false⟩] k', s, choices)
+              | .error err => throw err
+      | .selectOpsK clauses default? done pending env k' =>
+          match pending with
+          | e :: rest =>
+              return (.evalE e env
+                (.selectOpsK clauses default? (v :: done) rest env k'), s, choices)
+          | [] =>
+              match applySelect s clauses default? (v :: done).reverse env k' with
+              | .ok (c', s') => return (c', s', choices)
+              | .error (.panic msg) =>
+                  return (.panicking [⟨runtimeErrorValue msg, false⟩] k', s, choices)
+              | .error err => throw err
+      | .selectRecvK v0 okb locs pending body env k' =>
+          match valueAsLoc v with
+          | .error (.panic msg) =>
+              return (.panicking [⟨runtimeErrorValue msg, false⟩] k', s, choices)
+          | .error err => throw err
+          | .ok loc =>
+              match pending with
+              | e :: rest =>
+                  return (.evalE e env
+                    (.selectRecvK v0 okb (locs ++ [loc]) rest body env k'), s, choices)
+              | [] => do
+                  let s' ← storeMany s (locs ++ [loc])
+                    (recvStores v0 okb (locs ++ [loc]).length)
+                  return (.exec body env k', s', choices)
       | .stop => throw (.internal "value delivered to empty continuation")
       | _ => throw (.internal "value delivered to statement continuation")
   | .next k =>
@@ -532,6 +609,18 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
       | .frame _ _ _ _ _ => throw (.stuck "function body escaped with labeled continue")
       | .stop => throw (.stuck s!"labeled continue escaped its label: {L}")
       | _ => throw (.internal "labeled continue delivered to expression continuation")
+  -- Blocked configurations (channels arc slice 1): relation-silent — no
+  -- pairing partner can exist in the sequential machine, so stepping one
+  -- IS the deadlocked run (Go: "all goroutines are asleep"). Classified
+  -- here (not `.internal`) so every iteration driver reports the honest
+  -- terminal even without its own guard; `runConfig`/`execStmtLoop`
+  -- additionally classify blocked configurations before the fuel check,
+  -- like the other terminals. Slice 2's pool machine steps blocked
+  -- configurations at the POOL level (pairing/wake) and never calls the
+  -- per-goroutine `stepFn` on them.
+  | .blockedSend _ _ _ => throw .deadlock
+  | .blockedRecv _ _ _ _ => throw .deadlock
+  | .blockedSelect _ _ _ => throw .deadlock
 
 /-- Fuel-bounded iteration of `stepFn` to a terminal configuration. Fuel
 counts machine steps; the terminal check precedes the fuel check so a
@@ -543,6 +632,12 @@ def runConfig : Nat → ExecState → Config → Choices → Except GoError (Exe
       match c with
       | .next .stop => return (s, choices)
       | .panicked msg => throw (.panic msg)
+      -- Blocked = deadlocked (slice 1, zero scheduler): classified BEFORE
+      -- the fuel check, like the terminals — a blocked run must never
+      -- report fuel exhaustion instead of the deadlock it reached.
+      | .blockedSend _ _ _ => throw .deadlock
+      | .blockedRecv _ _ _ _ => throw .deadlock
+      | .blockedSelect _ _ _ => throw .deadlock
       | c =>
           match fuel with
           | 0 => throw .fuelOut
@@ -588,6 +683,9 @@ def execStmtLoop : Nat → ExecState → Config → Choices →
       | .breaking .stop => return (.broke σ, choices)
       | .continuing .stop => return (.continued σ, choices)
       | .panicked msg => throw (.panic msg)
+      | .blockedSend _ _ _ => throw .deadlock
+      | .blockedRecv _ _ _ _ => throw .deadlock
+      | .blockedSelect _ _ _ => throw .deadlock
       | c =>
           match fuel with
           | 0 => throw .fuelOut

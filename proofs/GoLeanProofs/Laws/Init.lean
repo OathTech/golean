@@ -69,6 +69,7 @@ theorem wp_init {pid : String} {pty : Ty} {v : GoValue} {rest : List Stmt}
     cases hst with
     | stmtOpFirst hplan => simp [stmtPlan] at hplan
     | stmtOpNullary hplan _ => simp [stmtPlan] at hplan
+    | chanStFirst hplan => simp [chanPlan] at hplan
     | initialization hd ha =>
       rw [hdef σ₁ htypes] at hd
       injection hd with hv

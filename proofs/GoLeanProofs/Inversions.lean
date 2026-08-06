@@ -42,7 +42,11 @@ theorem step_det {c : Config} {σ : ExecState} {c₁ : Config} {σ₁ : ExecStat
   cases h₁ <;> cases h₂ <;>
     first
       | (simp_all [Config.choiceFree, strictPlan, stmtPlan, panicPassthrough,
-          chainNewestRecovered]; done)
+          chainNewestRecovered, chanPlan, selectOperands]; done)
+      -- The one cross-plan pair simp cannot refute alone: a statement
+      -- both `stmtPlan` and `chanPlan` claim (their domains are disjoint,
+      -- `stmtPlan_of_chanPlan` — channels arc slice 1).
+      | (have := stmtPlan_of_chanPlan ‹_›; simp_all; done)
       | omega
 
 end GoLean.GoCore.Machine

@@ -371,6 +371,7 @@ def canonicalTyFuel : Nat → ExecState → Ty → Ty
   | fuel + 1, state, .array n elem => .array n (canonicalTyFuel fuel state elem)
   | fuel + 1, state, .map k v =>
       .map (canonicalTyFuel fuel state k) (canonicalTyFuel fuel state v)
+  | fuel + 1, state, .chan d e => .chan d (canonicalTyFuel fuel state e)
   | fuel + 1, state, .funcType ps rs =>
       .funcType (ps.map (canonicalTyFuel fuel state))
         (rs.map (canonicalTyFuel fuel state))
@@ -380,6 +381,7 @@ def canonicalTyFuel : Nat → ExecState → Ty → Ty
   | 0, _, .slice _ => .unsupported "canonical type: type nesting too deep"
   | 0, _, .array _ _ => .unsupported "canonical type: type nesting too deep"
   | 0, _, .map _ _ => .unsupported "canonical type: type nesting too deep"
+  | 0, _, .chan _ _ => .unsupported "canonical type: type nesting too deep"
   | 0, _, .funcType _ _ => .unsupported "canonical type: type nesting too deep"
   | _, _, other => other
 
@@ -399,6 +401,7 @@ def Ty.mentionsUnsupportedFuel : Nat → Ty → Bool
     | .pointer e => Ty.mentionsUnsupportedFuel fuel e
     | .slice e => Ty.mentionsUnsupportedFuel fuel e
     | .array _ e => Ty.mentionsUnsupportedFuel fuel e
+    | .chan _ e => Ty.mentionsUnsupportedFuel fuel e
     | .map k v => Ty.mentionsUnsupportedFuel fuel k || Ty.mentionsUnsupportedFuel fuel v
     | .funcType ps rs =>
         ps.any (fun t => Ty.mentionsUnsupportedFuel fuel t)
@@ -493,6 +496,9 @@ def goTypeNameForMessageFuel : Nat → ExecState → Ty → String
       | .pointer elem => s!"*{goTypeNameForMessageFuel fuel state elem}"
       | .slice elem => s!"[]{goTypeNameForMessageFuel fuel state elem}"
       | .map key value => s!"map[{goTypeNameForMessageFuel fuel state key}]{goTypeNameForMessageFuel fuel state value}"
+      | .chan .both elem => s!"chan {goTypeNameForMessageFuel fuel state elem}"
+      | .chan .send elem => s!"chan<- {goTypeNameForMessageFuel fuel state elem}"
+      | .chan .recv elem => s!"<-chan {goTypeNameForMessageFuel fuel state elem}"
       | .interface name => if isEmptyInterfaceName name then "interface {}" else name.key
       | .defined name => name.key
       | .array length elem => s!"[{length}]{goTypeNameForMessageFuel fuel state elem}"
@@ -1081,6 +1087,13 @@ from {actual.key} (non-identical underlying)"
       return .slice { base := none, offset := 0, len := 0, cap := 0 }
   | _, _, .map _ _, value@(.map _) => return value
   | _, _, .map _ _, .nil => return .map { base := none }
+  -- Channel conversions: the only runtime-legal ones change DIRECTION
+  -- (or retag through a defined type) — the reference is unchanged
+  -- (spec §Conversions; probe p12: a directional conversion of the same
+  -- channel remains ==-equal). A nil operand produces the machine's own
+  -- nil-channel representation, like the map/slice arms above.
+  | _, _, .chan _ _, value@(.chan _) => return value
+  | _, _, .chan _ _, .nil => return .chan { base := none }
   | _, _, .funcType _ _, value@(.funcVal _ _) => return value
   | _, _, .funcType _ _, .nil => return .nil
   -- Conversion INTO an interface type at a machine site (map key slots,
@@ -1129,6 +1142,7 @@ def defaultValueFuel : Nat → ExecState → Ty → Except GoError GoValue
       return .array (Array.replicate length elemDefault)
   | _ + 1, _, .slice _ => return .slice { base := none, offset := 0, len := 0, cap := 0 }
   | _ + 1, _, .map _ _ => return .map { base := none }
+  | _ + 1, _, .chan _ _ => return .chan { base := none }
   | _ + 1, _, .pointer _ => return .nil
   | _ + 1, _, .funcType _ _ => return .nil
   | _ + 1, _, .interface _ => return .nil
@@ -1298,6 +1312,10 @@ def valueAsMap : GoValue → Except GoError MapValue
   | .map value => return value
   | other => stuck s!"expected map value, got {repr other}"
 
+def valueAsChan : GoValue → Except GoError ChanValue
+  | .chan value => return value
+  | other => stuck s!"expected channel value, got {repr other}"
+
 def valueAsLoc : GoValue → Except GoError Loc
   | .addr loc => return loc
   | .nil => panic "runtime error: invalid memory address or nil pointer dereference"
@@ -1397,6 +1415,15 @@ def valueEqFuel : Nat → ExecState → Ty → GoValue → GoValue → Except Go
     | _ + 1, _, .map _ _, .map left, .nil => return left.base.isNone
     | _ + 1, _, .map _ _, .nil, .map right => return right.base.isNone
     | _ + 1, _, .map _ _, left, right => stuck s!"map equality expected map/nil operands, got {repr left} and {repr right}"
+    -- Channel == is REFERENCE identity (spec: "equal if they were created
+    -- by the same call to make or if both have value nil"; probe p12) —
+    -- the derived ChanValue BEq is exactly base-loc equality, nil = base
+    -- none. Unlike maps, non-nil channels ARE comparable.
+    | _ + 1, _, .chan _ _, .chan left, .chan right => return left == right
+    | _ + 1, _, .chan _ _, .chan left, .nil => return left.base.isNone
+    | _ + 1, _, .chan _ _, .nil, .chan right => return right.base.isNone
+    | _ + 1, _, .chan _ _, .nil, .nil => return true
+    | _ + 1, _, .chan _ _, left, right => stuck s!"channel equality expected channel/nil operands, got {repr left} and {repr right}"
     | _ + 1, _, .interface _, .nil, .nil => return true
     | _ + 1, _, .interface _, .nil, _ => return false
     | _ + 1, _, .interface _, _, .nil => return false

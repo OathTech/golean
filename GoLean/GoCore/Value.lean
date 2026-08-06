@@ -107,6 +107,19 @@ structure FuncId where
   key : String
   deriving Repr, BEq, Inhabited, DecidableEq
 
+/-- Channel direction, a STATIC type property (spec §Channel types: "A
+channel may be constrained only to send or only to receive by assignment
+or explicit conversion" — direction lives in the type, never in the
+runtime value; the negative corpus pins direction misuse at the compile
+stage via go/types). Carried on `Ty.chan` because direction is part of
+type IDENTITY (a directional conversion changes the type but not the
+channel), which interface boxing/asserts and `Ty.eqb` key on. -/
+inductive ChanDir where
+  | both
+  | send
+  | recv
+  deriving Repr, BEq, Inhabited, DecidableEq
+
 def IntKind.compatibleResult (left right : IntKind) : Option IntKind :=
   if left == right then
     some left
@@ -131,6 +144,18 @@ inductive GoError where
   conflating the two (the old shape distinguished them only by message
   text) would make that reading unstatable. -/
   | fuelOut
+  /-- Deadlock — a PROGRAM behavior, not a model artifact (channels arc
+  slice 1): the run reached a blocked configuration with no runnable
+  goroutine, matching Go's runtime detector (`fatal error: all
+  goroutines are asleep - deadlock!`, exit status 2 — a fatal, not a
+  recoverable panic). In the zero-scheduler slice the single goroutine
+  blocking IS whole-program deadlock, so `stepFn` classifies blocked
+  configurations with this directly; the ThreadPool machine (slice 2)
+  moves the all-blocked judgment to the pool level. The message text is
+  the detector's fixed line — Go pins the abort MESSAGE, though the
+  detection itself is the flagship's rendering of the spec's "blocks
+  forever" (latitude row L6, ground-truth note §6). -/
+  | deadlock
   deriving Repr, BEq, Inhabited
 
 def GoError.status : GoError → String
@@ -139,6 +164,7 @@ def GoError.status : GoError → String
   | .stuck _ => "stuck"
   | .internal _ => "error"
   | .fuelOut => "fuel-out"
+  | .deadlock => "deadlock"
 
 def GoError.message : GoError → String
   | .panic message => message
@@ -146,6 +172,7 @@ def GoError.message : GoError → String
   | .stuck message => message
   | .internal message => message
   | .fuelOut => "GoCore execution fuel exhausted"
+  | .deadlock => "all goroutines are asleep - deadlock!"
 
 structure Addr where
   id : Nat
@@ -208,6 +235,11 @@ inductive Ty where
   | array (length : Nat) (elem : Ty)
   | slice (elem : Ty)
   | map (key value : Ty)
+  /-- A channel type `chan T` / `chan<- T` / `<-chan T` (channels arc
+  slice 1, `docs/2026-08-06_channels-arc-design.md` D7). Direction is
+  part of type identity; the runtime value (`GoValue.chan`) carries only
+  the reference. -/
+  | chan (dir : ChanDir) (elem : Ty)
   | pointer (elem : Ty)
   /-- A function type. Structural detail is carried for zero values and
   typing only — dispatch is by `FuncId`, never by this. -/
@@ -246,6 +278,7 @@ def Ty.eqbFuel : Nat → Ty → Ty → Bool
   | f + 1, .array n₁ e₁, .array n₂ e₂ => n₁ == n₂ && Ty.eqbFuel f e₁ e₂
   | f + 1, .slice e₁, .slice e₂ => Ty.eqbFuel f e₁ e₂
   | f + 1, .map k₁ v₁, .map k₂ v₂ => Ty.eqbFuel f k₁ k₂ && Ty.eqbFuel f v₁ v₂
+  | f + 1, .chan d₁ e₁, .chan d₂ e₂ => d₁ == d₂ && Ty.eqbFuel f e₁ e₂
   | f + 1, .pointer e₁, .pointer e₂ => Ty.eqbFuel f e₁ e₂
   | f + 1, .funcType p₁ r₁, .funcType p₂ r₂ =>
       Ty.eqbListFuel f p₁ p₂ && Ty.eqbListFuel f r₁ r₂
@@ -284,6 +317,11 @@ def Ty.dynamicName : Ty → String
   | .slice e => "[]" ++ Ty.dynamicName e
   | .array n e => s!"[{n}]" ++ Ty.dynamicName e
   | .map k v => s!"map[{Ty.dynamicName k}]{Ty.dynamicName v}"
+  -- reflect renders direction exactly this way ("chan int",
+  -- "<-chan int", "chan<- int").
+  | .chan .both e => "chan " ++ Ty.dynamicName e
+  | .chan .send e => "chan<- " ++ Ty.dynamicName e
+  | .chan .recv e => "<-chan " ++ Ty.dynamicName e
   | .funcType _ _ => "func"
   | .unsupported f => s!"<unsupported {f}>"
 
@@ -348,6 +386,18 @@ structure SliceValue where
   deriving Repr, BEq
 
 structure MapValue where
+  base : Option Loc
+  deriving Repr, BEq
+
+/-- A channel REFERENCE (channels arc slice 1, the `MapValue` precedent):
+`base` addresses the `GoValue.chanData` heap cell; `none` is the nil
+channel. Channel `==` is reference identity (spec: "equal if they were
+created by the same call to `make` or if both have value `nil`") — the
+derived `BEq` (base equality) IS that relation, which is also why
+channels are valid map keys. Direction is NOT here: it is a static type
+property (`Ty.chan`), and a directional conversion returns the same
+reference. -/
+structure ChanValue where
   base : Option Loc
   deriving Repr, BEq
 
@@ -464,6 +514,16 @@ inductive GoValue where
   | slice (value : SliceValue)
   | map (value : MapValue)
   | mapData (entries : Array (GoValue × GoValue))
+  /-- A channel reference (channels arc slice 1; the `map` precedent). -/
+  | chan (value : ChanValue)
+  /-- A channel's heap-cell payload (the `mapData` precedent — a value no
+  expression may produce): the buffered elements in FIFO order (spec:
+  "Channels act as first-in-first-out queues" — deterministic, strict
+  lane), the buffer capacity (`cap = 0` ⟺ unbuffered — ONE spec rule,
+  not two channel kinds), and the closed flag. NO waiter queues (design
+  of record D7): blocked goroutines are blocked-Config shapes, never
+  channel state. -/
+  | chanData (buf : Array GoValue) (capacity : Nat) (closed : Bool)
   /-- A **function value**: the callee's semantic identity plus the values
   captured at closure-creation time. Closures are lambda-lifted by the
   frontend (`docs/2026-07-24_sequential-coverage-scoping.md` §8), so the
@@ -540,6 +600,9 @@ def GoValue.eqbFuel : Nat → GoValue → GoValue → Bool
   | _, .map a, .map b => a == b
   | f + 1, .mapData a, .mapData b =>
       GoValue.eqbPairsWith (GoValue.eqbFuel f) a.toList b.toList
+  | _, .chan a, .chan b => a == b
+  | f + 1, .chanData b₁ c₁ k₁, .chanData b₂ c₂ k₂ =>
+      c₁ == c₂ && k₁ == k₂ && GoValue.eqbListWith (GoValue.eqbFuel f) b₁.toList b₂.toList
   | f + 1, .funcVal id₁ c₁, .funcVal id₂ c₂ =>
       id₁ == id₂ && GoValue.eqbListWith (GoValue.eqbFuel f) c₁ c₂
   | _, _, _ => false

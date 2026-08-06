@@ -189,6 +189,25 @@ private partial def goValueJson : GoValue → Json
             ("value", goValueJson value)
           ])))
       ]
+  -- Channel observations mirror the map shape (reference identity). The
+  -- Go harness FAILS CLOSED on a channel-typed result (reflect.Chan is
+  -- an unsupported observation kind there), so a case whose OUTPUT is a
+  -- raw channel is outside the differential's comparable surface — this
+  -- arm keeps the machine side total and diagnosable.
+  | .chan value =>
+      Json.mkObj [
+        ("tag", Json.str "chan"),
+        ("base", match value.base with
+          | some loc => locJson loc
+          | none => Json.null)
+      ]
+  | .chanData buf capacity closed =>
+      Json.mkObj [
+        ("tag", Json.str "chanData"),
+        ("buf", Json.arr (buf.map goValueJson)),
+        ("cap", Lean.toJson capacity),
+        ("closed", Lean.toJson closed)
+      ]
 
 private def runJson : GoLean.GoCore.Result → Json
   | { values } =>
@@ -334,7 +353,7 @@ private def decodeObservation (path raw : String) : Except String Json := do
       let _ ← StrictJson.mapArrayIdx values (fun i value => do
         decodeGoValueObservation s!"{path}.values[{i}]" value)
       return json
-  | "panic" | "unsupported" | "stuck" | "error" | "fuel-out" =>
+  | "panic" | "unsupported" | "stuck" | "error" | "fuel-out" | "deadlock" =>
       StrictJson.requireExactKeys path obj ["message", "schema", "status"]
       let _ ← StrictJson.string s!"{path}.message" (← StrictJson.field path obj "message")
       return json

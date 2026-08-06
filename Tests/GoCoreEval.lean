@@ -357,6 +357,108 @@ private def coreMakeSliceFunction : GoCore.Func := {
     ]
 }
 
+/-! ### Channel statements (channels arc slice 1): make/send/recv/close/
+len/cap FIFO behavior, the deadlocked terminal, the nil-close panic, and
+deterministic select (one-ready; default fallthrough). -/
+
+private def coreChanBasicFunction : GoCore.Func := {
+  id := ⟨"chanBasic_F"⟩,
+  args := #[],
+  results := #[coreParam "z"],
+  body := .block
+    #[
+      { id := "chv", typ := .chan .both .int },
+      { id := "a", typ := .int },
+      { id := "b", typ := .int },
+      { id := "okv", typ := .bool },
+      { id := "score", typ := .int }
+    ]
+    #[
+      .makeChan (.var "chv") .int (some (.intLit 2)),
+      .chanSend (.var "chv") (.intLit 7) .int,
+      .chanSend (.var "chv") (.intLit 8) .int,
+      -- len 2, cap 2 while queued
+      .assign (.var "score")
+        (.add (.mul (.length (.var "chv") (some (.chan .both .int))) (.intLit 10))
+          (.capacity (.var "chv") (some (.chan .both .int)))),
+      .chanRecv #[.var "a", .var "okv"] (.var "chv") .int,
+      .closeChan (.var "chv"),
+      -- close does not drain: the queued 8 still arrives, FIFO
+      .chanRecv #[.var "b"] (.var "chv") .int,
+      -- closed-and-drained: zero value, ok = false
+      .chanRecv #[.var "z", .var "okv"] (.var "chv") .int,
+      .ifThenElse (.var "okv")
+        (.assign (.var "z") (.intLit 999))
+        (.assign (.var "z")
+          (.add (.mul (.var "score") (.intLit 100))
+            (.add (.mul (.var "a") (.intLit 10)) (.var "b"))))
+    ]
+}
+
+private def coreChanDeadlockFunction : GoCore.Func := {
+  id := ⟨"chanDeadlock_F"⟩,
+  args := #[],
+  results := #[coreParam "z"],
+  body := .block
+    #[{ id := "chv", typ := .chan .both .int }]
+    #[
+      .makeChan (.var "chv") .int none,
+      -- unbuffered self-send: blocks; the sequential driver classifies
+      -- the blocked configuration as the deadlocked run
+      .chanSend (.var "chv") (.intLit 1) .int
+    ]
+}
+
+private def coreChanCloseNilFunction : GoCore.Func := {
+  id := ⟨"chanCloseNil_F"⟩,
+  args := #[],
+  results := #[coreParam "z"],
+  body := .block
+    #[{ id := "chv", typ := .chan .both .int }]
+    #[.closeChan (.var "chv")]
+}
+
+private def coreChanSelectFunction : GoCore.Func := {
+  id := ⟨"chanSelect_F"⟩,
+  args := #[],
+  results := #[coreParam "z"],
+  body := .block
+    #[
+      { id := "chv", typ := .chan .both .int },
+      { id := "nilv", typ := .chan .both .int },
+      { id := "rv", typ := .int },
+      { id := "okv", typ := .bool }
+    ]
+    #[
+      .makeChan (.var "chv") .int (some (.intLit 1)),
+      .chanSend (.var "chv") (.intLit 5) .int,
+      .selectStmt #[
+        (.recv #[.var "rv", .var "okv"] (.var "nilv") .int,
+          .assign (.var "z") (.intLit 111)),
+        (.recv #[.var "rv", .var "okv"] (.var "chv") .int,
+          .assign (.var "z") (.mul (.var "rv") (.intLit 3)))
+      ] none
+    ]
+}
+
+private def coreChanSelectDefaultFunction : GoCore.Func := {
+  id := ⟨"chanSelectDefault_F"⟩,
+  args := #[],
+  results := #[coreParam "z"],
+  body := .block
+    #[
+      { id := "chv", typ := .chan .both .int },
+      { id := "rv", typ := .int }
+    ]
+    #[
+      .makeChan (.var "chv") .int (some (.intLit 1)),
+      .selectStmt #[
+        (.recv #[.var "rv"] (.var "chv") .int,
+          .assign (.var "z") (.intLit 333))
+      ] (some (.assign (.var "z") (.intLit 444)))
+    ]
+}
+
 private def coreMapBasicFunction : GoCore.Func := {
   id := ⟨"map_basic_F"⟩,
   args := #[],
@@ -1288,6 +1390,16 @@ def main : IO UInt32 := do
   passed := passed && (← expectIntResult "GoCore full slice" (GoCore.Machine.runFunctionM 100000 coreFullSliceFunction #[]) 5)
   passed := passed && (← expectIntResult "GoCore make slice" (GoCore.Machine.runFunctionM 100000 coreMakeSliceFunction #[]) 537)
   passed := passed && (← expectIntResult "GoCore map basic" (GoCore.Machine.runFunctionM 100000 coreMapBasicFunction #[]) 1070)
+  passed := passed && (← expectIntResult "GoCore channel make/send/recv/close (FIFO, comma-ok, close-does-not-drain)"
+    (GoCore.Machine.runFunctionM 100000 coreChanBasicFunction #[]) 2278)
+  passed := passed && (← expectErrorStatus "GoCore blocked channel op classifies deadlock"
+    (GoCore.Machine.runFunctionM 100000 coreChanDeadlockFunction #[]) "deadlock")
+  passed := passed && (← expectErrorStatus "GoCore close of nil channel panics"
+    (GoCore.Machine.runFunctionM 100000 coreChanCloseNilFunction #[]) "panic")
+  passed := passed && (← expectIntResult "GoCore select exactly-one-ready receive (nil never ready)"
+    (GoCore.Machine.runFunctionM 100000 coreChanSelectFunction #[]) 15)
+  passed := passed && (← expectIntResult "GoCore select default fallthrough (none ready)"
+    (GoCore.Machine.runFunctionM 100000 coreChanSelectDefaultFunction #[]) 444)
   passed := passed && (← expectIntResult "GoCore string basic" (GoCore.Machine.runFunctionM 100000 coreStringFunction #[]) 22)
   passed := passed && (← expectIntResult "GoCore string byte length" (GoCore.Machine.runFunctionM 100000 coreStringByteLenFunction #[]) 6)
   passed := passed && (← expectValues "GoCore string byte indexing"
