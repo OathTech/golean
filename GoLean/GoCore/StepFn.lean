@@ -135,14 +135,8 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
               else throw (.internal "initialization under foreign-scope sequence")
           | _ => throw (.stuck "GoCore initialization outside a statement sequence")
       | .assign lhs rhs =>
-          -- Round 4 (BUG-037): a single assignment rides the spine as a
-          -- one-target multi-assign — the RHS is phase 1, the target
-          -- chain's checks fire at the store (phase 2).
-          match targetPlan lhs with
-          | some (sh, e :: ops) =>
-              return (.evalE e env
-                (.tgtOpK sh [] ops [] [] .vals [rhs] [] (.seqn #[]) env k), s, choices)
-          | some (_, []) => throw (.internal "malformed assignment target plan")
+          match assigneeExpr lhs with
+          | some te => return (.evalE te env (.assignTargetK rhs env k), s, choices)
           | none =>
               match lhs with
               | .unsupported feature => throw (.unsupported feature)
@@ -216,27 +210,6 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
               | some d => return (.exec d env k, s, choices)
               | none => return (.blockedSelect [] env k, s, choices)
       | .unsupported feature => throw (.unsupported feature)
-      | .mapLookup t okT base index keyTy valueTy =>
-          -- Round 4 (BUG-034): the comma-ok map lookup rides the spine —
-          -- target operands phase 1 (checks deferred), base/key
-          -- evaluated, the lookup applied (`applyRhsOp`), stores
-          -- left-to-right in phase 2.
-          match targetsPlan [t, okT] with
-          | some ((sh, e :: ops) :: rest) =>
-              return (.evalE e env
-                (.tgtOpK sh [] ops [] rest (.mapLookup keyTy valueTy)
-                  [base, index] [] (.seqn #[]) env k), s, choices)
-          | some _ => throw (.internal "malformed comma-ok target plan")
-          | none => throw (.unsupported "unsupported statement target assignee")
-      | .typeAssert t okT expr targetTy =>
-          -- Round 4 (BUG-034): the comma-ok type assertion, same spine.
-          match targetsPlan [t, okT] with
-          | some ((sh, e :: ops) :: rest) =>
-              return (.evalE e env
-                (.tgtOpK sh [] ops [] rest (.typeAssert targetTy)
-                  [expr] [] (.seqn #[]) env k), s, choices)
-          | some _ => throw (.internal "malformed comma-ok target plan")
-          | none => throw (.unsupported "unsupported statement target assignee")
       | .assignMany left right =>
           -- Convergence round (BUG-025): the general multi-assign rides
           -- the SAME phase-split delivery machinery as the receive —
@@ -246,7 +219,7 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
             match targetsPlan left.toList with
             | some ((sh, e :: ops) :: rest) =>
                 return (.evalE e env
-                  (.tgtOpK sh [] ops [] rest .vals right.toList [] (.seqn #[]) env k), s, choices)
+                  (.tgtOpK sh [] ops [] rest right.toList [] (.seqn #[]) env k), s, choices)
             | some _ => throw (.stuck "malformed multi-assignment target plan")
             | none => throw (.unsupported "unsupported multi-assignment target assignee")
           else
@@ -324,6 +297,18 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
             return (.exec b env (.loop c b env k'), s, choices)
           else
             return (.next k', s, choices)
+      | .assignTargetK rhs env k' =>
+          match valueAsLoc v with
+          | .ok loc => return (.evalE rhs env (.assignStoreK loc k'), s, choices)
+          | .error (.panic msg) =>
+              return (.panicking [⟨runtimeErrorValue msg, false⟩] k', s, choices)
+          | .error err => throw err
+      | .assignStoreK loc k' =>
+          match storeLoc s loc v with
+          | .ok s' => return (.next k', s', choices)
+          | .error (.panic msg) =>
+              return (.panicking [⟨runtimeErrorValue msg, false⟩] k', s, choices)
+          | .error err => throw err
       | .callTargetsK fid locs pending args env k' =>
           match valueAsLoc v with
           | .error (.panic msg) =>
@@ -469,7 +454,7 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
               | .error (.panic msg) =>
                   return (.panicking [⟨runtimeErrorValue msg, false⟩] k', s, choices)
               | .error err => throw err
-      | .tgtOpK sh ops pending refs targets rop rhs vals body env k' =>
+      | .tgtOpK sh ops pending refs targets rhs vals body env k' =>
           -- Delivery PHASE 1 (convergence round, BUG-029): operand
           -- values accumulate; each target completes into a
           -- store-ready TargetRef (its outer nil/bounds check
@@ -480,7 +465,7 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
           match pending with
           | e :: rest =>
               return (.evalE e env
-                (.tgtOpK sh (v :: ops) rest refs targets rop rhs vals body env k'), s, choices)
+                (.tgtOpK sh (v :: ops) rest refs targets rhs vals body env k'), s, choices)
           | [] =>
               match completeTargetRef sh (v :: ops).reverse with
               | none => throw (.internal "malformed receive target operands")
@@ -488,29 +473,22 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
                   match targets with
                   | (sh', e :: ops') :: rest =>
                       return (.evalE e env
-                        (.tgtOpK sh' [] ops' (refs ++ [r]) rest rop rhs vals body env k'), s, choices)
+                        (.tgtOpK sh' [] ops' (refs ++ [r]) rest rhs vals body env k'), s, choices)
                   | (_, []) :: _ => throw (.internal "malformed receive target plan")
                   | [] =>
                       match rhs with
                       | e :: rest =>
                           return (.evalE e env
-                            (.rhsK rop (refs ++ [r]) [] rest body env k'), s, choices)
+                            (.rhsK (refs ++ [r]) [] rest body env k'), s, choices)
                       | [] =>
                           return (.next (.storeK (refs ++ [r]) vals body env k'), s, choices)
-      | .rhsK rop refs done pending body env k' =>
-          -- RHS values left-to-right; the last applies the value source
-          -- (BUG-034: the comma-ok lookup/assert — its key-hash panic
-          -- fires HERE, before any store) and enters phase 2.
+      | .rhsK refs done pending body env k' =>
+          -- BUG-025 RHS values, left-to-right; the last enters phase 2.
           match pending with
           | e :: rest =>
-              return (.evalE e env (.rhsK rop refs (v :: done) rest body env k'), s, choices)
+              return (.evalE e env (.rhsK refs (v :: done) rest body env k'), s, choices)
           | [] =>
-              match applyRhsOp s rop (v :: done).reverse with
-              | .ok vals =>
-                  return (.next (.storeK refs vals body env k'), s, choices)
-              | .error (.panic msg) =>
-                  return (.panicking [⟨runtimeErrorValue msg, false⟩] k', s, choices)
-              | .error err => throw err
+              return (.next (.storeK refs (v :: done).reverse body env k'), s, choices)
       | .stop => throw (.internal "value delivered to empty continuation")
       | _ => throw (.internal "value delivered to statement continuation")
   | .next k =>

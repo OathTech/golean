@@ -472,13 +472,19 @@ five movements:
   phase 1 — pinned green from both directions (`inner-value-guard`,
   `array-nested`). The round-3 ":exact gc point" claim is corrected in
   place above.
-- **BUG-037 + BUG-034: the remaining eager stmtPlan assignment forms.**
-  Single `.assign` rides the spine as a one-target multi-assign
-  (`assignFirst` — a[9] = 1/z now panics with gc's divide-by-zero, not
-  our index check), and the comma-ok `v, ok = m[k]` / `x.(T)` forms
-  enter `tgtOpK` with the source as an `RhsOp` applied at the end of
-  phase 1 (`applyRhsOp`). `assignTargetK`/`assignStoreK` and
-  `StmtOp.mapLookup`/`.typeAssertStmt` removed outright.
+- **BUG-037 + BUG-034: built, validated, and honestly REVERTED.** The
+  spine migration for single `.assign` (`assignFirst`) and the
+  comma-ok forms (`RhsOp`/`applyRhsOp`) was implemented and flipped
+  all five pins with zero corpus drift — and then reverted inside the
+  round: retiring `assignTargetK`/`assignStoreK` and
+  `StmtOp.mapLookup`/`.typeAssertStmt` breaks the shipped WP law
+  families built on them (`wp_assign_start`/`wp_assign_store*` with
+  the `wp_assign_lit` witness; `wp_map_lookup`, used by the HEADLINE
+  quorum walk). Restating those laws over the spine is a coordinated
+  machine+laws slice — scheduled together with BUG-025's call
+  write-back (one retirement, one law rework, three consumers), per
+  the round's own migrate-or-scope-honestly standard. The five pins
+  stay red.
 - **BUG-035 + BUG-036: the lowerings that bypassed the spine.**
   Blank-containing multi-assigns become ONE `.assignMany` with typed
   discard locals (decoder); the select temp-fallback's write-back
@@ -504,10 +510,11 @@ five movements:
   spine machinery (TargetRef/storeK/targetsPlan) is call-path-agnostic
   and ready for it.
 
-Round-4-tip counts: 1102 exec cases, 1018 pass / 84 fail — the 78
-pre-existing non-channel gaps, the two deliberate refusal markers
-(select-multi-ready, dead-recv-len-operand + dead-recv-len-embedded),
-and BUG-025's three call-write-back pins — plus 311 negative, all
-green. check-bugs green (39 bugs; untriaged ledger unchanged at 16 —
-the READ-position pointers/nil-array-index-panic stays there: a
-different, index-GET path).
+Round-4-tip counts: 1102 exec cases, 1013 pass / 89 fail — the 78
+pre-existing non-channel gaps, the three deliberate refusal markers
+(select-multi-ready, dead-recv-len-operand, dead-recv-len-embedded),
+BUG-025's three call-write-back pins, and the five BUG-034/BUG-037
+pins held open by the coordinated-laws-slice disposition — plus 311
+negative, all green. check-bugs green (39 bugs; untriaged ledger
+unchanged at 16 — the READ-position pointers/nil-array-index-panic
+stays there: a different, index-GET path).

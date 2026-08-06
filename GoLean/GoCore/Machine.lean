@@ -610,6 +610,8 @@ inductive StmtOp where
   `makechan: size out of range` (probe p21). -/
   | makeChan (hasCap : Bool)
   | mapAssign (keyTy valueTy : Ty)
+  | mapLookup (keyTy valueTy : Ty)
+  | typeAssertStmt (targetTy : Ty)
   | appendSlice (elem : Ty)
   | copySlice
   | mapDelete (keyTy : Ty)
@@ -641,6 +643,14 @@ def stmtPlan : Stmt → Option (StmtOp × Nat × List Expr)
       return (.makeChan capacity.isSome, 1, [te] ++ capacity.toList)
   | .mapAssign base index value keyTy valueTy =>
       return (.mapAssign keyTy valueTy, 0, [base, index, value])
+  | .mapLookup target okTarget base index keyTy valueTy => do
+      let te ← assigneeExpr target
+      let oke ← assigneeExpr okTarget
+      return (.mapLookup keyTy valueTy, 2, [te, oke, base, index])
+  | .typeAssert target okTarget expr targetTy => do
+      let te ← assigneeExpr target
+      let oke ← assigneeExpr okTarget
+      return (.typeAssertStmt targetTy, 2, [te, oke, expr])
   | .appendSlice target elem slice elems => do
       let te ← assigneeExpr target
       return (.appendSlice elem, 1, [te, slice, elems])
@@ -730,6 +740,26 @@ def applyStmtOpCore (s : ExecState) (op : StmtOp) (_nt : Nat)
       match vs with
       | [baseV, keyV, valueV] => mapAssignValue s keyTy valueTy baseV keyV valueV
       | _ => stuck "malformed mapAssign operands"
+  | .mapLookup keyTy valueTy =>
+      match vs with
+      | [tv, okv, baseV, keyV] => do
+          let map ← valueAsMap baseV
+          let key ← normalizeValueForTy s keyTy keyV
+          let pair ← mapLookupValue s map key keyTy valueTy
+          let tloc ← valueAsLoc tv
+          let okloc ← valueAsLoc okv
+          let s₁ ← storeLoc s tloc pair.1
+          return ((← storeLoc s₁ okloc (.bool pair.2)))
+      | _ => stuck "malformed mapLookup operands"
+  | .typeAssertStmt targetTy =>
+      match vs with
+      | [tv, okv, value] => do
+          let result ← typeAssertValue s value targetTy
+          let tloc ← valueAsLoc tv
+          let okloc ← valueAsLoc okv
+          let s₁ ← storeLoc s tloc result.1
+          return ((← storeLoc s₁ okloc (.bool result.2)))
+      | _ => stuck "malformed typeAssert operands"
   | .mapDelete keyTy =>
       match vs with
       | [baseV, keyV] => do
@@ -1062,34 +1092,6 @@ def storeTarget (s : ExecState) (r : TargetRef) (v : GoValue) : Except GoError E
   | .chain anchor idxs steps =>
       storeLoc s (← valueAsLoc (← resolveChain s anchor steps idxs)) v
   | .mapElem b k kt vt => mapAssignValue s kt vt b k v
-
-/-- The VALUE SOURCE for a spine-riding assignment's stores (round 4,
-BUG-034/BUG-037): `.vals` — the evaluated right-hand expressions ARE
-the stored values (plain single/multi assign); or a comma-ok source
-applied to them at the END of phase 1 — a map lookup
-(`[base, key] ↦ [v, ok]`; a nil map yields the zero value, an
-unhashable key panics HERE, before any store) or a type assertion
-(`[x] ↦ [v, ok]`; the comma-ok form never panics). -/
-inductive RhsOp where
-  | vals
-  | mapLookup (keyTy valueTy : Ty)
-  | typeAssert (targetTy : Ty)
-  deriving Repr, BEq
-
-/-- Apply the value source to the evaluated right-hand operands.
-Shared verbatim by rule `Step.rhsStores`/`rhsStoresPanic` and
-`stepFn`'s `rhsK` finish arm. -/
-def applyRhsOp (s : ExecState) : RhsOp → List GoValue → Except GoError (List GoValue)
-  | .vals, vs => return vs
-  | .mapLookup keyTy valueTy, [baseV, keyV] => do
-      let map ← valueAsMap baseV
-      let key ← normalizeValueForTy s keyTy keyV
-      let pair ← mapLookupValue s map key keyTy valueTy
-      return [pair.1, .bool pair.2]
-  | .typeAssert targetTy, [value] => do
-      let result ← typeAssertValue s value targetTy
-      return [result.1, .bool result.2]
-  | _, _ => stuck "malformed comma-ok source operands"
 
 /-- Head of a channel statement (send/receive/close). `elem` is the
 element type: sends normalize the value at it (the `mapAssign` key/value
@@ -1433,6 +1435,12 @@ inductive Cont where
   | ifK (thenBranch elseBranch : Stmt) (env : LocalEnv) (k : Cont)
   /-- Awaiting a `while` condition value. -/
   | whileK (cond : Expr) (body : Stmt) (env : LocalEnv) (k : Cont)
+  /-- Awaiting an assignment target address; the RHS is not yet evaluated
+  (Go's order: target location first, then value). -/
+  | assignTargetK (rhs : Expr) (env : LocalEnv) (k : Cont)
+  /-- Awaiting an assignment RHS value; the store to `loc` is the next
+  step. -/
+  | assignStoreK (loc : Loc) (k : Cont)
   /-- Awaiting a call target address; then remaining targets, then
   arguments, then frame entry. -/
   | callTargetsK (fid : FuncId) (locs : List Loc) (pending : List Expr)
@@ -1497,18 +1505,15 @@ inductive Cont where
   `TargetRef` — the OUTER nil/bounds check stays deferred to phase 2. -/
   | tgtOpK (sh : TargetShape) (ops : List GoValue) (pending : List Expr)
       (refs : List TargetRef) (targets : List (TargetShape × List Expr))
-      (rop : RhsOp) (rhs : List Expr) (vals : List GoValue) (body : Stmt)
+      (rhs : List Expr) (vals : List GoValue) (body : Stmt)
       (env : LocalEnv) (k : Cont)
-  /-- The RHS evaluation of a spine-riding assignment (BUG-025;
-  comma-ok sources round 4, BUG-034): after phase 1 resolved every
-  target (`rop`/`rhs` carried through `tgtOpK`), the right-hand
-  expressions evaluate left-to-right into `done`; the last value
-  applies `rop` (`applyRhsOp` — identity for plain assigns, the
-  lookup/assert for comma-ok forms) and enters phase 2 (`storeK`).
-  The receive path never uses this frame (its delivery values are
-  already known). -/
-  | rhsK (rop : RhsOp) (refs : List TargetRef) (done : List GoValue)
-      (pending : List Expr) (body : Stmt) (env : LocalEnv) (k : Cont)
+  /-- The general multi-assign's RHS evaluation (convergence round,
+  BUG-025): after phase 1 resolved every target (`rhs` carried through
+  `tgtOpK`), the right-hand expressions evaluate left-to-right into
+  `done`; the last value enters phase 2 (`storeK`). The receive path
+  never uses this frame (its delivery values are already known). -/
+  | rhsK (refs : List TargetRef) (done : List GoValue) (pending : List Expr)
+      (body : Stmt) (env : LocalEnv) (k : Cont)
   /-- Receive delivery, PHASE 2 (`.next`-driven, one store per step,
   LEFT-TO-RIGHT — an earlier target's store is observable before a
   later target's store-time panic; pinned by
@@ -1573,6 +1578,8 @@ def panicPassthrough : Cont → Option Cont
   | .boolK k => some k
   | .ifK _ _ _ k => some k
   | .whileK _ _ _ k => some k
+  | .assignTargetK _ _ k => some k
+  | .assignStoreK _ k => some k
   | .callTargetsK _ _ _ _ _ k => some k
   | .callArgsK _ _ _ _ _ k => some k
   | .stmtOpK _ _ _ _ _ k => some k
@@ -1585,8 +1592,8 @@ def panicPassthrough : Cont → Option Cont
   | .panicArgK k => some k
   | .chanStK _ _ _ _ k => some k
   | .selectOpsK _ _ _ _ _ k => some k
-  | .tgtOpK _ _ _ _ _ _ _ _ _ _ k => some k
-  | .rhsK _ _ _ _ _ _ k => some k
+  | .tgtOpK _ _ _ _ _ _ _ _ _ k => some k
+  | .rhsK _ _ _ _ _ k => some k
   | .storeK _ _ _ _ k => some k
   | .frame _ _ _ _ _ => none
   | .panicResumeK _ _ => none
@@ -1623,6 +1630,10 @@ def recoverThroughWrappers : Cont → Option (GoValue × Cont)
   | .boolK k => (recoverThroughWrappers k).map (fun (v, k') => (v, .boolK k'))
   | .ifK a b c k => (recoverThroughWrappers k).map (fun (v, k') => (v, .ifK a b c k'))
   | .whileK a b c k => (recoverThroughWrappers k).map (fun (v, k') => (v, .whileK a b c k'))
+  | .assignTargetK a b k =>
+      (recoverThroughWrappers k).map (fun (v, k') => (v, .assignTargetK a b k'))
+  | .assignStoreK a k =>
+      (recoverThroughWrappers k).map (fun (v, k') => (v, .assignStoreK a k'))
   | .callTargetsK a b c d e k =>
       (recoverThroughWrappers k).map (fun (v, k') => (v, .callTargetsK a b c d e k'))
   | .callArgsK a b c d e k =>
@@ -1646,10 +1657,10 @@ def recoverThroughWrappers : Cont → Option (GoValue × Cont)
       (recoverThroughWrappers k).map (fun (v, k') => (v, .chanStK a b c d k'))
   | .selectOpsK a b c d e k =>
       (recoverThroughWrappers k).map (fun (v, k') => (v, .selectOpsK a b c d e k'))
-  | .tgtOpK a b c d e f g h i j k =>
-      (recoverThroughWrappers k).map (fun (v, k') => (v, .tgtOpK a b c d e f g h i j k'))
-  | .rhsK a b c d e f k =>
-      (recoverThroughWrappers k).map (fun (v, k') => (v, .rhsK a b c d e f k'))
+  | .tgtOpK a b c d e f g h i k =>
+      (recoverThroughWrappers k).map (fun (v, k') => (v, .tgtOpK a b c d e f g h i k'))
+  | .rhsK a b c d e k =>
+      (recoverThroughWrappers k).map (fun (v, k') => (v, .rhsK a b c d e k'))
   | .storeK a b c d k =>
       (recoverThroughWrappers k).map (fun (v, k') => (v, .storeK a b c d k'))
 
@@ -1690,6 +1701,8 @@ def recoverResult : Cont → GoValue × Cont
   | .boolK k => let (v, k') := recoverResult k; (v, .boolK k')
   | .ifK a b c k => let (v, k') := recoverResult k; (v, .ifK a b c k')
   | .whileK a b c k => let (v, k') := recoverResult k; (v, .whileK a b c k')
+  | .assignTargetK a b k => let (v, k') := recoverResult k; (v, .assignTargetK a b k')
+  | .assignStoreK a k => let (v, k') := recoverResult k; (v, .assignStoreK a k')
   | .callTargetsK a b c d e k =>
       let (v, k') := recoverResult k; (v, .callTargetsK a b c d e k')
   | .callArgsK a b c d e k =>
@@ -1711,10 +1724,10 @@ def recoverResult : Cont → GoValue × Cont
       let (v, k') := recoverResult k; (v, .chanStK a b c d k')
   | .selectOpsK a b c d e k =>
       let (v, k') := recoverResult k; (v, .selectOpsK a b c d e k')
-  | .tgtOpK a b c d e f g h i j k =>
-      let (v, k') := recoverResult k; (v, .tgtOpK a b c d e f g h i j k')
-  | .rhsK a b c d e f k =>
-      let (v, k') := recoverResult k; (v, .rhsK a b c d e f k')
+  | .tgtOpK a b c d e f g h i k =>
+      let (v, k') := recoverResult k; (v, .tgtOpK a b c d e f g h i k')
+  | .rhsK a b c d e k =>
+      let (v, k') := recoverResult k; (v, .rhsK a b c d e k')
   | .storeK a b c d k =>
       let (v, k') := recoverResult k; (v, .storeK a b c d k')
 
@@ -1776,7 +1789,7 @@ def enterRecvTargets (s : ExecState) (targets : List Assignee)
     Except GoError (Config × ExecState) := do
   match targetsPlan targets with
   | some ((sh, e :: ops) :: rest) =>
-      return (.evalE e env (.tgtOpK sh [] ops [] rest .vals [] vals body env k), s)
+      return (.evalE e env (.tgtOpK sh [] ops [] rest [] vals body env k), s)
   | _ => stuck "malformed receive target plan"
 
 /-- Apply a channel statement's head to its evaluated pre-communication
@@ -2010,11 +2023,27 @@ inductive Step : Config → ExecState → Config → ExecState → Prop where
       s.alloc v (some p.typ) = (loc, s') →
       Step (.exec (.initialization p) env (.seq rest env k)) s
         (.next (.seq rest (env.declare p.id loc) k)) s'
-  -- Assignment (round 4, BUG-037): the SINGLE assignment rides the
-  -- phase-split spine as a one-target multi-assign — the RHS is
-  -- phase 1, the target chain's checks fire at the store (phase 2).
-  -- Rules appended at the END of the inductive with their spine
-  -- siblings.
+  -- Assignment: target address, then RHS, then the store — three separate
+  -- steps around the operand evaluations.
+  | assign {lhs te rhs env k s} :
+      assigneeExpr lhs = some te →
+      Step (.exec (.assign lhs rhs) env k) s
+        (.evalE te env (.assignTargetK rhs env k)) s
+  | assignTargetLoc {v loc rhs env k s} :
+      valueAsLoc v = .ok loc →
+      Step (.retV v (.assignTargetK rhs env k)) s
+        (.evalE rhs env (.assignStoreK loc k)) s
+  | assignTargetPanic {v msg rhs env k s} :
+      valueAsLoc v = .error (.panic msg) →
+      Step (.retV v (.assignTargetK rhs env k)) s
+        (.panicking [⟨runtimeErrorValue msg, false⟩] k) s
+  | assignStore {v loc k s s'} :
+      storeLoc s loc v = .ok s' →
+      Step (.retV v (.assignStoreK loc k)) s (.next k) s'
+  | assignStorePanic {v loc msg k s} :
+      storeLoc s loc v = .error (.panic msg) →
+      Step (.retV v (.assignStoreK loc k)) s
+        (.panicking [⟨runtimeErrorValue msg, false⟩] k) s
   -- Conditionals
   | ifStmt {c t e env k s} :
       Step (.exec (.ifThenElse c t e) env k) s (.evalE c env (.ifK t e env k)) s
@@ -2514,57 +2543,37 @@ inductive Step : Config → ExecState → Config → ExecState → Prop where
   -- nil/bounds check DEFERRED; phase 2 (`storeK`, `.next`-driven)
   -- stores left-to-right, ONE step per target, store-time panics
   -- firing after earlier stores landed.
-  | tgtOpShift {sh ops v e pending refs targets rop rhs vals body env k s} :
-      Step (.retV v (.tgtOpK sh ops (e :: pending) refs targets rop rhs vals body env k)) s
-        (.evalE e env (.tgtOpK sh (v :: ops) pending refs targets rop rhs vals body env k)) s
-  | tgtOpNext {sh ops v r sh' e ops' targets refs rop rhs vals body env k s} :
+  | tgtOpShift {sh ops v e pending refs targets rhs vals body env k s} :
+      Step (.retV v (.tgtOpK sh ops (e :: pending) refs targets rhs vals body env k)) s
+        (.evalE e env (.tgtOpK sh (v :: ops) pending refs targets rhs vals body env k)) s
+  | tgtOpNext {sh ops v r sh' e ops' targets refs rhs vals body env k s} :
       completeTargetRef sh (v :: ops).reverse = some r →
-      Step (.retV v (.tgtOpK sh ops [] refs ((sh', e :: ops') :: targets) rop rhs vals body env k)) s
-        (.evalE e env (.tgtOpK sh' [] ops' (refs ++ [r]) targets rop rhs vals body env k)) s
-  | tgtOpStores {sh ops v r refs rop vals body env k s} :
+      Step (.retV v (.tgtOpK sh ops [] refs ((sh', e :: ops') :: targets) rhs vals body env k)) s
+        (.evalE e env (.tgtOpK sh' [] ops' (refs ++ [r]) targets rhs vals body env k)) s
+  | tgtOpStores {sh ops v r refs vals body env k s} :
       completeTargetRef sh (v :: ops).reverse = some r →
-      Step (.retV v (.tgtOpK sh ops [] refs [] rop [] vals body env k)) s
+      Step (.retV v (.tgtOpK sh ops [] refs [] [] vals body env k)) s
         (.next (.storeK (refs ++ [r]) vals body env k)) s
-  -- Spine-riding assignments (BUG-025; single form and comma-ok
-  -- sources round 4, BUG-034/BUG-037): phase 1 resolves the targets,
-  -- the RHS evaluates left-to-right (`rhsK`), the value source
-  -- applies (`applyRhsOp` — identity / map lookup / type assert),
-  -- phase 2 stores one step per target with the chain's checks firing
-  -- at the store.
-  | tgtOpRhs {sh ops v r refs rop e rest vals body env k s} :
+  -- General multi-assign (convergence round, BUG-025): phase 1 resolves
+  -- the targets, the RHS evaluates left-to-right (`rhsK`), phase 2
+  -- stores one step per target — same machinery, same store-time
+  -- checks, so the spec's own `x[1], x[3] = 4, 5` shape keeps its
+  -- earlier store when the later one panics.
+  | tgtOpRhs {sh ops v r refs e rest vals body env k s} :
       completeTargetRef sh (v :: ops).reverse = some r →
-      Step (.retV v (.tgtOpK sh ops [] refs [] rop (e :: rest) vals body env k)) s
-        (.evalE e env (.rhsK rop (refs ++ [r]) [] rest body env k)) s
-  | rhsShift {rop refs done v e rest body env k s} :
-      Step (.retV v (.rhsK rop refs done (e :: rest) body env k)) s
-        (.evalE e env (.rhsK rop refs (v :: done) rest body env k)) s
-  | rhsStores {rop refs done v vals body env k s} :
-      applyRhsOp s rop (v :: done).reverse = .ok vals →
-      Step (.retV v (.rhsK rop refs done [] body env k)) s
-        (.next (.storeK refs vals body env k)) s
-  | rhsStoresPanic {rop refs done v msg body env k s} :
-      applyRhsOp s rop (v :: done).reverse = .error (.panic msg) →
-      Step (.retV v (.rhsK rop refs done [] body env k)) s
-        (.panicking [⟨runtimeErrorValue msg, false⟩] k) s
+      Step (.retV v (.tgtOpK sh ops [] refs [] (e :: rest) vals body env k)) s
+        (.evalE e env (.rhsK (refs ++ [r]) [] rest body env k)) s
+  | rhsShift {refs done v e rest body env k s} :
+      Step (.retV v (.rhsK refs done (e :: rest) body env k)) s
+        (.evalE e env (.rhsK refs (v :: done) rest body env k)) s
+  | rhsStores {refs done v body env k s} :
+      Step (.retV v (.rhsK refs done [] body env k)) s
+        (.next (.storeK refs (v :: done).reverse body env k)) s
   | assignManyFirst {left right sh e ops rest env k s} :
       left.size = right.size →
       targetsPlan left.toList = some ((sh, e :: ops) :: rest) →
       Step (.exec (.assignMany left right) env k) s
-        (.evalE e env (.tgtOpK sh [] ops [] rest .vals right.toList [] (.seqn #[]) env k)) s
-  | assignFirst {lhs rhs sh e ops env k s} :
-      targetPlan lhs = some (sh, e :: ops) →
-      Step (.exec (.assign lhs rhs) env k) s
-        (.evalE e env (.tgtOpK sh [] ops [] [] .vals [rhs] [] (.seqn #[]) env k)) s
-  | mapLookupFirst {t okT base index keyTy valueTy sh e ops rest env k s} :
-      targetsPlan [t, okT] = some ((sh, e :: ops) :: rest) →
-      Step (.exec (.mapLookup t okT base index keyTy valueTy) env k) s
-        (.evalE e env (.tgtOpK sh [] ops [] rest (.mapLookup keyTy valueTy)
-          [base, index] [] (.seqn #[]) env k)) s
-  | typeAssertFirst {t okT expr targetTy sh e ops rest env k s} :
-      targetsPlan [t, okT] = some ((sh, e :: ops) :: rest) →
-      Step (.exec (.typeAssert t okT expr targetTy) env k) s
-        (.evalE e env (.tgtOpK sh [] ops [] rest (.typeAssert targetTy)
-          [expr] [] (.seqn #[]) env k)) s
+        (.evalE e env (.tgtOpK sh [] ops [] rest right.toList [] (.seqn #[]) env k)) s
   | storeStep {r rs val vals body env k s s'} :
       storeTarget s r val = .ok s' →
       Step (.next (.storeK (r :: rs) (val :: vals) body env k)) s

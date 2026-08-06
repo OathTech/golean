@@ -64,15 +64,16 @@ replaying the chain (checks included) in `storeTarget`.
 
 ## BUG-034 — comma-ok `v, ok = m[k]` / `v, ok = x.(T)` still ride the eager stmtPlan path
 
-- Status: fixed (2026-08-06, round-4 response: both forms left
-  `stmtPlan` for the spine — new rules `mapLookupFirst`/
-  `typeAssertFirst` enter `tgtOpK` with the source carried as an
-  `RhsOp` (`applyRhsOp`: map lookup / type assert applied to the
-  evaluated RHS operands at the END of phase 1 — an unhashable-key
-  panic fires there, before any store), then `storeK` stores
-  left-to-right with deferred target checks. `StmtOp.mapLookup`/
-  `.typeAssertStmt` removed outright. Both pins flip; the dep-index
-  capture guard and every existing maps/interfaces case stay green.)
+- Status: open (round-4 disposition, migrate-or-scope-honestly: a full
+  spine migration WAS built and validated (RhsOp/applyRhsOp, both pins
+  flipped, zero corpus drift) and then REVERTED in the same round —
+  retiring `StmtOp.mapLookup`/`.typeAssertStmt` breaks the shipped
+  `wp_map_lookup` law family (`Laws/StmtOps.lean`, the three-cell
+  comma-ok law used by the HEADLINE quorum walk at
+  `GoldenQuorumWP.lean:183` plus its GoldenQuorumPin witnesses), whose
+  spine restatement is a coordinated laws rework, not a round patch.
+  Scheduled with the BUG-025 call-write-back and BUG-037 migrations as
+  ONE machine+laws slice; the two pins stay red and visible.)
 - Pinned-by: differential
 - Cases: multi-assign/comma-ok-forms/map-oob, multi-assign/comma-ok-forms/assert-nil-field
 - Discovered: 2026-08-06 (round-4 convergence check, verified major;
@@ -132,13 +133,17 @@ spine, post-BUG-025) and keep the phase split inside the clause.
 
 ## BUG-037 — single assignment fires the target's phase-2 check before evaluating the RHS
 
-- Status: fixed (2026-08-06, round-4 response: `.assign` rides the
-  spine as a one-target multi-assign (rule `assignFirst` — target
-  chain operands phase 1, RHS phase 1 under `rhsK`, the chain's checks
-  at the `storeK` store), realizing gc's panic identity
-  (divide-by-zero, not index/nil-deref) on all three pinned shapes.
-  The `assignTargetK`/`assignStoreK` frames and their rules were
-  removed outright.)
+- Status: open (round-4 disposition, migrate-or-scope-honestly: the
+  spine migration (`assignFirst`, retiring the `assignTargetK`/
+  `assignStoreK` frames) WAS built and validated — all three pins
+  flipped, zero corpus drift — and then REVERTED in the same round:
+  those frames anchor the entire shipped WP assignment law family
+  (`wp_assign_start`/`wp_assign_target` in `Laws/Eval.lean`,
+  `wp_assign_store*` in `Laws/Assign.lean` with the `wp_assign_lit`
+  non-vacuity witness, and every golden walk's store steps).
+  Restating that family over the spine is the same coordinated
+  machine+laws slice as BUG-025's call write-back and BUG-034;
+  the three pins stay red and visible until it lands.)
 - Pinned-by: differential
 - Cases: assign-order/target-check-vs-rhs/index-target, assign-order/target-check-vs-rhs/nil-field-target, assign-order/target-check-vs-rhs/nil-deref-target
 - Discovered: 2026-08-06 (round-4 convergence check, verified major;

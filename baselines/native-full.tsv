@@ -1,16 +1,18 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-06  commit: channels-arc-s1 (round-4 minors: BUG-038 + BUG-039)
+# recorded: 2026-08-06  commit: channels-arc-s1 (round 4: BUG-034/BUG-037 spine migration REVERTED — coordinated-laws-slice disposition)
 #   frontend: native  oracle: go run (strict lane) / go-run membership in the
 #   machine-enumerated observation set (membership lane; go1.26.5 samples)
-# manifest_cases: 1102  pass: 1018  fail: 84
-# Re-pin reason: BUG-038 (indexTargetLoc .nil arm — nil pointer-to-
-#   array store panics recoverably instead of going stuck) flips
-#   pointers/nil-array-elem-store{,/second-target} -> PASS. BUG-039
-#   (panicFreeOperand consults Selections[..].Indirect() — the
-#   embedded-pointer fail-open hole) moves
-#   channels/recv-order/dead-recv-len-embedded [differential]
-#   -> [frontend-export]: a permanent fail-closed refusal marker.
-#   Zero drift on all other ids.
+# manifest_cases: 1102  pass: 1013  fail: 89
+# Re-pin reason: deliberate, explained regression — the validated
+#   BUG-034/BUG-037 spine migration is reverted because retiring
+#   assignTargetK/assignStoreK and StmtOp.mapLookup/.typeAssertStmt
+#   breaks the shipped WP law families (wp_assign_* incl. the
+#   wp_assign_lit witness; wp_map_lookup under the headline quorum
+#   walk); the law restatement is scheduled with BUG-025's call
+#   write-back as one machine+laws slice. The five pins return to RED
+#   (assign-order/target-check-vs-rhs/{index,nil-field,nil-deref}-target,
+#   multi-assign/comma-ok-forms/{map-oob,assert-nil-field}); zero
+#   drift on all other ids — every other round-4 fix intact.
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
 PASS	arrays/array-copy	-
@@ -30,9 +32,9 @@ PASS	arrays/nested-arrays	-
 PASS	arrays/nested-copy-value	-
 PASS	arrays/nil-pointer-len-cap	-
 FAIL	arrays/pointer-array	lean-observation
-PASS	assign-order/target-check-vs-rhs/index-target	-
-PASS	assign-order/target-check-vs-rhs/nil-deref-target	-
-PASS	assign-order/target-check-vs-rhs/nil-field-target	-
+FAIL	assign-order/target-check-vs-rhs/index-target	differential
+FAIL	assign-order/target-check-vs-rhs/nil-deref-target	differential
+FAIL	assign-order/target-check-vs-rhs/nil-field-target	differential
 PASS	bools/generic-type-set/and-or	-
 PASS	bools/generic-type-set/equality	-
 PASS	bools/generic-type-set/inference	-
@@ -770,9 +772,9 @@ PASS	multi-assign/chain-field-over-index/array-field	-
 PASS	multi-assign/chain-field-over-index/array-nested	-
 PASS	multi-assign/chain-field-over-index/inner-value-guard	-
 PASS	multi-assign/chain-field-over-index/nil-slice-field	-
-PASS	multi-assign/comma-ok-forms/assert-nil-field	-
+FAIL	multi-assign/comma-ok-forms/assert-nil-field	differential
 PASS	multi-assign/comma-ok-forms/dep-index	-
-PASS	multi-assign/comma-ok-forms/map-oob	-
+FAIL	multi-assign/comma-ok-forms/map-oob	differential
 PASS	multi-assign/deref-target-before-rhs	-
 PASS	multi-assign/field-nil-store-time	-
 PASS	multi-assign/index-target-rhs-call-order	-
