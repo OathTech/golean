@@ -31,7 +31,16 @@ differential-pinned) `- Cases: <id>, <id>, …` (baseline case ids), then prose.
 
 ## BUG-022 — chan-recv statement inverts spec §Assignments' phases: target-address panics fire BEFORE the communication
 
-- Status: open
+- Status: fixed (2026-08-06, audit response: the receive statement now
+  mirrors the select path — `ChanStOp.recv` carries its target
+  expressions, `applyChanOp` performs the COMMUNICATION first
+  (block/panic/dequeue) and delivers through the existing `selectRecvK`
+  target-evaluation frames with an empty body, so target-address
+  panics are phase-2 events after the receive; the target-first
+  `chanStK` shift machinery (`ntargets`, target checks) was removed
+  outright, not left dead. Spec-ordered `len(ch)` reads inside targets
+  stay pre-receive via BUG-023's uniform frontend hoist. Relation,
+  stepFn, WF lemmas, and correspondence proofs moved in lockstep.)
 - Pinned-by: differential
 - Cases: channels/recv-edge/nil-deref-target-drains, channels/recv-edge/oob-target-drains, channels/recv-edge/bad-target-blocks
 - Discovered: 2026-08-06 (channels-arc-s1 pre-merge audit S1+S7,

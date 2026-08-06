@@ -1,13 +1,15 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-06  commit: channels-arc-s1 (audit response: BUG-024 fixed)
+# recorded: 2026-08-06  commit: channels-arc-s1 (audit response: BUG-022 fixed)
 #   frontend: native  oracle: go run (strict lane) / go-run membership in the
 #   machine-enumerated observation set (membership lane; go1.26.5 samples)
-# manifest_cases: 1059  pass: 975  fail: 84
-# Re-pin reason: BUG-024 fixed (audit S3+S8) — bare receive statement
-#   emits the zero-target chan-recv (receive-and-discard) instead of a
-#   residual ident the decoder rejected package-wide;
-#   channels/recv-stmt flips FAIL/lean-observation -> PASS. Zero drift
-#   on all other ids.
+# manifest_cases: 1059  pass: 978  fail: 81
+# Re-pin reason: BUG-022 fixed (audit S1+S7) — the receive statement is
+#   reordered to spec §Assignments' two phases (communication first,
+#   target stores and their panics after, via the select path's
+#   selectRecvK frames); channels/recv-edge/{nil-deref-target-drains,
+#   oob-target-drains} [differential] and bad-target-blocks
+#   [lean-observation: deadlock was misreported as panic] flip to PASS.
+#   Zero drift on all other ids.
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
 PASS	arrays/array-copy	-
@@ -119,10 +121,10 @@ PASS	channels/nil-values	-
 PASS	channels/range-closed	-
 PASS	channels/range-edge/break	-
 PASS	channels/range-edge/no-var	-
-FAIL	channels/recv-edge/bad-target-blocks	lean-observation
-FAIL	channels/recv-edge/nil-deref-target-drains	differential
+PASS	channels/recv-edge/bad-target-blocks	-
+PASS	channels/recv-edge/nil-deref-target-drains	-
 PASS	channels/recv-edge/nil-deref-target-recovered	-
-FAIL	channels/recv-edge/oob-target-drains	differential
+PASS	channels/recv-edge/oob-target-drains	-
 FAIL	channels/recv-map-elem	frontend-export
 PASS	channels/recv-order/binary	-
 PASS	channels/recv-order/call-arg	-

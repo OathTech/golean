@@ -68,7 +68,7 @@ theorem stepFn_sound {s : ExecState} {c : Config} {ch : Choices}
       obtain ⟨rfl, rfl, rfl⟩ := h
       exact Step.panicFrameDeferEnterPanic hd
     · simp at h
-  case case149 =>
+  case case146 =>
     rename_i hrec
     simp_all only [stepFn, Except.ok.injEq, Prod.mk.injEq]
     obtain ⟨rfl, rfl, rfl⟩ := h
@@ -210,11 +210,11 @@ theorem stepFn_sound {s : ExecState} {c : Config} {ch : Choices}
     simp_all only [stepFn, bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq]
     obtain ⟨entries, hd, rfl, rfl, rfl⟩ := h
     exact Step.mapRangeSnapshot hd
-  case case144 =>
+  case case141 =>
     simp_all only [stepFn, bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq]
     obtain ⟨vs, hload, s₂, hstore, rfl, rfl, rfl⟩ := h
     exact Step.frameFall hload hstore
-  case case145 =>
+  case case142 =>
     simp_all only [stepFn, enterFrameStep]
     split at h
     · rename_i func frameEnv resultLocs s₂ hd
@@ -226,7 +226,7 @@ theorem stepFn_sound {s : ExecState} {c : Config} {ch : Choices}
       obtain ⟨rfl, rfl, rfl⟩ := h
       exact Step.frameDeferFallEnterPanic hd
     · simp at h
-  case case178 =>
+  case case175 =>
     simp_all only [stepFn, enterFrameStep]
     split at h
     · rename_i func frameEnv resultLocs s₂ hd
@@ -238,14 +238,14 @@ theorem stepFn_sound {s : ExecState} {c : Config} {ch : Choices}
       obtain ⟨rfl, rfl, rfl⟩ := h
       exact Step.frameDeferReturnEnterPanic hd
     · simp at h
-  case case152 =>
+  case case149 =>
     rename_i hempty
     obtain rfl : _ = (#[] : Array (GoValue × GoValue)) := Array.isEmpty_iff.mp hempty
     simp_all only [stepFn, Array.isEmpty_empty, reduceIte, Except.ok.injEq,
       Prod.mk.injEq]
     obtain ⟨rfl, rfl, rfl⟩ := h
     exact Step.mapIterDone
-  case case153 =>
+  case case150 =>
     rename_i keyVar valVar keyTy valTy body remaining env k' hne idx choices₂
       hcons hidx
     exfalso
@@ -256,7 +256,7 @@ theorem stepFn_sound {s : ExecState} {c : Config} {ch : Choices}
     have hlt : idx < remaining.size := by
       simpa [hcons] using consume_fst_lt (ch := ch) hsz
     omega
-  case case154 =>
+  case case151 =>
     rename_i keyVar valVar keyTy valTy body remaining env k' hne idx choices₂
       hcons key value hidx hlt
     simp only [stepFn, hcons] at h
@@ -274,7 +274,7 @@ theorem stepFn_sound {s : ExecState} {c : Config} {ch : Choices}
       obtain ⟨⟨env', s₁⟩, hd, rfl, rfl, rfl⟩ := h
       obtain ⟨_, hw⟩ := Array.getElem?_eq_some_iff.mp hidx
       exact Step.mapIterNext hlt (by rw [hw]; exact hd)
-  case case177 =>
+  case case174 =>
     simp_all only [stepFn, bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq]
     obtain ⟨vs, hload, s₂, hstore, rfl, rfl, rfl⟩ := h
     exact Step.frameReturn hload hstore
@@ -301,25 +301,21 @@ theorem stepFn_sound {s : ExecState} {c : Config} {ch : Choices}
     simp only [stepFn] at h
     rw [hplan, if_neg hgt] at h
     simp [throw, throwThe, MonadExceptOf.throw] at h
-  case case126 =>
-    simp_all only [stepFn, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq]
-    obtain ⟨rfl, rfl, rfl⟩ := h
-    exact Step.chanStShiftPlain (Nat.le_of_not_lt ‹_›)
-  case case128 =>
+  case case125 =>
     rename_i happly
     simp only [stepFn] at h
     rw [happly] at h
     simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl, rfl⟩ := h
     exact Step.chanStApplyPanic happly
-  case case132 =>
+  case case129 =>
     rename_i happly
     simp only [stepFn] at h
     rw [happly] at h
     simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl, rfl⟩ := h
     exact Step.selectApplyPanic happly
-  case case137 =>
+  case case134 =>
     rename_i loc hloc
     simp only [stepFn] at h
     rw [hloc] at h
@@ -429,18 +425,12 @@ theorem step_complete {c : Config} {s : ExecState} {c' : Config} {s' : ExecState
   -- abstract behind its plan (case on it, like stmtOpFirst); the plain
   -- shift needs its `if_neg`, like stmtOpShiftPlain.
   case chanStFirst =>
-    rename_i stmt op nt e rest env k hplan
+    rename_i stmt op e rest env k hplan
     refine ⟨[], [], ?_⟩
     cases stmt <;>
       first
         | (simp_all [stepFn, chanPlan]; done)
         | (simp only [stepFn]; rw [hplan]; rfl)
-  case chanStShiftPlain =>
-    rename_i op nt done v e rest env k hle
-    refine ⟨[], [], ?_⟩
-    simp only [stepFn]
-    rw [if_neg (Nat.not_lt.mpr hle)]
-    rfl
   all_goals
     exact ⟨[], [], by simp_all [stepFn, enterFrameStep, enterFrameDeferPanicking, Bind.bind, Except.bind, valueAsBool]⟩
 
@@ -654,9 +644,10 @@ theorem step_blockedSend_elim {chl : Option Loc} {v : GoValue} {k : Cont}
   cases h
 
 @[inherit_doc step_panicked_elim]
-theorem step_blockedRecv_elim {chl : Option Loc} {locs : List Loc}
-    {elem : Ty} {k : Cont} {σ : ExecState} {c' : Config} {σ' : ExecState} :
-    ¬ Step (.blockedRecv chl locs elem k) σ c' σ' := by
+theorem step_blockedRecv_elim {chl : Option Loc} {targets : List Expr}
+    {elem : Ty} {env : LocalEnv} {k : Cont} {σ : ExecState} {c' : Config}
+    {σ' : ExecState} :
+    ¬ Step (.blockedRecv chl targets elem env k) σ c' σ' := by
   intro h
   cases h
 
@@ -2259,15 +2250,11 @@ theorem step_complete_any_wf_aux {c : Config} {σ : ExecState} {c' : Config}
       simp [hbind₂, Bind.bind, Except.bind]
   case panicUnwind chain k k' hpass =>
     cases k <;> simp_all [stepFn, panicPassthrough]
-  case chanStFirst stmt op nt e rest env k hplan =>
+  case chanStFirst stmt op e rest env k hplan =>
     cases stmt <;>
       first
         | (simp_all [stepFn, chanPlan]; done)
         | (simp only [stepFn]; rw [hplan]; exact ⟨_, rfl⟩)
-  case chanStShiftPlain op nt done v e rest env k hle =>
-    simp only [stepFn]
-    rw [if_neg (Nat.not_lt.mpr hle)]
-    exact ⟨_, rfl⟩
   all_goals simp_all [stepFn, enterFrameStep, enterFrameDeferPanicking, Bind.bind, Except.bind, valueAsBool]
 
 /-- **Completeness at every stream** (the recorded kit obligation): a
@@ -2586,14 +2573,7 @@ theorem stepFn_oblivious {σ : ExecState} {c : Config} {ch₀ : Choices}
     simp only [stepFn] at h
     rw [hplan, if_neg hgt] at h
     simp [throw, throwThe, MonadExceptOf.throw] at h
-  case case126 =>
-    rename_i hlt
-    simp only [stepFn, if_neg hlt, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-    obtain ⟨rfl, rfl, rfl⟩ := h
-    refine ⟨by simp, fun ch => ?_⟩
-    simp only [stepFn, if_neg hlt]
-    rfl
-  case case137 =>
+  case case134 =>
     rename_i loc hloc
     simp only [stepFn] at h
     rw [hloc] at h
@@ -2782,14 +2762,14 @@ theorem stepFn_oblivious {σ : ExecState} {c : Config} {ch₀ : Choices}
     simp only [stepFn, bind_eq_ok]
     refine ⟨entries, hd, ?_⟩
     simp
-  case case144 =>
+  case case141 =>
     simp_all only [stepFn, bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq]
     obtain ⟨vs, hload, s₂, hstore, rfl, rfl, rfl⟩ := h
     refine ⟨by simp, fun ch => ?_⟩
     simp only [stepFn, bind_eq_ok]
     refine ⟨vs, hload, ?_⟩
     simp [hstore, Bind.bind, Except.bind]
-  case case145 =>
+  case case142 =>
     simp_all only [stepFn, enterFrameStep]
     split at h
     · rename_i func frameEnv resultLocs s₂ hd
@@ -2803,14 +2783,14 @@ theorem stepFn_oblivious {σ : ExecState} {c : Config} {ch₀ : Choices}
       refine ⟨rfl, fun ch => ?_⟩
       simp only [stepFn, enterFrameStep, hd]
     · simp at h
-  case case177 =>
+  case case174 =>
     simp_all only [stepFn, bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq]
     obtain ⟨vs, hload, s₂, hstore, rfl, rfl, rfl⟩ := h
     refine ⟨by simp, fun ch => ?_⟩
     simp only [stepFn, bind_eq_ok]
     refine ⟨vs, hload, ?_⟩
     simp [hstore, Bind.bind, Except.bind]
-  case case178 =>
+  case case175 =>
     simp_all only [stepFn, enterFrameStep]
     split at h
     · rename_i func frameEnv resultLocs s₂ hd
@@ -2889,7 +2869,7 @@ theorem execStmtLoop_unfold (fuel : Nat) (σ : ExecState) (c : Config)
          | .continuing .stop => .ok (.continued σ, ch)
          | .panicked msg => throw (.panic msg)
          | .blockedSend _ _ _ => throw .deadlock
-         | .blockedRecv _ _ _ _ => throw .deadlock
+         | .blockedRecv _ _ _ _ _ => throw .deadlock
          | .blockedSelect _ _ _ => throw .deadlock
          | c =>
              match fuel with

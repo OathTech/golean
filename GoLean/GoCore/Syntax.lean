@@ -289,12 +289,17 @@ inductive Stmt where
   enqueue (normalized at `elem`); full → block. -/
   | chanSend (ch value : Expr) (elem : Ty)
   /-- Receive statement covering `<-ch` (0 targets), `x = <-ch`
-  (1 target), and `x, ok = <-ch` (2 targets): target ADDRESSES first (in
-  order), then the channel (Go's assignment operand order, pinned by
-  `ordinary-receive-eval-order`), then ONE receive step: nil → block;
-  buffered value → dequeue, `ok = true`; closed-and-drained → zero value
-  at `elem`, `ok = false`; open-and-empty → block. Receive in expression
-  position lowers frontend-side into a temp via this statement. -/
+  (1 target), and `x, ok = <-ch` (2 targets). Spec §Assignments is
+  TWO-PHASE (audit response BUG-022): the channel evaluates and the
+  COMMUNICATION happens first — nil → block; buffered value → dequeue,
+  `ok = true`; closed-and-drained → zero value at `elem`, `ok = false`;
+  open-and-empty → block — and only then do the target addresses
+  evaluate and store (their nil-deref / out-of-range panics are phase-2
+  events, AFTER the receive; pinned by `channels/recv-edge/*`).
+  Spec-ordered evaluations inside the targets (`len(ch)`) are pre-bound
+  by the frontend's hoists, which keep lexical order. Receive in
+  expression position lowers frontend-side into a temp via this
+  statement. -/
   | chanRecv (targets : Array Assignee) (ch : Expr) (elem : Ty)
   /-- `close(ch)`: nil → panic "close of nil channel"; already closed →
   panic "close of closed channel"; else set the closed flag (buffered
