@@ -33,7 +33,7 @@ differential-pinned) `- Cases: <id>, <id>, …` (baseline case ids), then prose.
 
 - Status: open
 - Pinned-by: differential
-- Cases: multi-assign/store-order-plain, channels/recv-edge/second-target-panic-stores-first
+- Cases: multi-assign/store-order-plain
 - Discovered: 2026-08-06 (channels-arc-s1 delta review D3, generalized
   by the verifier: pre-existing on main, NOT channel-specific)
 
@@ -44,11 +44,13 @@ set x[1] = 4, then panic setting x[3] = 5`). The machine's generic
 multi-assign apply (`locsOf` + `storeMany` after all target addresses)
 stores all-or-nothing: `v, *nilp = 7, 9` recovered leaves `v == 0`
 where Go leaves 7. The RECEIVE-statement instance of the same defect
-(delivery through `selectRecvK`) was fixed on the channels-arc-s1
-branch (per-target store-then-next; pin
-channels/recv-edge/second-target-panic-stores-first); this entry tracks
-the GENERAL path (`applyStmtOpCore .assignMany`, frame-exit
-`storeMany`), untouched.
+(delivery through `selectRecvK`) IS fixed on the channels-arc-s1
+branch: `selectRecvK` now carries the remaining delivery values and
+stores each target IMMEDIATELY as its address arrives (per-target
+store-then-next), so an earlier store survives a later target's panic —
+pinned GREEN by channels/recv-edge/second-target-panic-stores-first.
+This entry tracks the GENERAL path (`applyStmtOpCore .assignMany`,
+frame-exit `storeMany`), untouched.
 
 ## BUG-026 — BUG-023's statement-level receive flag misses for-init/for-cond/else-if/switch-case positions (regression vs the deleted binary pre-bind)
 
@@ -128,7 +130,11 @@ receive flag), aligning both target kinds with gc.
   `chanStK` shift machinery (`ntargets`, target checks) was removed
   outright, not left dead. Spec-ordered `len(ch)` reads inside targets
   stay pre-receive via BUG-023's uniform frontend hoist. Relation,
-  stepFn, WF lemmas, and correspondence proofs moved in lockstep.)
+  stepFn, WF lemmas, and correspondence proofs moved in lockstep.
+  Delta review D3 then closed the remaining phase-2 half for this path:
+  stores are per-target LEFT-TO-RIGHT (an earlier target's store is
+  observable before a later target's panic); the GENERAL multi-assign
+  path still stores all-or-nothing — BUG-025.)
 - Pinned-by: differential
 - Cases: channels/recv-edge/nil-deref-target-drains, channels/recv-edge/oob-target-drains, channels/recv-edge/bad-target-blocks
 - Discovered: 2026-08-06 (channels-arc-s1 pre-merge audit S1+S7,

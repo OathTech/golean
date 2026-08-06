@@ -446,7 +446,9 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
               | .error (.panic msg) =>
                   return (.panicking [⟨runtimeErrorValue msg, false⟩] k', s, choices)
               | .error err => throw err
-      | .selectRecvK v0 okb locs pending body env k' =>
+      | .selectRecvK vals pending body env k' =>
+          -- Per-target store-then-next (delta review D3): phase 2 is
+          -- left-to-right, so each address stores immediately.
           match valueAsLoc v with
           | .error (.panic msg) =>
               return (.panicking [⟨runtimeErrorValue msg, false⟩] k', s, choices)
@@ -454,12 +456,18 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
           | .ok loc =>
               match pending with
               | e :: rest =>
-                  return (.evalE e env
-                    (.selectRecvK v0 okb (locs ++ [loc]) rest body env k'), s, choices)
-              | [] => do
-                  let s' ← storeMany s (locs ++ [loc])
-                    (recvStores v0 okb (locs ++ [loc]).length)
-                  return (.exec body env k', s', choices)
+                  match vals with
+                  | val :: vrest => do
+                      let s' ← storeLoc s loc val
+                      return (.evalE e env
+                        (.selectRecvK vrest rest body env k'), s', choices)
+                  | [] => throw (.internal "select receive value/target arity mismatch")
+              | [] =>
+                  match vals with
+                  | [val] => do
+                      let s' ← storeLoc s loc val
+                      return (.exec body env k', s', choices)
+                  | _ => throw (.internal "select receive value/target arity mismatch")
       | .stop => throw (.internal "value delivered to empty continuation")
       | _ => throw (.internal "value delivered to statement continuation")
   | .next k =>

@@ -368,9 +368,9 @@ def Cont.locSup : Cont → Nat
       max (max (selectClausesSup clauses) (optStmtSup default?))
         (max (max (goValueListSup done) (exprListSup pending))
           (max (LocalEnv.locSup env) (Cont.locSup k)))
-  | .selectRecvK v _ locs pending body env k =>
-      max (max (GoValue.locSup v) (locListSup locs))
-        (max (max (exprListSup pending) (Stmt.locSup body))
+  | .selectRecvK vals pending body env k =>
+      max (max (goValueListSup vals) (exprListSup pending))
+        (max (Stmt.locSup body)
           (max (LocalEnv.locSup env) (Cont.locSup k)))
 
 /-- One evaluated select clause's sup (`.blockedSelect` payloads). -/
@@ -457,7 +457,7 @@ def Cont.itersNormalized (types : TypeEnv) : Cont → Bool
   | .panicResumeK _ k => Cont.itersNormalized types k
   | .chanStK _ _ _ _ k => Cont.itersNormalized types k
   | .selectOpsK _ _ _ _ _ k => Cont.itersNormalized types k
-  | .selectRecvK _ _ _ _ _ _ k => Cont.itersNormalized types k
+  | .selectRecvK _ _ _ _ k => Cont.itersNormalized types k
 
 @[inherit_doc Cont.itersNormalized]
 def Config.itersNormalized (types : TypeEnv) : Config → Bool
@@ -4466,6 +4466,7 @@ theorem commitClause_wf {σ : ExecState} {env : LocalEnv} {k : Cont}
           omega
         · rename_i te rest
           refine ⟨w1, ?_, w4, w2⟩
+          have hvals := recvStores_locSup (v := v₀) (ok := true) (rest.length + 1)
           simp only [exprListSup, Nat.max_le] at hcl
           simp only [Config.locSup, Cont.locSup, GoValue.locSup, locListSup,
             exprListSup, Nat.max_le]
@@ -4484,6 +4485,7 @@ theorem commitClause_wf {σ : ExecState} {env : LocalEnv} {k : Cont}
             omega
           · rename_i te rest
             refine ⟨hw, ?_, rfl, Nat.le_refl _⟩
+            have hvals := recvStores_locSup (v := z) (ok := false) (rest.length + 1)
             simp only [exprListSup, Nat.max_le] at hcl
             simp only [Config.locSup, Cont.locSup, GoValue.locSup, locListSup,
               exprListSup, Nat.max_le]
@@ -4591,6 +4593,7 @@ theorem applyChanOp_wf {σ : ExecState} {op : ChanStOp}
           omega
         · rename_i te rest
           refine ⟨w1, ?_, w4⟩
+          have hvals := recvStores_locSup (v := v) (ok := true) (rest.length + 1)
           simp only [exprListSup, Nat.max_le] at hop
           simp only [Config.locSup, Cont.locSup, GoValue.locSup, locListSup,
             exprListSup, stmtListSup, Stmt.locSup, Nat.max_le]
@@ -4607,6 +4610,7 @@ theorem applyChanOp_wf {σ : ExecState} {op : ChanStOp}
           · exact ⟨hw, by simp only [Config.locSup, Nat.max_le]; omega, rfl⟩
           · rename_i te rest
             refine ⟨hw, ?_, rfl⟩
+            have hvals := recvStores_locSup (v := z) (ok := false) (rest.length + 1)
             simp only [exprListSup, Nat.max_le] at hop
             simp only [Config.locSup, Cont.locSup, GoValue.locSup, locListSup,
               exprListSup, stmtListSup, Stmt.locSup, Nat.max_le]
@@ -5505,29 +5509,29 @@ theorem step_preserves_wf_loc {c : Config} {σ : ExecState} {c' : Config}
     obtain ⟨h1, h2, h3, h4, h5⟩ := hcomp
     obtain ⟨w1, w2, w3⟩ := applySelect_wf hs h1 h2 h3 h4 h5 happly
     exact ⟨w1, w2, w3⟩
-  case selectRecvTargetLoc v0 okb locs v loc e rest body env k hloc =>
-    refine ⟨hs, ?_, rfl⟩
+  case selectRecvStore val vrest v loc e rest body env k hloc hst =>
     have h1 := valueAsLoc_locSup hloc
-    simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
-      GoValue.locSup, optLocSup, panicChainSup, goValueListSup, exprListSup,
-      stmtListSup, locListSup, deferListSup, assigneeListSup, optExprSup,
-      goValueListSup_append, exprListSup_append, stmtListSup_append,
-      locListSup_append, panicChainSup_append, goValueListSup_reverse,
-      runtimeErrorValue_locSup, panicPayload, LocalEnv.pushScope_locSup,
-      Nat.max_le] at hc ⊢
-    omega
-  case selectRecvFinish v0 okb locs v loc body env k hloc hsm =>
-    have h1 := valueAsLoc_locSup hloc
-    have hbounds : locListSup (locs ++ [loc]) ≤ σ.nextAddr
-        ∧ GoValue.locSup v0 ≤ σ.nextAddr := by
+    have hbounds : Loc.locSup loc ≤ σ.nextAddr
+        ∧ GoValue.locSup val ≤ σ.nextAddr := by
       simp only [ConfigWf, Config.locSup, Cont.locSup, GoValue.locSup,
-        locListSup, exprListSup, locListSup_append, Nat.max_le] at hc ⊢
+        goValueListSup, exprListSup, Nat.max_le] at hc
       omega
-    obtain ⟨w1, w2, w3, w4, w5⟩ := storeMany_pres hs hbounds.1
-      (Nat.le_trans (recvStores_locSup _) hbounds.2) hsm
+    obtain ⟨w1, w2, w3, w4, w5⟩ := storeLoc_pres hs hbounds.1 hbounds.2 hst
+    refine ⟨w1, ?_, w4⟩
+    simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
+      GoValue.locSup, goValueListSup, exprListSup, Nat.max_le] at hc ⊢
+    omega
+  case selectRecvFinish val v loc body env k hloc hst =>
+    have h1 := valueAsLoc_locSup hloc
+    have hbounds : Loc.locSup loc ≤ σ.nextAddr
+        ∧ GoValue.locSup val ≤ σ.nextAddr := by
+      simp only [ConfigWf, Config.locSup, Cont.locSup, GoValue.locSup,
+        goValueListSup, exprListSup, Nat.max_le] at hc
+      omega
+    obtain ⟨w1, w2, w3, w4, w5⟩ := storeLoc_pres hs hbounds.1 hbounds.2 hst
     refine ⟨w1, ?_, w4⟩
     simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup,
-      GoValue.locSup, locListSup, exprListSup, Nat.max_le] at hc ⊢
+      GoValue.locSup, goValueListSup, exprListSup, Nat.max_le] at hc ⊢
     omega
 
 

@@ -1376,10 +1376,15 @@ inductive Cont where
   | selectOpsK (clauses : List (SelectClauseHead × Stmt)) (default? : Option Stmt)
       (done : List GoValue) (pending : List Expr) (env : LocalEnv) (k : Cont)
   /-- A selected receive clause's target evaluation (spec step 4: LHS
-  evaluated only AFTER the communication committed): the received value
-  and ok flag are pinned; target addresses accumulate; the final step
-  stores and enters the clause body. -/
-  | selectRecvK (v : GoValue) (ok : Bool) (locs : List Loc)
+  evaluated only AFTER the communication committed). `vals` are the
+  REMAINING delivery values, head-aligned with the target address being
+  evaluated: each arriving address is stored IMMEDIATELY (spec
+  §Assignments phase 2 carries assignments out in LEFT-TO-RIGHT order —
+  an earlier target's store is observable before a later target's
+  panic; delta review D3, pinned by
+  channels/recv-edge/second-target-panic-stores-first), then the next
+  target evaluates; the last store enters the clause body. -/
+  | selectRecvK (vals : List GoValue)
       (pending : List Expr) (body : Stmt) (env : LocalEnv) (k : Cont)
 
 /-- The continuation for entering a `.seqn`: under a same-env governing
@@ -1451,7 +1456,7 @@ def panicPassthrough : Cont → Option Cont
   | .panicArgK k => some k
   | .chanStK _ _ _ _ k => some k
   | .selectOpsK _ _ _ _ _ k => some k
-  | .selectRecvK _ _ _ _ _ _ k => some k
+  | .selectRecvK _ _ _ _ k => some k
   | .frame _ _ _ _ _ => none
   | .panicResumeK _ _ => none
   | .stop => none
@@ -1514,8 +1519,8 @@ def recoverThroughWrappers : Cont → Option (GoValue × Cont)
       (recoverThroughWrappers k).map (fun (v, k') => (v, .chanStK a b c d k'))
   | .selectOpsK a b c d e k =>
       (recoverThroughWrappers k).map (fun (v, k') => (v, .selectOpsK a b c d e k'))
-  | .selectRecvK a b c d e f k =>
-      (recoverThroughWrappers k).map (fun (v, k') => (v, .selectRecvK a b c d e f k'))
+  | .selectRecvK a b c d k =>
+      (recoverThroughWrappers k).map (fun (v, k') => (v, .selectRecvK a b c d k'))
 
 /-- The `recover()` builtin (arc doc §A1; wrapper transparency added at
 the arc-final audit F1/BUG-015, 2026-08-06): walk the continuation to the
@@ -1577,8 +1582,8 @@ def recoverResult : Cont → GoValue × Cont
       let (v, k') := recoverResult k; (v, .chanStK a b c d k')
   | .selectOpsK a b c d e k =>
       let (v, k') := recoverResult k; (v, .selectOpsK a b c d e k')
-  | .selectRecvK a b c d e f k =>
-      let (v, k') := recoverResult k; (v, .selectRecvK a b c d e f k')
+  | .selectRecvK a b c d k =>
+      let (v, k') := recoverResult k; (v, .selectRecvK a b c d k')
 
 /-- Control configurations (the Iris `Expr` projection; the `ExecState` is
 the paired `Step` component, as before). New over the old relation:
@@ -1674,7 +1679,8 @@ def applyChanOp (s : ExecState) (op : ChanStOp) (vs : List GoValue)
               | [] => return (.next k, s₁)
               | te :: rest =>
                   return (.evalE te env
-                    (.selectRecvK v true [] rest (.seqn #[]) env k), s₁)
+                    (.selectRecvK (recvStores v true (rest.length + 1))
+                      rest (.seqn #[]) env k), s₁)
           | none =>
               if closed then do
                 let zero ← defaultValue s elem
@@ -1682,7 +1688,8 @@ def applyChanOp (s : ExecState) (op : ChanStOp) (vs : List GoValue)
                 | [] => return (.next k, s)
                 | te :: rest =>
                     return (.evalE te env
-                      (.selectRecvK zero false [] rest (.seqn #[]) env k), s)
+                      (.selectRecvK (recvStores zero false (rest.length + 1))
+                        rest (.seqn #[]) env k), s)
               else
                 return (.blockedRecv (some loc) targets elem env k, s)
   | .close, [chv] => do
@@ -1739,7 +1746,8 @@ def commitClause (s : ExecState) (env : LocalEnv) (k : Cont) :
           match targets with
           | [] => return (.exec body env k, s₁)
           | te :: rest =>
-              return (.evalE te env (.selectRecvK v ok [] rest body env k), s₁)
+              return (.evalE te env
+                (.selectRecvK (recvStores v ok (rest.length + 1)) rest body env k), s₁)
 
 /-- The `select` READINESS step (spec step 2, deterministic slice): pair
 the evaluated entry operands with their clauses, compute the ready set;
@@ -2369,18 +2377,23 @@ inductive Step : Config → ExecState → Config → ExecState → Prop where
       applySelect s clauses default? (v :: done).reverse env k = .error (.panic msg) →
       Step (.retV v (.selectOpsK clauses default? done [] env k)) s
         (.panicking [⟨runtimeErrorValue msg, false⟩] k) s
-  | selectRecvTargetLoc {v0 ok locs v loc e rest body env k s} :
+  -- Per-target store-then-next (delta review D3): spec §Assignments
+  -- phase 2 is LEFT-TO-RIGHT — each arriving target address stores its
+  -- delivery value immediately, so an earlier store is observable
+  -- before a later target's panic.
+  | selectRecvStore {val vrest v loc e rest body env k s s'} :
       valueAsLoc v = .ok loc →
-      Step (.retV v (.selectRecvK v0 ok locs (e :: rest) body env k)) s
-        (.evalE e env (.selectRecvK v0 ok (locs ++ [loc]) rest body env k)) s
-  | selectRecvTargetPanic {v0 ok locs v msg pending body env k s} :
+      storeLoc s loc val = .ok s' →
+      Step (.retV v (.selectRecvK (val :: vrest) (e :: rest) body env k)) s
+        (.evalE e env (.selectRecvK vrest rest body env k)) s'
+  | selectRecvTargetPanic {vals v msg pending body env k s} :
       valueAsLoc v = .error (.panic msg) →
-      Step (.retV v (.selectRecvK v0 ok locs pending body env k)) s
+      Step (.retV v (.selectRecvK vals pending body env k)) s
         (.panicking [⟨runtimeErrorValue msg, false⟩] k) s
-  | selectRecvFinish {v0 ok locs v loc body env k s s'} :
+  | selectRecvFinish {val v loc body env k s s'} :
       valueAsLoc v = .ok loc →
-      storeMany s (locs ++ [loc]) (recvStores v0 ok (locs ++ [loc]).length) = .ok s' →
-      Step (.retV v (.selectRecvK v0 ok locs [] body env k)) s
+      storeLoc s loc val = .ok s' →
+      Step (.retV v (.selectRecvK [val] [] body env k)) s
         (.exec body env k) s'
 
 /-- Reflexive-transitive closure of `Step`. -/
