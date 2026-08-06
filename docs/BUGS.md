@@ -31,11 +31,20 @@ differential-pinned) `- Cases: <id>, <id>, …` (baseline case ids), then prose.
 
 ## BUG-029 — receive/select delivery collapses spec §Assignments' two phases: target k's store happens before target k+1's ADDRESS evaluates
 
-- Status: open (machine HALF fixed — the statement-form discriminators
-  channels/recv-edge/{dep-index-target,nil-index-base-second} flipped
-  green with the phase split below; the SELECT forms stay red until the
-  frontend passes user clause targets into the machine's delivery plan
-  instead of body-side single assigns)
+- Status: fixed (2026-08-06, convergence response, two movements. The
+  MACHINE movement made spec §Assignments' two phases explicit
+  structure: `tgtOpK` (phase 1) evaluates every target's OPERANDS
+  left-to-right after the communication, resolving each target to a
+  store-ready `TargetRef` (`targetPlan`/`completeTargetRef`) with the
+  OUTER nil/bounds/nil-map check deferred; `storeK` (phase 2,
+  `.next`-driven) stores left-to-right ONE step per target,
+  `storeTarget` firing the deferred check at the store, after earlier
+  stores landed. The FRONTEND movement routes select receive-clause
+  user targets into the same delivery plan (`machineSelectTargets`)
+  instead of body-side single assigns — falling back to the temp
+  lowering for `:=`/blank/boxing/hoisting targets, where step-4
+  clause-locality demands it. All four discriminators plus the three
+  collapse-direction guards green.)
 - Pinned-by: differential
 - Cases: channels/select-recv-edge/dep-index-target, channels/select-recv-edge/nil-index-base-second
 - Discovered: 2026-08-06 (channels-arc-s1 convergence round; introduced
@@ -64,7 +73,17 @@ after earlier stores landed).
 
 ## BUG-030 — map-element FIRST target's store is lost when a later receive target's store panics (post-statement map-assign lowering)
 
-- Status: open
+- Status: fixed (2026-08-06, convergence response: a TWO-target
+  receive's map-element target rides the machine's delivery plan as an
+  `Assignee.mapElem` ("map" wire target) — base/key evaluate in phase 1
+  (post-communication, the BUG-028 point), the map store is a phase-2
+  left-to-right `storeTarget` step via the shared `mapAssignValue`, so
+  it survives a later target's store panic. Interface-valued maps with
+  a concrete element fail closed in this form (the machine stores the
+  delivered value raw). The SINGLE-target `m[k] = <-ch` keeps the
+  post-statement map-assign — one store, order cannot be violated, and
+  it carries the boxing wrap. Select clauses reuse the same machinery
+  through `machineSelectTargets`.)
 - Pinned-by: differential
 - Cases: channels/recv-map-elem/first-store-lands
 - Discovered: 2026-08-06 (channels-arc-s1 convergence round, verified

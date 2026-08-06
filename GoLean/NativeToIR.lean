@@ -372,6 +372,15 @@ private def decodeTarget (path : String) (json : Json) : LowerM Target := do
   | "addr" =>
       let e ← decodeExpr s!"{path}.expr" (← StrictJson.field path obj "expr")
       pure { assignee := .addr e, declare := none }
+  | "map" =>
+      -- A map-element delivery target (convergence round, BUG-030):
+      -- consumed only by the channel-receive delivery plan; every other
+      -- assignee position fails closed on it (`assigneeExpr` is `none`).
+      let b ← decodeExpr s!"{path}.base" (← StrictJson.field path obj "base")
+      let i ← decodeExpr s!"{path}.index" (← StrictJson.field path obj "index")
+      let kt ← decodeTy s!"{path}.keyType" (← StrictJson.field path obj "keyType")
+      let vt ← decodeTy s!"{path}.valueType" (← StrictJson.field path obj "valueType")
+      pure { assignee := .mapElem b i kt vt, declare := none }
   | other => fail s!"unsupported assignment target {other} at {path}"
 
 private def targetAssignee (t : Target) : LowerM Assignee := pure t.assignee

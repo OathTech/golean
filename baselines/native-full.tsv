@@ -1,15 +1,15 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-06  commit: channels-arc-s1 (convergence: BUG-029 machine phase split)
+# recorded: 2026-08-06  commit: channels-arc-s1 (convergence: delivery targets ride the machine plan — BUG-029 select half, BUG-030)
 #   frontend: native  oracle: go run (strict lane) / go-run membership in the
 #   machine-enumerated observation set (membership lane; go1.26.5 samples)
-# manifest_cases: 1080  pass: 994  fail: 86
-# Re-pin reason: BUG-029 machine fix — receive delivery phases SPLIT
-#   (tgtOpK phase-1 operand evaluation with deferred outer checks;
-#   storeK phase-2 one-store-per-step). Flips the two STATEMENT-form
-#   discriminators channels/recv-edge/{dep-index-target,
-#   nil-index-base-second} [differential] -> PASS. Select-form and
-#   map-element siblings stay red until the frontend movements. Zero
-#   drift on all other ids.
+# manifest_cases: 1080  pass: 997  fail: 83
+# Re-pin reason: select receive-clause user targets now ride the
+#   machine's delivery plan (machineSelectTargets; fallback to the temp
+#   lowering for :=/blank/boxing/hoisting targets), and a TWO-target
+#   receive's map-element target is an Assignee.mapElem "map" wire
+#   target (BUG-030). Flips channels/select-recv-edge/{dep-index-target,
+#   nil-index-base-second} and channels/recv-map-elem/first-store-lands
+#   [differential] -> PASS. Zero drift on all other ids.
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
 PASS	arrays/array-copy	-
@@ -134,7 +134,7 @@ PASS	channels/recv-edge/oob-second-target-stores-first	-
 PASS	channels/recv-edge/oob-target-drains	-
 PASS	channels/recv-edge/second-target-panic-stores-first	-
 PASS	channels/recv-map-elem	-
-FAIL	channels/recv-map-elem/first-store-lands	differential
+PASS	channels/recv-map-elem/first-store-lands	-
 PASS	channels/recv-map-elem/key-panic-drains	-
 PASS	channels/recv-order/binary	-
 PASS	channels/recv-order/call-arg	-
@@ -166,9 +166,9 @@ FAIL	channels/select-multi-ready	lean-observation
 PASS	channels/select-nil-default	-
 PASS	channels/select-ready-receive	-
 PASS	channels/select-ready-send	-
-FAIL	channels/select-recv-edge/dep-index-target	differential
+PASS	channels/select-recv-edge/dep-index-target	-
 PASS	channels/select-recv-edge/field-second-target-stores-first	-
-FAIL	channels/select-recv-edge/nil-index-base-second	differential
+PASS	channels/select-recv-edge/nil-index-base-second	-
 PASS	channels/send-closed-panic	-
 PASS	comparisons/short-circuit/array-reaches-interface-panic	-
 PASS	comparisons/short-circuit/array-skips-interface-panic	-

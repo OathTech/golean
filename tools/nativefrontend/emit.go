@@ -6277,16 +6277,51 @@ func (e *emitter) hoistChanRecv(u *ast.UnaryExpr) (any, error) {
 	return map[string]any{"expr": "ident", "name": name, "type": elemTy}, nil
 }
 
+// emitMapTargetWire builds the machine's MAP-element delivery target
+// (convergence round, BUG-030): base and key evaluate in the machine's
+// phase 1 (post-communication, in lexical position among the targets —
+// the BUG-028 point), and the map store is a phase-2 left-to-right
+// step, so it lands before a LATER target's store panic. The map VALUE
+// must not need interface boxing (the machine stores the delivered
+// value raw) — callers check.
+func (e *emitter) emitMapTargetWire(ix *ast.IndexExpr, m *types.Map) (any, error) {
+	baseW, err := e.emitExpr(ix.X)
+	if err != nil {
+		return nil, err
+	}
+	idxW, err := e.emitExpr(ix.Index)
+	if err != nil {
+		return nil, err
+	}
+	idxW, err = e.wrapInterfaceConversion(m.Key(), e.goTypeOf(ix.Index), idxW)
+	if err != nil {
+		return nil, err
+	}
+	keyTy, err := e.emitType(m.Key())
+	if err != nil {
+		return nil, err
+	}
+	valTy, err := e.emitType(m.Elem())
+	if err != nil {
+		return nil, err
+	}
+	return map[string]any{"target": "map", "base": baseW, "index": idxW,
+		"keyType": keyTy, "valueType": valTy}, nil
+}
+
 // emitChanRecvAssign lowers the receive STATEMENT forms `v = <-ch`,
 // `v, ok := <-ch`, … to the dedicated chan-recv statement (spec
 // §Assignments' two phases: the machine performs the COMMUNICATION
-// first and evaluates/stores targets after — BUG-022). A blank ok drops
-// to the 1-target form (the flag is unobservable); a blank value
-// receives into a fresh temp (the receive itself must still happen). A
-// MAP-element target (`m[k] = <-ch` — audit S4) pre-binds its base and
-// key in phase-1 lexical order, receives into a fresh temp, and
-// map-assigns afterwards (maps are not addressable, so the dedicated
-// statement cannot target them directly).
+// first, evaluates target operands, and stores left-to-right after —
+// BUG-022/BUG-029). A blank ok drops to the 1-target form (the flag is
+// unobservable); a blank value receives into a fresh temp (the receive
+// itself must still happen). A MAP-element target in the TWO-target
+// form rides the machine's delivery plan as a "map" target (BUG-030:
+// its store must land before the second target's store); the
+// single-target form `m[k] = <-ch` keeps the post-statement map-assign
+// (only one store, so order cannot be violated, and it supports
+// interface-valued maps via the boxing wrap the machine target cannot
+// carry).
 func (e *emitter) emitChanRecvAssign(st *ast.AssignStmt, ux *ast.UnaryExpr, define bool) (any, error) {
 	elemGo, err := e.chanElem(ux.X)
 	if err != nil {
@@ -6314,10 +6349,27 @@ func (e *emitter) emitChanRecvAssign(st *ast.AssignStmt, ux *ast.UnaryExpr, defi
 		}
 		if ix, ok := ast.Unparen(lv).(*ast.IndexExpr); ok {
 			if m, ok := e.applySubst(e.goTypeOf(ix.X)).Underlying().(*types.Map); ok {
-				// Map-element target: the receive lands in a fresh temp;
-				// the map-assign stores it AFTER the communication. Base
-				// and key are emitted INLINE into that post-receive store
-				// (BUG-028): calls in them auto-hoist pre-receive
+				if len(st.Lhs) == 2 {
+					// TWO-target form (BUG-030): the map store is a phase-2
+					// left-to-right store and must land BEFORE the other
+					// target's store — carry the target into the machine's
+					// delivery plan. The machine stores the delivered value
+					// raw, so an interface-valued map with a concrete
+					// element needs boxing it cannot do: fail closed.
+					if types.IsInterface(m.Elem()) && !types.IsInterface(posGo) {
+						return unsup("channel receive into interface-valued map element (two-target form)")
+					}
+					w, err := e.emitMapTargetWire(ix, m)
+					if err != nil {
+						return err
+					}
+					targets = append(targets, w)
+					return nil
+				}
+				// Single-target map element: the receive lands in a fresh
+				// temp; the map-assign stores it AFTER the communication.
+				// Base and key are emitted INLINE into that post-receive
+				// store (BUG-028): calls in them auto-hoist pre-receive
 				// (A-normal form) and len(ch) keys hoist via the
 				// fnHasRecv flag — both spec-ordered, both pre-receive —
 				// while a panicking NON-call operand (spec-unordered
@@ -6391,12 +6443,80 @@ func (e *emitter) emitChanRecvAssign(st *ast.AssignStmt, ux *ast.UnaryExpr, defi
 	return node, nil
 }
 
-// selectRecvClause builds one receive clause of a select: the received
-// value (and ok flag) land in fresh pre-declared temps — the machine's
-// post-selection targets — and the USER assignment happens at the top of
-// the clause body (spec §Select statements step 4: LHS expressions are
-// evaluated only after the communication, so their side effects stay
-// inside the selected clause — pinned by
+// machineSelectTargets tries to express EVERY user target of a select
+// receive clause as a machine delivery target (convergence round,
+// BUG-029 select half): the machine then realizes spec step 4 with the
+// SAME two-phase split as the receive statement — phase-1 operand
+// evaluation, phase-2 left-to-right stores — where body-side single
+// assigns interleave a later target's address evaluation with an
+// earlier store (the exact BUG-029 collapse; pinned by
+// channels/select-recv-edge/*). Returns ok=false (fall back to the
+// temp+body-assign lowering) when a target is blank, needs interface
+// boxing (the machine stores the delivered value raw), or emits operand
+// HOISTS — a hoisted temp would evaluate at select ENTRY, but step 4
+// evaluates targets only after selection (pinned by
+// unselected-receive-lhs-not-eval).
+func (e *emitter) machineSelectTargets(lhs []ast.Expr, elemGo types.Type) ([]any, bool, error) {
+	ws := []any{}
+	for i, lv := range lhs {
+		if id, ok := lv.(*ast.Ident); ok && id.Name == "_" {
+			return nil, false, nil
+		}
+		posGo := elemGo
+		if i == 1 {
+			posGo = types.Typ[types.Bool]
+		}
+		var w any
+		var hoists []any
+		if ix, ok := ast.Unparen(lv).(*ast.IndexExpr); ok {
+			if m, ok := e.applySubst(e.goTypeOf(ix.X)).Underlying().(*types.Map); ok {
+				// Map-element target (BUG-030): machine "map" target unless
+				// the VALUE needs boxing.
+				if types.IsInterface(m.Elem()) && !types.IsInterface(posGo) {
+					return nil, false, nil
+				}
+				saved := e.hoisted
+				e.hoisted = nil
+				mw, err := e.emitMapTargetWire(ix, m)
+				hoists = e.hoisted
+				e.hoisted = saved
+				if err != nil {
+					return nil, false, err
+				}
+				if len(hoists) > 0 {
+					return nil, false, nil
+				}
+				ws = append(ws, mw)
+				continue
+			}
+		}
+		tgtTy := e.applySubst(e.assignTargetType(lv, false))
+		if tgtTy != nil && types.IsInterface(tgtTy) && !types.IsInterface(posGo) {
+			return nil, false, nil
+		}
+		saved := e.hoisted
+		e.hoisted = nil
+		w, err := e.emitAssignTarget(lv, false)
+		hoists = e.hoisted
+		e.hoisted = saved
+		if err != nil {
+			return nil, false, err
+		}
+		if len(hoists) > 0 {
+			return nil, false, nil
+		}
+		ws = append(ws, w)
+	}
+	return ws, true, nil
+}
+
+// selectRecvClause builds one receive clause of a select. Plain lvalue
+// user targets ride the clause head as MACHINE delivery targets
+// (machineSelectTargets — spec step 4 with the statement form's
+// two-phase split, BUG-029). Otherwise the received value (and ok flag)
+// land in fresh pre-declared temps and the USER assignment happens at
+// the top of the clause body (step 4's side effects stay inside the
+// selected clause — pinned by
 // channels/select-deterministic/{unselected-receive-lhs-not-eval,
 // selected-receive-lhs-eval}).
 func (e *emitter) selectRecvClause(ux *ast.UnaryExpr, lhs []ast.Expr, define bool, bodyNode any) (any, error) {
@@ -6411,6 +6531,16 @@ func (e *emitter) selectRecvClause(ux *ast.UnaryExpr, lhs []ast.Expr, define boo
 	chW, err := e.emitExpr(ux.X)
 	if err != nil {
 		return nil, err
+	}
+	if !define && len(lhs) > 0 {
+		ws, ok, err := e.machineSelectTargets(lhs, elemGo)
+		if err != nil {
+			return nil, err
+		}
+		if ok {
+			return map[string]any{"clause": "recv", "targets": ws, "ch": chW,
+				"elem": elemTy, "body": bodyNode}, nil
+		}
 	}
 	boolTy := map[string]any{"kind": "bool"}
 	targets := []any{}
