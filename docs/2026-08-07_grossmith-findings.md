@@ -1,5 +1,18 @@
 # grossmith differential findings — 2026-08-07
 
+> **2026-08-07 addendum (GoLean side):** grossmith is now a reading
+> checkout at `deps/grossmith` (CLAUDE.md reference-checkouts list);
+> it SUPERSEDES the retired `side/gofuzz` prototype (founding record:
+> `docs/2026-08-01_go-fuzzer-side-project-brief.md`). `side/gofuzz` is
+> untracked/outside this repo and is left in place pending the user's
+> deletion call (flagged, not deleted). Disposition of this doc's
+> items: §1 filed+fixed as BUG-042 (pins
+> `ints/defined-incdec/*`, `floats/defined-incdec`,
+> `maps/incdec-value-kinds/*`); §2 fixed (diff-coverage exit 2 on
+> no-publish + up-front invalidation; ci meta manifest_sha256 check;
+> G1/G2 fixtures); §3 promoted (BUG-042 matrix +
+> `bools/short-circuit-call-operand` tracked frontend-export red).
+
 Handed over from the grossmith project (generator of small,
 outcome-deterministic Go programs for differential conformance testing;
 first campaigns against this checkout at `a38e086e`, native frontend,

@@ -276,6 +276,11 @@ they are not tracked):
   keep the reading copy at the manifest's pinned rev).
 - `deps/raft` — etcd-io/raft, the north-star target (REQUIRED for the
   quorum-pilot arc).
+- `deps/grossmith` — the seed-deterministic differential conformance
+  GENERATOR for Go programs (external project; hands findings over as
+  dated docs, e.g. `docs/2026-08-07_grossmith-findings.md`). Supersedes
+  the retired `side/gofuzz` prototype (founding record:
+  `docs/2026-08-01_go-fuzzer-side-project-brief.md`).
 - `deps/gobra`, `deps/aeneas`, `deps/strata` — other verification
   toolchains kept for comparison.
 

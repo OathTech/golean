@@ -79,8 +79,9 @@ witness must be a non-quorum program.
 ## Out of scope
 
 Concurrency (BUG-002 unchanged), floats/generics/channels, the fuzzer
-side project (own loop, `side/gofuzz/`), frontend work beyond the
-rider items.
+side project (own loop, `side/gofuzz/` — since 2026-08-07 superseded
+by `deps/grossmith`, see the fuzzer brief's addendum), frontend work
+beyond the rider items.
 
 ## Exit criteria
 

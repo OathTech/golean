@@ -7,6 +7,14 @@
 > CONSUMER-SIDE contract (the parts GoLean relies on — see the
 > supersession section at the end). The original text below is kept
 > unedited as history.
+>
+> **2026-08-07 addendum:** grossmith is now a reading checkout at
+> `deps/grossmith` (CLAUDE.md reference-checkouts list) and delivers
+> findings as dated handover docs
+> (`docs/2026-08-07_grossmith-findings.md` is the first). The
+> `side/gofuzz` prototype directory is RETIRED/superseded; it is
+> outside this repo's tracking and is left in place pending the
+> user's deletion call (flagged, not deleted).
 
 The founding spec for a SEPARATE project (own repo, own agent loop): a
 csmith/rustlantis-class differential fuzzer for Go, testing GoLean's
