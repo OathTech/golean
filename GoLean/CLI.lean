@@ -647,9 +647,9 @@ def enumPoolRun (resultLocs : List Loc) :
                       | .error e => throw e
                       | .ok r' => enumPoolRun resultLocs fuel m' r' choices'
 
-/-- The `$pkginit` phase of an enumeration run (init slice): `enumRun`'s
-terminal handling, but returning the FINAL STATE (the subject runs from
-it) instead of a result observation. A panic terminal is the run's
+/-- The `$pkginit` phase of an enumeration run (init slice):
+`runConfig`-mirroring terminal handling, but returning the FINAL STATE
+(the subject runs from it) instead of a result observation. A panic terminal is the run's
 observation (a panicking initializer aborts the program before the
 subject), reported with the leftover stream like any panic member. -/
 def enumInitRun :

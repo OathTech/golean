@@ -1415,7 +1415,9 @@ and an `--expect-status ok` enumeration must FAIL loud, never bury the
 panic member in the set.
 
 F5: driver-agreement pins — `CLI.enumSetup`/`CLI.enumRunProgram`/
-`CLI.enumRun`/`CLI.enumInitRun` COPY `runProgramM`/`runConfig` (no
+`CLI.enumPoolRun`/`CLI.enumInitRun` (and, slice 4, the stepwise
+engine's `CLI.stepNeeds` consumption accountant) COPY
+`runProgramPoolM`/`execProgLoop`/`runConfig`'s wiring (no
 shared driver helper BY POLICY — the lane adds nothing to GoCore; the
 old "GoCore stays bit-identical" wording was the membership slice's
 own constraint, stale as a standing fact — arc-final audit F16,
