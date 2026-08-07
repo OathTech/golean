@@ -406,9 +406,14 @@ private def runNativeJsonRun (args : List String) : IO UInt32 := do
                   -- (iterated stepFn) is the executable; the big-step
                   -- interpreter is deleted at S4. Since the init slice the
                   -- entry is the whole-PROGRAM driver: seed globals, run
-                  -- $pkginit, then the subject (identical to the old entry
-                  -- for globals-free programs).
-                  match GoLean.GoCore.Machine.runProgramIntsM cfg.fuel program functionName cfg.args cfg.choices with
+                  -- $pkginit, then the subject. Since the channels arc
+                  -- slice 2 the subject phase runs on the THREAD POOL
+                  -- (`runProgramPoolM`) — identical to the sequential
+                  -- driver on programs that never spawn
+                  -- (`execProg_single_eq_execStmt` + the full-corpus
+                  -- bit-identity check), and the only driver on which
+                  -- `go` statements run.
+                  match GoLean.GoCore.Machine.runProgramPoolIntsM cfg.fuel program functionName cfg.args cfg.choices with
                   | .ok result =>
                       IO.println (runJson result).compress
                       return 0

@@ -459,6 +459,119 @@ private def coreChanSelectDefaultFunction : GoCore.Func := {
     ]
 }
 
+/-! ### The ThreadPool (channels arc slice 2): spawn + rendezvous,
+multi-goroutine deadlock, main-exit kills goroutines (D6), close-wake,
+and the nil-spawn fail-closed refusal — hand-built Programs run on the
+pool driver (`runProgramPoolM`). -/
+
+private def poolWorkerSendFunction : GoCore.Func := {
+  id := ⟨"poolWorkerSend_F"⟩,
+  args := #[{ id := "ch", typ := .chan .both .int }],
+  results := #[],
+  body := .seqn #[.chanSend (.var "ch") (.intLit 42) .int]
+}
+
+private def poolSpawnMainFunction : GoCore.Func := {
+  id := ⟨"poolSpawnMain_F"⟩,
+  args := #[],
+  results := #[coreParam "z"],
+  body := .block
+    #[{ id := "chv", typ := .chan .both .int }]
+    #[
+      .makeChan (.var "chv") .int none,
+      .goStmt (.funcVal ⟨"poolWorkerSend_F"⟩ #[]) #[.var "chv"],
+      -- main parks; the worker's arriving send pairs with it (rendezvous)
+      .chanRecv #[.var "z"] (.var "chv") .int
+    ]
+}
+
+private def poolWorkerRecvFunction : GoCore.Func := {
+  id := ⟨"poolWorkerRecv_F"⟩,
+  args := #[{ id := "ch", typ := .chan .both .int }],
+  results := #[],
+  body := .seqn #[.chanRecv #[] (.var "ch") .int]
+}
+
+private def poolDeadlockMainFunction : GoCore.Func := {
+  id := ⟨"poolDeadlockMain_F"⟩,
+  args := #[],
+  results := #[coreParam "z"],
+  body := .block
+    #[{ id := "av", typ := .chan .both .int },
+      { id := "bv", typ := .chan .both .int }]
+    #[
+      .makeChan (.var "av") .int none,
+      .makeChan (.var "bv") .int none,
+      .goStmt (.funcVal ⟨"poolWorkerRecv_F"⟩ #[]) #[.var "av"],
+      -- worker parks on a, main parks on b: ALL goroutines asleep
+      .chanRecv #[.var "z"] (.var "bv") .int
+    ]
+}
+
+private def poolMainExitFunction : GoCore.Func := {
+  id := ⟨"poolMainExit_F"⟩,
+  args := #[],
+  results := #[coreParam "z"],
+  body := .block
+    #[{ id := "chv", typ := .chan .both .int }]
+    #[
+      .makeChan (.var "chv") .int none,
+      .goStmt (.funcVal ⟨"poolWorkerRecv_F"⟩ #[]) #[.var "chv"],
+      -- main returns with the worker parked forever: program exits with
+      -- main's outcome (D6), the leaked goroutine unobserved
+      .assign (.var "z") (.intLit 7)
+    ]
+}
+
+private def poolCloseWakeWorkerFunction : GoCore.Func := {
+  id := ⟨"poolCloseWakeWorker_F"⟩,
+  args := #[{ id := "ch", typ := .chan .both .int },
+            { id := "done", typ := .chan .both .int }],
+  results := #[],
+  body := .block
+    #[{ id := "v", typ := .int }, { id := "okv", typ := .bool }]
+    #[
+      .chanRecv #[.var "v", .var "okv"] (.var "ch") .int,
+      .ifThenElse (.var "okv")
+        (.chanSend (.var "done") (.intLit 999) .int)
+        (.chanSend (.var "done") (.intLit 55) .int)
+    ]
+}
+
+private def poolCloseWakeMainFunction : GoCore.Func := {
+  id := ⟨"poolCloseWakeMain_F"⟩,
+  args := #[],
+  results := #[coreParam "z"],
+  body := .block
+    #[{ id := "chv", typ := .chan .both .int },
+      { id := "donev", typ := .chan .both .int }]
+    #[
+      .makeChan (.var "chv") .int none,
+      .makeChan (.var "donev") .int none,
+      .goStmt (.funcVal ⟨"poolCloseWakeWorker_F"⟩ #[]) #[.var "chv", .var "donev"],
+      -- close wakes the parked receiver into the drained zero (ok=false)
+      .closeChan (.var "chv"),
+      .chanRecv #[.var "z"] (.var "donev") .int
+    ]
+}
+
+private def poolNilSpawnFunction : GoCore.Func := {
+  id := ⟨"poolNilSpawn_F"⟩,
+  args := #[],
+  results := #[coreParam "z"],
+  -- gc: "fatal error: go of nil func value" at the spawn — the fatal
+  -- class is unmodeled; the pool refuses fail-closed (probed
+  -- 2026-08-07, refuting the child-panic analysis)
+  body := .seqn #[.goStmt (.nil none) #[]]
+}
+
+private def poolProgram : GoCore.Program := {
+  funcs := #[poolWorkerSendFunction, poolSpawnMainFunction,
+    poolWorkerRecvFunction, poolDeadlockMainFunction, poolMainExitFunction,
+    poolCloseWakeWorkerFunction, poolCloseWakeMainFunction,
+    poolNilSpawnFunction]
+}
+
 private def coreMapBasicFunction : GoCore.Func := {
   id := ⟨"map_basic_F"⟩,
   args := #[],
@@ -1354,6 +1467,7 @@ private def coreFloatNaNMapFunction : GoCore.Func := {
     ]
 }
 
+set_option maxRecDepth 4096 in
 def main : IO UInt32 := do
   let mut passed := true
   passed := passed && (← expectFloatVectors "FloatBits hardware-oracle vectors")
@@ -1400,6 +1514,16 @@ def main : IO UInt32 := do
     (GoCore.Machine.runFunctionM 100000 coreChanSelectFunction #[]) 15)
   passed := passed && (← expectIntResult "GoCore select default fallthrough (none ready)"
     (GoCore.Machine.runFunctionM 100000 coreChanSelectDefaultFunction #[]) 444)
+  passed := passed && (← expectIntResult "GoCore pool spawn + rendezvous pairing"
+    (GoCore.Machine.runProgramPoolM 100000 poolProgram "poolSpawnMain_F" #[]) 42)
+  passed := passed && (← expectErrorStatus "GoCore pool multi-goroutine deadlock (all asleep)"
+    (GoCore.Machine.runProgramPoolM 100000 poolProgram "poolDeadlockMain_F" #[]) "deadlock")
+  passed := passed && (← expectIntResult "GoCore pool main-exit kills parked goroutine (D6)"
+    (GoCore.Machine.runProgramPoolM 100000 poolProgram "poolMainExit_F" #[]) 7)
+  passed := passed && (← expectIntResult "GoCore pool close wakes parked receiver (drained zero)"
+    (GoCore.Machine.runProgramPoolM 100000 poolProgram "poolCloseWakeMain_F" #[]) 55)
+  passed := passed && (← expectErrorStatus "GoCore pool nil spawn callee fail-closed (gc fatal unmodeled)"
+    (GoCore.Machine.runProgramPoolM 100000 poolProgram "poolNilSpawn_F" #[]) "unsupported")
   passed := passed && (← expectIntResult "GoCore string basic" (GoCore.Machine.runFunctionM 100000 coreStringFunction #[]) 22)
   passed := passed && (← expectIntResult "GoCore string byte length" (GoCore.Machine.runFunctionM 100000 coreStringByteLenFunction #[]) 6)
   passed := passed && (← expectValues "GoCore string byte indexing"

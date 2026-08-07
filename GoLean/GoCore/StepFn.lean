@@ -867,8 +867,9 @@ instead of aliasing a later allocation (audit response, C1). For a
 program with no globals and no `$pkginit` the init phases are no-ops
 and this is exactly the old named-function entry wiring
 (`runFunctionWithContextM`'s, over a `Program`). -/
-def runProgramM (fuel : Nat) (program : Program) (name : String)
-    (args : Array GoValue) (choices : Choices := []) : Except GoError Result := do
+def runProgramSetupM (fuel : Nat) (program : Program) (name : String)
+    (args : Array GoValue) (choices : Choices := []) :
+    Except GoError (Config × ExecState × List Loc × Choices) := do
   let func ←
     match findFunctionIn? program.funcs ⟨name⟩ with
     | some func => pure func
@@ -886,6 +887,12 @@ def runProgramM (fuel : Nat) (program : Program) (name : String)
   let (frameEnv, s₃) ← allocDecls env s₂ func.results.toList
   let resultLocs ← pinResultLocs frameEnv func.results.toList
   let c₀ : Config := .exec func.body frameEnv (.frame [] [] [] .stop)
+  return (c₀, s₃, resultLocs, choices₁)
+
+@[inherit_doc runProgramSetupM]
+def runProgramM (fuel : Nat) (program : Program) (name : String)
+    (args : Array GoValue) (choices : Choices := []) : Except GoError Result := do
+  let (c₀, s₃, resultLocs, choices₁) ← runProgramSetupM fuel program name args choices
   let (sF, _) ← runConfig fuel s₃ c₀ choices₁
   return { values := (← loadMany sF resultLocs).toArray }
 
