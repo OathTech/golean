@@ -128,9 +128,9 @@ while [[ "$#" -gt 0 ]]; do
 done
 
 case "$STATUS_FILTER" in
-  ""|ok|panic|deadlock) ;;
+  ""|ok|panic|deadlock|race) ;;
   *)
-    echo "coverage-manifest: invalid --status $STATUS_FILTER; use ok, panic, or deadlock" >&2
+    echo "coverage-manifest: invalid --status $STATUS_FILTER; use ok, panic, deadlock, or race" >&2
     exit 2
     ;;
 esac
@@ -411,11 +411,14 @@ while IFS= read -r cases_file; do
           bad=1
           continue
         fi
-        if [[ "$expected_status" == "deadlock" ]]; then
+        if [[ "$expected_status" == "deadlock" || "$expected_status" == "race" ]]; then
           # Fail closed: the membership enumerator has no deadlock-member
           # handling (a blocked run fails its enumeration loudly), and the
-          # oracle's deadlock detector is schedule/mode-sensitive.
-          echo "coverage-manifest: $cases_file: deadlock-expectation cases are strict-lane only" >&2
+          # oracle's deadlock detector is schedule/mode-sensitive. Race
+          # expectations are per-stream refusals (racy-negative lane) —
+          # the slice-4 schedule enumerator will own "every enumerated
+          # path refuses"; until then they are strict-lane only too.
+          echo "coverage-manifest: $cases_file: deadlock/race-expectation cases are strict-lane only" >&2
           bad=1
           continue
         fi
@@ -448,12 +451,17 @@ while IFS= read -r cases_file; do
     # message "fatal error: all goroutines are asleep - deadlock!" (exit
     # status 2), so no per-case expected_reason exists (leave it "-").
     # These cases must never run under -race: the detector does not fire
-    # there (probed; ground-truth note §5) — the modes are mutually
-    # exclusive by construction when a -race lane arrives.
+    # there (probed; ground-truth note §5) — and race-expectation cases
+    # are exactly the -race lane, so the two statuses are mutually
+    # exclusive BY CONSTRUCTION (one status column).
+    # race (channels arc slice 3, lane d): the subject has a data race on
+    # every interleaving — the machine must refuse (raceDetected) on
+    # every tested stream, and the Go oracle is `go run -race` (exit 66,
+    # "WARNING: DATA RACE"; no per-case expected_reason).
     case "$expected_status" in
-      ok|panic|deadlock) ;;
+      ok|panic|deadlock|race) ;;
       *)
-        echo "coverage-manifest: $cases_file: invalid expected Go status $expected_status; use ok, panic, or deadlock" >&2
+        echo "coverage-manifest: $cases_file: invalid expected Go status $expected_status; use ok, panic, deadlock, or race" >&2
         bad=1
         continue
         ;;

@@ -156,6 +156,19 @@ inductive GoError where
   detection itself is the flagship's rendering of the spec's "blocks
   forever" (latitude row L6, ground-truth note §6). -/
   | deadlock
+  /-- Data race — a PROGRAM-class refusal, not a model artifact
+  (channels arc slice 3, D2+D3(b)): the pool's segment-level
+  happens-before detector found two HB-unordered conflicting accesses
+  from different goroutines. Races FAIL CLOSED per run (nondeterminism
+  doctrine: no semantics below the DRF line — the memory model's
+  ceiling for racy programs includes "report the race and terminate"
+  and multiword corruption), on every run where the conflicting
+  accesses execute, deterministically given the stream. The
+  differential oracle for this class is `go run -race` (TSan; exit 66);
+  the message is FIXED so per-stream refusal is choice-invariant in the
+  harness. Never combined with deadlock expectations (-race suppresses
+  the deadlock detector — ground-truth note §5). -/
+  | raceDetected
   deriving Repr, BEq, Inhabited
 
 def GoError.status : GoError → String
@@ -165,6 +178,7 @@ def GoError.status : GoError → String
   | .internal _ => "error"
   | .fuelOut => "fuel-out"
   | .deadlock => "deadlock"
+  | .raceDetected => "race"
 
 def GoError.message : GoError → String
   | .panic message => message
@@ -173,6 +187,7 @@ def GoError.message : GoError → String
   | .internal message => message
   | .fuelOut => "GoCore execution fuel exhausted"
   | .deadlock => "all goroutines are asleep - deadlock!"
+  | .raceDetected => "data race detected"
 
 structure Addr where
   id : Nat

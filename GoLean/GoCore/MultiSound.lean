@@ -196,6 +196,15 @@ def transferable : Except GoError (ExecOutcome × Choices) → Prop
   | .error (.panic _) => True
   | _ => False
 
+/-- The race detector is DEFINITIONALLY inert on one-goroutine pools
+(`raceUpdate`'s first branch): a single goroutine cannot race with
+itself. The conservation proof's detector hinge — sequential runs
+thread the `RaceState` through untouched. -/
+theorem raceUpdate_single {σ : ExecState} {ts : Array Config} {c : Config}
+    {σ' : ExecState} {i : Nat} {rs : RaceState} :
+    raceUpdate σ ts ⟨#[c], σ', i⟩ rs = .ok rs := by
+  simp [raceUpdate]
+
 /-- The singleton-pool projections of a mid-run (non-terminal,
 non-blocked) configuration. -/
 theorem singleton_pool_facts {σ : ExecState} {c : Config}
@@ -233,13 +242,14 @@ in the `transferable` classes is the singleton pool's result verbatim
 accounting. -/
 theorem execProgLoop_single :
     ∀ {fuel : Nat} {σ : ExecState} {c : Config} {ch : Choices}
+      {rs : RaceState}
       {r : Except GoError (ExecOutcome × Choices)},
       execStmtLoop fuel σ c ch = r → transferable r →
-      execProgLoop fuel ⟨#[c], σ, 0⟩ ch = r := by
+      execProgLoop fuel ⟨#[c], σ, 0⟩ rs ch = r := by
   intro fuel
   induction fuel with
   | zero =>
-    intro σ c ch r hr htr
+    intro σ c ch rs r hr htr
     unfold execStmtLoop at hr
     split at hr
     · subst hr; rfl
@@ -259,7 +269,7 @@ theorem execProgLoop_single :
       unfold execProgLoop
       simp [hp, hm, runnableIdxs_singleton hrun]
   | succ n ih =>
-    intro σ c ch r hr htr
+    intro σ c ch rs r hr htr
     unfold execStmtLoop at hr
     split at hr
     · subst hr; rfl
@@ -302,9 +312,9 @@ theorem execProgLoop_single :
               rw [hstep] at hr
               rw [hstep] at hmulti
               simp only [Except.map] at hmulti
-              have hrec := ih hr htr
+              have hrec := ih (rs := rs) hr htr
               simp [hp, hm, runnableIdxs_singleton hrun, hmulti,
-                Bind.bind, Except.bind, hrec]
+                Bind.bind, Except.bind, raceUpdate_single, hrec]
 
 /-- **`execProg_single_eq_execStmt` — THE sequential-conservation
 theorem** (machine-shape note §7; D9(a)): for every program, every

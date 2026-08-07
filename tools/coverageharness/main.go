@@ -52,7 +52,11 @@ func run(cfg config) error {
 	// and the runtime detector aborts the run — like "panic", the subject
 	// never returns, so no observable result is required. Deadlock cases
 	// must never be built with -race (the detector does not fire there).
-	if cfg.status != "ok" && cfg.status != "panic" && cfg.status != "deadlock" {
+	// "race" (channels arc slice 3): the harness is built with -race by
+	// the caller; the subject completes (the default GORACE continues
+	// past a report), so the wrapper is the plain "ok" shape — the race
+	// report and exit 66 arrive from the TSan runtime, not the wrapper.
+	if cfg.status != "ok" && cfg.status != "panic" && cfg.status != "deadlock" && cfg.status != "race" {
 		return fmt.Errorf("invalid --expected-status %q", cfg.status)
 	}
 

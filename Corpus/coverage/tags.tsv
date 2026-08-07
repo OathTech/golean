@@ -85,6 +85,7 @@ panic
 pointers
 prefix
 quorum
+race
 range
 recursion
 recover

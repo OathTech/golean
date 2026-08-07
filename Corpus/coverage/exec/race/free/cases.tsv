@@ -1,0 +1,7 @@
+# id	subject	args	expected_status	expected_reason	features
+# FALSE-POSITIVE guards (slice 3): race-free programs adjacent to racy
+# shapes at exactly the detector's Loc-path granularity (distinct slice
+# elements / struct fields are distinct memory locations). go run -race
+# verified green; a raceDetected here is a detector granularity bug.
+slice-disjoint	freeSliceDisjoint	-	ok	-	goroutines,channels,slices,race
+field-disjoint	freeFieldDisjoint	-	ok	-	goroutines,channels,structs,race

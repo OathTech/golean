@@ -799,6 +799,104 @@ private def prioProgram : GoCore.Program := {
     closedSendWorkerFunction, closedSelRecvMainFunction]
 }
 
+/-! ### Race detection (channels arc slice 3, D2+D3(b)): stream-pinned
+pool runs of racy programs — refusal must be `raceDetected` on every
+tested stream when the race executes on every schedule, and the
+exit-no-sync shape pins the SCHEDULE-DEPENDENT refusal the corpus
+cannot express (main-first schedules never execute the child's write:
+value leaf under [], race leaf under [1] — one racy leaf poisons the
+CASE, which is the slice-4 enumerator's job; recorded in the design
+note). -/
+
+private def raceStoreWorkerFunction : GoCore.Func := {
+  id := ⟨"raceStoreWorker_F"⟩,
+  args := #[{ id := "p", typ := .pointer .int },
+            { id := "done", typ := .chan .both .int }],
+  results := #[],
+  body := .seqn #[
+    .assign (.addr (.var "p")) (.intLit 1),
+    .chanSend (.var "done") (.intLit 0) .int
+  ]
+}
+
+-- Write/write on every schedule: main's store to x is sequenced before
+-- its receive; the worker's store before its send — HB-unordered under
+-- every pick sequence.
+private def raceWriteWriteMainFunction : GoCore.Func := {
+  id := ⟨"raceWriteWriteMain_F"⟩,
+  args := #[],
+  results := #[coreParam "z"],
+  body := .block
+    #[{ id := "x", typ := .int },
+      { id := "donev", typ := .chan .both .int }]
+    #[
+      .makeChan (.var "donev") .int none,
+      .goStmt (.funcVal ⟨"raceStoreWorker_F"⟩ #[]) #[.ref "x", .var "donev"],
+      .assign (.var "x") (.intLit 2),
+      .chanRecv #[] (.var "donev") .int,
+      .assign (.var "z") (.var "x")
+    ]
+}
+
+private def raceStoreOnlyWorkerFunction : GoCore.Func := {
+  id := ⟨"raceStoreOnlyWorker_F"⟩,
+  args := #[{ id := "p", typ := .pointer .int }],
+  results := #[],
+  body := .seqn #[.assign (.addr (.var "p")) (.intLit 7)]
+}
+
+-- Exit-no-sync: goroutine exit is NOT synchronized-before anything
+-- (go_mem), so when the child's write executes before main's read the
+-- run must refuse — but a main-first schedule never runs the child at
+-- all (main returns, the spawned write is discarded) and the run is a
+-- legitimate value leaf. Both leaves pinned below.
+private def raceExitNoSyncMainFunction : GoCore.Func := {
+  id := ⟨"raceExitNoSyncMain_F"⟩,
+  args := #[],
+  results := #[coreParam "z"],
+  body := .block
+    #[{ id := "x", typ := .int }]
+    #[
+      .goStmt (.funcVal ⟨"raceStoreOnlyWorker_F"⟩ #[]) #[.ref "x"],
+      .assign (.var "z") (.var "x")
+    ]
+}
+
+-- The rendezvous edge, machine-level: the worker's store is ordered
+-- before main's read THROUGH the unbuffered send/recv pairing — green
+-- on every stream (the corpus litmus lane pins the other edges).
+private def raceHbWorkerFunction : GoCore.Func := {
+  id := ⟨"raceHbWorker_F"⟩,
+  args := #[{ id := "p", typ := .pointer .int },
+            { id := "done", typ := .chan .both .int }],
+  results := #[],
+  body := .seqn #[
+    .assign (.addr (.var "p")) (.intLit 9),
+    .chanSend (.var "done") (.intLit 0) .int
+  ]
+}
+
+private def raceHbGreenMainFunction : GoCore.Func := {
+  id := ⟨"raceHbGreenMain_F"⟩,
+  args := #[],
+  results := #[coreParam "z"],
+  body := .block
+    #[{ id := "x", typ := .int },
+      { id := "donev", typ := .chan .both .int }]
+    #[
+      .makeChan (.var "donev") .int none,
+      .goStmt (.funcVal ⟨"raceHbWorker_F"⟩ #[]) #[.ref "x", .var "donev"],
+      .chanRecv #[] (.var "donev") .int,
+      .assign (.var "z") (.var "x")
+    ]
+}
+
+private def raceProgram : GoCore.Program := {
+  funcs := #[raceStoreWorkerFunction, raceWriteWriteMainFunction,
+    raceStoreOnlyWorkerFunction, raceExitNoSyncMainFunction,
+    raceHbWorkerFunction, raceHbGreenMainFunction]
+}
+
 private def coreMapBasicFunction : GoCore.Func := {
   id := ⟨"map_basic_F"⟩,
   args := #[],
@@ -1765,6 +1863,25 @@ def main : IO UInt32 := do
     (GoCore.Machine.runProgramPoolM 100000 prioProgram "closedSelSendMain_F" #[] [1, 1]) "panic")
   passed := passed && (← expectIntResult "GoCore pool arriving select: recv clause on a CLOSED channel drains zero/ok=false past a parked sender"
     (GoCore.Machine.runProgramPoolM 100000 prioProgram "closedSelRecvMain_F" #[] [1, 1]) 5)
+  passed := passed && (← expectErrorStatus "GoCore race: write/write refuses on the default stream"
+    (GoCore.Machine.runProgramPoolM 100000 raceProgram "raceWriteWriteMain_F" #[] []) "race")
+  passed := passed && (← expectErrorStatus "GoCore race: write/write refuses on the worker-first stream"
+    (GoCore.Machine.runProgramPoolM 100000 raceProgram "raceWriteWriteMain_F" #[] [1, 1]) "race")
+  -- BUG-040 (recorded gap, slice-3 build log): there is NO post-spawn
+  -- reschedule point — after a fork the parent runs privately to its
+  -- next registry boundary, so a child can never run before a
+  -- sync-free parent segment, and the exit-no-sync race class is a
+  -- value leaf on EVERY stream (the [1] below is consumed nowhere).
+  -- The fix (a post-spawn scheduling decision) adds a consumption
+  -- site, which restates the pinned-stream designated witnesses —
+  -- stopped on per the slice charter; these two pins document the
+  -- CURRENT behavior and flip to race/one-racy-leaf when it lands.
+  passed := passed && (← expectIntResult "GoCore race BUG-040 pin: exit-no-sync is a value leaf even on stream [1] (post-spawn reschedule point missing; the child-first coarse path does not exist yet)"
+    (GoCore.Machine.runProgramPoolM 100000 raceProgram "raceExitNoSyncMain_F" #[] [1]) 0)
+  passed := passed && (← expectIntResult "GoCore race BUG-040 pin: exit-no-sync main-first stream is a value leaf (child never runs; matches gc's dominant schedule)"
+    (GoCore.Machine.runProgramPoolM 100000 raceProgram "raceExitNoSyncMain_F" #[] []) 0)
+  passed := passed && (← expectIntResult "GoCore race: rendezvous HB edge keeps the ordered store/read green (worker-first stream)"
+    (GoCore.Machine.runProgramPoolM 100000 raceProgram "raceHbGreenMain_F" #[] [1, 1]) 9)
   passed := passed && (← expectIntResult "GoCore string basic" (GoCore.Machine.runFunctionM 100000 coreStringFunction #[]) 22)
   passed := passed && (← expectIntResult "GoCore string byte length" (GoCore.Machine.runFunctionM 100000 coreStringByteLenFunction #[]) 6)
   passed := passed && (← expectValues "GoCore string byte indexing"

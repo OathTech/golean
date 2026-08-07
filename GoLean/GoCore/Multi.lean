@@ -1,4 +1,4 @@
-import GoLean.GoCore.StepFn
+import GoLean.GoCore.Race
 
 /-!
 # The ThreadPool machine (channels arc slice 2, design of record D1/D2a)
@@ -740,6 +740,222 @@ def stepMulti (m : MultiConfig) (ch : Choices) :
     else
       stepThreadInto m m.cur ch
 
+/-! ## The registry's SECOND duty: segment-level happens-before race
+detection (slice 3, D2+D3(b))
+
+Execution between registry ops is a SEGMENT: a goroutine's vector
+clock changes only at registry-op HB edges, so every private step in
+between records its accesses (`stepAccesses`, Race.lean) under one
+clock — the segment's. `raceUpdate` below is the event dispatcher the
+detecting loop (`execProgLoop`) runs after every pool step: it
+classifies the step it just observed (spawn / wake / pairing /
+cell-path channel or select op / private step) from the pre- and
+post-configurations — deterministically, consuming NOTHING — and
+either advances the clocks (the go_mem channel rules, quoted at
+`ChanClocks`/`RaceState.spawn` in Race.lean) or checks-and-records the
+step's footprint. A conflict is the terminal `raceDetected`: races
+fail closed per run, on every run where the conflicting accesses
+execute, deterministically given the stream.
+
+The detector is EXTERNAL instrumentation in the `Choices`/fuel mold:
+`stepMulti`, the `StepM` relation, and the whole correspondence kit
+are untouched (grow by extension); the only influence on execution is
+the refusal itself. It is inert (definitionally, `raceUpdate`'s first
+branch) while the pool holds one goroutine — a single goroutine cannot
+race with itself — which keeps sequential conservation literal and
+the sequential corpus at zero detector overhead. -/
+
+/-- The parked partner a pairing step woke, if any: the unique OTHER
+index whose configuration went blocked → unblocked. Every non-pairing
+pool step leaves all other goroutines' configurations untouched, and
+`applyPairing`'s outcomes are never blocked shapes — so this is exactly
+the pairing partner, recovered without re-running the L4 pick. -/
+def wokenPartner (tsPre tsPost : Array Config) (i : Nat) : Option Nat :=
+  (List.range tsPre.size).find? fun j =>
+    j != i
+      && (match tsPre[j]? with | some c => isBlockedConfig c | none => false)
+      && (match tsPost[j]? with | some c => !isBlockedConfig c | none => false)
+
+/-- The channel a chan-op apply position is about to operate on, with
+its direction (`true` = send side). -/
+def chanApplyChan : Config → Option (Bool × Loc)
+  | .retV v (.chanStK op done [] _ _) =>
+      match op, (v :: done).reverse with
+      | .send _, chv :: _ => (chanValueLoc chv).map ((true, ·))
+      | .recv _ _, [chv] => (chanValueLoc chv).map ((false, ·))
+      | _, _ => none
+  | _ => none
+
+/-- Clock update for a committed select clause / woken select — the
+cell-path channel op it performs: buffered send/receive through the
+slot clocks, closed-empty receive through the close clock, panicking
+or unready shapes no edge. -/
+def raceCommitClauseEvent (s : ExecState) (i : Nat) (r : RaceState) :
+    EvClause → Except GoError RaceState
+  | .sendEv chv _ _ _ => do
+      match chanValueLoc chv with
+      | some loc => do
+          let (buf, cap, closed) ← chanCell s loc
+          if closed then return r  -- send-on-closed panic: no edge
+          else if buf.size < cap then return (r.slotOp i loc cap true)
+          else return r
+      | none => return r
+  | .recvEv chv _ _ _ => do
+      match chanValueLoc chv with
+      | some loc => do
+          let (buf, cap, closed) ← chanCell s loc
+          if buf.size > 0 then return (r.slotOp i loc cap false)
+          else if closed then return (r.closeAcquire i loc)
+          else return r
+      | none => return r
+
+/-- Clock update for the WAKE of a parked goroutine (classified from
+the pre-step cell exactly as `resumeThread` classifies): a close-woken
+sender panics with NO edge (gc's woken `chansend` performs no
+`raceacquire` — TSan-aligned); a buffered send/receive completes
+through the slot clocks; a closed-empty receive acquires the close
+clock. -/
+def raceWakeEvent (s : ExecState) (i : Nat) (r : RaceState) :
+    Config → Except GoError RaceState
+  | .blockedSend (some loc) _ _ => do
+      let (_, cap, closed) ← chanCell s loc
+      if closed then return r
+      else return (r.slotOp i loc cap true)
+  | .blockedRecv (some loc) _ _ _ _ => do
+      let (buf, cap, closed) ← chanCell s loc
+      if buf.size > 0 then return (r.slotOp i loc cap false)
+      else if closed then return (r.closeAcquire i loc)
+      else return r
+  | .blockedSelect evs _ _ => do
+      match ← readyClauses s evs with
+      | [cl] => raceCommitClauseEvent s i r cl
+      | _ => return r
+  | _ => return r
+
+/-- Clock update for a PAIRING step (arriving goroutine `i`, woken
+partner `j`): capacity 0 is the bidirectional rendezvous (`racesync`;
+both unbuffered go_mem rules); a buffered direct handoff transits the
+slot clocks — sender's slot-op, then receiver's, same slot (gc's
+`send()` pretends the value crossed the buffer); a head-and-refill
+receive takes the HEAD slot (the k-th send's clock) while the parked
+sender releases into the tail slot. The channel comes from the parked
+partner's shape, or from the arriving op when the partner is a parked
+select clause (select-with-select pairing is refused upstream). -/
+def racePairEvent (s : ExecState) (tsPre : Array Config) (i j : Nat)
+    (cPre : Config) (r : RaceState) : Except GoError RaceState := do
+  let viaSlots (loc : Loc) (cap : Nat) (senderFirst : Bool)
+      (sender recv : Nat) : RaceState :=
+    if senderFirst then (r.slotOp sender loc cap true).slotOp recv loc cap false
+    else (r.slotOp recv loc cap false).slotOp sender loc cap true
+  match tsPre[j]? with
+  | some (.blockedSend (some loc) _ _) => do
+      -- partner sends; arriving side receives
+      let (buf, cap, _) ← chanCell s loc
+      if cap == 0 then return (r.rendezvous i j)
+      else if buf.size > 0 then
+        -- head-and-refill: receiver takes the head first, sender refills
+        return (viaSlots loc cap false j i)
+      else return (r.rendezvous i j)
+  | some (.blockedRecv (some loc) _ _ _ _) => do
+      -- partner receives; arriving side sends
+      let (buf, cap, _) ← chanCell s loc
+      if cap == 0 then return (r.rendezvous i j)
+      else if buf.isEmpty then
+        -- buffered direct handoff through the (empty) slot
+        return (viaSlots loc cap true i j)
+      else return (r.rendezvous i j)
+  | some (.blockedSelect _ _ _) => do
+      match chanApplyChan cPre with
+      | some (isSend, loc) => do
+          let (buf, cap, _) ← chanCell s loc
+          if cap == 0 then return (r.rendezvous i j)
+          else if isSend then
+            if buf.isEmpty then return (viaSlots loc cap true i j)
+            else return (r.rendezvous i j)
+          else
+            if buf.size > 0 then return (viaSlots loc cap false j i)
+            else return (r.rendezvous i j)
+      | none => return r
+  | _ => return r
+
+/-- **The detector's event dispatcher** — run by the detecting loop
+after every successful pool step, over the PRE-step pool
+(`sPre`/`tsPre`) and the post-step pool `m'` (whose `cur` is the
+goroutine that stepped). Inert while the pool holds ≤ 1 goroutine.
+Classification mirrors `stepThread`'s dispatch order: spawn (pool
+grew), wake (pre-config blocked), channel/select apply (pairing when a
+partner was woken, cell path otherwise), private step (footprint
+check-and-record; a step that PANICKED performed no access — the
+panic fired in place of it). -/
+def raceUpdate (sPre : ExecState) (tsPre : Array Config) (m' : MultiConfig)
+    (r : RaceState) : Except GoError RaceState := do
+  if m'.threads.size ≤ 1 then return r
+  else
+    let i := m'.cur
+    match tsPre[i]? with
+    | none => return r
+    | some cPre =>
+      if m'.threads.size > tsPre.size then
+        return (r.spawn i tsPre.size)
+      else if isBlockedConfig cPre then
+        raceWakeEvent sPre i r cPre
+      else
+        match cPre with
+        | .retV v (.chanStK op done [] _ _) => do
+            match wokenPartner tsPre m'.threads i with
+            | some j => racePairEvent sPre tsPre i j cPre r
+            | none =>
+                -- cell path: classify from the pre-cell + outcome shape
+                match op, (v :: done).reverse with
+                | .send _, chv :: _ =>
+                    (match chanValueLoc chv with
+                    | some loc =>
+                        (match m'.threads[i]? with
+                        | some (.next _) => do
+                            let (_, cap, _) ← chanCell sPre loc
+                            return (r.slotOp i loc cap true)
+                        | _ => return r)  -- parked / panicked: no edge yet
+                    | none => return r)
+                | .recv _ _, [chv] =>
+                    (match chanValueLoc chv with
+                    | some loc =>
+                        (match m'.threads[i]? with
+                        | some (.blockedRecv _ _ _ _ _) => return r
+                        | _ => do
+                            let (buf, cap, closed) ← chanCell sPre loc
+                            if buf.size > 0 then return (r.slotOp i loc cap false)
+                            else if closed then return (r.closeAcquire i loc)
+                            else return r)
+                    | none => return r)
+                | .close, [chv] =>
+                    (match chanValueLoc chv with
+                    | some loc =>
+                        (match m'.threads[i]? with
+                        | some (.next _) => do
+                            let (_, cap, _) ← chanCell sPre loc
+                            return (r.closeOp i loc cap)
+                        | _ => return r)  -- close panic: no edge
+                    | none => return r)
+                | _, _ => return r
+        | .retV v (.selectOpsK clauses _ done [] _ _) => do
+            match wokenPartner tsPre m'.threads i with
+            | some j => racePairEvent sPre tsPre i j cPre r
+            | none => do
+                match m'.threads[i]? with
+                | some (.blockedSelect _ _ _) => return r
+                | _ => do
+                    let evs ← evalClauses clauses ((v :: done).reverse)
+                    match ← readyClauses sPre evs with
+                    | [cl] => raceCommitClauseEvent sPre i r cl
+                    | _ => return r  -- default taken / refused upstream
+        | _ =>
+            match m'.threads[i]? with
+            | some (.panicking _ _) =>
+                match cPre with
+                | .panicking _ _ => r.accesses i (stepAccesses sPre cPre)
+                | _ => return r  -- the step panicked: the access never happened
+            | _ => r.accesses i (stepAccesses sPre cPre)
+
 /-- The first unrecovered-panic abort among the goroutines: an
 unrecovered panic in ANY goroutine terminates the program (Go). -/
 def MultiConfig.panicMsg? (m : MultiConfig) : Option String :=
@@ -765,10 +981,16 @@ def MultiConfig.mainOutcome? (m : MultiConfig) : Option ExecOutcome :=
 `execStmtLoop`'s classification order exactly (any-goroutine panic
 abort, then main's terminal, then the deadlock state, all BEFORE the
 fuel check — a finished or wedged program never reports exhaustion),
-with `stepMulti` in place of `stepFn`. Fuel counts goroutine-steps. -/
-def execProgLoop : Nat → MultiConfig → Choices →
+with `stepMulti` in place of `stepFn`. Fuel counts goroutine-steps.
+THE DETECTING LOOP (slice 3): a `RaceState` rides along, updated by
+`raceUpdate` after every pool step — a conflict aborts the run with
+the terminal `raceDetected` before anything else can be observed
+(fail closed per run; deterministic given the stream; consumes no
+choices and no fuel). Inert on one-goroutine pools, so sequential
+conservation and the sequential corpus are untouched by construction. -/
+def execProgLoop : Nat → MultiConfig → RaceState → Choices →
     Except GoError (ExecOutcome × Choices)
-  | fuel, m, choices =>
+  | fuel, m, r, choices =>
       if m.threads.isEmpty then
         throw (.internal "thread pool without a main goroutine")
       else
@@ -785,20 +1007,22 @@ def execProgLoop : Nat → MultiConfig → Choices →
                   | 0 => throw .fuelOut
                   | fuel + 1 => do
                       let (m', choices') ← stepMulti m choices
-                      execProgLoop fuel m' choices'
+                      let r' ← raceUpdate m.shared m.threads m' r
+                      execProgLoop fuel m' r' choices'
 
 /-- **The `execStmt`-shaped POOL wrapper** (D8's carrier swap): run
-`prog` as goroutine 0 of a fresh pool over `σ`. On programs that never
-spawn this agrees with `execStmt` on the TRANSFERABLE result classes
-(`.ok` at any terminal, `.fuelOut`, `.panic`) by
-`execProg_single_eq_execStmt` (MultiSound.lean — the
-sequential-conservation transfer lemma); the fail-closed diagnostic
-classes are covered by the full-corpus bit-identity check, not the
-theorem (S2 audit response: citation matched to the theorem's actual
-strength). -/
+`prog` as goroutine 0 of a fresh pool over `σ`, with the race detector
+armed from an empty `RaceState`. On programs that never spawn this
+agrees with `execStmt` on the TRANSFERABLE result classes (`.ok` at
+any terminal, `.fuelOut`, `.panic`) by `execProg_single_eq_execStmt`
+(MultiSound.lean — the sequential-conservation transfer lemma; the
+detector is definitionally inert on one-goroutine pools); the
+fail-closed diagnostic classes are covered by the full-corpus
+bit-identity check, not the theorem (S2 audit response: citation
+matched to the theorem's actual strength). -/
 def execProg (fuel : Nat) (env : LocalEnv) (σ : ExecState) (choices : Choices)
     (prog : Stmt) : Except GoError (ExecOutcome × Choices) :=
-  execProgLoop fuel ⟨#[.exec prog env .stop], σ, 0⟩ choices
+  execProgLoop fuel ⟨#[.exec prog env .stop], σ, 0⟩ {} choices
 
 /-- The whole-PROGRAM pool entry: `runProgramM`'s wiring (shared setup —
 subject lookup, arity, global seeding, `StateWf` assert, the SEQUENTIAL
@@ -810,7 +1034,7 @@ exit, exactly the sequential driver's readout. -/
 def runProgramPoolM (fuel : Nat) (program : Program) (name : String)
     (args : Array GoValue) (choices : Choices := []) : Except GoError Result := do
   let (c₀, s₀, resultLocs, choices₁) ← runProgramSetupM fuel program name args choices
-  match ← execProgLoop fuel ⟨#[c₀], s₀, 0⟩ choices₁ with
+  match ← execProgLoop fuel ⟨#[c₀], s₀, 0⟩ {} choices₁ with
   | (.normal sF, _) => return { values := (← loadMany sF resultLocs).toArray }
   | _ => throw (.internal "main terminal outside its barrier frame")
 

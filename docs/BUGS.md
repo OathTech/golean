@@ -29,6 +29,47 @@ differential-pinned) `- Cases: <id>, <id>, …` (baseline case ids), then prose.
 
 ---
 
+## BUG-040 — no POST-SPAWN reschedule point: a child can never run before a sync-free parent segment (L1 envelope too narrow; exit-no-sync races undetectable)
+
+- Status: open
+- Pinned-by: none (eval pins `GoCore race BUG-040 pin: …` in
+  Tests/GoCoreEval.lean assert the CURRENT value-leaf behavior on both
+  streams and name this entry; a differential case cannot pin it — the
+  gc scheduler realizes the same main-first corner ~always, so `go run`
+  and `go run -race` agree with our value leaf, 0/700-style —
+  validation note §3's mainfirst measurement is exactly this shape)
+- Discovered: 2026-08-07 (slice-3 detector work, by reasoning — the
+  green gates structurally cannot see it, the audit dimension's
+  "unexercised paths" class)
+- What: `Config.atBoundary` marks the PRE-fork spawn position, so the
+  scheduling decision at a `go` statement happens while the child does
+  not exist yet (|runnable| = 1 beside a running parent — no pick).
+  After the fork the parent's post-spawn config (`.next k`) is not a
+  boundary, so the parent runs privately to its NEXT registry op. A
+  parent whose remaining segment contains no channel/select op —
+  the exit-no-sync class, `raceExitNoSyncMain_F`: `go func(){ x = 7 }();
+  return x` — can therefore NEVER be preempted by its child on any
+  stream: the child-first interleaving (legal Go — the spec makes no
+  scheduling promise) is outside the modeled envelope, and the race
+  detector, which is complete only over accesses that EXECUTE on the
+  chosen path, sees a value leaf on every stream.
+- Why it matters: (a) L1 envelope too narrow — the
+  theorem-transfer-breaking direction; (b) it breaks the racy-refusal
+  coupling the NPDRF reduction needs ("programs outside DRF are exactly
+  those the machine refuses") for races reachable ONLY via a post-spawn
+  preemption; the slice-4 enumerator's lane-d claim "every enumerated
+  path refuses" is scoped to the registry-point path set until fixed.
+- Fix shape (deliberately NOT patched in slice 3 — charter stop
+  condition): a post-spawn scheduling decision (e.g. a pool-level
+  `spawnedK` boundary strip, or a fork-then-pick `stepMulti` arm). ANY
+  form adds a `Choices` consumption site at |runnable| > 1, which
+  SHIFTS every pinned stream — including the three pinned-stream
+  fork/join designated witnesses (statement restatement → needs its own
+  sign-off + Comparator landmark) — and reworks the
+  `StepM`/`stepMulti` correspondence. Schedule together with the
+  slice-4 enumerator, which needs the same machinery to enumerate the
+  child-first paths at all.
+
 ## BUG-033 — targetPlan defers only the OUTERMOST address op: `a[i].f` fires the inner index check in phase 1
 
 - Status: fixed (2026-08-06, round-4 response: `targetPlan` now

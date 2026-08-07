@@ -1,0 +1,16 @@
+# id	subject	args	expected_status	expected_reason	features	lane	why	params
+# RACY-NEGATIVE lane (slice 3, validation note lane d): expected_status
+# race = the machine must refuse (raceDetected) on the default and every
+# adversarial stream the harness tests, and the Go oracle is `go run
+# -race` (exit 66, "WARNING: DATA RACE"; TSan has no false positives, so
+# one red sample proves the race is real). Every subject races on EVERY
+# interleaving (the conflicting accesses are HB-unordered under all
+# schedules), which is what makes per-stream refusal the right pass
+# criterion before the slice-4 schedule enumerator exists. Racy cases
+# are never combined with deadlock expectations (-race suppresses the
+# deadlock detector).
+write-write	raceWriteWrite	-	race	-	goroutines,channels,race
+read-write	raceReadWrite	-	race	-	goroutines,channels,race
+increment	raceIncrement	-	race	-	goroutines,channels,race
+map-rw	raceMapRW	-	race	-	goroutines,channels,maps,race
+slice-elem	raceSliceElem	-	race	-	goroutines,channels,slices,race

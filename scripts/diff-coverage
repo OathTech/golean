@@ -223,10 +223,26 @@ run_case_rows() {
   # (exit status 2); expected_reason stays "-" (nothing case-specific to
   # pin). NEVER combine these cases with -race builds — the detector does
   # not fire there (probed; ground-truth note §5).
+  # race (channels arc slice 3, racy-negative lane): the Go oracle is
+  # `go run -race` (TSan; exit 66, "WARNING: DATA RACE" — no false
+  # positives, so one red sample proves the race), and the machine must
+  # refuse with status "race" under the default AND every adversarial
+  # stream (the invariance loop below enforces per-stream refusal — the
+  # slice-4 schedule enumerator will strengthen this to "every
+  # enumerated path refuses"). Race and deadlock expectations are
+  # mutually exclusive by construction (one status column): the -race
+  # runtime suppresses the deadlock detector (ground-truth note §5).
+  # THE THREE-WAY INVESTIGATION RULE (validation note §2.7/lane d): if
+  # the machine refuses but every `-race` sample stays green, that is
+  # NOT a pass — it is an investigation with exactly three outcomes:
+  # (a) our race check is too eager (model bug — fix); (b) the race
+  # needs a schedule the sampler never hits (strengthen with directed
+  # sampling; record the conclusion in the case's why); (c) the program
+  # is race-free and misclassified (model bug — fix).
   case "$expected_status" in
-    ok|panic|deadlock) ;;
+    ok|panic|deadlock|race) ;;
     *)
-      report_fail "$id" "$features" "manifest" "invalid expected Go status: $expected_status; use ok, panic, or deadlock"
+      report_fail "$id" "$features" "manifest" "invalid expected Go status: $expected_status; use ok, panic, deadlock, or race"
       return 0
       ;;
   esac
@@ -300,7 +316,10 @@ run_case_rows() {
   fi
 
   if go_observation="$(go_run_oracle 2>&1)"; then
-    if [[ "$expected_status" == "panic" || "$expected_status" == "deadlock" ]]; then
+    if [[ "$expected_status" == "race" ]]; then
+      report_fail "$id" "$features" "go-observation" "expected a -race report, but go run -race exited green: $go_observation (three-way investigation: too-eager check / schedule-hidden race / misclassified case)"
+      failed=1
+    elif [[ "$expected_status" == "panic" || "$expected_status" == "deadlock" ]]; then
       report_fail "$id" "$features" "go-observation" "expected $expected_status, but Go exited successfully: $go_observation"
       failed=1
     elif ! lean observation-eq --left "$go_observation" --right "$go_observation" >/dev/null 2>&1; then
@@ -320,6 +339,18 @@ run_case_rows() {
         failed=1
       else
         go_observation="{\"message\":\"all goroutines are asleep - deadlock!\",\"schema\":\"golean-observation-v1\",\"status\":\"deadlock\"}"
+      fi
+    elif [[ "$expected_status" == "race" ]]; then
+      # TSan's report text is diagnostic detail (addresses, stacks); the
+      # observation both sides compare is the FIXED refusal — the Lean
+      # machine's raceDetected terminal renders the identical
+      # status/message, deterministic per stream so the invariance loop
+      # below doubles as the per-stream refusal check.
+      if [[ "$go_observation" != *"WARNING: DATA RACE"* ]]; then
+        report_fail "$id" "$features" "go-run" "expected a go run -race data-race report, got: $go_observation"
+        failed=1
+      else
+        go_observation="{\"message\":\"data race detected\",\"schema\":\"golean-observation-v1\",\"status\":\"race\"}"
       fi
     elif [[ "$expected_status" == "panic" ]]; then
       if [[ "$go_observation" != *"panic:"* ]]; then
@@ -439,8 +470,17 @@ run_case_rows() {
 # behavior; the knob aligns the oracle with the model instead of
 # agreeing by config coincidence (unwinding arc §A2's recorded knob).
 go_run_oracle() {
+  # Race-expectation cases build with -race (the TSan second oracle);
+  # everything else runs plain. The two oracle modes never mix in one
+  # case: -race suppresses the deadlock detector (ground-truth note §5),
+  # and the manifest's single status column makes race+deadlock
+  # unrepresentable.
+  local race_flag=()
+  if [[ "$expected_status" == "race" ]]; then
+    race_flag=(-race)
+  fi
   run_with_timeout "$GO_TIMEOUT_SECONDS" env GO111MODULE=off GODEBUG=panicnil=0 GOCACHE="$GO_BUILD_CACHE" \
-    bash -c 'cd "$1" && exec go run .' go-run-oracle "$go_run_dir"
+    bash -c 'cd "$1" && shift && exec go run "$@" .' go-run-oracle "$go_run_dir" ${race_flag[@]+"${race_flag[@]}"}
 }
 
 # One `go run` of the generated harness, classified under the SAME status /
