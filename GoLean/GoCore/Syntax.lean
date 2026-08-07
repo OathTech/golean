@@ -322,6 +322,19 @@ inductive Stmt where
   send clause on a CLOSED channel counts as READY and panics when
   selected (probe p23; `select.go` checks closed first). -/
   | selectStmt (clauses : Array (SelectClauseHead × Stmt)) (default? : Option Stmt)
+  /-- `go f(args)` (channels arc slice 2, the registry's spawn entry):
+  the function value and parameters are evaluated NOW, in the SPAWNING
+  goroutine (spec §Go statements: "evaluated as usual in the calling
+  goroutine") — the `deferCall` eval-now frame shape (`goCalleeK`/
+  `goArgsK`). The SPAWN itself is a POOL-level step (`stepMulti`): the
+  per-goroutine relation is silent at the evaluated spawn configuration
+  and `stepFn` fails closed there — which is exactly what keeps `go`
+  during `$pkginit` refused this slice (the init phase runs on the
+  sequential driver). A nil callee is gc's "go of nil func value"
+  FATAL at the spawn, in the spawner (probed 2026-08-07, REFUTING the
+  machine-shape note §6's child-panic-at-first-step analysis); the
+  fatal class is unmodeled — refused fail-closed at the spawn step. -/
+  | goStmt (callee : Expr) (args : Array Expr)
   | unsupported (feature : String)
   deriving Repr, BEq, Inhabited
 

@@ -198,6 +198,12 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
                 throw (.stuck s!"channel receive with {targets.size} targets")
               else
                 throw (.unsupported "unsupported channel-receive target assignee")
+      | .goStmt callee args =>
+          -- Spawn operands evaluate NOW in the spawning goroutine (spec
+          -- §Go statements — the deferCall shape); the SPAWN itself is a
+          -- pool step (`stepMulti`), and `stepFn`'s spawn position below
+          -- fails closed.
+          return (.evalE callee env (.goCalleeK args.toList env k), s, choices)
       | .selectStmt clauses default? =>
           match selectOperands clauses.toList with
           | e :: rest =>
@@ -489,6 +495,27 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
               return (.evalE e env (.rhsK refs (v :: done) rest body env k'), s, choices)
           | [] =>
               return (.next (.storeK refs (v :: done).reverse body env k'), s, choices)
+      | .goCalleeK args env k' =>
+          -- Spawn callee arrived. Nil registers into the walk like a
+          -- deferred callee (gc evaluates the arguments before its
+          -- nil-fatal); the zero-argument SPAWN position fails closed —
+          -- spawning is a pool step (`stepMulti` intercepts this
+          -- configuration before ever calling `stepFn` on it), so
+          -- reaching this arm means a sequential driver ran a `go`
+          -- statement (the `$pkginit` phase, `execStmt`-level runs).
+          if deferrableCallee v then
+            match args with
+            | a :: rest =>
+                return (.evalE a env (.goArgsK v [] rest env k'), s, choices)
+            | [] => throw (.unsupported
+                "go spawn outside the thread pool (goroutine spawn is a pool step; go during package init is refused this slice)")
+          else throw (.stuck s!"expected function value in go statement, got {repr v}")
+      | .goArgsK cv vals pending env k' =>
+          match pending with
+          | a :: rest =>
+              return (.evalE a env (.goArgsK cv (vals ++ [v]) rest env k'), s, choices)
+          | [] => throw (.unsupported
+              "go spawn outside the thread pool (goroutine spawn is a pool step; go during package init is refused this slice)")
       | .stop => throw (.internal "value delivered to empty continuation")
       | _ => throw (.internal "value delivered to statement continuation")
   | .next k =>

@@ -1522,6 +1522,23 @@ inductive Cont where
   enters `body` (the clause body; `.seqn #[]` for the statement form). -/
   | storeK (refs : List TargetRef) (vals : List GoValue)
       (body : Stmt) (env : LocalEnv) (k : Cont)
+  /-- Awaiting a `go` statement's callee value (channels arc slice 2):
+  the spawn's callee and arguments evaluate NOW, in the spawning
+  goroutine (spec §Go statements) — the `deferCalleeK` shape. The
+  completed spawn position (`.retV cv (.goCalleeK [] …)` /
+  `.retV v (.goArgsK cv vals [] …)`) is a POOL step: relation-silent
+  per-goroutine, fail-closed in `stepFn` (which is what refuses `go`
+  during `$pkginit` — the init phase is sequential this slice).
+  Appended at the END of the inductive so positional case tags in the
+  correspondence proofs stay stable. -/
+  | goCalleeK (args : List Expr) (env : LocalEnv) (k : Cont)
+  /-- Awaiting a `go` statement's argument values (evaluated at the go
+  statement, in the spawning goroutine). Carries the callee VALUE; a
+  nil callee is gc's "go of nil func value" fatal at the SPAWN
+  (probed 2026-08-07) — refused fail-closed at the pool's spawn step,
+  not during the argument walk (gc evaluates the arguments first). -/
+  | goArgsK (callee : GoValue) (vals : List GoValue)
+      (pending : List Expr) (env : LocalEnv) (k : Cont)
 
 /-- The continuation for entering a `.seqn`: under a same-env governing
 sequence, SPLICE the statements into it (D1) — Go statement lists splice
@@ -1595,6 +1612,8 @@ def panicPassthrough : Cont → Option Cont
   | .tgtOpK _ _ _ _ _ _ _ _ _ k => some k
   | .rhsK _ _ _ _ _ k => some k
   | .storeK _ _ _ _ k => some k
+  | .goCalleeK _ _ k => some k
+  | .goArgsK _ _ _ _ k => some k
   | .frame _ _ _ _ _ => none
   | .panicResumeK _ _ => none
   | .stop => none
@@ -1663,6 +1682,10 @@ def recoverThroughWrappers : Cont → Option (GoValue × Cont)
       (recoverThroughWrappers k).map (fun (v, k') => (v, .rhsK a b c d e k'))
   | .storeK a b c d k =>
       (recoverThroughWrappers k).map (fun (v, k') => (v, .storeK a b c d k'))
+  | .goCalleeK a b k =>
+      (recoverThroughWrappers k).map (fun (v, k') => (v, .goCalleeK a b k'))
+  | .goArgsK a b c d k =>
+      (recoverThroughWrappers k).map (fun (v, k') => (v, .goArgsK a b c d k'))
 
 /-- The `recover()` builtin (arc doc §A1; wrapper transparency added at
 the arc-final audit F1/BUG-015, 2026-08-06): walk the continuation to the
@@ -1730,6 +1753,10 @@ def recoverResult : Cont → GoValue × Cont
       let (v, k') := recoverResult k; (v, .rhsK a b c d e k')
   | .storeK a b c d k =>
       let (v, k') := recoverResult k; (v, .storeK a b c d k')
+  | .goCalleeK a b k =>
+      let (v, k') := recoverResult k; (v, .goCalleeK a b k')
+  | .goArgsK a b c d k =>
+      let (v, k') := recoverResult k; (v, .goArgsK a b c d k')
 
 /-- Control configurations (the Iris `Expr` projection; the `ExecState` is
 the paired `Step` component, as before). New over the old relation:
@@ -2584,6 +2611,24 @@ inductive Step : Config → ExecState → Config → ExecState → Prop where
         (.panicking [⟨runtimeErrorValue msg, false⟩] k) s
   | storeDone {body env k s} :
       Step (.next (.storeK [] [] body env k)) s (.exec body env k) s
+  -- `go` statements (channels arc slice 2): callee then arguments,
+  -- evaluated NOW in the spawning goroutine (spec §Go statements) — the
+  -- defer registration's eval-now shape. The completed SPAWN position
+  -- (`goCalleeK []` / `goArgsK … []`) is deliberately RELATION-SILENT
+  -- here: spawning appends a thread, which the per-goroutine relation
+  -- cannot express — the spawn is a rule of the spawn-extended `StepE`
+  -- (Multi.lean) and a pool step of `StepM`; `stepFn` fails closed at
+  -- the spawn position, which keeps `go` in `$pkginit` refused.
+  | goStmtEntry {callee args env k s} :
+      Step (.exec (.goStmt callee args) env k) s
+        (.evalE callee env (.goCalleeK args.toList env k)) s
+  | goCalleeArg {cv a rest env k s} :
+      deferrableCallee cv = true →
+      Step (.retV cv (.goCalleeK (a :: rest) env k)) s
+        (.evalE a env (.goArgsK cv [] rest env k)) s
+  | goArgNext {v cv vals a rest env k s} :
+      Step (.retV v (.goArgsK cv vals (a :: rest) env k)) s
+        (.evalE a env (.goArgsK cv (vals ++ [v]) rest env k)) s
 
 /-- Reflexive-transitive closure of `Step`. -/
 inductive Steps : Config → ExecState → Config → ExecState → Prop where

@@ -245,6 +245,9 @@ def Stmt.locSup : Stmt → Nat
   | .closeChan ch => Expr.locSup ch
   | .selectStmt clauses default? =>
       max (selectClausesSup clauses.toList) (optStmtSup default?)
+  -- `go` statements (channels arc slice 2).
+  | .goStmt callee args =>
+      max (Expr.locSup callee) (exprListSup args.toList)
 
 def stmtListSup : List Stmt → Nat
   | [] => 0
@@ -400,6 +403,12 @@ def Cont.locSup : Cont → Nat
       max (max (targetRefListSup refs) (goValueListSup vals))
         (max (Stmt.locSup body)
           (max (LocalEnv.locSup env) (Cont.locSup k)))
+  | .goCalleeK args env k =>
+      max (exprListSup args) (max (LocalEnv.locSup env) (Cont.locSup k))
+  | .goArgsK callee vals pending env k =>
+      max (max (GoValue.locSup callee) (goValueListSup vals))
+        (max (exprListSup pending)
+          (max (LocalEnv.locSup env) (Cont.locSup k)))
 
 /-- One evaluated select clause's sup (`.blockedSelect` payloads). -/
 def evClauseSup : EvClause → Nat
@@ -488,6 +497,8 @@ def Cont.itersNormalized (types : TypeEnv) : Cont → Bool
   | .tgtOpK _ _ _ _ _ _ _ _ _ k => Cont.itersNormalized types k
   | .rhsK _ _ _ _ _ k => Cont.itersNormalized types k
   | .storeK _ _ _ _ k => Cont.itersNormalized types k
+  | .goCalleeK _ _ k => Cont.itersNormalized types k
+  | .goArgsK _ _ _ _ k => Cont.itersNormalized types k
 
 @[inherit_doc Cont.itersNormalized]
 def Config.itersNormalized (types : TypeEnv) : Config → Bool
