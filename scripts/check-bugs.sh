@@ -10,7 +10,7 @@
 #   (3) SYMMETRIC: every `Status: fixed` differential bug's cases must now PASS
 #       (marking a bug fixed while its cases still fail is laundering);
 #   (4) RATCHET: the count of unexplained baseline fidelity failures (stage
-#       lean-observation / differential / membership, in no bug's Cases) must not EXCEED the
+#       lean-observation / differential / membership / confluent / racy, in no bug's Cases) must not EXCEED the
 #       recorded ceiling in baselines/untriaged-count — a new bug cannot hide in
 #       the pile, and deleting a BUG entry raises the count and trips this.
 #       When the count drops, lower the ceiling in the same commit (the check
@@ -81,9 +81,16 @@ done <<< "$bugs"
 #     importantly "Go observation is NOT in the machine's enumerated set"
 #     (the too-narrow soundness alarm) and driver-coupling drift — and was
 #     previously invisible to both the count ceiling and the tracked set.
+#     `confluent` and `racy` joined at the channels-arc final audit (F5,
+#     2026-08-07): slice 4 introduced both stages, and their FAILs are
+#     exactly machine-vs-Go fidelity divergences ("the observable is NOT
+#     schedule-confluent", enumerator/driver drift, "'every enumerated
+#     path refuses' not certified" — the unsound-race-refusal direction),
+#     yet neither was in this filter — the same hole the previous arc's
+#     F9 closed for membership, reopened lane by lane.
 unexplained="$(awk -F'\t' -v DC="$declared_cases" '
   BEGIN { n=split(DC,a," "); for(i=1;i<=n;i++) named[a[i]]=1 }
-  !/^#/ && $1=="FAIL" && ($3=="lean-observation" || $3=="differential" || $3=="membership") && !($2 in named) { print $2"\t"$3 }
+  !/^#/ && $1=="FAIL" && ($3=="lean-observation" || $3=="differential" || $3=="membership" || $3=="confluent" || $3=="racy") && !($2 in named) { print $2"\t"$3 }
 ' "$BASELINE" | sort)"
 nun="$(printf '%s' "$unexplained" | grep -c . || true)"
 
