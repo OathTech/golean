@@ -39,43 +39,19 @@ structs/tag-pointer-conversion
 #   membership — the enumerator does not explore SCHEDULES until
 #   slice 4's enumerator-over-schedules, so the membership run refuses
 #   loudly at the spawn. Not a fidelity bug; flips when slice 4 lands.
-goroutines/sched-dependent/first-come
 # goroutines/spawn-in-init/in-init: DELIBERATE fail-closed refusal pin
 #   (channels arc slice 2 scope): `go` during $pkginit is legal Go but
 #   the init phase runs on the SEQUENTIAL driver this slice — the spawn
 #   position refuses with a precise .unsupported. Flips when a later
 #   slice runs init on the pool.
 goroutines/spawn-in-init/in-init
-# goroutines/sched-dependent/select-default-handshake and
-# goroutines/sched-dependent/len-handoff: DELIBERATE slice-4 red pins
-#   (S2 audit response): the two audit majors' envelope shapes —
-#   select-with-default vs a maybe-parked partner ({7,99}) and
-#   handoff-vs-transit buffer occupancy ({100,110}) — declared
-#   membership; the waiter-priority fix makes gc's dominant outcomes
-#   reachable, and the schedule enumerator (slice 4) certifies the
-#   sets. Not fidelity bugs; the deterministic discriminators are the
-#   stream-pinned pool eval-test pins that landed green with the fix.
-goroutines/sched-dependent/select-default-handshake
-goroutines/sched-dependent/len-handoff
-# race/litmus/sb-chan: DELIBERATE slice-4 red pin (S3, lane e): the
-#   store-buffer litmus shape in channel form — schedule-dependent
-#   observable (admitted set {1, 10, 11}; 00 SC-forbidden, the DRF-SC
-#   boundary), declared membership; the schedule enumerator (slice 4)
-#   certifies the set and the 00-exclusion. Not a fidelity bug; the
-#   racy SB/MP/LB forms refuse raceDetected on every tested stream and
-#   are PASSing race-lane cases in the same commit.
-race/litmus/sb-chan
-# The three slice-4 L2-envelope red pins (S4 red-first commit):
-#   [channels/select-multi-ready/observable FLIPPED PASS at the L2
-#   movement; the two goroutines ids below stay red until the pool
-#   enumerator lands later in this slice.]
-#   channels/select-multi-ready/observable (entry path — the L2 pick is
-#   the only site), goroutines/select-wake-multi (wake path — L1 wake
-#   timing + entry pick; wake itself commits first-ready, no
-#   re-randomization), goroutines/select-arrival-multi (arrival path —
-#   waiter-extended multi-ready, L2 then L4). All three are TRANSIENT:
-#   the L2 site and the pool enumerator land in THIS slice and flip
-#   them (the ceiling drops back in those commits). Not fidelity bugs —
-#   deliberate fail-closed refusals of the not-yet-live latitude point.
-goroutines/select-wake-multi
-goroutines/select-arrival-multi
+# [sched-dependent/{select-default-handshake,len-handoff}: FLIPPED
+#   PASS when the slice-4 pool enumerator certified their sets —
+#   entries retired.]
+# [race/litmus/sb-chan: FLIPPED PASS at slice 4 — the enumerator
+#   certified {1, 10, 11} with the members=3 cardinality pin (00
+#   SC-forbidden, the DRF-SC boundary). Entry retired.]
+# [The three slice-4 L2-envelope red pins all FLIPPED PASS within the
+#   slice as planned: observable at the L2 movement; select-wake-multi
+#   ({1,2}) and select-arrival-multi ({10,20}) at the pool enumerator.
+#   Entries retired.]

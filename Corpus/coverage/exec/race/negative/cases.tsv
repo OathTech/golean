@@ -1,38 +1,37 @@
 # id	subject	args	expected_status	expected_reason	features	lane	why	params
-# RACY-NEGATIVE lane (slice 3, validation note lane d): expected_status
-# race = the machine must refuse (raceDetected) on the default and every
-# adversarial stream the harness tests, and the Go oracle is `go run
-# -race` (exit 66, "WARNING: DATA RACE"; TSan has no false positives, so
-# one red sample proves the race is real). Every subject races on EVERY
-# interleaving (the conflicting accesses are HB-unordered under all
-# schedules), which is what makes per-stream refusal the right pass
-# criterion before the slice-4 schedule enumerator exists. Racy cases
-# are never combined with deadlock expectations (-race suppresses the
-# deadlock detector).
-write-write	raceWriteWrite	-	race	-	goroutines,channels,race
-read-write	raceReadWrite	-	race	-	goroutines,channels,race
-increment	raceIncrement	-	race	-	goroutines,channels,race
-map-rw	raceMapRW	-	race	-	goroutines,channels,maps,race
-slice-elem	raceSliceElem	-	race	-	goroutines,channels,slices,race
+# RACY-NEGATIVE lane (slice 3; FULL STRENGTH at slice 4 — lane=racy):
+# expected_status race = the enumerator proves EVERY ENUMERATED PATH
+# refuses (raceDetected), replacing the per-stream approximation; the
+# Go oracle is `go run -race` (exit 66, "WARNING: DATA RACE"; TSan has
+# no false positives, so one red sample proves the race is real).
+# Width 4 caps the mechanically-computed site bounds (two-goroutine
+# shapes: scheduler <= 2, plus small mapIter sites where present).
+# Racy cases are never combined with deadlock expectations (-race
+# suppresses the deadlock detector).
+write-write	raceWriteWrite	-	race	-	goroutines,channels,race	racy	-	width=4
+read-write	raceReadWrite	-	race	-	goroutines,channels,race	racy	-	width=4
+increment	raceIncrement	-	race	-	goroutines,channels,race	racy	-	width=4
+map-rw	raceMapRW	-	race	-	goroutines,channels,maps,race	racy	-	width=4
+slice-elem	raceSliceElem	-	race	-	goroutines,channels,slices,race	racy	-	width=4
 # S3 audit response: the interface pointer-box dispatch READ (frame
 # entry's auto-deref — the footprint arm the audit found missing) and
 # the len(map) read (gc DOES instrument it on go1.26.5 — the earlier
 # "invisible to -race" claim was refuted by probe).
-iface-dispatch	raceIfaceDispatch	-	race	-	goroutines,channels,interfaces,methods,race
-len-map	raceLenMap	-	race	-	goroutines,channels,maps,len,race
+iface-dispatch	raceIfaceDispatch	-	race	-	goroutines,channels,interfaces,methods,race	racy	-	width=4
+len-map	raceLenMap	-	race	-	goroutines,channels,maps,len,race	racy	-	width=4
 # S3 convergence response: one pin per frame-entry dispatch arm family
 # (method value / deferred drain / spawn entry with child attribution)
 # plus the promotion narrowing's RED direction (a race on the embedded
 # field must survive the narrowed wrapper read; its green direction is
 # race/free/promoted-ptr-box, and iface-dispatch above is the
 # non-promoted must-stay-racy control).
-method-value	raceMethodValue	-	race	-	goroutines,channels,interfaces,methods,race
-defer-dispatch	raceDeferDispatch	-	race	-	goroutines,channels,interfaces,methods,defer,race
-spawn-dispatch	raceSpawnDispatch	-	race	-	goroutines,channels,interfaces,methods,race
-promoted-dispatch	racePromotedDispatch	-	race	-	goroutines,channels,interfaces,methods,embedding,race
+method-value	raceMethodValue	-	race	-	goroutines,channels,interfaces,methods,race	racy	-	width=4
+defer-dispatch	raceDeferDispatch	-	race	-	goroutines,channels,interfaces,methods,defer,race	racy	-	width=4
+spawn-dispatch	raceSpawnDispatch	-	race	-	goroutines,channels,interfaces,methods,race	racy	-	width=4
+promoted-dispatch	racePromotedDispatch	-	race	-	goroutines,channels,interfaces,methods,embedding,race	racy	-	width=4
 # RED PIN (BUG-005): gc's LIVE map iteration reads the map every
 # iteration (mapIterNext is -race-instrumented); our snapshot range
 # performs no per-iteration read, so the write landing mid-range is a
 # silent value run — carried by BUG-005 until the live-iteration
 # surgery lands (its footprint arm falls out of that fix).
-map-range-iter	raceMapRangeIter	-	race	-	goroutines,channels,maps,range,race
+map-range-iter	raceMapRangeIter	-	race	-	goroutines,channels,maps,range,race	racy	-	width=4

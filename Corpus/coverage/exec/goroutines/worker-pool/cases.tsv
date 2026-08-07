@@ -1,3 +1,11 @@
-# id	subject	args	expected_status	expected_reason	features
-sum	workerPoolSum	-	ok	-	goroutines,channels,closures
+# id	subject	args	expected_status	expected_reason	features	lane	why	params
+# sum: CONFLUENT (slice 4) — the certified singleton over ~60k schedule
+# leaves is the lane's heaviest measured tree (~9.9M steps+probes,
+# ~65 s); params sized from the probe.
+# shared-feed: left STRICT, recorded — its schedule tree exceeds the
+# fail-loud caps at tractable budgets (>60M steps / >400 s at probe;
+# the range-over-channel drain multiplies interleavings). The strict
+# lane's 3-stream invariance still covers it; revisit with DPOR (the
+# recorded later-additive layer, D9(c)).
+sum	workerPoolSum	-	ok	-	goroutines,channels,closures	confluent	the summed contributions commute and the result channel joins all workers before the readout, so every schedule yields the one member	width=4,sites=18,work=15000000
 shared-feed	workerPoolSharedFeed	-	ok	-	goroutines,channels,range,close

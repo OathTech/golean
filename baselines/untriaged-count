@@ -117,4 +117,11 @@
 #   head-commits; arrival .multi analysis) — channels/select-multi-ready
 #   (slice-1's refusal pin) and channels/select-multi-ready/observable
 #   (this slice's entry-path membership pin) both flip PASS.
-22
+# 2026-08-07 (channels arc slice 4, pool enumerator + lanes)  22 -> 16:
+#   the six schedule-enumeration red pins flip PASS — sched-dependent/
+#   {first-come,select-default-handshake,len-handoff} (certified sets
+#   {12,21}/{7,99}/{100,110}), race/litmus/sb-chan (certified {1,10,11},
+#   members=3 — the DRF-SC boundary pin), select-wake-multi ({1,2}) and
+#   select-arrival-multi ({10,20}). Their untriaged-ids entries retired;
+#   the retained comments above them record the history.
+16

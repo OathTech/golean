@@ -238,8 +238,15 @@ validate_path_id() {
 #   sites   = D, max consumption sites per run (default 8)
 #   cap     = N, max distinct observations (default 64)
 #   samples = Go-side go-run sample count (default 5; 1 = version-tracking
-#             for features Go decides deterministically per toolchain)
-#   work    = enumerator work cap on total machine runs (default 200000)
+#             for features Go decides deterministically per toolchain).
+#             Since slice 4 each sample count runs BOTH plain and -race
+#             builds (the doctrine's -race default sample source).
+#   work    = enumerator work cap (default 200000; since the slice-4
+#             stepwise engine the unit is machine STEPS + probe runs
+#             over the shared-prefix exploration tree, not whole runs)
+#   members = exact expected |enumerated set| (optional; a mechanical
+#             set-cardinality pin — e.g. sb-chan's {1,10,11} pins 3 and
+#             the SC-forbidden 00 cannot hide inside a passing run)
 validate_lane_params() {
   local cases_file="$1"
   local params="$2"
@@ -256,7 +263,7 @@ validate_lane_params() {
     key="${kv%%=*}"
     value="${kv#*=}"
     case "$key" in
-      width|sites|cap|samples|work) ;;
+      width|sites|cap|samples|work|members) ;;
       *)
         echo "coverage-manifest: $cases_file: unknown lane param key: $kv" >&2
         return 1
@@ -413,12 +420,10 @@ while IFS= read -r cases_file; do
         fi
         if [[ "$expected_status" == "deadlock" || "$expected_status" == "race" ]]; then
           # Fail closed: the membership enumerator has no deadlock-member
-          # handling (a blocked run fails its enumeration loudly), and the
-          # oracle's deadlock detector is schedule/mode-sensitive. Race
-          # expectations are per-stream refusals (racy-negative lane) —
-          # the slice-4 schedule enumerator will own "every enumerated
-          # path refuses"; until then they are strict-lane only too.
-          echo "coverage-manifest: $cases_file: deadlock/race-expectation cases are strict-lane only" >&2
+          # handling (a blocked run fails its enumeration loudly), and
+          # race-expectation rows have their OWN full-strength lane
+          # (lane=racy, D9(d): every enumerated path refuses).
+          echo "coverage-manifest: $cases_file: deadlock cases are strict-lane only; race-expectation cases use lane=racy" >&2
           bad=1
           continue
         fi
@@ -428,9 +433,10 @@ while IFS= read -r cases_file; do
         fi
         # Audit F2a: the enumerator's coverage claim is certified only by
         # the author-asserted width (>= every consumption-site bound in
-        # the case; the alias guard is a heuristic cross-check, not a
-        # proof). No silent default: every membership case declares width
-        # explicitly, and its why must argue the bound.
+        # the case). No silent default: every membership case declares
+        # width explicitly, and its why must argue the bound. (Since the
+        # slice-4 stepwise engine the assertion is checked MECHANICALLY
+        # at every explored site; the declaration discipline stands.)
         case ",$params," in
           *,width=*) ;;
           *)
@@ -440,12 +446,92 @@ while IFS= read -r cases_file; do
             ;;
         esac
         ;;
+      confluent)
+        # D9(b), slice 4: the enumerator certifies |set| = 1 over ALL
+        # schedules, then the ordinary strict pipeline runs — full-
+        # strength differential verification for deterministic
+        # concurrent programs. The observable is deterministic, so the
+        # nondet tag is FORBIDDEN (that is the membership lane), and
+        # the why records why the schedule latitude leaves it fixed.
+        if [[ "$why" == "-" ]]; then
+          echo "coverage-manifest: $cases_file: lane=confluent requires a why (why the schedule latitude leaves the observable fixed)" >&2
+          bad=1
+          continue
+        fi
+        if has_tag "$features" "nondet"; then
+          echo "coverage-manifest: $cases_file: confluent-lane rows must not carry the nondet tag (a nondeterministic observable is the membership lane)" >&2
+          bad=1
+          continue
+        fi
+        if [[ "$expected_status" == "deadlock" || "$expected_status" == "race" ]]; then
+          echo "coverage-manifest: $cases_file: deadlock/race-expectation cases cannot be confluent-lane" >&2
+          bad=1
+          continue
+        fi
+        if ! validate_lane_params "$cases_file" "$params"; then
+          bad=1
+          continue
+        fi
+        case ",$params," in
+          *,members=*|*,samples=*)
+            echo "coverage-manifest: $cases_file: confluent-lane rows take no members/samples params (|set|=1 is the lane's claim; the strict oracle is one go run)" >&2
+            bad=1
+            continue
+            ;;
+        esac
+        case ",$params," in
+          *,width=*) ;;
+          *)
+            echo "coverage-manifest: $cases_file: lane=confluent requires an explicit width=<B> in params" >&2
+            bad=1
+            continue
+            ;;
+        esac
+        ;;
+      racy)
+        # D9(d), slice 4 FULL STRENGTH: the enumerator proves "every
+        # enumerated path refuses" (--expect-status race — one value
+        # member anywhere fails loud), replacing the per-stream
+        # refusal approximation. Requires the race expectation.
+        if [[ "$expected_status" != "race" ]]; then
+          echo "coverage-manifest: $cases_file: lane=racy requires expected_status race" >&2
+          bad=1
+          continue
+        fi
+        if ! validate_lane_params "$cases_file" "$params"; then
+          bad=1
+          continue
+        fi
+        case ",$params," in
+          *,members=*|*,samples=*)
+            echo "coverage-manifest: $cases_file: racy-lane rows take no members/samples params (the refusal set is the singleton claim; the oracle is one -race red)" >&2
+            bad=1
+            continue
+            ;;
+        esac
+        case ",$params," in
+          *,width=*) ;;
+          *)
+            echo "coverage-manifest: $cases_file: lane=racy requires an explicit width=<B> in params" >&2
+            bad=1
+            continue
+            ;;
+        esac
+        ;;
       *)
-        echo "coverage-manifest: $cases_file: invalid lane: $lane (use strict or membership)" >&2
+        echo "coverage-manifest: $cases_file: invalid lane: $lane (use strict, membership, confluent, or racy)" >&2
         bad=1
         continue
         ;;
     esac
+    # Slice 4: every race-expectation row must be lane=racy — the
+    # full-strength refusal lane exists, so the strict per-stream
+    # approximation is no longer an acceptable classification.
+    if [[ "$expected_status" == "race" && "$lane" != "racy" ]]; then
+      echo "coverage-manifest: $cases_file: race-expectation rows must declare lane=racy (full-strength: every enumerated path refuses)" >&2
+      bad=1
+      continue
+    fi
     # deadlock (channels arc slice 1): the subject blocks with every
     # goroutine asleep — Go's runtime detector aborts with the FIXED
     # message "fatal error: all goroutines are asleep - deadlock!" (exit

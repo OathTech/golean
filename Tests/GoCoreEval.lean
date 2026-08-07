@@ -808,6 +808,40 @@ value leaf under [], race leaf under [1] — one racy leaf poisons the
 CASE, which is the slice-4 enumerator's job; recorded in the design
 note). -/
 
+-- Slice 4 (L2 live): the WAKE-path head-commit discriminator — a
+-- parked select whose channels BOTH become ready via closes (closes
+-- never pair, so the wake is cell-based). The b-clause is listed FIRST:
+-- a wake that head-commits the first wake-ready clause gives 2 on the
+-- park-then-both-closes schedule REGARDLESS of further stream content,
+-- while a (forbidden) re-randomizing wake would consume the next pick
+-- and could give 1 — the trailing 1s in the pinned stream are the
+-- discriminator.
+private def wakeMultiWorkerFunction : GoCore.Func := {
+  id := ⟨"wakeMultiWorker_F"⟩,
+  args := #[{ id := "a", typ := .chan .both .int },
+            { id := "b", typ := .chan .both .int }],
+  results := #[],
+  body := .seqn #[.closeChan (.var "a"), .closeChan (.var "b")]
+}
+
+private def wakeMultiMainFunction : GoCore.Func := {
+  id := ⟨"wakeMultiMain_F"⟩,
+  args := #[],
+  results := #[coreParam "z"],
+  body := .block
+    #[{ id := "av", typ := .chan .both .int },
+      { id := "bv", typ := .chan .both .int }]
+    #[
+      .makeChan (.var "av") .int (some (.intLit 1)),
+      .makeChan (.var "bv") .int (some (.intLit 1)),
+      .goStmt (.funcVal ⟨"wakeMultiWorker_F"⟩ #[]) #[.var "av", .var "bv"],
+      .selectStmt #[
+        (.recv #[] (.var "bv") .int, .assign (.var "z") (.intLit 2)),
+        (.recv #[] (.var "av") .int, .assign (.var "z") (.intLit 1))
+      ] none
+    ]
+}
+
 private def raceStoreWorkerFunction : GoCore.Func := {
   id := ⟨"raceStoreWorker_F"⟩,
   args := #[{ id := "p", typ := .pointer .int },
@@ -895,6 +929,10 @@ private def raceProgram : GoCore.Program := {
   funcs := #[raceStoreWorkerFunction, raceWriteWriteMainFunction,
     raceStoreOnlyWorkerFunction, raceExitNoSyncMainFunction,
     raceHbWorkerFunction, raceHbGreenMainFunction]
+}
+
+private def wakeMultiProgram : GoCore.Program := {
+  funcs := #[wakeMultiWorkerFunction, wakeMultiMainFunction]
 }
 
 private def coreMapBasicFunction : GoCore.Func := {
@@ -1502,8 +1540,11 @@ private def enumerate (program : GoCore.Program) (name : String)
       -- Width 32: the append-spill site's bound at the cap-panic shape
       -- (oldCap 0, newLen 1) is appendSpillWidth 0 1 = 32 since the F2
       -- envelope widening (arc-final audit, 2026-08-06); map shapes
-      -- need at most 3.
-      CLI.exploreLoop ep 1000000 32 8 64 expectStatus 100000 [#[]] {}
+      -- need at most 3; pool sites (slice 4) are bounded by the
+      -- goroutine count. Since slice 4 the engine is the stepwise
+      -- pool explorer with mechanically-computed per-site bounds
+      -- (`CLI.explore`) — width is the mechanical cap.
+      CLI.explore ep 1000000 32 16 64 500000 expectStatus
 
 private def expectNatEq (name : String) (actual expected : Nat) : IO Bool := do
   if actual == expected then
@@ -1564,6 +1605,29 @@ private def expectDriverAgreement (name : String) (program : GoCore.Program)
           (GoCore.Machine.runProgramM 1000000 program fname #[] s)
         if !out.observations.contains obs then
           IO.eprintln s!"FAIL: {name}: driver observation under stream {s} is not in the enumerated set: {obs.compress}"
+          return false
+      IO.println s!"ok: {name}"
+      return true
+
+/-- The slice-4 POOL half of the F5 pin: the enumerated set must contain
+the POOL driver's observation under each stream. The stepwise engine
+reuses `stepMulti`/`raceUpdate` but hand-mirrors the loop and the
+consumption ACCOUNTANT (`CLI.stepNeeds`) — this pin is the accountant's
+drift alarm: an accountant bound smaller than the machine's real one
+would leave a driver-reachable observation out of the set. -/
+private def expectPoolDriverAgreement (name : String) (program : GoCore.Program)
+    (fname : String) (expectStatus : Option String)
+    (streams : List (List Nat)) : IO Bool := do
+  match enumerate program fname expectStatus with
+  | .error msg =>
+      IO.eprintln s!"FAIL: {name}: enumeration failed: {msg}"
+      return false
+  | .ok out =>
+      for s in streams do
+        let obs := CLI.observationOfRun
+          (GoCore.Machine.runProgramPoolM 1000000 program fname #[] s)
+        if !out.observations.contains obs then
+          IO.eprintln s!"FAIL: {name}: pool driver observation under stream {s} is not in the enumerated set: {obs.compress}"
           return false
       IO.println s!"ok: {name}"
       return true
@@ -2002,6 +2066,35 @@ def main : IO UInt32 := do
     (enumerate enumInitPanicProgram "enum_init_read_F" (some "panic")) 1)
   passed := passed && (← expectDriverAgreement "GoCore enumerator agrees with the whole-program driver ($pkginit panic)"
     enumInitPanicProgram "enum_init_read_F" (some "panic") [[], [3], [7, 1]])
+  -- Slice 4: the POOL engine's pins (stepwise explorer + consumption
+  -- accountant), per pool consumption-site class.
+  passed := passed && (← expectEnumMembers "GoCore pool enumerator: fork/join rendezvous is confluent (singleton over all schedules)"
+    (enumerate poolProgram "poolSpawnMain_F" (some "ok")) 1)
+  passed := passed && (← expectPoolDriverAgreement "GoCore pool enumerator agrees with the pool driver (fork/join; L1 + pairing)"
+    poolProgram "poolSpawnMain_F" (some "ok") [[], [1], [1, 1, 1], [9, 8, 7, 6]])
+  passed := passed && (← expectEnumMembers "GoCore pool enumerator: waiter-extended select-with-default set is {7, 99} (the S2 audit envelope)"
+    (enumerate prioProgram "prioSelectDefaultRecvMain_F" (some "ok")) 2)
+  passed := passed && (← expectPoolDriverAgreement "GoCore pool enumerator agrees with the pool driver (waiter-extended select-with-default; L1 + L4)"
+    prioProgram "prioSelectDefaultRecvMain_F" (some "ok") [[], [1], [1, 1], [9, 8, 7, 6]])
+  passed := passed && (← expectEnumMembers "GoCore pool enumerator: every enumerated path of write/write refuses (lane d, full strength)"
+    (enumerate raceProgram "raceWriteWriteMain_F" (some "race")) 1)
+  passed := passed && (← expectEnumMembers "GoCore pool enumerator: exit-no-sync has BOTH leaves (value + race — why the class is eval-pinned, not a corpus race case)"
+    (enumerate raceProgram "raceExitNoSyncMain_F" none) 2)
+  -- The wake-path head-commit discriminator (L2 envelope: NO
+  -- re-randomization on the blocked path): under the pinned stream the
+  -- select parks, BOTH channels close, and the wake commits the FIRST
+  -- wake-ready clause in clause order (b-first => 2) — the trailing 1s
+  -- prove no further pick is drawn at the wake (a re-randomizing wake
+  -- would consume one and commit the a-clause instead).
+  -- Stream [0,0,1,1,1]: picks — post-spawn 0 (main strips), select
+  -- apply 0 (main parks), close-b boundary 1 (worker closes b before
+  -- the wake). The wake then sees BOTH clauses ready and head-commits
+  -- b (listed first) WITHOUT consuming: the trailing 1s would flip the
+  -- commit to the a-clause under a re-randomizing wake.
+  passed := passed && (← expectIntResult "GoCore pool wake-path head-commit: both-closed wake commits the first clause in clause order, consuming nothing"
+    (GoCore.Machine.runProgramPoolM 100000 wakeMultiProgram "wakeMultiMain_F" #[] [0, 0, 1, 1, 1]) 2)
+  passed := passed && (← expectEnumMembers "GoCore pool enumerator: wake/entry multi-ready select set is {1, 2}"
+    (enumerate wakeMultiProgram "wakeMultiMain_F" (some "ok")) 2)
   -- Audit response 2026-08-05, C6 (made NON-VACUOUS by delta-review M2 —
   -- the wp_assign lesson in test form: the original used the
   -- SUCCEEDING-init program, on which the OLD divergent orders already

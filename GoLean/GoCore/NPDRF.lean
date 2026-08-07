@@ -66,15 +66,15 @@ starts honest):
    mover statements below therefore carry existing-cell/frame
    premises; the eventual proof should work over an extensional heap
    equivalence.
-3. **BUG-040 (the post-spawn decision point).** The coupling "programs
-   outside DRF are exactly those the machine refuses" currently FAILS
-   for races reachable only by preempting a sync-free post-spawn
-   parent segment (the exit-no-sync class): the coarse relation has no
-   child-first path there, so no coarse run executes — or detects —
-   the conflicting access. `NPDRFReduction` as stated below is about
-   OUTCOME equality for race-free programs; the detector-completeness
-   half (fine-racy ⇒ some coarse path refuses) must additionally wait
-   on BUG-040's fix.
+3. **BUG-040 (the post-spawn decision point) — DISCHARGED at slice 4.**
+   The coupling "programs outside DRF are exactly those the machine
+   refuses" used to FAIL for races reachable only by preempting a
+   sync-free post-spawn parent segment (the exit-no-sync class); the
+   `.spawned` marker (a registry op at spawn completion) put the
+   child-first interleavings inside the coarse path set, and the class
+   is detectable (the flipped eval pins + the pool enumerator's
+   both-leaves pin). The detector-completeness half no longer waits on
+   it; the remaining obstructions stand on their own.
 4. **Main-exit discard (D6) — and it makes the statement below
    REFUTABLE AS WRITTEN, not merely unproven (S3 audit).** Main's
    terminal ends the program and discards other goroutines mid-flight,

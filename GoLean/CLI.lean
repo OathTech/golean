@@ -32,7 +32,7 @@ private def usage : String :=
   "  golean native-json-run --input <file> --function <name> [--arg-int <n> ...] [--fuel <n>] [--choices <n,n,...>]\n" ++
   "  golean observation-eq --left <json> --right <json>\n" ++
   "  golean coverage-observations --input <file> --function <name> [--arg-int <n> ...] [--fuel <n>]\n" ++
-  "      [--max-width <B>] [--max-sites <D>] [--cap <N>] [--work-cap <W>] [--expect-status <ok|panic>]\n"
+  "      [--max-width <B>] [--max-sites <D>] [--cap <N>] [--work-cap <W>] [--expect-status <ok|panic|race>]\n"
 
 private def absoluteFrom (base : FilePath) (path : FilePath) : FilePath :=
   if path.isRelative then (base / path).normalize else path.normalize
@@ -433,8 +433,12 @@ seeding is stream-independent setup shared with `runProgramM`). What is
 COPIED (not shared) is the driver layer: `enumSetup`/`enumRunProgram`
 hand-mirror `runProgramM`'s wiring (subject lookup, `$pkginit` shape
 check, per-stream init-then-subject composition — init consumes choices,
-so it runs per enumerated stream) and `enumRun`/`enumInitRun`
-hand-mirror `runConfig`'s terminal handling (audit F5/F7, 2026-08-05).
+so it runs per enumerated stream) and `enumPoolRun`/`enumInitRun`
+hand-mirror `execProgLoop`'s / `runConfig`'s terminal handling (audit
+F5/F7, 2026-08-05; the subject phase moved to the POOL mirror at the
+channels arc's slice 4, reusing `stepMulti`/`raceUpdate` verbatim so
+the scheduler/waiter/select sites and the detector are the machine's
+own).
 Rationale updated at the arc-final audit (F16, 2026-08-06): the original
 clause "a shared helper would touch GoCore, which stays bit-identical"
 was the MEMBERSHIP SLICE's constraint (that slice touched zero GoCore
@@ -502,10 +506,12 @@ structure EnumArgs where
   `B^D` blowup guard. Exactly this many runs are permitted; exceeding it
   fails loud (audit F8: previously permitted N+1). -/
   workCap : Nat := 200000
-  /-- Expected observation status (`ok` / `panic`): every enumerated
-  member must carry it, else the enumeration fails loud (audit F1 — a
-  wrong-status member is a machine bug, not an envelope point). `none`
-  skips the check (bare CLI exploration). -/
+  /-- Expected observation status (`ok` / `panic` / `race` — the last
+  is lane d's full-strength claim: EVERY enumerated path refuses):
+  every enumerated member must carry it, else the enumeration fails
+  loud (audit F1 — a wrong-status member is a machine bug, not an
+  envelope point; for `race`, a value member is a schedule the
+  detector missed). `none` skips the check (bare CLI exploration). -/
   expectStatus : Option String := none
   deriving Repr
 
@@ -528,10 +534,10 @@ private def parseEnumArgs : List String → EnumArgs → Except String EnumArgs
   | "--work-cap" :: value :: rest, cfg => do
       parseEnumArgs rest { cfg with workCap := (← parseJsonNat "--work-cap" value) }
   | "--expect-status" :: value :: rest, cfg =>
-      if value == "ok" || value == "panic" then
+      if value == "ok" || value == "panic" || value == "race" then
         parseEnumArgs rest { cfg with expectStatus := some value }
       else
-        .error s!"--expect-status must be ok or panic, got {value}\n{usage}"
+        .error s!"--expect-status must be ok, panic, or race, got {value}\n{usage}"
   | flag :: _, _ => .error s!"unknown or incomplete option: {flag}\n{usage}"
 
 private def renderGoError (err : GoError) : String :=
@@ -584,34 +590,62 @@ def enumSetup (program : GoCore.Program) (name : String)
         else pure (some initF.body)
   return { σ₀, initBody?, func, args }
 
-/-- One machine run to a terminal configuration: the observation JSON plus
+/-- One machine run to a program terminal: the observation JSON plus
 the LEFTOVER choice stream. `Choices.consume` pops exactly one element
 while the stream is non-empty (exhaustion consumes nothing and yields the
 default 0), so `provided − |leftover|` is the exact number of consumption
 sites reached whenever the leftover is non-empty — the enumerator's
-consumption meter. Terminal handling mirrors `runConfig` exactly, except
-the panic terminal KEEPS the stream (its observation is a member too,
-returned with status `"panic"`) instead of throwing it away; all other
-`GoError`s (stuck, unsupported, internal, fuel-out, and — channels arc
-slice 1 — `deadlock` from a blocked configuration, classified before the
-fuel check like `runConfig` does) propagate and the enumeration fails
-loud on them (a deadlocking member has no membership handling yet).
+consumption meter.
+
+THE POOL MIRROR (channels arc slice 4): the subject phase runs on the
+THREAD POOL, exactly like `native-json-run`'s `runProgramPoolM` — this
+loop hand-mirrors `execProgLoop`'s terminal-classification order
+(any-goroutine panic abort, main's terminal, the all-asleep deadlock
+state, all BEFORE the fuel check) while REUSING the machine's own
+`stepMulti` and `raceUpdate` verbatim, so every pool step, every
+consumption site (L1 scheduler, L4 waiter pick, L2 select pick,
+mapIter, append spill), and the race detector are the machine's own.
+Member statuses: `"ok"` (main `.normal`, readout at the pinned result
+locations), `"panic"` (any goroutine's unrecovered panic — the stream
+is KEPT: the panic is a member), and — lane d — `"race"` (the
+detector's refusal, also a member with its stream: for a racy case
+EVERY enumerated path must carry it, which `--expect-status race`
+enforces; under any other expectation a race member fails the status
+discipline loudly). All other `GoError`s (stuck, unsupported,
+internal, fuel-out, and `deadlock` — a deadlocking member still has
+no membership handling) propagate and the enumeration fails loud.
 Returns (status, observation, leftover); non-`private` so the
-driver-agreement eval tests can pin it against the originals it copies
-(audit F5). -/
-def enumRun (resultLocs : List Loc) :
-    Nat → GoCore.ExecState → GoCore.Machine.Config → GoCore.Choices →
-    Except GoError (String × Json × GoCore.Choices)
-  | _, σ, .next .stop, choices =>
-      return ("ok", runJson { values := (← GoCore.Machine.loadMany σ resultLocs).toArray }, choices)
-  | _, _, .panicked msg, choices => return ("panic", errorJson (.panic msg), choices)
-  | _, _, .blockedSend _ _ _, _ => throw .deadlock
-  | _, _, .blockedRecv _ _ _ _ _, _ => throw .deadlock
-  | _, _, .blockedSelect _ _ _, _ => throw .deadlock
-  | 0, _, _, _ => throw .fuelOut
-  | fuel + 1, σ, c, choices => do
-      let (c', σ', choices') ← GoCore.Machine.stepFn σ c choices
-      enumRun resultLocs fuel σ' c' choices'
+driver-agreement eval tests can pin it against the originals it
+mirrors (audit F5). -/
+def enumPoolRun (resultLocs : List Loc) :
+    Nat → GoCore.Machine.MultiConfig → GoCore.Machine.RaceState →
+    GoCore.Choices → Except GoError (String × Json × GoCore.Choices)
+  | fuel, m, r, choices =>
+      if m.threads.isEmpty then
+        throw (.internal "thread pool without a main goroutine")
+      else
+        match m.panicMsg? with
+        | some msg => return ("panic", errorJson (.panic msg), choices)
+        | none =>
+            match m.mainOutcome? with
+            | some (.normal σf) =>
+                return ("ok", runJson
+                  { values := (← GoCore.Machine.loadMany σf resultLocs).toArray },
+                  choices)
+            | some _ => throw (.internal "main terminal outside its barrier frame")
+            | none =>
+                if (GoCore.Machine.runnableIdxs m.shared m.threads).isEmpty then
+                  throw .deadlock
+                else
+                  match fuel with
+                  | 0 => throw .fuelOut
+                  | fuel + 1 => do
+                      let (m', choices') ← GoCore.Machine.stepMulti m choices
+                      match GoCore.Machine.raceUpdate m.shared m.threads choices m' r with
+                      | .error .raceDetected =>
+                          return ("race", errorJson .raceDetected, choices')
+                      | .error e => throw e
+                      | .ok r' => enumPoolRun resultLocs fuel m' r' choices'
 
 /-- The `$pkginit` phase of an enumeration run (init slice): `enumRun`'s
 terminal handling, but returning the FINAL STATE (the subject runs from
@@ -656,8 +690,11 @@ def enumRunProgram (ep : EnumProgram) (runFuel : Nat)
   let (env, s₂) ← GoCore.Machine.bindParams [] σ₁ ep.func.args.toList ep.args.toList
   let (frameEnv, s₃) ← GoCore.Machine.allocDecls env s₂ ep.func.results.toList
   let resultLocs ← GoCore.Machine.pinResultLocs frameEnv ep.func.results.toList
-  enumRun resultLocs runFuel s₃
-    (.exec ep.func.body frameEnv (.frame [] [] [] .stop)) choices₁
+  -- The subject runs on the POOL (slice 4), mirroring `runProgramPoolM`:
+  -- a fresh one-thread pool over the initialized state, race detector
+  -- armed from empty.
+  enumPoolRun resultLocs runFuel
+    ⟨#[.exec ep.func.body frameEnv (.frame [] [] [] .stop)], s₃, 0⟩ {} choices₁
 
 /-- The observation `native-json-run` prints for a driver result — public
 so the driver-agreement eval tests compare the two drivers on the SAME
@@ -670,113 +707,408 @@ structure EnumOutcome where
   /-- Distinct observations (canonical `Json`, deduplicated by structural
   equality — the same equality `observation-eq` decides). -/
   observations : Array Json := #[]
-  /-- Complete pick assignments (one per explored leaf; exact consumption
-  = length). The alias guard probes these. -/
-  leaves : Array (Array Nat) := #[]
-  runs : Nat := 0
+  /-- Machine steps taken across the exploration tree (pool steps in the
+  subject phase, `stepFn` steps in the `$pkginit` phase; shared prefixes
+  counted ONCE — the stepwise engine's work meter). -/
+  steps : Nat := 0
+  /-- Alias-ladder probe RUNS performed (the bound accountant's
+  cross-check; each is a full root-replay). -/
+  probes : Nat := 0
+  /-- Observations of the alias-ladder probe runs (deduplicated). The
+  final certification check requires every one to be a member of
+  `observations`; an escapee refutes the computed site bounds. -/
+  probeObservations : Array Json := #[]
+  /-- Consumption sites discovered (tree nodes drawing a pick). -/
+  sitesSeen : Nat := 0
+  /-- Complete leaves (terminal paths) explored. -/
+  leaves : Nat := 0
+  /-- Maximum picks consumed along any single path. -/
+  maxDepth : Nat := 0
 
-/-- Depth-first exploration of the choice tree over prefixes on `[0, B)`.
-Invariant on every frontier entry `p`: the run's first `|p|` consumption
-sites exist and consume exactly `p` (established by the parent's probe).
-Each pop runs the machine once with stream `p ++ [0]` — the probe pick:
-a leftover of exactly one element proves the run finished consuming `|p|`
-sites (record the observation; `p` is a complete assignment), an empty
-leftover proves a site exists at depth `|p|` (extend with every pick in
-`[0, B)`). Fuel is the work cap: decrements once per run, fails loud at
-zero with the frontier non-empty (seeded with exactly the cap — audit
-F8). `expectStatus`: every recorded member must carry it (audit F1 — a
-wrong-status member is a machine bug, not an envelope point). -/
-def exploreLoop (ep : EnumProgram) (runFuel : Nat)
-    (width sites cap : Nat) (expectStatus : Option String) :
-    Nat → List (Array Nat) → EnumOutcome → Except String EnumOutcome
-  | _, [], out => .ok out
-  | 0, _ :: _, out =>
-      .error s!"work cap exceeded after {out.runs} run(s) with prefixes still unexplored — raise --work-cap or narrow the case"
-  | work + 1, p :: rest, out => do
-      let stream := p.toList ++ [0]
-      match enumRunProgram ep runFuel stream with
-      | .error err =>
-          .error s!"machine run failed under pick prefix {p.toList} — cannot certify the observation set: {renderGoError err}"
-      | .ok (status, obs, leftover) =>
-          let out := { out with runs := out.runs + 1 }
-          if leftover.length ≥ 1 then
-            -- Probe untouched: `p` is a complete assignment.
-            if expectStatus.any (· != status) then
-              .error s!"machine-side status divergence: member under pick assignment {p.toList} has status {status}, expected {expectStatus.getD ""} — a machine bug under a stream Go may never realize, not an envelope point. Member: {obs.compress}"
-            else
-            let observations :=
-              if out.observations.contains obs then out.observations
-              else out.observations.push obs
-            if observations.size > cap then
-              .error s!"observation cap N={cap} exceeded — the case is too wide for enumeration (design note: needs a per-case predicate)"
-            else
-              exploreLoop ep runFuel width sites cap expectStatus work rest
-                { out with observations, leaves := out.leaves.push p }
+/-! ## The stepwise pool explorer (channels arc slice 4)
+
+The membership enumerator's engine, rebuilt for the POOL: the prior
+whole-run frontier explored alphabet `[0, B)` at EVERY site under one
+author-asserted width `B`, which is intractable at scheduler scale
+(a 3-goroutine litmus case has ~15 consumption sites of bound 2-3, and
+uniform width-3 exploration wastes `3/2` per bound-2 site — a ~300×
+blowup — while the per-leaf alias ladder multiplied the probe count by
+path length). The rebuilt engine explores STEPWISE with MACHINE-COMPUTED
+per-site bounds:
+
+* **`stepNeeds` — the consumption ACCOUNTANT** (a CLI-layer mirror of
+  exactly the consumption decision points of one `stepMulti` call,
+  REUSING the machine's own analysis functions — `runnableIdxs`,
+  `arrivalCases`, `applySelectCore`, `appendSpillWidth` — so every
+  BOUND is computed by the same code the semantics consumes with; only
+  the dispatch skeleton is mirrored). Given the picks supplied for the
+  next pool step it answers: `none` — the step consumes nothing
+  further — or `some b` — the step's next draw is a SITE of bound `b`.
+  This realizes the membership design's deferred "mechanical bound
+  certification" WITHOUT touching GoCore (the deferral's stated
+  concern): the hook is a CLI copy, pinned like every driver copy —
+  by the driver-agreement eval tests and the harness's per-case
+  coupling check — plus the two in-engine cross-checks below.
+* **The author width is now a mechanically-checked CAP**: a site whose
+  computed bound exceeds the case's `width` fails the enumeration loud
+  ("width assertion refuted mechanically") — the F2a discipline, now
+  exact at every explored site instead of heuristic.
+* **The alias ladder is retargeted at the ACCOUNTANT**: for each
+  discovered site of computed bound `b`, three full root-replays probe
+  raw picks `b`, `2b+1`, `4b+3` at that position (offsets ≡ 0 mod `b`
+  only if `b` is the true bound — the de-aligned upper rungs survive
+  divisor coincidences, delta-review T1). A probe observation outside
+  the enumerated set refutes the computed bound (an accountant bound
+  smaller than the machine's real one would leave residues
+  unexplored — exactly what the escaping probe exhibits). Probes run
+  through `enumRunProgram` — the REAL semantics end to end, empty-tail
+  defaults included — so a probe is never itself accountant-derived.
+* **DFS with shared prefixes**: work is counted in machine STEPS over
+  the distinct-behavior tree (a shared prefix executes once), with the
+  established fail-loud caps carried over: `--max-sites` (picks per
+  path), `--cap` (distinct observations), `--work-cap` (steps +
+  probes; NOTE the unit changed from whole runs to steps — per-case
+  `work` params recalibrated in the same change).
+
+Member statuses and the status discipline (audit F1) are unchanged;
+`"race"` members (the detector's refusal) join for lane d — a racy
+case enumerates under `--expect-status race`, so EVERY path must
+refuse. Deadlock members still fail loud (no membership handling). -/
+
+/-- The consumption accountant (docstring above): walks the consumption
+decision points of ONE `stepMulti` call over the supplied pick vector.
+`none` = the vector suffices (the real `stepMulti` will draw only from
+it); `some b` = the step's next draw would exceed the vector — a site
+of bound `b` at this position. Errors and non-consuming refusals
+return `none` (the real step surfaces them). -/
+def stepNeeds (m : GoCore.Machine.MultiConfig) (picks : GoCore.Choices) :
+    Option Nat :=
+  match m.threads[m.cur]? with
+  | none => none
+  | some c₀ =>
+    -- Site: the L1 scheduler pick (consumed only at |runnable| > 1).
+    let l1 : Option (Nat × GoCore.Choices) :=
+      if c₀.atBoundary then
+        match GoCore.Machine.runnableIdxs m.shared m.threads with
+        | [] => none  -- all asleep: classified before stepping
+        | [j] => some (j, picks)
+        | rs =>
+            match picks with
+            | [] => none  -- signal handled below via the sentinel
+            | p :: rest =>
+                match rs[p % rs.length]? with
+                | some j => some (j, rest)
+                | none => none
+      else some (m.cur, picks)
+    match c₀.atBoundary, GoCore.Machine.runnableIdxs m.shared m.threads, picks with
+    | true, _ :: _ :: _, [] =>
+        some (GoCore.Machine.runnableIdxs m.shared m.threads).length
+    | _, _, _ =>
+      match l1 with
+      | none => none
+      | some (i, ch) =>
+        match m.threads[i]? with
+        | none => none
+        | some c =>
+          if GoCore.Machine.isBlockedConfig c then none
+          else if (GoCore.Machine.spawnedCont c).isSome then none
           else
-            -- Probe consumed: a site exists at depth |p|.
-            if p.size + 1 > sites then
-              .error s!"run consumes more than --max-sites {sites} choice site(s) — raise the case's sites bound (never truncated silently)"
-            else
-              let children := (List.range width).map (fun b => p.push b)
-              exploreLoop ep runFuel width sites cap expectStatus work
-                (children ++ rest) out
+            match GoCore.Machine.spawnPlan c with
+            | some _ => none
+            | none =>
+              match GoCore.Machine.arrivalCases m.shared m.threads i c with
+              | .error _ => none
+              | .ok (.single _ cs) =>
+                  if cs.length ≤ 1 then none
+                  else match ch with
+                    | [] => some cs.length
+                    | _ :: _ => none
+              | .ok (.multi os) =>
+                  (match ch with
+                  | [] => some os.length
+                  | p :: rest =>
+                      match os[p % os.length]? with
+                      | some (.pair _ cs) =>
+                          if cs.length ≤ 1 then none
+                          else match rest with
+                            | [] => some cs.length
+                            | _ :: _ => none
+                      | _ => none)
+              | .ok .cellPath =>
+                  -- The sequential machine's own sites, per shape.
+                  match c with
+                  | .next (.mapIterK _ _ _ _ _ remaining _ _) =>
+                      if remaining.isEmpty then none
+                      else match ch with
+                        | [] => some remaining.size
+                        | _ :: _ => none
+                  | .retV v (.selectOpsK clauses default? done [] env k) =>
+                      (match GoCore.Machine.applySelectCore m.shared clauses
+                          default? ((v :: done).reverse) env k with
+                      | .ok (.picks commits) =>
+                          (match ch with
+                          | [] => some commits.length
+                          | _ :: _ => none)
+                      | _ => none)
+                  | .retV v (.stmtOpK (.appendSlice _) _ done [] _ _) =>
+                      -- The spill's capacity site (bound mirrors
+                      -- `applyStmtOp`'s appendSlice arm verbatim).
+                      (match (v :: done).reverse with
+                      | [_, sliceV, elemsV] =>
+                          (match GoCore.valueAsSlice sliceV,
+                              GoCore.valueAsSlice elemsV with
+                          | .ok slice, .ok elems =>
+                              let newLen := slice.len + elems.len
+                              if newLen ≤ slice.cap then none
+                              else match ch with
+                                | [] => some
+                                    (GoCore.appendSpillWidth slice.cap newLen)
+                                | _ :: _ => none
+                          | _, _ => none)
+                      | _ => none)
+                  | _ => none
 
-/-- The alias guard — a HEURISTIC cross-check of the author-asserted
-width, not a proof (audit F2): for every explored complete assignment
-and every pick position, re-run with that pick bumped through a small
-ladder of offsets `≥ B` (`+B`, `+2B+1`, `+4B+3` — one probe per rung).
-If the enumeration is complete (`B ≥` every site's bound), every
-stream's observation — probe streams included — lies in the enumerated
-set; an observation outside it REFUTES the width assertion, so coverage
-is not certified and the enumeration fails closed ("raise width").
+/-- The SEQUENTIAL accountant for the `$pkginit` phase (one `stepFn`
+step consumes at most one pick): `some b` iff this configuration's next
+step draws a pick, with bound `b`. -/
+def stepNeedsSeq (σ : GoCore.ExecState) (c : GoCore.Machine.Config) :
+    Option Nat :=
+  match c with
+  | .next (.mapIterK _ _ _ _ _ remaining _ _) =>
+      if remaining.isEmpty then none else some remaining.size
+  | .retV v (.selectOpsK clauses default? done [] env k) =>
+      (match GoCore.Machine.applySelectCore σ clauses default?
+          ((v :: done).reverse) env k with
+      | .ok (.picks commits) => some commits.length
+      | _ => none)
+  | .retV v (.stmtOpK (.appendSlice _) _ done [] _ _) =>
+      (match (v :: done).reverse with
+      | [_, sliceV, elemsV] =>
+          (match GoCore.valueAsSlice sliceV, GoCore.valueAsSlice elemsV with
+          | .ok slice, .ok elems =>
+              let newLen := slice.len + elems.len
+              if newLen ≤ slice.cap then none
+              else some (GoCore.appendSpillWidth slice.cap newLen)
+          | _, _ => none)
+      | _ => none)
+  | _ => none
 
-When the guard can and cannot refute (delta-review T1, 2026-08-05 —
-this doc originally claimed "any bound beyond 5B is entirely unprobed",
-which is BACKWARDS: for a true bound `M ≥ 5B` every rung's probe value
-is its own residue, a live unenumerated one — the most informative
-case). Precisely: a rung with offset `d` probes residue
-`(pick + d) mod M` at a site of true bound `M`; it can refute ONLY if
-that residue lies outside the enumerated residues `[0, min(B, M))`, and
-even then only if the residue's behavior yields an observation outside
-the set (aliased observations still escape). A rung is provably INERT
-when `d ≡ 0 (mod M)` — the probe lands back on the enumerated residue —
-which with the original `+B/+2B/+4B` ladder happened whenever
-`M ∣ m·B` (e.g. a width that is a multiple of a site's true bound
-makes all `+m·B` rungs `≡ 0` — concretely, width 16 over the append
-site's OLD fixed bound 8, before F2 widened it to the shape-dependent
-`appendSpillWidth` ≥ 32); the `+2B+1`/`+4B+3` offsets de-align the upper rungs from such
-divisor coincidences. When `B ≥ M` (the width assertion TRUE) every
-residue is enumerated, so all rungs are necessarily silent — that is
-the expected behavior of a correct assertion, not a blind spot.
-Mechanical bound certification needs a core-adjacent instrumentation
-hook, deferred per the design note. -/
-def aliasProbeLoop (ep : EnumProgram) (runFuel : Nat) (width : Nat)
-    (observations : Array Json) :
-    Nat → List (List Nat) → Nat → Except String Nat
-  | _, [], probes => .ok probes
-  | 0, _ :: _, probes =>
-      .error s!"work cap exceeded during alias probes (after {probes} probe(s)) — raise --work-cap"
-  | work + 1, stream :: rest, probes => do
-      match enumRunProgram ep runFuel stream with
-      | .error err =>
-          .error s!"alias-guard probe {stream} failed — width assertion not certified at B={width}: {renderGoError err}"
-      | .ok (_, obs, _) =>
-          if observations.contains obs then
-            aliasProbeLoop ep runFuel width observations work rest (probes + 1)
+/-- Exploration context (invariant across the tree). -/
+structure ExpCtx where
+  ep : EnumProgram
+  runFuel : Nat
+  width : Nat
+  sites : Nat
+  cap : Nat
+  workCap : Nat
+  expectStatus : Option String
+
+/-- Record one terminal leaf: status discipline (audit F1), observation
+dedup, cap check. -/
+def recordLeaf (ctx : ExpCtx) (out : EnumOutcome) (path : List Nat)
+    (status : String) (obs : Json) (depth : Nat) :
+    Except String EnumOutcome := do
+  if ctx.expectStatus.any (· != status) then
+    .error s!"machine-side status divergence: member under pick assignment {path.reverse} has status {status}, expected {ctx.expectStatus.getD ""} — a machine bug under a stream Go may never realize, not an envelope point. Member: {obs.compress}"
+  else
+    let observations :=
+      if out.observations.contains obs then out.observations
+      else out.observations.push obs
+    if observations.size > ctx.cap then
+      .error s!"observation cap N={ctx.cap} exceeded — the case is too wide for enumeration (design note: needs a per-case predicate)"
+    else
+      .ok { out with
+            observations := observations
+            leaves := out.leaves + 1
+            maxDepth := max out.maxDepth depth }
+
+/-- One alias-ladder probe set for a site of computed bound `b` at path
+position `path` (reversed picks so far): three full ROOT-replays through
+`enumRunProgram` — the real semantics — at raw picks `b`, `2b+1`,
+`4b+3`, observations collected for the final membership check. A probe
+whose RUN fails refutes certification loud (like the old guard). -/
+def probeSite (ctx : ExpCtx) (out : EnumOutcome) (path : List Nat)
+    (bound : Nat) : Except String EnumOutcome := do
+  let prefixPicks := path.reverse
+  let mut o := out
+  for d in [bound, 2 * bound + 1, 4 * bound + 3] do
+    match enumRunProgram ctx.ep ctx.runFuel (prefixPicks ++ [d]) with
+    | .error err =>
+        throw s!"alias-guard probe {prefixPicks ++ [d]} failed — site-bound certification refuted (computed bound {bound}): {renderGoError err}"
+    | .ok (_, obs, _) =>
+        let pset :=
+          if o.probeObservations.contains obs then o.probeObservations
+          else o.probeObservations.push obs
+        o := { o with probes := o.probes + 1, probeObservations := pset }
+  if o.probes > ctx.workCap then
+    throw s!"work cap exceeded during alias probes ({o.probes} probe run(s)) — raise --work-cap"
+  return o
+
+/-- Branch a discovered site: width cap (mechanical F2a check), sites
+cap, per-pick recursion via `k`. -/
+def branchSite (ctx : ExpCtx) (out : EnumOutcome) (path : List Nat)
+    (bound : Nat) (depth : Nat)
+    (k : EnumOutcome → Nat → Except String EnumOutcome) :
+    Except String EnumOutcome := do
+  if bound > ctx.width then
+    .error s!"site bound {bound} exceeds the case's width {ctx.width} — the width assertion is REFUTED (mechanically, at pick position {depth}); raise the case's width metadata"
+  else if depth + 1 > ctx.sites then
+    .error s!"run consumes more than --max-sites {ctx.sites} choice site(s) — raise the case's sites bound (never truncated silently)"
+  else do
+    let out ← probeSite ctx { out with sitesSeen := out.sitesSeen + 1 }
+      path bound
+    let mut o := out
+    for b in List.range bound do
+      o ← k o b
+    return o
+
+mutual
+
+/-- DFS over the POOL phase from a mid-run state. `path` is the picks
+consumed so far, REVERSED (a snoc list); `stepPicks` the picks fed to
+the in-progress pool step (reversed); `fuel` the remaining per-path
+pool-step budget. Terminal classification mirrors `enumPoolRun`
+(panic/main/deadlock before the fuel check); each completed step goes
+through the REAL `stepMulti` + `raceUpdate`. -/
+partial def poolDFS (ctx : ExpCtx) (out : EnumOutcome) (path : List Nat)
+    (resultLocs : List Loc)
+    (fuel : Nat) (m : GoCore.Machine.MultiConfig)
+    (r : GoCore.Machine.RaceState) : Except String EnumOutcome := do
+  if out.steps + out.probes > ctx.workCap then
+    .error s!"work cap exceeded after {out.steps} step(s) + {out.probes} probe(s) with subtrees still unexplored — raise --work-cap or narrow the case"
+  else if m.threads.isEmpty then
+    .error "thread pool without a main goroutine"
+  else
+    match m.panicMsg? with
+    | some msg =>
+        recordLeaf ctx out path "panic" (errorJson (.panic msg)) path.length
+    | none =>
+      match m.mainOutcome? with
+      | some (.normal σf) =>
+          match GoCore.Machine.loadMany σf resultLocs with
+          | .error e =>
+              .error s!"result readout failed at a terminal: {renderGoError e}"
+          | .ok vals =>
+              recordLeaf ctx out path "ok"
+                (runJson { values := vals.toArray }) path.length
+      | some _ => .error "main terminal outside its barrier frame"
+      | none =>
+        if (GoCore.Machine.runnableIdxs m.shared m.threads).isEmpty then
+          .error s!"deadlock member under pick assignment {path.reverse} — deadlocking members have no membership handling (fail loud, per the design)"
+        else
+          match fuel with
+          | 0 => .error "per-path fuel exhausted (raise --fuel)"
+          | fuel' + 1 => poolStepDFS ctx out path resultLocs fuel' m r []
+
+/-- Feed picks to the CURRENT pool step until the accountant says the
+vector suffices, branching at each reported site; then take the step
+through the real `stepMulti` + `raceUpdate`. -/
+partial def poolStepDFS (ctx : ExpCtx) (out : EnumOutcome) (path : List Nat)
+    (resultLocs : List Loc) (fuel : Nat)
+    (m : GoCore.Machine.MultiConfig) (r : GoCore.Machine.RaceState)
+    (stepPicks : List Nat) : Except String EnumOutcome := do
+  let picks := stepPicks.reverse
+  match stepNeeds m picks with
+  | some bound =>
+      branchSite ctx out path bound path.length fun o b =>
+        poolStepDFS ctx o (b :: path) resultLocs fuel m r (b :: stepPicks)
+  | none =>
+      match GoCore.Machine.stepMulti m picks with
+      | .error e =>
+          .error s!"machine step failed under pick assignment {path.reverse} — cannot certify the observation set: {renderGoError e}"
+      | .ok (m', leftover) =>
+          if !leftover.isEmpty then
+            .error s!"consumption accountant drift: a pool step left picks {leftover} unconsumed under {path.reverse} — driver-copy drift, cannot certify"
           else
-            .error s!"alias guard: probe pick ≥ B (stream {stream}) produced an observation OUTSIDE the enumerated set — the case's width assertion is REFUTED (B={width} is smaller than some consumption site's bound); raise the case's width metadata. Probe observation: {obs.compress}"
+            match GoCore.Machine.raceUpdate m.shared m.threads picks m' r with
+            | .error .raceDetected =>
+                recordLeaf ctx { out with steps := out.steps + 1 } path
+                  "race" (errorJson .raceDetected) path.length
+            | .error e =>
+                .error s!"race-detector update failed: {renderGoError e}"
+            | .ok r' =>
+                poolDFS ctx { out with steps := out.steps + 1 } path
+                  resultLocs fuel m' r'
 
-/-- The alias-guard probe streams for a set of explored leaves: each pick
-position bumped through the heuristic ladder `+B`, `+2B+1`, `+4B+3`
-(offsets all `≥ B`; the upper rungs are offset off multiples of `B` so
-rung inertness cannot align with `M ∣ m·B` divisor coincidences —
-delta-review T1). -/
-def aliasProbeStreams (width : Nat) (leaves : Array (Array Nat)) :
-    List (List Nat) :=
-  leaves.toList.flatMap (fun p =>
-    (List.range p.size).flatMap (fun i =>
-      [width, 2 * width + 1, 4 * width + 3].map
-        (fun d => (p.set! i (p[i]! + d)).toList)))
+end
+
+/-- The per-branch subject entry (`enumRunProgram`'s wiring, per init
+branch): bind params, allocate results, pin locations, seed the
+one-thread pool with the detector armed. -/
+partial def subjectEntry (ctx : ExpCtx) (out : EnumOutcome) (path : List Nat)
+    (σ : GoCore.ExecState) : Except String EnumOutcome := do
+  match GoCore.Machine.bindParams [] σ ctx.ep.func.args.toList
+      ctx.ep.args.toList with
+  | .error e => .error s!"subject entry failed: {renderGoError e}"
+  | .ok (env, s₂) =>
+    match GoCore.Machine.allocDecls env s₂ ctx.ep.func.results.toList with
+    | .error e => .error s!"subject entry failed: {renderGoError e}"
+    | .ok (frameEnv, s₃) =>
+      match GoCore.Machine.pinResultLocs frameEnv ctx.ep.func.results.toList with
+      | .error e => .error s!"subject entry failed: {renderGoError e}"
+      | .ok resultLocs =>
+          poolDFS ctx out path resultLocs ctx.runFuel
+            ⟨#[.exec ctx.ep.func.body frameEnv (.frame [] [] [] .stop)], s₃, 0⟩
+            {}
+
+/-- DFS over the `$pkginit` phase (sequential, one pick per step at
+most); on the init terminal, wire the subject entry (per branch — the
+post-init state differs per path) and hand off to the pool DFS. A
+panicking initializer is the run's (panic) member. -/
+partial def initDFS (ctx : ExpCtx) (out : EnumOutcome) (path : List Nat)
+    (fuel : Nat) (σ : GoCore.ExecState) (c : GoCore.Machine.Config) :
+    Except String EnumOutcome := do
+  if out.steps + out.probes > ctx.workCap then
+    .error s!"work cap exceeded after {out.steps} step(s) + {out.probes} probe(s) with subtrees still unexplored — raise --work-cap or narrow the case"
+  else
+    match c with
+    | .next .stop => subjectEntry ctx out path σ
+    | .panicked msg =>
+        recordLeaf ctx out path "panic" (errorJson (.panic msg)) path.length
+    | .blockedSend _ _ _ => .error "package init deadlocked (fail loud)"
+    | .blockedRecv _ _ _ _ _ => .error "package init deadlocked (fail loud)"
+    | .blockedSelect _ _ _ => .error "package init deadlocked (fail loud)"
+    | c =>
+      match fuel with
+      | 0 => .error "per-path fuel exhausted in package init (raise --fuel)"
+      | fuel' + 1 =>
+        match stepNeedsSeq σ c with
+        | some bound =>
+            branchSite ctx out path bound path.length fun o b =>
+              match GoCore.Machine.stepFn σ c [b] with
+              | .error e =>
+                  .error s!"package init step failed under {(b :: path).reverse}: {renderGoError e}"
+              | .ok (c', σ', leftover) =>
+                  if !leftover.isEmpty then
+                    .error s!"consumption accountant drift in package init (pick {leftover} unconsumed) — driver-copy drift"
+                  else
+                    initDFS ctx { o with steps := o.steps + 1 } (b :: path)
+                      fuel' σ' c'
+        | none =>
+            match GoCore.Machine.stepFn σ c [] with
+            | .error e =>
+                .error s!"package init failed under {path.reverse}: {renderGoError (GoCore.Machine.markInitPhase e)}"
+            | .ok (c', σ', _) =>
+                initDFS ctx { out with steps := out.steps + 1 } path fuel' σ' c'
+
+/-- The engine's entry: explore from the seeded state (init phase when
+present, then the pool subject per branch), then run the certification
+check — every alias-probe observation must be a member. -/
+def explore (ep : EnumProgram) (runFuel width sites cap workCap : Nat)
+    (expectStatus : Option String) : Except String EnumOutcome := do
+  let ctx : ExpCtx :=
+    { ep, runFuel, width, sites, cap, workCap, expectStatus }
+  let out ←
+    match ep.initBody? with
+    | none => subjectEntry ctx {} [] ep.σ₀
+    | some body =>
+        initDFS ctx {} [] runFuel ep.σ₀
+          (.exec body [] (.frame [] [] [] .stop))
+  -- THE CERTIFICATION CHECK: probe observations ⊆ enumerated set.
+  for pobs in out.probeObservations do
+    if !out.observations.contains pobs then
+      throw s!"alias guard: a probe pick ≥ the computed site bound produced an observation OUTSIDE the enumerated set — the bound accountant (or the case's width assertion) is REFUTED; cannot certify. Probe observation: {pobs.compress}"
+  return out
 
 private def runCoverageObservations (args : List String) : IO UInt32 := do
   let cwd ← IO.currentDir
@@ -807,27 +1139,19 @@ private def runCoverageObservations (args : List String) : IO UInt32 := do
                       IO.eprintln s!"coverage-observations: setup failed: {renderGoError err}"
                       return 1
                   | .ok ep =>
-                      match exploreLoop ep cfg.fuel
-                          cfg.maxWidth cfg.maxSites cfg.cap cfg.expectStatus
-                          cfg.workCap [#[]] {} with
+                      match explore ep cfg.fuel
+                          cfg.maxWidth cfg.maxSites cfg.cap cfg.workCap
+                          cfg.expectStatus with
                       | .error err =>
                           IO.eprintln s!"coverage-observations: {err}"
                           return 1
                       | .ok out =>
-                          let probeStreams := aliasProbeStreams cfg.maxWidth out.leaves
-                          let workLeft := cfg.workCap - out.runs
-                          match aliasProbeLoop ep cfg.fuel
-                              cfg.maxWidth out.observations workLeft probeStreams 0 with
-                          | .error err =>
-                              IO.eprintln s!"coverage-observations: {err}"
-                              return 1
-                          | .ok probes =>
-                              let lines :=
-                                (out.observations.map (·.compress)).qsort (· < ·)
-                              for line in lines do
-                                IO.println line
-                              IO.eprintln s!"coverage-observations: observations={out.observations.size} runs={out.runs} probes={probes} width={cfg.maxWidth} sites={cfg.maxSites} leaves={out.leaves.size}"
-                              return 0
+                          let lines :=
+                            (out.observations.map (·.compress)).qsort (· < ·)
+                          for line in lines do
+                            IO.println line
+                          IO.eprintln s!"coverage-observations: observations={out.observations.size} steps={out.steps} probes={out.probes} sites={out.sitesSeen} leaves={out.leaves} maxdepth={out.maxDepth} width={cfg.maxWidth}"
+                          return 0
       | _, _ =>
           IO.eprintln s!"provide --input <file> and --function <name>\n{usage}"
           return 2

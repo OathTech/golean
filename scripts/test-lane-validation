@@ -95,6 +95,37 @@ expect_accept "explicit strict row" \
   '-\trangeFirstKey\t-\tok\t-\tmaps\tstrict\t-\t-'
 expect_accept "well-formed membership row" \
   '-\trangeFirstKey\t-\tok\t-\tmaps,nondet\tmembership\twhy text\twidth=16'
+# ---- slice-4 lane shapes (confluent / racy / members pin).
+expect_reject "confluent without why" \
+  '-\trangeFirstKey\t-\tok\t-\tmaps\tconfluent\t-\twidth=4' \
+  "requires a why"
+expect_reject "confluent with the nondet tag" \
+  '-\trangeFirstKey\t-\tok\t-\tmaps,nondet\tconfluent\twhy text\twidth=4' \
+  "must not carry the nondet tag"
+expect_reject "confluent without width" \
+  '-\trangeFirstKey\t-\tok\t-\tmaps\tconfluent\twhy text\tsites=8' \
+  "explicit width"
+expect_reject "confluent with a members param" \
+  '-\trangeFirstKey\t-\tok\t-\tmaps\tconfluent\twhy text\twidth=4,members=1' \
+  "no members/samples params"
+expect_reject "racy on a non-race expectation" \
+  '-\trangeFirstKey\t-\tok\t-\tmaps\tracy\t-\twidth=4' \
+  "requires expected_status race"
+expect_reject "racy without width" \
+  '-\trangeFirstKey\t-\trace\t-\tmaps,race\tracy\t-\t-' \
+  "explicit width"
+expect_reject "race expectation left on the strict lane" \
+  '-\trangeFirstKey\t-\trace\t-\tmaps,race\tstrict\t-\t-' \
+  "must declare lane=racy"
+expect_reject "race expectation on the membership lane" \
+  '-\trangeFirstKey\t-\trace\t-\tmaps,race,nondet\tmembership\twhy text\twidth=4' \
+  "lane=racy"
+expect_accept "well-formed confluent row" \
+  '-\trangeFirstKey\t-\tok\t-\tmaps\tconfluent\twhy text\twidth=4'
+expect_accept "well-formed racy row" \
+  '-\trangeFirstKey\t-\trace\t-\tmaps,race\tracy\t-\twidth=4'
+expect_accept "membership row with a members pin" \
+  '-\trangeFirstKey\t-\tok\t-\tmaps,nondet\tmembership\twhy text\twidth=16,members=3'
 
 # ---- Part B: diff-coverage's in-harness lane checks (need go: the
 # dispatch sits after the shared go-harness generation).

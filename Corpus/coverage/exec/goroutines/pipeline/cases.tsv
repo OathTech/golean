@@ -1,4 +1,11 @@
-# id	subject	args	expected_status	expected_reason	features
+# id	subject	args	expected_status	expected_reason	features	lane	why	params
+# request-reply: CONFLUENT (slice 4) — certified singleton over ~4.4k
+# leaves (probe: depth 15, ~275k steps+probes).
+# two-stage / buffered-stage: left STRICT, recorded — their schedule
+# trees exceed the fail-loud caps at tractable budgets (probe: >60M
+# steps / >400 s; multi-stage pipelines multiply interleavings). The
+# strict lane's 3-stream invariance still covers them; revisit with
+# DPOR (the recorded later-additive layer, D9(c)).
 two-stage	pipelineTwoStage	-	ok	-	goroutines,channels,range,close
 buffered-stage	pipelineBufferedStage	-	ok	-	goroutines,channels,range,close
-request-reply	pipelineRequestReply	-	ok	-	goroutines,channels,range,close
+request-reply	pipelineRequestReply	-	ok	-	goroutines,channels,range,close	confluent	each request's reply is received before the next request is sent, serializing the exchange on every schedule	width=4,sites=18,work=1200000

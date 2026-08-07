@@ -1,3 +1,9 @@
-# id	subject	args	expected_status	expected_reason	features
-send-hb	rendezvousSendHB	-	ok	-	goroutines,channels,globals
-recv-hb	rendezvousRecvHB	-	ok	-	goroutines,channels,globals
+# id	subject	args	expected_status	expected_reason	features	lane	why	params
+# CONFLUENT lane (D9(b), slice 4): the enumerator certifies |set| = 1
+# over ALL schedules (mechanically-computed per-site bounds; width caps
+# them), then the ordinary full-strength strict differential runs —
+# schedule-independence is now a certified claim, not a 3-stream spot
+# check. Params: sites/work raised only where the measured tree needs
+# them (probed at reclassification).
+send-hb	rendezvousSendHB	-	ok	-	goroutines,channels,globals	confluent	the unbuffered send is synchronized before the receive completes (go_mem), ordering the global write before the read on every schedule	width=4
+recv-hb	rendezvousRecvHB	-	ok	-	goroutines,channels,globals	confluent	the unbuffered receive is synchronized before the send completes (go_mem's other direction), same fixed readout	width=4

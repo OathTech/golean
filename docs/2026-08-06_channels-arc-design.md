@@ -1179,3 +1179,144 @@ BUG-005/BUG-041 red pins; 7 new ids all PASS. 311 negative green; 99
 eval tests green; check-bugs green (41 bugs; untriaged ceiling 21
 unchanged); baseline re-pinned from the full run in this commit; the
 38 designated statements byte-identical.
+
+## Slice-4 build log (2026-08-07, branch `channels-arc-s4`)
+
+Executed as decided (select multi-ready + wake-order membership +
+confluent lane; enumerator over schedules; envelope statements live) —
+PLUS the slice's owed items: BUG-040's fix (authorized as anticipated
+by D8), sb-chan's set certification, full-strength lane d, and the
+sched-dependent un-reds. Red-first: the three L2 multi-ready envelope
+shapes (entry/wake/arrival) were corpus-pinned red with go-verified
+sets BEFORE any machinery. Decisions and findings DURING the build:
+
+- **BUG-040 FIXED — the post-spawn reschedule point is the new Config
+  marker `.spawned k`**, a registry op at spawn completion (this
+  slice's one authorized new consumption POINT beside L2): `spawnStep`
+  leaves the parent on it, `Config.atBoundary` includes it, its only
+  step is the pool-level strip to `.next k` (`stepThread`; new rule
+  `StepM.spawned`, mirrored in `StepMFine`); `stepFn` fails closed
+  `.internal` on it (pool-only, like the blocked shapes). The child
+  can now preempt a sync-free parent segment; the exit-no-sync race
+  class is DETECTABLE (eval pins flipped: race on child-first [1],
+  value leaf on main-first [] — and the pool enumerator pins BOTH
+  leaves, the mixed-leaf class no corpus race row can express).
+  **The predicted designated-witness re-pin turned out to need NO
+  literal changes**: all three pinned-stream fork/join witnesses
+  survive byte-identical (every stream still completes `.normal`/42),
+  but the SCHEDULES the literals realize shifted — re-derived by probe
+  (`.tmp/probe_fj_streams.lean`) and the distinctness argument
+  re-recorded in GoldenForkJoin.lean (canonical = parked-receiver
+  direction; adversarial now realizes worker-parks/recv-arrives via
+  picks 1,0,1; all-ones = worker-twice-then-strip). Challenge/
+  Solution/judge-config needed no sync (statement text unchanged); the
+  arc-end Comparator landmark certifies the set over the changed
+  machine. Conservation gains the `spawnedCont c = none` side
+  condition internally; theorem statements unchanged; full corpus
+  ZERO-drift on all 1173 prior ids.
+- **THE L2 SITE, LIVE** (D4's envelope statement ships at
+  `applySelect`'s docstring): spec step 3's "uniform pseudo-random
+  selection" weakened possibilistically to "any entry-ready case";
+  pick bound = ready-clause count, consumed only at width > 1. NO
+  RE-RANDOMIZATION ON THE BLOCKED PATH: a woken select head-commits
+  the first wake-ready clause in clause order (`resumeThread`),
+  consuming nothing — wake-order latitude is L1/L4's (every gc
+  first-event commit is realized by the prompt-wake schedule; a later
+  wake's head-commit is a spec-legal member). Eval discriminator:
+  the both-closed wake commits the FIRST clause with trailing stream
+  picks untouched (`wakeMultiProgram`, stream [0,0,1,1,1] → 2).
+- **`applySelect` factored through the stream-free `applySelectCore`**
+  (the `applyStmtOpCore` precedent): the multi-ready arm PRE-COMMITS
+  every ready clause, so apply-SUCCESS is pick-independent by
+  construction (the ∀-choices kit's discipline — the mapIterNext
+  precedent; a fail-closed commit error fires on every stream, panics
+  stay per-pick as `.inr` members). This is what keeps
+  `step_complete_any_wf` (and `progressExec_of_progress` above it)
+  total with NO new exclusions; `stepFn_oblivious` gains the
+  `consumesSelect` exclusion and `allStreamsOk` fails closed at select
+  applies (conservative, the appendSlice precedent); `step_det`'s
+  `choiceFree` excludes the select apply position.
+- **The arrival plan split into a PURE analysis + consuming wrapper**:
+  `arrivalCases` (`.cellPath` / `.single bc cands` — always a pair,
+  single-commit unrepresentable by type / `.multi os` — one outcome
+  per waiter-extended-ready clause) is the relation's carrier;
+  `arrivalPlan` draws the L2 pick at `.multi`. A picked cell-only
+  clause commits at the POOL level (`ArrivalOutcome.commit` — its
+  waiter-extended bound differs from `applySelect`'s cell bound);
+  pure-cell multi-ready delegates to `applySelect` (equal bounds by
+  construction, argued at the site). `StepM` gains
+  `pickPair`/`pickCommit`; sound/complete reworked over the
+  `arrivalPlan_of_*` bridge lemmas. `raceUpdate` gains the pre-step
+  stream and REPLICATES the step's consumption (L1 iff |runnable| > 1
+  at the boundary; then the same `arrivalCases`/`Choices.consume`; then
+  the cell-path replay) to recover the committed clause — it observes
+  the stream, deterministic given it, consumes nothing.
+- **THE ENUMERATOR WENT STEPWISE WITH MACHINE-COMPUTED PER-SITE
+  BOUNDS** (the big in-slice design decision; membership design note's
+  slice-4 addendum is the record). The old whole-run frontier at one
+  author width is INTRACTABLE at scheduler scale (probed:
+  first-come at width 3 exceeded 5M runs before finishing its alias
+  probes — uniform width wastes width/bound per bound-2 site and the
+  per-leaf ladder multiplies by path length). The rebuilt engine
+  (GoLean/CLI.lean): DFS over the pool with shared prefixes,
+  `stepNeeds`/`stepNeedsSeq` — the CLI consumption ACCOUNTANT
+  mirroring only the consumption decision points while REUSING
+  `runnableIdxs`/`arrivalCases`/`applySelectCore`/`appendSpillWidth`
+  for every bound (GoCore untouched — the membership note's deferred
+  "mechanical bound certification", taken without the core hook its
+  deferral worried about); the author width is now a mechanically
+  checked CAP (F2a made exact); the alias ladder retargets the
+  accountant (per-site root-replays through the REAL semantics at raw
+  picks b/2b+1/4b+3; an escaping observation refutes the bound);
+  work is counted in machine steps + probe runs, fail-loud caps
+  carried over. Pinned: pool driver-agreement eval tests (L1+pairing,
+  L1+L4, lane-d refusal, exit-no-sync both-leaves), the in-engine
+  unconsumed-picks drift alarm, and the harness coupling check.
+  Scale on the certified corpus sets: first-come {12,21} — 24,298
+  leaves, depth 14, ~1.02M steps+probes, 3.2 s; sb-chan {1,10,11} —
+  30,186 leaves, ~1.28M, 5.3 s; worker-pool/sum singleton — 59,601
+  leaves, ~9.9M, ~65 s (the heaviest); handshake/len-handoff/
+  wake-multi/arrival-multi all < 0.1 s.
+- **Lanes wired** (coverage-manifest + diff-coverage + fixture
+  extensions in test-lane-validation): `confluent` (certify |set|=1
+  over all schedules, then the full strict pipeline; the singleton is
+  also pinned against the driver's observation), `racy` (MANDATORY
+  for every race-expectation row: every enumerated path refuses,
+  replacing the per-stream approximation), membership `members=<n>`
+  cardinality pins, and plain+`-race` DUAL SAMPLING for membership
+  rows (the doctrine update; live finding: cap-zero's -race sample
+  lands on cap 1 — inside the F2-widened envelope, a live validation
+  of the widening; first-come exhibits BOTH members only under
+  -race). 36 confluent reclassifications; 3 recorded stay-strict ids
+  whose trees exceed tractable caps (pipeline/{two-stage,
+  buffered-stage} >60M steps / >400 s, worker-pool/shared-feed —
+  DPOR is the recorded later-additive layer, D9(c)).
+- **Un-red**: channels/select-multi-ready (strict, the slice-1 refusal
+  pin) + the six schedule pins — sched-dependent/{first-come,
+  select-default-handshake,len-handoff} ({12,21}/{7,99}/{100,110},
+  members=2 each), race/litmus/sb-chan ({1,10,11}, members=3 — the
+  DRF-SC boundary certified, 00 mechanically excluded),
+  select-wake-multi ({1,2}), select-arrival-multi ({10,20}), and
+  channels/select-multi-ready/observable ({101,210}). Untriaged
+  ceiling 21 → 24 (red-first) → 22 (L2) → 16 (enumerator).
+
+Slice-4-tip counts: 1176 exec cases, 1083 pass / 93 fail (the 89
+round-4-tip non-channel gaps and held-open multi-assign pins carried;
+the remaining channel-adjacent reds: spawn-edge/{nil-func-fatal,
+child-recovers}, spawn-in-init/in-init, race/negative/map-range-iter
+(BUG-005), race/free/array-read-write (BUG-041)); 311 negative green;
+107 eval tests green (99 → 107: the 8 pool-enumerator/wake-commit
+pins; the two BUG-040 pins flipped in place); proofs green, 38
+designated statements byte-identical; check-bugs green (41 bugs;
+untriaged 16). Baselines re-pinned per movement in the moving commits
+(zero unexplained drift at each).
+
+STILL OWED (slice 5+, unchanged unless noted): the Comparator landmark
+at arc end; the GoSpecC witness + concurrent WP (slice 5); MultiWf
+preservation (scaffold); the fatal class (go-of-nil-func);
+bare-recover-statement lowering; select-with-select rendezvous;
+BUG-005's live-iteration surgery (now also the race U1 fix);
+BUG-041's path-precise value reads; DPOR for the three stay-strict
+confluent candidates; the NPDRF obligation (BUG-040's obstruction 3 is
+now discharged by the fix — the reduction statement's remaining
+obstructions stand).

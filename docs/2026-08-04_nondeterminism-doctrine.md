@@ -127,14 +127,16 @@ terminal `raceDetected`, and the corpus grew the `race/` lanes
 the second oracle (`expected_status: race` in the harness). The lane's
 EPISTEMIC CAPTION, recorded per the per-lane discipline:
 
-- **What a race-lane PASS means**: the machine refused on the default
-  and every adversarial stream the harness tests, AND one `-race`
-  sample witnessed a real race (TSan has no false positives — one red
-  report is proof). It does NOT yet mean "every enumerated schedule
-  refuses": the schedule enumerator is slice 4, so per-stream refusal
-  is the strongest executable claim today, and the seeded lane-d cases
-  are deliberately every-interleaving-racy so the per-stream claim is
-  the whole claim for them.
+- **What a race-lane PASS means (FULL STRENGTH since slice 4,
+  lane=racy)**: the schedule enumerator proved EVERY ENUMERATED PATH
+  refuses — the whole registry-point schedule tree, mechanically
+  bounded per site, ends in `raceDetected` on every leaf (one value
+  leaf anywhere fails the case loudly) — AND one `-race` sample
+  witnessed a real race (TSan has no false positives — one red report
+  is proof). The claim is scoped to the REGISTRY-POINT path set (the
+  NPDRF obligation's territory) and by the footprint inventory's
+  recorded under-approximations (U1–U3); the pre-slice-4 per-stream
+  approximation is retired.
 - **The three-way investigation rule** (binding; also recorded at the
   harness dispatch in `scripts/diff-coverage`): our-refusal +
   `-race`-green-on-every-sample is NEVER a pass — it is an
@@ -163,11 +165,43 @@ EPISTEMIC CAPTION, recorded per the per-lane discipline:
   uninstrumented on both sides (probe p26). The footprint's remaining
   under-approximations are U1–U3 in Race.lean's inventory — the
   lane's per-stream refusal claim is scoped by them.
-- **Scope limit, recorded loudly (BUG-040)**: the detector is complete
-  only over accesses that EXECUTE on the modeled (registry-point)
-  paths. Races reachable only by preempting a sync-free post-spawn
-  parent segment (the exit-no-sync class) are value leaves on every
-  stream until the post-spawn scheduling decision lands — scheduled
-  with the slice-4 enumerator, which needs the same machinery. The
-  NPDRF reduction statement (`GoLean/GoCore/NPDRF.lean`, scaffold)
-  carries the same caveat in its obstruction list.
+- **Scope limit (BUG-040) — FIXED at slice 4**: the detector is
+  complete only over accesses that EXECUTE on the modeled
+  (registry-point) paths; the post-spawn reschedule point (`.spawned`,
+  a registry op at fork completion) now puts the child-first
+  interleavings INSIDE that path set, so the exit-no-sync race class
+  is detectable (eval-pinned: value leaf on main-first, race leaf on
+  child-first — a mixed-leaf class no corpus race case can express,
+  and the pool enumerator pins BOTH leaves). The registry-point-vs-
+  full-interleaving gap itself remains the NPDRF obligation.
+
+## Slice-4 additions (2026-08-07): schedule enumeration and the lane upgrades
+
+- **The membership lane enumerates SCHEDULES** (the out-of-scope item
+  above, delivered): the enumerator explores the POOL stepwise —
+  scheduler (L1), waiter (L4), and select (L2) sites included — with
+  MECHANICALLY-COMPUTED per-site bounds (the CLI consumption
+  accountant reuses the machine's own analysis functions; the author
+  `width` is now a mechanically-checked cap, and the alias ladder
+  cross-checks the accountant). Certified sets carry an optional
+  `members=` cardinality pin (sb-chan's {1,10,11} pins 3, so the
+  SC-forbidden 00 cannot hide inside a passing run).
+- **`-race` is a DEFAULT membership sample source** (the recorded
+  measurement above, operationalized): every membership case samples
+  the oracle `samples` times plain AND `samples` times under `-race`
+  — the -race runtime's scheduling perturbation reaches orderings the
+  point-mass plain runs never exhibit (first-come exhibits both
+  members only under -race), and its allocator differences exercise
+  other envelope members (cap-zero's -race sample lands on cap 1,
+  inside the F2-widened envelope — a live validation of the
+  widening).
+- **The CONFLUENT lane (D9(b))**: for deterministic concurrent
+  programs the enumerator certifies |set| = 1 over ALL schedules and
+  the full-strength strict differential then runs — schedule-
+  independence is a certified claim, not a 3-stream spot check.
+  Caption: a confluent PASS quantifies the registry-point schedule
+  tree, scoped like the racy lane. Cases whose trees exceed the
+  fail-loud caps at tractable budgets stay strict, RECORDED in their
+  cases.tsv (pipeline/two-stage, pipeline/buffered-stage,
+  worker-pool/shared-feed — DPOR is the recorded later-additive
+  layer).

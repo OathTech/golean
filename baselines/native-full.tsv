@@ -1,14 +1,21 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-07  commit: channels-arc-s4 (L2 multi-ready select live: applySelect pick + wake head-commit + arrival .multi analysis)
+# recorded: 2026-08-07  commit: channels-arc-s4 (pool enumerator + lane upgrades: membership-over-schedules, confluent, racy full-strength)
 #   frontend: native  oracle: go run (strict lane) / go-run membership in the
-#   machine-enumerated observation set (membership lane; go1.26.5 samples) /
-#   go run -race (racy-negative lane: TSan report + exit 66 justifies the
-#   machine's per-stream raceDetected refusal; never combined with deadlock)
-# manifest_cases: 1176  pass: 1077  fail: 99
-# Re-pin reason: deliberate coverage change — the L2 select site went
-#   live: channels/select-multi-ready (slice-1 refusal pin) and
-#   channels/select-multi-ready/observable (entry-path membership pin)
-#   flip PASS; ZERO drift on every other id in this run.
+#   machine-enumerated observation set, sampled plain AND under -race
+#   (membership lane; go1.26.5) / schedule-tree singleton certification +
+#   strict go-run equality (confluent lane) / every-enumerated-path-refuses
+#   + go run -race red (racy lane; never combined with deadlock)
+# manifest_cases: 1176  pass: 1083  fail: 93
+# Re-pin reason: deliberate coverage change — the slice-4 pool enumerator
+#   went live: 6 red pins flip PASS (goroutines/sched-dependent/{first-come,
+#   select-default-handshake,len-handoff}, race/litmus/sb-chan with its
+#   {1,10,11}/members=3 certification, goroutines/select-wake-multi,
+#   goroutines/select-arrival-multi); 36 schedule-confluent ids reclassify
+#   stage - -> confluent (certified |set|=1 over all schedules; pipeline/
+#   {two-stage,buffered-stage} and worker-pool/shared-feed stay strict —
+#   trees beyond tractable caps, recorded in their cases.tsv); the 13
+#   race-expectation ids reclassify stage - -> racy (full strength: every
+#   enumerated path refuses). ZERO result flips outside the 6 recorded ones.
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
 PASS	arrays/array-copy	-
@@ -489,53 +496,53 @@ PASS	generics/type-set-constraint	-
 PASS	generics/unused-generic-helper	-
 PASS	generics/zero-composite	-
 PASS	generics/zero-values	-
-PASS	goroutines/buffered-wake/cap-one	-
-PASS	goroutines/buffered-wake/fifo	-
-PASS	goroutines/buffered-wake/len-after-join	-
-PASS	goroutines/close-wake/receiver	-
-PASS	goroutines/close-wake/receiver-drain-first	-
-PASS	goroutines/close-wake/sender-full-buffer	-
-PASS	goroutines/close-wake/sender-panics	-
+PASS	goroutines/buffered-wake/cap-one	confluent
+PASS	goroutines/buffered-wake/fifo	confluent
+PASS	goroutines/buffered-wake/len-after-join	confluent
+PASS	goroutines/close-wake/receiver	confluent
+PASS	goroutines/close-wake/receiver-drain-first	confluent
+PASS	goroutines/close-wake/sender-full-buffer	confluent
+PASS	goroutines/close-wake/sender-panics	confluent
 PASS	goroutines/deadlock/after-progress	-
 PASS	goroutines/deadlock/chain	-
 PASS	goroutines/deadlock/mutual	-
 PASS	goroutines/deadlock/with-select	-
-PASS	goroutines/fork-join/args-eval-now	-
-PASS	goroutines/fork-join/buffered	-
-PASS	goroutines/fork-join/closure-capture	-
-PASS	goroutines/fork-join/compute	-
-PASS	goroutines/fork-join/method-callee	-
-PASS	goroutines/fork-join/result-discarded	-
-PASS	goroutines/fork-join/two-workers-own-chans	-
-PASS	goroutines/fork-join/unbuffered	-
-PASS	goroutines/main-exit/blocked-goroutine	-
-PASS	goroutines/main-exit/two-leaked	-
-PASS	goroutines/ping-pong/alternate	-
-PASS	goroutines/ping-pong/cap-zero	-
+PASS	goroutines/fork-join/args-eval-now	confluent
+PASS	goroutines/fork-join/buffered	confluent
+PASS	goroutines/fork-join/closure-capture	confluent
+PASS	goroutines/fork-join/compute	confluent
+PASS	goroutines/fork-join/method-callee	confluent
+PASS	goroutines/fork-join/result-discarded	confluent
+PASS	goroutines/fork-join/two-workers-own-chans	confluent
+PASS	goroutines/fork-join/unbuffered	confluent
+PASS	goroutines/main-exit/blocked-goroutine	confluent
+PASS	goroutines/main-exit/two-leaked	confluent
+PASS	goroutines/ping-pong/alternate	confluent
+PASS	goroutines/ping-pong/cap-zero	confluent
 PASS	goroutines/pipeline/buffered-stage	-
-PASS	goroutines/pipeline/request-reply	-
+PASS	goroutines/pipeline/request-reply	confluent
 PASS	goroutines/pipeline/two-stage	-
-PASS	goroutines/rendezvous-hb/recv-hb	-
-PASS	goroutines/rendezvous-hb/send-hb	-
-FAIL	goroutines/sched-dependent/first-come	membership
-FAIL	goroutines/sched-dependent/len-handoff	membership
-FAIL	goroutines/sched-dependent/select-default-handshake	membership
-FAIL	goroutines/select-arrival-multi	membership
-PASS	goroutines/select-closed-arrival/recv-parked-sender	-
-PASS	goroutines/select-closed-arrival/send	-
-PASS	goroutines/select-wake/buffered-data	-
-PASS	goroutines/select-wake/closed	-
-FAIL	goroutines/select-wake-multi	membership
-PASS	goroutines/select-wake/recv	-
-PASS	goroutines/select-wake/send	-
-PASS	goroutines/spawn-edge/child-panic-aborts	-
+PASS	goroutines/rendezvous-hb/recv-hb	confluent
+PASS	goroutines/rendezvous-hb/send-hb	confluent
+PASS	goroutines/sched-dependent/first-come	membership
+PASS	goroutines/sched-dependent/len-handoff	membership
+PASS	goroutines/sched-dependent/select-default-handshake	membership
+PASS	goroutines/select-arrival-multi	membership
+PASS	goroutines/select-closed-arrival/recv-parked-sender	confluent
+PASS	goroutines/select-closed-arrival/send	confluent
+PASS	goroutines/select-wake/buffered-data	confluent
+PASS	goroutines/select-wake/closed	confluent
+PASS	goroutines/select-wake-multi	membership
+PASS	goroutines/select-wake/recv	confluent
+PASS	goroutines/select-wake/send	confluent
+PASS	goroutines/spawn-edge/child-panic-aborts	confluent
 FAIL	goroutines/spawn-edge/child-recovers	frontend-export
 FAIL	goroutines/spawn-edge/nil-func-fatal	go-run
 PASS	goroutines/spawn-edge/nil-interface-recovered	-
-PASS	goroutines/spawn-edge/ptr-box-child-aborts	-
+PASS	goroutines/spawn-edge/ptr-box-child-aborts	confluent
 FAIL	goroutines/spawn-in-init/in-init	lean-observation
 PASS	goroutines/worker-pool/shared-feed	-
-PASS	goroutines/worker-pool/sum	-
+PASS	goroutines/worker-pool/sum	confluent
 PASS	if/condition-evaluated-once	-
 PASS	if/else-if-first-match	-
 PASS	if/if-init-scope	-
@@ -946,31 +953,31 @@ PASS	quorum/vote-result-small-n/n2-won	-
 PASS	quorum/vote-result/tie-lost	-
 PASS	quorum/vote-result/won-exact	-
 FAIL	race/free/array-read-write	lean-observation
-PASS	race/free/field-disjoint	-
-PASS	race/free/field-read-write	-
-PASS	race/free/method-value-order	-
-PASS	race/free/promoted-ptr-box	-
-PASS	race/free/ptr-field-read-write	-
-PASS	race/free/slice-disjoint	-
-PASS	race/free/spawn-dispatch-free	-
-PASS	race/litmus/chan-mutex	-
-PASS	race/litmus/close-hb	-
-PASS	race/litmus/lb-racy	-
-PASS	race/litmus/mp-racy	-
-PASS	race/litmus/mp-sync	-
-FAIL	race/litmus/sb-chan	membership
-PASS	race/negative/defer-dispatch	-
-PASS	race/negative/iface-dispatch	-
-PASS	race/negative/increment	-
-PASS	race/negative/len-map	-
+PASS	race/free/field-disjoint	confluent
+PASS	race/free/field-read-write	confluent
+PASS	race/free/method-value-order	confluent
+PASS	race/free/promoted-ptr-box	confluent
+PASS	race/free/ptr-field-read-write	confluent
+PASS	race/free/slice-disjoint	confluent
+PASS	race/free/spawn-dispatch-free	confluent
+PASS	race/litmus/chan-mutex	confluent
+PASS	race/litmus/close-hb	confluent
+PASS	race/litmus/lb-racy	racy
+PASS	race/litmus/mp-racy	racy
+PASS	race/litmus/mp-sync	confluent
+PASS	race/litmus/sb-chan	membership
+PASS	race/negative/defer-dispatch	racy
+PASS	race/negative/iface-dispatch	racy
+PASS	race/negative/increment	racy
+PASS	race/negative/len-map	racy
 FAIL	race/negative/map-range-iter	lean-observation
-PASS	race/negative/map-rw	-
-PASS	race/negative/method-value	-
-PASS	race/negative/promoted-dispatch	-
-PASS	race/negative/read-write	-
-PASS	race/negative/slice-elem	-
-PASS	race/negative/spawn-dispatch	-
-PASS	race/negative/write-write	-
+PASS	race/negative/map-rw	racy
+PASS	race/negative/method-value	racy
+PASS	race/negative/promoted-dispatch	racy
+PASS	race/negative/read-write	racy
+PASS	race/negative/slice-elem	racy
+PASS	race/negative/spawn-dispatch	racy
+PASS	race/negative/write-write	racy
 PASS	range/range-array-copy	-
 PASS	range/range-array-pointer	-
 PASS	range/range-array-pointer-nil-index	-

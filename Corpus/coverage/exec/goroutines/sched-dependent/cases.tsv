@@ -1,14 +1,10 @@
 # id	subject	args	expected_status	expected_reason	features	lane	why	params
-# RED PIN (slice 4): schedule-dependent observable — which sender
-# commits first is pure L1 latitude (12 vs 21). Declared membership
-# (nondet-tagged), but the membership enumerator does not explore
-# SCHEDULES yet (charter: slice 4's enumerator-over-schedules); until
-# then the enumeration refuses loudly at the spawn and the row stays
-# red. Width bound: scheduler picks are bounded by |runnable| <= 3
-# (main + two senders); waiter picks <= 2 — width 8 covers both.
-first-come	schedFirstCome	-	ok	-	goroutines,channels,nondet	membership	the two senders' commit order onto the cap-2 buffer is scheduler latitude (L1): the admitted set is {12, 21}; schedule enumeration is the slice-4 lane — red until then	width=8
-# RED PINS (slice 4; S2 audit response): schedule-dependent envelope
-# members made REACHABLE by the waiter-priority fix — go-run oracle
-# recorded in the why column; enumeration certifies the sets in slice 4.
-select-default-handshake	schedSelectDefaultHandshake	-	ok	-	goroutines,channels,select,default,nondet	membership	whether the worker is parked at its send when main's select decides is L1 latitude: admitted set {7 (communication; gc-dominant, 199970/200000), 99 (default)}; waiter-aware readiness makes 7 reachable — schedule enumeration is the slice-4 lane	width=8
-len-handoff	schedLenHandoff	-	ok	-	goroutines,channels,len,make,nondet	membership	whether the receiver is parked when the buffered send arrives is L1 latitude: parked -> gc direct handoff (len 0, result 100), unparked -> buffered transit (len 1, result 110); admitted set {100, 110} — schedule enumeration is the slice-4 lane	width=8
+# SCHEDULE-DEPENDENT observables — CERTIFIED at slice 4 (formerly the
+# red pins awaiting the schedule enumerator): the membership lane now
+# enumerates the POOL (scheduler/waiter/select streams, mechanically
+# computed per-site bounds), certifies each admitted set with a
+# members= cardinality pin, and samples the go oracle both plain and
+# under -race (the doctrine's scheduling-perturbation sample source).
+first-come	schedFirstCome	-	ok	-	goroutines,channels,nondet	membership	the two senders' commit order onto the cap-2 buffer is scheduler latitude (L1): the certified set is {12, 21} (members=2); width 3 caps the computed bounds (|runnable| <= 3); measured tree ~24k leaves, depth 14, ~1M steps+probes	width=3,sites=16,work=4000000,members=2
+select-default-handshake	schedSelectDefaultHandshake	-	ok	-	goroutines,channels,select,default,nondet	membership	whether the worker is parked at its send when main's select decides is L1 latitude: certified set {7 (communication; gc-dominant, 199970/200000), 99 (default)} (members=2); waiter-aware readiness makes 7 reachable; width 2 caps the two-goroutine bounds	width=2,sites=12,members=2
+len-handoff	schedLenHandoff	-	ok	-	goroutines,channels,len,make,nondet	membership	whether the receiver is parked when the buffered send arrives is L1 latitude: parked -> gc direct handoff (len 0, result 100), unparked -> buffered transit (len 1, result 110); certified set {100, 110} (members=2); width 2 caps the two-goroutine bounds	width=2,sites=12,members=2

@@ -1,5 +1,11 @@
-# id	subject	args	expected_status	expected_reason	features
-receiver	closeWakesReceiver	-	ok	-	goroutines,channels,close,comma_ok
-receiver-drain-first	closeWakesReceiverDrainFirst	-	ok	-	goroutines,channels,close,comma_ok
-sender-panics	closeWakesSenderPanics	-	ok	-	goroutines,channels,close,recover
-sender-full-buffer	closeWakesSenderFullBuffer	-	ok	-	goroutines,channels,close,recover
+# id	subject	args	expected_status	expected_reason	features	lane	why	params
+# CONFLUENT lane (D9(b), slice 4): the enumerator certifies |set| = 1
+# over ALL schedules (mechanically-computed per-site bounds; width caps
+# them), then the ordinary full-strength strict differential runs —
+# schedule-independence is now a certified claim, not a 3-stream spot
+# check. Params: sites/work raised only where the measured tree needs
+# them (probed at reclassification).
+receiver	closeWakesReceiver	-	ok	-	goroutines,channels,close,comma_ok	confluent	the receiver proceeds only via the close wake; the comma-ok readout is fixed on every schedule	width=4
+receiver-drain-first	closeWakesReceiverDrainFirst	-	ok	-	goroutines,channels,close,comma_ok	confluent	buffered values drain in FIFO order before the closed-zero on every schedule	width=4
+sender-panics	closeWakesSenderPanics	-	ok	-	goroutines,channels,close,recover	confluent	the parked sender's close-wake panic is recovered identically on every schedule	width=4
+sender-full-buffer	closeWakesSenderFullBuffer	-	ok	-	goroutines,channels,close,recover	confluent	the sender can only park on the full buffer and only the close wakes it; the recovered readout is fixed	width=4

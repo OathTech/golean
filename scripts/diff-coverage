@@ -13,9 +13,10 @@ GO_BUILD_CACHE="$ROOT/artifacts/go-build-cache"
 LAKE_BUILD_TIMEOUT_SECONDS="${LAKE_BUILD_TIMEOUT_SECONDS:-120}"
 GO_TIMEOUT_SECONDS="${GO_TIMEOUT_SECONDS:-30}"
 LEAN_TIMEOUT_SECONDS="${LEAN_TIMEOUT_SECONDS:-30}"
-# The membership-lane enumerator explores the whole choice tree in one
-# process (thousands of machine runs), so it gets its own, larger budget.
-LEAN_ENUM_TIMEOUT_SECONDS="${LEAN_ENUM_TIMEOUT_SECONDS:-120}"
+# The membership/confluent/racy-lane enumerator explores the whole
+# schedule tree in one process (up to millions of pool steps on the
+# 3-goroutine litmus shapes), so it gets its own, larger budget.
+LEAN_ENUM_TIMEOUT_SECONDS="${LEAN_ENUM_TIMEOUT_SECONDS:-300}"
 
 run_with_timeout() {
   local seconds="$1"
@@ -212,9 +213,9 @@ run_case_rows() {
     return 0
   fi
   case "$lane" in
-    strict|membership) ;;
+    strict|membership|confluent|racy) ;;
     *)
-      report_fail "$id" "$features" "manifest" "invalid lane: $lane (use strict or membership)"
+      report_fail "$id" "$features" "manifest" "invalid lane: $lane (use strict, membership, confluent, or racy)"
       return 0
       ;;
   esac
@@ -388,6 +389,43 @@ run_case_rows() {
     report_fail "$id" "$features" "frontend-export" "native frontend: $native_export"
     return 0
   fi
+
+  # CONFLUENT lane (D9(b), slice 4): certify |set| = 1 over ALL
+  # schedules FIRST — the strict pipeline below then verifies the one
+  # member against the go oracle at full differential strength. The
+  # certified member is additionally pinned against the strict path's
+  # own observation further down.
+  confluent_member=""
+  confluent_detail=""
+  if [[ "$lane" == "confluent" ]]; then
+    local width sites obs_cap samples work members
+    parse_lane_params || return 0
+    local conf_dir="$OUT/membership/$id"
+    mkdir -p "$conf_dir"
+    local conf_args=(coverage-observations --input "$wire_json" --function "$function_name"
+      --max-width "$width" --max-sites "$sites" --cap "$obs_cap" --work-cap "$work"
+      --expect-status "$expected_status")
+    if [[ "$arg_ints" != "-" ]]; then
+      local v2
+      IFS=',' read -r -a ints2 <<< "$arg_ints"
+      for v2 in "${ints2[@]}"; do
+        conf_args+=(--arg-int "$v2")
+      done
+    fi
+    if ! run_with_timeout "$LEAN_ENUM_TIMEOUT_SECONDS" "$GOLEAN_BIN" "${conf_args[@]}" \
+        > "$conf_dir/observations.txt" 2> "$conf_dir/enum-stats.txt"; then
+      report_fail "$id" "$features" "confluent" "enumerator failed (schedule-confluence not certified): $(cat "$conf_dir/enum-stats.txt")"
+      return 0
+    fi
+    local conf_count
+    conf_count="$(grep -c . "$conf_dir/observations.txt" || true)"
+    if [[ "$conf_count" -ne 1 ]]; then
+      report_fail "$id" "$features" "confluent" "enumerated observation set has $conf_count member(s) — the observable is NOT schedule-confluent (declare membership with the admitted set, or fix the machine)"
+      return 0
+    fi
+    confluent_member="$(head -1 "$conf_dir/observations.txt")"
+    confluent_detail="$(one_line "$(cat "$conf_dir/enum-stats.txt")")"
+  fi
   lean_args=(native-json-run --input "$wire_json" --function "$function_name")
   if [[ "$arg_ints" != "-" ]]; then
     IFS=',' read -r -a ints <<< "$arg_ints"
@@ -430,6 +468,42 @@ run_case_rows() {
     report_fail "$id" "$features" "differential" "Lean=$lean_observation Go=$go_observation $observation_diff"
     return 0
   fi
+  if [[ "$lane" == "confluent" ]]; then
+    if ! lean observation-eq --left "$confluent_member" --right "$lean_observation" >/dev/null 2>&1; then
+      report_fail "$id" "$features" "confluent" "the certified singleton member differs from the driver's observation (enumerator/driver drift): member=$confluent_member driver=$lean_observation"
+      return 0
+    fi
+  fi
+
+  # RACY lane (D9(d), slice 4 FULL STRENGTH): the enumerator proves
+  # "every enumerated path refuses" — one value member anywhere fails
+  # the expect-status check loudly — REPLACING the per-stream refusal
+  # approximation (the old adversarial-stream loop is subsumed: every
+  # stream's path is in the enumerated tree).
+  if [[ "$lane" == "racy" ]]; then
+    local width sites obs_cap samples work members
+    parse_lane_params || return 0
+    local racy_dir="$OUT/membership/$id"
+    mkdir -p "$racy_dir"
+    local racy_args=(coverage-observations --input "$wire_json" --function "$function_name"
+      --max-width "$width" --max-sites "$sites" --cap "$obs_cap" --work-cap "$work"
+      --expect-status race)
+    if [[ "$arg_ints" != "-" ]]; then
+      local v3
+      IFS=',' read -r -a ints3 <<< "$arg_ints"
+      for v3 in "${ints3[@]}"; do
+        racy_args+=(--arg-int "$v3")
+      done
+    fi
+    if ! run_with_timeout "$LEAN_ENUM_TIMEOUT_SECONDS" "$GOLEAN_BIN" "${racy_args[@]}" \
+        > "$racy_dir/observations.txt" 2> "$racy_dir/enum-stats.txt"; then
+      report_fail "$id" "$features" "racy" "enumerator failed — 'every enumerated path refuses' not certified: $(cat "$racy_dir/enum-stats.txt")"
+      return 0
+    fi
+    report_pass_lane "$id" "$features" "racy" \
+      "every enumerated path refuses: $(one_line "$(cat "$racy_dir/enum-stats.txt")")"
+    return 0
+  fi
 
   # Oracle-invariance check: re-run under several nondeterminism choice streams.
   # A deterministic-lane-eligible program has an observation that does not vary
@@ -451,7 +525,12 @@ run_case_rows() {
     fi
   fi
 
-  report_pass "$id" "$features"
+  if [[ "$lane" == "confluent" ]]; then
+    report_pass_lane "$id" "$features" "confluent" \
+      "|set|=1 certified over all schedules; $confluent_detail"
+  else
+    report_pass "$id" "$features"
+  fi
 }
 
 # The go-run oracle invocation for the CURRENT case (uses run_case_rows'
@@ -471,12 +550,15 @@ run_case_rows() {
 # agreeing by config coincidence (unwinding arc §A2's recorded knob).
 go_run_oracle() {
   # Race-expectation cases build with -race (the TSan second oracle);
-  # everything else runs plain. The two oracle modes never mix in one
-  # case: -race suppresses the deadlock detector (ground-truth note §5),
-  # and the manifest's single status column makes race+deadlock
-  # unrepresentable.
+  # everything else runs plain — except that membership SAMPLING may
+  # force a -race build ($1 = race): the slice-4 doctrine update makes
+  # -race a default membership sample source (its runtime perturbs
+  # scheduling — plain go run is a point-mass on schedule-dependent
+  # shapes; probes: 0/700 vs 6/6 orderings). The two oracle MODES still
+  # never mix in one deadlock case: -race suppresses the deadlock
+  # detector (ground-truth note §5), and membership excludes deadlock.
   local race_flag=()
-  if [[ "$expected_status" == "race" ]]; then
+  if [[ "$expected_status" == "race" || "${1:-}" == "race" ]]; then
     race_flag=(-race)
   fi
   run_with_timeout "$GO_TIMEOUT_SECONDS" env GO111MODULE=off GODEBUG=panicnil=0 GOCACHE="$GO_BUILD_CACHE" \
@@ -490,7 +572,7 @@ go_run_oracle() {
 # expected_reason).
 membership_go_observation() {
   local out
-  if out="$(go_run_oracle 2>&1)"; then
+  if out="$(go_run_oracle "${1:-}" 2>&1)"; then
     if [[ "$expected_status" == "panic" ]]; then
       printf 'go sample: expected panic, but Go exited successfully: %s' "$out"
       return 1
@@ -538,13 +620,14 @@ membership_go_observation() {
 # (|enumerated|, |exhibited|, the unexhibited members) is recorded as
 # metadata in the PASS detail and under $OUT/membership/<id>/ — never a
 # pass criterion. Runs inside run_case_rows' scope (uses its locals).
-run_membership_case_rows() {
-  # Per-case enumerator/sampler params. Validated by coverage-manifest AND
-  # re-validated here (audit F4: a value that reaches this function
-  # malformed — e.g. samples=0 — must fail loud, never degrade to a
-  # zero-oracle pass). Width has NO default (audit F2a: the coverage claim
-  # rests on the author-asserted width, so it is always explicit).
-  local width="" sites=8 obs_cap=64 samples=5 work=200000
+# Parse the lane params into width/sites/obs_cap/samples/work/members.
+# Validated by coverage-manifest AND re-validated here (audit F4: a value
+# that reaches the harness malformed — e.g. samples=0 — must fail loud,
+# never degrade to a zero-oracle pass). Width has NO default (audit F2a),
+# and since slice 4 the assertion is checked MECHANICALLY per site by the
+# enumerator. Returns nonzero after reporting on a bad shape.
+parse_lane_params() {
+  width="" sites=8 obs_cap=64 samples=5 work=200000 members=""
   if [[ "$params" != "-" ]]; then
     local kv key value
     IFS=',' read -r -a kvs <<< "$params"
@@ -553,7 +636,7 @@ run_membership_case_rows() {
       value="${kv#*=}"
       if [[ ! "$value" =~ ^[1-9][0-9]*$ ]]; then
         report_fail "$id" "$features" "manifest" "lane param $key must be a positive integer: $kv"
-        return 0
+        return 1
       fi
       case "$key" in
         width) width="$value" ;;
@@ -561,31 +644,42 @@ run_membership_case_rows() {
         cap) obs_cap="$value" ;;
         samples) samples="$value" ;;
         work) work="$value" ;;
+        members) members="$value" ;;
         *)
           report_fail "$id" "$features" "manifest" "unknown lane param key: $kv"
-          return 0
+          return 1
           ;;
       esac
     done
   fi
   if [[ -z "$width" ]]; then
-    report_fail "$id" "$features" "manifest" "membership case must declare an explicit width=<B> (author-asserted >= every consumption-site bound)"
-    return 0
+    report_fail "$id" "$features" "manifest" "$lane case must declare an explicit width=<B> (author-asserted >= every consumption-site bound; mechanically checked per site)"
+    return 1
   fi
+  return 0
+}
+
+run_membership_case_rows() {
+  local width sites obs_cap samples work members
+  parse_lane_params || return 0
 
   local mem_dir="$OUT/membership/$id"
   mkdir -p "$mem_dir"
 
-  # Go side: R samples (samples=1 is the version-tracking mode for features
-  # Go decides deterministically per toolchain, e.g. append capacity).
-  local i sample
+  # Go side: R samples PLAIN plus R samples under -race (slice-4 doctrine
+  # update: the -race runtime perturbs goroutine scheduling, so it is a
+  # default membership sample source — plain go run is a point-mass on
+  # schedule-dependent shapes; samples=1 stays the version-tracking mode).
+  local i sample mode
   : > "$mem_dir/samples.txt"
-  for ((i = 1; i <= samples; i++)); do
-    if ! sample="$(membership_go_observation)"; then
-      report_fail "$id" "$features" "membership" "$sample"
-      return 0
-    fi
-    printf '%s\n' "$sample" >> "$mem_dir/samples.txt"
+  for mode in "" "race"; do
+    for ((i = 1; i <= samples; i++)); do
+      if ! sample="$(membership_go_observation "$mode")"; then
+        report_fail "$id" "$features" "membership" "${mode:+-race }$sample"
+        return 0
+      fi
+      printf '%s\n' "$sample" >> "$mem_dir/samples.txt"
+    done
   done
   # Audit F4: never pass with zero oracle — however the loop above was
   # reached, an empty samples file means no Go observation constrains the
@@ -630,7 +724,14 @@ run_membership_case_rows() {
   local member_count
   member_count="$(grep -c . "$mem_dir/observations.txt" || true)"
   if [[ "$member_count" -le 1 ]]; then
-    report_fail "$id" "$features" "membership" "enumerated observation set is a singleton ($member_count member) — the case belongs in the strict lane"
+    report_fail "$id" "$features" "membership" "enumerated observation set is a singleton ($member_count member) — the case belongs in the strict or confluent lane"
+    return 0
+  fi
+  # The set-cardinality pin (slice 4, members=<n>): the certified set's
+  # SIZE is part of the claim — e.g. sb-chan's {1,10,11} pins 3, so the
+  # SC-forbidden 00 cannot appear without failing the case.
+  if [[ -n "$members" && "$member_count" -ne "$members" ]]; then
+    report_fail "$id" "$features" "membership" "enumerated set has $member_count member(s), the case pins members=$members — the certified set moved (widen/narrow deliberately or fix the machine)"
     return 0
   fi
 
@@ -722,7 +823,8 @@ export CASE_OUT ROOT OUT FRONTEND GO_BUILD_CACHE GOLEAN_BIN \
   GO_TIMEOUT_SECONDS LEAN_TIMEOUT_SECONDS LEAN_ENUM_TIMEOUT_SECONDS
 export -f run_case run_case_rows run_with_timeout lean json_string_literal \
   panic_message report_pass report_pass_lane report_fail one_line \
-  membership_go_observation run_membership_case_rows go_run_oracle
+  membership_go_observation run_membership_case_rows go_run_oracle \
+  parse_lane_params
 
 # Record the concurrency the run used (audit finding: a load-induced
 # timeout drift was indistinguishable from a real one after the fact).

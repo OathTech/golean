@@ -1,20 +1,23 @@
 # id	subject	args	expected_status	expected_reason	features	lane	why	params
-# LITMUS PAIRS (slice 3, validation note lane e): channel-synchronized
-# forms admit exactly the SC outcomes (the confluent ones are strict
-# full-strength differential cases, and each pins one go_mem
-# happens-before edge in the detector — a missing edge would fire a
-# false raceDetected here); racy shared-variable forms must refuse on
-# every tested stream with `go run -race` red as the justifying oracle.
-mp-sync	litmusMPSync	-	ok	-	goroutines,channels,race
-mp-racy	litmusMPRacy	-	race	-	goroutines,channels,race
-lb-racy	litmusLBRacy	-	race	-	goroutines,channels,race
-close-hb	litmusCloseHB	-	ok	-	goroutines,channels,close,race
-chan-mutex	litmusChanMutex	-	ok	-	goroutines,channels,race
-# RED PIN (slice 4): the SB shape's observable is schedule-dependent
-# ({1, 10, 11}; 00 is SC-FORBIDDEN — r1 = 0 puts T1's poll before T2's
-# publish, hence T1's publish before T2's poll, forcing r2 = 1).
-# Declared membership, but the enumerator does not explore SCHEDULES
-# yet (slice 4); until then it refuses loudly at the spawn and the row
-# stays red. Width: scheduler picks bounded by |runnable| <= 3; waiter
-# picks <= 2 — width 8 covers both.
-sb-chan	litmusSBChan	-	ok	-	goroutines,channels,select,default,race,nondet	membership	the two publish/poll goroutines' commit order is L1 latitude: admitted set {1, 10, 11}, with 00 SC-forbidden (the DRF-SC boundary pin); schedule enumeration is the slice-4 lane — red until then	width=8
+# LITMUS PAIRS (slice 3, validation note lane e; lanes upgraded at
+# slice 4): channel-synchronized forms admit exactly the SC outcomes —
+# the CONFLUENT lane certifies |set|=1 over ALL schedules and then runs
+# the full-strength strict differential (each green case pins one
+# go_mem happens-before edge in the detector: a missing edge would fire
+# a false raceDetected on some schedule and break the singleton);
+# racy shared-variable forms are lane=racy — EVERY enumerated path
+# refuses, `go run -race` red as the justifying oracle.
+mp-sync	litmusMPSync	-	ok	-	goroutines,channels,race	confluent	the child's write is ordered before main's read by the flag send/recv edge on every schedule, so the stale read is unreachable and 42 is the only member	width=4
+mp-racy	litmusMPRacy	-	race	-	goroutines,channels,race	racy	-	width=4
+lb-racy	litmusLBRacy	-	race	-	goroutines,channels,race	racy	-	width=4
+close-hb	litmusCloseHB	-	ok	-	goroutines,channels,close,race	confluent	main can only proceed past its receive after the close, whose HB edge orders the child's write before main's read on every schedule — 9 is the only member	width=4
+chan-mutex	litmusChanMutex	-	ok	-	goroutines,channels,race	confluent	the cap-1 channel's k/k+C edge serializes the two increments on every schedule (the counting-semaphore idiom), so 2 is the only member	width=4
+# CERTIFIED at slice 4 (formerly the sb-chan RED PIN): the SB shape's
+# admitted set is {1, 10, 11} with 00 SC-FORBIDDEN (r1 = 0 puts T1's
+# poll before T2's publish, hence T1's publish before T2's poll,
+# forcing r2 = 1) — the DRF-SC boundary pinned executably. The
+# enumerator certifies the set over ALL schedules; members=3 pins its
+# cardinality, so 00 cannot appear without failing the case. Width 3
+# caps the computed bounds (|runnable| <= 3); measured tree: ~30k
+# leaves, depth 14, ~1.3M steps+probes.
+sb-chan	litmusSBChan	-	ok	-	goroutines,channels,select,default,race,nondet	membership	the two publish/poll goroutines' commit order is L1 latitude: admitted set {1, 10, 11}, 00 SC-forbidden — certified by schedule enumeration with the members=3 cardinality pin; go samples (plain and -race) must be members	width=3,sites=16,work=5000000,members=3

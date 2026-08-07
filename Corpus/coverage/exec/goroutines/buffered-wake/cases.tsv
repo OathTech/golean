@@ -1,4 +1,10 @@
-# id	subject	args	expected_status	expected_reason	features
-fifo	bufferedWakeFIFO	-	ok	-	goroutines,channels,make,loops
-cap-one	bufferedWakeCapOne	-	ok	-	goroutines,channels,range,close
-len-after-join	bufferedLenAfterJoin	-	ok	-	goroutines,channels,len,cap,make
+# id	subject	args	expected_status	expected_reason	features	lane	why	params
+# CONFLUENT lane (D9(b), slice 4): the enumerator certifies |set| = 1
+# over ALL schedules (mechanically-computed per-site bounds; width caps
+# them), then the ordinary full-strength strict differential runs —
+# schedule-independence is now a certified claim, not a 3-stream spot
+# check. Params: sites/work raised only where the measured tree needs
+# them (probed at reclassification).
+fifo	bufferedWakeFIFO	-	ok	-	goroutines,channels,make,loops	confluent	buffer FIFO is spec; the producer/consumer loop's interleavings all deliver the same ordered sums	width=4,sites=16,work=1500000
+cap-one	bufferedWakeCapOne	-	ok	-	goroutines,channels,range,close	confluent	the cap-1 buffer serializes the producer/consumer hand-offs; every schedule drains the same sequence	width=4,sites=16
+len-after-join	bufferedLenAfterJoin	-	ok	-	goroutines,channels,len,cap,make	confluent	len/cap are read only after the join receive, past which every schedule has the same buffer state	width=4

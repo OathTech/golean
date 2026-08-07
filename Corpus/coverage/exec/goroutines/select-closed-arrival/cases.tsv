@@ -1,3 +1,9 @@
-# id	subject	args	expected_status	expected_reason	features
-send	selectSendClosedArrival	-	panic	send on closed channel	goroutines,channels,select,close,panic
-recv-parked-sender	selectRecvClosedArrival	-	ok	-	goroutines,channels,select,close,comma_ok,recover
+# id	subject	args	expected_status	expected_reason	features	lane	why	params
+# CONFLUENT lane (D9(b), slice 4): the enumerator certifies |set| = 1
+# over ALL schedules (mechanically-computed per-site bounds; width caps
+# them), then the ordinary full-strength strict differential runs —
+# schedule-independence is now a certified claim, not a 3-stream spot
+# check. Params: sites/work raised only where the measured tree needs
+# them (probed at reclassification).
+send	selectSendClosedArrival	-	panic	send on closed channel	goroutines,channels,select,close,panic	confluent	the send clause's channel is closed before the select on every schedule (join-ordered), so the committed send panics identically	width=4
+recv-parked-sender	selectRecvClosedArrival	-	ok	-	goroutines,channels,select,close,comma_ok,recover	confluent	the closed recv clause drains/zeroes and the parked sender close-wakes into its recovered panic; both readouts join-ordered, fixed on every schedule	width=4

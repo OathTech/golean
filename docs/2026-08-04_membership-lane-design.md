@@ -201,3 +201,52 @@ arc — this lane is its oracle pattern, but interleaving enumeration
 needs the partial-order machinery that arc will design); a general
 per-case membership PREDICATE language (only if enumeration's `N` cap is
 ever genuinely exceeded).
+
+## Slice-4 addendum (2026-08-07, channels arc): the stepwise pool engine
+
+The enumerator was REBUILT for schedule enumeration (channels arc slice
+4; `GoLean/CLI.lean`'s "stepwise pool explorer" section is the design
+of record for the engine, this addendum the design-note record):
+
+- **The whole-run frontier is replaced by a stepwise DFS** over the
+  pool (init phase sequential, subject on the ThreadPool), sharing
+  prefixes: work is counted in machine STEPS (+ probe runs) over the
+  distinct-behavior tree, and the `work` param's unit changed
+  accordingly (per-case params recalibrated in the same change).
+- **Per-site bounds are MECHANICALLY COMPUTED** — this note's deferred
+  "mechanical bound certification" candidate, now taken, WITHOUT the
+  core-adjacent hook the deferral worried about: the CLI-layer
+  consumption ACCOUNTANT (`stepNeeds`/`stepNeedsSeq`) mirrors only the
+  consumption decision points and REUSES the machine's own analysis
+  functions (`runnableIdxs`, `arrivalCases`, `applySelectCore`,
+  `appendSpillWidth`) for every bound. GoCore is untouched. The
+  uniform-width alternative is intractable at scheduler scale (a
+  3-goroutine litmus case has ~15 sites of bound 2-3; width-3
+  exploration at every bound-2 site is a ~300× blowup).
+- **The author `width` is now a mechanically-checked CAP** (F2a made
+  exact): a site whose computed bound exceeds it fails loud.
+- **The alias ladder is retargeted at the accountant**: per site of
+  computed bound `b`, three full ROOT-replays through the real
+  semantics (`enumRunProgram` — empty-tail defaults included) at raw
+  picks `b`, `2b+1`, `4b+3`; a probe observation outside the final set
+  refutes the computed bound (an under-estimate leaves residues
+  unexplored — exactly what an escaping probe exhibits). The per-leaf
+  probe multiplicity of the old guard (position × leaf suffix) is
+  dropped as pure redundancy; probe streams still run end-to-end
+  through the real machine, never through the accountant.
+- **Pinning the copies** (the standing policy): the accountant and the
+  loop mirrors are pinned by the driver-agreement eval tests (now
+  including POOL classes: L1+pairing, L1+L4 waiter-extended select,
+  lane-d refusal, the exit-no-sync mixed-leaf class) and by the
+  harness's per-case coupling check, plus an in-engine drift alarm — a
+  pool step that leaves supplied picks unconsumed (accountant said
+  "suffices", machine disagreed) fails the enumeration loudly.
+- **New member statuses**: `race` (lane d's full-strength claim via
+  `--expect-status race`: every enumerated path refuses); deadlock
+  members still fail loud.
+- **New lanes wired** (`scripts/coverage-manifest`,
+  `scripts/diff-coverage`, fixtures in `scripts/test-lane-validation`):
+  `confluent` (certify |set|=1 over all schedules, then the strict
+  pipeline; stage `confluent`) and `racy` (mandatory for every
+  race-expectation row; stage `racy`), plus the `members=` cardinality
+  pin and plain+`-race` dual sampling for membership rows.

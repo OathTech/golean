@@ -1,3 +1,9 @@
-# id	subject	args	expected_status	expected_reason	features
-blocked-goroutine	mainExitLeavesBlockedGoroutine	-	ok	-	goroutines,channels
-two-leaked	mainExitLeavesTwo	-	ok	-	goroutines,channels
+# id	subject	args	expected_status	expected_reason	features	lane	why	params
+# CONFLUENT lane (D9(b), slice 4): the enumerator certifies |set| = 1
+# over ALL schedules (mechanically-computed per-site bounds; width caps
+# them), then the ordinary full-strength strict differential runs —
+# schedule-independence is now a certified claim, not a 3-stream spot
+# check. Params: sites/work raised only where the measured tree needs
+# them (probed at reclassification).
+blocked-goroutine	mainExitLeavesBlockedGoroutine	-	ok	-	goroutines,channels	confluent	the leaked goroutine stays parked on every schedule (nobody sends); main's exit discards it observably-nothing (D6)	width=4
+two-leaked	mainExitLeavesTwo	-	ok	-	goroutines,channels	confluent	both leaked goroutines are sync-blocked before any observable effect on every schedule; main's readout is its own state	width=4

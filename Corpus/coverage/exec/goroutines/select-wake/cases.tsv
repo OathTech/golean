@@ -1,5 +1,11 @@
-# id	subject	args	expected_status	expected_reason	features
-recv	selectWakeRecv	-	ok	-	goroutines,channels,select
-send	selectWakeSend	-	ok	-	goroutines,channels,select
-closed	selectWakeClosed	-	ok	-	goroutines,channels,select,close
-buffered-data	selectWakeBufferedData	-	ok	-	goroutines,channels,select,make
+# id	subject	args	expected_status	expected_reason	features	lane	why	params
+# CONFLUENT lane (D9(b), slice 4): the enumerator certifies |set| = 1
+# over ALL schedules (mechanically-computed per-site bounds; width caps
+# them), then the ordinary full-strength strict differential runs —
+# schedule-independence is now a certified claim, not a 3-stream spot
+# check. Params: sites/work raised only where the measured tree needs
+# them (probed at reclassification).
+recv	selectWakeRecv	-	ok	-	goroutines,channels,select	confluent	exactly one clause ever becomes ready; the parked select commits it on every schedule	width=4
+send	selectWakeSend	-	ok	-	goroutines,channels,select	confluent	exactly one clause ever becomes ready (the receiver's arrival); fixed commit on every schedule	width=4
+closed	selectWakeClosed	-	ok	-	goroutines,channels,select,close	confluent	only the closed channel's clause becomes ready; the closed-zero commit is fixed	width=4
+buffered-data	selectWakeBufferedData	-	ok	-	goroutines,channels,select,make	confluent	only the buffered channel's clause becomes ready when the data lands; fixed commit	width=4
