@@ -811,10 +811,18 @@ def raceCommitClauseEvent (s : ExecState) (i : Nat) (r : RaceState) :
 
 /-- Clock update for the WAKE of a parked goroutine (classified from
 the pre-step cell exactly as `resumeThread` classifies): a close-woken
-sender panics with NO edge (gc's woken `chansend` performs no
-`raceacquire` — TSan-aligned); a buffered send/receive completes
-through the slot clocks; a closed-empty receive acquires the close
-clock. -/
+sender panics with NO edge — deliberately STRONGER than gc's realized
+HB here (S3 audit correction: gc's `closechan` DOES `raceacquireg` the
+parked sender's g at chan.go's "release all writers" loop, exactly as
+it does for receivers; the earlier claim that the woken `chansend`
+path performs no raceacquire was true but irrelevant — the closer
+installs the edge). The refusal-set agreement with `-race` holds
+anyway, for a different reason: gc flags EVERY close-beside-parked-
+sender via its channel-OBJECT instrumentation (`racewritepc` at close
+vs `racereadpc` at send entry), which we do not model — recorded in
+Race.lean's inventory as under-approximation (U3). A buffered
+send/receive completes through the slot clocks; a closed-empty receive
+acquires the close clock. -/
 def raceWakeEvent (s : ExecState) (i : Nat) (r : RaceState) :
     Config → Except GoError RaceState
   | .blockedSend (some loc) _ _ => do
@@ -896,7 +904,15 @@ def raceUpdate (sPre : ExecState) (tsPre : Array Config) (m' : MultiConfig)
     | none => return r
     | some cPre =>
       if m'.threads.size > tsPre.size then
-        return (r.spawn i tsPre.size)
+        -- Spawn: the go_mem edge, PLUS the child frame entry's possible
+        -- interface-dispatch receiver deref (recorded under the CHILD's
+        -- id, after the edge — gc attributes the read to the spawned
+        -- goroutine; S3 audit, the dispatch-read footprint).
+        let r₁ := r.spawn i tsPre.size
+        match spawnPlan cPre with
+        | some (.funcVal fid captured, args, _) =>
+            r₁.accesses tsPre.size (dispatchAccesses sPre fid (captured ++ args))
+        | _ => return r₁
       else if isBlockedConfig cPre then
         raceWakeEvent sPre i r cPre
       else
@@ -1113,8 +1129,13 @@ covered by the sequential kit (`step_preserves_wf_loc` and the slice-1
 the wake/pairing helpers), but the FOREIGN-thread frame argument
 (`ConfigWf` of the untouched goroutines under the stepped shared
 state) needs a step-level `nextAddr` monotonicity lemma the sequential
-kit does not yet expose. Nothing consumes `MultiWf` this slice; it is
-the declared invariant carrier for the slice-3 detector work. -/
+kit does not yet expose. Slice 3 did NOT become the consumer this line
+once predicted: the detector's state was externalized into `RaceState`
+(the `Choices`/fuel mold — slice-3 build log's recorded deviation), so
+nothing consumes `MultiWf` at slice-3 tip either; it remains the
+marked scaffold, and the recorded discharge route is extending the
+existing `*_wf` lemma conclusions with the `≤ nextAddr` conjunct
+(slice-3 build log, MultiWf disposition). -/
 def MultiWf (m : MultiConfig) : Prop :=
   StateWf m.shared ∧ m.cur < m.threads.size ∧
     ∀ i (h : i < m.threads.size),

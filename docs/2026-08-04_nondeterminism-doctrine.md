@@ -143,15 +143,26 @@ EPISTEMIC CAPTION, recorded per the per-lane discipline:
   never hits (directed sampling / enumerator territory; record the
   conclusion in the case's `why`); (c) the program is race-free and
   misclassified (model bug — fix).
-- **Detector HB is TSan's realized edge set, on purpose** (the
+- **Detector HB targets TSan's realized edge set** (the
   structural-alignment decision, design note D2+D3): gc's channel race
   instrumentation (slot release-acquire, rendezvous racesync, close
-  release/acquire, NO close-woken-sender edge, NO len/cap
-  instrumentation) — not the memory model's minimal rule set — so our
+  release/acquire) — not the memory model's minimal rule set — so our
   refusals stay justifiable by the oracle. Divergences between the
   detector's HB and go_mem's relation (Fava SEFM 2020's caution) are
   therefore shared with `-race` rather than invented by us; each is
-  quoted at its implementation site in `Race.lean`.
+  quoted at its implementation site in `Race.lean`. Two recorded
+  DEVIATIONS from gc's realized set (S3 audit corrections): (i) the
+  close-woken SENDER gets no edge from us although gc's `closechan`
+  DOES `raceacquireg` parked senders — our edge set is strictly
+  STRONGER there; refusal-set agreement holds anyway because gc flags
+  every close-beside-parked-send via its channel-OBJECT
+  instrumentation, which we do not model (Race.lean inventory U3);
+  (ii) `len(m)` on a MAP is instrumented by gc (probed red on
+  go1.26.5, refuting the first version of this caption) and is now
+  recorded by the footprint; `len`/`cap` on channels remain
+  uninstrumented on both sides (probe p26). The footprint's remaining
+  under-approximations are U1–U3 in Race.lean's inventory — the
+  lane's per-stream refusal claim is scoped by them.
 - **Scope limit, recorded loudly (BUG-040)**: the detector is complete
   only over accesses that EXECUTE on the modeled (registry-point)
   paths. Races reachable only by preempting a sync-free post-spawn

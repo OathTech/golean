@@ -26,26 +26,29 @@ proof debt's STATEMENT layer and its first mover lemmas:
 * `RacyFine` — the fine-semantics race: some fine-reachable pool holds
   two distinct goroutines whose next private steps carry conflicting
   footprints (`stepAccesses`, Race.lean — the same footprint the
-  executable detector records, so the statement and the detector share
-  one access semantics by construction).
-* `NPDRFReduction` — the reduction STATEMENT (a `Prop`-valued
-  definition, deliberately not a theorem — see the scaffold marking
-  below): race-free-fine programs reach exactly the same program
-  results under both relations.
+  executable detector records; what that sharing does and does not buy
+  is obstruction 5).
+* `NPDRFReduction` — the reduction statement in DRAFT form (a
+  `Prop`-valued definition, deliberately not a theorem — and REFUTABLE
+  as written: obstruction 4 exhibits the counterexample class; the
+  statement must be weakened before any proof attempt).
 * the representative BOTH-MOVER lemmas (`storeLoc_root_frame`,
-  `loadLoc_after_disjoint_store`) — the commutation core for the
-  in-place store class (`appendSlice`'s in-place path, `copySlice`,
-  `clearSlice`, `sortSlice`, plain stores): a store is invisible to
-  every access rooted at a different heap cell.
+  `loadLoc_after_disjoint_store`) — the CROSS-ROOT half of the
+  commutation core (obstruction 6 records the unproved same-root
+  path-level half): a store is invisible to every access rooted at a
+  different heap cell.
 
 ## SCAFFOLD STATUS (non-vacuity gate, recorded honestly)
 
-`NPDRFReduction` is a STATEMENT AWAITING PROOF — no theorem in the
-repo claims it, and nothing may cite it as established. It is a `def`,
-not an axiom and not a `sorry`. The mover lemmas below ARE proved and
-non-vacuous on their own terms (they instantiate on any two disjoint
-cells). Known obstructions the eventual proof must clear, found by
-probing while building this slice (each recorded so the proof effort
+`NPDRFReduction` is a DRAFT STATEMENT — no theorem in the repo claims
+it, nothing may cite it (not even as a proof target: it is refutable
+as written, obstruction 4), and the recorded weakening decision comes
+before any proof effort. It is a `def`, not an axiom and not a
+`sorry`. The mover lemmas below ARE proved and non-vacuous on their
+own terms (they instantiate on any two disjoint cells). Known
+obstructions the eventual proof must clear, found by probing while
+building this slice and sharpened by the S3 pre-merge audit (each
+recorded so the proof effort
 starts honest):
 
 1. **Allocator interleaving.** Steps that ALLOCATE (`ExecState.alloc`)
@@ -72,14 +75,45 @@ starts honest):
    OUTCOME equality for race-free programs; the detector-completeness
    half (fine-racy ⇒ some coarse path refuses) must additionally wait
    on BUG-040's fix.
-4. **Main-exit discard (D6).** Main's terminal ends the program and
-   discards other goroutines mid-flight, so the joined final state can
-   differ across schedules even race-free (a leaked goroutine's
-   private effects). `PoolResult` below therefore compares main's
-   outcome CLASS and, for `.done`, the final state — the eventual
-   proof will need the post-state comparison scoped to main-reachable
-   locations (or the statement weakened to main's readout), recorded
-   here rather than discovered mid-proof.
+4. **Main-exit discard (D6) — and it makes the statement below
+   REFUTABLE AS WRITTEN, not merely unproven (S3 audit).** Main's
+   terminal ends the program and discards other goroutines mid-flight,
+   so the joined final state can differ across schedules even
+   race-free (a leaked goroutine's private effects), and
+   `PoolResult.done` carries the WHOLE `ExecState`. Concretely: a main
+   that spawns two sync-free goroutines and returns reaches, under
+   fine interleaving, `.done` states with both children mid-segment —
+   while the coarse relation keeps at most ONE thread mid-segment in a
+   sync-free pool — so `ReachesMFine → ReachesM` FAILS on race-free
+   programs and the `↔` below is false as stated. The statement must
+   be WEAKENED before any proof attempt (post-state scoped to
+   main-reachable locations, or main's readout only) — kept in its
+   present form deliberately so the weakening is its own reviewed
+   decision rather than a silent edit; nothing may cite the current
+   form even as a target.
+5. **Footprint completeness bears on `RacyFine`'s EXTERNAL adequacy
+   (S3 audit).** Sharing `stepAccesses` between the detector and
+   `RacyFine` makes plan step (iv)'s coupling cancel any shared
+   under-approximation — that axis is real. What sharing does NOT buy:
+   `¬ RacyFine` does not imply go_mem/`-race` data-race-freedom while
+   the table under-approximates Go's access set (the recorded U1–U3
+   in Race.lean's inventory), and an access a step performs but the
+   table omits is invisible to the mover route too (a step reading a
+   shared cell with an empty recorded footprint would be treated as a
+   both-mover it is not). The reduction's honesty therefore rides on
+   the inventory's completeness discipline, not on sharing alone.
+6. **The proved movers are CROSS-ROOT only; same-root disjoint PATHS
+   are unproved (S3 audit).** Both lemmas below are gated on
+   `Loc.rootBase m ≠ Loc.rootBase l` — whole-cell disjointness — while
+   `RacyFine`/the detector call distinct `.index`/`.field` paths under
+   ONE root disjoint (`locOverlap`). So for exactly the multi-cell
+   constructs named below (appendSlice in-place, copySlice,
+   clearSlice, sortSlice: element writes sharing the backing root),
+   the peer pairs the race semantics calls independent need a
+   DIFFERENT lemma class — path-level frame lemmas through
+   `StructFields.set`/array update — and store/store commutation is
+   unproved in any form. The proved pair covers the cross-root half
+   (different variables/cells) only.
 
 ## The decomposition plan (the mover route, ICTAC 2018's shape)
 
@@ -280,13 +314,16 @@ def RacyFine (m₀ : MultiConfig) : Prop :=
       threadRunnable m.shared ci = true ∧ threadRunnable m.shared cj = true ∧
       footprintsConflict (stepAccesses m.shared ci) (stepAccesses m.shared cj)
 
-/-- **THE NPDRF REDUCTION STATEMENT** (scaffold — see the module
-docstring's marking; nothing may cite this as established): for every
-race-free-fine initial pool, full interleaving and registry-point
-scheduling reach exactly the same program results. The ⊇ direction is
-already unconditional (`stepsM_le_stepsMFine`); the ⊆ direction is the
-mover argument (plan steps i–iii), and the coupling with the
-executable detector is plan step iv. -/
+/-- **THE NPDRF REDUCTION STATEMENT — DRAFT FORM, REFUTABLE AS
+WRITTEN** (scaffold; see the module docstring's marking and
+OBSTRUCTION 4, which exhibits the counterexample class: `.done`
+compares whole joined states, and sync-free leaked goroutines make
+those schedule-sensitive even race-free — so the `↔`'s ⊆ direction is
+false as stated and MUST be weakened, per obstruction 4, before any
+proof attempt; the mover plan (steps i–iii) is the route for the
+WEAKENED form, not this one). Nothing may cite this — not even as a
+proof target. The ⊇ direction is unconditional
+(`stepsM_le_stepsMFine`); the detector coupling is plan step iv. -/
 def NPDRFReduction : Prop :=
   ∀ m₀ : MultiConfig, ¬ RacyFine m₀ →
     ∀ res, ReachesMFine m₀ res ↔ ReachesM m₀ res
@@ -298,14 +335,17 @@ theorem reachesM_le_fine {m₀ : MultiConfig} {res : PoolResult}
   obtain ⟨m, hsteps, hres⟩ := h
   exact ⟨m, stepsM_le_stepsMFine hsteps, hres⟩
 
-/-! ## The representative both-mover lemmas (plan step i)
+/-! ## The representative both-mover lemmas (plan step i, CROSS-ROOT
+half — see obstruction 6)
 
 The store class: `storeLoc` writes exactly its ROOT heap cell, so any
-access rooted elsewhere commutes with it. This is the commutation core
-for the non-allocating multi-cell apply steps — `appendSlice`'s
-in-place path (a fold of `storeLoc`s into the backing root plus the
-header root), `copySlice`, `clearSlice`, `sortSlice`, `storeMany` —
-whose per-construct movers (plan step ii) are folds of these. -/
+access rooted at a DIFFERENT cell commutes with it. For the
+non-allocating multi-cell apply steps (`appendSlice`'s in-place path,
+`copySlice`, `clearSlice`, `sortSlice`, `storeMany`) this covers their
+commutation against peers rooted in OTHER cells; peers at disjoint
+paths under the SAME root (distinct elements/fields of one cell —
+which the detector's `locOverlap` rightly calls independent) need the
+unproved path-level frame lemmas of obstruction 6. -/
 
 /-- `storeLoc` touches only its ROOT cell: every access path rooted at
 a different cell looks up the same cell before and after the store.

@@ -78,10 +78,88 @@ func raceSliceElem() int {
 	return s[0] + s[1]
 }
 
+type dispBox struct {
+	v int
+}
+
+type dispGetter interface {
+	Get() int
+}
+
+// VALUE receiver: a *dispBox in the interface auto-dereferences the
+// pointee at dispatch (the receiver is copied out of *p) — a genuine
+// read of shared memory.
+func (b dispBox) Get() int {
+	return b.v
+}
+
+// Interface pointer-box dispatch read vs a concurrent write to the
+// pointee (S3 audit, major: the auto-deref read happens at FRAME
+// ENTRY — dynamicDispatch's needsDeref — and needs its own footprint
+// arm; no other shape exercises it).
+func raceIfaceDispatch() int {
+	p := &dispBox{v: 1}
+	var g dispGetter = p
+	done := make(chan int)
+	go func() {
+		p.v = 2
+		done <- 0
+	}()
+	r := g.Get()
+	<-done
+	return r
+}
+
+// len(m) beside a concurrent map write: gc's maps.Map length read IS
+// instrumented on go1.26.5 (S3 audit refuted the earlier
+// "len is invisible to -race" claim for maps) — the map object is one
+// location, and len reads it.
+func raceLenMap() int {
+	m := map[int]int{}
+	done := make(chan int)
+	go func() {
+		m[1] = 1
+		done <- 0
+	}()
+	n := len(m)
+	<-done
+	return n + len(m)
+}
+
+// Map WRITE landing while another goroutine's range is ACTIVE (between
+// handoffs): gc's mapIterNext reads the map on every iteration, so
+// -race flags the write against iteration 2. Our machine snapshots the
+// entries at range entry (BUG-005), performs no per-iteration read,
+// and returns a value — a PERMANENT red pin carried by BUG-005 until
+// the live-iteration surgery lands (the fix's footprint arm falls out
+// of that surgery).
+func raceMapRangeIter() int {
+	m := map[int]int{1: 1, 2: 2}
+	ch := make(chan int)
+	go func() {
+		for range m {
+			ch <- 1
+		}
+		close(ch)
+	}()
+	s := <-ch // iteration 1 handed off; the range is ACTIVE
+	m[3] = 3
+	// Drain to the close: gc's LIVE iteration may or may not visit the
+	// new key (spec latitude), so the count varies — irrelevant here,
+	// the race lane compares only the refusal, never values.
+	for v := range ch {
+		s += v
+	}
+	return s + len(m)
+}
+
 func main() {
 	println(raceWriteWrite())
 	println(raceReadWrite())
 	println(raceIncrement())
 	println(raceMapRW())
 	println(raceSliceElem())
+	println(raceIfaceDispatch())
+	println(raceLenMap())
+	println(raceMapRangeIter())
 }

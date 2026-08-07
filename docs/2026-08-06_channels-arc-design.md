@@ -833,17 +833,27 @@ build, recorded here:
   formation) and channel-cell traffic (synchronization, race-free by
   spec) — false positives against the `-race` oracle in both cases —
   and `loadLoc` is a pure reader with no state to carry a log
-  (instrumenting it = growth by revision). The table's arms are the
+  (instrumenting it = growth by revision). The table's arms map to the
   loadLoc/storeLoc call-site inventory of the access-bearing step
   shapes, curated to Go's access semantics; completeness over
   access-bearing shapes is a LOCKSTEP obligation like the relation's
-  (a new stepFn arm touching user memory must add its footprint arm),
-  with the racy-negative lane as the executable check. Recorded
-  over-approximation: `evalVar` reads the WHOLE cell of a composite
-  local (`p.a` via the value path records a read of `p`) — fail-closed
-  direction; fix if a real race-free case needs it is address-based
-  field reads in the frontend. Recorded under-approximation
-  (TSan-aligned on purpose): `len`/`cap` record nothing.
+  (a new stepFn arm touching user memory must add its footprint arm
+  AND its inventory row), with the racy-negative lane as the
+  executable check. [CORRECTED at the S3 audit response — the original
+  paragraph ASSERTED the inventory ("the arms are exactly the
+  call-site inventory") without enumerating it, and the audit found
+  two missing arms (the interface-dispatch frame-entry deref, the
+  instrumented `len(m)` read) plus a too-narrow over-approximation
+  record; the inventory is now ENUMERATED in Race.lean's module
+  docstring (footprint arms / model-internal / synchronization / fresh
+  allocation), and the recorded approximations are its O1 + U1–U3
+  entries: O1 whole-cell value-path composite reads (narrowed through
+  immediate fieldGet chains; BUG-041 pins the array remainder), U1
+  map-range per-iteration reads unperformed (BUG-005's fourth
+  symptom), U2 len/cap — channels exempt (probe p26) but `len(m)`
+  RECORDED (the original "len/cap record nothing / invisible to
+  -race" claim was probe-refuted for maps), U3 the channel OBJECT
+  unmodeled (gc flags close-beside-parked-send through it).]
 - **THE HB EDGE SET IS GC'S RACE INSTRUMENTATION, quoted against
   go_mem at the implementation sites** (Race.lean `ChanClocks` /
   `RaceState.spawn`; the structural-alignment decision of D2+D3):
@@ -862,8 +872,16 @@ build, recorded here:
   - close releases into `closeVC`; a closed-empty receive acquires it
     ("The closing of a channel is synchronized before a receive that
     returns a zero value because the channel is closed"); a
-    close-WOKEN sender's panic gets NO edge (gc's woken `chansend`
-    performs no raceacquire — TSan-aligned, fail-closed direction);
+    close-WOKEN sender's panic gets NO edge — [CORRECTED at the S3
+    audit response: the original parenthetical claimed gc-parity
+    ("gc's woken chansend performs no raceacquire"); the premise is
+    true but the closer installs the edge from ITS side
+    (`closechan`'s release-all-writers loop `raceacquireg`s each
+    parked sender, exactly as for receivers), so our no-edge choice
+    is strictly STRONGER than TSan's realized HB. Refusal-set
+    agreement holds for a different reason: gc flags every
+    close-beside-parked-send via channel-OBJECT instrumentation we
+    do not model (inventory U3)];
   - spawn copies the parent clock to the child and bumps the parent
     ("The go statement that starts a new goroutine is synchronized
     before the start of the goroutine's execution"); goroutine EXIT
@@ -937,17 +955,24 @@ build, recorded here:
   goroutines' private cells). One representative both-mover pair IS
   proved: `storeLoc_root_frame` (a store touches exactly its root
   cell) and `loadLoc_after_disjoint_store` (the read mover) — the
-  commutation core of the NON-allocating store class (appendSlice
-  in-place, copySlice, clearSlice, sortSlice, storeMany), axiom-pinned
-  in Audit (they inherit `Classical.choice` from the pre-existing
-  `Heap.lookup_set_ne`).
+  CROSS-ROOT half of the commutation core for the non-allocating
+  store class (appendSlice in-place, copySlice, clearSlice, sortSlice,
+  storeMany) [qualifier added at the S3 audit response: the lemmas are
+  gated on root-cell disjointness, so same-root disjoint PATHS —
+  distinct elements/fields of one cell, which the detector rightly
+  calls independent — need the unproved path-level frame lemmas of
+  NPDRF obstruction 6], axiom-pinned in Audit (they inherit
+  `Classical.choice` from the pre-existing `Heap.lookup_set_ne`).
 - **MultiWf disposition: NOT discharged; why, precisely.** The missing
   piece is real — a step-level `σ.nextAddr ≤ σ'.nextAddr` for the
   foreign-thread `ConfigWf` frame — and a probe (an automated
-  premise-free sweep over `applyStrictOp`) left 47 of ~60 arms needing
-  bespoke destructuring, i.e. the cost is comparable to the existing
-  `*_wf` family (`applyStrictOp_wf` alone is ~700 lines) TIMES the
-  helper surface. The right implementation, recorded for the follow-up:
+  premise-free sweep over `applyStrictOp`) left 47 of the op-applier
+  surface's 60 arms (47 `applyStrictOp` + 13 `applyStmtOpCore`)
+  needing bespoke destructuring, i.e. the cost is comparable to the
+  existing `*_wf` family (`applyStrictOp_wf` is ~540 lines,
+  StateWf.lean:2776-3312) TIMES the helper surface. [Figures corrected
+  at the S3 audit response — the first form said "~700 lines" (~30%
+  high) and attributed the ~60 denominator to the sweep alone.] The right implementation, recorded for the follow-up:
   EXTEND the existing `*_wf` conclusions with the `≤` conjunct inside
   their existing case analyses (`applyStrictOp_wf`,
   `enterRecvTargets_wf` and `StmtOpPres` already expose it; the
@@ -968,3 +993,128 @@ build, recorded here:
   post-spawn decision point) with its designated-witness restatement
   under its own sign-off. The Comparator landmark stays OWED at arc
   end.
+
+### S3 audit response (2026-08-07, pre-merge audit of this slice)
+
+Eleven confirmed findings (one refuted — the empty-buffer rendezvous
+fall-through, unreachable by the re-derived hchan invariant), all
+addressed on the branch — guardrails first (6 new go-run-`-race`-
+verified cases, red-verified on the pre-fix machine at exactly the
+predicted classifications), then the fixes:
+
+- **MAJOR 1 (fail-OPEN): the interface pointer-box dispatch read had
+  no footprint arm.** `dynamicDispatch?`'s `needsDeref` branch reads
+  the pointee at FRAME ENTRY (a *T box dispatching to a value-receiver
+  method copies the receiver out), and `stepAccesses` had no
+  frame-entry arm — a `-race`-red program ran to `ok` on every stream
+  (verifier-probed; isolated from BUG-040 by controls). Fixed:
+  `dispatchAccesses` (mirroring the dispatch branch-for-branch) wired
+  into every frame-entry shape — callArgsK/callValCalleeK/callValArgsK
+  last-operand arrivals, all three deferred-call drains, and the SPAWN
+  entry (recorded under the child's id after the spawn edge, matching
+  gc's attribution). The audit's mandated INVENTORY audit was
+  performed: every semantic-core loadLoc/storeLoc call site is now
+  enumerated and classified in Race.lean's module docstring (footprint
+  arm / model-internal / synchronization / fresh allocation) — the
+  lockstep obligation's evidence, replacing the asserted-and-false
+  "exactly the inventory" sentence. Pin:
+  `race/negative/iface-dispatch` (red pre-fix on all streams, green
+  refusal after).
+- **MAJOR 2 (fail-OPEN, record-level per the verifier): map-range
+  per-iteration reads.** gc's live iteration reads the map at every
+  `mapIterNext` (`-race`-instrumented); our snapshot range performs no
+  such read, so a write landing mid-range runs to a silent value. The
+  root cause is BUG-005's snapshot design (no `stepFn` arm exists for
+  the missing accesses — the lockstep obligation is structurally blind
+  here, now said so in Race.lean U1). Disposition per the verifier:
+  RECORD, not code surgery — BUG-005 gains its fourth symptom
+  paragraph (race invisibility) and the permanent red pin
+  `race/negative/map-range-iter` (in its Cases); the live-iteration
+  surgery must add the footprint arm in the same movement.
+- **MAJOR 3 (false-positive scope): interior reads vs disjoint-field
+  writes over-refused beyond the recorded scope, and the free lane
+  guarded only write/write.** Fixed on both sides: (i) NARROWING —
+  `fieldChainTarget` projects a whole-cell read through the immediate
+  `fieldGet` chain in its continuation, applied to BOTH the `evalVar`
+  and `.deref` arms (the original record named only evalVar; the
+  `.deref` form is the dominant `p.field`-through-`*struct` idiom) —
+  `race/free/{field-read-write,ptr-field-read-write}` land green;
+  (ii) the REMAINING envelope recorded precisely as O1 + BUG-041
+  (value-path array-element reads and non-fieldGet composite reads
+  stay whole-cell), red-pinned by `race/free/array-read-write`
+  (expected ok, `-race` green, machine refuses — the over-refusal is
+  fail-closed but now visible and carried by a bug entry, never a
+  hidden misclassification).
+- **MINOR (gc-parity claim wrong at four sites): the close-woken
+  sender.** gc's `closechan` DOES `raceacquireg` parked senders (the
+  closer installs the edge; the woken `chansend` premise was true but
+  irrelevant), so our no-edge choice is strictly STRONGER than TSan's
+  realized HB, and refusal-set agreement holds via gc's channel-OBJECT
+  instrumentation, which we do not model. All four sites corrected in
+  place (Race.lean `ChanClocks`, Multi.lean `raceWakeEvent`, doctrine
+  caption, this log's HB list); the unmodeled chan-object accesses
+  recorded as inventory U3. Behavior deliberately unchanged (the
+  stronger edge set refuses more, the fail-closed direction).
+- **MINOR (footprint completeness vs `RacyFine`): `len(m)` IS
+  instrumented.** The verifier's probe refuted Race.lean's "len is
+  invisible to -race" claim for maps (go1.26.5 flags `len(m)` beside a
+  map write) — the `lengthOf` MAP arm is now in the footprint (pin
+  `race/negative/len-map`, red pre-fix), channels stay exempt (probe
+  p26). NPDRF gains obstruction 5: sharing `stepAccesses` between
+  detector and `RacyFine` cancels shared under-approximation for the
+  step-(iv) coupling but buys nothing for EXTERNAL adequacy
+  (`¬RacyFine` ⇏ go_mem-DRF while U1–U3 stand), and unrecorded reads
+  are invisible to the mover route too.
+- **MINOR (mover granularity)**: the proved movers are gated on
+  root-cell disjointness while the detector calls same-root disjoint
+  paths independent — the named multi-cell constructs' same-root peer
+  pairs need unproved path-level frame lemmas. NPDRF obstruction 6
+  added; the build-log sentence and the mover section's prose
+  qualified (CROSS-ROOT half).
+- **MINOR (`NPDRFReduction` refutable as written)**: obstruction 4's
+  scenario (sync-free leaked goroutines; `.done` compares whole joined
+  states; coarse keeps ≤ 1 thread mid-segment in a sync-free pool
+  where fine does not) refutes the `↔`'s ⊆ direction on race-free
+  programs. The statement stays in draft form DELIBERATELY (the
+  weakening — main-readout or main-reachable-scoped post-state — is
+  its own reviewed decision), but the marking now says REFUTABLE, not
+  merely unproven, forbids citing it even as a proof target, and no
+  longer advertises the mover plan as closing the current form.
+- **NOTE (byte-identity ≠ meaning-invariance)**: recorded here — the
+  five fork/join designated witnesses' PROPOSITIONS strengthened when
+  `execProg` became the detecting loop (each now also asserts no race
+  is detected on its pinned stream), and their statement closures grew
+  by `raceUpdate`/Race.lean (statement-TCB growth under D8's
+  readability-as-specification review; the detector can only REMOVE
+  accepted outcomes, so a detector bug breaks the kernel witnesses at
+  build time — fail loud, never a false readout).
+- **NOTE (MultiWf stale marking)**: Multi.lean's docstring no longer
+  promises slice-3 consumption; it records the externalization and
+  points at the `*_wf`-extension discharge route.
+- **NOTE (cost figures)**: corrected in place above (~540 lines, not
+  ~700; the ~60 denominator is 47 `applyStrictOp` + 13
+  `applyStmtOpCore` arms).
+- **NOTE (history reconstructibility, recorded honestly)**: slice 3's
+  corpus + harness + machine landed in ONE commit (47dd4f4), so the
+  guardrails-first ORDER within the slice is asserted, not
+  reconstructible from history (the `-race` verifications themselves
+  re-run today; a corpus-only first commit was awkward because
+  `expected_status: race` did not exist before the harness half — a
+  corpus+harness-then-machine split was available and should be the
+  S4 practice). The S3 baseline re-pin also landed in a follow-up
+  commit (40adc68) rather than the coverage-moving commit — deviation
+  from the same-commit convention; protective purpose satisfied (zero
+  drift on all prior ids, reason in the header), and exactly one
+  commit (47dd4f4) is not standalone gate-green. This response's
+  re-pin is in the same commit as its corpus change.
+
+Post-response counts: 1166 exec cases, 1068 pass / 98 fail — the 96
+carried (zero drift) plus the two new permanent red pins
+(`race/negative/map-range-iter` → BUG-005,
+`race/free/array-read-write` → BUG-041); four new ids PASS
+(iface-dispatch, len-map — refusals live; field-read-write,
+ptr-field-read-write — narrowing green). 311 negative green; 99 eval
+tests green; check-bugs green (41 bugs; the two new reds are in
+BUG-005/BUG-041 Cases, untriaged ceiling unchanged at 21); baseline
+re-pinned from the full run in this commit; the 38 designated
+statements byte-identical.

@@ -29,6 +29,35 @@ differential-pinned) `- Cases: <id>, <id>, …` (baseline case ids), then prose.
 
 ---
 
+## BUG-041 — race-detector footprint over-approximation: value-path composite reads are whole-cell (array elements; non-fieldGet uses), refusing race-free programs
+
+- Status: open
+- Pinned-by: differential
+- Cases: race/free/array-read-write
+- Discovered: 2026-08-07 (S3 pre-merge audit, major finding 3 — the
+  original record named only `evalVar` and shipped write/write-only
+  free-lane guards, so the read/write direction that actually trips
+  was neither scoped nor pinned)
+- What: `stepAccesses` records a WHOLE-CELL read when a composite
+  value is materialized (`evalVar` on a composite local; `.deref` of a
+  composite pointee), so an interior read overlapping a concurrent
+  DISJOINT-path write refuses a `-race`-green race-free program. The
+  S3 audit response NARROWED the dominant class — a read delivered
+  straight into single-operand `fieldGet` frames records only the
+  projected field path (`fieldChainTarget`; covers `p.a` on struct
+  locals and on `*struct`, green-pinned by
+  `race/free/{field-read-write,ptr-field-read-write}`) — leaving
+  exactly: value-path ARRAY-element reads (`a[1]`: the index operand
+  is unevaluated when the base cell is read, so no continuation
+  narrowing exists) and composite reads whose continuation is not a
+  fieldGet chain. Over-refusal is the FAIL-CLOSED direction (a
+  refusal, never a wrong value), recorded as O1 in
+  `GoLean/GoCore/Race.lean`'s inventory.
+- Fix shape: path-precise element reads need either provenance-carrying
+  array values or frontend address-based element reads
+  (indexAddr+deref, which the deref arm then narrows) — a frontend/
+  machine movement with its own guardrails, not a detector patch.
+
 ## BUG-040 — no POST-SPAWN reschedule point: a child can never run before a sync-free parent segment (L1 envelope too narrow; exit-no-sync races undetectable)
 
 - Status: open
@@ -1210,8 +1239,24 @@ the re-pin guard. The guard treats an untyped-nil source as exact
 
 - Status: open
 - Pinned-by: differential
-- Cases: maps/delete-during-range, maps/clear-during-range, maps/update-during-range
+- Cases: maps/delete-during-range, maps/clear-during-range, maps/update-during-range, race/negative/map-range-iter
 - Discovered: 2026-07-26 (pre-merge adversarial audit of `wrong-answers-builtins`)
+
+**Fourth symptom, added 2026-08-07 (S3 pre-merge audit, major): RACE
+INVISIBILITY.** gc's live iteration reads the map at every
+`mapIterNext` — `-race`-instrumented, so a concurrent map write landing
+while another goroutine's range is ACTIVE is a TSan-red data race
+(probed: "Previous read ... runtime.mapIterNext()", exit 66). Our
+snapshot range performs no per-iteration read (the pick steps consume
+the snapshot from `Cont.mapIterK`, touching no user memory), so the S3
+race detector records only the entry-snapshot read and such programs
+run to a silent value (`race/negative/map-range-iter`, the fourth
+Cases pin — red until this entry's live-iteration surgery lands). The
+detector's footprint-table lockstep obligation is structurally blind
+here because the gc accesses have no `stepFn` arm at all; recorded as
+under-approximation U1 in `GoLean/GoCore/Race.lean`'s inventory. The
+live-iteration fix must add the per-iteration footprint arm as part of
+the same movement.
 
 `mapRange` snapshots the entry array once (the reshape's nondeterminism
 design) and iterates the snapshot, so an entry removed during iteration

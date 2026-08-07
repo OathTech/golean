@@ -1,20 +1,22 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-07  commit: channels-arc-s3 (S3 detector: segment-HB race detection + racy-negative/litmus lanes)
+# recorded: 2026-08-07  commit: channels-arc-s3 (S3 audit response: dispatch/len(m) footprint arms, fieldGet-chain narrowing, BUG-005/BUG-041 red pins)
 #   frontend: native  oracle: go run (strict lane) / go-run membership in the
 #   machine-enumerated observation set (membership lane; go1.26.5 samples) /
 #   go run -race (racy-negative lane: TSan report + exit 66 justifies the
 #   machine's per-stream raceDetected refusal; never combined with deadlock)
-# manifest_cases: 1160  pass: 1064  fail: 96
-# Re-pin reason: deliberate coverage change (S3 race-detection slice).
-#   The segment-HB detector (raceUpdate/RaceState over the detecting
-#   execProgLoop) is ZERO-drift on all 1147 prior ids in this run.
-#   13 new ids: race/negative/* (5) + race/litmus/{mp-racy,lb-racy} —
-#   every-interleaving-racy programs refusing raceDetected on every
-#   tested stream, -race-verified; race/litmus/{mp-sync,close-hb,
-#   chan-mutex} + race/free/* — the go_mem channel-edge and Loc-path
-#   granularity false-positive guards, strict-lane PASS; and
-#   race/litmus/sb-chan — the DRF-SC boundary membership red pin
-#   (schedule enumeration is slice 4), the one new FAIL.
+# manifest_cases: 1166  pass: 1068  fail: 98
+# Re-pin reason: deliberate coverage change (S3 audit response). The
+#   footprint fixes (interface-dispatch frame-entry deref arm, len(m)
+#   read arm, fieldGet-chain narrowing for evalVar/deref reads) are
+#   ZERO-drift on all 1160 prior ids in this run. 6 new ids: 4 PASS —
+#   race/negative/{iface-dispatch,len-map} (the audit's fail-open
+#   holes, now refusing on every tested stream, -race-verified) and
+#   race/free/{field-read-write,ptr-field-read-write} (the read/write
+#   free-lane guards the narrowing makes green) — and 2 permanent red
+#   pins: race/negative/map-range-iter (BUG-005's fourth symptom: no
+#   per-iteration map read exists to record until the live-iteration
+#   surgery) and race/free/array-read-write (BUG-041: value-path
+#   array-element reads stay whole-cell — recorded over-refusal).
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
 PASS	arrays/array-copy	-
@@ -948,7 +950,10 @@ PASS	quorum/vote-result-small-n/n2-one-yes-lost	-
 PASS	quorum/vote-result-small-n/n2-won	-
 PASS	quorum/vote-result/tie-lost	-
 PASS	quorum/vote-result/won-exact	-
+FAIL	race/free/array-read-write	lean-observation
 PASS	race/free/field-disjoint	-
+PASS	race/free/field-read-write	-
+PASS	race/free/ptr-field-read-write	-
 PASS	race/free/slice-disjoint	-
 PASS	race/litmus/chan-mutex	-
 PASS	race/litmus/close-hb	-
@@ -956,7 +961,10 @@ PASS	race/litmus/lb-racy	-
 PASS	race/litmus/mp-racy	-
 PASS	race/litmus/mp-sync	-
 FAIL	race/litmus/sb-chan	membership
+PASS	race/negative/iface-dispatch	-
 PASS	race/negative/increment	-
+PASS	race/negative/len-map	-
+FAIL	race/negative/map-range-iter	lean-observation
 PASS	race/negative/map-rw	-
 PASS	race/negative/read-write	-
 PASS	race/negative/slice-elem	-

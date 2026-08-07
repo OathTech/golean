@@ -5,3 +5,13 @@
 # verified green; a raceDetected here is a detector granularity bug.
 slice-disjoint	freeSliceDisjoint	-	ok	-	goroutines,channels,slices,race
 field-disjoint	freeFieldDisjoint	-	ok	-	goroutines,channels,structs,race
+# S3 audit response: the READ/WRITE direction (what actually trips
+# whole-cell read footprints) — struct local and *struct forms, green
+# via the fieldGet-chain narrowing.
+field-read-write	freeFieldReadWrite	-	ok	-	goroutines,channels,structs,race
+ptr-field-read-write	freePtrFieldReadWrite	-	ok	-	goroutines,channels,structs,pointers,race
+# RED PIN (BUG-041): value-path array-element read (`a[1]` loads the
+# whole cell before indexing) vs a disjoint-element write — race-free
+# Go refused by the recorded whole-cell over-approximation; red until
+# value-path element reads become path-precise.
+array-read-write	freeArrayReadWrite	-	ok	-	goroutines,channels,arrays,race

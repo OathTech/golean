@@ -14,3 +14,15 @@ read-write	raceReadWrite	-	race	-	goroutines,channels,race
 increment	raceIncrement	-	race	-	goroutines,channels,race
 map-rw	raceMapRW	-	race	-	goroutines,channels,maps,race
 slice-elem	raceSliceElem	-	race	-	goroutines,channels,slices,race
+# S3 audit response: the interface pointer-box dispatch READ (frame
+# entry's auto-deref — the footprint arm the audit found missing) and
+# the len(map) read (gc DOES instrument it on go1.26.5 — the earlier
+# "invisible to -race" claim was refuted by probe).
+iface-dispatch	raceIfaceDispatch	-	race	-	goroutines,channels,interfaces,methods,race
+len-map	raceLenMap	-	race	-	goroutines,channels,maps,len,race
+# RED PIN (BUG-005): gc's LIVE map iteration reads the map every
+# iteration (mapIterNext is -race-instrumented); our snapshot range
+# performs no per-iteration read, so the write landing mid-range is a
+# silent value run — carried by BUG-005 until the live-iteration
+# surgery lands (its footprint arm falls out of that fix).
+map-range-iter	raceMapRangeIter	-	race	-	goroutines,channels,maps,range,race

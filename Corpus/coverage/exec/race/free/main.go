@@ -40,7 +40,62 @@ func freeFieldDisjoint() int {
 	return p.a*10 + p.b
 }
 
+// READ/WRITE disjoint fields on a struct LOCAL: the direction that
+// actually trips whole-cell footprints (S3 audit: the free lane's
+// original guards were write/write only) — main reads p.a while the
+// child writes p.b. Race-free; requires the fieldGet-chain narrowing.
+func freeFieldReadWrite() int {
+	p := pair{}
+	p.a = 7
+	done := make(chan int)
+	go func() {
+		p.b = 6
+		done <- 0
+	}()
+	r := p.a
+	<-done
+	return r*10 + p.b
+}
+
+// READ/WRITE disjoint fields THROUGH A POINTER (*struct — the dominant
+// raft-like idiom): the read is deref + fieldGet, narrowed to the
+// field path.
+func freePtrFieldReadWrite() int {
+	p := &pair{}
+	p.a = 3
+	done := make(chan int)
+	go func() {
+		p.b = 4
+		done <- 0
+	}()
+	r := p.a
+	<-done
+	return r*10 + p.b
+}
+
+// RED PIN (BUG-041): array-element READ via the value path (`a[1]` on
+// an array local loads the whole cell before indexing) vs a concurrent
+// DISJOINT-element write — race-free Go (-race green), refused by the
+// recorded whole-cell over-approximation. Red until value-path element
+// reads become path-precise; the over-refusal envelope is recorded in
+// Race.lean and BUG-041.
+func freeArrayReadWrite() int {
+	var a [2]int
+	a[1] = 9
+	done := make(chan int)
+	go func() {
+		a[0] = 3
+		done <- 0
+	}()
+	r := a[1]
+	<-done
+	return r*10 + a[0]
+}
+
 func main() {
 	println(freeSliceDisjoint())
 	println(freeFieldDisjoint())
+	println(freeFieldReadWrite())
+	println(freePtrFieldReadWrite())
+	println(freeArrayReadWrite())
 }
