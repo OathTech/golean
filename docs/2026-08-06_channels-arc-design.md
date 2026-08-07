@@ -518,3 +518,154 @@ pins held open by the coordinated-laws-slice disposition — plus 311
 negative, all green. check-bugs green (39 bugs; untriaged ledger
 unchanged at 16 — the READ-position pointers/nil-array-index-panic
 stays there: a different, index-GET path).
+
+## Slice-2 build log (2026-08-07, branch `channels-arc-s2`)
+
+Executed as decided (goroutines + ThreadPool, D1/D2a/D5-scope/D6/D8).
+Guardrails first: 38 red-pinned `goroutines/` cases (all go-run
+verified) BEFORE any machinery. Decisions and findings DURING the
+build, recorded here:
+
+- **PROBE FINDING — `go` of a nil func value is a runtime FATAL at the
+  SPAWN, in the SPAWNER** (`fatal error: go of nil func value`, exit 2;
+  runtime `newproc`), REFUTING the machine-shape note §6's analysis
+  ("nil-callee panics at invocation in the CHILD, the deferCall rule").
+  The fatal class (non-panic, non-deadlock abort) is unmodeled; the
+  spawn step refuses fail-closed (`.unsupported`) and
+  `goroutines/spawn-edge/nil-func-fatal` is a permanent red pin until a
+  fatal class exists. Guardrails-first caught this before the machinery
+  encoded the wrong rule.
+- **MultiConfig shape**: `{threads : Array Config, shared : ExecState,
+  cur : Nat}` — APPEND-ONLY pool: a spawn pushes, a finished goroutine
+  keeps its terminal config as a tombstone (never runnable again), so
+  the ARRAY INDEX is the stable goroutine id for its whole life (D1's
+  stable-identity requirement with no separate id carrier; main = 0).
+  `cur` is the running goroutine; "goroutine exit" needs no explicit
+  step — the finished cur is at a boundary and unrunnable, so the next
+  pool step reschedules.
+- **The scheduler (L1, first live Choices site)**: context switches
+  ONLY at registry boundaries (`Config.atBoundary`: chan/select apply
+  positions, the no-operand select entry, spawn positions, terminals,
+  parked shapes); the pick is consumed ONLY at `|runnable| > 1`
+  (envelope statement at `runnableIdxs`: the spec has NO scheduling
+  text — "any runnable goroutine"; width = `|runnable|`). Scheduling
+  folds into the same `stepMulti` call as the picked goroutine's step,
+  so fuel counts exactly one goroutine-step per pool step — which is
+  what makes the conservation theorem an `Except.map` away from
+  `stepFn`.
+- **Pairing = ARRIVAL INTERCEPT; wake = CELL-BASED** (D7 realized):
+  when a goroutine's op would park, the pool first scans parked
+  partners and performs the direct handoff in the same step; parked
+  goroutines wake only on cell changes (close/data/room). Consequence
+  (argued in `Multi.lean`'s file docstring): matched parked-parked
+  pairs cannot coexist — the hchan-invariant analogue — so a `close`
+  can never steal an already-pairable rendezvous. This closes the
+  too-wide close-window divergence a wake-based-pairing design would
+  have had (a sender-panic behavior real Go cannot exhibit).
+- **FIFO-through-handoff guard**: a direct handoff fires only against
+  an EMPTY buffer (else the newest value would jump queued elements —
+  spec: "Channels act as first-in-first-out queues"); with a nonempty
+  buffer the arriving op parks and values flow through the buffer. The
+  L4 waiter-pick site (envelope statement at
+  `pairCandidates`/`selectClauseWaiters`: no spec text on waiter order
+  — "any matching waiter", gc's FIFO wakeup is a membership point;
+  width = #matches, clauses counted individually) consumes only at
+  width > 1. Both envelope statements carry width metadata for the
+  slice-4 enumerator.
+- **Select wake IS in scope** (the charter's "waking slice-1's blocked
+  configs" includes `.blockedSelect`): parked selects pair op×select in
+  both directions and wake via `readyClauses`/`commitClause`. FAIL
+  CLOSED (visible `.unsupported`, never silent): multi-ready at wake or
+  arrival (the L2 envelope, slice 4), select-with-select rendezvous
+  (both sides parked selects — unmodeled this slice; pinned only by
+  review, no corpus case constructs it deterministically).
+- **D6**: main's terminal ends the program with main's outcome (the
+  shared state at that instant is the joined final state); an
+  unrecovered panic in ANY goroutine aborts the program with its
+  message. Deadlock = no runnable goroutine, classified BEFORE the fuel
+  check exactly like `execStmtLoop`'s terminals.
+- **Driver**: `runProgramPoolM` = `runProgramSetupM` (factored out of
+  `runProgramM` — shared wiring, no drift) + `execProgLoop`; the CLI's
+  `native-json-run` subject phase now runs on the pool. `$pkginit`
+  stays sequential — `go` during init refuses via `stepFn`'s
+  fail-closed spawn position (red pin `spawn-in-init`).
+- **THE CONSERVATION THEOREM** (`execProg_single_eq_execStmt`,
+  `MultiSound.lean`): proof shape as predicted near-definitional —
+  `stepMulti_single` shows the one-thread pool step IS `stepFn` up to
+  an `Except.map` (single runnable ⇒ no scheduler consumption; no
+  partner ⇒ the intercept is inert — `pairCandidates` scans waiters
+  FIRST so a partnerless park never touches the cell, keeping the
+  equation literal), lifted by a fuel induction to: every sequential
+  result in the TRANSFERABLE classes (`.ok` at any terminal,
+  `.fuelOut`, `.panic`) is the pool result verbatim — outcome, state,
+  stream, and fuel accounting all equal. Deliberately excluded classes,
+  recorded in `transferable`'s docstring: `.deadlock` (an ARTIFICIAL
+  wake-ready blocked seed would resume in the pool; sequential runs
+  never produce one — the corpus's 12 deadlock cases validate the
+  deadlock direction empirically instead) and the fail-closed
+  diagnostics (spawn positions refuse sequentially, fork on the pool).
+  Verified BOTH ways per the charter: the theorem + the full corpus
+  bit-identical (ZERO drift on all 1102 prior ids under the pool
+  driver).
+- **Correspondence kit**: `StepE` (the per-goroutine `Step` SPAWN
+  COMPONENT — every `Step` lifts with `[]`, spawn positions fork one
+  child; the iris-lean `Language` shape for slice 5) + the pool
+  relation `StepM` (thread/park/pair/wake; deadlock relation-silent,
+  mirroring the sequential blocked configs). `stepMulti_sound` and
+  `stepM_complete` both shipped, both constructive
+  (propext+Quot.sound), axiom-pinned in Audit. Completeness routes the
+  L4 alignment through `stepFn_oblivious` via a new 190-rule sweep
+  (`step_blocked_shape`: a step INTO a blocked config never starts
+  from a stream-consuming shape).
+- **D8 statement notions**: `GoTripleC`/`ProgressExecC`/`GoSpecC` over
+  the `execProg` carrier (pre = single-threaded `InitialSplit`, post =
+  joined final state `.normal`-pinned — main's `.normal` IS
+  "mainNormal" — one stream for schedules + latitude; `ProgressExecC`
+  additionally excludes `.deadlock`: a proven concurrent spec implies
+  deadlock-freedom on every modeled schedule). WITNESS STATUS, per the
+  non-vacuity gate: the full `GoSpecC` instance is the SLICE-5
+  deliverable (this note's own slice plan: "the GoSpecC witness
+  proved") — discharging `∀ ch` needs the concurrent WP or a
+  pool-level `allStreamsOk` analogue, neither slice-2 scope. Slice 2
+  ships KERNEL witnesses instead (`Specs/GoldenForkJoin.lean`): the
+  fork/join rendezvous under three pinned streams (canonical,
+  adversarial, alternating — the scheduler genuinely consumes) all
+  completing `.normal` with the 42 readout, plus the all-asleep
+  two-goroutine program classifying `.deadlock` under two streams.
+  The `GoSpecC` definitions are marked scaffolds in their docstrings.
+- **DESIGNATED-STATEMENT-SET CHANGE**: the five fork/join kernel
+  witnesses join the statement-TCB gate (33 → 38; closures verified
+  Iris-free and relation-free); `StepE`/`StepM` join the gate's
+  forbidden relation set; Challenge/Solution/judge-config extended in
+  sync. **THE COMPARATOR LANDMARK IS OWED AT ARC END** (landmark
+  cadence — deliberately not run in this slice, never part of ci).
+- **Frontend fail-open fixed** (found by the guardrails): a bare
+  builtin STATEMENT (`recover()` as a deferred closure's statement)
+  emitted an undecodable node that took the WHOLE package down; it now
+  quarantines per-decl with a precise reason. The bare-recover
+  statement LOWERING itself is a recorded gap (red pin
+  `spawn-edge/child-recovers`; the value-position form is unaffected
+  and green throughout `close-wake/`).
+
+OWED (recorded, not silently dropped): the Comparator landmark at arc
+end; the slice-5 `GoSpecC` witness + pool ∀-streams checker; `MultiWf`
+PRESERVATION (the foreign-thread `ConfigWf` frame needs a step-level
+`nextAddr` monotonicity lemma the sequential kit does not expose —
+`MultiWf` ships as a marked scaffold, the declared invariant carrier
+for slice 3's detector); the D5 fairness-scope precision note (the
+∀-stream `Terminates` claim for the blocking-discipline class — to be
+made precise when a concurrent `Terminates` is first stated, slice 5);
+the fatal error class (go-of-nil-func); bare-recover-statement
+lowering; select-with-select rendezvous.
+
+Slice-2-tip counts: 1140 exec cases, 1047 pass / 93 fail — the 89
+slice-1-tip fails carried unchanged (zero drift on every prior id)
+plus the 4 deliberate goroutines reds (sched-dependent/first-come —
+slice 4's schedule enumerator; spawn-edge/nil-func-fatal — the fatal
+class; spawn-edge/child-recovers — bare-recover lowering;
+spawn-in-init — init stays sequential this slice); 311 negative, all
+green; 87 machine eval-tests green (82 → 87, the 5 new pool pins:
+rendezvous, multi-goroutine deadlock, D6 main-exit, close-wake,
+nil-spawn refusal); check-bugs green (untriaged 16 → 18, both pins
+recorded); baseline re-pinned in the frontend commit with the zero-
+drift statement.
