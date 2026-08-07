@@ -86,4 +86,14 @@
 #   rather than picking silently; the scheduler arc's slice 4 flips it
 #   via the membership-lane choice envelope. Same class as the floats
 #   refusal pins: permanently red until its slice lands.
-16
+# 2026-08-07 (channels arc slice 2)  16 -> 18: two DELIBERATE red pins
+#   enter with the goroutines corpus (same class as select-multi-ready,
+#   both recorded in the baseline header of the same commit):
+#   goroutines/sched-dependent/first-come (schedule-dependent
+#   observable, membership; the schedule enumerator is slice 4) and
+#   goroutines/spawn-in-init/in-init (go during $pkginit stays
+#   fail-closed while the init phase runs sequentially). The other two
+#   goroutines reds (spawn-edge/nil-func-fatal at the go-run stage,
+#   spawn-edge/child-recovers at frontend-export) are stage-classified
+#   gaps, not fidelity entries.
+18

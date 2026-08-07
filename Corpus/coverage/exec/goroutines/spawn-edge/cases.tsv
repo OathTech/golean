@@ -8,4 +8,10 @@
 # is EXPECTED red on the go side too (fatal, not panic).
 nil-func-fatal	spawnNilFuncFatal	-	panic	go of nil func value	goroutines,channels,nil,panic
 child-panic-aborts	spawnChildPanicAborts	-	panic	child says no	goroutines,channels,panic
+# RED PIN (frontend gap, found by this guardrail): a BARE `recover()`
+# statement has no statement lowering — the frontend quarantines the
+# decl with a precise reason (it used to emit an undecodable node that
+# took the whole package down — the fail-open is fixed; the lowering
+# itself is future work). The recovered-child behavior is green-pinned
+# through the value-position form in goroutines/close-wake/*.
 child-recovers	spawnChildRecovers	-	ok	-	goroutines,channels,recover

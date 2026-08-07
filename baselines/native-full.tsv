@@ -1,18 +1,20 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-06  commit: channels-arc-s1 (round 4: BUG-034/BUG-037 spine migration REVERTED — coordinated-laws-slice disposition)
+# recorded: 2026-08-07  commit: channels-arc-s2 (goroutines + ThreadPool: go statements, spawn, pairing/wake, multi-goroutine deadlock, main-exit)
 #   frontend: native  oracle: go run (strict lane) / go-run membership in the
 #   machine-enumerated observation set (membership lane; go1.26.5 samples)
-# manifest_cases: 1102  pass: 1013  fail: 89
-# Re-pin reason: deliberate, explained regression — the validated
-#   BUG-034/BUG-037 spine migration is reverted because retiring
-#   assignTargetK/assignStoreK and StmtOp.mapLookup/.typeAssertStmt
-#   breaks the shipped WP law families (wp_assign_* incl. the
-#   wp_assign_lit witness; wp_map_lookup under the headline quorum
-#   walk); the law restatement is scheduled with BUG-025's call
-#   write-back as one machine+laws slice. The five pins return to RED
-#   (assign-order/target-check-vs-rhs/{index,nil-field,nil-deref}-target,
-#   multi-assign/comma-ok-forms/{map-oob,assert-nil-field}); zero
-#   drift on all other ids — every other round-4 fix intact.
+# manifest_cases: 1140  pass: 1047  fail: 93
+# Re-pin reason: deliberate coverage change — the ThreadPool machine
+#   (slice 2) makes `go` statements live: the program driver runs the
+#   subject on the pool (runProgramPoolM; single-goroutine programs are
+#   bit-identical per execProg_single_eq_execStmt — verified: ZERO
+#   drift on all 1102 prior ids in this run). 38 new goroutines/ ids:
+#   34 flip PASS; 4 deliberate red pins — sched-dependent/first-come
+#   (membership; schedule enumeration is slice 4),
+#   spawn-edge/nil-func-fatal (gc's "go of nil func value" fatal class,
+#   unmodeled — fail-closed refusal), spawn-edge/child-recovers (bare
+#   recover() statement lowering gap, per-decl quarantine),
+#   spawn-in-init (go during $pkginit stays fail-closed this slice).
+PASS	arrays/array-bounds	-
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
 PASS	arrays/array-copy	-
@@ -492,6 +494,44 @@ PASS	generics/type-set-constraint	-
 PASS	generics/unused-generic-helper	-
 PASS	generics/zero-composite	-
 PASS	generics/zero-values	-
+PASS	goroutines/buffered-wake/cap-one	-
+PASS	goroutines/buffered-wake/fifo	-
+PASS	goroutines/close-wake/receiver	-
+PASS	goroutines/close-wake/receiver-drain-first	-
+PASS	goroutines/close-wake/sender-full-buffer	-
+PASS	goroutines/close-wake/sender-panics	-
+PASS	goroutines/deadlock/after-progress	-
+PASS	goroutines/deadlock/chain	-
+PASS	goroutines/deadlock/mutual	-
+PASS	goroutines/deadlock/with-select	-
+PASS	goroutines/fork-join/args-eval-now	-
+PASS	goroutines/fork-join/buffered	-
+PASS	goroutines/fork-join/closure-capture	-
+PASS	goroutines/fork-join/compute	-
+PASS	goroutines/fork-join/method-callee	-
+PASS	goroutines/fork-join/result-discarded	-
+PASS	goroutines/fork-join/two-workers-own-chans	-
+PASS	goroutines/fork-join/unbuffered	-
+PASS	goroutines/main-exit/blocked-goroutine	-
+PASS	goroutines/main-exit/two-leaked	-
+PASS	goroutines/ping-pong/alternate	-
+PASS	goroutines/ping-pong/cap-zero	-
+PASS	goroutines/pipeline/buffered-stage	-
+PASS	goroutines/pipeline/request-reply	-
+PASS	goroutines/pipeline/two-stage	-
+PASS	goroutines/rendezvous-hb/recv-hb	-
+PASS	goroutines/rendezvous-hb/send-hb	-
+FAIL	goroutines/sched-dependent/first-come	membership
+PASS	goroutines/select-wake/buffered-data	-
+PASS	goroutines/select-wake/closed	-
+PASS	goroutines/select-wake/recv	-
+PASS	goroutines/select-wake/send	-
+PASS	goroutines/spawn-edge/child-panic-aborts	-
+FAIL	goroutines/spawn-edge/child-recovers	frontend-export
+FAIL	goroutines/spawn-edge/nil-func-fatal	go-run
+FAIL	goroutines/spawn-in-init/in-init	lean-observation
+PASS	goroutines/worker-pool/shared-feed	-
+PASS	goroutines/worker-pool/sum	-
 PASS	if/condition-evaluated-once	-
 PASS	if/else-if-first-match	-
 PASS	if/if-init-scope	-

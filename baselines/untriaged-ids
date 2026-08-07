@@ -32,3 +32,16 @@ strings/rune-slice-to-string-copy
 strings/rune-string-conversion
 strings/string-to-rune-copy
 structs/tag-pointer-conversion
+# goroutines/sched-dependent/first-come: DELIBERATE slice-4 red pin
+#   (channels arc slice 2): a schedule-DEPENDENT observable (which
+#   sender commits first is L1 latitude, admitted set {12,21}) declared
+#   membership — the enumerator does not explore SCHEDULES until
+#   slice 4's enumerator-over-schedules, so the membership run refuses
+#   loudly at the spawn. Not a fidelity bug; flips when slice 4 lands.
+goroutines/sched-dependent/first-come
+# goroutines/spawn-in-init/in-init: DELIBERATE fail-closed refusal pin
+#   (channels arc slice 2 scope): `go` during $pkginit is legal Go but
+#   the init phase runs on the SEQUENTIAL driver this slice — the spawn
+#   position refuses with a precise .unsupported. Flips when a later
+#   slice runs init on the pool.
+goroutines/spawn-in-init/in-init

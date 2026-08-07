@@ -462,6 +462,14 @@ partial def decodeStmt (results : Array Param) (path : String) (json : Json) : L
       let args ← StrictJson.array s!"{path}.args" (← StrictJson.field path obj "args")
       pure (.deferCall callee
         (← args.mapIdxM (fun i a => decodeExpr s!"{path}.args[{i}]" a)))
+  | "go" =>
+      -- `go f(args)` (channels arc slice 2): the defer wire shape — the
+      -- callee and arguments evaluate at the go statement, in the
+      -- spawning goroutine; the spawn itself is the pool's step.
+      let callee ← decodeExpr s!"{path}.callee" (← StrictJson.field path obj "callee")
+      let args ← StrictJson.array s!"{path}.args" (← StrictJson.field path obj "args")
+      pure (.goStmt callee
+        (← args.mapIdxM (fun i a => decodeExpr s!"{path}.args[{i}]" a)))
   | "panic" =>
       -- The payload's `any`-conversion: a "wrap" type wraps via the
       -- machine's `toInterface` (its `dynamicTypeName?` fails closed on

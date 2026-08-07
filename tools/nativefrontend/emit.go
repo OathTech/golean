@@ -1587,6 +1587,18 @@ func (e *emitter) emitStmt(s ast.Stmt) (any, error) {
 						return e.emitClearStmt(call)
 					case "close":
 						return e.emitCloseStmt(call)
+					default:
+						// Any other builtin in STATEMENT position (a bare
+						// `recover()`, `print`, ...) has no statement
+						// lowering: refuse HERE so the decl quarantines
+						// per-function. The old fall-through emitted the
+						// builtin's EXPRESSION node inside an expr
+						// statement, which the decoder rejects as a
+						// whole-package error (found by
+						// goroutines/spawn-edge/child-recovers, whose bare
+						// deferred recover() took its package siblings
+						// down — a fail-open, not a semantics gap).
+						return nil, unsup("builtin %s in statement position", id.Name)
 					}
 				}
 			}
@@ -1689,6 +1701,31 @@ func (e *emitter) emitStmt(s ast.Stmt) (any, error) {
 			return nil, err
 		}
 		return map[string]any{"stmt": "defer", "callee": callee, "args": args}, nil
+	case *ast.GoStmt:
+		// `go f(args)` (channels arc slice 2): the function value and
+		// parameters evaluate NOW, in the spawning goroutine (spec §Go
+		// statements) — the defer wire shape with a "go" head; the
+		// machine's pool performs the spawn. Builtin callees are
+		// restricted as for expression statements and none is modeled in
+		// spawn position — fail closed.
+		if id, ok := st.Call.Fun.(*ast.Ident); ok {
+			if _, isBuiltin := e.info.Uses[id].(*types.Builtin); isBuiltin {
+				return nil, unsup("go of builtin %s", id.Name)
+			}
+		}
+		callee, err := e.emitExpr(st.Call.Fun)
+		if err != nil {
+			return nil, err
+		}
+		var gsig *types.Signature
+		if tv, ok := e.typesEntry(st.Call.Fun); ok {
+			gsig, _ = tv.Type.Underlying().(*types.Signature)
+		}
+		args, err := e.emitCallArgs(gsig, st.Call)
+		if err != nil {
+			return nil, err
+		}
+		return map[string]any{"stmt": "go", "callee": callee, "args": args}, nil
 	case *ast.LabeledStmt:
 		return e.emitLabeled(st)
 	case *ast.BranchStmt:
