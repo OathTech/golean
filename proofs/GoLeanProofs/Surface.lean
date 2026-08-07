@@ -625,10 +625,15 @@ Adequacy.lean records that strengthening) PLUS, since slice 3's
 segment-HB detector, `.raceDetected`: `execProg` now runs the
 detecting loop, and this definition's "nothing but `.ok .normal` or
 `.fuelOut`" excludes the race refusal WITHOUT restating — a proven
-concurrent spec implies deadlock- AND race-freedom on every modeled
-schedule (scope caveat: "modeled schedule" is the registry-point path
-set — BUG-040 records the post-spawn decision point the L1 envelope
-still lacks). What is genuinely NEW versus the sequential notion is
+concurrent spec implies deadlock-freedom and RACE-REFUSAL-freedom (the
+detector's refusal never fires — scoped by the detector's recorded
+under-approximations, Race.lean's U1–U3 inventory) on every modeled
+schedule ("modeled schedule" = the registry-point path set; the
+post-spawn decision point joined it when BUG-040 was FIXED at slice 4
+— the `.spawned` boundary is a live L1 site, so child-first
+interleavings are in the envelope; stale "still lacks" caveat
+corrected at the S5 audit response). What is genuinely NEW versus the
+sequential notion is
 the CARRIER: the guarantee holds of `execProg` under EVERY modeled
 schedule, not of the single sequential run. (Wording corrected at the
 S2 audit response — the first form claimed "strictly larger
@@ -651,8 +656,12 @@ def ProgressExecC (types : TypeEnv) (funcs : Array Func)
 /-- **The full concurrent surface judgment** (D8): triple + safety over
 the pool carrier — "runs safely on every schedule (no deadlock, no
 abort), and every completing run delivers `Q` in the joined final state
-with the frame intact". See the witness-status note above: slice 2
-ships no `GoSpecC` instance; the discharge is the slice-5 deliverable. -/
+with the frame intact". INHABITED since slice 5 — `goldenSpecC`
+(`Specs/GoldenSurface.lean`, via `goSpecC_of_goSpec` below; the
+sequential-degenerate lane) — with the fork/join ∀-schedule family
+discharging the `∀ ch` quantifier at the seed; see the witness-status
+note above for the two lanes and the recorded remaining debt (the
+frame-quantified genuinely-spawning instance). -/
 def GoSpecC (types : TypeEnv) (funcs : Array Func) (methods : Array MethodInfo)
     (env₀ : LocalEnv)
     (P : HProp) (prog : Stmt) (Q : HProp) : Prop :=

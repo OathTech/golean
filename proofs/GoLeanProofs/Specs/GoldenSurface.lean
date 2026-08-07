@@ -174,4 +174,55 @@ theorem goldenSpecC :
       sliceLowered.methods outEnv outCell0 goldenDriver outCell2 :=
   goSpecC_of_goSpec goldenSpec
 
+
+/-- **The pool-carrier first-order readout twin of `goldenSpecC`** (S5
+audit response — the doctrine's rung-2 readout, on the SAME carrier as
+the judgment it reads out): every `.normal` `execProg` completion of
+the seeded golden driver leaves the output cell holding 2. Derived by
+pinning the pool run to the sequential one — `goldenSpec`'s
+`ProgressExec` half confines the sequential run to the transferable
+classes, `execProg_single_eq_execStmt` transfers it verbatim, and the
+sequential readout `goldenReturnsTwo` reads the cell. -/
+theorem goldenReturnsTwoC :
+    ∀ (fuel : Nat) (ch : Choices) (σf : ExecState) (ch' : Choices),
+      execProg fuel outEnv goldenOut ch goldenDriver
+        = .ok (.normal σf, ch') →
+      loadLoc σf (.base ⟨0⟩) = .ok (.int 2 .int) := by
+  intro fuel ch σf ch' hrun
+  have hspec : GoSpec sliceLowered.typeDefs.toList sliceLowered.funcs
+      sliceLowered.methods outEnv outCell0 goldenDriver outCell2 :=
+    GoLean.Surface.goldenSpec
+  have hret : ∀ (fuel : Nat) (ch : Choices) (σf : ExecState) (ch' : Choices),
+      execStmt fuel outEnv goldenOut ch goldenDriver = .ok (.normal σf, ch') →
+      loadLoc σf (.base ⟨0⟩) = .ok (.int 2 .int) :=
+    GoLean.Surface.goldenReturnsTwo
+  have hsat : sat (heapletOf [(.base ⟨0⟩, ⟨some (.int .int), .int 0 .int⟩)])
+      outCell0 := rfl
+  have hsplit := InitialSplit.noFrame (P := outCell0)
+    (hp := [(.base ⟨0⟩, ⟨some (.int .int), .int 0 .int⟩)]) (na := 1)
+    (funcs := sliceLowered.funcs) (env₀ := outEnv) (prog := goldenDriver)
+    hsat (by decide +kernel)
+  rcases hspec.2 _ _ _ _ hsplit fuel ch with ⟨σs, chs, hseq⟩ | hseq
+  · have hpool := execProg_single_eq_execStmt hseq trivial
+    have hrun' : execProg fuel outEnv
+        { types := sliceLowered.typeDefs.toList,
+          functions := sliceLowered.funcs, methods := sliceLowered.methods,
+          heap := [(.base ⟨0⟩, ⟨some (.int .int), .int 0 .int⟩)],
+          nextAddr := 1 } ch goldenDriver = .ok (.normal σf, ch') := hrun
+    rw [hrun'] at hpool
+    injection hpool with hpair
+    injection hpair with hout hch
+    injection hout with hσ
+    subst hσ
+    subst hch
+    exact hret fuel ch σf ch' hseq
+  · have hpool := execProg_single_eq_execStmt hseq trivial
+    have hrun' : execProg fuel outEnv
+        { types := sliceLowered.typeDefs.toList,
+          functions := sliceLowered.funcs, methods := sliceLowered.methods,
+          heap := [(.base ⟨0⟩, ⟨some (.int .int), .int 0 .int⟩)],
+          nextAddr := 1 } ch goldenDriver = .ok (.normal σf, ch') := hrun
+    rw [hrun'] at hpool
+    cases hpool
+
 end GoLean.Surface

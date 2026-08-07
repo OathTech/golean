@@ -279,8 +279,10 @@ theorem forkJoinDeadlockAdversarial :
 /-! ## The slice-5 ∀-SCHEDULE fork/join witnesses: the `∀ ch`
 quantifier discharged — EVERY choice stream (schedules + latitude,
 D8's single stream) completes the fork/join rendezvous at main's
-`.normal` terminal with the 42 readout; deadlock- and race-freedom on
-every modeled schedule as first-order corollaries; and the
+`.normal` terminal with the 42 readout; deadlock-freedom and
+RACE-REFUSAL-freedom (the detector never refuses — scoped by the
+detector's recorded under-approximations, Race.lean U1–U3) on every
+modeled schedule as first-order corollaries; and the
 `TerminatesNormallyC` instance (one fuel bound, every stream). Plus
 `goldenSpecC`: the full concurrent surface judgment `GoSpecC`,
 inhabited on the golden program via the sequential-conservation lane. -/
@@ -301,5 +303,11 @@ open GoLean.Iris.GoldenSlice in
 theorem goldenSpecC :
     GoSpecC sliceLowered.typeDefs.toList sliceLowered.funcs
       sliceLowered.methods outEnv outCell0 goldenDriver outCell2 := sorry
+
+theorem goldenReturnsTwoC
+    (fuel : Nat) (ch : Choices) (σf : ExecState) (ch' : Choices)
+    (hrun : execProg fuel outEnv goldenOut ch goldenDriver
+      = .ok (.normal σf, ch')) :
+    loadLoc σf (.base ⟨0⟩) = .ok (.int 2 .int) := sorry
 
 end Judge

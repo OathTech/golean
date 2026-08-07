@@ -572,6 +572,57 @@ private def poolProgram : GoCore.Program := {
     poolNilSpawnFunction]
 }
 
+
+/-! ### The D5-precision poller family (slice-5 audit response, MAJOR):
+the DISCRIMINATING record for the stream-vs-branch distinction. Main
+spawns a sender on `done` and a select-default POLLER on `poll` (which
+never fires), then receives from `done`. EVERY finite stream terminates
+main-`.normal` 42 — but the minimum fuel grows without bound in the
+stream length (probed: ≈9n+21 for streams `[2]*n`, which keep picking
+the poller), so NO uniform fuel bound exists and `TerminatesNormallyC`
+is FALSE for this program even though "no (finite) stream diverges"
+holds. ∀-stream facts quantify only the eventually-canonical branches
+of the pick tree; the exact `TerminatesNormallyC` characterization is
+the FINITE PICK TREE (docs/2026-08-07_fairness-precision-note.md §1).
+The two pins fix one fuel and exhibit the growth: the shorter stream
+completes, the longer one exhausts the same fuel. -/
+
+private def pollerSendOneFunction : GoCore.Func := {
+  id := ⟨"pollerSendOne_F"⟩,
+  args := #[{ id := "ch", typ := .chan .both .int }],
+  results := #[],
+  body := .seqn #[.chanSend (.var "ch") (.intLit 42) .int]
+}
+
+private def pollerLoopFunction : GoCore.Func := {
+  id := ⟨"pollerLoop_F"⟩,
+  args := #[{ id := "poll", typ := .chan .both .int }],
+  results := #[],
+  body := .while (.boolLit true)
+    (.selectStmt #[(.recv #[] (.var "poll") .int, .seqn #[])]
+      (some (.seqn #[])))
+}
+
+private def pollerMainFunction : GoCore.Func := {
+  id := ⟨"pollerMain_F"⟩,
+  args := #[],
+  results := #[coreParam "z"],
+  body := .block
+    #[{ id := "pollv", typ := .chan .both .int },
+      { id := "donev", typ := .chan .both .int }]
+    #[
+      .makeChan (.var "pollv") .int none,
+      .makeChan (.var "donev") .int none,
+      .goStmt (.funcVal ⟨"pollerSendOne_F"⟩ #[]) #[.var "donev"],
+      .goStmt (.funcVal ⟨"pollerLoop_F"⟩ #[]) #[.var "pollv"],
+      .chanRecv #[.var "z"] (.var "donev") .int
+    ]
+}
+
+private def pollerProgram : GoCore.Program := {
+  funcs := #[pollerSendOneFunction, pollerLoopFunction, pollerMainFunction]
+}
+
 /-! ### Waiter-queue priority (S2 audit response, major findings):
 gc consults parked waiters BEFORE the buffer. Stream-pinned pool runs
 — deterministic given the stream — discriminate handoff/refill from
@@ -1923,6 +1974,12 @@ def main : IO UInt32 := do
     (GoCore.Machine.runProgramPoolM 100000 poolProgram "poolCloseWakeMain_F" #[]) 55)
   passed := passed && (← expectErrorStatus "GoCore pool nil spawn callee fail-closed (gc fatal unmodeled)"
     (GoCore.Machine.runProgramPoolM 100000 poolProgram "poolNilSpawn_F" #[]) "unsupported")
+  passed := passed && (← expectIntResult "GoCore poller family: shorter stream completes at fuel 165 (min 165 at [2]*16)"
+    (GoCore.Machine.runProgramPoolM 165 pollerProgram "pollerMain_F" #[]
+      (List.replicate 16 2)) 42)
+  passed := passed && (← expectErrorStatus "GoCore poller family: longer stream exhausts the same fuel (min 309 at [2]*32 — min fuel grows with the stream; no uniform bound)"
+    (GoCore.Machine.runProgramPoolM 165 pollerProgram "pollerMain_F" #[]
+      (List.replicate 32 2)) "fuel-out")
   passed := passed && (← expectIntResult "GoCore pool waiter priority: buffered send hands off to the parked receiver (len 0; gc chansend recvq-first)"
     (GoCore.Machine.runProgramPoolM 100000 prioProgram "prioSendHandoffMain_F" #[] [1, 1]) 100)
   passed := passed && (← expectIntResult "GoCore pool waiter priority: receive refills from the parked sender (len preserved; gc recv same-slot)"

@@ -184,6 +184,16 @@ open Lean in
      `GoLean.Iris.StepEC, `GoLean.Iris.GoPrimStepC]
   let isRelation : Name → Bool := fun n =>
     forbiddenRoots.any (fun r => r == n || r.isPrefixOf n)
+  -- FAIL-CLOSED existence check on the forbidden set itself (S5 audit
+  -- response): the roots are raw name literals — a rename would
+  -- silently drop a relation from the check (the 2026-07-23
+  -- purity-scan rename-hole class). Mirror the designated list's
+  -- missing-name guard: every root must resolve in the environment.
+  for r in forbiddenRoots do
+    let some _ := env.find? r
+      | throwError "statement-TCB gate: forbidden relation root {r} is \
+          MISSING (renamed without re-pointing the gate?)"
+
   -- The designated headline theorems (the summit family + the golden and
   -- recover surfaces + the math bridge). Extend this list when a new
   -- headline theorem is claimed; never remove without a recorded reason.
@@ -254,8 +264,10 @@ open Lean in
     -- Channels arc slice 5 (2026-08-07): the ∀-SCHEDULE fork/join
     -- witnesses (the pool ∀-streams kernel checker discharges the
     -- `∀ ch` quantifier — every schedule + latitude stream completes
-    -- the rendezvous at .normal/42; deadlock- and race-freedom
-    -- first-order corollaries; the TerminatesNormallyC instance), and
+    -- the rendezvous at .normal/42; deadlock-freedom and
+    -- race-REFUSAL-freedom (the detector never refuses; scoped by its
+    -- recorded U1–U3 under-approximations) first-order corollaries;
+    -- the TerminatesNormallyC instance), and
     -- the GoSpecC inhabitation witness `goldenSpecC` (the
     -- conservation-transfer lane; the genuinely-spawning
     -- frame-quantified instance is the recorded successor debt —
@@ -267,7 +279,12 @@ open Lean in
     ``GoLean.Surface.forkJoinNoDeadlock,
     ``GoLean.Surface.forkJoinNoRace,
     ``GoLean.Surface.forkJoinTerminatesNormallyC,
-    ``GoLean.Surface.goldenSpecC]
+    ``GoLean.Surface.goldenSpecC,
+    -- S5 audit response: the pool-carrier first-order readout twin of
+    -- `goldenSpecC` (the rung-2 readout on the judgment's own carrier
+    -- — the audit found the golden readouts were sequential-carrier
+    -- only). 43 → 44.
+    ``GoLean.Surface.goldenReturnsTwoC]
   let mut lines : Array String := #[]
   let mut violations : Array String := #[]
   for t in designated do
@@ -437,6 +454,8 @@ open Lean in
 #guard_msgs in #print axioms GoLean.Surface.forkJoinTerminatesNormallyC
 /-- info: 'GoLean.Surface.goldenSpecC' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Surface.goldenSpecC
+/-- info: 'GoLean.Surface.goldenReturnsTwoC' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Surface.goldenReturnsTwoC
 -- The MultiWf discharge (the slice-2 scaffold's owed preservation) and
 -- the pool ∀-streams checker soundness kit.
 /-- info: 'GoLean.GoCore.Machine.stepMulti_wf' depends on axioms: [propext, Classical.choice, Quot.sound] -/

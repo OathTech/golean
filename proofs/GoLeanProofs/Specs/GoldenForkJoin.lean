@@ -2,9 +2,9 @@ import GoLeanProofs.Surface
 import GoLean.GoCore.MultiStreams
 
 /-!
-# The fork/join kernel witnesses (channels arc slice 2)
+# The fork/join kernel witnesses (channels arc slices 2 + 5)
 
-The slice-2 witnesses for the concurrent carrier (see the witness-status
+The witnesses for the concurrent carrier (see the witness-status
 note in `Surface.lean`'s D8 section): a hand-built fork/join program —
 main spawns a worker, the worker sends 42 over an unbuffered channel,
 main receives it into the pinned output cell — KERNEL-EVALUATED through
@@ -17,9 +17,11 @@ the distinctness argument re-recorded at `forkJoinStreamAlternating`;
 stream literals and readouts unchanged), plus a
 multi-goroutine DEADLOCK program classified `.deadlock` the same way.
 
-These are rung-1, pinned-stream readouts — deliberately NOT `GoSpecC`
-instances (the `∀ ch` schedule quantifier's discharge is the slice-5
-deliverable, per the design's slice plan). What they pin, non-vacuously:
+The slice-2 witnesses are rung-1, pinned-stream readouts; SLICE 5
+added the ∀-SCHEDULE family below (the `∀ ch` quantifier discharged by
+the pool ∀-streams kernel checker) which subsumes them — they are
+deliberately KEPT byte-identical (designated-set growth by extension,
+never restatement). What the pinned-stream witnesses pin, non-vacuously:
 the spawn step forks, the arrival intercept pairs the rendezvous, the
 handoff delivers the value, main's exit joins, and the all-asleep state
 classifies as the deadlock terminal — end to end, through the kernel.

@@ -6135,13 +6135,10 @@ theorem step_preserves_wf {c : Config} {σ : ExecState} {c' : Config}
   rw [ht]
   exact step_preserves_iters h hi
 
-/-- Step-level allocator monotonicity — the `MultiWf` discharge's
-foreign-thread frame lemma (slice-3 build log's recorded route),
-projected out of the extended `step_preserves_wf_loc`. -/
-theorem step_nextAddr_mono {c : Config} {σ : ExecState} {c' : Config}
-    {σ' : ExecState} (h : Step c σ c' σ')
-    (hs : StateWf σ) (hc : ConfigWf σ.nextAddr c) :
-    σ.nextAddr ≤ σ'.nextAddr :=
-  (step_preserves_wf_loc h hs hc).2.2.2
+-- (S5 audit response: the standalone `step_nextAddr_mono` projection
+-- that briefly lived here was DELETED as born-unused — the `MultiWf`
+-- discharge consumes the `σ.nextAddr ≤ σ'.nextAddr` conjunct of
+-- `step_preserves_wf_loc` directly, and the no-inert-scaffolding rule
+-- forbids an unconsumed twin whose docstring claimed the role.)
 
 end GoLean.GoCore.Machine

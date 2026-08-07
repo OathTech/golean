@@ -44,7 +44,8 @@
     "Judge.forkJoinNoDeadlock",
     "Judge.forkJoinNoRace",
     "Judge.forkJoinTerminatesNormallyC",
-    "Judge.goldenSpecC"
+    "Judge.goldenSpecC",
+    "Judge.goldenReturnsTwoC"
   ],
   "permitted_axioms": [
     "propext",

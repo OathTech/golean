@@ -297,4 +297,11 @@ theorem goldenSpecC :
       sliceLowered.methods outEnv outCell0 goldenDriver outCell2 :=
   GoLean.Surface.goldenSpecC
 
+theorem goldenReturnsTwoC
+    (fuel : Nat) (ch : Choices) (σf : ExecState) (ch' : Choices)
+    (hrun : execProg fuel outEnv goldenOut ch goldenDriver
+      = .ok (.normal σf, ch')) :
+    loadLoc σf (.base ⟨0⟩) = .ok (.int 2 .int) :=
+  GoLean.Surface.goldenReturnsTwoC fuel ch σf ch' hrun
+
 end Judge

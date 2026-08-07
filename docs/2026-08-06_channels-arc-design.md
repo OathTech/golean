@@ -1467,20 +1467,26 @@ build, recorded here:
   into an instance. Discharge shape: kernel certificate at one fuel +
   the new `execProgLoop_mono` (the pool twin of `execStmt_mono`).
 - **THE D5 FAIRNESS-PRECISION NOTE**
-  (`docs/2026-08-07_fairness-precision-note.md`): the assumption-free
-  ∀-stream lane is EXACTLY the finite-schedule-tree class (König —
-  the pool branches finitely, so "no infinite run" ⟺ "uniform fuel
-  bound"); the fork/join instance is the proved class membership; the
-  general syntactic-discipline ⇒ finite-tree lemma is a recorded
-  prose scaffold (no Lean def — no consumer, no inert scaffolding).
-  **Correction recorded**: D5's "starvation … not expressible
-  race-free without atomics" is FALSE for the busy-wait-through-the-
-  registry shape — a select-with-default poll loop is race-free,
-  atomics-free, live since slice 4, and starves on adversarial
-  streams; no shipped claim is affected (such programs are correctly
-  outside `TerminatesNormallyC`), but the `FairStream` additive lane
-  is now recorded as needed for select-default polling too, not only
-  atomics.
+  (`docs/2026-08-07_fairness-precision-note.md`; restated here as
+  CORRECTED at the S5 audit response — the first form of this bullet
+  and the note said "no infinite [stream] run ⟺ uniform fuel bound",
+  which is false in the ⟸ direction): the assumption-free ∀-stream
+  lane is EXACTLY the FINITE-PICK-TREE class —
+  `TerminatesNormallyC` ⟺ the pick tree is finite ∧ every leaf is
+  main-`.normal` (König over the pool's finite branching; the ∃N∀
+  form is tree-equivalent by truncate-and-pad). Streams (`Choices`,
+  a finite list) realize only the eventually-canonical branches, a
+  PROPER subset of the tree — "no stream diverges" does NOT give a
+  uniform bound; the discriminating poller family (every finite
+  stream terminates, min fuel grows ≈9n+21 in the stream) is
+  eval-pinned. The fork/join instance is the proved class membership;
+  no syntactic discipline is claimed sufficient (the note's §3
+  records the known atomics-free infinite-tree idioms — select-default
+  polling, closed-channel drains, buffered self-cycles, unbounded
+  ping-pong — expressible since slice 2, hence D5's "not expressible
+  race-free without atomics" was false when written); the `FairStream`
+  additive lane is recorded as covering all of them. No shipped Lean
+  statement affected (`allStreamsOkPool` certifies the TREE).
 - **MultiWf DISCHARGED by the recorded route** (slice-3 disposition,
   executed): `applyChanOp_wf`, `applySelect_wf` and
   `step_preserves_wf_loc` conclusions gained the
@@ -1543,3 +1549,109 @@ DPOR for the three stay-strict confluent candidates; the NPDRF
 obligation's remaining obstructions; the `FairStream` additive lane
 (now recorded as covering select-default polling too — the D5
 precision note).
+
+### S5 audit response (2026-08-07, pre-merge audit of this slice)
+
+Twelve confirmed findings (two refuted), all addressed on the branch;
+severities as verified (1 major + 6 minor + 5 note):
+
+- **MAJOR (claim-precision — and this slice's deliverable IS the
+  claim): the fairness note's König "iff" was FALSE in the ⟸
+  direction.** `Choices` is a FINITE list (`consume [] b = (0, [])`),
+  so ∀-stream quantifies only the eventually-canonical branches of the
+  pick tree — a proper subset — and "no stream diverges" does NOT
+  yield a uniform fuel bound. The verifier exhibited the refuting
+  family (a select-default poller beside a sender: every finite stream
+  terminates, min fuel grows unboundedly in the stream). FIXED: the
+  note's headline (and this log's restatement above, corrected in
+  place) is now the TREE characterization — `TerminatesNormallyC` ⟺
+  finite pick tree ∧ every leaf main-`.normal` (∃N∀ ⟺ tree by
+  truncate-and-pad) — with the stream-vs-branch distinction spelled
+  out (it is exactly the inference a future "discipline ⇒ no diverging
+  stream ⇒ terminates" lemma would wrongly rest on, and the note now
+  says so), the first form's internal inconsistency with its own §3
+  tree reading recorded, and the counterexample reproduced at MACHINE
+  level and EVAL-PINNED (the two "poller family" pins: same fuel 165,
+  stream `[2]*16` completes / `[2]*32` exhausts; machine-probed min
+  fuel ≈9n+21). No Lean statement was affected — `allStreamsOkPool`
+  certifies the TREE, and the checker/soundness kit never used the
+  stream form.
+- **MINOR (×2 same root): stale-prose de-scaffold misses.**
+  `GoSpecC`'s own defining docstring still said "slice 2 ships no
+  `GoSpecC` instance" while pointing at the witness-status note that
+  now says the opposite; `GoldenForkJoin.lean`'s header still called
+  its witnesses "deliberately NOT GoSpecC instances (the slice-5
+  deliverable)". Both corrected (the module title now says slices
+  2 + 5; the pinned-stream witnesses recorded as kept-byte-identical
+  and subsumed by the ∀-schedule family). Audit.lean's slice-2
+  designated-list comment left as-is (superseded in place, per the
+  verifier).
+- **MINOR: "race-freedom" glosses on `forkJoinNoRace`.** The theorem
+  says the DETECTOR never refuses; the new Challenge section docstring
+  and the Audit designated-list comment upgraded that to race-freedom
+  simpliciter, silently absorbing the detector's recorded fail-open
+  under-approximations (Race.lean U1–U3; NPDRF.lean says outright that
+  ¬refusal ⇏ go_mem-DRF). Both glosses corrected to
+  race-REFUSAL-freedom with the U1–U3 scope named; `ProgressExecC`'s
+  docstring got the same precision in the same edit.
+- **MINOR: `forbiddenRoots` was unvalidated** — raw name literals,
+  no existence check, no anchors: a rename would silently drop a
+  relation from the statement-TCB check (the purity-scan rename-hole
+  class). FIXED: the gate now fail-closes on a missing forbidden root
+  (mirroring the designated list's guard); verified by negative test
+  (a bogus root fails the build with the new message).
+- **MINOR (×2, one root): the fairness note's spinner taxonomy claimed
+  an exhaustiveness it lacked** ("exactly two shapes" — park-and-wake-
+  forever spinners are a third, and an infinite branch need not
+  contain the first two at all: the unbuffered ping-pong), **and its
+  "exact sufficient discipline" was NOT sufficient** (closed-channel
+  drain loops and single-goroutine buffered self-cycles satisfy all
+  four conditions with infinite trees). FIXED in the rewritten §3: the
+  only exact criterion is the finite pick tree; the known
+  infinite-tree idioms are listed WITHOUT an exhaustiveness claim;
+  membership is per-program (the kernel checker); the general
+  syntactic lemma must prove tree-finiteness directly.
+- **MINOR: misdating** — the note credited slice 4 ("made
+  select-with-default and the L2 site real") for the poller idiom's
+  liveness. Select-with-default is a slice-1 machine step, `go` is
+  slice 2, and a one-clause select never touches L2 — so D5's
+  parenthetical was false WHEN WRITTEN (slice 2), not newly falsified.
+  Corrected in §3 with the attribution.
+- **MINOR: `ProgressExecC`'s scope caveat was stale** ("BUG-040
+  records the post-spawn decision point the L1 envelope still lacks")
+  — BUG-040 was fixed in slice 4 and the caveat now rides a designated
+  statement's meaning (`goldenSpecC`). Corrected: the `.spawned`
+  boundary is recorded as a live L1 site with the correction dated.
+- **NOTE: `step_nextAddr_mono` was dead code** (born-unused, its
+  docstring claiming the MultiWf-discharge role that
+  `step_preserves_wf_loc`'s conjunct actually plays, unanchored).
+  DELETED per the no-inert-scaffolding rule, with a tombstone comment;
+  the discharge path is unchanged.
+- **NOTE: `goldenSpecC` had no same-carrier readout.** Added
+  `goldenReturnsTwoC` — every `.normal` `execProg` completion of the
+  seeded golden driver leaves the cell at 2 (derived via
+  `ProgressExec` + the conservation transfer + the sequential
+  readout) — DESIGNATED (44th statement), axiom-pinned,
+  Challenge/Solution/judge-config synced, and named in the
+  witness-status note.
+- **NOTE (decision item for the merge sign-off, not a fix): the
+  Comparator landmark deferral.** CLAUDE.md's step-2 trigger ("added
+  or changed a designated statement") is literally satisfied by this
+  branch (38 → 44); the deferral to arc end follows the slices-2/4
+  precedent and is recorded in three tracked places — but it is now
+  FOUR slices deep and covers all eleven concurrent designated
+  statements, none of which has reached `main` with a comparator
+  replay. Explicitly flagged here for the pre-merge sign-off to decide
+  (run at arc end vs. before this merge), rather than inherited
+  silently.
+
+Refuted (no action): the judge-config wholesale-reindent claim; the
+LangC-obstruction-scope claim (the recorded obstruction covers the
+scheduling-granularity gap).
+
+Post-response counts: 111 eval tests green (109 → 111, the two poller
+pins); designated set 44 (the slice's 5 plus the audit-response
+readout twin; the original 38 byte-identical throughout); corpus
+unchanged (1193 exec / 311 negative, zero drift — no frontend or
+interpreter behavior changed); check-bugs green; proofs + Audit gate
+green with the new fail-closed forbidden-roots guard.
