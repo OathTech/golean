@@ -1,0 +1,11 @@
+# id	subject	args	expected_status	expected_reason	features
+# RED PIN (permanent fail-closed refusal until the fatal class is
+# modeled): go-of-nil-func is a runtime FATAL in the spawner ("fatal
+# error: go of nil func value", exit 2 — probed 2026-08-07, refuting
+# the machine-shape note's child-panic analysis). Neither harness
+# status class (ok|panic|deadlock) describes a non-panic fatal; the
+# machine refuses the nil spawn callee with .unsupported and this row
+# is EXPECTED red on the go side too (fatal, not panic).
+nil-func-fatal	spawnNilFuncFatal	-	panic	go of nil func value	goroutines,channels,nil,panic
+child-panic-aborts	spawnChildPanicAborts	-	panic	child says no	goroutines,channels,panic
+child-recovers	spawnChildRecovers	-	ok	-	goroutines,channels,recover

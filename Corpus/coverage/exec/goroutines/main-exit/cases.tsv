@@ -1,0 +1,3 @@
+# id	subject	args	expected_status	expected_reason	features
+blocked-goroutine	mainExitLeavesBlockedGoroutine	-	ok	-	goroutines,channels
+two-leaked	mainExitLeavesTwo	-	ok	-	goroutines,channels

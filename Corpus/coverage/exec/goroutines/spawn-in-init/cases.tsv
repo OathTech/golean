@@ -1,0 +1,6 @@
+# id	subject	args	expected_status	expected_reason	features
+# RED PIN (deliberate fail-closed refusal): `go` inside $pkginit is
+# refused this slice — the init phase runs sequentially and the
+# sequential spawn arm is .unsupported (charter D-scope). The case is
+# legal Go (init may launch goroutines) and go run returns 3.
+in-init	spawnInInit	-	ok	-	goroutines,channels,init

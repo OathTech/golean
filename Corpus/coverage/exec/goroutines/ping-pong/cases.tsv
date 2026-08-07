@@ -1,0 +1,3 @@
+# id	subject	args	expected_status	expected_reason	features
+alternate	pingPong	-	ok	-	goroutines,channels,loops
+cap-zero	pingPongCapZero	-	ok	-	goroutines,channels,make

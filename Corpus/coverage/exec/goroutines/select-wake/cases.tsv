@@ -1,0 +1,5 @@
+# id	subject	args	expected_status	expected_reason	features
+recv	selectWakeRecv	-	ok	-	goroutines,channels,select
+send	selectWakeSend	-	ok	-	goroutines,channels,select
+closed	selectWakeClosed	-	ok	-	goroutines,channels,select,close
+buffered-data	selectWakeBufferedData	-	ok	-	goroutines,channels,select,make

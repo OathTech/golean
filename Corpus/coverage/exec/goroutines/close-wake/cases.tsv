@@ -1,0 +1,5 @@
+# id	subject	args	expected_status	expected_reason	features
+receiver	closeWakesReceiver	-	ok	-	goroutines,channels,close,comma_ok
+receiver-drain-first	closeWakesReceiverDrainFirst	-	ok	-	goroutines,channels,close,comma_ok
+sender-panics	closeWakesSenderPanics	-	ok	-	goroutines,channels,close,recover
+sender-full-buffer	closeWakesSenderFullBuffer	-	ok	-	goroutines,channels,close,recover

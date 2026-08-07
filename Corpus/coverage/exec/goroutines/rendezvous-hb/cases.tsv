@@ -1,0 +1,3 @@
+# id	subject	args	expected_status	expected_reason	features
+send-hb	rendezvousSendHB	-	ok	-	goroutines,channels,globals
+recv-hb	rendezvousRecvHB	-	ok	-	goroutines,channels,globals

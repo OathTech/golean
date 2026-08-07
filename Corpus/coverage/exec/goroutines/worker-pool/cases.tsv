@@ -1,0 +1,3 @@
+# id	subject	args	expected_status	expected_reason	features
+sum	workerPoolSum	-	ok	-	goroutines,channels,closures
+shared-feed	workerPoolSharedFeed	-	ok	-	goroutines,channels,range,close

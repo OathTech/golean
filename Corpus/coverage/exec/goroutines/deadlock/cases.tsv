@@ -1,0 +1,5 @@
+# id	subject	args	expected_status	expected_reason	features
+mutual	deadlockMutual	-	deadlock	-	goroutines,channels,deadlock
+chain	deadlockChain	-	deadlock	-	goroutines,channels,deadlock
+after-progress	deadlockAfterProgress	-	deadlock	-	goroutines,channels,deadlock
+with-select	deadlockWithSelect	-	deadlock	-	goroutines,channels,select,deadlock

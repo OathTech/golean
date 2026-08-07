@@ -1,0 +1,9 @@
+# id	subject	args	expected_status	expected_reason	features
+unbuffered	forkJoinUnbuffered	-	ok	-	goroutines,channels,make
+buffered	forkJoinBuffered	-	ok	-	goroutines,channels,make
+compute	forkJoinCompute	-	ok	-	goroutines,channels,loops
+two-workers-own-chans	forkJoinTwoWorkersOwnChans	-	ok	-	goroutines,channels
+args-eval-now	goArgsEvalNow	-	ok	-	goroutines,channels,evaluation_order
+closure-capture	goClosureCapture	-	ok	-	goroutines,channels,closures
+method-callee	goMethodCallee	-	ok	-	goroutines,channels,methods
+result-discarded	goResultDiscarded	-	ok	-	goroutines,channels,returns

@@ -1,0 +1,4 @@
+# id	subject	args	expected_status	expected_reason	features
+two-stage	pipelineTwoStage	-	ok	-	goroutines,channels,range,close
+buffered-stage	pipelineBufferedStage	-	ok	-	goroutines,channels,range,close
+request-reply	pipelineRequestReply	-	ok	-	goroutines,channels,range,close

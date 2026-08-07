@@ -13,6 +13,7 @@ calls
 cap
 cases
 channels
+goroutines
 clear
 closures
 close
