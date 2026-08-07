@@ -1,4 +1,5 @@
 import GoLean.GoCore.MachineSound
+import GoLean.GoCore.MultiSound
 import Std.Data.ExtTreeMap
 
 /-!
@@ -545,5 +546,83 @@ theorem goSpecT_terminates_and_post {types funcs methods env₀}
   fun hp na hP F hin =>
     ⟨h.2.2 hp na hP F hin, fun fuel ch σf ch' hrun =>
       h.1 hp na hP F hin fuel ch σf ch' hrun⟩
+
+/-! ## The CONCURRENT statement notions (channels arc slice 2, D8)
+
+The statement idiom's carrier swap: `execStmt` → `execProg` (the
+ThreadPool driver, `GoLean/GoCore/Multi.lean`). Every notion keeps its
+SHAPE: the pre stays a SINGLE-THREADED `InitialSplit` (main is the only
+goroutine at t = 0), the post reads the JOINED final state — the shared
+`ExecState` at main's exit, `.normal`-pinned (main's `.normal` terminal
+IS the design's "mainNormal") — and the ONE `∀ ch` stream quantifies
+schedules AND data latitude together (D8's single-stream design).
+
+`execProg_single_eq_execStmt` (MultiSound.lean) is the transfer lemma:
+on programs that never spawn, `execProg` runs ARE `execStmt` runs, so
+the sequential designated statements remain valid unrestated and the
+sequential and concurrent notions coincide on the sequential fragment.
+
+**Witness status (non-vacuity gate, recorded honestly):** the design of
+record's slice plan proves the full `GoSpecC` witness at SLICE 5 (the
+Iris proof layer: "the GoSpecC witness proved") — discharging the
+`∀ ch` schedule quantifier needs either the concurrent WP or a
+pool-level ∀-streams kernel checker (the `allStreamsOk` analogue),
+neither of which is slice-2 scope. Slice 2 ships the definitions plus
+the KERNEL-RUN fork/join witnesses (`Specs/GoldenForkJoin.lean`):
+pinned-stream `execProg` runs — canonical, adversarial, and alternating
+schedules — completing `.normal` with the pinned readout, plus a
+pinned-stream multi-goroutine deadlock classification. Until the
+slice-5 discharge these definitions are SCAFFOLDS in the doctrine's
+sense: no theorem below claims a `GoSpecC` instance. -/
+
+/-- The concurrent frame-closed triple (D8): `GoTriple` with the pool
+carrier. Post over the joined final state — the shared heap at MAIN's
+exit (goroutines the program leaked were killed there, their effects
+included exactly as far as they had executed — D6). -/
+def GoTripleC (types : TypeEnv) (funcs : Array Func) (methods : Array MethodInfo)
+    (env₀ : LocalEnv)
+    (P : HProp) (prog : Stmt) (Q : HProp) : Prop :=
+  ∀ (hp : Heap) (na : Nat) (hP F : Heaplet), InitialSplit P hp na hP F funcs env₀ prog →
+    ∀ (fuel : Nat) (ch : Choices) (σf : ExecState) (ch' : Choices),
+      execProg fuel env₀
+          { types := types, functions := funcs, methods := methods,
+            heap := hp, nextAddr := na }
+          ch prog = .ok (.normal σf, ch') →
+      ∃ hQ : Heaplet, (∀ k, hQ.get? k = none ∨ F.get? k = none)
+        ∧ hQ.sub (heapletOf σf.heap) ∧ F.sub (heapletOf σf.heap) ∧ sat hQ Q
+
+/-- Concurrent interpreter-level safety (D8): every bounded pool run
+ends `.ok (.normal …)` (main completed normally) or `.error .fuelOut` —
+and NOTHING else. The exclusions are strictly larger than
+`ProgressExec`'s: besides stuck/unsupported/internal/unrecovered-panic,
+a proven `ProgressExecC` forbids `.deadlock` (the all-goroutines-asleep
+terminal) on EVERY modeled schedule — a proven concurrent spec implies
+deadlock-freedom (and, once slice 3's detector lands, race-freedom:
+`raceDetected` will join the same excluded class). -/
+def ProgressExecC (types : TypeEnv) (funcs : Array Func)
+    (methods : Array MethodInfo) (env₀ : LocalEnv)
+    (P : HProp) (prog : Stmt) : Prop :=
+  ∀ (hp : Heap) (na : Nat) (hP F : Heaplet), InitialSplit P hp na hP F funcs env₀ prog →
+    ∀ (fuel : Nat) (ch : Choices),
+      (∃ (σf : ExecState) (ch' : Choices),
+        execProg fuel env₀
+          { types := types, functions := funcs, methods := methods,
+            heap := hp, nextAddr := na }
+          ch prog = .ok (.normal σf, ch'))
+      ∨ execProg fuel env₀
+          { types := types, functions := funcs, methods := methods,
+            heap := hp, nextAddr := na }
+          ch prog = .error .fuelOut
+
+/-- **The full concurrent surface judgment** (D8): triple + safety over
+the pool carrier — "runs safely on every schedule (no deadlock, no
+abort), and every completing run delivers `Q` in the joined final state
+with the frame intact". See the witness-status note above: slice 2
+ships no `GoSpecC` instance; the discharge is the slice-5 deliverable. -/
+def GoSpecC (types : TypeEnv) (funcs : Array Func) (methods : Array MethodInfo)
+    (env₀ : LocalEnv)
+    (P : HProp) (prog : Stmt) (Q : HProp) : Prop :=
+  GoTripleC types funcs methods env₀ P prog Q
+    ∧ ProgressExecC types funcs methods env₀ P prog
 
 end GoLean.Surface

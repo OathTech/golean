@@ -34,7 +34,12 @@
         "Judge.committedIndexAllReturnsSix",
         "Judge.committedIndexAllNotTwelve",
         "Judge.committedIndexAll_refutes_wrong",
-        "Judge.committedIndexRef_meets_spec"
+        "Judge.committedIndexRef_meets_spec",
+        "Judge.forkJoinStreamCanonical",
+        "Judge.forkJoinStreamAdversarial",
+        "Judge.forkJoinStreamAlternating",
+        "Judge.forkJoinDeadlockCanonical",
+        "Judge.forkJoinDeadlockAdversarial"
     ],
     "permitted_axioms": ["propext", "Quot.sound", "Classical.choice"],
     "enable_nanoda": false

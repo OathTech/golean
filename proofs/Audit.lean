@@ -164,8 +164,13 @@ open Lean in
   -- RELATION-freedom block): the two inductives, matched with everything
   -- in their namespaces. `Name.isPrefixOf` matches whole components, so
   -- `…Machine.Step` does NOT match `…Machine.Steps` (nor `…Machine.stepFn`).
+  -- (Channels arc slice 2, 2026-08-07: the pool relations `StepE` — the
+  -- spawn-component per-goroutine relation — and `StepM` join the
+  -- forbidden set: they are proof infrastructure exactly like
+  -- `Step`/`Steps`; headline statements speak `stepMulti`/`execProg`.)
   let forbiddenRoots : List Name :=
-    [`GoLean.GoCore.Machine.Step, `GoLean.GoCore.Machine.Steps]
+    [`GoLean.GoCore.Machine.Step, `GoLean.GoCore.Machine.Steps,
+     `GoLean.GoCore.Machine.StepE, `GoLean.GoCore.Machine.StepM]
   let isRelation : Name → Bool := fun n =>
     forbiddenRoots.any (fun r => r == n || r.isPrefixOf n)
   -- The designated headline theorems (the summit family + the golden and
@@ -221,7 +226,20 @@ open Lean in
     ``GoLean.Surface.recoverTotalReadout,
     ``GoLean.Surface.quorumOneKnownTotalReadout,
     ``GoLean.Surface.quorumThreeAllTotalReadout,
-    ``GoLean.Quorum.committedIndexRef_meets_spec]
+    ``GoLean.Quorum.committedIndexRef_meets_spec,
+    -- Channels arc slice 2 (2026-08-07): the fork/join KERNEL witnesses
+    -- over the ThreadPool carrier (`execProg`) — pinned-stream rung-1
+    -- readouts (canonical/adversarial/alternating schedules complete
+    -- .normal with the pinned value; the all-asleep program classifies
+    -- .deadlock). The full GoSpecC witness is the slice-5 deliverable
+    -- (design of record's slice plan); the COMPARATOR landmark for this
+    -- designated-set change is OWED at arc end (recorded in the design
+    -- note's build log — never run as part of ci).
+    ``GoLean.Surface.forkJoinStreamCanonical,
+    ``GoLean.Surface.forkJoinStreamAdversarial,
+    ``GoLean.Surface.forkJoinStreamAlternating,
+    ``GoLean.Surface.forkJoinDeadlockCanonical,
+    ``GoLean.Surface.forkJoinDeadlockAdversarial]
   let mut lines : Array String := #[]
   let mut violations : Array String := #[]
   for t in designated do
@@ -337,6 +355,25 @@ open Lean in
 #guard_msgs in #print axioms GoLean.GoCore.Machine.runConfig_sound
 /-- info: 'GoLean.GoCore.Machine.execStmt_sound_normal' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.GoCore.Machine.execStmt_sound_normal
+
+-- The ThreadPool correspondence + conservation (channels arc slice 2) —
+-- constructive like the sequential kit.
+/-- info: 'GoLean.GoCore.Machine.stepMulti_sound' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.GoCore.Machine.stepMulti_sound
+/-- info: 'GoLean.GoCore.Machine.execProg_single_eq_execStmt' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.GoCore.Machine.execProg_single_eq_execStmt
+
+-- The fork/join pool kernel witnesses (pinned streams; slice 2).
+/-- info: 'GoLean.Surface.forkJoinStreamCanonical' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Surface.forkJoinStreamCanonical
+/-- info: 'GoLean.Surface.forkJoinStreamAdversarial' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Surface.forkJoinStreamAdversarial
+/-- info: 'GoLean.Surface.forkJoinStreamAlternating' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Surface.forkJoinStreamAlternating
+/-- info: 'GoLean.Surface.forkJoinDeadlockCanonical' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Surface.forkJoinDeadlockCanonical
+/-- info: 'GoLean.Surface.forkJoinDeadlockAdversarial' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Surface.forkJoinDeadlockAdversarial
 /-- info: 'GoLean.GoCore.Machine.step_det' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.GoCore.Machine.step_det
 

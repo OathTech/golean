@@ -1,5 +1,6 @@
 import GoLeanProofs.Specs.Statements
 import GoLeanProofs.Specs.GoldenTargets
+import GoLeanProofs.Specs.GoldenForkJoin
 
 /-!
 # The Challenge — the judge's trusted statement of what GoLean claims
@@ -253,5 +254,26 @@ theorem committedIndexAll_refutes_wrong (c : List Nat)
 
 theorem committedIndexRef_meets_spec : committedIndexRef_meets_spec_statement :=
   sorry
+
+
+/-! ## The fork/join pool kernel witnesses (channels arc slice 2):
+pinned-stream `execProg` runs over the ThreadPool carrier — the
+canonical/adversarial/alternating schedules complete `.normal` with the
+pinned 42 readout; the all-asleep program classifies `.deadlock`. The
+defs (`fjRunGives42`/`fjRunDeadlocks`, seeds, drivers) are in the
+trusted closure — `Specs/GoldenForkJoin.lean`. -/
+
+theorem forkJoinStreamCanonical : fjRunGives42 400 [] = true := sorry
+
+theorem forkJoinStreamAdversarial :
+    fjRunGives42 400 [9, 8, 7, 6, 5, 4, 3, 2, 1, 0] = true := sorry
+
+theorem forkJoinStreamAlternating :
+    fjRunGives42 400 [1, 0, 1, 0, 1, 0, 1, 0] = true := sorry
+
+theorem forkJoinDeadlockCanonical : fjRunDeadlocks 400 [] = true := sorry
+
+theorem forkJoinDeadlockAdversarial :
+    fjRunDeadlocks 400 [9, 8, 7, 6, 5, 4, 3, 2, 1, 0] = true := sorry
 
 end Judge
