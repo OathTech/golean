@@ -1,16 +1,14 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-07  commit: channels-arc-s4 (BUG-040 post-spawn reschedule point + the three L2 multi-ready red pins)
+# recorded: 2026-08-07  commit: channels-arc-s4 (L2 multi-ready select live: applySelect pick + wake head-commit + arrival .multi analysis)
 #   frontend: native  oracle: go run (strict lane) / go-run membership in the
 #   machine-enumerated observation set (membership lane; go1.26.5 samples) /
 #   go run -race (racy-negative lane: TSan report + exit 66 justifies the
 #   machine's per-stream raceDetected refusal; never combined with deadlock)
-# manifest_cases: 1176  pass: 1075  fail: 101
-# Re-pin reason: deliberate coverage change — three new slice-4 red pins
-#   (channels/select-multi-ready/observable, goroutines/select-wake-multi,
-#   goroutines/select-arrival-multi: the L2 envelope shapes, red until the
-#   L2 site and the pool enumerator land this slice). BUG-040's machine
-#   movement (the `.spawned` post-spawn boundary) is ZERO-drift on all
-#   1173 prior ids in this same run.
+# manifest_cases: 1176  pass: 1077  fail: 99
+# Re-pin reason: deliberate coverage change — the L2 select site went
+#   live: channels/select-multi-ready (slice-1 refusal pin) and
+#   channels/select-multi-ready/observable (entry-path membership pin)
+#   flip PASS; ZERO drift on every other id in this run.
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
 PASS	arrays/array-copy	-
@@ -169,8 +167,8 @@ PASS	channels/select-deterministic/send-rhs-panic-before-default	-
 PASS	channels/select-deterministic/unselected-receive-lhs-not-eval	-
 PASS	channels/select-empty-receive-default	-
 PASS	channels/select-full-send-default	-
-FAIL	channels/select-multi-ready	lean-observation
-FAIL	channels/select-multi-ready/observable	membership
+PASS	channels/select-multi-ready	-
+PASS	channels/select-multi-ready/observable	membership
 PASS	channels/select-nil-default	-
 PASS	channels/select-ready-receive	-
 PASS	channels/select-ready-send	-

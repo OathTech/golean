@@ -65,10 +65,10 @@ theorem chanArrivalPlan_singleton {s : ExecState} {c : Config}
   | .close, _ => rfl
 
 @[inherit_doc chanArrivalPlan_singleton]
-theorem selectArrivalPlan_singleton {s : ExecState} {c : Config}
+theorem selectArrivalCases_singleton {s : ExecState} {c : Config}
     {clauses : List (SelectClauseHead × Stmt)} {vs : List GoValue}
     {env : LocalEnv} {k : Cont} :
-    selectArrivalPlan s #[c] 0 clauses vs env k = .ok none := by
+    selectArrivalCases s #[c] 0 clauses vs env k = .ok .cellPath := by
   have hsw : ∀ sides : List (Option (Bool × Loc)),
       sidesHaveWaiters #[c] 0 sides = false := by
     intro sides
@@ -81,7 +81,7 @@ theorem selectArrivalPlan_singleton {s : ExecState} {c : Config}
             cases isSend <;>
               simp [sidesHaveWaiters, recvSideWaiters_singleton,
                 sendSideWaiters_singleton, ih]
-  unfold selectArrivalPlan
+  unfold selectArrivalCases
   cases hsc : selectClauseChans clauses vs with
   | none => rfl
   | some sides =>
@@ -90,13 +90,73 @@ theorem selectArrivalPlan_singleton {s : ExecState} {c : Config}
       rfl
 
 @[inherit_doc chanArrivalPlan_singleton]
-theorem arrivalPlan_singleton {s : ExecState} {c c' : Config} :
-    arrivalPlan s #[c] 0 c' = .ok none := by
-  unfold arrivalPlan arrivalPlanAux
+theorem arrivalCases_singleton {s : ExecState} {c c' : Config} :
+    arrivalCases s #[c] 0 c' = .ok .cellPath := by
+  unfold arrivalCases
   split
-  · exact chanArrivalPlan_singleton
-  · exact selectArrivalPlan_singleton
+  · rw [show chanArrivalPlan s #[c] 0 _ _ _ _ = .ok none
+      from chanArrivalPlan_singleton]
+    rfl
+  · exact selectArrivalCases_singleton
   · rfl
+
+@[inherit_doc chanArrivalPlan_singleton]
+theorem arrivalPlan_singleton {s : ExecState} {c c' : Config} {ch : Choices} :
+    arrivalPlan s #[c] 0 c' ch = .ok (none, ch) := by
+  unfold arrivalPlan
+  rw [show arrivalCases s #[c] 0 c' = .ok .cellPath from arrivalCases_singleton]
+  rfl
+
+/-- Wrapper computations of `arrivalPlan` from a pure analysis (the
+proofs' bridge between `arrivalCases` — the relation's carrier — and
+the consuming wrapper the executable calls). -/
+theorem arrivalPlan_of_cellPath {s : ExecState} {threads : Array Config}
+    {i : Nat} {c : Config} {ch : Choices}
+    (h : arrivalCases s threads i c = .ok .cellPath) :
+    arrivalPlan s threads i c ch = .ok (none, ch) := by
+  unfold arrivalPlan
+  rw [h]
+  rfl
+
+@[inherit_doc arrivalPlan_of_cellPath]
+theorem arrivalPlan_of_single {s : ExecState} {threads : Array Config}
+    {i : Nat} {c bc : Config} {cs : List (Nat × PairTarget)} {ch : Choices}
+    (h : arrivalCases s threads i c = .ok (.single bc cs)) :
+    arrivalPlan s threads i c ch = .ok (some (.pair bc cs), ch) := by
+  unfold arrivalPlan
+  rw [h]
+  rfl
+
+@[inherit_doc arrivalPlan_of_cellPath]
+theorem arrivalPlan_of_error {s : ExecState} {threads : Array Config}
+    {i : Nat} {c : Config} {e : GoError} {ch : Choices}
+    (h : arrivalCases s threads i c = .error e) :
+    arrivalPlan s threads i c ch = .error e := by
+  unfold arrivalPlan
+  rw [h]
+  rfl
+
+@[inherit_doc arrivalPlan_of_cellPath]
+theorem arrivalPlan_of_multi {s : ExecState} {threads : Array Config}
+    {i : Nat} {c : Config} {os : List ArrivalOutcome} {sel : Nat}
+    {ch ch₁ : Choices}
+    (h : arrivalCases s threads i c = .ok (.multi os))
+    (hcons : Choices.consume ch os.length = (sel, ch₁)) :
+    arrivalPlan s threads i c ch
+      = (match os[sel]? with
+        | some o => .ok (some o, ch₁)
+        | none => .error (.internal "select L2 ready pick out of range")) := by
+  unfold arrivalPlan
+  rw [h]
+  show (do
+    let (idx, ch') := Choices.consume ch os.length
+    match os[idx]? with
+    | some o => pure ((some o : Option ArrivalOutcome), ch')
+    | none => throw (.internal "select L2 ready pick out of range")
+    : Except GoError (Option ArrivalOutcome × Choices)) = _
+  rw [hcons]
+  dsimp only
+  cases os[sel]? <;> rfl
 
 /-- The post-spawn marker never steps sequentially — `stepFn` fails
 closed there (`.internal`; the marker is pool-only, BUG-040). -/
@@ -120,7 +180,8 @@ theorem stepThread_single {σ : ExecState} {c : Config} {ch : Choices}
   have h0 : (#[c] : Array Config)[0]? = some c := rfl
   rw [h0]
   simp only [hbl, Bool.false_eq_true, reduceIte, hsc, hsp]
-  rw [show arrivalPlan σ #[c] 0 c = .ok none from arrivalPlan_singleton]
+  rw [show arrivalPlan σ #[c] 0 c ch = .ok (none, ch)
+    from arrivalPlan_singleton]
   simp only [Bind.bind, Except.bind]
   cases hstep : stepFn σ c ch with
   | error e => rfl
@@ -213,8 +274,8 @@ def transferable : Except GoError (ExecOutcome × Choices) → Prop
 itself. The conservation proof's detector hinge — sequential runs
 thread the `RaceState` through untouched. -/
 theorem raceUpdate_single {σ : ExecState} {ts : Array Config} {c : Config}
-    {σ' : ExecState} {i : Nat} {rs : RaceState} :
-    raceUpdate σ ts ⟨#[c], σ', i⟩ rs = .ok rs := by
+    {σ' : ExecState} {i : Nat} {ch : Choices} {rs : RaceState} :
+    raceUpdate σ ts ch ⟨#[c], σ', i⟩ rs = .ok rs := by
   simp [raceUpdate]
 
 /-- The singleton-pool projections of a mid-run (non-terminal,
@@ -438,7 +499,8 @@ theorem stepThreadInto_sound {m : MultiConfig} {i : Nat} {ch ch' : Choices}
             rw [hspawn] at hst
             simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at hst
             obtain ⟨rfl, rfl, rfl⟩ := hst
-            have hplanNone : arrivalPlan m.shared m.threads i c = .ok none := by
+            have hplanNone : arrivalCases m.shared m.threads i c
+                = .ok .cellPath := by
               match c, hsp with
               | .retV cv' (.goCalleeK [] env k'), _ => rfl
               | .retV v' (.goArgsK cv' vals [] env k'), _ => rfl
@@ -450,13 +512,31 @@ theorem stepThreadInto_sound {m : MultiConfig} {i : Nat} {ch ch' : Choices}
         | none =>
           rw [hsp] at hst
           simp only [Bind.bind, Except.bind] at hst
-          cases hplan : arrivalPlan m.shared m.threads i c with
-          | error e => rw [hplan] at hst; cases hst
-          | ok plan =>
-            rw [hplan] at hst
-            cases plan with
-            | some p =>
-              obtain ⟨bc, cs⟩ := p
+          -- Dispatch on the PURE analysis; each analysis value fixes the
+          -- wrapper's result (`arrivalPlan_of_*`), which rewrites `hst`.
+          cases hac : arrivalCases m.shared m.threads i c with
+          | error e => rw [arrivalPlan_of_error hac] at hst; cases hst
+          | ok analysis =>
+            cases analysis with
+            | cellPath =>
+              rw [arrivalPlan_of_cellPath hac] at hst
+              simp only [Bind.bind, Except.bind] at hst
+              cases hstep : stepFn m.shared c ch with
+              | error e => rw [hstep] at hst; cases hst
+              | ok r₂ =>
+                obtain ⟨c', s₂, ch₂⟩ := r₂
+                rw [hstep] at hst
+                simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at hst
+                obtain ⟨rfl, rfl, rfl⟩ := hst
+                have hts : m.threads.setIfInBounds i c'
+                    = (m.threads.setIfInBounds i c') ++ ([] : List Config).toArray := by
+                  simp
+                rw [hts]
+                exact StepM.thread hsched hti hbl hac
+                  (StepE.lift (stepFn_sound hstep))
+            | single bc cs =>
+              rw [arrivalPlan_of_single hac] at hst
+              simp only [Bind.bind, Except.bind] at hst
               cases cs with
               | nil => cases hst
               | cons cand rest =>
@@ -470,7 +550,7 @@ theorem stepThreadInto_sound {m : MultiConfig} {i : Nat} {ch ch' : Choices}
                     rw [hap] at hst
                     simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at hst
                     obtain ⟨rfl, rfl, rfl⟩ := hst
-                    exact StepM.pair hsched hti hbl hsp hplan
+                    exact StepM.pair hsched hti hbl hsp hac
                       (idx := 0) (by simp) hap
                 | cons b rest' =>
                   simp only [Bind.bind, Except.bind] at hst
@@ -489,23 +569,62 @@ theorem stepThreadInto_sound {m : MultiConfig} {i : Nat} {ch ch' : Choices}
                       simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at hst
                       obtain ⟨rfl, rfl, rfl⟩ := hst
                       obtain ⟨hlt, hidxeq⟩ := List.getElem?_eq_some_iff.mp hget
-                      exact StepM.pair hsched hti hbl hsp hplan
+                      exact StepM.pair hsched hti hbl hsp hac
                         (idx := idx) hlt (by rw [hidxeq]; exact hap)
-            | none =>
-              simp only [Bind.bind, Except.bind] at hst
-              cases hstep : stepFn m.shared c ch with
-              | error e => rw [hstep] at hst; cases hst
-              | ok r₂ =>
-                obtain ⟨c', s₂, ch₂⟩ := r₂
-                rw [hstep] at hst
-                simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at hst
-                obtain ⟨rfl, rfl, rfl⟩ := hst
-                have hts : m.threads.setIfInBounds i c'
-                    = (m.threads.setIfInBounds i c') ++ ([] : List Config).toArray := by
-                  simp
-                rw [hts]
-                exact StepM.thread hsched hti hbl hplan
-                  (StepE.lift (stepFn_sound hstep))
+            | multi os =>
+              rcases hcons : ch.consume os.length with ⟨sel, chL⟩
+              rw [arrivalPlan_of_multi hac hcons] at hst
+              cases hget : os[sel]? with
+              | none => rw [hget] at hst; cases hst
+              | some o =>
+                rw [hget] at hst
+                cases o with
+                | pair bc cs =>
+                  simp only [Bind.bind, Except.bind] at hst
+                  cases cs with
+                  | nil => cases hst
+                  | cons cand rest =>
+                    cases rest with
+                    | nil =>
+                      simp only [Bind.bind, Except.bind] at hst
+                      cases hap : applyPairing m.shared m.threads i bc cand with
+                      | error e => rw [hap] at hst; cases hst
+                      | ok r₃ =>
+                        obtain ⟨ts', s₃⟩ := r₃
+                        rw [hap] at hst
+                        simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at hst
+                        obtain ⟨rfl, rfl, rfl⟩ := hst
+                        exact StepM.pickPair hsched hti hbl hsp hac hget
+                          (idx := 0) (by simp) hap
+                    | cons b rest' =>
+                      simp only [Bind.bind, Except.bind] at hst
+                      rcases hconsL : chL.consume (cand :: b :: rest').length with ⟨idx, ch₃⟩
+                      rw [hconsL] at hst
+                      cases hgetL : (cand :: b :: rest')[idx]? with
+                      | none => rw [hgetL] at hst; cases hst
+                      | some cand' =>
+                        rw [hgetL] at hst
+                        simp only [Bind.bind, Except.bind] at hst
+                        cases hap : applyPairing m.shared m.threads i bc cand' with
+                        | error e => rw [hap] at hst; cases hst
+                        | ok r₃ =>
+                          obtain ⟨ts', s₃⟩ := r₃
+                          rw [hap] at hst
+                          simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at hst
+                          obtain ⟨rfl, rfl, rfl⟩ := hst
+                          obtain ⟨hlt, hidxeq⟩ := List.getElem?_eq_some_iff.mp hgetL
+                          exact StepM.pickPair hsched hti hbl hsp hac hget
+                            (idx := idx) hlt (by rw [hidxeq]; exact hap)
+                | commit cl envc kc =>
+                  simp only [Bind.bind, Except.bind] at hst
+                  cases hcom : commitClause m.shared envc kc cl with
+                  | error e => rw [hcom] at hst; cases hst
+                  | ok r₃ =>
+                    obtain ⟨c₃, s₃⟩ := r₃
+                    rw [hcom] at hst
+                    simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at hst
+                    obtain ⟨rfl, rfl, rfl⟩ := hst
+                    exact StepM.pickCommit hsched hti hbl hsp hac hget hcom
 
 /-- **Soundness of the pool step**: every `.ok` step of `stepMulti` is a
 step of the pool relation `StepM`. -/
@@ -680,7 +799,8 @@ theorem stepM_complete {m m' : MultiConfig} (h : StepM m m') :
         unfold stepThread
         rw [hti]
         simp only [hblc, Bool.false_eq_true, reduceIte, hsc, hsp]
-        rw [hplan]
+        rw [show arrivalPlan m.shared m.threads i c ch₀ = .ok (none, ch₀)
+          from arrivalPlan_of_cellPath hplan]
         simp only [Bind.bind, Except.bind]
         rw [hfn]
         rfl
@@ -714,8 +834,8 @@ theorem stepM_complete {m m' : MultiConfig} (h : StepM m m') :
           have hcfg : c = .spawned kk := by
             cases c <;> simp_all [spawnedCont]
           subst hcfg
-          rw [show arrivalPlan m.shared m.threads i (.spawned kk) = .ok none
-            from rfl] at hplan
+          rw [show arrivalCases m.shared m.threads i (.spawned kk)
+            = .ok .cellPath from rfl] at hplan
           cases hplan
     cases cs with
     | nil => exact absurd hidx (by simp)
@@ -734,7 +854,7 @@ theorem stepM_complete {m m' : MultiConfig} (h : StepM m m') :
           rw [hti]
           simp only [hblc, Bool.false_eq_true, reduceIte, hsc, hsp, Bind.bind,
             Except.bind]
-          rw [hplan]
+          rw [arrivalPlan_of_single hplan]
           dsimp only
           rw [hap']
           rfl
@@ -746,7 +866,7 @@ theorem stepM_complete {m m' : MultiConfig} (h : StepM m m') :
           rw [hti]
           simp only [hblc, Bool.false_eq_true, reduceIte, hsc, hsp, Bind.bind,
             Except.bind]
-          rw [hplan]
+          rw [arrivalPlan_of_single hplan]
           dsimp only
           have hcons : Choices.consume [idx] (cand :: b :: rest').length
               = (idx, []) := by
@@ -765,6 +885,109 @@ theorem stepM_complete {m m' : MultiConfig} (h : StepM m m') :
           rw [hap]
           rfl
         exact stepMulti_of_inner hsched hinner
+  | pickPair hsched hti hblc hsp hplan hget hidx hap =>
+    rename_i i c bc σ'' os sel cs idx ts'
+    have hsc : spawnedCont c = none := by
+      cases hscq : spawnedCont c with
+      | none => rfl
+      | some kk =>
+          have hcfg : c = .spawned kk := by
+            cases c <;> simp_all [spawnedCont]
+          subst hcfg
+          rw [show arrivalCases m.shared m.threads i (.spawned kk)
+            = .ok .cellPath from rfl] at hplan
+          cases hplan
+    have hsel : sel < os.length := (List.getElem?_eq_some_iff.mp hget).1
+    cases cs with
+    | nil => exact absurd hidx (by simp)
+    | cons cand rest =>
+      cases rest with
+      | nil =>
+        have hap' : applyPairing m.shared m.threads i bc cand = .ok (ts', σ'') := by
+          have h0 : idx = 0 := by
+            simp at hidx
+            omega
+          subst h0
+          exact hap
+        have hconsS : Choices.consume [sel] os.length = (sel, []) := by
+          simp only [Choices.consume]
+          congr 1
+          have hmax : max 1 os.length = os.length := by omega
+          rw [hmax]
+          exact Nat.mod_eq_of_lt hsel
+        have hinner : stepThread m.shared m.threads i [sel]
+            = .ok (ts', σ'', []) := by
+          unfold stepThread
+          rw [hti]
+          simp only [hblc, Bool.false_eq_true, reduceIte, hsc, hsp, Bind.bind,
+            Except.bind]
+          rw [arrivalPlan_of_multi hplan hconsS, hget]
+          dsimp only
+          rw [hap']
+          rfl
+        exact stepMulti_of_inner hsched hinner
+      | cons b rest' =>
+        have hconsS : Choices.consume (sel :: [idx]) os.length = (sel, [idx]) := by
+          simp only [Choices.consume]
+          congr 1
+          have hmax : max 1 os.length = os.length := by omega
+          rw [hmax]
+          exact Nat.mod_eq_of_lt hsel
+        have hconsL : Choices.consume [idx] (cand :: b :: rest').length
+            = (idx, []) := by
+          simp only [Choices.consume]
+          congr 1
+          have hmax : max 1 (cand :: b :: rest').length
+              = (cand :: b :: rest').length := by
+            simp only [List.length_cons]
+            omega
+          rw [hmax]
+          exact Nat.mod_eq_of_lt hidx
+        have hinner : stepThread m.shared m.threads i (sel :: [idx])
+            = .ok (ts', σ'', []) := by
+          unfold stepThread
+          rw [hti]
+          simp only [hblc, Bool.false_eq_true, reduceIte, hsc, hsp, Bind.bind,
+            Except.bind]
+          rw [arrivalPlan_of_multi hplan hconsS, hget]
+          dsimp only
+          rw [hconsL]
+          dsimp only
+          rw [List.getElem?_eq_getElem hidx]
+          dsimp only
+          rw [hap]
+          rfl
+        exact stepMulti_of_inner hsched hinner
+  | pickCommit hsched hti hblc hsp hplan hget hcom =>
+    rename_i i c cl envc kc os sel c' σ'
+    have hsc : spawnedCont c = none := by
+      cases hscq : spawnedCont c with
+      | none => rfl
+      | some kk =>
+          have hcfg : c = .spawned kk := by
+            cases c <;> simp_all [spawnedCont]
+          subst hcfg
+          rw [show arrivalCases m.shared m.threads i (.spawned kk)
+            = .ok .cellPath from rfl] at hplan
+          cases hplan
+    have hsel : sel < os.length := (List.getElem?_eq_some_iff.mp hget).1
+    have hconsS : Choices.consume [sel] os.length = (sel, []) := by
+      simp only [Choices.consume]
+      congr 1
+      have hmax : max 1 os.length = os.length := by omega
+      rw [hmax]
+      exact Nat.mod_eq_of_lt hsel
+    have hinner : stepThread m.shared m.threads i [sel]
+        = .ok (m.threads.setIfInBounds i c', σ', []) := by
+      unfold stepThread
+      rw [hti]
+      simp only [hblc, Bool.false_eq_true, reduceIte, hsc, hsp, Bind.bind,
+        Except.bind]
+      rw [arrivalPlan_of_multi hplan hconsS, hget]
+      dsimp only
+      rw [hcom]
+      rfl
+    exact stepMulti_of_inner hsched hinner
   | wake hsched hti hblc hres =>
     rename_i i c c' σ'
     have hinner : stepThread m.shared m.threads i []

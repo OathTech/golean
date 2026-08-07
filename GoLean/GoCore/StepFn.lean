@@ -15,10 +15,11 @@ sharing the rule premises' functions verbatim (`strictPlan`,
 which the driver reports as `GoError.panic`; only out-of-model conditions
 are `Except` errors.
 
-Nondeterminism: the two choice points (mapRange pick-next, appendSlice
-spill capacity) consume from the external `Choices` stream, exactly as
-the big-step interpreter did — the relation's corresponding rules
-quantify over the choice.
+Nondeterminism: the sequential choice points (mapRange pick-next,
+appendSlice spill capacity, and — slice 4 — the multi-ready select's
+L2 clause pick inside `applySelect`) consume from the external
+`Choices` stream, exactly as the big-step interpreter did — the
+relation's corresponding rules quantify over the choice.
 
 Execution is fuel-bounded iteration (`runConfig`); fuel counts machine
 steps (design note §5 — the CLI default retunes at S3). The function
@@ -455,8 +456,10 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
               return (.evalE e env
                 (.selectOpsK clauses default? (v :: done) rest env k'), s, choices)
           | [] =>
-              match applySelect s clauses default? (v :: done).reverse env k' with
-              | .ok (c', s') => return (c', s', choices)
+              -- The stream threads through the apply: multi-ready
+              -- readiness consumes the L2 clause pick (slice 4).
+              match applySelect s clauses default? (v :: done).reverse env k' choices with
+              | .ok (c', s', choices') => return (c', s', choices')
               | .error (.panic msg) =>
                   return (.panicking [⟨runtimeErrorValue msg, false⟩] k', s, choices)
               | .error err => throw err

@@ -13,11 +13,12 @@
 #   spec-unspecified; the model realizes go/types' conforming order, gc
 #   realizes a different conforming order. The differential red IS the
 #   version-tracked pin; it never flips PASS.
-# channels/select-multi-ready: DELIBERATE fail-closed refusal pin
+# channels/select-multi-ready: FLIPPED PASS at slice 4 (the L2 site
+#   went live) — entry retired; history below kept for the record.
+# (was:) DELIBERATE fail-closed refusal pin
 #   (multi-ready select = the L2 choice envelope, scheduler arc slice 4);
 #   permanently red until that slice — see untriaged-count 2026-08-06.
 arrays/pointer-array
-channels/select-multi-ready
 floats/to-int-out-of-range/nan
 floats/to-int-out-of-range/range
 init/hidden-dep-order
@@ -65,6 +66,9 @@ goroutines/sched-dependent/len-handoff
 #   are PASSing race-lane cases in the same commit.
 race/litmus/sb-chan
 # The three slice-4 L2-envelope red pins (S4 red-first commit):
+#   [channels/select-multi-ready/observable FLIPPED PASS at the L2
+#   movement; the two goroutines ids below stay red until the pool
+#   enumerator lands later in this slice.]
 #   channels/select-multi-ready/observable (entry path — the L2 pick is
 #   the only site), goroutines/select-wake-multi (wake path — L1 wake
 #   timing + entry pick; wake itself commits first-ready, no
@@ -73,6 +77,5 @@ race/litmus/sb-chan
 #   the L2 site and the pool enumerator land in THIS slice and flip
 #   them (the ceiling drops back in those commits). Not fidelity bugs —
 #   deliberate fail-closed refusals of the not-yet-live latitude point.
-channels/select-multi-ready/observable
 goroutines/select-wake-multi
 goroutines/select-arrival-multi

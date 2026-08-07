@@ -160,7 +160,7 @@ inductive StepMFine : MultiConfig → MultiConfig → Prop where
       schedPickFine m i →
       m.threads[i]? = some c →
       isBlockedConfig c = false →
-      arrivalPlan m.shared m.threads i c = .ok none →
+      arrivalCases m.shared m.threads i c = .ok .cellPath →
       StepE c m.shared c' σ' efs →
       StepMFine m ⟨(m.threads.setIfInBounds i c') ++ efs.toArray, σ', i⟩
   | pair {m : MultiConfig} {i : Nat} {c bc : Config} {σ'' : ExecState}
@@ -169,10 +169,33 @@ inductive StepMFine : MultiConfig → MultiConfig → Prop where
       m.threads[i]? = some c →
       isBlockedConfig c = false →
       spawnPlan c = none →
-      arrivalPlan m.shared m.threads i c = .ok (some (bc, cs)) →
+      arrivalCases m.shared m.threads i c = .ok (.single bc cs) →
       (hidx : idx < cs.length) →
       applyPairing m.shared m.threads i bc cs[idx] = .ok (ts', σ'') →
       StepMFine m ⟨ts', σ'', i⟩
+  | pickPair {m : MultiConfig} {i : Nat} {c bc : Config} {σ'' : ExecState}
+      {os : List ArrivalOutcome} {sel : Nat}
+      {cs : List (Nat × PairTarget)} {idx : Nat} {ts' : Array Config} :
+      schedPickFine m i →
+      m.threads[i]? = some c →
+      isBlockedConfig c = false →
+      spawnPlan c = none →
+      arrivalCases m.shared m.threads i c = .ok (.multi os) →
+      os[sel]? = some (.pair bc cs) →
+      (hidx : idx < cs.length) →
+      applyPairing m.shared m.threads i bc cs[idx] = .ok (ts', σ'') →
+      StepMFine m ⟨ts', σ'', i⟩
+  | pickCommit {m : MultiConfig} {i : Nat} {c : Config} {cl : EvClause}
+      {env : LocalEnv} {k : Cont} {os : List ArrivalOutcome} {sel : Nat}
+      {c' : Config} {σ' : ExecState} :
+      schedPickFine m i →
+      m.threads[i]? = some c →
+      isBlockedConfig c = false →
+      spawnPlan c = none →
+      arrivalCases m.shared m.threads i c = .ok (.multi os) →
+      os[sel]? = some (.commit cl env k) →
+      commitClause m.shared env k cl = .ok (c', σ') →
+      StepMFine m ⟨m.threads.setIfInBounds i c', σ', i⟩
   | wake {m : MultiConfig} {i : Nat} {c c' : Config} {σ' : ExecState} :
       schedPickFine m i →
       m.threads[i]? = some c →
@@ -245,6 +268,12 @@ theorem stepM_le_stepMFine {m m' : MultiConfig} (h : StepM m m') :
       exact StepMFine.thread (schedPick_le_fine hs) hti hbl hplan hstep
   | pair hs hti hbl hsp hplan hidx hap =>
       exact StepMFine.pair (schedPick_le_fine hs) hti hbl hsp hplan hidx hap
+  | pickPair hs hti hbl hsp hplan hget hidx hap =>
+      exact StepMFine.pickPair (schedPick_le_fine hs) hti hbl hsp hplan hget
+        hidx hap
+  | pickCommit hs hti hbl hsp hplan hget hcom =>
+      exact StepMFine.pickCommit (schedPick_le_fine hs) hti hbl hsp hplan hget
+        hcom
   | wake hs hti hbl hres =>
       exact StepMFine.wake (schedPick_le_fine hs) hti hbl hres
   | spawned hs hti =>

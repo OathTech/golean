@@ -112,4 +112,9 @@
 #   (entry/wake/arrival — see untriaged-ids). The L2 site and the pool
 #   enumerator land in this same slice and flip them; the ceiling drops
 #   back in those commits.
-24
+# 2026-08-07 (channels arc slice 4, L2 movement)  24 -> 22: the L2
+#   clause pick went LIVE (applySelect consumes at multi-ready; wake
+#   head-commits; arrival .multi analysis) — channels/select-multi-ready
+#   (slice-1's refusal pin) and channels/select-multi-ready/observable
+#   (this slice's entry-path membership pin) both flip PASS.
+22

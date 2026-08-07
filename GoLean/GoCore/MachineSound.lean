@@ -424,6 +424,16 @@ theorem step_complete {c : Config} {s : ExecState} {c' : Config} {s' : ExecState
       first
         | (simp_all [stepFn, chanPlan]; done)
         | (simp only [stepFn]; rw [hplan]; rfl)
+  -- The select apply rules carry their own stream (the L2 pick, slice
+  -- 4): realize under exactly it.
+  case selectApply =>
+    rename_i ch₀ ch₀' happly
+    simp only [List.reverse_cons] at happly
+    exact ⟨ch₀, ch₀', by simp [stepFn, happly]⟩
+  case selectApplyPanic =>
+    rename_i ch₀ happly
+    simp only [List.reverse_cons] at happly
+    exact ⟨ch₀, ch₀, by simp [stepFn, happly]⟩
   all_goals
     exact ⟨[], [], by simp_all [stepFn, enterFrameStep, enterFrameDeferPanicking, Bind.bind, Except.bind, valueAsBool]⟩
 
@@ -2128,6 +2138,72 @@ theorem bindIterVars_ok_of_normal {env : LocalEnv} {σ : ExecState}
       simp [isNormalForTy_sound hk, hv', Bind.bind, Except.bind,
         ExecState.alloc, ExecState.freshLoc, pure, Except.pure]
 
+/-- `mapM` over `Except` preserves length on success. -/
+theorem mapM_ok_length {α β : Type} {f : α → Except GoError β}
+    {xs : List α} {ys : List β}
+    (h : xs.mapM f = .ok ys) : ys.length = xs.length := by
+  induction xs generalizing ys with
+  | nil =>
+      simp only [List.mapM_nil, pure_eq_ok, Except.ok.injEq] at h
+      subst h
+      rfl
+  | cons x xs ih =>
+      rw [List.mapM_cons] at h
+      simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq] at h
+      obtain ⟨y, hy, ys', hys', rfl⟩ := h
+      simp [ih hys']
+
+/-- `applySelect`'s apply-SUCCESS is pick-independent (the ∀-choices
+kit's discipline; the mapIterNext-snapshot precedent): if the apply
+returns `.ok` or a panic under one stream, it does under EVERY stream
+— `applySelectCore` is stream-free and pre-commits every ready clause,
+so a fail-closed commit error fires identically on every stream, and
+per-pick variation is confined to WHICH `.ok` configuration or panic
+surfaces. -/
+theorem applySelect_ok_or_panic_any_ch {σ : ExecState}
+    {clauses : List (SelectClauseHead × Stmt)} {default? : Option Stmt}
+    {vs : List GoValue} {env : LocalEnv} {k : Cont} {ch₀ : Choices}
+    (h : (∃ out, applySelect σ clauses default? vs env k ch₀ = .ok out)
+      ∨ (∃ msg, applySelect σ clauses default? vs env k ch₀
+          = .error (.panic msg))) :
+    ∀ ch : Choices,
+      (∃ out, applySelect σ clauses default? vs env k ch = .ok out)
+      ∨ (∃ msg, applySelect σ clauses default? vs env k ch
+          = .error (.panic msg)) := by
+  intro ch
+  rw [applySelect.eq_def] at h ⊢
+  simp only [Bind.bind, Except.bind] at h ⊢
+  cases hcore : applySelectCore σ clauses default? vs env k with
+  | error e =>
+      rw [hcore] at h
+      rcases h with ⟨out, h⟩ | ⟨msg, h⟩
+      · cases h
+      · cases h
+        exact .inr ⟨_, rfl⟩
+  | ok outc =>
+      rw [hcore] at h
+      cases outc with
+      | done c' s' => exact .inl ⟨_, rfl⟩
+      | picks commits =>
+          dsimp only at h ⊢
+          cases commits with
+          | nil =>
+              rcases h with ⟨out, h⟩ | ⟨msg, h⟩ <;>
+                simp [throw, throwThe, MonadExceptOf.throw] at h
+          | cons b rest =>
+              rcases hcons : Choices.consume ch (b :: rest).length
+                with ⟨idx, ch'⟩
+              have hlt : idx < (b :: rest).length := by
+                have := consume_fst_lt (ch := ch)
+                  (show 0 < (b :: rest).length by simp)
+                rw [hcons] at this
+                simpa using this
+              dsimp only
+              rw [List.getElem?_eq_getElem hlt]
+              cases hb : (b :: rest)[idx] with
+              | inl r => exact .inl ⟨_, rfl⟩
+              | inr msg => exact .inr ⟨_, rfl⟩
+
 set_option maxHeartbeats 1600000 in
 set_option linter.unusedSimpArgs false in
 /-- `step_complete_any_wf`, ∃-packaged (the per-case scripts close a
@@ -2248,6 +2324,23 @@ theorem step_complete_any_wf_aux {c : Config} {σ : ExecState} {c' : Config}
       first
         | (simp_all [stepFn, chanPlan]; done)
         | (simp only [stepFn]; rw [hplan]; exact ⟨_, rfl⟩)
+  -- The select apply is pick-independent in apply-SUCCESS (slice 4;
+  -- `applySelect_ok_or_panic_any_ch`): under any stream it lands `.ok`
+  -- or a panic, and `stepFn` maps both to `.ok` configurations.
+  case selectApply clauses default? done v env k ch₀ ch₁ happly =>
+    rcases applySelect_ok_or_panic_any_ch (.inl ⟨_, happly⟩) ch with
+      ⟨⟨c₂, σ₂, ch₂⟩, hap⟩ | ⟨msg, hap⟩ <;>
+      simp only [List.reverse_cons] at hap
+    · exact ⟨(c₂, σ₂, ch₂), by simp [stepFn, hap]⟩
+    · exact ⟨(.panicking [⟨runtimeErrorValue msg, false⟩] k, σ, ch),
+        by simp [stepFn, hap]⟩
+  case selectApplyPanic clauses default? done v msg env k ch₀ happly =>
+    rcases applySelect_ok_or_panic_any_ch (.inr ⟨_, happly⟩) ch with
+      ⟨⟨c₂, σ₂, ch₂⟩, hap⟩ | ⟨msg', hap⟩ <;>
+      simp only [List.reverse_cons] at hap
+    · exact ⟨(c₂, σ₂, ch₂), by simp [stepFn, hap]⟩
+    · exact ⟨(.panicking [⟨runtimeErrorValue msg', false⟩] k, σ, ch),
+        by simp [stepFn, hap]⟩
   all_goals simp_all [stepFn, enterFrameStep, enterFrameDeferPanicking, Bind.bind, Except.bind, valueAsBool]
 
 /-- **Completeness at every stream** (the recorded kit obligation): a
@@ -2403,6 +2496,15 @@ def consumesAppendSlice : Config → Bool
       | _ => false
   | _ => false
 
+/-- Is this configuration the select APPLY position (whose
+`applySelect` may consume the L2 clause pick — slice 4)? Conservative,
+like `consumesAppendSlice`: flags every select apply, including the
+stream-oblivious single-ready/default ones — the checker fails closed
+there rather than reasoning about readiness. -/
+def consumesSelect : Config → Bool
+  | .retV _ (.selectOpsK _ _ _ [] _ _) => true
+  | _ => false
+
 /-- The kernel-evaluable ∀-streams run explorer (docstring above). At a
 nonempty `mapIterK` it checks EVERY pick; elsewhere it probes one step
 at the canonical stream `[0]` and relies on `stepFn_oblivious`. `false`
@@ -2429,7 +2531,7 @@ def allStreamsOk : Nat → ExecState → Config → Bool
               | .ok (c', σ', _) => allStreamsOk fuel σ' c'
               | .error _ => false
       | c =>
-          if consumesAppendSlice c then false
+          if consumesAppendSlice c || consumesSelect c then false
           else
             match stepFn σ c [0] with
             | .ok (c', σ', _) => allStreamsOk fuel σ' c'
@@ -2492,9 +2594,11 @@ theorem stepFn_exec_plan_nullary {σ : ExecState} {stmt : Stmt}
 
 set_option maxHeartbeats 1600000 in
 set_option linter.unusedSimpArgs false in
-/-- **Stream obliviousness of the non-consuming arms**: away from the two
-consuming shapes (a `mapIterK` at the `.next` position — excluded by
-`hmi` — and an `appendSlice` apply position — excluded by `hnc`), a step
+/-- **Stream obliviousness of the non-consuming arms**: away from the
+three consuming shapes (a `mapIterK` at the `.next` position — excluded
+by `hmi` — an `appendSlice` apply position — excluded by `hnc` — and a
+select apply position, whose `applySelect` may draw the L2 clause pick
+— excluded by `hns`, slice 4), a step
 that succeeds under one stream succeeds under EVERY stream, with the SAME
 successor and the stream returned untouched. Sweep over `stepFn`'s case
 tree; a newly added stream-consuming arm breaks this proof loudly rather
@@ -2505,11 +2609,13 @@ theorem stepFn_oblivious {σ : ExecState} {c : Config} {ch₀ : Choices}
       (rem : Array (GoValue × GoValue)) (env : LocalEnv) (k : Cont),
       c ≠ .next (.mapIterK kv vv kt vt body rem env k))
     (hnc : consumesAppendSlice c = false)
+    (hns : consumesSelect c = false)
     (h : stepFn σ c ch₀ = .ok (c', σ', ch₀')) :
     ch₀' = ch₀ ∧ ∀ ch : Choices, stepFn σ c ch = .ok (c', σ', ch) := by
   fun_cases stepFn σ c ch₀
   all_goals first
     | exact absurd rfl (hmi _ _ _ _ _ _ _ _)
+    | (simp [consumesSelect] at hns; done)
     | (refine ⟨?_, fun ch => ?_⟩ <;> (simp_all [stepFn]; done))
     | skip
   -- 23 arms remain: every one binds through a choices-free helper
@@ -2961,18 +3067,21 @@ theorem execStmtLoop_ok_of_allStreamsOk :
           exact hrun
     · -- the oblivious catch-all
       rename_i hx1 hx2 hx3 hx4 hx5
-      cases hnc : consumesAppendSlice c with
+      cases hnc : (consumesAppendSlice c || consumesSelect c) with
       | true =>
         rw [hnc] at hall
         simp at hall
       | false =>
         rw [hnc] at hall
         simp only [Bool.false_eq_true, if_false] at hall
+        obtain ⟨hnc1, hnc2⟩ : consumesAppendSlice c = false
+            ∧ consumesSelect c = false := by
+          simpa using hnc
         split at hall
         · rename_i c₁ σ₁ ch₁ hprobe
           obtain ⟨-, hobl⟩ := stepFn_oblivious
             (fun kv vv kt vt b r e kk heq => hx5 kv vv kt vt b r e kk heq)
-            hnc hprobe
+            hnc1 hnc2 hprobe
           obtain ⟨out, ch', hrun⟩ := ih hall ch
           exact ⟨out, ch', by rw [execStmtLoop_step (hobl ch)]; exact hrun⟩
         · exact absurd hall (by simp)

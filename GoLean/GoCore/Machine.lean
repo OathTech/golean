@@ -1947,27 +1947,97 @@ def commitClause (s : ExecState) (env : LocalEnv) (k : Cont) :
           | _ :: _ =>
               enterRecvTargets s₁ targets (recvStores v ok targets.length) body env k
 
-/-- The `select` READINESS step (spec step 2, deterministic slice): pair
-the evaluated entry operands with their clauses, compute the ready set;
-none ready → `default` (consuming NOTHING) or block; exactly one ready →
-commit it. MULTIPLE ready clauses FAIL CLOSED (`.unsupported`) — the
-spec's "uniform pseudo-random" choice is the L2 envelope, a `Choices`
-site deliberately deferred to the scheduler arc (slice 4); refusing here
-keeps this slice free of new nondeterminism-consumption sites. Shared by
-rule `Step.selectApply` and `stepFn`. -/
-def applySelect (s : ExecState) (clauses : List (SelectClauseHead × Stmt))
-    (default? : Option Stmt) (vs : List GoValue) (env : LocalEnv) (k : Cont) :
-    Except GoError (Config × ExecState) := do
+/-- **The `select` READINESS step and THE L2 ENVELOPE** (spec steps
+2-3; this docstring is the envelope statement, shipped with its site —
+it documents the `SelectOutcome`/`applySelectCore`/`applySelect`
+trio): pair the evaluated
+entry operands with their clauses, compute the ready set; none ready →
+`default` (consuming NOTHING) or block; exactly one ready → commit it
+(consuming nothing — `Choices.consume` pops even at bound 1, and the
+sequential/deterministic behavior depends on non-consumption at
+singleton readiness). MULTIPLE ready clauses are THE L2 SITE (design
+D4, live since slice 4):
+
+The spec's step 3 — "If one or more of the communications can
+proceed, a single one that can proceed is chosen via a uniform
+pseudo-random selection" — is deliberately WEAKENED to the
+possibilistic "ANY entry-ready case may commit" (the nondeterminism
+doctrine: no distributional claims; the membership lane is the oracle,
+and gc's own runtime shuffle exercises the members). The pick is drawn
+from the choice stream, bounded by the READY-CLAUSE COUNT and
+consumed ONLY at width > 1. Width metadata for the enumerator /
+membership lane: the site's bound is the number of ready clauses at
+this apply, ≤ the clause count.
+
+NO RE-RANDOMIZATION ON THE BLOCKED PATH (probe-pinned; D4): a select
+that parks consumes NOTHING here, and its WAKE does not re-draw — a
+woken select commits the FIRST wake-ready clause in clause order
+(`resumeThread`), deterministically. gc's woken select commits the
+case its waking event belongs to (never a fresh shuffle); every such
+first-event commit is realized in this machine by the prompt-wake
+schedule (the enabling op is a registry boundary, so the woken select
+is schedulable immediately), and a later wake's head-commit is a
+spec-legal member — at the commit moment every wake-ready clause "can
+proceed". Wake-ORDER latitude is L1/L4's, not a second L2 draw.
+
+Shared by rule `Step.selectApply` (which quantifies the stream — the
+`stmtOpApply` idiom) and `stepFn`; the readiness/commit computation is
+the stream-free `applySelectCore` below (`applySelect` adds only the
+L2 consumption). -/
+inductive SelectOutcome where
+  /-- No pick consumed: default taken, park, or a singleton-ready
+  commit. -/
+  | done (c : Config) (σ : ExecState)
+  /-- Multi-ready (≥ 2): the PRE-COMMITTED result of every ready
+  clause, clause order, for the L2 pick — `.inl` a committed
+  configuration, `.inr` a panic message. -/
+  | picks (commits : List (Sum (Config × ExecState) String))
+
+/-- The stream-FREE core of `applySelect` (the `applyStmtOpCore`
+precedent: choices-obliviousness of apply-SUCCESS is true by
+construction — the ∀-choices kit's discipline, the mapIterNext
+precedent). The multi-ready arm commits EVERY ready clause against the
+same pre-state: a clause whose commit FAIL-CLOSES
+(stuck/unsupported/internal — diagnostics, never Go behaviors) fails
+the apply on every stream, not just when picked; channel PANICS are Go
+behaviors and stay per-pick (`.inr` carries the clause's panic — an
+unpicked clause's panic is discarded with its commit). -/
+def applySelectCore (s : ExecState)
+    (clauses : List (SelectClauseHead × Stmt)) (default? : Option Stmt)
+    (vs : List GoValue) (env : LocalEnv) (k : Cont) :
+    Except GoError SelectOutcome := do
   let evs ← evalClauses clauses vs
   match ← readyClauses s evs with
   | [] =>
       match default? with
-      | some d => return (.exec d env k, s)
-      | none => return (.blockedSelect evs env k, s)
-  | [c] => commitClause s env k c
-  | _ :: _ :: _ =>
-      throw (.unsupported
-        "select with multiple ready cases (deterministic slice; the choice envelope is the scheduler arc's slice 4)")
+      | some d => return .done (.exec d env k) s
+      | none => return .done (.blockedSelect evs env k) s
+  | [c] => do
+      let (c', s') ← commitClause s env k c
+      return .done c' s'
+  | ready => do
+      let commits ← ready.mapM fun cl =>
+        (match commitClause s env k cl with
+        | .ok r => .ok (.inl r)
+        | .error (.panic msg) => .ok (.inr msg)
+        | .error e => .error e :
+          Except GoError (Sum (Config × ExecState) String))
+      return .picks commits
+
+@[inherit_doc applySelectCore]
+def applySelect (s : ExecState) (clauses : List (SelectClauseHead × Stmt))
+    (default? : Option Stmt) (vs : List GoValue) (env : LocalEnv) (k : Cont)
+    (ch : Choices) : Except GoError (Config × ExecState × Choices) := do
+  match ← applySelectCore s clauses default? vs env k with
+  | .done c' s' => return (c', s', ch)
+  | .picks commits =>
+      -- THE L2 CONSUMPTION (envelope statement in the docstring
+      -- above): bound = the ready-clause count.
+      let (idx, ch') := ch.consume commits.length
+      match commits[idx]? with
+      | some (.inl (c', s')) => return (c', s', ch')
+      | some (.inr msg) => throw (.panic msg)
+      | none => throw (.internal "select ready-clause pick out of range")
 
 /-! ## The step relation -/
 
@@ -2547,9 +2617,10 @@ inductive Step : Config → ExecState → Config → ExecState → Prop where
         (.panicking [⟨runtimeErrorValue msg, false⟩] k) s
   -- `select` (spec's five steps): entry evaluates the clause operands in
   -- source order under `selectOpsK` (step 1); the apply step computes
-  -- readiness and commits (steps 2-3, `applySelect` — deterministic in
-  -- this slice: one ready clause or default; multi-ready is
-  -- relation-silent/unsupported); a selected receive's targets evaluate
+  -- readiness and commits (steps 2-3, `applySelect` — one ready clause
+  -- or default deterministically; MULTI-READY draws the L2 clause pick
+  -- from the choice stream, live since slice 4 — the envelope statement
+  -- is `applySelect`'s docstring); a selected receive's targets evaluate
   -- after the communication (step 4, the `tgtOpK`/`storeK` phases); the
   -- body enters
   -- under the plain continuation (step 5 — the frontend wraps the whole
@@ -2570,11 +2641,15 @@ inductive Step : Config → ExecState → Config → ExecState → Prop where
   | selectOpsShift {clauses default? done v e rest env k s} :
       Step (.retV v (.selectOpsK clauses default? done (e :: rest) env k)) s
         (.evalE e env (.selectOpsK clauses default? (v :: done) rest env k)) s
-  | selectApply {clauses default? done v c' env k s s'} :
-      applySelect s clauses default? (v :: done).reverse env k = .ok (c', s') →
+  -- The apply rules quantify the CHOICE STREAM (`stmtOpApply`'s idiom):
+  -- multi-ready readiness draws the L2 clause pick from it (slice 4 —
+  -- the envelope statement is `applySelect`'s docstring), so any
+  -- ready clause's commit is a legal step.
+  | selectApply {clauses default? done v c' env k s s' ch ch'} :
+      applySelect s clauses default? (v :: done).reverse env k ch = .ok (c', s', ch') →
       Step (.retV v (.selectOpsK clauses default? done [] env k)) s c' s'
-  | selectApplyPanic {clauses default? done v msg env k s} :
-      applySelect s clauses default? (v :: done).reverse env k = .error (.panic msg) →
+  | selectApplyPanic {clauses default? done v msg env k s ch} :
+      applySelect s clauses default? (v :: done).reverse env k ch = .error (.panic msg) →
       Step (.retV v (.selectOpsK clauses default? done [] env k)) s
         (.panicking [⟨runtimeErrorValue msg, false⟩] k) s
   -- Receive delivery, phases SPLIT (convergence round, BUG-029): phase

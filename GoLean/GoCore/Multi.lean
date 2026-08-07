@@ -84,11 +84,12 @@ Design points (docs/2026-08-06_channels-arc-design.md):
   `GoError.deadlock` terminal, generalizing slice 1's immediate
   single-thread classification and matching Go's detector state.
 
-Fail closed in this slice (each a visible `.unsupported`, never a
-silent approximation): `go` of a nil func value (gc's "go of nil func
-value" runtime FATAL — probed 2026-08-07; the fatal class is
-unmodeled), select-with-select rendezvous, multi-ready select at
-arrival or wake (the L2 envelope, slice 4).
+Fail closed (each a visible `.unsupported`, never a silent
+approximation): `go` of a nil func value (gc's "go of nil func value"
+runtime FATAL — probed 2026-08-07; the fatal class is unmodeled) and
+select-with-select rendezvous. Multi-ready select went LIVE at slice 4
+(the L2 site — envelope statement at `applySelect`; arrival-path
+`.multi` analysis here; wake-path head-commit at `resumeThread`).
 -/
 
 namespace GoLean.GoCore.Machine
@@ -301,11 +302,21 @@ CELL. A close wakes a parked sender INTO the recoverable
 "send on closed channel" panic in ITS OWN goroutine (probe p24;
 `chan.go`'s wakeup path) and a parked receiver into the buffered
 drain / closed-zero delivery (probe p06's rules). A parked select
-wakes through `readyClauses`/`commitClause` — exactly one ready
-clause commits; multiple ready at wake FAIL CLOSED (the L2 envelope
-is slice 4). Unready resumes are `.internal` (the scheduler only
-picks wake-ready parked goroutines — fail closed, never a silent
-no-op). -/
+wakes through `readyClauses`/`commitClause`, committing the FIRST
+wake-ready clause in clause order — DETERMINISTICALLY, consuming
+nothing: **no re-randomization on the blocked path** (the L2 envelope
+statement at `applySelect`, slice 4; probe-pinned against gc, whose
+woken select commits the case its waking event belongs to, never a
+fresh shuffle). When a deferred wake finds SEVERAL clauses ready
+(possible only because the wake's scheduling is itself L1 latitude —
+gc would have woken at the first enabling event), the head-commit is
+covered per-member: each gc first-event commit is realized here by
+the prompt-wake schedule (every enabling op is a registry boundary),
+and the later wake's head-commit is a spec-legal member of "any case
+that can proceed". The wake-order latitude thus lives entirely at
+L1/L4; the wake itself is not a choice site. Unready resumes are
+`.internal` (the scheduler only picks wake-ready parked goroutines —
+fail closed, never a silent no-op). -/
 def resumeThread (s : ExecState) : Config → Except GoError (Config × ExecState)
   | .blockedSend (some loc) v k => do
       let (buf, capacity, closed) ← chanCell s loc
@@ -329,9 +340,7 @@ def resumeThread (s : ExecState) : Config → Except GoError (Config × ExecStat
   | .blockedSelect evs env k => do
       match ← readyClauses s evs with
       | [] => throw (.internal "resume on an unready blocked select")
-      | [cl] => commitClause s env k cl
-      | _ :: _ :: _ => throw (.unsupported
-          "select with multiple ready cases at wake (deterministic slice; the L2 choice envelope is slice 4)")
+      | cl :: _ => commitClause s env k cl
   | _ => throw (.internal "resume on a non-blocked configuration")
 
 /-- A pairing partner for the arrival intercept: a parked chan-op
@@ -440,14 +449,21 @@ particular every single-goroutine op — is a pure no-op here
 SELECT readiness is waiter-EXTENDED here (S2 audit, second major: a
 select with `default` must see parked partners — gc's `selectgo`
 consults the sudog queues): a clause is ready when cell-ready OR a
-parked partner matches. No ready clause → `none` (`stepFn`: default or
-park). Exactly one ready clause: waiter-matched → pair (a clause both
-cell- and waiter-ready pairs, preserving gc's dequeue-first refill
-semantics); cell-only → `none` (`applySelect` commits the same single
-clause). Two or more ready clauses WITH a waiter involved → fail
-closed (the L2 envelope, slice 4); with no waiter involved → `none`
-(`applySelect`'s own multi-ready refusal, byte-identical to the
-sequential behavior). Select-with-select rendezvous stays fail-closed.
+parked partner matches. No ready clause → `.cellPath` (`stepFn`:
+default or park). Exactly one ready clause: waiter-matched →
+`.single` pair (a clause both cell- and waiter-ready pairs, preserving
+gc's dequeue-first refill semantics); cell-only → `.cellPath`
+(`applySelect` commits the same single clause). Two or more ready
+clauses (slice 4 — the L2 envelope LIVE; statement at `applySelect`):
+with a waiter involved → `.multi`, one outcome per ready clause in
+clause order — the L2 pick chooses the CLAUSE (drawn by
+`arrivalPlan`, bound = ready count), and the chosen clause then
+either pairs (its L4 waiter pick follows, in `stepThread`) or commits
+against the cell (`.commit` — performed at the pool level, since
+`applySelect`'s cell bound differs from the waiter-extended one);
+with no waiter involved → `.cellPath` (`applySelect`'s own L2 pick,
+same bound by construction). Select-with-select rendezvous stays
+fail-closed.
 
 Invariant asserts (fail closed, never a silent wrong order): a matched
 recv-side waiter beside a NONEMPTY buffer is an hchan-invariant breach
@@ -493,16 +509,48 @@ def sidesHaveWaiters (threads : Array Config) (i : Nat) :
         else sendSideWaiters threads i loc).isEmpty
       || sidesHaveWaiters threads i rest
 
+/-- One resolved arrival outcome: PAIR the arriving op (as its
+would-block shape `bc`) with one of the matched parked waiters
+(`cands` — the L4 pick), or COMMIT a specific clause against the cell
+(the select-arrival case where the L2-picked clause is cell-only
+ready: `applySelect` cannot perform that commit, because its
+cell-readiness bound differs from the waiter-extended ready set the
+L2 pick was drawn over). -/
+inductive ArrivalOutcome where
+  | pair (bc : Config) (cands : List (Nat × PairTarget))
+  | commit (cl : EvClause) (env : LocalEnv) (k : Cont)
+
+/-- The PURE arrival analysis (stream-free — the relation's carrier;
+`arrivalPlan` is its consuming wrapper):
+* `.cellPath` — no waiter involvement: the op falls through to the
+  sequential `stepFn`/`applySelect` semantics (including
+  `applySelect`'s OWN L2 pick for a pure-cell multi-ready select —
+  whose bound then equals the waiter-extended one by construction).
+* `.single bc cands` — exactly one ready clause/op, waiter-matched: no
+  L2 pick; the pairing is the only outcome (a singleton-ready
+  cell-only clause is `.cellPath`, so `.single` is always a PAIR — the
+  constructor carries it directly, making a single-commit
+  unrepresentable).
+* `.multi os` — a select arrival with ≥ 2 waiter-extended-ready
+  clauses, at least one waiter-matched: **the L2 site on the arrival
+  path** — one outcome per ready clause in clause order, the pick
+  drawn by `arrivalPlan` (bound `os.length`, the envelope statement
+  at `applySelect`). Chan-op arrivals never produce `.multi`. -/
+inductive ArrivalAnalysis where
+  | cellPath
+  | single (bc : Config) (cands : List (Nat × PairTarget))
+  | multi (os : List ArrivalOutcome)
+
 @[inherit_doc chanArrivalPlan]
-def selectArrivalPlan (s : ExecState) (threads : Array Config) (i : Nat)
+def selectArrivalCases (s : ExecState) (threads : Array Config) (i : Nat)
     (clauses : List (SelectClauseHead × Stmt)) (vs : List GoValue)
     (env : LocalEnv) (k : Cont) :
-    Except GoError (Option (Config × List (Nat × PairTarget))) := do
+    Except GoError ArrivalAnalysis := do
   match selectClauseChans clauses vs with
-  | none => return none
+  | none => return .cellPath
   | some sides =>
       -- pure waiter-existence pre-scan
-      if !sidesHaveWaiters threads i sides then return none
+      if !sidesHaveWaiters threads i sides then return .cellPath
       else do
         let evs ← evalClauses clauses vs
         -- per-clause: cell readiness and waiter candidates
@@ -516,11 +564,11 @@ def selectArrivalPlan (s : ExecState) (threads : Array Config) (i : Nat)
                 -- dequeue — chansend panics on closed unconditionally and
                 -- chanrecv dequeues sendq only when open — so the clause's
                 -- waiter list is zeroed and, being cell-ready (closed ⇒
-                -- ready in both directions), it falls to `applySelect`'s
-                -- correct closed semantics: the send clause panics, the
-                -- recv clause drains/zeroes, and a parked sender is left
-                -- for its close-wake panic. Mirrors `chanArrivalPlan`'s
-                -- closed guards.
+                -- ready in both directions), it takes the cell-commit
+                -- semantics (send panics, recv drains/zeroes, parked
+                -- senders are left for their close-wake panic) whether it
+                -- commits via `applySelect` or via an L2-picked
+                -- `.commit`. Mirrors `chanArrivalPlan`'s closed guards.
                 let ws ←
                   match cl with
                   | .recvEv chv _ _ _ =>
@@ -539,36 +587,65 @@ def selectArrivalPlan (s : ExecState) (threads : Array Config) (i : Nat)
                       | none => pure []
                 return (ci, cell, ws)
             | none => return (ci, false, [])
+        -- One outcome per waiter-extended-ready clause, clause order.
+        let mkOutcome : Nat × Bool × List (Nat × PairTarget) →
+            Except GoError ArrivalOutcome := fun (ci, _, ws) =>
+          if ws.isEmpty then
+            match evs[ci]? with
+            | some cl => return .commit cl env k
+            | none => throw (.internal "select ready-clause index out of range")
+          else if ws.any (fun w => w.2.isSelect) then
+            throw (.unsupported
+              "select-with-select rendezvous (unmodeled this slice)")
+          else
+            return .pair (.blockedSelect evs env k) (ws.map fun w => (ci, w.2))
         match readiness.filter (fun r => r.2.1 || !r.2.2.isEmpty) with
-        | [] => return none
-        | [(ci, _, ws)] =>
-            if ws.isEmpty then return none  -- cell-only: applySelect commits it
+        | [] => return .cellPath
+        | [(ci, _cell, ws)] =>
+            if ws.isEmpty then return .cellPath  -- cell-only: applySelect commits it
             else if ws.any (fun w => w.2.isSelect) then
               throw (.unsupported
                 "select-with-select rendezvous (unmodeled this slice)")
             else
-              return some (.blockedSelect evs env k,
-                ws.map fun w => (ci, w.2))
+              return .single (.blockedSelect evs env k) (ws.map fun w => (ci, w.2))
         | ready =>
             if ready.all (fun r => r.2.2.isEmpty) then
-              return none  -- pure cell multi-ready: applySelect's refusal
-            else
-              throw (.unsupported
-                "select with multiple ready cases under waiter-extended readiness (the L2 choice envelope is slice 4)")
+              -- Pure cell multi-ready: `applySelect`'s own L2 pick — and
+              -- its bound (|cell-ready|) EQUALS |ready| here (every
+              -- waiter-carrying clause is ready, so all-empty-ws means
+              -- ready is exactly the cell-ready set): one consumption,
+              -- one bound, either path.
+              return .cellPath
+            else do
+              return .multi (← ready.mapM mkOutcome)
 
 @[inherit_doc chanArrivalPlan]
-def arrivalPlanAux (s : ExecState) (threads : Array Config) (i : Nat) :
-    Config → Except GoError (Option (Config × List (Nat × PairTarget)))
-  | .retV v (.chanStK op done [] env k) =>
-      chanArrivalPlan s threads i op ((v :: done).reverse) env k
+def arrivalCases (s : ExecState) (threads : Array Config) (i : Nat) :
+    Config → Except GoError ArrivalAnalysis
+  | .retV v (.chanStK op done [] env k) => do
+      match ← chanArrivalPlan s threads i op ((v :: done).reverse) env k with
+      | none => return .cellPath
+      | some (bc, cs) => return .single bc cs
   | .retV v (.selectOpsK clauses _default? done [] env k) =>
-      selectArrivalPlan s threads i clauses ((v :: done).reverse) env k
-  | _ => return none
+      selectArrivalCases s threads i clauses ((v :: done).reverse) env k
+  | _ => return .cellPath
 
-@[inherit_doc chanArrivalPlan]
+/-- The consuming wrapper over `arrivalCases`: draws the L2 clause pick
+at a `.multi` analysis (bound = the ready count; consumed ONLY then —
+`.cellPath`/`.single` return the stream untouched, which is what keeps
+partnerless and singleton arrivals stream-transparent and sequential
+conservation literal). -/
 def arrivalPlan (s : ExecState) (threads : Array Config) (i : Nat)
-    (c : Config) : Except GoError (Option (Config × List (Nat × PairTarget))) :=
-  arrivalPlanAux s threads i c
+    (c : Config) (ch : Choices) :
+    Except GoError (Option ArrivalOutcome × Choices) := do
+  match ← arrivalCases s threads i c with
+  | .cellPath => return (none, ch)
+  | .single bc cands => return (some (.pair bc cands), ch)
+  | .multi os =>
+      let (idx, ch') := ch.consume os.length
+      match os[idx]? with
+      | some o => return (some o, ch')
+      | none => throw (.internal "select L2 ready pick out of range")
 
 /-- Perform ONE pairing: the arriving goroutine `i` (whose op takes
 its would-block shape `bc`) pairs with the chosen candidate. Two
@@ -728,24 +805,31 @@ def stepThread (s : ExecState) (threads : Array Config) (i : Nat)
           let (parent', child, s') ← spawnStep s cv args k
           return ((threads.setIfInBounds i parent').push child, s', ch)
       | none => do
-          match ← arrivalPlan s threads i c with
-          | some (bc, cs) =>
+          match ← arrivalPlan s threads i c ch with
+          | (some (.pair bc cs), ch₁) =>
               match cs with
               | [] => throw (.internal "empty arrival pairing plan")
               | [cand] => do
                   let (ts', s'') ← applyPairing s threads i bc cand
-                  return (ts', s'', ch)
+                  return (ts', s'', ch₁)
               | _ :: _ :: _ => do
                   -- L4: any matching waiter (consumed only at width > 1)
-                  let (idx, ch₂) := ch.consume cs.length
+                  let (idx, ch₂) := ch₁.consume cs.length
                   match cs[idx]? with
                   | some cand => do
                       let (ts', s'') ← applyPairing s threads i bc cand
                       return (ts', s'', ch₂)
                   | none => throw (.internal "waiter pick out of range")
-          | none => do
-              let (c', s', ch₁) ← stepFn s c ch
+          | (some (.commit cl env k), ch₁) => do
+              -- The L2-picked clause is cell-only ready: commit it
+              -- against the cell at the pool level (`applySelect`'s
+              -- cell bound differs from the waiter-extended one the
+              -- pick was drawn over).
+              let (c', s') ← commitClause s env k cl
               return (threads.setIfInBounds i c', s', ch₁)
+          | (none, ch₁) => do
+              let (c', s', ch₂) ← stepFn s c ch₁
+              return (threads.setIfInBounds i c', s', ch₂)
 
 /-- `stepThread` lifted back into a `MultiConfig` (the stepped goroutine
 becomes the running one). -/
@@ -874,9 +958,11 @@ def raceWakeEvent (s : ExecState) (i : Nat) (r : RaceState) :
       else if closed then return (r.closeAcquire i loc)
       else return r
   | .blockedSelect evs _ _ => do
+      -- Head-commit lockstep with `resumeThread` (slice 4): the wake
+      -- commits the FIRST wake-ready clause, deterministically.
       match ← readyClauses s evs with
-      | [cl] => raceCommitClauseEvent s i r cl
-      | _ => return r
+      | cl :: _ => raceCommitClauseEvent s i r cl
+      | [] => return r
   | _ => return r
 
 /-- Clock update for a PAIRING step (arriving goroutine `i`, woken
@@ -927,14 +1013,19 @@ def racePairEvent (s : ExecState) (tsPre : Array Config) (i j : Nat)
 
 /-- **The detector's event dispatcher** — run by the detecting loop
 after every successful pool step, over the PRE-step pool
-(`sPre`/`tsPre`) and the post-step pool `m'` (whose `cur` is the
-goroutine that stepped). Inert while the pool holds ≤ 1 goroutine.
+(`sPre`/`tsPre`), the PRE-step choice stream `chPre` (slice 4: the
+multi-ready select commit is stream-dependent, so the dispatcher
+REPLICATES the step's consumption to recover the committed clause —
+it observes the stream, deterministic given it, and consumes
+nothing), and the post-step pool `m'` (whose `cur` is the goroutine
+that stepped). Inert while the pool holds ≤ 1 goroutine.
 Classification mirrors `stepThread`'s dispatch order: spawn (pool
 grew), wake (pre-config blocked), channel/select apply (pairing when a
 partner was woken, cell path otherwise), private step (footprint
 check-and-record; a step that PANICKED performed no access — the
 panic fired in place of it). -/
-def raceUpdate (sPre : ExecState) (tsPre : Array Config) (m' : MultiConfig)
+def raceUpdate (sPre : ExecState) (tsPre : Array Config) (chPre : Choices)
+    (m' : MultiConfig)
     (r : RaceState) : Except GoError RaceState := do
   if m'.threads.size ≤ 1 then return r
   else
@@ -999,10 +1090,37 @@ def raceUpdate (sPre : ExecState) (tsPre : Array Config) (m' : MultiConfig)
                 match m'.threads[i]? with
                 | some (.blockedSelect _ _ _) => return r
                 | _ => do
-                    let evs ← evalClauses clauses ((v :: done).reverse)
-                    match ← readyClauses sPre evs with
-                    | [cl] => raceCommitClauseEvent sPre i r cl
-                    | _ => return r  -- default taken / refused upstream
+                    -- Slice 4 (multi-ready live): REPLICATE the step's
+                    -- choice consumption to recover the COMMITTED
+                    -- clause. The select apply is a boundary, so the
+                    -- reschedule branch ran and the L1 pick was
+                    -- consumed iff |runnable| > 1 over the PRE pool;
+                    -- then the arrival analysis' L2 pick (the same
+                    -- pure `arrivalCases` + `Choices.consume` the step
+                    -- used), then `applySelect`'s L2 on the cell path.
+                    -- Deterministic given the stream; consumes nothing.
+                    let rs := runnableIdxs sPre tsPre
+                    let ch₁ :=
+                      if rs.length > 1 then (chPre.consume rs.length).2
+                      else chPre
+                    match ← arrivalCases sPre tsPre i cPre with
+                    | .multi os =>
+                        let (sel, _) := ch₁.consume os.length
+                        (match os[sel]? with
+                        | some (.commit cl _ _) =>
+                            raceCommitClauseEvent sPre i r cl
+                        | _ => return r)  -- pair: a partner was woken (path above)
+                    | .single _ _ => return r  -- pair: partner woken (path above)
+                    | .cellPath => do
+                        let evs ← evalClauses clauses ((v :: done).reverse)
+                        match ← readyClauses sPre evs with
+                        | [] => return r  -- default taken
+                        | [cl] => raceCommitClauseEvent sPre i r cl
+                        | ready =>
+                            let (idx, _) := ch₁.consume ready.length
+                            (match ready[idx]? with
+                            | some cl => raceCommitClauseEvent sPre i r cl
+                            | none => return r)
         | _ =>
             match m'.threads[i]? with
             | some (.panicking _ _) =>
@@ -1062,7 +1180,7 @@ def execProgLoop : Nat → MultiConfig → RaceState → Choices →
                   | 0 => throw .fuelOut
                   | fuel + 1 => do
                       let (m', choices') ← stepMulti m choices
-                      let r' ← raceUpdate m.shared m.threads m' r
+                      let r' ← raceUpdate m.shared m.threads choices m' r
                       execProgLoop fuel m' r' choices'
 
 /-- **The `execStmt`-shaped POOL wrapper** (D8's carrier swap): run
@@ -1119,13 +1237,16 @@ def schedPick (m : MultiConfig) (i : Nat) : Prop :=
   | none => False
 
 /-- The POOL relation (proof infrastructure; `stepMulti` is its
-executable instantiation — `stepMulti_sound`/`stepM_complete`). Four
+executable instantiation — `stepMulti_sound`/`stepM_complete`). Six
 rule classes: a partnerless goroutine step (`thread` — ordinary, spawn,
-or park: `arrivalPlan` found no parked partner, so a blocked outcome
-simply parks), the arrival pairing (`pair` — gc's waiter-queue
-priority; the L4 waiter pick is the rule's `idx`), the wake of a
-parked goroutine (`wake`), and the post-spawn marker strip (`spawned`
-— BUG-040's registry op at fork completion). Deadlock is
+or park: the arrival analysis found no waiter involvement, so a blocked
+outcome simply parks), the singleton arrival pairing (`pair` — gc's
+waiter-queue priority; the L4 waiter pick is the rule's `idx`), the
+multi-ready select arrival's two L2-picked shapes (`pickPair` /
+`pickCommit` — the rule's `sel` is the L2 clause pick over the pure
+`.multi` analysis, slice 4), the wake of a parked goroutine (`wake` —
+head-commit, no re-randomization), and the post-spawn marker strip
+(`spawned` — BUG-040's registry op at fork completion). Deadlock is
 relation-SILENT (no rule from an all-asleep pool), mirroring the
 sequential machine's silent blocked configs. -/
 inductive StepM : MultiConfig → MultiConfig → Prop where
@@ -1134,7 +1255,7 @@ inductive StepM : MultiConfig → MultiConfig → Prop where
       schedPick m i →
       m.threads[i]? = some c →
       isBlockedConfig c = false →
-      arrivalPlan m.shared m.threads i c = .ok none →
+      arrivalCases m.shared m.threads i c = .ok .cellPath →
       StepE c m.shared c' σ' efs →
       StepM m ⟨(m.threads.setIfInBounds i c') ++ efs.toArray, σ', i⟩
   | pair {m : MultiConfig} {i : Nat} {c bc : Config} {σ'' : ExecState}
@@ -1143,10 +1264,33 @@ inductive StepM : MultiConfig → MultiConfig → Prop where
       m.threads[i]? = some c →
       isBlockedConfig c = false →
       spawnPlan c = none →
-      arrivalPlan m.shared m.threads i c = .ok (some (bc, cs)) →
+      arrivalCases m.shared m.threads i c = .ok (.single bc cs) →
       (hidx : idx < cs.length) →
       applyPairing m.shared m.threads i bc cs[idx] = .ok (ts', σ'') →
       StepM m ⟨ts', σ'', i⟩
+  | pickPair {m : MultiConfig} {i : Nat} {c bc : Config} {σ'' : ExecState}
+      {os : List ArrivalOutcome} {sel : Nat}
+      {cs : List (Nat × PairTarget)} {idx : Nat} {ts' : Array Config} :
+      schedPick m i →
+      m.threads[i]? = some c →
+      isBlockedConfig c = false →
+      spawnPlan c = none →
+      arrivalCases m.shared m.threads i c = .ok (.multi os) →
+      os[sel]? = some (.pair bc cs) →
+      (hidx : idx < cs.length) →
+      applyPairing m.shared m.threads i bc cs[idx] = .ok (ts', σ'') →
+      StepM m ⟨ts', σ'', i⟩
+  | pickCommit {m : MultiConfig} {i : Nat} {c : Config} {cl : EvClause}
+      {env : LocalEnv} {k : Cont} {os : List ArrivalOutcome} {sel : Nat}
+      {c' : Config} {σ' : ExecState} :
+      schedPick m i →
+      m.threads[i]? = some c →
+      isBlockedConfig c = false →
+      spawnPlan c = none →
+      arrivalCases m.shared m.threads i c = .ok (.multi os) →
+      os[sel]? = some (.commit cl env k) →
+      commitClause m.shared env k cl = .ok (c', σ') →
+      StepM m ⟨m.threads.setIfInBounds i c', σ', i⟩
   | wake {m : MultiConfig} {i : Nat} {c c' : Config} {σ' : ExecState} :
       schedPick m i →
       m.threads[i]? = some c →

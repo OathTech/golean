@@ -6,9 +6,11 @@ import GoLean.GoCore.MachineSound
 The old file held per-expression-form `ExprR` determinism inversions
 (`exprR_var_eq_lit_det` and family), consumed by the laws' `hred`
 determinism obligations. Under the fine-grained machine they collapse into
-ONE generic fact: away from the two nondeterministic step classes
-(`mapIterK`'s pick-next and the `stmtOpK` apply position, whose
-`applyStmtOp` may consume a capacity choice), the rules are syntactically
+ONE generic fact: away from the three nondeterministic step classes
+(`mapIterK`'s pick-next, the `stmtOpK` apply position, whose
+`applyStmtOp` may consume a capacity choice, and — channels arc slice
+4 — the `selectOpsK` apply position, whose `applySelect` may consume
+the L2 clause pick), the rules are syntactically
 disjoint and their premises are function equations — so any two steps
 from the same configuration agree. `step_det` is what every
 `wp_det_step_keep`/`wp_store_step`-style `hred` cites for its determinism
@@ -20,12 +22,15 @@ namespace GoLean.GoCore.Machine
 open GoLean
 
 /-- Configurations whose outgoing step (if any) is unique. Everything
-except the two choice classes — conservatively including the nullary
+except the three choice classes — conservatively including the nullary
 wide-statement entry (its `applyStmtOp` is in fact choice-independent,
-but no law needs that). -/
+but no law needs that) and every select apply position (single-ready
+applies are in fact choice-independent, but no law steps through a
+select). -/
 def Config.choiceFree : Config → Prop
   | .next (.mapIterK _ _ _ _ _ _ _ _) => False
   | .retV _ (.stmtOpK _ _ _ [] _ _) => False
+  | .retV _ (.selectOpsK _ _ _ [] _ _) => False
   | .exec stmt _ _ =>
       match stmtPlan stmt with
       | some (_, _, []) => False
