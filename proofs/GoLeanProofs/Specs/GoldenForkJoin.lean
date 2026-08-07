@@ -8,10 +8,12 @@ note in `Surface.lean`'s D8 section): a hand-built fork/join program —
 main spawns a worker, the worker sends 42 over an unbuffered channel,
 main receives it into the pinned output cell — KERNEL-EVALUATED through
 the ThreadPool driver (`execProg`) under three pinned choice streams
-realizing three DISTINCT schedules (main-first, worker-then-main,
-worker-twice — the scheduler's L1 site genuinely consumes: two
-goroutines are runnable at the registry boundaries; distinctness
-argued at `forkJoinStreamAlternating`), plus a
+realizing three DISTINCT schedules (the scheduler's L1 site genuinely
+consumes: two goroutines are runnable at the registry boundaries —
+including, since slice 4's BUG-040 fix, the POST-SPAWN `.spawned`
+boundary; the schedules were re-derived by probe after that fix and
+the distinctness argument re-recorded at `forkJoinStreamAlternating`;
+stream literals and readouts unchanged), plus a
 multi-goroutine DEADLOCK program classified `.deadlock` the same way.
 
 These are rung-1, pinned-stream readouts — deliberately NOT `GoSpecC`
@@ -64,25 +66,34 @@ def fjRunGives42 (fuel : Nat) (ch : Choices) : Bool :=
       | _ => false
   | _ => false
 
-/-- Canonical schedule (the empty stream: every pick 0). -/
+/-- Canonical schedule (the empty stream: every pick 0): main runs
+through the post-spawn boundary, parks at its receive, and the
+worker's ARRIVING SEND pairs with the parked receiver. -/
 theorem forkJoinStreamCanonical : fjRunGives42 400 [] = true := by
   decide +kernel
 
-/-- Adversarial schedule: descending picks at every consumption. -/
+/-- Adversarial schedule: descending picks at every consumption.
+RE-DERIVED at slice 4 (BUG-040: the post-spawn `.spawned` boundary is
+a new consumption site, so the same literal now realizes a DIFFERENT
+schedule — probed): picks 1,0,1 mod the bound 2 give worker-first at
+the fork's completion, main's marker strip, then the worker PARKS at
+its send (main is mid-statement, not parked) and main's arriving
+receive pairs with the parked sender — the handoff direction the
+pre-fix literal could not reach. -/
 theorem forkJoinStreamAdversarial :
     fjRunGives42 400 [9, 8, 7, 6, 5, 4, 3, 2, 1, 0] = true := by
   decide +kernel
 
-/-- The worker-first-twice schedule — the third DISTINCT execution
-(S2 audit response: the original stream [1,0,1,0,…] reduced mod the
-scheduler's bound 2 to the same pick sequence as the adversarial
-stream, certifying the same execution twice; every consumption in this
-program has bound exactly 2, so distinctness is decided by the pick
-sequence mod 2: canonical [] = main-first (main parks, worker's
-arriving send pairs), adversarial [9,8,…] = worker-then-main (main
-still parks — the worker sits unparked at its boundary — then the
-send pairs), all-ones = worker-twice (the WORKER parks first and
-main's arriving receive pairs — the handoff's other direction). -/
+/-- The third DISTINCT execution (S2 audit response introduced the
+all-ones literal; slice 4's BUG-040 re-derivation, by probe): picks
+1,1 run the WORKER TWICE consecutively from the post-spawn boundary —
+it parks at its send while main still holds the `.spawned` marker —
+then main (the only runnable) strips and its arriving receive pairs.
+Distinctness of the three: the realized pick sequences are [], [1,0,1]
+and [1,1] (every site here has bound exactly 2), and the interleavings
+differ pairwise — canonical is the parked-RECEIVER direction; the
+other two are the parked-SENDER direction but place main's marker
+strip on opposite sides of the worker's park. -/
 theorem forkJoinStreamAlternating :
     fjRunGives42 400 [1, 1, 1, 1, 1, 1, 1, 1] = true := by
   decide +kernel

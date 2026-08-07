@@ -70,10 +70,29 @@ differential-pinned) `- Cases: <id>, <id>, …` (baseline case ids), then prose.
 
 ## BUG-040 — no POST-SPAWN reschedule point: a child can never run before a sync-free parent segment (L1 envelope too narrow; exit-no-sync races undetectable)
 
-- Status: open
-- Pinned-by: none (eval pins `GoCore race BUG-040 pin: …` in
-  Tests/GoCoreEval.lean assert the CURRENT value-leaf behavior on both
-  streams and name this entry; a differential case cannot pin it — the
+- Status: fixed (2026-08-07, slice 4 — the anticipated-by-D8 fix:
+  `spawnStep` leaves the parent on the new `.spawned k` Config marker,
+  a registry boundary of its own (`Config.atBoundary`), whose only
+  step is the pool-level strip to `.next k` (`stepThread`; relation
+  rule `StepM.spawned`, mirrored in `StepMFine`; `stepFn` fails closed
+  `.internal` on it — pool-only). The "who runs after the fork"
+  decision is therefore a real L1 consumption site, the child CAN
+  preempt a sync-free parent segment, and the exit-no-sync race class
+  is detectable: the `GoCore race BUG-040` eval pins flipped — stream
+  [1] now refuses `race` (child-first), the empty stream keeps the
+  value leaf (main-first, gc's dominant corner). Pinned-stream shift,
+  as predicted: the three designated fork/join witnesses'
+  STATEMENTS (shapes AND literals) survived unchanged — every stream
+  still completes `.normal`/42 — but the schedules those literals
+  realize moved and were re-derived by probe; the distinctness
+  argument is re-recorded in GoldenForkJoin.lean. Full corpus:
+  ZERO drift on all 1173 prior ids under the new boundary (the empty
+  stream's pick-0 defaults preserve the lowest-index-runnable
+  schedule). The arc-end Comparator landmark certifies the (textually
+  unchanged) designated set over the changed machine.)
+- Pinned-by: none (eval pins `GoCore race BUG-040 …` in
+  Tests/GoCoreEval.lean: stream [1] refuses race, stream [] is the
+  value leaf; a differential case cannot pin the class — the
   gc scheduler realizes the same main-first corner ~always, so `go run`
   and `go run -race` agree with our value leaf, 0/700-style —
   validation note §3's mainfirst measurement is exactly this shape)

@@ -146,6 +146,10 @@ S3 convergence: these two rows were missing from the first
 - `.capacityOf` CHANNEL load → U2, same basis.
 
 MODEL-INTERNAL loads gc never performs (excluded on purpose):
+- the `.spawned` marker's pool strip (BUG-040, slice 4): a pure
+  control step — touches no memory (`stepAccesses` catch-all; the
+  spawn's own edge and the child's dispatch read are recorded at the
+  FORK step by `raceUpdate`, unchanged).
 - `loadLoc`/`storeLoc` own path recursion (walking to the root cell).
 - `indexTargetLoc`/`resolveChain` bounds-check loads (address
   formation; bounds come from headers/types in gc).

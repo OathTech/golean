@@ -1803,6 +1803,19 @@ inductive Config where
   | blockedSend (ch : Option Loc) (v : GoValue) (k : Cont)
   | blockedRecv (ch : Option Loc) (targets : List Assignee) (elem : Ty) (env : LocalEnv) (k : Cont)
   | blockedSelect (clauses : List EvClause) (env : LocalEnv) (k : Cont)
+  -- The POST-SPAWN completion marker (channels arc slice 4, BUG-040):
+  -- the spawn step leaves the PARENT here instead of at `.next k`, and
+  -- the pool treats it as a registry boundary — so the scheduling
+  -- decision "who runs after the fork" exists as its own registry op
+  -- (the child now CAN preempt a sync-free parent segment; without
+  -- this the child-first interleaving of the exit-no-sync class was
+  -- outside the L1 envelope on every stream). Its only step is the
+  -- pool-level strip to `.next k` (`stepThread`; rule
+  -- `StepM.spawned`). Pool-only: the sequential machine never
+  -- constructs it (`stepFn` fails closed `.internal`), and it is
+  -- relation-silent in the per-goroutine `Step` like the blocked
+  -- shapes.
+  | spawned (k : Cont)
 
 /-- Enter a receive's TARGET phase (nonempty targets; convergence
 round, BUG-029): resolve the target plan and start phase 1 on the

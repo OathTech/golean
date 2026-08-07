@@ -1867,18 +1867,19 @@ def main : IO UInt32 := do
     (GoCore.Machine.runProgramPoolM 100000 raceProgram "raceWriteWriteMain_F" #[] []) "race")
   passed := passed && (← expectErrorStatus "GoCore race: write/write refuses on the worker-first stream"
     (GoCore.Machine.runProgramPoolM 100000 raceProgram "raceWriteWriteMain_F" #[] [1, 1]) "race")
-  -- BUG-040 (recorded gap, slice-3 build log): there is NO post-spawn
-  -- reschedule point — after a fork the parent runs privately to its
-  -- next registry boundary, so a child can never run before a
-  -- sync-free parent segment, and the exit-no-sync race class is a
-  -- value leaf on EVERY stream (the [1] below is consumed nowhere).
-  -- The fix (a post-spawn scheduling decision) adds a consumption
-  -- site, which restates the pinned-stream designated witnesses —
-  -- stopped on per the slice charter; these two pins document the
-  -- CURRENT behavior and flip to race/one-racy-leaf when it lands.
-  passed := passed && (← expectIntResult "GoCore race BUG-040 pin: exit-no-sync is a value leaf even on stream [1] (post-spawn reschedule point missing; the child-first coarse path does not exist yet)"
-    (GoCore.Machine.runProgramPoolM 100000 raceProgram "raceExitNoSyncMain_F" #[] [1]) 0)
-  passed := passed && (← expectIntResult "GoCore race BUG-040 pin: exit-no-sync main-first stream is a value leaf (child never runs; matches gc's dominant schedule)"
+  -- BUG-040 FIXED (slice 4): the post-spawn reschedule point exists —
+  -- `spawnStep` leaves the parent on the `.spawned` marker, a registry
+  -- boundary of its own, so stream [1] picks the CHILD at the fork's
+  -- completion: the child's write executes before main's read with no
+  -- ordering edge (goroutine exit synchronizes nothing — go_mem), and
+  -- the exit-no-sync race class is DETECTABLE (race leaf on the
+  -- child-first stream). The main-first empty stream keeps the value
+  -- leaf (the child never runs; gc's dominant schedule) — one racy
+  -- leaf beside a value leaf is exactly why this class is eval-pinned,
+  -- not a corpus race case (the enumerated set is mixed).
+  passed := passed && (← expectErrorStatus "GoCore race BUG-040 fixed: exit-no-sync refuses on the child-first stream [1] (post-spawn reschedule point live)"
+    (GoCore.Machine.runProgramPoolM 100000 raceProgram "raceExitNoSyncMain_F" #[] [1]) "race")
+  passed := passed && (← expectIntResult "GoCore race BUG-040: exit-no-sync main-first stream stays a value leaf (child never runs; matches gc's dominant schedule)"
     (GoCore.Machine.runProgramPoolM 100000 raceProgram "raceExitNoSyncMain_F" #[] []) 0)
   passed := passed && (← expectIntResult "GoCore race: rendezvous HB edge keeps the ordered store/read green (worker-first stream)"
     (GoCore.Machine.runProgramPoolM 100000 raceProgram "raceHbGreenMain_F" #[] [1, 1]) 9)

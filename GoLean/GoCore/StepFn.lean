@@ -682,6 +682,10 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
   | .blockedSend _ _ _ => throw .deadlock
   | .blockedRecv _ _ _ _ _ => throw .deadlock
   | .blockedSelect _ _ _ => throw .deadlock
+  -- The post-spawn marker (BUG-040, slice 4) is pool-only: the
+  -- sequential machine never spawns, so reaching it here is an
+  -- internal invariant break, never Go behavior.
+  | .spawned _ => throw (.internal "post-spawn marker outside the thread pool")
 
 /-- Fuel-bounded iteration of `stepFn` to a terminal configuration. Fuel
 counts machine steps; the terminal check precedes the fuel check so a

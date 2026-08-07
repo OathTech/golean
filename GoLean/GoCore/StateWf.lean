@@ -440,6 +440,7 @@ def Config.locSup : Config → Nat
           (max (LocalEnv.locSup env) (Cont.locSup k)))
   | .blockedSelect clauses env k =>
       max (evClausesSup clauses) (max (LocalEnv.locSup env) (Cont.locSup k))
+  | .spawned k => Cont.locSup k
 
 /-- State sup: heap keys+values, and every stored function body
 (bodies enter the configuration at `enterFrame`). -/
@@ -515,6 +516,7 @@ def Config.itersNormalized (types : TypeEnv) : Config → Bool
   | .blockedSend _ _ k => Cont.itersNormalized types k
   | .blockedRecv _ _ _ _ k => Cont.itersNormalized types k
   | .blockedSelect _ _ k => Cont.itersNormalized types k
+  | .spawned k => Cont.itersNormalized types k
   | .panicked _ => true
 
 /-! ## The Prop wrappers -/

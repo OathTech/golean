@@ -20,7 +20,10 @@ Design points (docs/2026-08-06_channels-arc-design.md):
 
 * **D2(a) — the scheduler consumption rule.** Context switches happen
   ONLY at registry ops (`Config.atBoundary`: channel-op/select apply
-  positions, spawn positions, goroutine exit, parked-blocked configs);
+  positions, spawn positions, spawn COMPLETIONS — the `.spawned`
+  marker, BUG-040's slice-4 fix: the decision "who runs after the
+  fork" is a registry op of its own, so a child can preempt a
+  sync-free parent segment — goroutine exit, parked-blocked configs);
   between boundaries the running goroutine steps without any scheduler
   involvement. The scheduler `Choices` site is consumed ONLY when
   `|runnable| > 1` — `Choices.consume` pops even at bound 1, so
@@ -111,6 +114,20 @@ def isBlockedConfig : Config → Bool
   | .blockedSelect _ _ _ => true
   | _ => false
 
+/-- The post-spawn completion marker (BUG-040, slice 4). Its only step
+is the pool-level strip to `.next k` (`stepThread`); it is a registry
+boundary (`Config.atBoundary`) and runnable, which is exactly what puts
+the "who runs after the fork" decision inside the L1 envelope. -/
+def Config.isSpawned : Config → Bool
+  | .spawned _ => true
+  | _ => false
+
+/-- The marker's continuation, in the `spawnPlan` extraction mold (what
+keeps the `stepThread` dispatch and its proofs plan-shaped). -/
+def spawnedCont : Config → Option Cont
+  | .spawned k => some k
+  | _ => none
+
 /-- A goroutine with nothing left to do: the four unwound terminals
 (only main can reach the non-`.next` ones — spawned goroutines run
 under a barrier frame) and the program-aborting `.panicked`. Tombstones
@@ -185,6 +202,14 @@ def Config.atBoundary : Config → Bool
   | .retV _ (.selectOpsK _ _ _ [] _ _) => true
   | .retV _ (.goCalleeK [] _ _) => true
   | .retV _ (.goArgsK _ _ [] _ _) => true
+  -- Spawn COMPLETION (BUG-040, slice 4): the parent's post-fork marker
+  -- is a registry op of its own, so the "who runs after the fork"
+  -- decision is a real L1 scheduling point — the child can preempt a
+  -- sync-free parent segment. Without it the pre-fork spawn position
+  -- was the only boundary, where the child does not exist yet
+  -- (|runnable| counts the parent alone), and the child-first
+  -- interleaving was outside the modeled envelope on every stream.
+  | .spawned _ => true
   | .exec (.selectStmt clauses _) _ _ => (selectOperands clauses.toList).isEmpty
   | .next .stop => true
   | .returning .stop => true
@@ -232,10 +257,14 @@ def spawnStep (s : ExecState) (cv : GoValue) (args : List GoValue) (k : Cont) :
   | .funcVal fid captured =>
       match enterFrame s fid (captured ++ args) with
       | .ok (func, frameEnv, _resultLocs, s') =>
-          return (.next k,
+          -- The parent lands on the POST-SPAWN marker (BUG-040, slice
+          -- 4): a registry boundary of its own, so the next pool step
+          -- reschedules among {parent, child, …} instead of running
+          -- the parent privately to its next sync op.
+          return (.spawned k,
             .exec func.body frameEnv (.frame [] [] [] .stop func.wrapper), s')
       | .error (.panic msg) =>
-          return (.next k, .panicking [⟨runtimeErrorValue msg, false⟩] .stop, s)
+          return (.spawned k, .panicking [⟨runtimeErrorValue msg, false⟩] .stop, s)
       | .error e => throw e
   | .nil => throw (.unsupported
       "go of nil func value (gc raises an unrecoverable runtime fatal at the spawn; the fatal class is unmodeled this slice)")
@@ -668,7 +697,9 @@ def applyPairing (s : ExecState) (threads : Array Config) (i : Nat)
   | _, _ => throw (.internal "pairing on a non-blocked configuration")
 
 /-- One step of goroutine `i` in the pool: a parked goroutine WAKES
-(`resumeThread`); a completed spawn position FORKS (`spawnStep`,
+(`resumeThread`); the post-spawn marker STRIPS to `.next k` (BUG-040 —
+the fork's own registry op, whose boundary is where the child may first
+preempt); a completed spawn position FORKS (`spawnStep`,
 appending the child — stable ids); a channel/select apply position
 consults PARKED PARTNERS FIRST (`arrivalPlan` — gc's waiter-queue
 priority; the L4 pick is consumed ONLY when more than one candidate
@@ -684,6 +715,14 @@ def stepThread (s : ExecState) (threads : Array Config) (i : Nat)
       let (c', s') ← resumeThread s c
       return (threads.setIfInBounds i c', s', ch)
     else
+      match spawnedCont c with
+      | some k =>
+          -- BUG-040 (slice 4): strip the post-spawn marker — one
+          -- goroutine-step, consuming nothing (the scheduling decision
+          -- it exists for was taken by `stepMulti`'s L1 site at this
+          -- boundary).
+          return (threads.setIfInBounds i (.next k), s, ch)
+      | none =>
       match spawnPlan c with
       | some (cv, args, k) => do
           let (parent', child, s') ← spawnStep s cv args k
@@ -1080,14 +1119,15 @@ def schedPick (m : MultiConfig) (i : Nat) : Prop :=
   | none => False
 
 /-- The POOL relation (proof infrastructure; `stepMulti` is its
-executable instantiation — `stepMulti_sound`/`stepM_complete`). Three
+executable instantiation — `stepMulti_sound`/`stepM_complete`). Four
 rule classes: a partnerless goroutine step (`thread` — ordinary, spawn,
 or park: `arrivalPlan` found no parked partner, so a blocked outcome
 simply parks), the arrival pairing (`pair` — gc's waiter-queue
-priority; the L4 waiter pick is the rule's `idx`), and the wake of a
-parked goroutine (`wake`). Deadlock is relation-SILENT (no rule from an
-all-asleep pool), mirroring the sequential machine's silent blocked
-configs. -/
+priority; the L4 waiter pick is the rule's `idx`), the wake of a
+parked goroutine (`wake`), and the post-spawn marker strip (`spawned`
+— BUG-040's registry op at fork completion). Deadlock is
+relation-SILENT (no rule from an all-asleep pool), mirroring the
+sequential machine's silent blocked configs. -/
 inductive StepM : MultiConfig → MultiConfig → Prop where
   | thread {m : MultiConfig} {i : Nat} {c : Config} {c' : Config} {σ' : ExecState}
       {efs : List Config} :
@@ -1113,6 +1153,10 @@ inductive StepM : MultiConfig → MultiConfig → Prop where
       isBlockedConfig c = true →
       resumeThread m.shared c = .ok (c', σ') →
       StepM m ⟨m.threads.setIfInBounds i c', σ', i⟩
+  | spawned {m : MultiConfig} {i : Nat} {k : Cont} :
+      schedPick m i →
+      m.threads[i]? = some (.spawned k) →
+      StepM m ⟨m.threads.setIfInBounds i (.next k), m.shared, i⟩
 
 /-! ## Well-formedness (the thread-indexed carrier) -/
 

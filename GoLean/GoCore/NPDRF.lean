@@ -149,7 +149,7 @@ envelope the reduction compares against. -/
 def schedPickFine (m : MultiConfig) (i : Nat) : Prop :=
   i ∈ runnableIdxs m.shared m.threads
 
-/-- The FULL-interleaving pool relation: `StepM`'s three rule classes
+/-- The FULL-interleaving pool relation: `StepM`'s four rule classes
 verbatim with `schedPickFine` in place of `schedPick`. Proof
 infrastructure for the reduction statement only — the executable
 machine and every statement carrier stay on registry-point
@@ -179,6 +179,10 @@ inductive StepMFine : MultiConfig → MultiConfig → Prop where
       isBlockedConfig c = true →
       resumeThread m.shared c = .ok (c', σ') →
       StepMFine m ⟨m.threads.setIfInBounds i c', σ', i⟩
+  | spawned {m : MultiConfig} {i : Nat} {k : Cont} :
+      schedPickFine m i →
+      m.threads[i]? = some (.spawned k) →
+      StepMFine m ⟨m.threads.setIfInBounds i (.next k), m.shared, i⟩
 
 /-- A finished goroutine's configuration is a registry boundary
 (goroutine exit is a registry op). -/
@@ -243,6 +247,8 @@ theorem stepM_le_stepMFine {m m' : MultiConfig} (h : StepM m m') :
       exact StepMFine.pair (schedPick_le_fine hs) hti hbl hsp hplan hidx hap
   | wake hs hti hbl hres =>
       exact StepMFine.wake (schedPick_le_fine hs) hti hbl hres
+  | spawned hs hti =>
+      exact StepMFine.spawned (schedPick_le_fine hs) hti
 
 /-! ## Reachability and program results -/
 

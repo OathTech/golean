@@ -98,17 +98,28 @@ theorem arrivalPlan_singleton {s : ExecState} {c c' : Config} :
   · exact selectArrivalPlan_singleton
   · rfl
 
+/-- The post-spawn marker never steps sequentially — `stepFn` fails
+closed there (`.internal`; the marker is pool-only, BUG-040). -/
+theorem spawnedCont_stepFn_internal {c : Config} {σ : ExecState}
+    {ch : Choices} {k : Cont} (h : spawnedCont c = some k) :
+    stepFn σ c ch
+      = .error (.internal "post-spawn marker outside the thread pool") := by
+  match c, h with
+  | .spawned k', _ => rfl
+
 /-- The one-thread `stepThread` is `stepFn`, results re-wrapped (the
 arrival plan is a pure no-op with no other goroutines —
-`arrivalPlan_singleton`). -/
+`arrivalPlan_singleton`; the post-spawn marker is excluded — its pool
+strip has no sequential counterpart). -/
 theorem stepThread_single {σ : ExecState} {c : Config} {ch : Choices}
-    (hbl : isBlockedConfig c = false) (hsp : spawnPlan c = none) :
+    (hbl : isBlockedConfig c = false) (hsc : spawnedCont c = none)
+    (hsp : spawnPlan c = none) :
     stepThread σ #[c] 0 ch
       = (stepFn σ c ch).map (fun r => (#[r.1], r.2.1, r.2.2)) := by
   unfold stepThread
   have h0 : (#[c] : Array Config)[0]? = some c := rfl
   rw [h0]
-  simp only [hbl, Bool.false_eq_true, reduceIte, hsp]
+  simp only [hbl, Bool.false_eq_true, reduceIte, hsc, hsp]
   rw [show arrivalPlan σ #[c] 0 c = .ok none from arrivalPlan_singleton]
   simp only [Bind.bind, Except.bind]
   cases hstep : stepFn σ c ch with
@@ -126,7 +137,8 @@ theorem runnableIdxs_singleton {σ : ExecState} {c : Config}
 consumption rule at work: a single runnable goroutine never consumes a
 scheduler choice, and with no partner the intercept never fires). -/
 theorem stepMulti_single {σ : ExecState} {c : Config} {ch : Choices}
-    (hbl : isBlockedConfig c = false) (hsp : spawnPlan c = none)
+    (hbl : isBlockedConfig c = false) (hsc : spawnedCont c = none)
+    (hsp : spawnPlan c = none)
     (hdone : threadDone c = false) :
     stepMulti ⟨#[c], σ, 0⟩ ch
       = (stepFn σ c ch).map (fun r => (⟨#[r.1], r.2.1, 0⟩, r.2.2)) := by
@@ -136,7 +148,7 @@ theorem stepMulti_single {σ : ExecState} {c : Config} {ch : Choices}
       = (stepFn σ c ch).map (fun r => (⟨#[r.1], r.2.1, 0⟩, r.2.2)) := by
     unfold stepThreadInto
     show (stepThread σ #[c] 0 ch).bind _ = _
-    rw [stepThread_single hbl hsp]
+    rw [stepThread_single hbl hsc hsp]
     cases stepFn σ c ch <;>
       simp [Bind.bind, Except.bind, Functor.map, Except.map]
   unfold stepMulti
@@ -287,6 +299,14 @@ theorem execProgLoop_single :
         simp [threadRunnable, hd, hb]
       unfold execProgLoop
       simp only [Bind.bind, Except.bind] at hr
+      cases hsc : spawnedCont c with
+      | some kk =>
+          -- The post-spawn marker refuses sequentially (`.internal`) —
+          -- outside the transferable classes.
+          rw [spawnedCont_stepFn_internal (σ := σ) (ch := ch) hsc] at hr
+          subst hr
+          simp [transferable] at htr
+      | none =>
       cases hsp : spawnPlan c with
       | some p =>
           have hcls := spawnPlan_stepFn_refuses (σ := σ) (ch := ch) hsp
@@ -298,7 +318,7 @@ theorem execProgLoop_single :
               subst hr
               cases e <;> simp_all [transferable]
       | none =>
-          have hmulti := stepMulti_single (σ := σ) (ch := ch) hb hsp hd
+          have hmulti := stepMulti_single (σ := σ) (ch := ch) hb hsc hsp hd
           cases hstep : stepFn σ c ch with
           | error e =>
               rw [hstep] at hr
@@ -335,11 +355,12 @@ theorem execProg_single_eq_execStmt {fuel : Nat} {env : LocalEnv}
 
 /-! ## Correspondence: `stepMulti` instantiates `StepM` -/
 
-/-- A successful spawn's PARENT successor is always `.next k` (the
-statement completes; the fork is the child). -/
+/-- A successful spawn's PARENT successor is always the post-spawn
+marker `.spawned k` (BUG-040: the fork's completion is a registry op;
+the marker strips to `.next k` at the next pool step). -/
 theorem spawnStep_shape {s : ExecState} {cv : GoValue} {args : List GoValue}
     {k : Cont} {p c : Config} {s' : ExecState}
-    (h : spawnStep s cv args k = .ok (p, c, s')) : p = .next k := by
+    (h : spawnStep s cv args k = .ok (p, c, s')) : p = .spawned k := by
   unfold spawnStep at h
   cases cv <;>
     simp_all [Bind.bind, Except.bind, throw, throwThe, MonadExceptOf.throw]
@@ -393,6 +414,18 @@ theorem stepThreadInto_sound {m : MultiConfig} {i : Nat} {ch ch' : Choices}
           exact StepM.wake hsched hti hbl hres
       · simp only [Bool.not_eq_true] at hbl
         simp only [hbl, Bool.false_eq_true, reduceIte] at hst
+        cases hsc : spawnedCont c with
+        | some kk =>
+          -- The post-spawn marker STRIP (BUG-040).
+          rw [hsc] at hst
+          simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at hst
+          obtain ⟨rfl, rfl, rfl⟩ := hst
+          have hcfg : c = .spawned kk := by
+            cases c <;> simp_all [spawnedCont]
+          subst hcfg
+          exact StepM.spawned hsched hti
+        | none =>
+        rw [hsc] at hst
         cases hsp : spawnPlan c with
         | some p =>
           obtain ⟨cv, args, k⟩ := p
@@ -522,6 +555,32 @@ theorem step_spawnPos_elim {c : Config} {σ : ExecState} {c' : Config}
   | .retV cv (.goCalleeK [] env k), _ => cases h
   | .retV v (.goArgsK cv vals [] env k), _ => cases h
 
+/-- The per-goroutine relation is silent at the post-spawn marker (the
+strip is `StepM.spawned`'s rule — pool-only, BUG-040). -/
+theorem step_spawnedMarker_elim {c : Config} {σ : ExecState} {c' : Config}
+    {σ' : ExecState} {k : Cont}
+    (hsc : spawnedCont c = some k) : ¬ Step c σ c' σ' := by
+  intro h
+  match c, hsc with
+  | .spawned _, _ => cases h
+
+/-- A completed spawn position is not the marker (plan disjointness for
+the `stepThread` dispatch proofs). -/
+theorem spawnedCont_of_spawnPlan {c : Config}
+    {p : GoValue × List GoValue × Cont}
+    (h : spawnPlan c = some p) : spawnedCont c = none := by
+  match c, h with
+  | .retV cv (.goCalleeK [] env k), _ => rfl
+  | .retV v (.goArgsK cv vals [] env k), _ => rfl
+
+/-- A blocked configuration is not the marker. -/
+theorem spawnedCont_of_blocked {c : Config}
+    (h : isBlockedConfig c = true) : spawnedCont c = none := by
+  match c, h with
+  | .blockedSend _ _ _, _ => rfl
+  | .blockedRecv _ _ _ _ _, _ => rfl
+  | .blockedSelect _ _ _, _ => rfl
+
 /-- Compose a scheduling prefix in front of an inner `stepThread`
 realization: a legal pick is realized by the scheduler site (consumed
 only at `|runnable| > 1`, the pick index prepended to the stream). -/
@@ -612,11 +671,15 @@ theorem stepM_complete {m m' : MultiConfig} (h : StepM m m') :
         cases hspq : spawnPlan c with
         | none => rfl
         | some p => exact absurd hstep (step_spawnPos_elim hspq)
+      have hsc : spawnedCont c = none := by
+        cases hscq : spawnedCont c with
+        | none => rfl
+        | some kk => exact absurd hstep (step_spawnedMarker_elim hscq)
       have hinner : stepThread m.shared m.threads i ch₀
           = .ok (m.threads.setIfInBounds i c', σ', ch₀') := by
         unfold stepThread
         rw [hti]
-        simp only [hblc, Bool.false_eq_true, reduceIte, hsp]
+        simp only [hblc, Bool.false_eq_true, reduceIte, hsc, hsp]
         rw [hplan]
         simp only [Bind.bind, Except.bind]
         rw [hfn]
@@ -632,7 +695,8 @@ theorem stepM_complete {m m' : MultiConfig} (h : StepM m m') :
           = .ok ((m.threads.setIfInBounds i c').push child, σ', []) := by
         unfold stepThread
         rw [hti]
-        simp only [hblc, Bool.false_eq_true, reduceIte, hplan', Bind.bind,
+        simp only [hblc, Bool.false_eq_true, reduceIte,
+          spawnedCont_of_spawnPlan hplan', hplan', Bind.bind,
           Except.bind]
         rw [hspawn]
         rfl
@@ -643,6 +707,16 @@ theorem stepM_complete {m m' : MultiConfig} (h : StepM m m') :
       exact stepMulti_of_inner hsched hinner
   | pair hsched hti hblc hsp hplan hidx hap =>
     rename_i i c bc σ'' cs idx ts'
+    have hsc : spawnedCont c = none := by
+      cases hscq : spawnedCont c with
+      | none => rfl
+      | some kk =>
+          have hcfg : c = .spawned kk := by
+            cases c <;> simp_all [spawnedCont]
+          subst hcfg
+          rw [show arrivalPlan m.shared m.threads i (.spawned kk) = .ok none
+            from rfl] at hplan
+          cases hplan
     cases cs with
     | nil => exact absurd hidx (by simp)
     | cons cand rest =>
@@ -658,7 +732,7 @@ theorem stepM_complete {m m' : MultiConfig} (h : StepM m m') :
             = .ok (ts', σ'', []) := by
           unfold stepThread
           rw [hti]
-          simp only [hblc, Bool.false_eq_true, reduceIte, hsp, Bind.bind,
+          simp only [hblc, Bool.false_eq_true, reduceIte, hsc, hsp, Bind.bind,
             Except.bind]
           rw [hplan]
           dsimp only
@@ -670,7 +744,7 @@ theorem stepM_complete {m m' : MultiConfig} (h : StepM m m') :
             = .ok (ts', σ'', []) := by
           unfold stepThread
           rw [hti]
-          simp only [hblc, Bool.false_eq_true, reduceIte, hsp, Bind.bind,
+          simp only [hblc, Bool.false_eq_true, reduceIte, hsc, hsp, Bind.bind,
             Except.bind]
           rw [hplan]
           dsimp only
@@ -699,6 +773,14 @@ theorem stepM_complete {m m' : MultiConfig} (h : StepM m m') :
       rw [hti]
       simp only [hblc, reduceIte, Bind.bind, Except.bind]
       rw [hres]
+      rfl
+    exact stepMulti_of_inner hsched hinner
+  | spawned hsched hti =>
+    rename_i i k
+    have hinner : stepThread m.shared m.threads i []
+        = .ok (m.threads.setIfInBounds i (.next k), m.shared, []) := by
+      unfold stepThread
+      rw [hti]
       rfl
     exact stepMulti_of_inner hsched hinner
 
