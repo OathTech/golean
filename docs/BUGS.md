@@ -29,6 +29,39 @@ differential-pinned) `- Cases: <id>, <id>, …` (baseline case ids), then prose.
 
 ---
 
+## BUG-043 — range-over-integer desugar hard-codes the default int kind for the loop variable and index arithmetic
+
+- Status: open
+- Pinned-by: differential
+- Cases: range/int-kind-arith/uint8-arith, range/int-kind-arith/defined-arith, range/int-kind-arith/int8-arith
+- Discovered: 2026-08-07 (maint-check pre-merge review M1, verified
+  against go run: 21368 vs stuck; found auditing BUG-042's family —
+  the unexercised-path class)
+- What: for `for i := range n` over an integer, the spec gives the
+  iteration variable the OPERAND's type (§For statements), but
+  `decodeRange`'s index-loop desugar (GoLean/NativeToIR.lean, the
+  slice/array/int/array-pointer arm) declares `$ridx`/`$rlen`/the
+  loop variable at the default int kind and increments with an
+  int-kinded 1 — and the frontend (tools/nativefrontend/emit.go,
+  range emission, `*types.Basic` integer case) emits NO operand kind
+  on the wire at all, so the decoder has nothing to key off.
+  Arithmetic on the loop variable in the operand's kind
+  (`i * 2` with i uint8) is a mismatched-kind STUCK. RELATED to
+  BUG-042 (kind-defaulting family) but a BROADER mechanism: the wire
+  carries no kind and the decoder hard-codes `.int`, so it bites
+  UNNAMED non-int kinds too (BUG-042's incdec facet passed its
+  unnamed control). Stuck-not-wrong (fail-visible): comparisons and
+  map-key lookups are kind-blind, which is why the conversion-only
+  shape (`range/range-int-typed`, green since it converts with
+  `int(last)` before any arithmetic) never exposed it — the corpus
+  gap was the arithmetic-in-kind shape, now pinned with its
+  conversion-only control (`range/int-kind-arith/conversion-control`).
+- Fix shape: the frontend emits the operand's underlying integer kind
+  (`operandType`) for range-over-int; the decoder threads it through
+  `$ridx`/`$rlen`/loop-variable/increment and FAILS CLOSED on a
+  missing/non-integer operandType (the incdec precedent — silent
+  int-defaulting is this defect class).
+
 ## BUG-042 — IncDec desugar's synthetic 1 takes the default int kind instead of the operand's underlying kind (defined types; map values of any non-default kind)
 
 - Status: fixed (2026-08-07, channels-arc-maint — both desugar sites
@@ -66,6 +99,12 @@ differential-pinned) `- Cases: <id>, <id>, …` (baseline case ids), then prose.
   desugar sites (frontend), mirroring `emitConstValue`; tighten the
   decoder's incdec arm to fail closed on a non-numeric carried type
   instead of silently defaulting.
+- Scoping correction (2026-08-07, maint-check M1): "two sites of one
+  family" was incomplete — a third, RELATED kind-defaulting site
+  exists in the range-over-integer desugar, with a broader mechanism
+  (the decoder hard-codes `.int` and the wire carries no kind at all,
+  so it bites unnamed non-int kinds too, unlike this bug's incdec
+  facet whose unnamed control passes). Filed separately as BUG-043.
 
 ## BUG-041 — race-detector footprint over-approximation: value-path composite reads are whole-cell (array elements; non-fieldGet uses), refusing race-free programs
 

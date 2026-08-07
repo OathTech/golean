@@ -1,0 +1,5 @@
+# id	subject	args	expected_status	expected_reason	features
+uint8-arith	rangeUint8Arith	-	ok	-	range,ints,loops,overflow
+defined-arith	rangeDefinedArith	-	ok	-	range,ints,loops,defined_type,overflow
+int8-arith	rangeInt8Arith	-	ok	-	range,ints,loops
+conversion-control	rangeDefinedConversionControl	-	ok	-	range,ints,loops,defined_type,conversions
