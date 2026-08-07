@@ -1,0 +1,8 @@
+# id	subject	args	expected_status	expected_reason	features	lane	why	params
+# RED PIN (slice 4, entry path): the L2 clause pick is the ONLY
+# consumption site (single goroutine, both clauses buffered-ready), so
+# this row goes green the moment the multi-ready refusal becomes the
+# live L2 Choices site — no schedule enumeration needed. Width: the L2
+# bound is the ready-clause count, 2. Go samples both members (the
+# runtime's own uniform shuffle): admitted set {101, 210}.
+-	channelSelectMultiReadyObservable	-	ok	-	channels,select,make,len,nondet	membership	which of the two ready clauses commits is the L2 select latitude (spec: "uniform pseudo-random selection", weakened possibilistically to any entry-ready case): admitted set {101 (a-clause), 210 (b-clause)}; the only consumption site is the L2 pick, bound 2	width=2

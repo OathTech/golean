@@ -1,0 +1,8 @@
+# id	subject	args	expected_status	expected_reason	features	lane	why	params
+# RED PIN (slice 4, arrival path): an arriving select whose
+# waiter-extended readiness sees two parked senders — the L2 pick
+# chooses the clause, the (singleton) L4 pick the partner; the loser
+# goroutine is discarded at main's exit (D6, observably nothing).
+# Width: scheduler picks bounded by |runnable| <= 3 (main + two
+# workers); L2 pick by 2; L4 singleton.
+-	selectArrivalMulti	-	ok	-	goroutines,channels,select,nondet	membership	which parked sender's clause the arriving select commits is L1 latitude (which worker parked / arrives first) plus the L2 clause pick on both-parked schedules: admitted set {10, 20}; site bounds are 3 (scheduler) and 2 (L2)	width=3
