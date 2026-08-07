@@ -176,7 +176,12 @@ open Lean in
     [`GoLean.GoCore.Machine.Step, `GoLean.GoCore.Machine.Steps,
      `GoLean.GoCore.Machine.StepE, `GoLean.GoCore.Machine.StepM,
      `GoLean.GoCore.Machine.StepMFine, `GoLean.GoCore.Machine.StepsM,
-     `GoLean.GoCore.Machine.StepsMFine]
+     `GoLean.GoCore.Machine.StepsMFine,
+     -- Channels arc slice 5: the CONCURRENT Iris Language's per-thread
+     -- relation (LangC.lean) — proof infrastructure like its siblings;
+     -- it lives in a GoLeanProofs module (module-of-origin cannot flag
+     -- it), so it joins the name-based forbidden set.
+     `GoLean.Iris.StepEC, `GoLean.Iris.GoPrimStepC]
   let isRelation : Name → Bool := fun n =>
     forbiddenRoots.any (fun r => r == n || r.isPrefixOf n)
   -- The designated headline theorems (the summit family + the golden and
@@ -454,6 +459,17 @@ open Lean in
 #guard_msgs in #print axioms GoLean.Iris.go_heap_invariance
 /-- info: 'GoLean.Iris.adequate_seqn_nil' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Iris.adequate_seqn_nil
+
+-- The CONCURRENT Iris layer (channels arc slice 5, LangC.lean): the
+-- pool Language over StepE + the marker strip, the fork rule, and the
+-- closed end-to-end pool adequacy witness (a program that SPAWNS,
+-- NotStuck for parent and forked child).
+/-- info: 'GoLean.Iris.wpC_fork' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.wpC_fork
+/-- info: 'GoLean.Iris.wpC_spawn_noop_witness' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.wpC_spawn_noop_witness
+/-- info: 'GoLean.Iris.adequateC_spawn_noop' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.adequateC_spawn_noop
 
 -- The exit pipes.
 /-- info: 'GoLean.Iris.goSpec_of_wp' depends on axioms: [propext, Classical.choice, Quot.sound] -/
@@ -1334,6 +1350,26 @@ example := @GoLean.Iris.mergeSort_intKind_eq_of_perm
 example := @GoLean.Quorum.storeLoc_stk_fill
 example := @GoLean.Quorum.perm_eraseIdx_append
 example := @GoLean.Quorum.sortLe_three_all
+/-- `✓` the CONCURRENT-Language law kit (channels arc slice 5,
+`LangC.lean`) — `wpC_fork` (the `go` statement's WP law),
+`wpC_pure_det` (the pool carrier's pure-det lift) and
+`wpC_spawned_strip` (the BUG-040 marker's thread-local strip), all
+witnessed IN THE SAME COMMIT by `wpC_spawn_noop_witness` (the full WP
+of a program that spawns — every law premise discharged against the
+concrete program; externals = the standard program/method pins) and
+closed end-to-end by `adequateC_spawn_noop` (zero hypotheses,
+`adequate .NotStuck` over the POOL Language — parent and forked child
+both covered). The pairing/wake fragment is deliberately NOT claimed:
+LangC's module docstring records the structural obstruction (a pairing
+touches two threads; the thread-pool Language steps one) and the
+decomposition route. -/
+example := @GoLean.Iris.wpC_fork
+example := @GoLean.Iris.wpC_pure_det
+example := @GoLean.Iris.wpC_spawned_strip
+example := @GoLean.Iris.wpC_spawn_noop_witness
+example := @GoLean.Iris.goC_adequacy
+example := @GoLean.Iris.adequateC_spawn_noop
+
 /-- `✓` the negative pins (trivialization guards). -/
 example := @GoLean.GoCore.NegativeSpecs.unbound_ref_stuck
 example := @GoLean.GoCore.NegativeSpecs.unbound_var_stuck
