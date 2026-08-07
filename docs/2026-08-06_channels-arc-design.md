@@ -1410,3 +1410,136 @@ Refuted (no action): the baseline-header flip-set/completeness claim;
 the L2-pick-not-popped-on-panic claim (the pick IS consumed before the
 old throw — the latent issue was the STREAM the stepFn handler
 returned, fixed above as part of the `.inr` correction).
+
+## Slice-5 build log (2026-08-07, branch `channels-arc-s5`)
+
+Executed as decided (the Iris proof layer; D8's owed witness; the
+recorded MultiWf and D5 debts). Decisions and findings DURING the
+build, recorded here:
+
+- **THE GoSpecC WITNESS LANDED BY BOTH ROUTES THE SLICE-2 LOG
+  RECORDED, each at its honest strength** (the witness-status note in
+  `Surface.lean` is the authoritative record):
+  - **The `∀ ch` quantifier is discharged on the real fork/join
+    program** via the pool ∀-streams KERNEL CHECKER
+    (`allStreamsOkPool`, new `GoLean/GoCore/MultiStreams.lean` — the
+    "allStreamsOk analogue" route): the ONLY branched site is the L1
+    scheduler pick (every runnable index probed at the singleton
+    stream `[j]`); every other consumption shape fails CLOSED (select
+    applies incl. L2, appendSlice, mapIterK, L4 multi-candidate
+    pairings — the slice-4 CLI enumerator stays the full-width engine;
+    the checker is the kernel-reducible core). Soundness
+    (`execProgLoop_ok_of_allStreamsOkPool`) rests on
+    `stepThread_oblivious` (stepFn_oblivious lifted through the pool
+    dispatch) and `raceUpdate_oblivious` (the detector replicates
+    consumption only at select applies — its slice-4 site — so the
+    fail-closed select flag makes its verdict stream-independent).
+    One `decide +kernel` (~0.5 s) certifies the fork/join tree;
+    the all-asleep deadlock program is REFUSED by the same checker
+    (probed). New designated statements: `forkJoinAllSchedules42`
+    (every stream gives 42), `forkJoinNoDeadlock`, `forkJoinNoRace`
+    (first-order corollaries — deadlock- and race-refusal-freedom on
+    EVERY modeled schedule), `forkJoinTerminatesNormallyC` (the first
+    instance of the new concurrent termination notion). The slice-2
+    pinned-stream witnesses stay byte-identical.
+  - **`GoSpecC` is inhabited** via the new conservation transfer
+    `goSpecC_of_goSpec` (a sequential `GoSpec` IS a `GoSpecC`, no side
+    conditions: `ProgressExec` confines every sequential run to the
+    transferable classes and `execProg_single_eq_execStmt` pins the
+    pool run — D9(a) at judgment level); witness `goldenSpecC`, the
+    golden program at full frame-quantified strength, MARKED as the
+    sequential-degenerate lane.
+  - **Still owed, recorded precisely** (Surface witness-status note +
+    LangC docstring): a frame-quantified `GoSpecC` whose program
+    genuinely spawns. The obstruction found by building: iris-lean's
+    thread-pool `Language` steps ONE thread per step, while `StepM`'s
+    pairing rules touch two (arriving op + parked partner) — so the
+    concurrent WP pipe needs a proof-layer DECOMPOSITION
+    (park/deposit/wake per-thread rules simulating each pairing with
+    structural state equality — storeLoc round-trip lemmas — plus
+    spin self-loops for parked configs and a pool-reachability kit
+    for the deadlock/race exclusions, since safety-only adequacy
+    cannot see deadlock once parked configs spin). Sized: successor
+    arc, not slice scope.
+- **`TerminatesNormallyC`** (Surface) — the first concrete concurrent
+  termination notion: one fuel bound, EVERY stream, main-`.normal`
+  pinned; deadlock/race-freedom on every modeled schedule is built
+  into an instance. Discharge shape: kernel certificate at one fuel +
+  the new `execProgLoop_mono` (the pool twin of `execStmt_mono`).
+- **THE D5 FAIRNESS-PRECISION NOTE**
+  (`docs/2026-08-07_fairness-precision-note.md`): the assumption-free
+  ∀-stream lane is EXACTLY the finite-schedule-tree class (König —
+  the pool branches finitely, so "no infinite run" ⟺ "uniform fuel
+  bound"); the fork/join instance is the proved class membership; the
+  general syntactic-discipline ⇒ finite-tree lemma is a recorded
+  prose scaffold (no Lean def — no consumer, no inert scaffolding).
+  **Correction recorded**: D5's "starvation … not expressible
+  race-free without atomics" is FALSE for the busy-wait-through-the-
+  registry shape — a select-with-default poll loop is race-free,
+  atomics-free, live since slice 4, and starves on adversarial
+  streams; no shipped claim is affected (such programs are correctly
+  outside `TerminatesNormallyC`), but the `FairStream` additive lane
+  is now recorded as needed for select-default polling too, not only
+  atomics.
+- **MultiWf DISCHARGED by the recorded route** (slice-3 disposition,
+  executed): `applyChanOp_wf`, `applySelect_wf` and
+  `step_preserves_wf_loc` conclusions gained the
+  `σ.nextAddr ≤ σ'.nextAddr` conjunct inside their existing case
+  analyses (`commitClause_wf`/`enterRecvTargets_wf`/`StmtOpPres`
+  already exposed it); new `GoLean/GoCore/MultiWfSound.lean` builds
+  the pool assembly (`spawnStep_wf`, `resumeThread_wf`,
+  `applyPairing_wf` over all six pairing shapes, the arrival-analysis
+  bounds, the pool frame lemmas) up to **`stepMulti_wf`**: one
+  executable pool step preserves `MultiWf` — foreign threads framed by
+  allocator monotonicity and types-invariance. `Multi.lean`'s scaffold
+  marking replaced by the discharge record. No executable definition
+  changed.
+- **THE CONCURRENT IRIS LAYER** (`proofs/GoLeanProofs/LangC.lean`):
+  the pool `Language` instantiated over `StepE` (per-goroutine, spawn
+  component — the D1-recorded interface shape) PLUS the thread-local
+  `.spawned` strip (`StepEC` — pool-level `StepM.spawned` must be
+  per-thread in the Language's world or a parent never passes its own
+  fork); gen_heap over the shared `ExecState` reused VERBATIM (the
+  state type is unchanged, so `Ghost.lean`'s `StateInterp` serves both
+  carriers); `forkPost = True`; `wpC_pure_det`, `wpC_spawned_strip`,
+  and **`wpC_fork`** (the `go` statement's WP law, state-preserving
+  spawn class), witnessed in the same commit by
+  `wpC_spawn_noop_witness` (a spawning program walked end to end) and
+  the CLOSED `adequateC_spawn_noop` (`adequate .NotStuck` over the
+  pool Language, zero hypotheses — parent AND forked child; via
+  `goC_adequacy`, `go_adequacy`'s pool twin). Channel
+  invariants/ghost (Actris-lite) deliberately NOT built: the witness
+  went through the checker route, so a protocol layer would have no
+  consumer this slice — it lands with the decomposition arc that
+  consumes it (no inert scaffolding). `StepEC`/`GoPrimStepC` joined
+  the statement-TCB forbidden set (protective — they live in a
+  GoLeanProofs module, invisible to the module-of-origin check).
+- **DESIGNATED-STATEMENT-SET CHANGE: 38 → 43** (the four fork/join
+  ∀-schedule statements + `goldenSpecC`); the existing 38
+  byte-identical; closures verified Iris-free and relation-free by
+  the gate; Challenge/Solution/judge-config synced. **THE COMPARATOR
+  LANDMARK REMAINS OWED AT ARC END** (never part of ci).
+
+Validation: full `scripts/ci --diff` green at the movement-3 tip —
+1193 exec / 311 negative, ZERO drift on every id (the corpus did not
+move, as the charter predicted: no frontend or interpreter behavior
+changed; no baseline re-pin needed) — and the fast gate green at each
+commit; 109 eval tests green (unchanged — no machine eval pins were
+added: the new kernel facts live in proofs as designated statements);
+proofs + Audit gate green (43 statements, axiom sets pinned at the
+classical trio). One process deviation, recorded: the first
+`ci --diff` invocation of the slice ran against a tree being edited
+mid-flight (a sorried draft raced the harness half) — discarded and
+re-run on the quiescent committed tip; the per-movement fast gates and
+the tip `--diff` are the record.
+
+STILL OWED after slice 5 (unchanged unless noted): the Comparator
+landmark at arc end; the frame-quantified SPAWNING `GoSpecC` instance
+(the decomposition route above — NEW precise record replacing the bare
+"GoSpecC witness" line); the fatal class (go-of-nil-func);
+bare-recover-statement lowering; select-with-select rendezvous;
+BUG-005's live-iteration surgery; BUG-041's path-precise value reads;
+DPOR for the three stay-strict confluent candidates; the NPDRF
+obligation's remaining obstructions; the `FairStream` additive lane
+(now recorded as covering select-default polling too — the D5
+precision note).
