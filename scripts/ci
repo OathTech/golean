@@ -403,10 +403,10 @@ if [ "$RUN_DIFF" -eq 1 ]; then
   esac
 fi
 if [ "$RUN_DIFF" -eq 1 ]; then
-  step "membership-lane gate self-test, go-dependent half (--with-go: F4 param re-validation, F6 frontend guard)"
+  step "membership-lane gate self-test, go-dependent half (--with-go: F4 param re-validation, F6 frontend guard, B3-B5 slice-4 lane gates, G1-G4 gate-integrity no-publish)"
   if laneout="$(./scripts/test-lane-validation --with-go 2>&1)"; then
-    echo "$laneout" | grep -E "F4|F6|^test-lane" | sed 's/^/  /'
-    ok "lane-validation fixtures incl. harness half (F4/F6)"
+    echo "$laneout" | grep -E "F4|F6|B[0-9]|G[0-9]|^test-lane" | sed 's/^/  /'
+    ok "lane-validation fixtures incl. harness half (F4/F6/B3-B5/G1-G4)"
   else
     echo "$laneout"
     bad "lane-validation fixtures, harness half (a lane gate went quiet — see above)"
@@ -451,8 +451,12 @@ if [ -f artifacts/coverage/latest.tsv ]; then
   # inside diff-coverage used to leave the previous run's file here to
   # be judged as if fresh; diff-coverage now removes its outputs up
   # front, and this closes the remaining consumer-side hole (results
-  # without meta, or a corpus change since the recorded full run —
-  # content swaps the `ran >= total` count check cannot see). Partial
+  # without meta, or a CASE-SET/EXPECTATION change since the recorded
+  # full run — manifest-content swaps of ids/status/args/lane the
+  # `ran >= total` count check cannot see; corpus SOURCE bytes are not
+  # in the manifest, so an edited main.go is only re-validated by a
+  # fresh --diff run — the general limit of judging cached results,
+  # maint-check note). Partial
   # runs are exempt from the sha comparison (their manifest was
   # filtered) — they are already reported as partial, never certified.
   meta_ok=1

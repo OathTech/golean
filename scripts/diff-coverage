@@ -18,6 +18,22 @@ LEAN_TIMEOUT_SECONDS="${LEAN_TIMEOUT_SECONDS:-30}"
 # 3-goroutine litmus shapes), so it gets its own, larger budget.
 LEAN_ENUM_TIMEOUT_SECONDS="${LEAN_ENUM_TIMEOUT_SECONDS:-300}"
 
+# GATE INTEGRITY (grossmith findings §2,
+# docs/2026-08-07_grossmith-findings.md; hoisted ABOVE every infra exit
+# at the maint-check M2 fix — the first placement sat below three exit-2
+# paths, leaving a stale pair readable on them): invalidate the previous
+# run's published results FIRST. Any run of this script that dies before
+# publish_results — missing go, manifest generation failure, manifest
+# not found, empty manifest, lake build failure/timeout, missing binary,
+# killed pool — leaves NO readable results/meta pair, so a consumer
+# (scripts/ci's baseline diff; any programmatic caller) can never judge
+# the previous run's file as if fresh ("same set = no regression" for a
+# run that never ran — the exact ambiguity that produced a pre-release
+# wrong-conformance statement in grossmith). Exit code discipline:
+# 1 = FAIL rows exist and published results ARE authoritative;
+# >=2 = infrastructure, nothing published, nothing readable.
+rm -f "$RESULTS_TSV" "$META_TSV"
+
 run_with_timeout() {
   local seconds="$1"
   shift
@@ -84,20 +100,20 @@ META_BASE="$(basename "$META_TSV")"
 mkdir -p "$RESULTS_DIR" "$META_DIR"
 RESULTS_TMP="$(mktemp "$RESULTS_DIR/.${RESULTS_BASE}.XXXXXX")"
 META_TMP="$(mktemp "$META_DIR/.${META_BASE}.XXXXXX")"
-# GATE INTEGRITY (grossmith findings §2,
-# docs/2026-08-07_grossmith-findings.md): invalidate the PREVIOUS run's
-# published results up front — a run that dies before publish_results
-# (lake build failure/timeout, missing binary, killed pool) must leave
-# NO readable results/meta pair, or a consumer (scripts/ci's baseline
-# diff; any programmatic caller) judges the previous run's file as if
-# fresh ("same set = no regression" for a run that never ran — the
-# exact ambiguity that produced a pre-release wrong-conformance
-# statement in grossmith).
-rm -f "$RESULTS_TSV" "$META_TSV"
 printf 'result\tid\tfeatures\tstage\tdetail\n' > "$RESULTS_TMP"
 
 manifest_sha="$(shasum -a 256 "$MANIFEST" | awk '{ print $1 }')"
 manifest_cases="$(awk -F $'\t' 'NF > 0 && $1 !~ /^#/ { count += 1 } END { print count + 0 }' "$MANIFEST")"
+# An EMPTY manifest is an infra refusal, decided BEFORE the build and
+# BEFORE publish (maint-check M2: the old check sat after
+# publish_results, so a caller-supplied empty manifest published a
+# results file and THEN exited 2 — and under JOBS=1 died on an unbound
+# variable with exit 1; the auto-generated path never gets here,
+# coverage-manifest refuses an empty selection upstream).
+if [[ "$manifest_cases" -eq 0 ]]; then
+  echo "no differential cases found in $MANIFEST (nothing published)" >&2
+  exit 2
+fi
 git_commit="$(git rev-parse HEAD 2>/dev/null || printf 'unknown')"
 if git diff --quiet -- . 2>/dev/null && git diff --cached --quiet -- . 2>/dev/null; then
   git_dirty=false
@@ -872,6 +888,13 @@ pass_count="$(awk -F '\t' '$1=="PASS"' "$RESULTS_TMP" | wc -l | tr -d ' ')"
 fail_count="$(awk -F '\t' '$1=="FAIL"' "$RESULTS_TMP" | wc -l | tr -d ' ')"
 rm -rf "$ROWDIR"
 
+# Defense in depth (maint-check M2): unreachable after the up-front
+# manifest_cases check, but a zero-case state must never publish —
+# exit BEFORE publish_results, keeping "exit >= 2 => nothing published".
+if [[ "$case_count" -eq 0 ]]; then
+  echo "no differential cases found in $MANIFEST (nothing published)" >&2
+  exit 2
+fi
 echo
 echo "differential coverage summary: cases=$case_count pass=$pass_count fail=$fail_count export_status=$export_status"
 publish_results
@@ -883,10 +906,6 @@ if [[ "${GOLEAN_COVERAGE_RUN_FULL:-unknown}" == "true" ]]; then
   cp "$META_TSV" "$OUT/latest-full.meta.tsv"
 fi
 
-if [[ "$case_count" -eq 0 ]]; then
-  echo "no differential cases found in $MANIFEST" >&2
-  exit 2
-fi
 if [[ "$fail_count" -ne 0 || "$export_status" -ne 0 ]]; then
   exit 1
 fi

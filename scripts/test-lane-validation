@@ -205,18 +205,23 @@ if [ "$WITH_GO" -eq 1 ]; then
     fi
 
     # ---- Gate-integrity fixtures (grossmith findings §2,
-    # docs/2026-08-07_grossmith-findings.md): diff-coverage's NO-PUBLISH
-    # paths must (a) exit 2 — infrastructure, distinguishable from exit
-    # 1's "FAIL rows exist, published results authoritative" — and (b)
-    # leave NO readable latest.tsv/meta, so a dead run can never be
-    # judged via the previous run's files ("same set = no regression"
-    # for a run that never ran; this exact ambiguity produced a
-    # pre-release wrong-conformance statement in grossmith). Each
-    # fixture pre-seeds a stale results/meta pair and asserts both the
-    # exit code and the removal. The build failure is simulated with a
-    # fake `lake` on PATH; a timeout via LAKE_BUILD_TIMEOUT_SECONDS=0 is
-    # NOT usable (run_with_timeout's perl alarm(0) DISABLES the timer),
-    # so the timeout arm uses a sleeping fake lake under a 1s budget.
+    # docs/2026-08-07_grossmith-findings.md; extended at the maint-check
+    # M2 fix): EVERY diff-coverage infra death must (a) exit 2 —
+    # distinguishable from exit 1's "FAIL rows exist, published results
+    # authoritative" — and (b) leave NO readable latest.tsv/meta (the
+    # up-front rm precedes every infra exit since M2; the first
+    # placement left three pre-rm exit-2 paths with a readable stale
+    # pair), so a dead run can never be judged via the previous run's
+    # files ("same set = no regression" for a run that never ran; this
+    # exact ambiguity produced a pre-release wrong-conformance statement
+    # in grossmith). Each fixture pre-seeds a stale results/meta pair
+    # and asserts both the exit code and the removal. G1/G2 cover the
+    # post-build-attempt deaths (fake failing `lake` on PATH; a timeout
+    # via LAKE_BUILD_TIMEOUT_SECONDS=0 is NOT usable — run_with_timeout's
+    # perl alarm(0) DISABLES the timer — so the timeout arm uses a
+    # sleeping fake lake under a 1s budget); G3 covers a formerly PRE-rm
+    # death (manifest not found); G4 the empty-manifest path, which
+    # previously PUBLISHED a fabricated results row and then exited 2.
     seed_stale_results() {
       mkdir -p "$1"
       printf 'result\tid\tfeatures\tstage\tdetail\nPASS\tstale/one\tx\t-\t-\n' > "$1/latest.tsv"
@@ -252,6 +257,24 @@ if [ "$WITH_GO" -eq 1 ]; then
     seed_stale_results "$ART_G2"
     PATH="$FAKEBIN2:$PATH" LAKE_BUILD_TIMEOUT_SECONDS=1 GOLEAN_COVERAGE_ARTIFACTS="$ART_G2" scripts/diff-coverage "$TMP/manifest-g1.tsv" >/dev/null 2>&1
     check_no_publish "lake-build timeout exits 2, no readable results (G2)" $? "$ART_G2"
+
+    # G3: a pre-build infra death (manifest not found) — one of the
+    # three paths that previously exited 2 ABOVE the rm with the stale
+    # pair fully readable (maint-check M2, verifier-reproduced).
+    ART_G3="$TMP/artifacts-g3"
+    seed_stale_results "$ART_G3"
+    GOLEAN_COVERAGE_ARTIFACTS="$ART_G3" scripts/diff-coverage "$TMP/no-such-manifest.tsv" >/dev/null 2>&1
+    check_no_publish "manifest-not-found exits 2, no readable results (G3)" $? "$ART_G3"
+
+    # G4: an EMPTY caller-supplied manifest must not publish — the old
+    # check ran after publish_results, so it published a fabricated
+    # 'worker produced no result' row and THEN exited 2 (and died on an
+    # unbound variable with exit 1 under JOBS=1).
+    ART_G4="$TMP/artifacts-g4"
+    seed_stale_results "$ART_G4"
+    printf '# comment-only manifest\n' > "$TMP/manifest-g4.tsv"
+    GOLEAN_COVERAGE_ARTIFACTS="$ART_G4" scripts/diff-coverage "$TMP/manifest-g4.tsv" >/dev/null 2>&1
+    check_no_publish "empty manifest exits 2 without publishing (G4)" $? "$ART_G4"
   fi
 fi
 
