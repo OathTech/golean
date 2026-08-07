@@ -1310,20 +1310,19 @@ by the shared allocator with normalized in-flight snapshots — the
 sequential `MachineWf`'s components, thread-indexed. Decidable, so
 concrete pool seeds discharge it by `decide` like `MachineWf`.
 
-SCAFFOLD STATUS (recorded honestly, slice-2 build log): preservation
-(`stepMulti` keeps `MultiWf`) is OWED — the active goroutine's step is
-covered by the sequential kit (`step_preserves_wf_loc` and the slice-1
-`applyChanOp_wf`/`commitClause_wf`/`enterRecvTargets_wf` family cover
-the wake/pairing helpers), but the FOREIGN-thread frame argument
-(`ConfigWf` of the untouched goroutines under the stepped shared
-state) needs a step-level `nextAddr` monotonicity lemma the sequential
-kit does not yet expose. Slice 3 did NOT become the consumer this line
-once predicted: the detector's state was externalized into `RaceState`
-(the `Choices`/fuel mold — slice-3 build log's recorded deviation), so
-nothing consumes `MultiWf` at slice-3 tip either; it remains the
-marked scaffold, and the recorded discharge route is extending the
-existing `*_wf` lemma conclusions with the `≤ nextAddr` conjunct
-(slice-3 build log, MultiWf disposition). -/
+PRESERVATION IS DISCHARGED (slice 5, by the slice-3 build log's
+recorded route): `stepMulti_wf` (`MultiWfSound.lean`) proves one
+executable pool step keeps this invariant. The sequential `*_wf`
+conclusions (`applyChanOp_wf`, `applySelect_wf`,
+`step_preserves_wf_loc`) were extended with the step-level
+`σ.nextAddr ≤ σ'.nextAddr` conjunct — the monotonicity the
+FOREIGN-thread frame argument needed — and the pool helpers gained
+their own preservation lemmas (`spawnStep_wf`, `resumeThread_wf`,
+`applyPairing_wf`, the arrival-analysis bounds); an untouched
+goroutine's `ConfigWf` transports along allocator monotonicity and its
+iteration-typing component along the step's types-invariance. This
+definition is no longer a scaffold: it is a preserved invariant,
+available as the slice-3-declared carrier for future detector work. -/
 def MultiWf (m : MultiConfig) : Prop :=
   StateWf m.shared ∧ m.cur < m.threads.size ∧
     ∀ i (h : i < m.threads.size),

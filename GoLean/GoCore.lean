@@ -7,3 +7,4 @@ import GoLean.GoCore.Multi
 import GoLean.GoCore.MachineSound
 import GoLean.GoCore.NPDRF
 import GoLean.GoCore.MultiSound
+import GoLean.GoCore.MultiWfSound

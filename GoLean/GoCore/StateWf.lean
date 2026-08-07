@@ -4704,7 +4704,11 @@ theorem commitClause_wf {σ : ExecState} {env : LocalEnv} {k : Cont}
 
 set_option maxHeartbeats 1600000 in
 /-- `applyChanOp` preservation: wf state out, bounded successor
-configuration, types unchanged, allocator monotone. -/
+configuration, types unchanged, allocator monotone. (The
+`σ.nextAddr ≤ σ'.nextAddr` conjunct is the MultiWf discharge route's
+step-level monotonicity — the slice-3 build log's recorded plan: extend
+the existing `*_wf` conclusions rather than build a parallel
+premise-free family.) -/
 theorem applyChanOp_wf {σ : ExecState} {op : ChanStOp}
     {vs : List GoValue} {env : LocalEnv} {k : Cont} {c' : Config}
     {σ' : ExecState}
@@ -4713,7 +4717,8 @@ theorem applyChanOp_wf {σ : ExecState} {op : ChanStOp}
     (henv : LocalEnv.locSup env ≤ σ.nextAddr)
     (hk : Cont.locSup k ≤ σ.nextAddr)
     (h : applyChanOp σ op vs env k = .ok (c', σ')) :
-    StateWf σ' ∧ Config.locSup c' ≤ σ'.nextAddr ∧ σ'.types = σ.types := by
+    StateWf σ' ∧ Config.locSup c' ≤ σ'.nextAddr ∧ σ'.types = σ.types
+      ∧ σ.nextAddr ≤ σ'.nextAddr := by
   have hheap := hw.heap_le
   rw [applyChanOp.eq_def] at h
   split at h
@@ -4730,7 +4735,7 @@ theorem applyChanOp_wf {σ : ExecState} {op : ChanStOp}
     split at h
     · simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
-      refine ⟨hw, ?_, rfl⟩
+      refine ⟨hw, ?_, rfl, Nat.le_refl _⟩
       simp only [Config.locSup, optLocSup, Nat.max_le]
       omega
     · rename_i loc hbase
@@ -4742,7 +4747,7 @@ theorem applyChanOp_wf {σ : ExecState} {op : ChanStOp}
       split at h
       · simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
         obtain ⟨rfl, rfl⟩ := h
-        refine ⟨hw, ?_, rfl⟩
+        refine ⟨hw, ?_, rfl, Nat.le_refl _⟩
         simp only [Config.locSup, panicChainSup, runtimeErrorValue_locSup,
           Nat.max_le]
         omega
@@ -4754,12 +4759,12 @@ theorem applyChanOp_wf {σ : ExecState} {op : ChanStOp}
                   = goValueListSup (buf.push v').toList from rfl,
                 goValueListSup_push]
                 omega) hst
-          refine ⟨w1, ?_, w4⟩
+          refine ⟨w1, ?_, w4, w2⟩
           simp only [Config.locSup, Nat.max_le]
           omega
         · simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
           obtain ⟨rfl, rfl⟩ := h
-          refine ⟨hw, ?_, rfl⟩
+          refine ⟨hw, ?_, rfl, Nat.le_refl _⟩
           simp only [Config.locSup, optLocSup, Nat.max_le]
           omega
   · -- recv (audit response BUG-022: communication FIRST, then targets)
@@ -4772,7 +4777,7 @@ theorem applyChanOp_wf {σ : ExecState} {op : ChanStOp}
     split at h
     · simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
-      refine ⟨hw, ?_, rfl⟩
+      refine ⟨hw, ?_, rfl, Nat.le_refl _⟩
       simp only [Config.locSup, optLocSup, Nat.max_le]
       omega
     · rename_i loc hbase
@@ -4797,7 +4802,7 @@ theorem applyChanOp_wf {σ : ExecState} {op : ChanStOp}
         split at h
         · simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
           obtain ⟨rfl, rfl⟩ := h
-          refine ⟨w1, ?_, w4⟩
+          refine ⟨w1, ?_, w4, w2⟩
           simp only [Config.locSup, Nat.max_le]
           omega
         · rename_i t ts
@@ -4805,7 +4810,7 @@ theorem applyChanOp_wf {σ : ExecState} {op : ChanStOp}
             (by omega)
             (Nat.le_trans (recvStores_locSup ((t :: ts).length)) (by omega))
             (by simp [Stmt.locSup, stmtListSup]) (by omega) (by omega) h
-          exact ⟨q1, q2, q3.trans w4⟩
+          exact ⟨q1, q2, q3.trans w4, Nat.le_trans w2 q4⟩
       · split at h
         · -- closed-and-drained: zero value, then deliver
           simp only [bind_eq_ok] at h
@@ -4815,17 +4820,17 @@ theorem applyChanOp_wf {σ : ExecState} {op : ChanStOp}
           split at h
           · simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
             obtain ⟨rfl, rfl⟩ := h
-            exact ⟨hw, by simp only [Config.locSup, Nat.max_le]; omega, rfl⟩
+            exact ⟨hw, by simp only [Config.locSup, Nat.max_le]; omega, rfl, Nat.le_refl _⟩
           · rename_i t ts
             obtain ⟨q1, q2, q3, q4⟩ := enterRecvTargets_wf hw
               (by omega)
               (Nat.le_trans (recvStores_locSup ((t :: ts).length)) (by omega))
               (by simp [Stmt.locSup, stmtListSup]) (by omega) (by omega) h
-            exact ⟨q1, q2, q3⟩
+            exact ⟨q1, q2, q3, q4⟩
         · -- open-and-empty: block
           simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
           obtain ⟨rfl, rfl⟩ := h
-          refine ⟨hw, ?_, rfl⟩
+          refine ⟨hw, ?_, rfl, Nat.le_refl _⟩
           simp only [Config.locSup, optLocSup, Nat.max_le]
           omega
   · -- close
@@ -4837,7 +4842,7 @@ theorem applyChanOp_wf {σ : ExecState} {op : ChanStOp}
     split at h
     · simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
-      refine ⟨hw, ?_, rfl⟩
+      refine ⟨hw, ?_, rfl, Nat.le_refl _⟩
       simp only [Config.locSup, panicChainSup, runtimeErrorValue_locSup,
         Nat.max_le]
       omega
@@ -4850,7 +4855,7 @@ theorem applyChanOp_wf {σ : ExecState} {op : ChanStOp}
       split at h
       · simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
         obtain ⟨rfl, rfl⟩ := h
-        refine ⟨hw, ?_, rfl⟩
+        refine ⟨hw, ?_, rfl, Nat.le_refl _⟩
         simp only [Config.locSup, panicChainSup, runtimeErrorValue_locSup,
           Nat.max_le]
         omega
@@ -4860,7 +4865,7 @@ theorem applyChanOp_wf {σ : ExecState} {op : ChanStOp}
           (by rw [show GoValue.locSup (.chanData buf capacity true)
                 = goValueListSup buf.toList from rfl]
               omega) hst
-        refine ⟨w1, ?_, w4⟩
+        refine ⟨w1, ?_, w4, w2⟩
         simp only [Config.locSup, Nat.max_le]
         omega
   · simp [stuck, throw, throwThe, MonadExceptOf.throw] at h
@@ -4904,7 +4909,8 @@ theorem applySelect_wf {σ : ExecState}
     (henv : LocalEnv.locSup env ≤ σ.nextAddr)
     (hk : Cont.locSup k ≤ σ.nextAddr)
     (h : applySelect σ clauses default? vs env k ch = .ok (c', σ', ch')) :
-    StateWf σ' ∧ Config.locSup c' ≤ σ'.nextAddr ∧ σ'.types = σ.types := by
+    StateWf σ' ∧ Config.locSup c' ≤ σ'.nextAddr ∧ σ'.types = σ.types
+      ∧ σ.nextAddr ≤ σ'.nextAddr := by
   rw [applySelect.eq_def] at h
   simp only [bind_eq_ok] at h
   obtain ⟨outc, hcore, h⟩ := h
@@ -4917,13 +4923,13 @@ theorem applySelect_wf {σ : ExecState}
     omega
   have hcommit : ∀ c ∈ rc, ∀ {c₂ : Config} {σ₂ : ExecState},
       commitClause σ env k c = .ok (c₂, σ₂) →
-      StateWf σ₂ ∧ Config.locSup c₂ ≤ σ₂.nextAddr ∧ σ₂.types = σ.types := by
+      StateWf σ₂ ∧ Config.locSup c₂ ≤ σ₂.nextAddr ∧ σ₂.types = σ.types
+        ∧ σ.nextAddr ≤ σ₂.nextAddr := by
     intro c hmem c₂ σ₂ hcom
     have hcb : evClauseSup c ≤ σ.nextAddr := by
       have hmem' := readyClauses_subset hrc c hmem
       exact Nat.le_trans (evClausesSup_mem hmem') hevsb
-    obtain ⟨w1, w2, w3, _⟩ := commitClause_wf hw hcb henv hk hcom
-    exact ⟨w1, w2, w3⟩
+    exact commitClause_wf hw hcb henv hk hcom
   split at h
   · -- outc = .done c₂ σ₂: no pick was consumed
     rename_i c₂ σ₂
@@ -4934,11 +4940,11 @@ theorem applySelect_wf {σ : ExecState}
         (simp only [pure_eq_ok, Except.ok.injEq, SelectOutcome.done.injEq] at hcore;
          obtain ⟨rfl, rfl⟩ := hcore)
       · rename_i d
-        refine ⟨hw, ?_, rfl⟩
+        refine ⟨hw, ?_, rfl, Nat.le_refl _⟩
         simp only [optStmtSup] at hd
         simp only [Config.locSup, Nat.max_le]
         omega
-      · refine ⟨hw, ?_, rfl⟩
+      · refine ⟨hw, ?_, rfl, Nat.le_refl _⟩
         simp only [Config.locSup, Nat.max_le]
         omega
     · rename_i c
@@ -4980,7 +4986,7 @@ theorem applySelect_wf {σ : ExecState}
       -- `.panicking` configuration over the input state
       simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl, rfl⟩ := h
-      refine ⟨hw, ?_, rfl⟩
+      refine ⟨hw, ?_, rfl, Nat.le_refl _⟩
       simp only [Config.locSup, panicChainSup, runtimeErrorValue_locSup,
         Nat.max_le]
       omega
@@ -5202,13 +5208,14 @@ below `nextAddr`), and never mutates the type environment. The combined
 theorem step_preserves_wf_loc {c : Config} {σ : ExecState} {c' : Config}
     {σ' : ExecState} (h : Step c σ c' σ')
     (hs : StateWf σ) (hc : ConfigWf σ.nextAddr c) :
-    StateWf σ' ∧ ConfigWf σ'.nextAddr c' ∧ σ'.types = σ.types := by
+    StateWf σ' ∧ ConfigWf σ'.nextAddr c' ∧ σ'.types = σ.types
+      ∧ σ.nextAddr ≤ σ'.nextAddr := by
 
   have hheap := hs.heap_le
   have hfuncs := hs.funcs_le
   cases h
   all_goals try (
-    refine ⟨hs, ?_, rfl⟩
+    refine ⟨hs, ?_, rfl, Nat.le_refl _⟩
     simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
       GoValue.locSup, optLocSup, panicChainSup, goValueListSup, exprListSup,
       stmtListSup, locListSup, deferListSup, assigneeListSup, optExprSup,
@@ -5218,19 +5225,19 @@ theorem step_preserves_wf_loc {c : Config} {σ : ExecState} {c' : Config}
       Nat.max_le] at hc ⊢
     omega)
   case panicArgValue v k =>
-    refine ⟨hs, ?_, rfl⟩
+    refine ⟨hs, ?_, rfl, Nat.le_refl _⟩
     have hp := panicPayload_locSup (v := v)
     simp only [ConfigWf, Config.locSup, Cont.locSup, Expr.locSup,
       GoValue.locSup, panicChainSup, Nat.max_le] at hc ⊢
     omega
   case evalRef id loc env k hlook =>
-    refine ⟨hs, ?_, rfl⟩
+    refine ⟨hs, ?_, rfl, Nat.le_refl _⟩
     have h1 := LocalEnv.lookup_locSup hlook
     simp only [ConfigWf, Config.locSup, Cont.locSup, Expr.locSup,
       GoValue.locSup, Nat.max_le] at hc ⊢
     omega
   case evalVar id loc v env k hlook hload =>
-    refine ⟨hs, ?_, rfl⟩
+    refine ⟨hs, ?_, rfl, Nat.le_refl _⟩
     have h1 := loadLoc_locSup hload
     simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
       GoValue.locSup, optLocSup, panicChainSup, goValueListSup, exprListSup,
@@ -5241,7 +5248,7 @@ theorem step_preserves_wf_loc {c : Config} {σ : ExecState} {c' : Config}
       Nat.max_le] at hc ⊢
     omega
   case evalStrict e op e₁ rest env k hplan =>
-    refine ⟨hs, ?_, rfl⟩
+    refine ⟨hs, ?_, rfl, Nat.le_refl _⟩
     have h1 := strictPlan_locSup hplan
     simp only [exprListSup] at h1
     simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
@@ -5255,7 +5262,7 @@ theorem step_preserves_wf_loc {c : Config} {σ : ExecState} {c' : Config}
   case evalStrictNullary e op v env k hplan happly =>
     obtain ⟨w1, w2, w3, w4, w5, w6⟩ := applyStrictOp_wf hs
       (by simp [goValueListSup]) happly
-    refine ⟨w1, ?_, w4⟩
+    refine ⟨w1, ?_, w4, w2⟩
     simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
       GoValue.locSup, optLocSup, panicChainSup, goValueListSup, exprListSup,
       stmtListSup, locListSup, deferListSup, assigneeListSup, optExprSup,
@@ -5266,7 +5273,7 @@ theorem step_preserves_wf_loc {c : Config} {σ : ExecState} {c' : Config}
     omega
   case evalRecover env k v k' hrec =>
     obtain ⟨r1, r2⟩ := recoverResult_locSup hrec
-    refine ⟨hs, ?_, rfl⟩
+    refine ⟨hs, ?_, rfl, Nat.le_refl _⟩
     simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
       GoValue.locSup, optLocSup, panicChainSup, goValueListSup, exprListSup,
       stmtListSup, locListSup, deferListSup, assigneeListSup, optExprSup,
@@ -5288,7 +5295,7 @@ theorem step_preserves_wf_loc {c : Config} {σ : ExecState} {c' : Config}
       simp only [goValueListSup]
       omega
     obtain ⟨w1, w2, w3, w4, w5, w6⟩ := applyStrictOp_wf hs hop happly
-    refine ⟨w1, ?_, w4⟩
+    refine ⟨w1, ?_, w4, w2⟩
     simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
       GoValue.locSup, optLocSup, panicChainSup, goValueListSup, exprListSup,
       stmtListSup, locListSup, deferListSup, assigneeListSup, optExprSup,
@@ -5298,7 +5305,7 @@ theorem step_preserves_wf_loc {c : Config} {σ : ExecState} {c' : Config}
       Nat.max_le] at hc ⊢
     omega
   case seqn ss env k =>
-    refine ⟨hs, ?_, rfl⟩
+    refine ⟨hs, ?_, rfl, Nat.le_refl _⟩
     have h1 := seqCont_locSup (ss := ss.toList) (env := env) (k := k)
     simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
       GoValue.locSup, optLocSup, panicChainSup, goValueListSup, exprListSup,
@@ -5319,7 +5326,7 @@ theorem step_preserves_wf_loc {c : Config} {σ : ExecState} {c' : Config}
       runtimeErrorValue_locSup, panicPayload, LocalEnv.pushScope_locSup,
       Nat.max_le] at hc
       omega)
-    refine ⟨w1, ?_, w4⟩
+    refine ⟨w1, ?_, w4, w2⟩
     simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
       GoValue.locSup, optLocSup, panicChainSup, goValueListSup, exprListSup,
       stmtListSup, locListSup, deferListSup, assigneeListSup, optExprSup,
@@ -5333,7 +5340,7 @@ theorem step_preserves_wf_loc {c : Config} {σ : ExecState} {c' : Config}
     obtain ⟨w1, w2, w3, w4⟩ := alloc_wf hs (by omega) halloc
     obtain ⟨d1, d2, d3, d4, d5, _⟩ := alloc_shape halloc
     have hdecl := LocalEnv.declare_locSup (env := env) (id := p.id) (l := loc)
-    refine ⟨w1, ?_, d3⟩
+    refine ⟨w1, ?_, d3, by omega⟩
     simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
       GoValue.locSup, optLocSup, panicChainSup, goValueListSup, exprListSup,
       stmtListSup, locListSup, deferListSup, assigneeListSup, optExprSup,
@@ -5343,7 +5350,7 @@ theorem step_preserves_wf_loc {c : Config} {σ : ExecState} {c' : Config}
       Nat.max_le] at hc ⊢
     omega
   case assign lhs te rhs env k hte =>
-    refine ⟨hs, ?_, rfl⟩
+    refine ⟨hs, ?_, rfl, Nat.le_refl _⟩
     have h1 := assigneeExpr_locSup hte
     simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
       GoValue.locSup, optLocSup, panicChainSup, goValueListSup, exprListSup,
@@ -5354,7 +5361,7 @@ theorem step_preserves_wf_loc {c : Config} {σ : ExecState} {c' : Config}
       Nat.max_le] at hc ⊢
     omega
   case assignTargetLoc v loc rhs env k hloc =>
-    refine ⟨hs, ?_, rfl⟩
+    refine ⟨hs, ?_, rfl, Nat.le_refl _⟩
     have h1 := valueAsLoc_locSup hloc
     simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
       GoValue.locSup, optLocSup, panicChainSup, goValueListSup, exprListSup,
@@ -5375,7 +5382,7 @@ theorem step_preserves_wf_loc {c : Config} {σ : ExecState} {c' : Config}
       Nat.max_le] at hc
       omega
     obtain ⟨w1, w2, w3⟩ := storeLoc_wf hs hb.1 hb.2 hstore
-    refine ⟨w1, ?_, (storeLoc_shape hstore).1⟩
+    refine ⟨w1, ?_, (storeLoc_shape hstore).1, Nat.le_of_eq w2.symm⟩
     simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
       GoValue.locSup, optLocSup, panicChainSup, goValueListSup, exprListSup,
       stmtListSup, locListSup, deferListSup, assigneeListSup, optExprSup,
@@ -5385,7 +5392,7 @@ theorem step_preserves_wf_loc {c : Config} {σ : ExecState} {c' : Config}
       Nat.max_le] at hc ⊢
     omega
   case callFirstTarget targets fid args te rest env k hplan =>
-    refine ⟨hs, ?_, rfl⟩
+    refine ⟨hs, ?_, rfl, Nat.le_refl _⟩
     have h1 := assigneesExprs_locSup hplan
     simp only [exprListSup] at h1
     simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
@@ -5397,7 +5404,7 @@ theorem step_preserves_wf_loc {c : Config} {σ : ExecState} {c' : Config}
       Nat.max_le] at hc h1 ⊢
     omega
   case callFirstArg targets fid args a rest env k hplan hargs =>
-    refine ⟨hs, ?_, rfl⟩
+    refine ⟨hs, ?_, rfl, Nat.le_refl _⟩
     have h2 : exprListSup (a :: rest) = exprListSup args.toList := by rw [hargs]
     simp only [exprListSup] at h2
     simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
@@ -5412,7 +5419,7 @@ theorem step_preserves_wf_loc {c : Config} {σ : ExecState} {c' : Config}
  hplan hargs henter =>
     obtain ⟨w1, w2, w3, w4, w5, w6, w7, w8⟩ := enterFrame_wf hs
       (by simp [goValueListSup]) henter
-    refine ⟨w1, ?_, w3⟩
+    refine ⟨w1, ?_, w3, w2⟩
     simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
       GoValue.locSup, optLocSup, panicChainSup, goValueListSup, exprListSup,
       stmtListSup, locListSup, deferListSup, assigneeListSup, optExprSup,
@@ -5422,7 +5429,7 @@ theorem step_preserves_wf_loc {c : Config} {σ : ExecState} {c' : Config}
       Nat.max_le] at hc ⊢
     omega
   case callTargetLoc v loc fid locs te rest args env k hloc =>
-    refine ⟨hs, ?_, rfl⟩
+    refine ⟨hs, ?_, rfl, Nat.le_refl _⟩
     have h1 := valueAsLoc_locSup hloc
     simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
       GoValue.locSup, optLocSup, panicChainSup, goValueListSup, exprListSup,
@@ -5433,7 +5440,7 @@ theorem step_preserves_wf_loc {c : Config} {σ : ExecState} {c' : Config}
       Nat.max_le] at hc ⊢
     omega
   case callTargetsDoneArg v loc fid locs a rest env k hloc =>
-    refine ⟨hs, ?_, rfl⟩
+    refine ⟨hs, ?_, rfl, Nat.le_refl _⟩
     have h1 := valueAsLoc_locSup hloc
     simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
       GoValue.locSup, optLocSup, panicChainSup, goValueListSup, exprListSup,
@@ -5448,7 +5455,7 @@ theorem step_preserves_wf_loc {c : Config} {σ : ExecState} {c' : Config}
     have h1 := valueAsLoc_locSup hloc
     obtain ⟨w1, w2, w3, w4, w5, w6, w7, w8⟩ := enterFrame_wf hs
       (by simp [goValueListSup]) henter
-    refine ⟨w1, ?_, w3⟩
+    refine ⟨w1, ?_, w3, w2⟩
     simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
       GoValue.locSup, optLocSup, panicChainSup, goValueListSup, exprListSup,
       stmtListSup, locListSup, deferListSup, assigneeListSup, optExprSup,
@@ -5471,7 +5478,7 @@ theorem step_preserves_wf_loc {c : Config} {σ : ExecState} {c' : Config}
       simp only [goValueListSup]
       omega
     obtain ⟨w1, w2, w3, w4, w5, w6, w7, w8⟩ := enterFrame_wf hs hargb henter
-    refine ⟨w1, ?_, w3⟩
+    refine ⟨w1, ?_, w3, w2⟩
     simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
       GoValue.locSup, optLocSup, panicChainSup, goValueListSup, exprListSup,
       stmtListSup, locListSup, deferListSup, assigneeListSup, optExprSup,
@@ -5481,7 +5488,7 @@ theorem step_preserves_wf_loc {c : Config} {σ : ExecState} {c' : Config}
       Nat.max_le] at hc ⊢
     omega
   case stmtOpFirst stmt op nt e rest env k hplan =>
-    refine ⟨hs, ?_, rfl⟩
+    refine ⟨hs, ?_, rfl, Nat.le_refl _⟩
     have h1 := stmtPlan_locSup hplan
     simp only [exprListSup] at h1
     simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
@@ -5495,7 +5502,7 @@ theorem step_preserves_wf_loc {c : Config} {σ : ExecState} {c' : Config}
   case stmtOpNullary stmt op nt env k ch ch' hplan happly =>
     obtain ⟨w1, w2, w3, w4, w5⟩ := applyStmtOp_wf hs
       (by simp [goValueListSup]) happly
-    refine ⟨w1, ?_, w4⟩
+    refine ⟨w1, ?_, w4, w2⟩
     simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
       GoValue.locSup, optLocSup, panicChainSup, goValueListSup, exprListSup,
       stmtListSup, locListSup, deferListSup, assigneeListSup, optExprSup,
@@ -5517,7 +5524,7 @@ theorem step_preserves_wf_loc {c : Config} {σ : ExecState} {c' : Config}
       simp only [goValueListSup]
       omega
     obtain ⟨w1, w2, w3, w4, w5⟩ := applyStmtOp_wf hs hop happly
-    refine ⟨w1, ?_, w4⟩
+    refine ⟨w1, ?_, w4, w2⟩
     simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
       GoValue.locSup, optLocSup, panicChainSup, goValueListSup, exprListSup,
       stmtListSup, locListSup, deferListSup, assigneeListSup, optExprSup,
@@ -5527,7 +5534,7 @@ theorem step_preserves_wf_loc {c : Config} {σ : ExecState} {c' : Config}
       Nat.max_le] at hc ⊢
     omega
   case mapRangeSnapshot v entries keyVar valVar keyTy valTy body env k hsnap =>
-    refine ⟨hs, ?_, rfl⟩
+    refine ⟨hs, ?_, rfl, Nat.le_refl _⟩
     have h1 := mapRangeSnapshotEntries_locSup hsnap
     simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
       GoValue.locSup, optLocSup, panicChainSup, goValueListSup, exprListSup,
@@ -5565,7 +5572,7 @@ theorem step_preserves_wf_loc {c : Config} {σ : ExecState} {c' : Config}
       (by omega) (by omega) hbind
     have herase : goValueEntriesSup ((remaining.eraseIdx idx hidx).toList)
         ≤ goValueEntriesSup remaining.toList := goValueEntriesSup_eraseIdx
-    refine ⟨w1, ?_, w4⟩
+    refine ⟨w1, ?_, w4, w2⟩
     simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
       GoValue.locSup, optLocSup, panicChainSup, goValueListSup, exprListSup,
       stmtListSup, locListSup, deferListSup, assigneeListSup, optExprSup,
@@ -5575,7 +5582,7 @@ theorem step_preserves_wf_loc {c : Config} {σ : ExecState} {c' : Config}
       Nat.max_le] at hc ⊢
     omega
   case callValueFirstTarget targets callee args te rest env k hplan =>
-    refine ⟨hs, ?_, rfl⟩
+    refine ⟨hs, ?_, rfl, Nat.le_refl _⟩
     have h1 := assigneesExprs_locSup hplan
     simp only [exprListSup] at h1
     simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
@@ -5587,7 +5594,7 @@ theorem step_preserves_wf_loc {c : Config} {σ : ExecState} {c' : Config}
       Nat.max_le] at hc h1 ⊢
     omega
   case callValTargetLoc v loc callee locs te rest args env k hloc =>
-    refine ⟨hs, ?_, rfl⟩
+    refine ⟨hs, ?_, rfl, Nat.le_refl _⟩
     have h1 := valueAsLoc_locSup hloc
     simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
       GoValue.locSup, optLocSup, panicChainSup, goValueListSup, exprListSup,
@@ -5598,7 +5605,7 @@ theorem step_preserves_wf_loc {c : Config} {σ : ExecState} {c' : Config}
       Nat.max_le] at hc ⊢
     omega
   case callValTargetsDone v loc callee locs args env k hloc =>
-    refine ⟨hs, ?_, rfl⟩
+    refine ⟨hs, ?_, rfl, Nat.le_refl _⟩
     have h1 := valueAsLoc_locSup hloc
     simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
       GoValue.locSup, optLocSup, panicChainSup, goValueListSup, exprListSup,
@@ -5620,7 +5627,7 @@ theorem step_preserves_wf_loc {c : Config} {σ : ExecState} {c' : Config}
       Nat.max_le] at hc
       omega
     obtain ⟨w1, w2, w3, w4, w5, w6, w7, w8⟩ := enterFrame_wf hs hargb henter
-    refine ⟨w1, ?_, w3⟩
+    refine ⟨w1, ?_, w3, w2⟩
     simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
       GoValue.locSup, optLocSup, panicChainSup, goValueListSup, exprListSup,
       stmtListSup, locListSup, deferListSup, assigneeListSup, optExprSup,
@@ -5643,7 +5650,7 @@ theorem step_preserves_wf_loc {c : Config} {σ : ExecState} {c' : Config}
       simp only [goValueListSup]
       omega
     obtain ⟨w1, w2, w3, w4, w5, w6, w7, w8⟩ := enterFrame_wf hs hargb henter
-    refine ⟨w1, ?_, w3⟩
+    refine ⟨w1, ?_, w3, w2⟩
     simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
       GoValue.locSup, optLocSup, panicChainSup, goValueListSup, exprListSup,
       stmtListSup, locListSup, deferListSup, assigneeListSup, optExprSup,
@@ -5665,7 +5672,7 @@ theorem step_preserves_wf_loc {c : Config} {σ : ExecState} {c' : Config}
       omega
     have p := storeMany_pres hs hb (by omega) hstore
     obtain ⟨w1, w2, w3, w4, w5⟩ := p
-    refine ⟨w1, ?_, w4⟩
+    refine ⟨w1, ?_, w4, w2⟩
     simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
       GoValue.locSup, optLocSup, panicChainSup, goValueListSup, exprListSup,
       stmtListSup, locListSup, deferListSup, assigneeListSup, optExprSup,
@@ -5687,7 +5694,7 @@ theorem step_preserves_wf_loc {c : Config} {σ : ExecState} {c' : Config}
       omega
     have p := storeMany_pres hs hb (by omega) hstore
     obtain ⟨w1, w2, w3, w4, w5⟩ := p
-    refine ⟨w1, ?_, w4⟩
+    refine ⟨w1, ?_, w4, w2⟩
     simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
       GoValue.locSup, optLocSup, panicChainSup, goValueListSup, exprListSup,
       stmtListSup, locListSup, deferListSup, assigneeListSup, optExprSup,
@@ -5709,7 +5716,7 @@ theorem step_preserves_wf_loc {c : Config} {σ : ExecState} {c' : Config}
       Nat.max_le] at hc
       omega
     obtain ⟨w1, w2, w3, w4, w5, w6, w7, w8⟩ := enterFrame_wf hs hargb henter
-    refine ⟨w1, ?_, w3⟩
+    refine ⟨w1, ?_, w3, w2⟩
     simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
       GoValue.locSup, optLocSup, panicChainSup, goValueListSup, exprListSup,
       stmtListSup, locListSup, deferListSup, assigneeListSup, optExprSup,
@@ -5731,7 +5738,7 @@ theorem step_preserves_wf_loc {c : Config} {σ : ExecState} {c' : Config}
       Nat.max_le] at hc
       omega
     obtain ⟨w1, w2, w3, w4, w5, w6, w7, w8⟩ := enterFrame_wf hs hargb henter
-    refine ⟨w1, ?_, w3⟩
+    refine ⟨w1, ?_, w3, w2⟩
     simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
       GoValue.locSup, optLocSup, panicChainSup, goValueListSup, exprListSup,
       stmtListSup, locListSup, deferListSup, assigneeListSup, optExprSup,
@@ -5741,7 +5748,7 @@ theorem step_preserves_wf_loc {c : Config} {σ : ExecState} {c' : Config}
       Nat.max_le] at hc ⊢
     omega
   case deferCalleeNoArgs cv env k k' hdc hpush =>
-    refine ⟨hs, ?_, rfl⟩
+    refine ⟨hs, ?_, rfl, Nat.le_refl _⟩
     have h1 := pushDefer_locSup hpush
     simp only [Nat.max_le] at h1
     simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
@@ -5754,7 +5761,7 @@ theorem step_preserves_wf_loc {c : Config} {σ : ExecState} {c' : Config}
     simp only [goValueListSup] at h1
     omega
   case deferArgsDone v cv vals env k k' hpush =>
-    refine ⟨hs, ?_, rfl⟩
+    refine ⟨hs, ?_, rfl, Nat.le_refl _⟩
     have h1 := pushDefer_locSup hpush
     simp only [Nat.max_le, goValueListSup_append, goValueListSup] at h1
     simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
@@ -5766,7 +5773,7 @@ theorem step_preserves_wf_loc {c : Config} {σ : ExecState} {c' : Config}
       Nat.max_le] at hc ⊢
     omega
   case panicUnwind chain k k' hpass =>
-    refine ⟨hs, ?_, rfl⟩
+    refine ⟨hs, ?_, rfl, Nat.le_refl _⟩
     have h1 := panicPassthrough_locSup hpass
     simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
       GoValue.locSup, optLocSup, panicChainSup, goValueListSup, exprListSup,
@@ -5789,7 +5796,7 @@ theorem step_preserves_wf_loc {c : Config} {σ : ExecState} {c' : Config}
       Nat.max_le] at hc
       omega
     obtain ⟨w1, w2, w3, w4, w5, w6, w7, w8⟩ := enterFrame_wf hs hargb henter
-    refine ⟨w1, ?_, w3⟩
+    refine ⟨w1, ?_, w3, w2⟩
     simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
       GoValue.locSup, optLocSup, panicChainSup, goValueListSup, exprListSup,
       stmtListSup, locListSup, deferListSup, assigneeListSup, optExprSup,
@@ -5800,7 +5807,7 @@ theorem step_preserves_wf_loc {c : Config} {σ : ExecState} {c' : Config}
     omega
   -- Channel statements (channels arc slice 1).
   case chanStFirst stmt op e rest env k hplan =>
-    refine ⟨hs, ?_, rfl⟩
+    refine ⟨hs, ?_, rfl, Nat.le_refl _⟩
     obtain ⟨h1, h2⟩ := chanPlan_locSup hplan
     simp only [exprListSup] at h1
     simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
@@ -5822,10 +5829,10 @@ theorem step_preserves_wf_loc {c : Config} {σ : ExecState} {c' : Config}
       simp only [goValueListSup]
       omega
     obtain ⟨h1, h2, h3, h4⟩ := hop
-    obtain ⟨w1, w2, w3⟩ := applyChanOp_wf hs h1 h2 h3 h4 happly
-    exact ⟨w1, w2, w3⟩
+    obtain ⟨w1, w2, w3, w4⟩ := applyChanOp_wf hs h1 h2 h3 h4 happly
+    exact ⟨w1, w2, w3, w4⟩
   case selectFirst clauses default? e rest env k hplan =>
-    refine ⟨hs, ?_, rfl⟩
+    refine ⟨hs, ?_, rfl, Nat.le_refl _⟩
     have h1 : exprListSup (e :: rest) ≤ selectClausesSup clauses.toList := by
       rw [← hplan]; exact selectOperands_locSup
     simp only [exprListSup] at h1
@@ -5835,12 +5842,12 @@ theorem step_preserves_wf_loc {c : Config} {σ : ExecState} {c' : Config}
       Nat.max_le] at hc h1 ⊢
     omega
   case selectNoClausesDefault clauses d env k hplan =>
-    refine ⟨hs, ?_, rfl⟩
+    refine ⟨hs, ?_, rfl, Nat.le_refl _⟩
     simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, optStmtSup,
       Nat.max_le] at hc ⊢
     omega
   case selectNoClausesBlock clauses env k hplan =>
-    refine ⟨hs, ?_, rfl⟩
+    refine ⟨hs, ?_, rfl, Nat.le_refl _⟩
     simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, evClausesSup,
       Nat.max_le] at hc ⊢
     omega
@@ -5856,12 +5863,12 @@ theorem step_preserves_wf_loc {c : Config} {σ : ExecState} {c' : Config}
       simp only [goValueListSup]
       omega
     obtain ⟨h1, h2, h3, h4, h5⟩ := hcomp
-    obtain ⟨w1, w2, w3⟩ := applySelect_wf hs h1 h2 h3 h4 h5 happly
-    exact ⟨w1, w2, w3⟩
+    obtain ⟨w1, w2, w3, w4⟩ := applySelect_wf hs h1 h2 h3 h4 h5 happly
+    exact ⟨w1, w2, w3, w4⟩
   case tgtOpNext sh ops v r sh' e ops' targets refs vals body env k hcomp =>
     have hr := completeTargetRef_locSup hcomp
     rw [goValueListSup_reverse] at hr
-    refine ⟨hs, ?_, rfl⟩
+    refine ⟨hs, ?_, rfl, Nat.le_refl _⟩
     simp only [ConfigWf, Config.locSup, Cont.locSup, GoValue.locSup,
       goValueListSup, exprListSup, targetRefListSup, targetPlansSup,
       targetRefListSup_append, Stmt.locSup, Nat.max_le] at hc hr ⊢
@@ -5869,7 +5876,7 @@ theorem step_preserves_wf_loc {c : Config} {σ : ExecState} {c' : Config}
   case tgtOpStores sh ops v r refs vals body env k hcomp =>
     have hr := completeTargetRef_locSup hcomp
     rw [goValueListSup_reverse] at hr
-    refine ⟨hs, ?_, rfl⟩
+    refine ⟨hs, ?_, rfl, Nat.le_refl _⟩
     simp only [ConfigWf, Config.locSup, Cont.locSup, GoValue.locSup,
       goValueListSup, exprListSup, targetRefListSup, targetPlansSup,
       targetRefListSup_append, Stmt.locSup, Nat.max_le] at hc hr ⊢
@@ -5877,14 +5884,14 @@ theorem step_preserves_wf_loc {c : Config} {σ : ExecState} {c' : Config}
   case tgtOpRhs sh ops v r refs e rest vals body env k hcomp =>
     have hr := completeTargetRef_locSup hcomp
     rw [goValueListSup_reverse] at hr
-    refine ⟨hs, ?_, rfl⟩
+    refine ⟨hs, ?_, rfl, Nat.le_refl _⟩
     simp only [ConfigWf, Config.locSup, Cont.locSup, GoValue.locSup,
       goValueListSup, exprListSup, targetRefListSup, targetPlansSup,
       targetRefListSup_append, Stmt.locSup, Nat.max_le] at hc hr ⊢
     omega
   case assignManyFirst left right sh e ops rest env k hsz hplan =>
     have hplans := targetsPlan_locSup hplan
-    refine ⟨hs, ?_, rfl⟩
+    refine ⟨hs, ?_, rfl, Nat.le_refl _⟩
     simp only [targetPlansSup, exprListSup, Nat.max_le] at hplans
     simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup,
       goValueListSup, exprListSup, targetRefListSup, targetPlansSup,
@@ -5897,7 +5904,7 @@ theorem step_preserves_wf_loc {c : Config} {σ : ExecState} {c' : Config}
         goValueListSup, Nat.max_le] at hc
       omega
     obtain ⟨w1, w2, w3, w4, w5⟩ := storeTarget_pres hs hbounds.1 hbounds.2 hst
-    refine ⟨w1, ?_, w4⟩
+    refine ⟨w1, ?_, w4, w2⟩
     simp only [ConfigWf, Config.locSup, Cont.locSup, targetRefListSup,
       goValueListSup, Stmt.locSup, Nat.max_le] at hc ⊢
     omega
@@ -6123,9 +6130,18 @@ theorem step_preserves_wf {c : Config} {σ : ExecState} {c' : Config}
     {σ' : ExecState} (h : Step c σ c' σ') (hwf : MachineWf σ c) :
     MachineWf σ' c' := by
   obtain ⟨hs, hc, hi⟩ := hwf
-  obtain ⟨hs', hc', ht⟩ := step_preserves_wf_loc h hs hc
+  obtain ⟨hs', hc', ht, _⟩ := step_preserves_wf_loc h hs hc
   refine ⟨hs', hc', ?_⟩
   rw [ht]
   exact step_preserves_iters h hi
+
+/-- Step-level allocator monotonicity — the `MultiWf` discharge's
+foreign-thread frame lemma (slice-3 build log's recorded route),
+projected out of the extended `step_preserves_wf_loc`. -/
+theorem step_nextAddr_mono {c : Config} {σ : ExecState} {c' : Config}
+    {σ' : ExecState} (h : Step c σ c' σ')
+    (hs : StateWf σ) (hc : ConfigWf σ.nextAddr c) :
+    σ.nextAddr ≤ σ'.nextAddr :=
+  (step_preserves_wf_loc h hs hc).2.2.2
 
 end GoLean.GoCore.Machine
