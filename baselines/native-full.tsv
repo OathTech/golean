@@ -1,23 +1,19 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-07  commit: channels-arc-s2 (S2 audit response: gc waiter-queue PRIORITY — channel/select ops consult parked partners before the buffer; waiter-extended select readiness)
+# recorded: 2026-08-07  commit: channels-arc-s2 (S2 convergence round: selectArrivalPlan closed-channel guard — no arrival pairs across a close)
 #   frontend: native  oracle: go run (strict lane) / go-run membership in the
 #   machine-enumerated observation set (membership lane; go1.26.5 samples)
-# manifest_cases: 1145  pass: 1050  fail: 95
-# Re-pin reason: deliberate coverage change (S2 pre-merge audit
-#   response). The waiter-priority redesign (arrivalPlan: sends hand
-#   off to parked receivers before buffering, receives refill from
-#   parked senders, select readiness waiter-extended incl. default) is
-#   ZERO-drift on all 1140 prior ids in this run. 5 new ids: 3 PASS
-#   (spawn-edge/{nil-interface-recovered,ptr-box-child-aborts} — the
-#   two spawn-position dispatch classes; buffered-wake/len-after-join
-#   — first len/cap goroutines coverage) and 2 deliberate membership
-#   red pins for slice 4's schedule enumerator
-#   (sched-dependent/{select-default-handshake,len-handoff} — the two
-#   audit majors' envelope shapes; the fix makes gc's dominant
-#   outcomes reachable, enumeration certifies the sets). This re-pin
-#   also drops the duplicated arrays/array-bounds row the previous
-#   re-pin introduced (now guarded: coverage-baseline-diff fails on
-#   duplicate baseline ids).
+# manifest_cases: 1147  pass: 1052  fail: 95
+# Re-pin reason: deliberate coverage change (S2 convergence-round
+#   response). The per-clause CLOSED guard in selectArrivalPlan (the
+#   critical: an arriving select paired with a parked partner on an
+#   already-closed channel — a guaranteed send-on-closed panic was
+#   silently erased) is ZERO-drift on all 1145 prior ids in this run.
+#   2 new ids, both PASS: select-closed-arrival/{send,
+#   recv-parked-sender} — the go-oracle pins for the arriving-select
+#   closed semantics (unconditional panic / drained-zero + recovered
+#   close-woken sender). The discriminating red-first pins are the two
+#   stream-pinned pool eval-tests in the same commit (pre-fix values
+#   103 / 7100 against go's panic / 5).
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
 PASS	arrays/array-copy	-
@@ -528,6 +524,8 @@ PASS	goroutines/rendezvous-hb/send-hb	-
 FAIL	goroutines/sched-dependent/first-come	membership
 FAIL	goroutines/sched-dependent/len-handoff	membership
 FAIL	goroutines/sched-dependent/select-default-handshake	membership
+PASS	goroutines/select-closed-arrival/recv-parked-sender	-
+PASS	goroutines/select-closed-arrival/send	-
 PASS	goroutines/select-wake/buffered-data	-
 PASS	goroutines/select-wake/closed	-
 PASS	goroutines/select-wake/recv	-

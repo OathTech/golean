@@ -722,11 +722,81 @@ private def prioSelectDefaultSendMainFunction : GoCore.Func := {
     ]
 }
 
+-- S2 convergence round (CRITICAL): an arriving SELECT must take the
+-- closed CELL semantics, never a pairing — gc checks closed before any
+-- waiter dequeue. Stream [1,1] parks the worker BEFORE main closes and
+-- selects (the schedule the strict lane's four streams never realize).
+
+private def closedRecvWorkerFunction : GoCore.Func := {
+  id := ⟨"closedRecvWorker_F"⟩,
+  args := #[{ id := "ch", typ := .chan .both .int }],
+  results := #[],
+  body := .block
+    #[{ id := "v", typ := .int }, { id := "okv", typ := .bool }]
+    #[.chanRecv #[.var "v", .var "okv"] (.var "ch") .int]
+}
+
+-- go oracle: close precedes the select in program order => the send
+-- clause panics "send on closed channel" under EVERY schedule (probed
+-- 200000/200000). The waiter-blind bug paired with the parked receiver
+-- instead => 103.
+private def closedSelSendMainFunction : GoCore.Func := {
+  id := ⟨"closedSelSendMain_F"⟩,
+  args := #[],
+  results := #[coreParam "z"],
+  body := .block
+    #[{ id := "chv", typ := .chan .both .int }]
+    #[
+      .makeChan (.var "chv") .int none,
+      .goStmt (.funcVal ⟨"closedRecvWorker_F"⟩ #[]) #[.var "chv"],
+      .closeChan (.var "chv"),
+      .selectStmt #[
+        (.send (.var "chv") (.intLit 3) .int,
+          .assign (.var "z") (.intLit 103))
+      ] (some (.assign (.var "z") (.intLit 99)))
+    ]
+}
+
+private def closedSendWorkerFunction : GoCore.Func := {
+  id := ⟨"closedSendWorker_F"⟩,
+  args := #[{ id := "ch", typ := .chan .both .int }],
+  results := #[],
+  body := .seqn #[.chanSend (.var "ch") (.intLit 7) .int]
+}
+
+-- go oracle: the recv clause on a closed channel is the drained zero
+-- with ok=false (=> 5); the parked sender is close-woken into its own
+-- panic, never delivered. The waiter-blind bug handed the select the
+-- parked sender's 7 with ok=true => 7100.
+private def closedSelRecvMainFunction : GoCore.Func := {
+  id := ⟨"closedSelRecvMain_F"⟩,
+  args := #[],
+  results := #[coreParam "z"],
+  body := .block
+    #[{ id := "chv", typ := .chan .both .int },
+      { id := "v", typ := .int }, { id := "okv", typ := .bool }]
+    #[
+      .makeChan (.var "chv") .int none,
+      .goStmt (.funcVal ⟨"closedSendWorker_F"⟩ #[]) #[.var "chv"],
+      .closeChan (.var "chv"),
+      .selectStmt #[
+        (.recv #[.var "v", .var "okv"] (.var "chv") .int,
+          .ifThenElse (.var "okv")
+            (.assign (.var "z")
+              (.add (.mul (.var "v") (.intLit 1000)) (.intLit 100)))
+            (.assign (.var "z")
+              (.add (.mul (.var "v") (.intLit 1000)) (.intLit 5))))
+      ] none
+    ]
+}
+
 private def prioProgram : GoCore.Program := {
   funcs := #[prioRecvOutWorkerFunction, prioSendHandoffMainFunction,
     prioSendSendWorkerFunction, prioRecvRefillMainFunction,
     prioSendSevenWorkerFunction, prioSelectDefaultRecvMainFunction,
-    prioRecvForwardWorkerFunction, prioSelectDefaultSendMainFunction]
+    prioRecvForwardWorkerFunction, prioSelectDefaultSendMainFunction,
+    closedRecvWorkerFunction, closedSelSendMainFunction,
+    closedSendWorkerFunction, closedSelRecvMainFunction]
 }
 
 private def coreMapBasicFunction : GoCore.Func := {
@@ -1691,6 +1761,10 @@ def main : IO UInt32 := do
     (GoCore.Machine.runProgramPoolM 100000 prioProgram "prioSelectDefaultSendMain_F" #[] [1, 1]) 13)
   passed := passed && (← expectIntResult "GoCore pool select default IS taken with no parked partner (envelope's other member, stream [])"
     (GoCore.Machine.runProgramPoolM 100000 prioProgram "prioSelectDefaultRecvMain_F" #[] []) 99)
+  passed := passed && (← expectErrorStatus "GoCore pool arriving select: send clause on a CLOSED channel panics past a parked receiver (gc closed-before-dequeue)"
+    (GoCore.Machine.runProgramPoolM 100000 prioProgram "closedSelSendMain_F" #[] [1, 1]) "panic")
+  passed := passed && (← expectIntResult "GoCore pool arriving select: recv clause on a CLOSED channel drains zero/ok=false past a parked sender"
+    (GoCore.Machine.runProgramPoolM 100000 prioProgram "closedSelRecvMain_F" #[] [1, 1]) 5)
   passed := passed && (← expectIntResult "GoCore string basic" (GoCore.Machine.runFunctionM 100000 coreStringFunction #[]) 22)
   passed := passed && (← expectIntResult "GoCore string byte length" (GoCore.Machine.runFunctionM 100000 coreStringByteLenFunction #[]) 6)
   passed := passed && (← expectValues "GoCore string byte indexing"

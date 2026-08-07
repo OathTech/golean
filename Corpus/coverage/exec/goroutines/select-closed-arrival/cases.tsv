@@ -1,0 +1,3 @@
+# id	subject	args	expected_status	expected_reason	features
+send	selectSendClosedArrival	-	panic	send on closed channel	goroutines,channels,select,close,panic
+recv-parked-sender	selectRecvClosedArrival	-	ok	-	goroutines,channels,select,close,comma_ok,recover

@@ -572,8 +572,11 @@ build, recorded here:
   hchan-invariant analogue chan.go L17-18 is RESTORED AND RE-ARGUED
   (`Multi.lean` file docstring): parked receiver ⇒ empty buffer,
   parked sender ⇒ full buffer, hence matched parked-parked pairs
-  cannot coexist on any capacity — so a `close` can never steal an
-  already-pairable rendezvous. Discriminating pins: four stream-pinned
+  cannot coexist on any capacity; AND every arrival — send, recv, and
+  (since the convergence round) each SELECT clause — checks CLOSED
+  before pairing, so no arrival pairs across a close and a `close`
+  can never steal an already-pairable rendezvous in either direction.
+  Discriminating pins: four stream-pinned
   pool eval-tests (verified RED on the pre-fix machine with the
   predicted divergent values 110/5091/99/99, green after) + the two
   membership envelope pins in `sched-dependent/` (go-run oracle:
@@ -756,3 +759,42 @@ waiter-priority discriminators — red-verified pre-fix at 110/5091/99/
 99 — plus the no-partner default-member guard); check-bugs green
 (untriaged 18 → 20, both pins recorded); baseline re-pinned from the
 full run in the fix commit.
+
+### S2 convergence-round response (2026-08-07, review of the audit-response commits)
+
+Two confirmed findings (none refuted); the headline is a CRITICAL
+introduced BY the audit-response rework itself:
+
+- **CRITICAL: `selectArrivalPlan` had no closed-channel guard.**
+  `chanArrivalPlan` refused to pair on closed in both directions
+  (matching gc's closed-before-dequeue), but the select path computed
+  its waiter lists unconditionally — and `clauseReady` counts closed
+  as ready in both directions — so an ARRIVING select paired with a
+  parked partner on an already-closed channel: the send clause
+  completed normally where Go panics 200000/200000 (a guaranteed
+  panic silently erased — too-wide, no oracle), and the recv clause
+  took the parked sender's value ok=true while Go close-wakes that
+  sender into its panic. Unreachable at 5cee9a1 (the old
+  blocked-outcome intercept never ran for cell-ready selects) —
+  introduced by moving the intercept in front of `stepFn`. FIXED by
+  the per-clause closed guard mirroring `chanArrivalPlan`'s (the
+  closed clause stays cell-ready and falls to `applySelect`'s correct
+  semantics); the close-window docstring/design claims are RE-RECORDED
+  against the arriving-select case (invariant clause (iv): no arrival
+  pairs across a close). Pins: two stream-pinned eval discriminators,
+  red-verified pre-fix at exactly the buggy values (103 where go
+  guarantees the panic; 7100 where go gives 5) and green after; plus
+  the `select-closed-arrival/{send,recv-parked-sender}` corpus pins
+  (go-run verified: unconditional panic / stable 21) — confluent
+  shapes that pass both sides on the strict lane's four streams (the
+  discriminating schedule needs worker-parks-first-twice, which those
+  streams never realize; the slice-4 enumerator will) and pin the
+  oracle answers for it.
+- **NOTE: `MultiSound.lean` trailing newline** restored (the tip was
+  the repo's only .lean file without one).
+
+Post-convergence counts: 1147 exec cases, 1052 pass / 95 fail (the
+two new closed-arrival pins PASS; the fail set unchanged); 311
+negative green; 94 eval-tests green (92 → 94); check-bugs green
+(untriaged unchanged at 20); baseline re-pinned from the full run in
+the same commit; the 38 designated statements byte-identical.

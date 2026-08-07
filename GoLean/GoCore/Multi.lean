@@ -53,8 +53,17 @@ Design points (docs/2026-08-06_channels-arc-design.md):
   parked pairs cannot coexist on ANY capacity (a parked receiver
   implies an empty buffer and a parked sender a full one — cap 0 —
   where both arrival directions pair before parking), so a close can
-  never steal an already-pairable rendezvous (the too-wide
-  close-window divergence this design rules out).
+  never steal an already-pairable rendezvous; and (iv) every ARRIVAL
+  checks closed BEFORE pairing — `chanArrivalPlan`'s two closed
+  guards and `selectArrivalPlan`'s per-clause closed guard (S2
+  convergence round: the select path first shipped WITHOUT it, so an
+  arriving select could steal a rendezvous that close had already
+  destroyed — a send-on-closed panic silently erased) — so a closed
+  channel's ops always take the cell semantics (send panics, recv
+  drains/zeroes, parked senders are left for their close-wake panic).
+  Together (i)–(iv) rule out the too-wide close-window divergence in
+  both directions: parked pairs cannot outlive a close unpaired, and
+  no arrival pairs across a close.
 
 * **FIFO through pressure.** A direct handoff happens only against an
   empty buffer (implied by invariant (i)); a receive meeting a parked
@@ -473,16 +482,32 @@ def selectArrivalPlan (s : ExecState) (threads : Array Config) (i : Nat)
             match evs[ci]? with
             | some cl => do
                 let cell ← clauseReady s cl
-                let ws :=
+                -- A clause on a CLOSED channel never pairs (S2 convergence
+                -- round, critical): gc checks closed BEFORE any waiter
+                -- dequeue — chansend panics on closed unconditionally and
+                -- chanrecv dequeues sendq only when open — so the clause's
+                -- waiter list is zeroed and, being cell-ready (closed ⇒
+                -- ready in both directions), it falls to `applySelect`'s
+                -- correct closed semantics: the send clause panics, the
+                -- recv clause drains/zeroes, and a parked sender is left
+                -- for its close-wake panic. Mirrors `chanArrivalPlan`'s
+                -- closed guards.
+                let ws ←
                   match cl with
                   | .recvEv chv _ _ _ =>
                       match chanValueLoc chv with
-                      | some loc => sendSideWaiters threads i loc
-                      | none => []
+                      | some loc => do
+                          let (_, _, closed) ← chanCell s loc
+                          if closed then pure ([] : List (Nat × PairTarget))
+                          else pure (sendSideWaiters threads i loc)
+                      | none => pure []
                   | .sendEv chv _ _ _ =>
                       match chanValueLoc chv with
-                      | some loc => recvSideWaiters threads i loc
-                      | none => []
+                      | some loc => do
+                          let (_, _, closed) ← chanCell s loc
+                          if closed then pure ([] : List (Nat × PairTarget))
+                          else pure (recvSideWaiters threads i loc)
+                      | none => pure []
                 return (ci, cell, ws)
             | none => return (ci, false, [])
         match readiness.filter (fun r => r.2.1 || !r.2.2.isEmpty) with
