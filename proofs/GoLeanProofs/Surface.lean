@@ -599,14 +599,18 @@ ends `.ok (.normal …)` (main completed normally) or `.error .fuelOut` —
 and NOTHING else. The excluded ERROR CLASSES are the same as
 `ProgressExec`'s (which already forbids `.deadlock` — the sequential
 driver classifies blocked configurations so since channels slice 1;
-Adequacy.lean records that strengthening); what is genuinely NEW here
-is the CARRIER: the guarantee holds of `execProg` under EVERY modeled
-schedule, not of the single sequential run — a proven concurrent spec
-implies deadlock-freedom on every schedule (and, once slice 3's
-detector lands, race-freedom: `raceDetected` will join the excluded
-classes). (Wording corrected at the S2 audit response — the first form
-claimed "strictly larger exclusions", contradicting Adequacy.lean's own
-note.) -/
+Adequacy.lean records that strengthening) PLUS, since slice 3's
+segment-HB detector, `.raceDetected`: `execProg` now runs the
+detecting loop, and this definition's "nothing but `.ok .normal` or
+`.fuelOut`" excludes the race refusal WITHOUT restating — a proven
+concurrent spec implies deadlock- AND race-freedom on every modeled
+schedule (scope caveat: "modeled schedule" is the registry-point path
+set — BUG-040 records the post-spawn decision point the L1 envelope
+still lacks). What is genuinely NEW versus the sequential notion is
+the CARRIER: the guarantee holds of `execProg` under EVERY modeled
+schedule, not of the single sequential run. (Wording corrected at the
+S2 audit response — the first form claimed "strictly larger
+exclusions", contradicting Adequacy.lean's own note.) -/
 def ProgressExecC (types : TypeEnv) (funcs : Array Func)
     (methods : Array MethodInfo) (env₀ : LocalEnv)
     (P : HProp) (prog : Stmt) : Prop :=

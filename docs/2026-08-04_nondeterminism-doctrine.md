@@ -116,3 +116,47 @@ directions are asymmetric:
   starve the writer). Concurrency termination claims need an explicit
   fairness-constrained quantifier, decided in the design note — not
   discovered as an unprovable theorem.
+
+## The racy-negative lane, live (channels arc slice 3, 2026-08-07)
+
+The DRF-SC fail-closed input above is now executable: the pool's
+segment-level happens-before detector (`RaceState`/`raceUpdate`,
+`GoLean/GoCore/Race.lean` + `Multi.lean`) refuses racy runs with the
+terminal `raceDetected`, and the corpus grew the `race/` lanes
+(negative, litmus pairs, false-positive guards) with `go run -race` as
+the second oracle (`expected_status: race` in the harness). The lane's
+EPISTEMIC CAPTION, recorded per the per-lane discipline:
+
+- **What a race-lane PASS means**: the machine refused on the default
+  and every adversarial stream the harness tests, AND one `-race`
+  sample witnessed a real race (TSan has no false positives — one red
+  report is proof). It does NOT yet mean "every enumerated schedule
+  refuses": the schedule enumerator is slice 4, so per-stream refusal
+  is the strongest executable claim today, and the seeded lane-d cases
+  are deliberately every-interleaving-racy so the per-stream claim is
+  the whole claim for them.
+- **The three-way investigation rule** (binding; also recorded at the
+  harness dispatch in `scripts/diff-coverage`): our-refusal +
+  `-race`-green-on-every-sample is NEVER a pass — it is an
+  investigation with exactly three outcomes: (a) the race check is too
+  eager (model bug — fix); (b) the race needs a schedule the sampler
+  never hits (directed sampling / enumerator territory; record the
+  conclusion in the case's `why`); (c) the program is race-free and
+  misclassified (model bug — fix).
+- **Detector HB is TSan's realized edge set, on purpose** (the
+  structural-alignment decision, design note D2+D3): gc's channel race
+  instrumentation (slot release-acquire, rendezvous racesync, close
+  release/acquire, NO close-woken-sender edge, NO len/cap
+  instrumentation) — not the memory model's minimal rule set — so our
+  refusals stay justifiable by the oracle. Divergences between the
+  detector's HB and go_mem's relation (Fava SEFM 2020's caution) are
+  therefore shared with `-race` rather than invented by us; each is
+  quoted at its implementation site in `Race.lean`.
+- **Scope limit, recorded loudly (BUG-040)**: the detector is complete
+  only over accesses that EXECUTE on the modeled (registry-point)
+  paths. Races reachable only by preempting a sync-free post-spawn
+  parent segment (the exit-no-sync class) are value leaves on every
+  stream until the post-spawn scheduling decision lands — scheduled
+  with the slice-4 enumerator, which needs the same machinery. The
+  NPDRF reduction statement (`GoLean/GoCore/NPDRF.lean`, scaffold)
+  carries the same caveat in its obstruction list.

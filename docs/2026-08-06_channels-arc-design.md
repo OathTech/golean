@@ -798,3 +798,173 @@ two new closed-arrival pins PASS; the fail set unchanged); 311
 negative green; 94 eval-tests green (92 → 94); check-bugs green
 (untriaged unchanged at 20); baseline re-pinned from the full run in
 the same commit; the 38 designated statements byte-identical.
+
+## Slice-3 build log (2026-08-07, branch `channels-arc-s3`)
+
+Executed as decided (D2+D3's SECOND duty: segment-HB race detection,
+racy-negative lane, litmus pairs, the NPDRF obligation's statement
+layer). Guardrails first: all 13 `race/` corpus cases written and
+`go run -race`-verified (racy shapes red at exit 66, green shapes
+clean) BEFORE any machine change. Decisions and findings DURING the
+build, recorded here:
+
+- **Detector state is EXTERNAL instrumentation (the `Choices`/fuel
+  mold), not a `MultiConfig` field** — a recorded deviation from the
+  method line "detection state enters MultiConfig/StateWf carriers".
+  `RaceState` (per-goroutine vector clocks, per-`Loc` TSan/FastTrack
+  shadow, per-channel clocks) is threaded by the DETECTING
+  `execProgLoop` beside the pool, updated by `raceUpdate` after each
+  `stepMulti` call; it observes steps and never influences them except
+  by the terminal `raceDetected`. Why: (i) the 38 designated
+  statements stay byte-identical (a `MultiConfig` field would have
+  reshaped every pool literal and `StepM` conclusion); (ii)
+  `stepMulti`/`StepM` and the whole S2 correspondence kit are
+  UNTOUCHED — grow by extension; (iii) the detector is definitionally
+  inert on one-goroutine pools (`raceUpdate`'s first branch), which
+  keeps sequential conservation literal (`raceUpdate_single` is the
+  one new lemma the conservation proof needed) and the sequential
+  corpus at zero detector cost. Consequence for `MultiWf`: it gained
+  NO new consumer this slice (see the disposition below).
+- **The footprint is a curated per-shape table (`stepAccesses`,
+  Race.lean), not autologging at the `loadLoc`/`storeLoc` chokepoint**
+  — the slice's second recorded deviation, argued in Race.lean's
+  module docstring: chokepoint autologging would record accesses gc
+  never performs (bounds-check loads, whole-cell loads for address
+  formation) and channel-cell traffic (synchronization, race-free by
+  spec) — false positives against the `-race` oracle in both cases —
+  and `loadLoc` is a pure reader with no state to carry a log
+  (instrumenting it = growth by revision). The table's arms are the
+  loadLoc/storeLoc call-site inventory of the access-bearing step
+  shapes, curated to Go's access semantics; completeness over
+  access-bearing shapes is a LOCKSTEP obligation like the relation's
+  (a new stepFn arm touching user memory must add its footprint arm),
+  with the racy-negative lane as the executable check. Recorded
+  over-approximation: `evalVar` reads the WHOLE cell of a composite
+  local (`p.a` via the value path records a read of `p`) — fail-closed
+  direction; fix if a real race-free case needs it is address-based
+  field reads in the frontend. Recorded under-approximation
+  (TSan-aligned on purpose): `len`/`cap` record nothing.
+- **THE HB EDGE SET IS GC'S RACE INSTRUMENTATION, quoted against
+  go_mem at the implementation sites** (Race.lean `ChanClocks` /
+  `RaceState.spawn`; the structural-alignment decision of D2+D3):
+  - buffered send/recv = RELEASE-ACQUIRE on buffer slot
+    `count % max 1 cap` — slot reuse every `cap` ops IS "The kth
+    receive on a channel with capacity C is synchronized before the
+    k+Cth send from that channel completes", and the send slot-op's
+    release half is "A send on a channel is synchronized before the
+    completion of the corresponding receive from that channel";
+  - unbuffered pairing = bidirectional `racesync` join (both go_mem
+    unbuffered directions at once, incl. "A receive from an unbuffered
+    channel is synchronized before the completion of the corresponding
+    send on that channel"); buffered handoff/head-refill transit the
+    slot clocks exactly as gc's `send()`/`recv()` pretend the value
+    crossed the buffer;
+  - close releases into `closeVC`; a closed-empty receive acquires it
+    ("The closing of a channel is synchronized before a receive that
+    returns a zero value because the channel is closed"); a
+    close-WOKEN sender's panic gets NO edge (gc's woken `chansend`
+    performs no raceacquire — TSan-aligned, fail-closed direction);
+  - spawn copies the parent clock to the child and bumps the parent
+    ("The go statement that starts a new goroutine is synchronized
+    before the start of the goroutine's execution"); goroutine EXIT
+    gets NO edge ("The exit of a goroutine is not guaranteed to be
+    synchronized before any event in the program") — pinned by the
+    exit-no-sync eval pins.
+  Event classification is pool-observational (pre/post configs;
+  `wokenPartner` recovers a pairing's partner as the unique
+  blocked→unblocked index) — no re-running of the L4 pick, no stream
+  consumption, deterministic given the stream.
+- **Cost, honest**: sequential programs (pool never exceeds one
+  goroutine) pay ONE `Nat` comparison per pool step — the full-corpus
+  run's wall-clock is unchanged and the 1147 prior ids are
+  bit-identical. Multi-goroutine programs pay, per private step, a
+  footprint pattern-match plus one shadow-list scan per access
+  (entries = distinct post-spawn `Loc` paths, one epoch pair per
+  goroutine per kind), and per registry op a clock join over goroutine
+  count; the heaviest multi-goroutine corpus case (worker-pool/sum)
+  runs in ~25 ms wall including process start.
+- **Validation**: 13 new corpus ids (`race/negative/*` 5 racy,
+  `race/litmus/*` 3 green edge pins + 2 racy + sb-chan red, and
+  `race/free/*` 2 granularity guards), every racy id refusing on the
+  default AND all three adversarial streams with `-race` red (exit 66)
+  as the justifying oracle, every green id strict-lane PASS on first
+  machine run — zero granularity false positives. Full corpus 1160
+  exec: 1064 pass / 96 fail = the 95 S2-tip fails carried unchanged
+  (ZERO drift on all 1147 prior ids) + sb-chan; 311 negative green;
+  99 eval tests green (5 new: write-write refusal under two streams,
+  the two BUG-040 documentation pins, the rendezvous-HB green pin);
+  check-bugs green (40 bugs; untriaged 20 → 21, sb-chan recorded).
+  Baseline re-pinned from the full run with the -race oracle recorded
+  in its header.
+- **BUG-040 (open, found by reasoning — the audit dimension's
+  "unexercised paths" class): no POST-SPAWN reschedule point.**
+  `atBoundary` marks the PRE-fork spawn position, where the child does
+  not exist, and the parent's post-fork `.next k` is not a boundary —
+  so a child can NEVER preempt a sync-free parent segment, the
+  child-first interleaving of the exit-no-sync shape is outside the L1
+  envelope (too narrow, theorem-transfer-breaking direction), and the
+  detector — complete only over accesses that execute on modeled
+  paths — sees a value leaf on every stream there. Not patched in
+  this slice DELIBERATELY: every fix shape adds a `Choices`
+  consumption site at the post-fork decision, which shifts every
+  pinned stream including the three pinned-stream fork/join DESIGNATED
+  witnesses (statement restatement = the charter's stop condition) and
+  reworks the `StepM` correspondence. Scheduled with the slice-4
+  enumerator (which needs the same machinery to enumerate child-first
+  paths at all). Recorded in BUGS.md, the doctrine note's lane
+  caption, ProgressExecC's scope caveat, and NPDRF.lean's obstruction
+  list; pinned by the two `GoCore race BUG-040 pin` eval tests.
+- **The NPDRF obligation's deliverable** (`GoLean/GoCore/NPDRF.lean`):
+  `StepMFine` (the full-interleaving pool relation — `StepM` with the
+  boundary condition dropped), the PROVED easy half
+  (`stepM_le_stepMFine` / `reachesM_le_fine`: registry-point
+  reachability ⊆ fine reachability, via "done/blocked configs are
+  boundaries, so a mid-segment running goroutine is runnable"),
+  `RacyFine` (co-enabled-conflict over the SAME `stepAccesses`
+  footprint the detector records — one access semantics for statement
+  and tool), and `NPDRFReduction` — the reduction STATEMENT as a
+  Prop-valued definition, scaffold-marked per the non-vacuity gate (no
+  theorem claims it; Audit carries deletion anchors and the
+  `StepMFine`/`StepsM`/`StepsMFine` relations joined the
+  statement-closure forbidden set). The mover decomposition plan is in
+  the module docstring with the obstructions found by probing while
+  building: (1) allocating steps commute only up to address renaming
+  (`nextAddr` is shared — the appendSlice SPILL class); (2) fresh-cell
+  `Heap.set` insertion order permutes the assoc list (commutation is
+  extensional, not structural); (3) BUG-040 blocks the
+  detector-completeness half; (4) D6 main-exit discard makes the
+  joined final state schedule-sensitive even race-free (leaked
+  goroutines' private cells). One representative both-mover pair IS
+  proved: `storeLoc_root_frame` (a store touches exactly its root
+  cell) and `loadLoc_after_disjoint_store` (the read mover) — the
+  commutation core of the NON-allocating store class (appendSlice
+  in-place, copySlice, clearSlice, sortSlice, storeMany), axiom-pinned
+  in Audit (they inherit `Classical.choice` from the pre-existing
+  `Heap.lookup_set_ne`).
+- **MultiWf disposition: NOT discharged; why, precisely.** The missing
+  piece is real — a step-level `σ.nextAddr ≤ σ'.nextAddr` for the
+  foreign-thread `ConfigWf` frame — and a probe (an automated
+  premise-free sweep over `applyStrictOp`) left 47 of ~60 arms needing
+  bespoke destructuring, i.e. the cost is comparable to the existing
+  `*_wf` family (`applyStrictOp_wf` alone is ~700 lines) TIMES the
+  helper surface. The right implementation, recorded for the follow-up:
+  EXTEND the existing `*_wf` conclusions with the `≤` conjunct inside
+  their existing case analyses (`applyStrictOp_wf`,
+  `enterRecvTargets_wf` and `StmtOpPres` already expose it; the
+  missing conjuncts are `applyChanOp_wf`, `applySelect_wf`,
+  `commitClause_wf`, and the top-level `step_preserves_wf_loc`),
+  rather than a parallel premise-free family. Deprioritized THIS slice
+  because the externalized detector state gave `MultiWf` no new
+  consumer — it remains the marked scaffold and the declared invariant
+  carrier it was at S2.
+- **What stays red for slice 4** (unchanged plus one):
+  `channels/select-multi-ready` (L2), `goroutines/sched-dependent/*`
+  (3), `race/litmus/sb-chan` (the DRF-SC boundary set
+  {1,10,11}/¬00), `goroutines/spawn-edge/{nil-func-fatal,
+  child-recovers}`, `goroutines/spawn-in-init/in-init`, and the
+  BUG-034/037/025 held-open multi-assign pins. The slice-4 enumerator
+  additionally owes: lane-d "every enumerated path refuses" at full
+  strength, sb-chan's set certification, and the BUG-040 fix (the
+  post-spawn decision point) with its designated-witness restatement
+  under its own sign-off. The Comparator landmark stays OWED at arc
+  end.

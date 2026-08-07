@@ -168,9 +168,15 @@ open Lean in
   -- spawn-component per-goroutine relation — and `StepM` join the
   -- forbidden set: they are proof infrastructure exactly like
   -- `Step`/`Steps`; headline statements speak `stepMulti`/`execProg`.)
+  -- (Channels arc slice 3: the NPDRF statement layer's relations join —
+  -- `StepMFine`/`StepsMFine` are the reduction obligation's proof
+  -- infrastructure, and `StepsM` its coarse closure; headline statements
+  -- keep speaking `stepMulti`/`execProg`.)
   let forbiddenRoots : List Name :=
     [`GoLean.GoCore.Machine.Step, `GoLean.GoCore.Machine.Steps,
-     `GoLean.GoCore.Machine.StepE, `GoLean.GoCore.Machine.StepM]
+     `GoLean.GoCore.Machine.StepE, `GoLean.GoCore.Machine.StepM,
+     `GoLean.GoCore.Machine.StepMFine, `GoLean.GoCore.Machine.StepsM,
+     `GoLean.GoCore.Machine.StepsMFine]
   let isRelation : Name → Bool := fun n =>
     forbiddenRoots.any (fun r => r == n || r.isPrefixOf n)
   -- The designated headline theorems (the summit family + the golden and
@@ -364,6 +370,24 @@ open Lean in
 #guard_msgs in #print axioms GoLean.GoCore.Machine.execProg_single_eq_execStmt
 /-- info: 'GoLean.GoCore.Machine.stepM_complete' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.GoCore.Machine.stepM_complete
+
+-- The race-detection + NPDRF layer (channels arc slice 3) — the
+-- detector's conservation hinge, the proved half of the reduction, and
+-- the representative both-mover lemmas. The relation-side pair is
+-- constructive; the two mover lemmas inherit Classical.choice from
+-- `Heap.lookup_set_ne` (the pre-existing ∀-choices-kit lemma their
+-- frame argument reuses), recorded as-is — they are proof
+-- infrastructure, not correspondence theorems.
+/-- info: 'GoLean.GoCore.Machine.raceUpdate_single' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.GoCore.Machine.raceUpdate_single
+/-- info: 'GoLean.GoCore.Machine.stepM_le_stepMFine' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.GoCore.Machine.stepM_le_stepMFine
+/-- info: 'GoLean.GoCore.Machine.reachesM_le_fine' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.GoCore.Machine.reachesM_le_fine
+/-- info: 'GoLean.GoCore.Machine.storeLoc_root_frame' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.GoCore.Machine.storeLoc_root_frame
+/-- info: 'GoLean.GoCore.Machine.loadLoc_after_disjoint_store' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.GoCore.Machine.loadLoc_after_disjoint_store
 
 -- The fork/join pool kernel witnesses (pinned streams; slice 2).
 /-- info: 'GoLean.Surface.forkJoinStreamCanonical' depends on axioms: [propext, Quot.sound] -/
@@ -749,6 +773,14 @@ example := @GoLean.Surface.GoSpecT
 example := @GoLean.Surface.GoTripleC
 example := @GoLean.Surface.ProgressExecC
 example := @GoLean.Surface.GoSpecC
+-- The NPDRF reduction obligation's statement layer (channels arc slice
+-- 3; scaffold — a Prop-valued DEFINITION awaiting proof, marked so in
+-- NPDRF.lean's module docstring): deletion/rename anchors so the
+-- recorded proof debt cannot silently drift.
+example := @GoLean.GoCore.Machine.NPDRFReduction
+example := @GoLean.GoCore.Machine.RacyFine
+example := @GoLean.GoCore.Machine.ReachesM
+example := @GoLean.GoCore.Machine.ReachesMFine
 example := @GoLean.Iris.typeEnv_pin_is_load_bearing
 example := @GoLean.Iris.wp_call_dynamic_enter₂
 example := @GoLean.Iris.wp_call_dynamic_enter_ackedIndex
