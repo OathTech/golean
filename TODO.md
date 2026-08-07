@@ -365,6 +365,12 @@ feature breadth up the raft ladder, `slices.Sort` extern + input fuzzing.
   Part A per its Part-C proposal. Earlier area-by-area notes remain in
   `docs/2026-07-19_goose-perennial-mapping.md` and the 2026-08-06
   concurrency research notes; new comparison rows land in the matrix.
+- Goose-parity buildout: charter DRAFTED, awaiting user blessing —
+  `docs/2026-08-07_goose-parity-charter.md` (phase-1 import of the 87
+  importable Goose/Perennial test files up the rung ladder;
+  parking-ledger discipline; escape hatch). NOTHING starts until the
+  user blesses the charter and sets the standing goal — a decision
+  item at the channels-arc merge sign-off.
 
 ## Differential Execution
 
