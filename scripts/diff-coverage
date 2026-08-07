@@ -250,6 +250,27 @@ run_case_rows() {
       return 0
       ;;
   esac
+  # PER-LANE EPISTEMIC CAPTIONS — compact copy; the record is the
+  # nondeterminism doctrine's "Per-lane epistemic captions" section
+  # (docs/2026-08-04_nondeterminism-doctrine.md; evidence base:
+  # validation research note §4). What a PASS means / cannot show:
+  #   strict     go-run equality + 3-stream invariance. Structurally
+  #              BLIND to scheduling: says nothing about interleaving.
+  #   confluent  |set|=1 certified over all registry-point schedules,
+  #              then strict equality on the singleton. Nothing past
+  #              the fail-loud caps or outside the certified program.
+  #   membership every go sample (plain AND -race) is in the
+  #              enumerated set. Does NOT show unexhibited members are
+  #              Go-realizable — width metadata + the standing
+  #              envelope-width review police that; too-wide has no
+  #              oracle.
+  #   racy       every enumerated path refuses + one -race red sample
+  #              (see the race block below; scope = registry-point
+  #              paths and the Race.lean inventory's U1-U3).
+  # Litmus pairs are a corpus discipline over lanes b/c + d (SC set
+  # inside DRF, refusal outside); deadlock is strict-only (below);
+  # leak classification is model-internal, never differential
+  # evidence.
   # deadlock (channels arc slice 1): Go's whole-program detector aborts
   # with the FIXED "fatal error: all goroutines are asleep - deadlock!"
   # (exit status 2); expected_reason stays "-" (nothing case-specific to

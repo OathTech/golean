@@ -205,3 +205,69 @@ EPISTEMIC CAPTION, recorded per the per-lane discipline:
   cases.tsv (pipeline/two-stage, pipeline/buffered-stage,
   worker-pool/shared-feed — DPOR is the recorded later-additive
   layer).
+
+## Per-lane epistemic captions (channels arc slice 6, 2026-08-07)
+
+The complete caption set for the D9 lane taxonomy — what a PASS MEANS
+and what it structurally CANNOT show, per lane (validation research
+note §4 is the evidence base; the racy lane's full caption is its own
+section above and is only pointed to here). A compact copy rides at
+the lane dispatch in `scripts/diff-coverage`; THIS section is the
+record.
+
+- **strict — sequential-degenerate (D9(a))**: PASS = observation
+  equality against one `go run` plus three-adversarial-stream
+  invariance. Means: the observable is choice-invariant and equals
+  Go's, and the concurrency machinery is CONSERVATIVE on it (the
+  conservation theorem `execProg_single_eq_execStmt` is the transfer
+  lemma; full-corpus bit-identity its empirical twin). Cannot show:
+  anything about interleaving — a strict green is structurally blind
+  to schedule effects (the S2 waiter-priority majors were invisible
+  to every green strict case; only membership probes saw them) — and
+  nothing about streams beyond the three pinned adversarial ones.
+- **confluent (D9(b))**: PASS = enumerator-certified |set| = 1 over
+  ALL registry-point schedules, then the full-strength strict
+  differential on the singleton. Means: schedule-independence is a
+  CERTIFIED claim for this program, and the one admitted observation
+  is Go's. Cannot show: anything past the fail-loud caps (over-cap
+  cases stay strict, recorded in their cases.tsv); anything about
+  programs outside the certified one; anything at sub-registry
+  granularity (the NPDRF obligation's territory).
+- **membership — schedule-dependent (D9(c))**: PASS = every Go sample
+  (R plain + R under `-race`, the dual-sampling rule above) ∈ the
+  machine-enumerated observation set, with mechanically-computed
+  per-site bounds, fail-loud caps, and the optional `members=`
+  cardinality pin. Means: Go's exhibited corner lies inside our
+  envelope, and the envelope was exhaustively enumerated at registry
+  granularity. Cannot show: that UNEXHIBITED members are
+  Go-realizable — the too-wide direction has no oracle; the
+  width-signal metadata (|enumerated| vs |exhibited|, recorded per
+  run) plus the standing envelope-width review are the only check —
+  and nothing about racy programs (refused before this lane applies).
+- **racy (D9(d))**: the full caption is the dedicated section above —
+  every enumerated path refuses AND one `-race` red sample witnesses
+  the real race; the three-way investigation rule; scope = the
+  registry-point path set and the footprint inventory's U1–U3.
+- **litmus pairs (D9(e))**: not a harness lane — a corpus DISCIPLINE
+  over the memory-model shapes (MP, SB, …), each in two forms: the
+  channel-synchronized form rides lane b/c and must admit exactly the
+  SC-reachable outcomes (sb-chan {1,10,11} with members=3 — 00
+  mechanically excluded), the racy form rides lane d and must refuse.
+  A PASS of the pair means: the envelope's EDGES sit where the memory
+  model says (SC inside DRF, refusal outside) — the envelope-fidelity
+  audit dimension made executable. Cannot show: weak-memory behaviors
+  — we refuse the programs that could exhibit them, deliberately; a
+  real implementation's weak behavior on a racy program is outside
+  every claim we make, and transfer caveats must say so.
+- **deadlock / leak (D9(f))**: global deadlock is strict-lane
+  differential (`expected_status: deadlock` against gc's fixed
+  "all goroutines are asleep" fatal, exit 2; NEVER combined with
+  `-race`, which suppresses the detector). PASS means the blocking
+  semantics — what deadlock is made of — agrees with Go where Go can
+  express an opinion. Partial LEAK is observably NOTHING on the Go
+  side (exit 0): main-exit cases validate the sequential observable
+  differentially, while the leaked-goroutine classification itself is
+  model-internal SELF-consistency plus review, never differential
+  evidence. Cannot show: liveness (deadlock-freedom of
+  nonterminating-by-design programs is outside a terminating-run
+  corpus entirely — the proof side's territory).
