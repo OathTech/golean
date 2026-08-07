@@ -120,6 +120,27 @@ Per-program demo artifacts (golden file for slice.go, `r = 2` instance,
 `sliceProg` correspondence witness) are bounded to ONE witness per mechanism —
 they double as the non-vacuity discharges our gate requires.
 
+## Enumerator optimization layer (deferred backlog, 2026-08-07)
+
+Record only — no implementation scheduled. Design of record:
+`docs/2026-08-04_membership-lane-design.md`, section "Deferred: the
+enumerator OPTIMIZATION layer (2026-08-07)" (provenance: user
+discussion 2026-08-07). Layers, each behind the BOTH-EXPLORERS
+adoption gate (optimized vs reference explorer, identical observation
+sets on every tractable instance) and each with a named soundness
+obligation:
+
+- [ ] Verified POR — race-detector footprints as the independence
+      oracle; NPDRF mover lemmas as its eventual proof.
+- [ ] Symmetry reduction — decidable Config equality; the
+      id-relabeling lemma is the soundness obligation.
+- [ ] Preemption-bound-as-metadata — certificates must NAME their
+      bound (bounded tree, never silently the full one).
+- [ ] State memoization on canonicalized MultiConfig — requires the
+      decidable-equality/canonicalization layer first.
+- [ ] PCT / portfolio sampling beyond enumeration scale — sample
+      source only, never certification.
+
 ## Epistemic hardening / pipeline error-resistance (2026-07-19, priority #0)
 
 Plan of record: `docs/2026-07-19_pipeline-error-resistance.md` (stage-by-stage

@@ -202,6 +202,50 @@ needs the partial-order machinery that arc will design); a general
 per-case membership PREDICATE language (only if enumeration's `N` cap is
 ever genuinely exceeded).
 
+## Deferred: the enumerator OPTIMIZATION layer (2026-08-07)
+
+Backlog record, NOT implementation (provenance: user discussion
+2026-08-07; TODO.md carries the pointer entry). Standing admission
+rule for every layer below — the BOTH-EXPLORERS cross-check: an
+optimized explorer is adopted only while a reference (unoptimized)
+explorer cross-checks it on every instance where full enumeration is
+tractable, with identical observation sets required; a divergence
+ejects the optimization. Each layer names its soundness obligation up
+front so the proof direction stays reachable:
+
+- **Verified POR (partial-order reduction).** Independence oracle: the
+  race-detector footprints (`GoLean/GoCore/Race.lean`'s access
+  records) — two steps commute when their footprints are disjoint.
+  Eventual proof: the NPDRF mover lemmas (the S3 statement layer) as
+  the soundness argument for the reduction; until proven, POR runs
+  only behind the both-explorers adoption gate.
+- **Symmetry reduction** via decidable `Config` equality: quotient
+  explored states by goroutine/location id relabeling. Named soundness
+  obligation: the ID-RELABELING LEMMA — a relabeled Config bisimulates
+  the original, so observation sets are invariant under the
+  relabeling. Cross-check: both-explorers.
+- **Preemption-bound-as-metadata.** Bounded exploration is admissible
+  only when the certificate NAMES its bound — a preemption-bounded
+  certificate claims the bounded tree, never silently the full one
+  (the claim-strength/vacuity audit dimension applied to
+  certificates). Cross-check: unbounded reference runs on tractable
+  shrinks of the same case.
+- **State memoization on canonicalized MultiConfig.** Requires the
+  decidable-equality/canonicalization layer above (memoization without
+  a proven canonical form is a silent-pruning hazard). Cross-check:
+  memoized vs unmemoized explorer set equality.
+- **PCT / portfolio sampling beyond enumeration scale.** Sampling is a
+  SAMPLE SOURCE (the lane's Go-side oracle half), never a
+  certification — certificates stay enumeration-only. Cross-check:
+  every sampled observation must be a member of any certified set it
+  accompanies (the existing membership alarm, unchanged).
+
+These stay deferred until the membership/confluent/racy lanes hit a
+tractability wall the work caps cannot absorb (pipeline/{two-stage,
+buffered-stage} and worker-pool/shared-feed — today's
+beyond-tractable-caps strict-lane residents — are the natural first
+customers).
+
 ## Slice-4 addendum (2026-08-07, channels arc): the stepwise pool engine
 
 The enumerator was REBUILT for schedule enumeration (channels arc slice
