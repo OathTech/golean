@@ -101,4 +101,10 @@
 #   (select-default-handshake, len-handoff — see untriaged-ids; same
 #   deliberate slice-4 class as first-come). The three other new ids
 #   land PASS.
-20
+# 2026-08-07 (channels arc slice 3)  20 -> 21: race/litmus/sb-chan
+#   enters as a DELIBERATE membership red pin (lane e's DRF-SC
+#   boundary shape; slice 4's schedule enumerator certifies its
+#   admitted set {1,10,11} and the SC-forbidden 00). The other 12 new
+#   race-lane ids land PASS (racy-negative refusals + green edge/
+#   granularity guards).
+21

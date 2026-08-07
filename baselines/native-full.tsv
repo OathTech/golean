@@ -1,19 +1,20 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-07  commit: channels-arc-s2 (S2 convergence round: selectArrivalPlan closed-channel guard — no arrival pairs across a close)
+# recorded: 2026-08-07  commit: channels-arc-s3 (S3 detector: segment-HB race detection + racy-negative/litmus lanes)
 #   frontend: native  oracle: go run (strict lane) / go-run membership in the
-#   machine-enumerated observation set (membership lane; go1.26.5 samples)
-# manifest_cases: 1147  pass: 1052  fail: 95
-# Re-pin reason: deliberate coverage change (S2 convergence-round
-#   response). The per-clause CLOSED guard in selectArrivalPlan (the
-#   critical: an arriving select paired with a parked partner on an
-#   already-closed channel — a guaranteed send-on-closed panic was
-#   silently erased) is ZERO-drift on all 1145 prior ids in this run.
-#   2 new ids, both PASS: select-closed-arrival/{send,
-#   recv-parked-sender} — the go-oracle pins for the arriving-select
-#   closed semantics (unconditional panic / drained-zero + recovered
-#   close-woken sender). The discriminating red-first pins are the two
-#   stream-pinned pool eval-tests in the same commit (pre-fix values
-#   103 / 7100 against go's panic / 5).
+#   machine-enumerated observation set (membership lane; go1.26.5 samples) /
+#   go run -race (racy-negative lane: TSan report + exit 66 justifies the
+#   machine's per-stream raceDetected refusal; never combined with deadlock)
+# manifest_cases: 1160  pass: 1064  fail: 96
+# Re-pin reason: deliberate coverage change (S3 race-detection slice).
+#   The segment-HB detector (raceUpdate/RaceState over the detecting
+#   execProgLoop) is ZERO-drift on all 1147 prior ids in this run.
+#   13 new ids: race/negative/* (5) + race/litmus/{mp-racy,lb-racy} —
+#   every-interleaving-racy programs refusing raceDetected on every
+#   tested stream, -race-verified; race/litmus/{mp-sync,close-hb,
+#   chan-mutex} + race/free/* — the go_mem channel-edge and Loc-path
+#   granularity false-positive guards, strict-lane PASS; and
+#   race/litmus/sb-chan — the DRF-SC boundary membership red pin
+#   (schedule enumeration is slice 4), the one new FAIL.
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
 PASS	arrays/array-copy	-
@@ -947,6 +948,19 @@ PASS	quorum/vote-result-small-n/n2-one-yes-lost	-
 PASS	quorum/vote-result-small-n/n2-won	-
 PASS	quorum/vote-result/tie-lost	-
 PASS	quorum/vote-result/won-exact	-
+PASS	race/free/field-disjoint	-
+PASS	race/free/slice-disjoint	-
+PASS	race/litmus/chan-mutex	-
+PASS	race/litmus/close-hb	-
+PASS	race/litmus/lb-racy	-
+PASS	race/litmus/mp-racy	-
+PASS	race/litmus/mp-sync	-
+FAIL	race/litmus/sb-chan	membership
+PASS	race/negative/increment	-
+PASS	race/negative/map-rw	-
+PASS	race/negative/read-write	-
+PASS	race/negative/slice-elem	-
+PASS	race/negative/write-write	-
 PASS	range/range-array-copy	-
 PASS	range/range-array-pointer	-
 PASS	range/range-array-pointer-nil-index	-
