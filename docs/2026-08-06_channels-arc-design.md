@@ -1655,3 +1655,152 @@ readout twin; the original 38 byte-identical throughout); corpus
 unchanged (1193 exec / 311 negative, zero drift — no frontend or
 interpreter behavior changed); check-bugs green; proofs + Audit gate
 green with the new fail-closed forbidden-roots guard.
+
+## Slice-6 build log (2026-08-07, branch `channels-arc-s6`)
+
+Executed as decided (doctrine/harness updates: -race sampling, lane
+captions, envelope-width review). Much of the slice's list landed
+EARLY in slices 3/4, so the slice opened with an AUDIT of the design's
+slice-6 list against what shipped, then landed the gaps:
+
+- **-race as a default membership sample source — VERIFIED, no gap**
+  (landed in slice 4): doctrine-recorded (nondeterminism doctrine,
+  "Slice-4 additions" §: dual sampling + the point-mass measurement)
+  AND harness-live (`scripts/diff-coverage`: `go_run_oracle`'s -race
+  build for race-expectation rows and forced membership sampling mode;
+  `run_membership_case_rows`' R-plain + R-`-race` sample loop). Nothing
+  to land; recorded here as audited.
+- **Per-lane epistemic captions — gap CLOSED**: the doctrine carried a
+  full caption only for the racy lane (slice 3) plus a one-sentence
+  confluent caption (slice 4). The doctrine's new "Per-lane epistemic
+  captions" section now records all six D9 lanes (strict/sequential-
+  degenerate, confluent, membership, racy, litmus pairs,
+  deadlock/leak) with what a PASS means and what it structurally
+  cannot show, per the validation research's §4 taxonomy; a compact
+  copy rides at the lane dispatch in `scripts/diff-coverage`
+  (comment-only; no behavior change).
+- **THE ENVELOPE-WIDTH REVIEW over the concurrency envelopes** — the
+  doctrine's standing review (requirement 2), run in the
+  2026-08-05 membership-landing format (per-envelope width signal from
+  the membership metadata, argued against spec TEXT, verdict
+  recorded). Verdicts below. ONE finding: the L4 width>1 corner had no
+  certified exercise anywhere — closed in this slice by the directed
+  membership pin `goroutines/sched-dependent/waiter-pick`.
+
+### Envelope-width review — concurrency lanes (2026-08-07)
+
+Scope: the three concurrency choice-consumption sites (L1 scheduler,
+L2 select, L4 waiter pick). The sequential envelopes (append spill,
+map iteration, the recorded singletons) were reviewed at the
+membership landing (2026-08-05) and the arc-final audit (2026-08-06)
+and are out of scope here. Buffer FIFO is SPEC (deterministic, strict
+lane — D4) and consumes nothing; no review applies. Width-signal data
+is this slice's full run (go1.26.5; 5 plain + 5 `-race` samples per
+membership row; artifacts under `artifacts/coverage/membership/`).
+Per the doctrine: |exhibited| < |enumerated| is a REVIEW FLAG, never a
+failure; the too-wide direction has no oracle, so the argument against
+spec text is the only check.
+
+**L1 — the scheduler pick** (`stepMulti`/`runnableIdxs`, Multi.lean;
+width = |runnable|, consumed only at width > 1 at registry
+boundaries). Spec text: NONE — the spec says nothing about scheduling,
+so "any runnable goroutine may run next" is pure omission latitude.
+Width signal: first-come {12,21} exhibited 2/2 (12×2, 21×8);
+select-default-handshake {7,99} exhibited 1/2 this run (7×10; 99 — the
+default-taken member — unexhibited here, exhibited in the prior
+recorded run: per-run sampling noise on a member gc realizes at
+~30/200000, the S2 probe); len-handoff {100,110} exhibited 1/2
+(100×10; 110 — the unparked-receiver buffered-transit member —
+unexhibited: gc's realized policy is the direct handoff at
+~199970/200000); sb-chan {1,10,11} exhibited 2/3 (1×4, 10×6; 11 —
+both-reads-see-both-writes — unexhibited), members=3 pin with the
+SC-forbidden 00 mechanically excluded. VERDICT: NOT A FLAG in the
+too-wide direction — with zero spec text, every member the enumerator
+admits is realized by a concrete registry-point schedule of runnable
+goroutines, which a conforming implementation is free to produce; no
+member exists that conforming Go could not exhibit. The unexhibited
+corners are the MEASURED go-side sampling bias (plain go run is a
+point-mass on schedule-dependent shapes; -race perturbs but still
+explores a biased corner — validation note §3, operationalized as the
+dual-sampling rule), not gratuitous width, and each unexhibited member
+is an SC outcome the litmus discipline requires (sb-chan's 11) or gc's
+own documented-rare branch (110, 99). The known TOO-NARROW debts are
+recorded elsewhere and unchanged by this review: registry granularity
+itself (the NPDRF obligation; sub-registry preemption is outside the
+envelope for racy programs by design) — BUG-040's missing post-spawn
+point was already fixed in slice 4.
+
+**L2 — the select pick** (`applySelect` entry + `arrivalCases`
+`.multi`; width = ready-clause count, waiter-extended on the arrival
+path). Spec text: "uniform pseudo-random selection" (§Select
+statements, step 3), deliberately weakened possibilistically to "any
+entry-ready case" per the doctrine (no distributional claims). Width
+signal: select-multi-ready/observable {101,210} exhibited 2/2 at 5×/5×
+— per-execution re-randomization gives DENSE sampling, exactly the
+validation note §3.4 prediction (the map-order regime, not the
+scheduling regime); select-arrival-multi {10,20} exhibited 2/2 (10×3,
+20×7); select-wake-multi {1,2} exhibited 1/2 (1×10; 2 requires the
+worker to complete BOTH closes before main's select entry — the
+member is L1-timing-gated, so it inherits the scheduling point-mass,
+not select-pick sparsity). VERDICT: NOT A FLAG. Entry path: every
+member is an entry-ready clause; a conforming uniform shuffle reaches
+each with positive probability, and go's own exhibited splits (5/5,
+3/7) confirm the members are real — the envelope could not be narrower
+without excluding behavior the oracle demonstrates. Wake path (the
+deliberate NARROWING: no re-randomization; a woken select head-commits
+the first wake-ready clause, consuming nothing): re-argued against
+gc — a parked gc select is committed by the EVENT that wakes it (the
+partner dequeues one sudog), so gc's realized wake outcomes are
+arrival-order outcomes, and each is realized in our envelope by the
+prompt-wake schedule (L1 wake-timing latitude); the certified {1,2}
+wake set contains gc's realized point (1), and the head-commit
+mechanism is eval-pinned (the both-closed discriminator, slice 4). The
+narrowing is path-structural, not observational, and the membership
+alarm (a go sample outside the set fails the case) polices exactly
+the direction that matters with a real oracle.
+
+**L4 — the waiter pick** (`chanArrivalPlan`/`selectArrivalPlan` +
+`stepThread`'s multi-candidate arm; width = #matching parked waiters,
+select clauses counted individually). Spec text: NONE on waiter order
+— "any matching waiter"; gc's FIFO wakeup is one legal point
+(membership territory, D4; real FIFO in channel state was rejected
+with the recorded reason). THE REVIEW'S FINDING: before this slice NO
+certified tree consumed the L4 pick above width 1 —
+select-arrival-multi's two parked senders sit on DIFFERENT channels
+(the choice among them is the L2 clause pick; its L4 picks are
+singletons), first-come's senders commit to a cap-2 buffer and never
+park, and worker-pool/sum's results channel (cap 3, three sends) never
+parks a sender — so the envelope's width>1 corner had NO width signal
+at all: precisely the doctrine's "a set Go never touches any corner
+of" review flag, plus an unexercised-machinery hazard (the
+`stepThread` multi-candidate arm was reachable only in theory).
+CLOSED IN THIS REVIEW by the directed membership pin
+`goroutines/sched-dependent/waiter-pick` (two senders parked on ONE
+unbuffered channel when main's receive arrives; the both-parked state
+is forced onto every enumerated branch where both workers run to
+their sends before main's receive): certified {12,21} (members=2;
+tree 926 leaves, depth 10, ~34k steps+probes, well inside default
+caps), go1.26.5 exhibits BOTH members (12×3, 21×7 across the dual
+samples; the pre-landing probe showed plain-only sampling sitting on
+21 alone with -race exhibiting both — one more live validation of the
+dual-sampling doctrine). VERDICT with the pin landed: NOT A FLAG —
+the spec is silent on waiter order, so any matching waiter is
+conforming latitude; both members are oracle-exhibited; and the
+L4-vs-L1 relation is recorded honestly: on this shape (and every
+shape probed) each L4 member is ALSO realizable by L1 arrival timing
+alone — any candidate could have been the sole parked waiter under a
+different schedule — so the width>1 pick widens the per-STATE
+branching (and detector attribution), not the observation set.
+[ANALYSIS], not a theorem: no claim that L4 ⊆ L1-reachable holds for
+every program; the membership alarm polices the too-narrow direction
+per shape, and a future counterexample shape belongs in the lane, not
+in prose.
+
+Slice-6 counts: 1194 exec cases, 1100 pass / 94 fail (the 94 = the
+prior fail set carried unchanged — zero drift on all 1193 prior ids;
+`goroutines/sched-dependent/waiter-pick` is the one NEW id, PASS
+stage `membership`); 311 negative green; 111 eval tests green;
+proofs + Audit gate green, 44 designated statements byte-identical;
+check-bugs green (43 bugs, untriaged 16); baseline re-pinned from the
+full run in the same commit (re-pin reason: the one new id). Slice 6
+is COMPLETE; with it the arc's slice plan (1–6) is fully executed.
