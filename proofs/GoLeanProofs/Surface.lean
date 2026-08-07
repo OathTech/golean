@@ -558,9 +558,12 @@ IS the design's "mainNormal") — and the ONE `∀ ch` stream quantifies
 schedules AND data latitude together (D8's single-stream design).
 
 `execProg_single_eq_execStmt` (MultiSound.lean) is the transfer lemma:
-on programs that never spawn, `execProg` runs ARE `execStmt` runs, so
-the sequential designated statements remain valid unrestated and the
-sequential and concurrent notions coincide on the sequential fragment.
+a sequential `execStmt` result in its TRANSFERABLE classes (`.ok`,
+`.fuelOut`, `.panic`) is the `execProg` result verbatim — which keeps
+the sequential designated statements valid unrestated; the fail-closed
+diagnostic classes are covered by the full-corpus bit-identity check
+rather than the theorem (S2 audit response: the claim is stated to the
+theorem's actual strength).
 
 **Witness status (non-vacuity gate, recorded honestly):** the design of
 record's slice plan proves the full `GoSpecC` witness at SLICE 5 (the
@@ -593,12 +596,17 @@ def GoTripleC (types : TypeEnv) (funcs : Array Func) (methods : Array MethodInfo
 
 /-- Concurrent interpreter-level safety (D8): every bounded pool run
 ends `.ok (.normal …)` (main completed normally) or `.error .fuelOut` —
-and NOTHING else. The exclusions are strictly larger than
-`ProgressExec`'s: besides stuck/unsupported/internal/unrecovered-panic,
-a proven `ProgressExecC` forbids `.deadlock` (the all-goroutines-asleep
-terminal) on EVERY modeled schedule — a proven concurrent spec implies
-deadlock-freedom (and, once slice 3's detector lands, race-freedom:
-`raceDetected` will join the same excluded class). -/
+and NOTHING else. The excluded ERROR CLASSES are the same as
+`ProgressExec`'s (which already forbids `.deadlock` — the sequential
+driver classifies blocked configurations so since channels slice 1;
+Adequacy.lean records that strengthening); what is genuinely NEW here
+is the CARRIER: the guarantee holds of `execProg` under EVERY modeled
+schedule, not of the single sequential run — a proven concurrent spec
+implies deadlock-freedom on every schedule (and, once slice 3's
+detector lands, race-freedom: `raceDetected` will join the excluded
+classes). (Wording corrected at the S2 audit response — the first form
+claimed "strictly larger exclusions", contradicting Adequacy.lean's own
+note.) -/
 def ProgressExecC (types : TypeEnv) (funcs : Array Func)
     (methods : Array MethodInfo) (env₀ : LocalEnv)
     (P : HProp) (prog : Stmt) : Prop :=

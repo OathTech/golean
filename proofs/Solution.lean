@@ -264,7 +264,7 @@ theorem forkJoinStreamAdversarial :
   GoLean.Surface.forkJoinStreamAdversarial
 
 theorem forkJoinStreamAlternating :
-    fjRunGives42 400 [1, 0, 1, 0, 1, 0, 1, 0] = true :=
+    fjRunGives42 400 [1, 1, 1, 1, 1, 1, 1, 1] = true :=
   GoLean.Surface.forkJoinStreamAlternating
 
 theorem forkJoinDeadlockCanonical : fjRunDeadlocks 400 [] = true :=

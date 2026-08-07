@@ -230,7 +230,8 @@ check_surface_imports proofs/GoLeanProofs/Specs/GoldenForkJoin.lean \
 # The Comparator Challenge — the judge's TRUSTED root (pre-merge audit
 # 2026-08-02, major finding: this file was in NO scripts/ci scan at all;
 # the wrapper's walk was its only gate, and that walk was fail-open).
-# Direct imports pinned to exactly the two clean statement modules.
+# Direct imports pinned to exactly the clean statement modules
+# (Statements, GoldenTargets, and — channels arc slice 2 — GoldenForkJoin).
 check_surface_imports proofs/Challenge.lean \
   '^import (GoLeanProofs\.Specs\.Statements$|GoLeanProofs\.Specs\.GoldenTargets$|GoLeanProofs\.Specs\.GoldenForkJoin$)'
 # AutomationTargets is statement-bearing but MIXED BY DESIGN: it holds the

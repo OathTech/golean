@@ -742,6 +742,13 @@ example := @GoLean.GoCore.Machine.execStmt_mono
 example := @GoLean.Surface.Terminates
 example := @GoLean.Surface.ProgressExec
 example := @GoLean.Surface.GoSpecT
+-- The CONCURRENT statement notions (channels arc slice 2; S2 audit
+-- response: deletion/rename anchors like their sequential twins' — the
+-- scaffold trio must not silently drift before slice 5 proves a
+-- witness against it).
+example := @GoLean.Surface.GoTripleC
+example := @GoLean.Surface.ProgressExecC
+example := @GoLean.Surface.GoSpecC
 example := @GoLean.Iris.typeEnv_pin_is_load_bearing
 example := @GoLean.Iris.wp_call_dynamic_enter₂
 example := @GoLean.Iris.wp_call_dynamic_enter_ackedIndex

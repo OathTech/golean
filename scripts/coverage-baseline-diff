@@ -42,6 +42,11 @@ drift="$(awk -F'\t' -v BASE="$BASELINE" -v FULL="$FULL" '
       if (line ~ /^#/) continue
       n = split(line, f, "\t")
       if (f[1] == "result" || n < 2) continue
+      # Well-formedness of the RECORD itself (S2 audit response: the
+      # re-pinned baseline carried a silently-tolerated duplicated row —
+      # id-keyed consumers resolved it last-wins; a duplicate with
+      # CONFLICTING results would have been laundered the same way).
+      if (f[2] in bseen) { print f[2] "\tDUPLICATE id in baseline (record integrity)"; }
       bkey[f[2]] = f[1] "/" f[3]; bseen[f[2]] = 1
     }
   }

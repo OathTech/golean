@@ -8,9 +8,10 @@ note in `Surface.lean`'s D8 section): a hand-built fork/join program —
 main spawns a worker, the worker sends 42 over an unbuffered channel,
 main receives it into the pinned output cell — KERNEL-EVALUATED through
 the ThreadPool driver (`execProg`) under three pinned choice streams
-(canonical, adversarial, alternating: the scheduler's L1 site genuinely
-consumes here — two goroutines are runnable at the registry boundaries,
-so different streams realize different schedules), plus a
+realizing three DISTINCT schedules (main-first, worker-then-main,
+worker-twice — the scheduler's L1 site genuinely consumes: two
+goroutines are runnable at the registry boundaries; distinctness
+argued at `forkJoinStreamAlternating`), plus a
 multi-goroutine DEADLOCK program classified `.deadlock` the same way.
 
 These are rung-1, pinned-stream readouts — deliberately NOT `GoSpecC`
@@ -72,9 +73,18 @@ theorem forkJoinStreamAdversarial :
     fjRunGives42 400 [9, 8, 7, 6, 5, 4, 3, 2, 1, 0] = true := by
   decide +kernel
 
-/-- Alternating schedule. -/
+/-- The worker-first-twice schedule — the third DISTINCT execution
+(S2 audit response: the original stream [1,0,1,0,…] reduced mod the
+scheduler's bound 2 to the same pick sequence as the adversarial
+stream, certifying the same execution twice; every consumption in this
+program has bound exactly 2, so distinctness is decided by the pick
+sequence mod 2: canonical [] = main-first (main parks, worker's
+arriving send pairs), adversarial [9,8,…] = worker-then-main (main
+still parks — the worker sits unparked at its boundary — then the
+send pairs), all-ones = worker-twice (the WORKER parks first and
+main's arriving receive pairs — the handoff's other direction). -/
 theorem forkJoinStreamAlternating :
-    fjRunGives42 400 [1, 0, 1, 0, 1, 0, 1, 0] = true := by
+    fjRunGives42 400 [1, 1, 1, 1, 1, 1, 1, 1] = true := by
   decide +kernel
 
 /-- The blocked worker for the deadlock witness: receive on a channel

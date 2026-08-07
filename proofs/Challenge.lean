@@ -269,7 +269,7 @@ theorem forkJoinStreamAdversarial :
     fjRunGives42 400 [9, 8, 7, 6, 5, 4, 3, 2, 1, 0] = true := sorry
 
 theorem forkJoinStreamAlternating :
-    fjRunGives42 400 [1, 0, 1, 0, 1, 0, 1, 0] = true := sorry
+    fjRunGives42 400 [1, 1, 1, 1, 1, 1, 1, 1] = true := sorry
 
 theorem forkJoinDeadlockCanonical : fjRunDeadlocks 400 [] = true := sorry
 

@@ -553,21 +553,40 @@ build, recorded here:
   so fuel counts exactly one goroutine-step per pool step — which is
   what makes the conservation theorem an `Except.map` away from
   `stepFn`.
-- **Pairing = ARRIVAL INTERCEPT; wake = CELL-BASED** (D7 realized):
-  when a goroutine's op would park, the pool first scans parked
-  partners and performs the direct handoff in the same step; parked
-  goroutines wake only on cell changes (close/data/room). Consequence
-  (argued in `Multi.lean`'s file docstring): matched parked-parked
-  pairs cannot coexist — the hchan-invariant analogue — so a `close`
-  can never steal an already-pairable rendezvous. This closes the
-  too-wide close-window divergence a wake-based-pairing design would
-  have had (a sender-panic behavior real Go cannot exhibit).
-- **FIFO-through-handoff guard**: a direct handoff fires only against
-  an EMPTY buffer (else the newest value would jump queued elements —
-  spec: "Channels act as first-in-first-out queues"); with a nonempty
-  buffer the arriving op parks and values flow through the buffer. The
-  L4 waiter-pick site (envelope statement at
-  `pairCandidates`/`selectClauseWaiters`: no spec text on waiter order
+- **Pairing = ARRIVAL INTERCEPT; wake = CELL-BASED** (D7 realized).
+  AS FIRST SHIPPED the intercept fired only when the op would BLOCK —
+  the S2 audit's headline major: buffered ops bypassed parked waiters
+  (gc dequeues `recvq` BEFORE testing buffer room), gc's handoff
+  observation (len 0 beside a parked receiver) was UNREACHABLE on
+  every stream (too-narrow, the theorem-transfer-breaking direction),
+  and this bullet's original invariant claim was FALSE for buffered
+  channels. REDESIGNED at the audit response: every channel/select op
+  at its apply position consults PARKED PARTNERS FIRST (`arrivalPlan`
+  — gc's waiter-queue priority): matched sends hand off directly
+  (never buffer beside a parked receiver — breach asserts
+  `.internal`), matched receives take the buffer HEAD and REFILL from
+  the parked sender in the same step (gc's `recv()` same-slot
+  semantics — len preserved), and select readiness is waiter-EXTENDED
+  (the audit's second major: a select with `default` now sees parked
+  partners, both clause directions). With that priority the
+  hchan-invariant analogue chan.go L17-18 is RESTORED AND RE-ARGUED
+  (`Multi.lean` file docstring): parked receiver ⇒ empty buffer,
+  parked sender ⇒ full buffer, hence matched parked-parked pairs
+  cannot coexist on any capacity — so a `close` can never steal an
+  already-pairable rendezvous. Discriminating pins: four stream-pinned
+  pool eval-tests (verified RED on the pre-fix machine with the
+  predicted divergent values 110/5091/99/99, green after) + the two
+  membership envelope pins in `sched-dependent/` (go-run oracle:
+  handoff/communication are gc's DOMINANT outcomes, 199970/200000 for
+  the select shape); a strict-lane corpus case cannot observe buffer
+  occupancy confluently, which is why the green lanes were
+  structurally blind here.
+- **FIFO through pressure**: a direct handoff happens only against an
+  empty buffer (implied by the restored invariant); a receive meeting
+  a parked sender over a nonempty buffer gets the HEAD, the sender's
+  value entering at the tail (probe p18's same-slot trick). The L4
+  waiter-pick site (envelope statement at
+  `chanArrivalPlan`/`selectArrivalPlan`: no spec text on waiter order
   — "any matching waiter", gc's FIFO wakeup is a membership point;
   width = #matches, clauses counted individually) consumes only at
   width > 1. Both envelope statements carry width metadata for the
@@ -621,17 +640,23 @@ build, recorded here:
   the `execProg` carrier (pre = single-threaded `InitialSplit`, post =
   joined final state `.normal`-pinned — main's `.normal` IS
   "mainNormal" — one stream for schedules + latitude; `ProgressExecC`
-  additionally excludes `.deadlock`: a proven concurrent spec implies
-  deadlock-freedom on every modeled schedule). WITNESS STATUS, per the
+  excludes the same error classes as the sequential `ProgressExec` —
+  which already forbids `.deadlock` since slice 1 — but on the POOL
+  carrier, i.e. on every modeled schedule: a proven concurrent spec
+  implies deadlock-freedom on every schedule; wording corrected at
+  the S2 audit response). WITNESS STATUS, per the
   non-vacuity gate: the full `GoSpecC` instance is the SLICE-5
   deliverable (this note's own slice plan: "the GoSpecC witness
   proved") — discharging `∀ ch` needs the concurrent WP or a
   pool-level `allStreamsOk` analogue, neither slice-2 scope. Slice 2
   ships KERNEL witnesses instead (`Specs/GoldenForkJoin.lean`): the
-  fork/join rendezvous under three pinned streams (canonical,
-  adversarial, alternating — the scheduler genuinely consumes) all
-  completing `.normal` with the 42 readout, plus the all-asleep
-  two-goroutine program classifying `.deadlock` under two streams.
+  fork/join rendezvous under three pinned streams realizing three
+  DISTINCT schedules (main-first / worker-then-main / worker-twice —
+  the S2 audit caught the original third stream aliasing the second
+  mod the scheduler bound; the stream is now all-ones, distinctness
+  argued in the witness file) all completing `.normal` with the 42
+  readout, plus the all-asleep two-goroutine program classifying
+  `.deadlock` under two streams.
   The `GoSpecC` definitions are marked scaffolds in their docstrings.
 - **DESIGNATED-STATEMENT-SET CHANGE**: the five fork/join kernel
   witnesses join the statement-TCB gate (33 → 38; closures verified
@@ -669,3 +694,65 @@ rendezvous, multi-goroutine deadlock, D6 main-exit, close-wake,
 nil-spawn refusal); check-bugs green (untriaged 16 → 18, both pins
 recorded); baseline re-pinned in the frontend commit with the zero-
 drift statement.
+
+### S2 audit response (2026-08-07, pre-merge audit of this slice)
+
+Nine confirmed findings (one refuted), all addressed on the branch —
+pins first, then the fix, then the claim/gate corrections:
+
+- **MAJOR (semantics): buffered ops bypassed parked waiters.** Fixed
+  by the waiter-queue-priority redesign recorded in the corrected D7
+  bullet above (`arrivalPlan` replaces the blocked-outcome intercept;
+  handoff/refill per gc's `chansend`/`recv`; invariant chan.go L17-18
+  restored and the close-window argument re-verified against the NEW
+  design). Machine movement with relation/interpreter lockstep: the
+  `StepM` rules are now thread (partnerless — park merged in), pair
+  (arrival pairing, no `stepFn` involvement), wake;
+  `stepMulti_sound`/`stepM_complete`/`stepThread_single`/
+  `arrivalPlan_singleton` reworked (the pairing completeness no
+  longer needs `stepFn_oblivious`; `step_blocked_shape` deleted).
+  Conservation theorem statement UNCHANGED; full corpus ZERO-drift on
+  all 1140 prior ids under the new semantics.
+- **MAJOR (metatheory): select-with-default blind to parked
+  partners.** Same root, same fix (waiter-extended readiness incl.
+  the default decision); the non-blocking-select idiom is
+  north-star-relevant (raft's `node.Tick`). Both select directions
+  eval-pinned; the handshake shape membership-pinned with the go
+  distribution recorded.
+- **MINOR: spawnStep's nil-interface claim.** Docstring corrected
+  (pointer-box class → child; nil-interface class is SPAWNER-side and
+  frontend-hoisted; the indistinguishable-classes hazard recorded);
+  both classes corpus-pinned
+  (`spawn-edge/{ptr-box-child-aborts,nil-interface-recovered}`).
+- **MINOR: ProgressExecC "strictly larger exclusions"** — false
+  (sequential `ProgressExec` already forbids `.deadlock`); docstring
+  and this note corrected: the delta is the CARRIER (every schedule),
+  not the exclusion set.
+- **MINOR: duplicated baseline row.** Clean re-pin removed it;
+  `coverage-baseline-diff` now FAILS on duplicate baseline ids (the
+  latent last-wins laundering hole closed).
+- **MINOR: the third fork/join witness aliased the second** (equal
+  pick sequences mod the scheduler bound 2). The alternating stream
+  is now all-ones — worker-parks-first, the handoff's OTHER direction
+  — with the distinctness argument in the witness file;
+  Challenge/Solution/judge-config synced (the other 37 designated
+  statements byte-identical; the Comparator landmark already owed at
+  arc end replays the corrected set).
+- **NOTES:** `transferable`'s `.deadlock` justification now names
+  which theorem needs it (the loop lemma; the headline's exec seeds
+  never block — a strengthening opportunity recorded, deadlock
+  preservation validated by the 12 pinned cases); `execProg`/Surface
+  prose citations matched to the theorem's actual strength (the
+  diagnostic classes are covered by the bit-identity check, not the
+  theorem); the C-family scaffold trio got Audit deletion anchors
+  like its sequential twins; the stale two-modules ci comment (the
+  refuted finding's residual) fixed.
+
+Post-response counts: 1145 exec cases, 1050 pass / 95 fail (the 93
+carried + `sched-dependent/{select-default-handshake,len-handoff}`,
+the two audit-major envelope membership pins for slice 4; three new
+ids PASS); 311 negative green; 92 eval-tests green (87 → 92: the four
+waiter-priority discriminators — red-verified pre-fix at 110/5091/99/
+99 — plus the no-partner default-member guard); check-bugs green
+(untriaged 18 → 20, both pins recorded); baseline re-pinned from the
+full run in the fix commit.
