@@ -92,10 +92,95 @@ func freeArrayReadWrite() int {
 	return r*10 + a[0]
 }
 
+type fInner struct {
+	x int
+}
+
+// VALUE receiver on the embedded type — promotion synthesizes a
+// value-receiver wrapper on fOuter, so a *fOuter interface box
+// dispatches with needsDeref.
+func (i fInner) Get() int {
+	return i.x
+}
+
+type fOuter struct {
+	fInner
+	z int
+}
+
+type fGetter interface {
+	Get() int
+}
+
+// PROMOTED value-receiver method through a *T box vs a write to a
+// NON-embedded field (S3 convergence, major): gc's synthesized
+// (*fOuter).Get wrapper loads only the EMBEDDED field, so the
+// concurrent o.z write is race-free — the dispatch footprint must
+// narrow to the wrapper's hop path (the whole-pointee read would
+// refuse this). The non-promoted control that must STAY racy is
+// race/negative/iface-dispatch.
+func freePromotedPtrBox() int {
+	o := &fOuter{}
+	o.x = 5
+	var g fGetter = o
+	done := make(chan int)
+	go func() {
+		o.z = 10
+		done <- 0
+	}()
+	r := g.Get()
+	<-done
+	return r + o.z
+}
+
+// METHOD-VALUE creation concurrent with the pointee write, CALL after
+// the join: gc defers the *T→T auto-deref to the call (probed), so
+// this is race-free — pins that the model's callValCalleeK dispatch
+// read fires at the call, not at creation.
+func freeMethodValueOrder() int {
+	p := &fInner{x: 1}
+	var gv fGetter = p
+	done := make(chan int)
+	go func() {
+		p.x = 2
+		done <- 0
+	}()
+	f := gv.Get
+	<-done
+	return f()
+}
+
+// Write BEFORE the spawn, dispatch read in the child: ordered by the
+// spawn edge — the free direction of the spawn-entry attribution pair
+// (race/negative/spawn-dispatch is the racy direction).
+func freeSpawnDispatch() int {
+	p := &dispSBox{v: 5}
+	var g dispSGetter = p
+	ch := make(chan int)
+	p.v = 6
+	go g.Send(ch)
+	return <-ch
+}
+
+type dispSBox struct {
+	v int
+}
+
+func (b dispSBox) Send(ch chan int) {
+	ch <- b.v
+}
+
+type dispSGetter interface {
+	Send(ch chan int)
+}
+
 func main() {
 	println(freeSliceDisjoint())
 	println(freeFieldDisjoint())
 	println(freeFieldReadWrite())
 	println(freePtrFieldReadWrite())
 	println(freeArrayReadWrite())
+	println(freePromotedPtrBox())
+	println(freeMethodValueOrder())
+	println(freeSpawnDispatch())
 }

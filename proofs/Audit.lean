@@ -774,8 +774,11 @@ example := @GoLean.Surface.GoTripleC
 example := @GoLean.Surface.ProgressExecC
 example := @GoLean.Surface.GoSpecC
 -- The NPDRF reduction obligation's statement layer (channels arc slice
--- 3; scaffold — a Prop-valued DEFINITION awaiting proof, marked so in
--- NPDRF.lean's module docstring): deletion/rename anchors so the
+-- 3; scaffold — a Prop-valued DEFINITION in DRAFT form, REFUTABLE as
+-- written per NPDRF.lean obstruction 4: nothing may cite it, not even
+-- as a proof target, until the recorded weakening decision; marking
+-- refreshed at the S3 convergence response — the earlier "awaiting
+-- proof" wording understated this): deletion/rename anchors so the
 -- recorded proof debt cannot silently drift.
 example := @GoLean.GoCore.Machine.NPDRFReduction
 example := @GoLean.GoCore.Machine.RacyFine

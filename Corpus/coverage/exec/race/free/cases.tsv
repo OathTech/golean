@@ -15,3 +15,11 @@ ptr-field-read-write	freePtrFieldReadWrite	-	ok	-	goroutines,channels,structs,po
 # Go refused by the recorded whole-cell over-approximation; red until
 # value-path element reads become path-precise.
 array-read-write	freeArrayReadWrite	-	ok	-	goroutines,channels,arrays,race
+# S3 convergence response: the promotion narrowing's GREEN direction
+# (gc's synthesized wrapper loads only the embedded field — a write to
+# a non-embedded outer field is race-free) plus the free directions of
+# the method-value (deref at call, not creation) and spawn-entry
+# (write-before-go ordered by the spawn edge) dispatch pins.
+promoted-ptr-box	freePromotedPtrBox	-	ok	-	goroutines,channels,interfaces,methods,embedding,race
+method-value-order	freeMethodValueOrder	-	ok	-	goroutines,channels,interfaces,methods,race
+spawn-dispatch-free	freeSpawnDispatch	-	ok	-	goroutines,channels,interfaces,methods,race

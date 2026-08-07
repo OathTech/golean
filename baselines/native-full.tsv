@@ -1,22 +1,22 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-07  commit: channels-arc-s3 (S3 audit response: dispatch/len(m) footprint arms, fieldGet-chain narrowing, BUG-005/BUG-041 red pins)
+# recorded: 2026-08-07  commit: channels-arc-s3 (S3 convergence response: promotion-wrapper dispatch narrowing + per-arm dispatch pins)
 #   frontend: native  oracle: go run (strict lane) / go-run membership in the
 #   machine-enumerated observation set (membership lane; go1.26.5 samples) /
 #   go run -race (racy-negative lane: TSan report + exit 66 justifies the
 #   machine's per-stream raceDetected refusal; never combined with deadlock)
-# manifest_cases: 1166  pass: 1068  fail: 98
-# Re-pin reason: deliberate coverage change (S3 audit response). The
-#   footprint fixes (interface-dispatch frame-entry deref arm, len(m)
-#   read arm, fieldGet-chain narrowing for evalVar/deref reads) are
-#   ZERO-drift on all 1160 prior ids in this run. 6 new ids: 4 PASS —
-#   race/negative/{iface-dispatch,len-map} (the audit's fail-open
-#   holes, now refusing on every tested stream, -race-verified) and
-#   race/free/{field-read-write,ptr-field-read-write} (the read/write
-#   free-lane guards the narrowing makes green) — and 2 permanent red
-#   pins: race/negative/map-range-iter (BUG-005's fourth symptom: no
-#   per-iteration map read exists to record until the live-iteration
-#   surgery) and race/free/array-read-write (BUG-041: value-path
-#   array-element reads stay whole-cell — recorded over-refusal).
+# manifest_cases: 1173  pass: 1075  fail: 98
+# Re-pin reason: deliberate coverage change (S3 convergence response).
+#   The promotion-wrapper narrowing (dispatchAccesses records the
+#   wrapper's hop path, not the whole pointee; unrecognized shapes fall
+#   back over-refusing per O1/BUG-041) is ZERO-drift on all 1166 prior
+#   ids in this run. 7 new ids, all PASS: race/free/promoted-ptr-box
+#   (the convergence major's green direction — red pre-fix on every
+#   stream) with race/negative/{promoted-dispatch} (embedded-field race
+#   survives the narrowing) and the per-arm dispatch pins
+#   race/negative/{method-value,defer-dispatch,spawn-dispatch} +
+#   race/free/{method-value-order,spawn-dispatch-free} (each frame-entry
+#   arm family + the spawn child-attribution, both directions,
+#   -race-verified).
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
 PASS	arrays/array-copy	-
@@ -953,21 +953,28 @@ PASS	quorum/vote-result/won-exact	-
 FAIL	race/free/array-read-write	lean-observation
 PASS	race/free/field-disjoint	-
 PASS	race/free/field-read-write	-
+PASS	race/free/method-value-order	-
+PASS	race/free/promoted-ptr-box	-
 PASS	race/free/ptr-field-read-write	-
 PASS	race/free/slice-disjoint	-
+PASS	race/free/spawn-dispatch-free	-
 PASS	race/litmus/chan-mutex	-
 PASS	race/litmus/close-hb	-
 PASS	race/litmus/lb-racy	-
 PASS	race/litmus/mp-racy	-
 PASS	race/litmus/mp-sync	-
 FAIL	race/litmus/sb-chan	membership
+PASS	race/negative/defer-dispatch	-
 PASS	race/negative/iface-dispatch	-
 PASS	race/negative/increment	-
 PASS	race/negative/len-map	-
 FAIL	race/negative/map-range-iter	lean-observation
 PASS	race/negative/map-rw	-
+PASS	race/negative/method-value	-
+PASS	race/negative/promoted-dispatch	-
 PASS	race/negative/read-write	-
 PASS	race/negative/slice-elem	-
+PASS	race/negative/spawn-dispatch	-
 PASS	race/negative/write-write	-
 PASS	range/range-array-copy	-
 PASS	range/range-array-pointer	-

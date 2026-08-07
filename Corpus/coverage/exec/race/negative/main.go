@@ -96,13 +96,106 @@ func (b dispBox) Get() int {
 // Interface pointer-box dispatch read vs a concurrent write to the
 // pointee (S3 audit, major: the auto-deref read happens at FRAME
 // ENTRY — dynamicDispatch's needsDeref — and needs its own footprint
-// arm; no other shape exercises it).
+// arm; no other shape exercises it). Also the NON-promoted control
+// for race/free/promoted-ptr-box: a direct value-receiver method
+// really does copy the whole pointee, so this must STAY racy.
 func raceIfaceDispatch() int {
 	p := &dispBox{v: 1}
 	var g dispGetter = p
 	done := make(chan int)
 	go func() {
 		p.v = 2
+		done <- 0
+	}()
+	r := g.Get()
+	<-done
+	return r
+}
+
+// Send signals completion through a channel — the spawn-entry
+// dispatch shape (`go g.Send(ch)`).
+func (b dispBox) Send(ch chan int) {
+	ch <- b.v
+}
+
+type dispSender interface {
+	Send(ch chan int)
+}
+
+// METHOD VALUE dispatch (callValCalleeK arm): the *T→T auto-deref
+// happens at the CALL, not at `f := g.Get` creation (gc-probed), so a
+// call concurrent with the pointee write races.
+func raceMethodValue() int {
+	p := &dispBox{v: 1}
+	var g dispGetter = p
+	f := g.Get
+	done := make(chan int)
+	go func() {
+		p.v = 2
+		done <- 0
+	}()
+	r := f()
+	<-done
+	return r
+}
+
+// DEFERRED interface-method call (the frame-drain dispatch arms): the
+// deref read happens at the drain, concurrent with the child's write.
+func raceDeferDispatch() int {
+	p := &dispBox{v: 3}
+	var g dispGetter = p
+	done := make(chan int)
+	go func() {
+		p.v = 4
+		done <- 0
+	}()
+	func() {
+		defer g.Get()
+	}()
+	<-done
+	return p.v
+}
+
+// SPAWN-entry dispatch (`go g.Send(ch)`): the auto-deref read is
+// attributed to the CHILD (after the spawn edge), so the parent's
+// post-spawn write races it — pins the child-id attribution direction
+// (a parent-attributed read would be sequenced with the write and
+// silently green).
+func raceSpawnDispatch() int {
+	p := &dispBox{v: 5}
+	var g dispSender = p
+	ch := make(chan int)
+	go g.Send(ch)
+	p.v = 6
+	return <-ch
+}
+
+type promInner struct {
+	x int
+}
+
+// VALUE receiver on the embedded type: promotion through outer gives
+// a synthesized VALUE-receiver wrapper on promOuter.
+func (i promInner) Get() int {
+	return i.x
+}
+
+type promOuter struct {
+	promInner
+	z int
+}
+
+// PROMOTED dispatch with a REAL race on the embedded field: the
+// narrowed wrapper read (.promInner) must still overlap the child's
+// write INSIDE the embedded field — the red direction of the
+// promotion narrowing (its green direction is
+// race/free/promoted-ptr-box).
+func racePromotedDispatch() int {
+	o := &promOuter{}
+	var g dispGetter = o
+	done := make(chan int)
+	go func() {
+		o.x = 7
 		done <- 0
 	}()
 	r := g.Get()
@@ -162,4 +255,8 @@ func main() {
 	println(raceIfaceDispatch())
 	println(raceLenMap())
 	println(raceMapRangeIter())
+	println(raceMethodValue())
+	println(raceDeferDispatch())
+	println(raceSpawnDispatch())
+	println(racePromotedDispatch())
 }

@@ -20,6 +20,16 @@ slice-elem	raceSliceElem	-	race	-	goroutines,channels,slices,race
 # "invisible to -race" claim was refuted by probe).
 iface-dispatch	raceIfaceDispatch	-	race	-	goroutines,channels,interfaces,methods,race
 len-map	raceLenMap	-	race	-	goroutines,channels,maps,len,race
+# S3 convergence response: one pin per frame-entry dispatch arm family
+# (method value / deferred drain / spawn entry with child attribution)
+# plus the promotion narrowing's RED direction (a race on the embedded
+# field must survive the narrowed wrapper read; its green direction is
+# race/free/promoted-ptr-box, and iface-dispatch above is the
+# non-promoted must-stay-racy control).
+method-value	raceMethodValue	-	race	-	goroutines,channels,interfaces,methods,race
+defer-dispatch	raceDeferDispatch	-	race	-	goroutines,channels,interfaces,methods,defer,race
+spawn-dispatch	raceSpawnDispatch	-	race	-	goroutines,channels,interfaces,methods,race
+promoted-dispatch	racePromotedDispatch	-	race	-	goroutines,channels,interfaces,methods,embedding,race
 # RED PIN (BUG-005): gc's LIVE map iteration reads the map every
 # iteration (mapIterNext is -race-instrumented); our snapshot range
 # performs no per-iteration read, so the write landing mid-range is a

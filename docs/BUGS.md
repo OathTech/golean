@@ -57,6 +57,16 @@ differential-pinned) `- Cases: <id>, <id>, …` (baseline case ids), then prose.
   array values or frontend address-based element reads
   (indexAddr+deref, which the deref arm then narrows) — a frontend/
   machine movement with its own guardrails, not a detector patch.
+- S3 convergence addendum: the class gained a FRAME-ENTRY member and
+  its narrowing — a needsDeref dispatch to a synthesized promotion
+  wrapper is narrowed to the wrapper's hop path
+  (`race/free/promoted-ptr-box` green, `race/negative/
+  {promoted-dispatch,iface-dispatch}` red guards); wrapper shapes the
+  extractor does not recognize (embedded-POINTER hops, non-synthesized
+  bodies) fall back to the whole-pointee read and belong to this
+  entry's over-refusal envelope (no corpus case constructs one yet —
+  a future embedded-pointer-hop promotion case through a *T box would
+  land red here, never silently wrong).
 
 ## BUG-040 — no POST-SPAWN reschedule point: a child can never run before a sync-free parent segment (L1 envelope too narrow; exit-no-sync races undetectable)
 
