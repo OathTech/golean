@@ -8,14 +8,24 @@
 #   Part A (always; pure shell, no build, no go): scripts/coverage-manifest
 #   must REJECT each bad lane row shape (audit F2a + the R2 lane rules) and
 #   ACCEPT the good ones.
+#   Part A2 (always; needs go ON PATH but NO real build — G1/G2 shadow
+#   `lake` with fakes, G3/G4 die before any build; ~2s total): the
+#   gate-integrity no-publish fixtures (G1-G4, grossmith findings §2 +
+#   maint-check M2: infra failures exit 2 and leave no readable
+#   latest.tsv/meta). Hoisted out of --with-go at the channels-arc final
+#   audit (F19, 2026-08-07): these validate exactly the invariant whose
+#   absence produced a wrong-conformance statement in grossmith, and the
+#   fast gate — the one run on every commit — never exercised them. A
+#   missing go FAILS this part rather than skipping it: diff-coverage's
+#   own go check sits BELOW its up-front rm, so without go every fixture
+#   would pass VACUOUSLY (dying at the go check, not the path under test).
 #   Part B (--with-go only; needs go + the built golean binary, so ci runs
 #   it under --diff): scripts/diff-coverage's IN-HARNESS lane checks — the
 #   param re-validation (F4: a samples=0 row that somehow bypasses the
 #   manifest must fail loud, never a zero-oracle pass) and the non-native
 #   frontend guard (F6: membership under GOLEAN_FRONTEND != native fails
 #   closed at frontend-export, no native frontend shelled) — plus the
-#   gate-integrity no-publish fixtures (G1/G2, grossmith findings §2:
-#   infra failures exit 2 and leave no readable results).
+#   B3-B5 slice-4 lane gates.
 #
 # Exit 0 = all fixtures behave; nonzero = a gate went quiet.
 set -uo pipefail
@@ -129,6 +139,88 @@ expect_accept "well-formed racy row" \
 expect_accept "membership row with a members pin" \
   '-\trangeFirstKey\t-\tok\t-\tmaps,nondet\tmembership\twhy text\twidth=16,members=3'
 
+# ---- Part A2 (always): gate-integrity no-publish fixtures (grossmith
+# findings §2, docs/2026-08-07_grossmith-findings.md; extended at the
+# maint-check M2 fix; hoisted into the fast gate at the channels-arc
+# final audit F19): EVERY diff-coverage infra death must (a) exit 2 —
+# distinguishable from exit 1's "FAIL rows exist, published results
+# authoritative" — and (b) leave NO readable latest.tsv/meta (the
+# up-front rm precedes every infra exit since M2; the first
+# placement left three pre-rm exit-2 paths with a readable stale
+# pair), so a dead run can never be judged via the previous run's
+# files ("same set = no regression" for a run that never ran; this
+# exact ambiguity produced a pre-release wrong-conformance statement
+# in grossmith). Each fixture pre-seeds a stale results/meta pair
+# and asserts both the exit code and the removal. G1/G2 cover the
+# post-build-attempt deaths (fake failing `lake` on PATH — no real
+# build ever runs; a timeout via LAKE_BUILD_TIMEOUT_SECONDS=0 is NOT
+# usable — run_with_timeout's perl alarm(0) DISABLES the timer — so
+# the timeout arm uses a sleeping fake lake under a 1s budget); G3
+# covers a formerly PRE-rm death (manifest not found); G4 the
+# empty-manifest path, which previously PUBLISHED a fabricated
+# results row and then exited 2. A missing go FAILS here, never
+# skips: diff-coverage's own go check sits below the up-front rm, so
+# without go all four fixtures would pass vacuously.
+if ! command -v go >/dev/null 2>&1; then
+  echo "FAIL: gate-integrity fixtures G1-G4 need go on PATH (without it they would pass vacuously at diff-coverage's own go check — failing closed instead of skipping)"
+  fail=1
+else
+  G_DIR="Corpus/coverage/exec/maps/range-first-key"
+  seed_stale_results() {
+    mkdir -p "$1"
+    printf 'result\tid\tfeatures\tstage\tdetail\nPASS\tstale/one\tx\t-\t-\n' > "$1/latest.tsv"
+    printf 'key\tvalue\nmanifest_sha256\tdeadbeef\n' > "$1/latest.meta.tsv"
+  }
+  check_no_publish() {
+    local name="$1" rc="$2" art="$3"
+    if [ "$rc" -ne 2 ]; then
+      echo "FAIL: $name: no-publish infra failure exited $rc, want 2"
+      fail=1
+    elif [ -e "$art/latest.tsv" ] || [ -e "$art/latest.meta.tsv" ]; then
+      echo "FAIL: $name: dead run left readable results/meta in $art"
+      fail=1
+    else
+      echo "ok: $name"
+    fi
+  }
+  FAKEBIN="$TMP/fakebin-fail"
+  mkdir -p "$FAKEBIN"
+  printf '#!/bin/sh\necho "fake lake: refusing to build" >&2\nexit 1\n' > "$FAKEBIN/lake"
+  chmod +x "$FAKEBIN/lake"
+  ART_G1="$TMP/artifacts-g1"
+  seed_stale_results "$ART_G1"
+  printf 'lane-g1\t%s\trangeFirstKey\t-\tok\tmaps,range,keys,loops,nondet\t-\tmembership\twhy\twidth=16\n' "$G_DIR" > "$TMP/manifest-g1.tsv"
+  PATH="$FAKEBIN:$PATH" GOLEAN_COVERAGE_ARTIFACTS="$ART_G1" scripts/diff-coverage "$TMP/manifest-g1.tsv" >/dev/null 2>&1
+  check_no_publish "lake-build failure exits 2, no readable results (G1)" $? "$ART_G1"
+
+  FAKEBIN2="$TMP/fakebin-hang"
+  mkdir -p "$FAKEBIN2"
+  printf '#!/bin/sh\nsleep 5\n' > "$FAKEBIN2/lake"
+  chmod +x "$FAKEBIN2/lake"
+  ART_G2="$TMP/artifacts-g2"
+  seed_stale_results "$ART_G2"
+  PATH="$FAKEBIN2:$PATH" LAKE_BUILD_TIMEOUT_SECONDS=1 GOLEAN_COVERAGE_ARTIFACTS="$ART_G2" scripts/diff-coverage "$TMP/manifest-g1.tsv" >/dev/null 2>&1
+  check_no_publish "lake-build timeout exits 2, no readable results (G2)" $? "$ART_G2"
+
+  # G3: a pre-build infra death (manifest not found) — one of the
+  # three paths that previously exited 2 ABOVE the rm with the stale
+  # pair fully readable (maint-check M2, verifier-reproduced).
+  ART_G3="$TMP/artifacts-g3"
+  seed_stale_results "$ART_G3"
+  GOLEAN_COVERAGE_ARTIFACTS="$ART_G3" scripts/diff-coverage "$TMP/no-such-manifest.tsv" >/dev/null 2>&1
+  check_no_publish "manifest-not-found exits 2, no readable results (G3)" $? "$ART_G3"
+
+  # G4: an EMPTY caller-supplied manifest must not publish — the old
+  # check ran after publish_results, so it published a fabricated
+  # 'worker produced no result' row and THEN exited 2 (and died on an
+  # unbound variable with exit 1 under JOBS=1).
+  ART_G4="$TMP/artifacts-g4"
+  seed_stale_results "$ART_G4"
+  printf '# comment-only manifest\n' > "$TMP/manifest-g4.tsv"
+  GOLEAN_COVERAGE_ARTIFACTS="$ART_G4" scripts/diff-coverage "$TMP/manifest-g4.tsv" >/dev/null 2>&1
+  check_no_publish "empty manifest exits 2 without publishing (G4)" $? "$ART_G4"
+fi
+
 # ---- Part B: diff-coverage's in-harness lane checks (need go: the
 # dispatch sits after the shared go-harness generation).
 if [ "$WITH_GO" -eq 1 ]; then
@@ -204,77 +296,6 @@ if [ "$WITH_GO" -eq 1 ]; then
       fail=1
     fi
 
-    # ---- Gate-integrity fixtures (grossmith findings §2,
-    # docs/2026-08-07_grossmith-findings.md; extended at the maint-check
-    # M2 fix): EVERY diff-coverage infra death must (a) exit 2 —
-    # distinguishable from exit 1's "FAIL rows exist, published results
-    # authoritative" — and (b) leave NO readable latest.tsv/meta (the
-    # up-front rm precedes every infra exit since M2; the first
-    # placement left three pre-rm exit-2 paths with a readable stale
-    # pair), so a dead run can never be judged via the previous run's
-    # files ("same set = no regression" for a run that never ran; this
-    # exact ambiguity produced a pre-release wrong-conformance statement
-    # in grossmith). Each fixture pre-seeds a stale results/meta pair
-    # and asserts both the exit code and the removal. G1/G2 cover the
-    # post-build-attempt deaths (fake failing `lake` on PATH; a timeout
-    # via LAKE_BUILD_TIMEOUT_SECONDS=0 is NOT usable — run_with_timeout's
-    # perl alarm(0) DISABLES the timer — so the timeout arm uses a
-    # sleeping fake lake under a 1s budget); G3 covers a formerly PRE-rm
-    # death (manifest not found); G4 the empty-manifest path, which
-    # previously PUBLISHED a fabricated results row and then exited 2.
-    seed_stale_results() {
-      mkdir -p "$1"
-      printf 'result\tid\tfeatures\tstage\tdetail\nPASS\tstale/one\tx\t-\t-\n' > "$1/latest.tsv"
-      printf 'key\tvalue\nmanifest_sha256\tdeadbeef\n' > "$1/latest.meta.tsv"
-    }
-    check_no_publish() {
-      local name="$1" rc="$2" art="$3"
-      if [ "$rc" -ne 2 ]; then
-        echo "FAIL: $name: no-publish infra failure exited $rc, want 2"
-        fail=1
-      elif [ -e "$art/latest.tsv" ] || [ -e "$art/latest.meta.tsv" ]; then
-        echo "FAIL: $name: dead run left readable results/meta in $art"
-        fail=1
-      else
-        echo "ok: $name"
-      fi
-    }
-    FAKEBIN="$TMP/fakebin-fail"
-    mkdir -p "$FAKEBIN"
-    printf '#!/bin/sh\necho "fake lake: refusing to build" >&2\nexit 1\n' > "$FAKEBIN/lake"
-    chmod +x "$FAKEBIN/lake"
-    ART_G1="$TMP/artifacts-g1"
-    seed_stale_results "$ART_G1"
-    printf 'lane-g1\t%s\trangeFirstKey\t-\tok\tmaps,range,keys,loops,nondet\t-\tmembership\twhy\twidth=16\n' "$GO_DIR" > "$TMP/manifest-g1.tsv"
-    PATH="$FAKEBIN:$PATH" GOLEAN_COVERAGE_ARTIFACTS="$ART_G1" scripts/diff-coverage "$TMP/manifest-g1.tsv" >/dev/null 2>&1
-    check_no_publish "lake-build failure exits 2, no readable results (G1)" $? "$ART_G1"
-
-    FAKEBIN2="$TMP/fakebin-hang"
-    mkdir -p "$FAKEBIN2"
-    printf '#!/bin/sh\nsleep 5\n' > "$FAKEBIN2/lake"
-    chmod +x "$FAKEBIN2/lake"
-    ART_G2="$TMP/artifacts-g2"
-    seed_stale_results "$ART_G2"
-    PATH="$FAKEBIN2:$PATH" LAKE_BUILD_TIMEOUT_SECONDS=1 GOLEAN_COVERAGE_ARTIFACTS="$ART_G2" scripts/diff-coverage "$TMP/manifest-g1.tsv" >/dev/null 2>&1
-    check_no_publish "lake-build timeout exits 2, no readable results (G2)" $? "$ART_G2"
-
-    # G3: a pre-build infra death (manifest not found) — one of the
-    # three paths that previously exited 2 ABOVE the rm with the stale
-    # pair fully readable (maint-check M2, verifier-reproduced).
-    ART_G3="$TMP/artifacts-g3"
-    seed_stale_results "$ART_G3"
-    GOLEAN_COVERAGE_ARTIFACTS="$ART_G3" scripts/diff-coverage "$TMP/no-such-manifest.tsv" >/dev/null 2>&1
-    check_no_publish "manifest-not-found exits 2, no readable results (G3)" $? "$ART_G3"
-
-    # G4: an EMPTY caller-supplied manifest must not publish — the old
-    # check ran after publish_results, so it published a fabricated
-    # 'worker produced no result' row and THEN exited 2 (and died on an
-    # unbound variable with exit 1 under JOBS=1).
-    ART_G4="$TMP/artifacts-g4"
-    seed_stale_results "$ART_G4"
-    printf '# comment-only manifest\n' > "$TMP/manifest-g4.tsv"
-    GOLEAN_COVERAGE_ARTIFACTS="$ART_G4" scripts/diff-coverage "$TMP/manifest-g4.tsv" >/dev/null 2>&1
-    check_no_publish "empty manifest exits 2 without publishing (G4)" $? "$ART_G4"
   fi
 fi
 

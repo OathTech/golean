@@ -133,10 +133,13 @@ if covout="$(./scripts/check-coverage 2>&1)"; then echo "$covout" | tail -2 | se
 
 # 1c2. Membership-lane gate self-test (delta-review T2, 2026-08-05): the
 # lane's shell gates (manifest lane validation incl. the explicit-width
-# requirement) exercised against the recorded bad-shape fixtures. Pure
-# shell, no build. The go-dependent half (harness param re-validation,
-# frontend guard) runs under --diff below.
-step "membership-lane gate self-test (scripts/test-lane-validation)"
+# requirement) exercised against the recorded bad-shape fixtures, PLUS —
+# hoisted into the fast gate at the channels-arc final audit (F19,
+# 2026-08-07) — the G1-G4 gate-integrity no-publish fixtures (go on PATH
+# required, no real build: G1/G2 shadow `lake`, G3/G4 die pre-build;
+# ~2s). The golean-binary-dependent half (harness param re-validation,
+# frontend guard, B3-B5) runs under --diff below.
+step "membership-lane gate self-test (scripts/test-lane-validation; incl. G1-G4 no-publish)"
 if laneout="$(./scripts/test-lane-validation 2>&1)"; then
   echo "$laneout" | tail -1 | sed 's/^/  /'
   ok "lane-validation fixtures (manifest gates reject bad shapes)"
@@ -403,10 +406,10 @@ if [ "$RUN_DIFF" -eq 1 ]; then
   esac
 fi
 if [ "$RUN_DIFF" -eq 1 ]; then
-  step "membership-lane gate self-test, go-dependent half (--with-go: F4 param re-validation, F6 frontend guard, B3-B5 slice-4 lane gates, G1-G4 gate-integrity no-publish)"
+  step "membership-lane gate self-test, go-dependent half (--with-go: F4 param re-validation, F6 frontend guard, B3-B5 slice-4 lane gates; G1-G4 run in the fast half since audit F19)"
   if laneout="$(./scripts/test-lane-validation --with-go 2>&1)"; then
     echo "$laneout" | grep -E "F4|F6|B[0-9]|G[0-9]|^test-lane" | sed 's/^/  /'
-    ok "lane-validation fixtures incl. harness half (F4/F6/B3-B5/G1-G4)"
+    ok "lane-validation fixtures incl. harness half (F4/F6/B3-B5)"
   else
     echo "$laneout"
     bad "lane-validation fixtures, harness half (a lane gate went quiet — see above)"
