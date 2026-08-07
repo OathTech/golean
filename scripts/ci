@@ -222,12 +222,17 @@ check_surface_imports proofs/GoLeanProofs/Specs/QuorumRefSpec.lean \
 # touches Iris. Allowlist: core + Std + the clean statement chain.
 check_surface_imports proofs/GoLeanProofs/Specs/Statements.lean \
   '^import (GoLean\.|Std\.|GoLeanProofs\.Surface$|GoLeanProofs\.Specs\.QuorumTargets$|GoLeanProofs\.Specs\.GoldenQuorum$|GoLeanProofs\.Specs\.GoldenProgram$)'
+# The fork/join pool witnesses (channels arc slice 2): statement-bearing,
+# Iris-free by chain — GoLean core + the surface only (the Challenge
+# imports it, so it joins the scanned set; gate EXTENDED, not weakened).
+check_surface_imports proofs/GoLeanProofs/Specs/GoldenForkJoin.lean \
+  '^import (GoLean\.|GoLeanProofs\.Surface$)'
 # The Comparator Challenge — the judge's TRUSTED root (pre-merge audit
 # 2026-08-02, major finding: this file was in NO scripts/ci scan at all;
 # the wrapper's walk was its only gate, and that walk was fail-open).
 # Direct imports pinned to exactly the two clean statement modules.
 check_surface_imports proofs/Challenge.lean \
-  '^import (GoLeanProofs\.Specs\.Statements$|GoLeanProofs\.Specs\.GoldenTargets$)'
+  '^import (GoLeanProofs\.Specs\.Statements$|GoLeanProofs\.Specs\.GoldenTargets$|GoLeanProofs\.Specs\.GoldenForkJoin$)'
 # AutomationTargets is statement-bearing but MIXED BY DESIGN: it holds the
 # range-rule target (a statement ABOUT the Iris-side proof infrastructure,
 # quantifying over IProp) and the phase-2 acceptance pins that reference

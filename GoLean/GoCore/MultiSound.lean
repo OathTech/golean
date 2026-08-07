@@ -20,6 +20,10 @@ The pool's proof kit, mirroring the sequential one:
 -/
 
 set_option maxRecDepth 8192
+-- The unused-simp-arg linter misfires on the shared multi-branch simp
+-- sets (an argument unused in one branch is load-bearing in another) —
+-- the MachineSound sweeps' standing rationale, file-wide here.
+set_option linter.unusedSimpArgs false
 
 namespace GoLean.GoCore.Machine
 
