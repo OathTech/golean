@@ -1,0 +1,10 @@
+# id	subject	args	expected_status	expected_reason	features
+inc-signed	definedIncSigned	-	ok	-	ints,defined_type,assignment
+dec-signed	definedDecSigned	-	ok	-	ints,defined_type,assignment
+inc-unsigned	definedIncUnsigned	-	ok	-	ints,defined_type,assignment
+dec-unsigned	definedDecUnsigned	-	ok	-	ints,defined_type,assignment
+inc-signed-wrap	definedIncSignedWrap	-	ok	-	ints,defined_type,assignment,overflow
+dec-signed-wrap	definedDecSignedWrap	-	ok	-	ints,defined_type,assignment,overflow
+inc-unsigned-wrap	definedIncUnsignedWrap	-	ok	-	ints,defined_type,assignment,overflow
+dec-unsigned-wrap	definedDecUnsignedWrap	-	ok	-	ints,defined_type,assignment,overflow
+unnamed-control	unnamedControl	-	ok	-	ints,assignment

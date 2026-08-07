@@ -29,6 +29,38 @@ differential-pinned) `- Cases: <id>, <id>, …` (baseline case ids), then prose.
 
 ---
 
+## BUG-042 — IncDec desugar's synthetic 1 takes the default int kind instead of the operand's underlying kind (defined types; map values of any non-default kind)
+
+- Status: open
+- Pinned-by: differential
+- Cases: ints/defined-incdec/inc-signed, ints/defined-incdec/dec-signed, ints/defined-incdec/inc-unsigned, ints/defined-incdec/dec-unsigned, ints/defined-incdec/inc-signed-wrap, ints/defined-incdec/dec-signed-wrap, ints/defined-incdec/inc-unsigned-wrap, ints/defined-incdec/dec-unsigned-wrap, floats/defined-incdec, maps/incdec-value-kinds/uint8, maps/incdec-value-kinds/defined
+- Discovered: 2026-08-07 (external: the grossmith differential
+  generator, seed 559 minimized — docs/2026-08-07_grossmith-findings.md
+  §1; probes here widened the family to the map facet)
+- What: two sites of one family — the IncDec desugar's synthetic 1
+  literal is kinded from the wire `type` field, and that field is not
+  resolved through defined types to the underlying basic kind:
+  (a) `emitIncDec` (tools/nativefrontend/emit.go) carries
+  `e.typeOf(st.X)`, which for a defined type is `{"kind":"named"}` —
+  the decoder's `intKindOfOptType` (GoLean/NativeToIR.lean) silently
+  falls to the default `int`, so `T1(5)++` (T1 int8) desugars to an
+  int8 + int add and the machine goes STUCK ("mismatched + integer
+  kinds: int8 and int"). Hits every defined integer AND float type,
+  inc and dec, with and without wrap; the unnamed control passes
+  (kind picked up when the type is unnamed), which localizes the
+  defect. (b) `emitMapCompound` synthesizes a default-int 1 for every
+  non-float map value type, so `m[k]++` over even UNNAMED uint8
+  values — or any defined-type values — is stuck the same way (the
+  floats slice F3 fixed only the float kinds at this site).
+  Both are stuck-not-wrong (fail-visible), past the frontend gate:
+  machine/lowering defects per the fail-closed doctrine, not
+  frontend-export coverage gaps. Same site family `emitConstValue`
+  already resolves for defined-typed literals (`tv.Type.Underlying()`).
+- Fix shape: resolve the carried kind through `Underlying()` at both
+  desugar sites (frontend), mirroring `emitConstValue`; tighten the
+  decoder's incdec arm to fail closed on a non-numeric carried type
+  instead of silently defaulting.
+
 ## BUG-041 — race-detector footprint over-approximation: value-path composite reads are whole-cell (array elements; non-fieldGet uses), refusing race-free programs
 
 - Status: open

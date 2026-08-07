@@ -1,25 +1,22 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-07  commit: channels-arc-s4 (pool enumerator + lane upgrades: membership-over-schedules, confluent, racy full-strength)
+# recorded: 2026-08-07  commit: channels-arc-maint (BUG-042 red-first pins: IncDec synthetic-1 kind matrix)
 #   frontend: native  oracle: go run (strict lane) / go-run membership in the
 #   machine-enumerated observation set, sampled plain AND under -race
 #   (membership lane; go1.26.5) / schedule-tree singleton certification +
 #   strict go-run equality (confluent lane) / every-enumerated-path-refuses
 #   + go run -race red (racy lane; never combined with deadlock)
-# manifest_cases: 1176  pass: 1083  fail: 93
-# Re-pin reason: deliberate coverage change — the slice-4 pool enumerator
-#   went live: 6 red pins flip PASS (goroutines/sched-dependent/{first-come,
-#   select-default-handshake,len-handoff}, race/litmus/sb-chan with its
-#   {1,10,11}/members=3 certification, goroutines/select-wake-multi,
-#   goroutines/select-arrival-multi); 41 schedule-confluent ids reclassify
-#   stage - -> confluent (S4 audit correction: this header first said 36,
-#   an undercount of 5 that also propagated into the recording commit's
-#   "49 stage reclassifications" — true decomposition 6 result flips +
-#   54 stage moves = 41 confluent + 13 racy; certified |set|=1 over all
-#   schedules; pipeline/{two-stage,buffered-stage} and
-#   worker-pool/shared-feed stay strict —
-#   trees beyond tractable caps, recorded in their cases.tsv); the 13
-#   race-expectation ids reclassify stage - -> racy (full strength: every
-#   enumerated path refuses). ZERO result flips outside the 6 recorded ones.
+# manifest_cases: 1188  pass: 1084  fail: 104
+# Re-pin reason: deliberate coverage change — 12 new ids, zero drift on
+#   every prior id. BUG-042 red-first pin matrix (grossmith seed 559,
+#   docs/2026-08-07_grossmith-findings.md §1): the IncDec desugar's
+#   synthetic 1 takes the default int kind instead of the operand's
+#   underlying kind. 11 red at lean-observation (stuck, not wrong):
+#   ints/defined-incdec/{inc,dec}-{signed,unsigned}[-wrap] (8),
+#   floats/defined-incdec, maps/incdec-value-kinds/{uint8,defined}
+#   (the map facet: emitMapCompound's synthetic 1 is default-int for
+#   every non-float value kind, even unnamed uint8). 1 green control:
+#   ints/defined-incdec/unnamed-control (unnamed int8 — localizes the
+#   defect to named-type resolution). All 11 listed in BUGS.md BUG-042.
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
 PASS	arrays/array-copy	-
@@ -363,6 +360,7 @@ PASS	embedding/value-embedded-pointer-promotion/dynamic-dispatch	-
 PASS	embedding/value-embedded-pointer-promotion/static-call	-
 PASS	embedding/value-embedded-pointer-promotion/value-box-satisfies	-
 PASS	floats/compound-assign	-
+FAIL	floats/defined-incdec	lean-observation
 PASS	floats/defined-type-ops	-
 PASS	floats/division-specials	-
 PASS	floats/finite-arithmetic	-
@@ -687,6 +685,15 @@ PASS	ints/break-continue	-
 PASS	ints/byte-conversion	-
 PASS	ints/compound-assign-wrap	-
 PASS	ints/conversion-width-matrix	-
+FAIL	ints/defined-incdec/dec-signed	lean-observation
+FAIL	ints/defined-incdec/dec-signed-wrap	lean-observation
+FAIL	ints/defined-incdec/dec-unsigned	lean-observation
+FAIL	ints/defined-incdec/dec-unsigned-wrap	lean-observation
+FAIL	ints/defined-incdec/inc-signed	lean-observation
+FAIL	ints/defined-incdec/inc-signed-wrap	lean-observation
+FAIL	ints/defined-incdec/inc-unsigned	lean-observation
+FAIL	ints/defined-incdec/inc-unsigned-wrap	lean-observation
+PASS	ints/defined-incdec/unnamed-control	-
 PASS	ints/defined-int-conversion	-
 PASS	ints/defined-type-ops	-
 PASS	ints/defined-underlying-conversion	-
@@ -728,6 +735,8 @@ PASS	maps/delete-nil-key-types	-
 PASS	maps/delete-nil-map	-
 PASS	maps/delete-nil-value-types	-
 FAIL	maps/imported-named-key-unhashable	lean-observation
+FAIL	maps/incdec-value-kinds/defined	lean-observation
+FAIL	maps/incdec-value-kinds/uint8	lean-observation
 PASS	maps/index-assign-eval-order	-
 PASS	maps/interface-dynamic-type-key	-
 PASS	maps/interface-key	-

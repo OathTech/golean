@@ -1,0 +1,3 @@
+# id	subject	args	expected_status	expected_reason	features
+uint8	mapUint8IncDec	-	ok	-	maps,indexing,assignment,ints,overflow
+defined	mapDefinedIncDec	-	ok	-	maps,indexing,assignment,ints,defined_type
