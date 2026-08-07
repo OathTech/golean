@@ -42,7 +42,26 @@ func bufferedWakeCapOne() int {
 	return acc
 }
 
+
+// len/cap observed at SYNC points only (confluent): after the join the
+// buffer state is schedule-independent. Closes the audit-noted gap
+// (zero len/cap uses across goroutines cases); the schedule-DEPENDENT
+// occupancy observations live in sched-dependent/ (membership).
+func bufferedLenAfterJoin() int {
+	ch := make(chan int, 3)
+	done := make(chan int)
+	go func() {
+		ch <- 1
+		ch <- 2
+		done <- 1
+	}()
+	<-done
+	// both sends completed-before the done rendezvous: len is pinned
+	return len(ch)*100 + cap(ch)*10 + <-ch
+}
+
 func main() {
 	bufferedWakeFIFO()
 	bufferedWakeCapOne()
+	bufferedLenAfterJoin()
 }

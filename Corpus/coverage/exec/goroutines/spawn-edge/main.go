@@ -40,6 +40,44 @@ func spawnChildRecovers() int {
 	return <-done
 }
 
+
+type dispI interface {
+	M() int
+}
+
+type dispT struct{ n int }
+
+func (t *dispT) M() int { return t.n }
+
+// Nil INTERFACE dispatch in spawn position (S2 audit): the panic fires
+// in the SPAWNING goroutine, recoverably — probed go1.26.5 (the
+// frontend hoists the nil-interface check before the go statement,
+// which realizes exactly this attribution).
+func spawnNilInterfaceRecovered() (z int) {
+	defer func() {
+		if recover() != nil {
+			z = 31
+		}
+	}()
+	var i dispI
+	go i.M()
+	<-make(chan int)
+	return 0
+}
+
+// Nil POINTER-BOX auto-deref dispatch in spawn position (S2 audit):
+// the panic fires in the CHILD goroutine and aborts the program —
+// probed go1.26.5 (goroutine N [running] ... exit status 2). Main
+// parks so the child's abort is the only outcome under every schedule.
+func spawnPtrBoxChildAborts() int {
+	var p *dispT
+	var i dispI = p
+	go i.M()
+	<-make(chan int)
+	return 0
+}
+
 func main() {
 	spawnChildRecovers()
+	spawnNilInterfaceRecovered()
 }

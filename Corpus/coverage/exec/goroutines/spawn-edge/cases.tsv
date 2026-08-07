@@ -15,3 +15,9 @@ child-panic-aborts	spawnChildPanicAborts	-	panic	child says no	goroutines,channe
 # itself is future work). The recovered-child behavior is green-pinned
 # through the value-position form in goroutines/close-wake/*.
 child-recovers	spawnChildRecovers	-	ok	-	goroutines,channels,recover
+# S2 audit response: the two dispatch classes of a spawn-position
+# panic, pinned in both directions (nil INTERFACE -> spawner-side,
+# recoverable, realized via the frontend's pre-spawn hoist; nil
+# POINTER-BOX auto-deref -> child-side, program abort).
+nil-interface-recovered	spawnNilInterfaceRecovered	-	ok	-	goroutines,channels,interfaces,nil,recover
+ptr-box-child-aborts	spawnPtrBoxChildAborts	-	panic	runtime error: invalid memory address or nil pointer dereference	goroutines,channels,interfaces,nil,panic

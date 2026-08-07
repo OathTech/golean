@@ -1,3 +1,4 @@
 # id	subject	args	expected_status	expected_reason	features
 fifo	bufferedWakeFIFO	-	ok	-	goroutines,channels,make,loops
 cap-one	bufferedWakeCapOne	-	ok	-	goroutines,channels,range,close
+len-after-join	bufferedLenAfterJoin	-	ok	-	goroutines,channels,len,cap,make
