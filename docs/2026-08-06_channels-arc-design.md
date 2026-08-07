@@ -1804,3 +1804,181 @@ proofs + Audit gate green, 44 designated statements byte-identical;
 check-bugs green (43 bugs, untriaged 16); baseline re-pinned from the
 full run in the same commit (re-pin reason: the one new id). Slice 6
 is COMPLETE; with it the arc's slice plan (1–6) is fully executed.
+
+## ARC COMPLETION RECORD (2026-08-07, branch tip `channels-arc-s6`)
+
+All six slices of the decided plan executed; the arc awaits the
+pre-merge decision items below. This section is the arc's summary of
+record.
+
+### Per-slice summary, with counts
+
+Corpus counts are exec `total (pass/fail)` at each slice's
+post-audit-cycle tip; 311 negative cases green THROUGHOUT (unchanged
+by the arc). Arc start (main `a38e086`): **1027 (899/128)**.
+
+1. **Channels-only, zero scheduler** (chanData, send/recv/close/
+   len/cap/range/select-with-default; blocking = deadlock terminal;
+   the phase-split assignment machine forced by the audit cycle):
+   1047 at first landing → **1102 (1013/89)** at the round-4 tip.
+   69 pre-existing reds flipped green at first landing; the audit
+   cycle grew the multi-assign/receive-order guardrail families.
+2. **Goroutines + ThreadPool** (MultiConfig, L1 scheduler, arrival-
+   intercept pairing redesigned to waiter-queue priority at the
+   audit, D6 main-exit, conservation theorem, StepE/StepM kit,
+   GoTripleC/GoSpecC/ProgressExecC scaffolds, fork/join kernel
+   witnesses; designated set 33 → 38): **1147 (1052/95)**.
+3. **Registry second duty — race detection** (external RaceState,
+   curated footprint + enumerated inventory, gc's HB edge set quoted
+   against go_mem, racy-negative/litmus lanes, NPDRF statement layer
+   + first mover pair): **1173 (1075/98)**.
+4. **Select multi-ready + membership enumerator + lanes** (L2 live,
+   BUG-040 post-spawn boundary fixed, stepwise pool enumerator with
+   the mechanically-checked consumption accountant + two-sided
+   sentinel alarm, confluent/racy lanes wired, 41 confluent + 13 racy
+   reclassifications, sb-chan DRF-SC set certified):
+   **1176 (1083/93)**.
+   *Maintenance interlude* (grossmith campaign findings, same branch):
+   BUG-042/BUG-043 red-first-then-fixed + the M2 gate-integrity fix —
+   **1193 (1099/94)** entering slice 5.
+5. **Iris proof layer** (allStreamsOkPool kernel checker discharging
+   ∀ ch on the real fork/join program; goSpecC_of_goSpec conservation
+   transfer inhabiting GoSpecC; TerminatesNormallyC; MultiWf
+   discharged via stepMulti_wf; LangC pool Language over StepE/StepEC
+   with wpC_fork + closed adequateC_spawn_noop; D5 fairness-precision
+   note, König TREE characterization after the audit; designated set
+   38 → 44): corpus unchanged **1193 (1099/94)**.
+6. **Doctrine/harness** (six-lane epistemic captions in doctrine +
+   harness; -race dual sampling audited as landed in s4; the
+   envelope-width review over L1/L2/L4 with the L4 width>1 directed
+   pin): **1194 (1100/94)** — the arc's final state. Eval tests
+   77 (arc start) → 111, all green; check-bugs green, BUGS.md 21 →
+   43 entries, untriaged ledger back at its arc-start 16 (peak 24
+   during the s4 red-first phase).
+
+### Audit-cycle trail (every slice adversarially audited pre-merge-style on the branch)
+
+- **S1**: audit — 12 confirmed / 2 refuted (3 major: BUG-022 receive
+  phase inversion, BUG-023 receive-hoist reorder, BUG-024 bare-recv
+  fail-open). Delta review — 5 confirmed (1 critical BUG-026
+  function-scoped flag; 1 major BUG-027; 2 minor BUG-025/028; 1
+  note). Convergence — 5 confirmed (1 critical BUG-029: phase-split
+  as machine structure; BUG-030/031/032; BUG-025's general half
+  CLOSED). Round-4 check — 9 confirmed / 0 refuted (1 critical
+  BUG-033 address-chain spine; BUG-034—039; BUG-025 honestly
+  REOPENED for the call write-back; BUG-037+034 built-validated-
+  reverted per the migrate-or-scope-honestly standard).
+- **S2**: audit — 9 confirmed / 1 refuted (2 major: buffered ops
+  bypassing parked waiters → the waiter-queue-priority redesign;
+  select-default waiter-blindness). Convergence — 2 confirmed (1
+  CRITICAL introduced by the response itself: selectArrivalPlan's
+  missing closed-channel guard).
+- **S3**: audit — 11 confirmed / 1 refuted (3 major: two fail-open
+  footprint gaps — iface-dispatch arm, map-range reads → BUG-005's
+  fourth symptom — and the composite-read false-positive scope →
+  BUG-041; 4 minor incl. the close-woken-sender gc-parity
+  correction; 4 note). Convergence — 4 confirmed (1 major: the
+  promotion-wrapper false positive the response introduced, fixed by
+  the hop-path narrowing).
+- **S4**: audit — 10 confirmed / 2 refuted (2 minor + 8 note after
+  verifier adjustment; headline: the one-sided accountant alarm
+  upgraded to the two-sided sentinel; the 36-vs-41 count
+  correction).
+- **S5**: audit — 12 confirmed / 2 refuted (1 major: the fairness
+  note's false König "iff", corrected to the tree
+  characterization + eval-pinned counterexample family; 6 minor; 5
+  note incl. the 44th designated readout twin).
+- **S6**: no per-slice audit run (doc/harness-caption slice + one
+  membership pin); the ARC-FINAL audit is decision item (b) below.
+
+Pattern across the trail: every "response introduced a new defect"
+instance (S1 rounds 3-4, S2 convergence, S3 convergence) was caught
+by the NEXT round — the multi-round convergence discipline earned
+its cost.
+
+### What stays red, with owners
+
+The 94-id fail set decomposes:
+
+- **78 pre-arc, non-channel gaps** (carried unchanged; owners
+  pre-date this arc): complex/floats-adjacent frontend-export
+  classes, range-over-func, goto-backward capture classes,
+  short-circuit operand quarantine, tuple-assign map targets, etc.
+- **BUG-034/BUG-037 held-open pins (5)** —
+  `assign-order/target-check-vs-rhs/*` (3),
+  `multi-assign/comma-ok-forms/*` (2). Owner: the coordinated
+  machine+laws slice (spine migration retires
+  assignTargetK/assignStoreK + StmtOp.mapLookup/typeAssertStmt,
+  which the shipped wp_assign*/wp_map_lookup law families and the
+  HEADLINE quorum walk consume — one retirement, one law rework,
+  three consumers; round-4 disposition).
+- **BUG-025 call write-back (3)** — `multi-assign/call-write-back/*`.
+  Owner: the same laws slice (TargetRefs through Cont.frame; the
+  spine machinery is ready for it).
+- **BUG-005 (4)** — `maps/{delete,update,clear}-during-range`,
+  `race/negative/map-range-iter`. Owner: the live-iteration surgery
+  (must add the footprint arm in the same movement — race inventory
+  U1).
+- **BUG-041 (1)** — `race/free/array-read-write`. Owner: path-precise
+  value reads (narrowing the whole-cell composite-read
+  over-approximation, O1).
+- **Spawn-edge fatal class (1)** — `spawn-edge/nil-func-fatal`.
+  Owner: a future fatal (non-panic, non-deadlock abort) terminal
+  class; refuses fail-closed until then.
+- **Bare-recover statement lowering (1)** — `spawn-edge/
+  child-recovers`. Owner: frontend lowering gap, recorded at S2.
+- **Spawn-in-init (1)** — `spawn-in-init/in-init`. Owner: init stays
+  sequential by design this arc; a future decision on `go` during
+  `$pkginit`.
+- **Permanent fail-closed refusal markers** (in the 78 above where
+  pre-arc, plus the arc's own): `recv-order/dead-recv-len-operand`,
+  `dead-recv-len-embedded` (BUG-032's ANF-linearization deferral).
+
+### Successor-arc debts (recorded, not red ids)
+
+- **The frame-quantified SPAWNING GoSpecC instance** via the
+  park/deposit/wake per-thread decomposition (pairing touches two
+  threads; iris-lean's Language steps one) + pool-reachability kit —
+  sized successor-arc at S5; the channel WP law family (their
+  T3/T4 analogue) and the Actris-lite protocol layer land WITH it.
+- **NPDRFReduction restatement**: refutable as written (obstruction
+  4, main-exit discard); the weakening (main-readout or
+  main-reachable-scoped post-state) is its own reviewed decision;
+  obstructions 1-2, 5-6 stand; mover route open.
+- **FairStream** (additive fairness quantifier; atomics-arc
+  prerequisite) — now recorded as covering the select-default
+  polling / drain-loop / self-cycle / ping-pong infinite-tree idioms
+  (D5 precision note).
+- **sync package** (Mutex/RWMutex/WaitGroup/Once) via the D2+D3
+  registry growth contract — the top LIVE blocker for the goose
+  import corpus (scoping study Part B) and raft-critical.
+- **select-with-select rendezvous** (both sides parked selects);
+  **DPOR** for the three stay-strict confluent candidates;
+  **go-of-nil-func fatal class** (above); **BUG-005/BUG-041**
+  surgeries (above).
+
+### DECISION ITEMS FOR THE USER at merge sign-off
+
+(a) **The owed Comparator landmark.** CLAUDE.md's step-2 trigger is
+    satisfied on this branch (designated set 38 → 44 — really 33 → 44
+    across the arc); the deferral to arc end followed the slice-2/4/5
+    precedent and is recorded in the build logs — but ELEVEN
+    concurrent designated statements (the 5 pinned-stream fork/join
+    witnesses, the 4 ∀-schedule statements, goldenSpecC,
+    goldenReturnsTwoC) have never been comparator-replayed, and none
+    has reached `main`. Decide: run `scripts/comparator-judge` before
+    this merge (recommended by the trigger's letter) vs. at another
+    point of the user's choosing.
+(b) **The arc-final adversarial audit ask** (the AUDIT CHECK — the
+    ask is unconditional): this branch has had per-slice audits
+    through slice 5 but NO audit of the branch's FINAL state (slices
+    6's changes, the completion record, the docs commits, and the
+    integrated whole). Propose scope + scale at sign-off; the user
+    may waive or trim.
+(c) **The goose-parity charter** (`docs/2026-08-07_goose-parity-
+    charter.md`, DRAFT): bless/edit/decline the charter and, if
+    blessed, set the standing goal text it proposes (phase-1 import
+    buildout with parking-ledger discipline and the escape hatch).
+(d) **Main-merge + push**: merge protocol steps 4-7 (explicit merge
+    sign-off at that moment; `git checkout main && git merge
+    --ff-only channels-arc-s6`; push is its own separate sign-off).
