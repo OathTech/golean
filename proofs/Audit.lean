@@ -362,6 +362,8 @@ open Lean in
 #guard_msgs in #print axioms GoLean.GoCore.Machine.stepMulti_sound
 /-- info: 'GoLean.GoCore.Machine.execProg_single_eq_execStmt' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.GoCore.Machine.execProg_single_eq_execStmt
+/-- info: 'GoLean.GoCore.Machine.stepM_complete' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.GoCore.Machine.stepM_complete
 
 -- The fork/join pool kernel witnesses (pinned streams; slice 2).
 /-- info: 'GoLean.Surface.forkJoinStreamCanonical' depends on axioms: [propext, Quot.sound] -/

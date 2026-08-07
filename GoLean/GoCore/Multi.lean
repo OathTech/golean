@@ -672,7 +672,18 @@ inductive StepM : MultiConfig → MultiConfig → Prop where
 /-- Pool well-formedness: the shared state is `StateWf`, the running
 index is in range, and EVERY goroutine's configuration is loc-bounded
 by the shared allocator with normalized in-flight snapshots — the
-sequential `MachineWf`'s components, thread-indexed. -/
+sequential `MachineWf`'s components, thread-indexed. Decidable, so
+concrete pool seeds discharge it by `decide` like `MachineWf`.
+
+SCAFFOLD STATUS (recorded honestly, slice-2 build log): preservation
+(`stepMulti` keeps `MultiWf`) is OWED — the active goroutine's step is
+covered by the sequential kit (`step_preserves_wf_loc` and the slice-1
+`applyChanOp_wf`/`commitClause_wf`/`enterRecvTargets_wf` family cover
+the wake/pairing helpers), but the FOREIGN-thread frame argument
+(`ConfigWf` of the untouched goroutines under the stepped shared
+state) needs a step-level `nextAddr` monotonicity lemma the sequential
+kit does not yet expose. Nothing consumes `MultiWf` this slice; it is
+the declared invariant carrier for the slice-3 detector work. -/
 def MultiWf (m : MultiConfig) : Prop :=
   StateWf m.shared ∧ m.cur < m.threads.size ∧
     ∀ i (h : i < m.threads.size),
