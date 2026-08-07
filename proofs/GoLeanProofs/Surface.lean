@@ -565,18 +565,40 @@ diagnostic classes are covered by the full-corpus bit-identity check
 rather than the theorem (S2 audit response: the claim is stated to the
 theorem's actual strength).
 
-**Witness status (non-vacuity gate, recorded honestly):** the design of
-record's slice plan proves the full `GoSpecC` witness at SLICE 5 (the
-Iris proof layer: "the GoSpecC witness proved") — discharging the
-`∀ ch` schedule quantifier needs either the concurrent WP or a
-pool-level ∀-streams kernel checker (the `allStreamsOk` analogue),
-neither of which is slice-2 scope. Slice 2 ships the definitions plus
-the KERNEL-RUN fork/join witnesses (`Specs/GoldenForkJoin.lean`):
-pinned-stream `execProg` runs — canonical, adversarial, and alternating
-schedules — completing `.normal` with the pinned readout, plus a
-pinned-stream multi-goroutine deadlock classification. Until the
-slice-5 discharge these definitions are SCAFFOLDS in the doctrine's
-sense: no theorem below claims a `GoSpecC` instance. -/
+**Witness status (non-vacuity gate — updated at slice 5, recorded
+honestly):** the definitions are NO LONGER unwitnessed scaffolds, and
+the discharge landed by BOTH routes the slice-2 note recorded, each at
+its honest strength:
+
+* **`GoSpecC` is inhabited** — `goldenSpecC`
+  (`Specs/GoldenSurface.lean`), via the conservation transfer
+  `goSpecC_of_goSpec` below: a sequential `GoSpec` lifts to the pool
+  carrier verbatim, because its `ProgressExec` half confines every
+  sequential run to the transferable classes and
+  `execProg_single_eq_execStmt` then pins the pool run. This is the
+  SEQUENTIAL-DEGENERATE lane (D9(a)) — a real, frame-quantified,
+  non-vacuous instance, but not yet a concurrent-carrier one.
+* **The `∀ ch` quantifier is discharged on a REAL fork/join program**
+  — `forkJoinAllSchedules42`/`forkJoinTerminatesNormallyC`
+  (`Specs/GoldenForkJoin.lean`), via the pool ∀-streams kernel checker
+  (`allStreamsOkPool`, `MultiStreams.lean` — the "allStreamsOk
+  analogue" route): every schedule and every latitude stream completes
+  the rendezvous at `.normal` with the 42 readout, deadlock- and
+  race-refusal-free. These are SEEDED statements (the concrete
+  fork/join seed), the concurrent counterpart of the sequential
+  per-seed total pins.
+
+**Still owed, precisely** (recorded, not silently dropped): a
+FRAME-QUANTIFIED `GoSpecC` instance whose program genuinely spawns —
+i.e. `GoSpecC` at full `InitialSplit` strength over the fork/join
+program. Its `GoTripleC` half needs heap-parametric reasoning over the
+pool (the concurrent WP pipe), and the recorded obstruction is
+structural: iris-lean's thread-pool `Language` steps ONE thread per
+step, while `StepM`'s pairing rules touch two — the decomposition
+(park/deposit/wake proof-layer steps simulating the pairing with
+structural state equality) plus a pool-reachability kit for the
+deadlock/race exclusions is the successor arc's work, sized in the
+slice-5 build log. -/
 
 /-- The concurrent frame-closed triple (D8): `GoTriple` with the pool
 carrier. Post over the joined final state — the shared heap at MAIN's
@@ -636,5 +658,56 @@ def GoSpecC (types : TypeEnv) (funcs : Array Func) (methods : Array MethodInfo)
     (P : HProp) (prog : Stmt) (Q : HProp) : Prop :=
   GoTripleC types funcs methods env₀ P prog Q
     ∧ ProgressExecC types funcs methods env₀ P prog
+
+/-- **The conservation transfer for the full surface judgment** (slice
+5): a sequential `GoSpec` IS a `GoSpecC` — no side conditions. The
+hinge is that `GoSpec`'s safety half (`ProgressExec`) confines every
+sequential run to the transferable classes (`.ok (.normal …)` or
+`.fuelOut`), so `execProg_single_eq_execStmt` pins the pool run to the
+sequential one verbatim: both halves of the concurrent judgment read
+off their sequential twins. This is D9(a) at judgment level — the
+sequential-degenerate lane of the concurrent carrier — and the theorem
+that makes `GoSpecC` inhabited (witness `goldenSpecC`); the
+concurrent-carrier (genuinely spawning, frame-quantified) instance
+remains the recorded debt in the witness-status note above. -/
+theorem goSpecC_of_goSpec {types : TypeEnv} {funcs : Array Func}
+    {methods : Array MethodInfo} {env₀ : LocalEnv} {P Q : HProp} {prog : Stmt}
+    (h : GoSpec types funcs methods env₀ P prog Q) :
+    GoSpecC types funcs methods env₀ P prog Q := by
+  constructor
+  · intro hp na hP F hinit fuel ch σf ch' hrun
+    rcases h.2 hp na hP F hinit fuel ch with ⟨σs, chs, hseq⟩ | hseq
+    · have hpool := execProg_single_eq_execStmt hseq trivial
+      rw [hrun] at hpool
+      injection hpool with hpair
+      injection hpair with hout hch
+      injection hout with hσ
+      subst hσ
+      subst hch
+      exact h.1 hp na hP F hinit fuel ch σf ch' hseq
+    · have hpool := execProg_single_eq_execStmt hseq trivial
+      rw [hrun] at hpool
+      cases hpool
+  · intro hp na hP F hinit fuel ch
+    rcases h.2 hp na hP F hinit fuel ch with ⟨σs, chs, hseq⟩ | hseq
+    · exact .inl ⟨σs, chs, execProg_single_eq_execStmt hseq trivial⟩
+    · exact .inr (execProg_single_eq_execStmt hseq trivial)
+
+/-- **Concurrent normal-pinned termination** (slice 5 — the first
+concrete concurrent `Terminates` notion, the one D5's
+fairness-precision note is stated against): the POOL run from `σ₀`
+completes at MAIN's `.normal` terminal — one fuel bound for EVERY
+choice stream, schedules and data latitude quantified together (D8's
+single stream). Because `execProg`'s error classes include `.deadlock`
+and `.raceDetected`, an instance of this notion asserts by itself that
+NO modeled schedule deadlocks or trips the race detector. Discharge
+route: the pool ∀-streams kernel checker (`allStreamsOkPool` +
+`execProgLoop_ok_of_allStreamsOkPool`, `MultiStreams.lean`) at one
+fuel, lifted to all larger fuels by `execProgLoop_mono` — the exact
+shape of the sequential `TerminatesNormally` discharge. -/
+def TerminatesNormallyC (env₀ : LocalEnv) (σ₀ : ExecState) (prog : Stmt) : Prop :=
+  ∃ N : Nat, ∀ fuel : Nat, N ≤ fuel → ∀ ch : Choices,
+    ∃ (σf : ExecState) (ch' : Choices),
+      execProg fuel env₀ σ₀ ch prog = .ok (.normal σf, ch')
 
 end GoLean.Surface

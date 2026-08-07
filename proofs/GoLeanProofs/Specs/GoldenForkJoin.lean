@@ -1,4 +1,5 @@
 import GoLeanProofs.Surface
+import GoLean.GoCore.MultiStreams
 
 /-!
 # The fork/join kernel witnesses (channels arc slice 2)
@@ -136,5 +137,89 @@ theorem forkJoinDeadlockCanonical : fjRunDeadlocks 400 [] = true := by
 theorem forkJoinDeadlockAdversarial :
     fjRunDeadlocks 400 [9, 8, 7, 6, 5, 4, 3, 2, 1, 0] = true := by
   decide +kernel
+
+
+/-! ## The slice-5 ∀-SCHEDULE witnesses — the `∀ ch` quantifier
+DISCHARGED (the pool ∀-streams kernel checker route the slice-2 note
+recorded; `allStreamsOkPool`, `MultiStreams.lean`).
+
+One kernel evaluation (`forkJoinAllStreamsCert`) explores EVERY choice
+stream's run of the fork/join program — the L1 scheduler branched at
+every multi-runnable boundary, every other step certified
+stream-oblivious — and the soundness theorem
+(`execProgLoop_ok_of_allStreamsOkPool`) turns it into: every schedule
+and every latitude stream completes the rendezvous at main's `.normal`
+terminal with the 42 readout. The pinned-stream witnesses above are
+subsumed but deliberately KEPT (byte-identical — the designated set
+grows by extension, never restatement). -/
+
+/-- The joined-final-state readout: the output cell holds 42. -/
+def fjReadout42 : ExecState → Bool := fun σf =>
+  match loadLoc σf (.base ⟨0⟩) with
+  | .ok (.int 42 .int) => true
+  | _ => false
+
+/-- The kernel certificate: the checker explores every schedule of the
+fork/join pool within fuel 400 and certifies the `.normal`/42 outcome
+on all of them. (The deadlock program of `fjRunDeadlocks` is REFUSED
+by the same checker — probed; a certificate for it cannot exist, since
+the soundness theorem would then contradict
+`forkJoinDeadlockCanonical`.) -/
+theorem forkJoinAllStreamsCert :
+    allStreamsOkPool fjReadout42 400
+      ⟨#[.exec forkJoinDriver fjEnv .stop], fjSeed, 0⟩ {} = true := by
+  decide +kernel
+
+/-- **THE ∀-SCHEDULE WITNESS**: EVERY choice stream — schedules and
+latitude together — runs the fork/join program to `.normal` with the
+output cell holding 42. The slice-2 pinned-stream witnesses are the
+`[]`/`[9,…,0]`/`[1,…,1]` instances of this statement. -/
+theorem forkJoinAllSchedules42 : ∀ ch : Choices, fjRunGives42 400 ch = true := by
+  intro ch
+  obtain ⟨σf, ch', hrun, hpost⟩ :=
+    execProgLoop_ok_of_allStreamsOkPool forkJoinAllStreamsCert ch
+  unfold fjRunGives42
+  rw [show execProg 400 fjEnv fjSeed ch forkJoinDriver
+      = execProgLoop 400 ⟨#[.exec forkJoinDriver fjEnv .stop], fjSeed, 0⟩ {} ch
+    from rfl, hrun]
+  simpa [fjReadout42] using hpost
+
+/-- First-order readout corollary: NO schedule of the fork/join program
+deadlocks (the run completes, so the `.deadlock` classification is
+unreachable on every stream). -/
+theorem forkJoinNoDeadlock : ∀ ch : Choices,
+    execProg 400 fjEnv fjSeed ch forkJoinDriver ≠ .error .deadlock := by
+  intro ch hcontra
+  obtain ⟨σf, ch', hrun, -⟩ :=
+    execProgLoop_ok_of_allStreamsOkPool forkJoinAllStreamsCert ch
+  rw [show execProg 400 fjEnv fjSeed ch forkJoinDriver
+      = execProgLoop 400 ⟨#[.exec forkJoinDriver fjEnv .stop], fjSeed, 0⟩ {} ch
+    from rfl, hrun] at hcontra
+  cases hcontra
+
+/-- First-order readout corollary: NO schedule of the fork/join program
+trips the race detector (`execProg` runs the detecting loop, and every
+stream's run completes `.ok`). -/
+theorem forkJoinNoRace : ∀ ch : Choices,
+    execProg 400 fjEnv fjSeed ch forkJoinDriver ≠ .error .raceDetected := by
+  intro ch hcontra
+  obtain ⟨σf, ch', hrun, -⟩ :=
+    execProgLoop_ok_of_allStreamsOkPool forkJoinAllStreamsCert ch
+  rw [show execProg 400 fjEnv fjSeed ch forkJoinDriver
+      = execProgLoop 400 ⟨#[.exec forkJoinDriver fjEnv .stop], fjSeed, 0⟩ {} ch
+    from rfl, hrun] at hcontra
+  cases hcontra
+
+/-- **Concurrent termination of the fork/join program** — the first
+`TerminatesNormallyC` instance (D5's ∀-stream `Terminates` claim, made
+concrete on a program IN the blocking-discipline class): one fuel bound
+works for every stream, lifted to all larger fuels by
+`execProgLoop_mono`. -/
+theorem forkJoinTerminatesNormallyC :
+    TerminatesNormallyC fjEnv fjSeed forkJoinDriver := by
+  refine ⟨400, fun fuel hfuel ch => ?_⟩
+  obtain ⟨σf, ch', hrun, -⟩ :=
+    execProgLoop_ok_of_allStreamsOkPool forkJoinAllStreamsCert ch
+  exact ⟨σf, ch', execProgLoop_mono hrun hfuel⟩
 
 end GoLean.Surface

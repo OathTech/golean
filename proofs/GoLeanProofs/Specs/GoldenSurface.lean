@@ -162,4 +162,16 @@ theorem goldenNotThree : goldenNotThree_statement := by
   injection hval with hn _
   exact absurd hn (by decide)
 
+
+/-- **The golden spec on the CONCURRENT carrier** (channels arc slice
+5) — `GoSpecC`'s inhabitation witness: the sequential `goldenSpec`
+transfers verbatim through `goSpecC_of_goSpec` (the conservation
+theorem at judgment level). Sequential-degenerate lane, marked so at
+the Surface witness-status note; the genuinely-spawning
+frame-quantified instance is the recorded successor debt. -/
+theorem goldenSpecC :
+    GoSpecC sliceLowered.typeDefs.toList sliceLowered.funcs
+      sliceLowered.methods outEnv outCell0 goldenDriver outCell2 :=
+  goSpecC_of_goSpec goldenSpec
+
 end GoLean.Surface

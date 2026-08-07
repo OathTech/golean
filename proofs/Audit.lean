@@ -245,7 +245,24 @@ open Lean in
     ``GoLean.Surface.forkJoinStreamAdversarial,
     ``GoLean.Surface.forkJoinStreamAlternating,
     ``GoLean.Surface.forkJoinDeadlockCanonical,
-    ``GoLean.Surface.forkJoinDeadlockAdversarial]
+    ``GoLean.Surface.forkJoinDeadlockAdversarial,
+    -- Channels arc slice 5 (2026-08-07): the ∀-SCHEDULE fork/join
+    -- witnesses (the pool ∀-streams kernel checker discharges the
+    -- `∀ ch` quantifier — every schedule + latitude stream completes
+    -- the rendezvous at .normal/42; deadlock- and race-freedom
+    -- first-order corollaries; the TerminatesNormallyC instance), and
+    -- the GoSpecC inhabitation witness `goldenSpecC` (the
+    -- conservation-transfer lane; the genuinely-spawning
+    -- frame-quantified instance is the recorded successor debt —
+    -- Surface.lean witness-status note). The pinned-stream slice-2
+    -- witnesses above stay byte-identical (growth by extension). The
+    -- Comparator landmark for this designated-set change remains OWED
+    -- at arc end.
+    ``GoLean.Surface.forkJoinAllSchedules42,
+    ``GoLean.Surface.forkJoinNoDeadlock,
+    ``GoLean.Surface.forkJoinNoRace,
+    ``GoLean.Surface.forkJoinTerminatesNormallyC,
+    ``GoLean.Surface.goldenSpecC]
   let mut lines : Array String := #[]
   let mut violations : Array String := #[]
   for t in designated do
@@ -400,6 +417,31 @@ open Lean in
 #guard_msgs in #print axioms GoLean.Surface.forkJoinDeadlockCanonical
 /-- info: 'GoLean.Surface.forkJoinDeadlockAdversarial' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Surface.forkJoinDeadlockAdversarial
+
+-- The slice-5 ∀-schedule fork/join witnesses + the GoSpecC
+-- inhabitation witness (channels arc slice 5). The ∀-stream family
+-- inherits Classical.choice through the checker soundness kit's
+-- sequential dependencies; all within the allowlist.
+/-- info: 'GoLean.Surface.forkJoinAllSchedules42' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Surface.forkJoinAllSchedules42
+/-- info: 'GoLean.Surface.forkJoinNoDeadlock' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Surface.forkJoinNoDeadlock
+/-- info: 'GoLean.Surface.forkJoinNoRace' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Surface.forkJoinNoRace
+/-- info: 'GoLean.Surface.forkJoinTerminatesNormallyC' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Surface.forkJoinTerminatesNormallyC
+/-- info: 'GoLean.Surface.goldenSpecC' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Surface.goldenSpecC
+-- The MultiWf discharge (the slice-2 scaffold's owed preservation) and
+-- the pool ∀-streams checker soundness kit.
+/-- info: 'GoLean.GoCore.Machine.stepMulti_wf' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.GoCore.Machine.stepMulti_wf
+/-- info: 'GoLean.GoCore.Machine.execProgLoop_ok_of_allStreamsOkPool' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.GoCore.Machine.execProgLoop_ok_of_allStreamsOkPool
+/-- info: 'GoLean.GoCore.Machine.execProgLoop_mono' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.GoCore.Machine.execProgLoop_mono
+/-- info: 'GoLean.Surface.goSpecC_of_goSpec' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Surface.goSpecC_of_goSpec
 /-- info: 'GoLean.GoCore.Machine.step_det' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.GoCore.Machine.step_det
 
@@ -766,13 +808,35 @@ example := @GoLean.GoCore.Machine.execStmt_mono
 example := @GoLean.Surface.Terminates
 example := @GoLean.Surface.ProgressExec
 example := @GoLean.Surface.GoSpecT
--- The CONCURRENT statement notions (channels arc slice 2; S2 audit
--- response: deletion/rename anchors like their sequential twins' — the
--- scaffold trio must not silently drift before slice 5 proves a
--- witness against it).
+-- The CONCURRENT statement notions (channels arc slice 2; slice 5:
+-- no longer an unwitnessed scaffold trio — `goldenSpecC` inhabits
+-- `GoSpecC` via the conservation transfer, and the fork/join
+-- ∀-schedule family discharges the `∀ ch` quantifier at the seed;
+-- the frame-quantified spawning instance is the recorded debt in
+-- Surface.lean's witness-status note).
 example := @GoLean.Surface.GoTripleC
 example := @GoLean.Surface.ProgressExecC
 example := @GoLean.Surface.GoSpecC
+example := @GoLean.Surface.goSpecC_of_goSpec
+example := @GoLean.Surface.TerminatesNormallyC
+example := @GoLean.Surface.goldenSpecC
+example := @GoLean.Surface.forkJoinAllSchedules42
+example := @GoLean.Surface.forkJoinTerminatesNormallyC
+-- The pool ∀-streams checker kit (slice 5) and the MultiWf discharge —
+-- deletion anchors: the checker, its soundness/obliviousness hinges,
+-- the fuel-mono lift, and the preservation theorem the slice-2
+-- scaffold owed.
+example := @GoLean.GoCore.Machine.allStreamsOkPool
+example := @GoLean.GoCore.Machine.execProgLoop_ok_of_allStreamsOkPool
+example := @GoLean.GoCore.Machine.stepThread_oblivious
+example := @GoLean.GoCore.Machine.raceUpdate_oblivious
+example := @GoLean.GoCore.Machine.poolThreadOblivious_nsel
+example := @GoLean.GoCore.Machine.execProgLoop_mono
+example := @GoLean.GoCore.Machine.stepMulti_wf
+example := @GoLean.GoCore.Machine.applyPairing_wf
+example := @GoLean.GoCore.Machine.resumeThread_wf
+example := @GoLean.GoCore.Machine.spawnStep_wf
+example := @GoLean.GoCore.Machine.stepThread_wf
 -- The NPDRF reduction obligation's statement layer (channels arc slice
 -- 3; scaffold — a Prop-valued DEFINITION in DRAFT form, REFUTABLE as
 -- written per NPDRF.lean obstruction 4: nothing may cite it, not even

@@ -276,4 +276,30 @@ theorem forkJoinDeadlockCanonical : fjRunDeadlocks 400 [] = true := sorry
 theorem forkJoinDeadlockAdversarial :
     fjRunDeadlocks 400 [9, 8, 7, 6, 5, 4, 3, 2, 1, 0] = true := sorry
 
+/-! ## The slice-5 ∀-SCHEDULE fork/join witnesses: the `∀ ch`
+quantifier discharged — EVERY choice stream (schedules + latitude,
+D8's single stream) completes the fork/join rendezvous at main's
+`.normal` terminal with the 42 readout; deadlock- and race-freedom on
+every modeled schedule as first-order corollaries; and the
+`TerminatesNormallyC` instance (one fuel bound, every stream). Plus
+`goldenSpecC`: the full concurrent surface judgment `GoSpecC`,
+inhabited on the golden program via the sequential-conservation lane. -/
+
+theorem forkJoinAllSchedules42 : ∀ ch : Choices, fjRunGives42 400 ch = true :=
+  sorry
+
+theorem forkJoinNoDeadlock : ∀ ch : Choices,
+    execProg 400 fjEnv fjSeed ch forkJoinDriver ≠ .error .deadlock := sorry
+
+theorem forkJoinNoRace : ∀ ch : Choices,
+    execProg 400 fjEnv fjSeed ch forkJoinDriver ≠ .error .raceDetected := sorry
+
+theorem forkJoinTerminatesNormallyC :
+    TerminatesNormallyC fjEnv fjSeed forkJoinDriver := sorry
+
+open GoLean.Iris.GoldenSlice in
+theorem goldenSpecC :
+    GoSpecC sliceLowered.typeDefs.toList sliceLowered.funcs
+      sliceLowered.methods outEnv outCell0 goldenDriver outCell2 := sorry
+
 end Judge

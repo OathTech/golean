@@ -274,4 +274,27 @@ theorem forkJoinDeadlockAdversarial :
     fjRunDeadlocks 400 [9, 8, 7, 6, 5, 4, 3, 2, 1, 0] = true :=
   GoLean.Surface.forkJoinDeadlockAdversarial
 
+/-! ## The slice-5 ∀-schedule fork/join witnesses + GoSpecC witness -/
+
+theorem forkJoinAllSchedules42 : ∀ ch : Choices, fjRunGives42 400 ch = true :=
+  GoLean.Surface.forkJoinAllSchedules42
+
+theorem forkJoinNoDeadlock : ∀ ch : Choices,
+    execProg 400 fjEnv fjSeed ch forkJoinDriver ≠ .error .deadlock :=
+  GoLean.Surface.forkJoinNoDeadlock
+
+theorem forkJoinNoRace : ∀ ch : Choices,
+    execProg 400 fjEnv fjSeed ch forkJoinDriver ≠ .error .raceDetected :=
+  GoLean.Surface.forkJoinNoRace
+
+theorem forkJoinTerminatesNormallyC :
+    TerminatesNormallyC fjEnv fjSeed forkJoinDriver :=
+  GoLean.Surface.forkJoinTerminatesNormallyC
+
+open GoLean.Iris.GoldenSlice in
+theorem goldenSpecC :
+    GoSpecC sliceLowered.typeDefs.toList sliceLowered.funcs
+      sliceLowered.methods outEnv outCell0 goldenDriver outCell2 :=
+  GoLean.Surface.goldenSpecC
+
 end Judge
