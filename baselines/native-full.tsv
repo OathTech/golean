@@ -1,22 +1,20 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-07  commit: channels-arc-maint (BUG-042 red-first pins: IncDec synthetic-1 kind matrix)
+# recorded: 2026-08-07  commit: channels-arc-maint (BUG-042 fixed: IncDec synthetic-1 takes the operand's underlying kind)
 #   frontend: native  oracle: go run (strict lane) / go-run membership in the
 #   machine-enumerated observation set, sampled plain AND under -race
 #   (membership lane; go1.26.5) / schedule-tree singleton certification +
 #   strict go-run equality (confluent lane) / every-enumerated-path-refuses
 #   + go run -race red (racy lane; never combined with deadlock)
-# manifest_cases: 1188  pass: 1084  fail: 104
-# Re-pin reason: deliberate coverage change — 12 new ids, zero drift on
-#   every prior id. BUG-042 red-first pin matrix (grossmith seed 559,
-#   docs/2026-08-07_grossmith-findings.md §1): the IncDec desugar's
-#   synthetic 1 takes the default int kind instead of the operand's
-#   underlying kind. 11 red at lean-observation (stuck, not wrong):
-#   ints/defined-incdec/{inc,dec}-{signed,unsigned}[-wrap] (8),
-#   floats/defined-incdec, maps/incdec-value-kinds/{uint8,defined}
-#   (the map facet: emitMapCompound's synthetic 1 is default-int for
-#   every non-float value kind, even unnamed uint8). 1 green control:
-#   ints/defined-incdec/unnamed-control (unnamed int8 — localizes the
-#   defect to named-type resolution). All 11 listed in BUGS.md BUG-042.
+# manifest_cases: 1188  pass: 1095  fail: 93
+# Re-pin reason: BUG-042 fixed — both IncDec desugar sites resolve the
+#   synthetic 1's kind through Underlying() (emitIncDec through defined
+#   types; emitMapCompound for integer value kinds, completing F3's
+#   float-only resolution), and the decoder's incdec arm fails closed on
+#   a non-numeric carried type instead of defaulting to int. Exactly the
+#   11 BUG-042 pins flip FAIL/lean-observation -> PASS
+#   (ints/defined-incdec/{inc,dec}-{signed,unsigned}[-wrap],
+#   floats/defined-incdec, maps/incdec-value-kinds/{uint8,defined});
+#   zero drift on every other id.
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
 PASS	arrays/array-copy	-
@@ -360,7 +358,7 @@ PASS	embedding/value-embedded-pointer-promotion/dynamic-dispatch	-
 PASS	embedding/value-embedded-pointer-promotion/static-call	-
 PASS	embedding/value-embedded-pointer-promotion/value-box-satisfies	-
 PASS	floats/compound-assign	-
-FAIL	floats/defined-incdec	lean-observation
+PASS	floats/defined-incdec	-
 PASS	floats/defined-type-ops	-
 PASS	floats/division-specials	-
 PASS	floats/finite-arithmetic	-
@@ -685,14 +683,14 @@ PASS	ints/break-continue	-
 PASS	ints/byte-conversion	-
 PASS	ints/compound-assign-wrap	-
 PASS	ints/conversion-width-matrix	-
-FAIL	ints/defined-incdec/dec-signed	lean-observation
-FAIL	ints/defined-incdec/dec-signed-wrap	lean-observation
-FAIL	ints/defined-incdec/dec-unsigned	lean-observation
-FAIL	ints/defined-incdec/dec-unsigned-wrap	lean-observation
-FAIL	ints/defined-incdec/inc-signed	lean-observation
-FAIL	ints/defined-incdec/inc-signed-wrap	lean-observation
-FAIL	ints/defined-incdec/inc-unsigned	lean-observation
-FAIL	ints/defined-incdec/inc-unsigned-wrap	lean-observation
+PASS	ints/defined-incdec/dec-signed	-
+PASS	ints/defined-incdec/dec-signed-wrap	-
+PASS	ints/defined-incdec/dec-unsigned	-
+PASS	ints/defined-incdec/dec-unsigned-wrap	-
+PASS	ints/defined-incdec/inc-signed	-
+PASS	ints/defined-incdec/inc-signed-wrap	-
+PASS	ints/defined-incdec/inc-unsigned	-
+PASS	ints/defined-incdec/inc-unsigned-wrap	-
 PASS	ints/defined-incdec/unnamed-control	-
 PASS	ints/defined-int-conversion	-
 PASS	ints/defined-type-ops	-
@@ -735,8 +733,8 @@ PASS	maps/delete-nil-key-types	-
 PASS	maps/delete-nil-map	-
 PASS	maps/delete-nil-value-types	-
 FAIL	maps/imported-named-key-unhashable	lean-observation
-FAIL	maps/incdec-value-kinds/defined	lean-observation
-FAIL	maps/incdec-value-kinds/uint8	lean-observation
+PASS	maps/incdec-value-kinds/defined	-
+PASS	maps/incdec-value-kinds/uint8	-
 PASS	maps/index-assign-eval-order	-
 PASS	maps/interface-dynamic-type-key	-
 PASS	maps/interface-key	-

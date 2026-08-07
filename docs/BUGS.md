@@ -31,7 +31,13 @@ differential-pinned) `- Cases: <id>, <id>, …` (baseline case ids), then prose.
 
 ## BUG-042 — IncDec desugar's synthetic 1 takes the default int kind instead of the operand's underlying kind (defined types; map values of any non-default kind)
 
-- Status: open
+- Status: fixed (2026-08-07, channels-arc-maint — both desugar sites
+  resolve the carried kind through `Underlying()` mirroring
+  `emitConstValue` (`emitIncDec` keeps the substitution-aware `typeOf`
+  path for non-basic underlying, i.e. type parameters outside a
+  stencil); the decoder's incdec arm now FAILS CLOSED on a non-numeric
+  carried type instead of silently defaulting to int. All 11 pinned
+  cases flip PASS; unnamed control stays green.)
 - Pinned-by: differential
 - Cases: ints/defined-incdec/inc-signed, ints/defined-incdec/dec-signed, ints/defined-incdec/inc-unsigned, ints/defined-incdec/dec-unsigned, ints/defined-incdec/inc-signed-wrap, ints/defined-incdec/dec-signed-wrap, ints/defined-incdec/inc-unsigned-wrap, ints/defined-incdec/dec-unsigned-wrap, floats/defined-incdec, maps/incdec-value-kinds/uint8, maps/incdec-value-kinds/defined
 - Discovered: 2026-08-07 (external: the grossmith differential

@@ -2859,17 +2859,25 @@ func (e *emitter) emitMapCompound(ix *ast.IndexExpr, mt *types.Map, op string, r
 	if err != nil {
 		return nil, err
 	}
+	// The synthetic 1 (m[k]++/--) takes the VALUE type's UNDERLYING kind:
+	// float kinds since the floats slice (F3), integer kinds since BUG-042
+	// (m[k]++ over uint8 — or any defined-type — values previously
+	// synthesized a default-int 1 and went stuck at the add). ++/-- is
+	// go/types-checked numeric, so a non-numeric underlying here is
+	// unreachable; the default-int literal below is kept only for that
+	// vacuous arm rather than inventing a new failure mode.
 	var rhs any = map[string]any{"expr": "int", "value": "1",
 		"type": map[string]any{"kind": "int", "int": "int"}}
-	// m[k]++ over FLOAT values: the synthetic 1 must be float-kinded
-	// (floats slice F3 — an int literal would be a kind-mismatched
-	// operand in the machine).
-	if vb, ok := mt.Elem().Underlying().(*types.Basic); ok && vb.Info()&types.IsFloat != 0 {
+	if vb, ok := mt.Elem().Underlying().(*types.Basic); ok && vb.Info()&(types.IsFloat|types.IsInteger) != 0 {
 		vt, err := e.emitBasic(vb)
 		if err != nil {
 			return nil, err
 		}
-		rhs = map[string]any{"expr": "float", "num": "1", "den": "1", "type": vt}
+		if vb.Info()&types.IsFloat != 0 {
+			rhs = map[string]any{"expr": "float", "num": "1", "den": "1", "type": vt}
+		} else {
+			rhs = map[string]any{"expr": "int", "value": "1", "type": vt}
+		}
 	}
 	if rhsExpr != nil {
 		rhs, err = e.emitExpr(rhsExpr)
@@ -2902,8 +2910,19 @@ func (e *emitter) emitIncDec(st *ast.IncDecStmt) (any, error) {
 		return nil, err
 	}
 	// Carry the operand type so the synthetic 1 literal takes the operand's
-	// integer kind (otherwise uint8-- would mix uint8 with an int literal).
-	ty, err := e.typeOf(st.X)
+	// integer kind (otherwise uint8-- would mix uint8 with an int literal) —
+	// resolved through DEFINED types to the UNDERLYING basic kind, the same
+	// resolution emitConstValue applies to defined-typed literals (BUG-042,
+	// grossmith seed 559: a {"kind":"named"} wire type made the decoder's
+	// literal-kind lookup fall to the default int, so T1(5)++ desugared to
+	// an int8 + int add and went stuck). Non-basic underlying (a type
+	// parameter outside a stencil) keeps the substitution-aware typeOf path.
+	var ty any
+	if b, ok := e.goTypeOf(st.X).Underlying().(*types.Basic); ok {
+		ty, err = e.emitBasic(b)
+	} else {
+		ty, err = e.typeOf(st.X)
+	}
 	if err != nil {
 		return nil, err
 	}

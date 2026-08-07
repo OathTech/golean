@@ -541,9 +541,16 @@ partial def decodeStmt (results : Array Param) (path : String) (json : Json) : L
       -- The synthetic 1 takes the OPERAND's kind: float operands get a
       -- float-kinded literal (floats slice F3 — an int 1 would be a
       -- kind-mismatched operand in the machine; floats/incdec pins it).
-      let one : Expr := match (← optType path obj) with
-        | some (.float k) => .floatLit 1 1 k
-        | t => .intLit 1 (intKindOfOptType t)
+      -- FAIL CLOSED on a non-numeric carried type (BUG-042: a named wire
+      -- type silently defaulted to int here, producing a kind-mismatched
+      -- add; the frontend now resolves defined types to the underlying
+      -- basic kind, and a named type reaching this slot again is a
+      -- frontend defect, never a default).
+      let one : Expr ← match (← optType path obj) with
+        | some (.float k) => pure (.floatLit 1 1 k)
+        | some (.int k) => pure (.intLit 1 k)
+        | none => pure (.intLit 1 .int)
+        | some other => fail s!"incdec at {path} carries a non-numeric operand type ({repr other}) — the synthetic 1 has no kind to take"
       let rhs := if op == "-" then Expr.sub read one else Expr.add read one
       pure (.assign t.assignee rhs)
   | "compound-assign" =>
