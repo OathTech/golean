@@ -45,3 +45,14 @@ goroutines/sched-dependent/first-come
 #   position refuses with a precise .unsupported. Flips when a later
 #   slice runs init on the pool.
 goroutines/spawn-in-init/in-init
+# goroutines/sched-dependent/select-default-handshake and
+# goroutines/sched-dependent/len-handoff: DELIBERATE slice-4 red pins
+#   (S2 audit response): the two audit majors' envelope shapes —
+#   select-with-default vs a maybe-parked partner ({7,99}) and
+#   handoff-vs-transit buffer occupancy ({100,110}) — declared
+#   membership; the waiter-priority fix makes gc's dominant outcomes
+#   reachable, and the schedule enumerator (slice 4) certifies the
+#   sets. Not fidelity bugs; the deterministic discriminators are the
+#   stream-pinned pool eval-test pins that landed green with the fix.
+goroutines/sched-dependent/select-default-handshake
+goroutines/sched-dependent/len-handoff

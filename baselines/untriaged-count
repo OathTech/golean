@@ -96,4 +96,9 @@
 #   goroutines reds (spawn-edge/nil-func-fatal at the go-run stage,
 #   spawn-edge/child-recovers at frontend-export) are stage-classified
 #   gaps, not fidelity entries.
-18
+# 2026-08-07 (S2 audit response)  18 -> 20: the two sched-dependent
+#   membership red pins for the audit-major envelope shapes enter
+#   (select-default-handshake, len-handoff — see untriaged-ids; same
+#   deliberate slice-4 class as first-come). The three other new ids
+#   land PASS.
+20

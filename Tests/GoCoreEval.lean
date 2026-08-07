@@ -572,6 +572,163 @@ private def poolProgram : GoCore.Program := {
     poolNilSpawnFunction]
 }
 
+/-! ### Waiter-queue priority (S2 audit response, major findings):
+gc consults parked waiters BEFORE the buffer. Stream-pinned pool runs
+— deterministic given the stream — discriminate handoff/refill from
+the old buffer-transit model; go-run oracle values recorded per pin.
+Streams [1,1] drive the worker to park FIRST (pick the worker at the
+two scheduling points); [] leaves the worker unstarted at main's
+decision point. -/
+
+private def prioRecvOutWorkerFunction : GoCore.Func := {
+  id := ⟨"prioRecvOutWorker_F"⟩,
+  args := #[{ id := "ch", typ := .chan .both .int },
+            { id := "out", typ := .chan .both .int }],
+  results := #[],
+  body := .block
+    #[{ id := "v", typ := .int }]
+    #[
+      .chanRecv #[.var "v"] (.var "ch") .int,
+      .chanSend (.var "out") (.var "v") .int
+    ]
+}
+
+-- go oracle (handoff): parked receiver + buffered send -> DIRECT
+-- handoff, len stays 0 => 1*100 + 0*10 = 100 (old model buffered:
+-- len 1 => 110).
+private def prioSendHandoffMainFunction : GoCore.Func := {
+  id := ⟨"prioSendHandoffMain_F"⟩,
+  args := #[],
+  results := #[coreParam "z"],
+  body := .block
+    #[{ id := "chv", typ := .chan .both .int },
+      { id := "outv", typ := .chan .both .int },
+      { id := "l", typ := .int },
+      { id := "r", typ := .int }]
+    #[
+      .makeChan (.var "chv") .int (some (.intLit 2)),
+      .makeChan (.var "outv") .int (some (.intLit 1)),
+      .goStmt (.funcVal ⟨"prioRecvOutWorker_F"⟩ #[]) #[.var "chv", .var "outv"],
+      .chanSend (.var "chv") (.intLit 1) .int,
+      .assign (.var "l") (.length (.var "chv") (some (.chan .both .int))),
+      .chanRecv #[.var "r"] (.var "outv") .int,
+      .assign (.var "z")
+        (.add (.mul (.var "r") (.intLit 100)) (.mul (.var "l") (.intLit 10)))
+    ]
+}
+
+private def prioSendSendWorkerFunction : GoCore.Func := {
+  id := ⟨"prioSendSendWorker_F"⟩,
+  args := #[{ id := "ch", typ := .chan .both .int },
+            { id := "out", typ := .chan .both .int }],
+  results := #[],
+  body := .seqn #[
+    .chanSend (.var "ch") (.intLit 9) .int,
+    .chanSend (.var "out") (.intLit 1) .int
+  ]
+}
+
+-- go oracle (refill): receive against a parked sender over a FULL
+-- buffer takes the head AND refills from the sender in one step —
+-- len stays 1 => 5*1000 + 1*100 + 9*10 + 1 = 5191 (old model: len 0
+-- until the sender's separate room-wake => 5091).
+private def prioRecvRefillMainFunction : GoCore.Func := {
+  id := ⟨"prioRecvRefillMain_F"⟩,
+  args := #[],
+  results := #[coreParam "z"],
+  body := .block
+    #[{ id := "chv", typ := .chan .both .int },
+      { id := "outv", typ := .chan .both .int },
+      { id := "l", typ := .int },
+      { id := "r", typ := .int },
+      { id := "r2", typ := .int },
+      { id := "o", typ := .int }]
+    #[
+      .makeChan (.var "chv") .int (some (.intLit 1)),
+      .makeChan (.var "outv") .int (some (.intLit 1)),
+      .chanSend (.var "chv") (.intLit 5) .int,
+      .goStmt (.funcVal ⟨"prioSendSendWorker_F"⟩ #[]) #[.var "chv", .var "outv"],
+      .chanRecv #[.var "r"] (.var "chv") .int,
+      .assign (.var "l") (.length (.var "chv") (some (.chan .both .int))),
+      .chanRecv #[.var "r2"] (.var "chv") .int,
+      .chanRecv #[.var "o"] (.var "outv") .int,
+      .assign (.var "z")
+        (.add (.mul (.var "r") (.intLit 1000))
+          (.add (.mul (.var "l") (.intLit 100))
+            (.add (.mul (.var "r2") (.intLit 10)) (.var "o"))))
+    ]
+}
+
+private def prioSendSevenWorkerFunction : GoCore.Func := {
+  id := ⟨"prioSendSevenWorker_F"⟩,
+  args := #[{ id := "ch", typ := .chan .both .int }],
+  results := #[],
+  body := .seqn #[.chanSend (.var "ch") (.intLit 7) .int]
+}
+
+-- go oracle: a select WITH default sees a parked sender (selectgo
+-- consults the sudog queues) => communication case, 7. Old model:
+-- cell-blind readiness took default => 99.
+private def prioSelectDefaultRecvMainFunction : GoCore.Func := {
+  id := ⟨"prioSelectDefaultRecvMain_F"⟩,
+  args := #[],
+  results := #[coreParam "z"],
+  body := .block
+    #[{ id := "chv", typ := .chan .both .int }]
+    #[
+      .makeChan (.var "chv") .int none,
+      .goStmt (.funcVal ⟨"prioSendSevenWorker_F"⟩ #[]) #[.var "chv"],
+      .selectStmt #[
+        (.recv #[.var "z"] (.var "chv") .int, .seqn #[])
+      ] (some (.assign (.var "z") (.intLit 99)))
+    ]
+}
+
+private def prioRecvForwardWorkerFunction : GoCore.Func := {
+  id := ⟨"prioRecvForwardWorker_F"⟩,
+  args := #[{ id := "ch", typ := .chan .both .int },
+            { id := "out", typ := .chan .both .int }],
+  results := #[],
+  body := .block
+    #[{ id := "v", typ := .int }]
+    #[
+      .chanRecv #[.var "v"] (.var "ch") .int,
+      .chanSend (.var "out") (.var "v") .int
+    ]
+}
+
+-- go oracle: a select WITH default sees a parked receiver on its SEND
+-- clause => communication case, worker forwards 3 => 10 + 3 = 13.
+-- Old model: default => 99.
+private def prioSelectDefaultSendMainFunction : GoCore.Func := {
+  id := ⟨"prioSelectDefaultSendMain_F"⟩,
+  args := #[],
+  results := #[coreParam "z"],
+  body := .block
+    #[{ id := "chv", typ := .chan .both .int },
+      { id := "outv", typ := .chan .both .int },
+      { id := "o", typ := .int }]
+    #[
+      .makeChan (.var "chv") .int none,
+      .makeChan (.var "outv") .int (some (.intLit 1)),
+      .goStmt (.funcVal ⟨"prioRecvForwardWorker_F"⟩ #[]) #[.var "chv", .var "outv"],
+      .selectStmt #[
+        (.send (.var "chv") (.intLit 3) .int,
+          .seqn #[
+            .chanRecv #[.var "o"] (.var "outv") .int,
+            .assign (.var "z") (.add (.intLit 10) (.var "o"))
+          ])
+      ] (some (.assign (.var "z") (.intLit 99)))
+    ]
+}
+
+private def prioProgram : GoCore.Program := {
+  funcs := #[prioRecvOutWorkerFunction, prioSendHandoffMainFunction,
+    prioSendSendWorkerFunction, prioRecvRefillMainFunction,
+    prioSendSevenWorkerFunction, prioSelectDefaultRecvMainFunction,
+    prioRecvForwardWorkerFunction, prioSelectDefaultSendMainFunction]
+}
+
 private def coreMapBasicFunction : GoCore.Func := {
   id := ⟨"map_basic_F"⟩,
   args := #[],
@@ -1524,6 +1681,16 @@ def main : IO UInt32 := do
     (GoCore.Machine.runProgramPoolM 100000 poolProgram "poolCloseWakeMain_F" #[]) 55)
   passed := passed && (← expectErrorStatus "GoCore pool nil spawn callee fail-closed (gc fatal unmodeled)"
     (GoCore.Machine.runProgramPoolM 100000 poolProgram "poolNilSpawn_F" #[]) "unsupported")
+  passed := passed && (← expectIntResult "GoCore pool waiter priority: buffered send hands off to the parked receiver (len 0; gc chansend recvq-first)"
+    (GoCore.Machine.runProgramPoolM 100000 prioProgram "prioSendHandoffMain_F" #[] [1, 1]) 100)
+  passed := passed && (← expectIntResult "GoCore pool waiter priority: receive refills from the parked sender (len preserved; gc recv same-slot)"
+    (GoCore.Machine.runProgramPoolM 100000 prioProgram "prioRecvRefillMain_F" #[] [1, 1]) 5191)
+  passed := passed && (← expectIntResult "GoCore pool waiter-extended select: default loses to a parked sender"
+    (GoCore.Machine.runProgramPoolM 100000 prioProgram "prioSelectDefaultRecvMain_F" #[] [1, 1]) 7)
+  passed := passed && (← expectIntResult "GoCore pool waiter-extended select: default loses to a parked receiver (send clause)"
+    (GoCore.Machine.runProgramPoolM 100000 prioProgram "prioSelectDefaultSendMain_F" #[] [1, 1]) 13)
+  passed := passed && (← expectIntResult "GoCore pool select default IS taken with no parked partner (envelope's other member, stream [])"
+    (GoCore.Machine.runProgramPoolM 100000 prioProgram "prioSelectDefaultRecvMain_F" #[] []) 99)
   passed := passed && (← expectIntResult "GoCore string basic" (GoCore.Machine.runFunctionM 100000 coreStringFunction #[]) 22)
   passed := passed && (← expectIntResult "GoCore string byte length" (GoCore.Machine.runFunctionM 100000 coreStringByteLenFunction #[]) 6)
   passed := passed && (← expectValues "GoCore string byte indexing"

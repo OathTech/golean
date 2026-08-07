@@ -1,20 +1,23 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-07  commit: channels-arc-s2 (goroutines + ThreadPool: go statements, spawn, pairing/wake, multi-goroutine deadlock, main-exit)
+# recorded: 2026-08-07  commit: channels-arc-s2 (S2 audit response: gc waiter-queue PRIORITY — channel/select ops consult parked partners before the buffer; waiter-extended select readiness)
 #   frontend: native  oracle: go run (strict lane) / go-run membership in the
 #   machine-enumerated observation set (membership lane; go1.26.5 samples)
-# manifest_cases: 1140  pass: 1047  fail: 93
-# Re-pin reason: deliberate coverage change — the ThreadPool machine
-#   (slice 2) makes `go` statements live: the program driver runs the
-#   subject on the pool (runProgramPoolM; single-goroutine programs are
-#   bit-identical per execProg_single_eq_execStmt — verified: ZERO
-#   drift on all 1102 prior ids in this run). 38 new goroutines/ ids:
-#   34 flip PASS; 4 deliberate red pins — sched-dependent/first-come
-#   (membership; schedule enumeration is slice 4),
-#   spawn-edge/nil-func-fatal (gc's "go of nil func value" fatal class,
-#   unmodeled — fail-closed refusal), spawn-edge/child-recovers (bare
-#   recover() statement lowering gap, per-decl quarantine),
-#   spawn-in-init (go during $pkginit stays fail-closed this slice).
-PASS	arrays/array-bounds	-
+# manifest_cases: 1145  pass: 1050  fail: 95
+# Re-pin reason: deliberate coverage change (S2 pre-merge audit
+#   response). The waiter-priority redesign (arrivalPlan: sends hand
+#   off to parked receivers before buffering, receives refill from
+#   parked senders, select readiness waiter-extended incl. default) is
+#   ZERO-drift on all 1140 prior ids in this run. 5 new ids: 3 PASS
+#   (spawn-edge/{nil-interface-recovered,ptr-box-child-aborts} — the
+#   two spawn-position dispatch classes; buffered-wake/len-after-join
+#   — first len/cap goroutines coverage) and 2 deliberate membership
+#   red pins for slice 4's schedule enumerator
+#   (sched-dependent/{select-default-handshake,len-handoff} — the two
+#   audit majors' envelope shapes; the fix makes gc's dominant
+#   outcomes reachable, enumeration certifies the sets). This re-pin
+#   also drops the duplicated arrays/array-bounds row the previous
+#   re-pin introduced (now guarded: coverage-baseline-diff fails on
+#   duplicate baseline ids).
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
 PASS	arrays/array-copy	-
@@ -496,6 +499,7 @@ PASS	generics/zero-composite	-
 PASS	generics/zero-values	-
 PASS	goroutines/buffered-wake/cap-one	-
 PASS	goroutines/buffered-wake/fifo	-
+PASS	goroutines/buffered-wake/len-after-join	-
 PASS	goroutines/close-wake/receiver	-
 PASS	goroutines/close-wake/receiver-drain-first	-
 PASS	goroutines/close-wake/sender-full-buffer	-
@@ -522,6 +526,8 @@ PASS	goroutines/pipeline/two-stage	-
 PASS	goroutines/rendezvous-hb/recv-hb	-
 PASS	goroutines/rendezvous-hb/send-hb	-
 FAIL	goroutines/sched-dependent/first-come	membership
+FAIL	goroutines/sched-dependent/len-handoff	membership
+FAIL	goroutines/sched-dependent/select-default-handshake	membership
 PASS	goroutines/select-wake/buffered-data	-
 PASS	goroutines/select-wake/closed	-
 PASS	goroutines/select-wake/recv	-
@@ -529,6 +535,8 @@ PASS	goroutines/select-wake/send	-
 PASS	goroutines/spawn-edge/child-panic-aborts	-
 FAIL	goroutines/spawn-edge/child-recovers	frontend-export
 FAIL	goroutines/spawn-edge/nil-func-fatal	go-run
+PASS	goroutines/spawn-edge/nil-interface-recovered	-
+PASS	goroutines/spawn-edge/ptr-box-child-aborts	-
 FAIL	goroutines/spawn-in-init/in-init	lean-observation
 PASS	goroutines/worker-pool/shared-feed	-
 PASS	goroutines/worker-pool/sum	-

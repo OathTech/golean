@@ -27,22 +27,40 @@ Design points (docs/2026-08-06_channels-arc-design.md):
   unconditional consumption would desynchronize every existing
   adversarial-stream run; sequential conservation depends on this.
 
-* **D7 — pairing over waiter queues.** Blocked goroutines are the
-  slice-1 blocked-Config shapes; channels hold NO waiter queues.
-  Rendezvous is the ARRIVAL INTERCEPT: when a goroutine's channel op
-  would park, the pool first looks for matching parked partners and
-  performs the direct handoff in the same step (gc's shape: an arriving
-  op never parks when it can proceed). Parked goroutines are woken by
-  CELL changes only (close, buffer data, buffer room) — which restores
-  hchan's invariant analogue: matched parked-parked pairs cannot
-  coexist, so a close can never steal an already-pairable rendezvous
-  (the too-wide close-window divergence this design rules out).
+* **D7 — pairing over waiter queues, WITH gc's waiter-queue
+  PRIORITY** (re-designed at the S2 audit response — the original
+  arrival intercept fired only when the op would BLOCK, so buffered
+  ops bypassed parked waiters, gc's handoff observation was
+  unreachable, and the invariant claimed below was FALSE for buffered
+  channels). Blocked goroutines are the slice-1 blocked-Config shapes;
+  channels hold NO waiter queues. Every channel/select op at its apply
+  position consults PARKED PARTNERS FIRST (`arrivalPlan` — gc:
+  `chansend` dequeues `recvq` BEFORE testing buffer room, `chanrecv`
+  dequeues `sendq` before draining the buffer): a matched send-side
+  arrival hands off directly; a matched receive-side arrival against a
+  full buffer takes the HEAD and refills from the parked sender in the
+  same step (gc's `recv()`). Only a partnerless op touches the cell.
+  Parked goroutines are woken by CELL changes only (close; buffer
+  data/room, both now unreachable beside a parked partner).
 
-* **FIFO through handoff.** A direct handoff is performed ONLY when the
-  channel's buffer is empty — otherwise the newest value would jump the
-  queue past buffered elements (spec: "Channels act as first-in-first-out
-  queues"). With a nonempty buffer the arriving op parks and the values
-  flow through the buffer.
+  **The hchan-invariant analogue, RESTORED and re-argued** (chan.go
+  L17-18): (i) a parked receiver never coexists with a nonempty
+  buffer — sends with parked receivers hand off and never enqueue
+  (`applyPairing` asserts `.internal` on a breach rather than jumping
+  the queue); (ii) a parked sender never coexists with buffer room —
+  senders park only on full buffers and receives against parked
+  senders refill the slot they drain; hence (iii) matched parked-
+  parked pairs cannot coexist on ANY capacity (a parked receiver
+  implies an empty buffer and a parked sender a full one — cap 0 —
+  where both arrival directions pair before parking), so a close can
+  never steal an already-pairable rendezvous (the too-wide
+  close-window divergence this design rules out).
+
+* **FIFO through pressure.** A direct handoff happens only against an
+  empty buffer (implied by invariant (i)); a receive meeting a parked
+  sender over a nonempty buffer gets the buffer HEAD, the sender's
+  value entering at the tail (spec: "Channels act as first-in-first-out
+  queues"; probe p18's same-slot trick).
 
 * **D6 — main-exit.** Main (goroutine 0) reaching a terminal ends the
   program with main's outcome; other goroutines are discarded mid-flight
@@ -183,11 +201,22 @@ the shared state and fork the body as a fresh goroutine under a
 targetless, resultless barrier frame (results are discarded — spec:
 "they are discarded when the function completes"; the deferred-call
 frame precedent). Returns (parent successor, child config, state).
-A frame-ENTRY panic (nil-interface dispatch and friends) fires in the
-CHILD — its first observable act is aborting on that panic. A nil
-callee is gc's "go of nil func value" runtime FATAL at the spawn
-(probed 2026-08-07, refuting the older child-panic analysis): the
-fatal class is unmodeled — fail closed. -/
+A frame-ENTRY panic from the nil POINTER-BOX auto-deref class fires in
+the CHILD — its first observable act is aborting on that panic (probed:
+`go i.M()` with a nil *T box aborts in the spawned goroutine; pinned by
+goroutines/spawn-edge/ptr-box-child-aborts). The OTHER `.panic` class
+`enterFrame` can raise — dynamic dispatch on a NIL INTERFACE — fires in
+the SPAWNER in gc, recoverably (probed; S2 audit): that class never
+reaches this arm because the frontend hoists the nil-interface check
+before the go statement (pinned by
+goroutines/spawn-edge/nil-interface-recovered); the two classes are
+indistinguishable from the panic message here, so any future lowering
+that leaks the nil-interface class through a spawn would be misrouted
+to a child abort by this arm — keep the hoist, or split the classes
+upstream (recorded hazard, S2 audit response). A nil callee is gc's
+"go of nil func value" runtime FATAL at the spawn (probed 2026-08-07,
+refuting the older child-panic analysis): the fatal class is unmodeled
+— fail closed. -/
 def spawnStep (s : ExecState) (cv : GoValue) (args : List GoValue) (k : Cont) :
     Except GoError (Config × Config × ExecState) := do
   match cv with
@@ -318,107 +347,234 @@ def PairTarget.isSelect : PairTarget → Bool
   | .selectWaiter _ _ => true
   | _ => false
 
-/-- THE WAITER-PAIRING candidates of an arriving blocked outcome — the
-L4 envelope site (design D4; ground-truth §6 row L4): the spec has NO
-text on which of several matching parked waiters pairs with an arriving
-operation (gc's FIFO wakeup is one legal point, membership-lane
-territory), so the envelope is "ANY matching waiter", and when more
-than one candidate exists the pick is drawn from the choice stream
-bounded by the candidate count (consumed ONLY then — `stepThread`).
-Width metadata for the enumerator/membership lane: the site's bound is
-the number of matched parked waiters (clauses counted individually).
+/-- The per-clause channel of a select's evaluated entry operands,
+extracted TOTALLY (no exceptions): `(isSend, loc)` per clause, `none`
+for nil channels / non-channel garbage, and `none` OVERALL on an
+arity mismatch (the fallible `evalClauses` path then reports the
+authoritative error through `stepFn`). The pure waiter-existence
+pre-scan runs on this, so a select with no parked partners — in
+particular every single-goroutine select — never touches a fallible
+helper before `stepFn` (what keeps `stepThread_single` literal). -/
+def selectClauseChans : List (SelectClauseHead × Stmt) → List GoValue →
+    Option (List (Option (Bool × Loc)))
+  | [], [] => some []
+  | (.send _ _ _, _) :: rest, chv :: _vv :: vs =>
+      (selectClauseChans rest vs).map fun tl =>
+        (match chanValueLoc chv with
+          | some l => some (true, l)
+          | none => none) :: tl
+  | (.recv _ _ _, _) :: rest, chv :: vs =>
+      (selectClauseChans rest vs).map fun tl =>
+        (match chanValueLoc chv with
+          | some l => some (false, l)
+          | none => none) :: tl
+  | _, _ => none
 
-Candidates are attached as `(arriving-clause-index, target)`; for
+/-- **THE ARRIVAL PLAN — gc's waiter-queue-priority, modeled** (S2
+audit response, major finding: `chansend` dequeues `recvq` BEFORE
+testing buffer room, and `chanrecv` dequeues `sendq` before draining
+the buffer — chan.go's L17-18 invariants). A channel/select op at its
+apply position consults PARKED PARTNERS FIRST; only a partnerless op
+falls through to the cell-based `stepFn` step. `none` = no pairing
+(cell path); `some (bc, cands)` = pair the op (as its would-block
+shape `bc`) with one of `cands`.
+
+THE L4 ENVELOPE SITE (design D4; ground-truth §6 row L4): the spec has
+NO text on which of several matching parked waiters pairs with an
+arriving operation (gc's FIFO wakeup is one legal point, membership
+territory), so the envelope is "ANY matching waiter"; when more than
+one candidate matches, the pick is drawn from the choice stream,
+bounded by the candidate count and consumed ONLY then (`stepThread`).
+Width metadata for the enumerator/membership lane: the site's bound is
+the number of matched parked waiters (select clauses counted
+individually). Candidates are `(arriving-clause-index, target)`; for
 chan-op arrivals the first component is 0 and unused.
 
-FIFO guard: a direct handoff is performed only against an EMPTY buffer
-(file docstring) — checked here for the send side; the receive side's
-emptiness is implied by its blocking condition. The waiter scan runs
-FIRST and the cell is consulted only when waiters exist, so a
-partnerless park never touches the cell (this keeps the one-thread pool
-literally equal to the sequential machine — `stepThread_single`).
+Order of checks, per gc: a send on a CLOSED channel panics before any
+dequeue (cell path); a receive on a closed channel drains/zeroes (cell
+path — gc's close empties `sendq` synchronously; our transiently
+still-parked senders wake into their panics separately, an equivalent
+schedule). The pure waiter scans run FIRST and the cell/fallible
+helpers only when a waiter matched, so a partnerless arrival — in
+particular every single-goroutine op — is a pure no-op here
+(`arrivalPlan_singleton`, the conservation theorem's hinge).
 
-Fail-closed refusals (never silent): an arriving select with matchable
-waiters on MORE than one clause is the L2 multi-ready surface
-(slice 4); a select-with-select rendezvous is unmodeled this slice. -/
-def selectClauseWaiters (s : ExecState) (threads : Array Config) (i : Nat)
-    (evs : List EvClause) (ci : Nat) :
-    Except GoError (Nat × List (Nat × PairTarget)) := do
-  match evs[ci]? with
-  | some (.recvEv chv _ _ _) =>
+SELECT readiness is waiter-EXTENDED here (S2 audit, second major: a
+select with `default` must see parked partners — gc's `selectgo`
+consults the sudog queues): a clause is ready when cell-ready OR a
+parked partner matches. No ready clause → `none` (`stepFn`: default or
+park). Exactly one ready clause: waiter-matched → pair (a clause both
+cell- and waiter-ready pairs, preserving gc's dequeue-first refill
+semantics); cell-only → `none` (`applySelect` commits the same single
+clause). Two or more ready clauses WITH a waiter involved → fail
+closed (the L2 envelope, slice 4); with no waiter involved → `none`
+(`applySelect`'s own multi-ready refusal, byte-identical to the
+sequential behavior). Select-with-select rendezvous stays fail-closed.
+
+Invariant asserts (fail closed, never a silent wrong order): a matched
+recv-side waiter beside a NONEMPTY buffer is an hchan-invariant breach
+(`applyPairing` refuses `.internal` rather than jumping the queue). -/
+def chanArrivalPlan (s : ExecState) (threads : Array Config) (i : Nat)
+    (op : ChanStOp) (vs : List GoValue) (env : LocalEnv) (k : Cont) :
+    Except GoError (Option (Config × List (Nat × PairTarget))) := do
+  match op, vs with
+  | .send elem, [chv, vv] =>
       match chanValueLoc chv with
+      | none => return none
       | some loc =>
-          -- clause not cell-ready (it blocked) ⇒ buffer empty, open
-          return (ci, sendSideWaiters threads i loc)
-      | none => return (ci, [])
-  | some (.sendEv chv _ _ _) =>
-      match chanValueLoc chv with
-      | some loc => do
           let ws := recvSideWaiters threads i loc
-          if ws.isEmpty then return (ci, []) else do
-            let (buf, _, _) ← chanCell s loc
-            if buf.isEmpty then return (ci, ws) else return (ci, [])
-      | none => return (ci, [])
-  | none => return (ci, [])
+          if ws.isEmpty then return none
+          else do
+            let (_, _, closed) ← chanCell s loc
+            if closed then return none  -- send on closed: panic (cell path)
+            else do
+              let v' ← normalizeValueForTy s elem vv
+              return some (.blockedSend (some loc) v' k, ws)
+  | .recv targets elem, [chv] =>
+      match chanValueLoc chv with
+      | none => return none
+      | some loc =>
+          let ws := sendSideWaiters threads i loc
+          if ws.isEmpty then return none
+          else do
+            let (_, _, closed) ← chanCell s loc
+            if closed then return none  -- drain/zero (cell path)
+            else return some (.blockedRecv (some loc) targets elem env k, ws)
+  | _, _ => return none
 
-@[inherit_doc selectClauseWaiters]
-def pairCandidates (s : ExecState) (threads : Array Config) (i : Nat) :
-    Config → Except GoError (List (Nat × PairTarget))
-  | .blockedSend (some loc) _ _ => do
-      let ws := recvSideWaiters threads i loc
-      if ws.isEmpty then return [] else do
-        let (buf, _, _) ← chanCell s loc
-        if buf.isEmpty then return ws else return []
-  | .blockedRecv (some loc) _ _ _ _ =>
-      -- a blocked receive implies the buffer is empty and open: a parked
-      -- send-side waiter's value is exactly the queue head.
-      return (sendSideWaiters threads i loc)
-  | .blockedSelect evs _ _ => do
-      let perClause : List (Nat × List (Nat × PairTarget)) ←
-        (List.range evs.length).mapM (selectClauseWaiters s threads i evs)
-      match perClause.filter (fun p => !p.2.isEmpty) with
-      | [] => return []
-      | [(ci, ws)] =>
-          if ws.any (fun w => w.2.isSelect) then
-            throw (.unsupported
-              "select-with-select rendezvous (unmodeled this slice)")
-          else
-            return (ws.map fun w => (ci, w.2))
-      | _ => throw (.unsupported
-          "select with waiter-pairable cases on multiple clauses (the L2 multi-ready envelope is slice 4)")
-  | _ => return []
+/-- Pure waiter-existence pre-scan over a select's clause channels
+(the fallible readiness analysis runs only when this is true — which
+keeps a partnerless select, in particular every single-goroutine
+select, a pure no-op in the arrival plan). -/
+def sidesHaveWaiters (threads : Array Config) (i : Nat) :
+    List (Option (Bool × Loc)) → Bool
+  | [] => false
+  | none :: rest => sidesHaveWaiters threads i rest
+  | some (isSend, loc) :: rest =>
+      !(if isSend then recvSideWaiters threads i loc
+        else sendSideWaiters threads i loc).isEmpty
+      || sidesHaveWaiters threads i rest
 
-/-- Perform ONE pairing: the arriving goroutine `i` (whose op produced
-the blocked outcome `bc`) pairs with the chosen candidate — the direct
-handoff (gc's `send()`/`recv()` shape): the value teleports, both
-goroutines proceed, the buffer is untouched (empty by the FIFO guard).
-Shape mismatches are `.internal` (the candidates were just scanned). -/
+@[inherit_doc chanArrivalPlan]
+def selectArrivalPlan (s : ExecState) (threads : Array Config) (i : Nat)
+    (clauses : List (SelectClauseHead × Stmt)) (vs : List GoValue)
+    (env : LocalEnv) (k : Cont) :
+    Except GoError (Option (Config × List (Nat × PairTarget))) := do
+  match selectClauseChans clauses vs with
+  | none => return none
+  | some sides =>
+      -- pure waiter-existence pre-scan
+      if !sidesHaveWaiters threads i sides then return none
+      else do
+        let evs ← evalClauses clauses vs
+        -- per-clause: cell readiness and waiter candidates
+        let readiness : List (Nat × Bool × List (Nat × PairTarget)) ←
+          (List.range evs.length).mapM fun (ci : Nat) => do
+            match evs[ci]? with
+            | some cl => do
+                let cell ← clauseReady s cl
+                let ws :=
+                  match cl with
+                  | .recvEv chv _ _ _ =>
+                      match chanValueLoc chv with
+                      | some loc => sendSideWaiters threads i loc
+                      | none => []
+                  | .sendEv chv _ _ _ =>
+                      match chanValueLoc chv with
+                      | some loc => recvSideWaiters threads i loc
+                      | none => []
+                return (ci, cell, ws)
+            | none => return (ci, false, [])
+        match readiness.filter (fun r => r.2.1 || !r.2.2.isEmpty) with
+        | [] => return none
+        | [(ci, _, ws)] =>
+            if ws.isEmpty then return none  -- cell-only: applySelect commits it
+            else if ws.any (fun w => w.2.isSelect) then
+              throw (.unsupported
+                "select-with-select rendezvous (unmodeled this slice)")
+            else
+              return some (.blockedSelect evs env k,
+                ws.map fun w => (ci, w.2))
+        | ready =>
+            if ready.all (fun r => r.2.2.isEmpty) then
+              return none  -- pure cell multi-ready: applySelect's refusal
+            else
+              throw (.unsupported
+                "select with multiple ready cases under waiter-extended readiness (the L2 choice envelope is slice 4)")
+
+@[inherit_doc chanArrivalPlan]
+def arrivalPlanAux (s : ExecState) (threads : Array Config) (i : Nat) :
+    Config → Except GoError (Option (Config × List (Nat × PairTarget)))
+  | .retV v (.chanStK op done [] env k) =>
+      chanArrivalPlan s threads i op ((v :: done).reverse) env k
+  | .retV v (.selectOpsK clauses _default? done [] env k) =>
+      selectArrivalPlan s threads i clauses ((v :: done).reverse) env k
+  | _ => return none
+
+@[inherit_doc chanArrivalPlan]
+def arrivalPlan (s : ExecState) (threads : Array Config) (i : Nat)
+    (c : Config) : Except GoError (Option (Config × List (Nat × PairTarget))) :=
+  arrivalPlanAux s threads i c
+
+/-- Perform ONE pairing: the arriving goroutine `i` (whose op takes
+its would-block shape `bc`) pairs with the chosen candidate. Two
+shapes, both gc's:
+- **direct handoff** (`send()`): buffer EMPTY — the value teleports,
+  both goroutines proceed, the buffer untouched;
+- **head-and-refill** (`recv()`): an arriving/committing RECEIVE
+  against a parked SENDER with a NONEMPTY (necessarily full) buffer
+  takes the buffer HEAD and enqueues the parked sender's value at the
+  tail in the same step — FIFO through pressure, len unchanged (the
+  S2 audit's too-narrow finding: without the refill, gc's
+  len-preserving observation was unreachable).
+A matched RECV-SIDE waiter beside a nonempty buffer is an
+hchan-invariant breach: fail closed (`.internal`), never a
+queue-jumping delivery. Shape mismatches are `.internal` (the
+candidates were just scanned). -/
 def applyPairing (s : ExecState) (threads : Array Config) (i : Nat)
     (bc : Config) (cand : Nat × PairTarget) :
     Except GoError (Array Config × ExecState) := do
   match bc, cand.2 with
-  | .blockedSend _ v k, .opWaiter j =>
+  | .blockedSend (some loc) v k, .opWaiter j =>
       match threads[j]? with
       | some (.blockedRecv _ targets _ envr kr) => do
-          let (cr, s') ← resumeRecvDelivery s v true targets envr kr
-          return ((threads.setIfInBounds i (.next k)).setIfInBounds j cr, s')
+          let (buf, _, _) ← chanCell s loc
+          if buf.isEmpty then do
+            let (cr, s') ← resumeRecvDelivery s v true targets envr kr
+            return ((threads.setIfInBounds i (.next k)).setIfInBounds j cr, s')
+          else throw (.internal
+            "parked receiver beside a nonempty buffer (hchan invariant breach)")
       | _ => throw (.internal "pairing partner shape mismatch")
-  | .blockedSend _ v k, .selectWaiter j ci =>
+  | .blockedSend (some loc) v k, .selectWaiter j ci =>
       match threads[j]? with
       | some (.blockedSelect evs envs ks) =>
           match evs[ci]? with
           | some (.recvEv _ targets _ body) => do
-              let (cs', s') ← selectRecvDelivery s v true targets body envs ks
-              return ((threads.setIfInBounds i (.next k)).setIfInBounds j cs', s')
+              let (buf, _, _) ← chanCell s loc
+              if buf.isEmpty then do
+                let (cs', s') ← selectRecvDelivery s v true targets body envs ks
+                return ((threads.setIfInBounds i (.next k)).setIfInBounds j cs', s')
+              else throw (.internal
+                "parked select receiver beside a nonempty buffer (hchan invariant breach)")
           | _ => throw (.internal "pairing partner clause mismatch")
       | _ => throw (.internal "pairing partner shape mismatch")
-  | .blockedRecv _ targets _ env k, .opWaiter j =>
+  | .blockedRecv (some loc) targets _ env k, .opWaiter j =>
       match threads[j]? with
-      | some (.blockedSend _ v ks) => do
-          let (cr, s') ← resumeRecvDelivery s v true targets env k
-          return ((threads.setIfInBounds i cr).setIfInBounds j (.next ks), s')
+      | some (.blockedSend _ vs ks) => do
+          let (buf, capacity, closed) ← chanCell s loc
+          match buf[0]? with
+          | none => do
+              -- empty (capacity 0): direct handoff
+              let (cr, s') ← resumeRecvDelivery s vs true targets env k
+              return ((threads.setIfInBounds i cr).setIfInBounds j (.next ks), s')
+          | some hd => do
+              -- gc recv(): head out, parked sender's value in at the tail
+              let s₁ ← storeLoc s loc
+                (.chanData ((buf.eraseIdx! 0).push vs) capacity closed)
+              let (cr, s') ← resumeRecvDelivery s₁ hd true targets env k
+              return ((threads.setIfInBounds i cr).setIfInBounds j (.next ks), s')
       | _ => throw (.internal "pairing partner shape mismatch")
-  | .blockedRecv _ targets _ env k, .selectWaiter j ci =>
+  | .blockedRecv (some loc) targets _ env k, .selectWaiter j ci =>
       match threads[j]? with
       | some (.blockedSelect evs envs ks) =>
           match evs[ci]? with
@@ -426,31 +582,60 @@ def applyPairing (s : ExecState) (threads : Array Config) (i : Nat)
               -- the select's send value normalizes at the element type at
               -- COMMIT (commitClause's discipline)
               let v' ← normalizeValueForTy s selem vv
-              let (cr, s') ← resumeRecvDelivery s v' true targets env k
-              return ((threads.setIfInBounds i cr).setIfInBounds j
-                (.exec body envs ks), s')
+              let (buf, capacity, closed) ← chanCell s loc
+              match buf[0]? with
+              | none => do
+                  let (cr, s') ← resumeRecvDelivery s v' true targets env k
+                  return ((threads.setIfInBounds i cr).setIfInBounds j
+                    (.exec body envs ks), s')
+              | some hd => do
+                  let s₁ ← storeLoc s loc
+                    (.chanData ((buf.eraseIdx! 0).push v') capacity closed)
+                  let (cr, s') ← resumeRecvDelivery s₁ hd true targets env k
+                  return ((threads.setIfInBounds i cr).setIfInBounds j
+                    (.exec body envs ks), s')
           | _ => throw (.internal "pairing partner clause mismatch")
       | _ => throw (.internal "pairing partner shape mismatch")
   | .blockedSelect evs env k, tgt =>
       match evs[cand.1]? with
-      | some (.recvEv _ targets _ body) =>
+      | some (.recvEv chv targets _ body) =>
           match tgt with
           | .opWaiter j =>
               match threads[j]? with
-              | some (.blockedSend _ v ks) => do
-                  let (ci', s') ← selectRecvDelivery s v true targets body env k
-                  return ((threads.setIfInBounds i ci').setIfInBounds j (.next ks), s')
+              | some (.blockedSend _ vs ks) => do
+                  match chanValueLoc chv with
+                  | none => throw (.internal "pairing clause channel mismatch")
+                  | some loc => do
+                      let (buf, capacity, closed) ← chanCell s loc
+                      match buf[0]? with
+                      | none => do
+                          let (ci', s') ← selectRecvDelivery s vs true targets body env k
+                          return ((threads.setIfInBounds i ci').setIfInBounds j
+                            (.next ks), s')
+                      | some hd => do
+                          let s₁ ← storeLoc s loc
+                            (.chanData ((buf.eraseIdx! 0).push vs) capacity closed)
+                          let (ci', s') ← selectRecvDelivery s₁ hd true targets body env k
+                          return ((threads.setIfInBounds i ci').setIfInBounds j
+                            (.next ks), s')
               | _ => throw (.internal "pairing partner shape mismatch")
           | .selectWaiter _ _ => throw (.internal
               "select-with-select pairing reached applyPairing (refused upstream)")
-      | some (.sendEv _ vv selem body) =>
+      | some (.sendEv chv vv selem body) =>
           match tgt with
           | .opWaiter j =>
               match threads[j]? with
               | some (.blockedRecv _ targetsr _ envr kr) => do
-                  let v' ← normalizeValueForTy s selem vv
-                  let (cr, s') ← resumeRecvDelivery s v' true targetsr envr kr
-                  return ((threads.setIfInBounds i (.exec body env k)).setIfInBounds j cr, s')
+                  match chanValueLoc chv with
+                  | none => throw (.internal "pairing clause channel mismatch")
+                  | some loc => do
+                      let (buf, _, _) ← chanCell s loc
+                      if buf.isEmpty then do
+                        let v' ← normalizeValueForTy s selem vv
+                        let (cr, s') ← resumeRecvDelivery s v' true targetsr envr kr
+                        return ((threads.setIfInBounds i (.exec body env k)).setIfInBounds j cr, s')
+                      else throw (.internal
+                        "parked receiver beside a nonempty buffer (hchan invariant breach)")
               | _ => throw (.internal "pairing partner shape mismatch")
           | .selectWaiter _ _ => throw (.internal
               "select-with-select pairing reached applyPairing (refused upstream)")
@@ -459,12 +644,12 @@ def applyPairing (s : ExecState) (threads : Array Config) (i : Nat)
 
 /-- One step of goroutine `i` in the pool: a parked goroutine WAKES
 (`resumeThread`); a completed spawn position FORKS (`spawnStep`,
-appending the child — stable ids); everything else steps by the
-sequential `stepFn`, with a blocked outcome routed through the ARRIVAL
-INTERCEPT — pair with a matched parked waiter (the L4 site: the pick
-is consumed ONLY when more than one candidate matches) or park.
-Blocked outcomes leave the state untouched (`applyChanOp`/`applySelect`
-block without effects), so the intercept reads the post-step state. -/
+appending the child — stable ids); a channel/select apply position
+consults PARKED PARTNERS FIRST (`arrivalPlan` — gc's waiter-queue
+priority; the L4 pick is consumed ONLY when more than one candidate
+matches); everything else — including every partnerless op — steps by
+the sequential `stepFn`, a blocked outcome simply parking (partners
+were already ruled out by the plan). -/
 def stepThread (s : ExecState) (threads : Array Config) (i : Nat)
     (ch : Choices) : Except GoError (Array Config × ExecState × Choices) := do
   match threads[i]? with
@@ -479,24 +664,24 @@ def stepThread (s : ExecState) (threads : Array Config) (i : Nat)
           let (parent', child, s') ← spawnStep s cv args k
           return ((threads.setIfInBounds i parent').push child, s', ch)
       | none => do
-          let (c', s', ch₁) ← stepFn s c ch
-          if isBlockedConfig c' then do
-            let cs ← pairCandidates s' threads i c'
-            match cs with
-            | [] => return (threads.setIfInBounds i c', s', ch₁)
-            | [cand] => do
-                let (ts', s'') ← applyPairing s' threads i c' cand
-                return (ts', s'', ch₁)
-            | _ :: _ :: _ => do
-                -- L4: any matching waiter (consumed only at width > 1)
-                let (idx, ch₂) := ch₁.consume cs.length
-                match cs[idx]? with
-                | some cand => do
-                    let (ts', s'') ← applyPairing s' threads i c' cand
-                    return (ts', s'', ch₂)
-                | none => throw (.internal "waiter pick out of range")
-          else
-            return (threads.setIfInBounds i c', s', ch₁)
+          match ← arrivalPlan s threads i c with
+          | some (bc, cs) =>
+              match cs with
+              | [] => throw (.internal "empty arrival pairing plan")
+              | [cand] => do
+                  let (ts', s'') ← applyPairing s threads i bc cand
+                  return (ts', s'', ch)
+              | _ :: _ :: _ => do
+                  -- L4: any matching waiter (consumed only at width > 1)
+                  let (idx, ch₂) := ch.consume cs.length
+                  match cs[idx]? with
+                  | some cand => do
+                      let (ts', s'') ← applyPairing s threads i bc cand
+                      return (ts', s'', ch₂)
+                  | none => throw (.internal "waiter pick out of range")
+          | none => do
+              let (c', s', ch₁) ← stepFn s c ch
+              return (threads.setIfInBounds i c', s', ch₁)
 
 /-- `stepThread` lifted back into a `MultiConfig` (the stepped goroutine
 becomes the running one). -/
@@ -578,9 +763,14 @@ def execProgLoop : Nat → MultiConfig → Choices →
                       execProgLoop fuel m' choices'
 
 /-- **The `execStmt`-shaped POOL wrapper** (D8's carrier swap): run
-`prog` as goroutine 0 of a fresh pool over `σ`. For programs that never
-spawn this is `execStmt` verbatim (`execProg_single_eq_execStmt`,
-MultiSound.lean — the sequential-conservation transfer lemma). -/
+`prog` as goroutine 0 of a fresh pool over `σ`. On programs that never
+spawn this agrees with `execStmt` on the TRANSFERABLE result classes
+(`.ok` at any terminal, `.fuelOut`, `.panic`) by
+`execProg_single_eq_execStmt` (MultiSound.lean — the
+sequential-conservation transfer lemma); the fail-closed diagnostic
+classes are covered by the full-corpus bit-identity check, not the
+theorem (S2 audit response: citation matched to the theorem's actual
+strength). -/
 def execProg (fuel : Nat) (env : LocalEnv) (σ : ExecState) (choices : Choices)
     (prog : Stmt) : Except GoError (ExecOutcome × Choices) :=
   execProgLoop fuel ⟨#[.exec prog env .stop], σ, 0⟩ choices
@@ -625,10 +815,11 @@ def schedPick (m : MultiConfig) (i : Nat) : Prop :=
   | none => False
 
 /-- The POOL relation (proof infrastructure; `stepMulti` is its
-executable instantiation — `stepMulti_sound`/`stepM_complete`). Four
-rule classes: an ordinary/spawn goroutine step (`thread`), parking on a
-partnerless blocked outcome (`park`), the arrival-intercept handoff
-(`pair` — the L4 waiter pick is the rule's `idx`), and the wake of a
+executable instantiation — `stepMulti_sound`/`stepM_complete`). Three
+rule classes: a partnerless goroutine step (`thread` — ordinary, spawn,
+or park: `arrivalPlan` found no parked partner, so a blocked outcome
+simply parks), the arrival pairing (`pair` — gc's waiter-queue
+priority; the L4 waiter pick is the rule's `idx`), and the wake of a
 parked goroutine (`wake`). Deadlock is relation-SILENT (no rule from an
 all-asleep pool), mirroring the sequential machine's silent blocked
 configs. -/
@@ -638,27 +829,18 @@ inductive StepM : MultiConfig → MultiConfig → Prop where
       schedPick m i →
       m.threads[i]? = some c →
       isBlockedConfig c = false →
+      arrivalPlan m.shared m.threads i c = .ok none →
       StepE c m.shared c' σ' efs →
-      isBlockedConfig c' = false →
       StepM m ⟨(m.threads.setIfInBounds i c') ++ efs.toArray, σ', i⟩
-  | park {m : MultiConfig} {i : Nat} {c bc : Config} {σ' : ExecState} :
-      schedPick m i →
-      m.threads[i]? = some c →
-      isBlockedConfig c = false →
-      StepE c m.shared bc σ' [] →
-      isBlockedConfig bc = true →
-      pairCandidates σ' m.threads i bc = .ok [] →
-      StepM m ⟨m.threads.setIfInBounds i bc, σ', i⟩
-  | pair {m : MultiConfig} {i : Nat} {c bc : Config} {σ' σ'' : ExecState}
+  | pair {m : MultiConfig} {i : Nat} {c bc : Config} {σ'' : ExecState}
       {cs : List (Nat × PairTarget)} {idx : Nat} {ts' : Array Config} :
       schedPick m i →
       m.threads[i]? = some c →
       isBlockedConfig c = false →
-      StepE c m.shared bc σ' [] →
-      isBlockedConfig bc = true →
-      pairCandidates σ' m.threads i bc = .ok cs →
+      spawnPlan c = none →
+      arrivalPlan m.shared m.threads i c = .ok (some (bc, cs)) →
       (hidx : idx < cs.length) →
-      applyPairing σ' m.threads i bc cs[idx] = .ok (ts', σ'') →
+      applyPairing m.shared m.threads i bc cs[idx] = .ok (ts', σ'') →
       StepM m ⟨ts', σ'', i⟩
   | wake {m : MultiConfig} {i : Nat} {c c' : Config} {σ' : ExecState} :
       schedPick m i →

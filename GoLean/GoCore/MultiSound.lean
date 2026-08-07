@@ -41,84 +41,66 @@ theorem recvSideWaiters_singleton {c : Config} {loc : Loc} :
 theorem sendSideWaiters_singleton {c : Config} {loc : Loc} :
     sendSideWaiters #[c] 0 loc = [] := rfl
 
-/-- With no OTHER goroutines there is never a pairing candidate. -/
-theorem pairCandidates_singleton {s : ExecState} {c bc : Config} :
-    pairCandidates s #[c] 0 bc = .ok [] := by
-  cases bc
-  case blockedSend ch v k =>
-      cases ch with
-      | none => rfl
-      | some loc => simp [pairCandidates, recvSideWaiters_singleton]
-  case blockedRecv ch targets elem env k =>
-      cases ch with
-      | none => rfl
-      | some loc => simp [pairCandidates, sendSideWaiters_singleton]
-  case blockedSelect evs env k =>
-      have hone : ∀ ci : Nat, selectClauseWaiters s #[c] 0 evs ci
-          = .ok (ci, ([] : List (Nat × PairTarget))) := by
-        intro ci
-        unfold selectClauseWaiters
-        match ha : evs[ci]? with
-        | none => simp [ha]
-        | some (.recvEv chv tgts e b) =>
-            cases hcl : chanValueLoc chv <;>
-              simp [hcl, sendSideWaiters_singleton]
-        | some (.sendEv chv vv e b) =>
-            cases hcl : chanValueLoc chv <;>
-              simp [hcl, recvSideWaiters_singleton]
-      have hmap : ∀ l : List Nat,
-          l.mapM (selectClauseWaiters s #[c] 0 evs)
-            = .ok (l.map (fun ci => (ci, ([] : List (Nat × PairTarget))))) := by
-        intro l
-        induction l with
-        | nil => rfl
-        | cons a rest ih =>
-            simp [List.mapM_cons, hone, ih, Bind.bind, Except.bind, pure, Except.pure]
-      have hfil : ∀ l : List Nat,
-          (l.map (fun ci => (ci, ([] : List (Nat × PairTarget))))).filter
-            (fun p => !p.2.isEmpty) = [] := by
-        intro l
-        induction l with
-        | nil => rfl
-        | cons a rest ih =>
-            simp only [List.map_cons, List.filter_cons, List.isEmpty_nil,
-              Bool.not_true, Bool.false_eq_true, if_false, ih]
-      show (do
-        let perClause : List (Nat × List (Nat × PairTarget)) ←
-          (List.range evs.length).mapM (selectClauseWaiters s #[c] 0 evs)
-        match perClause.filter (fun p => !p.2.isEmpty) with
-        | [] => pure []
-        | [(ci, ws)] =>
-            if ws.any (fun w => w.2.isSelect) then
-              throw (GoError.unsupported
-                "select-with-select rendezvous (unmodeled this slice)")
-            else
-              pure (ws.map fun w => (ci, w.2))
-        | _ => throw (GoError.unsupported
-            "select with waiter-pairable cases on multiple clauses (the L2 multi-ready envelope is slice 4)")
-        : Except GoError (List (Nat × PairTarget))) = .ok []
-      rw [show ((List.range evs.length).mapM (selectClauseWaiters s #[c] 0 evs))
-          = .ok ((List.range evs.length).map
-              (fun ci => (ci, ([] : List (Nat × PairTarget)))))
-        from hmap _]
-      show (match ((List.range evs.length).map
-          (fun ci => (ci, ([] : List (Nat × PairTarget))))).filter
-            (fun p => !p.2.isEmpty) with
-        | [] => pure []
-        | [(ci, ws)] =>
-            if ws.any (fun w => w.2.isSelect) then
-              throw (GoError.unsupported
-                "select-with-select rendezvous (unmodeled this slice)")
-            else
-              pure (ws.map fun w => (ci, w.2))
-        | _ => throw (GoError.unsupported
-            "select with waiter-pairable cases on multiple clauses (the L2 multi-ready envelope is slice 4)")
-        : Except GoError (List (Nat × PairTarget))) = .ok []
-      rw [hfil]
-      rfl
-  all_goals rfl
+/-- With no OTHER goroutines there is never a parked partner: the
+arrival plan is a pure no-op — its waiter scans short-circuit before
+any fallible helper runs. The conservation theorem's hinge. -/
+theorem chanArrivalPlan_singleton {s : ExecState} {c : Config}
+    {op : ChanStOp} {vs : List GoValue} {env : LocalEnv} {k : Cont} :
+    chanArrivalPlan s #[c] 0 op vs env k = .ok none := by
+  unfold chanArrivalPlan
+  match op, vs with
+  | .send elem, [] => rfl
+  | .send elem, [x] => rfl
+  | .send elem, [chv, vv] =>
+      cases hcl : chanValueLoc chv with
+      | none => simp [hcl]
+      | some loc => simp [hcl, recvSideWaiters_singleton]
+  | .send elem, x :: y :: z :: rest => rfl
+  | .recv targets elem, [] => rfl
+  | .recv targets elem, [chv] =>
+      cases hcl : chanValueLoc chv with
+      | none => simp [hcl]
+      | some loc => simp [hcl, sendSideWaiters_singleton]
+  | .recv targets elem, x :: y :: rest => rfl
+  | .close, _ => rfl
 
-/-- The one-thread `stepThread` is `stepFn`, results re-wrapped. -/
+@[inherit_doc chanArrivalPlan_singleton]
+theorem selectArrivalPlan_singleton {s : ExecState} {c : Config}
+    {clauses : List (SelectClauseHead × Stmt)} {vs : List GoValue}
+    {env : LocalEnv} {k : Cont} :
+    selectArrivalPlan s #[c] 0 clauses vs env k = .ok none := by
+  have hsw : ∀ sides : List (Option (Bool × Loc)),
+      sidesHaveWaiters #[c] 0 sides = false := by
+    intro sides
+    induction sides with
+    | nil => rfl
+    | cons sd rest ih =>
+        match sd with
+        | none => simpa [sidesHaveWaiters] using ih
+        | some (isSend, loc) =>
+            cases isSend <;>
+              simp [sidesHaveWaiters, recvSideWaiters_singleton,
+                sendSideWaiters_singleton, ih]
+  unfold selectArrivalPlan
+  cases hsc : selectClauseChans clauses vs with
+  | none => rfl
+  | some sides =>
+      dsimp only
+      simp only [hsw, Bool.not_false, reduceIte]
+      rfl
+
+@[inherit_doc chanArrivalPlan_singleton]
+theorem arrivalPlan_singleton {s : ExecState} {c c' : Config} :
+    arrivalPlan s #[c] 0 c' = .ok none := by
+  unfold arrivalPlan arrivalPlanAux
+  split
+  · exact chanArrivalPlan_singleton
+  · exact selectArrivalPlan_singleton
+  · rfl
+
+/-- The one-thread `stepThread` is `stepFn`, results re-wrapped (the
+arrival plan is a pure no-op with no other goroutines —
+`arrivalPlan_singleton`). -/
 theorem stepThread_single {σ : ExecState} {c : Config} {ch : Choices}
     (hbl : isBlockedConfig c = false) (hsp : spawnPlan c = none) :
     stepThread σ #[c] 0 ch
@@ -127,15 +109,13 @@ theorem stepThread_single {σ : ExecState} {c : Config} {ch : Choices}
   have h0 : (#[c] : Array Config)[0]? = some c := rfl
   rw [h0]
   simp only [hbl, Bool.false_eq_true, reduceIte, hsp]
+  rw [show arrivalPlan σ #[c] 0 c = .ok none from arrivalPlan_singleton]
+  simp only [Bind.bind, Except.bind]
   cases hstep : stepFn σ c ch with
   | error e => rfl
   | ok r =>
       obtain ⟨c', s', ch₁⟩ := r
-      by_cases hbc : isBlockedConfig c' = true
-      · simp [hstep, hbc, pairCandidates_singleton, Bind.bind, Except.bind,
-          Functor.map, Except.map]
-      · simp only [Bool.not_eq_true] at hbc
-        simp [hstep, hbc, Bind.bind, Except.bind, Functor.map, Except.map]
+      simp [Functor.map, Except.map]
 
 theorem runnableIdxs_singleton {σ : ExecState} {c : Config}
     (h : threadRunnable σ c = true) :
@@ -195,12 +175,21 @@ theorem spawnPlan_stepFn_refuses {c : Config} {σ : ExecState}
 fuel exhaustion, and panic aborts — everything a designated sequential
 statement's meaning consumes. The two excluded classes are exactly
 where the pool may legitimately differ from the sequential machine's
-refusals: `.deadlock` (an ARTIFICIAL wake-ready blocked seed would
-resume in the pool where the sequential driver classifies immediately —
-sequential runs never produce such configurations, but the theorem
-quantifies arbitrary seeds) and the fail-closed
+refusals: `.deadlock` and the fail-closed
 `.unsupported`/`.stuck`/`.internal` diagnostics (a spawn position is
-refused sequentially and forked by the pool). -/
+refused sequentially and forked by the pool).
+
+Which theorem needs which exclusion (S2 audit response — the original
+note blurred them): the `.deadlock` exclusion is needed by the LOOP
+lemma `execProgLoop_single`, which quantifies ARBITRARY configurations
+— an artificial wake-ready blocked seed would resume in the pool where
+the sequential driver classifies immediately. The headline
+`execProg_single_eq_execStmt` seeds `.exec prog env .stop` (never a
+blocked config), so for it the exclusion is a currently-unclaimed
+strengthening opportunity (it would need a per-step
+blocked-not-wake-ready invariant carried through the induction);
+deadlock preservation under the driver swap is validated by the
+corpus's 12 pinned deadlock cases instead. -/
 def transferable : Except GoError (ExecOutcome × Choices) → Prop
   | .ok _ => True
   | .error .fuelOut => True
@@ -363,7 +352,7 @@ theorem schedPick_cur {m : MultiConfig} {c : Config}
 
 /-- One goroutine-step of the executable pool is a `StepM` step (given a
 legal scheduler pick). Case-for-case with `stepThread`'s arms: wake,
-spawn, ordinary step, park, pairing. -/
+spawn, arrival pairing, partnerless step. -/
 theorem stepThreadInto_sound {m : MultiConfig} {i : Nat} {ch ch' : Choices}
     {m' : MultiConfig} (hsched : schedPick m i)
     (h : stepThreadInto m i ch = .ok (m', ch')) : StepM m m' := by
@@ -406,80 +395,74 @@ theorem stepThreadInto_sound {m : MultiConfig} {i : Nat} {ch ch' : Choices}
             rw [hspawn] at hst
             simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at hst
             obtain ⟨rfl, rfl, rfl⟩ := hst
+            have hplanNone : arrivalPlan m.shared m.threads i c = .ok none := by
+              match c, hsp with
+              | .retV cv' (.goCalleeK [] env k'), _ => rfl
+              | .retV v' (.goArgsK cv' vals [] env k'), _ => rfl
             have hts : (m.threads.setIfInBounds i parent').push child
                 = (m.threads.setIfInBounds i parent') ++ ([child] : List Config).toArray := by
               rw [Array.push_eq_append]
             rw [hts]
-            refine StepM.thread hsched hti hbl (StepE.spawn hsp hspawn) ?_
-            rw [spawnStep_shape hspawn]
-            rfl
+            exact StepM.thread hsched hti hbl hplanNone (StepE.spawn hsp hspawn)
         | none =>
           rw [hsp] at hst
           simp only [Bind.bind, Except.bind] at hst
-          cases hstep : stepFn m.shared c ch with
-          | error e => rw [hstep] at hst; cases hst
-          | ok r₂ =>
-            obtain ⟨c', s₂, ch₂⟩ := r₂
-            rw [hstep] at hst
-            by_cases hbc : isBlockedConfig c' = true
-            · -- blocked outcome: park or pair
-              simp only [hbc, reduceIte, Bind.bind, Except.bind] at hst
-              cases hcs : pairCandidates s₂ m.threads i c' with
-              | error e => rw [hcs] at hst; cases hst
-              | ok cs =>
-                rw [hcs] at hst
-                cases cs with
+          cases hplan : arrivalPlan m.shared m.threads i c with
+          | error e => rw [hplan] at hst; cases hst
+          | ok plan =>
+            rw [hplan] at hst
+            cases plan with
+            | some p =>
+              obtain ⟨bc, cs⟩ := p
+              cases cs with
+              | nil => cases hst
+              | cons cand rest =>
+                cases rest with
                 | nil =>
-                  simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at hst
-                  obtain ⟨rfl, rfl, rfl⟩ := hst
-                  exact StepM.park hsched hti hbl
-                    (StepE.lift (stepFn_sound hstep)) hbc hcs
-                | cons cand rest =>
-                  cases rest with
-                  | nil =>
+                  simp only [Bind.bind, Except.bind] at hst
+                  cases hap : applyPairing m.shared m.threads i bc cand with
+                  | error e => rw [hap] at hst; cases hst
+                  | ok r₃ =>
+                    obtain ⟨ts', s₃⟩ := r₃
+                    rw [hap] at hst
+                    simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at hst
+                    obtain ⟨rfl, rfl, rfl⟩ := hst
+                    exact StepM.pair hsched hti hbl hsp hplan
+                      (idx := 0) (by simp) hap
+                | cons b rest' =>
+                  simp only [Bind.bind, Except.bind] at hst
+                  rcases hcons : ch.consume (cand :: b :: rest').length with ⟨idx, ch₃⟩
+                  rw [hcons] at hst
+                  cases hget : (cand :: b :: rest')[idx]? with
+                  | none => rw [hget] at hst; cases hst
+                  | some cand' =>
+                    rw [hget] at hst
                     simp only [Bind.bind, Except.bind] at hst
-                    cases hap : applyPairing s₂ m.threads i c' cand with
+                    cases hap : applyPairing m.shared m.threads i bc cand' with
                     | error e => rw [hap] at hst; cases hst
                     | ok r₃ =>
                       obtain ⟨ts', s₃⟩ := r₃
                       rw [hap] at hst
-                      simp only [pure_eq_ok, Except.ok.injEq,
-                        Prod.mk.injEq] at hst
+                      simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at hst
                       obtain ⟨rfl, rfl, rfl⟩ := hst
-                      exact StepM.pair hsched hti hbl
-                        (StepE.lift (stepFn_sound hstep)) hbc hcs
-                        (idx := 0) (by simp) hap
-                  | cons b rest' =>
-                    simp only [Bind.bind, Except.bind] at hst
-                    rcases hcons : ch₂.consume (cand :: b :: rest').length with ⟨idx, ch₃⟩
-                    rw [hcons] at hst
-                    cases hget : (cand :: b :: rest')[idx]? with
-                    | none => rw [hget] at hst; cases hst
-                    | some cand' =>
-                      rw [hget] at hst
-                      simp only [Bind.bind, Except.bind] at hst
-                      cases hap : applyPairing s₂ m.threads i c' cand' with
-                      | error e => rw [hap] at hst; cases hst
-                      | ok r₃ =>
-                        obtain ⟨ts', s₃⟩ := r₃
-                        rw [hap] at hst
-                        simp only [pure, Except.pure, Except.ok.injEq,
-                          Prod.mk.injEq] at hst
-                        obtain ⟨rfl, rfl, rfl⟩ := hst
-                        obtain ⟨hlt, hidxeq⟩ := List.getElem?_eq_some_iff.mp hget
-                        exact StepM.pair hsched hti hbl
-                          (StepE.lift (stepFn_sound hstep)) hbc hcs
-                          (idx := idx) hlt (by rw [hidxeq]; exact hap)
-            · simp only [Bool.not_eq_true] at hbc
-              simp only [hbc, Bool.false_eq_true, reduceIte] at hst
-              simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at hst
-              obtain ⟨rfl, rfl, rfl⟩ := hst
-              have hts : m.threads.setIfInBounds i c'
-                  = (m.threads.setIfInBounds i c') ++ ([] : List Config).toArray := by
-                simp
-              rw [hts]
-              exact StepM.thread hsched hti hbl
-                (StepE.lift (stepFn_sound hstep)) (by simp [hbc])
+                      obtain ⟨hlt, hidxeq⟩ := List.getElem?_eq_some_iff.mp hget
+                      exact StepM.pair hsched hti hbl hsp hplan
+                        (idx := idx) hlt (by rw [hidxeq]; exact hap)
+            | none =>
+              simp only [Bind.bind, Except.bind] at hst
+              cases hstep : stepFn m.shared c ch with
+              | error e => rw [hstep] at hst; cases hst
+              | ok r₂ =>
+                obtain ⟨c', s₂, ch₂⟩ := r₂
+                rw [hstep] at hst
+                simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at hst
+                obtain ⟨rfl, rfl, rfl⟩ := hst
+                have hts : m.threads.setIfInBounds i c'
+                    = (m.threads.setIfInBounds i c') ++ ([] : List Config).toArray := by
+                  simp
+                rw [hts]
+                exact StepM.thread hsched hti hbl hplan
+                  (StepE.lift (stepFn_sound hstep))
 
 /-- **Soundness of the pool step**: every `.ok` step of `stepMulti` is a
 step of the pool relation `StepM`. -/
@@ -528,19 +511,6 @@ theorem step_spawnPos_elim {c : Config} {σ : ExecState} {c' : Config}
   match c, hsp with
   | .retV cv (.goCalleeK [] env k), _ => cases h
   | .retV v (.goArgsK cv vals [] env k), _ => cases h
-
-set_option maxHeartbeats 1600000 in
-/-- A relation step INTO a blocked configuration starts from one of the
-three registry apply shapes — in particular never from the two
-stream-consuming shapes, which is what lets the wake/pairing
-completeness route through `stepFn_oblivious`. -/
-theorem step_blocked_shape {c : Config} {σ : ExecState} {bc : Config}
-    {σ' : ExecState} (h : Step c σ bc σ') (hb : isBlockedConfig bc = true) :
-    (∀ (kv vv : Option String) (kt vt : Ty) (body : Stmt)
-      (rem : Array (GoValue × GoValue)) (env : LocalEnv) (k : Cont),
-      c ≠ .next (.mapIterK kv vv kt vt body rem env k))
-      ∧ consumesAppendSlice c = false := by
-  cases h <;> simp_all [isBlockedConfig, consumesAppendSlice, stmtPlan]
 
 /-- Compose a scheduling prefix in front of an inner `stepThread`
 realization: a legal pick is realized by the scheduler site (consumed
@@ -618,12 +588,12 @@ theorem stepMulti_of_inner {m : MultiConfig} {i : Nat} {chI chI' : Choices}
 /-- **Completeness of the pool step**: every `StepM` step is realized
 by `stepMulti` under some choice stream (scheduler pick and L4 waiter
 pick encoded in the stream; the goroutine's own step realized through
-the sequential kit's `step_complete`, with `stepFn_oblivious` aligning
-the stream at the pairing site). -/
+the sequential kit's `step_complete`; the pairing path never touches
+`stepFn`, so its stream is exactly the waiter pick). -/
 theorem stepM_complete {m m' : MultiConfig} (h : StepM m m') :
     ∃ ch ch', stepMulti m ch = .ok (m', ch') := by
   cases h with
-  | thread hsched hti hblc hstepE hblc' =>
+  | thread hsched hti hblc hplan hstepE =>
     rename_i i c c' σ' efs
     cases hstepE with
     | lift hstep =>
@@ -636,23 +606,23 @@ theorem stepM_complete {m m' : MultiConfig} (h : StepM m m') :
           = .ok (m.threads.setIfInBounds i c', σ', ch₀') := by
         unfold stepThread
         rw [hti]
-        simp only [hblc, Bool.false_eq_true, reduceIte, hsp, Bind.bind,
-          Except.bind]
+        simp only [hblc, Bool.false_eq_true, reduceIte, hsp]
+        rw [hplan]
+        simp only [Bind.bind, Except.bind]
         rw [hfn]
-        simp only [hblc', Bool.false_eq_true, reduceIte]
         rfl
       have heq : (m.threads.setIfInBounds i c') ++ ([] : List Config).toArray
           = m.threads.setIfInBounds i c' := by
         rw [show (([] : List Config)).toArray = #[] from rfl, Array.append_empty]
       rw [heq]
       exact stepMulti_of_inner hsched hinner
-    | spawn hplan hspawn =>
+    | spawn hplan' hspawn =>
       rename_i cv args k child
       have hinner : stepThread m.shared m.threads i []
           = .ok ((m.threads.setIfInBounds i c').push child, σ', []) := by
         unfold stepThread
         rw [hti]
-        simp only [hblc, Bool.false_eq_true, reduceIte, hplan, Bind.bind,
+        simp only [hblc, Bool.false_eq_true, reduceIte, hplan', Bind.bind,
           Except.bind]
         rw [hspawn]
         rfl
@@ -661,89 +631,56 @@ theorem stepM_complete {m m' : MultiConfig} (h : StepM m m') :
         rw [Array.push_eq_append]
       rw [heq]
       exact stepMulti_of_inner hsched hinner
-  | park hsched hti hblc hstepE hbc hcs =>
-    rename_i i c bc σ'
-    cases hstepE with
-    | lift hstep =>
-      obtain ⟨ch₀, ch₀', hfn⟩ := step_complete hstep
-      have hsp : spawnPlan c = none := by
-        cases hspq : spawnPlan c with
-        | none => rfl
-        | some p => exact absurd hstep (step_spawnPos_elim hspq)
-      have hinner : stepThread m.shared m.threads i ch₀
-          = .ok (m.threads.setIfInBounds i bc, σ', ch₀') := by
-        unfold stepThread
-        rw [hti]
-        simp only [hblc, Bool.false_eq_true, reduceIte, hsp, Bind.bind,
-          Except.bind]
-        rw [hfn]
-        simp only [hbc, reduceIte]
-        rw [hcs]
-        rfl
-      exact stepMulti_of_inner hsched hinner
-  | pair hsched hti hblc hstepE hbc hcs hidx hap =>
-    rename_i i c bc σ' σ'' cs idx ts'
-    cases hstepE with
-    | lift hstep =>
-      obtain ⟨ch₀, ch₀', hfn₀⟩ := step_complete hstep
-      obtain ⟨hmi, hnc⟩ := step_blocked_shape hstep hbc
-      obtain ⟨-, hfn⟩ := stepFn_oblivious hmi hnc hfn₀
-      have hsp : spawnPlan c = none := by
-        cases hspq : spawnPlan c with
-        | none => rfl
-        | some p => exact absurd hstep (step_spawnPos_elim hspq)
-      cases cs with
-      | nil => exact absurd hidx (by simp)
-      | cons cand rest =>
-        cases rest with
-        | nil =>
-          have hap' : applyPairing σ' m.threads i bc cand = .ok (ts', σ'') := by
-            have h0 : idx = 0 := by
-              simp at hidx
+  | pair hsched hti hblc hsp hplan hidx hap =>
+    rename_i i c bc σ'' cs idx ts'
+    cases cs with
+    | nil => exact absurd hidx (by simp)
+    | cons cand rest =>
+      cases rest with
+      | nil =>
+        have hap' : applyPairing m.shared m.threads i bc cand = .ok (ts', σ'') := by
+          have h0 : idx = 0 := by
+            simp at hidx
+            omega
+          subst h0
+          exact hap
+        have hinner : stepThread m.shared m.threads i []
+            = .ok (ts', σ'', []) := by
+          unfold stepThread
+          rw [hti]
+          simp only [hblc, Bool.false_eq_true, reduceIte, hsp, Bind.bind,
+            Except.bind]
+          rw [hplan]
+          dsimp only
+          rw [hap']
+          rfl
+        exact stepMulti_of_inner hsched hinner
+      | cons b rest' =>
+        have hinner : stepThread m.shared m.threads i [idx]
+            = .ok (ts', σ'', []) := by
+          unfold stepThread
+          rw [hti]
+          simp only [hblc, Bool.false_eq_true, reduceIte, hsp, Bind.bind,
+            Except.bind]
+          rw [hplan]
+          dsimp only
+          have hcons : Choices.consume [idx] (cand :: b :: rest').length
+              = (idx, []) := by
+            simp only [Choices.consume]
+            congr 1
+            have hmax : max 1 (cand :: b :: rest').length
+                = (cand :: b :: rest').length := by
+              simp only [List.length_cons]
               omega
-            subst h0
-            exact hap
-          have hinner : stepThread m.shared m.threads i []
-              = .ok (ts', σ'', []) := by
-            unfold stepThread
-            rw [hti]
-            simp only [hblc, Bool.false_eq_true, reduceIte, hsp, Bind.bind,
-              Except.bind]
-            rw [hfn []]
-            simp only [hbc, reduceIte]
-            rw [hcs]
-            dsimp only
-            rw [hap']
-            rfl
-          exact stepMulti_of_inner hsched hinner
-        | cons b rest' =>
-          have hinner : stepThread m.shared m.threads i [idx]
-              = .ok (ts', σ'', []) := by
-            unfold stepThread
-            rw [hti]
-            simp only [hblc, Bool.false_eq_true, reduceIte, hsp, Bind.bind,
-              Except.bind]
-            rw [hfn [idx]]
-            simp only [hbc, reduceIte]
-            rw [hcs]
-            dsimp only
-            have hcons : Choices.consume [idx] (cand :: b :: rest').length
-                = (idx, []) := by
-              simp only [Choices.consume]
-              congr 1
-              have hmax : max 1 (cand :: b :: rest').length
-                  = (cand :: b :: rest').length := by
-                simp only [List.length_cons]
-                omega
-              rw [hmax]
-              exact Nat.mod_eq_of_lt hidx
-            rw [hcons]
-            dsimp only
-            rw [List.getElem?_eq_getElem hidx]
-            dsimp only
-            rw [hap]
-            rfl
-          exact stepMulti_of_inner hsched hinner
+            rw [hmax]
+            exact Nat.mod_eq_of_lt hidx
+          rw [hcons]
+          dsimp only
+          rw [List.getElem?_eq_getElem hidx]
+          dsimp only
+          rw [hap]
+          rfl
+        exact stepMulti_of_inner hsched hinner
   | wake hsched hti hblc hres =>
     rename_i i c c' σ'
     have hinner : stepThread m.shared m.threads i []
