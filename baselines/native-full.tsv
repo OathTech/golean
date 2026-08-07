@@ -1,21 +1,19 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-07  commit: channels-arc-maint (BUG-043 red-first pins: range-over-integer loop-variable kind)
+# recorded: 2026-08-07  commit: channels-arc-maint (BUG-043 fixed: range-over-integer loop variable takes the operand's kind)
 #   frontend: native  oracle: go run (strict lane) / go-run membership in the
 #   machine-enumerated observation set, sampled plain AND under -race
 #   (membership lane; go1.26.5) / schedule-tree singleton certification +
 #   strict go-run equality (confluent lane) / every-enumerated-path-refuses
 #   + go run -race red (racy lane; never combined with deadlock)
-# manifest_cases: 1193  pass: 1096  fail: 97
-# Re-pin reason: deliberate coverage change — 4 new ids, zero drift on
-#   every prior id. BUG-043 red-first pins (maint-check M1: the
-#   range-over-integer desugar hard-codes the default int kind for the
-#   loop variable/index arithmetic; the wire carries no operand kind).
-#   3 red at lean-observation (stuck, not wrong):
-#   range/int-kind-arith/{uint8-arith,defined-arith,int8-arith} —
-#   arithmetic on the loop variable in the operand's kind. 1 green
-#   control: range/int-kind-arith/conversion-control (conversion-only,
-#   kind-blind — the shape range/range-int-typed already covered, which
-#   is why the gap was invisible). Listed in BUGS.md BUG-043.
+# manifest_cases: 1193  pass: 1099  fail: 94
+# Re-pin reason: BUG-043 fixed — the frontend emits operandType (the
+#   operand's underlying integer kind) for range-over-int and the
+#   decoder threads it through $ridx/$rlen/loop-variable/increment,
+#   failing closed on a missing/non-integer operandType (same commit:
+#   the incdec arm's absent-type default removed, fail-closed). Exactly
+#   the 3 BUG-043 pins flip FAIL/lean-observation -> PASS
+#   (range/int-kind-arith/{uint8-arith,defined-arith,int8-arith});
+#   zero drift on every other id.
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
 PASS	arrays/array-copy	-
@@ -992,9 +990,9 @@ PASS	race/negative/slice-elem	racy
 PASS	race/negative/spawn-dispatch	racy
 PASS	race/negative/write-write	racy
 PASS	range/int-kind-arith/conversion-control	-
-FAIL	range/int-kind-arith/defined-arith	lean-observation
-FAIL	range/int-kind-arith/int8-arith	lean-observation
-FAIL	range/int-kind-arith/uint8-arith	lean-observation
+PASS	range/int-kind-arith/defined-arith	-
+PASS	range/int-kind-arith/int8-arith	-
+PASS	range/int-kind-arith/uint8-arith	-
 PASS	range/range-array-copy	-
 PASS	range/range-array-pointer	-
 PASS	range/range-array-pointer-nil-index	-

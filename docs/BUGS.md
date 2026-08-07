@@ -31,7 +31,15 @@ differential-pinned) `- Cases: <id>, <id>, …` (baseline case ids), then prose.
 
 ## BUG-043 — range-over-integer desugar hard-codes the default int kind for the loop variable and index arithmetic
 
-- Status: open
+- Status: fixed (2026-08-07, channels-arc-maint — the frontend emits
+  `operandType` (the operand's underlying integer kind, `emitBasic` of
+  the already-Underlying basic; the array-pointer static-length form
+  carries int) and the decoder threads it through
+  `$ridx`/`$rlen`/loop-variable/increment, failing closed on a
+  missing/non-integer operandType. Same commit: the incdec arm's
+  absent-type default removed (fail closed, the float-literal
+  precedent). All 3 pinned cases flip PASS; conversion control stays
+  green.)
 - Pinned-by: differential
 - Cases: range/int-kind-arith/uint8-arith, range/int-kind-arith/defined-arith, range/int-kind-arith/int8-arith
 - Discovered: 2026-08-07 (maint-check pre-merge review M1, verified

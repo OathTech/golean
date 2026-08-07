@@ -546,10 +546,14 @@ partial def decodeStmt (results : Array Param) (path : String) (json : Json) : L
       -- add; the frontend now resolves defined types to the underlying
       -- basic kind, and a named type reaching this slot again is a
       -- frontend defect, never a default).
+      -- A MISSING type fails closed too (maint-check note: the frontend
+      -- always emits one, and an absent-kind default is the same silent
+      -- shape as the named-type default this arm just removed; the
+      -- float-literal arm set the precedent).
       let one : Expr ← match (← optType path obj) with
         | some (.float k) => pure (.floatLit 1 1 k)
         | some (.int k) => pure (.intLit 1 k)
-        | none => pure (.intLit 1 .int)
+        | none => fail s!"incdec at {path} carries no operand type — the synthetic 1 has no kind to take"
         | some other => fail s!"incdec at {path} carries a non-numeric operand type ({repr other}) — the synthetic 1 has no kind to take"
       let rhs := if op == "-" then Expr.sub read one else Expr.add read one
       pure (.assign t.assignee rhs)
@@ -844,6 +848,27 @@ partial def decodeRange (results : Array Param) (path : String) (obj : StrictJso
   | "slice" | "array" | "int" | "array-pointer" =>
       let collTy ← exprTypeOf s!"{path}.collection" collJson
       let intTy : Ty := .int .int
+      -- Range over an INTEGER: the iteration variable and the index
+      -- arithmetic take the OPERAND's integer kind, carried on the wire
+      -- as operandType (spec §For statements: the loop variable has the
+      -- operand's type). BUG-043: this desugar previously hard-coded
+      -- the default int kind for $ridx/$rlen/the loop variable/the
+      -- increment — comparisons are kind-blind, so the conversion-only
+      -- shape passed while arithmetic on the loop variable in the
+      -- operand's kind went stuck. FAIL CLOSED on a missing or
+      -- non-integer operandType (the incdec precedent: silent
+      -- int-defaulting is exactly this defect class). Slice/array/
+      -- array-pointer ranges index with int (spec), unchanged.
+      let idxTy : Ty ←
+        if kind == "int" then
+          match obj.get? "operandType" with
+          | some t =>
+              match (← decodeTy s!"{path}.operandType" t) with
+              | .int k => pure (.int k)
+              | other => fail s!"range-over-int at {path} carries a non-integer operandType ({repr other})"
+          | none => fail s!"range-over-int at {path} carries no operandType — the loop variable has no kind to take"
+        else pure intTy
+      let idxKind : IntKind := match idxTy with | .int k => k | _ => .int
       let ridx : Expr := .var "$ridx"
       -- Range over *[N]T (value form): the pointer binds once; each
       -- iteration reads the element THROUGH it, so writes to the array
@@ -864,15 +889,16 @@ partial def decodeRange (results : Array Param) (path : String) (obj : StrictJso
         | none => .length (.var "$rcoll") none
       -- Per-iteration loop-variable bindings.
       let mut iter : Array Stmt := #[
-        -- increment index at top except on the first iteration
+        -- increment index at top except on the first iteration (the
+        -- synthetic 1 in the OPERAND's kind — BUG-043)
         .ifThenElse (.var "$rfirst")
           (.assign (.var "$rfirst") (.boolLit false))
-          (.assign (.var "$ridx") (.add ridx (.intLit 1 .int))),
+          (.assign (.var "$ridx") (.add ridx (.intLit 1 idxKind))),
         -- exit when the index reaches the length
         .ifThenElse (.atLeastCmp ridx (.var "$rlen")) .breakStmt (.seqn #[])
       ]
       match keyVar with
-      | some k => iter := iter ++ #[.initialization { id := k, typ := intTy }, .assign (.var k) ridx]
+      | some k => iter := iter ++ #[.initialization { id := k, typ := idxTy }, .assign (.var k) ridx]
       | none => pure ()
       if kind != "int" then
         match valVar with
@@ -887,8 +913,8 @@ partial def decodeRange (results : Array Param) (path : String) (obj : StrictJso
       iter := iter.push body
       pure (.block #[] #[
         .initialization { id := "$rcoll", typ := collTy }, .assign (.var "$rcoll") coll,
-        .initialization { id := "$rlen", typ := intTy }, .assign (.var "$rlen") lenExpr,
-        .initialization { id := "$ridx", typ := intTy }, .assign (.var "$ridx") (.intLit 0 .int),
+        .initialization { id := "$rlen", typ := idxTy }, .assign (.var "$rlen") lenExpr,
+        .initialization { id := "$ridx", typ := idxTy }, .assign (.var "$ridx") (.intLit 0 idxKind),
         .initialization { id := "$rfirst", typ := .bool }, .assign (.var "$rfirst") (.boolLit true),
         lab (.while (.boolLit true) (.block #[] iter))
       ])

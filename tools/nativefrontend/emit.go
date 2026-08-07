@@ -2677,6 +2677,11 @@ func (e *emitter) emitRange(rs *ast.RangeStmt) (any, error) {
 			}
 			coll = map[string]any{"expr": "int", "value": itoa(int(arr.Len()))}
 			kindFields["kind"] = "int"
+			// Ranging an array (through the pointer) indexes with int
+			// (spec §For statements) — the static-length int desugar
+			// carries that kind explicitly (BUG-043: the decoder fails
+			// closed on a kindless range-over-int).
+			kindFields["operandType"] = intType("int")
 			valName = ""
 		} else {
 			// Value form: the POINTER binds once; each iteration reads the
@@ -2736,7 +2741,19 @@ func (e *emitter) emitRange(rs *ast.RangeStmt) (any, error) {
 			kindFields["elemType"] = et
 		case *types.Basic:
 			if u.Info()&types.IsInteger != 0 {
+				// Range over an integer: the iteration variable takes the
+				// OPERAND's type (spec §For statements), so the wire
+				// carries its underlying integer kind — previously no
+				// kind was emitted at all and the decoder hard-coded the
+				// default int, so arithmetic on the loop variable in the
+				// operand's kind went stuck (BUG-043; u is already the
+				// operand's Underlying, so defined types resolve here).
+				ot, err := e.emitBasic(u)
+				if err != nil {
+					return nil, err
+				}
 				kindFields["kind"] = "int"
+				kindFields["operandType"] = ot
 			} else if u.Info()&types.IsString != 0 {
 				kindFields["kind"] = "string"
 			} else {
