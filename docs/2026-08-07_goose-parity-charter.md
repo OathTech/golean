@@ -1,6 +1,6 @@
 # Goose-parity buildout — charter + standing-goal draft (2026-08-07)
 
-**STATUS: DRAFT — AWAITING USER BLESSING.** The user has NOT signed
+**STATUS: BLESSED (user sign-off 2026-08-07) — charter of record for the goose-parity buildout; the standing goal text below is ready to set when the buildout launches (post arc-final audit). Note: grossmith received a further upstream update 2026-08-07 (post-campaign); re-pin its rev at buildout launch..** The user has NOT signed
 this charter off; nothing in it is in force, and no goose-parity
 buildout starts until the user blesses the charter and sets the
 standing goal (a decision item at the channels-arc merge sign-off).
