@@ -149,7 +149,7 @@ envelope the reduction compares against. -/
 def schedPickFine (m : MultiConfig) (i : Nat) : Prop :=
   i ∈ runnableIdxs m.shared m.threads
 
-/-- The FULL-interleaving pool relation: `StepM`'s four rule classes
+/-- The FULL-interleaving pool relation: `StepM`'s six rule classes
 verbatim with `schedPickFine` in place of `schedPick`. Proof
 infrastructure for the reduction statement only — the executable
 machine and every statement carrier stay on registry-point

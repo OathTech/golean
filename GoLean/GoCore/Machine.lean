@@ -1999,9 +1999,18 @@ construction — the ∀-choices kit's discipline, the mapIterNext
 precedent). The multi-ready arm commits EVERY ready clause against the
 same pre-state: a clause whose commit FAIL-CLOSES
 (stuck/unsupported/internal — diagnostics, never Go behaviors) fails
-the apply on every stream, not just when picked; channel PANICS are Go
-behaviors and stay per-pick (`.inr` carries the clause's panic — an
-unpicked clause's panic is discarded with its commit). -/
+the apply on every stream, not just when picked. Channel PANICS are Go
+behaviors and stay per-pick — and on TODAY'S machine they ride `.inl`
+as committed `.panicking` CONFIGURATIONS (`commitClause` never throws
+`.error (.panic …)`: the send-on-closed panic is
+`return (.panicking …, s)`, S4 audit correction — the earlier text
+claimed `.inr` carried them). The `.inr` arm is a DEFENSIVE mirror for
+any future `commitClause` panic-THROWING path: `applySelect` turns a
+picked `.inr` into the same `.panicking` configuration WITH the L2
+pick consumed (never a re-thrown `.error`, whose `stepFn` handler
+would return the pre-consumption stream and desynchronize every later
+site — the latent drop the audit found); an unpicked clause's panic is
+discarded with its commit either way. -/
 def applySelectCore (s : ExecState)
     (clauses : List (SelectClauseHead × Stmt)) (default? : Option Stmt)
     (vs : List GoValue) (env : LocalEnv) (k : Cont) :
@@ -2036,7 +2045,11 @@ def applySelect (s : ExecState) (clauses : List (SelectClauseHead × Stmt))
       let (idx, ch') := ch.consume commits.length
       match commits[idx]? with
       | some (.inl (c', s')) => return (c', s', ch')
-      | some (.inr msg) => throw (.panic msg)
+      | some (.inr msg) =>
+          -- Defensive arm (unreachable today — docstring above): the
+          -- picked clause's panic becomes a `.panicking` configuration
+          -- with the pick CONSUMED, exactly like the `.inl` route.
+          return (.panicking [⟨runtimeErrorValue msg, false⟩] k, s, ch')
       | none => throw (.internal "select ready-clause pick out of range")
 
 /-! ## The step relation -/

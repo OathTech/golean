@@ -229,18 +229,35 @@ of record for the engine, this addendum the design-note record):
   computed bound `b`, three full ROOT-replays through the real
   semantics (`enumRunProgram` — empty-tail defaults included) at raw
   picks `b`, `2b+1`, `4b+3`; a probe observation outside the final set
-  refutes the computed bound (an under-estimate leaves residues
-  unexplored — exactly what an escaping probe exhibits). The per-leaf
-  probe multiplicity of the old guard (position × leaf suffix) is
-  dropped as pure redundancy; probe streams still run end-to-end
-  through the real machine, never through the accountant.
+  refutes the computed bound. HONEST SCOPE (S4 audit correction —
+  this addendum first called the dropped per-leaf multiplicity "pure
+  redundancy", which is FALSE): the probe stream is prefix-only, so
+  every later site takes the empty-stream default and each rung
+  exhibits only the ALL-DEFAULTS leaf of the bumped branch — an
+  under-counted bound whose escaping residue's distinguishing
+  behavior needs a later non-default pick aliases back into the set
+  (demonstrated by the audit on schedLenHandoff, node [1,1]: branch
+  subtree {110}, divergent 100 one non-default pick deeper). The old
+  position × leaf-suffix multiplicity carried exactly that refutation
+  power. The ladder is therefore the heuristic MAGNITUDE cross-check;
+  the systematic checks on the accountant are the two-sided sentinel
+  drift alarm (below) and the external driver-agreement/coupling
+  pins. Probe streams still run end-to-end through the real machine,
+  never through the accountant.
 - **Pinning the copies** (the standing policy): the accountant and the
   loop mirrors are pinned by the driver-agreement eval tests (now
   including POOL classes: L1+pairing, L1+L4 waiter-extended select,
   lane-d refusal, the exit-no-sync mixed-leaf class) and by the
-  harness's per-case coupling check, plus an in-engine drift alarm — a
-  pool step that leaves supplied picks unconsumed (accountant said
-  "suffices", machine disagreed) fails the enumeration loudly.
+  harness's per-case coupling check, plus the in-engine TWO-SIDED
+  sentinel drift alarm (S4 audit upgrade — the first form checked
+  only unconsumed over-supply, leaving a MISSED consumption site
+  silent since `Choices.consume` defaults to 0 on an exhausted
+  stream): every step runs sentinel-suffixed and must return the
+  sentinel exactly, so over-counted AND missed sites both fail loud.
+  The accountant-exhaustiveness inventory (the six semantic-core
+  consume sites → accountant arms) is recorded in `GoLean/CLI.lean`'s
+  engine docstring as a standing lockstep obligation, Race.lean-
+  inventory style.
 - **New member statuses**: `race` (lane d's full-strength claim via
   `--expect-status race`: every enumerated path refuses); deadlock
   members still fail loud.

@@ -10,9 +10,13 @@
 #   went live: 6 red pins flip PASS (goroutines/sched-dependent/{first-come,
 #   select-default-handshake,len-handoff}, race/litmus/sb-chan with its
 #   {1,10,11}/members=3 certification, goroutines/select-wake-multi,
-#   goroutines/select-arrival-multi); 36 schedule-confluent ids reclassify
-#   stage - -> confluent (certified |set|=1 over all schedules; pipeline/
-#   {two-stage,buffered-stage} and worker-pool/shared-feed stay strict —
+#   goroutines/select-arrival-multi); 41 schedule-confluent ids reclassify
+#   stage - -> confluent (S4 audit correction: this header first said 36,
+#   an undercount of 5 that also propagated into the recording commit's
+#   "49 stage reclassifications" — true decomposition 6 result flips +
+#   54 stage moves = 41 confluent + 13 racy; certified |set|=1 over all
+#   schedules; pipeline/{two-stage,buffered-stage} and
+#   worker-pool/shared-feed stay strict —
 #   trees beyond tractable caps, recorded in their cases.tsv); the 13
 #   race-expectation ids reclassify stage - -> racy (full strength: every
 #   enumerated path refuses). ZERO result flips outside the 6 recorded ones.

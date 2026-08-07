@@ -160,6 +160,47 @@ if [ "$WITH_GO" -eq 1 ]; then
       echo "FAIL: membership under non-native frontend did not fail at frontend-export (F6); row: ${row:-<none>}"
       fail=1
     fi
+
+    # ---- slice-4 lane gates (S4 audit: the four new diff-coverage
+    # failure paths get landing-time fixtures like slice 3's two).
+    # Fixture subject: the L2 entry-path case — 2-member set, tiny tree.
+    OBS_DIR="Corpus/coverage/exec/channels/select-multi-ready/observable"
+    RACY_DIR="Corpus/coverage/exec/race/negative"
+
+    # B3: the members= cardinality pin must refuse a wrong pin.
+    printf 'lane-b3\t%s\tchannelSelectMultiReadyObservable\t-\tok\tchannels,select,make,len,nondet\t-\tmembership\twhy\twidth=2,members=99,samples=1\n' "$OBS_DIR" > "$TMP/manifest-b3.tsv"
+    GOLEAN_COVERAGE_ARTIFACTS="$ART" scripts/diff-coverage "$TMP/manifest-b3.tsv" >/dev/null 2>&1
+    row="$(tail -1 "$ART/latest.tsv" 2>/dev/null || true)"
+    if [[ "$row" == FAIL*membership*"pins members=99"* ]]; then
+      echo "ok: members= cardinality pin refuses a wrong pin (B3)"
+    else
+      echo "FAIL: members=99 pin did not refuse; row: ${row:-<none>}"
+      fail=1
+    fi
+
+    # B4: the confluent lane must refuse a non-singleton observable.
+    printf 'lane-b4\t%s\tchannelSelectMultiReadyObservable\t-\tok\tchannels,select,make,len\t-\tconfluent\twhy\twidth=2\n' "$OBS_DIR" > "$TMP/manifest-b4.tsv"
+    GOLEAN_COVERAGE_ARTIFACTS="$ART" scripts/diff-coverage "$TMP/manifest-b4.tsv" >/dev/null 2>&1
+    row="$(tail -1 "$ART/latest.tsv" 2>/dev/null || true)"
+    if [[ "$row" == FAIL*confluent*"NOT schedule-confluent"* ]]; then
+      echo "ok: confluent lane refuses a non-singleton set (B4)"
+    else
+      echo "FAIL: confluent lane accepted a 2-member observable; row: ${row:-<none>}"
+      fail=1
+    fi
+
+    # B5: the racy lane's enumerator-failure path — a width below the
+    # mechanically-computed site bound must fail at stage racy (the
+    # width-cap refutation surfacing through the racy dispatch).
+    printf 'lane-b5\t%s\traceWriteWrite\t-\trace\tgoroutines,channels,race\t-\tracy\t-\twidth=1\n' "$RACY_DIR" > "$TMP/manifest-b5.tsv"
+    GOLEAN_COVERAGE_ARTIFACTS="$ART" scripts/diff-coverage "$TMP/manifest-b5.tsv" >/dev/null 2>&1
+    row="$(tail -1 "$ART/latest.tsv" 2>/dev/null || true)"
+    if [[ "$row" == FAIL*racy*"site bound"* ]]; then
+      echo "ok: racy lane fails loud on a refuted width (B5)"
+    else
+      echo "FAIL: racy lane with width=1 did not fail at the site-bound check; row: ${row:-<none>}"
+      fail=1
+    fi
   fi
 fi
 

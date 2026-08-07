@@ -2202,7 +2202,7 @@ theorem applySelect_ok_or_panic_any_ch {σ : ExecState}
               rw [List.getElem?_eq_getElem hlt]
               cases hb : (b :: rest)[idx] with
               | inl r => exact .inl ⟨_, rfl⟩
-              | inr msg => exact .inr ⟨_, rfl⟩
+              | inr msg => exact .inl ⟨_, rfl⟩
 
 set_option maxHeartbeats 1600000 in
 set_option linter.unusedSimpArgs false in

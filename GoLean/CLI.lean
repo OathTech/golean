@@ -456,26 +456,60 @@ set for every membership case, several streams, every differential run).
 Drift between the copies and the originals breaks those pins loudly.
 
 For a case whose observable genuinely depends on the `Choices` stream,
-this enumerates the DISTINCT observations over all stream prefixes on
-alphabet `[0, B)` to consumption depth `D`, deduplicating canonical
-observation JSON.
+this enumerates the DISTINCT observations over the whole choice tree,
+deduplicating canonical observation JSON.
 
-Coverage argument — the certification claim, stated honestly:
-`Choices.consume` takes each pick modulo the site's bound, so `[0, B)`
-at every position covers every behavior IF AND ONLY IF the precondition
-holds that `B ≥` every consumption site's bound reached in the case.
-The enumerator CANNOT read a site's bound (that would need a
-core-adjacent instrumentation hook — deferred, see the design note), so
-the precondition is AUTHOR-ASSERTED per-case metadata (`width`,
-explicit — no silent default at the harness; the case's `why` must argue
-the bound). The ALIAS GUARD is a heuristic cross-check of that
-assertion, not a proof: it probes each explored pick position with a
-small ladder of values `≥ B` (`+B`, `+2B+1`, `+4B+3`); if the enumeration is
-complete, EVERY stream's observation is in the set, so a probe landing
-outside the set REFUTES the width assertion (fail closed, "raise
-width"). A bound `> B` whose extra residues alias existing observations
-can still escape the ladder. Depth `D`, the observation cap `N`, and
+Coverage argument — the certification claim, stated honestly.
+[SUPERSEDED at the channels arc's slice 4 (S4 audit correction — the
+paragraph here described the retired uniform-width engine: alphabet
+`[0, B)` at every position, "the enumerator CANNOT read a site's
+bound", the author-asserted width PRECONDITION, and the `+B/+2B+1/+4B+3`
+offset ladder; all four are false of the shipped engine). The current
+claim:] `Choices.consume` takes each pick modulo the site's bound, and
+the stepwise engine below explores exactly `[0, bound)` at each site,
+with every bound COMPUTED by the consumption accountant
+(`stepNeeds`/`stepNeedsSeq`) from the machine's own analysis functions
+— the design note's once-deferred "mechanical bound certification",
+taken at slice 4 without touching GoCore. The per-case `width` is a
+MECHANICALLY-CHECKED CAP (a computed bound above it fails loud —
+F2a's discipline made exact), no longer the precondition the
+certification rests on. The certification's residual trust is the
+ACCOUNTANT itself (a hand-mirrored copy), guarded three ways: the
+per-site alias ladder (raw picks `b`, `2b+1`, `4b+3` at each
+discovered site's computed bound, replayed through the REAL semantics
+— an under-counted bound's escaping residue refutes it, with the
+recorded qualifier that the ladder replays an all-defaults suffix, so
+a residue whose distinguishing behavior needs a later non-default
+pick can still alias into the set); the TWO-SIDED sentinel drift
+alarm on every step (S4 audit: over-supplied picks AND a missed
+consumption site both fail loud — the sentinel-suffixed step must
+return the sentinel exactly); and the external driver-agreement /
+coupling pins above. Depth `D`, the observation cap `N`, and
 the work cap all fail LOUD, never truncate silently.
+
+THE ACCOUNTANT-EXHAUSTIVENESS INVENTORY (a standing LOCKSTEP
+obligation, the Race.lean-inventory mold: a new `Choices.consume`
+call site in the semantic core MUST add its `stepNeeds`/`stepNeedsSeq`
+arm AND its row here; the sentinel alarm is the executable check).
+The semantic core's consume sites and their accountant arms:
+1. `stepMulti`'s L1 scheduler pick (Multi.lean, `rs.length` at a
+   boundary with |runnable| > 1) → `stepNeeds`' boundary arm.
+2. `arrivalPlan`'s L2 arrival pick (Multi.lean, `os.length` at a
+   `.multi` analysis) → `stepNeeds`' `.multi` arm.
+3. `stepThread`'s L4 waiter pick (Multi.lean, `cs.length` at a
+   multi-candidate pairing) → `stepNeeds`' `.single`/`.multi`-pair
+   arms (`cs.length` when > 1).
+4. `stepFn`'s mapIterK pick-next (StepFn.lean, `remaining.size`) →
+   the `.next (.mapIterK …)` arm of both accountants.
+5. `applyStmtOp`'s appendSlice spill capacity (Machine.lean,
+   `appendSpillWidth oldCap newLen`) → the `.stmtOpK (.appendSlice)`
+   apply arm of both accountants (operand analysis mirrored).
+6. `applySelect`'s L2 select pick (Machine.lean, `commits.length` at
+   a `.picks` core outcome) → the `.selectOpsK` apply arm of both
+   accountants (via the same `applySelectCore`).
+Non-consuming by signature (no arm needed): `resumeThread`,
+`spawnStep`, `commitClause`, `applyPairing`, the `.spawned` strip,
+and `raceUpdate` (which REPLICATES consumption but draws nothing).
 
 Machine-side status discipline (audit F1): a member whose status differs
 from the case's expected status is BY CONSTRUCTION a machine bug, not an
@@ -489,11 +523,12 @@ structure EnumArgs where
   functionName : Option String := none
   args : Array Int := #[]
   fuel : Nat := 10000000
-  /-- `B`: the pick alphabet is `[0, B)` at every consumption site. Must be
-  `≥` every site's bound in the case (per-case metadata; default 16
-  covers small maps, but NOT the append spill since the F2 envelope
-  widening — its bound is `appendSpillWidth oldCap newLen`, at least 32;
-  a membership case observing a spill must assert its width). -/
+  /-- `B`: the mechanically-checked CAP on every consumption site's
+  COMPUTED bound (slice 4 — the engine explores `[0, bound)` per site;
+  a bound above `B` fails loud). Per-case metadata; default 16 covers
+  small maps and small pools, but NOT the append spill since the F2
+  envelope widening — its bound is `appendSpillWidth oldCap newLen`,
+  at least 32; a case observing a spill must assert its width. -/
   maxWidth : Nat := 16
   /-- `D`: maximum consumption sites per run. A run consuming more fails
   loud — it is never silently truncated to a prefix. -/
@@ -502,9 +537,10 @@ structure EnumArgs where
   such a case is too wide for enumeration (needs a per-case predicate,
   out of scope per the design note). -/
   cap : Nat := 64
-  /-- Work cap on total machine runs (exploration + alias probes): the
-  `B^D` blowup guard. Exactly this many runs are permitted; exceeding it
-  fails loud (audit F8: previously permitted N+1). -/
+  /-- Work cap on exploration MACHINE STEPS + alias-probe RUNS (the
+  unit changed from whole runs at slice 4's stepwise engine — shared
+  prefixes execute once): the blowup guard. Exceeding it fails loud
+  (audit F8's discipline carried over). -/
   workCap : Nat := 200000
   /-- Expected observation status (`ok` / `panic` / `race` — the last
   is lane d's full-strength claim: EVERY enumerated path refuses):
@@ -758,9 +794,18 @@ per-site bounds:
   raw picks `b`, `2b+1`, `4b+3` at that position (offsets ≡ 0 mod `b`
   only if `b` is the true bound — the de-aligned upper rungs survive
   divisor coincidences, delta-review T1). A probe observation outside
-  the enumerated set refutes the computed bound (an accountant bound
-  smaller than the machine's real one would leave residues
-  unexplored — exactly what the escaping probe exhibits). Probes run
+  the enumerated set refutes the computed bound. HONEST SCOPE (S4
+  audit): the probe stream ends at the probed position, so every
+  later site takes the empty-stream default 0 — the probe exhibits
+  only the ALL-DEFAULTS leaf of the bumped branch, and an escaping
+  residue whose distinguishing behavior needs a later non-default
+  pick can still alias into the set (demonstrated on schedLenHandoff:
+  node [1,1], branch subtree {110} with the divergent 100 one
+  non-default pick deeper). The old per-leaf suffix multiplicity
+  carried that refutation power and was NOT pure redundancy; the
+  primary check on the accountant is the driver-agreement /
+  coupling pins plus the sentinel drift alarm, with the ladder as
+  the heuristic magnitude cross-check. Probes run
   through `enumRunProgram` — the REAL semantics end to end, empty-tail
   defaults included — so a probe is never itself accountant-derived.
 * **DFS with shared prefixes**: work is counted in machine STEPS over
@@ -926,7 +971,10 @@ def recordLeaf (ctx : ExpCtx) (out : EnumOutcome) (path : List Nat)
 position `path` (reversed picks so far): three full ROOT-replays through
 `enumRunProgram` — the real semantics — at raw picks `b`, `2b+1`,
 `4b+3`, observations collected for the final membership check. A probe
-whose RUN fails refutes certification loud (like the old guard). -/
+whose RUN fails refutes certification loud (like the old guard).
+Scope: the probe stream is prefix-only — later sites take the
+empty-stream default — so each rung exhibits the bumped branch's
+all-defaults leaf only (the engine docstring's HONEST SCOPE note). -/
 def probeSite (ctx : ExpCtx) (out : EnumOutcome) (path : List Nat)
     (bound : Nat) : Except String EnumOutcome := do
   let prefixPicks := path.reverse
@@ -1013,12 +1061,22 @@ partial def poolStepDFS (ctx : ExpCtx) (out : EnumOutcome) (path : List Nat)
       branchSite ctx out path bound path.length fun o b =>
         poolStepDFS ctx o (b :: path) resultLocs fuel m r (b :: stepPicks)
   | none =>
-      match GoCore.Machine.stepMulti m picks with
+      -- TWO-SIDED drift alarm (S4 audit): run the step with ONE
+      -- SENTINEL pick appended and require the sentinel to survive as
+      -- the exact leftover. Over-supply (accountant said the picks
+      -- were needed, the machine consumed fewer) leaves extra picks
+      -- beside the sentinel; UNDER-supply (a consumption site the
+      -- accountant MISSED — previously silent, because
+      -- `Choices.consume` defaults to 0 on an exhausted stream)
+      -- swallows the sentinel. Both fail loud. The sentinel is never
+      -- consulted when it survives, so `m'` is exactly the
+      -- sentinel-free step's result.
+      match GoCore.Machine.stepMulti m (picks ++ [0]) with
       | .error e =>
           .error s!"machine step failed under pick assignment {path.reverse} — cannot certify the observation set: {renderGoError e}"
       | .ok (m', leftover) =>
-          if !leftover.isEmpty then
-            .error s!"consumption accountant drift: a pool step left picks {leftover} unconsumed under {path.reverse} — driver-copy drift, cannot certify"
+          if leftover != [0] then
+            .error s!"consumption accountant drift under {path.reverse}: sentinel-suffixed step left {leftover} (expected the sentinel alone) — the accountant {if leftover.isEmpty then "MISSED a consumption site (the machine drew the sentinel)" else "over-counted (supplied picks went unconsumed)"}; driver-copy drift, cannot certify"
           else
             match GoCore.Machine.raceUpdate m.shared m.threads picks m' r with
             | .error .raceDetected =>
@@ -1074,22 +1132,30 @@ partial def initDFS (ctx : ExpCtx) (out : EnumOutcome) (path : List Nat)
       | fuel' + 1 =>
         match stepNeedsSeq σ c with
         | some bound =>
+            -- Sentinel-suffixed like the pool path: the branch pick
+            -- must be consumed AND nothing more (a sequential step
+            -- draws at most one pick — checked, not assumed).
             branchSite ctx out path bound path.length fun o b =>
-              match GoCore.Machine.stepFn σ c [b] with
+              match GoCore.Machine.stepFn σ c [b, 0] with
               | .error e =>
                   .error s!"package init step failed under {(b :: path).reverse}: {renderGoError e}"
               | .ok (c', σ', leftover) =>
-                  if !leftover.isEmpty then
-                    .error s!"consumption accountant drift in package init (pick {leftover} unconsumed) — driver-copy drift"
+                  if leftover != [0] then
+                    .error s!"consumption accountant drift in package init under {(b :: path).reverse}: sentinel-suffixed step left {leftover} (expected the sentinel alone) — driver-copy drift"
                   else
                     initDFS ctx { o with steps := o.steps + 1 } (b :: path)
                       fuel' σ' c'
         | none =>
-            match GoCore.Machine.stepFn σ c [] with
+            -- TWO-SIDED here too (S4 audit): the sentinel must survive
+            -- a step the accountant called non-consuming.
+            match GoCore.Machine.stepFn σ c [0] with
             | .error e =>
                 .error s!"package init failed under {path.reverse}: {renderGoError (GoCore.Machine.markInitPhase e)}"
-            | .ok (c', σ', _) =>
-                initDFS ctx { out with steps := out.steps + 1 } path fuel' σ' c'
+            | .ok (c', σ', leftover) =>
+                if leftover != [0] then
+                  .error s!"consumption accountant drift in package init under {path.reverse}: a step the accountant called non-consuming drew the sentinel — driver-copy drift"
+                else
+                  initDFS ctx { out with steps := out.steps + 1 } path fuel' σ' c'
 
 /-- The engine's entry: explore from the seeded state (init phase when
 present, then the pool subject per branch), then run the certification

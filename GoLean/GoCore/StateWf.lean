@@ -4976,7 +4976,14 @@ theorem applySelect_wf {σ : ExecState}
               rw [hcc] at hf
               cases e <;> simp_all
         exact hcommit cl hmem hcom
-    · simp [throw, throwThe, MonadExceptOf.throw] at h
+    · -- defensive `.inr` (unreachable today): the picked panic as a
+      -- `.panicking` configuration over the input state
+      simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl, rfl⟩ := h
+      refine ⟨hw, ?_, rfl⟩
+      simp only [Config.locSup, panicChainSup, runtimeErrorValue_locSup,
+        Nat.max_le]
+      omega
     · simp [throw, throwThe, MonadExceptOf.throw] at h
 
 /-- Iteration-typing transparency of the phase-1 target entry: the new
@@ -5181,7 +5188,10 @@ theorem applySelect_itersNormalized {σ : ExecState}
               rw [hcc] at hf
               cases e <;> simp_all
         exact commitClause_itersNormalized hcom hk
-    · simp [throw, throwThe, MonadExceptOf.throw] at h
+    · -- defensive `.inr`: the panicking configuration forwards `k`
+      simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl, rfl⟩ := h
+      simpa [Config.itersNormalized] using hk
     · simp [throw, throwThe, MonadExceptOf.throw] at h
 
 set_option maxHeartbeats 4000000 in

@@ -107,7 +107,9 @@
 #   admitted set {1,10,11} and the SC-forbidden 00). The other 12 new
 #   race-lane ids land PASS (racy-negative refusals + green edge/
 #   granularity guards).
-# 2026-08-07 (channels arc slice 4, red-first commit)  21 -> 24,
+# 2026-08-07 (channels arc slice 4; raise RECORDED IN the BUG-040
+#   commit, one commit after the red-first commit it describes — the
+#   recorded S4 deviation)  21 -> 24,
 #   TRANSIENT: the three L2 multi-ready envelope shapes enter red-first
 #   (entry/wake/arrival — see untriaged-ids). The L2 site and the pool
 #   enumerator land in this same slice and flip them; the ceiling drops

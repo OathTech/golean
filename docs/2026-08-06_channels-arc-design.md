@@ -1287,7 +1287,11 @@ sets BEFORE any machinery. Decisions and findings DURING the build:
   rows (the doctrine update; live finding: cap-zero's -race sample
   lands on cap 1 — inside the F2-widened envelope, a live validation
   of the widening; first-come exhibits BOTH members only under
-  -race). 36 confluent reclassifications; 3 recorded stay-strict ids
+  -race). 41 confluent reclassifications (S4 audit correction: first
+  recorded as 36 here, in the baseline header, and — as "49 stage
+  reclassifications" — in commit 88fa982's message; the true drift
+  decomposition is 6 result flips + 54 stage moves = 41 confluent +
+  13 racy = 60 ids); 3 recorded stay-strict ids
   whose trees exceed tractable caps (pipeline/{two-stage,
   buffered-stage} >60M steps / >400 s, worker-pool/shared-feed —
   DPOR is the recorded later-additive layer, D9(c)).
@@ -1308,8 +1312,14 @@ child-recovers}, spawn-in-init/in-init, race/negative/map-range-iter
 107 eval tests green (99 → 107: the 8 pool-enumerator/wake-commit
 pins; the two BUG-040 pins flipped in place); proofs green, 38
 designated statements byte-identical; check-bugs green (41 bugs;
-untriaged 16). Baselines re-pinned per movement in the moving commits
-(zero unexplained drift at each).
+untriaged 16). Baselines re-pinned per movement — with one recorded
+DEVIATION (S4 audit): the red-first commit (f4117e2) landed its three
+new red ids WITHOUT the same-commit baseline/untriaged re-pin; both
+landed one commit later (9209f4e, whose re-pin reason names them), so
+f4117e2 is not standalone gate-green under --diff (the S3 note's
+history-reconstructibility class; the untriaged-count entry labeled
+"red-first commit" was recorded in 9209f4e). Every other movement
+re-pinned in its own commit with zero unexplained drift.
 
 STILL OWED (slice 5+, unchanged unless noted): the Comparator landmark
 at arc end; the GoSpecC witness + concurrent WP (slice 5); MultiWf
@@ -1320,3 +1330,83 @@ BUG-041's path-precise value reads; DPOR for the three stay-strict
 confluent candidates; the NPDRF obligation (BUG-040's obstruction 3 is
 now discharged by the fix — the reduction statement's remaining
 obstructions stand).
+
+### S4 audit response (2026-08-07, pre-merge audit of this slice)
+
+Ten confirmed findings (two refuted), all addressed on the branch;
+severities as verified (2 minor + 8 note after verifier adjustments):
+
+- **MINOR (gate honesty): the enumerator's "Coverage argument" header
+  docstring still described the retired uniform-width engine** — four
+  false claims ("[0, B) alphabet", "CANNOT read a site's bound",
+  author-asserted width PRECONDITION, the +B/+2B+1/+4B+3 offset
+  ladder) contradicting the accurate engine section in the same file.
+  Rewritten to the shipped accountant engine with an explicit
+  SUPERSEDED marker, and the `maxWidth`/`workCap` field docs updated
+  (width = mechanically-checked cap; work unit = steps + probe runs).
+- **NOTE → TAKEN AS A FIX: the accountant drift alarm was ONE-SIDED**
+  (over-supplied picks failed loud; a MISSED consumption site was
+  silent — `Choices.consume` defaults to 0 on an exhausted stream —
+  and unprobed, since only discovered sites get ladder rungs; the
+  verifier confirmed the accountant exhaustive TODAY, six consume
+  sites each mirrored). Upgraded to the TWO-SIDED SENTINEL alarm:
+  every explored step (pool AND init phases) runs sentinel-suffixed
+  and must return the sentinel exactly — a missed site draws it, an
+  over-count leaves extra picks beside it, both fail loud. The
+  detection primitive is eval-pinned both ways (an L1 site draws the
+  sentinel / a non-site leaves it; a broken-accountant injection is
+  not expressible, so the primitive is the pin), and THE
+  ACCOUNTANT-EXHAUSTIVENESS INVENTORY (six semantic-core consume
+  sites → accountant arms) is recorded in CLI.lean's engine docstring
+  as a standing lockstep obligation, Race.lean-inventory style.
+- **NOTE: the retargeted alias ladder's "pure redundancy" claim was
+  FALSE** — the prefix-only probe exhibits only the bumped branch's
+  all-defaults leaf, and the audit DEMONSTRATED (schedLenHandoff node
+  [1,1]) a hypothetical under-count whose escaping residue aliases
+  under the empty suffix but diverges one non-default pick deeper —
+  refutation power the old per-leaf suffix multiplicity carried.
+  Claim corrected in the engine docstring, `probeSite`, and the
+  membership addendum: the ladder is the heuristic MAGNITUDE
+  cross-check; the systematic accountant checks are the sentinel
+  alarm and the external driver-agreement/coupling pins.
+- **MINOR (×2, same root): the confluent reclassification count was 41,
+  recorded as 36** in the baseline re-pin header and the build log —
+  and the recording commit's "6 + 49 = 60" is internally inconsistent
+  by the same 5 (true decomposition: 6 result flips + 54 stage moves
+  = 41 confluent + 13 racy). Both tracked records corrected in place
+  with the commit-message discrepancy noted (history not rewritten);
+  the racy count (13) and flip set (6) were verified correct.
+- **NOTE: applySelectCore's `.inr` panic arm is UNREACHABLE today**
+  (`commitClause` returns channel panics as `.panicking`
+  CONFIGURATIONS, never `.error (.panic …)`), its docstring
+  misattributed the panic flow, and the arm's `throw` would have
+  DROPPED the consumed L2 pick if it ever went live (stepFn's panic
+  handler returns the pre-consumption stream). Docstring corrected
+  (panics ride `.inl`; `.inr` is the defensive mirror) and the arm
+  now returns the `.panicking` configuration WITH the pick consumed
+  — the latent desync is closed while the defensive totality stays.
+- **NOTE: the red-first commit's baseline/untriaged re-pin landed one
+  commit late** (f4117e2 carried only the corpus files; 9209f4e
+  carried the re-pin with a back-reference) — the build log's
+  "re-pinned per movement in the moving commits" sentence corrected
+  to record the deviation (f4117e2 is not standalone gate-green under
+  --diff), and the untriaged-count entry's label fixed.
+- **NOTE: the alarm-direction doc gloss** — folded into the sentinel
+  fix and the addendum correction above (the membership note's
+  "exactly what an escaping probe exhibits" now scoped to discovered
+  sites).
+- **MINOR: the four new in-harness lane gates had no Part-B
+  fixtures** (slice 3's precedent gives harness-side guards
+  landing-time fixtures). Added B3/B4/B5 to test-lane-validation's
+  Part B: the members= pin refuses members=99 on a 2-member set; the
+  confluent lane refuses a non-singleton observable; the racy lane
+  fails loud on a mechanically-refuted width (width=1 under a bound-2
+  site). All run under ci --diff.
+- **NOTE: StepMFine's docstring said "four rule classes"** (bumped at
+  BUG-040's +1 but not at L2's +2); corrected to six, matching
+  StepM's.
+
+Refuted (no action): the baseline-header flip-set/completeness claim;
+the L2-pick-not-popped-on-panic claim (the pick IS consumed before the
+old throw — the latent issue was the STREAM the stepFn handler
+returned, fixed above as part of the `.inr` correction).

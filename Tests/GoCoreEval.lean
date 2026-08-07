@@ -1271,6 +1271,14 @@ private def expectIntResult (name : String) (result : Except GoError GoLean.GoCo
       IO.eprintln s!"FAIL: {name}: expected success, got {repr err}"
       return false
 
+private def expectTrue (name : String) (b : Bool) : IO Bool := do
+  if b then
+    IO.println s!"ok: {name}"
+    return true
+  else
+    IO.eprintln s!"FAIL: {name}: condition is false"
+    return false
+
 private def expectBoolResult (name : String) (result : Except GoError GoLean.GoCore.Result)
     (expected : Bool) : IO Bool := do
   match result with
@@ -2097,6 +2105,27 @@ def main : IO UInt32 := do
     (GoCore.Machine.runProgramPoolM 100000 wakeMultiProgram "wakeMultiMain_F" #[] [0, 0, 1, 1, 1]) 2)
   passed := passed && (← expectEnumMembers "GoCore pool enumerator: wake/entry multi-ready select set is {1, 2}"
     (enumerate wakeMultiProgram "wakeMultiMain_F" (some "ok")) 2)
+  -- S4 audit (the TWO-SIDED sentinel drift alarm's detection
+  -- primitive, pinned both ways): at a consumption site the machine
+  -- DRAWS the appended sentinel (so an accountant that missed the site
+  -- — answering none — would trip poolStepDFS's leftover-!=-[sentinel]
+  -- alarm), and away from a site the sentinel SURVIVES untouched. The
+  -- site here is the L1 scheduler pick over two runnable no-clause
+  -- selects (both at boundaries).
+  passed := passed && (← expectTrue "GoCore accountant sentinel: an L1 site draws the sentinel (stepNeeds some 2, sentinel-run leftover [])"
+    (let selB : GoCore.Machine.Config :=
+      .exec (.selectStmt #[] (some (.seqn #[]))) [] .stop
+     CLI.stepNeeds ⟨#[selB, selB], {}, 0⟩ [] == some 2
+      && (match GoCore.Machine.stepMulti ⟨#[selB, selB], {}, 0⟩ [0] with
+          | .ok (_, leftover) => leftover.isEmpty
+          | .error _ => false)))
+  passed := passed && (← expectTrue "GoCore accountant sentinel: a non-site leaves the sentinel (stepNeeds none, leftover [0])"
+    (let selB : GoCore.Machine.Config :=
+      .exec (.selectStmt #[] (some (.seqn #[]))) [] .stop
+     CLI.stepNeeds ⟨#[selB], {}, 0⟩ [] == none
+      && (match GoCore.Machine.stepMulti ⟨#[selB], {}, 0⟩ [0] with
+          | .ok (_, leftover) => leftover == [0]
+          | .error _ => false)))
   -- Audit response 2026-08-05, C6 (made NON-VACUOUS by delta-review M2 —
   -- the wp_assign lesson in test form: the original used the
   -- SUCCEEDING-init program, on which the OLD divergent orders already
