@@ -391,7 +391,11 @@ if [ "$RUN_DIFF" -eq 1 ]; then
   # Exit semantics of diff-coverage: 1 = some cases FAIL (expected — the corpus
   # deliberately outruns the tool; whether the failing SET is acceptable is the
   # baseline diff's job below), >=2 = the run itself broke (no cases, bad
-  # manifest, missing oracle). Judge run-completion here, regression below.
+  # manifest, missing oracle — and, since the grossmith-findings §2 fix,
+  # the no-publish paths: lake build failure/timeout, missing golean
+  # binary; those also remove latest.tsv/meta up front, so a dead run
+  # leaves nothing for the baseline diff below to judge as fresh).
+  # Judge run-completion here, regression below.
   ./scripts/diff-smoke 2>&1 | tail -3; drc=${PIPESTATUS[0]}
   case "$drc" in
     0|1) ok "differential run completed (exit $drc; failing-set judged by baseline diff)" ;;
@@ -439,7 +443,34 @@ if [ -f artifacts/coverage/latest.tsv ]; then
   head="$(git rev-parse HEAD 2>/dev/null)"
   stale=""
   [ -n "$runcommit" ] && [ "$runcommit" != "unknown" ] && [ "$runcommit" != "$head" ] && stale=" [recorded at ${runcommit:0:7}, HEAD is ${head:0:7} — stale]"
-  if [ "$ran" -ge "$total" ] && [ "$total" -gt 0 ]; then
+  # Gate integrity (grossmith findings §2,
+  # docs/2026-08-07_grossmith-findings.md): before judging latest.tsv,
+  # verify it is ATTRIBUTABLE — a published meta exists and, for a run
+  # claiming full-corpus scope, its recorded manifest_sha256 matches the
+  # manifest regenerated from the CURRENT corpus. A no-publish failure
+  # inside diff-coverage used to leave the previous run's file here to
+  # be judged as if fresh; diff-coverage now removes its outputs up
+  # front, and this closes the remaining consumer-side hole (results
+  # without meta, or a corpus change since the recorded full run —
+  # content swaps the `ran >= total` count check cannot see). Partial
+  # runs are exempt from the sha comparison (their manifest was
+  # filtered) — they are already reported as partial, never certified.
+  meta_ok=1
+  metafile=artifacts/coverage/latest.meta.tsv
+  if [ ! -f "$metafile" ]; then
+    bad "baseline diff (latest.tsv has NO published meta — refusing to judge unattributable results; re-run scripts/ci --diff)"
+    meta_ok=0
+  elif [ "$ran" -ge "$total" ] && [ "$total" -gt 0 ]; then
+    meta_sha="$(awk -F'\t' '$1=="manifest_sha256"{print $2}' "$metafile")"
+    cur_sha="$(./scripts/coverage-manifest 2>/dev/null | shasum -a 256 | awk '{print $1}')"
+    if [ -z "$meta_sha" ] || [ -z "$cur_sha" ] || [ "$meta_sha" != "$cur_sha" ]; then
+      bad "baseline diff (published meta manifest_sha256 [${meta_sha:-missing}] does not match the current corpus manifest — stale/foreign results; re-run scripts/ci --diff)"
+      meta_ok=0
+    fi
+  fi
+  if [ "$meta_ok" -eq 0 ]; then
+    :
+  elif [ "$ran" -ge "$total" ] && [ "$total" -gt 0 ]; then
     if ./scripts/coverage-baseline-diff --full; then ok "baseline diff FULL ($ran/$total, no regression)$stale"; else bad "baseline diff (DRIFT — see above)"; fi
   else
     if [ "$RUN_DIFF" -eq 1 ]; then

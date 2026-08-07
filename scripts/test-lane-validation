@@ -13,7 +13,9 @@
 #   param re-validation (F4: a samples=0 row that somehow bypasses the
 #   manifest must fail loud, never a zero-oracle pass) and the non-native
 #   frontend guard (F6: membership under GOLEAN_FRONTEND != native fails
-#   closed at frontend-export, no native frontend shelled).
+#   closed at frontend-export, no native frontend shelled) — plus the
+#   gate-integrity no-publish fixtures (G1/G2, grossmith findings §2:
+#   infra failures exit 2 and leave no readable results).
 #
 # Exit 0 = all fixtures behave; nonzero = a gate went quiet.
 set -uo pipefail
@@ -201,6 +203,55 @@ if [ "$WITH_GO" -eq 1 ]; then
       echo "FAIL: racy lane with width=1 did not fail at the site-bound check; row: ${row:-<none>}"
       fail=1
     fi
+
+    # ---- Gate-integrity fixtures (grossmith findings §2,
+    # docs/2026-08-07_grossmith-findings.md): diff-coverage's NO-PUBLISH
+    # paths must (a) exit 2 — infrastructure, distinguishable from exit
+    # 1's "FAIL rows exist, published results authoritative" — and (b)
+    # leave NO readable latest.tsv/meta, so a dead run can never be
+    # judged via the previous run's files ("same set = no regression"
+    # for a run that never ran; this exact ambiguity produced a
+    # pre-release wrong-conformance statement in grossmith). Each
+    # fixture pre-seeds a stale results/meta pair and asserts both the
+    # exit code and the removal. The build failure is simulated with a
+    # fake `lake` on PATH; a timeout via LAKE_BUILD_TIMEOUT_SECONDS=0 is
+    # NOT usable (run_with_timeout's perl alarm(0) DISABLES the timer),
+    # so the timeout arm uses a sleeping fake lake under a 1s budget.
+    seed_stale_results() {
+      mkdir -p "$1"
+      printf 'result\tid\tfeatures\tstage\tdetail\nPASS\tstale/one\tx\t-\t-\n' > "$1/latest.tsv"
+      printf 'key\tvalue\nmanifest_sha256\tdeadbeef\n' > "$1/latest.meta.tsv"
+    }
+    check_no_publish() {
+      local name="$1" rc="$2" art="$3"
+      if [ "$rc" -ne 2 ]; then
+        echo "FAIL: $name: no-publish infra failure exited $rc, want 2"
+        fail=1
+      elif [ -e "$art/latest.tsv" ] || [ -e "$art/latest.meta.tsv" ]; then
+        echo "FAIL: $name: dead run left readable results/meta in $art"
+        fail=1
+      else
+        echo "ok: $name"
+      fi
+    }
+    FAKEBIN="$TMP/fakebin-fail"
+    mkdir -p "$FAKEBIN"
+    printf '#!/bin/sh\necho "fake lake: refusing to build" >&2\nexit 1\n' > "$FAKEBIN/lake"
+    chmod +x "$FAKEBIN/lake"
+    ART_G1="$TMP/artifacts-g1"
+    seed_stale_results "$ART_G1"
+    printf 'lane-g1\t%s\trangeFirstKey\t-\tok\tmaps,range,keys,loops,nondet\t-\tmembership\twhy\twidth=16\n' "$GO_DIR" > "$TMP/manifest-g1.tsv"
+    PATH="$FAKEBIN:$PATH" GOLEAN_COVERAGE_ARTIFACTS="$ART_G1" scripts/diff-coverage "$TMP/manifest-g1.tsv" >/dev/null 2>&1
+    check_no_publish "lake-build failure exits 2, no readable results (G1)" $? "$ART_G1"
+
+    FAKEBIN2="$TMP/fakebin-hang"
+    mkdir -p "$FAKEBIN2"
+    printf '#!/bin/sh\nsleep 5\n' > "$FAKEBIN2/lake"
+    chmod +x "$FAKEBIN2/lake"
+    ART_G2="$TMP/artifacts-g2"
+    seed_stale_results "$ART_G2"
+    PATH="$FAKEBIN2:$PATH" LAKE_BUILD_TIMEOUT_SECONDS=1 GOLEAN_COVERAGE_ARTIFACTS="$ART_G2" scripts/diff-coverage "$TMP/manifest-g1.tsv" >/dev/null 2>&1
+    check_no_publish "lake-build timeout exits 2, no readable results (G2)" $? "$ART_G2"
   fi
 fi
 

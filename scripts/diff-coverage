@@ -84,6 +84,16 @@ META_BASE="$(basename "$META_TSV")"
 mkdir -p "$RESULTS_DIR" "$META_DIR"
 RESULTS_TMP="$(mktemp "$RESULTS_DIR/.${RESULTS_BASE}.XXXXXX")"
 META_TMP="$(mktemp "$META_DIR/.${META_BASE}.XXXXXX")"
+# GATE INTEGRITY (grossmith findings §2,
+# docs/2026-08-07_grossmith-findings.md): invalidate the PREVIOUS run's
+# published results up front — a run that dies before publish_results
+# (lake build failure/timeout, missing binary, killed pool) must leave
+# NO readable results/meta pair, or a consumer (scripts/ci's baseline
+# diff; any programmatic caller) judges the previous run's file as if
+# fresh ("same set = no regression" for a run that never ran — the
+# exact ambiguity that produced a pre-release wrong-conformance
+# statement in grossmith).
+rm -f "$RESULTS_TSV" "$META_TSV"
 printf 'result\tid\tfeatures\tstage\tdetail\n' > "$RESULTS_TMP"
 
 manifest_sha="$(shasum -a 256 "$MANIFEST" | awk '{ print $1 }')"
@@ -121,13 +131,18 @@ publish_results() {
 }
 
 echo "building Lean executable..."
+# Exit 2, not 1, on the no-publish paths (grossmith findings §2): a
+# build failure/timeout or missing binary is an INFRASTRUCTURE failure —
+# nothing was classified, nothing was published — and must be
+# distinguishable from exit 1 ("FAIL rows exist; published results are
+# authoritative"), like the other infra exits in this script.
 if ! run_with_timeout "$LAKE_BUILD_TIMEOUT_SECONDS" lake build; then
-  echo "lake build failed" >&2
-  exit 1
+  echo "lake build failed or timed out (no results published)" >&2
+  exit 2
 fi
 if [[ ! -x "$GOLEAN_BIN" ]]; then
-  echo "built golean binary not found at $GOLEAN_BIN" >&2
-  exit 1
+  echo "built golean binary not found at $GOLEAN_BIN (no results published)" >&2
+  exit 2
 fi
 
 export_status=0
