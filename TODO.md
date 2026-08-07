@@ -356,30 +356,15 @@ interpreter.
 Deferred until the foundation is set: native interface dispatch (quorum 39/39),
 feature breadth up the raft ladder, `slices.Sort` extern + input fuzzing.
 
-## Goose/Perennial Design Mapping
+## Goose/Perennial comparison (standing matrix)
 
-- Produce a systematic design mapping of GoCore against new Goose/Perennial
-  (reference checkouts under `../deps/goose` and `../deps/perennial/new`),
-  area by area, so their lessons are adopted or explicitly rejected rather
-  than rediscovered. Record the mapping and each adopt/reject decision in a
-  dedicated doc (suggested: `docs/goose-perennial-mapping.md`).
-- Areas to map, with their Perennial/Goose anchors: memory model and typed
-  points-to (`theory/mem.v`, per-index array ownership in `theory/array.v`)
-  versus GoCore `Loc.field`/`Loc.index` and the heap-cell typing work;
-  semantic type universe and tables (`defn/prelang.v`, `defn/postlang.v`,
-  `GoSemanticsFunctions`) versus GoCore `TypeId`/`FuncId` tables; interface
-  semantics from type sets and method sets (`defn/interface.v`) versus the
-  planned Phase 5 rebuild; slice descriptors and nondeterministic append
-  capacity (`defn/slice.v`) versus `docs/slice-model.md`; strings as byte
-  sequences (`go_string`); channels and concurrency primitives (new Goose
-  channel model) ahead of the Iris-Lean concurrency phase; proof-generation
-  templates (`proofgen/tmpl/types.tmpl`) ahead of Phase 5/6 proof output.
-- The mapping should state, per area, what Goose/Perennial does, what GoCore
-  does today, whether the delta is intentional (and why) or a gap with a
-  planned fix, and which upcoming phase consumes the lesson. Keep it a
-  design-review artifact, not ported code: the architecture lesson (clean
-  frontend translation, explicit semantic tables, typed primitives, proof
-  automation layered above the core) is the thing to preserve.
+- DISCHARGED (2026-08-07): the old "Goose/Perennial Design Mapping" entry is
+  realized as the STANDING comparison matrix `docs/goose-perennial-comparison.md`
+  (rev-pinned rows, CAP/DEL/LAT classification, per-arc maintenance
+  contract), seeded from `docs/2026-08-07_goose-comparative-scoping.md`
+  Part A per its Part-C proposal. Earlier area-by-area notes remain in
+  `docs/2026-07-19_goose-perennial-mapping.md` and the 2026-08-06
+  concurrency research notes; new comparison rows land in the matrix.
 
 ## Differential Execution
 
