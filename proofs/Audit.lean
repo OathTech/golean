@@ -254,8 +254,11 @@ open Lean in
     -- .normal with the pinned value; the all-asleep program classifies
     -- .deadlock). The full GoSpecC witness is the slice-5 deliverable
     -- (design of record's slice plan); the COMPARATOR landmark for this
-    -- designated-set change is OWED at arc end (recorded in the design
-    -- note's build log — never run as part of ci).
+    -- designated-set change was DISCHARGED at the arc-final audit
+    -- response (2026-08-08): scripts/comparator-judge PASS — 44
+    -- theorems certified in 123 s, fresh clone @ c526fb7c7f9e (run
+    -- record: the comparator-judge sprint doc's landmark log; never
+    -- run as part of ci).
     ``GoLean.Surface.forkJoinStreamCanonical,
     ``GoLean.Surface.forkJoinStreamAdversarial,
     ``GoLean.Surface.forkJoinStreamAlternating,
@@ -273,8 +276,9 @@ open Lean in
     -- frame-quantified instance is the recorded successor debt —
     -- Surface.lean witness-status note). The pinned-stream slice-2
     -- witnesses above stay byte-identical (growth by extension). The
-    -- Comparator landmark for this designated-set change remains OWED
-    -- at arc end.
+    -- Comparator landmark for this designated-set change was
+    -- DISCHARGED 2026-08-08 (44/44 in 123 s @ c526fb7c7f9e — see the
+    -- slice-2 comment above and the sprint doc's landmark log).
     ``GoLean.Surface.forkJoinAllSchedules42,
     ``GoLean.Surface.forkJoinNoDeadlock,
     ``GoLean.Surface.forkJoinNoRace,

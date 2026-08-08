@@ -2070,16 +2070,17 @@ The (original) 94-id fail set decomposes:
 
 ### DECISION ITEMS FOR THE USER at merge sign-off
 
-(a) **The owed Comparator landmark.** CLAUDE.md's step-2 trigger is
-    satisfied on this branch (designated set 38 → 44 — really 33 → 44
-    across the arc); the deferral to arc end followed the slice-2/4/5
-    precedent and is recorded in the build logs — but ELEVEN
-    concurrent designated statements (the 5 pinned-stream fork/join
-    witnesses, the 4 ∀-schedule statements, goldenSpecC,
-    goldenReturnsTwoC) have never been comparator-replayed, and none
-    has reached `main`. Decide: run `scripts/comparator-judge` before
-    this merge (recommended by the trigger's letter) vs. at another
-    point of the user's choosing.
+(a) **The owed Comparator landmark — DISCHARGED (arc-final audit
+    response, F17, 2026-08-08).** CLAUDE.md's step-2 trigger was
+    satisfied on this branch (designated set 33 → 44 across the arc)
+    and the deferral to arc end left eleven concurrent designated
+    statements never comparator-replayed. `scripts/comparator-judge`
+    now: **PASS, 44/44 theorems certified in 123 s, fresh clone @
+    `c526fb7c7f9e`** (the audit-response tip: the BUG-044/BUG-045
+    semantics fixes and the F4 ForkJoinTargets split are inside the
+    certified tree). Run record: the comparator-judge sprint doc's
+    landmark log; proofs/Audit.lean's OWED comments updated. Nothing
+    remains to decide here at merge sign-off.
 (b) **The arc-final adversarial audit ask** (the AUDIT CHECK — the
     ask is unconditional): this branch has had per-slice audits
     through slice 5 but NO audit of the branch's FINAL state (slices

@@ -349,3 +349,23 @@ correction — 24 stands). Fixed in the follow-up commit:
   landrun install, upstream smoke pair). Needs network, so it runs
   user-side; its steps are exactly what this session performed and
   verified piecewise.
+
+## Landmark run log (append per landmark run — arc-final audit F17,
+2026-08-08: a landmark result that gates a designated-set change must
+land in the repo, not chat; the channels arc's OWED landmark and the
+sem-adequacy arc's unrecorded run showed the precedent was mixed)
+
+- **2026-08-08 — channels-arc final audit response: PASS, 44/44
+  theorems certified in 123 s**, fresh clone @ `c526fb7c7f9e`
+  (`scripts/comparator-judge`, systemd-run +
+  `RestrictAddressFamilies=~AF_UNIX`, landrun-sandboxed Solution
+  build, kernel replay). This discharges the Comparator landmark the
+  channels arc's designated-set changes (33 → 43 → 44) left OWED at
+  arc end (proofs/Audit.lean's slice-2/slice-5 comments updated in
+  the same change). Note the run rode on the audit-response tip: the
+  eleven concurrent designated statements, the BUG-044/BUG-045
+  semantics fixes, and the F4 ForkJoinTargets statement-module split
+  are all inside the certified tree — the first post-split run also
+  validated the split operationally (the judge's trusted-side
+  pre-build needed the recorded core-lib widening; see
+  scripts/comparator-judge's F4 note).
