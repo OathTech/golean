@@ -1200,9 +1200,14 @@ def MultiConfig.mainOutcome? (m : MultiConfig) : Option ExecOutcome :=
   | _ => none
 
 /-- Fuel-bounded pool execution to the program terminals, mirroring
-`execStmtLoop`'s classification order exactly (any-goroutine panic
-abort, then main's terminal, then the deadlock state, all BEFORE the
-fuel check — a finished or wedged program never reports exhaustion),
+`execStmtLoop`'s classification order (any-goroutine panic abort,
+then main's terminal, then the deadlock state, all BEFORE the fuel
+check — a WEDGED program never reports exhaustion, and a finished one
+only through the L5 window below: at main's terminal with runnable
+goroutines left, a continue pick at fuel 0 is `.fuelOut` — the
+convergence check corrected this sentence's old unqualified
+"a finished or wedged program never reports exhaustion", which
+`execProgLoop_mono`'s window case explicitly contradicts),
 with `stepMulti` in place of `stepFn`. Fuel counts goroutine-steps.
 THE DETECTING LOOP (slice 3): a `RaceState` rides along, updated by
 `raceUpdate` after every pool step — a conflict aborts the run with

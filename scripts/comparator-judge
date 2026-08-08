@@ -197,8 +197,10 @@ if [ "$MODE" = fresh ]; then
   (cd "$JUDGE_DIR" && lake build Challenge) \
     || fail "pre-build of Challenge in the fresh clone failed"
   # Audit F4 follow-through (2026-08-08): the ForkJoinTargets split
-  # REMOVED the pool proof modules (MultiStreams/MultiWfSound/MultiSound/
-  # Race) from Challenge's closure — the statement-TCB discipline
+  # REMOVED MultiStreams and MultiWfSound from Challenge's closure
+  # (MultiSound and Race remain in it via Surface -> MultiSound and
+  # Multi -> Race — module list corrected at the convergence check;
+  # Race carries defs, not proofs) — the statement-TCB discipline
   # restored — so the Solution build now needs GoLean core modules
   # outside that closure, and the first post-split judge run failed with
   # exactly the loud failure predicted above (MultiWfSound inside the

@@ -60,3 +60,9 @@ goroutines/spawn-in-init/in-init
 #   rendezvous refused fail-closed at the machine boundary
 #   (lean-observation is the nearest stage); not a fidelity bug.
 channels/select-select/core
+# channels/select-select/beside-loop: the same marker's over-broad-
+#   trigger sibling (F10), at stage nondet (default stream commits the
+#   cell-ready clause; adversarial streams hit the refusal). Entered
+#   when the ledger filter gained nondet (convergence response,
+#   2026-08-08); not a fidelity bug.
+channels/select-select/beside-loop

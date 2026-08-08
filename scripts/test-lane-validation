@@ -138,6 +138,25 @@ expect_accept "well-formed racy row" \
   '-\trangeFirstKey\t-\trace\t-\tmaps,race\tracy\t-\twidth=4'
 expect_accept "membership row with a members pin" \
   '-\trangeFirstKey\t-\tok\t-\tmaps,nondet\tmembership\twhy text\twidth=16,members=3'
+# statuses= (status-diverse envelopes, audit F8/BUG-044; fixtures added
+# at the convergence check — the param landed with no self-test):
+expect_reject "statuses on a non-membership lane" \
+  '-\trangeFirstKey\t-\tok\t-\tmaps\tconfluent\twhy text\twidth=4,statuses=ok+panic' \
+  "membership-lane param"
+expect_reject "statuses malformed entry" \
+  '-\trangeFirstKey\t-\tok\t-\tmaps,nondet\tmembership\twhy text\twidth=16,statuses=ok+boom' \
+  "+-separated set over {ok,panic}"
+expect_reject "statuses singleton" \
+  '-\trangeFirstKey\t-\tok\t-\tmaps,nondet\tmembership\twhy text\twidth=16,statuses=ok' \
+  "+-separated set over {ok,panic}"
+expect_reject "statuses missing expected_status" \
+  '-\trangeFirstKey\t-\tok\t-\tmaps,nondet\tmembership\twhy text\twidth=16,statuses=panic+panic' \
+  "must include the row's expected_status"
+expect_reject "statuses duplicate entry" \
+  '-\trangeFirstKey\t-\tok\t-\tmaps,nondet\tmembership\twhy text\twidth=16,statuses=ok+ok' \
+  "duplicate entry"
+expect_accept "membership row with a status-diverse envelope" \
+  '-\trangeFirstKey\t-\tok\t-\tmaps,nondet\tmembership\twhy text\twidth=16,statuses=ok+panic'
 
 # ---- Part A2 (always): gate-integrity no-publish fixtures (grossmith
 # findings §2, docs/2026-08-07_grossmith-findings.md; extended at the

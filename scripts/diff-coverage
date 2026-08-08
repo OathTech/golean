@@ -709,6 +709,14 @@ parse_lane_params() {
           report_fail "$id" "$features" "manifest" "statuses must include the row's expected_status ($expected_status): $kv"
           return 1
         fi
+        if [[ "$value" == *ok*ok* || "$value" == *panic*panic* ]]; then
+          # Lockstep with coverage-manifest's duplicate arm (convergence
+          # check: this copy had shipped without it; a bypassing ok+ok
+          # was backstopped only by the enumerator's own duplicate
+          # refusal downstream).
+          report_fail "$id" "$features" "manifest" "statuses has a duplicate entry: $kv"
+          return 1
+        fi
         statuses="$value"
         continue
       fi

@@ -10,7 +10,7 @@
 #   (3) SYMMETRIC: every `Status: fixed` differential bug's cases must now PASS
 #       (marking a bug fixed while its cases still fail is laundering);
 #   (4) RATCHET: the count of unexplained baseline fidelity failures (stage
-#       lean-observation / differential / membership / confluent / racy, in no bug's Cases) must not EXCEED the
+#       lean-observation / differential / membership / confluent / racy / nondet, in no bug's Cases) must not EXCEED the
 #       recorded ceiling in baselines/untriaged-count — a new bug cannot hide in
 #       the pile, and deleting a BUG entry raises the count and trips this.
 #       When the count drops, lower the ceiling in the same commit (the check
@@ -87,10 +87,17 @@ done <<< "$bugs"
 #     schedule-confluent", enumerator/driver drift, "'every enumerated
 #     path refuses' not certified" — the unsound-race-refusal direction),
 #     yet neither was in this filter — the same hole the previous arc's
-#     F9 closed for membership, reopened lane by lane.
+#     F9 closed for membership, reopened lane by lane. `nondet` joined at
+#     the convergence check (2026-08-08): its failure text ("observation
+#     varies with iteration order") fires only AFTER strict equality with
+#     Go held, so it means the machine varies where the case is declared
+#     deterministic — the too-wide-envelope direction, at least as
+#     fidelity-bearing as confluent's machine-only alarm; the F5 fix had
+#     left it out while the same diff parked the first-ever permanent
+#     nondet FAIL (channels/select-select/beside-loop).
 unexplained="$(awk -F'\t' -v DC="$declared_cases" '
   BEGIN { n=split(DC,a," "); for(i=1;i<=n;i++) named[a[i]]=1 }
-  !/^#/ && $1=="FAIL" && ($3=="lean-observation" || $3=="differential" || $3=="membership" || $3=="confluent" || $3=="racy") && !($2 in named) { print $2"\t"$3 }
+  !/^#/ && $1=="FAIL" && ($3=="lean-observation" || $3=="differential" || $3=="membership" || $3=="confluent" || $3=="racy" || $3=="nondet") && !($2 in named) { print $2"\t"$3 }
 ' "$BASELINE" | sort)"
 nun="$(printf '%s' "$unexplained" | grep -c . || true)"
 

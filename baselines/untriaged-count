@@ -136,4 +136,12 @@
 #   beside-loop (F10's over-refusal trigger: any polled channel whose
 #   partner is a select loop) sits at stage nondet, outside this
 #   ledger's filter.
-17
+# 2026-08-08 (convergence response)  17 -> 18: check-bugs' fidelity
+#   filter gains stage `nondet` (the F5 rationale applies verbatim —
+#   the previous entry's "outside this ledger's filter" note was the
+#   gap, not a justification), so channels/select-select/beside-loop
+#   ENTERS the ledger as the same PERMANENT-until-lifted
+#   select-with-select refusal marker as its sibling core (F10's
+#   over-broad trigger: the default stream commits the cell-ready
+#   clause, adversarial streams hit the refusal — stage nondet).
+18
