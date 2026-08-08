@@ -944,13 +944,20 @@ HB here (S3 audit correction: gc's `closechan` DOES `raceacquireg` the
 parked sender's g at chan.go's "release all writers" loop, exactly as
 it does for receivers; the earlier claim that the woken `chansend`
 path performs no raceacquire was true but irrelevant — the closer
-installs the edge). The refusal-set agreement with `-race` holds
-anyway, for a different reason: gc flags EVERY close-beside-parked-
-sender via its channel-OBJECT instrumentation (`racewritepc` at close
-vs `racereadpc` at send entry), which we do not model — recorded in
-Race.lean's inventory as under-approximation (U3). A buffered
-send/receive completes through the slot clocks; a closed-empty receive
-acquires the close clock. -/
+installs the edge). CORRECTED at the arc-final audit (F1/BUG-045,
+2026-08-08): this docstring used to claim "the refusal-set agreement
+with `-race` holds anyway" via gc's channel-OBJECT instrumentation
+"which we do not model" — asserting agreement through the very
+mechanism whose absence broke it (three shipped confluent-green
+subjects were TSan-red). The chan-object pair IS now modeled
+(`RaceState.chanObjAccess`, U3 closed): every close beside a parked
+plain sender refuses at the CLOSE, before this wake can run — so the
+missing closer→woken-sender edge is moot on refused programs, and the
+close-woken-sender panic arm is detector-unreachable in race-free
+programs (no HB edge can order a close after a send entry that then
+parks; the arm remains for the racy members' pre-refusal semantics).
+A buffered send/receive completes through the slot clocks; a
+closed-empty receive acquires the close clock. -/
 def raceWakeEvent (s : ExecState) (i : Nat) (r : RaceState) :
     Config → Except GoError RaceState
   | .blockedSend (some loc) _ _ => do
@@ -1053,6 +1060,17 @@ def raceUpdate (sPre : ExecState) (tsPre : Array Config) (chPre : Choices)
       else
         match cPre with
         | .retV v (.chanStK op done [] _ _) => do
+            -- BUG-045: the channel-OBJECT pair (`chanObjAccess`) — a
+            -- plain send's ENTRY read, checked-and-recorded before any
+            -- dispatch (gc's chansend reads `c.raceaddr()` at entry, so
+            -- the read exists whether the send commits, parks, pairs,
+            -- or panics on closed).
+            let r ← (match op, (v :: done).reverse with
+              | .send _, chv :: _ =>
+                  (match chanValueLoc chv with
+                  | some loc => r.chanObjAccess i loc false
+                  | none => pure r)
+              | _, _ => pure r)
             match wokenPartner tsPre m'.threads i with
             | some j => racePairEvent sPre tsPre i j cPre r
             | none =>
@@ -1083,9 +1101,14 @@ def raceUpdate (sPre : ExecState) (tsPre : Array Config) (chPre : Choices)
                     | some loc =>
                         (match m'.threads[i]? with
                         | some (.next _) => do
+                            -- BUG-045: closechan's racewritepc — on the
+                            -- SUCCESS path only (gc panics on closed/nil
+                            -- before instrumenting), checked under the
+                            -- pre-release clock, then the release.
+                            let r ← r.chanObjAccess i loc true
                             let (_, cap, _) ← chanCell sPre loc
                             return (r.closeOp i loc cap)
-                        | _ => return r)  -- close panic: no edge
+                        | _ => return r)  -- close panic: no edge, no write
                     | none => return r)
                 | _, _ => return r
         | .retV v (.selectOpsK clauses _ done [] _ _) => do

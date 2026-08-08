@@ -171,12 +171,22 @@ EPISTEMIC CAPTION, recorded per the per-lane discipline:
   detector's HB and go_mem's relation (Fava SEFM 2020's caution) are
   therefore shared with `-race` rather than invented by us; each is
   quoted at its implementation site in `Race.lean`. Two recorded
-  DEVIATIONS from gc's realized set (S3 audit corrections): (i) the
+  DEVIATIONS from gc's realized set (S3 audit corrections; (i)
+  RESOLVED at the arc-final audit F1/BUG-045, 2026-08-08): (i) the
   close-woken SENDER gets no edge from us although gc's `closechan`
   DOES `raceacquireg` parked senders — our edge set is strictly
-  STRONGER there; refusal-set agreement holds anyway because gc flags
-  every close-beside-parked-send via its channel-OBJECT
-  instrumentation, which we do not model (Race.lean inventory U3);
+  STRONGER there. The old text claimed "refusal-set agreement holds
+  anyway because gc flags every close-beside-parked-send via its
+  channel-OBJECT instrumentation, which we do not model" — FALSE in
+  the fail-open direction (three shipped confluent-green subjects
+  were TSan-red through exactly that unmodeled pair; the audit's F1).
+  The chan-object pair IS now modeled (`RaceState.chanObjAccess`:
+  send = entry read, successful close = write, recv/select = nothing
+  — gc's instrumentation exactly), so every close beside a parked
+  plain sender refuses at the close and the missing wake edge is moot
+  on refused programs; the reclassified racy pins
+  (goroutines/close-wake/sender-*, select-closed-arrival/
+  recv-parked-sender) are the executable check;
   (ii) `len(m)` on a MAP is instrumented by gc (probed red on
   go1.26.5, refuting the first version of this caption) and is now
   recorded by the footprint; `len`/`cap` on channels remain

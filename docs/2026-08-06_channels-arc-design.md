@@ -878,10 +878,17 @@ build, recorded here:
     true but the closer installs the edge from ITS side
     (`closechan`'s release-all-writers loop `raceacquireg`s each
     parked sender, exactly as for receivers), so our no-edge choice
-    is strictly STRONGER than TSan's realized HB. Refusal-set
-    agreement holds for a different reason: gc flags every
-    close-beside-parked-send via channel-OBJECT instrumentation we
-    do not model (inventory U3)];
+    is strictly STRONGER than TSan's realized HB. RE-CORRECTED at the
+    arc-final audit (F1/BUG-045, 2026-08-08): the follow-on sentence
+    here — "refusal-set agreement holds for a different reason: gc
+    flags every close-beside-parked-send via channel-OBJECT
+    instrumentation we do not model" — asserted agreement through the
+    very mechanism whose absence broke it (three shipped
+    confluent-green subjects were TSan-red). The chan-object pair is
+    now MODELED (`chanObjAccess`, U3 closed): every
+    close-beside-parked-plain-send refuses at the close, the three
+    subjects are racy-lane pins, and the no-edge choice is moot on
+    refused programs];
   - spawn copies the parent clock to the child and bumps the parent
     ("The go statement that starts a new goroutine is synchronized
     before the start of the goroutine's execution"); goroutine EXIT
@@ -1049,12 +1056,17 @@ predicted classifications), then the fixes:
   sender.** gc's `closechan` DOES `raceacquireg` parked senders (the
   closer installs the edge; the woken `chansend` premise was true but
   irrelevant), so our no-edge choice is strictly STRONGER than TSan's
-  realized HB, and refusal-set agreement holds via gc's channel-OBJECT
-  instrumentation, which we do not model. All four sites corrected in
-  place (Race.lean `ChanClocks`, Multi.lean `raceWakeEvent`, doctrine
-  caption, this log's HB list); the unmodeled chan-object accesses
-  recorded as inventory U3. Behavior deliberately unchanged (the
-  stronger edge set refuses more, the fail-closed direction).
+  realized HB. [The rest of this entry's original text — "refusal-set
+  agreement holds via gc's channel-OBJECT instrumentation, which we do
+  not model" — was FALSE in the fail-open direction and is superseded:
+  arc-final audit F1/BUG-045 (2026-08-08) showed three shipped
+  confluent-green subjects TSan-red through exactly that unmodeled
+  pair; the pair is now modeled (`chanObjAccess`, U3 closed) and the
+  subjects are racy-lane pins with `-race` as the justifying oracle.]
+  All four sites corrected in place (Race.lean `ChanClocks`, Multi.lean
+  `raceWakeEvent`, doctrine caption, this log's HB list). Behavior of
+  the S3-era edge-set choice itself unchanged (the stronger edge set
+  refuses more, the fail-closed direction).
 - **MINOR (footprint completeness vs `RacyFine`): `len(m)` IS
   instrumented.** The verifier's probe refuted Race.lean's "len is
   invisible to -race" claim for maps (go1.26.5 flags `len(m)` beside a
@@ -1780,16 +1792,27 @@ the direction that matters with a real oracle.
 select clauses counted individually). Spec text: NONE on waiter order
 — "any matching waiter"; gc's FIFO wakeup is one legal point
 (membership territory, D4; real FIFO in channel state was rejected
-with the recorded reason). THE REVIEW'S FINDING: before this slice NO
-certified tree consumed the L4 pick above width 1 —
-select-arrival-multi's two parked senders sit on DIFFERENT channels
-(the choice among them is the L2 clause pick; its L4 picks are
-singletons), first-come's senders commit to a cap-2 buffer and never
-park, and worker-pool/sum's results channel (cap 3, three sends) never
-parks a sender — so the envelope's width>1 corner had NO width signal
-at all: precisely the doctrine's "a set Go never touches any corner
-of" review flag, plus an unexercised-machinery hazard (the
-`stepThread` multi-candidate arm was reachable only in theory).
+with the recorded reason). THE REVIEW'S FINDING — CORRECTED at the
+arc-final audit (F3, 2026-08-08): BOTH halves of the finding as
+originally written were factually WRONG. The claim was "before this
+slice NO certified tree consumed the L4 pick above width 1", with
+first-come dismissed because "first-come's senders commit to a cap-2
+buffer and never park" — but that dismissal looked only at `ch` and
+overlooked `done`: an UNBUFFERED channel on which BOTH spawned
+goroutines send while main receives twice. The audit's verifier
+mirrored the enumerator's tree and found 336 L4 sites in first-come's
+certified tree, each "arriving-thread=0 width=2 op=[recv cap=0
+buflen=0 closed=false]" — main's receive on `done` against TWO parked
+senders — so a certified tree DID consume the L4 pick at width 2
+before slice 6 (first-come was certified at slice 4), and the
+`stepThread` multi-candidate arm was NOT "reachable only in theory".
+What remains true: select-arrival-multi's parked senders sit on
+DIFFERENT channels (its L4 picks are singletons — the verifier's
+probe confirms 0 width>1 L4 sites there), first-come's pick is
+observationally INERT (both `done` senders send 0), and no case
+DIRECTLY pinned an observable width>1 L4 pick — so the directed pin
+below still adds value (an observable L4 discriminator), but as a
+strengthening, not as first coverage.
 CLOSED IN THIS REVIEW by the directed membership pin
 `goroutines/sched-dependent/waiter-pick` (two senders parked on ONE
 unbuffered channel when main's receive arrives; the both-parked state
@@ -1799,7 +1822,10 @@ tree 926 leaves, depth 10, ~34k steps+probes, well inside default
 caps), go1.26.5 exhibits BOTH members (12×3, 21×7 across the dual
 samples; the pre-landing probe showed plain-only sampling sitting on
 21 alone with -race exhibiting both — one more live validation of the
-dual-sampling doctrine). VERDICT with the pin landed: NOT A FLAG —
+dual-sampling doctrine). The verdict below is UNAFFECTED by the F3
+correction above (the pin, the certified sets, and NOT-A-FLAG all
+stand; only the "first coverage" claim fell). VERDICT with the pin
+landed: NOT A FLAG —
 the spec is silent on waiter order, so any matching waiter is
 conforming latitude; both members are oracle-exhibited; and the
 L4-vs-L1 relation is recorded honestly: on this shape (and every

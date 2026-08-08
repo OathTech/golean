@@ -819,6 +819,23 @@ private def closedSendWorkerFunction : GoCore.Func := {
 -- with ok=false (=> 5); the parked sender is close-woken into its own
 -- panic, never delivered. The waiter-blind bug handed the select the
 -- parked sender's 7 with ok=true => 7100.
+-- BUG-045 (arc-final audit F1): the closed-guard-past-parked-PLAIN-
+-- sender shape above is now correctly raceDetected (gc's chan-object
+-- pair: the parked send's entry read vs the close's write, unordered),
+-- so the guard behavior gets a RACE-FREE twin: a parked SELECT-send
+-- waiter — selectgo performs no chan-object access, so close beside it
+-- is TSan-green — and the arriving select-recv must still take the
+-- closed cell semantics (the closed guard zeroes the clause's waiter
+-- list BEFORE the select-with-select refusal could fire, S2
+-- convergence invariant (iv)).
+private def closedSelSendWorkerFunction : GoCore.Func := {
+  id := ⟨"closedSelSendWorker_F"⟩,
+  args := #[{ id := "ch", typ := .chan .both .int }],
+  results := #[],
+  body := .seqn #[.selectStmt #[
+    (.send (.var "ch") (.intLit 7) .int, .seqn #[])] none]
+}
+
 private def closedSelRecvMainFunction : GoCore.Func := {
   id := ⟨"closedSelRecvMain_F"⟩,
   args := #[],
@@ -841,13 +858,38 @@ private def closedSelRecvMainFunction : GoCore.Func := {
     ]
 }
 
+-- The race-free guard twin (BUG-045 comment above): identical shape,
+-- worker parked on a single-clause SELECT-send.
+private def closedSelRecvSelWaiterMainFunction : GoCore.Func := {
+  id := ⟨"closedSelRecvSelWaiterMain_F"⟩,
+  args := #[],
+  results := #[coreParam "z"],
+  body := .block
+    #[{ id := "chv", typ := .chan .both .int },
+      { id := "v", typ := .int }, { id := "okv", typ := .bool }]
+    #[
+      .makeChan (.var "chv") .int none,
+      .goStmt (.funcVal ⟨"closedSelSendWorker_F"⟩ #[]) #[.var "chv"],
+      .closeChan (.var "chv"),
+      .selectStmt #[
+        (.recv #[.var "v", .var "okv"] (.var "chv") .int,
+          .ifThenElse (.var "okv")
+            (.assign (.var "z")
+              (.add (.mul (.var "v") (.intLit 1000)) (.intLit 100)))
+            (.assign (.var "z")
+              (.add (.mul (.var "v") (.intLit 1000)) (.intLit 5))))
+      ] none
+    ]
+}
+
 private def prioProgram : GoCore.Program := {
   funcs := #[prioRecvOutWorkerFunction, prioSendHandoffMainFunction,
     prioSendSendWorkerFunction, prioRecvRefillMainFunction,
     prioSendSevenWorkerFunction, prioSelectDefaultRecvMainFunction,
     prioRecvForwardWorkerFunction, prioSelectDefaultSendMainFunction,
     closedRecvWorkerFunction, closedSelSendMainFunction,
-    closedSendWorkerFunction, closedSelRecvMainFunction]
+    closedSendWorkerFunction, closedSelRecvMainFunction,
+    closedSelSendWorkerFunction, closedSelRecvSelWaiterMainFunction]
 }
 
 /-! ### Race detection (channels arc slice 3, D2+D3(b)): stream-pinned
@@ -1992,8 +2034,15 @@ def main : IO UInt32 := do
     (GoCore.Machine.runProgramPoolM 100000 prioProgram "prioSelectDefaultRecvMain_F" #[] []) 99)
   passed := passed && (← expectErrorStatus "GoCore pool arriving select: send clause on a CLOSED channel panics past a parked receiver (gc closed-before-dequeue)"
     (GoCore.Machine.runProgramPoolM 100000 prioProgram "closedSelSendMain_F" #[] [1, 1]) "panic")
-  passed := passed && (← expectIntResult "GoCore pool arriving select: recv clause on a CLOSED channel drains zero/ok=false past a parked sender"
-    (GoCore.Machine.runProgramPoolM 100000 prioProgram "closedSelRecvMain_F" #[] [1, 1]) 5)
+  -- BUG-045: the parked-PLAIN-sender form of this guard pin is now
+  -- correctly raceDetected (the chan-object pair; the corpus racy case
+  -- goroutines/select-closed-arrival/recv-parked-sender certifies
+  -- every-path refusal); the guard behavior itself is pinned race-free
+  -- via the parked SELECT-send waiter twin below.
+  passed := passed && (← expectErrorStatus "GoCore pool arriving select recv on CLOSED past a parked plain sender is the chan-object race (BUG-045)"
+    (GoCore.Machine.runProgramPoolM 100000 prioProgram "closedSelRecvMain_F" #[] [1, 1]) "race")
+  passed := passed && (← expectIntResult "GoCore pool arriving select: recv clause on a CLOSED channel drains zero/ok=false past a parked SELECT-send waiter (race-free guard twin; invariant (iv))"
+    (GoCore.Machine.runProgramPoolM 100000 prioProgram "closedSelRecvSelWaiterMain_F" #[] [1, 1]) 5)
   passed := passed && (← expectErrorStatus "GoCore race: write/write refuses on the default stream"
     (GoCore.Machine.runProgramPoolM 100000 raceProgram "raceWriteWriteMain_F" #[] []) "race")
   passed := passed && (← expectErrorStatus "GoCore race: write/write refuses on the worker-first stream"

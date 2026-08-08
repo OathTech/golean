@@ -32,7 +32,24 @@ differential-pinned) `- Cases: <id>, <id>, …` (baseline case ids), then prose.
 
 ## BUG-045 — the channel OBJECT is not a shadow location: three shipped confluent-green subjects are TSan data races (`-race` fail-open; doctrine violation)
 
-- Status: open
+- Status: fixed (2026-08-08, channels-arc audit response F1 —
+  `RaceState.chanObjAccess` models gc's pair exactly (send = entry
+  read at the apply position on every outcome; successful close =
+  write; recv acquire-only; select clauses nothing), dispatched by
+  `raceUpdate`'s chan-op arm under the pre-release clock. All three
+  pinned cases certify "every enumerated path refuses" (PASS/racy)
+  with `go run -race` the justifying oracle; zero drift on all 1196
+  other ids — the rule over-refuses NOTHING (race/free lane intact).
+  The forkJoinNoRace designated statement is byte-identical and its
+  meaning is unshifted: the fork/join program has no close, so its
+  only chan-object records are send reads, which cannot conflict —
+  certs recomputed green. Eval pins updated: the
+  closed-guard-past-parked-PLAIN-sender pin now expects race, and the
+  guard behavior gained a race-free twin via a parked SELECT-send
+  waiter (selectgo is uninstrumented — invariant (iv) stays
+  exercised). The three overclaiming "refusal-set agreement holds
+  anyway" sentences (raceWakeEvent, doctrine caption, design note ×2)
+  and U3 corrected in place.)
 - Pinned-by: differential
 - Cases: goroutines/close-wake/sender-panics, goroutines/close-wake/sender-full-buffer, goroutines/select-closed-arrival/recv-parked-sender
 - Discovered: 2026-08-08 (channels-arc final audit F1, major/envelope;

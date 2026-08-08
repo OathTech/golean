@@ -1,22 +1,17 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-08  commit: channels-arc audit response (BUG-045 red pin)
+# recorded: 2026-08-08  commit: channels-arc audit response (BUG-045 fixed: the chan-object pair modeled)
 #   frontend: native  oracle: go run (strict lane) / go-run membership in the
 #   machine-enumerated observation set, sampled plain AND under -race
 #   (membership lane; go1.26.5) / schedule-tree singleton certification +
 #   strict go-run equality (confluent lane) / every-enumerated-path-refuses
 #   + go run -race red (racy lane; never combined with deadlock)
-# manifest_cases: 1199  pass: 1102  fail: 97
-# Re-pin reason: arc-final audit F1 (major) red-first pin — BUG-045:
-#   the channel OBJECT is not a shadow location, so gc's
-#   chansend-read/closechan-write TSan pair is invisible and three
-#   shipped confluent-green subjects are -race red (30/30, 20/20,
-#   50/50). They reclassify to the RACY lane (expected_status race,
-#   go run -race the justifying oracle) and enter RED at stage
-#   lean-observation until the detector rule lands; each flip is on
-#   BUG-045's Cases line. Their close-adjacent behavior coverage moves
-#   to three NEW race-free HB-ordered variants (close-after-send-drains,
-#   send-closed-recovered, recv-closed-drains-hb), green confluent.
-#   Zero drift on all other ids.
+# manifest_cases: 1199  pass: 1105  fail: 94
+# Re-pin reason: arc-final audit F1 fix — BUG-045's chan-object detector
+#   rule lands (RaceState.chanObjAccess: send entry read / close write /
+#   recv+select nothing — gc's instrumentation exactly). The three
+#   reclassified racy pins flip PASS/racy ("every enumerated path
+#   refuses" certified); zero drift on all 1196 other ids (the rule
+#   over-refuses nothing).
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
 PASS	arrays/array-copy	-
@@ -506,8 +501,8 @@ PASS	goroutines/close-wake/close-after-send-drains	confluent
 PASS	goroutines/close-wake/receiver	confluent
 PASS	goroutines/close-wake/receiver-drain-first	confluent
 PASS	goroutines/close-wake/send-closed-recovered	confluent
-FAIL	goroutines/close-wake/sender-full-buffer	lean-observation
-FAIL	goroutines/close-wake/sender-panics	lean-observation
+PASS	goroutines/close-wake/sender-full-buffer	racy
+PASS	goroutines/close-wake/sender-panics	racy
 PASS	goroutines/deadlock/after-progress	-
 PASS	goroutines/deadlock/chain	-
 PASS	goroutines/deadlock/mutual	-
@@ -535,7 +530,7 @@ PASS	goroutines/sched-dependent/select-default-handshake	membership
 PASS	goroutines/sched-dependent/waiter-pick	membership
 PASS	goroutines/select-arrival-multi	membership
 PASS	goroutines/select-closed-arrival/recv-closed-drains-hb	confluent
-FAIL	goroutines/select-closed-arrival/recv-parked-sender	lean-observation
+PASS	goroutines/select-closed-arrival/recv-parked-sender	racy
 PASS	goroutines/select-closed-arrival/send	confluent
 PASS	goroutines/select-wake-multi	membership
 PASS	goroutines/select-wake/buffered-data	confluent

@@ -97,14 +97,33 @@ loudly; the racy-negative lane's claim is scoped by these):
   instrument chanlen). `len` on MAPS IS recorded (S3 audit refuted the
   earlier claim that it is invisible to `-race` — probed red on
   go1.26.5); slices/strings/pointer-to-array read headers/types only.
-* **U3 — the channel OBJECT is not a shadow location.** gc flags
-  close-concurrent-with-blocked-send via `racewritepc`/`racereadpc` on
-  `c.raceaddr()` (every close beside a parked sender is `-race`-red
-  through the channel-object pair); we model no chan-object accesses,
-  so such programs refuse only if a DATA access also conflicts. (Our
-  missing closer→woken-sender HB edge — see `raceWakeEvent` — pushes
-  the same programs toward refusal for a different reason; the
-  refusal sets have not been proven to coincide.)
+* **U3 — CLOSED (BUG-045, arc-final audit F1): the channel OBJECT is
+  now a shadow location**, modeling exactly gc's instrumentation
+  (go1.26.5 runtime/chan.go): `chansend` performs `racereadpc` on
+  `c.raceaddr()` at ENTRY (before the closed check, before parking —
+  so the read is recorded whether the send commits, parks, or
+  panics), `closechan` performs `racewritepc` on success (it panics
+  on closed/nil BEFORE instrumenting — no record on the panic path),
+  and `chanrecv` performs only `raceacquire` — NO read. `selectgo`'s
+  clause commits bypass `chansend`/`closechan` entirely, so select
+  clauses record nothing (probed: `selectSendClosedArrival` and
+  `selectWakeClosed` are TSan-green beside parked receivers, while
+  every close-beside-parked-plain-send is TSan-red — the verifier's
+  44-subject sweep found exactly that family). Realized as
+  `RaceState.chanObjAccess` (a per-channel `ShadowCell` keyed by the
+  channel's cell `Loc`, EXACT match — channel identity, no path
+  overlap), checked-and-recorded by `raceUpdate`'s chan-op arm.
+  Consequence recorded honestly: `resumeThread`'s
+  close-woke-parked-sender panic arm is reachable only through a
+  chan-object-racy shape (no HB edge can order a close after a send
+  entry that then parks), so under the DRF-SC discipline the detector
+  refuses at the close before any such wake — the arm stays (racy
+  members traverse it only when the refusal is later on their path;
+  the refused programs' pre-refusal semantics still needs it).
+  The old "refusal-set agreement holds anyway" summaries (here, the
+  doctrine's racy caption, the design note ×2) were FALSE in the
+  fail-open direction — three shipped confluent-green subjects were
+  TSan-red — and are corrected in place (BUG-045).
 
 ## THE loadLoc/storeLoc CALL-SITE INVENTORY (the lockstep obligation's
 evidence — S3 audit response; audit this table when touching either
@@ -160,7 +179,10 @@ SYNCHRONIZATION (the registry's ops — HB updates, never data):
 - `chanCell` loads and `chanData` stores in `applyChanOp`,
   `commitClause`, `resumeThread`, `applyPairing`, `wakeReady`,
   `clauseReady` (spec: channels race-free without synchronization;
-  U3 records the one gc chan-object behavior outside this).
+  the CHANNEL-OBJECT access pair gc layers on top of this is modeled
+  since BUG-045 — U3 above, `chanObjAccess`, dispatched by
+  `raceUpdate`'s chan-op arm, not by the footprint table: it is
+  keyed to the OP, not to a machine-step memory access).
 
 FRESH ALLOCATION / DRIVER (excluded — the malloc convention):
 - `ExecState.alloc`, `allocDecls`, `bindParams`, `bindIterVars`,
@@ -515,15 +537,20 @@ def assocSet {α : Type} (xs : List (Loc × α)) (loc : Loc) (v : α) :
       if l == loc then (loc, v) :: rest else (l, w) :: assocSet rest loc v
 
 /-- The detector state: per-goroutine clocks (index = pool goroutine
-id; absent = the birth clock), the access shadow, the channel clocks.
-Empty until the pool holds a second goroutine — a single goroutine
-cannot race with itself (every access is sequenced), so the detector
-is inert on sequential runs BY CONSTRUCTION (the conservation
-theorem's hinge, and the whole-corpus zero-overhead guarantee). -/
+id; absent = the birth clock), the access shadow, the channel clocks,
+and (BUG-045) the CHANNEL-OBJECT shadow — gc's `c.raceaddr()`
+instrumentation point, one `ShadowCell` per channel keyed by the
+channel's cell `Loc` with EXACT-loc matching (channel identity; the
+path-overlap relation is for data, not objects). Empty until the pool
+holds a second goroutine — a single goroutine cannot race with itself
+(every access is sequenced), so the detector is inert on sequential
+runs BY CONSTRUCTION (the conservation theorem's hinge, and the
+whole-corpus zero-overhead guarantee). -/
 structure RaceState where
   clocks : Array VClock := #[]
   shadow : List (Loc × ShadowCell) := []
   chans : List (Loc × ChanClocks) := []
+  chanObj : List (Loc × ShadowCell) := []
   deriving Repr, BEq
 
 def RaceState.vcOf (r : RaceState) (t : Nat) : VClock :=
@@ -627,6 +654,34 @@ def RaceState.accesses (r : RaceState) (t : Nat) :
     List RaceAccess → Except GoError RaceState
   | [] => return r
   | a :: rest => do RaceState.accesses (← r.access t a) t rest
+
+/-- **The CHANNEL-OBJECT access pair (BUG-045; U3 in the module
+docstring)** — gc's `c.raceaddr()` instrumentation, modeled exactly:
+a plain send is a chan-object READ (`chansend`'s entry `racereadpc` —
+recorded at the apply position whether the send commits, parks, or
+panics), a successful close is a chan-object WRITE (`closechan`'s
+`racewritepc`; the closed/nil panics fire before it), a receive
+records NOTHING (`chanrecv` is acquire-only) and select clauses record
+nothing (`selectgo` bypasses `chansend`/`closechan`). Check-then-record
+against the per-channel shadow under the goroutine's CURRENT clock
+(before the op's own release/acquire, matching gc's instruction
+order): an HB-unordered read↔write or write↔write on the same channel
+is the terminal `raceDetected` — send↔send never conflicts. Exact-loc
+keying (channel identity), unlike the data shadow's path overlap. -/
+def RaceState.chanObjAccess (r : RaceState) (t : Nat) (loc : Loc)
+    (isWrite : Bool) : Except GoError RaceState :=
+  let vt := r.vcOf t
+  let cell := ((r.chanObj.find? (·.1 == loc)).map (·.2)).getD {}
+  let conflict :=
+    ShadowCell.someConcurrent cell.writes t vt
+      || (isWrite && ShadowCell.someConcurrent cell.reads t vt)
+  if conflict then throw .raceDetected
+  else
+    let myE := vt.get t
+    let cell' :=
+      if isWrite then { cell with writes := ShadowCell.upsert cell.writes t myE }
+      else { cell with reads := ShadowCell.upsert cell.reads t myE }
+    return { r with chanObj := assocSet r.chanObj loc cell' }
 
 /-- The write of one phase-2 store step (`storeK`): the resolved
 target path. Chain resolution itself reads no user memory (address
