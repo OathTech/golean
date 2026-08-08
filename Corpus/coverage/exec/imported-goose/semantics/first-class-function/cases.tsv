@@ -1,0 +1,2 @@
+# id	subject	args	expected_status	expected_reason	features
+first-class-function	goleanTestFirstClassFunction	-	ok	-	imported_goose,functions,higher_order

@@ -1,0 +1,3 @@
+# id	subject	args	expected_status	expected_reason	features
+defer	goleanTestDefer	-	ok	-	imported_goose,defer
+defer-func-lit	goleanTestDeferFuncLit	-	ok	-	imported_goose,defer

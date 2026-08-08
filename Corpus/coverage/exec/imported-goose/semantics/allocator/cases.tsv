@@ -1,0 +1,3 @@
+# id	subject	args	expected_status	expected_reason	features
+allocate-distinct	goleanTestAllocateDistinct	-	ok	-	imported_goose,maps
+allocate-full	goleanTestAllocateFull	-	ok	-	imported_goose,maps

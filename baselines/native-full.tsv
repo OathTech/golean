@@ -1,17 +1,18 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-08  commit: goose-parity batch 1 (imported-goose lane first population)
+# recorded: 2026-08-08  commit: goose-parity batch 2 (imported-goose semantics: functions/closures/allocation)
 #   frontend: native  oracle: go run (strict lane) / go-run membership in the
 #   machine-enumerated observation set, sampled plain AND under -race
 #   (membership lane; go1.26.5) / schedule-tree singleton certification +
 #   strict go-run equality (confluent lane) / every-enumerated-path-refuses
 #   + go run -race red (racy lane; never combined with deadlock)
-# manifest_cases: 1253  pass: 1147  fail: 106
-# Re-pin reason: goose-parity buildout batch 1 — 48 imported-goose ids join
-#   (goose testdata/examples/semantics @ 3be88bb, 10 units, scripts/import-goose
-#   lane): 40 PASS, 8 FAIL all at frontend-export in the RECORDED
-#   call-in-short-circuit-operand quarantine class (emitGuarded) — expected
-#   native-frontend coverage gaps, no new refusal reason. Zero drift on all
-#   1205 pre-existing ids.
+# manifest_cases: 1275  pass: 1166  fail: 109
+# Re-pin reason: goose-parity buildout batch 2 — 22 imported-goose ids join
+#   (goose testdata/examples/semantics @ 3be88bb, 10 units): 19 PASS, 3 FAIL
+#   all at frontend-export in EXISTING unsup() fail-closed classes
+#   (call-in-short-circuit-operand; builtin-copy-in-statement-position
+#   emit.go:1601; map-element-target-outside-single-assignment emit.go:4558)
+#   — expected coverage gaps, no new refusal reason. Zero drift on all 1253
+#   pre-existing ids (incl. batch 1).
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
 PASS	arrays/array-copy	-
@@ -557,13 +558,26 @@ PASS	if/condition-evaluated-once	-
 PASS	if/else-if-first-match	-
 PASS	if/if-init-scope	-
 PASS	if/init-before-condition	-
+PASS	imported-goose/semantics/allocator/allocate-distinct	-
+PASS	imported-goose/semantics/allocator/allocate-full	-
 PASS	imported-goose/semantics/block/explicit-block-stmt	-
+PASS	imported-goose/semantics/builtin/max-uint64	-
+PASS	imported-goose/semantics/builtin/min-uint64	-
+FAIL	imported-goose/semantics/closures/closure-basic	frontend-export
 PASS	imported-goose/semantics/comparisons/compare-all	-
 PASS	imported-goose/semantics/comparisons/compare-g-e	-
 PASS	imported-goose/semantics/comparisons/compare-g-t	-
 PASS	imported-goose/semantics/comparisons/compare-l-e	-
 PASS	imported-goose/semantics/comparisons/compare-l-t	-
 PASS	imported-goose/semantics/conversions/byte-slice-to-string	-
+PASS	imported-goose/semantics/copy/copy-shorter-dst	-
+PASS	imported-goose/semantics/copy/copy-shorter-src	-
+FAIL	imported-goose/semantics/copy/copy-simple	frontend-export
+PASS	imported-goose/semantics/defer/defer	-
+PASS	imported-goose/semantics/defer/defer-func-lit	-
+PASS	imported-goose/semantics/first-class-function/first-class-function	-
+PASS	imported-goose/semantics/function-ordering/failing-argument-order	-
+PASS	imported-goose/semantics/function-ordering/failing-function-ordering	-
 PASS	imported-goose/semantics/int-conversions/u32-len	-
 PASS	imported-goose/semantics/int-conversions/u32-newtype-len	-
 PASS	imported-goose/semantics/int-conversions/u32-to-u64	-
@@ -579,6 +593,15 @@ PASS	imported-goose/semantics/loops/nested-go-style-loops	-
 PASS	imported-goose/semantics/loops/nested-go-style-loops-no-comparison	-
 PASS	imported-goose/semantics/loops/nested-loops	-
 PASS	imported-goose/semantics/loops/standard-for-loop	-
+PASS	imported-goose/semantics/multiple-assign/assign-three	-
+PASS	imported-goose/semantics/multiple-assign/assign-two	-
+FAIL	imported-goose/semantics/multiple-assign/multiple-assign-to-map	frontend-export
+PASS	imported-goose/semantics/multiple-return/anonymous-binding	-
+PASS	imported-goose/semantics/multiple-return/return-four	-
+PASS	imported-goose/semantics/multiple-return/return-three	-
+PASS	imported-goose/semantics/multiple-return/return-two	-
+PASS	imported-goose/semantics/new/nil-default	-
+PASS	imported-goose/semantics/new/nil-val	-
 FAIL	imported-goose/semantics/operations/add64-equals	frontend-export
 PASS	imported-goose/semantics/operations/arithmetic-shifts	-
 PASS	imported-goose/semantics/operations/bit-add-and	-

@@ -1,0 +1,3 @@
+# id	subject	args	expected_status	expected_reason	features
+nil-default	goleanTestNilDefault	-	ok	-	imported_goose,new,pointers
+nil-val	goleanTestNilVal	-	ok	-	imported_goose,new,pointers

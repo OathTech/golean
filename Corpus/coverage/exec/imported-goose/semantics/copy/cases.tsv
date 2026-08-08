@@ -1,0 +1,4 @@
+# id	subject	args	expected_status	expected_reason	features
+copy-simple	goleanTestCopySimple	-	ok	-	imported_goose,slices,copy
+copy-shorter-dst	goleanTestCopyShorterDst	-	ok	-	imported_goose,slices,copy
+copy-shorter-src	goleanTestCopyShorterSrc	-	ok	-	imported_goose,slices,copy

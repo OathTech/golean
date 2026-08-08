@@ -36,6 +36,7 @@ import GoLeanProofs.Specs.TotalPins
 import GoLeanProofs.Specs.ForkJoinTargets
 import GoLeanProofs.Specs.GoldenForkJoin
 import GoLeanProofs.Specs.ImportedGooseBlock
+import GoLeanProofs.Specs.ImportedGooseDefer
 import GoLeanProofs.NegativeSpecs
 
 /-!

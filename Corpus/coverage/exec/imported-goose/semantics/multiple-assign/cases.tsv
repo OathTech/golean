@@ -1,0 +1,4 @@
+# id	subject	args	expected_status	expected_reason	features
+assign-two	goleanTestAssignTwo	-	ok	-	imported_goose,multi_assign
+assign-three	goleanTestAssignThree	-	ok	-	imported_goose,multi_assign
+multiple-assign-to-map	goleanTestMultipleAssignToMap	-	ok	-	imported_goose,multi_assign

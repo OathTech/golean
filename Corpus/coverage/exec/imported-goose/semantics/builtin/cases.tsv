@@ -1,0 +1,3 @@
+# id	subject	args	expected_status	expected_reason	features
+min-uint64	goleanTestMinUint64	-	ok	-	imported_goose,builtins
+max-uint64	goleanTestMaxUint64	-	ok	-	imported_goose,builtins

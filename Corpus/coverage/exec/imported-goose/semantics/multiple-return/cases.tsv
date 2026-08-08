@@ -1,0 +1,5 @@
+# id	subject	args	expected_status	expected_reason	features
+return-two	goleanTestReturnTwo	-	ok	-	imported_goose,multi_result
+anonymous-binding	goleanTestAnonymousBinding	-	ok	-	imported_goose,multi_result
+return-three	goleanTestReturnThree	-	ok	-	imported_goose,multi_result
+return-four	goleanTestReturnFour	-	ok	-	imported_goose,multi_result

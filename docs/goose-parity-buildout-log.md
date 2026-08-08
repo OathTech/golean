@@ -71,3 +71,39 @@ Rungs:
 
 Gate: full `scripts/ci --diff` green; baseline re-pinned same-commit
 (1205 → 1253 ids; all 1205 pre-existing ids unchanged — zero drift).
+
+## Batch 2 (2026-08-08) — semantics tree, functions / closures / allocation
+
+Units (10, all self-contained; upstream `testdata/examples/semantics/*.go`
+@ 3be88bb):
+
+| unit | rows | R1 | notes |
+|---|---|---|---|
+| semantics/closures | 1 | 0 PASS, 1 frontend-export | short-circuit-operand quarantine (oracle style) |
+| semantics/first-class-function | 1 | 1 PASS | |
+| semantics/function-ordering | 2 | 2 PASS | BOTH are upstream `failing_test*` — programs goose's own translation gets wrong vs Go (their caveat goose.go:1901); we match `go run`. Parity delta logged in the matrix. |
+| semantics/multiple-assign | 3 | 2 PASS, 1 frontend-export | "map element as assignment target outside a single assignment" (emit.go:4558) |
+| semantics/multiple-return | 4 | 4 PASS | |
+| semantics/defer | 2 | 2 PASS | + R2 pins (both oracles) |
+| semantics/new | 2 | 2 PASS | incl. Go 1.26 `new(expr)` (`new(3)`) |
+| semantics/allocator | 2 | 2 PASS | map-iteration allocator |
+| semantics/copy | 3 | 2 PASS, 1 frontend-export | "builtin copy in statement position" (emit.go:1601) |
+| semantics/builtin | 2 | 2 PASS | min/max uint64 |
+
+Totals: 22 rows — 19 R1 PASS, 3 FAIL, all stage `frontend-export`, all
+in EXISTING `unsup(...)` fail-closed classes (cited above); the two
+classes new to the BASELINE (copy-in-statement-position, map-element
+multi-assign target) are existing frontend quarantine sites first
+exercised by this corpus — not new refusal reasons. No divergence, no
+suspected GoLean bug.
+
+Rungs:
+- **R2**: `proofs/GoLeanProofs/Specs/ImportedGooseDefer.lean` — both
+  defer oracles: ∀-streams `Terminates` + canonical-stream readout `1`
+  each (1.6 s build under the 16 GiB cap). Same P1 staleness caveat as
+  the pilot. R2 skipped for the other 9 units (P1 pending; route
+  demonstrated).
+- **R3**: skipped batch-wide (same reason as batch 1).
+
+Gate: full `scripts/ci --diff`; baseline re-pinned same-commit
+(1253 → 1275 ids; zero drift on all 1253 prior ids).

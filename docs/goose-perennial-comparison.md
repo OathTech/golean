@@ -152,3 +152,14 @@ as `test_fun_ok` Iris lemmas, 1 Admitted).
 | batch | units | rows | R1 PASS | R1 FAIL (all recorded fail-closed classes) | R2 kernel pins |
 |---|---|---|---|---|---|
 | 1 (semantics: scalar ops & control flow) | 10 | 48 | 40 | 8 (call-in-short-circuit-operand quarantine) | 1 pilot (semantics/block: ∀-streams Terminates + readout) |
+| 2 (semantics: functions / closures / allocation) | 10 | 22 | 19 | 3 (short-circuit-operand; copy-in-statement-position; map-element multi-assign target — all existing emit.go unsup sites) | 2 (semantics/defer, both oracles) |
+
+Batch-2 parity delta worth a row of its own: goose's two
+`failing_test*` semantics oracles (`failing_testFunctionOrdering`,
+`failing_testArgumentOrder`, testdata/examples/semantics/
+function_ordering.go@3be88bb — evaluation-order programs their
+translation is KNOWN to get wrong vs Go, their caveat at
+goose.go:1901) both run R1 differential PASS on our side
+(`imported-goose/semantics/function-ordering/{failing-function-ordering,
+failing-argument-order}`): evaluation-order fidelity where their
+translation diverges from gc.
