@@ -61,4 +61,40 @@ func selectRecvClosedArrival() int {
 func main() {
 	selectSendClosedArrival()
 	selectRecvClosedArrival()
+	selectRecvClosedDrains()
+}
+
+// HB-ORDERED VARIANT (BUG-045 / arc-final audit F1): the racy
+// reclassification above removes recv-parked-sender from the green
+// lanes; this preserves its select-recv-on-closed drain/zero behavior
+// RACE-FREE (probed: go build -race, 0 reports over 30 runs): main's
+// own send is ordered before the child's close by the spawn edge, and
+// the close before both selects by the done rendezvous — no parked
+// sender exists. Returns 7100.
+func selectRecvClosedDrains() int {
+	ch := make(chan int, 1)
+	ch <- 7
+	done := make(chan int)
+	go func() {
+		close(ch)
+		done <- 1
+	}()
+	<-done
+	acc := 0
+	select {
+	case v, ok := <-ch:
+		acc = v * 1000
+		if ok {
+			acc += 100
+		}
+	}
+	acc2 := 0
+	select {
+	case w, ok2 := <-ch:
+		acc2 = w * 10
+		if ok2 {
+			acc2 += 1
+		}
+	}
+	return acc + acc2
 }

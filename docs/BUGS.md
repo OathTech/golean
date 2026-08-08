@@ -30,6 +30,52 @@ differential-pinned) `- Cases: <id>, <id>, …` (baseline case ids), then prose.
 
 ---
 
+## BUG-045 — the channel OBJECT is not a shadow location: three shipped confluent-green subjects are TSan data races (`-race` fail-open; doctrine violation)
+
+- Status: open
+- Pinned-by: differential
+- Cases: goroutines/close-wake/sender-panics, goroutines/close-wake/sender-full-buffer, goroutines/select-closed-arrival/recv-parked-sender
+- Discovered: 2026-08-08 (channels-arc final audit F1, major/envelope;
+  verifier-reproduced from primary sources: go1.26.5 runtime/chan.go —
+  `chansend` line 190 does `racereadpc(c.raceaddr(), …)` at ENTRY,
+  `closechan` lines 430-431 do `racewritepc`/`racerelease`; `chanrecv`
+  performs only `raceacquire` — and all three subjects are TSan-red
+  through exactly that pair, 30/30, 20/20, 50/50, while the whole
+  remaining goroutines corpus (44 subjects × 10) is green: the family
+  is precisely close-beside-parked-plain-send)
+- What: the detector modeled channel cells as pure synchronization
+  (Race.lean U3) and recorded NO accesses on the channel OBJECT, so
+  programs gc's `-race` flags via the chansend-read/closechan-write
+  pair passed the strongest (confluent) lane green — violating the
+  doctrine's binding input "programs the race detector flags must fail
+  closed in our model" (`docs/2026-08-04_nondeterminism-doctrine.md`),
+  by the doctrine's own epistemics ("TSan has no false positives — one
+  red report is proof"). Structurally invisible to every gate: the
+  strict/confluent lanes never build with `-race` (fail-open confirmed
+  at `go_run_oracle`'s race_flag condition), and the three summary
+  sentences (raceWakeEvent's docstring, the doctrine's racy-lane
+  caption, the design note twice) claimed "refusal-set agreement holds
+  anyway" via the very mechanism that broke it, while Race.lean's U3
+  row was the honest same-tree contradiction.
+- Fix shape: model exactly gc's chan-object pair as a detector rule —
+  a plain send records a chan-object READ at its apply position
+  (commit, park, or panic alike — gc reads at entry), a successful
+  close records a chan-object WRITE (gc panics on closed/nil BEFORE
+  instrumenting); HB-unordered read↔write or write↔write on the same
+  channel is `raceDetected`; recv records NOTHING (acquire-only), and
+  select clauses record nothing (selectgo commits bypass
+  chansend/closechan — which is why selectSendClosedArrival and
+  selectWakeClosed are TSan-green with their parked receivers). The
+  three cases move to the racy lane (`go run -race` the justifying
+  oracle); their close-adjacent behavior coverage is preserved by
+  HB-ordered variants (close-after-send-drains, send-closed-recovered,
+  recv-closed-drains-hb — race-free, probed 0/30 each). The
+  close-WAKES-parked-sender panic arm (resumeThread) is reachable only
+  through a `-race`-red shape — no HB edge can order a close after a
+  send entry that then parks — so under DRF-SC it becomes
+  detector-unreachable; the arm stays (it is the semantics the racy
+  members traverse pre-refusal), recorded honestly at its site.
+
 ## BUG-044 — no scheduling point between a wake-producing registry op and main's terminal: the woken goroutine is discarded, its gc-realized continuation excluded (L1 envelope too narrow at main-exit — BUG-040's class)
 
 - Status: fixed (2026-08-08, channels-arc audit response F2 — the L5

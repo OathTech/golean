@@ -5,7 +5,25 @@
 # schedule-independence is now a certified claim, not a 3-stream spot
 # check. Params: sites/work raised only where the measured tree needs
 # them (probed at reclassification).
+#
+# RECLASSIFICATION (arc-final audit F1, major; BUG-045): the two
+# sender-side subjects are TSan DATA RACES — gc's chansend does
+# racereadpc on the CHANNEL OBJECT at entry and closechan does
+# racewritepc, so every close beside a parked sender is -race red
+# (verifier: 30/30 and 20/20 red; the doctrine binds: race-detector-
+# flagged programs fail closed). They move to the RACY lane with
+# go run -race as the justifying oracle. Their close-adjacent BEHAVIOR
+# coverage is preserved by the HB-ordered variants below (send ordered
+# before close through a rendezvous — race-free, -race 0/30) and by the
+# receiver-side wakes above (recv is acquire-only at the chan object,
+# TSan-green). The close-WAKES-parked-sender panic itself is reachable
+# ONLY through a -race-red shape (no HB edge can order a close after a
+# send entry that then parks), so under DRF-SC no race-free program
+# exercises that wake arm — recorded in the design note and at
+# resumeThread.
 receiver	closeWakesReceiver	-	ok	-	goroutines,channels,close,comma_ok	confluent	the receiver proceeds only via the close wake; the comma-ok readout is fixed on every schedule	width=4
 receiver-drain-first	closeWakesReceiverDrainFirst	-	ok	-	goroutines,channels,close,comma_ok	confluent	buffered values drain in FIFO order before the closed-zero on every schedule	width=4
-sender-panics	closeWakesSenderPanics	-	ok	-	goroutines,channels,close,recover	confluent	the parked sender's close-wake panic is recovered identically on every schedule	width=4,sites=16
-sender-full-buffer	closeWakesSenderFullBuffer	-	ok	-	goroutines,channels,close,recover	confluent	the sender can only park on the full buffer and only the close wakes it; the recovered readout is fixed	width=4,sites=16
+sender-panics	closeWakesSenderPanics	-	race	-	goroutines,channels,close,recover,race	racy	-	width=4,sites=16
+sender-full-buffer	closeWakesSenderFullBuffer	-	race	-	goroutines,channels,close,recover,race	racy	-	width=4,sites=16
+close-after-send-drains	closeAfterSendDrains	-	ok	-	goroutines,channels,close,comma_ok	confluent	the send completes and is ordered before the close through the done rendezvous (race-free); the buffered value survives the close and drains before the closed-zero on every schedule	width=4,sites=24
+send-closed-recovered	sendOnClosedRecovered	-	ok	-	goroutines,channels,close,recover	confluent	the close is ordered before the send entry through the ready rendezvous (race-free), so the send arrives on closed and panics recoverably in its goroutine on every schedule	width=4,sites=24

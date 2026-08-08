@@ -6,4 +6,16 @@
 # check. Params: sites/work raised only where the measured tree needs
 # them (probed at reclassification).
 send	selectSendClosedArrival	-	panic	send on closed channel	goroutines,channels,select,close,panic	confluent	the send clause's channel is closed before the select on every schedule (join-ordered), so the committed send panics identically	width=4
-recv-parked-sender	selectRecvClosedArrival	-	ok	-	goroutines,channels,select,close,comma_ok,recover	confluent	the closed recv clause drains/zeroes and the parked sender close-wakes into its recovered panic; both readouts join-ordered, fixed on every schedule	width=4,sites=16
+# RECLASSIFICATION (arc-final audit F1, major; BUG-045): the parked
+# plain SENDER beside main's close makes this a TSan DATA RACE (gc's
+# chansend racereadpc on the channel object vs closechan's racewritepc;
+# verifier: 50/50 -race red) — the doctrine binds, so it moves to the
+# RACY lane. Its select-recv-on-closed drain/zero behavior is kept by
+# the HB-ordered variant below (no parked sender; close ordered after
+# main's own send via the spawn edge and before the selects via done —
+# race-free, -race 0/30). The arrival-must-not-pair-when-closed guard
+# (invariant (iv)) beside a REAL parked sender is now
+# detector-unreachable in race-free programs — the guard stays
+# (BUG-045's fix note records this).
+recv-parked-sender	selectRecvClosedArrival	-	race	-	goroutines,channels,select,close,comma_ok,recover,race	racy	-	width=4,sites=16
+recv-closed-drains-hb	selectRecvClosedDrains	-	ok	-	goroutines,channels,select,close,comma_ok	confluent	the close is ordered after main's own send (spawn edge) and before both selects (done rendezvous), race-free; the first select drains 7/true, the second yields the closed 0/false, on every schedule	width=4,sites=24

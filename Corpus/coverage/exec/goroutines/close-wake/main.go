@@ -83,4 +83,66 @@ func main() {
 	closeWakesReceiverDrainFirst()
 	closeWakesSenderPanics()
 	closeWakesSenderFullBuffer()
+	closeAfterSendDrains()
+	sendOnClosedRecovered()
+}
+
+// HB-ORDERED VARIANTS (BUG-045 / arc-final audit F1): the racy
+// reclassification above removes the close-beside-parked-SENDER
+// subjects from the green lanes; these preserve their close-adjacent
+// behavior coverage RACE-FREE (probed: go build -race, 0 reports over
+// 30 runs each).
+
+// The send completes and is ordered BEFORE the close (send -> done
+// rendezvous -> close), so the chan-object read/write pair is
+// HB-ordered: race-free. Behavior kept from closeWakesSenderFullBuffer:
+// the buffered value survives the close and drains before the
+// closed-zero. Returns 510.
+func closeAfterSendDrains() int {
+	ch := make(chan int, 1)
+	done := make(chan int)
+	go func() {
+		ch <- 5   // completes: buffer room
+		done <- 1 // orders the send before main's close
+	}()
+	<-done
+	close(ch)
+	v, ok := <-ch
+	w, ok2 := <-ch
+	acc := v * 100
+	if ok {
+		acc += 10
+	}
+	acc += w
+	if ok2 {
+		acc += 1
+	}
+	return acc
+}
+
+// The close is ordered BEFORE the send entry (close -> ready
+// rendezvous -> send), so the send arrives on the closed channel and
+// panics recoverably IN ITS OWN GOROUTINE — race-free (the read is
+// HB-after the write). Behavior kept from closeWakesSenderPanics: the
+// recoverable send-on-closed panic in a spawned goroutine, in its
+// arrival form (the WAKE form is reachable only through a -race-red
+// shape — see the cases.tsv note). Returns 21.
+func sendOnClosedRecovered() int {
+	ch := make(chan int)
+	ready := make(chan int)
+	done := make(chan int)
+	go func() {
+		defer func() {
+			if recover() != nil {
+				done <- 21
+			} else {
+				done <- 99
+			}
+		}()
+		<-ready
+		ch <- 1
+	}()
+	close(ch)
+	ready <- 1
+	return <-done
 }
