@@ -1,0 +1,6 @@
+# id	subject	args	expected_status	expected_reason	features
+u64-to-u32	goleanTestU64ToU32	-	ok	-	imported_goose,ints,conversions
+u32-to-u64	goleanTestU32ToU64	-	ok	-	imported_goose,ints,conversions
+u32-len	goleanTestU32Len	-	ok	-	imported_goose,ints,conversions
+u32-newtype-len	goleanTestU32NewtypeLen	-	ok	-	imported_goose,ints,conversions
+uint32-untyped	goleanTestUint32Untyped	-	ok	-	imported_goose,ints,conversions

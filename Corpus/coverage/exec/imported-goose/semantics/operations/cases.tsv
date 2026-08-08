@@ -1,0 +1,12 @@
+# id	subject	args	expected_status	expected_reason	features
+reverse-assign-ops64	goleanTestReverseAssignOps64	-	ok	-	imported_goose,ints
+failing-reverse-assign-ops32	goleanFailing_testReverseAssignOps32	-	ok	-	imported_goose,ints
+add64-equals	goleanTestAdd64Equals	-	ok	-	imported_goose,ints
+sub64-equals	goleanTestSub64Equals	-	ok	-	imported_goose,ints
+division-precedence	goleanTestDivisionPrecedence	-	ok	-	imported_goose,ints
+mod-precedence	goleanTestModPrecedence	-	ok	-	imported_goose,ints
+bitwise-ops-precedence	goleanTestBitwiseOpsPrecedence	-	ok	-	imported_goose,ints
+arithmetic-shifts	goleanTestArithmeticShifts	-	ok	-	imported_goose,ints
+bit-add-and	goleanTestBitAddAnd	-	ok	-	imported_goose,ints
+many-parentheses	goleanTestManyParentheses	-	ok	-	imported_goose,ints
+plus-times	goleanTestPlusTimes	-	ok	-	imported_goose,ints

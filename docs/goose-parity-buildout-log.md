@@ -32,4 +32,42 @@ revs; `deps/goose` is READ-ONLY throughout).
 
 ---
 
-(no batches landed yet)
+## Batch 1 (2026-08-08) — semantics tree, scalar ops & control flow
+
+Units (10, all imported self-contained, no sibling assembly needed;
+upstream `testdata/examples/semantics/*.go` @ 3be88bb):
+
+| unit | rows | R1 | notes |
+|---|---|---|---|
+| semantics/comparisons | 5 | 5 PASS | |
+| semantics/operations | 11 | 7 PASS, 4 frontend-export | quarantine: call in short-circuit operand (`ok && f(...)` oracle style) |
+| semantics/precedence | 4 | 4 PASS | |
+| semantics/shortcircuiting | 4 | 0 PASS, 4 frontend-export | same quarantine class — the unit's whole point is side-effecting `&&`/`\|\|` operands |
+| semantics/int-conversions | 5 | 5 PASS | |
+| semantics/conversions | 1 | 1 PASS | |
+| semantics/loops | 10 | 10 PASS | |
+| semantics/switch | 4 | 4 PASS | |
+| semantics/block | 1 | 1 PASS | + R2 pilot pin |
+| semantics/vars | 3 | 3 PASS | |
+
+Totals: 48 rows — 40 R1 PASS, 8 FAIL, every FAIL at stage
+`frontend-export` in the ONE recorded fail-closed class
+"call/allocation in short-circuit operand (would change evaluation
+order)" (`tools/nativefrontend/emit.go` `emitGuarded`). NO new refusal
+reason surfaced (the Part-B acceptance condition); no divergence, no
+suspected GoLean bug.
+
+Rungs:
+- **R2**: pilot `proofs/GoLeanProofs/Specs/ImportedGooseBlock.lean`
+  (semantics/block): ∀-streams `Terminates` via `allStreamsOk`
+  `decide +kernel` + canonical-stream `.normal` readout `= 1`; builds
+  in ~0.4 s under the 16 GiB kernel cap. R2 SKIPPED for the other 9
+  units: pending the P1 parked decision (staleness-guard wiring for
+  generated Program terms — docs/goose-parity-parked.md); the pilot
+  proves the route.
+- **R3**: skipped batch-wide — no existing automation discharges a
+  GoSpec instance for an arbitrary imported program; per-oracle WP
+  walks are new per-program proof effort (attempt-or-skip judgment).
+
+Gate: full `scripts/ci --diff` green; baseline re-pinned same-commit
+(1205 → 1253 ids; all 1205 pre-existing ids unchanged — zero drift).

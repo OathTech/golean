@@ -1,0 +1,4 @@
+# id	subject	args	expected_status	expected_reason	features
+pointer-assignment	goleanTestPointerAssignment	-	ok	-	imported_goose,assignment
+address-of-local	goleanTestAddressOfLocal	-	ok	-	imported_goose,assignment
+anonymous-assign	goleanTestAnonymousAssign	-	ok	-	imported_goose,assignment

@@ -1,0 +1,5 @@
+# id	subject	args	expected_status	expected_reason	features
+switch-val	goleanTestSwitchVal	-	ok	-	imported_goose,switch
+switch-multiple	goleanTestSwitchMultiple	-	ok	-	imported_goose,switch
+switch-default-true	goleanTestSwitchDefaultTrue	-	ok	-	imported_goose,switch
+switch-conversion	goleanTestSwitchConversion	-	ok	-	imported_goose,switch

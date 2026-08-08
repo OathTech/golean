@@ -1,0 +1,11 @@
+# id	subject	args	expected_status	expected_reason	features
+standard-for-loop	goleanTestStandardForLoop	-	ok	-	imported_goose,loops,ints
+for-loop-wait	goleanTestForLoopWait	-	ok	-	imported_goose,loops,ints
+break-from-loop-with-continue	goleanTestBreakFromLoopWithContinue	-	ok	-	imported_goose,loops,ints
+break-from-loop-no-continue	goleanTestBreakFromLoopNoContinue	-	ok	-	imported_goose,loops,ints
+break-from-loop-no-continue-double	goleanTestBreakFromLoopNoContinueDouble	-	ok	-	imported_goose,loops,ints
+break-from-loop-for-only	goleanTestBreakFromLoopForOnly	-	ok	-	imported_goose,loops,ints
+break-from-loop-assign-and-continue	goleanTestBreakFromLoopAssignAndContinue	-	ok	-	imported_goose,loops,ints
+nested-loops	goleanTestNestedLoops	-	ok	-	imported_goose,loops,ints
+nested-go-style-loops	goleanTestNestedGoStyleLoops	-	ok	-	imported_goose,loops,ints
+nested-go-style-loops-no-comparison	goleanTestNestedGoStyleLoopsNoComparison	-	ok	-	imported_goose,loops,ints

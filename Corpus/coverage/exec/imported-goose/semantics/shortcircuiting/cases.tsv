@@ -1,0 +1,5 @@
+# id	subject	args	expected_status	expected_reason	features
+shortcircuit-and-t-f	goleanTestShortcircuitAndTF	-	ok	-	imported_goose,bools,evaluation_order
+shortcircuit-and-f-t	goleanTestShortcircuitAndFT	-	ok	-	imported_goose,bools,evaluation_order
+shortcircuit-or-t-f	goleanTestShortcircuitOrTF	-	ok	-	imported_goose,bools,evaluation_order
+shortcircuit-or-f-t	goleanTestShortcircuitOrFT	-	ok	-	imported_goose,bools,evaluation_order

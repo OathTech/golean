@@ -138,3 +138,17 @@ successor arc: when the spawning frame-quantified `GoSpecC` and the
 channel law family land, "we can state and discharge GoSpecC instances
 for their verified channel examples" is the parity claim to aim at,
 program by program.
+
+## 6. Imported-corpus status (goose-parity buildout lane)
+
+Last-reviewed: goose-parity batch 1, 2026-08-08. The
+`Corpus/coverage/exec/imported-goose/` lane (provenance-tagged, verbatim
+bodies, goose @ 3be88bb — pipeline `scripts/import-goose`, charter
+`docs/2026-08-07_goose-parity-charter.md`) is populating; this section
+tracks the phase-1 "verify them all" claim per batch. Their comparable
+artifact is the `test_gen` boolean-oracle suite (112 oracles; 37 proved
+as `test_fun_ok` Iris lemmas, 1 Admitted).
+
+| batch | units | rows | R1 PASS | R1 FAIL (all recorded fail-closed classes) | R2 kernel pins |
+|---|---|---|---|---|---|
+| 1 (semantics: scalar ops & control flow) | 10 | 48 | 40 | 8 (call-in-short-circuit-operand quarantine) | 1 pilot (semantics/block: ∀-streams Terminates + readout) |

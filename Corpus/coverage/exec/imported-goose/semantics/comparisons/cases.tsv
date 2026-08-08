@@ -1,0 +1,6 @@
+# id	subject	args	expected_status	expected_reason	features
+compare-all	goleanTestCompareAll	-	ok	-	imported_goose,comparisons,ints
+compare-g-t	goleanTestCompareGT	-	ok	-	imported_goose,comparisons,ints
+compare-g-e	goleanTestCompareGE	-	ok	-	imported_goose,comparisons,ints
+compare-l-t	goleanTestCompareLT	-	ok	-	imported_goose,comparisons,ints
+compare-l-e	goleanTestCompareLE	-	ok	-	imported_goose,comparisons,ints

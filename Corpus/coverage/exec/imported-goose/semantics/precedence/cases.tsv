@@ -1,0 +1,5 @@
+# id	subject	args	expected_status	expected_reason	features
+or-compare-simple	goleanTestOrCompareSimple	-	ok	-	imported_goose,ints,evaluation_order
+or-compare	goleanTestOrCompare	-	ok	-	imported_goose,ints,evaluation_order
+and-compare	goleanTestAndCompare	-	ok	-	imported_goose,ints,evaluation_order
+shift-mod	goleanTestShiftMod	-	ok	-	imported_goose,ints,evaluation_order
