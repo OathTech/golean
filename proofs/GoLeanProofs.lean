@@ -33,6 +33,7 @@ import GoLeanProofs.Specs.AutomationTargets
 import GoLeanProofs.Specs.GoldenQuorumThree
 import GoLeanProofs.Specs.GoldenQuorumAll
 import GoLeanProofs.Specs.TotalPins
+import GoLeanProofs.Specs.ForkJoinTargets
 import GoLeanProofs.Specs.GoldenForkJoin
 import GoLeanProofs.NegativeSpecs
 

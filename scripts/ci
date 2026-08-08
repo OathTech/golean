@@ -225,18 +225,27 @@ check_surface_imports proofs/GoLeanProofs/Specs/QuorumRefSpec.lean \
 # touches Iris. Allowlist: core + Std + the clean statement chain.
 check_surface_imports proofs/GoLeanProofs/Specs/Statements.lean \
   '^import (GoLean\.|Std\.|GoLeanProofs\.Surface$|GoLeanProofs\.Specs\.QuorumTargets$|GoLeanProofs\.Specs\.GoldenQuorum$|GoLeanProofs\.Specs\.GoldenProgram$)'
+# The fork/join statement targets (channels-arc final audit F4,
+# 2026-08-07): the DEF-ONLY module the designated fork/join statements
+# reference — in Challenge's trusted closure, so its imports are pinned
+# to the core alone.
+check_surface_imports proofs/GoLeanProofs/Specs/ForkJoinTargets.lean \
+  '^import GoLean\.'
 # The fork/join pool witnesses (channels arc slice 2): statement-bearing,
-# Iris-free by chain — GoLean core + the surface only (the Challenge
-# imports it, so it joins the scanned set; gate EXTENDED, not weakened).
+# Iris-free by chain — GoLean core + the surface + its own def-only
+# targets module (audit F4 split). NOT importable from Challenge (it
+# holds decide+kernel PROOFS of designated theorems).
 check_surface_imports proofs/GoLeanProofs/Specs/GoldenForkJoin.lean \
-  '^import (GoLean\.|GoLeanProofs\.Surface$)'
+  '^import (GoLean\.|GoLeanProofs\.Surface$|GoLeanProofs\.Specs\.ForkJoinTargets$)'
 # The Comparator Challenge — the judge's TRUSTED root (pre-merge audit
 # 2026-08-02, major finding: this file was in NO scripts/ci scan at all;
 # the wrapper's walk was its only gate, and that walk was fail-open).
-# Direct imports pinned to exactly the clean statement modules
-# (Statements, GoldenTargets, and — channels arc slice 2 — GoldenForkJoin).
+# Direct imports pinned to exactly the clean DEF-ONLY statement modules
+# (Statements, GoldenTargets, and — audit F4 — ForkJoinTargets; the
+# GoldenForkJoin PROOF module was removed from this list 2026-08-07,
+# restoring the statement-only import discipline).
 check_surface_imports proofs/Challenge.lean \
-  '^import (GoLeanProofs\.Specs\.Statements$|GoLeanProofs\.Specs\.GoldenTargets$|GoLeanProofs\.Specs\.GoldenForkJoin$)'
+  '^import (GoLeanProofs\.Specs\.Statements$|GoLeanProofs\.Specs\.GoldenTargets$|GoLeanProofs\.Specs\.ForkJoinTargets$)'
 # AutomationTargets is statement-bearing but MIXED BY DESIGN: it holds the
 # range-rule target (a statement ABOUT the Iris-side proof infrastructure,
 # quantifying over IProp) and the phase-2 acceptance pins that reference
@@ -259,6 +268,71 @@ if [ "$surface_ok" = 1 ]; then
   ok "surface purity (Iris-free imports, chain-closed)"
 else
   bad "surface purity violated (Iris reachable from the spec surface)"
+fi
+
+# 1c3. Statement-TCB closure gate (channels-arc final audit F4,
+# 2026-08-07): no DESIGNATED theorem may be DECLARED (proved) anywhere in
+# Challenge's transitive import closure — the trusted root's story is "a
+# skeptic reads this file and its import closure and nothing else", and a
+# designated proof inside the closure collapses the statement/proof
+# separation the Comparator judge exists to police. The prior gates
+# (this script's Iris scan; comparator-judge §3c) check only
+# Iris-FREEDOM of the closure, which is how the slice-2 GoldenForkJoin
+# import shipped nine designated decide+kernel proofs into the closure
+# ungated. Closure walk over proofs/ AND GoLean/ modules; designated
+# names from proofs/judge-config.json (base names, Judge. stripped);
+# Challenge.lean itself is exempt (its sorry-bodied Judge.* statements
+# ARE the artifact). Fails closed on an empty name list or unreadable
+# closure file.
+step "statement-TCB closure (no designated theorem proved in Challenge's import closure)"
+tcb_ok=1
+desig_names="$(grep -o '"Judge\.[A-Za-z0-9_]*"' proofs/judge-config.json 2>/dev/null | sed 's/"Judge\.//; s/"$//' | sort -u)"
+if [ -z "$desig_names" ]; then
+  echo "  could not read designated names from proofs/judge-config.json — failing closed" >&2
+  tcb_ok=0
+else
+  # Transitive closure of Challenge's imports, files resolved under
+  # proofs/ (GoLeanProofs.*) and the repo root (GoLean.*).
+  ch_closure=""
+  ch_frontier="$(lean_imports proofs/Challenge.lean)"
+  while [ -n "$ch_frontier" ]; do
+    next=""
+    for m in $ch_frontier; do
+      case " $ch_closure " in *" $m "*) continue ;; esac
+      ch_closure="$ch_closure $m"
+      mf=""
+      case "$m" in
+        GoLeanProofs*) mf="proofs/$(echo "$m" | tr '.' '/').lean" ;;
+        GoLean*)       mf="$(echo "$m" | tr '.' '/').lean" ;;
+        *) continue ;;  # external (Std, Init) — not ours
+      esac
+      [ -f "$mf" ] || { echo "  closure module $m has no file $mf — failing closed" >&2; tcb_ok=0; continue; }
+      next="$next $(lean_imports "$mf")"
+    done
+    ch_frontier="$next"
+  done
+  # Scan every closure file (never Challenge itself) for a designated
+  # theorem declaration.
+  name_re="$(printf '%s\n' "$desig_names" | paste -sd'|' -)"
+  for m in $ch_closure; do
+    case "$m" in
+      GoLeanProofs*) mf="proofs/$(echo "$m" | tr '.' '/').lean" ;;
+      GoLean*)       mf="$(echo "$m" | tr '.' '/').lean" ;;
+      *) continue ;;
+    esac
+    [ -f "$mf" ] || continue
+    hits="$(strip_lean_comments < "$mf" | grep -nE "^[[:space:]]*(public[[:space:]]+)?(protected[[:space:]]+)?theorem[[:space:]]+($name_re)\b" || true)"
+    if [ -n "$hits" ]; then
+      echo "  designated theorem DECLARED in Challenge's closure ($mf):" >&2
+      echo "$hits" | sed 's/^/    /' >&2
+      tcb_ok=0
+    fi
+  done
+fi
+if [ "$tcb_ok" = 1 ]; then
+  ok "statement-TCB closure (designated theorems proved outside the trusted closure)"
+else
+  bad "statement-TCB closure violated (a designated proof is inside Challenge's import closure — move the defs to a statement module and the proofs out)"
 fi
 
 # 1d. Import-direction lint (layering doctrine,

@@ -1,4 +1,5 @@
 import GoLeanProofs.Surface
+import GoLeanProofs.Specs.ForkJoinTargets
 import GoLean.GoCore.MultiStreams
 
 /-!
@@ -17,6 +18,15 @@ the distinctness argument re-recorded at `forkJoinStreamAlternating`;
 stream literals and readouts unchanged), plus a
 multi-goroutine DEADLOCK program classified `.deadlock` the same way.
 
+THE DEFS the designated statements reference (`fjRunGives42`,
+`fjRunDeadlocks`, the programs/seeds/env) live in
+`Specs/ForkJoinTargets.lean` — the def-only statement module in
+Challenge's trusted closure (split at the channels-arc final audit,
+F4, 2026-08-07: this file holds `decide +kernel` PROOFS of designated
+theorems and therefore must NOT be imported by the trusted root).
+This module holds the proofs and reaches the judge only through
+`Solution`.
+
 The slice-2 witnesses are rung-1, pinned-stream readouts; SLICE 5
 added the ∀-SCHEDULE family below (the `∀ ch` quantifier discharged by
 the pool ∀-streams kernel checker) which subsumes them — they are
@@ -32,42 +42,6 @@ open GoLean GoLean.GoCore GoLean.GoCore.Machine
 namespace GoLean.Surface
 
 set_option maxRecDepth 1000000
-
-/-- The fork/join worker: send 42 on the channel argument. -/
-def forkJoinWorker : Func := {
-  id := ⟨"fjWorker"⟩,
-  args := #[{ id := "ch", typ := .chan .both .int }],
-  results := #[],
-  body := .seqn #[.chanSend (.var "ch") (.intLit 42) .int]
-}
-
-/-- Main's body: make an unbuffered channel, spawn the worker on it,
-receive the worker's value into the pinned output cell `r`. -/
-abbrev forkJoinDriver : Stmt := .block
-  #[{ id := "chv", typ := .chan .both .int }]
-  #[
-    .makeChan (.var "chv") .int none,
-    .goStmt (.funcVal ⟨"fjWorker"⟩ #[]) #[.var "chv"],
-    .chanRecv #[.var "r"] (.var "chv") .int
-  ]
-
-abbrev fjEnv : LocalEnv := [[("r", .base ⟨0⟩)]]
-
-/-- The seeded state: the output cell at base 0 holding 0. -/
-def fjSeed : ExecState :=
-  { functions := #[forkJoinWorker],
-    heap := [(.base ⟨0⟩, ⟨some (.int .int), .int 0 .int⟩)],
-    nextAddr := 1 }
-
-/-- The pinned-run readout: did the pool run complete `.normal` with
-the output cell holding 42? Bool-valued so the kernel decides it. -/
-def fjRunGives42 (fuel : Nat) (ch : Choices) : Bool :=
-  match execProg fuel fjEnv fjSeed ch forkJoinDriver with
-  | .ok (.normal σf, _) =>
-      match loadLoc σf (.base ⟨0⟩) with
-      | .ok (.int 42 .int) => true
-      | _ => false
-  | _ => false
 
 /-- Canonical schedule (the empty stream: every pick 0): main runs
 through the post-spawn boundary, parks at its receive, and the
@@ -101,38 +75,6 @@ theorem forkJoinStreamAlternating :
     fjRunGives42 400 [1, 1, 1, 1, 1, 1, 1, 1] = true := by
   decide +kernel
 
-/-- The blocked worker for the deadlock witness: receive on a channel
-nobody sends on. -/
-def fjBlockedWorker : Func := {
-  id := ⟨"fjBlocked"⟩,
-  args := #[{ id := "ch", typ := .chan .both .int }],
-  results := #[],
-  body := .seqn #[.chanRecv #[] (.var "ch") .int]
-}
-
-/-- Main parks on one channel while the spawned worker parks on
-another: ALL goroutines asleep after real multi-goroutine progress. -/
-abbrev fjDeadlockDriver : Stmt := .block
-  #[{ id := "av", typ := .chan .both .int },
-    { id := "bv", typ := .chan .both .int }]
-  #[
-    .makeChan (.var "av") .int none,
-    .makeChan (.var "bv") .int none,
-    .goStmt (.funcVal ⟨"fjBlocked"⟩ #[]) #[.var "av"],
-    .chanRecv #[.var "r"] (.var "bv") .int
-  ]
-
-def fjDeadlockSeed : ExecState :=
-  { functions := #[fjBlockedWorker],
-    heap := [(.base ⟨0⟩, ⟨some (.int .int), .int 0 .int⟩)],
-    nextAddr := 1 }
-
-/-- Does the pool classify the run as the all-asleep DEADLOCK terminal? -/
-def fjRunDeadlocks (fuel : Nat) (ch : Choices) : Bool :=
-  match execProg fuel fjEnv fjDeadlockSeed ch fjDeadlockDriver with
-  | .error .deadlock => true
-  | _ => false
-
 theorem forkJoinDeadlockCanonical : fjRunDeadlocks 400 [] = true := by
   decide +kernel
 
@@ -154,12 +96,6 @@ and every latitude stream completes the rendezvous at main's `.normal`
 terminal with the 42 readout. The pinned-stream witnesses above are
 subsumed but deliberately KEPT (byte-identical — the designated set
 grows by extension, never restatement). -/
-
-/-- The joined-final-state readout: the output cell holds 42. -/
-def fjReadout42 : ExecState → Bool := fun σf =>
-  match loadLoc σf (.base ⟨0⟩) with
-  | .ok (.int 42 .int) => true
-  | _ => false
 
 /-- The kernel certificate: the checker explores every schedule of the
 fork/join pool within fuel 400 and certifies the `.normal`/42 outcome

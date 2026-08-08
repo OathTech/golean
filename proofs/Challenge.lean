@@ -1,6 +1,6 @@
 import GoLeanProofs.Specs.Statements
 import GoLeanProofs.Specs.GoldenTargets
-import GoLeanProofs.Specs.GoldenForkJoin
+import GoLeanProofs.Specs.ForkJoinTargets
 
 /-!
 # The Challenge — the judge's trusted statement of what GoLean claims
@@ -12,7 +12,14 @@ the allowlist, accepted by a kernel replaying the exported environment — so a
 skeptic auditing GoLean's headline results needs to read exactly: this file,
 its import closure, and nothing else. Everything here is `sorry`-bodied by
 design; the proofs live in `GoLeanProofs` and reach the judge only through
-`Solution`.
+`Solution`. The direct imports are DEF-ONLY statement modules (zero
+theorems); the closure does contain proof modules of the semantic core
+(`MachineSound`/`StateWf` ride in with the interpreter), but NO designated
+theorem is declared anywhere in it — restored at the channels-arc final
+audit (F4, 2026-08-07: the slice-2 `GoldenForkJoin` import had brought nine
+designated `decide +kernel` proofs into the closure; its defs now live in
+`Specs/ForkJoinTargets.lean`) and enforced by ci's statement-TCB closure
+gate (step 1c3).
 
 The import closure is the deletion-test doctrine
 (`docs/2026-08-01_tcb-and-layering-doctrine.md`) made operational: `GoLean`
@@ -261,7 +268,8 @@ pinned-stream `execProg` runs over the ThreadPool carrier — the
 canonical/adversarial/alternating schedules complete `.normal` with the
 pinned 42 readout; the all-asleep program classifies `.deadlock`. The
 defs (`fjRunGives42`/`fjRunDeadlocks`, seeds, drivers) are in the
-trusted closure — `Specs/GoldenForkJoin.lean`. -/
+trusted closure — `Specs/ForkJoinTargets.lean` (def-only; the proofs
+live outside the closure, in `Specs/GoldenForkJoin.lean`). -/
 
 theorem forkJoinStreamCanonical : fjRunGives42 400 [] = true := sorry
 
