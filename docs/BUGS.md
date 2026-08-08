@@ -30,6 +30,37 @@ differential-pinned) `- Cases: <id>, <id>, …` (baseline case ids), then prose.
 
 ---
 
+## BUG-050 — ASSIGN-form range into interface-typed targets skips implicit boxing (silent WRONG answer)
+
+- Status: open
+- Pinned-by: differential
+- Cases: range/assign-form-interface-target/slice-value, range/assign-form-interface-target/map-key, range/assign-form-interface-target/index, range/assign-form-interface-target/string-rune, range/assign-form-interface-target/assert-escalation
+- Discovered: 2026-08-08 (codex-landing skeptical review round: an
+  Opus reviewer probing beyond the BUG-049 fix's matrix; verifier
+  reproduced all four forms verbatim at 6624cc83. Pre-existing —
+  identical pre-fix; NOT introduced by the BUG-049 landing, whose
+  emit.go diff is entirely in `emitCallArgs`.)
+- What: `for i, v = range X` (ASSIGN form, `=` not `:=`) with an
+  interface-typed target: `emitRange`'s bind closure
+  (tools/nativefrontend/emit.go) emits `outer = $rangeKey/$rangeVal`
+  with NO `wrapInterfaceConversion`, so the raw key/element lands in
+  the interface variable — while labeling the temp ident with the
+  interface type it never carries. Unlike the quarantined multi-value
+  assign forms this does NOT fail closed: both sides run to status ok
+  and the OBSERVATIONS differ (Go interface-boxed vs our raw value) —
+  a differential-visible SILENT WRONG ANSWER, the class this project
+  treats as worst; asserting the value inside the loop escalates to
+  wrong-stuck ("type assertion from non-interface value
+  GoLean.GoValue.int 3"). Verifier's four-form matrix, all confirmed:
+  slice value (Go boxed int 4 vs raw 4), map key (boxed 7 vs raw 7),
+  index (boxed 1 vs raw 1), string-rune (Go {dynamic int32, 98} vs
+  raw 98). Second member of the wrapInterfaceConversion-omission
+  FAMILY (BUG-049 was the call-argument arm) — found serially, like
+  the BUG-042/043 kind-defaulting family.
+- Family sweep (recorded per the serial-discovery precedent — the
+  omission family is now sweep-audited, not found one-by-one): result
+  recorded in this entry when the fix lands.
+
 ## BUG-049 — tuple-forwarded call arguments bypass interface boxing (`g(f())` into interface-typed slots)
 
 - Status: fixed (2026-08-08, codex-review landing — established on-branch

@@ -1,0 +1,6 @@
+# id	subject	args	expected_status	expected_reason	features
+slice-value	rangeAssignSliceValue	-	ok	-	range,interfaces,slices,assignment,loops
+map-key	rangeAssignMapKey	-	ok	-	range,interfaces,maps,keys,assignment,loops
+index	rangeAssignIndex	-	ok	-	range,interfaces,slices,indexing,assignment,loops
+string-rune	rangeAssignStringRune	-	ok	-	range,interfaces,strings,runes,assignment,loops
+assert-escalation	rangeAssignAssertEscalation	-	ok	-	range,interfaces,slices,assignment,type_assertions,loops
