@@ -1,19 +1,16 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-08  commit: goose-parity batch 5 (imported-goose storage-clean + generics)
+# recorded: 2026-08-08  commit: goose-parity batch 6 (imported-goose unittest wrapper lane, first slice)
 #   frontend: native  oracle: go run (strict lane) / go-run membership in the
 #   machine-enumerated observation set, sampled plain AND under -race
 #   (membership lane; go1.26.5) / schedule-tree singleton certification +
 #   strict go-run equality (confluent lane) / every-enumerated-path-refuses
 #   + go run -race red (racy lane; never combined with deadlock)
-# manifest_cases: 1334  pass: 1218  fail: 116
-# Re-pin reason: goose-parity buildout batch 5 — 7 imported-goose ids join
-#   (goose @ 3be88bb: comments assembled pair, interfacerecursion, mapliteral,
-#   mutualrec, generics constraints/helpers/generic-conversion; authored
-#   wrappers): 6 PASS, 1 FAIL at frontend-export in the recorded
-#   call-in-short-circuit-operand class (generic-conversion's assert &&).
-#   interfacerecursion + mutualrec are packages goose itself REJECTS
-#   ("cycle in dependencies") — valid Go, green here. Zero drift on all
-#   1327 pre-existing ids.
+# manifest_cases: 1345  pass: 1229  fail: 116
+# Re-pin reason: goose-parity buildout batch 6 — 11 imported-goose unittest
+#   ids join (goose testdata/examples/unittest @ 3be88bb, authored checksum
+#   wrappers; the tree has no oracles by construction): 11 PASS, zero
+#   frontend refusals in this slice. Zero drift on all 1334 pre-existing
+#   ids.
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
 PASS	arrays/array-copy	-
@@ -688,6 +685,17 @@ PASS	imported-goose/storage/comments	-
 PASS	imported-goose/storage/interfacerecursion	-
 PASS	imported-goose/storage/mapliteral	-
 PASS	imported-goose/storage/mutualrec	-
+PASS	imported-goose/unittest/const	-
+PASS	imported-goose/unittest/empty-functions	-
+PASS	imported-goose/unittest/enum	-
+PASS	imported-goose/unittest/ints	-
+PASS	imported-goose/unittest/literals	-
+PASS	imported-goose/unittest/operators	-
+PASS	imported-goose/unittest/reassign	-
+PASS	imported-goose/unittest/returns	-
+PASS	imported-goose/unittest/trailing-call	-
+PASS	imported-goose/unittest/type-alias	-
+PASS	imported-goose/unittest/vars	-
 PASS	init/bare-call-in-init	-
 PASS	init/blank-var-init	-
 PASS	init/global-addr-taken	-

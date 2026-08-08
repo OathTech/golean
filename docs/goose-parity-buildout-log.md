@@ -248,3 +248,34 @@ Rungs: R2 = storage/mapliteral (Terminates + readout 21; 0.6 s,
 
 Gate: full `scripts/ci --diff`; baseline re-pinned same-commit
 (1327 → 1334 ids; zero drift on all 1327 prior ids).
+
+## Batch 6 (2026-08-08) — unittest wrapper lane, first slice
+
+11 small unittest-tree files (translation-golden upstream: NO oracles
+by construction; every subject an authored checksum wrapper per the
+scoping's B.3 oracle-mapping shape; `--allow-no-oracles` lane):
+
+| unit | rows | R1 | notes |
+|---|---|---|---|
+| unittest/empty-functions | 1 | 1 PASS | empty/void/unnamed/anonymous params |
+| unittest/returns | 1 | 1 PASS | every named-return shape, length checksum |
+| unittest/reassign | 1 | 1 PASS | |
+| unittest/vars | 1 | 1 PASS | local var/const blocks |
+| unittest/ints | 1 | 1 PASS | defined-type chains (my_u32/also_u32) |
+| unittest/trailing-call | 1 | 1 PASS | |
+| unittest/type-alias | 1 | 1 PASS | alias vs defined-type conversions |
+| unittest/enum | 1 | 1 PASS | both iota blocks, multi-name const lines |
+| unittest/const | 1 | 1 PASS | full const-arithmetic surface + R2 pin |
+| unittest/literals | 1 | 1 PASS | incl. a struct FIELD named `int` and unkeyed literals |
+| unittest/operators | 1 | 1 PASS | incl. `&^` and `&^=` |
+
+Totals: 11 units, 11 rows, 11/11 R1 PASS — zero frontend refusals in
+this slice. Remaining unittest files needing MORE than mechanical
+wrapper authorship are untouched (next slices or park per charter).
+
+Rungs: R2 = unittest/const (Terminates + readout 2139, the
+differentially-agreed checksum; 0.6 s / ~0.7 GiB RSS). R2 skipped
+elsewhere (P1 pending). R3 skipped batch-wide.
+
+Gate: full `scripts/ci --diff`; baseline re-pinned same-commit
+(1334 → 1345 ids; zero drift on all 1334 prior ids).

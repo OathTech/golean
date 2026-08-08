@@ -1,0 +1,2 @@
+# id	subject	args	expected_status	expected_reason	features
+-	goleanTrailingCall	-	ok	-	imported_goose,functions,calls

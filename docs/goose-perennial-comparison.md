@@ -141,8 +141,7 @@ program by program.
 
 ## 6. Imported-corpus status (goose-parity buildout lane)
 
-Last-reviewed: goose-parity phase-A checkpoint (batches 1-3 + fix
-round), 2026-08-08. The
+Last-reviewed: goose-parity phase B, batch 6, 2026-08-08. The
 `Corpus/coverage/exec/imported-goose/` lane (provenance-tagged, verbatim
 bodies, goose @ 3be88bb — pipeline `scripts/import-goose`, charter
 `docs/2026-08-07_goose-parity-charter.md`) is populating; this section
@@ -155,13 +154,28 @@ as `test_fun_ok` Iris lemmas, 1 Admitted).
 | 1 (semantics: scalar ops & control flow) | 10 | 48 | 40 | 8 (call-in-short-circuit-operand quarantine) | 1 pilot (semantics/block: ∀-streams Terminates + readout) |
 | 2 (semantics: functions / closures / allocation) | 10 | 22 | 19 | 3 (short-circuit-operand; copy-in-statement-position; map-element multi-assign target — all existing emit.go unsup sites) | 2 (semantics/defer, both oracles) |
 | 3 (semantics: data structures) | 8 | 43 | 37 | 6 (all short-circuit-operand quarantine) | 6 (semantics/nil, all oracles) |
+| 4 (channel tree, authored wrappers + lane classification) | 5 landed (+2 units, 2 rows parked P2) | 9 | 9 | 0 | 0 (concurrent: outside the sequential checker) |
+| 5 (storage-clean + generics) | 7 | 7 | 6 | 1 (short-circuit-operand) | 1 (storage/mapliteral) |
+| 6 (unittest wrapper lane, first slice) | 11 | 11 | 11 | 0 | 1 (unittest/const) |
 
-Running totals after batch 3: 28 of the 29 clean semantics files
-imported (remaining: panic.go — zero boolean oracles, needs an authored
-wrapper); 113 imported rows, 96 R1 PASS, 17 recorded-fail-closed
-frontend-export; 9 oracles R2 kernel-pinned (vs their 37 `test_fun_ok`
-proofs over 112 oracles — R2 count deliberately held down pending the
-parked staleness-guard decision P1, not by capability). Claim-strength
+Running totals after batch 6: 51 units landed (28 semantics of 29
+clean — remaining panic.go; 5 channel + 2 parked; 7 storage/generics;
+11 unittest of ~32 remaining), 140 imported rows, 122 R1 PASS, 18
+recorded-fail-closed frontend-export; 11 oracles R2 kernel-pinned (vs
+their 37 `test_fun_ok` proofs over 112 oracles — R2 count deliberately
+held down pending the parked staleness-guard decision P1, not by
+capability).
+
+Batch 4/5 parity deltas: our channel-example coverage now includes
+machine-CERTIFIED results for their verified examples wp_DSPExample
+(=42, confluent), the select-tricky trio (their proved-unreachable
+default included), muxer Async/Client — while their Google example
+(unverified upstream) ships here with a certified 6-member
+arrival-order set. Goose REJECTS the interfacerecursion and mutualrec
+packages outright ("// ERROR cycle in dependencies"); both are valid
+Go and differentially green here. Their generic_conversion example is
+latently panicking Go (probed: "index out of range [0] with length 0")
+that their translation-only tests never execute. Claim-strength
 caveat on that comparison (phase-A checkpoint, 2026-08-08), two-sided:
 our R2 pins pair ∀-streams outcome-agnostic `Terminates` with a
 CANONICAL-STREAM `.normal` readout (weaker than the designated

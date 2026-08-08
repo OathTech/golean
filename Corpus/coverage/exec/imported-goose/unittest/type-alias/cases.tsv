@@ -1,0 +1,2 @@
+# id	subject	args	expected_status	expected_reason	features
+-	goleanTypeAlias	-	ok	-	imported_goose,aliases,defined_type,conversions
