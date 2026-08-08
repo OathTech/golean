@@ -1,0 +1,7 @@
+# id	subject	args	expected_status	expected_reason	features
+compare-slice-to-nil	goleanTestCompareSliceToNil	-	ok	-	imported_goose,nil,comparisons
+compare-pointer-to-nil	goleanTestComparePointerToNil	-	ok	-	imported_goose,nil,comparisons
+compare-nil-to-nil	goleanTestCompareNilToNil	-	ok	-	imported_goose,nil,comparisons
+compare-pointer-wrapped-to-nil	goleanTestComparePointerWrappedToNil	-	ok	-	imported_goose,nil,comparisons
+compare-pointer-wrapped-default-to-nil	goleanTestComparePointerWrappedDefaultToNil	-	ok	-	imported_goose,nil,comparisons
+interface-nil-with-type	goleanTestInterfaceNilWithType	-	ok	-	imported_goose,nil,comparisons

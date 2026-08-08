@@ -1,0 +1,3 @@
+# id	subject	args	expected_status	expected_reason	features
+iterate-map	goleanTestIterateMap	-	ok	-	imported_goose,maps,range
+map-size	goleanTestMapSize	-	ok	-	imported_goose,maps,range

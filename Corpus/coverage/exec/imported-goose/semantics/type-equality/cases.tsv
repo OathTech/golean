@@ -1,0 +1,4 @@
+# id	subject	args	expected_status	expected_reason	features
+primitive-types-equal	goleanTestPrimitiveTypesEqual	-	ok	-	imported_goose,equality
+defined-str-types-equal	goleanTestDefinedStrTypesEqual	-	ok	-	imported_goose,equality
+list-types-equal	goleanTestListTypesEqual	-	ok	-	imported_goose,equality

@@ -1,0 +1,12 @@
+# id	subject	args	expected_status	expected_reason	features
+params-interface	goleanTestParamsInterface	-	ok	-	imported_goose,interfaces,methods
+empty-interface	goleanTestEmptyInterface	-	ok	-	imported_goose,interfaces,methods
+string-interface	goleanTestStringInterface	-	ok	-	imported_goose,interfaces,methods
+type-assertion-interface	goleanTestTypeAssertionInterface	-	ok	-	imported_goose,interfaces,methods
+double-pointer-interface	goleanTestDoublePointerInterface	-	ok	-	imported_goose,interfaces,methods
+multiple-fields-interface	goleanTestMultipleFieldsInterface	-	ok	-	imported_goose,interfaces,methods
+shared-functions-interface	goleanTestSharedFunctionsInterface	-	ok	-	imported_goose,interfaces,methods
+accept-address-interface	goleanTestAcceptAddressInterface	-	ok	-	imported_goose,interfaces,methods
+polymorphism-interface	goleanTestPolymorphismInterface	-	ok	-	imported_goose,interfaces,methods
+embedding-interface	goleanTestEmbeddingInterface	-	ok	-	imported_goose,interfaces,methods
+downcast-interface	goleanTestDowncastInterface	-	ok	-	imported_goose,interfaces,methods

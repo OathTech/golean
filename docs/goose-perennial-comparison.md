@@ -153,6 +153,14 @@ as `test_fun_ok` Iris lemmas, 1 Admitted).
 |---|---|---|---|---|---|
 | 1 (semantics: scalar ops & control flow) | 10 | 48 | 40 | 8 (call-in-short-circuit-operand quarantine) | 1 pilot (semantics/block: ∀-streams Terminates + readout) |
 | 2 (semantics: functions / closures / allocation) | 10 | 22 | 19 | 3 (short-circuit-operand; copy-in-statement-position; map-element multi-assign target — all existing emit.go unsup sites) | 2 (semantics/defer, both oracles) |
+| 3 (semantics: data structures) | 8 | 43 | 37 | 6 (all short-circuit-operand quarantine) | 6 (semantics/nil, all oracles) |
+
+Running totals after batch 3: 28 of the 29 clean semantics files
+imported (remaining: panic.go — zero boolean oracles, needs an authored
+wrapper); 113 imported rows, 96 R1 PASS, 17 recorded-fail-closed
+frontend-export; 9 oracles R2 kernel-pinned (vs their 37 `test_fun_ok`
+proofs over 112 oracles — R2 count deliberately held down pending the
+parked staleness-guard decision P1, not by capability).
 
 Batch-2 parity delta worth a row of its own: goose's two
 `failing_test*` semantics oracles (`failing_testFunctionOrdering`,

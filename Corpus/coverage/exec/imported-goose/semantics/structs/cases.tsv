@@ -1,0 +1,10 @@
+# id	subject	args	expected_status	expected_reason	features
+struct-updates	goleanTestStructUpdates	-	ok	-	imported_goose,structs
+nested-struct-updates	goleanTestNestedStructUpdates	-	ok	-	imported_goose,structs
+struct-constructions	goleanTestStructConstructions	-	ok	-	imported_goose,structs
+incomplete-struct	goleanTestIncompleteStruct	-	ok	-	imported_goose,structs
+store-in-struct-var	goleanTestStoreInStructVar	-	ok	-	imported_goose,structs
+store-in-struct-pointer-var	goleanTestStoreInStructPointerVar	-	ok	-	imported_goose,structs
+store-composite	goleanTestStoreComposite	-	ok	-	imported_goose,structs
+store-slice	goleanTestStoreSlice	-	ok	-	imported_goose,structs
+struct-field-func	goleanTestStructFieldFunc	-	ok	-	imported_goose,structs

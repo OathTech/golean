@@ -1,18 +1,17 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-08  commit: goose-parity batch 2 (imported-goose semantics: functions/closures/allocation)
+# recorded: 2026-08-08  commit: goose-parity batch 3 (imported-goose semantics: data structures)
 #   frontend: native  oracle: go run (strict lane) / go-run membership in the
 #   machine-enumerated observation set, sampled plain AND under -race
 #   (membership lane; go1.26.5) / schedule-tree singleton certification +
 #   strict go-run equality (confluent lane) / every-enumerated-path-refuses
 #   + go run -race red (racy lane; never combined with deadlock)
-# manifest_cases: 1275  pass: 1166  fail: 109
-# Re-pin reason: goose-parity buildout batch 2 — 22 imported-goose ids join
-#   (goose testdata/examples/semantics @ 3be88bb, 10 units): 19 PASS, 3 FAIL
-#   all at frontend-export in EXISTING unsup() fail-closed classes
-#   (call-in-short-circuit-operand; builtin-copy-in-statement-position
-#   emit.go:1601; map-element-target-outside-single-assignment emit.go:4558)
-#   — expected coverage gaps, no new refusal reason. Zero drift on all 1253
-#   pre-existing ids (incl. batch 1).
+# manifest_cases: 1318  pass: 1203  fail: 115
+# Re-pin reason: goose-parity buildout batch 3 — 43 imported-goose ids join
+#   (goose testdata/examples/semantics @ 3be88bb, 8 units; interfaces-complex
+#   assembled with its interfaces.go sibling): 37 PASS, 6 FAIL all at
+#   frontend-export in the recorded call-in-short-circuit-operand quarantine
+#   class — expected coverage gaps, no new refusal reason. Zero drift on all
+#   1275 pre-existing ids (incl. batches 1-2).
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
 PASS	arrays/array-copy	-
@@ -583,6 +582,22 @@ PASS	imported-goose/semantics/int-conversions/u32-newtype-len	-
 PASS	imported-goose/semantics/int-conversions/u32-to-u64	-
 PASS	imported-goose/semantics/int-conversions/u64-to-u32	-
 PASS	imported-goose/semantics/int-conversions/uint32-untyped	-
+PASS	imported-goose/semantics/interfaces/assign-interface	-
+PASS	imported-goose/semantics/interfaces/basic-interface	-
+FAIL	imported-goose/semantics/interfaces/binary-expr-interface	frontend-export
+PASS	imported-goose/semantics/interfaces-complex/accept-address-interface	-
+PASS	imported-goose/semantics/interfaces-complex/double-pointer-interface	-
+PASS	imported-goose/semantics/interfaces-complex/downcast-interface	-
+PASS	imported-goose/semantics/interfaces-complex/embedding-interface	-
+PASS	imported-goose/semantics/interfaces-complex/empty-interface	-
+PASS	imported-goose/semantics/interfaces-complex/multiple-fields-interface	-
+PASS	imported-goose/semantics/interfaces-complex/params-interface	-
+PASS	imported-goose/semantics/interfaces-complex/polymorphism-interface	-
+PASS	imported-goose/semantics/interfaces-complex/shared-functions-interface	-
+PASS	imported-goose/semantics/interfaces-complex/string-interface	-
+PASS	imported-goose/semantics/interfaces-complex/type-assertion-interface	-
+PASS	imported-goose/semantics/interfaces/if-stmt-interface	-
+PASS	imported-goose/semantics/interfaces/multiple-interface	-
 PASS	imported-goose/semantics/loops/break-from-loop-assign-and-continue	-
 PASS	imported-goose/semantics/loops/break-from-loop-for-only	-
 PASS	imported-goose/semantics/loops/break-from-loop-no-continue	-
@@ -593,6 +608,8 @@ PASS	imported-goose/semantics/loops/nested-go-style-loops	-
 PASS	imported-goose/semantics/loops/nested-go-style-loops-no-comparison	-
 PASS	imported-goose/semantics/loops/nested-loops	-
 PASS	imported-goose/semantics/loops/standard-for-loop	-
+FAIL	imported-goose/semantics/maps/iterate-map	frontend-export
+PASS	imported-goose/semantics/maps/map-size	-
 PASS	imported-goose/semantics/multiple-assign/assign-three	-
 PASS	imported-goose/semantics/multiple-assign/assign-two	-
 FAIL	imported-goose/semantics/multiple-assign/multiple-assign-to-map	frontend-export
@@ -602,6 +619,12 @@ PASS	imported-goose/semantics/multiple-return/return-three	-
 PASS	imported-goose/semantics/multiple-return/return-two	-
 PASS	imported-goose/semantics/new/nil-default	-
 PASS	imported-goose/semantics/new/nil-val	-
+PASS	imported-goose/semantics/nil/compare-nil-to-nil	-
+PASS	imported-goose/semantics/nil/compare-pointer-to-nil	-
+PASS	imported-goose/semantics/nil/compare-pointer-wrapped-default-to-nil	-
+PASS	imported-goose/semantics/nil/compare-pointer-wrapped-to-nil	-
+PASS	imported-goose/semantics/nil/compare-slice-to-nil	-
+PASS	imported-goose/semantics/nil/interface-nil-with-type	-
 FAIL	imported-goose/semantics/operations/add64-equals	frontend-export
 PASS	imported-goose/semantics/operations/arithmetic-shifts	-
 PASS	imported-goose/semantics/operations/bit-add-and	-
@@ -621,10 +644,29 @@ FAIL	imported-goose/semantics/shortcircuiting/shortcircuit-and-f-t	frontend-expo
 FAIL	imported-goose/semantics/shortcircuiting/shortcircuit-and-t-f	frontend-export
 FAIL	imported-goose/semantics/shortcircuiting/shortcircuit-or-f-t	frontend-export
 FAIL	imported-goose/semantics/shortcircuiting/shortcircuit-or-t-f	frontend-export
+PASS	imported-goose/semantics/slices/overwrite-array	-
+PASS	imported-goose/semantics/slices/slice-append	-
+PASS	imported-goose/semantics/slices/slice-capacity-ops	-
+PASS	imported-goose/semantics/slices/slice-literal	-
+PASS	imported-goose/semantics/slices/slice-ops	-
+PASS	imported-goose/semantics/slices/slice-ref	-
+PASS	imported-goose/semantics/struct-pointers/foo-bar-mutation	-
+PASS	imported-goose/semantics/structs/incomplete-struct	-
+PASS	imported-goose/semantics/structs/nested-struct-updates	-
+PASS	imported-goose/semantics/structs/store-composite	-
+PASS	imported-goose/semantics/structs/store-in-struct-pointer-var	-
+PASS	imported-goose/semantics/structs/store-in-struct-var	-
+PASS	imported-goose/semantics/structs/store-slice	-
+PASS	imported-goose/semantics/structs/struct-constructions	-
+PASS	imported-goose/semantics/structs/struct-field-func	-
+FAIL	imported-goose/semantics/structs/struct-updates	frontend-export
 PASS	imported-goose/semantics/switch/switch-conversion	-
 PASS	imported-goose/semantics/switch/switch-default-true	-
 PASS	imported-goose/semantics/switch/switch-multiple	-
 PASS	imported-goose/semantics/switch/switch-val	-
+FAIL	imported-goose/semantics/type-equality/defined-str-types-equal	frontend-export
+FAIL	imported-goose/semantics/type-equality/list-types-equal	frontend-export
+FAIL	imported-goose/semantics/type-equality/primitive-types-equal	frontend-export
 PASS	imported-goose/semantics/vars/address-of-local	-
 PASS	imported-goose/semantics/vars/anonymous-assign	-
 PASS	imported-goose/semantics/vars/pointer-assignment	-

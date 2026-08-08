@@ -1,0 +1,6 @@
+# id	subject	args	expected_status	expected_reason	features
+basic-interface	goleanTestBasicInterface	-	ok	-	imported_goose,interfaces
+assign-interface	goleanTestAssignInterface	-	ok	-	imported_goose,interfaces
+multiple-interface	goleanTestMultipleInterface	-	ok	-	imported_goose,interfaces
+binary-expr-interface	goleanTestBinaryExprInterface	-	ok	-	imported_goose,interfaces
+if-stmt-interface	goleanTestIfStmtInterface	-	ok	-	imported_goose,interfaces

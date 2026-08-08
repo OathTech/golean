@@ -1,0 +1,7 @@
+# id	subject	args	expected_status	expected_reason	features
+slice-ops	goleanTestSliceOps	-	ok	-	imported_goose,slices
+slice-capacity-ops	goleanTestSliceCapacityOps	-	ok	-	imported_goose,slices
+overwrite-array	goleanTestOverwriteArray	-	ok	-	imported_goose,slices
+slice-literal	goleanTestSliceLiteral	-	ok	-	imported_goose,slices
+slice-append	goleanTestSliceAppend	-	ok	-	imported_goose,slices
+slice-ref	goleanTestSliceRef	-	ok	-	imported_goose,slices
