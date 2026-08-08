@@ -1,0 +1,3 @@
+# id	subject	args	expected_status	expected_reason	features
+async	goleanAsync	-	ok	-	imported_goose,channels,goroutines,strings	confluent	the cap-1 buffered send happens-before the join receive; one worker, one value; width 4 covers the 2-thread bounds	width=4
+client	goleanClient	-	ok	-	imported_goose,channels,goroutines,strings	confluent	the unbuffered req/res pair serializes the single request round-trip; the server then parks on its next recv (leaked at main exit); width 4 covers the 2-thread bounds	width=4,sites=48

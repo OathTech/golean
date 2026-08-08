@@ -1,0 +1,4 @@
+# id	subject	args	expected_status	expected_reason	features
+nb-not-ready	goleanSelectNbNotReady	-	ok	-	imported_goose,channels,select,default	confluent	two nonblocking ops never rendezvous (no-offer asymmetry), so both selects take default on every schedule incl. the main-exit window over the leaked goroutine; width 4 covers the 2-thread and 2-clause bounds	width=4,sites=32
+nb-guaranteed-ready	goleanSelectNbGuaranteedReady	-	ok	-	imported_goose,channels,select,default,close
+nb-full-buffer-not-ready	goleanSelectNbFullBufferNotReady	-	ok	-	imported_goose,channels,select,default

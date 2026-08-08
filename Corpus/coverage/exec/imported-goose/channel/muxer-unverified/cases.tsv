@@ -1,0 +1,3 @@
+# id	subject	args	expected_status	expected_reason	features
+drained	goleanCancellableMuxerDrained	-	ok	-	imported_goose,channels,select,close
+done	goleanCancellableMuxerDone	-	ok	-	imported_goose,channels,select,close

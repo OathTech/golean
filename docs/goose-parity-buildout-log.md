@@ -186,3 +186,38 @@ all fixed here:
    scripts/ changes, per coordinator ruling).
 
 Refuted (no action): the ulimit-note-belongs-in-ledger claim.
+
+## Batch 4 (2026-08-08) — channel tree (the 7 concurrency-clean files)
+
+Zero upstream boolean oracles in this tree: every subject is an
+authored wrapper below the marker (`--allow-no-oracles` lane, first
+use). Lane assignment per row (MAY-DECIDE), whys recorded in cases.tsv:
+
+| unit | rows | R1 | lanes | notes |
+|---|---|---|---|---|
+| channel/actris-example | 1 | 1 PASS | confluent | DSPExample = 42 (rendezvous handoff); certified 36 leaves |
+| channel/google-search | 1 | 1 PASS | membership | arrival-order code, certified members=6 (all 3! orders), 4/6 exhibited by go-run samples; work=40000000 (~10× prior corpus max; ~2-4 min recurring per full run — FLAG for next checkpoint) |
+| channel/muxer | 2 | 2 PASS | confluent | async + client; client-old/make-greeting rows PARKED (P2) |
+| channel/muxer-unverified | 2 | 2 PASS | strict | single-threaded select paths (drained/done); assembled with muxer.go |
+| channel/select-tricky-examples | 3 | 3 PASS | 1 confluent + 2 strict | their wp-proved trio incl. the no-2-NB-rendezvous shape and the guaranteed-ready closed-recv |
+| channel/fibonacci | — | — | — | PARKED whole unit (P2: append-spill × schedule tree >20M) |
+| channel/higher-order | — | — | — | PARKED whole unit (P2: >8M at sites=96) |
+
+Totals: 5 units landed, 9 rows, 9 R1 PASS (5 confluent-certified,
+1 membership-certified, 3 strict); 2 units + 2 rows parked (P2). The
+red-first loop here was the enumerator's own author-assertion checks
+(width refuted mechanically at fibonacci's spill bound; sites bounds
+raised until measured) — every failure was a loud bound refutation,
+never a silent truncation. Parity note: this covers goose's verified
+channel-example surface for actris_example (wp_DSPExample), the
+select-tricky trio (incl. their proved-unreachable-default example),
+and muxer's Async/Client (wp lemmas in their channel examples); their
+Google example is UNVERIFIED upstream while ours ships with a
+machine-certified 6-member observation set.
+
+Rungs: R2/R3 skipped batch-wide — concurrent programs are outside the
+sequential `allStreamsOk` checker (R2), and GoSpecC's spawning form is
+the recorded T7 successor debt (R3).
+
+Gate: full `scripts/ci --diff`; baseline re-pinned same-commit
+(1318 → 1327 ids; zero drift on all 1318 prior ids).
