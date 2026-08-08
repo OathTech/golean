@@ -33,24 +33,36 @@ Every examples-tree import-free file is now either LANDED or PARKED:
 
 ## Counts per rung
 
-- **R1 (differential)**: 172 imported rows — **151 PASS** (124 strict,
-  incl. 4 expected-panic rows; 4 confluent-certified; 1
-  membership-certified with members=6; the rest strict), **20
-  frontend-export** reds, every one in a RECORDED fail-closed
-  quarantine class (call-in-short-circuit-operand ×16;
+(Figures FINALIZED at the pre-merge audit round, 2026-08-08 — the
+first version was a mixed snapshot written before the user-authorized
+bug-fix round; the audit flagged it and this section now states the
+branch-tip state.)
+
+- **R1 (differential)**: 172 imported rows — **152 PASS / 20 FAIL**.
+  Lane split of the 172: 167 strict (147 of them PASS, incl. 4
+  expected-panic rows), 4 confluent-certified (all PASS), 1
+  membership-certified (PASS, members=6, tier=slow cached checking).
+  All 20 FAILs are `frontend-export` reds in RECORDED fail-closed
+  quarantine classes (call-in-short-circuit-operand ×16;
   builtin-copy-in-statement-position ×2; map-element-target ×1;
   implicit-interface-conversion-in-multi-value-assignment ×1 — no NEW
-  refusal reason in the whole buildout), and **1 deliberate red**
-  (unittest/embedded/live, a BUG-048 pin). Zero drift on every
-  pre-existing id at every one of the 8 re-pins (1205 → 1381 ids).
+  refusal reason in the whole buildout). ZERO deliberate reds remain:
+  the buildout-time BUG-048 pin (unittest/embedded/live) flipped green
+  when the user-authorized fix landed. Zero drift on every
+  pre-existing id at every one of the branch's 11 baseline re-pins
+  (1205 → 1381 ids); the only pre-existing-id movements anywhere are
+  the 2 BUG-047 and 5 BUG-048 deliberate fix flips.
 - **R2 (kernel pins)**: 12 oracles across 6 units (block 1, defer 2,
   nil 6, mapliteral 1, const 1, rune 1) — 24 kernel theorems
   (∀-streams `Terminates` via `allStreamsOk decide +kernel` +
   canonical-stream readout each; 0.4-1.6 s / ≤1 GiB RSS). Claim
   strength vs the designated TotalReadout shape is caveated in matrix
-  §6 (checkpoint finding). R2 held down deliberately pending the P1
-  staleness-guard decision, not by capability; the const pin carries a
-  BUG-047 true-of-term caveat.
+  §6 (checkpoint finding). R2 was held down during the buildout
+  pending the then-parked P1 decision; P1 is now RESOLVED — all six
+  pins are staleness-guarded by `scripts/check-imported-pins` (ci step
+  1c5) — and the const pin's buildout-time BUG-047 true-of-term caveat
+  is HISTORY: the bug is fixed and the term regenerated (the guard
+  caught the drift).
 - **R3 (GoSpec instances)**: 0 — skipped every batch with the recorded
   reason: no existing automation discharges a GoSpec instance for an
   arbitrary imported program; per-oracle WP walks are new per-program
@@ -68,15 +80,19 @@ Every examples-tree import-free file is now either LANDED or PARKED:
   not laundered).
 - **P4** — BUG-048 triage.
 
-## Suspected-bug list (all filed, pinned, unfixed per charter)
+## Bug list (filed + pinned during the buildout per MUST-PARK; both
+FIXED post-buildout in the user-authorized check-in response round —
+heading updated at the pre-merge audit)
 
-- **BUG-047** (major, pre-existing): frontend double-emits a
-  conversion-of-call as the whole RHS of assign/define
-  (emit.go:2112). Pinned by
-  `assign-order/conversion-call-eval-once/{define,assign}`
-  (FAIL/differential, 202 vs 101). Two green-by-luck corpus instances
-  annotated (semantics/copy idempotent; unittest/const pure).
-- **BUG-048** (pre-existing): machine wrong-stuck calling a
+- **BUG-047** (pre-existing, FIXED 2026-08-08): frontend double-emitted
+  a conversion-of-call as the whole RHS of assign/define
+  (emit.go:2112). Pinned red-first by
+  `assign-order/conversion-call-eval-once/{define,assign}` (202 vs
+  101); both pins now green. The two green-by-luck corpus instances
+  (semantics/copy idempotent; unittest/const pure) were annotated
+  during the buildout and the annotations removed with the fix.
+- **BUG-048** (pre-existing, FIXED 2026-08-08 — frontend-side
+  auto-deref): machine wrong-stuck calling a
   VALUE-receiver method through a pointer VARIABLE (`p := &x;
   p.get()`); promoted-through-embedding via pointer var works, the
   direct call does not. Pinned by
@@ -95,8 +111,8 @@ Every examples-tree import-free file is now either LANDED or PARKED:
 The imported-corpus section §6 now carries per-batch rows and totals.
 Corrected parity claims (phase-B checkpoint): the goose-REJECTS-cycles
 and Google-unverified deltas were FALSE and are struck/restated. The
-surviving true deltas: 151 of their example rows run differentially
-GREEN on an executable semantics they no longer have; both upstream
+surviving true deltas: 152 of their example rows run differentially
+GREEN (final count at the pre-merge audit round) on an executable semantics they no longer have; both upstream
 `failing_test*` evaluation-order oracles (their known-wrong
 translations) pass here; three latent upstream PANICS their
 translation-only tests never execute are pinned as panic rows

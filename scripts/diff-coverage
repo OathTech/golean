@@ -721,11 +721,20 @@ parse_lane_params() {
         continue
       fi
       if [[ "$key" == "tier" ]]; then
-        # Re-validated like every param (F4's discipline).
+        # Re-validated like every param (F4's discipline); members= is
+        # required (the cached path's cardinality constraint — pre-merge
+        # audit 2026-08-08).
         if [[ "$value" != "slow" || "$lane" != "membership" ]]; then
           report_fail "$id" "$features" "manifest" "tier=slow is the only tier and is membership-only: $kv (lane=$lane)"
           return 1
         fi
+        case ",$params," in
+          *,members=*) ;;
+          *)
+            report_fail "$id" "$features" "manifest" "tier=slow requires an explicit members=<n> pin"
+            return 1
+            ;;
+        esac
         tier="slow"
         continue
       fi
@@ -826,7 +835,7 @@ run_membership_case_rows() {
   # deferred to the --slow path — machine-side envelope drift is caught
   # there, and coupling drift is caught here).
   local cert_file="baselines/certified/${id//\//__}.certified.tsv" cached=0
-  local wire_sha rec_sha cert_stamp
+  local wire_sha rec_sha cert_stamp rec_params
   if [[ "$tier" == "slow" && "${GOLEAN_SLOW:-0}" != "1" ]]; then
     if [[ ! -f "$cert_file" ]]; then
       report_fail "$id" "$features" "membership" "tier=slow but no certified-set record at $cert_file — certify with scripts/ci --slow and commit the record"
@@ -836,6 +845,16 @@ run_membership_case_rows() {
     rec_sha="$(sed -n 's/^# wire-sha256: //p' "$cert_file" | head -1)"
     if [[ -z "$rec_sha" || "$wire_sha" != "$rec_sha" ]]; then
       report_fail "$id" "$features" "membership" "certified-set record is STALE (wire sha ${wire_sha:0:12} != recorded ${rec_sha:0:12}) — the case or frontend moved since certification; re-certify with scripts/ci --slow"
+      return 0
+    fi
+    # Params guard (pre-merge audit, 2026-08-08): the wire hash covers the
+    # SOURCE but not the CLAIM — the cases.tsv row's lane params are
+    # outside it. The record's `# params:` header must equal the row's
+    # current params string exactly; a row edit without re-certification
+    # fails loud instead of silently re-labeling a cached set.
+    rec_params="$(sed -n 's/^# params: //p' "$cert_file" | head -1)"
+    if [[ -z "$rec_params" || "$rec_params" != "$params" ]]; then
+      report_fail "$id" "$features" "membership" "certified-set record was certified under params '$rec_params' but the row now declares '$params' — re-certify with scripts/ci --slow"
       return 0
     fi
     grep -v '^#' "$cert_file" | grep . > "$mem_dir/observations.txt" || true
@@ -861,10 +880,11 @@ run_membership_case_rows() {
         return 0
       fi
       rec_sha="$(sed -n 's/^# wire-sha256: //p' "$cert_file" | head -1)"
-      if [[ "$wire_sha" != "$rec_sha" ]] \
+      rec_params="$(sed -n 's/^# params: //p' "$cert_file" | head -1)"
+      if [[ "$wire_sha" != "$rec_sha" || "$rec_params" != "$params" ]] \
          || ! diff <(grep -v '^#' "$cert_file" | grep . | sort) \
                    <(sort "$mem_dir/observations.txt") > /dev/null; then
-        report_fail "$id" "$features" "membership" "re-certification DIFFERS from the tracked record $cert_file (set or wire hash moved) — update the record deliberately in this commit (fresh set in $mem_dir/observations.txt, wire-sha256 $wire_sha)"
+        report_fail "$id" "$features" "membership" "re-certification DIFFERS from the tracked record $cert_file (set, params, or wire hash moved: row params '$params' vs recorded '$rec_params') — update the record deliberately in this commit (fresh set in $mem_dir/observations.txt, wire-sha256 $wire_sha)"
         return 0
       fi
     fi

@@ -5,6 +5,12 @@ name: gate
 # proofs build incl. the in-build Audit axiom/non-vacuity sweep, eval tests,
 # baseline diff + re-pin guard). Push/PR runs the fast gate; the full
 # differential corpus (`go run` per case) runs nightly and on manual dispatch.
+# The NIGHTLY runs `--slow` (tiered checking, 2026-08-08): tier=slow rows are
+# fully RE-CERTIFIED against their tracked certified-set records — this is the
+# scheduled cadence the membership-lane design note names. Manual dispatch
+# defaults to the same `--slow`; pass slow=false for a quick `--diff` run
+# (recorded decision: the dispatch path is usually a "run the full thing now"
+# request, so it defaults to the strongest form).
 # Local runs of scripts/ci give the same answer — CI is redundancy, not a
 # different check.
 
@@ -12,8 +18,13 @@ on:
   push:
   pull_request:
   workflow_dispatch:
+    inputs:
+      slow:
+        description: "Re-certify tier=slow rows (scripts/ci --slow); false = quick --diff"
+        type: boolean
+        default: true
   schedule:
-    - cron: '17 3 * * *' # nightly full differential
+    - cron: '17 3 * * *' # nightly full differential incl. --slow re-certification
 
 jobs:
   gate:
@@ -39,6 +50,16 @@ jobs:
           key: lake-${{ runner.os }}-${{ hashFiles('lean-toolchain', 'proofs/lean-toolchain', 'proofs/lake-manifest.json') }}
           restore-keys: lake-${{ runner.os }}-
 
+      # The imported-goose guards (ci steps 1c3-1c5) verify landed corpus
+      # bytes and R2 pin terms against the PINNED goose checkout and fail
+      # CLOSED if it is absent — deps/ is gitignored, so the runner must
+      # clone it (pre-merge audit round, 2026-08-08; rev = the pin in
+      # scripts/import-goose and scripts/check-imported-goose).
+      - name: Reference checkout deps/goose at the pinned rev
+        run: |
+          git clone --quiet https://github.com/goose-lang/goose deps/goose
+          git -C deps/goose checkout --quiet 3be88bbb4982f58e5813b6f0344302d5582c8e8a
+
       - name: Fast gate (scripts/ci)
         if: github.event_name == 'push' || github.event_name == 'pull_request'
         run: ./scripts/ci
@@ -53,6 +74,11 @@ jobs:
           # GOCACHE), so the default cache:true only emits a go.sum warning.
           cache: false
 
-      - name: Full gate incl. differential corpus (scripts/ci --diff)
+      - name: Full gate incl. differential corpus (scheduled/dispatch; --slow re-certifies tier=slow rows)
         if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
-        run: ./scripts/ci --diff
+        run: |
+          if [ "${{ github.event_name }}" = "schedule" ] || [ "${{ inputs.slow }}" != "false" ]; then
+            ./scripts/ci --slow
+          else
+            ./scripts/ci --diff
+          fi

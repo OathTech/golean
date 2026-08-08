@@ -1,10 +1,12 @@
 package main
 
-// BUG-047 pin: a conversion of a call as the WHOLE RHS of a define or
-// assign must evaluate the call EXACTLY ONCE. The native frontend
-// currently hoists the inner call in the conversion path and then
-// re-emits the RHS on the generic path, so the callee runs twice
-// (emit.go:2112 + the generic loop; see docs/BUGS.md BUG-047).
+// BUG-047 pin (FIXED 2026-08-08): a conversion of a call as the WHOLE
+// RHS of a define or assign must evaluate the call EXACTLY ONCE. The
+// native frontend used to hoist the inner call in the conversion path
+// and then re-emit the RHS on the generic path, running the callee
+// twice; the assign-site guard now routes conversions through the
+// generic single-emit path. Both rows pin the fixed once-only
+// evaluation green. See docs/BUGS.md BUG-047.
 
 var counter int
 

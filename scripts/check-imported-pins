@@ -42,6 +42,22 @@ WORK="$(mktemp -d "${TMPDIR:-/tmp}/imported-pins.XXXXXX")"
 trap 'rm -rf "$WORK"' EXIT
 export GOCACHE="${GOCACHE:-$ROOT/artifacts/go-build-cache}"
 
+# Completeness cross-check (pre-merge audit note, 2026-08-08): the PINS
+# array is hand-maintained (the check-golden mold); a new
+# Specs/ImportedGoose*.lean pin module that is not registered here would
+# otherwise be silently unguarded. Fail loud on any module not in PINS
+# (and vice versa). Partial registration already fails closed via the
+# term-print step; this closes the total-non-registration hole.
+if [[ -z "${SINGLE_DIR:-}" ]]; then :; fi
+modules_on_disk="$(ls proofs/GoLeanProofs/Specs/ImportedGoose*.lean 2>/dev/null \
+  | sed 's|proofs/||; s|/|.|g; s|\.lean$||' | sort)"
+modules_in_pins="$(for pin in "${PINS[@]}"; do IFS='|' read -r _ _ m <<< "$pin"; echo "$m"; done | sort)"
+if [[ "$modules_on_disk" != "$modules_in_pins" ]]; then
+  echo "check-imported-pins: FAIL — Specs/ImportedGoose*.lean modules and the PINS registry differ (register every pin module here AND in the term.lean import block):" >&2
+  diff <(echo "$modules_on_disk") <(echo "$modules_in_pins") | sed 's/^/  /' >&2
+  exit 1
+fi
+
 # Build both sides once (stale-olean hardening per check-golden).
 lake build GoLean.NativeToIR > /dev/null \
   || { echo "check-imported-pins: FAIL — NativeToIR build failed (fail closed)" >&2; exit 1; }

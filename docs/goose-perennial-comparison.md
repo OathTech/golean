@@ -160,11 +160,17 @@ as `test_fun_ok` Iris lemmas, 1 Admitted).
 | 5 (storage-clean + generics) | 7 | 7 | 6 | 1 (short-circuit-operand) | 1 (storage/mapliteral) |
 | 6 (unittest wrapper lane, first slice) | 11 | 11 | 11 | 0 | 1 (unittest/const) |
 
-FINAL buildout totals (after batch 9): 78 units landed / 172
-imported rows — 151 R1 PASS, 20 recorded-fail-closed frontend-export,
-1 deliberate BUG-048 pin red; 12 oracles R2 kernel-pinned; 2 units + 2
-rows parked (P2); 2 suspected GoLean bugs filed and pinned (BUG-047,
-BUG-048). Per-batch rows below are historical.
+FINAL branch totals (updated at the pre-merge audit round,
+2026-08-08 — the buildout-end figures predated the user-authorized bug
+fixes): 78 units landed / 172 imported rows — 152 R1 PASS, 20
+recorded-fail-closed frontend-export, ZERO deliberate reds (the
+buildout-time BUG-048 pin flipped green with the fix); 12 oracles R2
+kernel-pinned, all six pin terms staleness-guarded
+(check-imported-pins, ci 1c5); 2 units + 2 rows parked (P2,
+ruled-parked at the check-in); 2 GoLean bugs surfaced, filed, pinned,
+and FIXED on the branch (BUG-047, BUG-048 — the latter also repaired
+two long-standing untriaged backlog reds; ratchet 18 → 16). Per-batch
+rows below are historical.
 
 Running totals after batch 6: 51 units landed (28 semantics of 29
 clean — remaining panic.go; 5 channel + 2 parked; 7 storage/generics;

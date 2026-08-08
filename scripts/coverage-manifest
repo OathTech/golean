@@ -300,6 +300,16 @@ validate_lane_params() {
         echo "coverage-manifest: $cases_file: tier=slow is a membership-lane param (lane=$lane_ctx has no cached certification path): $kv" >&2
         return 1
       fi
+      # A cached row's only machine-cardinality constraint is the
+      # members= pin against the recorded set (pre-merge audit,
+      # 2026-08-08) — require it explicitly.
+      case ",$params," in
+        *,members=*) ;;
+        *)
+          echo "coverage-manifest: $cases_file: tier=slow requires an explicit members=<n> pin (the cached path's cardinality constraint): $kv" >&2
+          return 1
+          ;;
+      esac
       continue
     fi
     if [[ "$key" == "statuses" ]]; then

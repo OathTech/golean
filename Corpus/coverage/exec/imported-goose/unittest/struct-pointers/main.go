@@ -67,10 +67,11 @@ func setField() S {
 // --- GoLean harness ---
 // Authored wrapper.
 
-// BUG-048 note: `s.readBVal()` (value receiver via the pointer var s)
-// is the wrong-stuck class pinned by
-// methods/value-receiver-via-pointer-var — the wrapper calls it on the
-// DEREFERENCED value instead and leaves the class to its pin.
+// (Historical: the wrapper calls readBVal on a dereferenced value
+// because the value-receiver-via-pointer-var shape was BUG-048-stuck
+// at authoring time; the bug is FIXED 2026-08-08 and the class is
+// pinned green by methods/value-receiver-via-pointer-var. The wrapper
+// body is unchanged to keep the row's observable stable.)
 func goleanStructPointers() int {
 	s := NewS()
 	sum := int(s.readA())

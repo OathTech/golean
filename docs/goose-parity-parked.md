@@ -4,7 +4,10 @@ Charter: `docs/2026-08-07_goose-parity-charter.md`. Format per the
 charter: unit; the precise question; evidence gathered (probes, cites);
 options WITH costs; **NO decision**. A parked entry is a SUCCESS outcome
 for a unit — this ledger is the deliverable the end-of-buildout check-in
-resolves. Nothing here has been acted on.
+resolves. Entries carry NO decision when parked; the user's check-in
+rulings (2026-08-08) are recorded as explicit RESOLVED/ruled banners
+per entry — P1 implemented, P2 ruled-parked, P3/P4 bug fixes
+authorized and landed.
 
 Entries are appended in discovery order, dated.
 
@@ -42,6 +45,15 @@ Entries are appended in discovery order, dated.
 - **NO decision** — pilot shipped under option 3 with the caveat in its
   docstring; further R2 pins in this buildout follow the same recorded
   caveat until the checkpoint resolves this.
+- **RESOLVED (user check-in ruling, 2026-08-08; banner restored at the
+  pre-merge audit — the closure commit eb36679's edit was lost to a
+  scripting slip and the audit caught the gap):** implemented as an
+  option-1/2 hybrid — `scripts/check-imported-pins` (check-golden mold,
+  data-driven PINS list, fresh decoded(frontend(source)) diffed
+  directly against each checked-in term), wired into `scripts/ci`
+  (step 1c5), negative-fixtured (real-pin pass + tampered-copy drift
+  reject). All six pins verify; the guard caught the BUG-047
+  constLowered drift exactly as designed.
 
 ## P2 (2026-08-08) — channel-tree units whose confluent certification exceeds sane enumeration cost
 

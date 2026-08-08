@@ -6,7 +6,7 @@
 # deliberately, in its own commit, with the reason — never auto-written.
 # certified: 2026-08-08  commit: BUG-048-fix full run (goose-parity check-in response round)
 # case: imported-goose/channel/google-search
-# params: width=4,sites=48,work=40000000,members=6
+# params: width=4,sites=48,work=40000000,members=6,tier=slow
 # wire-sha256: f9c666f6ebf242a7caee1054301098eaeb811a2e346898b0eb708255bdc06395
 # enum-stats: observations=6 steps=34705816 probes=161130 sites=53710 leaves=59601 maxdepth=15 width=4
 {"schema":"golean-observation-v1","status":"ok","values":[{"tag":"int","value":123}]}

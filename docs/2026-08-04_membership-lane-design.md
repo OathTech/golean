@@ -346,8 +346,14 @@ cycle. Design (minimal, fail-closed, NO silent skips):
   by a run.
 - **Quick path** (per-commit `ci --diff`): NO enumeration. Fail-closed
   gates: record must exist; the case's fresh wire.json sha256 must
-  equal the recorded hash (case/frontend drift → loud STALE failure
-  demanding `--slow`). Then the ordinary go-side samples AND the
+  equal the recorded hash (source/frontend drift → loud STALE failure
+  demanding `--slow`); AND the record's `# params:` header must equal
+  the row's current params string (pre-merge audit fix, 2026-08-08:
+  the wire hash covers the SOURCE but not the CLAIM — a cases.tsv
+  params edit is outside it, so the first version of this path would
+  have silently re-labeled a cached set; both paths now compare params
+  and fail loud). tier=slow rows must declare `members=` (the cached
+  path's cardinality constraint against the recorded set). Then the ordinary go-side samples AND the
   driver-coupling pin (four `native-json-run` streams — the machine IS
   still exercised) are checked for membership in the RECORDED set, and
   the members= cardinality pin applies. Reported as a visible

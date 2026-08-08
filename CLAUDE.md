@@ -153,7 +153,11 @@ way an arc reaches `main`).
    at user direction; the old "process amendments may land directly" carve-out
    is revoked).
 2. **Arc complete → run the gate:** `scripts/ci` (add `--diff` when runtime
-   code changed). Must be green before anything else. If the arc added or
+   code changed; use `--slow` instead when the arc touched a `tier=slow`
+   row, its certified-set record, the enumerator, or the interpreter —
+   the cached membership path defers full envelope re-certification to
+   exactly this flag, and the nightly CI schedule runs it; tiered-checking
+   design 2026-08-08). Must be green before anything else. If the arc added or
    changed a designated headline theorem statement (the statement-TCB
    gate's list), also run `scripts/comparator-judge` — the independent
    kernel-replay judge (landmark cadence only, never part of `scripts/ci`;

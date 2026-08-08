@@ -471,3 +471,45 @@ Per-item disposition:
    Full quick-mode `ci --diff`: PASS, 1381/1381, zero drift.
 5. **OOM convention**: kept; RSS-fallback note added to
    docs/agent-sandbox.md per the ruling.
+
+## Pre-merge audit response round (2026-08-08)
+
+Audit verdict: minors + one doc-state major, no code majors; one
+refuted (the pointer-conversion probe — already pinned red by
+structs/tag-pointer-conversion, a recorded deliberate decision).
+All confirmed findings fixed:
+
+1. (minor) certified-record PARAMS guard: both the cached and --slow
+   paths now parse `# params:` back and compare against the row's
+   current params string — a cases.tsv edit without re-certification
+   fails loud (verified live both directions). tier=slow now REQUIRES
+   members= (manifest + harness); the google-search record's params
+   line updated to the row's current string (it had drifted when
+   tier=slow was appended post-certification — the new guard catches
+   exactly this). Membership-note wording corrected (the wire hash
+   covers the SOURCE, not the CLAIM; the cases.tsv residual is closed).
+2. (minor) --slow cadence WIRED: the nightly schedule runs
+   `scripts/ci --slow`; workflow_dispatch gains a `slow` input
+   defaulting TRUE (recorded decision: dispatch is usually a
+   run-the-full-thing request). CLAUDE.md merge-protocol step 2 names
+   --slow for slow-tier-bearing changes (process-contract edit,
+   on-branch per protocol). ALSO found while wiring: the runner never
+   clones deps/goose, so ci steps 1c3-1c5 (verbatim + pin guards)
+   would fail closed on every runner run — a reference-checkout step
+   at the pinned rev added to the workflow.
+3. (major, doc-state) end-of-buildout report + matrix §6 finalized to
+   branch-tip figures (152/20, zero deliberate reds, both bugs FIXED,
+   167/4/1 lane split, 11 re-pins), marked as audit-round corrections.
+4. (minor) P1 ledger closure banner RESTORED (the eb36679 closure edit
+   was lost to a double-write scripting slip; the audit caught it) +
+   preamble corrected; (minor) all six R2 pin docstrings now state the
+   guarded reality; (minor) the three corpus bug comments moved to
+   past tense (the BUG-048-round commit had claimed these edits while
+   its script died mid-block — same slip class, now applied with
+   per-edit verified writes).
+5. (note) check-imported-pins gained a completeness cross-check
+   (Specs/ImportedGoose*.lean modules must equal the PINS registry;
+   fail loud on any diff — verified both directions).
+
+Gates: full `scripts/ci --diff` AND the first end-to-end
+`scripts/ci --slow` (the scheduled form) — both green, zero drift.

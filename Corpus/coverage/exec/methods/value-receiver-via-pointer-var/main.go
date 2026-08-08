@@ -1,12 +1,12 @@
 package main
 
-// BUG-048 pin: calling a VALUE-receiver method through a pointer-typed
-// VARIABLE (`p := &x; p.Get()` — Go auto-dereferences: (*p).Get()) gets
-// the machine STUCK ("expected struct value, got addr") while go run
-// returns normally. Surfaced by the goose-parity import of
-// unittest/embedded.go (the explicit `d.embedB.Foo()` selector through
-// a pointer-embedded field is the same class); minimized here.
-// See docs/BUGS.md BUG-048.
+// BUG-048 pin (FIXED 2026-08-08): calling a VALUE-receiver method
+// through a pointer-typed VARIABLE (`p := &x; p.get()` — Go
+// auto-dereferences: (*p).get()) used to wrong-stick the machine
+// ("expected struct value, got addr") while go run returned normally.
+// Surfaced by the goose-parity import of unittest/embedded.go;
+// minimized here; both rows now pin the fixed auto-deref behavior
+// green. See docs/BUGS.md BUG-048.
 
 type sVal struct{ v int }
 
