@@ -96,7 +96,7 @@ starts honest):
    `RacyFine` makes plan step (iv)'s coupling cancel any shared
    under-approximation — that axis is real. What sharing does NOT buy:
    `¬ RacyFine` does not imply go_mem/`-race` data-race-freedom while
-   the table under-approximates Go's access set (the recorded U1–U3
+   the table under-approximates Go's access set (the recorded U1–U2
    in Race.lean's inventory), and an access a step performs but the
    table omits is invisible to the mover route too (a step reading a
    shared cell with an empty recorded footprint would be treated as a

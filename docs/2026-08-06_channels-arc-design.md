@@ -854,7 +854,7 @@ build, recorded here:
   instrumented `len(m)` read) plus a too-narrow over-approximation
   record; the inventory is now ENUMERATED in Race.lean's module
   docstring (footprint arms / model-internal / synchronization / fresh
-  allocation), and the recorded approximations are its O1 + U1–U3
+  allocation), and the recorded approximations are its O1 + U1–U2 (U3 closed by BUG-045, 2026-08-08)
   entries: O1 whole-cell value-path composite reads (narrowed through
   immediate fieldGet chains; BUG-041 pins the array remainder), U1
   map-range per-iteration reads unperformed (BUG-005's fourth
@@ -1083,7 +1083,7 @@ predicted classifications), then the fixes:
   p26). NPDRF gains obstruction 5: sharing `stepAccesses` between
   detector and `RacyFine` cancels shared under-approximation for the
   step-(iv) coupling but buys nothing for EXTERNAL adequacy
-  (`¬RacyFine` ⇏ go_mem-DRF while U1–U3 stand), and unrecorded reads
+  (`¬RacyFine` ⇏ go_mem-DRF while U1–U2 stand; U3 closed by BUG-045), and unrecorded reads
   are invisible to the mover route too.
 - **MINOR (mover granularity)**: the proved movers are gated on
   root-cell disjointness while the detector calls same-root disjoint
@@ -1620,9 +1620,9 @@ severities as verified (1 major + 6 minor + 5 note):
   says the DETECTOR never refuses; the new Challenge section docstring
   and the Audit designated-list comment upgraded that to race-freedom
   simpliciter, silently absorbing the detector's recorded fail-open
-  under-approximations (Race.lean U1–U3; NPDRF.lean says outright that
+  under-approximations (Race.lean U1–U2 — U3 closed by BUG-045; NPDRF.lean says outright that
   ¬refusal ⇏ go_mem-DRF). Both glosses corrected to
-  race-REFUSAL-freedom with the U1–U3 scope named; `ProgressExecC`'s
+  race-REFUSAL-freedom with the U1–U2 scope named (U3 closed by BUG-045); `ProgressExecC`'s
   docstring got the same precision in the same edit.
 - **MINOR: `forbiddenRoots` was unvalidated** — raw name literals,
   no existence check, no anchors: a rename would silently drop a

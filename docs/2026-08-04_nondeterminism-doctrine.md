@@ -153,7 +153,7 @@ EPISTEMIC CAPTION, recorded per the per-lane discipline:
   witnessed a real race (TSan has no false positives — one red report
   is proof). The claim is scoped to the REGISTRY-POINT path set (the
   NPDRF obligation's territory) and by the footprint inventory's
-  recorded under-approximations (U1–U3); the pre-slice-4 per-stream
+  recorded under-approximations (U1–U2; U3 closed by BUG-045); the pre-slice-4 per-stream
   approximation is retired.
 - **The three-way investigation rule** (binding; also recorded at the
   harness dispatch in `scripts/diff-coverage`): our-refusal +
@@ -191,7 +191,7 @@ EPISTEMIC CAPTION, recorded per the per-lane discipline:
   go1.26.5, refuting the first version of this caption) and is now
   recorded by the footprint; `len`/`cap` on channels remain
   uninstrumented on both sides (probe p26). The footprint's remaining
-  under-approximations are U1–U3 in Race.lean's inventory — the
+  under-approximations are U1–U2 in Race.lean's inventory (U3 closed by BUG-045, 2026-08-08) — the
   lane's per-stream refusal claim is scoped by them.
 - **Scope limit (BUG-040) — FIXED at slice 4**: the detector is
   complete only over accesses that EXECUTE on the modeled
@@ -275,7 +275,7 @@ record.
 - **racy (D9(d))**: the full caption is the dedicated section above —
   every enumerated path refuses AND one `-race` red sample witnesses
   the real race; the three-way investigation rule; scope = the
-  registry-point path set and the footprint inventory's U1–U3.
+  registry-point path set and the footprint inventory's U1–U2 (U3 closed by BUG-045).
 - **litmus pairs (D9(e))**: not a harness lane — a corpus DISCIPLINE
   over the memory-model shapes (MP, SB, …), each in two forms: the
   channel-synchronized form rides lane b/c and must admit exactly the

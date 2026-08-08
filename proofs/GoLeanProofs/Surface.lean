@@ -627,7 +627,8 @@ detecting loop, and this definition's "nothing but `.ok .normal` or
 `.fuelOut`" excludes the race refusal WITHOUT restating — a proven
 concurrent spec implies deadlock-freedom and RACE-REFUSAL-freedom (the
 detector's refusal never fires — scoped by the detector's recorded
-under-approximations, Race.lean's U1–U3 inventory) on every modeled
+under-approximations, Race.lean's U1–U2 — U3 closed by BUG-045's
+chan-object rule, 2026-08-08) on every modeled
 schedule ("modeled schedule" = the registry-point path set; the
 post-spawn decision point joined it when BUG-040 was FIXED at slice 4
 — the `.spawned` boundary is a live L1 site, so child-first

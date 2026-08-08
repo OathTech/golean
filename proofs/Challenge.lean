@@ -289,7 +289,8 @@ quantifier discharged — EVERY choice stream (schedules + latitude,
 D8's single stream) completes the fork/join rendezvous at main's
 `.normal` terminal with the 42 readout; deadlock-freedom and
 RACE-REFUSAL-freedom (the detector never refuses — scoped by the
-detector's recorded under-approximations, Race.lean U1–U3) on every
+detector's recorded under-approximations, Race.lean U1–U2; U3 closed
+by BUG-045's chan-object rule, 2026-08-08) on every
 modeled schedule as first-order corollaries; and the
 `TerminatesNormallyC` instance (one fuel bound, every stream). Plus
 `goldenSpecC`: the full concurrent surface judgment `GoSpecC`,
