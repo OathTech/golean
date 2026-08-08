@@ -45,6 +45,15 @@ Entries are appended in discovery order, dated.
 
 ## P2 (2026-08-08) — channel-tree units whose confluent certification exceeds sane enumeration cost
 
+**RESOLVED AS PARKED (user check-in ruling, 2026-08-08):** the units
+STAY parked — fibonacci, higher-order, and muxer's client-old /
+make-greeting rows are not landed; the measurements below stand as the
+motivating cases for the partial-order-reduction backlog (option 4).
+No cap raises, no weaker reclassification. (The related
+iteration-speed concern is addressed separately by the tiered-checking
+directive — see the membership-lane design note's 2026-08-08
+addendum.)
+
 - **Units/rows:** `channel/fibonacci` (whole unit, not landed),
   `channel/higher-order` (whole unit, not landed), `channel/muxer`
   rows `client-old` and `make-greeting` (unit landed with its two

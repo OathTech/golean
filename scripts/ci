@@ -185,6 +185,18 @@ else
   bad "imported-goose verbatim DRIFTED (a landed imported body no longer matches goose @ pin)"
 fi
 
+# 1c5. Imported-goose R2-PIN staleness (user check-in ruling on ledger P1,
+# 2026-08-08; check-golden mold): each R2 pin's checked-in Program term
+# must equal a FRESH decoded(frontend(source)) of its corpus case — a
+# frontend/decoder change that moves a pinned lowering fails here and the
+# term is regenerated deliberately in the same commit.
+step "imported-goose R2-pin staleness (scripts/check-imported-pins)"
+if ./scripts/check-imported-pins; then
+  ok "imported-goose R2 pins (term = decoded(frontend(source)), all pins)"
+else
+  bad "imported-goose R2 pin DRIFTED (regenerate the pin term with the frontend change)"
+fi
+
 # 1c. Surface purity (docs/2026-07-21_native-spec-surface.md D1; widened to
 # the FULL statement-bearing set 2026-08-01 per the TCB doctrine,
 # docs/2026-08-01_tcb-and-layering-doctrine.md §1 — QuorumTargets/

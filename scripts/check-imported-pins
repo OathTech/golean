@@ -1,0 +1,111 @@
+#!/usr/bin/env bash
+# R2-pin staleness guard for the imported-goose kernel pins (user check-in
+# ruling on ledger P1, 2026-08-08; check-golden mold, check-imported-goose
+# wiring precedent).
+#
+# For EACH imported-goose R2 pin, verifies "proof subject =
+# decoded(frontend(source))" DIRECTLY: a fresh frontend emit + decode of the
+# pin's corpus case must print the SAME repr as the checked-in Lean Program
+# term. Any drift fails loud — regenerate the pin term deliberately, in the
+# same commit as the frontend/decoder change, with the reason (this is
+# exactly how a frontend fix that changes a lowering, e.g. BUG-047's, is
+# forced to surface here instead of silently dating a pinned term).
+#
+# Fixture mode (scripts/test-import-goose): --dir <case-dir> --term <fqn>
+# checks a single (possibly scratch) case dir against a real term.
+set -uo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+cd "$ROOT"
+
+# source case dir | fully qualified Lean term | proofs module
+PINS=(
+  "Corpus/coverage/exec/imported-goose/semantics/block|GoLean.ImportedGoose.SemanticsBlock.blockLowered|GoLeanProofs.Specs.ImportedGooseBlock"
+  "Corpus/coverage/exec/imported-goose/semantics/defer|GoLean.ImportedGoose.SemanticsDefer.deferLowered|GoLeanProofs.Specs.ImportedGooseDefer"
+  "Corpus/coverage/exec/imported-goose/semantics/nil|GoLean.ImportedGoose.SemanticsNil.nilLowered|GoLeanProofs.Specs.ImportedGooseNil"
+  "Corpus/coverage/exec/imported-goose/storage/mapliteral|GoLean.ImportedGoose.StorageMapliteral.mapliteralLowered|GoLeanProofs.Specs.ImportedGooseMapliteral"
+  "Corpus/coverage/exec/imported-goose/unittest/const|GoLean.ImportedGoose.UnittestConst.constLowered|GoLeanProofs.Specs.ImportedGooseConst"
+  "Corpus/coverage/exec/imported-goose/unittest/rune|GoLean.ImportedGoose.UnittestRune.runeLowered|GoLeanProofs.Specs.ImportedGooseRune"
+)
+
+SINGLE_DIR=""
+SINGLE_TERM=""
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --dir) SINGLE_DIR="$2"; shift 2 ;;
+    --term) SINGLE_TERM="$2"; shift 2 ;;
+    *) echo "check-imported-pins: unknown arg $1" >&2; exit 2 ;;
+  esac
+done
+
+WORK="$(mktemp -d "${TMPDIR:-/tmp}/imported-pins.XXXXXX")"
+trap 'rm -rf "$WORK"' EXIT
+export GOCACHE="${GOCACHE:-$ROOT/artifacts/go-build-cache}"
+
+# Build both sides once (stale-olean hardening per check-golden).
+lake build GoLean.NativeToIR > /dev/null \
+  || { echo "check-imported-pins: FAIL — NativeToIR build failed (fail closed)" >&2; exit 1; }
+if [[ -z "$SINGLE_DIR" ]]; then
+  mods=()
+  for pin in "${PINS[@]}"; do IFS='|' read -r _ _ m <<< "$pin"; mods+=("$m"); done
+  (cd proofs && lake build "${mods[@]}" > /dev/null) \
+    || { echo "check-imported-pins: FAIL — pin module build failed (fail closed)" >&2; exit 1; }
+fi
+
+cat > "$WORK/decode.lean" <<'LEAN'
+import GoLean.NativeToIR
+def main (args : List String) : IO Unit := do
+  let raw ← IO.FS.readFile args[0]!
+  match Lean.Json.parse raw with
+  | .error e => IO.println s!"PARSE ERROR: {e}"
+  | .ok json =>
+    match GoLean.NativeToIR.decodeProgram json with
+    | .error e => IO.println s!"DECODE ERROR: {e}"
+    | .ok prog => IO.println (repr prog)
+LEAN
+
+check_pin() {
+  local src_dir="$1" term="$2" name
+  name="$(basename "$(dirname "$src_dir")")/$(basename "$src_dir")"
+  GO111MODULE=off go run ./tools/nativefrontend --dir "$src_dir" --out "$WORK/wire.json" \
+    || { echo "check-imported-pins: FAIL [$name] — frontend emit failed (fail closed)" >&2; return 1; }
+  lake env lean --run "$WORK/decode.lean" "$WORK/wire.json" > "$WORK/fresh.repr" \
+    || { echo "check-imported-pins: FAIL [$name] — decode run failed (fail closed)" >&2; return 1; }
+  if grep -q "ERROR" "$WORK/fresh.repr"; then
+    echo "check-imported-pins: FAIL [$name] — decoder error:" >&2
+    head -3 "$WORK/fresh.repr" >&2
+    return 1
+  fi
+  cat > "$WORK/term.lean" <<LEAN
+import GoLeanProofs.Specs.ImportedGooseBlock
+import GoLeanProofs.Specs.ImportedGooseDefer
+import GoLeanProofs.Specs.ImportedGooseNil
+import GoLeanProofs.Specs.ImportedGooseMapliteral
+import GoLeanProofs.Specs.ImportedGooseConst
+import GoLeanProofs.Specs.ImportedGooseRune
+def main : IO Unit :=
+  IO.println (repr $term)
+LEAN
+  (cd proofs && lake env lean --run "$WORK/term.lean" > "$WORK/term.repr") \
+    || { echo "check-imported-pins: FAIL [$name] — term print failed (fail closed)" >&2; return 1; }
+  if ! diff -q "$WORK/fresh.repr" "$WORK/term.repr" > /dev/null; then
+    echo "check-imported-pins: FAIL [$name] — pinned R2 term drifted from decoded(frontend(source)):" >&2
+    diff "$WORK/fresh.repr" "$WORK/term.repr" | head -15 >&2
+    return 1
+  fi
+  echo "check-imported-pins: ok [$name] — R2 pin term = decoded(frontend(source))"
+  return 0
+}
+
+if [[ -n "$SINGLE_DIR" ]]; then
+  [[ -n "$SINGLE_TERM" ]] || { echo "check-imported-pins: --dir needs --term" >&2; exit 2; }
+  check_pin "$SINGLE_DIR" "$SINGLE_TERM" || exit 1
+  exit 0
+fi
+
+fail=0
+for pin in "${PINS[@]}"; do
+  IFS='|' read -r src_dir term _mod <<< "$pin"
+  check_pin "$src_dir" "$term" || fail=1
+done
+[[ "$fail" -eq 0 ]] || exit 1

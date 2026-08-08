@@ -287,6 +287,28 @@ else
   echo "ok: verbatim guard fails closed without the goose checkout"
 fi
 
+# --- R2-pin staleness guard (scripts/check-imported-pins) fixtures ---
+# Clean: the real block pin verifies in single-check mode.
+if out="$(scripts/check-imported-pins --dir Corpus/coverage/exec/imported-goose/semantics/block \
+    --term GoLean.ImportedGoose.SemanticsBlock.blockLowered 2>&1)"; then
+  echo "ok: pin guard passes the real block pin"
+else
+  echo "FAIL: pin guard rejected the real block pin: $out"; fail=1
+fi
+# Drift: a tampered COPY of the case source against the same term -> FAIL.
+PINTMP="$TMP/pin-drift"
+mkdir -p "$PINTMP"
+cp Corpus/coverage/exec/imported-goose/semantics/block/main.go "$PINTMP/main.go"
+sed -i 's/x := 10/x := 12/' "$PINTMP/main.go"
+if out="$(scripts/check-imported-pins --dir "$PINTMP" \
+    --term GoLean.ImportedGoose.SemanticsBlock.blockLowered 2>&1)"; then
+  echo "FAIL: pin guard ACCEPTED a drifted lowering"; fail=1
+elif [[ "$out" != *"drifted from decoded(frontend(source))"* ]]; then
+  echo "FAIL: pin guard rejected drift without the expected message: $out"; fail=1
+else
+  echo "ok: pin guard catches a drifted lowering"
+fi
+
 cleanup_dest
 if [[ "$fail" -ne 0 ]]; then
   echo "test-import-goose: FAIL"
