@@ -40,6 +40,7 @@ import GoLeanProofs.Specs.ImportedGooseDefer
 import GoLeanProofs.Specs.ImportedGooseNil
 import GoLeanProofs.Specs.ImportedGooseMapliteral
 import GoLeanProofs.Specs.ImportedGooseConst
+import GoLeanProofs.Specs.ImportedGooseRune
 import GoLeanProofs.NegativeSpecs
 
 /-!

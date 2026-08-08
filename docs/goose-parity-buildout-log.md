@@ -338,3 +338,32 @@ All fixed here; the two majors' substance:
    "10× sb-chan's 4M").
 
 Refuted (no action): the P2 wrappers-remain understatement claim.
+
+## Batch 7 (2026-08-08) — panic pair + unittest small files
+
+11 units, 12 rows (unittest/copy carries its 2 upstream `test*` bool
+oracles; everything else wrapper-authored):
+
+| unit | rows | R1 | notes |
+|---|---|---|---|
+| semantics/panic | 1 | 1 PASS | shouldPanic → expected_status=panic "bad" |
+| unittest/panic | 1 | 1 PASS | PanicAtTheDisco → panic "disco" |
+| unittest/rune | 1 | 1 PASS | + R2 pin (readout 98) |
+| unittest/higher-order | 1 | 1 PASS | closure passed as func-typed arg mutates a local |
+| unittest/copy | 2 | 1 PASS, 1 frontend-export | copy-simple: builtin-copy-in-statement-position (recorded class); copy-different-lengths green with a BUG-047 idempotence annotation |
+| unittest/multiple | 1 | 1 PASS | multi-value pass-through calls |
+| unittest/repeat-vars | 1 | 1 PASS | block-scoped redeclaration + panic-on-failure body |
+| unittest/recursive | 1 | 1 PASS | divergent recursions taken as values; the mutually-embedded type cycle lowers |
+| unittest/float | 1 | 1 PASS | float consts + int/float comparisons |
+| unittest/topsort | 1 | 1 PASS | type-order test (0 upstream funcs); wrapper constructs the pair |
+| unittest/strings | 1 | 1 PASS | |
+
+Totals: 12 rows — 11 R1 PASS, 1 frontend-export (recorded class). One
+new BUG-047 green-by-idempotence instance found and annotated at
+import time (unittest/copy — the class watch from the fix round).
+
+Rungs: R2 = unittest/rune (Terminates + readout 98; 0.4 s). R3
+skipped batch-wide.
+
+Gate: full `scripts/ci --diff`; baseline re-pinned same-commit
+(1347 → 1359 ids; zero drift on all 1347 prior ids).

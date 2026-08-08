@@ -1,18 +1,17 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-08  commit: phase-B checkpoint fix round (BUG-047 filed + pinned)
+# recorded: 2026-08-08  commit: goose-parity batch 7 (panic pair + unittest small files)
 #   frontend: native  oracle: go run (strict lane) / go-run membership in the
 #   machine-enumerated observation set, sampled plain AND under -race
 #   (membership lane; go1.26.5) / schedule-tree singleton certification +
 #   strict go-run equality (confluent lane) / every-enumerated-path-refuses
 #   + go run -race red (racy lane; never combined with deadlock)
-# manifest_cases: 1347  pass: 1229  fail: 118
-# Re-pin reason: BUG-047 red-first pin joins — the fresh canonical case
-#   assign-order/conversion-call-eval-once/{define,assign} (both
-#   FAIL/differential, Lean 202 vs Go 101: the frontend double-emits a
-#   conversion-of-call whole-RHS; docs/BUGS.md BUG-047, surfaced by the
-#   goose-parity phase-B checkpoint from batch 6's const wrapper). The two
-#   reds are DELIBERATE bug pins per the BUGS.md Cases discipline. Zero
-#   drift on all 1345 pre-existing ids.
+# manifest_cases: 1359  pass: 1240  fail: 119
+# Re-pin reason: goose-parity buildout batch 7 — 12 imported-goose ids join
+#   (goose @ 3be88bb: semantics/panic + 10 unittest units incl. copy's two
+#   upstream bool oracles): 11 PASS (incl. two expected-panic rows), 1 FAIL
+#   at frontend-export in the recorded builtin-copy-in-statement-position
+#   class (unittest/copy/copy-simple). Zero drift on all 1347 pre-existing
+#   ids (the two BUG-047 pins stay red as recorded).
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
 PASS	arrays/array-copy	-
@@ -651,6 +650,7 @@ PASS	imported-goose/semantics/operations/mod-precedence	-
 PASS	imported-goose/semantics/operations/plus-times	-
 FAIL	imported-goose/semantics/operations/reverse-assign-ops64	frontend-export
 FAIL	imported-goose/semantics/operations/sub64-equals	frontend-export
+PASS	imported-goose/semantics/panic	-
 PASS	imported-goose/semantics/precedence/and-compare	-
 PASS	imported-goose/semantics/precedence/or-compare	-
 PASS	imported-goose/semantics/precedence/or-compare-simple	-
@@ -690,13 +690,24 @@ PASS	imported-goose/storage/interfacerecursion	-
 PASS	imported-goose/storage/mapliteral	-
 PASS	imported-goose/storage/mutualrec	-
 PASS	imported-goose/unittest/const	-
+PASS	imported-goose/unittest/copy/copy-different-lengths	-
+FAIL	imported-goose/unittest/copy/copy-simple	frontend-export
 PASS	imported-goose/unittest/empty-functions	-
 PASS	imported-goose/unittest/enum	-
+PASS	imported-goose/unittest/float	-
+PASS	imported-goose/unittest/higher-order	-
 PASS	imported-goose/unittest/ints	-
 PASS	imported-goose/unittest/literals	-
+PASS	imported-goose/unittest/multiple	-
 PASS	imported-goose/unittest/operators	-
+PASS	imported-goose/unittest/panic	-
 PASS	imported-goose/unittest/reassign	-
+PASS	imported-goose/unittest/recursive	-
+PASS	imported-goose/unittest/repeat-vars	-
 PASS	imported-goose/unittest/returns	-
+PASS	imported-goose/unittest/rune	-
+PASS	imported-goose/unittest/strings	-
+PASS	imported-goose/unittest/topsort	-
 PASS	imported-goose/unittest/trailing-call	-
 PASS	imported-goose/unittest/type-alias	-
 PASS	imported-goose/unittest/vars	-

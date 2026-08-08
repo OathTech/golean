@@ -1,0 +1,2 @@
+# id	subject	args	expected_status	expected_reason	features
+-	goleanStrings	-	ok	-	imported_goose,strings,len
