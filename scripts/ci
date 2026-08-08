@@ -10,6 +10,12 @@
 #   scripts/ci --diff   also re-runs the full native differential corpus first
 #                       (slow: `go run` per case), then diffs it. Do this when
 #                       you touched runtime code (frontend / interpreter / Ops).
+#                       tier=slow rows verify against their tracked
+#                       certified-set records (baselines/certified/) and
+#                       report CERTIFIED-CACHED — visible, never silent.
+#   scripts/ci --slow   --diff plus FULL re-certification of tier=slow rows
+#                       (the nightly / pre-merge path; a re-certification
+#                       that differs from the tracked record fails loud).
 #
 # NOTE: the differential is the FOUNDATION of the trust chain. `scripts/ci`
 # (no flag) only checks that the LAST recorded run still matches the baseline;
@@ -21,7 +27,18 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
 cd "$ROOT"
 
 RUN_DIFF=0
-[ "${1:-}" = "--diff" ] && RUN_DIFF=1
+RUN_SLOW=0
+for arg in "$@"; do
+  case "$arg" in
+    --diff) RUN_DIFF=1 ;;
+    # Tiered checking (user directive 2026-08-08): --slow implies --diff
+    # and RE-CERTIFIES tier=slow rows fully (GOLEAN_SLOW=1 to the
+    # differential); without it, slow-tier rows verify against their
+    # tracked certified-set records and report CERTIFIED-CACHED —
+    # visibly, never as a silent skip.
+    --slow) RUN_DIFF=1; RUN_SLOW=1 ;;
+  esac
+done
 
 # Lean import matcher + comment stripper: canonical definitions extracted to
 # scripts/lean-scan.sh (comparator-judge pre-merge audit, 2026-08-02 — the
@@ -515,7 +532,7 @@ if [ "$RUN_DIFF" -eq 1 ]; then
   # binary; those also remove latest.tsv/meta up front, so a dead run
   # leaves nothing for the baseline diff below to judge as fresh).
   # Judge run-completion here, regression below.
-  ./scripts/diff-smoke 2>&1 | tail -3; drc=${PIPESTATUS[0]}
+  GOLEAN_SLOW="$RUN_SLOW" ./scripts/diff-smoke 2>&1 | tail -3; drc=${PIPESTATUS[0]}
   case "$drc" in
     0|1) ok "differential run completed (exit $drc; failing-set judged by baseline diff)" ;;
     *)   bad "differential run BROKE (exit $drc — not a case failure; see output)" ;;

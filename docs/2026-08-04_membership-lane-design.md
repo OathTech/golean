@@ -327,3 +327,45 @@ of record for the engine, this addendum the design-note record):
   pipeline; stage `confluent`) and `racy` (mandatory for every
   race-expectation row; stage `racy`), plus the `members=` cardinality
   pin and plain+`-race` dual sampling for membership rows.
+
+## Addendum 2026-08-08 — tiered checking (tier=slow; user directive at the goose-parity check-in)
+
+Iteration speed matters: a membership/confluent certification that takes
+minutes (google-search: 34.7M steps, ~2-4 min) must not tax every quick
+cycle. Design (minimal, fail-closed, NO silent skips):
+
+- **Declaration**: lane param `tier=slow` (membership rows only; any
+  other lane or value is refused at the manifest AND re-validated in
+  the harness). Threshold for declaring: full certification wall time
+  over ~30 s.
+- **Tracked certified-set record**: `baselines/certified/
+  <id, / → __>.certified.tsv` — header (`# certified: <date> commit:
+  <rev>`, `# params:`, `# wire-sha256:`, `# enum-stats:`) + the
+  enumerated observation lines. A TRACKED baseline: updated
+  deliberately in its own commit with the reason, never auto-written
+  by a run.
+- **Quick path** (per-commit `ci --diff`): NO enumeration. Fail-closed
+  gates: record must exist; the case's fresh wire.json sha256 must
+  equal the recorded hash (case/frontend drift → loud STALE failure
+  demanding `--slow`). Then the ordinary go-side samples AND the
+  driver-coupling pin (four `native-json-run` streams — the machine IS
+  still exercised) are checked for membership in the RECORDED set, and
+  the members= cardinality pin applies. Reported as a visible
+  `CERTIFIED-CACHED (certified <date>…)` detail on stage `membership`
+  (stage unchanged between modes, so the tracked baseline never flaps).
+- **Slow path** (`scripts/ci --slow`, implies `--diff`; the
+  nightly/pre-merge cadence): full enumeration as before, then the
+  fresh set AND wire hash are compared against the tracked record —
+  any difference fails loud demanding a deliberate record update.
+- **Honest residual, stated**: the quick path cannot see MACHINE-side
+  envelope drift (an interpreter change that widens/narrows the
+  enumerable set while leaving the four coupling streams' observations
+  inside the recorded set). That is exactly what the `--slow`
+  re-certification cadence exists to catch; the CERTIFIED-CACHED
+  wording names the deferral rather than hiding it.
+- First tier member: `imported-goose/channel/google-search`
+  (members=6, work=40000000). Quick path measured ~10 s vs ~2-4 min.
+- Fixtures: manifest rejects (tier on non-membership lane, non-`slow`
+  value) in `scripts/test-lane-validation` Part A; the cached path's
+  missing-record and stale-hash refusals probed live at design time
+  (both fail loud); the slow path's record-match verified live.

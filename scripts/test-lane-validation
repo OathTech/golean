@@ -98,6 +98,17 @@ expect_reject "non-positive param value" \
 expect_reject "membership without the nondet tag" \
   '-\trangeFirstKey\t-\tok\t-\tmaps\tmembership\twhy text\twidth=16' \
   "requires the nondet feature tag"
+# Tiered checking (user directive 2026-08-08): tier is membership-only
+# and 'slow' is the only tier — both directions fail closed at the
+# manifest (the harness re-validates, F4 discipline; its cached path's
+# missing-record/stale-hash refusals are exercised by the tier=slow row
+# itself in the full run).
+expect_reject "tier on a confluent row" \
+  '-\trangeFirstKey\t-\tok\t-\tmaps\tconfluent\twhy text\twidth=4,tier=slow' \
+  "membership-lane param"
+expect_reject "invalid tier value" \
+  '-\trangeFirstKey\t-\tok\t-\tmaps,nondet\tmembership\twhy text\twidth=4,tier=fast' \
+  "tier must be 'slow'"
 expect_reject "membership without explicit width (F2a)" \
   '-\trangeFirstKey\t-\tok\t-\tmaps,nondet\tmembership\twhy text\tsamples=5' \
   "explicit width"

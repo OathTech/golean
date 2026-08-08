@@ -430,3 +430,44 @@ import nothing while a full gate is in flight.
 
 Totals: 7 rows — 6 PASS, 1 frontend-export (recorded class). R2/R3
 skipped batch-wide (P1 pending).
+
+## Check-in response round (2026-08-08; user rulings, coordinator-relayed)
+
+Per-item disposition:
+1. **P1 ruling implemented**: `scripts/check-imported-pins` (check-golden
+   mold; fresh decoded(frontend(source)) diffed directly against each R2
+   pin's term) — ci step 1c5, fixtured (real-pin pass + tampered-copy
+   drift reject). Ledger P1 closed.
+2. **P2 closed as ruled-parked** (units stay parked; measurements stand
+   as the POR backlog's motivating cases).
+3. **BUG-047 FIXED** (assign-site speculative-emit guard extended to
+   conversions): drift = exactly the two pin flips; constLowered
+   regenerated — the DRIFT WAS CAUGHT BY THE NEW STALENESS GUARD, the
+   designed sequence; green-by-luck annotations removed.
+   **BUG-048 FIXED** (frontend value-receiver auto-deref through
+   pointer operands, mirroring the promoted arm — no machine change):
+   drift = exactly five flips — the three pins PLUS two pre-existing
+   tracked-untriaged backlog reds of the same class (untriaged ratchet
+   18 → 16). Record correction: BUG-048's "unexercised cell" claim was
+   wrong — the class sat pinned in the tracked untriaged backlog.
+   Both fixes: own commits, own full `ci --diff`, same-commit re-pins,
+   zero drift beyond the explained flips, designated statements
+   byte-identical.
+   Process slip, recorded: the BUG-047 gate was first invalidated by
+   editing emit.go (the 048 fix) mid-run — the exact batch-8 lesson;
+   killed, sequenced properly (048 stashed, 047 gated+committed clean,
+   048 re-applied and gated). Two orphaned harness binaries from the
+   killed run cleaned by hand.
+4. **Tiered checking implemented** (user directive; design:
+   membership-lane note 2026-08-08 addendum + nondet-doctrine caption):
+   `tier=slow` lane param (membership-only, manifest+harness validated,
+   fixtured), tracked certified-set records under `baselines/certified/`
+   (wire-sha staleness-guarded), quick runs report visible
+   CERTIFIED-CACHED (~10 s vs ~2-4 min for google-search, the first
+   tier member) with samples + driver-coupling still checked against
+   the recorded set, `scripts/ci --slow` re-certifies fully and fails
+   loud on any set/hash movement (verified live both directions:
+   missing-record and stale-sha refuse; slow re-certification matches).
+   Full quick-mode `ci --diff`: PASS, 1381/1381, zero drift.
+5. **OOM convention**: kept; RSS-fallback note added to
+   docs/agent-sandbox.md per the ruling.

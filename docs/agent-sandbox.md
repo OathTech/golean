@@ -60,7 +60,13 @@ invocation:
 
 - run it under `ulimit -v` in a subshell — 16 GiB (`ulimit -v 16777216`)
   is the default cap; below ~8 GiB Lean fails at startup ("failed to
-  create thread");
+  create thread"). (User ruling 2026-08-08: the convention stays as-is;
+  where the thread-VA reservation makes the `-v` cap misfire even at
+  16 GiB — observed intermittently on multi-decide pin modules at
+  ~1 GiB actual RSS — an RSS-based fallback measurement
+  (`/usr/bin/time -v`, judge against the 16 GiB intent) may be used and
+  the substitution documented at the site; keep jobs short per the
+  user's avoid-long-jobs preference.)
 - add a `timeout`, and run it as a BACKGROUND task so a blowup kills the
   capped process, never the session;
 - one experiment per invocation (a stuck reduction reports per-file, and

@@ -272,7 +272,7 @@ validate_lane_params() {
     key="${kv%%=*}"
     value="${kv#*=}"
     case "$key" in
-      width|sites|cap|samples|work|members|statuses) ;;
+      width|sites|cap|samples|work|members|statuses|tier) ;;
       *)
         echo "coverage-manifest: $cases_file: unknown lane param key: $kv" >&2
         return 1
@@ -283,6 +283,25 @@ validate_lane_params() {
       return 1
     fi
     seen="$seen $key"
+    if [[ "$key" == "tier" ]]; then
+      # Tiered checking (user directive 2026-08-08; membership-lane note
+      # addendum of the same date): tier=slow marks a row whose full
+      # certification exceeds the ~30 s budget. Quick/per-commit runs
+      # verify against the row's TRACKED certified-set record
+      # (baselines/certified/) and report CERTIFIED-CACHED; only
+      # `scripts/ci --slow` (or GOLEAN_SLOW=1) re-enumerates. Membership
+      # rows only for now — the other lanes have no cached path, so the
+      # param fails closed there.
+      if [[ "$value" != "slow" ]]; then
+        echo "coverage-manifest: $cases_file: tier must be 'slow' (the only tier): $kv" >&2
+        return 1
+      fi
+      if [[ "$lane_ctx" != "membership" ]]; then
+        echo "coverage-manifest: $cases_file: tier=slow is a membership-lane param (lane=$lane_ctx has no cached certification path): $kv" >&2
+        return 1
+      fi
+      continue
+    fi
     if [[ "$key" == "statuses" ]]; then
       # Status-diverse envelope declaration (audit F8) — its own shape,
       # not an integer. Membership-only: the other lanes' claims are

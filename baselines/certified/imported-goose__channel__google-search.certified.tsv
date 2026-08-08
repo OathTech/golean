@@ -1,0 +1,17 @@
+# Certified observation set — tier=slow membership row (tiered checking,
+# user directive 2026-08-08; docs/2026-08-04_membership-lane-design.md
+# addendum of the same date). Quick runs verify samples + the
+# driver-coupling pin against THIS set and its wire hash; scripts/ci
+# --slow re-enumerates and must reproduce it exactly. Update
+# deliberately, in its own commit, with the reason — never auto-written.
+# certified: 2026-08-08  commit: BUG-048-fix full run (goose-parity check-in response round)
+# case: imported-goose/channel/google-search
+# params: width=4,sites=48,work=40000000,members=6
+# wire-sha256: f9c666f6ebf242a7caee1054301098eaeb811a2e346898b0eb708255bdc06395
+# enum-stats: observations=6 steps=34705816 probes=161130 sites=53710 leaves=59601 maxdepth=15 width=4
+{"schema":"golean-observation-v1","status":"ok","values":[{"tag":"int","value":123}]}
+{"schema":"golean-observation-v1","status":"ok","values":[{"tag":"int","value":132}]}
+{"schema":"golean-observation-v1","status":"ok","values":[{"tag":"int","value":213}]}
+{"schema":"golean-observation-v1","status":"ok","values":[{"tag":"int","value":231}]}
+{"schema":"golean-observation-v1","status":"ok","values":[{"tag":"int","value":312}]}
+{"schema":"golean-observation-v1","status":"ok","values":[{"tag":"int","value":321}]}

@@ -301,3 +301,14 @@ record.
   evidence. Cannot show: liveness (deadlock-freedom of
   nonterminating-by-design programs is outside a terminating-run
   corpus entirely — the proof side's territory).
+
+**Tiered-checking caption (2026-08-08, user directive):** an envelope
+certification too expensive for every commit (tier=slow rows) may be
+CACHED against a tracked certified-set record — quick runs check
+samples and the driver-coupling streams against the record (visible
+`CERTIFIED-CACHED`, never a silent green) and `scripts/ci --slow`
+re-certifies the envelope in full. The cached mode defers only the
+machine-side envelope re-enumeration; the record is staleness-guarded
+by the case's wire hash, and a re-certification that moves the set
+fails loud. Design: docs/2026-08-04_membership-lane-design.md,
+2026-08-08 addendum.
