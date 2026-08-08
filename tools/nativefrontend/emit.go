@@ -5532,19 +5532,52 @@ func (e *emitter) emitResultTypes(sig *types.Signature) ([]any, error) {
 func (e *emitter) emitCallArgs(sig *types.Signature, c *ast.CallExpr) ([]any, error) {
 	// Tuple forwarding `g(f())`: splat the inner multi-value call into
 	// temps, then treat the temp idents as the argument list (variadic
-	// packing proceeds over them like any other arguments).
+	// packing proceeds over them like any other arguments). Each splat
+	// temp is paired with its destination parameter type (or the variadic
+	// element type) and gets the SAME wrapInterfaceConversion ordinary
+	// arguments get below — the source type is the tuple component's
+	// (BUG-049: returning the raw temps handed the machine unboxed values
+	// in interface-typed slots; the return path's splat arm in emitReturn
+	// already wrapped per result).
 	if len(c.Args) == 1 {
 		if inner, ok := c.Args[0].(*ast.CallExpr); ok {
-			if _, isTup := e.goTypeOf(inner).(*types.Tuple); isTup {
+			if tup, isTup := e.goTypeOf(inner).(*types.Tuple); isTup {
 				idents, err := e.splatMultiCall(inner)
 				if err != nil {
 					return nil, err
 				}
 				if sig == nil || !sig.Variadic() || c.Ellipsis != token.NoPos {
+					if sig != nil {
+						params := sig.Params()
+						for i := range idents {
+							pi := i
+							if pi >= params.Len() {
+								pi = params.Len() - 1
+							}
+							if pi >= 0 && i < tup.Len() {
+								idents[i], err = e.wrapInterfaceConversion(
+									params.At(pi).Type(), tup.At(i).Type(), idents[i])
+								if err != nil {
+									return nil, err
+								}
+							}
+						}
+					}
 					return idents, nil
 				}
 				fixed := sig.Params().Len() - 1
-				args := append([]any{}, idents[:fixed]...)
+				args := []any{}
+				for i := 0; i < fixed && i < len(idents); i++ {
+					w := idents[i]
+					if i < tup.Len() {
+						w, err = e.wrapInterfaceConversion(
+							sig.Params().At(i).Type(), tup.At(i).Type(), w)
+						if err != nil {
+							return nil, err
+						}
+					}
+					args = append(args, w)
+				}
 				elemType := sig.Params().At(fixed).Type().(*types.Slice).Elem()
 				elemTy, err := e.emitType(elemType)
 				if err != nil {
@@ -5558,7 +5591,14 @@ func (e *emitter) emitCallArgs(sig *types.Signature, c *ast.CallExpr) ([]any, er
 				}
 				elems := []any{}
 				for i := fixed; i < len(idents); i++ {
-					elems = append(elems, map[string]any{"index": int64(i - fixed), "value": idents[i]})
+					w := idents[i]
+					if i < tup.Len() {
+						w, err = e.wrapInterfaceConversion(elemType, tup.At(i).Type(), w)
+						if err != nil {
+							return nil, err
+						}
+					}
+					elems = append(elems, map[string]any{"index": int64(i - fixed), "value": w})
 				}
 				sliceRef, err := e.hoistSliceLit(elems, elemTy, int64(len(idents)-fixed))
 				if err != nil {

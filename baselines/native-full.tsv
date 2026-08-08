@@ -1,22 +1,19 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-08  commit: BUG-049 red-first pins (tuple-forward interface boxing matrix)
+# recorded: 2026-08-08  commit: BUG-049 FIXED (tuple-forward splat args get interface boxing)
 #   frontend: native  oracle: go run (strict lane) / go-run membership in the
 #   machine-enumerated observation set, sampled plain AND under -race
 #   (membership lane; go1.26.5) / schedule-tree singleton certification +
 #   strict go-run equality (confluent lane) / every-enumerated-path-refuses
 #   + go run -race red (racy lane; never combined with deadlock)
-# manifest_cases: 1387  pass: 1267  fail: 120
-# Re-pin reason: BUG-049 red-first pins (external Codex review 2026-08-08,
-#   docs/2026-08-08_semantic-divergence-review.md §1): tuple forwarding
-#   g(f()) into interface-typed parameter slots skips the implicit
-#   interface conversion (emitCallArgs' splat arm bypasses
-#   wrapInterfaceConversion). Drift is exactly the SIX new
-#   interfaces/tuple-forward-boxing/* ids — the full six-form matrix:
-#   fixed-any, variadic-any, mixed-second-any, fixed-plus-variadic red
-#   at lean-observation (raw value in an `any` slot; the mixed forms
-#   red on the raw STRING, pinning per-position boxing) + the two PASS
-#   controls (concrete-control, interface-source-control). Zero drift
-#   on all 1381 prior ids.
+# manifest_cases: 1387  pass: 1271  fail: 116
+# Re-pin reason: BUG-049 fix (codex-review landing, on-branch fix per the
+#   BUG-047/048 precedent): emitCallArgs' splat arm pairs each splatted
+#   temp with its destination parameter type (or variadic element type)
+#   and applies the same wrapInterfaceConversion ordinary arguments get.
+#   Drift is exactly the FOUR red matrix pins flipping FAIL->PASS
+#   (interfaces/tuple-forward-boxing/{fixed-any,variadic-any,
+#   mixed-second-any,fixed-plus-variadic}); both controls stay PASS.
+#   Zero drift on all 1383 other ids.
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
 PASS	arrays/array-copy	-
@@ -835,11 +832,11 @@ PASS	interfaces/recover-promoted-wrapper/silent-pointer-embed	-
 PASS	interfaces/recover-promoted-wrapper/silent-value-embed	-
 PASS	interfaces/recover-promoted-wrapper/status-value-embed	-
 PASS	interfaces/tuple-forward-boxing/concrete-control	-
-FAIL	interfaces/tuple-forward-boxing/fixed-any	lean-observation
-FAIL	interfaces/tuple-forward-boxing/fixed-plus-variadic	lean-observation
+PASS	interfaces/tuple-forward-boxing/fixed-any	-
+PASS	interfaces/tuple-forward-boxing/fixed-plus-variadic	-
 PASS	interfaces/tuple-forward-boxing/interface-source-control	-
-FAIL	interfaces/tuple-forward-boxing/mixed-second-any	lean-observation
-FAIL	interfaces/tuple-forward-boxing/variadic-any	lean-observation
+PASS	interfaces/tuple-forward-boxing/mixed-second-any	-
+PASS	interfaces/tuple-forward-boxing/variadic-any	-
 PASS	interfaces/type-assert-from-named-interface-panic/nil-operand	-
 PASS	interfaces/type-assert-from-named-interface-panic/to-pointer	-
 PASS	interfaces/type-assert-interface	-

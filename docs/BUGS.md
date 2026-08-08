@@ -32,7 +32,15 @@ differential-pinned) `- Cases: <id>, <id>, …` (baseline case ids), then prose.
 
 ## BUG-049 — tuple-forwarded call arguments bypass interface boxing (`g(f())` into interface-typed slots)
 
-- Status: open
+- Status: fixed (2026-08-08, codex-review landing — established on-branch
+  fix precedent per the BUG-047/048 user rulings, FRONTEND-only (no
+  machine/decoder change): `emitCallArgs`' splat arm now pairs each
+  splatted temp with its destination parameter type (nonvariadic path)
+  or the variadic element type (packing path) and applies the same
+  `wrapInterfaceConversion` ordinary arguments get — the source type is
+  the forwarded tuple component's, mirroring `emitReturn`'s per-result
+  wrap. All four red matrix pins flip PASS, both controls stay PASS;
+  zero drift on all 1383 other ids.)
 - Pinned-by: differential
 - Cases: interfaces/tuple-forward-boxing/fixed-any, interfaces/tuple-forward-boxing/variadic-any, interfaces/tuple-forward-boxing/mixed-second-any, interfaces/tuple-forward-boxing/fixed-plus-variadic
 - Discovered: 2026-08-08 (external: Codex semantic-divergence review,
