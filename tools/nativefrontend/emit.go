@@ -2623,7 +2623,34 @@ func (e *emitter) emitRange(rs *ast.RangeStmt) (any, error) {
 	valName := rangeVarName(rs.Value)
 	prefix := []any{}
 	if rs.Tok == token.ASSIGN {
-		bind := func(outer ast.Expr, temp string) (string, error) {
+		// Source component types per spec §For statements (what each
+		// iteration actually produces): the temp holds THIS type, and an
+		// interface-typed outer target owes the same implicit conversion
+		// every other assignment gets (BUG-050 — the bind below used to
+		// emit the raw temp, landing unboxed values in interface targets:
+		// a silent wrong answer).
+		var srcKeyGo, srcValGo types.Type
+		switch u := e.goTypeOf(rs.X).Underlying().(type) {
+		case *types.Slice:
+			srcKeyGo, srcValGo = types.Typ[types.Int], u.Elem()
+		case *types.Array:
+			srcKeyGo, srcValGo = types.Typ[types.Int], u.Elem()
+		case *types.Pointer:
+			if arr, ok := u.Elem().Underlying().(*types.Array); ok {
+				srcKeyGo, srcValGo = types.Typ[types.Int], arr.Elem()
+			}
+		case *types.Map:
+			srcKeyGo, srcValGo = u.Key(), u.Elem()
+		case *types.Basic:
+			if u.Info()&types.IsString != 0 {
+				srcKeyGo, srcValGo = types.Typ[types.Int], types.Typ[types.Int32]
+			} else if u.Info()&types.IsInteger != 0 {
+				srcKeyGo = e.goTypeOf(rs.X)
+			}
+		case *types.Chan:
+			srcKeyGo = u.Elem()
+		}
+		bind := func(outer ast.Expr, temp string, src types.Type) (string, error) {
 			id, isIdent := outer.(*ast.Ident)
 			if isIdent && id.Name == "_" {
 				return "", nil
@@ -2643,22 +2670,33 @@ func (e *emitter) emitRange(rs *ast.RangeStmt) (any, error) {
 			if err != nil {
 				return "", err
 			}
+			rhs := any(map[string]any{"expr": "ident", "name": temp, "type": ty})
+			if src != nil {
+				rhs, err = e.wrapInterfaceConversion(e.goTypeOf(outer), src, rhs)
+				if err != nil {
+					return "", err
+				}
+			} else if tgt := e.goTypeOf(outer); tgt != nil && types.IsInterface(e.applySubst(tgt)) {
+				// No source type computed for this collection shape: never
+				// hand a possibly-raw value to an interface slot.
+				return "", unsup("range assignment into interface-typed target over %s", e.goTypeOf(rs.X))
+			}
 			prefix = append(prefix, map[string]any{
 				"stmt": "assign", "define": false,
 				"lhs": []any{target},
-				"rhs": []any{map[string]any{"expr": "ident", "name": temp, "type": ty}},
+				"rhs": []any{rhs},
 			})
 			return temp, nil
 		}
 		if rs.Key != nil {
-			n, err := bind(rs.Key, "$rangeKey")
+			n, err := bind(rs.Key, "$rangeKey", srcKeyGo)
 			if err != nil {
 				return nil, err
 			}
 			keyName = n
 		}
 		if rs.Value != nil {
-			n, err := bind(rs.Value, "$rangeVal")
+			n, err := bind(rs.Value, "$rangeVal", srcValGo)
 			if err != nil {
 				return nil, err
 			}

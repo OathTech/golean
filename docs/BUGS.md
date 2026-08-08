@@ -32,7 +32,17 @@ differential-pinned) `- Cases: <id>, <id>, …` (baseline case ids), then prose.
 
 ## BUG-050 — ASSIGN-form range into interface-typed targets skips implicit boxing (silent WRONG answer)
 
-- Status: open
+- Status: fixed (2026-08-08, same review round, FRONTEND-only (no
+  machine/decoder change): `emitRange` now computes the source
+  key/value component types from the range operand (spec §For
+  statements — slice/array/pointer-to-array: int/elem; map: key/elem;
+  string: int/rune; int: operand type; chan: elem) and the bind
+  closure applies destination-typed `wrapInterfaceConversion` to the
+  temp — the same mechanism as the BUG-049 fix and the multi-assign
+  quarantine's eventual shape. A collection shape with no computed
+  source type now fails closed at an interface-typed target instead
+  of ever handing it a raw value. All five pins flip PASS; zero
+  drift on all 1394 other ids.)
 - Pinned-by: differential
 - Cases: range/assign-form-interface-target/slice-value, range/assign-form-interface-target/map-key, range/assign-form-interface-target/index, range/assign-form-interface-target/string-rune, range/assign-form-interface-target/assert-escalation
 - Discovered: 2026-08-08 (codex-landing skeptical review round: an
@@ -57,9 +67,25 @@ differential-pinned) `- Cases: <id>, <id>, …` (baseline case ids), then prose.
   raw 98). Second member of the wrapInterfaceConversion-omission
   FAMILY (BUG-049 was the call-argument arm) — found serially, like
   the BUG-042/043 kind-defaulting family.
-- Family sweep (recorded per the serial-discovery precedent — the
-  omission family is now sweep-audited, not found one-by-one): result
-  recorded in this entry when the fix lands.
+- Family sweep (2026-08-08, with the fix — recorded per the
+  BUG-042/043 serial-discovery precedent: a second member found
+  serially means the FAMILY gets sweep-audited, not found one-by-one):
+  all 16 `"stmt": "assign"` emission sites in emit.go classified.
+  ONE hole — this bug's bind closure (fixed above). The rest: 3 wrap
+  at the site (single-value call assign, per-pair assign, select-recv
+  write-back) and var-decl inits wrap at emission (feeding the
+  goto-context re-init site); 5 are same-type temp transfers (loop-var
+  per-iteration cells, type-switch guard temp + clause binding,
+  promotion-wrapper results, interface-method-value hoist); 6 move
+  synthetic int/bool machinery only ($pc x2, firstVar, idxVar,
+  fallVar x2). The `:=`-form range binds its variables AT the
+  component types (no conversion owed). The multi-value assign /
+  var-decl-from-call / plain chan-receive interface forms fail closed
+  with explicit quarantine messages (deferred, visible). Independently,
+  the skeptical-review verifier behaviorally confirmed every other
+  conversion-owing context (ordinary/field/deref/index/named-result/
+  closure assigns, append, composite literals, map store, chan send)
+  boxes correctly. Sweep verdict: clean except this one site.
 
 ## BUG-049 — tuple-forwarded call arguments bypass interface boxing (`g(f())` into interface-typed slots)
 
@@ -92,8 +118,17 @@ differential-pinned) `- Cases: <id>, <id>, …` (baseline case ids), then prose.
   "type assertion from non-interface value GoLean.GoValue.int 7".
   Fidelity bug, not a coverage refusal: the construct crosses the
   frontend boundary. The analogous tuple-forwarded RETURN path already
-  wraps per result (`emitReturn`'s splat arm) — the omission is
-  localized to the call-argument special case.
+  wraps per result (`emitReturn`'s splat arm). [CORRECTED 2026-08-08:
+  this entry originally claimed "the omission is localized to the
+  call-argument special case" — WRONG as a class statement. This is
+  the wrapInterfaceConversion-omission FAMILY (a special-case lowering
+  arm that moves values into typed slots without the implicit
+  interface conversion every assignable context owes), and a second
+  member was found serially in the same review round: BUG-050,
+  emitRange's ASSIGN-form bind. Per the BUG-042/043 kind-defaulting
+  precedent, serial discovery means the family gets SWEEP-audited;
+  the sweep of every assign-emission site is recorded in BUG-050's
+  entry — clean except that one site.]
 - Pin matrix (per the review's warning that an (any,any)-only pin can
   miss per-position errors): (int,string)→(any,any) red raw-int,
   →(...any) red raw-int, →(int,any) red raw-STRING (second slot),

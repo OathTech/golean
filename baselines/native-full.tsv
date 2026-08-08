@@ -1,20 +1,19 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-08  commit: BUG-050 red-first pins (ASSIGN-form range interface boxing)
+# recorded: 2026-08-08  commit: BUG-050 FIXED (ASSIGN-form range binds get destination-typed boxing)
 #   frontend: native  oracle: go run (strict lane) / go-run membership in the
 #   machine-enumerated observation set, sampled plain AND under -race
 #   (membership lane; go1.26.5) / schedule-tree singleton certification +
 #   strict go-run equality (confluent lane) / every-enumerated-path-refuses
 #   + go run -race red (racy lane; never combined with deadlock)
-# manifest_cases: 1399  pass: 1278  fail: 121
-# Re-pin reason: BUG-050 red-first pins (codex-landing skeptical review,
-#   2026-08-08, verifier-confirmed): emitRange's ASSIGN-form bind closure
-#   emits `outer = $rangeKey/$rangeVal` with no wrapInterfaceConversion —
-#   raw values land in interface-typed targets, a SILENT wrong answer.
-#   Drift is exactly the FIVE new range/assign-form-interface-target/*
-#   ids: slice-value, map-key, index, string-rune red at stage=
-#   differential (both sides ok, observations differ — raw vs boxed),
-#   assert-escalation red at lean-observation (wrong-stuck on the
-#   assertion). Zero drift on all 1394 prior ids.
+# manifest_cases: 1399  pass: 1283  fail: 116
+# Re-pin reason: BUG-050 fix (codex-landing skeptical-review round):
+#   emitRange computes the range operand's source key/value component
+#   types and the ASSIGN-form bind closure applies destination-typed
+#   wrapInterfaceConversion (same mechanism as the BUG-049 fix); an
+#   uncomputed collection shape now fails closed at an interface
+#   target. Drift is exactly the FIVE BUG-050 pins flipping FAIL->PASS
+#   (range/assign-form-interface-target/*). Zero drift on all 1394
+#   other ids.
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
 PASS	arrays/array-copy	-
@@ -1190,11 +1189,11 @@ PASS	race/negative/read-write	racy
 PASS	race/negative/slice-elem	racy
 PASS	race/negative/spawn-dispatch	racy
 PASS	race/negative/write-write	racy
-FAIL	range/assign-form-interface-target/assert-escalation	lean-observation
-FAIL	range/assign-form-interface-target/index	differential
-FAIL	range/assign-form-interface-target/map-key	differential
-FAIL	range/assign-form-interface-target/slice-value	differential
-FAIL	range/assign-form-interface-target/string-rune	differential
+PASS	range/assign-form-interface-target/assert-escalation	-
+PASS	range/assign-form-interface-target/index	-
+PASS	range/assign-form-interface-target/map-key	-
+PASS	range/assign-form-interface-target/slice-value	-
+PASS	range/assign-form-interface-target/string-rune	-
 PASS	range/int-kind-arith/conversion-control	-
 PASS	range/int-kind-arith/defined-arith	-
 PASS	range/int-kind-arith/int8-arith	-
