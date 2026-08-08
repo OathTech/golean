@@ -32,9 +32,20 @@ differential-pinned) `- Cases: <id>, <id>, …` (baseline case ids), then prose.
 
 ## BUG-048 — machine wrong-STUCK calling a VALUE-receiver method through a pointer-typed VARIABLE (Go auto-derefs; we refuse)
 
-- Status: open
+- Status: fixed (2026-08-08, check-in response round — user-authorized
+  on-branch fix, FRONTEND-side (no machine change, no lockstep needed):
+  `methodReceiverArg`'s value-receiver arm now emits a deref when the
+  receiver operand is pointer-typed, mirroring `promotedReceiverArg`'s
+  `!pointerRecv && ftIsPtr` arm (which is why promotion-through-
+  embedding already worked). All three pins flip PASS, incl. the
+  imported `embedded/live` row — `useEmbeddedMethod2`'s
+  `d.embedB.Foo()` now runs — PLUS the two pre-existing tracked
+  untriaged backlog reds of the same class, methods/value-auto-deref
+  and pointers/nil-value-receiver-call-panic (the nil variant now
+  realizes Go's panic through the emitted deref); zero drift
+  elsewhere; backlog ratchets 18 -> 16.)
 - Pinned-by: differential
-- Cases: methods/value-receiver-via-pointer-var/addr-of-var, methods/value-receiver-via-pointer-var/addr-of-literal, imported-goose/unittest/embedded/live
+- Cases: methods/value-receiver-via-pointer-var/addr-of-var, methods/value-receiver-via-pointer-var/addr-of-literal, imported-goose/unittest/embedded/live, methods/value-auto-deref, pointers/nil-value-receiver-call-panic
 - Discovered: 2026-08-08, goose-parity buildout batch 8 (goose-import
   provenance: `testdata/examples/unittest/embedded.go` @ 3be88bb —
   `useEmbeddedMethod2`'s `d.embedB.Foo()`, an explicit selector through
@@ -60,16 +71,18 @@ differential-pinned) `- Cases: <id>, <id>, …` (baseline case ids), then prose.
   pointer variable WORKS while the direct method on the pointer
   variable does not, which localizes the miss to the non-promoted
   direct-method path's receiver adaptation).
-- Why the corpus never saw it: an unexercised-path class — the methods
-  lane covers value receivers on addressable values and pointer
-  receivers via pointer vars, but not the exact "value receiver via
-  pointer VARIABLE" cell (the differential validates only what the
-  corpus runs; CLAUDE.md's named blind-spot class).
-- Fix: NOT fixed in the goose-parity buildout (charter forbids
-  machine/frontend changes there); maintenance round. The imported
-  case `imported-goose/unittest/embedded/live` stays red as a
-  live-corpus pin (its two sibling rows pin the file's two latent
-  upstream panics and stay green).
+- Why it survived (CORRECTED at fix time — this entry first claimed
+  the cell was unexercised, which was WRONG): the corpus DID pin the
+  class — `methods/value-auto-deref` (`c := &T{}; c.value()`) and
+  `pointers/nil-value-receiver-call-panic` (`var p *T; p.value()`,
+  expecting Go's nil-deref panic) sat as long-standing FAILs in the
+  TRACKED untriaged fidelity backlog (baselines/untriaged-ids), never
+  triaged into a bug entry. The import surfaced the class a second
+  time and forced the triage; the fix flips all five ids and the
+  backlog ratchets 18 -> 16.
+- Fix: deferred during the buildout (charter), then user-authorized
+  and landed in the check-in response round (2026-08-08) — see the
+  Status line.
 - Triage record: docs/goose-parity-parked.md P4.
 
 ## BUG-047 — frontend emits a call TWICE when the RHS of a single assign/define is a conversion of a call (silent divergence from Go)

@@ -158,3 +158,6 @@ addendum.)
   BUGS.md Cases discipline enforces closure.
 - **NO further decision needed** — triage complete, fix deferred by
   charter.
+- **Fix landed (user check-in ruling, 2026-08-08):** BUG-048 fixed on
+  the branch (frontend-side receiver deref); all three pins flipped
+  PASS; entry Status: fixed.

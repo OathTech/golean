@@ -144,4 +144,11 @@
 #   select-with-select refusal marker as its sibling core (F10's
 #   over-broad trigger: the default stream commits the cell-ready
 #   clause, adversarial streams hit the refusal — stage nondet).
-18
+# 2026-08-08 (check-in response round, BUG-048 fix)  18 -> 16: the two
+#   long-standing value-receiver-auto-deref backlog reds flip PASS —
+#   methods/value-auto-deref and pointers/nil-value-receiver-call-panic
+#   were the SAME class as BUG-048 (value receiver through a pointer
+#   operand; the frontend now emits the spec's auto-deref), repaired by
+#   its fix and folded into its Cases. The buildout's import of
+#   unittest/embedded.go re-surfaced the class and forced the triage.
+16

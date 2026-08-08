@@ -22,9 +22,7 @@ arrays/pointer-array
 floats/to-int-out-of-range/nan
 floats/to-int-out-of-range/range
 init/hidden-dep-order
-methods/value-auto-deref
 pointers/nil-array-index-panic
-pointers/nil-value-receiver-call-panic
 strings/defined-slice-string-conversion
 strings/nil-slice-string-conversion
 strings/rune-invalid-values

@@ -81,8 +81,11 @@ Every examples-tree import-free file is now either LANDED or PARKED:
   p.get()`); promoted-through-embedding via pointer var works, the
   direct call does not. Pinned by
   `methods/value-receiver-via-pointer-var/{addr-of-var,addr-of-literal}`
-  + `imported-goose/unittest/embedded/live`. A pure unexercised-path
-  find — the corpus's methods lane had never covered this cell.
+  + `imported-goose/unittest/embedded/live`. (The buildout-time
+  "unexercised cell" claim was corrected at the fix: the cell WAS
+  pinned by two long-standing tracked-untriaged backlog reds,
+  methods/value-auto-deref and pointers/nil-value-receiver-call-panic,
+  which the fix also flips.)
 - Observations (not bugs filed): a case binary orphaned past the
   harness's go-run timeout keeps running (batch-8 log); the confluent
   enumerator's runner detail is empty when timeout-killed (P2).

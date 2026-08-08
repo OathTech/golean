@@ -3650,6 +3650,23 @@ func (e *emitter) namedTypeName(t types.Type) (string, bool) {
 // (`methods/pointer-method-value-read`).
 func (e *emitter) methodReceiverArg(sel *ast.SelectorExpr, pointerRecv bool) (any, error) {
 	if !pointerRecv {
+		// A VALUE receiver reached through a POINTER operand: Go
+		// auto-dereferences (`p.get()` is `(*p).get()`, spec §Calls; a
+		// nil p panics at the deref). Mirrors promotedReceiverArg's
+		// `!pointerRecv && ftIsPtr` arm — this direct (hop-free) path
+		// was missing the deref, so the machine got the raw addr and
+		// wrong-stuck ("expected struct value, got addr"; BUG-048).
+		if ptr, isPtr := e.goTypeOf(sel.X).Underlying().(*types.Pointer); isPtr {
+			node, err := e.emitExpr(sel.X)
+			if err != nil {
+				return nil, err
+			}
+			elemTy, err := e.emitType(ptr.Elem())
+			if err != nil {
+				return nil, err
+			}
+			return map[string]any{"expr": "deref", "ptr": node, "type": elemTy}, nil
+		}
 		return e.emitExpr(sel.X)
 	}
 	if _, alreadyPtr := e.goTypeOf(sel.X).Underlying().(*types.Pointer); alreadyPtr {
