@@ -1,0 +1,7 @@
+# id	subject	args	expected_status	expected_reason	features
+fixed-any	tupleForwardFixedAny	-	ok	-	interfaces,calls,multi_result,type_assertions
+variadic-any	tupleForwardVariadicAny	-	ok	-	interfaces,calls,multi_result,variadic,type_assertions
+mixed-second-any	tupleForwardMixed	-	ok	-	interfaces,calls,multi_result,type_assertions
+fixed-plus-variadic	tupleForwardFixedPlusVariadic	-	ok	-	interfaces,calls,multi_result,variadic,type_assertions
+concrete-control	tupleForwardConcreteControl	-	ok	-	calls,multi_result,strings
+interface-source-control	tupleForwardInterfaceSourceControl	-	ok	-	interfaces,calls,multi_result,type_assertions

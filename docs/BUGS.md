@@ -30,6 +30,44 @@ differential-pinned) `- Cases: <id>, <id>, …` (baseline case ids), then prose.
 
 ---
 
+## BUG-049 — tuple-forwarded call arguments bypass interface boxing (`g(f())` into interface-typed slots)
+
+- Status: open
+- Pinned-by: differential
+- Cases: interfaces/tuple-forward-boxing/fixed-any, interfaces/tuple-forward-boxing/variadic-any, interfaces/tuple-forward-boxing/mixed-second-any, interfaces/tuple-forward-boxing/fixed-plus-variadic
+- Discovered: 2026-08-08 (external: Codex semantic-divergence review,
+  `docs/2026-08-08_semantic-divergence-review.md` §1, run at GoLean
+  06933964; reproduced verbatim at the current tip — one infra commit
+  past the review's base)
+- What: tuple forwarding `g(f())` where a destination parameter slot is
+  interface-typed skips the implicit interface conversion each
+  forwarded component owes (spec: each value of f()'s tuple is
+  assigned to g's parameters). `emitCallArgs`
+  (tools/nativefrontend/emit.go, the splat arm at the top) hoists the
+  inner call via `splatMultiCall` and returns the raw temp idents —
+  the nonvariadic path returns `idents` directly, the variadic path
+  copies fixed idents and packs the variadic slice from raw idents —
+  and BOTH bypass `wrapInterfaceConversion`, which ordinary arguments
+  get immediately below. The machine then receives a raw value in an
+  `any` slot and a later assertion fails closed:
+  "type assertion from non-interface value GoLean.GoValue.int 7".
+  Fidelity bug, not a coverage refusal: the construct crosses the
+  frontend boundary. The analogous tuple-forwarded RETURN path already
+  wraps per result (`emitReturn`'s splat arm) — the omission is
+  localized to the call-argument special case.
+- Pin matrix (per the review's warning that an (any,any)-only pin can
+  miss per-position errors): (int,string)→(any,any) red raw-int,
+  →(...any) red raw-int, →(int,any) red raw-STRING (second slot),
+  →(int,...any) red raw-STRING (variadic slot), plus two PASS
+  controls (→(int,string) no boxing; (any,any)→(any,any) source
+  already interface). The mixed forms reporting the raw string show
+  concrete slots stay correct and exactly the boxing-owed component
+  is malformed.
+- Fix shape (review-located): pair each splatted temp with its
+  destination parameter type (or variadic element type) and apply the
+  same `wrapInterfaceConversion` logic ordinary arguments get, before
+  returning fixed arguments or packing the variadic slice.
+
 ## BUG-048 — machine wrong-STUCK calling a VALUE-receiver method through a pointer-typed VARIABLE (Go auto-derefs; we refuse)
 
 - Status: fixed (2026-08-08, check-in response round — user-authorized
