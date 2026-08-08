@@ -1112,6 +1112,27 @@ def raceUpdate (sPre : ExecState) (tsPre : Array Config) (chPre : Choices)
                     | none => return r)
                 | _, _ => return r
         | .retV v (.selectOpsK clauses _ done [] _ _) => do
+            -- BUG-046: selectgo pass 1's chan-object READ per polled
+            -- SEND case (runtime/select.go:288 — `racereadpc` in the
+            -- send branch, ABOVE the closed check and before parking;
+            -- recv cases are acquire-only, and nil-channel cases are
+            -- excluded from pollorder, matching the `none` skip).
+            -- Recorded ONCE at the select's apply position, whatever
+            -- the outcome (commit, park, pairing, panic) — gc-exact
+            -- granularity: selectgo runs pass 1 once per call and a
+            -- woken parked select does not re-poll with racereadpc
+            -- (the wake handles the woken sudog's case directly), so
+            -- our wake path correctly records nothing. Poll ORDER is
+            -- a random permutation in gc; recording in clause order
+            -- is detection-equivalent (all reads carry the same
+            -- pre-op clock, and same-goroutine re-records upsert).
+            let r ← (match selectClauseChans clauses ((v :: done).reverse) with
+              | some sides =>
+                  sides.foldlM (fun r side =>
+                    match side with
+                    | some (true, loc) => r.chanObjAccess i loc false
+                    | _ => pure r) r
+              | none => pure r)
             match wokenPartner tsPre m'.threads i with
             | some j => racePairEvent sPre tsPre i j cPre r
             | none => do

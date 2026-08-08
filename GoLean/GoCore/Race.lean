@@ -97,22 +97,29 @@ loudly; the racy-negative lane's claim is scoped by these):
   instrument chanlen). `len` on MAPS IS recorded (S3 audit refuted the
   earlier claim that it is invisible to `-race` — probed red on
   go1.26.5); slices/strings/pointer-to-array read headers/types only.
-* **U3 — CLOSED (BUG-045, arc-final audit F1): the channel OBJECT is
-  now a shadow location**, modeling exactly gc's instrumentation
-  (go1.26.5 runtime/chan.go): `chansend` performs `racereadpc` on
+* **U3 — CLOSED (BUG-045 + BUG-046): the channel OBJECT is now a
+  shadow location**, modeling exactly gc's instrumentation (go1.26.5
+  runtime/chan.go + select.go): `chansend` performs `racereadpc` on
   `c.raceaddr()` at ENTRY (before the closed check, before parking —
   so the read is recorded whether the send commits, parks, or
   panics), `closechan` performs `racewritepc` on success (it panics
   on closed/nil BEFORE instrumenting — no record on the panic path),
-  and `chanrecv` performs only `raceacquire` — NO read. `selectgo`'s
-  clause commits bypass `chansend`/`closechan` entirely, so select
-  clauses record nothing (probed: `selectSendClosedArrival` and
-  `selectWakeClosed` are TSan-green beside parked receivers, while
-  every close-beside-parked-plain-send is TSan-red — the verifier's
-  44-subject sweep found exactly that family). Realized as
+  `chanrecv` performs only `raceacquire` — NO read — and `selectgo`
+  pass 1 performs the SAME `racereadpc` for every polled SEND case
+  (select.go:288, above its closed check; recv cases acquire-only,
+  nil-channel cases excluded from pollorder). CORRECTED at the
+  convergence check (BUG-046): the first version of this entry
+  claimed select clauses record nothing because "selectgo's clause
+  commits bypass chansend/closechan" — true of the COMMIT path,
+  false of the instrumentation point (the poll), and the two probes
+  it cited never tested the claim (`selectSendClosedArrival`'s close
+  is same-goroutine-sequenced before its select;
+  `selectWakeClosed`'s select has only recv clauses — both remain
+  TSan-green for THOSE reasons). Realized as
   `RaceState.chanObjAccess` (a per-channel `ShadowCell` keyed by the
   channel's cell `Loc`, EXACT match — channel identity, no path
-  overlap), checked-and-recorded by `raceUpdate`'s chan-op arm.
+  overlap), checked-and-recorded by `raceUpdate`'s chan-op arm
+  (plain ops) and select-apply arm (the per-send-clause poll read).
   Consequence recorded honestly: `resumeThread`'s
   close-woke-parked-sender panic arm is reachable only through a
   chan-object-racy shape (no HB edge can order a close after a send
@@ -679,19 +686,24 @@ def RaceState.accesses (r : RaceState) (t : Nat) :
   | [] => return r
   | a :: rest => do RaceState.accesses (← r.access t a) t rest
 
-/-- **The CHANNEL-OBJECT access pair (BUG-045; U3 in the module
-docstring)** — gc's `c.raceaddr()` instrumentation, modeled exactly:
-a plain send is a chan-object READ (`chansend`'s entry `racereadpc` —
-recorded at the apply position whether the send commits, parks, or
-panics), a successful close is a chan-object WRITE (`closechan`'s
-`racewritepc`; the closed/nil panics fire before it), a receive
-records NOTHING (`chanrecv` is acquire-only) and select clauses record
-nothing (`selectgo` bypasses `chansend`/`closechan`). Check-then-record
-against the per-channel shadow under the goroutine's CURRENT clock
-(before the op's own release/acquire, matching gc's instruction
-order): an HB-unordered read↔write or write↔write on the same channel
-is the terminal `raceDetected` — send↔send never conflicts. Exact-loc
-keying (channel identity), unlike the data shadow's path overlap. -/
+/-- **The CHANNEL-OBJECT access pair (BUG-045 + BUG-046; U3 in the
+module docstring)** — gc's `c.raceaddr()` instrumentation, modeled
+exactly: a plain send is a chan-object READ (`chansend`'s entry
+`racereadpc` — recorded at the apply position whether the send
+commits, parks, or panics), a successful close is a chan-object WRITE
+(`closechan`'s `racewritepc`; the closed/nil panics fire before it), a
+receive records NOTHING (`chanrecv` is acquire-only), and a SELECT
+records one READ per SEND clause at its poll — `selectgo` pass 1's
+`racereadpc` per polled send case (select.go:288; recv clauses
+acquire-only, nil channels excluded from pollorder; BUG-046 corrected
+the first version's false "selectgo bypasses chansend/closechan"
+premise — that is true of the commit path, not the poll).
+Check-then-record against the per-channel shadow under the
+goroutine's CURRENT clock (before the op's own release/acquire,
+matching gc's instruction order): an HB-unordered read↔write or
+write↔write on the same channel is the terminal `raceDetected` —
+send↔send never conflicts. Exact-loc keying (channel identity),
+unlike the data shadow's path overlap. -/
 def RaceState.chanObjAccess (r : RaceState) (t : Nat) (loc : Loc)
     (isWrite : Bool) : Except GoError RaceState :=
   let vt := r.vcOf t

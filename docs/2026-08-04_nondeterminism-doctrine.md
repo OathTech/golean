@@ -181,7 +181,9 @@ EPISTEMIC CAPTION, recorded per the per-lane discipline:
   the fail-open direction (three shipped confluent-green subjects
   were TSan-red through exactly that unmodeled pair; the audit's F1).
   The chan-object pair IS now modeled (`RaceState.chanObjAccess`:
-  send = entry read, successful close = write, recv/select = nothing
+  send = entry read (plain sends AND, per BUG-046, one read per
+  polled select-SEND clause — selectgo pass 1's racereadpc),
+  successful close = write, recv and select-recv clauses = nothing
   — gc's instrumentation exactly), so every close beside a parked
   plain sender refuses at the close and the missing wake edge is moot
   on refused programs; the reclassified racy pins

@@ -32,7 +32,23 @@ differential-pinned) `- Cases: <id>, <id>, …` (baseline case ids), then prose.
 
 ## BUG-046 — BUG-045's chan-object rule is fail-open for SELECT SEND clauses: selectgo pass 1 DOES racereadpc the channel object per polled send case
 
-- Status: open
+- Status: fixed (2026-08-08, convergence-check response — `raceUpdate`'s
+  select-apply arm records a chan-object READ per SEND clause via
+  `selectClauseChans` before any dispatch (commit, park, pairing,
+  panic alike), with the gc-exactness granularity argument at the
+  site: selectgo runs pass 1 once per call and a woken parked select
+  does not re-poll, so once-per-apply matches; poll order is a random
+  permutation in gc, and clause-order recording is
+  detection-equivalent (same pre-op clock, same-goroutine upserts).
+  The pinned case flips PASS/racy ("every enumerated path refuses");
+  the wrong eval pin `closedSelRecvSelWaiterMain_F` now expects race
+  and the new `selSendPairedCloseMain_F` green twin exercises the
+  poll read race-free (op×select pairing orders it before the close).
+  Zero drift on every other id — recv-only selects and
+  same-goroutine-ordered select-sends are unaffected, which the
+  select corpus certifies as the regression suite. U3's, the
+  doctrine's, and BUG-045's "select clauses record nothing" prose
+  corrected in place.)
 - Pinned-by: differential
 - Cases: goroutines/select-closed-arrival/send-close-race
 - Discovered: 2026-08-08 (convergence check on the BUG-045 fix,

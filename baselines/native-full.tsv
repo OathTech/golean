@@ -1,22 +1,18 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-08  commit: channels-arc audit response (BUG-046 red pin)
+# recorded: 2026-08-08  commit: channels-arc audit response (BUG-046 fixed: select-send poll reads)
 #   frontend: native  oracle: go run (strict lane) / go-run membership in the
 #   machine-enumerated observation set, sampled plain AND under -race
 #   (membership lane; go1.26.5) / schedule-tree singleton certification +
 #   strict go-run equality (confluent lane) / every-enumerated-path-refuses
 #   + go run -race red (racy lane; never combined with deadlock)
-# manifest_cases: 1205  pass: 1106  fail: 99
-# Re-pin reason: convergence-check major on the BUG-045 fix — BUG-046:
-#   selectgo pass 1 racereadpc's the channel object for every polled
-#   SEND case (select.go:288, above the closed check), so a select-send
-#   racing a close is TSan-red (30/30 probed) while the BUG-045 rule
-#   recorded nothing for select clauses. Red-first pin
-#   goroutines/select-closed-arrival/send-close-race enters RED at
-#   stage lean-observation (racy lane; on BUG-046's Cases line) with
-#   its HB-ordered green twin send-paired-then-close (confluent —
-#   main's receive pairs with the parked select-send, ordering the
-#   poll read before the close; -race 0/30). Zero drift on all 1203
-#   prior ids.
+# manifest_cases: 1205  pass: 1107  fail: 98
+# Re-pin reason: BUG-046 fix — raceUpdate's select-apply arm records a
+#   chan-object READ per SEND clause (selectgo pass 1's racereadpc,
+#   gc-exact once-per-call granularity). The pinned
+#   goroutines/select-closed-arrival/send-close-race flips PASS/racy
+#   ("every enumerated path refuses"); zero drift on all 1204 other ids
+#   (recv-only selects and same-goroutine-ordered select-sends are
+#   unaffected — the select corpus is the regression suite).
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
 PASS	arrays/array-copy	-
@@ -541,7 +537,7 @@ PASS	goroutines/select-arrival-multi	membership
 PASS	goroutines/select-closed-arrival/recv-closed-drains-hb	confluent
 PASS	goroutines/select-closed-arrival/recv-parked-sender	racy
 PASS	goroutines/select-closed-arrival/send	confluent
-FAIL	goroutines/select-closed-arrival/send-close-race	lean-observation
+PASS	goroutines/select-closed-arrival/send-close-race	racy
 PASS	goroutines/select-closed-arrival/send-paired-then-close	confluent
 PASS	goroutines/select-wake-multi	membership
 PASS	goroutines/select-wake/buffered-data	confluent
