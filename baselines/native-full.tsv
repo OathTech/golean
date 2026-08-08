@@ -1,18 +1,19 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-07  commit: channels-arc-s6 (slice 6: envelope-width review — the L4 width>1 directed membership pin)
+# recorded: 2026-08-08  commit: channels-arc audit response (BUG-044 red pin)
 #   frontend: native  oracle: go run (strict lane) / go-run membership in the
 #   machine-enumerated observation set, sampled plain AND under -race
 #   (membership lane; go1.26.5) / schedule-tree singleton certification +
 #   strict go-run equality (confluent lane) / every-enumerated-path-refuses
 #   + go run -race red (racy lane; never combined with deadlock)
-# manifest_cases: 1194  pass: 1100  fail: 94
-# Re-pin reason: slice-6 envelope-width review finding — no certified
-#   tree consumed the L4 waiter pick above width 1; the directed
-#   membership pin goroutines/sched-dependent/waiter-pick (two senders
-#   parked on ONE unbuffered channel when main's receive arrives;
-#   certified {12, 21}, members=2, both members go-exhibited under the
-#   dual plain/-race sampling) is the ONE new id, PASS/membership.
-#   Zero drift on all 1193 prior ids.
+# manifest_cases: 1196  pass: 1100  fail: 96
+# Re-pin reason: arc-final audit F2 (major) red-first pin — BUG-044:
+#   no scheduling point between a wake-producing registry op of main's
+#   and main's terminal, so the woken goroutine's gc-realized
+#   continuation is excluded from the certified set. Two new membership
+#   ids (goroutines/wake-window/{buffered-send,close-recv}, race-free,
+#   status-diverse {ok,panic} envelope) enter RED at stage membership
+#   (the -race — and in the harness shape even the plain — sample trips
+#   the too-narrow alarm). Zero drift on all 1194 prior ids.
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
 PASS	arrays/array-copy	-
@@ -20,10 +21,10 @@ PASS	arrays/array-element-compound	-
 PASS	arrays/array-len-cap	-
 PASS	arrays/array-of-struct-field-write	-
 PASS	arrays/array-param-return	-
-PASS	arrays/arrays	-
-PASS	arrays/arrays-are-values	-
 PASS	arrays/array-slice-alias	-
 PASS	arrays/array-zero	-
+PASS	arrays/arrays	-
+PASS	arrays/arrays-are-values	-
 PASS	arrays/defined-array-receiver	-
 PASS	arrays/index-eval-order	-
 PASS	arrays/keyed-literal-eval-order	-
@@ -91,7 +92,6 @@ FAIL	builtins/real-imag	frontend-export
 PASS	builtins/recover-outside-defer	-
 PASS	channels/buffered-basic	-
 PASS	channels/close-closed-panic	-
-PASS	channels/closed-receive	-
 PASS	channels/close-edge/defer-close	-
 PASS	channels/close-edge/drain-zero-after-close	-
 PASS	channels/close-edge/recover-close-closed	-
@@ -100,6 +100,7 @@ PASS	channels/close-edge/recover-negative-make	-
 PASS	channels/close-edge/recover-send-closed	-
 PASS	channels/close-nil-panic	-
 PASS	channels/close-send-only	-
+PASS	channels/closed-receive	-
 PASS	channels/comparison/chan-of-chan	-
 PASS	channels/comparison/directional-equal	-
 PASS	channels/comparison/identity	-
@@ -216,10 +217,10 @@ FAIL	complex/zero-value	frontend-export
 PASS	constants/array-bound	-
 PASS	constants/builtin-len-cap-constants	-
 PASS	constants/complex-constant	-
+PASS	constants/const-precision	-
 PASS	constants/constant-character-representability	-
 PASS	constants/constant-comparison	-
 PASS	constants/constant-division	-
-PASS	constants/const-precision	-
 PASS	constants/default-bool-string	-
 FAIL	constants/default-types	frontend-export
 PASS	constants/dependent-constants	-
@@ -398,8 +399,8 @@ PASS	functions/closure-loop-var-capture	-
 PASS	functions/closure-nested-recapture	-
 PASS	functions/closure-param-shadows-capture	-
 PASS	functions/closure-recursion	-
-PASS	functions/closure-returns-closure	-
 PASS	functions/closure-return-state	-
+PASS	functions/closure-returns-closure	-
 PASS	functions/closure-share	-
 PASS	functions/closure-two-vars-one-closure	-
 PASS	functions/closure-value-reassigned	-
@@ -530,9 +531,9 @@ PASS	goroutines/sched-dependent/waiter-pick	membership
 PASS	goroutines/select-arrival-multi	membership
 PASS	goroutines/select-closed-arrival/recv-parked-sender	confluent
 PASS	goroutines/select-closed-arrival/send	confluent
+PASS	goroutines/select-wake-multi	membership
 PASS	goroutines/select-wake/buffered-data	confluent
 PASS	goroutines/select-wake/closed	confluent
-PASS	goroutines/select-wake-multi	membership
 PASS	goroutines/select-wake/recv	confluent
 PASS	goroutines/select-wake/send	confluent
 PASS	goroutines/spawn-edge/child-panic-aborts	confluent
@@ -541,6 +542,8 @@ FAIL	goroutines/spawn-edge/nil-func-fatal	go-run
 PASS	goroutines/spawn-edge/nil-interface-recovered	-
 PASS	goroutines/spawn-edge/ptr-box-child-aborts	confluent
 FAIL	goroutines/spawn-in-init/in-init	lean-observation
+FAIL	goroutines/wake-window/buffered-send	membership
+FAIL	goroutines/wake-window/close-recv	membership
 PASS	goroutines/worker-pool/shared-feed	-
 PASS	goroutines/worker-pool/sum	confluent
 PASS	if/condition-evaluated-once	-
@@ -559,8 +562,8 @@ PASS	init/init-defer-recover	-
 PASS	init/init-panic	-
 PASS	init/init-sees-var-values	-
 PASS	init/multi-file-order	-
-PASS	init/multiple-init-order	-
 PASS	init/multi-value-var-init	-
+PASS	init/multiple-init-order	-
 PASS	init/package-init-order	-
 PASS	init/quarantined-init-dep	-
 PASS	init/quarantined-init-iface	-
@@ -654,12 +657,6 @@ PASS	interfaces/type-assert-interface-panic/missing-one	-
 PASS	interfaces/type-assert-interface-panic/nil	-
 PASS	interfaces/type-assertions/comma-ok	-
 PASS	interfaces/type-assertions/panic	-
-PASS	interfaces/typed-nil-channel	-
-PASS	interfaces/typed-nil-composite	-
-PASS	interfaces/typed-nil-func	-
-PASS	interfaces/typed-nil-map	-
-PASS	interfaces/typed-nil-pointer-compare	-
-PASS	interfaces/typed-nil-slice	-
 PASS	interfaces/type-switch-default-binding	-
 PASS	interfaces/type-switch-default-binding-type	-
 PASS	interfaces/type-switch-dynamic	-
@@ -678,6 +675,12 @@ PASS	interfaces/type-switch-nil-multi-case	-
 PASS	interfaces/type-switch-single-binding	-
 PASS	interfaces/type-switch-typed-nil	-
 PASS	interfaces/type-switch-typed-nil-binding	-
+PASS	interfaces/typed-nil-channel	-
+PASS	interfaces/typed-nil-composite	-
+PASS	interfaces/typed-nil-func	-
+PASS	interfaces/typed-nil-map	-
+PASS	interfaces/typed-nil-pointer-compare	-
+PASS	interfaces/typed-nil-slice	-
 PASS	ints/bitwise	-
 PASS	ints/break-continue	-
 PASS	ints/byte-conversion	-
@@ -695,16 +698,16 @@ PASS	ints/defined-incdec/unnamed-control	-
 PASS	ints/defined-int-conversion	-
 PASS	ints/defined-type-ops	-
 PASS	ints/defined-underlying-conversion	-
+PASS	ints/div-mod-signs	-
 PASS	ints/divide-by-zero	-
 PASS	ints/division-overflow	-
-PASS	ints/div-mod-signs	-
 PASS	ints/if-return	-
 PASS	ints/int8-wrap	-
 PASS	ints/multi-assign	-
 PASS	ints/negative-shift	-
 PASS	ints/scalars	-
-PASS	ints/shifts	-
 PASS	ints/shift-width-boundaries	-
+PASS	ints/shifts	-
 PASS	ints/signed-unsigned-conversion	-
 PASS	ints/signed-width-wrap	-
 PASS	ints/truncate-conversion	-
@@ -867,8 +870,8 @@ PASS	panic-recover/defer-arg-during-panic	-
 PASS	panic-recover/defer-panic-after-return	-
 PASS	panic-recover/defer-panic-recovered-after-return	-
 PASS	panic-recover/defer-recover-builtin	-
-PASS	panic-recover/deferred-panic-replaces	-
 PASS	panic-recover/defer-registered-during-unwind	-
+PASS	panic-recover/deferred-panic-replaces	-
 PASS	panic-recover/named-result-preserved-after-recover	-
 PASS	panic-recover/nested-frame-recover	-
 PASS	panic-recover/nil-defer-during-unwind	-
@@ -919,13 +922,9 @@ PASS	pointers/pointer-identity	-
 PASS	pointers/pointer-param-alias	-
 PASS	pointers/pointer-slice-header	-
 PASS	pointers/pointer-to-pointer	-
-PASS	quorum/committed-index/all-acked	-
 PASS	quorum/committed-index-edges/all-unacked	-
 PASS	quorum/committed-index-edges/n1-acked	-
 PASS	quorum/committed-index-edges/n1-unacked	-
-PASS	quorum/committed-index/empty-maxuint	-
-PASS	quorum/committed-index/heap	-
-PASS	quorum/committed-index/on-stack	-
 PASS	quorum/committed-index-real/empty	-
 PASS	quorum/committed-index-real/five-dup	-
 PASS	quorum/committed-index-real/five-spread	-
@@ -943,6 +942,10 @@ PASS	quorum/committed-index-real/three-two	-
 PASS	quorum/committed-index-real/two-half	-
 PASS	quorum/committed-index-real/two-known	-
 PASS	quorum/committed-index-real/two-missing	-
+PASS	quorum/committed-index/all-acked	-
+PASS	quorum/committed-index/empty-maxuint	-
+PASS	quorum/committed-index/heap	-
+PASS	quorum/committed-index/on-stack	-
 PASS	quorum/committed-index/unacked	-
 PASS	quorum/joint/committed-min	-
 PASS	quorum/joint/ids-union	-
@@ -950,17 +953,17 @@ PASS	quorum/joint/vote-both-pending	-
 PASS	quorum/joint/vote-both-win	-
 PASS	quorum/joint/vote-disagree-lost	-
 PASS	quorum/joint/vote-disagree-pending	-
-PASS	quorum/vote-result/empty-wins	-
-PASS	quorum/vote-result/even-one-short	-
-PASS	quorum/vote-result/even-won	-
-PASS	quorum/vote-result/lost	-
-PASS	quorum/vote-result/pending	-
 PASS	quorum/vote-result-small-n/n1-lost	-
 PASS	quorum/vote-result-small-n/n1-pending	-
 PASS	quorum/vote-result-small-n/n1-won	-
 PASS	quorum/vote-result-small-n/n2-one-missing-pending	-
 PASS	quorum/vote-result-small-n/n2-one-yes-lost	-
 PASS	quorum/vote-result-small-n/n2-won	-
+PASS	quorum/vote-result/empty-wins	-
+PASS	quorum/vote-result/even-one-short	-
+PASS	quorum/vote-result/even-won	-
+PASS	quorum/vote-result/lost	-
+PASS	quorum/vote-result/pending	-
 PASS	quorum/vote-result/tie-lost	-
 PASS	quorum/vote-result/won-exact	-
 FAIL	race/free/array-read-write	lean-observation
@@ -1023,8 +1026,8 @@ PASS	range/range-struct-copy	-
 PASS	returns/early-return-named	-
 PASS	returns/method-multi-result-arg	-
 PASS	returns/multi-result-argument	-
-PASS	returns/multi-result-assignment	-
 PASS	returns/multi-result-assign-order	-
+PASS	returns/multi-result-assignment	-
 PASS	returns/multi-result-blank-forward	-
 PASS	returns/multi-result-forward	-
 PASS	returns/multi-result-forward-named	-
@@ -1084,8 +1087,8 @@ PASS	slices/slices-sort-edges/signed-negatives	-
 PASS	slices/slices-sort-edges/single-element	-
 PASS	slices/slices-sort-edges/subslice-aliasing	-
 PASS	slices/slices-sort-edges/unsigned-above-half	-
-PASS	slices/slices-sort/ints	-
 FAIL	slices/slices-sort-non-integer-refusal	frontend-export
+PASS	slices/slices-sort/ints	-
 PASS	slices/slices-sort/uint64	-
 PASS	slices/three-index-slice	-
 PASS	strings/byte-conversion-cap	-
@@ -1163,6 +1166,7 @@ PASS	structs/pointer-literal-elision/spec-example	-
 PASS	structs/positional-literal	-
 PASS	structs/positional-literal-eval-order	-
 PASS	structs/recursive-pointer	-
+PASS	structs/selector-address-pointer	-
 PASS	structs/selector-addressability-edge/map-value-copy-then-assign	-
 PASS	structs/selector-addressability-edge/map-value-pointer-field-write	-
 PASS	structs/selector-addressability-edge/map-value-slice-field-write	-
@@ -1170,7 +1174,6 @@ PASS	structs/selector-addressability-edge/pointer-field-from-call-result	-
 PASS	structs/selector-addressability-edge/pointer-result-assign	-
 PASS	structs/selector-addressability-edge/read-call-result	-
 PASS	structs/selector-addressability-edge/read-conversion-result	-
-PASS	structs/selector-address-pointer	-
 PASS	structs/selector-eval-once	-
 PASS	structs/struct-array-element-write	-
 PASS	structs/swap	-

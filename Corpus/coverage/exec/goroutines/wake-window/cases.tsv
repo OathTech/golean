@@ -1,0 +1,12 @@
+# id	subject	args	expected_status	expected_reason	features	lane	why	params
+# MEMBERSHIP lane, STATUS-DIVERSE envelope (BUG-044 / arc-final audit
+# F2+F8): the observable depends on the MAIN-EXIT WINDOW pick — after
+# main's wake-producing registry op, any finite number of woken-partner
+# steps may precede the program teardown (spec §Program execution) — so
+# the envelope is {ok(0), panic}. Both members are gc-exhibited (plain
+# realizes ok; -race scheduling realizes the panic 40/40; a plain
+# private delay loop also realizes it — dossier F2 verifier). RED until
+# the window lands: the machine's set is the singleton {ok}, and the
+# -race sample trips the too-narrow membership alarm.
+buffered-send	bufSendWakeThenExit	-	ok	-	goroutines,channels,nondet	membership	the ok/panic split is the main-exit window pick: exit-now discards the woken receiver, any continue schedule reaches its panic; window bound 2, scheduler bound 2	width=4,members=2
+close-recv	closeWakeReceiverThenExit	-	ok	-	goroutines,channels,close,nondet	membership	same window at the close-wake boundary (TSan-green: recv is acquire-only at the chan object); ok = exit-now, panic = the woken receiver runs	width=4,members=2

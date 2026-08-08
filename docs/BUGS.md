@@ -14,11 +14,12 @@ so a bug can neither rot in prose nor silently outlive its evidence:
    fixed-but-not-closed (or the case no longer pins it), and the check fails;
 2. every `Status: open` + `Pinned-by: differential` bug lists ≥1 case;
 3. (warning) the check reports how many baseline **fidelity failures**
-   (`stage=lean-observation`, `stage=differential`, or `stage=membership` —
-   wrong/stuck answers and membership-lane alarms, not frontend-coverage
-   gaps; membership added at the arc-final audit, F9 2026-08-06) are **not**
-   yet explained by any bug entry — the omission surface to ratchet toward
-   zero.
+   (`stage=lean-observation`, `stage=differential`, `stage=membership`,
+   `stage=confluent`, or `stage=racy` — wrong/stuck answers and
+   enumeration-lane alarms, not frontend-coverage gaps; membership added
+   at the arc-final audit F9 2026-08-06; confluent/racy at the
+   channels-arc final audit F5 2026-08-08) are **not** yet explained by
+   any bug entry — the omission surface to ratchet toward zero.
 
 Bugs that cannot yet be mechanically pinned use `Pinned-by: none (<reason>)` and
 are exempt from (1)/(2) — but still listed, so they cannot disappear.
@@ -28,6 +29,47 @@ are exempt from (1)/(2) — but still listed, so they cannot disappear.
 differential-pinned) `- Cases: <id>, <id>, …` (baseline case ids), then prose.
 
 ---
+
+## BUG-044 — no scheduling point between a wake-producing registry op and main's terminal: the woken goroutine is discarded, its gc-realized continuation excluded (L1 envelope too narrow at main-exit — BUG-040's class)
+
+- Status: open
+- Pinned-by: differential
+- Cases: goroutines/wake-window/buffered-send, goroutines/wake-window/close-recv
+- Discovered: 2026-08-08 (channels-arc final audit F2, major/comparative;
+  verifier-reproduced end to end with fresh probes — model
+  `observations=1` {ok} vs gc `-race` 200/200 panic, and PLAIN gc
+  1/100 at a 50k-iteration post-close delay, 50/50 at 20M — the
+  excluded member is realized by the unperturbed oracle)
+- What: when main's registry op wakes a parked partner (a pairing
+  handoff, a close) and main then reaches its terminal with no further
+  registry op, the model offers NO scheduling point: `Config.atBoundary`
+  marks the PRE-op config, the post-op `.next k` is not a boundary (the
+  only post-op boundary is `.spawned`, BUG-040's fix), and
+  `execProgLoop` classifies `mainOutcome?` BEFORE stepping — so the
+  woken goroutine is discarded on EVERY stream and its observable
+  continuation (a panic aborting the program) is excluded from the
+  certified observation set. gc runs it: spec §Program execution gives
+  no ordering between main's return and other goroutines' progress, so
+  any finite number of woken-partner steps may precede teardown. TRUE
+  SCOPE (dossier F2's scope correction): ANY main-goroutine registry op
+  that makes a partner runnable, followed by main's terminal with no
+  intervening registry boundary — not just close-wake. This falsified
+  the matrix's O9/L5 "faithful main-exit" advantage rows as stated, and
+  the slice-6 too-narrow debt list (design note) omitted it. The pinned
+  cases are RACE-FREE (probed: `go build -race`, 0 reports/30 runs
+  each), so the NPDRF carve-out does not excuse the exclusion, and the
+  envelope is STATUS-DIVERSE {ok, panic} — which the membership lane
+  could not even express (audit F8; fixed with this bug's fix).
+- Fix shape: the MAIN-EXIT WINDOW — a bound-2 choice site in
+  `execProgLoop` (and its driver mirrors) at `mainOutcome?`-some with
+  runnable goroutines remaining: pick 0 = exit now (the default, so
+  empty/default streams and sequential conservation are untouched —
+  a single-thread pool has no runnable others and consumes nothing),
+  pick 1 = one more pool step (the ordinary `stepMulti`, L1 pick and
+  all). The relation side needs NO change: `StepM`/`schedPick` already
+  admit post-main-terminal steps of runnable goroutines — the driver
+  was the narrow side. Membership lane gains status-diverse envelopes
+  (`statuses=` param / `--expect-status` list) to express {ok, panic}.
 
 ## BUG-043 — range-over-integer desugar hard-codes the default int kind for the loop variable and index arithmetic
 
