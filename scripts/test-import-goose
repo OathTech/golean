@@ -1,0 +1,227 @@
+#!/usr/bin/env bash
+# Reject-shape fixtures for scripts/import-goose (goose-parity buildout;
+# mold: scripts/test-lane-validation). Pure shell + a local `go` for the
+# self-containment fixture; no lake build, no network. Builds a throwaway
+# git "goose root" so the rev pin is exercised for real.
+#
+# Exit 0 = every fixture behaves; nonzero = a gate went quiet.
+set -uo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+cd "$ROOT"
+
+command -v go >/dev/null || { echo "FAIL: go not on PATH (self-containment fixture would pass vacuously)"; exit 1; }
+
+TMP="$(mktemp -d "${TMPDIR:-/tmp}/golean-import-goose-test.XXXXXX")"
+trap 'rm -rf "$TMP"' EXIT
+fail=0
+
+# --- throwaway goose root at a known rev ---
+FAKE="$TMP/goose"
+mkdir -p "$FAKE/testdata/examples/semantics"
+cat > "$FAKE/testdata/examples/semantics/good.go" <<'EOF'
+package semantics
+
+// upstream comment survives verbatim
+func testAddOne() bool {
+	var x uint64 = 1
+	x = x + 1
+	return x == 2
+}
+
+func failing_testTwo() bool {
+	return true
+}
+EOF
+cat > "$FAKE/testdata/examples/semantics/helper.go" <<'EOF'
+package semantics
+
+func helperVal() uint64 {
+	return 7
+}
+EOF
+cat > "$FAKE/testdata/examples/semantics/needs_helper.go" <<'EOF'
+package semantics
+
+func testUsesHelper() bool {
+	return helperVal() == 7
+}
+EOF
+cat > "$FAKE/testdata/examples/semantics/has_import.go" <<'EOF'
+package semantics
+
+import "sync"
+
+func testLocked() bool {
+	var mu sync.Mutex
+	mu.Lock()
+	mu.Unlock()
+	return true
+}
+EOF
+cat > "$FAKE/testdata/examples/semantics/has_main.go" <<'EOF'
+package semantics
+
+func main() {}
+EOF
+cat > "$FAKE/testdata/examples/semantics/other_pkg.go" <<'EOF'
+package other
+
+func testOther() bool { return true }
+EOF
+cat > "$FAKE/testdata/examples/semantics/build_tag.go" <<'EOF'
+//go:build linux
+package semantics
+
+func testTagged() bool { return true }
+EOF
+git -C "$FAKE" init -q
+git -C "$FAKE" -c user.email=t@t -c user.name=t add -A
+git -C "$FAKE" -c user.email=t@t -c user.name=t commit -qm fixture
+REV="$(git -C "$FAKE" rev-parse HEAD)"
+
+OUTROOT="$TMP/corpus"
+run_import() {
+  # run with the corpus root redirected via a chdir sandbox: import-goose
+  # writes under the REPO's Corpus/, so tests use a scratch clone of the
+  # script's cwd expectations by pointing dest at a unique name and
+  # cleaning up. Simpler: run in a scratch repo dir containing only the
+  # script's needs.
+  scripts/import-goose "$@" 2>&1
+}
+
+expect_reject() {
+  local name="$1" needle="$2"; shift 2
+  local out
+  if out="$(run_import "$@")"; then
+    echo "FAIL: $name: import-goose ACCEPTED a bad shape: $out"
+    fail=1
+  elif [[ "$out" != *"$needle"* ]]; then
+    echo "FAIL: $name: rejected, but without the expected message ($needle): $out"
+    fail=1
+  else
+    echo "ok: $name"
+  fi
+}
+
+DEST_BASE="zz-import-goose-selftest"
+CASE_ROOT="Corpus/coverage/exec/imported-goose/$DEST_BASE"
+cleanup_dest() { rm -rf "$CASE_ROOT"; }
+trap 'rm -rf "$TMP"; cleanup_dest' EXIT
+
+# 1. rev pin
+expect_reject "wrong checkout rev" "not at the pinned rev" \
+  --goose-root "$FAKE" --expect-rev 0000000000000000000000000000000000000000 \
+  --source testdata/examples/semantics/good.go --dest "$DEST_BASE/rev"
+
+# 2. missing source
+expect_reject "missing source" "missing upstream source" \
+  --goose-root "$FAKE" --expect-rev "$REV" \
+  --source testdata/examples/semantics/absent.go --dest "$DEST_BASE/missing"
+
+# 3. imports
+expect_reject "source with imports" "has imports" \
+  --goose-root "$FAKE" --expect-rev "$REV" \
+  --source testdata/examples/semantics/has_import.go --dest "$DEST_BASE/imports"
+
+# 4. func main
+expect_reject "source with func main" "defines func main" \
+  --goose-root "$FAKE" --expect-rev "$REV" \
+  --source testdata/examples/semantics/has_main.go --dest "$DEST_BASE/hasmain"
+
+# 5. build constraints
+expect_reject "source with build tag" "build constraints" \
+  --goose-root "$FAKE" --expect-rev "$REV" \
+  --source testdata/examples/semantics/build_tag.go --dest "$DEST_BASE/buildtag"
+
+# 6. package mismatch across siblings
+expect_reject "package mismatch" "package mismatch" \
+  --goose-root "$FAKE" --expect-rev "$REV" \
+  --source testdata/examples/semantics/good.go \
+  --also testdata/examples/semantics/other_pkg.go --dest "$DEST_BASE/pkgmix"
+
+# 7. self-containment (helper not assembled)
+expect_reject "missing sibling helper" "self-containment" \
+  --goose-root "$FAKE" --expect-rev "$REV" \
+  --source testdata/examples/semantics/needs_helper.go --dest "$DEST_BASE/nohelper"
+
+# 8. bad dest shape
+expect_reject "dest without class" "--dest must be" \
+  --goose-root "$FAKE" --expect-rev "$REV" \
+  --source testdata/examples/semantics/good.go --dest flat
+
+# --- accept: good single file ---
+if out="$(run_import --goose-root "$FAKE" --expect-rev "$REV" \
+    --source testdata/examples/semantics/good.go --dest "$DEST_BASE/good")"; then
+  echo "ok: accept good source"
+else
+  echo "FAIL: accept good source: $out"
+  fail=1
+fi
+GOOD="$CASE_ROOT/good"
+# provenance header names path @ rev
+if ! grep -q "source: testdata/examples/semantics/good.go @ $REV" "$GOOD/main.go" 2>/dev/null; then
+  echo "FAIL: provenance header missing/incorrect in $GOOD/main.go"; fail=1
+else echo "ok: provenance header"; fi
+# marker present
+if ! grep -q '^// --- GoLean harness ---$' "$GOOD/main.go" 2>/dev/null; then
+  echo "FAIL: harness marker missing"; fail=1
+else echo "ok: harness marker"; fi
+# VERBATIM: content above the marker, minus the generated header and
+# package clause, equals the upstream file minus its package clause.
+sed -n '1,/^\/\/ --- GoLean harness ---$/p' "$GOOD/main.go" \
+  | grep -v '^// GoLean imported-goose' | grep -v '^// source:' \
+  | grep -v '^// imported:' | grep -v '^// transform:' \
+  | grep -v '^// GoLean-authored' \
+  | grep -v '^package main$' | grep -v '^// --- GoLean harness ---$' \
+  | sed '/./,$!d' > "$TMP/got-body.txt"
+awk '!done && /^package[ \t]/ { done=1; next } { print }' \
+  "$FAKE/testdata/examples/semantics/good.go" | sed '/./,$!d' > "$TMP/want-body.txt"
+# trailing blank lines are insignificant
+if ! diff <(sed -e :a -e '/^\n*$/{$d;N;ba' -e '}' "$TMP/got-body.txt") \
+          <(sed -e :a -e '/^\n*$/{$d;N;ba' -e '}' "$TMP/want-body.txt") >/dev/null; then
+  echo "FAIL: imported body is not verbatim"
+  diff "$TMP/got-body.txt" "$TMP/want-body.txt" | head -10
+  fail=1
+else echo "ok: body verbatim above the marker"; fi
+# cases.tsv rows: one per oracle, wrapper subjects, failing- prefix kept
+if [[ "$(grep -vc '^#' "$GOOD/cases.tsv" 2>/dev/null)" != "2" ]]; then
+  echo "FAIL: expected 2 skeleton rows"; fail=1
+else echo "ok: 2 skeleton rows"; fi
+if ! grep -q $'^add-one\tgoleanTestAddOne\t-\tok\t-\timported_goose$' "$GOOD/cases.tsv"; then
+  echo "FAIL: oracle row add-one malformed: $(cat "$GOOD/cases.tsv")"; fail=1
+else echo "ok: oracle row shape"; fi
+if ! grep -q $'^failing-two\tgoleanFailing_testTwo\t' "$GOOD/cases.tsv"; then
+  echo "FAIL: failing_test row malformed"; fail=1
+else echo "ok: failing_test row shape"; fi
+# wrappers compile: the landed case builds stand-alone
+if (cd "$GOOD" && GO111MODULE=off GOCACHE="$ROOT/artifacts/go-build-cache" go build -o /dev/null . >/dev/null 2>&1); then
+  echo "ok: landed case compiles"
+else
+  echo "FAIL: landed case does not compile"; fail=1
+fi
+
+# 9. dest exists without --force
+expect_reject "existing dest without --force" "destination exists" \
+  --goose-root "$FAKE" --expect-rev "$REV" \
+  --source testdata/examples/semantics/good.go --dest "$DEST_BASE/good"
+
+# --- accept: sibling assembly ---
+if out="$(run_import --goose-root "$FAKE" --expect-rev "$REV" \
+    --source testdata/examples/semantics/needs_helper.go \
+    --also testdata/examples/semantics/helper.go --dest "$DEST_BASE/assembled")"; then
+  echo "ok: accept sibling assembly"
+else
+  echo "FAIL: accept sibling assembly: $out"; fail=1
+fi
+if ! grep -q "source: testdata/examples/semantics/helper.go @ $REV" \
+    "$CASE_ROOT/assembled/main.go" 2>/dev/null; then
+  echo "FAIL: assembled sibling not in provenance header"; fail=1
+else echo "ok: sibling provenance"; fi
+
+cleanup_dest
+if [[ "$fail" -ne 0 ]]; then
+  echo "test-import-goose: FAIL"
+  exit 1
+fi
+echo "test-import-goose: all fixtures behave"

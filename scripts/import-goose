@@ -1,0 +1,204 @@
+#!/usr/bin/env bash
+# Goose testdata importer (goose-parity buildout, charter
+# docs/2026-08-07_goose-parity-charter.md; pipeline shape from
+# docs/2026-08-07_goose-comparative-scoping.md Part C).
+#
+# Takes one or more sibling files of ONE upstream goose testdata package
+# (deps/goose at the PINNED rev — the checkout is READ-ONLY) and lands an
+# assembled single-file corpus case under
+# Corpus/coverage/exec/imported-goose/<dest>/ with:
+#   - a provenance header (upstream path(s) @ rev, import date, transform),
+#   - the upstream bodies VERBATIM (only the package clause is replaced by
+#     `package main` — the Part-C permitted assembly transform),
+#   - a `// --- GoLean harness ---` marker; everything below it is
+#     GoLean-authored (generated int wrappers over the upstream
+#     `test*() bool` / `failing_test*() bool` oracles + an empty `main`),
+#   - skeleton cases.tsv rows (one per detected oracle, subject = the
+#     wrapper, expected_status ok — red-first: the differential run is
+#     what classifies each row; a wrong expectation fails loud there).
+#
+# Fail-closed shapes (see scripts/test-import-goose):
+#   wrong checkout rev / missing source / source with imports / source
+#   with func main / no package clause / package mismatch across siblings /
+#   assembled file does not compile (self-containment) / dest exists
+#   (without --force) / duplicate derived row ids.
+set -uo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+cd "$ROOT"
+
+PINNED_REV="3be88bbb4982f58e5813b6f0344302d5582c8e8a"
+
+usage() {
+  cat >&2 <<'EOF'
+usage: scripts/import-goose --source <rel.go> [--also <rel.go>]... \
+         --dest <class>/<name> [--tags t1,t2] [--force] \
+         [--goose-root <dir>] [--expect-rev <rev>]
+
+  --source     primary upstream file, relative to <goose-root>
+  --also       sibling file of the SAME upstream package, assembled below
+               the primary (helpers); repeatable
+  --dest       corpus path under Corpus/coverage/exec/imported-goose/
+  --tags       extra feature tags appended after imported_goose
+  --force      overwrite an existing destination case
+  --goose-root default deps/goose
+  --expect-rev default the pinned goose rev (fixtures override)
+EOF
+  exit 2
+}
+
+die() { echo "import-goose: $*" >&2; exit 1; }
+
+GOOSE_ROOT="deps/goose"
+EXPECT_REV="$PINNED_REV"
+SOURCE=""
+ALSO=()
+DEST=""
+TAGS=""
+FORCE=0
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --source) [[ $# -ge 2 ]] || usage; SOURCE="$2"; shift 2 ;;
+    --also) [[ $# -ge 2 ]] || usage; ALSO+=("$2"); shift 2 ;;
+    --dest) [[ $# -ge 2 ]] || usage; DEST="$2"; shift 2 ;;
+    --tags) [[ $# -ge 2 ]] || usage; TAGS="$2"; shift 2 ;;
+    --force) FORCE=1; shift ;;
+    --goose-root) [[ $# -ge 2 ]] || usage; GOOSE_ROOT="$2"; shift 2 ;;
+    --expect-rev) [[ $# -ge 2 ]] || usage; EXPECT_REV="$2"; shift 2 ;;
+    *) usage ;;
+  esac
+done
+
+[[ -n "$SOURCE" && -n "$DEST" ]] || usage
+[[ -d "$GOOSE_ROOT" ]] || die "goose root not found: $GOOSE_ROOT"
+
+# 1. Rev pin (fail closed: an import from a drifted checkout is a silent
+# provenance lie).
+actual_rev="$(git -C "$GOOSE_ROOT" rev-parse HEAD 2>/dev/null)" \
+  || die "cannot read HEAD of $GOOSE_ROOT (not a git checkout?)"
+[[ "$actual_rev" == "$EXPECT_REV" ]] \
+  || die "$GOOSE_ROOT is not at the pinned rev: HEAD=$actual_rev expected=$EXPECT_REV"
+
+# 2. Destination shape. Path ids must satisfy the manifest's
+# validate_path_id (lowercase, no "__").
+case "$DEST" in
+  */*) ;;
+  *) die "--dest must be <class>/<name> (got: $DEST)" ;;
+esac
+for part in ${DEST//\// }; do
+  [[ "$part" =~ ^[a-z0-9][a-z0-9_-]*$ && "$part" != *__* ]] \
+    || die "--dest component not a valid case-path id: $part"
+done
+DEST_DIR="Corpus/coverage/exec/imported-goose/$DEST"
+if [[ -e "$DEST_DIR" && "$FORCE" -ne 1 ]]; then
+  die "destination exists (use --force to overwrite): $DEST_DIR"
+fi
+
+# 3. Read and vet the upstream files.
+ALL_SOURCES=("$SOURCE")
+[[ ${#ALSO[@]} -gt 0 ]] && ALL_SOURCES+=("${ALSO[@]}")
+pkg=""
+for rel in "${ALL_SOURCES[@]}"; do
+  f="$GOOSE_ROOT/$rel"
+  [[ -f "$f" ]] || die "missing upstream source: $f"
+  case "$rel" in *.go) ;; *) die "not a .go file: $rel" ;; esac
+  if grep -nE '^[[:space:]]*import[[:space:]("]' "$f" >/dev/null; then
+    die "$rel has imports — phase-1 imports only import-free files (park it)"
+  fi
+  if grep -nE '^func[[:space:]]+main[[:space:]]*\(' "$f" >/dev/null; then
+    die "$rel defines func main — refusing (harness owns main)"
+  fi
+  if grep -nE '^(//go:build|// \+build)' "$f" >/dev/null; then
+    die "$rel has build constraints — cannot be imported verbatim (park it)"
+  fi
+  this_pkg="$(grep -m1 -E '^package[[:space:]]+[A-Za-z0-9_]+' "$f" | awk '{print $2}')"
+  [[ -n "$this_pkg" ]] || die "$rel has no package clause"
+  if [[ -z "$pkg" ]]; then pkg="$this_pkg"
+  elif [[ "$pkg" != "$this_pkg" ]]; then
+    die "package mismatch: $rel is package $this_pkg, expected $pkg"
+  fi
+done
+
+# 4. Detect the boolean oracles (goose style: single-line signatures).
+oracles=()
+for rel in "${ALL_SOURCES[@]}"; do
+  while IFS= read -r name; do
+    oracles+=("$name")
+  done < <(grep -oE '^func (test|failing_test)[A-Za-z0-9_]*\(\) bool' "$GOOSE_ROOT/$rel" \
+           | sed -E 's/^func ([A-Za-z0-9_]+)\(\) bool$/\1/')
+done
+
+# 5. Assemble main.go.
+TMP="$(mktemp -d "${TMPDIR:-/tmp}/import-goose.XXXXXX")"
+trap 'rm -rf "$TMP"' EXIT
+out="$TMP/main.go"
+{
+  echo "// GoLean imported-goose corpus case — upstream bodies VERBATIM."
+  for rel in "${ALL_SOURCES[@]}"; do
+    echo "// source: $rel @ $actual_rev"
+  done
+  echo "// imported: $(date +%Y-%m-%d) by scripts/import-goose"
+  echo "// transform: package clause -> main; assembly order as listed; all"
+  echo "// GoLean-authored code sits below the harness marker."
+  echo "package main"
+  for rel in "${ALL_SOURCES[@]}"; do
+    echo ""
+    # Verbatim content: the whole upstream file minus its package clause
+    # line (replaced by the `package main` above).
+    awk '!done && /^package[ \t]/ { done=1; next } { print }' "$GOOSE_ROOT/$rel"
+  done
+  echo ""
+  echo "// --- GoLean harness ---"
+  echo "// One int subject per upstream boolean oracle (true -> 1, false -> 0)."
+  for name in ${oracles[@]+"${oracles[@]}"}; do
+    wrapper="golean$(printf '%s' "${name:0:1}" | tr '[:lower:]' '[:upper:]')${name:1}"
+    echo ""
+    echo "func $wrapper() int {"
+    echo "	if $name() {"
+    echo "		return 1"
+    echo "	}"
+    echo "	return 0"
+    echo "}"
+  done
+  echo ""
+  echo "func main() {}"
+} > "$out"
+
+# 6. Self-containment: the assembled file must compile stand-alone.
+export GOCACHE="${GOCACHE:-$ROOT/artifacts/go-build-cache}"
+if ! buildout="$(cd "$TMP" && GO111MODULE=off go build -o /dev/null . 2>&1)"; then
+  die "self-containment check failed — assembled file does not compile \
+(missing sibling helpers? add --also): $buildout"
+fi
+
+# 7. Skeleton cases.tsv (red-first: every row starts as the mechanical
+# ok-expectation; the differential run classifies it).
+tags="imported_goose"
+[[ -n "$TAGS" ]] && tags="$tags,$TAGS"
+{
+  printf '# id\tsubject\targs\texpected_status\texpected_reason\tfeatures\n'
+  seen_ids=" "
+  for name in ${oracles[@]+"${oracles[@]}"}; do
+    base="$name"
+    prefix=""
+    case "$base" in
+      failing_test*) base="${base#failing_test}"; prefix="failing-" ;;
+      test*) base="${base#test}" ;;
+    esac
+    row_id="$prefix$(printf '%s' "$base" | sed -E 's/([A-Z])/-\l\1/g' | sed -E 's/^-//; s/--+/-/g')"
+    [[ "$row_id" =~ ^[a-z0-9][a-z0-9_-]*$ ]] || die "derived row id invalid: $row_id (from $name)"
+    if [[ "$seen_ids" == *" $row_id "* ]]; then
+      die "duplicate derived row id: $row_id"
+    fi
+    seen_ids="$seen_ids$row_id "
+    wrapper="golean$(printf '%s' "${name:0:1}" | tr '[:lower:]' '[:upper:]')${name:1}"
+    printf '%s\t%s\t-\tok\t-\t%s\n' "$row_id" "$wrapper" "$tags"
+  done
+} > "$TMP/cases.tsv"
+
+# 8. Land it.
+mkdir -p "$DEST_DIR"
+cp "$out" "$DEST_DIR/main.go"
+cp "$TMP/cases.tsv" "$DEST_DIR/cases.tsv"
+echo "import-goose: landed $DEST_DIR (${#oracles[@]} oracle row(s); package $pkg @ ${actual_rev:0:7})"
