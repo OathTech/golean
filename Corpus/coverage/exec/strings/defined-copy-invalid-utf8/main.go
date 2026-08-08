@@ -16,7 +16,9 @@ func definedCopyInvalidUTF8() int {
 	var s copySrcString = "\xff\x00A\xfe"
 	b := make(copyDstBytes, 3) // short dst: copies min(len) = 3
 	n := copy(b, s)
-	return n*1000000 + int(b[0])*10000 + int(b[1])*100 + int(b[2]) // 3255065... compute: 3*1e6 + 255*1e4 + 0 + 65
+	// 256-base packing — injective per byte (values up to 255 never
+	// alias): 3*2^24 + 255*2^16 + 0*256 + 65 = 67043393.
+	return n*16777216 + int(b[0])*65536 + int(b[1])*256 + int(b[2])
 }
 
 func main() {
