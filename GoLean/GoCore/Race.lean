@@ -350,14 +350,29 @@ def fieldChainTarget : Cont → Loc → Loc
       fieldChainTarget k' (.field loc tid f)
   | _, loc => loc
 
-/-- Peel a pure `fieldGet` chain over a synthesized wrapper's `$recv`
+/-- Peel a pure `fieldGet` chain over a synthesized wrapper's RECEIVER
 parameter: `some hops`, outermost projection LAST. `none` on any other
 shape (mid-chain derefs from embedded-pointer hops, address-formers,
-non-`$recv` anchors) — the caller then falls back to the whole-pointee
-read (over-refusal, the fail-closed direction; recorded in O1). -/
-def recvFieldChain : Expr → Option (List (TypeId × String))
-  | .var "$recv" => some []
-  | .fieldGet recv tid f => (recvFieldChain recv).map (· ++ [(tid, f)])
+non-receiver anchors) — the caller then falls back to the whole-pointee
+read (over-refusal, the fail-closed direction; recorded in O1).
+
+The receiver is identified by its PARAMETER NAME taken from the target
+`Func`'s own first parameter (`recvId` — `dispatchAccesses` passes
+`target.args[0]`), never by a frontend string literal (arc-final audit
+F7, 2026-08-08: this arm previously matched the frontend-chosen name
+`"$recv"` verbatim — GoCore's only raw frontend string outside its own
+reserved ids, violating "semantic identity is TypeId/FuncId, never raw
+frontend strings"; the verifier showed a semantics-preserving frontend
+rename flipping race/free/promoted-ptr-box from ok to a spurious
+raceDetected). RESIDUAL COUPLING, recorded honestly: the BODY-shape
+half remains — `wrapperForwardArg` recognizes exactly the decoder's
+synthesized two-level wrapper block, and any other emission shape
+falls back to the whole-pointee read (fail-closed over-refusal, pinned
+by the `race/free/promoted-ptr-box` strict row going red on drift,
+per O1). -/
+def recvFieldChain (recvId : String) : Expr → Option (List (TypeId × String))
+  | .var v => if v == recvId then some [] else none
+  | .fieldGet recv tid f => (recvFieldChain recvId recv).map (· ++ [(tid, f)])
   | _ => none
 
 /-- The forwarding call's RECEIVER argument in a synthesized promotion
@@ -417,11 +432,20 @@ def dispatchAccesses (s : ExecState) (fid : FuncId) (args : List GoValue) :
                             (match findFunctionIn? s.functions concrete.funcId with
                             | some target =>
                                 if target.wrapper then
-                                  match wrapperForwardArg target.body >>= recvFieldChain with
-                                  | some hops =>
-                                      [(false, hops.foldl
-                                        (fun l (h : TypeId × String) =>
-                                          Loc.field l h.1 h.2) loc)]
+                                  -- The receiver anchor is the target's OWN
+                                  -- first parameter name (audit F7): the
+                                  -- decoder builds a method's args as
+                                  -- #[recv] ++ args, so args[0] is the
+                                  -- receiver whatever the frontend calls it.
+                                  match target.args[0]? with
+                                  | some recvParam =>
+                                      match wrapperForwardArg target.body
+                                          >>= recvFieldChain recvParam.id with
+                                      | some hops =>
+                                          [(false, hops.foldl
+                                            (fun l (h : TypeId × String) =>
+                                              Loc.field l h.1 h.2) loc)]
+                                      | none => [(false, loc)]
                                   | none => [(false, loc)]
                                 else [(false, loc)]
                             | none => [(false, loc)])
