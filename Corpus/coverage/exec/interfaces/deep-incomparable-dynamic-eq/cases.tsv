@@ -1,0 +1,2 @@
+# id	subject	args	expected_status	expected_reason	features
+-	deepIncomparableDynamicEq	-	panic	comparing uncomparable type []int	interfaces,arrays,slices,comparability,equality,panic

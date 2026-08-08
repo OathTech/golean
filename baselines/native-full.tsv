@@ -1,19 +1,21 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-08  commit: BUG-049 FIXED (tuple-forward splat args get interface boxing)
+# recorded: 2026-08-08  commit: codex-review green regression cells (seven §2 pins)
 #   frontend: native  oracle: go run (strict lane) / go-run membership in the
 #   machine-enumerated observation set, sampled plain AND under -race
 #   (membership lane; go1.26.5) / schedule-tree singleton certification +
 #   strict go-run equality (confluent lane) / every-enumerated-path-refuses
 #   + go run -race red (racy lane; never combined with deadlock)
-# manifest_cases: 1387  pass: 1271  fail: 116
-# Re-pin reason: BUG-049 fix (codex-review landing, on-branch fix per the
-#   BUG-047/048 precedent): emitCallArgs' splat arm pairs each splatted
-#   temp with its destination parameter type (or variadic element type)
-#   and applies the same wrapInterfaceConversion ordinary arguments get.
-#   Drift is exactly the FOUR red matrix pins flipping FAIL->PASS
-#   (interfaces/tuple-forward-boxing/{fixed-any,variadic-any,
-#   mixed-second-any,fixed-plus-variadic}); both controls stay PASS.
-#   Zero drift on all 1383 other ids.
+# manifest_cases: 1394  pass: 1278  fail: 116
+# Re-pin reason: green regression cells from the external Codex review
+#   (docs/2026-08-08_semantic-divergence-review.md §2) — seven new
+#   go-run-verified PASS ids pinning agreements the review probed:
+#   methods/nil-value-receiver-method-value (selection-time nil panic),
+#   interfaces/deep-incomparable-dynamic-eq + maps/deep-incomparable-insert
+#   (deep dynamic comparability panics, == and map store),
+#   maps/nan-key-clear, maps/signed-zero-replace-delete,
+#   strings/defined-copy-invalid-utf8,
+#   methods/method-value-capture-vs-pointer. Drift is exactly these
+#   seven NEW PASS ids; zero drift on all 1387 prior ids.
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
 PASS	arrays/array-copy	-
@@ -763,6 +765,7 @@ PASS	interfaces/assert-imported-interface/negative	-
 PASS	interfaces/assert-imported-interface/positive	-
 PASS	interfaces/assert-imported-method-set/comma-ok	-
 PASS	interfaces/assert-imported-method-set/panic-form	-
+PASS	interfaces/deep-incomparable-dynamic-eq	-
 PASS	interfaces/embedded-interface	-
 PASS	interfaces/embedded-interface-assertion	-
 PASS	interfaces/embedded-interface-duplicate-method	-
@@ -912,6 +915,7 @@ PASS	maps/array-value-copy	-
 PASS	maps/channel-key	-
 FAIL	maps/clear-during-range	differential
 PASS	maps/compound-assign-eval-once	-
+PASS	maps/deep-incomparable-insert	-
 PASS	maps/defined-map-value	-
 PASS	maps/delete-alias-visible	-
 FAIL	maps/delete-during-range	differential
@@ -963,6 +967,7 @@ PASS	maps/map-literal-nan-keys	-
 PASS	maps/map-nil-assign	-
 PASS	maps/map-nil-eq	-
 PASS	maps/map-value-inner-write	-
+PASS	maps/nan-key-clear	-
 PASS	maps/nil-assign-eval-before-panic	-
 PASS	maps/nil-channel-key	-
 PASS	maps/nil-literal-values/defined-func-element	-
@@ -980,6 +985,7 @@ PASS	maps/overwrite	-
 PASS	maps/pointer-key	-
 PASS	maps/range-first-key	membership
 PASS	maps/set-membership	-
+PASS	maps/signed-zero-replace-delete	-
 PASS	maps/slice-value-element-write	-
 PASS	maps/struct-key	-
 PASS	maps/struct-key-interface-field-unhashable/access-empty	-
@@ -998,12 +1004,14 @@ PASS	methods/defined-map-receiver	-
 PASS	methods/embedded-interface-satisfaction	-
 PASS	methods/interface-dispatch	-
 PASS	methods/method-expression	-
+PASS	methods/method-value-capture-vs-pointer	-
 PASS	methods/method-value-copy	-
 PASS	methods/method-value-read	-
 PASS	methods/multi-return-method	-
 PASS	methods/nil-pointer-method-value	-
 PASS	methods/nil-receiver	-
 PASS	methods/nil-receiver-interface-dispatch	-
+PASS	methods/nil-value-receiver-method-value	-
 PASS	methods/pointer-auto-address	-
 PASS	methods/pointer-method-expression	-
 PASS	methods/pointer-method-value	-
@@ -1285,6 +1293,7 @@ PASS	slices/three-index-slice	-
 PASS	strings/byte-conversion-cap	-
 PASS	strings/byte-slice-to-string-copy	-
 PASS	strings/concat-eval-order	-
+PASS	strings/defined-copy-invalid-utf8	-
 FAIL	strings/defined-slice-string-conversion	lean-observation
 PASS	strings/index-eval-order	-
 PASS	strings/literal-edge/interpreted-nul-byte	-

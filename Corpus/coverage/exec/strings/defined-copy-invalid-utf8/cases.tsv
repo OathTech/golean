@@ -1,0 +1,2 @@
+# id	subject	args	expected_status	expected_reason	features
+-	definedCopyInvalidUTF8	-	ok	-	strings,bytes,copy,typed,invalid_utf8,slices

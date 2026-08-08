@@ -1,0 +1,2 @@
+# id	subject	args	expected_status	expected_reason	features
+-	nilValueReceiverMethodValue	-	panic	invalid memory address or nil pointer dereference	methods,pointers,nil,functions,panic

@@ -1,0 +1,2 @@
+# id	subject	args	expected_status	expected_reason	features
+-	deepIncomparableInsert	-	panic	hash of unhashable type []int	maps,keys,interfaces,arrays,slices,comparability,panic
