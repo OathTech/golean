@@ -587,4 +587,20 @@ feature breadth up the raft ladder, `slices.Sort` extern + input fuzzing.
 - Prototype a Lean WP/VCG layer over GoCore.
 - Evaluate where Iris-Lean should enter for heap and concurrency reasoning.
 
+- **`$runtime.Error` method set on recovered runtime panics (parked
+  2026-08-08, codex-review landing — do NOT implement without a scoping
+  decision).** A machine capability question surfaced by the external
+  Codex review (`docs/2026-08-08_semantic-divergence-review.md` §5 G1):
+  recovered runtime panics in real Go carry a `runtime.Error` value, so
+  `p.(error)` + `e.Error()` on the recovered value works; our machine's
+  recovered runtime-panic values do not support that method set, which
+  is what turned all 19 of the review campaign's wrapper-caught panics
+  into clone-infrastructure failures and leaves grossmith's R1
+  recover-wrapper surface ineffective against us (outbound ask recorded
+  in `docs/2026-08-07_grossmith-requests.md` addendum 2026-08-08). The
+  question is ours as well as grossmith's: should recovered runtime
+  errors expose `Error()` (and satisfy `error`/`runtime.Error`
+  assertions), and with which message envelope? Needs a design pass
+  (message-text fidelity vs envelope, method-set/externs machinery),
+  not a drive-by fix.
 - [Verdi theorem-parity via differential embedding](docs/2026-08-08_verdi-parity-backlog.md) — validate we prove Verdi's theorem class by building a second differentially-tested embedding (Verdi's network semantics; fault layers map onto Choices envelopes). Needs its own scoping study; after/alongside the raft arc. (User idea 2026-08-08.)

@@ -322,3 +322,50 @@ semantic coverage.
 5. Harden grossmith's Go build invocation against VCS stamping and add a stock
    environment test for it.
 
+
+---
+
+## GoLean-side disposition addendum (2026-08-08 — appended on landing, NOT part of the external review above)
+
+Everything above this marker is the external Codex review, verbatim as
+delivered (landed as-is at 0c53dfe9). Per-section disposition on branch
+`goose-parity`:
+
+- **§1 — FIXED as BUG-049** (`docs/BUGS.md`). Red-first: the full
+  six-form matrix landed as
+  `Corpus/coverage/exec/interfaces/tuple-forward-boxing/*` (2e05313a),
+  each red verified to reproduce the exact non-interface-assertion
+  failure at the then-tip efbbc0d2 (one infra commit past the review's
+  base) — the mixed and fixed-plus-variadic forms red on the raw
+  STRING, per the review's per-position warning. Fix (264520e8),
+  frontend-only per the review's located root cause: `emitCallArgs`'
+  splat arm pairs each splatted temp with its destination parameter
+  type (or variadic element type) and applies the same
+  `wrapInterfaceConversion` ordinary arguments get, mirroring the
+  return path's per-result wrap. All six matrix ids pin their correct
+  colors; zero drift on all prior ids in both re-pins.
+- **§2 — the six named green cells landed** (274c3d95, seven packages —
+  the deep-comparability cell splits into == and map-insertion halves):
+  `methods/nil-value-receiver-method-value`,
+  `interfaces/deep-incomparable-dynamic-eq`,
+  `maps/deep-incomparable-insert`, `maps/nan-key-clear`,
+  `maps/signed-zero-replace-delete`,
+  `strings/defined-copy-invalid-utf8`,
+  `methods/method-value-capture-vs-pointer`; all go-run-verified green
+  on first run. The two §2 fail-closed probes (slice-to-array
+  conversion; float `min`/`max`) are coverage gaps, tracked as such —
+  no action here.
+- **§3 — confirms the known backlog**: all ten rerun ids are in the
+  tracked untriaged fidelity backlog (`baselines/untriaged-ids`,
+  ratchet 16). Already tracked; no action.
+- **§4–§5 — routed to grossmith** via the dated addendum in
+  `docs/2026-08-07_grossmith-requests.md` (2026-08-08): G1 the
+  recover-wrapper `$runtime.Error` incompatibility that blanked all 19
+  caught-panic comparisons (R1 blocked; the review's three directions
+  quoted), G2 the `-buildvcs` VCS-stamping hardening, G3
+  judged-vs-generated counts in campaign reports. The `$runtime.Error`
+  method-set gap is also OURS to consider (machine capability:
+  `Error()` on recovered runtime errors) — parked in `TODO.md`
+  (2026-08-08 entry), deliberately not implemented.
+- **§6 — all follow-ups dispatched**: 1–3 landed here (the commits
+  above); 4–5 are grossmith's, routed via the requests addendum.

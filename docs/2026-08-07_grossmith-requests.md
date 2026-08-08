@@ -110,3 +110,64 @@ Seed shapes: `embedding/value-embedded-pointer-promotion`,
 If only two land: R1 + R2 together would have mechanically found most
 of what our hardest audit rounds found manually. All six compose: R1's
 wrapper is the observation channel R2/R4/R6 want.
+
+---
+
+## Addendum (2026-08-08): outbound items from the external Codex semantic-divergence review
+
+Source: `docs/2026-08-08_semantic-divergence-review.md` (external Codex
+review, read-only, GoLean 06933964 / grossmith a09bf911, Go 1.26.5),
+§4–§5. Its campaign: 250 cases, seeds 2000000..2000249, 225 semantic
+matches, 0 mismatches, 25 clone-infrastructure failures. Two asks for
+grossmith and one reporting convention, recorded here as the outbound
+channel; full detail in the review doc.
+
+### G1 — recover-wrapper caught-panic observation is profile-incompatible with the GoLean clone (R1 is blocked)
+
+The highest-yield surface we requested (R1 above) is currently
+ineffective: `fuzzPanicCode` (grossmith `gen/gen.go:1171-1176`) attempts
+`p.(error)` and then calls `e.Error()` on the recovered value, and the
+GoLean clone does not support the `$runtime.Error` method set — so in
+the review's campaign every wrapper that actually caught a runtime
+panic became a clone-infrastructure failure ("wrapper-caught: 19;
+successfully compared caught-panic executions: 0"). The 40 generated
+`recover_wrapper` cases therefore do not mean 40 recovered-panic
+behaviors were validated: green wrappers were no-panic paths. The
+review's three candidate directions, quoted:
+
+> - avoid method dispatch on recovered runtime errors in the GoLean
+>   profile;
+> - encode known runtime panic classes through an observation mechanism
+>   already supported by the clone;
+> - or treat `$runtime.Error` support as an explicit prerequisite and
+>   label the recover rung unavailable until it lands.
+
+And the constraint, quoted: "The replacement must still distinguish
+which panic occurred. Merely recording that some panic was recovered
+would lose the ordering discrimination R1 was designed to provide."
+
+(GoLean-side note: the `$runtime.Error` method-set gap is also OURS to
+consider — whether the machine should support `Error()` on recovered
+runtime errors is parked in `TODO.md` (2026-08-08 entry, not
+implemented); a resolution there would satisfy the third direction.)
+
+### G2 — harden reference builds against Go 1.26.5 VCS stamping
+
+Stock-environment `go test ./...` and generated reference builds fail
+with "error obtaining VCS status: exit status 128 / Use -buildvcs=false
+to disable VCS stamping"; `GcAdapter`'s sanitized environment
+(`harness/harness.go:252-273`) drops an external
+`GOFLAGS=-buildvcs=false`, leaving no ordinary campaign CLI route to
+the workaround (the review used a scratch-only `go env -w`). Ask: make
+the reference build independent of ambient VCS stamping — add
+`-buildvcs=false` to the build invocation or support a deliberate
+build-flags/environment path — plus a stock-environment test for it.
+
+### G3 — campaign reporting: judged vs generated counts
+
+Per the review §5 G3 (and §4's lesson): campaign reports should state,
+per high-value feature rung, BOTH the gross generated count and the
+successfully judged (actually compared) count, so profile
+incompatibilities cannot look like tested semantic coverage — this
+campaign's recover rung read as "40 recover_wrapper cases" while the
+judged caught-panic count was 0.
