@@ -29,8 +29,10 @@ func (c *c) Bar() {
 
 // --- GoLean harness ---
 // Authored wrapper: constructs the type whose METHODS are mutually
-// recursive through two interfaces (goose REJECTS this package with
-// "// ERROR cycle in dependencies"; it is valid Go). The methods are
+// recursive through two interfaces. (Correction, phase-C fix round
+// 2026-08-08: at the pinned rev this is a POSITIVE gold-translated
+// goose example — the upstream "// ERROR cycle in dependencies"
+// comment is vestigial; NOT a parity delta.) The methods are
 // deliberately not called (calling either diverges by construction);
 // the observable is that lowering + interface assignment work.
 

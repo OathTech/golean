@@ -15,8 +15,10 @@ func B() {
 }
 
 // --- GoLean harness ---
-// Authored wrapper: the mutually recursive pair (goose REJECTS this
-// package with "// ERROR cycle in dependencies"; valid Go). Calling
+// Authored wrapper: the mutually recursive pair. (Correction,
+// phase-C fix round 2026-08-08: at the pinned rev this is a POSITIVE
+// gold-translated goose example — the upstream "// ERROR cycle in
+// dependencies" comment is vestigial; NOT a parity delta.) Calling
 // either function diverges by construction, so the wrapper takes
 // their function VALUES only; the observable is that lowering works.
 

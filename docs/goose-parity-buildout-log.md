@@ -196,24 +196,30 @@ use). Lane assignment per row (MAY-DECIDE), whys recorded in cases.tsv:
 | unit | rows | R1 | lanes | notes |
 |---|---|---|---|---|
 | channel/actris-example | 1 | 1 PASS | confluent | DSPExample = 42 (rendezvous handoff); certified 36 leaves |
-| channel/google-search | 1 | 1 PASS | membership | arrival-order code, certified members=6 (all 3! orders), 4/6 exhibited by go-run samples; work=40000000 (~10× prior corpus max; ~2-4 min recurring per full run — FLAG for next checkpoint) |
+| channel/google-search | 1 | 1 PASS | membership | arrival-order code, certified members=6 (all 3! orders), 4/6 exhibited by go-run samples; work=40000000 (magnitude corrected at the phase-C fix round: ~2.7× the prior corpus max work param — worker-pool/sum's 15M, not "10× sb-chan's 4M" — and ~1.3× the prior heaviest wall time, ~84 s vs ~65 s; recurring-cost FLAG stands) |
 | channel/muxer | 2 | 2 PASS | confluent | async + client; client-old/make-greeting rows PARKED (P2) |
 | channel/muxer-unverified | 2 | 2 PASS | strict | single-threaded select paths (drained/done); assembled with muxer.go |
 | channel/select-tricky-examples | 3 | 3 PASS | 1 confluent + 2 strict | their wp-proved trio incl. the no-2-NB-rendezvous shape and the guaranteed-ready closed-recv |
 | channel/fibonacci | — | — | — | PARKED whole unit (P2: append-spill × schedule tree >20M) |
 | channel/higher-order | — | — | — | PARKED whole unit (P2: >8M at sites=96) |
 
-Totals: 5 units landed, 9 rows, 9 R1 PASS (5 confluent-certified,
-1 membership-certified, 3 strict); 2 units + 2 rows parked (P2). The
+Totals: 5 units landed, 9 rows, 9 R1 PASS (4 confluent-certified,
+1 membership-certified, 4 strict — split corrected at the phase-C fix
+round; the first version said 5/1/3, contradicting the table above);
+2 units + 2 rows parked (P2). The
 red-first loop here was the enumerator's own author-assertion checks
 (width refuted mechanically at fibonacci's spill bound; sites bounds
 raised until measured) — every failure was a loud bound refutation,
-never a silent truncation. Parity note: this covers goose's verified
-channel-example surface for actris_example (wp_DSPExample), the
-select-tricky trio (incl. their proved-unreachable-default example),
-and muxer's Async/Client (wp lemmas in their channel examples); their
-Google example is UNVERIFIED upstream while ours ships with a
-machine-certified 6-member observation set.
+never a silent truncation. Parity note (corrected at the phase-C fix
+round — "their Google example is UNVERIFIED upstream" was FALSE): this
+covers goose's verified channel-example surface for actris_example
+(wp_DSPExample), the select-tricky trio (incl. their
+proved-unreachable-default example), and muxer's Async/Client; for
+Google the honest delta is METHOD, not coverage — upstream proves
+`wp_Google` (channel_google.v, Qed, 0 Admitted, permutation
+postcondition `xs ≡ₚ google_expected q`) on the byte-identical
+program, while ours adds machine-certified reachability of all 6
+arrival orders + the executable differential.
 
 Rungs: R2/R3 skipped batch-wide — concurrent programs are outside the
 sequential `allStreamsOk` checker (R2), and GoSpecC's spawning form is
@@ -230,17 +236,19 @@ comments. Units:
 | unit | rows | R1 | notes |
 |---|---|---|---|
 | storage/comments | 1 | 1 PASS | 0consts.go + 1doc.go assembled (one upstream package) |
-| storage/interfacerecursion | 1 | 1 PASS | goose REJECTS this package ("// ERROR cycle in dependencies"); valid Go — parity delta. Methods deliberately uncalled (divergent by construction); observable = lowering + interface assignment |
+| storage/interfacerecursion | 1 | 1 PASS | valid coverage of interface-recursion lowering; NOT a parity delta (corrected at the phase-C fix round: at the pinned rev this is a POSITIVE gold-translated goose example — the "// ERROR cycle" comment is vestigial, TestExamples passes it). Methods deliberately uncalled (divergent by construction); observable = lowering + interface assignment |
 | storage/mapliteral | 1 | 1 PASS | + R2 pin (readout 21) |
-| storage/mutualrec | 1 | 1 PASS | goose REJECTS ("cycle"); valid Go — parity delta. Function values taken, not called |
+| storage/mutualrec | 1 | 1 PASS | valid coverage of mutual-recursion lowering; NOT a parity delta (same correction: POSITIVE gold-translated goose example, vestigial ERROR comment). Function values taken, not called |
 | generics/constraints | 1 | 1 PASS | `~[]int` underlying constraint + generic Clone (append+spread) |
 | generics/helpers | 1 | 1 PASS | AnyPointer[T any] |
 | generics/generic-conversion | 1 | 0 PASS, 1 frontend-export | short-circuit-operand quarantine (assert's `&&`). NOTE: the upstream `genericConversions()` PANICS in real Go ("index out of range [0] with length 0" — `&(nilConvert[[]int]()[0][0])` indexes a nil slice); their unittest tree never RUNS it (translation-only), so the row is classified expected_status=panic — a latent upstream bug surfaced by executing their corpus |
 
 Totals: 7 units, 7 rows — 6 R1 PASS, 1 frontend-export (recorded
-class). Parity deltas: two whole packages goose rejects as
-untranslatable cycles (interfacerecursion, mutualrec) run green here;
-their generic_conversion example is latently panicking Go.
+class). Parity delta (corrected at the phase-C fix round: the claimed
+interfacerecursion/mutualrec delta was FALSE — both are POSITIVE
+gold-translated goose examples at the pinned rev; the units stand as
+ordinary valid coverage): their generic_conversion example is
+latently panicking Go — that delta stands.
 
 Rungs: R2 = storage/mapliteral (Terminates + readout 21; 0.6 s,
 ~0.7 GiB RSS). R2 skipped elsewhere (P1 pending; constraints hits the
@@ -269,9 +277,21 @@ scoping's B.3 oracle-mapping shape; `--allow-no-oracles` lane):
 | unittest/literals | 1 | 1 PASS | incl. a struct FIELD named `int` and unkeyed literals |
 | unittest/operators | 1 | 1 PASS | incl. `&^` and `&^=` |
 
-Totals: 11 units, 11 rows, 11/11 R1 PASS — zero frontend refusals in
-this slice. Remaining unittest files needing MORE than mechanical
-wrapper authorship are untouched (next slices or park per charter).
+Totals: 11 units, 11 rows, 11/11 R1 PASS — zero frontend REFUSALS in
+this slice. **Corrected at the phase-C fix round (2026-08-08): "zero
+frontend refusals" was true but concealed a COMPLIANCE LAPSE.** The
+const wrapper's `sum := int(useUntypedInt())` triggers a real frontend
+wrong-answer class (conversion-of-call double emission, now
+docs/BUGS.md BUG-047) that ran GREEN only because the callee is pure
+— and it went unparked at batch time, against the charter's MUST-PARK
+for suspected GoLean bugs. The phase-B checkpoint review caught it,
+not the batch discipline; the miss's root cause was inspecting only
+FAILs. Filed as BUG-047 (with the six-shape repro matrix), red-first
+pinned by `assign-order/conversion-call-eval-once/{define,assign}`,
+triaged in ledger P3; the const R2 pin and the copy/const cases carry
+true-of-term / green-by-luck annotations. Remaining unittest files
+needing MORE than mechanical wrapper authorship are untouched (next
+slices or park per charter).
 
 Rungs: R2 = unittest/const (Terminates + readout 2139, the
 differentially-agreed checksum; 0.6 s / ~0.7 GiB RSS). R2 skipped
@@ -279,3 +299,42 @@ elsewhere (P1 pending). R3 skipped batch-wide.
 
 Gate: full `scripts/ci --diff`; baseline re-pinned same-commit
 (1334 → 1345 ids; zero drift on all 1334 prior ids).
+
+## Phase-B checkpoint fix round (2026-08-08, opening phase C)
+
+Checkpoint verdict: three MAJORS + two minors confirmed, one refuted.
+All fixed here; the two majors' substance:
+
+1. (major, M1) **BUG-047 filed** — conversion-of-call double emission
+   (pre-existing frontend defect surfaced by batch 6's const wrapper;
+   verifier's six-shape matrix in the BUGS.md entry; root cause
+   emit.go:2112). Red-first pinned by the fresh canonical case
+   `assign-order/conversion-call-eval-once/{define,assign}` (both
+   FAIL/differential, Lean 202 vs Go 101 — joins the baseline as the
+   bug's mechanical pin). NOT fixed (charter forbids frontend changes;
+   maintenance round). Landed-corpus sweep: the only in-corpus
+   instances are semantics/copy (green by idempotence) and
+   unittest/const (green by purity) — both annotated, plus the
+   ImportedGooseConst pin docstring (true-of-term). Additional
+   controls recorded: `return T(f())`, `var x T = T(f())`, and
+   `len(f())` shapes are unaffected. The COMPLIANCE LAPSE (unparked at
+   batch time) is recorded in the batch-6 section and ledger P3 —
+   honestly, not cleaned.
+2. (major, M2) the "goose REJECTS interfacerecursion/mutualrec" parity
+   claim was FALSE (both are positive gold-translated examples; the
+   ERROR comments are vestigial — verified against examples_test.go
+   and the gold files directly). Struck/re-characterized in all four
+   locations (matrix §6, batch-5 log ×2, both wrapper comments).
+3. (major, M3) "their Google example is UNVERIFIED upstream" was FALSE
+   — `wp_Google` is Qed with 0 Admitted at the pinned perennial rev
+   (verified directly). Restated as a METHOD delta (their partial-
+   correctness permutation triple vs our certified 6-member
+   reachability + differential) in matrix §6 and the batch-4 log.
+4. (minor) batch-4 lane totals corrected to 4 confluent / 1
+   membership / 4 strict (re-verified directly from cases.tsv lane
+   columns — the flagged verifier's evidence held).
+5. (minor) the work=40000000 magnitude framing corrected in the log
+   and P2 (~2.7× worker-pool/sum's 15M, ~1.3× its wall time — not
+   "10× sb-chan's 4M").
+
+Refuted (no action): the P2 wrappers-remain understatement claim.

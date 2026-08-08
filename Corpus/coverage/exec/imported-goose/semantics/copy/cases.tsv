@@ -1,4 +1,9 @@
 # id	subject	args	expected_status	expected_reason	features
+# BUG-047 note (2026-08-08): the upstream oracles' `n := uint64(copy(y, x))`
+# is the conversion-of-call-as-whole-RHS shape the frontend double-emits
+# (docs/BUGS.md BUG-047) — `copy` executes TWICE in the lowered program.
+# The shorter-dst/shorter-src rows are green only because the double copy
+# is observationally IDEMPOTENT here (same src, same dst, same return).
 copy-simple	goleanTestCopySimple	-	ok	-	imported_goose,slices,copy
 copy-shorter-dst	goleanTestCopyShorterDst	-	ok	-	imported_goose,slices,copy
 copy-shorter-src	goleanTestCopyShorterSrc	-	ok	-	imported_goose,slices,copy

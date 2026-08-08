@@ -69,9 +69,13 @@ Entries are appended in discovery order, dated.
     here, no fix attempted).
   - Contrast (landed): google-search CONVERGES at 34.7M steps /
     ~2-4 min (members=6 exactly, all 3! arrival orders) and is landed
-    with work=40000000 — itself ~10× the corpus's largest prior
-    work param (sb-chan's 4M); its recurring full-run cost is flagged
-    in the batch-4 log for the next checkpoint.
+    with work=40000000 — ~2.7× the corpus's largest prior work param
+    (goroutines/worker-pool/sum's 15M; magnitude corrected at the
+    phase-C fix round — this entry first said "~10× sb-chan's 4M",
+    misnaming the case and its value: sb-chan is 5M, the 4M row is
+    sched-dependent/first-come) and ~1.3× the prior heaviest wall
+    time (~84 s vs worker-pool/sum's ~65 s); its recurring full-run
+    cost is flagged in the batch-4 log.
 - **Options + costs:**
   1. Raise caps/timeouts per case until convergence: unbounded and
      recurring — every full `ci --diff` pays it; make-greeting-class
@@ -88,3 +92,35 @@ Entries are appended in discovery order, dated.
      these trees are classic POR wins): machine/tool change,
      MUST-PARK in this buildout.
 - **NO decision** — units skipped, buildout continues.
+
+## P3 (2026-08-08) — BUG-047: conversion-of-call double emission (suspected GoLean bug surfaced by imports) + the handling lapse
+
+- **Unit:** `unittest/const` (batch 6, the surfacing wrapper) and
+  `semantics/copy` (batch 2, green-by-idempotence instances); the bug
+  itself is corpus-wide (any `x := T(f())` / `x = T(f())`).
+- **The precise question:** none open for this buildout — the item is
+  the charter's MUST-PARK "suspected GoLean bugs surfaced by imports
+  (park with repro; the fix belongs to a maintenance round)". Filed as
+  **docs/BUGS.md BUG-047** with the phase-B verifier's six-shape repro
+  matrix and root cause (emit.go:2112 conversion-path hoist + generic
+  re-emit), and red-first pinned by the fresh canonical case
+  `assign-order/conversion-call-eval-once/{define,assign}`
+  (FAIL/differential, Lean 202 vs Go 101).
+- **Evidence:** BUG-047's entry (matrix verbatim); the buildout
+  worker's independent re-reproduction; the landed-corpus sweep (the
+  only in-corpus instances are the two green-by-luck sites, both
+  annotated at their cases.tsv + the R2 pin docstring).
+- **Options + costs:** fix in the maintenance round (guard the
+  conversion path's already-hoisted case at emit.go:2116, or report
+  effectful=true from the conversion branch) — small, but frontend
+  changes are charter-forbidden here; the pin case turns green when
+  fixed and BUG-047's Cases discipline enforces closure.
+- **COMPLIANCE LAPSE, recorded (not laundered):** the class was
+  triggered by batch 6's own authored wrapper and went UNPARKED at the
+  time — the batch-6 log claimed "11/11 R1 PASS — zero frontend
+  refusals" while a wrong-answer class ran green by purity underneath.
+  The checkpoint review caught it, not the batch discipline. Root
+  cause of the miss: green R1 rows were read as "no frontend issue";
+  the discipline only inspected FAILs. Recorded also in the batch log.
+- **NO further decision needed** — the fix is deferred by charter, the
+  triage is complete.

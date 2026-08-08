@@ -30,6 +30,63 @@ differential-pinned) `- Cases: <id>, <id>, …` (baseline case ids), then prose.
 
 ---
 
+## BUG-047 — frontend emits a call TWICE when the RHS of a single assign/define is a conversion of a call (silent divergence from Go)
+
+- Status: open
+- Pinned-by: differential
+- Cases: assign-order/conversion-call-eval-once/define, assign-order/conversion-call-eval-once/assign
+- Discovered: 2026-08-08, goose-parity buildout phase-B checkpoint review
+  (goose-import provenance: batch 6's authored wrapper
+  `sum := int(useUntypedInt())` in
+  `Corpus/coverage/exec/imported-goose/unittest/const/main.go:56`
+  surfaced the class; the checkpoint reviewer isolated it, the
+  verifier reproduced the matrix below; the buildout worker
+  re-reproduced `x := int(bump())` -> 202 vs 101 independently).
+- What: for `x := T(f())` and `x = T(f())` — a conversion of a call as
+  the WHOLE RHS of a single assign/define — the native frontend emits
+  the inner call twice, so a side-effecting callee (or an effectful
+  builtin such as `copy`) executes twice and GoLean silently disagrees
+  with `go run`.
+- Verifier's repro matrix (golean native-json-run vs `go run`,
+  go1.26.5, quoted verbatim from the phase-B checkpoint verification):
+  `x := int(bump())` 202 vs 101; `x = int(bump())` 202 vs 101;
+  unused-result define 2 vs 1; `int(uint32(bump()))` 202 vs 101;
+  `uint64(bump())` 202 vs 101; `n := uint64(copy(s[1:], s))` 31112 vs
+  31123; and an additional variant, `s := string(rune(bump()+64))` 102
+  vs 101. Controls behave correctly (plain `x := bump()`,
+  `var x int = int(bump())`, `int(bump())+0`, `any(bump())` all
+  agree), so the defect is specific to a conversion-of-call as the
+  whole RHS of a single assign/define. Buildout-side additional
+  controls (2026-08-08): `return int(bump())` and `x := len(bump())`
+  are also correct — return statements and builtin-of-call take other
+  emission paths.
+- Root cause (verifier-confirmed): `tools/nativefrontend/emit.go:2112`
+  calls `emitCallNode(call)`; the conversion branch (emit.go:5271-5322)
+  has ALREADY hoisted the inner call into the statement buffer via
+  `emitExpr`, then reports `effectful == false`, so the early-return
+  guard at :2116 is skipped and the generic path at :2132 re-emits the
+  same RHS, hoisting a second copy ($c0 dead, $c1 used). The adjacent
+  `isBuiltinCall` guard (:2085-2094) was written for exactly this
+  hazard but covers only a bare builtin RHS, not a builtin (or call)
+  under a conversion.
+- Known green-by-luck instances in the landed corpus (annotated at
+  their sites): `imported-goose/semantics/copy` rows shorter-dst /
+  shorter-src (`n := uint64(copy(y, x))` — copy runs twice,
+  observationally idempotent here); `imported-goose/unittest/const`
+  (`int(useUntypedInt())` — pure callee, checksum unaffected; its R2
+  pin `Specs/ImportedGooseConst.lean` pins the DOUBLE-EMITTED term,
+  true-of-term, docstring annotated). Corpus-wide source sweep found
+  no other landed instance of the trigger shape.
+- Fix: NOT fixed in the goose-parity buildout (the charter forbids
+  frontend changes there); belongs to the post-buildout maintenance
+  round. The natural fix direction is making the :2116 guard cover the
+  conversion path's already-hoisted case (or having the conversion
+  branch report effectful=true).
+- Handling lapse, recorded: the class was triggered by a batch-6
+  wrapper and went unparked while the batch log claimed "zero frontend
+  refusals" — a charter MUST-PARK compliance miss, recorded plainly in
+  docs/goose-parity-buildout-log.md and ledger entry P3.
+
 ## BUG-046 — BUG-045's chan-object rule is fail-open for SELECT SEND clauses: selectgo pass 1 DOES racereadpc the channel object per polled send case
 
 - Status: fixed (2026-08-08, convergence-check response — `raceUpdate`'s

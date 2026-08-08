@@ -141,7 +141,8 @@ program by program.
 
 ## 6. Imported-corpus status (goose-parity buildout lane)
 
-Last-reviewed: goose-parity phase B, batch 6, 2026-08-08. The
+Last-reviewed: goose-parity phase-C fix round (parity-claim
+corrections M2/M3), 2026-08-08. The
 `Corpus/coverage/exec/imported-goose/` lane (provenance-tagged, verbatim
 bodies, goose @ 3be88bb — pipeline `scripts/import-goose`, charter
 `docs/2026-08-07_goose-parity-charter.md`) is populating; this section
@@ -166,16 +167,26 @@ their 37 `test_fun_ok` proofs over 112 oracles — R2 count deliberately
 held down pending the parked staleness-guard decision P1, not by
 capability).
 
-Batch 4/5 parity deltas: our channel-example coverage now includes
-machine-CERTIFIED results for their verified examples wp_DSPExample
-(=42, confluent), the select-tricky trio (their proved-unreachable
-default included), muxer Async/Client — while their Google example
-(unverified upstream) ships here with a certified 6-member
-arrival-order set. Goose REJECTS the interfacerecursion and mutualrec
-packages outright ("// ERROR cycle in dependencies"); both are valid
-Go and differentially green here. Their generic_conversion example is
-latently panicking Go (probed: "index out of range [0] with length 0")
-that their translation-only tests never execute. Claim-strength
+Batch 4/5 parity notes (corrected at the phase-C fix round,
+2026-08-08 — the first version claimed two false deltas): our
+channel-example coverage now includes machine-CERTIFIED results for
+their verified examples wp_DSPExample (=42, confluent), the
+select-tricky trio (their proved-unreachable default included), muxer
+Async/Client. For the Google example the delta is METHOD, not
+coverage: upstream PROVES `wp_Google` (channel_google.v, Qed, 0
+Admitted) with a permutation postcondition `xs ≡ₚ google_expected q`
+— the same set-membership content — while ours adds machine-certified
+REACHABILITY of all 6 arrival orders (envelope completeness their
+partial-correctness triple does not state) plus the executable
+differential. interfacerecursion and mutualrec are POSITIVE
+gold-translated goose examples at the pinned rev (their `// ERROR
+cycle in dependencies` comments are vestigial — consumed only by
+TestNegativeExamples, which loads a different tree; TestExamples
+passes both) — our units are ordinary valid coverage of
+interface/mutual-recursion lowering, NOT a parity delta. Their
+generic_conversion example is latently panicking Go (probed: "index
+out of range [0] with length 0") that their translation-only tests
+never execute — that delta stands. Claim-strength
 caveat on that comparison (phase-A checkpoint, 2026-08-08), two-sided:
 our R2 pins pair ∀-streams outcome-agnostic `Terminates` with a
 CANONICAL-STREAM `.normal` readout (weaker than the designated

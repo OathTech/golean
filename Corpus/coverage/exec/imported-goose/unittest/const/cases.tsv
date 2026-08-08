@@ -1,2 +1,6 @@
 # id	subject	args	expected_status	expected_reason	features
+# BUG-047 note (2026-08-08): the authored wrapper's `sum := int(useUntypedInt())`
+# triggers the frontend's conversion-of-call double emission (docs/BUGS.md
+# BUG-047); the row is green only because `useUntypedInt` is PURE. The R2 pin
+# Specs/ImportedGooseConst.lean pins the double-emitted term (docstring caveat).
 -	goleanConst	-	ok	-	imported_goose,constants,iota

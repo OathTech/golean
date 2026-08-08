@@ -16,6 +16,18 @@ Per oracle, kernel-checked and first-order over the interpreter:
 ∀-streams `Terminates` (`allStreamsOk` + soundness) and the
 canonical-stream `.normal` readout at the oracle's true verdict `2139`.
 NOT designated statements.
+
+**BUG-047 caveat (phase-B checkpoint, 2026-08-08): this term contains a
+DOUBLE-EMITTED call.** The wrapper's `sum := int(useUntypedInt())`
+triggers the frontend's conversion-of-call-as-whole-RHS defect
+(docs/BUGS.md BUG-047): `constLowered` carries TWO
+`Stmt.call … ⟨"useUntypedInt"⟩` sequences for the one source call
+(`$c0` dead, `$c1` used). The theorems below are TRUE OF THE TERM as
+pinned, and the readout `2139` matches the `go run` oracle only
+because `useUntypedInt` is PURE — the double execution is
+observationally invisible here. When BUG-047 is fixed in a
+maintenance round, this term must be regenerated (the pin will
+otherwise date, per the P1 caveat above).
 -/
 
 open GoLean GoLean.GoCore GoLean.GoCore.Machine

@@ -1,0 +1,3 @@
+# id	subject	args	expected_status	expected_reason	features
+define	convCallDefineOnce	-	ok	-	assignment,conversions,calls,evaluation_order
+assign	convCallAssignOnce	-	ok	-	assignment,conversions,calls,evaluation_order

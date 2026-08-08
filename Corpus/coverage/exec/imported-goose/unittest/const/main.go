@@ -51,6 +51,8 @@ func useUntypedString() string {
 // --- GoLean harness ---
 // Authored wrapper (unittest tree has no oracles; scoping B.3 shape:
 // a checksum/observable computed from the upstream functions).
+// BUG-047: `sum := int(useUntypedInt())` below is the conversion-of-call
+// shape the frontend double-emits; green by callee purity (see cases.tsv).
 
 func goleanConst() int {
 	sum := int(useUntypedInt())
