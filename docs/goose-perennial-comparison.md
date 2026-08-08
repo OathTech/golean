@@ -141,8 +141,9 @@ program by program.
 
 ## 6. Imported-corpus status (goose-parity buildout lane)
 
-Last-reviewed: goose-parity phase-C fix round (parity-claim
-corrections M2/M3), 2026-08-08. The
+Last-reviewed: goose-parity end-of-buildout, 2026-08-08
+(docs/2026-08-08_goose-parity-end-of-buildout.md is the closing
+report). The
 `Corpus/coverage/exec/imported-goose/` lane (provenance-tagged, verbatim
 bodies, goose @ 3be88bb — pipeline `scripts/import-goose`, charter
 `docs/2026-08-07_goose-parity-charter.md`) is populating; this section
@@ -158,6 +159,12 @@ as `test_fun_ok` Iris lemmas, 1 Admitted).
 | 4 (channel tree, authored wrappers + lane classification) | 5 landed (+2 units, 2 rows parked P2) | 9 | 9 | 0 | 0 (concurrent: outside the sequential checker) |
 | 5 (storage-clean + generics) | 7 | 7 | 6 | 1 (short-circuit-operand) | 1 (storage/mapliteral) |
 | 6 (unittest wrapper lane, first slice) | 11 | 11 | 11 | 0 | 1 (unittest/const) |
+
+FINAL buildout totals (after batch 9): 78 units landed / 172
+imported rows — 151 R1 PASS, 20 recorded-fail-closed frontend-export,
+1 deliberate BUG-048 pin red; 12 oracles R2 kernel-pinned; 2 units + 2
+rows parked (P2); 2 suspected GoLean bugs filed and pinned (BUG-047,
+BUG-048). Per-batch rows below are historical.
 
 Running totals after batch 6: 51 units landed (28 semantics of 29
 clean — remaining panic.go; 5 channel + 2 parked; 7 storage/generics;
