@@ -367,3 +367,66 @@ skipped batch-wide.
 
 Gate: full `scripts/ci --diff`; baseline re-pinned same-commit
 (1347 → 1359 ids; zero drift on all 1347 prior ids).
+
+## Batch 8 (2026-08-08) — unittest wrapper lane, second slice (+ BUG-048)
+
+9 units, 13 imported rows (conversions carries 2 upstream bool oracles
++ a wrapper row; embedded 3 rows), plus the 2-row canonical BUG-048
+pin case:
+
+| unit | rows | R1 | notes |
+|---|---|---|---|
+| unittest/array | 1 | 1 PASS | keyed array literal ([...] with const keys), [100] param, elem refs |
+| unittest/slices | 1 | 1 PASS | slice alias type, &elem through method |
+| unittest/nil | 1 | 1 PASS | |
+| unittest/control-flow | 1 | 1 PASS | incl. else-if init-statement chains with shadowing |
+| unittest/loops | 1 | 1 PASS | FOUR upstream loop demos DIVERGE by construction (ImplicitLoopContinue{,2}, nestedConditionalInLoopImplicitContinue, nestedLoops) — taken as values only, wrapper comment records it. First authoring attempt CALLED them: the Go-side case binary ran unbounded and SURVIVED the harness's go-run timeout kill (orphaned child; killed by hand) — harness-robustness observation, no scripts change |
+| unittest/switch | 1 | 1 PASS | |
+| unittest/conversions | 3 | 3 PASS | incl. the map[any]any/any-key oracle |
+| unittest/globals | 1 | 1 PASS | effectful global initializers + two init() funcs |
+| unittest/embedded | 3 | 2 PASS + 1 red BUG-048 pin | TWO latent upstream panic paths pinned green-as-panic (useEmbeddedField writes through a fresh zero &embedD{}'s nil *embedB for ANY argument; useEmbeddedValField same via returnEmbedValWithPointer) — their translation-only tests never run either. The `live` row is the in-corpus BUG-048 pin (stays red) |
+
+**BUG-048 filed** (docs/BUGS.md; ledger P4): the machine wrong-STUCKS
+calling a VALUE-receiver method through a pointer-typed VARIABLE
+(`p := &x; p.get()` — Go auto-derefs). Surfaced by embedded.go's
+`d.embedB.Foo()`; minimized by an 8-shape probe matrix (notable: the
+PROMOTED-through-embedding path via a pointer variable works; the
+direct call does not). Canonical red-first pin
+`methods/value-receiver-via-pointer-var/{addr-of-var,addr-of-literal}`
+(FAIL/lean-observation) + the imported `embedded/live` row — all three
+in BUG-048's Cases. An unexercised-path find: the methods lane never
+covered this exact cell. NOT fixed (charter).
+
+Totals: 13 imported rows — 12 PASS, 1 deliberate red (BUG-048 pin);
++2 canonical deliberate reds (BUG-048 pins). Two new latent upstream
+panics pinned. R2/R3 skipped batch-wide (P1 pending; batch prioritized
+the bug triage).
+
+Gate: batches 8 and 9 land in ONE commit with ONE full
+`scripts/ci --diff` + same-commit re-pin (1359 → 1381 ids; zero drift
+on all 1359 prior ids; check-bugs green with BUG-048's three pins).
+Reason, recorded: the batch-8 gate run went PARTIAL (1374/1381)
+because batch 9's imports landed in the tree mid-run — the corpus
+manifest is a filesystem walk, so the final baseline-diff saw 7 ids
+the run predated. Rather than re-run two full gates, the two batches'
+final state takes one full gate (batch composition is the worker's
+call; the discipline's substance — full run, zero drift, same-commit
+re-pin — holds for the union). Process lesson for the retrospective:
+import nothing while a full gate is in flight.
+
+## Batch 9 (2026-08-08) — unittest wrapper lane, final slice
+
+7 units, 7 rows (all wrapper-authored):
+
+| unit | rows | R1 | notes |
+|---|---|---|---|
+| unittest/varargs | 1 | 1 PASS | incl. variadic pass-through of a multi-value call |
+| unittest/struct-method | 1 | 1 PASS | method on literal receiver, blank receiver |
+| unittest/comments | 1 | 1 PASS | Coq-comment-hostile doc comments |
+| unittest/type-switch | 1 | 1 PASS | incl. the init-statement fancy type switch with nil case |
+| unittest/interfaces | 1 | 0 PASS, 1 frontend-export | recorded class "implicit interface conversion in multi-value assignment (interfaces campaign, deferred)" (emit.go:2039/2266) — testMultiReturn's `*x, y = returnConcrete()` |
+| unittest/struct-pointers | 1 | 1 PASS | wrapper avoids the BUG-048 shape (`s.readBVal()` via pointer var) — noted in the wrapper comment; the class stays pinned by its canonical case |
+| unittest/replicated-disk | 1 | 1 PASS | the dummy-disk replicated read/write/recover (1000-iteration recover loop runs green) |
+
+Totals: 7 rows — 6 PASS, 1 frontend-export (recorded class). R2/R3
+skipped batch-wide (P1 pending).

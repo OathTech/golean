@@ -124,3 +124,25 @@ Entries are appended in discovery order, dated.
   the discipline only inspected FAILs. Recorded also in the batch log.
 - **NO further decision needed** — the fix is deferred by charter, the
   triage is complete.
+
+## P4 (2026-08-08) — BUG-048: value-receiver method via pointer variable wrong-stuck (suspected GoLean bug surfaced by imports)
+
+- **Unit:** `unittest/embedded` (batch 8). The unit's other rows are
+  green (incl. two latent-upstream-panic pins); the `live` row stays
+  RED as a corpus pin of the bug.
+- **The precise question:** none open for this buildout — MUST-PARK
+  triage per the charter. Filed as **docs/BUGS.md BUG-048** with the
+  full probe matrix; minimized canonical pin
+  `methods/value-receiver-via-pointer-var/{addr-of-var,addr-of-literal}`
+  (both FAIL/lean-observation: machine stuck "expected struct value,
+  got addr" where Go auto-derefs).
+- **Evidence:** BUG-048's probe matrix (the buildout worker's own
+  probes, 8 shapes); notable localization: promotion-through-embedding
+  via a pointer variable WORKS, the direct value-receiver call on the
+  pointer variable does not.
+- **Options + costs:** maintenance-round fix in receiver adaptation
+  (auto-deref for value receivers on pointer bases along the
+  non-promoted path); the three pins turn green when fixed and the
+  BUGS.md Cases discipline enforces closure.
+- **NO further decision needed** — triage complete, fix deferred by
+  charter.

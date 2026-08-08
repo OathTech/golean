@@ -1,17 +1,20 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-08  commit: goose-parity batch 7 (panic pair + unittest small files)
+# recorded: 2026-08-08  commit: goose-parity batches 8+9 (unittest wrapper lane completion + BUG-048)
 #   frontend: native  oracle: go run (strict lane) / go-run membership in the
 #   machine-enumerated observation set, sampled plain AND under -race
 #   (membership lane; go1.26.5) / schedule-tree singleton certification +
 #   strict go-run equality (confluent lane) / every-enumerated-path-refuses
 #   + go run -race red (racy lane; never combined with deadlock)
-# manifest_cases: 1359  pass: 1240  fail: 119
-# Re-pin reason: goose-parity buildout batch 7 — 12 imported-goose ids join
-#   (goose @ 3be88bb: semantics/panic + 10 unittest units incl. copy's two
-#   upstream bool oracles): 11 PASS (incl. two expected-panic rows), 1 FAIL
-#   at frontend-export in the recorded builtin-copy-in-statement-position
-#   class (unittest/copy/copy-simple). Zero drift on all 1347 pre-existing
-#   ids (the two BUG-047 pins stay red as recorded).
+# manifest_cases: 1381  pass: 1258  fail: 123
+# Re-pin reason: goose-parity batches 8+9 (single commit; the batch-8-only
+#   run went PARTIAL when batch-9 imports landed mid-run — batch log
+#   records it): 22 ids join — 20 imported-goose (18 PASS; 1 recorded-class
+#   frontend-export unittest/interfaces implicit-interface-conversion-in-
+#   multi-value-assignment; 1 DELIBERATE red BUG-048 pin
+#   unittest/embedded/live) + the 2-row canonical BUG-048 pin
+#   methods/value-receiver-via-pointer-var (both FAIL/lean-observation:
+#   value-receiver method via pointer var wrong-stuck, docs/BUGS.md
+#   BUG-048). Zero drift on all 1359 pre-existing ids.
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
 PASS	arrays/array-copy	-
@@ -689,27 +692,47 @@ PASS	imported-goose/storage/comments	-
 PASS	imported-goose/storage/interfacerecursion	-
 PASS	imported-goose/storage/mapliteral	-
 PASS	imported-goose/storage/mutualrec	-
+PASS	imported-goose/unittest/array	-
+PASS	imported-goose/unittest/comments	-
 PASS	imported-goose/unittest/const	-
+PASS	imported-goose/unittest/control-flow	-
+PASS	imported-goose/unittest/conversions/conversion-literal	-
+PASS	imported-goose/unittest/conversions/u32-newtype-len	-
+PASS	imported-goose/unittest/conversions/wrapper	-
 PASS	imported-goose/unittest/copy/copy-different-lengths	-
 FAIL	imported-goose/unittest/copy/copy-simple	frontend-export
+PASS	imported-goose/unittest/embedded/field-nil-promote	-
+FAIL	imported-goose/unittest/embedded/live	lean-observation
+PASS	imported-goose/unittest/embedded/nil-promote	-
 PASS	imported-goose/unittest/empty-functions	-
 PASS	imported-goose/unittest/enum	-
 PASS	imported-goose/unittest/float	-
+PASS	imported-goose/unittest/globals	-
 PASS	imported-goose/unittest/higher-order	-
+FAIL	imported-goose/unittest/interfaces	frontend-export
 PASS	imported-goose/unittest/ints	-
 PASS	imported-goose/unittest/literals	-
+PASS	imported-goose/unittest/loops	-
 PASS	imported-goose/unittest/multiple	-
+PASS	imported-goose/unittest/nil	-
 PASS	imported-goose/unittest/operators	-
 PASS	imported-goose/unittest/panic	-
 PASS	imported-goose/unittest/reassign	-
 PASS	imported-goose/unittest/recursive	-
 PASS	imported-goose/unittest/repeat-vars	-
+PASS	imported-goose/unittest/replicated-disk	-
 PASS	imported-goose/unittest/returns	-
 PASS	imported-goose/unittest/rune	-
+PASS	imported-goose/unittest/slices	-
 PASS	imported-goose/unittest/strings	-
+PASS	imported-goose/unittest/struct-method	-
+PASS	imported-goose/unittest/struct-pointers	-
+PASS	imported-goose/unittest/switch	-
 PASS	imported-goose/unittest/topsort	-
 PASS	imported-goose/unittest/trailing-call	-
 PASS	imported-goose/unittest/type-alias	-
+PASS	imported-goose/unittest/type-switch	-
+PASS	imported-goose/unittest/varargs	-
 PASS	imported-goose/unittest/vars	-
 PASS	init/bare-call-in-init	-
 PASS	init/blank-var-init	-
@@ -987,6 +1010,8 @@ PASS	methods/pointer-receiver-slice-element	-
 PASS	methods/recursive-method	-
 PASS	methods/same-name-method-closures	-
 FAIL	methods/value-auto-deref	lean-observation
+FAIL	methods/value-receiver-via-pointer-var/addr-of-literal	lean-observation
+FAIL	methods/value-receiver-via-pointer-var/addr-of-var	lean-observation
 PASS	multi-assign/blank-dep-index	-
 PASS	multi-assign/blank-discard-nonint	-
 PASS	multi-assign/call-return-assignment	-

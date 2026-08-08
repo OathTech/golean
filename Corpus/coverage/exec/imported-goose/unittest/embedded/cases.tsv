@@ -1,0 +1,4 @@
+# id	subject	args	expected_status	expected_reason	features
+live	goleanEmbedded	-	ok	-	imported_goose,embedding,methods
+field-nil-promote	goleanEmbeddedField	-	panic	invalid memory address or nil pointer dereference	imported_goose,embedding,methods,panic,nil
+nil-promote	goleanEmbeddedValField	-	panic	invalid memory address or nil pointer dereference	imported_goose,embedding,methods,panic,nil

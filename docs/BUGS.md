@@ -30,6 +30,48 @@ differential-pinned) `- Cases: <id>, <id>, …` (baseline case ids), then prose.
 
 ---
 
+## BUG-048 — machine wrong-STUCK calling a VALUE-receiver method through a pointer-typed VARIABLE (Go auto-derefs; we refuse)
+
+- Status: open
+- Pinned-by: differential
+- Cases: methods/value-receiver-via-pointer-var/addr-of-var, methods/value-receiver-via-pointer-var/addr-of-literal, imported-goose/unittest/embedded/live
+- Discovered: 2026-08-08, goose-parity buildout batch 8 (goose-import
+  provenance: `testdata/examples/unittest/embedded.go` @ 3be88bb —
+  `useEmbeddedMethod2`'s `d.embedB.Foo()`, an explicit selector through
+  a pointer-embedded field, stuck the machine; minimized by probes to
+  the basic idiom below).
+- What: `p := &x; p.get()` where `get` has a VALUE receiver — Go
+  auto-dereferences (`(*p).get()`, spec §Selectors/§Calls); the machine
+  gets STUCK with "expected struct main.sVal value, got
+  GoLean.GoValue.addr (Loc.base …)". Wrong-stuck on a supported-claimed
+  construct = fidelity bug by this file's definition. The frontend
+  exports the program (no fail-closed refusal), so the miss is in the
+  lowering/machine receiver handling, not a recorded coverage gap.
+- Probe matrix (2026-08-08, all vs go run green): STUCK — `p := &x;
+  p.get()`; `p := &S{…}; p.get()` (literal and empty-literal);
+  `c.inB.Foo()` (explicit selector of a pointer-embedded field, value
+  receiver). OK (controls) — `x.get()` on an addressable var (auto
+  address/deref both directions); pointer RECEIVERS through the same
+  shapes (`d.PGet()`, `d.inA.PGet()`, `d.PCar()`); IMPLICIT promotion
+  through an embedded-pointer hop, value receiver (`d.Foo()`, incl.
+  two-level chains and method shadowing); explicit DEEP path through
+  the pointer hop (`d.inA.Foo()`); `&E{S{…}}` holder with promoted
+  value receiver (`p.Get()` — note: promoted-through-EMBEDDING via a
+  pointer variable WORKS while the direct method on the pointer
+  variable does not, which localizes the miss to the non-promoted
+  direct-method path's receiver adaptation).
+- Why the corpus never saw it: an unexercised-path class — the methods
+  lane covers value receivers on addressable values and pointer
+  receivers via pointer vars, but not the exact "value receiver via
+  pointer VARIABLE" cell (the differential validates only what the
+  corpus runs; CLAUDE.md's named blind-spot class).
+- Fix: NOT fixed in the goose-parity buildout (charter forbids
+  machine/frontend changes there); maintenance round. The imported
+  case `imported-goose/unittest/embedded/live` stays red as a
+  live-corpus pin (its two sibling rows pin the file's two latent
+  upstream panics and stay green).
+- Triage record: docs/goose-parity-parked.md P4.
+
 ## BUG-047 — frontend emits a call TWICE when the RHS of a single assign/define is a conversion of a call (silent divergence from Go)
 
 - Status: open

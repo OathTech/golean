@@ -1,0 +1,4 @@
+# id	subject	args	expected_status	expected_reason	features
+u32-newtype-len	goleanTestU32NewtypeLen	-	ok	-	imported_goose,conversions,strings,defined_type
+conversion-literal	goleanTestConversionLiteral	-	ok	-	imported_goose,conversions,strings,defined_type
+wrapper	goleanConversions	-	ok	-	imported_goose,conversions,strings,defined_type

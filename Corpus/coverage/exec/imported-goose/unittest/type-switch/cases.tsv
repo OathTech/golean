@@ -1,0 +1,2 @@
+# id	subject	args	expected_status	expected_reason	features
+-	goleanTypeSwitch	-	ok	-	imported_goose,type_switch,type_assertions

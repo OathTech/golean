@@ -1,0 +1,2 @@
+# id	subject	args	expected_status	expected_reason	features
+-	goleanSlices	-	ok	-	imported_goose,slices,aliases,methods

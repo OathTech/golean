@@ -1,0 +1,2 @@
+# id	subject	args	expected_status	expected_reason	features
+-	goleanNil	-	ok	-	imported_goose,nil,slices,pointers

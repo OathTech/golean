@@ -1,0 +1,2 @@
+# id	subject	args	expected_status	expected_reason	features
+-	goleanInterfaces	-	ok	-	imported_goose,interfaces,methods,variadic

@@ -1,0 +1,3 @@
+# id	subject	args	expected_status	expected_reason	features
+addr-of-var	valueRecvViaPointerVar	-	ok	-	methods,pointers,value_copy
+addr-of-literal	valueRecvViaPointerLiteral	-	ok	-	methods,pointers,literals
