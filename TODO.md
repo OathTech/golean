@@ -586,3 +586,5 @@ feature breadth up the raft ladder, `slices.Sort` extern + input fuzzing.
 - Generate field load/store/access lemmas over `Loc.field`.
 - Prototype a Lean WP/VCG layer over GoCore.
 - Evaluate where Iris-Lean should enter for heap and concurrency reasoning.
+
+- [Verdi theorem-parity via differential embedding](docs/2026-08-08_verdi-parity-backlog.md) — validate we prove Verdi's theorem class by building a second differentially-tested embedding (Verdi's network semantics; fault layers map onto Choices envelopes). Needs its own scoping study; after/alongside the raft arc. (User idea 2026-08-08.)
