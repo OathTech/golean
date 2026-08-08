@@ -62,6 +62,8 @@ func main() {
 	selectSendClosedArrival()
 	selectRecvClosedArrival()
 	selectRecvClosedDrains()
+	selectSendCloseRace()
+	selectSendPairedThenClose()
 }
 
 // HB-ORDERED VARIANT (BUG-045 / arc-final audit F1): the racy
@@ -97,4 +99,47 @@ func selectRecvClosedDrains() int {
 		}
 	}
 	return acc + acc2
+}
+
+// BUG-046 (convergence check on the BUG-045 fix): selectgo pass 1
+// performs racereadpc on the CHANNEL OBJECT for every SEND case it
+// polls (runtime/select.go:288, ABOVE the closed check) — the BUG-045
+// fix's "selectgo bypasses chansend/closechan" premise was FALSE for
+// send clauses — so a select-send clause racing a close is TSan-red
+// exactly like a plain send (probed 30/30). Red-first pin; flips to
+// PASS/racy when the detector's select-send poll read lands.
+func selectSendCloseRace() int {
+	ch := make(chan int)
+	done := make(chan int)
+	go func() {
+		defer func() {
+			if recover() != nil {
+				done <- 21
+			} else {
+				done <- 99
+			}
+		}()
+		select {
+		case ch <- 7:
+		}
+	}()
+	close(ch)
+	return <-done
+}
+
+// The HB-ordered green twin (probed: go build -race, 0/30): main's
+// receive PAIRS with the parked select-send (the op-x-select pairing),
+// so the worker's poll read is ordered before main's close by the
+// rendezvous — race-free on every schedule, and the shape exercises
+// the select-send poll read plus a close on the same channel. 7.
+func selectSendPairedThenClose() int {
+	ch := make(chan int)
+	go func() {
+		select {
+		case ch <- 7:
+		}
+	}()
+	v := <-ch
+	close(ch)
+	return v
 }

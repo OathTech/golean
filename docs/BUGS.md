@@ -30,12 +30,59 @@ differential-pinned) `- Cases: <id>, <id>, …` (baseline case ids), then prose.
 
 ---
 
+## BUG-046 — BUG-045's chan-object rule is fail-open for SELECT SEND clauses: selectgo pass 1 DOES racereadpc the channel object per polled send case
+
+- Status: open
+- Pinned-by: differential
+- Cases: goroutines/select-closed-arrival/send-close-race
+- Discovered: 2026-08-08 (convergence check on the BUG-045 fix,
+  major; verifier-reproduced from primary source — go1.26.5
+  runtime/select.go:288 `racereadpc(c.raceaddr(), casePC(casi),
+  chansendpc)` sits in selectgo pass 1's send branch ABOVE the closed
+  check; recv cases are acquire-only (:512). Probes: a select-send
+  clause racing a close is TSan-red 30/30 — including the genuine
+  multi-case selectgo path and the send+default form — while the
+  BUG-045 rule recorded NOTHING for select clauses on the false
+  premise "selectgo's clause commits bypass chansend/closechan".
+  Worse, the same commit shipped an eval pin,
+  `closedSelRecvSelWaiterMain_F`, asserting a green value result (5)
+  for a shape gc flags 30/30, with a comment claiming TSan-green.)
+- What: the BUG-045 premise confused the COMMIT path (selectgo's
+  send/recv branches do bypass chansend/chanrecv) with the
+  INSTRUMENTATION point: the chan-object read happens in selectgo's
+  POLL (pass 1), once per polled send case, before the closed check
+  and before parking — so every select-send clause polled on a
+  channel whose close is HB-unordered is a real TSan race our
+  detector passed green. The two probes the original rationale cited
+  (selectSendClosedArrival, selectWakeClosed) never tested the claim:
+  the first's close is same-goroutine-sequenced before its select and
+  the second's select has only recv clauses. No corpus row was
+  misclassified (no corpus subject had a select-send racing a close)
+  — a latent model gap plus one wrong shipped eval pin.
+- Fix shape: at the select's POLL step — the `.selectOpsK` apply
+  position in `raceUpdate` — record a chan-object READ for EVERY send
+  clause's channel (nil channels skipped: selectgo's pollorder
+  excludes them), before any dispatch, whatever the outcome (commit,
+  park, refuse, panic). Granularity argument (recorded at the site):
+  selectgo executes pass 1 once per selectgo call and a woken parked
+  select does not re-poll with racereadpc, so once-per-apply is
+  gc-exact; recv clauses stay acquire-only. The wrong eval pin
+  re-pins as the racy form and gains an HB-ordered green twin (the
+  op×select pairing orders the poll read before the close); corpus:
+  send-close-race (racy) + send-paired-then-close (confluent green).
+  The invariant-(iv) guard beside a parked SELECT-send waiter joins
+  the plain-sender case as detector-unreachable in race-free
+  programs (a parked select-send implies an HB-unordered poll read
+  vs any close; an ordered close hits sclose at the poll instead).
+
 ## BUG-045 — the channel OBJECT is not a shadow location: three shipped confluent-green subjects are TSan data races (`-race` fail-open; doctrine violation)
 
 - Status: fixed (2026-08-08, channels-arc audit response F1 —
-  `RaceState.chanObjAccess` models gc's pair exactly (send = entry
+  `RaceState.chanObjAccess` models gc's pair (send = entry
   read at the apply position on every outcome; successful close =
-  write; recv acquire-only; select clauses nothing), dispatched by
+  write; recv acquire-only; select clauses AMENDED by BUG-046: send
+  clauses DO record a poll read — selectgo pass 1's racereadpc; the
+  original "select clauses nothing" premise was wrong), dispatched by
   `raceUpdate`'s chan-op arm under the pre-release clock. All three
   pinned cases certify "every enumerated path refuses" (PASS/racy)
   with `go run -race` the justifying oracle; zero drift on all 1196
@@ -45,9 +92,12 @@ differential-pinned) `- Cases: <id>, <id>, …` (baseline case ids), then prose.
   only chan-object records are send reads, which cannot conflict —
   certs recomputed green. Eval pins updated: the
   closed-guard-past-parked-PLAIN-sender pin now expects race, and the
-  guard behavior gained a race-free twin via a parked SELECT-send
-  waiter (selectgo is uninstrumented — invariant (iv) stays
-  exercised). The three overclaiming "refusal-set agreement holds
+  guard initially gained a "race-free" twin via a parked SELECT-send
+  waiter on the FALSE premise that selectgo is uninstrumented —
+  REVERSED by BUG-046 (that twin is TSan-red 30/30 and now expects
+  race too; invariant (iv) beside ANY parked sender, plain or
+  select, is detector-unreachable race-free). The three
+  overclaiming "refusal-set agreement holds
   anyway" sentences (raceWakeEvent, doctrine caption, design note ×2)
   and U3 corrected in place.)
 - Pinned-by: differential
@@ -79,10 +129,14 @@ differential-pinned) `- Cases: <id>, <id>, …` (baseline case ids), then prose.
   (commit, park, or panic alike — gc reads at entry), a successful
   close records a chan-object WRITE (gc panics on closed/nil BEFORE
   instrumenting); HB-unordered read↔write or write↔write on the same
-  channel is `raceDetected`; recv records NOTHING (acquire-only), and
-  select clauses record nothing (selectgo commits bypass
-  chansend/closechan — which is why selectSendClosedArrival and
-  selectWakeClosed are TSan-green with their parked receivers). The
+  channel is `raceDetected`; recv records NOTHING (acquire-only).
+  [The original fix-shape clause here — "select clauses record
+  nothing (selectgo commits bypass chansend/closechan)" — was WRONG
+  and is superseded by BUG-046: selectgo pass 1 racereadpc's every
+  polled SEND case, so send clauses record poll reads; recv clauses
+  stay acquire-only, which — with same-goroutine sequencing — is the
+  actual reason selectSendClosedArrival and selectWakeClosed are
+  TSan-green.] The
   three cases move to the racy lane (`go run -race` the justifying
   oracle); their close-adjacent behavior coverage is preserved by
   HB-ordered variants (close-after-send-drains, send-closed-recovered,

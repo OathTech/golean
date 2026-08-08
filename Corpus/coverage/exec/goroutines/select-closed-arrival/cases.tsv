@@ -19,3 +19,10 @@ send	selectSendClosedArrival	-	panic	send on closed channel	goroutines,channels,
 # (BUG-045's fix note records this).
 recv-parked-sender	selectRecvClosedArrival	-	race	-	goroutines,channels,select,close,comma_ok,recover,race	racy	-	width=4,sites=16
 recv-closed-drains-hb	selectRecvClosedDrains	-	ok	-	goroutines,channels,select,close,comma_ok	confluent	the close is ordered after main's own send (spawn edge) and before both selects (done rendezvous), race-free; the first select drains 7/true, the second yields the closed 0/false, on every schedule	width=4,sites=24
+# BUG-046 red-first pin (convergence check on BUG-045): selectgo pass 1
+# does racereadpc on the chan object for every polled SEND case
+# (select.go:288, above the closed check) — a select-send racing a
+# close is TSan-red (30/30 probed); the BUG-045 rule recorded nothing
+# for select clauses. RED until the select-send poll read lands.
+send-close-race	selectSendCloseRace	-	race	-	goroutines,channels,select,close,recover,race	racy	-	width=4,sites=16
+send-paired-then-close	selectSendPairedThenClose	-	ok	-	goroutines,channels,select,close	confluent	main's receive pairs with the parked select-send, ordering the poll read before the close (race-free, -race 0/30); the handoff value is fixed on every schedule	width=4,sites=24

@@ -1,20 +1,22 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-08  commit: channels-arc audit response (records batch: F6/F9/F10/F11/F12/F13/F14/F18/F20-F26 + four new refusal markers)
+# recorded: 2026-08-08  commit: channels-arc audit response (BUG-046 red pin)
 #   frontend: native  oracle: go run (strict lane) / go-run membership in the
 #   machine-enumerated observation set, sampled plain AND under -race
 #   (membership lane; go1.26.5) / schedule-tree singleton certification +
 #   strict go-run equality (confluent lane) / every-enumerated-path-refuses
 #   + go run -race red (racy lane; never combined with deadlock)
-# manifest_cases: 1203  pass: 1105  fail: 98
-# Re-pin reason: arc-final audit records batch — four NEW deliberate
-#   fail-closed refusal markers enter RED with recorded owners:
-#   generics/chan-type-arg/first (F9: unnamed chan type-arg outside the
-#   mangling surface; frontend-export), goroutines/go-builtin/close
-#   (F22: go-of-builtin, legal Go, refused; frontend-export),
-#   channels/select-select/{core,beside-loop} (F11/F10: the rendezvous
-#   gap and its over-broad trigger; core carried in
-#   baselines/untriaged-ids 16->17, beside-loop at stage nondet).
-#   Zero drift on all 1199 prior ids.
+# manifest_cases: 1205  pass: 1106  fail: 99
+# Re-pin reason: convergence-check major on the BUG-045 fix — BUG-046:
+#   selectgo pass 1 racereadpc's the channel object for every polled
+#   SEND case (select.go:288, above the closed check), so a select-send
+#   racing a close is TSan-red (30/30 probed) while the BUG-045 rule
+#   recorded nothing for select clauses. Red-first pin
+#   goroutines/select-closed-arrival/send-close-race enters RED at
+#   stage lean-observation (racy lane; on BUG-046's Cases line) with
+#   its HB-ordered green twin send-paired-then-close (confluent —
+#   main's receive pairs with the parked select-send, ordering the
+#   poll read before the close; -race 0/30). Zero drift on all 1203
+#   prior ids.
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
 PASS	arrays/array-copy	-
@@ -539,6 +541,8 @@ PASS	goroutines/select-arrival-multi	membership
 PASS	goroutines/select-closed-arrival/recv-closed-drains-hb	confluent
 PASS	goroutines/select-closed-arrival/recv-parked-sender	racy
 PASS	goroutines/select-closed-arrival/send	confluent
+FAIL	goroutines/select-closed-arrival/send-close-race	lean-observation
+PASS	goroutines/select-closed-arrival/send-paired-then-close	confluent
 PASS	goroutines/select-wake-multi	membership
 PASS	goroutines/select-wake/buffered-data	confluent
 PASS	goroutines/select-wake/closed	confluent
