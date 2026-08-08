@@ -75,6 +75,13 @@ package semantics
 
 func testTagged() bool { return true }
 EOF
+cat > "$FAKE/testdata/examples/semantics/no_oracle.go" <<'EOF'
+package semantics
+
+func testIntShaped() uint64 {
+	return 1
+}
+EOF
 git -C "$FAKE" init -q
 git -C "$FAKE" -c user.email=t@t -c user.name=t add -A
 git -C "$FAKE" -c user.email=t@t -c user.name=t commit -qm fixture
@@ -150,6 +157,22 @@ expect_reject "dest without class" "--dest must be" \
   --goose-root "$FAKE" --expect-rev "$REV" \
   --source testdata/examples/semantics/good.go --dest flat
 
+# 8b. zero detected oracles = fail closed (checkpoint fix 2026-08-08)...
+expect_reject "zero oracles without --allow-no-oracles" "zero detected oracles" \
+  --goose-root "$FAKE" --expect-rev "$REV" \
+  --source testdata/examples/semantics/no_oracle.go --dest "$DEST_BASE/nooracle"
+# ...and the explicit opt-in lands it (unittest wrapper lane).
+if out="$(run_import --goose-root "$FAKE" --expect-rev "$REV" --allow-no-oracles \
+    --source testdata/examples/semantics/no_oracle.go --dest "$DEST_BASE/nooracle")"; then
+  if [[ "$(grep -vc '^#' "$CASE_ROOT/nooracle/cases.tsv")" == "0" ]]; then
+    echo "ok: --allow-no-oracles lands a header-only skeleton"
+  else
+    echo "FAIL: --allow-no-oracles case has unexpected rows"; fail=1
+  fi
+else
+  echo "FAIL: --allow-no-oracles rejected the legitimate zero-oracle landing: $out"; fail=1
+fi
+
 # --- accept: good single file ---
 if out="$(run_import --goose-root "$FAKE" --expect-rev "$REV" \
     --source testdata/examples/semantics/good.go --dest "$DEST_BASE/good")"; then
@@ -218,6 +241,51 @@ if ! grep -q "source: testdata/examples/semantics/helper.go @ $REV" \
     "$CASE_ROOT/assembled/main.go" 2>/dev/null; then
   echo "FAIL: assembled sibling not in provenance header"; fail=1
 else echo "ok: sibling provenance"; fi
+
+# --- standing verbatim guard (scripts/check-imported-goose) fixtures ---
+# Clean: the freshly landed scratch cases pass the guard against the fake
+# goose root at its rev.
+GUARD_ROOT="$TMP/guard-corpus"
+mkdir -p "$GUARD_ROOT"
+cp -R "$CASE_ROOT/good" "$GUARD_ROOT/good"
+cp -R "$CASE_ROOT/assembled" "$GUARD_ROOT/assembled"
+if out="$(scripts/check-imported-goose --corpus-root "$GUARD_ROOT" \
+    --goose-root "$FAKE" --expect-rev "$REV" 2>&1)"; then
+  echo "ok: verbatim guard passes clean landed cases"
+else
+  echo "FAIL: verbatim guard rejected clean landed cases: $out"; fail=1
+fi
+# Tamper: edit one byte in the above-marker (upstream) region -> FAIL loud.
+sed -i 's/x == 2/x == 3/' "$GUARD_ROOT/good/main.go"
+if out="$(scripts/check-imported-goose --corpus-root "$GUARD_ROOT" \
+    --goose-root "$FAKE" --expect-rev "$REV" 2>&1)"; then
+  echo "FAIL: verbatim guard ACCEPTED a tampered imported body"; fail=1
+elif [[ "$out" != *"drifted from the pinned upstream bytes"* ]]; then
+  echo "FAIL: verbatim guard rejected tamper without the expected message: $out"; fail=1
+else
+  echo "ok: verbatim guard catches a tampered body"
+fi
+# Wrong rev in a provenance header -> FAIL loud.
+cp -R "$CASE_ROOT/good" "$GUARD_ROOT/wrongrev"
+sed -i "s/@ $REV/@ 0000000000000000000000000000000000000000/" "$GUARD_ROOT/wrongrev/main.go"
+rm -rf "$GUARD_ROOT/good"
+if out="$(scripts/check-imported-goose --corpus-root "$GUARD_ROOT" \
+    --goose-root "$FAKE" --expect-rev "$REV" 2>&1)"; then
+  echo "FAIL: verbatim guard ACCEPTED a wrong-rev provenance pin"; fail=1
+elif [[ "$out" != *"pinned at 0000000000000000000000000000000000000000"* ]]; then
+  echo "FAIL: verbatim guard rejected wrong rev without the expected message: $out"; fail=1
+else
+  echo "ok: verbatim guard catches a wrong-rev provenance pin"
+fi
+# Missing goose checkout -> FAIL loud (never a silent skip).
+if out="$(scripts/check-imported-goose --corpus-root "$GUARD_ROOT" \
+    --goose-root "$TMP/absent-goose" --expect-rev "$REV" 2>&1)"; then
+  echo "FAIL: verbatim guard passed with NO goose checkout"; fail=1
+elif [[ "$out" != *"not a git checkout"* ]]; then
+  echo "FAIL: missing-checkout rejection lacks the expected message: $out"; fail=1
+else
+  echo "ok: verbatim guard fails closed without the goose checkout"
+fi
 
 cleanup_dest
 if [[ "$fail" -ne 0 ]]; then

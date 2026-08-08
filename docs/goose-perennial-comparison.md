@@ -141,7 +141,8 @@ program by program.
 
 ## 6. Imported-corpus status (goose-parity buildout lane)
 
-Last-reviewed: goose-parity batch 1, 2026-08-08. The
+Last-reviewed: goose-parity phase-A checkpoint (batches 1-3 + fix
+round), 2026-08-08. The
 `Corpus/coverage/exec/imported-goose/` lane (provenance-tagged, verbatim
 bodies, goose @ 3be88bb — pipeline `scripts/import-goose`, charter
 `docs/2026-08-07_goose-parity-charter.md`) is populating; this section
@@ -160,14 +161,27 @@ imported (remaining: panic.go — zero boolean oracles, needs an authored
 wrapper); 113 imported rows, 96 R1 PASS, 17 recorded-fail-closed
 frontend-export; 9 oracles R2 kernel-pinned (vs their 37 `test_fun_ok`
 proofs over 112 oracles — R2 count deliberately held down pending the
-parked staleness-guard decision P1, not by capability).
+parked staleness-guard decision P1, not by capability). Claim-strength
+caveat on that comparison (phase-A checkpoint, 2026-08-08), two-sided:
+our R2 pins pair ∀-streams outcome-agnostic `Terminates` with a
+CANONICAL-STREAM `.normal` readout (weaker than the designated
+`TotalReadout` ∀-fuel/∀-choices shape, as each pin's docstring states);
+their `test_fun_ok` is Iris partial correctness with no termination
+claim at all (row O8).
 
 Batch-2 parity delta worth a row of its own: goose's two
 `failing_test*` semantics oracles (`failing_testFunctionOrdering`,
 `failing_testArgumentOrder`, testdata/examples/semantics/
 function_ordering.go@3be88bb — evaluation-order programs their
-translation is KNOWN to get wrong vs Go, their caveat at
-goose.go:1901) both run R1 differential PASS on our side
+translation is KNOWN to get wrong vs Go: the file's own comment
+"Goose has a right-to-left evaluation order for function arguments,
+which is incorrect" (function_ordering.go:79-80) and the mechanized
+`failing_` convention itself, `Fail Example` on the Rocq side vs
+`suite.Equal(true, …)` on the Go side (cmd/test_gen/main.go:134,166).
+[Citation corrected at the phase-A checkpoint, 2026-08-08: the first
+version of this paragraph cited goose.go:1901 — the sendStmt caveat
+this file's §1 select row (F12) had already ruled misattributed]) both
+run R1 differential PASS on our side
 (`imported-goose/semantics/function-ordering/{failing-function-ordering,
 failing-argument-order}`): evaluation-order fidelity where their
 translation diverges from gc.

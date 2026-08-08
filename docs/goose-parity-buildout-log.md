@@ -21,6 +21,13 @@ revs; `deps/goose` is READ-ONLY throughout).
   ordered this helper built as setup with the checkpoint after ~3
   batches, so the script commit is flagged here for that review rather
   than checkpointed in advance.
+  **RESOLVED at the phase-A checkpoint (2026-08-08):** the review
+  covered the setup helper commit (confirmed as a disclosed, bounded,
+  note-severity process deviation whose retro-review was that
+  checkpoint), and the coordinator ruled the `scripts/` changes of the
+  checkpoint FIX ROUND (ci wiring of test-import-goose, the standing
+  verbatim guard check-imported-goose, the zero-oracle fail-closed
+  flag) likewise covered by the same checkpoint's review.
 - `imported_goose` feature tag joins `Corpus/coverage/tags.tsv` in the
   SAME commit as the first cases carrying it (batch 1) — the ci
   dead-tags gate (`scripts/check-coverage`) rejects an unexercised tag,
@@ -81,7 +88,7 @@ Units (10, all self-contained; upstream `testdata/examples/semantics/*.go`
 |---|---|---|---|
 | semantics/closures | 1 | 0 PASS, 1 frontend-export | short-circuit-operand quarantine (oracle style) |
 | semantics/first-class-function | 1 | 1 PASS | |
-| semantics/function-ordering | 2 | 2 PASS | BOTH are upstream `failing_test*` — programs goose's own translation gets wrong vs Go (their caveat goose.go:1901); we match `go run`. Parity delta logged in the matrix. |
+| semantics/function-ordering | 2 | 2 PASS | BOTH are upstream `failing_test*` — programs goose's own translation gets wrong vs Go (the file's own "right-to-left … incorrect" comment, function_ordering.go:79-80, and the mechanized `failing_` convention, test_gen/main.go:134,166; goose.go:1901 citation corrected at the phase-A checkpoint — that is the sendStmt site F12 ruled misattributed); we match `go run`. Parity delta logged in the matrix. |
 | semantics/multiple-assign | 3 | 2 PASS, 1 frontend-export | "map element as assignment target outside a single assignment" (emit.go:4558) |
 | semantics/multiple-return | 4 | 4 PASS | |
 | semantics/defer | 2 | 2 PASS | + R2 pins (both oracles) |
@@ -146,3 +153,36 @@ Rungs:
 
 Gate: full `scripts/ci --diff`; baseline re-pinned same-commit
 (1275 → 1318 ids; zero drift on all 1275 prior ids).
+
+## Phase-A checkpoint fix round (2026-08-08)
+
+Checkpoint verdict: clean substantively (verbatim discipline 28/28
+byte-verified by the reviewer, MUST-PARK held, zero divergences, zero
+drift confirmed by independent baseline join) with confirmed minors,
+all fixed here:
+
+1. (minor) `scripts/test-import-goose` wired into `scripts/ci`
+   (step 1c3, beside its declared mold), and a STANDING verbatim
+   re-check guard added: `scripts/check-imported-goose` (check-golden
+   mold, ci step 1c4) walks every landed imported-goose unit's
+   above-marker region against `deps/goose` @ the pinned rev — byte
+   drift, wrong-rev provenance, or a missing checkout all fail loud.
+   Negative-fixtured both (tamper / wrong-rev / missing-checkout /
+   zero-oracle fixtures; suite now 25 green).
+2. (minor) zero-oracle landings are FAIL-CLOSED in import-goose; the
+   explicit `--allow-no-oracles` opt-in exists for the unittest
+   wrapper lane (recorded in the helper header; fixtured both ways).
+3. (minor) the goose.go:1901 citation in matrix §6 and batch-2's log
+   row re-anchored to the true support (function_ordering.go:79-80's
+   own comment + the mechanized `failing_` convention,
+   test_gen/main.go:134,166) — the old anchor was the sendStmt site
+   the matrix's F12 record had already ruled misattributed.
+4. (note) matrix §6 gained the two-sided claim-strength caveat on the
+   9-pins-vs-37-test_fun_ok comparison (our readouts canonical-stream;
+   their proofs termination-free partial correctness).
+5. (note) §6 "Last-reviewed" stamp bumped (was stuck at batch 1).
+6. (note) the setup-commit scripts-gating deviation: resolution
+   recorded above (checkpoint-covered, including this fix round's
+   scripts/ changes, per coordinator ruling).
+
+Refuted (no action): the ulimit-note-belongs-in-ledger claim.

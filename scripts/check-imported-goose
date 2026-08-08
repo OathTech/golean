@@ -1,0 +1,134 @@
+#!/usr/bin/env bash
+# Standing verbatim-import guard for the imported-goose corpus lane
+# (goose-parity phase-A checkpoint fix, 2026-08-08; mold: check-golden —
+# re-verify a LANDED artifact against its source, fail closed).
+#
+# For EVERY landed case under Corpus/coverage/exec/imported-goose/, checks
+# that the above-marker region of main.go is byte-identical to the upstream
+# goose sources its provenance header names, at the PINNED rev:
+#   1. every `// source: <path> @ <rev>` line must carry the pinned rev;
+#   2. expected body := concatenation, in header order, of
+#      `git -C deps/goose show <rev>:testdata/...` with the first
+#      `^package` line removed;
+#   3. got body := main.go from after the generated header + `package main`
+#      up to the `// --- GoLean harness ---` marker;
+#   4. compare with trailing-blank-line runs normalized (the assembly
+#      inserts single separator blanks; comparison is on the sequence of
+#      non-degenerate lines exactly as the checkpoint verifier's method).
+# Any drift, any missing marker/header, a missing/wrong-rev deps/goose
+# checkout, or an unreadable upstream blob FAILS (exit 1) — a tampered or
+# hand-edited imported main.go must never pass silently ("do not edit
+# canonical Go to make something pass" is the invariant this arms).
+#
+# Fixture overrides (scripts/test-import-goose): --corpus-root, --goose-root,
+# --expect-rev.
+set -uo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+cd "$ROOT"
+
+PINNED_REV="3be88bbb4982f58e5813b6f0344302d5582c8e8a"
+CORPUS_ROOT="Corpus/coverage/exec/imported-goose"
+GOOSE_ROOT="deps/goose"
+EXPECT_REV="$PINNED_REV"
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --corpus-root) CORPUS_ROOT="$2"; shift 2 ;;
+    --goose-root) GOOSE_ROOT="$2"; shift 2 ;;
+    --expect-rev) EXPECT_REV="$2"; shift 2 ;;
+    *) echo "check-imported-goose: unknown arg $1" >&2; exit 2 ;;
+  esac
+done
+
+fail=0
+checked=0
+
+if [[ ! -d "$CORPUS_ROOT" ]]; then
+  # An empty lane is legitimately guard-free (pre-population state).
+  echo "check-imported-goose: ok (no imported-goose lane at $CORPUS_ROOT)"
+  exit 0
+fi
+
+if ! git -C "$GOOSE_ROOT" rev-parse --git-dir >/dev/null 2>&1; then
+  echo "check-imported-goose: FAIL — $GOOSE_ROOT is not a git checkout; the" >&2
+  echo "  verbatim guard cannot run (fail closed — clone goose at the pinned" >&2
+  echo "  rev $EXPECT_REV; see CLAUDE.md 'Reference checkouts')" >&2
+  exit 1
+fi
+
+# Normalize: drop trailing blank lines and collapse nothing else (the
+# checkpoint verifier's comparison: exact bytes modulo trailing blanks).
+strip_trailing_blanks() { sed -e :a -e '/^[[:space:]]*$/{$d;N;ba' -e '}'; }
+
+TMP="$(mktemp -d "${TMPDIR:-/tmp}/check-imported-goose.XXXXXX")"
+trap 'rm -rf "$TMP"' EXIT
+
+while IFS= read -r main_go; do
+  case_dir="${main_go%/main.go}"
+  rel="${case_dir#"$CORPUS_ROOT"/}"
+  checked=$((checked + 1))
+
+  if ! grep -q '^// --- GoLean harness ---$' "$main_go"; then
+    echo "check-imported-goose: FAIL [$rel] — no harness marker line" >&2
+    fail=1
+    continue
+  fi
+
+  # Provenance sources, in header order; every one must be at EXPECT_REV.
+  mapfile -t src_lines < <(grep -E '^// source: ' "$main_go")
+  if [[ ${#src_lines[@]} -eq 0 ]]; then
+    echo "check-imported-goose: FAIL [$rel] — no provenance source lines" >&2
+    fail=1
+    continue
+  fi
+
+  : > "$TMP/want"
+  bad_case=0
+  for line in "${src_lines[@]}"; do
+    path="${line#// source: }"
+    rev="${path##* @ }"
+    path="${path% @ *}"
+    if [[ "$rev" != "$EXPECT_REV" ]]; then
+      echo "check-imported-goose: FAIL [$rel] — source '$path' pinned at $rev, expected $EXPECT_REV" >&2
+      bad_case=1
+      break
+    fi
+    if ! git -C "$GOOSE_ROOT" show "$rev:$path" > "$TMP/blob" 2>/dev/null; then
+      echo "check-imported-goose: FAIL [$rel] — cannot read $path @ ${rev:0:7} from $GOOSE_ROOT" >&2
+      bad_case=1
+      break
+    fi
+    echo "" >> "$TMP/want"
+    awk '!done && /^package[ \t]/ { done=1; next } { print }' "$TMP/blob" >> "$TMP/want"
+  done
+  if [[ "$bad_case" -ne 0 ]]; then
+    fail=1
+    continue
+  fi
+
+  # Got: above-marker region minus the generated header and package clause.
+  sed -n '1,/^\/\/ --- GoLean harness ---$/p' "$main_go" \
+    | sed '/^\/\/ --- GoLean harness ---$/d' \
+    | sed '/^\/\/ GoLean imported-goose corpus case/d; /^\/\/ source: /d; /^\/\/ imported: /d; /^\/\/ transform: /d; /^\/\/ GoLean-authored code sits below the harness marker\.$/d' \
+    | awk '!done && /^package main$/ { done=1; next } { print }' \
+    > "$TMP/got"
+
+  if ! diff -u <(strip_trailing_blanks < "$TMP/want" | sed '/./,$!d') \
+               <(strip_trailing_blanks < "$TMP/got" | sed '/./,$!d') \
+               > "$TMP/diff" 2>&1; then
+    echo "check-imported-goose: FAIL [$rel] — above-marker region has drifted from the pinned upstream bytes:" >&2
+    head -15 "$TMP/diff" >&2
+    fail=1
+    continue
+  fi
+done < <(find "$CORPUS_ROOT" -name main.go | sort)
+
+if [[ "$checked" -eq 0 ]]; then
+  echo "check-imported-goose: FAIL — lane directory exists but contains no main.go (husk?)" >&2
+  exit 1
+fi
+if [[ "$fail" -ne 0 ]]; then
+  exit 1
+fi
+echo "check-imported-goose: ok — $checked imported case(s) verbatim against goose @ ${EXPECT_REV:0:7}"

@@ -148,11 +148,41 @@ else
   bad "lane-validation fixtures (a lane gate went quiet — see above)"
 fi
 
+# 1c3. Import-pipeline gate self-test (goose-parity phase-A checkpoint,
+# 2026-08-08): scripts/import-goose's reject-shape fixtures (rev drift,
+# imports, func main, build tags, package mismatch, non-self-containment,
+# zero-oracle fail-closed, dest collision) plus the standing verbatim
+# guard's own tamper/wrong-rev/missing-checkout fixtures — the same
+# gated-mold treatment as its declared mold, test-lane-validation.
+# Needs go on PATH (self-containment fixture; ~3s), no lake build.
+step "import-goose gate self-test (scripts/test-import-goose)"
+if igout="$(./scripts/test-import-goose 2>&1)"; then
+  echo "$igout" | tail -1 | sed 's/^/  /'
+  ok "import-goose fixtures (importer + verbatim guard reject bad shapes)"
+else
+  echo "$igout"
+  bad "import-goose fixtures (an import gate went quiet — see above)"
+fi
+
 step "golden-lowering staleness (scripts/check-golden)"
 if ./scripts/check-golden; then
   ok "golden lowering (proof subject = decoded(frontend(source)))"
 else
   bad "golden lowering DRIFTED (re-pin deliberately with the frontend change)"
+fi
+
+# 1c4. Imported-goose verbatim staleness (goose-parity phase-A checkpoint,
+# 2026-08-08; check-golden mold — re-verify the LANDED artifact against
+# its source): every imported-goose main.go's above-marker region must be
+# byte-identical (modulo trailing blanks) to the upstream goose sources
+# its provenance header names, at the pinned rev. Fails closed on a
+# missing/wrong-rev deps/goose checkout — the charter's verbatim-import
+# invariant must never pass unverified.
+step "imported-goose verbatim staleness (scripts/check-imported-goose)"
+if ./scripts/check-imported-goose; then
+  ok "imported-goose verbatim (above-marker bytes = pinned upstream)"
+else
+  bad "imported-goose verbatim DRIFTED (a landed imported body no longer matches goose @ pin)"
 fi
 
 # 1c. Surface purity (docs/2026-07-21_native-spec-surface.md D1; widened to

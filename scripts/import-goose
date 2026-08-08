@@ -21,7 +21,12 @@
 #   wrong checkout rev / missing source / source with imports / source
 #   with func main / no package clause / package mismatch across siblings /
 #   assembled file does not compile (self-containment) / dest exists
-#   (without --force) / duplicate derived row ids.
+#   (without --force) / duplicate derived row ids / ZERO detected oracles
+#   (checkpoint fix 2026-08-08: a source whose test functions do not match
+#   the `test*()/failing_test*() bool` shape must not land silently as an
+#   exercises-nothing case — pass --allow-no-oracles EXPLICITLY for the
+#   legitimate zero-auto-oracle use, the unittest wrapper lane, where the
+#   harness rows are authored by hand below the marker).
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
@@ -41,6 +46,10 @@ usage: scripts/import-goose --source <rel.go> [--also <rel.go>]... \
   --dest       corpus path under Corpus/coverage/exec/imported-goose/
   --tags       extra feature tags appended after imported_goose
   --force      overwrite an existing destination case
+  --allow-no-oracles
+               land a case with ZERO auto-detected boolean oracles
+               (unittest wrapper lane: rows + wrappers authored by hand
+               below the marker). Without it, 0 oracles = hard error.
   --goose-root default deps/goose
   --expect-rev default the pinned goose rev (fixtures override)
 EOF
@@ -56,6 +65,7 @@ ALSO=()
 DEST=""
 TAGS=""
 FORCE=0
+ALLOW_NO_ORACLES=0
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -64,6 +74,7 @@ while [[ $# -gt 0 ]]; do
     --dest) [[ $# -ge 2 ]] || usage; DEST="$2"; shift 2 ;;
     --tags) [[ $# -ge 2 ]] || usage; TAGS="$2"; shift 2 ;;
     --force) FORCE=1; shift ;;
+    --allow-no-oracles) ALLOW_NO_ORACLES=1; shift ;;
     --goose-root) [[ $# -ge 2 ]] || usage; GOOSE_ROOT="$2"; shift 2 ;;
     --expect-rev) [[ $# -ge 2 ]] || usage; EXPECT_REV="$2"; shift 2 ;;
     *) usage ;;
@@ -128,6 +139,11 @@ for rel in "${ALL_SOURCES[@]}"; do
   done < <(grep -oE '^func (test|failing_test)[A-Za-z0-9_]*\(\) bool' "$GOOSE_ROOT/$rel" \
            | sed -E 's/^func ([A-Za-z0-9_]+)\(\) bool$/\1/')
 done
+if [[ ${#oracles[@]} -eq 0 && "$ALLOW_NO_ORACLES" -ne 1 ]]; then
+  die "zero detected oracles (no \`test*()/failing_test*() bool\` functions) \
+— refusing to land an exercises-nothing case; pass --allow-no-oracles only \
+for the hand-authored wrapper lane"
+fi
 
 # 5. Assemble main.go.
 TMP="$(mktemp -d "${TMPDIR:-/tmp}/import-goose.XXXXXX")"
