@@ -7,5 +7,5 @@
 # them (probed at reclassification).
 receiver	closeWakesReceiver	-	ok	-	goroutines,channels,close,comma_ok	confluent	the receiver proceeds only via the close wake; the comma-ok readout is fixed on every schedule	width=4
 receiver-drain-first	closeWakesReceiverDrainFirst	-	ok	-	goroutines,channels,close,comma_ok	confluent	buffered values drain in FIFO order before the closed-zero on every schedule	width=4
-sender-panics	closeWakesSenderPanics	-	ok	-	goroutines,channels,close,recover	confluent	the parked sender's close-wake panic is recovered identically on every schedule	width=4
-sender-full-buffer	closeWakesSenderFullBuffer	-	ok	-	goroutines,channels,close,recover	confluent	the sender can only park on the full buffer and only the close wakes it; the recovered readout is fixed	width=4
+sender-panics	closeWakesSenderPanics	-	ok	-	goroutines,channels,close,recover	confluent	the parked sender's close-wake panic is recovered identically on every schedule	width=4,sites=16
+sender-full-buffer	closeWakesSenderFullBuffer	-	ok	-	goroutines,channels,close,recover	confluent	the sender can only park on the full buffer and only the close wakes it; the recovered readout is fixed	width=4,sites=16

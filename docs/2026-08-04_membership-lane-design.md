@@ -72,10 +72,26 @@ ALL rungs are necessarily silent — expected, not a blind spot.
 `N` caps
 the observation set (fail loud if exceeded — such a case is too wide for
 enumeration and needs a per-case predicate instead; none expected in the
-current corpus). Every enumerated member must carry the case's expected
-status (audit F1): a member whose status differs — e.g. a panic under a
-stream Go can never realize — is by construction a machine bug, not an
-envelope point, and fails the enumeration loudly.
+current corpus). Every enumerated member must carry a status in the
+case's DECLARED STATUS SET (audit F1; SET-VALUED since the arc-final
+audit F8, 2026-08-08): a member whose status is outside the set fails
+the enumeration loudly. The original claim here — "a member whose
+status differs is by construction a machine bug, not an envelope
+point" — was FALSE and is corrected in place: gc itself realizes
+status-diverse envelopes (a leaked goroutine with an observable effect
+legitimately spans `ok` and `panic` — the D6 main-exit latitude,
+realized through BUG-044's main-exit window and verifier-probed:
+ok=176/panic=24 over 200 plain runs on the dossier's p60 shape). Such
+cases declare `statuses=ok+panic` in their lane params (the manifest
+requires the set to include the row's `expected_status`, the
+default-stream status); the enumerator receives the whole set via
+`--expect-status ok,panic`, and only membership OUTSIDE the declared
+set is a machine bug. `race` remains a singleton (the racy lane's
+every-path-refuses claim admits no value members), and deadlock
+members still have no membership handling (they fail the enumeration
+as the member-class failures they are — audit F15 fixed the
+diagnostic that used to misattribute them to the site-bound
+accountant).
 
 What the enumerator REUSES vs COPIES (audit F7 correction — this note
 originally claimed "reuses `execStmt` verbatim", which was wrong):

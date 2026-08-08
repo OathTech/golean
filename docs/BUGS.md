@@ -32,7 +32,21 @@ differential-pinned) `- Cases: <id>, <id>, …` (baseline case ids), then prose.
 
 ## BUG-044 — no scheduling point between a wake-producing registry op and main's terminal: the woken goroutine is discarded, its gc-realized continuation excluded (L1 envelope too narrow at main-exit — BUG-040's class)
 
-- Status: open
+- Status: fixed (2026-08-08, channels-arc audit response F2 — the L5
+  MAIN-EXIT WINDOW: `execProgLoop` (and the driver mirrors
+  `enumPoolRun`/`poolDFS`) draw a bound-2 pick at `mainOutcome?`-some
+  with runnable goroutines left — 0 = exit now (the default; empty
+  streams and single-thread pools unchanged, sequential conservation
+  literal), 1 = one more ordinary `stepMulti`. The ∀-streams checker
+  (`allStreamsOkPool`) certifies BOTH window branches (shared stepping
+  core `stepAllBranchesOk`); soundness + mono re-proved; the fork-join
+  designated statements are byte-identical and their `decide +kernel`
+  certs recompute green at the same fuel 400. Both pinned cases flip
+  PASS as status-diverse membership rows (`statuses=ok+panic` — the
+  audit-F8 machinery landed with this fix), certifying exactly the
+  gc envelope {ok, panic}. 14 existing enumeration-lane cases needed
+  only sites/work recalibration (deeper trees; every certified
+  observation set unchanged — probed per case before re-pinning).)
 - Pinned-by: differential
 - Cases: goroutines/wake-window/buffered-send, goroutines/wake-window/close-recv
 - Discovered: 2026-08-08 (channels-arc final audit F2, major/comparative;

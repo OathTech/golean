@@ -3,4 +3,4 @@
 # whose waiter-extended readiness sees two parked senders — the L2 pick
 # chooses the clause, the (singleton) L4 pick the partner; the loser
 # goroutine is discarded at main's exit (D6, observably nothing).
--	selectArrivalMulti	-	ok	-	goroutines,channels,select,nondet	membership	which parked sender's clause the arriving select commits is L1 latitude (which worker parked / arrives first) plus the L2 clause pick on both-parked schedules: certified set {10, 20} (members=2); width 3 caps the computed bounds (|runnable| <= 3, L2 <= 2)	width=3,sites=12,members=2
+-	selectArrivalMulti	-	ok	-	goroutines,channels,select,nondet	membership	which parked sender's clause the arriving select commits is L1 latitude (which worker parked / arrives first) plus the L2 clause pick on both-parked schedules: certified set {10, 20} (members=2); width 3 caps the computed bounds (|runnable| <= 3, L2 <= 2)	width=3,sites=24,members=2

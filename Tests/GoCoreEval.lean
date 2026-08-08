@@ -1594,7 +1594,7 @@ private def enumInitPanicProgram : GoCore.Program := {
 }
 
 private def enumerate (program : GoCore.Program) (name : String)
-    (expectStatus : Option String) : Except String CLI.EnumOutcome :=
+    (expectStatus : Option (List String)) : Except String CLI.EnumOutcome :=
   match CLI.enumSetup program name #[] with
   | .error err => .error s!"setup failed: {repr err}"
   | .ok ep =>
@@ -1654,7 +1654,7 @@ private def expectEnumMembers (name : String) (result : Except String CLI.EnumOu
 /-- The F5 pin proper: for each stream, the single-run driver's canonical
 observation must be a member of the enumerated set. -/
 private def expectDriverAgreement (name : String) (program : GoCore.Program)
-    (fname : String) (expectStatus : Option String)
+    (fname : String) (expectStatus : Option (List String))
     (streams : List (List Nat)) : IO Bool := do
   match enumerate program fname expectStatus with
   | .error msg =>
@@ -1677,7 +1677,7 @@ consumption ACCOUNTANT (`CLI.stepNeeds`) — this pin is the accountant's
 drift alarm: an accountant bound smaller than the machine's real one
 would leave a driver-reachable observation out of the set. -/
 private def expectPoolDriverAgreement (name : String) (program : GoCore.Program)
-    (fname : String) (expectStatus : Option String)
+    (fname : String) (expectStatus : Option (List String))
     (streams : List (List Nat)) : IO Bool := do
   match enumerate program fname expectStatus with
   | .error msg =>
@@ -2103,7 +2103,7 @@ def main : IO UInt32 := do
   -- F1 guardrail: the stream-panicking shape (panic iff spill capacity
   -- lands on 7) must FAIL an expect-status=ok enumeration loudly.
   passed := passed && (← expectEnumFailure "GoCore enumerator rejects stream-dependent panic under expect-status ok"
-    (enumerate enumCapPanicProgram "enum_cap_panic_F" (some "ok")) "status divergence")
+    (enumerate enumCapPanicProgram "enum_cap_panic_F" (some ["ok"])) "status divergence")
   -- Without a status expectation the same shape enumerates 32 members:
   -- the widened envelope [newLen, max(32, 2*growth)] = [1, 32] gives 31
   -- ok capacities + the cap-7 panic observation (arc-final audit F2 —
@@ -2111,7 +2111,7 @@ def main : IO UInt32 := do
   passed := passed && (← expectEnumMembers "GoCore enumerator admits the panic member without a status expectation"
     (enumerate enumCapPanicProgram "enum_cap_panic_F" none) 32)
   passed := passed && (← expectEnumMembers "GoCore enumerator first-key set is {1,2,3}"
-    (enumerate enumFirstKeyProgram "enum_first_key_F" (some "ok")) 3)
+    (enumerate enumFirstKeyProgram "enum_first_key_F" (some ["ok"])) 3)
   -- F5: driver-agreement pins, per consumption-site class (incl. the
   -- panic-observation path via stream [3] on the append shape: the
   -- envelope offset keeps extra 3 landing on cap 7 — newLen 1 +
@@ -2119,32 +2119,32 @@ def main : IO UInt32 := do
   passed := passed && (← expectDriverAgreement "GoCore enumerator agrees with the single-run driver (append spill incl. panic path)"
     enumCapPanicProgram "enum_cap_panic_F" none [[], [1], [3], [7], [12, 9]])
   passed := passed && (← expectDriverAgreement "GoCore enumerator agrees with the single-run driver (map-range pick-next)"
-    enumFirstKeyProgram "enum_first_key_F" (some "ok") [[], [1], [2], [5, 3, 1], [9, 8, 7, 6]])
+    enumFirstKeyProgram "enum_first_key_F" (some ["ok"]) [[], [1], [2], [5, 3, 1], [9, 8, 7, 6]])
   -- Init slice: $pkginit's choice consumption is part of the run in
   -- BOTH drivers (globals seeded, init run per stream).
   passed := passed && (← expectEnumMembers "GoCore enumerator init-phase pick set is {1,2,3}"
-    (enumerate enumInitPickProgram "enum_init_read_F" (some "ok")) 3)
+    (enumerate enumInitPickProgram "enum_init_read_F" (some ["ok"])) 3)
   passed := passed && (← expectDriverAgreement "GoCore enumerator agrees with the whole-program driver ($pkginit map-range pick)"
-    enumInitPickProgram "enum_init_read_F" (some "ok") [[], [1], [2], [5, 3, 1], [9, 8, 7, 6]])
+    enumInitPickProgram "enum_init_read_F" (some ["ok"]) [[], [1], [2], [5, 3, 1], [9, 8, 7, 6]])
   -- Audit response 2026-08-05, C4: the enumerator's init-phase PANIC
   -- branch — a panicking $pkginit is the run's single (panic) member,
   -- and both drivers surface the same observation.
   passed := passed && (← expectEnumMembers "GoCore enumerator surfaces the $pkginit panic member"
-    (enumerate enumInitPanicProgram "enum_init_read_F" (some "panic")) 1)
+    (enumerate enumInitPanicProgram "enum_init_read_F" (some ["panic"])) 1)
   passed := passed && (← expectDriverAgreement "GoCore enumerator agrees with the whole-program driver ($pkginit panic)"
-    enumInitPanicProgram "enum_init_read_F" (some "panic") [[], [3], [7, 1]])
+    enumInitPanicProgram "enum_init_read_F" (some ["panic"]) [[], [3], [7, 1]])
   -- Slice 4: the POOL engine's pins (stepwise explorer + consumption
   -- accountant), per pool consumption-site class.
   passed := passed && (← expectEnumMembers "GoCore pool enumerator: fork/join rendezvous is confluent (singleton over all schedules)"
-    (enumerate poolProgram "poolSpawnMain_F" (some "ok")) 1)
+    (enumerate poolProgram "poolSpawnMain_F" (some ["ok"])) 1)
   passed := passed && (← expectPoolDriverAgreement "GoCore pool enumerator agrees with the pool driver (fork/join; L1 + pairing)"
-    poolProgram "poolSpawnMain_F" (some "ok") [[], [1], [1, 1, 1], [9, 8, 7, 6]])
+    poolProgram "poolSpawnMain_F" (some ["ok"]) [[], [1], [1, 1, 1], [9, 8, 7, 6]])
   passed := passed && (← expectEnumMembers "GoCore pool enumerator: waiter-extended select-with-default set is {7, 99} (the S2 audit envelope)"
-    (enumerate prioProgram "prioSelectDefaultRecvMain_F" (some "ok")) 2)
+    (enumerate prioProgram "prioSelectDefaultRecvMain_F" (some ["ok"])) 2)
   passed := passed && (← expectPoolDriverAgreement "GoCore pool enumerator agrees with the pool driver (waiter-extended select-with-default; L1 + L4)"
-    prioProgram "prioSelectDefaultRecvMain_F" (some "ok") [[], [1], [1, 1], [9, 8, 7, 6]])
+    prioProgram "prioSelectDefaultRecvMain_F" (some ["ok"]) [[], [1], [1, 1], [9, 8, 7, 6]])
   passed := passed && (← expectEnumMembers "GoCore pool enumerator: every enumerated path of write/write refuses (lane d, full strength)"
-    (enumerate raceProgram "raceWriteWriteMain_F" (some "race")) 1)
+    (enumerate raceProgram "raceWriteWriteMain_F" (some ["race"])) 1)
   passed := passed && (← expectEnumMembers "GoCore pool enumerator: exit-no-sync has BOTH leaves (value + race — why the class is eval-pinned, not a corpus race case)"
     (enumerate raceProgram "raceExitNoSyncMain_F" none) 2)
   -- The wake-path head-commit discriminator (L2 envelope: NO
@@ -2161,7 +2161,7 @@ def main : IO UInt32 := do
   passed := passed && (← expectIntResult "GoCore pool wake-path head-commit: both-closed wake commits the first clause in clause order, consuming nothing"
     (GoCore.Machine.runProgramPoolM 100000 wakeMultiProgram "wakeMultiMain_F" #[] [0, 0, 1, 1, 1]) 2)
   passed := passed && (← expectEnumMembers "GoCore pool enumerator: wake/entry multi-ready select set is {1, 2}"
-    (enumerate wakeMultiProgram "wakeMultiMain_F" (some "ok")) 2)
+    (enumerate wakeMultiProgram "wakeMultiMain_F" (some ["ok"])) 2)
   -- S4 audit (the TWO-SIDED sentinel drift alarm's detection
   -- primitive, pinned both ways): at a consumption site the machine
   -- DRAWS the appended sentinel (so an accountant that missed the site

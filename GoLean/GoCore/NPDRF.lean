@@ -299,7 +299,13 @@ theorem stepsM_le_stepsMFine {m m' : MultiConfig} (h : StepsM m m') :
 
 /-- A pool's terminal program result, mirroring `execProgLoop`'s
 classification order (panic abort, main's terminal, the all-asleep
-deadlock). See scaffold obstruction 4 on the `.done` state
+deadlock). Since BUG-044's main-exit window the mirror is of the
+CLASSIFICATIONS, not of a unique run outcome: at a `.done`-classifiable
+pool with runnable goroutines left, the driver may also CONTINUE (the
+L5 window pick), so several results can be reachable from one pool —
+which is what `ReachesM`'s existential already expresses (the relation
+side admitted post-main-terminal steps all along; the window brought
+the driver into line). See scaffold obstruction 4 on the `.done` state
 comparison. -/
 inductive PoolResult where
   | panicked (msg : String)

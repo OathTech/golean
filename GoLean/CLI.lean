@@ -32,7 +32,7 @@ private def usage : String :=
   "  golean native-json-run --input <file> --function <name> [--arg-int <n> ...] [--fuel <n>] [--choices <n,n,...>]\n" ++
   "  golean observation-eq --left <json> --right <json>\n" ++
   "  golean coverage-observations --input <file> --function <name> [--arg-int <n> ...] [--fuel <n>]\n" ++
-  "      [--max-width <B>] [--max-sites <D>] [--cap <N>] [--work-cap <W>] [--expect-status <ok|panic|race>]\n"
+  "      [--max-width <B>] [--max-sites <D>] [--cap <N>] [--work-cap <W>] [--expect-status <ok|panic|ok,panic|race>]\n"
 
 private def absoluteFrom (base : FilePath) (path : FilePath) : FilePath :=
   if path.isRelative then (base / path).normalize else path.normalize
@@ -511,12 +511,18 @@ Non-consuming by signature (no arm needed): `resumeThread`,
 `spawnStep`, `commitClause`, `applyPairing`, the `.spawned` strip,
 and `raceUpdate` (which REPLICATES consumption but draws nothing).
 
-Machine-side status discipline (audit F1): a member whose status differs
-from the case's expected status is BY CONSTRUCTION a machine bug, not an
-envelope point — a machine that panics under streams Go can never
-realize must fail the case loudly, not bury the panic in unexhibited
-metadata. `--expect-status` makes the enumerator check every recorded
-member. -/
+Machine-side status discipline (audit F1; CORRECTED at the arc-final
+audit F8, 2026-08-08): a member whose status is outside the case's
+DECLARED STATUS SET fails the enumeration loudly — a machine that
+panics under streams Go can never realize must fail the case, not bury
+the panic in unexhibited metadata. The original claim ("a member whose
+status differs is by construction a machine bug, not an envelope
+point") was FALSE: gc itself realizes status-diverse envelopes — a
+leaked goroutine with an observable effect legitimately spans
+`ok` and `panic` (the D6 main-exit latitude, BUG-044's window) — so
+`--expect-status` now takes a comma-separated SET (e.g. `ok,panic`),
+and only membership outside the set is a machine bug. `race` stays a
+singleton (lane d's every-path-refuses claim admits no value members). -/
 
 structure EnumArgs where
   input : Option FilePath := none
@@ -542,13 +548,16 @@ structure EnumArgs where
   prefixes execute once): the blowup guard. Exceeding it fails loud
   (audit F8's discipline carried over). -/
   workCap : Nat := 200000
-  /-- Expected observation status (`ok` / `panic` / `race` — the last
-  is lane d's full-strength claim: EVERY enumerated path refuses):
-  every enumerated member must carry it, else the enumeration fails
-  loud (audit F1 — a wrong-status member is a machine bug, not an
-  envelope point; for `race`, a value member is a schedule the
-  detector missed). `none` skips the check (bare CLI exploration). -/
-  expectStatus : Option String := none
+  /-- Expected observation status SET (comma-separated `ok`/`panic`, or
+  the singleton `race` — lane d's full-strength claim: EVERY enumerated
+  path refuses, so it combines with nothing): every enumerated member
+  must carry a status IN the set, else the enumeration fails loud
+  (audit F1; SET-valued since the arc-final audit F8 — gc realizes
+  status-diverse envelopes via the main-exit window, BUG-044, so
+  `ok,panic` is a legitimate declaration, and only a member OUTSIDE
+  the declared set is a machine bug). `none` skips the check (bare
+  CLI exploration). -/
+  expectStatus : Option (List String) := none
   deriving Repr
 
 private def parseEnumArgs : List String → EnumArgs → Except String EnumArgs
@@ -570,10 +579,17 @@ private def parseEnumArgs : List String → EnumArgs → Except String EnumArgs
   | "--work-cap" :: value :: rest, cfg => do
       parseEnumArgs rest { cfg with workCap := (← parseJsonNat "--work-cap" value) }
   | "--expect-status" :: value :: rest, cfg =>
-      if value == "ok" || value == "panic" || value == "race" then
-        parseEnumArgs rest { cfg with expectStatus := some value }
+      let parts := (value.splitOn ",").filter (· ≠ "")
+      if parts.isEmpty then
+        .error s!"--expect-status needs at least one status, got {value}\n{usage}"
+      else if !parts.all (fun p => p == "ok" || p == "panic" || p == "race") then
+        .error s!"--expect-status entries must be ok, panic, or race, got {value}\n{usage}"
+      else if parts.contains "race" && parts.length > 1 then
+        .error s!"--expect-status race combines with nothing (lane d claims EVERY path refuses), got {value}\n{usage}"
+      else if parts.eraseDups.length != parts.length then
+        .error s!"--expect-status has duplicate entries: {value}\n{usage}"
       else
-        .error s!"--expect-status must be ok, panic, or race, got {value}\n{usage}"
+        parseEnumArgs rest { cfg with expectStatus := some parts }
   | flag :: _, _ => .error s!"unknown or incomplete option: {flag}\n{usage}"
 
 private def renderGoError (err : GoError) : String :=
@@ -665,9 +681,30 @@ def enumPoolRun (resultLocs : List Loc) :
         | none =>
             match m.mainOutcome? with
             | some (.normal σf) =>
-                return ("ok", runJson
-                  { values := (← GoCore.Machine.loadMany σf resultLocs).toArray },
-                  choices)
+                -- THE MAIN-EXIT WINDOW (L5, BUG-044) — `execProgLoop`'s
+                -- bound-2 site, mirrored: with runnable goroutines left,
+                -- pick 0 exits now, pick 1 takes one more pool step.
+                (match GoCore.Machine.runnableIdxs m.shared m.threads with
+                | [] =>
+                    return ("ok", runJson
+                      { values := (← GoCore.Machine.loadMany σf resultLocs).toArray },
+                      choices)
+                | _ :: _ =>
+                    let (pick, choices₁) := choices.consume 2
+                    if pick == 0 then
+                      return ("ok", runJson
+                        { values := (← GoCore.Machine.loadMany σf resultLocs).toArray },
+                        choices₁)
+                    else
+                      match fuel with
+                      | 0 => throw .fuelOut
+                      | fuel + 1 => do
+                          let (m', choices') ← GoCore.Machine.stepMulti m choices₁
+                          match GoCore.Machine.raceUpdate m.shared m.threads choices₁ m' r with
+                          | .error .raceDetected =>
+                              return ("race", errorJson .raceDetected, choices')
+                          | .error e => throw e
+                          | .ok r' => enumPoolRun resultLocs fuel m' r' choices')
             | some _ => throw (.internal "main terminal outside its barrier frame")
             | none =>
                 if (GoCore.Machine.runnableIdxs m.shared m.threads).isEmpty then
@@ -946,15 +983,16 @@ structure ExpCtx where
   sites : Nat
   cap : Nat
   workCap : Nat
-  expectStatus : Option String
+  expectStatus : Option (List String)
 
-/-- Record one terminal leaf: status discipline (audit F1), observation
+/-- Record one terminal leaf: status discipline (audit F1; SET-valued
+since the arc-final audit F8 — see `EnumArgs.expectStatus`), observation
 dedup, cap check. -/
 def recordLeaf (ctx : ExpCtx) (out : EnumOutcome) (path : List Nat)
     (status : String) (obs : Json) (depth : Nat) :
     Except String EnumOutcome := do
-  if ctx.expectStatus.any (· != status) then
-    .error s!"machine-side status divergence: member under pick assignment {path.reverse} has status {status}, expected {ctx.expectStatus.getD ""} — a machine bug under a stream Go may never realize, not an envelope point. Member: {obs.compress}"
+  if ctx.expectStatus.any (fun ss => !ss.contains status) then
+    .error s!"machine-side status divergence: member under pick assignment {path.reverse} has status {status}, outside the case's declared status set {ctx.expectStatus.getD []} — a member Go may never realize is a machine bug; a genuinely Go-realizable status belongs in the declared set (status-diverse envelopes declare e.g. ok,panic — audit F8). Member: {obs.compress}"
   else
     let observations :=
       if out.observations.contains obs then out.observations
@@ -971,7 +1009,14 @@ def recordLeaf (ctx : ExpCtx) (out : EnumOutcome) (path : List Nat)
 position `path` (reversed picks so far): three full ROOT-replays through
 `enumRunProgram` — the real semantics — at raw picks `b`, `2b+1`,
 `4b+3`, observations collected for the final membership check. A probe
-whose RUN fails refutes certification loud (like the old guard).
+whose RUN fails still fails the enumeration loud — but as the MEMBER
+failure it is (audit F15: under a correct bound every rung reduces
+modulo the bound onto an in-bound member already in the DFS tree, so
+an errored probe run is an ordinary member-class failure — e.g. a
+deadlocking or fuel-exhausting member — and is NOT evidence against
+the computed bound; the bound-refutation criterion is the OTHER check,
+a probe observation outside the enumerated set, CLI's certification
+check in `explore`).
 Scope: the probe stream is prefix-only — later sites take the
 empty-stream default — so each rung exhibits the bumped branch's
 all-defaults leaf only (the engine docstring's HONEST SCOPE note). -/
@@ -982,7 +1027,7 @@ def probeSite (ctx : ExpCtx) (out : EnumOutcome) (path : List Nat)
   for d in [bound, 2 * bound + 1, 4 * bound + 3] do
     match enumRunProgram ctx.ep ctx.runFuel (prefixPicks ++ [d]) with
     | .error err =>
-        throw s!"alias-guard probe {prefixPicks ++ [d]} failed — site-bound certification refuted (computed bound {bound}): {renderGoError err}"
+        throw s!"alias-guard probe {prefixPicks ++ [d]} failed: the probed member's run errored — {renderGoError err}. Under a correct bound this rung aliases onto an in-bound member, so this is a member-class failure (e.g. a deadlocking or fuel-out member, which has no membership handling), NOT evidence against the computed bound {bound} (audit F15; a bound refutation is a probe OBSERVATION outside the enumerated set)"
     | .ok (_, obs, _) =>
         let pset :=
           if o.probeObservations.contains obs then o.probeObservations
@@ -1033,12 +1078,27 @@ partial def poolDFS (ctx : ExpCtx) (out : EnumOutcome) (path : List Nat)
     | none =>
       match m.mainOutcome? with
       | some (.normal σf) =>
-          match GoCore.Machine.loadMany σf resultLocs with
-          | .error e =>
-              .error s!"result readout failed at a terminal: {renderGoError e}"
-          | .ok vals =>
-              recordLeaf ctx out path "ok"
-                (runJson { values := vals.toArray }) path.length
+          let exitLeaf : EnumOutcome → List Nat → Except String EnumOutcome :=
+            fun o p =>
+              match GoCore.Machine.loadMany σf resultLocs with
+              | .error e =>
+                  .error s!"result readout failed at a terminal: {renderGoError e}"
+              | .ok vals =>
+                  recordLeaf ctx o p "ok"
+                    (runJson { values := vals.toArray }) p.length
+          (match GoCore.Machine.runnableIdxs m.shared m.threads with
+          | [] => exitLeaf out path
+          | _ :: _ =>
+              -- THE MAIN-EXIT WINDOW (L5, BUG-044): a bound-2 site —
+              -- pick 0 exits with main's readout, pick 1 takes one more
+              -- pool step (mirrors `enumPoolRun`/`execProgLoop`).
+              branchSite ctx out path 2 path.length fun o b =>
+                if b == 0 then exitLeaf o (b :: path)
+                else
+                  match fuel with
+                  | 0 => .error "per-path fuel exhausted (raise --fuel)"
+                  | fuel' + 1 =>
+                      poolStepDFS ctx o (b :: path) resultLocs fuel' m r [])
       | some _ => .error "main terminal outside its barrier frame"
       | none =>
         if (GoCore.Machine.runnableIdxs m.shared m.threads).isEmpty then
@@ -1161,7 +1221,7 @@ partial def initDFS (ctx : ExpCtx) (out : EnumOutcome) (path : List Nat)
 present, then the pool subject per branch), then run the certification
 check — every alias-probe observation must be a member. -/
 def explore (ep : EnumProgram) (runFuel width sites cap workCap : Nat)
-    (expectStatus : Option String) : Except String EnumOutcome := do
+    (expectStatus : Option (List String)) : Except String EnumOutcome := do
   let ctx : ExpCtx :=
     { ep, runFuel, width, sites, cap, workCap, expectStatus }
   let out ←

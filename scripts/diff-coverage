@@ -450,7 +450,7 @@ run_case_rows() {
   confluent_member=""
   confluent_detail=""
   if [[ "$lane" == "confluent" ]]; then
-    local width sites obs_cap samples work members
+    local width sites obs_cap samples work members statuses
     parse_lane_params || return 0
     local conf_dir="$OUT/membership/$id"
     mkdir -p "$conf_dir"
@@ -533,7 +533,7 @@ run_case_rows() {
   # approximation (the old adversarial-stream loop is subsumed: every
   # stream's path is in the enumerated tree).
   if [[ "$lane" == "racy" ]]; then
-    local width sites obs_cap samples work members
+    local width sites obs_cap samples work members statuses
     parse_lane_params || return 0
     local racy_dir="$OUT/membership/$id"
     mkdir -p "$racy_dir"
@@ -618,34 +618,36 @@ go_run_oracle() {
 }
 
 # One `go run` of the generated harness, classified under the SAME status /
-# panic policy as the strict lane. On success prints the sample's canonical
-# observation JSON and returns 0; on any failure prints the error detail
-# and returns 1. Uses run_case_rows' locals (go_run_dir, expected_status,
-# expected_reason).
+# panic policy as the strict lane — generalized (audit F8/BUG-044) to the
+# case's declared STATUS SET (`statuses`, +-separated; defaults to the
+# singleton expected_status): a sample is classified by what actually
+# happened (success -> ok observation; a panic exit -> canonical panic
+# observation) and accepted iff that status is in the declared set — the
+# sample-in-enumerated-set check downstream then pins the VALUE/message.
+# On success prints the sample's canonical observation JSON and returns 0;
+# on any failure prints the error detail and returns 1. Uses
+# run_membership_case_rows' locals (go_run_dir, expected_status,
+# expected_reason, statuses).
 membership_go_observation() {
   local out
   if out="$(go_run_oracle "${1:-}" 2>&1)"; then
-    if [[ "$expected_status" == "panic" ]]; then
-      printf 'go sample: expected panic, but Go exited successfully: %s' "$out"
+    if ! member_status_allowed ok; then
+      printf 'go sample: declared status set (%s) excludes ok, but Go exited successfully: %s' "$statuses" "$out"
       return 1
     fi
     if ! lean observation-eq --left "$out" --right "$out" >/dev/null 2>&1; then
       printf 'go sample is not a valid observation: %s' "$out"
       return 1
     fi
-    if [[ "$out" != *"\"status\":\"$expected_status\""* ]]; then
-      printf 'go sample: expected status %s, got %s' "$expected_status" "$out"
+    if [[ "$out" != *"\"status\":\"ok\""* ]]; then
+      printf 'go sample: expected an ok observation from a successful run, got %s' "$out"
       return 1
     fi
     printf '%s' "$out"
     return 0
   fi
-  if [[ "$expected_status" == "panic" ]]; then
-    if [[ "$out" != *"panic:"* ]]; then
-      printf 'go sample: expected Go panic, got: %s' "$out"
-      return 1
-    fi
-    if [[ "$out" != *"$expected_reason"* ]]; then
+  if [[ "$out" == *"panic:"* ]] && member_status_allowed panic; then
+    if [[ "$expected_status" == "panic" && "$out" != *"$expected_reason"* ]]; then
       printf 'go sample: Go panic did not contain expected reason %s: %s' "$expected_reason" "$out"
       return 1
     fi
@@ -658,7 +660,11 @@ membership_go_observation() {
     printf '{"message":%s,"schema":"golean-observation-v1","status":"panic"}' "$escaped"
     return 0
   fi
-  printf 'go sample run failed: %s' "$out"
+  if [[ "$expected_status" == "panic" ]]; then
+    printf 'go sample: expected Go panic, got: %s' "$out"
+    return 1
+  fi
+  printf 'go sample run failed (status outside the declared set %s): %s' "$statuses" "$out"
   return 1
 }
 
@@ -679,13 +685,33 @@ membership_go_observation() {
 # and since slice 4 the assertion is checked MECHANICALLY per site by the
 # enumerator. Returns nonzero after reporting on a bad shape.
 parse_lane_params() {
-  width="" sites=8 obs_cap=64 samples=5 work=200000 members=""
+  width="" sites=8 obs_cap=64 samples=5 work=200000 members="" statuses="$expected_status"
   if [[ "$params" != "-" ]]; then
     local kv key value
     IFS=',' read -r -a kvs <<< "$params"
     for kv in "${kvs[@]}"; do
       key="${kv%%=*}"
       value="${kv#*=}"
+      if [[ "$key" == "statuses" ]]; then
+        # Status-diverse envelope declaration (audit F8/BUG-044) —
+        # membership-only, its own shape; re-validated here like every
+        # param (F4's discipline: a malformed value that bypasses the
+        # manifest must fail loud).
+        if [[ "$lane" != "membership" ]]; then
+          report_fail "$id" "$features" "manifest" "statuses= is a membership-lane param (lane=$lane)"
+          return 1
+        fi
+        if [[ ! "$value" =~ ^(ok|panic)(\+(ok|panic))+$ ]]; then
+          report_fail "$id" "$features" "manifest" "statuses must be a +-separated set over {ok,panic} with >=2 entries: $kv"
+          return 1
+        fi
+        if [[ "+$value+" != *"+$expected_status+"* ]]; then
+          report_fail "$id" "$features" "manifest" "statuses must include the row's expected_status ($expected_status): $kv"
+          return 1
+        fi
+        statuses="$value"
+        continue
+      fi
       if [[ ! "$value" =~ ^[1-9][0-9]*$ ]]; then
         report_fail "$id" "$features" "manifest" "lane param $key must be a positive integer: $kv"
         return 1
@@ -711,8 +737,14 @@ parse_lane_params() {
   return 0
 }
 
+# Is status $1 in the case's declared status set (`statuses`, +-separated;
+# defaults to the singleton expected_status)?
+member_status_allowed() {
+  [[ "+$statuses+" == *"+$1+"* ]]
+}
+
 run_membership_case_rows() {
-  local width sites obs_cap samples work members
+  local width sites obs_cap samples work members statuses
   parse_lane_params || return 0
 
   local mem_dir="$OUT/membership/$id"
@@ -761,12 +793,14 @@ run_membership_case_rows() {
       int_flags+=(--arg-int "$value")
     done
   fi
-  # --expect-status (audit F1): a member whose status differs from the
-  # case's expected status is a machine bug, not an envelope point — the
-  # enumerator fails loud on it instead of burying it in the set.
+  # --expect-status (audit F1; SET-valued since audit F8): a member
+  # whose status is OUTSIDE the case's declared status set is a machine
+  # bug — the enumerator fails loud on it instead of burying it in the
+  # set. Status-diverse envelopes (BUG-044's main-exit window) declare
+  # statuses=ok+panic and pass the whole set.
   local enum_args=(coverage-observations --input "$wire_json" --function "$function_name"
     --max-width "$width" --max-sites "$sites" --cap "$obs_cap" --work-cap "$work"
-    --expect-status "$expected_status" ${int_flags+"${int_flags[@]}"})
+    --expect-status "${statuses//+/,}" ${int_flags+"${int_flags[@]}"})
   if ! run_with_timeout "$LEAN_ENUM_TIMEOUT_SECONDS" "$GOLEAN_BIN" "${enum_args[@]}" \
       > "$mem_dir/observations.txt" 2> "$mem_dir/enum-stats.txt"; then
     report_fail "$id" "$features" "membership" "enumerator failed (coverage not certified): $(cat "$mem_dir/enum-stats.txt")"
@@ -876,7 +910,7 @@ export CASE_OUT ROOT OUT FRONTEND GO_BUILD_CACHE GOLEAN_BIN \
 export -f run_case run_case_rows run_with_timeout lean json_string_literal \
   panic_message report_pass report_pass_lane report_fail one_line \
   membership_go_observation run_membership_case_rows go_run_oracle \
-  parse_lane_params
+  parse_lane_params member_status_allowed
 
 # Record the concurrency the run used (audit finding: a load-induced
 # timeout drift was indistinguishable from a real one after the fact).

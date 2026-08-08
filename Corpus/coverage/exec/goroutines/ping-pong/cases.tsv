@@ -5,5 +5,5 @@
 # schedule-independence is now a certified claim, not a 3-stream spot
 # check. Params: sites/work raised only where the measured tree needs
 # them (probed at reclassification).
-alternate	pingPong	-	ok	-	goroutines,channels,loops	confluent	the two unbuffered channels force strict alternation; every schedule realizes the same rally	width=4,sites=16,work=600000
+alternate	pingPong	-	ok	-	goroutines,channels,loops	confluent	the two unbuffered channels force strict alternation; every schedule realizes the same rally	width=4,sites=64,work=600000
 cap-zero	pingPongCapZero	-	ok	-	goroutines,channels,make	confluent	the cap-0 rendezvous serializes the exchange on every schedule	width=4

@@ -42,13 +42,19 @@ sequence"; a generator is a function from a bit-stream to a value) and the
 Interaction-Trees model (nondeterminism is an explicit event resolved by an
 oracle).
 
-Nondeterministic points that consume choices, now and later:
+Nondeterministic points that consume choices, now and later (list
+brought current at the arc-final audit F16, 2026-08-08 — the channels
+arc had delivered the "eventually" items; the CANONICAL current list is
+the doctrine preamble, `docs/2026-08-04_nondeterminism-doctrine.md`
+§The model):
 
 - map iteration order (`for k := range m`);
 - append capacity growth after reallocation;
-- fresh allocation addresses;
-- eventually: goroutine scheduling (the scheduler is the oracle, consuming a
-  choice per step) — the concurrency endgame for raft.
+- LIVE since the channels arc: the L1 scheduler pick, the L4 waiter
+  pick, the L2 select-commit picks (entry and arrival paths), and the
+  L5 main-exit window (BUG-044) — consumed at registry boundaries, not
+  per step;
+- still later: fresh allocation addresses.
 
 ## Why this resolves both problems
 

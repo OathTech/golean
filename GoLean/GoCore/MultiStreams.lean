@@ -14,10 +14,13 @@ Bool readout of the joined final state.
 Design (mirroring the sequential checker's discipline,
 `MachineSound.lean`):
 
-* The ONLY branched site is the L1 scheduler pick: at a boundary with
+* The branched sites are the L1 scheduler pick — at a boundary with
   `|runnable| > 1` the checker explores every runnable index, probing
   the REAL `stepMulti` at the singleton stream `[j]` (the consume pops
-  `j`, leaving the remainder empty).
+  `j`, leaving the remainder empty) — and (BUG-044) the MAIN-EXIT
+  WINDOW: at main's terminal with runnable goroutines left, BOTH window
+  picks must certify (exit = `post` of the readout state; continue =
+  the same stepping core, recursively).
 * Every OTHER consumption shape FAILS CLOSED (`false`, never unsound):
   select apply positions (L2 — `consumesSelect`, per-thread),
   `appendSlice` applies, `mapIterK` picks, and multi-candidate waiter
@@ -243,9 +246,47 @@ theorem raceUpdate_oblivious {sPre : ExecState} {tsPre : Array Config}
               | nil => simp [consumesSelect] at hsel
               | cons e rest => rfl
 
+/-- One all-runnable-branches STEP probe — the checker's stepping core,
+factored out (BUG-044: the main-exit window makes it reachable from TWO
+classification arms, so it is shared instead of duplicated). Every
+scheduler branch of one pool step from `m` must succeed
+stream-obliviously with the detector accepting and `next` certifying
+the successor. The recursive knot is passed in (`next` =
+`allStreamsOkPool post fuel`), keeping this helper non-recursive and
+the checker's recursion structural. -/
+def stepAllBranchesOk (next : MultiConfig → RaceState → Bool)
+    (m : MultiConfig) (r : RaceState) : Bool :=
+  let probe : Nat → Choices → Bool := fun i probeCh =>
+    poolThreadOblivious m.shared m.threads i &&
+    match stepMulti m probeCh with
+    | .ok (m', chRem) =>
+        chRem.isEmpty &&
+        (match raceUpdate m.shared m.threads probeCh m' r with
+         | .ok r' => next m' r'
+         | .error _ => false)
+    | .error _ => false
+  match m.threads[m.cur]? with
+  | none => false
+  | some c =>
+    if c.atBoundary then
+      match runnableIdxs m.shared m.threads with
+      | [] => false
+      | [i] => probe i []
+      | rs =>
+          (List.range rs.length).all fun j =>
+            match rs[j]? with
+            | some i => probe i [j]
+            | none => false
+    else probe m.cur []
+
 /-- **THE POOL ∀-STREAMS CHECKER** (docstring above): kernel-evaluable
 certification that every choice stream completes the pool run at main's
-`.normal` terminal with `post` true of the joined final state. -/
+`.normal` terminal with `post` true of the joined final state. The
+BUG-044 MAIN-EXIT WINDOW (L5) is covered: at main's terminal with other
+goroutines still runnable, BOTH window branches must certify — the
+exit itself (`post σf`) AND every continuation step
+(`stepAllBranchesOk`, recursively), mirroring `execProgLoop`'s bound-2
+site over every pick. -/
 def allStreamsOkPool (post : ExecState → Bool) :
     Nat → MultiConfig → RaceState → Bool
   | 0, _, _ => false
@@ -256,33 +297,15 @@ def allStreamsOkPool (post : ExecState → Bool) :
       | some _ => false
       | none =>
         match m.mainOutcome? with
-        | some (.normal σf) => post σf
+        | some (.normal σf) =>
+          (match runnableIdxs m.shared m.threads with
+          | [] => post σf
+          | _ :: _ =>
+              post σf && stepAllBranchesOk (allStreamsOkPool post fuel) m r)
         | some _ => false
         | none =>
           if (runnableIdxs m.shared m.threads).isEmpty then false
-          else
-            let probe : Nat → Choices → Bool := fun i probeCh =>
-              poolThreadOblivious m.shared m.threads i &&
-              match stepMulti m probeCh with
-              | .ok (m', chRem) =>
-                  chRem.isEmpty &&
-                  (match raceUpdate m.shared m.threads probeCh m' r with
-                   | .ok r' => allStreamsOkPool post fuel m' r'
-                   | .error _ => false)
-              | .error _ => false
-            match m.threads[m.cur]? with
-            | none => false
-            | some c =>
-              if c.atBoundary then
-                match runnableIdxs m.shared m.threads with
-                | [] => false
-                | [i] => probe i []
-                | rs =>
-                    (List.range rs.length).all fun j =>
-                      match rs[j]? with
-                      | some i => probe i [j]
-                      | none => false
-              else probe m.cur []
+          else stepAllBranchesOk (allStreamsOkPool post fuel) m r
 
 
 /-- A certified thread shape is never a select apply (the flag is
@@ -319,7 +342,8 @@ theorem poolThreadOblivious_nsel {s : ExecState} {ts : Array Config}
         | true => rw [hnsel] at hobl; simp at hobl
         | false => rfl
 
-/-- The one-layer unfolding of `execProgLoop`, as an equation. -/
+/-- The one-layer unfolding of `execProgLoop`, as an equation
+(incl. the BUG-044 main-exit window at `mainOutcome?`-some). -/
 theorem execProgLoop_unfold (fuel : Nat) (m : MultiConfig) (r : RaceState)
     (ch : Choices) :
     execProgLoop fuel m r ch
@@ -330,7 +354,19 @@ theorem execProgLoop_unfold (fuel : Nat) (m : MultiConfig) (r : RaceState)
           | some msg => throw (.panic msg)
           | none =>
             match m.mainOutcome? with
-            | some out => return (out, ch)
+            | some out =>
+              (match runnableIdxs m.shared m.threads with
+              | [] => return (out, ch)
+              | _ :: _ =>
+                  let (pick, ch₁) := ch.consume 2
+                  if pick == 0 then return (out, ch₁)
+                  else
+                    match fuel with
+                    | 0 => throw .fuelOut
+                    | fuel + 1 => do
+                        let (m', choices') ← stepMulti m ch₁
+                        let r' ← raceUpdate m.shared m.threads ch₁ m' r
+                        execProgLoop fuel m' r' choices')
             | none =>
               if (runnableIdxs m.shared m.threads).isEmpty then
                 throw .deadlock
@@ -345,12 +381,246 @@ theorem execProgLoop_unfold (fuel : Nat) (m : MultiConfig) (r : RaceState)
   rfl
 
 set_option maxHeartbeats 1600000 in
+/-- **Soundness of the stepping core** (`stepAllBranchesOk`), for the
+induction step of the checker's soundness theorem: if every scheduler
+branch of one pool step certifies (with `next` = the fuel-`n` checker,
+whose soundness is the induction hypothesis `ih`), then under EVERY
+stream the step-then-recurse pipeline completes at main's `.normal`
+terminal with `post`. Shared verbatim by both classification arms that
+step (mid-run, and the BUG-044 main-exit window's continue branch). -/
+theorem stepAllBranchesOk_sound {post : ExecState → Bool} {n : Nat}
+    {m : MultiConfig} {r : RaceState}
+    (ih : ∀ {m' : MultiConfig} {r' : RaceState},
+      allStreamsOkPool post n m' r' = true →
+      ∀ ch : Choices, ∃ (σf : ExecState) (ch' : Choices),
+        execProgLoop n m' r' ch = .ok (.normal σf, ch') ∧ post σf = true)
+    (hall : stepAllBranchesOk (allStreamsOkPool post n) m r = true) :
+    ∀ ch : Choices, ∃ (σf : ExecState) (ch' : Choices),
+      ((do
+        let x ← stepMulti m ch
+        match x with
+        | (m', choices') => do
+            let r' ← raceUpdate m.shared m.threads ch m' r
+            execProgLoop n m' r' choices')
+        : Except GoError (ExecOutcome × Choices))
+        = .ok (.normal σf, ch') ∧ post σf = true := by
+  intro ch
+  unfold stepAllBranchesOk at hall
+  dsimp only at hall
+  -- the per-branch probe fact, discharged uniformly below
+  have hprobe : ∀ {i : Nat} {probeCh : Choices},
+      (poolThreadOblivious m.shared m.threads i &&
+        match stepMulti m probeCh with
+        | .ok (m', chRem) =>
+            chRem.isEmpty &&
+            (match raceUpdate m.shared m.threads probeCh m' r with
+             | .ok r' => allStreamsOkPool post n m' r'
+             | .error _ => false)
+        | .error _ => false) = true →
+      -- what the induction needs: the probe's successor pool,
+      -- the empty remainder, the detector verdict, and the
+      -- recursive certificate
+      ∃ (m' : MultiConfig) (r' : RaceState),
+        poolThreadOblivious m.shared m.threads i = true
+        ∧ stepMulti m probeCh = .ok (m', [])
+        ∧ raceUpdate m.shared m.threads probeCh m' r = .ok r'
+        ∧ allStreamsOkPool post n m' r' = true := by
+    intro i probeCh hpr
+    rw [Bool.and_eq_true] at hpr
+    obtain ⟨hobl, hpr⟩ := hpr
+    cases hsm : stepMulti m probeCh with
+    | error e => rw [hsm] at hpr; cases hpr
+    | ok p =>
+      obtain ⟨m', chRem⟩ := p
+      rw [hsm] at hpr
+      dsimp only at hpr
+      rw [Bool.and_eq_true] at hpr
+      obtain ⟨hemp', hpr⟩ := hpr
+      have hchRem : chRem = [] := by
+        cases chRem with
+        | nil => rfl
+        | cons a l => simp [List.isEmpty] at hemp'
+      subst hchRem
+      cases hru : raceUpdate m.shared m.threads probeCh m' r with
+      | error e => rw [hru] at hpr; cases hpr
+      | ok r' =>
+        rw [hru] at hpr
+        exact ⟨m', r', hobl, rfl, hru, hpr⟩
+  cases hti : m.threads[m.cur]? with
+  | none => rw [hti] at hall; cases hall
+  | some c =>
+    rw [hti] at hall
+    dsimp only at hall
+    -- shared finisher: from a certified probe for thread `i`
+    -- and the real `stepMulti` landing on the same successor,
+    -- chain the detector and the induction hypothesis.
+    have hfinish : ∀ {i : Nat} {probeCh chTail : Choices}
+        {m' : MultiConfig} {r' : RaceState},
+        poolThreadOblivious m.shared m.threads i = true →
+        raceUpdate m.shared m.threads probeCh m' r = .ok r' →
+        allStreamsOkPool post n m' r' = true →
+        stepMulti m ch = .ok (m', chTail) →
+        m'.cur = i →
+        ∃ (σf : ExecState) (ch' : Choices),
+          ((do
+            let x ← stepMulti m ch
+            match x with
+            | (m', choices') => do
+                let r' ← raceUpdate m.shared m.threads ch m' r
+                execProgLoop n m' r' choices')
+            : Except GoError (ExecOutcome × Choices))
+            = .ok (.normal σf, ch') ∧ post σf = true := by
+      intro i probeCh chTail m' r' hobl hru hnext hreal hcur
+      have hruReal : raceUpdate m.shared m.threads ch m' r = .ok r' := by
+        rw [raceUpdate_oblivious (ch' := probeCh)
+          (fun cPre hcp => poolThreadOblivious_nsel
+            (hcur ▸ hobl) (hcur ▸ hcp))]
+        exact hru
+      obtain ⟨σf, ch'', hrec, hpost⟩ := ih hnext chTail
+      refine ⟨σf, ch'', ?_, hpost⟩
+      dsimp only
+      rw [hreal]
+      simp only [Bind.bind, Except.bind]
+      rw [hruReal]
+      exact hrec
+    by_cases hb : c.atBoundary = true
+    · rw [if_pos hb] at hall
+      cases hrs : runnableIdxs m.shared m.threads with
+      | nil => rw [hrs] at hall; cases hall
+      | cons r0 rest =>
+        rw [hrs] at hall
+        cases rest with
+        | nil =>
+          obtain ⟨m', r', hobl, hsm, hru, hnext⟩ := hprobe hall
+          have hinto : stepThreadInto m r0 [] = .ok (m', []) := by
+            unfold stepMulti at hsm
+            rw [hti] at hsm
+            dsimp only at hsm
+            rw [if_pos hb, hrs] at hsm
+            exact hsm
+          obtain ⟨ts₂, s₂, hst, hm'⟩ :
+              ∃ ts₂ s₂,
+                stepThread m.shared m.threads r0 [] = .ok (ts₂, s₂, [])
+                ∧ m' = ⟨ts₂, s₂, r0⟩ := by
+            unfold stepThreadInto at hinto
+            simp only [bind_eq_ok] at hinto
+            obtain ⟨⟨ts₂, s₂, chr⟩, hst, hinto⟩ := hinto
+            simp only [pure_eq_ok, Except.ok.injEq,
+              Prod.mk.injEq] at hinto
+            obtain ⟨rfl, rfl⟩ := hinto
+            exact ⟨ts₂, s₂, hst, rfl⟩
+          obtain ⟨-, hallst⟩ := stepThread_oblivious hobl hst
+          have hreal : stepMulti m ch = .ok (m', ch) := by
+            unfold stepMulti
+            rw [hti]
+            dsimp only
+            rw [if_pos hb, hrs]
+            dsimp only
+            unfold stepThreadInto
+            rw [hallst ch]
+            subst hm'
+            rfl
+          exact hfinish hobl hru hnext hreal (by rw [hm'])
+        | cons r1 rest' =>
+          rcases hcons : Choices.consume ch (r0 :: r1 :: rest').length
+            with ⟨pick, tail⟩
+          have hpicklt : pick < (r0 :: r1 :: rest').length := by
+            have hb0 : 0 < (r0 :: r1 :: rest').length := by simp
+            have := consume_fst_lt (ch := ch) hb0
+            rw [hcons] at this
+            exact this
+          rw [List.all_eq_true] at hall
+          have hj := hall pick (by
+            simpa using List.mem_range.mpr hpicklt)
+          cases hget : (r0 :: r1 :: rest')[pick]? with
+          | none =>
+            rw [List.getElem?_eq_none_iff] at hget
+            omega
+          | some i =>
+            rw [hget] at hj
+            obtain ⟨m', r', hobl, hsm, hru, hnext⟩ := hprobe hj
+            have hconsProbe :
+                Choices.consume [pick] (r0 :: r1 :: rest').length
+                  = (pick, []) := by
+              simp only [Choices.consume, Prod.mk.injEq]
+              refine ⟨Nat.mod_eq_of_lt ?_, trivial⟩
+              omega
+            have hinto : stepThreadInto m i [] = .ok (m', []) := by
+              unfold stepMulti at hsm
+              rw [hti] at hsm
+              dsimp only at hsm
+              rw [if_pos hb, hrs] at hsm
+              dsimp only at hsm
+              simp only [hconsProbe, hget] at hsm
+              exact hsm
+            obtain ⟨ts₂, s₂, hst, hm'⟩ :
+                ∃ ts₂ s₂,
+                  stepThread m.shared m.threads i []
+                    = .ok (ts₂, s₂, [])
+                  ∧ m' = ⟨ts₂, s₂, i⟩ := by
+              unfold stepThreadInto at hinto
+              simp only [bind_eq_ok] at hinto
+              obtain ⟨⟨ts₂, s₂, chr⟩, hst, hinto⟩ := hinto
+              simp only [pure_eq_ok, Except.ok.injEq,
+                Prod.mk.injEq] at hinto
+              obtain ⟨rfl, rfl⟩ := hinto
+              exact ⟨ts₂, s₂, hst, rfl⟩
+            obtain ⟨-, hallst⟩ := stepThread_oblivious hobl hst
+            have hreal : stepMulti m ch = .ok (m', tail) := by
+              unfold stepMulti
+              rw [hti]
+              dsimp only
+              rw [if_pos hb, hrs]
+              dsimp only
+              rw [hcons]
+              dsimp only
+              rw [hget]
+              dsimp only
+              unfold stepThreadInto
+              rw [hallst tail]
+              subst hm'
+              rfl
+            exact hfinish hobl hru hnext hreal (by rw [hm'])
+    · rw [if_neg hb] at hall
+      obtain ⟨m', r', hobl, hsm, hru, hnext⟩ := hprobe hall
+      have hinto : stepThreadInto m m.cur [] = .ok (m', []) := by
+        unfold stepMulti at hsm
+        rw [hti] at hsm
+        dsimp only at hsm
+        rw [if_neg hb] at hsm
+        exact hsm
+      obtain ⟨ts₂, s₂, hst, hm'⟩ :
+          ∃ ts₂ s₂,
+            stepThread m.shared m.threads m.cur []
+              = .ok (ts₂, s₂, [])
+            ∧ m' = ⟨ts₂, s₂, m.cur⟩ := by
+        unfold stepThreadInto at hinto
+        simp only [bind_eq_ok] at hinto
+        obtain ⟨⟨ts₂, s₂, chr⟩, hst, hinto⟩ := hinto
+        simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at hinto
+        obtain ⟨rfl, rfl⟩ := hinto
+        exact ⟨ts₂, s₂, hst, rfl⟩
+      obtain ⟨-, hallst⟩ := stepThread_oblivious hobl hst
+      have hreal : stepMulti m ch = .ok (m', ch) := by
+        unfold stepMulti
+        rw [hti]
+        dsimp only
+        rw [if_neg hb]
+        unfold stepThreadInto
+        rw [hallst ch]
+        subst hm'
+        rfl
+      exact hfinish hobl hru hnext hreal (by rw [hm'])
+
+set_option maxHeartbeats 1600000 in
 /-- **Checker soundness**: `allStreamsOkPool post fuel m r = true`
 certifies that EVERY choice stream's pool run from `(m, r)` completes
 at main's `.normal` terminal within `fuel`, with `post` true of the
 joined final state — schedules and data latitude quantified together
 (one stream), deadlock and race refusals excluded on every modeled
-schedule. -/
+schedule, and (BUG-044) the main-exit window's branches both covered:
+the exit pick returns main's readout, every continue pick re-enters
+the certified stepping core. -/
 theorem execProgLoop_ok_of_allStreamsOkPool {post : ExecState → Bool} :
     ∀ {fuel : Nat} {m : MultiConfig} {r : RaceState},
       allStreamsOkPool post fuel m r = true →
@@ -377,7 +647,24 @@ theorem execProgLoop_ok_of_allStreamsOkPool {post : ExecState → Bool} :
         | some out =>
           rw [hm] at hall
           cases out with
-          | normal σf => exact ⟨σf, ch, rfl, hall⟩
+          | normal σf =>
+            cases hrs : runnableIdxs m.shared m.threads with
+            | nil =>
+              rw [hrs] at hall
+              exact ⟨σf, ch, rfl, hall⟩
+            | cons r0 rest =>
+              -- the BUG-044 main-exit window: both picks certified
+              rw [hrs] at hall
+              rw [Bool.and_eq_true] at hall
+              obtain ⟨hpost, hstep⟩ := hall
+              dsimp only
+              rcases hcons : Choices.consume ch 2 with ⟨pick, ch₁⟩
+              dsimp only
+              by_cases hpick : (pick == 0) = true
+              · rw [if_pos hpick]
+                exact ⟨σf, ch₁, rfl, hpost⟩
+              · rw [if_neg hpick]
+                exact stepAllBranchesOk_sound ih hstep ch₁
           | returned σf => cases hall
           | broke σf => cases hall
           | continued σf => cases hall
@@ -387,213 +674,7 @@ theorem execProgLoop_ok_of_allStreamsOkPool {post : ExecState → Bool} :
           · rw [if_pos hrun] at hall; cases hall
           · rw [if_neg hrun] at hall
             rw [if_neg hrun]
-            dsimp only at hall
-            -- the per-branch probe fact, discharged uniformly below
-            have hprobe : ∀ {i : Nat} {probeCh : Choices},
-                (poolThreadOblivious m.shared m.threads i &&
-                  match stepMulti m probeCh with
-                  | .ok (m', chRem) =>
-                      chRem.isEmpty &&
-                      (match raceUpdate m.shared m.threads probeCh m' r with
-                       | .ok r' => allStreamsOkPool post n m' r'
-                       | .error _ => false)
-                  | .error _ => false) = true →
-                -- what the induction needs: the probe's successor pool,
-                -- the empty remainder, the detector verdict, and the
-                -- recursive certificate
-                ∃ (m' : MultiConfig) (r' : RaceState),
-                  poolThreadOblivious m.shared m.threads i = true
-                  ∧ stepMulti m probeCh = .ok (m', [])
-                  ∧ raceUpdate m.shared m.threads probeCh m' r = .ok r'
-                  ∧ allStreamsOkPool post n m' r' = true := by
-              intro i probeCh hpr
-              rw [Bool.and_eq_true] at hpr
-              obtain ⟨hobl, hpr⟩ := hpr
-              cases hsm : stepMulti m probeCh with
-              | error e => rw [hsm] at hpr; cases hpr
-              | ok p =>
-                obtain ⟨m', chRem⟩ := p
-                rw [hsm] at hpr
-                dsimp only at hpr
-                rw [Bool.and_eq_true] at hpr
-                obtain ⟨hemp', hpr⟩ := hpr
-                have hchRem : chRem = [] := by
-                  cases chRem with
-                  | nil => rfl
-                  | cons a l => simp [List.isEmpty] at hemp'
-                subst hchRem
-                cases hru : raceUpdate m.shared m.threads probeCh m' r with
-                | error e => rw [hru] at hpr; cases hpr
-                | ok r' =>
-                  rw [hru] at hpr
-                  exact ⟨m', r', hobl, rfl, hru, hpr⟩
-            cases hti : m.threads[m.cur]? with
-            | none => rw [hti] at hall; cases hall
-            | some c =>
-              rw [hti] at hall
-              dsimp only at hall
-              -- shared finisher: from a certified probe for thread `i`
-              -- and the real `stepMulti` landing on the same successor,
-              -- chain the detector and the induction hypothesis.
-              have hfinish : ∀ {i : Nat} {probeCh chTail : Choices}
-                  {m' : MultiConfig} {r' : RaceState},
-                  poolThreadOblivious m.shared m.threads i = true →
-                  raceUpdate m.shared m.threads probeCh m' r = .ok r' →
-                  allStreamsOkPool post n m' r' = true →
-                  stepMulti m ch = .ok (m', chTail) →
-                  m'.cur = i →
-                  ∃ (σf : ExecState) (ch' : Choices),
-                    ((match n + 1 with
-                      | 0 => throw GoError.fuelOut
-                      | fuel + 1 => do
-                          let x ← stepMulti m ch
-                          match x with
-                          | (m', choices') => do
-                              let r' ← raceUpdate m.shared m.threads ch m' r
-                              execProgLoop fuel m' r' choices'
-                      : Except GoError (ExecOutcome × Choices)))
-                      = .ok (.normal σf, ch') ∧ post σf = true := by
-                intro i probeCh chTail m' r' hobl hru hnext hreal hcur
-                have hruReal : raceUpdate m.shared m.threads ch m' r = .ok r' := by
-                  rw [raceUpdate_oblivious (ch' := probeCh)
-                    (fun cPre hcp => poolThreadOblivious_nsel
-                      (hcur ▸ hobl) (hcur ▸ hcp))]
-                  exact hru
-                obtain ⟨σf, ch'', hrec, hpost⟩ := ih hnext chTail
-                refine ⟨σf, ch'', ?_, hpost⟩
-                dsimp only
-                rw [hreal]
-                simp only [Bind.bind, Except.bind]
-                rw [hruReal]
-                exact hrec
-              by_cases hb : c.atBoundary = true
-              · rw [if_pos hb] at hall
-                cases hrs : runnableIdxs m.shared m.threads with
-                | nil => rw [hrs] at hall; cases hall
-                | cons r0 rest =>
-                  rw [hrs] at hall
-                  cases rest with
-                  | nil =>
-                    obtain ⟨m', r', hobl, hsm, hru, hnext⟩ := hprobe hall
-                    have hinto : stepThreadInto m r0 [] = .ok (m', []) := by
-                      unfold stepMulti at hsm
-                      rw [hti] at hsm
-                      dsimp only at hsm
-                      rw [if_pos hb, hrs] at hsm
-                      exact hsm
-                    obtain ⟨ts₂, s₂, hst, hm'⟩ :
-                        ∃ ts₂ s₂,
-                          stepThread m.shared m.threads r0 [] = .ok (ts₂, s₂, [])
-                          ∧ m' = ⟨ts₂, s₂, r0⟩ := by
-                      unfold stepThreadInto at hinto
-                      simp only [bind_eq_ok] at hinto
-                      obtain ⟨⟨ts₂, s₂, chr⟩, hst, hinto⟩ := hinto
-                      simp only [pure_eq_ok, Except.ok.injEq,
-                        Prod.mk.injEq] at hinto
-                      obtain ⟨rfl, rfl⟩ := hinto
-                      exact ⟨ts₂, s₂, hst, rfl⟩
-                    obtain ⟨-, hallst⟩ := stepThread_oblivious hobl hst
-                    have hreal : stepMulti m ch = .ok (m', ch) := by
-                      unfold stepMulti
-                      rw [hti]
-                      dsimp only
-                      rw [if_pos hb, hrs]
-                      dsimp only
-                      unfold stepThreadInto
-                      rw [hallst ch]
-                      subst hm'
-                      rfl
-                    exact hfinish hobl hru hnext hreal (by rw [hm'])
-                  | cons r1 rest' =>
-                    rcases hcons : Choices.consume ch (r0 :: r1 :: rest').length
-                      with ⟨pick, tail⟩
-                    have hpicklt : pick < (r0 :: r1 :: rest').length := by
-                      have hb0 : 0 < (r0 :: r1 :: rest').length := by simp
-                      have := consume_fst_lt (ch := ch) hb0
-                      rw [hcons] at this
-                      exact this
-                    rw [List.all_eq_true] at hall
-                    have hj := hall pick (by
-                      simpa using List.mem_range.mpr hpicklt)
-                    cases hget : (r0 :: r1 :: rest')[pick]? with
-                    | none =>
-                      rw [List.getElem?_eq_none_iff] at hget
-                      omega
-                    | some i =>
-                      rw [hget] at hj
-                      obtain ⟨m', r', hobl, hsm, hru, hnext⟩ := hprobe hj
-                      have hconsProbe :
-                          Choices.consume [pick] (r0 :: r1 :: rest').length
-                            = (pick, []) := by
-                        simp only [Choices.consume, Prod.mk.injEq]
-                        refine ⟨Nat.mod_eq_of_lt ?_, trivial⟩
-                        omega
-                      have hinto : stepThreadInto m i [] = .ok (m', []) := by
-                        unfold stepMulti at hsm
-                        rw [hti] at hsm
-                        dsimp only at hsm
-                        rw [if_pos hb, hrs] at hsm
-                        dsimp only at hsm
-                        simp only [hconsProbe, hget] at hsm
-                        exact hsm
-                      obtain ⟨ts₂, s₂, hst, hm'⟩ :
-                          ∃ ts₂ s₂,
-                            stepThread m.shared m.threads i []
-                              = .ok (ts₂, s₂, [])
-                            ∧ m' = ⟨ts₂, s₂, i⟩ := by
-                        unfold stepThreadInto at hinto
-                        simp only [bind_eq_ok] at hinto
-                        obtain ⟨⟨ts₂, s₂, chr⟩, hst, hinto⟩ := hinto
-                        simp only [pure_eq_ok, Except.ok.injEq,
-                          Prod.mk.injEq] at hinto
-                        obtain ⟨rfl, rfl⟩ := hinto
-                        exact ⟨ts₂, s₂, hst, rfl⟩
-                      obtain ⟨-, hallst⟩ := stepThread_oblivious hobl hst
-                      have hreal : stepMulti m ch = .ok (m', tail) := by
-                        unfold stepMulti
-                        rw [hti]
-                        dsimp only
-                        rw [if_pos hb, hrs]
-                        dsimp only
-                        rw [hcons]
-                        dsimp only
-                        rw [hget]
-                        dsimp only
-                        unfold stepThreadInto
-                        rw [hallst tail]
-                        subst hm'
-                        rfl
-                      exact hfinish hobl hru hnext hreal (by rw [hm'])
-              · rw [if_neg hb] at hall
-                obtain ⟨m', r', hobl, hsm, hru, hnext⟩ := hprobe hall
-                have hinto : stepThreadInto m m.cur [] = .ok (m', []) := by
-                  unfold stepMulti at hsm
-                  rw [hti] at hsm
-                  dsimp only at hsm
-                  rw [if_neg hb] at hsm
-                  exact hsm
-                obtain ⟨ts₂, s₂, hst, hm'⟩ :
-                    ∃ ts₂ s₂,
-                      stepThread m.shared m.threads m.cur []
-                        = .ok (ts₂, s₂, [])
-                      ∧ m' = ⟨ts₂, s₂, m.cur⟩ := by
-                  unfold stepThreadInto at hinto
-                  simp only [bind_eq_ok] at hinto
-                  obtain ⟨⟨ts₂, s₂, chr⟩, hst, hinto⟩ := hinto
-                  simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at hinto
-                  obtain ⟨rfl, rfl⟩ := hinto
-                  exact ⟨ts₂, s₂, hst, rfl⟩
-                obtain ⟨-, hallst⟩ := stepThread_oblivious hobl hst
-                have hreal : stepMulti m ch = .ok (m', ch) := by
-                  unfold stepMulti
-                  rw [hti]
-                  dsimp only
-                  rw [if_neg hb]
-                  unfold stepThreadInto
-                  rw [hallst ch]
-                  subst hm'
-                  rfl
-                exact hfinish hobl hru hnext hreal (by rw [hm'])
+            exact stepAllBranchesOk_sound ih hall ch
 
 /-- Fuel monotonicity of the pool driver: a completed run is stable
 under more fuel (the classification arms precede the fuel check —
@@ -621,7 +702,24 @@ theorem execProgLoop_mono :
         cases hm : m.mainOutcome? with
         | some o =>
           rw [hm] at h
-          exact h
+          cases hrs : runnableIdxs m.shared m.threads with
+          | nil =>
+            rw [hrs] at h
+            exact h
+          | cons r0 rest =>
+            -- the BUG-044 window at fuel 0: exit pick carries over,
+            -- continue pick is a fuel-out contradiction
+            rw [hrs] at h
+            dsimp only at h ⊢
+            rcases hcons : Choices.consume ch 2 with ⟨pick, ch₁⟩
+            rw [hcons] at h
+            dsimp only at h ⊢
+            by_cases hpick : (pick == 0) = true
+            · rw [if_pos hpick] at h
+              rw [if_pos hpick]
+              exact h
+            · rw [if_neg hpick] at h
+              simp [throw, throwThe, MonadExceptOf.throw] at h
         | none =>
           rw [hm] at h
           by_cases hrun : (runnableIdxs m.shared m.threads).isEmpty
@@ -646,7 +744,39 @@ theorem execProgLoop_mono :
           cases hm : m.mainOutcome? with
           | some o =>
             rw [hm] at h
-            exact h
+            cases hrs : runnableIdxs m.shared m.threads with
+            | nil =>
+              rw [hrs] at h
+              exact h
+            | cons r0 rest =>
+              -- the BUG-044 window: exit pick carries over; a continue
+              -- pick recurses like the ordinary step case
+              rw [hrs] at h
+              dsimp only at h ⊢
+              rcases hcons : Choices.consume ch 2 with ⟨pick, ch₁⟩
+              rw [hcons] at h
+              dsimp only at h ⊢
+              by_cases hpick : (pick == 0) = true
+              · rw [if_pos hpick] at h
+                rw [if_pos hpick]
+                exact h
+              · rw [if_neg hpick] at h
+                rw [if_neg hpick]
+                cases hsm : stepMulti m ch₁ with
+                | error e =>
+                  rw [hsm] at h
+                  simp [Bind.bind, Except.bind] at h
+                | ok p =>
+                  obtain ⟨m', ch₂⟩ := p
+                  rw [hsm] at h
+                  simp only [Bind.bind, Except.bind] at h ⊢
+                  cases hru : raceUpdate m.shared m.threads ch₁ m' r with
+                  | error e =>
+                    rw [hru] at h
+                    simp at h
+                  | ok r' =>
+                    rw [hru] at h
+                    exact ih h (by omega)
           | none =>
             rw [hm] at h
             by_cases hrun : (runnableIdxs m.shared m.threads).isEmpty

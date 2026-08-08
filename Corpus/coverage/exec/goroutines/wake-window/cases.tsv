@@ -7,6 +7,9 @@
 # realizes ok; -race scheduling realizes the panic 40/40; a plain
 # private delay loop also realizes it — dossier F2 verifier). RED until
 # the window lands: the machine's set is the singleton {ok}, and the
-# -race sample trips the too-narrow membership alarm.
-buffered-send	bufSendWakeThenExit	-	ok	-	goroutines,channels,nondet	membership	the ok/panic split is the main-exit window pick: exit-now discards the woken receiver, any continue schedule reaches its panic; window bound 2, scheduler bound 2	width=4,members=2
-close-recv	closeWakeReceiverThenExit	-	ok	-	goroutines,channels,close,nondet	membership	same window at the close-wake boundary (TSan-green: recv is acquire-only at the chan object); ok = exit-now, panic = the woken receiver runs	width=4,members=2
+# -race sample trips the too-narrow membership alarm. GREEN since the
+# BUG-044 fix: the machine certifies exactly {ok, panic} (members=2,
+# statuses=ok+panic — the F8 status-diverse declaration), the window's
+# bound-2 site chains give maxdepth ~21, hence sites=32.
+buffered-send	bufSendWakeThenExit	-	ok	-	goroutines,channels,nondet	membership	the ok/panic split is the main-exit window pick: exit-now discards the woken receiver, any continue schedule reaches its panic; window bound 2, scheduler bound 2	width=4,members=2,statuses=ok+panic,sites=32
+close-recv	closeWakeReceiverThenExit	-	ok	-	goroutines,channels,close,nondet	membership	same window at the close-wake boundary (TSan-green: recv is acquire-only at the chan object); ok = exit-now, panic = the woken receiver runs	width=4,members=2,statuses=ok+panic,sites=32

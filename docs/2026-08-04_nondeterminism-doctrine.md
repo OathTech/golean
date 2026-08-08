@@ -11,10 +11,28 @@ All Go implementation latitude we model routes through ONE mechanism: the
 `Choices` stream in `sem()`'s signature. The interpreter is total and
 deterministic GIVEN a stream (executability — the differential trust root
 — is the project's foundational requirement and the reason a set-valued
-semantics was never an option). Consumption sites are named and few (map
-iteration pick; append spill capacity), enforced structurally
-(`applyStmtOpCore` is choices-free; step SUCCESS is provably
-choice-independent — the sem-adequacy arc's stream-obliviousness kit).
+semantics was never an option). Consumption sites are named and few —
+the CANONICAL LIST (kept current per this doctrine's binding-site rule;
+brought current at the arc-final audit F16, 2026-08-08, after the
+channels arc left this preamble at its two sequential sites):
+
+- map iteration pick (`StepFn.lean`);
+- append spill capacity (`Machine.lean`, `appendSpillWidth` envelope);
+- L2 select-commit pick, entry path (`applySelect`, `Machine.lean`);
+- L2 select-commit pick, arrival path (`arrivalPlan`, `Multi.lean`);
+- L4 waiter pick (`stepThread`, `Multi.lean`);
+- L1 scheduler pick (`stepMulti`, `Multi.lean`);
+- L5 main-exit window (`execProgLoop`, `Multi.lean` — BUG-044, audit
+  F2: exit-now vs one-more-runnable-goroutine-step at main's terminal).
+
+Each site carries its envelope statement in situ; enforcement is
+structural (`applyStmtOpCore` is choices-free). The old parenthetical
+"step SUCCESS is provably choice-independent" is scoped precisely
+(F16's correction): the sequential kit (`stepFn_oblivious`) is GUARDED
+(no mapIter/append/select shapes), and at POOL level the L1 pick
+decides WHICH goroutine steps, so a stream can determine whether a
+pool step succeeds — obliviousness holds per certified shape
+(`poolThreadOblivious`/`stepThread_oblivious`), never unconditionally.
 Headline theorems ∀-quantify the stream: true under EVERY resolution of
 the latitude — deliberately stronger than any single Go implementation.
 

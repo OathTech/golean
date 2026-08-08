@@ -8,8 +8,8 @@
 unbuffered	forkJoinUnbuffered	-	ok	-	goroutines,channels,make	confluent	the rendezvous joins before the readout on every schedule	width=4
 buffered	forkJoinBuffered	-	ok	-	goroutines,channels,make	confluent	the join receive orders the worker's send before the readout on every schedule	width=4
 compute	forkJoinCompute	-	ok	-	goroutines,channels,loops	confluent	the worker's loop result crosses the join channel; no shared state outside it	width=4
-two-workers-own-chans	forkJoinTwoWorkersOwnChans	-	ok	-	goroutines,channels	confluent	each worker owns its channel; both joins complete before the readout on every schedule	width=4,sites=12
+two-workers-own-chans	forkJoinTwoWorkersOwnChans	-	ok	-	goroutines,channels	confluent	each worker owns its channel; both joins complete before the readout on every schedule	width=4,sites=24
 args-eval-now	goArgsEvalNow	-	ok	-	goroutines,channels,evaluation_order	confluent	spawn arguments evaluate in the spawner before the fork (spec), so the child sees the pre-mutation value on every schedule	width=4
 closure-capture	goClosureCapture	-	ok	-	goroutines,channels,closures	confluent	the captured cell is written only before the spawn and read only by the child; the join orders the readout	width=4
 method-callee	goMethodCallee	-	ok	-	goroutines,channels,methods	confluent	the method child communicates only through the join channel	width=4
-result-discarded	goResultDiscarded	-	ok	-	goroutines,channels,returns	confluent	the child's results are discarded (spec); only the join-channel effect is observable, on every schedule	width=4
+result-discarded	goResultDiscarded	-	ok	-	goroutines,channels,returns	confluent	the child's results are discarded (spec); only the join-channel effect is observable, on every schedule	width=4,sites=24

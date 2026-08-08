@@ -1,19 +1,20 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-08  commit: channels-arc audit response (BUG-044 red pin)
+# recorded: 2026-08-08  commit: channels-arc audit response (BUG-044 fixed: the L5 main-exit window)
 #   frontend: native  oracle: go run (strict lane) / go-run membership in the
 #   machine-enumerated observation set, sampled plain AND under -race
 #   (membership lane; go1.26.5) / schedule-tree singleton certification +
 #   strict go-run equality (confluent lane) / every-enumerated-path-refuses
 #   + go run -race red (racy lane; never combined with deadlock)
-# manifest_cases: 1196  pass: 1100  fail: 96
-# Re-pin reason: arc-final audit F2 (major) red-first pin — BUG-044:
-#   no scheduling point between a wake-producing registry op of main's
-#   and main's terminal, so the woken goroutine's gc-realized
-#   continuation is excluded from the certified set. Two new membership
-#   ids (goroutines/wake-window/{buffered-send,close-recv}, race-free,
-#   status-diverse {ok,panic} envelope) enter RED at stage membership
-#   (the -race — and in the harness shape even the plain — sample trips
-#   the too-narrow alarm). Zero drift on all 1194 prior ids.
+# manifest_cases: 1196  pass: 1102  fail: 94
+# Re-pin reason: arc-final audit F2 fix — BUG-044's main-exit window
+#   lands (L5 site in execProgLoop + driver mirrors + the ∀-streams
+#   checker; fork-join designated statements byte-identical, certs
+#   recomputed green at fuel 400). The two red pins
+#   goroutines/wake-window/{buffered-send,close-recv} flip PASS as
+#   status-diverse membership rows (statuses=ok+panic, audit F8's
+#   machinery). 14 enumeration-lane cases recalibrated sites/work for
+#   the deeper post-window trees — every certified observation set
+#   unchanged (probed per case). Zero drift on all other ids.
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
 PASS	arrays/array-copy	-
@@ -542,8 +543,8 @@ FAIL	goroutines/spawn-edge/nil-func-fatal	go-run
 PASS	goroutines/spawn-edge/nil-interface-recovered	-
 PASS	goroutines/spawn-edge/ptr-box-child-aborts	confluent
 FAIL	goroutines/spawn-in-init/in-init	lean-observation
-FAIL	goroutines/wake-window/buffered-send	membership
-FAIL	goroutines/wake-window/close-recv	membership
+PASS	goroutines/wake-window/buffered-send	membership
+PASS	goroutines/wake-window/close-recv	membership
 PASS	goroutines/worker-pool/shared-feed	-
 PASS	goroutines/worker-pool/sum	confluent
 PASS	if/condition-evaluated-once	-

@@ -78,6 +78,11 @@ Design points (docs/2026-08-06_channels-arc-design.md):
   program with main's outcome; other goroutines are discarded mid-flight
   (spec §Program execution — probe p17: their defers never run). An
   unrecovered panic in ANY goroutine aborts the whole program.
+  AMENDED (BUG-044, arc-final audit F2): the exit does not preempt
+  runnable goroutines deterministically — the MAIN-EXIT WINDOW (L5, at
+  `execProgLoop`) lets any finite number of runnable-goroutine steps
+  precede the teardown, matching gc's racing of main's return against
+  woken partners.
 
 * **Deadlock.** ALL goroutines asleep — no thread runnable (tombstones
   excluded, parked threads unrunnable unless wake-ready) — is the
@@ -1160,7 +1165,32 @@ THE DETECTING LOOP (slice 3): a `RaceState` rides along, updated by
 the terminal `raceDetected` before anything else can be observed
 (fail closed per run; deterministic given the stream; consumes no
 choices and no fuel). Inert on one-goroutine pools, so sequential
-conservation and the sequential corpus are untouched by construction. -/
+conservation and the sequential corpus are untouched by construction.
+
+**THE MAIN-EXIT WINDOW (L5; BUG-044, channels-arc final audit F2).**
+Main's terminal does NOT tear the program down while another goroutine
+is runnable: spec §Program execution ("It does not wait for other
+(non-main) goroutines to complete") gives no ordering between main's
+return and other goroutines' progress, so gc may run a woken partner
+any finite amount before the exit — the verifier realized the excluded
+member on the PLAIN oracle (dossier F2). Envelope: at `mainOutcome?`
+with `runnableIdxs` nonempty, a bound-2 pick — 0 = exit now (the
+default, so empty/default streams keep the old behavior), 1 = one more
+ordinary pool step (`stepMulti`: at main's terminal boundary that is
+exactly the L1 reschedule among the runnable others) — repeated at
+every subsequent loop entry until exit is picked or nothing is
+runnable. Too-wide is bounded by the same discipline as L1: the window
+only reorders/extends registry-granularity schedules gc's scheduler
+can realize; in a race-free program its only observable member beyond
+the exit is a woken goroutine's own program-aborting panic (a
+result-cell write from the window would conflict with main's readout
+accesses and refuse — the detector rides along; window steps go
+through `raceUpdate` like any other). A single-thread pool has no
+runnable others at main's terminal, so the site never opens there and
+sequential conservation stays literal (`execProgLoop_single`). The
+relation needed NO widening: `StepM`/`schedPick` already allow
+post-main-terminal steps of runnable goroutines — the driver was the
+narrow side. -/
 def execProgLoop : Nat → MultiConfig → RaceState → Choices →
     Except GoError (ExecOutcome × Choices)
   | fuel, m, r, choices =>
@@ -1171,7 +1201,20 @@ def execProgLoop : Nat → MultiConfig → RaceState → Choices →
         | some msg => throw (.panic msg)
         | none =>
             match m.mainOutcome? with
-            | some out => return (out, choices)
+            | some out =>
+                (match runnableIdxs m.shared m.threads with
+                | [] => return (out, choices)
+                | _ :: _ =>
+                    -- The main-exit window (L5): 0 = exit, 1 = step.
+                    let (pick, choices₁) := choices.consume 2
+                    if pick == 0 then return (out, choices₁)
+                    else
+                      match fuel with
+                      | 0 => throw .fuelOut
+                      | fuel + 1 => do
+                          let (m', choices') ← stepMulti m choices₁
+                          let r' ← raceUpdate m.shared m.threads choices₁ m' r
+                          execProgLoop fuel m' r' choices')
             | none =>
                 if (runnableIdxs m.shared m.threads).isEmpty then
                   throw .deadlock

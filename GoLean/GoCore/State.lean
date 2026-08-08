@@ -128,12 +128,19 @@ def StructFields.set (fields : Array (String × GoValue)) (needle : String)
     throw (.stuck s!"unknown GoCore struct field: {needle}")
 
 /-- The nondeterminism choice stream ("parser of randomness"): each
-nondeterministic point (map iteration order, append capacity) consumes the next
-choice. It is threaded by the interpreter **external to `ExecState`**, so the
-relation and the interpreter/relation correspondence compare oracle-free states.
-GoCore never commits to determinism Go lacks; the interpreter only picks a
-behavior by instantiating this oracle, a testing convenience — see
-`docs/nondeterminism-design.md` and
+nondeterministic point consumes the next choice. The CANONICAL SITE
+LIST lives in the doctrine's preamble
+(`docs/2026-08-04_nondeterminism-doctrine.md` §The model — brought
+current at the arc-final audit F16, 2026-08-08): map iteration order
+and append capacity (sequential), plus the channels arc's L2 select
+picks (entry + arrival), L4 waiter pick, L1 scheduler pick, and L5
+main-exit window. It is threaded by the interpreter **external to
+`ExecState`**, so the relation and the interpreter/relation
+correspondence compare oracle-free states. GoCore never commits to
+determinism Go lacks; the interpreter only picks a behavior by
+instantiating this oracle, a testing convenience — see
+`docs/nondeterminism-design.md` (whose own site list predates the
+concurrency sites — the doctrine preamble is the current record) and
 `docs/2026-07-19_reshape-b-oracle-externalization.md`. -/
 abbrev Choices := List Nat
 

@@ -247,9 +247,18 @@ validate_path_id() {
 #   members = exact expected |enumerated set| (optional; a mechanical
 #             set-cardinality pin — e.g. sb-chan's {1,10,11} pins 3 and
 #             the SC-forbidden 00 cannot hide inside a passing run)
+#   statuses = the declared STATUS SET of a status-diverse envelope
+#             (membership lane ONLY; audit F8/BUG-044: gc realizes
+#             {ok, panic} envelopes via the main-exit window). `+`-
+#             separated subset of {ok, panic} that must include the
+#             row's expected_status (the default/plain-run status);
+#             e.g. statuses=ok+panic. Absent = the singleton
+#             {expected_status}, the pre-F8 discipline.
 validate_lane_params() {
   local cases_file="$1"
   local params="$2"
+  local lane_ctx="${3:-}"
+  local expected_status_ctx="${4:-}"
   local kv key value seen=""
   if [[ "$params" == "-" ]]; then
     return 0
@@ -263,7 +272,7 @@ validate_lane_params() {
     key="${kv%%=*}"
     value="${kv#*=}"
     case "$key" in
-      width|sites|cap|samples|work|members) ;;
+      width|sites|cap|samples|work|members|statuses) ;;
       *)
         echo "coverage-manifest: $cases_file: unknown lane param key: $kv" >&2
         return 1
@@ -274,6 +283,28 @@ validate_lane_params() {
       return 1
     fi
     seen="$seen $key"
+    if [[ "$key" == "statuses" ]]; then
+      # Status-diverse envelope declaration (audit F8) — its own shape,
+      # not an integer. Membership-only: the other lanes' claims are
+      # single-status by construction.
+      if [[ "$lane_ctx" != "membership" ]]; then
+        echo "coverage-manifest: $cases_file: statuses= is a membership-lane param (lane=$lane_ctx cannot declare a status-diverse envelope): $kv" >&2
+        return 1
+      fi
+      if [[ ! "$value" =~ ^(ok|panic)(\+(ok|panic))+$ ]]; then
+        echo "coverage-manifest: $cases_file: statuses must be a +-separated set over {ok,panic} with >=2 entries (a singleton is just expected_status): $kv" >&2
+        return 1
+      fi
+      if [[ "+$value+" != *"+$expected_status_ctx+"* ]]; then
+        echo "coverage-manifest: $cases_file: statuses must include the row's expected_status ($expected_status_ctx — the default-stream status): $kv" >&2
+        return 1
+      fi
+      if [[ "$value" == *ok*ok* || "$value" == *panic*panic* ]]; then
+        echo "coverage-manifest: $cases_file: statuses has a duplicate entry: $kv" >&2
+        return 1
+      fi
+      continue
+    fi
     if [[ ! "$value" =~ ^[1-9][0-9]*$ ]]; then
       echo "coverage-manifest: $cases_file: lane param $key must be a positive integer: $kv" >&2
       return 1
@@ -427,7 +458,7 @@ while IFS= read -r cases_file; do
           bad=1
           continue
         fi
-        if ! validate_lane_params "$cases_file" "$params"; then
+        if ! validate_lane_params "$cases_file" "$params" "$lane" "$expected_status"; then
           bad=1
           continue
         fi
@@ -468,7 +499,7 @@ while IFS= read -r cases_file; do
           bad=1
           continue
         fi
-        if ! validate_lane_params "$cases_file" "$params"; then
+        if ! validate_lane_params "$cases_file" "$params" "$lane" "$expected_status"; then
           bad=1
           continue
         fi
@@ -498,7 +529,7 @@ while IFS= read -r cases_file; do
           bad=1
           continue
         fi
-        if ! validate_lane_params "$cases_file" "$params"; then
+        if ! validate_lane_params "$cases_file" "$params" "$lane" "$expected_status"; then
           bad=1
           continue
         fi

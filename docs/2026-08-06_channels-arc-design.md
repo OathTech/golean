@@ -1729,6 +1729,22 @@ recorded elsewhere and unchanged by this review: registry granularity
 itself (the NPDRF obligation; sub-registry preemption is outside the
 envelope for racy programs by design) — BUG-040's missing post-spawn
 point was already fixed in slice 4.
+CORRECTION (arc-final audit F2, major — 2026-08-08): this review's
+debt list was INCOMPLETE. A too-narrow gap of exactly BUG-040's class
+was live at the main-exit boundary: any main-goroutine registry op
+that wakes a partner (pairing handoff, close), followed by main's
+terminal with no further registry boundary, discarded the woken
+goroutine on every stream — gc realizes its continuation (the
+verifier exhibited the excluded panic member on the PLAIN oracle,
+race-free witness). Recorded as BUG-044, fixed by the L5 MAIN-EXIT
+WINDOW (`execProgLoop`), red-first-pinned by
+goroutines/wake-window/{buffered-send,close-recv} (membership lane,
+status-diverse `statuses=ok+panic` — the audit-F8 machinery this fix
+required). The sentence below about the membership alarm policing the
+too-narrow direction was TRUE only per-lane: the alarm can only see
+members of shapes the corpus exercises — the wake-then-terminal shape
+was exercised nowhere (every close-wake case joins on `<-done` after
+the close), which is how this gap shipped through a green gate.
 
 **L2 — the select pick** (`applySelect` entry + `arrivalCases`
 `.multi`; width = ready-clause count, waiter-extended on the arrival
