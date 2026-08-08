@@ -74,7 +74,17 @@ differential-pinned) `- Cases: <id>, <id>, …` (baseline case ids), then prose.
 
 ## BUG-047 — frontend emits a call TWICE when the RHS of a single assign/define is a conversion of a call (silent divergence from Go)
 
-- Status: open
+- Status: fixed (2026-08-08, check-in response round — user-authorized
+  on-branch fix: the assign-site speculative-emitCallNode guard now
+  covers CONVERSIONS exactly like builtins (`isConversion` beside
+  `isBuiltinCall`, emit.go — a conversion RHS routes through the
+  generic single-emit path, so the operand hoists once). Both
+  canonical pins flip PASS; the two green-by-luck corpus instances
+  (semantics/copy, unittest/const) verified green on the corrected
+  single-emission lowering and their annotations removed; the
+  `constLowered` R2 pin term REGENERATED — the drift was caught by
+  `scripts/check-imported-pins`, the staleness guard shipped in the
+  same response round, exactly as designed.)
 - Pinned-by: differential
 - Cases: assign-order/conversion-call-eval-once/define, assign-order/conversion-call-eval-once/assign
 - Discovered: 2026-08-08, goose-parity buildout phase-B checkpoint review
@@ -119,11 +129,9 @@ differential-pinned) `- Cases: <id>, <id>, …` (baseline case ids), then prose.
   pin `Specs/ImportedGooseConst.lean` pins the DOUBLE-EMITTED term,
   true-of-term, docstring annotated). Corpus-wide source sweep found
   no other landed instance of the trigger shape.
-- Fix: NOT fixed in the goose-parity buildout (the charter forbids
-  frontend changes there); belongs to the post-buildout maintenance
-  round. The natural fix direction is making the :2116 guard cover the
-  conversion path's already-hoisted case (or having the conversion
-  branch report effectful=true).
+- Fix: deferred during the buildout (charter), then user-authorized and
+  landed in the check-in response round (2026-08-08) — the guard-side
+  direction (conversion RHS never takes the speculative path).
 - Handling lapse, recorded: the class was triggered by a batch-6
   wrapper and went unparked while the batch log claimed "zero frontend
   refusals" — a charter MUST-PARK compliance miss, recorded plainly in

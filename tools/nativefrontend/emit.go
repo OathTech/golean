@@ -2092,7 +2092,20 @@ func (e *emitter) emitAssign(st *ast.AssignStmt) (any, error) {
 					isBuiltinCall = true
 				}
 			}
-			if !isBuiltinCall && captures {
+			// A conversion T(x) is syntactically a CallExpr too, and its
+			// emitter has the SAME hazard the builtin guard above names:
+			// emitCallNode's conversion branch emits the operand (HOISTING
+			// an inner call such as T(f())'s f() into the statement buffer
+			// as a side effect) and then reports effectful=false, so the
+			// speculative call below would fall through and the generic
+			// path would emit the operand a SECOND time — the callee ran
+			// twice (BUG-047, goose-parity phase-B checkpoint). Route
+			// conversions through the generic single-emit path.
+			isConversion := false
+			if tv, ok := e.info.Types[call.Fun]; ok && tv.IsType() {
+				isConversion = true
+			}
+			if !isBuiltinCall && !isConversion && captures {
 				// `x := f(x)`-shaped: the call's arguments would read the
 				// fresh cells. Fail closed until the arg-level pre-binding
 				// lands.
@@ -2108,7 +2121,7 @@ func (e *emitter) emitAssign(st *ast.AssignStmt) (any, error) {
 			// statement; a SINGLE-value call onto an addressed target runs
 			// the call first (multi-assign/index-target-rhs-call-order), so
 			// it falls through to the generic hoist path below.
-			if !isBuiltinCall && (allIdentTargets || isMultiValue) {
+			if !isBuiltinCall && !isConversion && (allIdentTargets || isMultiValue) {
 				node, effectful, err := e.emitCallNode(call)
 				if err != nil {
 					return nil, err

@@ -1,20 +1,20 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-08  commit: goose-parity batches 8+9 (unittest wrapper lane completion + BUG-048)
+# recorded: 2026-08-08  commit: BUG-047 FIXED (conversion-of-call double emission)
 #   frontend: native  oracle: go run (strict lane) / go-run membership in the
 #   machine-enumerated observation set, sampled plain AND under -race
 #   (membership lane; go1.26.5) / schedule-tree singleton certification +
 #   strict go-run equality (confluent lane) / every-enumerated-path-refuses
 #   + go run -race red (racy lane; never combined with deadlock)
-# manifest_cases: 1381  pass: 1258  fail: 123
-# Re-pin reason: goose-parity batches 8+9 (single commit; the batch-8-only
-#   run went PARTIAL when batch-9 imports landed mid-run — batch log
-#   records it): 22 ids join — 20 imported-goose (18 PASS; 1 recorded-class
-#   frontend-export unittest/interfaces implicit-interface-conversion-in-
-#   multi-value-assignment; 1 DELIBERATE red BUG-048 pin
-#   unittest/embedded/live) + the 2-row canonical BUG-048 pin
-#   methods/value-receiver-via-pointer-var (both FAIL/lean-observation:
-#   value-receiver method via pointer var wrong-stuck, docs/BUGS.md
-#   BUG-048). Zero drift on all 1359 pre-existing ids.
+# manifest_cases: 1381  pass: 1260  fail: 121
+# Re-pin reason: BUG-047 fix (user-authorized check-in response round) — the
+#   assign-site speculative-emitCallNode guard now covers conversions like
+#   builtins, so a conversion-of-call RHS emits its operand ONCE. Drift is
+#   exactly the two deliberate pins flipping red->green
+#   (assign-order/conversion-call-eval-once/{define,assign}, now
+#   PASS/differential-green); zero drift on all 1379 other ids. The
+#   constLowered R2 pin term is regenerated in this commit (drift caught by
+#   scripts/check-imported-pins as designed); green-by-luck annotations
+#   removed from semantics/copy, unittest/copy, unittest/const.
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
 PASS	arrays/array-copy	-
@@ -34,8 +34,8 @@ PASS	arrays/nested-arrays	-
 PASS	arrays/nested-copy-value	-
 PASS	arrays/nil-pointer-len-cap	-
 FAIL	arrays/pointer-array	lean-observation
-FAIL	assign-order/conversion-call-eval-once/assign	differential
-FAIL	assign-order/conversion-call-eval-once/define	differential
+PASS	assign-order/conversion-call-eval-once/assign	-
+PASS	assign-order/conversion-call-eval-once/define	-
 FAIL	assign-order/target-check-vs-rhs/index-target	differential
 FAIL	assign-order/target-check-vs-rhs/nil-deref-target	differential
 FAIL	assign-order/target-check-vs-rhs/nil-field-target	differential

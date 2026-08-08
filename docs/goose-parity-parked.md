@@ -133,6 +133,9 @@ addendum.)
   the discipline only inspected FAILs. Recorded also in the batch log.
 - **NO further decision needed** — the fix is deferred by charter, the
   triage is complete.
+- **Fix landed (user check-in ruling, 2026-08-08):** BUG-047 fixed on
+  the branch in the response round; pins flipped PASS; entry Status:
+  fixed. The lapse record above stands as history.
 
 ## P4 (2026-08-08) — BUG-048: value-receiver method via pointer variable wrong-stuck (suspected GoLean bug surfaced by imports)
 

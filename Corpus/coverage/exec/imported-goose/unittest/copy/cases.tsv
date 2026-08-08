@@ -1,6 +1,3 @@
 # id	subject	args	expected_status	expected_reason	features
-# BUG-047 note (2026-08-08): testCopyDifferentLengths' `n := uint64(copy(y, x))`
-# is the conversion-of-call shape the frontend double-emits (docs/BUGS.md
-# BUG-047); green only because the doubled copy is idempotent here.
 copy-simple	goleanTestCopySimple	-	ok	-	imported_goose,slices,copy
 copy-different-lengths	goleanTestCopyDifferentLengths	-	ok	-	imported_goose,slices,copy
