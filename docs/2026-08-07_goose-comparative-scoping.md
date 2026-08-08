@@ -31,7 +31,7 @@ Revisions (recorded per charter; all their-side cites below are at these):
 - GoLean = main at the channels-arc merged state: baseline
   `baselines/native-full.tsv` header "recorded: 2026-08-07 commit:
   channels-arc-maint", 1193 exec cases (1099 pass / 94 fail), 311 negative;
-  43 designated theorems (`proofs/Audit.lean:207-270`); 167 concurrency-lane
+  44 designated theorems (`proofs/Audit.lean`'s designated list + judge-config.json — count and citation corrected at the arc-final audit F14: this doc was drafted after the S5 response's 44th, goldenReturnsTwoC, and cited both a stale count and a stale line range); 167 concurrency-lane
   ids (channels/goroutines/race) — 160 PASS (99 strict, 41 confluent, 13
   racy, 7 membership), 7 FAIL (all recorded deliberate/held-open pins).
 
@@ -135,7 +135,7 @@ spec-latitude difference (both defensible; envelope shapes differ).
 | O5 | Recoverable channel panics: send-on-closed/close-of-closed/close-of-nil/make-negative are real Go panics — `recover()` works, messages differentially compared | channels/close-edge/recover-* (all green) | In the logic these are `False` branches in `send_au`/`close_au` (chan_au_base.v:205,295@43d4efa) — verified code must prove them impossible; `go.panic` has no proof rules found; the Go-model panics are unreachable-by-obligation. Go defines these as catchable panics | **DEL** on their side (proof-obligation style); faithfulness + testability win on ours |
 | O6 | Select multi-ready with a CERTIFIED possibilistic record: L2 envelope statement at the site, membership lane with machine-enumerated observation sets + `members=n` cardinality pins, plain AND -race dual go-run sampling | slice-4 log; channels/select-multi-ready/observable {101,210}, select-wake-multi {1,2}, select-arrival-multi {10,20} | Nondeterminism exists (demonic permutation) but is unexplored: no schedule enumeration, no set certification; select liveness/fairness only EMPIRICALLY tested in Go with sleeps (TestSelectLiveness*, channel_test.go:897-1018@3be88bb) — properties their logic does not state | **CAP** on their side |
 | O7 | The sequential-conservation theorem (`execProg_single_eq_execStmt`): every sequential result in the transferable classes is the pool result verbatim — 33 sequential designated statements transfer unrestated; corpus bit-identity as the empirical twin | slice-2 log, `MultiSound.lean` | No analogue needed (no sequential machine) — but nothing plays this role of a machine-level growth-by-extension guarantee | ours-specific asset |
-| O8 | ∀-schedule KERNEL certificates + a concurrent termination notion: `forkJoinAllSchedules42/NoDeadlock/NoRace`, `TerminatesNormallyC` (one fuel bound, every stream, main-normal) — designated statements 39-43 | `proofs/Audit.lean:266-270`; `MultiStreams.lean` | Partial correctness only; explicitly no termination/liveness/fairness claims anywhere (research note §3; enumeration §5) | **CAP** on their side |
+| O8 | ∀-schedule KERNEL certificates + a concurrent termination notion: `forkJoinAllSchedules42/NoDeadlock/NoRace`, `TerminatesNormallyC` (one fuel bound, every stream, main-normal) — designated statements (5 of the 44 — indices stale-corrected at audit F14) | `proofs/Audit.lean` designated list; `MultiStreams.lean` | Partial correctness only; explicitly no termination/liveness/fairness claims anywhere (research note §3; enumeration §5) | **CAP** on their side |
 | O9 | Faithful main-exit (main's return terminates the program; goroutine leaks classified) | D6; goroutines/main-exit | Pool never removes threads — a safety-conservative SUPERSET (research note §3): sound for them, observationally unfaithful | **LAT** (their too-wide is free under safety-only; ours is oracle-required) |
 | O10 | Nil channels inside select | channels/select-nil-default (green) | NOT modeled: their model's `TrySend/TryReceive` have no nil check (channel.go:46-98,120-181@3be88bb — only Send/Receive/Close/Len/Cap check nil); a nil clause would nil-deref in the Go model and is unprovable in Coq (`is_chan` requires `ch ≠ chan.nil`, chan_au_base.v:449); no test covers it | **CAP** on their side |
 | O11 | Blocked-config machine states (no spin): O(1) blocking, fuel-friendly, wake as explicit pairing, waiter-queue-priority arrival matching gc's recvq-before-buffer discipline with the re-argued hchan invariant | S2 audit-response redesign (`arrivalPlan`) | Spin loops + mutex; buffered channels post NO offers, so gc's direct-handoff observation (len 0 beside a parked receiver) is not enforced — their model can expose len-transients real gc avoids; they explicitly punt on len reasoning ("might not be worth specifying", channel.go:250-251@3be88bb) | **LAT** — their envelope is wider than gc with no oracle; exactly the class our S2 audit fixed on our side |
@@ -272,6 +272,14 @@ select_tricky_examples, muxer_unverified) exercise exactly the machinery the
 channels arc shipped; expected to export, with any refusal landing in our
 recorded fail-closed classes (select-with-select rendezvous,
 dead-recv-len-operand, bare-recover statement, go-of-nil-func fatal).
+IMPORT-LANE CALIBRATION (arc-final audit F21/F23, 2026-08-08): the
+dead-recv-len-operand entry above names BUG-032's class by its
+artificial discriminator; its REAL trigger is broad — `len`/`cap` of
+any non-identifier/literal/value-selector operand anywhere in a
+receive-bearing function — and a hit inside a METHOD aborts the whole
+package export (methods have no per-decl quarantine; receive-bearing
+decls in raft are 12/12 methods). Budget import triage accordingly;
+the class statement lives in BUG-032 (docs/BUGS.md).
 
 **(2) Differential run.** They are translation tests, not oracles — except
 the semantics corpus, whose 112 `test*() bool` functions are EXACTLY our
@@ -399,6 +407,6 @@ sync/atomic/stdlib proofs → out of scope until the phases below.
 Open questions for the user (recorded, not decided here): whether phase 1
 lands as one arc or as a background lane; whether the time model is a
 phase-2 co-requisite or its own decision; whether rung-(i) kernel
-certificates for imported oracles join the designated set (43 → ~140 would
+certificates for imported oracles join the designated set (44 → ~140 would
 strain statement-TCB review — a SAMPLED designation policy is probably
 right and needs its own sign-off).

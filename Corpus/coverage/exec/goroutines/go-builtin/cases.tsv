@@ -1,0 +1,7 @@
+# id	subject	args	expected_status	expected_reason	features	lane	why	params
+# PERMANENT-until-lifted refusal marker (audit F22): go-of-builtin,
+# red at frontend-export by design (the emit.go GoStmt arm refuses
+# "go of builtin close" with a decl-scoped quarantine). Owner: the
+# GoStmt lowering (wrap the builtin in a synthesized thunk). The class
+# is unused in deps/raft and deps/goose (probed).
+close	goCloseBuiltin	-	ok	-	goroutines,channels,close,comma_ok	strict	-	-

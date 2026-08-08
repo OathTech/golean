@@ -831,9 +831,22 @@ func (e *emitter) renderTypeArgList(list *types.TypeList) (string, error) {
 // renderTypeArg renders one type argument in the runtime's spelling (see
 // the file comment). Types outside the admitted mangling surface
 // (channels, anonymous non-empty structs/interfaces, unsubstituted type
-// parameters) fail closed: none of them can reach a supported wire type
-// either, and refusing here keeps the key space inside the injectivity
-// argument.
+// parameters) fail closed, keeping the key space inside the injectivity
+// argument. RATIONALE CORRECTED (arc-final audit F9, 2026-08-08): this
+// comment used to also claim "none of them can reach a supported wire
+// type either" — true when written (pre-channels), FALSE since the
+// channels arc made chan a first-class wire type (emitType's
+// *types.Chan case, wire.go). The refusal for channels is now a pure
+// COVERAGE gap, not a wire impossibility: any generic instantiation
+// whose type argument structurally contains an UNNAMED channel type
+// (chan int, []chan int, map[k]chan int, ...) is refused even when the
+// generic performs no channel operation, while the NAMED spelling
+// (type C chan int) reaches the Named arm and works — the split the
+// corpus pin generics/chan-type-arg records red (the one existing
+// guardrail, type-parameter-channel-ops, instantiates at a named type
+// and so never saw this). A future *types.Chan arm needs a mangled
+// spelling with direction+elem inside the injectivity argument.
+// TestManglingSurfaceFailsClosed pins the refusal itself.
 func (e *emitter) renderTypeArg(t types.Type) (string, error) {
 	switch ty := t.(type) {
 	case *types.Basic:

@@ -1,0 +1,10 @@
+# id	subject	args	expected_status	expected_reason	features	lane	why	params
+# PERMANENT-until-lifted refusal markers (audit F11 + F10): the machine
+# refuses select-with-select rendezvous AT RUN TIME (.unsupported from
+# selectArrivalCases — not a frontend-export quarantine), so these sit
+# red at a runtime stage; both ids are carried in
+# baselines/untriaged-ids with in-file justification (they are
+# fail-closed coverage refusals, not fidelity bugs — the ledger's
+# stage taxonomy cannot express machine-boundary refusals).
+core	selectToSelect	-	ok	-	channels,select,goroutines	strict	-	-
+beside-loop	selectBesideSelectLoop	-	ok	-	channels,select,goroutines	strict	-	-

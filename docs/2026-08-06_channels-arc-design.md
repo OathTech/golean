@@ -228,12 +228,20 @@ sites). Decisions made DURING the build, recorded here:
   `isNormalForTyFuel` arms; congruence/locSup/soundness lemmas extended.
 - **Receive vs. call ordering** (spec §Order of evaluation: calls AND
   receives are lexically ordered): a receive hoists to a statement, so
-  `emitBinary` pre-binds its LEFT operand to a temp when the RIGHT
-  operand contains a receive (caught by select-ready-send's
-  `len(ch)*10 + <-ch`). KNOWN NARROWER SCOPE: call-ARGUMENT positions
-  (`f(len(ch), <-ch)`) do not yet pre-bind — no corpus case pins the
-  shape; a future one would fail visibly at the differential, never
-  silently.
+  the emitter must preserve operand order around it. SUPERSEDED IN
+  PLACE (arc-final audit F20, 2026-08-08 — both clauses of the
+  original entry here had gone stale): (1) the binary-position
+  LEFT-operand pre-bind this entry described was REPLACED by the
+  ONE-mechanism len/cap hoist under the function-scoped `fnHasRecv`
+  flag (BUG-023/BUG-026: every operand AND statement-emission
+  position, capability-scoped "by construction", not corpus-scoped —
+  emit.go's note at the deleted pre-bind site); (2) "call-ARGUMENT
+  positions do not yet pre-bind — no corpus case pins the shape" is
+  false at tip: the shape is handled and green-pinned by
+  channels/recv-order/call-arg (`orderTwo(len(ch), <-ch)`; live
+  diff-one PASS re-verified at the audit). The original
+  corpus-absence justification is the over-specialization smell the
+  audit dimension names; the real fix argued from the capability.
 - **Interface-typed receive targets fail closed** in the `=` statement
   form (`x = <-ch` with `x` an interface and a non-interface element):
   the chan-recv statement stores the raw element value and carries no
@@ -1511,7 +1519,17 @@ build, recorded here:
   executable pool step preserves `MultiWf` — foreign threads framed by
   allocator monotonicity and types-invariance. `Multi.lean`'s scaffold
   marking replaced by the discharge record. No executable definition
-  changed.
+  changed. CONSISTENCY NOTE (arc-final audit F18, recorded as an
+  observation, not a defect): `stepMulti_wf` ships with zero code
+  consumers while the SAME slice declined Actris-lite on a
+  no-consumer rationale (below). The asymmetry is deliberate and the
+  cases differ in kind: `MultiWf` was ALREADY-shipped slice-2 surface
+  owing a recorded preservation debt (this closes it and removes a
+  scaffold marking), whereas Actris-lite would ADD new unconsumed
+  surface; the sequential analogue (`step_preserves_wf`) is
+  load-bearing in the ∀-streams completeness, so the pool twin is the
+  artifact later relation↔interpreter transfer needs. Docstrings on
+  both sides state the consumer status honestly.
 - **THE CONCURRENT IRIS LAYER** (`proofs/GoLeanProofs/LangC.lean`):
   the pool `Language` instantiated over `StepE` (per-goroutine, spawn
   component — the D1-recorded interface shape) PLUS the thread-local
@@ -1940,12 +1958,41 @@ its cost.
 
 ### What stays red, with owners
 
-The 94-id fail set decomposes:
+PARTITION CORRECTED (arc-final audit F6, 2026-08-08): the original
+decomposition below summed to 94 only because two errors cancelled —
+(a) BUG-005's bullet counted `maps/{delete,update,clear}-during-range`,
+which are PRE-ARC fails already inside the leading 78 (double-count of
+3; BUG-005 owns 4 listed ids but only 1 arc-new one), and (b) three
+arc-ADDED reds were in no counted bucket:
+`channels/recv-order/dead-recv-len-{operand,embedded}` (the
+permanent-refusal bullet filed them "in the 78 above where pre-arc" —
+they are arc-added) and `bools/short-circuit-call-operand` (arc-added
+at the grossmith campaign, owner recorded there — a 79th id the
+pre-arc bullet's "short-circuit operand quarantine" phrase silently
+absorbed). The corrected partition: 78 pre-arc + 16 arc-added
+= 94, with the arc-added 16 = BUG-034/037 (5) + BUG-025 (3) +
+BUG-005's genuinely-new race/negative/map-range-iter (1) + BUG-041
+(1) + nil-func-fatal (1) + child-recovers (1) + spawn-in-init (1) +
+dead-recv-len-operand (1) + dead-recv-len-embedded (1) +
+short-circuit-call-operand (1). AUDIT-RESPONSE MOVEMENTS on top of
+this set (the standing red set is still 94): the three
+close-beside-parked-sender ids left it (BUG-045: reclassified racy,
+now PASS/racy), goroutines/wake-window/* entered red and flipped
+PASS (BUG-044), and five NEW refusal markers entered red with
+recorded owners — generics/chan-type-arg/first (audit F9),
+goroutines/go-builtin/close (audit F22),
+channels/select-select/{core,beside-loop} (audits F11/F10; core is
+carried in baselines/untriaged-ids)... the authoritative set is
+always `baselines/native-full.tsv`; this prose is the owner map.
+
+The (original) 94-id fail set decomposes:
 
 - **78 pre-arc, non-channel gaps** (carried unchanged; owners
   pre-date this arc): complex/floats-adjacent frontend-export
   classes, range-over-func, goto-backward capture classes,
-  short-circuit operand quarantine, tuple-assign map targets, etc.
+  short-circuit operand quarantine (NOT including the arc-added
+  bools/short-circuit-call-operand — see the correction above),
+  tuple-assign map targets, etc.
 - **BUG-034/BUG-037 held-open pins (5)** —
   `assign-order/target-check-vs-rhs/*` (3),
   `multi-assign/comma-ok-forms/*` (2). Owner: the coordinated
@@ -1957,10 +2004,12 @@ The 94-id fail set decomposes:
 - **BUG-025 call write-back (3)** — `multi-assign/call-write-back/*`.
   Owner: the same laws slice (TargetRefs through Cont.frame; the
   spine machinery is ready for it).
-- **BUG-005 (4)** — `maps/{delete,update,clear}-during-range`,
-  `race/negative/map-range-iter`. Owner: the live-iteration surgery
-  (must add the footprint arm in the same movement — race inventory
-  U1).
+- **BUG-005 (4 listed / 1 arc-new; audit F6)** —
+  `maps/{delete,update,clear}-during-range` (PRE-ARC, already in the
+  78 above — listed here for the owner map only, not counted twice),
+  `race/negative/map-range-iter` (arc-new). Owner: the live-iteration
+  surgery (must add the footprint arm in the same movement — race
+  inventory U1).
 - **BUG-041 (1)** — `race/free/array-read-write`. Owner: path-precise
   value reads (narrowing the whole-cell composite-read
   over-approximation, O1).
@@ -1972,9 +2021,15 @@ The 94-id fail set decomposes:
 - **Spawn-in-init (1)** — `spawn-in-init/in-init`. Owner: init stays
   sequential by design this arc; a future decision on `go` during
   `$pkginit`.
-- **Permanent fail-closed refusal markers** (in the 78 above where
-  pre-arc, plus the arc's own): `recv-order/dead-recv-len-operand`,
+- **Permanent fail-closed refusal markers** (ARC-ADDED, audit F6
+  correction — the original parenthetical mis-filed them "in the 78
+  above where pre-arc"): `recv-order/dead-recv-len-operand`,
   `dead-recv-len-embedded` (BUG-032's ANF-linearization deferral).
+  Joined at the audit response by generics/chan-type-arg/first (F9:
+  unnamed chan type-arg mangling gap), goroutines/go-builtin/close
+  (F22: go-of-builtin, legal Go, refused with no thunk lowering),
+  and channels/select-select/{core,beside-loop} (F11/F10: the
+  rendezvous gap + its over-broad trigger).
 
 ### Successor-arc debts (recorded, not red ids)
 
@@ -1994,7 +2049,21 @@ The 94-id fail set decomposes:
 - **sync package** (Mutex/RWMutex/WaitGroup/Once) via the D2+D3
   registry growth contract — the top LIVE blocker for the goose
   import corpus (scoping study Part B) and raft-critical.
-- **select-with-select rendezvous** (both sides parked selects);
+- **select-with-select rendezvous** — TRIGGER SCOPE CORRECTED at the
+  arc-final audit (F10, 2026-08-08): the record's "both sides parked
+  selects" understated the code's actual trigger. `selectArrivalCases`
+  throws whenever ANY ready-or-waiter-carrying clause of an ARRIVING
+  select has a parked-select partner — including when a DIFFERENT
+  clause is cell-ready and could commit with no select-to-select
+  pairing at all (the ordinary worker idiom: a select polling several
+  channels where one partner is a select loop; verifier-probed —
+  `--choices 0,0` commits the buffered 5, every stream reaching the
+  analysis with the parked-select waiter refuses). A sound narrower
+  refusal exists (carry the refusal per-clause in `ArrivalOutcome` so
+  only the pick of the select-partnered clause refuses) and is the
+  successor's cheap first step. Corpus-pinned red since this audit
+  response: channels/select-select/{core,beside-loop} (the matrix S2
+  row records goose/perennial DO model and test the rendezvous);
   **DPOR** for the three stay-strict confluent candidates;
   **go-of-nil-func fatal class** (above); **BUG-005/BUG-041**
   surgeries (above).
@@ -2018,9 +2087,11 @@ The 94-id fail set decomposes:
     integrated whole). Propose scope + scale at sign-off; the user
     may waive or trim.
 (c) **The goose-parity charter** (`docs/2026-08-07_goose-parity-
-    charter.md`, DRAFT): bless/edit/decline the charter and, if
-    blessed, set the standing goal text it proposes (phase-1 import
-    buildout with parking-ledger discipline and the escape hatch).
+    charter.md`, BLESSED 2026-08-07 — this item's "DRAFT:
+    bless/edit/decline" half is resolved; stale text corrected at the
+    arc-final audit, F13): set (or defer) the standing goal text the
+    blessed charter proposes (phase-1 import buildout with
+    parking-ledger discipline and the escape hatch).
 (d) **Main-merge + push**: merge protocol steps 4-7 (explicit merge
     sign-off at that moment; `git checkout main && git merge
     --ff-only channels-arc-s6`; push is its own separate sign-off).

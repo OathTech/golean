@@ -55,3 +55,8 @@ goroutines/spawn-in-init/in-init
 #   slice as planned: observable at the L2 movement; select-wake-multi
 #   ({1,2}) and select-arrival-multi ({10,20}) at the pool enumerator.
 #   Entries retired.]
+# channels/select-select/core: PERMANENT-until-lifted refusal marker
+#   (arc-final audit F11/F10, 2026-08-08) — select-with-select
+#   rendezvous refused fail-closed at the machine boundary
+#   (lean-observation is the nearest stage); not a fidelity bug.
+channels/select-select/core

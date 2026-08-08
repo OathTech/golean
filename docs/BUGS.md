@@ -651,6 +651,29 @@ alongside every `e.lifted` rollback (both paths).
   justifying claim in BUG-023/BUG-026 and wire.go was FALSE and the
   trigger is non-local)
 
+CLASS REACH, stated plainly (arc-final audit F23, 2026-08-08 — the
+record stated the predicate but never calibrated its reach, and the
+"deferred until a real target needs the shape" framing read as an
+exotic dead-receive shape): the refusal fires on `len`/`cap` of
+ANYTHING other than a bare identifier, a literal, or a non-indirecting
+selector chain, anywhere in a function containing ANY receive
+(`fnHasRecv` is function-scoped) — i.e. the idiomatic `len(p.xs)`
+(pointer receiver/param), `len(g[i])`, `len(f())`, `len(s[1:])`, and
+even the provably-panic-free `len([]byte(s))` (the predicate is
+conservatively syntactic; the "potentially-panicking" message
+over-states for that shape). The audit's verifier hit it on the first
+naive composed program. AMPLIFICATION (audit F21 — the composition is
+arc-new even though both halves predate it): methods have NO per-decl
+quarantine (emit.go's `d.Recv == nil` gate; mono.go's stencil twin),
+so this refusal inside any METHOD kills the WHOLE package export —
+and receive-bearing decls in etcd-io/raft are 12/12 METHODS (verifier
+AST scan), so the import lane's blast radius is per-package, not
+per-declaration. Mitigating datum, also verified: ZERO of those raft
+methods contain any len/cap call today, so the deferral holds for the
+north star — but the goose-parity import lane should expect this
+cliff (pointer from `docs/2026-08-07_goose-comparative-scoping.md`'s
+refusal-class list).
+
 The BUG-026 scope argument — "over-hoisting len/cap is unobservable
 (pure, non-panicking, lexically placed)" — is true of the BUILTIN but
 not of its OPERAND: `emitBuiltin` hoists the whole `len(b[j])` node,

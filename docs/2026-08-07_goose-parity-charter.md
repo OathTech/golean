@@ -1,15 +1,20 @@
 # Goose-parity buildout — charter + standing-goal draft (2026-08-07)
 
-**STATUS: BLESSED (user sign-off 2026-08-07) — charter of record for the goose-parity buildout; the standing goal text below is ready to set when the buildout launches (post arc-final audit). Note: grossmith received a further upstream update 2026-08-07 (post-campaign); re-pin its rev at buildout launch..** The user has NOT signed
-this charter off; nothing in it is in force, and no goose-parity
-buildout starts until the user blesses the charter and sets the
-standing goal (a decision item at the channels-arc merge sign-off).
-(Committed to docs/ 2026-08-07, verbatim from the working-note
-.tmp/goose-parity-charter.md — this status paragraph is the only
-addition.)
+**STATUS: BLESSED (user sign-off 2026-08-07) — charter of record for
+the goose-parity buildout; the standing goal text below is ready to
+set when the buildout launches (post arc-final audit). Note: grossmith
+received a further upstream update 2026-08-07 (post-campaign); re-pin
+its rev at buildout launch.** The buildout itself has NOT launched:
+launching (setting the standing goal) is its own decision at the
+channels-arc merge sign-off. (Self-contradiction cleaned at the
+arc-final audit, F13, 2026-08-08: the blessing commit spliced the
+BLESSED fragment into the draft's "the user has NOT signed this
+charter off" sentence and left the line-11 "DRAFT for user review"
+banner, so the charter of record could not be read as in force from
+its own text; committed to docs/ 2026-08-07 from the working-note
+.tmp/goose-parity-charter.md.)
 
-DRAFT for user review — nothing here is set until the user blesses it
-and sets the goal. Basis: `.tmp/goose-comparative-scoping.md` (Part B:
+Basis: `.tmp/goose-comparative-scoping.md` (Part B:
 87 files importable today; the rung ladder) and the user's autonomy
 design (2026-08-07 discussion): run long and independently; blockers
 are SET ASIDE, never hard-blocking; the user checks in at the END; the
@@ -31,7 +36,7 @@ rung ladder as far as it goes cheaply:
   R3 GoSpecC/GoSpec instance where existing machinery suffices
      (no new proof infrastructure for R3 in this buildout)
 
-Maintain `docs/goose-perenial-comparison.md` (the standing matrix from
+Maintain `docs/goose-perennial-comparison.md` (the standing matrix from
 the scoping study's Part C) as rows change. Unit order: any; batch
 size: worker's judgment; a natural batch is one feature class.
 
@@ -50,7 +55,10 @@ size: worker's judgment; a natural batch is one feature class.
   buildout); check-bugs green; audit checkpoint (1 reviewer +
   refute-default verifiers) every ~3 batches or before any commit that
   touches shared infrastructure (scripts/, the lane definition).
-- The 43 designated statements are byte-identical throughout. proofs/
+- The 44 designated statements are byte-identical throughout (count
+  corrected at the arc-final audit, F14: the S5 audit response added
+  the 44th, goldenReturnsTwoC, before this charter was drafted; the
+  mechanical list is proofs/Audit.lean + judge-config.json). proofs/
   may gain R2/R3 pins in Specs/ only; nothing joins the designated
   list in this buildout (that is an arc-level decision).
 

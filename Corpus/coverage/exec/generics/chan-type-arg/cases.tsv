@@ -1,0 +1,7 @@
+# id	subject	args	expected_status	expected_reason	features	lane	why	params
+# PERMANENT-until-lifted refusal marker (audit F9): the unnamed-chan
+# type-argument gap, red at frontend-export by design (fail closed,
+# never a silent wrong answer). Owner: the generics mangling surface
+# (mono.go renderTypeArg — needs a *types.Chan arm with a
+# direction+elem spelling inside the injectivity argument).
+first	chanTypeArgFirst	-	ok	-	generics,channels,slices	strict	-	-

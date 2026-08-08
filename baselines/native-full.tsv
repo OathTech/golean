@@ -1,17 +1,20 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-08  commit: channels-arc audit response (BUG-045 fixed: the chan-object pair modeled)
+# recorded: 2026-08-08  commit: channels-arc audit response (records batch: F6/F9/F10/F11/F12/F13/F14/F18/F20-F26 + four new refusal markers)
 #   frontend: native  oracle: go run (strict lane) / go-run membership in the
 #   machine-enumerated observation set, sampled plain AND under -race
 #   (membership lane; go1.26.5) / schedule-tree singleton certification +
 #   strict go-run equality (confluent lane) / every-enumerated-path-refuses
 #   + go run -race red (racy lane; never combined with deadlock)
-# manifest_cases: 1199  pass: 1105  fail: 94
-# Re-pin reason: arc-final audit F1 fix — BUG-045's chan-object detector
-#   rule lands (RaceState.chanObjAccess: send entry read / close write /
-#   recv+select nothing — gc's instrumentation exactly). The three
-#   reclassified racy pins flip PASS/racy ("every enumerated path
-#   refuses" certified); zero drift on all 1196 other ids (the rule
-#   over-refuses nothing).
+# manifest_cases: 1203  pass: 1105  fail: 98
+# Re-pin reason: arc-final audit records batch — four NEW deliberate
+#   fail-closed refusal markers enter RED with recorded owners:
+#   generics/chan-type-arg/first (F9: unnamed chan type-arg outside the
+#   mangling surface; frontend-export), goroutines/go-builtin/close
+#   (F22: go-of-builtin, legal Go, refused; frontend-export),
+#   channels/select-select/{core,beside-loop} (F11/F10: the rendezvous
+#   gap and its over-broad trigger; core carried in
+#   baselines/untriaged-ids 16->17, beside-loop at stage nondet).
+#   Zero drift on all 1199 prior ids.
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
 PASS	arrays/array-copy	-
@@ -181,6 +184,8 @@ PASS	channels/select-recv-edge/dep-index-target	-
 PASS	channels/select-recv-edge/fallback-call-index	-
 PASS	channels/select-recv-edge/field-second-target-stores-first	-
 PASS	channels/select-recv-edge/nil-index-base-second	-
+FAIL	channels/select-select/beside-loop	nondet
+FAIL	channels/select-select/core	lean-observation
 PASS	channels/send-closed-panic	-
 PASS	comparisons/short-circuit/array-reaches-interface-panic	-
 PASS	comparisons/short-circuit/array-skips-interface-panic	-
@@ -427,6 +432,7 @@ PASS	functions/untyped-nil-sinks/struct-lit-append	-
 PASS	functions/untyped-nil-sinks/struct-lit-field	-
 PASS	functions/untyped-nil-sinks/struct-lit-map-field	-
 PASS	functions/untyped-nil-sinks/variadic-spread	-
+FAIL	generics/chan-type-arg/first	frontend-export
 PASS	generics/comparable-constraint	-
 PASS	generics/comparable-runtime-edge/any-different-dynamic-types	-
 PASS	generics/comparable-runtime-edge/any-equal-ints	-
@@ -515,6 +521,7 @@ PASS	goroutines/fork-join/method-callee	confluent
 PASS	goroutines/fork-join/result-discarded	confluent
 PASS	goroutines/fork-join/two-workers-own-chans	confluent
 PASS	goroutines/fork-join/unbuffered	confluent
+FAIL	goroutines/go-builtin/close	frontend-export
 PASS	goroutines/main-exit/blocked-goroutine	confluent
 PASS	goroutines/main-exit/two-leaked	confluent
 PASS	goroutines/ping-pong/alternate	confluent

@@ -126,4 +126,14 @@
 #   members=3 — the DRF-SC boundary pin), select-wake-multi ({1,2}) and
 #   select-arrival-multi ({10,20}). Their untriaged-ids entries retired;
 #   the retained comments above them record the history.
-16
+# 2026-08-08 (arc-final audit response, F11/F10)  16 -> 17:
+#   channels/select-select/core ENTERS as a PERMANENT-until-lifted
+#   fail-closed refusal marker: select-with-select rendezvous is
+#   refused AT RUN TIME (.unsupported from selectArrivalCases), a
+#   machine-boundary refusal the stage taxonomy can only express as
+#   lean-observation — a coverage gap (goose/perennial model AND test
+#   the capability; matrix S2 row), not a fidelity bug. Its sibling
+#   beside-loop (F10's over-refusal trigger: any polled channel whose
+#   partner is a select loop) sits at stage nondet, outside this
+#   ledger's filter.
+17
