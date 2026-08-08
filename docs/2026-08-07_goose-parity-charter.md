@@ -14,6 +14,11 @@ banner, so the charter of record could not be read as in force from
 its own text; committed to docs/ 2026-08-07 from the working-note
 .tmp/goose-parity-charter.md.)
 
+**Buildout-launch addendum (2026-08-08):** `deps/grossmith` re-pinned at
+its current rev `11e3fc464a771643f968d382904d7fb0cf851279` (upstream
+update of 2026-08-07, post-campaign) per the header's instruction;
+grossmith is otherwise unused in this buildout.
+
 Basis: `.tmp/goose-comparative-scoping.md` (Part B:
 87 files importable today; the rung ladder) and the user's autonomy
 design (2026-08-07 discussion): run long and independently; blockers
