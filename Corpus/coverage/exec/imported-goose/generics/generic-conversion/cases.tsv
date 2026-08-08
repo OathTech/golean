@@ -1,0 +1,2 @@
+# id	subject	args	expected_status	expected_reason	features
+-	goleanGenericConversions	-	panic	index out of range [0] with length 0	imported_goose,generics,conversions,panic

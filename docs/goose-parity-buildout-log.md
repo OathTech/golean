@@ -221,3 +221,30 @@ the recorded T7 successor debt (R3).
 
 Gate: full `scripts/ci --diff`; baseline re-pinned same-commit
 (1318 → 1327 ids; zero drift on all 1318 prior ids).
+
+## Batch 5 (2026-08-08) — storage-clean + generics
+
+All wrapper-authored (`--allow-no-oracles`); whys in the wrappers'
+comments. Units:
+
+| unit | rows | R1 | notes |
+|---|---|---|---|
+| storage/comments | 1 | 1 PASS | 0consts.go + 1doc.go assembled (one upstream package) |
+| storage/interfacerecursion | 1 | 1 PASS | goose REJECTS this package ("// ERROR cycle in dependencies"); valid Go — parity delta. Methods deliberately uncalled (divergent by construction); observable = lowering + interface assignment |
+| storage/mapliteral | 1 | 1 PASS | + R2 pin (readout 21) |
+| storage/mutualrec | 1 | 1 PASS | goose REJECTS ("cycle"); valid Go — parity delta. Function values taken, not called |
+| generics/constraints | 1 | 1 PASS | `~[]int` underlying constraint + generic Clone (append+spread) |
+| generics/helpers | 1 | 1 PASS | AnyPointer[T any] |
+| generics/generic-conversion | 1 | 0 PASS, 1 frontend-export | short-circuit-operand quarantine (assert's `&&`). NOTE: the upstream `genericConversions()` PANICS in real Go ("index out of range [0] with length 0" — `&(nilConvert[[]int]()[0][0])` indexes a nil slice); their unittest tree never RUNS it (translation-only), so the row is classified expected_status=panic — a latent upstream bug surfaced by executing their corpus |
+
+Totals: 7 units, 7 rows — 6 R1 PASS, 1 frontend-export (recorded
+class). Parity deltas: two whole packages goose rejects as
+untranslatable cycles (interfacerecursion, mutualrec) run green here;
+their generic_conversion example is latently panicking Go.
+
+Rungs: R2 = storage/mapliteral (Terminates + readout 21; 0.6 s,
+~0.7 GiB RSS). R2 skipped elsewhere (P1 pending; constraints hits the
+`allStreamsOk` fail-closed appendSlice arm). R3 skipped batch-wide.
+
+Gate: full `scripts/ci --diff`; baseline re-pinned same-commit
+(1327 → 1334 ids; zero drift on all 1327 prior ids).

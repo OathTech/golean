@@ -1,17 +1,19 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-08  commit: goose-parity batch 4 (imported-goose channel tree)
+# recorded: 2026-08-08  commit: goose-parity batch 5 (imported-goose storage-clean + generics)
 #   frontend: native  oracle: go run (strict lane) / go-run membership in the
 #   machine-enumerated observation set, sampled plain AND under -race
 #   (membership lane; go1.26.5) / schedule-tree singleton certification +
 #   strict go-run equality (confluent lane) / every-enumerated-path-refuses
 #   + go run -race red (racy lane; never combined with deadlock)
-# manifest_cases: 1327  pass: 1212  fail: 115
-# Re-pin reason: goose-parity buildout batch 4 — 9 imported-goose channel ids
-#   join (goose testdata/examples/channel @ 3be88bb, 5 units, authored
-#   wrappers below the marker): 9 PASS (5 confluent-certified, 1
-#   membership-certified members=6, 3 strict). fibonacci + higher-order units
-#   and muxer's client-old/make-greeting rows PARKED (ledger P2: enumeration
-#   cost), so no red rows join. Zero drift on all 1318 pre-existing ids.
+# manifest_cases: 1334  pass: 1218  fail: 116
+# Re-pin reason: goose-parity buildout batch 5 — 7 imported-goose ids join
+#   (goose @ 3be88bb: comments assembled pair, interfacerecursion, mapliteral,
+#   mutualrec, generics constraints/helpers/generic-conversion; authored
+#   wrappers): 6 PASS, 1 FAIL at frontend-export in the recorded
+#   call-in-short-circuit-operand class (generic-conversion's assert &&).
+#   interfacerecursion + mutualrec are packages goose itself REJECTS
+#   ("cycle in dependencies") — valid Go, green here. Zero drift on all
+#   1327 pre-existing ids.
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
 PASS	arrays/array-copy	-
@@ -566,6 +568,9 @@ PASS	imported-goose/channel/muxer-unverified/drained	-
 PASS	imported-goose/channel/select-tricky-examples/nb-full-buffer-not-ready	-
 PASS	imported-goose/channel/select-tricky-examples/nb-guaranteed-ready	-
 PASS	imported-goose/channel/select-tricky-examples/nb-not-ready	confluent
+PASS	imported-goose/generics/constraints	-
+FAIL	imported-goose/generics/generic-conversion	frontend-export
+PASS	imported-goose/generics/helpers	-
 PASS	imported-goose/semantics/allocator/allocate-distinct	-
 PASS	imported-goose/semantics/allocator/allocate-full	-
 PASS	imported-goose/semantics/block/explicit-block-stmt	-
@@ -679,6 +684,10 @@ FAIL	imported-goose/semantics/type-equality/primitive-types-equal	frontend-expor
 PASS	imported-goose/semantics/vars/address-of-local	-
 PASS	imported-goose/semantics/vars/anonymous-assign	-
 PASS	imported-goose/semantics/vars/pointer-assignment	-
+PASS	imported-goose/storage/comments	-
+PASS	imported-goose/storage/interfacerecursion	-
+PASS	imported-goose/storage/mapliteral	-
+PASS	imported-goose/storage/mutualrec	-
 PASS	init/bare-call-in-init	-
 PASS	init/blank-var-init	-
 PASS	init/global-addr-taken	-
