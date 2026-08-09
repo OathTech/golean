@@ -30,6 +30,40 @@ differential-pinned) `- Cases: <id>, <id>, …` (baseline case ids), then prose.
 
 ---
 
+## BUG-052 — call write-back reads target operands BEFORE the call; gc reads them after (deterministic divergence inside spec-unordered latitude)
+
+- Status: open
+- Pinned-by: differential
+- Cases: multi-assign/call-write-back-order/index-missed-panic, multi-assign/call-write-back-order/index-spurious-panic, multi-assign/call-write-back-order/global-index, multi-assign/call-write-back-order/deref-target, multi-assign/call-write-back-order/slice-header-base
+- Discovered: 2026-08-09 (S1 pre-merge audit, semantics dimension,
+  verifier-reproduced with an independent probe matrix; PRE-EXISTING on
+  main — the pre-migration `callTargetLoc` path also resolved target
+  addresses pre-call — but exposed by the BUG-025 closure's own
+  "phase-1 faithful" prose, and the case named for the genre
+  (multi-assign/target-eval-before-call) is structurally blind: its
+  callee never mutates a target operand)
+
+For `lhs..., x = f(...)` the machine evaluates the left-hand target
+OPERANDS (index operands, a deref target's pointer, an index target's
+slice-header base) BEFORE the callee/arguments and the call body; gc
+evaluates them AFTER the call. Go's spec leaves the relative order
+UNSPECIFIED (§Order of evaluation: "the order of those events compared
+to the evaluation and indexing of x and the evaluation of y ... is not
+specified"), so neither realization is non-conforming — but the site
+consumes NO Choices (the machine claims determinism), the differential
+oracle is `go run`, and a callee that mutates a target operand
+diverges observably in BOTH panic directions (missed panic 51 vs
+420030; spurious panic; deref/slice-header/global-index value
+variants). The hoisted-call control (`x[i], j = f(), 3` — the frontend
+hoists single-value calls ahead of the statement) already realizes
+gc's post-call read, so the machine is not even internally consistent
+about the timing. Fix per the deterministic-latitude precedent (panic
+identity, hidden-dep init order): PIN GC'S REALIZED POINT — evaluate
+the call first, then the target operands (through the existing tgtOpK
+spine at frame exit, the receive path's exact shape), then the
+per-target stores; record the pinned latitude at the site (spec text
+verbatim, gc realization version-tracked).
+
 ## BUG-051 — single-value call assigned into an interface-typed target: the boxing wrap lands on the CALL NODE, which the decoder refuses (whole-program over-refusal)
 
 - Status: fixed (2026-08-09, same closing-review round, FRONTEND-only
