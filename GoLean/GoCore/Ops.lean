@@ -512,6 +512,7 @@ def goTypeNameForMessageFuel : Nat → ExecState → Ty → String
           | [r] => s!"{base} {goTypeNameForMessageFuel fuel state r}"
           | rs => s!"{base} ({", ".intercalate (rs.map (goTypeNameForMessageFuel fuel state))})"
       | .unsupported feature => feature
+      | .sync kind => s!"sync.{kind.name}"
   | 0, _, _ => "<type nesting too deep>"
 
 def goTypeNameForMessage (state : ExecState) (typ : Ty) : String :=
@@ -844,6 +845,13 @@ def normalizeValueForTyFuel : Nat → ExecState → Ty → GoValue → Except Go
   | _ + 1, _, .chan _ _, .chan cv => return .chan cv
   | _ + 1, _, .chan _ _, .nil => return .chan { base := none }
   | _ + 1, _, .chan _ _, value => stuck s!"expected channel value, got {repr value}"
+  -- Sync cells (spec-parity slice 2): only kind-matching primitive
+  -- state is normal at a sync type — there is no nil sync struct and
+  -- no cross-kind coercion; anything else fails closed.
+  | _ + 1, _, .sync kind, .syncData p =>
+      if p.kind == kind then return .syncData p
+      else stuck s!"expected sync.{kind.name} state, got {repr (GoValue.syncData p)}"
+  | _ + 1, _, .sync kind, value => stuck s!"expected sync.{kind.name} state, got {repr value}"
   | fuel + 1, state, .defined name, value => do
       match TypeEnv.lookup state.types name with
       | some (.alias target) => normalizeValueForTyFuel fuel state target value
@@ -926,6 +934,9 @@ def isNormalForTyFuel : Nat → TypeEnv → Ty → GoValue → Bool
   -- self-normalized (a raw `.nil` normalizes to the canonical form).
   | _ + 1, _, .chan _ _, .chan _ => true
   | _ + 1, _, .chan _ _, _ => false
+  -- LOCKSTEP with the normalizer's sync arms.
+  | _ + 1, _, .sync kind, .syncData p => p.kind == kind
+  | _ + 1, _, .sync _, _ => false
   | fuel + 1, types, .defined name, value =>
       match TypeEnv.lookup types name with
       | some (.alias target) => isNormalForTyFuel fuel types target value
@@ -1156,6 +1167,9 @@ def defaultValueFuel : Nat → ExecState → Ty → Except GoError GoValue
   | _ + 1, _, .slice _ => return .slice { base := none, offset := 0, len := 0, cap := 0 }
   | _ + 1, _, .map _ _ => return .map { base := none }
   | _ + 1, _, .chan _ _ => return .chan { base := none }
+  -- The zero sync value IS the ready-to-use primitive ("The zero value
+  -- for a Mutex is an unlocked mutex"; likewise RWMutex/WaitGroup/Once).
+  | _ + 1, _, .sync kind => return .syncData kind.zero
   | _ + 1, _, .pointer _ => return .nil
   | _ + 1, _, .funcType _ _ => return .nil
   | _ + 1, _, .interface _ => return .nil
@@ -1459,6 +1473,13 @@ def valueEqFuel : Nat → ExecState → Ty → GoValue → GoValue → Except Go
         -- the precise "unknown defined type" reason.
         | _ => valueEqFuel fuel state dynL innerL innerR
     | _ + 1, _, .interface _, left, right => unsupported s!"interface equality for {repr left} and {repr right}"
+    -- Go's == is DEFINED on the sync structs (plain comparable fields),
+    -- but comparing sync primitives is copy-class misuse (they "must
+    -- not be copied after first use") with no in-scope consumer — fail
+    -- closed rather than pin an equality semantics nothing exercises
+    -- (recorded, design note §9).
+    | _ + 1, _, .sync kind, _, _ =>
+        unsupported s!"equality at sync type sync.{kind.name} (unmodeled; sync values fail closed under ==)"
     | fuel + 1, state, .defined name, left, right => do
         match TypeEnv.lookup state.types name with
         | some (.alias target) => valueEqFuel fuel state target left right
