@@ -82,15 +82,29 @@ directory: zero errors, zero warnings. Contents:
 | `VerdiCompat/Net.lean` | params classes, packet/network, `step_1`, `step_async/dup/drop/failure` + closures | full slice needed by the theorems |
 | `VerdiCompat/RaftState.lean` | the 14-field record | setter boilerplate subsumed by `{s with …}` |
 | `VerdiCompat/Raft.lean` | **the entire `Raft.v:9-554` spec**: all handlers, instances, `raft_intermediate_reachable` | per-def source-line citations |
+| `VerdiCompat/CommonDefinitions.lean` | statement vocabulary: `entries_match`, `sorted`, `commit_recorded`, … | `CommonDefinitions.v` slice |
+| `VerdiCompat/Properties.lean` | **the consensus property statements**: `one_leader_per_term`, `log_matching`, `state_machine_safety` + named transfer targets | ghost-free headliners, 1:1 |
+| `VerdiCompat/ProofStructure.lean` | **the proof scaffold, RE-PROVED**: the 11 `raft_net_invariant_*` obligation shapes, both dispatcher lemmas, THE `raft_net_invariant` induction principle, and the `step_failure_star → raft_intermediate_reachable` bridge | `Raft.v:556-848`; statements 1:1, proofs from scratch (Ltac doesn't port) |
 | `VerdiCompat/Examples.lean` | non-vacuity witness: counter machine, N=3, handler runs checked by `rfl` | mirrors the repo witness doctrine |
 | `AxCheck.lean` | `#print axioms` audit script | run: `env LEAN_PATH=.lake/build/lib/lean lean AxCheck.lean` |
 
 Proved so far: `reboot_init_handlers`, `reboot_idem` (rfl, same as Coq),
-`allFin_all`/`allFin_NoDup` (discharging the `MultiParams` obligations), and a
-real case-analysis lemma `handleRequestVote_grant_votedFor`. Axiom audit:
+`allFin_all`/`allFin_NoDup` (discharging the `MultiParams` obligations), a
+real case-analysis lemma `handleRequestVote_grant_votedFor`, and — the
+substantive one — **`raft_net_invariant`**, the induction principle every one
+of verdi-raft's ~90 invariant proofs instantiates (one obligation per
+handler + init/packet-subset/reboot), plus the trace bridge
+`step_failure_star_raft_intermediate_reachable`. Axiom audit:
 `propext`/`Quot.sound` only — no `sorry`, no `Classical.choice`, no
 `native_decide`, and the port is total (structural recursion throughout,
 matching Verdi's `Fixpoint`s).
+
+Porting friction worth recording (bit during the proof, all benign but each
+a must-know for the correspondence contract): Lean's `++` is
+left-associative where Coq's is right-associative (or-tree shapes under
+`In`/`∈` differ); projection-of-literal doesn't reduce syntactically for
+`rw` (bridge with `show`); Coq's `in_crush` becomes explicit `rcases`
+or-shuffles (core Lean has no `tauto`).
 
 **Mapping decisions** (the systematic transformations a future mechanical
 check must account for — this table IS the informal translation contract):
@@ -195,6 +209,64 @@ Note A feeds both B and C: in all three the ingested spec is the abstract
 side. Verdi's `step_dup`/`step_drop`/`step_failure` family maps naturally
 onto the F5 envelope structure (as the backlog doc predicted).
 
+## 4b. Statement identity and proof-structure import (user questions, 2026-08-09)
+
+**"Is the statement of the consensus property the same as ours?"** As of this
+arc, golean has NO Raft consensus statement — F5 (`TODO.md`) plans to target
+exactly Verdi's stack, so identity was intended but never made inspectable.
+The spike closes that: `Properties.lean` now states `one_leader_per_term`,
+`log_matching`, and `state_machine_safety` in Lean, 1:1 with Verdi's
+ghost-free interface files, as named transfer targets
+(`StateMachineSafetyStatement` etc.). When our own spec-side statements get
+written, "same property?" is a side-by-side reading of two Lean `Prop`s —
+or a lemma. Two structural notes: (i) Verdi's statements quantify over
+`raft_intermediate_reachable` — a spec-level reachability, which composes
+with our statement-TCB doctrine by sitting on the abstract side of the
+refinement, with the Go-side hypothesis remaining an interpreter-run
+equation; (ii) their traces record external I/O only — same observation
+philosophy as ours. Leader completeness is the one headliner whose
+statement needs their ghost layer; deferred, revisit if we want it.
+
+**"Prove the same property over a richer model, importing the Verdi proof
+structure — feasible?"** Yes, with a precise meaning of "import". What
+imports is the *architecture*, not the Ltac: (1) the handler-indexed
+induction principle — **now proved in Lean**
+(`ProofStructure.lean:raft_net_invariant`), so "invariant of the reachable
+set" reduces to one obligation per handler exactly as in Verdi; extending
+the model (new message types, new handlers) = extending the obligation
+list; (2) the invariant DAG — verdi-raft's ~90 named invariant interfaces
+(~3.5k lines of statement text, same easy-port class as the handlers) form
+the roadmap of *which* invariants to prove in *what* order; that dependency
+structure is the hard-won knowledge, and it ports as statements. The ~37k
+lines of Ltac do NOT port — proofs over the richer model are re-proved in
+Lean (where they must be redone anyway, since a richer model changes them).
+Cost scales with the feature: PreVote is modular (new message pair, new
+obligations, election-safety argument locally adjusted); fast nextIndex
+backoff is leader-bookkeeping, safety-neutral; snapshots/compaction touch
+the log representation and hence most log invariants (substantial);
+**membership change invalidates the fixed-quorum arguments**
+(`div2`-majorities baked into `wonElection`/`haveQuorum` and every quorum
+lemma) — that one is research-grade, sequence it last or out of scope.
+
+## 4c. The decided architecture (user direction, 2026-08-09)
+
+The chain: **real etcd-io/raft ⟷ golean model (frontend + GoCore) ⟷
+Verdi-style + extensions model in Lean ⟷ consensus proof in Lean.**
+
+- Left link: the existing pipeline (frontend export of raft.go — the known
+  long pole) plus per-handler refinement in the `IsCommittedIndex` style:
+  every terminating GoCore run of a lowered handler lands in the abstract
+  step (architecture B/C of §4).
+- Middle object: the abstract model, SEEDED by this port and extended
+  toward etcd (D4 resolved: **downscope** — the model covers the core
+  fragment first; extensions added ring by ring with the ledger in §5).
+- Right link: safety proved natively in Lean over that model via the
+  imported proof structure (§4b); the unmodified-core port can additionally
+  get its properties by P2 certificate transfer instead of re-proof.
+- The Verdi compat layer's role in the chain: the anchor proving the
+  middle object's core is *the* spec a published machine-checked proof
+  holds of — not an artifact of our own assumptions.
+
 ## 5. The protocol-gap ledger (the honest risk)
 
 verdi-raft (2016) vs etcd-io/raft — visible in the spec, must be tracked
@@ -245,9 +317,11 @@ audited separately (D4).
   mirror types (verbatim pattern reuse)?
 - **D3 — certification timing:** invest in the P2 toolchain now, or run
   P1-differential-only until the port stabilizes?
-- **D4 — role of the Verdi spec vs etcd deltas:** target core-fragment
-  theorem transfer (delta ledger), or use the ingested spec as anchor/oracle
-  for our own extended spec (parity-comparison role only)?
+- **D4 — RESOLVED (user, 2026-08-09): downscope.** Core-fragment first with
+  the §5 delta ledger; the ingested spec seeds the extended model per the
+  §4c chain. Remaining sub-question: which extension ring comes first
+  (suggest: fast backoff + heartbeat-message alignment, then PreVote;
+  snapshots later; membership change last/out-of-scope).
 - **D5 — ghost field:** keep `electoralVictories` (1:1 fidelity, iso is
   trivial) or drop it (cleaner spec, breaks 1:1)? Spike keeps it.
 

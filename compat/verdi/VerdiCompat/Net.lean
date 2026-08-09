@@ -108,6 +108,17 @@ variable {P M}
 def send_packets (src : M.name) (ps : List (M.name × M.msg)) : List (Packet P M) :=
   ps.map fun m => ⟨src, m.1, m.2⟩
 
+theorem send_packets_app (src : M.name) (l₁ l₂ : List (M.name × M.msg)) :
+    send_packets (P := P) src (l₁ ++ l₂) = send_packets src l₁ ++ send_packets src l₂ := by
+  simp [send_packets]
+
+@[simp] theorem mem_send_packets_singleton {src dst : M.name} {m : M.msg}
+    {q : Packet P M} : q ∈ send_packets src [(dst, m)] ↔ q = ⟨src, dst, m⟩ := by
+  simp [send_packets]
+
+@[simp] theorem send_packets_nil (src : M.name) :
+    send_packets (P := P) src [] = [] := rfl
+
 variable (P M)
 
 /-- `Net.v:323-324` -/

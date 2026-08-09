@@ -14,6 +14,24 @@ namespace VerdiCompat
 def update {A B : Type} [DecidableEq A] (st : A → B) (h : A) (v : B) : A → B :=
   fun nm => if nm = h then v else st nm
 
+/-- StructTact `update_same` (`Update.v` lemma section). -/
+@[simp] theorem update_same {A B : Type} [DecidableEq A] (st : A → B) (h : A) (v : B) :
+    update st h v h = v := by
+  simp [update]
+
+/-- StructTact `update_neq`. -/
+theorem update_neq {A B : Type} [DecidableEq A] (st : A → B) {x h : A} (v : B)
+    (hne : x ≠ h) : update st h v x = st x := by
+  simp [update, hne]
+
+/-- StructTact `update_overwrite`-style collapse: two writes at the same key
+keep only the second. -/
+@[simp] theorem update_update_same {A B : Type} [DecidableEq A] (st : A → B) (h : A)
+    (v w : B) : update (update st h v) h w = update st h w := by
+  funext x
+  simp only [update]
+  split <;> rfl
+
 /-- StructTact `assoc` (`Assoc.v:13-21`). -/
 def assoc {K V : Type} [DecidableEq K] : List (K × V) → K → Option V
   | [], _ => none
