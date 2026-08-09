@@ -1,18 +1,17 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-09  commit: BUG-052 FIXED (call-first order pinned; target operands at frame exit)
+# recorded: 2026-08-09  commit: delta-review polish (.callValue write-back-order discriminator pins)
 #   frontend: native  oracle: go run (strict lane) / go-run membership in the
 #   machine-enumerated observation set, sampled plain AND under -race
 #   (membership lane; go1.26.5) / schedule-tree singleton certification +
 #   strict go-run equality (confluent lane) / every-enumerated-path-refuses
 #   + go run -race red (racy lane; never combined with deadlock)
-# manifest_cases: 1417  pass: 1309  fail: 108
-# Re-pin reason: BUG-052 fix (S1 audit-fix round): the call paths
-#   evaluate the CALL first; caller-target plans ride Cont.frame and
-#   their operands evaluate at frame exit through the tgtOpK spine
-#   (gc's realized point inside spec-unordered latitude, pinned at
-#   the rule site). Exactly the five call-write-back-order pins flip
-#   FAIL->PASS; the hoisted-control and all prior spine pins hold.
-#   Zero drift on all 1412 other ids.
+# manifest_cases: 1419  pass: 1311  fail: 108
+# Re-pin reason: delta-review polish round — two new
+#   multi-assign/call-write-back-order-value pins (func-value callees
+#   mutating a target operand: the .callValue half of the BUG-052
+#   reorder, uncovered by the named-func pins). Both PASS at the
+#   fixed machine and verified RED at the pre-fix machine (worktree
+#   at 390ed13c). Zero drift on all 1417 prior ids.
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
 PASS	arrays/array-copy	-
@@ -1045,6 +1044,8 @@ PASS	multi-assign/call-write-back-order/hoisted-control	-
 PASS	multi-assign/call-write-back-order/index-missed-panic	-
 PASS	multi-assign/call-write-back-order/index-spurious-panic	-
 PASS	multi-assign/call-write-back-order/slice-header-base	-
+PASS	multi-assign/call-write-back-order-value/deref-target	-
+PASS	multi-assign/call-write-back-order-value/index-target	-
 PASS	multi-assign/call-write-back/panic-identity	-
 PASS	multi-assign/chain-field-over-index	-
 PASS	multi-assign/chain-field-over-index/array-field	-
