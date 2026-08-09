@@ -42,7 +42,7 @@ inductive GExpr where
   | sub (a b : GExpr)
   | mul (a b : GExpr)
   | div (a b : GExpr)
-deriving Repr
+deriving Repr, DecidableEq
 
 /-- Go semantics for `/` (truncation toward zero), matching GoCore. -/
 def GExpr.eval (env : GEnv) : GExpr → Int
@@ -62,7 +62,7 @@ inductive GAssertion where
   | eq (a b : GExpr)
   | conj (p q : GAssertion)
   | impl (p q : GAssertion)
-deriving Repr
+deriving Repr, DecidableEq
 
 def GAssertion.holds (env : GEnv) : GAssertion → Prop
   | .le a b => a.eval env ≤ b.eval env
@@ -94,7 +94,7 @@ structure GobraContract where
   ensures : List GAssertion
   loopInvariants : List GAssertion
   terminates : Bool
-deriving Repr
+deriving Repr, DecidableEq
 
 def preHolds (ct : GobraContract) (env : GEnv) : Prop :=
   ∀ a ∈ ct.requires, a.holds env

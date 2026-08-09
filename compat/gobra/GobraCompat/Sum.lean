@@ -1,5 +1,6 @@
 import GobraCompat.SumProgram
 import GobraCompat.Contract
+import GobraCompat.Parser
 
 /-!
 # The tutorial `sum` contract, end to end (spike stage 1)
@@ -46,6 +47,28 @@ def sumContract : GobraContract where
     [ .conj (.le (.lit 0) (.evar "i")) (.le (.evar "i") (.add (.evar "n") (.lit 1))),
       .eq (.evar "sum") (.div (.mul (.evar "i") (.sub (.evar "i") (.lit 1))) (.lit 2)) ]
   terminates := true
+
+/-- The VERBATIM clause texts of `testdata/sum/main.go`'s `//@` comments
+(the stage-2 `"specs"` wire key ships exactly these strings; transcribing
+them as literals is the one remaining manual step in the pipeline). -/
+def sumClauseTexts : List String :=
+  [ "requires 0 <= n",
+    "ensures  sum == n * (n+1) / 2",
+    "decreases",
+    "invariant 0 <= i && i <= n + 1",
+    "invariant sum == i * (i-1) / 2",
+    "decreases n - i" ]
+
+/-- **Round-trip**: parsing the annotation text yields EXACTLY the
+transcribed contract the elaborated statement uses — the transcription
+step is now machine-checked, not trusted (fail-closed: parse error or
+any mismatch is `false`). -/
+def sumRoundTripOk : Bool :=
+  match parseContract sumClauseTexts with
+  | .ok ct => decide (ct = sumContract)
+  | .error _ => false
+
+example : sumRoundTripOk := by decide +kernel
 
 /-- The adequacy guard (divergence #1, `Contract.lean` header): Gobra's
 default unbounded `int` vs GoCore's machine `int`. Within this range the
