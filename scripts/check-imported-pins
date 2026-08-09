@@ -48,7 +48,16 @@ export GOCACHE="${GOCACHE:-$ROOT/artifacts/go-build-cache}"
 # otherwise be silently unguarded. Fail loud on any module not in PINS
 # (and vice versa). Partial registration already fails closed via the
 # term-print step; this closes the total-non-registration hole.
-if [[ -z "${SINGLE_DIR:-}" ]]; then :; fi
+# Scope decisions (closing review 2026-08-09, note finding — recorded so
+# the behavior reads as chosen, not accidental; a stub skip-in-fixture-
+# mode no-op that was never wired is removed):
+#  - the cross-check runs in fixture mode (--dir) too, DELIBERATELY: it
+#    guards a repo invariant that must hold regardless of invocation, and
+#    the extra strictness fails closed;
+#  - its universe is the ImportedGoose*.lean glob under Specs/ — a pin
+#    module named or placed outside that pattern is not seen here (pin
+#    modules follow the naming convention; the term.lean import block's
+#    term-print step still fails closed on partial registration).
 modules_on_disk="$(ls proofs/GoLeanProofs/Specs/ImportedGoose*.lean 2>/dev/null \
   | sed 's|proofs/||; s|/|.|g; s|\.lean$||' | sort)"
 modules_in_pins="$(for pin in "${PINS[@]}"; do IFS='|' read -r _ _ m <<< "$pin"; echo "$m"; done | sort)"
