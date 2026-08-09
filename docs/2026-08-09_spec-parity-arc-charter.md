@@ -21,6 +21,36 @@ first-order corollaries designated — so the comparison becomes
 statement-by-statement, and our exports ground in a tested semantics
 where theirs quantify an untested model.
 
+## Slice-1 record (2026-08-09, branch `spec-parity-s1`)
+
+DELIVERED, gate green at tip, four commits: (1) the F15 guardrail
+corpus (`ints/observation-kind/*`, the BUG-042 right-value/wrong-kind
+template); (2) F15 FIXED — both observation encoders emit the integer
+kind symmetrically, decode fail-closed (ten concrete kinds,
+range-checked; `uintptr` refuses on both sides since the frontend maps
+it to uint64), zero corpus drift — no hidden kind divergence existed —
+with two tracked observation records legitimately re-pinned
+(google-search certified set re-enumerated under `--slow`;
+hidden-dep-order deviation pin); (3) BUG-034 + BUG-037 FIXED — the
+round-4 spine migration re-applied WITH the anchored WP law families
+restated over it (`wp_assign*` incl. the `wp_assign_lit` witness,
+`wp_map_lookup` + `wp_map_lookup_start`, the new registered spine step
+laws, the `wp_seqCont_nil`/`wp_stores_done_nil` generic-continuation
+drain), every consumer re-proved, the five held-open pins flip;
+(4) BUG-025 FIXED — call write-back on the storeK spine (TargetRefs
+through `Cont.frame`, frame-exit `storeMany` retired), frame-exit law
+family restated with unchanged pre/posts, the three call-write-back
+pins flip. All EIGHT recorded held-open pins are green; designated
+statements untouched (44, byte-identical); no new Choices sites.
+Deferred with a reason: the `typeAssert` spine-entry WP law has no
+consumer yet and therefore ships with none (a law without a witness is
+a scaffold — `Laws/StmtOps.lean` records it; it lands with its first
+consumer). The assignment-adjacent frontend-export refusals
+(`maps/tuple-assign-key-eval`, imported-goose `multiple-assign-to-map`,
+`reverse-assign-ops*`) are FRONTEND coverage gaps, not machine pins —
+the machine now supports map-element call targets, so enabling them is
+a frontend slice when scheduled.
+
 ## The sync question (asked 2026-08-09), answered
 
 Sync is NOT a prerequisite for spec-parity over the imported corpus
