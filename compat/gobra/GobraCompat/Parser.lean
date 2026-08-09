@@ -21,12 +21,33 @@ Grammar (ring 0; anything outside it is a parse error, never a guess):
     term      := factor (('*' | '/') factor)*     -- left-assoc
     factor    := intLit | ident | '(' expr ')'
 
-Recorded ring-0 limitations (fail closed, lift in ring 1): no
-parenthesized assertions, no quantifiers/`old()`/pure-function calls, no
-`%`, single-token identifiers only.
+Recorded ring-0 limitations (ALL fail closed with an explicit `.error`;
+lift in ring 1). The list was completed by a pre-merge audit, which
+measured the fragment against Gobra's own regression corpus and found the
+original list omitted the operators a Gobra user meets first:
 
-Totality: explicit fuel everywhere (initialized to input length) — no
-`partial`, no well-founded-recursion obligations.
+- **comparison**: no `>`, `>=`, `!=` — `>` alone accounts for 20 clauses
+  in that corpus
+- **boolean**: no `||`, no `!`, no boolean literals or boolean-valued
+  variables
+- **arithmetic**: no `%`, no unary minus
+- **structure**: no parenthesized assertions (parens are expression-only),
+  no quantifiers, `old()`, `acc()`, pure-function calls, or `preserves`
+- **identifiers**: single-token only
+- **termination**: no tuple measures (`decreases a, b`), no conditional
+  measures (`decreases m if b`), and `decreases _` (the unsound
+  "assume termination" wildcard) is refused rather than read as a measure
+
+MEASURED COVERAGE, so nobody has to guess: of 507 spec clauses in
+`deps/gobra/src/test/resources/regressions/examples`, 29 parse (5.7%);
+of the 58 that are pure integer arithmetic — ring 0's stated scope — 29
+parse (50%). In `sum`'s OWN source file, the next two tutorial functions
+(`isEven`, `halfRoundedUp`) are both unrepresentable: they need `%`, `!`,
+booleans and pure-function calls. The fragment covers the tutorial's
+first function and nothing after it.
+
+Totality: explicit fuel everywhere (see `fuelFor`) — no `partial`, no
+well-founded-recursion obligations.
 -/
 
 namespace GobraCompat
@@ -230,6 +251,12 @@ def parseClause (s : String) : Except String SpecClause := do
     let (a, rest) ← Parser.parseAssertion fuel rest
     if rest.isEmpty then .ok (.invariantC a) else .error "trailing tokens"
   | [.ident "decreases"] => .ok (.decreasesC none)
+  -- `decreases _` is Viper's WILDCARD — "assume termination", an unsound
+  -- escape hatch — not a measure. Parsing it as `.decreasesC (some (evar
+  -- "_"))` silently reinterprets a construct whose meaning is the opposite
+  -- of what it would then claim. Fail closed (pre-merge audit).
+  | [.ident "decreases", .ident "_"] =>
+      .error "decreases _ (termination wildcard) is not supported: it ASSUMES termination"
   | .ident "decreases" :: rest => do
     let (e, rest) ← Parser.parseExpr fuel rest
     if rest.isEmpty then .ok (.decreasesC (some e)) else .error "trailing tokens"

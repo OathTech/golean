@@ -73,13 +73,32 @@ example : sumRoundTripOk := by decide +kernel
 /-- The adequacy guard (divergence #1, `Contract.lean` header): Gobra's
 default unbounded `int` vs GoCore's machine `int`. Within this range the
 loop never leaves int64, so the mathematical contract and the machine
-agree. The bound is spec content — visible, auditable, and exactly the
-obligation Gobra's own `--overflow` mode would impose. -/
+agree. The bound is spec content — visible and auditable.
+
+CLAIM CORRECTED (pre-merge audit): this is NOT "exactly the obligation
+Gobra's own `--overflow` mode would impose". `--overflow`
+(`OverflowChecksTransform.scala`) assumes argument bounds at body entry
+and asserts per-STATEMENT subexpression bounds over int64, and it
+explicitly adds no checks to assertions or predicates. Our guard is an
+input-range precondition, which is a different shape — sufficient here
+(at `n ≤ 2^31`, `n(n+1)/2 ≈ 2.3e18 < 2^63`, so no intermediate leaves
+int64) but not the same obligation. -/
 def sumGuard (n : Int) : Prop := 0 ≤ n ∧ n ≤ 2 ^ 31
 
+/-! The statement below names `"n"` and `"sum"` as the parameter and
+result. Nothing in `contractStatement` can check those against the
+lowered function — the connection was previously by eye, and getting it
+wrong makes a clause read an unbound name (worth 0 under `env1`), which
+is precisely the vacuity `scopedBy` exists to stop. These pin it. -/
+#guard sumFn.args.map (·.id) == #["n"]
+#guard sumFn.results.map (·.id) == #["sum"]
+#guard sumContract.scopedBy ["n", "sum"]
+
 /-- **THE elaborated contract statement** — what "Gobra verifies `sum`"
-MEANS over golean's semantics. Proof: recorded next milestone (the
-`go_walk`+`wp_while_inv` walk fed by `sumContract.loopInvariants`). -/
+MEANS over golean's semantics: `sum`'s contract carries `decreases`, so
+this is the TOTAL judgment (triple + safety + termination). Proof:
+recorded next milestone (the `go_walk`+`wp_while_inv` walk fed by
+`sumContract.loopInvariants`). -/
 def SumContractStatement : Prop :=
   contractStatement sumLowered.typeDefs.toList sumLowered.funcs
     sumLowered.methods ⟨"sum"⟩ .int "n" "sum" sumContract sumGuard

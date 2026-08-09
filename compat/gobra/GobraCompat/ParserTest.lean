@@ -4,8 +4,10 @@ import GobraCompat.Parser
 # Parser tests
 
 `#guard` rather than `by decide +kernel`: these run in the evaluator, so they
-are cheap, they fail the BUILD if they regress (fail-closed, same as any gate),
-and they add no axiom to anything. The kernel-checked claim stays where it
+are cheap, they fail this package's `lake build` if they regress, and they add
+no axiom to anything. Note the honest scope of that: **no repo gate builds
+`compat/`** — not `scripts/ci`, not the workflow (the isolation contract cuts
+both ways), so these run only when a human builds this package. The kernel-checked claim stays where it
 earns its keep — `Sum.lean`'s round trip, which proves the transcribed contract
 IS the parse of the verbatim annotation text.
 
@@ -146,6 +148,36 @@ A parser that accepts junk would let a wrong contract round-trip. -/
 #guard rejects "requires 0 <= n &&"        -- dangling connective
 #guard rejects "requires 0 <= n ==>"       -- dangling implication
 #guard rejects "decreases n - "            -- dangling operator in a measure
+
+/-! ## Unsupported Gobra constructs must fail CLOSED, and be pinned
+
+These all behaved correctly already; nothing PINNED them, and the
+limitation list omitted most of them. A pre-merge audit measured that `>`
+alone accounts for 20 clauses in Gobra's regression corpus, and that the
+next two functions in `sum`'s own tutorial file are unrepresentable. If
+any of these ever starts parsing, it must be because someone implemented
+it deliberately — not because a tokenizer change let it through with the
+wrong meaning. -/
+
+#guard rejects "requires n > 0"                    -- `>` (the commonest gap)
+#guard rejects "requires n >= 0"                   -- `>=`
+#guard rejects "requires n != 0"                   -- `!=`
+#guard rejects "requires 0 <= n || n < 0"          -- `||`
+#guard rejects "requires !(0 <= n)"                -- `!`
+#guard rejects "requires 0 <= n % 2"               -- `%`
+#guard rejects "requires -1 <= n"                  -- unary minus
+#guard rejects "requires true"                     -- boolean literal
+#guard rejects "preserves 0 <= n"                  -- `preserves` clause
+#guard rejects "requires acc(x)"                   -- permissions
+#guard rejects "ensures old(n) == n"               -- `old()`
+#guard rejects "requires forall i int :: 0 <= i"   -- quantifiers
+#guard rejects "requires isEven(n)"                -- pure-function call
+#guard rejects "requires len(s) == 0"              -- `len`
+#guard rejects "decreases n, i"                    -- tuple measure
+#guard rejects "decreases n if 0 <= n"             -- conditional measure
+-- Viper's `_` measure means "ASSUME termination" — an unsound escape
+-- hatch. It must not be read as an ordinary measure named "_".
+#guard rejects "decreases _"
 
 /-! ## The derived bound itself -/
 

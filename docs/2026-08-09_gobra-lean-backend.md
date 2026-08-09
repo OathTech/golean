@@ -257,3 +257,127 @@ rings 0–1.
   (clone-yourself, gitignored).
 - Research reports (three agent runs, 2026-08-09) synthesized above;
   recoverable-era artifact index in §2.
+
+## 10. The parser arc, and what two pre-merge audits found (2026-08-09, later same day)
+
+§§1–9 above were written at the ring-0 spike and predate four commits.
+This section is the arc's real record; where it contradicts an earlier
+section, this one is current.
+
+### 10a. Stage 2: the annotation parser, and a bug that ate two sessions
+
+`Parser.lean` (tokenizer + recursive-descent parser for `//@` clause text)
+and `sumRoundTripOk` close the last trusted step in the pipeline: the
+hand-transcribed `sumContract` is now machine-checked against the VERBATIM
+clause strings, by the kernel, rather than trusted as prose.
+
+It shipped broken, and the failure is worth recording because the symptom
+inverted the cause. `parseClause` set `fuel := toks.length + 1`, but the
+descent `assertion → conj → cmp → expr → term → factor` burns six levels
+before consuming a token. So the SHORTEST clause (`requires 0 <= n`, 4
+tokens, fuel 5) died "out of fuel" while LONGER arithmetic clauses parsed
+fine — extra tokens bought extra fuel. `parseContract` therefore returned
+`.error`, `sumRoundTripOk` was `false`, and `example : sumRoundTripOk := by
+decide +kernel` was asking the kernel to prove `False`. That consumed 60 GB
+of RSS in ~2 minutes and killed the session twice before the cause was
+found; it was misattributed first to the differential corpus and then to
+`decide +kernel` over `String`/`Char`, both wrong. The tokenizer
+kernel-reduces all six clauses in 558 ms and was never implicated.
+
+Two things came out of it, both now doctrine in `CLAUDE.md`: **`#eval` a
+`Bool` before asking the kernel to prove it**, and **cap every Lean build
+in a cgroup** (`scripts/capped`, merged separately) — which is what made
+the bisect-by-layer diagnosis affordable at all.
+
+The bound is now `Parser.fuelFor = grammarDepth * (|toks| + 1)`, derived
+from the input rather than tuned. It is ARGUED, NOT PROVED. An audit
+tried to break it — all 597,871 token sequences of length ≤ 6 parse with
+zero out-of-fuel, worst measured need is ~1.5 fuel/token against 6
+supplied — but the sufficiency lemma (`fuelFor toks ≤ f → parseAssertion f
+toks ≠ .error "out of fuel"`) is unwritten. **This is the arc's sharpest
+open item**: the failure mode is a silently false round-trip, which is
+exactly how the bug above hid.
+
+### 10b. Audit findings and dispositions
+
+Two decorrelated Opus reviewers (statement-TCB; Gobra-fidelity +
+over-specialization). They converged independently on the same defect.
+
+**FIXED — silent vacuity via unscoped names (both reviewers).** `GEnv` is
+total and `env1` maps every unbound name to `0`, so `requires 0 < b` for
+an unbound `b` became `0 < 0`, making the precondition unsatisfiable and
+the whole elaborated contract provable BY ABSURDITY without mentioning the
+program. One reviewer proved that theorem in three tactic lines for an
+ordinary two-argument contract; reproduced independently before fixing.
+Reached also via `nil` (an identifier, silently 0) and via division by an
+unbound name. Now `GobraContract.scopedBy` is a CONJUNCT of
+`contractStatement`: out of scope makes the statement FALSE, never
+vacuously true. Scope covers `requires`/`ensures` only — the first version
+also scoped `loopInvariants` and rejected `sumContract` itself, since
+invariants legitimately name loop-locals (`i`). Loop-invariant scoping
+remains UNCHECKED and is an open gap.
+
+**FIXED — `decreases` parsed then dropped (both reviewers).**
+`ct.terminates` was written in three places and read nowhere;
+`contractStatement` elaborated to `GoFuncSpec` = `GoTriple ∧ ProgressExec`
+— partial correctness + safety. A contract with `decreases` deleted and a
+FALSE loop invariant substituted produced a definitionally EQUAL Prop
+(`rfl` type-checked). Since the subject is Gobra's TOTAL-correctness
+tutorial example, discharging the statement would not have discharged the
+contract — the dangerous direction. Now `ct.terminates` selects
+`GoFuncSpecT` (triple + safety + `Terminates`). That total dual of
+`GoFuncSpec` does not exist in `proofs/`, so it lives in `Contract.lean`
+to preserve `compat/`'s isolation; **if this lane matures it belongs in
+`GoLeanProofs.Surface`, as a coordination-point slice.**
+
+**FIXED — claims corrected.** "Divergence #2 (division)" was not a
+divergence: Gobra's `IntEncoding.scala` routes Go `int` division through a
+custom `goIntDiv` implementing exact Go truncation, verified numerically
+across all six sign combinations. It was masking a real one — `goIntDiv`
+carries `requires r != 0`, so Gobra imposes a well-definedness obligation
+on every `/`, while `GExpr.eval` silently gives `x / 0 = 0`. Recorded as
+divergence #3 and NOT fixed: failing closed needs an `Option`/`Except`
+evaluator and new `Decidable` instances. Also: `sumGuard` is not "exactly
+the obligation `--overflow` would impose" (that asserts per-statement
+subexpression bounds over int64 and adds nothing to assertions); the guard
+is sound but a different shape.
+
+**FIXED — the limitation list was incomplete, with numbers.** It omitted
+`>`, `>=`, `!=`, `||`, `!`, unary minus, boolean literals. Measured against
+Gobra's own regressions: **29 of 507 spec clauses parse (5.7%); 29 of the
+58 pure-integer ones (50%)**. In `sum`'s own tutorial file the next two
+functions are unrepresentable. 17 new `#guard`s pin every unsupported
+construct as rejected. Also fixed: `decreases _` (Viper's "assume
+termination" wildcard, an unsound escape hatch) was parsed as a measure
+named `_`; it now fails closed.
+
+**OPEN — no witness for the `GoFuncSpec` joint.** The seed witnesses prove
+`runSumIs` (the differential runner) and integer arithmetic; nothing
+instantiates `contractStatement`/`GoFuncSpec`/`GoTriple`, so `Sum.lean`'s
+"demonstrably talks about the real program" is weaker evidence than it
+reads. Not a live vacuity risk — the shape is inhabited elsewhere in the
+repo — but per `CLAUDE.md`'s non-vacuity gate it is a scaffold until the
+`go_walk` proof lands, which is the milestone the ledger already names.
+
+**OPEN — `GobraContract`'s shape does not survive a second example.** One
+flat `loopInvariants` list with no association to a loop, and one
+`terminates : Bool` for both function- and loop-level `decreases`, with the
+measure discarded. Two loops are indistinguishable. Adding one requires
+reshaping the type, not extending it.
+
+**NOTED — nothing automated builds `compat/gobra`.** Not `scripts/ci`, not
+the workflow. That is the isolation contract working as designed, but it
+means the ~70 `#guard`s and the axiom audit run only when a human builds
+the package. `ParserTest.lean`'s header now says so.
+
+### 10c. What survived attack
+
+Worth recording, because it is the part that would otherwise be assumed:
+the proof subject really is `decoded(frontend(source))` — a reviewer
+regenerated `wire.json` byte-identically with `go run ./tools/nativefrontend`
+and reproduced `sum-lowered.repr` exactly; `sumClauseTexts` is
+character-exact against `main.go`'s `//@` comments (6/6, including the
+double space); 14,000 generated assertion trees round-trip through the
+parser exactly, so there is no silent wrong parse inside the fragment;
+precedence and associativity match Gobra's grammar; and every unsupported
+construct fails closed with an explicit error.
