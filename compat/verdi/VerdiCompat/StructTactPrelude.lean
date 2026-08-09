@@ -64,6 +64,22 @@ def removeAll {A : Type} [DecidableEq A] (x : A) : List A → List A
   | [] => []
   | y :: tl => if x = y then removeAll x tl else y :: removeAll x tl
 
+/-- StructTact `filterMap` (`FilterMap.v:9-16`). -/
+def filterMap {A B : Type} (f : A → Option B) : List A → List B
+  | [] => []
+  | x :: xs =>
+    match f x with
+    | none => filterMap f xs
+    | some y => y :: filterMap f xs
+
+/-- StructTact `remove_all` (`RemoveAll.v:14-18`): delete every element of
+`toDelete` from `l`, each deletion via Coq `List.remove` (= `removeAll`
+above, all occurrences). Named `removeList` here because the P0 port
+already uses the name `removeAll` for `List.remove` (lane-log delta 2). -/
+def removeList {A : Type} [DecidableEq A] : (toDelete l : List A) → List A
+  | [], l => l
+  | d :: ds, l => removeList ds (removeAll d l)
+
 /-- StructTact `all_fin` (`Fin.v:46-50`), transported to Lean's `Fin`.
 StructTact encodes `fin (S n) := option (fin n)` with `None ↦ 0` and
 `Some x ↦ x+1`; under that isomorphism their
