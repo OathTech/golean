@@ -1,0 +1,3 @@
+# id	subject	args	expected_status	expected_reason	features
+index-target	valueCallIndexTarget	-	ok	-	multi_assign,multi_result,calls,closures,indexing,globals,evaluation_order
+deref-target	valueCallDerefTarget	-	ok	-	multi_assign,multi_result,calls,closures,pointers,evaluation_order
