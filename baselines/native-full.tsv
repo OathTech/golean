@@ -1,20 +1,17 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-09  commit: sync-package machine+frontend movement (spec-parity slice 2)
+# recorded: 2026-08-09  commit: phase-2 goose sync imports (spec-parity slice 2 tail)
 #   frontend: native  oracle: go run (strict lane) / go-run membership in the
 #   machine-enumerated observation set, sampled plain AND under -race
 #   (membership lane; go1.26.5) / schedule-tree singleton certification +
 #   strict go-run equality (confluent lane) / every-enumerated-path-refuses
 #   + go run -race red (racy lane; never combined with deadlock)
-# manifest_cases: 1454  pass: 1344  fail: 110
-# Re-pin reason: the sync-package machine + frontend movement lands — 33
-#   of the 35 red-first guardrail pins flip PASS (mutex/rwmutex/waitgroup/
-#   once ops, the fatal terminals, sync deadlocks, HB-edge confluent
-#   certifications, the L1 acquisition-order membership set {10,20}, the
-#   racy sync lanes incl. the p14 two-clock discriminator), and the two
-#   PERMANENT out-of-scope markers (Cond, TryLock) move to their honest
-#   frontend-export refusal stage. workers-join lands strict (beyond
-#   tractable enumeration caps, recorded in its cases.tsv). Zero drift on
-#   all 1419 prior ids.
+# manifest_cases: 1458  pass: 1348  fail: 110
+# Re-pin reason: the four sync-only phase-2 goose files land at R1 via
+#   scripts/import-goose --allow-import sync (semantics/lock,
+#   unittest/synchronization, unittest/spawn, channel/
+#   parallel-search-replace), all PASS on landing; the other 13
+#   sync-importing goose files stay blocked by their OTHER imports
+#   (recorded in the design note §11). Zero drift on all 1454 prior ids.
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
 PASS	arrays/array-copy	-
@@ -568,6 +565,7 @@ PASS	imported-goose/channel/muxer/async	confluent
 PASS	imported-goose/channel/muxer/client	confluent
 PASS	imported-goose/channel/muxer-unverified/done	-
 PASS	imported-goose/channel/muxer-unverified/drained	-
+PASS	imported-goose/channel/parallel-search-replace/search-replace	-
 PASS	imported-goose/channel/select-tricky-examples/nb-full-buffer-not-ready	-
 PASS	imported-goose/channel/select-tricky-examples/nb-guaranteed-ready	-
 PASS	imported-goose/channel/select-tricky-examples/nb-not-ready	confluent
@@ -615,6 +613,7 @@ PASS	imported-goose/semantics/interfaces-complex/string-interface	-
 PASS	imported-goose/semantics/interfaces-complex/type-assertion-interface	-
 PASS	imported-goose/semantics/interfaces/if-stmt-interface	-
 PASS	imported-goose/semantics/interfaces/multiple-interface	-
+PASS	imported-goose/semantics/lock/s-use-locks	-
 PASS	imported-goose/semantics/loops/break-from-loop-assign-and-continue	-
 PASS	imported-goose/semantics/loops/break-from-loop-for-only	-
 PASS	imported-goose/semantics/loops/break-from-loop-no-continue	-
@@ -724,10 +723,12 @@ PASS	imported-goose/unittest/replicated-disk	-
 PASS	imported-goose/unittest/returns	-
 PASS	imported-goose/unittest/rune	-
 PASS	imported-goose/unittest/slices	-
+PASS	imported-goose/unittest/spawn/simple-spawn	-
 PASS	imported-goose/unittest/strings	-
 PASS	imported-goose/unittest/struct-method	-
 PASS	imported-goose/unittest/struct-pointers	-
 PASS	imported-goose/unittest/switch	-
+PASS	imported-goose/unittest/synchronization/make-lock	-
 PASS	imported-goose/unittest/topsort	-
 PASS	imported-goose/unittest/trailing-call	-
 PASS	imported-goose/unittest/type-alias	-
