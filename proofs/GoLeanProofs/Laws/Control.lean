@@ -80,7 +80,7 @@ theorem wp_frame_fall {k} {w : Bool} :
     (Hsafe := by
       intro σ
       cases s
-      · exact ⟨[], Config.next k, σ, [], GoPrimStep.step (Step.frameFall (targets := []) (results := []) rfl rfl)⟩
+      · exact ⟨[], Config.next k, σ, [], GoPrimStep.step Step.frameFall⟩
       · rfl)
     (Hpuredet := by
       intro σ obs e₂' σ₂ eₜ' h

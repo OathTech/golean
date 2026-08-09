@@ -381,7 +381,7 @@ theorem wpC_spawn_noop_witness
     iapply fupd_intro
     iintro Hcred3b
     iapply (wpC_pure_det (hsp := rfl) (hsc := rfl)
-      (hstep := fun σ => Step.frameFall (targets := []) (results := []) rfl rfl)
+      (hstep := fun σ => Step.frameFall)
       (hdet := by
         intro σ c₂ σ₂ sq
         cases sq <;> simp_all [loadMany, storeMany, pure, Except.pure]))

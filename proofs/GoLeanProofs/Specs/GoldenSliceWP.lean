@@ -48,7 +48,7 @@ pinned program it instantiates on). -/
 /-- Witness for `wp_call_enter_arg1` on the CONCRETE golden `inc`: every
 premise discharges by computation given the two genuinely-external pins
 (program and method table). -/
-theorem wp_call_enter_inc {xa : Addr} {locs : List Loc} {env k}
+theorem wp_call_enter_inc {xa : Addr} {locs : List TargetRef} {env k}
     (hprog : GoCoreGS.prog GF = GoldenSlice.sliceLowered.funcs)
     (hmeths : GoCoreGS.methods GF = #[]) :
     iprop(∀ pa : Addr,
@@ -74,9 +74,9 @@ theorem wp_call_enter_incViaCall {tl : Loc} {env k}
     iprop(∀ ra : Addr,
         ra.id ↦ (⟨some (.int .int), .int 0 .int⟩ : HeapCell) -∗
         WP (Config.exec GoldenSlice.incViaCallFunc.body [[("$res0", Loc.base ra)]]
-              (.frame [tl] [Loc.base ra] [] k)) @ s ; E {{ Φ }})
+              (.frame [.chain (.addr tl) [] []] [Loc.base ra] [] k)) @ s ; E {{ Φ }})
       ⊢ WP (Config.retV (.addr tl)
-            (.callTargetsK ⟨"incViaCall"⟩ [] [] [] env k)) @ s ; E {{ Φ }} :=
+            (.callTargetsK ⟨"incViaCall"⟩ (.chain []) [] [] [] [] [] env k)) @ s ; E {{ Φ }} :=
   wp_call_enter_ret1
     (hfind := by rw [hprog, GoldenSlice.sliceLowered_funcs_eq]; rfl)
     (hargs := rfl)
@@ -395,7 +395,7 @@ theorem wp_goldenCall {ta : Addr} {w : GoValue} {x : String} {env k}
       ⊢ WP (Config.exec (.call #[.var x] ⟨"incViaCall"⟩ #[]) env k)
           @ s ; E {{ Φ }} := by
   iintro ⟨Hr, Hcont⟩
-  iapply (wp_call_first_target (te := .ref x) (rest := []) rfl)
+  iapply (wp_call_first_target (e := .ref x) (sh := .chain []) (ops := []) (rest := []) rfl)
   iapply fupd_intro
   inext
   iapply fupd_intro
@@ -439,7 +439,7 @@ theorem wp_goldenCall_inv {ta : Addr} {x : String} {env k} {N : Namespace}
       ⊢ WP (Config.exec (.call #[.var x] ⟨"incViaCall"⟩ #[]) env k)
           @ s ; E {{ Φ }} := by
   iintro ⟨HinvT, Hnext⟩
-  iapply (wp_call_first_target (te := .ref x) (rest := []) rfl)
+  iapply (wp_call_first_target (e := .ref x) (sh := .chain []) (ops := []) (rest := []) rfl)
   iapply fupd_intro
   inext
   iapply fupd_intro

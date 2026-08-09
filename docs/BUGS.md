@@ -1081,25 +1081,29 @@ hoist further.
 
 ## BUG-025 — multi-target assignment phase 2 is all-or-nothing, not left-to-right (earlier stores lost when a later store panics)
 
-- Status: open (REOPENED at the round-4 convergence check: the round-3
-  closure was over-broad. FIXED half — the `assignMany` STATEMENT no
-  longer rides `stmtPlan`/`applyStmtOp`: it enters the phase-split
-  spine (`tgtOpK` target operands with deferred checks, `rhsK` RHS
-  left-to-right, `storeK` one store per step) — pinned GREEN by
-  multi-assign/{store-order-plain,field-nil-store-time} and the twelve
-  order/aliasing guards; `StmtOp.assignMany` and `locsOf` removed
-  outright. OPEN half — the entry's own scope line always named
-  "frame-exit `storeMany`": the multi-value CALL write-back path
-  (`callTargetsK`/`callValTargetsK` → frame-exit `storeMany`) still
-  resolves target addresses (checks INCLUDED) before the call and
-  stores all-or-nothing, so a bad target SUPPRESSES the call and its
-  side effects (go 117 vs ours 100), the call's own panic loses to our
-  target check (wrong panic value), and a nil FIELD target on the call
-  path loses the first result's store (go 107 vs ours 100). Migrating
-  it means carrying `TargetRef`s through `Cont.frame` and routing
-  frame exit through `storeK` — deliberately scoped to the next
-  machine slice rather than rushed; the three pins keep it red and
-  visible.)
+- Status: fixed (2026-08-09, spec-parity-s1 — the assignment-spine laws
+  slice, movement B2, completing the round-4 FIXED half (`assignMany`
+  on the spine since the convergence round): the multi-value CALL
+  write-back path migrated. Call targets are PHASE-1 plans
+  (`targetsPlan` through the reworked `callTargetsK`/`callValTargetsK`
+  frames — operands left-to-right, each target completing into a
+  store-ready `TargetRef` with its outer check DEFERRED; the
+  address-time `valueAsLoc` checks and their panic rules removed
+  outright), the refs are carried through `Cont.frame`
+  (`targets : List TargetRef`), and the frame exit reads the pinned
+  results and enters phase 2 — `storeK`, one store per step,
+  left-to-right, each target's check firing at its own store after the
+  call's effects and earlier stores landed. Frame-exit `storeMany` is
+  retired (the targetless resultless exit stays a single unchanged
+  step; a targetless frame with pinned results stays stuck-closed as
+  before). Laws moved in the same movement: `wp_call_first_target`,
+  the new `wp_call_tgt_shift`/`wp_call_tgt_next` pure laws,
+  `wp_call_targets_done_arg`, the frame-entry family retyped, and the
+  frame-exit family (`wp_frame_return_int`/`wp_frame_fall_int`/
+  `wp_frame_return_int_inv`/`wp_frame_return₁`/`wp_frame_return₂`)
+  restated as read-exit + per-target `storeK` store lifts + the
+  `wp_stores_done_nil` drain, statements' pre/posts unchanged; every
+  golden/quorum consumer re-proved. All three pins flip PASS.)
 - Pinned-by: differential
 - Cases: multi-assign/call-write-back/effects-suppressed, multi-assign/call-write-back/panic-identity, multi-assign/call-write-back/nil-field-store
 - Discovered: 2026-08-06 (channels-arc-s1 delta review D3, generalized

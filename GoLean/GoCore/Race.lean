@@ -162,7 +162,10 @@ FOOTPRINT ARMS (recorded accesses):
   `assignStoreK` row is gone with the frames.
 - `storeTarget` (phase-2 stores; `mapAssignValue` map half) →
   `storeTargetAccess`.
-- frame EXIT `loadMany`/`storeMany` → `stepAccesses` frame-[] arms.
+- frame EXIT `loadMany` (result reads) → `stepAccesses` frame-[] arms;
+  the caller-target WRITES are per-target `storeK` steps since the
+  BUG-025 spine migration (`storeTargetAccess`, phase 2 — `storeMany`
+  is retired from the frame exit).
 - `mapRangeEntries` snapshot load → `stepAccesses` mapRangeK arm (U1).
 - `dynamicDispatch?` needsDeref load (frame ENTRY) →
   `dispatchAccesses`, at the call/defer/spawn entry arms — narrowed to
@@ -788,10 +791,14 @@ def stepAccesses (s : ExecState) (c : Config) : List RaceAccess :=
   | .returning (.frame _ _ (d :: _) _ _) => deferEntryAccesses s d
   | .panicking _ (.frame _ _ (d :: _) _ _) => deferEntryAccesses s d
   | .next (.storeK (r :: _) (_ :: _) _ _ _) => storeTargetAccess s r
-  | .next (.frame targets results [] _ _) =>
-      results.map ((false, ·)) ++ targets.map ((true, ·))
-  | .returning (.frame targets results [] _ _) =>
-      results.map ((false, ·)) ++ targets.map ((true, ·))
+  -- Frame EXIT (BUG-025 spine migration): the exit step only READS the
+  -- pinned result cells; the caller-target WRITES are the subsequent
+  -- per-target `storeK` steps (the `storeTargetAccess` arm above),
+  -- exactly like every other phase-2 store.
+  | .next (.frame _ results [] _ _) =>
+      results.map ((false, ·))
+  | .returning (.frame _ results [] _ _) =>
+      results.map ((false, ·))
   | _ => []
 
 end GoLean.GoCore.Machine

@@ -1385,7 +1385,7 @@ inductive Cont where
   user-code frames are unmarked; call entries pass the resolved
   callee's flag. Positioned after `k` so the default applies at every
   pre-existing construction site. -/
-  | frame (targets : List Loc) (results : List Loc)
+  | frame (targets : List TargetRef) (results : List Loc)
       (defers : List (GoValue × List GoValue)) (k : Cont) (wrapper : Bool := false)
   /-- Awaiting a deferred call's callee value. -/
   | deferCalleeK (args : List Expr) (env : LocalEnv) (k : Cont)
@@ -1406,17 +1406,22 @@ inductive Cont where
   pass through — a bare break targets the innermost for/switch
   regardless of labels. -/
   | labelK (label : String) (k : Cont)
-  /-- Call-through-value (§8): awaiting a target address; then remaining
-  targets, then the callee expression. -/
-  | callValTargetsK (callee : Expr) (locs : List Loc) (pending : List Expr)
+  /-- Call-through-value (§8): awaiting one operand of the CURRENT
+  target (BUG-025 spine migration — call targets are PHASE-1 plans with
+  their outer checks deferred to the post-call `storeK` stores, exactly
+  like every other assignment target); then remaining targets, then the
+  callee expression. -/
+  | callValTargetsK (callee : Expr) (sh : TargetShape) (ops : List GoValue)
+      (pending : List Expr) (refs : List TargetRef)
+      (targets : List (TargetShape × List Expr))
       (args : List Expr) (env : LocalEnv) (k : Cont)
   /-- Awaiting the CALLEE value (a `funcVal`, or `nil` → panic). -/
-  | callValCalleeK (locs : List Loc) (args : List Expr) (env : LocalEnv) (k : Cont)
+  | callValCalleeK (refs : List TargetRef) (args : List Expr) (env : LocalEnv) (k : Cont)
   /-- Awaiting an argument of a value call. Carries the callee VALUE: a
   funcVal's captures are prepended at frame entry; a nil callee evaluates
   every argument first and panics at the invocation step (Go's order —
   pre-merge audit 2026-07-25). -/
-  | callValArgsK (callee : GoValue) (locs : List Loc)
+  | callValArgsK (callee : GoValue) (refs : List TargetRef)
       (vals : List GoValue) (pending : List Expr) (env : LocalEnv) (k : Cont)
   /-- Strict-operator evaluation: `done` holds evaluated operands (most
   recent first), `pending` the rest, in evaluation order. -/
@@ -1433,13 +1438,19 @@ inductive Cont where
   | ifK (thenBranch elseBranch : Stmt) (env : LocalEnv) (k : Cont)
   /-- Awaiting a `while` condition value. -/
   | whileK (cond : Expr) (body : Stmt) (env : LocalEnv) (k : Cont)
-  /-- Awaiting a call target address; then remaining targets, then
-  arguments, then frame entry. -/
-  | callTargetsK (fid : FuncId) (locs : List Loc) (pending : List Expr)
+  /-- Awaiting one operand of the CURRENT call target (BUG-025 spine
+  migration): call targets are PHASE-1 plans — operands evaluate
+  left-to-right, each target completes into a store-ready `TargetRef`
+  with its outer nil/bounds/nil-map check DEFERRED to the post-call
+  `storeK` stores — then arguments, then frame entry. A bad target no
+  longer suppresses the call or outranks the call's own panic. -/
+  | callTargetsK (fid : FuncId) (sh : TargetShape) (ops : List GoValue)
+      (pending : List Expr) (refs : List TargetRef)
+      (targets : List (TargetShape × List Expr))
       (args : List Expr) (env : LocalEnv) (k : Cont)
   /-- Awaiting a call argument value; then remaining arguments, then frame
   entry. -/
-  | callArgsK (fid : FuncId) (locs : List Loc) (vals : List GoValue)
+  | callArgsK (fid : FuncId) (refs : List TargetRef) (vals : List GoValue)
       (pending : List Expr) (env : LocalEnv) (k : Cont)
   /-- Wide-statement operand evaluation: the leading `ntargets` operands are
   target addresses (checked as they arrive); `done` holds evaluated
@@ -1590,11 +1601,11 @@ def panicPassthrough : Cont → Option Cont
   | .boolK k => some k
   | .ifK _ _ _ k => some k
   | .whileK _ _ _ k => some k
-  | .callTargetsK _ _ _ _ _ k => some k
+  | .callTargetsK _ _ _ _ _ _ _ _ k => some k
   | .callArgsK _ _ _ _ _ k => some k
   | .stmtOpK _ _ _ _ _ k => some k
   | .mapRangeK _ _ _ _ _ _ k => some k
-  | .callValTargetsK _ _ _ _ _ k => some k
+  | .callValTargetsK _ _ _ _ _ _ _ _ k => some k
   | .callValCalleeK _ _ _ k => some k
   | .callValArgsK _ _ _ _ _ k => some k
   | .deferCalleeK _ _ k => some k
@@ -1642,16 +1653,16 @@ def recoverThroughWrappers : Cont → Option (GoValue × Cont)
   | .boolK k => (recoverThroughWrappers k).map (fun (v, k') => (v, .boolK k'))
   | .ifK a b c k => (recoverThroughWrappers k).map (fun (v, k') => (v, .ifK a b c k'))
   | .whileK a b c k => (recoverThroughWrappers k).map (fun (v, k') => (v, .whileK a b c k'))
-  | .callTargetsK a b c d e k =>
-      (recoverThroughWrappers k).map (fun (v, k') => (v, .callTargetsK a b c d e k'))
+  | .callTargetsK a b c d e f g h k =>
+      (recoverThroughWrappers k).map (fun (v, k') => (v, .callTargetsK a b c d e f g h k'))
   | .callArgsK a b c d e k =>
       (recoverThroughWrappers k).map (fun (v, k') => (v, .callArgsK a b c d e k'))
   | .stmtOpK a b c d e k =>
       (recoverThroughWrappers k).map (fun (v, k') => (v, .stmtOpK a b c d e k'))
   | .mapRangeK a b c d e f k =>
       (recoverThroughWrappers k).map (fun (v, k') => (v, .mapRangeK a b c d e f k'))
-  | .callValTargetsK a b c d e k =>
-      (recoverThroughWrappers k).map (fun (v, k') => (v, .callValTargetsK a b c d e k'))
+  | .callValTargetsK a b c d e f g h k =>
+      (recoverThroughWrappers k).map (fun (v, k') => (v, .callValTargetsK a b c d e f g h k'))
   | .callValCalleeK a b c k =>
       (recoverThroughWrappers k).map (fun (v, k') => (v, .callValCalleeK a b c k'))
   | .callValArgsK a b c d e k =>
@@ -1713,15 +1724,15 @@ def recoverResult : Cont → GoValue × Cont
   | .boolK k => let (v, k') := recoverResult k; (v, .boolK k')
   | .ifK a b c k => let (v, k') := recoverResult k; (v, .ifK a b c k')
   | .whileK a b c k => let (v, k') := recoverResult k; (v, .whileK a b c k')
-  | .callTargetsK a b c d e k =>
-      let (v, k') := recoverResult k; (v, .callTargetsK a b c d e k')
+  | .callTargetsK a b c d e f g h k =>
+      let (v, k') := recoverResult k; (v, .callTargetsK a b c d e f g h k')
   | .callArgsK a b c d e k =>
       let (v, k') := recoverResult k; (v, .callArgsK a b c d e k')
   | .stmtOpK a b c d e k => let (v, k') := recoverResult k; (v, .stmtOpK a b c d e k')
   | .mapRangeK a b c d e f k =>
       let (v, k') := recoverResult k; (v, .mapRangeK a b c d e f k')
-  | .callValTargetsK a b c d e k =>
-      let (v, k') := recoverResult k; (v, .callValTargetsK a b c d e k')
+  | .callValTargetsK a b c d e f g h k =>
+      let (v, k') := recoverResult k; (v, .callValTargetsK a b c d e f g h k')
   | .callValCalleeK a b c k =>
       let (v, k') := recoverResult k; (v, .callValCalleeK a b c k')
   | .callValArgsK a b c d e k =>
@@ -2242,49 +2253,52 @@ inductive Step : Config → ExecState → Config → ExecState → Prop where
       contHeadLabel k ≠ some L →
       Step (.continuingTo L (.mapIterK keyVar valVar keyTy valTy body remaining env k)) s
         (.continuingTo L k) s
-  -- Calls: resolve target addresses left-to-right (each an evaluated
-  -- expression via `assigneeExpr`), then arguments left-to-right, then
-  -- frame entry — Go's order, one machine step per operand plus one per
-  -- memory operation inside the operand evaluations.
-  | callFirstTarget {targets fid args te rest env k s} :
-      assigneesExprs targets.toList = some (te :: rest) →
+  -- Calls (BUG-025 spine migration): target OPERANDS evaluate
+  -- left-to-right as phase-1 plans (each target completing into a
+  -- store-ready `TargetRef`, its outer check DEFERRED — spec
+  -- §Assignments phase 1), then arguments left-to-right, then frame
+  -- entry; the write-back is a post-call `storeK` phase 2 (the
+  -- frame-exit rules below), left-to-right one store per step. A bad
+  -- target can no longer suppress the call or its effects, and the
+  -- call's own panic outranks the deferred target checks.
+  | callFirstTarget {targets fid args sh e ops rest env k s} :
+      targetsPlan targets.toList = some ((sh, e :: ops) :: rest) →
       Step (.exec (.call targets fid args) env k) s
-        (.evalE te env (.callTargetsK fid [] rest args.toList env k)) s
+        (.evalE e env (.callTargetsK fid sh [] ops [] rest args.toList env k)) s
   | callFirstArg {targets fid args a rest env k s} :
-      assigneesExprs targets.toList = some [] →
+      targetsPlan targets.toList = some [] →
       args.toList = a :: rest →
       Step (.exec (.call targets fid args) env k) s
         (.evalE a env (.callArgsK fid [] [] rest env k)) s
   | callImmediate {targets fid args func frameEnv resultLocs env k s s'} :
-      assigneesExprs targets.toList = some [] →
+      targetsPlan targets.toList = some [] →
       args.toList = [] →
       enterFrame s fid [] = .ok (func, frameEnv, resultLocs, s') →
       Step (.exec (.call targets fid args) env k) s
         (.exec func.body frameEnv (.frame [] resultLocs [] k func.wrapper)) s'
-  | callTargetLoc {v loc fid locs te rest args env k s} :
-      valueAsLoc v = .ok loc →
-      Step (.retV v (.callTargetsK fid locs (te :: rest) args env k)) s
-        (.evalE te env (.callTargetsK fid (locs ++ [loc]) rest args env k)) s
-  | callTargetsDoneArg {v loc fid locs a rest env k s} :
-      valueAsLoc v = .ok loc →
-      Step (.retV v (.callTargetsK fid locs [] (a :: rest) env k)) s
-        (.evalE a env (.callArgsK fid (locs ++ [loc]) [] rest env k)) s
-  | callTargetsDoneEnter {v loc fid locs func frameEnv resultLocs env k s s'} :
-      valueAsLoc v = .ok loc →
+  | callTgtShift {v fid sh ops e pending refs targets args env k s} :
+      Step (.retV v (.callTargetsK fid sh ops (e :: pending) refs targets args env k)) s
+        (.evalE e env (.callTargetsK fid sh (v :: ops) pending refs targets args env k)) s
+  | callTgtNext {v r fid sh ops sh' e ops' targets refs args env k s} :
+      completeTargetRef sh (v :: ops).reverse = some r →
+      Step (.retV v (.callTargetsK fid sh ops [] refs ((sh', e :: ops') :: targets) args env k)) s
+        (.evalE e env (.callTargetsK fid sh' [] ops' (refs ++ [r]) targets args env k)) s
+  | callTargetsDoneArg {v r fid sh ops refs a rest env k s} :
+      completeTargetRef sh (v :: ops).reverse = some r →
+      Step (.retV v (.callTargetsK fid sh ops [] refs [] (a :: rest) env k)) s
+        (.evalE a env (.callArgsK fid (refs ++ [r]) [] rest env k)) s
+  | callTargetsDoneEnter {v r fid sh ops refs func frameEnv resultLocs env k s s'} :
+      completeTargetRef sh (v :: ops).reverse = some r →
       enterFrame s fid [] = .ok (func, frameEnv, resultLocs, s') →
-      Step (.retV v (.callTargetsK fid locs [] [] env k)) s
-        (.exec func.body frameEnv (.frame (locs ++ [loc]) resultLocs [] k func.wrapper)) s'
-  | callTargetPanic {v msg fid locs pending args env k s} :
-      valueAsLoc v = .error (.panic msg) →
-      Step (.retV v (.callTargetsK fid locs pending args env k)) s
-        (.panicking [⟨runtimeErrorValue msg, false⟩] k) s
-  | callArgNext {v fid locs vals a rest env k s} :
-      Step (.retV v (.callArgsK fid locs vals (a :: rest) env k)) s
-        (.evalE a env (.callArgsK fid locs (vals ++ [v]) rest env k)) s
-  | callArgsDoneEnter {v fid locs vals func frameEnv resultLocs env k s s'} :
+      Step (.retV v (.callTargetsK fid sh ops [] refs [] [] env k)) s
+        (.exec func.body frameEnv (.frame (refs ++ [r]) resultLocs [] k func.wrapper)) s'
+  | callArgNext {v fid refs vals a rest env k s} :
+      Step (.retV v (.callArgsK fid refs vals (a :: rest) env k)) s
+        (.evalE a env (.callArgsK fid refs (vals ++ [v]) rest env k)) s
+  | callArgsDoneEnter {v fid refs vals func frameEnv resultLocs env k s s'} :
       enterFrame s fid (vals ++ [v]) = .ok (func, frameEnv, resultLocs, s') →
-      Step (.retV v (.callArgsK fid locs vals [] env k)) s
-        (.exec func.body frameEnv (.frame locs resultLocs [] k func.wrapper)) s'
+      Step (.retV v (.callArgsK fid refs vals [] env k)) s
+        (.exec func.body frameEnv (.frame refs resultLocs [] k func.wrapper)) s'
   -- Wide statements (S2): one generic operand-plan frame; targets are
   -- checked as their addresses arrive (interpreter order), and the final
   -- state update is one `applyStmtOp` step. The `ch`/`ch'` choice streams
@@ -2355,64 +2369,80 @@ inductive Step : Config → ExecState → Config → ExecState → Prop where
   -- Call through a function VALUE (§8): targets, then the callee, then the
   -- arguments; frame entry prepends the closure's captured values, which is
   -- the whole lambda-lifting protocol. `enterFrame` is reused verbatim.
-  | callValueFirstTarget {targets callee args te rest env k s} :
-      assigneesExprs targets.toList = some (te :: rest) →
+  | callValueFirstTarget {targets callee args sh e ops rest env k s} :
+      targetsPlan targets.toList = some ((sh, e :: ops) :: rest) →
       Step (.exec (.callValue targets callee args) env k) s
-        (.evalE te env (.callValTargetsK callee [] rest args.toList env k)) s
+        (.evalE e env (.callValTargetsK callee sh [] ops [] rest args.toList env k)) s
   | callValueNoTargets {targets callee args env k s} :
-      assigneesExprs targets.toList = some [] →
+      targetsPlan targets.toList = some [] →
       Step (.exec (.callValue targets callee args) env k) s
         (.evalE callee env (.callValCalleeK [] args.toList env k)) s
-  | callValTargetLoc {v loc callee locs te rest args env k s} :
-      valueAsLoc v = .ok loc →
-      Step (.retV v (.callValTargetsK callee locs (te :: rest) args env k)) s
-        (.evalE te env (.callValTargetsK callee (locs ++ [loc]) rest args env k)) s
-  | callValTargetsDone {v loc callee locs args env k s} :
-      valueAsLoc v = .ok loc →
-      Step (.retV v (.callValTargetsK callee locs [] args env k)) s
-        (.evalE callee env (.callValCalleeK (locs ++ [loc]) args env k)) s
-  | callValTargetPanic {v msg callee locs pending args env k s} :
-      valueAsLoc v = .error (.panic msg) →
-      Step (.retV v (.callValTargetsK callee locs pending args env k)) s
-        (.panicking [⟨runtimeErrorValue msg, false⟩] k) s
+  | callValTgtShift {v callee sh ops e pending refs targets args env k s} :
+      Step (.retV v (.callValTargetsK callee sh ops (e :: pending) refs targets args env k)) s
+        (.evalE e env (.callValTargetsK callee sh (v :: ops) pending refs targets args env k)) s
+  | callValTgtNext {v r callee sh ops sh' e ops' targets refs args env k s} :
+      completeTargetRef sh (v :: ops).reverse = some r →
+      Step (.retV v (.callValTargetsK callee sh ops [] refs ((sh', e :: ops') :: targets) args env k)) s
+        (.evalE e env (.callValTargetsK callee sh' [] ops' (refs ++ [r]) targets args env k)) s
+  | callValTargetsDone {v r callee sh ops refs args env k s} :
+      completeTargetRef sh (v :: ops).reverse = some r →
+      Step (.retV v (.callValTargetsK callee sh ops [] refs [] args env k)) s
+        (.evalE callee env (.callValCalleeK (refs ++ [r]) args env k)) s
   /-- The callee value arrives (funcVal or nil); start the arguments. Go
   evaluates the callee and ALL arguments before the nil check fires. -/
-  | callValCalleeArg {cv locs a rest env k s} :
+  | callValCalleeArg {cv refs a rest env k s} :
       deferrableCallee cv = true →
-      Step (.retV cv (.callValCalleeK locs (a :: rest) env k)) s
-        (.evalE a env (.callValArgsK cv locs [] rest env k)) s
+      Step (.retV cv (.callValCalleeK refs (a :: rest) env k)) s
+        (.evalE a env (.callValArgsK cv refs [] rest env k)) s
   /-- Nullary call through a value: enter directly with the captures. -/
-  | callValCalleeEnter {fid captured locs func frameEnv resultLocs env k s s'} :
+  | callValCalleeEnter {fid captured refs func frameEnv resultLocs env k s s'} :
       enterFrame s fid captured = .ok (func, frameEnv, resultLocs, s') →
-      Step (.retV (.funcVal fid captured) (.callValCalleeK locs [] env k)) s
-        (.exec func.body frameEnv (.frame locs resultLocs [] k func.wrapper)) s'
+      Step (.retV (.funcVal fid captured) (.callValCalleeK refs [] env k)) s
+        (.exec func.body frameEnv (.frame refs resultLocs [] k func.wrapper)) s'
   /-- Nullary call of a nil function value: nothing to evaluate, panic. -/
-  | callValCalleeNil {locs env k s} :
-      Step (.retV .nil (.callValCalleeK locs [] env k)) s
+  | callValCalleeNil {refs env k s} :
+      Step (.retV .nil (.callValCalleeK refs [] env k)) s
         (.panicking [⟨runtimeErrorValue
           "runtime error: invalid memory address or nil pointer dereference", false⟩] k) s
-  | callValArgNext {v cv locs vals a rest env k s} :
-      Step (.retV v (.callValArgsK cv locs vals (a :: rest) env k)) s
-        (.evalE a env (.callValArgsK cv locs (vals ++ [v]) rest env k)) s
-  | callValArgsEnter {v fid captured locs vals func frameEnv resultLocs env k s s'} :
+  | callValArgNext {v cv refs vals a rest env k s} :
+      Step (.retV v (.callValArgsK cv refs vals (a :: rest) env k)) s
+        (.evalE a env (.callValArgsK cv refs (vals ++ [v]) rest env k)) s
+  | callValArgsEnter {v fid captured refs vals func frameEnv resultLocs env k s s'} :
       enterFrame s fid (captured ++ vals ++ [v]) = .ok (func, frameEnv, resultLocs, s') →
-      Step (.retV v (.callValArgsK (.funcVal fid captured) locs vals [] env k)) s
-        (.exec func.body frameEnv (.frame locs resultLocs [] k func.wrapper)) s'
+      Step (.retV v (.callValArgsK (.funcVal fid captured) refs vals [] env k)) s
+        (.exec func.body frameEnv (.frame refs resultLocs [] k func.wrapper)) s'
   /-- All arguments evaluated, callee is nil: NOW the invocation panics. -/
-  | callValArgsNil {v locs vals env k s} :
-      Step (.retV v (.callValArgsK .nil locs vals [] env k)) s
+  | callValArgsNil {v refs vals env k s} :
+      Step (.retV v (.callValArgsK .nil refs vals [] env k)) s
         (.panicking [⟨runtimeErrorValue
           "runtime error: invalid memory address or nil pointer dereference", false⟩] k) s
-  -- Frame exit: explicit return and fall-through perform the same
-  -- pinned-location result read and caller-target stores.
-  | frameReturn {targets results k w s vs s'} :
+  -- Frame exit (BUG-025 spine migration): explicit return and
+  -- fall-through perform the same pinned-location result read. A
+  -- TARGETLESS frame resumes the caller in the same step (behavior
+  -- unchanged — every expression-position call the frontend hoists
+  -- takes this shape); a frame WITH caller targets enters phase 2
+  -- (`storeK`, `.next`-driven): the stores are carried out
+  -- left-to-right ONE per step, each target's deferred check firing at
+  -- its store, after the call's effects and earlier stores landed —
+  -- spec §Assignments' example, on the call write-back path.
+  -- (Targetless + resultless — the void-call and deferred-inner-frame
+  -- shape — resumes in one step, state untouched, exactly as before. A
+  -- targetless frame with PINNED results has no rule: the frontend
+  -- always supplies targets — `$callres` temps or blank discards — for
+  -- result-bearing calls, and the machine stays stuck-closed on the
+  -- malformed shape as it always was.)
+  | frameReturn {k w s} :
+      Step (.returning (.frame [] [] [] k w)) s (.next k) s
+  | frameFall {k w s} :
+      Step (.next (.frame [] [] [] k w)) s (.next k) s
+  | frameReturnStores {r rs results k w s vs} :
       loadMany s results = .ok vs →
-      storeMany s targets vs = .ok s' →
-      Step (.returning (.frame targets results [] k w)) s (.next k) s'
-  | frameFall {targets results k w s vs s'} :
+      Step (.returning (.frame (r :: rs) results [] k w)) s
+        (.next (.storeK (r :: rs) vs (.seqn #[]) [] k)) s
+  | frameFallStores {r rs results k w s vs} :
       loadMany s results = .ok vs →
-      storeMany s targets vs = .ok s' →
-      Step (.next (.frame targets results [] k w)) s (.next k) s'
+      Step (.next (.frame (r :: rs) results [] k w)) s
+        (.next (.storeK (r :: rs) vs (.seqn #[]) [] k)) s
   -- Draining the defer chain: one deferred call per step, each in its own
   -- frame whose continuation is this frame with the rest of the chain, so
   -- both exit paths converge on the rules above once the chain is empty.
@@ -2527,27 +2557,27 @@ inductive Step : Config → ExecState → Config → ExecState → Prop where
   (`frameDeferFallEnterPanic` and friends — audit F1+F5, 2026-08-05;
   the original narrowing here was scoped too widely). -/
   | callImmediatePanic {targets fid args msg env k s} :
-      assigneesExprs targets.toList = some [] →
+      targetsPlan targets.toList = some [] →
       args.toList = [] →
       enterFrame s fid [] = .error (.panic msg) →
       Step (.exec (.call targets fid args) env k) s
         (.panicking [⟨runtimeErrorValue msg, false⟩] k) s
-  | callTargetsDoneEnterPanic {v loc fid locs msg env k s} :
-      valueAsLoc v = .ok loc →
+  | callTargetsDoneEnterPanic {v r fid sh ops refs msg env k s} :
+      completeTargetRef sh (v :: ops).reverse = some r →
       enterFrame s fid [] = .error (.panic msg) →
-      Step (.retV v (.callTargetsK fid locs [] [] env k)) s
+      Step (.retV v (.callTargetsK fid sh ops [] refs [] [] env k)) s
         (.panicking [⟨runtimeErrorValue msg, false⟩] k) s
-  | callArgsDoneEnterPanic {v fid locs vals msg env k s} :
+  | callArgsDoneEnterPanic {v fid refs vals msg env k s} :
       enterFrame s fid (vals ++ [v]) = .error (.panic msg) →
-      Step (.retV v (.callArgsK fid locs vals [] env k)) s
+      Step (.retV v (.callArgsK fid refs vals [] env k)) s
         (.panicking [⟨runtimeErrorValue msg, false⟩] k) s
-  | callValCalleeEnterPanic {fid captured locs msg env k s} :
+  | callValCalleeEnterPanic {fid captured refs msg env k s} :
       enterFrame s fid captured = .error (.panic msg) →
-      Step (.retV (.funcVal fid captured) (.callValCalleeK locs [] env k)) s
+      Step (.retV (.funcVal fid captured) (.callValCalleeK refs [] env k)) s
         (.panicking [⟨runtimeErrorValue msg, false⟩] k) s
-  | callValArgsEnterPanic {v fid captured locs vals msg env k s} :
+  | callValArgsEnterPanic {v fid captured refs vals msg env k s} :
       enterFrame s fid (captured ++ vals ++ [v]) = .error (.panic msg) →
-      Step (.retV v (.callValArgsK (.funcVal fid captured) locs vals [] env k)) s
+      Step (.retV v (.callValArgsK (.funcVal fid captured) refs vals [] env k)) s
         (.panicking [⟨runtimeErrorValue msg, false⟩] k) s
   /-- DEFERRED-call frame-ENTRY panics (audit F1+F5, 2026-08-05): a
   dispatch panic entering a deferred call is a panic of the deferred

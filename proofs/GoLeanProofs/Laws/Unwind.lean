@@ -54,7 +54,7 @@ variable {s : Stuckness} {E : CoPset} {Φ : Unit → IProp GF}
 @[go_walk_law]
 theorem wp_call_value_no_targets {targets : Array Assignee} {callee : Expr}
     {args : Array Expr} {env k}
-    (htargets : assigneesExprs targets.toList = some []) :
+    (htargets : targetsPlan targets.toList = some []) :
     (|={E}[E]▷=> £ 1 -∗
       WP (Config.evalE callee env (.callValCalleeK [] args.toList env k))
         @ s ; E {{ Φ }}) ⊢
@@ -211,7 +211,7 @@ theorem wp_frame_return_void {k} {w : Bool} :
     (|={E}[E]▷=> £ 1 -∗ WP (Config.next k) @ s ; E {{ Φ }}) ⊢
       WP (Config.returning (.frame [] [] [] k w)) @ s ; E {{ Φ }} :=
   wp_pure_det rfl (by simp [Config.choiceFree])
-    (fun _ => Step.frameReturn (targets := []) (results := []) rfl rfl)
+    (fun _ => Step.frameReturn)
 
 /-! ### Frame entry for value calls and the defer drain (stateful)
 
@@ -313,7 +313,7 @@ private theorem wp_enter_cap1_core {fid : FuncId} {func : Func}
 `f()` closure shape): the funcVal callee arrives, one step allocates the
 capture-parameter cell and enters the body. -/
 theorem wp_call_value_enter_cap1 {fid : FuncId} {func : Func}
-    {pid : String} {pty : Ty} {cv cv' : GoValue} {locs : List Loc} {env k}
+    {pid : String} {pty : Ty} {cv cv' : GoValue} {locs : List TargetRef} {env k}
     (hfind : findFunctionIn? (GoCoreGS.prog GF) fid = some func)
     (hargs : func.args = #[⟨pid, pty⟩])
     (hres : func.results = #[])
@@ -337,7 +337,8 @@ deferred closure enters over the rest-of-chain frame; its results are
 discarded (`[] [] []`). -/
 theorem wp_frame_defer_return_cap1 {fid : FuncId} {func : Func}
     {pid : String} {pty : Ty} {cv cv' : GoValue}
-    {targets results : List Loc} {ds : List (GoValue × List GoValue)} {k}
+    {targets : List TargetRef} {results : List Loc}
+    {ds : List (GoValue × List GoValue)} {k}
     {wsrc : Bool}
     (hfind : findFunctionIn? (GoCoreGS.prog GF) fid = some func)
     (hargs : func.args = #[⟨pid, pty⟩])
@@ -361,7 +362,8 @@ theorem wp_frame_defer_return_cap1 {fid : FuncId} {func : Func}
 /-- **Defer drain on the FALL path** (normal completion), same shape. -/
 theorem wp_frame_defer_fall_cap1 {fid : FuncId} {func : Func}
     {pid : String} {pty : Ty} {cv cv' : GoValue}
-    {targets results : List Loc} {ds : List (GoValue × List GoValue)} {k}
+    {targets : List TargetRef} {results : List Loc}
+    {ds : List (GoValue × List GoValue)} {k}
     {wsrc : Bool}
     (hfind : findFunctionIn? (GoCoreGS.prog GF) fid = some func)
     (hargs : func.args = #[⟨pid, pty⟩])
@@ -388,7 +390,8 @@ detects. The unwinding arc's central stateful law. -/
 theorem wp_panic_frame_defer_cap1 {fid : FuncId} {func : Func}
     {pid : String} {pty : Ty} {cv cv' : GoValue} {wsrc : Bool}
     {chain : List PanicEntry}
-    {targets results : List Loc} {ds : List (GoValue × List GoValue)} {k}
+    {targets : List TargetRef} {results : List Loc}
+    {ds : List (GoValue × List GoValue)} {k}
     (hfind : findFunctionIn? (GoCoreGS.prog GF) fid = some func)
     (hargs : func.args = #[⟨pid, pty⟩])
     (hres : func.results = #[])
@@ -703,7 +706,7 @@ concrete instance; the genuinely-external pins stay). -/
 open RecoverWitness in
 /-- Value-call frame entry witnessed on the concrete `rec$0` closure
 (the `f()` shape of `functions/closure-share`). -/
-theorem wp_call_value_enter_rec {ra : Addr} {locs : List Loc} {env k}
+theorem wp_call_value_enter_rec {ra : Addr} {locs : List TargetRef} {env k}
     (hprog : GoCoreGS.prog GF = RecoverWitness.progFuncs)
     (hmeths : GoCoreGS.methods GF = #[]) :
     iprop(∀ pa : Addr,
@@ -725,7 +728,7 @@ theorem wp_call_value_enter_rec {ra : Addr} {locs : List Loc} {env k}
 open RecoverWitness in
 /-- Normal-path defer drain (return exit) witnessed on `rec$0`. -/
 theorem wp_frame_defer_return_rec {ra : Addr}
-    {targets results : List Loc} {k}
+    {targets : List TargetRef} {results : List Loc} {k}
     (hprog : GoCoreGS.prog GF = RecoverWitness.progFuncs)
     (hmeths : GoCoreGS.methods GF = #[]) :
     iprop(∀ pa : Addr,
@@ -750,7 +753,7 @@ theorem wp_frame_defer_return_rec {ra : Addr}
 open RecoverWitness in
 /-- Normal-path defer drain (fall exit), same instance. -/
 theorem wp_frame_defer_fall_rec {ra : Addr}
-    {targets results : List Loc} {k}
+    {targets : List TargetRef} {results : List Loc} {k}
     (hprog : GoCoreGS.prog GF = RecoverWitness.progFuncs)
     (hmeths : GoCoreGS.methods GF = #[]) :
     iprop(∀ pa : Addr,
