@@ -330,6 +330,51 @@ statement.
 The shell-closed formulation captures the assigner property; a context
 lift can come later if it earns its cost.
 
+## 4f. Go↔Go refinement: a global-lock reference LIBRARY (user proposal, 2026-08-09)
+
+**Proposal confirmed as supportable, and unusually well-matched to house
+machinery.** Author a reference implementation in canonical Go — a
+"global lock" assigner (single shared log; write it as a CHANNEL-SERVER,
+not `sync.Mutex`: channels are modeled+validated today, sync is the
+in-flight spec-parity slice) — and prove `obs(real) ⊆ obs(reference)`:
+every client-visible observation of the N-node system is an observation
+of the reference. Clients reason against ~60 lines of obviously-correct
+Go. Prior art: CIVL/Armada layered code-to-code refinement;
+Grove/Perennial in the Iris world.
+
+Why it fits:
+- **Reference is oracle-checkable Go**: `go run` executes it; the
+  differential harness guards its lowering — the spec is a guardrailed
+  artifact (doctrine: differential tests before buildout).
+- **Doctrine-clean statement**: both sides are interpreter runs on pinned
+  lowerings; ∀ real schedule ∃ reference choices with the same client
+  trace. Observations made readout-shaped by the JOURNAL TRICK: client
+  harness records responses into a heap structure; observation = terminal
+  readout — no new trace semantics needed.
+- **Membership lane = the testing analog**: per-run refinement
+  certificates (search reference's choice space for a matching run) are
+  mechanically checkable BEFORE the ∀-theorem exists. Guardrails first.
+- **Factoring kills the prophecy problem**: direct simulation to the lock
+  version needs prophecy (commit points depend on future quorum acks);
+  instead factor real ⊑ Verdi-style model ⊑ atomic assigner ⊒ reference
+  library. The hard existential is Verdi's theorem (transported); the
+  reference-⊒-assigner leg is a small concurrent-machinery proof
+  (channels-arc-sized).
+
+Caveats:
+1. **Reference must be "atomic but flaky"**: it must nondeterministically
+   refuse (`NotLeader`) and drop responses, or the inclusion is false —
+   atomicity promised, availability not. Its refusal envelope is spec
+   content; audit it like a law statement.
+2. Near-term the real side is (GoCore^N + §4e math shell) ⊑ (single
+   GoCore program); literal closed Go↔Go trace inclusion arrives with F5.
+   Shared long poles unchanged (refinement framework in `proofs/`,
+   raft.go frontend export) — this adds no new missing machinery.
+
+Chain update: the reference library becomes the rightmost, client-facing
+link — real etcd-raft ⟷ golean model ⟷ Verdi-style+extensions model ⟷
+atomic assigner (consensus proof) ⟷ global-lock Go reference.
+
 ## 5. The protocol-gap ledger (the honest risk)
 
 verdi-raft (2016) vs etcd-io/raft — visible in the spec, must be tracked
