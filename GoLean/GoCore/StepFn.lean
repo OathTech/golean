@@ -163,16 +163,22 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
       | .panicStmt e =>
           return (.evalE e env (.panicArgK k), s, choices)
       | .callValue targets callee args =>
-          match assigneesExprs targets.toList with
-          | some (te :: rest) =>
-              return (.evalE te env (.callValTargetsK callee [] rest args.toList env k), s, choices)
+          -- BUG-025 spine migration: call targets are PHASE-1 plans with
+          -- their outer checks deferred to the post-call storeK stores.
+          match targetsPlan targets.toList with
+          | some ((sh, e :: ops) :: rest) =>
+              return (.evalE e env
+                (.callValTargetsK callee sh [] ops [] rest args.toList env k), s, choices)
+          | some ((_, []) :: _) => throw (.internal "malformed call target plan")
           | some [] =>
               return (.evalE callee env (.callValCalleeK [] args.toList env k), s, choices)
           | none => throw (.unsupported "unsupported value-call target assignee")
       | .call targets fid args =>
-          match assigneesExprs targets.toList with
-          | some (te :: rest) =>
-              return (.evalE te env (.callTargetsK fid [] rest args.toList env k), s, choices)
+          match targetsPlan targets.toList with
+          | some ((sh, e :: ops) :: rest) =>
+              return (.evalE e env
+                (.callTargetsK fid sh [] ops [] rest args.toList env k), s, choices)
+          | some ((_, []) :: _) => throw (.internal "malformed call target plan")
           | some [] =>
               match args.toList with
               | a :: rest =>
@@ -331,35 +337,42 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
             return (.exec b env (.loop c b env k'), s, choices)
           else
             return (.next k', s, choices)
-      | .callTargetsK fid locs pending args env k' =>
-          match valueAsLoc v with
-          | .error (.panic msg) =>
-              return (.panicking [⟨runtimeErrorValue msg, false⟩] k', s, choices)
-          | .error err => throw err
-          | .ok loc =>
-              match pending with
-              | te :: rest =>
-                  return (.evalE te env
-                    (.callTargetsK fid (locs ++ [loc]) rest args env k'), s, choices)
-              | [] =>
-                  match args with
-                  | a :: rest =>
-                      return (.evalE a env
-                        (.callArgsK fid (locs ++ [loc]) [] rest env k'), s, choices)
+      | .callTargetsK fid sh ops pending refs targets args env k' =>
+          -- BUG-025: phase-1 operand accumulation; each target completes
+          -- into a store-ready TargetRef (outer check DEFERRED to the
+          -- post-call storeK stores).
+          match pending with
+          | e :: rest =>
+              return (.evalE e env
+                (.callTargetsK fid sh (v :: ops) rest refs targets args env k'), s, choices)
+          | [] =>
+              match completeTargetRef sh (v :: ops).reverse with
+              | none => throw (.internal "malformed call target operands")
+              | some r =>
+                  match targets with
+                  | (sh', e :: ops') :: rest =>
+                      return (.evalE e env
+                        (.callTargetsK fid sh' [] ops' (refs ++ [r]) rest args env k'), s, choices)
+                  | (_, []) :: _ => throw (.internal "malformed call target plan")
                   | [] =>
-                      enterFrameStep s fid []
-                        (fun func frameEnv resultLocs =>
-                          .exec func.body frameEnv
-                            (.frame (locs ++ [loc]) resultLocs [] k' func.wrapper)) k' choices
-      | .callArgsK fid locs vals pending env k' =>
+                      match args with
+                      | a :: rest =>
+                          return (.evalE a env
+                            (.callArgsK fid (refs ++ [r]) [] rest env k'), s, choices)
+                      | [] =>
+                          enterFrameStep s fid []
+                            (fun func frameEnv resultLocs =>
+                              .exec func.body frameEnv
+                                (.frame (refs ++ [r]) resultLocs [] k' func.wrapper)) k' choices
+      | .callArgsK fid refs vals pending env k' =>
           match pending with
           | a :: rest =>
               return (.evalE a env
-                (.callArgsK fid locs (vals ++ [v]) rest env k'), s, choices)
+                (.callArgsK fid refs (vals ++ [v]) rest env k'), s, choices)
           | [] =>
               enterFrameStep s fid (vals ++ [v])
                 (fun func frameEnv resultLocs =>
-                  .exec func.body frameEnv (.frame locs resultLocs [] k' func.wrapper)) k' choices
+                  .exec func.body frameEnv (.frame refs resultLocs [] k' func.wrapper)) k' choices
       | .stmtOpK op nt done pending env k' =>
           -- Target addresses are checked as they arrive ONLY when more
           -- operands follow (interpreter panic timing); at the apply
@@ -382,25 +395,29 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
               | .error (.panic msg) =>
                   return (.panicking [⟨runtimeErrorValue msg, false⟩] k', s, choices)
               | .error err => throw err
-      | .callValTargetsK callee locs pending args env k' =>
-          match valueAsLoc v with
-          | .error (.panic msg) =>
-              return (.panicking [⟨runtimeErrorValue msg, false⟩] k', s, choices)
-          | .error err => throw err
-          | .ok loc =>
-              match pending with
-              | te :: rest =>
-                  return (.evalE te env
-                    (.callValTargetsK callee (locs ++ [loc]) rest args env k'), s, choices)
-              | [] =>
-                  return (.evalE callee env
-                    (.callValCalleeK (locs ++ [loc]) args env k'), s, choices)
-      | .callValCalleeK locs args env k' =>
+      | .callValTargetsK callee sh ops pending refs targets args env k' =>
+          match pending with
+          | e :: rest =>
+              return (.evalE e env
+                (.callValTargetsK callee sh (v :: ops) rest refs targets args env k'), s, choices)
+          | [] =>
+              match completeTargetRef sh (v :: ops).reverse with
+              | none => throw (.internal "malformed call target operands")
+              | some r =>
+                  match targets with
+                  | (sh', e :: ops') :: rest =>
+                      return (.evalE e env
+                        (.callValTargetsK callee sh' [] ops' (refs ++ [r]) rest args env k'), s, choices)
+                  | (_, []) :: _ => throw (.internal "malformed call target plan")
+                  | [] =>
+                      return (.evalE callee env
+                        (.callValCalleeK (refs ++ [r]) args env k'), s, choices)
+      | .callValCalleeK refs args env k' =>
           match v, args with
           | .funcVal fid captured, [] =>
               enterFrameStep s fid captured
                 (fun func frameEnv resultLocs =>
-                  .exec func.body frameEnv (.frame locs resultLocs [] k' func.wrapper)) k' choices
+                  .exec func.body frameEnv (.frame refs resultLocs [] k' func.wrapper)) k' choices
           | .nil, [] =>
               return (.panicking [⟨runtimeErrorValue
                 "runtime error: invalid memory address or nil pointer dereference", false⟩]
@@ -409,20 +426,20 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
               -- Go evaluates the callee and ALL arguments before the nil
               -- check fires, so nil proceeds into the argument walk.
               if deferrableCallee cv then
-                return (.evalE a env (.callValArgsK cv locs [] rest env k'), s, choices)
+                return (.evalE a env (.callValArgsK cv refs [] rest env k'), s, choices)
               else throw (.stuck s!"expected function value, got {repr cv}")
           | other, [] => throw (.stuck s!"expected function value, got {repr other}")
-      | .callValArgsK cv locs vals pending env k' =>
+      | .callValArgsK cv refs vals pending env k' =>
           match pending with
           | a :: rest =>
               return (.evalE a env
-                (.callValArgsK cv locs (vals ++ [v]) rest env k'), s, choices)
+                (.callValArgsK cv refs (vals ++ [v]) rest env k'), s, choices)
           | [] =>
               match cv with
               | .funcVal fid captured =>
                   enterFrameStep s fid (captured ++ vals ++ [v])
                     (fun func frameEnv resultLocs =>
-                      .exec func.body frameEnv (.frame locs resultLocs [] k' func.wrapper)) k' choices
+                      .exec func.body frameEnv (.frame refs resultLocs [] k' func.wrapper)) k' choices
               | .nil =>
                   return (.panicking [⟨runtimeErrorValue
                     "runtime error: invalid memory address or nil pointer dereference", false⟩]
@@ -549,10 +566,19 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
       | .seq (t :: rest) env k' => return (.exec t env (.seq rest env k'), s, choices)
       | .seq [] _ k' => return (.next k', s, choices)
       | .loop c b env k' => return (.exec (.while c b) env k', s, choices)
-      | .frame targets results [] k' _ => do
+      | .frame [] [] [] k' _ => return (.next k', s, choices)
+      | .frame [] (rl :: rls) [] _ _ => do
+          -- Targetless frame with pinned results: the frontend always
+          -- supplies targets for result-bearing calls; stuck-closed as
+          -- before the BUG-025 migration (the old storeMany [] (v::vs)
+          -- refusal), after the same result read.
+          let _ ← loadMany s (rl :: rls)
+          throw (.stuck "extra GoCore assignment value")
+      | .frame (r :: rs) results [] k' _ => do
+          -- BUG-025: the call write-back is phase 2 — one storeK store
+          -- per step, left-to-right, deferred checks firing at the store.
           let vs ← loadMany s results
-          let s' ← storeMany s targets vs
-          return (.next k', s', choices)
+          return (.next (.storeK (r :: rs) vs (.seqn #[]) [] k'), s, choices)
       | .frame targets results ((cv, args) :: ds) k' w =>
           match cv with
           | .funcVal fid captured =>
@@ -639,10 +665,19 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
       | .labelK _ k' => return (.returning k', s, choices)
       | .loop _ _ _ k' => return (.returning k', s, choices)
       | .mapIterK _ _ _ _ _ _ _ k' => return (.returning k', s, choices)
-      | .frame targets results [] k' _ => do
+      | .frame [] [] [] k' _ => return (.next k', s, choices)
+      | .frame [] (rl :: rls) [] _ _ => do
+          -- Targetless frame with pinned results: the frontend always
+          -- supplies targets for result-bearing calls; stuck-closed as
+          -- before the BUG-025 migration (the old storeMany [] (v::vs)
+          -- refusal), after the same result read.
+          let _ ← loadMany s (rl :: rls)
+          throw (.stuck "extra GoCore assignment value")
+      | .frame (r :: rs) results [] k' _ => do
+          -- BUG-025: the call write-back is phase 2 — one storeK store
+          -- per step, left-to-right, deferred checks firing at the store.
           let vs ← loadMany s results
-          let s' ← storeMany s targets vs
-          return (.next k', s', choices)
+          return (.next (.storeK (r :: rs) vs (.seqn #[]) [] k'), s, choices)
       | .frame targets results ((cv, args) :: ds) k' w =>
           match cv with
           | .funcVal fid captured =>

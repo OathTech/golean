@@ -10,6 +10,7 @@ import Iris.Std.GenSetsInstances
 import GoLean.GoCore.MachineSound
 import GoLeanProofs.HeapBridge
 import GoLeanProofs.Laws.Eval
+import GoLeanProofs.Laws.Control
 import GoLeanProofs.Tactics.GoWalk
 
 /-!
@@ -55,10 +56,11 @@ variable {s : Stuckness} {E : CoPset} {Φ : Unit → IProp GF}
 address. -/
 @[go_walk_law]
 theorem wp_call_first_target {targets : Array Assignee} {fid : FuncId}
-    {args : Array Expr} {te : Expr} {rest : List Expr} {env k}
-    (hplan : assigneesExprs targets.toList = some (te :: rest)) :
+    {args : Array Expr} {sh : TargetShape} {e : Expr} {ops : List Expr}
+    {rest : List (TargetShape × List Expr)} {env k}
+    (hplan : targetsPlan targets.toList = some ((sh, e :: ops) :: rest)) :
     (|={E}[E]▷=> £ 1 -∗
-      WP (Config.evalE te env (.callTargetsK fid [] rest args.toList env k))
+      WP (Config.evalE e env (.callTargetsK fid sh [] ops [] rest args.toList env k))
         @ s ; E {{ Φ }}) ⊢
       WP (Config.exec (.call targets fid args) env k) @ s ; E {{ Φ }} :=
   wp_pure_det rfl (by simp [Config.choiceFree, stmtPlan])
@@ -69,7 +71,7 @@ first argument. -/
 @[go_walk_law]
 theorem wp_call_first_arg {targets : Array Assignee} {fid : FuncId}
     {args : Array Expr} {a : Expr} {rest : List Expr} {env k}
-    (htargets : assigneesExprs targets.toList = some [])
+    (htargets : targetsPlan targets.toList = some [])
     (hargs : args.toList = a :: rest) :
     (|={E}[E]▷=> £ 1 -∗
       WP (Config.evalE a env (.callArgsK fid [] [] rest env k))
@@ -84,7 +86,7 @@ cell (normalized at declared type) and enters the body under the fresh
 one-binding frame environment. The continuation receives the
 machine-chosen cell (`∀ pa`). -/
 theorem wp_call_enter_arg1 {fid : FuncId} {func : Func} {pid : String}
-    {pty : Ty} {v v' : GoValue} {locs : List Loc} {env k}
+    {pty : Ty} {v v' : GoValue} {locs : List TargetRef} {env k}
     (hfind : findFunctionIn? (GoCoreGS.prog GF) fid = some func)
     (hargs : func.args = #[⟨pid, pty⟩])
     (hres : func.results = #[])
@@ -115,7 +117,7 @@ theorem wp_call_enter_arg1 {fid : FuncId} {func : Func} {pid : String}
   simp only [stateInterp]
   icases Hσ with ⟨Hσ, %Hinv⟩
   obtain ⟨hfns, hmeths, htypes, hwf⟩ := Hinv
-  have hstep := Step.callArgsDoneEnter (vals := []) (locs := locs) (env := env)
+  have hstep := Step.callArgsDoneEnter (vals := []) (refs := locs) (env := env)
     (k := k) (henter σ₁ hfns hmeths htypes)
   have hdet : ∀ c' s',
       Step (.retV v (.callArgsK fid locs [] [] env k)) σ₁ c' s' →
@@ -167,8 +169,8 @@ theorem wp_call_enter_ret1 {fid : FuncId} {func : Func} {rid : String}
       defaultValue σ rty = .ok dv) :
     iprop(∀ ra : Addr, ra.id ↦ (⟨some rty, dv⟩ : HeapCell) -∗
         WP (Config.exec func.body [[(rid, Loc.base ra)]]
-              (.frame [tl] [Loc.base ra] [] k func.wrapper)) @ s ; E {{ Φ }})
-      ⊢ WP (Config.retV (.addr tl) (.callTargetsK fid [] [] [] env k))
+              (.frame [.chain (.addr tl) [] []] [Loc.base ra] [] k func.wrapper)) @ s ; E {{ Φ }})
+      ⊢ WP (Config.retV (.addr tl) (.callTargetsK fid (.chain []) [] [] [] [] [] env k))
           @ s ; E {{ Φ }} := by
   have henter : ∀ σ₁ : ExecState, σ₁.functions = GoCoreGS.prog GF →
       σ₁.methods = GoCoreGS.methods GF → σ₁.types = GoCoreGS.types GF →
@@ -188,12 +190,13 @@ theorem wp_call_enter_ret1 {fid : FuncId} {func : Func} {rid : String}
   simp only [stateInterp]
   icases Hσ with ⟨Hσ, %Hinv⟩
   obtain ⟨hfns, hmeths, htypes, hwf⟩ := Hinv
-  have hstep := Step.callTargetsDoneEnter (locs := []) (env := env) (k := k)
-    (rfl : valueAsLoc (.addr tl) = .ok tl) (henter σ₁ hfns hmeths htypes)
+  have hstep := Step.callTargetsDoneEnter (refs := []) (env := env) (k := k)
+    (v := .addr tl) (sh := .chain []) (ops := []) (r := .chain (.addr tl) [] [])
+    rfl (henter σ₁ hfns hmeths htypes)
   have hdet : ∀ c' s',
-      Step (.retV (.addr tl) (.callTargetsK fid [] [] [] env k)) σ₁ c' s' →
+      Step (.retV (.addr tl) (.callTargetsK fid (.chain []) [] [] [] [] [] env k)) σ₁ c' s' →
       c' = Config.exec func.body [[(rid, Loc.base ⟨σ₁.nextAddr⟩)]]
-             (.frame ([] ++ [tl]) [Loc.base ⟨σ₁.nextAddr⟩] [] k func.wrapper)
+             (.frame ([] ++ [.chain (.addr tl) [] []]) [Loc.base ⟨σ₁.nextAddr⟩] [] k func.wrapper)
         ∧ s' = { σ₁ with heap := Heap.set σ₁.heap (.base ⟨σ₁.nextAddr⟩) ⟨some rty, dv⟩, nextAddr := σ₁.nextAddr + 1 } := by
     intro c' s' hst
     obtain ⟨h1, h2⟩ := step_det (by trivial) hstep hst
@@ -239,20 +242,48 @@ theorem wp_frame_return_int {ta ra : Addr} {kind tkind : IntKind}
       ∗ (ra.id ↦ (⟨some (.int kind), .int m kind⟩ : HeapCell)
           ∗ ta.id ↦ (⟨some (.int tkind), .int (tkind.normalize m) tkind⟩ : HeapCell)
           -∗ WP (Config.next k) @ s ; E {{ Φ }})
-      ⊢ WP (Config.returning (.frame [.base ta] [.base ra] [] k wf))
+      ⊢ WP (Config.returning (.frame [.chain (.addr (.base ta)) [] []] [.base ra] [] k wf))
           @ s ; E {{ Φ }} := by
-  iapply wp_store_step₂ (hnv := rfl)
-  intro σ₁ _hfns _hmeths _htypes hlookr hlookt
-  have hload : loadMany σ₁ [Loc.base ra] = .ok [GoValue.int m kind] := by
-    simp [loadMany, loadLoc, hlookr, Bind.bind, Except.bind]
-  have hstore : storeMany σ₁ [Loc.base ta] [GoValue.int m kind]
-      = .ok { σ₁ with heap := Heap.set σ₁.heap (.base ta) ⟨some (.int tkind), .int (tkind.normalize m) tkind⟩ } := by
-    simp [storeMany, storeLoc_int_any hlookt m, Bind.bind, Except.bind]
-  have hstep := Step.frameReturn (k := k) (w := wf) hload hstore
-  refine ⟨hstep, ?_⟩
-  intro c' s' hst
-  obtain ⟨h1, h2⟩ := step_det (by trivial) hstep hst
-  exact ⟨h1.symm, h2.symm⟩
+  iintro ⟨Hr, Ht, Hcont⟩
+  -- Step 1 (BUG-025 spine migration): the frame exit READS the pinned
+  -- result cell and enters phase 2 (`storeK`); the caller-target write
+  -- is a separate store step below.
+  iapply (wp_det_step_keep
+    (P := iprop(ra.id ↦ (⟨some (.int kind), .int m kind⟩ : HeapCell)))
+    (c₁ := Config.next (.storeK [.chain (.addr (.base ta)) [] []]
+      [.int m kind] (.seqn #[]) [] k))
+    (hnv := rfl)
+    (hred := fun σ₁ _hfns _hmeths _htypes => by
+      iintro ⟨Hσ, Hpt⟩
+      ihave %Hmap : ⌜get? (heapToMap σ₁.heap) ra.id
+          = some (⟨some (.int kind), .int m kind⟩ : HeapCell)⌝ $$ [Hσ Hpt]
+      · icases genHeap_valid $$ [$Hσ $Hpt] with >%h
+        itrivial
+      have hlook : Heap.lookup σ₁.heap (.base ra)
+          = some ⟨some (.int kind), .int m kind⟩ := by
+        rw [get?_heapToMap] at Hmap; simpa using Hmap
+      have hload : loadMany σ₁ [Loc.base ra] = .ok [GoValue.int m kind] := by
+        simp [loadMany, loadLoc, hlook, Bind.bind, Except.bind]
+      imodintro
+      ipureintro
+      refine ⟨Step.frameReturnStores hload, ?_⟩
+      intro c' s' hst
+      obtain ⟨h1, h2⟩ := step_det (by trivial) (Step.frameReturnStores hload) hst
+      exact ⟨h1.symm, h2.symm⟩))
+  isplitl [Hr]
+  · iexact Hr
+  iintro Hr
+  -- Step 2: the caller-target store (phase 2, deferred check at the
+  -- store).
+  iapply (wp_assign_store_loc
+    (oldcell := ⟨some (.int tkind), w⟩)
+    (newcell := ⟨some (.int tkind), .int (tkind.normalize m) tkind⟩)
+    (hstore := fun σ₁ _ht hlook => storeLoc_int_any hlook m))
+  isplitl [Ht]
+  · iexact Ht
+  iintro Ht
+  iapply wp_stores_done_nil
+  iapply Hcont $$ [$Hr $Ht]
 
 /-- **Value frame exit on the FALL path**: normal completion (no explicit
 `return`) at a frame with one pinned int result location and one int-typed
@@ -269,20 +300,48 @@ theorem wp_frame_fall_int {ta ra : Addr} {kind tkind : IntKind}
       ∗ (ra.id ↦ (⟨some (.int kind), .int m kind⟩ : HeapCell)
           ∗ ta.id ↦ (⟨some (.int tkind), .int (tkind.normalize m) tkind⟩ : HeapCell)
           -∗ WP (Config.next k) @ s ; E {{ Φ }})
-      ⊢ WP (Config.next (.frame [.base ta] [.base ra] [] k wf))
+      ⊢ WP (Config.next (.frame [.chain (.addr (.base ta)) [] []] [.base ra] [] k wf))
           @ s ; E {{ Φ }} := by
-  iapply wp_store_step₂ (hnv := rfl)
-  intro σ₁ _hfns _hmeths _htypes hlookr hlookt
-  have hload : loadMany σ₁ [Loc.base ra] = .ok [GoValue.int m kind] := by
-    simp [loadMany, loadLoc, hlookr, Bind.bind, Except.bind]
-  have hstore : storeMany σ₁ [Loc.base ta] [GoValue.int m kind]
-      = .ok { σ₁ with heap := Heap.set σ₁.heap (.base ta) ⟨some (.int tkind), .int (tkind.normalize m) tkind⟩ } := by
-    simp [storeMany, storeLoc_int_any hlookt m, Bind.bind, Except.bind]
-  have hstep := Step.frameFall (k := k) (w := wf) hload hstore
-  refine ⟨hstep, ?_⟩
-  intro c' s' hst
-  obtain ⟨h1, h2⟩ := step_det (by trivial) hstep hst
-  exact ⟨h1.symm, h2.symm⟩
+  iintro ⟨Hr, Ht, Hcont⟩
+  -- Step 1 (BUG-025 spine migration): the frame exit READS the pinned
+  -- result cell and enters phase 2 (`storeK`); the caller-target write
+  -- is a separate store step below.
+  iapply (wp_det_step_keep
+    (P := iprop(ra.id ↦ (⟨some (.int kind), .int m kind⟩ : HeapCell)))
+    (c₁ := Config.next (.storeK [.chain (.addr (.base ta)) [] []]
+      [.int m kind] (.seqn #[]) [] k))
+    (hnv := rfl)
+    (hred := fun σ₁ _hfns _hmeths _htypes => by
+      iintro ⟨Hσ, Hpt⟩
+      ihave %Hmap : ⌜get? (heapToMap σ₁.heap) ra.id
+          = some (⟨some (.int kind), .int m kind⟩ : HeapCell)⌝ $$ [Hσ Hpt]
+      · icases genHeap_valid $$ [$Hσ $Hpt] with >%h
+        itrivial
+      have hlook : Heap.lookup σ₁.heap (.base ra)
+          = some ⟨some (.int kind), .int m kind⟩ := by
+        rw [get?_heapToMap] at Hmap; simpa using Hmap
+      have hload : loadMany σ₁ [Loc.base ra] = .ok [GoValue.int m kind] := by
+        simp [loadMany, loadLoc, hlook, Bind.bind, Except.bind]
+      imodintro
+      ipureintro
+      refine ⟨Step.frameFallStores hload, ?_⟩
+      intro c' s' hst
+      obtain ⟨h1, h2⟩ := step_det (by trivial) (Step.frameFallStores hload) hst
+      exact ⟨h1.symm, h2.symm⟩))
+  isplitl [Hr]
+  · iexact Hr
+  iintro Hr
+  -- Step 2: the caller-target store (phase 2, deferred check at the
+  -- store).
+  iapply (wp_assign_store_loc
+    (oldcell := ⟨some (.int tkind), w⟩)
+    (newcell := ⟨some (.int tkind), .int (tkind.normalize m) tkind⟩)
+    (hstore := fun σ₁ _ht hlook => storeLoc_int_any hlook m))
+  isplitl [Ht]
+  · iexact Ht
+  iintro Ht
+  iapply wp_stores_done_nil
+  iapply Hcont $$ [$Hr $Ht]
 
 /-- **Invariant-opening value frame exit** (the invariance-readout form of
 `wp_frame_return_int`): the caller target lives in an Iris invariant with
@@ -299,22 +358,57 @@ theorem wp_frame_return_int_inv {ta ra : Addr} {kind tkind : IntKind}
       ∗ ra.id ↦ (⟨some (.int kind), .int m kind⟩ : HeapCell)
       ∗ (ra.id ↦ (⟨some (.int kind), .int m kind⟩ : HeapCell)
           -∗ WP (Config.next k) @ s ; E {{ Φ }})
-      ⊢ WP (Config.returning (.frame [.base ta] [.base ra] [] k wf))
+      ⊢ WP (Config.returning (.frame [.chain (.addr (.base ta)) [] []] [.base ra] [] k wf))
           @ s ; E {{ Φ }} := by
-  iapply wp_store_step₂_inv (hN := hN) (hnv := rfl) (hopen := hopen)
-    (hclose := hclose)
-  intro σ₁ oldcell hS hlookr hlookt
-  obtain ⟨w', rfl⟩ := hint oldcell hS
-  have hload : loadMany σ₁ [Loc.base ra] = .ok [GoValue.int m kind] := by
-    simp [loadMany, loadLoc, hlookr, Bind.bind, Except.bind]
-  have hstore : storeMany σ₁ [Loc.base ta] [GoValue.int m kind]
-      = .ok { σ₁ with heap := Heap.set σ₁.heap (.base ta) ⟨some (.int tkind), .int (tkind.normalize m) tkind⟩ } := by
-    simp [storeMany, storeLoc_int_any hlookt m, Bind.bind, Except.bind]
-  have hstep := Step.frameReturn (k := k) (w := wf) hload hstore
-  refine ⟨hstep, ?_⟩
-  intro c' s' hst
-  obtain ⟨h1, h2⟩ := step_det (by trivial) hstep hst
-  exact ⟨h1.symm, h2.symm⟩
+  iintro ⟨HinvT, Hr, Hcont⟩
+  -- Step 1 (BUG-025 spine migration): the exit READS the result cell
+  -- and enters phase 2; the invariant-managed target write is the
+  -- separate store step below, opened around exactly that step.
+  iapply (wp_det_step_keep
+    (P := iprop(ra.id ↦ (⟨some (.int kind), .int m kind⟩ : HeapCell)))
+    (c₁ := Config.next (.storeK [.chain (.addr (.base ta)) [] []]
+      [.int m kind] (.seqn #[]) [] k))
+    (hnv := rfl)
+    (hred := fun σ₁ _hfns _hmeths _htypes => by
+      iintro ⟨Hσ, Hpt⟩
+      ihave %Hmap : ⌜get? (heapToMap σ₁.heap) ra.id
+          = some (⟨some (.int kind), .int m kind⟩ : HeapCell)⌝ $$ [Hσ Hpt]
+      · icases genHeap_valid $$ [$Hσ $Hpt] with >%h
+        itrivial
+      have hlook : Heap.lookup σ₁.heap (.base ra)
+          = some ⟨some (.int kind), .int m kind⟩ := by
+        rw [get?_heapToMap] at Hmap; simpa using Hmap
+      have hload : loadMany σ₁ [Loc.base ra] = .ok [GoValue.int m kind] := by
+        simp [loadMany, loadLoc, hlook, Bind.bind, Except.bind]
+      imodintro
+      ipureintro
+      refine ⟨Step.frameReturnStores hload, ?_⟩
+      intro c' s' hst
+      obtain ⟨h1, h2⟩ := step_det (by trivial) (Step.frameReturnStores hload) hst
+      exact ⟨h1.symm, h2.symm⟩))
+  isplitl [Hr]
+  · iexact Hr
+  iintro Hr
+  -- Step 2: the store, the invariant opened around exactly this step.
+  iapply (wp_store_step₂_inv (pa := ra)
+    (pcell := ⟨some (.int kind), .int m kind⟩)
+    (hN := hN) (hnv := rfl) (hopen := hopen) (hclose := hclose)
+    (hred := fun σ₁ oldcell hS _hlookp hlook => by
+      obtain ⟨w', rfl⟩ := hint oldcell hS
+      have hst : storeTarget σ₁ (.chain (.addr (.base ta)) [] []) (.int m kind) = .ok { σ₁ with heap := Heap.set σ₁.heap (.base ta) (⟨some (.int tkind), .int (tkind.normalize m) tkind⟩ : HeapCell) } := by
+        simp [storeTarget, resolveChain, valueAsLoc, Bind.bind, Except.bind,
+          storeLoc_int_any hlook m]
+      refine ⟨Step.storeStep hst, ?_⟩
+      intro c' s' hst'
+      obtain ⟨h1, h2⟩ := step_det (by trivial) (Step.storeStep hst) hst'
+      exact ⟨h1.symm, h2.symm⟩))
+  isplitl [HinvT]
+  · iexact HinvT
+  isplitl [Hr]
+  · iexact Hr
+  iintro Hr
+  iapply wp_stores_done_nil
+  iapply Hcont $$ Hr
 
 /-! ## Frame entry through DYNAMIC DISPATCH (quorum pilot phase 4)
 
@@ -389,7 +483,7 @@ standing scope note, `wp_alloc_step₄`). -/
 theorem wp_call_enter₂₁ {fid : FuncId} {func : Func}
     {v₀ v₁ w₀ w₁ dv₀ : GoValue}
     {pid₀ pid₁ rid₀ : String} {pty₀ pty₁ rty₀ : Ty}
-    {locs : List Loc} {env k}
+    {locs : List TargetRef} {env k}
     (hfind : findFunctionIn? (GoCoreGS.prog GF) fid = some func)
     (hargs : func.args = #[⟨pid₀, pty₀⟩, ⟨pid₁, pty₁⟩])
     (hres : func.results = #[⟨rid₀, rty₀⟩])
@@ -441,7 +535,7 @@ theorem wp_call_enter₂₁ {fid : FuncId} {func : Func}
       (.frame locs [Loc.base a₂] [] k func.wrapper))
     (hred := by
       intro σ₁ hfns hmeths htypes
-      have hstep := Step.callArgsDoneEnter (vals := [v₀]) (locs := locs)
+      have hstep := Step.callArgsDoneEnter (vals := [v₀]) (refs := locs)
         (env := env) (k := k) (by simpa using henter σ₁ hfns hmeths htypes)
       refine ⟨hstep, ?_⟩
       intro c' s' hst
@@ -465,7 +559,7 @@ vacuous (`Specs/GoldenQuorumPin.typeEnv_pin_is_load_bearing`). -/
 theorem wp_call_dynamic_enter₂ {fid : FuncId} {anchor concrete : Func}
     {recvBox recv v₁ w₀ w₁ dv₀ dv₁ : GoValue}
     {pid₀ pid₁ rid₀ rid₁ : String} {pty₀ pty₁ rty₀ rty₁ : Ty}
-    {locs : List Loc} {env k}
+    {locs : List TargetRef} {env k}
     (hfind : findFunctionIn? (GoCoreGS.prog GF) fid = some anchor)
     (hanchor : anchor.args.size = 2)
     (hdisp : ∀ σ : ExecState, σ.functions = GoCoreGS.prog GF →
@@ -526,7 +620,7 @@ theorem wp_call_dynamic_enter₂ {fid : FuncId} {anchor concrete : Func}
       (.frame locs [Loc.base a₂, Loc.base a₃] [] k concrete.wrapper))
     (hred := by
       intro σ₁ hfns hmeths htypes
-      have hstep := Step.callArgsDoneEnter (vals := [recvBox]) (locs := locs)
+      have hstep := Step.callArgsDoneEnter (vals := [recvBox]) (refs := locs)
         (env := env) (k := k) (by simpa using henter σ₁ hfns hmeths htypes)
       refine ⟨hstep, ?_⟩
       intro c' s' hst
@@ -553,41 +647,60 @@ GoCore's (the CEK reshape's) shape, and multi-VALUE returns are handled
 by tupling rather than by caller target locations. Ours needs the
 handoff laws; theirs needs the (equally arity-bound) tuple projections. -/
 
-/-- Shift to the next TARGET operand: the delivered value must be an
-address (`hloc`), which is appended to the collected target locations. -/
+/-- Shift to the current call target's next phase-1 operand (BUG-025
+spine migration — call targets are plans with deferred checks, like
+every other assignment target). -/
 @[go_walk_law]
-theorem wp_call_target_next {fid : FuncId} {locs : List Loc} {v : GoValue}
-    {loc : Loc} {te : Expr} {rest args : List Expr} {env k}
-    (hloc : valueAsLoc v = .ok loc) :
+theorem wp_call_tgt_shift {fid : FuncId} {sh : TargetShape}
+    {ops : List GoValue} {v : GoValue} {e : Expr} {pending : List Expr}
+    {refs : List TargetRef} {targets : List (TargetShape × List Expr)}
+    {args : List Expr} {env k} :
     (|={E}[E]▷=> £ 1 -∗
-      WP (Config.evalE te env (.callTargetsK fid (locs ++ [loc]) rest args env k))
-        @ s ; E {{ Φ }}) ⊢
-      WP (Config.retV v (.callTargetsK fid locs (te :: rest) args env k))
-        @ s ; E {{ Φ }} :=
-  wp_pure_det rfl trivial (fun _ => Step.callTargetLoc hloc)
+      WP (Config.evalE e env (.callTargetsK fid sh (v :: ops) pending refs
+        targets args env k)) @ s ; E {{ Φ }}) ⊢
+      WP (Config.retV v (.callTargetsK fid sh ops (e :: pending) refs
+        targets args env k)) @ s ; E {{ Φ }} :=
+  wp_pure_det rfl trivial (fun _ => Step.callTgtShift)
 
-/-- The last target arrives and arguments remain: record it and start the
-argument walk. -/
+/-- Complete the current call target and start the next one's
+operands. -/
 @[go_walk_law]
-theorem wp_call_targets_done_arg {fid : FuncId} {locs : List Loc} {v : GoValue}
-    {loc : Loc} {a : Expr} {rest : List Expr} {env k}
-    (hloc : valueAsLoc v = .ok loc) :
+theorem wp_call_tgt_next {fid : FuncId} {sh : TargetShape}
+    {ops : List GoValue} {v : GoValue} {r : TargetRef} {sh' : TargetShape}
+    {e : Expr} {ops' : List Expr} {targets : List (TargetShape × List Expr)}
+    {refs : List TargetRef} {args : List Expr} {env k}
+    (hcomp : completeTargetRef sh (v :: ops).reverse = some r) :
     (|={E}[E]▷=> £ 1 -∗
-      WP (Config.evalE a env (.callArgsK fid (locs ++ [loc]) [] rest env k))
+      WP (Config.evalE e env (.callTargetsK fid sh' [] ops' (refs ++ [r])
+        targets args env k)) @ s ; E {{ Φ }}) ⊢
+      WP (Config.retV v (.callTargetsK fid sh ops [] refs
+        ((sh', e :: ops') :: targets) args env k)) @ s ; E {{ Φ }} :=
+  wp_pure_det rfl trivial (fun _ => Step.callTgtNext hcomp)
+
+/-- The last target completes and arguments remain: start the argument
+walk with the store-ready references carried for the post-call
+write-back. -/
+@[go_walk_law]
+theorem wp_call_targets_done_arg {fid : FuncId} {sh : TargetShape}
+    {ops : List GoValue} {v : GoValue} {r : TargetRef}
+    {refs : List TargetRef} {a : Expr} {rest : List Expr} {env k}
+    (hcomp : completeTargetRef sh (v :: ops).reverse = some r) :
+    (|={E}[E]▷=> £ 1 -∗
+      WP (Config.evalE a env (.callArgsK fid (refs ++ [r]) [] rest env k))
         @ s ; E {{ Φ }}) ⊢
-      WP (Config.retV v (.callTargetsK fid locs [] (a :: rest) env k))
+      WP (Config.retV v (.callTargetsK fid sh ops [] refs [] (a :: rest) env k))
         @ s ; E {{ Φ }} :=
-  wp_pure_det rfl trivial (fun _ => Step.callTargetsDoneArg hloc)
+  wp_pure_det rfl trivial (fun _ => Step.callTargetsDoneArg hcomp)
 
 /-- Shift to the next ARGUMENT operand (no address check — arguments are
 plain values). -/
 @[go_walk_law]
-theorem wp_call_arg_next {fid : FuncId} {locs : List Loc} {vals : List GoValue}
-    {v : GoValue} {a : Expr} {rest : List Expr} {env k} :
+theorem wp_call_arg_next {fid : FuncId} {refs : List TargetRef}
+    {vals : List GoValue} {v : GoValue} {a : Expr} {rest : List Expr} {env k} :
     (|={E}[E]▷=> £ 1 -∗
-      WP (Config.evalE a env (.callArgsK fid locs (vals ++ [v]) rest env k))
+      WP (Config.evalE a env (.callArgsK fid refs (vals ++ [v]) rest env k))
         @ s ; E {{ Φ }}) ⊢
-      WP (Config.retV v (.callArgsK fid locs vals (a :: rest) env k))
+      WP (Config.retV v (.callArgsK fid refs vals (a :: rest) env k))
         @ s ; E {{ Φ }} :=
   wp_pure_det rfl trivial (fun _ => Step.callArgNext)
 
@@ -606,7 +719,7 @@ carry the `σ.types` pin, without which they are false at any named type
 theorem wp_call_enter₂ {fid : FuncId} {func : Func}
     {v₀ v₁ w₀ w₁ dv₀ dv₁ : GoValue}
     {pid₀ pid₁ rid₀ rid₁ : String} {pty₀ pty₁ rty₀ rty₁ : Ty}
-    {locs : List Loc} {env k}
+    {locs : List TargetRef} {env k}
     (hfind : findFunctionIn? (GoCoreGS.prog GF) fid = some func)
     (hargs : func.args = #[⟨pid₀, pty₀⟩, ⟨pid₁, pty₁⟩])
     (hres : func.results = #[⟨rid₀, rty₀⟩, ⟨rid₁, rty₁⟩])
@@ -666,7 +779,7 @@ theorem wp_call_enter₂ {fid : FuncId} {func : Func}
       (.frame locs [Loc.base a₂, Loc.base a₃] [] k func.wrapper))
     (hred := by
       intro σ₁ hfns hmeths htypes
-      have hstep := Step.callArgsDoneEnter (vals := [v₀]) (locs := locs)
+      have hstep := Step.callArgsDoneEnter (vals := [v₀]) (refs := locs)
         (env := env) (k := k) (by simpa using henter σ₁ hfns hmeths htypes)
       refine ⟨hstep, ?_⟩
       intro c' s' hst
@@ -804,20 +917,42 @@ theorem wp_frame_return₁ {ta ra : Addr} {rcell tcell tcell' : HeapCell} {k} {w
         = .ok { σ with heap := Heap.set σ.heap (.base ta) tcell' }) :
     ra.id ↦ rcell ∗ ta.id ↦ tcell
       ∗ (ra.id ↦ rcell ∗ ta.id ↦ tcell' -∗ WP (Config.next k) @ s ; E {{ Φ }})
-      ⊢ WP (Config.returning (.frame [.base ta] [.base ra] [] k wf))
+      ⊢ WP (Config.returning (.frame [.chain (.addr (.base ta)) [] []] [.base ra] [] k wf))
           @ s ; E {{ Φ }} := by
-  iapply wp_store_step₂ (hnv := rfl)
-  intro σ _hfns _hmeths htypes hlookr hlookt
-  have hload : loadMany σ [Loc.base ra] = .ok [rcell.value] := by
-    simp [loadMany, loadLoc, hlookr, Bind.bind, Except.bind]
-  have hstore' : storeMany σ [Loc.base ta] [rcell.value]
-      = .ok { σ with heap := Heap.set σ.heap (.base ta) tcell' } := by
-    simp [storeMany, hstore σ htypes hlookt, Bind.bind, Except.bind]
-  have hstep := Step.frameReturn (k := k) (w := wf) hload hstore'
-  refine ⟨hstep, ?_⟩
-  intro c' s' hst
-  obtain ⟨h1, h2⟩ := step_det (by trivial) hstep hst
-  exact ⟨h1.symm, h2.symm⟩
+  iintro ⟨Hr, Ht, Hcont⟩
+  -- Step 1 (BUG-025 spine migration): the exit READS the result cell
+  -- and enters phase 2.
+  iapply (wp_det_step_keep
+    (P := iprop(ra.id ↦ rcell))
+    (c₁ := Config.next (.storeK [.chain (.addr (.base ta)) [] []]
+      [rcell.value] (.seqn #[]) [] k))
+    (hnv := rfl)
+    (hred := fun σ₁ _hfns _hmeths _htypes => by
+      iintro ⟨Hσ, Hpt⟩
+      ihave %Hmap : ⌜get? (heapToMap σ₁.heap) ra.id = some rcell⌝ $$ [Hσ Hpt]
+      · icases genHeap_valid $$ [$Hσ $Hpt] with >%h
+        itrivial
+      have hlook : Heap.lookup σ₁.heap (.base ra) = some rcell := by
+        rw [get?_heapToMap] at Hmap; simpa using Hmap
+      have hload : loadMany σ₁ [Loc.base ra] = .ok [rcell.value] := by
+        simp [loadMany, loadLoc, hlook, Bind.bind, Except.bind]
+      imodintro
+      ipureintro
+      refine ⟨Step.frameReturnStores hload, ?_⟩
+      intro c' s' hst
+      obtain ⟨h1, h2⟩ := step_det (by trivial) (Step.frameReturnStores hload) hst
+      exact ⟨h1.symm, h2.symm⟩))
+  isplitl [Hr]
+  · iexact Hr
+  iintro Hr
+  -- Step 2: the caller-target store (phase 2).
+  iapply (wp_assign_store_loc (oldcell := tcell) (newcell := tcell')
+    (hstore := hstore))
+  isplitl [Ht]
+  · iexact Ht
+  iintro Ht
+  iapply wp_stores_done_nil
+  iapply Hcont $$ [$Hr $Ht]
 
 /-- **Two-result frame exit**: `return` at a frame with TWO pinned result
 locations and TWO caller targets — read both result cells, store both
@@ -841,29 +976,59 @@ theorem wp_frame_return₂ {ta₀ ta₁ ra₀ ra₁ : Addr}
       ∗ (ra₀.id ↦ rcell₀ ∗ ra₁.id ↦ rcell₁ ∗ ta₀.id ↦ tcell₀' ∗ ta₁.id ↦ tcell₁'
           -∗ WP (Config.next k) @ s ; E {{ Φ }})
       ⊢ WP (Config.returning
-            (.frame [.base ta₀, .base ta₁] [.base ra₀, .base ra₁] [] k wf))
+            (.frame [.chain (.addr (.base ta₀)) [] [], .chain (.addr (.base ta₁)) [] []]
+              [.base ra₀, .base ra₁] [] k wf))
           @ s ; E {{ Φ }} := by
-  iapply wp_read₂_store₂_step (hnv := rfl)
-  intro σ _hfns _hmeths htypes hne hlr0 hlr1 hlt0 hlt1
-  have hload : loadMany σ [Loc.base ra₀, Loc.base ra₁]
-      = .ok [rcell₀.value, rcell₁.value] := by
-    simp [loadMany, loadLoc, hlr0, hlr1, Bind.bind, Except.bind]
-  have hlt1' : Heap.lookup (Heap.set σ.heap (.base ta₀) tcell₀') (.base ta₁)
-      = some tcell₁ := by
-    rw [heap_lookup_set_base_ne (b := ta₀) (n := ta₁.id) hne]
-    exact hlt1
-  have hstore : storeMany σ [Loc.base ta₀, Loc.base ta₁]
-      [rcell₀.value, rcell₁.value]
-      = .ok { σ with heap := Heap.set (Heap.set σ.heap (.base ta₀) tcell₀')
-                              (.base ta₁) tcell₁' } := by
-    simp [storeMany, hstore₀ σ htypes hlt0,
-      hstore₁ { σ with heap := Heap.set σ.heap (.base ta₀) tcell₀' } htypes hlt1',
-      Bind.bind, Except.bind]
-  have hstep := Step.frameReturn (k := k) (w := wf) hload hstore
-  refine ⟨hstep, ?_⟩
-  intro c' s' hst
-  obtain ⟨h1, h2⟩ := step_det (by trivial) hstep hst
-  exact ⟨h1.symm, h2.symm⟩
+  iintro ⟨Hr0, Hr1, Ht0, Ht1, Hcont⟩
+  -- Step 1 (BUG-025 spine migration): the exit READS both result cells
+  -- and enters phase 2; the two stores are separate left-to-right
+  -- steps, each target's deferred check firing at its own store.
+  iapply (wp_det_step_keep
+    (P := iprop(ra₀.id ↦ rcell₀ ∗ ra₁.id ↦ rcell₁))
+    (c₁ := Config.next (.storeK
+      [.chain (.addr (.base ta₀)) [] [], .chain (.addr (.base ta₁)) [] []]
+      [rcell₀.value, rcell₁.value] (.seqn #[]) [] k))
+    (hnv := rfl)
+    (hred := fun σ₁ _hfns _hmeths _htypes => by
+      iintro ⟨Hσ, Hpt0, Hpt1⟩
+      ihave %Hmap0 : ⌜get? (heapToMap σ₁.heap) ra₀.id = some rcell₀⌝ $$ [Hσ Hpt0]
+      · icases genHeap_valid $$ [$Hσ $Hpt0] with >%h
+        itrivial
+      ihave %Hmap1 : ⌜get? (heapToMap σ₁.heap) ra₁.id = some rcell₁⌝ $$ [Hσ Hpt1]
+      · icases genHeap_valid $$ [$Hσ $Hpt1] with >%h
+        itrivial
+      have hlook0 : Heap.lookup σ₁.heap (.base ra₀) = some rcell₀ := by
+        rw [get?_heapToMap] at Hmap0; simpa using Hmap0
+      have hlook1 : Heap.lookup σ₁.heap (.base ra₁) = some rcell₁ := by
+        rw [get?_heapToMap] at Hmap1; simpa using Hmap1
+      have hload : loadMany σ₁ [Loc.base ra₀, Loc.base ra₁]
+          = .ok [rcell₀.value, rcell₁.value] := by
+        simp [loadMany, loadLoc, hlook0, hlook1, Bind.bind, Except.bind]
+      imodintro
+      ipureintro
+      refine ⟨Step.frameReturnStores hload, ?_⟩
+      intro c' s' hst
+      obtain ⟨h1, h2⟩ := step_det (by trivial) (Step.frameReturnStores hload) hst
+      exact ⟨h1.symm, h2.symm⟩))
+  isplitl [Hr0 Hr1]
+  · isplitl [Hr0]
+    · iexact Hr0
+    · iexact Hr1
+  iintro ⟨Hr0, Hr1⟩
+  -- Step 2: the first caller-target store.
+  iapply (wp_assign_store_loc (oldcell := tcell₀) (newcell := tcell₀')
+    (hstore := hstore₀))
+  isplitl [Ht0]
+  · iexact Ht0
+  iintro Ht0
+  -- Step 3: the second caller-target store.
+  iapply (wp_assign_store_loc (oldcell := tcell₁) (newcell := tcell₁')
+    (hstore := hstore₁))
+  isplitl [Ht1]
+  · iexact Ht1
+  iintro Ht1
+  iapply wp_stores_done_nil
+  iapply Hcont $$ [$Hr0 $Hr1 $Ht0 $Ht1]
 
 end
 

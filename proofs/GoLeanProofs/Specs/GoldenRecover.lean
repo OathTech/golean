@@ -51,7 +51,7 @@ pointer, the recovered marker cancelling the unwind — ending at the
 frame's FALL exit still pending (`Config.next` at the frame), with the
 result cell holding 7. The `$c0` cell and the capture-parameter cell are
 dropped (affine). -/
-theorem wp_recoverDirect_body {ra : Addr} {tl : Loc} {k} {wf : Bool}
+theorem wp_recoverDirect_body {ra : Addr} {tl : TargetRef} {k} {wf : Bool}
     (hprog : GoCoreGS.prog GF = recoverLowered.funcs)
     (hmeths : GoCoreGS.methods GF = #[]) :
     ra.id ↦ (⟨some (.int .int), .int 0 .int⟩ : HeapCell)
@@ -127,7 +127,7 @@ theorem wp_recoverCall {ta : Addr} {w : GoValue} {x : String} {env k}
       ⊢ WP (Config.exec (.call #[.var x] ⟨"recoverDirect"⟩ #[]) env k)
           @ s ; E {{ Φ }} := by
   iintro ⟨Ht, Hcont⟩
-  iapply (wp_call_first_target (te := .ref x) (rest := []) rfl)
+  iapply (wp_call_first_target (e := .ref x) (sh := .chain []) (ops := []) (rest := []) rfl)
   iapply fupd_intro
   inext
   iapply fupd_intro
