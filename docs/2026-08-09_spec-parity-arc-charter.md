@@ -1,0 +1,109 @@
+# The spec-parity arc — charter (2026-08-09)
+
+Status: DRAFT for user decision on the marked items; structure and
+sequencing per the 2026-08-08/09 discussion. Basis:
+`docs/2026-08-07_goose-comparative-scoping.md` (the rung ladder;
+their 376 wp lemmas / 37 proved oracles / ~55 proved channel examples),
+`docs/goose-perennial-comparison.md` (the standing matrix),
+`docs/2026-08-08_goose-parity-end-of-buildout.md` (the imported corpus
+this arc proves things about). The buildout delivered corpus parity;
+THIS arc delivers SPEC parity: for goose/Perennial's proved examples,
+prove our analogues — Iris triples internally, adequacy-exported
+first-order corollaries designated — so the comparison becomes
+statement-by-statement, and our exports ground in a tested semantics
+where theirs quantify an untested model.
+
+## The sync question (asked 2026-08-09), answered
+
+Sync is NOT a prerequisite for spec-parity over the imported corpus
+(their proved channel examples and sequential oracles need no sync;
+channels are our primitives). But it IS the gating unlock for the 17
+phase-2 import files, their idiom libraries, and — decisively — the
+north-star target itself (etcd-raft uses sync.Mutex/WaitGroup
+throughout). And the channels arc built the exact extension mechanism
+sync needs: the synchronization-op registry (D2+D3 growth contract —
+a new primitive registers as one scheduling point + one HB edge rule,
+nothing revises). So: SYNC IS A SLICE OF THIS ARC, not its own —
+slice 2, after the laws spine, unlocking phase-2 imports mid-arc so
+the proof slices can cover them.
+
+## Slices
+
+1. **The assignment-spine laws slice** (the recorded prerequisite):
+   retire the three eager paths (BUG-025 call write-back, BUG-034
+   comma-ok, BUG-037 single-assign) onto the tgtOpK/storeK spine and
+   restate the anchored WP law families (`wp_assign*`,
+   `wp_map_lookup` + the quorum walk's consumers) over it — one
+   machinery retirement, one law rework, three consumers, the eleven
+   held-open pins flip. WP-walking imported programs hits these laws
+   constantly; clean foundation first.
+2. **The sync package** (registry growth): `sync.Mutex`/`RWMutex`/
+   `WaitGroup`/`Once` as machine primitives — each a registry entry
+   (scheduling point + HB edge per the memory-model text, quoted at
+   the site); real recoverable panics (unlock-of-unlocked etc.);
+   guardrails first from the 17 phase-2 goose files + fresh edge
+   cases; racy/litmus lanes extended; `FairStream` NOT in scope
+   (spin-waits via mutex contention are parked to the atomics arc as
+   recorded — sync ops BLOCK, so the blocking-discipline termination
+   class still applies; state this precisely in the slice note).
+   Unlocks: phase-2 imports land at R1/R2 in this slice's tail.
+3. **The WP-walk driver, exemplar-first**: hand-prove ONE feature
+   class end-to-end (recommended: their proved sequential oracles —
+   the `test_fun_ok` set) to fix the spec shape, then build the
+   `go_walk`-driven automation (tactic walking lowered programs,
+   applying laws, leaving side-goals) and scale across the imported
+   corpus. Proofs stay kernel-checked; the tactic is never trusted.
+4. **Channel-spec exemplars**: the frame-quantified `GoSpecC`
+   decomposition for spawning programs (the recorded successor debt:
+   park/deposit/wake through the one-thread-step Language interface,
+   pool-reachability kit), then triples + exports for a curated set
+   of their proved channel examples (the select-tricky trio, muxer,
+   dsp example — the flagship comparisons).
+5. **The parity table + arc closure**: the per-example comparison
+   artifact (their lemma ↔ our internal triple ↔ our export ↔
+   strength delta) as a standing doc section; matrix rows updated;
+   end-of-arc audit (user-asked, pre-merge) + Comparator landmark
+   (the designated set WILL grow — see D-item 3).
+
+## Decision items for the user (D1–D4)
+
+**D1 — Exported-spec shape** (the natural-spec question): recommended
+BOTH per the `goldenSpecC`+`goldenReturnsTwoC` precedent — the
+frame-quantified triple designated AND a first-order readout twin;
+pre/posts for stateful examples phrased as operational state
+assertions (history predicates only where a channel protocol demands
+it). USER CALL — this is the project's spec idiom being set.
+
+**D2 — Concurrent spec style**: mirror their Actris/dsp protocol
+layer (weeks-scale port; literal spec-to-spec comparison) vs native
+invariant+ghost internally with comparison at the exported level.
+Recommended: NATIVE for this arc (the export layer is where our
+comparison advantage lives; an Actris-lite port is recorded as a
+future option, not taken). USER CALL.
+
+**D3 — Designation policy at scale**: recommended CURATED — per
+feature class, one exemplar triple + export joins the designated
+list (Comparator-replayed); the bulk are gate-checked (axiom-pinned,
+statement-TCB-scanned) but undesignated, listed in a tracked
+manifest. Prevents silent list ballooning. USER CALL.
+
+**D4 — Slice-2 scope line**: sync.Mutex/RWMutex/WaitGroup/Once in;
+`sync/atomic`, `sync.Map`, `sync.Cond`, `sync.Pool` OUT (atomics are
+their own arc — FairStream's gate; the others are library-shaped).
+Recommended as stated. USER CALL (cheap to widen later by the same
+registry contract).
+
+## Binding discipline (inherited, not open)
+
+Everything from the standing doctrine: guardrails first; relation/
+interpreter lockstep for every machine change; envelope statements at
+every new registry entry argued from spec text; fail closed; zero
+drift on prior ids; designated statements byte-identical except the
+declared D3 additions; per-slice sub-branch audits (established
+cycle) + the user-directed pre-merge audit at arc end; the
+statement-TCB gate extended for every new designated statement;
+Iris strictly internal — every designated statement passes the
+deletion test; no new Choices sites beyond slice 2's registry
+entries. Research-first: slices 2 and 4 open with short design notes
+(the sync memory-model rules; the decomposition proof plan) in the
+established options format where latitude exists.
