@@ -297,6 +297,31 @@ theorem stepFn_sound {s : ExecState} {c : Config} {ch : Choices}
     simp only [stepFn] at h
     rw [hplan, if_neg hgt] at h
     simp [throw, throwThe, MonadExceptOf.throw] at h
+  -- Sync statements (spec-parity slice 2): the chan handlers' shapes.
+  case case60 =>
+    rename_i hplan
+    simp only [stepFn] at h
+    rw [hplan] at h
+    simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl, rfl⟩ := h
+    exact Step.syncStFirst hplan
+  case case61 =>
+    rename_i hplan
+    simp only [stepFn] at h
+    rw [hplan] at h
+    simp [throw, throwThe, MonadExceptOf.throw] at h
+  case case62 =>
+    rename_i hplan
+    simp only [stepFn] at h
+    rw [hplan] at h
+    simp [throw, throwThe, MonadExceptOf.throw] at h
+  case case144 =>
+    rename_i happly
+    simp only [stepFn] at h
+    rw [happly] at h
+    simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl, rfl⟩ := h
+    exact Step.syncStApplyPanic happly
   case case121 =>
     rename_i happly
     simp only [stepFn] at h
@@ -430,6 +455,15 @@ theorem step_complete {c : Config} {s : ExecState} {c' : Config} {s' : ExecState
     rename_i ch₀ happly
     simp only [List.reverse_cons] at happly
     exact ⟨ch₀, ch₀, by simp [stepFn, happly]⟩
+  -- Sync statements (spec-parity slice 2): entry holds the statement
+  -- abstract behind its plan — the chanStFirst recipe.
+  case syncStFirst =>
+    rename_i stmt op e rest env k hplan
+    refine ⟨[], [], ?_⟩
+    cases stmt <;>
+      first
+        | (simp_all [stepFn, syncPlan]; done)
+        | (simp only [stepFn]; rw [hplan]; rfl)
   all_goals
     exact ⟨[], [], by simp_all [stepFn, enterFrameStep, enterFrameDeferPanicking, Bind.bind, Except.bind, valueAsBool]⟩
 
@@ -453,7 +487,9 @@ theorem runConfig_sound {fuel : Nat} {s : ExecState} {c : Config}
   | case4 => simp [throw, throwThe, MonadExceptOf.throw] at h
   | case5 => simp [throw, throwThe, MonadExceptOf.throw] at h
   | case6 => simp [throw, throwThe, MonadExceptOf.throw] at h
-  | case7 =>
+  -- blockedSync (spec-parity slice 2): one more deadlock-classified arm.
+  | case7 => simp [throw, throwThe, MonadExceptOf.throw] at h
+  | case8 =>
       rename_i ih
       rw [bind_eq_ok] at h
       obtain ⟨⟨c', s', ch'⟩, hstep, hrun⟩ := h
@@ -482,7 +518,9 @@ theorem execStmtLoop_sound_normal {fuel : Nat} {σ : ExecState} {c : Config}
   | case7 => simp [throw, throwThe, MonadExceptOf.throw] at h
   | case8 => simp [throw, throwThe, MonadExceptOf.throw] at h
   | case9 => simp [throw, throwThe, MonadExceptOf.throw] at h
-  | case10 =>
+  -- blockedSync (spec-parity slice 2): one more deadlock-classified arm.
+  | case10 => simp [throw, throwThe, MonadExceptOf.throw] at h
+  | case11 =>
       rename_i ih
       rw [bind_eq_ok] at h
       obtain ⟨⟨c', s', ch'⟩, hstep, hrun⟩ := h
@@ -657,6 +695,15 @@ theorem step_blockedSelect_elim {clauses : List EvClause} {env : LocalEnv}
   intro h
   cases h
 
+/-- The sync-parked shape is relation-silent (spec-parity slice 2): the
+pool wakes it; the sequential driver classifies it as the deadlocked
+run. -/
+theorem step_blockedSync_elim {op : SyncOp} {loc : Loc} {env : LocalEnv}
+    {k : Cont} {σ : ExecState} {c' : Config} {σ' : ExecState} :
+    ¬ Step (.blockedSync op loc env k) σ c' σ' := by
+  intro h
+  cases h
+
 /-! ### Well-formedness preservation at the machine level (StateWf arc,
 2026-08-04; `GoLean/GoCore/StateWf.lean`)
 
@@ -813,6 +860,7 @@ theorem GoValue.capCong_refl : ∀ v : GoValue, GoValue.capCong v v
   | .chanData _ _ _ => rfl
   | .funcVal _ _ => rfl
   | .float _ _ => rfl
+  | .syncData _ => rfl
   | .slice _ => ⟨rfl, rfl, rfl⟩
   | .struct _ fs => ⟨rfl, capCongFields_refl fs.toList⟩
   | .array vs => capCongList_refl vs.toList
@@ -1125,6 +1173,19 @@ theorem normalizeValueForTyFuel_congr {σ₁ σ₂ : ExecState}
         | (obtain rfl := GoValue.capCong_eq hcc rfl
            exact exceptCong.self fun a => GoValue.capCong_refl a)
     | float kind =>
+      cases v <;>
+        first
+        | (obtain ⟨b, rfl, _, _, _⟩ := GoValue.capCong_slice_left hcc
+           exact rfl)
+        | (obtain ⟨gs, rfl, _⟩ := GoValue.capCong_struct_left hcc
+           exact rfl)
+        | (obtain ⟨ws, rfl, _⟩ := GoValue.capCong_array_left hcc
+           exact rfl)
+        | (obtain rfl := GoValue.capCong_eq hcc rfl
+           exact exceptCong.self fun a => GoValue.capCong_refl a)
+    | sync kind =>
+      -- Sync cells (spec-parity slice 2): the scalar recipe — capCong
+      -- on a non-slice/struct/array value is equality.
       cases v <;>
         first
         | (obtain ⟨b, rfl, _, _, _⟩ := GoValue.capCong_slice_left hcc
@@ -1696,6 +1757,9 @@ theorem defaultValueFuel_ok_of_normalize_ok {σ : ExecState} :
         simp [defaultValueFuel, pure, Except.pure]⟩
     | chan _ _ =>
       exact ⟨.chan { base := none }, by
+        simp [defaultValueFuel, pure, Except.pure]⟩
+    | sync kind =>
+      exact ⟨.syncData kind.zero, by
         simp [defaultValueFuel, pure, Except.pure]⟩
     | map kt vt =>
       exact ⟨.map { base := none }, by
@@ -2320,6 +2384,11 @@ theorem step_complete_any_wf_aux {c : Config} {σ : ExecState} {c' : Config}
       first
         | (simp_all [stepFn, chanPlan]; done)
         | (simp only [stepFn]; rw [hplan]; exact ⟨_, rfl⟩)
+  case syncStFirst stmt op e rest env k hplan =>
+    cases stmt <;>
+      first
+        | (simp_all [stepFn, syncPlan]; done)
+        | (simp only [stepFn]; rw [hplan]; exact ⟨_, rfl⟩)
   -- The select apply is pick-independent in apply-SUCCESS (slice 4;
   -- `applySelect_ok_or_panic_any_ch`): under any stream it lands `.ok`
   -- or a panic, and `stepFn` maps both to `.ok` configurations.
@@ -2409,6 +2478,9 @@ theorem execStmtLoop_ok_or_fuelOut {σ₀ : ExecState} {c₀ : Config}
     · rcases hprog _ _ hreach with hstop | ⟨c'', σ'', hstep⟩
       · exact absurd hstop (by simp)
       · exact absurd hstep step_blockedSelect_elim
+    · rcases hprog _ _ hreach with hstop | ⟨c'', σ'', hstep⟩
+      · exact absurd hstop (by simp)
+      · exact absurd hstep step_blockedSync_elim
     · exact .inr rfl
   | succ n ih =>
     intro c σ hreach hwfc ch
@@ -2438,7 +2510,10 @@ theorem execStmtLoop_ok_or_fuelOut {σ₀ : ExecState} {c₀ : Config}
       · exact absurd hstop (by simp)
       · exact absurd hstep step_blockedSelect_elim
     · rcases hprog _ _ hreach with hstop | ⟨c'', σ'', hstep⟩
-      · rename_i harm1 harm2 harm3 harm4 harm5 harm6 harm7 harm8
+      · exact absurd hstop (by simp)
+      · exact absurd hstep step_blockedSync_elim
+    · rcases hprog _ _ hreach with hstop | ⟨c'', σ'', hstep⟩
+      · rename_i harm1 harm2 harm3 harm4 harm5 harm6 harm7 harm8 harm9
         first
           | exact absurd hstop harm1
           | exact absurd hstop.symm harm1
@@ -2667,6 +2742,29 @@ theorem stepFn_oblivious {σ : ExecState} {c : Config} {ch₀ : Choices}
     rename_i hplan hgt
     simp only [stepFn] at h
     rw [hplan, if_neg hgt] at h
+    simp [throw, throwThe, MonadExceptOf.throw] at h
+  -- Sync statements (spec-parity slice 2): the chan recipes — entry is
+  -- stream-transparent (the apply consumes nothing, applySyncOp's
+  -- envelope statement).
+  case case60 =>
+    rename_i hplan
+    simp only [stepFn] at h
+    rw [hplan] at h
+    simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl, rfl⟩ := h
+    refine ⟨rfl, fun ch => ?_⟩
+    simp only [stepFn]
+    rw [hplan]
+    rfl
+  case case61 =>
+    rename_i hplan
+    simp only [stepFn] at h
+    rw [hplan] at h
+    simp [throw, throwThe, MonadExceptOf.throw] at h
+  case case62 =>
+    rename_i hplan
+    simp only [stepFn] at h
+    rw [hplan] at h
     simp [throw, throwThe, MonadExceptOf.throw] at h
   case case14 =>
     simp_all [stepFn, bind_eq_ok]
@@ -2949,6 +3047,7 @@ theorem execStmtLoop_unfold (fuel : Nat) (σ : ExecState) (c : Config)
          | .blockedSend _ _ _ => throw .deadlock
          | .blockedRecv _ _ _ _ _ => throw .deadlock
          | .blockedSelect _ _ _ => throw .deadlock
+         | .blockedSync _ _ _ _ => throw .deadlock
          | c =>
              match fuel with
              | 0 => throw .fuelOut
@@ -2974,6 +3073,8 @@ theorem execStmtLoop_step {fuel : Nat} {σ : ExecState} {c : Config}
   · simp [stepFn, throw, throwThe, MonadExceptOf.throw] at h
   · simp [stepFn, throw, throwThe, MonadExceptOf.throw] at h
   · simp [stepFn, throw, throwThe, MonadExceptOf.throw] at h
+  · simp [stepFn, throw, throwThe, MonadExceptOf.throw] at h
+  -- blockedSync (spec-parity slice 2): one more deadlock-classified arm.
   · simp [stepFn, throw, throwThe, MonadExceptOf.throw] at h
   · simp only [Bind.bind]
     rw [h]

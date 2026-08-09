@@ -271,6 +271,36 @@ theorem resumeThread_wf {s : ExecState} {c c' : Config} {s' : ExecState}
         exact Nat.le_trans (evClausesSup_mem hmem) hb.1
       obtain ⟨w1, w2, w3, w4⟩ := commitClause_wf hw hclb hb.2.1 hb.2.2 h
       exact ⟨w1, w2, w3, w4, commitClause_itersNormalized h hik⟩
+  · -- blockedSync (spec-parity slice 2): every resume is a loc-free
+    -- store then `.next k`, or the onceBegin delivery entry.
+    rename_i op loc env k
+    have hb : syncOpSup op ≤ s.nextAddr ∧ Loc.locSup loc ≤ s.nextAddr
+        ∧ LocalEnv.locSup env ≤ s.nextAddr ∧ Cont.locSup k ≤ s.nextAddr := by
+      simp only [ConfigWf, Config.locSup, Nat.max_le] at hc
+      omega
+    have hik : Cont.itersNormalized s.types k = true := by
+      simpa [Config.itersNormalized] using hi
+    simp only [bind_eq_ok] at h
+    obtain ⟨p, hcell, h⟩ := h
+    split at h
+    all_goals try (simp [stuck, throw, throwThe, MonadExceptOf.throw] at h; done)
+    all_goals split at h
+    all_goals try (simp [throw, throwThe, MonadExceptOf.throw] at h; done)
+    all_goals
+      first
+      | (simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+         obtain ⟨s₂, hst, rfl, rfl⟩ := h
+         obtain ⟨w1, w2, w3, w4, w5⟩ := storeLoc_pres hw hb.2.1
+           (by simp [syncData_locSup]) hst
+         refine ⟨w1, ?_, w4, w2, ?_⟩
+         · simp only [Config.locSup]
+           omega
+         · simpa [Config.itersNormalized] using hik)
+      | (obtain ⟨q1, q2, q3, q4⟩ := enterRecvTargets_wf hw
+           (by simpa [syncOpSup] using hb.1)
+           (by simp [goValueListSup, GoValue.locSup])
+           (by simp [Stmt.locSup, stmtListSup]) hb.2.2.1 hb.2.2.2 h
+         exact ⟨q1, q2, q3, q4, enterRecvTargets_itersNormalized h hik⟩)
   · simp [throw, throwThe, MonadExceptOf.throw] at h
 
 

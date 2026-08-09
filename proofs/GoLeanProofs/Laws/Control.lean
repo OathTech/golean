@@ -63,7 +63,7 @@ theorem wp_seqn {ss env k} :
     (Hpuredet := by
       intro σ obs e₂' σ₂ eₜ' h
       cases h with
-      | step st => cases st <;> simp_all [stmtPlan, chanPlan, selectOperands, loadMany, storeMany, allocDecls]))
+      | step st => cases st <;> simp_all [stmtPlan, chanPlan, syncPlan, selectOperands, loadMany, storeMany, allocDecls]))
   iexact H
 
 /-- Pure, deterministic frame pop for VOID frames: normal completion of a
@@ -85,7 +85,7 @@ theorem wp_frame_fall {tenv : LocalEnv} {k} {w : Bool} :
     (Hpuredet := by
       intro σ obs e₂' σ₂ eₜ' h
       cases h with
-      | step st => cases st <;> simp_all [stmtPlan, chanPlan, selectOperands, loadMany, storeMany, allocDecls]))
+      | step st => cases st <;> simp_all [stmtPlan, chanPlan, syncPlan, selectOperands, loadMany, storeMany, allocDecls]))
   iexact H
 
 /-- Pure, deterministic step: enter a declaration-free block
@@ -109,7 +109,7 @@ theorem wp_block_nil {ss : Array Stmt} {env k} :
     (Hpuredet := by
       intro σ obs e₂' σ₂ eₜ' h
       cases h with
-      | step st => cases st <;> simp_all [stmtPlan, chanPlan, selectOperands, loadMany, storeMany, allocDecls]))
+      | step st => cases st <;> simp_all [stmtPlan, chanPlan, syncPlan, selectOperands, loadMany, storeMany, allocDecls]))
   iexact H
 
 /-- Pure, deterministic step: advance a sequence to its next statement
@@ -129,7 +129,7 @@ theorem wp_seq_next {t : Stmt} {rest : List Stmt} {env k} :
     (Hpuredet := by
       intro σ obs e₂' σ₂ eₜ' h
       cases h with
-      | step st => cases st <;> simp_all [stmtPlan, chanPlan, selectOperands, loadMany, storeMany, allocDecls]))
+      | step st => cases st <;> simp_all [stmtPlan, chanPlan, syncPlan, selectOperands, loadMany, storeMany, allocDecls]))
   iexact H
 
 /-- Pure, deterministic step: `return` starts unwinding (env-free after
@@ -149,7 +149,7 @@ theorem wp_return {env k} :
     (Hpuredet := by
       intro σ obs e₂' σ₂ eₜ' h
       cases h with
-      | step st => cases st <;> simp_all [stmtPlan, chanPlan, selectOperands, loadMany, storeMany, allocDecls]))
+      | step st => cases st <;> simp_all [stmtPlan, chanPlan, syncPlan, selectOperands, loadMany, storeMany, allocDecls]))
   iexact H
 
 /-- Pure, deterministic step: `return` unwinds past a sequence continuation,
@@ -169,7 +169,7 @@ theorem wp_seq_return {rest : List Stmt} {env k} :
     (Hpuredet := by
       intro σ obs e₂' σ₂ eₜ' h
       cases h with
-      | step st => cases st <;> simp_all [stmtPlan, chanPlan, selectOperands, loadMany, storeMany, allocDecls]))
+      | step st => cases st <;> simp_all [stmtPlan, chanPlan, syncPlan, selectOperands, loadMany, storeMany, allocDecls]))
   iexact H
 
 /-- Pure, deterministic control step: an exhausted sequence pops to its
@@ -190,7 +190,7 @@ theorem wp_seq_done {env k} :
     (Hpuredet := by
       intro σ obs e₂' σ₂ eₜ' h
       cases h with
-      | step st => cases st <;> simp_all [stmtPlan, chanPlan, selectOperands, loadMany, storeMany, allocDecls]))
+      | step st => cases st <;> simp_all [stmtPlan, chanPlan, syncPlan, selectOperands, loadMany, storeMany, allocDecls]))
   iexact H
 
 /-- **The empty-splice absorber** (spine restatement, spec-parity

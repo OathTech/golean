@@ -286,7 +286,8 @@ theorem singleton_pool_facts {σ : ExecState} {c : Config}
     (h5 : ∀ msg, c ≠ .panicked msg)
     (h6 : ∀ a b k, c ≠ .blockedSend a b k)
     (h7 : ∀ a b e env k, c ≠ .blockedRecv a b e env k)
-    (h8 : ∀ cl env k, c ≠ .blockedSelect cl env k) :
+    (h8 : ∀ cl env k, c ≠ .blockedSelect cl env k)
+    (h9 : ∀ op loc env k, c ≠ .blockedSync op loc env k) :
     MultiConfig.panicMsg? ⟨#[c], σ, 0⟩ = none
       ∧ MultiConfig.mainOutcome? ⟨#[c], σ, 0⟩ = none
       ∧ threadDone c = false ∧ isBlockedConfig c = false := by
@@ -307,7 +308,8 @@ theorem singleton_pool_facts {σ : ExecState} {c : Config}
     split <;> simp_all
   · unfold isBlockedConfig
     split <;> try simp_all
-    exact (h7 _ _ _ _ _ rfl rfl rfl rfl rfl)
+    · exact (h7 _ _ _ _ _ rfl rfl rfl rfl rfl)
+    · exact (h9 _ _ _ _ rfl rfl rfl rfl)
 
 /-- **The conservation transfer, loop level**: every sequential result
 in the `transferable` classes is the singleton pool's result verbatim
@@ -333,10 +335,11 @@ theorem execProgLoop_single :
     · subst hr; simp [transferable, throw, throwThe, MonadExceptOf.throw] at htr
     · subst hr; simp [transferable, throw, throwThe, MonadExceptOf.throw] at htr
     · subst hr; simp [transferable, throw, throwThe, MonadExceptOf.throw] at htr
-    · rename_i harm1 harm2 harm3 harm4 harm5 harm6 harm7 harm8
+    · subst hr; simp [transferable, throw, throwThe, MonadExceptOf.throw] at htr
+    · rename_i harm1 harm2 harm3 harm4 harm5 harm6 harm7 harm8 harm9
       subst hr
       obtain ⟨hp, hm, hd, hb⟩ := singleton_pool_facts
-        (σ := σ) harm1 harm2 harm3 harm4 harm5 harm6 harm7 harm8
+        (σ := σ) harm1 harm2 harm3 harm4 harm5 harm6 harm7 harm8 harm9
       have hrun : threadRunnable σ c = true := by
         simp [threadRunnable, hd, hb]
       unfold execProgLoop
@@ -353,9 +356,10 @@ theorem execProgLoop_single :
     · subst hr; simp [transferable, throw, throwThe, MonadExceptOf.throw] at htr
     · subst hr; simp [transferable, throw, throwThe, MonadExceptOf.throw] at htr
     · subst hr; simp [transferable, throw, throwThe, MonadExceptOf.throw] at htr
-    · rename_i harm1 harm2 harm3 harm4 harm5 harm6 harm7 harm8
+    · subst hr; simp [transferable, throw, throwThe, MonadExceptOf.throw] at htr
+    · rename_i harm1 harm2 harm3 harm4 harm5 harm6 harm7 harm8 harm9
       obtain ⟨hp, hm, hd, hb⟩ := singleton_pool_facts
-        (σ := σ) harm1 harm2 harm3 harm4 harm5 harm6 harm7 harm8
+        (σ := σ) harm1 harm2 harm3 harm4 harm5 harm6 harm7 harm8 harm9
       have hrun : threadRunnable σ c = true := by
         simp [threadRunnable, hd, hb]
       unfold execProgLoop
@@ -699,6 +703,7 @@ theorem spawnedCont_of_blocked {c : Config}
   | .blockedSend _ _ _, _ => rfl
   | .blockedRecv _ _ _ _ _, _ => rfl
   | .blockedSelect _ _ _, _ => rfl
+  | .blockedSync _ _ _ _, _ => rfl
 
 /-- Compose a scheduling prefix in front of an inner `stepThread`
 realization: a legal pick is realized by the scheduler site (consumed

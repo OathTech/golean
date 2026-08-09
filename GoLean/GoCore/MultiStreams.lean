@@ -241,6 +241,10 @@ theorem raceUpdate_oblivious {sPre : ExecState} {tsPre : Array Config}
             cases k <;> try rfl
             case chanStK op done pending env kk =>
               cases pending <;> rfl
+            -- syncStK (spec-parity slice 2): the sync arm never reads
+            -- the stream (zero new Choices sites).
+            case syncStK op done pending env kk =>
+              cases pending <;> rfl
             case selectOpsK clauses d done pending env kk =>
               cases pending with
               | nil => simp [consumesSelect] at hsel
