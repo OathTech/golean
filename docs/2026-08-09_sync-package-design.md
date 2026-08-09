@@ -361,3 +361,122 @@ order), confluent cases for deterministic sync programs
 (mutex-counter + WaitGroup join). Cases the machine cannot run before
 the machine movement classify as visible refusals (frontend-export
 stage), never false passes.
+
+## 11. Slice-2 build log (2026-08-09, branch `spec-parity-s2`)
+
+Executed per the charter's order of work (note first, guardrails
+second, machine third, lanes fourth, tail fifth). A session crash
+interrupted the machine movement mid-proof; the working tree survived
+as the verbatim checkpoint 2fc4f4f0 ("WIP (RED, does not build)") and
+the next commit completes it — history legible, per the recovery
+directive. Decisions made DURING the build, recorded here:
+
+- **The registry growth contract HELD — with one honest qualifier.**
+  Sync landed as designed: ONE new blocked shape (`.blockedSync`), one
+  new `Cont` family (`syncStK`), new `atBoundary` rows, cell-based
+  `wakeReady`/`resumeThread` arms, `raceUpdate` classification arms,
+  and ZERO new `Choices` sites (the doctrine's canonical list is
+  unchanged; wake order rides L1 — the envelope statement at
+  `applySyncOp`). NOTHING in the scheduler scheme, `stepMulti`,
+  `StepM`'s rule set, `arrivalPlan`, or any existing statement was
+  revised; `stepThread`'s dispatch handles the new shapes through its
+  EXISTING branches (blocked → resume; else stepFn). The qualifier:
+  "one registry entry, nothing revises" still costs the LOCKSTEP
+  sweeps their new cases — the fun_cases positional tags renumbered
+  (+3/+7, the probe-derived map), and ~20 proof sites gained sync
+  alternatives/refutation arms. That is extension-shaped repair
+  (adding cases, never restating), but it is not free; the charter's
+  phrasing should be read as "no revision", not "no work".
+- **The Once desugar's defer scope (the slice's one real bug, caught
+  by the guardrails).** The first `once.Do(f)` desugar inlined
+  begin/complete into the CALLER, so the completer's `defer` fired at
+  the caller's frame exit — a second `Do` in the same function parked
+  forever (`once-basic/runs-once` red; `across-goroutines`' enumerator
+  found a deadlock leaf, same root). The fix is the shape gc itself
+  has: a per-site synthetic `$onceDo(p, f)` FUNCTION whose own frame
+  carries the defer — completion lands when Do returns. Red-first
+  paid for itself exactly here.
+- **`GoError.fatal` went live end-to-end** (decided in §2): machine
+  terminal, observation status, harness `expected_status: fatal`
+  (message in expected_reason; go side must die with
+  `fatal error: <reason>`), strict-lane only. The four probed sync
+  fatals are differentially GREEN, including the recover
+  discriminator (a deferred recover does not intervene).
+- **The WaitGroup misuse panic is the SUB-DETECTOR member.** The
+  Add-from-0-beside-a-parked-waiter shape is intrinsically TSan-racy
+  (the first-waiter sema WRITE has no HB edge to the adder's read —
+  gc's own instrumentation pair, waitgroup.go:111-116/185-190), so
+  the detector's `raceDetected` always precedes the recoverable
+  misuse panic on the pool: our machine refuses where plain gc
+  panics and `-race` gc reports — the DRF-SC discipline's correct
+  classification, the close-woken-sender precedent. No corpus lane
+  can express the mixed class; the eval pin
+  ("Add-from-0 beside a parked waiter is the wg-sema race", stream
+  [1,1,0]) is the executable record, and the panic arm stays for the
+  pre-refusal/sequential semantics.
+- **Lanes delivered**: 26/28 sync rows green (the 2 reds are the
+  PERMANENT out-of-scope refusal markers, Cond + TryLock, now at
+  their honest frontend-export stage); race/free-sync 4/4 confluent
+  (certified singletons incl. the 5,918-site rw-writers tree);
+  race/negative-sync 3/3 racy at FULL strength — every enumerated
+  path refuses — including the p14 TWO-CLOCK DISCRIMINATOR
+  (rlock-serialized: serialized readers stay HB-unordered; a
+  single-clock model would have admitted a value leaf and failed the
+  lane loudly). The L1 acquisition-order membership case certifies
+  {10, 20} with members=2, go sampling plain + -race.
+  `waitgroup-workers-join` stays STRICT, recorded: the 3-worker tree
+  exceeds the 40M work cap with subtrees unexplored (measured; the
+  pipeline/two-stage DPOR-deferral precedent).
+- **Sequential conservation held with zero effort**: the sync apply
+  consumes nothing and single-thread pools never consult the stream
+  (|runnable| = 1 at every new boundary), so
+  `execProg_single_eq_execStmt`'s statement is untouched and the full
+  corpus ran bit-identical on every prior id (zero drift on all 1419
+  at both re-pins).
+- **Phase-2 tail (the 17 sync-blocked goose files)**: the importer
+  gained the explicit `--allow-import <pkg>` seam (fail-closed
+  default; "sync" is the first member; per-path allowlist check on
+  both import forms). Landed at R1, all GREEN: `semantics/lock`
+  (upstream oracle), `unittest/synchronization` (hand wrapper),
+  `unittest/spawn` (simpleSpawn; loopSpawn gets NO row — divergent by
+  design, probed per the buildout retrospective's lesson 3), and
+  `channel/parallel-search-replace` (the 8-worker WaitGroup pool,
+  upstream verbatim). The other 13 sync-importing files remain
+  blocked by their OTHER imports, honestly: disk-FFI/marshal/binary
+  (append_log, logging2, wal, simpledb), time/testing/fmt/strconv/
+  errors (elimination_stack ×2, etcd_session, lock_test, muxer_test),
+  goose-primitive FFI (prims), and sync.Cond — out of scope by D4
+  (condvar, locks). R2 pins: none attempted for the concurrent
+  imports (allStreamsOk is sequential; the pool checker's fuel trees
+  for these shapes are beyond kernel-eval budgets — the R2
+  attempt-or-skip judgment the charter delegates).
+
+## 12. Parking ledger (user-scale items, per the AFK posture)
+
+- **P-S2-1 — Promote `fatal` into the membership/confluent lanes?**
+  `fatal` members currently have no enumeration handling (they fail a
+  certification loudly, like deadlock members) and fatal rows are
+  strict-only. Nothing needed it this slice; widening is a lane-design
+  decision (status-set semantics, -race interaction) → user call.
+  Meanwhile: strict-only, loud refusal — reversible.
+- **P-S2-2 — Migrate the go-of-nil-func refusal onto `GoError.fatal`.**
+  The class now exists; the migration is small but re-pins a recorded
+  permanent red (`spawn-edge/nil-func-fatal` would flip) and touches a
+  channels-arc decision record → parked rather than flipped
+  unilaterally. Meanwhile: the refusal stands unchanged.
+- **P-S2-3 — Designated-statement candidates.** None designated
+  (charter D3 is CURATED and user-owned). Candidate when the arc's
+  proof slices reach sync: a mutex-protected-counter GoSpecC exemplar
+  + first-order readout (the natural sync feature-class exemplar).
+  The 44 designated statements are byte-identical this slice.
+- **P-S2-4 — `valueEqFuel` refuses `==` at sync types.** Go's == IS
+  defined on the sync structs (comparable fields); we fail closed
+  (unsupported) since any comparison is copy-class misuse with no
+  in-scope consumer. If a real target compares sync values, decide
+  model-vs-refuse then. Recorded at the arm.
+- **P-S2-5 — U4 (sync-object data accesses) scope.** gc's -race
+  instruments reads OF the sync object inside ops (`rw.w`,
+  `m.state`), catching op-vs-overwrite races we do not model
+  (Race.lean inventory U4). Misuse-only; joins U1-U2 in the racy
+  caption. Closing it means modeling struct-copy accesses of sync
+  cells → future arc if ever needed.

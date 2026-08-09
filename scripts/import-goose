@@ -33,6 +33,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
 cd "$ROOT"
 
 PINNED_REV="3be88bbb4982f58e5813b6f0344302d5582c8e8a"
+ALLOW_IMPORTS=()
 
 usage() {
   cat >&2 <<'EOF'
@@ -50,6 +51,11 @@ usage: scripts/import-goose --source <rel.go> [--also <rel.go>]... \
                land a case with ZERO auto-detected boolean oracles
                (unittest wrapper lane: rows + wrappers authored by hand
                below the marker). Without it, 0 oracles = hard error.
+  --allow-import <pkg>
+               permit ONE named stdlib import to pass the no-imports vet
+               verbatim (phase-2 seam, spec-parity slice 2: "sync" is
+               the first legitimate member — the machine models it).
+               Repeatable; anything not explicitly allowed still fails.
   --goose-root default deps/goose
   --expect-rev default the pinned goose rev (fixtures override)
 EOF
@@ -75,6 +81,9 @@ while [[ $# -gt 0 ]]; do
     --tags) [[ $# -ge 2 ]] || usage; TAGS="$2"; shift 2 ;;
     --force) FORCE=1; shift ;;
     --allow-no-oracles) ALLOW_NO_ORACLES=1; shift ;;
+    --allow-import)
+      [[ $# -ge 2 ]] || usage
+      ALLOW_IMPORTS+=("$2"); shift 2 ;;
     --goose-root) [[ $# -ge 2 ]] || usage; GOOSE_ROOT="$2"; shift 2 ;;
     --expect-rev) [[ $# -ge 2 ]] || usage; EXPECT_REV="$2"; shift 2 ;;
     *) usage ;;
@@ -115,7 +124,25 @@ for rel in "${ALL_SOURCES[@]}"; do
   [[ -f "$f" ]] || die "missing upstream source: $f"
   case "$rel" in *.go) ;; *) die "not a .go file: $rel" ;; esac
   if grep -nE '^[[:space:]]*import[[:space:]("]' "$f" >/dev/null; then
-    die "$rel has imports — phase-1 imports only import-free files (park it)"
+    # Phase-2 seam (spec-parity slice 2): explicitly allowed stdlib
+    # imports pass verbatim; every OTHER imported path in the file
+    # still refuses. The check extracts each import path (single-line
+    # and block forms) and demands allowlist membership.
+    if [[ ${#ALLOW_IMPORTS[@]} -eq 0 ]]; then
+      die "$rel has imports — only --allow-import'ed packages may be imported (park it)"
+    fi
+    while IFS= read -r p; do
+      allowed=0
+      for a in "${ALLOW_IMPORTS[@]}"; do
+        [[ "$p" == "$a" ]] && allowed=1
+      done
+      [[ "$allowed" -eq 1 ]] || die "$rel imports \"$p\", which is not --allow-import'ed (park it)"
+    done < <(awk '
+      /^import[ 	]*\(/ { inblk=1; next }
+      inblk && /^\)/ { inblk=0; next }
+      inblk { if (match($0, /"[^"]+"/)) print substr($0, RSTART+1, RLENGTH-2); next }
+      /^import[ 	]/ { if (match($0, /"[^"]+"/)) print substr($0, RSTART+1, RLENGTH-2) }
+    ' "$f")
   fi
   if grep -nE '^func[[:space:]]+main[[:space:]]*\(' "$f" >/dev/null; then
     die "$rel defines func main — refusing (harness owns main)"

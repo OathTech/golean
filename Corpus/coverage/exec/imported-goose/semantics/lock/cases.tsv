@@ -1,0 +1,2 @@
+# id	subject	args	expected_status	expected_reason	features
+s-use-locks	goleanTestsUseLocks	-	ok	-	imported_goose,sync,mutex
