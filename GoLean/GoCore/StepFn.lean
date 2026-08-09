@@ -165,8 +165,10 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
       | .callValue targets callee args =>
           -- BUG-052 order pin: the CALL evaluates first (callee, args,
           -- frame); the caller-target plans ride to the frame and their
-          -- operands evaluate at frame EXIT (gc's realized point inside
-          -- spec §Order of evaluation's unordered carve-out).
+          -- operands evaluate at frame EXIT (the post-call point is
+          -- gc's realized order inside spec §Order of evaluation's
+          -- unordered carve-out — the call-vs-operand axis only; see
+          -- the relation's PINNED LATITUDE block).
           match targetsPlan targets.toList with
           | some plans =>
               return (.evalE callee env (.callValCalleeK plans args.toList env k), s, choices)
@@ -527,8 +529,11 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
       | .frame ((sh, e :: ops) :: rest) tenv results [] k' _ => do
           -- BUG-025 + the BUG-052 order pin: read the pinned results,
           -- then evaluate the caller-target operands POST-CALL through
-          -- the tgtOpK spine (gc's realized point; the receive path's
-          -- delivery shape), then the per-target storeK stores.
+          -- the tgtOpK spine (the POST-CALL point is gc's realized
+          -- order — the pin covers only the call-vs-operand axis; the
+          -- spine's left-to-right INTER-TARGET walk is our spec-legal
+          -- realization of an axis left OPEN, per the rule-site
+          -- latitude block), then the per-target storeK stores.
           let vs ← loadMany s results
           return (.evalE e tenv
             (.tgtOpK sh [] ops [] rest .vals [] vs (.seqn #[]) tenv k'), s, choices)
@@ -631,8 +636,11 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
       | .frame ((sh, e :: ops) :: rest) tenv results [] k' _ => do
           -- BUG-025 + the BUG-052 order pin: read the pinned results,
           -- then evaluate the caller-target operands POST-CALL through
-          -- the tgtOpK spine (gc's realized point; the receive path's
-          -- delivery shape), then the per-target storeK stores.
+          -- the tgtOpK spine (the POST-CALL point is gc's realized
+          -- order — the pin covers only the call-vs-operand axis; the
+          -- spine's left-to-right INTER-TARGET walk is our spec-legal
+          -- realization of an axis left OPEN, per the rule-site
+          -- latitude block), then the per-target storeK stores.
           let vs ← loadMany s results
           return (.evalE e tenv
             (.tgtOpK sh [] ops [] rest .vals [] vs (.seqn #[]) tenv k'), s, choices)

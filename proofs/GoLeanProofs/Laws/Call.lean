@@ -16,22 +16,29 @@ import GoLeanProofs.Tactics.GoWalk
 /-!
 # Call laws (R3 rewrite over the fine-grained machine)
 
-Under the machine a call is a walk: dispatch (`wp_call_first_target` /
-`wp_call_first_arg`), the target/argument evaluations (Laws/Eval), then
-ONE allocating frame-entry step (`enterFrame`: lookup, arity, dispatch,
-parameter binding, result declaration, result-location pinning), the
-body, and a frame exit. The frame-entry laws here cover the two shapes
-the golden program exercises — unary-argument void-result
-(`wp_call_enter_arg1`, the `inc(&x)` shape) and nullary-argument
-single-int-result (`wp_call_enter_ret1`, the `r = incViaCall()` shape) —
-each with its premises discharged on the CONCRETE golden functions as the
-non-vacuity witnesses (`wp_call_enter_inc`, `wp_call_enter_incViaCall` —
-relocated to `Specs/GoldenSliceWP.lean` at the proof-automation close-out
-so this GENERAL module imports no `Specs/*` pin, per the layering
-doctrine; the genuinely-external premises are the program/method-table
-pins, as in the old `wp_inc_call`). `wp_frame_return_int` is the value frame exit
-(read the pinned result cell, store to the caller's target — the
-`wp_store_step₂` two-cell core), premise-free given the resources.
+Under the machine a call is a walk (BUG-052 order: the CALL first):
+dispatch (`wp_call_start` — the argument walk begins with the
+caller-target PLANS riding untouched), the argument evaluations
+(Laws/Eval), then ONE allocating frame-entry step (`enterFrame`:
+lookup, arity, dispatch, parameter binding, result declaration,
+result-location pinning) with the plans and caller environment pinned
+in the frame, the body, and the frame exit — which reads the pinned
+results and only THEN walks the target operands (post-call, gc's
+realized point) through the tgtOpK spine into the per-target `storeK`
+stores. The frame-entry laws here cover the two shapes the golden
+program exercises — unary-argument void-result (`wp_call_enter_arg1`,
+the `inc(&x)` shape) and nullary-argument single-int-result
+(`wp_call_enter_ret1`, at the call-STATEMENT config, the
+`r = incViaCall()` shape) — each with its premises discharged on the
+CONCRETE golden functions as the non-vacuity witnesses
+(`wp_call_enter_inc`, `wp_call_enter_incViaCall` — relocated to
+`Specs/GoldenSliceWP.lean` at the proof-automation close-out so this
+GENERAL module imports no `Specs/*` pin, per the layering doctrine;
+the genuinely-external premises are the program/method-table pins).
+`wp_frame_return_int` is the value frame exit — a FOUR-step spine walk
+(read the result, evaluate the target operand post-call, complete,
+store) with no state side-conditions and ONE syntactic env-lookup
+premise (`hres`).
 
 Dynamic dispatch note: the machine consults `σ.methods` at frame entry,
 so `GoCoreGS` now pins the method table like the program; the
@@ -221,12 +228,14 @@ theorem wp_call_enter_ret1 {targets : Array Assignee} {fid : FuncId}
       · iapply Hcont $$ %(⟨σ₁.nextAddr⟩ : Addr) Hpt
       · itrivial
 
-/-- **Value frame exit**: `return` at a frame with one pinned int result
-location and one int-typed caller target — read the result cell, store
-(normalizing) into the target. The `wp_store_step₂` two-cell core: the
-result cell is read-only, the target is written. Premise-free given the
-resources (the store side-condition is internalized by
-`storeLoc_int_any`). -/
+/-- **Value frame exit**: `return` at a frame carrying one bare-chain
+caller-target PLAN and one pinned int result location — a FOUR-step
+spine walk (BUG-025/BUG-052): read the result cell (`wp_det_step_keep`),
+evaluate the target operand post-call (`wp_eval_ref`), complete the
+target (`wp_tgtop_stores`), store normalizing into it
+(`wp_assign_store_loc`), then drain. No state side-conditions — the
+store is internalized by `storeLoc_int_any` — and ONE syntactic
+env-lookup premise (`hres`, the post-call operand resolution). -/
 theorem wp_frame_return_int {x : String} {tenv : LocalEnv} {ta ra : Addr}
     {kind tkind : IntKind} {m : Int} {w : GoValue} {k} {wf : Bool}
     (hres : LocalEnv.lookup tenv x = some (.base ta)) :
@@ -665,10 +674,11 @@ theorem wp_call_dynamic_enter₂ {fid : FuncId} {anchor concrete : Func}
 
 /-! ## The multi-operand call walk (quorum pilot phase 4)
 
-Before this slice `Laws/Call` had the two ENTRY dispatch laws
-(`wp_call_first_target`, `wp_call_first_arg`) and nothing else on the
-operand walk, because the golden program's calls carry at most one
-operand of each kind. A general Go call `r₀, r₁ = f(a₀, a₁)` walks the
+Before that slice `Laws/Call` had only two ENTRY dispatch laws (the
+target-first `wp_call_first_target`/`wp_call_first_arg`, since retired
+with the pre-call target walk — BUG-052; `wp_call_start` is the sole
+dispatch now) and nothing else on the operand walk, because the golden
+program's calls carry at most one operand of each kind. A general Go call `r₀, r₁ = f(a₀, a₁)` walks the
 target list, then the argument list, one machine step per operand
 handoff. The three laws below are exactly those handoffs — generic over
 the call form: function id, operand lists, values and continuations are
@@ -778,22 +788,27 @@ theorem wp_call_enter₂ {fid : FuncId} {func : Func}
       exact ⟨h1.symm, h2.symm⟩))
   iexact Hcont
 
-/-! ## The TWO-RESULT frame exit (quorum pilot phase 4)
+/-! ## The TWO-RESULT frame exit (quorum pilot phase 4; restated over
+the spine at BUG-025/BUG-052)
 
-`wp_frame_return_int`/`wp_frame_fall_int` cover the unary-result exit
-(`loadMany [r]` / `storeMany [t]`). Go's multi-value return walks the
-same single step over LISTS: `Step.frameReturn` reads every pinned result
-location and stores into every caller target, in order. Two of each is
-the arity the `(Index, bool)` comma-ok method forces; the general n-ary
-form is owed (recorded, not silently target-fitted — it needs the
-list-indexed store core, like `wp_alloc_step₄`'s widening).
+`wp_frame_return_int`/`wp_frame_fall_int` cover the unary-result exit.
+Go's multi-value return walks the SAME spine over lists:
+`Step.frameReturnTargets` reads every pinned result location in one
+step, then the target operands evaluate post-call and the caller's
+cells are written by SEPARATE left-to-right `storeK` store steps —
+one per target, NOT atomically (the pre-spine exit's single
+`storeMany` step is retired; the per-store granularity is exactly
+BUG-025's point, and the write set is footprinted per store —
+`Race.lean`'s storeK row). Two of each is the arity the
+`(Index, bool)` comma-ok method forces; the general n-ary form is owed
+(recorded, not silently target-fitted — it needs the list-indexed
+store core, like `wp_alloc_step₄`'s widening).
 
 Perennial comparison: multi-value returns there are a TUPLE value
 returned by an ordinary GooseLang call, so no frame-exit law family
-arises — the caller destructures with pure projections. Ours writes the
-caller's cells inside the exit step, which is why the arity appears in
-the law; the granularity ledger's frame-exit entry covers both cells
-moving atomically. -/
+arises — the caller destructures with pure projections. Ours writes
+the caller's cells through the write-back spine, which is why the
+arity appears in the law. -/
 
 /-- Two owned full-fraction cells sit at distinct addresses (the
 disequality the second store's heap lookup needs; derived from ownership,

@@ -51,7 +51,15 @@ variable {s : Stuckness} {E : CoPset} {Φ : Unit → IProp GF}
 /-! ### Call through a value (§8): dispatch -/
 
 /-- Dispatch a value call: evaluate the callee expression first, the
-caller-target plans riding untouched (BUG-052 order pin). -/
+caller-target plans riding untouched (BUG-052 order pin). Generalized
+from the targetless form when the plans moved into the frame; the
+non-vacuity witness (`wp_call_value_start_witness` below) instantiates
+`plans := []` — the golden/quorum programs' value calls are targetless
+(targeted value-call write-backs reach the machine only through the
+differential, where multi-assign/call-write-back-order-value/* pins
+them). A non-empty-plans WITNESS lands with the first proof consumer
+of a targeted value call; recorded here per the non-vacuity rule
+rather than half-shipped. -/
 @[go_walk_law]
 theorem wp_call_value_start {targets : Array Assignee} {callee : Expr}
     {args : Array Expr} {plans : List (TargetShape × List Expr)} {env k}
