@@ -112,6 +112,7 @@ theorem wp_ci_fitIf_all {na sta sra : Addr} {w : GoValue} {n : Nat} {rest env k}
               GoValue.int 0 IntKind.uint64] : Array GoValue).size = 7 from rfl,
           checkSliceBounds_prefix (limit := 7) hfit]
         simp))
+    go_walk 1
     go_walk_step (wp_assign_store
       (oldcell := ⟨some (.slice (.int .uint64)), w⟩)
       (newcell := ⟨some (.slice (.int .uint64)),
@@ -119,7 +120,7 @@ theorem wp_ci_fitIf_all {na sta sra : Addr} {w : GoValue} {n : Nat} {rest env k}
       (fun σ _ht hl => by
         simp [storeLoc, hl, normalizeValueForTy, normalizeValueForTyFuel,
           Bind.bind, Except.bind, typeResolutionFuel]))
-    go_walk 1
+    go_walk
     rw [stkZero_split hfit]
     iapply Hcont $$ %sta %7 %(7 - n)
     isplitl []
@@ -153,7 +154,7 @@ theorem wp_ci_fitIf_all {na sta sra : Addr} {w : GoValue} {n : Nat} {rest env k}
       (fun σ _ht hl => by
         simp [storeLoc, hl, normalizeValueForTy, normalizeValueForTyFuel,
           Bind.bind, Except.bind, typeResolutionFuel]))
-    go_walk 1
+    go_walk
     rw [makeSlice_cell (n := n)]
     iapply Hcont $$ %fa %n %0
     isplitl []
@@ -678,6 +679,7 @@ theorem wp_ci_tail_all {na sra sta ra : Addr} {filled srt : List Int}
       simp [applyStrictOp, convertValueToTy, convertValueToTyFuel,
         typeResolutionFuel, resolveDefinedAliases, resolveDefinedAliasesFuel,
         QuorumPin.typeEnv_Index, Bind.bind, Except.bind, hnormres]))
+  go_walk 1
   go_walk_step (wp_assign_store
     (oldcell := ⟨some (.defined ⟨"main.Index"⟩), .int 0 .uint64⟩)
     (newcell := ⟨some (.defined ⟨"main.Index"⟩), .int res .uint64⟩)

@@ -629,7 +629,7 @@ theorem wp_recover_catch_seven {ra : Addr} {k}
   iapply fupd_intro
   iintro Hc23
   -- *rp = 7 through the captured pointer
-  iapply (wp_assign_start (te := .var "rp") rfl)
+  iapply (wp_assign_start (e := .var "rp") (sh := .chain []) (ops := []) rfl)
   iapply fupd_intro
   inext
   iapply fupd_intro
@@ -639,7 +639,7 @@ theorem wp_recover_catch_seven {ra : Addr} {k}
   isplitl [Hp]
   · iexact Hp
   iintro Hp
-  iapply wp_assign_target
+  iapply (wp_tgtop_rhs rfl)
   iapply fupd_intro
   inext
   iapply fupd_intro
@@ -649,12 +649,19 @@ theorem wp_recover_catch_seven {ra : Addr} {k}
   inext
   iapply fupd_intro
   iintro Hc26
+  iapply wp_rhs_stores_vals
+  iapply fupd_intro
+  inext
+  iapply fupd_intro
+  iintro Hc27
+  simp only [List.nil_append, List.reverse_cons, List.reverse_nil]
   iapply (wp_assign_store (oldcell := ⟨some (.int .int), .int 0 .int⟩)
     (newcell := ⟨some (.int .int), .int (IntKind.normalize .int 7) .int⟩)
     (fun σ₁ _ht hlook => storeLoc_int_cell hlook 7))
   isplitl [Hr]
   · iexact Hr
   iintro Hr
+  iapply wp_stores_done_nil
   -- the deferred closure returns; the recovered marker cancels the unwind
   iapply wp_seq_next
   iapply fupd_intro

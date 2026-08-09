@@ -9,6 +9,7 @@ import Iris.Std.FromMathlib
 import Iris.Std.GenSetsInstances
 import GoLean.GoCore.MachineSound
 import GoLeanProofs.Ghost
+import GoLeanProofs.Laws.Eval
 import GoLeanProofs.Tactics.GoWalk
 
 /-!
@@ -190,6 +191,61 @@ theorem wp_seq_done {env k} :
       intro σ obs e₂' σ₂ eₜ' h
       cases h with
       | step st => cases st <;> simp_all [stmtPlan, chanPlan, selectOperands, loadMany, storeMany, allocDecls]))
+  iexact H
+
+/-- **The empty-splice absorber** (spine restatement, spec-parity
+slice 1): `seqCont [] env k` is `k` itself under a same-env governing
+sequence and `.seq [] env k` (one `seqDone` step from `k`) otherwise —
+so a `WP` at `Config.next k` covers `Config.next (seqCont [] env k)`
+for ARBITRARY `k`, absorbing the 0-or-1-step difference (the modality
+is weakened, never strengthened). This is what lets a composed
+statement law keep its `Config.next k` postcondition at a GENERIC
+continuation even though the spine's drained `.seqn #[]` body reaches
+`k` through `seqCont`. -/
+theorem wp_seqCont_nil {env : LocalEnv} {k : Cont} :
+    (WP (Config.next k) @ s ; E {{ Φ }}) ⊢
+      WP (Config.next (seqCont [] env k)) @ s ; E {{ Φ }} := by
+  iintro H
+  have hcases : seqCont [] env k = k ∨ seqCont [] env k = .seq [] env k := by
+    cases k
+    case seq rest env' k' =>
+      by_cases henv : env' = env
+      · subst henv
+        exact Or.inl (by simp [seqCont])
+      · exact Or.inr (by simp [seqCont, henv])
+    all_goals exact Or.inr rfl
+  rcases hcases with heq | heq <;> rw [heq]
+  · iexact H
+  · iapply wp_seq_done
+    iapply fupd_intro
+    inext
+    iapply fupd_intro
+    iintro -
+    iexact H
+
+/-- **The statement-form phase-2 drain**: from the completed `storeK`
+over the statement forms' empty body (`.seqn #[]` — what
+`assignFirst`/`mapLookupFirst`/`typeAssertFirst`/`assignManyFirst`
+seed) to the statement's own continuation, at an ARBITRARY `k`
+(`wp_stores_done` → `wp_seqn` → the empty-splice absorber). The
+composed statement laws (`wp_assign_lit`, `wp_map_lookup`'s consumers)
+end with this, which is what keeps their `Config.next k`
+postconditions through the spine restatement. -/
+theorem wp_stores_done_nil {env : LocalEnv} {k : Cont} :
+    (WP (Config.next k) @ s ; E {{ Φ }}) ⊢
+      WP (Config.next (.storeK [] [] (.seqn #[]) env k)) @ s ; E {{ Φ }} := by
+  iintro H
+  iapply wp_stores_done
+  iapply fupd_intro
+  inext
+  iapply fupd_intro
+  iintro -
+  iapply wp_seqn
+  iapply fupd_intro
+  inext
+  iapply fupd_intro
+  iintro -
+  iapply wp_seqCont_nil
   iexact H
 
 end

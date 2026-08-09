@@ -589,8 +589,12 @@ theorem wp_map_lookup_ackedIndex_entries {ma ida mba ta oa : Addr}
       ⊢ WP (Config.exec QuorumPin.mapLookupStmt env k) @ s ; E {{ Φ }} := by
   iintro ⟨Hm, Hid, Hmb, Ht, Ho, Hcont⟩
   rw [QuorumPin.mapLookupStmt_eq]
-  iapply (wp_stmt_op_first (op := .mapLookup (.int .uint64) (.defined ⟨"main.Index"⟩))
-    (nt := 2) (e := .ref "idx") (rest := [.ref "ok", .var "m", .var "id"]) rfl)
+  -- The spine entry (BUG-034 migration): targets are phase 1 with
+  -- deferred checks; base/key evaluate under `rhsK`; the lookup applies
+  -- at the end of phase 1; the two stores are phase-2 `storeK` steps
+  -- (all inside `wp_map_lookup` below).
+  iapply (wp_map_lookup_start (sh := .chain []) (e := .ref "idx")
+    (ops := []) (rest := [(.chain [], [.ref "ok"])]) rfl)
   iapply fupd_intro
   inext
   iapply fupd_intro
@@ -600,7 +604,7 @@ theorem wp_map_lookup_ackedIndex_entries {ma ida mba ta oa : Addr}
   inext
   iapply fupd_intro
   iintro Hcm2
-  iapply (wp_stmt_op_shift_target (loc := .base ta) (by simp) rfl)
+  iapply (wp_tgtop_next rfl)
   iapply fupd_intro
   inext
   iapply fupd_intro
@@ -610,7 +614,7 @@ theorem wp_map_lookup_ackedIndex_entries {ma ida mba ta oa : Addr}
   inext
   iapply fupd_intro
   iintro Hcm4
-  iapply (wp_stmt_op_shift_target (loc := .base oa) (by simp) rfl)
+  iapply (wp_tgtop_rhs rfl)
   iapply fupd_intro
   inext
   iapply fupd_intro
@@ -620,7 +624,7 @@ theorem wp_map_lookup_ackedIndex_entries {ma ida mba ta oa : Addr}
   isplitl [Hm]
   · iexact Hm
   iintro Hm
-  iapply (wp_stmt_op_shift_plain (by simp))
+  iapply wp_rhs_shift
   iapply fupd_intro
   inext
   iapply fupd_intro
@@ -629,6 +633,7 @@ theorem wp_map_lookup_ackedIndex_entries {ma ida mba ta oa : Addr}
   isplitl [Hid]
   · iexact Hid
   iintro Hid
+  simp only [List.nil_append, List.append_nil, List.cons_append]
   iapply (wp_map_lookup (mba := mba) (ta := ta) (oa := oa) (mty := mty)
     (entries := entries)
     (key := .int q .uint64) (val := .int v .uint64) (b := b)
@@ -654,6 +659,7 @@ theorem wp_map_lookup_ackedIndex_entries {ma ida mba ta oa : Addr}
   isplitl [Ho]
   · iexact Ho
   iintro ⟨Hmb, Ht, Ho⟩
+  iapply wp_stores_done_nil
   iapply Hcont $$ [$Hm $Hid $Hmb $Ht $Ho]
 
 /-- **The ONE-ENTRY specialization — the registered law.** Its `hpair` is

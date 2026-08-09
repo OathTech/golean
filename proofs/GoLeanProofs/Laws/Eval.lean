@@ -234,26 +234,109 @@ theorem wp_strict_apply_read {op : StrictOp} {done : List GoValue}
     step_det (by trivial) (Step.strictApply (happly σ₁ htypes hlook)) hst
   exact ⟨h1.symm, h2.symm⟩
 
-/-! ### Statement-glue pure steps -/
+/-! ### Statement-glue pure steps
 
-/-- Begin an assignment: evaluate the target's address expression. -/
+The assignment walk (spine restatement, spec-parity slice 1): a single
+assignment rides the tgtOpK/rhsK/storeK spine as a one-target
+multi-assign (BUG-037 — the machine's `assignFirst`), so the old
+`assignTargetK`/`assignStoreK` two-frame walk (entry → address → RHS →
+store) becomes entry → address → `wp_tgtop_rhs` → RHS →
+`wp_rhs_stores_vals` → the `storeK` store (`wp_assign_store`) →
+`wp_stores_done`. Same handover points for a human: the store law is
+still the one non-mechanical step. The comma-ok forms (BUG-034) enter
+the same spine via `wp_map_lookup_start`/`wp_type_assert_start` with the
+source carried as an `RhsOp`, applied at the end of phase 1
+(`Laws/StmtOps.wp_map_lookup`). -/
+
+/-- Begin an assignment: the spine entry (`assignFirst`) — evaluate the
+target's first operand under the one-target `tgtOpK` frame, the RHS
+carried for `rhsK`. -/
 @[go_walk_law]
-theorem wp_assign_start {lhs : Assignee} {te rhs : Expr} {env k}
-    (hlhs : assigneeExpr lhs = some te) :
+theorem wp_assign_start {lhs : Assignee} {rhs e : Expr} {sh : TargetShape}
+    {ops : List Expr} {env k}
+    (hplan : targetPlan lhs = some (sh, e :: ops)) :
     (|={E}[E]▷=> £ 1 -∗
-      WP (Config.evalE te env (.assignTargetK rhs env k)) @ s ; E {{ Φ }}) ⊢
+      WP (Config.evalE e env (.tgtOpK sh [] ops [] [] .vals [rhs] []
+        (.seqn #[]) env k)) @ s ; E {{ Φ }}) ⊢
       WP (Config.exec (.assign lhs rhs) env k) @ s ; E {{ Φ }} :=
   wp_pure_det rfl
     (by simp [Config.choiceFree, stmtPlan])
-    (fun _ => Step.assign hlhs)
+    (fun _ => Step.assignFirst hplan)
 
-/-- Receive the target address: evaluate the RHS toward the store. -/
+/-- Shift to the current target's next phase-1 operand. -/
 @[go_walk_law]
-theorem wp_assign_target {loc : Loc} {rhs : Expr} {env k} :
+theorem wp_tgtop_shift {sh : TargetShape} {ops : List GoValue} {v : GoValue}
+    {e : Expr} {pending : List Expr} {refs : List TargetRef}
+    {targets : List (TargetShape × List Expr)} {rop : RhsOp} {rhs : List Expr}
+    {vals : List GoValue} {body : Stmt} {env k} :
     (|={E}[E]▷=> £ 1 -∗
-      WP (Config.evalE rhs env (.assignStoreK loc k)) @ s ; E {{ Φ }}) ⊢
-      WP (Config.retV (.addr loc) (.assignTargetK rhs env k)) @ s ; E {{ Φ }} :=
-  wp_pure_det rfl trivial (fun _ => Step.assignTargetLoc rfl)
+      WP (Config.evalE e env (.tgtOpK sh (v :: ops) pending refs targets
+        rop rhs vals body env k)) @ s ; E {{ Φ }}) ⊢
+      WP (Config.retV v (.tgtOpK sh ops (e :: pending) refs targets
+        rop rhs vals body env k)) @ s ; E {{ Φ }} :=
+  wp_pure_det rfl trivial (fun _ => Step.tgtOpShift)
+
+/-- Complete the current target and start the next one's operands. -/
+@[go_walk_law]
+theorem wp_tgtop_next {sh : TargetShape} {ops : List GoValue} {v : GoValue}
+    {r : TargetRef} {sh' : TargetShape} {e : Expr} {ops' : List Expr}
+    {targets : List (TargetShape × List Expr)} {refs : List TargetRef}
+    {rop : RhsOp} {rhs : List Expr} {vals : List GoValue} {body : Stmt} {env k}
+    (hcomp : completeTargetRef sh (v :: ops).reverse = some r) :
+    (|={E}[E]▷=> £ 1 -∗
+      WP (Config.evalE e env (.tgtOpK sh' [] ops' (refs ++ [r]) targets
+        rop rhs vals body env k)) @ s ; E {{ Φ }}) ⊢
+      WP (Config.retV v (.tgtOpK sh ops [] refs ((sh', e :: ops') :: targets)
+        rop rhs vals body env k)) @ s ; E {{ Φ }} :=
+  wp_pure_det rfl trivial (fun _ => Step.tgtOpNext hcomp)
+
+/-- Complete the LAST target: phase 1 turns to the right-hand side
+(`rhsK`), the value source riding along. -/
+@[go_walk_law]
+theorem wp_tgtop_rhs {sh : TargetShape} {ops : List GoValue} {v : GoValue}
+    {r : TargetRef} {refs : List TargetRef} {rop : RhsOp} {e : Expr}
+    {rest : List Expr} {vals : List GoValue} {body : Stmt} {env k}
+    (hcomp : completeTargetRef sh (v :: ops).reverse = some r) :
+    (|={E}[E]▷=> £ 1 -∗
+      WP (Config.evalE e env (.rhsK rop (refs ++ [r]) [] rest body env k))
+        @ s ; E {{ Φ }}) ⊢
+      WP (Config.retV v (.tgtOpK sh ops [] refs [] rop (e :: rest) vals
+        body env k)) @ s ; E {{ Φ }} :=
+  wp_pure_det rfl trivial (fun _ => Step.tgtOpRhs hcomp)
+
+/-- Shift to the next right-hand expression. -/
+@[go_walk_law]
+theorem wp_rhs_shift {rop : RhsOp} {refs : List TargetRef}
+    {done : List GoValue} {v : GoValue} {e : Expr} {rest : List Expr}
+    {body : Stmt} {env k} :
+    (|={E}[E]▷=> £ 1 -∗
+      WP (Config.evalE e env (.rhsK rop refs (v :: done) rest body env k))
+        @ s ; E {{ Φ }}) ⊢
+      WP (Config.retV v (.rhsK rop refs done (e :: rest) body env k))
+        @ s ; E {{ Φ }} :=
+  wp_pure_det rfl trivial (fun _ => Step.rhsShift)
+
+/-- The last RHS value under the IDENTITY source (`.vals` — plain
+single/multi assigns): phase 2 begins. The comma-ok sources' apply step
+reads the heap and lives in `Laws/StmtOps` (`wp_rhs_map_lookup`). -/
+@[go_walk_law]
+theorem wp_rhs_stores_vals {refs : List TargetRef} {done : List GoValue}
+    {v : GoValue} {body : Stmt} {env k} :
+    (|={E}[E]▷=> £ 1 -∗
+      WP (Config.next (.storeK refs (v :: done).reverse body env k))
+        @ s ; E {{ Φ }}) ⊢
+      WP (Config.retV v (.rhsK .vals refs done [] body env k))
+        @ s ; E {{ Φ }} :=
+  wp_pure_det rfl trivial (fun _ => Step.rhsStores rfl)
+
+/-- Phase 2 complete: enter the body (`.seqn #[]` for the statement
+forms — the next walk steps drain it). -/
+@[go_walk_law]
+theorem wp_stores_done {body : Stmt} {env k} :
+    (|={E}[E]▷=> £ 1 -∗
+      WP (Config.exec body env k) @ s ; E {{ Φ }}) ⊢
+      WP (Config.next (.storeK [] [] body env k)) @ s ; E {{ Φ }} :=
+  wp_pure_det rfl trivial (fun _ => Step.storeDone)
 
 /-- Receive an `if` condition. -/
 @[go_walk_law]
@@ -353,26 +436,54 @@ theorem wp_strict_apply_deref {ty : Ty} {a : Addr} {cell : HeapCell} {env k} :
     (Step.strictApply (done := []) happly) hst
   exact ⟨h1.symm, h2.symm⟩
 
-/-- **The store step**: deliver the RHS value to a `.base`-located target
-whose cell is owned. `hstore` is the cell-conditioned store fact (for
-int-typed cells, `storeLoc_int_cell` discharges it). Instantiates the
-`wp_store_step` core; determinism is `step_det`. -/
+/-- **The store step** (spine restatement): one `storeK` phase-2 store
+through a completed bare-chain target (`.chain (.addr tgt) [] []` — the
+shape every `x`/`$res` target completes to), the target's cell owned.
+`hstore` is the SAME cell-conditioned `storeLoc` fact as before the
+restatement (for int-typed cells, `storeLoc_int_cell` discharges it);
+the chain replay (`storeTarget` → `resolveChain` → `valueAsLoc`) is
+folded here once. Instantiates the `wp_store_step` core; determinism is
+`step_det`. -/
+theorem wp_store_target {a : Addr} {r : TargetRef} {v : GoValue}
+    {oldcell newcell : HeapCell} {rs : List TargetRef} {vals : List GoValue}
+    {body : Stmt} {env : LocalEnv} {k}
+    (hstore : ∀ σ₁ : ExecState, σ₁.types = GoCoreGS.types GF →
+      Heap.lookup σ₁.heap (.base a) = some oldcell →
+      storeTarget σ₁ r v
+        = .ok { σ₁ with heap := Heap.set σ₁.heap (.base a) newcell }) :
+    a.id ↦ oldcell
+      ∗ (a.id ↦ newcell -∗
+          WP (Config.next (.storeK rs vals body env k)) @ s ; E {{ Φ }})
+      ⊢ WP (Config.next (.storeK (r :: rs) (v :: vals)
+            body env k)) @ s ; E {{ Φ }} := by
+  iapply wp_store_step (hnv := rfl)
+  intro σ₁ hfns hmeths htypes hlook
+  refine ⟨Step.storeStep (hstore σ₁ htypes hlook), ?_⟩
+  intro c' s' hst'
+  obtain ⟨h1, h2⟩ :=
+    step_det (by trivial) (Step.storeStep (hstore σ₁ htypes hlook)) hst'
+  exact ⟨h1.symm, h2.symm⟩
+
+/-- The bare-chain instance of `wp_store_target`: a completed
+`.chain (.addr tgt) [] []` reference (the shape every `x`/`$res` target
+completes to), whose replay is exactly one `storeLoc` — so the `hstore`
+premise keeps the pre-restatement `storeLoc` shape every walk
+discharges with `storeLoc_int_cell`/`storeLoc_int_any`/a `simp`. -/
 theorem wp_assign_store_loc {a : Addr} {tgt : Loc} {v : GoValue}
-    {oldcell newcell : HeapCell} {k}
+    {oldcell newcell : HeapCell} {rs : List TargetRef} {vals : List GoValue}
+    {body : Stmt} {env : LocalEnv} {k}
     (hstore : ∀ σ₁ : ExecState, σ₁.types = GoCoreGS.types GF →
       Heap.lookup σ₁.heap (.base a) = some oldcell →
       storeLoc σ₁ tgt v
         = .ok { σ₁ with heap := Heap.set σ₁.heap (.base a) newcell }) :
     a.id ↦ oldcell
-      ∗ (a.id ↦ newcell -∗ WP (Config.next k) @ s ; E {{ Φ }})
-      ⊢ WP (Config.retV v (.assignStoreK tgt k)) @ s ; E {{ Φ }} := by
-  iapply wp_store_step (hnv := rfl)
-  intro σ₁ hfns hmeths htypes hlook
-  refine ⟨Step.assignStore (hstore σ₁ htypes hlook), ?_⟩
-  intro c' s' hst
-  obtain ⟨h1, h2⟩ :=
-    step_det (by trivial) (Step.assignStore (hstore σ₁ htypes hlook)) hst
-  exact ⟨h1.symm, h2.symm⟩
+      ∗ (a.id ↦ newcell -∗
+          WP (Config.next (.storeK rs vals body env k)) @ s ; E {{ Φ }})
+      ⊢ WP (Config.next (.storeK (.chain (.addr tgt) [] [] :: rs) (v :: vals)
+            body env k)) @ s ; E {{ Φ }} :=
+  wp_store_target (fun σ₁ htypes hlook => by
+    simp [storeTarget, resolveChain, valueAsLoc, Bind.bind, Except.bind,
+      hstore σ₁ htypes hlook])
 
 /-- The base-location instance of `wp_assign_store_loc` — the shape every
 `x = e` takes. The general form exists because `a[i] = e` stores at a
@@ -381,14 +492,18 @@ in one backing cell): the owned resource and the store target are then
 different `Loc`s for the same address, which the base-only statement
 could not express. -/
 @[go_walk_law]
-theorem wp_assign_store {a : Addr} {v : GoValue} {oldcell newcell : HeapCell} {k}
+theorem wp_assign_store {a : Addr} {v : GoValue} {oldcell newcell : HeapCell}
+    {rs : List TargetRef} {vals : List GoValue} {body : Stmt}
+    {env : LocalEnv} {k}
     (hstore : ∀ σ₁ : ExecState, σ₁.types = GoCoreGS.types GF →
       Heap.lookup σ₁.heap (.base a) = some oldcell →
       storeLoc σ₁ (.base a) v
         = .ok { σ₁ with heap := Heap.set σ₁.heap (.base a) newcell }) :
     a.id ↦ oldcell
-      ∗ (a.id ↦ newcell -∗ WP (Config.next k) @ s ; E {{ Φ }})
-      ⊢ WP (Config.retV v (.assignStoreK (.base a) k)) @ s ; E {{ Φ }} :=
+      ∗ (a.id ↦ newcell -∗
+          WP (Config.next (.storeK rs vals body env k)) @ s ; E {{ Φ }})
+      ⊢ WP (Config.next (.storeK (.chain (.addr (.base a)) [] [] :: rs)
+            (v :: vals) body env k)) @ s ; E {{ Φ }} :=
   wp_assign_store_loc hstore
 
 end

@@ -131,7 +131,7 @@ theorem wp_inc_body {pa xa : Addr} {m : Int} {k} :
   inext
   iapply fupd_intro
   iintro Hc4
-  iapply (wp_assign_start (te := .var "p") rfl)
+  iapply (wp_assign_start (e := .var "p") (sh := .chain []) (ops := []) rfl)
   iapply fupd_intro
   inext
   iapply fupd_intro
@@ -141,7 +141,7 @@ theorem wp_inc_body {pa xa : Addr} {m : Int} {k} :
   isplitl [Hp]
   · iexact Hp
   iintro Hp
-  iapply wp_assign_target
+  iapply (wp_tgtop_rhs rfl)
   iapply fupd_intro
   inext
   iapply fupd_intro
@@ -188,12 +188,19 @@ theorem wp_inc_body {pa xa : Addr} {m : Int} {k} :
   inext
   iapply fupd_intro
   iintro Hc11
+  iapply wp_rhs_stores_vals
+  iapply fupd_intro
+  inext
+  iapply fupd_intro
+  iintro Hc11b
+  simp only [List.nil_append, List.reverse_cons, List.reverse_nil]
   iapply (wp_assign_store (oldcell := ⟨some (.int .int), .int m .int⟩)
     (newcell := ⟨some (.int .int), .int (IntKind.normalize .int (m + 1)) .int⟩)
     (fun σ₁ _ht hlook => storeLoc_int_cell hlook (m + 1)))
   isplitl [Hx]
   · iexact Hx
   iintro Hx
+  iapply wp_stores_done_nil
   iapply wp_seq_done
   iapply fupd_intro
   inext
@@ -323,7 +330,7 @@ theorem wp_incViaCall_body {ra : Addr} {k}
   inext
   iapply fupd_intro
   iintro Hc10
-  iapply (wp_assign_start (te := .ref "$res0") rfl)
+  iapply (wp_assign_start (e := .ref "$res0") (sh := .chain []) (ops := []) rfl)
   iapply fupd_intro
   inext
   iapply fupd_intro
@@ -333,7 +340,7 @@ theorem wp_incViaCall_body {ra : Addr} {k}
   inext
   iapply fupd_intro
   iintro Hc12
-  iapply wp_assign_target
+  iapply (wp_tgtop_rhs rfl)
   iapply fupd_intro
   inext
   iapply fupd_intro
@@ -342,6 +349,12 @@ theorem wp_incViaCall_body {ra : Addr} {k}
   isplitl [Hx]
   · iexact Hx
   iintro Hx
+  iapply wp_rhs_stores_vals
+  iapply fupd_intro
+  inext
+  iapply fupd_intro
+  iintro Hc13b
+  simp only [List.nil_append, List.reverse_cons, List.reverse_nil]
   iapply (wp_assign_store (oldcell := ⟨some (.int .int), .int 0 .int⟩)
     (newcell := ⟨some (.int .int), .int 2 .int⟩)
     (fun σ₁ _ht hlook => by
@@ -351,6 +364,7 @@ theorem wp_incViaCall_body {ra : Addr} {k}
   isplitl [Hr]
   · iexact Hr
   iintro Hr
+  iapply wp_stores_done_nil
   iapply wp_seq_next
   iapply fupd_intro
   inext
