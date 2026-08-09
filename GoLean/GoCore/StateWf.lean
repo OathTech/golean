@@ -3997,30 +3997,6 @@ theorem targetsPlan_locSup :
     simp only [targetPlansSup, assigneeListSup]
     omega
 
-theorem assigneesExprs_locSup :
-    ∀ {targets : List Assignee} {es : List Expr},
-      assigneesExprs targets = some es →
-      exprListSup es ≤ assigneeListSup targets := by
-  intro targets
-  induction targets with
-  | nil =>
-    intro es h
-    simp only [assigneesExprs, List.mapM_nil, Option.pure_def,
-      Option.some.injEq] at h
-    subst h
-    simp [exprListSup]
-  | cons a rest ih =>
-    intro es h
-    rw [assigneesExprs, List.mapM_cons] at h
-    obtain ⟨e, he, h⟩ := Option.bind_eq_some_iff.mp h
-    obtain ⟨tail, htail, h⟩ := Option.bind_eq_some_iff.mp h
-    simp only [Option.pure_def, Option.some.injEq] at h
-    subst h
-    have h1 := assigneeExpr_locSup he
-    have h2 := ih (show assigneesExprs rest = some tail from htail)
-    simp only [exprListSup, assigneeListSup]
-    omega
-
 theorem targetRefListSup_append {a b : List TargetRef} :
     targetRefListSup (a ++ b) = max (targetRefListSup a) (targetRefListSup b) := by
   induction a with

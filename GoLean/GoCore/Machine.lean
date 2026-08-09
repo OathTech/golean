@@ -84,9 +84,6 @@ def assigneeExpr : Assignee → Option Expr
   | .mapElem _ _ _ _ => none
   | .unsupported _ => none
 
-def assigneesExprs (targets : List Assignee) : Option (List Expr) :=
-  targets.mapM assigneeExpr
-
 /-! ## Strict operators: the defunctionalized op table -/
 
 /-- Head of a strict expression form: Go evaluates its operands

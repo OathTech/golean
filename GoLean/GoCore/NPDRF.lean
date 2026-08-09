@@ -123,7 +123,7 @@ obstruction 1): two private steps of different threads with disjoint
 footprints commute as state transformers.
 (ii) **Per-construct coarse-step movers** (the granularity ledger's
 formal successor): each multi-cell apply step (`appendSlice`,
-`copySlice`, `clearSlice`, `sortSlice`, frame exit's `storeMany`) is a
+`copySlice`, `clearSlice`, `sortSlice`) is a
 fold of the frame lemmas — its whole footprint is what commutes, which
 is exactly why `stepAccesses` records apply steps whole.
 (iii) **Normalization induction**: any fine execution of a race-free
