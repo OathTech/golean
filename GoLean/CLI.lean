@@ -120,7 +120,23 @@ private def canonFloatObsBits (kind : GoCore.FloatKind) (bits : Nat) : Nat :=
 private partial def goValueJson : GoValue → Json
   | .unit => Json.mkObj [("tag", Json.str "unit")]
   | .bool value => Json.mkObj [("tag", Json.str "bool"), ("value", Lean.toJson value)]
-  | .int value _ => Json.mkObj [("tag", Json.str "int"), ("value", Lean.toJson value)]
+  -- Kind-carrying integer observation (grossmith hunt F15, spec-parity
+  -- s1): the kind (and with it the width/signedness) is part of the
+  -- observation, symmetrically with the Go harness's reflect kind — a
+  -- kind-defaulting bug landing on the RIGHT numeric value (the
+  -- BUG-042/043 family) was invisible to the value-only shape. The
+  -- value carries no defined-type identity (an `IntKind` only), so none
+  -- is emitted; defined-type identity over ints stays observable only
+  -- through interface boxes (`dynamic`), on both sides alike. An
+  -- `.unbounded` kind renders its name and FAILS the decoder below —
+  -- no wire program can produce one at runtime (fail closed, never a
+  -- silent default).
+  | .int value kind =>
+      Json.mkObj [
+        ("tag", Json.str "int"),
+        ("kind", Json.str kind.name),
+        ("value", Lean.toJson value)
+      ]
   -- Bit patterns, never decimal strings (note §5): equality is bit-exact
   -- modulo the NaN canonicalization above; Go's shortest-representation
   -- printing stays outside the trust surface.
@@ -269,8 +285,35 @@ private partial def decodeGoValueObservation (path : String) (json : Json) : Exc
       let _ ← StrictJson.bool s!"{path}.value" (← StrictJson.field path obj "value")
       pure ()
   | "int" =>
-      StrictJson.requireExactKeys path obj ["tag", "value"]
-      let _ ← StrictJson.int s!"{path}.value" (← StrictJson.field path obj "value")
+      -- Kind-carrying shape (F15, the float arm's discipline): exact
+      -- keys, kind restricted to the ten concrete integer kinds, value
+      -- range-checked per the kind's width/signedness — fail closed on
+      -- anything else. `uintptr` is deliberately ABSENT: the frontend
+      -- maps uintptr to uint64 (`intKindOfName`), so the machine could
+      -- never emit it and a Go-side uintptr observation must refuse
+      -- here rather than alias into uint64.
+      StrictJson.requireExactKeys path obj ["kind", "tag", "value"]
+      let kind ← StrictJson.string s!"{path}.kind" (← StrictJson.field path obj "kind")
+      let value ← StrictJson.int s!"{path}.value" (← StrictJson.field path obj "value")
+      let (bits, signed) ← match kind with
+        | "int" => pure (64, true)
+        | "uint" => pure (64, false)
+        | "int8" => pure (8, true)
+        | "uint8" => pure (8, false)
+        | "int16" => pure (16, true)
+        | "uint16" => pure (16, false)
+        | "int32" => pure (32, true)
+        | "uint32" => pure (32, false)
+        | "int64" => pure (64, true)
+        | "uint64" => pure (64, false)
+        | other => throw s!"{path}.kind: unknown integer kind {repr other}"
+      let inRange :=
+        if signed then
+          -(2 ^ (bits - 1) : Int) ≤ value && value < 2 ^ (bits - 1)
+        else
+          0 ≤ value && value < (2 ^ bits : Int)
+      if !inRange then
+        throw s!"{path}.value: {value} out of range for {kind}"
       pure ()
   | "float" =>
       -- Bit-pattern observation (floats note §5/§7): exact keys, kind
@@ -339,7 +382,10 @@ private partial def decodeGoValueObservation (path : String) (json : Json) : Exc
   | other =>
       throw s!"{path}.tag: unknown Go observation value tag {repr other}"
 
-private def decodeObservation (path raw : String) : Except String Json := do
+/-- Non-`private` so the eval tests can pin the fail-closed decode
+discipline for the kind-carrying integer shape (F15) — the enumSetup
+precedent. -/
+def decodeObservation (path raw : String) : Except String Json := do
   let json ← Json.parse raw
   let obj ← StrictJson.obj path json
   let schema ← StrictJson.string s!"{path}.schema" (← StrictJson.field path obj "schema")
