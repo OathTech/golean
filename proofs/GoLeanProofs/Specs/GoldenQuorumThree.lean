@@ -400,22 +400,20 @@ theorem wp_ci_range_body {ia la lba sra sta pa : Addr} {lty : Option Ty}
   go_walk
   unfold ciOkThen
   go_walk
-  -- `&srt[i]` at a SYMBOLIC index: the slice bounds check is a fact about
-  -- `zeros`, not a computation, so the walk hands the step back
-  go_walk_step (wp_strict_apply_pure
-    (out := .addr (.index (.base sta) (zeros : Int)))
-    (happly := fun σ => by
-      simp [applyStrictOp, indexTargetLoc, valueAsInt,
-        sliceIndexLoc_base (sta := sta) (n := slen)
-          (cap := cap) (j := zeros) hzlt hsle,
-        Bind.bind, Except.bind]))
-  go_walk with [hv]
-  -- the store THROUGH A SLICE INDEX into the backing array
-  go_walk_step (wp_assign_store_loc (a := sta)
-    (tgt := .index (.base sta) (zeros : Int))
+  -- the store THROUGH A SLICE INDEX into the backing array, at a
+  -- SYMBOLIC index: under the spine the whole address chain replays at
+  -- the STORE (`storeTarget` — phase 2, BUG-037's point), so the slice
+  -- bounds fact (`sliceIndexLoc_base` on `zeros`) discharges inside the
+  -- store law's premise rather than at a phase-1 address step
+  go_walk_step (wp_store_target (a := sta)
     (oldcell := stkCell cap (zeros + 1) filled trail)
     (newcell := stkCell cap zeros (v :: filled) trail)
-    (fun σ _ht hlk => storeLoc_stk_fill hv hf hcap hlk))
+    (fun σ _ht hlk => by
+      have hst := storeLoc_stk_fill (σ := σ) hv hf hcap hlk
+      simp [storeTarget, resolveChain, indexTargetLoc, valueAsInt,
+        sliceIndexLoc_base (sta := sta) (n := slen)
+          (cap := cap) (j := zeros) hzlt hsle,
+        valueAsLoc, Bind.bind, Except.bind, hv, hst]))
   -- `i--`
   go_walk with [hdec]
   go_walk_step (wp_assign_store
@@ -773,6 +771,7 @@ theorem wp_ci_tail_three {na sra sta ra : Addr} {filled : List Int} {env k}
         typeResolutionFuel, resolveDefinedAliases, resolveDefinedAliasesFuel,
         QuorumPin.typeEnv_Index, Bind.bind, Except.bind,
         show IntKind.uint64.normalize 6 = 6 from by decide]))
+  go_walk 1
   go_walk_step (wp_assign_store
     (oldcell := ⟨some (.defined ⟨"main.Index"⟩), .int 0 .uint64⟩)
     (newcell := ⟨some (.defined ⟨"main.Index"⟩), .int 6 .uint64⟩)
@@ -854,6 +853,7 @@ theorem wp_ci_fitIf_three {na sta sra : Addr} {w : GoValue} {rest env k}
     (happly := fun σ _ht hl => by
       simp [applyStrictOp, applySlice, loadLoc, hl, stkZero, valueAsInt,
         sliceFromArray, checkSliceBounds, Bind.bind, Except.bind]))
+  go_walk 1
   go_walk_step (wp_assign_store
     (oldcell := ⟨some (.slice (.int .uint64)), w⟩)
     (newcell := ⟨some (.slice (.int .uint64)),

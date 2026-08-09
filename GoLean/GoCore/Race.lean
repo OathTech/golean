@@ -148,11 +148,18 @@ FOOTPRINT ARMS (recorded accesses):
 - `.stringFromByteSlice` via `sliceVisibleValues` → `strictOpAccesses`.
 - `applyStmtOpCore` newValue/makeSlice/makeMap/makeChan target stores,
   mapAssign/mapDelete/clearMap (via `mapEntries`/`mapAssignValue`),
-  mapLookup (map read + two target stores), typeAssertStmt stores,
   clearSlice/sortSlice/copySlice element loops, appendSlice (in-place
   writes, spill reads via `sliceVisibleValues`, header store) →
-  `stmtOpAccesses`.
-- StepFn `assignStoreK` store → `stepAccesses`.
+  `stmtOpAccesses`. (mapLookup/typeAssertStmt rows retired with the
+  StmtOps themselves — spine migration, BUG-034: the comma-ok forms'
+  map read is the `rhsK`-apply arm below, their stores are ordinary
+  `storeK` steps.)
+- `applyRhsOp .mapLookup` map read (the `rhsK` apply step; BUG-034
+  spine migration — gc's mapaccess2 instrumentation point) →
+  `stepAccesses` rhsK arm. `.vals`/`.typeAssert` sources touch no
+  user memory. Single assigns (BUG-037) ride the same spine: their
+  store is the `storeK` row below (`storeTargetAccess`); the retired
+  `assignStoreK` row is gone with the frames.
 - `storeTarget` (phase-2 stores; `mapAssignValue` map half) →
   `storeTargetAccess`.
 - frame EXIT `loadMany`/`storeMany` → `stepAccesses` frame-[] arms.
@@ -479,9 +486,6 @@ def stmtOpAccesses (op : StmtOp) (vs : List GoValue) : List RaceAccess :=
   | .makeMap _, tv :: _ => targetWrite tv
   | .makeChan _, tv :: _ => targetWrite tv
   | .mapAssign _ _, [bv, _, _] => mapAccess true bv
-  | .mapLookup _ _, [tv, okv, bv, _] =>
-      mapAccess false bv ++ targetWrite tv ++ targetWrite okv
-  | .typeAssertStmt _, [tv, okv, _] => targetWrite tv ++ targetWrite okv
   | .appendSlice _, [tv, sliceV, elemsV] =>
       (match valueAsSlice sliceV, valueAsSlice elemsV with
        | .ok slice, .ok elems =>
@@ -753,9 +757,18 @@ def stepAccesses (s : ExecState) (c : Config) : List RaceAccess :=
        | .error _ => [])
   | .retV v (.strictK op done [] _ _) =>
       strictOpAccesses op ((v :: done).reverse)
-  | .retV _ (.assignStoreK loc _) => [(true, loc)]
   | .retV v (.stmtOpK op _ done [] _ _) =>
       stmtOpAccesses op ((v :: done).reverse)
+  -- The rhsK APPLY step (spine migration, BUG-034/BUG-037): the value
+  -- source applies to the completed RHS operands. `.mapLookup` READS
+  -- the map object (gc's mapaccess2 instrumentation point);
+  -- `.vals`/`.typeAssert` touch no user memory. The subsequent stores
+  -- are per-target `storeK` steps (`storeTargetAccess` below), exactly
+  -- like every other spine-riding assignment.
+  | .retV v (.rhsK rop _ done [] _ _ _) =>
+      (match rop, (v :: done).reverse with
+       | .mapLookup _ _, [bv, _] => mapAccess false bv
+       | _, _ => [])
   | .retV v (.mapRangeK _ _ _ _ _ _ _) => mapAccess false v
   -- Frame ENTRIES with a possible interface-dispatch receiver deref
   -- (S3 audit major: dynamicDispatch?'s needsDeref read): the ordinary

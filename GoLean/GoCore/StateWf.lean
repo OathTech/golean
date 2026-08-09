@@ -361,9 +361,6 @@ def Cont.locSup : Cont → Nat
   | .whileK c b env k =>
       max (max (Expr.locSup c) (Stmt.locSup b))
         (max (LocalEnv.locSup env) (Cont.locSup k))
-  | .assignTargetK rhs env k =>
-      max (max (Expr.locSup rhs) (LocalEnv.locSup env)) (Cont.locSup k)
-  | .assignStoreK l k => max (Loc.locSup l) (Cont.locSup k)
   | .callTargetsK _ locs pending args env k =>
       max (max (locListSup locs) (exprListSup pending))
         (max (exprListSup args) (max (LocalEnv.locSup env) (Cont.locSup k)))
@@ -388,13 +385,13 @@ def Cont.locSup : Cont → Nat
       max (max (selectClausesSup clauses) (optStmtSup default?))
         (max (max (goValueListSup done) (exprListSup pending))
           (max (LocalEnv.locSup env) (Cont.locSup k)))
-  | .tgtOpK _ ops pending refs targets rhs vals body env k =>
+  | .tgtOpK _ ops pending refs targets _ rhs vals body env k =>
       max (max (goValueListSup ops) (exprListSup pending))
         (max (max (targetRefListSup refs) (targetPlansSup targets))
           (max (max (exprListSup rhs) (goValueListSup vals))
             (max (Stmt.locSup body)
               (max (LocalEnv.locSup env) (Cont.locSup k)))))
-  | .rhsK refs done pending body env k =>
+  | .rhsK _ refs done pending body env k =>
       max (max (targetRefListSup refs) (goValueListSup done))
         (max (exprListSup pending)
           (max (Stmt.locSup body)
@@ -482,8 +479,6 @@ def Cont.itersNormalized (types : TypeEnv) : Cont → Bool
   | .boolK k => Cont.itersNormalized types k
   | .ifK _ _ _ k => Cont.itersNormalized types k
   | .whileK _ _ _ k => Cont.itersNormalized types k
-  | .assignTargetK _ _ k => Cont.itersNormalized types k
-  | .assignStoreK _ k => Cont.itersNormalized types k
   | .callTargetsK _ _ _ _ _ k => Cont.itersNormalized types k
   | .callArgsK _ _ _ _ _ k => Cont.itersNormalized types k
   | .stmtOpK _ _ _ _ _ k => Cont.itersNormalized types k
@@ -495,8 +490,8 @@ def Cont.itersNormalized (types : TypeEnv) : Cont → Bool
   | .panicResumeK _ k => Cont.itersNormalized types k
   | .chanStK _ _ _ _ k => Cont.itersNormalized types k
   | .selectOpsK _ _ _ _ _ k => Cont.itersNormalized types k
-  | .tgtOpK _ _ _ _ _ _ _ _ _ k => Cont.itersNormalized types k
-  | .rhsK _ _ _ _ _ k => Cont.itersNormalized types k
+  | .tgtOpK _ _ _ _ _ _ _ _ _ _ k => Cont.itersNormalized types k
+  | .rhsK _ _ _ _ _ _ k => Cont.itersNormalized types k
   | .storeK _ _ _ _ k => Cont.itersNormalized types k
   | .goCalleeK _ _ k => Cont.itersNormalized types k
   | .goArgsK _ _ _ _ k => Cont.itersNormalized types k
@@ -3454,6 +3449,34 @@ theorem resolveChain_locSup {σ : ExecState} :
           = Loc.locSup l := rfl
       omega
 
+/-- `applyRhsOp` output bound (round 4, BUG-034): the value source's
+results are bounded by its operands and the heap (a lookup reads the
+map cell); the state is untouched. -/
+theorem applyRhsOp_locSup {σ : ExecState} {rop : RhsOp}
+    {vs vals : List GoValue} (h : applyRhsOp σ rop vs = .ok vals) :
+    goValueListSup vals ≤ max (goValueListSup vs) (Heap.locSup σ.heap) := by
+  unfold applyRhsOp at h
+  split at h
+  · simp only [pure_eq_ok, Except.ok.injEq] at h
+    subst h
+    omega
+  · -- mapLookup
+    simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq] at h
+    obtain ⟨m, hm, key, hkey, ⟨rv, rb⟩, hpair, h⟩ := h
+    subst h
+    have h1 := mapLookupValue_locSup hpair
+    simp only [goValueListSup, GoValue.locSup]
+    omega
+  · -- typeAssert
+    rename_i targetTy value
+    simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq] at h
+    obtain ⟨⟨rv, rb⟩, hres, h⟩ := h
+    subst h
+    have h1 := typeAssertValue_locSup hres
+    simp only [goValueListSup, GoValue.locSup]
+    omega
+  · simp [stuck, throw, throwThe, MonadExceptOf.throw] at h
+
 /-- `storeTarget` preservation (convergence round, BUG-029; chain form
 round 4, BUG-033): one phase-2 store keeps the loc invariant. -/
 theorem storeTarget_pres {σ : ExecState} {r : TargetRef} {v : GoValue}
@@ -3638,45 +3661,6 @@ theorem applyStmtOpCore_wf {σ : ExecState} {op : StmtOp} {nt : Nat}
     · rename_i baseV keyV valueV
       simp only [goValueListSup] at hvs
       exact mapAssignValue_pres hw (by omega) (by omega) (by omega) h
-    · simp at h
-  · -- mapLookup
-    rename_i keyTy valueTy
-    split at h
-    · rename_i tv okv baseV keyV
-      simp only [goValueListSup] at hvs
-      simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq] at h
-      obtain ⟨m, hm, key, hkey, ⟨rv, rb⟩, hpair, tloc, htloc, okloc, hokloc,
-        σ₁, hσ₁, σ₂, h, hσ⟩ := h
-      subst hσ
-      dsimp only at hσ₁ h
-      have hrb := mapLookupValue_locSup hpair
-      have p1 := storeLoc_pres hw
-        (by have := valueAsLoc_locSup htloc; omega)
-        (by omega) hσ₁
-      obtain ⟨q1, q2, q3, q4, q5⟩ := p1
-      refine StmtOpPres.trans ⟨q1, q2, q3, q4, q5⟩ ?_
-      refine storeLoc_pres q1 ?_ (by simp [GoValue.locSup]) h
-      have := valueAsLoc_locSup hokloc
-      omega
-    · simp at h
-  · -- typeAssertStmt
-    rename_i targetTy
-    split at h
-    · rename_i tv okv value
-      simp only [goValueListSup] at hvs
-      simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq] at h
-      obtain ⟨⟨rv, rb⟩, hres, tloc, htloc, okloc, hokloc, σ₁, hσ₁, σ₂, h, hσ⟩ := h
-      subst hσ
-      dsimp only at hσ₁ h
-      have hrb := typeAssertValue_locSup hres
-      have p1 := storeLoc_pres hw
-        (by have := valueAsLoc_locSup htloc; omega)
-        (by omega) hσ₁
-      obtain ⟨q1, q2, q3, q4, q5⟩ := p1
-      refine StmtOpPres.trans ⟨q1, q2, q3, q4, q5⟩ ?_
-      refine storeLoc_pres q1 ?_ (by simp [GoValue.locSup]) h
-      have := valueAsLoc_locSup hokloc
-      omega
     · simp at h
   · -- mapDelete
     rename_i keyTy
@@ -4168,26 +4152,6 @@ theorem stmtPlan_locSup {stmt : Stmt} {op : StmtOp} {nt : Nat} {es : List Expr}
   case sortSlice b elem =>
     simp only [stmtPlan, Option.pure_def, Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨-, -, rfl⟩ := h
-    simp only [Stmt.locSup, exprListSup, Nat.max_le]
-    omega
-  case mapLookup target okT b i kt vt =>
-    simp only [stmtPlan] at h
-    obtain ⟨te, hte, h⟩ := Option.bind_eq_some_iff.mp h
-    obtain ⟨oke, hoke, h⟩ := Option.bind_eq_some_iff.mp h
-    simp only [Option.pure_def, Option.some.injEq, Prod.mk.injEq] at h
-    obtain ⟨-, -, rfl⟩ := h
-    have h1 := assigneeExpr_locSup hte
-    have h2 := assigneeExpr_locSup hoke
-    simp only [Stmt.locSup, exprListSup, Nat.max_le]
-    omega
-  case typeAssert target okT e' tt =>
-    simp only [stmtPlan] at h
-    obtain ⟨te, hte, h⟩ := Option.bind_eq_some_iff.mp h
-    obtain ⟨oke, hoke, h⟩ := Option.bind_eq_some_iff.mp h
-    simp only [Option.pure_def, Option.some.injEq, Prod.mk.injEq] at h
-    obtain ⟨-, -, rfl⟩ := h
-    have h1 := assigneeExpr_locSup hte
-    have h2 := assigneeExpr_locSup hoke
     simp only [Stmt.locSup, exprListSup, Nat.max_le]
     omega
   case appendSlice target elem sl els =>
@@ -5349,48 +5313,6 @@ theorem step_preserves_wf_loc {c : Config} {σ : ExecState} {c' : Config}
       runtimeErrorValue_locSup, panicPayload, LocalEnv.pushScope_locSup,
       Nat.max_le] at hc ⊢
     omega
-  case assign lhs te rhs env k hte =>
-    refine ⟨hs, ?_, rfl, Nat.le_refl _⟩
-    have h1 := assigneeExpr_locSup hte
-    simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
-      GoValue.locSup, optLocSup, panicChainSup, goValueListSup, exprListSup,
-      stmtListSup, locListSup, deferListSup, assigneeListSup, optExprSup,
-      goValueListSup_append, exprListSup_append, stmtListSup_append,
-      locListSup_append, panicChainSup_append, goValueListSup_reverse,
-      runtimeErrorValue_locSup, panicPayload, LocalEnv.pushScope_locSup,
-      Nat.max_le] at hc ⊢
-    omega
-  case assignTargetLoc v loc rhs env k hloc =>
-    refine ⟨hs, ?_, rfl, Nat.le_refl _⟩
-    have h1 := valueAsLoc_locSup hloc
-    simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
-      GoValue.locSup, optLocSup, panicChainSup, goValueListSup, exprListSup,
-      stmtListSup, locListSup, deferListSup, assigneeListSup, optExprSup,
-      goValueListSup_append, exprListSup_append, stmtListSup_append,
-      locListSup_append, panicChainSup_append, goValueListSup_reverse,
-      runtimeErrorValue_locSup, panicPayload, LocalEnv.pushScope_locSup,
-      Nat.max_le] at hc ⊢
-    omega
-  case assignStore v loc k hstore =>
-    have hb : Loc.locSup loc ≤ σ.nextAddr ∧ GoValue.locSup v ≤ σ.nextAddr := by
-      simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
-      GoValue.locSup, optLocSup, panicChainSup, goValueListSup, exprListSup,
-      stmtListSup, locListSup, deferListSup, assigneeListSup, optExprSup,
-      goValueListSup_append, exprListSup_append, stmtListSup_append,
-      locListSup_append, panicChainSup_append, goValueListSup_reverse,
-      runtimeErrorValue_locSup, panicPayload, LocalEnv.pushScope_locSup,
-      Nat.max_le] at hc
-      omega
-    obtain ⟨w1, w2, w3⟩ := storeLoc_wf hs hb.1 hb.2 hstore
-    refine ⟨w1, ?_, (storeLoc_shape hstore).1, Nat.le_of_eq w2.symm⟩
-    simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
-      GoValue.locSup, optLocSup, panicChainSup, goValueListSup, exprListSup,
-      stmtListSup, locListSup, deferListSup, assigneeListSup, optExprSup,
-      goValueListSup_append, exprListSup_append, stmtListSup_append,
-      locListSup_append, panicChainSup_append, goValueListSup_reverse,
-      runtimeErrorValue_locSup, panicPayload, LocalEnv.pushScope_locSup,
-      Nat.max_le] at hc ⊢
-    omega
   case callFirstTarget targets fid args te rest env k hplan =>
     refine ⟨hs, ?_, rfl, Nat.le_refl _⟩
     have h1 := assigneesExprs_locSup hplan
@@ -5896,6 +5818,38 @@ theorem step_preserves_wf_loc {c : Config} {σ : ExecState} {c' : Config}
     simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup,
       goValueListSup, exprListSup, targetRefListSup, targetPlansSup,
       stmtListSup, Nat.max_le] at hc ⊢
+    omega
+  case rhsStores rop refs done v vals body env k happly =>
+    have hv := applyRhsOp_locSup happly
+    rw [goValueListSup_reverse] at hv
+    refine ⟨hs, ?_, rfl, Nat.le_refl _⟩
+    simp only [ConfigWf, Config.locSup, Cont.locSup, GoValue.locSup,
+      goValueListSup, exprListSup, targetRefListSup, targetPlansSup,
+      Stmt.locSup, Nat.max_le] at hc hv ⊢
+    omega
+  case assignFirst lhs rhs sh e ops env k hplan =>
+    have hp := targetPlan_locSup hplan
+    refine ⟨hs, ?_, rfl, Nat.le_refl _⟩
+    simp only [exprListSup, Nat.max_le] at hp
+    simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup,
+      goValueListSup, exprListSup, targetRefListSup, targetPlansSup,
+      stmtListSup, Nat.max_le] at hc ⊢
+    omega
+  case mapLookupFirst t okT base index keyTy valueTy sh e ops rest env k hplan =>
+    have hp := targetsPlan_locSup hplan
+    refine ⟨hs, ?_, rfl, Nat.le_refl _⟩
+    simp only [targetPlansSup, exprListSup, assigneeListSup, Nat.max_le] at hp
+    simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup,
+      goValueListSup, exprListSup, targetRefListSup, targetPlansSup,
+      stmtListSup, assigneeListSup, Nat.max_le] at hc ⊢
+    omega
+  case typeAssertFirst t okT expr targetTy sh e ops rest env k hplan =>
+    have hp := targetsPlan_locSup hplan
+    refine ⟨hs, ?_, rfl, Nat.le_refl _⟩
+    simp only [targetPlansSup, exprListSup, assigneeListSup, Nat.max_le] at hp
+    simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup,
+      goValueListSup, exprListSup, targetRefListSup, targetPlansSup,
+      stmtListSup, assigneeListSup, Nat.max_le] at hc ⊢
     omega
   case storeStep r rs val vals body env k hst =>
     have hbounds : TargetRef.locSup r ≤ σ.nextAddr

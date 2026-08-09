@@ -10,6 +10,7 @@ import Iris.Std.GenSetsInstances
 import GoLean.GoCore.MachineSound
 import GoLeanProofs.HeapBridge
 import GoLeanProofs.Laws.Eval
+import GoLeanProofs.Laws.Control
 import GoLeanProofs.Tactics.GoWalk
 
 /-!
@@ -579,7 +580,7 @@ theorem wp_map_iter_inv_key_sum_witness {acc : Addr} {valTy : Ty} {env k}
       rw [hm]
       -- `sum = sum + k`
       unfold keySumBody
-      iapply (wp_assign_start (te := .ref "sum") rfl)
+      iapply (wp_assign_start (e := .ref "sum") (sh := .chain []) (ops := []) rfl)
       iapply fupd_intro
       inext
       iapply fupd_intro
@@ -591,7 +592,7 @@ theorem wp_map_iter_inv_key_sum_witness {acc : Addr} {valTy : Ty} {env k}
       inext
       iapply fupd_intro
       iintro Hc₂
-      iapply wp_assign_target
+      iapply (wp_tgtop_rhs rfl)
       iapply fupd_intro
       inext
       iapply fupd_intro
@@ -628,6 +629,12 @@ theorem wp_map_iter_inv_key_sum_witness {acc : Addr} {valTy : Ty} {env k}
       inext
       iapply fupd_intro
       iintro Hc₆
+      iapply wp_rhs_stores_vals
+      iapply fupd_intro
+      inext
+      iapply fupd_intro
+      iintro Hc₇
+      simp only [List.nil_append, List.reverse_cons, List.reverse_nil]
       iapply (wp_assign_store
         (oldcell := ⟨some (.int .int), .int v .int⟩)
         (newcell := ⟨some (.int .int), .int (v + m) .int⟩)
@@ -638,6 +645,7 @@ theorem wp_map_iter_inv_key_sum_witness {acc : Addr} {valTy : Ty} {env k}
       isplitl [Hacc]
       · iexact Hacc
       iintro Hacc
+      iapply wp_stores_done_nil
       iapply Hk
       iexists (v + m)
       isplitl []

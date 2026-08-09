@@ -907,9 +907,39 @@ theorem wp_stmt_op_apply_read_store₂ {op : StmtOp} {nt : Nat} {done : List GoV
     rw [happly σ₁ ch hfns hmeths htypes hne hlookr hlookt hlooko] at hap
     exact absurd hap (by simp)
 
-/-- **The comma-ok map read** `t, ok = m[key]` as ONE apply step: the
-map's data cell is read, the value target and the ok target are written
-(in that order — the machine's `storeLoc`/`storeLoc` sequence).
+/-- **The comma-ok map lookup's spine entry** (`Step.mapLookupFirst`,
+BUG-034 migration): `t, ok = m[key]` enters the tgtOpK/rhsK/storeK
+spine with the lookup carried as the `RhsOp` value source — target
+operands are phase 1 with their checks deferred to the stores, and the
+lookup applies at the end of phase 1 (`wp_map_lookup` below). Not in
+the `@[go_walk_law]` table: walks hand the composed comma-ok laws over
+whole (the boundary rule); this entry law is applied explicitly inside
+them. Witness: the `wp_map_lookup_ackedIndex_entries` walk
+(`Specs/GoldenQuorumPin`), every premise discharged. The `typeAssert`
+twin (`Step.typeAssertFirst`) deliberately has NO law yet — a law
+without a discharge witness is a scaffold (the `wp_assign` lesson);
+it lands with its first consumer. -/
+theorem wp_map_lookup_start {t okT : Assignee} {base index : Expr}
+    {keyTy valueTy : Ty} {sh : TargetShape} {e : Expr} {ops : List Expr}
+    {rest : List (TargetShape × List Expr)} {env k}
+    (hplan : targetsPlan [t, okT] = some ((sh, e :: ops) :: rest)) :
+    (|={E}[E]▷=> £ 1 -∗
+      WP (Config.evalE e env (.tgtOpK sh [] ops [] rest
+        (.mapLookup keyTy valueTy) [base, index] [] (.seqn #[]) env k))
+        @ s ; E {{ Φ }}) ⊢
+      WP (Config.exec (.mapLookup t okT base index keyTy valueTy) env k)
+        @ s ; E {{ Φ }} :=
+  wp_pure_det rfl
+    (by simp [Config.choiceFree, stmtPlan])
+    (fun _ => Step.mapLookupFirst hplan)
+
+/-- **The comma-ok map read** `t, ok = m[key]` over the spine (BUG-034
+migration, spec-parity slice 1): the value-source APPLY step reads the
+map's data cell (`applyRhsOp .mapLookup` — an unhashable key would
+panic HERE, before any store), then the value target and the ok target
+are written as two ordinary left-to-right `storeK` phase-2 steps. Was
+one `applyStmtOp` step before the migration; the statement's premises
+are UNCHANGED.
 
 The premises are the machine's own computations, in the
 `wp_assign_store`/`hstore` style: `hkey` normalizes the key operand at the
@@ -917,10 +947,13 @@ range key type, `hpair` is the lookup's `(value, found)` answer given the
 owned data cell, and the two `hstore*` are the cell-conditioned writes.
 They are all state-quantified, so they are dischargeable exactly when the
 types involved are `σ.types`-independent (see this module's header —
-`.defined`-typed target cells are the blocked case). -/
+`.defined`-typed target cells are the blocked case). The postcondition's
+configuration is the drained `storeK`; the statement form's `.seqn #[]`
+body is finished by `wp_stores_done_nil` (`Laws/Control`), which is how
+a consumer keeps a `Config.next k` post at a generic `k`. -/
 theorem wp_map_lookup {keyTy valTy : Ty} {mba ta oa : Addr} {mty : Option Ty}
     {entries : Array (GoValue × GoValue)} {keyV key val : GoValue} {b : Bool}
-    {tcell tcell' ocell ocell' : HeapCell} {env k}
+    {tcell tcell' ocell ocell' : HeapCell} {body : Stmt} {env : LocalEnv} {k}
     (hkey : ∀ σ : ExecState, σ.types = GoCoreGS.types GF →
       normalizeValueForTy σ keyTy keyV = .ok key)
     (hpair : ∀ σ : ExecState, σ.types = GoCoreGS.types GF →
@@ -936,21 +969,56 @@ theorem wp_map_lookup {keyTy valTy : Ty} {mba ta oa : Addr} {mty : Option Ty}
         = .ok { σ with heap := Heap.set σ.heap (.base oa) ocell' }) :
     mba.id ↦ (⟨mty, .mapData entries⟩ : HeapCell) ∗ ta.id ↦ tcell ∗ oa.id ↦ ocell
       ∗ (mba.id ↦ (⟨mty, .mapData entries⟩ : HeapCell) ∗ ta.id ↦ tcell'
-            ∗ oa.id ↦ ocell' -∗ WP (Config.next k) @ s ; E {{ Φ }})
+            ∗ oa.id ↦ ocell' -∗
+          WP (Config.next (.storeK [] [] body env k)) @ s ; E {{ Φ }})
       ⊢ WP (Config.retV keyV
-            (.stmtOpK (.mapLookup keyTy valTy) 2
-              [.map ⟨some (.base mba)⟩, .addr (.base oa), .addr (.base ta)] [] env k))
+            (.rhsK (.mapLookup keyTy valTy)
+              [.chain (.addr (.base ta)) [] [], .chain (.addr (.base oa)) [] []]
+              [.map ⟨some (.base mba)⟩] [] body env k))
         @ s ; E {{ Φ }} := by
-  iapply wp_stmt_op_apply_read_store₂
-  intro σ ch hfns hmeths htypes hne hlookm hlookt hlooko
-  have hlooko' : Heap.lookup (Heap.set σ.heap (.base ta) tcell') (.base oa)
-      = some ocell := by
-    rw [heap_lookup_set_base_ne (b := ta) (n := oa.id) hne]
-    exact hlooko
-  have hstore2 := hstoreo { σ with heap := Heap.set σ.heap (.base ta) tcell' }
-    htypes hlooko'
-  simp [applyStmtOp, valueAsMap, valueAsLoc, hkey σ htypes, hpair σ htypes hlookm,
-    hstoret σ htypes hlookt, hstore2, Bind.bind, Except.bind, applyStmtOpCore]
+  iintro ⟨Hmb, Ht, Ho, Hcont⟩
+  -- Step 1: the value-source apply — a heap READ through the map's data
+  -- cell (the machine's `Step.rhsStores` with the `.mapLookup` source).
+  iapply (wp_det_step_keep
+    (P := iprop(mba.id ↦ (⟨mty, .mapData entries⟩ : HeapCell)))
+    (c₁ := Config.next (.storeK
+      [.chain (.addr (.base ta)) [] [], .chain (.addr (.base oa)) [] []]
+      [val, .bool b] body env k))
+    (hnv := rfl)
+    (hred := fun σ₁ _hfns _hmeths htypes => by
+      iintro ⟨Hσ, Hpt⟩
+      ihave %Hmap : ⌜get? (heapToMap σ₁.heap) mba.id
+          = some (⟨mty, .mapData entries⟩ : HeapCell)⌝ $$ [Hσ Hpt]
+      · icases genHeap_valid $$ [$Hσ $Hpt] with >%h
+        itrivial
+      have hlook : Heap.lookup σ₁.heap (.base mba)
+          = some ⟨mty, .mapData entries⟩ := by
+        rw [get?_heapToMap] at Hmap; simpa using Hmap
+      have happly : applyRhsOp σ₁ (.mapLookup keyTy valTy)
+          ((keyV :: [GoValue.map ⟨some (.base mba)⟩]).reverse)
+          = .ok [val, .bool b] := by
+        simp [applyRhsOp, valueAsMap, hkey σ₁ htypes,
+          hpair σ₁ htypes hlook, Bind.bind, Except.bind]
+      imodintro
+      ipureintro
+      refine ⟨Step.rhsStores happly, ?_⟩
+      intro c' s' hst
+      obtain ⟨h1, h2⟩ := step_det (by trivial) (Step.rhsStores happly) hst
+      exact ⟨h1.symm, h2.symm⟩))
+  isplitl [Hmb]
+  · iexact Hmb
+  iintro Hmb
+  -- Step 2: the value target's store (phase 2, left-to-right).
+  iapply (wp_assign_store_loc (hstore := hstoret))
+  isplitl [Ht]
+  · iexact Ht
+  iintro Ht
+  -- Step 3: the ok target's store.
+  iapply (wp_assign_store_loc (hstore := hstoreo))
+  isplitl [Ho]
+  · iexact Ho
+  iintro Ho
+  iapply Hcont $$ [$Hmb $Ht $Ho]
 
 end
 

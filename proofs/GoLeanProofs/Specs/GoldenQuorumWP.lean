@@ -333,6 +333,8 @@ theorem wp_ci_len {ca cba : Addr} {cty : Option Ty}
     (out := .int (Int.ofNat entries.size) .int)
     (happly := fun σ _ht hl => by
       simp [applyStrictOp, loadLoc, hl, Bind.bind, Except.bind]))
+  -- the identity value source applies (`wp_rhs_stores_vals`, spine)
+  go_walk 1
   -- the store into `n`
   go_walk_step (wp_assign_store
     (oldcell := ⟨some (.int .int), .int 0 .int⟩)
@@ -416,6 +418,7 @@ theorem wp_ci_fitIf_one {na sta sra : Addr} {w : GoValue} {rest env k}
     (happly := fun σ _ht hl => by
       simp [applyStrictOp, applySlice, loadLoc, hl, stkZero, valueAsInt,
         sliceFromArray, checkSliceBounds, Bind.bind, Except.bind]))
+  go_walk 1
   go_walk_step (wp_assign_store
     (oldcell := ⟨some (.slice (.int .uint64)), w⟩)
     (newcell := ⟨some (.slice (.int .uint64)),
@@ -516,11 +519,13 @@ theorem wp_ci_range_body_one {ia la lba sra sta pa : Addr}
   unfold ciOkThen
   go_walk
   -- the store THROUGH A SLICE INDEX into the on-stack backing array
-  go_walk_step (wp_assign_store_loc (a := sta)
+  go_walk_step (wp_store_target (a := sta)
     (oldcell := ⟨some (.array 7 (.int .uint64)), stkZero⟩)
     (newcell := ⟨some (.array 7 (.int .uint64)), stkOne 12⟩)
     (fun σ _ht hlk => by
-      simp [storeLoc, loadLoc, hlk, stkZero, stkOne, arrayIndexNat, arraySet,
+      simp [storeTarget, resolveChain, indexTargetLoc, valueAsLoc, valueAsInt,
+        sliceIndexLoc, validateSlice, valueAsSlice,
+        storeLoc, loadLoc, hlk, stkZero, stkOne, arrayIndexNat, arraySet,
         coerceStoredValue, normalizeValueForTy, normalizeValueForTyFuel,
         normalizeListWith, Bind.bind, Except.bind, Functor.map, Except.map,
         show IntKind.uint64.normalize 12 = 12 from by decide,
@@ -740,6 +745,7 @@ theorem wp_ci_tail_one {na sra sta ra : Addr} {env k}
         typeResolutionFuel, resolveDefinedAliases, resolveDefinedAliasesFuel,
         QuorumPin.typeEnv_Index, Bind.bind, Except.bind,
         show IntKind.uint64.normalize 12 = 12 from by decide]))
+  go_walk 1
   go_walk_step (wp_assign_store
     (oldcell := ⟨some (.defined ⟨"main.Index"⟩), .int 0 .uint64⟩)
     (newcell := ⟨some (.defined ⟨"main.Index"⟩), .int 12 .uint64⟩)

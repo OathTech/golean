@@ -748,16 +748,22 @@ replaying the chain (checks included) in `storeTarget`.
 
 ## BUG-034 — comma-ok `v, ok = m[k]` / `v, ok = x.(T)` still ride the eager stmtPlan path
 
-- Status: open (round-4 disposition, migrate-or-scope-honestly: a full
-  spine migration WAS built and validated (RhsOp/applyRhsOp, both pins
-  flipped, zero corpus drift) and then REVERTED in the same round —
-  retiring `StmtOp.mapLookup`/`.typeAssertStmt` breaks the shipped
-  `wp_map_lookup` law family (`Laws/StmtOps.lean`, the three-cell
-  comma-ok law used by the HEADLINE quorum walk at
-  `GoldenQuorumWP.lean:183` plus its GoldenQuorumPin witnesses), whose
-  spine restatement is a coordinated laws rework, not a round patch.
-  Scheduled with the BUG-025 call-write-back and BUG-037 migrations as
-  ONE machine+laws slice; the two pins stay red and visible.)
+- Status: fixed (2026-08-09, spec-parity-s1 — the assignment-spine laws
+  slice: the round-4 machine migration re-applied (RhsOp/applyRhsOp;
+  `StmtOp.mapLookup`/`.typeAssertStmt` removed outright; the comma-ok
+  forms enter tgtOpK via `mapLookupFirst`/`typeAssertFirst` with the
+  source applied at the end of phase 1) AND the anchoring law family
+  restated over the spine in the same movement: `wp_map_lookup`
+  (`Laws/StmtOps.lean`) is now the value-source apply (map read) plus
+  two `storeK` store lifts with UNCHANGED premises, the spine entry is
+  `wp_map_lookup_start` (witnessed by the reworked
+  `wp_map_lookup_ackedIndex_entries` walk in GoldenQuorumPin), and the
+  quorum walks (WP/Three/All + the registered one-entry law) re-prove
+  with their statements unchanged. The `typeAssert` spine entry has NO
+  WP law yet — deliberately, a law without a witness is a scaffold; it
+  lands with its first consumer. Race.lean lockstep: the
+  mapLookup/typeAssertStmt footprint rows retired, the `rhsK`-apply map
+  read added. Both pins flip PASS.)
 - Pinned-by: differential
 - Cases: multi-assign/comma-ok-forms/map-oob, multi-assign/comma-ok-forms/assert-nil-field
 - Discovered: 2026-08-06 (round-4 convergence check, verified major;
@@ -817,19 +823,24 @@ spine, post-BUG-025) and keep the phase split inside the clause.
 
 ## BUG-037 — single assignment fires the target's phase-2 check before evaluating the RHS
 
-- Status: open (round-4 disposition, migrate-or-scope-honestly: the
-  spine migration (`assignFirst`, retiring the `assignTargetK`/
-  `assignStoreK` frames) WAS built and validated — all three pins
-  flipped, zero corpus drift — and then REVERTED in the same round:
-  those frames anchor the entire shipped WP assignment law family
-  (`wp_assign_start`/`wp_assign_target`/`wp_assign_store*` in
-  `Laws/Eval.lean`, with the `wp_assign_lit` non-vacuity witness in
-  `Laws/Assign.lean`, and every golden walk's store steps; file
-  pointer corrected 2026-08-06 final check — b86993e's commit message
-  carries the old wording).
-  Restating that family over the spine is the same coordinated
-  machine+laws slice as BUG-025's call write-back and BUG-034;
-  the three pins stay red and visible until it lands.)
+- Status: fixed (2026-08-09, spec-parity-s1 — the assignment-spine laws
+  slice: the round-4 machine migration re-applied (`assignFirst` — a
+  single assignment rides tgtOpK/rhsK/storeK as a one-target
+  multi-assign; the `assignTargetK`/`assignStoreK` frames and their
+  five rules removed outright) AND the anchoring WP assignment law
+  family restated over the spine in the same movement:
+  `wp_assign_start` enters the spine, the new pure step laws
+  (`wp_tgtop_shift`/`wp_tgtop_next`/`wp_tgtop_rhs`/`wp_rhs_shift`/
+  `wp_rhs_stores_vals`/`wp_stores_done`, all registered `go_walk`
+  laws) cover phase 1 and the phase transitions, the store lift is
+  `wp_store_target` (general chain replay; `wp_assign_store_loc`/
+  `wp_assign_store` keep their `storeLoc`-shaped premises as bare-chain
+  instances), and the generic-continuation drain is
+  `wp_stores_done_nil` via the empty-splice absorber `wp_seqCont_nil`
+  (`Laws/Control.lean`). The `wp_assign_lit` non-vacuity witness
+  re-proved as the full spine walk with its statement's `Config.next k`
+  post intact; every golden/loop/range/unwind walk re-proved. All
+  three pins flip PASS.)
 - Pinned-by: differential
 - Cases: assign-order/target-check-vs-rhs/index-target, assign-order/target-check-vs-rhs/nil-field-target, assign-order/target-check-vs-rhs/nil-deref-target
 - Discovered: 2026-08-06 (round-4 convergence check, verified major;

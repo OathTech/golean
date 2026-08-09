@@ -10,6 +10,7 @@ import Iris.Std.GenSetsInstances
 import GoLean.GoCore.MachineSound
 import GoLeanProofs.HeapBridge
 import GoLeanProofs.Laws.Eval
+import GoLeanProofs.Laws.Control
 
 /-!
 # Assignment laws (R3 rewrite over the fine-grained machine)
@@ -38,11 +39,17 @@ section
 variable {GF : BundledGFunctors} {hlc : HasLC} [GoCoreGS hlc GF]
 variable {s : Stuckness} {E : CoPset} {Φ : Unit → IProp GF}
 
-/-- **`x = intLit n` — the composed assignment walk** (entry → `&x` →
-target receipt → literal → store), and the walk architecture's discharge
-witness: every premise of every step law is discharged here — the plan
-fact by `rfl`, resolution by `hres`, and the store by
-`storeLoc_int_cell` (zero residual hypotheses beyond the resolution). -/
+/-- **`x = intLit n` — the composed assignment walk** (spine entry →
+`&x` → last-target completion into `rhsK` → literal → the identity
+value source → the `storeK` store → phase-2 completion), and the walk
+architecture's discharge witness: every premise of every step law is
+discharged here — the plan and completion facts by `rfl`, resolution by
+`hres`, and the store by `storeLoc_int_cell` (zero residual hypotheses
+beyond the resolution). Restated over the tgtOpK/rhsK/storeK spine when
+the single assignment migrated onto it (BUG-037, spec-parity slice 1);
+the phase-2 drain back to the statement's own
+continuation is `wp_stores_done_nil` (the empty-splice absorber), so
+the post stays `Config.next k` at an arbitrary `k`. -/
 theorem wp_assign_lit {x : String} {a : Addr} {w : GoValue} {n : Int}
     {kind : IntKind} {env k}
     (hres : LocalEnv.lookup env x = some (.base a)) :
@@ -52,7 +59,7 @@ theorem wp_assign_lit {x : String} {a : Addr} {w : GoValue} {n : Int}
       ⊢ WP (Config.exec (.assign (.var x) (.intLit n kind)) env k)
           @ s ; E {{ Φ }} := by
   iintro ⟨Hpt, Hcont⟩
-  iapply (wp_assign_start (te := .ref x) rfl)
+  iapply (wp_assign_start (e := .ref x) (sh := .chain []) (ops := []) rfl)
   iapply fupd_intro
   inext
   iapply fupd_intro
@@ -62,7 +69,7 @@ theorem wp_assign_lit {x : String} {a : Addr} {w : GoValue} {n : Int}
   inext
   iapply fupd_intro
   iintro Hcred₂
-  iapply wp_assign_target
+  iapply (wp_tgtop_rhs (r := .chain (.addr (.base a)) [] []) rfl)
   iapply fupd_intro
   inext
   iapply fupd_intro
@@ -72,6 +79,12 @@ theorem wp_assign_lit {x : String} {a : Addr} {w : GoValue} {n : Int}
   inext
   iapply fupd_intro
   iintro Hcred₄
+  iapply wp_rhs_stores_vals
+  iapply fupd_intro
+  inext
+  iapply fupd_intro
+  iintro Hcred₅
+  simp only [List.nil_append, List.reverse_cons, List.reverse_nil]
   iapply (wp_assign_store
     (oldcell := ⟨some (.int kind), w⟩)
     (newcell := ⟨some (.int kind), .int (kind.normalize n) kind⟩)
@@ -79,6 +92,7 @@ theorem wp_assign_lit {x : String} {a : Addr} {w : GoValue} {n : Int}
   isplitl [Hpt]
   · iexact Hpt
   iintro Hpt
+  iapply wp_stores_done_nil
   iapply Hcont $$ Hpt
 
 end

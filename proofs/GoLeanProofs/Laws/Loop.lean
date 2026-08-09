@@ -10,6 +10,7 @@ import Iris.Std.GenSetsInstances
 import GoLean.GoCore.MachineSound
 import GoLeanProofs.HeapBridge
 import GoLeanProofs.Laws.Eval
+import GoLeanProofs.Laws.Control
 import GoLeanProofs.Tactics.GoWalk
 
 /-!
@@ -190,7 +191,7 @@ theorem wp_while_eq_once {xa : Addr} {x : String} {env k}
         · rfl
         · simp at hnd
       subst hn0
-      iapply (wp_assign_start (te := .ref x) rfl)
+      iapply (wp_assign_start (e := .ref x) (sh := .chain []) (ops := []) rfl)
       iapply fupd_intro
       inext
       iapply fupd_intro
@@ -200,7 +201,7 @@ theorem wp_while_eq_once {xa : Addr} {x : String} {env k}
       inext
       iapply fupd_intro
       iintro Hb₂
-      iapply wp_assign_target
+      iapply (wp_tgtop_rhs rfl)
       iapply fupd_intro
       inext
       iapply fupd_intro
@@ -236,6 +237,12 @@ theorem wp_while_eq_once {xa : Addr} {x : String} {env k}
       inext
       iapply fupd_intro
       iintro Hb₇
+      iapply wp_rhs_stores_vals
+      iapply fupd_intro
+      inext
+      iapply fupd_intro
+      iintro Hb₈
+      simp only [List.nil_append, List.reverse_cons, List.reverse_nil]
       iapply (wp_assign_store (oldcell := ⟨some (.int .int), .int 0 .int⟩)
         (newcell := ⟨some (.int .int), .int 1 .int⟩)
         (hstore := fun σ₁ _ht hlook => by
@@ -245,6 +252,7 @@ theorem wp_while_eq_once {xa : Addr} {x : String} {env k}
       isplitl [Hpt]
       · iexact Hpt
       iintro Hpt
+      iapply wp_stores_done_nil
       iapply Hk
       iexists false
       iexists (1 : Int)

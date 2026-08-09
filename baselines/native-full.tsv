@@ -1,16 +1,23 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-09  commit: F15 guardrail corpus (observation-kind family, 6 new PASS ids)
+# recorded: 2026-08-09  commit: BUG-034 + BUG-037 FIXED (assignment-spine laws slice, spec-parity-s1)
 #   frontend: native  oracle: go run (strict lane) / go-run membership in the
 #   machine-enumerated observation set, sampled plain AND under -race
 #   (membership lane; go1.26.5) / schedule-tree singleton certification +
 #   strict go-run equality (confluent lane) / every-enumerated-path-refuses
 #   + go run -race red (racy lane; never combined with deadlock)
-# manifest_cases: 1411  pass: 1295  fail: 116
-# Re-pin reason: F15 opener guardrails (spec-parity s1): six new
-#   ints/observation-kind cases pin the kind-fidelity SHAPE family
-#   (right-value wrong-kind answers, the BUG-042/043 template) ahead
-#   of the symmetric observation-channel kind emission. All six PASS
-#   under the value-only channel; zero drift on all 1405 prior ids.
+# manifest_cases: 1411  pass: 1300  fail: 111
+# Re-pin reason: the assignment-spine laws slice (spec-parity s1,
+#   movement B1): the round-4 spine migration re-applied — single
+#   assigns (assignFirst) and the comma-ok forms (mapLookupFirst/
+#   typeAssertFirst + RhsOp/applyRhsOp) ride the tgtOpK/rhsK/storeK
+#   spine; assignTargetK/assignStoreK and StmtOp.mapLookup/
+#   typeAssertStmt removed outright — WITH the anchoring WP law
+#   families restated over the spine in the same movement (the
+#   revert b86993ea's blocker). Exactly the five held-open pins flip
+#   FAIL->PASS: assign-order/target-check-vs-rhs/{index-target,
+#   nil-deref-target,nil-field-target} (BUG-037) and
+#   multi-assign/comma-ok-forms/{map-oob,assert-nil-field}
+#   (BUG-034). Zero drift on all 1406 other ids.
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
 PASS	arrays/array-copy	-
@@ -32,9 +39,9 @@ PASS	arrays/nil-pointer-len-cap	-
 FAIL	arrays/pointer-array	lean-observation
 PASS	assign-order/conversion-call-eval-once/assign	-
 PASS	assign-order/conversion-call-eval-once/define	-
-FAIL	assign-order/target-check-vs-rhs/index-target	differential
-FAIL	assign-order/target-check-vs-rhs/nil-deref-target	differential
-FAIL	assign-order/target-check-vs-rhs/nil-field-target	differential
+PASS	assign-order/target-check-vs-rhs/index-target	-
+PASS	assign-order/target-check-vs-rhs/nil-deref-target	-
+PASS	assign-order/target-check-vs-rhs/nil-field-target	-
 PASS	bools/generic-type-set/and-or	-
 PASS	bools/generic-type-set/equality	-
 PASS	bools/generic-type-set/inference	-
@@ -1043,9 +1050,9 @@ PASS	multi-assign/chain-field-over-index/array-field	-
 PASS	multi-assign/chain-field-over-index/array-nested	-
 PASS	multi-assign/chain-field-over-index/inner-value-guard	-
 PASS	multi-assign/chain-field-over-index/nil-slice-field	-
-FAIL	multi-assign/comma-ok-forms/assert-nil-field	differential
+PASS	multi-assign/comma-ok-forms/assert-nil-field	-
 PASS	multi-assign/comma-ok-forms/dep-index	-
-FAIL	multi-assign/comma-ok-forms/map-oob	differential
+PASS	multi-assign/comma-ok-forms/map-oob	-
 PASS	multi-assign/deref-target-before-rhs	-
 PASS	multi-assign/field-nil-store-time	-
 PASS	multi-assign/index-target-rhs-call-order	-
