@@ -47,6 +47,15 @@ for arg in "$@"; do
     # tracked certified-set records and report CERTIFIED-CACHED —
     # visibly, never as a silent skip.
     --slow) RUN_DIFF=1; RUN_SLOW=1 ;;
+    # FAIL CLOSED ON TYPOS (2026-08-09). This loop used to ignore anything it
+    # didn't recognise, so `scripts/ci --dif` ran the FAST gate and printed
+    # RESULT: PASS — the operator believes the differential ran when it never
+    # did, which is the exact "gate quietly failed open" class this repo
+    # treats as worse than a red. Cost us a wasted run the day it was found.
+    *) echo "scripts/ci: unknown argument '$arg' (expected --diff or --slow)" >&2
+       echo "  Refusing to run: a mistyped flag must never silently downgrade" >&2
+       echo "  the gate to a weaker one that still reports PASS." >&2
+       exit 2 ;;
   esac
 done
 
