@@ -23,7 +23,12 @@ exist because they let us do that without accumulating debt, not as ceremony.
    frontend), plus `lake exe gocore-eval-tests`.
 3. Diff the failing case-id set against the last recorded baseline
    (`scripts/coverage-baseline-diff`). **Same set = no regression.** Any new red
-   is investigated before committing.
+   is investigated before committing. **No recorded run at all is a FAIL**, not
+   a skip (2026-08-09): a killed `--diff` deletes the record up front, and
+   "nothing has checked the corpus" used to exit PASS. A fresh clone therefore
+   goes red until you run `scripts/ci --diff` once; an environment that never
+   records one (CI's fast gate) sets `GOLEAN_ALLOW_NO_DIFF=1` explicitly and
+   reports a visible `note`.
 
 A green build is not evidence of correctness. The cheap, decisive signal is the
 failing-set diff — it is what kept 13 consecutive cleanup slices at zero
@@ -32,12 +37,13 @@ frontend (`tools/nativefrontend` + `NativeToIR.lean`) is the only frontend.
 
 ### Never run a Lean build uncapped (2026-08-09)
 
-Every `lake`/`lean` invocation goes through **`scripts/capped`**, which runs it
-in its own cgroup (`systemd-run --user --scope`, `MemoryMax` default 64G on a
-125G box, `GOLEAN_MEM_MAX` to override, `=none` to opt out loudly). On breach
-the kernel kills inside that cgroup only, so the build dies instead of the
-machine. `scripts/ci` re-execs itself through it — a rule you can forget is not
-a gate — so the gate needs no special handling; ad hoc builds do.
+Every `lake`/`lean` invocation MUST go through **`scripts/capped`** (a rule,
+not a description of the current state — see the uncapped list below), which
+runs it in its own cgroup (`systemd-run --user --scope`, `MemoryMax` default
+64G on a 125G box, `GOLEAN_MEM_MAX` to override, `=none` to opt out loudly).
+On breach the kernel kills inside that cgroup only, so the build dies instead
+of the machine. `scripts/ci` re-execs itself through it — a rule you can forget
+is not a gate — so the gate needs no special handling; ad hoc builds do.
 **The cap is a blast radius, not a budget:** use the heavy machine when a job
 needs it, just never let one job take the box.
 

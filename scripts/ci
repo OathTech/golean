@@ -32,9 +32,16 @@ cd "$ROOT"
 #    able to take the machine down. Self-wrapping rather than documenting is
 #    deliberate: a rule you can forget is not a gate. See scripts/capped for
 #    the cap size, the opt-out, and the two mechanisms that DON'T work.
-if [ -z "${GOLEAN_CAPPED:-}" ]; then
-  exec "$ROOT/scripts/capped" "$ROOT/scripts/ci" "$@"
-fi
+#    Only two token values may skip the wrap: `verified` (scripts/capped read
+#    the cgroup's memory.max back and PROVED a cap) and `none` (a deliberate,
+#    warned opt-out). Anything else — notably a stale `=1` inherited from an
+#    unrelated shell — gets wrapped, and bounces off the readback with exit 3.
+#    Trusting the bare variable here meant the readback never protected THIS
+#    script, the one CLAUDE.md tells everyone to run (delta-review D2).
+case "${GOLEAN_CAPPED:-}" in
+  verified|none) ;;
+  *) exec "$ROOT/scripts/capped" "$ROOT/scripts/ci" "$@" ;;
+esac
 
 RUN_DIFF=0
 RUN_SLOW=0

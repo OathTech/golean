@@ -48,34 +48,53 @@ fi
 # The reproduction was the exact scenario this script exists to prevent: the
 # terminal multiplexer's cgroup, memory.max=max. So: read the limit back.
 #
-# GOLEAN_CAPPED=none means "the opt-out already fired, don't re-verify and
-# don't re-wrap". It MUST be set on the opt-out path: a caller that re-execs
-# itself through this script (scripts/ci does) will otherwise bounce between
-# the two forever. That was a live infinite loop — `GOLEAN_MEM_MAX=none
-# scripts/ci` span until killed — because the opt-out exec'd the caller back
-# with no marker set. Caught by hand-testing the CI opt-out end to end; the
-# audit had only exercised =none on a bare command, never through a
-# self-wrapping caller.
+# THE TOKEN VALUES ARE LOAD-BEARING (delta-review D1/D2, 2026-08-09) — three
+# distinct states, because two of them were conflated and that WAS the bug:
+#
+#   (unset)  nothing has happened yet          -> wrap
+#   none     the opt-out fired, WARN every time-> run, uncapped, loudly
+#   verified the readback below PASSED here    -> run, capped
+#
+# Anything else (notably a stale `=1` from an unrelated shell) is UNTRUSTED and
+# must reach the readback. The first attempt used `=none` as a bare "already
+# handled" marker placed BEFORE the readback and printing nothing, which
+# recreated the exact fail-open it was fixing: an inherited GOLEAN_CAPPED=none
+# ran uncapped in the caller's own cgroup, silently, forever after — every
+# descendant of one opted-out shell. Hence: `none` warns unconditionally, and
+# only `verified` — which nothing but this script's own verified path sets —
+# skips the check.
 if [ "${GOLEAN_CAPPED:-}" = "none" ]; then
+  echo "scripts/capped: WARNING — running UNCAPPED (inherited GOLEAN_CAPPED=none): $*" >&2
+  exec "$@"
+fi
+if [ "${GOLEAN_CAPPED:-}" = "verified" ]; then
   exec "$@"
 fi
 if [ -n "${GOLEAN_CAPPED:-}" ]; then
-  cg="$(cut -d: -f3 /proc/self/cgroup 2>/dev/null | head -1)"
+  # Select the cgroup-v2 line explicitly ("0::"), and keep everything after
+  # the second colon — cgroup PATHS may themselves contain colons (systemd
+  # unit names allow them), and on a hybrid/v1 host `head -1` picks a v1
+  # controller line whose path has no memory.max (D4). Both mistakes fail
+  # CLOSED here (exit 3, never a false pass), but they refuse legitimate runs.
+  cg="$(awk -F: '/^0::/{print substr($0, index($0,":")+2); exit}' /proc/self/cgroup 2>/dev/null)"
   lim="$(cat "/sys/fs/cgroup${cg}/memory.max" 2>/dev/null)"
   if [ -z "$lim" ] || [ "$lim" = "max" ]; then
     cat >&2 <<EOF
 scripts/capped: REFUSING TO RUN — the memory cap is not in effect.
   cgroup:     ${cg:-<unreadable>}
   memory.max: ${lim:-<unreadable>}  (expected a byte count, not "max")
-  GOLEAN_CAPPED was set, so something claimed this process is capped, but the
-  kernel disagrees. Causes: a stale GOLEAN_CAPPED inherited from an unrelated
-  shell, or a host whose systemd user manager has no delegated memory
-  controller (check: cat /sys/fs/cgroup/user.slice/user-\$(id -u).slice/user@\$(id -u).service/cgroup.subtree_control).
+  GOLEAN_CAPPED=${GOLEAN_CAPPED} claimed this process is capped; the kernel
+  disagrees. Causes: a stale GOLEAN_CAPPED inherited from an unrelated shell;
+  a GOLEAN_MEM_MAX value systemd parsed as no limit (you asked for "$MEM");
+  or a host whose systemd user manager has no delegated memory controller
+  (check: cat /sys/fs/cgroup/user.slice/user-\$(id -u).slice/user@\$(id -u).service/cgroup.subtree_control).
   Run uncapped only if you mean it: GOLEAN_MEM_MAX=none $0 $*
 EOF
     exit 3
   fi
-  exec "$@"
+  # Hand the verified token down, so a self-wrapping caller (scripts/ci) can
+  # tell "a cap was PROVEN here" from "someone set a variable".
+  exec env GOLEAN_CAPPED=verified "$@"
 fi
 
 # Explicit, visible opt-out. Fail-closed doctrine: an unavailable cap is an
@@ -95,6 +114,31 @@ scripts/capped: systemd-run not found — refusing to run uncapped.
       GOLEAN_MEM_MAX=none scripts/capped $*
 EOF
   exit 127
+fi
+
+# PRE-FLIGHT: prove a capped scope can actually be created, before handing
+# systemd-run the real command. Without this, the two commonest setup errors
+# surface as a bare systemd message and exit 1 — indistinguishable from "the
+# build failed" (delta-review D3/D5/D7):
+#   * systemd-run present but no session D-Bus ("Failed to connect to bus") —
+#     GitHub runners, sudo-ed shells, containers. This is the F1 environment,
+#     so it is exactly the case that deserves the pointer to the opt-out.
+#   * an unparseable GOLEAN_MEM_MAX ("64GB", "abc", "infinity") — systemd
+#     rejects it, or silently means "no limit", which the readback would then
+#     refuse with a misleading diagnosis.
+# Costs one transient scope around `true` (~ms).
+if ! probe="$(systemd-run --user --scope -q -p MemoryMax="$MEM" -p MemorySwapMax=0 -- true 2>&1)"; then
+  cat >&2 <<EOF
+scripts/capped: cannot create a capped cgroup — refusing to run uncapped.
+  systemd-run said: ${probe:-<no output>}
+  GOLEAN_MEM_MAX=$MEM
+  Likely either a bad size (use 64G / 8192M / a plain byte count), or no
+  systemd user session on this host (common on CI runners, in containers, and
+  under sudo — check: systemctl --user is-system-running).
+  If this host cannot cap, opt out explicitly and knowingly:
+      GOLEAN_MEM_MAX=none $0 $*
+EOF
+  exit 4
 fi
 
 # --user --scope: the command runs as a transient scope in the caller's
