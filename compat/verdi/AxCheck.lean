@@ -9,4 +9,5 @@ open VerdiCompat VerdiCompat.Raft
 #print axioms step_failure_star_raft_intermediate_reachable
 #print axioms VerdiCompat.acknowledge_all_ops_func_correct
 #print axioms VerdiCompat.IR_equivalent_refl
+#print axioms VerdiCompat.Examples.raft_linearizable_conclusion_witness
 

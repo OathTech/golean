@@ -4,6 +4,7 @@ import VerdiCompat.RaftState
 import VerdiCompat.Raft
 import VerdiCompat.Linearizability
 import VerdiCompat.CommonDefinitions
+import VerdiCompat.RaftLinearizable
 import VerdiCompat.Properties
 import VerdiCompat.ProofStructure
 import VerdiCompat.Examples
