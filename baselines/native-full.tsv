@@ -1,20 +1,20 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-09  commit: sync-package slice-2 guardrails (spec-parity arc)
+# recorded: 2026-08-09  commit: sync-package machine+frontend movement (spec-parity slice 2)
 #   frontend: native  oracle: go run (strict lane) / go-run membership in the
 #   machine-enumerated observation set, sampled plain AND under -race
 #   (membership lane; go1.26.5) / schedule-tree singleton certification +
 #   strict go-run equality (confluent lane) / every-enumerated-path-refuses
 #   + go run -race red (racy lane; never combined with deadlock)
-# manifest_cases: 1454  pass: 1311  fail: 143
-# Re-pin reason: the 35 sync-package guardrail pins (design note
-#   docs/2026-08-09_sync-package-design.md §10) land red-first BEFORE any
-#   machine/frontend sync work: 28 sync/* rows + 4 race/free-sync + 3
-#   race/negative-sync, every one a visible fail-closed refusal
-#   (lean-observation "default value for imported named type sync.X",
-#   confluent/membership enumerator refusals of the same, or the
-#   frontend-quarantined NewCond marker). Includes the two new
-#   expected_status=fatal rows (harness class added this commit, probed
-#   gc surface). Zero drift on all 1419 prior ids.
+# manifest_cases: 1454  pass: 1344  fail: 110
+# Re-pin reason: the sync-package machine + frontend movement lands — 33
+#   of the 35 red-first guardrail pins flip PASS (mutex/rwmutex/waitgroup/
+#   once ops, the fatal terminals, sync deadlocks, HB-edge confluent
+#   certifications, the L1 acquisition-order membership set {10,20}, the
+#   racy sync lanes incl. the p14 two-clock discriminator), and the two
+#   PERMANENT out-of-scope markers (Cond, TryLock) move to their honest
+#   frontend-export refusal stage. workers-join lands strict (beyond
+#   tractable enumeration caps, recorded in its cases.tsv). Zero drift on
+#   all 1419 prior ids.
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
 PASS	arrays/array-copy	-
@@ -1192,10 +1192,10 @@ PASS	race/free/promoted-ptr-box	confluent
 PASS	race/free/ptr-field-read-write	confluent
 PASS	race/free/slice-disjoint	confluent
 PASS	race/free/spawn-dispatch-free	confluent
-FAIL	race/free-sync/mutex	confluent
-FAIL	race/free-sync/once-edge	confluent
-FAIL	race/free-sync/rw-writers	confluent
-FAIL	race/free-sync/wg-edge	confluent
+PASS	race/free-sync/mutex	confluent
+PASS	race/free-sync/once-edge	confluent
+PASS	race/free-sync/rw-writers	confluent
+PASS	race/free-sync/wg-edge	confluent
 PASS	race/litmus/chan-mutex	confluent
 PASS	race/litmus/close-hb	confluent
 PASS	race/litmus/lb-racy	racy
@@ -1213,9 +1213,9 @@ PASS	race/negative/promoted-dispatch	racy
 PASS	race/negative/read-write	racy
 PASS	race/negative/slice-elem	racy
 PASS	race/negative/spawn-dispatch	racy
-FAIL	race/negative-sync/one-side	lean-observation
-FAIL	race/negative-sync/rlock-serialized	lean-observation
-FAIL	race/negative-sync/wg-no-edge	lean-observation
+PASS	race/negative-sync/one-side	racy
+PASS	race/negative-sync/rlock-serialized	racy
+PASS	race/negative-sync/wg-no-edge	racy
 PASS	race/negative/write-write	racy
 PASS	range/assign-form-interface-target/assert-escalation	-
 PASS	range/assign-form-interface-target/index	-
@@ -1426,34 +1426,34 @@ PASS	structs/unnamed-conversion-targets/slice	-
 PASS	structs/unnamed-conversion-targets/slice-nil	-
 PASS	structs/unnamed-conversion-targets/slice-to-defined	-
 PASS	structs/zero-value	-
-FAIL	sync/mutex-basic/copy-carries-state	lean-observation
-FAIL	sync/mutex-basic/cross-goroutine-unlock	confluent
-FAIL	sync/mutex-basic/defer-unlock	lean-observation
-FAIL	sync/mutex-basic/lock-unlock	lean-observation
-FAIL	sync/mutex-double-lock/double-lock	lean-observation
-FAIL	sync/mutex-order/acquisition-order	membership
-FAIL	sync/mutex-protected/counter	confluent
-FAIL	sync/mutex-protected/visible	confluent
-FAIL	sync/mutex-unlock-fatal/unlock-of-unlocked	lean-observation
-FAIL	sync/mutex-unlock-fatal/unlock-recover-attempt	lean-observation
-FAIL	sync/once-basic/across-goroutines	confluent
-FAIL	sync/once-basic/panicking-f	lean-observation
-FAIL	sync/once-basic/runs-once	lean-observation
-FAIL	sync/once-nested-do/nested-do	lean-observation
+PASS	sync/mutex-basic/copy-carries-state	-
+PASS	sync/mutex-basic/cross-goroutine-unlock	confluent
+PASS	sync/mutex-basic/defer-unlock	-
+PASS	sync/mutex-basic/lock-unlock	-
+PASS	sync/mutex-double-lock/double-lock	-
+PASS	sync/mutex-order/acquisition-order	membership
+PASS	sync/mutex-protected/counter	confluent
+PASS	sync/mutex-protected/visible	confluent
+PASS	sync/mutex-unlock-fatal/unlock-of-unlocked	-
+PASS	sync/mutex-unlock-fatal/unlock-recover-attempt	-
+PASS	sync/once-basic/across-goroutines	confluent
+PASS	sync/once-basic/panicking-f	-
+PASS	sync/once-basic/runs-once	-
+PASS	sync/once-nested-do/nested-do	-
 FAIL	sync/out-of-scope-cond/cond-signal-no-waiter	frontend-export
-FAIL	sync/out-of-scope-trylock/trylock-uncontended	lean-observation
-FAIL	sync/rwmutex-basic/rlock-twice	lean-observation
-FAIL	sync/rwmutex-basic/write-then-read-ordered	confluent
-FAIL	sync/rwmutex-misuse-fatal/runlock-of-unlocked	lean-observation
-FAIL	sync/rwmutex-misuse-fatal/wunlock-of-unlocked	lean-observation
-FAIL	sync/rwmutex-rlock-then-lock/rlock-then-lock	lean-observation
-FAIL	sync/waitgroup-basic/add-done-wait	confluent
-FAIL	sync/waitgroup-basic/batch-done	lean-observation
-FAIL	sync/waitgroup-basic/recovered-negative-continue	lean-observation
-FAIL	sync/waitgroup-negative-after-recover/negative-after-recover	lean-observation
-FAIL	sync/waitgroup-negative-panic/negative-counter	lean-observation
-FAIL	sync/waitgroup-wait-deadlock/wait-deadlock	lean-observation
-FAIL	sync/waitgroup-workers-join/workers-join	confluent
+FAIL	sync/out-of-scope-trylock/trylock-uncontended	frontend-export
+PASS	sync/rwmutex-basic/rlock-twice	-
+PASS	sync/rwmutex-basic/write-then-read-ordered	confluent
+PASS	sync/rwmutex-misuse-fatal/runlock-of-unlocked	-
+PASS	sync/rwmutex-misuse-fatal/wunlock-of-unlocked	-
+PASS	sync/rwmutex-rlock-then-lock/rlock-then-lock	-
+PASS	sync/waitgroup-basic/add-done-wait	confluent
+PASS	sync/waitgroup-basic/batch-done	-
+PASS	sync/waitgroup-basic/recovered-negative-continue	-
+PASS	sync/waitgroup-negative-after-recover/negative-after-recover	-
+PASS	sync/waitgroup-negative-panic/negative-counter	-
+PASS	sync/waitgroup-wait-deadlock/wait-deadlock	-
+PASS	sync/waitgroup-workers-join/workers-join	-
 PASS	variadic/defined-slice-spread	-
 PASS	variadic/forwarding	-
 PASS	variadic/literal-args-local-slice	-

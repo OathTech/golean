@@ -94,6 +94,17 @@ partial def decodeTy (path : String) (json : Json) : LowerM Ty := do
       let key ← decodeTy s!"{path}.key" (← StrictJson.field path obj "key")
       let value ← decodeTy s!"{path}.value" (← StrictJson.field path obj "value")
       pure (.map key value)
+  | "sync" =>
+      -- Sync primitive types (spec-parity slice 2, design note §3):
+      -- exactly the four in-scope kinds; anything else under sync.*
+      -- never reaches here (the emitter quarantines it).
+      let name ← StrictJson.string s!"{path}.sync" (← StrictJson.field path obj "sync")
+      match name with
+      | "Mutex" => pure (.sync .mutex)
+      | "RWMutex" => pure (.sync .rwmutex)
+      | "WaitGroup" => pure (.sync .waitGroup)
+      | "Once" => pure (.sync .once)
+      | other => fail s!"unsupported sync kind {other} at {path}"
   | "named" =>
       pure (.defined ⟨← StrictJson.string s!"{path}.name" (← StrictJson.field path obj "name")⟩)
   | "interface" =>
@@ -652,6 +663,35 @@ partial def decodeStmt (results : Array Param) (path : String) (json : Json) : L
       pure (.seqn ((← declaresOf ts).push (.chanRecv (ts.map (·.assignee)) chE elemTy)))
   | "chan-close" =>
       pure (.closeChan (← decodeExpr s!"{path}.ch" (← StrictJson.field path obj "ch")))
+  -- Sync statements (spec-parity slice 2, design note §§3-4): `args`
+  -- carries the RECEIVER ADDRESS expression (plus the delta for
+  -- wgAdd); `onceBegin` additionally carries the Once desugar's fresh
+  -- bool target (declared here, the make-chan Target shape). Arity and
+  -- target validation happen again in `syncPlan` (fail closed twice).
+  | "sync-op" =>
+      let opName ← StrictJson.string s!"{path}.op" (← StrictJson.field path obj "op")
+      let argsJ ← StrictJson.array s!"{path}.args" (← StrictJson.field path obj "args")
+      let args ← argsJ.mapIdxM (fun i a => decodeExpr s!"{path}.args[{i}]" a)
+      let plain (op : SyncStmtOp) (arity : Nat) : LowerM Stmt := do
+        if args.size != arity then
+          fail s!"sync op {opName} expects {arity} operand(s), got {args.size} at {path}"
+        pure (.syncStmt op args #[])
+      match opName with
+      | "lock" => plain .lock 1
+      | "unlock" => plain .unlock 1
+      | "rlock" => plain .rlock 1
+      | "runlock" => plain .runlock 1
+      | "wlock" => plain .wlock 1
+      | "wunlock" => plain .wunlock 1
+      | "wgAdd" => plain .wgAdd 2
+      | "wgWait" => plain .wgWait 1
+      | "onceComplete" => plain .onceComplete 1
+      | "onceBegin" => do
+          if args.size != 1 then
+            fail s!"sync op onceBegin expects 1 operand, got {args.size} at {path}"
+          let t ← decodeTarget s!"{path}.target" (← StrictJson.field path obj "target")
+          pure (.seqn ((← declaresOf #[t]).push (.syncStmt .onceBegin args #[t.assignee])))
+      | other => fail s!"unsupported sync op {other} at {path}"
   | "select" =>
       -- Receive-clause targets are the frontend's fresh temps; their
       -- declares lift OUT in front of the select (fresh names — the

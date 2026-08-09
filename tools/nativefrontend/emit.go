@@ -1617,6 +1617,16 @@ func (e *emitter) emitStmt(s ast.Stmt) (any, error) {
 					}
 				}
 			}
+			// Sync-primitive method calls in statement position
+			// (spec-parity slice 2, design note §7): the whole modeled
+			// sync surface. Recognized-but-out-of-scope members fail
+			// closed inside the handler.
+			if node, handled, err := e.emitSyncOpStmt(call); handled {
+				if err != nil {
+					return nil, err
+				}
+				return node, nil
+			}
 			node, _, err := e.emitCallNode(call)
 			if err != nil {
 				return nil, err
@@ -1687,6 +1697,16 @@ func (e *emitter) emitStmt(s ast.Stmt) (any, error) {
 				}
 				return nil, unsup("defer of builtin %s", id.Name)
 			}
+		}
+		// `defer m.Unlock()` / `defer wg.Done()` etc. (spec-parity
+		// slice 2): a synthetic one-parameter wrapper through the
+		// existing defer machinery (the deferClose precedent) — the
+		// receiver address evaluates NOW, the op fires at frame exit.
+		if node, handled, err := e.emitDeferSyncOp(st.Call); handled {
+			if err != nil {
+				return nil, err
+			}
+			return node, nil
 		}
 		callee, err := e.emitExpr(st.Call.Fun)
 		if err != nil {
@@ -5739,6 +5759,16 @@ func (e *emitter) emitCallArgs(sig *types.Signature, c *ast.CallExpr) ([]any, er
 }
 
 func (e *emitter) emitMethodCall(c *ast.CallExpr, sel *ast.SelectorExpr) (any, bool, error) {
+	// Sync-primitive methods never reach the ordinary method machinery:
+	// the modeled surface is statement/defer-position only (spec-parity
+	// slice 2) and is intercepted upstream — anything arriving here is
+	// an expression-position use (TryLock in a condition, a sync method
+	// call as an operand) and fails closed.
+	if prim := e.syncPrimName(e.goTypeOf(sel.X)); prim != "" {
+		if seln := e.info.Selections[sel]; seln != nil && seln.Kind() == types.MethodVal {
+			return nil, false, unsup("sync.%s.%s outside statement position (only statement/defer-position sync ops are modeled)", prim, sel.Sel.Name)
+		}
+	}
 	seln, ok := e.info.Selections[sel]
 	if !ok || seln.Kind() != types.MethodVal {
 		// A call through a FUNC-TYPED FIELD (possibly promoted): an
@@ -6209,6 +6239,264 @@ func (e *emitter) emitDeferClose(c *ast.CallExpr) (any, error) {
 		"callee": map[string]any{"expr": "func-value", "func": name,
 			"captured": []any{}},
 		"args": []any{chW}}, nil
+}
+
+// syncPrimName reports the modeled sync primitive behind a (possibly
+// pointer) type — "Mutex"/"RWMutex"/"WaitGroup"/"Once" — or "" when the
+// type is not one of the four (spec-parity slice 2, design note §7).
+// Out-of-scope sync.* types are NOT reported here: they fail closed at
+// the type choke point (`emitType`).
+func (e *emitter) syncPrimName(t types.Type) string {
+	t = types.Unalias(e.applySubst(t))
+	if p, ok := t.(*types.Pointer); ok {
+		t = types.Unalias(p.Elem())
+	}
+	n, ok := t.(*types.Named)
+	if !ok {
+		return ""
+	}
+	obj := n.Obj()
+	if obj.Pkg() == nil || obj.Pkg().Path() != "sync" {
+		return ""
+	}
+	switch obj.Name() {
+	case "Mutex", "RWMutex", "WaitGroup", "Once":
+		return obj.Name()
+	}
+	return ""
+}
+
+// syncRecvAddr emits the receiver ADDRESS of a sync-primitive method
+// call: a pointer-typed receiver expression passes through; an
+// addressable value takes its address (go/types has already checked
+// addressability for the pointer-receiver call).
+func (e *emitter) syncRecvAddr(sel *ast.SelectorExpr) (any, error) {
+	recvGo := types.Unalias(e.applySubst(e.goTypeOf(sel.X)))
+	if _, isPtr := recvGo.(*types.Pointer); isPtr {
+		return e.emitExpr(sel.X)
+	}
+	return e.emitAddressOf(sel.X)
+}
+
+// syncOpFor maps a primitive+method pair to its wire sync-op name for
+// the ZERO-ARGUMENT ops ("" = not a zero-argument modeled op; Done maps
+// to its wgAdd(-1) lowering at both call sites, gc's own definition).
+func syncOpFor(prim, method string) string {
+	switch prim {
+	case "Mutex":
+		switch method {
+		case "Lock":
+			return "lock"
+		case "Unlock":
+			return "unlock"
+		}
+	case "RWMutex":
+		switch method {
+		case "Lock":
+			return "wlock"
+		case "Unlock":
+			return "wunlock"
+		case "RLock":
+			return "rlock"
+		case "RUnlock":
+			return "runlock"
+		}
+	case "WaitGroup":
+		if method == "Wait" {
+			return "wgWait"
+		}
+	}
+	return ""
+}
+
+func syncNegOne() map[string]any {
+	return map[string]any{"expr": "int", "value": "-1", "type": intType("int")}
+}
+
+// emitSyncOpStmt lowers a statement-position method call on one of the
+// four modeled sync primitives (spec-parity slice 2, design note §7):
+// Lock/Unlock (Mutex), Lock/Unlock/RLock/RUnlock (RWMutex),
+// Add/Done/Wait (WaitGroup — Done lowers to wgAdd(-1), gc waitgroup.go
+// line 156's own definition), Do (Once — the onceBegin/onceComplete
+// desugar, design note §3). handled=false when the call is not a
+// sync-primitive method at all; every recognized-but-out-of-scope
+// member (TryLock, WaitGroup.Go, ...) fails closed.
+func (e *emitter) emitSyncOpStmt(call *ast.CallExpr) (any, bool, error) {
+	sel, ok := call.Fun.(*ast.SelectorExpr)
+	if !ok {
+		return nil, false, nil
+	}
+	seln := e.info.Selections[sel]
+	if seln == nil || seln.Kind() != types.MethodVal {
+		return nil, false, nil
+	}
+	prim := e.syncPrimName(e.goTypeOf(sel.X))
+	if prim == "" {
+		return nil, false, nil
+	}
+	recvW, err := e.syncRecvAddr(sel)
+	if err != nil {
+		return nil, true, err
+	}
+	m := sel.Sel.Name
+	if op := syncOpFor(prim, m); op != "" {
+		return map[string]any{"stmt": "sync-op", "op": op, "args": []any{recvW}}, true, nil
+	}
+	switch {
+	case prim == "WaitGroup" && m == "Done":
+		return map[string]any{"stmt": "sync-op", "op": "wgAdd",
+			"args": []any{recvW, syncNegOne()}}, true, nil
+	case prim == "WaitGroup" && m == "Add":
+		if len(call.Args) != 1 {
+			return nil, true, unsup("sync.WaitGroup.Add with %d arguments", len(call.Args))
+		}
+		deltaW, err := e.emitExpr(call.Args[0])
+		if err != nil {
+			return nil, true, err
+		}
+		return map[string]any{"stmt": "sync-op", "op": "wgAdd",
+			"args": []any{recvW, deltaW}}, true, nil
+	case prim == "Once" && m == "Do":
+		return e.emitOnceDo(call, recvW)
+	}
+	return nil, true, unsup("sync.%s.%s (outside the modeled sync surface)", prim, m)
+}
+
+// emitOnceDo desugars `once.Do(f)` (spec-parity slice 2, design note
+// §3): a synthetic per-site `$onceDo` FUNCTION (receiver address and f
+// as parameters — evaluated once, at the call), whose body is
+// onceBegin (parks while another Do runs f; delivers false if already
+// done — the acquire of "the return from f 'synchronizes before' the
+// return from any call of once.Do(f)") and, on true, f() under a
+// DEFERRED synthetic completer. The completer MUST defer inside the
+// synthetic function's own frame — gc's Do sets done in a defer of
+// doSlow itself — so completion lands when Do returns, not when the
+// CALLER's frame exits (the first inline version deferred to the
+// caller and starved every later Do in the same function into the
+// park; caught red by sync/once-basic/runs-once). A panicking f still
+// completes through the ordinary panic-path defer drain (probe p05),
+// and nested Do parks into the deadlock gc realizes (p08).
+func (e *emitter) emitOnceDo(call *ast.CallExpr, recvW any) (any, bool, error) {
+	if len(call.Args) != 1 {
+		return nil, true, unsup("sync.Once.Do with %d arguments", len(call.Args))
+	}
+	fGo := e.applySubst(e.goTypeOf(call.Args[0]))
+	sig, ok := fGo.Underlying().(*types.Signature)
+	if !ok || sig.Params().Len() != 0 || sig.Results().Len() != 0 || sig.Variadic() {
+		return nil, true, unsup("sync.Once.Do argument is not a func()")
+	}
+	fW, err := e.emitExpr(call.Args[0])
+	if err != nil {
+		return nil, true, err
+	}
+	fTyW, err := e.emitType(fGo)
+	if err != nil {
+		return nil, true, err
+	}
+	onceTyW := map[string]any{"kind": "sync", "sync": "Once"}
+	oncePtrTyW := map[string]any{"kind": "pointer", "elem": onceTyW}
+	boolTyW := map[string]any{"kind": "bool"}
+	seq := e.liftSeq
+	e.liftSeq++
+	// Both synthetics are per-site and qualified by the enclosing
+	// function (the deferClose/BUG-027 discipline).
+	doneName := e.curFuncName + "$onceDone" + itoa(seq)
+	doName := e.curFuncName + "$onceDo" + itoa(seq)
+	onceParam := map[string]any{"expr": "ident", "name": "$once", "type": oncePtrTyW}
+	e.lifted = append(e.lifted, map[string]any{
+		"name":     doneName,
+		"params":   []any{map[string]any{"id": "$once", "type": oncePtrTyW}},
+		"results":  []any{},
+		"variadic": false,
+		"body": map[string]any{"stmt": "block", "body": []any{
+			map[string]any{"stmt": "sync-op", "op": "onceComplete",
+				"args": []any{onceParam}},
+		}},
+	})
+	e.lifted = append(e.lifted, map[string]any{
+		"name": doName,
+		"params": []any{
+			map[string]any{"id": "$once", "type": oncePtrTyW},
+			map[string]any{"id": "$f", "type": fTyW},
+		},
+		"results":  []any{},
+		"variadic": false,
+		"body": map[string]any{"stmt": "block", "body": []any{
+			map[string]any{"stmt": "sync-op", "op": "onceBegin", "args": []any{onceParam},
+				"target": map[string]any{"target": "declare", "id": "$onceStarted", "type": boolTyW}},
+			map[string]any{"stmt": "if",
+				"cond": map[string]any{"expr": "ident", "name": "$onceStarted", "type": boolTyW},
+				"then": map[string]any{"stmt": "block", "body": []any{
+					map[string]any{"stmt": "defer",
+						"callee": map[string]any{"expr": "func-value", "func": doneName, "captured": []any{}},
+						"args":   []any{onceParam}},
+					map[string]any{"stmt": "expr", "expr": map[string]any{"expr": "call-value",
+						"callee": map[string]any{"expr": "ident", "name": "$f", "type": fTyW},
+						"args":   []any{}, "resultTypes": []any{}}},
+				}},
+			},
+		}},
+	})
+	return map[string]any{"stmt": "expr", "expr": map[string]any{"expr": "call-value",
+		"callee": map[string]any{"expr": "func-value", "func": doName, "captured": []any{}},
+		"args":   []any{recvW, fW}, "resultTypes": []any{}}}, true, nil
+}
+
+// emitDeferSyncOp lowers `defer <syncop>()` for the ZERO-ARGUMENT sync
+// ops plus Done (spec-parity slice 2): a synthetic one-parameter
+// wrapper through the existing defer machinery — the receiver address
+// evaluates at defer time, the op (and any misuse fatal/panic) fires
+// at frame exit as the deferred invocation's. `defer wg.Add(n)` and
+// `defer once.Do(f)` fail closed (no modeled shape; nothing uses
+// them). handled=false when the deferred call is not a sync-primitive
+// method.
+func (e *emitter) emitDeferSyncOp(call *ast.CallExpr) (any, bool, error) {
+	sel, ok := call.Fun.(*ast.SelectorExpr)
+	if !ok {
+		return nil, false, nil
+	}
+	seln := e.info.Selections[sel]
+	if seln == nil || seln.Kind() != types.MethodVal {
+		return nil, false, nil
+	}
+	prim := e.syncPrimName(e.goTypeOf(sel.X))
+	if prim == "" {
+		return nil, false, nil
+	}
+	m := sel.Sel.Name
+	op := syncOpFor(prim, m)
+	var extraArgs []any
+	if op == "" {
+		if prim == "WaitGroup" && m == "Done" {
+			op = "wgAdd"
+			extraArgs = []any{syncNegOne()}
+		} else {
+			return nil, true, unsup("defer sync.%s.%s (only the zero-argument sync ops and Done are modeled in defer position)", prim, m)
+		}
+	}
+	recvW, err := e.syncRecvAddr(sel)
+	if err != nil {
+		return nil, true, err
+	}
+	primTyW := map[string]any{"kind": "sync", "sync": prim}
+	ptrTyW := map[string]any{"kind": "pointer", "elem": primTyW}
+	name := e.curFuncName + "$deferSync" + itoa(e.liftSeq)
+	e.liftSeq++
+	opArgs := []any{map[string]any{"expr": "ident", "name": "$sync", "type": ptrTyW}}
+	opArgs = append(opArgs, extraArgs...)
+	e.lifted = append(e.lifted, map[string]any{
+		"name":     name,
+		"params":   []any{map[string]any{"id": "$sync", "type": ptrTyW}},
+		"results":  []any{},
+		"variadic": false,
+		"body": map[string]any{"stmt": "block", "body": []any{
+			map[string]any{"stmt": "sync-op", "op": op, "args": opArgs},
+		}},
+	})
+	return map[string]any{"stmt": "defer",
+		"callee": map[string]any{"expr": "func-value", "func": name,
+			"captured": []any{}},
+		"args": []any{recvW}}, true, nil
 }
 
 // isByteSlice reports whether an underlying type is []byte/[]uint8.
