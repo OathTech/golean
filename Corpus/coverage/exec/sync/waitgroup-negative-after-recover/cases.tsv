@@ -1,0 +1,4 @@
+# id	subject	args	expected_status	expected_reason	features
+# Probe p13: the counter updates BEFORE the panic; a recovered
+# negative leaves the counter negative and Wait parks forever.
+negative-after-recover	negativeAfterRecover	-	deadlock	-	sync,waitgroup,recover,goroutines,channels,deadlock

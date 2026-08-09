@@ -1,0 +1,3 @@
+# id	subject	args	expected_status	expected_reason	features	lane	why	params
+wunlock-of-unlocked	wunlockOfUnlocked	-	fatal	sync: Unlock of unlocked RWMutex	sync,rwmutex	strict	-	-
+runlock-of-unlocked	runlockOfUnlocked	-	fatal	sync: RUnlock of unlocked RWMutex	sync,rwmutex	strict	-	-

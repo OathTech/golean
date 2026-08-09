@@ -1,0 +1,3 @@
+# id	subject	args	expected_status	expected_reason	features	lane	why	params
+counter	protectedCounter	-	ok	-	sync,mutex,goroutines,channels,globals	confluent	mutual exclusion makes the two increments commute and the channel join closes the run: every schedule yields 2	width=4
+visible	protectedVisible	-	ok	-	sync,mutex,goroutines,channels,globals	confluent	the mutex HB edge (unlock n sync-before lock m) plus the channel join order the worker's write before main's locked read on every schedule	width=4

@@ -64,3 +64,41 @@ channels/select-select/core
 #   when the ledger filter gained nondet (convergence response,
 #   2026-08-08); not a fidelity bug.
 channels/select-select/beside-loop
+# sync/* + race/{free,negative}-sync (2026-08-09, spec-parity slice 2):
+#   TRANSIENT red-first guardrail pins for the sync package (design
+#   note §10) — flip in this slice's machine/frontend commits, except
+#   out-of-scope-trylock (PERMANENT-until-lifted, see untriaged-count).
+race/free-sync/mutex
+race/free-sync/once-edge
+race/free-sync/rw-writers
+race/free-sync/wg-edge
+race/negative-sync/one-side
+race/negative-sync/rlock-serialized
+race/negative-sync/wg-no-edge
+sync/mutex-basic/copy-carries-state
+sync/mutex-basic/cross-goroutine-unlock
+sync/mutex-basic/defer-unlock
+sync/mutex-basic/lock-unlock
+sync/mutex-double-lock/double-lock
+sync/mutex-order/acquisition-order
+sync/mutex-protected/counter
+sync/mutex-protected/visible
+sync/mutex-unlock-fatal/unlock-of-unlocked
+sync/mutex-unlock-fatal/unlock-recover-attempt
+sync/once-basic/across-goroutines
+sync/once-basic/panicking-f
+sync/once-basic/runs-once
+sync/once-nested-do/nested-do
+sync/out-of-scope-trylock/trylock-uncontended
+sync/rwmutex-basic/rlock-twice
+sync/rwmutex-basic/write-then-read-ordered
+sync/rwmutex-misuse-fatal/runlock-of-unlocked
+sync/rwmutex-misuse-fatal/wunlock-of-unlocked
+sync/rwmutex-rlock-then-lock/rlock-then-lock
+sync/waitgroup-basic/add-done-wait
+sync/waitgroup-basic/batch-done
+sync/waitgroup-basic/recovered-negative-continue
+sync/waitgroup-negative-after-recover/negative-after-recover
+sync/waitgroup-negative-panic/negative-counter
+sync/waitgroup-wait-deadlock/wait-deadlock
+sync/waitgroup-workers-join/workers-join

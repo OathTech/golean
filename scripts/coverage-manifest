@@ -128,9 +128,9 @@ while [[ "$#" -gt 0 ]]; do
 done
 
 case "$STATUS_FILTER" in
-  ""|ok|panic|deadlock|race) ;;
+  ""|ok|panic|deadlock|race|fatal) ;;
   *)
-    echo "coverage-manifest: invalid --status $STATUS_FILTER; use ok, panic, deadlock, or race" >&2
+    echo "coverage-manifest: invalid --status $STATUS_FILTER; use ok, panic, deadlock, race, or fatal" >&2
     exit 2
     ;;
 esac
@@ -478,12 +478,14 @@ while IFS= read -r cases_file; do
           bad=1
           continue
         fi
-        if [[ "$expected_status" == "deadlock" || "$expected_status" == "race" ]]; then
+        if [[ "$expected_status" == "deadlock" || "$expected_status" == "race" || "$expected_status" == "fatal" ]]; then
           # Fail closed: the membership enumerator has no deadlock-member
           # handling (a blocked run fails its enumeration loudly), and
           # race-expectation rows have their OWN full-strength lane
-          # (lane=racy, D9(d): every enumerated path refuses).
-          echo "coverage-manifest: $cases_file: deadlock cases are strict-lane only; race-expectation cases use lane=racy" >&2
+          # (lane=racy, D9(d): every enumerated path refuses). Fatal
+          # members (spec-parity slice 2) likewise have no membership
+          # handling — fatal rows are strict-only.
+          echo "coverage-manifest: $cases_file: deadlock/fatal cases are strict-lane only; race-expectation cases use lane=racy" >&2
           bad=1
           continue
         fi
@@ -523,8 +525,8 @@ while IFS= read -r cases_file; do
           bad=1
           continue
         fi
-        if [[ "$expected_status" == "deadlock" || "$expected_status" == "race" ]]; then
-          echo "coverage-manifest: $cases_file: deadlock/race-expectation cases cannot be confluent-lane" >&2
+        if [[ "$expected_status" == "deadlock" || "$expected_status" == "race" || "$expected_status" == "fatal" ]]; then
+          echo "coverage-manifest: $cases_file: deadlock/race/fatal-expectation cases cannot be confluent-lane" >&2
           bad=1
           continue
         fi
@@ -604,16 +606,23 @@ while IFS= read -r cases_file; do
     # every interleaving — the machine must refuse (raceDetected) on
     # every tested stream, and the Go oracle is `go run -race` (exit 66,
     # "WARNING: DATA RACE"; no per-case expected_reason).
+    # fatal (spec-parity slice 2, sync design note §2): gc's
+    # UNRECOVERABLE runtime throws (`fatal error: <msg>`, exit 2 — the
+    # sync misuse class, probed: recover does not intervene). Unlike
+    # deadlock the message is per-case, so expected_reason CARRIES it
+    # (the text after "fatal error: "); both sides compare the
+    # synthesized status/message observation. Strict-lane only; never
+    # run under -race (same detector-suppression caution as deadlock).
     case "$expected_status" in
-      ok|panic|deadlock|race) ;;
+      ok|panic|deadlock|race|fatal) ;;
       *)
-        echo "coverage-manifest: $cases_file: invalid expected Go status $expected_status; use ok, panic, deadlock, or race" >&2
+        echo "coverage-manifest: $cases_file: invalid expected Go status $expected_status; use ok, panic, deadlock, race, or fatal" >&2
         bad=1
         continue
         ;;
     esac
     case "$expected_status" in
-      panic)
+      panic|fatal)
         if [[ "$expected_reason" == "-" ]]; then
           echo "coverage-manifest: $cases_file: $expected_status requires expected_reason" >&2
           bad=1
