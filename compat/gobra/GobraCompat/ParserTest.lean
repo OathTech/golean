@@ -179,6 +179,38 @@ wrong meaning. -/
 -- hatch. It must not be read as an ordinary measure named "_".
 #guard rejects "decreases _"
 
+/-! ## Scope: the vacuity guard, both directions
+
+`requires` is evaluated in an environment binding ONLY the parameter;
+`ensures` binds parameter and result. Pinning both, because a uniform
+`[argName, resName]` whitelist passed `requires 0 < sum` and left the
+statement provable by absurdity — a delta-review discharged
+`ensures 0 == 1` under it. -/
+
+private def ctOf (req ens : List GAssertion) : GobraContract :=
+  { requires := req, ensures := ens, loopInvariants := [], terminates := true }
+
+-- the real contract is in scope
+-- the RESULT named in a PRECONDITION is out of scope (the delta-review hole)
+#guard !(ctOf [.lt (.lit 0) (.evar "sum")] []).scopedFor "n" "sum"
+-- the result named in a postcondition is fine
+#guard (ctOf [] [.lt (.lit 0) (.evar "sum")]).scopedFor "n" "sum"
+-- the parameter is in scope in both
+#guard (ctOf [.lt (.lit 0) (.evar "n")] [.lt (.lit 0) (.evar "n")]).scopedFor "n" "sum"
+-- an unbound second parameter is out of scope in both (the original hole)
+#guard !(ctOf [.lt (.lit 0) (.evar "b")] []).scopedFor "n" "sum"
+#guard !(ctOf [] [.lt (.lit 0) (.evar "b")]).scopedFor "n" "sum"
+-- loop invariants are NOT scoped (they name loop-locals like `i`)
+#guard ({ requires := [], ensures := [], terminates := true,
+          loopInvariants := [.lt (.lit 0) (.evar "i")] } : GobraContract).scopedFor "n" "sum"
+
+/-! ## `_` is the Viper wildcard, never a variable -/
+
+#guard rejects "decreases (_)"        -- parenthesised
+#guard rejects "decreases _ + 1"      -- inside an expression
+#guard rejects "requires 0 <= _"      -- in an assertion
+#guard parsesTo "decreases _x" (.decreasesC (some (.evar "_x")))  -- NOT the wildcard
+
 /-! ## The derived bound itself -/
 
 -- fuelFor is computed from the input, not a constant

@@ -144,6 +144,15 @@ them today, and that is an open gap, not a closed one. -/
 def GobraContract.specVars (ct : GobraContract) : List String :=
   GobraContractVars ct.requires ct.ensures []
 
+/-- The names the PRECONDITION reads. Scoped separately from `ensures`
+because it is evaluated in a different environment — see `scopedFor`. -/
+def GobraContract.preVars (ct : GobraContract) : List String :=
+  GobraContractVars ct.requires [] []
+
+/-- The names the POSTCONDITION reads. -/
+def GobraContract.postVars (ct : GobraContract) : List String :=
+  GobraContractVars [] ct.ensures []
+
 /-- Every name this contract reads anywhere, invariants included. Not
 used by the statement — see `specVars`. -/
 def GobraContract.vars (ct : GobraContract) : List String :=
@@ -164,9 +173,19 @@ non-integer identifier triggers it.
 
 `contractStatement` therefore carries this as a CONJUNCT, not a premise:
 out of scope makes the statement FALSE (unprovable), never vacuously
-true. Fail closed, always. -/
-def GobraContract.scopedBy (ct : GobraContract) (names : List String) : Bool :=
-  ct.specVars.all (names.contains ·)
+true.
+
+**THE SCOPES DIFFER PER CLAUSE KIND, and getting that wrong left the hole
+open once already.** `requires` is evaluated in `env1 argName n`, which
+binds ONLY the parameter; `ensures` in `envRes … resName r`, which binds
+both. A first version of this check whitelisted `[argName, resName]`
+uniformly, so `requires 0 < sum` — the RESULT named in a precondition —
+passed the gate and was still read as `0 < 0`. A delta-review discharged
+`ensures 0 == 1` under exactly that contract, sorry-free, in three tactic
+lines with the gate green. Hence two checks, not one. -/
+def GobraContract.scopedFor (ct : GobraContract) (argName resName : String) : Bool :=
+  ct.preVars.all (· == argName) &&
+  ct.postVars.all (fun v => v == argName || v == resName)
 
 def preHolds (ct : GobraContract) (env : GEnv) : Prop :=
   ∀ a ∈ ct.requires, a.holds env
@@ -207,6 +226,19 @@ def GoFuncSpecT (types : TypeEnv) (funcs : Array Func)
       (.ex fun (n : Int) =>
         .sep (.pointsTo ra ⟨some (.int kind), .int n kind⟩) (Q n))
 
+/-- `GoFuncSpecT` is a HAND-WRITTEN dual of `Surface.GoFuncSpec`, so
+nothing keeps the two in sync if `proofs/` moves. This pins the direction
+that matters: the total judgment really is a STRENGTHENING, not a
+differently-shaped statement that merely resembles one (delta-review F6,
+which verified the shape but noted nothing held it). If
+`Surface.GoFuncSpec` or `GoSpecT` changes shape, this stops compiling. -/
+theorem goFuncSpecT_imp_goFuncSpec {types : TypeEnv} {funcs : Array Func}
+    {methods : Array MethodInfo} {fid : FuncId} {kind : IntKind}
+    {args : Array Expr} {P : HProp} {Q : Int → HProp} :
+    GoFuncSpecT types funcs methods fid kind args P Q →
+    GoFuncSpec types funcs methods fid kind args P Q := by
+  intro h ra w; exact ⟨(h ra w).1, (h ra w).2.1⟩
+
 /-- **The elaboration** (v1 fragment: unary `int → int` functions,
 matching `GoFuncSpec`'s v1 shape): the Gobra contract of `fid` means —
 every name the contract reads is in scope, AND for every argument in the
@@ -217,19 +249,34 @@ slots as `HProp.pure`.
 
 TWO THINGS THIS DELIBERATELY GETS RIGHT, both from the pre-merge audit:
 
-**Scope is a conjunct, not a premise** (`scopedBy`): a contract naming
-anything outside `{argName, resName}` makes this statement FALSE. As a
-premise it would have made it vacuously TRUE, which is the bug being
-fixed — see `GobraContract.scopedBy`.
+**Scope is a conjunct, not a premise** (`scopedFor`), and it is checked
+PER CLAUSE KIND — `requires` against the parameter alone, `ensures`
+against parameter and result — because those are the environments they
+are evaluated in. A contract reading anything else makes this statement
+FALSE. As a premise it would have made it vacuously TRUE, which is the
+bug being fixed — see `GobraContract.scopedFor`, including the
+uniform-whitelist version that left half the hole open.
 
 **`decreases` is honoured, not dropped**: when `ct.terminates` the
-elaboration is `GoFuncSpecT` (triple + safety + termination), matching
-Gobra, where `decreases` is exactly what upgrades partial correctness to
-total (`deps/gobra/docs/tutorial.md`). Previously `terminates` was parsed,
+elaboration is `GoFuncSpecT` (triple + safety + termination). In Gobra
+`decreases` is what upgrades partial correctness to total
+(`deps/gobra/docs/tutorial.md`). Previously `terminates` was parsed,
 round-trip-checked and then never read, so a contract with `decreases`
 deleted elaborated to a definitionally EQUAL Prop — the audit demonstrated
 that with `rfl`. Discharging the old statement would not have discharged
 the contract, which is the dangerous direction.
+
+CAVEAT, precise rather than flattering (delta-review F2): `parseContract`
+folds EVERY `decreases` clause — function-level and loop-level alike —
+into the one `terminates` flag, discarding the measure, because a flat
+list of clause texts carries no nesting. So a function with no
+function-level `decreases` but a measured LOOP elaborates to the total
+judgment too. That was inert before this change and is load-bearing now.
+It errs OVER-strong (proving more discharges the contract; it cannot
+under-claim), which is why it is a caveat and not a defect — but the
+mapping is not clause-by-clause, and fixing it needs a clause structure
+that records nesting. `sum` itself is unaffected: it carries a
+function-level `decreases`.
 
 `loopInvariants` are deliberately NOT statement content: they are proof
 INPUTS (the invariant `go_walk`'s `wp_while_inv` needs), not part of what
@@ -239,7 +286,7 @@ def contractStatement (types : TypeEnv) (funcs : Array Func)
     (methods : Array MethodInfo) (fid : FuncId) (kind : IntKind)
     (argName resName : String) (ct : GobraContract)
     (adequacyGuard : Int → Prop) : Prop :=
-  ct.scopedBy [argName, resName] = true ∧
+  ct.scopedFor argName resName = true ∧
   ∀ n : Int, adequacyGuard n →
     preHolds ct (env1 argName n) →
     (if ct.terminates then GoFuncSpecT else GoFuncSpec)

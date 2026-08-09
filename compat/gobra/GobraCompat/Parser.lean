@@ -38,13 +38,21 @@ original list omitted the operators a Gobra user meets first:
   measures (`decreases m if b`), and `decreases _` (the unsound
   "assume termination" wildcard) is refused rather than read as a measure
 
-MEASURED COVERAGE, so nobody has to guess: of 507 spec clauses in
-`deps/gobra/src/test/resources/regressions/examples`, 29 parse (5.7%);
-of the 58 that are pure integer arithmetic — ring 0's stated scope — 29
-parse (50%). In `sum`'s OWN source file, the next two tutorial functions
-(`isEven`, `halfRoundedUp`) are both unrepresentable: they need `%`, `!`,
-booleans and pure-function calls. The fragment covers the tutorial's
-first function and nothing after it.
+MEASURED COVERAGE, so nobody has to guess — **roughly 5%** of the spec
+clauses in `deps/gobra/src/test/resources/regressions/examples` parse.
+Two independent extractions during pre-merge review disagreed on the
+exact integers (507 clauses / 29 parsing / 20 with `>`, vs 514 / 24 / 12),
+because neither recorded its extraction method — dedup and
+comment-stripping choices move the denominator. Take the order of
+magnitude as established and the specific integers as not: ~5% overall,
+and roughly half of the clauses that are pure integer arithmetic, which
+is ring 0's stated scope. Recording a reproducible extraction script is
+open work.
+
+What is NOT approximate: in `sum`'s OWN source file the next two tutorial
+functions (`isEven`, `halfRoundedUp`) are unrepresentable — they need
+`%`, `!`, booleans and pure-function calls. The fragment covers the
+tutorial's first function and nothing after it.
 
 Totality: explicit fuel everywhere (see `fuelFor`) — no `partial`, no
 well-founded-recursion obligations.
@@ -141,6 +149,13 @@ mutual
   def parseFactor : Nat → ParserM GExpr
     | 0, _ => .error "out of fuel"
     | _ + 1, .int v :: rest => .ok (.lit v, rest)
+    -- `_` is Viper's wildcard, never an expression variable. Rejecting it
+    -- only in the two-token `decreases _` form left `decreases (_)`,
+    -- `decreases _ + 1` and `requires 0 <= _` accepting it as an ordinary
+    -- variable named "_" (delta-review F3). Refuse it at the leaf, where
+    -- every path goes through.
+    | _ + 1, .ident "_" :: _ =>
+      .error "'_' is the Viper wildcard, not a variable"
     | _ + 1, .ident s :: rest => .ok (.evar s, rest)
     | fuel + 1, .lparen :: rest => do
       let (e, rest) ← parseExpr fuel rest

@@ -342,14 +342,19 @@ the obligation `--overflow` would impose" (that asserts per-statement
 subexpression bounds over int64 and adds nothing to assertions); the guard
 is sound but a different shape.
 
-**FIXED — the limitation list was incomplete, with numbers.** It omitted
-`>`, `>=`, `!=`, `||`, `!`, unary minus, boolean literals. Measured against
-Gobra's own regressions: **29 of 507 spec clauses parse (5.7%); 29 of the
-58 pure-integer ones (50%)**. In `sum`'s own tutorial file the next two
-functions are unrepresentable. 17 new `#guard`s pin every unsupported
-construct as rejected. Also fixed: `decreases _` (Viper's "assume
-termination" wildcard, an unsound escape hatch) was parsed as a measure
-named `_`; it now fails closed.
+**FIXED — the limitation list was incomplete.** It omitted `>`, `>=`,
+`!=`, `||`, `!`, unary minus, boolean literals. Measured against Gobra's
+own regressions: **roughly 5% of spec clauses parse**, and roughly half of
+the pure-integer ones. The integers are deliberately approximate — two
+independent extractions during review disagreed (507/29/20 vs 514/24/12)
+because neither recorded its method, and a delta-review flagged the
+precise figures as stated with more confidence than an unreproducible
+measurement supports. The order of magnitude is solid; a reproducible
+extraction script is open work. Not approximate: in `sum`'s own tutorial
+file the next two functions are unrepresentable. 17 new `#guard`s pin
+every unsupported construct as rejected. Also fixed: `decreases _`
+(Viper's "assume termination" wildcard, an unsound escape hatch) was
+parsed as a measure named `_`; it now fails closed.
 
 **OPEN — no witness for the `GoFuncSpec` joint.** The seed witnesses prove
 `runSumIs` (the differential runner) and integer arithmetic; nothing
@@ -381,3 +386,37 @@ double space); 14,000 generated assertion trees round-trip through the
 parser exactly, so there is no silent wrong parse inside the fragment;
 precedence and associativity match Gobra's grammar; and every unsupported
 construct fails closed with an explicit error.
+
+### 10d. Delta-review of the audit response (the fix had its own hole)
+
+The audit response (§10b) was itself delta-reviewed, on the principle that
+fixes written under time pressure are where new bugs land. That review
+found the vacuity **not closed**, and proved it: `scopedFor`'s predecessor
+whitelisted `[argName, resName]` uniformly across `requires` and
+`ensures`, but the two are evaluated in DIFFERENT environments —
+`requires` in `env1 argName n`, which binds the parameter only. So
+`requires 0 < sum`, naming the result in a precondition, passed the new
+gate and was still read as `0 < 0`. The reviewer discharged a contract
+carrying `ensures 0 == 1` under it, sorry-free, in three tactic lines.
+
+Fixed by scoping per clause kind (`preVars` against the parameter,
+`postVars` against parameter and result), with both directions pinned in
+`ParserTest.lean`. The lesson is the one this arc keeps re-teaching: the
+first fix closed the instance that was reported, not the class.
+
+Also from that review: `_` (Viper's wildcard) was refused only in the
+exact two-token `decreases _` form, so `decreases (_)`, `decreases _ + 1`
+and `requires 0 <= _` still accepted it as a variable named `_` — now
+refused at `parseFactor`, where every path goes through. A theorem
+(`goFuncSpecT_imp_goFuncSpec`) now pins that the hand-written `GoFuncSpecT`
+really is a strengthening of `Surface.GoFuncSpec`, which nothing held
+before. And the coverage integers were softened to an order of magnitude
+(see §10b) after a second extraction disagreed with the first.
+
+Recorded as accepted, not fixed: a loop-level `decreases` flips the whole
+function to the total judgment, because `parseContract` folds every
+`decreases` into one flag and a flat clause list carries no nesting. It
+errs over-strong (proving more discharges the contract, and it cannot
+under-claim), `sum` itself carries a function-level `decreases` so is
+unaffected, and fixing it needs a clause structure that records nesting —
+the same reshape as the two-loop problem above.

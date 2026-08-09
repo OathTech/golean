@@ -92,7 +92,8 @@ wrong makes a clause read an unbound name (worth 0 under `env1`), which
 is precisely the vacuity `scopedBy` exists to stop. These pin it. -/
 #guard sumFn.args.map (·.id) == #["n"]
 #guard sumFn.results.map (·.id) == #["sum"]
-#guard sumContract.scopedBy ["n", "sum"]
+#guard sumContract.scopedFor "n" "sum"
+
 
 /-- **THE elaborated contract statement** — what "Gobra verifies `sum`"
 MEANS over golean's semantics: `sum`'s contract carries `decreases`, so
