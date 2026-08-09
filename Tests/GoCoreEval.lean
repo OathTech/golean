@@ -2299,6 +2299,40 @@ def main : IO UInt32 := do
       "GoCore drivers agree on wrong-arity refusal before the init phase (succeeding init)"
       enumInitPickProgram
     pure (r₁ && r₂))
+  -- F15 (spec-parity s1): the observation channel carries the integer
+  -- KIND. The distinguishing pin is the BUG-042 family's exact hidden
+  -- shape — same numeric value, different kind — which the value-only
+  -- channel rendered IDENTICAL (this assertion is red against the old
+  -- encoder; verified red-first before the encoder change landed).
+  passed := passed && (← expectTrue "F15: observation channel distinguishes right-value wrong-kind (red under the value-only channel)"
+    (CLI.observationOfRun (.ok { values := #[.int 6 .int] })
+      != CLI.observationOfRun (.ok { values := #[.int 6 .uint8] })))
+  -- The wire shape itself, pinned verbatim (both encoders must emit it).
+  passed := passed && (← expectStrEq "F15: kind-carrying int observation shape"
+    (CLI.observationOfRun (.ok { values := #[.int 6 .uint8] })).compress
+    "{\"schema\":\"golean-observation-v1\",\"status\":\"ok\",\"values\":[{\"kind\":\"uint8\",\"tag\":\"int\",\"value\":6}]}")
+  -- Fail-closed decode discipline for the new fields (the float arm's
+  -- mold): unknown kinds — including uintptr, which the frontend maps
+  -- to uint64 so the machine can never answer it — and out-of-range
+  -- values refuse; the machine encoder's own output round-trips.
+  passed := passed && (← expectTrue "F15: decode accepts the machine encoder's kind-carrying output"
+    (CLI.decodeObservation "left"
+      (CLI.observationOfRun (.ok { values := #[.int (-5) .int8, .int 255 .uint8] })).compress).isOk)
+  passed := passed && (← expectTrue "F15: decode refuses an unknown integer kind (uintptr)"
+    !(CLI.decodeObservation "left"
+      "{\"schema\":\"golean-observation-v1\",\"status\":\"ok\",\"values\":[{\"tag\":\"int\",\"kind\":\"uintptr\",\"value\":1}]}").isOk)
+  passed := passed && (← expectTrue "F15: decode refuses a kindless int observation (the retired shape)"
+    !(CLI.decodeObservation "left"
+      "{\"schema\":\"golean-observation-v1\",\"status\":\"ok\",\"values\":[{\"tag\":\"int\",\"value\":1}]}").isOk)
+  passed := passed && (← expectTrue "F15: decode refuses an out-of-range unsigned value (256 at uint8)"
+    !(CLI.decodeObservation "left"
+      "{\"schema\":\"golean-observation-v1\",\"status\":\"ok\",\"values\":[{\"tag\":\"int\",\"kind\":\"uint8\",\"value\":256}]}").isOk)
+  passed := passed && (← expectTrue "F15: decode refuses a negative value at an unsigned kind"
+    !(CLI.decodeObservation "left"
+      "{\"schema\":\"golean-observation-v1\",\"status\":\"ok\",\"values\":[{\"tag\":\"int\",\"kind\":\"uint64\",\"value\":-1}]}").isOk)
+  passed := passed && (← expectTrue "F15: decode refuses an out-of-range signed value (128 at int8)"
+    !(CLI.decodeObservation "left"
+      "{\"schema\":\"golean-observation-v1\",\"status\":\"ok\",\"values\":[{\"tag\":\"int\",\"kind\":\"int8\",\"value\":128}]}").isOk)
   if passed then
     return 0
   else
