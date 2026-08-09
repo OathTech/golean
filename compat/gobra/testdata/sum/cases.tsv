@@ -1,0 +1,5 @@
+# id	subject	args	expected_status	expected_reason	features
+zero	sumZero	-	ok	-	loops,named_results
+one	sumOne	-	ok	-	loops,named_results
+five	sumFive	-	ok	-	loops,named_results
+twelve	sumTwelve	-	ok	-	loops,named_results

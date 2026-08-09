@@ -1,5 +1,6 @@
 /.lake
 /proofs/.lake
+/compat/gobra/.lake
 /artifacts
 .DS_Store
 /.claude
