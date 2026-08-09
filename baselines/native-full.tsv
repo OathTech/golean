@@ -1,20 +1,16 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-09  commit: BUG-051 FIXED (call-assign boxing hoists the call, boxes the temp)
+# recorded: 2026-08-09  commit: F15 guardrail corpus (observation-kind family, 6 new PASS ids)
 #   frontend: native  oracle: go run (strict lane) / go-run membership in the
 #   machine-enumerated observation set, sampled plain AND under -race
 #   (membership lane; go1.26.5) / schedule-tree singleton certification +
 #   strict go-run equality (confluent lane) / every-enumerated-path-refuses
 #   + go run -race red (racy lane; never combined with deadlock)
-# manifest_cases: 1405  pass: 1289  fail: 116
-# Re-pin reason: BUG-051 fix (closing-review round): the single-value
-#   call-assign arm hoists the call into a temp at the call's own result
-#   type (call stays in statement position) and boxes the TEMP via
-#   wrapInterfaceConversion — the hoist-then-wrap shape of every working
-#   site. Drift is exactly the THREE BUG-051 pins flipping FAIL->PASS
-#   (interfaces/call-assign-boxing/{assign-any,assign-error,
-#   named-result}); the three controls and both prior fix families
-#   (BUG-049 matrix, BUG-050 range forms) re-verified green. Zero
-#   drift on all 1402 other ids.
+# manifest_cases: 1411  pass: 1295  fail: 116
+# Re-pin reason: F15 opener guardrails (spec-parity s1): six new
+#   ints/observation-kind cases pin the kind-fidelity SHAPE family
+#   (right-value wrong-kind answers, the BUG-042/043 template) ahead
+#   of the symmetric observation-channel kind emission. All six PASS
+#   under the value-only channel; zero drift on all 1405 prior ids.
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
 PASS	arrays/array-copy	-
@@ -902,6 +898,12 @@ PASS	ints/if-return	-
 PASS	ints/int8-wrap	-
 PASS	ints/multi-assign	-
 PASS	ints/negative-shift	-
+PASS	ints/observation-kind/boxed-uint16	-
+PASS	ints/observation-kind/defined-uint8	-
+PASS	ints/observation-kind/int8-negative	-
+PASS	ints/observation-kind/struct-fields	-
+PASS	ints/observation-kind/uint64-max	-
+PASS	ints/observation-kind/uint8-incr	-
 PASS	ints/scalars	-
 PASS	ints/shifts	-
 PASS	ints/shift-width-boundaries	-
