@@ -1,0 +1,2 @@
+# id	subject	args	expected_status	expected_reason	features	lane	why	params
+acquisition-order	acquisitionOrder	-	ok	-	sync,mutex,goroutines,channels,globals,nondet	membership	acquisition order between main and the worker is L1 scheduling latitude (design note §6: no spec/package text on contender order; gc's semaphore-FIFO-with-barging is one legal point): certified set {10 (main's section first), 20 (worker's first)} (members=2); width 4 caps the two-goroutine bounds	width=4,members=2

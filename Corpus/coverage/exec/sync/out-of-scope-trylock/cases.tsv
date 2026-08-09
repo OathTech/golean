@@ -1,0 +1,4 @@
+# id	subject	args	expected_status	expected_reason	features
+# PERMANENT-until-lifted refusal marker (design note §9: TryLock OUT —
+# the spin-wait enabler is the atomics arc's FairStream territory).
+trylock-uncontended	tryLockUncontended	-	ok	-	sync,mutex

@@ -292,15 +292,21 @@ run_case_rows() {
   # needs a schedule the sampler never hits (strengthen with directed
   # sampling; record the conclusion in the case's why); (c) the program
   # is race-free and misclassified (model bug — fix).
+  # fatal (spec-parity slice 2, sync design note §2): gc's UNRECOVERABLE
+  # runtime throws (`fatal error: <msg>`, exit 2 — the sync misuse
+  # class; probed: recover does not intervene, so this is a terminal
+  # like deadlock, never a panic). The message is per-case, carried in
+  # expected_reason; both sides compare the synthesized status/message
+  # observation. Strict-lane only.
   case "$expected_status" in
-    ok|panic|deadlock|race) ;;
+    ok|panic|deadlock|race|fatal) ;;
     *)
-      report_fail "$id" "$features" "manifest" "invalid expected Go status: $expected_status; use ok, panic, deadlock, or race"
+      report_fail "$id" "$features" "manifest" "invalid expected Go status: $expected_status; use ok, panic, deadlock, race, or fatal"
       return 0
       ;;
   esac
   case "$expected_status" in
-    panic)
+    panic|fatal)
       if [[ "$expected_reason" == "-" ]]; then
         report_fail "$id" "$features" "manifest" "$expected_status requires an expected_reason"
         return 0
@@ -360,8 +366,8 @@ run_case_rows() {
       report_fail "$id" "$features" "frontend-export" "unsupported frontend '$FRONTEND' (only 'native' is supported)"
       return 0
     fi
-    if [[ "$expected_status" == "deadlock" ]]; then
-      report_fail "$id" "$features" "manifest" "deadlock-expectation cases are strict-lane only"
+    if [[ "$expected_status" == "deadlock" || "$expected_status" == "fatal" ]]; then
+      report_fail "$id" "$features" "manifest" "deadlock/fatal-expectation cases are strict-lane only"
       return 0
     fi
     run_membership_case_rows
@@ -372,7 +378,7 @@ run_case_rows() {
     if [[ "$expected_status" == "race" ]]; then
       report_fail "$id" "$features" "go-observation" "expected a -race report, but go run -race exited green: $go_observation (three-way investigation: too-eager check / schedule-hidden race / misclassified case)"
       failed=1
-    elif [[ "$expected_status" == "panic" || "$expected_status" == "deadlock" ]]; then
+    elif [[ "$expected_status" == "panic" || "$expected_status" == "deadlock" || "$expected_status" == "fatal" ]]; then
       report_fail "$id" "$features" "go-observation" "expected $expected_status, but Go exited successfully: $go_observation"
       failed=1
     elif ! lean observation-eq --left "$go_observation" --right "$go_observation" >/dev/null 2>&1; then
@@ -404,6 +410,19 @@ run_case_rows() {
         failed=1
       else
         go_observation="{\"message\":\"data race detected\",\"schema\":\"golean-observation-v1\",\"status\":\"race\"}"
+      fi
+    elif [[ "$expected_status" == "fatal" ]]; then
+      # The throw's message is per-case (expected_reason carries it);
+      # the observation both sides compare is the synthesized
+      # status/message pair — the Lean machine's fatal terminal renders
+      # the identical status and message (the deadlock pattern with a
+      # case-specific message).
+      if [[ "$go_observation" != *"fatal error: $expected_reason"* ]]; then
+        report_fail "$id" "$features" "go-run" "expected Go fatal error '$expected_reason', got: $go_observation"
+        failed=1
+      else
+        escaped_reason="$(json_string_literal "$expected_reason")"
+        go_observation="{\"message\":$escaped_reason,\"schema\":\"golean-observation-v1\",\"status\":\"fatal\"}"
       fi
     elif [[ "$expected_status" == "panic" ]]; then
       if [[ "$go_observation" != *"panic:"* ]]; then

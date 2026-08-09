@@ -30,7 +30,7 @@ func main() {
 	flag.StringVar(&cfg.out, "out", "", "output directory")
 	flag.StringVar(&cfg.subject, "subject", "", "subject function")
 	flag.StringVar(&cfg.args, "args", "-", "comma-separated integer args or -")
-	flag.StringVar(&cfg.status, "expected-status", "ok", "expected Go status: ok, panic, or deadlock")
+	flag.StringVar(&cfg.status, "expected-status", "ok", "expected Go status: ok, panic, deadlock, race, or fatal")
 	flag.Parse()
 
 	if err := run(cfg); err != nil {
@@ -56,7 +56,11 @@ func run(cfg config) error {
 	// the caller; the subject completes (the default GORACE continues
 	// past a report), so the wrapper is the plain "ok" shape — the race
 	// report and exit 66 arrive from the TSan runtime, not the wrapper.
-	if cfg.status != "ok" && cfg.status != "panic" && cfg.status != "deadlock" && cfg.status != "race" {
+	// "fatal" (spec-parity slice 2): the subject hits an unrecoverable
+	// runtime throw (`fatal error: <msg>`, exit 2 — the sync misuse
+	// class) — like deadlock, the subject never returns and no
+	// observable result is required.
+	if cfg.status != "ok" && cfg.status != "panic" && cfg.status != "deadlock" && cfg.status != "race" && cfg.status != "fatal" {
 		return fmt.Errorf("invalid --expected-status %q", cfg.status)
 	}
 

@@ -1,0 +1,7 @@
+# id	subject	args	expected_status	expected_reason	features	lane	why	params
+# The UNRECOVERABLE sync throw class (probe p01; design note §2): gc
+# aborts with `fatal error: <reason>`, exit 2, recover does NOT
+# intervene — expected_status fatal pins both the class and the fixed
+# message.
+unlock-of-unlocked	unlockOfUnlocked	-	fatal	sync: unlock of unlocked mutex	sync,mutex	strict	-	-
+unlock-recover-attempt	unlockRecoverAttempt	-	fatal	sync: unlock of unlocked mutex	sync,mutex,recover	strict	-	-

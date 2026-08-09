@@ -1,0 +1,4 @@
+# id	subject	args	expected_status	expected_reason	features	lane	why	params
+add-done-wait	addDoneWait	-	ok	-	sync,waitgroup,goroutines,globals	confluent	the Done-to-Wait edge orders the worker's write before main's readout on every schedule	width=4
+batch-done	batchDone	-	ok	-	sync,waitgroup	strict	-	-
+recovered-negative-continue	recoveredNegativeContinue	-	ok	-	sync,waitgroup,recover,defer	strict	-	-

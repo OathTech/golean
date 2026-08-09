@@ -121,3 +121,8 @@ zero_values
 sort
 externs
 imported_goose
+sync
+mutex
+rwmutex
+waitgroup
+once

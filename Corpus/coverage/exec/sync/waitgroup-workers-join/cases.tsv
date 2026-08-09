@@ -1,0 +1,2 @@
+# id	subject	args	expected_status	expected_reason	features	lane	why	params
+workers-join	workersJoin	-	ok	-	sync,waitgroup,mutex,goroutines,globals,loops	confluent	mutual exclusion makes the three increments commute and Wait joins all workers before the readout: every schedule yields 3	width=5,sites=40,work=40000000
