@@ -83,7 +83,7 @@ def tokenizeAux : Nat → List Char → Except String (List Tok)
     else if c.isAlpha || c = '_' then
       let id := c :: cs.takeWhile isIdentChar
       let rest := cs.dropWhile isIdentChar
-      (Tok.ident (String.mk id) :: ·) <$> tokenizeAux fuel rest
+      (Tok.ident (String.ofList id) :: ·) <$> tokenizeAux fuel rest
     else .error s!"unexpected character '{c}'"
 
 def tokenize (s : String) : Except String (List Tok) :=
