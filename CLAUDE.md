@@ -280,6 +280,14 @@ they are not tracked):
   keep the reading copy at the manifest's pinned rev).
 - `deps/raft` — etcd-io/raft, the north-star target (REQUIRED for the
   quorum-pilot arc).
+- `deps/verdi` @ `7e1641b`, `deps/verdi-raft` @ `a3375e8`, `deps/StructTact`
+  @ `97268e1` — the Verdi system model (`theories/Core/Net.v`) and its Raft
+  instance: the spec `compat/verdi` ports, so the primary source for any
+  fidelity question (`docs/2026-08-09_verdi-compat-layer.md` §1).
+- `deps/rocq-lean-import` @ `96686c4`, `deps/lf-lean` @ `2c0d52e` — the public
+  half of the Lean↔Rocq kernel-import correspondence path: the plugin (older
+  text export format, pinned lean4export `c9f8373`) and 1,276 worked iso
+  examples. Read before any certification-toolchain work (§3 of the same note).
 - `deps/grossmith` — the seed-deterministic differential conformance
   GENERATOR for Go programs (external project; hands findings over as
   dated docs, e.g. `docs/2026-08-07_grossmith-findings.md`). Supersedes
