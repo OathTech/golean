@@ -121,6 +121,7 @@ inductive IR_equivalent : List (IR K) → List (IR K) → Prop where
       IR_equivalent l2 l3 →
       IR_equivalent l1 l3
 
+omit K_eq_dec in
 /-- `Linearizability.v:134-139` -/
 theorem IR_equivalent_refl : ∀ l : List (IR K), IR_equivalent l l
   | [] => .IR_equiv_nil
