@@ -1,7 +1,15 @@
 # The spec-parity arc — charter (2026-08-09)
 
-Status: DRAFT for user decision on the marked items; structure and
-sequencing per the 2026-08-08/09 discussion. Basis:
+Status: DECIDED (user sign-off 2026-08-09) — D1 BOTH (triple + readout
+twin, the golden precedent); D2 NATIVE (Actris port recorded as future
+option, comparison at the export layer); D3 CURATED (one exemplar per
+feature class designated + Comparator-replayed; bulk proven +
+gate-checked in a tracked manifest); D4 AS STATED (blocking primitives
+in; atomics/sync.Map/Cond/Pool out). ADDITION (user 2026-08-09):
+slice 1 OPENS with the F15 observation-channel fix (grossmith hunt —
+integer kind/width + defined-type identity in the observation JSON,
+symmetric encoder change both sides in one commit; see TODO.md entry)
+before the laws-spine work. Structure per the 2026-08-08/09 discussion. Basis:
 `docs/2026-08-07_goose-comparative-scoping.md` (the rung ladder;
 their 376 wp lemmas / 37 proved oracles / ~55 proved channel examples),
 `docs/goose-perennial-comparison.md` (the standing matrix),
