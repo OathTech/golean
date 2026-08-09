@@ -225,6 +225,7 @@ theorem isBlockedConfig_atBoundary {c : Config} (h : isBlockedConfig c = true) :
   | .blockedSend _ _ _, _ => rfl
   | .blockedRecv _ _ _ _ _, _ => rfl
   | .blockedSelect _ _ _, _ => rfl
+  | .blockedSync _ _ _ _, _ => rfl
 
 /-- A legal registry-point pick is a legal fine pick: at a boundary it
 is already a runnable-set member; between boundaries the running

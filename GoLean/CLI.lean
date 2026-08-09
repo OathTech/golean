@@ -224,6 +224,13 @@ private partial def goValueJson : GoValue → Json
         ("cap", Lean.toJson capacity),
         ("closed", Lean.toJson closed)
       ]
+  -- Sync primitive state (spec-parity slice 2): a subject RETURNING a
+  -- sync struct is copy-class misuse with no Go-side counterpart shape
+  -- (the harness reflects it as an opaque struct) — the tag is emitted
+  -- so the mismatch is a VISIBLE red, never a false pass. No corpus
+  -- case observes one; the machine-internal repr is diagnostic only.
+  | .syncData p =>
+      Json.mkObj [("tag", Json.str "syncData"), ("state", Json.str s!"{repr p}")]
 
 private def runJson : GoLean.GoCore.Result → Json
   | { values } =>

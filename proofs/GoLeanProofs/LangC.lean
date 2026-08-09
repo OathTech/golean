@@ -317,7 +317,7 @@ theorem wpC_spawn_noop_witness
     (hstep := fun σ => Step.goStmtEntry)
     (hdet := by
       intro σ c₂ σ₂ sq
-      cases sq <;> simp_all [stmtPlan, chanPlan]))
+      cases sq <;> simp_all [stmtPlan, chanPlan, syncPlan]))
   iapply fupd_intro
   inext
   iapply fupd_intro
@@ -365,7 +365,7 @@ theorem wpC_spawn_noop_witness
       (hstep := fun σ => Step.seqn)
       (hdet := by
         intro σ c₂ σ₂ sq
-        cases sq <;> simp_all [stmtPlan, chanPlan]))
+        cases sq <;> simp_all [stmtPlan, chanPlan, syncPlan]))
     iapply fupd_intro
     inext
     iapply fupd_intro

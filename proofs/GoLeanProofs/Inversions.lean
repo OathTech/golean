@@ -47,11 +47,15 @@ theorem step_det {c : Config} {σ : ExecState} {c₁ : Config} {σ₁ : ExecStat
   cases h₁ <;> cases h₂ <;>
     first
       | (simp_all [Config.choiceFree, strictPlan, stmtPlan, panicPassthrough,
-          chainNewestRecovered, chanPlan, selectOperands]; done)
-      -- The one cross-plan pair simp cannot refute alone: a statement
-      -- both `stmtPlan` and `chanPlan` claim (their domains are disjoint,
-      -- `stmtPlan_of_chanPlan` — channels arc slice 1).
+          chainNewestRecovered, chanPlan, selectOperands, syncPlan]; done)
+      -- The cross-plan pairs simp cannot refute alone: a statement two
+      -- plan classifiers claim (their domains are pairwise disjoint —
+      -- `stmtPlan_of_chanPlan`, channels arc slice 1;
+      -- `stmtPlan_of_syncPlan`/`chanPlan_of_syncPlan`, spec-parity
+      -- slice 2).
       | (have := stmtPlan_of_chanPlan ‹_›; simp_all; done)
+      | (have := stmtPlan_of_syncPlan ‹_›; simp_all; done)
+      | (have := chanPlan_of_syncPlan ‹_›; simp_all; done)
       | omega
 
 end GoLean.GoCore.Machine
