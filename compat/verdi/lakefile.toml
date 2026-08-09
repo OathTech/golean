@@ -1,6 +1,6 @@
 name = "VerdiCompat"
 version = "0.1.0"
-defaultTargets = ["VerdiCompat", "AxCheck"]
+defaultTargets = ["VerdiCompat", "AxCheck", "diffharness"]
 
 [[lean_lib]]
 name = "VerdiCompat"
@@ -12,3 +12,10 @@ name = "VerdiCompat"
 [[lean_lib]]
 name = "AxCheck"
 globs = ["AxCheck"]
+
+# The differential harness's Lean leg (design note §3 path 2; the Rocq
+# oracle leg is parked — see docs/2026-08-09_verdi-p1-lane.md).
+# Run: .lake/build/bin/diffharness check fixtures/handlers-n3.tsv
+[[lean_exe]]
+name = "diffharness"
+root = "DiffHarness"
