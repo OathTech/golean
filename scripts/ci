@@ -605,8 +605,14 @@ if [ -f artifacts/coverage/negative-latest.tsv ]; then
     bad "negative baseline diff (DRIFT — see above)"
   fi
 else
-  echo "  no artifacts/coverage/negative-latest.tsv — run scripts/coverage-negative first"
-  RESULTS+=("  skip negative baseline diff (no recorded run)")
+  # Same fail-open as the differential branch below, same fix (audit F4).
+  if [ -n "${GOLEAN_ALLOW_NO_DIFF:-}" ]; then
+    echo "  no artifacts/coverage/negative-latest.tsv — GOLEAN_ALLOW_NO_DIFF set, allowed"
+    RESULTS+=("  note negative baseline diff NOT RUN (no record; explicitly allowed here)")
+  else
+    echo "  no artifacts/coverage/negative-latest.tsv" >&2
+    bad "negative baseline diff (NO recorded negative run — run scripts/coverage-negative, or set GOLEAN_ALLOW_NO_DIFF=1 for an environment that never records one)"
+  fi
 fi
 
 step "differential baseline diff (scripts/coverage-baseline-diff)"
@@ -660,8 +666,21 @@ if [ -f artifacts/coverage/latest.tsv ]; then
     fi
   fi
 else
-  echo "  no artifacts/coverage/latest.tsv — run scripts/ci --diff or scripts/diff-one first"
-  RESULTS+=("  skip differential baseline diff (no recorded run)")
+  # NO RECORD AT ALL IS A FAILURE, NOT A SKIP (pre-merge audit F4, 2026-08-09).
+  # This branch used to append to RESULTS directly — bypassing bad(), the only
+  # thing that sets fail=1 — so "nothing has ever checked the corpus" exited
+  # PASS, while a meta-less or sha-mismatched record (above) is a FAIL.
+  # Deleting the evidence scored better than corrupting it. And it is trivially
+  # reachable: scripts/diff-coverage removes these outputs unconditionally up
+  # front, so ANY killed --diff parks the repo here — which is exactly where a
+  # cgroup kill from the new memory cap lands you.
+  if [ -n "${GOLEAN_ALLOW_NO_DIFF:-}" ]; then
+    echo "  no artifacts/coverage/latest.tsv — GOLEAN_ALLOW_NO_DIFF set, allowed"
+    RESULTS+=("  note differential baseline diff NOT RUN (no record; explicitly allowed here)")
+  else
+    echo "  no artifacts/coverage/latest.tsv" >&2
+    bad "baseline diff (NO recorded differential run — nothing has checked the corpus; run scripts/ci --diff, or set GOLEAN_ALLOW_NO_DIFF=1 for an environment that never records one)"
+  fi
 fi
 
 for GUARD_BASE in baselines/native-full.tsv baselines/negative-full.tsv; do

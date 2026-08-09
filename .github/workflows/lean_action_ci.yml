@@ -75,6 +75,14 @@ jobs:
         if: github.event_name == 'push' || github.event_name == 'pull_request'
         env:
           GOLEAN_MEM_MAX: none
+          # A fresh runner has no artifacts/ (gitignored), so it has no
+          # recorded differential or negative run — legitimately, since this
+          # step is the FAST gate and never produces one. Absent records are
+          # now a FAIL rather than a silent skip (audit F4), so this
+          # environment says so explicitly instead of being exempted in the
+          # script. The scheduled --diff/--slow steps below produce their own
+          # records and must NOT set this.
+          GOLEAN_ALLOW_NO_DIFF: 1
         run: ./scripts/ci
 
       - name: Set up Go (full differential)
