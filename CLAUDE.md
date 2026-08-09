@@ -17,7 +17,7 @@ exist because they let us do that without accumulating debt, not as ceremony.
    axiom/non-vacuity gate, eval tests, baseline diff of the last run). It fails
    loud and local. For runtime changes add the differential (step 2 / `--diff`).
    The individual steps, when you need them directly:
-1. `lake build` passes.
+1. `lake build` passes — **as `scripts/capped lake build`, never bare** (below).
 2. Run the focused differential slice for the touched area
    (`scripts/coverage run <ids...>` or `scripts/diff-one <id>`, native
    frontend), plus `lake exe gocore-eval-tests`.
@@ -29,6 +29,27 @@ A green build is not evidence of correctness. The cheap, decisive signal is the
 failing-set diff — it is what kept 13 consecutive cleanup slices at zero
 regressions. The differential oracle is real Go (`go run`); the native Go
 frontend (`tools/nativefrontend` + `NativeToIR.lean`) is the only frontend.
+
+### Never run a Lean build uncapped (2026-08-09)
+
+Every `lake`/`lean` invocation goes through **`scripts/capped`**, which runs it
+in its own cgroup (`systemd-run --user --scope`, `MemoryMax` default 64G on a
+125G box, `GOLEAN_MEM_MAX` to override, `=none` to opt out loudly). On breach
+the kernel kills inside that cgroup only, so the build dies instead of the
+machine. `scripts/ci` re-execs itself through it — a rule you can forget is not
+a gate — so the gate needs no special handling; ad hoc builds do.
+**The cap is a blast radius, not a budget:** use the heavy machine when a job
+needs it, just never let one job take the box.
+
+Why: `by decide +kernel` over a parser and six string literals
+(`compat/gobra`) reached 60 GB in ~2 min and killed the session twice; the OOM
+killer's badness score picks the multiplexer and the agent quite happily.
+Deleting the line made the file elaborate in 1.0 s — `decide +kernel` over
+`String`/`Char` is the smell. Two caps that DON'T work, measured, so nobody
+"simplifies" the wrapper into one: `lean -M` sails past its limit during kernel
+reduction (`-M 4096` still needed a 12 GB cgroup kill), and `prlimit --as`
+kills Lean instantly since it reserves address space per thread. RSS via cgroup
+is the only honest knob.
 
 ### Baseline pinning (the "recorded baseline" in step 3)
 

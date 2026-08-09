@@ -26,6 +26,16 @@ set -uo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
 cd "$ROOT"
 
+# 0. MEMORY CAP — re-exec ourselves inside our own cgroup before doing any
+#    work. An uncapped Lean elaboration reached 60 GB and killed the session
+#    (twice) on 2026-08-09; the gate is exactly the thing that must not be
+#    able to take the machine down. Self-wrapping rather than documenting is
+#    deliberate: a rule you can forget is not a gate. See scripts/capped for
+#    the cap size, the opt-out, and the two mechanisms that DON'T work.
+if [ -z "${GOLEAN_CAPPED:-}" ]; then
+  exec "$ROOT/scripts/capped" "$ROOT/scripts/ci" "$@"
+fi
+
 RUN_DIFF=0
 RUN_SLOW=0
 for arg in "$@"; do

@@ -1,0 +1,71 @@
+#!/usr/bin/env bash
+# Run a command inside its OWN cgroup with a hard memory cap, so a runaway
+# build dies alone instead of taking the machine (and the caller) with it.
+#
+#   scripts/capped lake build
+#   scripts/capped lake env lean SomeFile.lean
+#   GOLEAN_MEM_MAX=96G scripts/capped lake build     # deliberate heavy run
+#
+# WHY THIS EXISTS (2026-08-09): `example : sumRoundTripOk := by decide +kernel`
+# in compat/gobra reached 60 GB of RSS in ~2 minutes and killed the session
+# twice — the OOM killer picks by badness score, and the terminal multiplexer
+# and the agent are perfectly good candidates. Deleting that one line made the
+# same file elaborate in 1.0 s. The cap turns "the box dies" into "the build
+# fails", which is the outcome every gate in this repo is built around.
+#
+# THE CAP IS A BLAST RADIUS, NOT A BUDGET. Default 64G on a 125G machine: use
+# the heavy machine when a job needs it, but never let one job take the box.
+# Raise it deliberately with GOLEAN_MEM_MAX for a job you have reason to
+# believe needs more.
+#
+# TWO MECHANISMS THAT DO NOT WORK — measured, do not "simplify" to either:
+#   * `lean -M <mb>` sails past its own limit during KERNEL reduction. With
+#     -M 4096 the process still had to be killed by the cgroup at 12 GB. It
+#     checks at elaborator allocation points; `decide +kernel` is not one.
+#   * `prlimit --as=<n>` kills Lean instantly ("failed to create thread") —
+#     Lean reserves large address space per thread, so an address-space limit
+#     is not a memory limit here. RSS via cgroup is the only honest knob.
+# MemorySwapMax=0 is deliberate: with swap available the runaway thrashes
+# ~19 GB of it first, which hangs the box in a slower, more confusing way.
+set -uo pipefail
+
+MEM="${GOLEAN_MEM_MAX:-64G}"
+
+if [ "$#" -eq 0 ]; then
+  echo "usage: scripts/capped <command> [args...]" >&2
+  exit 2
+fi
+
+# Already inside a cap (e.g. scripts/ci re-exec'd itself, or nested calls):
+# run directly rather than nesting scopes.
+if [ -n "${GOLEAN_CAPPED:-}" ]; then
+  exec "$@"
+fi
+
+# Explicit, visible opt-out. Fail-closed doctrine: an unavailable cap is an
+# ERROR, not a silent uncapped run — a cap that quietly does nothing is worse
+# than no cap, because it is believed.
+if [ "$MEM" = "none" ]; then
+  echo "scripts/capped: WARNING — GOLEAN_MEM_MAX=none, running UNCAPPED: $*" >&2
+  exec "$@"
+fi
+
+if ! command -v systemd-run >/dev/null 2>&1; then
+  cat >&2 <<EOF
+scripts/capped: systemd-run not found — refusing to run uncapped.
+  An uncapped Lean build has taken this machine down before (see the header
+  of this script). Either install systemd, or opt out explicitly and
+  knowingly with:
+      GOLEAN_MEM_MAX=none scripts/capped $*
+EOF
+  exit 127
+fi
+
+# --user --scope: the command runs as a transient scope in the caller's
+# session, inheriting cwd/env/tty, but in its own cgroup. On breach the
+# kernel OOM-kills inside THIS cgroup only; the caller is never a candidate.
+exec env GOLEAN_CAPPED=1 \
+  systemd-run --user --scope -q \
+    -p MemoryMax="$MEM" \
+    -p MemorySwapMax=0 \
+    -- "$@"
