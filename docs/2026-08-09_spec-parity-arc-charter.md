@@ -74,6 +74,30 @@ corrected, the dangling law names in `Laws/Eval` fixed, `assigneesExprs`
 EIGHT. The audit's refuted finding (granularity ledger) required no
 action.
 
+## Slice-2 record (2026-08-09, branch `spec-parity-s2`)
+
+DELIVERED, gate green (`scripts/ci --slow`) at tip. The sync package
+is live as a registry growth: Mutex/RWMutex/WaitGroup/Once as machine
+primitives (value-semantics cells, one blocked shape, cell-based wake,
+ZERO new Choices sites — acquisition order is L1 latitude, envelope
+statement at `applySyncOp`), the probed-fatal class (`GoError.fatal` +
+`expected_status: fatal`, refuting this charter's "recoverable
+unlock-of-unlocked" parenthetical — probe p01), HB edges per the
+package-doc sentences (two-clock RWMutex realization, the p14
+discriminator; the wg misuse sema pair), interpreter/relation lockstep
+throughout (a crash checkpoint 2fc4f4f0 sits honestly mid-branch,
+completed by the next commit). 35 red-first guardrail pins: 33 green,
+2 permanent out-of-scope markers (Cond/TryLock). Lanes: sync
+confluent/membership/racy rows all certified; workers-join strict with
+the recorded beyond-caps reason. Phase-2 tail: the FOUR sync-only
+goose files land at R1 green (importer `--allow-import` seam); the
+other 13 stay blocked by their other imports, recorded per-file.
+Full record + parking ledger (5 user-scale items for the check-in):
+`docs/2026-08-09_sync-package-design.md` §§11-12. Designated
+statements untouched (44, byte-identical); untriaged ledger back to
+16; corpus 1458 (1348/110), zero drift on every prior id at all three
+re-pins.
+
 ## The sync question (asked 2026-08-09), answered
 
 Sync is NOT a prerequisite for spec-parity over the imported corpus
