@@ -448,6 +448,53 @@ audited separately (D4).
 - **D5 — ghost field:** keep `electoralVictories` (1:1 fidelity, iso is
   trivial) or drop it (cleaner spec, breaks 1:1)? Spike keeps it.
 
+## 8b. Parallel-lane feasibility (user question, 2026-08-09)
+
+**Can the Verdi buildout run as a long-lived feature lane beside mainline
+work, two agents building concurrently? Yes — the seam is unusually clean,
+and this session already ran the experiment**: this worktree executed two
+full `scripts/ci` runs (incl. complete GoLean+proofs builds) while the
+other agent held main — no interference. Worktrees have independent build
+dirs; marginal disk ≈ 1GB/lane (`.lake` 424M + `proofs/.lake` 361M; the
+compat package itself is 4.3M and builds in seconds). CPU contention only
+matters when both lanes run full gates simultaneously — schedule around
+it, no tooling needed.
+
+**The seam (division of labor):**
+- *Verdi lane owns:* `compat/verdi/**`, dated `docs/*_verdi-*.md`, its own
+  worktree `deps/` clones. Near-term slices (linearizability vocab, ghost
+  `refined_raft_net_invariant` port, iso toolchain, mock-library
+  authoring-in-compat) live entirely here — zero file overlap with
+  mainline. `compat` is referenced by NOTHING in the root
+  lakefile/manifest/`scripts/ci` (verified) — mainline builds cannot break
+  it and vice versa.
+- *Mainline lane owns:* `GoLean/`, `proofs/`, `tools/`, `Corpus/`,
+  `baselines/`, `scripts/` — including ALL GoCore semantics. Critically:
+  **F5 (network model) is mainline work** — it's a Choices-site semantic
+  change under full differential discipline. The Verdi lane builds the
+  abstract side only.
+- *Coordination points (explicit merge-window slices, never done
+  unilaterally from the Verdi lane):* corpus cases + baseline re-pins
+  (e.g. landing the mock as a corpus case), wiring compat checks into
+  `scripts/ci`, `CLAUDE.md`/`TODO.md` amendments, D1 integration into
+  `proofs/`.
+
+**Mechanics:** worktree per agent (already the practice — repo history
+shows the branch-per-slice pattern: `channels-arc-s1..s6`); protocol
+unchanged (rebase onto main → gate → audit-ask → ff-only merge at slice
+boundaries, so the "feature branch" is really a SEQUENCE of small merged
+slices, not one long-diverging branch — long-lived divergence is the main
+risk and small slices are the mitigation); shared-stash warning already in
+CLAUDE.md applies doubly; each fresh worktree must clone its own `deps/`
+(bit us today: missing `deps/goose` fails the verbatim gate closed —
+consider a `scripts/setup-deps` bootstrap as a mainline nicety).
+
+**Honest costs:** audit load doubles (each lane's merges get the
+protocol's audit-ask); merge windows on main remain the one serialized
+resource; disjointness erodes exactly when the Verdi lane starts touching
+integration points — the discipline is to funnel those through the
+coordination list above rather than drift into them.
+
 ## 8. Artifacts
 
 - This note.
