@@ -92,6 +92,22 @@ P0's mapping decisions (design note §2) carry over unchanged. New in P1:
 6. `good_trace` is a recursive `Prop`-valued function with a wildcard
    fallthrough; Lean's pattern elaboration splits the same way Coq's
    does (checked against `Linearizability.v:249-255` clause order).
+7. Porting FRICTION, not deviation (recorded for the next porter):
+   typeclass-projected types (`RaftParams.clientId counterBase`,
+   `BaseParams.input …`) are defeq to `Nat` but do NOT reduce during
+   `OfNat`/`ToString` instance search — concrete-instance literals must
+   be ascribed `(7 : Nat)`, and serializers take `Nat` arguments
+   (`serNat`) rather than interpolating projected values. Similarly,
+   `exact` on constructors whose premises are `rfl`-equations can fail
+   with unassigned metavariables where `refine … ?_` + `rfl` succeeds
+   (see `raft_linearizable_conclusion_witness`).
+8. Harness generator scope (not a spec deviation): generated INPUT
+   states always carry `electoralVictories = []` (no handler reads the
+   ghost field); nonempty values still appear on the OUTPUT side via
+   `handleRequestVoteReply` victories (7 elected-leader cases in the
+   committed fixture). Fixture outputs are COMPILED Lean evaluation;
+   the `rfl` witnesses in `Examples.lean` pin kernel reduction on a
+   handful of the same handlers.
 
 Recorded gaps (NOT ported, deliberately, this phase): the
 `Linearizability.v` proof-side lemma corpus past line 270 (incl.
@@ -144,13 +160,38 @@ linearizability); the ghost/refined layer (P0's recorded gap, unchanged).
    lives (`compat/verdi/` script vs `scripts/` — the latter is
    mainline-owned).
 
-## Slice log
+## Slice log (P1 complete, 2026-08-09)
 
-- S1 (this commit): lane doc.
-- S2: K-generic linearizability vocabulary (`Linearizability.lean`).
-- S3: raft-side execute/dedup slice (`CommonDefinitions.lean` extension).
-- S4: raft linearizability glue + headline transfer target
-  (`RaftLinearizable.lean`) + end-to-end non-vacuity witness.
-- S5: differential harness (`DiffHarness.lean` exe + committed fixtures).
-- (each slice: `scripts/capped lake build` green in `compat/verdi`
-  before commit; AxCheck extended as statements land.)
+- S1 `12f8a9be`: lane doc.
+- S2 `61440180`: K-generic linearizability vocabulary
+  (`Linearizability.lean`, `Linearizability.v:7-270` statement slice)
+  + `acknowledge_all_ops_func_correct` re-proved + `equivalent`
+  non-vacuity witness.
+- S3 `d932073f`: `CommonDefinitions.lean` execute/dedup slice
+  (`CommonDefinitions.v:27-121`).
+- S4 `cd2cb8d5`: `RaftLinearizable.lean` (`importTrace`, `exported`,
+  `get_input`/`get_output`, `log_to_IR`, `input_correct`,
+  `RaftLinearizableStatement`) + prelude `filterMap`/`removeList` +
+  witnesses in `Examples.lean` incl. the named, axiom-checked
+  `raft_linearizable_conclusion_witness` (statement-shape only — its
+  docstring says explicitly that the trace is NOT derived from a
+  `step_failure_star` run).
+- S5 `4324710b`: `DiffHarness.lean` exe + `fixtures/handlers-n3.tsv`
+  (280 cases, 7 kinds × 40). Fail-closed verified by hand: missing
+  fixture → exit 1, tampered fixture → exit 1 with first diverging
+  line, unknown args → exit 2. Two cases hand-checked against the
+  handler semantics (hAE reject-stale and accept-at-origin paths).
+- Every slice: `scripts/capped lake build` green (zero warnings) in
+  `compat/verdi` before commit; AxCheck axiom set stayed
+  `propext`/`Quot.sound`-only, no `sorry`/`native_decide`/`partial`.
+
+## The lane-local gate (run before any commit here)
+
+```
+cd compat/verdi
+../../scripts/capped lake build          # libs + AxCheck + diffharness
+./.lake/build/bin/diffharness check fixtures/handlers-n3.tsv
+```
+Re-generate the fixture ONLY on a deliberate, explained change to the
+port or the generator, committed together with the reason (mirrors the
+baseline re-pin doctrine).
