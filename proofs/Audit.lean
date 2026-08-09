@@ -677,9 +677,10 @@ example := @GoLean.Iris.wp_while_eq_once
 external premises = the program/method pins). -/
 example := @GoLean.Iris.wp_call_enter_inc
 example := @GoLean.Iris.wp_call_enter_incViaCall
-/-- `✓` the frame exits — `wp_frame_return_int` (premise-free given
-resources) and its invariant-opening form, both consumed by the golden
-walk. -/
+/-- `✓` the frame exits — `wp_frame_return_int` (a four-step spine walk
+since BUG-025/BUG-052: no state side-conditions, one syntactic
+env-lookup premise `hres`) and its invariant-opening form, both
+consumed by the golden walk. -/
 example := @GoLean.Iris.wp_frame_return_int
 example := @GoLean.Iris.wp_frame_return_int_inv
 /-- `✓` the unwinding/defer/call-value law families (proof-corpus
@@ -726,7 +727,12 @@ projections stop being `rfl`):
 - the wide-statement (`stmtOpK`) family — `wp_stmt_op_first`,
   `wp_stmt_op_shift_target`, `wp_stmt_op_shift_plain`,
   `wp_stmt_op_apply_store` — NOTHING existed for `stmtOpK` before this
-  file; witnessed by the `sortSlice` statement walk below.
+  file; witnessed by the `sortSlice` walk below (`wp_stmt_op_first` +
+  the apply-store core `wp_sort_slice` definitionally IS), the
+  `makeSlice` walk (`wp_stmt_op_shift_target`, `wp_make_slice_c2`),
+  and the golden mapAssign walks (`wp_stmt_op_shift_plain`, fired via
+  the registered `go_walk` table on the pinned `c[1] = struct{}{}` /
+  `l[1] = 12` statements).
   (`wp_stmt_op_apply_read_store₂` and its `wp_read_store_step₂` core
   were DELETED at the spec-parity-s1 audit-fix round: after the
   BUG-034 spine migration no `StmtOp` has two target cells — see the

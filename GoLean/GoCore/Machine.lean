@@ -2248,17 +2248,32 @@ inductive Step : Config → ExecState → Config → ExecState → Prop where
   -- evaluation — "when evaluating the operands of an expression,
   -- assignment, or return statement, all function calls, method calls,
   -- receive operations, and binary logical operations are evaluated in
-  -- lexical left-to-right order"; "the order of those events compared
-  -- to the evaluation and indexing of x and the evaluation of y and z
-  -- is not specified" (the a, b = f() class sits in that carve-out).
+  -- lexical left-to-right order"; and, of the spec's own
+  -- `y[f()], ok = g(z || h(), i()+x[j()], <-c), k()` example:
+  -- "However, the order of those events compared to the evaluation
+  -- and indexing of x and the evaluation of y and z is not specified,
+  -- except as required lexically." The `lhs..., x = f(...)` class sits
+  -- squarely in that carve-out ON GOCORE'S EXPR SURFACE: the frontend
+  -- hoists every nested call/receive out of target operands (A-normal
+  -- form), so by the time this rule fires the left-hand operand reads
+  -- are call-free and receive-free — nothing the "except as required
+  -- lexically" qualifier orders remains among them, and their order
+  -- against the RHS call is exactly the unspecified residue.
   -- gc REALIZES call-first: the left-hand operands (index operands, a
   -- deref target's pointer, an index target's slice-header base) are
   -- read AFTER the call returns — probed go1.26.5 (the BUG-052 matrix:
   -- missed/spurious index panic, global index, deref target,
-  -- slice-header base; multi-assign/call-write-back-order/*). The
-  -- machine consumes NO Choices here, so it pins gc's point; a future
-  -- gc that realizes the other order revisits this pin, not the spec
-  -- claim.
+  -- slice-header base; multi-assign/call-write-back-order{,-value}/*).
+  -- The machine consumes NO Choices here, so it pins gc's point; a
+  -- future gc that realizes the other order revisits this pin, not the
+  -- spec claim. SCOPE: the pin covers ONLY the call-vs-operand axis.
+  -- The INTER-TARGET operand order (which target's operands evaluate
+  -- first) is a SEPARATE spec-unordered axis this pin does NOT cover:
+  -- gc's realization there is compiler-internal (2 targets: the
+  -- second's operand panic wins; 3: the middle's — go1.26.5, stable
+  -- under -N -l) and therefore unpinnable; the machine's left-to-right
+  -- is OUR spec-legal realization, recorded as OPEN latitude in
+  -- BUG-026's unordered-panic-envelope amendment (docs/BUGS.md).
   | callStart {targets fid args plans a rest env k s} :
       targetsPlan targets.toList = some plans →
       args.toList = a :: rest →
@@ -2387,11 +2402,16 @@ inductive Step : Config → ExecState → Config → ExecState → Prop where
   -- result read. A TARGETLESS frame resumes the caller in one step
   -- (behavior unchanged — every expression-position call the frontend
   -- hoists takes this shape); a frame WITH caller-target PLANS reads
-  -- the results and enters the tgtOpK spine POST-CALL (gc's realized
-  -- order — the receive path's exact delivery shape): phase 1
-  -- evaluates the target operands left-to-right in the CALLER's
-  -- environment, each target completing into a store-ready TargetRef
-  -- with its outer check deferred; phase 2 (`storeK`) stores
+  -- the results and enters the tgtOpK spine POST-CALL (the post-call
+  -- point is gc's realized order — the BUG-052 pin, which covers ONLY
+  -- the call-vs-operand axis; the spine is the receive path's exact
+  -- delivery shape): phase 1 evaluates the target operands
+  -- left-to-right in the CALLER's environment — OUR spec-legal
+  -- realization of the INTER-TARGET order, an axis gc realizes
+  -- compiler-internally and this pin deliberately leaves OPEN (the
+  -- BUG-026 envelope amendment) — each target completing into a
+  -- store-ready TargetRef with its outer check deferred; phase 2
+  -- (`storeK`) stores
   -- left-to-right one per step, checks firing at the store after
   -- earlier stores landed — spec §Assignments' example, on the call
   -- write-back path.

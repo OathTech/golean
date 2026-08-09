@@ -45,7 +45,11 @@ differential-pinned) `- Cases: <id>, <id>, …` (baseline case ids), then prose.
   site (Machine.lean, the call rules' PINNED LATITUDE block: spec text
   verbatim, gc's realization probed go1.26.5, version-tracked — a
   future gc realizing the other order revisits the pin, not the spec
-  claim). Laws moved in lockstep: `wp_call_start` (entry),
+  claim). SCOPE (delta review, same date): the pin covers ONLY the
+  call-vs-operand axis. The INTER-TARGET phase-1 operand order is a
+  separate spec-unordered axis this fix does not touch and gc realizes
+  compiler-internally (unpinnable) — recorded as OPEN envelope in
+  BUG-026's amendment, not claimed here. Laws moved in lockstep: `wp_call_start` (entry),
   `wp_call_enter_ret1` restated at the call-statement config,
   `wp_tgtop_stores` (the known-values completion), and the frame-exit
   family (`wp_frame_return_int`/`_fall_int`/`_int_inv`/`₁`/`₂`)
@@ -54,7 +58,15 @@ differential-pinned) `- Cases: <id>, <id>, …` (baseline case ids), then prose.
   `Tests/GoCoreEval` "call target sequencing" pin retuned 901 → 91
   (it encoded the retired operand-first order; the oracle-backed
   guards are the five corpus pins). All five pins flip PASS; the
-  hoisted-control guard stays green.)
+  hoisted-control guard stays green. The `.callValue` half gained its
+  own discriminator pins at the delta review
+  (multi-assign/call-write-back-order-value/{index-target,
+  deref-target} — func-value callees mutating a target operand; the
+  named-func pins exercise only `.call`), green at the fixed machine
+  and VERIFIED RED at the pre-fix machine (worktree at 390ed13c:
+  index-target Lean 420007 vs Go 4207 — the operand-first signature;
+  both cases FAIL there, both PASS at tip; the delta-review verifier
+  probed the same discrimination independently).)
 - Pinned-by: differential
 - Cases: multi-assign/call-write-back-order/index-missed-panic, multi-assign/call-write-back-order/index-spurious-panic, multi-assign/call-write-back-order/global-index, multi-assign/call-write-back-order/deref-target, multi-assign/call-write-back-order/slice-header-base
 - Discovered: 2026-08-09 (S1 pre-merge audit, semantics dimension,
@@ -1079,7 +1091,29 @@ alongside every `e.lifted` rollback (both paths).
   points spec-legal, pre-existing, identical on the single-assign
   path, and realizing gc's exact point needs the same full-statement
   linearization this entry already records as deliberately not
-  built). Amendment widened at the 2026-08-06 final check: the class
+  built). Amendment widened again at the S1 delta review
+  (spec-parity-s1, 2026-08-09): the class has a THIRD axis —
+  INTER-TARGET phase-1 operand order (target-vs-target, distinct from
+  the targets-vs-RHS axis above): for `aa[5][0], b[*pn] = f6()` (and
+  the untouched assignMany twin `aa[5][0], b[*pn] = 42, 7`) gc
+  reports the SECOND target's operand panic and we the FIRST's, and
+  the answers FLIP when the targets are swapped — pinning it as
+  ordering, not deref priority. At three panicking targets gc picks
+  the MIDDLE one (`aa[5][0], cc[9][0], dd[7][0] = f8()` → gc
+  `[9] with length 3`), so gc's realization is neither left-to-right
+  nor right-to-left but compiler-internal (go1.26.5, stable under
+  `-gcflags=all="-N -l"` — not an optimizer artifact; reviewer probes
+  `.tmp/probe052/case12,13` genres, verifier-reproduced
+  independently). Both realizations spec-legal (§Order of evaluation
+  orders only calls/receives/binary-logical, and the frontend hoists
+  calls out of target operands, so the divergence CANNOT escape panic
+  selection into side effects — probed); pre-existing on the
+  assignMany, receive, and call-write-back paths alike; UNPINNABLE
+  (gc's order is compiler-internal and hence fragile to pin), so
+  recorded as OPEN envelope per this entry's precedent — no pin, and
+  the BUG-052 call-order pin explicitly does NOT cover this axis (the
+  rule-site latitude block's SCOPE clause). Amendment widened at the
+  2026-08-06 final check: the class
   also has an early-STORE manifestation crossing the phase boundary —
   `x, a[i].f = 1, 7/z` (z=0, recovered): gc lands the x=1 store before
   the phase-1 division panic; we follow the spec's literal two-phase

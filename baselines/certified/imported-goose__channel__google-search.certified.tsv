@@ -6,9 +6,10 @@
 # deliberately, in its own commit, with the reason — never auto-written.
 # certified: 2026-08-09  commit: spec-parity-s1 audit-fix round (assignment-spine step growth; work cap raised)
 # re-certification reason (S1 audit major, gates dimension): the
-#   BUG-034/037/025 spine migrations + the BUG-052 call-first reorder
-#   add machine steps per assignment / call write-back, pushing the
-#   enumeration past the old work=40000000 cap (fail-loud abort with
+#   BUG-034/037/025 spine migrations alone had already pushed the
+#   enumeration past the old work=40000000 cap (the audit reproduced
+#   the breach at 390ed13c, BEFORE the BUG-052 reorder; the reorder
+#   only re-times existing steps) (fail-loud abort with
 #   subtrees unexplored — the default gate's CERTIFIED-CACHED path
 #   could not see it). Cap raised to 60000000 in cases.tsv (same
 #   commit); re-enumerated FULLY under GOLEAN_SLOW=1 at the new cap:
