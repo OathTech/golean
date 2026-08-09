@@ -47,11 +47,18 @@ is not a gate — so the gate needs no special handling; ad hoc builds do.
 **The cap is a blast radius, not a budget:** use the heavy machine when a job
 needs it, just never let one job take the box.
 
-Why: `by decide +kernel` over a parser and six string literals
-(`compat/gobra`) reached 60 GB in ~2 min and killed the session twice; the OOM
-killer's badness score picks the multiplexer and the agent quite happily.
-Deleting the line made the file elaborate in 1.0 s — `decide +kernel` over
-`String`/`Char` is the smell. Two caps that DON'T work, measured, so nobody
+Why: a `by decide +kernel` in `compat/gobra` reached 60 GB in ~2 min and killed
+the session twice; the OOM killer's badness score picks the multiplexer and the
+agent quite happily. **The cause was a FALSE goal, not an expensive one** — a
+fuel bug made the proposition false, so the kernel was grinding on something
+unprovable; with the bug fixed the same line checks in 1.2 s. So the smell is
+not "`decide +kernel` over `String`/`Char`" (the tokenizer kernel-reduces six
+clauses in 558 ms) but **`decide`-family tactics on a proposition you have not
+first evaluated**. Cheap habit that would have caught it in seconds: `#eval` the
+`Bool` before asking the kernel to prove it — a decision procedure that must
+reduce to `False` has no reason to terminate politely. When one does run away,
+bisect it by layer under a small `GOLEAN_MEM_MAX` with a timeout; each probe
+costs seconds. Two caps that DON'T work, measured, so nobody
 "simplifies" the wrapper into one: `lean -M` is not enforced during kernel
 reduction (audit-reproduced: under `-M 4096`, lean's own `VmRSS` was 4953 MiB
 at t=10s and climbing, with no memory diagnostic), and `prlimit --as` kills
