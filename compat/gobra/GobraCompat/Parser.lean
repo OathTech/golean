@@ -89,6 +89,31 @@ def tokenizeAux : Nat → List Char → Except String (List Tok)
 def tokenize (s : String) : Except String (List Tok) :=
   tokenizeAux s.length s.toList
 
+/-- The longest chain of recursive descent that can occur WITHOUT consuming a
+token: `assertion → conj → cmp → expr → term → factor`. -/
+def grammarDepth : Nat := 6
+
+/-- Fuel sufficient for `toks`, DERIVED from the input rather than guessed.
+
+Every fuel decrement is either a token consumption or one of the descents that
+follow one, and at most `grammarDepth` descents separate two consumptions (a
+`(` re-descends `expr → term → factor`; an `&&`/`==>` re-descends from `conj`).
+With `|toks|` consumptions plus the initial descent, `grammarDepth * (|toks|+1)`
+bounds the deepest call chain. Over-supply is free: the loops return at their
+base case as soon as the tokens run out.
+
+Contrast the original `|toks| + 1`, which was neither derived nor sufficient —
+it ignored depth entirely, so the SHORTEST clause (`requires 0 <= n`, 4 tokens,
+fuel 5, six levels to descend) failed while longer ones passed.
+
+HONEST STATUS: this is an argued bound, not a proved one. `ParserTest.lean`
+stresses it (nesting, chained connectives, minimal clauses); a
+fuel-sufficiency theorem — `fuelFor toks ≤ f → parseAssertion f toks ≠ .error
+"out of fuel"` — is the real fix and is not written yet. Until it is, a clause
+deeper than the tests cover could still exhaust fuel, and the failure mode is
+a FALSE round-trip rather than a loud error. -/
+def fuelFor (toks : List Tok) : Nat := grammarDepth * (toks.length + 1)
+
 abbrev ParserM (α : Type) := List Tok → Except String (α × List Tok)
 
 mutual
@@ -191,16 +216,9 @@ deriving Repr, DecidableEq
 /-- Parse one clause's text (the content of one `//@` comment). -/
 def parseClause (s : String) : Except String SpecClause := do
   let toks ← Parser.tokenize s
-  -- Fuel must cover GRAMMAR DEPTH, not just token count. Every parse descends
-  -- assertion → conj → cmp → expr → term → factor — six levels burned before a
-  -- single token is consumed — and each nested paren costs another round. The
-  -- original `toks.length + 1` gave `requires 0 <= n` (4 tokens) a fuel of 5
-  -- and it died "out of fuel", while the LONGER arithmetic clauses parsed fine
-  -- because extra tokens bought extra fuel. That made sumRoundTripOk false, so
-  -- `decide +kernel` on it was asking the kernel to prove False — which is
-  -- what ate 60 GB and took two sessions down. Unused fuel costs nothing: the
-  -- loops return at their base case as soon as the tokens run out.
-  let fuel := toks.length * 6 + 8
+  -- Fuel must cover GRAMMAR DEPTH, not just token count — see `Parser.fuelFor`
+  -- for the derivation and for what the original `toks.length + 1` did.
+  let fuel := Parser.fuelFor toks
   match toks with
   | .ident "requires" :: rest => do
     let (a, rest) ← Parser.parseAssertion fuel rest
