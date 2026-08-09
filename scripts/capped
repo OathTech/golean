@@ -19,12 +19,15 @@
 # believe needs more.
 #
 # TWO MECHANISMS THAT DO NOT WORK — measured, do not "simplify" to either:
-#   * `lean -M <mb>` sails past its own limit during KERNEL reduction. With
-#     -M 4096 the process still had to be killed by the cgroup at 12 GB. It
-#     checks at elaborator allocation points; `decide +kernel` is not one.
-#   * `prlimit --as=<n>` kills Lean instantly ("failed to create thread") —
-#     Lean reserves large address space per thread, so an address-space limit
-#     is not a memory limit here. RSS via cgroup is the only honest knob.
+#   * `lean -M <mb>` is not enforced during KERNEL reduction. Audit-reproduced:
+#     under `-M 4096`, lean's own VmRSS was 4953 MiB at t=10s and still
+#     climbing, with no memory diagnostic ever emitted. It checks at elaborator
+#     allocation points; `decide +kernel` is not one.
+#   * `prlimit --as=<n>` kills Lean above a threshold ("failed to create
+#     thread") — Lean reserves large address space per thread, so an
+#     address-space limit is not a memory limit here. (--as=8G happened to run;
+#     --as=2G died immediately. Threshold effect, not a usable knob.)
+#     RSS via cgroup is the only honest knob.
 # MemorySwapMax=0 is deliberate: with swap available the runaway thrashes
 # ~19 GB of it first, which hangs the box in a slower, more confusing way.
 set -uo pipefail
@@ -36,9 +39,42 @@ if [ "$#" -eq 0 ]; then
   exit 2
 fi
 
-# Already inside a cap (e.g. scripts/ci re-exec'd itself, or nested calls):
-# run directly rather than nesting scopes.
+# Inside the scope: VERIFY the cap is real before running anything. Trusting
+# GOLEAN_CAPPED alone was a silent, total fail-open (pre-merge audit F2/F3,
+# 2026-08-09) — a stale inherited variable, or a host whose user manager has
+# no delegated memory controller (cgroup v1, or user@.service without
+# Delegate=memory, where systemd ACCEPTS -p MemoryMax and ignores it), meant
+# the command ran uncapped in the CALLER'S OWN cgroup while printing nothing.
+# The reproduction was the exact scenario this script exists to prevent: the
+# terminal multiplexer's cgroup, memory.max=max. So: read the limit back.
+#
+# GOLEAN_CAPPED=none means "the opt-out already fired, don't re-verify and
+# don't re-wrap". It MUST be set on the opt-out path: a caller that re-execs
+# itself through this script (scripts/ci does) will otherwise bounce between
+# the two forever. That was a live infinite loop — `GOLEAN_MEM_MAX=none
+# scripts/ci` span until killed — because the opt-out exec'd the caller back
+# with no marker set. Caught by hand-testing the CI opt-out end to end; the
+# audit had only exercised =none on a bare command, never through a
+# self-wrapping caller.
+if [ "${GOLEAN_CAPPED:-}" = "none" ]; then
+  exec "$@"
+fi
 if [ -n "${GOLEAN_CAPPED:-}" ]; then
+  cg="$(cut -d: -f3 /proc/self/cgroup 2>/dev/null | head -1)"
+  lim="$(cat "/sys/fs/cgroup${cg}/memory.max" 2>/dev/null)"
+  if [ -z "$lim" ] || [ "$lim" = "max" ]; then
+    cat >&2 <<EOF
+scripts/capped: REFUSING TO RUN — the memory cap is not in effect.
+  cgroup:     ${cg:-<unreadable>}
+  memory.max: ${lim:-<unreadable>}  (expected a byte count, not "max")
+  GOLEAN_CAPPED was set, so something claimed this process is capped, but the
+  kernel disagrees. Causes: a stale GOLEAN_CAPPED inherited from an unrelated
+  shell, or a host whose systemd user manager has no delegated memory
+  controller (check: cat /sys/fs/cgroup/user.slice/user-\$(id -u).slice/user@\$(id -u).service/cgroup.subtree_control).
+  Run uncapped only if you mean it: GOLEAN_MEM_MAX=none $0 $*
+EOF
+    exit 3
+  fi
   exec "$@"
 fi
 
@@ -47,7 +83,7 @@ fi
 # than no cap, because it is believed.
 if [ "$MEM" = "none" ]; then
   echo "scripts/capped: WARNING — GOLEAN_MEM_MAX=none, running UNCAPPED: $*" >&2
-  exec "$@"
+  exec env GOLEAN_CAPPED=none "$@"
 fi
 
 if ! command -v systemd-run >/dev/null 2>&1; then
@@ -62,10 +98,18 @@ EOF
 fi
 
 # --user --scope: the command runs as a transient scope in the caller's
-# session, inheriting cwd/env/tty, but in its own cgroup. On breach the
-# kernel OOM-kills inside THIS cgroup only; the caller is never a candidate.
+# session, inheriting cwd/env/tty, but in its own cgroup. systemd-run --scope
+# EXECS IN PLACE rather than forking, so exit status and signals are
+# byte-identical to an unwrapped run (audit-verified: 0/1/2/42/127/137 all
+# propagate, and the process keeps the caller's process group so Ctrl-C still
+# reaches it). On breach the kernel OOM-kills inside THIS cgroup only; the
+# caller is never a candidate.
+#
+# We re-enter THIS script inside the scope rather than exec'ing the command
+# directly, so the readback check above runs on every capped invocation —
+# one code path, no way to end up believing in a cap that isn't there.
 exec env GOLEAN_CAPPED=1 \
   systemd-run --user --scope -q \
     -p MemoryMax="$MEM" \
     -p MemorySwapMax=0 \
-    -- "$@"
+    -- "$0" "$@"

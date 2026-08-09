@@ -60,8 +60,21 @@ jobs:
           git clone --quiet https://github.com/goose-lang/goose deps/goose
           git -C deps/goose checkout --quiet 3be88bbb4982f58e5813b6f0344302d5582c8e8a
 
+      # MEMORY CAP OPT-OUT, deliberate and loud. scripts/ci re-execs itself
+      # through scripts/capped, which needs a systemd USER manager + session
+      # D-Bus (`systemd-run --user`). GitHub-hosted runners spawn steps
+      # without a PAM login session, so that bus is absent and the wrapper
+      # fails closed — which would take the whole gate down rather than the
+      # build it is meant to bound (pre-merge audit F1, 2026-08-09).
+      # =none is correct HERE and nowhere else: the cap exists to stop a
+      # runaway build killing the developer's session, and a runner is
+      # ephemeral and disposable — if a build eats it, the job just fails,
+      # which is the outcome we wanted anyway. scripts/capped prints a
+      # WARNING on this path, so an uncapped run is never silent.
       - name: Fast gate (scripts/ci)
         if: github.event_name == 'push' || github.event_name == 'pull_request'
+        env:
+          GOLEAN_MEM_MAX: none
         run: ./scripts/ci
 
       - name: Set up Go (full differential)
@@ -76,6 +89,8 @@ jobs:
 
       - name: Full gate incl. differential corpus (scheduled/dispatch; --slow re-certifies tier=slow rows)
         if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+        env:
+          GOLEAN_MEM_MAX: none   # see the opt-out rationale on the fast gate above
         run: |
           if [ "${{ github.event_name }}" = "schedule" ] || [ "${{ inputs.slow }}" != "false" ]; then
             ./scripts/ci --slow

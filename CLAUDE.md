@@ -46,10 +46,20 @@ Why: `by decide +kernel` over a parser and six string literals
 killer's badness score picks the multiplexer and the agent quite happily.
 Deleting the line made the file elaborate in 1.0 s — `decide +kernel` over
 `String`/`Char` is the smell. Two caps that DON'T work, measured, so nobody
-"simplifies" the wrapper into one: `lean -M` sails past its limit during kernel
-reduction (`-M 4096` still needed a 12 GB cgroup kill), and `prlimit --as`
-kills Lean instantly since it reserves address space per thread. RSS via cgroup
-is the only honest knob.
+"simplifies" the wrapper into one: `lean -M` is not enforced during kernel
+reduction (audit-reproduced: under `-M 4096`, lean's own `VmRSS` was 4953 MiB
+at t=10s and climbing, with no memory diagnostic), and `prlimit --as` kills
+Lean above a threshold since it reserves address space per thread. RSS via
+cgroup is the only honest knob.
+
+Still uncapped, so treat with care: `scripts/coverage`, `diff-one`,
+`comparator-judge`, `check-golden`, `check-imported-pins`, `test-import-goose`,
+`test-lane-validation`, `comparator-setup`, `diff-coverage` when invoked
+DIRECTLY (via `scripts/ci` they inherit the scope), and — the one most likely
+to hit a pathological file — **the Lean language server**, which elaborates on
+file open with no wrapper in the loop. CI opts out deliberately
+(`GOLEAN_MEM_MAX=none` in the workflow): GitHub runners have no systemd user
+bus, and a disposable runner is not what the cap protects.
 
 ### Baseline pinning (the "recorded baseline" in step 3)
 

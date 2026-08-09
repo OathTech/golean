@@ -52,6 +52,11 @@ for arg in "$@"; do
     # RESULT: PASS — the operator believes the differential ran when it never
     # did, which is the exact "gate quietly failed open" class this repo
     # treats as worse than a red. Cost us a wasted run the day it was found.
+    # NOTE the ordering: the memory-cap re-exec above runs FIRST, so a typo
+    # creates and tears down a scope (~ms) before landing here — and on a host
+    # with no systemd user bus this guard is unreachable, the operator getting
+    # the wrapper's error instead (pre-merge audit F7; the original commit
+    # message's "before any work" was imprecise).
     *) echo "scripts/ci: unknown argument '$arg' (expected --diff or --slow)" >&2
        echo "  Refusing to run: a mistyped flag must never silently downgrade" >&2
        echo "  the gate to a weaker one that still reports PASS." >&2
