@@ -1,0 +1,7 @@
+# id	subject	args	expected_status	expected_reason	features
+uint8-incr	obsKindUint8	-	ok	-	ints,assignment,overflow
+int8-negative	obsKindInt8Negative	-	ok	-	ints,assignment
+defined-uint8	obsKindDefinedUint8	-	ok	-	ints,defined_type
+uint64-max	obsKindUint64Max	-	ok	-	ints,overflow
+struct-fields	obsKindStructFields	-	ok	-	ints,structs
+boxed-uint16	obsKindBoxed	-	ok	-	ints,interfaces
