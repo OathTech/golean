@@ -351,7 +351,7 @@ theorem wpC_spawn_noop_witness
   iintro Hcred2
   -- main: THE FORK
   iapply (wpC_fork (hsp := rfl)
-    (child := .exec (.seqn #[]) [] (.frame [] [] [] .stop false))
+    (child := .exec (.seqn #[]) [] (.frame [] [] [] [] .stop false))
     (hspawn := by
       intro σ hf hm ht
       simp +decide [spawnStep, enterFrame, findFunctionIn?, noopWorker,

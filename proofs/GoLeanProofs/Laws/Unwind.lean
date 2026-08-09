@@ -50,17 +50,18 @@ variable {s : Stuckness} {E : CoPset} {Φ : Unit → IProp GF}
 
 /-! ### Call through a value (§8): dispatch -/
 
-/-- Dispatch a targetless value call: evaluate the callee expression. -/
+/-- Dispatch a value call: evaluate the callee expression first, the
+caller-target plans riding untouched (BUG-052 order pin). -/
 @[go_walk_law]
-theorem wp_call_value_no_targets {targets : Array Assignee} {callee : Expr}
-    {args : Array Expr} {env k}
-    (htargets : targetsPlan targets.toList = some []) :
+theorem wp_call_value_start {targets : Array Assignee} {callee : Expr}
+    {args : Array Expr} {plans : List (TargetShape × List Expr)} {env k}
+    (hplan : targetsPlan targets.toList = some plans) :
     (|={E}[E]▷=> £ 1 -∗
-      WP (Config.evalE callee env (.callValCalleeK [] args.toList env k))
+      WP (Config.evalE callee env (.callValCalleeK plans args.toList env k))
         @ s ; E {{ Φ }}) ⊢
       WP (Config.exec (.callValue targets callee args) env k) @ s ; E {{ Φ }} :=
   wp_pure_det rfl (by simp [Config.choiceFree, stmtPlan])
-    (fun _ => Step.callValueNoTargets htargets)
+    (fun _ => Step.callValueStart hplan)
 
 /-! ### Breakable scopes (switch bodies) -/
 
@@ -136,10 +137,10 @@ theorem wp_panic_unwind {chain : List PanicEntry} {k k'}
 
 /-- Unwinding past a frame whose defers are exhausted: results NOT read. -/
 @[go_walk_law]
-theorem wp_panic_frame_empty {chain : List PanicEntry} {targets results k}
+theorem wp_panic_frame_empty {chain : List PanicEntry} {targets tenv results k}
     {w : Bool} :
     (|={E}[E]▷=> £ 1 -∗ WP (Config.panicking chain k) @ s ; E {{ Φ }}) ⊢
-      WP (Config.panicking chain (.frame targets results [] k w)) @ s ; E {{ Φ }} :=
+      WP (Config.panicking chain (.frame targets tenv results [] k w)) @ s ; E {{ Φ }} :=
   wp_pure_det rfl (by simp [Config.choiceFree])
     (fun _ => Step.panicFrameEmpty)
 
@@ -207,9 +208,9 @@ theorem wp_eval_strict_nullary_pure {e : Expr} {op : StrictOp}
 /-- `return` at a VOID pure-barrier frame (no targets, no results, no
 defers): resume the caller — the `.returning` twin of `wp_frame_fall`. -/
 @[go_walk_law]
-theorem wp_frame_return_void {k} {w : Bool} :
+theorem wp_frame_return_void {tenv : LocalEnv} {k} {w : Bool} :
     (|={E}[E]▷=> £ 1 -∗ WP (Config.next k) @ s ; E {{ Φ }}) ⊢
-      WP (Config.returning (.frame [] [] [] k w)) @ s ; E {{ Φ }} :=
+      WP (Config.returning (.frame [] tenv [] [] k w)) @ s ; E {{ Φ }} :=
   wp_pure_det rfl (by simp [Config.choiceFree])
     (fun _ => Step.frameReturn)
 
@@ -313,7 +314,8 @@ private theorem wp_enter_cap1_core {fid : FuncId} {func : Func}
 `f()` closure shape): the funcVal callee arrives, one step allocates the
 capture-parameter cell and enters the body. -/
 theorem wp_call_value_enter_cap1 {fid : FuncId} {func : Func}
-    {pid : String} {pty : Ty} {cv cv' : GoValue} {locs : List TargetRef} {env k}
+    {pid : String} {pty : Ty} {cv cv' : GoValue}
+    {locs : List (TargetShape × List Expr)} {env k}
     (hfind : findFunctionIn? (GoCoreGS.prog GF) fid = some func)
     (hargs : func.args = #[⟨pid, pty⟩])
     (hres : func.results = #[])
@@ -323,13 +325,13 @@ theorem wp_call_value_enter_cap1 {fid : FuncId} {func : Func}
       normalizeValueForTy σ pty cv = .ok cv') :
     iprop(∀ pa : Addr, pa.id ↦ (⟨some pty, cv'⟩ : HeapCell) -∗
         WP (Config.exec func.body [[(pid, Loc.base pa)]]
-              (.frame locs [] [] k func.wrapper))
+              (.frame locs env [] [] k func.wrapper))
           @ s ; E {{ Φ }})
       ⊢ WP (Config.retV (.funcVal fid [cv]) (.callValCalleeK locs [] env k))
           @ s ; E {{ Φ }} :=
   wp_enter_cap1_core rfl (by trivial)
     (enterFrame_cap1 hfind hargs hres hnodisp hnorm)
-    (.frame locs [] [] k func.wrapper)
+    (.frame locs env [] [] k func.wrapper)
     (fun _ henter => Step.callValCalleeEnter henter)
 
 /-- **Defer drain on the RETURN path**, one capture / no arguments: the
@@ -337,8 +339,8 @@ deferred closure enters over the rest-of-chain frame; its results are
 discarded (`[] [] []`). -/
 theorem wp_frame_defer_return_cap1 {fid : FuncId} {func : Func}
     {pid : String} {pty : Ty} {cv cv' : GoValue}
-    {targets : List TargetRef} {results : List Loc}
-    {ds : List (GoValue × List GoValue)} {k}
+    {targets : List (TargetShape × List Expr)} {tenv : LocalEnv}
+    {results : List Loc} {ds : List (GoValue × List GoValue)} {k}
     {wsrc : Bool}
     (hfind : findFunctionIn? (GoCoreGS.prog GF) fid = some func)
     (hargs : func.args = #[⟨pid, pty⟩])
@@ -349,21 +351,21 @@ theorem wp_frame_defer_return_cap1 {fid : FuncId} {func : Func}
       normalizeValueForTy σ pty cv = .ok cv') :
     iprop(∀ pa : Addr, pa.id ↦ (⟨some pty, cv'⟩ : HeapCell) -∗
         WP (Config.exec func.body [[(pid, Loc.base pa)]]
-              (.frame [] [] [] (.frame targets results ds k wsrc) func.wrapper))
+              (.frame [] [] [] [] (.frame targets tenv results ds k wsrc) func.wrapper))
           @ s ; E {{ Φ }})
       ⊢ WP (Config.returning
-            (.frame targets results ((.funcVal fid [cv], []) :: ds) k wsrc))
+            (.frame targets tenv results ((.funcVal fid [cv], []) :: ds) k wsrc))
           @ s ; E {{ Φ }} :=
   wp_enter_cap1_core rfl (by trivial)
     (enterFrame_cap1 hfind hargs hres hnodisp hnorm)
-    (.frame [] [] [] (.frame targets results ds k wsrc) func.wrapper)
+    (.frame [] [] [] [] (.frame targets tenv results ds k wsrc) func.wrapper)
     (fun _ henter => Step.frameDeferReturn (by simpa using henter))
 
 /-- **Defer drain on the FALL path** (normal completion), same shape. -/
 theorem wp_frame_defer_fall_cap1 {fid : FuncId} {func : Func}
     {pid : String} {pty : Ty} {cv cv' : GoValue}
-    {targets : List TargetRef} {results : List Loc}
-    {ds : List (GoValue × List GoValue)} {k}
+    {targets : List (TargetShape × List Expr)} {tenv : LocalEnv}
+    {results : List Loc} {ds : List (GoValue × List GoValue)} {k}
     {wsrc : Bool}
     (hfind : findFunctionIn? (GoCoreGS.prog GF) fid = some func)
     (hargs : func.args = #[⟨pid, pty⟩])
@@ -374,14 +376,14 @@ theorem wp_frame_defer_fall_cap1 {fid : FuncId} {func : Func}
       normalizeValueForTy σ pty cv = .ok cv') :
     iprop(∀ pa : Addr, pa.id ↦ (⟨some pty, cv'⟩ : HeapCell) -∗
         WP (Config.exec func.body [[(pid, Loc.base pa)]]
-              (.frame [] [] [] (.frame targets results ds k wsrc) func.wrapper))
+              (.frame [] [] [] [] (.frame targets tenv results ds k wsrc) func.wrapper))
           @ s ; E {{ Φ }})
       ⊢ WP (Config.next
-            (.frame targets results ((.funcVal fid [cv], []) :: ds) k wsrc))
+            (.frame targets tenv results ((.funcVal fid [cv], []) :: ds) k wsrc))
           @ s ; E {{ Φ }} :=
   wp_enter_cap1_core rfl (by trivial)
     (enterFrame_cap1 hfind hargs hres hnodisp hnorm)
-    (.frame [] [] [] (.frame targets results ds k wsrc) func.wrapper)
+    (.frame [] [] [] [] (.frame targets tenv results ds k wsrc) func.wrapper)
     (fun _ henter => Step.frameDeferFall (by simpa using henter))
 
 /-- **Defer drain on the PANIC path**: the deferred closure runs above
@@ -390,8 +392,8 @@ detects. The unwinding arc's central stateful law. -/
 theorem wp_panic_frame_defer_cap1 {fid : FuncId} {func : Func}
     {pid : String} {pty : Ty} {cv cv' : GoValue} {wsrc : Bool}
     {chain : List PanicEntry}
-    {targets : List TargetRef} {results : List Loc}
-    {ds : List (GoValue × List GoValue)} {k}
+    {targets : List (TargetShape × List Expr)} {tenv : LocalEnv}
+    {results : List Loc} {ds : List (GoValue × List GoValue)} {k}
     (hfind : findFunctionIn? (GoCoreGS.prog GF) fid = some func)
     (hargs : func.args = #[⟨pid, pty⟩])
     (hres : func.results = #[])
@@ -401,16 +403,16 @@ theorem wp_panic_frame_defer_cap1 {fid : FuncId} {func : Func}
       normalizeValueForTy σ pty cv = .ok cv') :
     iprop(∀ pa : Addr, pa.id ↦ (⟨some pty, cv'⟩ : HeapCell) -∗
         WP (Config.exec func.body [[(pid, Loc.base pa)]]
-              (.frame [] [] []
-                (.panicResumeK chain (.frame targets results ds k wsrc))
+              (.frame [] [] [] []
+                (.panicResumeK chain (.frame targets tenv results ds k wsrc))
                 func.wrapper))
           @ s ; E {{ Φ }})
       ⊢ WP (Config.panicking chain
-            (.frame targets results ((.funcVal fid [cv], []) :: ds) k wsrc))
+            (.frame targets tenv results ((.funcVal fid [cv], []) :: ds) k wsrc))
           @ s ; E {{ Φ }} :=
   wp_enter_cap1_core rfl (by trivial)
     (enterFrame_cap1 hfind hargs hres hnodisp hnorm)
-    (.frame [] [] [] (.panicResumeK chain (.frame targets results ds k wsrc)) func.wrapper)
+    (.frame [] [] [] [] (.panicResumeK chain (.frame targets tenv results ds k wsrc)) func.wrapper)
     (fun _ henter => Step.panicFrameDefer (by simpa using henter))
 
 end
@@ -481,7 +483,7 @@ theorem wp_recover_catch_seven {ra : Addr} {k}
       ∗ (ra.id ↦ (⟨some (.int .int), .int 7 .int⟩ : HeapCell)
           -∗ WP (Config.next k) @ s ; E {{ Φ }})
       ⊢ WP (Config.exec catchBody [[("r", Loc.base ra)]]
-              (.frame [] [] [] k)) @ s ; E {{ Φ }} := by
+              (.frame [] [] [] [] k)) @ s ; E {{ Φ }} := by
   iintro ⟨Hr, Hcont⟩
   -- catchBody's spine: seqn → defer → panic → (return, never reached)
   iapply wp_seqn
@@ -706,13 +708,14 @@ concrete instance; the genuinely-external pins stay). -/
 open RecoverWitness in
 /-- Value-call frame entry witnessed on the concrete `rec$0` closure
 (the `f()` shape of `functions/closure-share`). -/
-theorem wp_call_value_enter_rec {ra : Addr} {locs : List TargetRef} {env k}
+theorem wp_call_value_enter_rec {ra : Addr}
+    {locs : List (TargetShape × List Expr)} {env k}
     (hprog : GoCoreGS.prog GF = RecoverWitness.progFuncs)
     (hmeths : GoCoreGS.methods GF = #[]) :
     iprop(∀ pa : Addr,
         pa.id ↦ (⟨some (.pointer (.int .int)), .addr (.base ra)⟩ : HeapCell) -∗
         WP (Config.exec RecoverWitness.recFunc.body [[("rp", Loc.base pa)]]
-              (.frame locs [] [] k)) @ s ; E {{ Φ }})
+              (.frame locs env [] [] k)) @ s ; E {{ Φ }})
       ⊢ WP (Config.retV (.funcVal ⟨"rec$0"⟩ [.addr (.base ra)])
             (.callValCalleeK locs [] env k)) @ s ; E {{ Φ }} :=
   wp_call_value_enter_cap1
@@ -728,16 +731,17 @@ theorem wp_call_value_enter_rec {ra : Addr} {locs : List TargetRef} {env k}
 open RecoverWitness in
 /-- Normal-path defer drain (return exit) witnessed on `rec$0`. -/
 theorem wp_frame_defer_return_rec {ra : Addr}
-    {targets : List TargetRef} {results : List Loc} {k}
+    {targets : List (TargetShape × List Expr)} {tenv : LocalEnv}
+    {results : List Loc} {k}
     (hprog : GoCoreGS.prog GF = RecoverWitness.progFuncs)
     (hmeths : GoCoreGS.methods GF = #[]) :
     iprop(∀ pa : Addr,
         pa.id ↦ (⟨some (.pointer (.int .int)), .addr (.base ra)⟩ : HeapCell) -∗
         WP (Config.exec RecoverWitness.recFunc.body [[("rp", Loc.base pa)]]
-              (.frame [] [] [] (.frame targets results [] k)))
+              (.frame [] [] [] [] (.frame targets tenv results [] k)))
           @ s ; E {{ Φ }})
       ⊢ WP (Config.returning
-            (.frame targets results
+            (.frame targets tenv results
               ((.funcVal ⟨"rec$0"⟩ [.addr (.base ra)], []) :: []) k))
           @ s ; E {{ Φ }} :=
   wp_frame_defer_return_cap1
@@ -753,16 +757,17 @@ theorem wp_frame_defer_return_rec {ra : Addr}
 open RecoverWitness in
 /-- Normal-path defer drain (fall exit), same instance. -/
 theorem wp_frame_defer_fall_rec {ra : Addr}
-    {targets : List TargetRef} {results : List Loc} {k}
+    {targets : List (TargetShape × List Expr)} {tenv : LocalEnv}
+    {results : List Loc} {k}
     (hprog : GoCoreGS.prog GF = RecoverWitness.progFuncs)
     (hmeths : GoCoreGS.methods GF = #[]) :
     iprop(∀ pa : Addr,
         pa.id ↦ (⟨some (.pointer (.int .int)), .addr (.base ra)⟩ : HeapCell) -∗
         WP (Config.exec RecoverWitness.recFunc.body [[("rp", Loc.base pa)]]
-              (.frame [] [] [] (.frame targets results [] k)))
+              (.frame [] [] [] [] (.frame targets tenv results [] k)))
           @ s ; E {{ Φ }})
       ⊢ WP (Config.next
-            (.frame targets results
+            (.frame targets tenv results
               ((.funcVal ⟨"rec$0"⟩ [.addr (.base ra)], []) :: []) k))
           @ s ; E {{ Φ }} :=
   wp_frame_defer_fall_cap1
@@ -781,12 +786,12 @@ past a spent frame, a chain merge, and the breakable family. NAMED
 theorems (2026-07-30 pre-merge audit: as anonymous `example`s these were
 structurally invisible to `Audit.lean`'s reference gate — deleting one
 broke nothing), each referenced from the Audit non-vacuity block. -/
-theorem wp_call_value_no_targets_witness {env k} :
+theorem wp_call_value_start_witness {env k} :
     (|={E}[E]▷=> £ 1 -∗
       WP (Config.evalE (.var "f") env
         (.callValCalleeK [] [] env k)) @ s ; E {{ Φ }}) ⊢
       WP (Config.exec (.callValue #[] (.var "f") #[]) env k) @ s ; E {{ Φ }} :=
-  wp_call_value_no_targets rfl
+  wp_call_value_start (plans := []) rfl
 
 theorem wp_panic_resume_continue_witness {k} :
     (|={E}[E]▷=> £ 1 -∗
@@ -797,7 +802,7 @@ theorem wp_panic_resume_continue_witness {k} :
 theorem wp_panic_frame_empty_witness {k} :
     (|={E}[E]▷=> £ 1 -∗
       WP (Config.panicking [⟨.nil, false⟩] k) @ s ; E {{ Φ }}) ⊢
-      WP (Config.panicking [⟨.nil, false⟩] (.frame [] [] [] k)) @ s ; E {{ Φ }} :=
+      WP (Config.panicking [⟨.nil, false⟩] (.frame [] [] [] [] k)) @ s ; E {{ Φ }} :=
   wp_panic_frame_empty
 
 theorem wp_panic_resume_merge_witness {k} :

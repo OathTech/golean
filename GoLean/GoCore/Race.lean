@@ -787,17 +787,17 @@ def stepAccesses (s : ExecState) (c : Config) : List RaceAccess :=
       (match cv with
        | .funcVal fid captured => dispatchAccesses s fid (captured ++ vals ++ [v])
        | _ => [])
-  | .next (.frame _ _ (d :: _) _ _) => deferEntryAccesses s d
-  | .returning (.frame _ _ (d :: _) _ _) => deferEntryAccesses s d
-  | .panicking _ (.frame _ _ (d :: _) _ _) => deferEntryAccesses s d
+  | .next (.frame _ _ _ (d :: _) _ _) => deferEntryAccesses s d
+  | .returning (.frame _ _ _ (d :: _) _ _) => deferEntryAccesses s d
+  | .panicking _ (.frame _ _ _ (d :: _) _ _) => deferEntryAccesses s d
   | .next (.storeK (r :: _) (_ :: _) _ _ _) => storeTargetAccess s r
   -- Frame EXIT (BUG-025 spine migration): the exit step only READS the
   -- pinned result cells; the caller-target WRITES are the subsequent
   -- per-target `storeK` steps (the `storeTargetAccess` arm above),
   -- exactly like every other phase-2 store.
-  | .next (.frame _ results [] _ _) =>
+  | .next (.frame _ _ results [] _ _) =>
       results.map ((false, ·))
-  | .returning (.frame _ results [] _ _) =>
+  | .returning (.frame _ _ results [] _ _) =>
       results.map ((false, ·))
   | _ => []
 

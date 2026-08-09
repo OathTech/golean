@@ -769,7 +769,7 @@ at `.defined main.mapAckIndexer` and `allocDecls` defaults at
 `.defined main.Index`, both `TypeEnv.lookup σ.types` resolutions. -/
 @[go_walk_law]
 theorem wp_call_dynamic_enter_ackedIndex {mba : Addr} {n : Int}
-    {locs : List TargetRef} {env k}
+    {locs : List (TargetShape × List Expr)} {env k}
     (hprog : GoCoreGS.prog GF = GoldenQuorum.quorumLowered.funcs)
     (hmeths : GoCoreGS.methods GF = GoldenQuorum.quorumLowered.methods)
     (htypes : GoCoreGS.types GF = GoldenQuorum.quorumLowered.typeDefs.toList) :
@@ -784,7 +784,7 @@ theorem wp_call_dynamic_enter_ackedIndex {mba : Addr} {n : Int}
         WP (Config.exec QuorumPin.ackedIndexImpl.body
               [[("$res1", Loc.base a₃), ("$res0", Loc.base a₂),
                 ("id", Loc.base a₁), ("m", Loc.base a₀)]]
-              (.frame locs [Loc.base a₂, Loc.base a₃] [] k)) @ s ; E {{ Φ }})
+              (.frame locs env [Loc.base a₂, Loc.base a₃] [] k)) @ s ; E {{ Φ }})
       ⊢ WP (Config.retV (.int n .uint64)
             (.callArgsK ⟨"main.AckedIndexer.AckedIndex"⟩ locs
               [.interface (.defined ⟨"main.mapAckIndexer"⟩)
@@ -836,7 +836,7 @@ discharged by computation against `quorumLowered`; the only external
 hypotheses are the three ghost-state pins. -/
 @[go_walk_law]
 theorem wp_call_enter_ackedIndexImpl {mba : Addr} {n : Int}
-    {locs : List TargetRef} {env k}
+    {locs : List (TargetShape × List Expr)} {env k}
     (hprog : GoCoreGS.prog GF = GoldenQuorum.quorumLowered.funcs)
     (hmeths : GoCoreGS.methods GF = GoldenQuorum.quorumLowered.methods)
     (htypes : GoCoreGS.types GF = GoldenQuorum.quorumLowered.typeDefs.toList) :
@@ -851,7 +851,7 @@ theorem wp_call_enter_ackedIndexImpl {mba : Addr} {n : Int}
         WP (Config.exec QuorumPin.ackedIndexImpl.body
               [[("$res1", Loc.base a₃), ("$res0", Loc.base a₂),
                 ("id", Loc.base a₁), ("m", Loc.base a₀)]]
-              (.frame locs [Loc.base a₂, Loc.base a₃] [] k)) @ s ; E {{ Φ }})
+              (.frame locs env [Loc.base a₂, Loc.base a₃] [] k)) @ s ; E {{ Φ }})
       ⊢ WP (Config.retV (.int n .uint64)
             (.callArgsK ⟨"main.mapAckIndexer.AckedIndex"⟩ locs
               [.map ⟨some (.base mba)⟩] [] env k)) @ s ; E {{ Φ }} :=

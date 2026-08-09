@@ -32,7 +32,29 @@ differential-pinned) `- Cases: <id>, <id>, …` (baseline case ids), then prose.
 
 ## BUG-052 — call write-back reads target operands BEFORE the call; gc reads them after (deterministic divergence inside spec-unordered latitude)
 
-- Status: open
+- Status: fixed (2026-08-09, spec-parity-s1 audit-fix round: the call
+  paths (`.call` and `.callValue` both) now evaluate the CALL first —
+  arguments, frame entry — with the caller-target PLANS riding
+  `Cont.frame` untouched (`targets : List (TargetShape × List Expr)` +
+  the caller env `tenv`); the target operands evaluate at frame EXIT
+  through the existing tgtOpK spine (the receive path's exact delivery
+  shape: `frameReturnTargets`/`frameFallTargets` load the pinned
+  results and enter phase 1 post-call), then the per-target `storeK`
+  stores. The pre-call target frames (`callTargetsK`/`callValTargetsK`)
+  are removed outright. The pinned latitude is recorded at the rule
+  site (Machine.lean, the call rules' PINNED LATITUDE block: spec text
+  verbatim, gc's realization probed go1.26.5, version-tracked — a
+  future gc realizing the other order revisits the pin, not the spec
+  claim). Laws moved in lockstep: `wp_call_start` (entry),
+  `wp_call_enter_ret1` restated at the call-statement config,
+  `wp_tgtop_stores` (the known-values completion), and the frame-exit
+  family (`wp_frame_return_int`/`_fall_int`/`_int_inv`/`₁`/`₂`)
+  restated as read-exit → post-call operand evaluation (`hres` premise)
+  → per-target store lifts → drain; consumers re-proved. The
+  `Tests/GoCoreEval` "call target sequencing" pin retuned 901 → 91
+  (it encoded the retired operand-first order; the oracle-backed
+  guards are the five corpus pins). All five pins flip PASS; the
+  hoisted-control guard stays green.)
 - Pinned-by: differential
 - Cases: multi-assign/call-write-back-order/index-missed-panic, multi-assign/call-write-back-order/index-spurious-panic, multi-assign/call-write-back-order/global-index, multi-assign/call-write-back-order/deref-target, multi-assign/call-write-back-order/slice-header-base
 - Discovered: 2026-08-09 (S1 pre-merge audit, semantics dimension,
@@ -1118,26 +1140,28 @@ hoist further.
 - Status: fixed (2026-08-09, spec-parity-s1 — the assignment-spine laws
   slice, movement B2, completing the round-4 FIXED half (`assignMany`
   on the spine since the convergence round): the multi-value CALL
-  write-back path migrated. Call targets are PHASE-1 plans
-  (`targetsPlan` through the reworked `callTargetsK`/`callValTargetsK`
-  frames — operands left-to-right, each target completing into a
-  store-ready `TargetRef` with its outer check DEFERRED; the
-  address-time `valueAsLoc` checks and their panic rules removed
-  outright), the refs are carried through `Cont.frame`
-  (`targets : List TargetRef`), and the frame exit reads the pinned
-  results and enters phase 2 — `storeK`, one store per step,
-  left-to-right, each target's check firing at its own store after the
-  call's effects and earlier stores landed. Frame-exit `storeMany` is
-  retired (the targetless resultless exit stays a single unchanged
-  step; a targetless frame with pinned results stays stuck-closed as
-  before). Laws moved in the same movement: `wp_call_first_target`,
-  the new `wp_call_tgt_shift`/`wp_call_tgt_next` pure laws,
-  `wp_call_targets_done_arg`, the frame-entry family retyped, and the
-  frame-exit family (`wp_frame_return_int`/`wp_frame_fall_int`/
-  `wp_frame_return_int_inv`/`wp_frame_return₁`/`wp_frame_return₂`)
-  restated as read-exit + per-target `storeK` store lifts + the
-  `wp_stores_done_nil` drain, statements' pre/posts unchanged; every
-  golden/quorum consumer re-proved. All three pins flip PASS.)
+  write-back path migrated onto the tgtOpK/storeK spine — target
+  checks deferred to the stores, stores left-to-right one per step,
+  each check firing at its own store after the call's effects and
+  earlier stores landed; frame-exit `storeMany` retired (the
+  targetless resultless exit stays a single unchanged step; a
+  targetless frame with pinned results stays stuck-closed as before).
+  TIMING SCOPED HONESTLY at the same round's audit (BUG-052): the
+  first landing of this migration evaluated the target OPERANDS before
+  the call — spec-§Assignments-shaped but inside §Order of
+  evaluation's UNSPECIFIED call-vs-operand carve-out, where gc
+  deterministically realizes CALL-FIRST — so the shipped shape is:
+  the call evaluates first (args, frame), the caller-target PLANS ride
+  `Cont.frame` with the caller env, and the operands evaluate at frame
+  EXIT through the tgtOpK spine (`frameReturnTargets`/
+  `frameFallTargets` — the receive path's delivery shape), then the
+  `storeK` stores. The pinned latitude is recorded at the rule site
+  (Machine.lean, PINNED LATITUDE block). Laws restated over the final
+  shape (`wp_call_start`, `wp_call_enter_ret1` at the call-statement
+  config, `wp_tgtop_stores`, the frame-exit family with post-call
+  `hres` operand premises + the `wp_stores_done_nil` drain), cell
+  pre/posts unchanged; every golden/quorum consumer re-proved. All
+  three pins flip PASS, and the BUG-052 timing pins guard the order.)
 - Pinned-by: differential
 - Cases: multi-assign/call-write-back/effects-suppressed, multi-assign/call-write-back/panic-identity, multi-assign/call-write-back/nil-field-store
 - Discovered: 2026-08-06 (channels-arc-s1 delta review D3, generalized

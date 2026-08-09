@@ -1292,9 +1292,10 @@ theorem wp_threeAllCall {ta : Addr} {w : GoValue} {env k}
       ⊢ WP (Config.exec (.call #[.var "$callres"] ⟨"committedThreeAll"⟩ #[])
             env k) @ s ; E {{ Φ }} := by
   iintro ⟨Ht, Hcont⟩
-  go_walk
   go_walk_step (wp_call_enter_ret1 (func := QuorumPin.threeAllImpl)
     (dv := .int 0 .uint64)
+    (plans := [(.chain [], [.ref "$callres"])])
+    (hplan := rfl)
     (hfind := by rw [hprog]; exact QuorumPin.threeAllImpl_find)
     (hargs := QuorumPin.threeAllImpl_args)
     (hres := QuorumPin.threeAllImpl_results)
@@ -1305,7 +1306,7 @@ theorem wp_threeAllCall {ta : Addr} {w : GoValue} {env k}
       simp [defaultValue, defaultValueFuel, typeResolutionFuel])) as [rra]
   go_walk_step (wp_threeAll_body (ra := rra) hprog hmeths htypes)
   go_walk_step (wp_frame_return_int (ta := ta) (ra := rra) (kind := .uint64)
-    (tkind := .uint64) (m := 6))
+    (tkind := .uint64) (m := 6) hres)
   go_walk_finish Hcont
 
 end

@@ -268,7 +268,7 @@ def spawnStep (s : ExecState) (cv : GoValue) (args : List GoValue) (k : Cont) :
           -- reschedules among {parent, child, …} instead of running
           -- the parent privately to its next sync op.
           return (.spawned k,
-            .exec func.body frameEnv (.frame [] [] [] .stop func.wrapper), s')
+            .exec func.body frameEnv (.frame [] [] [] [] .stop func.wrapper), s')
       | .error (.panic msg) =>
           return (.spawned k, .panicking [⟨runtimeErrorValue msg, false⟩] .stop, s)
       | .error e => throw e

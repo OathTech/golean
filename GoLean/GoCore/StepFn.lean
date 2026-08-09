@@ -85,8 +85,8 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
   | .panicked _ => throw (.internal "step on terminal panicked configuration")
   | .panicking chain k =>
       match k with
-      | .frame _targets _results [] k' _ => return (.panicking chain k', s, choices)
-      | .frame targets results ((cv, args) :: ds) k' w =>
+      | .frame _targets _tenv _results [] k' _ => return (.panicking chain k', s, choices)
+      | .frame targets tenv results ((cv, args) :: ds) k' w =>
           match cv with
           | .funcVal fid captured =>
               -- Defers run on the panic path, above the suspended chain's
@@ -96,15 +96,15 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
               enterFrameDeferPanicking s fid (captured ++ args)
                 (fun func frameEnv =>
                   .exec func.body frameEnv
-                    (.frame [] [] [] (.panicResumeK chain
-                      (.frame targets results ds k' w)) func.wrapper))
-                chain (.frame targets results ds k' w) choices
+                    (.frame [] [] [] [] (.panicResumeK chain
+                      (.frame targets tenv results ds k' w)) func.wrapper))
+                chain (.frame targets tenv results ds k' w) choices
           | .nil =>
               -- The nil invocation's panic joins the chain; remaining
               -- defers keep draining.
               return (.panicking (chain ++ [⟨runtimeErrorValue
                 "runtime error: invalid memory address or nil pointer dereference", false⟩])
-                (.frame targets results ds k' w), s, choices)
+                (.frame targets tenv results ds k' w), s, choices)
           | other => throw (.stuck s!"deferred callee is not a function value: {repr other}")
       | .panicResumeK suspended k' =>
           return (.panicking (suspended ++ chain) k', s, choices)
@@ -163,30 +163,24 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
       | .panicStmt e =>
           return (.evalE e env (.panicArgK k), s, choices)
       | .callValue targets callee args =>
-          -- BUG-025 spine migration: call targets are PHASE-1 plans with
-          -- their outer checks deferred to the post-call storeK stores.
+          -- BUG-052 order pin: the CALL evaluates first (callee, args,
+          -- frame); the caller-target plans ride to the frame and their
+          -- operands evaluate at frame EXIT (gc's realized point inside
+          -- spec §Order of evaluation's unordered carve-out).
           match targetsPlan targets.toList with
-          | some ((sh, e :: ops) :: rest) =>
-              return (.evalE e env
-                (.callValTargetsK callee sh [] ops [] rest args.toList env k), s, choices)
-          | some ((_, []) :: _) => throw (.internal "malformed call target plan")
-          | some [] =>
-              return (.evalE callee env (.callValCalleeK [] args.toList env k), s, choices)
+          | some plans =>
+              return (.evalE callee env (.callValCalleeK plans args.toList env k), s, choices)
           | none => throw (.unsupported "unsupported value-call target assignee")
       | .call targets fid args =>
           match targetsPlan targets.toList with
-          | some ((sh, e :: ops) :: rest) =>
-              return (.evalE e env
-                (.callTargetsK fid sh [] ops [] rest args.toList env k), s, choices)
-          | some ((_, []) :: _) => throw (.internal "malformed call target plan")
-          | some [] =>
+          | some plans =>
               match args.toList with
               | a :: rest =>
-                  return (.evalE a env (.callArgsK fid [] [] rest env k), s, choices)
+                  return (.evalE a env (.callArgsK fid plans [] rest env k), s, choices)
               | [] =>
                   enterFrameStep s fid []
                     (fun func frameEnv resultLocs =>
-                      .exec func.body frameEnv (.frame [] resultLocs [] k func.wrapper)) k choices
+                      .exec func.body frameEnv (.frame plans env resultLocs [] k func.wrapper)) k choices
           | none => throw (.unsupported "unsupported call target assignee")
       | .mapRange keyVar valVar mapExpr keyTy valTy body =>
           return (.evalE mapExpr env
@@ -337,42 +331,15 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
             return (.exec b env (.loop c b env k'), s, choices)
           else
             return (.next k', s, choices)
-      | .callTargetsK fid sh ops pending refs targets args env k' =>
-          -- BUG-025: phase-1 operand accumulation; each target completes
-          -- into a store-ready TargetRef (outer check DEFERRED to the
-          -- post-call storeK stores).
-          match pending with
-          | e :: rest =>
-              return (.evalE e env
-                (.callTargetsK fid sh (v :: ops) rest refs targets args env k'), s, choices)
-          | [] =>
-              match completeTargetRef sh (v :: ops).reverse with
-              | none => throw (.internal "malformed call target operands")
-              | some r =>
-                  match targets with
-                  | (sh', e :: ops') :: rest =>
-                      return (.evalE e env
-                        (.callTargetsK fid sh' [] ops' (refs ++ [r]) rest args env k'), s, choices)
-                  | (_, []) :: _ => throw (.internal "malformed call target plan")
-                  | [] =>
-                      match args with
-                      | a :: rest =>
-                          return (.evalE a env
-                            (.callArgsK fid (refs ++ [r]) [] rest env k'), s, choices)
-                      | [] =>
-                          enterFrameStep s fid []
-                            (fun func frameEnv resultLocs =>
-                              .exec func.body frameEnv
-                                (.frame (refs ++ [r]) resultLocs [] k' func.wrapper)) k' choices
-      | .callArgsK fid refs vals pending env k' =>
+      | .callArgsK fid plans vals pending env k' =>
           match pending with
           | a :: rest =>
               return (.evalE a env
-                (.callArgsK fid refs (vals ++ [v]) rest env k'), s, choices)
+                (.callArgsK fid plans (vals ++ [v]) rest env k'), s, choices)
           | [] =>
               enterFrameStep s fid (vals ++ [v])
                 (fun func frameEnv resultLocs =>
-                  .exec func.body frameEnv (.frame refs resultLocs [] k' func.wrapper)) k' choices
+                  .exec func.body frameEnv (.frame plans env resultLocs [] k' func.wrapper)) k' choices
       | .stmtOpK op nt done pending env k' =>
           -- Target addresses are checked as they arrive ONLY when more
           -- operands follow (interpreter panic timing); at the apply
@@ -395,29 +362,12 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
               | .error (.panic msg) =>
                   return (.panicking [⟨runtimeErrorValue msg, false⟩] k', s, choices)
               | .error err => throw err
-      | .callValTargetsK callee sh ops pending refs targets args env k' =>
-          match pending with
-          | e :: rest =>
-              return (.evalE e env
-                (.callValTargetsK callee sh (v :: ops) rest refs targets args env k'), s, choices)
-          | [] =>
-              match completeTargetRef sh (v :: ops).reverse with
-              | none => throw (.internal "malformed call target operands")
-              | some r =>
-                  match targets with
-                  | (sh', e :: ops') :: rest =>
-                      return (.evalE e env
-                        (.callValTargetsK callee sh' [] ops' (refs ++ [r]) rest args env k'), s, choices)
-                  | (_, []) :: _ => throw (.internal "malformed call target plan")
-                  | [] =>
-                      return (.evalE callee env
-                        (.callValCalleeK (refs ++ [r]) args env k'), s, choices)
-      | .callValCalleeK refs args env k' =>
+      | .callValCalleeK plans args env k' =>
           match v, args with
           | .funcVal fid captured, [] =>
               enterFrameStep s fid captured
                 (fun func frameEnv resultLocs =>
-                  .exec func.body frameEnv (.frame refs resultLocs [] k' func.wrapper)) k' choices
+                  .exec func.body frameEnv (.frame plans env resultLocs [] k' func.wrapper)) k' choices
           | .nil, [] =>
               return (.panicking [⟨runtimeErrorValue
                 "runtime error: invalid memory address or nil pointer dereference", false⟩]
@@ -426,20 +376,20 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
               -- Go evaluates the callee and ALL arguments before the nil
               -- check fires, so nil proceeds into the argument walk.
               if deferrableCallee cv then
-                return (.evalE a env (.callValArgsK cv refs [] rest env k'), s, choices)
+                return (.evalE a env (.callValArgsK cv plans [] rest env k'), s, choices)
               else throw (.stuck s!"expected function value, got {repr cv}")
           | other, [] => throw (.stuck s!"expected function value, got {repr other}")
-      | .callValArgsK cv refs vals pending env k' =>
+      | .callValArgsK cv plans vals pending env k' =>
           match pending with
           | a :: rest =>
               return (.evalE a env
-                (.callValArgsK cv refs (vals ++ [v]) rest env k'), s, choices)
+                (.callValArgsK cv plans (vals ++ [v]) rest env k'), s, choices)
           | [] =>
               match cv with
               | .funcVal fid captured =>
                   enterFrameStep s fid (captured ++ vals ++ [v])
                     (fun func frameEnv resultLocs =>
-                      .exec func.body frameEnv (.frame refs resultLocs [] k' func.wrapper)) k' choices
+                      .exec func.body frameEnv (.frame plans env resultLocs [] k' func.wrapper)) k' choices
               | .nil =>
                   return (.panicking [⟨runtimeErrorValue
                     "runtime error: invalid memory address or nil pointer dereference", false⟩]
@@ -566,20 +516,25 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
       | .seq (t :: rest) env k' => return (.exec t env (.seq rest env k'), s, choices)
       | .seq [] _ k' => return (.next k', s, choices)
       | .loop c b env k' => return (.exec (.while c b) env k', s, choices)
-      | .frame [] [] [] k' _ => return (.next k', s, choices)
-      | .frame [] (rl :: rls) [] _ _ => do
+      | .frame [] _ [] [] k' _ => return (.next k', s, choices)
+      | .frame [] _ (rl :: rls) [] _ _ => do
           -- Targetless frame with pinned results: the frontend always
           -- supplies targets for result-bearing calls; stuck-closed as
           -- before the BUG-025 migration (the old storeMany [] (v::vs)
           -- refusal), after the same result read.
           let _ ← loadMany s (rl :: rls)
           throw (.stuck "extra GoCore assignment value")
-      | .frame (r :: rs) results [] k' _ => do
-          -- BUG-025: the call write-back is phase 2 — one storeK store
-          -- per step, left-to-right, deferred checks firing at the store.
+      | .frame ((sh, e :: ops) :: rest) tenv results [] k' _ => do
+          -- BUG-025 + the BUG-052 order pin: read the pinned results,
+          -- then evaluate the caller-target operands POST-CALL through
+          -- the tgtOpK spine (gc's realized point; the receive path's
+          -- delivery shape), then the per-target storeK stores.
           let vs ← loadMany s results
-          return (.next (.storeK (r :: rs) vs (.seqn #[]) [] k'), s, choices)
-      | .frame targets results ((cv, args) :: ds) k' w =>
+          return (.evalE e tenv
+            (.tgtOpK sh [] ops [] rest .vals [] vs (.seqn #[]) tenv k'), s, choices)
+      | .frame ((_, []) :: _) _ _ [] _ _ =>
+          throw (.internal "malformed call target plan")
+      | .frame targets tenv results ((cv, args) :: ds) k' w =>
           match cv with
           | .funcVal fid captured =>
               -- A deferred call's results are DISCARDED (Go); only effects
@@ -590,14 +545,14 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
               enterFrameStep s fid (captured ++ args)
                 (fun func frameEnv _ =>
                   .exec func.body frameEnv
-                    (.frame [] [] [] (.frame targets results ds k' w) func.wrapper))
-                (.frame targets results ds k' w) choices
+                    (.frame [] [] [] [] (.frame targets tenv results ds k' w) func.wrapper))
+                (.frame targets tenv results ds k' w) choices
           | .nil =>
               -- Registration succeeded; the INVOCATION panics (Go), and
               -- this frame's remaining defers run on the panic path.
               return (.panicking [⟨runtimeErrorValue
                 "runtime error: invalid memory address or nil pointer dereference", false⟩]
-                (.frame targets results ds k' w), s, choices)
+                (.frame targets tenv results ds k' w), s, choices)
           | other => throw (.stuck s!"deferred callee is not a function value: {repr other}")
       | .panicResumeK chain k' =>
           if chainNewestRecovered chain then
@@ -635,7 +590,7 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
                   return (.panicking [⟨runtimeErrorValue msg, false⟩] k', s, choices)
               | .error err => throw err
           | [], [] => return (.exec body env k', s, choices)
-          | _, _ => throw (.internal "receive delivery value/target arity mismatch")
+          | _, _ => throw (.internal "storeK value/target arity mismatch (the shared phase-2 spine: receive delivery, assignment, comma-ok, call write-back)")
       | _ => throw (.internal "completion delivered to expression continuation")
   | .breaking k =>
       match k with
@@ -644,7 +599,7 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
       | .breakableK k' => return (.next k', s, choices)
       | .labelK _ k' => return (.breaking k', s, choices)
       | .mapIterK _ _ _ _ _ _ _ k' => return (.next k', s, choices)
-      | .frame _ _ _ _ _ => throw (.stuck "function body escaped with break")
+      | .frame _ _ _ _ _ _ => throw (.stuck "function body escaped with break")
       | .stop => throw (.stuck "break outside loop")
       | _ => throw (.internal "break delivered to expression continuation")
   | .continuing k =>
@@ -655,7 +610,7 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
       | .loop c b env k' => return (.exec (.while c b) env k', s, choices)
       | .mapIterK keyVar valVar keyTy valTy body remaining env k' =>
           return (.next (.mapIterK keyVar valVar keyTy valTy body remaining env k'), s, choices)
-      | .frame _ _ _ _ _ => throw (.stuck "function body escaped with continue")
+      | .frame _ _ _ _ _ _ => throw (.stuck "function body escaped with continue")
       | .stop => throw (.stuck "continue outside loop")
       | _ => throw (.internal "continue delivered to expression continuation")
   | .returning k =>
@@ -665,20 +620,25 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
       | .labelK _ k' => return (.returning k', s, choices)
       | .loop _ _ _ k' => return (.returning k', s, choices)
       | .mapIterK _ _ _ _ _ _ _ k' => return (.returning k', s, choices)
-      | .frame [] [] [] k' _ => return (.next k', s, choices)
-      | .frame [] (rl :: rls) [] _ _ => do
+      | .frame [] _ [] [] k' _ => return (.next k', s, choices)
+      | .frame [] _ (rl :: rls) [] _ _ => do
           -- Targetless frame with pinned results: the frontend always
           -- supplies targets for result-bearing calls; stuck-closed as
           -- before the BUG-025 migration (the old storeMany [] (v::vs)
           -- refusal), after the same result read.
           let _ ← loadMany s (rl :: rls)
           throw (.stuck "extra GoCore assignment value")
-      | .frame (r :: rs) results [] k' _ => do
-          -- BUG-025: the call write-back is phase 2 — one storeK store
-          -- per step, left-to-right, deferred checks firing at the store.
+      | .frame ((sh, e :: ops) :: rest) tenv results [] k' _ => do
+          -- BUG-025 + the BUG-052 order pin: read the pinned results,
+          -- then evaluate the caller-target operands POST-CALL through
+          -- the tgtOpK spine (gc's realized point; the receive path's
+          -- delivery shape), then the per-target storeK stores.
           let vs ← loadMany s results
-          return (.next (.storeK (r :: rs) vs (.seqn #[]) [] k'), s, choices)
-      | .frame targets results ((cv, args) :: ds) k' w =>
+          return (.evalE e tenv
+            (.tgtOpK sh [] ops [] rest .vals [] vs (.seqn #[]) tenv k'), s, choices)
+      | .frame ((_, []) :: _) _ _ [] _ _ =>
+          throw (.internal "malformed call target plan")
+      | .frame targets tenv results ((cv, args) :: ds) k' w =>
           match cv with
           | .funcVal fid captured =>
               -- A deferred call's results are DISCARDED (Go); only effects
@@ -689,14 +649,14 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
               enterFrameStep s fid (captured ++ args)
                 (fun func frameEnv _ =>
                   .exec func.body frameEnv
-                    (.frame [] [] [] (.frame targets results ds k' w) func.wrapper))
-                (.frame targets results ds k' w) choices
+                    (.frame [] [] [] [] (.frame targets tenv results ds k' w) func.wrapper))
+                (.frame targets tenv results ds k' w) choices
           | .nil =>
               -- Registration succeeded; the INVOCATION panics (Go), and
               -- this frame's remaining defers run on the panic path.
               return (.panicking [⟨runtimeErrorValue
                 "runtime error: invalid memory address or nil pointer dereference", false⟩]
-                (.frame targets results ds k' w), s, choices)
+                (.frame targets tenv results ds k' w), s, choices)
           | other => throw (.stuck s!"deferred callee is not a function value: {repr other}")
       | .stop => throw (.internal "return unwound past the entry frame")
       | _ => throw (.internal "return delivered to expression continuation")
@@ -709,7 +669,7 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
       | .labelK name k' =>
           if name = L then return (.next k', s, choices)
           else return (.breakingTo L k', s, choices)
-      | .frame _ _ _ _ _ => throw (.stuck "function body escaped with labeled break")
+      | .frame _ _ _ _ _ _ => throw (.stuck "function body escaped with labeled break")
       | .stop => throw (.stuck s!"labeled break escaped its label: {L}")
       | _ => throw (.internal "labeled break delivered to expression continuation")
   | .continuingTo L k =>
@@ -727,7 +687,7 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
           if contHeadLabel k' = some L then
             return (.next (.mapIterK keyVar valVar keyTy valTy body remaining env k'), s, choices)
           else return (.continuingTo L k', s, choices)
-      | .frame _ _ _ _ _ => throw (.stuck "function body escaped with labeled continue")
+      | .frame _ _ _ _ _ _ => throw (.stuck "function body escaped with labeled continue")
       | .stop => throw (.stuck s!"labeled continue escaped its label: {L}")
       | _ => throw (.internal "labeled continue delivered to expression continuation")
   -- Blocked configurations (channels arc slice 1): relation-silent — no
@@ -787,7 +747,7 @@ def runFunctionWithContextM (fuel : Nat) (types : TypeEnv) (functions : Array Fu
   -- The entry frame is a pure barrier (`[] []`): the big-step entry never
   -- stored results anywhere — the driver reads the pinned locations from
   -- the terminal state below.
-  let c₀ : Config := .exec func.body frameEnv (.frame [] [] [] .stop)
+  let c₀ : Config := .exec func.body frameEnv (.frame [] [] [] [] .stop)
   let (sF, _) ← runConfig fuel s₂ c₀ choices
   return { values := (← loadMany sF resultLocs).toArray }
 
@@ -912,7 +872,7 @@ def runPkgInitM (fuel : Nat) (state : ExecState) (choices : Choices) :
   | some initF =>
       if initF.args.size != 0 || initF.results.size != 0 then
         throw (.stuck s!"malformed {pkgInitFuncId.key}: expected no parameters and no results")
-      match runConfig fuel state (.exec initF.body [] (.frame [] [] [] .stop)) choices with
+      match runConfig fuel state (.exec initF.body [] (.frame [] [] [] [] .stop)) choices with
       | .ok r => pure r
       | .error e => throw (markInitPhase e)
 
@@ -950,7 +910,7 @@ def runProgramSetupM (fuel : Nat) (program : Program) (name : String)
   let (env, s₂) ← bindParams [] s₁ func.args.toList args.toList
   let (frameEnv, s₃) ← allocDecls env s₂ func.results.toList
   let resultLocs ← pinResultLocs frameEnv func.results.toList
-  let c₀ : Config := .exec func.body frameEnv (.frame [] [] [] .stop)
+  let c₀ : Config := .exec func.body frameEnv (.frame [] [] [] [] .stop)
   return (c₀, s₃, resultLocs, choices₁)
 
 @[inherit_doc runProgramSetupM]

@@ -2103,8 +2103,14 @@ def main : IO UInt32 := do
   passed := passed && (← expectErrorStatus "GoCore slice bounds panic" (GoCore.Machine.runFunctionM 100000 coreSliceBoundsFunction #[]) "panic")
   passed := passed && (← expectErrorStatus "GoCore nil map assignment panic" (GoCore.Machine.runFunctionM 100000 coreNilMapAssignFunction #[]) "panic")
   passed := passed && (← expectErrorStatus "GoCore mismatched equality stuck" (GoCore.Machine.runFunctionM 100000 coreMismatchedEqualityFunction #[]) "stuck")
-  passed := passed && (← expectIntResult "GoCore call target sequencing"
-    (GoCore.Machine.runFunctionWithContextM 100000 [] #[coreShiftIndexFunction, coreCallTargetSequencingFunction] coreCallTargetSequencingFunction #[]) 901)
+  -- RETUNED at the BUG-052 order pin (S1 audit, 2026-08-09): the call
+  -- write-back reads target operands AFTER the call (gc's realized
+  -- point inside spec §Order of evaluation's unordered carve-out), so
+  -- `a[i] = shiftIndex(&i)` with the callee setting i := 1 stores into
+  -- a[1], not a[0]: 901 (operand-first, the retired order) → 91. The
+  -- oracle-backed guards are multi-assign/call-write-back-order/*.
+  passed := passed && (← expectIntResult "GoCore call target sequencing (BUG-052: operands read post-call)"
+    (GoCore.Machine.runFunctionWithContextM 100000 [] #[coreShiftIndexFunction, coreCallTargetSequencingFunction] coreCallTargetSequencingFunction #[]) 91)
   passed := passed && (← expectIntResult "GoCore simultaneous assignment sequencing"
     (GoCore.Machine.runFunctionM 100000 coreAssignManySequencingFunction #[]) 1200)
   passed := passed && (← expectIntResult "GoCore if return positive" (GoCore.Machine.runFunctionM 100000 coreIfReturnFunction #[.int 7]) 7)

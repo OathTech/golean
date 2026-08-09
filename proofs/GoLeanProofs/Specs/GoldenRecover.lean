@@ -51,14 +51,15 @@ pointer, the recovered marker cancelling the unwind — ending at the
 frame's FALL exit still pending (`Config.next` at the frame), with the
 result cell holding 7. The `$c0` cell and the capture-parameter cell are
 dropped (affine). -/
-theorem wp_recoverDirect_body {ra : Addr} {tl : TargetRef} {k} {wf : Bool}
+theorem wp_recoverDirect_body {ra : Addr}
+    {tl : TargetShape × List Expr} {tenv : LocalEnv} {k} {wf : Bool}
     (hprog : GoCoreGS.prog GF = recoverLowered.funcs)
     (hmeths : GoCoreGS.methods GF = #[]) :
     ra.id ↦ (⟨some (.int .int), .int 0 .int⟩ : HeapCell)
       ∗ (ra.id ↦ (⟨some (.int .int), .int 7 .int⟩ : HeapCell)
-          -∗ WP (Config.next (.frame [tl] [.base ra] [] k wf)) @ s ; E {{ Φ }})
+          -∗ WP (Config.next (.frame [tl] tenv [.base ra] [] k wf)) @ s ; E {{ Φ }})
       ⊢ WP (Config.exec recoverDirectFunc.body [[("result", Loc.base ra)]]
-              (.frame [tl] [.base ra] [] k wf)) @ s ; E {{ Φ }} := by
+              (.frame [tl] tenv [.base ra] [] k wf)) @ s ; E {{ Φ }} := by
   iintro ⟨Hr, Hcont⟩
   simp only [recoverDirectFunc]
   -- the body block, the defer registration, `panic("boom-direct")`
@@ -127,18 +128,10 @@ theorem wp_recoverCall {ta : Addr} {w : GoValue} {x : String} {env k}
       ⊢ WP (Config.exec (.call #[.var x] ⟨"recoverDirect"⟩ #[]) env k)
           @ s ; E {{ Φ }} := by
   iintro ⟨Ht, Hcont⟩
-  iapply (wp_call_first_target (e := .ref x) (sh := .chain []) (ops := []) (rest := []) rfl)
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hc₁
-  iapply (wp_eval_ref hres)
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hc₂
   iapply (wp_call_enter_ret1
-    (func := recoverDirectFunc) (tl := .base ta) (dv := .int 0 .int)
+    (func := recoverDirectFunc) (dv := .int 0 .int)
+    (plans := [(.chain [], [.ref x])])
+    (hplan := rfl)
     (hfind := by rw [hprog, recoverLowered_funcs_eq]; rfl)
     (hargs := rfl) (hres := rfl)
     (hnodisp := fun σ h => by
@@ -151,7 +144,8 @@ theorem wp_recoverCall {ta : Addr} {w : GoValue} {x : String} {env k}
   isplitl [Hres]
   · iexact Hres
   iintro Hres
-  iapply (wp_frame_fall_int (m := 7) (kind := .int) (tkind := .int) (w := w))
+  iapply (wp_frame_fall_int (m := 7) (kind := .int) (tkind := .int) (w := w)
+    hres)
   isplitl [Hres]
   · iexact Hres
   isplitl [Ht]
