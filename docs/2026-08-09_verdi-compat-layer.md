@@ -267,6 +267,30 @@ Verdi-style + extensions model in Lean ⟷ consensus proof in Lean.**
   middle object's core is *the* spec a published machine-checked proof
   holds of — not an artifact of our own assumptions.
 
+## 4d. Do the extensions modify the core theorem? (user question, 2026-08-09)
+
+Determining factor: what the statement MENTIONS. Verdi's safety statements
+are written over the log representation and the wire alphabet; extensions
+touching those force restatement, behavior-only extensions don't.
+
+| Ring | Statement impact | Spec obviousness |
+|---|---|---|
+| fast backoff | none (statements never mention `nextIndex`; nw-clauses only cover `AppendEntries` requests; wrong backoff is rejected, not unsafe) | obvious |
+| PreVote | none (grants mutate nothing durable; election-safety text unchanged; +2 handler obligations via the induction principle) | near-obvious (term+1 probing detail) |
+| heartbeat msg | nw-half extends: `state_machine_safety_nw` is a case analysis over the wire alphabet, and `MsgHeartbeat` carries a commit index, so it gains a conjunct. General rule: **nw-halves co-vary with the message alphabet** (they are invariant-shaped, halfway between spec and proof) | mechanical |
+| snapshots | **YES — core theorem text breaks as written**: `commit_recorded` = "e ∈ log at/below watermark", `log_matching_hosts` = "every index 1..maxIndex present in log"; compaction falsifies both. Requires a virtual log (snapshot ⊕ suffix) or ghost complete-log history — a real design decision | NOT obvious |
+| membership change | text mostly survives; MEANING of quorum shifts per-config; fixed-`N` `div2` majorities are baked into `wonElection`/`haveQuorum` and the quorum-intersection proof backbone | treacherous — the feature with documented SPEC-level bugs (post-dissertation single-server-change flaw; etcd joint-consensus issues) |
+
+Consequence (recommendation): make the durable top-level theorem the
+CLIENT-OBSERVABLE one — linearizability (`raft_linearizable` shape) or an
+applied-state agreement corollary — whose text is stated over traces + the
+replicated machine and survives every ring including snapshots; log-level
+safety statements become ring-internal lemmas allowed to be restated per
+extension. Matches the statement-TCB doctrine. This RAISES the priority of
+porting the linearizability statement vocabulary
+(`Linearizability.v:7-270`, `RaftLinearizableProofs.v:26-93`,
+`CommonDefinitions.v` execute/dedup slice) within P1.
+
 ## 5. The protocol-gap ledger (the honest risk)
 
 verdi-raft (2016) vs etcd-io/raft — visible in the spec, must be tracked
