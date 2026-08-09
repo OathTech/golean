@@ -304,6 +304,22 @@ theorem wp_tgtop_rhs {sh : TargetShape} {ops : List GoValue} {v : GoValue}
         body env k)) @ s ; E {{ Φ }} :=
   wp_pure_det rfl trivial (fun _ => Step.tgtOpRhs hcomp)
 
+/-- Complete the LAST target when the delivery values are ALREADY KNOWN
+(`rhs = []` — the receive path's shape, and since the BUG-052 order pin
+the call write-back's: the frame exit loads the results and the target
+operands evaluate post-call): phase 2 begins directly. -/
+@[go_walk_law]
+theorem wp_tgtop_stores {sh : TargetShape} {ops : List GoValue} {v : GoValue}
+    {r : TargetRef} {refs : List TargetRef} {rop : RhsOp}
+    {vals : List GoValue} {body : Stmt} {env k}
+    (hcomp : completeTargetRef sh (v :: ops).reverse = some r) :
+    (|={E}[E]▷=> £ 1 -∗
+      WP (Config.next (.storeK (refs ++ [r]) vals body env k))
+        @ s ; E {{ Φ }}) ⊢
+      WP (Config.retV v (.tgtOpK sh ops [] refs [] rop [] vals
+        body env k)) @ s ; E {{ Φ }} :=
+  wp_pure_det rfl trivial (fun _ => Step.tgtOpStores hcomp)
+
 /-- Shift to the next right-hand expression. -/
 @[go_walk_law]
 theorem wp_rhs_shift {rop : RhsOp} {refs : List TargetRef}

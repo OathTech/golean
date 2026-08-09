@@ -1113,11 +1113,12 @@ theorem wp_oneKnownCall {ta : Addr} {w : GoValue} {env k}
       ⊢ WP (Config.exec (.call #[.var "$callres"] ⟨"committedOneKnown"⟩ #[])
             env k) @ s ; E {{ Φ }} := by
   iintro ⟨Ht, Hcont⟩
-  -- the one target cell, no arguments
-  go_walk
-  -- the outermost frame entry
+  -- the outermost frame entry (BUG-052: no pre-call target evaluation —
+  -- the plan rides the frame)
   go_walk_step (wp_call_enter_ret1 (func := QuorumPin.oneKnownImpl)
     (dv := .int 0 .uint64)
+    (plans := [(.chain [], [.ref "$callres"])])
+    (hplan := rfl)
     (hfind := by rw [hprog]; exact QuorumPin.oneKnownImpl_find)
     (hargs := QuorumPin.oneKnownImpl_args)
     (hres := QuorumPin.oneKnownImpl_results)
@@ -1129,7 +1130,7 @@ theorem wp_oneKnownCall {ta : Addr} {w : GoValue} {env k}
   -- the driver body, and the int frame exit
   go_walk_step (wp_oneKnown_body (ra := rra) hprog hmeths htypes)
   go_walk_step (wp_frame_return_int (ta := ta) (ra := rra) (kind := .uint64)
-    (tkind := .uint64) (m := 12))
+    (tkind := .uint64) (m := 12) hres)
   go_walk_finish Hcont
 
 end

@@ -326,9 +326,9 @@ def Cont.locSup : Cont → Nat
   | .loop cond body env k =>
       max (max (Expr.locSup cond) (Stmt.locSup body))
         (max (LocalEnv.locSup env) (Cont.locSup k))
-  | .frame targets results defers k _ =>
-      max (max (targetRefListSup targets) (locListSup results))
-        (max (deferListSup defers) (Cont.locSup k))
+  | .frame targets tenv results defers k _ =>
+      max (max (targetPlansSup targets) (LocalEnv.locSup tenv))
+        (max (max (locListSup results) (deferListSup defers)) (Cont.locSup k))
   | .deferCalleeK args env k =>
       max (max (exprListSup args) (LocalEnv.locSup env)) (Cont.locSup k)
   | .deferArgsK callee vals pending env k =>
@@ -336,16 +336,11 @@ def Cont.locSup : Cont → Nat
         (max (exprListSup pending) (max (LocalEnv.locSup env) (Cont.locSup k)))
   | .breakableK k => Cont.locSup k
   | .labelK _ k => Cont.locSup k
-  | .callValTargetsK callee _ ops pending refs targets args env k =>
-      max (max (Expr.locSup callee) (goValueListSup ops))
-        (max (max (exprListSup pending) (targetRefListSup refs))
-          (max (max (targetPlansSup targets) (exprListSup args))
-            (max (LocalEnv.locSup env) (Cont.locSup k))))
-  | .callValCalleeK refs args env k =>
-      max (max (targetRefListSup refs) (exprListSup args))
+  | .callValCalleeK targets args env k =>
+      max (max (targetPlansSup targets) (exprListSup args))
         (max (LocalEnv.locSup env) (Cont.locSup k))
-  | .callValArgsK callee refs vals pending env k =>
-      max (max (GoValue.locSup callee) (targetRefListSup refs))
+  | .callValArgsK callee targets vals pending env k =>
+      max (max (GoValue.locSup callee) (targetPlansSup targets))
         (max (max (goValueListSup vals) (exprListSup pending))
           (max (LocalEnv.locSup env) (Cont.locSup k)))
   | .strictK _ done pending env k =>
@@ -362,12 +357,9 @@ def Cont.locSup : Cont → Nat
   | .whileK c b env k =>
       max (max (Expr.locSup c) (Stmt.locSup b))
         (max (LocalEnv.locSup env) (Cont.locSup k))
-  | .callTargetsK _ _ ops pending refs targets args env k =>
-      max (max (goValueListSup ops) (exprListSup pending))
-        (max (max (targetRefListSup refs) (targetPlansSup targets))
-          (max (exprListSup args) (max (LocalEnv.locSup env) (Cont.locSup k))))
-  | .callArgsK _ refs vals pending env k =>
-      max (max (targetRefListSup refs) (goValueListSup vals))
+
+  | .callArgsK _ targets vals pending env k =>
+      max (max (targetPlansSup targets) (goValueListSup vals))
         (max (exprListSup pending) (max (LocalEnv.locSup env) (Cont.locSup k)))
   | .stmtOpK _ _ done pending env k =>
       max (max (goValueListSup done) (exprListSup pending))
@@ -467,12 +459,11 @@ def Cont.itersNormalized (types : TypeEnv) : Cont → Bool
   | .stop => true
   | .seq _ _ k => Cont.itersNormalized types k
   | .loop _ _ _ k => Cont.itersNormalized types k
-  | .frame _ _ _ k _ => Cont.itersNormalized types k
+  | .frame _ _ _ _ k _ => Cont.itersNormalized types k
   | .deferCalleeK _ _ k => Cont.itersNormalized types k
   | .deferArgsK _ _ _ _ k => Cont.itersNormalized types k
   | .breakableK k => Cont.itersNormalized types k
   | .labelK _ k => Cont.itersNormalized types k
-  | .callValTargetsK _ _ _ _ _ _ _ _ k => Cont.itersNormalized types k
   | .callValCalleeK _ _ _ k => Cont.itersNormalized types k
   | .callValArgsK _ _ _ _ _ k => Cont.itersNormalized types k
   | .strictK _ _ _ _ k => Cont.itersNormalized types k
@@ -481,7 +472,6 @@ def Cont.itersNormalized (types : TypeEnv) : Cont → Bool
   | .boolK k => Cont.itersNormalized types k
   | .ifK _ _ _ k => Cont.itersNormalized types k
   | .whileK _ _ _ k => Cont.itersNormalized types k
-  | .callTargetsK _ _ _ _ _ _ _ _ k => Cont.itersNormalized types k
   | .callArgsK _ _ _ _ _ k => Cont.itersNormalized types k
   | .stmtOpK _ _ _ _ _ k => Cont.itersNormalized types k
   | .mapRangeK _ _ _ _ _ _ k => Cont.itersNormalized types k
@@ -5188,6 +5178,7 @@ theorem step_preserves_wf_loc {c : Config} {σ : ExecState} {c' : Config}
       goValueListSup_append, exprListSup_append, stmtListSup_append,
       locListSup_append, panicChainSup_append, goValueListSup_reverse,
       targetRefListSup, targetPlansSup, targetRefListSup_append,
+      LocalEnv.locSup, Scope.locSup,
       runtimeErrorValue_locSup, panicPayload, LocalEnv.pushScope_locSup,
       Nat.max_le] at hc ⊢
     omega)
@@ -5212,6 +5203,7 @@ theorem step_preserves_wf_loc {c : Config} {σ : ExecState} {c' : Config}
       goValueListSup_append, exprListSup_append, stmtListSup_append,
       locListSup_append, panicChainSup_append, goValueListSup_reverse,
       targetRefListSup, targetPlansSup, targetRefListSup_append,
+      LocalEnv.locSup, Scope.locSup,
       runtimeErrorValue_locSup, panicPayload, LocalEnv.pushScope_locSup,
       Nat.max_le] at hc ⊢
     omega
@@ -5225,6 +5217,7 @@ theorem step_preserves_wf_loc {c : Config} {σ : ExecState} {c' : Config}
       goValueListSup_append, exprListSup_append, stmtListSup_append,
       locListSup_append, panicChainSup_append, goValueListSup_reverse,
       targetRefListSup, targetPlansSup, targetRefListSup_append,
+      LocalEnv.locSup, Scope.locSup,
       runtimeErrorValue_locSup, panicPayload, LocalEnv.pushScope_locSup,
       Nat.max_le] at hc h1 ⊢
     omega
@@ -5238,6 +5231,7 @@ theorem step_preserves_wf_loc {c : Config} {σ : ExecState} {c' : Config}
       goValueListSup_append, exprListSup_append, stmtListSup_append,
       locListSup_append, panicChainSup_append, goValueListSup_reverse,
       targetRefListSup, targetPlansSup, targetRefListSup_append,
+      LocalEnv.locSup, Scope.locSup,
       runtimeErrorValue_locSup, panicPayload, LocalEnv.pushScope_locSup,
       Nat.max_le] at hc ⊢
     omega
@@ -5250,6 +5244,7 @@ theorem step_preserves_wf_loc {c : Config} {σ : ExecState} {c' : Config}
       goValueListSup_append, exprListSup_append, stmtListSup_append,
       locListSup_append, panicChainSup_append, goValueListSup_reverse,
       targetRefListSup, targetPlansSup, targetRefListSup_append,
+      LocalEnv.locSup, Scope.locSup,
       runtimeErrorValue_locSup, panicPayload, LocalEnv.pushScope_locSup,
       Nat.max_le] at hc ⊢
     omega
@@ -5262,6 +5257,7 @@ theorem step_preserves_wf_loc {c : Config} {σ : ExecState} {c' : Config}
       goValueListSup_append, exprListSup_append, stmtListSup_append,
       locListSup_append, panicChainSup_append, goValueListSup_reverse,
       targetRefListSup, targetPlansSup, targetRefListSup_append,
+      LocalEnv.locSup, Scope.locSup,
       runtimeErrorValue_locSup, panicPayload, LocalEnv.pushScope_locSup,
       Nat.max_le] at hc
       simp only [goValueListSup]
@@ -5274,6 +5270,7 @@ theorem step_preserves_wf_loc {c : Config} {σ : ExecState} {c' : Config}
       goValueListSup_append, exprListSup_append, stmtListSup_append,
       locListSup_append, panicChainSup_append, goValueListSup_reverse,
       targetRefListSup, targetPlansSup, targetRefListSup_append,
+      LocalEnv.locSup, Scope.locSup,
       runtimeErrorValue_locSup, panicPayload, LocalEnv.pushScope_locSup,
       Nat.max_le] at hc ⊢
     omega
@@ -5286,6 +5283,7 @@ theorem step_preserves_wf_loc {c : Config} {σ : ExecState} {c' : Config}
       goValueListSup_append, exprListSup_append, stmtListSup_append,
       locListSup_append, panicChainSup_append, goValueListSup_reverse,
       targetRefListSup, targetPlansSup, targetRefListSup_append,
+      LocalEnv.locSup, Scope.locSup,
       runtimeErrorValue_locSup, panicPayload, LocalEnv.pushScope_locSup,
       Nat.max_le] at hc ⊢
     omega
@@ -5298,6 +5296,7 @@ theorem step_preserves_wf_loc {c : Config} {σ : ExecState} {c' : Config}
       goValueListSup_append, exprListSup_append, stmtListSup_append,
       locListSup_append, panicChainSup_append, goValueListSup_reverse,
       targetRefListSup, targetPlansSup, targetRefListSup_append,
+      LocalEnv.locSup, Scope.locSup,
       runtimeErrorValue_locSup, panicPayload, LocalEnv.pushScope_locSup,
       Nat.max_le] at hc
       omega)
@@ -5308,6 +5307,7 @@ theorem step_preserves_wf_loc {c : Config} {σ : ExecState} {c' : Config}
       goValueListSup_append, exprListSup_append, stmtListSup_append,
       locListSup_append, panicChainSup_append, goValueListSup_reverse,
       targetRefListSup, targetPlansSup, targetRefListSup_append,
+      LocalEnv.locSup, Scope.locSup,
       runtimeErrorValue_locSup, panicPayload, LocalEnv.pushScope_locSup,
       Nat.max_le] at hc ⊢
     omega
@@ -5323,24 +5323,13 @@ theorem step_preserves_wf_loc {c : Config} {σ : ExecState} {c' : Config}
       goValueListSup_append, exprListSup_append, stmtListSup_append,
       locListSup_append, panicChainSup_append, goValueListSup_reverse,
       targetRefListSup, targetPlansSup, targetRefListSup_append,
+      LocalEnv.locSup, Scope.locSup,
       runtimeErrorValue_locSup, panicPayload, LocalEnv.pushScope_locSup,
       Nat.max_le] at hc ⊢
     omega
-  case callFirstTarget targets fid args sh e ops rest env k hplan =>
+  case callStart targets fid args plans a rest env k hplan hargs =>
     refine ⟨hs, ?_, rfl, Nat.le_refl _⟩
     have h1 := targetsPlan_locSup hplan
-    simp only [targetPlansSup, exprListSup, assigneeListSup, Nat.max_le] at h1
-    simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
-      GoValue.locSup, optLocSup, panicChainSup, goValueListSup, exprListSup,
-      stmtListSup, locListSup, deferListSup, assigneeListSup, optExprSup,
-      goValueListSup_append, exprListSup_append, stmtListSup_append,
-      locListSup_append, panicChainSup_append, goValueListSup_reverse,
-      targetRefListSup, targetPlansSup,
-      runtimeErrorValue_locSup, panicPayload, LocalEnv.pushScope_locSup,
-      Nat.max_le] at hc h1 ⊢
-    omega
-  case callFirstArg targets fid args a rest env k hplan hargs =>
-    refine ⟨hs, ?_, rfl, Nat.le_refl _⟩
     have h2 : exprListSup (a :: rest) = exprListSup args.toList := by rw [hargs]
     simp only [exprListSup] at h2
     simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
@@ -5348,54 +5337,14 @@ theorem step_preserves_wf_loc {c : Config} {σ : ExecState} {c' : Config}
       stmtListSup, locListSup, deferListSup, assigneeListSup, optExprSup,
       goValueListSup_append, exprListSup_append, stmtListSup_append,
       locListSup_append, panicChainSup_append, goValueListSup_reverse,
+      targetRefListSup, targetPlansSup, targetRefListSup_append,
+      LocalEnv.locSup, Scope.locSup,
       runtimeErrorValue_locSup, panicPayload, LocalEnv.pushScope_locSup,
-      targetRefListSup, targetPlansSup, Nat.max_le] at hc h2 ⊢
+      Nat.max_le] at hc h1 h2 ⊢
     omega
-  case callImmediate targets fid args func frameEnv resultLocs env k 
+  case callImmediate targets fid args plans func frameEnv resultLocs env k 
  hplan hargs henter =>
-    obtain ⟨w1, w2, w3, w4, w5, w6, w7, w8⟩ := enterFrame_wf hs
-      (by simp [goValueListSup]) henter
-    refine ⟨w1, ?_, w3, w2⟩
-    simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
-      GoValue.locSup, optLocSup, panicChainSup, goValueListSup, exprListSup,
-      stmtListSup, locListSup, deferListSup, assigneeListSup, optExprSup,
-      goValueListSup_append, exprListSup_append, stmtListSup_append,
-      locListSup_append, panicChainSup_append, goValueListSup_reverse,
-      runtimeErrorValue_locSup, panicPayload, LocalEnv.pushScope_locSup,
-      targetRefListSup, targetPlansSup, Nat.max_le] at hc ⊢
-    omega
-  case callTgtNext v r fid sh ops sh' e ops' targets refs args env k hcomp =>
-    have h1 := completeTargetRef_locSup hcomp
-    rw [goValueListSup_reverse] at h1
-    refine ⟨hs, ?_, rfl, Nat.le_refl _⟩
-    simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
-      GoValue.locSup, optLocSup, panicChainSup, goValueListSup, exprListSup,
-      stmtListSup, locListSup, deferListSup, assigneeListSup, optExprSup,
-      goValueListSup_append, exprListSup_append, stmtListSup_append,
-      locListSup_append, panicChainSup_append, goValueListSup_reverse,
-      targetRefListSup, targetPlansSup, targetRefListSup_append,
-      LocalEnv.locSup,
-      runtimeErrorValue_locSup, panicPayload, LocalEnv.pushScope_locSup,
-      Nat.max_le] at hc h1 ⊢
-    omega
-  case callTargetsDoneArg v r fid sh ops refs a rest env k hcomp =>
-    have h1 := completeTargetRef_locSup hcomp
-    rw [goValueListSup_reverse] at h1
-    refine ⟨hs, ?_, rfl, Nat.le_refl _⟩
-    simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
-      GoValue.locSup, optLocSup, panicChainSup, goValueListSup, exprListSup,
-      stmtListSup, locListSup, deferListSup, assigneeListSup, optExprSup,
-      goValueListSup_append, exprListSup_append, stmtListSup_append,
-      locListSup_append, panicChainSup_append, goValueListSup_reverse,
-      targetRefListSup, targetPlansSup, targetRefListSup_append,
-      LocalEnv.locSup,
-      runtimeErrorValue_locSup, panicPayload, LocalEnv.pushScope_locSup,
-      Nat.max_le] at hc h1 ⊢
-    omega
-  case callTargetsDoneEnter v r fid sh ops refs func frameEnv resultLocs env k 
- hcomp henter =>
-    have h1 := completeTargetRef_locSup hcomp
-    rw [goValueListSup_reverse] at h1
+    have h1 := targetsPlan_locSup hplan
     obtain ⟨w1, w2, w3, w4, w5, w6, w7, w8⟩ := enterFrame_wf hs
       (by simp [goValueListSup]) henter
     refine ⟨w1, ?_, w3, w2⟩
@@ -5405,11 +5354,11 @@ theorem step_preserves_wf_loc {c : Config} {σ : ExecState} {c' : Config}
       goValueListSup_append, exprListSup_append, stmtListSup_append,
       locListSup_append, panicChainSup_append, goValueListSup_reverse,
       targetRefListSup, targetPlansSup, targetRefListSup_append,
-      LocalEnv.locSup,
+      LocalEnv.locSup, Scope.locSup,
       runtimeErrorValue_locSup, panicPayload, LocalEnv.pushScope_locSup,
       Nat.max_le] at hc h1 ⊢
     omega
-  case callArgsDoneEnter v fid locs vals func frameEnv resultLocs env k 
+  case callArgsDoneEnter v fid plans vals func frameEnv resultLocs env k 
  henter =>
     have hargb : goValueListSup (vals ++ [v]) ≤ σ.nextAddr := by
       rw [goValueListSup_append]
@@ -5419,6 +5368,7 @@ theorem step_preserves_wf_loc {c : Config} {σ : ExecState} {c' : Config}
       goValueListSup_append, exprListSup_append, stmtListSup_append,
       locListSup_append, panicChainSup_append, goValueListSup_reverse,
       targetRefListSup, targetPlansSup, targetRefListSup_append,
+      LocalEnv.locSup, Scope.locSup,
       runtimeErrorValue_locSup, panicPayload, LocalEnv.pushScope_locSup,
       Nat.max_le] at hc
       simp only [goValueListSup]
@@ -5431,6 +5381,7 @@ theorem step_preserves_wf_loc {c : Config} {σ : ExecState} {c' : Config}
       goValueListSup_append, exprListSup_append, stmtListSup_append,
       locListSup_append, panicChainSup_append, goValueListSup_reverse,
       targetRefListSup, targetPlansSup, targetRefListSup_append,
+      LocalEnv.locSup, Scope.locSup,
       runtimeErrorValue_locSup, panicPayload, LocalEnv.pushScope_locSup,
       Nat.max_le] at hc ⊢
     omega
@@ -5444,6 +5395,7 @@ theorem step_preserves_wf_loc {c : Config} {σ : ExecState} {c' : Config}
       goValueListSup_append, exprListSup_append, stmtListSup_append,
       locListSup_append, panicChainSup_append, goValueListSup_reverse,
       targetRefListSup, targetPlansSup, targetRefListSup_append,
+      LocalEnv.locSup, Scope.locSup,
       runtimeErrorValue_locSup, panicPayload, LocalEnv.pushScope_locSup,
       Nat.max_le] at hc h1 ⊢
     omega
@@ -5457,6 +5409,7 @@ theorem step_preserves_wf_loc {c : Config} {σ : ExecState} {c' : Config}
       goValueListSup_append, exprListSup_append, stmtListSup_append,
       locListSup_append, panicChainSup_append, goValueListSup_reverse,
       targetRefListSup, targetPlansSup, targetRefListSup_append,
+      LocalEnv.locSup, Scope.locSup,
       runtimeErrorValue_locSup, panicPayload, LocalEnv.pushScope_locSup,
       Nat.max_le] at hc ⊢
     omega
@@ -5469,6 +5422,7 @@ theorem step_preserves_wf_loc {c : Config} {σ : ExecState} {c' : Config}
       goValueListSup_append, exprListSup_append, stmtListSup_append,
       locListSup_append, panicChainSup_append, goValueListSup_reverse,
       targetRefListSup, targetPlansSup, targetRefListSup_append,
+      LocalEnv.locSup, Scope.locSup,
       runtimeErrorValue_locSup, panicPayload, LocalEnv.pushScope_locSup,
       Nat.max_le] at hc
       simp only [goValueListSup]
@@ -5481,6 +5435,7 @@ theorem step_preserves_wf_loc {c : Config} {σ : ExecState} {c' : Config}
       goValueListSup_append, exprListSup_append, stmtListSup_append,
       locListSup_append, panicChainSup_append, goValueListSup_reverse,
       targetRefListSup, targetPlansSup, targetRefListSup_append,
+      LocalEnv.locSup, Scope.locSup,
       runtimeErrorValue_locSup, panicPayload, LocalEnv.pushScope_locSup,
       Nat.max_le] at hc ⊢
     omega
@@ -5493,6 +5448,7 @@ theorem step_preserves_wf_loc {c : Config} {σ : ExecState} {c' : Config}
       goValueListSup_append, exprListSup_append, stmtListSup_append,
       locListSup_append, panicChainSup_append, goValueListSup_reverse,
       targetRefListSup, targetPlansSup, targetRefListSup_append,
+      LocalEnv.locSup, Scope.locSup,
       runtimeErrorValue_locSup, panicPayload, LocalEnv.pushScope_locSup,
       Nat.max_le] at hc ⊢
     omega
@@ -5505,6 +5461,7 @@ theorem step_preserves_wf_loc {c : Config} {σ : ExecState} {c' : Config}
       goValueListSup_append, exprListSup_append, stmtListSup_append,
       locListSup_append, panicChainSup_append, goValueListSup_reverse,
       targetRefListSup, targetPlansSup, targetRefListSup_append,
+      LocalEnv.locSup, Scope.locSup,
       runtimeErrorValue_locSup, panicPayload, LocalEnv.pushScope_locSup,
       Nat.max_le] at hc
       omega
@@ -5521,6 +5478,7 @@ theorem step_preserves_wf_loc {c : Config} {σ : ExecState} {c' : Config}
       goValueListSup_append, exprListSup_append, stmtListSup_append,
       locListSup_append, panicChainSup_append, goValueListSup_reverse,
       targetRefListSup, targetPlansSup, targetRefListSup_append,
+      LocalEnv.locSup, Scope.locSup,
       runtimeErrorValue_locSup, panicPayload, LocalEnv.pushScope_locSup,
       Nat.max_le] at hc; omega)
       (by omega) (by omega) hbind
@@ -5533,50 +5491,24 @@ theorem step_preserves_wf_loc {c : Config} {σ : ExecState} {c' : Config}
       goValueListSup_append, exprListSup_append, stmtListSup_append,
       locListSup_append, panicChainSup_append, goValueListSup_reverse,
       targetRefListSup, targetPlansSup, targetRefListSup_append,
+      LocalEnv.locSup, Scope.locSup,
       runtimeErrorValue_locSup, panicPayload, LocalEnv.pushScope_locSup,
       Nat.max_le] at hc ⊢
     omega
-  case callValueFirstTarget targets callee args sh e ops rest env k hplan =>
+  case callValueStart targets callee args plans env k hplan =>
     refine ⟨hs, ?_, rfl, Nat.le_refl _⟩
     have h1 := targetsPlan_locSup hplan
-    simp only [targetPlansSup, exprListSup, assigneeListSup, Nat.max_le] at h1
-    simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
-      GoValue.locSup, optLocSup, panicChainSup, goValueListSup, exprListSup,
-      stmtListSup, locListSup, deferListSup, assigneeListSup, optExprSup,
-      goValueListSup_append, exprListSup_append, stmtListSup_append,
-      locListSup_append, panicChainSup_append, goValueListSup_reverse,
-      runtimeErrorValue_locSup, panicPayload, LocalEnv.pushScope_locSup,
-      targetRefListSup, targetPlansSup, Nat.max_le] at hc h1 ⊢
-    omega
-  case callValTgtNext v r callee sh ops sh' e ops' targets refs args env k hcomp =>
-    have h1 := completeTargetRef_locSup hcomp
-    rw [goValueListSup_reverse] at h1
-    refine ⟨hs, ?_, rfl, Nat.le_refl _⟩
     simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
       GoValue.locSup, optLocSup, panicChainSup, goValueListSup, exprListSup,
       stmtListSup, locListSup, deferListSup, assigneeListSup, optExprSup,
       goValueListSup_append, exprListSup_append, stmtListSup_append,
       locListSup_append, panicChainSup_append, goValueListSup_reverse,
       targetRefListSup, targetPlansSup, targetRefListSup_append,
-      LocalEnv.locSup,
+      LocalEnv.locSup, Scope.locSup,
       runtimeErrorValue_locSup, panicPayload, LocalEnv.pushScope_locSup,
       Nat.max_le] at hc h1 ⊢
     omega
-  case callValTargetsDone v r callee sh ops refs args env k hcomp =>
-    have h1 := completeTargetRef_locSup hcomp
-    rw [goValueListSup_reverse] at h1
-    refine ⟨hs, ?_, rfl, Nat.le_refl _⟩
-    simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
-      GoValue.locSup, optLocSup, panicChainSup, goValueListSup, exprListSup,
-      stmtListSup, locListSup, deferListSup, assigneeListSup, optExprSup,
-      goValueListSup_append, exprListSup_append, stmtListSup_append,
-      locListSup_append, panicChainSup_append, goValueListSup_reverse,
-      targetRefListSup, targetPlansSup, targetRefListSup_append,
-      LocalEnv.locSup,
-      runtimeErrorValue_locSup, panicPayload, LocalEnv.pushScope_locSup,
-      Nat.max_le] at hc h1 ⊢
-    omega
-  case callValCalleeEnter fid captured locs func frameEnv resultLocs env k 
+  case callValCalleeEnter fid captured plans func frameEnv resultLocs env k 
  henter =>
     have hargb : goValueListSup captured ≤ σ.nextAddr := by
       simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
@@ -5585,6 +5517,7 @@ theorem step_preserves_wf_loc {c : Config} {σ : ExecState} {c' : Config}
       goValueListSup_append, exprListSup_append, stmtListSup_append,
       locListSup_append, panicChainSup_append, goValueListSup_reverse,
       targetRefListSup, targetPlansSup, targetRefListSup_append,
+      LocalEnv.locSup, Scope.locSup,
       runtimeErrorValue_locSup, panicPayload, LocalEnv.pushScope_locSup,
       Nat.max_le] at hc
       omega
@@ -5596,10 +5529,11 @@ theorem step_preserves_wf_loc {c : Config} {σ : ExecState} {c' : Config}
       goValueListSup_append, exprListSup_append, stmtListSup_append,
       locListSup_append, panicChainSup_append, goValueListSup_reverse,
       targetRefListSup, targetPlansSup, targetRefListSup_append,
+      LocalEnv.locSup, Scope.locSup,
       runtimeErrorValue_locSup, panicPayload, LocalEnv.pushScope_locSup,
       Nat.max_le] at hc ⊢
     omega
-  case callValArgsEnter v fid captured locs vals func frameEnv resultLocs env
+  case callValArgsEnter v fid captured plans vals func frameEnv resultLocs env
  k henter =>
     have hargb : goValueListSup (captured ++ vals ++ [v]) ≤ σ.nextAddr := by
       rw [goValueListSup_append, goValueListSup_append]
@@ -5609,6 +5543,7 @@ theorem step_preserves_wf_loc {c : Config} {σ : ExecState} {c' : Config}
       goValueListSup_append, exprListSup_append, stmtListSup_append,
       locListSup_append, panicChainSup_append, goValueListSup_reverse,
       targetRefListSup, targetPlansSup, targetRefListSup_append,
+      LocalEnv.locSup, Scope.locSup,
       runtimeErrorValue_locSup, panicPayload, LocalEnv.pushScope_locSup,
       Nat.max_le] at hc
       simp only [goValueListSup]
@@ -5621,10 +5556,11 @@ theorem step_preserves_wf_loc {c : Config} {σ : ExecState} {c' : Config}
       goValueListSup_append, exprListSup_append, stmtListSup_append,
       locListSup_append, panicChainSup_append, goValueListSup_reverse,
       targetRefListSup, targetPlansSup, targetRefListSup_append,
+      LocalEnv.locSup, Scope.locSup,
       runtimeErrorValue_locSup, panicPayload, LocalEnv.pushScope_locSup,
       Nat.max_le] at hc ⊢
     omega
-  case frameReturnStores r rs results k w vs hload =>
+  case frameReturnTargets sh e ops rest tenv results k w vs hload =>
     have h1 := loadMany_locSup hload
     refine ⟨hs, ?_, rfl, Nat.le_refl _⟩
     simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
@@ -5633,11 +5569,11 @@ theorem step_preserves_wf_loc {c : Config} {σ : ExecState} {c' : Config}
       goValueListSup_append, exprListSup_append, stmtListSup_append,
       locListSup_append, panicChainSup_append, goValueListSup_reverse,
       targetRefListSup, targetPlansSup, targetRefListSup_append,
-      LocalEnv.locSup,
+      LocalEnv.locSup, Scope.locSup,
       runtimeErrorValue_locSup, panicPayload, LocalEnv.pushScope_locSup,
-      Nat.max_le] at hc h1 ⊢
+      Nat.max_le, LocalEnv.locSup] at hc h1 ⊢
     omega
-  case frameFallStores r rs results k w vs hload =>
+  case frameFallTargets sh e ops rest tenv results k w vs hload =>
     have h1 := loadMany_locSup hload
     refine ⟨hs, ?_, rfl, Nat.le_refl _⟩
     simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
@@ -5646,11 +5582,11 @@ theorem step_preserves_wf_loc {c : Config} {σ : ExecState} {c' : Config}
       goValueListSup_append, exprListSup_append, stmtListSup_append,
       locListSup_append, panicChainSup_append, goValueListSup_reverse,
       targetRefListSup, targetPlansSup, targetRefListSup_append,
-      LocalEnv.locSup,
+      LocalEnv.locSup, Scope.locSup,
       runtimeErrorValue_locSup, panicPayload, LocalEnv.pushScope_locSup,
-      Nat.max_le] at hc h1 ⊢
+      Nat.max_le, LocalEnv.locSup] at hc h1 ⊢
     omega
-  case frameDeferFall targets results fid captured args ds k w func frameEnv
+  case frameDeferFall targets tenv results fid captured args ds k w func frameEnv
  resultLocs henter =>
     have hargb : goValueListSup (captured ++ args) ≤ σ.nextAddr := by
       rw [goValueListSup_append]
@@ -5660,6 +5596,7 @@ theorem step_preserves_wf_loc {c : Config} {σ : ExecState} {c' : Config}
       goValueListSup_append, exprListSup_append, stmtListSup_append,
       locListSup_append, panicChainSup_append, goValueListSup_reverse,
       targetRefListSup, targetPlansSup, targetRefListSup_append,
+      LocalEnv.locSup, Scope.locSup,
       runtimeErrorValue_locSup, panicPayload, LocalEnv.pushScope_locSup,
       Nat.max_le] at hc
       omega
@@ -5671,10 +5608,11 @@ theorem step_preserves_wf_loc {c : Config} {σ : ExecState} {c' : Config}
       goValueListSup_append, exprListSup_append, stmtListSup_append,
       locListSup_append, panicChainSup_append, goValueListSup_reverse,
       targetRefListSup, targetPlansSup, targetRefListSup_append,
+      LocalEnv.locSup, Scope.locSup,
       runtimeErrorValue_locSup, panicPayload, LocalEnv.pushScope_locSup,
       Nat.max_le] at hc ⊢
     omega
-  case frameDeferReturn targets results fid captured args ds k w func frameEnv
+  case frameDeferReturn targets tenv results fid captured args ds k w func frameEnv
  resultLocs henter =>
     have hargb : goValueListSup (captured ++ args) ≤ σ.nextAddr := by
       rw [goValueListSup_append]
@@ -5684,6 +5622,7 @@ theorem step_preserves_wf_loc {c : Config} {σ : ExecState} {c' : Config}
       goValueListSup_append, exprListSup_append, stmtListSup_append,
       locListSup_append, panicChainSup_append, goValueListSup_reverse,
       targetRefListSup, targetPlansSup, targetRefListSup_append,
+      LocalEnv.locSup, Scope.locSup,
       runtimeErrorValue_locSup, panicPayload, LocalEnv.pushScope_locSup,
       Nat.max_le] at hc
       omega
@@ -5695,6 +5634,7 @@ theorem step_preserves_wf_loc {c : Config} {σ : ExecState} {c' : Config}
       goValueListSup_append, exprListSup_append, stmtListSup_append,
       locListSup_append, panicChainSup_append, goValueListSup_reverse,
       targetRefListSup, targetPlansSup, targetRefListSup_append,
+      LocalEnv.locSup, Scope.locSup,
       runtimeErrorValue_locSup, panicPayload, LocalEnv.pushScope_locSup,
       Nat.max_le] at hc ⊢
     omega
@@ -5708,6 +5648,7 @@ theorem step_preserves_wf_loc {c : Config} {σ : ExecState} {c' : Config}
       goValueListSup_append, exprListSup_append, stmtListSup_append,
       locListSup_append, panicChainSup_append, goValueListSup_reverse,
       targetRefListSup, targetPlansSup, targetRefListSup_append,
+      LocalEnv.locSup, Scope.locSup,
       runtimeErrorValue_locSup, panicPayload, LocalEnv.pushScope_locSup,
       Nat.max_le] at hc ⊢
     simp only [goValueListSup] at h1
@@ -5722,6 +5663,7 @@ theorem step_preserves_wf_loc {c : Config} {σ : ExecState} {c' : Config}
       goValueListSup_append, exprListSup_append, stmtListSup_append,
       locListSup_append, panicChainSup_append, goValueListSup_reverse,
       targetRefListSup, targetPlansSup, targetRefListSup_append,
+      LocalEnv.locSup, Scope.locSup,
       runtimeErrorValue_locSup, panicPayload, LocalEnv.pushScope_locSup,
       Nat.max_le] at hc ⊢
     omega
@@ -5734,6 +5676,7 @@ theorem step_preserves_wf_loc {c : Config} {σ : ExecState} {c' : Config}
       goValueListSup_append, exprListSup_append, stmtListSup_append,
       locListSup_append, panicChainSup_append, goValueListSup_reverse,
       targetRefListSup, targetPlansSup, targetRefListSup_append,
+      LocalEnv.locSup, Scope.locSup,
       runtimeErrorValue_locSup, panicPayload, LocalEnv.pushScope_locSup,
       Nat.max_le] at hc ⊢
     omega
@@ -5747,6 +5690,7 @@ theorem step_preserves_wf_loc {c : Config} {σ : ExecState} {c' : Config}
       goValueListSup_append, exprListSup_append, stmtListSup_append,
       locListSup_append, panicChainSup_append, goValueListSup_reverse,
       targetRefListSup, targetPlansSup, targetRefListSup_append,
+      LocalEnv.locSup, Scope.locSup,
       runtimeErrorValue_locSup, panicPayload, LocalEnv.pushScope_locSup,
       Nat.max_le] at hc
       omega
@@ -5758,6 +5702,7 @@ theorem step_preserves_wf_loc {c : Config} {σ : ExecState} {c' : Config}
       goValueListSup_append, exprListSup_append, stmtListSup_append,
       locListSup_append, panicChainSup_append, goValueListSup_reverse,
       targetRefListSup, targetPlansSup, targetRefListSup_append,
+      LocalEnv.locSup, Scope.locSup,
       runtimeErrorValue_locSup, panicPayload, LocalEnv.pushScope_locSup,
       Nat.max_le] at hc ⊢
     omega
@@ -5772,6 +5717,7 @@ theorem step_preserves_wf_loc {c : Config} {σ : ExecState} {c' : Config}
       goValueListSup_append, exprListSup_append, stmtListSup_append,
       locListSup_append, panicChainSup_append, goValueListSup_reverse,
       targetRefListSup, targetPlansSup, targetRefListSup_append,
+      LocalEnv.locSup, Scope.locSup,
       runtimeErrorValue_locSup, panicPayload, LocalEnv.pushScope_locSup,
       Nat.max_le] at hc h1 h2 ⊢
     omega

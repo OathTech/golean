@@ -102,7 +102,7 @@ theorem spawnStep_wf {s : ExecState} {cv : GoValue} {args : List GoValue}
       refine ⟨w1, ?_, ?_, w3, w2, ?_, ?_⟩
       · simpa [Config.locSup] using Nat.le_trans hk w2
       · simp only [Config.locSup, Cont.locSup, locListSup, deferListSup,
-          targetRefListSup, Nat.max_le]
+          targetPlansSup, LocalEnv.locSup, Nat.max_le]
         omega
       · simpa [Config.itersNormalized, Cont.itersNormalized] using hik
       · simp [Config.itersNormalized, Cont.itersNormalized]

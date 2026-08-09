@@ -802,7 +802,7 @@ def enumRunProgram (ep : EnumProgram) (runFuel : Nat)
         -- mirroring `runPkgInitM` (audit response 2026-08-05, C6); the
         -- panic member's message stays unmarked (Go-observable).
         match enumInitRun runFuel ep.σ₀
-            (.exec body [] (.frame [] [] [] .stop)) stream with
+            (.exec body [] (.frame [] [] [] [] .stop)) stream with
         | .error e => throw (GoCore.Machine.markInitPhase e)
         | .ok (.inl r) => pure r
         | .ok (.inr (msg, leftover)) => return ("panic", errorJson (.panic msg), leftover)
@@ -813,7 +813,7 @@ def enumRunProgram (ep : EnumProgram) (runFuel : Nat)
   -- a fresh one-thread pool over the initialized state, race detector
   -- armed from empty.
   enumPoolRun resultLocs runFuel
-    ⟨#[.exec ep.func.body frameEnv (.frame [] [] [] .stop)], s₃, 0⟩ {} choices₁
+    ⟨#[.exec ep.func.body frameEnv (.frame [] [] [] [] .stop)], s₃, 0⟩ {} choices₁
 
 /-- The observation `native-json-run` prints for a driver result — public
 so the driver-agreement eval tests compare the two drivers on the SAME
@@ -1212,7 +1212,7 @@ partial def subjectEntry (ctx : ExpCtx) (out : EnumOutcome) (path : List Nat)
       | .error e => .error s!"subject entry failed: {renderGoError e}"
       | .ok resultLocs =>
           poolDFS ctx out path resultLocs ctx.runFuel
-            ⟨#[.exec ctx.ep.func.body frameEnv (.frame [] [] [] .stop)], s₃, 0⟩
+            ⟨#[.exec ctx.ep.func.body frameEnv (.frame [] [] [] [] .stop)], s₃, 0⟩
             {}
 
 /-- DFS over the `$pkginit` phase (sequential, one pick per step at
@@ -1275,7 +1275,7 @@ def explore (ep : EnumProgram) (runFuel width sites cap workCap : Nat)
     | none => subjectEntry ctx {} [] ep.σ₀
     | some body =>
         initDFS ctx {} [] runFuel ep.σ₀
-          (.exec body [] (.frame [] [] [] .stop))
+          (.exec body [] (.frame [] [] [] [] .stop))
   -- THE CERTIFICATION CHECK: probe observations ⊆ enumerated set.
   for pobs in out.probeObservations do
     if !out.observations.contains pobs then

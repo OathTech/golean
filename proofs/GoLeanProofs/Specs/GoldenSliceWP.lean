@@ -48,12 +48,14 @@ pinned program it instantiates on). -/
 /-- Witness for `wp_call_enter_arg1` on the CONCRETE golden `inc`: every
 premise discharges by computation given the two genuinely-external pins
 (program and method table). -/
-theorem wp_call_enter_inc {xa : Addr} {locs : List TargetRef} {env k}
+theorem wp_call_enter_inc {xa : Addr}
+    {locs : List (TargetShape × List Expr)} {env k}
     (hprog : GoCoreGS.prog GF = GoldenSlice.sliceLowered.funcs)
     (hmeths : GoCoreGS.methods GF = #[]) :
     iprop(∀ pa : Addr,
         pa.id ↦ (⟨some (.pointer (.int .int)), .addr (.base xa)⟩ : HeapCell) -∗
-        WP (Config.exec GoldenSlice.incFunc.body [[("p", Loc.base pa)]] (.frame locs [] [] k))
+        WP (Config.exec GoldenSlice.incFunc.body [[("p", Loc.base pa)]]
+              (.frame locs env [] [] k))
           @ s ; E {{ Φ }})
       ⊢ WP (Config.retV (.addr (.base xa))
             (.callArgsK ⟨"inc"⟩ locs [] [] env k)) @ s ; E {{ Φ }} :=
@@ -67,17 +69,19 @@ theorem wp_call_enter_inc {xa : Addr} {locs : List TargetRef} {env k}
       simp [normalizeValueForTy, normalizeValueForTyFuel, typeResolutionFuel])
 
 /-- Witness for `wp_call_enter_ret1` on the CONCRETE golden `incViaCall`
-(nullary, one int result `$res0` defaulting to 0). -/
-theorem wp_call_enter_incViaCall {tl : Loc} {env k}
+(nullary, one int result `$res0` defaulting to 0), at the call
+STATEMENT config (BUG-052: no target operand evaluates pre-call — the
+plan rides the frame). -/
+theorem wp_call_enter_incViaCall {x : String} {env k}
     (hprog : GoCoreGS.prog GF = GoldenSlice.sliceLowered.funcs)
     (hmeths : GoCoreGS.methods GF = #[]) :
     iprop(∀ ra : Addr,
         ra.id ↦ (⟨some (.int .int), .int 0 .int⟩ : HeapCell) -∗
         WP (Config.exec GoldenSlice.incViaCallFunc.body [[("$res0", Loc.base ra)]]
-              (.frame [.chain (.addr tl) [] []] [Loc.base ra] [] k)) @ s ; E {{ Φ }})
-      ⊢ WP (Config.retV (.addr tl)
-            (.callTargetsK ⟨"incViaCall"⟩ (.chain []) [] [] [] [] [] env k)) @ s ; E {{ Φ }} :=
+              (.frame [(.chain [], [.ref x])] env [Loc.base ra] [] k)) @ s ; E {{ Φ }})
+      ⊢ WP (Config.exec (.call #[.var x] ⟨"incViaCall"⟩ #[]) env k) @ s ; E {{ Φ }} :=
   wp_call_enter_ret1
+    (hplan := rfl)
     (hfind := by rw [hprog, GoldenSlice.sliceLowered_funcs_eq]; rfl)
     (hargs := rfl)
     (hres := rfl)
@@ -220,7 +224,7 @@ theorem wp_call_inc_stmt {env : LocalEnv} {xa : Addr} {m : Int} {k}
           -∗ WP (Config.next k) @ s ; E {{ Φ }})
       ⊢ WP (Config.exec (.call #[] ⟨"inc"⟩ #[.ref "x"]) env k) @ s ; E {{ Φ }} := by
   iintro ⟨Hx, Hcont⟩
-  iapply (wp_call_first_arg (a := .ref "x") (rest := []) rfl rfl)
+  iapply (wp_call_start (plans := []) (a := .ref "x") (rest := []) rfl rfl)
   iapply fupd_intro
   inext
   iapply fupd_intro
@@ -395,24 +399,14 @@ theorem wp_goldenCall {ta : Addr} {w : GoValue} {x : String} {env k}
       ⊢ WP (Config.exec (.call #[.var x] ⟨"incViaCall"⟩ #[]) env k)
           @ s ; E {{ Φ }} := by
   iintro ⟨Hr, Hcont⟩
-  iapply (wp_call_first_target (e := .ref x) (sh := .chain []) (ops := []) (rest := []) rfl)
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hc₁
-  iapply (wp_eval_ref hres)
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hc₂
-  iapply (wp_call_enter_incViaCall (tl := .base ta) hprog hmeths)
+  iapply (wp_call_enter_incViaCall (x := x) hprog hmeths)
   iintro %ra Hres
   iapply (wp_incViaCall_body hprog hmeths)
   isplitl [Hres]
   · iexact Hres
   iintro Hres
   iapply (wp_frame_return_int (m := 2) (kind := .int) (tkind := .int)
-    (w := w))
+    (w := w) hres)
   isplitl [Hres]
   · iexact Hres
   isplitl [Hr]
@@ -439,24 +433,14 @@ theorem wp_goldenCall_inv {ta : Addr} {x : String} {env k} {N : Namespace}
       ⊢ WP (Config.exec (.call #[.var x] ⟨"incViaCall"⟩ #[]) env k)
           @ s ; E {{ Φ }} := by
   iintro ⟨HinvT, Hnext⟩
-  iapply (wp_call_first_target (e := .ref x) (sh := .chain []) (ops := []) (rest := []) rfl)
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hc₁
-  iapply (wp_eval_ref hres)
-  iapply fupd_intro
-  inext
-  iapply fupd_intro
-  iintro Hc₂
-  iapply (wp_call_enter_incViaCall (tl := .base ta) hprog hmeths)
+  iapply (wp_call_enter_incViaCall (x := x) hprog hmeths)
   iintro %ra Hres
   iapply (wp_incViaCall_body hprog hmeths)
   isplitl [Hres]
   · iexact Hres
   iintro Hres
   iapply (wp_frame_return_int_inv (m := 2) (kind := .int) (tkind := .int)
-    hN hint hopen hclose)
+    hN hres hint hopen hclose)
   isplitl [HinvT]
   · iexact HinvT
   isplitl [Hres]

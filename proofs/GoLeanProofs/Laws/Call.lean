@@ -52,33 +52,22 @@ section
 variable {GF : BundledGFunctors} {hlc : HasLC} [GoCoreGS hlc GF]
 variable {s : Stuckness} {E : CoPset} {Φ : Unit → IProp GF}
 
-/-- Dispatch a call with at least one target: evaluate the first target
-address. -/
+/-- Dispatch a call with at least one argument: evaluate the first
+argument, the caller-target PLANS riding untouched (BUG-052 order pin:
+the call evaluates first, target operands at frame exit — gc's realized
+point inside spec §Order of evaluation's unordered carve-out). -/
 @[go_walk_law]
-theorem wp_call_first_target {targets : Array Assignee} {fid : FuncId}
-    {args : Array Expr} {sh : TargetShape} {e : Expr} {ops : List Expr}
-    {rest : List (TargetShape × List Expr)} {env k}
-    (hplan : targetsPlan targets.toList = some ((sh, e :: ops) :: rest)) :
-    (|={E}[E]▷=> £ 1 -∗
-      WP (Config.evalE e env (.callTargetsK fid sh [] ops [] rest args.toList env k))
-        @ s ; E {{ Φ }}) ⊢
-      WP (Config.exec (.call targets fid args) env k) @ s ; E {{ Φ }} :=
-  wp_pure_det rfl (by simp [Config.choiceFree, stmtPlan])
-    (fun _ => Step.callFirstTarget hplan)
-
-/-- Dispatch a targetless call with at least one argument: evaluate the
-first argument. -/
-@[go_walk_law]
-theorem wp_call_first_arg {targets : Array Assignee} {fid : FuncId}
-    {args : Array Expr} {a : Expr} {rest : List Expr} {env k}
-    (htargets : targetsPlan targets.toList = some [])
+theorem wp_call_start {targets : Array Assignee} {fid : FuncId}
+    {args : Array Expr} {plans : List (TargetShape × List Expr)}
+    {a : Expr} {rest : List Expr} {env k}
+    (hplan : targetsPlan targets.toList = some plans)
     (hargs : args.toList = a :: rest) :
     (|={E}[E]▷=> £ 1 -∗
-      WP (Config.evalE a env (.callArgsK fid [] [] rest env k))
+      WP (Config.evalE a env (.callArgsK fid plans [] rest env k))
         @ s ; E {{ Φ }}) ⊢
       WP (Config.exec (.call targets fid args) env k) @ s ; E {{ Φ }} :=
   wp_pure_det rfl (by simp [Config.choiceFree, stmtPlan])
-    (fun _ => Step.callFirstArg htargets hargs)
+    (fun _ => Step.callStart hplan hargs)
 
 /-- **Frame entry, unary argument / void result** (the `inc(&x)` shape):
 the last argument value arrives, and one step allocates the parameter
@@ -86,7 +75,8 @@ cell (normalized at declared type) and enters the body under the fresh
 one-binding frame environment. The continuation receives the
 machine-chosen cell (`∀ pa`). -/
 theorem wp_call_enter_arg1 {fid : FuncId} {func : Func} {pid : String}
-    {pty : Ty} {v v' : GoValue} {locs : List TargetRef} {env k}
+    {pty : Ty} {v v' : GoValue}
+    {plans : List (TargetShape × List Expr)} {env k}
     (hfind : findFunctionIn? (GoCoreGS.prog GF) fid = some func)
     (hargs : func.args = #[⟨pid, pty⟩])
     (hres : func.results = #[])
@@ -96,9 +86,9 @@ theorem wp_call_enter_arg1 {fid : FuncId} {func : Func} {pid : String}
       normalizeValueForTy σ pty v = .ok v') :
     iprop(∀ pa : Addr, pa.id ↦ (⟨some pty, v'⟩ : HeapCell) -∗
         WP (Config.exec func.body [[(pid, Loc.base pa)]]
-              (.frame locs [] [] k func.wrapper))
+              (.frame plans env [] [] k func.wrapper))
           @ s ; E {{ Φ }})
-      ⊢ WP (Config.retV v (.callArgsK fid locs [] [] env k)) @ s ; E {{ Φ }} := by
+      ⊢ WP (Config.retV v (.callArgsK fid plans [] [] env k)) @ s ; E {{ Φ }} := by
   have henter : ∀ σ₁ : ExecState, σ₁.functions = GoCoreGS.prog GF →
       σ₁.methods = GoCoreGS.methods GF → σ₁.types = GoCoreGS.types GF →
       enterFrame σ₁ fid [v]
@@ -117,12 +107,12 @@ theorem wp_call_enter_arg1 {fid : FuncId} {func : Func} {pid : String}
   simp only [stateInterp]
   icases Hσ with ⟨Hσ, %Hinv⟩
   obtain ⟨hfns, hmeths, htypes, hwf⟩ := Hinv
-  have hstep := Step.callArgsDoneEnter (vals := []) (refs := locs) (env := env)
+  have hstep := Step.callArgsDoneEnter (vals := []) (plans := plans) (env := env)
     (k := k) (henter σ₁ hfns hmeths htypes)
   have hdet : ∀ c' s',
-      Step (.retV v (.callArgsK fid locs [] [] env k)) σ₁ c' s' →
+      Step (.retV v (.callArgsK fid plans [] [] env k)) σ₁ c' s' →
       c' = Config.exec func.body [[(pid, Loc.base ⟨σ₁.nextAddr⟩)]]
-             (.frame locs [] [] k func.wrapper)
+             (.frame plans env [] [] k func.wrapper)
         ∧ s' = { σ₁ with heap := Heap.set σ₁.heap (.base ⟨σ₁.nextAddr⟩) ⟨some pty, v'⟩, nextAddr := σ₁.nextAddr + 1 } := by
     intro c' s' hst
     obtain ⟨h1, h2⟩ := step_det (by trivial) hstep hst
@@ -155,11 +145,15 @@ theorem wp_call_enter_arg1 {fid : FuncId} {func : Func} {pid : String}
       · itrivial
 
 /-- **Frame entry, nullary argument / single result** (the
-`r = incViaCall()` shape): the (single) target address arrives, and one
-step allocates the result cell at its default and enters the body; the
-frame pins the caller target and the result location. -/
-theorem wp_call_enter_ret1 {fid : FuncId} {func : Func} {rid : String}
-    {rty : Ty} {dv : GoValue} {tl : Loc} {env k}
+`r = incViaCall()` shape): the call statement's ONE step (BUG-052 order
+pin — no target operand evaluates pre-call) allocates the result cell at
+its default and enters the body; the frame pins the caller-target PLAN
+and the caller environment for the post-call write-back, plus the
+result location. -/
+theorem wp_call_enter_ret1 {targets : Array Assignee} {fid : FuncId}
+    {func : Func} {rid : String}
+    {rty : Ty} {dv : GoValue} {plans : List (TargetShape × List Expr)} {env k}
+    (hplan : targetsPlan targets.toList = some plans)
     (hfind : findFunctionIn? (GoCoreGS.prog GF) fid = some func)
     (hargs : func.args = #[])
     (hres : func.results = #[⟨rid, rty⟩])
@@ -169,8 +163,8 @@ theorem wp_call_enter_ret1 {fid : FuncId} {func : Func} {rid : String}
       defaultValue σ rty = .ok dv) :
     iprop(∀ ra : Addr, ra.id ↦ (⟨some rty, dv⟩ : HeapCell) -∗
         WP (Config.exec func.body [[(rid, Loc.base ra)]]
-              (.frame [.chain (.addr tl) [] []] [Loc.base ra] [] k func.wrapper)) @ s ; E {{ Φ }})
-      ⊢ WP (Config.retV (.addr tl) (.callTargetsK fid (.chain []) [] [] [] [] [] env k))
+              (.frame plans env [Loc.base ra] [] k func.wrapper)) @ s ; E {{ Φ }})
+      ⊢ WP (Config.exec (.call targets fid #[]) env k)
           @ s ; E {{ Φ }} := by
   have henter : ∀ σ₁ : ExecState, σ₁.functions = GoCoreGS.prog GF →
       σ₁.methods = GoCoreGS.methods GF → σ₁.types = GoCoreGS.types GF →
@@ -190,16 +184,15 @@ theorem wp_call_enter_ret1 {fid : FuncId} {func : Func} {rid : String}
   simp only [stateInterp]
   icases Hσ with ⟨Hσ, %Hinv⟩
   obtain ⟨hfns, hmeths, htypes, hwf⟩ := Hinv
-  have hstep := Step.callTargetsDoneEnter (refs := []) (env := env) (k := k)
-    (v := .addr tl) (sh := .chain []) (ops := []) (r := .chain (.addr tl) [] [])
-    rfl (henter σ₁ hfns hmeths htypes)
+  have hstep := Step.callImmediate (env := env) (k := k)
+    hplan rfl (henter σ₁ hfns hmeths htypes)
   have hdet : ∀ c' s',
-      Step (.retV (.addr tl) (.callTargetsK fid (.chain []) [] [] [] [] [] env k)) σ₁ c' s' →
+      Step (.exec (.call targets fid #[]) env k) σ₁ c' s' →
       c' = Config.exec func.body [[(rid, Loc.base ⟨σ₁.nextAddr⟩)]]
-             (.frame ([] ++ [.chain (.addr tl) [] []]) [Loc.base ⟨σ₁.nextAddr⟩] [] k func.wrapper)
+             (.frame plans env [Loc.base ⟨σ₁.nextAddr⟩] [] k func.wrapper)
         ∧ s' = { σ₁ with heap := Heap.set σ₁.heap (.base ⟨σ₁.nextAddr⟩) ⟨some rty, dv⟩, nextAddr := σ₁.nextAddr + 1 } := by
     intro c' s' hst
-    obtain ⟨h1, h2⟩ := step_det (by trivial) hstep hst
+    obtain ⟨h1, h2⟩ := step_det (by simp [Config.choiceFree, stmtPlan]) hstep hst
     exact ⟨h1.symm, h2.symm⟩
   iapply fupd_mask_intro Std.LawfulSet.empty_subset
   iintro Hclose
@@ -213,7 +206,6 @@ theorem wp_call_enter_ret1 {fid : FuncId} {func : Func} {rid : String}
   cases Hstep with
   | step st =>
     obtain ⟨rfl, rfl⟩ := hdet _ _ st
-    simp only [List.nil_append]
     imod (genHeap_alloc (v := (⟨some rty, dv⟩ : HeapCell)) hwf.fresh_get?)
       $$ Hσ with ⟨Hσ, Hpt, Htok⟩
     imod Hclose
@@ -235,23 +227,25 @@ location and one int-typed caller target — read the result cell, store
 result cell is read-only, the target is written. Premise-free given the
 resources (the store side-condition is internalized by
 `storeLoc_int_any`). -/
-theorem wp_frame_return_int {ta ra : Addr} {kind tkind : IntKind}
-    {m : Int} {w : GoValue} {k} {wf : Bool}
-    : ra.id ↦ (⟨some (.int kind), .int m kind⟩ : HeapCell)
+theorem wp_frame_return_int {x : String} {tenv : LocalEnv} {ta ra : Addr}
+    {kind tkind : IntKind} {m : Int} {w : GoValue} {k} {wf : Bool}
+    (hres : LocalEnv.lookup tenv x = some (.base ta)) :
+    ra.id ↦ (⟨some (.int kind), .int m kind⟩ : HeapCell)
       ∗ ta.id ↦ (⟨some (.int tkind), w⟩ : HeapCell)
       ∗ (ra.id ↦ (⟨some (.int kind), .int m kind⟩ : HeapCell)
           ∗ ta.id ↦ (⟨some (.int tkind), .int (tkind.normalize m) tkind⟩ : HeapCell)
           -∗ WP (Config.next k) @ s ; E {{ Φ }})
-      ⊢ WP (Config.returning (.frame [.chain (.addr (.base ta)) [] []] [.base ra] [] k wf))
+      ⊢ WP (Config.returning (.frame [(.chain [], [.ref x])] tenv [.base ra] [] k wf))
           @ s ; E {{ Φ }} := by
   iintro ⟨Hr, Ht, Hcont⟩
-  -- Step 1 (BUG-025 spine migration): the frame exit READS the pinned
-  -- result cell and enters phase 2 (`storeK`); the caller-target write
-  -- is a separate store step below.
+  -- Step 1 (BUG-052 order pin): the frame exit READS the pinned result
+  -- cell and enters the tgtOpK spine — the caller-target OPERANDS
+  -- evaluate POST-CALL in the caller's environment (gc's realized
+  -- point), then the store.
   iapply (wp_det_step_keep
     (P := iprop(ra.id ↦ (⟨some (.int kind), .int m kind⟩ : HeapCell)))
-    (c₁ := Config.next (.storeK [.chain (.addr (.base ta)) [] []]
-      [.int m kind] (.seqn #[]) [] k))
+    (c₁ := Config.evalE (.ref x) tenv (.tgtOpK (.chain []) [] [] [] []
+      .vals [] [.int m kind] (.seqn #[]) tenv k))
     (hnv := rfl)
     (hred := fun σ₁ _hfns _hmeths _htypes => by
       iintro ⟨Hσ, Hpt⟩
@@ -266,15 +260,27 @@ theorem wp_frame_return_int {ta ra : Addr} {kind tkind : IntKind}
         simp [loadMany, loadLoc, hlook, Bind.bind, Except.bind]
       imodintro
       ipureintro
-      refine ⟨Step.frameReturnStores hload, ?_⟩
+      refine ⟨Step.frameReturnTargets hload, ?_⟩
       intro c' s' hst
-      obtain ⟨h1, h2⟩ := step_det (by trivial) (Step.frameReturnStores hload) hst
+      obtain ⟨h1, h2⟩ := step_det (by trivial) (Step.frameReturnTargets hload) hst
       exact ⟨h1.symm, h2.symm⟩))
   isplitl [Hr]
   · iexact Hr
   iintro Hr
-  -- Step 2: the caller-target store (phase 2, deferred check at the
-  -- store).
+  -- Step 2: the target operand (post-call, phase 1).
+  iapply (wp_eval_ref hres)
+  iapply fupd_intro
+  inext
+  iapply fupd_intro
+  iintro -
+  -- Step 3: the target completes; phase 2 begins.
+  iapply (wp_tgtop_stores (r := .chain (.addr (.base ta)) [] []) rfl)
+  iapply fupd_intro
+  inext
+  iapply fupd_intro
+  iintro -
+  simp only [List.nil_append]
+  -- Step 4: the store (deferred check firing here).
   iapply (wp_assign_store_loc
     (oldcell := ⟨some (.int tkind), w⟩)
     (newcell := ⟨some (.int tkind), .int (tkind.normalize m) tkind⟩)
@@ -293,23 +299,25 @@ Go's "the surrounding function returns normally" exit after a recovered
 panic (`panicResumeRecovered` resumes the frame on its fall path), and
 the exit of any result-carrying function that falls off its end. Witness:
 the recover composition walk (`Specs/GoldenRecover.lean`, `m := 7`). -/
-theorem wp_frame_fall_int {ta ra : Addr} {kind tkind : IntKind}
-    {m : Int} {w : GoValue} {k} {wf : Bool}
-    : ra.id ↦ (⟨some (.int kind), .int m kind⟩ : HeapCell)
+theorem wp_frame_fall_int {x : String} {tenv : LocalEnv} {ta ra : Addr}
+    {kind tkind : IntKind} {m : Int} {w : GoValue} {k} {wf : Bool}
+    (hres : LocalEnv.lookup tenv x = some (.base ta)) :
+    ra.id ↦ (⟨some (.int kind), .int m kind⟩ : HeapCell)
       ∗ ta.id ↦ (⟨some (.int tkind), w⟩ : HeapCell)
       ∗ (ra.id ↦ (⟨some (.int kind), .int m kind⟩ : HeapCell)
           ∗ ta.id ↦ (⟨some (.int tkind), .int (tkind.normalize m) tkind⟩ : HeapCell)
           -∗ WP (Config.next k) @ s ; E {{ Φ }})
-      ⊢ WP (Config.next (.frame [.chain (.addr (.base ta)) [] []] [.base ra] [] k wf))
+      ⊢ WP (Config.next (.frame [(.chain [], [.ref x])] tenv [.base ra] [] k wf))
           @ s ; E {{ Φ }} := by
   iintro ⟨Hr, Ht, Hcont⟩
-  -- Step 1 (BUG-025 spine migration): the frame exit READS the pinned
-  -- result cell and enters phase 2 (`storeK`); the caller-target write
-  -- is a separate store step below.
+  -- Step 1 (BUG-052 order pin): the frame exit READS the pinned result
+  -- cell and enters the tgtOpK spine — the caller-target OPERANDS
+  -- evaluate POST-CALL in the caller's environment (gc's realized
+  -- point), then the store.
   iapply (wp_det_step_keep
     (P := iprop(ra.id ↦ (⟨some (.int kind), .int m kind⟩ : HeapCell)))
-    (c₁ := Config.next (.storeK [.chain (.addr (.base ta)) [] []]
-      [.int m kind] (.seqn #[]) [] k))
+    (c₁ := Config.evalE (.ref x) tenv (.tgtOpK (.chain []) [] [] [] []
+      .vals [] [.int m kind] (.seqn #[]) tenv k))
     (hnv := rfl)
     (hred := fun σ₁ _hfns _hmeths _htypes => by
       iintro ⟨Hσ, Hpt⟩
@@ -324,15 +332,27 @@ theorem wp_frame_fall_int {ta ra : Addr} {kind tkind : IntKind}
         simp [loadMany, loadLoc, hlook, Bind.bind, Except.bind]
       imodintro
       ipureintro
-      refine ⟨Step.frameFallStores hload, ?_⟩
+      refine ⟨Step.frameFallTargets hload, ?_⟩
       intro c' s' hst
-      obtain ⟨h1, h2⟩ := step_det (by trivial) (Step.frameFallStores hload) hst
+      obtain ⟨h1, h2⟩ := step_det (by trivial) (Step.frameFallTargets hload) hst
       exact ⟨h1.symm, h2.symm⟩))
   isplitl [Hr]
   · iexact Hr
   iintro Hr
-  -- Step 2: the caller-target store (phase 2, deferred check at the
-  -- store).
+  -- Step 2: the target operand (post-call, phase 1).
+  iapply (wp_eval_ref hres)
+  iapply fupd_intro
+  inext
+  iapply fupd_intro
+  iintro -
+  -- Step 3: the target completes; phase 2 begins.
+  iapply (wp_tgtop_stores (r := .chain (.addr (.base ta)) [] []) rfl)
+  iapply fupd_intro
+  inext
+  iapply fupd_intro
+  iintro -
+  simp only [List.nil_append]
+  -- Step 4: the store (deferred check firing here).
   iapply (wp_assign_store_loc
     (oldcell := ⟨some (.int tkind), w⟩)
     (newcell := ⟨some (.int tkind), .int (tkind.normalize m) tkind⟩)
@@ -348,9 +368,11 @@ theorem wp_frame_fall_int {ta ra : Addr} {kind tkind : IntKind}
 content `Icnt` (`S`-shaped int cells, per `hint`), opened around the
 single frame-exit store and closed at the written value. On the
 `wp_store_step₂_inv` core. -/
-theorem wp_frame_return_int_inv {ta ra : Addr} {kind tkind : IntKind}
+theorem wp_frame_return_int_inv {x : String} {tenv : LocalEnv}
+    {ta ra : Addr} {kind tkind : IntKind}
     {m : Int} {S : HeapCell → Prop} {Icnt : IProp GF} {k} {wf : Bool} {N : Namespace}
     (hN : ↑N ⊆ E)
+    (hres : LocalEnv.lookup tenv x = some (.base ta))
     (hint : ∀ cell, S cell → ∃ w', cell = ⟨some (.int tkind), w'⟩)
     (hopen : Icnt ⊢ iprop(∃ cell, ⌜S cell⌝ ∗ ta.id ↦ cell))
     (hclose : (iprop(ta.id ↦ (⟨some (.int tkind), .int (tkind.normalize m) tkind⟩ : HeapCell)) : IProp GF) ⊢ Icnt) :
@@ -358,16 +380,16 @@ theorem wp_frame_return_int_inv {ta ra : Addr} {kind tkind : IntKind}
       ∗ ra.id ↦ (⟨some (.int kind), .int m kind⟩ : HeapCell)
       ∗ (ra.id ↦ (⟨some (.int kind), .int m kind⟩ : HeapCell)
           -∗ WP (Config.next k) @ s ; E {{ Φ }})
-      ⊢ WP (Config.returning (.frame [.chain (.addr (.base ta)) [] []] [.base ra] [] k wf))
+      ⊢ WP (Config.returning (.frame [(.chain [], [.ref x])] tenv [.base ra] [] k wf))
           @ s ; E {{ Φ }} := by
   iintro ⟨HinvT, Hr, Hcont⟩
-  -- Step 1 (BUG-025 spine migration): the exit READS the result cell
-  -- and enters phase 2; the invariant-managed target write is the
+  -- Step 1 (BUG-052 order pin): the exit READS the result cell and
+  -- enters the tgtOpK spine; the invariant-managed target write is the
   -- separate store step below, opened around exactly that step.
   iapply (wp_det_step_keep
     (P := iprop(ra.id ↦ (⟨some (.int kind), .int m kind⟩ : HeapCell)))
-    (c₁ := Config.next (.storeK [.chain (.addr (.base ta)) [] []]
-      [.int m kind] (.seqn #[]) [] k))
+    (c₁ := Config.evalE (.ref x) tenv (.tgtOpK (.chain []) [] [] [] []
+      .vals [] [.int m kind] (.seqn #[]) tenv k))
     (hnv := rfl)
     (hred := fun σ₁ _hfns _hmeths _htypes => by
       iintro ⟨Hσ, Hpt⟩
@@ -382,14 +404,27 @@ theorem wp_frame_return_int_inv {ta ra : Addr} {kind tkind : IntKind}
         simp [loadMany, loadLoc, hlook, Bind.bind, Except.bind]
       imodintro
       ipureintro
-      refine ⟨Step.frameReturnStores hload, ?_⟩
+      refine ⟨Step.frameReturnTargets hload, ?_⟩
       intro c' s' hst
-      obtain ⟨h1, h2⟩ := step_det (by trivial) (Step.frameReturnStores hload) hst
+      obtain ⟨h1, h2⟩ := step_det (by trivial) (Step.frameReturnTargets hload) hst
       exact ⟨h1.symm, h2.symm⟩))
   isplitl [Hr]
   · iexact Hr
   iintro Hr
-  -- Step 2: the store, the invariant opened around exactly this step.
+  -- Step 2: the target operand (post-call, phase 1).
+  iapply (wp_eval_ref hres)
+  iapply fupd_intro
+  inext
+  iapply fupd_intro
+  iintro -
+  -- Step 3: the target completes; phase 2 begins.
+  iapply (wp_tgtop_stores (r := .chain (.addr (.base ta)) [] []) rfl)
+  iapply fupd_intro
+  inext
+  iapply fupd_intro
+  iintro -
+  simp only [List.nil_append]
+  -- Step 4: the store, the invariant opened around exactly this step.
   iapply (wp_store_step₂_inv (pa := ra)
     (pcell := ⟨some (.int kind), .int m kind⟩)
     (hN := hN) (hnv := rfl) (hopen := hopen) (hclose := hclose)
@@ -483,7 +518,7 @@ standing scope note, `wp_alloc_step₄`). -/
 theorem wp_call_enter₂₁ {fid : FuncId} {func : Func}
     {v₀ v₁ w₀ w₁ dv₀ : GoValue}
     {pid₀ pid₁ rid₀ : String} {pty₀ pty₁ rty₀ : Ty}
-    {locs : List TargetRef} {env k}
+    {locs : List (TargetShape × List Expr)} {env k}
     (hfind : findFunctionIn? (GoCoreGS.prog GF) fid = some func)
     (hargs : func.args = #[⟨pid₀, pty₀⟩, ⟨pid₁, pty₁⟩])
     (hres : func.results = #[⟨rid₀, rty₀⟩])
@@ -502,7 +537,7 @@ theorem wp_call_enter₂₁ {fid : FuncId} {func : Func}
           ∗ a₂.id ↦ (⟨some rty₀, dv₀⟩ : HeapCell) -∗
         WP (Config.exec func.body
               [[(rid₀, Loc.base a₂), (pid₁, Loc.base a₁), (pid₀, Loc.base a₀)]]
-              (.frame locs [Loc.base a₂] [] k func.wrapper)) @ s ; E {{ Φ }})
+              (.frame locs env [Loc.base a₂] [] k func.wrapper)) @ s ; E {{ Φ }})
       ⊢ WP (Config.retV v₁ (.callArgsK fid locs [v₀] [] env k))
           @ s ; E {{ Φ }} := by
   have henter : ∀ σ : ExecState, σ.functions = GoCoreGS.prog GF →
@@ -532,10 +567,10 @@ theorem wp_call_enter₂₁ {fid : FuncId} {func : Func}
   iapply (wp_alloc_step₃ (hnv := rfl)
     (kof := fun a₀ a₁ a₂ => Config.exec func.body
       [[(rid₀, Loc.base a₂), (pid₁, Loc.base a₁), (pid₀, Loc.base a₀)]]
-      (.frame locs [Loc.base a₂] [] k func.wrapper))
+      (.frame locs env [Loc.base a₂] [] k func.wrapper))
     (hred := by
       intro σ₁ hfns hmeths htypes
-      have hstep := Step.callArgsDoneEnter (vals := [v₀]) (refs := locs)
+      have hstep := Step.callArgsDoneEnter (vals := [v₀]) (plans := locs)
         (env := env) (k := k) (by simpa using henter σ₁ hfns hmeths htypes)
       refine ⟨hstep, ?_⟩
       intro c' s' hst
@@ -559,7 +594,7 @@ vacuous (`Specs/GoldenQuorumPin.typeEnv_pin_is_load_bearing`). -/
 theorem wp_call_dynamic_enter₂ {fid : FuncId} {anchor concrete : Func}
     {recvBox recv v₁ w₀ w₁ dv₀ dv₁ : GoValue}
     {pid₀ pid₁ rid₀ rid₁ : String} {pty₀ pty₁ rty₀ rty₁ : Ty}
-    {locs : List TargetRef} {env k}
+    {locs : List (TargetShape × List Expr)} {env k}
     (hfind : findFunctionIn? (GoCoreGS.prog GF) fid = some anchor)
     (hanchor : anchor.args.size = 2)
     (hdisp : ∀ σ : ExecState, σ.functions = GoCoreGS.prog GF →
@@ -584,7 +619,7 @@ theorem wp_call_dynamic_enter₂ {fid : FuncId} {anchor concrete : Func}
         WP (Config.exec concrete.body
               [[(rid₁, Loc.base a₃), (rid₀, Loc.base a₂),
                 (pid₁, Loc.base a₁), (pid₀, Loc.base a₀)]]
-              (.frame locs [Loc.base a₂, Loc.base a₃] [] k concrete.wrapper)) @ s ; E {{ Φ }})
+              (.frame locs env [Loc.base a₂, Loc.base a₃] [] k concrete.wrapper)) @ s ; E {{ Φ }})
       ⊢ WP (Config.retV v₁ (.callArgsK fid locs [recvBox] [] env k))
           @ s ; E {{ Φ }} := by
   have henter : ∀ σ : ExecState, σ.functions = GoCoreGS.prog GF →
@@ -617,10 +652,10 @@ theorem wp_call_dynamic_enter₂ {fid : FuncId} {anchor concrete : Func}
     (kof := fun a₀ a₁ a₂ a₃ => Config.exec concrete.body
       [[(rid₁, Loc.base a₃), (rid₀, Loc.base a₂),
         (pid₁, Loc.base a₁), (pid₀, Loc.base a₀)]]
-      (.frame locs [Loc.base a₂, Loc.base a₃] [] k concrete.wrapper))
+      (.frame locs env [Loc.base a₂, Loc.base a₃] [] k concrete.wrapper))
     (hred := by
       intro σ₁ hfns hmeths htypes
-      have hstep := Step.callArgsDoneEnter (vals := [recvBox]) (refs := locs)
+      have hstep := Step.callArgsDoneEnter (vals := [recvBox]) (plans := locs)
         (env := env) (k := k) (by simpa using henter σ₁ hfns hmeths htypes)
       refine ⟨hstep, ?_⟩
       intro c' s' hst
@@ -647,60 +682,16 @@ GoCore's (the CEK reshape's) shape, and multi-VALUE returns are handled
 by tupling rather than by caller target locations. Ours needs the
 handoff laws; theirs needs the (equally arity-bound) tuple projections. -/
 
-/-- Shift to the current call target's next phase-1 operand (BUG-025
-spine migration — call targets are plans with deferred checks, like
-every other assignment target). -/
-@[go_walk_law]
-theorem wp_call_tgt_shift {fid : FuncId} {sh : TargetShape}
-    {ops : List GoValue} {v : GoValue} {e : Expr} {pending : List Expr}
-    {refs : List TargetRef} {targets : List (TargetShape × List Expr)}
-    {args : List Expr} {env k} :
-    (|={E}[E]▷=> £ 1 -∗
-      WP (Config.evalE e env (.callTargetsK fid sh (v :: ops) pending refs
-        targets args env k)) @ s ; E {{ Φ }}) ⊢
-      WP (Config.retV v (.callTargetsK fid sh ops (e :: pending) refs
-        targets args env k)) @ s ; E {{ Φ }} :=
-  wp_pure_det rfl trivial (fun _ => Step.callTgtShift)
-
-/-- Complete the current call target and start the next one's
-operands. -/
-@[go_walk_law]
-theorem wp_call_tgt_next {fid : FuncId} {sh : TargetShape}
-    {ops : List GoValue} {v : GoValue} {r : TargetRef} {sh' : TargetShape}
-    {e : Expr} {ops' : List Expr} {targets : List (TargetShape × List Expr)}
-    {refs : List TargetRef} {args : List Expr} {env k}
-    (hcomp : completeTargetRef sh (v :: ops).reverse = some r) :
-    (|={E}[E]▷=> £ 1 -∗
-      WP (Config.evalE e env (.callTargetsK fid sh' [] ops' (refs ++ [r])
-        targets args env k)) @ s ; E {{ Φ }}) ⊢
-      WP (Config.retV v (.callTargetsK fid sh ops [] refs
-        ((sh', e :: ops') :: targets) args env k)) @ s ; E {{ Φ }} :=
-  wp_pure_det rfl trivial (fun _ => Step.callTgtNext hcomp)
-
-/-- The last target completes and arguments remain: start the argument
-walk with the store-ready references carried for the post-call
-write-back. -/
-@[go_walk_law]
-theorem wp_call_targets_done_arg {fid : FuncId} {sh : TargetShape}
-    {ops : List GoValue} {v : GoValue} {r : TargetRef}
-    {refs : List TargetRef} {a : Expr} {rest : List Expr} {env k}
-    (hcomp : completeTargetRef sh (v :: ops).reverse = some r) :
-    (|={E}[E]▷=> £ 1 -∗
-      WP (Config.evalE a env (.callArgsK fid (refs ++ [r]) [] rest env k))
-        @ s ; E {{ Φ }}) ⊢
-      WP (Config.retV v (.callTargetsK fid sh ops [] refs [] (a :: rest) env k))
-        @ s ; E {{ Φ }} :=
-  wp_pure_det rfl trivial (fun _ => Step.callTargetsDoneArg hcomp)
-
 /-- Shift to the next ARGUMENT operand (no address check — arguments are
 plain values). -/
 @[go_walk_law]
-theorem wp_call_arg_next {fid : FuncId} {refs : List TargetRef}
+theorem wp_call_arg_next {fid : FuncId}
+    {plans : List (TargetShape × List Expr)}
     {vals : List GoValue} {v : GoValue} {a : Expr} {rest : List Expr} {env k} :
     (|={E}[E]▷=> £ 1 -∗
-      WP (Config.evalE a env (.callArgsK fid refs (vals ++ [v]) rest env k))
+      WP (Config.evalE a env (.callArgsK fid plans (vals ++ [v]) rest env k))
         @ s ; E {{ Φ }}) ⊢
-      WP (Config.retV v (.callArgsK fid refs vals (a :: rest) env k))
+      WP (Config.retV v (.callArgsK fid plans vals (a :: rest) env k))
         @ s ; E {{ Φ }} :=
   wp_pure_det rfl trivial (fun _ => Step.callArgNext)
 
@@ -719,7 +710,7 @@ carry the `σ.types` pin, without which they are false at any named type
 theorem wp_call_enter₂ {fid : FuncId} {func : Func}
     {v₀ v₁ w₀ w₁ dv₀ dv₁ : GoValue}
     {pid₀ pid₁ rid₀ rid₁ : String} {pty₀ pty₁ rty₀ rty₁ : Ty}
-    {locs : List TargetRef} {env k}
+    {locs : List (TargetShape × List Expr)} {env k}
     (hfind : findFunctionIn? (GoCoreGS.prog GF) fid = some func)
     (hargs : func.args = #[⟨pid₀, pty₀⟩, ⟨pid₁, pty₁⟩])
     (hres : func.results = #[⟨rid₀, rty₀⟩, ⟨rid₁, rty₁⟩])
@@ -743,7 +734,7 @@ theorem wp_call_enter₂ {fid : FuncId} {func : Func}
         WP (Config.exec func.body
               [[(rid₁, Loc.base a₃), (rid₀, Loc.base a₂),
                 (pid₁, Loc.base a₁), (pid₀, Loc.base a₀)]]
-              (.frame locs [Loc.base a₂, Loc.base a₃] [] k func.wrapper)) @ s ; E {{ Φ }})
+              (.frame locs env [Loc.base a₂, Loc.base a₃] [] k func.wrapper)) @ s ; E {{ Φ }})
       ⊢ WP (Config.retV v₁ (.callArgsK fid locs [v₀] [] env k))
           @ s ; E {{ Φ }} := by
   have henter : ∀ σ : ExecState, σ.functions = GoCoreGS.prog GF →
@@ -776,10 +767,10 @@ theorem wp_call_enter₂ {fid : FuncId} {func : Func}
     (kof := fun a₀ a₁ a₂ a₃ => Config.exec func.body
       [[(rid₁, Loc.base a₃), (rid₀, Loc.base a₂),
         (pid₁, Loc.base a₁), (pid₀, Loc.base a₀)]]
-      (.frame locs [Loc.base a₂, Loc.base a₃] [] k func.wrapper))
+      (.frame locs env [Loc.base a₂, Loc.base a₃] [] k func.wrapper))
     (hred := by
       intro σ₁ hfns hmeths htypes
-      have hstep := Step.callArgsDoneEnter (vals := [v₀]) (refs := locs)
+      have hstep := Step.callArgsDoneEnter (vals := [v₀]) (plans := locs)
         (env := env) (k := k) (by simpa using henter σ₁ hfns hmeths htypes)
       refine ⟨hstep, ?_⟩
       intro c' s' hst
@@ -910,22 +901,23 @@ this law's int-typed special case (its store side-condition internalized
 by `storeLoc_int_any`); the general form is what a result at a NAMED Go
 type needs, because the coercion then resolves through `σ.types` and only
 the caller can compute it. -/
-theorem wp_frame_return₁ {ta ra : Addr} {rcell tcell tcell' : HeapCell} {k} {wf : Bool}
+theorem wp_frame_return₁ {x : String} {tenv : LocalEnv} {ta ra : Addr}
+    {rcell tcell tcell' : HeapCell} {k} {wf : Bool}
+    (hres : LocalEnv.lookup tenv x = some (.base ta))
     (hstore : ∀ σ : ExecState, σ.types = GoCoreGS.types GF →
       Heap.lookup σ.heap (.base ta) = some tcell →
       storeLoc σ (.base ta) rcell.value
         = .ok { σ with heap := Heap.set σ.heap (.base ta) tcell' }) :
     ra.id ↦ rcell ∗ ta.id ↦ tcell
       ∗ (ra.id ↦ rcell ∗ ta.id ↦ tcell' -∗ WP (Config.next k) @ s ; E {{ Φ }})
-      ⊢ WP (Config.returning (.frame [.chain (.addr (.base ta)) [] []] [.base ra] [] k wf))
+      ⊢ WP (Config.returning (.frame [(.chain [], [.ref x])] tenv [.base ra] [] k wf))
           @ s ; E {{ Φ }} := by
   iintro ⟨Hr, Ht, Hcont⟩
-  -- Step 1 (BUG-025 spine migration): the exit READS the result cell
-  -- and enters phase 2.
+  -- Step 1 (BUG-052 order pin): read the result, enter the spine.
   iapply (wp_det_step_keep
     (P := iprop(ra.id ↦ rcell))
-    (c₁ := Config.next (.storeK [.chain (.addr (.base ta)) [] []]
-      [rcell.value] (.seqn #[]) [] k))
+    (c₁ := Config.evalE (.ref x) tenv (.tgtOpK (.chain []) [] [] [] []
+      .vals [] [rcell.value] (.seqn #[]) tenv k))
     (hnv := rfl)
     (hred := fun σ₁ _hfns _hmeths _htypes => by
       iintro ⟨Hσ, Hpt⟩
@@ -938,14 +930,24 @@ theorem wp_frame_return₁ {ta ra : Addr} {rcell tcell tcell' : HeapCell} {k} {w
         simp [loadMany, loadLoc, hlook, Bind.bind, Except.bind]
       imodintro
       ipureintro
-      refine ⟨Step.frameReturnStores hload, ?_⟩
+      refine ⟨Step.frameReturnTargets hload, ?_⟩
       intro c' s' hst
-      obtain ⟨h1, h2⟩ := step_det (by trivial) (Step.frameReturnStores hload) hst
+      obtain ⟨h1, h2⟩ := step_det (by trivial) (Step.frameReturnTargets hload) hst
       exact ⟨h1.symm, h2.symm⟩))
   isplitl [Hr]
   · iexact Hr
   iintro Hr
-  -- Step 2: the caller-target store (phase 2).
+  iapply (wp_eval_ref hres)
+  iapply fupd_intro
+  inext
+  iapply fupd_intro
+  iintro -
+  iapply (wp_tgtop_stores (r := .chain (.addr (.base ta)) [] []) rfl)
+  iapply fupd_intro
+  inext
+  iapply fupd_intro
+  iintro -
+  simp only [List.nil_append]
   iapply (wp_assign_store_loc (oldcell := tcell) (newcell := tcell')
     (hstore := hstore))
   isplitl [Ht]
@@ -962,8 +964,11 @@ so the law is general in the cells' types: any pair of result cells and
 any pair of target cells whose stores compute. Go's `(T, bool)` comma-ok
 return is the instance the quorum pilot forces
 (`wp_frame_return_ackedIndex`, `Specs/GoldenQuorumWP.lean`). -/
-theorem wp_frame_return₂ {ta₀ ta₁ ra₀ ra₁ : Addr}
+theorem wp_frame_return₂ {x₀ x₁ : String} {tenv : LocalEnv}
+    {ta₀ ta₁ ra₀ ra₁ : Addr}
     {rcell₀ rcell₁ tcell₀ tcell₀' tcell₁ tcell₁' : HeapCell} {k} {wf : Bool}
+    (hres₀ : LocalEnv.lookup tenv x₀ = some (.base ta₀))
+    (hres₁ : LocalEnv.lookup tenv x₁ = some (.base ta₁))
     (hstore₀ : ∀ σ : ExecState, σ.types = GoCoreGS.types GF →
       Heap.lookup σ.heap (.base ta₀) = some tcell₀ →
       storeLoc σ (.base ta₀) rcell₀.value
@@ -976,18 +981,17 @@ theorem wp_frame_return₂ {ta₀ ta₁ ra₀ ra₁ : Addr}
       ∗ (ra₀.id ↦ rcell₀ ∗ ra₁.id ↦ rcell₁ ∗ ta₀.id ↦ tcell₀' ∗ ta₁.id ↦ tcell₁'
           -∗ WP (Config.next k) @ s ; E {{ Φ }})
       ⊢ WP (Config.returning
-            (.frame [.chain (.addr (.base ta₀)) [] [], .chain (.addr (.base ta₁)) [] []]
+            (.frame [(.chain [], [.ref x₀]), (.chain [], [.ref x₁])] tenv
               [.base ra₀, .base ra₁] [] k wf))
           @ s ; E {{ Φ }} := by
   iintro ⟨Hr0, Hr1, Ht0, Ht1, Hcont⟩
-  -- Step 1 (BUG-025 spine migration): the exit READS both result cells
-  -- and enters phase 2; the two stores are separate left-to-right
-  -- steps, each target's deferred check firing at its own store.
+  -- Step 1 (BUG-052 order pin): read both results, enter the spine —
+  -- target operands evaluate POST-CALL, stores left-to-right after.
   iapply (wp_det_step_keep
     (P := iprop(ra₀.id ↦ rcell₀ ∗ ra₁.id ↦ rcell₁))
-    (c₁ := Config.next (.storeK
-      [.chain (.addr (.base ta₀)) [] [], .chain (.addr (.base ta₁)) [] []]
-      [rcell₀.value, rcell₁.value] (.seqn #[]) [] k))
+    (c₁ := Config.evalE (.ref x₀) tenv (.tgtOpK (.chain []) [] [] []
+      [(.chain [], [.ref x₁])] .vals [] [rcell₀.value, rcell₁.value]
+      (.seqn #[]) tenv k))
     (hnv := rfl)
     (hred := fun σ₁ _hfns _hmeths _htypes => by
       iintro ⟨Hσ, Hpt0, Hpt1⟩
@@ -1006,22 +1010,41 @@ theorem wp_frame_return₂ {ta₀ ta₁ ra₀ ra₁ : Addr}
         simp [loadMany, loadLoc, hlook0, hlook1, Bind.bind, Except.bind]
       imodintro
       ipureintro
-      refine ⟨Step.frameReturnStores hload, ?_⟩
+      refine ⟨Step.frameReturnTargets hload, ?_⟩
       intro c' s' hst
-      obtain ⟨h1, h2⟩ := step_det (by trivial) (Step.frameReturnStores hload) hst
+      obtain ⟨h1, h2⟩ := step_det (by trivial) (Step.frameReturnTargets hload) hst
       exact ⟨h1.symm, h2.symm⟩))
   isplitl [Hr0 Hr1]
   · isplitl [Hr0]
     · iexact Hr0
     · iexact Hr1
   iintro ⟨Hr0, Hr1⟩
-  -- Step 2: the first caller-target store.
+  iapply (wp_eval_ref hres₀)
+  iapply fupd_intro
+  inext
+  iapply fupd_intro
+  iintro -
+  iapply (wp_tgtop_next (r := .chain (.addr (.base ta₀)) [] []) rfl)
+  iapply fupd_intro
+  inext
+  iapply fupd_intro
+  iintro -
+  iapply (wp_eval_ref hres₁)
+  iapply fupd_intro
+  inext
+  iapply fupd_intro
+  iintro -
+  iapply (wp_tgtop_stores (r := .chain (.addr (.base ta₁)) [] []) rfl)
+  iapply fupd_intro
+  inext
+  iapply fupd_intro
+  iintro -
+  simp only [List.nil_append, List.cons_append]
   iapply (wp_assign_store_loc (oldcell := tcell₀) (newcell := tcell₀')
     (hstore := hstore₀))
   isplitl [Ht0]
   · iexact Ht0
   iintro Ht0
-  -- Step 3: the second caller-target store.
   iapply (wp_assign_store_loc (oldcell := tcell₁) (newcell := tcell₁')
     (hstore := hstore₁))
   isplitl [Ht1]
