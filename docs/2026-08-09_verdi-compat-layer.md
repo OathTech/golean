@@ -291,6 +291,45 @@ porting the linearizability statement vocabulary
 (`Linearizability.v:7-270`, `RaftLinearizableProofs.v:26-93`,
 `CommonDefinitions.v` execute/dedup slice) within P1.
 
+## 4e. The Go-level final theorem: shell-closed library refinement (user question, 2026-08-09)
+
+**Framing confirmed:** the final property is "the real library refines a
+global assigner" — an atomic log / single sequential copy of the replicated
+machine. This is not an added axiom: Verdi's `raft_linearizable` IS that
+property in trace form (the assigner = the committed log; its existence and
+uniqueness are constructed by `applied_entries`/`execute_log`, its
+well-definedness is `state_machine_safety`). Classical result
+(Filipović–O'Hearn–Rinetzky–Yang): linearizability = observational
+refinement for interface-only clients — so the contextual phrasing is a
+corollary shape of the trace phrasing.
+
+**What makes it non-trivial (and is NOT in Verdi):** etcd-raft is a
+`Ready`/`Advance` library — the CALLER does all I/O under documented
+obligations (persist-before-send, in-order apply, …). Verdi's handlers are
+the whole node; they have no such boundary. So the Go-level theorem is
+refinement RELATIVE TO A DRIVER CONTRACT (rely/guarantee at the library
+boundary), the analog of their `input_correct` side condition but richer —
+persistence ordering is what makes the `reboot` model sound for real
+crashes. This contract is genuinely new spec-writing; audit it like a law
+statement.
+
+**Reflection to a simple interpreter theorem — the target shape:**
+- Abstract network shell in plain Lean (N nodes, message bag, fault
+  choices, ∀-quantified schedule — the ported `step_failure` shape). The
+  shell IS the "context", quantified at the math level, with the driver
+  contract as explicit hypotheses on its sequencing.
+- Shell node-step DEFINED by interpreter-run equations on the pinned
+  lowered `raft.Step` (heap-encoding idiom from `GoldenQuorumAll`).
+- Top theorem: every shell execution's client trace is linearizable wrt
+  the sequential machine. Hypotheses = `execStmt` equations; conclusion =
+  ∃ over plain math (a sequential replay). Passes the deletion test; per-
+  seed decidable readout corollaries in the golden-pin style.
+
+**Deferred explicitly:** quantification over literal Go client contexts
+`C[·]` (needs GoCore program composition/linking — research machinery).
+The shell-closed formulation captures the assigner property; a context
+lift can come later if it earns its cost.
+
 ## 5. The protocol-gap ledger (the honest risk)
 
 verdi-raft (2016) vs etcd-io/raft — visible in the spec, must be tracked
