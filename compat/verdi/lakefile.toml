@@ -1,6 +1,14 @@
 name = "VerdiCompat"
 version = "0.1.0"
-defaultTargets = ["VerdiCompat"]
+defaultTargets = ["VerdiCompat", "AxCheck"]
 
 [[lean_lib]]
 name = "VerdiCompat"
+
+# The axiom audit runs as part of the build (audit-finding F3: an
+# unwired check is decorative). `#print axioms` output lands in the
+# build log; the doctrine gate is that nothing beyond propext/Quot.sound
+# appears.
+[[lean_lib]]
+name = "AxCheck"
+globs = ["AxCheck"]

@@ -54,15 +54,16 @@ The spec is small and cleanly layered:
 - **Statement glue**: `raft_intermediate_reachable` (`Raft.v:515-554`),
   `commit_recorded` (`CommonDefinitions.v:102`).
 - **Headline theorems** (statements only; proofs are ~37k lines we do NOT
-  ingest, ratio ≈ 1:60):
+  ingest, ratio ≈ 1:40):
   - *State machine safety* (`StateMachineSafetyInterface.v:8-36`): committed
     entries agree at equal indices, over `raft_intermediate_reachable`.
     **Statement needs only the raw handlers + step relations** — no ghost
     machinery.
   - *End-to-end linearizability* (`RaftProofs/EndToEndLinearizability.v:471-478`):
     every `step_failure` trace is equivalent to a sequential execution
-    (`step_1_star`) of the replicated machine. Statement needs +≈250 lines
-    (`Linearizability.v:7-270`, `RaftLinearizableProofs.v:26-93`).
+    (`step_1_star`) of the replicated machine. Statement needs +≈330 lines
+    (`Linearizability.v:7-270`, `RaftLinearizableProofs.v:26-93`, plus the
+    `input_correct` hypothesis at `RaftLinearizableProofs.v:994`).
   - *Leader completeness* is the one headline whose **statement** requires the
     ghost/refinement layer (`refined_raft_intermediate_reachable`) — defer.
 
@@ -91,10 +92,15 @@ directory: zero errors, zero warnings. Contents:
 Proved so far: `reboot_init_handlers`, `reboot_idem` (rfl, same as Coq),
 `allFin_all`/`allFin_NoDup` (discharging the `MultiParams` obligations), a
 real case-analysis lemma `handleRequestVote_grant_votedFor`, and — the
-substantive one — **`raft_net_invariant`**, the induction principle every one
-of verdi-raft's ~90 invariant proofs instantiates (one obligation per
-handler + init/packet-subset/reboot), plus the trace bridge
-`step_failure_star_raft_intermediate_reachable`. Axiom audit:
+substantive one — **`raft_net_invariant`**, the raw-network induction
+principle (one obligation per handler + init/packet-subset/reboot), plus
+the trace bridge `step_failure_star_raft_intermediate_reachable`.
+(Audit correction 2026-08-09: ~17 of the 90 RaftProofs files instantiate
+this principle directly; ~46 instantiate `refined_raft_net_invariant` —
+the SAME-SHAPED principle over the ghost-annotated network
+(`RaftRefinementProof.v:56`, obligations `RaftRefinementInterface.v`),
+which is a second, unported artifact. Architecture identical; porting it
+is a known-shape repeat of this one, not new design.) Axiom audit:
 `propext`/`Quot.sound` only — no `sorry`, no `Classical.choice`, no
 `native_decide`, and the port is total (structural recursion throughout,
 matching Verdi's `Fixpoint`s).
@@ -139,14 +145,17 @@ public pieces are `deps/rocq-lean-import` @ `96686c4` (theorem-labs fork of
 rocq-community; consumes the *older text* export format, pinned lean4export
 `c9f8373`) and `deps/lf-lean` @ `2c0d52e` (1,276 verified LF translations —
 worked examples of the iso pattern: `Iso`/`rel_iso` in
-`lf/theories/IsomorphismDefinitions.v`, per-def commutation squares, Checker
+`deps/lf-lean/theories/IsomorphismDefinitions.v` — 100 result directories
+covering the 1,276 statements — per-def commutation squares, Checker
 modules whose transparent ascription is the kernel check). TCB notes: Rocq
 kernel in a nonstandard mode (SProp + `Definitional UIP` + per-inductive
 elimination-check relaxation), lean4export, the plugin's name mapping, and the
 *generated iso statements* themselves (a statement-TCB question, audit like law
 statements). Version pins are the sharp constraint: Rocq 9.1-fork or 9.3-dev,
-Lean 4.26-era for the export step (our port would need to also compile there —
-or we pin a dedicated export toolchain).
+and Lean **4.20-era** for the export step (audit-verified: pinned
+lean4export `c9f8373`'s `lean-toolchain` is `v4.20.0-rc5`) — our port would
+need to also compile there, a wider gap from our `v4.31.0` than first
+recorded, or we pin a dedicated export toolchain.
 
 Ranked (agent report, verified against the checkouts):
 
@@ -234,7 +243,12 @@ induction principle — **now proved in Lean**
 (`ProofStructure.lean:raft_net_invariant`), so "invariant of the reachable
 set" reduces to one obligation per handler exactly as in Verdi; extending
 the model (new message types, new handlers) = extending the obligation
-list; (2) the invariant DAG — verdi-raft's ~90 named invariant interfaces
+list. Qualification (audit 2026-08-09): the MAJORITY of Verdi's invariant
+stack runs through the ghost-layer twin `refined_raft_net_invariant`
+(same handler-indexed shape, over the ghost-annotated network); importing
+the full DAG therefore also needs the ghost transformer + that second
+principle ported — same port class as what's done, but real additional
+scope; (2) the invariant DAG — verdi-raft's ~90 named invariant interfaces
 (~3.5k lines of statement text, same easy-port class as the handlers) form
 the roadmap of *which* invariants to prove in *what* order; that dependency
 structure is the hard-won knowledge, and it ports as statements. The ~37k
@@ -277,7 +291,7 @@ touching those force restatement, behavior-only extensions don't.
 |---|---|---|
 | fast backoff | none (statements never mention `nextIndex`; nw-clauses only cover `AppendEntries` requests; wrong backoff is rejected, not unsafe) | obvious |
 | PreVote | none (grants mutate nothing durable; election-safety text unchanged; +2 handler obligations via the induction principle) | near-obvious (term+1 probing detail) |
-| heartbeat msg | nw-half extends: `state_machine_safety_nw` is a case analysis over the wire alphabet, and `MsgHeartbeat` carries a commit index, so it gains a conjunct. General rule: **nw-halves co-vary with the message alphabet** (they are invariant-shaped, halfway between spec and proof) | mechanical |
+| heartbeat msg | nw-half extends: `state_machine_safety_nw` is a clause about in-flight `AppendEntries` packets; `MsgHeartbeat` carries a commit index, so a sibling clause for the new constructor is needed. General rule: **nw-halves co-vary with the message alphabet** (they are invariant-shaped, halfway between spec and proof) | mechanical |
 | snapshots | **YES — core theorem text breaks as written**: `commit_recorded` = "e ∈ log at/below watermark", `log_matching_hosts` = "every index 1..maxIndex present in log"; compaction falsifies both. Requires a virtual log (snapshot ⊕ suffix) or ghost complete-log history — a real design decision | NOT obvious |
 | membership change | text mostly survives; MEANING of quorum shifts per-config; fixed-`N` `div2` majorities are baked into `wonElection`/`haveQuorum` and the quorum-intersection proof backbone | treacherous — the feature with documented SPEC-level bugs (post-dissertation single-server-change flaw; etcd joint-consensus issues) |
 
@@ -399,12 +413,13 @@ audited separately (D4).
 ## 6. Proposed phasing
 
 - **P0 (done, this worktree):** research + full handler-layer port + witnesses.
-- **P1 — complete the ingestible slice:** statement glue (`commit_recorded`,
-  the state-machine-safety property text), linearizability defs; state
-  `state_machine_safety` in Lean over the ported spec as the transfer target.
-  Add the **differential-execution harness** (path 2 above): extracted-Verdi
-  vs Lean `#eval` over seed-deterministic handler inputs. Pure Lean + one
-  opam/extraction step; no exotic toolchain.
+- **P1 — complete the ingestible slice** (updated: the statement glue —
+  `commit_recorded`, `state_machine_safety`, election safety, log matching —
+  landed in P0 after all, in `CommonDefinitions.lean`/`Properties.lean`):
+  remaining work is the linearizability vocabulary (~330 lines incl.
+  `input_correct`) and the **differential-execution harness** (path 2
+  above): extracted-Verdi vs Lean `#eval` over seed-deterministic handler
+  inputs. Pure Lean + one opam/extraction step; no exotic toolchain.
 - **P2 — correspondence certification:** stand up the pinned
   rocq-lean-import toolchain (opam/Docker, needs network + user sign-off on
   version pins per the trust-tools rule); write Interface/Checker-style iso
