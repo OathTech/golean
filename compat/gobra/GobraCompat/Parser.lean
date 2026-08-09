@@ -191,7 +191,16 @@ deriving Repr, DecidableEq
 /-- Parse one clause's text (the content of one `//@` comment). -/
 def parseClause (s : String) : Except String SpecClause := do
   let toks ← Parser.tokenize s
-  let fuel := toks.length + 1
+  -- Fuel must cover GRAMMAR DEPTH, not just token count. Every parse descends
+  -- assertion → conj → cmp → expr → term → factor — six levels burned before a
+  -- single token is consumed — and each nested paren costs another round. The
+  -- original `toks.length + 1` gave `requires 0 <= n` (4 tokens) a fuel of 5
+  -- and it died "out of fuel", while the LONGER arithmetic clauses parsed fine
+  -- because extra tokens bought extra fuel. That made sumRoundTripOk false, so
+  -- `decide +kernel` on it was asking the kernel to prove False — which is
+  -- what ate 60 GB and took two sessions down. Unused fuel costs nothing: the
+  -- loops return at their base case as soon as the tokens run out.
+  let fuel := toks.length * 6 + 8
   match toks with
   | .ident "requires" :: rest => do
     let (a, rest) ← Parser.parseAssertion fuel rest
