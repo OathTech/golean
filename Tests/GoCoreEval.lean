@@ -1050,6 +1050,63 @@ private def wakeMultiProgram : GoCore.Program := {
   funcs := #[wakeMultiWorkerFunction, wakeMultiMainFunction]
 }
 
+/-! ### Sync primitives (spec-parity slice 2): pool pins for behaviors
+no corpus lane can express (the schedule-pinned classes). -/
+
+private def syncWgWaiterFunction : GoCore.Func := {
+  id := ⟨"syncWgWaiter_F"⟩,
+  args := #[{ id := "wgp", typ := .pointer (.sync .waitGroup) }],
+  results := #[],
+  body := .seqn #[.syncStmt .wgWait #[.var "wgp"] #[]]
+}
+
+private def syncWgMisuseMainFunction : GoCore.Func := {
+  id := ⟨"syncWgMisuseMain_F"⟩,
+  args := #[],
+  results := #[coreParam "z"],
+  body := .block
+    #[{ id := "wg", typ := .sync .waitGroup }]
+    #[
+      .syncStmt .wgAdd #[.ref "wg", .intLit 1] #[],
+      .goStmt (.funcVal ⟨"syncWgWaiter_F"⟩ #[]) #[.ref "wg"],
+      .syncStmt .wgAdd #[.ref "wg", .intLit (-1)] #[],
+      .syncStmt .wgAdd #[.ref "wg", .intLit 1] #[],
+      .assign (.var "z") (.intLit 1)
+    ]
+}
+
+private def syncMuWorkerFunction : GoCore.Func := {
+  id := ⟨"syncMuWorker_F"⟩,
+  args := #[{ id := "mp", typ := .pointer (.sync .mutex) },
+            { id := "done", typ := .chan .both .int }],
+  results := #[],
+  body := .seqn #[
+    .syncStmt .lock #[.var "mp"] #[],
+    .syncStmt .unlock #[.var "mp"] #[],
+    .chanSend (.var "done") (.intLit 5) .int]
+}
+
+private def syncMuWakeMainFunction : GoCore.Func := {
+  id := ⟨"syncMuWakeMain_F"⟩,
+  args := #[],
+  results := #[coreParam "z"],
+  body := .block
+    #[{ id := "mu", typ := .sync .mutex },
+      { id := "donev", typ := .chan .both .int }]
+    #[
+      .makeChan (.var "donev") .int none,
+      .syncStmt .lock #[.ref "mu"] #[],
+      .goStmt (.funcVal ⟨"syncMuWorker_F"⟩ #[]) #[.ref "mu", .var "donev"],
+      .syncStmt .unlock #[.ref "mu"] #[],
+      .chanRecv #[.var "z"] (.var "donev") .int
+    ]
+}
+
+private def syncEvalProgram : GoCore.Program := {
+  funcs := #[syncWgWaiterFunction, syncWgMisuseMainFunction,
+    syncMuWorkerFunction, syncMuWakeMainFunction]
+}
+
 private def coreMapBasicFunction : GoCore.Func := {
   id := ⟨"map_basic_F"⟩,
   args := #[],
@@ -2067,6 +2124,20 @@ def main : IO UInt32 := do
     (GoCore.Machine.runProgramPoolM 100000 prioProgram "closedSelRecvSelWaiterMain_F" #[] [1, 1]) "race")
   passed := passed && (← expectIntResult "GoCore pool select-send poll read is HB-ordered by the op-x-select pairing: receive from the parked select-send, then close, race-free (BUG-046 green twin)"
     (GoCore.Machine.runProgramPoolM 100000 prioProgram "selSendPairedCloseMain_F" #[] [1, 1]) 7)
+  -- Sync primitives (spec-parity slice 2). The wg MISUSE shape
+  -- (Add-from-0 beside a parked waiter, waitgroup.go:120) is
+  -- intrinsically TSan-racy — the parked waiter's first-waiter sema
+  -- WRITE (waitgroup.go:190) has no HB edge to the adder's read
+  -- (waitgroup.go:115) — so under the DRF-SC discipline the detector
+  -- refuses BEFORE the recoverable misuse panic can abort the run
+  -- (plain gc realizes the panic, -race gc the report; our refusal is
+  -- the doctrine's racy classification). Stream [1,1,0]: worker picked
+  -- at the fork's completion AND at its wgWait apply (parking it),
+  -- main takes the final Add.
+  passed := passed && (← expectErrorStatus "GoCore sync: Add-from-0 beside a parked waiter is the wg-sema race (misuse pair; the panic is the sub-detector member)"
+    (GoCore.Machine.runProgramPoolM 100000 syncEvalProgram "syncWgMisuseMain_F" #[] [1, 1, 0]) "race")
+  passed := passed && (← expectIntResult "GoCore sync: parked Lock wakes on Unlock and acquires (park -> wake -> acquire, worker-first stream)"
+    (GoCore.Machine.runProgramPoolM 100000 syncEvalProgram "syncMuWakeMain_F" #[] [1, 0]) 5)
   passed := passed && (← expectErrorStatus "GoCore race: write/write refuses on the default stream"
     (GoCore.Machine.runProgramPoolM 100000 raceProgram "raceWriteWriteMain_F" #[] []) "race")
   passed := passed && (← expectErrorStatus "GoCore race: write/write refuses on the worker-first stream"

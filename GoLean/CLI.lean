@@ -406,7 +406,11 @@ def decodeObservation (path raw : String) : Except String Json := do
       let _ ← StrictJson.mapArrayIdx values (fun i value => do
         decodeGoValueObservation s!"{path}.values[{i}]" value)
       return json
-  | "panic" | "unsupported" | "stuck" | "error" | "fuel-out" | "deadlock" | "race" =>
+  -- "fatal" (spec-parity slice 2): gc's unrecoverable runtime-throw
+  -- class (`GoError.fatal` — the sync misuse fatals), message-carrying
+  -- like deadlock/race.
+  | "panic" | "unsupported" | "stuck" | "error" | "fuel-out" | "deadlock" | "race"
+  | "fatal" =>
       StrictJson.requireExactKeys path obj ["message", "schema", "status"]
       let _ ← StrictJson.string s!"{path}.message" (← StrictJson.field path obj "message")
       return json
@@ -562,7 +566,13 @@ The semantic core's consume sites and their accountant arms:
    accountants (via the same `applySelectCore`).
 Non-consuming by signature (no arm needed): `resumeThread`,
 `spawnStep`, `commitClause`, `applyPairing`, the `.spawned` strip,
-and `raceUpdate` (which REPLICATES consumption but draws nothing).
+`raceUpdate` (which REPLICATES consumption but draws nothing), and —
+spec-parity slice 2 — `applySyncOp` and the sync wake path: the sync
+registry entry adds NEW BOUNDARIES to `Config.atBoundary` (row 1's
+L1 bound reuses the machine's `runnableIdxs`/`atBoundary` directly,
+so the accountant tracks them with no new arm) but ZERO new consume
+sites (the envelope statement at `applySyncOp`: acquisition order
+among contenders is entirely L1 latitude).
 
 Machine-side status discipline (audit F1; CORRECTED at the arc-final
 audit F8, 2026-08-08): a member whose status is outside the case's

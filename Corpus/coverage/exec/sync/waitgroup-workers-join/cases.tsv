@@ -1,2 +1,9 @@
 # id	subject	args	expected_status	expected_reason	features	lane	why	params
-workers-join	workersJoin	-	ok	-	sync,waitgroup,mutex,goroutines,globals,loops	confluent	mutual exclusion makes the three increments commute and Wait joins all workers before the readout: every schedule yields 3	width=5,sites=40,work=40000000
+# BEYOND-TRACTABLE-CAPS, recorded (the pipeline/two-stage precedent,
+# doctrine slice-4 caption): the 3-worker mutex+WaitGroup tree exceeds
+# the 40M work cap with subtrees unexplored (measured 2026-08-09:
+# 37.3M steps + 2.7M probes, still growing). Stays STRICT — the
+# schedule-independence claim for this shape rides the mutex/wg edges
+# argued at applySyncOp, not a certified singleton — until the DPOR
+# additive layer (the recorded enumerator-optimization backlog).
+workers-join	workersJoin	-	ok	-	sync,waitgroup,mutex,goroutines,globals,loops	strict	-	-

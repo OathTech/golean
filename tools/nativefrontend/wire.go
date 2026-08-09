@@ -316,6 +316,18 @@ func (e *emitter) emitType(t types.Type) (any, error) {
 			return e.emitInstantiatedNamed(ty)
 		}
 		obj := ty.Obj()
+		// Sync primitive types (spec-parity slice 2, design note §7):
+		// exactly the four in-scope kinds map to machine sync types
+		// (zero value = the ready primitive); every OTHER sync.* type
+		// fails closed here (per-decl quarantine upstream).
+		if obj.Pkg() != nil && obj.Pkg().Path() == "sync" {
+			switch obj.Name() {
+			case "Mutex", "RWMutex", "WaitGroup", "Once":
+				return map[string]any{"kind": "sync", "sync": obj.Name()}, nil
+			default:
+				return nil, unsup("sync.%s (only Mutex/RWMutex/WaitGroup/Once are modeled)", obj.Name())
+			}
+		}
 		// A named type whose underlying is an interface is an interface type;
 		// otherwise it is a defined type. GoCore distinguishes the two. Names
 		// are package-qualified ("main.T"); predeclared types (error) stay
