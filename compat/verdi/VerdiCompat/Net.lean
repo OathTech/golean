@@ -163,6 +163,9 @@ inductive step_dup : step_relation (Network P M) (NetTrace P M)
       net' = ⟨p :: xs ++ p :: ys, net.nwState⟩ →
       step_dup net net' []
 
+/-- `Net.v:389` -/
+def step_dup_star := refl_trans_1n_trace (step_dup P M)
+
 /-- `Net.v:396-411` — `step_async` + dropping of any in-flight packet. -/
 inductive step_drop : step_relation (Network P M) (NetTrace P M)
   | StepDrop_deliver : ∀ (net net' : Network P M) (p : Packet P M) xs ys out d l,
@@ -180,6 +183,9 @@ inductive step_drop : step_relation (Network P M) (NetTrace P M)
       net' = ⟨send_packets h l ++ net.nwPackets,
               update net.nwState h d⟩ →
       step_drop net net' [(h, .inl inp), (h, .inr out)]
+
+/-- `Net.v:413` -/
+def step_drop_star := refl_trans_1n_trace (step_drop P M)
 
 /-- `Net.v:420-454` — the fault model all of verdi-raft's headline theorems
 are proved under: deliver/input at live nodes, drop, duplicate, crash,

@@ -9,8 +9,8 @@ class, wire types, log utilities, every handler, the composed
 `RaftNetHandler`/`RaftInputHandler`, `reboot`/`init_handlers`, the three
 Verdi instances, and `raft_intermediate_reachable` (the reachability
 predicate the safety theorem is stated over). Each definition cites its
-source lines. Not ported (proof scaffolding, future work): the
-`raft_net_invariant_*` induction principle (`Raft.v:594-848`).
+source lines. The `raft_net_invariant_*` induction principle
+(`Raft.v:594-848`) is ported and re-proved in `ProofStructure.lean`.
 
 Boolean-comparison notations mirror Coq's (`Raft.v:29-34`): the spec's
 comparisons are BOOLEAN (`Nat.blt` etc.), not propositional, and stay

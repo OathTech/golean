@@ -26,7 +26,7 @@ def entries_match (entries entries' : List (entry (P := P))) : Prop :=
     e''.eIndex ≤ e.eIndex →
     (e'' ∈ entries ↔ e'' ∈ entries')
 
-/-- `CommonDefinitions.v:16-24` (the newest-first log invariant shape) -/
+/-- `CommonDefinitions.v:17-25` (the newest-first log invariant shape) -/
 def sorted : List (entry (P := P)) → Prop
   | [] => True
   | e :: es =>
@@ -44,7 +44,7 @@ def commit_recorded (net : Network (raft_base_params (P := P)) raft_multi_params
   (e.eIndex ≤ (net.nwState h).lastApplied ∨
    e.eIndex ≤ (net.nwState h).commitIndex)
 
-/-- `CommonDefinitions.v:121-124` -/
+/-- `CommonDefinitions.v:124-127` -/
 def terms_and_indices_from_one (l : List (entry (P := P))) : Prop :=
   ∀ e, e ∈ l → e.eTerm ≥ 1 ∧ e.eIndex ≥ 1
 

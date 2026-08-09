@@ -9,11 +9,15 @@ lemmas, THE induction principle `raft_net_invariant`, and the
 `step_failure_star → raft_intermediate_reachable` bridge.
 
 This is the load-bearing feasibility demonstration for "import the Verdi
-proof structure": every one of verdi-raft's ~90 invariants is proved by
-instantiating `raft_net_invariant` with one obligation per handler. With
-this principle proved in Lean, extending the model (new messages, new
-handlers) means extending the obligation list — the proof architecture
-transfers even where individual proofs must be redone.
+proof structure": verdi-raft proves its invariants by instantiating
+handler-indexed induction principles of exactly this shape — ~17 of the
+90 RaftProofs files instantiate `raft_net_invariant` directly, and the
+rest instantiate its same-shaped ghost-layer twin
+`refined_raft_net_invariant` (`RaftRefinementProof.v`, not yet ported —
+a known-shape repeat of this file). With the principle proved in Lean,
+extending the model (new messages, new handlers) means extending the
+obligation list — the proof architecture transfers even where individual
+proofs must be redone.
 
 Naming: Coq's invariant variable `P` is `Pr` here (`P` is our `BaseParams`
 section variable). Proofs are re-proved from scratch (Ltac does not port);
