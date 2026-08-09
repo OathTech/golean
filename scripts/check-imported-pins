@@ -67,15 +67,20 @@ if [[ "$modules_on_disk" != "$modules_in_pins" ]]; then
   exit 1
 fi
 
-# Build both sides once (stale-olean hardening per check-golden).
+# Build both sides once (stale-olean hardening per check-golden). The pin
+# modules build in FIXTURE mode too (CI-only failure, 2026-08-09): the
+# term-print step imports ALL registered pin modules, so fixture mode is
+# just as dependent on their .oleans as full mode — skipping the build made
+# the guard depend on the INVOKING environment having already built proofs,
+# which held locally and failed on a fresh runner (lean's "object file ...
+# does not exist" went to stdout, i.e. into term.repr, and the guard
+# reported only the misleading "term print failed").
 lake build GoLean.NativeToIR > /dev/null \
   || { echo "check-imported-pins: FAIL — NativeToIR build failed (fail closed)" >&2; exit 1; }
-if [[ -z "$SINGLE_DIR" ]]; then
-  mods=()
-  for pin in "${PINS[@]}"; do IFS='|' read -r _ _ m <<< "$pin"; mods+=("$m"); done
-  (cd proofs && lake build "${mods[@]}" > /dev/null) \
-    || { echo "check-imported-pins: FAIL — pin module build failed (fail closed)" >&2; exit 1; }
-fi
+mods=()
+for pin in "${PINS[@]}"; do IFS='|' read -r _ _ m <<< "$pin"; mods+=("$m"); done
+(cd proofs && lake build "${mods[@]}" > /dev/null) \
+  || { echo "check-imported-pins: FAIL — pin module build failed (fail closed): cd proofs && lake build ${mods[*]}" >&2; exit 1; }
 
 cat > "$WORK/decode.lean" <<'LEAN'
 import GoLean.NativeToIR
@@ -94,8 +99,13 @@ check_pin() {
   name="$(basename "$(dirname "$src_dir")")/$(basename "$src_dir")"
   GO111MODULE=off go run ./tools/nativefrontend --dir "$src_dir" --out "$WORK/wire.json" \
     || { echo "check-imported-pins: FAIL [$name] — frontend emit failed (fail closed)" >&2; return 1; }
-  lake env lean --run "$WORK/decode.lean" "$WORK/wire.json" > "$WORK/fresh.repr" \
-    || { echo "check-imported-pins: FAIL [$name] — decode run failed (fail closed)" >&2; return 1; }
+  # NB `lean --run` prints elaboration errors (missing .olean, unknown
+  # identifier, ...) to STDOUT — surface both streams on failure or the
+  # real cause is silently redirected into the repr file (the 2026-08-09
+  # CI-only failure's misleading-message half).
+  lake env lean --run "$WORK/decode.lean" "$WORK/wire.json" > "$WORK/fresh.repr" 2> "$WORK/fresh.err" \
+    || { echo "check-imported-pins: FAIL [$name] — decode run failed: lake env lean --run could not load/elaborate the decoder (is GoLean.NativeToIR built?); lean output: (fail closed)" >&2
+         sed 's/^/    /' "$WORK/fresh.repr" "$WORK/fresh.err" >&2; return 1; }
   if grep -q "ERROR" "$WORK/fresh.repr"; then
     echo "check-imported-pins: FAIL [$name] — decoder error:" >&2
     head -3 "$WORK/fresh.repr" >&2
@@ -111,8 +121,9 @@ import GoLeanProofs.Specs.ImportedGooseRune
 def main : IO Unit :=
   IO.println (repr $term)
 LEAN
-  (cd proofs && lake env lean --run "$WORK/term.lean" > "$WORK/term.repr") \
-    || { echo "check-imported-pins: FAIL [$name] — term print failed (fail closed)" >&2; return 1; }
+  (cd proofs && lake env lean --run "$WORK/term.lean" > "$WORK/term.repr" 2> "$WORK/term.err") \
+    || { echo "check-imported-pins: FAIL [$name] — term print failed: lake env lean --run could not load/elaborate the pin term $term (missing GoLeanProofs.Specs.ImportedGoose* .oleans or a bad term name); lean output: (fail closed)" >&2
+         sed 's/^/    /' "$WORK/term.repr" "$WORK/term.err" >&2; return 1; }
   if ! diff -q "$WORK/fresh.repr" "$WORK/term.repr" > /dev/null; then
     echo "check-imported-pins: FAIL [$name] — pinned R2 term drifted from decoded(frontend(source)):" >&2
     diff "$WORK/fresh.repr" "$WORK/term.repr" | head -15 >&2

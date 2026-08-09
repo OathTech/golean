@@ -1,7 +1,13 @@
 #!/usr/bin/env bash
 # Reject-shape fixtures for scripts/import-goose (goose-parity buildout;
-# mold: scripts/test-lane-validation). Pure shell + a local `go` for the
-# self-containment fixture; no lake build, no network. Builds a throwaway
+# mold: scripts/test-lane-validation). Shell + a local `go` for the
+# self-containment fixture; no network. The importer/verbatim fixtures need
+# no lake build, but the PIN-GUARD fixtures at the bottom invoke
+# scripts/check-imported-pins, which builds GoLean.NativeToIR and the
+# GoLeanProofs.Specs.ImportedGoose* pin modules (no-op when already built —
+# scripts/ci orders this suite after the core+proofs builds since
+# 2026-08-09, when the old "no lake build" claim plus pre-build ordering
+# broke exactly these two fixtures on a fresh runner). Builds a throwaway
 # git "goose root" so the rev pin is exercised for real.
 #
 # Exit 0 = every fixture behaves; nonzero = a gate went quiet.
@@ -307,6 +313,22 @@ elif [[ "$out" != *"drifted from decoded(frontend(source))"* ]]; then
   echo "FAIL: pin guard rejected drift without the expected message: $out"; fail=1
 else
   echo "ok: pin guard catches a drifted lowering"
+fi
+# Unprintable term -> FAIL loud, WITH lean's own error surfaced (the
+# 2026-08-09 CI-only failure: `lean --run` reports elaboration failures on
+# stdout, which the guard redirected into term.repr — a missing pin-module
+# .olean or a bad term name produced only the bare, misleading "term print
+# failed". The guard must name the failing step AND show the underlying
+# lean output; a genuinely missing prerequisite must never fail mute).
+if out="$(scripts/check-imported-pins --dir Corpus/coverage/exec/imported-goose/semantics/block \
+    --term GoLean.ImportedGoose.SemanticsBlock.noSuchTerm 2>&1)"; then
+  echo "FAIL: pin guard ACCEPTED a nonexistent pin term"; fail=1
+elif [[ "$out" != *"term print failed"* ]]; then
+  echo "FAIL: pin guard rejected a nonexistent term without naming the term-print step: $out"; fail=1
+elif [[ "$out" != *"noSuchTerm"* || "$out" != *"error"* ]]; then
+  echo "FAIL: pin guard hid lean's underlying error for a nonexistent term (must surface it): $out"; fail=1
+else
+  echo "ok: pin guard fails loud, with the lean error surfaced, on an unprintable term"
 fi
 
 cleanup_dest

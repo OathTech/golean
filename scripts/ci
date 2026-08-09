@@ -165,29 +165,6 @@ else
   bad "lane-validation fixtures (a lane gate went quiet — see above)"
 fi
 
-# 1c3. Import-pipeline gate self-test (goose-parity phase-A checkpoint,
-# 2026-08-08): scripts/import-goose's reject-shape fixtures (rev drift,
-# imports, func main, build tags, package mismatch, non-self-containment,
-# zero-oracle fail-closed, dest collision) plus the standing verbatim
-# guard's own tamper/wrong-rev/missing-checkout fixtures — the same
-# gated-mold treatment as its declared mold, test-lane-validation.
-# Needs go on PATH (self-containment fixture; ~3s), no lake build.
-step "import-goose gate self-test (scripts/test-import-goose)"
-if igout="$(./scripts/test-import-goose 2>&1)"; then
-  echo "$igout" | tail -1 | sed 's/^/  /'
-  ok "import-goose fixtures (importer + verbatim guard reject bad shapes)"
-else
-  echo "$igout"
-  bad "import-goose fixtures (an import gate went quiet — see above)"
-fi
-
-step "golden-lowering staleness (scripts/check-golden)"
-if ./scripts/check-golden; then
-  ok "golden lowering (proof subject = decoded(frontend(source)))"
-else
-  bad "golden lowering DRIFTED (re-pin deliberately with the frontend change)"
-fi
-
 # 1c4. Imported-goose verbatim staleness (goose-parity phase-A checkpoint,
 # 2026-08-08; check-golden mold — re-verify the LANDED artifact against
 # its source): every imported-goose main.go's above-marker region must be
@@ -200,18 +177,6 @@ if ./scripts/check-imported-goose; then
   ok "imported-goose verbatim (above-marker bytes = pinned upstream)"
 else
   bad "imported-goose verbatim DRIFTED (a landed imported body no longer matches goose @ pin)"
-fi
-
-# 1c5. Imported-goose R2-PIN staleness (user check-in ruling on ledger P1,
-# 2026-08-08; check-golden mold): each R2 pin's checked-in Program term
-# must equal a FRESH decoded(frontend(source)) of its corpus case — a
-# frontend/decoder change that moves a pinned lowering fails here and the
-# term is regenerated deliberately in the same commit.
-step "imported-goose R2-pin staleness (scripts/check-imported-pins)"
-if ./scripts/check-imported-pins; then
-  ok "imported-goose R2 pins (term = decoded(frontend(source)), all pins)"
-else
-  bad "imported-goose R2 pin DRIFTED (regenerate the pin term with the frontend change)"
 fi
 
 # 1c. Surface purity (docs/2026-07-21_native-spec-surface.md D1; widened to
@@ -495,6 +460,55 @@ fi
 #    proof-layer claim FAILS HERE.
 step "proofs build incl. Audit gate (axiom allowlist + non-vacuity)"
 if ( cd proofs && lake build 2>&1 | tail -4 ); then ok "proofs + Audit gate"; else bad "proofs + Audit gate"; fi
+
+# 3a. Built-artifact-dependent guards — DELIBERATELY ordered after the core
+# and proofs builds (CI-only failure, 2026-08-09): check-golden and
+# check-imported-pins run `lake env lean --run` against GoLean.NativeToIR /
+# pin-module .oleans (and check-golden runs .lake/build/bin/golean), and
+# test-import-goose's pin-guard fixtures invoke check-imported-pins. Each
+# script lake-builds its own prerequisites (fail closed), so ordering is
+# not load-bearing for correctness — but running them pre-build on a fresh
+# runner made the FIRST heavyweight build happen inside a guard step
+# (misattributed failures, and the fixture-mode build gap surfaced as a
+# mute "term print failed"). After steps 2-3 their internal builds are
+# provably no-ops. check-imported-goose (1c4) stays in the static section:
+# pure git byte-comparison, no build dependency.
+
+# 3a1. Import-pipeline gate self-test (goose-parity phase-A checkpoint,
+# 2026-08-08): scripts/import-goose's reject-shape fixtures (rev drift,
+# imports, func main, build tags, package mismatch, non-self-containment,
+# zero-oracle fail-closed, dest collision) plus the standing verbatim
+# guard's own tamper/wrong-rev/missing-checkout fixtures — the same
+# gated-mold treatment as its declared mold, test-lane-validation.
+# Needs go on PATH (self-containment fixture) and the core+proofs builds
+# above (pin-guard fixtures; the old "no lake build" claim was stale).
+step "import-goose gate self-test (scripts/test-import-goose)"
+if igout="$(./scripts/test-import-goose 2>&1)"; then
+  echo "$igout" | tail -1 | sed 's/^/  /'
+  ok "import-goose fixtures (importer + verbatim guard reject bad shapes)"
+else
+  echo "$igout"
+  bad "import-goose fixtures (an import gate went quiet — see above)"
+fi
+
+step "golden-lowering staleness (scripts/check-golden)"
+if ./scripts/check-golden; then
+  ok "golden lowering (proof subject = decoded(frontend(source)))"
+else
+  bad "golden lowering DRIFTED (re-pin deliberately with the frontend change)"
+fi
+
+# 3a2. Imported-goose R2-PIN staleness (user check-in ruling on ledger P1,
+# 2026-08-08; check-golden mold): each R2 pin's checked-in Program term
+# must equal a FRESH decoded(frontend(source)) of its corpus case — a
+# frontend/decoder change that moves a pinned lowering fails here and the
+# term is regenerated deliberately in the same commit.
+step "imported-goose R2-pin staleness (scripts/check-imported-pins)"
+if ./scripts/check-imported-pins; then
+  ok "imported-goose R2 pins (term = decoded(frontend(source)), all pins)"
+else
+  bad "imported-goose R2 pin DRIFTED (regenerate the pin term with the frontend change)"
+fi
 
 # 3b. Frontend unit tests (generics slice, 2026-08-05): the monomorphization
 #     identity layer (mono.go — mangled-key renderings pinned against the
