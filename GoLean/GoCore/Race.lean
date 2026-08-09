@@ -200,6 +200,23 @@ SYNCHRONIZATION (the registry's ops — HB updates, never data):
   since BUG-045 — U3 above, `chanObjAccess`, dispatched by
   `raceUpdate`'s chan-op arm, not by the footprint table: it is
   keyed to the OP, not to a machine-step memory access).
+- `syncCell` loads and `syncData` stores in `applySyncOp`,
+  `wakeReady`, `resumeThread` (spec-parity slice 2): the sync
+  primitives' own state words — gc runs their accesses under
+  `race.Disable` (waitgroup.go:83) or as untracked atomics, so they
+  are never data accesses; the HB edges they carry are the sync-clock
+  updates in `raceUpdate`'s sync arm, and the one misuse-detection
+  data pair gc layers on top (`wg.sema`: waitgroup.go:115/190) is
+  modeled by `wgSemaAccess` below, U4's carve-out.
+
+* **U4 — sync-OBJECT data accesses inside ops are not modeled**
+  (spec-parity slice 2, design note §8): gc's `-race` build performs
+  `race.Read(&rw.w)` on every RWMutex op and reads `m.state` in
+  Mutex.Unlock — plain instrumented reads that catch races between a
+  sync op and a WRITE to the sync variable itself (an overwritten or
+  copied-over in-use mutex). We record no such access, so that
+  copy-class misuse can be TSan-red / ours-green. Misuse-only (also
+  vet-red); joins U1-U2 in the racy lane's scope caption.
 
 FRESH ALLOCATION / DRIVER (excluded — the malloc convention):
 - `ExecState.alloc`, `allocDecls`, `bindParams`, `bindIterVars`,
@@ -566,6 +583,44 @@ structure ChanClocks where
   closeVC : Option VClock := none
   deriving Repr, BEq
 
+/-- Per-sync-cell synchronization clocks (spec-parity slice 2, design
+note §5) — gc's race hooks realized, keeping the in-machine
+classification aligned with the `go run -race` oracle. The package-doc
+memory-model sentences are quoted in the design note §1; the hook
+inventory (read from the gc sources at the probe date):
+
+* `semA` — the write-release clock (gc's `readerSem` role for RWMutex,
+  the whole clock for Mutex/WaitGroup/Once): RELEASED by
+  Mutex.Unlock (`race.Release(&m)`, internal/sync/mutex.go:190),
+  RWMutex.Unlock (`race.Release(&rw.readerSem)`, rwmutex.go:204),
+  WaitGroup.Add with negative delta (`race.ReleaseMerge(wg)`,
+  waitgroup.go:81 — "a call to Done 'synchronizes before' the return
+  of any Wait call that it unblocks"), and Once completion (through
+  its internal mutex/atomic — "the return from f 'synchronizes
+  before' the return from any call of once.Do(f)"); ACQUIRED by
+  Mutex.Lock ("the n'th call to Unlock 'synchronizes before' the
+  m'th call to Lock for any n < m"), RWMutex.Lock AND RLock
+  (rwmutex.go:78,159 — "the n'th call to Unlock 'synchronizes
+  before' that call to RLock"), WaitGroup.Wait's return
+  (waitgroup.go:172), and a Do return that observed completion.
+* `semB` — the read-release clock (gc's `writerSem`): RELEASED by
+  RUnlock (`race.ReleaseMerge(&rw.writerSem)`, rwmutex.go:117 — "the
+  corresponding call to RUnlock 'synchronizes before' the n+1'th
+  call to Lock"), ACQUIRED by RWMutex.Lock ONLY (rwmutex.go:160).
+  The two-clock split is what keeps concurrent READERS mutually
+  HB-unordered (probe p14: TSan flags serialized readers writing
+  under RLock; a single-clock model would silently order them —
+  pinned by race/negative-sync/rlock-serialized).
+
+All releases here are merge-joins: gc uses overwrite `Release` where
+lock exclusivity makes overwrite and merge coincide, `ReleaseMerge`
+where concurrency (readers, Done callers) demands the join — merge is
+sound in both and equal under exclusivity (design note §5). -/
+structure SyncClocks where
+  semA : VClock := #[]
+  semB : VClock := #[]
+  deriving Repr, BEq
+
 /-- Update-or-insert in a `Loc`-keyed association list. -/
 def assocSet {α : Type} (xs : List (Loc × α)) (loc : Loc) (v : α) :
     List (Loc × α) :=
@@ -589,6 +644,14 @@ structure RaceState where
   shadow : List (Loc × ShadowCell) := []
   chans : List (Loc × ChanClocks) := []
   chanObj : List (Loc × ShadowCell) := []
+  /-- Per-sync-cell clock pairs (spec-parity slice 2, `SyncClocks`). -/
+  syncs : List (Loc × SyncClocks) := []
+  /-- The WaitGroup misuse-detection shadow — gc's `wg.sema` data pair
+  (waitgroup.go:111-116/185-190): the first counter increment from 0 is
+  a READ, the first waiter's registration a WRITE, both real
+  instrumented accesses whose race is exactly "Add called concurrently
+  with Wait". `chanObj`'s mold (exact-loc keying, check-then-record). -/
+  wgSema : List (Loc × ShadowCell) := []
   deriving Repr, BEq
 
 def RaceState.vcOf (r : RaceState) (t : Nat) : VClock :=
@@ -725,6 +788,54 @@ def RaceState.chanObjAccess (r : RaceState) (t : Nat) (loc : Loc)
       if isWrite then { cell with writes := ShadowCell.upsert cell.writes t myE }
       else { cell with reads := ShadowCell.upsert cell.reads t myE }
     return { r with chanObj := assocSet r.chanObj loc cell' }
+
+def RaceState.syncOf (r : RaceState) (loc : Loc) : SyncClocks :=
+  match r.syncs.find? (·.1 == loc) with
+  | some (_, sc) => sc
+  | none => {}
+
+def RaceState.setSync (r : RaceState) (loc : Loc) (sc : SyncClocks) : RaceState :=
+  { r with syncs := assocSet r.syncs loc sc }
+
+/-- RELEASE into one of a sync cell's clocks (merge-join; `toB` picks
+`semB`, the read-release clock): the goroutine's clock joins the sem
+clock, and the goroutine's own epoch bumps (FastTrack). -/
+def RaceState.syncRelease (r : RaceState) (t : Nat) (loc : Loc)
+    (toB : Bool := false) : RaceState :=
+  let sc := r.syncOf loc
+  let vt := r.vcOf t
+  let sc' := if toB then { sc with semB := sc.semB.join vt }
+             else { sc with semA := sc.semA.join vt }
+  (r.setVC t (vt.bump t)).setSync loc sc'
+
+/-- ACQUIRE from a sync cell's clocks: join `semA` (always) and `semB`
+(when `alsoB` — the write-Lock's second acquire) into the goroutine's
+clock. -/
+def RaceState.syncAcquire (r : RaceState) (t : Nat) (loc : Loc)
+    (alsoB : Bool := false) : RaceState :=
+  let sc := r.syncOf loc
+  let joined := (r.vcOf t).join sc.semA
+  r.setVC t (if alsoB then joined.join sc.semB else joined)
+
+/-- **The WaitGroup misuse pair** (`wgSema` — see the field docstring):
+check-then-record one access on the wg cell's sema shadow under the
+goroutine's current clock. An HB-unordered read↔write or write↔write is
+the terminal `raceDetected`, exactly gc's "Add called concurrently with
+Wait" TSan report class. -/
+def RaceState.wgSemaAccess (r : RaceState) (t : Nat) (loc : Loc)
+    (isWrite : Bool) : Except GoError RaceState :=
+  let vt := r.vcOf t
+  let cell := ((r.wgSema.find? (·.1 == loc)).map (·.2)).getD {}
+  let conflict :=
+    ShadowCell.someConcurrent cell.writes t vt
+      || (isWrite && ShadowCell.someConcurrent cell.reads t vt)
+  if conflict then throw .raceDetected
+  else
+    let myE := vt.get t
+    let cell' :=
+      if isWrite then { cell with writes := ShadowCell.upsert cell.writes t myE }
+      else { cell with reads := ShadowCell.upsert cell.reads t myE }
+    return { r with wgSema := assocSet r.wgSema loc cell' }
 
 /-- The write of one phase-2 store step (`storeK`): the resolved
 target path. Chain resolution itself reads no user memory (address

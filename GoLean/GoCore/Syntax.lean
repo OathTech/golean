@@ -197,6 +197,27 @@ inductive SelectClauseHead where
   | recv (targets : Array Assignee) (ch : Expr) (elem : Ty)
   deriving Repr, BEq, Inhabited
 
+/-- The sync-package statement operations (spec-parity slice 2, design
+note §3). Surface-level heads only; the machine-level `SyncOp` (with
+the validated `onceBegin` target payload) is derived by `syncPlan`,
+exactly the `chanPlan`/`ChanStOp` split. `Once.Do(f)` is a FRONTEND
+desugar over `onceBegin`/`onceComplete` (design note §3: the begin
+blocks while f runs elsewhere and reports whether to run f; the
+complete rides the existing defer machinery so a panicking f still
+completes — probe p05). -/
+inductive SyncStmtOp where
+  | lock
+  | unlock
+  | rlock
+  | runlock
+  | wlock
+  | wunlock
+  | wgAdd
+  | wgWait
+  | onceBegin
+  | onceComplete
+  deriving Repr, BEq, Inhabited, DecidableEq
+
 inductive Stmt where
   | seqn (stmts : Array Stmt)
   | block (decls : Array Param) (stmts : Array Stmt)
@@ -336,6 +357,17 @@ inductive Stmt where
   fatal class is unmodeled — refused fail-closed at the spawn step. -/
   | goStmt (callee : Expr) (args : Array Expr)
   | unsupported (feature : String)
+  /-- A sync-package primitive operation (spec-parity slice 2, design
+  note `docs/2026-08-09_sync-package-design.md` §3): `args` is the
+  RECEIVER ADDRESS expression (every in-scope sync method has a pointer
+  receiver; the frontend emits `&recv` for addressable receivers),
+  plus the delta expression for `wgAdd` (`Done()` lowers to
+  `wgAdd(-1)`, gc's own definition). `targets` is used ONLY by
+  `onceBegin` (one fresh frontend temp receiving the run-f bool of the
+  Once desugar; empty for every other op) — `syncPlan` validates the
+  shape and fails closed on drift. Appended at the END of the inductive
+  so positional case tags stay stable. -/
+  | syncStmt (op : SyncStmtOp) (args : Array Expr) (targets : Array Assignee)
   deriving Repr, BEq, Inhabited
 
 structure Func where
