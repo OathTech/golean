@@ -32,7 +32,18 @@ differential-pinned) `- Cases: <id>, <id>, …` (baseline case ids), then prose.
 
 ## BUG-051 — single-value call assigned into an interface-typed target: the boxing wrap lands on the CALL NODE, which the decoder refuses (whole-program over-refusal)
 
-- Status: open
+- Status: fixed (2026-08-09, same closing-review round, FRONTEND-only
+  (no machine/decoder change): the call-assign arm now hoists the call
+  into a temp at the call's own result type (the existing `hoist`
+  mechanism — the call stays in statement position) and boxes the
+  TEMP via `wrapInterfaceConversion`, exactly the hoist-then-wrap
+  shape the per-pair site documents; non-boxing targets keep the
+  bare-call statement emission unchanged. All three pins flip PASS,
+  the three controls stay PASS; the closing reviewer's exact probe
+  matrix a–f re-run post-fix: a/d/f now ok with correctly boxed
+  observations, b/c/e unchanged; BUG-050's four range forms +
+  escalation and BUG-049's six-form matrix re-run green as
+  regression guards. Zero drift on all 1399 other ids.)
 - Pinned-by: differential
 - Cases: interfaces/call-assign-boxing/assign-any, interfaces/call-assign-boxing/assign-error, interfaces/call-assign-boxing/named-result
 - Discovered: 2026-08-09 (closing review of the round's unreviewed

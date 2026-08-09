@@ -1,24 +1,20 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-09  commit: BUG-051 red-first pins (call-assign interface boxing over-refusal)
+# recorded: 2026-08-09  commit: BUG-051 FIXED (call-assign boxing hoists the call, boxes the temp)
 #   frontend: native  oracle: go run (strict lane) / go-run membership in the
 #   machine-enumerated observation set, sampled plain AND under -race
 #   (membership lane; go1.26.5) / schedule-tree singleton certification +
 #   strict go-run equality (confluent lane) / every-enumerated-path-refuses
 #   + go run -race red (racy lane; never combined with deadlock)
-# manifest_cases: 1405  pass: 1286  fail: 119
-# Re-pin reason: BUG-051 red-first pins (closing review 2026-08-09):
-#   the single-value call-assign site wraps the CALL NODE into
-#   to-interface(call), which NativeToIR refuses ("call in expression
-#   position") — `var err error; err = makeErr()` and the named-result
-#   form are whole-program errors on ordinary Go (fail-closed
-#   over-refusal; misrecorded as clean by BUG-050's sweep, corrected
-#   there). Drift is exactly the SIX new ids: the three red shapes
+# manifest_cases: 1405  pass: 1289  fail: 116
+# Re-pin reason: BUG-051 fix (closing-review round): the single-value
+#   call-assign arm hoists the call into a temp at the call's own result
+#   type (call stays in statement position) and boxes the TEMP via
+#   wrapInterfaceConversion — the hoist-then-wrap shape of every working
+#   site. Drift is exactly the THREE BUG-051 pins flipping FAIL->PASS
 #   (interfaces/call-assign-boxing/{assign-any,assign-error,
-#   named-result}, FAIL at lean-observation, status=error) and the
-#   three green guards (interfaces/call-assign-boxing-controls/
-#   {var-init,concrete,per-pair} — the reviewer's clean controls, in a
-#   sibling package because the red shapes poison their package's
-#   lowering). Zero drift on all 1399 prior ids.
+#   named-result}); the three controls and both prior fix families
+#   (BUG-049 matrix, BUG-050 range forms) re-verified green. Zero
+#   drift on all 1402 other ids.
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
 PASS	arrays/array-copy	-
@@ -768,12 +764,12 @@ PASS	interfaces/assert-imported-interface/negative	-
 PASS	interfaces/assert-imported-interface/positive	-
 PASS	interfaces/assert-imported-method-set/comma-ok	-
 PASS	interfaces/assert-imported-method-set/panic-form	-
-FAIL	interfaces/call-assign-boxing/assign-any	lean-observation
-FAIL	interfaces/call-assign-boxing/assign-error	lean-observation
+PASS	interfaces/call-assign-boxing/assign-any	-
+PASS	interfaces/call-assign-boxing/assign-error	-
 PASS	interfaces/call-assign-boxing-controls/concrete	-
 PASS	interfaces/call-assign-boxing-controls/per-pair	-
 PASS	interfaces/call-assign-boxing-controls/var-init	-
-FAIL	interfaces/call-assign-boxing/named-result	lean-observation
+PASS	interfaces/call-assign-boxing/named-result	-
 PASS	interfaces/deep-incomparable-dynamic-eq	-
 PASS	interfaces/embedded-interface	-
 PASS	interfaces/embedded-interface-assertion	-

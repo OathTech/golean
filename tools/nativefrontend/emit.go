@@ -2127,13 +2127,29 @@ func (e *emitter) emitAssign(st *ast.AssignStmt) (any, error) {
 					return nil, err
 				}
 				if effectful {
-					// Single-value call into an interface-typed target: box
-					// the call's result (multi-value stays refused above).
+					// Single-value call into an interface-typed target: the
+					// call must STAY in statement position (NativeToIR models
+					// calls as statements), so hoist it into a temp at the
+					// call's own result type and box the TEMP — the
+					// hoist-then-wrap shape every other conversion-owing site
+					// uses (BUG-051: wrapping the call node itself emitted
+					// to-interface(call), which the decoder refuses — a
+					// whole-program over-refusal on ordinary Go).
 					if !isMultiValue && len(st.Lhs) == 1 {
-						node, err = e.wrapInterfaceConversion(
-							e.assignTargetType(st.Lhs[0], define), e.goTypeOf(call), node)
-						if err != nil {
-							return nil, err
+						tgt := e.assignTargetType(st.Lhs[0], define)
+						srcT := e.goTypeOf(call)
+						if tgt != nil && srcT != nil &&
+							types.IsInterface(e.applySubst(tgt)) &&
+							!types.IsInterface(e.applySubst(srcT)) {
+							tmp, err := e.hoist(node, srcT)
+							if err != nil {
+								return nil, err
+							}
+							w, err := e.wrapInterfaceConversion(tgt, srcT, tmp)
+							if err != nil {
+								return nil, err
+							}
+							return map[string]any{"stmt": "assign", "define": define, "lhs": lhs, "rhs": []any{w}}, nil
 						}
 					}
 					return map[string]any{"stmt": "assign", "define": define, "lhs": lhs, "rhs": []any{node}}, nil
