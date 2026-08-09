@@ -35,7 +35,7 @@ What lives here:
    pure — the machine reads nothing).
 2. **The wide-statement (`stmtOpK`) walk** — `wp_stmt_op_first`,
    `wp_stmt_op_shift_target`, `wp_stmt_op_shift_plain`, and the apply
-   steps. Every wide statement (`sortSlice`, `mapLookup`, `makeSlice`,
+   steps. Every wide statement (`sortSlice`, `makeSlice`,
    `appendSlice`, `mapAssign`, …) enters through these.
    2b. **The ALLOCATING apply core** — wide ops that allocate a fresh
    cell INSIDE `applyStmtOp` and publish a handle to it in their target:
@@ -50,10 +50,11 @@ What lives here:
    transition at a SYMBOLIC length is `applyStmtOp_sortSlice_ints`
    (the two `for i in [:len]` loops by induction via
    `Laws/Values.forIn_range'_inv`).
-4. **`mapLookup`** (`wp_map_lookup`) — the comma-ok read, a THREE-cell
-   step (read the map's data cell, write the value target and the ok
-   target); `wp_read_store_step₂` is the new core. The map-entry SEARCH
-   at a symbolic entry array is characterized by
+4. **`mapLookup`** (`wp_map_lookup`) — the comma-ok read over the SPINE
+   (BUG-034 migration): the value-source apply READS the map's data
+   cell (`wp_det_step_keep`), then the value and ok targets are written
+   as two ordinary `storeK` store steps (`wp_assign_store_loc`). The
+   map-entry SEARCH at a symbolic entry array is characterized by
    `mapLookupValue_miss`/`mapLookupValue_hit` (via
    `forIn_find_none`/`forIn_find_some`).
 
@@ -797,115 +798,15 @@ theorem pointsTo_ne' {a b : Addr} {c₁ c₂ : HeapCell} :
   iintro ⟨H1, H2⟩
   iapply pointsTo_ne $$ H1 H2
 
-/-- **One-read/two-write step core.** The step reads the cell at `ra`
-(riding through unchanged) and writes `ta` then `oa`, in that order —
-the composed `Heap.set` shape `applyStmtOp`'s two-target ops produce. -/
-theorem wp_read_store_step₂ {ra ta oa : Addr}
-    {rcell tcell tcell' ocell ocell' : HeapCell} {c₀ : Config} {k}
-    (hnv : ToVal.toVal c₀ = (none : Option Unit))
-    (hred : ∀ σ₁ : ExecState, σ₁.functions = GoCoreGS.prog GF →
-      σ₁.methods = GoCoreGS.methods GF → σ₁.types = GoCoreGS.types GF →
-      ta.id ≠ oa.id →
-      Heap.lookup σ₁.heap (.base ra) = some rcell →
-      Heap.lookup σ₁.heap (.base ta) = some tcell →
-      Heap.lookup σ₁.heap (.base oa) = some ocell →
-      Step c₀ σ₁ (.next k)
-          { σ₁ with heap := Heap.set (Heap.set σ₁.heap (.base ta) tcell')
-                              (.base oa) ocell' } ∧
-      (∀ c' s', Step c₀ σ₁ c' s' →
-          c' = Config.next k ∧
-          s' = { σ₁ with heap := Heap.set (Heap.set σ₁.heap (.base ta) tcell')
-                                   (.base oa) ocell' })) :
-    ra.id ↦ rcell ∗ ta.id ↦ tcell ∗ oa.id ↦ ocell
-      ∗ (ra.id ↦ rcell ∗ ta.id ↦ tcell' ∗ oa.id ↦ ocell'
-          -∗ WP (Config.next k) @ s ; E {{ Φ }})
-      ⊢ WP c₀ @ s ; E {{ Φ }} := by
-  iintro ⟨Hr, Ht, Ho, Hcont⟩
-  iapply wp_lift_step (h := hnv)
-  iintro %σ₁ %ns %obs %obs' %nt Hσ
-  simp only [stateInterp]
-  icases Hσ with ⟨Hσ, %Hinv⟩
-  obtain ⟨hfns, hmeths, htypes, hwf⟩ := Hinv
-  ihave %Hmr : ⌜get? (heapToMap σ₁.heap) ra.id = some rcell⌝ $$ [Hσ Hr]
-  · icases genHeap_valid $$ [$Hσ $Hr] with >%h
-    itrivial
-  ihave %Hmt : ⌜get? (heapToMap σ₁.heap) ta.id = some tcell⌝ $$ [Hσ Ht]
-  · icases genHeap_valid $$ [$Hσ $Ht] with >%h
-    itrivial
-  ihave %Hmo : ⌜get? (heapToMap σ₁.heap) oa.id = some ocell⌝ $$ [Hσ Ho]
-  · icases genHeap_valid $$ [$Hσ $Ho] with >%h
-    itrivial
-  ihave %Hne : ⌜ta.id ≠ oa.id⌝ $$ [Ht Ho]
-  · icases pointsTo_ne' $$ [$Ht $Ho] with %h
-    itrivial
-  have hlookr : Heap.lookup σ₁.heap (.base ra) = some rcell := by
-    rw [get?_heapToMap] at Hmr; simpa using Hmr
-  have hlookt : Heap.lookup σ₁.heap (.base ta) = some tcell := by
-    rw [get?_heapToMap] at Hmt; simpa using Hmt
-  have hlooko : Heap.lookup σ₁.heap (.base oa) = some ocell := by
-    rw [get?_heapToMap] at Hmo; simpa using Hmo
-  iapply fupd_mask_intro Std.LawfulSet.empty_subset
-  iintro Hclose
-  isplitr
-  · ipureintro
-    cases s
-    · exact ⟨[], Config.next k, _, [],
-        GoPrimStep.step (hred σ₁ hfns hmeths htypes Hne hlookr hlookt hlooko).1⟩
-    · trivial
-  inext
-  iintro %e₂ %σ₂ %eₜ %Hstep Hcred
-  cases Hstep with
-  | step st =>
-    obtain ⟨rfl, rfl⟩ :=
-      (hred σ₁ hfns hmeths htypes Hne hlookr hlookt hlooko).2 _ _ st
-    imod (genHeap_update (v₂ := tcell')) $$ [$Hσ $Ht] with ⟨Hσ, Ht⟩
-    imod (genHeap_update (v₂ := ocell')) $$ [$Hσ $Ho] with ⟨Hσ, Ho⟩
-    imod Hclose
-    imodintro
-    simp only [Algebra.BigOpL.bigOpL_nil]
-    obtain ⟨y, hy⟩ := heap_lookup_set_isSome (l := .base ta) (c := tcell') hlooko
-    isplitl [Hσ]
-    · isplitl [Hσ]
-      · iapply (genHeapInterp_eqv
-          (fun kk => (heapToMap_set_base₂ σ₁.heap ta oa tcell' ocell' kk).symm)) $$ Hσ
-      · ipureintro
-        exact ⟨hfns, hmeths, htypes, (hwf.set_existing hlookt).set_existing hy⟩
-    · isplitl [Hr Ht Ho Hcont]
-      · iapply Hcont $$ [$Hr $Ht $Ho]
-      · itrivial
-
-/-- **The apply step, one-read/two-write form** — the wide-op face of
-`wp_read_store_step₂` (the `mapLookup`/`typeAssertStmt` shape: two target
-cells written, one state cell read). -/
-theorem wp_stmt_op_apply_read_store₂ {op : StmtOp} {nt : Nat} {done : List GoValue}
-    {v : GoValue} {ra ta oa : Addr}
-    {rcell tcell tcell' ocell ocell' : HeapCell} {env k}
-    (happly : ∀ (σ : ExecState) (ch : Choices), σ.functions = GoCoreGS.prog GF →
-      σ.methods = GoCoreGS.methods GF → σ.types = GoCoreGS.types GF →
-      ta.id ≠ oa.id →
-      Heap.lookup σ.heap (.base ra) = some rcell →
-      Heap.lookup σ.heap (.base ta) = some tcell →
-      Heap.lookup σ.heap (.base oa) = some ocell →
-      applyStmtOp σ ch op nt (v :: done).reverse
-        = .ok ({ σ with heap := Heap.set (Heap.set σ.heap (.base ta) tcell')
-                                  (.base oa) ocell' }, ch)) :
-    ra.id ↦ rcell ∗ ta.id ↦ tcell ∗ oa.id ↦ ocell
-      ∗ (ra.id ↦ rcell ∗ ta.id ↦ tcell' ∗ oa.id ↦ ocell'
-          -∗ WP (Config.next k) @ s ; E {{ Φ }})
-      ⊢ WP (Config.retV v (.stmtOpK op nt done [] env k)) @ s ; E {{ Φ }} := by
-  iapply wp_read_store_step₂ (hnv := rfl)
-  intro σ₁ hfns hmeths htypes hne hlookr hlookt hlooko
-  refine ⟨Step.stmtOpApply (ch := [])
-    (happly σ₁ [] hfns hmeths htypes hne hlookr hlookt hlooko), ?_⟩
-  intro c' s' hst
-  cases hst with
-  | @stmtOpApply _ _ _ _ _ _ _ _ ch _ hap =>
-    rw [happly σ₁ ch hfns hmeths htypes hne hlookr hlookt hlooko] at hap
-    injection hap with hap
-    exact ⟨rfl, (Prod.mk.inj hap).1.symm⟩
-  | @stmtOpApplyPanic _ _ _ _ _ _ _ _ ch hap =>
-    rw [happly σ₁ ch hfns hmeths htypes hne hlookr hlookt hlooko] at hap
-    exact absurd hap (by simp)
+/- TOMBSTONE (S1 audit-fix round, 2026-08-09; the no-inert-scaffolding
+rule): `wp_read_store_step₂` (one-read/two-write step core) and
+`wp_stmt_op_apply_read_store₂` (its `stmtOpK` front) were DELETED here.
+Their only consumers were the pre-spine `wp_map_lookup` (restated over
+the rhsK apply + per-target `storeK` stores when `StmtOp.mapLookup`/
+`.typeAssertStmt` were retired — BUG-034) — and after that retirement
+no surviving `StmtOp` has two target cells (`stmtPlan`'s max `nt` is
+1), so the front was not merely unwitnessed but vacuous-by-domain.
+History: b86993ea's revert record; the spine restatement commits. -/
 
 /-- **The comma-ok map lookup's spine entry** (`Step.mapLookupFirst`,
 BUG-034 migration): `t, ok = m[key]` enters the tgtOpK/rhsK/storeK

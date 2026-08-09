@@ -244,7 +244,8 @@ store) becomes entry → address → `wp_tgtop_rhs` → RHS →
 `wp_rhs_stores_vals` → the `storeK` store (`wp_assign_store`) →
 `wp_stores_done`. Same handover points for a human: the store law is
 still the one non-mechanical step. The comma-ok forms (BUG-034) enter
-the same spine via `wp_map_lookup_start`/`wp_type_assert_start` with the
+the same spine via `wp_map_lookup_start` (the `typeAssert` twin is deliberately
+DEFERRED to its first consumer — see `Laws/StmtOps.lean`) with the
 source carried as an `RhsOp`, applied at the end of phase 1
 (`Laws/StmtOps.wp_map_lookup`). -/
 
@@ -334,7 +335,7 @@ theorem wp_rhs_shift {rop : RhsOp} {refs : List TargetRef}
 
 /-- The last RHS value under the IDENTITY source (`.vals` — plain
 single/multi assigns): phase 2 begins. The comma-ok sources' apply step
-reads the heap and lives in `Laws/StmtOps` (`wp_rhs_map_lookup`). -/
+reads the heap and lives in `Laws/StmtOps` (`wp_map_lookup`). -/
 @[go_walk_law]
 theorem wp_rhs_stores_vals {refs : List TargetRef} {done : List GoValue}
     {v : GoValue} {body : Stmt} {env k} :

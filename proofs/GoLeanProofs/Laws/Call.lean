@@ -803,104 +803,15 @@ theorem pointsTo_addr_ne {a b : Addr} {c₁ c₂ : HeapCell} :
   iintro ⟨H1, H2⟩
   iapply pointsTo_ne $$ H1 H2
 
-/-- **Two-read/two-write step core**: a single step that READS two owned
-cells (riding through unchanged) and WRITES two others, in order — the
-composed `Heap.set` shape `storeMany` produces at a two-result frame
-exit. The general engine; `wp_frame_return₂` is its front. (Hosted here
-rather than in `Lifting.lean` for the same reason as
-`Laws/StmtOps.wp_read_store_step₂`: it needs the `HeapBridge`
-projection algebra.) -/
-theorem wp_read₂_store₂_step {ra₀ ra₁ ta₀ ta₁ : Addr}
-    {rcell₀ rcell₁ tcell₀ tcell₀' tcell₁ tcell₁' : HeapCell} {c₀ : Config} {k}
-    (hnv : ToVal.toVal c₀ = (none : Option Unit))
-    (hred : ∀ σ₁ : ExecState, σ₁.functions = GoCoreGS.prog GF →
-      σ₁.methods = GoCoreGS.methods GF → σ₁.types = GoCoreGS.types GF →
-      ta₀.id ≠ ta₁.id →
-      Heap.lookup σ₁.heap (.base ra₀) = some rcell₀ →
-      Heap.lookup σ₁.heap (.base ra₁) = some rcell₁ →
-      Heap.lookup σ₁.heap (.base ta₀) = some tcell₀ →
-      Heap.lookup σ₁.heap (.base ta₁) = some tcell₁ →
-      Step c₀ σ₁ (.next k)
-          { σ₁ with heap := Heap.set (Heap.set σ₁.heap (.base ta₀) tcell₀')
-                              (.base ta₁) tcell₁' } ∧
-      (∀ c' s', Step c₀ σ₁ c' s' →
-          c' = Config.next k ∧
-          s' = { σ₁ with heap := Heap.set (Heap.set σ₁.heap (.base ta₀) tcell₀')
-                                   (.base ta₁) tcell₁' })) :
-    ra₀.id ↦ rcell₀ ∗ ra₁.id ↦ rcell₁ ∗ ta₀.id ↦ tcell₀ ∗ ta₁.id ↦ tcell₁
-      ∗ (ra₀.id ↦ rcell₀ ∗ ra₁.id ↦ rcell₁ ∗ ta₀.id ↦ tcell₀' ∗ ta₁.id ↦ tcell₁'
-          -∗ WP (Config.next k) @ s ; E {{ Φ }})
-      ⊢ WP c₀ @ s ; E {{ Φ }} := by
-  iintro ⟨Hr0, Hr1, Ht0, Ht1, Hcont⟩
-  iapply wp_lift_step (h := hnv)
-  iintro %σ₁ %ns %obs %obs' %nt Hσ
-  simp only [stateInterp]
-  icases Hσ with ⟨Hσ, %Hinv⟩
-  obtain ⟨hfns, hmeths, htypes, hwf⟩ := Hinv
-  ihave %Hmr0 : ⌜get? (heapToMap σ₁.heap) ra₀.id = some rcell₀⌝ $$ [Hσ Hr0]
-  · icases genHeap_valid $$ [$Hσ $Hr0] with >%h
-    itrivial
-  ihave %Hmr1 : ⌜get? (heapToMap σ₁.heap) ra₁.id = some rcell₁⌝ $$ [Hσ Hr1]
-  · icases genHeap_valid $$ [$Hσ $Hr1] with >%h
-    itrivial
-  ihave %Hmt0 : ⌜get? (heapToMap σ₁.heap) ta₀.id = some tcell₀⌝ $$ [Hσ Ht0]
-  · icases genHeap_valid $$ [$Hσ $Ht0] with >%h
-    itrivial
-  ihave %Hmt1 : ⌜get? (heapToMap σ₁.heap) ta₁.id = some tcell₁⌝ $$ [Hσ Ht1]
-  · icases genHeap_valid $$ [$Hσ $Ht1] with >%h
-    itrivial
-  ihave %Hne : ⌜ta₀.id ≠ ta₁.id⌝ $$ [Ht0 Ht1]
-  · icases pointsTo_addr_ne $$ [$Ht0 $Ht1] with %h
-    itrivial
-  have hlookr0 : Heap.lookup σ₁.heap (.base ra₀) = some rcell₀ := by
-    rw [get?_heapToMap] at Hmr0; simpa using Hmr0
-  have hlookr1 : Heap.lookup σ₁.heap (.base ra₁) = some rcell₁ := by
-    rw [get?_heapToMap] at Hmr1; simpa using Hmr1
-  have hlookt0 : Heap.lookup σ₁.heap (.base ta₀) = some tcell₀ := by
-    rw [get?_heapToMap] at Hmt0; simpa using Hmt0
-  have hlookt1 : Heap.lookup σ₁.heap (.base ta₁) = some tcell₁ := by
-    rw [get?_heapToMap] at Hmt1; simpa using Hmt1
-  iapply fupd_mask_intro Std.LawfulSet.empty_subset
-  iintro Hclose
-  isplitr
-  · ipureintro
-    cases s
-    · exact ⟨[], Config.next k, _, [],
-        GoPrimStep.step (hred σ₁ hfns hmeths htypes Hne hlookr0 hlookr1
-          hlookt0 hlookt1).1⟩
-    · trivial
-  inext
-  iintro %e₂ %σ₂ %eₜ %Hstep Hcred
-  cases Hstep with
-  | step st =>
-    obtain ⟨rfl, rfl⟩ :=
-      (hred σ₁ hfns hmeths htypes Hne hlookr0 hlookr1 hlookt0 hlookt1).2 _ _ st
-    imod (genHeap_update (v₂ := tcell₀')) $$ [$Hσ $Ht0] with ⟨Hσ, Ht0⟩
-    imod (genHeap_update (v₂ := tcell₁')) $$ [$Hσ $Ht1] with ⟨Hσ, Ht1⟩
-    imod Hclose
-    imodintro
-    simp only [Algebra.BigOpL.bigOpL_nil]
-    have hy : Heap.lookup (Heap.set σ₁.heap (.base ta₀) tcell₀') (.base ta₁)
-        = some tcell₁ := by
-      rw [heap_lookup_set_base_ne (b := ta₀) (n := ta₁.id) Hne]
-      exact hlookt1
-    isplitl [Hσ]
-    · isplitl [Hσ]
-      · iapply (genHeapInterp_eqv
-          (fun kk => (heapToMap_set_base₂ σ₁.heap ta₀ ta₁ tcell₀' tcell₁' kk).symm)) $$ Hσ
-      · ipureintro
-        exact ⟨hfns, hmeths, htypes, (hwf.set_existing hlookt0).set_existing hy⟩
-    · isplitl [Hr0 Hr1 Ht0 Ht1 Hcont]
-      · iapply Hcont $$ [$Hr0 $Hr1 $Ht0 $Ht1]
-      · itrivial
+/- TOMBSTONE (S1 audit-fix round, 2026-08-09; the no-inert-scaffolding
+rule): `wp_read₂_store₂_step` (two-read/two-write step core) was
+DELETED here. Its only front, the pre-spine `wp_frame_return₂`, was
+restated when the frame exit's atomic `storeMany` was retired
+(BUG-025: the exit READS the pinned results and the caller-target
+writes are per-target `storeK` steps; since the BUG-052 order pin the
+target OPERANDS also evaluate post-call at the exit) — so no step
+performs the two-read/two-write shape any more. -/
 
-/-- **One-result frame exit, GENERAL in the cells' types**: `return` at a
-frame with one pinned result location and one caller target — read the
-result cell, store its value into the target. `wp_frame_return_int` is
-this law's int-typed special case (its store side-condition internalized
-by `storeLoc_int_any`); the general form is what a result at a NAMED Go
-type needs, because the coercion then resolves through `σ.types` and only
-the caller can compute it. -/
 theorem wp_frame_return₁ {x : String} {tenv : LocalEnv} {ta ra : Addr}
     {rcell tcell tcell' : HeapCell} {k} {wf : Bool}
     (hres : LocalEnv.lookup tenv x = some (.base ta))

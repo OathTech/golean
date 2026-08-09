@@ -51,6 +51,29 @@ consumer). The assignment-adjacent frontend-export refusals
 the machine now supports map-element call targets, so enabling them is
 a frontend slice when scheduled.
 
+**S1 audit-fix round (same date, four commits):** (1) BUG-052 red-first
+pins — the audit's major: call write-back read target operands
+pre-call, gc reads them post-call (spec-unordered latitude, no Choices
+consumed; five probe genres + the hoisted-control guard); (2) BUG-052
+FIXED — the call evaluates first, the caller-target PLANS ride
+`Cont.frame` (+ caller env) and their operands evaluate at frame exit
+through the tgtOpK spine (gc's realized point, PINNED at the rule site
+with the spec text verbatim, version-tracked), laws restated
+(`wp_call_start`, `wp_tgtop_stores`, the frame-exit family with
+post-call `hres` premises), the storeK arity refusal made path-neutral,
+the sequencing eval pin retuned 901→91 with the reason; (3) the
+google-search slow lane re-certified — the spine's step growth had
+pushed it past its 40M work cap (RED under `--slow`, invisible to the
+default gate); cap raised to 60M and the set re-checked COMPLETE at
+exactly the six members; (4) scaffold/prose cleanup — the three
+witness-less step cores deleted with tombstones
+(`wp_read_store_step₂`, `wp_stmt_op_apply_read_store₂`,
+`wp_read₂_store₂_step`), the Audit ledger's stale witness clauses
+corrected, the dangling law names in `Laws/Eval` fixed, `assigneesExprs`
++ its lemma removed, this file's "eleven" corrected to the recorded
+EIGHT. The audit's refuted finding (granularity ledger) required no
+action.
+
 ## The sync question (asked 2026-08-09), answered
 
 Sync is NOT a prerequisite for spec-parity over the imported corpus
@@ -72,8 +95,14 @@ the proof slices can cover them.
    comma-ok, BUG-037 single-assign) onto the tgtOpK/storeK spine and
    restate the anchored WP law families (`wp_assign*`,
    `wp_map_lookup` + the quorum walk's consumers) over it — one
-   machinery retirement, one law rework, three consumers, the eleven
-   held-open pins flip. WP-walking imported programs hits these laws
+   machinery retirement, one law rework, three consumers, the EIGHT
+   recorded held-open pins flip. (Count corrected at the slice-1
+   record + S1 audit: this bullet originally said "eleven"; the
+   authoritative owner map records 5 (BUG-034/037) + 3 (BUG-025) = 8.
+   If the extra three meant the assignment-adjacent frontend-export
+   refusals, those were never machine pins and are out of this
+   slice's machine+laws scope — deferred to a frontend slice, per the
+   record below.) WP-walking imported programs hits these laws
    constantly; clean foundation first.
 2. **The sync package** (registry growth): `sync.Mutex`/`RWMutex`/
    `WaitGroup`/`Once` as machine primitives — each a registry entry

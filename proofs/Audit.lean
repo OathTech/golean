@@ -725,14 +725,18 @@ projections stop being `rfl`):
 
 - the wide-statement (`stmtOpK`) family — `wp_stmt_op_first`,
   `wp_stmt_op_shift_target`, `wp_stmt_op_shift_plain`,
-  `wp_stmt_op_apply_store`, `wp_stmt_op_apply_read_store₂` — NOTHING
-  existed for `stmtOpK` before this file; witnessed by the `sortSlice`
-  and `mapLookup` statement walks below;
+  `wp_stmt_op_apply_store` — NOTHING existed for `stmtOpK` before this
+  file; witnessed by the `sortSlice` statement walk below.
+  (`wp_stmt_op_apply_read_store₂` and its `wp_read_store_step₂` core
+  were DELETED at the spec-parity-s1 audit-fix round: after the
+  BUG-034 spine migration no `StmtOp` has two target cells — see the
+  tombstone in `Laws/StmtOps.lean`;)
 - `wp_sort_slice` (the `slices.Sort` extern, one apply step over the
   slice's single backing cell) — witness `wp_sort_slice_srt`, the REAL
   `slices.Sort(srt)` statement on `[3,1,2] ↦ [1,2,3]`;
-- `wp_map_lookup` (comma-ok read: one cell read, two written) and its
-  new lifting core `wp_read_store_step₂` — witness
+- `wp_map_lookup` (comma-ok read: one cell read, two written — since
+  the BUG-034 spine migration the value-source APPLY step reads and
+  the two writes are per-target `storeK` store lifts) — witness
   `wp_map_lookup_ackedIndex`, the REAL `idx, ok := m[id]` of
   `main.mapAckIndexer.AckedIndex`. The earlier recorded divergence (the
   `idx` cell declared `uint64` where the lowering declares
@@ -822,8 +826,6 @@ example := @GoLean.Iris.wp_map_iter_next_key
 example := @GoLean.Iris.wp_map_iter_next_key_basic_key_witness
 example := @GoLean.Iris.wp_map_iter_next_key_defined_key_witness
 example := @GoLean.Iris.wp_stmt_op_apply_store
-example := @GoLean.Iris.wp_stmt_op_apply_read_store₂
-example := @GoLean.Iris.wp_read_store_step₂
 
 /-! ### sem-adequacy slice 3: the legitimacy invariant and the
 stream-obliviousness kit (2026-08-04). The SEMANTICS gained the mapRange
@@ -1069,7 +1071,6 @@ example := @GoLean.Iris.wp_call_start
 example := @GoLean.Iris.wp_tgtop_stores
 example := @GoLean.Iris.wp_call_arg_next
 example := @GoLean.Iris.wp_frame_return₂
-example := @GoLean.Iris.wp_read₂_store₂_step
 example := @GoLean.Surface.sat_sep_insert
 example := @GoLean.Surface.quorumOneKnownFuncSpec
 example := @GoLean.Surface.quorumOneKnownMeetsSpec
