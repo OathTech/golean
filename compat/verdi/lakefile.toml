@@ -1,0 +1,6 @@
+name = "VerdiCompat"
+version = "0.1.0"
+defaultTargets = ["VerdiCompat"]
+
+[[lean_lib]]
+name = "VerdiCompat"
