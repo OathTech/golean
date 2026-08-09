@@ -171,3 +171,31 @@ successfully judged (actually compared) count, so profile
 incompatibilities cannot look like tested semantic coverage — this
 campaign's recover rung read as "40 recover_wrapper cases" while the
 judged caught-panic count was 0.
+
+## Addendum (2026-08-09): grossmith's response received — dispositions
+
+Their `docs/2026-08-09_note-to-golean.md` (vendored tree @ b68ce03)
+answers G1-G3: G1 fixed via SITE-encoded panic observation, validated
+on our review's exact seeds (19/19 caught panics now judged, 0
+mismatches); G2 fixed harder than asked (pinned build env — their hunt
+found the passthrough could fabricate mismatch verdicts); G3's
+judged-vs-generated split is in batch.json with a nightly non-vacuity
+gate. Their return items, dispositioned:
+1. "Push your work" — RESOLVED (main pushed through 3d215822,
+   2026-08-09); their campaign noise from re-detecting fixed
+   BUG-042/043 dissolves at their next re-vendor.
+2. **Observation channel erases integer width/kind and defined-type
+   identity** (their hunt F15) — ACCEPTED as a real gap on our side:
+   a kind-defaulting bug landing on the right numeric value is
+   invisible to observation-eq, exactly the family that bit us three
+   times. Tracked in TODO.md; scheduling flagged to the user
+   (candidate: early spec-parity-arc slice — symmetric encoder
+   change, both sides move together).
+3. `$runtime.Error` method set — acknowledged; note their "BUG-009"
+   refers to OUR tracked TODO item (recovered runtime errors' method
+   set), not our closed BUG-009 (imported method sets). Reinforced as
+   a spec-parity-arc candidate (real-world recover idioms gate on it).
+4. Tuple-forwarding pincer — ANSWERED: BUG-049 fixed + the family
+   swept (BUG-050/051 siblings found and fixed; see BUGS.md), all on
+   pushed main; the six-form matrix + range/call-assign pins are live
+   as their witness spec. Generator welcome.
