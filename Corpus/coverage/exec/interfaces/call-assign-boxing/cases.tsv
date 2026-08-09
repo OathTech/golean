@@ -1,0 +1,4 @@
+# id	subject	args	expected_status	expected_reason	features
+assign-any	callAssignAny	-	ok	-	interfaces,calls,assignment
+assign-error	callAssignError	-	ok	-	interfaces,calls,assignment,methods
+named-result	callAssignNamedResult	-	ok	-	interfaces,calls,assignment,named-results,returns

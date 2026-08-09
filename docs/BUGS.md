@@ -30,6 +30,49 @@ differential-pinned) `- Cases: <id>, <id>, …` (baseline case ids), then prose.
 
 ---
 
+## BUG-051 — single-value call assigned into an interface-typed target: the boxing wrap lands on the CALL NODE, which the decoder refuses (whole-program over-refusal)
+
+- Status: open
+- Pinned-by: differential
+- Cases: interfaces/call-assign-boxing/assign-any, interfaces/call-assign-boxing/assign-error, interfaces/call-assign-boxing/named-result
+- Discovered: 2026-08-09 (closing review of the round's unreviewed
+  diffs, Opus reviewer + independent verifier; pre-existing — blame
+  85f3659 (2026-07-30), NOT introduced by any commit of this landing
+  round. BUG-050's family sweep had checked exactly this site and
+  misrecorded it as "wraps at the site / clean" — corrected there.)
+- What: `var x I; x = f()` where f returns a concrete type. The
+  assign-site special case (tools/nativefrontend/emit.go, the
+  single-value effectful-call arm) keeps the call in statement
+  position as the assign RHS but applies `wrapInterfaceConversion` to
+  the CALL NODE itself, emitting `to-interface(call)` — and
+  NativeToIR refuses any call in expression position ("call in
+  expression position is not modeled (calls are statements)",
+  GoLean/NativeToIR.lean), so the WHOLE PROGRAM fails to lower.
+  Ordinary Go (`var err error; err = makeErr()`; `out = mk()` into an
+  interface-typed named result) becomes a status=error refusal: a
+  fail-closed OVER-refusal — no wrong answer, but exactly the
+  "fail-closed classification" hole class the green gates are
+  structurally blind to (nothing in the corpus had the shape).
+  Structurally, at this site the wrap was NEVER correct: a
+  non-interface target makes it a no-op, and whenever it actually
+  boxes, the result is unlowerable.
+- Verifier probe matrix (all reproduced end-to-end at 2570667):
+  (a) `var a any; a = mk()` → error "call in expression position is
+  not modeled (calls are statements)"; (d) `var err error;
+  err = makeErr(); return err.Error()` (go vet-clean ordinary Go) →
+  same error; (f) named result `func probe() (out any) { out = mk();
+  return }` → same error. Controls clean: (b) `var a any = mk()` →
+  ok, boxed {dynamic int, 11}; (c) `var a int; a = mk()` → ok, raw
+  11; (e) `a, b = 3, 4` into any,any → ok, boxed. Pins: the three
+  red shapes in interfaces/call-assign-boxing (the refusal poisons
+  the whole package's lowering, so the three controls are green
+  guards in interfaces/call-assign-boxing-controls).
+- Fix shape: emit the call as a statement into a temp (the existing
+  hoist mechanism, typed at the call's result type), then assign
+  `to-interface(temp)` — the hoist-then-wrap shape every working
+  conversion-owing site uses (per-pair assign's own comment: "wrapping
+  AFTER the hoist keeps the temp at the value's static type").
+
 ## BUG-050 — ASSIGN-form range into interface-typed targets skips implicit boxing (silent WRONG answer)
 
 - Status: fixed (2026-08-08, same review round, FRONTEND-only (no
@@ -69,23 +112,45 @@ differential-pinned) `- Cases: <id>, <id>, …` (baseline case ids), then prose.
   the BUG-042/043 kind-defaulting family.
 - Family sweep (2026-08-08, with the fix — recorded per the
   BUG-042/043 serial-discovery precedent: a second member found
-  serially means the FAMILY gets sweep-audited, not found one-by-one):
-  all 16 `"stmt": "assign"` emission sites in emit.go classified.
-  ONE hole — this bug's bind closure (fixed above). The rest: 3 wrap
-  at the site (single-value call assign, per-pair assign, select-recv
-  write-back) and var-decl inits wrap at emission (feeding the
-  goto-context re-init site); 5 are same-type temp transfers (loop-var
-  per-iteration cells, type-switch guard temp + clause binding,
-  promotion-wrapper results, interface-method-value hoist); 6 move
-  synthetic int/bool machinery only ($pc x2, firstVar, idxVar,
-  fallVar x2). The `:=`-form range binds its variables AT the
-  component types (no conversion owed). The multi-value assign /
-  var-decl-from-call / plain chan-receive interface forms fail closed
-  with explicit quarantine messages (deferred, visible). Independently,
-  the skeptical-review verifier behaviorally confirmed every other
-  conversion-owing context (ordinary/field/deref/index/named-result/
-  closure assigns, append, composite literals, map store, chan send)
-  boxes correctly. Sweep verdict: clean except this one site.
+  serially means the FAMILY gets sweep-audited, not found one-by-one.
+  **CORRECTED 2026-08-09 per the closing review — the original verdict
+  "clean except this one site" was FALSE for one site, and the site
+  accounting was incomplete; corrections inline below**):
+  the `"stmt": "assign"` emission sites in emit.go were classified —
+  the original record said "all 16"; the true count is 24 emissions
+  (the original 16 were coarse groups, and three logical sites fell in
+  no bucket at all — closing review, minor finding). ONE hole of THIS
+  bug's shape — the range bind closure (fixed above). The rest, as
+  corrected: 2 wrap correctly at the site (per-pair assign,
+  select-recv write-back); the THIRD claimed wrap-at-site — the
+  single-value call assign — wraps the CALL NODE itself, producing
+  `to-interface(call)` which the decoder refuses: a fail-closed
+  over-refusal on ordinary Go, misrecorded here as clean and now
+  filed and fixed as BUG-051 (closing review, major finding — the
+  sweep's stated purpose was closing the family, so the false "clean"
+  is recorded plainly, not papered over). Var-decl inits wrap at
+  emission (feeding the goto-context re-init site); 5 same-type temp
+  transfers (loop-var per-iteration cells, type-switch guard temp +
+  clause binding, promotion-wrapper results, interface-method-value
+  hoist); 6 synthetic int/bool machinery ($pc x2, firstVar, idxVar,
+  fallVar x2); PLUS the three sites the original sweep never
+  classified, added with the closing verifier's checks: the generic
+  `hoist` temp (every caller passes the SOURCE type — the temp holds
+  the value at its own static type), `splatMultiCall`'s tuple temps
+  (declared at tup.At(i).Type()), and `emitSwitch`'s $sw tag temp
+  (declared at the tag's own type; interface-vs-case boxing applied
+  separately, both directions, at the comparison). The `:=`-form
+  range binds its variables AT the component types (no conversion
+  owed). The multi-value assign / var-decl-from-call / plain
+  chan-receive interface forms fail closed with explicit quarantine
+  messages (deferred, visible). The skeptical-review verifier's
+  behavioral pass ("ordinary/field/deref/index/named-result/closure
+  assigns, append, composite literals, map store, chan send box
+  correctly") used NON-CALL RHSes — scoped accordingly: the
+  named-result-assign-from-call form was in fact BUG-051-refused.
+  Corrected sweep verdict: clean except TWO sites — this bug's range
+  bind (silent wrong answer, fixed) and BUG-051's call-assign wrap
+  (fail-closed over-refusal, filed same day).
 
 ## BUG-049 — tuple-forwarded call arguments bypass interface boxing (`g(f())` into interface-typed slots)
 
@@ -128,7 +193,10 @@ differential-pinned) `- Cases: <id>, <id>, …` (baseline case ids), then prose.
   emitRange's ASSIGN-form bind. Per the BUG-042/043 kind-defaulting
   precedent, serial discovery means the family gets SWEEP-audited;
   the sweep of every assign-emission site is recorded in BUG-050's
-  entry — clean except that one site.]
+  entry — whose verdict the closing review corrected (2026-08-09):
+  clean except TWO sites, the range bind (BUG-050) and the
+  call-assign wrap the sweep itself had misrecorded as clean
+  (BUG-051).]
 - Pin matrix (per the review's warning that an (any,any)-only pin can
   miss per-position errors): (int,string)→(any,any) red raw-int,
   →(...any) red raw-int, →(int,any) red raw-STRING (second slot),

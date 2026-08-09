@@ -1,19 +1,24 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-08  commit: BUG-050 FIXED (ASSIGN-form range binds get destination-typed boxing)
+# recorded: 2026-08-09  commit: BUG-051 red-first pins (call-assign interface boxing over-refusal)
 #   frontend: native  oracle: go run (strict lane) / go-run membership in the
 #   machine-enumerated observation set, sampled plain AND under -race
 #   (membership lane; go1.26.5) / schedule-tree singleton certification +
 #   strict go-run equality (confluent lane) / every-enumerated-path-refuses
 #   + go run -race red (racy lane; never combined with deadlock)
-# manifest_cases: 1399  pass: 1283  fail: 116
-# Re-pin reason: BUG-050 fix (codex-landing skeptical-review round):
-#   emitRange computes the range operand's source key/value component
-#   types and the ASSIGN-form bind closure applies destination-typed
-#   wrapInterfaceConversion (same mechanism as the BUG-049 fix); an
-#   uncomputed collection shape now fails closed at an interface
-#   target. Drift is exactly the FIVE BUG-050 pins flipping FAIL->PASS
-#   (range/assign-form-interface-target/*). Zero drift on all 1394
-#   other ids.
+# manifest_cases: 1405  pass: 1286  fail: 119
+# Re-pin reason: BUG-051 red-first pins (closing review 2026-08-09):
+#   the single-value call-assign site wraps the CALL NODE into
+#   to-interface(call), which NativeToIR refuses ("call in expression
+#   position") — `var err error; err = makeErr()` and the named-result
+#   form are whole-program errors on ordinary Go (fail-closed
+#   over-refusal; misrecorded as clean by BUG-050's sweep, corrected
+#   there). Drift is exactly the SIX new ids: the three red shapes
+#   (interfaces/call-assign-boxing/{assign-any,assign-error,
+#   named-result}, FAIL at lean-observation, status=error) and the
+#   three green guards (interfaces/call-assign-boxing-controls/
+#   {var-init,concrete,per-pair} — the reviewer's clean controls, in a
+#   sibling package because the red shapes poison their package's
+#   lowering). Zero drift on all 1399 prior ids.
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
 PASS	arrays/array-copy	-
@@ -763,6 +768,12 @@ PASS	interfaces/assert-imported-interface/negative	-
 PASS	interfaces/assert-imported-interface/positive	-
 PASS	interfaces/assert-imported-method-set/comma-ok	-
 PASS	interfaces/assert-imported-method-set/panic-form	-
+FAIL	interfaces/call-assign-boxing/assign-any	lean-observation
+FAIL	interfaces/call-assign-boxing/assign-error	lean-observation
+PASS	interfaces/call-assign-boxing-controls/concrete	-
+PASS	interfaces/call-assign-boxing-controls/per-pair	-
+PASS	interfaces/call-assign-boxing-controls/var-init	-
+FAIL	interfaces/call-assign-boxing/named-result	lean-observation
 PASS	interfaces/deep-incomparable-dynamic-eq	-
 PASS	interfaces/embedded-interface	-
 PASS	interfaces/embedded-interface-assertion	-

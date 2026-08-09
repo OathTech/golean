@@ -1,0 +1,4 @@
+# id	subject	args	expected_status	expected_reason	features
+var-init	callAssignVarInitControl	-	ok	-	interfaces,calls,zero_values
+concrete	callAssignConcreteControl	-	ok	-	calls,assignment,ints
+per-pair	callAssignPerPairControl	-	ok	-	interfaces,assignment,multi_assign
