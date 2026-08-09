@@ -113,11 +113,13 @@ structure MultiConfig where
   shared : ExecState
   cur : Nat := 0
 
-/-- The slice-1 blocked shapes — the parked goroutines. -/
+/-- The slice-1 blocked shapes — the parked goroutines — plus the
+sync-parked shape (spec-parity slice 2). -/
 def isBlockedConfig : Config → Bool
   | .blockedSend _ _ _ => true
   | .blockedRecv _ _ _ _ _ => true
   | .blockedSelect _ _ _ => true
+  | .blockedSync _ _ _ _ => true
   | _ => false
 
 /-- The post-spawn completion marker (BUG-040, slice 4). Its only step
@@ -176,6 +178,25 @@ def wakeReady (s : ExecState) : Config → Bool
         match clauseReady s cl with
         | .ok b => b
         | .error _ => false
+  -- Sync parks (spec-parity slice 2, design note §6): CELL-based wake
+  -- readiness — can the parked op now acquire against the primitive's
+  -- state alone? WHICH ready contender proceeds is the L1 pick's
+  -- latitude (the envelope statement at `applySyncOp`); no L4-analogue
+  -- site exists for sync. A parked `rlock` stays unready while a
+  -- writer is PENDING (`pendingW` — the documented exclusion of new
+  -- readers); a parked `wgWait` stays unready on a NEGATIVE counter
+  -- (probe p13: Wait unblocks only at exactly 0).
+  | .blockedSync op loc _ _ =>
+      match loadLoc s loc with
+      | .ok (.syncData p) =>
+          match op, p with
+          | .lock, .mutex locked => !locked
+          | .wlock, .rwmutex writer readers _ => !writer && readers == 0
+          | .rlock, .rwmutex writer _ pendingW => !writer && pendingW == 0
+          | .wgWait, .waitGroup counter _ => counter == 0
+          | .onceBegin _, .once _ done => done
+          | _, _ => false
+      | _ => false
   | _ => false
 
 /-- Runnable = not a tombstone, and (if parked) wake-ready. -/
@@ -225,6 +246,12 @@ def Config.atBoundary : Config → Bool
   | .blockedSend _ _ _ => true
   | .blockedRecv _ _ _ _ _ => true
   | .blockedSelect _ _ _ => true
+  -- Sync ops (spec-parity slice 2): the apply position is the
+  -- registry's scheduling point — the EXISTING L1 site is consulted
+  -- here (consumed only at |runnable| > 1); the op itself consumes
+  -- nothing (`applySyncOp`'s envelope statement).
+  | .retV _ (.syncStK _ _ [] _ _) => true
+  | .blockedSync _ _ _ _ => true
   | _ => false
 
 /-- The completed spawn positions: callee and argument values evaluated
@@ -346,6 +373,41 @@ def resumeThread (s : ExecState) : Config → Except GoError (Config × ExecStat
       match ← readyClauses s evs with
       | [] => throw (.internal "resume on an unready blocked select")
       | cl :: _ => commitClause s env k cl
+  -- Sync wakes (spec-parity slice 2): re-attempt the parked op against
+  -- the CELL — scheduled only when `wakeReady`, and pick+resume happen
+  -- in one pool step (no window), so the acquire must succeed; unready
+  -- resumes are `.internal`, the channel arms' discipline. A woken
+  -- `wlock` retires its `pendingW` registration; a woken `wgWait` its
+  -- `waiters` one; a woken `onceBegin` delivers `false` (f already ran
+  -- — the design note §4 Once rules).
+  | .blockedSync op loc env k => do
+      let p ← syncCell s loc
+      match op, p with
+      | .lock, .mutex locked =>
+          if locked then throw (.internal "resume on an unready blocked Lock")
+          else do
+            let s' ← storeLoc s loc (.syncData (.mutex true))
+            return (.next k, s')
+      | .wlock, .rwmutex writer readers pendingW =>
+          if !writer && readers == 0 then do
+            let s' ← storeLoc s loc (.syncData (.rwmutex true 0 (pendingW - 1)))
+            return (.next k, s')
+          else throw (.internal "resume on an unready blocked write-Lock")
+      | .rlock, .rwmutex writer readers pendingW =>
+          if !writer && pendingW == 0 then do
+            let s' ← storeLoc s loc (.syncData (.rwmutex writer (readers + 1) pendingW))
+            return (.next k, s')
+          else throw (.internal "resume on an unready blocked RLock")
+      | .wgWait, .waitGroup counter waiters =>
+          if counter == 0 then do
+            let s' ← storeLoc s loc (.syncData (.waitGroup counter (waiters - 1)))
+            return (.next k, s')
+          else throw (.internal "resume on an unready blocked Wait")
+      | .onceBegin targets, .once started done =>
+          if started && done then
+            enterRecvTargets s targets [.bool false] (.seqn #[]) env k
+          else throw (.internal "resume on an unready blocked Once.Do")
+      | _, _ => throw (.internal "blocked sync op / cell shape mismatch")
   | _ => throw (.internal "resume on a non-blocked configuration")
 
 /-- A pairing partner for the arrival intercept: a parked chan-op
@@ -893,6 +955,21 @@ branch) while the pool holds one goroutine — a single goroutine cannot
 race with itself — which keeps sequential conservation literal and
 the sequential corpus at zero detector overhead. -/
 
+/-- Clock/misuse event of one `wgAdd` apply (spec-parity slice 2):
+release-merge on a negative delta (gc waitgroup.go:81 — BEFORE the
+panic checks, so a recovered negative-counter Done still released),
+the sema-READ half of the misuse pair when the counter departs 0
+upward (waitgroup.go:111-116). Factored out of `raceUpdate` for clean
+elaboration. -/
+def raceWgAddEvent (r : RaceState) (i : Nat) (loc : Loc) (delta : Int)
+    (preCounter : Option Int) : Except GoError RaceState :=
+  if delta < 0 then
+    return (r.syncRelease i loc)
+  else if delta > 0 ∧ preCounter = some 0 then
+    r.wgSemaAccess i loc false
+  else
+    return r
+
 /-- The parked partner a pairing step woke, if any: the unique OTHER
 index whose configuration went blocked → unblocked. Every non-pairing
 pool step leaves all other goroutines' configurations untouched, and
@@ -975,6 +1052,20 @@ def raceWakeEvent (s : ExecState) (i : Nat) (r : RaceState) :
       match ← readyClauses s evs with
       | cl :: _ => raceCommitClauseEvent s i r cl
       | [] => return r
+  -- Sync wakes (spec-parity slice 2): every successful resume is the
+  -- op's ACQUIRE — Lock/RLock/write-Lock at their acquisition, Wait at
+  -- its unblocked return ("a call to Done 'synchronizes before' the
+  -- return of any Wait call that it unblocks"), a woken Do at its
+  -- completion-observing return. `wlock` acquires BOTH clocks
+  -- (rwmutex.go:159-160). No release happens at a wake.
+  | .blockedSync op loc _ _ =>
+      match op with
+      | .lock => return (r.syncAcquire i loc)
+      | .rlock => return (r.syncAcquire i loc)
+      | .wlock => return (r.syncAcquire i loc (alsoB := true))
+      | .wgWait => return (r.syncAcquire i loc)
+      | .onceBegin _ => return (r.syncAcquire i loc)
+      | _ => return r
   | _ => return r
 
 /-- Clock update for a PAIRING step (arriving goroutine `i`, woken
@@ -1170,6 +1261,79 @@ def raceUpdate (sPre : ExecState) (tsPre : Array Config) (chPre : Choices)
                             (match ready[idx]? with
                             | some cl => raceCommitClauseEvent sPre i r cl
                             | none => return r)
+        | .retV v (.syncStK op done [] _ _) => do
+            -- THE SYNC REGISTRY ENTRY'S SECOND DUTY (spec-parity slice
+            -- 2, design note §5): classify the apply from the pre-step
+            -- shape and the outcome, and advance the sync clocks per
+            -- the package-doc HB sentences (quoted at `SyncClocks`).
+            -- Fatal outcomes never reach here (the pool step errored);
+            -- parked outcomes carry no edge (the wake does, above).
+            match (v :: done).reverse.head? with
+            | some (.addr loc) =>
+                (match op with
+                | .lock | .rlock =>
+                    (match m'.threads[i]? with
+                    | some (.next _) => return (r.syncAcquire i loc)
+                    | _ => return r)
+                | .wlock =>
+                    (match m'.threads[i]? with
+                    | some (.next _) => return (r.syncAcquire i loc (alsoB := true))
+                    | _ => return r)
+                | .unlock =>
+                    (match m'.threads[i]? with
+                    | some (.next _) => return (r.syncRelease i loc)
+                    | _ => return r)
+                | .wunlock =>
+                    (match m'.threads[i]? with
+                    | some (.next _) => return (r.syncRelease i loc)
+                    | _ => return r)
+                | .runlock =>
+                    (match m'.threads[i]? with
+                    | some (.next _) => return (r.syncRelease i loc (toB := true))
+                    | _ => return r)
+                | .wgAdd =>
+                    -- gc's Add (waitgroup.go): ReleaseMerge FIRST when
+                    -- delta < 0 (so a Done whose negative-counter panic
+                    -- is later recovered still released — probed
+                    -- ordering, design note §4), then the sema READ
+                    -- when the counter departs 0 upward (the misuse
+                    -- pair's Add half; it too precedes the panics) —
+                    -- `raceWgAddEvent`.
+                    raceWgAddEvent r i loc
+                      (match (v :: done).reverse[1]? with
+                        | some dv =>
+                            (match valueAsInt dv with
+                            | .ok d => d
+                            | .error _ => 0)
+                        | none => 0)
+                      (match syncCell sPre loc with
+                        | .ok (.waitGroup c _) => some c
+                        | _ => none)
+                | .wgWait =>
+                    (match m'.threads[i]? with
+                    | some (.next _) => return (r.syncAcquire i loc)
+                    | some (.blockedSync _ _ _ _) =>
+                        -- First-waiter registration writes the sema slot
+                        -- (waitgroup.go:185-190: only when the pre-park
+                        -- waiter count was 0 — concurrent Waits must not
+                        -- race each other).
+                        (match syncCell sPre loc with
+                        | .ok (.waitGroup _ 0) => r.wgSemaAccess i loc true
+                        | _ => return r)
+                    | _ => return r)
+                | .onceBegin _ =>
+                    -- Acquire only when the apply OBSERVED completion
+                    -- (pre-cell started ∧ done → the delivered false
+                    -- acquires); a fresh begin or a park carries no
+                    -- edge (the completion release is onceComplete's).
+                    (match syncCell sPre loc with
+                    | .ok (.once true true) => return (r.syncAcquire i loc)
+                    | _ => return r)
+                | .onceComplete =>
+                    (match m'.threads[i]? with
+                    | some (.next _) => return (r.syncRelease i loc)
+                    | _ => return r))
+            | _ => return r  -- nil/garbage receiver: the apply panicked
         | _ =>
             match m'.threads[i]? with
             | some (.panicking _ _) =>

@@ -1141,6 +1141,90 @@ def recvStores (v : GoValue) (ok : Bool) : Nat → List GoValue
   | 1 => [v]
   | _ => []
 
+/-! ## Sync-package primitives (spec-parity slice 2,
+`docs/2026-08-09_sync-package-design.md`)
+
+THE REGISTRY ENTRY (the channels-arc D2+D3 growth contract exercised as
+designed — one registration, nothing revises): each sync op's APPLY
+position is (a) a SCHEDULING POINT — it joins `Config.atBoundary`, so
+the EXISTING L1 scheduler site is consulted there (consumed only at
+|runnable| > 1; sync adds ZERO new `Choices` sites — see the envelope
+statement at `applySyncOp`) — and (b) an HB EDGE SOURCE — `raceUpdate`
+(Multi.lean) classifies sync applies/wakes and advances the per-cell
+sync clocks (`RaceState.syncAcquire`/`syncRelease`, Race.lean; the
+package-doc sentences quoted there). Blocked ops are the ONE new
+blocked-Config shape `.blockedSync`; wake is CELL-based (`wakeReady`),
+and which contender acquires next is pure L1 latitude — sync needs no
+arrival intercept, no pairing step, and no L4-analogue waiter pick,
+because nothing transfers between goroutines except through the cell. -/
+
+/-- Machine-level sync operation: the `SyncStmtOp` head with the
+`onceBegin` target payload validated in (the `ChanStOp.recv` shape). -/
+inductive SyncOp where
+  | lock
+  | unlock
+  | rlock
+  | runlock
+  | wlock
+  | wunlock
+  | wgAdd
+  | wgWait
+  | onceBegin (targets : List Assignee)
+  | onceComplete
+  deriving Repr, BEq
+
+/-- Classify a sync statement: op head plus the operands evaluated
+before the apply — the receiver ADDRESS expression, plus the delta for
+`wgAdd`. Fails closed (`none`) on arity drift, on targets anywhere but
+`onceBegin`, on a target count ≠ 1 for `onceBegin`, and on unsupported
+target assignees (the `chanPlan` discipline). -/
+def syncPlan : Stmt → Option (SyncOp × List Expr)
+  | .syncStmt .lock args targets =>
+      if targets.isEmpty && args.size == 1 then some (.lock, args.toList) else none
+  | .syncStmt .unlock args targets =>
+      if targets.isEmpty && args.size == 1 then some (.unlock, args.toList) else none
+  | .syncStmt .rlock args targets =>
+      if targets.isEmpty && args.size == 1 then some (.rlock, args.toList) else none
+  | .syncStmt .runlock args targets =>
+      if targets.isEmpty && args.size == 1 then some (.runlock, args.toList) else none
+  | .syncStmt .wlock args targets =>
+      if targets.isEmpty && args.size == 1 then some (.wlock, args.toList) else none
+  | .syncStmt .wunlock args targets =>
+      if targets.isEmpty && args.size == 1 then some (.wunlock, args.toList) else none
+  | .syncStmt .wgAdd args targets =>
+      if targets.isEmpty && args.size == 2 then some (.wgAdd, args.toList) else none
+  | .syncStmt .wgWait args targets =>
+      if targets.isEmpty && args.size == 1 then some (.wgWait, args.toList) else none
+  | .syncStmt .onceComplete args targets =>
+      if targets.isEmpty && args.size == 1 then some (.onceComplete, args.toList) else none
+  | .syncStmt .onceBegin args targets =>
+      if args.size == 1 && targets.size == 1 then
+        match targetsPlan targets.toList with
+        | some _ => some (.onceBegin targets.toList, args.toList)
+        | none => none
+      else none
+  | _ => none
+
+/-- Sync statements and wide statements classify DISJOINT statements
+(the `stmtPlan_of_chanPlan` twin, for `step_det`'s rule-disjointness
+sweep). -/
+theorem stmtPlan_of_syncPlan {stmt : Stmt} {p : SyncOp × List Expr}
+    (h : syncPlan stmt = some p) : stmtPlan stmt = none := by
+  cases stmt <;> simp_all [syncPlan, stmtPlan]
+
+/-- Sync statements and channel statements classify disjoint
+statements. -/
+theorem chanPlan_of_syncPlan {stmt : Stmt} {p : SyncOp × List Expr}
+    (h : syncPlan stmt = some p) : chanPlan stmt = none := by
+  cases stmt <;> simp_all [syncPlan, chanPlan]
+
+/-- Load a sync primitive's cell. A non-sync cell is `stuck` (fail
+closed — the frontend types every receiver). -/
+def syncCell (s : ExecState) (loc : Loc) : Except GoError SyncPrim := do
+  match ← loadLoc s loc with
+  | .syncData p => return p
+  | other => stuck s!"expected sync primitive data, got {repr other}"
+
 /-- One `select` clause with its entry-time operands EVALUATED (spec
 §Select statements, step 1): the channel value (and send value) are
 pinned; receive targets stay as their assignee expressions — evaluated
@@ -1536,6 +1620,13 @@ inductive Cont where
   not during the argument walk (gc evaluates the arguments first). -/
   | goArgsK (callee : GoValue) (vals : List GoValue)
       (pending : List Expr) (env : LocalEnv) (k : Cont)
+  /-- Sync-statement operand evaluation (spec-parity slice 2): the
+  receiver address (plus `wgAdd`'s delta), ending in one `applySyncOp`
+  step whose outcome may be next / panicking / blocked / fatal / an
+  `onceBegin` delivery entry. Appended at the END of the inductive so
+  positional case tags stay stable. -/
+  | syncStK (op : SyncOp) (done : List GoValue)
+      (pending : List Expr) (env : LocalEnv) (k : Cont)
 
 /-- The continuation for entering a `.seqn`: under a same-env governing
 sequence, SPLICE the statements into it (D1) — Go statement lists splice
@@ -1607,6 +1698,7 @@ def panicPassthrough : Cont → Option Cont
   | .storeK _ _ _ _ k => some k
   | .goCalleeK _ _ k => some k
   | .goArgsK _ _ _ _ k => some k
+  | .syncStK _ _ _ _ k => some k
   | .frame _ _ _ _ _ _ => none
   | .panicResumeK _ _ => none
   | .stop => none
@@ -1671,6 +1763,8 @@ def recoverThroughWrappers : Cont → Option (GoValue × Cont)
       (recoverThroughWrappers k).map (fun (v, k') => (v, .goCalleeK a b k'))
   | .goArgsK a b c d k =>
       (recoverThroughWrappers k).map (fun (v, k') => (v, .goArgsK a b c d k'))
+  | .syncStK a b c d k =>
+      (recoverThroughWrappers k).map (fun (v, k') => (v, .syncStK a b c d k'))
 
 /-- The `recover()` builtin (arc doc §A1; wrapper transparency added at
 the arc-final audit F1/BUG-015, 2026-08-06): walk the continuation to the
@@ -1736,6 +1830,8 @@ def recoverResult : Cont → GoValue × Cont
       let (v, k') := recoverResult k; (v, .goCalleeK a b k')
   | .goArgsK a b c d k =>
       let (v, k') := recoverResult k; (v, .goArgsK a b c d k')
+  | .syncStK a b c d k =>
+      let (v, k') := recoverResult k; (v, .syncStK a b c d k')
 
 /-- Control configurations (the Iris `Expr` projection; the `ExecState` is
 the paired `Step` component, as before). New over the old relation:
@@ -1795,6 +1891,16 @@ inductive Config where
   -- relation-silent in the per-goroutine `Step` like the blocked
   -- shapes.
   | spawned (k : Cont)
+  /-- A goroutine parked on a sync primitive (spec-parity slice 2,
+  design note §6): the op it will re-attempt, the primitive's cell.
+  Relation-silent per-goroutine like the channel blocked shapes; the
+  sequential driver classifies it as the deadlocked run (a parked sync
+  op with no sibling IS "all goroutines are asleep" — probes p06-p08),
+  and the pool wakes it cell-based (`wakeReady`/`resumeThread`). NO
+  loc-option: a sync receiver address is never nil here (nil panics at
+  the apply). Appended at the END so positional case tags stay
+  stable. -/
+  | blockedSync (op : SyncOp) (loc : Loc) (env : LocalEnv) (k : Cont)
 
 /-- Enter a receive's TARGET phase (nonempty targets; convergence
 round, BUG-029): resolve the target plan and start phase 1 on the
@@ -1882,6 +1988,173 @@ def applyChanOp (s : ExecState) (op : ChanStOp) (vs : List GoValue)
             let s' ← storeLoc s loc (.chanData buf capacity true)
             return (.next k, s')
   | op, vs => stuck s!"malformed channel-operator application: {repr op} on {vs.length} operand(s)"
+
+/-- **Apply a sync statement's head to its evaluated operands — the
+sync registry entry's op semantics AND its envelope statement** (design
+note §§4,6; every behavioral claim probed on go1.26.5, probe ids in
+the design note).
+
+THE ENVELOPE STATEMENT (nondeterminism doctrine, shipped with the
+site): the spec and package docs say NOTHING about acquisition order
+among lock/Wait/Do contenders — no fairness, no FIFO (gc realizes
+semaphore-FIFO handoff WITH barging, one legal point) — so the envelope
+is "any registry-granularity schedule over runnable goroutines", which
+is EXACTLY the existing L1 site's envelope: an unlock/Done/complete
+merely makes parked contenders wake-ready (`wakeReady`), and WHICH
+contender (or barging new arrival) proceeds next is the next L1 pick.
+Soundness (⊇ gc): acquisition order IS run order of the acquire steps,
+and L1 admits all run orders — gc's handoff member is the
+parked-waiter-picked schedule, every barging member an
+arrival-picked schedule. CONSEQUENCE: this apply consumes NOTHING from
+the choice stream, ever — sync adds zero new consumption sites, and
+single-thread sync programs are stream-transparent (sequential
+conservation untouched).
+
+Outcomes, per primitive (design note §4):
+* Mutex — `lock`: unlocked → locked; locked → park. `unlock`: locked →
+  unlocked; unlocked → the UNRECOVERABLE `GoError.fatal
+  "sync: unlock of unlocked mutex"` (probe p01: gc's runtime `fatal`,
+  recover does not catch — never a `.panicking`). No owner tracking
+  (probe p09: cross-goroutine unlock is legal).
+* RWMutex — `rlock`: admitted iff no writer AND no PENDING writer
+  (`pendingW` — rwmutex.go's documented "a blocked Lock call excludes
+  new readers"); else park. `runlock`: readers > 0 → decrement; else
+  fatal "sync: RUnlock of unlocked RWMutex" (p03). `wlock`: free →
+  acquire; else park AND count itself in `pendingW` (the resume
+  decrements). `wunlock`: writer → release; else fatal
+  "sync: Unlock of unlocked RWMutex" (p02).
+* WaitGroup — `wgAdd`: the counter updates FIRST (probe p13: a
+  recovered negative-counter panic leaves the counter negative), then
+  new < 0 → the RECOVERABLE panic "sync: negative WaitGroup counter"
+  (p04 — a real `panic()`, unlike the mutex fatals), then
+  waiters-parked ∧ delta > 0 ∧ old counter = 0 → the recoverable
+  misuse panic (waitgroup.go:120 — `waiters` is cell state, so the
+  check is cell-local exactly like gc's state-word test). `wgWait`:
+  counter = 0 → proceed (the fast path still acquires — raceUpdate);
+  else park, counting itself in `waiters`.
+* Once — `onceBegin targets`: fresh → mark started, deliver `true`
+  (run f); started ∧ done → deliver `false`; started ∧ ¬done → park
+  (nested Do on one goroutine = deadlock, probe p08). Delivery rides
+  `enterRecvTargets` (one fresh frontend temp). `onceComplete`: mark
+  done — reached through the Once desugar's DEFER, so a panicking f
+  still completes (probe p05). A complete without a begin is
+  `.internal` (only the desugar emits it).
+
+A nil receiver address panics recoverably via `valueAsLoc` (gc: the
+nil-pointer deref inside the method). Shared verbatim by rule
+`Step.syncStApply` and `stepFn`'s `syncStK` apply arm. -/
+def applySyncOp (s : ExecState) (op : SyncOp) (vs : List GoValue)
+    (env : LocalEnv) (k : Cont) : Except GoError (Config × ExecState) := do
+  match op, vs with
+  | .lock, [av] => do
+      let loc ← valueAsLoc av
+      match ← syncCell s loc with
+      | .mutex locked =>
+          if locked then return (.blockedSync .lock loc env k, s)
+          else do
+            let s' ← storeLoc s loc (.syncData (.mutex true))
+            return (.next k, s')
+      | other => stuck s!"Lock on a non-mutex sync cell: {repr other}"
+  | .unlock, [av] => do
+      let loc ← valueAsLoc av
+      match ← syncCell s loc with
+      | .mutex locked =>
+          if locked then do
+            let s' ← storeLoc s loc (.syncData (.mutex false))
+            return (.next k, s')
+          else throw (.fatal "sync: unlock of unlocked mutex")
+      | other => stuck s!"Unlock on a non-mutex sync cell: {repr other}"
+  | .rlock, [av] => do
+      let loc ← valueAsLoc av
+      match ← syncCell s loc with
+      | .rwmutex writer readers pendingW =>
+          if writer || pendingW > 0 then
+            return (.blockedSync .rlock loc env k, s)
+          else do
+            let s' ← storeLoc s loc (.syncData (.rwmutex writer (readers + 1) pendingW))
+            return (.next k, s')
+      | other => stuck s!"RLock on a non-RWMutex sync cell: {repr other}"
+  | .runlock, [av] => do
+      let loc ← valueAsLoc av
+      match ← syncCell s loc with
+      | .rwmutex writer readers pendingW =>
+          match readers with
+          | r + 1 => do
+              let s' ← storeLoc s loc (.syncData (.rwmutex writer r pendingW))
+              return (.next k, s')
+          | 0 => throw (.fatal "sync: RUnlock of unlocked RWMutex")
+      | other => stuck s!"RUnlock on a non-RWMutex sync cell: {repr other}"
+  | .wlock, [av] => do
+      let loc ← valueAsLoc av
+      match ← syncCell s loc with
+      | .rwmutex writer readers pendingW =>
+          if !writer && readers == 0 then do
+            let s' ← storeLoc s loc (.syncData (.rwmutex true 0 pendingW))
+            return (.next k, s')
+          else do
+            -- Park AND register as a pending writer: the documented
+            -- exclusion of new readers starts at the BLOCKED Lock call
+            -- (rwmutex.go), so the count updates at the park.
+            let s' ← storeLoc s loc (.syncData (.rwmutex writer readers (pendingW + 1)))
+            return (.blockedSync .wlock loc env k, s')
+      | other => stuck s!"write-Lock on a non-RWMutex sync cell: {repr other}"
+  | .wunlock, [av] => do
+      let loc ← valueAsLoc av
+      match ← syncCell s loc with
+      | .rwmutex writer readers pendingW =>
+          if writer then do
+            let s' ← storeLoc s loc (.syncData (.rwmutex false readers pendingW))
+            return (.next k, s')
+          else throw (.fatal "sync: Unlock of unlocked RWMutex")
+      | other => stuck s!"write-Unlock on a non-RWMutex sync cell: {repr other}"
+  | .wgAdd, [av, dv] => do
+      let loc ← valueAsLoc av
+      let delta ← valueAsInt dv
+      match ← syncCell s loc with
+      | .waitGroup counter waiters => do
+          let counter' := counter + delta
+          -- The update lands BEFORE any panic (probe p13).
+          let s' ← storeLoc s loc (.syncData (.waitGroup counter' waiters))
+          if counter' < 0 then
+            return (.panicking [⟨runtimeErrorValue
+              "sync: negative WaitGroup counter", false⟩] k, s')
+          else if waiters > 0 && delta > 0 && counter == 0 then
+            return (.panicking [⟨runtimeErrorValue
+              "sync: WaitGroup misuse: Add called concurrently with Wait", false⟩] k, s')
+          else
+            return (.next k, s')
+      | other => stuck s!"Add on a non-WaitGroup sync cell: {repr other}"
+  | .wgWait, [av] => do
+      let loc ← valueAsLoc av
+      match ← syncCell s loc with
+      | .waitGroup counter waiters =>
+          if counter == 0 then return (.next k, s)
+          else do
+            let s' ← storeLoc s loc (.syncData (.waitGroup counter (waiters + 1)))
+            return (.blockedSync .wgWait loc env k, s')
+      | other => stuck s!"Wait on a non-WaitGroup sync cell: {repr other}"
+  | .onceBegin targets, [av] => do
+      let loc ← valueAsLoc av
+      match ← syncCell s loc with
+      | .once started done =>
+          if !started then do
+            let s' ← storeLoc s loc (.syncData (.once true false))
+            enterRecvTargets s' targets [.bool true] (.seqn #[]) env k
+          else if done then
+            enterRecvTargets s targets [.bool false] (.seqn #[]) env k
+          else
+            return (.blockedSync (.onceBegin targets) loc env k, s)
+      | other => stuck s!"Once.Do begin on a non-Once sync cell: {repr other}"
+  | .onceComplete, [av] => do
+      let loc ← valueAsLoc av
+      match ← syncCell s loc with
+      | .once started _ =>
+          if started then do
+            let s' ← storeLoc s loc (.syncData (.once true true))
+            return (.next k, s')
+          else throw (.internal "onceComplete without a matching onceBegin")
+      | other => stuck s!"Once.Do complete on a non-Once sync cell: {repr other}"
+  | op, vs => stuck s!"malformed sync-operator application: {repr op} on {vs.length} operand(s)"
 
 /-- Commit the ONE ready clause of a `select` (spec step 3): perform its
 communication, then enter the body — for a receive with targets, via
@@ -2736,6 +3009,29 @@ inductive Step : Config → ExecState → Config → ExecState → Prop where
   | goArgNext {v cv vals a rest env k s} :
       Step (.retV v (.goArgsK cv vals (a :: rest) env k)) s
         (.evalE a env (.goArgsK cv (vals ++ [v]) rest env k)) s
+  -- Sync statements (spec-parity slice 2, design note §§4,6): the
+  -- `chanStK` shape verbatim — operand entry/shift, then ONE apply
+  -- step (`applySyncOp`: next / panicking / blocked / an onceBegin
+  -- delivery entry). The FATAL outcomes (unlock-of-unlocked etc.) are
+  -- `Except.error (.fatal …)` from the apply and therefore
+  -- RELATION-SILENT, like the diagnostic errors — an unrecoverable
+  -- abort has no successor configuration. The blocked shape
+  -- `.blockedSync` has no outgoing per-goroutine rule (the pool wakes
+  -- it); the apply consumes NO choices (the envelope statement at
+  -- `applySyncOp`).
+  | syncStFirst {stmt op e rest env k s} :
+      syncPlan stmt = some (op, e :: rest) →
+      Step (.exec stmt env k) s (.evalE e env (.syncStK op [] rest env k)) s
+  | syncStShift {op done v e rest env k s} :
+      Step (.retV v (.syncStK op done (e :: rest) env k)) s
+        (.evalE e env (.syncStK op (v :: done) rest env k)) s
+  | syncStApply {op done v c' env k s s'} :
+      applySyncOp s op (v :: done).reverse env k = .ok (c', s') →
+      Step (.retV v (.syncStK op done [] env k)) s c' s'
+  | syncStApplyPanic {op done v msg env k s} :
+      applySyncOp s op (v :: done).reverse env k = .error (.panic msg) →
+      Step (.retV v (.syncStK op done [] env k)) s
+        (.panicking [⟨runtimeErrorValue msg, false⟩] k) s
 
 /-- Reflexive-transitive closure of `Step`. -/
 inductive Steps : Config → ExecState → Config → ExecState → Prop where

@@ -103,6 +103,9 @@ def GoValue.locSup : GoValue → Nat
   | .chan c => optLocSup c.base
   | .chanData buf _ _ => goValueListSup buf.toList
   | .funcVal _ captured => goValueListSup captured
+  -- Sync primitive state is LOC-FREE (spec-parity slice 2: booleans
+  -- and counters only — no heap reference can hide in one).
+  | .syncData _ => 0
 
 def goValueListSup : List GoValue → Nat
   | [] => 0
@@ -248,6 +251,9 @@ def Stmt.locSup : Stmt → Nat
   -- `go` statements (channels arc slice 2).
   | .goStmt callee args =>
       max (Expr.locSup callee) (exprListSup args.toList)
+  -- Sync statements (spec-parity slice 2): heads are loc-free.
+  | .syncStmt _ args targets =>
+      max (exprListSup args.toList) (assigneeListSup targets.toList)
 
 def stmtListSup : List Stmt → Nat
   | [] => 0
@@ -299,6 +305,12 @@ def chanStOpSup : ChanStOp → Nat
   | .send _ => 0
   | .recv targets _ => assigneeListSup targets
   | .close => 0
+
+/-- A sync op head's loc positions: only `onceBegin`'s delivery targets
+(spec-parity slice 2). -/
+def syncOpSup : SyncOp → Nat
+  | .onceBegin targets => assigneeListSup targets
+  | _ => 0
 
 /-- A phase-1-resolved target's loc positions (its operand VALUES;
 `TargetStep`s are loc-free). -/
@@ -400,6 +412,10 @@ def Cont.locSup : Cont → Nat
       max (max (GoValue.locSup callee) (goValueListSup vals))
         (max (exprListSup pending)
           (max (LocalEnv.locSup env) (Cont.locSup k)))
+  | .syncStK op done pending env k =>
+      max (max (syncOpSup op) (goValueListSup done))
+        (max (exprListSup pending)
+          (max (LocalEnv.locSup env) (Cont.locSup k)))
 
 /-- One evaluated select clause's sup (`.blockedSelect` payloads). -/
 def evClauseSup : EvClause → Nat
@@ -432,6 +448,9 @@ def Config.locSup : Config → Nat
   | .blockedSelect clauses env k =>
       max (evClausesSup clauses) (max (LocalEnv.locSup env) (Cont.locSup k))
   | .spawned k => Cont.locSup k
+  | .blockedSync op loc env k =>
+      max (max (syncOpSup op) (Loc.locSup loc))
+        (max (LocalEnv.locSup env) (Cont.locSup k))
 
 /-- State sup: heap keys+values, and every stored function body
 (bodies enter the configuration at `enterFrame`). -/
@@ -487,6 +506,7 @@ def Cont.itersNormalized (types : TypeEnv) : Cont → Bool
   | .storeK _ _ _ _ k => Cont.itersNormalized types k
   | .goCalleeK _ _ k => Cont.itersNormalized types k
   | .goArgsK _ _ _ _ k => Cont.itersNormalized types k
+  | .syncStK _ _ _ _ k => Cont.itersNormalized types k
 
 @[inherit_doc Cont.itersNormalized]
 def Config.itersNormalized (types : TypeEnv) : Config → Bool
@@ -504,6 +524,7 @@ def Config.itersNormalized (types : TypeEnv) : Config → Bool
   | .blockedRecv _ _ _ _ k => Cont.itersNormalized types k
   | .blockedSelect _ _ k => Cont.itersNormalized types k
   | .spawned k => Cont.itersNormalized types k
+  | .blockedSync _ _ _ k => Cont.itersNormalized types k
   | .panicked _ => true
 
 /-! ## The Prop wrappers -/
@@ -1181,6 +1202,17 @@ theorem normalizeValueForTyFuel_locSup :
         simp_all [normalizeValueForTyFuel, GoValue.locSup, optLocSup] <;>
         subst h <;>
         simp [GoValue.locSup, optLocSup]
+    case sync kind =>
+      -- Sync arms (spec-parity slice 2): kind-matching state passes
+      -- through unchanged; everything else is stuck.
+      cases v <;> simp only [normalizeValueForTyFuel] at h
+      case syncData p =>
+        split at h
+        · simp only [pure_eq_ok, Except.ok.injEq] at h
+          subst h
+          exact Nat.le_refl _
+        · simp [stuck, throw, throwThe, MonadExceptOf.throw] at h
+      all_goals simp [stuck, throw, throwThe, MonadExceptOf.throw] at h
     all_goals
       simp only [normalizeValueForTyFuel, pure_eq_ok, Except.ok.injEq] at h
       subst h
@@ -1456,6 +1488,12 @@ theorem isNormalForTyFuel_sound {σ : ExecState} :
     | chan _ _ =>
       cases v
       case chan cv => simp [normalizeValueForTyFuel, pure, Except.pure]
+      all_goals exact absurd h (by simp [isNormalForTyFuel])
+    | sync kind =>
+      cases v
+      case syncData p =>
+        simp only [isNormalForTyFuel] at h
+        simp [normalizeValueForTyFuel, h, pure, Except.pure]
       all_goals exact absurd h (by simp [isNormalForTyFuel])
     | pointer _ => simp [normalizeValueForTyFuel, pure, Except.pure]
 
@@ -4802,6 +4840,276 @@ theorem applyChanOp_wf {σ : ExecState} {op : ChanStOp}
         omega
   · simp [stuck, throw, throwThe, MonadExceptOf.throw] at h
 
+/-- `syncPlan` extraction is loc-bounded by the statement (the
+`chanPlan_locSup` twin, spec-parity slice 2). -/
+theorem syncPlan_locSup {stmt : Stmt} {op : SyncOp}
+    {es : List Expr} (h : syncPlan stmt = some (op, es)) :
+    exprListSup es ≤ Stmt.locSup stmt
+      ∧ syncOpSup op ≤ Stmt.locSup stmt := by
+  cases stmt <;>
+    first
+    | (simp [syncPlan] at h; done)
+    | skip
+  case syncStmt sop args targets =>
+    cases sop <;> simp only [syncPlan] at h <;> repeat' split at h
+    all_goals try (simp at h; done)
+    all_goals
+      simp only [Option.some.injEq, Prod.mk.injEq] at h
+    all_goals
+      obtain ⟨rfl, rfl⟩ := h
+    all_goals
+      refine ⟨?_, ?_⟩
+      · simpa [Stmt.locSup] using Nat.le_max_left _ _
+      · simp only [Stmt.locSup, syncOpSup]
+        first
+        | exact Nat.zero_le _
+        | exact Nat.le_max_right _ _
+
+/-- The lock/counter cells store LOC-FREE values, so a sync cell store
+never raises any sup. -/
+theorem syncData_locSup (p : SyncPrim) : GoValue.locSup (.syncData p) = 0 := rfl
+
+set_option maxHeartbeats 1600000 in
+/-- `applySyncOp` preservation (spec-parity slice 2, the
+`applyChanOp_wf` twin): wf state out, bounded successor configuration,
+types unchanged, allocator monotone. Sync stores are loc-free
+(`syncData_locSup`), so every arm is either state-invariant or a
+`storeLoc_pres` of a loc-free value. -/
+theorem applySyncOp_wf {σ : ExecState} {op : SyncOp}
+    {vs : List GoValue} {env : LocalEnv} {k : Cont} {c' : Config}
+    {σ' : ExecState}
+    (hw : StateWf σ) (hvs : goValueListSup vs ≤ σ.nextAddr)
+    (hop : syncOpSup op ≤ σ.nextAddr)
+    (henv : LocalEnv.locSup env ≤ σ.nextAddr)
+    (hk : Cont.locSup k ≤ σ.nextAddr)
+    (h : applySyncOp σ op vs env k = .ok (c', σ')) :
+    StateWf σ' ∧ Config.locSup c' ≤ σ'.nextAddr ∧ σ'.types = σ.types
+      ∧ σ.nextAddr ≤ σ'.nextAddr := by
+  -- Closers shared by every arm's outcomes.
+  rw [applySyncOp.eq_def] at h
+  split at h
+  case _ av =>  -- lock
+    simp only [goValueListSup, Nat.max_le] at hvs
+    simp only [bind_eq_ok] at h
+    obtain ⟨loc, hloc, h⟩ := h
+    have hlocb : Loc.locSup loc ≤ σ.nextAddr :=
+      Nat.le_trans (valueAsLoc_locSup hloc) (by omega)
+    obtain ⟨p, hcell, h⟩ := h
+    split at h
+    · split at h
+      · simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+        obtain ⟨rfl, rfl⟩ := h
+        refine ⟨hw, ?_, rfl, Nat.le_refl _⟩
+        simp only [Config.locSup, syncOpSup, Nat.max_le]
+        omega
+      · simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+        obtain ⟨σ₂, hst, rfl, rfl⟩ := h
+        obtain ⟨w1, w2, w3, w4, w5⟩ := storeLoc_pres hw hlocb
+          (by simp [syncData_locSup]) hst
+        refine ⟨w1, ?_, w4, w2⟩
+        simp only [Config.locSup]
+        omega
+    · simp [stuck, throw, throwThe, MonadExceptOf.throw] at h
+  case _ av =>  -- unlock
+    simp only [goValueListSup, Nat.max_le] at hvs
+    simp only [bind_eq_ok] at h
+    obtain ⟨loc, hloc, h⟩ := h
+    have hlocb : Loc.locSup loc ≤ σ.nextAddr :=
+      Nat.le_trans (valueAsLoc_locSup hloc) (by omega)
+    obtain ⟨p, hcell, h⟩ := h
+    split at h
+    · split at h
+      · simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+        obtain ⟨σ₂, hst, rfl, rfl⟩ := h
+        obtain ⟨w1, w2, w3, w4, w5⟩ := storeLoc_pres hw hlocb
+          (by simp [syncData_locSup]) hst
+        refine ⟨w1, ?_, w4, w2⟩
+        simp only [Config.locSup]
+        omega
+      · simp [throw, throwThe, MonadExceptOf.throw] at h
+    · simp [stuck, throw, throwThe, MonadExceptOf.throw] at h
+  case _ av =>  -- rlock
+    simp only [goValueListSup, Nat.max_le] at hvs
+    simp only [bind_eq_ok] at h
+    obtain ⟨loc, hloc, h⟩ := h
+    have hlocb : Loc.locSup loc ≤ σ.nextAddr :=
+      Nat.le_trans (valueAsLoc_locSup hloc) (by omega)
+    obtain ⟨p, hcell, h⟩ := h
+    split at h
+    · split at h
+      · simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+        obtain ⟨rfl, rfl⟩ := h
+        refine ⟨hw, ?_, rfl, Nat.le_refl _⟩
+        simp only [Config.locSup, syncOpSup, Nat.max_le]
+        omega
+      · simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+        obtain ⟨σ₂, hst, rfl, rfl⟩ := h
+        obtain ⟨w1, w2, w3, w4, w5⟩ := storeLoc_pres hw hlocb
+          (by simp [syncData_locSup]) hst
+        refine ⟨w1, ?_, w4, w2⟩
+        simp only [Config.locSup]
+        omega
+    · simp [stuck, throw, throwThe, MonadExceptOf.throw] at h
+  case _ av =>  -- runlock
+    simp only [goValueListSup, Nat.max_le] at hvs
+    simp only [bind_eq_ok] at h
+    obtain ⟨loc, hloc, h⟩ := h
+    have hlocb : Loc.locSup loc ≤ σ.nextAddr :=
+      Nat.le_trans (valueAsLoc_locSup hloc) (by omega)
+    obtain ⟨p, hcell, h⟩ := h
+    split at h
+    · split at h
+      · simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+        obtain ⟨σ₂, hst, rfl, rfl⟩ := h
+        obtain ⟨w1, w2, w3, w4, w5⟩ := storeLoc_pres hw hlocb
+          (by simp [syncData_locSup]) hst
+        refine ⟨w1, ?_, w4, w2⟩
+        simp only [Config.locSup]
+        omega
+      · simp [throw, throwThe, MonadExceptOf.throw] at h
+    · simp [stuck, throw, throwThe, MonadExceptOf.throw] at h
+  case _ av =>  -- wlock
+    simp only [goValueListSup, Nat.max_le] at hvs
+    simp only [bind_eq_ok] at h
+    obtain ⟨loc, hloc, h⟩ := h
+    have hlocb : Loc.locSup loc ≤ σ.nextAddr :=
+      Nat.le_trans (valueAsLoc_locSup hloc) (by omega)
+    obtain ⟨p, hcell, h⟩ := h
+    split at h
+    · split at h
+      · simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+        obtain ⟨σ₂, hst, rfl, rfl⟩ := h
+        obtain ⟨w1, w2, w3, w4, w5⟩ := storeLoc_pres hw hlocb
+          (by simp [syncData_locSup]) hst
+        refine ⟨w1, ?_, w4, w2⟩
+        simp only [Config.locSup]
+        omega
+      · simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+        obtain ⟨σ₂, hst, rfl, rfl⟩ := h
+        obtain ⟨w1, w2, w3, w4, w5⟩ := storeLoc_pres hw hlocb
+          (by simp [syncData_locSup]) hst
+        refine ⟨w1, ?_, w4, w2⟩
+        simp only [Config.locSup, syncOpSup, Nat.max_le]
+        omega
+    · simp [stuck, throw, throwThe, MonadExceptOf.throw] at h
+  case _ av =>  -- wunlock
+    simp only [goValueListSup, Nat.max_le] at hvs
+    simp only [bind_eq_ok] at h
+    obtain ⟨loc, hloc, h⟩ := h
+    have hlocb : Loc.locSup loc ≤ σ.nextAddr :=
+      Nat.le_trans (valueAsLoc_locSup hloc) (by omega)
+    obtain ⟨p, hcell, h⟩ := h
+    split at h
+    · split at h
+      · simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+        obtain ⟨σ₂, hst, rfl, rfl⟩ := h
+        obtain ⟨w1, w2, w3, w4, w5⟩ := storeLoc_pres hw hlocb
+          (by simp [syncData_locSup]) hst
+        refine ⟨w1, ?_, w4, w2⟩
+        simp only [Config.locSup]
+        omega
+      · simp [throw, throwThe, MonadExceptOf.throw] at h
+    · simp [stuck, throw, throwThe, MonadExceptOf.throw] at h
+  case _ av dv =>  -- wgAdd
+    simp only [goValueListSup, Nat.max_le] at hvs
+    simp only [bind_eq_ok] at h
+    obtain ⟨loc, hloc, h⟩ := h
+    have hlocb : Loc.locSup loc ≤ σ.nextAddr :=
+      Nat.le_trans (valueAsLoc_locSup hloc) (by omega)
+    obtain ⟨delta, hdelta, h⟩ := h
+    obtain ⟨p, hcell, h⟩ := h
+    split at h
+    · simp only [bind_eq_ok] at h
+      obtain ⟨σ₂, hst, h⟩ := h
+      obtain ⟨w1, w2, w3, w4, w5⟩ := storeLoc_pres hw hlocb
+        (by simp [syncData_locSup]) hst
+      split at h
+      · simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+        obtain ⟨rfl, rfl⟩ := h
+        refine ⟨w1, ?_, w4, w2⟩
+        simp only [Config.locSup, panicChainSup, runtimeErrorValue_locSup,
+          goValueListSup, Nat.max_le]
+        omega
+      · split at h <;>
+          (simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h;
+           obtain ⟨rfl, rfl⟩ := h;
+           refine ⟨w1, ?_, w4, w2⟩;
+           simp only [Config.locSup, panicChainSup, runtimeErrorValue_locSup,
+             goValueListSup, Nat.max_le];
+           omega)
+    · simp [stuck, throw, throwThe, MonadExceptOf.throw] at h
+  case _ av =>  -- wgWait
+    simp only [goValueListSup, Nat.max_le] at hvs
+    simp only [bind_eq_ok] at h
+    obtain ⟨loc, hloc, h⟩ := h
+    have hlocb : Loc.locSup loc ≤ σ.nextAddr :=
+      Nat.le_trans (valueAsLoc_locSup hloc) (by omega)
+    obtain ⟨p, hcell, h⟩ := h
+    split at h
+    · split at h
+      · simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+        obtain ⟨rfl, rfl⟩ := h
+        refine ⟨hw, ?_, rfl, Nat.le_refl _⟩
+        simp only [Config.locSup]
+        omega
+      · simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+        obtain ⟨σ₂, hst, rfl, rfl⟩ := h
+        obtain ⟨w1, w2, w3, w4, w5⟩ := storeLoc_pres hw hlocb
+          (by simp [syncData_locSup]) hst
+        refine ⟨w1, ?_, w4, w2⟩
+        simp only [Config.locSup, syncOpSup, Nat.max_le]
+        omega
+    · simp [stuck, throw, throwThe, MonadExceptOf.throw] at h
+  case _ targets av =>  -- onceBegin
+    simp only [goValueListSup, Nat.max_le] at hvs
+    simp only [syncOpSup] at hop
+    simp only [bind_eq_ok] at h
+    obtain ⟨loc, hloc, h⟩ := h
+    have hlocb : Loc.locSup loc ≤ σ.nextAddr :=
+      Nat.le_trans (valueAsLoc_locSup hloc) (by omega)
+    obtain ⟨p, hcell, h⟩ := h
+    split at h
+    · split at h
+      · simp only [bind_eq_ok] at h
+        obtain ⟨σ₂, hst, h⟩ := h
+        obtain ⟨w1, w2, w3, w4, w5⟩ := storeLoc_pres hw hlocb
+          (by simp [syncData_locSup]) hst
+        obtain ⟨q1, q2, q3, q4⟩ := enterRecvTargets_wf w1
+          (by omega) (by simp [goValueListSup, GoValue.locSup])
+          (by simp [Stmt.locSup, stmtListSup]) (by omega) (by omega) h
+        exact ⟨q1, q2, q3.trans w4, Nat.le_trans w2 q4⟩
+      · split at h
+        · obtain ⟨q1, q2, q3, q4⟩ := enterRecvTargets_wf hw
+            (by omega) (by simp [goValueListSup, GoValue.locSup])
+            (by simp [Stmt.locSup, stmtListSup]) (by omega) (by omega) h
+          exact ⟨q1, q2, q3, q4⟩
+        · simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+          obtain ⟨rfl, rfl⟩ := h
+          refine ⟨hw, ?_, rfl, Nat.le_refl _⟩
+          simp only [Config.locSup, syncOpSup, Nat.max_le]
+          omega
+    · simp [stuck, throw, throwThe, MonadExceptOf.throw] at h
+  case _ av =>  -- onceComplete
+    simp only [goValueListSup, Nat.max_le] at hvs
+    simp only [bind_eq_ok] at h
+    obtain ⟨loc, hloc, h⟩ := h
+    have hlocb : Loc.locSup loc ≤ σ.nextAddr :=
+      Nat.le_trans (valueAsLoc_locSup hloc) (by omega)
+    obtain ⟨p, hcell, h⟩ := h
+    split at h
+    · split at h
+      · simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
+        obtain ⟨σ₂, hst, rfl, rfl⟩ := h
+        obtain ⟨w1, w2, w3, w4, w5⟩ := storeLoc_pres hw hlocb
+          (by simp [syncData_locSup]) hst
+        refine ⟨w1, ?_, w4, w2⟩
+        simp only [Config.locSup]
+        omega
+      · simp [throw, throwThe, MonadExceptOf.throw] at h
+    · simp [stuck, throw, throwThe, MonadExceptOf.throw] at h
+  case _ =>  -- malformed arity: stuck
+    simp [stuck, throw, throwThe, MonadExceptOf.throw] at h
+
 set_option maxHeartbeats 1600000 in
 /-- Extract the source element behind one `mapM` output position (the
 multi-ready select arm's commit list). -/
@@ -5015,6 +5323,42 @@ theorem applyChanOp_itersNormalized {σ : ExecState} {op : ChanStOp}
         obtain ⟨σ₂, hst, rfl, rfl⟩ := h
         simpa [Config.itersNormalized] using hk
   · simp [stuck, throw, throwThe, MonadExceptOf.throw] at h
+
+@[inherit_doc applySyncOp_wf]
+theorem applySyncOp_itersNormalized {σ : ExecState} {op : SyncOp}
+    {vs : List GoValue} {env : LocalEnv} {k : Cont} {c' : Config}
+    {σ' : ExecState} {types : TypeEnv}
+    (h : applySyncOp σ op vs env k = .ok (c', σ'))
+    (hk : Cont.itersNormalized types k = true) :
+    Config.itersNormalized types c' = true := by
+  rw [applySyncOp.eq_def] at h
+  split at h
+  all_goals
+    try (simp [stuck, throw, throwThe, MonadExceptOf.throw] at h; done)
+  all_goals
+    simp only [bind_eq_ok] at h
+  all_goals
+    obtain ⟨loc, hloc, h⟩ := h
+  all_goals
+    try obtain ⟨delta, hdelta, h⟩ := h  -- extra bind: wgAdd's delta
+  all_goals
+    try obtain ⟨p, hcell, h⟩ := h
+  all_goals
+    split at h
+  all_goals
+    try (simp [stuck, throw, throwThe, MonadExceptOf.throw] at h; done)
+  all_goals
+    repeat
+      first
+      | (simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h;
+         obtain ⟨rfl, rfl⟩ := h;
+         simpa [Config.itersNormalized] using hk)
+      | (exact enterRecvTargets_itersNormalized h hk)
+      | (simp [throw, throwThe, MonadExceptOf.throw] at h; done)
+      | (simp only [bind_eq_ok] at h;
+         obtain ⟨σ₂, hst, h⟩ := h)
+      | split at h
+
 
 /-- Iteration-typing transparency of `commitClause`. -/
 theorem commitClause_itersNormalized {σ : ExecState} {env : LocalEnv}
@@ -5710,6 +6054,27 @@ theorem step_preserves_wf_loc {c : Config} {σ : ExecState} {c' : Config}
     obtain ⟨h1, h2, h3, h4⟩ := hop
     obtain ⟨w1, w2, w3, w4⟩ := applyChanOp_wf hs h1 h2 h3 h4 happly
     exact ⟨w1, w2, w3, w4⟩
+  case syncStFirst stmt op e rest env k hplan =>
+    refine ⟨hs, ?_, rfl, Nat.le_refl _⟩
+    obtain ⟨h1, h2⟩ := syncPlan_locSup hplan
+    simp only [exprListSup] at h1
+    simp only [ConfigWf, Config.locSup, Cont.locSup, Stmt.locSup, Expr.locSup,
+      GoValue.locSup, optLocSup, panicChainSup, goValueListSup, exprListSup,
+      stmtListSup, locListSup, deferListSup, assigneeListSup, optExprSup,
+      Nat.max_le] at hc h1 h2 ⊢
+    omega
+  case syncStApply op done v env k happly =>
+    have hop : goValueListSup (v :: done).reverse ≤ σ.nextAddr
+        ∧ syncOpSup op ≤ σ.nextAddr
+        ∧ LocalEnv.locSup env ≤ σ.nextAddr
+        ∧ Cont.locSup k ≤ σ.nextAddr := by
+      rw [goValueListSup_reverse]
+      simp only [ConfigWf, Config.locSup, Cont.locSup, goValueListSup,
+        exprListSup, Nat.max_le] at hc
+      simp only [goValueListSup]
+      omega
+    obtain ⟨h1, h2, h3, h4⟩ := hop
+    exact applySyncOp_wf hs h1 h2 h3 h4 happly
   case selectFirst clauses default? e rest env k hplan =>
     refine ⟨hs, ?_, rfl, Nat.le_refl _⟩
     have h1 : exprListSup (e :: rest) ≤ selectClausesSup clauses.toList := by
@@ -6029,6 +6394,9 @@ theorem step_preserves_iters {c : Config} {σ : ExecState} {c' : Config}
   case chanStApply op done v env k happly =>
     simp only [Config.itersNormalized, Cont.itersNormalized] at hi
     exact applyChanOp_itersNormalized happly hi
+  case syncStApply op done v env k happly =>
+    simp only [Config.itersNormalized, Cont.itersNormalized] at hi
+    exact applySyncOp_itersNormalized happly hi
   case selectApply clauses default? done v env k ch ch' happly =>
     simp only [Config.itersNormalized, Cont.itersNormalized] at hi
     exact applySelect_itersNormalized happly hi

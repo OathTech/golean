@@ -120,6 +120,26 @@ inductive ChanDir where
   | recv
   deriving Repr, BEq, Inhabited, DecidableEq
 
+/-- The sync-package primitive KINDS modeled as machine types
+(spec-parity slice 2, `docs/2026-08-09_sync-package-design.md` §3; scope
+D4: Mutex/RWMutex/WaitGroup/Once in — atomics/Map/Cond/Pool out, each
+failing closed at the frontend). Like `ChanDir` this is a STATIC type
+property: `Ty.sync kind` is the type of the sync struct, whose zero
+value is the zero primitive ("The zero value for a Mutex is an unlocked
+mutex"). -/
+inductive SyncKind where
+  | mutex
+  | rwmutex
+  | waitGroup
+  | once
+  deriving Repr, BEq, Inhabited, DecidableEq
+
+def SyncKind.name : SyncKind → String
+  | .mutex => "Mutex"
+  | .rwmutex => "RWMutex"
+  | .waitGroup => "WaitGroup"
+  | .once => "Once"
+
 def IntKind.compatibleResult (left right : IntKind) : Option IntKind :=
   if left == right then
     some left
@@ -169,6 +189,17 @@ inductive GoError where
   harness. Never combined with deadlock expectations (-race suppresses
   the deadlock detector — ground-truth note §5). -/
   | raceDetected
+  /-- An UNRECOVERABLE runtime throw — a PROGRAM behavior, not a model
+  artifact (spec-parity slice 2, sync design note §2): gc's
+  `fatal error: <msg>` aborts (exit status 2) that `recover` does NOT
+  catch (probed: `sync: unlock of unlocked mutex` and the RWMutex
+  misuse throws — runtime `fatal`, never a `panic()`), so they must not
+  be modeled as `.panic` (a recover would wrongly intervene) nor as a
+  refusal (the behavior is probed and deterministic — differentially
+  testable, the deadlock terminal's pattern with a per-case message).
+  The message is gc's fixed string after "fatal error: ", which the
+  harness compares on both sides (`expected_status: fatal`). -/
+  | fatal (message : String)
   deriving Repr, BEq, Inhabited
 
 def GoError.status : GoError → String
@@ -179,6 +210,7 @@ def GoError.status : GoError → String
   | .fuelOut => "fuel-out"
   | .deadlock => "deadlock"
   | .raceDetected => "race"
+  | .fatal _ => "fatal"
 
 def GoError.message : GoError → String
   | .panic message => message
@@ -188,6 +220,7 @@ def GoError.message : GoError → String
   | .fuelOut => "GoCore execution fuel exhausted"
   | .deadlock => "all goroutines are asleep - deadlock!"
   | .raceDetected => "data race detected"
+  | .fatal message => message
 
 structure Addr where
   id : Nat
@@ -262,6 +295,11 @@ inductive Ty where
   | interface (id : TypeId)
   | defined (id : TypeId)
   | unsupported (feature : String)
+  /-- A sync-package primitive type (`sync.Mutex` / `sync.RWMutex` /
+  `sync.WaitGroup` / `sync.Once`; spec-parity slice 2, design note §3).
+  Zero value = the zero primitive (`GoValue.syncData`). Appended at the
+  END of the inductive so positional case tags stay stable. -/
+  | sync (kind : GoCore.SyncKind)
   deriving Repr, Inhabited
 
 /-- Fuel for structural `Ty` equality. Bounds COMBINED structural depth
@@ -300,6 +338,7 @@ def Ty.eqbFuel : Nat → Ty → Ty → Bool
   | _, .interface a, .interface b => a == b
   | _, .defined a, .defined b => a == b
   | _, .unsupported a, .unsupported b => a == b
+  | _, .sync a, .sync b => a == b
   | _, _, _ => false
 
 def Ty.eqbListFuel : Nat → List Ty → List Ty → Bool
@@ -339,6 +378,9 @@ def Ty.dynamicName : Ty → String
   | .chan .recv e => "<-chan " ++ Ty.dynamicName e
   | .funcType _ _ => "func"
   | .unsupported f => s!"<unsupported {f}>"
+  -- reflect.Type.Name() on sync.Mutex is "Mutex" (package-unqualified,
+  -- the observation channel's contract).
+  | .sync kind => kind.name
 
 end GoCore
 
@@ -415,6 +457,41 @@ reference. -/
 structure ChanValue where
   base : Option Loc
   deriving Repr, BEq
+
+/-- The runtime STATE of a sync-package primitive (spec-parity slice 2,
+design note §§3-4). Sync structs are Go VALUES — probe p10: a copy of a
+locked mutex carries the locked state and the runtime detects nothing —
+so the state lives in the heap cell where the variable lives (no
+reference cell, no registry), and struct copies copy it, exactly gc.
+Every scalar here is state gc itself keeps in its state words:
+`pendingW` (blocked write-lockers) realizes the DOCUMENTED
+writer-exclusion of new readers (rwmutex.go: "a blocked Lock call
+excludes new readers from acquiring the lock"); `waiters` (parked
+Wait callers) is what gc's Add-concurrent-with-Wait misuse panic tests
+(waitgroup.go:120). NO waiter queues, no identities, no order — the
+blocked goroutines themselves are `Config.blockedSync` shapes. -/
+inductive SyncPrim where
+  | mutex (locked : Bool)
+  | rwmutex (writer : Bool) (readers : Nat) (pendingW : Nat)
+  | waitGroup (counter : Int) (waiters : Nat)
+  | once (started : Bool) (done : Bool)
+  deriving Repr, BEq, Inhabited, DecidableEq
+
+/-- The zero value of a sync kind ("The zero value for a Mutex is an
+unlocked mutex" — and likewise for the other three). -/
+def GoCore.SyncKind.zero : GoCore.SyncKind → SyncPrim
+  | .mutex => .mutex false
+  | .rwmutex => .rwmutex false 0 0
+  | .waitGroup => .waitGroup 0 0
+  | .once => .once false false
+
+/-- The kind a primitive's state belongs to (the normalizer's
+kind-compatibility check). -/
+def SyncPrim.kind : SyncPrim → GoCore.SyncKind
+  | .mutex _ => .mutex
+  | .rwmutex _ _ _ => .rwmutex
+  | .waitGroup _ _ => .waitGroup
+  | .once _ _ => .once
 
 structure GoString where
   bytes : Array UInt8
@@ -547,6 +624,10 @@ inductive GoValue where
   over one variable sharing it. Method values and (later) deferred calls use
   the same shape. The zero value of a func type is `nil`, not this. -/
   | funcVal (fid : GoCore.FuncId) (captured : List GoValue)
+  /-- A sync-package primitive's state, living in the cell where the
+  sync struct lives (spec-parity slice 2, design note §3 — the VALUE
+  model: copies carry state, probe p10). Contains no locations. -/
+  | syncData (p : SyncPrim)
   deriving Repr
 
 
@@ -620,6 +701,7 @@ def GoValue.eqbFuel : Nat → GoValue → GoValue → Bool
       c₁ == c₂ && k₁ == k₂ && GoValue.eqbListWith (GoValue.eqbFuel f) b₁.toList b₂.toList
   | f + 1, .funcVal id₁ c₁, .funcVal id₂ c₂ =>
       id₁ == id₂ && GoValue.eqbListWith (GoValue.eqbFuel f) c₁ c₂
+  | _, .syncData a, .syncData b => a == b
   | _, _, _ => false
 
 /-- Structural `GoValue` equality — THE `BEq GoValue` instance (replacing

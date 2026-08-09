@@ -260,6 +260,15 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
             | none => throw (.unsupported "unsupported multi-assignment target assignee")
           else
             throw (.stuck s!"multi-assignment expected {left.size} value(s), got {right.size}")
+      | .syncStmt op args targets =>
+          -- Sync statements (spec-parity slice 2): operand-plan entry
+          -- mirroring the channel arm. Named scrutinee for the
+          -- correspondence proofs' fun_cases rewrites.
+          match _hplan : syncPlan (.syncStmt op args targets) with
+          | some (sop, e :: rest) =>
+              return (.evalE e env (.syncStK sop [] rest env k), s, choices)
+          | some (_, []) => throw (.internal "empty sync-statement operand plan")
+          | none => throw (.unsupported "malformed sync-statement shape (arity/targets)")
       | wide =>
           -- newValue / makeSlice / makeMap / mapAssign / mapLookup /
           -- typeAssert / appendSlice / copySlice
@@ -510,6 +519,21 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
               return (.evalE a env (.goArgsK cv (vals ++ [v]) rest env k'), s, choices)
           | [] => throw (.unsupported
               "go spawn outside the thread pool (goroutine spawn is a pool step; go during package init is refused this slice)")
+      | .syncStK op done pending env k' =>
+          match pending with
+          | e :: rest =>
+              return (.evalE e env (.syncStK op (v :: done) rest env k'), s, choices)
+          | [] =>
+              -- The sync apply (spec-parity slice 2): consumes NO
+              -- choices (the envelope statement at `applySyncOp` — the
+              -- acquisition-order latitude is entirely the existing L1
+              -- site's). `.fatal` propagates as the unrecoverable
+              -- terminal it is; recoverable panics become `.panicking`.
+              match applySyncOp s op (v :: done).reverse env k' with
+              | .ok (c', s') => return (c', s', choices)
+              | .error (.panic msg) =>
+                  return (.panicking [⟨runtimeErrorValue msg, false⟩] k', s, choices)
+              | .error err => throw err
       | .stop => throw (.internal "value delivered to empty continuation")
       | _ => throw (.internal "value delivered to statement continuation")
   | .next k =>
@@ -714,6 +738,10 @@ def stepFn (s : ExecState) (c : Config) (choices : Choices) :
   -- sequential machine never spawns, so reaching it here is an
   -- internal invariant break, never Go behavior.
   | .spawned _ => throw (.internal "post-spawn marker outside the thread pool")
+  -- A parked sync op with no sibling goroutine IS the deadlocked run
+  -- (probes p06-p08: gc's detector fires on a single goroutine parked
+  -- in Lock/Wait/Do) — the channel blocked shapes' classification.
+  | .blockedSync _ _ _ _ => throw .deadlock
 
 /-- Fuel-bounded iteration of `stepFn` to a terminal configuration. Fuel
 counts machine steps; the terminal check precedes the fuel check so a
@@ -731,6 +759,7 @@ def runConfig : Nat → ExecState → Config → Choices → Except GoError (Exe
       | .blockedSend _ _ _ => throw .deadlock
       | .blockedRecv _ _ _ _ _ => throw .deadlock
       | .blockedSelect _ _ _ => throw .deadlock
+      | .blockedSync _ _ _ _ => throw .deadlock
       | c =>
           match fuel with
           | 0 => throw .fuelOut
@@ -779,6 +808,7 @@ def execStmtLoop : Nat → ExecState → Config → Choices →
       | .blockedSend _ _ _ => throw .deadlock
       | .blockedRecv _ _ _ _ _ => throw .deadlock
       | .blockedSelect _ _ _ => throw .deadlock
+      | .blockedSync _ _ _ _ => throw .deadlock
       | c =>
           match fuel with
           | 0 => throw .fuelOut
