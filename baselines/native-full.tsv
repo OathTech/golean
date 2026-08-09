@@ -1,19 +1,18 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-09  commit: BUG-025 FIXED (call write-back rides the storeK spine, spec-parity-s1)
+# recorded: 2026-08-09  commit: BUG-052 red-first pins (call write-back target-operand timing vs gc)
 #   frontend: native  oracle: go run (strict lane) / go-run membership in the
 #   machine-enumerated observation set, sampled plain AND under -race
 #   (membership lane; go1.26.5) / schedule-tree singleton certification +
 #   strict go-run equality (confluent lane) / every-enumerated-path-refuses
 #   + go run -race red (racy lane; never combined with deadlock)
-# manifest_cases: 1411  pass: 1303  fail: 108
-# Re-pin reason: BUG-025 (spec-parity s1, movement B2): call targets
-#   are phase-1 TargetRef plans (outer checks deferred), carried
-#   through Cont.frame; the frame exit reads the pinned results and
-#   enters phase 2 (storeK) — stores left-to-right, one per step,
-#   checks at the store. frame-exit storeMany retired. Exactly the
-#   three held-open pins flip FAIL->PASS:
-#   multi-assign/call-write-back/{effects-suppressed,panic-identity,
-#   nil-field-store}. Zero drift on all 1408 other ids.
+# manifest_cases: 1417  pass: 1304  fail: 113
+# Re-pin reason: BUG-052 red-first pins (S1 audit major): five
+#   multi-assign/call-write-back-order cases pin gc's CALL-FIRST
+#   realization of the spec-unordered target-operand/call timing on
+#   lhs...,x = f(...) (index missed/spurious panic, global index,
+#   deref target, slice-header base) — all FAIL until the reorder
+#   lands — plus the hoisted-call control (PASS, the internal-
+#   consistency guard). Zero drift on all 1411 prior ids.
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
 PASS	arrays/array-copy	-
@@ -1040,6 +1039,12 @@ PASS	multi-assign/blank-discard-nonint	-
 PASS	multi-assign/call-return-assignment	-
 PASS	multi-assign/call-write-back/effects-suppressed	-
 PASS	multi-assign/call-write-back/nil-field-store	-
+FAIL	multi-assign/call-write-back-order/deref-target	differential
+FAIL	multi-assign/call-write-back-order/global-index	differential
+PASS	multi-assign/call-write-back-order/hoisted-control	-
+FAIL	multi-assign/call-write-back-order/index-missed-panic	differential
+FAIL	multi-assign/call-write-back-order/index-spurious-panic	differential
+FAIL	multi-assign/call-write-back-order/slice-header-base	differential
 PASS	multi-assign/call-write-back/panic-identity	-
 PASS	multi-assign/chain-field-over-index	-
 PASS	multi-assign/chain-field-over-index/array-field	-

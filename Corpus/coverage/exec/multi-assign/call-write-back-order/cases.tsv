@@ -1,0 +1,7 @@
+# id	subject	args	expected_status	expected_reason	features
+index-missed-panic	indexMissedPanic	-	ok	-	multi_assign,multi_result,calls,indexing,panic,recover,evaluation_order
+index-spurious-panic	indexSpuriousPanic	-	ok	-	multi_assign,multi_result,calls,indexing,panic,recover,evaluation_order
+global-index	globalIndex	-	ok	-	multi_assign,multi_result,calls,indexing,globals,evaluation_order
+deref-target	derefTarget	-	ok	-	multi_assign,multi_result,calls,pointers,evaluation_order
+slice-header-base	sliceHeaderBase	-	ok	-	multi_assign,multi_result,calls,slices,indexing,evaluation_order
+hoisted-control	hoistedControl	-	ok	-	multi_assign,calls,indexing,globals,evaluation_order
