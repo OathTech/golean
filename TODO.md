@@ -604,3 +604,87 @@ feature breadth up the raft ladder, `slices.Sort` extern + input fuzzing.
   (message-text fidelity vs envelope, method-set/externs machinery),
   not a drive-by fix.
 - [Verdi theorem-parity via differential embedding](docs/2026-08-08_verdi-parity-backlog.md) — validate we prove Verdi's theorem class by building a second differentially-tested embedding (Verdi's network semantics; fault layers map onto Choices envelopes). Needs its own scoping study; after/alongside the raft arc. (User idea 2026-08-08.)
+
+## Follow-ups from the 2026-08-09 tooling + compat-lane day
+
+Generated while landing `compat/verdi`, the build memory cap, and
+`compat/gobra`. Logged rather than folded in, so none of them silently
+widened an arc mid-audit. Roughly in priority order.
+
+- **`scripts/setup-deps` bootstrap (small, and it already cost us).** A
+  fresh worktree has no `deps/`, so `check-imported-goose` fails CLOSED
+  ("deps/goose is not a git checkout") and takes the whole gate red — hit
+  on the gobra worktree 2026-08-09, and predicted in
+  `docs/2026-08-09_verdi-compat-layer.md` §8b. The pins already live in
+  `scripts/check-imported-goose` / `scripts/import-goose`
+  (`PINNED_REV`). A script that clones the needed checkouts at their
+  pinned revs (cloning from a sibling worktree's `deps/` works offline
+  and is what unblocked us) removes a recurring papercut as the
+  worktree-per-lane pattern spreads.
+
+- **A cgroup kill is currently SILENT (`scripts/capped`).** Verified
+  2026-08-09: the real 60 GB runaway, capped at 8 G, dies at ~18 s with
+  peak in-scope RSS of 7.96 GB — and prints *nothing*, exiting 143. An
+  operator meeting that cold sees a build that mysteriously died, which
+  is approximately how this whole day started. The wrapper `exec`s
+  deliberately (that is what makes exit codes and Ctrl-C byte-exact —
+  both audits checked it), so it cannot observe the exit; fixing it means
+  either a fork-and-wait variant that preserves signal semantics, or a
+  post-hoc read of the scope's `memory.events`/`oom_kill` after failure.
+  Worth doing before someone else pays the diagnosis cost.
+
+- **Paths still uncapped.** Via `scripts/ci` everything inherits the
+  scope, but invoked DIRECTLY these do not: `scripts/coverage`,
+  `diff-one`, `comparator-judge`, `check-golden`, `check-imported-pins`,
+  `test-import-goose`, `test-lane-validation`, `comparator-setup`,
+  `diff-coverage`. And the one most likely to meet a pathological file:
+  **the Lean language server**, which elaborates on open with no wrapper
+  anywhere. Either route them through `scripts/capped` or decide
+  explicitly that the cap is gate-scoped only.
+
+- **Does `compat/**` deserve a gate? (decision, not a task.)** Nothing in
+  `scripts/ci`, the root lakefile, or the workflow builds `compat/verdi`
+  or `compat/gobra` — that IS the isolation contract, and it is why an
+  exploratory lane cannot break mainline. The cost: `compat/gobra`'s ~70
+  `#guard`s and both packages' `AxCheck` axiom audits run only when a
+  human builds the package, so these lanes can rot silently against
+  mainline drift. A nightly/`--slow`-tier compat build would catch that
+  without coupling the fast gate. Weigh against the parallel-lane story
+  in `docs/2026-08-09_verdi-compat-layer.md` §8b.
+
+- **Gobra: the fuel-sufficiency lemma is the arc's sharpest open item.**
+  `Parser.fuelFor = grammarDepth * (|toks|+1)` is ARGUED, not proved
+  (`compat/gobra/GobraCompat/Parser.lean`, docstring says so). An audit
+  could not break it — all 597,871 token sequences of length ≤ 6 parse,
+  measured need is ~1.5 fuel/token against 6 supplied — but the failure
+  mode is a **silently false round-trip**, which is exactly how the
+  original fuel bug hid for a whole session. The lemma wanted is
+  `fuelFor toks ≤ f → parseAssertion f toks ≠ .error "out of fuel"`.
+
+- **Gobra: the rest of §10's open ledger** (see
+  `docs/2026-08-09_gobra-lean-backend.md` §10b/§10d, all merged
+  knowingly): no witness instantiating the `GoFuncSpec` joint, so the
+  statement is a scaffold per CLAUDE.md's non-vacuity gate until the
+  `go_walk` proof lands; `GExpr.eval` gives `x / 0 = 0` where Gobra
+  imposes `requires r != 0` (fail-closed needs an `Option`/`Except`
+  evaluator and new `Decidable` instances); loop-invariant scoping is
+  unchecked (they name loop-locals the fragment does not model);
+  `GobraContract`'s flat `loopInvariants` + single `terminates` flag does
+  not survive a second loop and needs a clause structure recording
+  nesting; and the corpus-coverage figures need a **recorded extraction
+  script** — two independent extractions disagreed (507/29/20 vs
+  514/24/12), so only "~5%" is currently defensible.
+
+- **`GoFuncSpecT` belongs upstream if the Gobra lane matures.** It is the
+  total dual of `Surface.GoFuncSpec` and currently lives in
+  `compat/gobra/GobraCompat/Contract.lean` to keep `compat/`'s isolation
+  intact, pinned to its parent by `goFuncSpecT_imp_goFuncSpec`. Moving it
+  beside `GoFuncSpec` in `GoLeanProofs.Surface` is a coordination-point
+  slice, not a drive-by.
+
+- **`spec-parity-s2` is parked RED.** The sync-package spine is committed
+  at `2fc4f4f0` with an honest RED header: `MachineSound` has 16 open
+  proof errors (missing `sync` alternatives, unprovided `case8`/`case11`,
+  stale rewrites); every other module builds. Guardrails are already
+  green-pinned at `e44bf1c4` (35 go-run-verified sync cases + the fatal
+  status class). Resuming means finishing the proof half.
