@@ -40,6 +40,8 @@ import GoLeanProofs.Specs.GoldenSelectDone
 import GoLeanProofs.Specs.ImportedGooseBlock
 import GoLeanProofs.Specs.ImportedGooseDefer
 import GoLeanProofs.Specs.ImportedGooseNil
+import GoLeanProofs.Specs.ImportedGooseNew
+import GoLeanProofs.Specs.ImportedGooseVars
 import GoLeanProofs.Specs.ImportedGooseSelectTricky
 import GoLeanProofs.Specs.ImportedGooseMuxer
 import GoLeanProofs.Specs.ImportedGooseActris
