@@ -301,3 +301,209 @@ deletion test; no new Choices sites beyond slice 2's registry
 entries. Research-first: slices 2 and 4 open with short design notes
 (the sync memory-model rules; the decomposition proof plan) in the
 established options format where latitude exists.
+
+## Slice-5 record + ARC CLOSURE (2026-08-10, branch `spec-parity-s5`)
+
+Slice 5 is RECORDS-ONLY (work-plan item 5): zero Lean edits, zero
+corpus edits — the parity table, the matrix brought to arc-end state,
+this closure record, the cross-reference sweep. Gate at tip:
+`scripts/ci` PASS (records-only — zero drift expected and observed;
+the 44 designated statements byte-identical, verified below).
+Deliverables: **the per-example spec-parity table** as matrix §7
+(`docs/goose-perennial-comparison.md` — location choice recorded
+there: the standing matrix is the one canonical comparison home;
+every upstream status re-measured at 43d4efa with the command cited),
+matrix rows T1/T3/T7/T10 + §5/§6 updated with correction notes, the
+consolidated agenda below.
+
+### The arc in slices (39 commits before this slice, `git log
+--oneline main..spec-parity | wc -l`; each slice's own record above is
+the authoritative accounting)
+
+| slice | shipped | audit cycle → outcome |
+|---|---|---|
+| S1 (laws spine + F15 opener) | F15 fixed symmetrically; BUG-034/037/025 retired onto the tgtOpK/storeK spine, law families restated, all 8 held-open pins flipped | audit round found BUG-052 (call write-back operand timing — a real machine bug, red-first pinned then fixed) + the slow-lane cap miss; 4 fix commits + 2 delta-polish; 1 finding refuted |
+| S2 (the sync package) | Mutex/RWMutex/WaitGroup/Once live end-to-end (registry growth, ZERO new Choices sites), probed-fatal class, HB edges, 33/35 pins green (2 permanent out-of-scope: Cond/TryLock), 4 sync-only goose files R1 | audit fix round + delta rounds 2–4; round 4 CRITICAL (the import vet rebuilt on Go's own grammar) + residue cleanup; crash checkpoint 2fc4f4f0 recorded honestly mid-branch |
+| S3 (WP-walk driver) | THE EXEMPLAR + 5 more R3 D1 pairs (GoSpecC + readout twin over pinned lowerings), the kit, `wp_new_value` witnessed, the go_walk re-derivation + registration lesson, the tracked manifest | audit fix round (~4 surviving majors, ALL claims/records — the parity denominator corrected 37→28-of-36 at origin and every restatement) + delta polish (zero surviving critical/major) |
+| S4 (decomposition + channel rows) | the non-consuming-select checker refinement (witnessed both ways), 6 curated channel rows × 5 kernel theorems, the decomposition pipe through THE EXIT, `spawnNoopTripleC` + witness pair (the debt's TRIPLE half) | one polish round, zero critical/major; the load-bearing minor (stale inherited differential figure) fixed by a fresh full run FIRST-HAND |
+| S5 (this) | records only: parity table, matrix arc-end state, this record, sweep | sub-branch audit to follow (records dimension) |
+
+### The standing red set, with owners (measured at this record)
+
+**1465 ids: 1351 PASS / 114 recorded FAIL** (`awk` over
+`baselines/native-full.tsv`; zero drift all arc — every slice tip
+matched the tracked baseline on `result`+`stage` per id).
+
+- **85 `frontend-export`** — recorded fail-closed frontend coverage
+  classes; owner: future frontend slices, scheduled by value. Named
+  subsets: the 20 imported-goose rows (dominated by the
+  short-circuit-operand quarantine — including the FOUR upstream-Qed
+  oracles named in manifest/§7.1, the highest-leverage frontend item
+  this arc surfaced), the S1-recorded assignment-adjacent refusals
+  (map-element multi-assign targets), the sync Cond/TryLock
+  out-of-scope markers (owner: atomics arc / D4 widening).
+- **29 fidelity-stage** (23 lean-observation + 4 differential + 1
+  nondet + 1 go-run), split per `scripts/check-bugs.sh --list`:
+  - **16 untriaged** (the ratchet, `baselines/untriaged-count`) — of
+    which the DELIBERATE permanent entries carry their own records:
+    floats/to-int-out-of-range ×2 (fail-closed refusals, never flip),
+    init/hidden-dep-order (permanent deviation record),
+    channels/select-select ×2 (owner: the successor select slice —
+    matrix T12b), goroutines/spawn-in-init (init-phase concurrency,
+    unowned); the genuine backlog is the strings rune-conversion class
+    ×7 + arrays/pointer-array + pointers/nil-array-index-panic +
+    structs/tag-pointer-conversion (pre-existing, untouched this arc).
+  - **13 explained by a `docs/BUGS.md` entry** — maps *-during-range
+    (BUG-005 class), the panic-recover payload-method rows (the parked
+    `runtime.Error` scoping, TODO.md G1 entry), nil-literal-values +
+    imported-named-key rows, the two race-lane markers,
+    spawn-edge/nil-func-fatal (P-S2-2's parked migration).
+
+### The consolidated parked-items agenda (EVERY item ledgered this
+arc; grouped as the user's check-in agenda — nothing here was decided
+unilaterally)
+
+**A. Designation / spec-idiom calls (D3 curation, user-owned):**
+1. **P-S3-1** — designate the sequential exemplar pair? Cost is the
+   F4 def-only hoist + Challenge/Solution/judge-config/Audit wiring
+   (accounting in the S3 note §6).
+2. **S4 candidate** — designate `dspCert`+`dspAllSchedules` (channel
+   class exemplar)? Same hoist pattern (P-S4-4's `chanCert_*` move
+   rides along).
+3. **P-S2-3** — the sync feature class has NO candidate (the arc's
+   proof slices never reached sync specs); decide whether the sync
+   spec layer opens the successor arc.
+4. **P-S3-3** — keep or trim the duplicated hand walk
+   (`wp_compareNil_body_hand`). Default keep.
+5. **P-S3-5** — the joint sequential "completes-AND-verdict" form:
+   ship per-row, ship a pool-carrier `TerminatesNormallyC` variant, or
+   leave the two halves as stated.
+6. **P-S4-4** — `chanCert_*` hoisting; default keep-local.
+
+**B. Successor-arc machinery (scale/order calls):**
+7. **P-S4-1** — `ProgressExecC` at ∀-heap strength (the
+   pool-reachability kit's first instance) → assembles
+   `spawnNoopSpecC`, the debt's full form. Until then the honest claim
+   stays "the TRIPLE half is paid".
+8. **P-S4-2** — the channel WP law family + protocol layer (the
+   curated rows' D1 form 1; consumer seam built, `LangD.lean`).
+9. **P-S3-2** — backfill pinned lowerings: 73 unpinned units at arc
+   end (9 pinned — S4 added the three channel pin modules to S3's
+   six); whether to promote the `.tmp` mkpins helper to a tracked
+   script is part of the call.
+10. **P-S4-5** — google-search: bespoke certificate vs wait for the
+    decomposition lane (its membership cert + §7.3 row carry it
+    meanwhile).
+
+**C. Import/corpus cost calls:**
+11. **P-S4-3** — reopen the P2 import parking? Two of its rows
+    (`wp_MapClient`, `wp_makeGreeting`) are upstream-Qed parity rows
+    we cannot certify until it lands.
+
+**D. Lane/model design calls (S2's ledger, §12 of the sync note):**
+12. **P-S2-1** — promote `fatal` into membership/confluent lanes?
+13. **P-S2-2** — migrate go-of-nil-func onto `GoError.fatal`
+    (re-pins a recorded permanent red).
+14. **P-S2-4** — `valueEqFuel` refuses `==` at sync types
+    (model-vs-refuse when a target needs it).
+15. **P-S2-5** — U4 sync-object data-access race scope.
+
+**E. Recorded deferrals riding along (not P-numbered, ledgered in
+slice records):** the `typeAssert` spine-entry WP law (S1 — lands with
+its first consumer); the short-circuit `Expr.and`/`Expr.or` WP law
+family (S3's out-of-class gap; unblocks `testInterfaceNilWithType`);
+the short-circuit-operand FRONTEND quarantine (strictly earlier: 4
+upstream-Qed oracles blocked at R1); checker L2 branching (S4 §6(c) —
+only if a curated row ever needs a ≥2-ready select); **P-S3-4**
+`go_walk_step` ergonomics (tactic infra, soundness-neutral); the
+NPDRF reduction obligation (pre-existing metatheory debt, matrix T12
+— restated, not new).
+
+**Arc-level asks at the same check-in:** the pre-merge adversarial
+audit proposal for the WHOLE arc (protocol step 3 — the ask is
+unconditional; scope proposal to accompany it) and merge sign-off;
+the Comparator landmark fires if/when curation grows the designated
+set (D3); the perennial upstream pin (origin/master has moved past
+43d4efa — a rev bump is a deliberate recorded event, matrix
+maintenance contract).
+
+### Designation candidates for D3 curation (NOTHING designated this
+arc; the 44 designated statements byte-identical at every slice tip)
+
+| candidate | statement file | feature class it exemplifies | cost of designating |
+|---|---|---|---|
+| `GoLean.ImportedGoose.SemanticsNil.compareNilToNilSpecC` | `proofs/GoLeanProofs/Specs/GooseParityNilWP.lean` | class 1: imported sequential oracle, internal `GoSpecC` triple over the pinned lowering | the F4 def-only hoist (P-S3-1's accounting): the statement's defs live in the Iris-importing kit module and `ImportedGooseNil.lean` carries theorems — a core-import-only statement module must be split out (`ForkJoinTargets` pattern), plus Challenge/Solution/judge-config/Audit wiring and the statement-TCB closure extension |
+| `…compareNilToNilReadoutC` | same file | class 1: first-order pool-carrier export twin | shared with the row above (one hoist covers the pair) |
+| `GoLean.ImportedGoose.ChannelActris.dspCert` | `proofs/GoLeanProofs/Specs/GooseParityChannels.lean` | class 3: curated channel exemplar, kernel ∀-schedule certificate (upstream `wp_DSPExample` Qed beside it) | same hoist pattern: `chanSeed`/`cellIsInt`/driver/readout defs into a def-only module (P-S4-4's `chanCert_*` derivations move with them) + the same wiring |
+| `…dspAllSchedules` | same file | class 3: ∀-schedule verdict readout | shared with the row above |
+
+Deliberate NON-candidates, recorded: `spawnNoopTripleC` (curate the
+assembled `spawnNoopSpecC` when P-S4-1 pays the safety half, not the
+half-form); the sync class (no theorem exists yet — P-S2-3).
+
+### The exit-criterion walk (the charter's opening deliverable
+sentence + the five work-plan items + D1–D4 + the binding discipline;
+deferring with an honest log is success — each DEFERRED names its log)
+
+1. **"For goose/Perennial's proved examples, prove our analogues"** —
+   DONE at recorded strength, split honestly BOTH directions: 2
+   sequential upstream-Qed parity rows at the full D1 pair; 3
+   upstream-Abort discharges; 5 upstream-Qed channel lemmas with
+   kernel ∀-schedule families beside them; the against-us set NAMED (5
+   sequential oracles they prove and we don't — 1 law gap + 4
+   frontend-blocked; the channel D1 form open on all six rows).
+   Evidence: matrix §7; `docs/spec-parity-r3-manifest.md`.
+2. **"Iris triples internally"** — DONE for the sequential class
+   (`GoSpecC` through the laws spine, hand + `go_walk`); DEFERRED for
+   the channel class — log: manifest FC3's "NOT the D1 pair" paragraph
+   + P-S4-2 (the ∀-schedule family shipped instead, gap named per
+   row).
+3. **"Adequacy-exported first-order corollaries"** — DONE: every
+   proved row ships its deletion-test-clean readout/corollary twin
+   (readout twins; no-deadlock/no-race/termination corollaries).
+4. **"…designated"** — DEFERRED BY DESIGN to the user's D3 curation
+   (that is what D3 CURATED decided): candidates recorded above,
+   nothing designated by the arc. Log: slice notes §5/§10 + this
+   record.
+5. **"The comparison becomes statement-by-statement"** — DONE this
+   slice: matrix §7, one row per covered example, deltas both
+   directions, no ordering claims.
+6. **"Our exports ground in a tested semantics where theirs quantify
+   an untested model"** — DONE with the S4-corrected wording (their
+   Go model PACKAGE is well tested; the Rocq/GooseLang model and the
+   translation step are executed by no test — matrix §7 shared-delta
+   text carries the accurate form).
+7. **Work-plan items**: 1 DONE (S1 record), 2 DONE (S2 record), 3
+   DONE (S3 record), 4 DONE at recorded strength — the TRIPLE half of
+   the successor debt paid, the `GoSpecC` assembly deferred with its
+   named consumer (log: S4 note §9, P-S4-1) — and 5 is this record.
+   Item 5's "end-of-arc audit + Comparator landmark" tail is
+   USER-OWNED: the audit ask is merge-protocol step 3 (never skipped,
+   never self-granted); the landmark fires only if curation grows the
+   designated set.
+8. **D1–D4 honored as decided**: D1 BOTH (every proved R3 row is the
+   pair); D2 NATIVE (no Actris port; comparison at the export layer;
+   protocol layer recorded as future work with its consumer); D3
+   CURATED (tracked manifest + candidates, zero designations); D4 AS
+   STATED (sync scope exactly Mutex/RWMutex/WaitGroup/Once; the outs
+   recorded at their sites).
+9. **Binding discipline, checked**: guardrails first (F15 corpus, 35
+   sync pins, BUG-052 red-first, the negative checker control);
+   interpreter/relation lockstep (S2); zero drift at every slice tip;
+   designated statements byte-identical throughout (44 — `git diff`
+   over the branch range at S4/S5, name-list + closure gates green);
+   per-slice sub-branch audits held (trail above — every slice had at
+   least one round; two rounds surfaced a CRITICAL or a real machine
+   bug, which is the cycle working); no new Choices sites anywhere
+   (S2's registry entries consumed none); Iris strictly internal to
+   proofs (deletion test on every export). Honest deviations ON the
+   record: the S2 crash checkpoint (2fc4f4f0, red mid-branch,
+   completed next commit); S4's build commits briefly carrying an
+   inherited stale differential figure (caught by its audit, fixed
+   first-hand same round).
+
+**Verdict: the arc closes DELIVERED-WITH-NAMED-REMAINDERS.** The
+remainders are exactly items 7–11 of the agenda (the D1 channel form,
+the safety half, the pinning lever, P2) — none silent, each with an
+owner and a consumer. Nothing in this record is a merge request; the
+merge conversation starts at the check-in with the audit ask.
