@@ -376,19 +376,28 @@ feature breadth up the raft ladder, `slices.Sort` extern + input fuzzing.
   78 units / 172 rows at buildout end, 82 / 176 after the spec-parity
   arc's additions.)
 - Spec-parity arc (2026-08-09/10, branches `spec-parity`,
-  `spec-parity-s1..s5` — AWAITING the user check-in: pre-merge audit
+  `spec-parity-s1..s6` — AWAITING the user check-in: pre-merge audit
   ask + D3 designation curation + the parked-items agenda). Charter +
   ARC-CLOSURE RECORD: `docs/2026-08-09_spec-parity-arc-charter.md`
   (per-slice trail, standing red set with owners, the consolidated
   15-P-item check-in agenda, designation candidates, exit-criterion
   walk). Delivered: the laws-spine retirements (8 pins flipped,
   BUG-025/034/037/052), the sync package as machine primitives (D4
-  scope), 6 sequential R3 `GoSpecC`+readout pairs over pinned imported
+  scope), 10 sequential R3 `GoSpecC`+readout pairs over pinned imported
   lowerings + the tracked manifest (`docs/spec-parity-r3-manifest.md`),
-  6 curated channel ∀-schedule families, the decomposition pipe +
+  6 curated channel ∀-schedule families (fuel-general since slice 6),
+  the decomposition pipe +
   `spawnNoopTripleC` (the spawning-triple debt's TRIPLE half), and the
   per-example spec-parity table (`docs/goose-perennial-comparison.md`
-  §7). Nothing designated (charter D3 — user-owned curation;
+  §7). Slice 6 (user-directed amendment, 2026-08-10;
+  `docs/2026-08-10_spec-parity-s6.md`): the fuel-independence lift
+  (`execProgLoop_le` + `allStreamsOkPool_mono`, channel bundles
+  regeneralized — fuel off the against-us axis), P-S3-5 CLOSED
+  (`goSpec_seeded_totalReadout` + ten `<row>TotalReadout` joint
+  forms), the P-S3-2 bounded tranche (`scripts/gen-imported-pin`
+  tracked, 2 units pinned, 4 R3 rows proved — parity rows 2→4 — 1
+  oracle out-of-tranche with reason, remainder honestly not-reached).
+  Nothing designated (charter D3 — user-owned curation;
   candidates recorded in the closure record).
 
 ## Differential Execution

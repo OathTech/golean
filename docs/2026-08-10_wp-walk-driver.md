@@ -281,6 +281,9 @@ undesignated, listed in the manifest.
   from the `.tmp` mkpins helper to a tracked script, is a
   cost/coverage policy call → user. Meanwhile: the 6 pinned units
   carry the class; the manifest names the population.
+  (SLICE-6 STATUS, 2026-08-10: RESOLVED-BOUNDED — the helper is now
+  the tracked `scripts/gen-imported-pin`, pins 9 → 11, 4 new R3 rows;
+  the manifest's slice-6 addendum is the record.)
 - **P-S3-3 — Keep or trim the duplicated hand walk
   (`wp_compareNil_body_hand`)?** Kept as the walk-architecture witness
   and tactic-robustness fallback; it duplicates one body proof's build
@@ -302,6 +305,10 @@ undesignated, listed in the manifest.
   pool-carrier `TerminatesNormallyC` instead (via
   `execProg_single_eq_execStmt`), or leave the two halves as stated
   is a spec-idiom call → user at curation. Parked, not claimed.
+  (SLICE-6 STATUS, 2026-08-10: CLOSED — shipped per-row on the
+  sequential carrier, `goSpec_seeded_totalReadout` +
+  `<row>TotalReadout`; matrix §7.1 + the slice-6 note carry the
+  record.)
 
 ## 7. Build log
 
