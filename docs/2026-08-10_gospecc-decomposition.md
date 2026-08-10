@@ -250,7 +250,9 @@ section) with Qed line numbers.
 
 - **(a) the seeded ∀-schedule family** (the fork/join idiom, D1-shaped
   at seeded strength): per program, over the PINNED lowering
-  (staleness-guarded, ci 1c5) at the TotalPins-style seed — the
+  (staleness-guarded, ci 3a2 — label corrected at the S5 audit; this
+  note first said "1c5", stale since the branch base's renumber) at
+  the TotalPins-style seed — the
   kernel certificate `allStreamsOkPool post fuel = true`, and from it:
   the ∀-schedule verdict readout (every stream completes at main's
   `.normal` with the oracle's observable), no-deadlock and no-race
@@ -511,9 +513,13 @@ Parking ledger:
 - **P-S4-4 — `chanCert_*` hoisting** (the generic seeded-cert
   derivations living in a Specs module): a curation-time move, noted
   in the module header; default keep-local.
-- **P-S4-5 — google-search's checker-idiom cost**: its 5-worker pick
-  tree is past this kernel checker's envelope (the CLI membership lane
-  carries it, tier=slow). Whether an R3-style statement for it should
+- **P-S4-5 — google-search's checker-idiom cost**: its three-worker
+  fan-in — a 4-thread, width-4 schedule tree (enum-stats: ~40.0M
+  steps, 59601 leaves, maxdepth 15) — is past this kernel checker's
+  envelope (the CLI membership lane carries it, tier=slow; descriptor
+  corrected at the S5 audit — this bullet first said "5-worker",
+  contradicting the unit's own three `go` statements and 3! = 6
+  certified arrival orders). Whether an R3-style statement for it should
   wait for the decomposition lane or get a bespoke certificate is a
   cost/priority call → user.
 

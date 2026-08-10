@@ -69,7 +69,7 @@ measured (`grep -n 'Qed\.\|Abort\.' nil.v`).
 | semantics/nil `testInterfaceNilWithType` | **Qed** (nil.v:50) | **out-of-class** — an oracle THEY prove and we currently cannot | verdict uses short-circuit `&&` (`Expr.and`): NO WP law exists for the short-circuit forms (they have their own machine rules, not `strictPlan`). The `Expr.and`/`Expr.or` law family is recorded future law work. |
 | semantics/block `testExplicitBlockStmt` | no `test_fun_ok` statement (block.go has no lemma in semantics_proof/) | **proved** (same-class coverage, not a parity row) | `Specs/GooseParityBlockWP.lean`, `explicitBlock*` |
 | semantics/defer (2 oracles) | no `test_fun_ok` statements | **not-attempted** | R2-pinned; bodies use `deferCall` + `funcVal` closures — the defer drain laws exist (`Laws/Unwind`, cap1 family) but the walk composition is a different frame discipline than the kit wrapper; sized as its own movement. |
-| semantics — the R1-green remainder (comparisons, precedence, loops, switch, vars, operations, int-conversions, conversions, multiple-return, new, allocator, builtin, first-class-function, function-ordering, slices, maps, interfaces, structs' 8 green rows, …) | 26 of their 36 `test_fun_ok` statements (incl. 21 of the 28 Qeds) have R1-PASS rows here (delta-review recount — the first rewrite said "30 … incl. 25 Qeds", wrongly counting the 4 frontend-blocked rows below as R1-green) | **no-pinned-lowering** | R1-green rows exist; their lowering terms were never pinned into `proofs/` (the R2 buildout pinned 6 units). Pinning is mechanical (the import pipeline's term generator + ci 1c5 guard) and is the scaling lever for the next R3 movement. |
+| semantics — the R1-green remainder (comparisons, precedence, loops, switch, vars, operations, int-conversions, conversions, multiple-return, new, allocator, builtin, first-class-function, function-ordering, slices, maps, interfaces, structs' 8 green rows, …) | 26 of their 36 `test_fun_ok` statements (incl. 21 of the 28 Qeds) have R1-PASS rows here (delta-review recount — the first rewrite said "30 … incl. 25 Qeds", wrongly counting the 4 frontend-blocked rows below as R1-green) | **no-pinned-lowering** | R1-green rows exist; their lowering terms were never pinned into `proofs/` (the R2 buildout pinned 6 units). Pinning is mechanical (the import pipeline's term generator + ci 3a2 guard — label corrected at the S5 audit) and is the scaling lever for the next R3 movement. |
 | semantics/structs `testStructUpdates`; semantics/type-equality `testPrimitiveTypesEqual`, `testDefinedStrTypesEqual`, `testListTypesEqual` | **Qed** ×4 (structs.v:11; type_equality.v:11,15,19) | **out-of-class at R1** — 4 upstream-proved oracles we cannot even RUN through the differential | all four rows are `FAIL frontend-export` in the tracked baseline (the recorded call-in-short-circuit-operand quarantine — the buildout log's class): `type-equality` is one of the all-fail-5 units (0/3 green), `structs` is mixed (8/9). NOT a pinning item — a frontend capability gap, strictly earlier than the `&&` R3 law gap. |
 
 ## Feature class 2: authored checksum wrappers (unittest/storage lanes)
@@ -93,7 +93,9 @@ muxer, dsp. Subjects are the units' `golean*` harness wrappers (the
 upstream bodies sit verbatim above the marker; the wrappers are
 GoLean-authored harness code), over the staleness-guarded pinned
 lowerings (`Specs/ImportedGoose{SelectTricky,Muxer,Actris}.lean`, ci
-step 1c5 since this slice).
+step 3a2 since this slice — the label "1c5" this line first carried
+was stale for the whole arc: the step was renumbered at the branch
+base 2927085f; corrected across the arc docs at the S5 audit).
 
 **Statement strength, decided in the slice design note
 (`docs/2026-08-10_gospecc-decomposition.md` §6, option (a))**: the
@@ -142,23 +144,37 @@ deadlock- and race-refusal-freedom.
 | actris-example (dsp) | **Qed** (`wp_DSPExample`, channel_dsp.v:35, Qed :57) | **∀-schedule family proved** | `ChannelActris.dsp*` |
 
 **Population honesty — what the curated set does NOT cover.** The
-upstream channel-examples proof tree at 43d4efa
-(`new/proof/.../examples/channel*.v` + `channel/{workq,etcd_session}.v`;
-count command: `grep -cE '^(Lemma|Theorem)' <files>`) states **60**
-Lemma/Theorem items (12 channel.v, 9 google, 5 fibonacci, 3
-search-replace, 3 higher-order, 9 dsp, 10 select-tricky, 4 workq, 5
-etcd_session — helper lemmas included, all Qed-closed: zero `Abort.`/
-`Admitted.` in these files). This slice's curated set is the
-charter-fixed SIX rows above; of the remainder: fibonacci and
+upstream channel-examples proof tree at 43d4efa states **73**
+Lemma/Theorem items (CORRECTED at the S5 records audit, at this
+origin and every restatement: this paragraph first said **60**,
+counted by a FILENAME glob — `channel*.v` +
+`channel/{workq,etcd_session}.v` — that silently dropped
+`elimination_stack.v` (8 items) and `lock.v` (5), an 18% undercount
+in the self-favorable direction; both are channel-example proofs in
+the same directory, listed in the matrix §5's verified set. The
+corrected count is directory-derived and the command emits the
+figure: in `new/proof/.../examples/`, `grep -hE '^(Lemma|Theorem)'
+$(grep -l 'testdata\.examples\.channel' *.v channel/*.v) | wc -l` =
+73; per-file: 12 channel.v, 9 google, 5 fibonacci, 3 search-replace,
+3 higher-order, 9 dsp, 10 select-tricky, 4 workq, 5 etcd_session, 8
+elimination_stack, 5 lock — helper lemmas included, all Qed-closed:
+zero `Abort.`/`Admitted.` in these files). This slice's curated set
+is the charter-fixed SIX rows above; of the remainder: fibonacci and
 higher-order units are the recorded P2 import-parking (enumeration
 cost, buildout ledger); muxer's `client-old`/`make-greeting` rows are
 the same P2 entry (their upstream lemmas are Qed — `wp_MapClient`,
 channel_dsp.v:271, Qed :313; `wp_makeGreeting`, :358, Qed :385 —
 parity rows we cannot certify until the P2 cost call is made); google-search is imported and R1-green
-(membership lane, tier=slow) but its 5-worker pick tree is beyond this
-checker idiom's cost envelope — not attempted, recorded;
+(membership lane, tier=slow) but its three-worker fan-in — a
+4-thread, width-4 schedule tree (enum-stats: ~40.0M steps, 59601
+leaves) — is beyond this
+checker idiom's cost envelope — not attempted, recorded ("5-worker",
+the descriptor this line first carried, corrected at the S5 audit —
+the program forks THREE workers, matching its 3! = 6 certified
+arrival orders);
 workq/etcd_session/search-replace and the channel.v basics are
-imported (search-replace, google) or unimported upstream units — rows
+imported (search-replace, google) or unimported upstream units — as
+are elimination_stack and lock, both unimported — rows
 for a later movement, not silently claimed.
 
 Certificate fuels (measured minimum → shipped): nb-not-ready 100→200,

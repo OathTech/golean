@@ -71,7 +71,7 @@ updated at the spec-parity arc close, 2026-08-10.
 
 | # | What | Their evidence | Our status | Class |
 |---|---|---|---|---|
-| T1 | `sync` package: Mutex/RWMutex/WaitGroup/Once/sema specs proved over the goose-translated REAL stdlib source, atop a small trusted core (Mutex→CmpXchg spinlock, semaphore model; Cond notifyList STUBBED no-ops) | `new/trusted_code/sync.v:8-58@43d4efa`; `new/proof/sync.v` + `sync_proof/*` (9 files, ~35 wp lemmas) | MACHINE HALF LANDED (spec-parity S2, 2026-08-09, via exactly the recorded growth contract — each primitive one registry entry, ZERO new Choices sites): Mutex/RWMutex/WaitGroup/Once as machine primitives (value-semantics cells, blocked-shape wake, the probed-fatal misuse class, HB edges per the package-doc sentences with the two-clock RWMutex realization), 33 guardrail pins green + 2 permanent out-of-scope markers (Cond/TryLock, charter D4); the four sync-only goose files R1-green (`docs/2026-08-09_sync-package-design.md` §§11-12). NO sync spec/law layer yet — no sync WP laws, no proved sync specs (the feature-class exemplar is P-S2-3's candidate-when-reached; the arc's proof slices did not reach sync) | **CAP, narrowed** — the machine half is paid; owed: the sync spec layer (P-S2-3) and, for TryLock/atomics, the atomics arc |
+| T1 | `sync` package: Mutex/RWMutex/WaitGroup/Once/sema specs proved over the goose-translated REAL stdlib source, atop a small trusted core (Mutex→CmpXchg spinlock, semaphore model; Cond notifyList STUBBED no-ops) | `new/trusted_code/sync.v:8-58@43d4efa`; `new/proof/sync.v` + `sync_proof/*` (9 files, ~35 wp lemmas) | MACHINE HALF LANDED (spec-parity S2, 2026-08-09, via exactly the recorded growth contract — each primitive one registry entry, ZERO new Choices sites): Mutex/RWMutex/WaitGroup/Once as machine primitives (value-semantics cells, blocked-shape wake, the probed-fatal misuse class, HB edges per the package-doc sentences with the two-clock RWMutex realization). Lane state MEASURED at the arc tip (tracked baseline, `awk -F'\t' '$2~/^sync\//{n++;c[$1]++} END{print n,c["PASS"],c["FAIL"]}' baselines/native-full.tsv` → 35 29 6, plus race/{free,negative}-sync 7/7 PASS): **42 rows — 36 green, 6 PERMANENT fail-closed frontend-export markers**: the FOUR sync/escapes escape-refusals (S2 audit fix round, design note F4) + the Cond/TryLock out-of-scope pair (charter D4). (Correction, S5 audit: this cell first carried the S2 build-slice figure "33 guardrail pins green + 2 permanent markers", which was true pre-audit-round but names 2 of the 6 permanent refusals standing at tip.) The four sync-only goose files R1-green (`docs/2026-08-09_sync-package-design.md` §§11-12). NO sync spec/law layer yet — no sync WP laws, no proved sync specs (the feature-class exemplar is P-S2-3's candidate-when-reached; the arc's proof slices did not reach sync) | **CAP, narrowed** — the machine half is paid; owed: the sync spec layer (P-S2-3) and, for TryLock/atomics, the atomics arc |
 | T2 | `sync/atomic`: machine atomics (`LoadOp/AtomicSwap/AtomicAdd/CmpXchg`, lang.v:84-105,1372-1431@43d4efa) + 49 wp lemmas (`new/proof/sync/atomic.v`, their largest single proof file) | ibid. | Nothing; D5 records atomics as the `FairStream` prerequisite arc | **CAP** — owed: atomics arc (FairStream prerequisite) |
 | T3 | Logically-atomic channel-op spec set: `send_au/recv_au/close_au` + nested AUs + two incomparable nonblocking variants; proved `wp_NewChannel/wp_Send/wp_Receive/wp_Close/wp_TrySend/wp_TryReceive/wp_Len/wp_Cap` | `chan_au_base.v:106-297@43d4efa` (canonical-weakest-spec problem documented at :244-263); `chan_au_{new,send,recv}.v` | STILL ZERO channel WP/lifting laws — but the seam they land on now EXISTS (spec-parity S4): the decomposition pipe `proofs/GoLeanProofs/LangD.lean` (`StepDC`, the pairing simulation `stepM_erasedD`, run erasure, THE EXIT `goTripleC_of_wpD`, the `wpD_*` kit) is the recorded consumer boundary for the channel WP law family + protocol layer (P-S4-2). Concurrent Iris layer otherwise unchanged (`wpC_fork`/`wpC_pure_det`/`wpC_spawned_strip`, LangC); channel facts still export as kernel certificates / operational predicates (§7.2) | **CAP** (owed WITH its consumer: P-S4-2, the curated rows' D1 form) |
 | T4 | Select WP specs: `wp_select_blocking` (`[∧ list]` per-case AUs), `wp_select_nonblocking`, `wp_select_nonblocking_alt` (∗-separated with not-ready witnesses → provable-unreachable default) | `theory/chan.v:272-299,427-455,584-619@43d4efa`; unreachable-default demo `wp_select_nb_guaranteed_ready`, channel_select_tricky_examples.v:117 | None (same deferral as T3) | **CAP** (with T3) |
@@ -80,7 +80,7 @@ updated at the spec-parity arc close, 2026-08-10.
 | T7 | Frame-quantified WP proofs over genuinely-spawning programs (their entire proof portfolio is this) | e.g. `wp_simple_join` channel.v:259, all of §5's examples | THE TRIPLE HALF IS PAID (spec-parity S4): the recorded obstruction (pool `StepM` pairing touches two threads; iris-lean `Language` steps one) is discharged by the pairing decomposition (`LangD.lean`), and `spawnNoopTripleC` is the first frame-quantified `GoTripleC` at full `InitialSplit` strength on a genuinely spawning program (witness pair `spawnNoopReadoutC` + `spawnNoopTerminatesNormallyC`). Still owed: the safety half (`ProgressExecC` ∀-heap, P-S4-1) to assemble `spawnNoopSpecC`, and WP laws at channel positions (P-S4-2) before any of THEIR portfolio's shapes is reproducible | **CAP, narrowed** — their portfolio-wide practice vs our first instance; owed: P-S4-1 + P-S4-2 |
 | T8 | Prophecy variables (HeapLang-inherited; used at scale in vMVCC) | lang.v:244-245@43d4efa | None; slice-5 log records "no prophecies needed — primitive channels make lifting laws the atomic specs" | **DEL** for channels; revisit trigger: a future target needing future-dependent linearization |
 | T9 | Crash semantics + FFI worlds (disk, async_disk, filesys, grove network) and the storage-systems portfolio | lang.v FFI parameter; `testdata/examples/{append_log,wal,simpledb,...}` | Out of scope: our north star (etcd-io/raft, the library) needs no disk/net FFI | **DEL** — revisit trigger: a target change |
-| T10 | Translated Go stdlib surface: sync, atomic, time, strings, bytes, sort/slices (real stdlib pdqSort proved), context, fmt, encoding/binary, errors, io, log, math… | `etc/ci-goose-check.py:23-41@43d4efa` pins the source repos; `new/code/*`; ~60 stdlib wp lemmas + ~25 slices/sort | Our frontend refuses imports (`tools/nativefrontend/emit.go:4105,4148` — imported named types/methods fail closed), with ONE carve-out since spec-parity S2: the `sync` surface (Mutex/RWMutex/WaitGroup/Once) lowers, and the import pipeline gained the explicit `--allow-import` vet seam (the four sync-only goose files landed R1-green) | **CAP** long-term; scoping Part B quantifies which corpus files this blocks |
+| T10 | Translated Go stdlib surface: sync, atomic, time, strings, bytes, sort/slices (real stdlib pdqSort proved), context, fmt, encoding/binary, errors, io, log, math… | `etc/ci-goose-check.py:23-41@43d4efa` pins the source repos; `new/code/*`; ~60 stdlib wp lemmas + ~25 slices/sort | Our frontend refuses imports (`tools/nativefrontend/emit.go:4258,4301` — imported named types/methods fail closed; line numbers re-measured at the arc tip at the S5 audit — the seeded `4105,4148` had drifted 153 lines under them), with ONE carve-out since spec-parity S2: the `sync` surface (Mutex/RWMutex/WaitGroup/Once) lowers, and the import pipeline gained the explicit `--allow-import` vet seam (the four sync-only goose files landed R1-green) | **CAP** long-term; scoping Part B quantifies which corpus files this blocks |
 | T11 | North-star proof progress: in-progress etcd-raft + etcd verification (`wp_Node__Propose` Qed; etcd client 39 wp lemmas but 29 Admitted; readonly.v 955 ln, 5 Admitted) | `new/proof/go_etcd_io/raft/v3.v:17-29`, `v3_proof/*`, `etcd/client/*@43d4efa`; Go sources external: github.com/upamanyus/{etcd-raft,etcd} branch `goose` | Our quorum pilot is a raft fragment; no raft-package-scale work yet | **CAP** (this is the race; their surface is demonstrably WIP — 51 Admitted across new/proof's 376 wp lemmas) |
 | T12b | Select-with-select rendezvous (added at the arc-final audit, F11 2026-08-08 — a real they-have/we-lack gap the seeding missed while §1's rendezvous row implied parity): their blocking select's clauses call TrySend/TryReceive with blocking=true, posting/accepting offers (channel.go:66-92,151-172@3be88bb; chan_au_base chan.v:105-114 `chan_select_blocking` threads blocking into the clauses), and TestSelfSelect runs two concurrent BlockingSelect2 on one unbuffered channel (channel_test.go:848-891@3be88bb) | goose model + test, perennial defn | We REFUSE fail-closed (`select-with-select rendezvous (unmodeled this slice)`, Multi.lean; and over-broadly — any arriving select with a parked-select partner on ANY clause refuses even when another clause is cell-ready, audit F10). Corpus red markers channels/select-select/{core,beside-loop}; owner: the successor select slice (first step: per-clause refusal narrowing in `ArrivalOutcome`, then the offer-protocol rendezvous) | **CAP** on our side |
 | T12 | Sub-step interleaving granularity + operational race-UB by construction (two-step na accesses, `naMode Reading n | Writing`; racy access → stuck) | lang.v:543-546,1352-1396@43d4efa | We rejected naMode (grows by revision, D2+D3); registry-granularity + the NPDRF reduction OBLIGATION, whose statement is currently a REFUTABLE-as-written draft (NPDRF.lean; S3 audit) | **DEL** with an honest open metatheory debt on our side — their granularity story is complete by construction; ours rests on the unproven reduction |
@@ -146,7 +146,9 @@ dsp example now carry kernel-checked ∀-schedule families beside their
 upstream Qeds (per-statement rows in §7.2; per-row gap: the
 frame-quantified `GoSpecC`, blocked on P-S4-1/P-S4-2 exactly as this
 section's [ANALYSIS] anticipated). §7.4 counts the rest of the
-60-item tree by reason.
+73-item tree by reason (figure corrected at the S5 audit — the
+first form said 60, a filename-glob undercount that dropped
+elimination_stack.v and lock.v, two members of THIS section's list).
 
 ## 6. Imported-corpus status (goose-parity buildout lane)
 
@@ -183,7 +185,8 @@ fixes): 78 units landed / 172 imported rows — 152 R1 PASS, 20
 recorded-fail-closed frontend-export, ZERO deliberate reds (the
 buildout-time BUG-048 pin flipped green with the fix); 12 oracles R2
 kernel-pinned, all six pin terms staleness-guarded
-(check-imported-pins, ci 1c5); 2 units + 2 rows parked (P2,
+(check-imported-pins, ci 1c5 — the step label at this paragraph's
+date; 3a2 after the renumber at 2927085f); 2 units + 2 rows parked (P2,
 ruled-parked at the check-in); 2 GoLean bugs surfaced, filed, pinned,
 and FIXED on the branch (BUG-047, BUG-048 — the latter also repaired
 two long-standing untriaged backlog reds; ratchet 18 → 16). Per-batch
@@ -227,10 +230,11 @@ claim at all (row O8).
 
 Arc-end addendum (spec-parity arc close, 2026-08-10): branch totals at
 the arc tip — **82 units / 176 imported rows: 156 R1 PASS, 20 recorded
-fail-closed frontend-export FAILs, zero deliberate reds** (commands:
-`find Corpus/coverage/exec/imported-goose -mindepth 2 -maxdepth 2 -type d
-| wc -l`; `awk` over `baselines/native-full.tsv`'s `imported-goose/`
-rows). **9 units carry staleness-guarded pinned lowerings**
+fail-closed frontend-export FAILs, zero deliberate reds** (commands,
+each emitting its figure: `find Corpus/coverage/exec/imported-goose
+-mindepth 2 -maxdepth 2 -type d | wc -l` → 82; `awk -F'\t'
+'$2~/^imported-goose\//{n++;c[$1]++} END{print n,c["PASS"],c["FAIL"]}'
+baselines/native-full.tsv` → 176 156 20). **9 units carry staleness-guarded pinned lowerings**
 (`scripts/check-imported-pins` PINS registry: block, defer, nil,
 mapliteral, const, rune, select-tricky-examples, muxer, actris-example)
 → 73 unpinned (the P-S3-2 lever). Spec-level standing: 6 sequential D1
@@ -270,10 +274,13 @@ record, this table the per-STATEMENT comparison).
 Ground rules. All upstream statuses at `deps/perennial` @ 43d4efa,
 re-measured for this table (`grep -n 'Lemma\|Qed\.\|Abort\.\|Admitted'
 <file>` in `new/proof/github_com/mit_pdos/perennial/goose/testdata/
-examples[/semantics_proof]`); denominators re-measured: 36
-`test_fun_ok` statements / 29 `Qed` (incl. the non-oracle
-`wp_shouldPanic`) / 7 `Abort` / 1 `Admitted` (commands in the manifest
-header, re-run at arc close, matching). **No ordering claim is made
+examples[/semantics_proof]`); denominators re-measured: **36
+`test_fun_ok` statements — 28 `Qed` + 7 `Abort` + 1 `Admitted`**; the
+semantics_proof directory's Qed total is 29, the extra being the
+non-oracle `wp_shouldPanic` (commands in the manifest header, re-run
+at arc close, matching; figures restated at the S5 audit so the four
+numbers and the denominator visibly sum — the first form juxtaposed
+36/29/7/1, which does not partition). **No ordering claim is made
 between the two sides' judgments anywhere** (the slice-3/4 discipline):
 no relation between GooseLang WPs and our judgments is defined, so
 every delta is an itemized difference, not a ranking. Our-side axiom
@@ -285,7 +292,10 @@ the D3 curation says so.
 
 Shared statement forms (fixed by the slice-3 exemplar,
 `docs/2026-08-10_wp-walk-driver.md` §1; all six rows instantiate them
-over the unit's staleness-guarded pinned lowering, ci step 1c5):
+over the unit's staleness-guarded pinned lowering, ci step 3a2 —
+the step label earlier arc records call "1c5"; it has been 3a2 since
+the branch base 2927085f, corrected across the arc docs at the S5
+audit):
 
 - **internal triple** — `<name>SpecC : GoSpecC <unit>Lowered.typeDefs.toList
   <unit>Lowered.funcs <unit>Lowered.methods <env> (r ↦ ⟨int, 0⟩) driver
@@ -378,7 +388,7 @@ probe) are deliberately NOT tabled here.
 | ours (designated unless noted) | upstream analogue @ 43d4efa | correspondence + deltas both directions |
 |---|---|---|
 | the fork/join family — `forkJoinAllSchedules42`, `forkJoinNoDeadlock`, `forkJoinNoRace`, `forkJoinTerminatesNormallyC` (+ stream pins; `Specs/GoldenForkJoin.lean`, designated + Comparator-replayed) | `wp_simple_join`, channel.v:259, **Qed** :287 | class analogue: spawn a worker, join through a channel. Bodies differ (theirs: buffered(1) done-signal + shared string write, examples.go:50; ours: unbuffered send of 42 into the pinned cell). Theirs: heap-general compositional partial-correctness triple. Ours: seeded ∀-schedule totality + exact verdict + no-deadlock/no-race, kernel-certified, designated. No ordering claimed |
-| google-search membership certification (corpus `imported-goose/channel/google-search`, `members=6`, `tier=slow`, `cases.tsv`; certified set re-checked complete at exactly six members, S1 record) | `wp_Google`, channel_google.v:165, **Qed** :412 (permutation postcondition `xs ≡ₚ google_expected q`) | the delta is METHOD, not coverage (§6 note): theirs is a proved Iris triple with the set-membership content; ours is machine-CERTIFIED reachability of all 6 arrival orders (envelope completeness their partial-correctness triple does not state) + the executable differential. NO Lean theorem on our side for this unit (its 5-worker pick tree is past the kernel checker's cost envelope — P-S4-5) |
+| google-search membership certification (corpus `imported-goose/channel/google-search`, `members=6`, `tier=slow`, `cases.tsv`; certified set re-checked complete at exactly six members, S1 record) | `wp_Google`, channel_google.v:165, **Qed** :412 (permutation postcondition `xs ≡ₚ google_expected q`) | the delta is METHOD, not coverage (§6 note): theirs is a proved Iris triple with the set-membership content; ours is machine-CERTIFIED reachability of all 6 arrival orders (envelope completeness their partial-correctness triple does not state) + the executable differential. NO Lean theorem on our side for this unit (its THREE-worker fan-in — a 4-thread, width-4 schedule tree; enum-stats: ~40.0M steps, 59601 leaves, maxdepth 15 — is past the kernel checker's cost envelope, P-S4-5; descriptor corrected at the S5 audit: three docs carried "5-worker", contradicting the row's own 3! = 6 arrival orders) |
 
 ### 7.4 Population, both directions
 
@@ -396,25 +406,48 @@ reason.**
   mapliteral) and the defer oracles have NO upstream `test_fun_ok`
   statements and are our not-attempted coverage backlog (manifest,
   reasons recorded).
-- *Channel-examples proof tree* (60 Lemma/Theorem items, all
-  Qed-closed; command re-run at arc close: `grep -cE
-  '^(Lemma|Theorem)' channel*.v channel/{workq,etcd_session}.v` = 60 —
-  `channel_examples.v`/`channel_examples_init.v` state none): our
-  curated set discharges ∀-schedule families beside **5** of them (the
-  three trio lemmas + `wp_Client` + `wp_DSPExample`). The remaining 55
-  by reason: **10 P2-parked** (fibonacci 5 + higher-order 3 — the
+- *Channel-examples proof tree* — **73 Lemma/Theorem items, all
+  Qed-closed** (CORRECTED at the S5 records audit: the first form of
+  this bullet, and the S4 manifest paragraph it inherited from, said
+  60, derived from a FILENAME glob — `channel*.v` plus the two named
+  subdirectory files — that silently dropped `elimination_stack.v`
+  (8 items) and `lock.v` (5), both members of §5's own enumeration of
+  their verified set; an 18% undercount of the against-us population,
+  a glob artifact in the self-favorable direction, not a recorded
+  scope. The corrected set is DIRECTORY-derived — every proof file in
+  `semantics_proof/`'s parent `examples/` dir whose imports reference
+  the `testdata.examples.channel` package family — and the command
+  emits the figure: `grep -hE '^(Lemma|Theorem)' $(grep -l
+  'testdata\.examples\.channel' *.v channel/*.v) | wc -l` = **73**;
+  per-file: channel.v 12, dsp 9, google 9, select-tricky 10,
+  fibonacci 5, higher-order 3, search-replace 3, workq 4,
+  etcd_session 5, elimination_stack 8, lock 5; zero
+  `Abort.`/`Admitted.` across all of them). Our curated set
+  discharges ∀-schedule families beside **5** of the 73 (the three
+  trio lemmas + `wp_Client` + `wp_DSPExample`). The remaining 68 by
+  reason: **10 P2-parked** (fibonacci 5 + higher-order 3 — the
   recorded import-enumeration parking; muxer `client-old`/
   `make-greeting`'s `wp_MapClient` channel_dsp.v:271 Qed :313 +
   `wp_makeGreeting` :358 Qed :385 — P-S4-3); **9 beyond the checker's
   cost envelope** (channel_google.v — the unit IS imported, R1-green,
   membership-certified; §7.3's row records the method delta; P-S4-5);
-  **21 not imported** (channel.v 12 + workq 4 + etcd_session 5 —
-  upstream units outside the imported corpus; `wp_simple_join` is
-  class-analogued by §7.3's fork/join row); **15 imported but
-  unattempted at spec level** (select-tricky's other 7 incl. the
-  ≥2-ready examples needing checker L2 branching, dsp's other 5,
-  search-replace's 3 — R1-green rows, no certificates written; visible
-  manifest population, not silent skips).
+  **34 not imported** (channel.v 12 + workq 4 + etcd_session 5 +
+  elimination_stack 8 + lock 5 — upstream units outside the imported
+  corpus; `wp_simple_join` is class-analogued by §7.3's fork/join
+  row); **15 imported but unattempted at spec level** (select-tricky's
+  other 7 — ghost-state/atomic-update HELPER lemmas for its same
+  three programs, all three of which §7.2 attempts; no ≥2-ready
+  select example exists in that unit, and checker L2 branching stays
+  a conditional-FUTURE need per the S4 note §6(c), not a current
+  blocker — dsp's other 5, search-replace's 3 incl. its main
+  `wp_SearchReplace`: items in R1-green imported units, item ≠
+  corpus row (parallel-search-replace has ONE row beside its three
+  proof items), no certificates written; visible manifest population,
+  not silent skips. Clause rewritten at the S5 audit — the first form
+  called the helpers "examples" and attributed a ≥2-ready blocker
+  that does not exist upstream). NOTE the number collision: the
+  73-item UPSTREAM tree here is unrelated to OUR 73 unpinned imported
+  units (§6 addendum) — same numeral, different populations.
 
 **What we prove/validate that they do not.**
 
@@ -434,7 +467,24 @@ reason.**
   evaluation-order oracles run R1 differential PASS here (§6 batch-2
   note) — fidelity where their translation is documented incorrect
   vs gc.
-- The whole imported set is EXECUTED against `go run` (176 rows, 156
-  PASS, the rest recorded fail-closed) — upstream's example tests are
-  translation-golden only; nothing executes the Rocq model (rows
-  O1/O2).
+- The whole imported set is EXECUTED against `go run` THROUGH THE
+  VERIFICATION SUBJECT — the differential runs the same `execProg`
+  the theorems quantify (176 rows, 156 PASS, the rest recorded
+  fail-closed). Stated precisely BOTH directions (CORRECTED at the S5
+  records audit — the first form said "upstream's example tests are
+  translation-golden only", which is FALSE and re-introduced,
+  generalized, the pre-S4-correction one-sidedness this same file's
+  §7.2 already fixes): upstream DOES execute its example programs in
+  Go — the semantics oracles run as a 115-assertion testify suite
+  (`testdata/examples/semantics/generated_test.go` — incl.
+  `TestCompareNilToNil` :279 and the four §7.1 frontend-blocked
+  oracles :403/:455) and the channel examples have seven executing
+  `_test.go` files (`examples_test.go`'s `TestDSPExample` asserts
+  42), both run in upstream CI (`.github/workflows/build.yml:33-34`,
+  `go test ./testdata/examples/...`); the unittest/storage/generics
+  trees have NO executing tests (no `_test.go` there — measured), so
+  translation-golden-only is true of THOSE trees alone. The delta
+  that stands is rows O1/O2's, about the verification subject:
+  nothing on their side executes the Rocq/GooseLang model or the
+  translation step the proofs are ABOUT, while our differential
+  exercises the very semantics our theorems quantify.
