@@ -177,21 +177,29 @@ for rel in "${ALL_SOURCES[@]}"; do
       /^[ 	]*import[ 	("]/ { print "BAD " $0 }
       /^[ 	]*import"/ { print "BAD " $0 }
     ' "$f")
-    # Zero-output cross-check (delta-review round 2, fail closed): the
-    # loose gate fired, so the strict recognizer must have accounted
-    # for SOMETHING (a PATH, or a BAD that died above). Silence means
-    # an import form outside every strict shape (e.g. comment-
-    # prefixed): refuse rather than land unvetted. Comment text that
-    # merely mentions an import form over-refuses here — the
-    # fail-closed direction; park and hand-review such a source.
-    vetout="$(awk '
-      /^import[ 	]+"[^"]+"$/ { print "X"; next }
-      /^import[ 	]*\($/ { print "X"; next }
-      /^[ 	]*import[ 	("]/ { print "X" }
-      /^[ 	]*import"/ { print "X" }
-    ' "$f")"
-    if [[ -z "$vetout" ]]; then
-      die "$rel has import-like content the strict vet cannot account for (loose gate fired, recognizer silent) — fail closed (park it)"
+    # PER-OCCURRENCE accounting (delta-review round 3, MAJOR — the
+    # round-2 cross-check was FILE-GLOBAL: one recognized import
+    # laundered any number of unrecognized ones, e.g. `import "sync"`
+    # plus a comment-prefixed `/* c */ import "os"` landed under a
+    # sync-only grant). The invariant, per LINE: every line the loose
+    # gate fires on must be accounted by the strict recognizer (as a
+    # PATH or a BAD — BAD died above). Loose-hit lines skip only
+    # `//`-comment lines (which cannot carry live code); anything else
+    # the strict shapes cannot account for — including text inside
+    # block comments — refuses, the fail-closed direction.
+    loose_hits="$(grep -v '^[[:space:]]*//' "$f" \
+      | grep -cE '(^|[^[:alnum:]_"])import[[:space:]]*[("]')" || true
+    strict_hits="$(awk '
+      /^[ 	]*\/\// { next }
+      /^import[ 	]+"[^"]+"$/ { n++; next }
+      /^import[ 	]*\($/ { n++; inblk=1; next }
+      inblk && /^\)$/ { inblk=0; next }
+      inblk { next }
+      /^[ 	]*import[ 	("]/ { n++; next }
+      /^[ 	]*import"/ { n++ }
+      END { print n+0 }' "$f")"
+    if [[ "$loose_hits" -ne "$strict_hits" ]]; then
+      die "$rel has import-like content the strict vet cannot account for ($loose_hits loose-gate line(s), $strict_hits strictly recognized) — fail closed (park it)"
     fi
   fi
   if grep -nE '^func[[:space:]]+main[[:space:]]*\(' "$f" >/dev/null; then

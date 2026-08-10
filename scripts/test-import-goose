@@ -120,6 +120,22 @@ func testCommentImport() bool {
 	return true
 }
 EOF
+
+cat > "$FAKE/testdata/examples/semantics/dual_import.go" <<'EOF'
+package semantics
+
+import "sync"
+
+/* c */ import "os"
+
+func testDualImport() bool {
+	var mu sync.Mutex
+	mu.Lock()
+	mu.Unlock()
+	_ = os.Getpid
+	return true
+}
+EOF
 cat > "$FAKE/testdata/examples/semantics/has_main.go" <<'EOF'
 package semantics
 
@@ -229,6 +245,43 @@ expect_reject "comment-prefixed import fails the zero-output cross-check" "stric
 expect_reject "grant outside the modeled set refused" "not in the machine-modeled import set" \
   --goose-root "$FAKE" --expect-rev "$REV" --allow-import os \
   --source testdata/examples/semantics/sync_import.go --dest "$DEST_BASE/wideimp"
+# Round 3 (delta-review, MAJOR): the round-2 cross-check was
+# FILE-GLOBAL — one recognized import laundered any number of
+# unrecognized ones. Per-occurrence accounting now refuses the DUAL
+# shape (a recognized `import "sync"` beside a comment-prefixed
+# `/* c */ import "os"`), at the importer AND at the standing guard.
+expect_reject "dual-form file: recognized import cannot launder an unrecognized one" "strict vet cannot account for" \
+  --goose-root "$FAKE" --expect-rev "$REV" --allow-import sync \
+  --source testdata/examples/semantics/dual_import.go --dest "$DEST_BASE/dualimp"
+# The STANDING GUARD's per-occurrence check, negative-tested on a
+# hand-assembled corpus (bypassing the importer, the way a
+# vet-hole-era landing would look): a sync-granted file carrying the
+# comment-prefixed os import must FAIL certification.
+GUARD_ROOT="$TMP/guard-corpus/semantics/dualx"
+mkdir -p "$GUARD_ROOT"
+{
+  echo "// GoLean imported-goose corpus case — upstream bodies VERBATIM."
+  echo "// source: testdata/examples/semantics/dual_import.go @ $REV"
+  echo "// imported: 2026-08-10 by scripts/import-goose"
+  echo "// transform: package clause -> main; assembly order as listed; all"
+  echo "// GoLean-authored code sits below the harness marker."
+  echo "// imports-allowed: sync (--allow-import)"
+  echo "package main"
+  awk '!done && /^package[ \t]/ { done=1; next } { print }' "$FAKE/testdata/examples/semantics/dual_import.go"
+  echo ""
+  echo "// --- GoLean harness ---"
+  echo ""
+  echo "func main() {}"
+} > "$GUARD_ROOT/main.go"
+printf '# id\tsubject\targs\texpected_status\texpected_reason\tfeatures\n' > "$GUARD_ROOT/cases.tsv"
+if out="$(scripts/check-imported-goose --corpus-root "$TMP/guard-corpus" --goose-root "$FAKE" --expect-rev "$REV" 2>&1)"; then
+  echo "FAIL: standing guard certified the dual-form (laundered) import: $out"; fail=1
+elif [[ "$out" != *"cannot account for"* ]]; then
+  echo "FAIL: standing guard rejected the dual-form file without the per-occurrence message: $out"; fail=1
+else
+  echo "ok: standing guard refuses the dual-form (laundered) import per-occurrence"
+fi
+rm -rf "$TMP/guard-corpus"
 
 # 4. func main
 expect_reject "source with func main" "defines func main" \

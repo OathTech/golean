@@ -136,21 +136,28 @@ while IFS= read -r main_go; do
     echo "check-imported-goose: FAIL [$rel] — carriage-return bytes above the marker (unvettable import forms)" >&2
     fail=1
   fi
-  # Loose-gate/zero-output cross-check (round 2): if import-like
-  # content exists above the marker that the strict recognizer cannot
-  # account for, refuse — never certify an unvetted import. (The //
-  # comment filter keeps the generated header and upstream comment
-  # lines out of the loose gate.)
-  if sed -n '1,/^\/\/ --- GoLean harness ---$/p' "$main_go" | grep -v '^//' \
-      | grep -qE '(^|[^[:alnum:]_"])import[[:space:]]*[("]'; then
-    if [[ -z "$(sed -n '1,/^\/\/ --- GoLean harness ---$/p' "$main_go" | awk '
-        /^import[ 	]+"[^"]+"$/ { print "X"; next }
-        /^import[ 	]*\($/ { print "X"; next }
-        /^[ 	]*import[ 	("]/ { print "X" }
-        /^[ 	]*import"/ { print "X" }')" ]]; then
-      echo "check-imported-goose: FAIL [$rel] — import-like content the strict recognizer cannot account for above the marker" >&2
-      fail=1
-    fi
+  # PER-OCCURRENCE accounting (delta-review round 3, MAJOR — the
+  # round-2 form was FILE-GLOBAL, so one recognized import laundered
+  # any number of unrecognized ones; the standing guard certified a
+  # sync-granted file carrying a comment-prefixed os import). Per
+  # LINE: every loose-gate hit above the marker must be a strictly
+  # recognized import line; any mismatch refuses. `//`-comment lines
+  # (the generated header, upstream line comments) are excluded from
+  # the loose count — they cannot carry live code.
+  cig_loose="$(sed -n '1,/^\/\/ --- GoLean harness ---$/p' "$main_go" | grep -v '^[[:space:]]*//' \
+    | grep -cE '(^|[^[:alnum:]_"])import[[:space:]]*[("]')" || true
+  cig_strict="$(sed -n '1,/^\/\/ --- GoLean harness ---$/p' "$main_go" | awk '
+      /^[ 	]*\/\// { next }
+      /^import[ 	]+"[^"]+"$/ { n++; next }
+      /^import[ 	]*\($/ { n++; inblk=1; next }
+      inblk && /^\)$/ { inblk=0; next }
+      inblk { next }
+      /^[ 	]*import[ 	("]/ { n++; next }
+      /^[ 	]*import"/ { n++ }
+      END { print n+0 }')"
+  if [[ "$cig_loose" -ne "$cig_strict" ]]; then
+    echo "check-imported-goose: FAIL [$rel] — import-like content the strict recognizer cannot account for above the marker ($cig_loose loose-gate line(s), $cig_strict strictly recognized)" >&2
+    fail=1
   fi
   grant_line="$(sed -n 's/^\/\/ imports-allowed: \(.*\) (--allow-import)$/\1/p' "$main_go" | head -1)"
   for a in $grant_line; do

@@ -607,6 +607,35 @@ Finding-by-finding record — the themes and dispositions:
   build/gate in both fix rounds ran through the wrapper extracted from
   main into .tmp (the cap arrives in-tree at the arc-merge rebase).
 
+### Delta-review round 3 (2026-08-10; focused — U5 CONVERGED, gates not)
+
+- **MAJOR — the round-2 vet cross-check was FILE-GLOBAL**: one
+  recognized import laundered any number of unrecognized ones (the
+  round-3 verifier landed `import "sync"` + `/* c */ import "os"`
+  under a sync-only grant, and the standing guard certified it).
+  FIXED per-occurrence in BOTH scripts: every line the loose gate
+  fires on (`//`-comment lines excluded — they cannot carry live
+  code) must be a strictly recognized import line; ANY count mismatch
+  refuses, at landing and at every standing re-check. Fixtures: the
+  dual-form shape in the importer suite AND a hand-assembled
+  standing-guard negative test (both green); the 82 landed cases
+  re-scanned clean under the fixed accounting; two fresh adversarial
+  mixed-form candidates (comment-prefixed block import beside a gofmt
+  block; tab-indented comment-prefixed import beside a plain import)
+  both die with the per-occurrence message.
+- **rwmutex-order cases.tsv aligned** (the round-2 "records made
+  honest" miss): the retracted 16.4M/29.5s figures and the singular
+  "gc's realized point, 5/5 plain" framing replaced with the measured
+  truth (both members gc-witnessed; 2,230,228 steps / ~26s).
+- **Reuse-window wording scoped** (U5-area note): the channel-handoff
+  causal claim covers W1 only; W2's exclusion from the waiter-side
+  panic is probed-empirical (the verifier's 5400-run probe), stated
+  as such at both comment sites.
+- **Recorded, no action** (verifier note): the standing guard's CR
+  check is defense-in-depth behind the importer's landing-time
+  refusal, not an independently reachable gate — do not mistake it
+  for a second barrier.
+
 ## 12. Parking ledger (user-scale items, per the AFK posture)
 
 - **P-S2-1 — Promote `fatal` into the membership/confluent lanes?**
