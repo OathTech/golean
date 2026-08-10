@@ -22,12 +22,15 @@ Design (mirroring the sequential checker's discipline,
   picks must certify (exit = `post` of the readout state; continue =
   the same stepping core, recursively).
 * Every OTHER consumption shape FAILS CLOSED (`false`, never unsound):
-  select apply positions (L2 — `consumesSelect`, per-thread),
-  `appendSlice` applies, `mapIterK` picks, and multi-candidate waiter
-  pairings (L4 width > 1). The fork/join witnesses need none of these;
-  a future program that does turns the checker false, visibly. The
-  slice-4 CLI enumerator remains the full-width engine — this checker
-  is deliberately the KERNEL-REDUCIBLE core.
+  CONSUMING select apply positions (L2 — a `consumesSelect` shape is
+  accepted only when its arrival analysis is partnerless `.cellPath`
+  AND its `applySelectCore` is `.done`, i.e. default/park/singleton
+  commit — the spec-parity slice-4 refinement, `selectApplyDone`; a
+  multi-ready or partnered select still refuses), `appendSlice`
+  applies, `mapIterK` picks, and multi-candidate waiter pairings (L4
+  width > 1). A program that needs a refused shape turns the checker
+  false, visibly. The slice-4 CLI enumerator remains the full-width
+  engine — this checker is deliberately the KERNEL-REDUCIBLE core.
 * `stepThread_oblivious` is the soundness hinge: under the fail-closed
   flags (`poolThreadOblivious`), a goroutine-step that succeeds under
   one stream succeeds under EVERY stream with the same successor and
@@ -58,9 +61,29 @@ def isMapIterNext : Config → Bool
   | .next (.mapIterK _ _ _ _ _ _ _ _) => true
   | _ => false
 
+/-- Is this select-apply configuration's apply NON-consuming — i.e.
+does `applySelectCore` return `.done` (default taken, park, or a
+singleton-ready commit)? Kernel-computable on the spot; `false` on
+every other shape and on the `.picks` (≥ 2 ready, L2-consuming) arm.
+The spec-parity slice-4 refinement (design note
+`docs/2026-08-10_gospecc-decomposition.md` §6(b)): the select-tricky
+class's selects are all `.done`-shaped, and the blanket
+`consumesSelect` refusal was the only thing keeping them out of the
+checker. -/
+def selectApplyDone (s : ExecState) : Config → Bool
+  | .retV v (.selectOpsK clauses default? done [] env k) =>
+      match applySelectCore s clauses default? ((v :: done).reverse) env k with
+      | .ok (.done _ _) => true
+      | _ => false
+  | _ => false
+
 /-- The fail-closed per-thread obliviousness check: `true` only on
 shapes whose `stepThread` provably ignores the choice stream
-(`stepThread_oblivious`). -/
+(`stepThread_oblivious`). Select applies (spec-parity slice 4): no
+longer a blanket refusal — accepted exactly when the arrival analysis
+is partnerless (`.cellPath`) AND the apply is non-consuming
+(`selectApplyDone`, the `.done` shape); a multi-ready (L2-consuming)
+or partnered select still fails closed. -/
 def poolThreadOblivious (s : ExecState) (ts : Array Config) (i : Nat) : Bool :=
   match ts[i]? with
   | none => false
@@ -68,7 +91,10 @@ def poolThreadOblivious (s : ExecState) (ts : Array Config) (i : Nat) : Bool :=
     if isBlockedConfig c then true
     else if (spawnedCont c).isSome then true
     else if (spawnPlan c).isSome then true
-    else if consumesSelect c then false
+    else if consumesSelect c then
+      (match arrivalCases s ts i c with
+       | .ok .cellPath => selectApplyDone s c
+       | _ => false)
     else if consumesAppendSlice c then false
     else if isMapIterNext c then false
     else
@@ -85,6 +111,75 @@ theorem isMapIterNext_false_elim {c : Config} (h : isMapIterNext c = false) :
   intro kv vv kt vt body rem env k heq
   subst heq
   simp [isMapIterNext] at h
+
+/-- A `consumesSelect` configuration is exactly the select-apply
+shape. -/
+theorem consumesSelect_shape {c : Config} (h : consumesSelect c = true) :
+    ∃ v clauses default? done env k,
+      c = .retV v (.selectOpsK clauses default? done [] env k) := by
+  match c, h with
+  | .retV v (.selectOpsK clauses default? done [] env k), _ =>
+    exact ⟨v, clauses, default?, done, env, k, rfl⟩
+
+/-- Inversion of the non-consuming apply shape: `.done` arises only
+from a zero-ready analysis (default or park) or a singleton-ready
+commit — never from the `.picks` (≥ 2 ready) arm. Feeds the detector's
+obliviousness (`raceUpdate` reads the stream only in its multi-ready
+branches). -/
+theorem applySelectCore_done_inv {s : ExecState}
+    {clauses : List (SelectClauseHead × Stmt)} {default? : Option Stmt}
+    {vs : List GoValue} {env : LocalEnv} {k : Cont}
+    {c' : Config} {s' : ExecState}
+    (h : applySelectCore s clauses default? vs env k = .ok (.done c' s')) :
+    ∃ evs, evalClauses clauses vs = .ok evs
+      ∧ (readyClauses s evs = .ok []
+        ∨ ∃ cl, readyClauses s evs = .ok [cl]) := by
+  unfold applySelectCore at h
+  simp only [bind_eq_ok] at h
+  obtain ⟨evs, hevs, h⟩ := h
+  refine ⟨evs, hevs, ?_⟩
+  obtain ⟨ready, hready, h⟩ := h
+  cases ready with
+  | nil => exact .inl hready
+  | cons cl rest =>
+    cases rest with
+    | nil => exact .inr ⟨cl, hready⟩
+    | cons cl2 rest2 =>
+      -- the `.picks` arm: its result is never `.done`
+      simp only [bind_eq_ok] at h
+      obtain ⟨commits, -, h⟩ := h
+      simp only [pure_eq_ok] at h
+      cases h
+
+/-- A non-consuming apply returns the stream untouched, whatever the
+stream. -/
+theorem applySelect_of_done {s : ExecState}
+    {clauses : List (SelectClauseHead × Stmt)} {default? : Option Stmt}
+    {vs : List GoValue} {env : LocalEnv} {k : Cont}
+    {c' : Config} {s' : ExecState}
+    (h : applySelectCore s clauses default? vs env k = .ok (.done c' s')) :
+    ∀ ch : Choices,
+      applySelect s clauses default? vs env k ch = .ok (c', s', ch) := by
+  intro ch
+  unfold applySelect
+  simp only [h, Bind.bind, Except.bind]
+  rfl
+
+/-- `stepFn` at a `.done`-shaped select apply is stream-independent:
+the apply commits/parks/defaults with the stream returned verbatim. -/
+theorem stepFn_select_done {s : ExecState} {v : GoValue}
+    {clauses : List (SelectClauseHead × Stmt)} {default? : Option Stmt}
+    {done : List GoValue} {env : LocalEnv} {k : Cont}
+    {c' : Config} {s' : ExecState}
+    (h : applySelectCore s clauses default? ((v :: done).reverse) env k
+      = .ok (.done c' s')) :
+    ∀ ch : Choices,
+      stepFn s (.retV v (.selectOpsK clauses default? done [] env k)) ch
+        = .ok (c', s', ch) := by
+  intro ch
+  unfold stepFn
+  simp only [applySelect_of_done h ch]
+  rfl
 
 /-- **Stream obliviousness of the certified goroutine-step shapes**:
 under the `poolThreadOblivious` flags, a `stepThread` that succeeds
@@ -145,7 +240,58 @@ theorem stepThread_oblivious {s : ExecState} {ts : Array Config} {i : Nat}
           simp only [Option.isSome_none, Bool.false_eq_true, reduceIte] at hobl
           -- the fail-closed stream flags
           cases hnsel : consumesSelect c with
-          | true => rw [hnsel] at hobl; simp at hobl
+          | true =>
+            -- the slice-4 refinement: a select apply certified as
+            -- partnerless AND non-consuming (`.done`) is oblivious
+            rw [hnsel] at hobl
+            simp only [reduceIte] at hobl
+            obtain ⟨v, clauses, default?, dn, envS, kS, rfl⟩ :=
+              consumesSelect_shape hnsel
+            cases harr : arrivalCases s ts i
+                (.retV v (.selectOpsK clauses default? dn [] envS kS)) with
+            | error e => rw [harr] at hobl; cases hobl
+            | ok a =>
+              cases a with
+              | single bc cands => rw [harr] at hobl; cases hobl
+              | multi os => rw [harr] at hobl; cases hobl
+              | cellPath =>
+                rw [harr] at hobl
+                dsimp only at hobl
+                simp only [selectApplyDone] at hobl
+                cases happly : applySelectCore s clauses default?
+                    ((v :: dn).reverse) envS kS with
+                | error e => rw [happly] at hobl; cases hobl
+                | ok o =>
+                  cases o with
+                  | picks commits => rw [happly] at hobl; cases hobl
+                  | done c₂ s₂ =>
+                    simp only [bind_eq_ok] at h
+                    obtain ⟨⟨plan, ch₁⟩, hplan, h⟩ := h
+                    rw [arrivalPlan_of_cellPath (ch := ch₀) harr] at hplan
+                    simp only [Except.ok.injEq, Prod.mk.injEq] at hplan
+                    obtain ⟨hp1, hp2⟩ := hplan
+                    subst hp1
+                    subst hp2
+                    simp only [bind_eq_ok] at h
+                    obtain ⟨⟨c₃, s₃, ch₃⟩, hstep, h⟩ := h
+                    simp only [pure_eq_ok, Except.ok.injEq,
+                      Prod.mk.injEq] at h
+                    obtain ⟨rfl, rfl, rfl⟩ := h
+                    rw [stepFn_select_done happly ch₀] at hstep
+                    injection hstep with hstep
+                    injection hstep with hc hrest
+                    injection hrest with hs hch
+                    subst hc
+                    subst hs
+                    subst hch
+                    refine ⟨rfl, fun ch => ?_⟩
+                    unfold stepThread
+                    rw [hti]
+                    simp only [hblc, Bool.false_eq_true, reduceIte, hsc,
+                      hsp, Bind.bind, Except.bind,
+                      arrivalPlan_of_cellPath (ch := ch) harr]
+                    rw [stepFn_select_done happly ch]
+                    rfl
           | false =>
           rw [hnsel] at hobl
           simp only [Bool.false_eq_true, reduceIte] at hobl
@@ -216,11 +362,18 @@ theorem stepThread_oblivious {s : ExecState} {ts : Array Config} {i : Nat}
               rw [harr] at hobl
               cases hobl
 
-/-- **The detector's dispatcher is stream-independent away from select
-applies** (its only replication site, slice 4). -/
+/-- **The detector's dispatcher is stream-independent away from
+CONSUMING select applies** (its only replication site, slice 4;
+hypothesis generalized at spec-parity slice 4: a select apply
+certified partnerless + non-consuming is also covered — the detector's
+select arm reads the stream only in its multi-ready branches, which
+the `.done` inversion excludes). -/
 theorem raceUpdate_oblivious {sPre : ExecState} {tsPre : Array Config}
     {ch ch' : Choices} {m' : MultiConfig} {r : RaceState}
-    (hns : ∀ cPre, tsPre[m'.cur]? = some cPre → consumesSelect cPre = false) :
+    (hns : ∀ cPre, tsPre[m'.cur]? = some cPre →
+      consumesSelect cPre = false
+        ∨ (arrivalCases sPre tsPre m'.cur cPre = .ok .cellPath
+            ∧ selectApplyDone sPre cPre = true)) :
     raceUpdate sPre tsPre ch m' r = raceUpdate sPre tsPre ch' m' r := by
   unfold raceUpdate
   by_cases hsz : m'.threads.size ≤ 1
@@ -247,8 +400,46 @@ theorem raceUpdate_oblivious {sPre : ExecState} {tsPre : Array Config}
               cases pending <;> rfl
             case selectOpsK clauses d done pending env kk =>
               cases pending with
-              | nil => simp [consumesSelect] at hsel
               | cons e rest => rfl
+              | nil =>
+                -- the slice-4 case: partnerless + `.done` — the arm's
+                -- stream reads are all in branches the inversion of
+                -- `.done` excludes
+                rcases hsel with hfalse | ⟨harr, hdone⟩
+                · simp [consumesSelect] at hfalse
+                · have hdone' : ∃ c₂ s₂,
+                      applySelectCore sPre clauses d ((v :: done).reverse)
+                        env kk = .ok (.done c₂ s₂) := by
+                    simp only [selectApplyDone] at hdone
+                    cases happ : applySelectCore sPre clauses d
+                        ((v :: done).reverse) env kk with
+                    | error e => rw [happ] at hdone; cases hdone
+                    | ok o =>
+                      cases o with
+                      | picks commits => rw [happ] at hdone; cases hdone
+                      | done c₂ s₂ => exact ⟨c₂, s₂, rfl⟩
+                  obtain ⟨c₂, s₂, happly⟩ := hdone'
+                  obtain ⟨evs, hevs, hready⟩ :=
+                    applySelectCore_done_inv happly
+                  simp only [Bind.bind, Except.bind]
+                  congr 1
+                  funext r₁
+                  cases hwp : wokenPartner tsPre m'.threads m'.cur with
+                  | some j => rfl
+                  | none =>
+                    dsimp only
+                    cases hpost : m'.threads[m'.cur]? with
+                    | none =>
+                      simp only [harr, hevs, Bind.bind, Except.bind]
+                      rcases hready with hready | ⟨cl, hready⟩ <;>
+                        simp only [hready]
+                    | some cPost =>
+                      cases cPost <;>
+                        first
+                        | rfl
+                        | (simp only [harr, hevs, Bind.bind, Except.bind]
+                           rcases hready with hready | ⟨cl, hready⟩ <;>
+                             simp only [hready])
 
 /-- One all-runnable-branches STEP probe — the checker's stepping core,
 factored out (BUG-044: the main-exit window makes it reachable from TWO
@@ -312,14 +503,16 @@ def allStreamsOkPool (post : ExecState → Bool) :
           else stepAllBranchesOk (allStreamsOkPool post fuel) m r
 
 
-/-- A certified thread shape is never a select apply (the flag is
-explicit on the cell path; the wake/marker/spawn shapes are
-structurally not `.retV _ (.selectOpsK …)`). Feeds
-`raceUpdate_oblivious`. -/
-theorem poolThreadOblivious_nsel {s : ExecState} {ts : Array Config}
+/-- A certified thread shape is either not a select apply at all, or a
+select apply certified partnerless AND non-consuming (the slice-4
+refinement — the old conclusion was the bare `consumesSelect c =
+false`). Feeds `raceUpdate_oblivious`. -/
+theorem poolThreadOblivious_sel {s : ExecState} {ts : Array Config}
     {i : Nat} {c : Config}
     (hobl : poolThreadOblivious s ts i = true) (hti : ts[i]? = some c) :
-    consumesSelect c = false := by
+    consumesSelect c = false
+      ∨ (arrivalCases s ts i c = .ok .cellPath
+          ∧ selectApplyDone s c = true) := by
   unfold poolThreadOblivious at hobl
   rw [hti] at hobl
   dsimp only at hobl
@@ -330,21 +523,33 @@ theorem poolThreadOblivious_nsel {s : ExecState} {ts : Array Config}
     cases hsc : spawnedCont c with
     | some k =>
       obtain rfl := spawnedCont_shape hsc
-      rfl
+      exact .inl rfl
     | none =>
       simp only [hsc, Option.isSome_none, Bool.false_eq_true,
         reduceIte] at hobl
       cases hsp : spawnPlan c with
       | some p =>
         match c, hsp with
-        | .retV cv (.goCalleeK [] env k), _ => rfl
-        | .retV v (.goArgsK cv vals [] env k), _ => rfl
+        | .retV cv (.goCalleeK [] env k), _ => exact .inl rfl
+        | .retV v (.goArgsK cv vals [] env k), _ => exact .inl rfl
       | none =>
         simp only [hsp, Option.isSome_none, Bool.false_eq_true,
           reduceIte] at hobl
         cases hnsel : consumesSelect c with
-        | true => rw [hnsel] at hobl; simp at hobl
-        | false => rfl
+        | true =>
+          rw [hnsel] at hobl
+          simp only [reduceIte] at hobl
+          refine .inr ?_
+          cases harr : arrivalCases s ts i c with
+          | error e => rw [harr] at hobl; cases hobl
+          | ok a =>
+            cases a with
+            | single bc cands => rw [harr] at hobl; cases hobl
+            | multi os => rw [harr] at hobl; cases hobl
+            | cellPath =>
+              rw [harr] at hobl
+              exact ⟨rfl, hobl⟩
+        | false => exact .inl rfl
 
 /-- The one-layer unfolding of `execProgLoop`, as an equation
 (incl. the BUG-044 main-exit window at `mainOutcome?`-some). -/
@@ -477,8 +682,9 @@ theorem stepAllBranchesOk_sound {post : ExecState → Bool} {n : Nat}
       intro i probeCh chTail m' r' hobl hru hnext hreal hcur
       have hruReal : raceUpdate m.shared m.threads ch m' r = .ok r' := by
         rw [raceUpdate_oblivious (ch' := probeCh)
-          (fun cPre hcp => poolThreadOblivious_nsel
-            (hcur ▸ hobl) (hcur ▸ hcp))]
+          (fun cPre hcp => by
+            rw [hcur]
+            exact poolThreadOblivious_sel hobl (hcur ▸ hcp))]
         exact hru
       obtain ⟨σf, ch'', hrec, hpost⟩ := ih hnext chTail
       refine ⟨σf, ch'', ?_, hpost⟩

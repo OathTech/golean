@@ -473,6 +473,25 @@ open Lean in
 /-- info: 'GoLean.GoCore.Machine.step_det' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.GoCore.Machine.step_det
 
+-- The non-consuming-select checker refinement (spec-parity slice 4,
+-- design note 2026-08-10 §6(b)): `poolThreadOblivious` accepts a
+-- select apply exactly when partnerless (`.cellPath`) AND
+-- `applySelectCore`-`.done`; witnessed same-commit by the golden
+-- select-probe program (positive: every `.done` shape exercised on
+-- every schedule) and the two-ready NEGATIVE control (the consuming
+-- select is still refused — the fail-closed line held). Same
+-- name-existence/deletion-tripwire scope as the block below.
+/-- info: 'GoLean.GoCore.Machine.stepFn_select_done' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.GoCore.Machine.stepFn_select_done
+/-- info: 'GoLean.GoCore.Machine.applySelectCore_done_inv' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.GoCore.Machine.applySelectCore_done_inv
+/-- info: 'GoLean.Surface.selDoneAllStreamsCert' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Surface.selDoneAllStreamsCert
+/-- info: 'GoLean.Surface.selDoneAllSchedules42' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Surface.selDoneAllSchedules42
+/-- info: 'GoLean.Surface.selConsumingRefused' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Surface.selConsumingRefused
+
 -- The adequacy family.
 /-- info: 'GoLean.Iris.go_adequacy' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Iris.go_adequacy
@@ -877,7 +896,7 @@ example := @GoLean.GoCore.Machine.allStreamsOkPool
 example := @GoLean.GoCore.Machine.execProgLoop_ok_of_allStreamsOkPool
 example := @GoLean.GoCore.Machine.stepThread_oblivious
 example := @GoLean.GoCore.Machine.raceUpdate_oblivious
-example := @GoLean.GoCore.Machine.poolThreadOblivious_nsel
+example := @GoLean.GoCore.Machine.poolThreadOblivious_sel
 example := @GoLean.GoCore.Machine.execProgLoop_mono
 example := @GoLean.GoCore.Machine.stepMulti_wf
 example := @GoLean.GoCore.Machine.applyPairing_wf
