@@ -4,14 +4,26 @@ import VerdiCompat
 # Differential-execution harness (design note §3, path 2 — Lean leg)
 
 Seed-deterministic handler-level differential testing of the ported
-Verdi Raft spec. This file is the LEAN side only: it generates handler
+Verdi Raft spec. This file is the LEAN side: it generates handler
 inputs deterministically, runs the ported handlers, and records
-`(input, output)` pairs in a committed fixture. The ROCQ ORACLE LEG IS
-NOT ATTACHED (no Rocq/opam on this box — parked, see the lane log
-`docs/2026-08-09_verdi-p1-lane.md`). Until it attaches, `check` mode is
-a REGRESSION PIN of the Lean port against its own recorded behavior —
-it detects port drift, not port-vs-Verdi divergence. No stronger claim
-is made.
+`(input, output)` pairs in a committed fixture. `check` mode is a
+REGRESSION PIN of the Lean port against its own recorded behavior —
+it detects port drift.
+
+THE ROCQ ORACLE LEG EXISTS (`compat/verdi/extraction/`, attached
+2026-08-10 — lane log `docs/2026-08-09_verdi-p1-lane.md`, parking
+ledger resolved): verdi-raft's own Coq handlers at the pinned rev,
+instantiated with this same N=3 counter machine, extracted to OCaml
+and replayed over the committed fixture's recorded inputs by
+`extraction/build-and-run.sh`. Result on this fixture: 280/280
+byte-identical outputs. What that validates: the Lean port's handler
+semantics AGREE WITH THE COQ ORIGINALS on every recorded input, under
+the counter instantiation — through the extraction TCB (Coq extraction
+directives incl. nat→int and fin→int, plus OCaml evaluation). What it
+does NOT validate: inputs outside the fixture, and the Prop-level
+vocabulary (linearizability defs), which the oracle never executes.
+The oracle run is manual/lane-local, not part of `check`; re-run it
+whenever the fixture is regenerated.
 
 ## Fixture format (v1) — the contract the future Rocq leg codes against
 
@@ -393,8 +405,9 @@ def header : List String :=
   , s!"# machine=counter N=3 base-seed={baseSeed} cases-per-kind={casesPerKind} kinds={" ".intercalate kinds}"
   , "# per-case seed = baseSeed + 1000003 * caseIndex, splitmix64 stream; inputs recorded explicitly below"
   , "# columns: id<TAB>kind<TAB>input<TAB>output  (s-expr grammar: compat/verdi/DiffHarness.lean)"
-  , "# LEAN LEG ONLY: outputs are the Lean port's. The Rocq oracle leg is parked (lane log); until it"
-  , "#   attaches, `check` pins the Lean port against its own recorded behavior (drift detection)." ]
+  , "# outputs are the Lean port's; `diffharness check` pins them (drift detection). The Rocq oracle"
+  , "#   leg (compat/verdi/extraction/, extracted verdi-raft handlers) replays the input column and"
+  , "#   byte-compares the output column: 280/280 match, 2026-08-10. Re-run it after regenerating." ]
 
 def fixtureContent : Except String String := do
   let lines ← caseLines

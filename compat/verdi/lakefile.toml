@@ -13,8 +13,9 @@ name = "VerdiCompat"
 name = "AxCheck"
 globs = ["AxCheck"]
 
-# The differential harness's Lean leg (design note §3 path 2; the Rocq
-# oracle leg is parked — see docs/2026-08-09_verdi-p1-lane.md).
+# The differential harness's Lean leg (design note §3 path 2). The Rocq
+# oracle leg lives in extraction/ (attached 2026-08-10, lane log
+# docs/2026-08-09_verdi-p1-lane.md) and never enters this build.
 # Run: .lake/build/bin/diffharness check fixtures/handlers-n3.tsv
 [[lean_exe]]
 name = "diffharness"
