@@ -28,6 +28,16 @@
 # The emitted decide certs MUST be #eval'd true before building
 # (eval-before-you-decide doctrine); the script does this itself and
 # refuses to write the module if any oracle's checker Bool is false.
+#
+# SEED SHAPE (S6 audit): the emitted `<unit>Out` carries
+# `methodSets := <term>Lowered.methodSets` so pinned seeds match the
+# driver-built states rather than defaulting to `#[]` (the recorded
+# proof-side divergence — contract note, known-limitations). The two
+# pre-S6 pin modules (ImportedGooseNew/Vars) keep the empty-record
+# seed their R3 modules bind to; regenerating one is a deliberate
+# seed-shape change (the R3 kit composition over a record-carrying
+# seed needs the empty-records-refuse-strictly-more transfer lemma,
+# recorded owed with that consumer).
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
@@ -64,7 +74,7 @@ NAMESPACE="GoLean.ImportedGoose.${CatCamel}${UnitCamel}"
 
 # Oracles: fail closed on any non-golean / non-ok row.
 subjects=()
-while IFS=$'\t' read -r id subject args expected _rest; do
+while IFS=$'\t' read -r id subject args expected _rest || [[ -n "${id:-}" ]]; do
   [[ "$id" =~ ^# ]] && continue
   [[ -z "$id" ]] && continue
   if [[ ! "$subject" =~ ^golean ]] || [[ "$expected" != "ok" ]]; then
@@ -110,7 +120,7 @@ grep -q "ERROR" "$WORK/prog.repr" && { echo "gen-imported-pin: FAIL — decoder 
   echo "def pinEnv : LocalEnv := [[(\"r\", .base ⟨0⟩)]]"
   echo "def pinOut : ExecState :="
   echo "  { types := pinProg.typeDefs.toList, functions := pinProg.funcs,"
-  echo "    methods := pinProg.methods,"
+  echo "    methods := pinProg.methods, methodSets := pinProg.methodSets,"
   echo "    heap := [(.base ⟨0⟩, ⟨some (.int .int), .int 0 .int⟩)], nextAddr := 1 }"
   i=0
   for s in "${subjects[@]}"; do
@@ -179,11 +189,15 @@ HEADER
 /-- Driver env: \`r\` names the harness output cell at base address 0. -/
 abbrev ${term}Env : LocalEnv := [[("r", .base ⟨0⟩)]]
 
-/-- Seeded initial state (the TotalPins observable convention). -/
+/-- Seeded initial state (the TotalPins observable convention; carries
+the program's method-set RECORDS since the S6 audit — the seed matches
+the driver-built states, `runProgramSetupM`/`CLI.enumSetup`, instead of
+silently defaulting `methodSets := #[]`). -/
 def ${term}Out : ExecState :=
   { types := ${term}Lowered.typeDefs.toList,
     functions := ${term}Lowered.funcs,
     methods := ${term}Lowered.methods,
+    methodSets := ${term}Lowered.methodSets,
     heap := [(.base ⟨0⟩, ⟨some (.int .int), .int 0 .int⟩)],
     nextAddr := 1 }
 HEADER

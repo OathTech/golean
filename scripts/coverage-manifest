@@ -141,7 +141,7 @@ if [[ "$LAST_FAILED" -eq 1 ]]; then
     echo "coverage-manifest: --last-failed requires $latest" >&2
     exit 2
   fi
-  while IFS=$'\t' read -r result id _features _stage _detail _extra; do
+  while IFS=$'\t' read -r result id _features _stage _detail _extra || [[ -n "${result:-}" ]]; do
     if [[ "$result" == "FAIL" && -n "$id" ]]; then
       EXACT_IDS+=("$id")
       EXACT_ID_COUNT=$((EXACT_ID_COUNT + 1))
@@ -163,7 +163,7 @@ if [[ ! -f "$TAGS_FILE" ]]; then
 fi
 
 known_tags=""
-while IFS= read -r tag; do
+while IFS= read -r tag || [[ -n "${tag:-}" ]]; do
   if [[ -z "$tag" || "$tag" == \#* ]]; then
     continue
   fi
@@ -404,7 +404,7 @@ while IFS= read -r cases_file; do
     continue
   fi
 
-  while IFS=$'\t' read -r row_id subject args expected_status expected_reason features lane why params extra; do
+  while IFS=$'\t' read -r row_id subject args expected_status expected_reason features lane why params extra || [[ -n "${row_id:-}" ]]; do
     if [[ -z "${row_id:-}" || "$row_id" == \#* ]]; then
       continue
     fi
