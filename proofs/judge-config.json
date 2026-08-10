@@ -45,7 +45,11 @@
     "Judge.forkJoinNoRace",
     "Judge.forkJoinTerminatesNormallyC",
     "Judge.goldenSpecC",
-    "Judge.goldenReturnsTwoC"
+    "Judge.goldenReturnsTwoC",
+    "Judge.compareNilToNilSpecC",
+    "Judge.compareNilToNilReadoutC",
+    "Judge.dspCert",
+    "Judge.dspAllSchedules"
   ],
   "permitted_axioms": [
     "propext",

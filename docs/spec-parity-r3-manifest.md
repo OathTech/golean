@@ -7,8 +7,14 @@ imported sequential-oracle class. Started at slice 3
 round (2026-08-10) — the first version asserted "37 proved upstream"
 and marked three upstream-ABORTED oracles "proved upstream"; this
 version records the measured truth. Updated whenever a row moves.
-NOTHING here is designated unless the arc-end curation (user-owned)
-says so.
+Designation state (D3 user ruling 2026-08-10 — the arc-end curation
+this header awaited): `compareNilToNilSpecC` +
+`compareNilToNilReadoutC` and the fuel-free `dspCert` +
+`dspAllSchedules` are DESIGNATED (44 → 48; Challenge/Solution +
+judge config + statement-TCB list; statement defs hoisted to the
+def-only `Specs/GooseParityTargets.lean`). The fuel-based
+kernel-evidence siblings (`dspCert400` &c.) stay UNDESIGNATED per
+the ruling. Every other row here remains undesignated.
 
 **What is gate-checked, precisely** (S3 audit correction — the first
 header blurred two properties): every theorem listed here is covered
@@ -71,7 +77,7 @@ rows only.
 
 | program (imported-goose) | upstream @ 43d4efa | our disposition | where / why |
 |---|---|---|---|
-| semantics/nil `testCompareNilToNil` | **Qed** (nil.v:31) | **proved** (THE EXEMPLAR — a genuine parity row) | `Specs/GooseParityNilWP.lean` — `compareNilToNilSpecC` + `compareNilToNilReadoutC` (designation CANDIDATES) |
+| semantics/nil `testCompareNilToNil` | **Qed** (nil.v:31) | **proved** (THE EXEMPLAR — a genuine parity row) | `Specs/GooseParityNilWP.lean` — `compareNilToNilSpecC` + `compareNilToNilReadoutC` (DESIGNATED, D3 ruling 2026-08-10) |
 | semantics/nil `testCompareSliceToNil` | **Abort** (nil.v:20; their TODO: "need a lemma showing allocations are non-nil") | **proved** — an oracle upstream attempted and abandoned; we discharge it | same file, `compareSliceToNil*` |
 | semantics/nil `testComparePointerToNil` | **Abort** (nil.v:27; TODO: "points-tos are non-null") | **proved** — ditto | same file, `comparePointerToNil*` |
 | semantics/nil `testComparePointerWrappedToNil` | **Abort** (nil.v:38; TODO: "array points-to is non null") | **proved** — ditto | same file, `comparePointerWrappedToNil*` |
@@ -165,7 +171,7 @@ item).
 | select-tricky-examples `nb-full-buffer-not-ready` | **Qed** (:219, Qed :258) | **∀-schedule family proved** | `nbFullBuffer*`; same gaps as `nb-guaranteed-ready` |
 | muxer `async` | **no upstream lemma** for `Async` (searched `channel*.v`; `wp_HelloWorldAsync` channel.v:149 is the sibling `HelloWorldAsync`, a different function) | **∀-schedule family proved** (coverage row, not a parity row) | `ChannelMuxer.async*` |
 | muxer `client` | **Qed** (`wp_Client`, channel_dsp.v:152, Qed :172) | **∀-schedule family proved** | `ChannelMuxer.client*`; the leaked parked server at main's exit is inside the modeled envelope (D6/L5) |
-| actris-example (dsp) | **Qed** (`wp_DSPExample`, channel_dsp.v:35, Qed :57) | **∀-schedule family proved** | `ChannelActris.dsp*` |
+| actris-example (dsp) | **Qed** (`wp_DSPExample`, channel_dsp.v:35, Qed :57) | **∀-schedule family proved**; `dspCert`+`dspAllSchedules` DESIGNATED (D3 ruling 2026-08-10, fuel-free forms) | `ChannelActris.dsp*` |
 
 **Population honesty — what the curated set does NOT cover.** The
 upstream channel-examples proof tree at 43d4efa states **73**

@@ -286,6 +286,17 @@ check_surface_imports proofs/GoLeanProofs/Specs/Statements.lean \
 # to the core alone.
 check_surface_imports proofs/GoLeanProofs/Specs/ForkJoinTargets.lean \
   '^import GoLean\.'
+# The spec-parity statement targets (D3 designation, user ruling
+# 2026-08-10): the DEF-ONLY module the designated spec-parity
+# statements reference — in Challenge's trusted closure, so its
+# imports are pinned to core + the Iris-free surface + the (itself
+# def-only) actris pin module.
+check_surface_imports proofs/GoLeanProofs/Specs/GooseParityTargets.lean \
+  '^import (GoLean\.|GoLeanProofs\.Surface$|GoLeanProofs\.Specs\.ImportedGooseActris$)'
+# The actris pinned lowering (def-only since its creation; joined the
+# trusted closure at the D3 designation, so its imports are pinned).
+check_surface_imports proofs/GoLeanProofs/Specs/ImportedGooseActris.lean \
+  '^import GoLean\.'
 # The fork/join pool witnesses (channels arc slice 2): statement-bearing,
 # Iris-free by chain — GoLean core + the surface + its own def-only
 # targets module (audit F4 split). NOT importable from Challenge (it
@@ -300,7 +311,7 @@ check_surface_imports proofs/GoLeanProofs/Specs/GoldenForkJoin.lean \
 # GoldenForkJoin PROOF module was removed from this list 2026-08-07,
 # restoring the statement-only import discipline).
 check_surface_imports proofs/Challenge.lean \
-  '^import (GoLeanProofs\.Specs\.Statements$|GoLeanProofs\.Specs\.GoldenTargets$|GoLeanProofs\.Specs\.ForkJoinTargets$)'
+  '^import (GoLeanProofs\.Specs\.Statements$|GoLeanProofs\.Specs\.GoldenTargets$|GoLeanProofs\.Specs\.ForkJoinTargets$|GoLeanProofs\.Specs\.GooseParityTargets$)'
 # AutomationTargets is statement-bearing but MIXED BY DESIGN: it holds the
 # range-rule target (a statement ABOUT the Iris-side proof infrastructure,
 # quantifying over IProp) and the phase-2 acceptance pins that reference

@@ -1,6 +1,7 @@
 import GoLeanProofs.Specs.Statements
 import GoLeanProofs.Specs.GoldenTargets
 import GoLeanProofs.Specs.ForkJoinTargets
+import GoLeanProofs.Specs.GooseParityTargets
 
 /-!
 # The Challenge — the judge's trusted statement of what GoLean claims
@@ -318,5 +319,47 @@ theorem goldenReturnsTwoC
     (hrun : execProg fuel outEnv goldenOut ch goldenDriver
       = .ok (.normal σf, ch')) :
     loadLoc σf (.base ⟨0⟩) = .ok (.int 2 .int) := sorry
+
+/-! ## The spec-parity designated pairs (D3 curation, USER RULING
+2026-08-10 — the arc's designated-set change, 44 → 48; fuel-free forms
+ONLY, per the ruling: the `decide +kernel` evidence siblings
+(`dspCert400` &c.) stay UNDESIGNATED proof evidence).
+
+Class 1 — the imported sequential exemplar (`testCompareNilToNil`,
+upstream `wp_testCompareNilToNil` Qed): the internal `GoSpecC` triple
+at full `InitialSplit` strength over the frontend's ACTUAL pinned
+lowering (`nilLowered`, staleness-guarded by ci's imported-pins step),
+plus the first-order pool-carrier readout twin. Class 3 — the flagship
+channel exemplar (dsp, Actris 2.0 prog3, upstream `wp_DSPExample`
+Qed): the fuel-general `∃N, ∀ fuel ≥ N` kernel certificate over the
+pool ∀-streams checker, plus the ∀-schedule verdict readout (every
+choice stream completes at main's `.normal` with 42). All defs in the
+trusted closure — `Specs/GooseParityTargets.lean` (def-only) and the
+already-def-only `Specs/ImportedGooseActris.lean`. -/
+
+open GoLean.ImportedGoose GoLean.ImportedGoose.SemanticsNil in
+theorem compareNilToNilSpecC :
+    GoSpecC nilLowered.typeDefs.toList nilLowered.funcs nilLowered.methods
+      importedEnv importedCell0 compareNilDriver (importedCellV 1) := sorry
+
+open GoLean.ImportedGoose GoLean.ImportedGoose.SemanticsNil in
+theorem compareNilToNilReadoutC
+    (fuel : Nat) (ch : Choices) (σf : ExecState) (ch' : Choices)
+    (hrun : execProg fuel importedEnv (importedSeed nilLowered) ch
+      compareNilDriver = .ok (.normal σf, ch')) :
+    loadLoc σf (.base ⟨0⟩) = .ok (.int 1 .int) := sorry
+
+open GoLean.ImportedGoose GoLean.ImportedGoose.ChannelActris in
+theorem dspCert :
+    ∃ N, ∀ fuel, N ≤ fuel →
+      allStreamsOkPool (cellIsInt 42) fuel
+        ⟨#[.exec dspDriver dspEnv .stop], dspSeed, 0⟩ {} = true := sorry
+
+open GoLean.ImportedGoose GoLean.ImportedGoose.ChannelActris in
+theorem dspAllSchedules :
+    ∃ N, ∀ fuel, N ≤ fuel → ∀ ch : Choices,
+      ∃ (σf : ExecState) (ch' : Choices),
+        execProg fuel dspEnv dspSeed ch dspDriver = .ok (.normal σf, ch')
+          ∧ cellIsInt 42 σf = true := sorry
 
 end Judge

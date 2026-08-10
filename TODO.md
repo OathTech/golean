@@ -397,8 +397,12 @@ feature breadth up the raft ladder, `slices.Sort` extern + input fuzzing.
   forms), the P-S3-2 bounded tranche (`scripts/gen-imported-pin`
   tracked, 2 units pinned, 4 R3 rows proved — parity rows 2→4 — 1
   oracle out-of-tranche with reason, remainder honestly not-reached).
-  Nothing designated (charter D3 — user-owned curation;
-  candidates recorded in the closure record).
+  D3 curation RESOLVED (user ruling 2026-08-10, post-S6-audit):
+  `compareNilToNilSpecC`+`ReadoutC` and fuel-free
+  `dspCert`+`dspAllSchedules` DESIGNATED — 44 → 48 (Challenge/
+  Solution/judge-config/statement-TCB list; def-only hoist
+  `Specs/GooseParityTargets.lean`); Comparator landmark owed at the
+  coordinator's merge-prep step.
 
 ## Differential Execution
 

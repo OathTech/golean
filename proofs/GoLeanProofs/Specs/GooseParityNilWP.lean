@@ -28,9 +28,12 @@ content is exactly `wp_compareNil_body` — the inner body's walk; the
 wrapper, driver, exit pipe, pool transfer, and readout derivation are
 the once-proven kit (`Specs/GooseParityKit.lean`).
 
-Designation status: CANDIDATES only (charter D3 is curated —
-user-owned at the arc-end merge); nothing here joins
-`proofs/Audit.lean`'s designated list in this slice.
+Designation status: the pair `compareNilToNilSpecC` +
+`compareNilToNilReadoutC` is DESIGNATED (D3 user ruling 2026-08-10 —
+the arc-end curation this header awaited): both join
+`proofs/Audit.lean`'s designated list, Challenge/Solution, and the
+judge config; their statement defs live in the def-only
+`Specs/GooseParityTargets.lean` (the F4 hoist, paid at designation).
 -/
 
 open Iris Iris.ProgramLogic Iris.Std Iris.Std.PartialMap
@@ -91,10 +94,9 @@ example : findFunctionIn? nilLowered.funcs ⟨"testCompareNilToNil"⟩
 example : findFunctionIn? nilLowered.funcs ⟨"goleanTestCompareNilToNil"⟩
     = some goleanCompareNilFunc := rfl
 
-/-- The driver statement — the R1 differential row's subject, and the
-statement every theorem below is about. -/
-abbrev compareNilDriver : Stmt :=
-  .call #[.var "r"] ⟨"goleanTestCompareNilToNil"⟩ #[]
+-- `compareNilDriver` MOVED to the def-only
+-- `Specs/GooseParityTargets.lean` at the D3 designation (user ruling
+-- 2026-08-10; the designated pair's statement subject).
 
 /-- The kit seed at this program IS the existing R2 pin's seed. -/
 example : importedSeed nilLowered = nilOut := rfl
@@ -471,8 +473,9 @@ theorem compareNilToNilSpec :
   intro _inst hprog hmeths _htypes
   exact wp_compareNilDriver hprog hmeths
 
-/-- **D1 form 1 — the designated-shape triple (CANDIDATE, not
-designated)**: the exemplar on the concurrent carrier at full
+/-- **D1 form 1 — DESIGNATED (D3 user ruling 2026-08-10; Comparator
+Challenge/Solution + statement-TCB list, 44 → 48)**: the exemplar on
+the concurrent carrier at full
 `InitialSplit` strength, via the conservation transfer
 (sequential-degenerate lane — the program spawns nothing; the
 genuinely-spawning form is slice 4's work). -/
@@ -481,8 +484,8 @@ theorem compareNilToNilSpecC :
       importedEnv importedCell0 compareNilDriver (importedCellV 1) :=
   goSpecC_of_goSpec compareNilToNilSpec
 
-/-- **D1 form 2 — the first-order readout twin (CANDIDATE, not
-designated)**: every `.normal` pool completion of the seeded driver
+/-- **D1 form 2 — DESIGNATED (D3 user ruling 2026-08-10)**: every
+`.normal` pool completion of the seeded driver
 leaves the oracle's TRUE verdict `1` in the harness cell — interpreter
 vocabulary only (the deletion test: no Iris, no relation, no tactic in
 this statement's closure). -/
