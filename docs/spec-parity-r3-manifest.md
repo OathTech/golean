@@ -132,7 +132,16 @@ translation step are executed by no test. OURS are seed-concrete (no
 frame quantifier), driver-level (the wrapper program, not a
 compositional function spec), and quantify EVERY modeled schedule of
 the differentially tested `execProg` with totality + exact verdict +
-deadlock- and race-refusal-freedom.
+deadlock- and race-refusal-freedom ("race-REFUSAL-freedom" says
+exactly what the theorem says — the fail-open under-approximating
+detector never fires; it is NOT an ours-only race-freedom delta: the
+cross-model race accounting lives at the matrix §7.2 race-axis
+paragraph, arc-end correction — their `NotStuck` WP entails
+race-freedom sound-by-construction on their model, and our delta on
+that axis is the validation side only. Pointer added at the arc-end
+delta review; the THEIRS clause above enumerates only
+termination/deadlock precisely because race is not a they-lack
+item).
 
 | corpus row (imported-goose/channel/) | upstream @ 43d4efa | our disposition | where / gap |
 |---|---|---|---|
