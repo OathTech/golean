@@ -71,7 +71,7 @@ updated at the spec-parity arc close, 2026-08-10.
 
 | # | What | Their evidence | Our status | Class |
 |---|---|---|---|---|
-| T1 | `sync` package: Mutex/RWMutex/WaitGroup/Once/sema specs proved over the goose-translated REAL stdlib source, atop a small trusted core (Mutex→CmpXchg spinlock, semaphore model; Cond notifyList STUBBED no-ops) | `new/trusted_code/sync.v:8-58@43d4efa`; `new/proof/sync.v` + `sync_proof/*` (9 files, ~35 wp lemmas) | MACHINE HALF LANDED (spec-parity S2, 2026-08-09, via exactly the recorded growth contract — each primitive one registry entry, ZERO new Choices sites): Mutex/RWMutex/WaitGroup/Once as machine primitives (value-semantics cells, blocked-shape wake, the probed-fatal misuse class, HB edges per the package-doc sentences with the two-clock RWMutex realization). Lane state MEASURED at the arc tip (tracked baseline, `awk -F'\t' '$2~/^sync\//{n++;c[$1]++} END{print n,c["PASS"],c["FAIL"]}' baselines/native-full.tsv` → 35 29 6, plus race/{free,negative}-sync 7/7 PASS): **42 rows — 36 green, 6 PERMANENT fail-closed frontend-export markers**: the FOUR sync/escapes escape-refusals (S2 audit fix round, design note F4) + the Cond/TryLock out-of-scope pair (charter D4). (Correction, S5 audit: this cell first carried the S2 build-slice figure "33 guardrail pins green + 2 permanent markers", which was true pre-audit-round but names 2 of the 6 permanent refusals standing at tip.) The four sync-only goose files R1-green (`docs/2026-08-09_sync-package-design.md` §§11-12). NO sync spec/law layer yet — no sync WP laws, no proved sync specs (the feature-class exemplar is P-S2-3's candidate-when-reached; the arc's proof slices did not reach sync) | **CAP, narrowed** — the machine half is paid; owed: the sync spec layer (P-S2-3) and, for TryLock/atomics, the atomics arc |
+| T1 | `sync` package: Mutex/RWMutex/WaitGroup/Once/sema specs proved over the goose-translated REAL stdlib source, atop a small trusted core (Mutex→CmpXchg spinlock, semaphore model; Cond notifyList STUBBED no-ops) | `new/trusted_code/sync.v:8-58@43d4efa`; `new/proof/sync.v` + `sync_proof/*` (9 files, ~35 wp lemmas) | MACHINE HALF LANDED (spec-parity S2, 2026-08-09, via exactly the recorded growth contract — each primitive one registry entry, ZERO new Choices sites): Mutex/RWMutex/WaitGroup/Once as machine primitives (value-semantics cells, blocked-shape wake, the probed-fatal misuse class, HB edges per the package-doc sentences with the two-clock RWMutex realization). Lane state MEASURED at the arc tip 1a72c690, post the arc-end semantics fix round which added 18 sync guardrail ids and BUG-053/054/055 (tracked baseline, `awk -F'\t' '$2~/^sync\//{n++;c[$1]++} END{print n,c["PASS"],c["FAIL"]}' baselines/native-full.tsv` → 53 42 11, plus race/{free,negative}-sync 7/7 PASS): **60 rows — 49 green, 11 recorded fail-closed frontend-export markers**: the FOUR sync/escapes escape-refusals (S2 audit fix round, design note F4) + the Cond/TryLock out-of-scope pair (charter D4) + the arc-end round's THREE sync/iface-dispatch refusals (BUG-053's fail-closed lane — user-interface/Locker dispatch on sync primitives now refuses per-stub at export, was runtime stuck) and TWO sync/composite-literal capability refusals. (Correction trail: this cell first carried the S2 build-slice "33/35 + 2 permanent", corrected at the S5 audit to 42/36/6, re-measured here after the arc-end round moved the lane.) The four sync-only goose files R1-green (`docs/2026-08-09_sync-package-design.md` §§11-12). NO sync spec/law layer yet — no sync WP laws, no proved sync specs (the feature-class exemplar is P-S2-3's candidate-when-reached; the arc's proof slices did not reach sync) | **CAP, narrowed** — the machine half is paid; owed: the sync spec layer (P-S2-3) and, for TryLock/atomics, the atomics arc |
 | T2 | `sync/atomic`: machine atomics (`LoadOp/AtomicSwap/AtomicAdd/CmpXchg`, lang.v:84-105,1372-1431@43d4efa) + 49 wp lemmas (`new/proof/sync/atomic.v`, their largest single proof file) | ibid. | Nothing; D5 records atomics as the `FairStream` prerequisite arc | **CAP** — owed: atomics arc (FairStream prerequisite) |
 | T3 | Logically-atomic channel-op spec set: `send_au/recv_au/close_au` + nested AUs + two incomparable nonblocking variants; proved `wp_NewChannel/wp_Send/wp_Receive/wp_Close/wp_TrySend/wp_TryReceive/wp_Len/wp_Cap` | `chan_au_base.v:106-297@43d4efa` (canonical-weakest-spec problem documented at :244-263); `chan_au_{new,send,recv}.v` | STILL ZERO channel WP/lifting laws — but the seam they land on now EXISTS (spec-parity S4): the decomposition pipe `proofs/GoLeanProofs/LangD.lean` (`StepDC`, the pairing simulation `stepM_erasedD`, run erasure, THE EXIT `goTripleC_of_wpD`, the `wpD_*` kit) is the recorded consumer boundary for the channel WP law family + protocol layer (P-S4-2). Concurrent Iris layer otherwise unchanged (`wpC_fork`/`wpC_pure_det`/`wpC_spawned_strip`, LangC); channel facts still export as kernel certificates / operational predicates (§7.2) | **CAP** (owed WITH its consumer: P-S4-2, the curated rows' D1 form) |
 | T4 | Select WP specs: `wp_select_blocking` (`[∧ list]` per-case AUs), `wp_select_nonblocking`, `wp_select_nonblocking_alt` (∗-separated with not-ready witnesses → provable-unreachable default) | `theory/chan.v:272-299,427-455,584-619@43d4efa`; unreachable-default demo `wp_select_nb_guaranteed_ready`, channel_select_tricky_examples.v:117 | None (same deferral as T3) | **CAP** (with T3) |
@@ -340,6 +340,17 @@ joint form). Framing is NO delta (their `∀ Φ` WP frames natively).
 | semantics/nil `testComparePointerWrappedDefaultToNil` | nil.v:40, **Qed** :46 | `comparePointerWrappedDefaultToNilSpecC` | `comparePointerWrappedDefaultToNilReadoutC` | genuine parity row; shared delta only |
 | semantics/block `testExplicitBlockStmt` | **no statement** (block has no lemma in semantics_proof/) | `explicitBlockSpecC` (`Specs/GooseParityBlockWP.lean`; + sequential `explicitBlockSpec`) | `explicitBlockReadoutC` | same-class coverage row, not a parity row |
 
+Context on the three Abort-discharge rows (added at the arc-end
+audit; the claim stands, its nature named): all three upstream aborts
+are the SAME missing abstraction-level lemma — that an
+allocation/points-to is non-null, a fact their `own_slice`/points-to
+predicates do not carry — i.e. an SL assertion-language/library gap
+on their side, not a semantics gap; on our side the corresponding
+step is not a lemma at all but a COMPUTATION over the concrete heap
+(a made slice's `base` is `some addr` by construction, discharged by
+the walk's ordinary side-goal simp). The delta is real and stays
+recorded; it is about assertion-language design, not semantic reach.
+
 Deltas AGAINST us in this class, named (manifest rows, unchanged at
 arc close): `testInterfaceNilWithType` (nil.v:48, **Qed** :50) —
 out-of-class at R3, the short-circuit `Expr.and`/`Expr.or` WP law gap;
@@ -357,7 +368,17 @@ Shared statement family per row (slice 4,
 kernel theorems — `<row>Cert` (the kernel certificate
 `allStreamsOkPool post fuel = true`), `<row>AllSchedules` (∀-schedule
 verdict readout), `<row>NoDeadlock`, `<row>NoRace`,
-`<row>TerminatesNormallyC` — all interpreter-vocabulary. NOT the D1
+`<row>TerminatesNormallyC` — all interpreter-vocabulary. FUEL is an
+axis of these statements and their WP has none (noted at the arc-end
+audit): `Cert`/`AllSchedules`/`NoDeadlock`/`NoRace` are stated at the
+row's SHIPPED literal fuel (200/400/800 — the manifest's fuel line),
+while `TerminatesNormallyC` is the fuel-general member (∃N ∀fuel≥N,
+no post) and the class-1 readouts (§7.1) are ∀-fuel conditionals; the
+∀fuel≥bound lift of the fixed-fuel members is one `execProgLoop_mono`
+application (machine-checked at the audit; sub-bound runs classify
+`fuelOut`, never `.deadlock` — the fixed-fuel forms are
+truth-equivalent for these programs), a curation-time polish, owed
+not shipped. NOT the D1
 pair; each row's recorded gap is the frame-quantified `GoSpecC`
 (needs the decomposition pipe's consumers + the channel WP law family,
 P-S4-1/P-S4-2).
@@ -373,8 +394,31 @@ against real channels, upstream CI) — the Rocq/GooseLang model and the
 translation step are executed by no test. OURS are seed-concrete (no
 frame quantifier — WEAKER in generality), driver-level, and quantify
 EVERY modeled schedule of the differentially tested `execProg` with
-totality + exact verdict + deadlock- and race-refusal-freedom —
-classes their logic does not state (rows O3/O6/O8).
+totality + exact verdict + deadlock-freedom — termination and
+deadlock-freedom being classes their logic does not state (rows
+O3/O8). A FOURTH against-us direction, added at the arc-end audit
+(this paragraph omitted it): "every modeled schedule" ranges over the
+MODELED registry-point schedules of RUNNABLE threads, a strictly
+NARROWER interleaving set than their WP's — GooseLang interleaves at
+sub-expression granularity with parked threads still reducible
+(spin-loop blocking), so their safety statement covers strictly more
+interleavings; the reduction that would license reading our
+∀-modeled-schedule as ∀-Go-schedule is the open NPDRF obligation,
+currently a refutable-as-written draft (rows L3/T12). THE RACE AXIS,
+corrected at the arc-end audit (this paragraph and §7.4 counted
+"race-refusal-freedom" among the they-don't-state classes — wrong in
+the self-favorable direction, and introduced HERE: the manifest
+origin lists our race theorem without any comparative clause; the
+overclaim was added when the paragraph was lifted into this matrix):
+on the PROOF side theirs is at least as strong — GooseLang makes a
+racy non-atomic access STUCK (lang.v:1372-1388, and ordinary stores
+take that path), so their `NotStuck` WP entails race-freedom of
+every reachable execution on their model, sound BY CONSTRUCTION —
+while our `<row>NoRace` says an admittedly UNDER-approximating
+fail-open detector never fires (Race.lean's recorded U1/U2). Our
+race delta is the orthogonal VALIDATION axis only: the detector is
+`-race`-oracle-grounded over the real lowering where theirs is
+untestable (rows O4/T12 state exactly this split).
 
 | corpus row (imported-goose/channel/) | their lemma @ 43d4efa | our theorems (namespace, verdict) | per-row note |
 |---|---|---|---|
@@ -470,8 +514,14 @@ reason.**
 - **2 coverage rows with no upstream statement** (semantics/block,
   muxer async).
 - Per-row on all six channel exemplars: ∀-modeled-schedule TOTALITY +
-  exact verdict + no-deadlock + no-race (their logic states no
-  termination/liveness/deadlock-freedom — rows O3/O6/O8).
+  exact verdict + no-deadlock (their logic states no
+  termination/liveness/deadlock-freedom — rows O3/O6/O8). "No-race"
+  is DROPPED from this ours-only list at the arc-end audit: their
+  NotStuck WP entails race-freedom sound-by-construction on their
+  model, ours is a fail-open detector non-firing — the §7.2 race-axis
+  paragraph carries the honest split (proof-side theirs
+  at-least-as-strong; validation-side ours `-race`-oracle-grounded,
+  row O4).
 - **Explicitly-unverified upstream variants run differentially green
   here**: muxer-unverified/{done,drained} (upstream
   `muxer_unverified.go`, Cond the recorded reason) and
