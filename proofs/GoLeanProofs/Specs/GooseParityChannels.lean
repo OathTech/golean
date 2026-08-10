@@ -21,16 +21,24 @@ choice stream — schedules and data latitude together — completes at
 main's `.normal` with the oracle's exact observable), the no-deadlock
 and no-race first-order corollaries, and `TerminatesNormallyC`. Every
 statement is interpreter-vocabulary (no Iris, no relation — this
-module imports neither). The verdict values (1/1/1/42/"async"/"Hello,
-World!") are the same observables the R1 differential rows pin against
-`go run`.
+module imports neither). The verdict values, in the rows' order below
+(trio, muxer async/client, dsp: 1/1/1/"async"/"Hello, World!"/42), are
+the same observables the R1 differential rows pin against `go run`.
 
-Seeded strength, stated honestly (both directions, manifest-recorded):
-these quantify EVERY modeled schedule from the concrete TotalPins-style
-seed — totality + verdict + deadlock/race-refusal-freedom on the
-differentially tested `execProg` — but carry NO frame quantifier;
-upstream's Iris triples are heap-general partial-correctness `NotStuck`
-WPs over an untested model. No ordering is claimed.
+Seeded strength, stated honestly (both directions, manifest-recorded;
+upstream-model wording corrected at the S4 audit round — the first
+form said "an untested model", compressing away a distinction this
+repo's own research note records): these quantify EVERY modeled
+schedule from the concrete TotalPins-style seed — totality + verdict +
+deadlock/race-refusal-freedom on the differentially tested `execProg`
+— but carry NO frame quantifier. Upstream's Iris triples are
+heap-general partial-correctness `NotStuck` WPs; their channel
+semantics is the goose TRANSLATION of a hand-written Go model package
+that IS well tested in Go (a 24-test suite incl. direct side-by-side
+comparisons with real Go channels, run in upstream CI; the six rows'
+programs also have upstream Go tests) — but the Rocq/GooseLang model
+itself and the translation step are executed by no test. No ordering
+is claimed.
 
 The shared derivations (`chanCert_*`) are thin generic wrappers over
 `execProgLoop_ok_of_allStreamsOkPool`/`execProgLoop_mono`; they are

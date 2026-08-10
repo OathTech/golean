@@ -483,6 +483,8 @@ open Lean in
 -- name-existence/deletion-tripwire scope as the block below.
 /-- info: 'GoLean.GoCore.Machine.stepFn_select_done' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.GoCore.Machine.stepFn_select_done
+/-- info: 'GoLean.GoCore.Machine.applySelect_of_done' depends on axioms: [propext] -/
+#guard_msgs in #print axioms GoLean.GoCore.Machine.applySelect_of_done
 /-- info: 'GoLean.GoCore.Machine.applySelectCore_done_inv' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.GoCore.Machine.applySelectCore_done_inv
 /-- info: 'GoLean.Surface.selDoneAllStreamsCert' depends on axioms: [propext, Quot.sound] -/
@@ -526,7 +528,13 @@ open Lean in
 -- half (ProgressExecC at forall-heap strength; GoSpecC assembly) is the
 -- pool-reachability lane's recorded owed instance, NOT silently
 -- dropped — slice build log. Same name-existence-tripwire scope as
--- the witness blocks above.
+-- the witness blocks above. (S4 audit round: the block now anchors
+-- EVERY public LangD theorem — the five simulation-lane helpers were
+-- first left out and the registration sentence overstated the
+-- anchor's coverage; and the witness is a PAIR since the round — the
+-- run-conditioned readout plus the seeded completion pin
+-- spawnNoopTerminatesNormallyC, the goldenTerminates /
+-- forkJoinTerminatesNormallyC house idiom.)
 /-- info: 'GoLean.Iris.applyPairing_shape' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Iris.applyPairing_shape
 /-- info: 'GoLean.Iris.stepM_erasedD' depends on axioms: [propext, Quot.sound] -/
@@ -549,6 +557,20 @@ open Lean in
 #guard_msgs in #print axioms GoLean.Iris.spawnNoopTripleC
 /-- info: 'GoLean.Iris.spawnNoopReadoutC' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Iris.spawnNoopReadoutC
+/-- info: 'GoLean.Iris.spawnNoopAllStreamsCert' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.spawnNoopAllStreamsCert
+/-- info: 'GoLean.Iris.spawnNoopTerminatesNormallyC' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.spawnNoopTerminatesNormallyC
+/-- info: 'GoLean.Iris.poolStepD_at' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.poolStepD_at
+/-- info: 'GoLean.Iris.pair_erasedD' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.pair_erasedD
+/-- info: 'GoLean.Iris.execProgLoop_erasedD' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.execProgLoop_erasedD
+/-- info: 'GoLean.Iris.arrivalCases_of_nonApply' depends on axioms: [propext] -/
+#guard_msgs in #print axioms GoLean.Iris.arrivalCases_of_nonApply
+/-- info: 'GoLean.Iris.stepDC_shape_cases' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.stepDC_shape_cases
 
 -- The exit pipes.
 /-- info: 'GoLean.Iris.goSpec_of_wp' depends on axioms: [propext, Classical.choice, Quot.sound] -/

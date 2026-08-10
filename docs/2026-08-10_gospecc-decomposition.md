@@ -36,7 +36,13 @@ Reading `applyPairing` arm by arm (Multi.lean) gives the load-bearing
 observation, and it is SIMPLER than the slice-5 record anticipated:
 
 **In every pairing arm, the entire shared-state delta is attributable
-to exactly ONE of the two threads.** Concretely:
+to exactly ONE of the two threads** — where "attributable" is the
+ACCOUNTING convention the decomposition's steps use (which decomposed
+step performs the write), not a semantic-ownership claim: in arms 3–5
+the arm-local delta includes enqueueing the PARKED SENDER's value into
+the cell (its send completing), which this accounting books on the
+arriving receiver's step (S4 audit round — the caveat made explicit).
+Concretely:
 
 - **arriving SEND vs parked recv / parked-select recv clause** (arms
   1–2): the state change is `resumeRecvDelivery`/`selectRecvDelivery`
@@ -266,7 +272,11 @@ differentially tested `execProg` (every modeled schedule completes
 with the exact observable — no-deadlock/no-race included), which
 their partial-correctness `NotStuck` WPs do not assert (GooseLang
 NotStuck excludes stuck/racy configurations but not divergence or
-parked-forever schedules; and their model is untested). No ordering
+parked-forever schedules; and while the Go model PACKAGE their channel
+semantics is translated from is well tested in Go — incl. against real
+Go channels, upstream CI — the Rocq/GooseLang model itself and the
+translation are executed by no test; wording corrected at the S4 audit
+round, see the manifest's deltas paragraph). No ordering
 claim between the judgments; the deltas are recorded per row.
 
 ### The checker extension the trio needs (non-consuming select applies)
@@ -379,12 +389,64 @@ plus the trio certificates as its first real consumers.
     `arrivalCases_of_nonApply`/`stepDC_shape_cases`).
   - **THE WITNESS — `spawnNoopTripleC`**: the first frame-quantified
     `GoTripleC` whose program GENUINELY SPAWNS (the debt's triple
-    half), with `spawnNoopReadoutC` discharging every `InitialSplit`
-    premise at the concrete seed (non-vacuity) and reading the triple
-    back as a first-order interpreter fact. Axioms: the classical trio
+    half). Its non-vacuity discharge is a PAIR since the S4 audit
+    round: `spawnNoopReadoutC` (every `InitialSplit` premise
+    discharged at the concrete seed; run-conditioned first-order
+    readout) PLUS `spawnNoopTerminatesNormallyC` (the seeded
+    completion pin, `forkJoinTerminatesNormallyC` idiom — the audit's
+    minor: the readout alone left the run premise unexhibited, the
+    house form ships both halves). Axioms: the classical trio
     on the Iris side, `[propext, Quot.sound]` on the simulation lane.
   All registered in `proofs/Audit.lean` (name-existence-tripwire
   scope, as its blocks state).
+
+- **S4 audit polish round (2026-08-10; zero critical/major — 2
+  confirmed minors + 2 downgraded-to-note + note kernels, one round,
+  all applied).** (1) THE FRESH DIFFERENTIAL (the load-bearing minor):
+  the build commits' "zero corpus drift (1465 ids)" figure had
+  inherited the CACHED full run recorded at 419010af — seven commits
+  BEFORE the branch base — and the gate's own "— stale" marker never
+  reached the records. Re-established FIRST-HAND: full
+  `scripts/ci --diff` at the polish round's tree (content of this
+  commit over 1c0b293f; meta records `git_commit 1c0b293f`,
+  `git_dirty true` — the polish edits were in-tree, none touching the
+  differential surface), result **PASS, `baseline diff FULL
+  (1465/1465, no regression)` with NO stale marker**, negative lane no
+  regression, `manifest_sha256`
+  `e6d53d78c6414fad3cc69a0a0c7bf196a223643247820fcfdafd2bbc71af2934`
+  matching the recorded baseline's. The audit's verifier had
+  additionally established the window could not drift (the one
+  `GoLean/GoCore/` edit, `MultiStreams.lean`, is import-downstream of
+  `Multi.lean`); the fresh run makes the figure first-hand rather than
+  argued. (2) The witness became a PAIR: `spawnNoopTerminatesNormallyC`
+  (+ its kernel cert, fuel 20) joins `spawnNoopReadoutC` — the
+  run-conditioned readout alone left the run premise unexhibited
+  against the house idiom (`goldenTerminates`/
+  `forkJoinTerminatesNormallyC` precedents); docstrings, Audit block,
+  §8 and the charter record now state the pair as the non-vacuity
+  discharge. (3) The flagship deltas' "a model no test executes"
+  corrected at all three sites (manifest, this note §6, the module
+  docstring): upstream's channel semantics is the goose translation of
+  a Go model package that IS well tested in Go (24 tests incl. direct
+  real-`chan` comparisons, upstream CI; the six rows' programs have
+  upstream Go tests) — the Rocq/GooseLang model and the translation
+  step are what no test executes. (4) Note kernels: the §2 headline's
+  "attributable" scoped as the decomposition's accounting convention
+  with the arms-3–5 semantic caveat; the charter's round-trip credit
+  moved to the O1(a) choice (the §2 read predicted it; the proof never
+  consumes the fact); commit count "four build" → design-note commit +
+  three build commits; the Audit block now anchors EVERY public LangD
+  theorem (the five simulation-lane helpers + `applySelect_of_done`
+  were unanchored and the registration sentence overstated coverage —
+  sentence rescoped too); verdict ordering aligned to row order at
+  both sites; the P2 row citations given the surrounding
+  Lemma-line+Qed-line convention; the "44 byte-identical" claim
+  re-attributed to its real mechanism (`git diff` over the branch
+  range — Challenge/Solution/judge-config and every designated module
+  untouched; the ci gate pins the NAME list and closure purity, not
+  text); the charter record now NAMES the one `GoLean/GoCore/` edit
+  and its semantic-neutrality argument instead of the bare "machine
+  untouched".
 
 ## 9. Owed after this slice (recorded, each with its named consumer)
 
@@ -407,8 +469,12 @@ plus the trio certificates as its first real consumers.
 ## 10. Designation candidates + parking ledger (user-scale; AFK posture)
 
 Nothing is designated this slice (charter D3 — user's call at arc
-end); the 44 designated statements are byte-identical (ci's
-statement-TCB gate green at every commit). CANDIDATES recorded for the
+end); the 44 designated statements are byte-identical — verified by
+`git diff` over the branch range: Challenge.lean / Solution.lean /
+judge-config.json and every designated-statement module are untouched
+(attribution corrected at the S4 audit round: ci's statement-TCB gate,
+green at every commit, pins the designated NAME list and closure
+purity, not statement text). CANDIDATES recorded for the
 arc-end curation:
 
 - **The channel ∀-schedule class exemplar** (one per feature class,
