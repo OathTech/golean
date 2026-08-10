@@ -493,13 +493,23 @@ theorem compareNilToNilReadoutC :
       loadLoc σf (.base ⟨0⟩) = .ok (.int 1 .int) :=
   goSpec_seeded_readoutC compareNilToNilSpec (by decide +kernel)
 
-/-- **The R2+R3 composition, INSTANTIATED** (S3 audit round — the slice
-note asserted the R2 pins and the R3 specs "snap together"; this is
-the checked fact): the R2 ∀-streams termination pin
+/-- **The R2+R3 composition, INSTANTIATED — the TERMINATION half, on
+the SEQUENTIAL carrier** (S3 audit round; carrier scoping added at the
+delta review): the R2 ∀-streams termination pin
 (`testCompareNilToNilTerminates`, `Specs/ImportedGooseNil.lean`) plus
 the R3 spec's safety half (`compareNilToNilSpec.2`) pin the terminal —
 past some fuel bound, EVERY choice stream's run of the seeded exemplar
-driver completes at `.normal`. -/
+driver completes at `.normal`, over `execStmt` (the R2 pins' carrier).
+
+Carrier gap, recorded (delta-review machine-confirmed): this theorem
+does NOT conjoin directly with `compareNilToNilReadoutC` above — that
+twin is `execProg`-hypothesised, so feeding this theorem's `execStmt`
+witness into it is a type error. The joint sequential
+completes-AND-verdict statement (the `goldenTotalReadout` precedent
+shape) is derivable in a few lines from the kit's
+`goSpec_seeded_readout` (the review's probe compiled it) and is
+PARKED as the slice note's P-S3-5 — a spec-idiom call for curation,
+not claimed here. -/
 theorem compareNilToNilTerminatesNormally :
     TerminatesNormally importedEnv (importedSeed nilLowered)
       compareNilDriver :=

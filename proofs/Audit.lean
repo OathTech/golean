@@ -1110,14 +1110,21 @@ example := @GoLean.Iris.GoldenSlice.wp_goldenCall_inv
 /-- `✓` **the spec-parity slice-3 laws + their imported-goose witnesses**
 (S3 audit round, 2026-08-10 — the slice first shipped these without
 registry entries; the deletion tripwire now covers them like their
-siblings above). `wp_new_value` (the allocating apply core's third
-instance, ∀σ `hstore` premise) is discharged concretely at the
-exemplar's `$c2 = new(*uint64)` step; `wp_init_bool`/`wp_init_ptr`
-(zero-premise `wp_init` witnesses) at the kit wrapper's call-target
-declaration and the exemplar's pointer declarations respectively. The
-kit walks (`wp_golean_wrapper_body`/`wp_golean_driver`) and the
-exemplar body walk are the witnesses; deleting any of them — or any of
-the three laws — breaks this build. -/
+siblings above). SCOPE OF THE MECHANISM, stated plainly (delta
+review): these `example :=` lines are a NAME-EXISTENCE tripwire —
+deleting or renaming a law or witness breaks this build, and the
+whole-module axiom sweep covers their proofs — but they CANNOT detect
+a witness that stops APPLYING its law (witness-citation drift, the
+content half of non-vacuity); that detection remains the pre-merge
+audit's job, per this file's header. Attribution: `wp_new_value` (the
+allocating apply core's third instance, ∀σ `hstore` premise) is
+discharged concretely at the exemplar's `$c2 = new(*uint64)` step
+(`wp_compareNil_body`, and `_hand`); `wp_init_bool` at the kit
+wrapper's call-target declaration (`wp_golean_wrapper_body`);
+`wp_init_ptr` at the exemplar's pointer declarations
+(`wp_compareNil_body`). `wp_golean_driver` is NOT a witness of any of
+the three laws — it is the kit's assembly walk, anchored here as a
+deletion tripwire only (delta-review relabel). -/
 example := @GoLean.Iris.wp_new_value
 example := @GoLean.Iris.wp_init_bool
 example := @GoLean.Iris.wp_init_ptr

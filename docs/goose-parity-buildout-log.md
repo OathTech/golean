@@ -179,7 +179,12 @@ all fixed here:
    the matrix's F12 record had already ruled misattributed.
 4. (note) matrix §6 gained the two-sided claim-strength caveat on the
    9-pins-vs-37-test_fun_ok comparison (our readouts canonical-stream;
-   their proofs termination-free partial correctness).
+   their proofs termination-free partial correctness). [Denominator
+   corrected of record 2026-08-10, spec-parity S3 audit: the "37"
+   counted their `test_fun_ok` lemma STATEMENTS; the measured proved
+   set is 28 of 36 (7 `Abort`, 1 `Admitted`) — see
+   `docs/2026-08-07_goose-comparative-scoping.md` B.1. The historical
+   label stands as what the phase-A entry said at the time.]
 5. (note) §6 "Last-reviewed" stamp bumped (was stuck at batch 1).
 6. (note) the setup-commit scripts-gating deviation: resolution
    recorded above (checkpoint-covered, including this fix round's

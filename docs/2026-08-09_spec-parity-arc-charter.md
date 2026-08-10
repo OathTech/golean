@@ -121,9 +121,13 @@ honestly BOTH directions against upstream: 2 upstream-Qed parity rows
 (`testCompareNilToNil`, `testComparePointerWrappedDefaultToNil`),
 3 rows upstream ATTEMPTED AND ABORTED that we discharge (their TODOs
 name the missing lemmas), 1 same-class row with no upstream statement
-(semantics/block); the 1 out-of-class row (`testInterfaceNilWithType`
-— short-circuit `Expr.and` has no WP law; the gap is named, not
-skipped) is an oracle THEY prove. 5 not-attempted with reasons; 76
+(semantics/block); the deltas AGAINST us are FIVE upstream-Qed
+oracles (delta-review recount): `testInterfaceNilWithType`
+(out-of-class at R3 — short-circuit `Expr.and` has no WP law; the gap
+is named, not skipped) plus four frontend-blocked at R1
+(`testStructUpdates` + the three type-equality oracles, the recorded
+short-circuit-operand quarantine — manifest rows). 5 not-attempted
+with reasons; 76
 unpinned units (71 with ≥1 R1-green row — recounted at the fix round;
 the import-tooling lever, P-S3-2). Shared machinery:
 `Specs/GooseParityKit.lean` (the wrapper-shape pin + wrapper/driver
@@ -138,9 +142,11 @@ hoist cost is recorded at P-S3-1. Driver policy adopted the hard way:
 new laws default to UNREGISTERED in the `go_walk` table (a
 registration moved the standing quorum walks' stopping points).
 Designated statements untouched (44, byte-identical); proofs-only,
-zero corpus drift — all 1465 ids bit-identical (1351 PASS / 114
-recorded FAIL); axioms `[propext, Classical.choice, Quot.sound]`
-throughout. Parking ledger P-S3-1..4 in the slice note §6.
+zero corpus drift — all 1465 ids match the tracked baseline on
+`result`+`stage` per id, the recorded regression signal (1351 PASS /
+114 recorded FAIL; "bit-identical" wording scoped at the delta
+review); axioms `[propext, Classical.choice, Quot.sound]`
+throughout. Parking ledger P-S3-1..5 in the slice note §6.
 
 ## The sync question (asked 2026-08-09), answered
 
