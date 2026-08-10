@@ -206,8 +206,55 @@ manifest.
 
 ## 6. Parking ledger (user-scale items; AFK posture)
 
-- **P-S3-1 — (placeholder; filled as items arise.)**
+- **P-S3-1 — Designation curation (charter D3, user-owned).** The two
+  exemplar candidates (§5) await the arc-end sign-off; nothing
+  designated meanwhile. Reversible: the theorems exist gate-checked
+  either way.
+- **P-S3-2 — Backfill pinned lowerings for the remaining ~72 R1-green
+  imported units?** Each pinned term is the R3 statement's subject AND
+  joins the ci 1c5 staleness guard + pins registry (a standing
+  maintenance surface per unit). Scaling R3 across the corpus needs
+  them; how many, and whether the pin generator should be promoted
+  from the `.tmp` mkpins helper to a tracked script, is a
+  cost/coverage policy call → user. Meanwhile: the 6 pinned units
+  carry the class; the manifest names the population.
+- **P-S3-3 — Keep or trim the duplicated hand walk
+  (`wp_compareNil_body_hand`)?** Kept as the walk-architecture witness
+  and tactic-robustness fallback; it duplicates one body proof's build
+  cost. Default keep; user may trim at arc end.
+- **P-S3-4 — `go_walk_step` ergonomics (tactic infra, not soundness):**
+  a supply applied at the WRONG configuration burns the declaration's
+  heartbeat budget in `isDefEq` (the constrained-elaboration path is
+  unbudgeted) instead of failing crisply. Fixing it touches
+  `Tactics/GoWalk.lean` (shared tactic infrastructure used by the
+  designated summit's proof); parked rather than edited mid-slice.
+  Soundness is unaffected either way (the tactic is untrusted).
 
 ## 7. Build log
 
-- (appended per movement)
+- **Exemplar (commit 1).** `testCompareNilToNil` hand-proved
+  end-to-end; kit (`GooseParityKit.lean` — wrapper/driver walks +
+  generic seeded readouts); `wp_new_value` law + witness same-commit.
+  File-naming constraint discovered: `Specs/ImportedGoose*.lean` is
+  `check-imported-pins`' PIN-MODULE glob (its completeness cross-check
+  fails on any non-pin module matching it) — the R3 modules are named
+  `GooseParity*` to stay off it, recorded here and in the kit header.
+  Axioms `[propext, Classical.choice, Quot.sound]` on all three
+  deliverables; full `scripts/ci` PASS, zero drift (1465/1465).
+- **Phase 2 (commit 2).** The exemplar body re-derived `go_walk`-driven,
+  statement byte-identical; hand walk preserved
+  (`wp_compareNil_body_hand`). Registration lesson recorded (§3):
+  `wp_init_bool`/`wp_init_ptr` ship UNREGISTERED after registering
+  them broke the standing quorum walks' stopping points.
+- **Phase 3 (commit 3).** Scaled across the class: 4 more nil oracles
+  (all in Perennial's proved 37) + semantics/block, each the full D1
+  pair — R3 count 6 proved / 1 out-of-class (short-circuit `&&` law
+  gap) / 5 not-attempted with reasons — manifest
+  `docs/spec-parity-r3-manifest.md`. Empirical driver notes: pure INT
+  applies walk themselves (`go_walk_side`'s `rfl` computes them);
+  comparisons through `valueEqFuel`'s fuel literal do not (supplied
+  via `go_walk_step` — elaborator-side reduction cost, not a
+  soundness line). Every store/alloc/init side-goal discharged with
+  the same three-lemma simp vocabulary (`storeLoc`,
+  `normalizeValueForTy*`, `typeResolutionFuel`), which is what the
+  next movement can template.

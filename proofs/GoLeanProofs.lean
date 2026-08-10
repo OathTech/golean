@@ -40,6 +40,7 @@ import GoLeanProofs.Specs.ImportedGooseDefer
 import GoLeanProofs.Specs.ImportedGooseNil
 import GoLeanProofs.Specs.GooseParityKit
 import GoLeanProofs.Specs.GooseParityNilWP
+import GoLeanProofs.Specs.GooseParityBlockWP
 import GoLeanProofs.Specs.ImportedGooseMapliteral
 import GoLeanProofs.Specs.ImportedGooseConst
 import GoLeanProofs.Specs.ImportedGooseRune
