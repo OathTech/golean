@@ -723,6 +723,9 @@ def muxerLowered : Program :=
                  variadic := false,
                  wrapper := false }],
     methods := #[],
-    globals := #[] }
+    globals := #[],
+    methodSets := #[{ key := "struct{}", coverage := GoLean.GoCore.MethodSetCoverage.full },
+                    { key := "main.stream", coverage := GoLean.GoCore.MethodSetCoverage.full },
+                    { key := "main.streamold", coverage := GoLean.GoCore.MethodSetCoverage.full }] }
 
 end GoLean.ImportedGoose.ChannelMuxer

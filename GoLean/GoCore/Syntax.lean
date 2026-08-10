@@ -399,6 +399,30 @@ structure MethodInfo where
   recv : Ty
   deriving Repr, BEq
 
+/-- How much of a type's method set the wire records
+(`docs/2026-08-10_method-set-record-contract.md` §3). `full` — the
+complete set (locally declared named types; the D2 wire contract).
+`exported` — exported methods only (D5 imported markers, the sync
+primitives): a definite-"no" that hinges on an UNEXPORTED requirement
+refuses instead of answering. -/
+inductive MethodSetCoverage where
+  | full
+  | exported
+  deriving Repr, BEq
+
+/-- One method-set record: the frontend's explicit statement that
+`key`'s method set is on the wire at the stated coverage —
+empty-but-present means GENUINELY empty. The satisfaction/dispatch
+guards answer ONLY from these records (class closure of BUG-053, user
+direction 2026-08-10): a queried method-carrying type with no record
+refuses visibly, never answers. `key` is the carrier key —
+`TypeId.key` for `.defined`, `sync.<Kind>` for `.sync`
+(`methodCarrierKey?`, Ops.lean). -/
+structure MethodSetRecord where
+  key : String
+  coverage : MethodSetCoverage
+  deriving Repr, BEq
+
 /-- A package-level variable declaration (init slice,
 `docs/2026-08-05_init-design.md` §2): the driver seeds one heap cell per
 entry — zero value at the declared type — as the FIRST allocations, in
@@ -418,6 +442,11 @@ structure Program where
   filename order). Empty for globals-free programs — every existing
   construction site is untouched. -/
   globals : Array GlobalDef := #[]
+  /-- The method-set records (contract note §3, 2026-08-10): REQUIRED
+  on the wire — the decoder refuses a wire without the field — and
+  defaulted `#[]` here so hand-built programs FAIL CLOSED on carrier
+  queries rather than answering from absence. -/
+  methodSets : Array MethodSetRecord := #[]
   deriving Repr, BEq
 
 def findFunctionIn? (funcs : Array Func) (id : FuncId) : Option Func :=

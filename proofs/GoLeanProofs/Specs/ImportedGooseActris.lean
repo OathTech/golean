@@ -176,6 +176,7 @@ def actrisLowered : Program :=
                  variadic := false,
                  wrapper := false }],
     methods := #[],
-    globals := #[] }
+    globals := #[],
+    methodSets := #[{ key := "struct{}", coverage := GoLean.GoCore.MethodSetCoverage.full }] }
 
 end GoLean.ImportedGoose.ChannelActris

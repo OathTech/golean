@@ -1438,4 +1438,8 @@
                { name := "CommittedIndex",
                  funcId := { key := "main.MajorityConfig.CommittedIndex" },
                  recv := GoLean.GoCore.Ty.defined { key := "main.MajorityConfig" } }],
-  globals := #[] }
+  globals := #[],
+  methodSets := #[{ key := "struct{}", coverage := GoLean.GoCore.MethodSetCoverage.full },
+                  { key := "main.Index", coverage := GoLean.GoCore.MethodSetCoverage.full },
+                  { key := "main.MajorityConfig", coverage := GoLean.GoCore.MethodSetCoverage.full },
+                  { key := "main.mapAckIndexer", coverage := GoLean.GoCore.MethodSetCoverage.full }] }

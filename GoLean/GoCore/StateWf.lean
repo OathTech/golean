@@ -2238,7 +2238,10 @@ theorem dynamicDispatch?_locSup {σ : ExecState} {func : Func}
               try rw [Array.set!]
               refine Nat.le_trans goValueListSup_setIfInBounds ?_
               omega
-          · simp at h
+          · -- no concrete method: stuck (recorded set) or the BUG-053
+            -- class refusal (no record) — one throw over a conditional
+            -- payload, an error either way.
+            simp at h
         · simp at h
       · simp at h
       · simp at h

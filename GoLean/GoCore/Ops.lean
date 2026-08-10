@@ -635,47 +635,70 @@ def satisfiesMethodSig (state : ExecState) (dynTy : Ty) (req : MethodSig) : Bool
       | none => false
   | none => false
 
-/-- Is `dynTy`'s METHOD SET fully recorded on the wire?
+/-- The method-CARRIER key of a dynamic type's base — `some key` exactly
+when the base is a kind that CAN carry methods in Go, `none` when the
+LANGUAGE forbids it (class closure of BUG-053,
+`docs/2026-08-10_method-set-record-contract.md` §2, gc-probed): methods
+are declarable only on defined non-pointer non-interface types, so the
+carriers are `.defined` (every named type) and `.sync` (models the gc
+defined types `sync.Mutex`/…); unnamed type literals — basics, slices,
+maps, arrays, chans, funcs, `**T`, pointer-to-interface — carry
+nothing, and that emptiness is a language fact no registration can
+invalidate. One pointer level inherits the pointee's set (`*T` ⊇ T's
+value-receiver methods; the deref here mirrors the lookup base). Any
+FUTURE `Ty` kind modeling a defined Go type must join the carrier arms;
+forgetting its records then yields visible refusals, never answers —
+the inversion of the retired blanket-`true` taxonomy arm, which read
+"not `.defined` ⇒ no methods" and silently answered wrong "no"s for
+`.sync` (BUG-053's exact mechanism). -/
+def methodCarrierKey? (state : ExecState) (dynTy : Ty) : Option String :=
+  let base := match dynTy with
+    | .pointer elem => elem
+    | other => other
+  match resolveDefinedAliases state base with
+  | .defined name => some name.key
+  | .sync kind => some s!"sync.{kind.name}"
+  | _ => none
 
-Methods can only be declared in their type's OWN package, and the frontend
-emits a `TypeDef` for every named type the analyzed package declares — so
-for a `.defined` name the type environment KNOWS, the method table holds
-that type's complete method set and a "no such method" answer is real
-information. For a `.defined` name it does NOT know (today: every
-imported/stdlib named type, which reaches GoCore as a bare `.defined` with
-no declaration — BUG-008's premise), the empty method table means UNKNOWN,
-not empty: `*strings.Builder` really does have `String() string`.
-Answering `false` from it was a definite answer derived from nothing —
-the wrong comma-ok boolean, and a FABRICATED `missing method` panic on a
-program Go runs to completion (pre-merge audit 2026-07-31, finding 8).
+/-- The recorded coverage of a carrier key, or `none` when the wire
+carries NO record — in which case satisfaction/dispatch must REFUSE,
+never answer (the record table is the ONLY source; TypeDef presence,
+stub presence, and type-kind taxonomy no longer decide). -/
+def methodSetCoverage? (state : ExecState) (key : String) :
+    Option MethodSetCoverage :=
+  state.methodSets.foldl
+    (fun found record =>
+      match found with
+      | some _ => found
+      | none => if record.key == key then some record.coverage else none)
+    none
 
-Types that are not `.defined` (basics, slices, maps, pointers to those,
-`**T`) can carry no methods in Go at all, so an empty method set is
-correct — and a pointer inherits its POINTEE's declarations, so `*T` is
-known exactly when `T` is. -/
+/-- Is `dynTy`'s METHOD SET recorded on the wire? `true` for every
+non-carrier kind (§2 of the contract note: emptiness by the LANGUAGE)
+and exactly for carriers with a `MethodSetRecord` (empty-but-present
+means genuinely empty). Absence of a record for a carrier means
+UNKNOWN, not empty: answering `false` from it was a definite answer
+derived from nothing — the wrong comma-ok boolean and a FABRICATED
+`missing method` panic on a program Go runs to completion (pre-merge
+audit 2026-07-31 finding 8 = BUG-008/BUG-009 for imported `.defined`
+names; BUG-053 for `.sync`, which the retired taxonomy arm waved
+through). -/
 def dynamicMethodSetRecorded (state : ExecState) (dynTy : Ty) : Bool :=
-  let base := match dynTy with
-    | .pointer elem => elem
-    | other => other
-  match base with
-  | .defined name => (TypeEnv.lookup state.types name).isSome
-  | _ => true
+  match methodCarrierKey? state dynTy with
+  | some key => (methodSetCoverage? state key).isSome
+  | none => true
 
-/-- Is `dynTy` an IMPORTED named type known only through its
-existence-marker TypeDef (design note 2026-08-05 D5)? Its wire method
-set carries the EXPORTED methods only — cross-package UNEXPORTED method
-identity is inexpressible on the name-keyed wire — so a satisfaction
-check may answer definitively only for exported requirements. -/
-def dynamicIsImportedMarker (state : ExecState) (dynTy : Ty) : Bool :=
-  let base := match dynTy with
-    | .pointer elem => elem
-    | other => other
-  match base with
-  | .defined name =>
-      match TypeEnv.lookup state.types name with
-      | some (.unsupported _) => true
-      | _ => false
-  | _ => false
+/-- Is `dynTy` recorded at EXPORTED-only coverage (D5 imported markers,
+the sync primitives)? Cross-package UNEXPORTED method identity is
+inexpressible on the name-keyed wire, so a definite-"no" that hinges on
+an unexported requirement refuses instead of answering. Keyed on the
+RECORD's coverage — the old check sniffed the TypeDef kind
+(`.unsupported` marker), which could not see carriers without TypeDefs
+at all. -/
+def dynamicMethodSetExportedOnly (state : ExecState) (dynTy : Ty) : Bool :=
+  match methodCarrierKey? state dynTy with
+  | some key => methodSetCoverage? state key == some .exported
+  | none => false
 
 /-- Go exportedness, decided CONSTRUCTIVELY at the byte level: the first
 UTF-8 byte is an ASCII upper-case letter. Core's char-level String APIs
@@ -729,17 +752,24 @@ def firstUnsatisfiedMethod? (state : ExecState) (dynTy : Ty) (interfaceName : Ty
       | none => return none
       | some name =>
           if !dynamicMethodSetRecorded state dynTy then
+            -- The CLASS refusal (BUG-053 closure, contract note §3): a
+            -- method-CARRYING type with no method-set record on the
+            -- wire. `missing method` would be an answer derived from no
+            -- information — refuse visibly instead (BUG-008/BUG-009's
+            -- polarity, now keyed on record presence for EVERY carrier
+            -- kind, not on the `.defined` taxonomy arm).
             unsupported s!"interface satisfaction for {goTypeNameForMessage state dynTy}: \
-its method set is NOT on the wire (an imported named type carries no \
-declaration), so `missing method {name}' would be an answer derived from \
-no information (BUG-009)"
-          else if dynamicIsImportedMarker state dynTy && !isExportedName name then
-            -- An imported type's stubs cover EXPORTED methods only; an
-            -- unexported requirement could still be met inside the type's
-            -- own package — refuse rather than answer (D5).
+its method set has NO record on the wire (a method-carrying type without \
+a MethodSetRecord), so `missing method {name}' would be an answer derived \
+from no information (BUG-009/BUG-053 class)"
+          else if dynamicMethodSetExportedOnly state dynTy && !isExportedName name then
+            -- EXPORTED-only coverage (D5 markers, sync primitives): an
+            -- unexported requirement could still be met inside the
+            -- type's own package — refuse rather than answer (D5).
             unsupported s!"interface satisfaction for {goTypeNameForMessage state dynTy}: \
-requirement {name} is UNEXPORTED and the dynamic type is imported — \
-cross-package unexported method identity is not modeled"
+requirement {name} is UNEXPORTED and the dynamic type's record covers \
+exported methods only — cross-package unexported method identity is not \
+modeled"
           else
             return (some name)
 
@@ -1866,7 +1896,23 @@ def dynamicDispatch? (state : ExecState) (func : Func) (argValues : Array GoValu
                     else
                       pure inner
                   return some (targetFunc, argValues.set! 0 recvValue)
-              | none => stuck s!"dynamic type {goTypeNameForMessage state dynTy} has no method {method.name}"
+              | none =>
+                  -- No concrete method found. With a RECORD, that is a
+                  -- machine invariant break (satisfaction should have
+                  -- refused the box's construction path or the frontend
+                  -- lied) — fail stuck. WITHOUT a record it is the
+                  -- BUG-053 class (absence read as an answer): refuse
+                  -- visibly instead (contract note §3, dispatch half).
+                  -- One `throw` over a conditional payload — both arms
+                  -- are errors, keeping the proof layer's error-arm
+                  -- discharge shape (`dynamicDispatch?_locSup`).
+                  throw (if dynamicMethodSetRecorded state dynTy then
+                    GoError.stuck s!"dynamic type {goTypeNameForMessage state dynTy} has no method {method.name}"
+                  else
+                    GoError.unsupported s!"interface dispatch of {method.name} on \
+{goTypeNameForMessage state dynTy}: its method set has NO record on the \
+wire (a method-carrying type without a MethodSetRecord) — refusing \
+rather than dispatching from no information (BUG-009/BUG-053 class)")
           -- Calling a method on a NIL interface: Go's runtime nil
           -- dereference panic (probe-pinned; the stub body behind this
           -- is unreachable and fails stuck if a bug ever reaches it).

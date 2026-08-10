@@ -253,6 +253,25 @@ executing imported methods):
   machine's `dynamicMethodSetRecorded` guard then fails closed exactly
   as today. Monotone: strictly more definite answers, never a new wrong
   one.
+- **ADDENDUM (2026-08-10, BUG-053 class closure —
+  `docs/2026-08-10_method-set-record-contract.md`):** the guard behind
+  this design was re-keyed. As written here, `dynamicMethodSetRecorded`
+  keyed on the TYPE-KIND taxonomy — `.defined` consulted TypeDef
+  presence, every other kind got a blanket "can carry no methods"
+  `true`. That blanket arm was the latent hole: it was a claim about
+  the kinds that EXISTED in 2026-08-05, silently inherited by any later
+  kind modeling a method-carrying Go type — which is exactly how
+  `Ty.sync` answered wrong "no"s (BUG-053). The guard now keys on
+  RECORD PRESENCE: the wire carries an explicit `methodSets` entry
+  (`full`/`exported` coverage) for every method-carrying type, the
+  skip-whole posture above leaves no record (same refusals as before,
+  now by the general rule), and the marker-TypeDef sniffing that
+  implemented the unexported-requirement refusal
+  (`dynamicIsImportedMarker`) became coverage `exported`
+  (`dynamicMethodSetExportedOnly`). The taxonomy survives only as the
+  carrier/non-carrier split, whose non-carrier half is a gc-probed
+  language fact (type literals cannot carry methods), not a
+  registration default.
 - `NativeToIR.decodeMethod` accepts the stub form (full recv/params/
   results + an `unsupported` reason instead of a body): it registers the
   `MethodInfo` and a `Func` whose body is `Stmt.unsupported`, so

@@ -1415,6 +1415,10 @@ def quorumLowered : Program :=
                    recv := GoLean.GoCore.Ty.defined { key := "main.MajorityConfig" } },
                  { name := "CommittedIndex",
                    funcId := { key := "main.MajorityConfig.CommittedIndex" },
-                   recv := GoLean.GoCore.Ty.defined { key := "main.MajorityConfig" } }] }
+                   recv := GoLean.GoCore.Ty.defined { key := "main.MajorityConfig" } }],
+    methodSets := #[{ key := "struct{}", coverage := GoLean.GoCore.MethodSetCoverage.full },
+                    { key := "main.Index", coverage := GoLean.GoCore.MethodSetCoverage.full },
+                    { key := "main.MajorityConfig", coverage := GoLean.GoCore.MethodSetCoverage.full },
+                    { key := "main.mapAckIndexer", coverage := GoLean.GoCore.MethodSetCoverage.full }] }
 
 end GoLean.Iris.GoldenQuorum

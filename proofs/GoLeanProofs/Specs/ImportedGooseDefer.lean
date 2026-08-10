@@ -264,7 +264,8 @@ def deferLowered : Program :=
                  variadic := false,
                  wrapper := false }],
     methods := #[],
-    globals := #[] }
+    globals := #[],
+    methodSets := #[{ key := "struct{}", coverage := GoLean.GoCore.MethodSetCoverage.full }] }
 
 /-- Driver env: `r` names the harness output cell at base address 0. -/
 abbrev deferEnv : LocalEnv := [[("r", .base ⟨0⟩)]]

@@ -63,7 +63,8 @@ def sliceLowered : Program :=
                                    (GoLean.GoCore.Assignee.var "$res0")
                                    (GoLean.GoCore.Expr.var "x"),
                                  GoLean.GoCore.Stmt.returnStmt]] }],
-    methods := #[] }
+    methods := #[],
+    methodSets := #[{ key := "struct{}", coverage := GoLean.GoCore.MethodSetCoverage.full }] }
 
 /-- The golden `inc` function as a named literal; `sliceLowered_funcs_eq`
 kernel-checks the pair against the pinned lowering. -/
@@ -145,7 +146,8 @@ def recoverLowered : Program :=
                                  (GoLean.GoCore.Ty.string)
                                  (GoLean.GoCore.Expr.stringLit
                                    { bytes := #[98, 111, 111, 109, 45, 100, 105, 114, 101, 99, 116] }))] }],
-    methods := #[] }
+    methods := #[],
+    methodSets := #[{ key := "struct{}", coverage := GoLean.GoCore.MethodSetCoverage.full }] }
 
 /-- The lambda-lifted deferred closure as a named literal (bridge below). -/
 def litFunc : Func :=

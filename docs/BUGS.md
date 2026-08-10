@@ -68,6 +68,31 @@ differential-pinned) `- Cases: <id>, <id>, …` (baseline case ids), then prose.
   markers `sync/iface-dispatch/{mutex-user-iface,wg-user-iface,
   locker-box-dispatch}` are permanent-until-lifted `frontend-export`
   reds by design.)
+- **CLASS-CLOSURE ADDENDUM (2026-08-10, user direction):** the fix
+  above closed the INSTANCE (sync stubs), not the CLASS — the machine
+  still read an absent method table as a correct empty method set for
+  any type outside the `.defined` taxonomy arm, so a future imported
+  family, a new frontend path, or a re-introduction of this bug would
+  answer wrong "no"s again. Closed generically by the METHOD-SET RECORD
+  CONTRACT (`docs/2026-08-10_method-set-record-contract.md`): the wire
+  carries a REQUIRED `methodSets` field with one explicit record per
+  method-carrying type (`full`/`exported` coverage; empty-but-present =
+  genuinely empty; strict decode, duplicates refused), and
+  satisfaction/dispatch answer ONLY from records — a queried carrier
+  with no record refuses `.unsupported`, never answers, never goes
+  stuck (`methodCarrierKey?`/`methodSetCoverage?`, Ops.lean; carrier
+  kinds gc-probed: `.defined` and `.sync`; non-carrier emptiness is a
+  language fact, not a registration default). The renderer's
+  defined-type `main.T(v)` arm joined the closure (no record ⇒
+  unrenderable, never a fabricated message). Pinned forever at the wire
+  boundary by the Tests/GoCoreEval "MS:" fixtures: a TypeDef-present /
+  record-absent type REFUSES satisfaction (the guard keys on the
+  record, not the TypeDef), the same wire WITH the record answers the
+  definite no, and the `.sync` no-record state refuses (the
+  re-introduction pin). All 12 pinned lowering terms + 3 golden repr
+  baselines regenerated for the new `Program.methodSets` field
+  (bit-identical semantics; contract note §4); corpus classification
+  unchanged on all 1483 ids.
 - Pinned-by: differential
 - Cases: sync/satisfaction/assert-ok-mutex, sync/satisfaction/type-switch-mutex, sync/satisfaction/bare-assert-mutex, sync/satisfaction/assert-ok-waitgroup, sync/satisfaction/assert-ok-once, sync/satisfaction/trylock-sig-satisfies, sync/satisfaction-locker-sig/assert-ok-rwmutex
 

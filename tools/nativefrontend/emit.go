@@ -407,12 +407,56 @@ func (e *emitter) emitProgram(files []*ast.File) (map[string]any, error) {
 		return nil, err
 	}
 
+	// Method-set records (class closure of BUG-053, contract note
+	// docs/2026-08-10_method-set-record-contract.md §3): one explicit
+	// record per method-CARRYING type whose identity reached the wire —
+	// the machine's satisfaction/dispatch guards answer ONLY from these
+	// (empty-but-present means genuinely empty; absence refuses).
+	// Coverage per source: locally declared named types carry their FULL
+	// method table on the wire (D2 contract; quarantined methods still
+	// land signature-carrying stubs), D5 imported markers and the sync
+	// primitives carry EXPORTED-only stub sets. Interface defs are
+	// requirement tables, not carriers; alias defs are transparent (the
+	// carrier key resolves through them). Sorted for a deterministic
+	// wire; the decoder synthesizes the canonical struct{} record.
+	msSet := map[string]string{}
+	for _, td := range typeDefs {
+		m, ok := td.(map[string]any)
+		if !ok {
+			continue
+		}
+		name, _ := m["name"].(string)
+		def, _ := m["def"].(map[string]any)
+		kind, _ := def["kind"].(string)
+		switch kind {
+		case "interface", "alias":
+			continue
+		case "unsupported":
+			msSet[name] = "exported"
+		default:
+			msSet[name] = "full"
+		}
+	}
+	for name := range e.syncUsed {
+		msSet["sync."+name] = "exported"
+	}
+	msKeys := make([]string, 0, len(msSet))
+	for k := range msSet {
+		msKeys = append(msKeys, k)
+	}
+	sort.Strings(msKeys)
+	methodSets := make([]any, 0, len(msKeys))
+	for _, k := range msKeys {
+		methodSets = append(methodSets, map[string]any{"type": k, "coverage": msSet[k]})
+	}
+
 	program := map[string]any{
-		"schema":  "golean-native-v1",
-		"package": e.pkg.Name(),
-		"types":   typeDefs,
-		"funcs":   funcs,
-		"methods": methods,
+		"schema":     "golean-native-v1",
+		"package":    e.pkg.Name(),
+		"types":      typeDefs,
+		"funcs":      funcs,
+		"methods":    methods,
+		"methodSets": methodSets,
 	}
 	// Only when the package has package-level variables — a globals-free
 	// wire stays byte-identical to before the init slice.

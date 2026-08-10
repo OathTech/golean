@@ -714,7 +714,7 @@ private theorem goTripleC_adequate
     (hinit : InitialSplit P hp na hP F funcs env₀ prog) :
     adequate .NotStuck (PoolCfgD.mk (.exec prog env₀ .stop))
       (ExecState.mk (types := types) (functions := funcs) (methods := methods)
-        (heap := hp) (nextAddr := na))
+        (methodSets := #[]) (heap := hp) (nextAddr := na))
       (fun _ σ2 => ∃ hQ : Heaplet,
         (∀ k, hQ.get? k = none ∨ F.get? k = none)
         ∧ Heaplet.sub hQ (heapToMap σ2.heap)
