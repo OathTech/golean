@@ -98,6 +98,35 @@ statements untouched (44, byte-identical); untriaged ledger back to
 16; corpus 1458 (1348/110), zero drift on every prior id at all three
 re-pins.
 
+## Slice-3 record (2026-08-10, branch `spec-parity-s3`)
+
+DELIVERED, gate green at tip, three commits (slice note
+`docs/2026-08-10_wp-walk-driver.md`; manifest
+`docs/spec-parity-r3-manifest.md`). Exemplar-first as chartered:
+`testCompareNilToNil` (a row of Perennial's proved-37 `test_fun_ok`
+set) hand-proved end-to-end through the laws spine to the D1 pair —
+`GoSpecC` at full `InitialSplit` strength (sequential-degenerate lane,
+stated so) + the pool-carrier first-order readout twin — over the
+staleness-guarded pinned lowering; then the `go_walk` re-derivation
+(statement byte-identical, hand walk preserved as witness); then the
+scale-out. R3 standing: **6 proved** (5 = rows of their proved 37 —
+the nil unit sans the `&&` oracle — + semantics/block as same-class
+coverage), 1 out-of-class recorded (short-circuit `Expr.and` has no WP
+law — the gap is named, not skipped), 5 not-attempted with reasons,
+~72 R1-green units without pinned lowerings (the import-tooling
+lever, P-S3-2). Shared machinery: `Specs/GooseParityKit.lean` (the
+wrapper-shape pin + wrapper/driver walks + the generic TotalPins-seed
+readout derivations) and one general law with same-commit witness
+(`wp_new_value`, the allocating apply core's third instance).
+Designation: CANDIDATES only (`compareNilToNilSpecC` +
+`compareNilToNilReadoutC`), per D3. Driver policy adopted the hard
+way: new laws default to UNREGISTERED in the `go_walk` table (a
+registration moved the standing quorum walks' stopping points).
+Designated statements untouched (44, byte-identical); proofs-only,
+zero corpus drift (1465/1465); axioms
+`[propext, Classical.choice, Quot.sound]` throughout. Parking ledger
+P-S3-1..4 in the slice note §6.
+
 ## The sync question (asked 2026-08-09), answered
 
 Sync is NOT a prerequisite for spec-parity over the imported corpus
