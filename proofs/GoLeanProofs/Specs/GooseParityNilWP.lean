@@ -120,6 +120,62 @@ theorem wp_compareNil_body {ra : Addr} {k} :
           @ s ; E {{ Φ }} := by
   iintro ⟨Hr, Hcont⟩
   simp only [compareNilFunc]
+  -- the walk: block/seq up to the `$c2` declaration
+  go_walk
+  go_walk_step wp_init_ptr
+  -- the `new(*uint64)` operand walk up to the default-value operand
+  -- (a nullary strict form whose `∀σ` apply fact the walk cannot
+  -- discharge mechanically — a side-goal site by design)
+  go_walk
+  go_walk_step (wp_eval_strict_nullary_pure (v := .nil) (hplan := rfl)
+    (happly := fun σ => by
+      simp [applyStrictOp, defaultValue, defaultValueFuel,
+        typeResolutionFuel, Bind.bind, Except.bind]))
+  -- the allocate-and-store step. `fa` names the fresh cell.
+  go_walk_step (wp_new_value (oldcell := ⟨some ptrptr64, .nil⟩)
+    (newcell := fun fa => ⟨some ptrptr64, .addr (.base fa)⟩)
+    (hstore := fun σ fa _ht hlook => by
+      simp [storeLoc, hlook, normalizeValueForTy, normalizeValueForTyFuel,
+        typeResolutionFuel, Bind.bind, Except.bind])) as [fa, Hf, Hc]
+  -- `var s; s = $c2` up to the pointer-cell store
+  go_walk
+  go_walk_step wp_init_ptr
+  go_walk
+  go_walk_step (wp_assign_store (oldcell := ⟨some ptrptr64, .nil⟩)
+    (newcell := ⟨some ptrptr64, .addr (.base fa)⟩)
+    (hstore := fun σ _ht hlook => by
+      simp [storeLoc, hlook, normalizeValueForTy, normalizeValueForTyFuel,
+        typeResolutionFuel, Bind.bind, Except.bind]))
+  -- `$res0 = (*s == nil)`: the deref chain, then the comparison's apply
+  go_walk
+  go_walk_step (wp_strict_apply_pure (out := .bool true)
+    (happly := fun σ => by
+      simp [applyStrictOp, valueEq, valueEqFuel, typeResolutionFuel,
+        Bind.bind, Except.bind]))
+  go_walk
+  -- the verdict store into the bool result cell
+  go_walk_step (wp_assign_store (oldcell := ⟨some .bool, .bool false⟩)
+    (newcell := ⟨some .bool, .bool true⟩)
+    (hstore := fun σ _ht hlook => by
+      simp [storeLoc, hlook, normalizeValueForTy, normalizeValueForTyFuel,
+        typeResolutionFuel, Bind.bind, Except.bind]))
+  -- `return`: unwind to the frame and close with the continuation
+  go_walk_finish Hcont
+
+/-- The HAND walk of the same body — the exemplar's first, law-by-law
+derivation (spec-parity slice 3 phase 1; the tactic-driven proof above
+replaced it as `wp_compareNil_body`'s proof in phase 2 with the
+statement byte-identical — this copy is kept as the walk-architecture
+witness at full detail, exactly the modality-dance shape every law
+composes at). -/
+theorem wp_compareNil_body_hand {ra : Addr} {k} :
+    ra.id ↦ (⟨some .bool, .bool false⟩ : HeapCell)
+      ∗ (ra.id ↦ (⟨some .bool, .bool true⟩ : HeapCell)
+          -∗ WP (Config.returning k) @ s ; E {{ Φ }})
+      ⊢ WP (Config.exec compareNilFunc.body [[("$res0", Loc.base ra)]] k)
+          @ s ; E {{ Φ }} := by
+  iintro ⟨Hr, Hcont⟩
+  simp only [compareNilFunc]
   iapply wp_block_nil
   iapply fupd_intro
   inext
