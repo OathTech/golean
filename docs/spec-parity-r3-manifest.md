@@ -78,7 +78,7 @@ rows only.
 | semantics/nil `testComparePointerWrappedDefaultToNil` | **Qed** (nil.v:46) | **proved** (a genuine parity row) | same file, `comparePointerWrappedDefaultToNil*` |
 | semantics/nil `testInterfaceNilWithType` | **Qed** (nil.v:50) | **out-of-class** — an oracle THEY prove and we currently cannot | verdict uses short-circuit `&&` (`Expr.and`): NO WP law exists for the short-circuit forms (they have their own machine rules, not `strictPlan`). The `Expr.and`/`Expr.or` law family is recorded future law work. |
 | semantics/block `testExplicitBlockStmt` | no `test_fun_ok` statement (block.go has no lemma in semantics_proof/) | **proved** (same-class coverage, not a parity row) | `Specs/GooseParityBlockWP.lean`, `explicitBlock*` |
-| semantics/new `testNilDefault` (slice-6 tranche) | **Qed** (new.v:10, Qed :13) | **proved** — a genuine parity row | `Specs/GooseParityNewWP.lean`, `nilDefault*` (pin: `scripts/gen-imported-pin`) |
+| semantics/new `testNilDefault` (slice-6 tranche) | **Qed** (new.v:9, Qed :13) | **proved** — a genuine parity row | `Specs/GooseParityNewWP.lean`, `nilDefault*` (pin: `scripts/gen-imported-pin`) |
 | semantics/new `testNilVal` (slice-6 tranche) | **Qed** (new.v:15, Qed :19) | **proved** — a genuine parity row | same file, `nilVal*` |
 | semantics/vars `testPointerAssignment` (slice-6 tranche) | no `test_fun_ok` statement (no vars.v in semantics_proof/) | **proved** (coverage row) | `Specs/GooseParityVarsWP.lean`, `pointerAssignment*` |
 | semantics/vars `testAnonymousAssign` (slice-6 tranche) | no `test_fun_ok` statement | **proved** (coverage row) | same file, `anonymousAssign*` |
@@ -201,9 +201,19 @@ imported (search-replace, google) or unimported upstream units — as
 are elimination_stack and lock, both unimported — rows
 for a later movement, not silently claimed.
 
-Certificate fuels (measured minimum → shipped): nb-not-ready 100→200,
-nb-guaranteed-ready 100→200, nb-full-buffer 100→200, dsp 200→400,
-async 200→400, client 400→800. Full module kernel-checks in ~20 s.
+Certificate fuels (TRUE measured minimum → shipped; corrected at the
+S6 audit — every "measured minimum" this line first carried
+(100/100/100/200/200/400) was a doubling-search ROUND point, not a
+minimum: all six were wrong, in the safe direction. Re-measured
+first-hand at the fix round; each figure's emitting command is the
+least-n scan `(List.range (B+1)).find? (fun n => allStreamsOkPool
+<post> n <seed> {})` per row — sound as a minimum by
+`allStreamsOkPool_mono`, and each stated bound holds at n and fails
+at n−1): nb-not-ready 86→200, nb-guaranteed-ready 65→200,
+nb-full-buffer 71→200, dsp 195→400, async 140→400, client 308→800.
+Full module kernel-checks in ~20 s. Since the slice-6
+fuel-independence lift no THEOREM depends on any figure here — the
+bounds are kernel-evidence literals only.
 SLICE 6 (fuel-independence lift): these shipped bounds are now the
 KERNEL-EVIDENCE literals only (`<row>Cert<bound>`); the five
 statements per row are fuel-general — `Cert`/`AllSchedules` in the
@@ -293,7 +303,10 @@ stated honestly (the bound was the tranche budget, not reach):
 - **1 oracle out-of-tranche with its reason** (table row):
   `testAddressOfLocal` — short-circuit `Expr.and`, the recorded law
   gap; the hard bound forbids new law families.
-- **The remainder (69 unpinned units) was NOT REACHED this tranche**
+- **The remainder (the 71 unpinned units; figure corrected at the S6
+  audit — this line first said 69, a double-subtraction of the two
+  newly pinned units; 82 − 11 = 71 per the commands above) was NOT
+  REACHED this tranche**
   — recorded as such, not as per-unit blockers: the tranche was
   bounded by budget, and an honest small yield beats a stretched
   large one. The lever is now tracked tooling; the next movement's

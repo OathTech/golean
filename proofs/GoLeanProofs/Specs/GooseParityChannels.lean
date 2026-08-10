@@ -187,8 +187,10 @@ abbrev stSeed : ExecState := chanSeed selectTrickyLowered intCell0
 
 /-- `select_nb_not_ready` (upstream Qed, two goroutines, two
 non-blocking probes that must never rendezvous): the kernel
-certificate at the shipped bound 200 (measured minimum 100) — the
-kernel evidence the fuel-general bundle below lifts. -/
+certificate at the shipped bound 200 (true measured minimum 86 —
+S6-audit re-measure; the '100' this line first carried was a
+doubling-search round point, not a minimum) — the kernel evidence the
+fuel-general bundle below lifts. -/
 theorem nbNotReadyCert200 :
     allStreamsOkPool (cellIsInt 1) 200
       ⟨#[.exec nbNotReadyDriver stEnv .stop], stSeed, 0⟩ {} = true := by
@@ -224,7 +226,8 @@ theorem nbNotReadyTerminatesNormallyC :
 
 /-- `select_nb_guaranteed_ready` (upstream Qed; the closed-channel
 receive is guaranteed, the default must be unreachable): the kernel
-certificate at the shipped bound 200 (measured minimum 100). -/
+certificate at the shipped bound 200 (true measured minimum 65 —
+S6-audit re-measure; '100' was a round search point). -/
 theorem nbGuaranteedReadyCert200 :
     allStreamsOkPool (cellIsInt 1) 200
       ⟨#[.exec nbGuaranteedReadyDriver stEnv .stop], stSeed, 0⟩ {}
@@ -262,7 +265,8 @@ theorem nbGuaranteedReadyTerminatesNormallyC :
 
 /-- `select_nb_full_buffer_not_ready` (upstream Qed; the non-blocking
 send on a full buffer must take default): the kernel certificate at
-the shipped bound 200 (measured minimum 100). -/
+the shipped bound 200 (true measured minimum 71 — S6-audit
+re-measure; '100' was a round search point). -/
 theorem nbFullBufferCert200 :
     allStreamsOkPool (cellIsInt 1) 200
       ⟨#[.exec nbFullBufferDriver stEnv .stop], stSeed, 0⟩ {} = true := by
@@ -309,7 +313,8 @@ abbrev muxEnv : LocalEnv := [[("r", .base ⟨0⟩)]]
 abbrev muxSeed : ExecState := chanSeed muxerLowered strCell0
 
 /-- `Async` (buffered cap-1 handoff joined by a receive): the kernel
-certificate at the shipped bound 400 (measured minimum 200). -/
+certificate at the shipped bound 400 (true measured minimum 140 —
+S6-audit re-measure; '200' was a round search point). -/
 theorem asyncCert400 :
     allStreamsOkPool (cellIsStr (GoString.fromLeanString "async")) 400
       ⟨#[.exec asyncDriver muxEnv .stop], muxSeed, 0⟩ {} = true := by
@@ -344,7 +349,8 @@ theorem asyncTerminatesNormallyC :
 /-- `Client` (the unbuffered request/response round-trip against the
 `Serve` loop; the server is left parked at main's exit — the leaked
 goroutine is inside the modeled envelope): the kernel certificate at
-the shipped bound 800 (measured minimum 400). -/
+the shipped bound 800 (true measured minimum 308 — S6-audit
+re-measure; '400' was a round search point). -/
 theorem clientCert800 :
     allStreamsOkPool
       (cellIsStr (GoString.fromLeanString "Hello, World!")) 800
@@ -392,7 +398,8 @@ abbrev dspSeed : ExecState := chanSeed actrisLowered intCell0
 
 /-- `DSPExample` (the pointer handoff over an unbuffered channel, the
 write-back, the signal rendezvous, the deref — 42): the kernel
-certificate at the shipped bound 400 (measured minimum 200). -/
+certificate at the shipped bound 400 (true measured minimum 195 —
+S6-audit re-measure; '200' was a round search point). -/
 theorem dspCert400 :
     allStreamsOkPool (cellIsInt 42) 400
       ⟨#[.exec dspDriver dspEnv .stop], dspSeed, 0⟩ {} = true := by
