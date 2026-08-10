@@ -503,6 +503,35 @@ fi
 step "proofs build incl. Audit gate (axiom allowlist + non-vacuity)"
 if ( cd proofs && lake build 2>&1 | tail -4 ); then ok "proofs + Audit gate"; else bad "proofs + Audit gate"; fi
 
+# 3v. Verdi compat gate (merge window 2026-08-10, verdi-p1 lane queue
+# item 1): the standalone compat/verdi package — the Verdi Raft spec
+# port + the differential harness's LEAN leg only. The Rocq extraction
+# oracle (compat/verdi/extraction/) is on-demand lane tooling — it
+# needs the repo-local Coq switch and built verdi-raft theories, so it
+# NEVER runs in ci; its run records live in the lane log
+# (docs/2026-08-09_verdi-p1-lane.md). What this step enforces:
+#   - the compat build, which includes the ENFORCING AxCheck gate
+#     (#guard_msgs axiom pins per named theorem + a collectAxioms
+#     sweep that throwErrors on any axiom beyond propext/Quot.sound —
+#     upgraded from advisory prints at the merge window, so axiom
+#     drift in the port FAILS the build);
+#   - diffharness check: the committed fixture byte-compared against
+#     regenerated content (port-drift pin, fail closed on a missing
+#     fixture).
+# Needs NO deps/ checkouts and no extra bootstrap in a fresh worktree
+# (the package is self-contained); a missing or broken package fails
+# loud, never skips.
+step "verdi compat gate (compat/verdi build incl. enforcing AxCheck + diffharness check)"
+if [ ! -f compat/verdi/lakefile.toml ]; then
+  echo "  compat/verdi/lakefile.toml MISSING (package moved without re-pointing the gate?)" >&2
+  bad "verdi compat gate (package absent — fail closed)"
+elif ( cd compat/verdi && lake build 2>&1 | tail -3 ) \
+  && ( cd compat/verdi && ./.lake/build/bin/diffharness check fixtures/handlers-n3.tsv ); then
+  ok "verdi compat gate (build + AxCheck + fixture pin)"
+else
+  bad "verdi compat gate (build, AxCheck, or fixture pin — see above)"
+fi
+
 # 3a. Built-artifact-dependent guards — DELIBERATELY ordered after the core
 # and proofs builds (CI-only failure, 2026-08-09): check-golden and
 # check-imported-pins run `lake env lean --run` against GoLean.NativeToIR /
