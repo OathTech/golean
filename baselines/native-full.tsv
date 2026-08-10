@@ -1,17 +1,21 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-09  commit: phase-2 goose sync imports (spec-parity slice 2 tail)
+# recorded: 2026-08-10  commit: S2 audit fix round (spec-parity slice 2)
 #   frontend: native  oracle: go run (strict lane) / go-run membership in the
 #   machine-enumerated observation set, sampled plain AND under -race
 #   (membership lane; go1.26.5) / schedule-tree singleton certification +
 #   strict go-run equality (confluent lane) / every-enumerated-path-refuses
 #   + go run -race red (racy lane; never combined with deadlock)
-# manifest_cases: 1458  pass: 1348  fail: 110
-# Re-pin reason: the four sync-only phase-2 goose files land at R1 via
-#   scripts/import-goose --allow-import sync (semantics/lock,
-#   unittest/synchronization, unittest/spawn, channel/
-#   parallel-search-replace), all PASS on landing; the other 13
-#   sync-importing goose files stay blocked by their OTHER imports
-#   (recorded in the design note §11). Zero drift on all 1454 prior ids.
+# manifest_cases: 1464  pass: 1350  fail: 114
+# Re-pin reason: the S2 sub-branch audit fix round — six new ids, zero
+#   drift on all 1458 prior ids: sync/rwmutex-order/acquisition (the F1
+#   envelope pin, tier=slow membership {10,20}, certified record added),
+#   sync/rwmutex-misuse-fatal/runlock-while-write-locked (F5's probed-
+#   but-unpinned fatal), and the four sync/escapes/* PERMANENT markers
+#   (F4: promoted/method-value/go/defer sync shapes now quarantine
+#   per-decl as visible frontend-export refusals instead of landing as
+#   runtime stuck). The F3 reuse-window semantics fix (waiter count
+#   resets in the zeroing Add) moved no corpus id — its discriminators
+#   are eval pins (verified red pre-fix).
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
 PASS	arrays/array-copy	-
@@ -1427,6 +1431,10 @@ PASS	structs/unnamed-conversion-targets/slice	-
 PASS	structs/unnamed-conversion-targets/slice-nil	-
 PASS	structs/unnamed-conversion-targets/slice-to-defined	-
 PASS	structs/zero-value	-
+FAIL	sync/escapes/defer-embedded	frontend-export
+FAIL	sync/escapes/go-stmt	frontend-export
+FAIL	sync/escapes/method-value	frontend-export
+FAIL	sync/escapes/promoted	frontend-export
 PASS	sync/mutex-basic/copy-carries-state	-
 PASS	sync/mutex-basic/cross-goroutine-unlock	confluent
 PASS	sync/mutex-basic/defer-unlock	-
@@ -1446,7 +1454,9 @@ FAIL	sync/out-of-scope-trylock/trylock-uncontended	frontend-export
 PASS	sync/rwmutex-basic/rlock-twice	-
 PASS	sync/rwmutex-basic/write-then-read-ordered	confluent
 PASS	sync/rwmutex-misuse-fatal/runlock-of-unlocked	-
+PASS	sync/rwmutex-misuse-fatal/runlock-while-write-locked	-
 PASS	sync/rwmutex-misuse-fatal/wunlock-of-unlocked	-
+PASS	sync/rwmutex-order/acquisition	membership
 PASS	sync/rwmutex-rlock-then-lock/rlock-then-lock	-
 PASS	sync/waitgroup-basic/add-done-wait	confluent
 PASS	sync/waitgroup-basic/batch-done	-

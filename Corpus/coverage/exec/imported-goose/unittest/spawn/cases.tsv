@@ -1,2 +1,6 @@
 # id	subject	args	expected_status	expected_reason	features
+# COMPLETION-ONLY oracle (audit fix round): the wrapper returns a
+# constant — this row certifies termination-with-ok on the strict
+# lane's schedules, not any lock value or ordering (the upstream
+# subject returns nothing observable).
 simple-spawn	goleanSimpleSpawn	-	ok	-	imported_goose,sync,mutex,goroutines

@@ -1,2 +1,5 @@
 # id	subject	args	expected_status	expected_reason	features
+# COMPLETION-ONLY oracle (audit fix round): constant-return wrapper —
+# certifies termination-with-ok only (the upstream lock API subjects
+# return nothing observable).
 make-lock	goleanMakeLock	-	ok	-	imported_goose,sync,mutex

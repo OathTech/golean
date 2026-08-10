@@ -209,6 +209,21 @@ SYNCHRONIZATION (the registry's ops — HB updates, never data):
   data pair gc layers on top (`wg.sema`: waitgroup.go:115/190) is
   modeled by `wgSemaAccess` below, U4's carve-out.
 
+* **U5 — cross-goroutine unlock without handoff HB: TSan-red /
+  ours-green** (audit fix round 2026-08-10, F2). `syncRelease` is a
+  merge-join; gc's TSan hook is overwrite `race.Release`
+  (internal/sync/mutex.go:188-191, rwmutex.go:203-204). The two agree
+  exactly when the unlocker previously acquired the cell (handoff
+  discipline); on a legal owner-free unlock (probe p09) whose unlocker
+  has no HB from the prior critical section, TSan drops that section's
+  clock and reports a race our merge keeps ordered. The merge is the
+  memory-model text verbatim (the n<m Unlock/Lock sentence is
+  unconditional), so the deviation is from the TSan-alignment oracle
+  in the missed-race direction; scope-limited to programs doing
+  cross-goroutine unlocks without a handoff edge. Eval-pinned (the
+  cross-unlock publication pin); un-lane-able as a corpus row (the
+  mixed oracle class: plain gc green, race-instrumented gc red — the
+  three-way rule's investigation shape, resolved here by this record).
 * **U4 — sync-OBJECT data accesses inside ops are not modeled**
   (spec-parity slice 2, design note §8): gc's `-race` build performs
   `race.Read(&rw.w)` on every RWMutex op and reads `m.state` in
@@ -612,10 +627,20 @@ inventory (read from the gc sources at the probe date):
   under RLock; a single-clock model would silently order them —
   pinned by race/negative-sync/rlock-serialized).
 
-All releases here are merge-joins: gc uses overwrite `Release` where
-lock exclusivity makes overwrite and merge coincide, `ReleaseMerge`
-where concurrency (readers, Done callers) demands the join — merge is
-sound in both and equal under exclusivity (design note §5). -/
+All releases here are merge-joins. CORRECTED at the audit fix round
+(2026-08-10, F2 — the original sentence claimed merge and gc's
+overwrite `Release` "coincide under exclusivity", which is FALSE):
+they coincide only under lock-HANDOFF discipline — when the unlocker
+previously ACQUIRED the same cell (then its clock already contains the
+sem clock and join = overwrite). This slice deliberately models the
+shape where that fails (probe p09: a cross-goroutine unlock is legal
+and owner-free), and there gc's overwrite DROPS the earlier release's
+clock while our merge keeps it — TSan reports a race our detector does
+not (the U5 ledger entry in the module docstring; eval-pinned). The
+merge model is the MEMORY-MODEL text ("for n < m, call n of
+l.Unlock() is synchronized before call m of l.Lock() returns" — 
+unconditional), so this is a recorded deviation from the
+detector-alignment ORACLE, not from Go. -/
 structure SyncClocks where
   semA : VClock := #[]
   semB : VClock := #[]

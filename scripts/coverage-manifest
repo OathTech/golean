@@ -607,11 +607,12 @@ while IFS= read -r cases_file; do
     # every tested stream, and the Go oracle is `go run -race` (exit 66,
     # "WARNING: DATA RACE"; no per-case expected_reason).
     # fatal (spec-parity slice 2, sync design note §2): gc's
-    # UNRECOVERABLE runtime throws (`fatal error: <msg>`, exit 2 — the
-    # sync misuse class, probed: recover does not intervene). Unlike
-    # deadlock the message is per-case, so expected_reason CARRIES it
-    # (the text after "fatal error: "); both sides compare the
-    # synthesized status/message observation. Strict-lane only; never
+    # UNRECOVERABLE runtime throws (`fatal error: <msg>` — the sync
+    # misuse class, probed: recover does not intervene). Unlike
+    # deadlock the message is per-case: expected_reason GATES the run
+    # (must appear in gc's output) and the compared observation carries
+    # gc's ACTUAL leading fatal line (audit fix round 2026-08-10 — the
+    # panic path's actual-message discipline). Strict-lane only; never
     # run under -race (same detector-suppression caution as deadlock).
     case "$expected_status" in
       ok|panic|deadlock|race|fatal) ;;

@@ -65,6 +65,47 @@ func testLocked() bool {
 	return true
 }
 EOF
+
+cat > "$FAKE/testdata/examples/semantics/sync_import.go" <<'EOF'
+package semantics
+
+import "sync"
+
+func testSyncImport() bool {
+	var mu sync.Mutex
+	mu.Lock()
+	mu.Unlock()
+	return true
+}
+EOF
+
+cat > "$FAKE/testdata/examples/semantics/two_imports.go" <<'EOF'
+package semantics
+
+import (
+	"os"
+	"sync"
+)
+
+func testTwoImports() bool {
+	var mu sync.Mutex
+	_ = os.Getpid
+	mu.Lock()
+	mu.Unlock()
+	return true
+}
+EOF
+
+cat > "$FAKE/testdata/examples/semantics/odd_import.go" <<'EOF'
+package semantics
+
+import ("os")
+
+func testOddImport() bool {
+	_ = os.Getpid
+	return true
+}
+EOF
 cat > "$FAKE/testdata/examples/semantics/has_main.go" <<'EOF'
 package semantics
 
@@ -136,6 +177,30 @@ expect_reject "missing source" "missing upstream source" \
 expect_reject "source with imports" "has imports" \
   --goose-root "$FAKE" --expect-rev "$REV" \
   --source testdata/examples/semantics/has_import.go --dest "$DEST_BASE/imports"
+
+# 3b. --allow-import seam (spec-parity slice 2; fixtures added at the
+# audit fix round — the seam shipped without any, and the missing
+# accept/reject pair is exactly how the fail-open parser hole went
+# undetected). (i) an allowed import lands; (ii) a second,
+# non-allowed package still refuses; (iii) a non-gofmt import form
+# fails CLOSED even when a grant is present (the rewritten strict
+# parser refuses what it cannot account for, never zero-path passes).
+if out="$(run_import --goose-root "$FAKE" --expect-rev "$REV" --allow-import sync \
+    --source testdata/examples/semantics/sync_import.go --dest "$DEST_BASE/allowimp")"; then
+  if grep -q '^// imports-allowed: sync (--allow-import)$' "$CASE_ROOT/allowimp/main.go"; then
+    echo "ok: --allow-import lands an allowed import WITH the per-file grant record"
+  else
+    echo "FAIL: --allow-import landed without the imports-allowed grant line"; fail=1
+  fi
+else
+  echo "FAIL: --allow-import rejected an allowed import: $out"; fail=1
+fi
+expect_reject "non-allowed second import despite a grant" 'imports "os"' \
+  --goose-root "$FAKE" --expect-rev "$REV" --allow-import sync \
+  --source testdata/examples/semantics/two_imports.go --dest "$DEST_BASE/twoimp"
+expect_reject "unrecognized import form fails closed under a grant" "import form the vet does not recognize" \
+  --goose-root "$FAKE" --expect-rev "$REV" --allow-import sync \
+  --source testdata/examples/semantics/odd_import.go --dest "$DEST_BASE/oddimp"
 
 # 4. func main
 expect_reject "source with func main" "defines func main" \

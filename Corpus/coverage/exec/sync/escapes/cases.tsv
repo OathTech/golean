@@ -1,0 +1,10 @@
+# id	subject	args	expected_status	expected_reason	features
+# PERMANENT-until-lifted refusal markers (audit fix round, F4): red at
+# frontend-export by design — direct statement/defer-position sync ops
+# only; promoted/method-value/go-position shapes quarantine per-decl.
+# The promoted shape is the north-star idiom (raft MemoryStorage embeds
+# sync.Mutex); lifting it is the recorded follow-up.
+promoted	escapePromoted	-	ok	-	sync,mutex,embedding
+method-value	escapeMethodValue	-	ok	-	sync,mutex,closures
+go-stmt	escapeGoStmt	-	ok	-	sync,waitgroup,goroutines
+defer-embedded	escapeDeferEmbedded	-	ok	-	sync,mutex,defer,embedding

@@ -19,6 +19,16 @@ func runlockOfUnlocked() int {
 	return 0
 }
 
+// RUnlock while WRITE-locked is the same unrecoverable throw (audit
+// fix round F5 — probed, previously unpinned): readers = 0 under a
+// held write lock, so the misuse classifies identically.
+func runlockWhileWriteLocked() int {
+	var m sync.RWMutex
+	m.Lock()
+	m.RUnlock()
+	return 0
+}
+
 func main() {
 	wunlockOfUnlocked()
 }
