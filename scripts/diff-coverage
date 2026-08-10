@@ -441,6 +441,14 @@ run_case_rows() {
       if [[ "$go_observation" != *"fatal error: $expected_reason"* ]]; then
         report_fail "$id" "$features" "go-run" "expected Go fatal error '$expected_reason', got: $go_observation"
         failed=1
+      elif [[ "$go_observation" != *"exit status 2"* ]]; then
+        # Runtime fatals exit 2 (delta-review round 2: the design note
+        # claimed the exit-status pin; now CHECKED rather than claimed.
+        # `go run` itself exits 1 and reports the child's status as a
+        # trailing "exit status N" line — that line is the checkable
+        # signal, measured here).
+        report_fail "$id" "$features" "go-run" "expected the child's 'exit status 2' report for the runtime fatal: $go_observation"
+        failed=1
       elif ! actual_fatal_message="$(printf '%s\n' "$go_observation" | fatal_message)"; then
         report_fail "$id" "$features" "go-observation" "could not extract Go fatal message: $go_observation"
         failed=1

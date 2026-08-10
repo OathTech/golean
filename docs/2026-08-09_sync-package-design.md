@@ -74,8 +74,9 @@ real terminal, `GoError.fatal msg`** — status `fatal`, message = gc's
 fixed string, differentially testable as `expected_status: fatal`
 against a failing `go run` whose LEADING `fatal error: <msg>` line is
 extracted and compared (the panic path's actual-message discipline —
-audit fix round F8; exit codes are not separately pinned, matching the
-deadlock/panic branches). Options
+audit fix round F8) and whose trailing `exit status 2` report is
+checked (delta-review round 2: `go run` itself exits 1 and reports the
+child's status as text — measured; the report line is the pin). Options
 considered: (a) `.unsupported` refusal like the go-of-nil-func
 precedent — rejected: gc's behavior here is UNambiguous (probed, fixed
 message), and "fail closed on what's ambiguous" cuts the other way:
@@ -226,13 +227,14 @@ clock pair `semA`/`semB` —
   serialized readers; a single-clock model would silently order
   them).
 
-All releases are merge-joins (CORRECTED at the audit fix round, F2:
-merge equals gc's overwrite `Release` only under lock-HANDOFF
-discipline — the unlocker previously acquired the cell — not under
-mere exclusivity; on owner-free cross-goroutine unlocks TSan drops the
-prior section's clock and over-reports relative to the memory-model
-text. Recorded as Race.lean's U5; the merge stays — it is the spec
-sentence verbatim). The
+All releases are merge-joins (CORRECTED at the audit fix round F2 and
+made SEMANTIC at delta-review round 2: merge equals gc's overwrite
+`Release` at a release exactly when semA ⊑ the unlocker's clock —
+entailed program-wide by strict lock-handoff discipline; neither
+"previously acquired" nor "is the current holder" suffices per-unlock.
+On owner-free cross-goroutine unlocks TSan drops the prior section's
+clock and over-reports relative to the memory-model text. Recorded as
+Race.lean's U5; the merge stays — it is the spec sentence verbatim). The
 WaitGroup misuse pair is modeled as a per-cell shadow (`chanObjAccess`
 mold): the Add-side READ and first-waiter WRITE, check-then-record —
 keeping `-race` refusal alignment for Add-racing-Wait programs.
@@ -323,7 +325,9 @@ through unsupported shapes fail closed, never approximate.
   schedules; no model-only deadlock exists — `wunlock` leaves
   readers = 0, so the pending writer is wake-ready exactly when the
   reader would have been), certified by sync/rwmutex-order/acquisition
-  (members {10, 20} ⊇ gc's realized 10, plain + -race sampling).
+  (members {10, 20}, BOTH gc-witnessed — plain sampling is 10-dominant
+  with rare 20s, -race sampling near-even; delta-review round 2
+  corrected the earlier "gc's realized 10" phrasing).
 - **U5 (audit fix round, F2 — TSan release overwrite-vs-merge):** see
   Race.lean's inventory entry; the merge model is memory-model-exact
   and TSan over-reports on owner-free cross-goroutine unlocks without
@@ -548,6 +552,60 @@ Finding-by-finding record — the themes and dispositions:
   oracles are now marked in their cases.tsv; the five sibling rows'
   budget raises carry in-file notes; the unreproducible run-detail
   figure above was replaced by the tracked-record citation.
+
+### Delta-review round 2 (2026-08-10; 1 major + ~7 minors, fixed)
+
+- **MAJOR — the U5 pin was VACUOUS**: the first `syncXUnlockMain_F`
+  published BEFORE the spawns, so the spawn edge ordered the pair
+  under ANY release rule (the round-2 verifier proved it by mutation
+  build: overwrite semA left the whole eval suite byte-identical), and
+  its "-race red, verified by the audit" claim was refuted by probe
+  (60/60 green). RE-ENCODED as the verifiers' discriminating shape
+  (spawns before the publish; owner-free W1 unlock; W2's acquire
+  after it): gc -race RED on it (3/3, exit 66 — delta-review probes
+  .tmp/verify/u5disc, .tmp/verify-f2/true2.go), machine GREEN on the
+  empty stream, and SENSITIVITY MUTATION-TESTED this round (tree copy
+  with `semA := vt` overwrite → the pin flips to raceDetected; the
+  unpatched tree passes). Docstrings rewritten to the true claims.
+- **F4 stub regression pinned**: sync/stub-satisfaction/satisfies —
+  interface satisfaction through the promoted-sync stubs answers YES
+  (go 4 = machine 4); a dropped/mis-shaped stub flips it to a silent
+  false-"no" (the verifier exhibited exactly that with a
+  stub-dropping frontend build).
+- **F6 round 2**: CR bytes refused outright (legal Go whitespace the
+  strict rules missed — the last zero-path pass); the vet gate widened
+  beyond line-initial (comment-prefixed imports never reached the vet
+  at all) with a zero-output cross-check (loose gate fired + strict
+  recognizer silent = die, over-refusal accepted as the fail-closed
+  direction); grant WIDTH constrained to the machine-modeled set
+  (sync) at both the importer and the standing guard; three new
+  fixtures (CR, comment-prefixed, wide grant).
+- **F3 precision**: "gc is CLEAN" scoped to the ADD side at all three
+  comment sites — gc's misuse detection moves to the WAITER
+  (waitgroup.go:213), the recorded §8 narrowing; the reuse-window eval
+  pin's non-vacuity claim now names the exact pre-fix state + command.
+- **applySyncOp docstring**: the removed Add-side panic no longer
+  listed as a wgAdd outcome; the ⊇-gc sentence now carries the
+  WaitGroup carve-out beside the RWMutex one; Value.lean's `waiters`
+  gloss updated.
+- **F2 precondition made SEMANTIC**: merge = overwrite at a release
+  iff semA ⊑ the unlocker's clock (program-wide handoff discipline
+  entails it inductively; neither "previously acquired" nor "current
+  holder" suffices — verifier counterexamples).
+- **Certified record honesty**: steps figure re-measured at the
+  record's own params on the fixed semantics (2.23M steps/~26s; the
+  16.4M figure was the original audit's pre-F3-fix probe — explained
+  in the record header, tier=slow stands at the threshold).
+- **gc realizes BOTH rwmutex-order members** (round-2 verifier: plain
+  297x10/3x20; -race 56/64): the "gc exhibits 10 on every run" texts
+  corrected — both certified members are now oracle-witnessed (a
+  strengthening).
+- **Fatal exit status**: checked, not claimed — `go run` exits 1 and
+  reports the child's `exit status 2` as text (measured); the report
+  line is the pin.
+- Gate discipline note: this branch predates `scripts/capped`; every
+  build/gate in both fix rounds ran through the wrapper extracted from
+  main into .tmp (the cap arrives in-tree at the arc-merge rebase).
 
 ## 12. Parking ledger (user-scale items, per the AFK posture)
 

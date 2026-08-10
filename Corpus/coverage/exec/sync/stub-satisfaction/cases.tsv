@@ -1,0 +1,5 @@
+# id	subject	args	expected_status	expected_reason	features
+# Delta-review round 2 (F4 regression pin): satisfaction-through-the-
+# promoted-sync-stubs must answer YES; a dropped/mis-shaped stub turns
+# this into a silent false-"no" with status ok (verifier-exhibited).
+satisfies	stubSatisfaction	-	ok	-	sync,mutex,embedding,interfaces

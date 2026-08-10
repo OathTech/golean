@@ -2035,9 +2035,14 @@ Outcomes, per primitive (design note §4):
   recovered negative-counter panic leaves the counter negative), then
   new < 0 → the RECOVERABLE panic "sync: negative WaitGroup counter"
   (p04 — a real `panic()`, unlike the mutex fatals), then
-  waiters-parked ∧ delta > 0 ∧ old counter = 0 → the recoverable
-  misuse panic (waitgroup.go:120 — `waiters` is cell state, so the
-  check is cell-local exactly like gc's state-word test). `wgWait`:
+  a ZEROING add resets the waiter count in the same atomic step
+  (waitgroup.go:134-135; delta-review round 2 corrected this line — it
+  used to list the REMOVED Add-side misuse panic as an outcome. gc
+  reaches waitgroup.go:120 only through sub-op interleavings, realized
+  here as the wg-sema race or clean, and gc's WAITER-side reuse panic
+  (waitgroup.go:213) is a recorded §8 narrowing OUTSIDE this envelope
+  — the ⊇-gc claim above carries that carve-out alongside the RWMutex
+  one). `wgWait`:
   counter = 0 → proceed (the fast path still acquires — raceUpdate);
   else park, counting itself in `waiters`.
 * Once — `onceBegin targets`: fresh → mark started, deliver `true`
@@ -2125,9 +2130,15 @@ def applySyncOp (s : ExecState) (op : SyncOp) (vs : List GoValue)
           -- 2026-08-10, gc waitgroup.go:134-135: `wg.state.Store(0)`
           -- runs BEFORE the semrelease loop) — so an Add issued in the
           -- wake window, with woken waiters not yet resumed, sees
-          -- w == 0 and the misuse panic below cannot fire (gc is CLEAN
-          -- there; probed, and eval-pinned by the two-waiter
-          -- reuse-window pin). The parked waiters stay parked-Config
+          -- w == 0 and gc's ADD side is silent (eval-pinned by the
+          -- two-waiter reuse-window pin). PRECISION (delta-review
+          -- round 2 — the first comment said "gc is CLEAN there",
+          -- which is only the Add's half): gc's misuse detection
+          -- MOVES to the WAITER, which panics "sync: WaitGroup is
+          -- reused before previous Wait has returned"
+          -- (waitgroup.go:207-213) when it resumes seeing nonzero
+          -- state; our woken waiter stays parked instead — the §8
+          -- reuse-window narrowing, recorded, misuse-only. The parked waiters stay parked-Config
           -- shapes; their resume's `waiters - 1` saturates at the
           -- already-reset 0. A NEW Wait parking after the reset counts
           -- from 0 again — which is also what keeps the first-waiter
