@@ -26,7 +26,9 @@ this one:
 - **It is R1-green and R2-pinned on our side** — the differential row
   passes against `go run`, and the staleness-guarded lowering term
   `nilLowered` (`proofs/GoLeanProofs/Specs/ImportedGooseNil.lean`,
-  ci step 1c5) already exists, so the R3 statement quantifies the
+  ci step 3a2 — this note's "1c5" labels were stale for the whole
+  arc, renumbered at the branch base; all three corrected at the S5
+  audit) already exists, so the R3 statement quantifies the
   frontend's ACTUAL lowering, not a hand-transcription.
 - **Its body exercises the spine widely but finitely**: declaration at
   a pointer type, `new(*uint64)` (the allocating wide-op class), an
@@ -135,7 +137,7 @@ wrapper `FuncId`). `Specs/GooseParityKit.lean` factors that:
   function of the two names; per-unit an `example : … = by rfl` pins
   that the IMPORTED lowering's wrapper body is literally this term
   (if the frontend's wrapper generation drifts, the pin — and the
-  staleness guard 1c5 before it — fails loud).
+  staleness guard 3a2 before it — fails loud).
 - `wp_golean_wrapper_body` — the wrapper walk, parameterized by the
   inner function's body spec (a wand delivering `$res0 ↦ .bool true`);
   covers init `$cN`, the inner call's frame entry/exit
@@ -273,7 +275,7 @@ undesignated, listed in the manifest.
   ARC close — slice 4 added the three channel pin modules, manifest
   arc-close addendum)?** Each pinned
   term is the R3 statement's subject AND
-  joins the ci 1c5 staleness guard + pins registry (a standing
+  joins the ci 3a2 staleness guard + pins registry (a standing
   maintenance surface per unit). Scaling R3 across the corpus needs
   them; how many, and whether the pin generator should be promoted
   from the `.tmp` mkpins helper to a tracked script, is a

@@ -91,7 +91,11 @@ package-doc sentences (two-clock RWMutex realization, the p14
 discriminator; the wg misuse sema pair), interpreter/relation lockstep
 throughout (a crash checkpoint 2fc4f4f0 sits honestly mid-branch,
 completed by the next commit). 35 red-first guardrail pins: 33 green,
-2 permanent out-of-scope markers (Cond/TryLock). Lanes: sync
+2 permanent out-of-scope markers (Cond/TryLock). (Figure true at this
+record's commit, PRE-audit-round — the S2 audit fix round then added
+FOUR more permanent markers, the sync/escapes escape-refusals;
+arc-close lane state, measured at the S5 audit: 42 rows / 36 green /
+6 permanent fail-closed — matrix T1.) Lanes: sync
 confluent/membership/racy rows all certified; workers-join strict with
 the recorded beyond-caps reason. Phase-2 tail: the FOUR sync-only
 goose files land at R1 green (importer `--allow-import` seam); the
@@ -332,7 +336,7 @@ the authoritative accounting)
 | slice | shipped | audit cycle → outcome |
 |---|---|---|
 | S1 (laws spine + F15 opener) | F15 fixed symmetrically; BUG-034/037/025 retired onto the tgtOpK/storeK spine, law families restated, all 8 held-open pins flipped | audit round found BUG-052 (call write-back operand timing — a real machine bug, red-first pinned then fixed) + the slow-lane cap miss; 4 fix commits + 2 delta-polish; 1 finding refuted |
-| S2 (the sync package) | Mutex/RWMutex/WaitGroup/Once live end-to-end (registry growth, ZERO new Choices sites), probed-fatal class, HB edges, 33/35 pins green (2 permanent out-of-scope: Cond/TryLock), 4 sync-only goose files R1 | audit fix round + delta rounds 2–4; round 4 CRITICAL (the import vet rebuilt on Go's own grammar) + residue cleanup; crash checkpoint 2fc4f4f0 recorded honestly mid-branch |
+| S2 (the sync package) | Mutex/RWMutex/WaitGroup/Once live end-to-end (registry growth, ZERO new Choices sites), probed-fatal class, HB edges, 33/35 build-slice pins green (dated figure — the audit round then added FOUR permanent sync/escapes markers; lane state at arc close, measured: 42 rows, 36 green, 6 permanent fail-closed — matrix T1, corrected at the S5 audit), 4 sync-only goose files R1 | audit fix round + delta rounds 2–4; round 4 CRITICAL (the import vet rebuilt on Go's own grammar) + residue cleanup; crash checkpoint 2fc4f4f0 recorded honestly mid-branch |
 | S3 (WP-walk driver) | THE EXEMPLAR + 5 more R3 D1 pairs (GoSpecC + readout twin over pinned lowerings), the kit, `wp_new_value` witnessed, the go_walk re-derivation + registration lesson, the tracked manifest | audit fix round (~4 surviving majors, ALL claims/records — the parity denominator corrected 37→28-of-36 at origin and every restatement) + delta polish (zero surviving critical/major) |
 | S4 (decomposition + channel rows) | the non-consuming-select checker refinement (witnessed both ways), 6 curated channel rows × 5 kernel theorems, the decomposition pipe through THE EXIT, `spawnNoopTripleC` + witness pair (the debt's TRIPLE half) | one polish round, zero critical/major; the load-bearing minor (stale inherited differential figure) fixed by a fresh full run FIRST-HAND |
 | S5 (this) | records only: parity table, matrix arc-end state, this record, sweep | sub-branch audit to follow (records dimension) |
@@ -352,7 +356,10 @@ matched the tracked baseline on `result`+`stage` per id).
   (map-element multi-assign targets), the sync Cond/TryLock
   out-of-scope markers (owner: atomics arc / D4 widening).
 - **29 fidelity-stage** (23 lean-observation + 4 differential + 1
-  nondet + 1 go-run), split per `scripts/check-bugs.sh --list`:
+  nondet + 1 go-run) — 28 visible to the check-bugs filter + 1
+  outside it (split restated at the S5 audit; the first form said
+  "split per `scripts/check-bugs.sh --list`" for all 29, which that
+  command cannot produce — its stage filter has no `go-run`):
   - **16 untriaged** (the ratchet, `baselines/untriaged-count`) — of
     which the DELIBERATE permanent entries carry their own records:
     floats/to-int-out-of-range ×2 (fail-closed refusals, never flip),
@@ -362,15 +369,34 @@ matched the tracked baseline on `result`+`stage` per id).
     unowned); the genuine backlog is the strings rune-conversion class
     ×7 + arrays/pointer-array + pointers/nil-array-index-panic +
     structs/tag-pointer-conversion (pre-existing, untouched this arc).
-  - **13 explained by a `docs/BUGS.md` entry** — maps *-during-range
-    (BUG-005 class), the panic-recover payload-method rows (the parked
-    `runtime.Error` scoping, TODO.md G1 entry), nil-literal-values +
-    imported-named-key rows, the two race-lane markers,
-    spawn-edge/nil-func-fatal (P-S2-2's parked migration).
+  - **12 explained by a `docs/BUGS.md` entry**, fully enumerated with
+    the entry that owns each (CORRECTED at the S5 audit — the first
+    form said "13", enumerated only 11 rows, and attributed the
+    payload-method rows to TODO.md's G1, a different parked question
+    that would not flip them): maps/{delete,clear,update}-during-range
+    + race/negative/map-range-iter (BUG-005's Cases line); ALL FOUR
+    panic-recover rows, owner BUG-004 —
+    panic-defined-payload-methods/{error,stringer} (its item 4:
+    `preprintpanics` rewrites an `error`/`Stringer` payload, i.e.
+    CALLS a method at abort time, which the terminal rule cannot do),
+    panic-newline-abort (item 3, multi-line `printindented`),
+    repanic-same-value-abort (item 1, eface allocation identity);
+    maps/nil-literal-values ×2; maps/imported-named-key-unhashable;
+    race/free/array-read-write.
+  - **1 outside the filter**: goroutines/spawn-edge/nil-func-fatal,
+    stage `go-run` — not a BUGS.md row and invisible to
+    `check-bugs.sh --list` (its filter has no `go-run` stage); its
+    record is the corpus RED PIN header (permanent fail-closed
+    refusal until the fatal class is modeled) and its owner is
+    P-S2-2. So: 16 + 12 + 1 = 29.
 
 ### The consolidated parked-items agenda (EVERY item ledgered this
 arc; grouped as the user's check-in agenda — nothing here was decided
-unilaterally)
+unilaterally. The arithmetic, stated so the counts check: 15 P-items
+exist — P-S2-1..5, P-S3-1..5, P-S4-1..5 — of which 14 appear in the
+numbered groups A–D below and one, P-S3-4, sits in group E; numbered
+entry 2 is the S4 designation candidate, not a P-item; so the
+numbered list has 15 entries covering 14 P-items + 1 candidate)
 
 **A. Designation / spec-idiom calls (D3 curation, user-owned):**
 1. **P-S3-1** — designate the sequential exemplar pair? Cost is the
@@ -417,16 +443,24 @@ unilaterally)
     (model-vs-refuse when a target needs it).
 15. **P-S2-5** — U4 sync-object data-access race scope.
 
-**E. Recorded deferrals riding along (not P-numbered, ledgered in
-slice records):** the `typeAssert` spine-entry WP law (S1 — lands with
+**E. Recorded deferrals riding along (ledgered in slice records;
+header corrected at the S5 audit — this group also holds ONE P-item,
+P-S3-4, the "not P-numbered" label was wrong):** the `typeAssert`
+spine-entry WP law (S1 — lands with
 its first consumer); the short-circuit `Expr.and`/`Expr.or` WP law
 family (S3's out-of-class gap; unblocks `testInterfaceNilWithType`);
 the short-circuit-operand FRONTEND quarantine (strictly earlier: 4
 upstream-Qed oracles blocked at R1); checker L2 branching (S4 §6(c) —
-only if a curated row ever needs a ≥2-ready select); **P-S3-4**
+only if a FUTURE curated row ever needs a ≥2-ready select; none of
+the current six does); **P-S3-4**
 `go_walk_step` ergonomics (tactic infra, soundness-neutral); the
 NPDRF reduction obligation (pre-existing metatheory debt, matrix T12
-— restated, not new).
+— restated, not new); and one S5-audit observation for the next
+gate-touching slice: `scripts/check-bugs.sh`'s fidelity filter has no
+`go-run` stage — benign today (the single go-run red is a deliberate
+corpus RED PIN), but a future non-pinned go-run divergence would
+escape the untriaged ratchet silently; a one-line filter widening
+when the script is next touched.
 
 **Arc-level asks at the same check-in:** the pre-merge adversarial
 audit proposal for the WHOLE arc (protocol step 3 — the ask is
@@ -516,3 +550,103 @@ remainders are exactly items 7–11 of the agenda (the D1 channel form,
 the safety half, the pinning lever, P2) — none silent, each with an
 owner and a consumer. Nothing in this record is a merge request; the
 merge conversation starts at the check-in with the audit ask.
+
+### S5 records-audit fix round (2026-08-10; 2 confirmed majors + 5
+confirmed minors + 1 downgraded-to-minor + notes — every fix a record
+correction applied in place with its correction note; zero Lean, zero
+corpus edits; all findings verified by independent reproduction
+before fixing)
+
+1. **MAJOR — the channel denominator.** The "60-item" upstream
+   channel-examples proof tree was a FILENAME-glob artifact: it
+   dropped `elimination_stack.v` (8 items) and `lock.v` (5) — both
+   members of matrix §5's own verified-set enumeration, both
+   Qed-closed channel-example proofs in the same directory. Corrected
+   to the DIRECTORY-derived **73** at the origin (the manifest's
+   population paragraph, inherited from S4) and every restatement
+   (matrix §7.4 + the §5 arc-end note); buckets re-derived
+   (not-imported 21→**34**; attempted 5 / P2 10 / checker-cost 9 /
+   imported-unattempted 15 unchanged; 5+10+9+34+15 = 73). The
+   undercount was 18%, in the self-favorable direction. Every
+   counting command is now stated in a form that EMITS its figure
+   (`grep -c` over multiple files prints per-file lines, never a
+   total — the audit's point, applied at every cited command).
+   P-S3-2's sizing is UNAFFECTED: its 73 is OUR unpinned-unit count
+   (82 − 9), a numeral collision with the upstream tree now flagged
+   where the two meet (§7.4).
+2. **MAJOR — "upstream's example tests are translation-golden only"
+   was FALSE** (the S4 one-sidedness class recurring, generalized).
+   Upstream EXECUTES its example programs in Go: the semantics
+   oracles as a 115-assertion testify suite
+   (`generated_test.go`) and the channel examples via seven
+   `_test.go` files, both in upstream CI (`build.yml:33-34`).
+   The §7.4 bullet is rewritten both directions; the delta that
+   stands is O1/O2's (nothing executes their Rocq/GooseLang model or
+   the translation step; our differential runs the verification
+   subject itself). **The demanded sweep** — every remaining
+   upstream execute/test claim in the matrix, re-verified this round
+   against deps/goose @ 3be88bb / deps/perennial @ 43d4efa: O1
+   (their test_gen still references the absent
+   `Perennial.goose_lang.interpreter` — cmd/test_gen/main.go:17; no
+   interpreter directory exists in the checkout) TRUE; O2 (the
+   Go-model tests validate the GO model; the trusted-correspondence
+   header at select.go:3-5) TRUE; O4 ("no -race oracle use anywhere"
+   — repo-wide grep, zero hits) TRUE; O6/L1 (`TestSelectLiveness*`
+   at channel_test.go:897/922/947, empirical sleeps) TRUE; L6 (the
+   Go select model helpers exist for 1–3 cases only —
+   `{Blocking,NonBlocking}Select{1,2,3}`, no 4-ary form) TRUE; §6's
+   generic_conversion "translation-only tests never execute it" TRUE
+   (the unittest tree has NO `_test.go` — measured, `find`); the
+   manifest FC2 "translation-golden only" for const/rune/mapliteral
+   TRUE (same measurement); §5's explicitly-unverified variants
+   exist TRUE (three `*_unverified.go` files). The only false
+   execute/test claim found was the fixed one.
+3. **Red-set accounting** (two minors): "13 explained by a BUGS.md
+   entry" → **12 fully enumerated with their owning entries + 1
+   outside the filter** (nil-func-fatal is stage `go-run`, which
+   `check-bugs.sh`'s fidelity filter does not include — the stated
+   "split per --list" could never produce 13); the payload-method
+   rows re-owned to **BUG-004 item 4** (the G1 `runtime.Error`
+   parking is a different question that would not flip them); the
+   previously-unnamed panic-newline-abort + repanic-same-value-abort
+   rows named with their BUG-004 items; the filter's go-run hole
+   recorded as an agenda-E note for the next gate-touching slice.
+4. **T1 re-measured at tip** (minor): the sync lanes stand at 42
+   rows / 36 green / **6** permanent fail-closed markers (the FOUR
+   sync/escapes escape-refusals from the S2 audit round + the
+   Cond/TryLock pair) — the propagated "33/35 + 2 permanent" figure
+   was true only pre-audit-round; corrected in T1, in the closure
+   table's S2 row, and annotated at the S2 dated record above.
+5. **Stale cites re-measured — ALL file:line cites this slice
+   added, not a sample** (minor + the sweep the coordinator
+   directed): emit.go `4105,4148` → **4258,4301** (T10; 153-line
+   drift); google-search "5-worker pick tree" → **three-worker
+   fan-in, 4-thread width-4 tree** at all three carrier sites
+   (matrix §7.3, manifest, S4 note P-S4-5 — the descriptor
+   contradicted the row's own 3! = 6 arrival orders); the ci step
+   label **1c5 → 3a2** across the arc docs (stale since the branch
+   base's renumber at 2927085f — every arc record that wrote "1c5"
+   wrote it stale); every upstream `.v`/`.go` line cite in §7
+   re-verified this round (nil.v, structs.v, type_equality.v,
+   select-tricky, dsp, google, channel.v:259/:287, examples.go:50 —
+   all as stated, no further drift).
+6. **Notes applied**: the §7 ground-rules denominators restated so
+   the figures visibly sum (36 statements = 28 Qed + 7 Abort + 1
+   Admitted; the directory's 29 Qed = 28 + the non-oracle
+   `wp_shouldPanic`); the agenda arithmetic stated at its header (15
+   P-items = 14 in groups A–D + P-S3-4 in E; numbered entry 2 is the
+   candidate, not a P-item) and the E header corrected; the
+   select-tricky population clause reduced to its factual kernel per
+   the DOWNGRADED verdict (the "other 7" are ghost-state/AU helper
+   lemmas for the same three attempted programs; NO ≥2-ready select
+   example exists in that unit — the counts were correct throughout,
+   only the characterization was wrong).
+
+Gate at the fix-round tip: `scripts/ci` PASS re-run after these
+edits — same posture as the closure record's gate paragraph: every
+step fresh except the full-differential line (the cached S4
+first-hand run at 1c0b293f, gate-marked stale), and the window
+argument re-established for the NEW tip: `git diff --name-only
+bab76304..<fix tip>` remains docs/ + TODO.md only, so the
+differential surface is untouched by construction. 44 designated
+statements byte-identical (no proofs/ path in the diff).
