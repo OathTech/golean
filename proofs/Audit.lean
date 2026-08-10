@@ -1151,6 +1151,33 @@ example := @GoLean.Iris.ImportedGoose.wp_golean_wrapper_body
 example := @GoLean.Iris.ImportedGoose.wp_golean_driver
 example := @GoLean.ImportedGoose.SemanticsNil.wp_compareNil_body
 example := @GoLean.ImportedGoose.SemanticsNil.wp_compareNil_body_hand
+/-- `✓` **the spec-parity slice-4 curated channel rows** (manifest
+feature class 3; `Specs/GooseParityChannels.lean` over the three
+staleness-guarded channel pins). Same name-existence-tripwire scope as
+the slice-3 block above: deleting a certificate or its ∀-schedule
+readout breaks this build; the exhaustive axiom sweep covers their
+proofs; witness-citation drift stays the audit's job. The four
+`chanCert_*` kit derivations are generic wrappers over the checker
+soundness kit (hoisting candidates, recorded in the module header);
+the per-row `NoDeadlock`/`NoRace`/`TerminatesNormallyC` corollaries
+are one-liners over the registered certificates, covered by the
+sweep. -/
+example := @GoLean.ImportedGoose.chanCert_allSchedules
+example := @GoLean.ImportedGoose.chanCert_noDeadlock
+example := @GoLean.ImportedGoose.chanCert_noRace
+example := @GoLean.ImportedGoose.chanCert_terminatesNormallyC
+example := @GoLean.ImportedGoose.ChannelSelectTricky.nbNotReadyCert
+example := @GoLean.ImportedGoose.ChannelSelectTricky.nbNotReadyAllSchedules
+example := @GoLean.ImportedGoose.ChannelSelectTricky.nbGuaranteedReadyCert
+example := @GoLean.ImportedGoose.ChannelSelectTricky.nbGuaranteedReadyAllSchedules
+example := @GoLean.ImportedGoose.ChannelSelectTricky.nbFullBufferCert
+example := @GoLean.ImportedGoose.ChannelSelectTricky.nbFullBufferAllSchedules
+example := @GoLean.ImportedGoose.ChannelMuxer.asyncCert
+example := @GoLean.ImportedGoose.ChannelMuxer.asyncAllSchedules
+example := @GoLean.ImportedGoose.ChannelMuxer.clientCert
+example := @GoLean.ImportedGoose.ChannelMuxer.clientAllSchedules
+example := @GoLean.ImportedGoose.ChannelActris.dspCert
+example := @GoLean.ImportedGoose.ChannelActris.dspAllSchedules
 /-- `✓` **THE INDUCTIVE RANGE RULE** (proof-automation arc phase 1,
 2026-08-01). `wp_map_iter_inv` — the loop-invariant rule for the
 NONDETERMINISTIC key-only map range, and the piece that makes k-voter
