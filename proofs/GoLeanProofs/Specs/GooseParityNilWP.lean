@@ -7,9 +7,12 @@ import GoLeanProofs.Laws.StmtOps
 
 Design of record: `docs/2026-08-10_wp-walk-driver.md` §1. The imported
 goose oracle `testCompareNilToNil` (upstream
-`testdata/examples/semantics/nil.go` @ 3be88bbb — one of Perennial's 37
-PROVED `test_fun_ok` oracles, `wp_testCompareNilToNil` in
-`semantics_proof/nil.v` @ 43d4efab), hand-proven end-to-end through the
+`testdata/examples/semantics/nil.go` @ 3be88bbb — one of Perennial's
+**28 proved** `test_fun_ok` oracles: `wp_testCompareNilToNil`, `Qed` at
+`semantics_proof/nil.v:31` @ 43d4efab; count corrected at the S3 audit
+— upstream states 36 such lemmas, 28 `Qed` / 7 `Abort` / 1 `Admitted`,
+and nil.v itself is 3 `Qed` / 3 `Abort` — see
+`docs/spec-parity-r3-manifest.md`), hand-proven end-to-end through the
 laws spine to the full D1 pair:
 
 * `compareNilToNilSpecC` — the designated-shape triple: `GoSpecC`
@@ -490,15 +493,40 @@ theorem compareNilToNilReadoutC :
       loadLoc σf (.base ⟨0⟩) = .ok (.int 1 .int) :=
   goSpec_seeded_readoutC compareNilToNilSpec (by decide +kernel)
 
+/-- **The R2+R3 composition, INSTANTIATED** (S3 audit round — the slice
+note asserted the R2 pins and the R3 specs "snap together"; this is
+the checked fact): the R2 ∀-streams termination pin
+(`testCompareNilToNilTerminates`, `Specs/ImportedGooseNil.lean`) plus
+the R3 spec's safety half (`compareNilToNilSpec.2`) pin the terminal —
+past some fuel bound, EVERY choice stream's run of the seeded exemplar
+driver completes at `.normal`. -/
+theorem compareNilToNilTerminatesNormally :
+    TerminatesNormally importedEnv (importedSeed nilLowered)
+      compareNilDriver :=
+  terminatesNormally_of_progressExec
+    (InitialSplit.noFrame (P := importedCell0)
+      (hp := [(.base ⟨0⟩, ⟨some (.int .int), .int 0 .int⟩)]) (na := 1)
+      (funcs := nilLowered.funcs) (env₀ := importedEnv)
+      (prog := compareNilDriver) rfl (by decide +kernel))
+    compareNilToNilSpec.2
+    (by exact testCompareNilToNilTerminates)
+
 /-! ## Scaling across the unit (slice-3 phase 3)
 
 The other four WALKABLE nil oracles, driven by `go_walk` + the kit —
 each is: the two `Func` record pins, the inner body walk (the
 per-program content, side-goal supplies only), the driver exit form,
-and the three assembly theorems. `testInterfaceNilWithType` is NOT
-here: its verdict expression uses short-circuit `&&`, for which no WP
-law exists yet — a VISIBLE recorded gap (manifest row; the `Expr.and`
-law family is future law work, not a silent skip). -/
+and the three assembly theorems. Upstream status per row (S3 audit —
+measured at nil.v @ 43d4efab): `testComparePointerWrappedDefaultToNil`
+is upstream-`Qed` (a parity row); `testCompareSliceToNil`,
+`testComparePointerToNil` and `testComparePointerWrappedToNil` are
+upstream-`Abort`ed (their TODOs name missing non-nil
+allocation/points-to lemmas) — oracles we discharge that they did not.
+`testInterfaceNilWithType` is NOT here: its verdict uses short-circuit
+`&&`, for which no WP law exists yet — a VISIBLE recorded gap
+(manifest row; the `Expr.and` law family is future law work, not a
+silent skip), and it is an oracle upstream DOES prove (nil.v:50 `Qed`)
+— the delta against us, recorded. -/
 
 /-- `[]uint8` — the slice oracles' local type. -/
 private abbrev slice8 : Ty := .slice (.int .uint8)

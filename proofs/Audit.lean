@@ -1106,6 +1106,25 @@ example := @GoLean.Iris.GoldenSlice.wp_call_inc_stmt
 example := @GoLean.Iris.GoldenSlice.wp_incViaCall_body
 example := @GoLean.Iris.GoldenSlice.wp_goldenCall
 example := @GoLean.Iris.GoldenSlice.wp_goldenCall_inv
+
+/-- `✓` **the spec-parity slice-3 laws + their imported-goose witnesses**
+(S3 audit round, 2026-08-10 — the slice first shipped these without
+registry entries; the deletion tripwire now covers them like their
+siblings above). `wp_new_value` (the allocating apply core's third
+instance, ∀σ `hstore` premise) is discharged concretely at the
+exemplar's `$c2 = new(*uint64)` step; `wp_init_bool`/`wp_init_ptr`
+(zero-premise `wp_init` witnesses) at the kit wrapper's call-target
+declaration and the exemplar's pointer declarations respectively. The
+kit walks (`wp_golean_wrapper_body`/`wp_golean_driver`) and the
+exemplar body walk are the witnesses; deleting any of them — or any of
+the three laws — breaks this build. -/
+example := @GoLean.Iris.wp_new_value
+example := @GoLean.Iris.wp_init_bool
+example := @GoLean.Iris.wp_init_ptr
+example := @GoLean.Iris.ImportedGoose.wp_golean_wrapper_body
+example := @GoLean.Iris.ImportedGoose.wp_golean_driver
+example := @GoLean.ImportedGoose.SemanticsNil.wp_compareNil_body
+example := @GoLean.ImportedGoose.SemanticsNil.wp_compareNil_body_hand
 /-- `✓` **THE INDUCTIVE RANGE RULE** (proof-automation arc phase 1,
 2026-08-01). `wp_map_iter_inv` — the loop-invariant rule for the
 NONDETERMINISTIC key-only map range, and the piece that makes k-voter

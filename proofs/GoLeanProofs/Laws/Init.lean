@@ -122,7 +122,13 @@ state-independently). Deliberately NOT `@[go_walk_law]`-registered
 the stopping points of the standing quorum walks — the law table is a
 global tactic surface, so new laws stay unregistered unless every
 consumer is re-validated); walks supply it with `go_walk_step`.
-Witness: the imported-goose wrapper walks (their call-target bool). -/
+Witness: `GoLean.Iris.ImportedGoose.wp_golean_wrapper_body`'s
+call-target declaration (`Specs/GooseParityKit.lean`). [S3 audit
+correction: this docstring first claimed that witness while the kit
+walk still used the generic `wp_init` inline — the sentence the
+non-vacuity doctrine forbids; the kit now applies THIS law at that
+step, making the citation true, and the pair is referenced in
+`proofs/Audit.lean`'s witness registry.] -/
 theorem wp_init_bool {pid : String} {rest : List Stmt} {env k} :
     iprop(∀ pa : Addr, pa.id ↦ (⟨some .bool, .bool false⟩ : HeapCell) -∗
         WP (Config.next (.seq rest (env.declare pid (.base pa)) k)) @ s ; E {{ Φ }})

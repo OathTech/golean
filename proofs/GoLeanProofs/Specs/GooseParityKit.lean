@@ -132,9 +132,11 @@ theorem wp_golean_wrapper_body {cname : String} {innerFid : FuncId}
   inext
   iapply fupd_intro
   iintro Hc4
-  -- `$cN := false` (the call-target declaration)
-  iapply (wp_init (v := .bool false) (hdef := fun σ _ => by
-    simp [defaultValue, defaultValueFuel, typeResolutionFuel]))
+  -- `$cN := false` (the call-target declaration; `wp_init_bool`'s
+  -- discharge witness — S3 audit round: the walk first used the
+  -- generic `wp_init` inline while the law's docstring claimed this
+  -- site as its witness)
+  iapply wp_init_bool
   iintro %ca Hc
   iapply wp_seq_next
   iapply fupd_intro
@@ -304,9 +306,18 @@ end
 
 end GoLean.Iris.ImportedGoose
 
-namespace GoLean.Surface
+/- Namespace note (S3 audit round): these convention-level defs and
+readout derivations first lived in `namespace GoLean.Surface` — squatting
+the spec-surface namespace from an Iris-importing Specs module. They now
+live under `GoLean.ImportedGoose` (the corpus lane's own namespace; the
+per-unit proof modules are its children, so references resolve
+unqualified). If a consumer is ever DESIGNATED, these defs additionally
+move to a def-only, core-import-only module (the
+`Statements`/`ForkJoinTargets` pattern) — recorded at the slice note's
+P-S3-1. -/
+namespace GoLean.ImportedGoose
 
-open GoLean.GoCore GoLean.GoCore.Machine GoLean.Iris
+open GoLean.GoCore GoLean.GoCore.Machine GoLean.Iris GoLean.Surface
 
 /-- The TotalPins seed for an imported program: the harness-owned output
 cell at base address 0, `nextAddr = 1` (the convention every imported
@@ -412,4 +423,4 @@ theorem goSpec_seeded_readoutC {p : Program} {prog : Stmt} {v : Int}
     rw [hrun'] at hpool
     cases hpool
 
-end GoLean.Surface
+end GoLean.ImportedGoose
