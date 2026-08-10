@@ -5,3 +5,8 @@
 # message.
 unlock-of-unlocked	unlockOfUnlocked	-	fatal	sync: unlock of unlocked mutex	sync,mutex	strict	-	-
 unlock-recover-attempt	unlockRecoverAttempt	-	fatal	sync: unlock of unlocked mutex	sync,mutex,recover	strict	-	-
+# ARC-END (2026-08-10): fatal DURING panic unwinding — gc leads with
+# `panic: boom`, the fatal is a tab-indented continuation line (still
+# exit 2); pins the extractor's indented-line acceptance. Red-first
+# (go-observation: "could not extract Go fatal message").
+during-panic-unwind	unlockDuringUnwind	-	fatal	sync: unlock of unlocked mutex	sync,mutex,defer,panic	strict	-	-

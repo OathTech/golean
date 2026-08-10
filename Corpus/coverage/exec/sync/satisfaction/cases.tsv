@@ -1,0 +1,14 @@
+# id	subject	args	expected_status	expected_reason	features
+# ARC-END fix-round satisfaction pins (2026-08-10): the four modeled
+# sync primitives' method sets must be on the wire so satisfaction
+# answers what gc answers — wrong-bool, wrong-branch, and
+# spurious-panic genres each pinned red-first (verifier-reproduced;
+# gc answers verified by the go-run oracle in this harness).
+assert-ok-mutex	assertOkMutex	-	ok	-	sync,mutex,interfaces
+type-switch-mutex	typeSwitchMutex	-	ok	-	sync,mutex,interfaces,switch
+bare-assert-mutex	bareAssertMutex	-	ok	-	sync,mutex,interfaces
+assert-negative-missing	assertNegativeMissing	-	ok	-	sync,mutex,interfaces
+bare-assert-missing-panics	bareAssertMissingPanics	-	panic	interface conversion: *sync.Mutex is not main.fooLocker: missing method Foo	sync,mutex,interfaces,panic
+assert-ok-waitgroup	assertOkWaitGroup	-	ok	-	sync,waitgroup,interfaces
+assert-ok-once	assertOkOnce	-	ok	-	sync,once,interfaces
+trylock-sig-satisfies	tryLockSigSatisfies	-	ok	-	sync,mutex,interfaces

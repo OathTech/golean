@@ -1,0 +1,7 @@
+# id	subject	args	expected_status	expected_reason	features
+# PERMANENT-until-lifted markers (arc-end fix round, 2026-08-10):
+# composite-literal sync construction refuses per-decl with a reason
+# naming the CAPABILITY (was: the unexported internal `sync.noCopy`).
+# Red at frontend-export by design; §9 records the scope.
+mutex-addr-lit	mutexAddrLit	-	ok	-	sync,mutex
+waitgroup-value-lit	waitGroupValueLit	-	ok	-	sync,waitgroup

@@ -1,0 +1,5 @@
+# id	subject	args	expected_status	expected_reason	features
+# ARC-END pin (2026-08-10), split from sync/satisfaction: the
+# sync.Locker-in-signature query, isolated so its pre-fix WHOLE-export
+# refusal cannot mask the silent-wrong-answer genre pins. Red-first.
+assert-ok-rwmutex	assertOkRWMutex	-	ok	-	sync,rwmutex,interfaces

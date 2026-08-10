@@ -1,0 +1,5 @@
+# id	subject	args	expected_status	expected_reason	features
+# ARC-END payload-class pin (2026-08-10): gc panics with a plain
+# string (waitgroup.go:118), not a runtime error — the recovered
+# value's dynamic type is the observable. Red-first.
+payload-is-string	payloadIsString	-	ok	-	sync,waitgroup,panic,recover

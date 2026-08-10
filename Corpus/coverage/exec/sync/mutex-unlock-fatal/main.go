@@ -29,6 +29,20 @@ func unlockRecoverAttempt() int {
 	return r
 }
 
+// ARC-END pin (2026-08-10): the fatal raised DURING PANIC UNWINDING —
+// the idiomatic `defer m.Unlock()` in a panicking frame. gc's abort
+// LEADS with `panic: boom` and carries the fatal on a TAB-INDENTED
+// continuation line (`\tfatal error: sync: unlock of unlocked mutex`),
+// exit 2 — so the harness extractor must accept the indented shape.
+// The model reports the fatal (class and message gc-exact) but DROPS
+// the pending panic value from its observation — a recorded narrowing
+// (design note §8), not compared here.
+func unlockDuringUnwind() int {
+	var m sync.Mutex
+	defer m.Unlock()
+	panic("boom")
+}
+
 func main() {
 	unlockOfUnlocked()
 }
