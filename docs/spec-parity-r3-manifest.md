@@ -59,6 +59,16 @@ bodies under the generated `golean<TestName>` wrapper
 "upstream @ 43d4efa" column is nil.v's per-lemma proof status,
 measured (`grep -n 'Qed\.\|Abort\.' nil.v`).
 
+SLICE 6 (P-S3-5 closed): every **proved** row below additionally
+ships the JOINT single-carrier completes-AND-verdict theorem
+`<name>TotalReadout` (`∃N ∀fuel≥N ∀ch`, `execStmt` — the
+`goldenTotalReadout` shape; kit lemma `goSpec_seeded_totalReadout`
+joins the row's R2 `Terminates` pin, the spec's safety half, and the
+verdict readout on ONE carrier — the composition the S3 delta review
+machine-confirmed the two shipped halves could not make). The
+"separate halves" caveat now applies to the concurrent (class-3)
+rows only.
+
 | program (imported-goose) | upstream @ 43d4efa | our disposition | where / why |
 |---|---|---|---|
 | semantics/nil `testCompareNilToNil` | **Qed** (nil.v:31) | **proved** (THE EXEMPLAR — a genuine parity row) | `Specs/GooseParityNilWP.lean` — `compareNilToNilSpecC` + `compareNilToNilReadoutC` (designation CANDIDATES) |

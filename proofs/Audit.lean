@@ -1225,6 +1225,27 @@ example := @GoLean.Iris.ImportedGoose.wp_golean_wrapper_body
 example := @GoLean.Iris.ImportedGoose.wp_golean_driver
 example := @GoLean.ImportedGoose.SemanticsNil.wp_compareNil_body
 example := @GoLean.ImportedGoose.SemanticsNil.wp_compareNil_body_hand
+/-- `✓` **the P-S3-5 joint-carrier compositions** (slice 6, closing the
+recorded carrier gap): the kit's generic
+`goSpec_seeded_totalReadout` — `GoSpec` + seeded `MachineWf` + the R2
+∀-streams `Terminates` pin ⇒ completes-AND-verdict on the SINGLE
+sequential carrier (the `goldenTotalReadout` precedent shape) — and
+its six class-1 instances (each a concrete discharge: every premise
+is closed at the row's program, so the generic lemma ships nowhere
+without an inhabitant). Same name-existence-tripwire scope as the
+blocks above: deletion/rename breaks this build and the exhaustive
+sweep of axioms covers the proofs; whether each instance still cites its
+row's real R2 pin is witness-citation content, which stays the
+pre-merge audit's job. The concurrent (channel) rows deliberately
+remain two-halves — their joint form needs the frame-quantified
+triple (P-S4-1/2), not this kit. -/
+example := @GoLean.ImportedGoose.goSpec_seeded_totalReadout
+example := @GoLean.ImportedGoose.SemanticsNil.compareNilToNilTotalReadout
+example := @GoLean.ImportedGoose.SemanticsNil.compareSliceToNilTotalReadout
+example := @GoLean.ImportedGoose.SemanticsNil.comparePointerToNilTotalReadout
+example := @GoLean.ImportedGoose.SemanticsNil.comparePointerWrappedToNilTotalReadout
+example := @GoLean.ImportedGoose.SemanticsNil.comparePointerWrappedDefaultToNilTotalReadout
+example := @GoLean.ImportedGoose.SemanticsBlock.explicitBlockTotalReadout
 /-- `✓` **the spec-parity slice-4 curated channel rows** (manifest
 feature class 3; `Specs/GooseParityChannels.lean` over the three
 staleness-guarded channel pins). Same name-existence-tripwire scope as
