@@ -123,15 +123,24 @@ slice-6 build log.
 
 ## 5. Their verified channel-example set (the spec-level witness targets)
 
-Last-reviewed: channels arc, 2026-08-07 (seeding). [FACT]
-`new/proof/.../examples/channel*.v@43d4efa`: hedged requests
+Last-reviewed: channels arc, 2026-08-07 (seeding); source pointer
+corrected at the S5 audit residue pass — this line's [FACT] cite was
+the `channel*.v` filename glob §7.4's correction retired (it cannot
+reach elimination_stack.v/lock.v, which the list below names); the
+set of record is the import-derived one (§7.4's command over
+`new/proof/.../examples/` @ 43d4efa), over which the wp-lemma figure
+is **54 measured `wp_*` items** (the seeded "~55" was right as a
+tilde). [FACT] hedged requests
 (`wp_CancellableHedgedRequest`, using `wp_select_blocking`), hello-world
 async/sync/cancellable/with-timeout, `wp_simple_join`/
 `wp_simple_multi_join`, `wp_exchangePointer`, `wp_BroadcastExample`, the
 select-tricky trio (incl. the proved-unreachable default), the dsp
 examples (`wp_DSPExample`, Serve/Client/MapServer/MapClient/Muxer),
 higher-order, search-replace, workq, etcd_session, elimination_stack,
-lock — ~55 wp lemmas total, 0-1 Admitted. Explicitly unverified
+lock — **54** `wp_*` lemmas total (measured over the import-derived
+set at the S5 residue pass; the seeded "~55, 0-1 Admitted" hedges
+resolve to 54 and ZERO — no `Abort.`/`Admitted.` anywhere in the
+73-item tree, §7.4). Explicitly unverified
 variants exist (`cv_unverified.go`, `muxer_unverified.go`,
 `leaky_buffer_unverified.go` — Cond is the recurring reason).
 [ANALYSIS] This list is the natural witness-target set for the T3/T4/T7
@@ -422,7 +431,11 @@ reason.**
   per-file: channel.v 12, dsp 9, google 9, select-tricky 10,
   fibonacci 5, higher-order 3, search-replace 3, workq 4,
   etcd_session 5, elimination_stack 8, lock 5; zero
-  `Abort.`/`Admitted.` across all of them). Our curated set
+  `Abort.`/`Admitted.` across all of them. Membership-rule
+  corroboration, S5 residue pass: `channel_examples.v` — the 0-item
+  aggregator whose multiline `Require` escapes the grep — itself
+  lists in its Require block exactly the 11 item-bearing files above,
+  independently confirming the set is complete). Our curated set
   discharges ∀-schedule families beside **5** of the 73 (the three
   trio lemmas + `wp_Client` + `wp_DSPExample`). The remaining 68 by
   reason: **10 P2-parked** (fibonacci 5 + higher-order 3 — the
@@ -478,7 +491,7 @@ reason.**
   Go — the semantics oracles run as a 115-assertion testify suite
   (`testdata/examples/semantics/generated_test.go` — incl.
   `TestCompareNilToNil` :279 and the four §7.1 frontend-blocked
-  oracles :403/:455) and the channel examples have seven executing
+  oracles :403/:455/:459/:463) and the channel examples have seven executing
   `_test.go` files (`examples_test.go`'s `TestDSPExample` asserts
   42), both run in upstream CI (`.github/workflows/build.yml:33-34`,
   `go test ./testdata/examples/...`); the unittest/storage/generics
