@@ -467,8 +467,11 @@ Every scalar here is state gc itself keeps in its state words:
 `pendingW` (blocked write-lockers) realizes the DOCUMENTED
 writer-exclusion of new readers (rwmutex.go: "a blocked Lock call
 excludes new readers from acquiring the lock"); `waiters` (parked
-Wait callers) is what gc's Add-concurrent-with-Wait misuse panic tests
-(waitgroup.go:120). NO waiter queues, no identities, no order — the
+Wait callers) mirrors gc's state-word wait count — reset by the
+zeroing Add exactly as gc's `wg.state.Store(0)` (waitgroup.go:134-135;
+its consumers are the wg-sema race pair's first-waiter condition and
+the wake bookkeeping — the Add-side misuse panic gc guards with it is
+unreachable at registry granularity and carries no arm here). NO waiter queues, no identities, no order — the
 blocked goroutines themselves are `Config.blockedSync` shapes. -/
 inductive SyncPrim where
   | mutex (locked : Bool)

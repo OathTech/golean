@@ -106,6 +106,20 @@ func testOddImport() bool {
 	return true
 }
 EOF
+
+printf 'package semantics\n\nimport\r"os"\n\nfunc testCrImport() bool {\n\t_ = os.Getpid\n\treturn true\n}\n' \
+  > "$FAKE/testdata/examples/semantics/cr_import.go"
+
+cat > "$FAKE/testdata/examples/semantics/comment_import.go" <<'EOF'
+package semantics
+
+/* c */ import "os"
+
+func testCommentImport() bool {
+	_ = os.Getpid
+	return true
+}
+EOF
 cat > "$FAKE/testdata/examples/semantics/has_main.go" <<'EOF'
 package semantics
 
@@ -201,6 +215,20 @@ expect_reject "non-allowed second import despite a grant" 'imports "os"' \
 expect_reject "unrecognized import form fails closed under a grant" "import form the vet does not recognize" \
   --goose-root "$FAKE" --expect-rev "$REV" --allow-import sync \
   --source testdata/examples/semantics/odd_import.go --dest "$DEST_BASE/oddimp"
+# Round 2 (delta-review): the two zero-path-pass classes the first
+# rewrite missed — CR whitespace (legal Go, matched no strict rule)
+# and a non-line-initial import (the loose gate never fired at all) —
+# both die fail-closed now; and grant WIDTH is constrained to the
+# machine-modeled set.
+expect_reject "CR import form refused outright" "carriage-return bytes" \
+  --goose-root "$FAKE" --expect-rev "$REV" --allow-import sync \
+  --source testdata/examples/semantics/cr_import.go --dest "$DEST_BASE/crimp"
+expect_reject "comment-prefixed import fails the zero-output cross-check" "strict vet cannot account for" \
+  --goose-root "$FAKE" --expect-rev "$REV" --allow-import sync \
+  --source testdata/examples/semantics/comment_import.go --dest "$DEST_BASE/cmtimp"
+expect_reject "grant outside the modeled set refused" "not in the machine-modeled import set" \
+  --goose-root "$FAKE" --expect-rev "$REV" --allow-import os \
+  --source testdata/examples/semantics/sync_import.go --dest "$DEST_BASE/wideimp"
 
 # 4. func main
 expect_reject "source with func main" "defines func main" \

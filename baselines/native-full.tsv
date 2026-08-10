@@ -1,21 +1,20 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-10  commit: S2 audit fix round (spec-parity slice 2)
+# recorded: 2026-08-10  commit: delta-review round 2 (spec-parity slice 2)
 #   frontend: native  oracle: go run (strict lane) / go-run membership in the
 #   machine-enumerated observation set, sampled plain AND under -race
 #   (membership lane; go1.26.5) / schedule-tree singleton certification +
 #   strict go-run equality (confluent lane) / every-enumerated-path-refuses
 #   + go run -race red (racy lane; never combined with deadlock)
-# manifest_cases: 1464  pass: 1350  fail: 114
-# Re-pin reason: the S2 sub-branch audit fix round — six new ids, zero
-#   drift on all 1458 prior ids: sync/rwmutex-order/acquisition (the F1
-#   envelope pin, tier=slow membership {10,20}, certified record added),
-#   sync/rwmutex-misuse-fatal/runlock-while-write-locked (F5's probed-
-#   but-unpinned fatal), and the four sync/escapes/* PERMANENT markers
-#   (F4: promoted/method-value/go/defer sync shapes now quarantine
-#   per-decl as visible frontend-export refusals instead of landing as
-#   runtime stuck). The F3 reuse-window semantics fix (waiter count
-#   resets in the zeroing Add) moved no corpus id — its discriminators
-#   are eval pins (verified red pre-fix).
+# manifest_cases: 1465  pass: 1351  fail: 114
+# Re-pin reason: delta-review round 2 — one new id, zero drift on all
+#   1464 prior ids: sync/stub-satisfaction/satisfies (the F4 stub
+#   regression pin: satisfaction through the promoted-sync stubs must
+#   answer YES; a dropped stub is a silent false-"no" the verifier
+#   exhibited). The round's other movements are eval pins (the
+#   re-encoded, mutation-tested U5 discriminator), importer/guard
+#   hardening (CR + comment-prefixed forms, grant width), the honest
+#   certified-record stats, and record corrections — none moves a
+#   corpus id.
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
 PASS	arrays/array-copy	-
@@ -1458,6 +1457,7 @@ PASS	sync/rwmutex-misuse-fatal/runlock-while-write-locked	-
 PASS	sync/rwmutex-misuse-fatal/wunlock-of-unlocked	-
 PASS	sync/rwmutex-order/acquisition	membership
 PASS	sync/rwmutex-rlock-then-lock/rlock-then-lock	-
+PASS	sync/stub-satisfaction/satisfies	-
 PASS	sync/waitgroup-basic/add-done-wait	confluent
 PASS	sync/waitgroup-basic/batch-done	-
 PASS	sync/waitgroup-basic/recovered-negative-continue	-

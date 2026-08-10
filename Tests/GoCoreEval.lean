@@ -1118,9 +1118,14 @@ over the channel; W2 only waits. On the stream that parks BOTH waiters
 before main's zeroing Done, the post-window `Add(1)` runs with W1's
 first-waiter sema WRITE HB-covered (the channel handoff) and W2 still
 parked — so no race fires, and a resume-time waiter retirement would
-panic in the ADDER ("Add called concurrently with Wait") where gc is
-CLEAN (waitgroup.go:135 resets the wait count inside the zeroing Add,
-before the semreleases; probed clean under plain gc AND -race). -/
+panic in the ADDER ("Add called concurrently with Wait") where gc's
+ADD side is silent (waitgroup.go:135 resets the wait count inside the
+zeroing Add, before the semreleases). Precision (delta-review round
+2): gc's misuse detection moves to the WAITER (waitgroup.go:213),
+which CAN panic in the general window on other schedules; THIS shape's
+channel handoff forces the woken waiter to have resumed before the
+Adds, so gc is clean on it end-to-end (probed) — the general
+waiter-side panic is the recorded §8 narrowing. -/
 private def syncWgReuseMainFunction : GoCore.Func := {
   id := ⟨"syncWgReuseMain_F"⟩,
   args := #[],
@@ -1158,17 +1163,25 @@ private def syncXUnlockW2Function : GoCore.Func := {
     .chanSend (.var "ch") (.deref (.var "gp") .int) .int]
 }
 
-/-- The U5 divergence pin (audit fix round 2026-08-10, F2): main
-publishes under the lock, re-acquires, and a goroutine that NEVER
-acquired performs the unlock (probe p09 — legal, owner-free); a third
-goroutine then locks and reads the published value. The merge-join
-release keeps main's critical section in `semA`, so the read is
-HB-ordered and GREEN — the memory-model sentence verbatim. gc's TSan
-hook is overwrite `race.Release`, which DROPS main's clock at W1's
-unlock: `go run -race` reports a DATA RACE on this shape (verified by
-the audit). TSan-red/ours-green, the recorded U5 narrowing of the
-detector-alignment oracle; un-lane-able as a corpus row (mixed
-oracle). -/
+/-- The U5 divergence pin (RE-ENCODED at delta-review round 2,
+2026-08-10 — the first version published BEFORE the spawns, so the
+spawn edge HB-ordered the pair under ANY release rule: a vacuous pin
+with a false oracle claim; delta-review verifiers .tmp/verify-f2 +
+.tmp/verify/u5disc constructed this correct shape and mutation-tested
+the model). The shape: BOTH goroutines spawn while main holds the
+lock and BEFORE the publish, so neither inherits an HB edge over the
+write; main publishes, releases (the merge keeps main's clock in
+semA), and re-acquires; W1 — which never acquired — performs the
+owner-free unlock (probe p09: legal); W2 then locks and reads the
+published value. Under the MERGE release semA still carries main's
+critical section at W2's acquire, so the read is HB-ordered and the
+run is GREEN — the memory-model sentence verbatim. gc's TSan hook is
+overwrite `race.Release`: W1's unlock REPLACES semA with W1's clock
+(which predates the write), and `go run -race` reports a DATA RACE on
+exactly this shape (delta-review probes: 3/3 runs, exit 66, on
+go1.26.5 with the interleaving forced by delays; the machine realizes
+it by stream instead). TSan-red/ours-green — the recorded U5
+narrowing; un-lane-able as a corpus row (mixed oracle). -/
 private def syncXUnlockMainFunction : GoCore.Func := {
   id := ⟨"syncXUnlockMain_F"⟩,
   args := #[],
@@ -1180,11 +1193,11 @@ private def syncXUnlockMainFunction : GoCore.Func := {
     #[
       .makeChan (.var "chv") .int none,
       .syncStmt .lock #[.ref "mu"] #[],
+      .goStmt (.funcVal ⟨"syncXUnlockW1_F"⟩ #[]) #[.ref "mu"],
+      .goStmt (.funcVal ⟨"syncXUnlockW2_F"⟩ #[]) #[.ref "mu", .ref "g", .var "chv"],
       .assign (.var "g") (.intLit 1),
       .syncStmt .unlock #[.ref "mu"] #[],
       .syncStmt .lock #[.ref "mu"] #[],
-      .goStmt (.funcVal ⟨"syncXUnlockW1_F"⟩ #[]) #[.ref "mu"],
-      .goStmt (.funcVal ⟨"syncXUnlockW2_F"⟩ #[]) #[.ref "mu", .ref "g", .var "chv"],
       .chanRecv #[.var "z"] (.var "chv") .int
     ]
 }
@@ -2233,20 +2246,34 @@ def main : IO UInt32 := do
   -- The reuse window (audit fix round 2026-08-10): gc's zeroing Add
   -- RESETS the wait count before releasing the semaphores
   -- (waitgroup.go:135), so an Add issued in the wake window sees w == 0
-  -- and gc is CLEAN — plain and under -race (the W1 channel handoff
-  -- HB-covers the first-waiter sema write). Stream [1,1,1,1] parks both
+  -- and gc's ADD side is silent; THIS shape is gc-clean end-to-end
+  -- (the channel handoff resumes W1 before the Adds and HB-covers the
+  -- first-waiter sema write; the general window's WAITER-side reuse
+  -- panic is the recorded §8 narrowing). Stream [1,1,1,1] parks both
   -- waiters before main's zeroing Done and realizes exactly that
-  -- window; the pre-fix resume-time waiter retirement panicked in the
-  -- adder here (verified red before the fix).
+  -- window. NON-VACUITY (checkable): at the pre-fix machine — tip
+  -- 8b8fa09f plus only this program+pin, before the Machine.lean
+  -- waiter-reset landed in 537fa219 — `lake exe gocore-eval-tests`
+  -- FAILED this pin with exactly `GoError.panic "sync: WaitGroup
+  -- misuse: Add called concurrently with Wait"` (the Add-side arm
+  -- since removed).
   passed := passed && (← expectIntResult "GoCore sync: Add in the reuse window is CLEAN (gc resets the wait count in the zeroing Add; two-waiter shape, both parked)"
     (GoCore.Machine.runProgramPoolM 100000 syncEvalProgram "syncWgReuseMain_F" #[] [1, 1, 1, 1]) 1)
-  -- U5 (audit fix round, F2): the cross-goroutine-unlock publication
-  -- stays GREEN under the merge-join release — the memory-model
-  -- sentence verbatim — where gc's overwrite-Release TSan hook reports
-  -- a race (audit-verified on go1.26.5). The green result IS the pin:
-  -- a detector change toward TSan's overwrite would flip this to
-  -- raceDetected and must revisit the U5 record.
-  passed := passed && (← expectIntResult "GoCore sync: cross-goroutine unlock publication is HB-ordered by the merge release (U5: TSan-red/ours-green, recorded)"
+  -- U5 (RE-ENCODED at delta-review round 2 — the first pin published
+  -- before the spawns and was VACUOUS: the spawn edge ordered the pair
+  -- under any release rule, and its "-race red (verified by the
+  -- audit)" claim was refuted by probe, 60/60 green). This shape (see
+  -- syncXUnlockMainFunction's docstring) is the delta-review
+  -- verifiers' discriminator: `go run -race` RED on it (3/3, exit 66;
+  -- .tmp/verify/u5disc + .tmp/verify-f2/true2.go, go1.26.5), and the
+  -- machine realizes the same interleaving on the EMPTY stream
+  -- (default picks: main runs publish/unlock/re-lock, parks at the
+  -- recv; W1's owner-free unlock; W2's acquire + read). Sensitivity
+  -- verified by MUTATION BUILD at this fix round (tree copy with
+  -- syncRelease's merge replaced by TSan's overwrite `semA := vt`):
+  -- this pin flips to raceDetected there — the exact discrimination
+  -- the first version lacked.
+  passed := passed && (← expectIntResult "GoCore sync: owner-free cross-goroutine unlock keeps the publish HB-ordered under the merge release (U5: TSan-red/ours-green, mutation-tested)"
     (GoCore.Machine.runProgramPoolM 100000 syncEvalProgram "syncXUnlockMain_F" #[] []) 1)
   passed := passed && (← expectErrorStatus "GoCore race: write/write refuses on the default stream"
     (GoCore.Machine.runProgramPoolM 100000 raceProgram "raceWriteWriteMain_F" #[] []) "race")

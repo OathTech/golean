@@ -84,6 +84,13 @@ while [[ $# -gt 0 ]]; do
     --allow-no-oracles) ALLOW_NO_ORACLES=1; shift ;;
     --allow-import)
       [[ $# -ge 2 ]] || usage
+      # Grant WIDTH is constrained to the machine-modeled set
+      # (delta-review round 2: a too-wide grant used to pass every
+      # gate; widen this list deliberately, with the modeling).
+      case "$2" in
+        sync) ;;
+        *) die "--allow-import $2: not in the machine-modeled import set (sync); widen the allowlist in this script deliberately, with the modeling" ;;
+      esac
       ALLOW_IMPORTS+=("$2"); shift 2 ;;
     --goose-root) [[ $# -ge 2 ]] || usage; GOOSE_ROOT="$2"; shift 2 ;;
     --expect-rev) [[ $# -ge 2 ]] || usage; EXPECT_REV="$2"; shift 2 ;;
@@ -124,7 +131,17 @@ for rel in "${ALL_SOURCES[@]}"; do
   f="$GOOSE_ROOT/$rel"
   [[ -f "$f" ]] || die "missing upstream source: $f"
   case "$rel" in *.go) ;; *) die "not a .go file: $rel" ;; esac
-  if grep -nE '^[[:space:]]*import[[:space:]("]' "$f" >/dev/null; then
+  # CR bytes anywhere are refused outright (delta-review round 2: CR
+  # is legal Go whitespace, an import followed by a bare CR matched
+  # the loose gate but no strict rule — a silent zero-path pass; goose
+  # sources are LF-only, so the whole class dies here, fail closed).
+  if grep -q "$(printf '\r')" "$f"; then
+    die "$rel contains carriage-return bytes — cannot be vetted (park it)"
+  fi
+  # The LOOSE gate (delta-review round 2: widened beyond line-initial —
+  # a block-comment-prefixed import is legal Go the old line-anchored
+  # gate never saw, so the vet never ran at all).
+  if grep -nE '(^|[^[:alnum:]_"])import[[:space:]]*[("]' "$f" >/dev/null; then
     # Phase-2 seam (spec-parity slice 2; REWRITTEN fail-closed at the
     # audit fix round, F6 — the first extractor silently yielded ZERO
     # paths on forms it could not parse, so indented imports, one-line
@@ -160,6 +177,22 @@ for rel in "${ALL_SOURCES[@]}"; do
       /^[ 	]*import[ 	("]/ { print "BAD " $0 }
       /^[ 	]*import"/ { print "BAD " $0 }
     ' "$f")
+    # Zero-output cross-check (delta-review round 2, fail closed): the
+    # loose gate fired, so the strict recognizer must have accounted
+    # for SOMETHING (a PATH, or a BAD that died above). Silence means
+    # an import form outside every strict shape (e.g. comment-
+    # prefixed): refuse rather than land unvetted. Comment text that
+    # merely mentions an import form over-refuses here — the
+    # fail-closed direction; park and hand-review such a source.
+    vetout="$(awk '
+      /^import[ 	]+"[^"]+"$/ { print "X"; next }
+      /^import[ 	]*\($/ { print "X"; next }
+      /^[ 	]*import[ 	("]/ { print "X" }
+      /^[ 	]*import"/ { print "X" }
+    ' "$f")"
+    if [[ -z "$vetout" ]]; then
+      die "$rel has import-like content the strict vet cannot account for (loose gate fired, recognizer silent) — fail closed (park it)"
+    fi
   fi
   if grep -nE '^func[[:space:]]+main[[:space:]]*\(' "$f" >/dev/null; then
     die "$rel defines func main — refusing (harness owns main)"

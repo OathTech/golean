@@ -213,10 +213,12 @@ SYNCHRONIZATION (the registry's ops — HB updates, never data):
   ours-green** (audit fix round 2026-08-10, F2). `syncRelease` is a
   merge-join; gc's TSan hook is overwrite `race.Release`
   (internal/sync/mutex.go:188-191, rwmutex.go:203-204). The two agree
-  exactly when the unlocker previously acquired the cell (handoff
-  discipline); on a legal owner-free unlock (probe p09) whose unlocker
-  has no HB from the prior critical section, TSan drops that section's
-  clock and reports a race our merge keeps ordered. The merge is the
+  at a release exactly when semA ⊑ the unlocker's clock (entailed
+  program-wide by strict lock-handoff discipline; delta-review round 2
+  made this semantic — no per-unlock syntactic condition suffices); on
+  a legal owner-free unlock (probe p09) whose unlocker has no HB from
+  the prior critical section, TSan drops that section's clock and
+  reports a race our merge keeps ordered. The merge is the
   memory-model text verbatim (the n<m Unlock/Lock sentence is
   unconditional), so the deviation is from the TSan-alignment oracle
   in the missed-race direction; scope-limited to programs doing
@@ -628,11 +630,16 @@ inventory (read from the gc sources at the probe date):
   pinned by race/negative-sync/rlock-serialized).
 
 All releases here are merge-joins. CORRECTED at the audit fix round
-(2026-08-10, F2 — the original sentence claimed merge and gc's
-overwrite `Release` "coincide under exclusivity", which is FALSE):
-they coincide only under lock-HANDOFF discipline — when the unlocker
-previously ACQUIRED the same cell (then its clock already contains the
-sem clock and join = overwrite). This slice deliberately models the
+(2026-08-10, F2; precondition made SEMANTIC at delta-review round 2 —
+"previously acquired", and even "is the current holder", are
+insufficient: a stray owner-free unlock by a third party can seed the
+sem clock with entries the holder's clock lacks): merge and gc's
+overwrite `Release` coincide at a release exactly when semA ⊑ the
+unlocker's clock at that moment — i.e. the unlocker has already
+acquired every prior release into the cell. Program-wide lock-HANDOFF
+discipline (every unlock performed by the goroutine whose acquire is
+the latest, no owner-free unlocks anywhere) entails that inductively;
+no per-unlock syntactic condition does. This slice deliberately models the
 shape where that fails (probe p09: a cross-goroutine unlock is legal
 and owner-free), and there gc's overwrite DROPS the earlier release's
 clock while our merge keeps it — TSan reports a race our detector does

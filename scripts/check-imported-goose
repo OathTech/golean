@@ -130,7 +130,38 @@ while IFS= read -r main_go; do
   # appear on the file's own `// imports-allowed:` header line, parsed
   # by the same strict fail-closed gofmt-shape recognizer the importer
   # vet uses (any unrecognized import-shaped line fails).
+  # CR bytes above the marker are refused (delta-review round 2 — the
+  # importer refuses them at landing; the standing guard must agree).
+  if sed -n '1,/^\/\/ --- GoLean harness ---$/p' "$main_go" | grep -q "$(printf '\r')"; then
+    echo "check-imported-goose: FAIL [$rel] — carriage-return bytes above the marker (unvettable import forms)" >&2
+    fail=1
+  fi
+  # Loose-gate/zero-output cross-check (round 2): if import-like
+  # content exists above the marker that the strict recognizer cannot
+  # account for, refuse — never certify an unvetted import. (The //
+  # comment filter keeps the generated header and upstream comment
+  # lines out of the loose gate.)
+  if sed -n '1,/^\/\/ --- GoLean harness ---$/p' "$main_go" | grep -v '^//' \
+      | grep -qE '(^|[^[:alnum:]_"])import[[:space:]]*[("]'; then
+    if [[ -z "$(sed -n '1,/^\/\/ --- GoLean harness ---$/p' "$main_go" | awk '
+        /^import[ 	]+"[^"]+"$/ { print "X"; next }
+        /^import[ 	]*\($/ { print "X"; next }
+        /^[ 	]*import[ 	("]/ { print "X" }
+        /^[ 	]*import"/ { print "X" }')" ]]; then
+      echo "check-imported-goose: FAIL [$rel] — import-like content the strict recognizer cannot account for above the marker" >&2
+      fail=1
+    fi
+  fi
   grant_line="$(sed -n 's/^\/\/ imports-allowed: \(.*\) (--allow-import)$/\1/p' "$main_go" | head -1)"
+  for a in $grant_line; do
+    case "$a" in
+      sync) ;;
+      *)
+        echo "check-imported-goose: FAIL [$rel] — grant line names \"$a\", outside the machine-modeled import set (sync)" >&2
+        fail=1
+        ;;
+    esac
+  done
   while read -r tag rest; do
     case "$tag" in
       PATH)

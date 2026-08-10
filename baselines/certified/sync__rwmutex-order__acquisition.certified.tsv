@@ -4,16 +4,24 @@
 # driver-coupling pin against THIS set and its wire hash; scripts/ci
 # --slow re-enumerates and must reproduce it exactly. Update
 # deliberately, in its own commit, with the reason — never auto-written.
-# certified: 2026-08-10  commit: spec-parity-s2 audit fix round (F1 pin)
-# certification reason: new row — the RWMutex acquisition-order
-#   envelope pin (F1): the model admits both contenders' orders at the
-#   both-parked state while gc's realized point is reader-first;
-#   membership over {10, 20} with gc sampling plain + -race is the
-#   executable containment check. Measured 16.4M steps / ~30s, at the
-#   tier threshold.
+# certified: 2026-08-10  commit: spec-parity-s2 delta-review round 2
+# certification reason: new row at the audit fix round (the F1
+#   acquisition-order envelope pin: {10, 20} with gc sampling plain +
+#   -race as the containment check). STATS CORRECTED at delta-review
+#   round 2: the first record carried steps=16445466, a figure from
+#   the ORIGINAL audit verifier's pre-F3-fix probe (measured before
+#   the WaitGroup reuse-window semantics change landed; not
+#   reproducible at this record's own params/wire) — the honest
+#   re-measurement at these params on the fixed semantics is below
+#   (~26s wall; the tier=slow declaration stands at the ~30s
+#   threshold). gc SAMPLING NOTE (round-2 verifier, 300+120 runs):
+#   plain go realizes 10 dominantly but NOT exclusively (297/300 with
+#   3x 20), and -race realizes both members near-evenly (56/64) — so
+#   BOTH certified members are oracle-witnessed; the earlier
+#   "gc exhibits 10 on every run" was false as written.
 # case: sync/rwmutex-order/acquisition
 # params: width=4,sites=40,work=30000000,members=2,tier=slow
 # wire-sha256: c491fef27ef175b8a63c8d217f5129e1e50c415cf41d053b2e1913a214038ced
-# enum-stats: observations=2 steps=16445466 sites/leaves per artifacts (measured 2026-08-10)
+# enum-stats: observations=2 steps=2230228 probes=566160 sites=188720 leaves=194552 maxdepth=21 width=4 (re-measured at delta-review round 2)
 {"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":10}]}
 {"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":20}]}
