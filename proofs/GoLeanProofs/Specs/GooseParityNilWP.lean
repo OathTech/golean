@@ -506,10 +506,10 @@ does NOT conjoin directly with `compareNilToNilReadoutC` above — that
 twin is `execProg`-hypothesised, so feeding this theorem's `execStmt`
 witness into it is a type error. The joint sequential
 completes-AND-verdict statement (the `goldenTotalReadout` precedent
-shape) is derivable in a few lines from the kit's
-`goSpec_seeded_readout` (the review's probe compiled it) and is
-PARKED as the slice note's P-S3-5 — a spec-idiom call for curation,
-not claimed here. -/
+shape) was PARKED as the slice note's P-S3-5 and is now SHIPPED
+(slice 6, user direction at the 2026-08-10 check-in):
+`compareNilToNilTotalReadout` below, via the kit's
+`goSpec_seeded_totalReadout`. -/
 theorem compareNilToNilTerminatesNormally :
     TerminatesNormally importedEnv (importedSeed nilLowered)
       compareNilDriver :=
@@ -519,6 +519,21 @@ theorem compareNilToNilTerminatesNormally :
       (funcs := nilLowered.funcs) (env₀ := importedEnv)
       (prog := compareNilDriver) rfl (by decide +kernel))
     compareNilToNilSpec.2
+    (by exact testCompareNilToNilTerminates)
+
+/-- **P-S3-5 closed — the joint sequential completes-AND-verdict form
+on ONE carrier** (slice 6): past a bound, EVERY choice stream's run of
+the seeded exemplar driver completes at `.normal` AND leaves the
+oracle's TRUE verdict `1` in the harness cell — `execStmt` throughout
+(the R2 pins' carrier), joining the R2 `Terminates` pin and the
+verdict readout in a single statement. -/
+theorem compareNilToNilTotalReadout :
+    ∃ N : Nat, ∀ fuel : Nat, N ≤ fuel → ∀ ch : Choices,
+      ∃ (σf : ExecState) (ch' : Choices),
+        execStmt fuel importedEnv (importedSeed nilLowered) ch
+          compareNilDriver = .ok (.normal σf, ch')
+        ∧ loadLoc σf (.base ⟨0⟩) = .ok (.int 1 .int) :=
+  goSpec_seeded_totalReadout compareNilToNilSpec (by decide +kernel)
     (by exact testCompareNilToNilTerminates)
 
 /-! ## Scaling across the unit (slice-3 phase 3)
@@ -688,6 +703,17 @@ theorem compareSliceToNilReadoutC :
       loadLoc σf (.base ⟨0⟩) = .ok (.int 1 .int) :=
   goSpec_seeded_readoutC compareSliceToNilSpec (by decide +kernel)
 
+/-- P-S3-5 joint form (slice 6): completes-AND-verdict on the single
+sequential carrier, from the R2 pin + the spec. -/
+theorem compareSliceToNilTotalReadout :
+    ∃ N : Nat, ∀ fuel : Nat, N ≤ fuel → ∀ ch : Choices,
+      ∃ (σf : ExecState) (ch' : Choices),
+        execStmt fuel importedEnv (importedSeed nilLowered) ch
+          compareSliceDriver = .ok (.normal σf, ch')
+        ∧ loadLoc σf (.base ⟨0⟩) = .ok (.int 1 .int) :=
+  goSpec_seeded_totalReadout compareSliceToNilSpec (by decide +kernel)
+    (by exact testCompareSliceToNilTerminates)
+
 /-! ### testComparePointerToNil (`s := new(uint64); return s != nil`) -/
 
 def comparePointerFunc : Func :=
@@ -824,6 +850,16 @@ theorem comparePointerToNilReadoutC :
         comparePointerDriver = .ok (.normal σf, ch') →
       loadLoc σf (.base ⟨0⟩) = .ok (.int 1 .int) :=
   goSpec_seeded_readoutC comparePointerToNilSpec (by decide +kernel)
+
+/-- P-S3-5 joint form (slice 6). -/
+theorem comparePointerToNilTotalReadout :
+    ∃ N : Nat, ∀ fuel : Nat, N ≤ fuel → ∀ ch : Choices,
+      ∃ (σf : ExecState) (ch' : Choices),
+        execStmt fuel importedEnv (importedSeed nilLowered) ch
+          comparePointerDriver = .ok (.normal σf, ch')
+        ∧ loadLoc σf (.base ⟨0⟩) = .ok (.int 1 .int) :=
+  goSpec_seeded_totalReadout comparePointerToNilSpec (by decide +kernel)
+    (by exact testComparePointerToNilTerminates)
 
 /-! ### testComparePointerWrappedToNil
 (`var s []byte; s = make([]byte, 1); return s != nil`) -/
@@ -972,6 +1008,17 @@ theorem comparePointerWrappedToNilReadoutC :
       loadLoc σf (.base ⟨0⟩) = .ok (.int 1 .int) :=
   goSpec_seeded_readoutC comparePointerWrappedToNilSpec (by decide +kernel)
 
+/-- P-S3-5 joint form (slice 6). -/
+theorem comparePointerWrappedToNilTotalReadout :
+    ∃ N : Nat, ∀ fuel : Nat, N ≤ fuel → ∀ ch : Choices,
+      ∃ (σf : ExecState) (ch' : Choices),
+        execStmt fuel importedEnv (importedSeed nilLowered) ch
+          compareWrappedDriver = .ok (.normal σf, ch')
+        ∧ loadLoc σf (.base ⟨0⟩) = .ok (.int 1 .int) :=
+  goSpec_seeded_totalReadout comparePointerWrappedToNilSpec
+    (by decide +kernel)
+    (by exact testComparePointerWrappedToNilTerminates)
+
 /-! ### testComparePointerWrappedDefaultToNil
 (`var s []byte; return s == nil`) -/
 
@@ -1092,5 +1139,17 @@ theorem comparePointerWrappedDefaultToNilReadoutC :
       loadLoc σf (.base ⟨0⟩) = .ok (.int 1 .int) :=
   goSpec_seeded_readoutC comparePointerWrappedDefaultToNilSpec
     (by decide +kernel)
+
+/-- P-S3-5 joint form (slice 6) — the upstream-Qed parity row's joint
+statement. -/
+theorem comparePointerWrappedDefaultToNilTotalReadout :
+    ∃ N : Nat, ∀ fuel : Nat, N ≤ fuel → ∀ ch : Choices,
+      ∃ (σf : ExecState) (ch' : Choices),
+        execStmt fuel importedEnv (importedSeed nilLowered) ch
+          compareWrappedDefaultDriver = .ok (.normal σf, ch')
+        ∧ loadLoc σf (.base ⟨0⟩) = .ok (.int 1 .int) :=
+  goSpec_seeded_totalReadout comparePointerWrappedDefaultToNilSpec
+    (by decide +kernel)
+    (by exact testComparePointerWrappedDefaultToNilTerminates)
 
 end GoLean.ImportedGoose.SemanticsNil

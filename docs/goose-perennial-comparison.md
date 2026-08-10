@@ -328,17 +328,25 @@ over the frontend's ACTUAL lowering, with a first-order readout twin
 readable from base definitions; driver-level (the wrapper program).
 Neither side's judgment here claims termination (our separate
 composition `compareNilToNilTerminatesNormally` adds the termination
-half on the sequential carrier for the exemplar; P-S3-5 parks the
-joint form). Framing is NO delta (their `∀ Φ` WP frames natively).
+half on the sequential carrier for the exemplar). P-S3-5 CLOSED at
+slice 6: every class-1 row now ALSO ships the joint single-carrier
+completes-AND-verdict form `<name>TotalReadout` (`∃N ∀fuel≥N ∀ch`,
+`execStmt` — the `goldenTotalReadout` shape; kit lemma
+`goSpec_seeded_totalReadout` joins the R2 `Terminates` pin, the
+spec's safety half, and the readout on ONE carrier), so the
+"separate halves, conjunction informal" caveat now applies to the
+CONCURRENT rows only (their joint form needs the frame-quantified
+triple, P-S4-1/2). Framing is NO delta (their `∀ Φ` WP frames
+natively).
 
 | example (imported-goose) | their lemma @ 43d4efa | our internal triple | our export | per-row delta |
 |---|---|---|---|---|
-| semantics/nil `testCompareNilToNil` | `wp_testCompareNilToNil`, nil.v:29, **Qed** :31 | `compareNilToNilSpecC` (`Specs/GooseParityNilWP.lean`) | `compareNilToNilReadoutC`; + `compareNilToNilTerminatesNormally` (R2+R3 composition, sequential carrier) | genuine parity row (both sides prove); shared delta only. Designation CANDIDATE pair (D3) |
-| semantics/nil `testCompareSliceToNil` | nil.v:9, **Abort** :20 (their TODO: "need a lemma showing allocations are non-nil") | `compareSliceToNilSpecC` | `compareSliceToNilReadoutC` | our favor at example level: upstream attempted and abandoned; we discharge |
-| semantics/nil `testComparePointerToNil` | nil.v:22, **Abort** :27 (TODO: "points-tos are non-null") | `comparePointerToNilSpecC` | `comparePointerToNilReadoutC` | ditto |
-| semantics/nil `testComparePointerWrappedToNil` | nil.v:33, **Abort** :38 (TODO: "array points-to is non null") | `comparePointerWrappedToNilSpecC` | `comparePointerWrappedToNilReadoutC` | ditto |
-| semantics/nil `testComparePointerWrappedDefaultToNil` | nil.v:40, **Qed** :46 | `comparePointerWrappedDefaultToNilSpecC` | `comparePointerWrappedDefaultToNilReadoutC` | genuine parity row; shared delta only |
-| semantics/block `testExplicitBlockStmt` | **no statement** (block has no lemma in semantics_proof/) | `explicitBlockSpecC` (`Specs/GooseParityBlockWP.lean`; + sequential `explicitBlockSpec`) | `explicitBlockReadoutC` | same-class coverage row, not a parity row |
+| semantics/nil `testCompareNilToNil` | `wp_testCompareNilToNil`, nil.v:29, **Qed** :31 | `compareNilToNilSpecC` (`Specs/GooseParityNilWP.lean`) | `compareNilToNilReadoutC`; + `compareNilToNilTerminatesNormally` (R2+R3 composition, sequential carrier); + `compareNilToNilTotalReadout` (joint single-carrier form, slice 6) | genuine parity row (both sides prove); shared delta only. Designation CANDIDATE pair (D3) |
+| semantics/nil `testCompareSliceToNil` | nil.v:9, **Abort** :20 (their TODO: "need a lemma showing allocations are non-nil") | `compareSliceToNilSpecC` | `compareSliceToNilReadoutC`; + `compareSliceToNilTotalReadout` (slice 6) | our favor at example level: upstream attempted and abandoned; we discharge |
+| semantics/nil `testComparePointerToNil` | nil.v:22, **Abort** :27 (TODO: "points-tos are non-null") | `comparePointerToNilSpecC` | `comparePointerToNilReadoutC`; + `comparePointerToNilTotalReadout` (slice 6) | ditto |
+| semantics/nil `testComparePointerWrappedToNil` | nil.v:33, **Abort** :38 (TODO: "array points-to is non null") | `comparePointerWrappedToNilSpecC` | `comparePointerWrappedToNilReadoutC`; + `comparePointerWrappedToNilTotalReadout` (slice 6) | ditto |
+| semantics/nil `testComparePointerWrappedDefaultToNil` | nil.v:40, **Qed** :46 | `comparePointerWrappedDefaultToNilSpecC` | `comparePointerWrappedDefaultToNilReadoutC`; + `comparePointerWrappedDefaultToNilTotalReadout` (slice 6) | genuine parity row; shared delta only |
+| semantics/block `testExplicitBlockStmt` | **no statement** (block has no lemma in semantics_proof/) | `explicitBlockSpecC` (`Specs/GooseParityBlockWP.lean`; + sequential `explicitBlockSpec`) | `explicitBlockReadoutC`; + `explicitBlockTotalReadout` (slice 6) | same-class coverage row, not a parity row |
 
 Context on the three Abort-discharge rows (added at the arc-end
 audit; the claim stands, its nature named): all three upstream aborts

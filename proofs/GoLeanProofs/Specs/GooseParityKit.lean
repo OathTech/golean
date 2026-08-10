@@ -427,4 +427,44 @@ theorem goSpec_seeded_readoutC {p : Program} {prog : Stmt} {v : Int}
     rw [hrun'] at hpool
     cases hpool
 
+/-- **The joint sequential completes-AND-verdict form at the TotalPins
+seed** (P-S3-5, CLOSED at slice 6; the `goldenTotalReadout` precedent
+shape): a `GoSpec {r ↦ 0} prog {r ↦ v}`, machine well-formedness of
+the seeded configuration, and the R2 ∀-streams `Terminates` pin
+yield — on the SINGLE sequential carrier (`execStmt`, the R2 pins')
+— past one bound, EVERY choice stream's run completes at `.normal`
+AND the final state delivers the verdict. This is exactly the
+composition the S3 delta review machine-confirmed could NOT be
+assembled from the two shipped halves (the sequential-carrier
+`TerminatesNormally` and the `execProg`-hypothesised readout twin —
+feeding one's witness into the other is a type error); stating it on
+one carrier closes the recorded gap for the sequential class-1 rows,
+leaving the "separate halves" caveat to the concurrent rows only. -/
+theorem goSpec_seeded_totalReadout {p : Program} {prog : Stmt} {v : Int}
+    (hspec : GoSpec p.typeDefs.toList p.funcs p.methods importedEnv
+      importedCell0 prog (importedCellV v))
+    (hwf : Machine.MachineWf
+      { functions := p.funcs,
+        heap := [(.base ⟨0⟩, ⟨some (.int .int), .int 0 .int⟩)],
+        nextAddr := 1 }
+      (.exec prog importedEnv .stop))
+    (hterm : Terminates importedEnv (importedSeed p) prog) :
+    ∃ N : Nat, ∀ fuel : Nat, N ≤ fuel → ∀ ch : Choices,
+      ∃ (σf : ExecState) (ch' : Choices),
+        execStmt fuel importedEnv (importedSeed p) ch prog
+          = .ok (.normal σf, ch')
+        ∧ loadLoc σf (.base ⟨0⟩) = .ok (.int v .int) := by
+  have hsat : sat (heapletOf [(.base ⟨0⟩, ⟨some (.int .int), .int 0 .int⟩)])
+      importedCell0 := rfl
+  have hsplit := InitialSplit.noFrame (P := importedCell0)
+    (hp := [(.base ⟨0⟩, ⟨some (.int .int), .int 0 .int⟩)]) (na := 1)
+    (funcs := p.funcs) (env₀ := importedEnv) (prog := prog) hsat hwf
+  have hnorm : TerminatesNormally importedEnv (importedSeed p) prog :=
+    terminatesNormally_of_progressExec hsplit hspec.2 hterm
+  obtain ⟨N, hN⟩ := hnorm
+  refine ⟨N, fun fuel hfuel ch => ?_⟩
+  obtain ⟨σf, ch', hrun⟩ := hN fuel hfuel ch
+  exact ⟨σf, ch', hrun,
+    goSpec_seeded_readout hspec hwf fuel ch σf ch' hrun⟩
+
 end GoLean.ImportedGoose

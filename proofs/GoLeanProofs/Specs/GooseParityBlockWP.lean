@@ -190,4 +190,15 @@ theorem explicitBlockReadoutC :
       loadLoc σf (.base ⟨0⟩) = .ok (.int 1 .int) :=
   goSpec_seeded_readoutC explicitBlockSpec (by decide +kernel)
 
+/-- P-S3-5 joint form (slice 6): completes-AND-verdict on the single
+sequential carrier, from the R2 pin (`blockTerminates`) + the spec. -/
+theorem explicitBlockTotalReadout :
+    ∃ N : Nat, ∀ fuel : Nat, N ≤ fuel → ∀ ch : Choices,
+      ∃ (σf : ExecState) (ch' : Choices),
+        execStmt fuel importedEnv (importedSeed blockLowered) ch
+          explicitBlockDriver = .ok (.normal σf, ch')
+        ∧ loadLoc σf (.base ⟨0⟩) = .ok (.int 1 .int) :=
+  goSpec_seeded_totalReadout explicitBlockSpec (by decide +kernel)
+    (by exact blockTerminates)
+
 end GoLean.ImportedGoose.SemanticsBlock
