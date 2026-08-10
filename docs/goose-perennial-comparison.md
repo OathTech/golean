@@ -368,17 +368,21 @@ Shared statement family per row (slice 4,
 kernel theorems — `<row>Cert` (the kernel certificate
 `allStreamsOkPool post fuel = true`), `<row>AllSchedules` (∀-schedule
 verdict readout), `<row>NoDeadlock`, `<row>NoRace`,
-`<row>TerminatesNormallyC` — all interpreter-vocabulary. FUEL is an
-axis of these statements and their WP has none (noted at the arc-end
-audit): `Cert`/`AllSchedules`/`NoDeadlock`/`NoRace` are stated at the
-row's SHIPPED literal fuel (200/400/800 — the manifest's fuel line),
-while `TerminatesNormallyC` is the fuel-general member (∃N ∀fuel≥N,
-no post) and the class-1 readouts (§7.1) are ∀-fuel conditionals; the
-∀fuel≥bound lift of the fixed-fuel members is one `execProgLoop_mono`
-application (machine-checked at the audit; sub-bound runs classify
-`fuelOut`, never `.deadlock` — the fixed-fuel forms are
-truth-equivalent for these programs), a curation-time polish, owed
-not shipped. NOT the D1
+`<row>TerminatesNormallyC` — all interpreter-vocabulary. FUEL is no
+longer an axis of any of the five statements (slice 6's
+fuel-independence lift PAID the debt this paragraph recorded at the
+arc-end audit — the owed `∀fuel≥bound` regeneralization is shipped):
+`Cert`/`AllSchedules` are stated in the `∃N, ∀ fuel ≥ N` form
+`TerminatesNormallyC` already used (kernel evidence: the per-row
+`<row>Cert<bound>` literal at the shipped bound 200/400/800 — the
+manifest's fuel line — lifted by the new checker fuel-monotonicity
+`allStreamsOkPool_mono` / `execProgLoop_mono`), and
+`NoDeadlock`/`NoRace` are stated at ALL fuels — the audit's
+truth-equivalence argument (sub-bound runs classify `fuelOut`, never
+`.deadlock`) is now the machine-checked lemma `execProgLoop_le`
+(MultiStreams.lean; constructive, `[propext, Quot.sound]`, like the
+checker-mono pair). The class-1 readouts (§7.1) remain ∀-fuel
+conditionals. NOT the D1
 pair; each row's recorded gap is the frame-quantified `GoSpecC`
 (needs the decomposition pipe's consumers + the channel WP law family,
 P-S4-1/P-S4-2).
