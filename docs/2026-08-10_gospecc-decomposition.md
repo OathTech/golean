@@ -327,4 +327,80 @@ plus the trio certificates as its first real consumers.
 
 ## 8. Build log
 
-(appended as built)
+- **Commit 2 — the §6(b) checker refinement, witnessed both ways.**
+  `selectApplyDone` + the `poolThreadOblivious` select arm;
+  `stepThread_oblivious` gained the `.done` arm (`stepFn_select_done`,
+  `applySelect_of_done` — both constructive, `[propext, Quot.sound]`);
+  `poolThreadOblivious_nsel` GENERALIZED to `poolThreadOblivious_sel`
+  (a disjunction — the old name is gone, its one consumer rewired) and
+  `raceUpdate_oblivious`'s hypothesis widened with it (the detector's
+  select arm reads the stream only in the multi-ready branches
+  `applySelectCore_done_inv` excludes; the parked-`.done` case exits at
+  the detector's post-config `.blockedSelect` return). Witnesses
+  same-commit: `Specs/GoldenSelectDone.lean` — the golden select-probe
+  program (zero-ready+default both directions, close, singleton-ready
+  commit; `selDoneAllStreamsCert`/`selDoneAllSchedules42`) and the
+  NEGATIVE control `selConsumingRefused` (a two-ready select program
+  that RUNS fine is still checker-refused; `#eval`-confirmed before
+  `decide`, per doctrine). ci PASS, zero drift.
+- **Commit 3 — the curated rows (§6 option (a), taken).** Three pin
+  modules + `check-imported-pins` registration (guard green against
+  fresh emits); `Specs/GooseParityChannels.lean` — six rows × five
+  kernel theorems + the four generic `chanCert_*` derivations
+  (hoisting candidates, header-recorded); manifest feature class 3
+  with measured upstream statuses and both-direction deltas.
+  Certificate fuels measured (see manifest); the six-row module
+  kernel-checks in ~20 s.
+- **Commit 4 — the decomposition pipe (§§3–4), built through THE EXIT
+  and its witness** (`proofs/GoLeanProofs/LangD.lean`):
+  - `StepDC` (lift/strip/wake/pairArrive/pairRelease/selCommit — O1(a)
+    direct ∃-delivery taken as recommended; NO spin rules — O2(b)
+    sufficed: the exit consumes `adequate_result` only, and the
+    spawn-noop witness's WPs discharge `.NotStuck` reducibility at
+    every config they walk) + the `PoolCfgD` Language instance.
+  - `applyPairing_shape` (the pairing inversion: partner index, parked
+    pre-shape, two-point update — the only per-arm walk the simulation
+    needed; the §2 attribution fact was NOT needed, as predicted).
+  - **`stepM_erasedD` — THE SIMULATION**: every `StepM` step is 1–2
+    erased D-steps (`pair_erasedD` shared by `pair`/`pickPair`:
+    arriving step carries the whole delta, partner releases
+    state-preserving at the post-state). Constructive
+    (`[propext, Quot.sound]`).
+  - **`execProg_erasedD` — run erasure**: every `.ok (.normal σf)`
+    `execProg` run is an erased D-trace ending with main's terminal
+    VALUE at the head (detector verdicts discarded — the run
+    completed). Constructive.
+  - `goD_heap_adequacy_own` (the heap-handover adequacy port) and
+    **`goTripleC_of_wpD` — THE EXIT**: `GoTripleC` at full
+    `InitialSplit` strength from a D-Language WP; consumes the pairing
+    simulation generically for every program.
+  - The `wpD_*` law kit (`pure_det`/`spawned_strip`/`fork` ports; two
+    new shape side-conditions refute the decomposed rules via
+    `arrivalCases_of_nonApply`/`stepDC_shape_cases`).
+  - **THE WITNESS — `spawnNoopTripleC`**: the first frame-quantified
+    `GoTripleC` whose program GENUINELY SPAWNS (the debt's triple
+    half), with `spawnNoopReadoutC` discharging every `InitialSplit`
+    premise at the concrete seed (non-vacuity) and reading the triple
+    back as a first-order interpreter fact. Axioms: the classical trio
+    on the Iris side, `[propext, Quot.sound]` on the simulation lane.
+  All registered in `proofs/Audit.lean` (name-existence-tripwire
+  scope, as its blocks state).
+
+## 9. Owed after this slice (recorded, each with its named consumer)
+
+- **`ProgressExecC` at ∀-heap strength for the spawn-noop witness**
+  (the pool-reachability kit's first instance, §5): without it
+  `GoSpecC = GoTripleC ∧ ProgressExecC` cannot assemble for the
+  spawning witness. The triple half was the recorded obstruction and
+  is paid; the safety half is invariant-induction work over
+  `execProgLoop` with a symbolic heap — sized as its own movement.
+  Consumer: `spawnNoopSpecC` (the debt's full form).
+- **The channel WP law family + protocol layer** (§3's envelope
+  refinement, §4.6): the fork/join full-strength `GoSpecC` and any
+  frame-quantified triple for the six curated channel rows need WP
+  laws at chan/select apply and park/release positions plus an
+  invariant tying delivered values (O1(b) or ghost). Consumer: the
+  curated rows' D1 form 1 (each row's manifest gap).
+- **Checker L2 branching** (§6(c)): only if a future curated row hits
+  a genuinely multi-ready select.
+

@@ -1,5 +1,6 @@
 import GoLeanProofs.Lang
 import GoLeanProofs.LangC
+import GoLeanProofs.LangD
 import GoLeanProofs.HeapBridge
 import GoLeanProofs.Ghost
 import GoLeanProofs.Lifting

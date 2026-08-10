@@ -513,6 +513,43 @@ open Lean in
 /-- info: 'GoLean.Iris.adequateC_spawn_noop' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Iris.adequateC_spawn_noop
 
+-- THE DECOMPOSED D-LANGUAGE (spec-parity slice 4, LangD.lean — the
+-- channels-arc successor debt's pipe, design note 2026-08-10 §§3-4):
+-- the per-thread StepDC relation, the pairing SIMULATION (every StepM
+-- step is 1-2 erased D-steps; applyPairing_shape is its inversion
+-- kit), the run erasure, the pool heap-handover adequacy, THE EXIT
+-- (goTripleC_of_wpD — consumes the pairing simulation generically),
+-- the ported wpD law kit, and the WITNESS: spawnNoopTripleC, the
+-- first frame-quantified GoTripleC on a genuinely SPAWNING program,
+-- with its seeded first-order readout (non-vacuity — every
+-- InitialSplit premise discharged at the concrete seed). The SAFETY
+-- half (ProgressExecC at forall-heap strength; GoSpecC assembly) is the
+-- pool-reachability lane's recorded owed instance, NOT silently
+-- dropped — slice build log. Same name-existence-tripwire scope as
+-- the witness blocks above.
+/-- info: 'GoLean.Iris.applyPairing_shape' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.applyPairing_shape
+/-- info: 'GoLean.Iris.stepM_erasedD' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.stepM_erasedD
+/-- info: 'GoLean.Iris.execProg_erasedD' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.execProg_erasedD
+/-- info: 'GoLean.Iris.goD_heap_adequacy_own' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.goD_heap_adequacy_own
+/-- info: 'GoLean.Iris.goTripleC_of_wpD' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.goTripleC_of_wpD
+/-- info: 'GoLean.Iris.wpD_pure_det' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.wpD_pure_det
+/-- info: 'GoLean.Iris.wpD_spawned_strip' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.wpD_spawned_strip
+/-- info: 'GoLean.Iris.wpD_fork' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.wpD_fork
+/-- info: 'GoLean.Iris.wpD_spawn_noop_witness' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.wpD_spawn_noop_witness
+/-- info: 'GoLean.Iris.spawnNoopTripleC' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.spawnNoopTripleC
+/-- info: 'GoLean.Iris.spawnNoopReadoutC' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.spawnNoopReadoutC
+
 -- The exit pipes.
 /-- info: 'GoLean.Iris.goSpec_of_wp' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Iris.goSpec_of_wp
