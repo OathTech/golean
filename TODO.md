@@ -369,9 +369,27 @@ feature breadth up the raft ladder, `slices.Sort` extern + input fuzzing.
   stale "awaiting blessing" text here corrected at the arc-final
   audit, F13) — `docs/2026-08-07_goose-parity-charter.md` (phase-1
   import of the 87 importable Goose/Perennial test files up the rung
-  ladder; parking-ledger discipline; escape hatch). The BUILDOUT has
-  not launched: setting the standing goal is a decision item at the
-  channels-arc merge sign-off.
+  ladder; parking-ledger discipline; escape hatch). (Stale text
+  corrected at the spec-parity S5 sweep, 2026-08-10: this entry still
+  said "the BUILDOUT has not launched" — it ran and CLOSED 2026-08-08,
+  closing report `docs/2026-08-08_goose-parity-end-of-buildout.md`:
+  78 units / 172 rows at buildout end, 82 / 176 after the spec-parity
+  arc's additions.)
+- Spec-parity arc (2026-08-09/10, branches `spec-parity`,
+  `spec-parity-s1..s5` — AWAITING the user check-in: pre-merge audit
+  ask + D3 designation curation + the parked-items agenda). Charter +
+  ARC-CLOSURE RECORD: `docs/2026-08-09_spec-parity-arc-charter.md`
+  (per-slice trail, standing red set with owners, the consolidated
+  15-P-item check-in agenda, designation candidates, exit-criterion
+  walk). Delivered: the laws-spine retirements (8 pins flipped,
+  BUG-025/034/037/052), the sync package as machine primitives (D4
+  scope), 6 sequential R3 `GoSpecC`+readout pairs over pinned imported
+  lowerings + the tracked manifest (`docs/spec-parity-r3-manifest.md`),
+  6 curated channel ∀-schedule families, the decomposition pipe +
+  `spawnNoopTripleC` (the spawning-triple debt's TRIPLE half), and the
+  per-example spec-parity table (`docs/goose-perennial-comparison.md`
+  §7). Nothing designated (charter D3 — user-owned curation;
+  candidates recorded in the closure record).
 
 ## Differential Execution
 

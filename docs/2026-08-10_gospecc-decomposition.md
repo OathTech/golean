@@ -158,6 +158,13 @@ nothing about what `GoSpecC` asserts.
 
 ## 4. The pipe, end to end (the proof plan)
 
+(Naming note, added at the S5 cross-reference sweep: this section's
+names are PLAN-time; the shipped declarations dropped the underscore/C
+variants — `stepM_erasedD`, `execProg_erasedD`, `goD_heap_adequacy_own`,
+`goTripleC_of_wpD`, all in `proofs/GoLeanProofs/LangD.lean`. §8's
+build log records the shipped names; grep resolves against §8, not
+this plan.)
+
 1. **Simulation** (`stepM_erased_D`): every `StepM m m'` step maps to
    1–2 erased thread-pool steps of the D-Language from
    `(m.threads.toList, m.shared)` to `(m'.threads.toList, m'.shared)`

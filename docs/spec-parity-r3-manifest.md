@@ -200,3 +200,16 @@ async 200→400, client 400→800. Full module kernel-checks in ~20 s.
   `baselines/native-full.tsv`'s 176 imported-goose rows: 70 all-pass,
   7 mixed, 5 all-fail). The all-fail 5 (recorded fail-closed
   frontend-export classes) were never "R1-green".
+
+## Arc-close addendum (slice 5, 2026-08-10)
+
+The slice-3 counts above are the dated record; the deltas since:
+slice 4 added the three channel pin modules
+(select-tricky-examples, muxer, actris-example — the
+`check-imported-pins` PINS registry is the authority), so at arc
+close **9 units are pinned → 73 unpinned** (the P-S3-2 lever's
+denominator). Feature class 3 landed as recorded in its section (6
+rows × 5 kernel theorems). The per-STATEMENT comparison artifact is
+`docs/goose-perennial-comparison.md` §7; the arc-closure record and
+the consolidated parked-items agenda are in
+`docs/2026-08-09_spec-parity-arc-charter.md`.
