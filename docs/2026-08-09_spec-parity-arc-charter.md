@@ -148,6 +148,44 @@ zero corpus drift — all 1465 ids match the tracked baseline on
 review); axioms `[propext, Classical.choice, Quot.sound]`
 throughout. Parking ledger P-S3-1..5 in the slice note §6.
 
+## Slice-4 record (2026-08-10, branch `spec-parity-s4`)
+
+DELIVERED, gate green (`scripts/ci`) at tip; four build commits plus
+this record commit (design note first, per the binding discipline — `docs/2026-08-10_gospecc-decomposition.md`,
+whose §§8–10 are the authoritative build log / owed list / parking
+ledger). (1) THE DECOMPOSITION PIPE (charter item 4's successor debt):
+`LangD.lean` — the per-thread `StepDC` relation (deliberately wider
+∃-envelope, recorded), the pairing SIMULATION (`stepM_erasedD`: every
+`StepM` step is 1–2 erased one-thread D-Language steps; the measured
+one-thread attribution fact made the anticipated storeLoc round-trips
+unnecessary), run erasure, heap-handover pool adequacy, THE EXIT
+(`goTripleC_of_wpD` — `GoTripleC` at full `InitialSplit` strength from
+a D-Language WP, consuming the pairing simulation generically), the
+`wpD_*` law kit, and the witness `spawnNoopTripleC` — the FIRST
+frame-quantified `GoTripleC` on a genuinely spawning program (the
+debt's TRIPLE half, which was the recorded obstruction), non-vacuity
+via `spawnNoopReadoutC`. The SAFETY half (∀-heap `ProgressExecC`, the
+pool-reachability first instance) and the `GoSpecC` assembly are
+recorded owed WITH their consumer (P-S4-1), as are the channel WP law
+family + protocol layer (P-S4-2). (2) The checker's
+non-consuming-select refinement (`selectApplyDone`), witnessed
+positive AND negative (golden select-probe cert + the two-ready
+refusal control). (3) The CURATED CHANNEL ROWS at the design note's
+§6(a) strength: trio + muxer(async, client) + dsp — five kernel
+theorems each over three new staleness-guarded pins, manifest feature
+class 3 with per-row upstream ground truth at 43d4efa (trio +
+`wp_Client` + `wp_DSPExample` Qed with line numbers; `Async` has NO
+upstream lemma), deltas recorded BOTH directions with no ordering
+claim, and the frame-quantified-triple gap named PER ROW — plus the
+uncovered-population paragraph (60 upstream Lemma/Theorem items,
+commands cited). Designation: CANDIDATES only (`dspCert` +
+`dspAllSchedules`; `spawnNoopTripleC` deliberately not until its
+`GoSpecC` assembles); designated statements untouched (44,
+byte-identical); proofs/checker-layer only — machine untouched, zero
+corpus drift at every commit (1465 ids on `result`+`stage`); axioms
+the classical trio (simulation lane constructive,
+`[propext, Quot.sound]`).
+
 ## The sync question (asked 2026-08-09), answered
 
 Sync is NOT a prerequisite for spec-parity over the imported corpus
