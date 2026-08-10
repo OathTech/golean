@@ -2628,6 +2628,42 @@ def main : IO UInt32 := do
         (.pointer (.sync .mutex)) ⟨"main.locker"⟩ with
      | .ok b => b == true
      | .error _ => false))
+  -- The DISPATCH half and RENDERER half of the record contract (S6
+  -- audit fix: contract note §3 item 2 / §4 renderer bullet shipped
+  -- these two consumer arms with NO pin — a revert of either would
+  -- have passed every gate silently, since no corpus id and no MS pin
+  -- above exercises them). State: an interface requirement
+  -- (main.speaker/Speak, interface-receiver MethodInfo) and a defined
+  -- carrier main.T with NO concrete Speak — the no-method arm.
+  let dispTypes : GoCore.TypeEnv :=
+    [(⟨"main.speaker"⟩, .interfaceDef #[{ name := "Speak", params := #[], results := #[] }]),
+     (⟨"main.T"⟩, .defined (.int .int))]
+  let speakIfaceFunc : GoCore.Func :=
+    { id := ⟨"main.speaker.Speak"⟩,
+      args := #[{ id := "$recv", typ := .interface ⟨"main.speaker"⟩ }],
+      results := #[],
+      body := .unsupported "test iface requirement stub" }
+  let dispBox : GoValue := .interface (.defined ⟨"main.T"⟩) (.int 7 .int)
+  let dispNoRecord : GoCore.ExecState :=
+    { types := dispTypes,
+      functions := #[speakIfaceFunc],
+      methods := #[{ name := "Speak", funcId := ⟨"main.speaker.Speak"⟩,
+                     recv := .interface ⟨"main.speaker"⟩ }] }
+  let dispWithRecord : GoCore.ExecState :=
+    { dispNoRecord with
+      methodSets := #[{ key := "main.T", coverage := .full }] }
+  passed := passed && (← expectTrue "MS: dispatch on a carrier with NO record refuses unsupported (dispatch-half pin — never an answer from absence)"
+    (match GoCore.dynamicDispatch? dispNoRecord speakIfaceFunc #[dispBox] with
+     | .error err => err.status == "unsupported"
+     | .ok _ => false))
+  passed := passed && (← expectTrue "MS: the same dispatch WITH the record fails stuck (the invariant-break arm; mutation sensitivity — the refusal above is the record's absence, nothing else)"
+    (match GoCore.dynamicDispatch? dispWithRecord speakIfaceFunc #[dispBox] with
+     | .error err => err.status == "stuck"
+     | .ok _ => false))
+  passed := passed && (← expectTrue "MS: renderPanicPayload on a defined carrier with NO record is unrenderable (renderer-half pin — never a fabricated main.T(v))"
+    (GoCore.Machine.renderPanicPayload dispNoRecord dispBox).isNone)
+  passed := passed && (← expectTrue "MS: the same payload WITH the record renders main.T(7) (mutation sensitivity)"
+    (GoCore.Machine.renderPanicPayload dispWithRecord dispBox == some "main.T(7)"))
   if passed then
     return 0
   else
