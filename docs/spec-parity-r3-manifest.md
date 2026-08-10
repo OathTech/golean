@@ -192,7 +192,12 @@ async 200→400, client 400→800. Full module kernel-checks in ~20 s.
     statement-by-statement comparison the arc charters;
   - **3 discharge oracles upstream ATTEMPTED AND ABORTED** (their own
     TODO comments name the missing non-nil-allocation/points-to
-    lemmas) — rows where our result goes past theirs;
+    lemmas) — rows where our result goes past theirs (context added
+    at the arc-end audit: all three aborts are ONE missing
+    SL-library lemma class — points-to non-nullness their predicates
+    do not carry — which our concrete-heap model computes away; an
+    assertion-language-design delta, not a semantic-reach one; the
+    matrix §7.1 note carries the full form);
   - **1 is same-class coverage** with no upstream statement
     (semantics/block);
   - and the deltas AGAINST us are **five** upstream-Qed oracles, not

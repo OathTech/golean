@@ -95,7 +95,8 @@ completed by the next commit). 35 red-first guardrail pins: 33 green,
 record's commit, PRE-audit-round — the S2 audit fix round then added
 FOUR more permanent markers, the sync/escapes escape-refusals;
 arc-close lane state, measured at the S5 audit: 42 rows / 36 green /
-6 permanent fail-closed — matrix T1.) Lanes: sync
+6 permanent fail-closed; 60 / 49 / 11 after the arc-end semantics fix
+round's 18 guardrail ids — matrix T1.) Lanes: sync
 confluent/membership/racy rows all certified; workers-join strict with
 the recorded beyond-caps reason. Phase-2 tail: the FOUR sync-only
 goose files land at R1 green (importer `--allow-import` seam); the
@@ -336,25 +337,33 @@ the authoritative accounting)
 | slice | shipped | audit cycle → outcome |
 |---|---|---|
 | S1 (laws spine + F15 opener) | F15 fixed symmetrically; BUG-034/037/025 retired onto the tgtOpK/storeK spine, law families restated, all 8 held-open pins flipped | audit round found BUG-052 (call write-back operand timing — a real machine bug, red-first pinned then fixed) + the slow-lane cap miss; 4 fix commits + 2 delta-polish; 1 finding refuted |
-| S2 (the sync package) | Mutex/RWMutex/WaitGroup/Once live end-to-end (registry growth, ZERO new Choices sites), probed-fatal class, HB edges, 33/35 build-slice pins green (dated figure — the audit round then added FOUR permanent sync/escapes markers; lane state at arc close, measured: 42 rows, 36 green, 6 permanent fail-closed — matrix T1, corrected at the S5 audit), 4 sync-only goose files R1 | audit fix round + delta rounds 2–4; round 4 CRITICAL (the import vet rebuilt on Go's own grammar) + residue cleanup; crash checkpoint 2fc4f4f0 recorded honestly mid-branch |
+| S2 (the sync package) | Mutex/RWMutex/WaitGroup/Once live end-to-end (registry growth, ZERO new Choices sites), probed-fatal class, HB edges, 33/35 build-slice pins green (dated figure — the audit round then added FOUR permanent sync/escapes markers; lane state re-measured per round: 42/36/6 at the S5 audit, then 60 rows / 49 green / 11 recorded fail-closed after the ARC-END semantics fix round added 18 guardrail ids + BUG-053/054/055 — matrix T1), 4 sync-only goose files R1 | audit fix round + delta rounds 2–4; round 4 CRITICAL (the import vet rebuilt on Go's own grammar) + residue cleanup; crash checkpoint 2fc4f4f0 recorded honestly mid-branch |
 | S3 (WP-walk driver) | THE EXEMPLAR + 5 more R3 D1 pairs (GoSpecC + readout twin over pinned lowerings), the kit, `wp_new_value` witnessed, the go_walk re-derivation + registration lesson, the tracked manifest | audit fix round (~4 surviving majors, ALL claims/records — the parity denominator corrected 37→28-of-36 at origin and every restatement) + delta polish (zero surviving critical/major) |
 | S4 (decomposition + channel rows) | the non-consuming-select checker refinement (witnessed both ways), 6 curated channel rows × 5 kernel theorems, the decomposition pipe through THE EXIT, `spawnNoopTripleC` + witness pair (the debt's TRIPLE half) | one polish round, zero critical/major; the load-bearing minor (stale inherited differential figure) fixed by a fresh full run FIRST-HAND |
 | S5 (this) | records only: parity table, matrix arc-end state, this record, sweep | sub-branch audit to follow (records dimension) |
 
-### The standing red set, with owners (measured at this record)
+### The standing red set, with owners (measured at this record;
+RE-DERIVED at the arc-end ripple pass after the semantics fix round
+re-pinned the baseline — the figures below are the 1a72c690 state)
 
-**1465 ids: 1351 PASS / 114 recorded FAIL** (`awk` over
-`baselines/native-full.tsv`; zero drift all arc — every slice tip
-matched the tracked baseline on `result`+`stage` per id).
+**1483 ids: 1364 PASS / 119 recorded FAIL** (`awk -F'\t'
+'$1!~/^#/{n++;r[$1]++} END{print n,r["PASS"],r["FAIL"]}'
+baselines/native-full.tsv` → 1483 1364 119; the arc-end fix round
+added 18 explained sync guardrail ids — measured by baseline diff:
+18 added, 0 dropped, ZERO prior ids changed on `result`+`stage` —
+on top of the arc's standing zero-drift record).
 
-- **85 `frontend-export`** — recorded fail-closed frontend coverage
+- **90 `frontend-export`** — recorded fail-closed frontend coverage
   classes; owner: future frontend slices, scheduled by value. Named
   subsets: the 20 imported-goose rows (dominated by the
   short-circuit-operand quarantine — including the FOUR upstream-Qed
   oracles named in manifest/§7.1, the highest-leverage frontend item
   this arc surfaced), the S1-recorded assignment-adjacent refusals
   (map-element multi-assign targets), the sync Cond/TryLock
-  out-of-scope markers (owner: atomics arc / D4 widening).
+  out-of-scope markers (owner: atomics arc / D4 widening), and the
+  arc-end fix round's FIVE new recorded refusal rows (3
+  sync/iface-dispatch — BUG-053's fail-closed lane; 2
+  sync/composite-literal capability refusals).
 - **29 fidelity-stage** (23 lean-observation + 4 differential + 1
   nondet + 1 go-run) — 28 visible to the check-bugs filter + 1
   outside it (split restated at the S5 audit; the first form said
@@ -492,7 +501,9 @@ deferring with an honest log is success — each DEFERRED names its log)
 1. **"For goose/Perennial's proved examples, prove our analogues"** —
    DONE at recorded strength, split honestly BOTH directions: 2
    sequential upstream-Qed parity rows at the full D1 pair; 3
-   upstream-Abort discharges; 5 upstream-Qed channel lemmas with
+   upstream-Abort discharges (the SL-library-gap context recorded at
+   the matrix §7.1 note — an assertion-language delta, not
+   semantic reach); 5 upstream-Qed channel lemmas with
    kernel ∀-schedule families beside them; the against-us set NAMED (5
    sequential oracles they prove and we don't — 1 law gap + 4
    frontend-blocked; the channel D1 form open on all six rows).
@@ -502,9 +513,17 @@ deferring with an honest log is success — each DEFERRED names its log)
    the channel class — log: manifest FC3's "NOT the D1 pair" paragraph
    + P-S4-2 (the ∀-schedule family shipped instead, gap named per
    row).
-3. **"Adequacy-exported first-order corollaries"** — DONE: every
-   proved row ships its deletion-test-clean readout/corollary twin
-   (readout twins; no-deadlock/no-race/termination corollaries).
+3. **"Adequacy-exported first-order corollaries"** — DONE, scoped
+   precisely (arc-end audit note — the first form blurred the
+   derivation route): every proved row ships its deletion-test-clean
+   FIRST-ORDER twin, but only the class-1 readouts are literally
+   ADEQUACY-exports (`goSpec_seeded_readoutC` off `goSpec_of_wp`);
+   the six channel rows' corollaries derive from the kernel checker's
+   soundness lemma — no Iris WP, no adequacy step anywhere in their
+   chain (the module imports neither Iris nor the relation). The
+   export-ROUTE half for the channel class is part of item 2's
+   deferral (it arrives with the triple, P-S4-1/2), not silently
+   claimed here.
 4. **"…designated"** — DEFERRED BY DESIGN to the user's D3 curation
    (that is what D3 CURATED decided): candidates recorded above,
    nothing designated by the arc. Log: slice notes §5/§10 + this
@@ -651,3 +670,76 @@ argument re-established for the NEW tip: `git diff --name-only
 bab76304..<fix tip>` remains docs/ + TODO.md only, so the
 differential surface is untouched by construction. 44 designated
 statements byte-identical (no proofs/ path in the diff).
+
+### Arc-end audit, records fix round (2026-08-10, on `spec-parity`
+directly; the logical-effect-parity reviewer's set — 1 confirmed
+major + 2 confirmed minors + 1 downgraded-to-note + 2 notes, all
+applied; runs beside the semantics fix round's commits, which carry
+their own record in the BUGS entries and commit messages)
+
+1. **MAJOR — race-freedom was claimed as an ours-only class** at the
+   matrix's two summary sites (§7.2's shared delta and §7.4's
+   we-prove-they-don't list) — wrong in the self-favorable
+   direction: their `NotStuck` WP entails race-freedom
+   sound-by-construction (GooseLang makes racy non-atomic access
+   STUCK — lang.v:1372-1388, ordinary stores included; verified at
+   the audit down to the new-model store path), while our
+   `<row>NoRace` is a fail-open UNDER-approximating detector
+   non-firing (Race.lean U1/U2). Fixed per the verifier's narrow
+   remedy: "no-race"/"race-refusal-freedom" dropped from both claim
+   sites (the O3/O6/O8 parenthetical never covered race), the honest
+   axis split stated in §7.2 (proof side: theirs at-least-as-strong;
+   validation side: ours `-race`-oracle-grounded over the real
+   lowering — exactly what rows O4/T12 already said), with the
+   correction note naming the lift-into-matrix origin (the manifest's
+   list was the careful one; the comparative clause was added on
+   lift). Deadlock-freedom and termination REMAIN correctly
+   ours-only (verifier-confirmed; not over-trimmed).
+2. **MINOR — the schedule-granularity direction** was missing from
+   §7.2's both-directions delta: their WP quantifies a strictly
+   WIDER interleaving set (sub-expression granularity, parked
+   threads reducible) than our modeled registry-point schedules of
+   runnable threads; added as the fourth against-us direction with
+   the NPDRF pointer (rows L3/T12 — the reduction is the open,
+   currently refutable-as-written obligation).
+3. **Fuel axis** (DOWNGRADED-to-note kernel applied): §7.2's
+   statement-family paragraph now names fuel as an axis —
+   `Cert`/`AllSchedules`/`NoDeadlock`/`NoRace` are stated at the
+   shipped literal fuel per row, `TerminatesNormallyC` is the
+   ∃N-∀fuel≥N member (post-free), the class-1 readouts are ∀-fuel
+   conditionals; the ∀fuel≥bound lift is one `execProgLoop_mono`
+   application (machine-checked at the audit; sub-bound runs
+   classify `fuelOut`, never `.deadlock`) — a curation-time polish,
+   owed not shipped.
+4. **Notes**: exit-walk item 3's "adequacy-exported" scoped to the
+   rows that actually export through adequacy (class 1); the channel
+   corollaries are checker-route first-order theorems, their export
+   route part of item 2's deferral. The three Abort-discharge rows
+   annotated at §7.1 + the manifest with the verifier's context:
+   ONE missing SL-library lemma class (points-to non-nullness) that
+   our concrete-heap model computes away — an assertion-language
+   delta, not semantic reach; the claim stands, its nature named.
+5. **Ripple re-measure** (the semantics fix round moved the corpus):
+   every live figure re-derived at 1a72c690 — **1483 ids = 1364
+   PASS / 119 FAIL**; 119 = **90 frontend-export** (+5: the 3
+   iface-dispatch + 2 composite-literal refusal rows) **+ 29
+   fidelity** (23/4/1/1 by stage — UNCHANGED: 16 untriaged + 12
+   BUGS-explained + 1 go-run pin, the fidelity set is id-identical);
+   baseline diff old→new: 18 added (all sync/*, the round's
+   explained guardrails), 0 dropped, ZERO prior ids changed on
+   `result`+`stage`; sync lanes 60 rows / 49 green / 11 recorded
+   fail-closed markers (T1 re-measured); imported-goose 176/156/20,
+   82 units / 9 pinned / 73 unpinned — all UNCHANGED. Updated at:
+   the standing-red-set section, the closure table's S2 row, the S2
+   dated-record annotation, matrix T1. Dated slice records keep
+   their true-at-the-time figures.
+
+Gate and window at this round's tip: the records commits of this
+round are docs-only (the window argument restated: `git diff
+--name-only` over MY commits touches docs/ alone); the semantics fix
+round's commits carry their own full gate including the baseline
+re-pin with the 18 explained ids and the re-certified rwmutex-order
+record. `scripts/ci` run PASS at this round's tip with the FULL
+differential line now measured against the RE-PINNED 1483-id
+baseline; 44 designated statements byte-identical (no designated
+module in any records commit; the ci name-list/closure gates green).
