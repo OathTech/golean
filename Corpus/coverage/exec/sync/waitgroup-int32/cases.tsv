@@ -1,0 +1,6 @@
+# id	subject	args	expected_status	expected_reason	features
+# ARC-END int32-wrap pins (2026-08-10): gc's counter is the high
+# int32 of the state word and wraps mod 2^32 before the negative
+# test — divergence pinned in BOTH directions. Red-first.
+add-overflow-panics	addOverflowPanics	-	panic	sync: negative WaitGroup counter	sync,waitgroup,panic
+add-wrap-noop	addWrapNoop	-	ok	-	sync,waitgroup
