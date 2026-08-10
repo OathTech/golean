@@ -23,6 +23,8 @@ PINS=(
   "Corpus/coverage/exec/imported-goose/semantics/block|GoLean.ImportedGoose.SemanticsBlock.blockLowered|GoLeanProofs.Specs.ImportedGooseBlock"
   "Corpus/coverage/exec/imported-goose/semantics/defer|GoLean.ImportedGoose.SemanticsDefer.deferLowered|GoLeanProofs.Specs.ImportedGooseDefer"
   "Corpus/coverage/exec/imported-goose/semantics/nil|GoLean.ImportedGoose.SemanticsNil.nilLowered|GoLeanProofs.Specs.ImportedGooseNil"
+  "Corpus/coverage/exec/imported-goose/semantics/new|GoLean.ImportedGoose.SemanticsNew.newLowered|GoLeanProofs.Specs.ImportedGooseNew"
+  "Corpus/coverage/exec/imported-goose/semantics/vars|GoLean.ImportedGoose.SemanticsVars.varsLowered|GoLeanProofs.Specs.ImportedGooseVars"
   "Corpus/coverage/exec/imported-goose/storage/mapliteral|GoLean.ImportedGoose.StorageMapliteral.mapliteralLowered|GoLeanProofs.Specs.ImportedGooseMapliteral"
   "Corpus/coverage/exec/imported-goose/unittest/const|GoLean.ImportedGoose.UnittestConst.constLowered|GoLeanProofs.Specs.ImportedGooseConst"
   "Corpus/coverage/exec/imported-goose/unittest/rune|GoLean.ImportedGoose.UnittestRune.runeLowered|GoLeanProofs.Specs.ImportedGooseRune"
@@ -118,6 +120,8 @@ check_pin() {
 import GoLeanProofs.Specs.ImportedGooseBlock
 import GoLeanProofs.Specs.ImportedGooseDefer
 import GoLeanProofs.Specs.ImportedGooseNil
+import GoLeanProofs.Specs.ImportedGooseNew
+import GoLeanProofs.Specs.ImportedGooseVars
 import GoLeanProofs.Specs.ImportedGooseMapliteral
 import GoLeanProofs.Specs.ImportedGooseConst
 import GoLeanProofs.Specs.ImportedGooseRune
