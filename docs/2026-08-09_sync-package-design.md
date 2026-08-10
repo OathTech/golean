@@ -775,6 +775,23 @@ STRUCTURAL fix)
   stub methods change the wire sha — schema-widening only, members
   unchanged {10, 20}).
 
+### Class-closure round (2026-08-10, user direction: BUG-053's fix closed the instance, not the class)
+
+The method-set record contract —
+`docs/2026-08-10_method-set-record-contract.md` is the decision record;
+BUGS.md BUG-053 carries the addendum; the D5 note
+(2026-08-05_embedding-interfaces-design.md) records the guard re-key.
+Summary: REQUIRED `methodSets` wire field (one explicit record per
+method-carrying type, `full`/`exported` coverage, strict decode);
+satisfaction/dispatch/renderer answer ONLY from records
+(`methodCarrierKey?`/`methodSetCoverage?`; carrier kinds gc-probed:
+`.defined` + `.sync`); no record ⇒ visible `.unsupported`, never an
+answer, never stuck. Wire-boundary "MS:" fixtures (7, Tests/GoCoreEval)
+pin the class; 12 pinned lowering terms + 3 golden reprs regenerated
+(schema-only); both tier=slow certified records re-certified (sets and
+stats bit-for-bit); corpus classification unchanged on all 1483 ids
+(the contract is vacuously satisfied by today's frontend, as required).
+
 ## 12. Parking ledger (user-scale items, per the AFK posture)
 
 - **P-S2-1 — Promote `fatal` into the membership/confluent lanes?**

@@ -144,7 +144,8 @@ def constLowered : Program :=
                  variadic := false,
                  wrapper := false }],
     methods := #[],
-    globals := #[] }
+    globals := #[],
+    methodSets := #[{ key := "struct{}", coverage := GoLean.GoCore.MethodSetCoverage.full }] }
 
 /-- Driver env: `r` names the harness output cell at base address 0. -/
 abbrev constEnv : LocalEnv := [[("r", .base ⟨0⟩)]]

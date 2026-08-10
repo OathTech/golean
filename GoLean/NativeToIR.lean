@@ -1389,6 +1389,36 @@ partial def decodeProgram (json : Json) : Except String Program := do
     if seen.contains f.id.key then
       throw s!"native lowering: duplicate function id {f.id.key} in program"
     seen := seen.insert f.id.key
-  pure { typeDefs, funcs := allFuncs, methods := methodPairs.map Prod.snd, globals }
+  -- Method-set records (class closure of BUG-053, contract note
+  -- `docs/2026-08-10_method-set-record-contract.md` §3/§4): REQUIRED —
+  -- an old wire, or a new emitter that forgets the field, refuses at
+  -- decode, not at query. Strict entry shape, coverage enum closed,
+  -- duplicate keys refused (collision-check at the boundary, CLAUDE.md).
+  -- The canonical empty-struct record is synthesized alongside its
+  -- synthetic TypeDef above: `struct{}` is a carrier by kind and
+  -- genuinely method-free.
+  let msJson ← StrictJson.array "program.methodSets"
+    (← StrictJson.field "program" obj "methodSets")
+  let declaredRecords ← msJson.mapIdxM (fun i m => do
+    let mobj ← StrictJson.obj s!"program.methodSets[{i}]" m
+    let key ← StrictJson.string s!"program.methodSets[{i}].type"
+      (← StrictJson.field s!"program.methodSets[{i}]" mobj "type")
+    let covStr ← StrictJson.string s!"program.methodSets[{i}].coverage"
+      (← StrictJson.field s!"program.methodSets[{i}]" mobj "coverage")
+    let coverage ← match covStr with
+      | "full" => pure MethodSetCoverage.full
+      | "exported" => pure MethodSetCoverage.exported
+      | other => throw s!"native lowering: program.methodSets[{i}].coverage \
+must be full|exported, got {other}"
+    pure ({ key, coverage } : MethodSetRecord))
+  let methodSets := #[({ key := "struct{}", coverage := .full } : MethodSetRecord)]
+    ++ declaredRecords
+  let mut seenRecords : Std.HashSet String := {}
+  for r in methodSets do
+    if seenRecords.contains r.key then
+      throw s!"native lowering: duplicate method-set record for {r.key} in program"
+    seenRecords := seenRecords.insert r.key
+  pure { typeDefs, funcs := allFuncs, methods := methodPairs.map Prod.snd, globals,
+         methodSets }
 
 end GoLean.NativeToIR

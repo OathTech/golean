@@ -2552,6 +2552,82 @@ def main : IO UInt32 := do
   passed := passed && (← expectTrue "F15: decode refuses an out-of-range signed value (128 at int8)"
     !(CLI.decodeObservation "left"
       "{\"schema\":\"golean-observation-v1\",\"status\":\"ok\",\"values\":[{\"tag\":\"int\",\"kind\":\"int8\",\"value\":128}]}").isOk)
+  -- MS: the method-set record contract's WIRE-BOUNDARY pins (class
+  -- closure of BUG-053, docs/2026-08-10_method-set-record-contract.md
+  -- §3 item 3): hand-crafted wires with a method-CARRYING type whose
+  -- record is deliberately absent must REFUSE satisfaction — never
+  -- answer, never stuck — and the same wire WITH the record answers
+  -- the definite no (the refusal is the record's absence, nothing
+  -- else). These are the pins that make a re-introduction of the
+  -- class visible forever.
+  passed := passed && (← expectTrue "MS: decode refuses a wire without methodSets (required field)"
+    (match Lean.Json.parse "{\"schema\":\"golean-native-v1\",\"funcs\":[],\"types\":[],\"methods\":[]}" with
+     | .error _ => false
+     | .ok j => !(GoLean.NativeToIR.decodeProgram j).isOk))
+  passed := passed && (← expectTrue "MS: decode refuses an unknown coverage token"
+    (match Lean.Json.parse "{\"schema\":\"golean-native-v1\",\"funcs\":[],\"types\":[],\"methods\":[],\"methodSets\":[{\"type\":\"main.T\",\"coverage\":\"partial\"}]}" with
+     | .error _ => false
+     | .ok j => !(GoLean.NativeToIR.decodeProgram j).isOk))
+  passed := passed && (← expectTrue "MS: decode refuses a duplicate method-set record"
+    (match Lean.Json.parse "{\"schema\":\"golean-native-v1\",\"funcs\":[],\"types\":[],\"methods\":[],\"methodSets\":[{\"type\":\"main.T\",\"coverage\":\"full\"},{\"type\":\"main.T\",\"coverage\":\"full\"}]}" with
+     | .error _ => false
+     | .ok j => !(GoLean.NativeToIR.decodeProgram j).isOk))
+  -- The class pin proper: main.T has a TypeDef on the wire (the OLD
+  -- guard's presence key) but NO method-set record — satisfaction must
+  -- refuse `unsupported`, proving the guard keys on the RECORD.
+  let msWire (records : String) : String :=
+    "{\"schema\":\"golean-native-v1\",\"funcs\":[],\"methods\":[]," ++
+    "\"types\":[{\"name\":\"main.T\",\"def\":{\"kind\":\"defined\",\"target\":{\"kind\":\"int\",\"int\":\"int\"}}}," ++
+    "{\"name\":\"main.locker\",\"def\":{\"kind\":\"interface\",\"methods\":[{\"name\":\"Lock\",\"params\":[],\"results\":[],\"variadic\":false}]}}]," ++
+    "\"methodSets\":[" ++ records ++ "]}"
+  let msQuery (records : String) : Except String (Except GoError Bool) :=
+    match Lean.Json.parse (msWire records) with
+    | .error e => .error e
+    | .ok j =>
+        match GoLean.NativeToIR.decodeProgram j with
+        | .error e => .error e
+        | .ok prog =>
+            let state : GoCore.ExecState :=
+              { types := prog.typeDefs.toList, functions := prog.funcs
+                methods := prog.methods, methodSets := prog.methodSets }
+            .ok (GoCore.dynamicImplementsInterface state
+              (.defined ⟨"main.T"⟩) ⟨"main.locker"⟩)
+  passed := passed && (← expectTrue "MS: satisfaction REFUSES a method-carrying type with no record (BUG-053 class pin; TypeDef present, record absent)"
+    (match msQuery "" with
+     | .ok (.error err) => err.status == "unsupported"
+     | _ => false))
+  passed := passed && (← expectTrue "MS: the same wire WITH the record answers the definite no (mutation sensitivity)"
+    (match msQuery "{\"type\":\"main.T\",\"coverage\":\"full\"}" with
+     | .ok (.ok b) => b == false
+     | _ => false))
+  -- The `.sync` carrier arm (the re-introduction pin): a sync box in a
+  -- state with NO records refuses; with the exported record and the
+  -- declaration-only stub it answers true — exactly the BUG-053
+  -- polarity, now enforced for every carrier kind by one guard.
+  let syncLockerTypes : GoCore.TypeEnv :=
+    [(⟨"main.locker"⟩, .interfaceDef #[{ name := "Lock", params := #[], results := #[] }])]
+  let syncStubFunc : GoCore.Func :=
+    { id := ⟨"sync.Mutex.Lock"⟩,
+      args := #[{ id := "$recv", typ := .pointer (.sync .mutex) }],
+      results := #[],
+      body := .unsupported "test stub" }
+  let syncNoRecord : GoCore.ExecState := { types := syncLockerTypes }
+  let syncWithRecord : GoCore.ExecState :=
+    { types := syncLockerTypes,
+      functions := #[syncStubFunc],
+      methods := #[{ name := "Lock", funcId := ⟨"sync.Mutex.Lock"⟩,
+                     recv := .pointer (.sync .mutex) }],
+      methodSets := #[{ key := "sync.Mutex", coverage := .exported }] }
+  passed := passed && (← expectTrue "MS: a sync carrier without a record refuses (re-introduction pin)"
+    (match GoCore.dynamicImplementsInterface syncNoRecord
+        (.pointer (.sync .mutex)) ⟨"main.locker"⟩ with
+     | .error err => err.status == "unsupported"
+     | .ok _ => false))
+  passed := passed && (← expectTrue "MS: a sync carrier WITH the exported record and stub answers true"
+    (match GoCore.dynamicImplementsInterface syncWithRecord
+        (.pointer (.sync .mutex)) ⟨"main.locker"⟩ with
+     | .ok b => b == true
+     | .error _ => false))
   if passed then
     return 0
   else

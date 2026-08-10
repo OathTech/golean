@@ -1401,6 +1401,16 @@ def renderPanicPayload (state : ExecState) : GoValue → Option String
   | .interface (.defined name) (.int v _) =>
       if name == runtimeErrorTypeId then
         none
+      else if !dynamicMethodSetRecorded state (.defined name) then
+        -- BUG-053 class, renderer consumer (contract note §4,
+        -- 2026-08-10): with no method-set record,
+        -- `panicPayloadIsRewritten`'s "no Error()/String()" below would
+        -- be an answer from absence — gc may well rewrite the payload
+        -- through a method we never saw. Fail closed to an unrenderable
+        -- abort, never a fabricated `main.T(v)`. (`Error`/`String` are
+        -- exported names, so an `exported`-coverage record suffices to
+        -- decide honestly.)
+        none
       else if panicPayloadIsRewritten state (.defined name) then
         none -- Error()/String() would have to be CALLED: fail closed
       else

@@ -49,7 +49,7 @@ private theorem goSpec_adequate
     (hinit : InitialSplit P hp na hP F funcs env₀ prog) :
     adequate .NotStuck (Config.exec prog env₀ .stop)
       (ExecState.mk (types := types) (functions := funcs) (methods := methods)
-        (heap := hp) (nextAddr := na))
+        (methodSets := #[]) (heap := hp) (nextAddr := na))
       (fun _ σ2 => ∃ hQ : Heaplet,
         (∀ k, hQ.get? k = none ∨ F.get? k = none)
         ∧ Heaplet.sub hQ (heapToMap σ2.heap)
@@ -161,7 +161,7 @@ theorem goInvariant_of_wp {I P' : HProp}
   refine go_heap_invariance (GF := GoCoreS)
     (Config.exec prog env₀ .stop)
     (ExecState.mk (types := types) (functions := funcs) (methods := methods)
-      (heap := hp) (nextAddr := na))
+      (methodSets := #[]) (heap := hp) (nextAddr := na))
     [c'] σ' _ hinit.heapBounded ?_ htp
   intro _inst hprog hmeths htypes
   have hsplit : ownHeaplet (GF := GoCoreS) (heapToMap hp)

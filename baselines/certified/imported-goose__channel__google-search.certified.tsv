@@ -4,7 +4,14 @@
 # driver-coupling pin against THIS set and its wire hash; scripts/ci
 # --slow re-enumerates and must reproduce it exactly. Update
 # deliberately, in its own commit, with the reason — never auto-written.
-# certified: 2026-08-09  commit: spec-parity-s1 audit-fix round (assignment-spine step growth; work cap raised)
+# certified: 2026-08-10  commit: spec-parity arc-end class-closure round
+# re-certification reason (class-closure round, 2026-08-10): the wire
+#   sha moved because EVERY wire now carries the required methodSets
+#   field (BUG-053 class closure,
+#   docs/2026-08-10_method-set-record-contract.md) — schema widening
+#   only; the fresh enumeration reproduced the set AND the stats
+#   bit-for-bit (observations=6, steps=39976295).
+# previously: certified: 2026-08-09  commit: spec-parity-s1 audit-fix round (assignment-spine step growth; work cap raised)
 # re-certification reason (S1 audit major, gates dimension): the
 #   BUG-034/037/025 spine migrations alone had already pushed the
 #   enumeration past the old work=40000000 cap (the audit reproduced
@@ -20,7 +27,7 @@
 #   (same date): F15 kind-carrying observation shape.
 # case: imported-goose/channel/google-search
 # params: width=4,sites=48,work=60000000,members=6,tier=slow
-# wire-sha256: f9c666f6ebf242a7caee1054301098eaeb811a2e346898b0eb708255bdc06395
+# wire-sha256: 4a2ccadf9e2389570786ccb5c4eb5dd171a215f3e68ca4c52cd4eaed6c2a623b
 # enum-stats: observations=6 steps=39976295 probes=161130 sites=53710 leaves=59601 maxdepth=15 width=4
 {"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":123}]}
 {"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":132}]}

@@ -247,9 +247,12 @@ theorem HeapWf.allocMany : ∀ (cs : List HeapCell) {σ : ExecState}, HeapWf σ 
   | [], _, hwf => hwf
   | _ :: rest, _, hwf => HeapWf.allocMany rest hwf.alloc
 
-/-- **The `∀σ`-premise closer.** `ExecState` has exactly five fields, so a
-state whose three PINNED fields are known IS the pinned state up to heap
-and allocation counter. Rewriting with this turns a house-style
+/-- **The `∀σ`-premise closer.** `ExecState` has exactly six fields
+(`methodSets` joined at the BUG-053 class closure, 2026-08-10 — carried
+UNPINNED here like `heap`/`nextAddr`; none of the pinned computations
+query satisfaction), so a state whose three PINNED fields are known IS
+the pinned state up to heap, allocation counter, and method-set
+records. Rewriting with this turns a house-style
 `∀ σ, σ.functions = … → σ.methods = … → σ.types = … → P σ` premise into a
 statement about a state with literal `types`/`functions`/`methods` — i.e.
 a CLOSED computation the kernel can run — which is what makes such
@@ -259,6 +262,7 @@ theorem execState_pin_eq {σ : ExecState} {T : TypeEnv} {F : Array Func}
     {M : Array MethodInfo}
     (ht : σ.types = T) (hf : σ.functions = F) (hm : σ.methods = M) :
     σ = { types := T, functions := F, methods := M,
+          methodSets := σ.methodSets,
           heap := σ.heap, nextAddr := σ.nextAddr } := by
   cases σ; simp_all
 

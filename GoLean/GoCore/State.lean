@@ -36,6 +36,12 @@ structure ExecState where
   types : TypeEnv := []
   functions : Array Func := #[]
   methods : Array MethodInfo := #[]
+  /-- Method-set records (class closure of BUG-053; contract note
+  `docs/2026-08-10_method-set-record-contract.md`): satisfaction and
+  dispatch answer ONLY from these. Default `#[]` = fail closed — a
+  hand-built state refuses every method-carrier query until its
+  records are stated explicitly. -/
+  methodSets : Array MethodSetRecord := #[]
   heap : Heap := []
   nextAddr : Nat := 0
   deriving Repr, BEq
