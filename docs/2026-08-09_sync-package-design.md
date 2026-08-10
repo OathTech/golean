@@ -677,6 +677,17 @@ STRUCTURAL fix)
   the backstop for anything after it.
 - **NOTE**: the certified record's gc-sampling header now cites both
   verifier batches per mode, matching cases.tsv's scope.
+- **Residue cleanup (post-convergence, schematic)**: the standing
+  guard REFUSES any sibling .go file in an imported-goose case dir
+  (the stricter line — the importer writes only main.go; multi-file
+  packages are legitimate elsewhere in the corpus, never in this
+  lane); lsimports refuses control characters in parsed paths (the
+  one-path-per-line protocol's injectivity); the grant-token
+  iteration is glob-safe with honest messages; and the guard's header
+  records that below-marker content is covered by the verbatim diff +
+  the differential gate's own corpus compile (a per-dir go build was
+  considered and not added — 82 redundant compiles per run). Both
+  shapes fixtured (suite now 47).
 
 ## 12. Parking ledger (user-scale items, per the AFK posture)
 

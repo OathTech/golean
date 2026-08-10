@@ -50,6 +50,23 @@ func main() {
 				bad = true
 				continue
 			}
+			// Control characters in a parsed path would break the
+			// one-path-per-line output protocol (a "sync\n" path could
+			// smuggle a second line past a consumer) — refuse them here
+			// (round-4 residue note; go build also rejects such paths,
+			// but the vet must not depend on that backstop).
+			ctl := false
+			for _, r := range path {
+				if r < 0x20 || r == 0x7f {
+					ctl = true
+					break
+				}
+			}
+			if ctl {
+				fmt.Fprintf(os.Stderr, "PARSE-ERR\t%s\timport path %s contains a control character\n", p, im.Path.Value)
+				bad = true
+				continue
+			}
 			fmt.Println(path)
 		}
 	}
