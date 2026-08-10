@@ -1,10 +1,11 @@
 # verdi-diff-fixture v1
-# machine=counter N=3 base-seed=42 cases-per-kind=40 kinds=hAE hAER hRV hRVR net inp reboot
+# machine=counter N=3 base-seed=42 cases-per-kind=40 kinds=hAE hAER hRV hRVR net inp reboot init
 # per-case seed = baseSeed + 1000003 * caseIndex, splitmix64 stream; inputs recorded explicitly below
 # columns: id<TAB>kind<TAB>input<TAB>output  (s-expr grammar: compat/verdi/DiffHarness.lean)
 # outputs are the Lean port's; `diffharness check` pins them (drift detection). The Rocq oracle
 #   leg (compat/verdi/extraction/, extracted verdi-raft handlers) replays the input column and
-#   byte-compares the output column: 280/280 match, 2026-08-10. Re-run it after regenerating.
+#   byte-compares the output column; re-run it after regenerating. Run records live in the lane
+#   log, never in this header (a generated file must not assert its own oracle status).
 0	hAE	(1 (state 1 (none) (none) () 5 1 14 ((1 5) (1 8) (2 5)) ((0 0)) false (0) Candidate ((0 2 11) (1 1 1)) ()) 4 2 4 1 ((entry 1 1 2 2 5 7)) 2)	((state 1 (none) (none) () 5 1 14 ((1 5) (1 8) (2 5)) ((0 0)) false (0) Candidate ((0 2 11) (1 1 1)) ()) (AppendEntriesReply 1 ((entry 1 1 2 2 5 7)) false))
 1	hAE	(1 (state 5 (some 2) (none) ((entry 1 1 3 8 2 1) (entry 1 0 1 6 2 1)) 3 0 19 ((2 7)) ((1 8)) true (0 1) Leader ((2 3 15)) ()) 1 1 4 1 ((entry 1 0 0 2 1 3) (entry 0 0 1 1 1 8)) 2)	((state 5 (some 2) (none) ((entry 1 1 3 8 2 1) (entry 1 0 1 6 2 1)) 3 0 19 ((2 7)) ((1 8)) true (0 1) Leader ((2 3 15)) ()) (AppendEntriesReply 5 ((entry 1 0 0 2 1 3) (entry 0 0 1 1 1 8)) false))
 2	hAE	(1 (state 0 (some 2) (none) () 2 4 29 () ((1 8) (0 6) (2 6)) true (1 0) Follower ((1 3 18)) ()) 5 1 0 1 ((entry 2 2 1 8 4 5) (entry 0 1 2 6 3 6)) 5)	((state 5 (none) (some 1) ((entry 2 2 1 8 4 5) (entry 0 1 2 6 3 6)) 5 4 29 () ((1 8) (0 6) (2 6)) true (1 0) Follower ((1 3 18)) ()) (AppendEntriesReply 5 ((entry 2 2 1 8 4 5) (entry 0 1 2 6 3 6)) true))
@@ -285,3 +286,43 @@
 277	reboot	((state 0 (some 0) (none) ((entry 0 0 3 5 5 0) (entry 0 0 0 3 4 0) (entry 1 1 2 2 4 9)) 0 3 12 ((0 1) (0 0)) ((2 6) (2 3) (0 7)) true (1 1) Candidate ((0 2 13)) ()))	((state 0 (some 0) (none) ((entry 0 0 3 5 5 0) (entry 0 0 0 3 4 0) (entry 1 1 2 2 4 9)) 0 3 12 () () false () Follower ((0 2 13)) ()))
 278	reboot	((state 4 (some 2) (some 0) ((entry 0 0 0 7 3 3) (entry 0 2 1 5 3 3)) 1 8 18 () () false () Leader ((2 2 5) (0 0 1)) ()))	((state 4 (some 2) (some 0) ((entry 0 0 0 7 3 3) (entry 0 2 1 5 3 3)) 1 8 18 () () false () Follower ((2 2 5) (0 0 1)) ()))
 279	reboot	((state 3 (some 0) (some 2) ((entry 0 0 2 0 1 4)) 5 1 7 () ((2 7)) true () Candidate () ()))	((state 3 (some 0) (some 2) ((entry 0 0 2 0 1 4)) 5 1 7 () () false () Follower () ()))
+280	init	(0)	((state 0 (none) (none) () 0 0 0 () () false () Follower () ()))
+281	init	(0)	((state 0 (none) (none) () 0 0 0 () () false () Follower () ()))
+282	init	(2)	((state 0 (none) (none) () 0 0 0 () () false () Follower () ()))
+283	init	(0)	((state 0 (none) (none) () 0 0 0 () () false () Follower () ()))
+284	init	(0)	((state 0 (none) (none) () 0 0 0 () () false () Follower () ()))
+285	init	(2)	((state 0 (none) (none) () 0 0 0 () () false () Follower () ()))
+286	init	(2)	((state 0 (none) (none) () 0 0 0 () () false () Follower () ()))
+287	init	(1)	((state 0 (none) (none) () 0 0 0 () () false () Follower () ()))
+288	init	(2)	((state 0 (none) (none) () 0 0 0 () () false () Follower () ()))
+289	init	(1)	((state 0 (none) (none) () 0 0 0 () () false () Follower () ()))
+290	init	(1)	((state 0 (none) (none) () 0 0 0 () () false () Follower () ()))
+291	init	(2)	((state 0 (none) (none) () 0 0 0 () () false () Follower () ()))
+292	init	(1)	((state 0 (none) (none) () 0 0 0 () () false () Follower () ()))
+293	init	(2)	((state 0 (none) (none) () 0 0 0 () () false () Follower () ()))
+294	init	(2)	((state 0 (none) (none) () 0 0 0 () () false () Follower () ()))
+295	init	(2)	((state 0 (none) (none) () 0 0 0 () () false () Follower () ()))
+296	init	(1)	((state 0 (none) (none) () 0 0 0 () () false () Follower () ()))
+297	init	(0)	((state 0 (none) (none) () 0 0 0 () () false () Follower () ()))
+298	init	(0)	((state 0 (none) (none) () 0 0 0 () () false () Follower () ()))
+299	init	(2)	((state 0 (none) (none) () 0 0 0 () () false () Follower () ()))
+300	init	(0)	((state 0 (none) (none) () 0 0 0 () () false () Follower () ()))
+301	init	(1)	((state 0 (none) (none) () 0 0 0 () () false () Follower () ()))
+302	init	(2)	((state 0 (none) (none) () 0 0 0 () () false () Follower () ()))
+303	init	(0)	((state 0 (none) (none) () 0 0 0 () () false () Follower () ()))
+304	init	(0)	((state 0 (none) (none) () 0 0 0 () () false () Follower () ()))
+305	init	(1)	((state 0 (none) (none) () 0 0 0 () () false () Follower () ()))
+306	init	(1)	((state 0 (none) (none) () 0 0 0 () () false () Follower () ()))
+307	init	(2)	((state 0 (none) (none) () 0 0 0 () () false () Follower () ()))
+308	init	(0)	((state 0 (none) (none) () 0 0 0 () () false () Follower () ()))
+309	init	(0)	((state 0 (none) (none) () 0 0 0 () () false () Follower () ()))
+310	init	(0)	((state 0 (none) (none) () 0 0 0 () () false () Follower () ()))
+311	init	(1)	((state 0 (none) (none) () 0 0 0 () () false () Follower () ()))
+312	init	(2)	((state 0 (none) (none) () 0 0 0 () () false () Follower () ()))
+313	init	(0)	((state 0 (none) (none) () 0 0 0 () () false () Follower () ()))
+314	init	(1)	((state 0 (none) (none) () 0 0 0 () () false () Follower () ()))
+315	init	(1)	((state 0 (none) (none) () 0 0 0 () () false () Follower () ()))
+316	init	(0)	((state 0 (none) (none) () 0 0 0 () () false () Follower () ()))
+317	init	(0)	((state 0 (none) (none) () 0 0 0 () () false () Follower () ()))
+318	init	(2)	((state 0 (none) (none) () 0 0 0 () () false () Follower () ()))
+319	init	(1)	((state 0 (none) (none) () 0 0 0 () () false () Follower () ()))
