@@ -8,7 +8,7 @@ needed to STATE the headline safety properties (`commit_recorded` and the
 predicates the log-matching statement uses) plus — P1 — the execute/dedup
 slice the linearizability statement's witness vocabulary lives in
 (`applied_entries`, `execute_log`, `key`, `deduplicate_log`,
-`output_correct`; `CommonDefinitions.v:27-121`). Still not ported:
+`output_correct`; `CommonDefinitions.v:27-122`). Still not ported:
 `prefix_within_term` (invariant-DAG vocabulary, recorded gap in the lane
 log).
 -/
@@ -118,12 +118,12 @@ def deduplicate_log' : List (entry (P := P)) → List (R.clientId × Nat) →
 def deduplicate_log (l : List (entry (P := P))) : List (entry (P := P)) :=
   deduplicate_log' l []
 
-/-- `CommonDefinitions.v:96-101` -/
+/-- `CommonDefinitions.v:96-100` -/
 def mEntries : msg (P := P) → Option (List (entry (P := P)))
   | .AppendEntries _ _ _ _ entries _ => some entries
   | _ => none
 
-/-- `CommonDefinitions.v:115-122` — "output `out` for `(client, id)` is
+/-- `CommonDefinitions.v:116-122` — "output `out` for `(client, id)` is
 correct given applied entries `aes`": the deduplicated log replayed up to
 that client's entry produces exactly `out` last. Coq's
 `hd_error (rev tr')` is `tr'.reverse.head?`. -/

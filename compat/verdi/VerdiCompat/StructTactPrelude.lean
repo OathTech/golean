@@ -99,7 +99,7 @@ theorem allFin_all : ∀ {n : Nat} (x : Fin n), x ∈ allFin n
     apply List.mem_cons_of_mem
     exact List.mem_map_of_mem (allFin_all ⟨i, Nat.lt_of_succ_lt_succ h⟩)
 
-/-- StructTact `all_fin_NoDup` (`Fin.v:60`): the enumeration has no
+/-- StructTact `all_fin_NoDup` (`Fin.v:61-62`): the enumeration has no
 duplicates. Discharges the `no_dup_nodes` obligation of `MultiParams`. -/
 theorem allFin_NoDup : ∀ n, (allFin n).Nodup
   | 0 => List.nodup_nil
