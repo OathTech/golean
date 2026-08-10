@@ -47,9 +47,8 @@ touches it.
     committed fixture inputs + Lean-computed outputs so the Rocq
     extraction leg can attach later WITHOUT re-implementing the
     generator (the fixture carries explicit serialized inputs, not just
-    seeds). The Rocq oracle leg itself: **PARKED** — no `coqc`/`rocq`/
-    `opam` on this box (checked 2026-08-09), and installs need user
-    sign-off (standing rule). See the parking ledger.
+    seeds). The Rocq oracle leg itself: **ATTACHED 2026-08-10** —
+    280/280 match; see the parking ledger (resolved) and slice S6.
 
 Out of scope: P2 (rocq-lean-import certification toolchain — network +
 version-pin sign-off), P3 (attachment — mainline territory), F5, anything
@@ -122,29 +121,27 @@ linearizability); the ghost/refined layer (P0's recorded gap, unchanged).
 
 ## Parking ledger
 
-- **Rocq extraction oracle leg** (P1b's second half). Blocked: no Rocq
-  toolchain on the box (`which coqc rocq opam coqtop` — all absent,
-  2026-08-09). Never worked around per the sandbox/no-install rule.
-  What exists instead: committed fixtures with explicit serialized
-  inputs + Lean outputs (`compat/verdi/fixtures/`), format documented in
-  `DiffHarness.lean`, so the Rocq leg only needs a parser + extracted
-  handlers, not the generator. Exact commands for the user when they
-  want to enable it:
-  ```
-  # (network + install sign-off needed; version pins are the user's call)
-  opam init --disable-sandboxing -y
-  opam switch create verdi-raft 4.14.2
-  opam repo add coq-released https://coq.inria.fr/opam/released
-  opam install coq.8.16.1 coq-verdi coq-struct-tact coq-cheerios
-  # then: build deps/verdi-raft ('make quick' builds theories),
-  # extraction stub per deps/verdi-raft/extraction/vard/, and an OCaml
-  # driver that reads fixtures/handlers-n3.tsv, replays the inputs
-  # through the extracted RaftNetHandler/RaftInputHandler, and diffs
-  # the output column.
-  ```
-  (verdi-raft's own CI pins: see `deps/verdi-raft/.github` and opam
-  files; the exact Coq version pin should be chosen with the user at
-  enable time — trust-tools rule.)
+- **Rocq extraction oracle leg** (P1b's second half). **RESOLVED
+  2026-08-10** — leg built and run, 280/280 match (slice S6 below).
+  Originally blocked: no Rocq toolchain on the box (`which coqc rocq
+  opam coqtop` — all absent, 2026-08-09); never worked around per the
+  sandbox/no-install rule. The unpark that resolved it, for the
+  record:
+  - **Toolchain: Coq 8.18.0** in the repo-local opam switch
+    `deps/opam-coq818` (primary checkout; OCaml 4.14.2),
+    OPERATOR-INSTALLED 2026-08-10 with user sign-off, repos
+    coq-released + **coq-extra-dev** (per verdi's own CI — the
+    released coq-verdi does not cover 8.18).
+  - **Package revs** (= the repo's standing reading-copy pins):
+    coq-verdi @ `7e1641b`, coq-struct-tact @ `97268e1`, coq-cheerios
+    @ `5c9318c`, coq-inf-seq-ext @ `601e89e` (installed in the
+    switch's `user-contrib`), and verdi-raft @ `a3375e8`
+    AGENT-BUILT quick-mode (`make quick`, `.vos`/`.vio`) at the
+    primary checkout's `deps/verdi-raft` against those libs.
+  - The design-time enable sketch (previously recorded here: opam
+    commands with an 8.16 guess) is superseded by the record above;
+    version pins were chosen with the user at enable time, as
+    required.
 
 ## Merge-window queue (coordination points, to be done WITH the user)
 
@@ -158,7 +155,10 @@ linearizability); the ghost/refined layer (P0's recorded gap, unchanged).
 4. D1 (move under `proofs/`?) — decide at a merge window, not here.
 5. If/when the Rocq oracle leg is enabled: decide where its runner
    lives (`compat/verdi/` script vs `scripts/` — the latter is
-   mainline-owned).
+   mainline-owned). **Recorded choice (2026-08-10): lane-local,
+   `compat/verdi/extraction/build-and-run.sh`** — this lane owns
+   `compat/verdi/**` and may not touch `scripts/`; promotion into
+   `scripts/`/CI wiring stays a merge-window decision (item 1).
 
 ## Slice log (P1 complete, 2026-08-09)
 
@@ -185,6 +185,49 @@ linearizability); the ghost/refined layer (P0's recorded gap, unchanged).
   `compat/verdi` before commit; AxCheck axiom set stayed
   `propext`/`Quot.sound`-only, no `sorry`/`native_decide`/`partial`.
 
+## Slice log — S6, the Rocq oracle leg (2026-08-10)
+
+- S6a `2359f95a`: extraction stub + OCaml replay driver + lane-local
+  runner (`compat/verdi/extraction/`: `ExtractRaftHandlers.v`,
+  `driver.ml`, `build-and-run.sh`). **Route:** stub compiled against
+  the PRIMARY checkout's quick-built verdi-raft `.vos` via
+  `coqc -vok -Q .../deps/verdi-raft/theories VerdiRaft` (`-vos`
+  compiles clean but DEFERS the `Extraction` side effect — no `.ml`
+  emitted; `-vok` loads `.vos` deps and fully processes the file).
+  No cross-tree friction; the worktree's own `deps/verdi-raft` stayed
+  unbuilt. Coq-side instantiation mirrors
+  `VerdiCompat.Examples.counterBase` exactly (nat/nat/nat, init 0,
+  handler `i d ↦ (d+i, d+i)`, N=3, clientId nat) via explicit
+  `Build_*` constructors — record notation loops in TC search against
+  Raft.v's generic `base_params` instance (observed coqc stack
+  overflow, recorded in the stub's header). Names: `fin → int`
+  (`ExtrOcamlFinInt`), order agreeing with the Lean `Fin`/`allFin`
+  mapping via `fin_to_nat`/`all_fin`.
+- **RESULT: 280/280 MATCH, 0 diverge, 0 infra** — the Rocq leg
+  reproduces the Lean port's output column byte-for-byte on every
+  committed case (all 7 kinds × 40). No port bug, no instantiation
+  mismatch; the delta ledger gains no entry. Claim scope: handler
+  semantics on the fixture inputs, through the extraction TCB
+  (nat→int, fin→int, OCaml evaluation).
+- **Oracle liveness verified** (a 280/280 that cannot fail is not
+  evidence): tampered output byte → DIVERGE exit 1; perturbed live
+  input field (reboot `currentTerm`) → DIVERGE; malformed s-expr,
+  unknown kind, 3-column row, out-of-range name, header-only fixture
+  → INFRA / zero-case FAIL, all nonzero. Driver also round-trips
+  every input through its own serializer (grammar drift = INFRA) and
+  the runner refuses partial runs (judged-count vs fixture-row-count).
+  Two hand-checked insensitive perturbations (hAE `plt`/`t` on a
+  reject-path case) produced identical outputs legitimately and were
+  not counted as checks.
+- S6b `b526861f`: DiffHarness docstring/fixture-header/lakefile-comment
+  claim upgrade + header-only fixture regeneration (all 280 case lines
+  byte-identical, per the re-pin doctrine); oracle re-run over the
+  regenerated fixture: 280/280.
+- S6c: this lane-doc record (parking ledger resolved, queue item 5).
+- Gate: capped `lake build` green + `diffharness check` 280 cases at
+  each slice; extraction artifacts are gitignored and outside the
+  Lean build (lakefile targets unchanged).
+
 ## The lane-local gate (run before any commit here)
 
 ```
@@ -194,4 +237,13 @@ cd compat/verdi
 ```
 Re-generate the fixture ONLY on a deliberate, explained change to the
 port or the generator, committed together with the reason (mirrors the
-baseline re-pin doctrine).
+baseline re-pin doctrine) — and re-run the Rocq oracle leg over the
+regenerated fixture in the same change:
+
+```
+cd compat/verdi/extraction && ./build-and-run.sh
+# needs the Coq switch + built verdi-raft theories (parking-ledger
+# record); in a worktree without them, point GOLEAN_COQ_BIN and
+# GOLEAN_VERDI_RAFT_THEORIES at the primary checkout's. Fails closed
+# when absent.
+```
