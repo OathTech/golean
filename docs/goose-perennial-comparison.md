@@ -66,20 +66,21 @@ logs + corpus ids.
 
 ## 2. They have, we lack
 
-Last-reviewed: channels arc, 2026-08-07 (seeding).
+Last-reviewed: channels arc, 2026-08-07 (seeding); rows T1/T3/T7/T10
+updated at the spec-parity arc close, 2026-08-10.
 
 | # | What | Their evidence | Our status | Class |
 |---|---|---|---|---|
-| T1 | `sync` package: Mutex/RWMutex/WaitGroup/Once/sema specs proved over the goose-translated REAL stdlib source, atop a small trusted core (Mutex→CmpXchg spinlock, semaphore model; Cond notifyList STUBBED no-ops) | `new/trusted_code/sync.v:8-58@43d4efa`; `new/proof/sync.v` + `sync_proof/*` (9 files, ~35 wp lemmas) | Nothing. Recorded growth contract: a sync primitive is added by REGISTERING it (one scheduling point + one HB rule), design note D2+D3 | **CAP** — the top live blocker for their corpus (scoping Part B) and raft-critical; owed: successor sync arc |
+| T1 | `sync` package: Mutex/RWMutex/WaitGroup/Once/sema specs proved over the goose-translated REAL stdlib source, atop a small trusted core (Mutex→CmpXchg spinlock, semaphore model; Cond notifyList STUBBED no-ops) | `new/trusted_code/sync.v:8-58@43d4efa`; `new/proof/sync.v` + `sync_proof/*` (9 files, ~35 wp lemmas) | MACHINE HALF LANDED (spec-parity S2, 2026-08-09, via exactly the recorded growth contract — each primitive one registry entry, ZERO new Choices sites): Mutex/RWMutex/WaitGroup/Once as machine primitives (value-semantics cells, blocked-shape wake, the probed-fatal misuse class, HB edges per the package-doc sentences with the two-clock RWMutex realization), 33 guardrail pins green + 2 permanent out-of-scope markers (Cond/TryLock, charter D4); the four sync-only goose files R1-green (`docs/2026-08-09_sync-package-design.md` §§11-12). NO sync spec/law layer yet — no sync WP laws, no proved sync specs (the feature-class exemplar is P-S2-3's candidate-when-reached; the arc's proof slices did not reach sync) | **CAP, narrowed** — the machine half is paid; owed: the sync spec layer (P-S2-3) and, for TryLock/atomics, the atomics arc |
 | T2 | `sync/atomic`: machine atomics (`LoadOp/AtomicSwap/AtomicAdd/CmpXchg`, lang.v:84-105,1372-1431@43d4efa) + 49 wp lemmas (`new/proof/sync/atomic.v`, their largest single proof file) | ibid. | Nothing; D5 records atomics as the `FairStream` prerequisite arc | **CAP** — owed: atomics arc (FairStream prerequisite) |
-| T3 | Logically-atomic channel-op spec set: `send_au/recv_au/close_au` + nested AUs + two incomparable nonblocking variants; proved `wp_NewChannel/wp_Send/wp_Receive/wp_Close/wp_TrySend/wp_TryReceive/wp_Len/wp_Cap` | `chan_au_base.v:106-297@43d4efa` (canonical-weakest-spec problem documented at :244-263); `chan_au_{new,send,recv}.v` | ZERO channel WP/lifting laws — our concurrent Iris layer has only `wpC_fork`/`wpC_pure_det`/`wpC_spawned_strip` (`proofs/GoLeanProofs/LangC.lean`); channel facts export as operational history predicates / kernel certificates instead | **CAP** (deliberately deferred — slice-5 record: "no consumer this slice, no inert scaffolding"; lands with the decomposition arc) |
+| T3 | Logically-atomic channel-op spec set: `send_au/recv_au/close_au` + nested AUs + two incomparable nonblocking variants; proved `wp_NewChannel/wp_Send/wp_Receive/wp_Close/wp_TrySend/wp_TryReceive/wp_Len/wp_Cap` | `chan_au_base.v:106-297@43d4efa` (canonical-weakest-spec problem documented at :244-263); `chan_au_{new,send,recv}.v` | STILL ZERO channel WP/lifting laws — but the seam they land on now EXISTS (spec-parity S4): the decomposition pipe `proofs/GoLeanProofs/LangD.lean` (`StepDC`, the pairing simulation `stepM_erasedD`, run erasure, THE EXIT `goTripleC_of_wpD`, the `wpD_*` kit) is the recorded consumer boundary for the channel WP law family + protocol layer (P-S4-2). Concurrent Iris layer otherwise unchanged (`wpC_fork`/`wpC_pure_det`/`wpC_spawned_strip`, LangC); channel facts still export as kernel certificates / operational predicates (§7.2) | **CAP** (owed WITH its consumer: P-S4-2, the curated rows' D1 form) |
 | T4 | Select WP specs: `wp_select_blocking` (`[∧ list]` per-case AUs), `wp_select_nonblocking`, `wp_select_nonblocking_alt` (∗-separated with not-ready witnesses → provable-unreachable default) | `theory/chan.v:272-299,427-455,584-619@43d4efa`; unreachable-default demo `wp_select_nb_guaranteed_ready`, channel_select_tricky_examples.v:117 | None (same deferral as T3) | **CAP** (with T3) |
 | T5 | Channel idiom spec libraries: bag, broadcast, contrib (Actris ghost theory), future, handshake, lock, mpmc (1022 ln), spsc (668 ln) | `theory/chan/idioms/*@43d4efa` | None. [ANALYSIS] their idiom set is a map of raft's channel patterns — broadcast/done-channel and bag are what `v3_proof/protocol.v` imports | **CAP** (successor-arc, after T3) |
 | T6 | dsp/ — Actris dependent separation protocols over PAIRS of Go channels, with proofmode tactics (`wp_recv`/`wp_send`) and the COFE model in-tree | `theory/chan/idioms/dsp/{dsp,dsp_ghost_theory,proto_model,dsp_proofmode}.v@43d4efa`; example `wp_DSPExample` channel_dsp.v:35 | None (the "Actris-lite" layer named in D8 was deliberately not built in slice 5) | **CAP** (lowest urgency of the spec-layer family) |
-| T7 | Frame-quantified WP proofs over genuinely-spawning programs (their entire proof portfolio is this) | e.g. `wp_simple_join` channel.v:259, all of §5's examples | RECORDED SUCCESSOR DEBT: `goldenSpecC` is the sequential-degenerate lane; the spawning frame-quantified `GoSpecC` needs the pairing decomposition (pool `StepM` pairing touches two threads; iris-lean `Language` steps one) — slice-5 log + Surface.lean witness-status note | **CAP** (the named next-arc obstruction, sized) |
+| T7 | Frame-quantified WP proofs over genuinely-spawning programs (their entire proof portfolio is this) | e.g. `wp_simple_join` channel.v:259, all of §5's examples | THE TRIPLE HALF IS PAID (spec-parity S4): the recorded obstruction (pool `StepM` pairing touches two threads; iris-lean `Language` steps one) is discharged by the pairing decomposition (`LangD.lean`), and `spawnNoopTripleC` is the first frame-quantified `GoTripleC` at full `InitialSplit` strength on a genuinely spawning program (witness pair `spawnNoopReadoutC` + `spawnNoopTerminatesNormallyC`). Still owed: the safety half (`ProgressExecC` ∀-heap, P-S4-1) to assemble `spawnNoopSpecC`, and WP laws at channel positions (P-S4-2) before any of THEIR portfolio's shapes is reproducible | **CAP, narrowed** — their portfolio-wide practice vs our first instance; owed: P-S4-1 + P-S4-2 |
 | T8 | Prophecy variables (HeapLang-inherited; used at scale in vMVCC) | lang.v:244-245@43d4efa | None; slice-5 log records "no prophecies needed — primitive channels make lifting laws the atomic specs" | **DEL** for channels; revisit trigger: a future target needing future-dependent linearization |
 | T9 | Crash semantics + FFI worlds (disk, async_disk, filesys, grove network) and the storage-systems portfolio | lang.v FFI parameter; `testdata/examples/{append_log,wal,simpledb,...}` | Out of scope: our north star (etcd-io/raft, the library) needs no disk/net FFI | **DEL** — revisit trigger: a target change |
-| T10 | Translated Go stdlib surface: sync, atomic, time, strings, bytes, sort/slices (real stdlib pdqSort proved), context, fmt, encoding/binary, errors, io, log, math… | `etc/ci-goose-check.py:23-41@43d4efa` pins the source repos; `new/code/*`; ~60 stdlib wp lemmas + ~25 slices/sort | Our frontend refuses imports (`tools/nativefrontend/emit.go:4105,4148` — imported named types/methods fail closed) | **CAP** long-term; scoping Part B quantifies which corpus files this blocks |
+| T10 | Translated Go stdlib surface: sync, atomic, time, strings, bytes, sort/slices (real stdlib pdqSort proved), context, fmt, encoding/binary, errors, io, log, math… | `etc/ci-goose-check.py:23-41@43d4efa` pins the source repos; `new/code/*`; ~60 stdlib wp lemmas + ~25 slices/sort | Our frontend refuses imports (`tools/nativefrontend/emit.go:4105,4148` — imported named types/methods fail closed), with ONE carve-out since spec-parity S2: the `sync` surface (Mutex/RWMutex/WaitGroup/Once) lowers, and the import pipeline gained the explicit `--allow-import` vet seam (the four sync-only goose files landed R1-green) | **CAP** long-term; scoping Part B quantifies which corpus files this blocks |
 | T11 | North-star proof progress: in-progress etcd-raft + etcd verification (`wp_Node__Propose` Qed; etcd client 39 wp lemmas but 29 Admitted; readonly.v 955 ln, 5 Admitted) | `new/proof/go_etcd_io/raft/v3.v:17-29`, `v3_proof/*`, `etcd/client/*@43d4efa`; Go sources external: github.com/upamanyus/{etcd-raft,etcd} branch `goose` | Our quorum pilot is a raft fragment; no raft-package-scale work yet | **CAP** (this is the race; their surface is demonstrably WIP — 51 Admitted across new/proof's 376 wp lemmas) |
 | T12b | Select-with-select rendezvous (added at the arc-final audit, F11 2026-08-08 — a real they-have/we-lack gap the seeding missed while §1's rendezvous row implied parity): their blocking select's clauses call TrySend/TryReceive with blocking=true, posting/accepting offers (channel.go:66-92,151-172@3be88bb; chan_au_base chan.v:105-114 `chan_select_blocking` threads blocking into the clauses), and TestSelfSelect runs two concurrent BlockingSelect2 on one unbuffered channel (channel_test.go:848-891@3be88bb) | goose model + test, perennial defn | We REFUSE fail-closed (`select-with-select rendezvous (unmodeled this slice)`, Multi.lean; and over-broadly — any arriving select with a parked-select partner on ANY clause refuses even when another clause is cell-ready, audit F10). Corpus red markers channels/select-select/{core,beside-loop}; owner: the successor select slice (first step: per-clause refusal narrowing in `ArrivalOutcome`, then the offer-protocol rendezvous) | **CAP** on our side |
 | T12 | Sub-step interleaving granularity + operational race-UB by construction (two-step na accesses, `naMode Reading n | Writing`; racy access → stuck) | lang.v:543-546,1352-1396@43d4efa | We rejected naMode (grows by revision, D2+D3); registry-granularity + the NPDRF reduction OBLIGATION, whose statement is currently a REFUTABLE-as-written draft (NPDRF.lean; S3 audit) | **DEL** with an honest open metatheory debt on our side — their granularity story is complete by construction; ours rests on the unproven reduction |
@@ -139,11 +140,20 @@ channel law family land, "we can state and discharge GoSpecC instances
 for their verified channel examples" is the parity claim to aim at,
 program by program.
 
+Arc-end note (spec-parity close, 2026-08-10): the spec-parity arc
+ENGAGED this list — the select-tricky trio, muxer `client`, and the
+dsp example now carry kernel-checked ∀-schedule families beside their
+upstream Qeds (per-statement rows in §7.2; per-row gap: the
+frame-quantified `GoSpecC`, blocked on P-S4-1/P-S4-2 exactly as this
+section's [ANALYSIS] anticipated). §7.4 counts the rest of the
+60-item tree by reason.
+
 ## 6. Imported-corpus status (goose-parity buildout lane)
 
 Last-reviewed: goose-parity end-of-buildout, 2026-08-08
 (docs/2026-08-08_goose-parity-end-of-buildout.md is the closing
-report). The
+report); arc-end addendum below added at the spec-parity close,
+2026-08-10. The
 `Corpus/coverage/exec/imported-goose/` lane (provenance-tagged, verbatim
 bodies, goose @ 3be88bb — pipeline `scripts/import-goose`, charter
 `docs/2026-08-07_goose-parity-charter.md`) is populating; this section
@@ -215,6 +225,19 @@ CANONICAL-STREAM `.normal` readout (weaker than the designated
 their `test_fun_ok` is Iris partial correctness with no termination
 claim at all (row O8).
 
+Arc-end addendum (spec-parity arc close, 2026-08-10): branch totals at
+the arc tip — **82 units / 176 imported rows: 156 R1 PASS, 20 recorded
+fail-closed frontend-export FAILs, zero deliberate reds** (commands:
+`find Corpus/coverage/exec/imported-goose -mindepth 2 -maxdepth 2 -type d
+| wc -l`; `awk` over `baselines/native-full.tsv`'s `imported-goose/`
+rows). **9 units carry staleness-guarded pinned lowerings**
+(`scripts/check-imported-pins` PINS registry: block, defer, nil,
+mapliteral, const, rune, select-tricky-examples, muxer, actris-example)
+→ 73 unpinned (the P-S3-2 lever). Spec-level standing: 6 sequential D1
+pairs (R3) + 6 channel ∀-schedule families — the per-example
+statement-by-statement comparison is §7 below; per-row dispositions in
+`docs/spec-parity-r3-manifest.md`.
+
 Batch-2 parity delta worth a row of its own: goose's two
 `failing_test*` semantics oracles (`failing_testFunctionOrdering`,
 `failing_testArgumentOrder`, testdata/examples/semantics/
@@ -231,3 +254,187 @@ run R1 differential PASS on our side
 (`imported-goose/semantics/function-ordering/{failing-function-ordering,
 failing-argument-order}`): evaluation-order fidelity where their
 translation diverges from gc.
+
+## 7. The per-example spec-parity table (spec-parity arc close, 2026-08-10)
+
+The charter's slice-5 artifact (`docs/2026-08-09_spec-parity-arc-charter.md`
+item 5): one row per covered example — their lemma ↔ our internal
+triple ↔ our export/readout ↔ strength delta BOTH directions.
+**Location choice, recorded**: this table extends the standing matrix
+rather than opening a dedicated doc — one canonical comparison home,
+already under this file's maintenance contract (rows move in the same
+arc that moves their truth; the R3 manifest
+`docs/spec-parity-r3-manifest.md` stays the per-program disposition
+record, this table the per-STATEMENT comparison).
+
+Ground rules. All upstream statuses at `deps/perennial` @ 43d4efa,
+re-measured for this table (`grep -n 'Lemma\|Qed\.\|Abort\.\|Admitted'
+<file>` in `new/proof/github_com/mit_pdos/perennial/goose/testdata/
+examples[/semantics_proof]`); denominators re-measured: 36
+`test_fun_ok` statements / 29 `Qed` (incl. the non-oracle
+`wp_shouldPanic`) / 7 `Abort` / 1 `Admitted` (commands in the manifest
+header, re-run at arc close, matching). **No ordering claim is made
+between the two sides' judgments anywhere** (the slice-3/4 discipline):
+no relation between GooseLang WPs and our judgments is defined, so
+every delta is an itemized difference, not a ranking. Our-side axiom
+budget throughout: `[propext, Classical.choice, Quot.sound]`, checked
+by the in-build Audit sweep; nothing in this table is designated unless
+the D3 curation says so.
+
+### 7.1 Feature class 1 — sequential boolean oracles (the `test_fun_ok` class)
+
+Shared statement forms (fixed by the slice-3 exemplar,
+`docs/2026-08-10_wp-walk-driver.md` §1; all six rows instantiate them
+over the unit's staleness-guarded pinned lowering, ci step 1c5):
+
+- **internal triple** — `<name>SpecC : GoSpecC <unit>Lowered.typeDefs.toList
+  <unit>Lowered.funcs <unit>Lowered.methods <env> (r ↦ ⟨int, 0⟩) driver
+  (r ↦ ⟨int, 1⟩)` at full `InitialSplit` strength
+  (sequential-degenerate lane, stated so — these programs spawn
+  nothing);
+- **export/readout** — `<name>ReadoutC : ∀ fuel ch σf ch', execProg
+  fuel <env> <seed> ch driver = .ok (.normal σf, ch') → loadLoc σf
+  (.base ⟨0⟩) = .ok (.int 1 .int)` — first-order, pool-carrier,
+  deletion-test-clean (no Iris, no relation, no tactic in the
+  statement).
+
+Shared strength delta, BOTH directions (the corrected S3-audit
+wording, wp-walk-driver §1): THEIR `test_fun_ok` is an unannotated Iris
+WP — partial-correctness `NotStuck` over GooseLang, which already
+carries no-stuck safety and (GooseLang makes racy accesses stuck)
+race-freedom on their model; heap-general and compositional about the
+upstream FUNCTION. OURS is grounded in the executable, differentially
+tested interpreter (the same `execProg` the `go run` oracle validates),
+over the frontend's ACTUAL lowering, with a first-order readout twin
+readable from base definitions; driver-level (the wrapper program).
+Neither side's judgment here claims termination (our separate
+composition `compareNilToNilTerminatesNormally` adds the termination
+half on the sequential carrier for the exemplar; P-S3-5 parks the
+joint form). Framing is NO delta (their `∀ Φ` WP frames natively).
+
+| example (imported-goose) | their lemma @ 43d4efa | our internal triple | our export | per-row delta |
+|---|---|---|---|---|
+| semantics/nil `testCompareNilToNil` | `wp_testCompareNilToNil`, nil.v:29, **Qed** :31 | `compareNilToNilSpecC` (`Specs/GooseParityNilWP.lean`) | `compareNilToNilReadoutC`; + `compareNilToNilTerminatesNormally` (R2+R3 composition, sequential carrier) | genuine parity row (both sides prove); shared delta only. Designation CANDIDATE pair (D3) |
+| semantics/nil `testCompareSliceToNil` | nil.v:9, **Abort** :20 (their TODO: "need a lemma showing allocations are non-nil") | `compareSliceToNilSpecC` | `compareSliceToNilReadoutC` | our favor at example level: upstream attempted and abandoned; we discharge |
+| semantics/nil `testComparePointerToNil` | nil.v:22, **Abort** :27 (TODO: "points-tos are non-null") | `comparePointerToNilSpecC` | `comparePointerToNilReadoutC` | ditto |
+| semantics/nil `testComparePointerWrappedToNil` | nil.v:33, **Abort** :38 (TODO: "array points-to is non null") | `comparePointerWrappedToNilSpecC` | `comparePointerWrappedToNilReadoutC` | ditto |
+| semantics/nil `testComparePointerWrappedDefaultToNil` | nil.v:40, **Qed** :46 | `comparePointerWrappedDefaultToNilSpecC` | `comparePointerWrappedDefaultToNilReadoutC` | genuine parity row; shared delta only |
+| semantics/block `testExplicitBlockStmt` | **no statement** (block has no lemma in semantics_proof/) | `explicitBlockSpecC` (`Specs/GooseParityBlockWP.lean`; + sequential `explicitBlockSpec`) | `explicitBlockReadoutC` | same-class coverage row, not a parity row |
+
+Deltas AGAINST us in this class, named (manifest rows, unchanged at
+arc close): `testInterfaceNilWithType` (nil.v:48, **Qed** :50) —
+out-of-class at R3, the short-circuit `Expr.and`/`Expr.or` WP law gap;
+plus the FOUR frontend-blocked upstream-Qed oracles
+(`testStructUpdates` structs.v:9 Qed :11; `testPrimitiveTypesEqual`,
+`testDefinedStrTypesEqual`, `testListTypesEqual` type_equality.v:9/13/17
+Qed :11/15/19 — all `FAIL frontend-export` in the tracked baseline, the
+short-circuit-operand quarantine).
+
+### 7.2 Feature class 3 — the curated channel exemplars
+
+Shared statement family per row (slice 4,
+`docs/2026-08-10_gospecc-decomposition.md` §6 option (a);
+`Specs/GooseParityChannels.lean`, over the pinned lowerings): FIVE
+kernel theorems — `<row>Cert` (the kernel certificate
+`allStreamsOkPool post fuel = true`), `<row>AllSchedules` (∀-schedule
+verdict readout), `<row>NoDeadlock`, `<row>NoRace`,
+`<row>TerminatesNormallyC` — all interpreter-vocabulary. NOT the D1
+pair; each row's recorded gap is the frame-quantified `GoSpecC`
+(needs the decomposition pipe's consumers + the channel WP law family,
+P-S4-1/P-S4-2).
+
+Shared strength delta, BOTH directions (the manifest FC3 paragraph, as
+corrected at the S4 audit): THEIRS are heap-general compositional Iris
+triples about the upstream functions (protocol/ghost-carrying),
+partial-correctness `NotStuck` — no termination and no
+deadlock-freedom (blocking is loop-based, so `NotStuck` holds of a
+parked-forever schedule); their channel semantics is the goose
+translation of a Go model package that IS well tested in Go (incl.
+against real channels, upstream CI) — the Rocq/GooseLang model and the
+translation step are executed by no test. OURS are seed-concrete (no
+frame quantifier — WEAKER in generality), driver-level, and quantify
+EVERY modeled schedule of the differentially tested `execProg` with
+totality + exact verdict + deadlock- and race-refusal-freedom —
+classes their logic does not state (rows O3/O6/O8).
+
+| corpus row (imported-goose/channel/) | their lemma @ 43d4efa | our theorems (namespace, verdict) | per-row note |
+|---|---|---|---|
+| select-tricky-examples `nb-not-ready` | `wp_select_nb_not_ready`, channel_select_tricky_examples.v:71, **Qed** :114 | `ChannelSelectTricky.nbNotReady{Cert,AllSchedules,NoDeadlock,NoRace,TerminatesNormallyC}`, verdict 1 | parity at ∀-schedule strength; gap: frame-quantified GoSpecC |
+| select-tricky-examples `nb-guaranteed-ready` | :117, **Qed** :137 (incl. their proved-unreachable default) | `…nbGuaranteedReady*`, verdict 1 | spawns nothing — the sequential-lane triple is ALSO blocked (sequential channel WP laws, §6(c) declined with reason) |
+| select-tricky-examples `nb-full-buffer-not-ready` | :219, **Qed** :258 | `…nbFullBuffer*`, verdict 1 | same gaps as `nb-guaranteed-ready` |
+| muxer `async` | **no upstream lemma** for `Async` (searched `channel*.v`; `wp_HelloWorldAsync` is a different function) | `ChannelMuxer.async*`, verdict "async" | coverage row, not a parity row |
+| muxer `client` | `wp_Client`, channel_dsp.v:152, **Qed** :172 | `ChannelMuxer.client*`, verdict "Hello, World!" | leaked parked server at main's exit is inside the modeled envelope (D6/L5) |
+| actris-example (dsp) | `wp_DSPExample`, channel_dsp.v:35, **Qed** :57 (dependent-separation-protocol session) | `ChannelActris.dsp*`, verdict 42 | flagship row; `dspCert`+`dspAllSchedules` are the class's designation CANDIDATES (D3) |
+
+### 7.3 Golden exemplars with an upstream correspondence (class analogues, not verbatim rows)
+
+Our golden/designated programs are AUTHORED, not imported — where one
+corresponds to an upstream example it is a correspondence of feature
+CLASS, never a verbatim-body parity row. Rows with no upstream
+counterpart (the golden slice `goldenSpecC`/`goldenReturnsTwoC`, the
+recover and quorum families, `spawnNoopTripleC`, the golden select-done
+probe) are deliberately NOT tabled here.
+
+| ours (designated unless noted) | upstream analogue @ 43d4efa | correspondence + deltas both directions |
+|---|---|---|
+| the fork/join family — `forkJoinAllSchedules42`, `forkJoinNoDeadlock`, `forkJoinNoRace`, `forkJoinTerminatesNormallyC` (+ stream pins; `Specs/GoldenForkJoin.lean`, designated + Comparator-replayed) | `wp_simple_join`, channel.v:259, **Qed** :287 | class analogue: spawn a worker, join through a channel. Bodies differ (theirs: buffered(1) done-signal + shared string write, examples.go:50; ours: unbuffered send of 42 into the pinned cell). Theirs: heap-general compositional partial-correctness triple. Ours: seeded ∀-schedule totality + exact verdict + no-deadlock/no-race, kernel-certified, designated. No ordering claimed |
+| google-search membership certification (corpus `imported-goose/channel/google-search`, `members=6`, `tier=slow`, `cases.tsv`; certified set re-checked complete at exactly six members, S1 record) | `wp_Google`, channel_google.v:165, **Qed** :412 (permutation postcondition `xs ≡ₚ google_expected q`) | the delta is METHOD, not coverage (§6 note): theirs is a proved Iris triple with the set-membership content; ours is machine-CERTIFIED reachability of all 6 arrival orders (envelope completeness their partial-correctness triple does not state) + the executable differential. NO Lean theorem on our side for this unit (its 5-worker pick tree is past the kernel checker's cost envelope — P-S4-5) |
+
+### 7.4 Population, both directions
+
+**What upstream has that we do not attempt (or cannot yet), counted by
+reason.**
+
+- *Sequential `test_fun_ok` class* (36 statements, 28 proved): our
+  theorems cover 5 of the 36 (2 their-Qed + 3 their-Abort). Of the
+  remaining 31: **1 out-of-class at R3** (`testInterfaceNilWithType` —
+  the short-circuit law gap), **4 frontend-blocked at R1** (all
+  upstream-Qed; the short-circuit-operand quarantine), **26
+  no-pinned-lowering** (21 of them upstream-Qed; R1-green rows exist,
+  the lowering terms were never pinned — the P-S3-2 import-tooling
+  lever, a policy call, not a proof gap). Class-2 units (const, rune,
+  mapliteral) and the defer oracles have NO upstream `test_fun_ok`
+  statements and are our not-attempted coverage backlog (manifest,
+  reasons recorded).
+- *Channel-examples proof tree* (60 Lemma/Theorem items, all
+  Qed-closed; command re-run at arc close: `grep -cE
+  '^(Lemma|Theorem)' channel*.v channel/{workq,etcd_session}.v` = 60 —
+  `channel_examples.v`/`channel_examples_init.v` state none): our
+  curated set discharges ∀-schedule families beside **5** of them (the
+  three trio lemmas + `wp_Client` + `wp_DSPExample`). The remaining 55
+  by reason: **10 P2-parked** (fibonacci 5 + higher-order 3 — the
+  recorded import-enumeration parking; muxer `client-old`/
+  `make-greeting`'s `wp_MapClient` channel_dsp.v:271 Qed :313 +
+  `wp_makeGreeting` :358 Qed :385 — P-S4-3); **9 beyond the checker's
+  cost envelope** (channel_google.v — the unit IS imported, R1-green,
+  membership-certified; §7.3's row records the method delta; P-S4-5);
+  **21 not imported** (channel.v 12 + workq 4 + etcd_session 5 —
+  upstream units outside the imported corpus; `wp_simple_join` is
+  class-analogued by §7.3's fork/join row); **15 imported but
+  unattempted at spec level** (select-tricky's other 7 incl. the
+  ≥2-ready examples needing checker L2 branching, dsp's other 5,
+  search-replace's 3 — R1-green rows, no certificates written; visible
+  manifest population, not silent skips).
+
+**What we prove/validate that they do not.**
+
+- The **3 upstream-Abort discharges** (§7.1 rows 2–4): oracles they
+  attempted and abandoned, with their own TODOs naming the missing
+  lemmas.
+- **2 coverage rows with no upstream statement** (semantics/block,
+  muxer async).
+- Per-row on all six channel exemplars: ∀-modeled-schedule TOTALITY +
+  exact verdict + no-deadlock + no-race (their logic states no
+  termination/liveness/deadlock-freedom — rows O3/O6/O8).
+- **Explicitly-unverified upstream variants run differentially green
+  here**: muxer-unverified/{done,drained} (upstream
+  `muxer_unverified.go`, Cond the recorded reason) and
+  parallel-search-replace — R1 PASS rows.
+- **Their known-wrong translation rows**: goose's two `failing_test*`
+  evaluation-order oracles run R1 differential PASS here (§6 batch-2
+  note) — fidelity where their translation is documented incorrect
+  vs gc.
+- The whole imported set is EXECUTED against `go run` (176 rows, 156
+  PASS, the rest recorded fail-closed) — upstream's example tests are
+  translation-golden only; nothing executes the Rocq model (rows
+  O1/O2).
