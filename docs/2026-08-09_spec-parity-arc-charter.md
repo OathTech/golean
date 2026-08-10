@@ -307,8 +307,17 @@ established options format where latitude exists.
 Slice 5 is RECORDS-ONLY (work-plan item 5): zero Lean edits, zero
 corpus edits — the parity table, the matrix brought to arc-end state,
 this closure record, the cross-reference sweep. Gate at tip:
-`scripts/ci` PASS (records-only — zero drift expected and observed;
-the 44 designated statements byte-identical, verified below).
+`scripts/ci` PASS — every step fresh (proofs + Audit gate, statement-TCB
+closure, imported-pins staleness guards, eval tests, negative diff)
+EXCEPT the full-differential line, which is the CACHED full run
+recorded at 1c0b293f (`baseline diff FULL (1465/1465, no regression)`,
+gate-marked stale because HEAD moved) — that cached run is the S4
+polish round's FIRST-HAND fresh run at this branch's base content, and
+the s5 window cannot drift it by construction: `git diff --name-only
+bab76304..tip` is docs/ + TODO.md only (stated per the S4 stale-figure
+lesson, not silently inherited). The 44 designated statements are
+byte-identical over the slice (no proofs/ path in the diff; name-list
+and closure gates green).
 Deliverables: **the per-example spec-parity table** as matrix §7
 (`docs/goose-perennial-comparison.md` — location choice recorded
 there: the standing matrix is the one canonical comparison home;
