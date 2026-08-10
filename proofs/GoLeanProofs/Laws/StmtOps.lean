@@ -40,9 +40,10 @@ What lives here:
    2b. **The ALLOCATING apply core** — wide ops that allocate a fresh
    cell INSIDE `applyStmtOp` and publish a handle to it in their target:
    `wp_stmt_op_apply_alloc_store` on the general `wp_alloc_store_step`
-   core (`Lifting.lean`), with `wp_make_map` and `wp_make_slice` as its
-   two instances. `newValue` and `appendSlice`'s spill path are the same
-   shape and stay owed (no walk forces them yet).
+   core (`Lifting.lean`), with `wp_make_map`, `wp_make_slice` and
+   `wp_new_value` (spec-parity slice 3 — the imported-goose exemplar
+   forced it) as its instances. `appendSlice`'s spill path is the same
+   shape and stays owed (no walk forces it yet).
 3. **`sortSlice`** (`wp_sort_slice`) — the `slices.Sort` extern. A slice's
    backing store is ONE heap cell holding an `.array`, so despite the
    multi-element read+write this is a single-cell step: the
@@ -411,6 +412,43 @@ theorem wp_make_slice {elem : Ty} {a : Addr} {n : Nat} {oldcell : HeapCell}
   have hn : ¬ ((n : Int) < 0) := by omega
   simp [applyStmtOp, valueAsLoc, valueAsInt, natFromNonnegativeInt, hn,
     hbacking σ htypes, ExecState.alloc, ExecState.freshLoc, hst,
+    Bind.bind, Except.bind, applyStmtOpCore]
+
+/-- **`p = new(T)`** as ONE step (the `newValue` wide op): allocate the
+fresh cell holding the delivered initializer value `v` at declared type
+`typ` (`new(T)` delivers `T`'s default value as the operand; Go 1.26's
+`new(expr)` delivers the expression's value) and store a pointer to it
+into the target. Same core as `wp_make_map`/`wp_make_slice`; `hstore`
+is the cell-conditioned target store, quantified over the fresh address
+because the stored value names it. Witness: the imported-goose exemplar
+walk (`Specs/GooseParityNilWP.lean`, the `$c2 = new(*uint64)` step of
+`wp_testCompareNilToNil_body` — spec-parity slice 3, same commit). -/
+theorem wp_new_value {typ : Option Ty} {a : Addr} {oldcell : HeapCell}
+    (newcell : Addr → HeapCell) {v : GoValue} {env k}
+    (hstore : ∀ (σ : ExecState) (fa : Addr), σ.types = GoCoreGS.types GF →
+      Heap.lookup σ.heap (.base a) = some oldcell →
+      storeLoc σ (.base a) (.addr (.base fa))
+        = .ok { σ with heap := Heap.set σ.heap (.base a) (newcell fa) }) :
+    a.id ↦ oldcell
+      ∗ iprop(∀ fa : Addr, fa.id ↦ (⟨typ, v⟩ : HeapCell)
+          ∗ a.id ↦ newcell fa -∗ WP (Config.next k) @ s ; E {{ Φ }})
+      ⊢ WP (Config.retV v
+            (.stmtOpK (.newValue typ) 1 [.addr (.base a)] [] env k))
+          @ s ; E {{ Φ }} := by
+  iapply (wp_stmt_op_apply_alloc_store (done := [.addr (.base a)])
+    (fcell := (⟨typ, v⟩ : HeapCell)) newcell)
+  intro σ ch htypes hlook hne
+  have hlook' : Heap.lookup
+      (Heap.set σ.heap (.base ⟨σ.nextAddr⟩) ⟨typ, v⟩) (.base a)
+      = some oldcell := by
+    have := heap_lookup_set_base_ne (h := σ.heap) (n := a.id)
+      (b := (⟨σ.nextAddr⟩ : Addr)) (c := (⟨typ, v⟩ : HeapCell))
+      (fun he => hne he.symm)
+    simpa using this.trans (by simpa using hlook)
+  have hst := hstore { σ with
+      heap := Heap.set σ.heap (.base ⟨σ.nextAddr⟩) ⟨typ, v⟩,
+      nextAddr := σ.nextAddr + 1 } ⟨σ.nextAddr⟩ htypes hlook'
+  simp [applyStmtOp, valueAsLoc, ExecState.alloc, ExecState.freshLoc, hst,
     Bind.bind, Except.bind, applyStmtOpCore]
 
 /-! ## 3. `sortSlice` — the `slices.Sort` extern -/
