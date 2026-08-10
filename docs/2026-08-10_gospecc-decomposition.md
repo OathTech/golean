@@ -404,3 +404,43 @@ plus the trio certificates as its first real consumers.
 - **Checker L2 branching** (§6(c)): only if a future curated row hits
   a genuinely multi-ready select.
 
+## 10. Designation candidates + parking ledger (user-scale; AFK posture)
+
+Nothing is designated this slice (charter D3 — user's call at arc
+end); the 44 designated statements are byte-identical (ci's
+statement-TCB gate green at every commit). CANDIDATES recorded for the
+arc-end curation:
+
+- **The channel ∀-schedule class exemplar** (one per feature class,
+  the D3 pattern): `GoLean.ImportedGoose.ChannelActris.dspCert` +
+  `dspAllSchedules` — the flagship Actris prog3 row (upstream
+  `wp_DSPExample` Qed). Designating requires the F4 def-only hoist
+  (the P-S3-1 cost: `chanSeed`/drivers/readouts into a
+  core-import-only statement module) — same as slice 3's candidates.
+- `spawnNoopTripleC` is deliberately NOT a candidate yet: the
+  designated-shape summit for the decomposition lane is the assembled
+  `spawnNoopSpecC` (§9), premature to curate as a half.
+
+Parking ledger:
+
+- **P-S4-1 — `ProgressExecC` ∀-heap for the spawning witness** (§9
+  first bullet): the pool-reachability kit's first instance; sized as
+  its own movement; consumer `spawnNoopSpecC`. Until it lands the
+  slice's honest claim is exactly "the TRIPLE half of the debt is
+  paid".
+- **P-S4-2 — the channel WP law family + protocol layer** (§9 second
+  bullet): the curated rows' D1 form 1 and the fork/join
+  full-strength instance. Scale/order is an arc-planning call → user.
+- **P-S4-3 — muxer `client-old`/`make-greeting`**: upstream-Qed parity
+  rows (`wp_MapClient`/`wp_makeGreeting`) blocked on the recorded P2
+  import parking (enumeration cost) — reopening P2 is a cost call →
+  user.
+- **P-S4-4 — `chanCert_*` hoisting** (the generic seeded-cert
+  derivations living in a Specs module): a curation-time move, noted
+  in the module header; default keep-local.
+- **P-S4-5 — google-search's checker-idiom cost**: its 5-worker pick
+  tree is past this kernel checker's envelope (the CLI membership lane
+  carries it, tier=slow). Whether an R3-style statement for it should
+  wait for the decomposition lane or get a bespoke certificate is a
+  cost/priority call → user.
+
