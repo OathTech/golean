@@ -743,3 +743,66 @@ record. `scripts/ci` run PASS at this round's tip with the FULL
 differential line now measured against the RE-PINNED 1483-id
 baseline; 44 designated statements byte-identical (no designated
 module in any records commit; the ci name-list/closure gates green).
+## Amendment (2026-08-10, user-directed): slice 6 — equivalence minors
+
+Status: USER-APPROVED 2026-08-10 ("this all sounds reasonable") — appends a slice 6 to the arc; does not
+reopen slices 1–5 or their records.
+
+## Why this amendment
+
+The arc-end audit's logical-effect-parity dimension (user-mandated focus)
+established WHERE the arc's results are not yet equivalent to
+Goose/Perennial's, and the closure record names each direction honestly.
+User direction at the 2026-08-10 check-in: gaps that are *really part of
+the current design* roll into this arc before it closes; gaps that need
+*new instruments* belong to a successor arc (drafted separately:
+`docs/2026-08-10_channel-logic-arc-charter.md`, scoping only, not
+scheduled). The dividing test: does closing the gap require machinery this
+arc did not already build, or only theorems the existing machinery owes?
+
+## Slice 6 — equivalence minors (rolled in)
+
+1. **Fuel-independence lift.** Prove `execProgLoop_mono` (recorded this
+   arc as owed-not-shipped, machine-checked truth-equivalence argument in
+   matrix §7.2) and regeneralize the fixed-fuel channel-bundle theorems
+   (`Cert`/`AllSchedules`/`NoDeadlock`/`NoRace` at shipped bounds
+   200/400/800) to the `∃N, ∀ fuel ≥ N` form `TerminatesNormallyC`
+   already uses. Parity effect: removes fuel as an against-us axis from
+   §7.2 for the covered rows. The matrix/manifest fuel-axis paragraphs
+   are updated in the same commits (records move with the theorems, the
+   S5 discipline).
+2. **The P-S3-5 joint-carrier composition.** Close the recorded carrier
+   gap: one theorem per applicable class-1 row joining the R2
+   `Terminates` pin and the readout twin on a single carrier (the
+   machine-confirmed mismatch recorded at the S3 delta review). Parity
+   effect: the "bundle of separate theorems, conjunction claimed
+   informally" caveat narrows to the concurrent rows only.
+3. **Driver scaling tranche (bounded — USER MAY TRIM).** Resolve P-S3-2
+   in the bounded form: land the pin-backfill tooling lever and run the
+   `go_walk` driver over the units it can already reach (the same-class
+   sequential population; measured at the S3 fix round: 73 unpinned, 71
+   with ≥1 green row). Scope bound: tooling + driver application only —
+   any unit needing a NEW law or frontend capability is recorded
+   out-of-tranche, not chased. Parity effect: breadth, on the axis where
+   the gap is throughput rather than logic.
+4. **The BUG-053 class-closure delta review.** The generic fail-closed
+   method-set contract (user-directed, in flight at this amendment's
+   drafting) is the one un-reviewed delta on the branch; its focused
+   review folds into slice 6's audit rather than running standalone
+   (user direction 2026-08-10).
+
+Explicitly NOT rolled in (successor arc, new instruments): the channel
+WP law family + protocol layer; per-row frame-quantified triples; the
+NPDRF reduction proof; detector-completeness-or-recorded-asymmetry.
+Race-axis RECORDS are already honest (arc-end fix rounds); only the
+theorem question remains, and it is successor-scoped.
+
+## Discipline
+
+Unchanged and binding: sub-branch (`spec-parity-s6`) with the
+established audit cycle; red-first where behavior is pinned; zero
+unexplained drift; 44 designated byte-identical (designation still
+happens only at the user's D3 curation); honest records with
+figure-emitting commands. Slice 6 then re-enters the arc-close sequence:
+closure-record addendum, D3 curation, Comparator, rebase, merge
+sign-off, push sign-off.
