@@ -235,8 +235,13 @@ and the `Admitted` as proved. Measured:
 `grep -h 'Qed\.' *.v | wc -l` = 29,
 `grep -rn 'test_fun_ok semantics\.' *.v | wc -l` = 36,
 `grep -h 'Abort\.' *.v | wc -l` = 7 over semantics_proof/ @ 43d4efa.
-Every tracked restatement of the 37 figure was corrected the same
-round.]
+The standing restatements — the comparison matrix (×2), the
+end-of-buildout report, the arc charter (basis + slice-3 record), the
+S3 slice note and manifest — were corrected the same round; the
+buildout log's historical batch-entry mention carries an in-place
+annotation (delta-review sweep: the first version of this sentence
+claimed "every tracked restatement" while that line was still
+unannotated).]
 
 ## B.2 Dependency classification
 

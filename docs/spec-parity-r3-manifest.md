@@ -69,7 +69,8 @@ measured (`grep -n 'Qed\.\|Abort\.' nil.v`).
 | semantics/nil `testInterfaceNilWithType` | **Qed** (nil.v:50) | **out-of-class** — an oracle THEY prove and we currently cannot | verdict uses short-circuit `&&` (`Expr.and`): NO WP law exists for the short-circuit forms (they have their own machine rules, not `strictPlan`). The `Expr.and`/`Expr.or` law family is recorded future law work. |
 | semantics/block `testExplicitBlockStmt` | no `test_fun_ok` statement (block.go has no lemma in semantics_proof/) | **proved** (same-class coverage, not a parity row) | `Specs/GooseParityBlockWP.lean`, `explicitBlock*` |
 | semantics/defer (2 oracles) | no `test_fun_ok` statements | **not-attempted** | R2-pinned; bodies use `deferCall` + `funcVal` closures — the defer drain laws exist (`Laws/Unwind`, cap1 family) but the walk composition is a different frame discipline than the kit wrapper; sized as its own movement. |
-| semantics (other R1-green units: comparisons, precedence, loops, switch, vars, operations, int-conversions, conversions, multiple-return, new, allocator, builtin, first-class-function, function-ordering, structs, slices, maps, interfaces, …) | 30 of their 36 `test_fun_ok` statements (incl. 25 of the 28 Qeds) lie in these trees | **no-pinned-lowering** | R1-green rows exist; their lowering terms were never pinned into `proofs/` (the R2 buildout pinned 6 units). Pinning is mechanical (the import pipeline's term generator + ci 1c5 guard) and is the scaling lever for the next R3 movement. |
+| semantics — the R1-green remainder (comparisons, precedence, loops, switch, vars, operations, int-conversions, conversions, multiple-return, new, allocator, builtin, first-class-function, function-ordering, slices, maps, interfaces, structs' 8 green rows, …) | 26 of their 36 `test_fun_ok` statements (incl. 21 of the 28 Qeds) have R1-PASS rows here (delta-review recount — the first rewrite said "30 … incl. 25 Qeds", wrongly counting the 4 frontend-blocked rows below as R1-green) | **no-pinned-lowering** | R1-green rows exist; their lowering terms were never pinned into `proofs/` (the R2 buildout pinned 6 units). Pinning is mechanical (the import pipeline's term generator + ci 1c5 guard) and is the scaling lever for the next R3 movement. |
+| semantics/structs `testStructUpdates`; semantics/type-equality `testPrimitiveTypesEqual`, `testDefinedStrTypesEqual`, `testListTypesEqual` | **Qed** ×4 (structs.v:11; type_equality.v:11,15,19) | **out-of-class at R1** — 4 upstream-proved oracles we cannot even RUN through the differential | all four rows are `FAIL frontend-export` in the tracked baseline (the recorded call-in-short-circuit-operand quarantine — the buildout log's class): `type-equality` is one of the all-fail-5 units (0/3 green), `structs` is mixed (8/9). NOT a pinning item — a frontend capability gap, strictly earlier than the `&&` R3 law gap. |
 
 ## Feature class 2: authored checksum wrappers (unittest/storage lanes)
 
@@ -99,8 +100,14 @@ rows, not parity rows.
     lemmas) — rows where our result goes past theirs;
   - **1 is same-class coverage** with no upstream statement
     (semantics/block);
-  - and the one nil oracle we CANNOT do (`testInterfaceNilWithType`,
-    the `&&` gap) is one THEY prove — the delta against us, recorded.
+  - and the deltas AGAINST us are **five** upstream-Qed oracles, not
+    one (delta-review recount): `testInterfaceNilWithType` (R1-green,
+    R2-pinned, blocked only at R3 — the `&&` law gap) plus the FOUR
+    frontend-blocked rows above (`testStructUpdates`,
+    `testPrimitiveTypesEqual`, `testDefinedStrTypesEqual`,
+    `testListTypesEqual` — `FAIL frontend-export` at R1, the
+    short-circuit-operand quarantine), which they prove and we cannot
+    yet run.
 - Attempted and stopped: 0 (nothing shipped with open side-goals).
 - Out-of-class: 1 (recorded gap: short-circuit law family).
 - Not-attempted, reasons recorded: 5 (2 defer + const + rune +

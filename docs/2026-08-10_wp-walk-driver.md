@@ -74,8 +74,13 @@ precedent)** — for each proved oracle, two theorems:
    honest deltas: OURS is grounded in the executable, differentially
    tested interpreter (the same `execProg` the `go run` oracle
    validates, over the frontend's actual staleness-guarded lowering),
-   with the frame-quantified `InitialSplit` pre and a first-order
-   readout twin; THEIRS is stated over a Rocq model no test executes.
+   with a first-order readout twin readable from base definitions;
+   THEIRS is stated over a Rocq model no test executes. (Delta-review
+   correction: "the frame-quantified `InitialSplit` pre" was first
+   listed here as a delta — dropped: their `∀ Φ` Iris WP frames
+   natively, so framing is no cross-model difference; and where the
+   two framing notions differ, ours is the terminal-state-only
+   `F.sub`, the weaker kind.)
    Neither side's R3-level judgment claims termination (our
    ∀-streams `Terminates` is the separate R2 pin; the composition is
    `…TerminatesNormally` below).
@@ -91,13 +96,21 @@ precedent)** — for each proved oracle, two theorems:
    readable from base interpreter definitions alone (deletion test:
    no Iris, no relation, no tactic machinery in the statement).
 
-Both are stated over the seeded TotalPins convention so they compose
-with the existing R2 pins (`Terminates` + canonical readout): for a
-proved oracle the R2 termination pin plus the R3 spec's safety half
-yields `TerminatesNormally` — INSTANTIATED at the exemplar
-(`compareNilToNilTerminatesNormally`, added at the S3 audit fix round:
-the first version asserted the composition without instantiating it),
-so "the pieces snap together" is a checked fact, not prose.
+Composition with the R2 pins, stated precisely (delta-review
+correction — the first sentence here said "BOTH … compose", which
+overreached): the R2 termination pin plus the R3 spec's safety half
+yields `TerminatesNormally` on the SEQUENTIAL carrier (the R2 pins'
+carrier) — INSTANTIATED at the exemplar
+(`compareNilToNilTerminatesNormally`, added at the S3 audit fix
+round). That is the TERMINATION half only: the shipped readout twin
+(form 2) is pool-carrier, so the two shipped theorems do not conjoin
+directly (machine-confirmed at the delta review — feeding the
+termination witness's `execStmt` run into the `execProg`-hypothesised
+readout is a type error). The joint sequential
+"completes-AND-verdict" form (the `goldenTotalReadout` precedent
+shape) is derivable from the kit's `goSpec_seeded_readout` — the delta
+review's probe compiled it — and is PARKED as P-S3-5 rather than
+claimed.
 
 **Non-vacuity**: the exemplar IS a discharge witness (a concrete
 program with every premise discharged — the readout twin instantiates
@@ -244,14 +257,20 @@ undesignated, listed in the manifest.
   DEF-ONLY, core-import-only module so Challenge's trusted closure can
   import them (`ForkJoinTargets`/`Statements` pattern; ci pins
   Challenge's imports, so skipping the hoist fails loud, never
-  silent). The S3 fix round moved the four convention defs out of the
+  silent). The S3 fix round moved six declarations out of the
   `GoLean.Surface` namespace into `GoLean.ImportedGoose` (namespace
-  hygiene), but they still LIVE in the Iris-importing kit module, and
+  hygiene: the four convention defs AND the two readout-derivation
+  THEOREMS — count corrected at the delta review; the theorems were
+  the more notable squatters), but they still LIVE in the
+  Iris-importing kit module, and
   `nilLowered`'s home (`ImportedGooseNil.lean`) carries theorems — the
   def-only split plus Challenge/Solution/judge-config/Audit wiring is
   the real designation cost, owed at curation time.
-- **P-S3-2 — Backfill pinned lowerings for the remaining ~72 R1-green
-  imported units?** Each pinned term is the R3 statement's subject AND
+- **P-S3-2 — Backfill pinned lowerings for the remaining 76 unpinned
+  imported units (71 with ≥1 R1-green row — figure recounted at the
+  fix round; this bullet first said "~72 R1-green", the stale
+  pre-recount number, corrected at the delta review)?** Each pinned
+  term is the R3 statement's subject AND
   joins the ci 1c5 staleness guard + pins registry (a standing
   maintenance surface per unit). Scaling R3 across the corpus needs
   them; how many, and whether the pin generator should be promoted
@@ -269,6 +288,16 @@ undesignated, listed in the manifest.
   `Tactics/GoWalk.lean` (shared tactic infrastructure used by the
   designated summit's proof); parked rather than edited mid-slice.
   Soundness is unaffected either way (the tactic is untrusted).
+- **P-S3-5 — The joint sequential "completes-AND-verdict" form (the
+  `goldenTotalReadout` precedent shape) for R3 rows.** The shipped
+  pair is `TerminatesNormally` (sequential carrier, the R2 pins')
+  + the pool-carrier readout twin, which do not conjoin directly
+  (§1's carrier note). The sequential joint statement is derivable in
+  a few lines from the kit's `goSpec_seeded_readout` (the delta
+  review's probe compiled it); whether to ship it per-row, ship a
+  pool-carrier `TerminatesNormallyC` instead (via
+  `execProg_single_eq_execStmt`), or leave the two halves as stated
+  is a spec-idiom call → user at curation. Parked, not claimed.
 
 ## 7. Build log
 
@@ -281,9 +310,12 @@ undesignated, listed in the manifest.
   `GooseParity*` to stay off it, recorded here and in the kit header.
   Axioms `[propext, Classical.choice, Quot.sound]` on all three
   deliverables; full `scripts/ci` PASS, zero drift — all 1465 corpus
-  ids bit-identical to the baseline (1351 PASS / 114 recorded FAIL;
-  the earlier "1465/1465" shorthand read like an all-pass claim,
-  corrected at the S3 audit).
+  ids match the tracked baseline on `result`+`stage` per id (the
+  recorded regression signal — `detail` is deliberately outside it;
+  1351 PASS / 114 recorded FAIL. The earlier "1465/1465" shorthand
+  read like an all-pass claim, corrected at the S3 audit; the interim
+  "bit-identical" wording overstated the comparison, scoped at the
+  delta review).
 - **Phase 2 (commit 2).** The exemplar body re-derived `go_walk`-driven,
   statement byte-identical; hand walk preserved
   (`wp_compareNil_body_hand`). Registration lesson recorded (§3):
@@ -305,7 +337,10 @@ undesignated, listed in the manifest.
   `normalizeValueForTy*`, `typeResolutionFuel`), which is what the
   next movement can template.
 - **S3 audit fix round (2026-08-10; ~4 surviving majors, all
-  claims/records — no code or proof defect).** (1) THE PARITY-RECORD
+  claims/records — no surviving MAJOR was a code or proof defect;
+  two minor/note items were record defects fixed partly via
+  proof-code edits, scoping corrected at the delta review).**
+  (1) THE PARITY-RECORD
   CLUSTER: upstream ground truth measured (28 proved / 36 stated
   `test_fun_ok`, 7 Abort, 1 Admitted; nil.v = 3 Qed + 3 Abort) — the
   manifest rewritten with a per-row upstream-status column, the
@@ -334,3 +369,31 @@ undesignated, listed in the manifest.
   statements, P-S3-1's "reversible" replaced with the F4 hoist cost,
   and the kit's convention defs moved off the `GoLean.Surface`
   namespace into `GoLean.ImportedGoose`.
+- **Delta-review polish round (2026-08-10; zero surviving
+  critical/major — record-precision minors + notes, applied per the
+  verifiers' accountings).** Population precision: the
+  no-pinned-lowering row recounted to 26/36 statements (21/28 Qeds)
+  R1-green-pinnable, with the FOUR upstream-Qed frontend-blocked
+  oracles (`testStructUpdates` + the three type-equality ones, the
+  short-circuit-operand quarantine) carved into their own
+  out-of-class-at-R1 row — and the deltas-against-us count corrected
+  to FIVE (they-prove/we-don't), named in the manifest and the
+  charter. Stale figures: P-S3-2's "~72 R1-green" → 76/71; the
+  buildout log's historical "9-pins-vs-37" line annotated in place;
+  the origin note's "every tracked restatement" completeness sentence
+  replaced by the enumerated sweep. Strength text: "frame-quantified
+  pre" dropped from the deltas (their `∀ Φ` WP frames natively;
+  where the notions differ ours is the terminal-state-only `F.sub`).
+  Composition: `compareNilToNilTerminatesNormally` annotated as the
+  TERMINATION half on the sequential carrier, the carrier gap to the
+  pool-carrier readout twin recorded (machine-confirmed type
+  mismatch), the joint sequential form PARKED as P-S3-5. Registry
+  honesty: the witness block's header now states the mechanism's
+  scope (name-existence/deletion tripwire; witness-citation drift
+  stays the audit's job) and relabels `wp_golean_driver` as a
+  deletion anchor, not a law witness; the kit's redundant re-opens
+  removed; the "four convention defs" count corrected to six
+  declarations (four defs + the two readout theorems). Drift
+  phrasing scoped: baseline comparison is `result`+`stage` per id,
+  not bit-identity. This entry's fix-round header above was rescoped
+  the same way ("no code or proof defect" → no surviving MAJOR was).

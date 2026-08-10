@@ -317,7 +317,11 @@ move to a def-only, core-import-only module (the
 P-S3-1. -/
 namespace GoLean.ImportedGoose
 
-open GoLean.GoCore GoLean.GoCore.Machine GoLean.Iris GoLean.Surface
+-- The file-level `open`s above cover this namespace too (delta-review
+-- cleanup: the redundant re-opens are gone); `GoLean.Iris` is the one
+-- ADDITIONAL namespace the readout derivations below need (the
+-- heaplet-bridge lemmas live there).
+open GoLean.Iris
 
 /-- The TotalPins seed for an imported program: the harness-owned output
 cell at base address 0, `nextAddr = 1` (the convention every imported
