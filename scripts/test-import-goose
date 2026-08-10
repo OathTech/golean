@@ -136,6 +136,102 @@ func testDualImport() bool {
 	return true
 }
 EOF
+
+cat > "$FAKE/testdata/examples/semantics/named_import.go" <<'EOF'
+package semantics
+
+import osx "os"
+
+func testNamedImport() bool {
+	_ = osx.Getpid
+	return true
+}
+EOF
+
+cat > "$FAKE/testdata/examples/semantics/blank_import.go" <<'EOF'
+package semantics
+
+import _ "os"
+
+func testBlankImport() bool {
+	return true
+}
+EOF
+
+cat > "$FAKE/testdata/examples/semantics/dot_import.go" <<'EOF'
+package semantics
+
+import . "os"
+
+func testDotImport() bool {
+	_ = Getpid
+	return true
+}
+EOF
+
+cat > "$FAKE/testdata/examples/semantics/comment_named_import.go" <<'EOF'
+package semantics
+
+import "sync"
+
+/* c */ import osx "os"
+
+func testCommentNamedImport() bool {
+	var mu sync.Mutex
+	mu.Lock()
+	mu.Unlock()
+	_ = osx.Getpid
+	return true
+}
+EOF
+
+printf 'package semantics\n\nimport "sync"\n\n\t/* t */ import _ "os"\n\nfunc testTabImport() bool {\n\tvar mu sync.Mutex\n\tmu.Lock()\n\tmu.Unlock()\n\treturn true\n}\n' \
+  > "$FAKE/testdata/examples/semantics/tab_import.go"
+
+cat > "$FAKE/testdata/examples/semantics/trailing_import.go" <<'EOF'
+package semantics
+
+import "sync"
+
+import . "os" // trailing comment
+
+func testTrailingImport() bool {
+	var mu sync.Mutex
+	mu.Lock()
+	mu.Unlock()
+	_ = Getpid
+	return true
+}
+EOF
+
+cat > "$FAKE/testdata/examples/semantics/block_mixed_import.go" <<'EOF'
+package semantics
+
+import (
+	"sync"
+	_ "os"
+)
+
+func testBlockMixedImport() bool {
+	var mu sync.Mutex
+	mu.Lock()
+	mu.Unlock()
+	return true
+}
+EOF
+
+cat > "$FAKE/testdata/examples/semantics/rawstring_no_import.go" <<'EOF'
+package semantics
+
+var doc = `
+import "os"
+import _ "net"
+`
+
+func testRawstringNoImport() bool {
+	return len(doc) > 0
+}
+EOF
 cat > "$FAKE/testdata/examples/semantics/has_main.go" <<'EOF'
 package semantics
 
@@ -228,7 +324,7 @@ fi
 expect_reject "non-allowed second import despite a grant" 'imports "os"' \
   --goose-root "$FAKE" --expect-rev "$REV" --allow-import sync \
   --source testdata/examples/semantics/two_imports.go --dest "$DEST_BASE/twoimp"
-expect_reject "unrecognized import form fails closed under a grant" "import form the vet does not recognize" \
+expect_reject "one-line block import: parser sees the os import" 'imports "os"' \
   --goose-root "$FAKE" --expect-rev "$REV" --allow-import sync \
   --source testdata/examples/semantics/odd_import.go --dest "$DEST_BASE/oddimp"
 # Round 2 (delta-review): the two zero-path-pass classes the first
@@ -236,10 +332,14 @@ expect_reject "unrecognized import form fails closed under a grant" "import form
 # and a non-line-initial import (the loose gate never fired at all) —
 # both die fail-closed now; and grant WIDTH is constrained to the
 # machine-modeled set.
-expect_reject "CR import form refused outright" "carriage-return bytes" \
+# Round 4: the parser vets these directly — the CR and comment-prefixed
+# forms are ordinary imports to go/parser and refuse by SET membership
+# (the round-2/3 form-based refusal messages are gone with the ad-hoc
+# recognizers).
+expect_reject "CR import form: parser sees the os import" 'imports "os"' \
   --goose-root "$FAKE" --expect-rev "$REV" --allow-import sync \
   --source testdata/examples/semantics/cr_import.go --dest "$DEST_BASE/crimp"
-expect_reject "comment-prefixed import fails the zero-output cross-check" "strict vet cannot account for" \
+expect_reject "comment-prefixed import: parser sees the os import" 'imports "os"' \
   --goose-root "$FAKE" --expect-rev "$REV" --allow-import sync \
   --source testdata/examples/semantics/comment_import.go --dest "$DEST_BASE/cmtimp"
 expect_reject "grant outside the modeled set refused" "not in the machine-modeled import set" \
@@ -250,9 +350,49 @@ expect_reject "grant outside the modeled set refused" "not in the machine-modele
 # unrecognized ones. Per-occurrence accounting now refuses the DUAL
 # shape (a recognized `import "sync"` beside a comment-prefixed
 # `/* c */ import "os"`), at the importer AND at the standing guard.
-expect_reject "dual-form file: recognized import cannot launder an unrecognized one" "strict vet cannot account for" \
+expect_reject "dual-form file: the sync import cannot launder the os one" 'imports "os"' \
   --goose-root "$FAKE" --expect-rev "$REV" --allow-import sync \
   --source testdata/examples/semantics/dual_import.go --dest "$DEST_BASE/dualimp"
+# Round 4 (delta-review, CRITICAL): named/blank/dot forms — every
+# round-3 bypass class, incl. the no-vet-conditional shape (a file
+# whose ONLY import is a line-initial named form used to skip the vet
+# entirely) — plus the comment-prefixed/tab-indented/trailing-comment
+# variants and a factored block with a disallowed mid-block entry.
+expect_reject "named import (the no-vet-conditional shape)" 'imports "os"' \
+  --goose-root "$FAKE" --expect-rev "$REV" --allow-import sync \
+  --source testdata/examples/semantics/named_import.go --dest "$DEST_BASE/namedimp"
+expect_reject "blank import" 'imports "os"' \
+  --goose-root "$FAKE" --expect-rev "$REV" --allow-import sync \
+  --source testdata/examples/semantics/blank_import.go --dest "$DEST_BASE/blankimp"
+expect_reject "dot import" 'imports "os"' \
+  --goose-root "$FAKE" --expect-rev "$REV" --allow-import sync \
+  --source testdata/examples/semantics/dot_import.go --dest "$DEST_BASE/dotimp"
+expect_reject "comment-prefixed NAMED import beside a granted sync" 'imports "os"' \
+  --goose-root "$FAKE" --expect-rev "$REV" --allow-import sync \
+  --source testdata/examples/semantics/comment_named_import.go --dest "$DEST_BASE/cnamedimp"
+expect_reject "tab-indented comment-prefixed blank import" 'imports "os"' \
+  --goose-root "$FAKE" --expect-rev "$REV" --allow-import sync \
+  --source testdata/examples/semantics/tab_import.go --dest "$DEST_BASE/tabimp"
+expect_reject "trailing-comment dot import" 'imports "os"' \
+  --goose-root "$FAKE" --expect-rev "$REV" --allow-import sync \
+  --source testdata/examples/semantics/trailing_import.go --dest "$DEST_BASE/trailimp"
+expect_reject "factored block with disallowed mid-block entry" 'imports "os"' \
+  --goose-root "$FAKE" --expect-rev "$REV" --allow-import sync \
+  --source testdata/examples/semantics/block_mixed_import.go --dest "$DEST_BASE/blockmiximp"
+# The PRECISION WIN (round 4): import-looking text inside a raw string
+# is NOT an import to the parser — the file has zero real imports and
+# now correctly LANDS (rounds 1-3 falsely refused it with "has
+# imports"; recorded as the fail-closed cost of the ad-hoc era).
+if out="$(run_import --goose-root "$FAKE" --expect-rev "$REV" \
+    --source testdata/examples/semantics/rawstring_no_import.go --dest "$DEST_BASE/rawimp")"; then
+  if grep -q '^// imports-allowed:' "$CASE_ROOT/rawimp/main.go"; then
+    echo "FAIL: raw-string case landed WITH a grant line (zero imports need none)"; fail=1
+  else
+    echo "ok: raw-string import-looking text correctly ACCEPTED, no grant line (parser precision)"
+  fi
+else
+  echo "FAIL: raw-string zero-import case falsely refused: $out"; fail=1
+fi
 # The STANDING GUARD's per-occurrence check, negative-tested on a
 # hand-assembled corpus (bypassing the importer, the way a
 # vet-hole-era landing would look): a sync-granted file carrying the
@@ -276,10 +416,37 @@ mkdir -p "$GUARD_ROOT"
 printf '# id\tsubject\targs\texpected_status\texpected_reason\tfeatures\n' > "$GUARD_ROOT/cases.tsv"
 if out="$(scripts/check-imported-goose --corpus-root "$TMP/guard-corpus" --goose-root "$FAKE" --expect-rev "$REV" 2>&1)"; then
   echo "FAIL: standing guard certified the dual-form (laundered) import: $out"; fail=1
-elif [[ "$out" != *"cannot account for"* ]]; then
-  echo "FAIL: standing guard rejected the dual-form file without the per-occurrence message: $out"; fail=1
+elif [[ "$out" != *'parsed import "os"'* ]]; then
+  echo "FAIL: standing guard rejected the dual-form file without the parser-derived message: $out"; fail=1
 else
-  echo "ok: standing guard refuses the dual-form (laundered) import per-occurrence"
+  echo "ok: standing guard refuses the laundered os import (parser-derived set vs grant)"
+fi
+# Grant-TAMPERING negative (round 4): a grant line naming sync on a
+# file that parses ZERO imports must FAIL (stale/tampered grant).
+GUARD2="$TMP/guard-corpus/semantics/tamper"
+mkdir -p "$GUARD2"
+{
+  echo "// GoLean imported-goose corpus case — upstream bodies VERBATIM."
+  echo "// source: testdata/examples/semantics/good.go @ $REV"
+  echo "// imported: 2026-08-10 by scripts/import-goose"
+  echo "// transform: package clause -> main; assembly order as listed; all"
+  echo "// GoLean-authored code sits below the harness marker."
+  echo "// imports-allowed: sync (--allow-import)"
+  echo "package main"
+  awk '!done && /^package[ \t]/ { done=1; next } { print }' "$FAKE/testdata/examples/semantics/good.go"
+  echo ""
+  echo "// --- GoLean harness ---"
+  echo ""
+  echo "func main() {}"
+} > "$GUARD2/main.go"
+printf '# id\tsubject\targs\texpected_status\texpected_reason\tfeatures\n' > "$GUARD2/cases.tsv"
+rm -rf "$TMP/guard-corpus/semantics/dualx"
+if out="$(scripts/check-imported-goose --corpus-root "$TMP/guard-corpus" --goose-root "$FAKE" --expect-rev "$REV" 2>&1)"; then
+  echo "FAIL: standing guard certified a grant line over zero parsed imports: $out"; fail=1
+elif [[ "$out" != *"stale or tampered grant"* ]]; then
+  echo "FAIL: tampered-grant rejection lacked the expected message: $out"; fail=1
+else
+  echo "ok: standing guard refuses a grant line with no matching parsed import (tamper direction)"
 fi
 rm -rf "$TMP/guard-corpus"
 

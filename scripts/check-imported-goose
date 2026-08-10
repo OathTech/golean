@@ -28,6 +28,17 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
 cd "$ROOT"
 
 PINNED_REV="3be88bbb4982f58e5813b6f0344302d5582c8e8a"
+# go preflight (round 4: the parser-based import vet needs the same
+# toolchain the differential oracle already requires).
+command -v go >/dev/null 2>&1 || { echo "check-imported-goose: FAIL — go not found (the import vet is go/parser-based)" >&2; exit 2; }
+LSIMPORTS="$(mktemp "${TMPDIR:-/tmp}/golean-lsimports.XXXXXX")"
+trap 'rm -f "$LSIMPORTS"' EXIT
+if ! buildmsg="$(GO111MODULE=off GOCACHE="${GOCACHE:-$PWD/artifacts/go-build-cache}" \
+    go build -o "$LSIMPORTS" "$PWD/tools/lsimports/main.go" 2>&1)"; then
+  echo "check-imported-goose: FAIL — cannot build tools/lsimports (the import vet): $buildmsg" >&2
+  exit 2
+fi
+
 CORPUS_ROOT="Corpus/coverage/exec/imported-goose"
 GOOSE_ROOT="deps/goose"
 EXPECT_REV="$PINNED_REV"
@@ -123,41 +134,22 @@ while IFS= read -r main_go; do
     continue
   fi
 
-  # Import-grant re-check (audit fix round 2026-08-10: the landing-time
-  # --allow-import grant used to live only in commit prose, so a file
-  # admitted under a too-wide grant — or through a parser hole — was
-  # invisible to every standing gate). Every above-marker import must
-  # appear on the file's own `// imports-allowed:` header line, parsed
-  # by the same strict fail-closed gofmt-shape recognizer the importer
-  # vet uses (any unrecognized import-shaped line fails).
-  # CR bytes above the marker are refused (delta-review round 2 — the
-  # importer refuses them at landing; the standing guard must agree).
-  if sed -n '1,/^\/\/ --- GoLean harness ---$/p' "$main_go" | grep -q "$(printf '\r')"; then
-    echo "check-imported-goose: FAIL [$rel] — carriage-return bytes above the marker (unvettable import forms)" >&2
+  # THE IMPORT-GRANT RE-CHECK (delta-review round 4, STRUCTURAL): the
+  # landed file's imports are re-derived by Go's OWN grammar
+  # (tools/lsimports, go/parser parser.ImportsOnly — the same helper
+  # and invariant as the importer's landing-time vet; rounds 1-3
+  # patched ad-hoc recognizers and each round a legal import form
+  # escaped). The parsed set must EQUAL the grant line's set exactly:
+  # a parsed import missing from the grant is an unvetted landing (or
+  # later tampering); a granted path with no matching import is grant
+  # tampering/staleness. Zero parsed imports need no grant line. The
+  # grant set stays inside the machine-modeled allow-set (sync).
+  # Parse failure = FAIL (fail closed). go/parser is the toolchain
+  # already trusted as the differential oracle — no new trust surface.
+  if ! parsed_imports="$("$LSIMPORTS" "$main_go" 2>&1)"; then
+    echo "check-imported-goose: FAIL [$rel] — import parse failed (fail closed): $parsed_imports" >&2
     fail=1
-  fi
-  # PER-OCCURRENCE accounting (delta-review round 3, MAJOR — the
-  # round-2 form was FILE-GLOBAL, so one recognized import laundered
-  # any number of unrecognized ones; the standing guard certified a
-  # sync-granted file carrying a comment-prefixed os import). Per
-  # LINE: every loose-gate hit above the marker must be a strictly
-  # recognized import line; any mismatch refuses. `//`-comment lines
-  # (the generated header, upstream line comments) are excluded from
-  # the loose count — they cannot carry live code.
-  cig_loose="$(sed -n '1,/^\/\/ --- GoLean harness ---$/p' "$main_go" | grep -v '^[[:space:]]*//' \
-    | grep -cE '(^|[^[:alnum:]_"])import[[:space:]]*[("]')" || true
-  cig_strict="$(sed -n '1,/^\/\/ --- GoLean harness ---$/p' "$main_go" | awk '
-      /^[ 	]*\/\// { next }
-      /^import[ 	]+"[^"]+"$/ { n++; next }
-      /^import[ 	]*\($/ { n++; inblk=1; next }
-      inblk && /^\)$/ { inblk=0; next }
-      inblk { next }
-      /^[ 	]*import[ 	("]/ { n++; next }
-      /^[ 	]*import"/ { n++ }
-      END { print n+0 }')"
-  if [[ "$cig_loose" -ne "$cig_strict" ]]; then
-    echo "check-imported-goose: FAIL [$rel] — import-like content the strict recognizer cannot account for above the marker ($cig_loose loose-gate line(s), $cig_strict strictly recognized)" >&2
-    fail=1
+    continue
   fi
   grant_line="$(sed -n 's/^\/\/ imports-allowed: \(.*\) (--allow-import)$/\1/p' "$main_go" | head -1)"
   for a in $grant_line; do
@@ -169,32 +161,29 @@ while IFS= read -r main_go; do
         ;;
     esac
   done
-  while read -r tag rest; do
-    case "$tag" in
-      PATH)
-        ok_grant=0
-        for a in $grant_line; do
-          [[ "$rest" == "$a" ]] && ok_grant=1
-        done
-        if [[ "$ok_grant" -ne 1 ]]; then
-          echo "check-imported-goose: FAIL [$rel] — above-marker import \"$rest\" is not on the file's imports-allowed grant line" >&2
-          fail=1
-        fi
-        ;;
-      BAD)
-        echo "check-imported-goose: FAIL [$rel] — unrecognized import form above the marker (gofmt shapes only): $rest" >&2
-        fail=1
-        ;;
-    esac
-  done < <(sed -n '1,/^\/\/ --- GoLean harness ---$/p' "$main_go" | awk '
-      /^import[ \t]+"[^"]+"$/ { match($0, /"[^"]+"/); print "PATH " substr($0, RSTART+1, RLENGTH-2); next }
-      /^import[ \t]*\($/ { inblk=1; next }
-      inblk && /^\)$/ { inblk=0; next }
-      inblk && /^[ \t]*"[^"]+"$/ { match($0, /"[^"]+"/); print "PATH " substr($0, RSTART+1, RLENGTH-2); next }
-      inblk { print "BAD " $0; next }
-      /^[ \t]*import[ \t("]/ { print "BAD " $0 }
-      /^[ \t]*import"/ { print "BAD " $0 }
-    ')
+  # parsed ⊆ grant
+  while IFS= read -r p; do
+    [[ -n "$p" ]] || continue
+    ok_grant=0
+    for a in $grant_line; do
+      [[ "$p" == "$a" ]] && ok_grant=1
+    done
+    if [[ "$ok_grant" -ne 1 ]]; then
+      echo "check-imported-goose: FAIL [$rel] — parsed import \"$p\" is not on the file's imports-allowed grant line (unvetted landing or tampering)" >&2
+      fail=1
+    fi
+  done <<< "$parsed_imports"
+  # grant ⊆ parsed (tamper/staleness direction)
+  for a in $grant_line; do
+    found=0
+    while IFS= read -r p; do
+      [[ "$p" == "$a" ]] && found=1
+    done <<< "$parsed_imports"
+    if [[ "$found" -ne 1 ]]; then
+      echo "check-imported-goose: FAIL [$rel] — grant line names \"$a\" but the file parses no such import (stale or tampered grant)" >&2
+      fail=1
+    fi
+  done
 done < <(find "$CORPUS_ROOT" -name main.go | sort)
 
 if [[ "$checked" -eq 0 ]]; then
