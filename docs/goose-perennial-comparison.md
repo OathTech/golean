@@ -300,8 +300,9 @@ the D3 curation says so.
 ### 7.1 Feature class 1 — sequential boolean oracles (the `test_fun_ok` class)
 
 Shared statement forms (fixed by the slice-3 exemplar,
-`docs/2026-08-10_wp-walk-driver.md` §1; all six rows instantiate them
+`docs/2026-08-10_wp-walk-driver.md` §1; all ten rows instantiate them
 over the unit's staleness-guarded pinned lowering, ci step 3a2 —
+count six → ten at the slice-6 driver tranche —
 the step label earlier arc records call "1c5"; it has been 3a2 since
 the branch base 2927085f, corrected across the arc docs at the S5
 audit):
@@ -347,6 +348,11 @@ natively).
 | semantics/nil `testComparePointerWrappedToNil` | nil.v:33, **Abort** :38 (TODO: "array points-to is non null") | `comparePointerWrappedToNilSpecC` | `comparePointerWrappedToNilReadoutC`; + `comparePointerWrappedToNilTotalReadout` (slice 6) | ditto |
 | semantics/nil `testComparePointerWrappedDefaultToNil` | nil.v:40, **Qed** :46 | `comparePointerWrappedDefaultToNilSpecC` | `comparePointerWrappedDefaultToNilReadoutC`; + `comparePointerWrappedDefaultToNilTotalReadout` (slice 6) | genuine parity row; shared delta only |
 | semantics/block `testExplicitBlockStmt` | **no statement** (block has no lemma in semantics_proof/) | `explicitBlockSpecC` (`Specs/GooseParityBlockWP.lean`; + sequential `explicitBlockSpec`) | `explicitBlockReadoutC`; + `explicitBlockTotalReadout` (slice 6) | same-class coverage row, not a parity row |
+| semantics/new `testNilDefault` | `wp_testNilDefault`, new.v:10, **Qed** :13 | `nilDefaultSpecC` (`Specs/GooseParityNewWP.lean`, slice-6 tranche) | `nilDefaultReadoutC`; + `nilDefaultTotalReadout` | genuine parity row; shared delta only |
+| semantics/new `testNilVal` | `wp_testNilVal`, new.v:15, **Qed** :19 | `nilValSpecC` (same file) | `nilValReadoutC`; + `nilValTotalReadout` | genuine parity row; shared delta only |
+| semantics/vars `testPointerAssignment` | **no statement** (no vars.v in semantics_proof/) | `pointerAssignmentSpecC` (`Specs/GooseParityVarsWP.lean`, slice-6 tranche) | `pointerAssignmentReadoutC`; + `pointerAssignmentTotalReadout` | coverage row, not a parity row |
+| semantics/vars `testAnonymousAssign` | **no statement** | `anonymousAssignSpecC` (same file) | `anonymousAssignReadoutC`; + `anonymousAssignTotalReadout` | coverage row, not a parity row |
+| semantics/vars `testAddressOfLocal` | **no statement** | **out-of-tranche** (slice 6): short-circuit `Expr.and` verdict — the same recorded law gap as `testInterfaceNilWithType`; R2 pins shipped, R3 walk blocked | — | coverage gap on our side only (upstream states nothing here) |
 
 Context on the three Abort-discharge rows (added at the arc-end
 audit; the claim stands, its nature named): all three upstream aborts
