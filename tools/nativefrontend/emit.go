@@ -5926,7 +5926,14 @@ func (e *emitter) emitMethodCall(c *ast.CallExpr, sel *ast.SelectorExpr) (any, b
 	// dangling `sync.Mutex.Lock` call that lands as runtime `stuck`).
 	// The check keys on the resolved method's own receiver
 	// (`syncMethodPrim`), which covers the promoted shape the
-	// receiver-expression check misses.
+	// receiver-expression check misses. A call THROUGH AN INTERFACE
+	// resolves to the interface's method, not a sync receiver, so this
+	// guard correctly passes it through — that lane's fail-closed story
+	// is the `syncMethodStubs` pass (arc-end fix round 2026-08-10): the
+	// dispatch lands on a declaration-only stub and refuses per-stub
+	// (before that pass existed, this comment's "never a dangling call"
+	// claim was FALSE for exactly the interface-dispatch shape, which
+	// escaped to a runtime `stuck` — sync/iface-dispatch pins it).
 	if seln := e.info.Selections[sel]; seln != nil && seln.Kind() == types.MethodVal {
 		if prim := e.syncMethodPrim(seln); prim != "" {
 			return nil, false, unsup("sync.%s.%s outside a direct statement/defer position (promoted, embedded, and expression-position sync ops are unmodeled)", prim, sel.Sel.Name)
