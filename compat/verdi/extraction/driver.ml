@@ -8,13 +8,19 @@
    compares the serialized result byte-for-byte against the fixture's
    output column (the Lean port's answer).
 
-   FAIL CLOSED: any row whose input does not parse, whose kind is
+   FAIL CLOSED: any row whose input does not parse (including a
+   grammar-valid decimal exceeding OCaml's int range — audit fix
+   2026-08-10: previously an uncaught Failure abort), whose kind is
    unknown, whose parsed input does not round-trip to the exact input
    column (parser/serializer drift is an infra failure, never a pass),
    or whose result the grammar cannot serialize (e.g. a negative int)
    is a visible per-row INFRA failure; any INFRA or DIVERGE row, or an
    empty case set, exits nonzero. A run that checked nothing must not
-   pass.
+   pass. COMPLETENESS (audit fix 2026-08-10: a truncated fixture used
+   to pass green): the fixture header's `cases-per-kind=N kinds=...`
+   declaration is parsed and enforced — exactly N judged rows per
+   declared kind, no undeclared kinds; a fixture without the
+   declaration is refused.
 
    Verdicts: MATCH / DIVERGE (oracle disagrees with the Lean output —
    a finding, port bug or instantiation mismatch) / INFRA. *)
@@ -74,7 +80,10 @@ let p_nat = function
     if a = "" then infra "empty atom where nat expected";
     String.iter (fun c -> if c < '0' || c > '9' then
                    infra "non-decimal atom '%s' where nat expected" a) a;
-    int_of_string a
+    (* grammar-valid but oversized decimals must be a per-row INFRA,
+       not an uncaught Failure abort *)
+    (try int_of_string a
+     with Failure _ -> infra "decimal '%s' exceeds the driver's int range" a)
   | L _ -> infra "list where nat expected"
 
 (* names are Fin 3 decimals; the extracted fin is int (ExtrOcamlFinInt) *)
@@ -311,6 +320,28 @@ let run_case (kind : string) (inp : sexp) : string * string =
 
 let split_tabs (s : string) : string list = String.split_on_char '\t' s
 
+(* Parse the header's completeness declaration, e.g.
+   `# machine=... cases-per-kind=40 kinds=hAE hAER ... reboot`
+   -> Some (40, ["hAE"; ...]). The declaration is REQUIRED (see the
+   contract above): without it a truncated fixture is undetectable. *)
+let parse_decl (line : string) : (int * string list) option =
+  let toks = String.split_on_char ' ' line in
+  let pref p t =
+    let lp = String.length p in
+    if String.length t >= lp && String.sub t 0 lp = p
+    then Some (String.sub t lp (String.length t - lp)) else None in
+  let cpk = List.find_map (pref "cases-per-kind=") toks in
+  let rec after_kinds = function
+    | [] -> None
+    | t :: rest ->
+      (match pref "kinds=" t with
+       | Some k -> Some (k :: rest)
+       | None -> after_kinds rest) in
+  match cpk, after_kinds toks with
+  | Some n, Some kinds ->
+    (try Some (int_of_string n, kinds) with Failure _ -> None)
+  | _ -> None
+
 let () =
   if Array.length Sys.argv <> 2 then begin
     prerr_endline "usage: driver <fixture.tsv>   (fail closed: exactly one argument)";
@@ -319,14 +350,21 @@ let () =
   let path = Sys.argv.(1) in
   let ic = try open_in path with Sys_error e -> prerr_endline e; exit 2 in
   let n_match = ref 0 and n_diverge = ref 0 and n_infra = ref 0 in
+  let decl : (int * string list) option ref = ref None in
+  let seen : (string, int) Hashtbl.t = Hashtbl.create 8 in
+  let count_kind k =
+    Hashtbl.replace seen k (1 + (try Hashtbl.find seen k with Not_found -> 0)) in
   (try
      while true do
        let line = input_line ic in
-       if line = "" || line.[0] = '#' then ()
+       if line = "" || line.[0] = '#' then begin
+         if !decl = None then decl := parse_decl line
+       end
        else begin
          let verdict =
            match split_tabs line with
            | [id; kind; inp; expected] ->
+             count_kind kind;
              (try
                 let rt, got = run_case kind (parse_sexp inp) in
                 if rt <> inp then begin
@@ -365,6 +403,29 @@ let () =
     prerr_endline "oracle: FAIL: zero cases judged — a run that checked nothing must not pass";
     exit 1
   end;
-  if !n_diverge > 0 || !n_infra > 0 then exit 1;
+  (* completeness against the header's declaration (fail closed: a
+     fixture without one is refused — a truncated fixture must not
+     pass green) *)
+  let complete =
+    match !decl with
+    | None ->
+      prerr_endline "oracle: FAIL: fixture header carries no cases-per-kind=/kinds= declaration — cannot verify completeness, refusing";
+      false
+    | Some (cpk, kinds) ->
+      let ok = ref true in
+      List.iter (fun k ->
+          let n = try Hashtbl.find seen k with Not_found -> 0 in
+          if n <> cpk then begin
+            Printf.eprintf "oracle: FAIL: kind %s: %d rows judged, header declares %d\n" k n cpk;
+            ok := false
+          end) kinds;
+      Hashtbl.iter (fun k _ ->
+          if not (List.mem k kinds) then begin
+            Printf.eprintf "oracle: FAIL: rows of kind %s not declared in the header\n" k;
+            ok := false
+          end) seen;
+      !ok
+  in
+  if !n_diverge > 0 || !n_infra > 0 || not complete then exit 1;
   print_endline "oracle: OK: Rocq extraction leg matches the Lean fixture on every case";
   exit 0
