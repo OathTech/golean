@@ -154,3 +154,49 @@ inversion of the old blanket `true`).
   explicitly. When a surface subject someday needs satisfaction, the
   judgments should grow an explicit records parameter — a deliberate
   statement change with its own review, not a default.
+
+## 5. Known limitations (recorded at the S6 audit fix round, 2026-08-10)
+
+- **Proof-side seeds diverge from the driver-built states — recorded,
+  with the divergence's live half fixed forward.** §4's "meaning
+  refined fail-closed" bullet states the general case; the sharper
+  fact it left implicit: the pinned `Program`s' record arrays are
+  NON-EMPTY (every decoded wire carries at least the synthesized
+  `("struct{}", full)`, and e.g. `quorumLowered` carries 4 records,
+  `muxerLowered` 3), so every proof-side structure-literal seed
+  (`importedSeed`, `chanSeed`, the TotalPins literals, the surface
+  judgments' states) ACTIVELY drops records the executable drivers
+  (`runProgramSetupM`/`CLI.enumSetup`) thread through — not merely
+  defaults an absent thing. The direction is strictly-more-refusing
+  (all three record consumers refuse under `#[]`; the audit's A/B runs
+  reproduced identical results with and without records on every
+  shipped subject), so no shipped claim is wrong; the transfer
+  argument ("a run that completes under `#[]` made no carrier query,
+  hence exists identically under the real records") is PROSE — the
+  `empty-records-refuse-strictly-more` lemma is owed WITH its first
+  consumer, the first R3 walk over a record-carrying seed.
+  Fixed forward: `scripts/gen-imported-pin` now emits
+  `methodSets := <term>Lowered.methodSets` in every generated seed
+  (S6 audit fix), so future pins match the drivers; the two pre-S6
+  pin modules (`ImportedGooseNew`/`Vars`) deliberately keep the
+  empty-record seed their R3 kit compositions bind to (the generator
+  header records the regeneration consequence).
+- **Promoted unexported methods from imported embedded types are
+  re-keyed to the local type under `full` coverage** (audit note,
+  latent): `synthesizePromotionWrappers` emits promotion wrappers for
+  UNEXPORTED methods inherited from an imported embedded type keyed on
+  the LOCAL type, while the stub passes deliberately skip unexported
+  imported methods (cross-package unexported identity is inexpressible
+  on the name-keyed wire) — and the local type's `full` record then
+  licenses definite answers over a method set that includes the
+  re-keyed name. gc scopes unexported interface requirements to the
+  declaring package (probe: a main-package interface requiring
+  `copyCheck()` is NOT satisfied by `struct{ strings.Builder }` —
+  gc says false; a name+signature match would say true). CURRENTLY
+  UNREACHABLE end-to-end: every probed shape refuses earlier
+  (`default value for imported named type ...`), and the sync
+  carriers emit exported-only sets, so no wrong answer exists today.
+  The honest fix when a case reaches it: package-scoped method
+  identity on the wire, or refusing promotion of unexported imported
+  methods — a frontend capability decision, not a record-contract
+  change.

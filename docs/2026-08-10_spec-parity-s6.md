@@ -102,8 +102,9 @@ as always.
   coverage rows; 1 oracle out-of-tranche with its reason
   (`testAddressOfLocal` — short-circuit `Expr.and`, the recorded law
   gap; hard bound honored, R2 pins shipped, R3 walk blocked, visible
-  manifest + matrix rows); the 69-unit remainder recorded as
-  NOT-REACHED (budget), with only the SAMPLED blocker classes named
+  manifest + matrix rows); the 71-unit remainder recorded as
+  NOT-REACHED (budget; figure corrected at the S6 audit — first
+  written 69, a double-subtraction of the two newly pinned units), with only the SAMPLED blocker classes named
   (manifest slice-6 addendum — every figure's command emits it).
 - **Driver notes for the next movement**: the S3 side-goal pattern
   held exactly (supplies: `wp_init_bool`/`wp_init_ptr`/
@@ -126,8 +127,20 @@ baseline diff vs the tracked 1483-id baseline: **zero drift on every
 prior id, zero new ids** (this slice adds no corpus cases; the
 "explained pin-lowering additions" allowance went unused — pin
 modules are proofs-side, not corpus rows). The full-differential line
-is the recorded cached run (4e8a25e), gate-marked stale because HEAD
-moved; the window argument, stated per the S5 discipline: `git diff
+is the recorded cached run, whose provenance the S6 audit made exact
+(scoping correction, applied per its verifier): the run's meta label
+`4e8a25e` is a PRE-COMMIT HEAD, not a tree identity — its
+`git_dirty true` tree WAS the 8ebc0c9c class-closure content (the run
+finished minutes before that commit, its 1364/119 figures match the
+commit's own recorded `--slow` gate and the tracked baseline exactly,
+and the commit's re-certified tier=slow records carry fresh
+post-change wire-shas) — and the gate's "stale" marker compares only
+the commit label against HEAD, never the tree. So the window that
+must be surface-free is `8ebc0c9c..tip` (equivalently `c6eedd4b..tip`
+— c6eedd4b is docs-only over it), which is the window argued below;
+the audit fix round then re-ran the FULL differential fresh at its
+own tip (gate record at the end of this note). The window argument,
+stated per the S5 discipline: `git diff
 --name-only c6eedd4b..<tip>` touches `GoLean/GoCore/MultiStreams.lean`
 (THEOREM additions only — import-downstream of `Multi.lean`, no
 executable definition changed), `proofs/`, `docs/`, and
@@ -143,7 +156,8 @@ diff; ci name-list + closure gates green throughout).
 - The && / `||` short-circuit WP law family — UNCHANGED owner (agenda
   E); now blocks `testInterfaceNilWithType` + `testAddressOfLocal`.
 - P-S4-1/2 (safety half, channel WP laws) — successor arc, unchanged.
-- The remaining 69 unpinned units — the lever is tracked tooling now;
+- The remaining 71 unpinned units (corrected at the S6 audit; first
+  written 69) — the lever is tracked tooling now;
   scheduling is the user's scale call (agenda item 9's residue).
 - `GoldenSelectDone`'s literal-fuel statements — deliberate (item 1
   scope note); regeneralize only if it ever becomes a parity row.

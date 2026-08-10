@@ -441,8 +441,10 @@ numbered list has 15 entries covering 14 P-items + 1 candidate)
    script is part of the call. (RESOLVED-BOUNDED at slice 6, user
    direction: the helper IS promoted — `scripts/gen-imported-pin` —
    and the bounded tranche moved the count to 11 pinned / 71
-   unpinned with 4 new R3 rows; the 69-unit remainder stays a
-   user-scale scheduling call, slice-6 record below.)
+   unpinned with 4 new R3 rows; the 71-unit unpinned remainder stays
+   a user-scale scheduling call (S6-audit correction: this line first
+   said "69-unit", double-subtracting the two newly pinned units),
+   slice-6 record below.)
 10. **P-S4-5** — google-search: bespoke certificate vs wait for the
     decomposition lane (its membership cert + §7.3 row carry it
     meanwhile).
@@ -494,8 +496,8 @@ arc; the 44 designated statements byte-identical at every slice tip)
 |---|---|---|---|
 | `GoLean.ImportedGoose.SemanticsNil.compareNilToNilSpecC` | `proofs/GoLeanProofs/Specs/GooseParityNilWP.lean` | class 1: imported sequential oracle, internal `GoSpecC` triple over the pinned lowering | the F4 def-only hoist (P-S3-1's accounting): the statement's defs live in the Iris-importing kit module and `ImportedGooseNil.lean` carries theorems — a core-import-only statement module must be split out (`ForkJoinTargets` pattern), plus Challenge/Solution/judge-config/Audit wiring and the statement-TCB closure extension |
 | `…compareNilToNilReadoutC` | same file | class 1: first-order pool-carrier export twin | shared with the row above (one hoist covers the pair) |
-| `GoLean.ImportedGoose.ChannelActris.dspCert` | `proofs/GoLeanProofs/Specs/GooseParityChannels.lean` | class 3: curated channel exemplar, kernel ∀-schedule certificate (upstream `wp_DSPExample` Qed beside it) | same hoist pattern: `chanSeed`/`cellIsInt`/driver/readout defs into a def-only module (P-S4-4's `chanCert_*` derivations move with them) + the same wiring |
-| `…dspAllSchedules` | same file | class 3: ∀-schedule verdict readout | shared with the row above |
+| `GoLean.ImportedGoose.ChannelActris.dspCert` | `proofs/GoLeanProofs/Specs/GooseParityChannels.lean` | class 3: curated channel exemplar — since slice 6 the FUEL-GENERAL certificate (`∃N, ∀ fuel ≥ N` form; upstream `wp_DSPExample` Qed beside it). Table row moved with the S6 split (audit): the `decide +kernel` KERNEL EVIDENCE now lives in the undesignated sibling `dspCert400`, which `dspCert` lifts via `allStreamsOkPool_mono` — designating `dspCert` designates the derived statement, so the curation call should either designate the PAIR (`dspCert400` + `dspCert`) or accept the kernel base as an undesignated (Audit-anchored) dependency; decided at curation, not here | same hoist pattern: `chanSeed`/`cellIsInt`/driver/readout defs into a def-only module (P-S4-4's `chanCert_*` derivations move with them) + the same wiring; the `dspCert400` literal moves with them if the pair is taken |
+| `…dspAllSchedules` | same file | class 3: ∀-schedule verdict readout (fuel-general since slice 6, same ∃N form) | shared with the row above |
 
 Deliberate NON-candidates, recorded: `spawnNoopTripleC` (curate the
 assembled `spawnNoopSpecC` when P-S4-1 pays the safety half, not the
@@ -771,7 +773,12 @@ arc did not already build, or only theorems the existing machinery owes?
 
 1. **Fuel-independence lift.** Prove `execProgLoop_mono` (recorded this
    arc as owed-not-shipped, machine-checked truth-equivalence argument in
-   matrix §7.2) and regeneralize the fixed-fuel channel-bundle theorems
+   matrix §7.2 — CORRECTED at slice 6, in place per the S6 audit: the
+   lemma was ALREADY SHIPPED at drafting time (MultiStreams.lean, since
+   the channels arc; Audit-guarded); what was owed-not-shipped was the
+   LIFT itself plus the sub-bound classification lemma the ∀-fuel forms
+   need, delivered as `execProgLoop_le` + `allStreamsOkPool_mono` —
+   slice-6 record below) and regeneralize the fixed-fuel channel-bundle theorems
    (`Cert`/`AllSchedules`/`NoDeadlock`/`NoRace` at shipped bounds
    200/400/800) to the `∃N, ∀ fuel ≥ N` form `TerminatesNormallyC`
    already uses. Parity effect: removes fuel as an against-us axis from
@@ -844,8 +851,9 @@ self-registers); 2 units backfilled (pins 9→11, unpinned 71);
 4 R3 rows proved at the full D1 pair + joint form — semantics/new's
 BOTH oracles upstream-Qed (genuine parity rows 2→4), vars' two
 coverage rows — 1 oracle out-of-tranche with its reason (the
-short-circuit `Expr.and` law gap), the 69-unit remainder recorded
-NOT-REACHED (budget-bounded, sampled blocker classes named).
+short-circuit `Expr.and` law gap), the 71-unit remainder recorded
+NOT-REACHED (budget-bounded, sampled blocker classes named; figure
+corrected at the S6 audit — first written 69).
 R3 standing: **10 proved** (4 upstream-Qed parity / 3 Abort-discharge
 / 3 coverage). Gate posture: zero corpus drift (1483 ids on
 `result`+`stage`; the pin-lowering-additions allowance went unused —

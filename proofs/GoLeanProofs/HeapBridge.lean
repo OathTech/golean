@@ -249,15 +249,20 @@ theorem HeapWf.allocMany : ∀ (cs : List HeapCell) {σ : ExecState}, HeapWf σ 
 
 /-- **The `∀σ`-premise closer.** `ExecState` has exactly six fields
 (`methodSets` joined at the BUG-053 class closure, 2026-08-10 — carried
-UNPINNED here like `heap`/`nextAddr`; none of the pinned computations
-query satisfaction), so a state whose three PINNED fields are known IS
-the pinned state up to heap, allocation counter, and method-set
-records. Rewriting with this turns a house-style
-`∀ σ, σ.functions = … → σ.methods = … → σ.types = … → P σ` premise into a
-statement about a state with literal `types`/`functions`/`methods` — i.e.
-a CLOSED computation the kernel can run — which is what makes such
-premises dischargeable by `rfl` instead of by fighting `simp` through
-fuel-recursive resolution. General: no program is named. -/
+UNPINNED here like `heap`/`nextAddr`), so a state whose three PINNED
+fields are known IS the pinned state up to heap, allocation counter,
+and method-set records. Rewriting with this turns a house-style
+`∀ σ, σ.functions = … → σ.methods = … → σ.types = … → P σ` premise into
+a statement about a state with literal `types`/`functions`/`methods` —
+NOT a fully closed term (docstring truthed at the S6 audit: the
+rewritten state still carries the opaque `σ.methodSets`/`σ.heap`/
+`σ.nextAddr` variables), but closed in exactly the fields the pinned
+computations force — which is what makes such premises dischargeable
+by `rfl` instead of by fighting `simp` through fuel-recursive
+resolution. If a future pinned computation queries satisfaction (i.e.
+forces `methodSets`), the `rfl`/`decide` discharge gets STUCK on the
+opaque field, loudly — fail closed, never a silent wrong answer.
+General: no program is named. -/
 theorem execState_pin_eq {σ : ExecState} {T : TypeEnv} {F : Array Func}
     {M : Array MethodInfo}
     (ht : σ.types = T) (hf : σ.functions = F) (hm : σ.methods = M) :
