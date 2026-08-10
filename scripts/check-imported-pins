@@ -26,6 +26,9 @@ PINS=(
   "Corpus/coverage/exec/imported-goose/storage/mapliteral|GoLean.ImportedGoose.StorageMapliteral.mapliteralLowered|GoLeanProofs.Specs.ImportedGooseMapliteral"
   "Corpus/coverage/exec/imported-goose/unittest/const|GoLean.ImportedGoose.UnittestConst.constLowered|GoLeanProofs.Specs.ImportedGooseConst"
   "Corpus/coverage/exec/imported-goose/unittest/rune|GoLean.ImportedGoose.UnittestRune.runeLowered|GoLeanProofs.Specs.ImportedGooseRune"
+  "Corpus/coverage/exec/imported-goose/channel/select-tricky-examples|GoLean.ImportedGoose.ChannelSelectTricky.selectTrickyLowered|GoLeanProofs.Specs.ImportedGooseSelectTricky"
+  "Corpus/coverage/exec/imported-goose/channel/muxer|GoLean.ImportedGoose.ChannelMuxer.muxerLowered|GoLeanProofs.Specs.ImportedGooseMuxer"
+  "Corpus/coverage/exec/imported-goose/channel/actris-example|GoLean.ImportedGoose.ChannelActris.actrisLowered|GoLeanProofs.Specs.ImportedGooseActris"
 )
 
 SINGLE_DIR=""
@@ -118,6 +121,9 @@ import GoLeanProofs.Specs.ImportedGooseNil
 import GoLeanProofs.Specs.ImportedGooseMapliteral
 import GoLeanProofs.Specs.ImportedGooseConst
 import GoLeanProofs.Specs.ImportedGooseRune
+import GoLeanProofs.Specs.ImportedGooseSelectTricky
+import GoLeanProofs.Specs.ImportedGooseMuxer
+import GoLeanProofs.Specs.ImportedGooseActris
 def main : IO Unit :=
   IO.println (repr $term)
 LEAN

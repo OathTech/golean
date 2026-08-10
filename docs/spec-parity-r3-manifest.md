@@ -86,6 +86,74 @@ rows, not parity rows.
 | unittest/rune | not-attempted | R2-pinned; small (converts + add) but custom wrapper shape. |
 | storage/mapliteral | not-attempted | R2-pinned; needs `makeMap` (law exists) + `mapAssign` apply walks — the map-entry store discharge is the new content. |
 
+## Feature class 3: the curated channel exemplars (slice 4)
+
+The charter's flagship comparisons (item 4): the select-tricky trio,
+muxer, dsp. Subjects are the units' `golean*` harness wrappers (the
+upstream bodies sit verbatim above the marker; the wrappers are
+GoLean-authored harness code), over the staleness-guarded pinned
+lowerings (`Specs/ImportedGoose{SelectTricky,Muxer,Actris}.lean`, ci
+step 1c5 since this slice).
+
+**Statement strength, decided in the slice design note
+(`docs/2026-08-10_gospecc-decomposition.md` §6, option (a))**: the
+SEEDED ∀-schedule family per row — kernel certificate
+(`allStreamsOkPool`, via the slice's non-consuming-select refinement),
+∀-schedule verdict readout, no-deadlock + no-race first-order
+corollaries, `TerminatesNormallyC` — five kernel-checked theorems per
+row in `Specs/GooseParityChannels.lean`, interpreter vocabulary
+throughout. NOT the D1 pair: the frame-quantified `GoSpecC` triple is
+out of reach for ALL SIX rows this slice (it needs the §3–§5
+decomposition pipe PLUS a channel WP law family that does not exist,
+sequentially or concurrently) — that is each row's recorded gap, owed
+with the decomposition arc, not a silent skip. The verdicts
+(1/1/1/42/"async"/"Hello, World!") are the observables the R1
+differential rows pin against `go run`.
+
+Deltas, BOTH directions, no ordering claimed: THEIRS are heap-general,
+compositional Iris triples about the upstream FUNCTIONS (protocol/
+ghost-carrying, e.g. `wp_DSPExample`'s dependent-separation-protocol
+session), partial-correctness `NotStuck` over a model no test
+executes — no termination, and no deadlock-freedom (GooseLang blocking
+is loop-based, so `NotStuck` holds of a parked-forever schedule). OURS
+are seed-concrete (no frame quantifier), driver-level (the wrapper
+program, not a compositional function spec), and quantify EVERY
+modeled schedule of the differentially tested `execProg` with
+totality + exact verdict + deadlock- and race-refusal-freedom.
+
+| corpus row (imported-goose/channel/) | upstream @ 43d4efa | our disposition | where / gap |
+|---|---|---|---|
+| select-tricky-examples `nb-not-ready` | **Qed** (`wp_select_nb_not_ready`, channel_select_tricky_examples.v:71, Qed :114) | **∀-schedule family proved** (5 kernel theorems) | `ChannelSelectTricky.nbNotReady*`; gap: frame-quantified GoSpecC (decomposition + channel WP laws) |
+| select-tricky-examples `nb-guaranteed-ready` | **Qed** (:117, Qed :137) | **∀-schedule family proved** | `nbGuaranteedReady*`; same gap (this one spawns nothing — the sequential-lane triple is ALSO blocked, on sequential channel WP laws; design note §6(c) declined this slice with the reason) |
+| select-tricky-examples `nb-full-buffer-not-ready` | **Qed** (:219, Qed :258) | **∀-schedule family proved** | `nbFullBuffer*`; same gaps as `nb-guaranteed-ready` |
+| muxer `async` | **no upstream lemma** for `Async` (searched `channel*.v`; `wp_HelloWorldAsync` channel.v:149 is the sibling `HelloWorldAsync`, a different function) | **∀-schedule family proved** (coverage row, not a parity row) | `ChannelMuxer.async*` |
+| muxer `client` | **Qed** (`wp_Client`, channel_dsp.v:152, Qed :172) | **∀-schedule family proved** | `ChannelMuxer.client*`; the leaked parked server at main's exit is inside the modeled envelope (D6/L5) |
+| actris-example (dsp) | **Qed** (`wp_DSPExample`, channel_dsp.v:35, Qed :57) | **∀-schedule family proved** | `ChannelActris.dsp*` |
+
+**Population honesty — what the curated set does NOT cover.** The
+upstream channel-examples proof tree at 43d4efa
+(`new/proof/.../examples/channel*.v` + `channel/{workq,etcd_session}.v`;
+count command: `grep -cE '^(Lemma|Theorem)' <files>`) states **60**
+Lemma/Theorem items (12 channel.v, 9 google, 5 fibonacci, 3
+search-replace, 3 higher-order, 9 dsp, 10 select-tricky, 4 workq, 5
+etcd_session — helper lemmas included, all Qed-closed: zero `Abort.`/
+`Admitted.` in these files). This slice's curated set is the
+charter-fixed SIX rows above; of the remainder: fibonacci and
+higher-order units are the recorded P2 import-parking (enumeration
+cost, buildout ledger); muxer's `client-old`/`make-greeting` rows are
+the same P2 entry (their upstream `wp_MapClient`/`wp_makeGreeting` are
+Qed, channel_dsp.v:313/:385 — parity rows we cannot certify until the
+P2 cost call is made); google-search is imported and R1-green
+(membership lane, tier=slow) but its 5-worker pick tree is beyond this
+checker idiom's cost envelope — not attempted, recorded;
+workq/etcd_session/search-replace and the channel.v basics are
+imported (search-replace, google) or unimported upstream units — rows
+for a later movement, not silently claimed.
+
+Certificate fuels (measured minimum → shipped): nb-not-ready 100→200,
+nb-guaranteed-ready 100→200, nb-full-buffer 100→200, dsp 200→400,
+async 200→400, client 400→800. Full module kernel-checks in ~20 s.
+
 ## Counts (slice 3 close; corrected at the S3 audit fix round)
 
 - **R3 proved: 6** programs × 2 kernel-checked theorems each

@@ -39,9 +39,13 @@ import GoLeanProofs.Specs.GoldenSelectDone
 import GoLeanProofs.Specs.ImportedGooseBlock
 import GoLeanProofs.Specs.ImportedGooseDefer
 import GoLeanProofs.Specs.ImportedGooseNil
+import GoLeanProofs.Specs.ImportedGooseSelectTricky
+import GoLeanProofs.Specs.ImportedGooseMuxer
+import GoLeanProofs.Specs.ImportedGooseActris
 import GoLeanProofs.Specs.GooseParityKit
 import GoLeanProofs.Specs.GooseParityNilWP
 import GoLeanProofs.Specs.GooseParityBlockWP
+import GoLeanProofs.Specs.GooseParityChannels
 import GoLeanProofs.Specs.ImportedGooseMapliteral
 import GoLeanProofs.Specs.ImportedGooseConst
 import GoLeanProofs.Specs.ImportedGooseRune
