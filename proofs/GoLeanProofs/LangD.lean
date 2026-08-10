@@ -1093,11 +1093,21 @@ theorem spawnNoopTripleC :
   goTripleC_of_wpD (fun hprog hmeths _htypes =>
     wpD_spawn_noop_witness hprog hmeths)
 
-/-- The witness's own non-vacuity: at the concrete seeded state every
-premise of `spawnNoopTripleC`'s `InitialSplit` discharges, and the
-triple reads back as a first-order fact — every `.normal` pool
-completion of the spawning program leaves the harness cell intact.
-Interpreter vocabulary only. -/
+/-- The seeded state for the witness pair below. -/
+def spawnNoopSeed : ExecState :=
+  { types := [], functions := #[noopWorker], methods := #[],
+    heap := [(.base ⟨0⟩, ⟨some (.int .int), .int 0 .int⟩)],
+    nextAddr := 1 }
+
+/-- ONE HALF of the witness pair (S4 audit round — the pair, not this
+theorem alone, is the stated non-vacuity discharge): at the concrete
+seeded state every premise of `spawnNoopTripleC`'s `InitialSplit`
+discharges, and the triple reads back as a first-order RUN-CONDITIONED
+fact — every `.normal` pool completion of the spawning program leaves
+the harness cell intact. Run-conditioned readouts are the house form,
+shipped WITH a completion pin (`goldenTerminates` /
+`forkJoinTerminatesNormallyC` precedents); the completion half here is
+`spawnNoopTerminatesNormallyC` below. Interpreter vocabulary only. -/
 theorem spawnNoopReadoutC :
     ∀ (fuel : Nat) (ch : Choices) (σf : ExecState) (ch' : Choices),
       execProg fuel []
@@ -1122,5 +1132,32 @@ theorem spawnNoopReadoutC :
     exact LawfulPartialMap.get?_insert_eq rfl)
   rw [heaplet_get?_eq, heapletOf_eq_heapToMap, get?_heapToMap] at hget
   exact loadLoc_base_of_lookup hget
+
+/-- The completion half's kernel certificate: every schedule of the
+spawning witness program completes at main's `.normal` with the cell
+intact, within fuel 20. -/
+theorem spawnNoopAllStreamsCert :
+    allStreamsOkPool
+      (fun σf => match loadLoc σf (.base ⟨0⟩) with
+        | .ok (.int 0 .int) => true
+        | _ => false)
+      20 ⟨#[.exec spawnNoopProg [] .stop], spawnNoopSeed, 0⟩ {} = true := by
+  decide +kernel
+
+/-- THE OTHER HALF of the witness pair (S4 audit round): the seeded
+completion pin — the spawning witness program COMPLETES at main's
+`.normal` on every choice stream past one fuel bound (the
+`forkJoinTerminatesNormallyC` idiom). Together with
+`spawnNoopReadoutC` (the run-conditioned verdict) this is the stated
+non-vacuity discharge for `spawnNoopTripleC`: the runs exist AND
+every one satisfies the triple's readout. The ∀-HEAP safety half
+(`ProgressExecC`) remains the recorded P-S4-1 debt — this pin is
+seed-concrete, strictly weaker, and does not claim otherwise. -/
+theorem spawnNoopTerminatesNormallyC :
+    TerminatesNormallyC [] spawnNoopSeed spawnNoopProg := by
+  refine ⟨20, fun fuel hfuel ch => ?_⟩
+  obtain ⟨σf, ch', hrun, -⟩ :=
+    execProgLoop_ok_of_allStreamsOkPool spawnNoopAllStreamsCert ch
+  exact ⟨σf, ch', execProgLoop_mono hrun hfuel⟩
 
 end GoLean.Iris

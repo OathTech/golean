@@ -106,20 +106,31 @@ throughout. NOT the D1 pair: the frame-quantified `GoSpecC` triple is
 out of reach for ALL SIX rows this slice (it needs the §3–§5
 decomposition pipe PLUS a channel WP law family that does not exist,
 sequentially or concurrently) — that is each row's recorded gap, owed
-with the decomposition arc, not a silent skip. The verdicts
-(1/1/1/42/"async"/"Hello, World!") are the observables the R1
+with the decomposition arc, not a silent skip. The verdicts, in table
+row order (trio, muxer async/client, dsp:
+1/1/1/"async"/"Hello, World!"/42), are the observables the R1
 differential rows pin against `go run`.
 
-Deltas, BOTH directions, no ordering claimed: THEIRS are heap-general,
-compositional Iris triples about the upstream FUNCTIONS (protocol/
-ghost-carrying, e.g. `wp_DSPExample`'s dependent-separation-protocol
-session), partial-correctness `NotStuck` over a model no test
-executes — no termination, and no deadlock-freedom (GooseLang blocking
-is loop-based, so `NotStuck` holds of a parked-forever schedule). OURS
-are seed-concrete (no frame quantifier), driver-level (the wrapper
-program, not a compositional function spec), and quantify EVERY
-modeled schedule of the differentially tested `execProg` with
-totality + exact verdict + deadlock- and race-refusal-freedom.
+Deltas, BOTH directions, no ordering claimed (upstream-model wording
+corrected at the S4 audit round — the first form said "a model no
+test executes", compressing away a distinction
+`docs/2026-08-06_concurrency-research-goose-perennial.md` already
+records): THEIRS are heap-general, compositional Iris triples about
+the upstream FUNCTIONS (protocol/ghost-carrying, e.g.
+`wp_DSPExample`'s dependent-separation-protocol session),
+partial-correctness `NotStuck` — no termination, and no
+deadlock-freedom (GooseLang blocking is loop-based, so `NotStuck`
+holds of a parked-forever schedule). Their channel semantics is the
+goose TRANSLATION of `goose/model/channel`, a hand-written Go package
+that IS well tested in Go — 24 tests incl. direct side-by-side
+comparisons against real Go channels, run in upstream CI, and the six
+rows' own programs have upstream Go tests (`examples_test.go`,
+`muxer_test.go`) — but the Rocq/GooseLang model itself and the
+translation step are executed by no test. OURS are seed-concrete (no
+frame quantifier), driver-level (the wrapper program, not a
+compositional function spec), and quantify EVERY modeled schedule of
+the differentially tested `execProg` with totality + exact verdict +
+deadlock- and race-refusal-freedom.
 
 | corpus row (imported-goose/channel/) | upstream @ 43d4efa | our disposition | where / gap |
 |---|---|---|---|
@@ -141,9 +152,9 @@ etcd_session — helper lemmas included, all Qed-closed: zero `Abort.`/
 charter-fixed SIX rows above; of the remainder: fibonacci and
 higher-order units are the recorded P2 import-parking (enumeration
 cost, buildout ledger); muxer's `client-old`/`make-greeting` rows are
-the same P2 entry (their upstream `wp_MapClient`/`wp_makeGreeting` are
-Qed, channel_dsp.v:313/:385 — parity rows we cannot certify until the
-P2 cost call is made); google-search is imported and R1-green
+the same P2 entry (their upstream lemmas are Qed — `wp_MapClient`,
+channel_dsp.v:271, Qed :313; `wp_makeGreeting`, :358, Qed :385 —
+parity rows we cannot certify until the P2 cost call is made); google-search is imported and R1-green
 (membership lane, tier=slow) but its 5-worker pick tree is beyond this
 checker idiom's cost envelope — not attempted, recorded;
 workq/etcd_session/search-replace and the channel.v basics are
