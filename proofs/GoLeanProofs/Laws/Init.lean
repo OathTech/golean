@@ -116,6 +116,34 @@ theorem wp_init_int {pid : String} {kind : IntKind} {rest : List Stmt} {env k} :
   wp_init (fun _ _ => by
     simp [defaultValue, defaultValueFuel, typeResolutionFuel])
 
+/-- `var b bool` — zero hypotheses (the bool default is `false`,
+state-independently). Deliberately NOT `@[go_walk_law]`-registered
+(spec-parity slice 3, recorded in the slice note: registering it moved
+the stopping points of the standing quorum walks — the law table is a
+global tactic surface, so new laws stay unregistered unless every
+consumer is re-validated); walks supply it with `go_walk_step`.
+Witness: the imported-goose wrapper walks (their call-target bool). -/
+theorem wp_init_bool {pid : String} {rest : List Stmt} {env k} :
+    iprop(∀ pa : Addr, pa.id ↦ (⟨some .bool, .bool false⟩ : HeapCell) -∗
+        WP (Config.next (.seq rest (env.declare pid (.base pa)) k)) @ s ; E {{ Φ }})
+      ⊢ WP (Config.exec (.initialization ⟨pid, .bool⟩) env (.seq rest env k))
+          @ s ; E {{ Φ }} :=
+  wp_init (fun _ _ => by
+    simp [defaultValue, defaultValueFuel, typeResolutionFuel])
+
+/-- `var p *T` — zero hypotheses (the pointer default is `nil` at EVERY
+pointee type, state-independently: `defaultValueFuel`'s `.pointer` arm
+never looks at `t`). NOT table-registered, same reason as
+`wp_init_bool` above; walks supply it with `go_walk_step`. Witness: the
+imported-goose exemplar's `var $c2 **uint64` (spec-parity slice 3). -/
+theorem wp_init_ptr {pid : String} {t : Ty} {rest : List Stmt} {env k} :
+    iprop(∀ pa : Addr, pa.id ↦ (⟨some (.pointer t), .nil⟩ : HeapCell) -∗
+        WP (Config.next (.seq rest (env.declare pid (.base pa)) k)) @ s ; E {{ Φ }})
+      ⊢ WP (Config.exec (.initialization ⟨pid, .pointer t⟩) env (.seq rest env k))
+          @ s ; E {{ Φ }} :=
+  wp_init (fun _ _ => by
+    simp [defaultValue, defaultValueFuel, typeResolutionFuel])
+
 end
 
 end GoLean.Iris

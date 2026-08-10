@@ -158,6 +158,29 @@ over the interpreter and pass the deletion test (Iris and the tactic
 appear only in proofs). A `go_walk` bug can make a proof FAIL, never
 make a false statement PROVABLE.
 
+**Phase-2 outcome (the exemplar re-derived tactic-driven).**
+`wp_compareNil_body`'s proof is now the `go_walk` walk — statement
+byte-identical; the hand walk is preserved in full as
+`wp_compareNil_body_hand` (the walk-architecture witness, and the
+proof-robustness fallback). The realized side-goal surface for this
+body, exactly as designed: the two pointer declarations
+(`wp_init_ptr` — `hdef` is `∀σ` under the type pin), the
+`defaultValue` nullary eval (same `∀σ` shape), the `new` alloc-store
+(`wp_new_value`), the two pointer/bool cell stores
+(`wp_assign_store`), and the comparison's apply
+(`wp_strict_apply_pure` — `out` undetermined by the goal). Everything
+else — 60+ machine steps — is the table.
+
+**Registration lesson (recorded the hard way):** registering
+`wp_init_bool`/`wp_init_ptr` as `@[go_walk_law]` moved the STOPPING
+POINTS of the standing quorum walks (their `go_walk_step (wp_init …)`
+supplies then faced already-advanced goals and timed out). The law
+table is a GLOBAL tactic surface: a new registration changes every
+existing walk script's behavior. Policy adopted: new laws default to
+UNREGISTERED (supplied via `go_walk_step`); a registration is its own
+deliberate change validated against every walk consumer. The two init
+lemmas ship unregistered with this note recorded in their docstrings.
+
 ## 4. Scaling manifest
 
 Moved to `docs/spec-parity-r3-manifest.md` (tracked; per-program
