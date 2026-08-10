@@ -14,11 +14,13 @@
 #   reproducible at this record's own params/wire) — the honest
 #   re-measurement at these params on the fixed semantics is below
 #   (~26s wall; the tier=slow declaration stands at the ~30s
-#   threshold). gc SAMPLING NOTE (round-2 verifier, 300+120 runs):
-#   plain go realizes 10 dominantly but NOT exclusively (297/300 with
-#   3x 20), and -race realizes both members near-evenly (56/64) — so
-#   BOTH certified members are oracle-witnessed; the earlier
-#   "gc exhibits 10 on every run" was false as written.
+#   threshold). gc SAMPLING NOTE (batch scope aligned at round 4 with
+#   the cases.tsv citation): two independent verifier batches per
+#   mode — plain 297/3 (round 2) and 299/1 (round 3) over 300-run
+#   batches; -race 56/64 (round 2) and 58/62 (round 3) over 120-run
+#   batches — so BOTH certified members are oracle-witnessed in both
+#   modes; the earlier "gc exhibits 10 on every run" was false as
+#   written.
 # case: sync/rwmutex-order/acquisition
 # params: width=4,sites=40,work=30000000,members=2,tier=slow
 # wire-sha256: c491fef27ef175b8a63c8d217f5129e1e50c415cf41d053b2e1913a214038ced

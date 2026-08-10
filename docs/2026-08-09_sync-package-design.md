@@ -636,6 +636,48 @@ Finding-by-finding record — the themes and dispositions:
   refusal, not an independently reachable gate — do not mistake it
   for a second barrier.
 
+### Delta-review round 4 (2026-08-10; escalated CRITICAL — the
+STRUCTURAL fix)
+
+- **CRITICAL/majors — the ad-hoc import recognizers are GONE.** Three
+  rounds patched line regexes and each round a LEGAL Go import form
+  escaped (round 2: indented/one-line-block/no-space; round 3:
+  comment-prefixed; round 4's verifier: named/blank/dot forms — four
+  fresh bypasses landed AND were certified, plus the importer's vet
+  was CONDITIONAL on a loose grep while the guard's was not, so a
+  named-only-import file landed with no vetting at all). The round-4
+  fix is the verifier's principled one: Go's OWN grammar —
+  `tools/lsimports` (go/parser, parser.ImportsOnly; ~50 lines,
+  committed, trust argument in its header: the same toolchain already
+  trusted as the differential oracle) — run UNCONDITIONALLY by BOTH
+  scripts with one invariant: parsed imports ⊆ the allow-set ({sync}),
+  parse failure = refuse, and the landed grant line records EXACTLY
+  the parsed paths (the standing guard re-derives via the parser and
+  compares set-equality in both directions — the tamper direction
+  negative-tested). The regex machinery was removed outright rather
+  than demoted (it must not gate anything the parser doesn't).
+- **Fixtures**: every exhibited bypass class — named, blank, dot,
+  comment-prefixed named, tab-indented, trailing-comment, factored
+  block with a disallowed mid-block entry, the no-vet-conditional
+  shape — refuses in the importer suite; the standing guard's
+  laundered-import and tampered-grant negatives fail certification;
+  and the PRECISION WIN is pinned: a raw string containing
+  import-looking text (zero real imports) now correctly LANDS with no
+  grant line, where rounds 1-3 falsely refused it.
+- **82-case standing scan green** under the parser-based guard (the
+  round-3 verifier's independent go/parser scan already confirmed the
+  landed lane clean — the hole was prospective only).
+- **Adversarial self-check against the parser** (fresh candidates):
+  cgo (`import "C"` with preamble) — parser reports `C`, gate refuses
+  by set membership; build-tag-guarded `import _ "sync/atomic"` —
+  parser parses through the tag, reports `sync/atomic`, gate refuses.
+  Nothing lands.
+- **Scope note**: parser.ImportsOnly stops after the import section by
+  design; the importer's full-compile self-containment step remains
+  the backstop for anything after it.
+- **NOTE**: the certified record's gc-sampling header now cites both
+  verifier batches per mode, matching cases.tsv's scope.
+
 ## 12. Parking ledger (user-scale items, per the AFK posture)
 
 - **P-S2-1 — Promote `fatal` into the membership/confluent lanes?**
