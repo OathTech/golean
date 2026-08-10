@@ -422,7 +422,10 @@ numbered list has 15 entries covering 14 P-items + 1 candidate)
    (`wp_compareNil_body_hand`). Default keep.
 5. **P-S3-5** — the joint sequential "completes-AND-verdict" form:
    ship per-row, ship a pool-carrier `TerminatesNormallyC` variant, or
-   leave the two halves as stated.
+   leave the two halves as stated. (RESOLVED at slice 6, user
+   direction at the 2026-08-10 check-in: shipped per-row —
+   `goSpec_seeded_totalReadout` + the `<row>TotalReadout` instances;
+   slice-6 record below.)
 6. **P-S4-4** — `chanCert_*` hoisting; default keep-local.
 
 **B. Successor-arc machinery (scale/order calls):**
@@ -435,7 +438,11 @@ numbered list has 15 entries covering 14 P-items + 1 candidate)
 9. **P-S3-2** — backfill pinned lowerings: 73 unpinned units at arc
    end (9 pinned — S4 added the three channel pin modules to S3's
    six); whether to promote the `.tmp` mkpins helper to a tracked
-   script is part of the call.
+   script is part of the call. (RESOLVED-BOUNDED at slice 6, user
+   direction: the helper IS promoted — `scripts/gen-imported-pin` —
+   and the bounded tranche moved the count to 11 pinned / 71
+   unpinned with 4 new R3 rows; the 69-unit remainder stays a
+   user-scale scheduling call, slice-6 record below.)
 10. **P-S4-5** — google-search: bespoke certificate vs wait for the
     decomposition lane (its membership cert + §7.3 row carry it
     meanwhile).
@@ -806,3 +813,46 @@ happens only at the user's D3 curation); honest records with
 figure-emitting commands. Slice 6 then re-enters the arc-close sequence:
 closure-record addendum, D3 curation, Comparator, rebase, merge
 sign-off, push sign-off.
+
+## Slice-6 record (2026-08-10, branch `spec-parity-s6`)
+
+DELIVERED, gate green (`scripts/ci`) at every commit; build log
+`docs/2026-08-10_spec-parity-s6.md` (the dated slice note — the
+record-home call is recorded there). Four commits, one item each:
+(1) THE FUEL-INDEPENDENCE LIFT — `execProgLoop_le` (sub-bound
+truncation classifies `.ok`-or-`.fuelOut`, never
+`.deadlock`/`.raceDetected` — §7.2's truth-equivalence argument
+machine-checked) + `allStreamsOkPool_mono`/`stepAllBranchesOk_mono`
+(checker fuel-monotonicity), all constructive; the six channel-bundle
+rows regeneralized (`Cert`/`AllSchedules` to ∃N-∀fuel≥N,
+`NoDeadlock`/`NoRace` to ALL fuels — stronger than the amendment's
+ask, licensed by the new lemma) with the `decide +kernel` evidence
+preserved as `<row>Cert<bound>`; fuel is OFF the §7.2 against-us axis
+for the covered rows. Note found-on-arrival: `execProgLoop_mono`
+itself was already shipped — the owed piece was the lift, recorded
+so. None of the changed statements is designated (verified against
+the Audit list; the designated forkJoin family untouched;
+`dspCert`/`dspAllSchedules` are CANDIDATES and now carry the better,
+fuel-free forms). (2) P-S3-5 CLOSED — `goSpec_seeded_totalReadout`
+(kit-generic single-carrier completes-AND-verdict) + ten
+`<row>TotalReadout` instances (6 class-1 rows + the 4 tranche rows);
+the "separate halves" caveat narrows to the concurrent rows only
+(matrix §7.1). (3) THE BOUNDED DRIVER TRANCHE (P-S3-2, user kept) —
+`scripts/gen-imported-pin` tracked (fail-closed to the
+golean-oracle convention, #evals every Bool before any decide, never
+self-registers); 2 units backfilled (pins 9→11, unpinned 71);
+4 R3 rows proved at the full D1 pair + joint form — semantics/new's
+BOTH oracles upstream-Qed (genuine parity rows 2→4), vars' two
+coverage rows — 1 oracle out-of-tranche with its reason (the
+short-circuit `Expr.and` law gap), the 69-unit remainder recorded
+NOT-REACHED (budget-bounded, sampled blocker classes named).
+R3 standing: **10 proved** (4 upstream-Qed parity / 3 Abort-discharge
+/ 3 coverage). Gate posture: zero corpus drift (1483 ids on
+`result`+`stage`; the pin-lowering-additions allowance went unused —
+no corpus change at all), 44 designated byte-identical, axioms the
+classical trio on the spec lane / `[propext, Quot.sound]` on the new
+GoCore lemmas and literal certs; the one `GoLean/GoCore/` edit is
+THEOREM additions to `MultiStreams.lean` (import-downstream of
+`Multi.lean` — differential surface untouched by construction, no
+`--diff` owed). The slice-6 audit (which also owns the folded BUG-053
+class-closure delta review, amendment item 4) follows this record.
