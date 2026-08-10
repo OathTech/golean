@@ -1246,6 +1246,13 @@ example := @GoLean.ImportedGoose.SemanticsNil.comparePointerToNilTotalReadout
 example := @GoLean.ImportedGoose.SemanticsNil.comparePointerWrappedToNilTotalReadout
 example := @GoLean.ImportedGoose.SemanticsNil.comparePointerWrappedDefaultToNilTotalReadout
 example := @GoLean.ImportedGoose.SemanticsBlock.explicitBlockTotalReadout
+-- The slice-6 driver-tranche class-1 instances ride the same block
+-- (semantics/new — both upstream-Qed parity rows; semantics/vars —
+-- coverage rows; per-row records in the manifest).
+example := @GoLean.ImportedGoose.SemanticsNew.nilDefaultTotalReadout
+example := @GoLean.ImportedGoose.SemanticsNew.nilValTotalReadout
+example := @GoLean.ImportedGoose.SemanticsVars.pointerAssignmentTotalReadout
+example := @GoLean.ImportedGoose.SemanticsVars.anonymousAssignTotalReadout
 /-- `✓` **the spec-parity slice-4 curated channel rows** (manifest
 feature class 3; `Specs/GooseParityChannels.lean` over the three
 staleness-guarded channel pins). Same name-existence-tripwire scope as

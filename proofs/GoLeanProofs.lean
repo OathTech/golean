@@ -48,6 +48,8 @@ import GoLeanProofs.Specs.ImportedGooseActris
 import GoLeanProofs.Specs.GooseParityKit
 import GoLeanProofs.Specs.GooseParityNilWP
 import GoLeanProofs.Specs.GooseParityBlockWP
+import GoLeanProofs.Specs.GooseParityNewWP
+import GoLeanProofs.Specs.GooseParityVarsWP
 import GoLeanProofs.Specs.GooseParityChannels
 import GoLeanProofs.Specs.ImportedGooseMapliteral
 import GoLeanProofs.Specs.ImportedGooseConst
