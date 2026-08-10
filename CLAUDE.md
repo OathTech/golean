@@ -305,6 +305,31 @@ way an arc reaches `main`).
   verification of each finding, defaulting to *refute* if thin; (5) honest
   synthesis — drop refuted, spot-check the top survivors yourself.
 
+## Worktree-per-lane discipline (2026-08-10, user-directed)
+
+Arc and lane work happens in **worktrees**, one per lane, under
+`.claude/worktrees/<lane>` (branch named for the lane); the **primary
+checkout stays parked on `main`**, where the operator coordinates
+landings. Validated experimentally before adoption (§8b of the Verdi
+compat note: two full gates beside mainline, zero interference;
+~1 GB/lane of build dirs). The rules that make it safe:
+
+- **Disjoint ownership for CONCURRENT lanes.** One lane at a time owns
+  the semantic core + `Corpus/` + `baselines/` (re-pins and certified
+  records do not merge textually); parallel lanes own disjoint trees
+  (e.g. `compat/**`, docs-only scoping). Overlapping arcs run
+  SEQUENTIALLY — worktrees isolate builds, not intent.
+- **Cap budget:** two 64 G-capped builds can over-commit the 125 G box —
+  parallel lanes set `GOLEAN_MEM_MAX=48G` or stagger full gates
+  (arc-boundary events; staggering is nearly free).
+- **Each worktree bootstraps its own `deps/`** with `scripts/setup-deps`
+  (offline via `--from <sibling>`; pins table in the script, fail
+  closed). The verbatim gate fails closed without it — by design.
+- Landing is the unchanged merge protocol (rebase → gate → audit-ask →
+  ff-only), operator-coordinated; `main` is the one serialized resource.
+  Crash rule per lane: snapshot dirty worktrees to `refs/snapshots/`
+  before any checkout/rebase touches them. Prune retired worktrees.
+
 ## Reference checkouts (`deps/`, in-repo and gitignored)
 
 Checkouts available for reading — consult them instead of guessing or

@@ -1,0 +1,131 @@
+#!/usr/bin/env bash
+# setup-deps — populate a worktree's gitignored deps/ at the pinned revs.
+#
+# A fresh worktree has no deps/, so the verbatim gate fails CLOSED
+# ("deps/goose is not a git checkout") and takes scripts/ci red — hit on
+# the gobra worktree 2026-08-09, predicted by the parallel-lane note
+# (docs/2026-08-09_verdi-compat-layer.md §8b). This script exists so the
+# worktree-per-lane discipline doesn't pay that papercut per lane.
+#
+# Usage:
+#   scripts/setup-deps [--from <dir>] [--only name[,name...]]
+#
+#   --from <dir>   a sibling checkout's deps/ directory (or a repo root
+#                  containing deps/) to clone from LOCALLY — works
+#                  offline and is the ONLY source for repos with no
+#                  public URL. Local clones use --shared=false (full
+#                  object copy: a pruned sibling must not corrupt us).
+#   --only ...     restrict to named repos (default: the GATE set, see
+#                  the table — reading-only comparison checkouts are
+#                  opt-in by name).
+#
+# Behavior per repo, fail-closed:
+#   - already present at the pinned rev  -> ok (untouched)
+#   - present at a DIFFERENT rev         -> REPORTED, not touched (rev
+#     drift is resolved by a human per the trust-tools rule, never by
+#     this script silently re-pinning)
+#   - absent, --from has it              -> local clone + checkout pin
+#   - absent, public URL known           -> network clone + checkout pin
+#   - absent, no URL and no --from       -> FAIL with the exact command
+#     to run (hand it to the operator; never guess a source)
+#
+# The pins table is DERIVED from the authoritative sources named in each
+# row's comment — when a pin moves there, move it here in the same
+# change (checked by grep, not by magic).
+
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+cd "$ROOT"
+
+FROM=""
+ONLY=""
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --from) FROM="${2:?--from needs a dir}"; shift 2 ;;
+    --only) ONLY="${2:?--only needs names}"; shift 2 ;;
+    *) echo "setup-deps: unknown argument '$1' (fail closed)" >&2; exit 2 ;;
+  esac
+done
+[[ -n "$FROM" && -d "$FROM/deps" ]] && FROM="$FROM/deps"
+
+# name | pinned rev | public URL ("-" = none: --from required) | in default set
+# Pins' authoritative homes: goose = scripts/check-imported-goose PINNED_REV;
+# perennial = the parity records (docs/goose-perennial-comparison.md);
+# verdi/verdi-raft/StructTact/rocq-lean-import/lf-lean = CLAUDE.md's
+# reference-checkout list; iris-lean = the Lake manifest's pinned rev
+# (reading copy); raft = north-star target (rev floats deliberately —
+# recorded as "-" pin meaning any rev accepted).
+PINS=$(cat <<'TABLE'
+goose            3be88bbb4982f58e5813b6f0344302d5582c8e8a  https://github.com/goose-lang/goose.git      default
+perennial        43d4efabc22eb148eb239ebee89d1dd2ee54c900  https://github.com/mit-pdos/perennial.git    default
+raft             -                                         https://github.com/etcd-io/raft.git          default
+iris-lean        manifest                                  -                                            default
+verdi            7e1641b                                   https://github.com/uwplse/verdi.git          named
+verdi-raft       a3375e8                                   https://github.com/uwplse/verdi-raft.git     named
+StructTact       97268e1                                   https://github.com/uwplse/StructTact.git     named
+rocq-lean-import 96686c4                                   -                                            named
+lf-lean          2c0d52e                                   -                                            named
+grossmith        -                                         -                                            named
+gobra            -                                         -                                            named
+aeneas           -                                         -                                            named
+strata           -                                         -                                            named
+TABLE
+)
+
+mkdir -p deps
+fail=0
+while read -r name rev url tier; do
+  [[ -z "$name" ]] && continue
+  if [[ -n "$ONLY" ]]; then
+    [[ ",$ONLY," == *",$name,"* ]] || continue
+  else
+    [[ "$tier" == "default" ]] || continue
+  fi
+  # iris-lean's pin lives in the Lake manifest — resolve it, fail closed.
+  if [[ "$rev" == "manifest" ]]; then
+    rev="$(python3 -c "import json;m=json.load(open('proofs/lake-manifest.json'));print([p['rev'] for p in m['packages'] if p['name']=='iris'][0])" 2>/dev/null || true)"
+    if [[ -z "$rev" ]]; then
+      echo "setup-deps: FAIL — cannot resolve iris(-lean)'s rev from proofs/lake-manifest.json (fail closed)" >&2
+      fail=1; continue
+    fi
+  fi
+  dest="deps/$name"
+  if [[ -d "$dest/.git" || -f "$dest/.git" ]]; then
+    have="$(git -C "$dest" rev-parse HEAD)"
+    if [[ "$rev" == "-" || "$have" == "$rev"* || "$rev" == "$have"* ]]; then
+      echo "setup-deps: ok        $name @ ${have:0:9}"
+    else
+      echo "setup-deps: REV DRIFT $name — have ${have:0:9}, pin ${rev:0:9}; NOT touched (resolve per the trust-tools rule)" >&2
+      fail=1
+    fi
+    continue
+  fi
+  src=""
+  if [[ -n "$FROM" && -d "$FROM/$name/.git" || -n "$FROM" && -f "$FROM/$name/.git" ]]; then
+    src="$FROM/$name"
+  elif [[ "$url" != "-" ]]; then
+    src="$url"
+  else
+    echo "setup-deps: FAIL — $name has no public URL and --from did not provide it." >&2
+    echo "  hand the operator:  scripts/setup-deps --from <a sibling repo with deps/$name> --only $name" >&2
+    fail=1; continue
+  fi
+  echo "setup-deps: cloning   $name from $src"
+  if ! git clone --quiet --no-hardlinks "$src" "$dest" 2>/dev/null; then
+    echo "setup-deps: FAIL — clone of $name from $src failed (no network / bad source); use --from <sibling deps dir> (fail closed)" >&2
+    rm -rf "$dest"; fail=1; continue
+  fi
+  if [[ "$rev" != "-" ]]; then
+    git -C "$dest" checkout --quiet "$rev" || {
+      echo "setup-deps: FAIL — $name clone lacks pinned rev $rev (a shallow/pruned source?); removing the partial clone (fail closed)" >&2
+      rm -rf "$dest"; fail=1; continue
+    }
+  fi
+  echo "setup-deps: pinned    $name @ $(git -C "$dest" rev-parse --short HEAD)"
+done <<< "$PINS"
+
+if [[ "$fail" -ne 0 ]]; then
+  echo "setup-deps: INCOMPLETE — one or more repos failed above (fail closed; gates depending on them stay red)" >&2
+  exit 1
+fi
+echo "setup-deps: complete"
