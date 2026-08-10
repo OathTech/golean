@@ -1,0 +1,19 @@
+# Certified observation set — tier=slow membership row (tiered checking,
+# user directive 2026-08-08; docs/2026-08-04_membership-lane-design.md
+# addendum of the same date). Quick runs verify samples + the
+# driver-coupling pin against THIS set and its wire hash; scripts/ci
+# --slow re-enumerates and must reproduce it exactly. Update
+# deliberately, in its own commit, with the reason — never auto-written.
+# certified: 2026-08-10  commit: spec-parity-s2 audit fix round (F1 pin)
+# certification reason: new row — the RWMutex acquisition-order
+#   envelope pin (F1): the model admits both contenders' orders at the
+#   both-parked state while gc's realized point is reader-first;
+#   membership over {10, 20} with gc sampling plain + -race is the
+#   executable containment check. Measured 16.4M steps / ~30s, at the
+#   tier threshold.
+# case: sync/rwmutex-order/acquisition
+# params: width=4,sites=40,work=30000000,members=2,tier=slow
+# wire-sha256: c491fef27ef175b8a63c8d217f5129e1e50c415cf41d053b2e1913a214038ced
+# enum-stats: observations=2 steps=16445466 sites/leaves per artifacts (measured 2026-08-10)
+{"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":10}]}
+{"schema":"golean-observation-v1","status":"ok","values":[{"kind":"int","tag":"int","value":20}]}

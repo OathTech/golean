@@ -72,6 +72,25 @@ panic_message() {
   '
 }
 
+# The fatal twin (audit fix round 2026-08-10: the fatal branch used to
+# synthesize the compared observation from the manifest's
+# expected_reason, so a gc message that extended or a manifest pin that
+# truncated the real text passed green with stale text substituted —
+# asymmetric with the panic path, which compares gc's ACTUAL message).
+fatal_message() {
+  awk '
+    /^fatal error: / {
+      sub(/^fatal error: /, "")
+      print
+      found = 1
+      exit
+    }
+    END {
+      if (!found) exit 1
+    }
+  '
+}
+
 if ! command -v go >/dev/null 2>&1; then
   echo "go not found on PATH; install Go or expose it in the shell to run differential coverage" >&2
   exit 2
@@ -293,11 +312,12 @@ run_case_rows() {
   # sampling; record the conclusion in the case's why); (c) the program
   # is race-free and misclassified (model bug — fix).
   # fatal (spec-parity slice 2, sync design note §2): gc's UNRECOVERABLE
-  # runtime throws (`fatal error: <msg>`, exit 2 — the sync misuse
-  # class; probed: recover does not intervene, so this is a terminal
-  # like deadlock, never a panic). The message is per-case, carried in
-  # expected_reason; both sides compare the synthesized status/message
-  # observation. Strict-lane only.
+  # runtime throws (`fatal error: <msg>` — the sync misuse class;
+  # probed: recover does not intervene, so this is a terminal like
+  # deadlock, never a panic). The message is per-case: expected_reason
+  # GATES the run, and the compared observation carries gc's ACTUAL
+  # leading fatal line (audit fix round 2026-08-10, the panic path's
+  # actual-message discipline). Strict-lane only.
   case "$expected_status" in
     ok|panic|deadlock|race|fatal) ;;
     *)
@@ -412,16 +432,20 @@ run_case_rows() {
         go_observation="{\"message\":\"data race detected\",\"schema\":\"golean-observation-v1\",\"status\":\"race\"}"
       fi
     elif [[ "$expected_status" == "fatal" ]]; then
-      # The throw's message is per-case (expected_reason carries it);
-      # the observation both sides compare is the synthesized
-      # status/message pair — the Lean machine's fatal terminal renders
-      # the identical status and message (the deadlock pattern with a
-      # case-specific message).
+      # The throw's message is per-case: expected_reason GATES the run
+      # (the manifest pin must appear in gc's output), and the compared
+      # observation carries gc's ACTUAL leading fatal line — extracted
+      # symmetrically with the panic path (audit fix round 2026-08-10:
+      # synthesizing from expected_reason let extended gc text or a
+      # truncated manifest pin pass green with stale text substituted).
       if [[ "$go_observation" != *"fatal error: $expected_reason"* ]]; then
         report_fail "$id" "$features" "go-run" "expected Go fatal error '$expected_reason', got: $go_observation"
         failed=1
+      elif ! actual_fatal_message="$(printf '%s\n' "$go_observation" | fatal_message)"; then
+        report_fail "$id" "$features" "go-observation" "could not extract Go fatal message: $go_observation"
+        failed=1
       else
-        escaped_reason="$(json_string_literal "$expected_reason")"
+        escaped_reason="$(json_string_literal "$actual_fatal_message")"
         go_observation="{\"message\":$escaped_reason,\"schema\":\"golean-observation-v1\",\"status\":\"fatal\"}"
       fi
     elif [[ "$expected_status" == "panic" ]]; then
@@ -1015,7 +1039,7 @@ case_count="$row_i"
 export CASE_OUT ROOT OUT FRONTEND GO_BUILD_CACHE GOLEAN_BIN \
   GO_TIMEOUT_SECONDS LEAN_TIMEOUT_SECONDS LEAN_ENUM_TIMEOUT_SECONDS
 export -f run_case run_case_rows run_with_timeout lean json_string_literal \
-  panic_message report_pass report_pass_lane report_fail one_line \
+  panic_message fatal_message report_pass report_pass_lane report_fail one_line \
   membership_go_observation run_membership_case_rows go_run_oracle \
   parse_lane_params member_status_allowed
 

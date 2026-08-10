@@ -5023,20 +5023,13 @@ theorem applySyncOp_wf {σ : ExecState} {op : SyncOp}
       obtain ⟨σ₂, hst, h⟩ := h
       obtain ⟨w1, w2, w3, w4, w5⟩ := storeLoc_pres hw hlocb
         (by simp [syncData_locSup]) hst
-      split at h
-      · simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h
-        obtain ⟨rfl, rfl⟩ := h
-        refine ⟨w1, ?_, w4, w2⟩
-        simp only [Config.locSup, panicChainSup, runtimeErrorValue_locSup,
-          goValueListSup, Nat.max_le]
-        omega
-      · split at h <;>
-          (simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h;
-           obtain ⟨rfl, rfl⟩ := h;
-           refine ⟨w1, ?_, w4, w2⟩;
-           simp only [Config.locSup, panicChainSup, runtimeErrorValue_locSup,
-             goValueListSup, Nat.max_le];
-           omega)
+      split at h <;>
+        (simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h;
+         obtain ⟨rfl, rfl⟩ := h;
+         refine ⟨w1, ?_, w4, w2⟩;
+         simp only [Config.locSup, panicChainSup, runtimeErrorValue_locSup,
+           goValueListSup, Nat.max_le];
+         omega)
     · simp [stuck, throw, throwThe, MonadExceptOf.throw] at h
   case _ av =>  -- wgWait
     simp only [goValueListSup, Nat.max_le] at hvs

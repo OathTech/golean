@@ -2002,10 +2002,18 @@ is "any registry-granularity schedule over runnable goroutines", which
 is EXACTLY the existing L1 site's envelope: an unlock/Done/complete
 merely makes parked contenders wake-ready (`wakeReady`), and WHICH
 contender (or barging new arrival) proceeds next is the next L1 pick.
-Soundness (⊇ gc): acquisition order IS run order of the acquire steps,
-and L1 admits all run orders — gc's handoff member is the
-parked-waiter-picked schedule, every barging member an
-arrival-picked schedule. CONSEQUENCE: this apply consumes NOTHING from
+Soundness (⊇ gc), stated at ACQUISITION-ORDER granularity (audit fix
+round 2026-08-10, F1): acquisition order IS run order of the acquire
+steps, and L1 admits all run orders — gc's handoff member is the
+parked-waiter-picked schedule, every barging member an arrival-picked
+schedule. The claim is NOT per-state successor containment: at the
+RWMutex both-parked state (writer holds, a writer AND a reader are
+parked) gc's Unlock deterministically releases the readers first
+(rwmutex.go:206-217) while this model's `pendingW` keeps readers
+excluded until the parked writer passes — the reader-first ORDER is
+still admitted through the schedules that order the acquire steps
+directly (design note §8 R1; pinned by sync/rwmutex-order/acquisition,
+members {10, 20} ⊇ gc's realized 10). CONSEQUENCE: this apply consumes NOTHING from
 the choice stream, ever — sync adds zero new consumption sites, and
 single-thread sync programs are stream-transparent (sequential
 conservation untouched).
@@ -2113,15 +2121,36 @@ def applySyncOp (s : ExecState) (op : SyncOp) (vs : List GoValue)
       match ← syncCell s loc with
       | .waitGroup counter waiters => do
           let counter' := counter + delta
+          -- The ZEROING Add resets the wait count (audit fix round
+          -- 2026-08-10, gc waitgroup.go:134-135: `wg.state.Store(0)`
+          -- runs BEFORE the semrelease loop) — so an Add issued in the
+          -- wake window, with woken waiters not yet resumed, sees
+          -- w == 0 and the misuse panic below cannot fire (gc is CLEAN
+          -- there; probed, and eval-pinned by the two-waiter
+          -- reuse-window pin). The parked waiters stay parked-Config
+          -- shapes; their resume's `waiters - 1` saturates at the
+          -- already-reset 0. A NEW Wait parking after the reset counts
+          -- from 0 again — which is also what keeps the first-waiter
+          -- sema WRITE condition (raceUpdate's `.wgWait` arm) gc-exact
+          -- across reuse rounds.
+          let waiters' := if counter' == 0 && waiters > 0 then 0 else waiters
           -- The update lands BEFORE any panic (probe p13).
-          let s' ← storeLoc s loc (.syncData (.waitGroup counter' waiters))
+          let s' ← storeLoc s loc (.syncData (.waitGroup counter' waiters'))
           if counter' < 0 then
             return (.panicking [⟨runtimeErrorValue
               "sync: negative WaitGroup counter", false⟩] k, s')
-          else if waiters > 0 && delta > 0 && counter == 0 then
-            return (.panicking [⟨runtimeErrorValue
-              "sync: WaitGroup misuse: Add called concurrently with Wait", false⟩] k, s')
           else
+            -- gc's Add-side misuse panic (waitgroup.go:120, `w != 0 &&
+            -- delta > 0 && v == int32(delta)`) is UNREACHABLE at
+            -- registry granularity once the reset above is modeled:
+            -- `waiters > 0` requires a park at counter ≠ 0, and any op
+            -- that returns the counter to 0 resets the count in the
+            -- same atomic step — gc reaches line 120 only through
+            -- sub-op Wait/Add interleavings (a Wait registered between
+            -- another Add's state update and its reset), which this
+            -- machine's atomic ops realize as the wg-sema race or as
+            -- clean runs. No arm is kept (no inert dead code); the
+            -- audit fix round removed it with this record.
             return (.next k, s')
       | other => stuck s!"Add on a non-WaitGroup sync cell: {repr other}"
   | .wgWait, [av] => do

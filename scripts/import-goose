@@ -34,6 +34,7 @@ cd "$ROOT"
 
 PINNED_REV="3be88bbb4982f58e5813b6f0344302d5582c8e8a"
 ALLOW_IMPORTS=()
+GRANTED_USED=0
 
 usage() {
   cat >&2 <<'EOF'
@@ -124,24 +125,40 @@ for rel in "${ALL_SOURCES[@]}"; do
   [[ -f "$f" ]] || die "missing upstream source: $f"
   case "$rel" in *.go) ;; *) die "not a .go file: $rel" ;; esac
   if grep -nE '^[[:space:]]*import[[:space:]("]' "$f" >/dev/null; then
-    # Phase-2 seam (spec-parity slice 2): explicitly allowed stdlib
-    # imports pass verbatim; every OTHER imported path in the file
-    # still refuses. The check extracts each import path (single-line
-    # and block forms) and demands allowlist membership.
+    # Phase-2 seam (spec-parity slice 2; REWRITTEN fail-closed at the
+    # audit fix round, F6 — the first extractor silently yielded ZERO
+    # paths on forms it could not parse, so indented imports, one-line
+    # blocks, and `import"x"` landed unvetted): explicitly allowed
+    # stdlib imports pass verbatim; every OTHER imported path refuses.
+    # Only the two gofmt shapes are RECOGNIZED — `import "path"` and
+    # the multi-line block with one quoted path per line — and any
+    # import-shaped line the strict parser does not account for is a
+    # hard refusal (BAD), never a silent zero-path pass.
     if [[ ${#ALLOW_IMPORTS[@]} -eq 0 ]]; then
       die "$rel has imports — only --allow-import'ed packages may be imported (park it)"
     fi
-    while IFS= read -r p; do
-      allowed=0
-      for a in "${ALLOW_IMPORTS[@]}"; do
-        [[ "$p" == "$a" ]] && allowed=1
-      done
-      [[ "$allowed" -eq 1 ]] || die "$rel imports \"$p\", which is not --allow-import'ed (park it)"
+    while read -r tag rest; do
+      case "$tag" in
+        PATH)
+          allowed=0
+          for a in "${ALLOW_IMPORTS[@]}"; do
+            [[ "$rest" == "$a" ]] && allowed=1
+          done
+          [[ "$allowed" -eq 1 ]] || die "$rel imports \"$rest\", which is not --allow-import'ed (park it)"
+          GRANTED_USED=1
+          ;;
+        BAD)
+          die "$rel has an import form the vet does not recognize (gofmt shapes only; fail closed): $rest"
+          ;;
+      esac
     done < <(awk '
-      /^import[ 	]*\(/ { inblk=1; next }
-      inblk && /^\)/ { inblk=0; next }
-      inblk { if (match($0, /"[^"]+"/)) print substr($0, RSTART+1, RLENGTH-2); next }
-      /^import[ 	]/ { if (match($0, /"[^"]+"/)) print substr($0, RSTART+1, RLENGTH-2) }
+      /^import[ 	]+"[^"]+"$/ { match($0, /"[^"]+"/); print "PATH " substr($0, RSTART+1, RLENGTH-2); next }
+      /^import[ 	]*\($/ { inblk=1; next }
+      inblk && /^\)$/ { inblk=0; next }
+      inblk && /^[ 	]*"[^"]+"$/ { match($0, /"[^"]+"/); print "PATH " substr($0, RSTART+1, RLENGTH-2); next }
+      inblk { print "BAD " $0; next }
+      /^[ 	]*import[ 	("]/ { print "BAD " $0 }
+      /^[ 	]*import"/ { print "BAD " $0 }
     ' "$f")
   fi
   if grep -nE '^func[[:space:]]+main[[:space:]]*\(' "$f" >/dev/null; then
@@ -184,6 +201,12 @@ out="$TMP/main.go"
   echo "// imported: $(date +%Y-%m-%d) by scripts/import-goose"
   echo "// transform: package clause -> main; assembly order as listed; all"
   echo "// GoLean-authored code sits below the harness marker."
+  if [[ "$GRANTED_USED" -eq 1 ]]; then
+    # Per-file grant record (audit fix round: the grant used to live
+    # only in commit prose): the standing guard re-checks every
+    # above-marker import against this line.
+    echo "// imports-allowed: ${ALLOW_IMPORTS[*]} (--allow-import)"
+  fi
   echo "package main"
   for rel in "${ALL_SOURCES[@]}"; do
     echo ""

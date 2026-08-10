@@ -1102,9 +1102,99 @@ private def syncMuWakeMainFunction : GoCore.Func := {
     ]
 }
 
+private def syncWgWaiterSendFunction : GoCore.Func := {
+  id := ⟨"syncWgWaiterSend_F"⟩,
+  args := #[{ id := "wgp", typ := .pointer (.sync .waitGroup) },
+            { id := "ch", typ := .chan .both .int }],
+  results := #[],
+  body := .seqn #[
+    .syncStmt .wgWait #[.var "wgp"] #[],
+    .chanSend (.var "ch") (.intLit 1) .int]
+}
+
+/-- The REUSE-WINDOW discriminator (audit fix round 2026-08-10, the
+verifier's two-waiter shape): W1 waits and then hands main an HB edge
+over the channel; W2 only waits. On the stream that parks BOTH waiters
+before main's zeroing Done, the post-window `Add(1)` runs with W1's
+first-waiter sema WRITE HB-covered (the channel handoff) and W2 still
+parked — so no race fires, and a resume-time waiter retirement would
+panic in the ADDER ("Add called concurrently with Wait") where gc is
+CLEAN (waitgroup.go:135 resets the wait count inside the zeroing Add,
+before the semreleases; probed clean under plain gc AND -race). -/
+private def syncWgReuseMainFunction : GoCore.Func := {
+  id := ⟨"syncWgReuseMain_F"⟩,
+  args := #[],
+  results := #[coreParam "z"],
+  body := .block
+    #[{ id := "wg", typ := .sync .waitGroup },
+      { id := "chv", typ := .chan .both .int }]
+    #[
+      .makeChan (.var "chv") .int none,
+      .syncStmt .wgAdd #[.ref "wg", .intLit 1] #[],
+      .goStmt (.funcVal ⟨"syncWgWaiterSend_F"⟩ #[]) #[.ref "wg", .var "chv"],
+      .goStmt (.funcVal ⟨"syncWgWaiter_F"⟩ #[]) #[.ref "wg"],
+      .syncStmt .wgAdd #[.ref "wg", .intLit (-1)] #[],
+      .chanRecv #[.var "z"] (.var "chv") .int,
+      .syncStmt .wgAdd #[.ref "wg", .intLit 1] #[],
+      .syncStmt .wgAdd #[.ref "wg", .intLit (-1)] #[]
+    ]
+}
+
+private def syncXUnlockW1Function : GoCore.Func := {
+  id := ⟨"syncXUnlockW1_F"⟩,
+  args := #[{ id := "mp", typ := .pointer (.sync .mutex) }],
+  results := #[],
+  body := .seqn #[.syncStmt .unlock #[.var "mp"] #[]]
+}
+
+private def syncXUnlockW2Function : GoCore.Func := {
+  id := ⟨"syncXUnlockW2_F"⟩,
+  args := #[{ id := "mp", typ := .pointer (.sync .mutex) },
+            { id := "gp", typ := .pointer .int },
+            { id := "ch", typ := .chan .both .int }],
+  results := #[],
+  body := .seqn #[
+    .syncStmt .lock #[.var "mp"] #[],
+    .chanSend (.var "ch") (.deref (.var "gp") .int) .int]
+}
+
+/-- The U5 divergence pin (audit fix round 2026-08-10, F2): main
+publishes under the lock, re-acquires, and a goroutine that NEVER
+acquired performs the unlock (probe p09 — legal, owner-free); a third
+goroutine then locks and reads the published value. The merge-join
+release keeps main's critical section in `semA`, so the read is
+HB-ordered and GREEN — the memory-model sentence verbatim. gc's TSan
+hook is overwrite `race.Release`, which DROPS main's clock at W1's
+unlock: `go run -race` reports a DATA RACE on this shape (verified by
+the audit). TSan-red/ours-green, the recorded U5 narrowing of the
+detector-alignment oracle; un-lane-able as a corpus row (mixed
+oracle). -/
+private def syncXUnlockMainFunction : GoCore.Func := {
+  id := ⟨"syncXUnlockMain_F"⟩,
+  args := #[],
+  results := #[coreParam "z"],
+  body := .block
+    #[{ id := "mu", typ := .sync .mutex },
+      { id := "g", typ := .int },
+      { id := "chv", typ := .chan .both .int }]
+    #[
+      .makeChan (.var "chv") .int none,
+      .syncStmt .lock #[.ref "mu"] #[],
+      .assign (.var "g") (.intLit 1),
+      .syncStmt .unlock #[.ref "mu"] #[],
+      .syncStmt .lock #[.ref "mu"] #[],
+      .goStmt (.funcVal ⟨"syncXUnlockW1_F"⟩ #[]) #[.ref "mu"],
+      .goStmt (.funcVal ⟨"syncXUnlockW2_F"⟩ #[]) #[.ref "mu", .ref "g", .var "chv"],
+      .chanRecv #[.var "z"] (.var "chv") .int
+    ]
+}
+
 private def syncEvalProgram : GoCore.Program := {
   funcs := #[syncWgWaiterFunction, syncWgMisuseMainFunction,
-    syncMuWorkerFunction, syncMuWakeMainFunction]
+    syncMuWorkerFunction, syncMuWakeMainFunction,
+    syncWgWaiterSendFunction, syncWgReuseMainFunction,
+    syncXUnlockW1Function, syncXUnlockW2Function,
+    syncXUnlockMainFunction]
 }
 
 private def coreMapBasicFunction : GoCore.Func := {
@@ -2124,20 +2214,40 @@ def main : IO UInt32 := do
     (GoCore.Machine.runProgramPoolM 100000 prioProgram "closedSelRecvSelWaiterMain_F" #[] [1, 1]) "race")
   passed := passed && (← expectIntResult "GoCore pool select-send poll read is HB-ordered by the op-x-select pairing: receive from the parked select-send, then close, race-free (BUG-046 green twin)"
     (GoCore.Machine.runProgramPoolM 100000 prioProgram "selSendPairedCloseMain_F" #[] [1, 1]) 7)
-  -- Sync primitives (spec-parity slice 2). The wg MISUSE shape
-  -- (Add-from-0 beside a parked waiter, waitgroup.go:120) is
-  -- intrinsically TSan-racy — the parked waiter's first-waiter sema
-  -- WRITE (waitgroup.go:190) has no HB edge to the adder's read
-  -- (waitgroup.go:115) — so under the DRF-SC discipline the detector
-  -- refuses BEFORE the recoverable misuse panic can abort the run
-  -- (plain gc realizes the panic, -race gc the report; our refusal is
-  -- the doctrine's racy classification). Stream [1,1,0]: worker picked
+  -- Sync primitives (spec-parity slice 2; CORRECTED at the audit fix
+  -- round 2026-08-10 — the original comment claimed the shape was
+  -- "intrinsically TSan-racy" so the race "always precedes" the
+  -- misuse panic, refuted by the verifier's two-waiter counterexample;
+  -- the panic arm itself is retired with the reuse-window fix). The
+  -- Add-from-0-beside-a-parked-waiter shape refuses as the WG-SEMA
+  -- race exactly when the adder's read (waitgroup.go:111-116) is
+  -- HB-uncovered against the parked waiter's first-waiter WRITE
+  -- (waitgroup.go:185-190) — here it is (no edge exists), matching
+  -- `go run -race` on the same shape. Stream [1,1,0]: worker picked
   -- at the fork's completion AND at its wgWait apply (parking it),
   -- main takes the final Add.
   passed := passed && (← expectErrorStatus "GoCore sync: Add-from-0 beside a parked waiter is the wg-sema race (misuse pair; the panic is the sub-detector member)"
     (GoCore.Machine.runProgramPoolM 100000 syncEvalProgram "syncWgMisuseMain_F" #[] [1, 1, 0]) "race")
   passed := passed && (← expectIntResult "GoCore sync: parked Lock wakes on Unlock and acquires (park -> wake -> acquire, worker-first stream)"
     (GoCore.Machine.runProgramPoolM 100000 syncEvalProgram "syncMuWakeMain_F" #[] [1, 0]) 5)
+  -- The reuse window (audit fix round 2026-08-10): gc's zeroing Add
+  -- RESETS the wait count before releasing the semaphores
+  -- (waitgroup.go:135), so an Add issued in the wake window sees w == 0
+  -- and gc is CLEAN — plain and under -race (the W1 channel handoff
+  -- HB-covers the first-waiter sema write). Stream [1,1,1,1] parks both
+  -- waiters before main's zeroing Done and realizes exactly that
+  -- window; the pre-fix resume-time waiter retirement panicked in the
+  -- adder here (verified red before the fix).
+  passed := passed && (← expectIntResult "GoCore sync: Add in the reuse window is CLEAN (gc resets the wait count in the zeroing Add; two-waiter shape, both parked)"
+    (GoCore.Machine.runProgramPoolM 100000 syncEvalProgram "syncWgReuseMain_F" #[] [1, 1, 1, 1]) 1)
+  -- U5 (audit fix round, F2): the cross-goroutine-unlock publication
+  -- stays GREEN under the merge-join release — the memory-model
+  -- sentence verbatim — where gc's overwrite-Release TSan hook reports
+  -- a race (audit-verified on go1.26.5). The green result IS the pin:
+  -- a detector change toward TSan's overwrite would flip this to
+  -- raceDetected and must revisit the U5 record.
+  passed := passed && (← expectIntResult "GoCore sync: cross-goroutine unlock publication is HB-ordered by the merge release (U5: TSan-red/ours-green, recorded)"
+    (GoCore.Machine.runProgramPoolM 100000 syncEvalProgram "syncXUnlockMain_F" #[] []) 1)
   passed := passed && (← expectErrorStatus "GoCore race: write/write refuses on the default stream"
     (GoCore.Machine.runProgramPoolM 100000 raceProgram "raceWriteWriteMain_F" #[] []) "race")
   passed := passed && (← expectErrorStatus "GoCore race: write/write refuses on the worker-first stream"

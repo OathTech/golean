@@ -72,8 +72,10 @@ semrelease). Disposition in §4 (WaitGroup) and §8 (known narrowing).
 **Decision (fatal class): model gc's unrecoverable sync throws as a
 real terminal, `GoError.fatal msg`** — status `fatal`, message = gc's
 fixed string, differentially testable as `expected_status: fatal`
-against `go run` exit 2 + leading `fatal error: <msg>` (exactly the
-deadlock terminal's pattern, which is also a gc fatal). Options
+against a failing `go run` whose LEADING `fatal error: <msg>` line is
+extracted and compared (the panic path's actual-message discipline —
+audit fix round F8; exit codes are not separately pinned, matching the
+deadlock/panic branches). Options
 considered: (a) `.unsupported` refusal like the go-of-nil-func
 precedent — rejected: gc's behavior here is UNambiguous (probed, fixed
 message), and "fail closed on what's ambiguous" cuts the other way:
@@ -177,13 +179,12 @@ surface)
   RUnlock-of-write-locked the same way — readers = 0 covers it).
 - **WaitGroup.** Counter `Int`. `wgAdd delta`: counter += delta FIRST
   (p13 — the update lands before any panic), then: new counter < 0 →
-  recoverable panic `sync: negative WaitGroup counter` (p04); delta >
-  0 ∧ old counter = 0 ∧ parked `wgWait` waiters exist on this cell →
-  recoverable panic `sync: WaitGroup misuse: Add called concurrently
-  with Wait` (gc `waitgroup.go:120`; needs pool visibility, so this
-  one check runs at the pool layer where parked shapes are visible —
-  the arrivalPlan precedent for pool-visible op semantics); else
-  proceed, with HB release iff delta < 0 (gc releases before the
+  recoverable panic `sync: negative WaitGroup counter` (p04); a
+  ZEROING add additionally resets the waiter count in the same atomic
+  step (gc `waitgroup.go:134-135` — audit fix round F3; gc's Add-side
+  misuse panic at waitgroup.go:120 is thereby unreachable at registry
+  granularity and carries NO arm, per the record at the rule site);
+  else proceed, with HB release iff delta < 0 (gc releases before the
   panic check — a recovered negative-counter Done still released;
   modeled). `Done()` is frontend-lowered to `wgAdd(-1)` (gc's own
   definition). `wgWait`: counter = 0 → proceed (HB acquire — also on
@@ -225,9 +226,13 @@ clock pair `semA`/`semB` —
   serialized readers; a single-clock model would silently order
   them).
 
-All releases are merge-joins (gc uses overwrite `Release` where
-exclusivity makes it equivalent, merge where concurrency demands it;
-merge is sound in both and equal under exclusivity — recorded). The
+All releases are merge-joins (CORRECTED at the audit fix round, F2:
+merge equals gc's overwrite `Release` only under lock-HANDOFF
+discipline — the unlocker previously acquired the cell — not under
+mere exclusivity; on owner-free cross-goroutine unlocks TSan drops the
+prior section's clock and over-reports relative to the memory-model
+text. Recorded as Race.lean's U5; the merge stays — it is the spec
+sentence verbatim). The
 WaitGroup misuse pair is modeled as a per-cell shadow (`chanObjAccess`
 mold): the Add-side READ and first-waiter WRITE, check-then-record —
 keeping `-race` refusal alignment for Add-racing-Wait programs.
@@ -307,19 +312,48 @@ through unsupported shapes fail closed, never approximate.
 
 ## 8. Recorded approximations / known narrowings (each at its site)
 
+- **R1 (audit fix round, F1 — RWMutex unlock-handoff successor
+  divergence):** the model's `pendingW` exclusion attaches to every
+  PARKED writer; gc's attaches only to the `rw.w`-owning writer, and
+  gc's write-Unlock semreleases every parked reader BEFORE the next
+  writer can announce (rwmutex.go:143-155, 206-217) — so at the
+  both-parked state gc's successor is deterministically reader-first
+  where the model's is writer-first. The ACQUISITION-ORDER envelope is
+  unaffected (the reader-first member arrives via the direct-order
+  schedules; no model-only deadlock exists — `wunlock` leaves
+  readers = 0, so the pending writer is wake-ready exactly when the
+  reader would have been), certified by sync/rwmutex-order/acquisition
+  (members {10, 20} ⊇ gc's realized 10, plain + -race sampling).
+- **U5 (audit fix round, F2 — TSan release overwrite-vs-merge):** see
+  Race.lean's inventory entry; the merge model is memory-model-exact
+  and TSan over-reports on owner-free cross-goroutine unlocks without
+  a handoff edge — TSan-red/ours-green, eval-pinned, un-lane-able
+  (mixed-oracle class).
 - **U4 (new, Race.lean inventory):** sync-OBJECT data accesses inside
   ops are not modeled (gc: `race.Read(&rw.w)` on every RWMutex op,
   `_ = m.state` in Mutex.Unlock) — a program racing a WRITE to the
   sync variable itself against ops on it can be TSan-red / ours-green.
   Misuse-only (such a program is also vet-red); joins U1–U2 in the
   racy lane's scope caption.
-- **WaitGroup "reused before previous Wait has returned"**
-  (`waitgroup.go:213`): gc can fire this panic in the WOKEN WAITER
-  when the counter moves in its wake window (sub-registry timing). Our
-  model realizes those schedules as the ADD-side misuse panic (§4) or
-  as the waiter staying parked; the waiter-side panic message is a gc
-  realization our envelope does not contain. Misuse-only, recorded at
-  the `wgAdd` rule site.
+- **WaitGroup reuse window** (CORRECTED at the audit fix round, F3 —
+  the original entry claimed our model realizes the window as the
+  Add-side misuse panic, and §11 claimed that panic was always
+  race-preempted; both wrong): gc's ZEROING Add resets the wait count
+  before its semreleases (`waitgroup.go:134-135`), so no Add-side
+  panic exists in the wake window and gc can be fully CLEAN there
+  (probed 10/10 by the verifier; our resume-time retirement panicked
+  on exactly those schedules — the two-waiter reuse-window eval pin
+  was verified red pre-fix). FIXED: the zeroing Add resets `waiters`
+  in the same atomic step, making the sema-pair condition gc-exact and
+  the Add-side panic arm dead (REMOVED, with the record at the rule
+  site: gc reaches waitgroup.go:120 only through sub-op Wait/Add
+  interleavings, realized here as the wg-sema race or as clean runs).
+  REMAINING narrowing, recorded: gc's WAITER-side panic ("sync:
+  WaitGroup is reused before previous Wait has returned",
+  waitgroup.go:213) fires when the counter moves in the woken
+  waiter's wake window; our woken waiter instead stays parked until
+  the counter is 0 again — a gc realization our envelope does not
+  contain, misuse-only.
 - **Fatal-path HB edges:** gc releases before its unlock-path fatal
   checks; we model no edge on fatal paths (the run aborts — no
   observable difference).
@@ -402,22 +436,27 @@ directive. Decisions made DURING the build, recorded here:
   `fatal error: <reason>`), strict-lane only. The four probed sync
   fatals are differentially GREEN, including the recover
   discriminator (a deferred recover does not intervene).
-- **The WaitGroup misuse panic is the SUB-DETECTOR member.** The
-  Add-from-0-beside-a-parked-waiter shape is intrinsically TSan-racy
-  (the first-waiter sema WRITE has no HB edge to the adder's read —
-  gc's own instrumentation pair, waitgroup.go:111-116/185-190), so
-  the detector's `raceDetected` always precedes the recoverable
-  misuse panic on the pool: our machine refuses where plain gc
-  panics and `-race` gc reports — the DRF-SC discipline's correct
-  classification, the close-woken-sender precedent. No corpus lane
-  can express the mixed class; the eval pin
-  ("Add-from-0 beside a parked waiter is the wg-sema race", stream
-  [1,1,0]) is the executable record, and the panic arm stays for the
-  pre-refusal/sequential semantics.
+- **The WaitGroup misuse surface, corrected at the audit fix round
+  (F3).** This entry originally claimed the misuse shape was
+  "intrinsically TSan-racy" so the race "always precedes" the misuse
+  panic — REFUTED by the audit's two-waiter counterexample (a channel
+  handoff HB-covers the first waiter's sema write while a second
+  waiter stays parked: panic with no race, where gc is clean both
+  plain and under -race). The honest account: gc's zeroing Add resets
+  the wait count (waitgroup.go:134-135), which the model now mirrors,
+  making the Add-side panic dead (removed) and the wake window CLEAN
+  — pinned by the reuse-window eval pin (verified red pre-fix). What
+  remains of the original claim: Add-from-0 beside a parked waiter
+  whose sema write is HB-uncovered refuses as the wg-sema race,
+  matching -race (the misuse eval pin, stream [1,1,0]). Neither shape
+  is corpus-lane-able (mixed plain-green/-race-divergent oracle
+  classes); the eval pins are the executable record.
 - **Lanes delivered**: 26/28 sync rows green (the 2 reds are the
   PERMANENT out-of-scope refusal markers, Cond + TryLock, now at
   their honest frontend-export stage); race/free-sync 4/4 confluent
-  (certified singletons incl. the 5,918-site rw-writers tree);
+  (certified singletons; per-run enumeration figures live in the run
+  artifacts — the REPRODUCIBLE record is each row's cases.tsv
+  params + lane claim, re-certified on every --diff);
   race/negative-sync 3/3 racy at FULL strength — every enumerated
   path refuses — including the p14 TWO-CLOCK DISCRIMINATOR
   (rlock-serialized: serialized readers stay HB-unordered; a
@@ -442,14 +481,73 @@ directive. Decisions made DURING the build, recorded here:
   design, probed per the buildout retrospective's lesson 3), and
   `channel/parallel-search-replace` (the 8-worker WaitGroup pool,
   upstream verbatim). The other 13 sync-importing files remain
-  blocked by their OTHER imports, honestly: disk-FFI/marshal/binary
-  (append_log, logging2, wal, simpledb), time/testing/fmt/strconv/
-  errors (elimination_stack ×2, etcd_session, lock_test, muxer_test),
-  goose-primitive FFI (prims), and sync.Cond — out of scope by D4
-  (condvar, locks). R2 pins: none attempted for the concurrent
+  blocked, honestly (CORRECTED at the audit fix round: the first
+  version listed 12 labels — upstream has TWO wal-shaped files — and
+  blamed "OTHER imports" for two files whose only import IS sync):
+  disk-FFI/marshal/binary (append_log, logging2, semantics/wal.go,
+  wal/log.go, simpledb — 5 files), time/testing/fmt/strconv/errors
+  (elimination_stack ×2, etcd_session, lock_test, muxer_test — 5),
+  goose-primitive FFI (prims — 1), and sync.Cond USE with no other
+  import (condvar, locks — 2, out of scope by D4). R2 pins: none attempted for the concurrent
   imports (allStreamsOk is sequential; the pool checker's fuel trees
   for these shapes are beyond kernel-eval budgets — the R2
   attempt-or-skip judgment the charter delegates).
+
+### Audit fix round (2026-08-10, S2 sub-branch audit: 12 agents, both
+majors downgraded on verification, ~10 confirmed/downgraded minors)
+
+Finding-by-finding record — the themes and dispositions:
+
+- **F1 (RWMutex unlock-handoff, downgraded major)**: realization kept
+  (the verifier showed the acquisition-order envelope contains gc's
+  deterministic reader-first member via direct-order schedules, with
+  no model-only deadlock); recorded as §8 R1; the `applySyncOp`
+  envelope docstring scoped to acquisition-order granularity; pinned
+  by the new tier=slow membership row sync/rwmutex-order/acquisition
+  (certified {10, 20}, tracked record in baselines/certified/).
+- **F2 (TSan release overwrite-vs-merge)**: merge kept (memory-model
+  text verbatim; TSan over-reports on owner-free cross-goroutine
+  unlocks); §8 U5 + Race.lean inventory entry; SyncClocks docstring
+  corrected from "exclusivity" to lock-handoff discipline; the
+  TSan-red/ours-green shape eval-pinned (un-lane-able mixed-oracle
+  class).
+- **F3 (WaitGroup reuse window)**: FIXED — the zeroing Add resets the
+  waiter count in the same atomic step (waitgroup.go:134-135); the
+  Add-side misuse panic arm became dead at registry granularity and
+  was REMOVED with the record; the two-waiter reuse-window eval pin
+  verified red pre-fix, green post; §4/§8/§11 claims corrected (the
+  "intrinsically TSan-racy / always precedes" sentence was refuted).
+- **F4 (promoted/method-value/go/defer sync escapes landed as runtime
+  `stuck`)**: fail-closed now — the resolved-method guard quarantines
+  every escape per-decl at the frontend (visible frontend-export
+  refusals; four permanent marker cases in sync/escapes); promoted
+  wrappers over sync methods became declaration-only quarantined
+  stubs (satisfaction answers, calls refuse — no dangling
+  `sync.Mutex.Lock` bodies, TryLock stub included). Lifting the
+  promoted STATEMENT-position shape (raft's MemoryStorage idiom) is
+  the recorded follow-up.
+- **F5 (pendingW zero coverage)**: the rwmutex-order row exercises
+  rlock parking/wake and both acquisition orders; the probed-but-
+  unpinned RUnlock-while-write-locked fatal gained its strict row.
+- **F6/F7/grants (--allow-import)**: the vet REWRITTEN fail-closed
+  (strict gofmt-shape recognizer; any unrecognized import-shaped line
+  refuses — the zero-path pass is gone), three fixtures added
+  (accept-with-grant incl. the per-file grant line,
+  reject-second-package, reject-unparsable-form), the grant recorded
+  per landed file (`// imports-allowed:` header) and re-checked by
+  check-imported-goose on every gate (negative-tested).
+- **F8a (fatal-lane message)**: the compared observation now carries
+  gc's ACTUAL leading fatal line (`fatal_message`, the panic path's
+  extractor discipline; the first fix round also caught that worker
+  processes need the helper in the `export -f` list).
+- **F8b (records)**: the 12-vs-13 blocked-file list and the condvar/
+  locks umbrella reason corrected above; the abbd0d13 re-pin header's
+  "(Cond, TryLock) move" overstated — only TryLock moved stage (Cond
+  was already frontend-export); the historical header stands, this
+  line is its correction of record. The two completion-only import
+  oracles are now marked in their cases.tsv; the five sibling rows'
+  budget raises carry in-file notes; the unreproducible run-detail
+  figure above was replaced by the tracked-record citation.
 
 ## 12. Parking ledger (user-scale items, per the AFK posture)
 

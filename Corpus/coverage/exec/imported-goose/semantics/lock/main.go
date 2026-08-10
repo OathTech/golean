@@ -3,6 +3,7 @@
 // imported: 2026-08-09 by scripts/import-goose
 // transform: package clause -> main; assembly order as listed; all
 // GoLean-authored code sits below the harness marker.
+// imports-allowed: sync (--allow-import)
 package main
 
 

@@ -3889,6 +3889,23 @@ func (e *emitter) synthesizePromotionWrappers() ([]any, error) {
 				useSel = vs
 				recvIsPtr = false
 			}
+			// Promoted SYNC-PRIMITIVE methods get a declaration-only
+			// quarantined stub, not a forwarding wrapper (audit fix
+			// round F4): the wrapper's body would call the nonexistent
+			// `sync.X.Y` — an inert dangling placeholder — while
+			// dropping the entry would make interface satisfaction
+			// answer a false "no" on embedding types. The stub keeps
+			// the method table complete (satisfaction answers) and a
+			// CALL through it fails closed as frontend-quarantined
+			// (the importedMethodStubs precedent).
+			if prim := e.syncPrimName(mfn.Type().(*types.Signature).Recv().Type()); prim != "" {
+				stub, err := e.syncPromotedStub(named, tName, mfn, recvIsPtr, prim)
+				if err != nil {
+					return nil, err
+				}
+				out = append(out, stub)
+				continue
+			}
 			w, err := e.synthesizeWrapper(named, tName, useSel, recvIsPtr)
 			if err != nil {
 				return nil, err
@@ -3897,6 +3914,38 @@ func (e *emitter) synthesizePromotionWrappers() ([]any, error) {
 		}
 	}
 	return out, nil
+}
+
+// syncPromotedStub emits the declaration-only stub for a promoted
+// sync-primitive method (audit fix round F4; see the call site above).
+func (e *emitter) syncPromotedStub(named *types.Named, tName string, mfn *types.Func, recvIsPtr bool, prim string) (map[string]any, error) {
+	sig := mfn.Type().(*types.Signature)
+	valueTy, err := e.emitType(named)
+	if err != nil {
+		return nil, err
+	}
+	recvTy := valueTy
+	if recvIsPtr {
+		recvTy = map[string]any{"kind": "pointer", "elem": valueTy}
+	}
+	params, err := e.emitParams(sig.Params())
+	if err != nil {
+		return nil, err
+	}
+	results, err := e.emitResults(sig.Results())
+	if err != nil {
+		return nil, err
+	}
+	return map[string]any{
+		"name":     mfn.Name(),
+		"recvType": tName,
+		"recv":     map[string]any{"id": "$recv", "type": recvTy},
+		"params":   params,
+		"results":  results,
+		"variadic": sig.Variadic(),
+		"unsupported": "promoted sync-primitive method sync." + prim + "." + mfn.Name() +
+			" (only direct statement/defer-position sync ops are modeled; satisfaction answers, calls fail closed)",
+	}, nil
 }
 
 // synthesizeWrapper emits one forwarding wrapper method: body = walk the
@@ -4292,6 +4341,16 @@ func (e *emitter) fieldBase(sel *ast.SelectorExpr) (any, string, error) {
 }
 
 func (e *emitter) emitSelector(sel *ast.SelectorExpr) (any, error) {
+	// Sync-primitive METHOD VALUES / METHOD EXPRESSIONS (`f := m.Lock`,
+	// `go wg.Done()`'s callee, `(*sync.Mutex).Lock`) fail closed here
+	// (audit fix round F4): the lowering would otherwise emit a
+	// func-value over a nonexistent `sync.X.Y` function id and land as
+	// runtime `stuck`.
+	if seln, ok := e.info.Selections[sel]; ok && seln.Kind() != types.FieldVal {
+		if prim := e.syncMethodPrim(seln); prim != "" {
+			return nil, unsup("sync.%s.%s as a method value (only direct statement/defer-position sync ops are modeled)", prim, sel.Sel.Name)
+		}
+	}
 	if seln, ok := e.info.Selections[sel]; ok && seln.Kind() != types.FieldVal {
 		// A METHOD VALUE `x.M`: the same representation as a lifted closure
 		// (§8) — the receiver is simply the first captured value, because
@@ -5760,13 +5819,19 @@ func (e *emitter) emitCallArgs(sig *types.Signature, c *ast.CallExpr) ([]any, er
 
 func (e *emitter) emitMethodCall(c *ast.CallExpr, sel *ast.SelectorExpr) (any, bool, error) {
 	// Sync-primitive methods never reach the ordinary method machinery:
-	// the modeled surface is statement/defer-position only (spec-parity
-	// slice 2) and is intercepted upstream — anything arriving here is
-	// an expression-position use (TryLock in a condition, a sync method
-	// call as an operand) and fails closed.
-	if prim := e.syncPrimName(e.goTypeOf(sel.X)); prim != "" {
-		if seln := e.info.Selections[sel]; seln != nil && seln.Kind() == types.MethodVal {
-			return nil, false, unsup("sync.%s.%s outside statement position (only statement/defer-position sync ops are modeled)", prim, sel.Sel.Name)
+	// the modeled surface is DIRECT statement/defer-position calls only
+	// (spec-parity slice 2), intercepted upstream — anything arriving
+	// here is an expression-position use (TryLock in a condition, a
+	// sync method call as an operand) or — audit fix round F4 — a
+	// PROMOTED call on an embedding struct, and fails closed with a
+	// per-decl quarantine (a visible frontend-export refusal, never a
+	// dangling `sync.Mutex.Lock` call that lands as runtime `stuck`).
+	// The check keys on the resolved method's own receiver
+	// (`syncMethodPrim`), which covers the promoted shape the
+	// receiver-expression check misses.
+	if seln := e.info.Selections[sel]; seln != nil && seln.Kind() == types.MethodVal {
+		if prim := e.syncMethodPrim(seln); prim != "" {
+			return nil, false, unsup("sync.%s.%s outside a direct statement/defer position (promoted, embedded, and expression-position sync ops are unmodeled)", prim, sel.Sel.Name)
 		}
 	}
 	seln, ok := e.info.Selections[sel]
@@ -6264,6 +6329,29 @@ func (e *emitter) syncPrimName(t types.Type) string {
 		return obj.Name()
 	}
 	return ""
+}
+
+// syncMethodPrim reports the modeled sync primitive OWNING a resolved
+// method selection (the method's declared receiver, deref'd), or ""
+// (audit fix round 2026-08-10, F4): `syncPrimName` keys on the
+// RECEIVER EXPRESSION's type and therefore misses promoted calls on
+// embedding structs, method values, and go/defer callees — every such
+// escape used to land as a runtime `stuck` on a dangling
+// `sync.Mutex.Lock`, which is not a visible refusal. This helper keys
+// on the SELECTION's resolved *types.Func instead.
+func (e *emitter) syncMethodPrim(seln *types.Selection) string {
+	if seln == nil {
+		return ""
+	}
+	fn, ok := seln.Obj().(*types.Func)
+	if !ok {
+		return ""
+	}
+	sig, ok := fn.Type().(*types.Signature)
+	if !ok || sig.Recv() == nil {
+		return ""
+	}
+	return e.syncPrimName(sig.Recv().Type())
 }
 
 // syncRecvAddr emits the receiver ADDRESS of a sync-primitive method

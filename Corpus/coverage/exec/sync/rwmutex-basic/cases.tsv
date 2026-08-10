@@ -1,3 +1,5 @@
 # id	subject	args	expected_status	expected_reason	features	lane	why	params
+# write-then-read-ordered: sites/work raised from defaults at the
+# flip commit (measured 34 sites; in-file note per the audit).
 rlock-twice	rlockTwice	-	ok	-	sync,rwmutex	strict	-	-
 write-then-read-ordered	writeThenReadOrdered	-	ok	-	sync,rwmutex,goroutines,channels,globals	confluent	the RWMutex write-to-read edge plus the channel join order the worker's write before main's RLock read on every schedule	width=4,sites=40,work=20000000

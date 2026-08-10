@@ -110,7 +110,7 @@ while IFS= read -r main_go; do
   # Got: above-marker region minus the generated header and package clause.
   sed -n '1,/^\/\/ --- GoLean harness ---$/p' "$main_go" \
     | sed '/^\/\/ --- GoLean harness ---$/d' \
-    | sed '/^\/\/ GoLean imported-goose corpus case/d; /^\/\/ source: /d; /^\/\/ imported: /d; /^\/\/ transform: /d; /^\/\/ GoLean-authored code sits below the harness marker\.$/d' \
+    | sed '/^\/\/ GoLean imported-goose corpus case/d; /^\/\/ source: /d; /^\/\/ imported: /d; /^\/\/ transform: /d; /^\/\/ GoLean-authored code sits below the harness marker\.$/d; /^\/\/ imports-allowed: /d' \
     | awk '!done && /^package main$/ { done=1; next } { print }' \
     > "$TMP/got"
 
@@ -122,6 +122,41 @@ while IFS= read -r main_go; do
     fail=1
     continue
   fi
+
+  # Import-grant re-check (audit fix round 2026-08-10: the landing-time
+  # --allow-import grant used to live only in commit prose, so a file
+  # admitted under a too-wide grant — or through a parser hole — was
+  # invisible to every standing gate). Every above-marker import must
+  # appear on the file's own `// imports-allowed:` header line, parsed
+  # by the same strict fail-closed gofmt-shape recognizer the importer
+  # vet uses (any unrecognized import-shaped line fails).
+  grant_line="$(sed -n 's/^\/\/ imports-allowed: \(.*\) (--allow-import)$/\1/p' "$main_go" | head -1)"
+  while read -r tag rest; do
+    case "$tag" in
+      PATH)
+        ok_grant=0
+        for a in $grant_line; do
+          [[ "$rest" == "$a" ]] && ok_grant=1
+        done
+        if [[ "$ok_grant" -ne 1 ]]; then
+          echo "check-imported-goose: FAIL [$rel] — above-marker import \"$rest\" is not on the file's imports-allowed grant line" >&2
+          fail=1
+        fi
+        ;;
+      BAD)
+        echo "check-imported-goose: FAIL [$rel] — unrecognized import form above the marker (gofmt shapes only): $rest" >&2
+        fail=1
+        ;;
+    esac
+  done < <(sed -n '1,/^\/\/ --- GoLean harness ---$/p' "$main_go" | awk '
+      /^import[ \t]+"[^"]+"$/ { match($0, /"[^"]+"/); print "PATH " substr($0, RSTART+1, RLENGTH-2); next }
+      /^import[ \t]*\($/ { inblk=1; next }
+      inblk && /^\)$/ { inblk=0; next }
+      inblk && /^[ \t]*"[^"]+"$/ { match($0, /"[^"]+"/); print "PATH " substr($0, RSTART+1, RLENGTH-2); next }
+      inblk { print "BAD " $0; next }
+      /^[ \t]*import[ \t("]/ { print "BAD " $0 }
+      /^[ \t]*import"/ { print "BAD " $0 }
+    ')
 done < <(find "$CORPUS_ROOT" -name main.go | sort)
 
 if [[ "$checked" -eq 0 ]]; then

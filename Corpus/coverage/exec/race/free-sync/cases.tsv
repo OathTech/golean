@@ -2,6 +2,9 @@
 # FALSE-POSITIVE guards for the sync-package HB edges (spec-parity
 # slice 2, design note §5): each subject is race-free exactly through
 # one sync edge; go run -race verified green 2026-08-09.
+# mutex row: sites=60/work=30M raised from defaults at the flip
+# commit (measured; the two-critical-section tree exceeds sites=8;
+# in-file note per the audit fix round).
 mutex	freeSyncMutex	-	ok	-	sync,mutex,goroutines,channels,globals,race	confluent	the mutex edges order the commuting increments and the join closes the run; a missed edge would break the certified singleton on some schedule	width=4,sites=60,work=30000000
 wg-edge	freeSyncWgEdge	-	ok	-	sync,waitgroup,goroutines,globals,race	confluent	the Done-to-Wait edge orders the bare-looking write/read pair on every schedule	width=4
 once-edge	freeSyncOnceEdge	-	ok	-	sync,once,goroutines,channels,globals,race,closures	confluent	the Once completion edge orders the single write before both Do returns on every schedule	width=4
