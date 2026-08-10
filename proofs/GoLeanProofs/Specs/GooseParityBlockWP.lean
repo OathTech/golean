@@ -7,10 +7,11 @@ import GoLeanProofs.Specs.ImportedGooseBlock
 The imported goose oracle `testExplicitBlockStmt` (upstream
 `testdata/examples/semantics/block.go` @ 3be88bbb; R1 green, R2 pinned
 — `Specs/ImportedGooseBlock.lean`), walked with `go_walk` + the kit to
-the D1 pair over the staleness-guarded lowering `blockLowered`. Not in
-Perennial's proved-37 set (block.go has no `test_fun_ok` lemma at the
-pinned rev) — this row is same-class coverage, recorded as such in the
-manifest, not a parity row.
+the D1 pair over the staleness-guarded lowering `blockLowered`.
+block.go has NO `test_fun_ok` lemma at the pinned rev (upstream's
+measured proved set is 28 of 36 stated — S3 audit correction; see
+`docs/spec-parity-r3-manifest.md`) — this row is same-class coverage,
+recorded as such in the manifest, not a parity row.
 
 The program is the shadowing pin: an inner block redeclares `x`,
 mutates the INNER one, and the verdict compares the untouched OUTER

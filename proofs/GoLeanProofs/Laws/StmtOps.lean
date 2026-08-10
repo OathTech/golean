@@ -422,7 +422,11 @@ into the target. Same core as `wp_make_map`/`wp_make_slice`; `hstore`
 is the cell-conditioned target store, quantified over the fresh address
 because the stored value names it. Witness: the imported-goose exemplar
 walk (`Specs/GooseParityNilWP.lean`, the `$c2 = new(*uint64)` step of
-`wp_testCompareNilToNil_body` — spec-parity slice 3, same commit). -/
+`GoLean.ImportedGoose.SemanticsNil.wp_compareNil_body` — spec-parity
+slice 3, same commit; the citation originally named a non-existent
+`wp_testCompareNilToNil_body`, corrected at the S3 audit, and the
+law + witness pair is referenced in `proofs/Audit.lean`'s witness
+registry since the same round). -/
 theorem wp_new_value {typ : Option Ty} {a : Addr} {oldcell : HeapCell}
     (newcell : Addr → HeapCell) {v : GoValue} {env k}
     (hstore : ∀ (σ : ExecState) (fa : Addr), σ.types = GoCoreGS.types GF →
