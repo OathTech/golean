@@ -381,8 +381,9 @@ matched the tracked baseline on `result`+`stage` per id).
     CALLS a method at abort time, which the terminal rule cannot do),
     panic-newline-abort (item 3, multi-line `printindented`),
     repanic-same-value-abort (item 1, eface allocation identity);
-    maps/nil-literal-values ×2; maps/imported-named-key-unhashable;
-    race/free/array-read-write.
+    maps/nil-literal-values ×2 (BUG-014);
+    maps/imported-named-key-unhashable (BUG-008);
+    race/free/array-read-write (BUG-041).
   - **1 outside the filter**: goroutines/spawn-edge/nil-func-fatal,
     stage `go-run` — not a BUGS.md row and invisible to
     `check-bugs.sh --list` (its filter has no `go-run` stage); its

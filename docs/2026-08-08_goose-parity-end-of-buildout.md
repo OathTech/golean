@@ -60,7 +60,8 @@ branch-tip state.)
   §6 (checkpoint finding). R2 was held down during the buildout
   pending the then-parked P1 decision; P1 is now RESOLVED — all six
   pins are staleness-guarded by `scripts/check-imported-pins` (ci step
-  1c5) — and the const pin's buildout-time BUG-047 true-of-term caveat
+  1c5 — the label at this record's date; 3a2 since the renumber at
+  2927085f) — and the const pin's buildout-time BUG-047 true-of-term caveat
   is HISTORY: the bug is fixed and the term regenerated (the guard
   caught the drift).
 - **R3 (GoSpec instances)**: 0 — skipped every batch with the recorded

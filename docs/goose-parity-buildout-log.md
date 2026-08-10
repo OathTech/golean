@@ -441,8 +441,9 @@ skipped batch-wide (P1 pending).
 Per-item disposition:
 1. **P1 ruling implemented**: `scripts/check-imported-pins` (check-golden
    mold; fresh decoded(frontend(source)) diffed directly against each R2
-   pin's term) — ci step 1c5, fixtured (real-pin pass + tampered-copy
-   drift reject). Ledger P1 closed.
+   pin's term) — ci step 1c5 (the label at this record's date; 3a2
+   since the renumber at 2927085f), fixtured (real-pin pass +
+   tampered-copy drift reject). Ledger P1 closed.
 2. **P2 closed as ruled-parked** (units stay parked; measurements stand
    as the POR backlog's motivating cases).
 3. **BUG-047 FIXED** (assign-site speculative-emit guard extended to
@@ -499,7 +500,9 @@ All confirmed findings fixed:
    run-the-full-thing request). CLAUDE.md merge-protocol step 2 names
    --slow for slow-tier-bearing changes (process-contract edit,
    on-branch per protocol). ALSO found while wiring: the runner never
-   clones deps/goose, so ci steps 1c3-1c5 (verbatim + pin guards)
+   clones deps/goose, so ci steps 1c3-1c5 (labels at this record's
+   date; the R2-pin step is 3a2 since the renumber at 2927085f)
+   (verbatim + pin guards)
    would fail closed on every runner run — a reference-checkout step
    at the pinned rev added to the workflow.
 3. (major, doc-state) end-of-buildout report + matrix §6 finalized to
