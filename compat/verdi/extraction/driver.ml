@@ -312,7 +312,12 @@ let run_case (kind : string) (inp : sexp) : string * string =
     let rt = Printf.sprintf "(%s)" (ser_state st) in
     let st' = counter_reboot st in
     (rt, Printf.sprintf "(%s)" (ser_state st'))
-  | ("hAE" | "hAER" | "hRV" | "hRVR" | "net" | "inp" | "reboot"), _ ->
+  | "init", L [me] ->
+    let me = p_name me in
+    let rt = Printf.sprintf "(%s)" (ser_name me) in
+    let st = counter_init_handlers me in
+    (rt, Printf.sprintf "(%s)" (ser_state st))
+  | ("hAE" | "hAER" | "hRV" | "hRVR" | "net" | "inp" | "reboot" | "init"), _ ->
     infra "input arity/shape does not match kind '%s'" kind
   | k, _ -> infra "unknown kind '%s' — refusing to judge" k
 

@@ -44,10 +44,13 @@ Definition counter_one : OneNodeParams counter_base :=
 Definition counter_raft : RaftParams counter_base :=
   @Build_RaftParams counter_base 3 Nat.eq_dec Nat.eq_dec nat Nat.eq_dec.
 
-(* Monomorphic wrappers, one per fixture kind (+ init as a sanity
-   anchor). Implicit-argument order checked against `Check @...`:
-   the four message handlers and reboot take (base, raft); the two
-   composed handlers and init_handlers take (base, one, raft). *)
+(* Monomorphic wrappers, one per fixture kind. (counter_init_handlers
+   was extracted-but-dead at first — audit finding 2026-08-10; the
+   `init` fixture kind now replays it, so the initial-state record is
+   compared end-to-end.) Implicit-argument order checked against
+   `Check @...`: the four message handlers and reboot take
+   (base, raft); the two composed handlers and init_handlers take
+   (base, one, raft). *)
 
 Definition counter_handleAppendEntries :=
   @handleAppendEntries counter_base counter_raft.        (* kind hAE  *)
@@ -64,7 +67,7 @@ Definition counter_RaftInputHandler :=
 Definition counter_reboot :=
   @reboot counter_base counter_raft.                     (* kind reboot *)
 Definition counter_init_handlers :=
-  @init_handlers counter_base counter_one counter_raft.
+  @init_handlers counter_base counter_one counter_raft.  (* kind init *)
 
 Extraction "RaftHandlers.ml"
   seq

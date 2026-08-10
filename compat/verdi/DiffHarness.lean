@@ -15,22 +15,56 @@ THE ROCQ ORACLE LEG EXISTS (`compat/verdi/extraction/`, attached
 ledger resolved): verdi-raft's own Coq handlers at the pinned rev,
 instantiated with this same N=3 counter machine, extracted to OCaml
 and replayed over the committed fixture's recorded inputs by
-`extraction/build-and-run.sh`. Result on this fixture: 280/280
-byte-identical outputs. What that validates: the Lean port's handler
-semantics AGREE WITH THE COQ ORIGINALS on every recorded input, under
-the counter instantiation — through the extraction TCB (Coq extraction
-directives incl. nat→int and fin→int, plus OCaml evaluation). What it
-does NOT validate: inputs outside the fixture, and the Prop-level
-vocabulary (linearizability defs), which the oracle never executes.
-The oracle run is manual/lane-local, not part of `check`; re-run it
-whenever the fixture is regenerated.
+`extraction/build-and-run.sh`, byte-comparing the output column.
+Run records (dated, with case counts) live in the lane log — the
+fixture does NOT assert its own oracle status (audit fix 2026-08-10:
+this generator used to hardcode "280/280 match" into the header, so a
+regenerated fixture would have re-asserted a stale verdict). The
+oracle run is manual/lane-local, not part of `check`; re-run it
+whenever the fixture is regenerated. Its driver enforces the header's
+cases-per-kind/kinds declaration, so a truncated fixture cannot pass.
+
+What a green oracle run validates: the Lean port's handler semantics
+AGREE WITH THE COQ ORIGINALS on every recorded input, under the
+counter instantiation — through the extraction TCB (Coq extraction
+directives incl. nat→int and fin→int, plus OCaml evaluation).
+
+What it does NOT validate (coverage limits, audit-measured
+2026-08-10 over the 280-case fixture):
+- Inputs outside the fixture. Cases are SINGLE-SHOT handler calls on
+  independently generated random states — no multi-step traces, no
+  election or replication sequences, no `Network`/`step_failure`
+  composition. Generated ranges are narrow (see the generators below)
+  and branch coverage is thin on the hardest handler: hAE leaves the
+  state unchanged in 36/40 cases and appends to the log in only 2/40;
+  the whole fixture contains exactly one elected-leader transition
+  (id 194, kind `net`).
+- Instantiation classes the DEGENERATE counter machine cannot see:
+  `handler i d = (d + i, d + i)` is symmetric in its arguments with
+  equal result components, so a transposed state-machine application
+  or a swapped `(output, data)` result pair would still match
+  (measured: the machine is reached on only 6 of the 280 handler
+  rows, and both classes are algebraically invisible on all of them).
+  The `init` kind (added at the audit fix round) pins the
+  initial-state record end-to-end, closing the init blind spot.
+- Executable ported definitions no fixture kind reaches: the
+  CommonDefinitions execute/dedup slice (`execute_log`,
+  `deduplicate_log`, `argmax`/`argmin`, `applied_entries`, …),
+  `acknowledge_all_ops_func`, and the RaftLinearizable projections
+  (`importTrace`, `get_input`/`get_output`, `log_to_IR`) — all
+  extractable but not extracted; the `rfl` examples in `Examples.lean`
+  pin a few of the latter against hand-written expectations only. The
+  Prop-level relations (linearizability defs) are never executed by
+  anything, oracle included.
 
 ## Fixture format (v1) — the contract the future Rocq leg codes against
 
 - UTF-8 text; lines ending `\n`. Lines starting `#` are header.
 - One case per line: `id<TAB>kind<TAB>input<TAB>output`.
-- `kind` ∈ `hAE hAER hRV hRVR net inp reboot` (the four message
-  handlers, the two composed handlers, crash-recovery).
+- `kind` ∈ `hAE hAER hRV hRVR net inp reboot init` (the four message
+  handlers, the two composed handlers, crash-recovery, the initial
+  state — `init` added at the 2026-08-10 audit fix round, appended
+  after `reboot` so ids 0-279 are unchanged).
 - `input`/`output` are parenthesized s-expressions, space-separated,
   built from: `Nat` → decimal; `Fin N` (names) → decimal value;
   `Bool` → `true`/`false`; `Option` → `(none)` / `(some x)`;
@@ -52,9 +86,9 @@ whenever the fixture is regenerated.
   `hRV`: `(me (state…) t cand lli llt)`;
   `hRVR`: `(me (state…) src t granted)`;
   `net`: `(me src (msg…) (state…))`; `inp`: `(me (input…) (state…))`;
-  `reboot`: `((state…))`.
+  `reboot`: `((state…))`; `init`: `(me)`.
 - Output shapes: `hAE`/`hRV`: `((state…) (msg…))`; `hAER`:
-  `((state…) (packets))`; `hRVR`/`reboot`: `((state…))`;
+  `((state…) (packets))`; `hRVR`/`reboot`/`init`: `((state…))`;
   `net`/`inp`: `((outputs) (state…) (packets))`, packets as
   `(dst msg)` pairs.
 - The machine is the Examples counter (data/input/output/clientId =
@@ -310,7 +344,8 @@ def serHandlerResult
 
 /-! ## Cases -/
 
-def kinds : List String := ["hAE", "hAER", "hRV", "hRVR", "net", "inp", "reboot"]
+def kinds : List String :=
+  ["hAE", "hAER", "hRV", "hRVR", "net", "inp", "reboot", "init"]
 
 /-- Run one case: `(input-sexp, output-sexp)`. Every draw is recorded in
 the input serialization; the output is the ported handler's answer. -/
@@ -377,6 +412,12 @@ def runCase (kind : String) (caseIdx : Nat) (s : UInt64) :
     let (st, _) := genState caseIdx s
     let r := reboot (P := CB) st
     some (s!"({serState st})", s!"({serState r})")
+  | "init" =>
+    -- the initial-state record, end-to-end (closes the oracle's init
+    -- blind spot: `reboot` only preserves, `init_handlers` constructs)
+    let (me, _) := randName s
+    let r := init_handlers (P := CB) me
+    some (s!"({serName me})", s!"({serState r})")
   | _ => none  -- unknown kind: refused upstream, never silently skipped
 
 def baseSeed : UInt64 := 42
@@ -407,7 +448,8 @@ def header : List String :=
   , "# columns: id<TAB>kind<TAB>input<TAB>output  (s-expr grammar: compat/verdi/DiffHarness.lean)"
   , "# outputs are the Lean port's; `diffharness check` pins them (drift detection). The Rocq oracle"
   , "#   leg (compat/verdi/extraction/, extracted verdi-raft handlers) replays the input column and"
-  , "#   byte-compares the output column: 280/280 match, 2026-08-10. Re-run it after regenerating." ]
+  , "#   byte-compares the output column; re-run it after regenerating. Run records live in the lane"
+  , "#   log, never in this header (a generated file must not assert its own oracle status)." ]
 
 def fixtureContent : Except String String := do
   let lines ← caseLines
