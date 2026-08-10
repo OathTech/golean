@@ -1010,4 +1010,274 @@ theorem execProgLoop_mono :
                   rw [hru] at h
                   exact ih h (by omega)
 
+/-- **Sub-bound classification** (the fuel truth-equivalence hinge —
+matrix §7.2's recorded argument, machine-checked): truncating a
+completed pool run's fuel either completes the SAME run or classifies
+`.fuelOut` — never any OTHER outcome. In particular a sub-bound
+truncation can never surface `.deadlock` or `.raceDetected`: the
+classification arms precede the fuel check, and the truncated run
+follows the identical (choice-determined) path until the fuel gate
+throws. With `execProgLoop_mono` this makes the certificate-derived
+`NoDeadlock`/`NoRace` corollaries quantify ALL fuels (slice 6's
+fuel-independence lift). -/
+theorem execProgLoop_le :
+    ∀ {fuel : Nat} {m : MultiConfig} {r : RaceState} {ch : Choices}
+      {out : ExecOutcome} {ch' : Choices} {fuel' : Nat},
+      execProgLoop fuel m r ch = .ok (out, ch') → fuel' ≤ fuel →
+      execProgLoop fuel' m r ch = .ok (out, ch')
+        ∨ execProgLoop fuel' m r ch = .error .fuelOut := by
+  intro fuel
+  induction fuel with
+  | zero =>
+    intro m r ch out ch' fuel' h hle
+    have h0 : fuel' = 0 := Nat.le_zero.mp hle
+    subst h0
+    exact .inl h
+  | succ n ih =>
+    intro m r ch out ch' fuel' h hle
+    cases fuel' with
+    | zero =>
+      -- fuel' = 0: the classification arms carry over verbatim; both
+      -- step arms throw `.fuelOut` at the fuel gate.
+      rw [execProgLoop_unfold] at h
+      rw [execProgLoop_unfold]
+      by_cases hemp : m.threads.isEmpty
+      · rw [if_pos hemp] at h; cases h
+      · rw [if_neg hemp] at h
+        rw [if_neg hemp]
+        cases hp : m.panicMsg? with
+        | some msg => rw [hp] at h; cases h
+        | none =>
+          rw [hp] at h
+          cases hm : m.mainOutcome? with
+          | some o =>
+            rw [hm] at h
+            cases hrs : runnableIdxs m.shared m.threads with
+            | nil =>
+              rw [hrs] at h
+              exact .inl h
+            | cons r0 rest =>
+              -- the BUG-044 window: exit pick carries over; the
+              -- continue pick hits the fuel-0 gate.
+              rw [hrs] at h
+              dsimp only at h ⊢
+              rcases hcons : Choices.consume ch 2 with ⟨pick, ch₁⟩
+              rw [hcons] at h
+              dsimp only at h ⊢
+              by_cases hpick : (pick == 0) = true
+              · rw [if_pos hpick] at h
+                rw [if_pos hpick]
+                exact .inl h
+              · rw [if_neg hpick] at h
+                rw [if_neg hpick]
+                exact .inr rfl
+          | none =>
+            rw [hm] at h
+            by_cases hrun : (runnableIdxs m.shared m.threads).isEmpty
+            · rw [if_pos hrun] at h; cases h
+            · rw [if_neg hrun] at h
+              rw [if_neg hrun]
+              exact .inr rfl
+    | succ n' =>
+      -- fuel' = n' + 1 ≤ n + 1: both runs take the same classification
+      -- arm and (where they step) the same choice-determined step;
+      -- recurse with n' ≤ n.
+      rw [execProgLoop_unfold] at h
+      rw [execProgLoop_unfold]
+      by_cases hemp : m.threads.isEmpty
+      · rw [if_pos hemp] at h; cases h
+      · rw [if_neg hemp] at h
+        rw [if_neg hemp]
+        cases hp : m.panicMsg? with
+        | some msg => rw [hp] at h; cases h
+        | none =>
+          rw [hp] at h
+          cases hm : m.mainOutcome? with
+          | some o =>
+            rw [hm] at h
+            cases hrs : runnableIdxs m.shared m.threads with
+            | nil =>
+              rw [hrs] at h
+              exact .inl h
+            | cons r0 rest =>
+              rw [hrs] at h
+              dsimp only at h ⊢
+              rcases hcons : Choices.consume ch 2 with ⟨pick, ch₁⟩
+              rw [hcons] at h
+              dsimp only at h ⊢
+              by_cases hpick : (pick == 0) = true
+              · rw [if_pos hpick] at h
+                rw [if_pos hpick]
+                exact .inl h
+              · rw [if_neg hpick] at h
+                rw [if_neg hpick]
+                cases hsm : stepMulti m ch₁ with
+                | error e =>
+                  rw [hsm] at h
+                  simp [Bind.bind, Except.bind] at h
+                | ok p =>
+                  obtain ⟨m', ch₂⟩ := p
+                  rw [hsm] at h
+                  simp only [Bind.bind, Except.bind] at h ⊢
+                  cases hru : raceUpdate m.shared m.threads ch₁ m' r with
+                  | error e =>
+                    rw [hru] at h
+                    simp at h
+                  | ok r' =>
+                    rw [hru] at h
+                    exact ih h (by omega)
+          | none =>
+            rw [hm] at h
+            by_cases hrun : (runnableIdxs m.shared m.threads).isEmpty
+            · rw [if_pos hrun] at h; cases h
+            · rw [if_neg hrun] at h
+              rw [if_neg hrun]
+              dsimp only at h ⊢
+              cases hsm : stepMulti m ch with
+              | error e =>
+                rw [hsm] at h
+                simp [Bind.bind, Except.bind] at h
+              | ok p =>
+                obtain ⟨m', ch₁⟩ := p
+                rw [hsm] at h
+                simp only [Bind.bind, Except.bind] at h ⊢
+                cases hru : raceUpdate m.shared m.threads ch m' r with
+                | error e =>
+                  rw [hru] at h
+                  simp at h
+                | ok r' =>
+                  rw [hru] at h
+                  exact ih h (by omega)
+
+/-- `stepAllBranchesOk` is monotone in its recursive-knot parameter
+`next`: every probe consults `next` in exactly one (positive) position,
+so pointwise strengthening of `next` preserves certification. The
+hinge for `allStreamsOkPool_mono`. -/
+theorem stepAllBranchesOk_mono {next next' : MultiConfig → RaceState → Bool}
+    {m : MultiConfig} {r : RaceState}
+    (hnext : ∀ m' r', next m' r' = true → next' m' r' = true)
+    (hall : stepAllBranchesOk next m r = true) :
+    stepAllBranchesOk next' m r = true := by
+  unfold stepAllBranchesOk at hall ⊢
+  dsimp only at hall ⊢
+  have hprobe : ∀ (i : Nat) (probeCh : Choices),
+      (poolThreadOblivious m.shared m.threads i &&
+        match stepMulti m probeCh with
+        | .ok (m', chRem) =>
+            chRem.isEmpty &&
+            (match raceUpdate m.shared m.threads probeCh m' r with
+             | .ok r' => next m' r'
+             | .error _ => false)
+        | .error _ => false) = true →
+      (poolThreadOblivious m.shared m.threads i &&
+        match stepMulti m probeCh with
+        | .ok (m', chRem) =>
+            chRem.isEmpty &&
+            (match raceUpdate m.shared m.threads probeCh m' r with
+             | .ok r' => next' m' r'
+             | .error _ => false)
+        | .error _ => false) = true := by
+    intro i probeCh hpr
+    rw [Bool.and_eq_true] at hpr ⊢
+    obtain ⟨hobl, hpr⟩ := hpr
+    refine ⟨hobl, ?_⟩
+    cases hsm : stepMulti m probeCh with
+    | error e => rw [hsm] at hpr; cases hpr
+    | ok p =>
+      obtain ⟨m', chRem⟩ := p
+      rw [hsm] at hpr
+      dsimp only at hpr ⊢
+      rw [Bool.and_eq_true] at hpr ⊢
+      obtain ⟨hemp', hpr⟩ := hpr
+      refine ⟨hemp', ?_⟩
+      cases hru : raceUpdate m.shared m.threads probeCh m' r with
+      | error e => rw [hru] at hpr; cases hpr
+      | ok r' =>
+        rw [hru] at hpr
+        dsimp only at hpr ⊢
+        exact hnext _ _ hpr
+  cases hti : m.threads[m.cur]? with
+  | none => rw [hti] at hall; cases hall
+  | some c =>
+    rw [hti] at hall
+    dsimp only at hall ⊢
+    by_cases hb : c.atBoundary = true
+    · rw [if_pos hb] at hall ⊢
+      cases hrs : runnableIdxs m.shared m.threads with
+      | nil => rw [hrs] at hall; cases hall
+      | cons r0 rest =>
+        rw [hrs] at hall
+        cases rest with
+        | nil => exact hprobe r0 [] hall
+        | cons r1 rest' =>
+          rw [List.all_eq_true] at hall ⊢
+          intro j hj
+          have hjj := hall j hj
+          cases hget : (r0 :: r1 :: rest')[j]? with
+          | none => rw [hget] at hjj; cases hjj
+          | some i =>
+            rw [hget] at hjj
+            dsimp only at hjj ⊢
+            exact hprobe i [j] hjj
+    · rw [if_neg hb] at hall ⊢
+      exact hprobe m.cur [] hall
+
+/-- **Fuel monotonicity of the pool ∀-streams checker**: a certificate
+at one bound holds at every larger bound — the checker only ever
+returns `true` by reaching terminal pools, never by spending its
+slack. With `execProgLoop_mono`/`execProgLoop_le` this is what lets
+every certificate-backed statement shed its shipped literal fuel
+(slice 6's fuel-independence lift). -/
+theorem allStreamsOkPool_mono {post : ExecState → Bool} :
+    ∀ {fuel : Nat} {m : MultiConfig} {r : RaceState} {fuel' : Nat},
+      allStreamsOkPool post fuel m r = true → fuel ≤ fuel' →
+      allStreamsOkPool post fuel' m r = true := by
+  intro fuel
+  induction fuel with
+  | zero =>
+    intro m r fuel' h _
+    simp [allStreamsOkPool] at h
+  | succ n ih =>
+    intro m r fuel' h hle
+    cases fuel' with
+    | zero => omega
+    | succ n' =>
+      have hnext : ∀ (m' : MultiConfig) (r' : RaceState),
+          allStreamsOkPool post n m' r' = true →
+          allStreamsOkPool post n' m' r' = true :=
+        fun _ _ hm' => ih hm' (by omega)
+      unfold allStreamsOkPool at h ⊢
+      by_cases hemp : m.threads.isEmpty
+      · rw [if_pos hemp] at h; cases h
+      · rw [if_neg hemp] at h
+        rw [if_neg hemp]
+        cases hp : m.panicMsg? with
+        | some msg => rw [hp] at h; cases h
+        | none =>
+          rw [hp] at h
+          cases hm : m.mainOutcome? with
+          | some o =>
+            rw [hm] at h
+            cases o with
+            | normal σf =>
+              cases hrs : runnableIdxs m.shared m.threads with
+              | nil =>
+                rw [hrs] at h
+                exact h
+              | cons r0 rest =>
+                rw [hrs] at h
+                rw [Bool.and_eq_true] at h ⊢
+                obtain ⟨hpost, hstep⟩ := h
+                exact ⟨hpost, stepAllBranchesOk_mono hnext hstep⟩
+            | returned σf => cases h
+            | broke σf => cases h
+            | continued σf => cases h
+          | none =>
+            rw [hm] at h
+            by_cases hrun : (runnableIdxs m.shared m.threads).isEmpty
+            · rw [if_pos hrun] at h; cases h
+            · rw [if_neg hrun] at h
+              rw [if_neg hrun]
+              exact stepAllBranchesOk_mono hnext h
+
 end GoLean.GoCore.Machine

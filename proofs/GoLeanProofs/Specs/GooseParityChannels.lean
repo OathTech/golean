@@ -8,20 +8,29 @@ import GoLeanProofs.Specs.ImportedGooseActris
 # The curated channel-exemplar certificates (spec-parity slice 4)
 
 The charter's flagship comparisons — the SELECT-TRICKY TRIO, MUXER,
-DSP — over the staleness-guarded pinned lowerings (ci step 1c5), at
-the SEEDED ∀-schedule strength the slice design note takes
+DSP — over the staleness-guarded pinned lowerings (ci step 3a2; this
+header's "1c5" was the stale pre-renumber label, corrected at slice
+6), at the SEEDED ∀-schedule strength the slice design note takes
 (`docs/2026-08-10_gospecc-decomposition.md` §6, option (a), with the
 frame-quantified `GoSpecC` gap recorded PER ROW in the manifest —
 `docs/spec-parity-r3-manifest.md` feature class 3, together with each
 row's measured upstream proof status at perennial @ 43d4efa).
 
-Per program, five kernel-checked theorems (the fork/join idiom): the
-`allStreamsOkPool` certificate, the ∀-schedule verdict readout (every
-choice stream — schedules and data latitude together — completes at
-main's `.normal` with the oracle's exact observable), the no-deadlock
-and no-race first-order corollaries, and `TerminatesNormallyC`. Every
-statement is interpreter-vocabulary (no Iris, no relation — this
-module imports neither). The verdict values, in the rows' order below
+Per program, five kernel-checked FUEL-GENERAL theorems (the fork/join
+idiom, regeneralized at slice 6 — the fuel-independence lift): the
+`allStreamsOkPool` certificate in the `∃N, ∀ fuel ≥ N` form (its
+kernel evidence is the per-row `<row>Cert<bound>` literal at the
+shipped bound, lifted by `allStreamsOkPool_mono`), the ∀-schedule
+verdict readout (every choice stream — schedules and data latitude
+together — completes at main's `.normal` with the oracle's exact
+observable, same `∃N, ∀ fuel ≥ N` form), the no-deadlock and no-race
+first-order corollaries at ALL fuels (below the bound a truncated run
+classifies `.fuelOut`, never `.deadlock`/`.raceDetected` —
+`execProgLoop_le`, matrix §7.2's truth-equivalence argument
+machine-checked), and `TerminatesNormallyC`. Fuel is no longer an
+axis of any of the five statements. Every statement is
+interpreter-vocabulary (no Iris, no relation — this module imports
+neither). The verdict values, in the rows' order below
 (trio, muxer async/client, dsp: 1/1/1/"async"/"Hello, World!"/42), are
 the same observables the R1 differential rows pin against `go run`.
 
@@ -41,7 +50,8 @@ itself and the translation step are executed by no test. No ordering
 is claimed.
 
 The shared derivations (`chanCert_*`) are thin generic wrappers over
-`execProgLoop_ok_of_allStreamsOkPool`/`execProgLoop_mono`; they are
+`execProgLoop_ok_of_allStreamsOkPool`/`execProgLoop_mono` plus the
+slice-6 pair `execProgLoop_le`/`allStreamsOkPool_mono`; they are
 convention-free and are hoisting CANDIDATES for a general home at
 curation (kept local this slice — the P-S3-1 lesson: moving statement
 machinery is a deliberate step, not a side effect).
@@ -83,42 +93,66 @@ def cellIsStr (v : GoString) : ExecState → Bool := fun σf =>
   | .ok (.string w) => w == v
   | _ => false
 
-/-- The ∀-schedule verdict readout, generically from a certificate. -/
+/-- The ∀-schedule verdict readout at EVERY fuel past the
+certificate's bound, generically (the `execProgLoop_mono` lift —
+slice 6's fuel-independence regeneralization; the per-row statements
+package this as the `∃N, ∀ fuel ≥ N` form `TerminatesNormallyC`
+uses). -/
 theorem chanCert_allSchedules {post : ExecState → Bool} {fuel : Nat}
     {env : LocalEnv} {σ₀ : ExecState} {prog : Stmt}
     (hcert : allStreamsOkPool post fuel
       ⟨#[.exec prog env .stop], σ₀, 0⟩ {} = true) :
-    ∀ ch : Choices, ∃ (σf : ExecState) (ch' : Choices),
-      execProg fuel env σ₀ ch prog = .ok (.normal σf, ch')
-        ∧ post σf = true := by
-  intro ch
+    ∀ fuel', fuel ≤ fuel' → ∀ ch : Choices,
+      ∃ (σf : ExecState) (ch' : Choices),
+        execProg fuel' env σ₀ ch prog = .ok (.normal σf, ch')
+          ∧ post σf = true := by
+  intro fuel' hle ch
   obtain ⟨σf, ch', hrun, hpost⟩ :=
     execProgLoop_ok_of_allStreamsOkPool hcert ch
-  exact ⟨σf, ch', hrun, hpost⟩
+  exact ⟨σf, ch', execProgLoop_mono hrun hle, hpost⟩
 
-/-- No modeled schedule deadlocks, generically from a certificate. -/
+/-- NO modeled schedule AT ANY FUEL deadlocks, generically: past the
+certificate's bound by `execProgLoop_mono`; below it by
+`execProgLoop_le` — a sub-bound truncation of a completed run
+classifies `.ok` or `.fuelOut`, never `.deadlock` (matrix §7.2's
+truth-equivalence argument, now the machine-checked proof). -/
 theorem chanCert_noDeadlock {post : ExecState → Bool} {fuel : Nat}
     {env : LocalEnv} {σ₀ : ExecState} {prog : Stmt}
     (hcert : allStreamsOkPool post fuel
       ⟨#[.exec prog env .stop], σ₀, 0⟩ {} = true) :
-    ∀ ch : Choices,
-      execProg fuel env σ₀ ch prog ≠ .error .deadlock := by
-  intro ch hcontra
-  obtain ⟨σf, ch', hrun, -⟩ := chanCert_allSchedules hcert ch
-  rw [hrun] at hcontra
-  cases hcontra
+    ∀ (fuel' : Nat) (ch : Choices),
+      execProg fuel' env σ₀ ch prog ≠ .error .deadlock := by
+  intro fuel' ch hcontra
+  obtain ⟨σf, ch', hrun, -⟩ :=
+    execProgLoop_ok_of_allStreamsOkPool hcert ch
+  have hcontra' : execProgLoop fuel'
+      ⟨#[.exec prog env .stop], σ₀, 0⟩ {} ch = .error .deadlock := hcontra
+  rcases Nat.le_total fuel fuel' with hle | hle
+  · rw [execProgLoop_mono hrun hle] at hcontra'
+    cases hcontra'
+  · rcases execProgLoop_le hrun hle with hok | hfo
+    · rw [hok] at hcontra'; cases hcontra'
+    · rw [hfo] at hcontra'; simp at hcontra'
 
-/-- No modeled schedule trips the race detector, generically. -/
+/-- NO modeled schedule AT ANY FUEL trips the race detector,
+generically (same two-lemma split as `chanCert_noDeadlock`). -/
 theorem chanCert_noRace {post : ExecState → Bool} {fuel : Nat}
     {env : LocalEnv} {σ₀ : ExecState} {prog : Stmt}
     (hcert : allStreamsOkPool post fuel
       ⟨#[.exec prog env .stop], σ₀, 0⟩ {} = true) :
-    ∀ ch : Choices,
-      execProg fuel env σ₀ ch prog ≠ .error .raceDetected := by
-  intro ch hcontra
-  obtain ⟨σf, ch', hrun, -⟩ := chanCert_allSchedules hcert ch
-  rw [hrun] at hcontra
-  cases hcontra
+    ∀ (fuel' : Nat) (ch : Choices),
+      execProg fuel' env σ₀ ch prog ≠ .error .raceDetected := by
+  intro fuel' ch hcontra
+  obtain ⟨σf, ch', hrun, -⟩ :=
+    execProgLoop_ok_of_allStreamsOkPool hcert ch
+  have hcontra' : execProgLoop fuel'
+      ⟨#[.exec prog env .stop], σ₀, 0⟩ {} ch = .error .raceDetected := hcontra
+  rcases Nat.le_total fuel fuel' with hle | hle
+  · rw [execProgLoop_mono hrun hle] at hcontra'
+    cases hcontra'
+  · rcases execProgLoop_le hrun hle with hok | hfo
+    · rw [hok] at hcontra'; cases hcontra'
+    · rw [hfo] at hcontra'; simp at hcontra'
 
 /-- Concurrent normal-pinned termination, generically (one bound for
 every stream, lifted to all larger fuels by `execProgLoop_mono`). -/
@@ -128,7 +162,8 @@ theorem chanCert_terminatesNormallyC {post : ExecState → Bool}
       ⟨#[.exec prog env .stop], σ₀, 0⟩ {} = true) :
     TerminatesNormallyC env σ₀ prog := by
   refine ⟨fuel, fun fuel' hfuel ch => ?_⟩
-  obtain ⟨σf, ch', hrun, -⟩ := chanCert_allSchedules hcert ch
+  obtain ⟨σf, ch', hrun, -⟩ :=
+    execProgLoop_ok_of_allStreamsOkPool hcert ch
   exact ⟨σf, ch', execProgLoop_mono hrun hfuel⟩
 
 /-! ## Feature class 3, rows 1–3: the select-tricky trio
@@ -151,83 +186,114 @@ abbrev stEnv : LocalEnv := [[("r", .base ⟨0⟩)]]
 abbrev stSeed : ExecState := chanSeed selectTrickyLowered intCell0
 
 /-- `select_nb_not_ready` (upstream Qed, two goroutines, two
-non-blocking probes that must never rendezvous): the certificate. -/
-theorem nbNotReadyCert :
+non-blocking probes that must never rendezvous): the kernel
+certificate at the shipped bound 200 (measured minimum 100) — the
+kernel evidence the fuel-general bundle below lifts. -/
+theorem nbNotReadyCert200 :
     allStreamsOkPool (cellIsInt 1) 200
       ⟨#[.exec nbNotReadyDriver stEnv .stop], stSeed, 0⟩ {} = true := by
   decide +kernel
 
-theorem nbNotReadyAllSchedules : ∀ ch : Choices,
-    ∃ (σf : ExecState) (ch' : Choices),
-      execProg 200 stEnv stSeed ch nbNotReadyDriver
-        = .ok (.normal σf, ch') ∧ cellIsInt 1 σf = true :=
-  chanCert_allSchedules nbNotReadyCert
+/-- The fuel-general certificate (slice 6, `allStreamsOkPool_mono`):
+the `∃N, ∀ fuel ≥ N` form `TerminatesNormallyC` uses — fuel is no
+longer an axis of the statement. -/
+theorem nbNotReadyCert :
+    ∃ N, ∀ fuel, N ≤ fuel →
+      allStreamsOkPool (cellIsInt 1) fuel
+        ⟨#[.exec nbNotReadyDriver stEnv .stop], stSeed, 0⟩ {} = true :=
+  ⟨200, fun _ h => allStreamsOkPool_mono nbNotReadyCert200 h⟩
 
-theorem nbNotReadyNoDeadlock : ∀ ch : Choices,
-    execProg 200 stEnv stSeed ch nbNotReadyDriver ≠ .error .deadlock :=
-  chanCert_noDeadlock nbNotReadyCert
+theorem nbNotReadyAllSchedules :
+    ∃ N, ∀ fuel, N ≤ fuel → ∀ ch : Choices,
+      ∃ (σf : ExecState) (ch' : Choices),
+        execProg fuel stEnv stSeed ch nbNotReadyDriver
+          = .ok (.normal σf, ch') ∧ cellIsInt 1 σf = true :=
+  ⟨200, chanCert_allSchedules nbNotReadyCert200⟩
 
-theorem nbNotReadyNoRace : ∀ ch : Choices,
-    execProg 200 stEnv stSeed ch nbNotReadyDriver ≠ .error .raceDetected :=
-  chanCert_noRace nbNotReadyCert
+theorem nbNotReadyNoDeadlock : ∀ (fuel : Nat) (ch : Choices),
+    execProg fuel stEnv stSeed ch nbNotReadyDriver ≠ .error .deadlock :=
+  chanCert_noDeadlock nbNotReadyCert200
+
+theorem nbNotReadyNoRace : ∀ (fuel : Nat) (ch : Choices),
+    execProg fuel stEnv stSeed ch nbNotReadyDriver ≠ .error .raceDetected :=
+  chanCert_noRace nbNotReadyCert200
 
 theorem nbNotReadyTerminatesNormallyC :
     TerminatesNormallyC stEnv stSeed nbNotReadyDriver :=
-  chanCert_terminatesNormallyC nbNotReadyCert
+  chanCert_terminatesNormallyC nbNotReadyCert200
 
 /-- `select_nb_guaranteed_ready` (upstream Qed; the closed-channel
-receive is guaranteed, the default must be unreachable). -/
-theorem nbGuaranteedReadyCert :
+receive is guaranteed, the default must be unreachable): the kernel
+certificate at the shipped bound 200 (measured minimum 100). -/
+theorem nbGuaranteedReadyCert200 :
     allStreamsOkPool (cellIsInt 1) 200
       ⟨#[.exec nbGuaranteedReadyDriver stEnv .stop], stSeed, 0⟩ {}
       = true := by
   decide +kernel
 
-theorem nbGuaranteedReadyAllSchedules : ∀ ch : Choices,
-    ∃ (σf : ExecState) (ch' : Choices),
-      execProg 200 stEnv stSeed ch nbGuaranteedReadyDriver
-        = .ok (.normal σf, ch') ∧ cellIsInt 1 σf = true :=
-  chanCert_allSchedules nbGuaranteedReadyCert
+/-- Fuel-general certificate (slice 6). -/
+theorem nbGuaranteedReadyCert :
+    ∃ N, ∀ fuel, N ≤ fuel →
+      allStreamsOkPool (cellIsInt 1) fuel
+        ⟨#[.exec nbGuaranteedReadyDriver stEnv .stop], stSeed, 0⟩ {}
+        = true :=
+  ⟨200, fun _ h => allStreamsOkPool_mono nbGuaranteedReadyCert200 h⟩
 
-theorem nbGuaranteedReadyNoDeadlock : ∀ ch : Choices,
-    execProg 200 stEnv stSeed ch nbGuaranteedReadyDriver
+theorem nbGuaranteedReadyAllSchedules :
+    ∃ N, ∀ fuel, N ≤ fuel → ∀ ch : Choices,
+      ∃ (σf : ExecState) (ch' : Choices),
+        execProg fuel stEnv stSeed ch nbGuaranteedReadyDriver
+          = .ok (.normal σf, ch') ∧ cellIsInt 1 σf = true :=
+  ⟨200, chanCert_allSchedules nbGuaranteedReadyCert200⟩
+
+theorem nbGuaranteedReadyNoDeadlock : ∀ (fuel : Nat) (ch : Choices),
+    execProg fuel stEnv stSeed ch nbGuaranteedReadyDriver
       ≠ .error .deadlock :=
-  chanCert_noDeadlock nbGuaranteedReadyCert
+  chanCert_noDeadlock nbGuaranteedReadyCert200
 
-theorem nbGuaranteedReadyNoRace : ∀ ch : Choices,
-    execProg 200 stEnv stSeed ch nbGuaranteedReadyDriver
+theorem nbGuaranteedReadyNoRace : ∀ (fuel : Nat) (ch : Choices),
+    execProg fuel stEnv stSeed ch nbGuaranteedReadyDriver
       ≠ .error .raceDetected :=
-  chanCert_noRace nbGuaranteedReadyCert
+  chanCert_noRace nbGuaranteedReadyCert200
 
 theorem nbGuaranteedReadyTerminatesNormallyC :
     TerminatesNormallyC stEnv stSeed nbGuaranteedReadyDriver :=
-  chanCert_terminatesNormallyC nbGuaranteedReadyCert
+  chanCert_terminatesNormallyC nbGuaranteedReadyCert200
 
 /-- `select_nb_full_buffer_not_ready` (upstream Qed; the non-blocking
-send on a full buffer must take default). -/
-theorem nbFullBufferCert :
+send on a full buffer must take default): the kernel certificate at
+the shipped bound 200 (measured minimum 100). -/
+theorem nbFullBufferCert200 :
     allStreamsOkPool (cellIsInt 1) 200
       ⟨#[.exec nbFullBufferDriver stEnv .stop], stSeed, 0⟩ {} = true := by
   decide +kernel
 
-theorem nbFullBufferAllSchedules : ∀ ch : Choices,
-    ∃ (σf : ExecState) (ch' : Choices),
-      execProg 200 stEnv stSeed ch nbFullBufferDriver
-        = .ok (.normal σf, ch') ∧ cellIsInt 1 σf = true :=
-  chanCert_allSchedules nbFullBufferCert
+/-- Fuel-general certificate (slice 6). -/
+theorem nbFullBufferCert :
+    ∃ N, ∀ fuel, N ≤ fuel →
+      allStreamsOkPool (cellIsInt 1) fuel
+        ⟨#[.exec nbFullBufferDriver stEnv .stop], stSeed, 0⟩ {} = true :=
+  ⟨200, fun _ h => allStreamsOkPool_mono nbFullBufferCert200 h⟩
 
-theorem nbFullBufferNoDeadlock : ∀ ch : Choices,
-    execProg 200 stEnv stSeed ch nbFullBufferDriver ≠ .error .deadlock :=
-  chanCert_noDeadlock nbFullBufferCert
+theorem nbFullBufferAllSchedules :
+    ∃ N, ∀ fuel, N ≤ fuel → ∀ ch : Choices,
+      ∃ (σf : ExecState) (ch' : Choices),
+        execProg fuel stEnv stSeed ch nbFullBufferDriver
+          = .ok (.normal σf, ch') ∧ cellIsInt 1 σf = true :=
+  ⟨200, chanCert_allSchedules nbFullBufferCert200⟩
 
-theorem nbFullBufferNoRace : ∀ ch : Choices,
-    execProg 200 stEnv stSeed ch nbFullBufferDriver
+theorem nbFullBufferNoDeadlock : ∀ (fuel : Nat) (ch : Choices),
+    execProg fuel stEnv stSeed ch nbFullBufferDriver ≠ .error .deadlock :=
+  chanCert_noDeadlock nbFullBufferCert200
+
+theorem nbFullBufferNoRace : ∀ (fuel : Nat) (ch : Choices),
+    execProg fuel stEnv stSeed ch nbFullBufferDriver
       ≠ .error .raceDetected :=
-  chanCert_noRace nbFullBufferCert
+  chanCert_noRace nbFullBufferCert200
 
 theorem nbFullBufferTerminatesNormallyC :
     TerminatesNormallyC stEnv stSeed nbFullBufferDriver :=
-  chanCert_terminatesNormallyC nbFullBufferCert
+  chanCert_terminatesNormallyC nbFullBufferCert200
 
 end ChannelSelectTricky
 
@@ -242,57 +308,75 @@ abbrev clientDriver : Stmt := .call #[.var "r"] ⟨"goleanClient"⟩ #[]
 abbrev muxEnv : LocalEnv := [[("r", .base ⟨0⟩)]]
 abbrev muxSeed : ExecState := chanSeed muxerLowered strCell0
 
-/-- `Async` (buffered cap-1 handoff joined by a receive): the
-certificate. -/
-theorem asyncCert :
+/-- `Async` (buffered cap-1 handoff joined by a receive): the kernel
+certificate at the shipped bound 400 (measured minimum 200). -/
+theorem asyncCert400 :
     allStreamsOkPool (cellIsStr (GoString.fromLeanString "async")) 400
       ⟨#[.exec asyncDriver muxEnv .stop], muxSeed, 0⟩ {} = true := by
   decide +kernel
 
-theorem asyncAllSchedules : ∀ ch : Choices,
-    ∃ (σf : ExecState) (ch' : Choices),
-      execProg 400 muxEnv muxSeed ch asyncDriver = .ok (.normal σf, ch')
-        ∧ cellIsStr (GoString.fromLeanString "async") σf = true :=
-  chanCert_allSchedules asyncCert
+/-- Fuel-general certificate (slice 6). -/
+theorem asyncCert :
+    ∃ N, ∀ fuel, N ≤ fuel →
+      allStreamsOkPool (cellIsStr (GoString.fromLeanString "async")) fuel
+        ⟨#[.exec asyncDriver muxEnv .stop], muxSeed, 0⟩ {} = true :=
+  ⟨400, fun _ h => allStreamsOkPool_mono asyncCert400 h⟩
 
-theorem asyncNoDeadlock : ∀ ch : Choices,
-    execProg 400 muxEnv muxSeed ch asyncDriver ≠ .error .deadlock :=
-  chanCert_noDeadlock asyncCert
+theorem asyncAllSchedules :
+    ∃ N, ∀ fuel, N ≤ fuel → ∀ ch : Choices,
+      ∃ (σf : ExecState) (ch' : Choices),
+        execProg fuel muxEnv muxSeed ch asyncDriver = .ok (.normal σf, ch')
+          ∧ cellIsStr (GoString.fromLeanString "async") σf = true :=
+  ⟨400, chanCert_allSchedules asyncCert400⟩
 
-theorem asyncNoRace : ∀ ch : Choices,
-    execProg 400 muxEnv muxSeed ch asyncDriver ≠ .error .raceDetected :=
-  chanCert_noRace asyncCert
+theorem asyncNoDeadlock : ∀ (fuel : Nat) (ch : Choices),
+    execProg fuel muxEnv muxSeed ch asyncDriver ≠ .error .deadlock :=
+  chanCert_noDeadlock asyncCert400
+
+theorem asyncNoRace : ∀ (fuel : Nat) (ch : Choices),
+    execProg fuel muxEnv muxSeed ch asyncDriver ≠ .error .raceDetected :=
+  chanCert_noRace asyncCert400
 
 theorem asyncTerminatesNormallyC :
     TerminatesNormallyC muxEnv muxSeed asyncDriver :=
-  chanCert_terminatesNormallyC asyncCert
+  chanCert_terminatesNormallyC asyncCert400
 
 /-- `Client` (the unbuffered request/response round-trip against the
 `Serve` loop; the server is left parked at main's exit — the leaked
-goroutine is inside the modeled envelope): the certificate. -/
-theorem clientCert :
+goroutine is inside the modeled envelope): the kernel certificate at
+the shipped bound 800 (measured minimum 400). -/
+theorem clientCert800 :
     allStreamsOkPool
       (cellIsStr (GoString.fromLeanString "Hello, World!")) 800
       ⟨#[.exec clientDriver muxEnv .stop], muxSeed, 0⟩ {} = true := by
   decide +kernel
 
-theorem clientAllSchedules : ∀ ch : Choices,
-    ∃ (σf : ExecState) (ch' : Choices),
-      execProg 800 muxEnv muxSeed ch clientDriver = .ok (.normal σf, ch')
-        ∧ cellIsStr (GoString.fromLeanString "Hello, World!") σf = true :=
-  chanCert_allSchedules clientCert
+/-- Fuel-general certificate (slice 6). -/
+theorem clientCert :
+    ∃ N, ∀ fuel, N ≤ fuel →
+      allStreamsOkPool
+        (cellIsStr (GoString.fromLeanString "Hello, World!")) fuel
+        ⟨#[.exec clientDriver muxEnv .stop], muxSeed, 0⟩ {} = true :=
+  ⟨800, fun _ h => allStreamsOkPool_mono clientCert800 h⟩
 
-theorem clientNoDeadlock : ∀ ch : Choices,
-    execProg 800 muxEnv muxSeed ch clientDriver ≠ .error .deadlock :=
-  chanCert_noDeadlock clientCert
+theorem clientAllSchedules :
+    ∃ N, ∀ fuel, N ≤ fuel → ∀ ch : Choices,
+      ∃ (σf : ExecState) (ch' : Choices),
+        execProg fuel muxEnv muxSeed ch clientDriver = .ok (.normal σf, ch')
+          ∧ cellIsStr (GoString.fromLeanString "Hello, World!") σf = true :=
+  ⟨800, chanCert_allSchedules clientCert800⟩
 
-theorem clientNoRace : ∀ ch : Choices,
-    execProg 800 muxEnv muxSeed ch clientDriver ≠ .error .raceDetected :=
-  chanCert_noRace clientCert
+theorem clientNoDeadlock : ∀ (fuel : Nat) (ch : Choices),
+    execProg fuel muxEnv muxSeed ch clientDriver ≠ .error .deadlock :=
+  chanCert_noDeadlock clientCert800
+
+theorem clientNoRace : ∀ (fuel : Nat) (ch : Choices),
+    execProg fuel muxEnv muxSeed ch clientDriver ≠ .error .raceDetected :=
+  chanCert_noRace clientCert800
 
 theorem clientTerminatesNormallyC :
     TerminatesNormallyC muxEnv muxSeed clientDriver :=
-  chanCert_terminatesNormallyC clientCert
+  chanCert_terminatesNormallyC clientCert800
 
 end ChannelMuxer
 
@@ -307,29 +391,40 @@ abbrev dspEnv : LocalEnv := [[("r", .base ⟨0⟩)]]
 abbrev dspSeed : ExecState := chanSeed actrisLowered intCell0
 
 /-- `DSPExample` (the pointer handoff over an unbuffered channel, the
-write-back, the signal rendezvous, the deref — 42): the certificate. -/
-theorem dspCert :
+write-back, the signal rendezvous, the deref — 42): the kernel
+certificate at the shipped bound 400 (measured minimum 200). -/
+theorem dspCert400 :
     allStreamsOkPool (cellIsInt 42) 400
       ⟨#[.exec dspDriver dspEnv .stop], dspSeed, 0⟩ {} = true := by
   decide +kernel
 
-theorem dspAllSchedules : ∀ ch : Choices,
-    ∃ (σf : ExecState) (ch' : Choices),
-      execProg 400 dspEnv dspSeed ch dspDriver = .ok (.normal σf, ch')
-        ∧ cellIsInt 42 σf = true :=
-  chanCert_allSchedules dspCert
+/-- Fuel-general certificate (slice 6; the designation CANDIDATE —
+recorded in the charter's candidate table — now carries the
+fuel-free form). -/
+theorem dspCert :
+    ∃ N, ∀ fuel, N ≤ fuel →
+      allStreamsOkPool (cellIsInt 42) fuel
+        ⟨#[.exec dspDriver dspEnv .stop], dspSeed, 0⟩ {} = true :=
+  ⟨400, fun _ h => allStreamsOkPool_mono dspCert400 h⟩
 
-theorem dspNoDeadlock : ∀ ch : Choices,
-    execProg 400 dspEnv dspSeed ch dspDriver ≠ .error .deadlock :=
-  chanCert_noDeadlock dspCert
+theorem dspAllSchedules :
+    ∃ N, ∀ fuel, N ≤ fuel → ∀ ch : Choices,
+      ∃ (σf : ExecState) (ch' : Choices),
+        execProg fuel dspEnv dspSeed ch dspDriver = .ok (.normal σf, ch')
+          ∧ cellIsInt 42 σf = true :=
+  ⟨400, chanCert_allSchedules dspCert400⟩
 
-theorem dspNoRace : ∀ ch : Choices,
-    execProg 400 dspEnv dspSeed ch dspDriver ≠ .error .raceDetected :=
-  chanCert_noRace dspCert
+theorem dspNoDeadlock : ∀ (fuel : Nat) (ch : Choices),
+    execProg fuel dspEnv dspSeed ch dspDriver ≠ .error .deadlock :=
+  chanCert_noDeadlock dspCert400
+
+theorem dspNoRace : ∀ (fuel : Nat) (ch : Choices),
+    execProg fuel dspEnv dspSeed ch dspDriver ≠ .error .raceDetected :=
+  chanCert_noRace dspCert400
 
 theorem dspTerminatesNormallyC :
     TerminatesNormallyC dspEnv dspSeed dspDriver :=
-  chanCert_terminatesNormallyC dspCert
+  chanCert_terminatesNormallyC dspCert400
 
 end ChannelActris
 

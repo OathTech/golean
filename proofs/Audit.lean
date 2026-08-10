@@ -468,6 +468,16 @@ open Lean in
 #guard_msgs in #print axioms GoLean.GoCore.Machine.execProgLoop_ok_of_allStreamsOkPool
 /-- info: 'GoLean.GoCore.Machine.execProgLoop_mono' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.GoCore.Machine.execProgLoop_mono
+-- The slice-6 fuel-independence pair (constructive): sub-bound
+-- truncation classification and checker fuel-monotonicity — what
+-- lifts every certificate-backed channel-bundle statement off its
+-- shipped literal fuel.
+/-- info: 'GoLean.GoCore.Machine.execProgLoop_le' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.GoCore.Machine.execProgLoop_le
+/-- info: 'GoLean.GoCore.Machine.stepAllBranchesOk_mono' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.GoCore.Machine.stepAllBranchesOk_mono
+/-- info: 'GoLean.GoCore.Machine.allStreamsOkPool_mono' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.GoCore.Machine.allStreamsOkPool_mono
 /-- info: 'GoLean.Surface.goSpecC_of_goSpec' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Surface.goSpecC_of_goSpec
 /-- info: 'GoLean.GoCore.Machine.step_det' depends on axioms: [propext, Classical.choice, Quot.sound] -/
@@ -957,6 +967,11 @@ example := @GoLean.GoCore.Machine.stepThread_oblivious
 example := @GoLean.GoCore.Machine.raceUpdate_oblivious
 example := @GoLean.GoCore.Machine.poolThreadOblivious_sel
 example := @GoLean.GoCore.Machine.execProgLoop_mono
+-- Slice 6 (fuel-independence lift): sub-bound classification + the
+-- checker's fuel-monotonicity pair.
+example := @GoLean.GoCore.Machine.execProgLoop_le
+example := @GoLean.GoCore.Machine.stepAllBranchesOk_mono
+example := @GoLean.GoCore.Machine.allStreamsOkPool_mono
 example := @GoLean.GoCore.Machine.stepMulti_wf
 example := @GoLean.GoCore.Machine.applyPairing_wf
 example := @GoLean.GoCore.Machine.resumeThread_wf
@@ -1220,21 +1235,32 @@ proofs; witness-citation drift stays the audit's job. The four
 soundness kit (hoisting candidates, recorded in the module header);
 the per-row `NoDeadlock`/`NoRace`/`TerminatesNormallyC` corollaries
 are one-liners over the registered certificates, covered by the
-sweep. -/
+sweep. SLICE 6 (fuel-independence lift): every row's bundle is
+FUEL-GENERAL — `<row>Cert`/`<row>AllSchedules` in the `∃N, ∀ fuel ≥ N`
+form, `NoDeadlock`/`NoRace` at ALL fuels — and the kernel evidence is
+the per-row `<row>Cert<bound>` literal at the shipped bound (anchored
+below so the `decide +kernel` base cannot silently vanish under the
+general form). -/
 example := @GoLean.ImportedGoose.chanCert_allSchedules
 example := @GoLean.ImportedGoose.chanCert_noDeadlock
 example := @GoLean.ImportedGoose.chanCert_noRace
 example := @GoLean.ImportedGoose.chanCert_terminatesNormallyC
+example := @GoLean.ImportedGoose.ChannelSelectTricky.nbNotReadyCert200
 example := @GoLean.ImportedGoose.ChannelSelectTricky.nbNotReadyCert
 example := @GoLean.ImportedGoose.ChannelSelectTricky.nbNotReadyAllSchedules
+example := @GoLean.ImportedGoose.ChannelSelectTricky.nbGuaranteedReadyCert200
 example := @GoLean.ImportedGoose.ChannelSelectTricky.nbGuaranteedReadyCert
 example := @GoLean.ImportedGoose.ChannelSelectTricky.nbGuaranteedReadyAllSchedules
+example := @GoLean.ImportedGoose.ChannelSelectTricky.nbFullBufferCert200
 example := @GoLean.ImportedGoose.ChannelSelectTricky.nbFullBufferCert
 example := @GoLean.ImportedGoose.ChannelSelectTricky.nbFullBufferAllSchedules
+example := @GoLean.ImportedGoose.ChannelMuxer.asyncCert400
 example := @GoLean.ImportedGoose.ChannelMuxer.asyncCert
 example := @GoLean.ImportedGoose.ChannelMuxer.asyncAllSchedules
+example := @GoLean.ImportedGoose.ChannelMuxer.clientCert800
 example := @GoLean.ImportedGoose.ChannelMuxer.clientCert
 example := @GoLean.ImportedGoose.ChannelMuxer.clientAllSchedules
+example := @GoLean.ImportedGoose.ChannelActris.dspCert400
 example := @GoLean.ImportedGoose.ChannelActris.dspCert
 example := @GoLean.ImportedGoose.ChannelActris.dspAllSchedules
 /-- `✓` **THE INDUCTIVE RANGE RULE** (proof-automation arc phase 1,

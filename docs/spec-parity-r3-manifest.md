@@ -189,6 +189,15 @@ for a later movement, not silently claimed.
 Certificate fuels (measured minimum → shipped): nb-not-ready 100→200,
 nb-guaranteed-ready 100→200, nb-full-buffer 100→200, dsp 200→400,
 async 200→400, client 400→800. Full module kernel-checks in ~20 s.
+SLICE 6 (fuel-independence lift): these shipped bounds are now the
+KERNEL-EVIDENCE literals only (`<row>Cert<bound>`); the five
+statements per row are fuel-general — `Cert`/`AllSchedules` in the
+`∃N, ∀ fuel ≥ N` form `TerminatesNormallyC` uses (lifted by
+`allStreamsOkPool_mono`/`execProgLoop_mono`), `NoDeadlock`/`NoRace`
+at ALL fuels (`execProgLoop_le`: a sub-bound truncation classifies
+`.fuelOut`, never `.deadlock`/`.raceDetected` — matrix §7.2's
+truth-equivalence argument, machine-checked). Fuel is no longer an
+axis of any statement in this class.
 
 ## Counts (slice 3 close; corrected at the S3 audit fix round)
 
