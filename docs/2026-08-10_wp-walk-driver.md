@@ -269,7 +269,9 @@ undesignated, listed in the manifest.
 - **P-S3-2 — Backfill pinned lowerings for the remaining 76 unpinned
   imported units (71 with ≥1 R1-green row — figure recounted at the
   fix round; this bullet first said "~72 R1-green", the stale
-  pre-recount number, corrected at the delta review)?** Each pinned
+  pre-recount number, corrected at the delta review; 73 unpinned at
+  ARC close — slice 4 added the three channel pin modules, manifest
+  arc-close addendum)?** Each pinned
   term is the R3 statement's subject AND
   joins the ci 1c5 staleness guard + pins registry (a standing
   maintenance surface per unit). Scaling R3 across the corpus needs
