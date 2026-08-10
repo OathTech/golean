@@ -48,7 +48,8 @@ touches it.
     extraction leg can attach later WITHOUT re-implementing the
     generator (the fixture carries explicit serialized inputs, not just
     seeds). The Rocq oracle leg itself: **ATTACHED 2026-08-10** —
-    280/280 match; see the parking ledger (resolved) and slice S6.
+    320/320 match after the audit fix round (280/280 at attach);
+    coverage limits recorded in S6 and the DiffHarness docstring.
 
 Out of scope: P2 (rocq-lean-import certification toolchain — network +
 version-pin sign-off), P3 (attachment — mainline territory), F5, anything
@@ -146,7 +147,8 @@ linearizability); the ghost/refined layer (P0's recorded gap, unchanged).
 ## Parking ledger
 
 - **Rocq extraction oracle leg** (P1b's second half). **RESOLVED
-  2026-08-10** — leg built and run, 280/280 match (slice S6 below).
+  2026-08-10** — leg built and run, 280/280 match (320/320 after the
+  audit fix round; coverage limits in slice S6 below).
   Originally blocked: no Rocq toolchain on the box (`which coqc rocq
   opam coqtop` — all absent, 2026-08-09); never worked around per the
   sandbox/no-install rule. The unpark that resolved it, for the
@@ -172,7 +174,14 @@ linearizability); the ghost/refined layer (P0's recorded gap, unchanged).
 1. Wire the compat gate into `scripts/ci` (or a nightly job): build
    `compat/verdi` via `scripts/capped lake build` + run
    `diffharness check fixtures/handlers-n3.tsv` + the `AxCheck` scan.
-   Until then the gate is lane-local and manual.
+   Until then the gate is lane-local and manual. **Audit note
+   (2026-08-10): `AxCheck` is ADVISORY** — its `#print axioms` lines
+   land in the build log for a human to read; an added axiom would
+   print and the build would stay GREEN. The wiring should adopt
+   mainline's enforcing pattern (`proofs/Audit.lean`:
+   `#guard_msgs in #print axioms` docstring pins per theorem, plus an
+   exhaustive `collectAxioms` sweep over own modules that
+   `throwError`s — either mechanism FAILS the build on a new axiom).
 2. `CLAUDE.md` reference-checkout list: no change needed (Verdi pins
    already listed on main); revisit only if pins move.
 3. `TODO.md`: record P1-done status and the parked Rocq leg once merged.
@@ -229,17 +238,41 @@ linearizability); the ghost/refined layer (P0's recorded gap, unchanged).
   mapping via `fin_to_nat`/`all_fin`.
 - **RESULT: 280/280 MATCH, 0 diverge, 0 infra** — the Rocq leg
   reproduces the Lean port's output column byte-for-byte on every
-  committed case (all 7 kinds × 40). No port bug, no instantiation
-  mismatch; the delta ledger gains no entry. Claim scope: handler
-  semantics on the fixture inputs, through the extraction TCB
-  (nat→int, fin→int, OCaml evaluation).
+  committed case (all 7 kinds × 40 at the time of this run; the audit
+  fix round added the `init` kind and re-ran: **320/320**). Claim
+  scope: handler semantics on the fixture inputs, through the
+  extraction TCB (nat→int, fin→int, OCaml evaluation). **NO
+  DIVERGENCE OBSERVED** — the original "no port bug, no instantiation
+  mismatch" wording was qualified at the audit fix round (2026-08-10),
+  per the verified findings, to state what the run CANNOT see:
+  - the fixture is THIN: single-shot handler calls on independently
+    generated random states — no multi-step traces, no election or
+    replication sequences, no `Network`/`step_failure` composition;
+    hAE leaves the state unchanged in 36/40 cases (log append 2/40);
+    exactly one elected-leader transition in the 280 (id 194, `net`);
+  - the DEGENERATE counter machine (`handler i d = (d+i, d+i)`,
+    symmetric arguments, equal result components) is structurally
+    blind to a transposed state-machine application and to a swapped
+    `(output, data)` result pair — audit-measured: the machine is
+    reached on only 6/280 handler rows, and an `init` mismatch was
+    invisible until the `init` kind landed (fix 3: the init:=7 mutant
+    oracle now diverges on all 40 init rows, previously 280/280 green);
+  - the executable-but-unextracted ported surface (execute/dedup
+    slice, `acknowledge_all_ops_func`, RaftLinearizable projections)
+    is not covered by any oracle (DiffHarness docstring has the full
+    coverage-limits statement).
+  Within that scope the delta ledger gained no entry from the run.
 - **Oracle liveness verified** (a 280/280 that cannot fail is not
   evidence): tampered output byte → DIVERGE exit 1; perturbed live
   input field (reboot `currentTerm`) → DIVERGE; malformed s-expr,
   unknown kind, 3-column row, out-of-range name, header-only fixture
   → INFRA / zero-case FAIL, all nonzero. Driver also round-trips
   every input through its own serializer (grammar drift = INFRA) and
-  the runner refuses partial runs (judged-count vs fixture-row-count).
+  the driver enforces the header's cases-per-kind/kinds declaration
+  (exact per-kind counts, no undeclared kinds, declaration required —
+  audit fix 2: a truncated fixture used to pass the oracle leg green;
+  the runner's judged-vs-rows guard was self-referential and stays
+  only as defense in depth).
   Two hand-checked insensitive perturbations (hAE `plt`/`t` on a
   reject-path case) produced identical outputs legitimately and were
   not counted as checks.
@@ -251,6 +284,48 @@ linearizability); the ghost/refined layer (P0's recorded gap, unchanged).
 - Gate: capped `lake build` green + `diffharness check` 280 cases at
   each slice; extraction artifacts are gitignored and outside the
   Lean build (lakefile targets unchanged).
+
+## Audit fix round (2026-08-10, pre-merge audit of the lane tip)
+
+The lane's pre-merge audit (14 agents, review + independent verify)
+returned ZERO surviving critical/major findings — both filed majors
+were DOWNGRADED on verification — plus a batch of confirmed minors and
+notes in two classes, claim honesty and driver robustness. All
+verdict kernels applied in one fix round; every empirical figure below
+is the VERIFIER'S re-measured one, not the reviewer's:
+
+- `39e55412` fix 1 — records/citations: RaftLinearizable.lean's
+  drifted cites (six ranges), CommonDefinitions/StructTactPrelude
+  off-by-ones, lane doc :88; gap-ledger boundary restated item-wise
+  (the 7-270 window is item-selected — 10 unported transport lemmas +
+  `Section Examples` sit inside it); delta item 9 added (op_eq_dec/
+  IR_eq_dec → derived `DecidableEq`, mapping convention); delta item 8
+  truthed (ONE nonempty-electoralVictories case, id 194 `net`, not
+  "7"; mechanism attribution was correct; `reboot` reads-and-preserves
+  the ghost field, exercised only on `[]`).
+- `d3cbd091` fix 2 — driver robustness, negative-tested: oversized
+  grammar-valid decimal is now a per-row INFRA (was an uncaught
+  Failure abort with no summary); the driver enforces the header's
+  cases-per-kind/kinds declaration (a truncated fixture used to pass
+  the oracle leg green; declaration-less fixtures refused).
+- `af05abb2` fix 3 — the dead `counter_init_handlers` extraction is
+  now CALLED: new `init` fixture kind appended after `reboot` (ids
+  0-279 byte-identical, verified; fixture 280 → 320, deliberate
+  re-pin); the generator's hardcoded "280/280 match" header line
+  DROPPED (a generated file must not assert its own oracle status —
+  run records live here, not in the fixture); coverage limits stated
+  at every claim site without weakening the positive claim.
+- This commit, fix 4 — S6 record qualified ("no divergence observed"
+  + the blind-spot accounting above), AxCheck's advisory nature
+  recorded (queue item 1 carries the enforcing-pattern follow-up per
+  `proofs/Audit.lean`), lakefile comment truthed.
+
+Fix-round gate: capped `lake build` green, `diffharness check` 320 OK,
+oracle re-run **320/320 MATCH, 0 diverge, 0 infra**; fix-2 negative
+tests red as required (oversized decimal → per-row INFRA exit 1,
+truncated fixture → per-kind FAIL exit 1, declaration-less → refused);
+init liveness: the audit's init:=7 mutant oracle diverges on all 40
+init rows (was invisibly green pre-fix).
 
 ## The lane-local gate (run before any commit here)
 
