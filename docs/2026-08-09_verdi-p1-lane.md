@@ -85,7 +85,7 @@ P0's mapping decisions (design note §2) carry over unchanged. New in P1:
    decision procedures). The function stays a FUNCTION on the same
    arguments, target-list semantics preserved.
 5. `exported`'s `IU` case binds an arbitrary output `o` never constrained
-   (`RaftLinearizableProofs.v:52-55`) — ported verbatim, including the
+   (`RaftLinearizableProofs.v:51-54`) — ported verbatim, including the
    unconstrained existential-shaped binder. Not "cleaned up" on purpose:
    the statement must match theirs.
 6. `good_trace` is a recursive `Prop`-valued function with a wildcard
@@ -101,18 +101,42 @@ P0's mapping decisions (design note §2) carry over unchanged. New in P1:
    with unassigned metavariables where `refine … ?_` + `rfl` succeeds
    (see `raft_linearizable_conclusion_witness`).
 8. Harness generator scope (not a spec deviation): generated INPUT
-   states always carry `electoralVictories = []` (no handler reads the
-   ghost field); nonempty values still appear on the OUTPUT side via
-   `handleRequestVoteReply` victories (7 elected-leader cases in the
-   committed fixture). Fixture outputs are COMPILED Lean evaluation;
-   the `rfl` witnesses in `Examples.lean` pin kernel reduction on a
-   handful of the same handlers.
+   states always carry `electoralVictories = []` (no message/input
+   handler reads the ghost field; `reboot` reads-and-preserves it, so
+   its pass-through is exercised only on `[]` — wording corrected at
+   the 2026-08-10 audit fix round, which also corrected the coverage
+   figure below). Nonempty values still appear on the OUTPUT side via
+   `handleRequestVoteReply` victories — in exactly ONE committed case
+   (id 194, kind `net`, delivering a RequestVoteReply to a Candidate:
+   the fixture's only elected-leader transition; ZERO of the 40
+   `hRVR`-kind rows take the winning branch). The original entry
+   claimed "7 elected-leader cases" — audit-measured false (the 280
+   case rows never changed after S5); the mechanism attribution was
+   correct, the count was not. Fixture outputs are COMPILED Lean
+   evaluation; the `rfl` witnesses in `Examples.lean` pin kernel
+   reduction on a handful of the same handlers.
+9. (Recorded at the 2026-08-10 audit fix round; mapping convention,
+   not a semantic change.) Coq's standalone eq-deciders `op_eq_dec`
+   (`Linearizability.v:11-15`) and `IR_eq_dec` (:22-26) → the derived
+   `DecidableEq` instances on the `op`/`IR` inductives (same equality,
+   `decide equality` vs derived instance). Their only in-slice
+   consumers are `acknowledged_op_dec` and the `in_dec` uses already
+   recorded in item 4; the deviation is that the two intermediate
+   named constants have no Lean counterparts. Same convention as
+   `key_eq_dec` (recorded in `CommonDefinitions.lean`).
 
 Recorded gaps (NOT ported, deliberately, this phase): the
-`Linearizability.v` proof-side lemma corpus past line 270 (incl.
-`get_*_keys` at 272-344, `op_equivalent`, `equivalent_intro` at 1399 —
-they are proof machinery for re-proving `raft_linearizable'`, not
-statement vocabulary); StructTact `before` and the `TraceUtil.v`
+`Linearizability.v` proof-side lemma corpus — which does NOT start at
+272 (audit fix 2026-08-10; the old "past line 270" framing concealed
+in-window items): unported inside 7-270 are 10 transport lemmas
+(`acknowledge_all_ops_was_in` :56, `…_func_defn` :81,
+`…_func_target_ext` :104, the five `IR_equiv_*` lemmas :141-190,
+`…_func_IRU_In` :263) plus `Section Examples` (:192-247); the only
+in-window lemmas ported are `acknowledge_all_ops_func_correct` (:97)
+and `IR_equivalent_refl` (:134); past the window the whole 272-1428
+corpus (`get_*_keys` at 272-344, `op_equivalent`, `equivalent_intro` at
+1399) — all of it proof machinery for re-proving `raft_linearizable'`,
+not statement vocabulary; StructTact `before` and the `TraceUtil.v`
 vocabulary (`in_input_trace`, …) used only by the intermediate interface
 statements (`OutputImpliesAppliedInterface` etc.), which the END-TO-END
 statement does not mention; `prefix_within_term`

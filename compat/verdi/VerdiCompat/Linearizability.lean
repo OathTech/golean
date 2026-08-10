@@ -7,16 +7,27 @@ the end-to-end linearizability theorem (`EndToEndLinearizability.v:471`)
 is stated in: operation traces (`op`), intermediate representations
 (`IR`), the acknowledgment relation, the reordering equivalence
 (`good_move`/`IR_equivalent`), well-formed sequential traces
-(`good_trace`), and `equivalent` itself. The file's proof-side lemma
-corpus (its lines 272-1428: `get_*_keys`, `op_equivalent`,
-`equivalent_intro`, …) is proof machinery for re-proving
-`raft_linearizable'` and is a recorded gap for the attachment phase, not
-part of this statement slice (lane log, delta ledger).
+(`good_trace`), and `equivalent` itself. The port is ITEM-SELECTED
+inside 7-270, not range-complete: the proof-side lemma corpus is a
+recorded gap for the attachment phase (lane log, delta ledger), and it
+does NOT start at 272 — unported inside the window are the transport
+lemmas `acknowledge_all_ops_was_in` (:56), `acknowledge_all_ops_func_defn`
+(:81), `acknowledge_all_ops_func_target_ext` (:104), the five
+`IR_equiv_*` `In`/`Permutation`/append lemmas (:141-190),
+`Section Examples` (:192-247, `IR_equiv_eg1..4`) and
+`acknowledge_all_ops_func_IRU_In` (:263); ported in-window lemmas are
+exactly `acknowledge_all_ops_func_correct` (:97) and
+`IR_equivalent_refl` (:134). Past the window, the whole 272-1428 corpus
+(`get_*_keys`, `op_equivalent`, `equivalent_intro`, …) is unported.
 
 Mapping decisions (lane log `docs/2026-08-09_verdi-p1-lane.md`):
 sumbool deciders (`acknowledged_op_dec`, `in_dec`) become `Decidable`
-instances feeding `if`; everything else is verbatim. The section
-variable `K` (client-request keys) stays a section variable.
+instances feeding `if`; the standalone eq-deciders `op_eq_dec`
+(`Linearizability.v:11-15`) and `IR_eq_dec` (:22-26) become the derived
+`DecidableEq` instances on `op`/`IR` below (their only in-slice
+consumers are those two recorded mappings); everything else is
+verbatim. The section variable `K` (client-request keys) stays a
+section variable.
 -/
 
 namespace VerdiCompat
