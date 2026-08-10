@@ -55,10 +55,18 @@ Out of scope: P2 (rocq-lean-import certification toolchain — network +
 version-pin sign-off), P3 (attachment — mainline territory), F5, anything
 touching GoCore.
 
-## Provisional D-item defaults (all PROVISIONAL, chosen to be reversible)
+## Provisional D-item defaults (all PROVISIONAL unless marked resolved)
 
-- **D1 — PROVISIONAL: standalone `compat/verdi` home.** Keeps the main
-  gate untouched; integration under `proofs/` is a merge-window decision.
+- **D1 — RESOLVED (user-ratified, 2026-08-10 merge window): standalone
+  `compat/verdi` home, STAYS STANDALONE until P3 attachment.**
+  Rationale: the package is self-contained (no deps on the root
+  lakefile or `proofs/`), which is what lets exploratory compat work
+  proceed without mainline coupling; attachment under `proofs/` is P3's
+  job, done when the transfer statements actually consume mainline
+  definitions — moving earlier would buy nothing and cost the
+  isolation. Since this window the package IS built by `scripts/ci`
+  (step 3v, enforcing AxCheck + fixture pin), so standalone no longer
+  means unwatched.
 - **D2 — PROVISIONAL: Lean-native `Nat`/`List`/`Fin`** (the spike's
   choice). Costs slightly heavier Rocq-side isos in P2; nothing in P1
   bakes it in beyond what P0 already did.
@@ -171,21 +179,24 @@ linearizability); the ghost/refined layer (P0's recorded gap, unchanged).
 
 ## Merge-window queue (coordination points, to be done WITH the user)
 
-1. Wire the compat gate into `scripts/ci` (or a nightly job): build
-   `compat/verdi` via `scripts/capped lake build` + run
-   `diffharness check fixtures/handlers-n3.tsv` + the `AxCheck` scan.
-   Until then the gate is lane-local and manual. **Audit note
-   (2026-08-10): `AxCheck` is ADVISORY** — its `#print axioms` lines
-   land in the build log for a human to read; an added axiom would
-   print and the build would stay GREEN. The wiring should adopt
-   mainline's enforcing pattern (`proofs/Audit.lean`:
-   `#guard_msgs in #print axioms` docstring pins per theorem, plus an
-   exhaustive `collectAxioms` sweep over own modules that
-   `throwError`s — either mechanism FAILS the build on a new axiom).
+1. **DONE (2026-08-10 merge window):** compat gate wired into
+   `scripts/ci` as step 3v — `compat/verdi` lake build +
+   `diffharness check` (Lean leg only; the Rocq oracle stays
+   on-demand lane tooling). The audit note that `AxCheck` was
+   ADVISORY (printed but could not fail the build) became the fix:
+   AxCheck now carries mainline's enforcing pattern
+   (`#guard_msgs in #print axioms` pins per theorem + the exhaustive
+   `collectAxioms` sweep that `throwError`s beyond
+   propext/Quot.sound), negative-tested (a sorry probe fails the
+   build naming the declaration).
 2. `CLAUDE.md` reference-checkout list: no change needed (Verdi pins
    already listed on main); revisit only if pins move.
-3. `TODO.md`: record P1-done status and the parked Rocq leg once merged.
-4. D1 (move under `proofs/`?) — decide at a merge window, not here.
+3. **DONE (2026-08-10 merge window):** `TODO.md` records P1+oracle
+   status, the resolved parking ledger, and the toolchain-record
+   pointer.
+4. **DONE (2026-08-10 merge window):** D1 resolved — stay standalone
+   until P3 attachment (see the D-defaults section for the ratified
+   rationale).
 5. If/when the Rocq oracle leg is enabled: decide where its runner
    lives (`compat/verdi/` script vs `scripts/` — the latter is
    mainline-owned). **Recorded choice (2026-08-10): lane-local,

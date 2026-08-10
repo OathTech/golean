@@ -674,15 +674,30 @@ widened an arc mid-audit. Roughly in priority order.
   anywhere. Either route them through `scripts/capped` or decide
   explicitly that the cap is gate-scoped only.
 
-- **Does `compat/**` deserve a gate? (decision, not a task.)** Nothing in
-  `scripts/ci`, the root lakefile, or the workflow builds `compat/verdi`
-  or `compat/gobra` — that IS the isolation contract, and it is why an
-  exploratory lane cannot break mainline. The cost: `compat/gobra`'s ~70
-  `#guard`s and both packages' `AxCheck` axiom audits run only when a
-  human builds the package, so these lanes can rot silently against
-  mainline drift. A nightly/`--slow`-tier compat build would catch that
-  without coupling the fast gate. Weigh against the parallel-lane story
-  in `docs/2026-08-09_verdi-compat-layer.md` §8b.
+- **Does `compat/**` deserve a gate? PARTIALLY RESOLVED (2026-08-10,
+  verdi-p1 merge window):** `compat/verdi` is now IN the fast gate —
+  scripts/ci step 3v builds it (incl. its enforcing AxCheck: #guard_msgs
+  pins + a collectAxioms sweep that fails the build beyond
+  propext/Quot.sound) and runs `diffharness check` (Lean leg only; the
+  Rocq extraction oracle stays on-demand lane tooling). `compat/gobra`
+  remains ungated — its ~70 `#guard`s and advisory AxCheck still run
+  only on a human build; the nightly/`--slow`-tier question stays open
+  for it. Weigh against the parallel-lane story in
+  `docs/2026-08-09_verdi-compat-layer.md` §8b.
+
+- **Verdi P1 + oracle leg: DONE (2026-08-10, lane `verdi-p1`).** The
+  linearizability statement vocabulary ported (S2-S4), the differential
+  harness's Lean leg + committed fixture (S5), and the Rocq extraction
+  oracle leg (S6, previously parked): verdi-raft's own handlers at the
+  pins, extracted to OCaml, replayed over the fixture — 320/320 match
+  after the audit fix round (coverage limits recorded, S6 + the
+  DiffHarness docstring). Parking ledger RESOLVED; toolchain record
+  (Coq 8.18.0 repo-local switch `deps/opam-coq818`, the five package
+  revs, coq-extra-dev per verdi's CI) in the lane log
+  `docs/2026-08-09_verdi-p1-lane.md`. D1 decided at the merge window:
+  `compat/verdi` STAYS STANDALONE until P3 attachment (rationale in
+  the lane log's D-defaults). Next phases: P2 (certification
+  toolchain), P3 (attachment — mainline territory).
 
 - **Gobra: the fuel-sufficiency lemma is the arc's sharpest open item.**
   `Parser.fuelFor = grammarDepth * (|toks|+1)` is ARGUED, not proved
