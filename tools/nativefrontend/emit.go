@@ -423,18 +423,19 @@ func (e *emitter) emitProgram(files []*ast.File) (map[string]any, error) {
 	for _, td := range typeDefs {
 		m, ok := td.(map[string]any)
 		if !ok {
-			continue
+			// Every entry is a map this file built; anything else is a
+			// construction bug — fail the export, never classify it.
+			return nil, unsup("method-set record classifier: non-object typeDef entry (fail closed)")
 		}
 		name, _ := m["name"].(string)
 		def, _ := m["def"].(map[string]any)
 		kind, _ := def["kind"].(string)
-		switch kind {
-		case "interface", "alias":
-			continue
-		case "unsupported":
-			msSet[name] = "exported"
-		default:
-			msSet[name] = "full"
+		coverage, carrier, err := methodSetCoverageForKind(name, kind)
+		if err != nil {
+			return nil, err
+		}
+		if carrier {
+			msSet[name] = coverage
 		}
 	}
 	for name := range e.syncUsed {
@@ -464,6 +465,38 @@ func (e *emitter) emitProgram(files []*ast.File) (map[string]any, error) {
 		program["globals"] = e.globalDefs
 	}
 	return program, nil
+}
+
+// methodSetCoverageForKind is the record-coverage CLASSIFIER for one
+// emitted TypeDef (class closure of BUG-053, contract note §3;
+// FAIL-CLOSED since the S6 audit — the original inline switch had
+// `default: full`, i.e. an unknown or absent def.kind inherited the
+// STRONGEST coverage, the retired blanket-true taxonomy arm relocated
+// to the emitter; unreachable at the time, since the emitter only
+// produces struct/defined/interface/unsupported, but a future kind
+// added without choosing its coverage would have inherited a
+// definite-answer license silently). Returns (coverage, carrier):
+// carrier=false means the kind mints NO record (interfaces are
+// requirement tables, aliases are transparent). Every OTHER kind must
+// appear here explicitly — an unknown kind, an empty kind (absent or
+// malformed def), or a nameless TypeDef fails the whole export.
+func methodSetCoverageForKind(name, kind string) (coverage string, carrier bool, err error) {
+	if name == "" {
+		return "", false, unsup("method-set record classifier: TypeDef with empty name (fail closed; BUG-053 class)")
+	}
+	switch kind {
+	case "interface", "alias":
+		return "", false, nil
+	case "unsupported":
+		// D5 imported markers: exported-only stub sets on the wire.
+		return "exported", true, nil
+	case "struct", "defined":
+		// Locally declared named types: the FULL method table is on the
+		// wire (D2 contract; quarantined methods fail the export).
+		return "full", true, nil
+	default:
+		return "", false, unsup("method-set record classifier: unknown TypeDef kind %q for %q — a new kind must choose its record coverage explicitly (fail closed; BUG-053 class)", kind, name)
+	}
 }
 
 // ---- package initialization (init slice, docs/2026-08-05_init-design.md) ----
@@ -4376,11 +4409,16 @@ func (e *emitter) importedMethodStubs(qname string, named *types.Named) ([]any, 
 // method set.
 //
 // Unlike importedMethodStubs this FAILS THE EXPORT on any un-emittable
-// signature instead of skipping the type whole: `Ty.sync` is not a
-// `.defined` marker type, so the machine's not-recorded /
-// imported-marker refusal lanes (`dynamicMethodSetRecorded`,
-// `dynamicIsImportedMarker`) do not cover it — a skipped set would
-// silently reproduce the false-"no" this pass exists to fix.
+// signature instead of skipping the type whole. (Comment truthed at the
+// S6 audit: the original rationale — that the machine's refusal lanes
+// did not cover `Ty.sync` — was made FALSE by the BUG-053 class closure
+// in the same commit that kept it: `dynamicIsImportedMarker` is
+// retired, `.sync` is a first-class carrier arm of `methodCarrierKey?`,
+// and `dynamicMethodSetRecorded` covers it, so a skipped set would now
+// REFUSE visibly rather than answer a false "no". The fail-the-export
+// policy stands as belt-and-suspenders — contract note §3 item 1 — the
+// export-time refusal beats a run-time one; only the stated reason was
+// stale.)
 func (e *emitter) syncMethodStubs() ([]any, error) {
 	names := make([]string, 0, len(e.syncUsed))
 	for n := range e.syncUsed {
