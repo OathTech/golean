@@ -200,3 +200,12 @@ FULL (1483/1483, no regression)`, NO stale marker
 commit; name-list + closure gates green). Zero drift with the
 classifier change — as predicted: its new arms are refusals on shapes
 the emitter never produces.
+
+TERMINAL ANNOTATION on this note's "44 designated byte-identical"
+claims (all true as written, of the BUILD slices): after this fix
+round the user's D3 ruling (2026-08-10) designated the two candidate
+pairs in their fuel-free forms — 44 → 48. The designation record is
+the charter's candidate-table section; the execution (F4 hoist to
+`Specs/GooseParityTargets.lean`, Challenge/Solution/judge-config/
+statement-TCB wiring, closure-walk verification on all four) is the
+designation commit on `spec-parity`.

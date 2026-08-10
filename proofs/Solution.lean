@@ -304,4 +304,36 @@ theorem goldenReturnsTwoC
     loadLoc σf (.base ⟨0⟩) = .ok (.int 2 .int) :=
   GoLean.Surface.goldenReturnsTwoC fuel ch σf ch' hrun
 
+/-! ## The spec-parity designated pairs (D3 user ruling 2026-08-10) -/
+
+open GoLean.ImportedGoose GoLean.ImportedGoose.SemanticsNil in
+theorem compareNilToNilSpecC :
+    GoSpecC nilLowered.typeDefs.toList nilLowered.funcs nilLowered.methods
+      importedEnv importedCell0 compareNilDriver (importedCellV 1) :=
+  GoLean.ImportedGoose.SemanticsNil.compareNilToNilSpecC
+
+open GoLean.ImportedGoose GoLean.ImportedGoose.SemanticsNil in
+theorem compareNilToNilReadoutC
+    (fuel : Nat) (ch : Choices) (σf : ExecState) (ch' : Choices)
+    (hrun : execProg fuel importedEnv (importedSeed nilLowered) ch
+      compareNilDriver = .ok (.normal σf, ch')) :
+    loadLoc σf (.base ⟨0⟩) = .ok (.int 1 .int) :=
+  GoLean.ImportedGoose.SemanticsNil.compareNilToNilReadoutC
+    fuel ch σf ch' hrun
+
+open GoLean.ImportedGoose GoLean.ImportedGoose.ChannelActris in
+theorem dspCert :
+    ∃ N, ∀ fuel, N ≤ fuel →
+      allStreamsOkPool (cellIsInt 42) fuel
+        ⟨#[.exec dspDriver dspEnv .stop], dspSeed, 0⟩ {} = true :=
+  GoLean.ImportedGoose.ChannelActris.dspCert
+
+open GoLean.ImportedGoose GoLean.ImportedGoose.ChannelActris in
+theorem dspAllSchedules :
+    ∃ N, ∀ fuel, N ≤ fuel → ∀ ch : Choices,
+      ∃ (σf : ExecState) (ch' : Choices),
+        execProg fuel dspEnv dspSeed ch dspDriver = .ok (.normal σf, ch')
+          ∧ cellIsInt 42 σf = true :=
+  GoLean.ImportedGoose.ChannelActris.dspAllSchedules
+
 end Judge

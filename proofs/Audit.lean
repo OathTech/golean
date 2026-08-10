@@ -288,7 +288,23 @@ open Lean in
     -- `goldenSpecC` (the rung-2 readout on the judgment's own carrier
     -- — the audit found the golden readouts were sequential-carrier
     -- only). 43 → 44.
-    ``GoLean.Surface.goldenReturnsTwoC]
+    ``GoLean.Surface.goldenReturnsTwoC,
+    -- Spec-parity arc D3 curation (USER RULING 2026-08-10; the arc's
+    -- designated-set change, 44 → 48): the two candidate pairs join
+    -- in their FUEL-FREE forms only — the class-1 exemplar's GoSpecC
+    -- triple + pool readout twin (upstream wp_testCompareNilToNil
+    -- Qed) and the class-3 flagship's ∃N-∀fuel≥N kernel certificate +
+    -- ∀-schedule verdict readout (upstream wp_DSPExample Qed). The
+    -- fuel-based kernel-evidence siblings (dspCert400 &c.) stay
+    -- UNDESIGNATED per the ruling — proof evidence, nothing more.
+    -- Statement defs hoisted to the def-only
+    -- Specs/GooseParityTargets.lean (F4 discipline); the Comparator
+    -- landmark for this designated-set change is the coordinator's
+    -- post-merge-prep step (never part of ci).
+    ``GoLean.ImportedGoose.SemanticsNil.compareNilToNilSpecC,
+    ``GoLean.ImportedGoose.SemanticsNil.compareNilToNilReadoutC,
+    ``GoLean.ImportedGoose.ChannelActris.dspCert,
+    ``GoLean.ImportedGoose.ChannelActris.dspAllSchedules]
   let mut lines : Array String := #[]
   let mut violations : Array String := #[]
   for t in designated do
@@ -460,6 +476,18 @@ open Lean in
 #guard_msgs in #print axioms GoLean.Surface.goldenSpecC
 /-- info: 'GoLean.Surface.goldenReturnsTwoC' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Surface.goldenReturnsTwoC
+-- The spec-parity designated pairs (D3 user ruling 2026-08-10,
+-- 44 → 48): the class-1 pair on the spec lane (classical trio), the
+-- class-3 certificate constructive, its readout on the checker
+-- soundness kit's lane (classical trio).
+/-- info: 'GoLean.ImportedGoose.SemanticsNil.compareNilToNilSpecC' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.ImportedGoose.SemanticsNil.compareNilToNilSpecC
+/-- info: 'GoLean.ImportedGoose.SemanticsNil.compareNilToNilReadoutC' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.ImportedGoose.SemanticsNil.compareNilToNilReadoutC
+/-- info: 'GoLean.ImportedGoose.ChannelActris.dspCert' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.ImportedGoose.ChannelActris.dspCert
+/-- info: 'GoLean.ImportedGoose.ChannelActris.dspAllSchedules' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.ImportedGoose.ChannelActris.dspAllSchedules
 -- The MultiWf discharge (the slice-2 scaffold's owed preservation) and
 -- the pool ∀-streams checker soundness kit.
 /-- info: 'GoLean.GoCore.Machine.stepMulti_wf' depends on axioms: [propext, Classical.choice, Quot.sound] -/

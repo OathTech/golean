@@ -411,10 +411,15 @@ numbered list has 15 entries covering 14 P-items + 1 candidate)
 **A. Designation / spec-idiom calls (D3 curation, user-owned):**
 1. **P-S3-1** — designate the sequential exemplar pair? Cost is the
    F4 def-only hoist + Challenge/Solution/judge-config/Audit wiring
-   (accounting in the S3 note §6).
+   (accounting in the S3 note §6). (RESOLVED at the D3 ruling
+   2026-08-10: DESIGNATED; the hoist is `Specs/GooseParityTargets.lean`.)
 2. **S4 candidate** — designate `dspCert`+`dspAllSchedules` (channel
    class exemplar)? Same hoist pattern (P-S4-4's `chanCert_*` move
-   rides along).
+   rides along). (RESOLVED at the D3 ruling 2026-08-10: DESIGNATED in
+   the fuel-free forms only — `dspCert400` stays undesignated kernel
+   evidence; the hoist moved the dsp SUBJECTS, while the `chanCert_*`
+   derivations stayed local — they are proof machinery, not statement
+   defs, so P-S4-4's default-keep-local held.)
 3. **P-S2-3** — the sync feature class has NO candidate (the arc's
    proof slices never reached sync specs); decide whether the sync
    spec layer opens the successor arc.
@@ -489,8 +494,13 @@ set (D3); the perennial upstream pin (origin/master has moved past
 43d4efa — a rev bump is a deliberate recorded event, matrix
 maintenance contract).
 
-### Designation candidates for D3 curation (NOTHING designated this
-arc; the 44 designated statements byte-identical at every slice tip)
+### Designation candidates for D3 curation (RESOLVED — user ruling
+2026-08-10, post-audit: both pairs DESIGNATED in their fuel-free
+forms, 44 → 48; the fuel-based kernel-evidence siblings stay
+undesignated per the ruling. The "44 byte-identical at every slice
+tip" claim below is the arc-BUILD invariant and stands terminal: 44
+held through every build slice; 48 at designation, user-ruled — the
+arc's one designated-set change, executed after the S6 audit)
 
 | candidate | statement file | feature class it exemplifies | cost of designating |
 |---|---|---|---|
@@ -536,7 +546,9 @@ deferring with an honest log is success — each DEFERRED names its log)
 4. **"…designated"** — DEFERRED BY DESIGN to the user's D3 curation
    (that is what D3 CURATED decided): candidates recorded above,
    nothing designated by the arc. Log: slice notes §5/§10 + this
-   record.
+   record. (CLOSED post-arc: the curation ruling landed 2026-08-10
+   after the S6 audit — both pairs designated fuel-free, 44 → 48; see
+   the designation record at the candidate table above.)
 5. **"The comparison becomes statement-by-statement"** — DONE this
    slice: matrix §7, one row per covered example, deltas both
    directions, no ordering claims.
@@ -864,3 +876,39 @@ THEOREM additions to `MultiStreams.lean` (import-downstream of
 `Multi.lean` — differential surface untouched by construction, no
 `--diff` owed). The slice-6 audit (which also owns the folded BUG-053
 class-closure delta review, amendment item 4) follows this record.
+
+## The D3 designation record (2026-08-10, user ruling, post-S6-audit;
+executed on `spec-parity`)
+
+THE ARC'S DESIGNATED-SET CHANGE, 44 → 48 — the byte-identity claims
+throughout this charter stand terminal as build-slice invariants (44
+held through every slice tip and the audit fix rounds; 48 at
+designation, user-ruled). The ruling: both candidate pairs join in
+their FUEL-FREE forms only ("no reason to keep the fuel-based form") —
+`compareNilToNilSpecC` + `compareNilToNilReadoutC` (class 1) and
+`dspCert` + `dspAllSchedules` (class 3, the `∃N, ∀ fuel ≥ N` forms);
+the `decide +kernel` evidence siblings (`dspCert400` &c.) stay
+UNDESIGNATED proof evidence — the candidate table's recorded
+designate-the-pair-or-accept-the-base call is thereby RESOLVED:
+accept the base, undesignated but Audit-anchored.
+
+Execution (one commit): the F4 def-only hoist —
+`Specs/GooseParityTargets.lean` (statement defs MOVED: the
+imported-seed convention quartet ex-kit, `nilLowered`
+ex-`ImportedGooseNil` (which keeps its R2 pin theorems and so may not
+join the trusted closure; same fqn, `check-imported-pins` registry
+unchanged), `compareNilDriver` ex-`GooseParityNilWP`, the
+channel-seed kit + dsp subjects ex-`GooseParityChannels`;
+`ImportedGooseActris` was already def-only and rides in whole) —
+Challenge + Solution + judge-config gain the four statements (48
+names, Audit↔config lockstep verified), ci's surface-purity pins
+extended (GooseParityTargets + ImportedGooseActris import pins;
+Challenge's direct-import allowlist + GooseParityTargets), the
+statement-TCB designated list 44 → 48 with per-theorem axiom guards.
+Deletion-test verification: the in-build closure walk passed all four
+at their final locations — `compareNilToNilSpecC` 3387 statement
+constants (exactly the `goldenSpecC` control), `ReadoutC` 2811
+(exactly the `goldenReturnsTwoC` control), `dspCert` 2857,
+`dspAllSchedules` 2818 — zero Iris/relation constants. The Comparator
+landmark for this change is the coordinator's next step (never part
+of ci).

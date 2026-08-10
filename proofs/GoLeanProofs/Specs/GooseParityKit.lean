@@ -1,4 +1,5 @@
 import GoLeanProofs.SurfaceExit
+import GoLeanProofs.Specs.GooseParityTargets
 import GoLeanProofs.Laws.Control
 import GoLeanProofs.Laws.Eval
 import GoLeanProofs.Laws.Assign
@@ -323,25 +324,12 @@ namespace GoLean.ImportedGoose
 -- heaplet-bridge lemmas live there).
 open GoLean.Iris
 
-/-- The TotalPins seed for an imported program: the harness-owned output
-cell at base address 0, `nextAddr = 1` (the convention every imported
-R2 pin already uses). -/
-def importedSeed (p : Program) : ExecState :=
-  { types := p.typeDefs.toList,
-    functions := p.funcs,
-    methods := p.methods,
-    heap := [(.base ⟨0⟩, ⟨some (.int .int), .int 0 .int⟩)],
-    nextAddr := 1 }
-
-/-- Driver env: `r` names the harness output cell (the convention). -/
-abbrev importedEnv : LocalEnv := [[("r", .base ⟨0⟩)]]
-
-/-- The seeded-cell precondition `r ↦ 0`. -/
-def importedCell0 : HProp := .pointsTo 0 ⟨some (.int .int), .int 0 .int⟩
-
-/-- The verdict postcondition `r ↦ v`. -/
-def importedCellV (v : Int) : HProp :=
-  .pointsTo 0 ⟨some (.int .int), .int v .int⟩
+/-! `importedSeed`/`importedEnv`/`importedCell0`/`importedCellV` MOVED
+to the def-only `Specs/GooseParityTargets.lean` at the D3 designation
+(user ruling 2026-08-10): the designated class-1 statement pair
+references them, so they must live in the Comparator Challenge's
+trusted closure, which this Iris-importing kit module must not join
+(the F4 def-only-hoist discipline — the P-S3-1 cost, now paid). -/
 
 /-- **The generic sequential readout at the TotalPins seed** (the
 `goldenReturnsTwo` derivation, proven once): a `GoSpec`

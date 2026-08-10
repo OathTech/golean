@@ -1,5 +1,6 @@
 import GoLeanProofs.Surface
 import GoLean.GoCore.MultiStreams
+import GoLeanProofs.Specs.GooseParityTargets
 import GoLeanProofs.Specs.ImportedGooseSelectTricky
 import GoLeanProofs.Specs.ImportedGooseMuxer
 import GoLeanProofs.Specs.ImportedGooseActris
@@ -65,27 +66,17 @@ set_option maxRecDepth 1000000
 
 /-! ## The seeded-certificate kit (generic; hoisting candidates) -/
 
-/-- The TotalPins-style seed with a caller-typed harness cell at base
-address 0 (the string-returning muxer wrappers need a string cell; the
-int convention is `importedSeed`'s). -/
-def chanSeed (p : Program) (cell : HeapCell) : ExecState :=
-  { types := p.typeDefs.toList,
-    functions := p.funcs,
-    methods := p.methods,
-    heap := [(.base ⟨0⟩, cell)],
-    nextAddr := 1 }
-
-/-- Int harness cell / seed / readout (the imported convention). -/
-abbrev intCell0 : HeapCell := ⟨some (.int .int), .int 0 .int⟩
+/-! `chanSeed`/`intCell0`/`cellIsInt` and the dsp row's
+`dspDriver`/`dspEnv`/`dspSeed` MOVED to the def-only
+`Specs/GooseParityTargets.lean` at the D3 designation (user ruling
+2026-08-10): the designated `dspCert`/`dspAllSchedules` statements
+reference them, so they must live in the Comparator Challenge's
+trusted closure, which this theorem-carrying module must not join
+(the F4 def-only-hoist discipline — the P-S4-4 move, now made).
+`strCell0`/`cellIsStr` (muxer-only) deliberately stay here. -/
 
 /-- String harness cell (empty string seed). -/
 abbrev strCell0 : HeapCell := ⟨some .string, .string GoString.empty⟩
-
-/-- The verdict readout: the harness cell holds exactly `int v`. -/
-def cellIsInt (v : Int) : ExecState → Bool := fun σf =>
-  match loadLoc σf (.base ⟨0⟩) with
-  | .ok (.int w .int) => w == v
-  | _ => false
 
 /-- The verdict readout: the harness cell holds exactly the string. -/
 def cellIsStr (v : GoString) : ExecState → Bool := fun σf =>
@@ -391,11 +382,6 @@ upstream `wp_DSPExample` Qed, channel_dsp.v:57) -/
 
 namespace ChannelActris
 
-abbrev dspDriver : Stmt := .call #[.var "r"] ⟨"goleanDSPExample"⟩ #[]
-
-abbrev dspEnv : LocalEnv := [[("r", .base ⟨0⟩)]]
-abbrev dspSeed : ExecState := chanSeed actrisLowered intCell0
-
 /-- `DSPExample` (the pointer handoff over an unbuffered channel, the
 write-back, the signal rendezvous, the deref — 42): the kernel
 certificate at the shipped bound 400 (true measured minimum 195 —
@@ -405,15 +391,17 @@ theorem dspCert400 :
       ⟨#[.exec dspDriver dspEnv .stop], dspSeed, 0⟩ {} = true := by
   decide +kernel
 
-/-- Fuel-general certificate (slice 6; the designation CANDIDATE —
-recorded in the charter's candidate table — now carries the
-fuel-free form). -/
+/-- Fuel-general certificate — DESIGNATED (D3 user ruling 2026-08-10:
+the fuel-free form ONLY joins the designated set; `dspCert400` below
+stays undesignated kernel evidence). -/
 theorem dspCert :
     ∃ N, ∀ fuel, N ≤ fuel →
       allStreamsOkPool (cellIsInt 42) fuel
         ⟨#[.exec dspDriver dspEnv .stop], dspSeed, 0⟩ {} = true :=
   ⟨400, fun _ h => allStreamsOkPool_mono dspCert400 h⟩
 
+/-- ∀-schedule verdict readout — DESIGNATED (D3 user ruling
+2026-08-10, fuel-free form). -/
 theorem dspAllSchedules :
     ∃ N, ∀ fuel, N ≤ fuel → ∀ ch : Choices,
       ∃ (σf : ExecState) (ch' : Choices),
