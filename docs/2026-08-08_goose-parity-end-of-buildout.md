@@ -119,7 +119,10 @@ translation-only tests never execute are pinned as panic rows
 (generic_conversion's nil-slice index; embedded.go's two nil-*embedB
 promotions); Go 1.26 `new(expr)` is covered end-to-end; for Google the
 delta is METHOD (their Qed permutation triple vs our certified
-6-member reachability + differential). Their 37 proved `test_fun_ok`
+6-member reachability + differential). Their 28 proved `test_fun_ok`
+(of 36 stated; this line originally said "37 proved" — corrected
+2026-08-10 at the spec-parity S3 audit, correction of record in
+`docs/2026-08-07_goose-comparative-scoping.md` B.1)
 lemmas vs our 12 R2 pins: theirs are termination-free Iris partial
 correctness, ours are ∀-streams termination + canonical readout —
 neither subsumes the other; the R2 count is P1-limited, not

@@ -224,8 +224,19 @@ markers (:231,245-262), `test_gen` boolean-oracle suite
 bats CLI tests (`test/goose.bats`). On the Coq side, semantics tests are
 PROVED, not executed: `test_fun_ok name := ∀ Φ, Φ #true -∗ WP @! name #()`
 with a `semantics_auto` tactic
-(`new/proof/.../semantics_proof/semantics_init.v:25-51@43d4efa`) — **37 of
-the 112 oracles are proved** (1 Admitted).
+(`new/proof/.../semantics_proof/semantics_init.v:25-51@43d4efa`) — **28 of
+the 112 oracles are proved** (36 `test_fun_ok` lemma STATEMENTS exist;
+28 `Qed`, 7 `Abort`, 1 `Admitted`; the suite's 29th `Qed` is the
+non-oracle `wp_shouldPanic`). [CORRECTION OF RECORD 2026-08-10,
+spec-parity S3 audit: this line originally read "**37 of the 112
+oracles are proved** (1 Admitted)" — 37 counted lemma statements (36
+`test_fun_ok` + `wp_shouldPanic`), silently including the 7 `Abort`s
+and the `Admitted` as proved. Measured:
+`grep -h 'Qed\.' *.v | wc -l` = 29,
+`grep -rn 'test_fun_ok semantics\.' *.v | wc -l` = 36,
+`grep -h 'Abort\.' *.v | wc -l` = 7 over semantics_proof/ @ 43d4efa.
+Every tracked restatement of the 37 figure was corrected the same
+round.]
 
 ## B.2 Dependency classification
 
@@ -298,10 +309,11 @@ sleep/timeout-based tests must NOT be imported as-is; the enumerator
 replaces their probabilistic scheduling); storage/FFI → blocked regardless.
 
 **(3) "Verify" for their PROVED examples.** Three rungs, mapping their
-artifact to ours: (i) their 37 `test_fun_ok` semantics proofs → our
+artifact to ours: (i) their 28 proved `test_fun_ok` semantics proofs (of
+36 stated — count corrected 2026-08-10, see B.1) → our
 TotalPins-style kernel theorems (`TerminatesNormally` + readout `= true`) —
 mechanizable en masse over every imported clean oracle, i.e. we can EXCEED
-their 37 by proving ~all 100+ clean oracles with `decide +kernel`
+their 28 by proving ~all 100+ clean oracles with `decide +kernel`
 certificates, the exact pipeline the designated set already exercises;
 (ii) their channel-example wp proofs (~55 lemmas, A.5) → GoSpecC instances —
 BLOCKED on T3/T7; until then the honest analogue is ∀-schedule checker
@@ -335,7 +347,8 @@ sync/atomic/stdlib proofs → out of scope until the phases below.
   tagged corpus rows (Part C), a per-file export report (any refusal must
   land in a recorded fail-closed class — a NEW refusal reason is a
   finding), and rung-(i) kernel certificates for imported oracles (target:
-  exceed their 37 proved semantics tests in the first movement). The
+  exceed their 28 proved semantics tests — count corrected 2026-08-10,
+  see B.1 — in the first movement). The
   packaging step (single-file assembly + wrapper authoring for unittest) is
   the only non-mechanical part.
 - **Phase 2 — the sync slice: +~11 files** (17 minus FFI-overlap), via the

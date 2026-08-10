@@ -11,7 +11,11 @@ integer kind/width + defined-type identity in the observation JSON,
 symmetric encoder change both sides in one commit; see TODO.md entry)
 before the laws-spine work. Structure per the 2026-08-08/09 discussion. Basis:
 `docs/2026-08-07_goose-comparative-scoping.md` (the rung ladder;
-their 376 wp lemmas / 37 proved oracles / ~55 proved channel examples),
+their 376 wp lemmas / 28 proved oracles / ~55 proved channel examples
+— the oracle count corrected 2026-08-10 at the S3 audit: this line and
+its source doc originally said "37 proved", which counted their 36
+`test_fun_ok` lemma STATEMENTS plus the non-oracle `wp_shouldPanic`,
+i.e. it counted 7 `Abort`s and 1 `Admitted` as proved),
 `docs/goose-perennial-comparison.md` (the standing matrix),
 `docs/2026-08-08_goose-parity-end-of-buildout.md` (the imported corpus
 this arc proves things about). The buildout delivered corpus parity;
@@ -100,32 +104,43 @@ re-pins.
 
 ## Slice-3 record (2026-08-10, branch `spec-parity-s3`)
 
-DELIVERED, gate green at tip, three commits (slice note
-`docs/2026-08-10_wp-walk-driver.md`; manifest
-`docs/spec-parity-r3-manifest.md`). Exemplar-first as chartered:
-`testCompareNilToNil` (a row of Perennial's proved-37 `test_fun_ok`
-set) hand-proved end-to-end through the laws spine to the D1 pair —
-`GoSpecC` at full `InitialSplit` strength (sequential-degenerate lane,
-stated so) + the pool-carrier first-order readout twin — over the
-staleness-guarded pinned lowering; then the `go_walk` re-derivation
-(statement byte-identical, hand walk preserved as witness); then the
-scale-out. R3 standing: **6 proved** (5 = rows of their proved 37 —
-the nil unit sans the `&&` oracle — + semantics/block as same-class
-coverage), 1 out-of-class recorded (short-circuit `Expr.and` has no WP
-law — the gap is named, not skipped), 5 not-attempted with reasons,
-~72 R1-green units without pinned lowerings (the import-tooling
-lever, P-S3-2). Shared machinery: `Specs/GooseParityKit.lean` (the
-wrapper-shape pin + wrapper/driver walks + the generic TotalPins-seed
-readout derivations) and one general law with same-commit witness
-(`wp_new_value`, the allocating apply core's third instance).
+DELIVERED, gate green at tip; three build commits + the S3 audit fix
+round (slice note `docs/2026-08-10_wp-walk-driver.md`; manifest
+`docs/spec-parity-r3-manifest.md`; this record REWRITTEN at the fix
+round — the first version carried the "proved-37" denominator and
+called all five nil rows upstream-proved, both wrong). Exemplar-first
+as chartered: `testCompareNilToNil` (upstream `Qed`, nil.v:31 —
+Perennial's measured proved set is 28 of 36 stated `test_fun_ok`
+oracles, 7 `Abort`, 1 `Admitted`) hand-proved end-to-end through the
+laws spine to the D1 pair — `GoSpecC` at full `InitialSplit` strength
+(sequential-degenerate lane, stated so) + the pool-carrier first-order
+readout twin — over the staleness-guarded pinned lowering; then the
+`go_walk` re-derivation (statement byte-identical, hand walk preserved
+as witness); then the scale-out. R3 standing: **6 proved**, split
+honestly BOTH directions against upstream: 2 upstream-Qed parity rows
+(`testCompareNilToNil`, `testComparePointerWrappedDefaultToNil`),
+3 rows upstream ATTEMPTED AND ABORTED that we discharge (their TODOs
+name the missing lemmas), 1 same-class row with no upstream statement
+(semantics/block); the 1 out-of-class row (`testInterfaceNilWithType`
+— short-circuit `Expr.and` has no WP law; the gap is named, not
+skipped) is an oracle THEY prove. 5 not-attempted with reasons; 76
+unpinned units (71 with ≥1 R1-green row — recounted at the fix round;
+the import-tooling lever, P-S3-2). Shared machinery:
+`Specs/GooseParityKit.lean` (the wrapper-shape pin + wrapper/driver
+walks + the generic TotalPins-seed readout derivations) and one
+general law with same-commit witness (`wp_new_value`, the allocating
+apply core's third instance; the fix round wired all three new laws +
+their witness walks into the Audit witness registry and instantiated
+the R2+R3 composition, `compareNilToNilTerminatesNormally`).
 Designation: CANDIDATES only (`compareNilToNilSpecC` +
-`compareNilToNilReadoutC`), per D3. Driver policy adopted the hard
-way: new laws default to UNREGISTERED in the `go_walk` table (a
+`compareNilToNilReadoutC`), per D3 — the designation-time def-only
+hoist cost is recorded at P-S3-1. Driver policy adopted the hard way:
+new laws default to UNREGISTERED in the `go_walk` table (a
 registration moved the standing quorum walks' stopping points).
 Designated statements untouched (44, byte-identical); proofs-only,
-zero corpus drift (1465/1465); axioms
-`[propext, Classical.choice, Quot.sound]` throughout. Parking ledger
-P-S3-1..4 in the slice note §6.
+zero corpus drift — all 1465 ids bit-identical (1351 PASS / 114
+recorded FAIL); axioms `[propext, Classical.choice, Quot.sound]`
+throughout. Parking ledger P-S3-1..4 in the slice note §6.
 
 ## The sync question (asked 2026-08-09), answered
 

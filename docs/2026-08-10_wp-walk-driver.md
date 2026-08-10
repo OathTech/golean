@@ -14,11 +14,15 @@ The parking ledger (user-scale items, AFK posture) closes it.
 this one:
 
 - **It is in THEIR proved set.** Perennial proves
-  `wp_testCompareNilToNil` as a `test_fun_ok` lemma
-  (`deps/perennial/new/proof/.../semantics_proof/nil.v` @ 43d4efab) —
-  one of the 37 proved oracles the charter's parity claim is measured
-  against. The exemplar is therefore a real parity row, not merely a
-  same-class stand-in.
+  `wp_testCompareNilToNil` as a `test_fun_ok` lemma — `Qed` at
+  `deps/perennial/new/proof/.../semantics_proof/nil.v:31` @ 43d4efab —
+  one of the **28 proved** oracles the charter's parity claim is
+  measured against (count corrected at the S3 audit: upstream has 36
+  `test_fun_ok` lemma STATEMENTS — 28 `Qed`, 7 `Abort`, 1 `Admitted`;
+  the "37 proved" figure this note first carried counted statements,
+  and is corrected at its origin and every restatement, manifest §
+  "the upstream denominator, measured"). The exemplar is therefore a
+  real parity row, not merely a same-class stand-in.
 - **It is R1-green and R2-pinned on our side** — the differential row
   passes against `go run`, and the staleness-guarded lowering term
   `nilLowered` (`proofs/GoLeanProofs/Specs/ImportedGooseNil.lean`,
@@ -55,11 +59,26 @@ precedent)** — for each proved oracle, two theorems:
    the frame quantifier, safety half, and pool transfer are the
    once-proven pipes. The postcondition `r ↦ 1` is the oracle's TRUE
    verdict — the same value the differential row pins against
-   `go run`, and strictly stronger than their `test_fun_ok` (partial
-   correctness on an untested model, no termination): ours adds
-   interpreter-side safety (`ProgressExecC` — no deadlock, no race
-   refusal, no stuck state on any modeled schedule) over the
-   differentially tested machine.
+   `go run`.
+
+   **Cross-model strength, stated both directions (rewritten at the S3
+   audit — the first version claimed "strictly stronger … ours adds
+   interpreter-side safety", which is wrong: their `test_fun_ok` is an
+   unannotated Iris WP, i.e. `NotStuck`, so THEIR lemma already
+   asserts no-stuck safety on their model, and GooseLang makes racy
+   accesses stuck, so race-freedom too — the matrix's own row T12).**
+   No ordering between the two judgments is defined anywhere (theirs
+   quantifies GooseLang's nondeterminism under their semantics
+   assumptions; ours quantifies `execProg`'s modeled-schedule envelope
+   at the TotalPins seed), so no strictly-stronger claim is made. The
+   honest deltas: OURS is grounded in the executable, differentially
+   tested interpreter (the same `execProg` the `go run` oracle
+   validates, over the frontend's actual staleness-guarded lowering),
+   with the frame-quantified `InitialSplit` pre and a first-order
+   readout twin; THEIRS is stated over a Rocq model no test executes.
+   Neither side's R3-level judgment claims termination (our
+   ∀-streams `Terminates` is the separate R2 pin; the composition is
+   `…TerminatesNormally` below).
 
 2. **The first-order readout twin** — on the SAME carrier as the
    judgment (the goldenReturnsTwoC precedent):
@@ -75,8 +94,10 @@ precedent)** — for each proved oracle, two theorems:
 Both are stated over the seeded TotalPins convention so they compose
 with the existing R2 pins (`Terminates` + canonical readout): for a
 proved oracle the R2 termination pin plus the R3 spec's safety half
-yields `TerminatesNormally` — the pieces are stated to snap together,
-not as disconnected artifacts.
+yields `TerminatesNormally` — INSTANTIATED at the exemplar
+(`compareNilToNilTerminatesNormally`, added at the S3 audit fix round:
+the first version asserted the composition without instantiating it),
+so "the pieces snap together" is a checked fact, not prose.
 
 **Non-vacuity**: the exemplar IS a discharge witness (a concrete
 program with every premise discharged — the readout twin instantiates
@@ -131,8 +152,12 @@ obligation stops the walk instead of being guessed at. THIS SLICE DOES
 NOT REWRITE IT. What this slice adds is coverage and the exemplar-first
 usage pattern for the imported class:
 
-- registered spine laws where the class needs them and the law is
-  genuinely mechanical (per-law below);
+- new UNREGISTERED laws where the class needs them, supplied per-walk
+  with `go_walk_step` (`wp_new_value`, `wp_init_bool`, `wp_init_ptr`
+  — the slice registered NOTHING into the `@[go_walk_law]` table;
+  sentence corrected at the S3 audit — the first version said
+  "registered spine laws", contradicting the registration lesson
+  below);
 - the kit lemmas of §2, so the per-program side-goal surface is the
   INNER body walk only;
 - the scaling manifest (§4) with per-program disposition.
@@ -153,10 +178,13 @@ with `go_walk_step law` and proven by hand at each site):
 **THE TACTIC IS NEVER TRUSTED.** Every proof it produces elaborates to
 a kernel-checked term; the in-build Audit gate pins the axiom set
 (`propext, Classical.choice, Quot.sound` — no `native_decide`, no
-`sorry`); the statements it proves are stated in Surface vocabulary
-over the interpreter and pass the deletion test (Iris and the tactic
-appear only in proofs). A `go_walk` bug can make a proof FAIL, never
-make a false statement PROVABLE.
+`sorry`). Scope precision (S3 audit): `go_walk`'s DIRECT outputs are
+Iris WP entailments (`wp_compareNil_body` and kin) — it is the
+ASSEMBLED top-level statements (`…SpecC`/`…ReadoutC`, through the exit
+pipe) that are stated in Surface vocabulary over the interpreter and
+pass the deletion test; Iris and the tactic appear only in their
+proofs. A `go_walk` bug can make a proof FAIL, never make a false
+statement PROVABLE.
 
 **Phase-2 outcome (the exemplar re-derived tactic-driven).**
 `wp_compareNil_body`'s proof is now the `go_walk` walk — statement
@@ -199,17 +227,29 @@ for the arc-end curation (one exemplar per feature class):
 - `GoLean.ImportedGoose.SemanticsNil.compareNilToNilReadoutC` (the
   first-order readout twin, §1 form 2).
 
-The bulk R3 instances are gate-checked (axiom-pinned by the in-build
-Audit module sweep, statement-TCB-clean by construction — stated in
-Surface/interpreter vocabulary) but undesignated, listed in the
-manifest.
+The bulk R3 instances are axiom-pinned by the in-build Audit module
+sweep (a real gate) and stated in Surface/interpreter vocabulary (a
+TRUE property that no standing gate checks for undesignated theorems —
+the statement-TCB walk covers the designated list only; hand-verified
+this slice, recorded as a limitation in the manifest header), and are
+undesignated, listed in the manifest.
 
 ## 6. Parking ledger (user-scale items; AFK posture)
 
 - **P-S3-1 — Designation curation (charter D3, user-owned).** The two
   exemplar candidates (§5) await the arc-end sign-off; nothing
-  designated meanwhile. Reversible: the theorems exist gate-checked
-  either way.
+  designated meanwhile. NOT a free flip (wording corrected at the S3
+  audit — "reversible" understated it, the F4 def-only-hoist precedent
+  applies): designating requires hoisting the statements' defs into a
+  DEF-ONLY, core-import-only module so Challenge's trusted closure can
+  import them (`ForkJoinTargets`/`Statements` pattern; ci pins
+  Challenge's imports, so skipping the hoist fails loud, never
+  silent). The S3 fix round moved the four convention defs out of the
+  `GoLean.Surface` namespace into `GoLean.ImportedGoose` (namespace
+  hygiene), but they still LIVE in the Iris-importing kit module, and
+  `nilLowered`'s home (`ImportedGooseNil.lean`) carries theorems — the
+  def-only split plus Challenge/Solution/judge-config/Audit wiring is
+  the real designation cost, owed at curation time.
 - **P-S3-2 — Backfill pinned lowerings for the remaining ~72 R1-green
   imported units?** Each pinned term is the R3 statement's subject AND
   joins the ci 1c5 staleness guard + pins registry (a standing
@@ -240,17 +280,23 @@ manifest.
   fails on any non-pin module matching it) — the R3 modules are named
   `GooseParity*` to stay off it, recorded here and in the kit header.
   Axioms `[propext, Classical.choice, Quot.sound]` on all three
-  deliverables; full `scripts/ci` PASS, zero drift (1465/1465).
+  deliverables; full `scripts/ci` PASS, zero drift — all 1465 corpus
+  ids bit-identical to the baseline (1351 PASS / 114 recorded FAIL;
+  the earlier "1465/1465" shorthand read like an all-pass claim,
+  corrected at the S3 audit).
 - **Phase 2 (commit 2).** The exemplar body re-derived `go_walk`-driven,
   statement byte-identical; hand walk preserved
   (`wp_compareNil_body_hand`). Registration lesson recorded (§3):
   `wp_init_bool`/`wp_init_ptr` ship UNREGISTERED after registering
   them broke the standing quorum walks' stopping points.
 - **Phase 3 (commit 3).** Scaled across the class: 4 more nil oracles
-  (all in Perennial's proved 37) + semantics/block, each the full D1
-  pair — R3 count 6 proved / 1 out-of-class (short-circuit `&&` law
-  gap) / 5 not-attempted with reasons — manifest
-  `docs/spec-parity-r3-manifest.md`. Empirical driver notes: pure INT
+  + semantics/block, each the full D1 pair — R3 count 6 proved / 1
+  out-of-class (short-circuit `&&` law gap) / 5 not-attempted with
+  reasons — manifest `docs/spec-parity-r3-manifest.md`. (This entry
+  originally said the 4 nil oracles were "all in Perennial's proved
+  37" — corrected at the S3 audit: ONE of the four is upstream-Qed,
+  THREE are upstream-Aborted; see the manifest's per-row upstream
+  column.) Empirical driver notes: pure INT
   applies walk themselves (`go_walk_side`'s `rfl` computes them);
   comparisons through `valueEqFuel`'s fuel literal do not (supplied
   via `go_walk_step` — elaborator-side reduction cost, not a
@@ -258,3 +304,33 @@ manifest.
   the same three-lemma simp vocabulary (`storeLoc`,
   `normalizeValueForTy*`, `typeResolutionFuel`), which is what the
   next movement can template.
+- **S3 audit fix round (2026-08-10; ~4 surviving majors, all
+  claims/records — no code or proof defect).** (1) THE PARITY-RECORD
+  CLUSTER: upstream ground truth measured (28 proved / 36 stated
+  `test_fun_ok`, 7 Abort, 1 Admitted; nil.v = 3 Qed + 3 Abort) — the
+  manifest rewritten with a per-row upstream-status column, the
+  denominator corrected at its ORIGIN
+  (`docs/2026-08-07_goose-comparative-scoping.md` B.1, pre-existing,
+  outside the slice range) and at every tracked restatement
+  (comparison matrix, end-of-buildout report, charter basis + slice-3
+  record, this note). The corrected story is stronger in one
+  direction and weaker in the other, both now recorded: three of our
+  proved rows discharge oracles upstream ABORTED, and our one
+  out-of-class oracle is one THEY prove. (2) The cross-model
+  "strictly stronger" claim rewritten to the verifier's accounting
+  (their `NotStuck` WP already carries no-stuck safety on their
+  model; deltas stated both directions, no ordering claimed). (3)
+  WITNESS DISCIPLINE: the dangling `wp_testCompareNilToNil_body`
+  citation fixed to `wp_compareNil_body`; `wp_init_bool`'s false
+  witness sentence made TRUE by using the law at the kit wrapper's
+  call-target declaration; all three new laws + their witness walks
+  wired into `proofs/Audit.lean`'s witness registry (the deletion
+  tripwire now covers them). (4) The R2+R3 composition instantiated
+  (`compareNilToNilTerminatesNormally`). (5) Records: population
+  recount (82 units, not 78 — command cited in the manifest),
+  1465-shorthand expanded (1351 PASS / 114 FAIL), the §3
+  "registered spine laws" sentence corrected (nothing was
+  registered), the deletion-test sentence scoped to the ASSEMBLED
+  statements, P-S3-1's "reversible" replaced with the F4 hoist cost,
+  and the kit's convention defs moved off the `GoLean.Surface`
+  namespace into `GoLean.ImportedGoose`.

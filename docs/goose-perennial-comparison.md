@@ -148,8 +148,15 @@ report). The
 bodies, goose @ 3be88bb — pipeline `scripts/import-goose`, charter
 `docs/2026-08-07_goose-parity-charter.md`) is populating; this section
 tracks the phase-1 "verify them all" claim per batch. Their comparable
-artifact is the `test_gen` boolean-oracle suite (112 oracles; 37 proved
-as `test_fun_ok` Iris lemmas, 1 Admitted).
+artifact is the `test_gen` boolean-oracle suite (112 oracles; 36 stated
+as `test_fun_ok` Iris lemmas of which **28 proved** — 7 `Abort`, 1
+`Admitted`. Count corrected 2026-08-10 at the spec-parity S3 audit:
+this line originally said "37 proved", which counted lemma statements
+— incl. the Aborts, the Admitted, and the non-`test_fun_ok`
+`wp_shouldPanic` — as proved; measured at 43d4efa, correction of
+record in `docs/2026-08-07_goose-comparative-scoping.md` B.1. Per-row
+status for nil.v — 3 `Qed` / 3 `Abort` — and the R3 standing are in
+`docs/spec-parity-r3-manifest.md`).
 
 | batch | units | rows | R1 PASS | R1 FAIL (all recorded fail-closed classes) | R2 kernel pins |
 |---|---|---|---|---|---|
@@ -176,7 +183,8 @@ Running totals after batch 6: 51 units landed (28 semantics of 29
 clean — remaining panic.go; 5 channel + 2 parked; 7 storage/generics;
 11 unittest of ~32 remaining), 140 imported rows, 122 R1 PASS, 18
 recorded-fail-closed frontend-export; 11 oracles R2 kernel-pinned (vs
-their 37 `test_fun_ok` proofs over 112 oracles — R2 count deliberately
+their 28 proved `test_fun_ok` oracles, 36 stated, over 112 — figure
+corrected 2026-08-10, see §6's header note; R2 count deliberately
 held down pending the parked staleness-guard decision P1, not by
 capability).
 
