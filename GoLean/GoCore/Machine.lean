@@ -1307,6 +1307,19 @@ can spell, so type asserts against user types correctly fail on it. -/
 def runtimeErrorValue (msg : String) : GoValue :=
   .interface (.defined runtimeErrorTypeId) (.string (GoString.fromLeanString msg))
 
+/-- The payload of a PACKAGE-CODE panic raised with a string literal —
+gc's sync package panics this way (`panic("sync: negative WaitGroup
+counter")`, waitgroup.go:118): a plain `string` interface box, dynamic
+type `string`, NOT `$runtime.Error`. That class distinction is
+observable: `recover().(string)` answers true on it in gc (arc-end fix
+round 2026-08-10, payload-class finding; pinned by
+`sync/waitgroup-panic-payload` — the abort TEXT is identical for both
+payload kinds, so only a recover discriminator can see it). The channel
+panics stay `runtimeErrorValue`: gc raises those as `runtime.plainError`
+(runtime/chan.go), a genuine `runtime.Error`. -/
+def stringPanicValue (msg : String) : GoValue :=
+  .interface .string (.string (GoString.fromLeanString msg))
+
 /-- Coerce a delivered `panic` argument to its chain payload. MODERN
 (Go 1.21+) semantics since the arc-final audit (F21, 2026-08-06): the
 spec says "calling panic with a nil interface value (or an untyped nil)
@@ -2125,7 +2138,17 @@ def applySyncOp (s : ExecState) (op : SyncOp) (vs : List GoValue)
       let delta ← valueAsInt dv
       match ← syncCell s loc with
       | .waitGroup counter waiters => do
-          let counter' := counter + delta
+          -- gc's counter is an int32 — the high 32 bits of the uint64
+          -- state word (waitgroup.go:104 `state.Add(uint64(delta) << 32)`,
+          -- :109 `v := int32(state >> 32)`) — so the addition wraps mod
+          -- 2^32 BEFORE the negative test (arc-end fix round 2026-08-10;
+          -- divergence was real in BOTH directions, pinned by
+          -- `sync/waitgroup-int32`: `Add(1 << 31)` panics in gc where the
+          -- unbounded Int proceeded, `Add(-(1 << 32))` leaves the state
+          -- word untouched where the unbounded Int fabricated the panic).
+          -- The stored counter always lies in int32 range (starts 0,
+          -- every update wraps), matching gc's bit pattern exactly.
+          let counter' := (counter + delta + 2147483648).emod 4294967296 - 2147483648
           -- The ZEROING Add resets the wait count (audit fix round
           -- 2026-08-10, gc waitgroup.go:134-135: `wg.state.Store(0)`
           -- runs BEFORE the semrelease loop) — so an Add issued in the
@@ -2148,7 +2171,11 @@ def applySyncOp (s : ExecState) (op : SyncOp) (vs : List GoValue)
           -- The update lands BEFORE any panic (probe p13).
           let s' ← storeLoc s loc (.syncData (.waitGroup counter' waiters'))
           if counter' < 0 then
-            return (.panicking [⟨runtimeErrorValue
+            -- Payload CLASS is gc-exact (arc-end fix round 2026-08-10):
+            -- gc's sync package raises this with `panic("...")` — a plain
+            -- string, package code — where the channel panics are runtime
+            -- `plainError`s. `recover().(string)` answers true here.
+            return (.panicking [⟨stringPanicValue
               "sync: negative WaitGroup counter", false⟩] k, s')
           else
             -- gc's Add-side misuse panic (waitgroup.go:120, `w != 0 &&
