@@ -490,4 +490,569 @@ theorem compareNilToNilReadoutC :
       loadLoc σf (.base ⟨0⟩) = .ok (.int 1 .int) :=
   goSpec_seeded_readoutC compareNilToNilSpec (by decide +kernel)
 
+/-! ## Scaling across the unit (slice-3 phase 3)
+
+The other four WALKABLE nil oracles, driven by `go_walk` + the kit —
+each is: the two `Func` record pins, the inner body walk (the
+per-program content, side-goal supplies only), the driver exit form,
+and the three assembly theorems. `testInterfaceNilWithType` is NOT
+here: its verdict expression uses short-circuit `&&`, for which no WP
+law exists yet — a VISIBLE recorded gap (manifest row; the `Expr.and`
+law family is future law work, not a silent skip). -/
+
+/-- `[]uint8` — the slice oracles' local type. -/
+private abbrev slice8 : Ty := .slice (.int .uint8)
+
+/-- `*uint64` — the pointer oracle's local type. -/
+private abbrev ptru64 : Ty := .pointer (.int .uint64)
+
+/-- The empty (nil) slice value — every slice local's default. -/
+private abbrev nilSlice : SliceValue := { base := none, offset := 0, len := 0, cap := 0 }
+
+/-! ### testCompareSliceToNil (`s := make([]byte, 0); return s != nil`) -/
+
+def compareSliceFunc : Func :=
+  { id := { key := "testCompareSliceToNil" },
+    args := #[],
+    results := #[{ id := "$res0", typ := .bool }],
+    body := .block
+              #[]
+              #[.seqn
+                  #[.initialization { id := "$c0", typ := slice8 },
+                    .makeSlice (.var "$c0") (.int .uint8) (.intLit 0 .int) none],
+                .seqn
+                  #[.initialization { id := "s", typ := slice8 },
+                    .assign (.var "s") (.var "$c0")],
+                .seqn
+                  #[.assign (.var "$res0")
+                      (.neqCmp slice8 (.var "s") (.nil none)),
+                    .returnStmt]],
+    variadic := false,
+    wrapper := false }
+
+def goleanCompareSliceFunc : Func :=
+  { id := { key := "goleanTestCompareSliceToNil" },
+    args := #[],
+    results := #[{ id := "$res0", typ := .int .int }],
+    body := goleanWrapperBody "$c4" ⟨"testCompareSliceToNil"⟩,
+    variadic := false,
+    wrapper := false }
+
+example : findFunctionIn? nilLowered.funcs ⟨"testCompareSliceToNil"⟩
+    = some compareSliceFunc := rfl
+example : findFunctionIn? nilLowered.funcs ⟨"goleanTestCompareSliceToNil"⟩
+    = some goleanCompareSliceFunc := rfl
+
+abbrev compareSliceDriver : Stmt :=
+  .call #[.var "r"] ⟨"goleanTestCompareSliceToNil"⟩ #[]
+
+section
+variable {GF : BundledGFunctors} {hlc : HasLC} [GoCoreGS hlc GF]
+variable {s : Stuckness} {E : CoPset} {Φ : Unit → IProp GF}
+
+/-- Inner body walk: `make([]byte, 0)` allocates a zero-length backing
+array; a made slice — even empty — is NOT nil (`s != nil` is `true`). -/
+theorem wp_compareSlice_body {ra : Addr} {k} :
+    ra.id ↦ (⟨some .bool, .bool false⟩ : HeapCell)
+      ∗ (ra.id ↦ (⟨some .bool, .bool true⟩ : HeapCell)
+          -∗ WP (Config.returning k) @ s ; E {{ Φ }})
+      ⊢ WP (Config.exec compareSliceFunc.body [[("$res0", Loc.base ra)]] k)
+          @ s ; E {{ Φ }} := by
+  iintro ⟨Hr, Hcont⟩
+  simp only [compareSliceFunc]
+  go_walk
+  go_walk_step (wp_init (v := .slice nilSlice) (hdef := fun σ _ => by
+    simp [defaultValue, defaultValueFuel, typeResolutionFuel]))
+  go_walk
+  go_walk_step (wp_make_slice (n := 0) (elem := .int .uint8)
+    (oldcell := ⟨some slice8, .slice nilSlice⟩)
+    (backing := .array #[])
+    (newcell := fun fa =>
+      ⟨some slice8, .slice { base := some (.base fa), offset := 0, len := 0, cap := 0 }⟩)
+    (hbacking := fun σ _ => by
+      simp [buildDefaultArrayValue, buildArrayValue, Bind.bind, Except.bind,
+        pure, Except.pure])
+    (hstore := fun σ fa _ht hlook => by
+      simp [storeLoc, hlook, normalizeValueForTy, normalizeValueForTyFuel,
+        typeResolutionFuel, Bind.bind, Except.bind])) as [fa, Hf, Hc]
+  go_walk
+  go_walk_step (wp_init (v := .slice nilSlice) (hdef := fun σ _ => by
+    simp [defaultValue, defaultValueFuel, typeResolutionFuel]))
+  go_walk
+  go_walk_step (wp_assign_store
+    (oldcell := ⟨some slice8, .slice nilSlice⟩)
+    (newcell := ⟨some slice8,
+      .slice { base := some (.base fa), offset := 0, len := 0, cap := 0 }⟩)
+    (hstore := fun σ _ht hlook => by
+      simp [storeLoc, hlook, normalizeValueForTy, normalizeValueForTyFuel,
+        typeResolutionFuel, Bind.bind, Except.bind]))
+  go_walk
+  go_walk_step (wp_strict_apply_pure (out := .bool true)
+    (happly := fun σ => by
+      simp [applyStrictOp, valueEq, valueEqFuel, typeResolutionFuel,
+        validateSlice, Bind.bind, Except.bind]))
+  go_walk
+  go_walk_step (wp_assign_store (oldcell := ⟨some .bool, .bool false⟩)
+    (newcell := ⟨some .bool, .bool true⟩)
+    (hstore := fun σ _ht hlook => by
+      simp [storeLoc, hlook, normalizeValueForTy, normalizeValueForTyFuel,
+        typeResolutionFuel, Bind.bind, Except.bind]))
+  go_walk_finish Hcont
+
+theorem wp_compareSliceDriver
+    (hprog : GoCoreGS.prog GF = nilLowered.funcs)
+    (hmeths : GoCoreGS.methods GF = #[]) :
+    embed (GF := GF) importedCell0
+      ⊢ WP (Config.exec compareSliceDriver importedEnv .stop)
+          {{ _v, embed (importedCellV 1) }} := by
+  simp only [importedCell0, importedCellV, embed]
+  iintro Hr
+  iapply (wp_golean_driver (cname := "$c4")
+    (wrapperFunc := goleanCompareSliceFunc) (innerFunc := compareSliceFunc)
+    (w := .int 0 .int)
+    (hr := rfl)
+    (hcname := by decide)
+    (hfindW := by rw [hprog]; rfl)
+    (hargsW := rfl) (hresW := rfl) (hbodyW := rfl)
+    (hnodispW := fun σ h => by
+      simp [dynamicDispatch?, methodInfoByFuncId?, h, hmeths,
+        Bind.bind, Except.bind])
+    (hfind := by rw [hprog]; rfl)
+    (hargs := rfl) (hres := rfl)
+    (hnodisp := fun σ h => by
+      simp [dynamicDispatch?, methodInfoByFuncId?, h, hmeths,
+        Bind.bind, Except.bind])
+    (Hinner := fun ra' k' => wp_compareSlice_body))
+  isplitl [Hr]
+  · iexact Hr
+  iintro Hr
+  iapply (wp_value' (v := ()))
+  iexact Hr
+
+end
+
+theorem compareSliceToNilSpec :
+    GoSpec nilLowered.typeDefs.toList nilLowered.funcs nilLowered.methods
+      importedEnv importedCell0 compareSliceDriver (importedCellV 1) := by
+  refine goSpec_of_wp ?_
+  intro _inst hprog hmeths _htypes
+  exact wp_compareSliceDriver hprog hmeths
+
+theorem compareSliceToNilSpecC :
+    GoSpecC nilLowered.typeDefs.toList nilLowered.funcs nilLowered.methods
+      importedEnv importedCell0 compareSliceDriver (importedCellV 1) :=
+  goSpecC_of_goSpec compareSliceToNilSpec
+
+theorem compareSliceToNilReadoutC :
+    ∀ (fuel : Nat) (ch : Choices) (σf : ExecState) (ch' : Choices),
+      execProg fuel importedEnv (importedSeed nilLowered) ch
+        compareSliceDriver = .ok (.normal σf, ch') →
+      loadLoc σf (.base ⟨0⟩) = .ok (.int 1 .int) :=
+  goSpec_seeded_readoutC compareSliceToNilSpec (by decide +kernel)
+
+/-! ### testComparePointerToNil (`s := new(uint64); return s != nil`) -/
+
+def comparePointerFunc : Func :=
+  { id := { key := "testComparePointerToNil" },
+    args := #[],
+    results := #[{ id := "$res0", typ := .bool }],
+    body := .block
+              #[]
+              #[.seqn
+                  #[.initialization { id := "$c1", typ := ptru64 },
+                    .newValue (.var "$c1") (.defaultValue (.int .uint64))
+                      (some (.int .uint64))],
+                .seqn
+                  #[.initialization { id := "s", typ := ptru64 },
+                    .assign (.var "s") (.var "$c1")],
+                .seqn
+                  #[.assign (.var "$res0")
+                      (.neqCmp ptru64 (.var "s") (.nil none)),
+                    .returnStmt]],
+    variadic := false,
+    wrapper := false }
+
+def goleanComparePointerFunc : Func :=
+  { id := { key := "goleanTestComparePointerToNil" },
+    args := #[],
+    results := #[{ id := "$res0", typ := .int .int }],
+    body := goleanWrapperBody "$c5" ⟨"testComparePointerToNil"⟩,
+    variadic := false,
+    wrapper := false }
+
+example : findFunctionIn? nilLowered.funcs ⟨"testComparePointerToNil"⟩
+    = some comparePointerFunc := rfl
+example : findFunctionIn? nilLowered.funcs ⟨"goleanTestComparePointerToNil"⟩
+    = some goleanComparePointerFunc := rfl
+
+abbrev comparePointerDriver : Stmt :=
+  .call #[.var "r"] ⟨"goleanTestComparePointerToNil"⟩ #[]
+
+section
+variable {GF : BundledGFunctors} {hlc : HasLC} [GoCoreGS hlc GF]
+variable {s : Stuckness} {E : CoPset} {Φ : Unit → IProp GF}
+
+/-- Inner body walk: `new(uint64)` is a non-nil pointer (`true`). -/
+theorem wp_comparePointer_body {ra : Addr} {k} :
+    ra.id ↦ (⟨some .bool, .bool false⟩ : HeapCell)
+      ∗ (ra.id ↦ (⟨some .bool, .bool true⟩ : HeapCell)
+          -∗ WP (Config.returning k) @ s ; E {{ Φ }})
+      ⊢ WP (Config.exec comparePointerFunc.body [[("$res0", Loc.base ra)]] k)
+          @ s ; E {{ Φ }} := by
+  iintro ⟨Hr, Hcont⟩
+  simp only [comparePointerFunc]
+  go_walk
+  go_walk_step wp_init_ptr
+  go_walk
+  go_walk_step (wp_eval_strict_nullary_pure (v := .int 0 .uint64)
+    (hplan := rfl)
+    (happly := fun σ => by
+      simp [applyStrictOp, defaultValue, defaultValueFuel,
+        typeResolutionFuel, Bind.bind, Except.bind]))
+  go_walk_step (wp_new_value (oldcell := ⟨some ptru64, .nil⟩)
+    (newcell := fun fa => ⟨some ptru64, .addr (.base fa)⟩)
+    (hstore := fun σ fa _ht hlook => by
+      simp [storeLoc, hlook, normalizeValueForTy, normalizeValueForTyFuel,
+        typeResolutionFuel, Bind.bind, Except.bind])) as [fa, Hf, Hc]
+  go_walk
+  go_walk_step wp_init_ptr
+  go_walk
+  go_walk_step (wp_assign_store (oldcell := ⟨some ptru64, .nil⟩)
+    (newcell := ⟨some ptru64, .addr (.base fa)⟩)
+    (hstore := fun σ _ht hlook => by
+      simp [storeLoc, hlook, normalizeValueForTy, normalizeValueForTyFuel,
+        typeResolutionFuel, Bind.bind, Except.bind]))
+  go_walk
+  go_walk_step (wp_strict_apply_pure (out := .bool true)
+    (happly := fun σ => by
+      simp [applyStrictOp, valueEq, valueEqFuel, typeResolutionFuel,
+        Bind.bind, Except.bind]))
+  go_walk
+  go_walk_step (wp_assign_store (oldcell := ⟨some .bool, .bool false⟩)
+    (newcell := ⟨some .bool, .bool true⟩)
+    (hstore := fun σ _ht hlook => by
+      simp [storeLoc, hlook, normalizeValueForTy, normalizeValueForTyFuel,
+        typeResolutionFuel, Bind.bind, Except.bind]))
+  go_walk_finish Hcont
+
+theorem wp_comparePointerDriver
+    (hprog : GoCoreGS.prog GF = nilLowered.funcs)
+    (hmeths : GoCoreGS.methods GF = #[]) :
+    embed (GF := GF) importedCell0
+      ⊢ WP (Config.exec comparePointerDriver importedEnv .stop)
+          {{ _v, embed (importedCellV 1) }} := by
+  simp only [importedCell0, importedCellV, embed]
+  iintro Hr
+  iapply (wp_golean_driver (cname := "$c5")
+    (wrapperFunc := goleanComparePointerFunc)
+    (innerFunc := comparePointerFunc)
+    (w := .int 0 .int)
+    (hr := rfl)
+    (hcname := by decide)
+    (hfindW := by rw [hprog]; rfl)
+    (hargsW := rfl) (hresW := rfl) (hbodyW := rfl)
+    (hnodispW := fun σ h => by
+      simp [dynamicDispatch?, methodInfoByFuncId?, h, hmeths,
+        Bind.bind, Except.bind])
+    (hfind := by rw [hprog]; rfl)
+    (hargs := rfl) (hres := rfl)
+    (hnodisp := fun σ h => by
+      simp [dynamicDispatch?, methodInfoByFuncId?, h, hmeths,
+        Bind.bind, Except.bind])
+    (Hinner := fun ra' k' => wp_comparePointer_body))
+  isplitl [Hr]
+  · iexact Hr
+  iintro Hr
+  iapply (wp_value' (v := ()))
+  iexact Hr
+
+end
+
+theorem comparePointerToNilSpec :
+    GoSpec nilLowered.typeDefs.toList nilLowered.funcs nilLowered.methods
+      importedEnv importedCell0 comparePointerDriver (importedCellV 1) := by
+  refine goSpec_of_wp ?_
+  intro _inst hprog hmeths _htypes
+  exact wp_comparePointerDriver hprog hmeths
+
+theorem comparePointerToNilSpecC :
+    GoSpecC nilLowered.typeDefs.toList nilLowered.funcs nilLowered.methods
+      importedEnv importedCell0 comparePointerDriver (importedCellV 1) :=
+  goSpecC_of_goSpec comparePointerToNilSpec
+
+theorem comparePointerToNilReadoutC :
+    ∀ (fuel : Nat) (ch : Choices) (σf : ExecState) (ch' : Choices),
+      execProg fuel importedEnv (importedSeed nilLowered) ch
+        comparePointerDriver = .ok (.normal σf, ch') →
+      loadLoc σf (.base ⟨0⟩) = .ok (.int 1 .int) :=
+  goSpec_seeded_readoutC comparePointerToNilSpec (by decide +kernel)
+
+/-! ### testComparePointerWrappedToNil
+(`var s []byte; s = make([]byte, 1); return s != nil`) -/
+
+def compareWrappedFunc : Func :=
+  { id := { key := "testComparePointerWrappedToNil" },
+    args := #[],
+    results := #[{ id := "$res0", typ := .bool }],
+    body := .block
+              #[]
+              #[.seqn
+                  #[.initialization { id := "s", typ := slice8 }],
+                .seqn
+                  #[.initialization { id := "$c3", typ := slice8 },
+                    .makeSlice (.var "$c3") (.int .uint8) (.intLit 1 .int) none],
+                .seqn
+                  #[.assign (.var "s") (.var "$c3")],
+                .seqn
+                  #[.assign (.var "$res0")
+                      (.neqCmp slice8 (.var "s") (.nil none)),
+                    .returnStmt]],
+    variadic := false,
+    wrapper := false }
+
+def goleanCompareWrappedFunc : Func :=
+  { id := { key := "goleanTestComparePointerWrappedToNil" },
+    args := #[],
+    results := #[{ id := "$res0", typ := .int .int }],
+    body := goleanWrapperBody "$c7" ⟨"testComparePointerWrappedToNil"⟩,
+    variadic := false,
+    wrapper := false }
+
+example : findFunctionIn? nilLowered.funcs ⟨"testComparePointerWrappedToNil"⟩
+    = some compareWrappedFunc := rfl
+example : findFunctionIn? nilLowered.funcs
+    ⟨"goleanTestComparePointerWrappedToNil"⟩
+    = some goleanCompareWrappedFunc := rfl
+
+abbrev compareWrappedDriver : Stmt :=
+  .call #[.var "r"] ⟨"goleanTestComparePointerWrappedToNil"⟩ #[]
+
+section
+variable {GF : BundledGFunctors} {hlc : HasLC} [GoCoreGS hlc GF]
+variable {s : Stuckness} {E : CoPset} {Φ : Unit → IProp GF}
+
+/-- Inner body walk: a made one-element slice is not nil (`true`). -/
+theorem wp_compareWrapped_body {ra : Addr} {k} :
+    ra.id ↦ (⟨some .bool, .bool false⟩ : HeapCell)
+      ∗ (ra.id ↦ (⟨some .bool, .bool true⟩ : HeapCell)
+          -∗ WP (Config.returning k) @ s ; E {{ Φ }})
+      ⊢ WP (Config.exec compareWrappedFunc.body [[("$res0", Loc.base ra)]] k)
+          @ s ; E {{ Φ }} := by
+  iintro ⟨Hr, Hcont⟩
+  simp only [compareWrappedFunc]
+  go_walk
+  go_walk_step (wp_init (v := .slice nilSlice) (hdef := fun σ _ => by
+    simp [defaultValue, defaultValueFuel, typeResolutionFuel]))
+  go_walk
+  go_walk_step (wp_init (v := .slice nilSlice) (hdef := fun σ _ => by
+    simp [defaultValue, defaultValueFuel, typeResolutionFuel]))
+  go_walk
+  go_walk_step (wp_make_slice (n := 1) (elem := .int .uint8)
+    (oldcell := ⟨some slice8, .slice nilSlice⟩)
+    (backing := .array #[.int 0 .uint8])
+    (newcell := fun fa =>
+      ⟨some slice8, .slice { base := some (.base fa), offset := 0, len := 1, cap := 1 }⟩)
+    (hbacking := fun σ _ => by
+      simp [buildDefaultArrayValue, buildArrayValue, defaultValue,
+        defaultValueFuel, typeResolutionFuel,
+        Std.Legacy.Range.forIn_eq_forIn_range', List.range',
+        List.forIn_cons, List.forIn_nil, Bind.bind, Except.bind,
+        pure, Except.pure])
+    (hstore := fun σ fa _ht hlook => by
+      simp [storeLoc, hlook, normalizeValueForTy, normalizeValueForTyFuel,
+        typeResolutionFuel, Bind.bind, Except.bind])) as [fa, Hf, Hc]
+  go_walk
+  go_walk_step (wp_assign_store
+    (oldcell := ⟨some slice8, .slice nilSlice⟩)
+    (newcell := ⟨some slice8,
+      .slice { base := some (.base fa), offset := 0, len := 1, cap := 1 }⟩)
+    (hstore := fun σ _ht hlook => by
+      simp [storeLoc, hlook, normalizeValueForTy, normalizeValueForTyFuel,
+        typeResolutionFuel, Bind.bind, Except.bind]))
+  go_walk
+  go_walk_step (wp_strict_apply_pure (out := .bool true)
+    (happly := fun σ => by
+      simp [applyStrictOp, valueEq, valueEqFuel, typeResolutionFuel,
+        validateSlice, Bind.bind, Except.bind]))
+  go_walk
+  go_walk_step (wp_assign_store (oldcell := ⟨some .bool, .bool false⟩)
+    (newcell := ⟨some .bool, .bool true⟩)
+    (hstore := fun σ _ht hlook => by
+      simp [storeLoc, hlook, normalizeValueForTy, normalizeValueForTyFuel,
+        typeResolutionFuel, Bind.bind, Except.bind]))
+  go_walk_finish Hcont
+
+theorem wp_compareWrappedDriver
+    (hprog : GoCoreGS.prog GF = nilLowered.funcs)
+    (hmeths : GoCoreGS.methods GF = #[]) :
+    embed (GF := GF) importedCell0
+      ⊢ WP (Config.exec compareWrappedDriver importedEnv .stop)
+          {{ _v, embed (importedCellV 1) }} := by
+  simp only [importedCell0, importedCellV, embed]
+  iintro Hr
+  iapply (wp_golean_driver (cname := "$c7")
+    (wrapperFunc := goleanCompareWrappedFunc)
+    (innerFunc := compareWrappedFunc)
+    (w := .int 0 .int)
+    (hr := rfl)
+    (hcname := by decide)
+    (hfindW := by rw [hprog]; rfl)
+    (hargsW := rfl) (hresW := rfl) (hbodyW := rfl)
+    (hnodispW := fun σ h => by
+      simp [dynamicDispatch?, methodInfoByFuncId?, h, hmeths,
+        Bind.bind, Except.bind])
+    (hfind := by rw [hprog]; rfl)
+    (hargs := rfl) (hres := rfl)
+    (hnodisp := fun σ h => by
+      simp [dynamicDispatch?, methodInfoByFuncId?, h, hmeths,
+        Bind.bind, Except.bind])
+    (Hinner := fun ra' k' => wp_compareWrapped_body))
+  isplitl [Hr]
+  · iexact Hr
+  iintro Hr
+  iapply (wp_value' (v := ()))
+  iexact Hr
+
+end
+
+theorem comparePointerWrappedToNilSpec :
+    GoSpec nilLowered.typeDefs.toList nilLowered.funcs nilLowered.methods
+      importedEnv importedCell0 compareWrappedDriver (importedCellV 1) := by
+  refine goSpec_of_wp ?_
+  intro _inst hprog hmeths _htypes
+  exact wp_compareWrappedDriver hprog hmeths
+
+theorem comparePointerWrappedToNilSpecC :
+    GoSpecC nilLowered.typeDefs.toList nilLowered.funcs nilLowered.methods
+      importedEnv importedCell0 compareWrappedDriver (importedCellV 1) :=
+  goSpecC_of_goSpec comparePointerWrappedToNilSpec
+
+theorem comparePointerWrappedToNilReadoutC :
+    ∀ (fuel : Nat) (ch : Choices) (σf : ExecState) (ch' : Choices),
+      execProg fuel importedEnv (importedSeed nilLowered) ch
+        compareWrappedDriver = .ok (.normal σf, ch') →
+      loadLoc σf (.base ⟨0⟩) = .ok (.int 1 .int) :=
+  goSpec_seeded_readoutC comparePointerWrappedToNilSpec (by decide +kernel)
+
+/-! ### testComparePointerWrappedDefaultToNil
+(`var s []byte; return s == nil`) -/
+
+def compareWrappedDefaultFunc : Func :=
+  { id := { key := "testComparePointerWrappedDefaultToNil" },
+    args := #[],
+    results := #[{ id := "$res0", typ := .bool }],
+    body := .block
+              #[]
+              #[.seqn
+                  #[.initialization { id := "s", typ := slice8 }],
+                .seqn
+                  #[.assign (.var "$res0")
+                      (.eqCmp slice8 (.var "s") (.nil none)),
+                    .returnStmt]],
+    variadic := false,
+    wrapper := false }
+
+def goleanCompareWrappedDefaultFunc : Func :=
+  { id := { key := "goleanTestComparePointerWrappedDefaultToNil" },
+    args := #[],
+    results := #[{ id := "$res0", typ := .int .int }],
+    body := goleanWrapperBody "$c8" ⟨"testComparePointerWrappedDefaultToNil"⟩,
+    variadic := false,
+    wrapper := false }
+
+example : findFunctionIn? nilLowered.funcs
+    ⟨"testComparePointerWrappedDefaultToNil"⟩
+    = some compareWrappedDefaultFunc := rfl
+example : findFunctionIn? nilLowered.funcs
+    ⟨"goleanTestComparePointerWrappedDefaultToNil"⟩
+    = some goleanCompareWrappedDefaultFunc := rfl
+
+abbrev compareWrappedDefaultDriver : Stmt :=
+  .call #[.var "r"] ⟨"goleanTestComparePointerWrappedDefaultToNil"⟩ #[]
+
+section
+variable {GF : BundledGFunctors} {hlc : HasLC} [GoCoreGS hlc GF]
+variable {s : Stuckness} {E : CoPset} {Φ : Unit → IProp GF}
+
+/-- Inner body walk: a default (never-made) slice IS nil (`true`). -/
+theorem wp_compareWrappedDefault_body {ra : Addr} {k} :
+    ra.id ↦ (⟨some .bool, .bool false⟩ : HeapCell)
+      ∗ (ra.id ↦ (⟨some .bool, .bool true⟩ : HeapCell)
+          -∗ WP (Config.returning k) @ s ; E {{ Φ }})
+      ⊢ WP (Config.exec compareWrappedDefaultFunc.body
+            [[("$res0", Loc.base ra)]] k)
+          @ s ; E {{ Φ }} := by
+  iintro ⟨Hr, Hcont⟩
+  simp only [compareWrappedDefaultFunc]
+  go_walk
+  go_walk_step (wp_init (v := .slice nilSlice) (hdef := fun σ _ => by
+    simp [defaultValue, defaultValueFuel, typeResolutionFuel]))
+  go_walk
+  go_walk_step (wp_strict_apply_pure (out := .bool true)
+    (happly := fun σ => by
+      simp [applyStrictOp, valueEq, valueEqFuel, typeResolutionFuel,
+        validateSlice, Bind.bind, Except.bind]))
+  go_walk
+  go_walk_step (wp_assign_store (oldcell := ⟨some .bool, .bool false⟩)
+    (newcell := ⟨some .bool, .bool true⟩)
+    (hstore := fun σ _ht hlook => by
+      simp [storeLoc, hlook, normalizeValueForTy, normalizeValueForTyFuel,
+        typeResolutionFuel, Bind.bind, Except.bind]))
+  go_walk_finish Hcont
+
+theorem wp_compareWrappedDefaultDriver
+    (hprog : GoCoreGS.prog GF = nilLowered.funcs)
+    (hmeths : GoCoreGS.methods GF = #[]) :
+    embed (GF := GF) importedCell0
+      ⊢ WP (Config.exec compareWrappedDefaultDriver importedEnv .stop)
+          {{ _v, embed (importedCellV 1) }} := by
+  simp only [importedCell0, importedCellV, embed]
+  iintro Hr
+  iapply (wp_golean_driver (cname := "$c8")
+    (wrapperFunc := goleanCompareWrappedDefaultFunc)
+    (innerFunc := compareWrappedDefaultFunc)
+    (w := .int 0 .int)
+    (hr := rfl)
+    (hcname := by decide)
+    (hfindW := by rw [hprog]; rfl)
+    (hargsW := rfl) (hresW := rfl) (hbodyW := rfl)
+    (hnodispW := fun σ h => by
+      simp [dynamicDispatch?, methodInfoByFuncId?, h, hmeths,
+        Bind.bind, Except.bind])
+    (hfind := by rw [hprog]; rfl)
+    (hargs := rfl) (hres := rfl)
+    (hnodisp := fun σ h => by
+      simp [dynamicDispatch?, methodInfoByFuncId?, h, hmeths,
+        Bind.bind, Except.bind])
+    (Hinner := fun ra' k' => wp_compareWrappedDefault_body))
+  isplitl [Hr]
+  · iexact Hr
+  iintro Hr
+  iapply (wp_value' (v := ()))
+  iexact Hr
+
+end
+
+theorem comparePointerWrappedDefaultToNilSpec :
+    GoSpec nilLowered.typeDefs.toList nilLowered.funcs nilLowered.methods
+      importedEnv importedCell0 compareWrappedDefaultDriver
+      (importedCellV 1) := by
+  refine goSpec_of_wp ?_
+  intro _inst hprog hmeths _htypes
+  exact wp_compareWrappedDefaultDriver hprog hmeths
+
+theorem comparePointerWrappedDefaultToNilSpecC :
+    GoSpecC nilLowered.typeDefs.toList nilLowered.funcs nilLowered.methods
+      importedEnv importedCell0 compareWrappedDefaultDriver
+      (importedCellV 1) :=
+  goSpecC_of_goSpec comparePointerWrappedDefaultToNilSpec
+
+theorem comparePointerWrappedDefaultToNilReadoutC :
+    ∀ (fuel : Nat) (ch : Choices) (σf : ExecState) (ch' : Choices),
+      execProg fuel importedEnv (importedSeed nilLowered) ch
+        compareWrappedDefaultDriver = .ok (.normal σf, ch') →
+      loadLoc σf (.base ⟨0⟩) = .ok (.int 1 .int) :=
+  goSpec_seeded_readoutC comparePointerWrappedDefaultToNilSpec
+    (by decide +kernel)
+
 end GoLean.ImportedGoose.SemanticsNil
