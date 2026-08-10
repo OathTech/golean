@@ -77,10 +77,16 @@ panic_message() {
 # expected_reason, so a gc message that extended or a manifest pin that
 # truncated the real text passed green with stale text substituted —
 # asymmetric with the panic path, which compares gc's ACTUAL message).
+# A single leading TAB is accepted (arc-end fix round 2026-08-10): a
+# fatal raised DURING PANIC UNWINDING (`defer m.Unlock()` in a
+# panicking frame) leads with `panic: <value>` and carries the fatal on
+# a tab-indented continuation line — the FIRST `fatal error:` line,
+# indented or not, is the throw's message (pinned by
+# sync/mutex-unlock-fatal/during-panic-unwind).
 fatal_message() {
   awk '
-    /^fatal error: / {
-      sub(/^fatal error: /, "")
+    /^\t?fatal error: / {
+      sub(/^\t?fatal error: /, "")
       print
       found = 1
       exit

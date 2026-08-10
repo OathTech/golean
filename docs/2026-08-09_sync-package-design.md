@@ -72,9 +72,18 @@ semrelease). Disposition in §4 (WaitGroup) and §8 (known narrowing).
 **Decision (fatal class): model gc's unrecoverable sync throws as a
 real terminal, `GoError.fatal msg`** — status `fatal`, message = gc's
 fixed string, differentially testable as `expected_status: fatal`
-against a failing `go run` whose LEADING `fatal error: <msg>` line is
+against a failing `go run` whose FIRST `fatal error: <msg>` line is
 extracted and compared (the panic path's actual-message discipline —
-audit fix round F8) and whose trailing `exit status 2` report is
+audit fix round F8; arc-end correction 2026-08-10: "leading line" was
+false for a fatal raised DURING PANIC UNWINDING — `defer m.Unlock()`
+in a panicking frame — where gc LEADS with `panic: <value>` and puts
+the fatal on a TAB-indented continuation line, still exit 2. The
+extractor accepts exactly that one indented shape; pinned by
+`sync/mutex-unlock-fatal/during-panic-unwind`. Recorded narrowing §8:
+the model's `fatal` observation carries the fatal alone — the pending
+panic VALUE gc prints on its leading line is dropped, so the
+differential compares the fatal class+message, not the panic line)
+and whose trailing `exit status 2` report is
 checked (delta-review round 2: `go run` itself exits 1 and reports the
 child's status as text — measured; the report line is the pin). Options
 considered: (a) `.unsupported` refusal like the go-of-nil-func
@@ -305,12 +314,31 @@ values included, embedded-struct fields included), method calls
 `Lock/Unlock` on `sync.Mutex`, `Lock/Unlock/RLock/RUnlock` on
 `sync.RWMutex`, `Add/Done/Wait` on `sync.WaitGroup` (Done →
 `wgAdd(-1)`), `Do` on `sync.Once` (the §3 desugar), with receivers
-lowered to addresses via go/types. EVERYTHING else under `sync.`
-fails closed per-decl with a precise reason (`sync.OnceFunc`,
-`WaitGroup.Go`, `TryLock/TryRLock/RLocker`, `Locker`-interface
-dispatch, `Cond`, `Map`, `Pool`, copies into interfaces that would
-need method dispatch). Receivers that are unaddressable or reached
-through unsupported shapes fail closed, never approximate.
+lowered to addresses via go/types.
+
+Method sets and interfaces (REWRITTEN at the arc-end fix round,
+2026-08-10 — the original paragraph claimed "copies into interfaces
+that would need method dispatch" fail closed, which was FALSE: the
+boxing exported silently and satisfaction answered a wrong "no" with
+status ok, the worst class — wrong comma-ok bool, wrong type-switch
+branch, fabricated missing-method panic, all verifier-reproduced;
+dispatch through a USER-defined interface additionally escaped the F4
+quarantine and landed as runtime `stuck`): the four types' FULL
+exported pointer method sets now ride the wire as declaration-only
+stubs (`syncMethodStubs`, the D5 shape with a FAIL-THE-EXPORT posture
+on un-emittable signatures — `Ty.sync` has no not-recorded refusal
+lane, so a skipped set would silently reproduce the false "no").
+Satisfaction/boxing/type-switch ANSWER what gc answers, for
+user-defined interfaces and `sync.Locker` alike (`sync.Locker` is
+emitted as a plain named interface — also needed by `RLocker`'s
+signature); a CALL through any stub refuses per-stub with a precise
+frontend-quarantined reason. Pinned by `sync/satisfaction`,
+`sync/satisfaction-locker-sig`, `sync/iface-dispatch` (markers),
+`sync/stub-satisfaction` (the embedding shape). EVERYTHING else under
+`sync.` fails closed per-decl with a precise reason (`sync.OnceFunc`,
+`WaitGroup.Go`, `TryLock/TryRLock/RLocker` as CALLS, `Cond`, `Map`,
+`Pool`). Receivers that are unaddressable or reached through
+unsupported shapes fail closed, never approximate.
 
 ## 8. Recorded approximations / known narrowings (each at its site)
 
@@ -361,15 +389,37 @@ through unsupported shapes fail closed, never approximate.
 - **Fatal-path HB edges:** gc releases before its unlock-path fatal
   checks; we model no edge on fatal paths (the run aborts — no
   observable difference).
+- **Fatal during panic unwinding drops the pending panic value**
+  (arc-end fix round, 2026-08-10): `defer m.Unlock()` in a panicking
+  frame — gc's abort LEADS with `panic: <value>` and carries the
+  fatal on a tab-indented continuation line (probed; exit 2); our
+  `fatal` observation carries the fatal class+message alone, so the
+  differential compares those and not the pending panic line. Pinned
+  by `sync/mutex-unlock-fatal/during-panic-unwind` (the extractor
+  accepts exactly the one indented shape). The message discipline is
+  otherwise unchanged; carrying the pending chain in the fatal
+  observation is a recorded possible lift, not scheduled.
 
 ## 9. Out of scope, recorded (not silently dropped)
 
 Per D4: `sync/atomic` (own arc — FairStream's gate), `sync.Map`,
 `sync.Cond` (blocks `unittest/condvar.go` + `unittest/locks.go` of the
 phase-2 files), `sync.Pool`. Additionally recorded here: `TryLock`/
-`TryRLock` (§6's class-boundary reason; also unused by the 17 files),
-`RLocker`, `sync.Locker` interface dispatch, `WaitGroup.Go` (1.25
-sugar), `OnceFunc`/`OnceValue`/`OnceValues`, migrating the
+`TryRLock` as CALLS (§6's class-boundary reason; their method-set
+PRESENCE answers satisfaction since the arc-end fix round), `RLocker`
+as a CALL, sync method CALLS through interface dispatch (user-defined
+or `sync.Locker`; satisfaction/boxing answer — the call refuses
+per-stub; markers `sync/iface-dispatch`; the lift is real stub bodies
+over the machine's existing sync ops, recorded in §12),
+composite-literal construction (`&sync.Mutex{}`, `sync.WaitGroup{}` —
+refused naming the capability since the arc-end fix round, was the
+internal `sync.noCopy`; markers `sync/composite-literal`; `var` and
+`new` are the modeled construction surface), `defer wg.Add(n)` /
+`defer once.Do(f)` (the deferred-operand shape — an argument evaluated
+at defer time and threaded through the synthetic wrapper; Done already
+threads a literal -1, so the lift is the natural follow-up),
+`WaitGroup.Go` (1.25 sugar), `OnceFunc`/`OnceValue`/`OnceValues`,
+migrating the
 go-of-nil-func refusal onto the new fatal class (a one-line follow-up,
 but it re-pins a recorded permanent red — its own change with its own
 reason), vet-style copy-after-use static detection (§3). Of the 17
@@ -689,6 +739,42 @@ STRUCTURAL fix)
   considered and not added — 82 redundant compiles per run). Both
   shapes fixtured (suite now 47).
 
+### Arc-end fix round (2026-08-10, branch `spec-parity` — the arc-end audit's sync findings; red-first throughout)
+
+- **CRITICAL/major — satisfaction false-"no" (BUG-053), quarantine
+  escape via user interfaces**: red-first pins exhibited every genre
+  (comma-ok 0-vs-21/31/41/61, type-switch 0-vs-12, fabricated
+  missing-method panic; user-iface dispatch `stuck`; sync.Locker
+  whole-export refusal isolated in `satisfaction-locker-sig` so it
+  could not mask the silent-wrong reds). Fix: `syncMethodStubs`
+  (frontend-only; fail-the-export on un-emittable signatures, unlike
+  D5's skip-whole — no refusal lane covers a skipped `Ty.sync` set) +
+  `sync.Locker` as a plain named interface. Post-fix: satisfaction 9/9
+  green incl. both definite-no controls; `sync/iface-dispatch` 3
+  markers moved stuck→`frontend-export` with per-stub reasons.
+- **major — wg panic payload class (BUG-054)**: `stringPanicValue` at
+  the `wgAdd` arm (gc panics with package-code string, waitgroup.go:118;
+  channels stay `runtimeErrorValue` = `plainError`). Discriminator pin
+  3→1032.
+- **minor — wg int32 wrap (BUG-055)**: `emod 2^32` wrap before the
+  negative test; BOTH divergence directions pinned (`Add(1<<31)`
+  missed panic, `Add(-(1<<32))` fabricated panic). Interpreter and
+  relation move together through the shared `applySyncOp`; StateWf's
+  wgAdd arm re-proved (`stringPanicValue_locSup`); full proof build
+  green.
+- **minor — fatal during unwinding**: extractor accepts the one
+  tab-indented `fatal error:` continuation shape (gc leads with
+  `panic: <value>`); §2's "LEADING line" premise corrected; dropped
+  pending-panic value recorded as a §8 narrowing; pinned
+  (`during-panic-unwind`, red-first at go-observation).
+- **notes — composite-literal refusal** now names the capability (was
+  `sync.noCopy`), markers `sync/composite-literal`; defer-position
+  wording restated capability-scoped (the deferred-operand shape, §9)
+  instead of "nothing uses them".
+- The rwmutex-order certified record re-certified this round (the
+  stub methods change the wire sha — schema-widening only, members
+  unchanged {10, 20}).
+
 ## 12. Parking ledger (user-scale items, per the AFK posture)
 
 - **P-S2-1 — Promote `fatal` into the membership/confluent lanes?**
@@ -718,3 +804,16 @@ STRUCTURAL fix)
   (Race.lean inventory U4). Misuse-only; joins U1-U2 in the racy
   caption. Closing it means modeling struct-copy accesses of sync
   cells → future arc if ever needed.
+- **P-S2-6 — Lift sync method CALLS through interface dispatch
+  (arc-end fix round, 2026-08-10).** Satisfaction/boxing now answer
+  correctly through the `syncMethodStubs` declaration-only stubs; the
+  CALLS refuse per-stub (markers `sync/iface-dispatch`). The lift is
+  real stub bodies over the machine's EXISTING sync ops (Lock/Unlock/
+  RLock/RUnlock/Add/Done/Wait as one-statement bodies; Do via a
+  generic `$syncOnceDo`; TryLock/TryRLock/RLocker/Go stay
+  declaration-only) — semantics-identical to direct calls at registry
+  granularity, but it grows the dispatchable surface, so it is a
+  scoped slice with its own red-first cases, not a fix-round rider.
+  Adjacent: the promoted-call lift (raft's MemoryStorage idiom,
+  `sync/escapes/promoted`) and `defer wg.Add(n)`/`defer once.Do(f)`
+  (§9's deferred-operand shape).

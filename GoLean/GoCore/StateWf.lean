@@ -4371,6 +4371,9 @@ theorem goValueEntriesSup_eraseIdxA {arr : Array (GoValue × GoValue)} {i : Nat}
 theorem runtimeErrorValue_locSup {msg : String} :
     GoValue.locSup (runtimeErrorValue msg) = 0 := rfl
 
+theorem stringPanicValue_locSup {msg : String} :
+    GoValue.locSup (stringPanicValue msg) = 0 := rfl
+
 /-- `panicPayload` never introduces locations: the nil arm's runtime
 error is loc-free, every other payload passes through (modern
 `panic(nil)` semantics, arc-final audit F21 2026-08-06). -/
@@ -5027,7 +5030,7 @@ theorem applySyncOp_wf {σ : ExecState} {op : SyncOp}
         (simp only [pure_eq_ok, Except.ok.injEq, Prod.mk.injEq] at h;
          obtain ⟨rfl, rfl⟩ := h;
          refine ⟨w1, ?_, w4, w2⟩;
-         simp only [Config.locSup, panicChainSup, runtimeErrorValue_locSup,
+         simp only [Config.locSup, panicChainSup, stringPanicValue_locSup,
            goValueListSup, Nat.max_le];
          omega)
     · simp [stuck, throw, throwThe, MonadExceptOf.throw] at h

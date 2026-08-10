@@ -289,6 +289,20 @@ func (e *emitter) emitProgram(files []*ast.File) (map[string]any, error) {
 	typeDefs = append(typeDefs, importedDefs...)
 	methods = append(methods, importedStubs...)
 
+	// Sync-primitive method-set stubs (arc-end fix round 2026-08-10):
+	// the four modeled sync types' FULL exported pointer method sets,
+	// so interface satisfaction answers what gc answers (the early
+	// `{"kind":"sync"}` return skipped the D5 registration, leaving
+	// them the ONLY imported family that runs past a satisfaction
+	// query with no method table — a silent false "no"). Also before
+	// the interface-declaration pass: RLocker's signature mentions
+	// sync.Locker.
+	syncStubs, err := e.syncMethodStubs()
+	if err != nil {
+		return nil, err
+	}
+	methods = append(methods, syncStubs...)
+
 	// Interface DECLARATIONS: one `interface` TypeDef per interface type that
 	// reached the wire anywhere (declared here, predeclared `error`, or
 	// imported), carrying the FULL method set — embedded interfaces included,
@@ -4305,6 +4319,80 @@ func (e *emitter) importedMethodStubs(qname string, named *types.Named) ([]any, 
 	return out, true
 }
 
+// syncMethodStubs emits, for every modeled sync primitive type whose
+// identity reached the wire, its FULL exported method set as
+// declaration-only stubs (arc-end fix round 2026-08-10): the real
+// go/types signatures — `satisfiesMethodSig` compares them — over
+// fail-closed bodies, so interface satisfaction against a bare
+// `*sync.Mutex` answers what gc answers while a CALL through a stub
+// (interface dispatch; direct calls are intercepted earlier and
+// lowered to sync ops) refuses with the reason. All four types carry
+// exported POINTER-receiver methods only (mutex.go / rwmutex.go /
+// waitgroup.go / once.go), so a value box correctly keeps an empty
+// method set.
+//
+// Unlike importedMethodStubs this FAILS THE EXPORT on any un-emittable
+// signature instead of skipping the type whole: `Ty.sync` is not a
+// `.defined` marker type, so the machine's not-recorded /
+// imported-marker refusal lanes (`dynamicMethodSetRecorded`,
+// `dynamicIsImportedMarker`) do not cover it — a skipped set would
+// silently reproduce the false-"no" this pass exists to fix.
+func (e *emitter) syncMethodStubs() ([]any, error) {
+	names := make([]string, 0, len(e.syncUsed))
+	for n := range e.syncUsed {
+		names = append(names, n)
+	}
+	sort.Strings(names)
+	out := []any{}
+	for _, name := range names {
+		named := e.syncUsed[name]
+		qname := "sync." + name
+		valSet := types.NewMethodSet(named)
+		ptrSet := types.NewMethodSet(types.NewPointer(named))
+		for i := 0; i < ptrSet.Len(); i++ {
+			mfn, ok := ptrSet.At(i).Obj().(*types.Func)
+			if !ok {
+				return nil, unsup("sync method-set entry %s.%s is not a func", qname, ptrSet.At(i).Obj().Name())
+			}
+			if !mfn.Exported() {
+				// Cross-package unexported identity can never satisfy a
+				// user requirement (Go's package-scoped method identity),
+				// so skipping is the CORRECT answer, not a hole.
+				continue
+			}
+			sig := mfn.Type().(*types.Signature)
+			valueTy, err := e.emitType(named)
+			if err != nil {
+				return nil, err
+			}
+			recvTy := any(valueTy)
+			if valSet.Lookup(mfn.Pkg(), mfn.Name()) == nil {
+				recvTy = map[string]any{"kind": "pointer", "elem": valueTy}
+			}
+			params, err := e.emitParams(sig.Params())
+			if err != nil {
+				return nil, err
+			}
+			results, err := e.emitResults(sig.Results())
+			if err != nil {
+				return nil, err
+			}
+			out = append(out, map[string]any{
+				"name":     mfn.Name(),
+				"recvType": qname,
+				"recv":     map[string]any{"id": "$recv", "type": recvTy},
+				"params":   params,
+				"results":  results,
+				"variadic": sig.Variadic(),
+				"unsupported": "sync-primitive method " + qname + "." + mfn.Name() +
+					" through interface dispatch (declaration-only stub: satisfaction answers; " +
+					"only direct statement/defer-position calls are modeled)",
+			})
+		}
+	}
+	return out, nil
+}
+
 // stringLitNode emits a string literal wire node (the machine's GoString
 // byte representation).
 func stringLitNode(s string) map[string]any {
@@ -4806,6 +4894,16 @@ func containsCall(x ast.Expr) bool {
 }
 
 func (e *emitter) emitStructLit(cl *ast.CompositeLit, t types.Type, st *types.Struct) (any, error) {
+	// Composite-literal construction of a modeled sync primitive
+	// (`&sync.Mutex{}`, `sync.WaitGroup{}`) is out of scope (design
+	// note §9: `var` declarations and `new` are the modeled
+	// construction surface) — refused HERE, naming the capability
+	// (arc-end fix round 2026-08-10): descending into the underlying
+	// struct used to trip over the unexported `sync.noCopy` field
+	// type, a refusal naming an internal no user wrote.
+	if prim := e.syncPrimName(t); prim != "" {
+		return nil, unsup("composite-literal construction of sync.%s (out of scope: `var` declarations and new() are the modeled construction surface)", prim)
+	}
 	target, err := e.emitType(t)
 	if err != nil {
 		return nil, err
@@ -6535,9 +6633,12 @@ func (e *emitter) emitOnceDo(call *ast.CallExpr, recvW any) (any, bool, error) {
 // wrapper through the existing defer machinery — the receiver address
 // evaluates at defer time, the op (and any misuse fatal/panic) fires
 // at frame exit as the deferred invocation's. `defer wg.Add(n)` and
-// `defer once.Do(f)` fail closed (no modeled shape; nothing uses
-// them). handled=false when the deferred call is not a sync-primitive
-// method.
+// `defer once.Do(f)` — legal Go — fail closed as a visible per-decl
+// refusal: the deferred-operand shape (an argument evaluated at defer
+// time and threaded through the wrapper) is a recorded capability gap
+// (design note §9; Done already threads a LITERAL -1, so the lift is
+// the natural follow-up). handled=false when the deferred call is not
+// a sync-primitive method.
 func (e *emitter) emitDeferSyncOp(call *ast.CallExpr) (any, bool, error) {
 	sel, ok := call.Fun.(*ast.SelectorExpr)
 	if !ok {

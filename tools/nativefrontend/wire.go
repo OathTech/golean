@@ -122,6 +122,17 @@ type emitter struct {
 	// answer instead of refusing (BUG-009's polarity).
 	importedNamed map[string]*types.Named
 
+	// The modeled sync primitive types whose identity reached the wire
+	// (arc-end fix round 2026-08-10): emitProgram emits, per type, its
+	// FULL exported (pointer) method set as declaration-only stubs —
+	// satisfaction answers what gc answers; a CALL through a stub
+	// refuses per-stub. Unlike importedNamed this pass FAILS THE EXPORT
+	// on an un-emittable signature: `Ty.sync` is not a `.defined`
+	// marker, so the machine has no not-recorded refusal lane for it —
+	// a silently skipped sync method set would answer a false "no"
+	// (the arc-end CRITICAL's exact mechanism).
+	syncUsed map[string]*types.Named
+
 	// Mangled instantiation key → the types.Type it names (mono.go, the
 	// generics slice): the belt-and-suspenders collision registry behind
 	// the mangling injectivity argument, capped at monoRegistryCap. Every
@@ -318,11 +329,24 @@ func (e *emitter) emitType(t types.Type) (any, error) {
 		obj := ty.Obj()
 		// Sync primitive types (spec-parity slice 2, design note §7):
 		// exactly the four in-scope kinds map to machine sync types
-		// (zero value = the ready primitive); every OTHER sync.* type
-		// fails closed here (per-decl quarantine upstream).
-		if obj.Pkg() != nil && obj.Pkg().Path() == "sync" {
+		// (zero value = the ready primitive). Each is REGISTERED for
+		// the method-set stub pass (arc-end fix round 2026-08-10): the
+		// old early return skipped every method-table registration, so
+		// satisfaction against a bare `*sync.Mutex` answered a false
+		// "no" — wrong comma-ok bool, wrong type-switch branch, and a
+		// fabricated missing-method panic, all with status ok.
+		// sync.Locker is a PLAIN INTERFACE (Lock/Unlock) and rides the
+		// general named-interface path below — needed both for its own
+		// satisfaction/boxing and for RLocker's result signature.
+		// Every OTHER sync.* type fails closed here (per-decl
+		// quarantine upstream).
+		if obj.Pkg() != nil && obj.Pkg().Path() == "sync" && obj.Name() != "Locker" {
 			switch obj.Name() {
 			case "Mutex", "RWMutex", "WaitGroup", "Once":
+				if e.syncUsed == nil {
+					e.syncUsed = map[string]*types.Named{}
+				}
+				e.syncUsed[obj.Name()] = ty
 				return map[string]any{"kind": "sync", "sync": obj.Name()}, nil
 			default:
 				return nil, unsup("sync.%s (only Mutex/RWMutex/WaitGroup/Once are modeled)", obj.Name())

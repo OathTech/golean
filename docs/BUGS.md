@@ -30,6 +30,84 @@ differential-pinned) `- Cases: <id>, <id>, …` (baseline case ids), then prose.
 
 ---
 
+## BUG-053 — interface satisfaction on bare sync primitives answered a false "no" (wrong comma-ok bool, wrong type-switch branch, fabricated missing-method panic)
+
+- Status: fixed (2026-08-10, spec-parity arc-end fix round: the
+  `emitType` sync branch returned its `{"kind":"sync"}` node BEFORE the
+  imported-named registration that feeds the D5 method-stub pass, so
+  the four modeled types were the only imported family with NO
+  method-table entries — and the only one whose zero value is modeled,
+  so queries ran past the point where a missing table yields an answer
+  instead of a refusal. `Ty.sync` is not `.defined`, so the machine's
+  BUG-009 not-recorded guard read the empty table as a CORRECT empty
+  method set and answered a definite false "no": `i.(locker)` comma-ok
+  false where gc says true, the wrong type-switch branch, and a
+  fabricated `interface conversion: *sync.Mutex is not main.locker:
+  missing method Lock` panic on a program gc completes — silent, status
+  ok, invisible to every green gate (only the EMBEDDING shape had a
+  stub + pin, `sync/stub-satisfaction`). FIX: a dedicated
+  `syncMethodStubs` pass emits the four types' FULL exported pointer
+  method sets as declaration-only stubs (real go/types signatures,
+  fail-closed bodies), with a FAIL-THE-EXPORT posture on un-emittable
+  signatures instead of D5's skip-whole (no refusal lane exists for a
+  skipped sync set); `sync.Locker` is emitted as a plain named
+  interface (its own boxing/satisfaction + `RLocker`'s signature).
+  Same root, same fix: sync method CALLS through a user-defined
+  interface — which escaped the F4 quarantine (it keys on the resolved
+  receiver; interface dispatch resolves to the interface) and landed as
+  runtime `stuck` one layer too late — now refuse per-stub as visible
+  `frontend-export` markers, and `sync.Locker` boxing behaves
+  identically to a user-defined equivalent instead of refusing at the
+  type. Value boxes correctly keep an empty method set (all four types'
+  exported methods are pointer-receiver, mutex.go/rwmutex.go/
+  waitgroup.go/once.go). Frontend-only fix; the machine and the 44
+  designated statements are untouched by it.)
+  (All seven pins below PASS post-fix; the definite-no controls
+  `sync/satisfaction/assert-negative-missing` and
+  `bare-assert-missing-panics` were green throughout, and the dispatch
+  markers `sync/iface-dispatch/{mutex-user-iface,wg-user-iface,
+  locker-box-dispatch}` are permanent-until-lifted `frontend-export`
+  reds by design.)
+- Pinned-by: differential
+- Cases: sync/satisfaction/assert-ok-mutex, sync/satisfaction/type-switch-mutex, sync/satisfaction/bare-assert-mutex, sync/satisfaction/assert-ok-waitgroup, sync/satisfaction/assert-ok-once, sync/satisfaction/trylock-sig-satisfies, sync/satisfaction-locker-sig/assert-ok-rwmutex
+
+## BUG-054 — WaitGroup negative-counter panic payload carried `$runtime.Error`; gc panics with a plain string
+
+- Status: fixed (2026-08-10, spec-parity arc-end fix round: gc's sync
+  package raises the panic as PACKAGE CODE — `panic("sync: negative
+  WaitGroup counter")`, waitgroup.go:118, a plain `string` — where the
+  channel panics are `runtime.plainError`s (runtime/chan.go), for which
+  `runtimeErrorValue` is the correct modeling. The recovered value's
+  dynamic type is the observable: `recover().(string)` answers true in
+  gc, false against our `$runtime.Error` box — silent, status ok; the
+  abort TEXT is identical for both payload kinds, so the existing
+  message-only pins could not see it. FIX: `stringPanicValue` (a plain
+  `string` interface box) at the `wgAdd` arm; the channel sites keep
+  `runtimeErrorValue`. This is the only modeled sync panic — the
+  Mutex/RWMutex misuse class is `fatal`, and the waiter-side reuse
+  panic is the recorded §8 narrowing.)
+  (The pin PASSes post-fix: 1032, the 1000+len discriminator.)
+- Pinned-by: differential
+- Cases: sync/waitgroup-panic-payload/payload-is-string
+
+## BUG-055 — WaitGroup counter modeled as unbounded Int; gc's is an int32 that wraps mod 2^32 before the negative test (divergent in BOTH directions)
+
+- Status: fixed (2026-08-10, spec-parity arc-end fix round: gc keeps
+  the counter in the high 32 bits of a uint64 state word
+  (waitgroup.go:104 `wg.state.Add(uint64(delta) << 32)`, :109
+  `v := int32(state >> 32)`), so the addition wraps BEFORE the `v < 0`
+  panic test. Unbounded Int diverged both ways: `Add(1 << 31)` — gc
+  wraps to -2^31 and panics, the model proceeded silently with 2^31;
+  `Add(-(1 << 32))` — the shifted delta's high word is 0, gc's state is
+  UNCHANGED (no panic, counter 0), the model computed -2^32 < 0 and
+  fabricated the panic. FIX: `counter' = ((counter + delta + 2^31)
+  emod 2^32) - 2^31` in the `wgAdd` arm — the stored counter always
+  lies in int32 range, matching gc's bit pattern; interpreter and
+  relation move in lockstep through the shared `applySyncOp`.)
+  (Both pins PASS post-fix.)
+- Pinned-by: differential
+- Cases: sync/waitgroup-int32/add-overflow-panics, sync/waitgroup-int32/add-wrap-noop
+
 ## BUG-052 — call write-back reads target operands BEFORE the call; gc reads them after (deterministic divergence inside spec-unordered latitude)
 
 - Status: fixed (2026-08-09, spec-parity-s1 audit-fix round: the call
