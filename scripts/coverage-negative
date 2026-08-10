@@ -79,7 +79,7 @@ report_negative_pass() {
   pass_count=$((pass_count + 1))
 }
 
-while IFS=$'\t' read -r id go_dir expected_substring features extra; do
+while IFS=$'\t' read -r id go_dir expected_substring features extra || [[ -n "${id:-}" ]]; do
   if [[ -z "${id:-}" || "$id" == \#* ]]; then
     continue
   fi

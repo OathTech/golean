@@ -703,6 +703,35 @@ else
   echo "ok: pin guard fails loud, with the lean error surfaced, on an unprintable term"
 fi
 
+# --- pin GENERATOR scope-gate fixtures (scripts/gen-imported-pin) ---
+# The S6 audit's trailing-newline hole: `read` returns non-zero on a
+# final line with no terminating newline, so the scope loop silently
+# skipped that row — an authored-wrapper subject on an unterminated
+# last line passed the golean-oracle gate BY OMISSION. Both fixtures
+# run the scope gate only (it refuses before any build/emit).
+GENTMP="$TMP/gen-pin-scope"
+mkdir -p "$GENTMP/scratchcat/probeunit"
+printf 'package main\nfunc main() {}\n' > "$GENTMP/scratchcat/probeunit/main.go"
+# Authored-wrapper subject on the LAST line, NO trailing newline.
+printf '# id\tsubject\targs\texpected_status\texpected_reason\tfeatures\nok-row\tgoleanTestFine\t-\tok\t-\timported_goose\nauthored-row\ttestAuthoredWrapper\t-\tok\t-\timported_goose' \
+  > "$GENTMP/scratchcat/probeunit/cases.tsv"
+if out="$(scripts/gen-imported-pin --dir "$GENTMP/scratchcat/probeunit" 2>&1)"; then
+  echo "FAIL: gen-imported-pin ACCEPTED an authored-wrapper row hidden on an unterminated last line"; fail=1
+elif [[ "$out" != *"outside the golean-boolean-oracle convention"* ]]; then
+  echo "FAIL: gen-imported-pin refused the unterminated authored row for the wrong reason: $out"; fail=1
+else
+  echo "ok: gen-imported-pin scope gate fires on an unterminated last row (trailing-newline hole closed)"
+fi
+# Control: the same file WITH the newline refuses identically.
+printf '\n' >> "$GENTMP/scratchcat/probeunit/cases.tsv"
+if out="$(scripts/gen-imported-pin --dir "$GENTMP/scratchcat/probeunit" 2>&1)"; then
+  echo "FAIL: gen-imported-pin ACCEPTED an authored-wrapper row (newline-terminated control)"; fail=1
+elif [[ "$out" != *"outside the golean-boolean-oracle convention"* ]]; then
+  echo "FAIL: gen-imported-pin control refusal changed shape: $out"; fail=1
+else
+  echo "ok: gen-imported-pin scope gate control (terminated file) refuses identically"
+fi
+
 cleanup_dest
 if [[ "$fail" -ne 0 ]]; then
   echo "test-import-goose: FAIL"
