@@ -28,6 +28,14 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
 cd "$ROOT"
 
 PINNED_REV="3be88bbb4982f58e5813b6f0344302d5582c8e8a"
+# COVERAGE NOTE (round-4 residue): the parser vet reads only the import
+# section (parser.ImportsOnly) and this guard runs no compiler.
+# Below-marker content of landed files is covered by the VERBATIM diff
+# against the pinned upstream bytes (this script's core check) plus the
+# differential gate itself, which compiles and runs every corpus case
+# on each `ci --diff` — a landed file that stopped compiling goes red
+# there. A per-dir `go build` here was considered and NOT added (82
+# dirs of redundant compiles per gate run; recorded choice).
 # go preflight (round 4: the parser-based import vet needs the same
 # toolchain the differential oracle already requires).
 command -v go >/dev/null 2>&1 || { echo "check-imported-goose: FAIL — go not found (the import vet is go/parser-based)" >&2; exit 2; }
@@ -146,17 +154,35 @@ while IFS= read -r main_go; do
   # grant set stays inside the machine-modeled allow-set (sync).
   # Parse failure = FAIL (fail closed). go/parser is the toolchain
   # already trusted as the differential oracle — no new trust surface.
+  # SIBLING-FILE scope (round-4 residue, minor): the oracle and the
+  # frontend compile the WHOLE case dir, but the importer only ever
+  # writes main.go — so ANY other .go file in an imported-goose case
+  # dir is foreign to this lane's provenance discipline and REFUSES
+  # outright (the stricter line, recorded: multi-file packages are
+  # legitimate elsewhere in the corpus, never in this lane; a sibling
+  # would otherwise compile into the case while riding main.go's
+  # grant unvetted).
+  case_dir="$(dirname "$main_go")"
+  while IFS= read -r sib; do
+    [[ "$sib" == "$case_dir/main.go" ]] && continue
+    echo "check-imported-goose: FAIL [$rel] — foreign sibling Go file in an imported-goose case dir: $sib (the importer writes only main.go; park multi-file shapes)" >&2
+    fail=1
+  done < <(find "$case_dir" -maxdepth 1 -name '*.go' | sort)
   if ! parsed_imports="$("$LSIMPORTS" "$main_go" 2>&1)"; then
     echo "check-imported-goose: FAIL [$rel] — import parse failed (fail closed): $parsed_imports" >&2
     fail=1
     continue
   fi
   grant_line="$(sed -n 's/^\/\/ imports-allowed: \(.*\) (--allow-import)$/\1/p' "$main_go" | head -1)"
-  for a in $grant_line; do
+  # Tokenize WITHOUT glob expansion (round-4 residue note: an unquoted
+  # `for a in $grant_line` pathname-expanded a tampered `*` grant into
+  # repo filenames — fail-closed either way, but the message lied).
+  read -r -a grant_tokens <<< "$grant_line"
+  for a in ${grant_tokens[@]+"${grant_tokens[@]}"}; do
     case "$a" in
       sync) ;;
       *)
-        echo "check-imported-goose: FAIL [$rel] — grant line names \"$a\", outside the machine-modeled import set (sync)" >&2
+        echo "check-imported-goose: FAIL [$rel] — grant token \"$a\" is outside the machine-modeled import set (sync)" >&2
         fail=1
         ;;
     esac
@@ -165,7 +191,7 @@ while IFS= read -r main_go; do
   while IFS= read -r p; do
     [[ -n "$p" ]] || continue
     ok_grant=0
-    for a in $grant_line; do
+    for a in ${grant_tokens[@]+"${grant_tokens[@]}"}; do
       [[ "$p" == "$a" ]] && ok_grant=1
     done
     if [[ "$ok_grant" -ne 1 ]]; then
@@ -174,13 +200,13 @@ while IFS= read -r main_go; do
     fi
   done <<< "$parsed_imports"
   # grant ⊆ parsed (tamper/staleness direction)
-  for a in $grant_line; do
+  for a in ${grant_tokens[@]+"${grant_tokens[@]}"}; do
     found=0
     while IFS= read -r p; do
       [[ "$p" == "$a" ]] && found=1
     done <<< "$parsed_imports"
     if [[ "$found" -ne 1 ]]; then
-      echo "check-imported-goose: FAIL [$rel] — grant line names \"$a\" but the file parses no such import (stale or tampered grant)" >&2
+      echo "check-imported-goose: FAIL [$rel] — grant token \"$a\" has no matching parsed import (stale or tampered grant)" >&2
       fail=1
     fi
   done

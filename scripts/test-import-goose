@@ -255,6 +255,9 @@ func testIntShaped() uint64 {
 	return 1
 }
 EOF
+printf 'package semantics\n\nimport "sync\\n"\n\nfunc testCtlPath() bool {\n\treturn true\n}\n' \
+  > "$FAKE/testdata/examples/semantics/ctl_path.go"
+
 git -C "$FAKE" init -q
 git -C "$FAKE" -c user.email=t@t -c user.name=t add -A
 git -C "$FAKE" -c user.email=t@t -c user.name=t commit -qm fixture
@@ -447,6 +450,62 @@ elif [[ "$out" != *"stale or tampered grant"* ]]; then
   echo "FAIL: tampered-grant rejection lacked the expected message: $out"; fail=1
 else
   echo "ok: standing guard refuses a grant line with no matching parsed import (tamper direction)"
+fi
+# Round-4 residue fixtures:
+# (a) SIBLING .go file in a case dir (minor): the importer never
+# writes siblings, so their existence refuses outright in this lane.
+GUARD3="$TMP/guard-corpus/semantics/sibling"
+mkdir -p "$GUARD3"
+{
+  echo "// GoLean imported-goose corpus case — upstream bodies VERBATIM."
+  echo "// source: testdata/examples/semantics/good.go @ $REV"
+  echo "// imported: 2026-08-10 by scripts/import-goose"
+  echo "// transform: package clause -> main; assembly order as listed; all"
+  echo "// GoLean-authored code sits below the harness marker."
+  echo "package main"
+  awk '!done && /^package[ \t]/ { done=1; next } { print }' "$FAKE/testdata/examples/semantics/good.go"
+  echo ""
+  echo "// --- GoLean harness ---"
+  echo ""
+  echo "func main() {}"
+} > "$GUARD3/main.go"
+printf 'package main\n\nimport _ "os"\n\nfunc helper() int { return 1 }\n' > "$GUARD3/helper.go"
+printf '# id\tsubject\targs\texpected_status\texpected_reason\tfeatures\n' > "$GUARD3/cases.tsv"
+if out="$(scripts/check-imported-goose --corpus-root "$TMP/guard-corpus" --goose-root "$FAKE" --expect-rev "$REV" 2>&1)"; then
+  echo "FAIL: standing guard certified a case dir with a foreign sibling .go file: $out"; fail=1
+elif [[ "$out" != *"foreign sibling Go file"* ]]; then
+  echo "FAIL: sibling rejection lacked the expected message: $out"; fail=1
+else
+  echo "ok: standing guard refuses a foreign sibling .go file in the lane"
+fi
+rm -rf "$TMP/guard-corpus"
+# (b) control-character import path (note): lsimports refuses, the
+# guard fails closed on the parse error. The above-marker region is
+# the (adversarial) upstream file VERBATIM so the parser vet — which
+# runs after the verbatim diff — is the arm that fires.
+GUARD4="$TMP/guard-corpus/semantics/ctl"
+mkdir -p "$GUARD4"
+{
+  echo "// GoLean imported-goose corpus case — upstream bodies VERBATIM."
+  echo "// source: testdata/examples/semantics/ctl_path.go @ $REV"
+  echo "// imported: 2026-08-10 by scripts/import-goose"
+  echo "// transform: package clause -> main; assembly order as listed; all"
+  echo "// GoLean-authored code sits below the harness marker."
+  echo "// imports-allowed: sync (--allow-import)"
+  echo "package main"
+  awk '!done && /^package[ \t]/ { done=1; next } { print }' "$FAKE/testdata/examples/semantics/ctl_path.go"
+  echo ""
+  echo "// --- GoLean harness ---"
+  echo ""
+  echo "func main() {}"
+} > "$GUARD4/main.go"
+printf '# id\tsubject\targs\texpected_status\texpected_reason\tfeatures\n' > "$GUARD4/cases.tsv"
+if out="$(scripts/check-imported-goose --corpus-root "$TMP/guard-corpus" --goose-root "$FAKE" --expect-rev "$REV" 2>&1)"; then
+  echo "FAIL: standing guard certified a control-character import path: $out"; fail=1
+elif [[ "$out" != *"import parse failed"* ]]; then
+  echo "FAIL: control-character rejection lacked the parse-failure message: $out"; fail=1
+else
+  echo "ok: standing guard fails closed on a control-character import path (lsimports refusal)"
 fi
 rm -rf "$TMP/guard-corpus"
 
