@@ -161,3 +161,42 @@ diff; ci name-list + closure gates green throughout).
   scheduling is the user's scale call (agenda item 9's residue).
 - `GoldenSelectDone`'s literal-fuel statements — deliberate (item 1
   scope note); regeneralize only if it ever becomes a parity row.
+
+## S6 audit fix round (2026-08-10; zero critical, zero surviving
+major — every confirmed minor + surviving note kernel applied)
+
+Four commits on `spec-parity-s6` after the slice record; findings and
+verdicts in the audit task output (11 agents, verify phase per
+finding). (1) The method-set record CLASSIFIER fails closed
+(`methodSetCoverageForKind` — the inline `default: full` was the
+retired blanket-true arm relocated to the emitter, latent; unknown/
+empty kind and nameless TypeDefs now refuse the export; Go unit
+fixtures pin every known kind + the refusals). (2) The dispatch-half
+and renderer-half refusal arms PINNED (4 new MS eval pins with
+mutation-sensitivity twins — 11 MS pins total; both arms previously
+revertible past every gate). (3) The TSV read-loop trailing-newline
+hole closed at all seven tracked/hand-editable-input sites (swept
+list in the commit; gen-imported-pin fixture pair green), and the
+generator's emitted seeds now carry `methodSets` (the recorded
+divergence's forward fix; contract note §5). (4) Records truthed:
+the six certificate fuel "minima" re-measured first-hand (86/65/71/
+140/195/308 — the shipped figures were doubling-search round points;
+manifest carries the emitting command), the 69→71 remainder figure at
+five sites, new.v:9, the charter amendment's inline found-on-arrival
+correction, the D3 candidate table moved with the `dspCert` split,
+`execState_pin_eq`'s docstring, the window-argument scoping above,
+and the contract note's new §5 known-limitations (seed divergence +
+promoted-unexported re-keying).
+
+**Gate at the fix-round tip (00948a30): fresh full
+`scripts/ci --diff` PASS** — the classifier fix moves the frontend,
+so the full differential was owed and ran FIRST-HAND: `baseline diff
+FULL (1483/1483, no regression)`, NO stale marker
+(`artifacts/coverage/latest.meta.tsv`: `git_commit 00948a30`,
+`git_dirty false`, 1483 manifest cases = the full corpus;
+`manifest_sha256 5dd06a6c…`), negative lane no regression, eval tests
+136 ok (the 4 new MS pins included), every fixture suite green,
+44 designated byte-identical (no designated module in any fix-round
+commit; name-list + closure gates green). Zero drift with the
+classifier change — as predicted: its new arms are refusals on shapes
+the emitter never produces.
