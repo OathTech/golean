@@ -1124,8 +1124,12 @@ zeroing Add, before the semreleases). Precision (delta-review round
 2): gc's misuse detection moves to the WAITER (waitgroup.go:213),
 which CAN panic in the general window on other schedules; THIS shape's
 channel handoff forces the woken waiter to have resumed before the
-Adds, so gc is clean on it end-to-end (probed) — the general
-waiter-side panic is the recorded §8 narrowing. -/
+Adds — that causal claim covers W1 only; W2 (a bare Wait, not
+channel-ordered) is excluded from the panic EMPIRICALLY (the round-2
+verifier's 5400-run probe of this shape found no waiter-side panic),
+not by a forcing edge — so gc is clean on this shape end-to-end
+(probed); the general waiter-side panic is the recorded §8
+narrowing. -/
 private def syncWgReuseMainFunction : GoCore.Func := {
   id := ⟨"syncWgReuseMain_F"⟩,
   args := #[],
@@ -2248,7 +2252,8 @@ def main : IO UInt32 := do
   -- (waitgroup.go:135), so an Add issued in the wake window sees w == 0
   -- and gc's ADD side is silent; THIS shape is gc-clean end-to-end
   -- (the channel handoff resumes W1 before the Adds and HB-covers the
-  -- first-waiter sema write; the general window's WAITER-side reuse
+  -- first-waiter sema write; W2's exclusion is probed-empirical — see
+  -- the program docstring; the general window's WAITER-side reuse
   -- panic is the recorded §8 narrowing). Stream [1,1,1,1] parks both
   -- waiters before main's zeroing Done and realizes exactly that
   -- window. NON-VACUITY (checkable): at the pre-fix machine — tip

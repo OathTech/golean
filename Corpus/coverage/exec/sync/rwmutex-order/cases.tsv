@@ -7,8 +7,14 @@
 # while the model's is writer-first; the ACQUISITION-ORDER envelope
 # still contains both (the reader-first member arrives via the
 # schedules that order the acquire steps directly), which this row
-# certifies: members {10 (reader first — gc's realized point, 5/5
-# plain samples), 20 (writer first)}. Recorded as the §8 R1 entry in
-# the design note. tier=slow: certification measured 29.5s / 16.4M
-# steps (at the ~30s threshold); the certified set is tracked.
+# certifies: members {10 (reader first), 20 (writer first)} — BOTH
+# gc-witnessed (delta-review measurements: plain heavily favors 10
+# with rare 20s, 299/1 and 297/3 over 300-run batches; under -race
+# near-even, 56/64 and 58/62 — the lane's own dual sampling realizes
+# both members). Recorded as the §8 R1 entry in the design note.
+# tier=slow: certification measured 2,230,228 steps / ~26s wall at
+# these params (at the ~30s threshold; the certified set and honest
+# stats are tracked in baselines/certified/ — round 3 aligned this
+# block, which still carried the retracted 16.4M/29.5s figures and
+# the singular "gc's realized point" framing).
 acquisition	rwOrder	-	ok	-	sync,rwmutex,goroutines,channels,globals,nondet	membership	which contender acquires after main's write-unlock is schedule latitude at registry granularity (both-parked successor divergence recorded in design note §8 R1): width 4 caps the three-goroutine bounds; certified set {10,20}, members=2	width=4,sites=40,work=30000000,members=2,tier=slow
