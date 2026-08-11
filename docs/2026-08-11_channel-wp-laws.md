@@ -673,6 +673,19 @@ pinned checkout; their new channel library).
   line (choice: WARN, not fail — the tight loop legitimately records
   dirty mid-iteration runs; handoff-quality claims must cite a
   clean-tree record; reason recorded at the ci site too).
+- **Fix G — the clean differential record** (finding C1's re-run
+  half): full `GOLEAN_MEM_MAX=48G scripts/ci --diff` at the fix
+  round's tip 403e2356, COMMITTED CLEAN TREE — the artifact's own
+  meta now reads `git_commit 403e2356`, `git_dirty false`,
+  `manifest_cases 1483`. **RESULT: PASS — baseline diff FULL
+  (1483/1483, no regression), negative lane 311 no regression, all
+  gates green** (incl. the new completion-pin gate and the dirty-meta
+  marker path, which this clean record does not trip). This entry
+  lands as a DOC-ONLY commit directly on top of 403e2356 (the
+  established S4-precedent discipline: the run's meta names its
+  commit; the recording commit changes no differential surface — the
+  branch's only non-doc, non-proofs file remains scripts/ci itself,
+  whose change is the reporting marker above).
 
 ## 10. The TCB-grounding walk (retrofit, S1 audit fix round — the
 ## per-slice review criterion from here on)
