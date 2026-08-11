@@ -41,8 +41,6 @@ import GoLeanProofs.Specs.GoldenSelectDone
 import GoLeanProofs.Specs.ChanRendezvous
 import GoLeanProofs.Specs.ChanCloseProbe
 import GoLeanProofs.Specs.ChanVacuityWarning
-import GoLeanProofs.Specs.ZzVacuityGateFixtures
-import GoLeanProofs.CompletionManifest
 import GoLeanProofs.Specs.ImportedGooseBlock
 import GoLeanProofs.Specs.ImportedGooseDefer
 import GoLeanProofs.Specs.ImportedGooseNil

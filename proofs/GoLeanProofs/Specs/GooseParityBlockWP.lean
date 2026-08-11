@@ -202,17 +202,17 @@ theorem explicitBlockTotalReadout :
     (by exact blockTerminates)
 
 /-- The POOL-carrier ∃-completion member for `explicitBlockSpecC`
-(channel-logic S1 audit round 2 — the completion-pin gate's pin for
-this row's program; sequential completion lifted by conservation). -/
+(the D1-BOTH convention's pool-carrier ∃-completion member for this
+row's `GoSpecC` export; sequential completion lifted by
+conservation). -/
 theorem explicitBlockTerminatesNormallyC :
     TerminatesNormallyC importedEnv (importedSeed blockLowered) explicitBlockDriver :=
   goSpec_seeded_terminatesNormallyC explicitBlockSpec (by decide +kernel)
     (by exact blockTerminates)
 
-/-- The SEQUENTIAL-carrier completion pin for `explicitBlockSpec` (gen-5
-manifest round: the completion half of the row's `TotalReadout`,
-projected — the named seq pin the completion manifest pairs the
-sequential export against). -/
+/-- The D1 convention's SEQUENTIAL-carrier completion member for `explicitBlockSpec` — the
+completion half of the row's `TotalReadout`, projected as a named
+theorem. -/
 theorem explicitBlockTerminatesNormally :
     TerminatesNormally importedEnv (importedSeed blockLowered) explicitBlockDriver := by
   obtain ⟨N, h⟩ := explicitBlockTotalReadout

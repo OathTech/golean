@@ -654,6 +654,12 @@ pinned checkout; their new channel library).
 ## 9. S1 audit fix round (2026-08-11; 1 confirmed major, 1 downgraded
 ## minor with confirmed core, 2 confirmed minors, notes)
 
+[§§9-15 below are kept in full as THE RECORDED LESSON of the gate
+arms race — six adversarial review generations against successive
+completion-gate mechanisms, each finding an escape. The user ruling
+that ended it, and the cleanup that followed, are §16. Nothing below
+describes current machinery except where §16 says so.]
+
 - **Fix A — THE MAJOR (the nil-park/vacuity story).** §3's nil-channel
   paragraph rewritten to the truth (see it for the full account); the
   protection story restated per the TCB-grounding principle (user
@@ -746,20 +752,16 @@ none of it appears in any exported statement (the statements above
 mention only `execProg`/`loadLoc`/`GoTripleC`/`TerminatesNormallyC`,
 all interpreter-vocabulary surface definitions), and the differential
 (§11) plus the kernel certificates are what ground the interpreter
-itself. The completion gate (RESTRUCTURED to the generated-manifest form at
-gen 5 — §15): the checker only ENUMERATES (full key tuples, incl.
-types/funcs/methods, plus each pin's full seed tuple), and
-`CompletionManifest.lean` is the reviewed record every dump line must
-match. RECORDED LIMITS, all of them (the manifest docstring is the
-canonical list): `paired-exact`'s mechanical floor is (env₀, prog)
-equality — seed-vs-(types,funcs,methods) agreement AND
-seed-vs-precondition satisfaction are REVIEWED via the visible
-tuples, not machine-verified; dispositions are reviewed prose;
-`_private` declarations are out of scope by design (tracked
-fixture); the compat/gobra import of Surface is a watched surface.
-Pre-side vacuity stays exactly where this table puts it — in the
-witness discipline (each readout row discharges its `InitialSplit`
-at the pin's own seed).
+itself. The D1-BOTH convention (triple + completion pin ship together) is
+held BY REVIEW — the audit dimension checks it per slice — not by a
+build gate (user ruling 2026-08-11, §16: gates are speedbumps
+against honest mistakes; adversarial-grade gate certainty is neither
+reachable nor needed). One dumb speedbump remains in `Audit.lean` (a
+`Chan*` Specs module with a `*TripleC`-named theorem should have a
+`*TerminatesNormallyC`-named one; trivially evadable by design, with
+the threat-model comment saying so). Pre-side vacuity stays exactly
+where this table puts it — in the witness discipline (each readout
+row discharges its `InitialSplit` at the pin's own seed).
 The matching charter addendum makes this walk a per-slice review
 criterion for the rest of the arc.
 
@@ -1136,3 +1138,57 @@ restructure landed instead:
   designated, byte-identical; audit sweep 13589 declarations
   axiom-clean. Doc-only record commit over the run's own commit, per
   the established discipline.
+
+## 16. THE CLEANUP ROUND — user ruling ends the gate arms race
+## (2026-08-11)
+
+**USER RULING (recorded):** the gate arms race was an antipattern —
+adversarial-grade certainty is neither reachable nor needed for a
+deterrent. NEW STANDING DOCTRINE: gates are SPEEDBUMPS against honest
+mistakes unless they guard the TCB; they are reviewed for
+simplicity/robustness ("does it catch the honest mistake, could we
+delete it"), never for adversarial escape; adversarial review stays
+reserved for semantics, claims, and records. Ruthless deletion of
+fragile gate cruft is the default.
+
+**DELETED** (this round, ~940 lines):
+- `CompletionManifest.lean` (343 lines — all 67 reviewed lines) and
+  the manifest diff gate;
+- the semantic classifier, reverse-BFS, per-shape verdict rules,
+  mutation triggers, same-module and denylist assertions — the whole
+  gate section's machinery in `Audit.lean` (~510 lines across its
+  generations);
+- all 16 gate-attack fixtures + 4 satellites
+  (`ZzVacuityGateFixtures.lean`, 237 lines;
+  `ZzGateFixtureSupport.lean`, 45 lines) and their Audit
+  registrations. (Discovered during cleanup, recorded: the gen-5
+  gate-replacement edit had already unintentionally swept the
+  round-3/4 fixture registrations along with the old gate section —
+  invisible because the exhaustive axiom sweep still covered the
+  constants and a lost `#guard_msgs` block cannot fail a build. An
+  instance of exactly the fragility the ruling names.)
+
+**KEPT:**
+- `Specs/ChanVacuityWarning.lean`'s educational core —
+  `deadlockRecvTripleC` + `deadlockRecvDeadlocks`(+`Adv`) + the
+  nil-park/cross-channel envelope lemmas: the permanent demonstration
+  that a triple without its completion pin claims nothing. Docstrings
+  trimmed of gate references; it teaches, it does not guard.
+- The ELEVEN pool-carrier and TEN sequential completion pins — they
+  are genuine theorems with standalone value (the D1-BOTH
+  convention's ∃-completion members); their docstrings re-homed to
+  the convention, not to any gate.
+- ONE dumb speedbump in `Audit.lean` (~30 lines, name-based,
+  module-scoped: a `Specs.Chan*` module with a `*TripleC`-named
+  theorem should have a `*TerminatesNormallyC`-named one;
+  `ChanVacuityWarning` excluded by name — its point is the missing
+  pin) carrying the DO-NOT-HARDEN threat-model comment verbatim.
+- The D1-BOTH convention as a REVIEW item (audit dimension), stated
+  here and in the charter; no build gate enforces it.
+- §§8-15 in full, as the recorded lesson.
+
+**Gate figures at the cleanup tip**: audit job/declaration count
+SHRANK as expected (sweep 13589 → 13531 declarations — the deleted
+fixture modules); speedbump green (2 `Chan*` modules with triples,
+both pinned); statement-TCB 48 byte-identical; full differential
+re-run at the tip (entry below).

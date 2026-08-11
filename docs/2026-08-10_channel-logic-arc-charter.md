@@ -186,6 +186,33 @@ concurrent program exists for its shape — the executable differential
 remains the arc's distinguishing check, and a law that cannot be
 exercised by any runnable program is a red flag on its own.
 
+## Addendum (2026-08-11, user ruling): the gate-review standard
+
+Gates are SPEEDBUMPS against honest mistakes unless they guard the
+TCB. They get reviewed for simplicity and robustness ("does it catch
+the honest mistake; could we delete it"), never for adversarial
+escape; adversarial review is reserved for SEMANTICS, CLAIMS, and
+RECORDS. Ruthless deletion of fragile gate cruft is the default
+response to gate complexity. (Context: the S1 completion-gate arms
+race, six adversarial generations each finding an escape — slice note
+§§8-16 is the recorded lesson.)
+
+QUEUED for the arc-end merge window (user-approved 2026-08-11): a
+CLAUDE.md amendment to the same effect. Draft text, so the merge
+window just lifts it:
+
+    ## Gates are speedbumps (2026-08-11)
+    A gate that does not guard the TCB is a SPEEDBUMP against honest
+    mistakes, not a barrier: review it for simplicity and robustness
+    ("does it catch the honest mistake, could we delete it"), never
+    for adversarial escape — escapes always exist, and hardening
+    invites an arms race (the recorded lesson:
+    docs/2026-08-11_channel-wp-laws.md §§8-16). Adversarial review is
+    reserved for semantics, claims, and records. Default response to
+    fragile gate complexity: delete it. TCB-guarding gates (the axiom
+    sweep, the statement-TCB closure, baseline pinning) keep their
+    stricter standard.
+
 ## Addendum (2026-08-11, S1 audit fix round — user doctrine): the
 ## TCB-grounding walk is a per-slice review criterion
 
@@ -201,19 +228,14 @@ and every exported triple-carrying constant (`GoTripleC`, `GoSpecC`,
 or anything whose type closure reaches them) across ALL
 `GoLeanProofs.Specs.*` modules carries a `TerminatesNormallyC`
 ∃-completion member FOR ITS PROGRAM, enforced by the completion-pin
-gate — RESTRUCTURED at gen 5 to the GENERATED-MANIFEST form after
-five review generations broke successive per-shape rule sets
-(Audit.lean + CompletionManifest.lean): the checker only ENUMERATES
-(exhaustive `ConstantInfo` walk + reverse-BFS, full key tuples incl.
-types/funcs/methods, sequential carriers included, each pin's full
-seed tuple), and the tracked manifest is the reviewed record — drift
-fails the build until a human-reviewed line lands in the same commit
-(the re-pin discipline). RECORDED LIMITS (complete list in the
-manifest docstring): `paired-exact` mechanically floors only
-(env₀, prog) equality — seed-vs-(types,funcs,methods) and
-seed-vs-precondition agreement are REVIEWED via the visible tuples,
-not machine-verified; dispositions are reviewed prose; pre-side
-vacuity remains the witness discipline's job (the D1 readout pair). Run-conditioned triples ALONE anchor nothing (the
+convention — HELD BY REVIEW, not by a build gate (user ruling
+2026-08-11, which ended the six-generation gate arms race recorded in
+the slice note §§8-16): the audit dimension reviews, per slice, that
+every exported triple-carrying statement ships with its ∃-completion
+member and honest key/seed agreement. One dumb name-based speedbump
+remains in Audit.lean (threat-model comment at the site: trivially
+evadable by design, DO NOT HARDEN). Pre-side vacuity remains the
+witness discipline's job (the D1 readout pair). Run-conditioned triples ALONE anchor nothing (the
 permanent demonstration: Specs/ChanVacuityWarning.lean); the
 sub-branch audits review the walk as a standing dimension.
 

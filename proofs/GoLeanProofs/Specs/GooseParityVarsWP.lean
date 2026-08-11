@@ -168,17 +168,17 @@ theorem pointerAssignmentTotalReadout :
     (by exact testPointerAssignmentTerminates)
 
 /-- The POOL-carrier ∃-completion member for `pointerAssignmentSpecC`
-(channel-logic S1 audit round 2 — the completion-pin gate's pin for
-this row's program; sequential completion lifted by conservation). -/
+(the D1-BOTH convention's pool-carrier ∃-completion member for this
+row's `GoSpecC` export; sequential completion lifted by
+conservation). -/
 theorem pointerAssignmentTerminatesNormallyC :
     TerminatesNormallyC importedEnv (importedSeed varsLowered) pointerAssignmentDriver :=
   goSpec_seeded_terminatesNormallyC pointerAssignmentSpec (by decide +kernel)
     (by exact testPointerAssignmentTerminates)
 
-/-- The SEQUENTIAL-carrier completion pin for `pointerAssignmentSpec` (gen-5
-manifest round: the completion half of the row's `TotalReadout`,
-projected — the named seq pin the completion manifest pairs the
-sequential export against). -/
+/-- The D1 convention's SEQUENTIAL-carrier completion member for `pointerAssignmentSpec` — the
+completion half of the row's `TotalReadout`, projected as a named
+theorem. -/
 theorem pointerAssignmentTerminatesNormally :
     TerminatesNormally importedEnv (importedSeed varsLowered) pointerAssignmentDriver := by
   obtain ⟨N, h⟩ := pointerAssignmentTotalReadout
@@ -319,17 +319,17 @@ theorem anonymousAssignTotalReadout :
     (by exact testAnonymousAssignTerminates)
 
 /-- The POOL-carrier ∃-completion member for `anonymousAssignSpecC`
-(channel-logic S1 audit round 2 — the completion-pin gate's pin for
-this row's program; sequential completion lifted by conservation). -/
+(the D1-BOTH convention's pool-carrier ∃-completion member for this
+row's `GoSpecC` export; sequential completion lifted by
+conservation). -/
 theorem anonymousAssignTerminatesNormallyC :
     TerminatesNormallyC importedEnv (importedSeed varsLowered) anonymousAssignDriver :=
   goSpec_seeded_terminatesNormallyC anonymousAssignSpec (by decide +kernel)
     (by exact testAnonymousAssignTerminates)
 
-/-- The SEQUENTIAL-carrier completion pin for `anonymousAssignSpec` (gen-5
-manifest round: the completion half of the row's `TotalReadout`,
-projected — the named seq pin the completion manifest pairs the
-sequential export against). -/
+/-- The D1 convention's SEQUENTIAL-carrier completion member for `anonymousAssignSpec` — the
+completion half of the row's `TotalReadout`, projected as a named
+theorem. -/
 theorem anonymousAssignTerminatesNormally :
     TerminatesNormally importedEnv (importedSeed varsLowered) anonymousAssignDriver := by
   obtain ⟨N, h⟩ := anonymousAssignTotalReadout

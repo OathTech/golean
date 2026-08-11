@@ -40,7 +40,8 @@ demonstrates, permanently:
 
 Provenance: the S1 audit verifier's reproductions (probes B/C and
 V1a/V1b, rebuilt independently of the reviewer's files); committed as
-tracked fixtures at the operator's direction.
+the permanent educational record at the operator's direction. It
+teaches; it does not guard.
 -/
 
 open Iris Iris.ProgramLogic Iris.Std Iris.Std.PartialMap
@@ -185,7 +186,8 @@ end
 /-- **THE VACUOUS TRIPLE** — true, axiom-identical to the real
 exemplars, and compatible with a program that never completes
 (`deadlockRecvDeadlocks`). The reason exported channel triples ship
-ONLY inside a bundle with their completion pin (the Audit gate). -/
+inside a bundle with their completion pin (the D1-BOTH convention,
+held by review). -/
 theorem deadlockRecvTripleC :
     GoTripleC [] #[] #[] deadlockRecvEnv deadlockRecvPre deadlockRecvProg
       deadlockRecvPost :=

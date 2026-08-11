@@ -149,9 +149,8 @@ theorem goldenTerminatesNormally :
   exact terminatesNormally_of_progressExec
     (InitialSplit.noFrame hsat (by decide +kernel)) hspec.2 goldenTerminates
 
-/-- The POOL-carrier ∃-completion member for `goldenSpecC`
-(channel-logic S1 audit round 2 — the completion-pin gate's pin for
-the golden driver; sequential completion lifted by conservation). -/
+/-- The POOL-carrier ∃-completion member for `goldenSpecC` (the
+D1-BOTH convention; sequential completion lifted by conservation). -/
 theorem goldenTerminatesNormallyC :
     TerminatesNormallyC outEnv goldenOut goldenDriver :=
   terminatesNormallyC_of_terminatesNormally goldenTerminatesNormally

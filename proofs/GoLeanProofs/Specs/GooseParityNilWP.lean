@@ -540,8 +540,9 @@ theorem compareNilToNilTotalReadout :
     (by exact testCompareNilToNilTerminates)
 
 /-- The POOL-carrier ∃-completion member for `compareNilToNilSpecC`
-(channel-logic S1 audit round 2 — the completion-pin gate's pin for
-this row's program; sequential completion lifted by conservation). -/
+(the D1-BOTH convention's pool-carrier ∃-completion member for this
+row's `GoSpecC` export; sequential completion lifted by
+conservation). -/
 theorem compareNilToNilTerminatesNormallyC :
     TerminatesNormallyC importedEnv (importedSeed nilLowered) compareNilDriver :=
   goSpec_seeded_terminatesNormallyC compareNilToNilSpec (by decide +kernel)
@@ -726,17 +727,17 @@ theorem compareSliceToNilTotalReadout :
     (by exact testCompareSliceToNilTerminates)
 
 /-- The POOL-carrier ∃-completion member for `compareSliceToNilSpecC`
-(channel-logic S1 audit round 2 — the completion-pin gate's pin for
-this row's program; sequential completion lifted by conservation). -/
+(the D1-BOTH convention's pool-carrier ∃-completion member for this
+row's `GoSpecC` export; sequential completion lifted by
+conservation). -/
 theorem compareSliceToNilTerminatesNormallyC :
     TerminatesNormallyC importedEnv (importedSeed nilLowered) compareSliceDriver :=
   goSpec_seeded_terminatesNormallyC compareSliceToNilSpec (by decide +kernel)
     (by exact testCompareSliceToNilTerminates)
 
-/-- The SEQUENTIAL-carrier completion pin for `compareSliceToNilSpec` (gen-5
-manifest round: the completion half of the row's `TotalReadout`,
-projected — the named seq pin the completion manifest pairs the
-sequential export against). -/
+/-- The D1 convention's SEQUENTIAL-carrier completion member for `compareSliceToNilSpec` — the
+completion half of the row's `TotalReadout`, projected as a named
+theorem. -/
 theorem compareSliceToNilTerminatesNormally :
     TerminatesNormally importedEnv (importedSeed nilLowered) compareSliceDriver := by
   obtain ⟨N, h⟩ := compareSliceToNilTotalReadout
@@ -892,17 +893,17 @@ theorem comparePointerToNilTotalReadout :
     (by exact testComparePointerToNilTerminates)
 
 /-- The POOL-carrier ∃-completion member for `comparePointerToNilSpecC`
-(channel-logic S1 audit round 2 — the completion-pin gate's pin for
-this row's program; sequential completion lifted by conservation). -/
+(the D1-BOTH convention's pool-carrier ∃-completion member for this
+row's `GoSpecC` export; sequential completion lifted by
+conservation). -/
 theorem comparePointerToNilTerminatesNormallyC :
     TerminatesNormallyC importedEnv (importedSeed nilLowered) comparePointerDriver :=
   goSpec_seeded_terminatesNormallyC comparePointerToNilSpec (by decide +kernel)
     (by exact testComparePointerToNilTerminates)
 
-/-- The SEQUENTIAL-carrier completion pin for `comparePointerToNilSpec` (gen-5
-manifest round: the completion half of the row's `TotalReadout`,
-projected — the named seq pin the completion manifest pairs the
-sequential export against). -/
+/-- The D1 convention's SEQUENTIAL-carrier completion member for `comparePointerToNilSpec` — the
+completion half of the row's `TotalReadout`, projected as a named
+theorem. -/
 theorem comparePointerToNilTerminatesNormally :
     TerminatesNormally importedEnv (importedSeed nilLowered) comparePointerDriver := by
   obtain ⟨N, h⟩ := comparePointerToNilTotalReadout
@@ -1069,17 +1070,17 @@ theorem comparePointerWrappedToNilTotalReadout :
     (by exact testComparePointerWrappedToNilTerminates)
 
 /-- The POOL-carrier ∃-completion member for `comparePointerWrappedToNilSpecC`
-(channel-logic S1 audit round 2 — the completion-pin gate's pin for
-this row's program; sequential completion lifted by conservation). -/
+(the D1-BOTH convention's pool-carrier ∃-completion member for this
+row's `GoSpecC` export; sequential completion lifted by
+conservation). -/
 theorem comparePointerWrappedToNilTerminatesNormallyC :
     TerminatesNormallyC importedEnv (importedSeed nilLowered) compareWrappedDriver :=
   goSpec_seeded_terminatesNormallyC comparePointerWrappedToNilSpec (by decide +kernel)
     (by exact testComparePointerWrappedToNilTerminates)
 
-/-- The SEQUENTIAL-carrier completion pin for `comparePointerWrappedToNilSpec` (gen-5
-manifest round: the completion half of the row's `TotalReadout`,
-projected — the named seq pin the completion manifest pairs the
-sequential export against). -/
+/-- The D1 convention's SEQUENTIAL-carrier completion member for `comparePointerWrappedToNilSpec` — the
+completion half of the row's `TotalReadout`, projected as a named
+theorem. -/
 theorem comparePointerWrappedToNilTerminatesNormally :
     TerminatesNormally importedEnv (importedSeed nilLowered) compareWrappedDriver := by
   obtain ⟨N, h⟩ := comparePointerWrappedToNilTotalReadout
@@ -1221,17 +1222,17 @@ theorem comparePointerWrappedDefaultToNilTotalReadout :
     (by exact testComparePointerWrappedDefaultToNilTerminates)
 
 /-- The POOL-carrier ∃-completion member for `comparePointerWrappedDefaultToNilSpecC`
-(channel-logic S1 audit round 2 — the completion-pin gate's pin for
-this row's program; sequential completion lifted by conservation). -/
+(the D1-BOTH convention's pool-carrier ∃-completion member for this
+row's `GoSpecC` export; sequential completion lifted by
+conservation). -/
 theorem comparePointerWrappedDefaultToNilTerminatesNormallyC :
     TerminatesNormallyC importedEnv (importedSeed nilLowered) compareWrappedDefaultDriver :=
   goSpec_seeded_terminatesNormallyC comparePointerWrappedDefaultToNilSpec (by decide +kernel)
     (by exact testComparePointerWrappedDefaultToNilTerminates)
 
-/-- The SEQUENTIAL-carrier completion pin for `comparePointerWrappedDefaultToNilSpec` (gen-5
-manifest round: the completion half of the row's `TotalReadout`,
-projected — the named seq pin the completion manifest pairs the
-sequential export against). -/
+/-- The D1 convention's SEQUENTIAL-carrier completion member for `comparePointerWrappedDefaultToNilSpec` — the
+completion half of the row's `TotalReadout`, projected as a named
+theorem. -/
 theorem comparePointerWrappedDefaultToNilTerminatesNormally :
     TerminatesNormally importedEnv (importedSeed nilLowered) compareWrappedDefaultDriver := by
   obtain ⟨N, h⟩ := comparePointerWrappedDefaultToNilTotalReadout

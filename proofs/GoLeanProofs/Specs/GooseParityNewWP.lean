@@ -189,17 +189,17 @@ theorem nilDefaultTotalReadout :
     (by exact testNilDefaultTerminates)
 
 /-- The POOL-carrier ∃-completion member for `nilDefaultSpecC`
-(channel-logic S1 audit round 2 — the completion-pin gate's pin for
-this row's program; sequential completion lifted by conservation). -/
+(the D1-BOTH convention's pool-carrier ∃-completion member for this
+row's `GoSpecC` export; sequential completion lifted by
+conservation). -/
 theorem nilDefaultTerminatesNormallyC :
     TerminatesNormallyC importedEnv (importedSeed newLowered) nilDefaultDriver :=
   goSpec_seeded_terminatesNormallyC nilDefaultSpec (by decide +kernel)
     (by exact testNilDefaultTerminates)
 
-/-- The SEQUENTIAL-carrier completion pin for `nilDefaultSpec` (gen-5
-manifest round: the completion half of the row's `TotalReadout`,
-projected — the named seq pin the completion manifest pairs the
-sequential export against). -/
+/-- The D1 convention's SEQUENTIAL-carrier completion member for `nilDefaultSpec` — the
+completion half of the row's `TotalReadout`, projected as a named
+theorem. -/
 theorem nilDefaultTerminatesNormally :
     TerminatesNormally importedEnv (importedSeed newLowered) nilDefaultDriver := by
   obtain ⟨N, h⟩ := nilDefaultTotalReadout
@@ -356,17 +356,17 @@ theorem nilValTotalReadout :
     (by exact testNilValTerminates)
 
 /-- The POOL-carrier ∃-completion member for `nilValSpecC`
-(channel-logic S1 audit round 2 — the completion-pin gate's pin for
-this row's program; sequential completion lifted by conservation). -/
+(the D1-BOTH convention's pool-carrier ∃-completion member for this
+row's `GoSpecC` export; sequential completion lifted by
+conservation). -/
 theorem nilValTerminatesNormallyC :
     TerminatesNormallyC importedEnv (importedSeed newLowered) nilValDriver :=
   goSpec_seeded_terminatesNormallyC nilValSpec (by decide +kernel)
     (by exact testNilValTerminates)
 
-/-- The SEQUENTIAL-carrier completion pin for `nilValSpec` (gen-5
-manifest round: the completion half of the row's `TotalReadout`,
-projected — the named seq pin the completion manifest pairs the
-sequential export against). -/
+/-- The D1 convention's SEQUENTIAL-carrier completion member for `nilValSpec` — the
+completion half of the row's `TotalReadout`, projected as a named
+theorem. -/
 theorem nilValTerminatesNormally :
     TerminatesNormally importedEnv (importedSeed newLowered) nilValDriver := by
   obtain ⟨N, h⟩ := nilValTotalReadout

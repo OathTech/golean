@@ -455,13 +455,13 @@ theorem goSpec_seeded_totalReadout {p : Program} {prog : Stmt} {v : Int}
   exact ⟨σf, ch', hrun,
     goSpec_seeded_readout hspec hwf fuel ch σf ch' hrun⟩
 
-/-- **The seeded POOL-carrier completion pin** (channel-logic S1 audit
-round 2 — the completion-pin gate's pin class, for the sequential
-class-1 rows): same premises as `goSpec_seeded_totalReadout`,
-conclusion `TerminatesNormallyC` at the same seed — the sequential
-completion lifted by `terminatesNormallyC_of_terminatesNormally`
-(conservation). One call per row makes every `GoSpecC` export carry
-its ∃-completion member on the judgment's own carrier. -/
+/-- **The seeded POOL-carrier completion pin** (the D1-BOTH
+convention's ∃-completion member, for the sequential class-1 rows):
+same premises as `goSpec_seeded_totalReadout`, conclusion
+`TerminatesNormallyC` at the same seed — the sequential completion
+lifted by `terminatesNormallyC_of_terminatesNormally` (conservation).
+One call per row gives every `GoSpecC` export its ∃-completion member
+on the judgment's own carrier. -/
 theorem goSpec_seeded_terminatesNormallyC {p : Program} {prog : Stmt}
     {v : Int}
     (hspec : GoSpec p.typeDefs.toList p.funcs p.methods importedEnv
