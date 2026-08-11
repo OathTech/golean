@@ -597,6 +597,24 @@ open Lean in
 #guard_msgs in #print axioms GoLean.Iris.spawnNoopReadoutC
 /-- info: 'GoLean.Iris.spawnNoopAllStreamsCert' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Iris.spawnNoopAllStreamsCert
+-- P-S4-1 PAID (channel-logic slice 2, Specs/SpawnNoopProgress.lean):
+-- ProgressExecC at FULL InitialSplit strength for the spawning
+-- witness — an interpreter-side invariant induction over the
+-- heap-blind stage family (no Iris, no kernel enumeration; the S4
+-- note §9's owed safety half) — and the assembled spawnNoopSpecC
+-- (GoSpecC = GoTripleC ∧ ProgressExecC), the debt's full form.
+-- spawnNoopPoolProgress is the same fact in interpreter vocabulary
+-- alone, at the CONSTRUCTIVE set (the ProgressExecC form inherits
+-- Classical.choice from the surface STATEMENT vocabulary —
+-- InitialSplit/sat/heapletOf over PartialMap — not from this proof).
+-- Name-existence tripwire as everywhere in this file.
+/-- info: 'GoLean.Iris.spawnNoopPoolProgress' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.spawnNoopPoolProgress
+/-- info: 'GoLean.Iris.spawnNoopProgressC' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.spawnNoopProgressC
+/-- info: 'GoLean.Iris.spawnNoopSpecC' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.spawnNoopSpecC
+
 /-- info: 'GoLean.Iris.spawnNoopTerminatesNormallyC' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Iris.spawnNoopTerminatesNormallyC
 /-- info: 'GoLean.Iris.poolStepD_at' depends on axioms: [propext, Quot.sound] -/
