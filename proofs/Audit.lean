@@ -179,8 +179,12 @@ open Lean in
      `GoLean.GoCore.Machine.StepsMFine,
      -- Channel-logic S4: the boundary-switched fine closure (the
      -- coarse/fine characterization's run carrier) — proof
-     -- infrastructure exactly like its siblings.
+     -- infrastructure exactly like its siblings — and (fix round) the
+     -- BoundarySwitch predicate itself (the audit's TCB-walk finding:
+     -- the walk claimed blanket forbidden-set membership for the new
+     -- carriers, and this one was missing).
      `GoLean.GoCore.Machine.StepsMFineBS,
+     `GoLean.GoCore.Machine.BoundarySwitch,
      -- Channels arc slice 5: the CONCURRENT Iris Language's per-thread
      -- relation (LangC.lean) — proof infrastructure like its siblings;
      -- it lives in a GoLeanProofs module (module-of-origin cannot flag
@@ -473,10 +477,26 @@ open Lean in
 #guard_msgs in #print axioms GoLean.GoCore.Machine.stepsM_iff_fine_bs
 /-- info: 'GoLean.GoCore.Machine.reachesMFine_iff_reachesM_single' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.GoCore.Machine.reachesMFine_iff_reachesM_single
-/-- info: 'GoLean.GoCore.Machine.npdrfClassReduction_single_fragment' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in #print axioms GoLean.GoCore.Machine.npdrfClassReduction_single_fragment
+/-- info: 'GoLean.GoCore.Machine.npdrfClassReductionRooted_single_fragment' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.GoCore.Machine.npdrfClassReductionRooted_single_fragment
 /-- info: 'GoLean.GoCore.Machine.fragment_witness_iff' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.GoCore.Machine.fragment_witness_iff
+
+-- S4 audit fix round: the refutation of the fix's FIRST corrected
+-- attempt (obstruction 7, the schedPick/cur asymmetry — ported from
+-- the audit's smallest counterexample), the negative checks that every
+-- exhibited counterexample family fails the REPAIRED premises, and the
+-- stepping fragment witness (the weak-witness note discharged).
+/-- info: 'GoLean.GoCore.Machine.NPDRFClassReduction_refuted' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.GoCore.Machine.NPDRFClassReduction_refuted
+/-- info: 'GoLean.GoCore.Machine.m0_fails_rooted' does not depend on any axioms -/
+#guard_msgs in #print axioms GoLean.GoCore.Machine.m0_fails_rooted
+/-- info: 'GoLean.GoCore.Machine.q0_fails_rooted' does not depend on any axioms -/
+#guard_msgs in #print axioms GoLean.GoCore.Machine.q0_fails_rooted
+/-- info: 'GoLean.GoCore.Machine.wedgedPairRep_fails_rooted' does not depend on any axioms -/
+#guard_msgs in #print axioms GoLean.GoCore.Machine.wedgedPairRep_fails_rooted
+/-- info: 'GoLean.GoCore.Machine.stepping_witness_iff' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.GoCore.Machine.stepping_witness_iff
 
 -- The fork/join pool kernel witnesses (pinned streams; slice 2).
 /-- info: 'GoLean.Surface.forkJoinStreamCanonical' depends on axioms: [propext, Quot.sound] -/
@@ -1677,17 +1697,21 @@ example := @GoLean.GoCore.Machine.applyPairing_wf
 example := @GoLean.GoCore.Machine.resumeThread_wf
 example := @GoLean.GoCore.Machine.spawnStep_wf
 example := @GoLean.GoCore.Machine.stepThread_wf
--- The NPDRF statement layer, SETTLED at channel-logic S4 (binding
--- design note docs/2026-08-11_npdrf-reduction.md): the draft
--- `NPDRFReduction` is REFUTED BY THEOREM (`NPDRFReduction_refuted`,
--- kept as the record — nothing may cite the draft except the
--- refutation); `NPDRFClassReduction` is the corrected citable target
--- (scaffold — a Prop-valued definition claimed by no theorem; its
--- proved instance class is the never-spawning fragment). Deletion/
--- rename anchors so neither the refutation nor the open target can
--- silently drift.
+-- The NPDRF statement layer, SETTLED at channel-logic S4 + audit fix
+-- round (binding design note docs/2026-08-11_npdrf-reduction.md): the
+-- draft `NPDRFReduction` AND the fix's first corrected attempt
+-- `NPDRFClassReduction` are both REFUTED BY THEOREM
+-- (`NPDRFReduction_refuted`, `NPDRFClassReduction_refuted` — kept as
+-- records; nothing may cite either except its refutation);
+-- `NPDRFClassReductionRooted` is the repaired citable target
+-- (scaffold — a Prop-valued definition claimed by no theorem, its
+-- known-mechanism negative checks machine-checked; its proved
+-- instance class is the single-threaded-throughout fragment).
+-- Deletion/rename anchors so neither the refutations nor the open
+-- target can silently drift.
 example := @GoLean.GoCore.Machine.NPDRFReduction
 example := @GoLean.GoCore.Machine.NPDRFClassReduction
+example := @GoLean.GoCore.Machine.NPDRFClassReductionRooted
 example := @GoLean.GoCore.Machine.PoolResult.sameClass
 example := @GoLean.GoCore.Machine.BoundarySwitch
 example := @GoLean.GoCore.Machine.RacyFine

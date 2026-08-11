@@ -33,8 +33,10 @@ proof debt's STATEMENT layer and its first mover lemmas:
   `Prop`-valued definition, deliberately not a theorem — and REFUTED,
   machine-checked, at slice channel-logic S4: `NPDRFReduction_refuted`
   below formalizes obstruction 4's counterexample class; the corrected
-  statement is `NPDRFClassReduction` per the binding design note
-  `docs/2026-08-11_npdrf-reduction.md`).
+  statement — REVISED at the S4 audit fix round after the first
+  attempt `NPDRFClassReduction` was itself refuted (obstruction 7) —
+  is `NPDRFClassReductionRooted`, per the binding design note
+  `docs/2026-08-11_npdrf-reduction.md` §4).
 * the representative BOTH-MOVER lemmas (`storeLoc_root_frame`,
   `loadLoc_after_disjoint_store`) — the CROSS-ROOT half of the
   commutation core (obstruction 6 records the unproved same-root
@@ -48,8 +50,9 @@ of what was refuted — `NPDRFReduction_refuted` (channel-logic S4) is
 the machine-checked counterexample, so nothing may cite the draft
 except that refutation. The reviewed weakening decision it waited for
 is taken: `docs/2026-08-11_npdrf-reduction.md` §4 fixes the corrected
-class-level statement (`NPDRFClassReduction`). It is a `def`, not an
-axiom and not a `sorry`. The mover lemmas below ARE proved and non-vacuous on their
+class-level statement (`NPDRFClassReductionRooted`, after the audit
+refuted the fix's first attempt — obstruction 7). It is a `def`, not
+an axiom and not a `sorry`. The mover lemmas below ARE proved and non-vacuous on their
 own terms (they instantiate on any two disjoint cells). Known
 obstructions the eventual proof must clear, found by probing while
 building this slice and sharpened by the S3 pre-merge audit (each
@@ -64,13 +67,22 @@ starts honest):
    per-goroutine allocation arenas. This is why the mover lemmas below
    cover the NON-allocating store class first — `appendSlice`'s SPILL
    path (fresh backing) is exactly the allocating class.
+   UPGRADED at S4 (note §2): the same mechanism refutes literal-VALUE
+   corrected STATEMENTS too (main's-readout-only included — addresses
+   embed in pointer values and formatted panic payloads), not just
+   movers; and the allocation boundary is delimited by SITES
+   (per-parameter/per-result frame entry, block decls,
+   `newValue`/`make*`/spill), not call-presence — a niladic
+   resultless call allocates nothing.
 2. **Fresh-cell insertion order.** Even without `nextAddr`, two stores
    that CREATE their cells (`Heap.set` on a missing key appends)
    produce permuted heap LISTS under swapped order — commutation is up
    to assoc-list extensional equality, not structural equality. The
    mover statements below therefore carry existing-cell/frame
    premises; the eventual proof should work over an extensional heap
-   equivalence.
+   equivalence. UPGRADED at S4 (note §2): joins obstruction 1 at
+   statement level — literal-state corrected forms need the same
+   iso/extensional quotient.
 3. **BUG-040 (the post-spawn decision point) — DISCHARGED at slice 4.**
    The coupling "programs outside DRF are exactly those the machine
    refuses" used to FAIL for races reachable only by preempting a
@@ -91,12 +103,13 @@ starts honest):
    fine interleaving, `.done` states with both children mid-segment —
    while the coarse relation keeps at most ONE thread mid-segment in a
    sync-free pool — so `ReachesMFine → ReachesM` FAILS on race-free
-   programs and the `↔` below is false as stated. The statement must
-   be WEAKENED before any proof attempt (post-state scoped to
-   main-reachable locations, or main's readout only) — kept in its
-   present form deliberately so the weakening is its own reviewed
-   decision rather than a silent edit; nothing may cite the current
-   form even as a target.
+   programs and the `↔` below is false as stated. SETTLED (S4 + fix
+   round): the weakening decision is TAKEN — note §§2-4 refute the
+   S3-sketched literal weakenings ("post-state scoped to
+   main-reachable locations, or main's readout only" — argued via
+   obstruction 1's mechanism, not machine-checked) and fix the
+   class-level `NPDRFClassReductionRooted` as the corrected target;
+   nothing may cite the draft form except `NPDRFReduction_refuted`.
 5. **Footprint completeness bears on `RacyFine`'s EXTERNAL adequacy
    (S3 audit).** Sharing `stepAccesses` between the detector and
    `RacyFine` makes plan step (iv)'s coupling cancel any shared
@@ -120,6 +133,20 @@ starts honest):
    `StructFields.set`/array update — and store/store commutation is
    unproved in any form. The proved pair covers the cross-root half
    (different variables/cells) only.
+7. **The `schedPick`/`cur` asymmetry (S4 pre-merge audit, MAJOR; note
+   §1a).** `schedPick` consults `m.cur` (`none → False`; off-boundary
+   forces `i = m.cur`) while `schedPickFine` never does — so a pool
+   whose `cur` thread is off-boundary and cannot step (fail-closed
+   config) or never reaches a boundary (a `for {}` spinner) WEDGES
+   the coarse relation while fine proceeds: a real non-preemption gap
+   between `StepM` and `StepMFine`, and spinner-wedged pools are
+   coarse-reachable from genuine initial programs. This refuted the
+   fix's first corrected statement (`NPDRFClassReduction_refuted` —
+   the audit's counterexample, ported below); the repaired
+   `NPDRFClassReductionRooted` excludes pools that START wedged or
+   multi-threaded, and §1a's avoidance argument covers mid-run
+   wedges for the ∃-reachability form. The RUN-level normalization
+   will need a boundary-progress premise (P-S4NP-5).
 
 ## The decomposition plan (the mover route, ICTAC 2018's shape)
 
@@ -467,21 +494,30 @@ theorem loadLoc_after_disjoint_store {l m : Loc} {s s' : ExecState}
 `docs/2026-08-11_npdrf-reduction.md` §1)
 
 Obstruction 4's counterexample class, formalized: main (goroutine 0)
-already terminal beside two leaked goroutines A and B, each two
+already terminal beside two leaked-SHAPED goroutines A and B, each two
 private stores to its own pre-existing cell (A: x:=1;x:=2 on cell 1,
 B: y:=10;y:=20 on cell 2), no synchronization anywhere. All
 cross-goroutine footprints are disjoint, so `¬ RacyFine` holds — the
-premise of the draft statement is satisfied.
+premise of the draft statement is satisfied. Reachability status,
+stated precisely (audit fix round): `m0` is HAND-BUILT and not
+reachable from any initial pool — `spawnStep` gives spawned
+goroutines barrier frames, while A/B carry bare `.stop`
+continuations; the refuted statement quantifies `∀ m₀ : MultiConfig`,
+so the theorem is exactly on-statement.
 
 * FINE: step A once (x=1), then B once (y=10); main is terminal, so
   the pool classifies `.done (.normal σ)` at x=1 ∧ y=10 — BOTH leaked
   goroutines strictly mid-segment (`reachesMFine_bad`).
-* COARSE: `schedPick` forces `i = cur` off boundaries, so in any
-  `StepsM` run at most ONE goroutine is ever strictly mid-segment
-  (`CoarseInv`: A untouched-or-complete or B untouched-or-complete,
-  with the forced-continuation `cur` coupling that makes the exclusion
+* COARSE: `schedPick` forces `i = cur` off boundaries, so in a
+  SYNC-FREE, spawn-free pool like this one, any `StepsM` run holds at
+  most ONE goroutine strictly mid-segment (`CoarseInv`: A
+  untouched-or-complete or B untouched-or-complete, with the
+  forced-continuation `cur` coupling that makes the exclusion
   inductive) — the x=1 ∧ y=10 shared state is coarse-unreachable
-  (`not_reachesM_bad`).
+  (`not_reachesM_bad`). (The at-most-one property is NOT general —
+  a pairing step advances the parked partner off-boundary and a
+  spawn bears the child off-boundary, audit fix round; the
+  refutation needs only the sync-free instance.)
 
 The proof is finite-state model checking against the EXECUTABLE
 machine: the fine run is built from `stepFn_sound`, and coarse
@@ -596,10 +632,6 @@ theorem stepB {l : Nat} (hl : l ≤ 4) (u w : Int) (ch : Choices) :
   | 3, _ => rfl
   | 4, _ => rfl
 
-theorem stepDone (u w : Int) (ch : Choices) (r : Config × ExecState × Choices) :
-    stepFn (sh u w) (.next .stop) ch ≠ .ok r := by
-  intro h; simp [stepFn] at h
-
 /-! ### Per-phase shape lemmas -/
 
 theorem aC_hi {k : Nat} (hk : 5 ≤ k) : aC k = .next .stop := by
@@ -663,11 +695,6 @@ theorem arrival_aC (s : ExecState) (ts : Array Config) (i k : Nat) :
 theorem arrival_bC (s : ExecState) (ts : Array Config) (i l : Nat) :
     arrivalCases s ts i (bC l) = .ok .cellPath :=
   arrival_cellPath s ts i _ (notRetV_bC l)
-
-theorem done_aC (k : Nat) : threadDone (aC k) = decide (5 ≤ k) := by
-  match k with | 0 | 1 | 2 | 3 | 4 => rfl | k + 5 => simp [aC_hi, threadDone]
-theorem done_bC (l : Nat) : threadDone (bC l) = decide (5 ≤ l) := by
-  match l with | 0 | 1 | 2 | 3 | 4 => rfl | l + 5 => simp [bC_hi, threadDone]
 
 theorem boundary_aC (k : Nat) : (aC k).atBoundary = decide (5 ≤ k) := by
   match k with | 0 | 1 | 2 | 3 | 4 => rfl | k + 5 => simp [aC_hi, Config.atBoundary]
@@ -1416,24 +1443,220 @@ theorem PoolResult.sameClass_refl (r : PoolResult) : r.sameClass r = true := by
   | deadlocked => rfl
   | done o => cases o <;> rfl
 
-/-- **THE CORRECTED NPDRF REDUCTION — the citable open target**
-(design note §4; replaces the refuted draft above): a race-free pool's
-fine-reachable results are coarse-reachable UP TO RESULT CLASS. Unlike
-the draft, no known counterexample class applies (class-level
-observation is blind to both refutation mechanisms — the mid-segment
-state gap and allocation order); the truth argument and the mover-
-route proof plan are the note's §4-5. SCAFFOLD DISCIPLINE: this is a
-`def`, claimed by no theorem; the proved instances are the
-never-spawning fragment below (`npdrfClassReduction_single_fragment`)
-— nothing may cite it AS PROVED, and no ∀-schedule caption may claim
-it (the caption formula's guard, note §6). The ⊇ direction is
-`reachesM_le_fine` (literal, hence class-level, unconditionally). -/
+/-- **The fix's FIRST corrected attempt — REFUTED** (S4 pre-merge
+audit, confirmed major; `NPDRFClassReduction_refuted` below is the
+machine-checked counterexample, kept exactly as the draft was kept).
+Its original docstring claimed "no known counterexample class
+applies" — that sentence is BANNED (note §4): the statement is false
+through obstruction 7's `schedPick`/`cur` asymmetry, a mechanism the
+first truth argument never considered (the audit refuted it three
+independent times: an out-of-range-`cur` pool, a `MultiWf` in-range
+stuck-`cur` pool, and a distinct verifier variant). Nothing may cite
+this except its refutation; the repaired target is
+`NPDRFClassReductionRooted` below. -/
 def NPDRFClassReduction : Prop :=
   ∀ m₀ : MultiConfig, ¬ RacyFine m₀ →
     ∀ res, ReachesMFine m₀ res →
       ∃ res', ReachesM m₀ res' ∧ res.sameClass res' = true
 
-/-! ### P3: the never-spawning fragment -/
+/-! ### The refutation of `NPDRFClassReduction` (obstruction 7 made a
+theorem; ported from the S4 audit's smallest counterexample —
+reviewer probe `.tmp/aud_s4_class2.lean`, re-verified first-hand at
+the fix round — with the audit's two further variants recorded in
+note §1a: the verifier's `MultiWf`, in-range two-thread pool and the
+spinner form). The wedge: `q0`'s single thread can step, but
+`q0.cur = 1` is OUT OF RANGE, so `schedPick` reduces to `False` and
+the ENTIRE coarse relation is silent while fine runs the thread to
+its terminal and classifies `.done`. -/
+
+namespace NPDRFClassRefutation
+
+/-- The smallest thread that STEPS: one control step to the terminal. -/
+def cStep : Config := .next (.seq [] [] .stop)
+
+/-- The one-`cStep`-thread pool at an arbitrary `cur` — the fine
+machinery never consults `cur`, so the invariant below is proved once
+for ALL `cur` values and serves both the refutation (`q0 = qAt 1`,
+`cur` out of range) and the fragment's stepping witness
+(`steppingRootPool = qAt 0`, a legal root). -/
+def qAt (c : Nat) : MultiConfig := ⟨#[cStep], {}, c⟩
+
+/-- The terminal successor pool. -/
+def qT : MultiConfig := ⟨#[.next .stop], {}, 0⟩
+
+/-- The wedged pool: one runnable thread, `cur` out of range. -/
+def q0 : MultiConfig := qAt 1
+
+theorem stepc (ch : Choices) : stepFn {} cStep ch = .ok (.next .stop, {}, ch) :=
+  rfl
+
+theorem fineStep (c : Nat) : StepMFine (qAt c) qT :=
+  StepMFine.thread (m := qAt c) (i := 0) (c := cStep) (c' := .next .stop)
+    (σ' := {}) (efs := [])
+    (by show (0 : Nat) ∈ runnableIdxs {} #[cStep]; decide)
+    rfl rfl rfl (.lift (stepFn_sound (c := cStep) (ch := []) (stepc [])))
+
+theorem reachesFine_done (c : Nat) : ReachesMFine (qAt c) (.done (.normal {})) :=
+  ⟨qT, .tail (.refl _) (fineStep c), rfl⟩
+
+/-- Every `StepM` constructor dies on `schedPick q0 i = False`
+(`q0.threads[q0.cur]? = none`). -/
+theorem no_stepM {m' : MultiConfig} (h : StepM q0 m') : False := by
+  cases h with
+  | thread hs _ _ _ _ => exact hs
+  | pair hs _ _ _ _ _ _ => exact hs
+  | pickPair hs _ _ _ _ _ _ _ => exact hs
+  | pickCommit hs _ _ _ _ _ _ => exact hs
+  | wake hs _ _ _ => exact hs
+  | spawned hs _ => exact hs
+
+theorem stepsM_fixed {m : MultiConfig} (h : StepsM q0 m) : m = q0 := by
+  induction h with
+  | refl => rfl
+  | tail _ hbc ih => subst ih; exact absurd hbc no_stepM
+
+theorem no_reachesM (res : PoolResult) : ¬ ReachesM q0 res := by
+  rintro ⟨m, hs, hr⟩
+  rw [stepsM_fixed hs] at hr
+  cases hr
+
+theorem idx_zero {x c : Config} {i : Nat}
+    (h : (#[x] : Array Config)[i]? = some c) : i = 0 ∧ c = x := by
+  match i with
+  | 0 => exact ⟨rfl, by injection h with h1; exact h1.symm⟩
+  | i + 1 =>
+      rw [Array.getElem?_eq_none (by simp)] at h
+      cases h
+
+/-- The two-state fine invariant, for EVERY starting `cur`. -/
+theorem inv_step (c : Nat) {m m' : MultiConfig}
+    (hi : m = qAt c ∨ m = qT) (h : StepMFine m m') :
+    m' = qAt c ∨ m' = qT := by
+  rcases hi with rfl | rfl
+  · cases h with
+    | thread hs hti hbl harr hse =>
+        rename_i i cc c' σ' efs
+        obtain ⟨rfl, rfl⟩ := idx_zero hti
+        cases hse with
+        | spawn hplan _ =>
+            rw [show spawnPlan cStep = none from rfl] at hplan; cases hplan
+        | lift hstep =>
+            obtain ⟨ch, ch', hexec⟩ := step_complete hstep
+            rw [show (qAt c).shared = {} from rfl, stepc ch] at hexec
+            injection hexec with h1
+            injection h1 with h2 h3
+            injection h3 with h4 h5
+            subst h2; subst h4
+            exact .inr rfl
+    | pair hs hti hbl hsp harr hidx hap =>
+        obtain ⟨rfl, rfl⟩ := idx_zero hti
+        rw [show arrivalCases (qAt c).shared (qAt c).threads 0 cStep
+          = .ok .cellPath from rfl] at harr
+        cases harr
+    | pickPair hs hti hbl hsp harr hget hidx hap =>
+        obtain ⟨rfl, rfl⟩ := idx_zero hti
+        rw [show arrivalCases (qAt c).shared (qAt c).threads 0 cStep
+          = .ok .cellPath from rfl] at harr
+        cases harr
+    | pickCommit hs hti hbl hsp harr hget hcom =>
+        obtain ⟨rfl, rfl⟩ := idx_zero hti
+        rw [show arrivalCases (qAt c).shared (qAt c).threads 0 cStep
+          = .ok .cellPath from rfl] at harr
+        cases harr
+    | wake hs hti hbl hres =>
+        obtain ⟨rfl, rfl⟩ := idx_zero hti
+        rw [show isBlockedConfig cStep = false from rfl] at hbl
+        cases hbl
+    | spawned hs hti =>
+        rename_i i kk
+        obtain ⟨rfl, hc⟩ := idx_zero hti
+        exact absurd hc (by simp [cStep])
+  · -- the terminal pool has no runnable thread: no fine step exists
+    have hempty : ∀ i, schedPickFine qT i → False := by
+      intro i hs
+      have : i ∈ ([] : List Nat) := hs
+      cases this
+    cases h with
+    | thread hs _ _ _ _ => exact absurd hs (hempty _)
+    | pair hs _ _ _ _ _ _ => exact absurd hs (hempty _)
+    | pickPair hs _ _ _ _ _ _ _ => exact absurd hs (hempty _)
+    | pickCommit hs _ _ _ _ _ _ => exact absurd hs (hempty _)
+    | wake hs _ _ _ => exact absurd hs (hempty _)
+    | spawned hs _ => exact absurd hs (hempty _)
+
+theorem inv_reach (c : Nat) {m : MultiConfig} (h : StepsMFine (qAt c) m) :
+    m = qAt c ∨ m = qT := by
+  induction h with
+  | refl => exact .inl rfl
+  | tail _ hstep ih => exact inv_step c ih hstep
+
+theorem not_racy (c : Nat) : ¬ RacyFine (qAt c) := by
+  rintro ⟨m, hs, i, j, ci, cj, hne, hi, hj, -, -, -⟩
+  rcases inv_reach c hs with rfl | rfl <;>
+    exact hne (((idx_zero hi).1).trans ((idx_zero hj).1).symm)
+
+end NPDRFClassRefutation
+
+/-- **The first corrected attempt is FALSE** — obstruction 7 as a
+theorem (S4 audit; the counterexample satisfies `¬ RacyFine`, reaches
+`.done` finely, and admits NO coarse step at all). -/
+theorem NPDRFClassReduction_refuted : ¬ NPDRFClassReduction := by
+  intro h
+  obtain ⟨res', hR, -⟩ :=
+    h NPDRFClassRefutation.q0 (NPDRFClassRefutation.not_racy 1)
+      (.done (.normal {})) (NPDRFClassRefutation.reachesFine_done 1)
+  exact NPDRFClassRefutation.no_reachesM res' hR
+
+/-- **THE REPAIRED NPDRF REDUCTION — the citable open target** (note
+§4, the fix-round revision): from a SINGLE-THREADED ROOT
+(`threads.size = 1`, `cur = 0`), a race-free pool's fine-reachable
+results are coarse-reachable UP TO RESULT CLASS. Known mechanisms 1-3
+addressed (note §4 — never "no known counterexample class applies"):
+1 (whole-state `.done`) and 2 (allocation order) by class-level
+blindness; 3 (the `schedPick`/`cur` wedge, obstruction 7) by the root
+premises — every exhibited counterexample pool fails them
+(negative-checked below) — plus §1a's avoidance argument for mid-run
+wedges (needed segments are finite by construction; non-yielding
+segments are unneeded). EPISTEMIC STATUS, stated plainly: an ARGUED
+target whose predecessor failed once in revised form; the note's §4
+records a deliberate fourth-mechanism refutation attempt (five
+candidates, none succeeded). SCAFFOLD DISCIPLINE: a `def`, claimed by
+no theorem; the proved instance class is the single-threaded-
+throughout fragment (`npdrfClassReductionRooted_single_fragment`);
+nothing may cite it AS PROVED, and no ∀-schedule caption may claim it
+(the caption formula's guard, note §6). The ⊇ direction is
+`reachesM_le_fine` (literal, hence class-level, unconditionally). -/
+def NPDRFClassReductionRooted : Prop :=
+  ∀ m₀ : MultiConfig, m₀.threads.size = 1 → m₀.cur = 0 →
+    ¬ RacyFine m₀ →
+    ∀ res, ReachesMFine m₀ res →
+      ∃ res', ReachesM m₀ res' ∧ res.sameClass res' = true
+
+/-! ### Negative checks: every exhibited counterexample family fails
+the rooted premises (note §4's table; `NPDRFClassReduction_refuted`
+itself pins that DROPPING them recreates a false statement). -/
+
+/-- Mechanism-1 family: the draft-refutation pool is 3-threaded. -/
+theorem m0_fails_rooted : ¬ NPDRFRefutation.m0.threads.size = 1 := by decide
+
+/-- Obstruction-7 stuck-`cur` family: the pool is not rooted. -/
+theorem q0_fails_rooted : ¬ NPDRFClassRefutation.q0.cur = 0 := by decide
+
+/-- Representative of the audit's TWO-THREAD stuck/`MultiWf` family
+(the reviewer's arity-mismatch and the verifier's
+value-to-statement-continuation variants; both two-threaded, both
+`cur = 1`). -/
+def wedgedPairRep : MultiConfig :=
+  ⟨#[.next (.seq [] [] .stop),
+     .retV (.int 1) (.storeK [] [] (.seqn #[]) [] .stop)], {}, 1⟩
+
+theorem wedgedPairRep_fails_rooted : ¬ wedgedPairRep.threads.size = 1 := by
+  decide
+
+/-! ### P3: the single-threaded-throughout fragment (renamed at the
+fix round — "never-spawning" over-claimed: the premise `hns` requires
+every fine-reachable pool to have EXACTLY ONE thread, which excludes
+multi-thread spawn-free pools like the refutation's own `m0`) -/
 
 theorem runnableIdxs_lt {s : ExecState} {ts : Array Config} {i : Nat}
     (h : i ∈ runnableIdxs s ts) : i < ts.size := by
@@ -1463,15 +1686,17 @@ theorem stepsMFine_to_stepsM_single {m₀ : MultiConfig}
       exact ⟨.tail hsM (stepM_iff_fine_bs.mpr ⟨hbc, hbs⟩), hcc⟩
 
 /-- **The proved fragment of the corrected reduction** (P3, design
-note §5): on never-spawning pools (every fine-reachable pool still
-single-threaded), fine and coarse reachability coincide LITERALLY —
-strictly stronger than `NPDRFClassReduction`'s conclusion on this
-class, and without the race-freedom premise (a lone thread's fine pick
-is always boundary-switched: it IS the running goroutine). Honesty
-rider: this is the sequential-degenerate class at relation level — the
-corrected statement's genuinely CONCURRENT content (spawning programs)
-remains open, gated on the note §5's blocking machinery (footprint-
-frame theorem, heap iso, permutation engine). -/
+note §5): on pools single-threaded THROUGHOUT (every fine-reachable
+pool has exactly one thread), fine and coarse reachability coincide
+LITERALLY — strictly stronger than `NPDRFClassReductionRooted`'s
+conclusion on this class, and without the race-freedom premise (a
+lone thread's fine pick is always boundary-switched: it IS the
+running goroutine). Honesty rider: this is the sequential-degenerate
+class at relation level — the corrected statement's genuinely
+CONCURRENT content (spawning programs) remains open, gated on the
+note §5's blocking machinery (footprint-frame theorem, heap iso,
+permutation engine) plus, for the run-level form, the
+boundary-progress premise (P-S4NP-5). -/
 theorem reachesMFine_iff_reachesM_single {m₀ : MultiConfig}
     (hc : m₀.cur = 0)
     (hns : ∀ m, StepsMFine m₀ m → m.threads.size = 1) :
@@ -1482,8 +1707,10 @@ theorem reachesMFine_iff_reachesM_single {m₀ : MultiConfig}
     exact ⟨m, (stepsMFine_to_stepsM_single hc hns hs).1, hr⟩
   · exact reachesM_le_fine
 
-/-- The corrected statement's conclusion, discharged on the fragment. -/
-theorem npdrfClassReduction_single_fragment {m₀ : MultiConfig}
+/-- The repaired statement's conclusion, discharged on the fragment
+(renamed from `npdrfClassReduction_single_fragment` at the fix round,
+tracking the repaired target's name). -/
+theorem npdrfClassReductionRooted_single_fragment {m₀ : MultiConfig}
     (hc : m₀.cur = 0)
     (hns : ∀ m, StepsMFine m₀ m → m.threads.size = 1) :
     ∀ res, ReachesMFine m₀ res →
@@ -1492,12 +1719,11 @@ theorem npdrfClassReduction_single_fragment {m₀ : MultiConfig}
     ⟨res, (reachesMFine_iff_reachesM_single hc hns res).mp hr,
       PoolResult.sameClass_refl res⟩
 
-/-! ### Non-vacuity witness for the fragment: a concrete pool
-satisfying the fragment's premises, with an inhabited result on both
-sides of the proved `iff` (degenerate BY DESIGN — the fragment's value
-is that the corrected statement's shape is inhabitable, not that this
-pool is interesting; the honest scope note is on the fragment theorem
-above). -/
+/-! ### Non-vacuity witnesses for the fragment: a degenerate pool
+(below) AND a STEPPING pool (added at the audit fix round — the
+audit's weak-witness note: the degenerate pool takes no step, so it
+never exercised the induction's tail branch). Both honestly labeled;
+the honest scope note is on the fragment theorem above. -/
 
 def singletonTerminalPool : MultiConfig := ⟨#[.next .stop], {}, 0⟩
 
@@ -1521,5 +1747,28 @@ theorem fragment_witness_iff :
 theorem fragment_witness_inhabited :
     ReachesM singletonTerminalPool (.done (.normal {})) :=
   ⟨singletonTerminalPool, .refl _, rfl⟩
+
+/-- The STEPPING witness pool (audit fix round): one thread, one real
+fine step to the terminal — `NPDRFClassRefutation.cStep` at a LEGAL
+root (`cur = 0`; contrast `q0 = qAt 1`, the same thread wedged). -/
+def steppingRootPool : MultiConfig := NPDRFClassRefutation.qAt 0
+
+theorem steppingRoot_single :
+    ∀ m, StepsMFine steppingRootPool m → m.threads.size = 1 := by
+  intro m h
+  rcases NPDRFClassRefutation.inv_reach 0 h with rfl | rfl <;> rfl
+
+/-- The fragment's `iff` on a pool that STEPS — the induction's tail
+branch is exercised (the audit's weak-witness note discharged). -/
+theorem stepping_witness_iff :
+    ∀ res, ReachesMFine steppingRootPool res
+      ↔ ReachesM steppingRootPool res :=
+  reachesMFine_iff_reachesM_single rfl steppingRoot_single
+
+/-- A `.done` result reached THROUGH the proved iff from a real fine
+step (not the reflexive run). -/
+theorem stepping_witness_reaches :
+    ReachesM steppingRootPool (.done (.normal {})) :=
+  (stepping_witness_iff _).mp (NPDRFClassRefutation.reachesFine_done 0)
 
 end GoLean.GoCore.Machine
