@@ -168,6 +168,11 @@ DESIGNATE — designation happens at the arc-end window, with the user).
 | `dspCompTripleC` + `dspCompReadoutC` | S3 — `docs/2026-08-11_channel-resource-tier.md` §10 | THE expected flagship pair (the first six-row re-proof, over the pinned lowering, at the row's certificate seed); hoist near-zero |
 | `dspCompTerminatesNormallyC` | S3 — same §10 | completes the D1 pair, but rests on the **undesignated** fuel-based `dspCert400` (NOT on the designated `dspCert`/`dspAllSchedules` — provenance corrected at the S3 fix round); designating it means pulling `dspCert400` in or accepting undesignated kernel evidence underneath |
 
+S4 attestation (2026-08-11): NO candidate — the NPDRF slice ships
+proof infrastructure and a scaffold target only
+(`docs/2026-08-11_npdrf-reduction.md` §8 commit 4); its relation
+carriers are statement-closure-forbidden by design.
+
 Deliberate NON-candidates, recorded so they are not re-proposed:
 `chanRendezvousValTripleC`, `chanTransferTripleC`, `seqWalkTripleC` —
 purpose-built exemplars and witness programs, not curated rows.

@@ -474,3 +474,59 @@ Per the charter, either branch is SUCCESS and the lane does not stop.
   statements untouched (statement-TCB closure green; Comparator
   mirrors excluded from the sweep by the byte-identity discipline).
   Gate: `scripts/ci` green.
+* Commit 4 (slice-record close):
+
+  **TCB-grounding walk (the per-slice review criterion, S1 form).**
+  Exported artifacts this slice, each with (i) what the trusted claim
+  reduces to, (ii) machinery placement, (iii) the executable anchor:
+  - `NPDRFReduction_refuted` — (i) reduces to concrete-interpreter
+    propositions: `stepFn`/`stepMulti` computations on literal pools
+    (the per-phase step lemmas are `rfl`/simp equalities about the
+    executable machine) plus the relation definitions the draft
+    statement itself is made of; (ii) `FineInv`/`CoarseInv` and the
+    inversion plumbing are proof-side only; (iii) the executable
+    anchors are the `stepFn`-equality lemmas themselves, `#eval`-
+    probed before proving. No Iris, no WP, no fuel.
+  - `stepM_iff_fine_bs` / `stepsM_iff_fine_bs` / the fragment family —
+    relation-level proof infrastructure over `Multi.lean` definitions;
+    all carriers (`StepMFine`, `StepsMFineBS`, …) are in the Audit
+    statement-closure forbidden set, so none can enter a designated
+    statement. Nothing this slice is a `GoLeanProofs.Specs.*`
+    triple-carrying export, so the completion-pin convention owes no
+    `TerminatesNormallyC` member; the caption sweep is the slice's
+    user-facing surface and it only WEAKENS/clarifies claims.
+
+  **Deletion test.** Nothing headline-shaped shipped; the Audit
+  anchors (`NPDRFReduction`, `NPDRFClassReduction`,
+  `PoolResult.sameClass`, `BoundarySwitch`, the axiom pins) are the
+  drift guards, and deleting any S4 artifact fails the proofs+Audit
+  gate.
+
+  **FD3 attestation.** NO designation candidate this slice: every new
+  statement is proof infrastructure or a scaffold target, none is a
+  headline-shaped theorem over interpreter vocabulary alone with a
+  user-facing claim (the fragment's literal-equivalence theorem
+  quantifies relation carriers, which the statement-TCB forbids from
+  designated closures by design). Recorded in the charter's FD3
+  ledger.
+
+  **FD5 (§7) — post-proof confirmation.** What was actually proved
+  matches the §7 evaluation's assumption exactly (P1/P2/P3, nothing
+  detector-facing), so the evaluation stands as written: the rule's
+  condition is NOT met; recommendation remains the ELSE branch
+  (permanent asymmetry, O4/T12 axis split as the statement). The rule
+  decides at slice 5.
+
+  **Parking ledger (S4).** Parked, each with its §5 sizing: P-S4NP-1
+  the footprint-frame theorem over `stepFn` (1–2 slices; blocks any
+  spawning-fragment proof of `NPDRFClassReduction`); P-S4NP-2 the
+  heap-iso quotient (~1 slice; blocks every stronger-than-class
+  observation); P-S4NP-3 the permutation/normalization engine
+  (~1 slice given 1+2); P-S4NP-4 obstruction 6's path-level movers
+  (inside P-S4NP-1; not proved this slice because their consumer is
+  P-S4NP-1 itself — the every-lemma-has-its-consumer rule). No
+  mid-slice question required a park outside the FDs; no hard-stop
+  condition was approached (interpreter untouched, no designated
+  statement moved, no gate weakened).
+
+  Gate: `scripts/ci` green at the close commit.
