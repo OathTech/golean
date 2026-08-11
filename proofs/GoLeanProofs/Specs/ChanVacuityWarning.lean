@@ -31,10 +31,12 @@ demonstrates, permanently:
   (`TerminatesNormallyC`-class — a semantically trivial property of
   the interpreter, discharged by kernel evaluation), and the Iris /
   Löb / simulation machinery is untrusted METHOD only. The
-  completion-pin gate in `Audit.lean` enforces the pairing
-  structurally; THIS module is its negative-test fixture — it
-  declares a `GoTripleC` with (necessarily) no completion pin, and
-  the gate's negative test asserts the checker flags exactly it.
+  completion gate in `Audit.lean` (since the gen-5 RESTRUCTURE: the
+  generated-manifest form, `CompletionManifest.lean`) enforces the
+  pairing structurally; THIS module's triple is the original tracked
+  fixture — its manifest line carries `fixture: unpaired`, and the
+  gate re-verifies the computed class forever (a fixture line that
+  pairs fails the build).
 
 Provenance: the S1 audit verifier's reproductions (probes B/C and
 V1a/V1b, rebuilt independently of the reviewer's files); committed as
