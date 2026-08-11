@@ -413,7 +413,95 @@ pinned checkout; their new channel library).
   general store-of-∃-value lane (typed target stores of adversarial
   values); course: zero-target exemplar; consumer: protocol-layer
   rows whose invariant pins the value class first.
+- **P-CL1-6 — close / make / len-cap laws: designed (§3), NOT shipped
+  this slice** (budget: the slice's route — laws through exit through
+  the D1 pair — landed; each of these three needs its own core-port
+  and witness walk, and the sequential-degenerate probe's post must
+  absorb the phantom-pairing branch reconvergence, §4). Their §3
+  designs stand as the intended statements; consumers: the probe
+  witness (`chanOpsProbe`, §4) and the slice-3 buffered rows.
+  Deviation from work-plan item 3 logged here honestly rather than
+  half-shipped.
 
 ## 8. Build log (appended as built)
 
-- (opened with the note; entries follow per commit)
+- **Commit 2 — the rendezvous law family + THE EXEMPLAR, same-commit**
+  (`proofs/GoLeanProofs/ChanD.lean`,
+  `proofs/GoLeanProofs/Specs/ChanRendezvous.lean`; Audit block added,
+  root import wired). Decisions made DURING the build, recorded:
+  - **Law scoping: RENDEZVOUS-CLASS, not general-`S`** (amends §3's
+    presentation, not its design). The shipped laws
+    (`wpD_send_rendezvous_inv`, `wpD_recv_nil_rendezvous_inv`,
+    `wpD_blocked_send_rendezvous_inv`,
+    `wpD_blocked_recv_nil_rendezvous_inv`) pin the invariant cell to
+    `chanData #[] 0 false` (any `declaredTy`) instead of carrying the
+    `S`-parameterized branch obligations: every `S`-branch beyond the
+    rendezvous class (closed-panic, buffered enqueue/dequeue,
+    head-refill) would ship without a witness discharging it —
+    exactly the unconsumed generality the non-vacuity gate exists
+    for. §3 remains the recorded growth path; the general-`S` forms
+    land with the buffered/close consumers (slice 3 rows). The
+    branch-continuation FORM settled during the build: one
+    continuation over a pure successor disjunction
+    (`∀ c', ⌜c' = park ∨ c' = next⌝ -∗ WP c'`), so the caller keeps
+    every resource in both branches (a `∗`-pair of continuations
+    would force splitting the frame; BI `∧` costs proofmode
+    ergonomics).
+  - **FINDING — the parked SELF-STEP (`pairRelease` re-admits the O2
+    spin).** `StepDC.pairRelease` constrains `ts'[j]? = some p'` with
+    the pairing's arriving/partner indices ∃-quantified — when the
+    ∃-pairing's partner is some OTHER index, `ts'[j] = p` and the
+    rule admits `p → p` (state-preserving) for ANY parked `p`
+    whenever the current state can host any state-preserving pairing
+    at all (an empty-buffer cell suffices —
+    `stepDC_parked_spin`). The decomposition note's O2 record says
+    "NO spin rules — O2(b) sufficed"; that is true of the RULE SET
+    but the spin exists as a derived member of `pairRelease`'s
+    envelope, invisible until a WP had to walk a parked config (the
+    spawn-noop witness never did). Consequences, both directions:
+    (i) parked-config WPs need Löb induction (the parked laws prove
+    it internally — one `iloeb`, the self-branch re-applies the IH);
+    (ii) parked-config REDUCIBILITY is free at empty-buffer cells
+    (the spin is the NotStuck witness), which is what lets the
+    parked laws avoid the wake-readiness case analysis the S4 note
+    expected. Sound-wider, per the standing envelope argument — the
+    simulation direction is untouched. Recorded here as the slice's
+    main design finding; the O1(b) refinement (P-CL1-4) would remove
+    it along with the phantom pairings.
+  - **`wpD_fork_alloc₁` shipped** — the gen_heap-update fork variant
+    LangC recorded as "lands with its first consumer": the exemplar's
+    one-parameter worker is that consumer (`bindParams` allocates the
+    param cell; the child's WP receives it ∀-address).
+  - **The untyped-literal wrinkle:** `.intLit 42` evaluates at kind
+    `unbounded "integer"` (Go untyped constant), so the send-law
+    witness normalizes `int 42 unbounded → int 42 int` via
+    `rdvNorm42` (σ-independent, `[propext]`); the fork's `bindParams`
+    normalization rides `rdvNormChan`. Both are exemplar-local
+    helpers, not laws.
+  - **Figures** (measured): exemplar cert
+    `chanRendezvousAllStreamsCert` at fuel 400, `#eval`-confirmed
+    `true` before `decide +kernel` (with a plain-run probe and the
+    seed's `MachineWf` decide, all three eval'd first); axiom sets —
+    inversion kit `[propext]`/`[propext, Quot.sound]` (constructive),
+    Iris-side laws + exit artifacts the classical trio, cert
+    `[propext, Quot.sound]` — FD7 exactly. The walk elaborates under
+    `maxHeartbeats 3200000` (the noop witness needed 1600000; this
+    walk is roughly twice the steps plus two invariant openings per
+    channel position).
+  - Witness structure: `chanRendezvousTripleC` (the exit's product) +
+    the D1-BOTH pair `chanRendezvousReadoutC` (InitialSplit
+    discharged at the seed via `sat_sep_insert`; three-cell heaplet)
+    and `chanRendezvousTerminatesNormallyC` (seeded completion pin,
+    `execProgLoop_mono` lift). Nothing designated (FD3); the 48
+    designated statements untouched (git diff over the branch range:
+    Challenge/Solution/judge-config and every designated module
+    untouched).
+  - **Gate**: full `scripts/ci --diff` run IN-LANE at this commit's
+    tree (this worktree's first recorded differential — the
+    documented fresh-checkout red; `GOLEAN_MEM_MAX=48G` per the
+    parallel-lane cap discipline): **PASS, baseline diff FULL
+    (1483/1483, no regression), negative lane no regression**,
+    proofs + Audit green with the new registrations. Zero
+    `GoLean/GoCore` edits anywhere in the slice — the differential
+    surface is untouched by construction; the fresh run makes the
+    zero-drift figure first-hand rather than argued.

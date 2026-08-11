@@ -610,6 +610,83 @@ open Lean in
 /-- info: 'GoLean.Iris.stepDC_shape_cases' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Iris.stepDC_shape_cases
 
+-- THE CHANNEL WP LAW FAMILY, slice 1 of the channel-logic arc
+-- (ChanD.lean + Specs/ChanRendezvous.lean; design note
+-- docs/2026-08-11_channel-wp-laws.md). The rendezvous-class laws over
+-- the D-Language — send/recv at the apply position and the two parked
+-- shapes, each stated under an Iris invariant pinning the unbuffered
+-- open empty cell; the parked laws absorb the pairRelease SELF-step
+-- (the phantom spin, note §1a) by Löb induction — plus the D-carrier
+-- lifting cores (resource-read, var load, THE ALLOCATING FORK — the
+-- gen_heap-update fork variant LangC recorded as owed with its first
+-- consumer) and the pure inversion kit behind their step case
+-- analyses. THE WITNESS is the rendezvous exemplar: the full WP walk
+-- (wpD_chan_rendezvous_witness) consumes EVERY law in the same
+-- commit; chanRendezvousTripleC is the first frame-quantified
+-- GoTripleC whose program communicates on a channel across
+-- goroutines; its non-vacuity discharge is the D1-BOTH pair
+-- chanRendezvousReadoutC + chanRendezvousTerminatesNormallyC (seeded
+-- completion pin over the kernel certificate). SCOPE stated in the
+-- law docstrings: heap preservation, not the delivered value (the
+-- protocol layer is slice 2); the ∀-heap safety half stays P-S4-1.
+-- This block anchors every public theorem of both modules —
+-- name-existence tripwire: deleting a law or its witness breaks the
+-- build here.
+/-- info: 'GoLean.Iris.resumeRecvDelivery_state' depends on axioms: [propext] -/
+#guard_msgs in #print axioms GoLean.Iris.resumeRecvDelivery_state
+/-- info: 'GoLean.Iris.selectRecvDelivery_state' depends on axioms: [propext] -/
+#guard_msgs in #print axioms GoLean.Iris.selectRecvDelivery_state
+/-- info: 'GoLean.Iris.applyPairing_sendArrive_proj' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.applyPairing_sendArrive_proj
+/-- info: 'GoLean.Iris.applyPairing_recvArrive_nil_proj' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.applyPairing_recvArrive_nil_proj
+/-- info: 'GoLean.Iris.applyPairing_partner_write' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.applyPairing_partner_write
+/-- info: 'GoLean.Iris.arrivalCases_chanStK_single' depends on axioms: [propext] -/
+#guard_msgs in #print axioms GoLean.Iris.arrivalCases_chanStK_single
+/-- info: 'GoLean.Iris.arrivalCases_chanStK_not_multi' depends on axioms: [propext] -/
+#guard_msgs in #print axioms GoLean.Iris.arrivalCases_chanStK_not_multi
+/-- info: 'GoLean.Iris.arrivalCases_blocked' depends on axioms: [propext] -/
+#guard_msgs in #print axioms GoLean.Iris.arrivalCases_blocked
+/-- info: 'GoLean.Iris.chanArrivalPlan_send_inv' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.chanArrivalPlan_send_inv
+/-- info: 'GoLean.Iris.chanArrivalPlan_recv_inv' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.chanArrivalPlan_recv_inv
+/-- info: 'GoLean.Iris.resumeThread_rendezvous_send' depends on axioms: [propext] -/
+#guard_msgs in #print axioms GoLean.Iris.resumeThread_rendezvous_send
+/-- info: 'GoLean.Iris.resumeThread_rendezvous_recv' depends on axioms: [propext] -/
+#guard_msgs in #print axioms GoLean.Iris.resumeThread_rendezvous_recv
+/-- info: 'GoLean.Iris.stepDC_parked_spin' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.stepDC_parked_spin
+/-- info: 'GoLean.Iris.wpD_det_step_keep' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.wpD_det_step_keep
+/-- info: 'GoLean.Iris.wpD_eval_var' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.wpD_eval_var
+/-- info: 'GoLean.Iris.wpD_fork_alloc₁' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.wpD_fork_alloc₁
+/-- info: 'GoLean.Iris.wpD_send_rendezvous_inv' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.wpD_send_rendezvous_inv
+/-- info: 'GoLean.Iris.wpD_recv_nil_rendezvous_inv' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.wpD_recv_nil_rendezvous_inv
+/-- info: 'GoLean.Iris.wpD_blocked_send_rendezvous_inv' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.wpD_blocked_send_rendezvous_inv
+/-- info: 'GoLean.Iris.wpD_blocked_recv_nil_rendezvous_inv' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.wpD_blocked_recv_nil_rendezvous_inv
+/-- info: 'GoLean.Iris.rdvNorm42' depends on axioms: [propext] -/
+#guard_msgs in #print axioms GoLean.Iris.rdvNorm42
+/-- info: 'GoLean.Iris.rdvNormChan' depends on axioms: [propext] -/
+#guard_msgs in #print axioms GoLean.Iris.rdvNormChan
+/-- info: 'GoLean.Iris.wpD_chan_rendezvous_witness' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.wpD_chan_rendezvous_witness
+/-- info: 'GoLean.Iris.chanRendezvousTripleC' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.chanRendezvousTripleC
+/-- info: 'GoLean.Iris.chanRendezvousReadoutC' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.chanRendezvousReadoutC
+/-- info: 'GoLean.Iris.chanRendezvousAllStreamsCert' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.chanRendezvousAllStreamsCert
+/-- info: 'GoLean.Iris.chanRendezvousTerminatesNormallyC' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.chanRendezvousTerminatesNormallyC
+
 -- The exit pipes.
 /-- info: 'GoLean.Iris.goSpec_of_wp' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Iris.goSpec_of_wp

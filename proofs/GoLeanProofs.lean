@@ -1,6 +1,7 @@
 import GoLeanProofs.Lang
 import GoLeanProofs.LangC
 import GoLeanProofs.LangD
+import GoLeanProofs.ChanD
 import GoLeanProofs.HeapBridge
 import GoLeanProofs.Ghost
 import GoLeanProofs.Lifting
@@ -37,6 +38,7 @@ import GoLeanProofs.Specs.TotalPins
 import GoLeanProofs.Specs.ForkJoinTargets
 import GoLeanProofs.Specs.GoldenForkJoin
 import GoLeanProofs.Specs.GoldenSelectDone
+import GoLeanProofs.Specs.ChanRendezvous
 import GoLeanProofs.Specs.ImportedGooseBlock
 import GoLeanProofs.Specs.ImportedGooseDefer
 import GoLeanProofs.Specs.ImportedGooseNil
