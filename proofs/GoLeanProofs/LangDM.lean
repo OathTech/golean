@@ -2373,6 +2373,104 @@ theorem wpDM_fork_alloc₁ {c : Config} {cv : GoValue} {args : List GoValue}
     · iapply Hchild $$ %(⟨σ₁.nextAddr⟩ : Addr) [$Hp]
     · itrivial
 
+/-- **The TWO-PARAMETER allocating fork on the DM-carrier** (the dsp
+child's shape: `go lit0(&c, &signal)` — two consecutive param cells;
+the continuation receives the first machine-chosen address, the second
+is its successor). -/
+theorem wpDM_fork_alloc₂ {c : Config} {cv : GoValue} {args : List GoValue}
+    {k : Cont} {pcell₁ pcell₂ : HeapCell} (childOf : Addr → Config)
+    (hsp : spawnPlan c = some (cv, args, k))
+    (hspawn : ∀ σ : ExecState, σ.functions = GoCoreGS.prog GF →
+      σ.methods = GoCoreGS.methods GF → σ.types = GoCoreGS.types GF →
+      spawnStep σ cv args k = .ok (.spawned k, childOf ⟨σ.nextAddr⟩,
+        allocMany σ [pcell₁, pcell₂])) :
+    ▷ iprop(∀ pa : Addr, pa.id ↦ pcell₁ ∗ (pa.id + 1) ↦ pcell₂ -∗
+        WP (PoolCfgDM.mk (childOf pa)) @ s ; ⊤ {{ fun _ => iprop(True) }})
+      ∗ ▷ WP (PoolCfgDM.mk (.spawned k)) @ s ; E {{ Φ }}
+      ⊢ WP (PoolCfgDM.mk c) @ s ; E {{ Φ }} := by
+  iintro ⟨Hchild, Hparent⟩
+  have hnv : ToVal.toVal (PoolCfgDM.mk c) = (none : Option Unit) := by
+    match c, hsp with
+    | .retV cv' (.goCalleeK [] env k'), _ => rfl
+    | .retV v (.goArgsK cv' vals [] env k'), _ => rfl
+  have hblk : isBlockedConfig c = false := by
+    match c, hsp with
+    | .retV cv' (.goCalleeK [] env k'), _ => rfl
+    | .retV v (.goArgsK cv' vals [] env k'), _ => rfl
+  have hpos : chanSelApplyPos c = false := by
+    match c, hsp with
+    | .retV cv' (.goCalleeK [] env k'), _ => rfl
+    | .retV v (.goArgsK cv' vals [] env k'), _ => rfl
+  iapply wp_lift_step hnv
+  iintro %σ₁ %ns %obs %obs' %nt Hσ
+  simp only [stateInterp]
+  icases Hσ with ⟨Hσ, %Hinv⟩
+  obtain ⟨hfns, hmeths, htypes, hwf⟩ := Hinv
+  have hfresh : get? (heapToMap σ₁.heap) σ₁.nextAddr = none := hwf.fresh_get?
+  iapply fupd_mask_intro Std.LawfulSet.empty_subset
+  iintro Hclose
+  isplitr
+  · ipureintro
+    cases s
+    · exact ⟨[], ⟨.spawned k⟩, _, [⟨childOf ⟨σ₁.nextAddr⟩⟩],
+        GoPrimStepDM.step (.lift (.spawn hsp (hspawn σ₁ hfns hmeths htypes)))⟩
+    · trivial
+  inext
+  iintro %e₂ %σ₂ %eₜ %Hstep Hcred
+  have hshape : e₂ = PoolCfgDM.mk (.spawned k)
+      ∧ σ₂ = allocMany σ₁ [pcell₁, pcell₂]
+      ∧ eₜ = [PoolCfgDM.mk (childOf ⟨σ₁.nextAddr⟩)] := by
+    cases Hstep with
+    | step st =>
+      rcases stepDM_shape_cases hblk hpos st with hse | ⟨k', hk, -⟩
+      · cases hse with
+        | lift sq => exact absurd sq (step_spawnPos_elim hsp)
+        | spawn hsp' hstep' =>
+          rw [hsp] at hsp'
+          injection hsp' with heq
+          injection heq with h1 hrest
+          injection hrest with h2 h3
+          subst h1
+          subst h2
+          subst h3
+          rw [hspawn σ₁ hfns hmeths htypes] at hstep'
+          injection hstep' with hp
+          injection hp with hpar hrest'
+          injection hrest' with hchild hσ
+          subst hpar
+          subst hchild
+          subst hσ
+          exact ⟨rfl, rfl, rfl⟩
+      · rw [hk] at hsp
+        cases hsp
+  obtain ⟨rfl, rfl, rfl⟩ := hshape
+  simp only [allocMany]
+  imod (genHeap_alloc (v := pcell₁) hfresh) $$ Hσ with ⟨Hσ, Hp₁, Htok₁⟩
+  have hfresh₂ : get? (insert (heapToMap σ₁.heap) σ₁.nextAddr pcell₁)
+      (σ₁.nextAddr + 1) = none := by
+    rw [get?_insert_ne (by omega)]
+    rw [get?_heapToMap]
+    exact hwf (σ₁.nextAddr + 1) (by omega)
+  imod (genHeap_alloc (v := pcell₂) hfresh₂) $$ Hσ with ⟨Hσ, Hp₂, Htok₂⟩
+  imod Hclose
+  imodintro
+  isplitl [Hσ]
+  · isplitl [Hσ]
+    · iapply (genHeapInterp_eqv (fun kk =>
+        ((heapToMap_set_base₂ σ₁.heap ⟨σ₁.nextAddr⟩ ⟨σ₁.nextAddr + 1⟩
+          pcell₁ pcell₂) kk).symm)) $$ Hσ
+    · ipureintro
+      exact ⟨hfns, hmeths, htypes, HeapWf.allocMany [pcell₁, pcell₂] hwf⟩
+  isplitl [Hparent]
+  · iexact Hparent
+  · simp only [Algebra.BigOpL.bigOpL_cons, Algebra.BigOpL.bigOpL_nil]
+    isplitl [Hchild Hp₁ Hp₂]
+    · iapply Hchild $$ %(⟨σ₁.nextAddr⟩ : Addr)
+      isplitl [Hp₁]
+      · iexact Hp₁
+      · iexact Hp₂
+    · itrivial
+
 end
 
 end GoLean.Iris

@@ -271,6 +271,39 @@ set — S2 fix round — and all slice-3 exports stay
 ## 6. Build log (appended as built)
 
 - **Commit 1** — this note.
+- **Commit 2 — THE RESOURCE TIER + THE TRANSFER WITNESS**
+  (`ChanDMRes.lean`, `Specs/ChanTransfer.lean`, `wpDM_fork_alloc₂` in
+  `LangDM.lean`; Audit block + root imports). §1 built as designed:
+  `chanInv` (the `[∗list]` IProp tier), the four `wpDM_*_inv` laws,
+  `chanInv_pure_eqv` (P-CL3-1 DISCHARGED — `BigSepL.bigSepL_pure` was
+  at the pin, so the degenerate case is a theorem, not prose), and the
+  mini-dsp witness with D1-BOTH + completion pin (fuel 500,
+  `#eval`-confirmed `true` before `decide +kernel`). In-build
+  decisions, recorded:
+  - **The timeless restriction** (`[∀ v, Timeless (Ψ v)]` on all four
+    laws): invariant opening yields `▷ chanInv`, and the proofs strip
+    the later by timelessness — free for the pure tier, a real
+    restriction here. Covers every protocol this arc states
+    (points-to/pure/`metaInfo` compositions are timeless at the pin);
+    the later-credit generalization (needed only for genuinely
+    higher-order Ψ, e.g. a nested WP) is parked as **P-CL3-3** with no
+    current consumer.
+  - **The park branch RETURNS the payment**: `wpDM_send_inv`'s
+    continuation disjunction is `(⌜parked⌝ ∗ Ψ v') ∨ ⌜pushed⌝` — a
+    resource, unlike the pure tier's freely-duplicable hypothesis, must
+    round-trip through the park so the parked-send law can re-pay it.
+    This is the one statement-shape delta from the `*_invP` family.
+  - **`wpDM_store_step₂` was drafted and DELETED**: the machine's
+    phase-split target resolution (the `tgtOpK`/`storeK` machinery)
+    reads the pointer cell and writes the target cell in SEPARATE
+    steps, so the two-cell store core has no consumer on the DM
+    carrier (the sequential `wp_store_step₂` predates the split's
+    reach here). Anti-scaffold rule applied; re-adding is one git
+    revert away if a genuinely simultaneous two-cell step appears.
+  Axiom sets FD7-exact (spec-lane classical trio; cert
+  `[propext, Quot.sound]`; pure helpers `[propext]`); the DM lane's
+  recorded `BEq.rfl`/Ord deviation (P-CL2-6) is inherited unchanged
+  and cited at the Audit block. `scripts/ci` green at the commit.
 
 ## 7. Perennial comparison (shape reference, deltas both directions)
 

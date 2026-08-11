@@ -795,6 +795,67 @@ open Lean in
 /-- info: 'GoLean.Iris.chanRendezvousValTerminatesNormallyC' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Iris.chanRendezvousValTerminatesNormallyC
 
+-- THE RESOURCE-TRANSFER TIER (channel-logic slice 3, ChanDMRes.lean +
+-- Specs/ChanTransfer.lean + LangDM's wpDM_fork_alloc₂; design note
+-- docs/2026-08-11_channel-resource-tier.md §§1,4): the IProp-valued
+-- per-element invariant chanInv (P-CL2-3's first form — the [∗list]
+-- shape; ownership TRANSFERS with the message) and the four
+-- resource-protocol laws over the mediated carrier: send/parked-send
+-- PAY Ψ v' (a resource — the park branch RETURNS the payment to the
+-- continuation), targeted recv/parked-recv are DELIVERED Ψ v for the
+-- physical head — the move the pure Ψp tier provably cannot make
+-- (slice-2 note §6 obstacle 1) and the dsp flagship's prerequisite.
+-- The pure tier is untouched and recovered as the degenerate case
+-- (chanInv_pure_eqv). The laws carry a [∀ v, Timeless (Ψ v)]
+-- restriction (invariant opening strips the later by timelessness —
+-- covers points-to/pure/metaInfo protocols; the later-credit
+-- generalization is parked P-CL3-3 with no consumer). THE WITNESS is
+-- the mini-dsp transfer exemplar: chanTransferTripleC's post RE-OWNS
+-- x ↦ 42 — a cell main's thread never wrote, whose points-to went to
+-- the worker at the (two-parameter allocating) fork and came back
+-- ONLY through the message's protocol resource; its D1-BOTH pair is
+-- the run-conditioned readout (42 pin, InitialSplit discharged at the
+-- seed) + the seeded completion pin over the fuel-500 kernel
+-- certificate (#eval-confirmed true before decide, per doctrine).
+-- Axiom sets FD7-exact (spec-lane classical trio; cert
+-- [propext, Quot.sound]; pure helpers [propext]); the DM lane's
+-- recorded BEq.rfl/Ord Classical.choice deviation (P-CL2-6, S2 audit
+-- fix round) is inherited here unchanged — not re-investigated, per
+-- the standing record. Name-existence tripwire: every public theorem
+-- of ChanDMRes.lean and Specs/ChanTransfer.lean is anchored here.
+/-- info: 'GoLean.Iris.chanBuf_push' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.chanBuf_push
+/-- info: 'GoLean.Iris.chanBuf_head' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.chanBuf_head
+/-- info: 'GoLean.Iris.chanInv_pure_eqv' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.chanInv_pure_eqv
+/-- info: 'GoLean.Iris.wpDM_send_inv' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.wpDM_send_inv
+/-- info: 'GoLean.Iris.wpDM_blocked_send_inv' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.wpDM_blocked_send_inv
+/-- info: 'GoLean.Iris.wpDM_recv_inv' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.wpDM_recv_inv
+/-- info: 'GoLean.Iris.wpDM_blocked_recv_inv' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.wpDM_blocked_recv_inv
+/-- info: 'GoLean.Iris.wpDM_fork_alloc₂' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.wpDM_fork_alloc₂
+/-- info: 'GoLean.Iris.xferDel' depends on axioms: [propext] -/
+#guard_msgs in #print axioms GoLean.Iris.xferDel
+/-- info: 'GoLean.Iris.xferNormChan' depends on axioms: [propext] -/
+#guard_msgs in #print axioms GoLean.Iris.xferNormChan
+/-- info: 'GoLean.Iris.xferNormPtr' depends on axioms: [propext] -/
+#guard_msgs in #print axioms GoLean.Iris.xferNormPtr
+/-- info: 'GoLean.Iris.wpDM_chan_transfer_witness' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.wpDM_chan_transfer_witness
+/-- info: 'GoLean.Iris.chanTransferTripleC' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.chanTransferTripleC
+/-- info: 'GoLean.Iris.chanTransferReadoutC' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.chanTransferReadoutC
+/-- info: 'GoLean.Iris.chanTransferAllStreamsCert' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.chanTransferAllStreamsCert
+/-- info: 'GoLean.Iris.chanTransferTerminatesNormallyC' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.chanTransferTerminatesNormallyC
+
 -- THE CHANNEL WP LAW FAMILY, slice 1 of the channel-logic arc
 -- (ChanD.lean + Specs/ChanRendezvous.lean; design note
 -- docs/2026-08-11_channel-wp-laws.md). The rendezvous-class laws over
