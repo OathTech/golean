@@ -57,6 +57,21 @@ member (carrier irreducibility, S2 §2c — unchanged). House
 obligations unchanged: FD7 axiom sets, same-commit witnesses, Audit
 registration, docstrings scoped to the witness.
 
+**Standing docstring element for DELIVERY laws (adopted at the S3 fix
+round; the S2 lesson's third occurrence).** Every send/receive law's
+docstring must state the `closed = false` SCOPING explicitly: the
+outcome sets these laws describe (drain-with-`Ψ`, park, no
+closed-panic) hold only because `chanInv`/`chanInvP` pin the OPEN cell
+shape. On a closed empty channel the machine resumes a parked receiver
+with the type's ZERO value and `ok = false` (`Multi.lean` `.blockedRecv`
+arm) — delivering no message and no `Ψ`. The send law already carried
+its clause ("the closed-panic branch is refuted by the invariant's open
+shape"); the two receive laws did not, and now do. This is a docstring
+rule, not a statement change: the scoping is real in the statements
+(the invariant is a hypothesis), it was simply unstated where a reader
+would look for it. Any future close-protocol tier (P-CL2-3) restates
+these outcomes at a `closed`-generic invariant.
+
 **The pure tier remains as the degenerate case.** `chanInvP` is
 recovered by `Ψ v := ⌜Ψp v⌝` — `[∗list] v ∈ l, ⌜Ψp v⌝ ⊣⊢ ⌜∀ v ∈ l, Ψp
 v⌝` (`bigOpL_pure`-shaped lemma, proved with the tier if cheap at the
@@ -133,9 +148,16 @@ Options at this latitude point:
   points-to is main's cell, the deref reads 42. Both Ψ's are
   `sa`-parametric — legal, `sa` is in scope at creation. Zero new
   ghost machinery, zero functor-bundle change, everything proven at
-  the pin. Cost: a `Pos.Countable Addr` instance (the pin has
-  Char/String/List/Pos only — a small local Nat/Addr instance,
-  FD9-authorized local construction, recorded here).
+  the pin. Cost: **exactly one `Pos.Countable Addr` instance** (the
+  pin has Char/String/List/Pos only — a small local construction,
+  FD9-authorized, recorded here). `metaToken`/`metaInfo` constrain
+  only the METADATA type, never the location index, so the metadata
+  being `Addr` is the whole requirement. (Corrected at the S3 fix
+  round: this line and the commit-4 log said "Nat/Addr". A dead
+  `Pos.Countable Nat` instance did ship at `Specs/ChanDSP.lean` — used
+  by zero declarations, measured, and an unscoped global instance on a
+  ubiquitous type — and was DELETED at the fix round. Only the `Addr`
+  instance is the tie's construction.)
 - **(b) fallback, not taken — a ghost-map name allocated early, shot
   late.** Add a slot-7 functor to `GoCoreS` (`HeapView Nat (Agree
   (LeibnizO Addr)) GoHeapF`) + a `GhostMapG GoCoreS Nat Addr`
@@ -173,25 +195,45 @@ The S1→S2 port pattern: same machine-equation content as the
 sequential `Laws/*` family, restated on the DM carrier over the DM
 cores, side-conditions `hsp/hsc/hblk/hpos` (all `rfl` at sequential
 shapes — `stepDM_shape_cases` refutes the mediated rules away from
-apply/blocked positions). New cores in `LangDM.lean` (internal
-machinery, consumed by the ports, per the `Lifting.lean` precedent):
+apply/blocked positions). New cores (internal machinery, consumed by
+the ports, per the `Lifting.lean` precedent). **File attribution
+corrected at the S3 fix round** — this list originally said "new cores
+in `LangDM.lean`" for all of them, which is wrong for the two
+allocating cores; measured locations are given per bullet:
 
-- `wpDM_alloc_step` — ONE fresh cell, continuation `∀ pa`-parametric
-  (the `wp_init`/`enterFrame` allocation shape; `genHeap_alloc` +
-  `HeapWf.fresh_get?`, the `wpDM_fork_alloc₁` interior). **Hands out
-  the allocation's `metaToken pa ⊤`** — new to the DM kit, needed by
-  §2(a); the sequential family discards it, ours must not.
-- `wpDM_alloc_store_step` — fresh cell + a store into an owned cell
-  (the `newValue`/`makeChan` shape: allocate the payload, store the
-  handle/pointer into the target var's cell). Token handed out too.
-- `wpDM_store_step₂` — the two-cell store (`wp_store_step₂`'s port:
-  read `pa`, write `a` — the child's `*ptr = *ptr + 2`).
-- `wpDM_fork_alloc₂` — the two-parameter spawn (`allocMany σ [p₁,
-  p₂]`, child continuation over consecutive fresh addresses): dsp's
-  `go lit0(&c, &signal)` shape, measured from the lowering.
-- `wpDM_eval_var`/read laws generalized to `↦{dq}` (read-only needs
-  `genHeap_valid`, which is dq-generic at the pin) — the persisted
-  handle cells.
+- `wpDM_alloc_step` (**`LawsDM.lean`:68**) — ONE fresh cell,
+  continuation `∀ pa`-parametric (the `wp_init`/`enterFrame`
+  allocation shape; `genHeap_alloc` + `HeapWf.fresh_get?`, the
+  `wpDM_fork_alloc₁` interior). **Hands out the allocation's
+  `metaToken pa ⊤`** — new to the DM kit, needed by §2(a); the
+  sequential family discards it, ours must not. (The kit rule has one
+  recorded EXCEPTION, `wpDM_fork_alloc₂` — see below.)
+- `wpDM_alloc_store_step` (**`LawsDM.lean`:131**) — fresh cell + a
+  store into an owned cell (the `newValue`/`makeChan` shape: allocate
+  the payload, store the handle/pointer into the target var's cell).
+  Token handed out too. (`wpDM_pure_step`, the third core, is at
+  `LawsDM.lean`:52.)
+- ~~`wpDM_store_step₂` — the two-cell store (`wp_store_step₂`'s port:
+  read `pa`, write `a` — the child's `*ptr = *ptr + 2`).~~ **DRAFTED
+  AND DELETED at commit 2** (anti-scaffold; the machine's phase-split
+  target resolution leaves it consumer-less — §6's log). Struck here
+  so the plan table does not read as shipped surface.
+- `wpDM_fork_alloc₂` (**`LangDM.lean`:2380**) — the two-parameter
+  spawn (`allocMany σ [p₁, p₂]`, child continuation over consecutive
+  fresh addresses): dsp's `go lit0(&c, &signal)` shape, measured from
+  the lowering. **Recorded deviation from the token rule above (S3 fix
+  round, audit note):** it binds both fresh cells' `metaToken`s in its
+  proof and DISCARDS them — the child receives the two points-tos
+  only, so a forked parameter cell cannot carry a meta tie. Not a
+  soundness issue (dropping a resource only weakens the law) and no
+  consumer needs it today; the deviation is now stated at the law's
+  docstring. Threading them is a statement change to a landed law plus
+  its witness, so it was NOT taken inside a records fix round —
+  reversible whenever a consumer appears (the proof already binds
+  `Htok₁`/`Htok₂`).
+- `wpDM_eval_var` (**`LangDM.lean`:2203**)/read laws generalized to
+  `↦{dq}` (read-only needs `genHeap_valid`, which is dq-generic at the
+  pin) — the persisted handle cells.
 
 The named ports (`proofs/GoLeanProofs/LawsDM.lean`), each consumed by
 the flagship walk and/or the §4 witnesses in the same commit:
@@ -202,15 +244,31 @@ the flagship walk and/or the §4 witnesses in the same commit:
 | `wpDM_init` | `wp_init` (alloc core) | 9 `initialization`s |
 | `wpDM_make_chan` | NEW (P-CL1-6 closes; `applyStmtOpCore` `.makeChan` + alloc-store core; no sequential counterpart exists) | `make(chan any)` ×2 |
 | `wpDM_new_value` | `wp_new_value` | `new(40)` |
-| `wpDM_call_start` / `wpDM_call_enter_ret1` | `wp_call_start`/`wp_call_enter_ret1` | driver → `goleanDSPExample` → `DSPExample` (both nullary/1-int-result) |
+| `wpDM_call_enter_ret1` | `wp_call_enter_ret1` | driver → `goleanDSPExample` → `DSPExample` (both nullary/1-int-result) |
 | `wpDM_frame_return_int` | `wp_frame_return_int` | both frame exits |
 | strict-spine ports (`wpDM_eval_strict`, `wpDM_strict_shift`, `wpDM_strict_apply_pure/pin/read`) | `Laws/Eval.lean` | `toInterface` (boxing, types-pinned), `typeAssert` (unboxing), `add`, `deref` (read at `↦{dq}`) |
 | assign/tgtop-spine ports (`wpDM_assign_start`, `wpDM_tgtop_*`, `wpDM_rhs_*`, `wpDM_assign_store`, `wpDM_stores_done*`) | `Laws/Eval.lean` | `assign` ×5, `assignMany` (the phase-split `tgtOpK`/`rhsK`/`storeK` machinery — `assignMany` has no one-shot plan, BUG-025) |
-| control ports (`wpDM_seqn`, `wpDM_seq_next`, `wpDM_seq_done`, `wpDM_frame_fall`, `wpDM_return`, `wpDM_eval_intLit`, `wpDM_eval_ref`) | `Laws/Control.lean`, `Laws/Eval.lean` | everywhere |
+| control ports (`wpDM_seqn`, `wpDM_seq_next`, `wpDM_seq_done`, `wpDM_frame_fall`, `wpDM_return`, `wpDM_eval_intLit`, `wpDM_eval_boolLit`, `wpDM_eval_ref`) | `Laws/Control.lean`, `Laws/Eval.lean` | everywhere (`wpDM_eval_boolLit` has NO dsp site — see below) |
 
 A port that turns conceptual (a rule shape fighting the DM carrier)
 becomes a section here, not a silent hack — none did at build time
 except where noted in §6's log.
+
+**Two corrections to this table, made at the S3 fix round (audit
+findings, both records-only):**
+
+- The planned row `wpDM_call_start` / `wpDM_call_enter_ret1` was
+  shipped as `wpDM_call_enter_ret1` ALONE: no `wpDM_call_start` exists
+  anywhere in the tree, because the nullary `.call targets fid #[]`
+  shape is consumed by the entry law directly and needs no separate
+  start step. The port was dropped as unnecessary and the drop was
+  never recorded — §6's "table built in full" is corrected there.
+- `wpDM_eval_boolLit` was built but is NOT in this plan table (an
+  unlisted extra) and has no dsp site: the three slice-3 programs
+  contain no boolean literal. Its discharge witness is
+  `wpDM_eval_boolLit_witness` in `Specs/SeqWalkDM.lean`, added at the
+  fix round (§11) — the future consumers are the muxer rows, whose
+  loop guards and `if`s are `Expr.boolLit` (measured, §9).
 
 ## 4. Witnesses (non-vacuity, same-commit)
 
@@ -306,7 +364,12 @@ set — S2 fix round — and all slice-3 exports stay
   and cited at the Audit block. `scripts/ci` green at the commit.
 - **Commit 3 — THE wpDM LAW PORTS + THE KITCHEN-SINK WITNESS**
   (`LawsDM.lean` ~46 laws, `Specs/SeqWalkDM.lean`; Audit block + root
-  imports). §3's table built in full: the three cores
+  imports). §3's table built, with ONE planned row dropped and one
+  extra added (this sentence originally read "§3's table built in
+  full", which was inaccurate — corrected at the S3 fix round;
+  `wpDM_call_start` was dropped as unnecessary at the nullary call
+  shape and `wpDM_eval_boolLit` was built without being listed, both
+  now recorded at §3): the three cores
   (`wpDM_pure_step` over the generic `step_det`; the two allocating
   cores handing out `metaToken` — the §2(a) tie's raw material), the
   pure control/eval/go/chan glue, the strict spine (`toInterface`/
@@ -321,9 +384,34 @@ set — S2 fix round — and all slice-3 exports stay
     surface; the DM entries are safe by DISCRIMINATION — their
     conclusions are `WP (PoolCfgDM.mk _)`, a different head than the
     sequential `WP (_ : Config)` keys, so neither family can fire on
-    the other's goals. Validated empirically: the same `scripts/ci`
-    run rebuilds every standing sequential walk green. `go_walk`
-    DRIVES DM WALKS — the kitchen-sink witness's pure glue is
+    the other's goals. **Evidence, restated honestly at the S3 fix
+    round** (this line originally read "Validated empirically: the
+    same `scripts/ci` run rebuilds every standing sequential walk
+    green", which cannot support the claim and is withdrawn — the
+    audit measured the `go_walk` table directly at a standing
+    sequential walk: 51 entries, 0 of them DM, because the law table
+    is a scoped env extension and NO standing sequential-walk module
+    has `LawsDM` in its import closure; those walks were replayed from
+    cache, not re-elaborated):
+    - the DISCRIMINATION argument is STRUCTURAL, not empirical — the
+      `PoolCfgDM.mk` wrapper is a distinct `DiscrTree` head, so the
+      two families' keys cannot collide;
+    - what the standing sequential walks DO show is NO REGRESSION
+      (nothing this slice added perturbed them), which is worth having
+      and is a different claim from disjointness;
+    - the direction that IS exercised in-build is the converse:
+      `SeqWalkDM`/`ChanDSP` run ~60 `go_walk` calls on DM goals with
+      all 51 sequential entries in scope, and no sequential entry
+      fires on them;
+    - the untested direction (DM entries in scope at a sequential
+      goal) arises nowhere in the repo today, since only the root
+      aggregator, `SeqWalkDM` and `ChanDSP` import `LawsDM`. The audit
+      ran the missing probe by hand (a verbatim copy of a standing
+      sequential walk plus `import GoLeanProofs.LawsDM`: 32 DM entries
+      in the table, elaborates clean at the same cost); a permanent
+      cross-family probe module is the honest way to make this
+      empirical and is left as a maintenance item beside P-CL3-5.
+    `go_walk` DRIVES DM WALKS — the kitchen-sink witness's pure glue is
     `go_walk` end to end, a large cost reduction for the flagship.
   - No port turned conceptual: every rule shape carried over
     mechanically (the §3 escape clause was not needed).
@@ -339,8 +427,10 @@ set — S2 fix round — and all slice-3 exports stay
   convention — every `.normal` completion leaves the harness cell at
   **42**, proved laws → wpDM → resource tier → meta tie → exit,
   never by execution. §5's route held exactly; in-build findings:
-  - **The meta tie worked as designed** (§2(a)): `Pos.Countable`
-    Nat/Addr local instances (the FD9-recorded construction),
+  - **The meta tie worked as designed** (§2(a)): the local
+    `Pos.Countable Addr` instance (the FD9-recorded construction — a
+    `Pos.Countable Nat` instance shipped beside it and was dead, since
+    deleted, S3 fix round),
     `metaInfo` Timeless/Persistent by instance inference at the pin,
     `meta_set` on the signal `makeChan`'s token after `new(40)`,
     `meta_agree` closing `x' = x` at main's receive. Zero
@@ -422,6 +512,34 @@ deliberate:
   `make(chan string, 1)` (measured, §9) — a mechanical variant over
   the same `applyStmtOpCore` arm with the capacity operand; the
   protocol laws are already cap-generic. Lands with the async row.
+- **P-CL3-6 — the async/client PORT INVENTORY** (opened at the S3 fix
+  round, from §9's corrected walk-level check). Three DM ports the
+  async and client rows both need and that no landed law covers:
+  1. **arg-carrying call entry** — the 1-arg/1-result shape
+     (`goleanAsync → Async`, `Client → Serve`); landed
+     `wpDM_call_enter_ret1` is nullary-only. Sequential shapes:
+     `wp_call_enter_arg1` (1-arg/0-result), `wp_call_enter₂₁`
+     (2-arg/1-result). Mechanical-leaning.
+  2. **`Stmt.callValue`** — indirect call through a deref'd func
+     pointer (`Async$lit0`, `Serve$lit0`); NO DM law exists.
+     Sequential spine: `wp_call_value_start` +
+     `wp_call_value_enter_cap1` (`Laws/Unwind.lean`:64, :324). NEEDS
+     DESIGN: the callee is an expression evaluated into
+     `callValCalleeK` first, so the port sits a continuation against
+     the mediated apply/blocked side-conditions rather than restating
+     one step.
+  3. **non-int frame exit** — `chan string`/`string`/`Ty.defined
+     main.stream` results; landed `wpDM_frame_return_int` is int-only.
+     Sequential twins `wp_frame_return₁`/`₂` are general.
+     Mechanical-leaning.
+  Named consumer: the async and client row attempts in the successor
+  slice — these land WITH the rows, not speculatively (anti-scaffold),
+  and the capacity-carrying `makeChan` (P-CL3-4) rides along with
+  async. NOT a complete list by construction: it is what a statement-
+  by-statement read of the two call graphs found, and the walk itself
+  may surface more (candidates not yet checked: `funcVal`-as-argument
+  parameter binding, `Serve$lit0`'s `main.stream` struct-pointer
+  params). The honest form of the reach claim is "at least these".
 - **P-CL3-5 — the sequential `wp_strict_apply_read` registration**:
   the DM twin was unregistered from the `go_walk` table after the
   spurious-iframe-capture finding (commit-4 log); the SEQUENTIAL
@@ -433,38 +551,135 @@ deliberate:
 ## 9. Reach check (measured at the landed surface, per the charter
 ## item — first-hand statement inventories of `muxerLowered`)
 
-Per-function counts (`while`/`select`/chan-ops), measured from the
-pinned lowering at this slice's tip:
+**REWRITTEN AT THE S3 FIX ROUND (2026-08-11).** The first form of this
+section reported "async: REACHABLE … plus exactly one small law
+variant" and "client: blocked on ONE thing". Both conclusions were
+WRONG, and the way they were wrong is the section's most useful
+lesson, so it is stated before the corrected accounting:
 
-- `Async` {goStmt 1, makeChan 1(+cap)}, `Async$lit0` {chanSend 1},
-  `goleanAsync` {chanRecv 1, call 1} — **zero `while`, zero
-  `select`**.
+> **The measurement-scope lesson.** What was measured was a
+> per-function inventory of `while`/`select`/chan-ops. That inventory
+> is accurate — the audit reproduced every count. What was WRITTEN was
+> a conclusion about the whole walk ("everything else in its walk … is
+> landed"), which quantifies over dimensions the inventory never
+> counted: CALL SHAPE (arity of the callee's `args`), CALL FORM
+> (`Stmt.call` vs `Stmt.callValue`), and RESULT TYPE (the landed exit
+> law is int-only). Counting three node kinds and concluding about all
+> of them is the error. A reach check is a claim about a WALK, so its
+> unit of measurement must be the walk: for each statement of each
+> function in the call graph, name the landed law whose conclusion
+> matches, or name the missing port. Below, what WAS measured is
+> separated from what the walk-level check found.
+
+**(a) What was measured — per-function counts (`while`/`select`/
+chan-ops) from the pinned lowering at this slice's tip.** Accurate as
+recorded; independently reproduced at the fix round:
+
+- `Async` {goStmt 1, makeChan 1 with capacity `some (intLit 1 .int)`},
+  `Async$lit0` {chanSend 1}, `goleanAsync` {chanRecv 1, call 1} —
+  **zero `while`, zero `select`**.
 - `Client` {chanSend 1, chanRecv 1, call 1}, its server `Serve`
-  {goStmt 1, makeChan 2} and `Serve$lit0` **{while 1, chanRecv 1,
-  chanSend 1, if 2, break 1}** — the one live loop; zero `select`.
+  {goStmt 1, makeChan 2, both capacity `none`} and `Serve$lit0`
+  **{while 1, chanRecv 1, chanSend 1, if 2, break 1}** — the one live
+  loop; zero `select`.
+- Zero `select` and zero `close` in the ENTIRE `muxerLowered` unit
+  (case-insensitive grep = 0). The select trio therefore remains the
+  ONLY select consumer — P-CL1-2 unchanged.
 
-**async: REACHABLE with the landed surface plus exactly one small law
-variant** — the capacity-carrying `makeChan` (P-CL3-4). Everything
-else in its walk (fork with captured ref args, buffered send/recv —
-the protocol laws are cap-generic since S2 — call frames, string
-payload) is landed. No loop-invariant machinery needed.
+**(b) What the walk-level check found — three UNMADE DM ports, in
+addition to the parked `makeChan` variant.** Each is a shape whose
+node appears in the row's call graph and whose conclusion no landed
+`wpDM_*` law matches (full DM inventory: 60-odd `wpDM_*` theorems
+across `LangDM`/`ChanDM`/`ChanDMRes`/`LawsDM`; the sequential family
+is NOT a fallback — the carriers are disjoint by construction, §6's
+discrimination note):
 
-**client: blocked on ONE thing — loop-invariant machinery for the
-spawned server, and the loop is NOT unrollable.** `Serve$lit0`'s
-`for { s.res <- f(<-s.req) }` is an unbounded service loop: after
+1. **Arg-carrying call entry.** `goleanAsync` does
+   `Stmt.call #[$c17] {Async} #[Expr.funcVal {goleanAsync$lit0} #[]]`
+   and `Async.args = #[{f : funcType [] [string]}]`; `Client` calls
+   `Serve` with a `funcVal` argument the same way. The only landed DM
+   entry law, `wpDM_call_enter_ret1`, carries `hargs : func.args = #[]`
+   and concludes over `.call targets fid #[]` — nullary only (§3's own
+   table said so; §9's first form did not read it).
+2. **`Stmt.callValue` (indirect call through a deref'd func pointer).**
+   `Async$lit0`'s body is
+   `Stmt.callValue #[$c3] (Expr.deref (Expr.var "f$cap") …) #[]`;
+   `Serve$lit0` has the same shape with a string argument. There is NO
+   `callValue` law on the DM carrier at all (`grep -c callValue` over
+   the DM files = 0).
+3. **Non-int frame exit.** `Async.results = #[chan both string]`,
+   `goleanAsync.results = #[string]`, `Serve.results =
+   #[Ty.defined main.stream]`. The only landed value-exit law,
+   `wpDM_frame_return_int`, is int-fixed on both cells
+   (`⟨some (.int kind), .int m kind⟩`, `IntKind.normalize`).
+   (`wpDM_frame_fall` does cover `Async$lit0`'s void exit.)
+
+Sequential twins, measured, since they set the cost: (1) has
+`wp_call_enter_arg1` (1-arg/0-result) and `wp_call_enter₂₁`
+(2-arg/1-result) — the SHAPE exists but not the 1-arg/1-result
+instance the rows need; (3) has the general `wp_frame_return₁`/`₂`;
+(2) has a two-law spine, `wp_call_value_start` +
+`wp_call_value_enter_cap1` (`Laws/Unwind.lean`:64, :324). So (1) and
+(3) are restatement-shaped (mechanical-leaning, the S1→S2 port
+pattern), while (2) is the one needing DESIGN attention on the DM
+carrier: its callee is an EXPRESSION evaluated first, so the port must
+sit the `callValCalleeK` continuation against the mediated rules'
+apply/blocked side-conditions rather than restate a single step.
+
+**async: NOT reachable with the landed surface.** It needs the
+capacity-carrying `makeChan` (P-CL3-4, a mechanical variant) PLUS
+ports (1), (2) and (3) above. What IS landed for it, and was correctly
+identified: the fork with captured ref args (`wpDM_fork_alloc₂`), the
+buffered send/recv (the protocol laws are cap-generic since S2), the
+string payload, no loop machinery. The port inventory is parked as
+**P-CL3-6** (§8) with the async/client row attempts as its named
+consumer.
+
+**client: blocked on the loop machinery AND the same three ports.**
+The loop diagnosis stands and re-measures correct: `Serve$lit0`'s
+`for { s.res <- f(<-s.req) }` is an unbounded service loop — after
 serving a request it re-parks at the receive (the certificate row
 leaves it parked at main's exit), so no finite unrolling covers the
-child's WP. The successor design, recorded (P-CL3-2): a DM port of
-the loop rule in `wp_while_inv`'s shape with the iteration proved by
-LÖB — each iteration passes through the step laws' `▷`, so the
-guarded fixpoint closes — carrying the two `is_chan` assertions (and
-the break-on-closed branch, which is where S2 §2c's closed-zero
-forward warning becomes live: the server's exit path receives the
-closed-channel default, so the loop invariant meets the
-close-protocol tier, P-CL2-3's remaining half). The row's
+child's WP. The successor design, recorded (P-CL3-2): a DM port of the
+loop rule in `wp_while_inv`'s shape with the iteration proved by LÖB —
+each iteration passes through the step laws' `▷`, so the guarded
+fixpoint closes — carrying the two `is_chan` assertions. The row's
 request/response protocols themselves fit the landed resource tier
-as-is. The select trio remains the ONLY select consumer (measured
-zero selects in the async/client call graphs) — P-CL1-2 unchanged.
+as-is.
+
+**The break-on-closed attachment was a MISATTRIBUTION — withdrawn.**
+The first form of this section said the client row's loop rule must
+carry "the break-on-closed branch … so the loop invariant meets the
+close-protocol tier, P-CL2-3's remaining half". Measured, `Serve$lit0`
+has no such branch and no reachable exit at all:
+
+- its guard is `Expr.boolLit true`, and its ONLY `break` is the
+  else-branch of a second literal-`true` test — the standard `for {}`
+  lowering, structurally dead (this is the `break 1` the inventory
+  above counts);
+- its receive is `chanRecv #[$c8] …` — ONE assignee, no `ok` flag, so
+  closedness is not even observable there;
+- nothing anywhere in `muxerLowered` closes a channel (`close` count
+  = 0), and the Go source agrees (`Corpus/coverage/exec/imported-goose/
+  channel/muxer/main.go`, byte-identical to goose's `muxer.go`).
+
+The break-on-closed shape the withdrawn clause described is real but
+belongs to a DIFFERENT function: `Muxer`, which does
+`chanRecv #[$rrecv, $rok]` then `if not $rok then break` — and `Muxer`
+is NOT in the client row's call graph (`clientDriver → goleanClient →
+Client → Serve → Serve$lit0`; `Muxer` is reached only from
+`makeGreeting`). So the client row does NOT meet the close-protocol
+tier, and P-CL2-3's remaining half is NOT on its critical path.
+
+The correction has a real design consequence, which is why it matters
+more than a scoping slip: because `Serve$lit0` has no reachable exit,
+the successor loop rule for this row cannot be `wp_while_inv`'s
+ordinary "post on exit" shape — it is the NEVER-EXITING instance (Löb
+with an unreachable post; the child's WP is `True`-posted at the fork,
+which is what `wpDM_fork_alloc₂` already hands it). S2 §2c's
+closed-zero forward warning stays correctly scoped where S2 put it (at
+close-protocols generally); it becomes live at whichever row first
+runs `Muxer`, not here.
 
 ## 10. The TCB-grounding walk (the per-slice review criterion)
 
@@ -501,9 +716,131 @@ FD3, for the arc-end designation window:
   `dspEnv`/`dspSeed` already live in the def-only
   `GooseParityTargets`; the statement additionally references
   `GoTripleC` (Surface, already in the trusted closure) — the hoist
-  is near-zero. `dspCompTerminatesNormallyC` completes the D1 pair
-  (its underlying `dspCert`/`dspAllSchedules` are ALREADY
-  designated, D3 2026-08-10).
+  is near-zero. `dspCompTerminatesNormallyC` completes the D1 pair —
+  **provenance corrected at the S3 fix round**: it is a direct
+  restatement of `ChannelActris.dspTerminatesNormallyC`, which is
+  `chanCert_terminatesNormallyC dspCert400`, i.e. it rests on the
+  FUEL-BASED `dspCert400`, which D3 (2026-08-10) deliberately left
+  UNDESIGNATED. The already-designated `dspCert`/`dspAllSchedules` are
+  NOT what this member depends on (the earlier text said they were).
+  The restatement itself is honest and delta-free (same proposition,
+  same env/seed/program, discharged by direct reference); what changes
+  is the designation calculus: designating the completion member at
+  the arc-end window means either pulling `dspCert400` into the
+  designated set or accepting a designated statement whose proof leans
+  on undesignated kernel evidence. That decision is the user's at the
+  window, and it should be made against the TRUE dependency.
 - `chanTransferTripleC` is deliberately NOT a candidate (purpose-built
   exemplar, the `chanRendezvousValTripleC` precedent); `seqWalkTripleC`
   likewise (a witness program, not a curated row).
+
+Candidates now ALSO accumulate in one place per FD3: the charter's
+"FD3 candidate ledger" section (added at the S3 fix round — before it,
+each slice's candidates lived only in that slice's own note, so the
+arc-end window would have had to gather them by reading every note).
+
+## 11. The S3 audit fix round (2026-08-11)
+
+Pre-merge sub-branch audit of the slice-3 tip (306ca14c): 11 agents,
+reviewers and verifiers Opus-class, every finding independently
+reproduced from primary sources before being accepted. **The flagship
+and the resource tier survived untouched** — no theorem statement, no
+proof, no axiom set, no gate, and no designated statement is affected
+by anything below. Two majors and the rest were RECORD defects: the
+slice's central charter deliverable (§9's reach check) drew wrong
+conclusions from a correct measurement. Dispositions, finding by
+finding:
+
+**Majors (both are the same defect, filed twice by decorrelated
+reviewers) — §9's reach-check overclaim, for BOTH rows.**
+
+- FIXED BY HONEST RECORD, not by landing ports: §9 is rewritten above
+  with the measurement-scope lesson stated first, the measured
+  inventory separated from the walk-level check, and the three unmade
+  DM ports named per row. The ports themselves belong to the successor
+  slice that consumes them (they land WITH the async/client rows —
+  landing them here would be scaffold), and are parked as **P-CL3-6**.
+- The `Serve$lit0` break-on-closed clause is WITHDRAWN, with the true
+  loop shape (dead `for {}` break, single-target receive, no `close`
+  anywhere in the unit, no reachable exit) and the design consequence
+  (the never-exiting Löb instance) recorded in its place. The real
+  break-on-closed shape belongs to `Muxer`, outside the client row's
+  call graph.
+- **Commit-5's message repeats the overclaim** ("async: reachable +
+  one small variant"; "meets the close-protocol tier at
+  break-on-closed"). History is NOT rewritten — this entry is the
+  correction of record, and anyone reading `git log` for the slice
+  should read §9 as it now stands instead. Same for commit 3's "§3's
+  table built in full" and "standing sequential walks re-validated
+  green by this same ci run": corrected in §6's log, message left
+  alone.
+
+**Minors.**
+
+- `ChanDMRes`'s module docstring named the DELETED `wpDM_store_step₂`
+  among the laws its witness discharges (the stale line was added by
+  the very commit that deleted the law). Docstring fixed; §3's plan
+  bullet struck.
+- `wpDM_eval_boolLit` shipped with no consumer, contradicting §4's
+  "every port fires at least once" and `SeqWalkDM`'s "every named
+  port". The law has genuine consumer shapes (the muxer rows' loop
+  guards and `if`s ARE `Expr.boolLit`), so the anti-scaffold rule's
+  DELETE branch does not apply — the honest fix is a witness, and
+  `wpDM_eval_boolLit_witness` (a concrete `b = true` assignment walked
+  on the DM carrier through the registered port, all premises
+  discharged) is it. §3's table now lists the port and its witness.
+- §3's port table listed `wpDM_call_start`, which exists nowhere, and
+  attributed the two allocating cores to `LangDM.lean` when they are
+  in `LawsDM.lean`; §6 claimed the table was "built in full". All
+  three corrected in place, with the drop's REASON recorded (the
+  nullary call shape needs no start step) — the same treatment §6
+  already gave `wpDM_store_step₂`.
+- The `go_walk` table-discrimination claim cited evidence that cannot
+  support it (standing sequential walks never had the DM entries in
+  their import closure, and were replayed from cache rather than
+  re-elaborated). §6's log now states the structural argument as
+  structural, keeps the no-regression reading of the green walks, and
+  names the direction that IS exercised in-build plus the probe that
+  would make the remaining direction empirical.
+- The dead global `Pos.Countable Nat` instance is DELETED from
+  `Specs/ChanDSP.lean` (measured: zero users; ablation elaborates
+  byte-identically, while deleting the `Addr` instance fails
+  instance synthesis at six sites). §2(a), the commit-4 log and the
+  Audit block now credit the `Addr` instance alone.
+
+**Notes.**
+
+- The generic `Persistent (l ↦{.discard} v)` instance moved from the
+  target-specific flagship module to `Ghost.lean`, the general
+  ghost-state/heap infrastructure module (layering doctrine
+  2026-08-01: general proof infrastructure stays separate from
+  target-specific infrastructure — before the move, any module wanting
+  persistent handle cells had to import the dsp flagship to get it).
+- `wpDM_fork_alloc₂`'s discarded `metaToken`s: the deviation from the
+  DM kit rule (§3) is now STATED at the law's docstring and in §3.
+  Threading them was not taken — it is a statement change to a landed
+  law plus its witness, out of scope for a records round — and is
+  reversible (the proof already binds both tokens).
+- The two receive laws' docstrings now carry the `closed = false`
+  scoping clause, and §1 makes that clause a STANDING docstring
+  element for delivery laws (the S2 lesson's third occurrence — a rule
+  that has to be re-learned every slice belongs in the house
+  obligations, not in a per-slice fix).
+- FD3: the completion half's provenance is corrected in §10 (it rests
+  on the UNDESIGNATED `dspCert400`, not on the designated
+  `dspCert`/`dspAllSchedules`), and candidates now have an
+  accumulation point in the charter.
+
+**Not re-litigated (the audit re-measured these clean, first-hand):**
+`scripts/ci` PASS at the audited tip incl. the Audit gate,
+statement-TCB closure and full baseline diff (1483/1483, no
+regression); axiom sets FD7-exact by independent `#print axioms`; the
+48 designated statements byte-identical; the Audit name-existence
+tripwire complete over all five new modules; the parking ledger's
+P-CL3-1/3/4/5 entries accurate; every exported triple-carrying
+constant carrying its `TerminatesNormallyC` member at the same
+env/seed/program; `StepDM`/`StepDC` absent from every statement.
+
+**Gate at the fix tip:** `scripts/ci` green (proofs + docs only; no
+`--diff` owed — zero runtime files touched, zero corpus effect), axiom
+sets unchanged, 48 designated byte-identical, zero corpus drift.

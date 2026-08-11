@@ -81,6 +81,19 @@ instance : IrisGS_gen hlc Config GF where
 
 variable {s : Stuckness} {E : CoPset} {Φ : Unit → IProp GF}
 
+/-- **Persisted (discarded-fraction) points-to is persistent** — the
+`ghost_map_elem` instance seen through the `pointsTo` definition. This
+is a general fact about the repo's heap assertion at `DFrac.discard`
+(the `pointsTo_persist` counterpart), not a fact about any target: it
+belongs to the ghost-state kit, and any module persisting a cell —
+handle cells read by several threads, read-only tables — gets it from
+here. (Moved from `Specs/ChanDSP.lean`, the dsp flagship module, at
+the S3 audit fix round: general proof infrastructure stays separate
+from target-specific infrastructure, layering doctrine 2026-08-01.) -/
+instance {l : Nat} {v : HeapCell} :
+    Iris.BI.Persistent (PROP := IProp GF) (l ↦{DFrac.discard} v) :=
+  inferInstanceAs (Iris.BI.Persistent (_ ↪◯MAP[l]{.discard} _))
+
 end
 
 end GoLean.Iris

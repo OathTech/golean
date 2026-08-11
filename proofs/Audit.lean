@@ -866,8 +866,13 @@ open Lean in
 -- unlike the sequential family which discards it), the pure
 -- control/eval/go/chan glue (registered @[go_walk_law]: the table
 -- discriminates on the PoolCfgDM.mk wrapper, so the DM entries cannot
--- fire on sequential goals nor vice versa — validated by this same ci
--- run rebuilding every standing sequential walk), the strict spine
+-- fire on sequential goals nor vice versa — a STRUCTURAL argument
+-- about the DiscrTree head, corrected at the S3 fix round: the
+-- standing sequential walks cited here as evidence do not import
+-- LawsDM, so the law table they elaborate against has zero DM
+-- entries; what they show is no regression. The converse direction IS
+-- exercised in-build, by SeqWalkDM/ChanDSP walking DM goals with all
+-- sequential entries in scope), the strict spine
 -- (toInterface boxing / typeAssert unboxing at the types pin; the
 -- deref read at ↦{dq} — persisted handle cells), the assign/
 -- assignMany tgtOp/rhs/store spine, wpDM_make_chan (P-CL1-6 CLOSES —
@@ -1008,8 +1013,11 @@ open Lean in
 -- carries it BACK at 42, and the reply leg is tied by gen_heap
 -- metadata on the signal cell's own address (meta_set from the
 -- makeChan token; meta_agree at main's receive; the local
--- Pos.Countable Nat/Addr instances are the FD9-recorded
--- construction), with both handle cells persisted (↦{.discard}) for
+-- Pos.Countable Addr instance is the FD9-recorded construction —
+-- metaToken/metaInfo constrain only the metadata type, so that one
+-- instance is the whole requirement; a dead Pos.Countable Nat
+-- instance shipped beside it and was deleted at the S3 fix round),
+-- with both handle cells persisted (↦{.discard}) for
 -- the two-thread reads. D1-BOTH: dspCompReadoutC (run-conditioned
 -- first-order 42 readout at dspSeed, InitialSplit discharged by
 -- kernel decide) + dspCompTerminatesNormallyC (the row's STANDING

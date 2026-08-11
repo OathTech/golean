@@ -60,12 +60,14 @@ namespace GoLean.Iris
 
 /-! ## `Pos.Countable` for addresses (design note §2(a): the one local
 construction the meta tie needs — the pin carries Char/String/List
-only; FD9's local-construction latitude, recorded) -/
+only; FD9's local-construction latitude, recorded).
 
-instance : Pos.Countable Nat where
-  encode n := Pos.ofNat n
-  decode p := some (p.toNat - 1)
-  decode_encode n := by simp [Pos.toNat_ofNat]
+`metaToken`/`metaInfo` constrain only the METADATA type, never the
+location index, and the tie's metadata is an `Addr` — so this ONE
+instance is the whole requirement. (A `Pos.Countable Nat` instance
+shipped here too and was dead: zero users, measured, and an unscoped
+global instance on a ubiquitous type. Deleted at the S3 audit fix
+round.) -/
 
 instance : Pos.Countable Addr where
   encode a := Pos.ofNat a.id
@@ -455,12 +457,11 @@ end
 
 /-! ## The main thread: bodies, environments, continuations -/
 
-/-- Persisted (discarded-fraction) points-to is persistent — the
-`ghost_map_elem` instance seen through the `pointsTo` definition. -/
-instance {GF : BundledGFunctors} {hlc : HasLC} [GoCoreGS hlc GF]
-    {l : Nat} {v : HeapCell} :
-    Persistent (PROP := IProp GF) (l ↦{DFrac.discard} v) :=
-  inferInstanceAs (Persistent (_ ↪◯MAP[l]{.discard} _))
+-- (The generic `Persistent (l ↦{.discard} v)` instance used by the
+-- persisted handle cells lived here until the S3 audit fix round; it
+-- is general infrastructure about `pointsTo`, nothing dsp-specific,
+-- and now lives in `GoLeanProofs/Ghost.lean` per the layering
+-- doctrine — 2026-08-01, cited by CLAUDE.md.)
 
 /-- `DSPExample`, verbatim from the pin (`rfl`-anchored below). -/
 def dspMainFn : Func :=

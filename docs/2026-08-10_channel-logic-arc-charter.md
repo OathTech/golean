@@ -148,6 +148,30 @@ asymmetries by explicit decision, never by silence.
     reason or none; the drift tests and fidelity rules override
     completion pressure.
 
+## FD3 candidate ledger (the accumulation point; added 2026-08-11 at
+## the S3 audit fix round)
+
+FD3 says candidates "accumulate in the manifest with the F4
+def-only-hoist cost itemized", but no such list existed anywhere in
+this arc — each slice recorded its candidate only in its own note, so
+the arc-end designation window would have had to reconstruct the set
+by reading every note. This section IS the accumulation point. It is a
+LIST, deliberately with no machinery: one line per candidate, its
+slice note for the itemized hoist cost, and any dependency the
+designation decision must see. Appending to it is part of each slice's
+FD3 attestation; nothing here is designated (FD3: RECORD, NEVER
+DESIGNATE — designation happens at the arc-end window, with the user).
+
+| candidate | slice / record | note for the designation decision |
+|---|---|---|
+| `spawnNoopSpecC` | S2 — `docs/2026-08-11_channel-protocol-layer.md` FD3 attestation | assembled `GoSpecC`, the decomposition lane's designated-shape summit; hoist cost small (a statement-module hoist like P-S3-1's) |
+| `dspCompTripleC` + `dspCompReadoutC` | S3 — `docs/2026-08-11_channel-resource-tier.md` §10 | THE expected flagship pair (the first six-row re-proof, over the pinned lowering, at the row's certificate seed); hoist near-zero |
+| `dspCompTerminatesNormallyC` | S3 — same §10 | completes the D1 pair, but rests on the **undesignated** fuel-based `dspCert400` (NOT on the designated `dspCert`/`dspAllSchedules` — provenance corrected at the S3 fix round); designating it means pulling `dspCert400` in or accepting undesignated kernel evidence underneath |
+
+Deliberate NON-candidates, recorded so they are not re-proposed:
+`chanRendezvousValTripleC`, `chanTransferTripleC`, `seqWalkTripleC` —
+purpose-built exemplars and witness programs, not curated rows.
+
 ## Must-park list (never decided in-lane; ledger + batch for check-in)
 
 Designation or ANY designated-statement change; new Choices sites or

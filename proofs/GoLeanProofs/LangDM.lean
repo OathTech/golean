@@ -2376,7 +2376,21 @@ theorem wpDM_fork_alloc₁ {c : Config} {cv : GoValue} {args : List GoValue}
 /-- **The TWO-PARAMETER allocating fork on the DM-carrier** (the dsp
 child's shape: `go lit0(&c, &signal)` — two consecutive param cells;
 the continuation receives the first machine-chosen address, the second
-is its successor). -/
+is its successor).
+
+**Recorded deviation from the DM allocation kit's token rule**
+(design note `docs/2026-08-11_channel-resource-tier.md` §3, stated at
+the S3 audit fix round): the other DM allocating laws
+(`wpDM_alloc_step`, `wpDM_alloc_store_step`, `wpDM_make_chan`,
+`wpDM_new_value`, `wpDM_init`, `wpDM_call_enter_ret1`) hand the
+allocation's `metaToken … ⊤` to the continuation — that token is the
+§2(a) meta tie's raw material. This law does NOT: its proof binds both
+fresh cells' tokens and drops them, so a forked PARAMETER cell cannot
+carry a meta tie. Not a soundness issue (dropping a resource only
+weakens the law) and no consumer needs it today; threading them is a
+statement change to a landed law plus its witness
+(`Specs/ChanTransfer.lean`), deliberately not taken inside a records
+fix round, and reversible whenever a consumer appears. -/
 theorem wpDM_fork_alloc₂ {c : Config} {cv : GoValue} {args : List GoValue}
     {k : Cont} {pcell₁ pcell₂ : HeapCell} (childOf : Addr → Config)
     (hsp : spawnPlan c = some (cv, args, k))

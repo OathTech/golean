@@ -39,8 +39,8 @@ irreducibility of parked-empty configs — slice-2 §2c, unchanged).
 Everything else is stuckness-generic; the parked-SEND law's
 reducibility witness is the always-available deposit.
 
-Same-commit witness for the four laws (+ `wpDM_fork_alloc₂` and
-`wpDM_store_step₂`): `Specs/ChanTransfer.lean` — the mini-dsp
+Same-commit witness for the four laws (+ `wpDM_fork_alloc₂`):
+`Specs/ChanTransfer.lean` — the mini-dsp
 resource-transfer exemplar (the child writes 42 into main's cell and
 sends the pointer back; main's post re-owns the cell at 42, which it
 can obtain ONLY through the message resource).
@@ -410,7 +410,14 @@ protocol.** Outcomes: the PARK (empty buffer) or the DRAIN of the
 physical head — the continuation RECEIVES the resource `Ψ v` for the
 delivered `v`: ownership transfers into the receiving thread with the
 message. `deliverCfg`/`hdel` follow the established caller-supplied-
-shape idiom. -/
+shape idiom.
+
+**Scoped to OPEN channels (`closed = false`), by `chanInv`.** These
+two outcomes are exhaustive only because the invariant pins the open
+cell shape: on a CLOSED channel the machine delivers the element
+type's ZERO value with `ok = false` (`Multi.lean`'s receive arms) —
+no message, no `Ψ`. Close-protocols are the P-CL2-3 tier; a law for
+them restates these outcomes at a `closed`-generic invariant. -/
 theorem wpDM_recv_inv {targets : List Assignee} {elem : Ty}
     {env : LocalEnv} {k : Cont}
     (hN : ↑N ⊆ E)
@@ -610,7 +617,14 @@ set_option maxHeartbeats 1600000 in
 /-- **The PARKED TARGETED RECEIVER under the resource protocol**, at
 `.MaybeStuck` — parked-empty configs are irreducible on this carrier
 by design; its only steps DRAIN the physical head, with the resource
-`Ψ v` delivered. -/
+`Ψ v` delivered.
+
+**Scoped to OPEN channels (`closed = false`), by `chanInv`.** The
+drain is the only step only under the invariant's open shape: the
+machine's `.blockedRecv` arm on a CLOSED empty channel resumes the
+parked receiver with the element type's ZERO value and `ok = false`
+(`Multi.lean`), delivering no message and no `Ψ`. Close-protocols are
+the P-CL2-3 tier (S2 §2c's closed-zero forward warning). -/
 theorem wpDM_blocked_recv_inv {targets : List Assignee} {elem : Ty}
     {env : LocalEnv} {k : Cont} {Φ : Unit → IProp GF}
     (hN : ↑N ⊆ E)
