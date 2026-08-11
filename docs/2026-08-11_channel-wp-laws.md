@@ -1192,3 +1192,15 @@ SHRANK as expected (sweep 13589 → 13531 declarations — the deleted
 fixture modules); speedbump green (2 `Chan*` modules with triples,
 both pinned); statement-TCB 48 byte-identical; full differential
 re-run at the tip (entry below).
+- **The cleanup-tip clean differential record**: full
+  `GOLEAN_MEM_MAX=48G scripts/ci --diff` at the cleanup tip
+  `4cd1dec8`, committed clean tree — meta `git_commit 4cd1dec8`,
+  `git_dirty false`, `manifest_cases 1483`. **RESULT: PASS — baseline
+  diff FULL (1483/1483, no regression), negative lane 311 no
+  regression, all gates green**: audit sweep 13531 declarations
+  axiom-clean (the shrink from 13589 is the deleted gate-fixture
+  modules, expected), the completion-pin speedbump green (2 `Chan*`
+  modules with triples, both pinned, `ChanVacuityWarning` excluded by
+  design), statement-TCB 48 designated byte-identical, eval tests 136
+  green. Doc-only record commit over the run's own commit, per the
+  established discipline. THE SLICE IS DONE at this tip.
