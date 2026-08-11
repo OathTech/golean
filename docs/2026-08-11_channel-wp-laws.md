@@ -232,16 +232,49 @@ the clause structure) with its intended consumers named: the
 select-tricky trio's frame-quantified rows (charter slice 3). Until
 then the trio's ∀-schedule certificate family remains their record.
 
-**NIL-CHANNEL ops.** A nil send/recv parks as
-`.blockedSend/Recv none …`; `wakeReady` is never true and no
-`applyPairing` arm matches a `none` loc — a nil-parked thread is
-IRREDUCIBLE in the D-Language (and correctly so: the machine
-deadlocks it). A WP over a nil-parked successor is unprovable at
-NotStuck — which is honest: no law is stated for the nil park;
-programs that reach it cannot get a triple through this pipe (they
-have no `.normal` runs to speak about, so the vacuous-triple route is
-closed off by the completion-pin half of the D1 pair). Recorded, not
-worked around.
+**NIL-CHANNEL ops — and what actually protects against vacuous
+triples** (REWRITTEN at the S1 audit fix round, 2026-08-11 — the
+original paragraph was the audit's confirmed MAJOR: it claimed nil
+parks are irreducible, that no `applyPairing` arm matches a `none`
+loc, and that deadlocking programs "cannot get a triple through this
+pipe". All three claims were FALSE, proved so by compiled probes now
+tracked in `Specs/ChanVacuityWarning.lean`):
+
+- A nil send/recv parks as `.blockedSend/Recv none …` and `wakeReady`
+  is never true of it — that much stands. But `applyPairing`'s
+  ARRIVING-side patterns are the only ones requiring `some loc`; its
+  PARTNER patterns match the partner's channel with a WILDCARD, and
+  `isBlockedConfig` does not inspect the channel. So a nil park is
+  both SPINNABLE (`nilParkSpins` — the shipped `stepDC_parked_spin`
+  applies verbatim) and RELEASABLE to `.next k` (`nilParkReleases`)
+  whenever the state holds any empty-buffer channel cell; a nil-park
+  WP law is provable with exactly the shipped kit. The only state in
+  which a nil park is irreducible is the degenerate one with no
+  pairable channel cell anywhere — nothing rests on that case.
+- Consequently **a deadlocking program DOES get a frame-quantified
+  triple through this pipe**: `deadlockRecvTripleC`
+  (`ChanVacuityWarning.lean`) proves, with the shipped laws and the
+  shipped exit at the exemplars' exact axiom set, a `GoTripleC` for a
+  program the interpreter classifies `.deadlock` on every schedule
+  (`deadlockRecvDeadlocks`, kernel-evaluated). This is not a bug:
+  `GoTripleC` is RUN-CONDITIONED partial correctness — every premise
+  chain starts from `execProg … = .ok (.normal σf, _)` — so it is
+  vacuously provable for non-completing programs BY DESIGN.
+
+**The protection story, stated per the TCB-grounding principle (user
+doctrine 2026-08-11):** the trusted claim of a channel bundle is
+never the triple alone. The trusted claims are BORING, semantically
+trivial properties of the interpreter — the ∃-completion member
+(`TerminatesNormallyC`-class, discharged by kernel evaluation) and
+the run-conditioned readout — and the Iris/Löb/simulation machinery
+is untrusted METHOD for producing them. Enforced structurally since
+the audit fix round: the **completion-pin gate** (`Audit.lean`) fails
+the build if any `GoLeanProofs.Specs.Chan*` module declares a
+`GoTripleC`-typed theorem without a `TerminatesNormallyC`-typed
+companion; `ChanVacuityWarning` — whose program can have no
+completion pin, by construction — is the gate's negative-test
+fixture (the raw checker must flag it, and it is excluded from
+enforcement by exact name with the reason recorded at the gate).
 
 ### 3a. The supporting cores (D-ports of Lifting.lean engines)
 
@@ -528,3 +561,22 @@ pinned checkout; their new channel library).
   inversion + cert constructive). Audit block extended; root import
   wired; `scripts/ci` green (the slice's recorded differential
   stands — zero runtime edits in this commit either).
+
+## 9. S1 audit fix round (2026-08-11; 1 confirmed major, 1 downgraded
+## minor with confirmed core, 2 confirmed minors, notes)
+
+- **Fix A — THE MAJOR (the nil-park/vacuity story).** §3's nil-channel
+  paragraph rewritten to the truth (see it for the full account); the
+  protection story restated per the TCB-grounding principle (user
+  doctrine 2026-08-11): trusted = boring interpreter propositions
+  (completion pin + readout), machinery = untrusted method. Enforced:
+  the COMPLETION-PIN GATE (`Audit.lean` — every
+  `GoLeanProofs.Specs.Chan*` module declaring a `GoTripleC` theorem
+  must declare a `TerminatesNormallyC` companion; fail-closed anchor/
+  scope guards; negative-tested against the fixture). The verifier's
+  deadlock-triple probe is now the PERMANENT warning fixture
+  `Specs/ChanVacuityWarning.lean` (negative knowledge, kept forever):
+  `deadlockRecvTripleC` through the shipped laws beside
+  `deadlockRecvDeadlocks` (the kernel-evaluated deadlock), plus the
+  three pinned envelope members (`nilParkSpins`, `nilParkReleases`,
+  `crossChannelSendRelease`) the corrected §3/§1a cite.

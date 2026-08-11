@@ -710,6 +710,29 @@ open Lean in
 /-- info: 'GoLean.Iris.chanCloseTerminatesNormallyC' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Iris.chanCloseTerminatesNormallyC
 
+-- THE PERMANENT VACUITY-WARNING FIXTURE (S1 audit fix, 2026-08-11;
+-- Specs/ChanVacuityWarning.lean — negative knowledge, keep forever): a
+-- frame-quantified GoTripleC through the SHIPPED laws for a program the
+-- interpreter deadlocks on every schedule (deadlockRecvDeadlocks, the
+-- boring kernel-evaluated fact), plus the three pinned envelope members
+-- (nil-park spin, nil-park release, cross-channel phantom release) the
+-- corrected design note cites. Doubles as the completion-pin gate's
+-- negative-test fixture (the gate block below the sweeps). Name
+-- tripwire: deleting any of these breaks the build here AND trips the
+-- gate's negative test.
+/-- info: 'GoLean.Iris.deadlockRecvDeadlocks' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.deadlockRecvDeadlocks
+/-- info: 'GoLean.Iris.wpD_deadlockRecv_witness' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.wpD_deadlockRecv_witness
+/-- info: 'GoLean.Iris.deadlockRecvTripleC' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.deadlockRecvTripleC
+/-- info: 'GoLean.Iris.nilParkSpins' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.nilParkSpins
+/-- info: 'GoLean.Iris.nilParkReleases' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.nilParkReleases
+/-- info: 'GoLean.Iris.crossChannelSendRelease' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.crossChannelSendRelease
+
 -- The exit pipes.
 /-- info: 'GoLean.Iris.goSpec_of_wp' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Iris.goSpec_of_wp
@@ -1752,5 +1775,77 @@ example := @GoLean.GoCore.NegativeSpecs.div_nonzero_no_panic
   the operational evidence, and the queued panic assembly is the
   proof-side gap on record.
 -/
+
+
+/-! ## The completion-pin gate (channel-logic S1 audit fix, 2026-08-11)
+
+**Doctrine (user, 2026-08-11 — the TCB-grounding principle):** for
+every soundness property the TRUSTED claim must be a boring,
+semantically-trivial property of the interpreter; the Iris/Löb/
+simulation machinery is untrusted METHOD only. For channel triples the
+instantiation is: `GoTripleC` is run-conditioned partial correctness —
+vacuously provable for programs with no completing runs
+(`Specs/ChanVacuityWarning.lean` is the permanent demonstration) — so
+**every exported channel-triple bundle must carry its ∃-completion
+member** (a `TerminatesNormallyC`-class theorem, discharged by kernel
+evaluation of the interpreter). This gate enforces the pairing
+structurally: every module under `GoLeanProofs.Specs.Chan*` that
+declares a theorem whose TYPE mentions `GoTripleC` must also declare
+one whose type mentions `TerminatesNormallyC`. Fail-closed guards: the
+two anchor constants must resolve, the scope must contain the known
+positive modules (a prefix drift cannot silently empty the gate), and
+the WARNING FIXTURE — whose deadlocking program can have no completion
+pin, by construction — must be flagged by the raw checker (the
+NEGATIVE TEST) and is excluded from enforcement by exact name with
+this recorded reason. -/
+
+open Lean in
+#eval show CoreM Unit from do
+  let env ← getEnv
+  let mods := env.header.moduleNames
+  let scopePrefix := "GoLeanProofs.Specs.Chan"
+  let fixture := "GoLeanProofs.Specs.ChanVacuityWarning"
+  -- fail-closed: the anchors must exist under their expected names
+  for anchor in [``GoLean.Surface.GoTripleC, ``GoLean.Surface.TerminatesNormallyC] do
+    let some _ := env.find? anchor
+      | throwError "completion-pin gate: anchor constant {anchor} is MISSING \
+          (renamed without re-pointing the gate?)"
+  let names : Array Name := env.constants.fold (fun acc n _ => acc.push n) #[]
+  let mut tripleMods : Array String := #[]
+  let mut pinMods : Array String := #[]
+  for n in names do
+    let some idx := env.getModuleIdxFor? n | continue
+    let m := mods[idx.toNat]!.toString
+    unless m.startsWith scopePrefix do continue
+    let some ci := env.find? n | continue
+    let isThm := match ci with | .thmInfo _ => true | _ => false
+    unless isThm do continue
+    let used := ci.type.getUsedConstants
+    if used.contains ``GoLean.Surface.GoTripleC then
+      unless tripleMods.contains m do tripleMods := tripleMods.push m
+    if used.contains ``GoLean.Surface.TerminatesNormallyC then
+      unless pinMods.contains m do pinMods := pinMods.push m
+  -- fail-closed: the known positives must be in scope (prefix drift guard)
+  for known in ["GoLeanProofs.Specs.ChanRendezvous",
+      "GoLeanProofs.Specs.ChanCloseProbe", fixture] do
+    unless tripleMods.contains known do
+      throwError "completion-pin gate: expected module {known} to declare a \
+        GoTripleC theorem in scope — scope drift or a renamed module; \
+        re-point the gate"
+  let violating := tripleMods.filter (fun m => !(pinMods.contains m))
+  -- THE NEGATIVE TEST: the warning fixture must trip the raw checker
+  unless violating.contains fixture do
+    throwError "completion-pin gate NEGATIVE TEST FAILED: the warning \
+      fixture {fixture} was not flagged — the checker has gone inert \
+      (did the fixture gain a completion pin, or did the type scan \
+      break?)"
+  let real := violating.filter (fun m => m != fixture)
+  if real.isEmpty then
+    IO.println s!"completion-pin gate: {tripleMods.size} GoTripleC-declaring \
+module(s) in scope, all paired with a completion pin (fixture correctly \
+flagged and excluded)"
+  else
+    throwError "completion-pin gate FAILED — GoTripleC-declaring module(s) \
+      without a TerminatesNormallyC completion pin: {real}"
 
 end GoLean.Iris.Audit
