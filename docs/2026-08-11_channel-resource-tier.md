@@ -304,6 +304,34 @@ set — S2 fix round — and all slice-3 exports stay
   `[propext, Quot.sound]`; pure helpers `[propext]`); the DM lane's
   recorded `BEq.rfl`/Ord deviation (P-CL2-6) is inherited unchanged
   and cited at the Audit block. `scripts/ci` green at the commit.
+- **Commit 3 — THE wpDM LAW PORTS + THE KITCHEN-SINK WITNESS**
+  (`LawsDM.lean` ~46 laws, `Specs/SeqWalkDM.lean`; Audit block + root
+  imports). §3's table built in full: the three cores
+  (`wpDM_pure_step` over the generic `step_det`; the two allocating
+  cores handing out `metaToken` — the §2(a) tie's raw material), the
+  pure control/eval/go/chan glue, the strict spine (`toInterface`/
+  `typeAssert` at the types pin, the deref read at `↦{dq}`), the
+  assign/`assignMany` spine, **`wpDM_make_chan` (P-CL1-6 CLOSES)**,
+  `wpDM_new_value`, `wpDM_init`, `wpDM_call_enter_ret1`,
+  `wpDM_frame_return_int`; `wpDM_eval_var` generalized to `↦{dq}` in
+  place (safe: existing call sites unify at `.own 1`). In-build
+  decisions, recorded:
+  - **The DM laws are `@[go_walk_law]`-registered.** The
+    `wp_init_bool` precedent warns that the table is a global tactic
+    surface; the DM entries are safe by DISCRIMINATION — their
+    conclusions are `WP (PoolCfgDM.mk _)`, a different head than the
+    sequential `WP (_ : Config)` keys, so neither family can fire on
+    the other's goals. Validated empirically: the same `scripts/ci`
+    run rebuilds every standing sequential walk green. `go_walk`
+    DRIVES DM WALKS — the kitchen-sink witness's pure glue is
+    `go_walk` end to end, a large cost reduction for the flagship.
+  - No port turned conceptual: every rule shape carried over
+    mechanically (the §3 escape clause was not needed).
+  Witness: the kitchen-sink program (make-chan → new → boxing →
+  unboxing → multi-assign → deref/add → both frames, verdict 42),
+  `seqWalkTripleC` + readout + fuel-500 completion pin
+  (`#eval`-confirmed first). Axiom sets FD7-exact. `scripts/ci` green
+  at the commit.
 
 ## 7. Perennial comparison (shape reference, deltas both directions)
 

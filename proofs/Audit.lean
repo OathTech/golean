@@ -856,6 +856,143 @@ open Lean in
 /-- info: 'GoLean.Iris.chanTransferTerminatesNormallyC' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Iris.chanTransferTerminatesNormallyC
 
+-- THE wpDM LAW PORTS (channel-logic slice 3, LawsDM.lean +
+-- Specs/SeqWalkDM.lean; design note
+-- docs/2026-08-11_channel-resource-tier.md §§3-4): the sequential
+-- Laws/* family restated on the MEDIATED carrier — the dsp flagship's
+-- sequential surface. The cores (wpDM_pure_step over the generic
+-- step_det; wpDM_alloc_step / wpDM_alloc_store_step, which HAND OUT
+-- the allocation's metaToken — the reply-leg meta tie's raw material,
+-- unlike the sequential family which discards it), the pure
+-- control/eval/go/chan glue (registered @[go_walk_law]: the table
+-- discriminates on the PoolCfgDM.mk wrapper, so the DM entries cannot
+-- fire on sequential goals nor vice versa — validated by this same ci
+-- run rebuilding every standing sequential walk), the strict spine
+-- (toInterface boxing / typeAssert unboxing at the types pin; the
+-- deref read at ↦{dq} — persisted handle cells), the assign/
+-- assignMany tgtOp/rhs/store spine, wpDM_make_chan (P-CL1-6 CLOSES —
+-- no sequential counterpart ever existed; the fresh cell is exactly
+-- the untyped OPEN shape chanInv/chanInvP pin), wpDM_new_value,
+-- wpDM_init, and the call frame entry/exit pair. THE WITNESS is the
+-- kitchen-sink walk (Specs/SeqWalkDM.lean): one single-threaded
+-- program (make-chan, new, boxing, unboxing, multi-assign, deref/add,
+-- both frames) walked end-to-end on the DM carrier with go_walk
+-- driving the pure glue over the new table entries; seqWalkTripleC +
+-- run-conditioned readout + fuel-500 kernel completion pin
+-- (#eval-confirmed true before decide). Axiom sets FD7-exact
+-- (classical trio; helpers [propext]; cert [propext, Quot.sound]);
+-- the DM lane's recorded BEq.rfl/Ord deviation (P-CL2-6) inherited
+-- unchanged. Name-existence tripwire: every public theorem of
+-- LawsDM.lean and Specs/SeqWalkDM.lean is anchored here.
+/-- info: 'GoLean.Iris.wpDM_pure_step' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.wpDM_pure_step
+/-- info: 'GoLean.Iris.wpDM_alloc_step' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.wpDM_alloc_step
+/-- info: 'GoLean.Iris.wpDM_alloc_store_step' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.wpDM_alloc_store_step
+/-- info: 'GoLean.Iris.wpDM_seqn' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.wpDM_seqn
+/-- info: 'GoLean.Iris.wpDM_seq_next' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.wpDM_seq_next
+/-- info: 'GoLean.Iris.wpDM_seq_done' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.wpDM_seq_done
+/-- info: 'GoLean.Iris.wpDM_block_nil' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.wpDM_block_nil
+/-- info: 'GoLean.Iris.wpDM_frame_fall' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.wpDM_frame_fall
+/-- info: 'GoLean.Iris.wpDM_return' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.wpDM_return
+/-- info: 'GoLean.Iris.wpDM_seq_return' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.wpDM_seq_return
+/-- info: 'GoLean.Iris.wpDM_seqCont_nil' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.wpDM_seqCont_nil
+/-- info: 'GoLean.Iris.wpDM_eval_intLit' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.wpDM_eval_intLit
+/-- info: 'GoLean.Iris.wpDM_eval_boolLit' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.wpDM_eval_boolLit
+/-- info: 'GoLean.Iris.wpDM_eval_ref' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.wpDM_eval_ref
+/-- info: 'GoLean.Iris.wpDM_eval_strict' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.wpDM_eval_strict
+/-- info: 'GoLean.Iris.wpDM_strict_shift' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.wpDM_strict_shift
+/-- info: 'GoLean.Iris.wpDM_strict_apply_pure' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.wpDM_strict_apply_pure
+/-- info: 'GoLean.Iris.wpDM_strict_apply_pin' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.wpDM_strict_apply_pin
+/-- info: 'GoLean.Iris.wpDM_eval_strict_nullary_pin' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.wpDM_eval_strict_nullary_pin
+/-- info: 'GoLean.Iris.wpDM_strict_apply_read' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.wpDM_strict_apply_read
+/-- info: 'GoLean.Iris.wpDM_assign_start' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.wpDM_assign_start
+/-- info: 'GoLean.Iris.wpDM_assign_many_start' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.wpDM_assign_many_start
+/-- info: 'GoLean.Iris.wpDM_tgtop_shift' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.wpDM_tgtop_shift
+/-- info: 'GoLean.Iris.wpDM_tgtop_next' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.wpDM_tgtop_next
+/-- info: 'GoLean.Iris.wpDM_tgtop_rhs' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.wpDM_tgtop_rhs
+/-- info: 'GoLean.Iris.wpDM_tgtop_stores' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.wpDM_tgtop_stores
+/-- info: 'GoLean.Iris.wpDM_rhs_shift' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.wpDM_rhs_shift
+/-- info: 'GoLean.Iris.wpDM_rhs_stores_vals' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.wpDM_rhs_stores_vals
+/-- info: 'GoLean.Iris.wpDM_stores_done' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.wpDM_stores_done
+/-- info: 'GoLean.Iris.wpDM_stores_done_nil' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.wpDM_stores_done_nil
+/-- info: 'GoLean.Iris.wpDM_store_target' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.wpDM_store_target
+/-- info: 'GoLean.Iris.wpDM_assign_store_loc' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.wpDM_assign_store_loc
+/-- info: 'GoLean.Iris.wpDM_stmt_op_first' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.wpDM_stmt_op_first
+/-- info: 'GoLean.Iris.wpDM_stmt_op_shift_target' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.wpDM_stmt_op_shift_target
+/-- info: 'GoLean.Iris.wpDM_stmt_op_shift_plain' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.wpDM_stmt_op_shift_plain
+/-- info: 'GoLean.Iris.wpDM_stmt_op_apply_alloc_store' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.wpDM_stmt_op_apply_alloc_store
+/-- info: 'GoLean.Iris.wpDM_make_chan' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.wpDM_make_chan
+/-- info: 'GoLean.Iris.wpDM_new_value' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.wpDM_new_value
+/-- info: 'GoLean.Iris.wpDM_init' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.wpDM_init
+/-- info: 'GoLean.Iris.wpDM_call_enter_ret1' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.wpDM_call_enter_ret1
+/-- info: 'GoLean.Iris.wpDM_frame_return_int' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.wpDM_frame_return_int
+/-- info: 'GoLean.Iris.wpDM_gostmt_entry' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.wpDM_gostmt_entry
+/-- info: 'GoLean.Iris.wpDM_gocallee_arg' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.wpDM_gocallee_arg
+/-- info: 'GoLean.Iris.wpDM_goarg_next' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.wpDM_goarg_next
+/-- info: 'GoLean.Iris.wpDM_chanst_first' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.wpDM_chanst_first
+/-- info: 'GoLean.Iris.wpDM_chanst_shift' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.wpDM_chanst_shift
+/-- info: 'GoLean.Iris.sinkNormChan' depends on axioms: [propext] -/
+#guard_msgs in #print axioms GoLean.Iris.sinkNormChan
+/-- info: 'GoLean.Iris.sinkNormIface' depends on axioms: [propext] -/
+#guard_msgs in #print axioms GoLean.Iris.sinkNormIface
+/-- info: 'GoLean.Iris.sinkNormPtr' depends on axioms: [propext] -/
+#guard_msgs in #print axioms GoLean.Iris.sinkNormPtr
+/-- info: 'GoLean.Iris.wpDM_seq_walk_witness' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.wpDM_seq_walk_witness
+/-- info: 'GoLean.Iris.seqWalkTripleC' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.seqWalkTripleC
+/-- info: 'GoLean.Iris.seqWalkReadoutC' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.seqWalkReadoutC
+/-- info: 'GoLean.Iris.seqWalkAllStreamsCert' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.seqWalkAllStreamsCert
+/-- info: 'GoLean.Iris.seqWalkTerminatesNormallyC' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.seqWalkTerminatesNormallyC
+
 -- THE CHANNEL WP LAW FAMILY, slice 1 of the channel-logic arc
 -- (ChanD.lean + Specs/ChanRendezvous.lean; design note
 -- docs/2026-08-11_channel-wp-laws.md). The rendezvous-class laws over

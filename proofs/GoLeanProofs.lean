@@ -5,6 +5,7 @@ import GoLeanProofs.ChanD
 import GoLeanProofs.LangDM
 import GoLeanProofs.ChanDM
 import GoLeanProofs.ChanDMRes
+import GoLeanProofs.LawsDM
 import GoLeanProofs.HeapBridge
 import GoLeanProofs.Ghost
 import GoLeanProofs.Lifting
@@ -65,6 +66,7 @@ import GoLeanProofs.NegativeSpecs
 import GoLeanProofs.Specs.SpawnNoopProgress
 import GoLeanProofs.Specs.ChanRendezvousVal
 import GoLeanProofs.Specs.ChanTransfer
+import GoLeanProofs.Specs.SeqWalkDM
 
 /-!
 # GoCore ⇒ Iris — the proof layer (root)

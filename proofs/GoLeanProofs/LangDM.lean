@@ -2200,13 +2200,13 @@ theorem wpDM_det_step_keep {P : IProp GF} {c₀ c₁ : Config}
       simp [spawnedCont] at hsc
 
 /-- The variable-load step on the DM-carrier. -/
-theorem wpDM_eval_var {id : String} {a : Addr} {cell : HeapCell}
+theorem wpDM_eval_var {id : String} {a : Addr} {dq : DFrac} {cell : HeapCell}
     {env : LocalEnv} {k : Cont}
     (hres : LocalEnv.lookup env id = some (.base a)) :
-    a.id ↦ cell
-      ∗ (a.id ↦ cell -∗ WP (PoolCfgDM.mk (.retV cell.value k)) @ s ; E {{ Φ }})
+    a.id ↦{dq} cell
+      ∗ (a.id ↦{dq} cell -∗ WP (PoolCfgDM.mk (.retV cell.value k)) @ s ; E {{ Φ }})
       ⊢ WP (PoolCfgDM.mk (.evalE (.var id) env k)) @ s ; E {{ Φ }} := by
-  iapply wpDM_det_step_keep (P := iprop(a.id ↦ cell))
+  iapply wpDM_det_step_keep (P := iprop(a.id ↦{dq} cell))
     (c₁ := Config.retV cell.value k) (hnv := rfl) (hsp := rfl) (hsc := rfl)
     (hblk := rfl) (hpos := rfl)
   intro σ₁ _hfns _hmeths _htypes
