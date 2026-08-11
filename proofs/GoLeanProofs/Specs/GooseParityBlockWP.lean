@@ -209,4 +209,15 @@ theorem explicitBlockTerminatesNormallyC :
   goSpec_seeded_terminatesNormallyC explicitBlockSpec (by decide +kernel)
     (by exact blockTerminates)
 
+/-- The SEQUENTIAL-carrier completion pin for `explicitBlockSpec` (gen-5
+manifest round: the completion half of the row's `TotalReadout`,
+projected — the named seq pin the completion manifest pairs the
+sequential export against). -/
+theorem explicitBlockTerminatesNormally :
+    TerminatesNormally importedEnv (importedSeed blockLowered) explicitBlockDriver := by
+  obtain ⟨N, h⟩ := explicitBlockTotalReadout
+  exact ⟨N, fun fuel hf ch =>
+    let ⟨σf, ch', hr, _⟩ := h fuel hf ch
+    ⟨σf, ch', hr⟩⟩
+
 end GoLean.ImportedGoose.SemanticsBlock

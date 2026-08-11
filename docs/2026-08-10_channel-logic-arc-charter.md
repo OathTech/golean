@@ -201,19 +201,19 @@ and every exported triple-carrying constant (`GoTripleC`, `GoSpecC`,
 or anything whose type closure reaches them) across ALL
 `GoLeanProofs.Specs.*` modules carries a `TerminatesNormallyC`
 ∃-completion member FOR ITS PROGRAM, enforced by the completion-pin
-gate (Audit.lean — SEMANTIC since audit round 2, hardened at round 3:
-exhaustive-arms closure walk (no `ConstantInfo` wildcard — the
-twice-grown bug), env-wide scope over the proofs package,
-conclusion-asserted CLOSED pins only, per-program pairing,
-wrapper-hidden and open-term exports fail closed, an exact-name
-allowlist for genuine ∀-program lemmas, and every attacker shape from
-all FOUR review rounds kept as a tracked negative-tested fixture; at
-round 4: exhaustive kind filter, binder-free pins, exact-name-only
-exclusions, `(env₀, prog)` pairing keys, upstream-root denylist
-coverage). RECORDED LIMIT: the gate enforces anchor EXISTENCE per
-`(env₀, prog)` only — it never checks a pin's seed against an
-export's precondition; pre-side vacuity remains the witness
-discipline's job (the D1 readout pair). Run-conditioned triples ALONE anchor nothing (the
+gate — RESTRUCTURED at gen 5 to the GENERATED-MANIFEST form after
+five review generations broke successive per-shape rule sets
+(Audit.lean + CompletionManifest.lean): the checker only ENUMERATES
+(exhaustive `ConstantInfo` walk + reverse-BFS, full key tuples incl.
+types/funcs/methods, sequential carriers included, each pin's full
+seed tuple), and the tracked manifest is the reviewed record — drift
+fails the build until a human-reviewed line lands in the same commit
+(the re-pin discipline). RECORDED LIMITS (complete list in the
+manifest docstring): `paired-exact` mechanically floors only
+(env₀, prog) equality — seed-vs-(types,funcs,methods) and
+seed-vs-precondition agreement are REVIEWED via the visible tuples,
+not machine-verified; dispositions are reviewed prose; pre-side
+vacuity remains the witness discipline's job (the D1 readout pair). Run-conditioned triples ALONE anchor nothing (the
 permanent demonstration: Specs/ChanVacuityWarning.lean); the
 sub-branch audits review the walk as a standing dimension.
 

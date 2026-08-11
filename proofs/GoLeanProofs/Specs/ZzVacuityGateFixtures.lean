@@ -4,11 +4,14 @@ import GoLeanProofs.Specs.GoldenTargets
 /-!
 # Completion-pin gate: the ESCAPE-SHAPE fixtures (S1 audit round 2)
 
-Negative-test fixtures for the REBUILT (semantic) completion-pin gate
-in `Audit.lean` — one tracked instance of each escape shape the round-2
-delta review proved against the first gate, each of which the rebuilt
-gate must FLAG (its negative tests assert so by constant name) while
-enforcement excludes exactly this module and the warning fixture:
+Tracked attacker shapes for the completion gate — one instance of
+each escape shape the five review generations proved (rounds 1-4 and
+gen 5; the standing rule: every attacker's shape is kept forever).
+Since the gen-5 RESTRUCTURE these are enforced as MANIFEST LINES
+(`CompletionManifest.lean`): each fixture's line carries its expected
+class as a `fixture:` disposition, the gate re-verifies the computed
+class matches, and a fixture line that ever pairs fails the build.
+The round-2 shapes:
 
 - `fixtureSpecCUnpinned` — a `GoSpecC`-typed export: the first gate's
   one-level type scan never saw `GoTripleC` through the `GoSpecC`
@@ -210,5 +213,25 @@ job, recorded at the gate.) -/
 theorem fixtureEnvMismatchTriple :
     GoTripleC [] #[] #[] [] (.pure False) goldenDriver .emp :=
   fun _hp _na _hP _F hinit => (hinit.sat_pre.1).elim
+
+/-- Fixture-private program for the private-decl scope shape. -/
+def zzPrivateProg : Stmt := .seqn #[.block #[] #[], .block #[] #[]]
+
+/-- R5 — the PRIVATE-DECLARATION scope fixture (gen-5 note): the
+completion gate's name skip drops `_private`-rooted declarations by
+RECORDED DESIGN (a `private` declaration is not an export — it cannot
+be referenced outside its module). This fixture makes the scope line
+a checked fact rather than prose: the gate asserts this declaration
+EXISTS in the environment and is NOT enumerated. If the skip is ever
+widened or the design revisited, this is the tracked shape. -/
+private theorem fixturePrivateTriple :
+    GoTripleC [] #[] #[] [] (.pure False) zzPrivateProg .emp :=
+  fun _hp _na _hP _F hinit => (hinit.sat_pre.1).elim
+
+/-- Keeps the private fixture referenced (private decls are usable
+in-module), so it cannot silently vanish. -/
+theorem fixturePrivateTripleAnchor : True :=
+  have _ := @fixturePrivateTriple
+  trivial
 
 end GoLean.Surface

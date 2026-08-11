@@ -733,6 +733,17 @@ theorem compareSliceToNilTerminatesNormallyC :
   goSpec_seeded_terminatesNormallyC compareSliceToNilSpec (by decide +kernel)
     (by exact testCompareSliceToNilTerminates)
 
+/-- The SEQUENTIAL-carrier completion pin for `compareSliceToNilSpec` (gen-5
+manifest round: the completion half of the row's `TotalReadout`,
+projected — the named seq pin the completion manifest pairs the
+sequential export against). -/
+theorem compareSliceToNilTerminatesNormally :
+    TerminatesNormally importedEnv (importedSeed nilLowered) compareSliceDriver := by
+  obtain ⟨N, h⟩ := compareSliceToNilTotalReadout
+  exact ⟨N, fun fuel hf ch =>
+    let ⟨σf, ch', hr, _⟩ := h fuel hf ch
+    ⟨σf, ch', hr⟩⟩
+
 /-! ### testComparePointerToNil (`s := new(uint64); return s != nil`) -/
 
 def comparePointerFunc : Func :=
@@ -887,6 +898,17 @@ theorem comparePointerToNilTerminatesNormallyC :
     TerminatesNormallyC importedEnv (importedSeed nilLowered) comparePointerDriver :=
   goSpec_seeded_terminatesNormallyC comparePointerToNilSpec (by decide +kernel)
     (by exact testComparePointerToNilTerminates)
+
+/-- The SEQUENTIAL-carrier completion pin for `comparePointerToNilSpec` (gen-5
+manifest round: the completion half of the row's `TotalReadout`,
+projected — the named seq pin the completion manifest pairs the
+sequential export against). -/
+theorem comparePointerToNilTerminatesNormally :
+    TerminatesNormally importedEnv (importedSeed nilLowered) comparePointerDriver := by
+  obtain ⟨N, h⟩ := comparePointerToNilTotalReadout
+  exact ⟨N, fun fuel hf ch =>
+    let ⟨σf, ch', hr, _⟩ := h fuel hf ch
+    ⟨σf, ch', hr⟩⟩
 
 /-! ### testComparePointerWrappedToNil
 (`var s []byte; s = make([]byte, 1); return s != nil`) -/
@@ -1054,6 +1076,17 @@ theorem comparePointerWrappedToNilTerminatesNormallyC :
   goSpec_seeded_terminatesNormallyC comparePointerWrappedToNilSpec (by decide +kernel)
     (by exact testComparePointerWrappedToNilTerminates)
 
+/-- The SEQUENTIAL-carrier completion pin for `comparePointerWrappedToNilSpec` (gen-5
+manifest round: the completion half of the row's `TotalReadout`,
+projected — the named seq pin the completion manifest pairs the
+sequential export against). -/
+theorem comparePointerWrappedToNilTerminatesNormally :
+    TerminatesNormally importedEnv (importedSeed nilLowered) compareWrappedDriver := by
+  obtain ⟨N, h⟩ := comparePointerWrappedToNilTotalReadout
+  exact ⟨N, fun fuel hf ch =>
+    let ⟨σf, ch', hr, _⟩ := h fuel hf ch
+    ⟨σf, ch', hr⟩⟩
+
 /-! ### testComparePointerWrappedDefaultToNil
 (`var s []byte; return s == nil`) -/
 
@@ -1194,5 +1227,16 @@ theorem comparePointerWrappedDefaultToNilTerminatesNormallyC :
     TerminatesNormallyC importedEnv (importedSeed nilLowered) compareWrappedDefaultDriver :=
   goSpec_seeded_terminatesNormallyC comparePointerWrappedDefaultToNilSpec (by decide +kernel)
     (by exact testComparePointerWrappedDefaultToNilTerminates)
+
+/-- The SEQUENTIAL-carrier completion pin for `comparePointerWrappedDefaultToNilSpec` (gen-5
+manifest round: the completion half of the row's `TotalReadout`,
+projected — the named seq pin the completion manifest pairs the
+sequential export against). -/
+theorem comparePointerWrappedDefaultToNilTerminatesNormally :
+    TerminatesNormally importedEnv (importedSeed nilLowered) compareWrappedDefaultDriver := by
+  obtain ⟨N, h⟩ := comparePointerWrappedDefaultToNilTotalReadout
+  exact ⟨N, fun fuel hf ch =>
+    let ⟨σf, ch', hr, _⟩ := h fuel hf ch
+    ⟨σf, ch', hr⟩⟩
 
 end GoLean.ImportedGoose.SemanticsNil

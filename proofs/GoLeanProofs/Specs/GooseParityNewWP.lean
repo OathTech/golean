@@ -196,6 +196,17 @@ theorem nilDefaultTerminatesNormallyC :
   goSpec_seeded_terminatesNormallyC nilDefaultSpec (by decide +kernel)
     (by exact testNilDefaultTerminates)
 
+/-- The SEQUENTIAL-carrier completion pin for `nilDefaultSpec` (gen-5
+manifest round: the completion half of the row's `TotalReadout`,
+projected — the named seq pin the completion manifest pairs the
+sequential export against). -/
+theorem nilDefaultTerminatesNormally :
+    TerminatesNormally importedEnv (importedSeed newLowered) nilDefaultDriver := by
+  obtain ⟨N, h⟩ := nilDefaultTotalReadout
+  exact ⟨N, fun fuel hf ch =>
+    let ⟨σf, ch', hr, _⟩ := h fuel hf ch
+    ⟨σf, ch', hr⟩⟩
+
 /-! ### testNilVal (`x := new(3); return *x == 3` — goose's
 value-carrying `new` extension, lowered as `newValue` with a literal
 operand) -/
@@ -351,5 +362,16 @@ theorem nilValTerminatesNormallyC :
     TerminatesNormallyC importedEnv (importedSeed newLowered) nilValDriver :=
   goSpec_seeded_terminatesNormallyC nilValSpec (by decide +kernel)
     (by exact testNilValTerminates)
+
+/-- The SEQUENTIAL-carrier completion pin for `nilValSpec` (gen-5
+manifest round: the completion half of the row's `TotalReadout`,
+projected — the named seq pin the completion manifest pairs the
+sequential export against). -/
+theorem nilValTerminatesNormally :
+    TerminatesNormally importedEnv (importedSeed newLowered) nilValDriver := by
+  obtain ⟨N, h⟩ := nilValTotalReadout
+  exact ⟨N, fun fuel hf ch =>
+    let ⟨σf, ch', hr, _⟩ := h fuel hf ch
+    ⟨σf, ch', hr⟩⟩
 
 end GoLean.ImportedGoose.SemanticsNew

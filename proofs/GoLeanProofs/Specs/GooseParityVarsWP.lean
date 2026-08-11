@@ -175,6 +175,17 @@ theorem pointerAssignmentTerminatesNormallyC :
   goSpec_seeded_terminatesNormallyC pointerAssignmentSpec (by decide +kernel)
     (by exact testPointerAssignmentTerminates)
 
+/-- The SEQUENTIAL-carrier completion pin for `pointerAssignmentSpec` (gen-5
+manifest round: the completion half of the row's `TotalReadout`,
+projected — the named seq pin the completion manifest pairs the
+sequential export against). -/
+theorem pointerAssignmentTerminatesNormally :
+    TerminatesNormally importedEnv (importedSeed varsLowered) pointerAssignmentDriver := by
+  obtain ⟨N, h⟩ := pointerAssignmentTotalReadout
+  exact ⟨N, fun fuel hf ch =>
+    let ⟨σf, ch', hr, _⟩ := h fuel hf ch
+    ⟨σf, ch', hr⟩⟩
+
 /-! ### testAnonymousAssign (`_ = uint64(1) + uint64(2); return true` —
 the blank-assign lowers to a `$blank0` local; the sum is
 constant-folded to `3` by the frontend) -/
@@ -314,5 +325,16 @@ theorem anonymousAssignTerminatesNormallyC :
     TerminatesNormallyC importedEnv (importedSeed varsLowered) anonymousAssignDriver :=
   goSpec_seeded_terminatesNormallyC anonymousAssignSpec (by decide +kernel)
     (by exact testAnonymousAssignTerminates)
+
+/-- The SEQUENTIAL-carrier completion pin for `anonymousAssignSpec` (gen-5
+manifest round: the completion half of the row's `TotalReadout`,
+projected — the named seq pin the completion manifest pairs the
+sequential export against). -/
+theorem anonymousAssignTerminatesNormally :
+    TerminatesNormally importedEnv (importedSeed varsLowered) anonymousAssignDriver := by
+  obtain ⟨N, h⟩ := anonymousAssignTotalReadout
+  exact ⟨N, fun fuel hf ch =>
+    let ⟨σf, ch', hr, _⟩ := h fuel hf ch
+    ⟨σf, ch', hr⟩⟩
 
 end GoLean.ImportedGoose.SemanticsVars

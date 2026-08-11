@@ -746,12 +746,20 @@ none of it appears in any exported statement (the statements above
 mention only `execProg`/`loadLoc`/`GoTripleC`/`TerminatesNormallyC`,
 all interpreter-vocabulary surface definitions), and the differential
 (§11) plus the kernel certificates are what ground the interpreter
-itself. The completion-pin gate (`Audit.lean`) enforces
-completion-anchor EXISTENCE per `(env₀, prog)` — a structural floor,
-with its RECORDED LIMIT (round 4): it does not check that a pin's
-seed satisfies an export's precondition, so pre-side vacuity stays
-exactly where this table puts it — in the witness discipline (each
-readout row discharges its `InitialSplit` at the pin's own seed).
+itself. The completion gate (RESTRUCTURED to the generated-manifest form at
+gen 5 — §15): the checker only ENUMERATES (full key tuples, incl.
+types/funcs/methods, plus each pin's full seed tuple), and
+`CompletionManifest.lean` is the reviewed record every dump line must
+match. RECORDED LIMITS, all of them (the manifest docstring is the
+canonical list): `paired-exact`'s mechanical floor is (env₀, prog)
+equality — seed-vs-(types,funcs,methods) agreement AND
+seed-vs-precondition satisfaction are REVIEWED via the visible
+tuples, not machine-verified; dispositions are reviewed prose;
+`_private` declarations are out of scope by design (tracked
+fixture); the compat/gobra import of Surface is a watched surface.
+Pre-side vacuity stays exactly where this table puts it — in the
+witness discipline (each readout row discharges its `InitialSplit`
+at the pin's own seed).
 The matching charter addendum makes this walk a per-slice review
 criterion for the rest of the arc.
 
@@ -895,6 +903,12 @@ through the frontend, they become ordinary confluent rows.
 ## 13. S1 gate-verification round (round 3: 1 critical + 2 major +
 ## 2 minor + 1 note — all in the rebuilt gate; NOT_CONVERGED → fixed)
 
+- [CORRECTED at gen 5: this round's record claimed "the gate section
+  was swept for remaining `| _ =>` arms — none remain" — FALSE; three
+  remained, all fail-closed (the two `Expr`-leaf arms in
+  `gateCollectApps` and the pin pass's non-`.const` head, each
+  strict-direction). The false sweep claim is exactly the
+  self-report class the gate-honesty dimension checks; recorded.]
 - **CRITICAL — the walk's `| _ => pure ()` wildcard was fail-open**
   (structure/inductive wrappers with out-of-scope pieces escaped,
   invisible even in the counts) — a VERBATIM regression of the
@@ -1046,3 +1060,67 @@ through the frontend, they become ordinary confluent rows.
   byte-identical; audit sweep 13549 declarations axiom-clean.
   Doc-only record commit over the run's own commit, per the
   established discipline.
+
+## 15. Gen-5: THE RESTRUCTURE — the generated-manifest completion gate
+
+Gen-5 review found the pairing key's (types, funcs, methods) axis (a
+triple over an empty/different function table silently anchored by a
+real pin — latent: all 14 live pairings were verified matching at gen
+5) and mapped the adjacent surfaces (17 sequential GoSpec/GoTriple
+exports outside the gate; the compat/gobra Surface import; the
+private-decl and same-module blind spots). Per the operator's declared
+terminal condition, per-shape patching STOPPED; the §14-designed
+restructure landed instead:
+
+- **The checker only enumerates** (`Audit.lean`): the reverse-BFS +
+  exhaustive `ConstantInfo` walk (unbroken through gens 4-5) now emit
+  a descriptor per in-scope constant — kind, class, the FULL key
+  tuple (types, funcs, methods, env₀, prog) of every carrier
+  application including the SEQUENTIAL carriers (`GoTriple`/`GoSpec`
+  — the 17-export surface closed), and the mechanically-matched pin
+  with the pin's own full (env₀, seed, prog) tuple. The trusted claim
+  shrank to ENUMERATION COMPLETENESS.
+- **`CompletionManifest.lean` is the record** (choice recorded there:
+  a def-only Lean module, not a baselines/ TSV — no IO/cwd in the
+  in-build gate, no parser to drift, same reviewability): 67 lines,
+  every one dispositioned BY HAND at creation — 24 `paired-exact`
+  (14 concurrent, verified matching by the gen-5 verifier + 10
+  sequential, paired against the NINE new seq pins derived from the
+  rows' TotalReadouts plus the pre-existing nil pin), 23
+  `paired-with-stated-delta` / `allowlisted` lines with per-line
+  citations (the legacy designated sequential statement-forms — incl.
+  two RECORDED HONEST GAPS: `committedIndexAllConfigs`' ∀-config
+  quantifier and `quorumAckedIndexFuncSpec2`'s unpinned callsite
+  driver, both predating the doctrine — and the nine generic
+  ∀-program lemmas), 16 fixtures + 4 satellites. Drift = build
+  failure until a reviewed line lands in the same commit (the
+  tracked-baseline re-pin discipline, cited at the gate).
+- **The gen-5 escape class is now reviewable, not rule-anticipated**:
+  a wrong-funcs export's manifest line visibly carries `f=<empty>`
+  beside `pinkey=…s=rdvSeed` — verified RED: the funcs-axis probe
+  drifts with exactly that line printed (this round's RED-3).
+- **Verified RED** (all three coordinator scenarios): a stash-probe
+  new unpinned export → `DRIFT (new/unlisted export)`; a manifest
+  line flipped to `paired-exact` without the pin → `disposition
+  paired-exact but computed class is unpaired`; the funcs-axis probe
+  → drift with the differing tuples printed. Fixture migration: the
+  16 attacker shapes are manifest lines whose computed class the
+  gate re-verifies (a fixture line marked paired fails); enumeration
+  mutations move computed lines and fail the diff.
+- **Honesty sweep** (gen-5 minors/notes, all applied): the
+  "remaining, deliberately UNCHECKED axis (singular)" wording
+  replaced by the complete limits list (manifest docstring, §10,
+  charter); §14's false "swept, none remain" corrected in place
+  (three fail-closed `| _ =>` arms remain, named); the stale "FALLEN
+  THREE TIMES" gate docstring replaced by the full five-generation
+  history + restructure rationale; the private-decl skip got its
+  tracked fixture (`fixturePrivateTriple` + in-gate existence/skip
+  assertion) and a stated-scope line; the same-module blind spot is
+  now an asserted-empty check; the denylist justification corrected
+  to the actual mechanism (Lake per-library module ownership + the
+  ci proofs-file closure step, not build order); the compat/gobra
+  Surface-import adjacency recorded as a watched surface (zero
+  triples there today, gen-5 census).
+- If the follow-up focused verification finds a MAJOR in the
+  restructured gate, the operator takes it to the user (recorded per
+  instruction).
