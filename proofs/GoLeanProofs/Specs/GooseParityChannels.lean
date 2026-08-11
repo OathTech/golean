@@ -50,6 +50,21 @@ programs also have upstream Go tests) — but the Rocq/GooseLang model
 itself and the translation step are executed by no test. No ordering
 is claimed.
 
+∀-schedule scope (NPDRF settled at channel-logic S4,
+docs/2026-08-11_npdrf-reduction.md): "every schedule" = every
+REGISTRY-POINT schedule — the modeled path set, i.e. full
+per-machine-step interleaving RESTRICTED to boundary switches
+(`stepM_iff_fine_bs`, NPDRF.lean). The draft claim that race-free
+programs behave identically under unrestricted interleaving is REFUTED
+as originally stated (`NPDRFReduction_refuted`: whole-state results +
+two leaked mid-segment goroutines); the corrected class-level
+reduction (`NPDRFClassReduction`) is the recorded open target, proved
+so far only for never-spawning pools. For spawning programs these
+statements claim registry granularity ONLY; sub-registry transfer is
+unproved.
+Every ∀-schedule/no-deadlock/no-race statement in this module is read
+under that scope.
+
 The shared derivations (`chanCert_*`) are thin generic wrappers over
 `execProgLoop_ok_of_allStreamsOkPool`/`execProgLoop_mono` plus the
 slice-6 pair `execProgLoop_le`/`allStreamsOkPool_mono`; they are
@@ -102,7 +117,8 @@ theorem chanCert_allSchedules {post : ExecState → Bool} {fuel : Nat}
     execProgLoop_ok_of_allStreamsOkPool hcert ch
   exact ⟨σf, ch', execProgLoop_mono hrun hle, hpost⟩
 
-/-- NO modeled schedule AT ANY FUEL deadlocks, generically: past the
+/-- NO modeled schedule (registry-point scope — the module header's S4
+caption) AT ANY FUEL deadlocks, generically: past the
 certificate's bound by `execProgLoop_mono`; below it by
 `execProgLoop_le` — a sub-bound truncation of a completed run
 classifies `.ok` or `.fuelOut`, never `.deadlock` (matrix §7.2's
@@ -125,8 +141,9 @@ theorem chanCert_noDeadlock {post : ExecState → Bool} {fuel : Nat}
     · rw [hok] at hcontra'; cases hcontra'
     · rw [hfo] at hcontra'; simp at hcontra'
 
-/-- NO modeled schedule AT ANY FUEL trips the race detector,
-generically (same two-lemma split as `chanCert_noDeadlock`). -/
+/-- NO modeled schedule (registry-point scope — the module header's S4
+caption) AT ANY FUEL trips the race detector, generically (same
+two-lemma split as `chanCert_noDeadlock`). -/
 theorem chanCert_noRace {post : ExecState → Bool} {fuel : Nat}
     {env : LocalEnv} {σ₀ : ExecState} {prog : Stmt}
     (hcert : allStreamsOkPool post fuel

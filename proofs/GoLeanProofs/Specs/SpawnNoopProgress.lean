@@ -566,7 +566,7 @@ GoTripleC ∧ ProgressExecC`, §9) CLOSED: `spawnNoopTripleC` (the triple
 half, paid through the decomposition pipe) beside `spawnNoopProgressC`
 (the safety half, the pool-reachability kit's first instance). Every
 completing run delivers the harness cell with the frame intact, and
-every bounded run on every schedule is safe. Axioms: the triple half
+every bounded run on every schedule is safe ("every schedule" = every REGISTRY-POINT schedule — the settled S4 NPDRF caption, docs/2026-08-11_npdrf-reduction.md §6; sub-registry transfer is unproved). Axioms: the triple half
 went through the Iris pipe, so this bundle sits at
 `[propext, Classical.choice, Quot.sound]` — the safety half's proof
 layer is constructive (`spawnNoopPoolProgress`). -/

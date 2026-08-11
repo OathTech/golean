@@ -29,7 +29,8 @@ harness and handle cells intact. The triple ALONE is run-conditioned
 and therefore compatible with a program that never communicates
 (`deadlockRecvTripleC` in `Specs/ChanVacuityWarning.lean` is the
 standing demonstration) — what distinguishes THIS bundle is the
-COMPLETION PIN below: every schedule reaches main's `.normal`, and
+COMPLETION PIN below: every schedule reaches main's `.normal`
+("every schedule" = every REGISTRY-POINT schedule — the settled S4 NPDRF caption, docs/2026-08-11_npdrf-reduction.md §6; sub-registry transfer is unproved), and
 for this program a `.normal` completion requires the real rendezvous
 (the machine's only routes past main's park are the pairing with the
 worker's send or the corresponding wake). The WALK — not the triple's

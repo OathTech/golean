@@ -367,6 +367,15 @@ entirely by the byte-identity discipline):
 9. `docs/BUGS.md` — only if an entry cites the draft statement's
    marker (checked at sweep time; BUG-040/044 entries reference the
    obligation contextually).
+10. Found at sweep time by the module-wide scan (grep for every
+    "every schedule"/"∀-schedule"/"all schedules" phrasing outside the
+    excluded Comparator mirrors) and added to the sweep:
+    `Surface.lean`'s witness-status note and `GoSpecC` docstring,
+    `Specs/SpawnNoopProgress.lean`'s assembled-`GoSpecC` docstring,
+    `LangD.lean`'s completion-half kernel-certificate docstring, and
+    `Specs/ChanRendezvous.lean`'s module header (covers its cert
+    docstring). `Specs/ChanVacuityWarning.lean` needed nothing — its
+    text is ABOUT the absence of a ∀-schedule claim.
 
 Historical slice notes (`2026-08-06_channels-arc-design.md`'s build
 logs, spec-parity notes) are records of their dates and are NOT
@@ -452,3 +461,16 @@ Per the charter, either branch is SUCCESS and the lane does not stop.
   NPDRF.lean is a theorem-only leaf module — interpreter untouched,
   no `--diff` owed. Gate: `scripts/ci` green (proofs+Audit, eval
   tests 136 ok, baseline diff 1483/1483 no regression).
+* Commit 3 (the FD1 caption sweep, ONCE): the doctrine gains the
+  section "The NPDRF status — SETTLED captions (2026-08-11)" as the
+  formula of record; the three doctrine scope lines point at it
+  (racy caption, confluent caption, the BUG-040 scope-limit
+  paragraph); Lean docstring sites per the §6 inventory + item 10's
+  scan additions; comparative-scoping rows T12/L3 restated
+  (settled-but-open; DEL/ANALYSIS verdicts unchanged); TODO's
+  verified-POR line points at §5's sized machinery. No caption
+  strengthened — every site now says registry granularity ONLY with
+  the refutation and the open corrected target named. Designated
+  statements untouched (statement-TCB closure green; Comparator
+  mirrors excluded from the sweep by the byte-identity discipline).
+  Gate: `scripts/ci` green.

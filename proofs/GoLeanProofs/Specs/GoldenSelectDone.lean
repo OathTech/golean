@@ -83,7 +83,9 @@ def selDoneReadout : ExecState → Bool := fun σf =>
 /-- **The extension's kernel certificate**: every schedule of the
 select-probe program completes at main's `.normal` with the 42 readout
 — through select applies the pre-refinement checker refused
-unconditionally. -/
+unconditionally. ("Every schedule" = every registry-point schedule —
+the S4 NPDRF caption, docs/2026-08-11_npdrf-reduction.md §6; sub-
+registry transfer is unproved.) -/
 theorem selDoneAllStreamsCert :
     allStreamsOkPool selDoneReadout 200
       ⟨#[.exec selDoneDriver selDoneEnv .stop], selDoneSeed, 0⟩ {} = true := by

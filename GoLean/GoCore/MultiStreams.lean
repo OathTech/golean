@@ -44,7 +44,11 @@ Design (mirroring the sequential checker's discipline,
 `execProgLoop_ok_of_allStreamsOkPool` is the soundness theorem: checker
 true at fuel `N` ⇒ every stream's pool run completes `.ok (.normal σf)`
 within `N` with `post σf = true` — in particular no run deadlocks, no
-run trips the race detector, on ANY modeled schedule.
+run trips the race detector, on ANY modeled schedule. ("Modeled
+schedule" = every registry-point schedule — full interleaving
+restricted to boundary switches, `stepM_iff_fine_bs`; the S4 NPDRF
+caption, docs/2026-08-11_npdrf-reduction.md §6: sub-registry transfer
+is unproved, so certificates claim registry granularity only.)
 -/
 
 namespace GoLean.GoCore.Machine

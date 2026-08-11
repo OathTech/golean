@@ -151,8 +151,9 @@ EPISTEMIC CAPTION, recorded per the per-lane discipline:
   bounded per site, ends in `raceDetected` on every leaf (one value
   leaf anywhere fails the case loudly) — AND one `-race` sample
   witnessed a real race (TSan has no false positives — one red report
-  is proof). The claim is scoped to the REGISTRY-POINT path set (the
-  NPDRF obligation's territory) and by the footprint inventory's
+  is proof). The claim is scoped to the REGISTRY-POINT path set (scope settled
+  at channel-logic S4 — the NPDRF status section below) and by the
+  footprint inventory's
   recorded under-approximations (U1–U2; U3 closed by BUG-045); the pre-slice-4 per-stream
   approximation is retired.
 - **The three-way investigation rule** (binding; also recorded at the
@@ -203,7 +204,39 @@ EPISTEMIC CAPTION, recorded per the per-lane discipline:
   is detectable (eval-pinned: value leaf on main-first, race leaf on
   child-first — a mixed-leaf class no corpus race case can express,
   and the pool enumerator pins BOTH leaves). The registry-point-vs-
-  full-interleaving gap itself remains the NPDRF obligation.
+  full-interleaving gap is now precisely characterized and its
+  reduction statement settled-but-open (the NPDRF status section
+  above, 2026-08-11).
+
+## The NPDRF status — SETTLED captions (2026-08-11, channel-logic S4)
+
+The reduction obligation the captions below lean on is settled at
+slice channel-logic S4 (binding note `docs/2026-08-11_npdrf-reduction.md`;
+this section is the caption formula of record — the lane captions
+point here):
+
+- "Every schedule" / "the registry-point path set" = full
+  per-machine-step interleaving RESTRICTED to boundary switches —
+  now a machine-checked characterization, not a separate relation
+  (`stepM_iff_fine_bs`, NPDRF.lean: StepM = StepMFine ∩
+  BoundarySwitch).
+- The draft claim "race-free programs behave identically under
+  registry-point scheduling and full interleaving" is REFUTED as
+  originally stated (`NPDRFReduction_refuted`: `.done` carries the
+  whole joined state, and two leaked mid-segment goroutines make it
+  fine-reachable but coarse-unreachable, race-free). Literal-state
+  and literal-value corrections stay refuted through allocation
+  order (note §2).
+- The corrected, citable target is class-level
+  (`NPDRFClassReduction`: fine-reachable results are coarse-reachable
+  up to result CONSTRUCTOR) — OPEN, proved so far only for
+  never-spawning pools (`reachesMFine_iff_reachesM_single`, where the
+  equivalence is literal). The mover route to the general statement
+  and its sized blocking machinery: note §5.
+- Consequence for every ∀-schedule statement: for spawning programs
+  the claim is registry granularity ONLY; no caption may assert
+  sub-registry transfer, and none may cite `NPDRFClassReduction` as
+  proved.
 
 ## Slice-4 additions (2026-08-07): schedule enumeration and the lane upgrades
 
@@ -262,7 +295,9 @@ record.
   is Go's. Cannot show: anything past the fail-loud caps (over-cap
   cases stay strict, recorded in their cases.tsv); anything about
   programs outside the certified one; anything at sub-registry
-  granularity (the NPDRF obligation's territory).
+  granularity (settled scope — the NPDRF status section above: the
+  class-level reduction is open, so sub-registry transfer is not
+  claimed).
 - **membership — schedule-dependent (D9(c))**: PASS = every Go sample
   (R plain + R under `-race`, the dual-sampling rule above) ∈ the
   machine-enumerated observation set, with mechanically-computed

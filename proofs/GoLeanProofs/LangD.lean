@@ -1135,7 +1135,7 @@ theorem spawnNoopReadoutC :
 
 /-- The completion half's kernel certificate: every schedule of the
 spawning witness program completes at main's `.normal` with the cell
-intact, within fuel 20. -/
+intact, within fuel 20 ("every schedule" = every REGISTRY-POINT schedule — the settled S4 NPDRF caption, docs/2026-08-11_npdrf-reduction.md §6; sub-registry transfer is unproved). -/
 theorem spawnNoopAllStreamsCert :
     allStreamsOkPool
       (fun σf => match loadLoc σf (.base ⟨0⟩) with

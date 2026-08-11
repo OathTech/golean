@@ -131,7 +131,11 @@ sets on every tractable instance) and each with a named soundness
 obligation:
 
 - [ ] Verified POR — race-detector footprints as the independence
-      oracle; NPDRF mover lemmas as its eventual proof.
+      oracle; the NPDRF mover route as its eventual proof (statement
+      layer settled at channel-logic S4 —
+      docs/2026-08-11_npdrf-reduction.md §5 sizes the blocking
+      machinery: footprint-frame theorem, heap iso, permutation
+      engine).
 - [ ] Symmetry reduction — decidable Config equality; the
       id-relabeling lemma is the soundness obligation.
 - [ ] Preemption-bound-as-metadata — certificates must NAME their

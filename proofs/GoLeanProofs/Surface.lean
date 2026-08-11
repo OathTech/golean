@@ -584,7 +584,9 @@ its honest strength:
   (`allStreamsOkPool`, `MultiStreams.lean` — the "allStreamsOk
   analogue" route): every schedule and every latitude stream completes
   the rendezvous at `.normal` with the 42 readout, deadlock- and
-  race-refusal-free. These are SEEDED statements (the concrete
+  race-refusal-free ("every schedule" = every REGISTRY-POINT schedule
+  — the settled S4 NPDRF caption in `ProgressExecC`'s docstring
+  below; sub-registry transfer is unproved). These are SEEDED statements (the concrete
   fork/join seed), the concurrent counterpart of the sequential
   per-seed total pins.
 
@@ -633,7 +635,16 @@ schedule ("modeled schedule" = the registry-point path set; the
 post-spawn decision point joined it when BUG-040 was FIXED at slice 4
 — the `.spawned` boundary is a live L1 site, so child-first
 interleavings are in the envelope; stale "still lacks" caveat
-corrected at the S5 audit response). What is genuinely NEW versus the
+corrected at the S5 audit response. ∀-schedule scope, NPDRF settled at
+channel-logic S4 — docs/2026-08-11_npdrf-reduction.md: the
+registry-point path set is full per-machine-step interleaving
+RESTRICTED to boundary switches, `stepM_iff_fine_bs`; the draft
+race-free-programs-behave-identically claim is REFUTED as originally
+stated, `NPDRFReduction_refuted`, the corrected class-level target
+`NPDRFClassReduction` is open and proved only for never-spawning
+pools — so for spawning programs this guarantee claims registry
+granularity ONLY, never sub-registry transfer). What is genuinely NEW
+versus the
 sequential notion is
 the CARRIER: the guarantee holds of `execProg` under EVERY modeled
 schedule, not of the single sequential run. (Wording corrected at the
@@ -657,7 +668,9 @@ def ProgressExecC (types : TypeEnv) (funcs : Array Func)
 /-- **The full concurrent surface judgment** (D8): triple + safety over
 the pool carrier — "runs safely on every schedule (no deadlock, no
 abort), and every completing run delivers `Q` in the joined final state
-with the frame intact". INHABITED since slice 5 — `goldenSpecC`
+with the frame intact"; "every schedule" = every REGISTRY-POINT
+schedule (the settled S4 NPDRF caption in `ProgressExecC`'s docstring
+above; sub-registry transfer is unproved). INHABITED since slice 5 — `goldenSpecC`
 (`Specs/GoldenSurface.lean`, via `goSpecC_of_goSpec` below; the
 sequential-degenerate lane) — with the fork/join ∀-schedule family
 discharging the `∀ ch` quantifier at the seed; see the witness-status

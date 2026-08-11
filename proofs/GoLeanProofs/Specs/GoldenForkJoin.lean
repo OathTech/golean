@@ -111,7 +111,12 @@ theorem forkJoinAllStreamsCert :
 /-- **THE ∀-SCHEDULE WITNESS**: EVERY choice stream — schedules and
 latitude together — runs the fork/join program to `.normal` with the
 output cell holding 42. The slice-2 pinned-stream witnesses are the
-`[]`/`[9,…,0]`/`[1,…,1]` instances of this statement. -/
+`[]`/`[9,…,0]`/`[1,…,1]` instances of this statement. ∀-schedule scope
+(NPDRF settled at channel-logic S4,
+docs/2026-08-11_npdrf-reduction.md): every REGISTRY-POINT schedule —
+boundary-switched interleaving (`stepM_iff_fine_bs`); sub-registry
+transfer is unproved (`NPDRFClassReduction` open), so this claims
+registry granularity only. -/
 theorem forkJoinAllSchedules42 : ∀ ch : Choices, fjRunGives42 400 ch = true := by
   intro ch
   obtain ⟨σf, ch', hrun, hpost⟩ :=
