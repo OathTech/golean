@@ -505,3 +505,35 @@ coordination list above rather than drift into them.
   merge.
 - Research reports (agent runs, 2026-08-09) synthesized above; primary-source
   citations retained inline.
+
+## 9. Direction ruling (2026-08-11, user): native proof translation supersedes the certificate path
+
+The §3 ranking is OVERRIDDEN as the terminal architecture. The
+certificate path (path 1, rocq-lean-import iso) transfers a FROZEN
+theorem about a FROZEN spec: the moment the model extends (§4d rings —
+PreVote, snapshots, our network layer), upstream's proof no longer
+applies and no certificate can follow. A living development must OWN
+its proofs; and anchoring the permanent trust story to an unmaintained
+proof stack buys trust nobody needs. Ruling:
+
+- **The consensus proofs will be TRANSLATED into Lean** — a guided
+  re-proof, not mechanical translation (no tool exists): port the
+  invariant STATEMENTS per the P1 citation/ledger discipline, then
+  re-prove bottom-up through the induction framework (which P0 already
+  ported and re-proved). The upstream proof scripts are the map; the
+  invariant decomposition is the valuable import; the work is wide,
+  parallelizes across the framework's decoupled invariants, and every
+  finished invariant survives model extension.
+- **P2 (certificate toolchain) is demoted** from milestone to at-most
+  an optional transitional cross-check of statement fidelity while the
+  re-proof is in progress; its effort redirects to the campaign. The
+  §3 TCB analysis stays as the record of why the path was considered.
+- **The differential oracle's role is re-scoped**: a seed-phase port
+  validator (live gate while our handlers mirror upstream's); once the
+  model deliberately diverges, it becomes historical evidence of the
+  seed's fidelity, recorded as such at that time.
+- The endgame chain becomes fully Lean-native: GoLean refinement proof
+  → ported handlers → LEAN-PROVED linearizability (no external axiom).
+- Next artifact: the proof-translation campaign charter (invariant
+  inventory, slice structure, oracle reclassification), drafted as the
+  lane's next-arc scoping doc.

@@ -696,8 +696,12 @@ widened an arc mid-audit. Roughly in priority order.
   revs, coq-extra-dev per verdi's CI) in the lane log
   `docs/2026-08-09_verdi-p1-lane.md`. D1 decided at the merge window:
   `compat/verdi` STAYS STANDALONE until P3 attachment (rationale in
-  the lane log's D-defaults). Next phases: P2 (certification
-  toolchain), P3 (attachment — mainline territory).
+  the lane log's D-defaults). Next phases (RE-RULED 2026-08-11, compat
+  note §9): the CONSENSUS PROOF TRANSLATION campaign (guided re-proof
+  of the invariant stack in Lean, statements-first — P2's certificate
+  path demoted to optional transitional cross-check; the endgame chain
+  is fully Lean-native), then P3 (attachment — mainline territory,
+  after the channel-logic arc's instrument).
 
 - **Gobra: the fuel-sufficiency lemma is the arc's sharpest open item.**
   `Parser.fuelFor = grammarDepth * (|toks|+1)` is ARGUED, not proved

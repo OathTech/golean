@@ -357,3 +357,11 @@ cd compat/verdi/extraction && ./build-and-run.sh
 # GOLEAN_VERDI_RAFT_THEORIES at the primary checkout's. Fails closed
 # when absent.
 ```
+
+## Direction ruling 2026-08-11 (user)
+
+P2 dropped as milestone; the lane's standing successor arc is the
+CONSENSUS PROOF TRANSLATION campaign (compat note §9: guided re-proof
+of the invariant stack, statements-first, induction framework already
+ported). The oracle leg is re-scoped per §9 (seed-phase validator).
+Charter to be drafted at campaign kickoff.
