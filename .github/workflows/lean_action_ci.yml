@@ -71,6 +71,20 @@ jobs:
       # ephemeral and disposable — if a build eats it, the job just fails,
       # which is the outcome we wanted anyway. scripts/capped prints a
       # WARNING on this path, so an uncapped run is never silent.
+      - name: Set up Go (pinned to the oracle family)
+        uses: actions/setup-go@v5
+        with:
+          # The differential oracle IS go1.26.x: every fatal-message,
+          # panic-payload, and probe claim in the repo is measured against
+          # it, and the goose-imported corpus uses 1.26 language features
+          # (new(expr) — semantics/new, channel/actris-example). A floating
+          # version let the fast gate run on the runner image's pre-1.26 Go
+          # and fail check-imported-pins with "3 is not a type" (2026-08-11).
+          # Bump this pin ONLY together with a re-validated oracle (probes +
+          # baseline re-pin rationale), never to chase "stable".
+          go-version: '1.26.x'
+          cache: false
+
       - name: Fast gate (scripts/ci)
         if: github.event_name == 'push' || github.event_name == 'pull_request'
         env:
@@ -85,15 +99,9 @@ jobs:
           GOLEAN_ALLOW_NO_DIFF: 1
         run: ./scripts/ci
 
-      - name: Set up Go (full differential)
-        if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
-        uses: actions/setup-go@v5
-        with:
-          go-version: stable
-          # No module cache to manage: the repo has no go.mod/go.sum (the
-          # differential harness runs GO111MODULE=off with a repo-local
-          # GOCACHE), so the default cache:true only emits a go.sum warning.
-          cache: false
+      # (Go setup moved above the fast gate and pinned — both gates use it;
+      # the old conditional stable-floating step let the fast gate run on
+      # the runner image's Go. No module cache: the repo has no go.mod.)
 
       - name: Full gate incl. differential corpus (scheduled/dispatch; --slow re-certifies tier=slow rows)
         if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
