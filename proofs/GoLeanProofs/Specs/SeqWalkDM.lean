@@ -10,7 +10,14 @@ import GoLeanProofs.Specs.GoldenQuorumWP
 `docs/2026-08-11_channel-resource-tier.md` §4)
 
 One single-threaded program on the MEDIATED carrier exercising every
-named port of `LawsDM.lean` (the dsp flagship's sequential surface):
+named port of `LawsDM.lean` that has a site in it (the dsp flagship's
+sequential surface). **Scope corrected at the S3 audit fix round:**
+this said "every named port", and one port had no site — the program
+contains no boolean literal, so `wpDM_eval_boolLit` fired nowhere.
+Rather than bend the kitchen-sink program around it, that port gets
+its own minimal witness at the end of this file
+(`wpDM_eval_boolLit_witness`); the claim here is now exactly what the
+program does. The walk:
 call-frame entry (`wpDM_call_enter_ret1`) → `block` → six
 `initialization`s (`wpDM_init`) → `makeChan` (`wpDM_make_chan` —
 P-CL1-6's law, first consumer) → `newValue` (`wpDM_new_value`) →
@@ -87,6 +94,14 @@ theorem sinkNormChan (σ : ExecState) (fa : Addr) :
 theorem sinkNormIface (σ : ExecState) (v : GoValue) :
     normalizeValueForTy σ (.interface ⟨"any"⟩)
       (.interface (.pointer .int) v) = .ok (.interface (.pointer .int) v) := by
+  simp only [normalizeValueForTy]
+  rw [show typeResolutionFuel = 1023 + 1 from rfl]
+  simp [normalizeValueForTyFuel]
+
+/-- Booleans ride through normalization at their declared type
+(`wpDM_eval_boolLit`'s witness, below). -/
+theorem sinkNormBool (σ : ExecState) (b : Bool) :
+    normalizeValueForTy σ .bool (.bool b) = .ok (.bool b) := by
   simp only [normalizeValueForTy]
   rw [show typeResolutionFuel = 1023 + 1 from rfl]
   simp [normalizeValueForTyFuel]
@@ -297,6 +312,45 @@ theorem wpDM_seq_walk_witness
   iapply (wp_value' (v := ()))
   simp only [show IntKind.int.normalize 42 = 42 from by decide]
   iexact Hr
+
+/-- **`wpDM_eval_boolLit`'s discharge witness** (added at the S3 audit
+fix round; design note §11). The kitchen-sink program above has no
+boolean literal, so that port had no consumer anywhere — an unwitnessed
+law, against the house rule. It is NOT a scaffold to delete: boolean
+literals are what the muxer rows' loop guards and `if` tests lower to
+(`Expr.boolLit`, measured from the pinned lowering, §9), so the port
+has real consumer shapes ahead of it. This is the minimal program
+statement that fires it: `b = true` against a declared-`bool` cell,
+walked on the DM carrier from the `assign` through the registered
+`wpDM_eval_boolLit` step (applied EXPLICITLY via `go_walk_step`, so
+the firing is visible in the proof rather than hidden inside the
+table-driven glue) to the store — every premise discharged at the
+concrete configuration. -/
+theorem wpDM_eval_boolLit_witness {s : Stuckness} {E : CoPset}
+    {Φ : Unit → IProp GF} {a : Addr} {k : Cont} :
+    a.id ↦ (⟨some .bool, .bool false⟩ : HeapCell)
+      ∗ (a.id ↦ (⟨some .bool, .bool true⟩ : HeapCell) -∗
+          WP (PoolCfgDM.mk (.next k)) @ s ; E {{ Φ }})
+      ⊢ WP (PoolCfgDM.mk
+            (.exec (.assign (.var "b") (.boolLit true)) [[("b", .base a)]] k))
+          @ s ; E {{ Φ }} := by
+  iintro ⟨Hb, Hcont⟩
+  go_walk 3
+  go_walk_step wpDM_eval_boolLit
+  go_walk
+  iapply (wpDM_assign_store_loc (a := a)
+    (oldcell := ⟨some .bool, .bool false⟩)
+    (newcell := ⟨some .bool, .bool true⟩)
+    (hstore := fun σ _ hlook => by
+      simp [storeLoc, hlook, sinkNormBool σ true,
+        Bind.bind, Except.bind, Pure.pure, Except.pure]))
+  isplitl [Hb]
+  · iexact Hb
+  iintro Hb
+  go_walk
+  iapply wpDM_seqCont_nil
+  iapply Hcont
+  iexact Hb
 
 end
 

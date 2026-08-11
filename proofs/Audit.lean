@@ -987,8 +987,15 @@ open Lean in
 #guard_msgs in #print axioms GoLean.Iris.sinkNormIface
 /-- info: 'GoLean.Iris.sinkNormPtr' depends on axioms: [propext] -/
 #guard_msgs in #print axioms GoLean.Iris.sinkNormPtr
+/-- info: 'GoLean.Iris.sinkNormBool' depends on axioms: [propext] -/
+#guard_msgs in #print axioms GoLean.Iris.sinkNormBool
 /-- info: 'GoLean.Iris.wpDM_seq_walk_witness' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Iris.wpDM_seq_walk_witness
+-- The one port with no site in the kitchen-sink program (no boolean
+-- literal in it): wpDM_eval_boolLit's own minimal discharge witness,
+-- added at the S3 audit fix round (design note §11).
+/-- info: 'GoLean.Iris.wpDM_eval_boolLit_witness' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.wpDM_eval_boolLit_witness
 /-- info: 'GoLean.Iris.seqWalkTripleC' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Iris.seqWalkTripleC
 /-- info: 'GoLean.Iris.seqWalkReadoutC' depends on axioms: [propext, Classical.choice, Quot.sound] -/
