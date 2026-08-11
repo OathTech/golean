@@ -1,11 +1,19 @@
 # Channel-logic arc — successor charter (2026-08-10)
 
-Status: DRAFT — SCOPING ONLY (user direction 2026-08-10: scope now, not
-necessarily scheduled next). Successor to the spec-parity arc; assumes
-its merged final state. Objective: close the *instrument-level* gaps to
+Status: EXECUTION CHARTER (2026-08-11 upgrade of the 2026-08-10 scoping
+draft; user-directed: scoped to RUN LONG under a standing goal, with
+decisions FRONT-LOADED so execution never pauses on a question the
+charter can answer). Successor to the spec-parity arc; assumes its
+merged final state. Objective: close the *instrument-level* gaps to
 Goose/Perennial equivalence that the spec-parity closure record names —
 the places where our concurrency results are exhaustive-checking
-certificates rather than a compositional program logic.
+certificates rather than a compositional program logic. The two
+motivations, recorded from the 2026-08-11 discussion: (1) certificates
+are abstract over INTERLEAVING but concrete over DATA — unbounded
+iteration, quantified inputs, general heaps, and forever-running
+programs (etcd-raft's node loop) need INVARIANTS, which only a program
+logic supplies; (2) instrument parity with Goose/Perennial, whose
+channel logic exists for the same target.
 
 ## The objective, stated as the property it buys
 
@@ -56,19 +64,101 @@ asymmetries by explicit decision, never by silence.
    informed by slice 4's outcome (completeness likely composes with the
    NPDRF fragment).
 
-## Decision items for the user (at arc start)
+## Front-loaded decisions (ALL resolved at charter blessing — none may
+## pause execution; re-opening any of these mid-arc is a PARK, not a stop)
 
-- **D1 — sequencing**: slices as ordered above, or NPDRF (slice 4)
-  first since slices 3/5's statements caption against it? Recommended:
-  as ordered — the law family unblocks the most, and captions can be
-  updated once.
-- **D2 — designation policy**: which of the new triples join the
-  designated set (CURATED discipline inherited; the dsp pair is the
-  natural flagship).
-- **D3 — breadth target**: after slice 3, how far to scale across the
-  remaining upstream channel population (34 not-imported / 15
-  imported-unattempted at spec-parity close, honest 73-item tree) —
-  a coverage target is a user call, not a drift default.
+- **FD1 — sequencing: AS ORDERED.** The law family unblocks the most.
+  Until slice 4 lands, every ∀-schedule statement carries the standing
+  provisional caption (the NPDRF obligation, refutable-as-written
+  draft cited); slice 4 updates the captions ONCE, whichever branch it
+  takes (FD5).
+- **FD2 — protocol style: NATIVE** (inherited from spec-parity D2,
+  now binding): invariant+ghost internally over iris-lean, comparison
+  at the exported level; the Actris-lite port stays a recorded future
+  option. Iris strictly internal; every headline passes the deletion
+  test.
+- **FD3 — designation: RECORD, NEVER DESIGNATE.** Candidates
+  accumulate in the manifest with the F4 def-only-hoist cost itemized
+  (the dsp pair's successor triples are the expected flagships).
+  Designation + the Comparator landmark happen at the arc-end merge
+  window with the user — user-gated BY DESIGN, so it is end-loaded,
+  not a mid-arc pause. The 48 designated statements stay byte-identical
+  through the whole arc.
+- **FD4 — breadth: BOUNDED DEFAULT.** After slice 3, scale to the
+  15 imported-unattempted channel items in covered feature classes
+  (honest 73-item tree accounting). The 10 P2-blocked and 34
+  not-imported stay OUT (import work is not this arc). Trimming the 15
+  with an honest per-row reason is in-lane authority; EXPANDING beyond
+  them is a park.
+- **FD5 — race axis: A DECISION RULE, not a deferred decision.** After
+  slice 4: IF the proven NPDRF fragment supports a
+  detector-completeness theorem over modeled schedules at ≤ one
+  slice's cost, PROVE IT (closes the proof-side asymmetry at our
+  granularity); ELSE record the asymmetry as permanent with the
+  O4/T12 axis split as its statement. Either branch is SUCCESS; the
+  lane takes the branch, records the reasoning, and does not stop.
+- **FD6 — machine-change policy.** This is a proofs-side arc.
+  GoCore THEOREM-ONLY additions are allowed (the S4/S6 precedent:
+  import-downstream modules, window argument recorded per commit).
+  A BEHAVIORAL machine change is allowed only as a probe-backed BUG
+  FIX (gc disagrees with the model: red-first pin, full differential
+  discipline, BUGS.md entry, lockstep) and is always reported as a
+  finding in the slice record. Model-DESIGN changes, new Choices
+  sites, and envelope changes are MUST-PARK.
+- **FD7 — statement forms and axioms (inherited, binding):** ∃N-∀fuel≥N
+  forms for anything fuel-dependent (execProgLoop_le/mono are the
+  lifts); axiom sets [propext, Classical.choice, Quot.sound] spec
+  lane, constructive [propext, Quot.sound] where the existing
+  simulation lane is; statement TCB + deletion test on everything
+  headline-shaped; non-vacuity witnesses same-commit, Audit-registered
+  with the name-tripwire scope stated.
+- **FD8 — NPDRF outcome latitude (explicit):** slice 4 proves the
+  corrected reduction statement OR a precisely-scoped fragment with
+  every ∀-schedule caption updated to match. Both outcomes are
+  success; an honest fragment beats a stalled generality.
+
+## The standing goal (proposed /goal text, set by the user at blessing)
+
+    Execute the channel-logic arc charter
+    (docs/2026-08-10_channel-logic-arc-charter.md) on lane
+    channel-logic (worktree .claude/worktrees/channel-logic).
+    Done = the charter's exit criterion with all goals done, or goals
+    deferred for good reason and logged — deferral with an honest log
+    entry is SUCCESS; never trade soundness or the fidelity rules for
+    coverage. The front-loaded decisions (FD1-FD8) are settled: apply
+    them rather than re-asking. Questions outside them go to the
+    parking ledger with a reversible conservative course taken
+    meanwhile — hard-stop ONLY for soundness threats (a designated
+    statement change, a gate weakening, an unexplainable regression).
+    EXIT CONDITION: an early exit may be declared at any time, for any
+    reason or none; the drift tests and fidelity rules override
+    completion pressure.
+
+## Must-park list (never decided in-lane; ledger + batch for check-in)
+
+Designation or ANY designated-statement change; new Choices sites or
+envelope changes; model-design changes (FD6's bug-fix carve-out
+excepted); merges to main and pushes (operator-gated, arc end);
+CLAUDE.md/doctrine amendments; certified-record re-pins beyond the
+same-commit-explained discipline; anything in compat/** (the Verdi
+lane's tree); grossmith-outbound communication; expansion beyond FD4's
+breadth bound.
+
+## Lane mechanics (worktree discipline, binding)
+
+Lane branch `channel-logic`, worktree `.claude/worktrees/channel-logic`
+(created at charter drafting; deps bootstrapped via scripts/setup-deps).
+This lane is the MAINLINE OWNER for its duration: GoLean/, proofs/,
+Corpus/, baselines/, scripts/, docs/ — disjoint from the Verdi lane
+(compat/** + its dated docs). When both lanes run full gates
+concurrently: GOLEAN_MEM_MAX=48G or stagger (arc-boundary events).
+Sub-branches per slice off the lane branch, the established audit
+cycle per slice (Opus reviewers/verifiers, Fable workers; convergence
+bar: critical/major ⇒ verified fix round, note-level ⇒ converged);
+delta-reviews per the substantive-fix policy; snapshot refs before any
+rebase. Parking ledger lives in the lane's slice notes; the arc-end
+sequence (closure record → audit-ask → designation → Comparator →
+rebase → merge → push) is the user's.
 
 ## Validation discipline (inherited, with one addition)
 
