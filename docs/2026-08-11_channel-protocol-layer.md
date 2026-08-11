@@ -489,6 +489,23 @@ the new carrier) → per-row invariants → dsp. Ledger entry P-CL2-4.
 | `chanRendezvousValTerminatesNormallyC` | ∃N ∀fuel≥N ∀ch: `.normal` completion | `chanRendezvousValAllStreamsCert` — kernel evaluation (fuel 500, `#eval` first), `execProgLoop_mono` lift |
 | `spawnNoopProgressC` / `spawnNoopSpecC` / `spawnNoopPoolProgress` | ∀ heap/allocator, ∀ fuel/stream: `execProg` is `.ok (.normal …)` or `.error .fuelOut` (and the `GoSpecC` conjunction) | the invariant induction is itself interpreter-side (no Iris anywhere in statement OR proof for the progress half) |
 
+## 9a. The confluent-lane discharge (charter validation addition,
+## RUN first-hand at the slice tip)
+
+The slice-2 laws are proof-layer over the SAME
+`applyChanOp`/`resumeThread`/`storeLoc`/delivery-frame code paths the
+differential executes; the S1 §11 seven-id slice re-run first-hand at
+the slice tip: **7/7 PASS**, the three goroutine rows at
+`stage=confluent` with `|set|=1 certified over all schedules`
+(`goroutines/fork-join/unbuffered` — the TARGETED unbuffered receive,
+this slice's exemplar shape; `goroutines/fork-join/args-eval-now` —
+the allocating spawn; `goroutines/rendezvous-hb/send-hb` — the
+zero-target discard; the three close rows and
+`builtins/make-channel-len-cap` strict). The exemplar program itself
+remains a Lean-side seed, exercised by the fuel-500 kernel
+certificate (schedule-exhaustive at the seed); zero corpus effect
+stands.
+
 Everything else this slice shipped — `StepDM`, the simulation, the
 round-trip kit, `chanInvP`, the `wpDM_*` laws, the walks — is METHOD:
 none of it appears in an exported statement (all statements above are
