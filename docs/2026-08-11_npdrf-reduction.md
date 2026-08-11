@@ -50,18 +50,37 @@ current sources (not inherited from the S3 marker):
 3. The fine scheduler has no such constraint: `schedPickFine m i` is
    bare runnable-membership (NPDRF.lean).
 
-Consequence, stated precisely: **in any `StepsM` run, at most one
-goroutine is ever strictly mid-segment** (has stepped past a boundary
-without reaching the next one) — the running one. The fine relation
-can hold two goroutines strictly mid-segment simultaneously. With
-`.done` pinning the whole shared state, that difference is a
-reachable-RESULT difference, race-free.
+Consequence — CORRECTED at the S4 audit fix round (the first form
+over-generalized; the audit exhibited pairing and spawn
+counterexamples on the repo's own certified rendezvous pool): **in a
+SYNC-FREE, spawn-free pool, any `StepsM` run holds at most one
+goroutine strictly mid-segment** (has stepped past a boundary without
+reaching the next one) — the running one. In GENERAL coarse runs the
+count can exceed one without the extra thread ever being picked: a
+pairing step (`applyPairing`) rewrites TWO thread slots, moving the
+parked partner off its blocked-config boundary into a delivery config
+it did not step into itself, and a spawn bears the child at an
+off-boundary `.exec` config — so the coarse/fine gap is NOT
+characterized by "≥ 2 simultaneously mid-segment" once sync or spawn
+is present. The refutation below needs only the sync-free instance,
+which is the class its `CoarseInv` formalizes. The fine relation can
+hold two goroutines strictly mid-segment simultaneously even
+sync-free. With `.done` pinning the whole shared state, that
+difference is a reachable-RESULT difference, race-free.
 
 The counterexample class (obstruction 4's, now made exact): main
-(goroutine 0) already terminal; two spawned-and-leaked goroutines A
-and B, each performing TWO stores to its own private pre-existing
-cell (A: x:=1 then x:=2; B: y:=10 then y:=20), no synchronization
-anywhere. All footprints are per-goroutine disjoint (`locOverlap` on
+(goroutine 0) already terminal; two leaked-SHAPED goroutines A and B,
+each performing TWO stores to its own private pre-existing cell
+(A: x:=1 then x:=2; B: y:=10 then y:=20), no synchronization
+anywhere. Reachability status, stated precisely (audit fix round —
+the first form said "spawned-and-leaked", inviting a stronger
+reading): the formalized pool `m0` is HAND-BUILT and NOT reachable
+from any initial pool — `spawnStep` gives every spawned goroutine a
+barrier frame, while A and B carry bare `.stop` continuations. The
+refuted statement quantifies `∀ m₀ : MultiConfig`, so the theorem is
+exactly on-statement; a program-level (initial-pool-reachable)
+variant of the same mechanism would need barrier-framed threads and
+was not built. All footprints are per-goroutine disjoint (`locOverlap` on
 distinct base cells is false), so `¬ RacyFine` — the premise holds.
 
 * Fine: step A once (x=1), then B once (y=10). Main is terminal, so
@@ -78,9 +97,10 @@ admits steps after main's terminal (the relation admitted them all
 along; BUG-044 brought the driver into line) and `poolResult?`
 classifies at EVERY intermediate pool, single-mid-segment `.done`
 states ARE coarse-reachable (run main to its exit, then step A
-partway). Only the ≥ 2-simultaneously-mid-segment states are outside
-the coarse set. That is why the counterexample needs TWO leaked
-writers; one is not enough.
+partway). Within the counterexample's sync-free class, only the
+≥ 2-simultaneously-mid-segment states are outside the coarse set.
+That is why the counterexample needs TWO leaked writers; one is not
+enough.
 
 The `↔`'s ⊆ direction (`ReachesMFine → ReachesM`) is therefore FALSE
 on race-free pools. (The ⊇ direction is `reachesM_le_fine`, proved
@@ -103,6 +123,60 @@ probed by `#eval` before this note was committed (the
 classifications, footprints, and `stepMulti`'s forced-continuation
 behavior all compute as the derivation above requires.
 
+## 1a. THE THIRD MECHANISM — the `schedPick`/`cur` asymmetry (S4
+## pre-merge audit, MAJOR; re-derived here first-hand at the fix round)
+
+The audit machine-checked `¬ NPDRFClassReduction` — the fix-round's
+predecessor "corrected target" — three independent times, through a
+mechanism §4's first truth argument never considered. Re-derived from
+the sources:
+
+* `schedPick m i` (Multi.lean) matches on `m.threads[m.cur]?`:
+  `none → False` (an out-of-range `cur` silences the ENTIRE coarse
+  relation), and an off-boundary `some c` forces `i = m.cur`.
+  `schedPickFine` never consults `cur` at all. So whenever the thread
+  at `cur` is off-boundary and cannot take a `StepE`, every `StepM`
+  constructor dies on it: the coarse relation is WEDGED while fine
+  simply schedules another runnable thread.
+* TWO forms, both machine-checked by the audit and re-run first-hand
+  at this fix round (`.tmp/aud_s4_class2.lean`, `.tmp/vfy/PFinal.lean`
+  — both reproduce, axioms `[propext, Quot.sound]`):
+  - **stuck-`cur`**: the thread at `cur` sits at a fail-closed config
+    (no `Step` rule; `stepFn` errors on every stream). The verifier's
+    variant is a `MultiWf`, in-range pool — well-formedness does NOT
+    exclude the class.
+  - **spinning-`cur`**: a `for {}` body (`.while (.boolLit true) …`)
+    steps forever with `atBoundary = false` at every step (probed 60
+    steps) — no error, empty footprints, race-free — wedging the
+    coarse relation FOREVER by the same forced-`i = cur` mechanism.
+* The verifier's decisive strengthening: spinner-wedged pools are
+  themselves COARSE-REACHABLE from genuine initial programs (main
+  spawns a `for {}` goroutine; the `.spawned` marker is a boundary, so
+  the coarse scheduler may pick the child there — and can then never
+  switch back). So this is a REAL non-preemption gap between `StepM`
+  (non-preemptive between boundaries) and `StepMFine` (preemptive),
+  not a well-formedness nit: no `m₀`-scoping can remove wedged pools
+  from the middle of coarse RUNS.
+
+**Why ∃-reachability from single-threaded roots nonetheless escapes**
+(the repair's load-bearing argument — new at this fix round, engaging
+the mechanism directly instead of ignoring it):
+`ReachesM` is ∃-quantified over schedules. A wedged pool is a DEAD
+BRANCH of the coarse tree, not an obstruction to other branches; the
+coarse scheduler is only ever FORCED onto a thread it previously
+picked mid-segment, and from a single-threaded `cur = 0` root every
+multi-thread coarse state descends from a boundary reschedule — so a
+schedule that simply never picks a doomed thread exists whenever one
+is not needed. And a non-yielding segment is never needed: any
+segment the mimicking coarse run must traverse is one the FINE run
+completed (finitely, up to that thread's next registry op) — segments
+that never reach a boundary produce no registry op, no sync effect,
+and (race-free, class-level) no observable contribution, so the
+avoidance schedule realizes the fine run's registry-op order without
+ever entering them. The two exhibited forms are exactly the pools
+where `m₀` ITSELF starts wedged or multi-threaded — which is what the
+repaired premise excludes.
+
 ## 2. The second refutation class, sharpened: allocation order kills
 ## every literal-value correction too
 
@@ -123,10 +197,18 @@ readout only") whenever concurrent segments allocate:
   access (the malloc convention — fresh allocation is deliberately
   not footprinted, Race.lean).
 * The fragment where this cannot happen — no allocation in any
-  concurrent segment — is narrower than it sounds: `enterFrame`
-  allocates (locals), so EVERY call in a post-spawn segment
-  allocates. Straight-line no-call segments (the dsp child's
-  `*p = 42; sig <- …` shape) qualify; anything with a call does not.
+  concurrent segment — is delimited by allocation SITES, not by
+  call-presence (CORRECTED at the S4 audit fix round; the first form
+  claimed "EVERY call allocates" and "no-call segments qualify",
+  wrong in both directions): `enterFrame` allocates exactly one cell
+  per PARAMETER (`bindParams`) and one per RESULT (`allocDecls`), so
+  a niladic, resultless call allocates nothing — the repo's own
+  `noopWorker` spawn witness (LangC.lean / SpawnNoopProgress.lean) is
+  a live call-bearing allocation-free post-spawn segment — while a
+  CALL-FREE segment that declares a block local or runs
+  `newValue`/`make*`/an append spill DOES allocate. The dsp child's
+  `*p = 42; sig <- …` shape qualifies because it hits no allocation
+  site, not because it has no call.
 
 Conclusion (binding): any corrected statement that compares STATES or
 address-carrying VALUES literally is either refutable or confined to
@@ -183,51 +265,136 @@ constructor-level result CLASSES avoid the quotient entirely.
   strictly mid-segment). RECORDED as the eventual full theorem
   (Mazurkiewicz normal form territory); note-only.
 
-## 4. The corrected statement (the citable target) and its parts
+## 4. The corrected statement — REVISED at the S4 audit fix round
+## (the first attempt, `NPDRFClassReduction`, is REFUTED — §1a)
 
-The corrected reduction, stated in Lean this slice as a `Prop`-valued
-definition (citable as a proof target — unlike the draft, no known
-counterexample class applies; the argument for its truth is below):
+HISTORY, kept honestly: this section first shipped
+`NPDRFClassReduction` (premise `¬ RacyFine` only) with the sentence
+"unlike the draft, no known counterexample class applies". That
+sentence is BANNED from this note and the code from the fix round on
+— the audit refuted the statement three times through §1a's mechanism,
+which the first truth argument never considered. The def is kept in
+NPDRF.lean as the refuted intermediate record with its own
+machine-checked refutation (`NPDRFClassReduction_refuted`, ported from
+the audit's smallest counterexample), exactly the draft's treatment.
 
-    def PoolResult.sameClass : PoolResult → PoolResult → Bool
-      -- panicked _ ~ panicked _ ; deadlocked ~ deadlocked ;
-      -- done o ~ done o' iff o, o' share their ExecOutcome constructor
+THE FIX-ROUND DECISION (both branches argued; FD8: either is success):
 
-    def NPDRFClassReduction : Prop :=
-      ∀ m₀ : MultiConfig, ¬ RacyFine m₀ →
+* (a) REPAIR with premises — CHOSEN. The premise space considered:
+  - initial-`.exec` scoping (`m₀ = ⟨#[.exec prog env .stop], σ, 0⟩`):
+    sufficient but stronger than needed, and couples the statement to
+    a config constructor.
+  - **single-threaded root: `m₀.threads.size = 1 ∧ m₀.cur = 0`** —
+    CHOSEN: the weakest premise that excludes every exhibited pool
+    (they are mid-run multi-thread or `cur ≠ 0` pools), matches the
+    proved fragment theorem's shape, and makes §1a's avoidance
+    argument available (every multi-thread coarse state then descends
+    from a boundary reschedule).
+  - a boundary-progress/fairness premise ("every thread's every
+    segment reaches a boundary or terminates" — the Go-shaped
+    blocking-discipline condition, since sync/chan ops ARE
+    boundaries): REJECTED for the ∃-reachability form as unnecessary
+    (§1a: needed segments are finite by construction, non-yielding
+    segments are avoidable) and hard to state (a per-segment
+    liveness condition). RECORDED as the premise the RUN-level
+    normalization (plan step iii) will genuinely need — P-S4NP-5 in
+    the parking ledger.
+* (b) DEMOTE (no citable corrected statement; the open problem IS the
+  statement; captions point only at the characterization + fragment).
+  NOT taken, with the reason recorded: the repair below survives all
+  three known mechanisms by construction (negative-checked in Lean),
+  its truth argument now engages the coarse relation's binding
+  constraint (§1a's avoidance) instead of overlooking it, and a
+  fourth-mechanism refutation attempt (below) failed — while a
+  demotion would leave successor slices without a stated goal. The
+  epistemic cost of being wrong twice is priced in: the repaired def
+  carries the failure history in its docstring, and its confidence
+  label is "believed-true target, twice-revised", never more.
+
+The repaired statement:
+
+    def NPDRFClassReductionRooted : Prop :=
+      ∀ m₀ : MultiConfig, m₀.threads.size = 1 → m₀.cur = 0 →
+        ¬ RacyFine m₀ →
         ∀ res, ReachesMFine m₀ res →
           ∃ res', ReachesM m₀ res' ∧ res.sameClass res' = true
 
-(The ⊇ direction needs no new statement: `reachesM_le_fine` gives it
-with literal equality, which implies `sameClass`.)
+(`PoolResult.sameClass` unchanged: ctor-level; `.done` compared on the
+`ExecOutcome` constructor. The ⊇ direction stays `reachesM_le_fine`.)
 
-Truth argument (why this form escapes the known refutation classes):
-`sameClass` ignores states and messages, so §1's mechanism (whole
-`ExecState` in `.done`) and §2's mechanism (addresses in values and
-messages) have nothing to bite on. What remains is the classic
-normalization claim: a fine run of a race-free pool reaching a panic
-/ main-terminal / all-asleep configuration can be reordered — swapping
-adjacent independent steps, preserving registry-op order — into a
-boundary-switched run reaching a configuration of the same class.
-Sync operations happen at boundaries in BOTH relations, and DRF makes
-cross-thread non-sync steps footprint-disjoint, so the reordering
-preserves each thread's local computation (the values it reads) and
-hence its terminal class and each channel op's outcome. The two known
-non-commuting ingredients — allocation order and assoc-list insertion
-order — change addresses and heap layout, never a result CLASS,
-because no modeled operation branches on a raw address value
-(pointer equality compares `Loc`s, which rename consistently under
-the run permutation). This argument is exactly plan steps (i)–(iii)
-of the mover route, up to iso; it is NOT discharged this slice — the
-def ships scaffold-marked with an explicit no-theorem-cites-it-as-
-proved rider, mirroring the draft's discipline, but now legitimately
-citable as a target.
+Truth argument — "known mechanisms 1–3 addressed below" (NEVER "no
+known counterexample class applies"):
 
-Statement-TCB posture: `NPDRFClassReduction` and its parts stay proof
-infrastructure. `StepMFine`/`StepsM(Fine)` remain in the Audit
-statement-closure forbidden set; nothing headline-shaped may depend
-on them; the corrected statement changes nothing about what
-designated statements say (the 48 stay byte-identical).
+* Mechanism 1 (whole-state `.done`, ≥ 2-mid states): `sameClass` is
+  blind to states. Unchanged.
+* Mechanism 2 (allocation order in values/messages): `sameClass` is
+  blind to values and messages. Unchanged.
+* Mechanism 3 (`schedPick`/`cur` wedging): the premises exclude every
+  pool that STARTS wedged or multi-threaded, and §1a's avoidance
+  argument covers wedges arising mid-run: coarse is only forced onto
+  a thread it picked at a boundary; the mimicking schedule for any
+  fine-reachable result picks only threads whose next segment the
+  fine run completed (finite by construction), realizing the fine
+  run's registry-op order — parking/pairing/wake/spawn events all
+  sit at boundaries, cross-thread value flow is HB-ordered through
+  those same boundaries (race-free), and per-thread local computation
+  is preserved; non-yielding segments contribute no registry op, no
+  sync effect, and no class-visible observation, so the schedule
+  never enters them.
+
+Negative checks (machine-checked at the fix round, in NPDRF.lean):
+each exhibited counterexample family FAILS the repaired premises —
+the mechanism-1 pool `m0` has `threads.size = 3`; the audit's
+stuck-`cur` pool `q0` has `cur = 1`; the two-thread stuck/`MultiWf`
+family (reviewer + verifier variants) has `threads.size = 2`; the
+spinner-wedged pools are multi-thread. And `NPDRFClassReduction_refuted`
+pins that dropping the new premises recreates a FALSE statement.
+
+The fourth-mechanism attempt (spent deliberately, recorded whether or
+not it found anything — it did not): candidate mechanisms tried
+against `NPDRFClassReductionRooted` and why each fails to refute:
+1. **Wake-delay across a non-yielding segment** (fine wakes a parked
+   thread while another spins mid-segment; coarse must wait): wake
+   ENABLEDNESS (`wakeReady`) reads channel/sync cells, which only
+   registry ops change — private steps never touch them — so
+   enabledness is stable across segments and the avoidance schedule
+   delays nothing it needs; the spinner itself is never needed.
+2. **Allocation/pointer-identity observables** (make a result CLASS
+   depend on address order): no modeled operation exposes an address
+   as data — pointer equality compares `Loc`s (order-insensitive for
+   distinct allocations), there is no addr→int conversion, and map
+   iteration order over pointer keys is L-site latitude admitted in
+   BOTH relations.
+3. **Deadlock-order** (a fine-only-reachable `.deadlocked`): a
+   deadlocked pool is all-parked/done — every thread AT a boundary —
+   so every segment in its history completed; the sync-op order that
+   produced the parked pattern is boundary-scheduled in both
+   relations. No asymmetry to exploit.
+4. **Arrival/partner-config dependence** (`arrivalCases` scans OTHER
+   threads' configs, not just cells): partners are visible only as
+   PARKED configs, and parking/pairing/waking all happen at
+   boundaries, so the partner pattern at any registry op is fixed by
+   the boundary-event order, which the mimicking schedule preserves.
+5. **Stuck-segment truncation** (a thread's segment hits a
+   fail-closed config): symmetric where it matters — fine cannot get
+   that thread past the stuck point either; the partial segment's
+   effects are private and class-invisible; coarse runs it only up
+   to its LAST completed boundary, exactly as far as any result
+   needs.
+None produced a counterexample. Epistemic status, stated plainly:
+this is an ARGUED target that already failed once in a revised form;
+the argument now covers the coarse relation's two binding constraints
+(forced continuation, `cur` consultation) explicitly, but it is not a
+proof, and nothing may cite the def as proved. The proof route is
+unchanged (§5's blocking machinery) PLUS the boundary-progress
+premise for the run-level form (P-S4NP-5).
+
+Statement-TCB posture: `NPDRFClassReductionRooted`, the refuted
+`NPDRFClassReduction`, and their parts stay proof infrastructure.
+`StepMFine`/`StepsM(Fine)`/`StepsMFineBS` and (from the fix round)
+`BoundarySwitch` are in the Audit statement-closure forbidden set;
+nothing headline-shaped may depend on them; the 48 designated
+statements stay byte-identical.
 
 ## 5. The proof plan and the honest fragment boundary (drawn BEFORE
 ## proving)
@@ -253,7 +420,11 @@ PROVED THIS SLICE (each with its consumer):
   into a boundary-switched one", and P2 is the lemma that makes a
   boundary-switched run coarse).
 * **P3 — the proved fragment of the corrected statement**:
-  never-spawning pools. For `m₀` with one thread, `cur = 0`, and
+  pools single-threaded THROUGHOUT (the fix round renames the record:
+  the earlier "never-spawning" gloss admitted multi-thread
+  spawn-free pools — e.g. the refutation's own `m0` — that the
+  theorem's `hns` premise excludes). For `m₀` with one thread,
+  `cur = 0`, and
   every fine-reachable pool still single-threaded, the fine and
   coarse closures coincide (`stepsMFine_to_stepsM_single` via P2 —
   a lone runnable thread's fine pick IS boundary-switched), hence
@@ -418,23 +589,41 @@ conflict that the segment-HB detector misses — i.e. coarse-RacyFine
 
 What THIS slice's proofs contribute to that: P2 (the
 characterization) and P1 (the refutation) relate coarse and fine
-SCHEDULING; they do not touch the detector at all. The one relevant
-asset predates this slice: the shared `stepAccesses` table
-(obstruction 5), which makes item 3's vocabulary already aligned.
-Items 1–2 are a detector-correctness development comparable in scale
-to the whole S3 detector build (a multi-commit slice), independent of
-anything proved here.
+SCHEDULING; they do not touch the detector at all.
 
-**Evaluation: the rule's condition is NOT met.** The proven fragment
-does not reduce detector-completeness below one slice — the honest
-estimate is 2+ slices (FastTrack correspondence + driver bridge).
+Pre-existing assets, ALL of them on the table (RE-SIZED at the S4
+audit fix round — the first form named only one asset, understating
+what exists and thereby biasing the measurement toward the branch it
+recommended; corrected per the audit's FD5 finding):
+* the shared `stepAccesses` table (obstruction 5) — item 3's
+  vocabulary is already aligned;
+* the single-step relation↔executable correspondence
+  `stepMulti_sound`/`stepM_complete` (MultiSound.lean, pre-slice;
+  this slice's own refutation leans on the latter) — the SEED of
+  item 2's bridge. What item 2 still needs beyond it: run-level
+  composition (`stepM_complete` is single-step and ∃-quantified over
+  streams, with no splicing lemma) and the DETECTOR-carrying half
+  (`execProgLoop` threads a `RaceState` through `raceUpdate` after
+  every step; the correspondence is detector-free). Item 2 is
+  therefore a real but SUB-slice-sized work item, not a from-scratch
+  bridge.
+
+**Evaluation: the rule's condition is still NOT met, on item 1's
+dominance.** With item 2 re-priced down, the sizing rests where it
+always should have: item 1 — a FastTrack-style vector-clock
+soundness/completeness argument over the ~10 event classes, plus the
+`wokenPartner` recovery and `raceUpdate`'s stream replication — is
+alone comparable to the whole S3 detector build and plausibly exceeds
+one slice by itself; item 3 rides on 1. Honest total: 1.5–2.5 slices.
 Recommendation to the rule: take the ELSE branch — record the
 asymmetry as permanent with the O4/T12 axis split as its statement
 (ours: executable, oracle-aligned, differentially testable detection
 with the racy/litmus lanes; theirs: granularity-complete-by-
 construction race-UB with no way to test it). The completeness
 theorem remains statable later; nothing this slice closes that door.
-Per the charter, either branch is SUCCESS and the lane does not stop.
+Slice 5's decider should weigh item 1's dominance — the bridge is no
+longer the argument. Per the charter, either branch is SUCCESS and
+the lane does not stop.
 
 ## 8. Slice record (appended per commit)
 
@@ -530,3 +719,50 @@ Per the charter, either branch is SUCCESS and the lane does not stop.
   statement moved, no gate weakened).
 
   Gate: `scripts/ci` green at the close commit.
+
+### S4 audit fix round (2026-08-11; 1 confirmed major + minors — the
+### coordinator's list; every item below names its disposition)
+
+RECORD CORRECTIONS to this note's own §8 (the record must say what
+actually happened):
+* Commit-2's entry claimed the module docstring's "obstruction list
+  re-graded: … 1/2 upgraded per §2". FALSE at c085036b — obstructions
+  1/2 and obstruction 4's BODY were byte-identical to the pre-slice
+  text (audit finding, machine-checked byte comparison); only
+  obstruction 4's header changed. The re-grade happens FOR REAL in
+  this fix round's Lean commit; the false ledger sentence stands
+  corrected here rather than edited away.
+* §6 item 10's "module-wide scan" claimed completeness it did not
+  have: the grep patterns ("every schedule"/"∀-schedule"/"all
+  schedules") structurally missed "NO (modeled) schedule" phrasings
+  and two files (`Specs/ChanTransfer.lean`,
+  `Specs/ChanRendezvousVal.lean`) containing the literal string
+  "every schedule" that the scan nonetheless failed to surface. The
+  fix round re-runs the sweep with widened patterns ("every
+  schedule", "all schedules", "∀-schedule", "modeled schedule",
+  "NO schedule", "modeled path set") and records the result at its
+  commit entry below.
+* The doctrine's formula-of-record bullet gave the ARGUED
+  allocation-order refutation the same "REFUTED" force as the
+  machine-checked one — fixed with an explicit "(argued, not
+  machine-checked: note §2)" label; same labeling discipline applied
+  here: mechanism 1 and 3 refutations are THEOREMS
+  (`NPDRFReduction_refuted`, `NPDRFClassReduction_refuted`);
+  mechanism 2 is an ARGUMENT.
+* One doctrine cross-reference pointed the wrong way ("above" for a
+  section that is below) — fixed.
+* "never-spawning" as the fragment's name over-claimed (admits
+  multi-thread spawn-free pools the theorem excludes — including the
+  refutation's own `m0`); renamed "single-threaded throughout" at
+  every occurrence.
+* The TCB-grounding walk's "all carriers are in the forbidden set"
+  overstated: `BoundarySwitch` was not — it IS added to the
+  forbidden roots at the fix round (it is proof infrastructure like
+  its siblings; the alternative of arguing its exclusion was
+  rejected as a needless review burden).
+* Consumer-less lemmas `stepDone`/`done_aC`/`done_bC` deleted (the
+  anti-scaffold rule the note itself invokes; they were shipped
+  unused).
+* The fragment gains a STEPPING non-vacuity witness beside the
+  degenerate one (the audit demonstrated the ~50-line shape; the
+  degenerate witness stays, both honestly labeled).
