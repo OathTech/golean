@@ -272,3 +272,40 @@ table's channel section re-states every delta both directions at the
 new state; all inherited gates green; designated growth per D2 with
 Comparator landmark. Deferring any goal with an honest log entry is
 success; trading soundness for coverage is not.
+
+## ARC PARKED (2026-08-11, user ruling — the essence-of-Go charter)
+
+The arc is PAUSED at slice-4-open under the project-charter articulation
+of 2026-08-11 (recorded in the coordinator memory and the forthcoming
+doctrine amendment): the machine is to be the UPPER bound — the weakest
+machine Go can plausibly ever do, exercising all latent degrees of
+freedom — with differential testing as the LOWER bound (observed ∈
+possible). The gc-realization pins, including the coarse scheduler's
+forced-continuation, are velocity scaffolding carrying re-envelope
+obligations, not fidelity achievements.
+
+State at parking:
+- **Slices 1–3 MERGED into this lane** (tip 1ade325d): the statements
+  (law family, value/resource exemplars, dspCompTripleC — all execProg
+  vocabulary) survive the coming machine re-envelope unchanged; the
+  PROOFS beneath them (LangDM simulation, laws at boundary-adjacent
+  sites) and every certificate will need re-alignment proportional to
+  the machine diff. Deliberate; sized at parking as repair, not loss.
+- **Slice 4 branch `channel-logic-s4` @ 9fbf674d, UN-MERGED, PARKED**:
+  its three machine-checked refutation families are TRUE and permanently
+  valuable (they are the discovery record that forced the charter's
+  application here — the fused-boundary/forced-continuation narrowing,
+  gc-probe-verified both directions: panic variant matches gc 500/500;
+  spinner variant DIVERGES, gc exit-0 100/100 vs machine fuelOut). The
+  branch does NOT merge as-is: its tip presents NPDRFClassReductionRooted
+  as the citable target, which the delta-review refuted (an ordinary
+  program; the un-actioned critical). Salvage happens at resume.
+- **Slice 5 not started.** The standing goal is cleared.
+
+RESUME CONDITION: after (1) the essence-of-Go doctrine arc and (2) the
+machine re-envelope phase it scopes (the latitude inventory decides the
+scope; the fused-boundary de-fuse is the known first item — the spinner
+divergence is a definitional bug under the charter: observed ∉ modeled).
+At resume: the reduction line re-targets as the upper-bound theorem over
+the widened machine; FD5's race-axis rule re-evaluates under the new
+doctrine; the certificates re-certify.
