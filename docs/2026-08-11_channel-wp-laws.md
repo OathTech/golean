@@ -876,3 +876,14 @@ through the frontend, they become ordinary confluent rows.
   scoped to the tracked step-level witnesses (a law is derivable but
   deliberately unshipped — no consumer); the false "Consequently"
   linkage removed (the deadlock demonstration needs no nil channel).
+- **The round-2 clean differential record**: full
+  `GOLEAN_MEM_MAX=48G scripts/ci --diff` at the round-2 tip
+  `1c7e6e06`, committed clean tree — meta `git_commit 1c7e6e06`,
+  `git_dirty false`, `manifest_cases 1483`. **RESULT: PASS — baseline
+  diff FULL (1483/1483, no regression), negative lane 311 no
+  regression** (its judgment line now carrying the recorded
+  no-metadata note), all gates green including the REBUILT semantic
+  completion-pin gate (17 classified / 22 pins / fixtures flagged)
+  and the statement-TCB gate at 48 designated, byte-identical. This
+  entry is the round's doc-only record commit over the run's own
+  commit, per the established discipline.
