@@ -637,6 +637,15 @@ feature breadth up the raft ladder, `slices.Sort` extern + input fuzzing.
 - [Verdi theorem-parity via differential embedding](docs/2026-08-08_verdi-parity-backlog.md) — validate we prove Verdi's theorem class by building a second differentially-tested embedding (Verdi's network semantics; fault layers map onto Choices envelopes). Needs its own scoping study; after/alongside the raft arc. (User idea 2026-08-08.)
 - ~~Observation-channel width/type fidelity (grossmith hunt F15, 2026-08-09)~~ — FIXED (spec-parity-s1 slice-1 opener, 2026-08-09): both encoders (CLI.lean goValueJson + the coverageharness reflect encoder) emit the integer KIND beside the value in one symmetric change; the observation-eq decoder accepts exactly the ten concrete kinds with per-kind range checks and fails closed on everything else (incl. `uintptr`, which the frontend maps to uint64 — the Go harness now refuses uintptr observations rather than alias the kind away). Defined-type identity over ints stays unobserved at top level BY DESIGN on both sides alike (the machine value carries an IntKind only; identity is observable through interface boxes' `dynamic`) — full defined-type identity in the observation would need the value representation to carry it, out of F15's scope. Guardrails: `ints/observation-kind/*` corpus family (right-value wrong-kind shapes, the BUG-042 template) + eval-test pins (the distinguishing wrong-kind assertion verified RED against the value-only encoder before the fix; decode fail-closed pins). Corpus-wide zero drift (1411 ids); two tracked observation records legitimately re-pinned in the same change (google-search certified set re-enumerated under GOLEAN_SLOW=1 — same six member values, kind-carrying shape; hidden-dep-order deviation pin).
 
+- **Toolchain + iris-lean bump (post-channel-logic-arc maintenance,
+  queued 2026-08-11).** iris-lean upstream (86 commits past our pin
+  3877dbe) requires Lean 4.32.2 and refactors the ProgramLogic layer
+  (AbstractWeakestPre/ThreadPool) that LangC/LangD instantiate; a bump
+  is a whole-repo toolchain event (warning-free core gate re-validated,
+  caches lost) plus an interface migration. Do it deliberately BETWEEN
+  arcs; what it buys: MonoNat, BigSepMSet, SavedProp, IPM ergonomics
+  (charter FD9 has the full investigation record).
+
 ## Follow-ups from the 2026-08-09 tooling + compat-lane day
 
 Generated while landing `compat/verdi`, the build memory cap, and

@@ -112,6 +112,20 @@ asymmetries by explicit decision, never by silence.
   simulation lane is; statement TCB + deletion test on everything
   headline-shaped; non-vacuity witnesses same-commit, Audit-registered
   with the name-tripwire scope stated.
+- **FD9 — iris-lean: STAY AT THE PIN (3877dbe)** — investigated
+  2026-08-11 with network: the pin already carries the protocol
+  layer's core (Invariants/WSat/FUpd, GhostMap, Auth/View/FracAuth/
+  ExclAuth, Frac/DFrac/Excl/Agree, LaterCredits); upstream's 86
+  newer commits add conveniences (MonoNat, BigSepMSet, SavedProp)
+  but require Lean 4.32.2 (we are 4.31.0 — a bump is a WHOLE-REPO
+  toolchain event) and refactor the ProgramLogic layer our
+  LangC/LangD instantiate. In-lane authority: build small local
+  constructions over the pin's machinery where a convenience is
+  missing (mono-nat over auth, multiset big-ops, saved-prop if
+  higher-order protocols demand it) — proofs-side code, recorded in
+  the slice notes. The deliberate post-arc bump (toolchain +
+  iris-lean + ProgramLogic migration) is queued on TODO as its own
+  maintenance item; re-opening it mid-arc is a PARK.
 - **FD8 — NPDRF outcome latitude (explicit):** slice 4 proves the
   corrected reduction statement OR a precisely-scoped fragment with
   every ∀-schedule caption updated to match. Both outcomes are
