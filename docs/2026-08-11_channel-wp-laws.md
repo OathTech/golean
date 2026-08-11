@@ -738,7 +738,7 @@ anchor.
 | `chanCloseReadoutC` | first-order at the seed | consumes the triple |
 | `chanCloseTerminatesNormallyC` | ∃N ∀fuel≥N ∀ch completion | `chanCloseAllStreamsCert` (fuel 20, `#eval`-first) |
 | `deadlockRecvDeadlocks` (+`…Adv`, warning fixture) | `execProg 200 … = .error .deadlock` under the canonical / a pinned adversarial stream (∀-stream deliberately unproved — `transferable` excludes `.deadlock`; scope at the theorem) | itself — kernel evaluation; THE fixture's trusted content |
-| `deadlockRecvTripleC` (warning fixture) | (vacuous by design — no completing runs) | none, deliberately: the fixture demonstrates exactly this |
+| `deadlockRecvTripleC` (warning fixture) | (vacuous by design — no completing run is exhibited, and the pinned-stream runs deadlock; the ∀-stream no-completion claim is deliberately unproved, like the deadlock's — scope at `deadlockRecvDeadlocks`) | none, deliberately: the fixture demonstrates exactly this |
 
 Everything else this slice shipped — the `wpD_*` laws, the lifting
 cores, the inversion kit, the WP walks, `StepDC` facts — is METHOD:
@@ -887,3 +887,62 @@ through the frontend, they become ordinary confluent rows.
   and the statement-TCB gate at 48 designated, byte-identical. This
   entry is the round's doc-only record commit over the run's own
   commit, per the established discipline.
+
+## 13. S1 gate-verification round (round 3: 1 critical + 2 major +
+## 2 minor + 1 note — all in the rebuilt gate; NOT_CONVERGED → fixed)
+
+- **CRITICAL — the walk's `| _ => pure ()` wildcard was fail-open**
+  (structure/inductive wrappers with out-of-scope pieces escaped,
+  invisible even in the counts) — a VERBATIM regression of the
+  2026-08-01 defect recorded at the statement-TCB gate's own
+  docstring; **the repo has now grown this bug twice**, and the gate's
+  comment says so. Fixed per the verifier's validated patch: the
+  dependency-edge rule matches every `ConstantInfo` case explicitly
+  (`.opaqueInfo → value`, `.inductInfo → ctors`, thm/axiom/ctor/rec/
+  quot type-only), NO wildcard — a new kind is a compile error. The
+  reachability computation was also restructured to ONE reverse-BFS
+  from `GoTripleC` over GoLean-module constants (Iris/Std constants
+  cannot reference it), replacing per-root walks.
+- **MAJOR — open-term pairing**: the two generic pin lemmas
+  contributed bare de Bruijn indices (`#1`, `#4`) to the pin set, so
+  a triple's bound-variable prog could "pair" by binder-depth
+  collision. Fixed: open pin programs are dropped; a classified
+  export with an open extracted prog is the OPEN-TERM fail-closed
+  class (fixture `fixtureOpenProgTriple`); genuine ∀-program lemmas
+  (`goSpecC_of_goSpec`, `goTripleC_of_wpD`) live on an EXACT-NAME
+  allowlist with per-name reasons at the gate.
+- **MAJOR — mention-is-not-assertion**: round 2 counted ANY
+  `TerminatesNormallyC` application anywhere in a type as a pin —
+  self-pinning hypotheses and non-assertive decoys included. Fixed: a
+  pin is a theorem/def whose CONCLUSION (after the binder telescope)
+  has `TerminatesNormallyC` as its head over a CLOSED program;
+  fixtures `fixtureSelfPin` + `fixtureDecoyPin`/`fixtureDecoyTriple`
+  pin the two escape shapes.
+- **MINOR — prefix exclusion**: fixture exclusion is now exact-name
+  plus a generated-suffix whitelist (`eq_*`, `match_*`,
+  leading-underscore, numeric); a user-declared namespace child is
+  flagged and must be listed exactly (fixture
+  `fixtureDefTriple.namespaceChildProbe`). The P2 structure's three
+  compiler-generated satellites (projection/casesOn/recOn) are
+  exact-listed with the reason at the gate.
+- **MINOR — scope**: enforcement is ENV-WIDE over the proofs package
+  (`GoLeanProofs` + `GoLeanProofs.*`) — `spawnNoopTripleC` (LangD) is
+  now enforced and pairs with its existing pin; a module named
+  exactly `GoLeanProofs.Specs` is covered; fixture
+  `fixtureOutOfSpecsTriple` (in the non-Specs
+  `ZzGateFixtureSupport`) proves the widening structurally. No
+  allowlisted namespace carve-outs — the only allowlist is the
+  two-name generic-lemma list.
+- **NOTE — prose residues**: the fixture program abbrev's docstring
+  and the §10 table row no longer claim "every schedule"/unscoped
+  no-completion; both point at `deadlockRecvDeadlocks`' recorded
+  scope.
+- **COUNTS, explained** (the record the round demands): round-2's
+  "17 classified / 22 pins" → round-3's **27 classified / 21
+  conclusion-asserted closed pins / 2 allowlisted**. Classified: +9
+  new tracked fixtures +3 fixture-structure satellites +spawnNoop
+  (env-wide) −2 generics (moved to the allowlist, no longer counted).
+  Pins: −2 open-term bvar "pins" (the round-2 escape, gone by
+  design) +1 `spawnNoopTerminatesNormallyC` (env-wide scope now sees
+  it). Fixtures flagged: 7 unpaired + 2 wrapper-hidden + 1 open-term,
+  every one negative-asserted in its class.

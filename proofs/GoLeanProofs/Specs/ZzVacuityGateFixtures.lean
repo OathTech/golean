@@ -1,4 +1,4 @@
-import GoLeanProofs.Surface
+import GoLeanProofs.ZzGateFixtureSupport
 
 /-!
 # Completion-pin gate: the ESCAPE-SHAPE fixtures (S1 audit round 2)
@@ -63,6 +63,71 @@ def ZzWrappedTriple : Prop :=
 walk classifies it, and the gate fails closed on the missing
 extractable application (this fixture pins that arm). -/
 theorem fixtureWrappedTriple : ZzWrappedTriple :=
+  fun _hp _na _hP _F hinit => (hinit.sat_pre.1).elim
+
+/-! ## Round-3 escape shapes (S1 audit round 3 — the verifier's probe
+shapes P2/P3/P4/P4b/P12, kept forever: the gate that has fallen three
+times keeps every attacker's shape as a tracked fixture) -/
+
+/-- P2 — the STRUCTURE-WRAPPER escape: the wrapper `Prop` structure
+lives OUTSIDE `Specs.*` (`ZzGateFixtureSupport`), so only the walk's
+`.inductInfo → ctors` arm can see the triple through it. This is the
+shape the round-3 CRITICAL proved invisible to the `| _ => pure ()`
+wildcard walk. Expected gate class: WRAPPER-HIDDEN. -/
+theorem fixtureStructWrapped : ZzStructWrappedTriple :=
+  ⟨fun _hp _na _hP _F hinit => (hinit.sat_pre.1).elim⟩
+
+/-- P3 — the OPEN-TERM escape: the triple's `prog` is a bound variable
+of the theorem's own telescope; the extracted argument is a loose
+de Bruijn index, which round 2's structural pairing could collide
+with a generic pin lemma's binder. Expected gate class: OPEN-TERM
+(fail closed — a ∀-program triple has no per-program pin; a GENUINE
+generic lemma of this shape belongs on the gate's exact-name
+allowlist with a reason, never silently). -/
+theorem fixtureOpenProgTriple {prog : Stmt} (_h : True) :
+    GoTripleC [] #[] #[] [] (.pure False) prog .emp :=
+  fun _hp _na _hP _F hinit => (hinit.sat_pre.1).elim
+
+/-- Fixture-private program for the self-pin shape. -/
+def zzSelfPinProg : Stmt := .seqn #[.seqn #[], .seqn #[], .seqn #[]]
+
+/-- P4 — the SELF-PIN escape: the theorem carries its OWN unproved
+`TerminatesNormallyC` as a HYPOTHESIS; round 2's
+mention-counting pass would have counted it as a pin. A pin is a
+CONCLUSION, never a hypothesis. Expected gate class: UNPAIRED. -/
+theorem fixtureSelfPin
+    (_h : TerminatesNormallyC [] {} zzSelfPinProg) :
+    GoTripleC [] #[] #[] [] (.pure False) zzSelfPinProg .emp :=
+  fun _hp _na _hP _F hinit => (hinit.sat_pre.1).elim
+
+/-- Fixture-private program for the decoy shape. -/
+def zzDecoyProg : Stmt := .seqn #[.seqn #[.seqn #[]]]
+
+/-- P4b (decoy half) — a theorem that MENTIONS `TerminatesNormallyC`
+for the decoy program without ASSERTING it (the conclusion's head is
+`Or`, discharged right). Must NOT count as a pin. -/
+theorem fixtureDecoyPin :
+    TerminatesNormallyC [] {} zzDecoyProg ∨ True :=
+  Or.inr trivial
+
+/-- P4b (triple half) — the unpinned triple the decoy would have
+"paired" under round 2's mention-counting. Expected gate class:
+UNPAIRED (the decoy does not save it). -/
+theorem fixtureDecoyTriple :
+    GoTripleC [] #[] #[] [] (.pure False) zzDecoyProg .emp :=
+  fun _hp _na _hP _F hinit => (hinit.sat_pre.1).elim
+
+/-- Fixture-private program for the namespace-child shape. -/
+def zzChildProg : Stmt := .seqn #[.seqn #[.seqn #[.seqn #[]]]]
+
+/-- P12 — the NAMESPACE-CHILD escape: a user-declared theorem inside a
+fixture root's namespace. Round 2's PREFIX-based fixture exclusion
+silently swallowed it; the round-3 exclusion is exact-name plus a
+generated-suffix whitelist, so this fixture is flagged by the raw
+checker and excluded only because it is LISTED by its exact name.
+Expected gate class: UNPAIRED. -/
+theorem fixtureDefTriple.namespaceChildProbe :
+    GoTripleC [] #[] #[] [] (.pure False) zzChildProg .emp :=
   fun _hp _na _hP _F hinit => (hinit.sat_pre.1).elim
 
 end GoLean.Surface

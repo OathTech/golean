@@ -47,8 +47,9 @@ open GoLean.Surface
 
 namespace GoLean.Iris
 
-/-- Receive on a rendezvous channel NOBODY sends on: deadlocks on
-every schedule. -/
+/-- Receive on a rendezvous channel NOBODY sends on: the interpreter
+classifies it `.deadlock` (pinned streams below; the ∀-schedule form
+is deliberately unproved — see `deadlockRecvDeadlocks`). -/
 abbrev deadlockRecvProg : Stmt := .seqn #[.chanRecv #[] (.var "chv") .int]
 abbrev deadlockRecvEnv : LocalEnv := [[("chv", .base ⟨1⟩)]]
 abbrev deadlockRecvPre : HProp :=

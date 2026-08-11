@@ -201,10 +201,13 @@ and every exported triple-carrying constant (`GoTripleC`, `GoSpecC`,
 or anything whose type closure reaches them) across ALL
 `GoLeanProofs.Specs.*` modules carries a `TerminatesNormallyC`
 ∃-completion member FOR ITS PROGRAM, enforced by the completion-pin
-gate (Audit.lean — SEMANTIC since audit round 2: deep
-`defnInfo`-unfolding classification, per-program pairing,
-wrapper-hidden exports fail closed, escape shapes negative-tested via
-tracked fixtures). Run-conditioned triples ALONE anchor nothing (the
+gate (Audit.lean — SEMANTIC since audit round 2, hardened at round 3:
+exhaustive-arms closure walk (no `ConstantInfo` wildcard — the
+twice-grown bug), env-wide scope over the proofs package,
+conclusion-asserted CLOSED pins only, per-program pairing,
+wrapper-hidden and open-term exports fail closed, an exact-name
+allowlist for genuine ∀-program lemmas, and every attacker shape from
+all three review rounds kept as a tracked negative-tested fixture). Run-conditioned triples ALONE anchor nothing (the
 permanent demonstration: Specs/ChanVacuityWarning.lean); the
 sub-branch audits review the walk as a standing dimension.
 
