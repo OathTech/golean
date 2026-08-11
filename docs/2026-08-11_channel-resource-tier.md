@@ -406,15 +406,104 @@ deliberate:
 
 ## 8. Parking ledger (slice 3)
 
-- **P-CL3-1 — `bigOpL` pure-collapse lemma**: if `[∗list] ⌜·⌝ ⊣⊢ ⌜∀·⌝`
-  is not already at the pin, the degenerate-case equivalence (§1) is
-  recorded prose, not a theorem; revisit with an actual consumer.
+- **P-CL3-1 — `bigOpL` pure-collapse lemma: DISCHARGED at commit 2**
+  (`BigSepL.bigSepL_pure` was at the pin; `chanInv_pure_eqv` is a
+  theorem).
 - **P-CL3-2 — loop-invariant machinery for the muxer `client` row**:
-  reach-check outcome recorded in §9 when measured.
-- (appended as the build parks items)
+  measured design recorded at §9 (the successor entry).
+- **P-CL3-3 — later-credit generalization of the resource laws**: the
+  four `wpDM_*_inv` laws carry `[∀ v, Timeless (Ψ v)]` (commit-2 log);
+  points-to/pure/`metaInfo` protocols — everything this arc states —
+  are timeless. Needed only for genuinely higher-order Ψ (a nested
+  WP/saved-prop payload); no consumer, reversible (restate with
+  `£`-elimination at the invariant opening).
+- **P-CL3-4 — capacity-carrying `wpDM_make_chan`**: the landed law is
+  the `hasCap = false` form (dsp's shape). `async` needs
+  `make(chan string, 1)` (measured, §9) — a mechanical variant over
+  the same `applyStmtOpCore` arm with the capacity operand; the
+  protocol laws are already cap-generic. Lands with the async row.
+- **P-CL3-5 — the sequential `wp_strict_apply_read` registration**:
+  the DM twin was unregistered from the `go_walk` table after the
+  spurious-iframe-capture finding (commit-4 log); the SEQUENTIAL
+  twin's `@[go_walk_law]` registration has the same latent hazard but
+  was left untouched (out of this slice's tree-of-concern; standing
+  sequential walks are green, so any capture there is currently
+  benign). Flagged for the audit / a maintenance pass.
 
-## 9. Reach check (charter item: measured AFTER the ports land)
+## 9. Reach check (measured at the landed surface, per the charter
+## item — first-hand statement inventories of `muxerLowered`)
 
-To be appended with measurements: muxer `client` (the one row with a
-live loop — `Serve`'s `for { s.res <- f(<-s.req) }`) and `async`
-against the landed law surface. The select trio stays P-CL1-2's.
+Per-function counts (`while`/`select`/chan-ops), measured from the
+pinned lowering at this slice's tip:
+
+- `Async` {goStmt 1, makeChan 1(+cap)}, `Async$lit0` {chanSend 1},
+  `goleanAsync` {chanRecv 1, call 1} — **zero `while`, zero
+  `select`**.
+- `Client` {chanSend 1, chanRecv 1, call 1}, its server `Serve`
+  {goStmt 1, makeChan 2} and `Serve$lit0` **{while 1, chanRecv 1,
+  chanSend 1, if 2, break 1}** — the one live loop; zero `select`.
+
+**async: REACHABLE with the landed surface plus exactly one small law
+variant** — the capacity-carrying `makeChan` (P-CL3-4). Everything
+else in its walk (fork with captured ref args, buffered send/recv —
+the protocol laws are cap-generic since S2 — call frames, string
+payload) is landed. No loop-invariant machinery needed.
+
+**client: blocked on ONE thing — loop-invariant machinery for the
+spawned server, and the loop is NOT unrollable.** `Serve$lit0`'s
+`for { s.res <- f(<-s.req) }` is an unbounded service loop: after
+serving a request it re-parks at the receive (the certificate row
+leaves it parked at main's exit), so no finite unrolling covers the
+child's WP. The successor design, recorded (P-CL3-2): a DM port of
+the loop rule in `wp_while_inv`'s shape with the iteration proved by
+LÖB — each iteration passes through the step laws' `▷`, so the
+guarded fixpoint closes — carrying the two `is_chan` assertions (and
+the break-on-closed branch, which is where S2 §2c's closed-zero
+forward warning becomes live: the server's exit path receives the
+closed-channel default, so the loop invariant meets the
+close-protocol tier, P-CL2-3's remaining half). The row's
+request/response protocols themselves fit the landed resource tier
+as-is. The select trio remains the ONLY select consumer (measured
+zero selects in the async/client call graphs) — P-CL1-2 unchanged.
+
+## 10. The TCB-grounding walk (the per-slice review criterion)
+
+| exported artifact | (i) trusted endpoint (interpreter vocabulary) | (iii) executable anchor |
+|---|---|---|
+| `dspCompTripleC` | ∀ admissible seeded heap, run-conditioned: `execProg … dspDriver = .ok (.normal σf, _)` → `loadLoc σf r = .ok (.int 42 .int)` | run-conditioned only — anchored by the pin row below (the standing `ChanVacuityWarning` demonstration) |
+| `dspCompReadoutC` | the same, first-order at `dspSeed` — **the 42 pin in `loadLoc` vocabulary** | premises discharged at the seed (kernel `decide` for the split); consumes the triple as method |
+| `dspCompTerminatesNormallyC` | ∃N ∀fuel≥N ∀ch: `.normal` completion | the row's STANDING fuel-400 kernel certificate (`dspCert400`, `#eval`-first per its record) — restated, not re-proved |
+| `chanTransferTripleC` / `ReadoutC` / `TerminatesNormallyC` | as the commit-2 log: run-conditioned `x = 42` re-owned through the message; first-order at the seed; fuel-500 kernel pin | `chanTransferAllStreamsCert` (`#eval`-confirmed first) |
+| `seqWalkTripleC` / `ReadoutC` / `TerminatesNormallyC` | run-conditioned `r = 42` through make-chan/new/boxing/unboxing/multi-assign/frames; first-order at the seed; fuel-500 kernel pin | `seqWalkAllStreamsCert` (`#eval`-confirmed first) |
+
+Everything else this slice shipped — `chanInv`, the four resource
+laws, the meta tie, the `Pos.Countable` instances, LawsDM's ~46
+ports, the three private dsp tail lemmas, the walks — is METHOD: none
+appears in an exported statement (all statements above are
+`execProg`/`loadLoc`/`GoTripleC`/`TerminatesNormallyC` vocabulary;
+Iris appears in no statement; `StepDM`/`StepDC` are in the
+statement-TCB forbidden set and appear in no export — the deletion
+test per statement). The FD7 `BEq.rfl`/Ord classical deviation
+(P-CL2-6) is inherited by the DM lane unchanged and cited at each
+Audit block, not re-investigated.
+
+**FD3 attestation (the per-slice practice):** nothing is designated
+this slice; the 48 designated statements are byte-identical (the
+branch touches no designated module; the ci statement-TCB closure and
+byte-set gates are green at every commit). CANDIDATES RECORDED per
+FD3, for the arc-end designation window:
+
+- **`dspCompTripleC` + `dspCompReadoutC`** — THE expected flagship
+  pair (charter FD3's "the dsp pair's successor triples are the
+  expected flagships"): the first six-row re-proof, over the pinned
+  lowering, at the row's designated-certificate seed. F4
+  def-only-hoist cost: `importedCell0`/`importedCellV`/`dspDriver`/
+  `dspEnv`/`dspSeed` already live in the def-only
+  `GooseParityTargets`; the statement additionally references
+  `GoTripleC` (Surface, already in the trusted closure) — the hoist
+  is near-zero. `dspCompTerminatesNormallyC` completes the D1 pair
+  (its underlying `dspCert`/`dspAllSchedules` are ALREADY
+  designated, D3 2026-08-10).
+- `chanTransferTripleC` is deliberately NOT a candidate (purpose-built
+  exemplar, the `chanRendezvousValTripleC` precedent); `seqWalkTripleC`
+  likewise (a witness program, not a curated row).
