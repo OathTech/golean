@@ -115,8 +115,9 @@ output cell holding 42. The slice-2 pinned-stream witnesses are the
 (NPDRF settled at channel-logic S4,
 docs/2026-08-11_npdrf-reduction.md): every REGISTRY-POINT schedule —
 boundary-switched interleaving (`stepM_iff_fine_bs`); sub-registry
-transfer is unproved (`NPDRFClassReduction` open), so this claims
-registry granularity only. -/
+transfer is unproved (`NPDRFClassReductionRooted` open — the earlier
+fix-round target `NPDRFClassReduction` is itself refuted), so this
+claims registry granularity only. -/
 theorem forkJoinAllSchedules42 : ∀ ch : Choices, fjRunGives42 400 ch = true := by
   intro ch
   obtain ⟨σf, ch', hrun, hpost⟩ :=
@@ -127,9 +128,10 @@ theorem forkJoinAllSchedules42 : ∀ ch : Choices, fjRunGives42 400 ch = true :=
     from rfl, hrun]
   simpa [fjReadout42] using hpost
 
-/-- First-order readout corollary: NO schedule of the fork/join program
-deadlocks (the run completes, so the `.deadlock` classification is
-unreachable on every stream). -/
+/-- First-order readout corollary: NO modeled (registry-point — the
+S4 NPDRF caption on the witness above) schedule of the fork/join
+program deadlocks (the run completes, so the `.deadlock`
+classification is unreachable on every stream). -/
 theorem forkJoinNoDeadlock : ∀ ch : Choices,
     execProg 400 fjEnv fjSeed ch forkJoinDriver ≠ .error .deadlock := by
   intro ch hcontra
@@ -140,9 +142,10 @@ theorem forkJoinNoDeadlock : ∀ ch : Choices,
     from rfl, hrun] at hcontra
   cases hcontra
 
-/-- First-order readout corollary: NO schedule of the fork/join program
-trips the race detector (`execProg` runs the detecting loop, and every
-stream's run completes `.ok`). -/
+/-- First-order readout corollary: NO modeled (registry-point — the
+S4 NPDRF caption on the witness above) schedule of the fork/join
+program trips the race detector (`execProg` runs the detecting loop,
+and every stream's run completes `.ok`). -/
 theorem forkJoinNoRace : ∀ ch : Choices,
     execProg 400 fjEnv fjSeed ch forkJoinDriver ≠ .error .raceDetected := by
   intro ch hcontra

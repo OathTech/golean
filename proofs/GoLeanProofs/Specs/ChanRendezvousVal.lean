@@ -551,7 +551,7 @@ theorem chanRendezvousValReadoutC :
 
 /-- The completion half's kernel certificate: every schedule completes
 at main's `.normal` with the three cells at their pinned values —
-`x = 42` included. (`#eval`-confirmed before `decide`, per doctrine.) -/
+`x = 42` included ("every schedule" = every REGISTRY-POINT schedule — the settled S4 NPDRF caption, docs/2026-08-11_npdrf-reduction.md §6; sub-registry transfer is unproved). (`#eval`-confirmed before `decide`, per doctrine.) -/
 theorem chanRendezvousValAllStreamsCert :
     allStreamsOkPool
       (fun σf =>

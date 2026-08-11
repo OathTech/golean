@@ -640,10 +640,12 @@ channel-logic S4 — docs/2026-08-11_npdrf-reduction.md: the
 registry-point path set is full per-machine-step interleaving
 RESTRICTED to boundary switches, `stepM_iff_fine_bs`; the draft
 race-free-programs-behave-identically claim is REFUTED as originally
-stated, `NPDRFReduction_refuted`, the corrected class-level target
-`NPDRFClassReduction` is open and proved only for never-spawning
-pools — so for spawning programs this guarantee claims registry
-granularity ONLY, never sub-registry transfer). What is genuinely NEW
+stated, `NPDRFReduction_refuted`; the corrected class-level target —
+twice-revised: the fix round's first attempt `NPDRFClassReduction` is
+itself refuted, `NPDRFClassReduction_refuted` — is
+`NPDRFClassReductionRooted`, open and proved only for pools
+single-threaded throughout — so for spawning programs this guarantee
+claims registry granularity ONLY, never sub-registry transfer). What is genuinely NEW
 versus the
 sequential notion is
 the CARRIER: the guarantee holds of `execProg` under EVERY modeled
@@ -723,7 +725,9 @@ completes at MAIN's `.normal` terminal — one fuel bound for EVERY
 choice stream, schedules and data latitude quantified together (D8's
 single stream). Because `execProg`'s error classes include `.deadlock`
 and `.raceDetected`, an instance of this notion asserts by itself that
-NO modeled schedule deadlocks or trips the race detector. Discharge
+NO modeled schedule deadlocks or trips the race detector
+("modeled schedule" = registry-point — the settled S4 NPDRF caption in
+`ProgressExecC`'s docstring above; sub-registry transfer is unproved). Discharge
 route: the pool ∀-streams kernel checker (`allStreamsOkPool` +
 `execProgLoop_ok_of_allStreamsOkPool`, `MultiStreams.lean`) at one
 fuel, lifted to all larger fuels by `execProgLoop_mono` — the exact

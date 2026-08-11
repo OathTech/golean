@@ -206,7 +206,7 @@ EPISTEMIC CAPTION, recorded per the per-lane discipline:
   and the pool enumerator pins BOTH leaves). The registry-point-vs-
   full-interleaving gap is now precisely characterized and its
   reduction statement settled-but-open (the NPDRF status section
-  above, 2026-08-11).
+  below, 2026-08-11).
 
 ## The NPDRF status — SETTLED captions (2026-08-11, channel-logic S4)
 
@@ -226,17 +226,23 @@ point here):
   whole joined state, and two leaked mid-segment goroutines make it
   fine-reachable but coarse-unreachable, race-free). Literal-state
   and literal-value corrections stay refuted through allocation
-  order (note §2).
-- The corrected, citable target is class-level
-  (`NPDRFClassReduction`: fine-reachable results are coarse-reachable
-  up to result CONSTRUCTOR) — OPEN, proved so far only for
-  never-spawning pools (`reachesMFine_iff_reachesM_single`, where the
+  order (argued, not machine-checked: note §2).
+- The corrected, citable target is class-level and TWICE-REVISED
+  (S4 audit fix round: the first attempt `NPDRFClassReduction` — no
+  root premises — is itself refuted by theorem,
+  `NPDRFClassReduction_refuted`, through the `schedPick`/`cur`
+  wedge, note §1a): `NPDRFClassReductionRooted` — from a
+  single-threaded root, fine-reachable results are coarse-reachable
+  up to result CONSTRUCTOR — OPEN, proved so far only for pools
+  single-threaded THROUGHOUT (every fine-reachable pool has exactly
+  one thread: `reachesMFine_iff_reachesM_single`, where the
   equivalence is literal). The mover route to the general statement
-  and its sized blocking machinery: note §5.
+  and its sized blocking machinery: note §5; the run-level form
+  additionally needs a boundary-progress premise (note §4).
 - Consequence for every ∀-schedule statement: for spawning programs
   the claim is registry granularity ONLY; no caption may assert
-  sub-registry transfer, and none may cite `NPDRFClassReduction` as
-  proved.
+  sub-registry transfer, and none may cite `NPDRFClassReductionRooted`
+  (or its refuted predecessors) as proved.
 
 ## Slice-4 additions (2026-08-07): schedule enumeration and the lane upgrades
 

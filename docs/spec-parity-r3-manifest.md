@@ -152,7 +152,10 @@ rows' own programs have upstream Go tests (`examples_test.go`,
 translation step are executed by no test. OURS are seed-concrete (no
 frame quantifier), driver-level (the wrapper program, not a
 compositional function spec), and quantify EVERY modeled schedule of
-the differentially tested `execProg` with totality + exact verdict +
+the differentially tested `execProg` ("modeled schedule" = every
+registry-point schedule — the settled S4 NPDRF caption,
+docs/2026-08-11_npdrf-reduction.md §6; sub-registry transfer is
+unproved) with totality + exact verdict +
 deadlock- and race-refusal-freedom ("race-REFUSAL-freedom" says
 exactly what the theorem says — the fail-open under-approximating
 detector never fires; it is NOT an ours-only race-freedom delta: the

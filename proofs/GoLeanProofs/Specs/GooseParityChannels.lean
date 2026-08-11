@@ -58,8 +58,10 @@ per-machine-step interleaving RESTRICTED to boundary switches
 programs behave identically under unrestricted interleaving is REFUTED
 as originally stated (`NPDRFReduction_refuted`: whole-state results +
 two leaked mid-segment goroutines); the corrected class-level
-reduction (`NPDRFClassReduction`) is the recorded open target, proved
-so far only for never-spawning pools. For spawning programs these
+reduction (`NPDRFClassReductionRooted`; the fix round's first attempt
+`NPDRFClassReduction` is itself refuted) is the recorded open target,
+proved so far only for pools single-threaded throughout. For spawning
+programs these
 statements claim registry granularity ONLY; sub-registry transfer is
 unproved.
 Every ∀-schedule/no-deadlock/no-race statement in this module is read

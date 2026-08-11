@@ -467,8 +467,9 @@ open Lean in
 -- Channel-logic S4 — the settled NPDRF statement layer (design note
 -- docs/2026-08-11_npdrf-reduction.md §5): the machine-checked
 -- refutation of the draft statement, the coarse=fine∩boundary-switch
--- characterization, and the never-spawning fragment of the corrected
--- statement — all in the constructive simulation-lane set.
+-- characterization, and the single-threaded-throughout fragment of
+-- the corrected statement — all in the constructive simulation-lane
+-- set.
 /-- info: 'GoLean.GoCore.Machine.NPDRFRefutation.NPDRFReduction_refuted' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.GoCore.Machine.NPDRFRefutation.NPDRFReduction_refuted
 /-- info: 'GoLean.GoCore.Machine.stepM_iff_fine_bs' depends on axioms: [propext, Quot.sound] -/

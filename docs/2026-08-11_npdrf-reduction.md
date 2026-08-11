@@ -498,11 +498,13 @@ before the colon:
 > (`stepM_iff_fine_bs`, NPDRF.lean). The draft claim that race-free
 > programs behave identically under unrestricted interleaving is
 > REFUTED as originally stated (`NPDRFReduction_refuted`:
-> whole-state results + ≥ 2 leaked mid-segment goroutines); the
-> corrected class-level reduction (`NPDRFClassReduction`) is the
-> recorded open target, proved so far only for never-spawning pools.
-> For spawning programs these theorems claim registry granularity
-> ONLY; sub-registry transfer is unproved.
+> whole-state results + ≥ 2 leaked mid-segment goroutines; the fix
+> round's first corrected attempt is ALSO refuted,
+> `NPDRFClassReduction_refuted`); the repaired class-level reduction
+> (`NPDRFClassReductionRooted`, single-threaded roots) is the
+> recorded open target, proved so far only for pools single-threaded
+> throughout. For spawning programs these theorems claim registry
+> granularity ONLY; sub-registry transfer is unproved.
 
 Site inventory (the sweep is ONE commit; docstrings/comments only —
 designated STATEMENTS stay byte-identical, and the Comparator mirror
@@ -766,3 +768,47 @@ actually happened):
 * The fragment gains a STEPPING non-vacuity witness beside the
   degenerate one (the audit demonstrated the ~50-line shape; the
   degenerate witness stays, both honestly labeled).
+
+* Fix commit 2 (the statement layer repaired — Lean):
+  `NPDRFClassReduction_refuted` machine-checked in-tree (the audit's
+  smallest counterexample ported with attribution, `qAt`-parametrized
+  so one invariant serves the refutation AND the stepping witness;
+  constructive [propext, Quot.sound]); `NPDRFClassReductionRooted`
+  shipped per §4 with the failure-history docstring; NEGATIVE CHECKS
+  machine-checked (`m0_fails_rooted`, `q0_fails_rooted`,
+  `wedgedPairRep_fails_rooted` — axiom-free `decide`; every exhibited
+  family fails the rooted premises); `steppingRootPool` witness
+  (real fine step through the proved iff); obstruction list actually
+  re-graded in the file (1/2 upgraded, 4 settled, 7 added);
+  `BoundarySwitch` into the forbidden roots; consumer-less
+  `stepDone`/`done_aC`/`done_bC` deleted; fragment + consumer renamed
+  single-threaded-throughout (`npdrfClassReductionRooted_single_fragment`).
+  Gate: `scripts/ci` green (first run caught an `Exists.choose` in
+  the refutation term pulling `Classical.choice` — replaced with
+  constructive `obtain`; the FD7 posture held).
+* Fix commit 3 (the caption RE-SWEEP, recorded): scan re-run with
+  widened patterns ("every schedule", "all schedules", "∀-schedule",
+  "modeled schedule", "NO schedule", "modeled path set") over
+  `proofs/` + `GoLean/` + maintained docs. Newly captioned: the two
+  missed spawning-program certificates
+  (`Specs/ChanTransfer.lean`, `Specs/ChanRendezvousVal.lean` — the
+  audit's finding: both matched the ORIGINAL scan strings and were
+  missed anyway), `Surface.lean`'s `TerminatesNormallyC`, the
+  designated `forkJoinNoDeadlock`/`forkJoinNoRace` docstrings
+  ("NO schedule" un-qualified — verifier's bonus finding), and the
+  spec-parity R3 manifest's "EVERY modeled schedule" sentence.
+  Target-name updates at every pointer site (doctrine bullet — now
+  naming the refuted intermediate and the repaired target with the
+  argued-vs-machine-checked labels and the fixed cross-ref —
+  GooseParityChannels header, GoldenForkJoin witness, Surface
+  ProgressExecC parenthetical, comparative-scoping T12/L3).
+  Deliberate exclusions, recorded: `Challenge.lean`/`Solution.lean`
+  (Comparator mirrors, byte-identity); dated slice notes
+  (records of their dates — the doctrine section supersedes);
+  `Audit.lean`'s descriptive inventory comments (labels, not
+  claims); `ChanVacuityWarning.lean` (its text is ABOUT the absence
+  of a ∀-schedule claim); `ForkJoinTargets.lean:98`
+  (cross-reference, not a claim). Residual scan hits after the
+  sweep: every "every/all/NO/modeled schedule" occurrence in
+  `proofs/`+`GoLean/` outside the exclusions now sits within one
+  docstring of an S4 rider. Gate: `scripts/ci` green.
