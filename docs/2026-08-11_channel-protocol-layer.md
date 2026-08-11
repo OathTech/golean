@@ -127,16 +127,18 @@ coexists with `PoolCfg`/`PoolCfgD`):
     that the pairing's cell loc (`pairLoc bc cand` — the would-block
     shape's loc, resp. the arriving select clause's `chanValueLoc`)
     is NOT `.base`.
-11. `pairReleaseNB` — `StepDC.pairRelease` restricted to parked
-    shapes that are `.blockedSend` (whose release projection is
-    provably pure control `.next ks` in every arm —
-    `applyPairing_partner_write`; the phantom COMPLETION stays, see
-    the poison check), `.blockedSelect` (select laws are deferred
-    P-CL1-2; the ∃-release for parked selects is recorded as this
-    carrier's remaining wide spot), or a `.blockedRecv` whose OWN loc
-    is NOT `.base`. A parked plain receiver on a `.base` cell has NO
-    ∃-release — its only completions are `wake` and `parkedRecvDrain`,
-    both delivering the CELL HEAD.
+11. `pairReleaseNB` — `StepDC.pairRelease` restricted by
+    `parkedReleaseNB`. [AMENDED AT BUILD, stronger than drafted: the
+    draft kept `.blockedSend` in the release with its phantom
+    completion; the build EXCLUDES `.base`-parked plain SENDS too —
+    the simulation never needed their release (every machine arm with
+    a `.base`-parked sender is mediated via `parkedSendDeposit`), so
+    both plain parked shapes on `.base` cells have NO ∃-rule, no
+    self-step, no Löb, and the send-side tie "completed ⇒ value
+    physically in the buffer" HOLDS (P-CL2-2 resolved stronger; the
+    old P-CL1-1 statement becomes a law-level fact).] Kept for:
+    `.blockedSelect` (select laws deferred, P-CL2-5), non-`.base` and
+    nil parks (no law targets them).
 12. `selCommitCell` — `StepDC.selCommit` verbatim (`commitClause`
     against the real cell; value-clean by construction).
 
@@ -376,11 +378,11 @@ the new carrier) → per-row invariants → dsp. Ledger entry P-CL2-4.
   non-`.base` channel cells (adversarial-seed residue; no law targets
   them). Course: mediate if a law ever needs a path-loc channel
   (none foreseen — machine-made channels are `.base`).
-- **P-CL2-2 — parked-sender phantom completion** (§2c): remains in
-  rule 11 (`.blockedSend` arm). Course: laws state send-side ghost
-  obligations at deposit branches only. Consumer for removal: a law
-  needing "parked sender completed ⇒ delivered" — none shipped, none
-  planned (receiver-side pinning suffices for the arc's rows).
+- **P-CL2-2 — parked-sender phantom completion: RESOLVED STRONGER AT
+  BUILD** (§2b rule 11 amendment): `.base`-parked plain sends are
+  excluded from the ∃-release entirely — the simulation mediates every
+  arm they appear in — so the send-side tie holds as a law
+  (`wpDM_blocked_send_invP`'s successor set is exactly the push).
 - **P-CL2-3 — the auth-ghost `own_chan` tier + HoCAP au-forms**
   (§3b(b); folds in P-CL1-3): derivation over the tier-1 laws when a
   close-protocol/history consumer lands (dsp's session row is the
@@ -398,6 +400,101 @@ the new carrier) → per-row invariants → dsp. Ledger entry P-CL2-4.
   makeable on the DM-carrier for the deposit/wake branches — the
   buffered law forms land with their slice-3 consumers, per P-CL1-7.
 
+- **P-CL2-6 — constructivize the Loc-beq lemma chain** (found at the
+  carrier's Audit registration; the investigated note lives at the
+  Audit block): `LawfulBEq Loc`'s proof leans on core String/Int beq
+  lawfulness that is classical at this toolchain, so the raw-cell kit
+  and the DM simulation lane carry `Classical.choice` where LangD's
+  lane is constructive (probe: `(l == l) = true := BEq.rfl` alone
+  reports the trio). No soundness content; a reversible upstream
+  cleanup (constructivize the instance proof or route the kit around
+  beq). Course: measured sets registered; the LangD lane unchanged.
+
 ## 8. Build log (appended as built)
 
-(opened with the note; entries land per commit)
+- **Commit 1** — this note.
+- **Commit 2 — THE MEDIATED CARRIER** (`proofs/GoLeanProofs/LangDM.lean`,
+  ~2350 lines; Audit block + root import). Everything of §2 built:
+  the raw-cell round-trip kit (P-CL1-1's family at `.base` scope, incl.
+  `normalize_chanData_id` — the normalizer's success-identity on
+  channel payloads, which is what lets machine `storeLoc` writes
+  factor through raw `Heap.set`), `StepDM` + Language instance, the
+  waiter-scan/arrival-analysis provenance inversions (the
+  `selectArrivalCases` mapM walk included), the DEPOSIT-then-DRAIN
+  pairing simulation over all six machine arms (+ the non-`.base`
+  ∃-residue via the restricted rules), run erasure, `.MaybeStuck`
+  adequacy, THE EXIT `goTripleC_of_wpDM`, and the ported `wpDM` kit
+  incl. the STORE core. In-build decisions, recorded: the rule-11
+  strengthening (§2b amendment — P-CL2-2 resolved stronger); the
+  `.MaybeStuck` exit confirmed available at the pin (`adequate`,
+  `adequate_alt`, `wp_strong_adequacy_gen` all stuckness-generic);
+  the Loc-beq classical finding (P-CL2-6). RECORDED BLEMISH: commit 2
+  is not self-contained as a checkout — its root-import edit also
+  carried the (then-untracked-file) import line for commit 3's module;
+  the branch tip builds, intermediate-commit bisection over exactly
+  commit 2 does not. `scripts/ci` green at the commit.
+- **Commit 3 — P-S4-1 PAID** (`Specs/SpawnNoopProgress.lean`, built by
+  a delegated Fable worker to the note's §5 route; reviewed): ∀-heap
+  `ProgressExecC` for the spawning witness by heap-blind stage-family
+  invariant induction over `execProgLoop` — no Iris, no kernel
+  enumeration — plus `spawnNoopSpecC` (the S4 note's owed
+  `GoSpecC` assembly) and `spawnNoopPoolProgress`, the same fact in
+  interpreter vocabulary at the CONSTRUCTIVE set (the `ProgressExecC`
+  form inherits `Classical.choice` from the surface statement
+  vocabulary itself — `InitialSplit`/`sat`/`heapletOf` over
+  `PartialMap` — a pre-existing property, measured and recorded at
+  the Audit block). `scripts/ci` green.
+- **Commit 4 — THE PROTOCOL LAWS + THE VALUE-PINNING EXEMPLAR**
+  (`ChanDM.lean`, `Specs/ChanRendezvousVal.lean`; Audit block + root
+  import). Decision recorded, AMENDING §3a's sketch: the shipped
+  tier-1 invariant `chanInvP` carries the per-element protocol as a
+  PURE predicate (`Ψp : GoValue → Prop`) rather than the sketched
+  `[∗list]` of `IProp`s — the exemplar's protocol is pure, a pure Ψ
+  makes every branch obligation a plain hypothesis/pure-disjunction
+  (no big-op machinery), and shipping the `IProp` form without a
+  consumer is the scaffold smell; the `IProp` per-element form joins
+  the auth-ghost tier in P-CL2-3 as the recorded growth path. Also
+  pinned: `declaredTy = none` (the machine-real `makeChan` shape, the
+  S1 close-law precedent) and the OPEN cell. The four laws shipped
+  (`wpDM_send_invP`, `wpDM_blocked_send_invP`, `wpDM_recv_invP` —
+  P-CL1-5 closed, `wpDM_blocked_recv_invP` — the one
+  `.MaybeStuck`-fixed member), each consumed same-commit by the
+  exemplar: `chanRendezvousValTripleC` — **the claim slice 1 could
+  not make**: every `.normal` completion from any admissible seeded
+  heap leaves `x = 42`, proved compositionally (fork → send-under-Ψ
+  → receive-under-Ψ → delivery-frame store walk → exit). Figures
+  (measured): cert fuel 500, `#eval`-confirmed `true` before
+  `decide +kernel` (with the seed's `MachineWf` decide eval'd too);
+  walk under `maxHeartbeats 3200000`; axiom sets FD7-exact
+  (laws/witness/exit classical trio; cert `[propext, Quot.sound]`;
+  pure helpers `[propext]`); the completion-pin speedbump sees 3
+  `Chan*` modules, all pinned. `scripts/ci` green.
+- **The differential record at the slice tip**: every commit ran
+  `scripts/ci` green (baseline-diff judgment against the lane's
+  cleanup-tip clean record at `4cd1dec8`, marked stale-by-commit as
+  expected — the branch touches only `proofs/` and `docs/`, so the
+  differential surface is unchanged). A fresh clean-tree
+  `scripts/ci --diff` at the slice tip is NOT run in-lane this
+  session: the standing "no background differential runs" rule and
+  the session's remaining budget put the (~long) full run out of
+  reach foreground — it is OWED at the slice boundary and flagged for
+  the operator in the slice report, per the honest-records rule.
+
+## 9. The TCB-grounding walk (the per-slice review criterion)
+
+| exported artifact | (i) trusted endpoint (interpreter vocabulary) | (iii) executable anchor |
+|---|---|---|
+| `chanRendezvousValTripleC` | ∀ admissible seeded heap, run-conditioned: `execProg … = .ok (.normal σf, _)` → harness/handle intact ∧ `loadLoc σf x = .ok (.int 42 .int)` | run-conditioned only — anchored by the pin row below (the standing `ChanVacuityWarning` demonstration) |
+| `chanRendezvousValReadoutC` | the same, first-order at the concrete seed — **the 42 pin in `loadLoc` vocabulary** | premises discharged at the seed; consumes the triple as method |
+| `chanRendezvousValTerminatesNormallyC` | ∃N ∀fuel≥N ∀ch: `.normal` completion | `chanRendezvousValAllStreamsCert` — kernel evaluation (fuel 500, `#eval` first), `execProgLoop_mono` lift |
+| `spawnNoopProgressC` / `spawnNoopSpecC` / `spawnNoopPoolProgress` | ∀ heap/allocator, ∀ fuel/stream: `execProg` is `.ok (.normal …)` or `.error .fuelOut` (and the `GoSpecC` conjunction) | the invariant induction is itself interpreter-side (no Iris anywhere in statement OR proof for the progress half) |
+
+Everything else this slice shipped — `StepDM`, the simulation, the
+round-trip kit, `chanInvP`, the `wpDM_*` laws, the walks — is METHOD:
+none of it appears in an exported statement (all statements above are
+`execProg`/`loadLoc`/`GoTripleC`/`GoSpecC`/`TerminatesNormallyC`
+vocabulary; Iris appears in no statement — the deletion test per
+statement). The D1-BOTH convention is observed for the exemplar
+(triple + completion pin, same commit); the completion-pin speedbump
+covers the new `Specs.ChanRendezvousVal` module by its naming
+convention.

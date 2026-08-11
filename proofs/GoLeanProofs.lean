@@ -3,6 +3,7 @@ import GoLeanProofs.LangC
 import GoLeanProofs.LangD
 import GoLeanProofs.ChanD
 import GoLeanProofs.LangDM
+import GoLeanProofs.ChanDM
 import GoLeanProofs.HeapBridge
 import GoLeanProofs.Ghost
 import GoLeanProofs.Lifting
@@ -61,6 +62,7 @@ import GoLeanProofs.Specs.ImportedGooseConst
 import GoLeanProofs.Specs.ImportedGooseRune
 import GoLeanProofs.NegativeSpecs
 import GoLeanProofs.Specs.SpawnNoopProgress
+import GoLeanProofs.Specs.ChanRendezvousVal
 
 /-!
 # GoCore ⇒ Iris — the proof layer (root)

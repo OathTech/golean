@@ -730,6 +730,55 @@ open Lean in
 /-- info: 'GoLean.Iris.wpDM_fork_alloc₁' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Iris.wpDM_fork_alloc₁
 
+-- THE VALUE-PROTOCOL LAYER (channel-logic slice 2, ChanDM.lean +
+-- Specs/ChanRendezvousVal.lean; design note §§3-4): the Ψ-protocol
+-- invariant chanInvP (the physical cell + a PURE per-element value
+-- predicate — tier 1, the option with a consumer; the IProp/big-op
+-- and auth-ghost own_chan tiers are the recorded growth path,
+-- P-CL2-3) and the four value-protocol laws over the MEDIATED
+-- carrier: send/parked-send (which must PAY Ψp — no phantom
+-- completions exist for .base-parked senders on StepDM, so
+-- "completed ⇒ value physically in the buffer" is now a law-level
+-- fact, P-CL1-1's honest statement) and targeted recv/parked-recv
+-- (which are DELIVERED Ψp for the physical head — P-CL1-5 closed;
+-- the parked-recv law is the family's one .MaybeStuck-fixed member,
+-- parked-empty configs being irreducible on this carrier by design).
+-- THE WITNESS is the VALUE-PINNING exemplar — the claim slice 1
+-- explicitly could not make: chanRendezvousValTripleC's post pins
+-- the delivered 42 in x, frame-quantified, proved compositionally
+-- through the protocol layer and the goTripleC_of_wpDM exit; its
+-- D1-BOTH pair is the run-conditioned readout (42 pin included,
+-- InitialSplit discharged at the seed) + the seeded completion pin
+-- over the fuel-500 kernel certificate (#eval-confirmed true before
+-- decide, per doctrine). The triple alone remains run-conditioned
+-- (the ChanVacuityWarning lesson); the completion pin carries the
+-- existence evidence. Name-existence tripwire: every public theorem
+-- of both modules is anchored here.
+/-- info: 'GoLean.Iris.array_toList_head_erase' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.array_toList_head_erase
+/-- info: 'GoLean.Iris.wpDM_send_invP' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.wpDM_send_invP
+/-- info: 'GoLean.Iris.wpDM_blocked_send_invP' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.wpDM_blocked_send_invP
+/-- info: 'GoLean.Iris.wpDM_recv_invP' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.wpDM_recv_invP
+/-- info: 'GoLean.Iris.wpDM_blocked_recv_invP' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.wpDM_blocked_recv_invP
+/-- info: 'GoLean.Iris.rdvValDel' depends on axioms: [propext] -/
+#guard_msgs in #print axioms GoLean.Iris.rdvValDel
+/-- info: 'GoLean.Iris.rdvValNormInt42' depends on axioms: [propext] -/
+#guard_msgs in #print axioms GoLean.Iris.rdvValNormInt42
+/-- info: 'GoLean.Iris.wpDM_chan_rendezvous_val_witness' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.wpDM_chan_rendezvous_val_witness
+/-- info: 'GoLean.Iris.chanRendezvousValTripleC' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.chanRendezvousValTripleC
+/-- info: 'GoLean.Iris.chanRendezvousValReadoutC' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.chanRendezvousValReadoutC
+/-- info: 'GoLean.Iris.chanRendezvousValAllStreamsCert' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.chanRendezvousValAllStreamsCert
+/-- info: 'GoLean.Iris.chanRendezvousValTerminatesNormallyC' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.chanRendezvousValTerminatesNormallyC
+
 -- THE CHANNEL WP LAW FAMILY, slice 1 of the channel-logic arc
 -- (ChanD.lean + Specs/ChanRendezvous.lean; design note
 -- docs/2026-08-11_channel-wp-laws.md). The rendezvous-class laws over
