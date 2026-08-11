@@ -431,3 +431,24 @@ Per the charter, either branch is SUCCESS and the lane does not stop.
 
 * Commit 1 (this note): binding design committed before proof work.
   Gate: `scripts/ci` green (docs-only).
+* Commit 2 (the settled statement layer — P1+P2+P3, one movement per
+  the note's plan; all in `GoLean/GoCore/NPDRF.lean` + Audit
+  registration): **P1** `NPDRFReduction_refuted` machine-checked
+  exactly as §1 planned (finite-state: `FineInv` for `¬ RacyFine`,
+  `CoarseInv` — at most one strictly-mid goroutine, forced-`cur`
+  coupling — for `¬ ReachesM`, coarse inversion via `stepM_complete`,
+  fine run via `stepFn_sound`); **P2** `BoundarySwitch` +
+  `schedPick_iff_fine_bs` + `stepM_iff_fine_bs` + the run-level
+  `StepsMFineBS`/`stepsM_iff_fine_bs`; **P3**
+  `reachesMFine_iff_reachesM_single` (never-spawning fragment,
+  LITERAL result equality, no race-freedom premise) +
+  `npdrfClassReduction_single_fragment` + the degenerate-by-design
+  witness pool. `NPDRFClassReduction`/`PoolResult.sameClass` land as
+  the citable open target, scaffold-marked. AXIOMS: every new theorem
+  in the constructive set [propext, Quot.sound] (Audit-pinned) — the
+  §5 posture met exactly; no BEq/DecidableEq instance ended up needed
+  (the FD7 deviation rider was not exercised). `StepsMFineBS` joined
+  the statement-closure forbidden roots. FD6 window argument (§5):
+  NPDRF.lean is a theorem-only leaf module — interpreter untouched,
+  no `--diff` owed. Gate: `scripts/ci` green (proofs+Audit, eval
+  tests 136 ok, baseline diff 1483/1483 no regression).

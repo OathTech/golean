@@ -177,6 +177,10 @@ open Lean in
      `GoLean.GoCore.Machine.StepE, `GoLean.GoCore.Machine.StepM,
      `GoLean.GoCore.Machine.StepMFine, `GoLean.GoCore.Machine.StepsM,
      `GoLean.GoCore.Machine.StepsMFine,
+     -- Channel-logic S4: the boundary-switched fine closure (the
+     -- coarse/fine characterization's run carrier) — proof
+     -- infrastructure exactly like its siblings.
+     `GoLean.GoCore.Machine.StepsMFineBS,
      -- Channels arc slice 5: the CONCURRENT Iris Language's per-thread
      -- relation (LangC.lean) — proof infrastructure like its siblings;
      -- it lives in a GoLeanProofs module (module-of-origin cannot flag
@@ -455,6 +459,24 @@ open Lean in
 #guard_msgs in #print axioms GoLean.GoCore.Machine.storeLoc_root_frame
 /-- info: 'GoLean.GoCore.Machine.loadLoc_after_disjoint_store' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.GoCore.Machine.loadLoc_after_disjoint_store
+
+-- Channel-logic S4 — the settled NPDRF statement layer (design note
+-- docs/2026-08-11_npdrf-reduction.md §5): the machine-checked
+-- refutation of the draft statement, the coarse=fine∩boundary-switch
+-- characterization, and the never-spawning fragment of the corrected
+-- statement — all in the constructive simulation-lane set.
+/-- info: 'GoLean.GoCore.Machine.NPDRFRefutation.NPDRFReduction_refuted' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.GoCore.Machine.NPDRFRefutation.NPDRFReduction_refuted
+/-- info: 'GoLean.GoCore.Machine.stepM_iff_fine_bs' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.GoCore.Machine.stepM_iff_fine_bs
+/-- info: 'GoLean.GoCore.Machine.stepsM_iff_fine_bs' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.GoCore.Machine.stepsM_iff_fine_bs
+/-- info: 'GoLean.GoCore.Machine.reachesMFine_iff_reachesM_single' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.GoCore.Machine.reachesMFine_iff_reachesM_single
+/-- info: 'GoLean.GoCore.Machine.npdrfClassReduction_single_fragment' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.GoCore.Machine.npdrfClassReduction_single_fragment
+/-- info: 'GoLean.GoCore.Machine.fragment_witness_iff' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.GoCore.Machine.fragment_witness_iff
 
 -- The fork/join pool kernel witnesses (pinned streams; slice 2).
 /-- info: 'GoLean.Surface.forkJoinStreamCanonical' depends on axioms: [propext, Quot.sound] -/
@@ -1655,14 +1677,19 @@ example := @GoLean.GoCore.Machine.applyPairing_wf
 example := @GoLean.GoCore.Machine.resumeThread_wf
 example := @GoLean.GoCore.Machine.spawnStep_wf
 example := @GoLean.GoCore.Machine.stepThread_wf
--- The NPDRF reduction obligation's statement layer (channels arc slice
--- 3; scaffold — a Prop-valued DEFINITION in DRAFT form, REFUTABLE as
--- written per NPDRF.lean obstruction 4: nothing may cite it, not even
--- as a proof target, until the recorded weakening decision; marking
--- refreshed at the S3 convergence response — the earlier "awaiting
--- proof" wording understated this): deletion/rename anchors so the
--- recorded proof debt cannot silently drift.
+-- The NPDRF statement layer, SETTLED at channel-logic S4 (binding
+-- design note docs/2026-08-11_npdrf-reduction.md): the draft
+-- `NPDRFReduction` is REFUTED BY THEOREM (`NPDRFReduction_refuted`,
+-- kept as the record — nothing may cite the draft except the
+-- refutation); `NPDRFClassReduction` is the corrected citable target
+-- (scaffold — a Prop-valued definition claimed by no theorem; its
+-- proved instance class is the never-spawning fragment). Deletion/
+-- rename anchors so neither the refutation nor the open target can
+-- silently drift.
 example := @GoLean.GoCore.Machine.NPDRFReduction
+example := @GoLean.GoCore.Machine.NPDRFClassReduction
+example := @GoLean.GoCore.Machine.PoolResult.sameClass
+example := @GoLean.GoCore.Machine.BoundarySwitch
 example := @GoLean.GoCore.Machine.RacyFine
 example := @GoLean.GoCore.Machine.ReachesM
 example := @GoLean.GoCore.Machine.ReachesMFine
