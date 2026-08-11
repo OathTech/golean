@@ -1151,8 +1151,10 @@ completion pin — the spawning witness program COMPLETES at main's
 `spawnNoopReadoutC` (the run-conditioned verdict) this is the stated
 non-vacuity discharge for `spawnNoopTripleC`: the runs exist AND
 every one satisfies the triple's readout. The ∀-HEAP safety half
-(`ProgressExecC`) remains the recorded P-S4-1 debt — this pin is
-seed-concrete, strictly weaker, and does not claim otherwise. -/
+(`ProgressExecC`) — the P-S4-1 debt when this pin landed — is PAID at
+channel-logic slice 2 (`Specs/SpawnNoopProgress.lean`,
+`spawnNoopProgressC`/`spawnNoopSpecC`); this pin is seed-concrete,
+strictly weaker, and does not claim otherwise. -/
 theorem spawnNoopTerminatesNormallyC :
     TerminatesNormallyC [] spawnNoopSeed spawnNoopProg := by
   refine ⟨20, fun fuel hfuel ch => ?_⟩

@@ -677,7 +677,12 @@ if [ -f artifacts/coverage/latest.tsv ]; then
   # §9): WARN visibly rather than fail — the tight loop legitimately
   # records dirty mid-iteration runs; handoff-quality claims must cite a
   # clean-tree record, and this marker is what makes citing a dirty one
-  # visible in every judgment line.
+  # visible in every judgment line. NUANCE (S2 audit fix round): the
+  # recorder's git_dirty reflects TRACKED files only — untracked files
+  # (scratch dirs, not-yet-added modules) do not flip it, so "clean"
+  # here means "tracked tree matches the commit", not "no extra files
+  # on disk". An untracked .lean file that a tracked root imports is
+  # the known gap (the S2 commit-2 bisection blemish's shape).
   [ "$rundirty" = "true" ] && stale="$stale [recorded from a DIRTY tree — for a handoff-quality record re-run scripts/ci --diff on the committed tree]"
   # FAIL CLOSED on a missing git_dirty key (S1 audit round 2): a meta
   # without the key (older/foreign diff-coverage) is attributable only as

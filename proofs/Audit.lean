@@ -181,7 +181,15 @@ open Lean in
      -- relation (LangC.lean) — proof infrastructure like its siblings;
      -- it lives in a GoLeanProofs module (module-of-origin cannot flag
      -- it), so it joins the name-based forbidden set.
-     `GoLean.Iris.StepEC, `GoLean.Iris.GoPrimStepC]
+     `GoLean.Iris.StepEC, `GoLean.Iris.GoPrimStepC,
+     -- Channel-logic S2 audit fix round, 2026-08-11: the DECOMPOSED
+     -- and MEDIATED per-thread relations join — StepDC/GoPrimStepD
+     -- (LangD, spec-parity S4) had been omitted when that carrier
+     -- landed (a genuine TCB-hygiene gap, closed here), and
+     -- StepDM/GoPrimStepDM (LangDM, this slice) join with them.
+     -- Headline statements keep speaking execProg only.
+     `GoLean.Iris.StepDC, `GoLean.Iris.GoPrimStepD,
+     `GoLean.Iris.StepDM, `GoLean.Iris.GoPrimStepDM]
   let isRelation : Name → Bool := fun n =>
     forbiddenRoots.any (fun r => r == n || r.isPrefixOf n)
   -- FAIL-CLOSED existence check on the forbidden set itself (S5 audit
@@ -647,18 +655,26 @@ open Lean in
 -- and Specs/ChanRendezvousVal.lean (the value-pinning exemplar) —
 -- same-slice commits. Name-existence-tripwire scope: every public
 -- theorem of LangDM.lean is anchored here.
--- AXIOM NOTE (investigated, 2026-08-11): several kit/simulation
--- entries below carry Classical.choice where LangD's lane is
--- constructive. Root cause measured, not guessed: `BEq.rfl`/
--- `eq_of_beq` at `Loc` go through the `LawfulBEq Loc` instance
--- (GoLean/GoCore/Value.lean), whose proof leans on core String/Int
--- beq lawfulness that is classical at this toolchain — a probe of
--- `(l == l) = true := BEq.rfl` alone reports the trio. Every
--- `Heap.set`/`Heap.lookup` beq-if reduction and every waiter-scan
--- `eq_of_beq` inherits it; the LangD lane never reasons about Loc
--- beq, which is why it stayed constructive. Constructivizing the
--- upstream instance is parked (P-CL2-6, design note §7) — a
--- reversible cleanup, no soundness content.
+-- AXIOM NOTE (RE-MEASURED at the S2 audit fix round — the first
+-- form's root cause was WRONG, the audit's confirmed minor): several
+-- kit/simulation entries below carry Classical.choice where LangD's
+-- lane is constructive. This is a RECORDED DEVIATION from FD7's
+-- binding constructive-simulation-lane clause (charter FD7; labeled
+-- as such here and at the design note §9). TRUE root cause: NOT
+-- String/Int beq lawfulness (instLawfulBEqString is axiom-free;
+-- Int.instLawfulBEq is [propext, Quot.sound]) — the classical
+-- carrier is the `BEq.rfl` route the GoLean LawfulBEq Addr/Loc
+-- instance proofs' `simp` takes: ReflBEq resolves through
+-- EquivBEq.toReflBEq ∘ Std.LawfulBEqOrd.equivBEq over
+-- Nat.instLawfulEqOrd/Nat.instTransOrd, and those two core Ord
+-- instances carry Classical.choice. Not Loc-specific (LawfulBEq
+-- Addr, Nat-only, is equally classical); every Heap.set/Heap.lookup
+-- beq-if reduction and waiter-scan eq_of_beq inherits it, which is
+-- how the DM lane picked it up while LangD's lane (which never
+-- reasons about Loc beq) stayed constructive. Fix parked as P-CL2-6
+-- (constructivize the two instance `rfl` fields away from BEq.rfl,
+-- or route the kit around beq) — reversible, no soundness content;
+-- the registrations below are the accurate measured sets.
 /-- info: 'GoLean.Iris.heap_set_set' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Iris.heap_set_set
 /-- info: 'GoLean.Iris.heap_set_lookup_self' depends on axioms: [propext] -/

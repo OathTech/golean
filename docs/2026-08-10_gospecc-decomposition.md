@@ -504,14 +504,19 @@ arc-end curation:
 - `spawnNoopTripleC` is deliberately NOT a candidate yet: the
   designated-shape summit for the decomposition lane is the assembled
   `spawnNoopSpecC` (§9), premature to curate as a half.
+  [CLOSED at channel-logic slice 2 (P-S4-1 paid): **`spawnNoopSpecC`
+  is now RECORDED as the lane's designation candidate** per FD3 —
+  the S2 note's FD3 attestation carries the entry and the F4
+  hoist-cost sizing.]
 
 Parking ledger:
 
-- **P-S4-1 — `ProgressExecC` ∀-heap for the spawning witness** (§9
-  first bullet): the pool-reachability kit's first instance; sized as
-  its own movement; consumer `spawnNoopSpecC`. Until it lands the
-  slice's honest claim is exactly "the TRIPLE half of the debt is
-  paid".
+- **P-S4-1 — `ProgressExecC` ∀-heap for the spawning witness: PAID**
+  (channel-logic slice 2, 2026-08-11 —
+  `Specs/SpawnNoopProgress.lean`: heap-blind stage-family invariant
+  induction over `execProgLoop`; `spawnNoopSpecC` assembled). The
+  ledger entry stands as the record of what was owed; the §9 first
+  bullet and this entry are closed.
 - **P-S4-2 — the channel WP law family + protocol layer** (§9 second
   bullet): the curated rows' D1 form 1 and the fork/join
   full-strength instance. Scale/order is an arc-planning call → user.
