@@ -1034,3 +1034,15 @@ through the frontend, they become ordinary confluent rows.
   change to the classified set becomes reviewable drift instead of a
   silent-escape surface; the checker then only needs to be trusted
   for completeness of ENUMERATION, not for per-shape rules.
+- **The round-4 clean differential record**: full
+  `GOLEAN_MEM_MAX=48G scripts/ci --diff` at the round-4 tip
+  `074bfa54`, committed clean tree — meta `git_commit 074bfa54`,
+  `git_dirty false`, `manifest_cases 1483`. **RESULT: PASS — baseline
+  diff FULL (1483/1483, no regression), negative lane 311 no
+  regression, all gates green** including the round-4 completion-pin
+  gate (34 classified / 21 binder-free (env,prog)-keyed pins / 2
+  allowlisted; fixtures 12+3+1 flagged; all six mutation triggers
+  verified firing, §14) and statement-TCB at 48 designated,
+  byte-identical; audit sweep 13549 declarations axiom-clean.
+  Doc-only record commit over the run's own commit, per the
+  established discipline.
