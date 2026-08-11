@@ -1,0 +1,969 @@
+# Latitude inventory — every point where Go permits multiple behaviors and the machine chooses (2026-08-11)
+
+Status: companion to `docs/2026-08-11_essence-of-go-doctrine.md` (DRAFT,
+awaiting user review). This is the doctrine's promised enumeration: every
+point where the Go spec / memory model / library documentation permits
+multiple behaviors and GoLean's machine resolves the choice — with the
+classification, the evidence status, the re-envelope obligation and cost
+for every pin, and the priority ranking. §8 is the doctrine register's
+extension. Produced by a dual sweep (2026-08-11): the records
+(nondeterminism doctrine 2026-08-04, BUGS.md, the channels/sync/floats/
+init design notes) and the code (GoLean/GoCore/{Machine,StepFn,Multi,
+Ops,Race,State,Value,Syntax,FloatBits}.lean). Where records and code
+disagreed, the code was taken as truth and the record flagged (§9).
+
+## 0. How to read
+
+Classes (per the inventory charter):
+
+- **(a) ENVELOPED** — the machine exercises the latitude via the
+  `Choices` stream; the entry states the envelope and whether it is
+  believed MAXIMAL against the plausible upper bound, or itself
+  narrowed.
+- **(b) PINNED** — the latitude is resolved to one deterministic point
+  (usually gc's realization; twice OURS where gc's is compiler-internal
+  and unpinnable — marked **known ≠ gc**). Each pin states the plausible
+  envelope, the re-envelope obligation, and a cost estimate.
+  Sub-class **(b-n) NARROWED**: a deliberate proper-subset resolution
+  recorded with a transfer caveat (the doctrine's "singleton narrowing").
+- **(c) FORCED** — the spec mandates the behavior; no latitude.
+- **(d) UNKNOWN** — latitude suspected, not yet analyzed; the open
+  question is stated instead of guessed at.
+- **REFUSED** — not a latitude class: a spec-open point the machine
+  resolves by failing closed (visible red, never an answer). Listed
+  because refusals are how several latitude points are currently
+  handled; each is a coverage debt, not a fidelity claim.
+
+Evidence-class shorthand (doctrine §Evidence): SPEC (spec text), MM
+(memory model doc), DOCS (runtime/library docs), GC (measured gc probe,
+lower-bound instrument), XIMPL (cross-implementation — none exists yet;
+noted where it would bear), ARCH (proposal/issue archaeology — none done
+yet; noted where it would bear).
+
+**The choice-site census agrees between records and code.** The
+nondeterminism doctrine's canonical list (7 sites, kept current per its
+binding-site rule) matches the executable machine's `Choices.consume`
+call sites exactly:
+
+| Site | Code | Bound | Consumed when | Empty-stream default |
+|---|---|---|---|---|
+| Map-iteration pick | StepFn.lean:599 | snapshot remainder size | every iteration (even width 1) | first snapshot entry (insertion order) |
+| Append spill capacity | Machine.lean:863 | `appendSpillWidth` (Ops.lean:1857) | every spill | gc growth-formula point |
+| L2 select pick, entry path | Machine.lean:2374 | ready-clause count | only width > 1 | first ready clause (clause order) |
+| L2 select pick, arrival path | Multi.lean:712 | `.multi` outcome count | only `.multi` | first ready clause |
+| L4 waiter pick | Multi.lean:884 | matching-candidate count | only width > 1 | lowest (goroutine order, clause order) |
+| L1 scheduler pick | Multi.lean:926 | \|runnable\| | only width > 1 | lowest runnable goroutine id |
+| L5 main-exit window | Multi.lean:1422 | 2 | main terminal ∧ others runnable | 0 = exit now |
+
+The race detector replays consumption without consuming
+(Multi.lean:1242–1263); the relation quantifies every pick
+(Machine.lean:2645–2702, Multi.lean:1487–1559).
+
+---
+
+## 1. Concurrency and scheduling
+
+### C1. Which runnable goroutine runs next (L1) — (a) ENVELOPED
+
+- WHERE: spec — NONE. The spec has zero scheduling text (ground-truth
+  note §1.2: pure omission latitude, bounded only by blocking rules and
+  the memory model). Machine: `runnableIdxs` Multi.lean:206–219 (the
+  envelope statement in situ), consumed in `stepMulti` Multi.lean:926.
+- ENVELOPE: any runnable goroutine may run next, at every registry
+  boundary; width = |runnable|. Believed MAXIMAL **at registry
+  granularity** — the envelope-width review (channels design note,
+  2026-08-07, as corrected by BUG-044) argued no admitted member is
+  outside conforming Go. It is NOT maximal absolutely: the granularity
+  itself is the pin recorded as C2+C3 below, and the registry-point
+  path set vs full interleaving is the open NPDRF obligation
+  (register #5).
+- EVIDENCE: GC — plain `go run` is a point-mass on schedule-dependent
+  shapes (0/700-style; validation note §3); `-race` perturbation is the
+  dual-sampling rule; membership lane polices too-narrow per shape.
+  XIMPL would bear on nothing here (the spec is silent; the envelope is
+  already "anything"). Upper bound argued from SPEC silence + MM
+  blocking rules.
+
+### C2. Preemption inside a boundary-free segment — (b) PINNED, structural: forced continuation (run-to-boundary)
+
+- WHERE: spec — silent on scheduling, so preemption at ANY point is
+  conforming (gc itself realizes asynchronous preemption since 1.14 —
+  DOCS/GC). Machine: `stepMulti`'s non-boundary arm, Multi.lean:930–931
+  (`else stepThreadInto m m.cur ch`) — between registry boundaries the
+  running goroutine steps privately and CANNOT be preempted on any
+  stream. `Config.atBoundary` (Multi.lean:227–255) is the complete
+  boundary set; ordinary statement/expression steps, calls, loads,
+  stores, loop back-edges are all private.
+- PLAUSIBLE ENVELOPE: a scheduling point at (at least) every loop
+  back-edge / bounded-compute interval inside boundary-free segments —
+  enough that a goroutine stuck in a registry-free loop can always be
+  descheduled, which is what every real Go implementation does.
+- WHY IT IS THE DOCTRINE'S KNOWN FIRST ITEM (register #1): the spinner
+  divergence — a program whose spawned goroutine loops with no registry
+  op. Once a stream picks the spinner at any boundary, the machine runs
+  it privately forever: `fuelOut`, while gc preempts and exits 0
+  (doctrine's recorded probe: gc exit-0 100/100). `observed ∉ modeled`
+  on those streams — definitionally a bug, and it also poisons the
+  ∀-stream claims' shape: `TerminatesNormallyC` is FALSE for programs
+  gc always terminates (the fairness note's spinner family is the same
+  structure seen from the termination side).
+- RE-ENVELOPE OBLIGATION + COST: add preemption points inside segments
+  (loop back-edges are the registry-granularity-style candidate) —
+  boundary-set change ⇒ every pinned stream shifts (BUG-040 precedent:
+  fork/join designated witnesses re-derived, Comparator landmark),
+  enumeration trees branch at every new point (enumerator caps/DPOR
+  pressure), fuel/step accounting and `MultiSound`/`MultiStreams`
+  metatheory re-proved, NPDRF statement restated over the new point
+  set, race-detector segments shrink (more, smaller segments — clock
+  traffic grows). The largest single re-envelope in the queue; also
+  the highest-value one.
+
+### C3. Scheduling between an op's effect and its continuation — (b) PINNED, structural: the fused effect boundary
+
+- WHERE: spec — §Program execution and the MM give no ordering between
+  one goroutine's post-synchronization progress and a woken partner's;
+  any finite interleaving is conforming. Machine: `Config.atBoundary`
+  marks PRE-op apply positions only; the ONLY post-op boundary is the
+  spawn-completion marker `.spawned` (Multi.lean:232–239, BUG-040's
+  fix). Every other registry op's effect and the issuer's subsequent
+  private segment are FUSED: after (e.g.) a send that wakes a partner,
+  no scheduling point occurs until the issuer's next boundary or
+  terminal.
+- PLAUSIBLE ENVELOPE: a scheduling point at every registry op's
+  COMPLETION (post-op boundaries), so a woken partner can interleave
+  before the issuer's next private segment.
+- KNOWN INSTANCES, both fixed pointwise: BUG-040 (post-spawn — fixed by
+  `.spawned`), BUG-044 (wake-then-main-terminal — fixed by the L5
+  window, C4). REMAINING GAP, recorded here: the mid-program analogue —
+  a wake-producing op followed by a private segment that ABORTS (an
+  unrecovered panic) discards the woken partner's continuation on every
+  stream exactly as BUG-044 did at main's terminal (`execProgLoop`
+  classifies `panicMsg?` before stepping, Multi.lean:1413; the
+  partner's alternative abort/observable is excluded). For race-free
+  programs the excluded members are termination/abort-ordering
+  observables — schedule-observable without data races (register #5's
+  closing sentence). No corpus case pins this today; it is the same
+  class the BUG-044 dossier scope-corrected to "ANY main-goroutine
+  registry op ... " but for non-main issuers and abort terminals.
+- EVIDENCE: GC probes exist for the two fixed instances (BUG-044:
+  model {ok} vs gc-plain 1/100→50/50 panic at delay; BUG-040 eval
+  pins). The mid-program abort instance is UNPROBED — a directed gc
+  probe (wake partner, then panic in the issuer's private segment,
+  observably different partner abort) is the cheap next datum.
+- RE-ENVELOPE OBLIGATION + COST: post-op boundaries for wake-producing
+  registry ops (or all registry ops — simpler rule, wider trees). Same
+  cost class as C2 (stream shifts, witnesses, enumerator, NPDRF), but
+  strictly smaller: the boundary set grows by op-completion positions
+  only. Can land with or before C2; the doctrine queues them together
+  as "the fused-boundary/forced-continuation" item.
+
+### C4. How long after main's terminal other goroutines may run (L5) — (a) ENVELOPED
+
+- WHERE: spec — §Program execution: "It does not wait for other
+  (non-main) goroutines to complete" — no ordering between main's
+  return and others' progress; any finite continuation before teardown
+  is conforming. Machine: `execProgLoop` Multi.lean:1383–1430 (envelope
+  statement in situ; consume-2 at :1422, re-offered at every subsequent
+  loop entry until exit picked or nothing runnable).
+- ENVELOPE: {exit now, one more pool step}* — i.e. every finite prefix
+  of registry-granularity continuations of the runnable others.
+  Believed MAXIMAL at registry granularity (the re-offer covers any
+  finite count; infinite continuation is not an observation). Inherits
+  C2/C3's granularity pins like everything pool-side.
+- EVIDENCE: GC — BUG-044's dossier probes (the excluded panic member
+  realized by the PLAIN oracle 1/100 at 50k-iteration delay, 50/50 at
+  20M); membership cases goroutines/wake-window/* certify {ok, panic}.
+
+### C5. Which matching parked waiter pairs with an arriving op (L4) — (a) ENVELOPED
+
+- WHERE: spec — NONE on waiter order ("any matching waiter"; gc's FIFO
+  wakeup is one legal point). Machine: `chanArrivalPlan` docstring
+  Multi.lean:487–537 (envelope statement), candidate enumeration in
+  goroutine order / clause order within a select (Multi.lean:424–456),
+  pick consumed in `stepThread` Multi.lean:879–889 only at width > 1.
+- ENVELOPE: any matching waiter, width = #matches (select clauses
+  counted individually). Believed MAXIMAL (spec-silent axis; both
+  members oracle-exhibited on the directed pin
+  goroutines/sched-dependent/waiter-pick, {12,21}).
+- EVIDENCE: GC — dual-sampling exhibits both members (12×3, 21×7);
+  envelope-width review verdict NOT A FLAG with the F3 correction
+  (336 width-2 L4 sites in first-come's certified tree). Open
+  [ANALYSIS] question recorded there: whether L4 ⊆ L1-reachable holds
+  for every program (each L4 member also realizable by arrival timing)
+  — no theorem; per-shape membership polices it.
+
+### C6. Which ready select clause commits at entry (L2, entry + arrival paths) — (a) ENVELOPED (possibilistic weakening)
+
+- WHERE: spec — §Select statements step 3: "If one or more of the
+  communications can proceed, a single one that can proceed is chosen
+  via a uniform pseudo-random selection." Machine: the L2 envelope
+  statement at Machine.lean:2279–2314; entry consumption
+  Machine.lean:2374; arrival-path consumption Multi.lean:700–715.
+- ENVELOPE: ANY entry-ready clause (readiness waiter-extended on the
+  arrival path). "Uniform pseudo-random" is deliberately weakened to
+  the possibilistic "any" per the doctrine's no-distributional-claims
+  rule — the envelope's SUPPORT equals the spec's, so this direction is
+  maximal; distributional facts are out of scope by declaration.
+- EVIDENCE: GC — dense sampling (per-execution re-randomization: the
+  map-order regime), both members exhibited 5/5–3/7 on the pinned
+  shapes; `clauseReady`'s send-on-closed-counts-as-ready subtlety is
+  probe-pinned (p23, Machine.lean:1259–1263).
+
+### C7. Which clause a WOKEN (parked) select commits — (b-n) NARROWED, deliberately
+
+- WHERE: same spec sentence as C6 (a parked select that becomes ready
+  again is still a select "choosing"). Machine: `resumeThread`
+  Multi.lean:331–375 — a woken select head-commits the FIRST wake-ready
+  clause in clause order, deterministically, consuming nothing ("no
+  re-randomization on the blocked path").
+- WHAT THE PLAUSIBLE ENVELOPE WOULD BE: any wake-ready clause (a second
+  L2 draw at wake).
+- THE RECORDED COVERAGE ARGUMENT (envelope-width review, L2 wake path):
+  a parked gc select is committed by the EVENT that wakes it (the
+  partner dequeues one sudog), so gc's realized wake outcomes are
+  arrival-order outcomes, and each is realized in our envelope by a
+  prompt-wake L1 schedule — the narrowing is path-structural, not
+  observational. [ANALYSIS], not a theorem; the certified {1,2} wake
+  set contains gc's realized point, and membership polices too-narrow
+  per shape.
+- RE-ENVELOPE OBLIGATION + COST: a wake-path L2 draw — moderate
+  (one consumption site added at `resumeThread`, stream shifts for
+  pinned pool streams, enumerator bound work); LOW priority while the
+  coverage argument stands, but it should be re-argued whenever wake
+  machinery changes (it is the kind of argument the fused-boundary
+  discovery shows can silently lose its premise).
+
+### C8. Sync acquisition order (Mutex/RWMutex/WaitGroup/Once contention) — (a) ENVELOPED, via L1 (zero new sites)
+
+- WHERE: spec/DOCS — nothing on acquisition order among contenders (no
+  fairness, no FIFO; gc realizes semaphore-FIFO handoff WITH barging —
+  one legal point). Machine: `applySyncOp` envelope statement
+  Machine.lean:2015–2043 (consumes nothing, ever); wake-readiness is
+  cell-based (`wakeReady` Multi.lean:181–199); which ready contender
+  proceeds is the existing L1 pick (sync design §6).
+- ENVELOPE: every registry-granularity schedule over runnable
+  goroutines — contains gc's handoff member and every barging member.
+  Believed MAXIMAL at registry granularity (acquisition order = run
+  order of acquire steps; L1 admits all run-orders).
+- CONTAINED DIVERGENCE, recorded (sync design §8 R1): at the
+  both-parked RWMutex state gc's successor is deterministically
+  reader-first where the model's cell logic is writer-first; the
+  ACQUISITION-ORDER envelope contains both (certified
+  sync/rwmutex-order/acquisition {10,20}, both gc-witnessed), so this
+  is a realized-point difference inside the envelope, not a hole.
+- EVIDENCE: GC — probe suite p01–p26 (sync design §2); membership
+  certification. DOCS bear directly (the Mutex/RWMutex doc sentences
+  quoted at the arms: `pendingW` reader exclusion, Wait-at-zero).
+
+### C9. Global deadlock: detect-and-classify vs hang — (b) PINNED to gc's runtime detector (spec-silent)
+
+- WHERE: spec — nothing; a deadlocked program simply "blocks forever".
+  gc's runtime realizes a global detector: `fatal error: all goroutines
+  are asleep - deadlock!`, exit 2 (DOCS/GC). Machine: `.deadlock`
+  terminal thrown when no goroutine is runnable (`stepMulti`
+  Multi.lean:923, `execProgLoop` :1432–1433; Value.lean:170–178
+  records the latitude: "the detection itself is the flagship's
+  rendering of the spec's 'blocks forever'").
+- PLAUSIBLE ENVELOPE: {detected-fatal, silent hang} — a conforming
+  implementation without the detector hangs. The observable difference
+  is temporal (a hang has no exit), so within a terminating-run corpus
+  the pin and the envelope coincide observationally; the pin's real
+  content is the fixed message/exit-class and the CLAIM SHAPE
+  (deadlock-freedom via `ProgressExecC` excludes the terminal — that
+  transfer needs only "Go never completes a deadlocked run", which is
+  forced).
+- RE-ENVELOPE: likely PERMANENT-pin territory — record, don't widen
+  (widening to "hang" would only weaken claims for zero fidelity gain);
+  the message/exit pin is R9's class. Cost of the record: zero (this
+  entry).
+
+### C10. Racy programs — refusal by doctrine, and the detector's OWN latitude alignment
+
+- WHERE: MM — racy programs get essentially undefined behavior
+  ("implementations may always react to a data race by reporting the
+  race and terminating the program" — go_mem's escape hatch is
+  exactly a refusal license). Machine: `RaceState`/`raceUpdate`
+  (Race.lean + Multi.lean:1117–1263), terminal `raceDetected`.
+- CLASSIFICATION: not an envelope — a doctrine-decided boundary
+  (register #4): SC interleaving is claimed only inside DRF; outside,
+  fail-closed refusal. The latitude the DETECTOR itself resolves is its
+  HB edge set: targeted at TSan's REALIZED edges (gc's instrumentation),
+  not go_mem's minimal relation — each divergence quoted at its
+  implementation site. Scope ledger, code-verified: U1 (map-range has
+  no per-iteration read — BUG-005 coupling), U2 (len/cap on channels
+  uninstrumented both sides; len on MAPS recorded), U3 CLOSED
+  (BUG-045/046 chan-object accesses), U4 (sync-object internal
+  accesses unmodeled — misuse-only), U5 (release merge-vs-overwrite:
+  ours is memory-model-exact merge, TSan over-reports — TSan-red/
+  ours-green, un-lane-able), O1 (whole-cell composite-read
+  over-approximation, BUG-041). Race.lean:12–15: the detector consumes
+  no choices; refusal is choice-invariant per stream.
+- EVIDENCE: GC (`go run -race` as second oracle; TSan one-red-is-proof);
+  the enumerator's every-path refusal at registry granularity. The
+  registry-point-vs-full-interleaving gap is the NPDRF obligation —
+  C2/C3's territory.
+
+### C11. Tie-breaks that look like latitude but are unreachable/unobservable — (c) FORCED
+
+- `panicMsg?` picks the first panicked goroutine in id order
+  (Multi.lean:1345–1351) — defensive only: the loop aborts at the first
+  panicked config, and one pool step creates at most one, so the
+  multi-panicked tie-break is unreachable in the driver. WHICH
+  goroutine panics first is C1's (and C2/C3's) latitude, not a new
+  site.
+- Goroutine ids = spawn order (pool index, Multi.lean:104–114); heap
+  addresses = `nextAddr` bump (State.lean:162–169). Unobservable
+  in-language at the observation channel (uintptr observations refused;
+  pointer formatting unsupported); they surface only as model-internal
+  identity (`ChanValue.base` equality — forced semantics) and detector
+  keys. The one place allocation identity WOULD be observable —
+  gc's eface-identity `[recovered]` collapse — is fail-closed
+  (R10/BUG-004 item 1).
+- Goroutine EXIT has no HB edge (Race.lean:752–762, go_mem quoted:
+  exit "is not guaranteed to happen before any event in the program")
+  — forced by the memory model.
+
+---
+
+## 2. Sequential evaluation order
+
+### E1. The spec-ordered core — (c) FORCED (machine follows; history recorded)
+
+Spec §Order of evaluation orders function calls, method calls, receive
+operations, and binary logical operations left-to-right; §Assignments
+mandates the two-phase discipline and phase-2 left-to-right stores with
+the earlier-store-observable example; select operands evaluate exactly
+once in source order (§Select step 1); channel buffers are FIFO
+("Channels act as first-in-first-out queues", Value.lean:614–621);
+defers run LIFO. The machine realizes all of these deterministically
+(storeK one-store-per-step Machine.lean:1621–1626, StepFn.lean:610–622;
+select entry Syntax.lean:338–344; send channel-then-value
+Machine.lean:1105–1111). The BUG-022/025/029/030/033/034/035/036/037
+family was the machine being WRONG against these forced points — fixed
+or tracked in BUGS.md, not latitude.
+
+### E2. Call vs. assignment-target operands — (b) PINNED to gc (call-first)
+
+- WHERE: spec §Order of evaluation: "the order of those events compared
+  to the evaluation and indexing of x and the evaluation of y ... is
+  not specified." Machine: the PINNED LATITUDE rule-site block
+  Machine.lean:2587–2626 (spec text verbatim, gc realization probed
+  go1.26.5, version-tracked), frame-exit twin :2750–2767, `callArgsK`
+  docstring :1543–1550, StepFn.lean:166/554/661. History: BUG-052.
+- PIN: the call evaluates first (args, frame); target operands evaluate
+  at frame exit; then stores. gc's realized point. Plausible envelope:
+  both orders (and in principle interleavings of the operand
+  evaluations with the call's effects).
+- EVIDENCE: GC — the S1-audit probe matrix, five oracle-backed corpus
+  pins + `.callValue` discriminators (verified RED at the pre-fix
+  machine). XIMPL/ARCH would bear on whether any implementation
+  realizes operand-first (none known).
+- RE-ENVELOPE OBLIGATION + COST: a two-point (or wider) envelope at the
+  call rules — touches the call/frame-exit machine arms, the wp call-law
+  family (`wp_call_start`, frame-exit family — restated once already
+  for BUG-052; a second restatement is the cost ceiling), stream-bound
+  metadata, and the five timing pins (would become membership rows).
+  MODERATE-HIGH; sequential-only observable (panic/value divergence
+  requires a callee mutating a target operand).
+
+### E3. Inter-target phase-1 operand order — (b) PINNED to OUR point, **known ≠ gc** (open envelope)
+
+- WHERE: spec §Order of evaluation (only calls/receives/binary-logical
+  are ordered — target-vs-target operand order is open). Machine:
+  left-to-right inter-target walk (the tgtOpK spine; the rule-site
+  SCOPE clause Machine.lean:2620–2626 records this axis as OPEN and
+  explicitly NOT covered by E2's pin). Record: BUG-032's S1-delta
+  amendment.
+- THE FACTS (GC-probed, verifier-reproduced): for
+  `aa[5][0], b[*pn] = f6()` gc reports the SECOND target's operand
+  panic and we the FIRST's; answers flip when targets swap; at three
+  panicking targets gc picks the MIDDLE (`[9] with length 3`) — gc's
+  realization is compiler-internal (stable under `-N -l`), hence
+  UNPINNABLE. Both realizations spec-legal; the divergence cannot
+  escape panic selection into side effects (frontend hoists calls out
+  of target operands — probed).
+- PLAUSIBLE ENVELOPE: any order of the targets' operand evaluations —
+  observable ONLY as which panic wins (panic-identity membership).
+- RE-ENVELOPE OBLIGATION + COST: either full-statement linearization
+  with an order choice (deliberately not built — BUG-032 records why)
+  or a panic-identity membership envelope (admit any of the candidate
+  panics — needs status-diverse membership machinery pointed at panic
+  identity). MODERATE; sequential-only; today it is a recorded
+  deterministic divergence with no strict-lane pin possible.
+
+### E4. Targets-vs-RHS unordered panic order — same class as E3 — (b) PINNED to OUR point
+
+- WHERE: BUG-032 round-4 amendment (b): `xs[ys[9]], b = zs[7], 2`
+  realizes the LHS-operand panic where gc realizes the RHS's; both
+  spec-legal. Machine: phase-1 targets-then-RHS order (tgtOpK → rhsK,
+  StepFn.lean:459–500).
+- Same plausible envelope, obligation, and cost as E3 (one mechanism
+  fixes both axes); recorded as OPEN envelope per BUG-032's precedent.
+
+### E5. Early store across the phase boundary — (b) PINNED to the spec-literal point; gc elsewhere
+
+- WHERE: BUG-032 final-check amendment: `x, a[i].f = 1, 7/z` (z = 0,
+  recovered) — gc lands the x = 1 store BEFORE the phase-1 division
+  panic; we follow the spec's literal two-phase order (x stays 0). Both
+  spec-legal (§Order of evaluation orders only calls/receives/
+  binary-logical). Distinct mechanism from E3/E4 — a fix holds the
+  store back rather than linearizing panics; natural home the BUG-025
+  retirement slice; a future pin must use the membership treatment.
+- Note the asymmetry: here the machine's point is the SPEC-shaped one
+  and gc's is the exotic one — the doctrine's "pinned to gc" framing
+  does not describe this axis (see §9, flag 3).
+
+### E6. `len`/`cap` hoist discriminating shapes — REFUSED (recorded)
+
+- WHERE: BUG-032's fix — a potentially-panicking `len`/`cap` operand in
+  a receive-bearing function fails closed (`panicFreeOperand`;
+  channels/recv-order/dead-recv-len-operand is a permanent frontend
+  refusal). Not latitude: a coverage refusal that EXISTS because
+  realizing gc's point inside the E3/E4 latitude needs the
+  linearization not built. Reach calibrated at F23 (idiomatic
+  `len(p.xs)` in any receive-bearing function; method refusals kill
+  whole-package export — the goose-parity cliff note).
+
+### E7. Hidden-dependency initialization order — (b) PINNED to go/types' conforming order, **known ≠ gc**
+
+- WHERE: spec §Package initialization: "If other, hidden, data
+  dependencies exist between variables, the initialization order
+  between those variables is unspecified." Machine/frontend: go/types
+  `InitOrder` drives `$pkginit` synthesis (init design §1; the
+  dependency analysis itself is spec-pinned and NOT latitude).
+- THE FACTS (GC-probed): gc's initorder is a separate, coarser analysis
+  and diverges on exactly the spec's own example shape —
+  `init/hidden-dep-order`: go/types [hiddenX, hiddenB, hiddenA]
+  (4242) vs gc hiddenX-after-a/b (4624242). Both conform. This is the
+  doctrine's TOO-NARROW, soundness-relevant direction: theorems over
+  our order do NOT transfer to gc executions of hidden-dep programs.
+  The deferral is UNGUARDED — no frontend check detects the shape; the
+  case is a permanent differential red with the realized order
+  mechanically pinned (check-golden deviation-observation pin), so
+  drift to a third order is caught.
+- PLAUSIBLE ENVELOPE: all conforming initialization orders (the
+  lexical-reference partial order's linear extensions, with
+  hidden-dep-affected variables freed).
+- RE-ENVELOPE OBLIGATION + COST: a named Choices site over conforming
+  orders + envelope discussion (deliberately deferred, recorded in the
+  design note); OR the cheap interim: a frontend DETECTOR for the
+  hidden-dep shape (method-through-interface-conversion reachability)
+  that fails closed, converting the unguarded silent-divergence into a
+  visible refusal. Detector: LOW cost. Full envelope: MODERATE
+  ($pkginit becomes schedule-bearing; strict-lane init cases must stay
+  on the deterministic default point). North-star exposure recorded:
+  etcd-io/raft has package-level vars — must be checked at the target
+  lane.
+
+### E8. Multi-file declaration order — (b-n) NARROWED to the go command's realization
+
+- WHERE: spec: "the order in which the files are presented to the
+  compiler"; build systems are "encouraged" to sort by file name.
+  Frontend: files sorted by name (tools/nativefrontend, sort.Strings) —
+  matches the go command exactly (init design §1.2; pinned by
+  init/multi-file-order).
+- A conforming NON-go-command build system could present files in any
+  order — outside the envelope; revisit only if a target ships one.
+  PERMANENT-record candidate; cost of widening near-zero benefit.
+
+### E9. Map iteration order — (a) ENVELOPED (all permutations of the snapshot) — scoped, with one FORCED-point violation
+
+- WHERE: spec §For statements: "The iteration order over maps is not
+  specified and is not guaranteed to be the same from one iteration to
+  the next." Machine: snapshot at range entry
+  (`mapRangeSnapshotEntries` Machine.lean:873–921), pick-any-remaining
+  per iteration (StepFn.lean:595–609; relation rules
+  Machine.lean:2683–2702).
+- ENVELOPE: all permutations of the entry snapshot. MAXIMAL for the
+  order axis — but the envelope statement is SCOPED to mutation-free
+  iteration (arc-final F14), because the snapshot design violates a
+  FORCED point: the spec MANDATES "If a map entry that has not yet been
+  reached is removed during iteration, the corresponding iteration
+  value will not be produced" — we still produce it, and stale values
+  (BUG-005, open; three red pins + the U1 race-invisibility symptom).
+  `observed ∉ modeled` in live-mutation shapes: definitional bug, not
+  latitude. Entries CREATED during iteration: spec latitude ("may or
+  may not be produced") which the snapshot resolves to the singleton
+  "never produced" — a (b-n) narrowing INSIDE the envelope, currently
+  recorded only via BUG-005's dismissal sentence (see §9, flag 4).
+- EVIDENCE: GC — per-run re-randomization makes sampling dense (the
+  doctrine's best-sampled envelope); the live-mutation divergences are
+  probe-pinned red.
+- RE-ENVELOPE (= the BUG-005 fix): live iteration — `Cont.mapIterK`
+  carries the map's base loc, pick-next skips absent keys, re-reads
+  values, adds the per-iteration footprint arm (U1), replays the
+  stream-obliviousness analysis and `step_complete_any_wf`. Cost:
+  MODERATE machine surgery, scheduled as its own slice (recorded in
+  BUG-005); also the created-entries narrowing should get its explicit
+  statement at the site in the same movement.
+
+### E10. Which `==`-equal map key is retained on overwrite — (b) PINNED (always-replace)
+
+- WHERE: spec — silent (only requires `==` on key types); gc realizes
+  per-type `needkeyupdate` (floats design §4, arc-final F15). Machine:
+  `entries.set! i (key, value)` — the NEW key replaces the stored key
+  (Machine.lean:239–243 via `mapEntryIndex?` Ops.lean:1638–1647).
+- Observable exposure: exactly the key kinds where `==`-equal keys are
+  distinguishable when the stored key is later observed — the recorded
+  list is float/complex/string/interface/array/struct keys (floats
+  design §4; the in-language observable is the float case's `1/k` sign
+  probe — retention is unobservable for every kind where `==` implies
+  bit-equality). Matches gc where pinned (`floats/signed-zero-map-key`
+  green, version-tracks gc's choice); a conforming
+  original-key-retaining implementation is outside — recorded transfer
+  caveat at the site.
+- RE-ENVELOPE: a two-point retention choice — LOW cost (one arm), LOW
+  value until a cross-implementation lane exists.
+
+### E11. Runtime check ORDER inside one operation — (b) PINNED to gc
+
+- WHERE: spec — panics are mandated, their ORDER within one operation
+  is not spec text. Machine: slice-expression bounds checked HIGH then
+  LOW (`checkSliceBounds`/`checkSliceBounds3` Ops.lean:173–218,
+  "the runtime's exact messages and check ORDER (oracle-pinned)");
+  map-key hashability walk stops at the first offending component in
+  gc's own hashing order (Ops.lean:1564–1611); interface-assert panic
+  names the first unmet method in name-sorted order
+  (Ops.lean:716–747).
+- Observable as which panic message appears. Plausible envelope: any
+  check order. PERMANENT-pin candidate alongside R9 (message identity
+  is already gc-pinned; an order envelope without a message envelope
+  buys nothing).
+
+---
+
+## 3. Representation, runtime, and library realization
+
+### R1. `int`/`uint` width — (b) PINNED to 64 bits
+
+- WHERE: spec §Numeric types: `uint`/`int` are "implementation-specific
+  sizes" — "either 32 or 64 bits". Machine: `IntKind.bits?`
+  Value.lean:33–34 (`.int => some 64`, `.uint => some 64`);
+  `IntKind.normalize` wraps at the fixed width. Recorded only in
+  docs/semantics.md:199 as an "executable testing policy" with the
+  stated intent that width become an explicit parameter — the record
+  PREDATES the envelope doctrine and there is no site-level caveat in
+  Value.lean (§9, flag 2).
+- Also entangled: which programs COMPILE (constant overflow at int
+  boundaries — the negative lane inherits the pin via go/types on the
+  host), and `uintptr` (frontend maps to uint64; observations of it
+  refused).
+- PLAUSIBLE ENVELOPE: {32, 64} as a machine parameter.
+- EVIDENCE: GC (amd64 = 64-bit only). XIMPL is the evidence class that
+  BEARS here more than anywhere sequential: a 32-bit gc / tinygo lane
+  would exercise the other point.
+- RE-ENVELOPE OBLIGATION + COST: parameterize width (IntKind.bits?,
+  normalize, conversions, the frontend's go/types Sizes config, the
+  negative lane's acceptance) — PERVASIVE but mechanical; blocked in
+  practice on having any 32-bit oracle to differentiate against.
+  MODERATE-HIGH cost, LOW urgency until a cross-implementation lane
+  exists.
+
+### R2. Append spill capacity — (a) ENVELOPED (a declared pragmatic subset)
+
+- WHERE: spec §Appending: append "allocates a new, sufficiently large
+  underlying array" — ANY capacity ≥ newLen conforms (unbounded
+  latitude). Machine: envelope [newLen, max(32, 2·growth)]
+  (`appendSpillUpper` Ops.lean:1829–1854 with the containment argument;
+  consumption Machine.lean:854–869, empty stream = the gc
+  growth-formula point).
+- NOT maximal, deliberately: the plausible upper bound is unbounded;
+  the envelope is a PRAGMATIC SUBSET believed ⊇ gc across probed
+  regimes (BUG-021's widening: stack buffer, size-class rounding,
+  below-formula), version-tracked by the three escaping-regime
+  membership pins + the formula point. "Widen deliberately if a
+  toolchain leaves the window; never narrow to one compiler mode."
+- EVIDENCE: GC probe sweep over element sizes (go1.26.5); the -race
+  allocator lands on other members (cap-zero → 1) — live validation.
+  XIMPL (gccgo/tinygo allocators) would stress the upper end.
+
+### R3. `[]byte(s)` conversion capacity — (b-n) PINNED singleton, **gc known outside** (escaping path)
+
+- WHERE: spec §Conversions: "The capacity of the resulting slice is
+  implementation-specific and may be larger than the slice length."
+  Machine: SINGLETON cap = len, no consumption, transfer caveat at the
+  arm (Machine.lean:313–333): gc's ESCAPING path realizes
+  roundupsize(len) — outside the singleton.
+- This is the same class as pre-widening BUG-021 (a real behavior
+  outside the model), currently guarded only by the caveat: a theorem
+  asserting cap = len does not transfer where the conversion escapes,
+  and a corpus case observing cap of an escaping conversion would go
+  red.
+- RE-ENVELOPE OBLIGATION + COST: the append-spill mold — envelope
+  [len, roundupsize-style upper], one arm + width metadata + a
+  membership pin for the escaping regime. LOW cost; ranked high on
+  value-per-cost (§7). String→[]rune stays REFUSED (BUG-020), so only
+  the byte arm needs it today.
+
+### R4. Float fusion + extra intermediate precision — (b-n) NARROWED to per-op rounding (platform-scoped singleton)
+
+- WHERE: spec §Floating-point operators (verbatim in floats design §3.1
+  and the FloatBits.lean:31–49 module envelope statement): "An
+  implementation may combine multiple floating-point operations into a
+  single fused operation, possibly across statements..."; plus the
+  float32 extra-precision sentence. Machine: every op rounds to the
+  operand type, no fusion, no extra precision (FloatBits kernel).
+- Matches the oracle platform exactly (gc linux/amd64 GOAMD64=v1 emits
+  no FMA); gc/arm64 and amd64-v3 executions of fusable shapes are
+  OUTSIDE the envelope — stated transfer scope. Tripwire:
+  floats/fma-shape (goes red if the oracle platform ever fuses).
+  The recorded reason a Choices site is wrong-shaped here: the choice
+  space is whole-DAG rewritings, not a per-op coin.
+- RE-ENVELOPE: per-site fused/unfused choice at frontend-identified
+  fusable shapes — HIGH cost, zero corpus benefit today; revisit only
+  when a supported target requires it (the record already binds this).
+
+### R5. Float division by zero: panic or not — (b-n) NARROWED to no-panic
+
+- WHERE: spec: "whether a run-time panic occurs is
+  implementation-specific." Machine: IEEE ±Inf/NaN, never a panic; the
+  float arm dispatches before the integer zero check
+  (Machine.lean:270–275).
+- gc never panics (pinned by floats/division-specials); no known
+  conforming-but-panicking implementation. XIMPL/ARCH would close the
+  question; PERMANENT-record candidate otherwise.
+
+### R6. Out-of-range float→int conversion — REFUSED (declared latitude resolved by failing closed)
+
+- WHERE: spec: "the conversion succeeds but the result value is
+  implementation-dependent." Machine: explicit
+  `.unsupported "float-to-int conversion out of range/NaN
+  (implementation-dependent in Go)"` (Ops.lean:1050–1060). Really does
+  diverge across gc targets (amd64 0x8000...0; arm64 saturates).
+- The honest resolution for an unoracleable point; re-envelope would be
+  a value envelope {amd64 point, saturation, ...} — only worth it if a
+  target program does this deliberately.
+
+### R7. NaN bit patterns produced by the machine — pinned canonical quiet NaN; unobservable in-language
+
+- FloatBits.lean:68–72. Go the language cannot observe NaN payloads
+  (math.Float64bits is out of scope); becomes latitude-relevant only if
+  math lands. Also: float min/max builtins REFUSED (Ops.lean:85–90 —
+  spec-pinned semantics, zero coverage, refusal over unvalidated pin).
+
+### R8. WaitGroup counter representation — (b) PINNED to gc's bit layout
+
+- WHERE: DOCS — sync docs say only "panics if the counter goes
+  negative"; nothing about width/wrap. gc keeps the counter in the high
+  32 bits of a uint64 and WRAPS before the negative test
+  (waitgroup.go:104/109). Machine: counter' = ((counter + delta + 2^31)
+  emod 2^32) − 2^31 at the `wgAdd` arm (BUG-055; divergent in BOTH
+  directions pre-fix).
+- Plausible envelope: any counter semantics consistent with the doc
+  sentence (unbounded, 32-bit wrap, 64-bit...). PERMANENT-pin
+  candidate: the doc text underdetermines behavior only at misuse-scale
+  deltas (≥ 2^31); XIMPL would bear. Related recorded narrowing: the
+  waiter-side reuse panic (sync design §8) — gc's Add-side window is
+  clean (probed 10/10), our resume-time model matches post-fix.
+
+### R9. Run-time panic VALUES and message texts — (b) PINNED to gc's realized strings
+
+- WHERE: spec §Run-time panics: "The exact error values that represent
+  distinct run-time error conditions are unspecified." Machine:
+  gc-exact texts everywhere — index/slice-bounds messages
+  (Ops.lean:92–218), map-key hash panic's two phrasings
+  (Ops.lean:1613–1636), make chan/map/slice negative-size strings
+  (Machine.lean:685–722, probe p21), channel op panics
+  ("send on closed channel" etc., Machine.lean:1966–2012, probes
+  p01–p03), nil-payload `*runtime.PanicNilError` (Machine.lean:1323 —
+  oracle aligned with GODEBUG=panicnil=0), `$runtime.Error` box for
+  runtime panics vs plain-string box for sync package panics (the
+  BUG-054 class distinction — observable via recover().(string)).
+- Plausible envelope: any values satisfying "runtime.Error implementing
+  error". The pin is what makes the equality lane possible;
+  PERMANENT-pin candidate with the caveat that claims about panic
+  MESSAGE content never transfer beyond gc. XIMPL (gccgo texts differ)
+  is the evidence class that would size the real envelope if ever
+  needed.
+
+### R10. Abort-line rendering (unrecovered panic output) — (b) PINNED to gc's `preprintpanics` behavior, fail-closed at its unmodelable edges
+
+- WHERE: not spec at all — pure gc runtime realization (the spec does
+  not define abort output). Machine: `renderPanicHead`/
+  `renderPanicPayload` (Machine.lean:1373–1443) render gc's exact
+  shapes and FAIL CLOSED where the machine cannot decide gc's answer:
+  eface identity for `[recovered]` collapse (needs allocation identity
+  — unmodeled), Error()/String() rewrite (needs a method call at abort
+  time), multi-line/non-ASCII payloads (BUG-004 items 1/3/4, open with
+  red pins).
+- The fail-closed edges are the honest form; the re-envelope obligation
+  is really BUG-004's fix list (allocation identity being the deep
+  one — see C11).
+
+### R11. Sync misuse fatal class — (b) PINNED to gc's throw realization
+
+- WHERE: DOCS — "It is a run-time error if m is not locked on entry to
+  Unlock" underdetermines the CLASS; gc realizes an unrecoverable
+  runtime throw (`fatal error: sync: unlock of unlocked mutex`, exit 2,
+  recover does NOT catch — probes p01–p03). Machine: `GoError.fatal`
+  with gc's fixed strings; recorded narrowing: the fatal observation
+  carries the fatal alone, dropping gc's pending-panic line when raised
+  during unwinding (sync design §8). go-of-nil-func fatal remains
+  REFUSED (not migrated to the class; permanent red pin
+  spawn-edge/nil-func-fatal).
+- Plausible envelope: {recoverable panic, unrecoverable fatal} — a
+  historical gc change class (ARCH would bear: pre-1.8 realizations
+  differed). PERMANENT-pin candidate at gc's current point,
+  version-tracked by the fatal cases.
+
+### R12. Exit codes and terminal classification — (b) PINNED at the harness boundary
+
+Exit 2 for panic/deadlock/fatal, exit 66 for -race — gc realizations
+the differential HARNESS keys on (`expected_status` dispatch,
+scripts/diff-coverage); the spec says nothing about exit codes. Rides
+with R9/R11; no machine content beyond the terminal classes themselves.
+
+### R13. Sort stability in `sortSlice` — declared-unobservable narrowing
+
+Syntax.lean:248–253 / Ops.lean:1931–1947: insertion sort, "exact for
+integers, where Go's instability is unobservable" (sort.Slice is
+documented NOT stable — DOCS latitude — but equal ints are
+indistinguishable). Becomes real latitude the day non-integer sorts
+land; the declared-unobservable argument is scoped to int kinds at the
+site.
+
+### R14. Constant arithmetic precision — (d) UNKNOWN (delegated)
+
+Spec §Constants gives minimum implementation requirements (at least 256
+bits of integer precision etc.) and allows more; "Implementations may
+round if unable to represent". The frontend delegates all constant
+evaluation to go/types (exact where the oracle's own frontend is
+exact), so machine and oracle share one realization — but whether any
+acceptance-relevant latitude survives at the extremes (a conforming
+implementation REJECTING constants go/types accepts, or rounding where
+it doesn't) has not been analyzed. Negative-lane relevance only; no
+runtime observable. OPEN QUESTION as stated.
+
+---
+
+## 4. Forced points — the compact list (class (c))
+
+For completeness, the main spec-mandated points the machine implements
+deterministically and correctly-by-obligation (any divergence here is a
+plain bug, several were — see BUGS.md): E1's ordered-evaluation core;
+channel buffer FIFO; select default-when-none-ready (consuming nothing
+— Machine.lean:2343–2355); nil-channel never-ready (Multi.lean:161);
+receive-communication-before-target-evaluation (§Assignments via
+BUG-022/029); defers LIFO; per-iteration loop variables (Go 1.22,
+BUG-003 fixed); range-over-slice/array/string/integer order; string
+semantics as bytes with U+FFFD decoding; IEEE-754 arithmetic per op
+(within R4's narrowing); two's-complement wrap at fixed widths; map
+NaN keys inserting distinct entries (falls out of `valueEq` — floats
+design §4); function values comparable only to nil; interface
+comparison panics on uncomparable dynamic types; init dependency order
+for hidden-dep-free programs (the spec's stepwise rule, via go/types);
+`init()` functions in source order; main's return not waiting for other
+goroutines (the exit itself — C4 is the latitude around it); goroutine
+exit having no HB edge.
+
+## 5. Refusals standing in for latitude (inventory of fail-closed resolutions)
+
+R6 (float→int out-of-range), E6 (len/cap hoist shapes), R7's min/max,
+string→[]rune capacity (BUG-020 — refused before its cap latitude is
+even reachable), go-of-nil-func fatal (R11), select-with-select
+rendezvous (Multi.lean:92–97), racy programs (C10 — by doctrine),
+uintptr observations, `go` during `$pkginit` (StepFn.lean:501–521).
+Each is honest (visible red, never a wrong answer); none is a fidelity
+achievement.
+
+## 6. Unknowns — suspected latitude, not yet analyzed (class (d))
+
+- **U-1 Mid-program fused-boundary members** (C3): the
+  wake-then-private-abort exclusion class is characterized but UNPROBED
+  — no gc datum yet exhibits an excluded member mid-program. Cheap
+  directed probe owed.
+- **U-2 L4 ⊆ L1-reachability**: the envelope-width review's [ANALYSIS]
+  that every width>1 L4 member is also realizable by arrival timing has
+  no theorem and no counterexample search beyond the probed shapes.
+- **U-3 Constant precision extremes** (R14).
+- **U-4 Overlapping copy/append aliasing coverage**: `copy` with
+  overlapping src/dst is spec-defined ("as if" intermediate) — FORCED —
+  but the differential coverage validating our multi-cell one-step
+  arms against it is recorded as owed (TODO; granularity-ledger R4
+  re-audit covers the concurrency side of the same arms).
+- **U-5 Wide-op granularity under concurrency**: `appendSlice` spill,
+  `copySlice`, `clearSlice` are single apply steps (Machine.lean:66–69,
+  756–819) — coarse-but-recorded; fine sequentially; the
+  granularity-ledger re-audit before any concurrency claim mentions
+  them is still owed (BUG-002's R4 residue). Sub-registry granularity
+  generally is C2/C3 + NPDRF territory, but these named arms are the
+  known coarse spots INSIDE segments.
+- **U-6 Future atomics**: go_mem pins sync/atomic to SC ("behave as
+  the sequentially consistent atomics of C++") — forced when modeled;
+  the latitude to analyze at that arc is the surrounding-plain-access
+  envelope, not the atomics themselves.
+- **U-7 gc version drift as an evidence problem**: every pinned
+  realized point (R2's formula center, R3, E2, E10, R8, R9, R11) is
+  version-tracked at go1.26.x per the CI pin; the inventory assumes the
+  version-tracking pins actually fire on toolchain movement — believed
+  true (they are membership/eval pins), not re-audited here.
+
+## 7. Priority ranking for re-envelope
+
+Criteria per the doctrine: (i) oracle-visibility risk, (ii)
+concurrency-relevance (the charter: concurrency matters most),
+(iii) cost. The known first item is fixed by the doctrine.
+
+1. **C2+C3 — forced continuation + fused effect boundary** (the
+   doctrine's designated first item). Oracle-visible TODAY (the spinner:
+   gc exit-0 100/100 vs machine fuelOut — definitional bug), maximally
+   concurrency-relevant (it IS the scheduling envelope's missing
+   dimension; register #1/#5), highest cost — which is why it is
+   first: everything else in the concurrency queue (NPDRF's final
+   form, FairStream, enumerator work) reshapes around the boundary
+   set, so this pin's removal should precede them.
+2. **E9/BUG-005 — live map iteration.** Oracle-red today (three
+   differential pins + the race-invisibility pin), violates a FORCED
+   spec point (worse than latitude), couples into the detector (U1) —
+   concurrency-relevant through the race lane. Cost: moderate, already
+   scoped in BUG-005 (its own slice).
+3. **E7 — hidden-dep init order.** Oracle-red today (permanent
+   deviation record), the only pin KNOWN to sit beside the oracle's
+   realization on the SEQUENTIAL side, soundness-direction
+   (no-transfer), and UNGUARDED — the interim frontend detector
+   (fail closed on the hidden-dep shape) is LOW cost and converts a
+   silent class into a visible one; the full envelope can wait.
+4. **R3 — `[]byte(s)` capacity singleton.** gc KNOWN outside on the
+   escaping path (the record's own caveat) — the same too-narrow class
+   BUG-021 was, unwidened; cheap (append-spill mold, one arm + one
+   membership pin). Best value-per-cost in the queue.
+5. **E3/E4/E5 — the unordered-panic-selection axes.** Deterministic
+   divergences from gc recorded and probed (unpinnable
+   compiler-internal realization); needs the membership/panic-identity
+   envelope treatment or linearization. Sequential-only,
+   moderate cost — above R1/R4-class pins because it is
+   oracle-visible in panic-selection shapes today.
+
+Below the line (recorded, deliberately not queued): R1 int width
+(waits on any 32-bit oracle lane — XIMPL evidence class), C7 select
+wake-path narrowing (coverage argument stands; re-argue on wake-path
+changes), R2's upper end and R4/R5 float narrowings (tripwired /
+platform-scoped), E10/E11/R8/R9/R10/R11 permanent-pin candidates
+(record-and-caveat, widening buys no verification value while the
+oracle is gc), C9 deadlock-as-terminal (observationally coincident),
+E8 multi-file order (no non-go-command target exists).
+
+## 8. THE REGISTER EXTENSION — entries beyond the doctrine's seeded five
+
+In the register's format (what is assumed, why, what removing it
+costs). Numbering continues the doctrine draft's 1–5.
+
+6. **`int`/`uint`/`uintptr` are 64-bit.** The spec makes the width
+   implementation-specific (32 or 64); the machine, frontend, and
+   negative lane all realize the oracle host's 64. Why: one concrete
+   width keeps normalization/conversions executable and matches the
+   only oracle we have. Removing: parameterize width across
+   Value.lean/conversions/frontend Sizes/negative-lane acceptance —
+   pervasive but mechanical, and worthless until a 32-bit oracle lane
+   (cross-implementation evidence) exists. (semantics.md:199 records
+   the policy; no site-level caveat yet — owed.)
+7. **Library-doc-silent behaviors are modeled at gc's realized point.**
+   WaitGroup's int32 wrap-before-negative-test (BUG-055), the sync
+   misuse FATAL class and its exact strings (probes p01–p03), the
+   dropped pending-panic line on fatals-during-unwinding, map-key
+   retention on overwrite (`needkeyupdate`), deadlock detection as a
+   terminal with gc's message. Why: the docs underdetermine these and
+   gc is the oracle. Removing (per point): small envelopes/membership
+   rows; value appears only with cross-implementation evidence — until
+   then these are recorded version-tracked pins, not fidelity claims.
+8. **Run-time error VALUES, message texts, check orders, and abort
+   rendering are gc's.** The spec explicitly leaves the exact error
+   values unspecified; the equality lane exists BECAUSE we pin them.
+   Abort rendering additionally fails closed at gc's
+   allocation-identity and method-call edges (BUG-004) — allocation
+   identity itself is unmodeled. Removing: message-identity envelopes
+   would dissolve the strict lane's decisive signal for near-zero
+   verification value; the honest cost is the standing caveat that no
+   message-content claim transfers beyond gc.
+9. **The evidence base is one PLATFORM, not just one implementation.**
+   Seeded #3 names gc-at-a-pinned-version; the sharper truth is
+   linux/amd64 at default GOAMD64 — the float no-fusion singleton and
+   the float→int refusal are scoped to it, and gc/arm64 executions of
+   fusable shapes are already outside the float envelope (tripwire:
+   floats/fma-shape). Removing: platform lanes (arm64 runner) before
+   any claim touches fusable float code.
+10. **`[]byte(s)` capacity = len although gc's escaping path is KNOWN
+    outside.** The one recorded singleton whose escape is already
+    probed (roundupsize) rather than merely possible. Why: shipped as a
+    singleton before the append-spill widening precedent existed.
+    Removing: cheap (the append mold) — queued at priority 4.
+11. **Map iteration is snapshot-based.** Violates the spec-MANDATED
+    delete-visibility (BUG-005 — a definitional bug carried openly, red
+    pins standing), resolves the created-entry MAY-latitude to "never",
+    and is invisible to the race detector per-iteration (U1). Removing:
+    the live-iteration surgery, its own slice, with the obliviousness
+    and wf analyses replayed.
+12. **A woken select head-commits; only entry-time selects draw L2.**
+    A deliberate wake-path narrowing carried on the recorded
+    gc-commit-at-wake argument (each gc wake outcome realized by a
+    prompt-wake L1 schedule) — an [ANALYSIS], not a theorem. Removing:
+    a wake-path L2 draw (stream shifts, enumerator bounds). Re-argue
+    whenever wake machinery changes.
+13. **The race-refusal boundary is TSan's realized edge set, not
+    go_mem's minimal relation.** Deviations are quoted at their
+    implementation sites and scoped by the U-ledger (U1–U2, U4–U5, plus
+    the O1 footprint over-approximation); U5 is deliberately
+    memory-model-exact where TSan over-reports. Why: keeps every
+    refusal justifiable by the `-race` oracle. Removing: nothing to
+    remove — this is the scope statement the racy lane's claims carry;
+    the NPDRF obligation (registry-point path set) is its structural
+    half, owned by register #5.
+
+**Correction owed to the draft's seeded #2** (flag, not a new entry):
+"Sequential evaluation-order latitude is pinned ... to gc's
+realization" is accurate only for the call-vs-operand axis (BUG-052).
+The inter-target axis is pinned to OUR left-to-right point with gc
+KNOWN elsewhere (compiler-internal, unpinnable), and the early-store
+axis to the spec-literal point with gc elsewhere — both recorded as
+OPEN envelope in BUG-032. Hidden-dep order (E7) is likewise pinned to
+go/types' point with gc KNOWN elsewhere. The register entry should say
+"pinned, each to a recorded conforming point — gc's where pinnable,
+ours where gc's is compiler-internal — with the known ≠ gc cases
+carried as permanent deviation records."
+
+## 9. Records-vs-code flags found by the sweep
+
+1. **Race.lean:588–590 (ChanClocks docstring) is stale**: it still
+   says the close-woken SENDER's missing acquire edge is "TSan-aligned,
+   the fail-closed direction" — the BUG-045 correction (gc's
+   `closechan` DOES raceacquireg parked senders; the deviation is ours-
+   STRONGER, and moot on refused programs via the chan-object rule) is
+   recorded at Multi.lean:1017–1037 and in the nondeterminism doctrine,
+   but this in-file parenthetical predates it. Doc-only fix owed at the
+   next Race.lean-touching slice (not made in this docs-only lane —
+   the file is semantic-core-owned).
+2. **The int-width pin has no site-level record** (R1): the policy
+   lives in semantics.md prose only; Value.lean:33 carries no
+   caveat/envelope statement, although the singleton-narrowing rule
+   (nondeterminism doctrine F8/F15) would require one if shipped today.
+3. **Doctrine draft seeded #2's "to gc's realization"** — see §8's
+   correction paragraph.
+4. **The created-entries map narrowing is recorded only inside
+   BUG-005's dismissal sentence** ("may or may not be produced, so the
+   snapshot's not-producing them is fine") — fine as a soundness note,
+   but it is a singleton narrowing per F8/F15 and should get its
+   explicit statement at the site when the BUG-005 surgery lands.
+5. **Census agreement (positive finding)**: the doctrine's canonical
+   7-site list, the module docstrings, and the executable consume sites
+   agree exactly; the map-iteration site is the only one that consumes
+   even at width 1 (StepFn.lean:599 — the doctrine's width>1 phrasing
+   describes the pool sites and append's always-consume is width-formed;
+   no behavioral consequence, but stream authors should know the
+   alignment rule differs per site).
+
+## 10. Counts
+
+- (a) ENVELOPED: 7 sites / 6 entries (C1, C4, C5, C6, C8, E9, R2 —
+  C8 rides C1's site; E9's order axis).
+- (b) PINNED: 14 entries — structural: C2, C3; sequential order: E2,
+  E3 (known ≠ gc), E4, E5, E7 (known ≠ gc), E10, E11; representation/
+  runtime: R1, R8, R9, R10, R11 (+R12 harness-level).
+- (b-n) NARROWED with recorded caveat: 6 — C7, E8, R3 (known outside),
+  R4, R5, R13 (+ E9's created-entries sub-point).
+- (c) FORCED: the §4 list (machine follows; divergences are plain
+  bugs — one open: BUG-005's mandated point).
+- (d) UNKNOWN: 7 (U-1 … U-7).
+- REFUSED standing in for latitude: 9 (§5).
+- Known-≠-oracle deterministic points (the honesty-critical subset of
+  (b)): E3, E5, E7, R3(escaping path) — plus C2's spinner as the
+  oracle-visible structural instance.
