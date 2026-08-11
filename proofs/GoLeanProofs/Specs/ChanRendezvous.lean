@@ -22,11 +22,19 @@ surrendered to an Iris invariant at the head of the WP walk, which is
 why the postcondition covers only the harness and handle cells (the
 triple's `Q` side is intuitionistic).
 
-**What the triple does and does not say** (stated per the note §4):
-every `.normal` completion, from ANY admissible heap containing the
-three `P`-cells, leaves the harness and handle cells intact — through
-a genuine cross-goroutine send/recv whose park/pair/release positions
-are walked by the channel laws. It says NOTHING about the value 42
+**What the triple does and does not say** (stated per the note §4;
+SCOPED at the S1 audit fix round): every `.normal` completion, from
+ANY admissible heap containing the three `P`-cells, leaves the
+harness and handle cells intact. The triple ALONE is run-conditioned
+and therefore compatible with a program that never communicates
+(`deadlockRecvTripleC` in `Specs/ChanVacuityWarning.lean` is the
+standing demonstration) — what distinguishes THIS bundle is the
+COMPLETION PIN below: every schedule reaches main's `.normal`, and
+for this program a `.normal` completion requires the real rendezvous
+(the machine's only routes past main's park are the pairing with the
+worker's send or the corresponding wake). The WALK — not the triple's
+statement — is what exercises the park/pair/release law positions.
+The bundle says NOTHING about the value 42
 (the protocol layer, slice 2 — the fork/join GOLDEN certificates
 carry seeded 42-verdicts beside this) and nothing about ∀-heap
 deadlock-freedom (`ProgressExecC`, the pool-reachability lane,

@@ -199,7 +199,11 @@ theorem wpC_spawned_strip {k : Cont} :
 whose `spawnStep` is STATE-PRESERVING under the pins (the no-fresh-cell
 class: a callee with no parameters, results, or declarations — the
 witness's shape; the allocating class needs the gen_heap-update
-variant, which lands with its first consumer), the parent proceeds to
+variant, which lands with its first consumer — SHIPPED 2026-08-11 on
+the D-CARRIER as `wpD_fork_alloc₁` (ChanD.lean, channel-logic S1)
+with the rendezvous exemplar as consumer; the C-carrier sibling
+remains unbuilt, this record back-annotated at the S1 audit fix
+round), the parent proceeds to
 its `.spawned` marker and the child runs under the trivial `forkPost`:
 
     ▷ WP child {{ True }} ∗ ▷ WP (.spawned k) {{ Φ }} ⊢ WP c {{ Φ }}

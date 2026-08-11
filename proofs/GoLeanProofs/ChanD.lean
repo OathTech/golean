@@ -763,8 +763,12 @@ theorem wpD_eval_var {id : String} {a : Addr} {cell : HeapCell}
 /-- **The ALLOCATING fork on the D-carrier** — `wpD_fork`'s sibling for
 the spawn class whose `spawnStep` allocates ONE cell (a one-parameter
 callee: `bindParams` allocates the param cell; no results, no decls).
-This is the gen_heap-update fork variant LangC recorded as owed with
-its first consumer — the channel rendezvous exemplar is that consumer.
+This is the gen_heap-update fork variant, shipped on the D-CARRIER
+(S1 audit fix round scoping): LangC's `wpC_fork` docstring recorded
+the debt on the `PoolCfg` carrier, and the C-carrier allocating
+variant remains unbuilt — this law discharges the CLASS on the
+carrier where the arc's work continues (the LangC record is
+back-annotated); the channel rendezvous exemplar is the consumer.
 The child configuration is a function of the machine-chosen address
 (`∀ pa` discipline), and the child's WP receives the fresh param
 cell. -/
@@ -1084,10 +1088,18 @@ theorem wpD_recv_nil_rendezvous_inv {elem : Ty} {env : LocalEnv} {k : Cont}
 
 /-- **The PARKED SENDER on a rendezvous channel.** Wake is refuted by
 the invariant's cell shape (no close, no room at cap 0); what remains
-is `pairRelease` — either the genuine release to `.next k` (the
-partner completed the handoff; the ∃-pairing carried the delivery) or
-the SELF-step (a pairing elsewhere in the ∃-pool — the phantom spin,
-note §1a), absorbed by Löb induction. State-preserving throughout. -/
+is `pairRelease`, whose derived envelope has exactly two successor
+classes here (`applyPairing_partner_write` proves the enumeration
+over all arms): the SELF-step (`p → p`, absorbed by Löb — note §1a)
+and the release to `.next k`. THE RELEASE CARRIES NO DELIVERY
+INFORMATION (S1 audit fix round): `applyPairing` never reads the
+PARTNER's channel and `pairRelease` ∃-quantifies the imagined pool,
+so the release fires equally for a real handoff and for a wholly
+PHANTOM pairing on a different channel with no partner at all
+(`crossChannelSendRelease`, the tracked witness). Sound — the
+successor set is complete either way — but "reached `.next k`" must
+never be read as "the value was delivered"; that tie is the slice-2
+protocol ghost's job. State-preserving throughout. -/
 theorem wpD_blocked_send_rendezvous_inv {v' : GoValue} {k : Cont}
     (hN : ↑N ⊆ E)
     (hcv : cell.value = .chanData #[] 0 false) :
@@ -1294,9 +1306,12 @@ theorem wpD_close_owned {a : Addr} {buf : Array GoValue} {cap : Nat}
   · itrivial
 
 /-- **The PARKED zero-target RECEIVER on a rendezvous channel.** Wake
-refuted (empty open cell); genuine release delivers an ∃-value that
-the zero-target form discards (`.next k`); the phantom self-step is
-absorbed by Löb. -/
+refuted (empty open cell); the `pairRelease` successors are the
+SELF-step (Löb-absorbed) and `.next k` — the latter covering both a
+real delivery (value discarded by the zero-target form) and a wholly
+phantom release with no delivery at all (S1 audit fix round; see
+`wpD_blocked_send_rendezvous_inv`'s docstring and
+`crossChannelSendRelease`). -/
 theorem wpD_blocked_recv_nil_rendezvous_inv {elem : Ty} {env : LocalEnv}
     {k : Cont}
     (hN : ↑N ⊆ E)

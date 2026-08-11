@@ -622,16 +622,23 @@ open Lean in
 -- consumer) and the pure inversion kit behind their step case
 -- analyses. THE WITNESS is the rendezvous exemplar: the full WP walk
 -- (wpD_chan_rendezvous_witness) consumes EVERY law in the same
--- commit; chanRendezvousTripleC is the first frame-quantified
--- GoTripleC whose program communicates on a channel across
+-- commit; chanRendezvousTripleC is a frame-quantified
+-- GoTripleC whose PROGRAM communicates on a channel across
 -- goroutines; its non-vacuity discharge is the D1-BOTH pair
 -- chanRendezvousReadoutC + chanRendezvousTerminatesNormallyC (seeded
--- completion pin over the kernel certificate). SCOPE stated in the
+-- completion pin over the kernel certificate — which is ALSO where
+-- the communication evidence lives: the triple alone is
+-- run-conditioned and compatible with a never-communicating program,
+-- see Specs/ChanVacuityWarning.lean; framing scoped at the S1 audit
+-- fix round). SCOPE stated in the
 -- law docstrings: heap preservation, not the delivered value (the
 -- protocol layer is slice 2); the ∀-heap safety half stays P-S4-1.
--- This block anchors every public theorem of both modules —
--- name-existence tripwire: deleting a law or its witness breaks the
--- build here.
+-- This block anchors every public theorem the slice's SECOND commit
+-- added (ChanD.lean's kit/cores/rendezvous laws + ChanRendezvous);
+-- the close-law commit's theorems are anchored in the block below,
+-- and the warning fixture's in its own block — jointly every public
+-- theorem of the four channel-logic modules. Name-existence
+-- tripwire: deleting a law or its witness breaks the build here.
 /-- info: 'GoLean.Iris.resumeRecvDelivery_state' depends on axioms: [propext] -/
 #guard_msgs in #print axioms GoLean.Iris.resumeRecvDelivery_state
 /-- info: 'GoLean.Iris.selectRecvDelivery_state' depends on axioms: [propext] -/

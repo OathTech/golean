@@ -317,9 +317,11 @@ store steps. The exemplar therefore uses the ZERO-TARGET receive
   zero-target `chanRecv`), with the channel PRE-SEEDED in the initial
   heap (handle cell + `chanData #[] 0 false` cell) and reached
   through `env₀` — makeChan deliberately NOT in the exemplar walk
-  (its law is witnessed separately by the sequential-degenerate probe
-  below); this keeps the exemplar's law set exactly the rendezvous
-  four + fork + loads.
+  (the parenthetical that stood here — "its law is witnessed
+  separately by the sequential-degenerate probe below" — went STALE:
+  neither the makeChan law nor `chanOpsProbe` shipped; see P-CL1-6,
+  the honest disposition, and the S1 audit fix round); this keeps the
+  exemplar's law set exactly the rendezvous four + fork + loads.
 - Pre `P` = harness ∗ handle ∗ chanData cells; post `Q` = harness ∗
   handle (the chanData cell is SURRENDERED to the invariant at the
   start of the WP walk and does not return — `GoTripleC`'s Q side is
@@ -344,9 +346,20 @@ pinned shape). `S = (· = the cell)`; every `hclose` is trivial.
    release/pair → frame fall → terminal), under the invariant
    allocated by `inv_alloc` from the pre's chanData cell at the walk's
    head. This walk IS the discharge witness for every law it uses.
-3. `chanRendezvousTripleC : GoTripleC …` via `goTripleC_of_wpD` — the
-   first frame-quantified triple whose program communicates on a
-   channel across goroutines.
+3. `chanRendezvousTripleC : GoTripleC …` via `goTripleC_of_wpD` — a
+   frame-quantified triple whose PROGRAM communicates on a channel
+   across goroutines. SCOPED at the S1 audit fix round: the triple
+   ALONE does not certify the communication — it is run-conditioned
+   and compatible with a never-communicating program
+   (`deadlockRecvTripleC`, the warning fixture, is the standing
+   demonstration). What separates this bundle from a vacuous one is
+   the COMPLETION PIN: `chanRendezvousTerminatesNormallyC` proves
+   every schedule reaches main's `.normal`, and for THIS program a
+   `.normal` completion requires the real rendezvous (main's receive
+   can only complete through the worker's send — pairing or wake are
+   the machine's only routes past the park). The communication
+   evidence lives in the boring executable half, per the
+   TCB-grounding principle (§3).
 4. The D1-BOTH pair: `chanRendezvousReadoutC` (run-conditioned
    first-order readout: every `.normal` completion leaves the harness
    and handle cells intact — every `InitialSplit` premise discharged
@@ -362,7 +375,10 @@ GOLDEN certificates carry the 42 verdict at seeded ∀-schedule
 strength beside it); nothing about deadlock-freedom at ∀-heap
 strength (P-S4-1's `ProgressExecC`, the pool-reachability lane).
 
-**The sequential-degenerate probe witness (`chanOpsProbe`)** for the
+**The sequential-degenerate probe witness (`chanOpsProbe`)**
+[SUPERSEDED as designed — what shipped is the close-only
+`Specs/ChanCloseProbe.lean`; make/len-cap and this fuller probe are
+P-CL1-6] for the
 owned-cell laws + make/close (+ len/cap if shipped): a single-thread
 program — make a buffered channel (cap 1), send 1 (enqueue branch),
 close, receive (drain branch), receive (closed-zero branch) — walked
@@ -431,10 +447,18 @@ pinned checkout; their new channel library).
 
 ## 7. Parking ledger (slice-1, reversible courses taken)
 
-- **P-CL1-1 — buffered parked-sender law** (§3): needs the storeLoc
-  round-trip lemma for the release construction at nonempty buffers.
-  Course: law scoped to empty-buffer parks (covers cap-0). Consumer:
-  buffered-park rows (slice 3).
+- **P-CL1-1 — buffered parked-sender law** (§3). RE-DIAGNOSED at the
+  S1 audit fix round: the entry first named the storeLoc round-trip
+  lemma as the blocker (release construction at nonempty buffers) —
+  WRONG: a release at any buffer state is constructible for free from
+  an empty-buffer cell elsewhere (`crossChannelSendRelease` — the
+  phantom-completion envelope member). The REAL obstacle is that the
+  phantom completion skips the enqueue entirely, so a buffered
+  parked-sender law cannot state "the value ends up in the buffer"
+  at all on this Language — that statement needs the protocol layer's
+  ghost tie or the O1(b) refinement (P-CL1-4). Course unchanged: law
+  scoped to empty-buffer parks (covers cap-0). Consumer:
+  buffered-park rows (slice 3), jointly with slice-2 design.
 - **P-CL1-2 — select law family** (§3): designed here, deferred on
   budget; consumer: the select-tricky trio's frame-quantified rows
   (slice 3). Course: trio remains on its certificate family.
@@ -446,6 +470,14 @@ pinned checkout; their new channel library).
   general store-of-∃-value lane (typed target stores of adversarial
   values); course: zero-target exemplar; consumer: protocol-layer
   rows whose invariant pins the value class first.
+- **P-CL1-7 — general-`S` law forms: SCOPE REDUCTION recorded as a
+  ledger item** (S1 audit fix round; previously only a build-log
+  bullet). The shipped invariant-form laws are RENDEZVOUS-CLASS
+  (cell pinned to `chanData #[] 0 false`), not the §3-designed
+  `S`-parameterized forms — reason: unwitnessed `S`-branches are the
+  scaffold smell. Course: §3 stays the growth path; consumers: the
+  buffered/close-sharing rows (slice 3) and the protocol layer's
+  au-restatement (P-CL1-3).
 - **P-CL1-6 — make / len-cap laws: designed (§3), NOT shipped this
   slice** (budget: each needs its own core-port and witness walk, and
   a buffered probe's post must absorb the phantom-pairing branch
@@ -503,6 +535,27 @@ pinned checkout; their new channel library).
     simulation direction is untouched. Recorded here as the slice's
     main design finding; the O1(b) refinement (P-CL1-4) would remove
     it along with the phantom pairings.
+    CORRECTED at the S1 audit fix round (the downgraded-major's
+    confirmed core): the finding as first recorded UNDER-stated the
+    derived envelope — beside the self-step, the non-self release
+    branch can be a **phantom COMPLETION**: `applyPairing` never
+    reads the PARTNER's channel (its partner patterns wildcard it),
+    and `pairRelease` ∃-quantifies the whole imagined pool and its
+    pre-state, so a parked sender releases to `.next k` off a pairing
+    on a DIFFERENT channel — no partner, no handoff, no delivery, no
+    cell write (`crossChannelSendRelease`,
+    `Specs/ChanVacuityWarning.lean`, axiom-clean). The original
+    "genuine release — the partner completed the handoff; the
+    ∃-pairing carried the delivery" reading was FALSE as a
+    per-branch characterization: a release to `.next k` carries NO
+    delivery information whatsoever. The shipped laws remain sound
+    (their successor enumeration `{p, .next k}` is proved over ALL
+    arms — `applyPairing_partner_write`); the corrections land in
+    the law docstrings, in P-CL1-1's re-diagnosis below, and in the
+    slice-2 consequence: the protocol layer can NEVER infer "parked
+    sender reached `.next k` ⇒ its value was delivered" from the
+    Language — value transfer must be tied by ghost state, not by
+    control flow.
   - **`wpD_fork_alloc₁` shipped** — the gen_heap-update fork variant
     LangC recorded as "lands with its first consumer": the exemplar's
     one-parameter worker is that consumer (`bindParams` allocates the
@@ -531,15 +584,23 @@ pinned checkout; their new channel library).
     designated statements untouched (git diff over the branch range:
     Challenge/Solution/judge-config and every designated module
     untouched).
-  - **Gate**: full `scripts/ci --diff` run IN-LANE at this commit's
-    tree (this worktree's first recorded differential — the
+  - **Gate** (CORRECTED at the S1 audit fix round, finding C1 — the
+    first form of this bullet said "at this commit's tree", which the
+    artifact's own metadata contradicts): full `scripts/ci --diff`
+    run IN-LANE (this worktree's first recorded differential — the
     documented fresh-checkout red; `GOLEAN_MEM_MAX=48G` per the
     parallel-lane cap discipline): **PASS, baseline diff FULL
-    (1483/1483, no regression), negative lane no regression**,
-    proofs + Audit green with the new registrations. Zero
-    `GoLean/GoCore` edits anywhere in the slice — the differential
-    surface is untouched by construction; the fresh run makes the
-    zero-drift figure first-hand rather than argued.
+    (1483/1483, no regression), negative lane no regression**, proofs
+    + Audit green with the new registrations. The record's meta:
+    `git_commit c1a619b8` (commit 1) with `git_dirty true` — the run
+    executed over the commit-2 content while it was still IN-TREE,
+    before commit 2 existed, so later `scripts/ci` invocations mark
+    it stale. Mitigation (verified at the audit): the whole branch
+    diff touches only `docs/` + `proofs/`, so the differential
+    surface is unchanged and the result transfers; and the fix
+    round's clean-tree re-run at its tip (§9) supersedes this record.
+    ci now surfaces dirty-meta records on every judgment line (the
+    §9 hardening).
 
 - **Commit 3 — the CLOSE law (the family's write-path member) +
   probe witness.** `wpD_close_owned` (`ChanD.lean`): close on an
@@ -580,3 +641,110 @@ pinned checkout; their new channel library).
   `deadlockRecvDeadlocks` (the kernel-evaluated deadlock), plus the
   three pinned envelope members (`nilParkSpins`, `nilParkReleases`,
   `crossChannelSendRelease`) the corrected §3/§1a cite.
+- **Fix B — the phantom-completion correction** (the downgraded
+  major's confirmed core): the §8 SELF-step finding, both parked-law
+  docstrings, and P-CL1-1 corrected — a release to `.next k` carries
+  NO delivery information (the imagined pairing can sit on a
+  different channel entirely); the slice-2 consequence (ghost-tied
+  value transfer, never control-flow-inferred) recorded at each site.
+- **Fix C — the TCB-grounding retrofit** (§10, the walk over every
+  exported artifact) + the charter addendum making the walk a
+  per-slice review criterion for the rest of the arc.
+- **Fix D — the confluent-lane discharge** (§11): the charter's own
+  validation addition, owed by finding C2 — per-law corpus mapping
+  recorded and the seven-case slice RUN first-hand (7/7 PASS, the
+  fork-join/rendezvous rows confluent-certified `|set|=1`).
+- **Fix E — exemplar framing scoped** (downgraded-to-note, applied
+  anyway): the "genuine cross-goroutine" sentence in the module
+  docstring, the route §4 item 3, and the Audit block now state that
+  the triple alone is compatible with a never-communicating program
+  and that the completion pin carries the communication evidence.
+- **Fix F — records batch**: the `wpD_fork_alloc₁` fork-debt claim
+  scoped to the D-carrier with LangC's `wpC_fork` record
+  back-annotated (the C-carrier variant remains unbuilt); the S4
+  decomposition note's "NO spin rules" back-annotated in place; §4's
+  stale makeChan/`chanOpsProbe` forward references annotated (they
+  point to P-CL1-6); the general-`S` scope reduction promoted to a
+  ledger entry (P-CL1-7); the Audit blocks' "every public theorem of
+  both modules" sentences rescoped to the four-module reality; the
+  commit-2 gate bullet corrected to the artifact's own metadata
+  (finding C1) and `scripts/ci` HARDENED — dirty-meta records now
+  print a visible warning marker on every baseline-diff judgment
+  line (choice: WARN, not fail — the tight loop legitimately records
+  dirty mid-iteration runs; handoff-quality claims must cite a
+  clean-tree record; reason recorded at the ci site too).
+
+## 10. The TCB-grounding walk (retrofit, S1 audit fix round — the
+## per-slice review criterion from here on)
+
+Doctrine (user, 2026-08-11): for every soundness property, the TRUSTED
+claim must be a boring, semantically-trivial property of the
+interpreter; Iris/Löb/simulation are untrusted METHOD only. The walk
+below names, for every exported artifact of this slice: (i) the boring
+trusted endpoint — the interpreter proposition the statement reduces
+to; (ii) that all machinery is proof-side (the deletion test:
+`Audit.lean`'s statement-TCB gate mechanizes it for designated
+statements; none of these are designated, but each statement below is
+Iris-free and relation-free by the same reading); (iii) the executable
+anchor.
+
+| exported artifact | (i) trusted endpoint (interpreter vocabulary) | (iii) executable anchor |
+|---|---|---|
+| `chanRendezvousTripleC` | ∀ admissible seeded heap, ∀ fuel/stream: `execProg … = .ok (.normal σf, _)` → the harness+handle bindings survive in `σf.heap` | run-conditioned only — anchored by the pin row below; the warning fixture documents why the triple alone anchors nothing |
+| `chanRendezvousReadoutC` | the same, first-order at the concrete seed (`loadLoc σf … = .ok …`) | premises discharged at the seed; consumes the triple as method |
+| `chanRendezvousTerminatesNormallyC` | ∃N ∀fuel≥N ∀ch: `execProg … = .ok (.normal …, _)` | `chanRendezvousAllStreamsCert` — kernel evaluation of `allStreamsOkPool` (fuel 400), `#eval`-confirmed first; `execProgLoop_mono` lift |
+| `chanCloseTripleC` | ∀ admissible heap, run-conditioned: handle intact ∧ data cell `chanData #[] 1 true` in `σf.heap` | pin row below |
+| `chanCloseReadoutC` | first-order at the seed | consumes the triple |
+| `chanCloseTerminatesNormallyC` | ∃N ∀fuel≥N ∀ch completion | `chanCloseAllStreamsCert` (fuel 20, `#eval`-first) |
+| `deadlockRecvDeadlocks` (warning fixture) | `execProg 200 … = .error .deadlock` under the canonical stream | itself — kernel evaluation; THE fixture's trusted content |
+| `deadlockRecvTripleC` (warning fixture) | (vacuous by design — no completing runs) | none, deliberately: the fixture demonstrates exactly this |
+
+Everything else this slice shipped — the `wpD_*` laws, the lifting
+cores, the inversion kit, the WP walks, `StepDC` facts — is METHOD:
+none of it appears in any exported statement (the statements above
+mention only `execProg`/`loadLoc`/`GoTripleC`/`TerminatesNormallyC`,
+all interpreter-vocabulary surface definitions), and the differential
+(§11) plus the kernel certificates are what ground the interpreter
+itself. The completion-pin gate (`Audit.lean`) enforces the
+triple-must-carry-its-anchor pairing structurally. The matching
+charter addendum makes this walk a per-slice review criterion for the
+rest of the arc.
+
+## 11. The confluent-lane discharge (charter validation addition,
+## owed by the audit's C2 — recorded and RUN at the fix round)
+
+The charter's addition: every new law's soundness is also exercised
+through the CONFLUENT lane where a deterministic concurrent program
+exists for its shape. Discharge, per law — the laws are proof-layer
+over the SAME `applyChanOp`/`arrivalPlan`/`applyPairing`/
+`resumeThread` code paths the differential executes, so the corpus
+cases below exercise each law's machine positions end-to-end against
+`go run`:
+
+- **send/recv apply + parked send/recv (rendezvous four)**:
+  `goroutines/fork-join/unbuffered` (the exemplar's exact shape —
+  spawn, unbuffered send, receive) and
+  `goroutines/fork-join/result-discarded` (zero-target receive, the
+  exemplar's discard idiom) — both CONFLUENT-lane rows: the
+  enumerator certifies |set|=1 over ALL schedules, then strict go-run
+  equality (full-strength differential for deterministic concurrent
+  programs — the charter's requested lane). Also
+  `goroutines/rendezvous-hb/send-hb` (confluent, rendezvous + HB).
+- **close (owned)**: `channels/close-closed-panic`,
+  `channels/closed-receive`, `channels/close-edge/drain-zero-after-close`
+  (strict lane — the close probe's single-goroutine class is
+  sequential-degenerate, where strict IS the full-strength check).
+- **make/len-cap (P-CL1-6, laws unshipped)**:
+  `builtins/make-channel-len-cap` stands ready as their case.
+
+RUN first-hand at the fix round (`scripts/coverage run` over the seven
+ids above): **7/7 PASS**, the three goroutine rows at
+`stage=confluent` with `|set|=1 certified over all schedules`
+(observations recorded in the run detail). The exemplar programs
+themselves are Lean-side seeds (hand-built `Stmt`, no frontend
+lowering), so they are exercised by the kernel certificates
+(`allStreamsOkPool` — schedule-exhaustive at the seed) rather than by
+new corpus rows; the corpus rows above pin the same shapes through
+the full frontend+oracle pipeline. No new corpus case was added
+(zero corpus effect stands); if a future slice lowers the exemplars
+through the frontend, they become ordinary confluent rows.

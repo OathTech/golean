@@ -377,6 +377,15 @@ plus the trio certificates as its first real consumers.
     sufficed: the exit consumes `adequate_result` only, and the
     spawn-noop witness's WPs discharge `.NotStuck` reducibility at
     every config they walk) + the `PoolCfgD` Language instance.
+    [SCOPED at the channel-logic S1 audit fix round, 2026-08-11:
+    "NO spin rules" is true of the RULE SET only — the spin exists as
+    a DERIVED member of `pairRelease`'s ∃-envelope (`ts'[j] = p` when
+    the imagined pairing's partner is another index), along with a
+    phantom-COMPLETION member (release to `.next k` off a pairing on
+    a different channel, no delivery). Invisible until a WP walked a
+    parked config, which the spawn-noop witness never does. Full
+    account: docs/2026-08-11_channel-wp-laws.md §§1a,8 and
+    proofs/GoLeanProofs/Specs/ChanVacuityWarning.lean.]
   - `applyPairing_shape` (the pairing inversion: partner index, parked
     pre-shape, two-point update — the only per-arm walk the simulation
     needed; the §2 attribution fact was NOT needed, as predicted).

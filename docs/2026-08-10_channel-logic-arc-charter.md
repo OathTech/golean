@@ -186,6 +186,23 @@ concurrent program exists for its shape — the executable differential
 remains the arc's distinguishing check, and a law that cannot be
 exercised by any runnable program is a red flag on its own.
 
+## Addendum (2026-08-11, S1 audit fix round — user doctrine): the
+## TCB-grounding walk is a per-slice review criterion
+
+For every soundness property this arc ships, the TRUSTED claim must be
+a boring, semantically-trivial property of the interpreter (a kernel-
+evaluated completion pin, a first-order run-conditioned readout, a
+differential pin); the Iris/Löb/simulation machinery is untrusted
+METHOD only. Every slice record from S1 on carries a grounding walk
+(the S1 form: docs/2026-08-11_channel-wp-laws.md §10) naming, per
+exported artifact, (i) the interpreter proposition it reduces to,
+(ii) that all machinery is proof-side, (iii) the executable anchor —
+and every exported channel-triple bundle carries its ∃-completion
+member, enforced by the completion-pin gate (Audit.lean, negative-
+tested). Run-conditioned triples ALONE anchor nothing (the permanent
+demonstration: Specs/ChanVacuityWarning.lean); the sub-branch audits
+review the walk as a standing dimension.
+
 ## Exit criterion
 
 The six channel rows stand as compositional frame-quantified triples
