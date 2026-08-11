@@ -1124,3 +1124,15 @@ restructure landed instead:
 - If the follow-up focused verification finds a MAJOR in the
   restructured gate, the operator takes it to the user (recorded per
   instruction).
+- **The gen-5 clean differential record**: full
+  `GOLEAN_MEM_MAX=48G scripts/ci --diff` at the restructure tip
+  `11d570dd`, committed clean tree — meta `git_commit 11d570dd`,
+  `git_dirty false`, `manifest_cases 1483`. **RESULT: PASS — baseline
+  diff FULL (1483/1483, no regression), negative lane 311 no
+  regression, all gates green** including the RESTRUCTURED
+  manifest completion gate (67 enumerated = 67 reviewed lines, 24
+  mechanically pin-paired, 35 pins, no UNRESOLVED; three RED
+  scenarios verified this round) and the statement-TCB gate at 48
+  designated, byte-identical; audit sweep 13589 declarations
+  axiom-clean. Doc-only record commit over the run's own commit, per
+  the established discipline.
