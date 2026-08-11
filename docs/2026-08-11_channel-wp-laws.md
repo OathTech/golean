@@ -247,16 +247,28 @@ tracked in `Specs/ChanVacuityWarning.lean`):
   `isBlockedConfig` does not inspect the channel. So a nil park is
   both SPINNABLE (`nilParkSpins` — the shipped `stepDC_parked_spin`
   applies verbatim) and RELEASABLE to `.next k` (`nilParkReleases`)
-  whenever the state holds any empty-buffer channel cell; a nil-park
-  WP law is provable with exactly the shipped kit. The only state in
+  whenever the state holds any empty-buffer channel cell. (A nil-park
+  WP LAW along the parked laws' lines is therefore derivable — the
+  round-2 verifier compiled one in a scratch probe — but none is
+  SHIPPED and the claim is scoped to the tracked step-level witnesses
+  above: we do not ship laws without consumers, and the tracked
+  fixtures are the negative knowledge the corrected paragraph needs;
+  S1 audit round 2.) The only state in
   which a nil park is irreducible is the degenerate one with no
   pairable channel cell anywhere — nothing rests on that case.
-- Consequently **a deadlocking program DOES get a frame-quantified
+- Independently of nil channels (S1 audit round 2 — an earlier
+  "Consequently" here linked the two facts falsely: the demonstration
+  program parks on a REAL channel nobody sends on and needs no nil
+  park at all), **a deadlocking program DOES get a frame-quantified
   triple through this pipe**: `deadlockRecvTripleC`
   (`ChanVacuityWarning.lean`) proves, with the shipped laws and the
   shipped exit at the exemplars' exact axiom set, a `GoTripleC` for a
-  program the interpreter classifies `.deadlock` on every schedule
-  (`deadlockRecvDeadlocks`, kernel-evaluated). This is not a bug:
+  program the interpreter classifies `.deadlock`
+  (`deadlockRecvDeadlocks`/`deadlockRecvDeadlocksAdv`, kernel-evaluated
+  at the canonical and an adversarial stream — the ∀-stream form is
+  deliberately NOT claimed: `transferable` excludes `.deadlock` from
+  the conservation kit, so it is not mechanical; scope recorded at the
+  theorem, S1 audit round 2). This is not a bug:
   `GoTripleC` is RUN-CONDITIONED partial correctness — every premise
   chain starts from `execProg … = .ok (.normal σf, _)` — so it is
   vacuously provable for non-completing programs BY DESIGN.
@@ -267,11 +279,22 @@ never the triple alone. The trusted claims are BORING, semantically
 trivial properties of the interpreter — the ∃-completion member
 (`TerminatesNormallyC`-class, discharged by kernel evaluation) and
 the run-conditioned readout — and the Iris/Löb/simulation machinery
-is untrusted METHOD for producing them. Enforced structurally since
-the audit fix round: the **completion-pin gate** (`Audit.lean`) fails
-the build if any `GoLeanProofs.Specs.Chan*` module declares a
-`GoTripleC`-typed theorem without a `TerminatesNormallyC`-typed
-companion; `ChanVacuityWarning` — whose program can have no
+is untrusted METHOD for producing them. Enforced structurally — and
+REBUILT SEMANTIC at audit round 2 (the first, name/glob/module-based
+gate was escapable four ways; the round-2 delta review proved each):
+the **completion-pin gate** (`Audit.lean`) classifies every
+`theorem`/`def` across ALL `GoLeanProofs.Specs.*` modules by the
+TYPE's transitive `defnInfo`-unfolding closure (so `GoSpecC` and any
+wrapper reach `GoTripleC`), extracts each triple's `prog` argument,
+and requires a `TerminatesNormallyC` pin FOR THAT PROGRAM anywhere in
+scope (per-PROGRAM pairing; wrapper-hidden triples fail closed; the
+pin side stays a shallow scan — recorded: its failure direction is
+loud). Every pre-existing `GoSpecC` export gained its genuine
+pool-carrier pin at the round (eleven new `*TerminatesNormallyC`
+theorems, the sequential completions lifted by conservation —
+`terminatesNormallyC_of_terminatesNormally`); the escape shapes are
+tracked fixtures (`ZzVacuityGateFixtures`, negative-tested).
+`ChanVacuityWarning` — whose program can have no
 completion pin, by construction — is the gate's negative-test
 fixture (the raw checker must flag it, and it is excluded from
 enforcement by exact name with the reason recorded at the gate).
@@ -450,15 +473,20 @@ pinned checkout; their new channel library).
 - **P-CL1-1 — buffered parked-sender law** (§3). RE-DIAGNOSED at the
   S1 audit fix round: the entry first named the storeLoc round-trip
   lemma as the blocker (release construction at nonempty buffers) —
-  WRONG: a release at any buffer state is constructible for free from
-  an empty-buffer cell elsewhere (`crossChannelSendRelease` — the
-  phantom-completion envelope member). The REAL obstacle is that the
-  phantom completion skips the enqueue entirely, so a buffered
-  parked-sender law cannot state "the value ends up in the buffer"
-  at all on this Language — that statement needs the protocol layer's
-  ghost tie or the O1(b) refinement (P-CL1-4). Course unchanged: law
-  scoped to empty-buffer parks (covers cap-0). Consumer:
-  buffered-park rows (slice 3), jointly with slice-2 design.
+  overcorrected in turn (round 2): the RELEASE construction never
+  needed the round-trip — constructible for free from an empty-buffer
+  cell elsewhere (`crossChannelSendRelease`, the phantom-completion
+  envelope member) — but BOTH of these obstacles are real: (i) the
+  phantom completion skips the enqueue, so a buffered parked-sender
+  law cannot state "the value ends up in the buffer" on this Language
+  — that statement needs the protocol layer's ghost tie or the O1(b)
+  refinement (P-CL1-4); AND (ii) the WAKE branch is live for a
+  buffered parked sender (once the buffer drains, `resumeThread`
+  enqueues through `storeLoc`), so the law's wake case genuinely
+  needs the cell-update machinery the original entry pointed at.
+  Course unchanged: law scoped to empty-buffer parks (covers cap-0).
+  Consumer: buffered-park rows (slice 3), jointly with slice-2
+  design.
 - **P-CL1-2 — select law family** (§3): designed here, deferred on
   budget; consumer: the select-tricky trio's frame-quantified rows
   (slice 3). Course: trio remains on its certificate family.
@@ -709,7 +737,7 @@ anchor.
 | `chanCloseTripleC` | ∀ admissible heap, run-conditioned: handle intact ∧ data cell `chanData #[] 1 true` in `σf.heap` | pin row below |
 | `chanCloseReadoutC` | first-order at the seed | consumes the triple |
 | `chanCloseTerminatesNormallyC` | ∃N ∀fuel≥N ∀ch completion | `chanCloseAllStreamsCert` (fuel 20, `#eval`-first) |
-| `deadlockRecvDeadlocks` (warning fixture) | `execProg 200 … = .error .deadlock` under the canonical stream | itself — kernel evaluation; THE fixture's trusted content |
+| `deadlockRecvDeadlocks` (+`…Adv`, warning fixture) | `execProg 200 … = .error .deadlock` under the canonical / a pinned adversarial stream (∀-stream deliberately unproved — `transferable` excludes `.deadlock`; scope at the theorem) | itself — kernel evaluation; THE fixture's trusted content |
 | `deadlockRecvTripleC` (warning fixture) | (vacuous by design — no completing runs) | none, deliberately: the fixture demonstrates exactly this |
 
 Everything else this slice shipped — the `wpD_*` laws, the lifting
@@ -737,12 +765,21 @@ cases below exercise each law's machine positions end-to-end against
 - **send/recv apply + parked send/recv (rendezvous four)**:
   `goroutines/fork-join/unbuffered` (the exemplar's exact shape —
   spawn, unbuffered send, receive) and
-  `goroutines/fork-join/result-discarded` (zero-target receive, the
-  exemplar's discard idiom) — both CONFLUENT-lane rows: the
-  enumerator certifies |set|=1 over ALL schedules, then strict go-run
-  equality (full-strength differential for deterministic concurrent
-  programs — the charter's requested lane). Also
-  `goroutines/rendezvous-hb/send-hb` (confluent, rendezvous + HB).
+  `goroutines/rendezvous-hb/send-hb` (confluent; carries the
+  zero-target receive `<-done`, the exemplar's discard idiom) — both
+  CONFLUENT-lane rows: the enumerator certifies |set|=1 over ALL
+  schedules, then strict go-run equality (full-strength differential
+  for deterministic concurrent programs — the charter's requested
+  lane). [CORRECTED at audit round 2: this bullet first cited
+  `goroutines/fork-join/result-discarded` as the zero-target-receive
+  row — false, its receive is targeted (it discards the goroutine's
+  RETURN value); the id is dropped from the discharge and the
+  zero-target shape is carried by `rendezvous-hb/send-hb`.]
+- **`wpD_fork_alloc₁` (the allocating fork)** [ADDED at audit round
+  2 — the first form of this section omitted the law entirely]:
+  `goroutines/fork-join/args-eval-now` (CONFLUENT-lane, `go
+  func(v int){…}(…)` — a one-parameter spawned callee, exactly the
+  `bindParams`-allocating spawn class the law covers).
 - **close (owned)**: `channels/close-closed-panic`,
   `channels/closed-receive`, `channels/close-edge/drain-zero-after-close`
   (strict lane — the close probe's single-goroutine class is
@@ -750,8 +787,10 @@ cases below exercise each law's machine positions end-to-end against
 - **make/len-cap (P-CL1-6, laws unshipped)**:
   `builtins/make-channel-len-cap` stands ready as their case.
 
-RUN first-hand at the fix round (`scripts/coverage run` over the seven
-ids above): **7/7 PASS**, the three goroutine rows at
+RUN first-hand (re-run at audit round 2 with the corrected id set —
+`fork-join/unbuffered`, `fork-join/args-eval-now`,
+`rendezvous-hb/send-hb`, the three close rows,
+`make-channel-len-cap`): **7/7 PASS**, the three goroutine rows at
 `stage=confluent` with `|set|=1 certified over all schedules`
 (observations recorded in the run detail). The exemplar programs
 themselves are Lean-side seeds (hand-built `Stmt`, no frontend
@@ -761,3 +800,79 @@ new corpus rows; the corpus rows above pin the same shapes through
 the full frontend+oracle pipeline. No new corpus case was added
 (zero corpus effect stands); if a future slice lowers the exemplars
 through the frontend, they become ordinary confluent rows.
+
+## 12. S1 audit round 2 (delta review: 1 confirmed major + 8 confirmed
+## minors — the gate's name/glob/module mechanics were escapable)
+
+- **THE GATE, REBUILT SEMANTIC** (the major + the convergent minors,
+  on the statement-TCB gate's own idiom): classification = the TYPE's
+  transitive `defnInfo`-unfolding closure reaching `GoTripleC` (kills
+  the `GoSpecC` blindness, the wrapper escape, and any future
+  wrapper); scope = ALL `GoLeanProofs.Specs.*` (the `Chan*` glob is
+  gone); kinds = `theorem` AND `def` (recorded choice for (d):
+  classify, don't refuse); pairing = per-PROGRAM (the triple's
+  extracted `prog` argument must have a `TerminatesNormallyC` pin for
+  the SAME program anywhere in scope — implemented, the preferred
+  branch of (c); cross-module pins legitimate, the golden row's pin
+  lives in `TotalPins`); wrapper-hidden triples (classified but no
+  extractable saturated application in the stated type) FAIL CLOSED;
+  the PIN side stays a shallow syntactic scan (recorded per the
+  verifier's asymmetry note — its failure direction is a loud
+  spurious failure, never a silent pass); budget exhaustion on the
+  walk throws. Gate output at this round's tip: 17 triple-carrying
+  constants, 22 pin instances, all non-fixture exports
+  program-paired.
+- **Eleven completion pins** so every pre-existing `GoSpecC` export
+  carries its genuine POOL-carrier ∃-completion member (preferred
+  over grandfathering, per the round's direction): the kit lemma
+  `goSpec_seeded_terminatesNormallyC` + the carrier transfer
+  `terminatesNormallyC_of_terminatesNormally` (Surface — sequential
+  completion lifted by conservation; `transferable (.ok _)` is the
+  hinge), instantiated per row — NilWP ×5, NewWP ×2, VarsWP ×2,
+  BlockWP ×1, and `goldenTerminatesNormallyC` (TotalPins) for
+  `goldenSpecC`. No designated STATEMENT changed — the pins are new
+  theorems beside them (statement-TCB gate green, 48 unchanged).
+- **Escape-shape fixtures** (`Specs/ZzVacuityGateFixtures.lean`,
+  tracked): `fixtureSpecCUnpinned` (GoSpecC-typed), `fixtureDefTriple`
+  (def-exported), `fixtureWrappedTriple` (wrapper-hidden → the
+  fail-closed arm), in a module whose own name is the out-of-glob
+  scope fixture; all honest vacuous-by-unsatisfiable-pre proofs
+  (recorded deviation: the review's `.tmp` GoSpecC probe used `sorry`,
+  which the axiom sweep forbids — the tracked fixtures demonstrate
+  the same escape SHAPES honestly, and double as permanent reminders
+  that unsatisfiable-pre triples are vacuously true). The gate's
+  negative tests assert each fixture flags in its expected class.
+- **"Deadlocks on every schedule" scoped to the proved claim** at all
+  three sites (fixture header, §3, Audit anchor) + an
+  adversarial-stream sibling pin added (`deadlockRecvDeadlocksAdv`).
+  Choice recorded: prose-scoping over ∀-stream strengthening — the
+  strengthening is NOT mechanical, because the conservation kit's
+  `transferable` class deliberately excludes `.deadlock` (no lemma
+  transfers or quantifies deadlocking runs over streams); recorded at
+  the theorem as the honest gap.
+- **P-CL1-1 restated with BOTH obstacles** (below, in place): the
+  round-1 re-diagnosis overcorrected — the phantom completion blocks
+  the "value ends up in the buffer" statement, AND the wake branch
+  still enqueues through `storeLoc` (a buffered parked sender's wake
+  is live once the buffer drains), so the storeLoc/store-update
+  machinery is genuinely needed by the wake case even though the
+  release construction never needed the round-trip.
+- **§11 corrected + re-run**: `fork-join/result-discarded` dropped
+  (its receive is targeted — it discards the goroutine's RETURN
+  value, not the received value); the zero-target shape is carried by
+  `rendezvous-hb/send-hb`; `wpD_fork_alloc₁` gained its missing
+  discharge row (`fork-join/args-eval-now`, the one-parameter
+  allocating-spawn confluent case); the corrected seven-id slice
+  re-run first-hand, 7/7 PASS.
+- **ci hardening completed fail-closed**: a meta lacking `git_dirty`
+  is now treated as dirty/unknown (marked, not silently clean); the
+  negative lane's judgment line states its no-metadata attribution
+  gap honestly (it publishes no meta at all — recorded); the round-1
+  "every baseline-diff judgment line" claim corrected accordingly.
+- **Commit-2 gate bullet range-scoped** (its "whole branch diff"
+  mitigation was made false by the fix rounds touching `scripts/ci`):
+  now stated over the record's own range `d5696de1..c7251faa`.
+- **§3 scoped and unlinked**: the nil-park-law provability claim is
+  scoped to the tracked step-level witnesses (a law is derivable but
+  deliberately unshipped — no consumer); the false "Consequently"
+  linkage removed (the deadlock demonstration needs no nil channel).

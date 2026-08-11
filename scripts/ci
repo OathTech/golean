@@ -647,7 +647,7 @@ fi
 step "negative baseline diff"
 if [ -f artifacts/coverage/negative-latest.tsv ]; then
   if ./scripts/coverage-baseline-diff --full --baseline baselines/negative-full.tsv        artifacts/coverage/negative-latest.tsv; then
-    ok "negative baseline diff (no regression)"
+    ok "negative baseline diff (no regression; note: the negative lane publishes no run metadata — commit/dirty attribution gap recorded, S1 audit round 2)"
   else
     bad "negative baseline diff (DRIFT — see above)"
   fi
@@ -679,6 +679,12 @@ if [ -f artifacts/coverage/latest.tsv ]; then
   # clean-tree record, and this marker is what makes citing a dirty one
   # visible in every judgment line.
   [ "$rundirty" = "true" ] && stale="$stale [recorded from a DIRTY tree — for a handoff-quality record re-run scripts/ci --diff on the committed tree]"
+  # FAIL CLOSED on a missing git_dirty key (S1 audit round 2): a meta
+  # without the key (older/foreign diff-coverage) is attributable only as
+  # dirty/unknown — treat it exactly like dirty rather than silently
+  # judging it clean. (The NEGATIVE lane publishes no metadata file at
+  # all — a recorded attribution gap, surfaced on its judgment line.)
+  [ -z "$rundirty" ] && stale="$stale [record meta lacks git_dirty — treated as dirty/unknown (fail closed); re-run scripts/ci --diff]"
   # Gate integrity (grossmith findings §2,
   # docs/2026-08-07_grossmith-findings.md): before judging latest.tsv,
   # verify it is ATTRIBUTABLE — a published meta exists and, for a run
