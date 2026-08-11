@@ -39,6 +39,7 @@ import GoLeanProofs.Specs.ForkJoinTargets
 import GoLeanProofs.Specs.GoldenForkJoin
 import GoLeanProofs.Specs.GoldenSelectDone
 import GoLeanProofs.Specs.ChanRendezvous
+import GoLeanProofs.Specs.ChanCloseProbe
 import GoLeanProofs.Specs.ImportedGooseBlock
 import GoLeanProofs.Specs.ImportedGooseDefer
 import GoLeanProofs.Specs.ImportedGooseNil

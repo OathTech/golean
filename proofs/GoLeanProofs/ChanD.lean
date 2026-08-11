@@ -1179,6 +1179,120 @@ theorem wpD_blocked_send_rendezvous_inv {v' : GoValue} {k : Cont}
     · iexact Hcont
   · itrivial
 
+/-- A CLOSE apply position never pairs: `chanArrivalPlan` has no
+`.close` arm (fed to `arrivalCases_chanStK_single` to refute
+`pairArrive` at close applies). -/
+theorem chanArrivalPlan_close {σ : ExecState} {threads : Array Config}
+    {i : Nat} {chv : GoValue} {env : LocalEnv} {k : Cont} :
+    chanArrivalPlan σ threads i .close [chv] env k = .ok none := rfl
+
+/-- **CLOSE on an OWNED open channel cell** (the owned-cell law form —
+note §3: close needs no invariant when the closing thread owns the
+cell, the sequential-degenerate class the probe witnesses; the
+invariant sibling lands with a sharing consumer). The one channel law
+that WRITES the cell through the D-carrier: `closed := true`, buffer
+and capacity preserved (drain-after-close is `applyChanOp`'s recv
+semantics, not close's). The cell is the machine-real UNTYPED shape
+(`makeChan` allocates `declaredTy := none`). No pairing branch exists
+at a close apply (`chanArrivalPlan_close`) — the successor is
+deterministic. -/
+theorem wpD_close_owned {a : Addr} {buf : Array GoValue} {cap : Nat}
+    {env : LocalEnv} {k : Cont} :
+    a.id ↦ (⟨none, .chanData buf cap false⟩ : HeapCell)
+      ∗ (a.id ↦ (⟨none, .chanData buf cap true⟩ : HeapCell) -∗
+          WP (PoolCfgD.mk (.next k)) @ s ; E {{ Φ }})
+      ⊢ WP (PoolCfgD.mk (.retV (.chan ⟨some (.base a)⟩)
+          (.chanStK .close [] [] env k))) @ s ; E {{ Φ }} := by
+  iintro ⟨Hpt, Hcont⟩
+  iapply wp_lift_step (h := rfl)
+  iintro %σ₁ %ns %obs %obs' %nt Hσ
+  simp only [stateInterp]
+  icases Hσ with ⟨Hσ, %Hpins⟩
+  obtain ⟨hfns, hmeths, htypes, hwf⟩ := Hpins
+  ihave %Hmap : ⌜get? (heapToMap σ₁.heap) a.id
+      = some (⟨none, .chanData buf cap false⟩ : HeapCell)⌝ $$ [Hσ Hpt]
+  · icases genHeap_valid $$ [$Hσ $Hpt] with >%h
+    itrivial
+  have hlook : Heap.lookup σ₁.heap (.base a)
+      = some (⟨none, .chanData buf cap false⟩ : HeapCell) := by
+    rw [get?_heapToMap] at Hmap; simpa using Hmap
+  have hload : loadLoc σ₁ (.base a) = .ok (.chanData buf cap false) :=
+    loadLoc_base_of_lookup hlook
+  have hcell : chanCell σ₁ (.base a) = .ok (buf, cap, false) := by
+    unfold chanCell
+    rw [hload]
+    rfl
+  have hstore : storeLoc σ₁ (.base a) (.chanData buf cap true)
+      = .ok { σ₁ with
+          heap := Heap.set σ₁.heap (.base a) (⟨none, .chanData buf cap true⟩ : HeapCell) } := by
+    simp [storeLoc, hlook, coerceStoredValue, Bind.bind, Except.bind]
+  have happly : applyChanOp σ₁ .close
+      (((GoValue.chan ⟨some (.base a)⟩) :: ([] : List GoValue)).reverse) env k
+      = .ok (.next k, { σ₁ with
+          heap := Heap.set σ₁.heap (.base a) (⟨none, .chanData buf cap true⟩ : HeapCell) }) := by
+    simp [applyChanOp, valueAsChan, hcell, hstore, Bind.bind, Except.bind]
+  iapply fupd_mask_intro Std.LawfulSet.empty_subset
+  iintro Hclose
+  isplitr
+  · ipureintro
+    cases s
+    · exact ⟨[], ⟨.next k⟩, _, [],
+        GoPrimStepD.step (.lift (.lift (Step.chanStApply happly)))⟩
+    · trivial
+  inext
+  iintro %e₂ %σ₂ %eₜ %Hstep Hcred
+  obtain ⟨c₂⟩ := e₂
+  have hshape : c₂ = Config.next k
+      ∧ σ₂ = { σ₁ with
+          heap := Heap.set σ₁.heap (.base a) (⟨none, .chanData buf cap true⟩ : HeapCell) }
+      ∧ eₜ = [] := by
+    cases Hstep with
+    | step st =>
+      cases st with
+      | lift ste =>
+        cases ste with
+        | lift sq =>
+          cases sq with
+          | chanStApply h =>
+            rw [happly] at h
+            injection h with h
+            injection h with h1 h2
+            exact ⟨h1.symm, h2.symm, by simp⟩
+          | chanStApplyPanic h =>
+            rw [happly] at h
+            cases h
+        | spawn hsp' _ => simp [spawnPlan] at hsp'
+      | wake hblk' _ => simp [isBlockedConfig] at hblk'
+      | pairRelease hblk' _ => simp [isBlockedConfig] at hblk'
+      | pairArrive hti hblc hpair hidx happ hproj =>
+        rcases hpair with hs | ⟨os, sel, hm, -⟩
+        · have hplan := arrivalCases_chanStK_single hs
+          simp only [List.reverse_cons, List.reverse_nil,
+            List.nil_append] at hplan
+          rw [chanArrivalPlan_close] at hplan
+          injection hplan with hplan
+          cases hplan
+        · exact (arrivalCases_chanStK_not_multi hm).elim
+      | selCommit hex _ =>
+        obtain ⟨th, ii, os, sel, hti, hm, -⟩ := hex
+        exact (arrivalCases_chanStK_not_multi hm).elim
+  obtain ⟨rfl, rfl, rfl⟩ := hshape
+  imod (genHeap_update (v₂ := (⟨none, .chanData buf cap true⟩ : HeapCell)))
+    $$ [$Hσ $Hpt] with ⟨Hσ, Hpt⟩
+  imod Hclose
+  imodintro
+  simp only [Algebra.BigOpL.bigOpL_nil]
+  isplitl [Hσ]
+  · isplitl [Hσ]
+    · iapply (genHeapInterp_eqv
+        (fun kk => (heapToMap_set_base σ₁.heap a
+          ⟨none, .chanData buf cap true⟩ kk).symm)) $$ Hσ
+    · ipureintro
+      exact ⟨hfns, hmeths, htypes, hwf.set_existing hlook⟩
+  isplitl [Hpt Hcont]
+  · iapply Hcont $$ Hpt
+  · itrivial
+
 /-- **The PARKED zero-target RECEIVER on a rendezvous channel.** Wake
 refuted (empty open cell); genuine release delivers an ∃-value that
 the zero-target form discards (`.next k`); the phantom self-step is

@@ -413,15 +413,17 @@ pinned checkout; their new channel library).
   general store-of-∃-value lane (typed target stores of adversarial
   values); course: zero-target exemplar; consumer: protocol-layer
   rows whose invariant pins the value class first.
-- **P-CL1-6 — close / make / len-cap laws: designed (§3), NOT shipped
-  this slice** (budget: the slice's route — laws through exit through
-  the D1 pair — landed; each of these three needs its own core-port
-  and witness walk, and the sequential-degenerate probe's post must
-  absorb the phantom-pairing branch reconvergence, §4). Their §3
-  designs stand as the intended statements; consumers: the probe
-  witness (`chanOpsProbe`, §4) and the slice-3 buffered rows.
-  Deviation from work-plan item 3 logged here honestly rather than
-  half-shipped.
+- **P-CL1-6 — make / len-cap laws: designed (§3), NOT shipped this
+  slice** (budget: each needs its own core-port and witness walk, and
+  a buffered probe's post must absorb the phantom-pairing branch
+  reconvergence, §4). CLOSE left this entry — shipped as
+  `wpD_close_owned` with the close-probe witness (build log, commit
+  3): the owned-cell form covers the write path without the phantom
+  problem, since a close apply has NO pairing branch
+  (`chanArrivalPlan_close`). The §3 designs for make/len-cap stand as
+  the intended statements; consumers: the buffered probe and the
+  slice-3 rows. Deviation from work-plan item 3 logged here honestly
+  rather than half-shipped.
 
 ## 8. Build log (appended as built)
 
@@ -505,3 +507,24 @@ pinned checkout; their new channel library).
     `GoLean/GoCore` edits anywhere in the slice — the differential
     surface is untouched by construction; the fresh run makes the
     zero-drift figure first-hand rather than argued.
+
+- **Commit 3 — the CLOSE law (the family's write-path member) +
+  probe witness.** `wpD_close_owned` (`ChanD.lean`): close on an
+  OWNED open cell — the one channel law that WRITES the cell through
+  the D-carrier (`closed := true`, buffer/capacity preserved; the
+  cell in the machine-real untyped shape `makeChan` allocates). The
+  key structural fact: a close apply has NO pairing branch —
+  `chanArrivalPlan` has no `.close` arm (`chanArrivalPlan_close`,
+  proved `rfl`) — so unlike send/recv the successor is deterministic
+  and no invariant is needed when the closing thread owns the cell
+  (the sequential-degenerate class; the invariant sibling is recorded
+  with a sharing consumer, P-CL1-6's neighbor). WITNESS
+  (`Specs/ChanCloseProbe.lean`): the close-probe walk —
+  `chanCloseTripleC` is the first frame-quantified triple whose POST
+  records a channel-cell state change — with the D1-BOTH pair
+  (`chanCloseReadoutC`, `chanCloseTerminatesNormallyC`; cert fuel 20,
+  `#eval`-confirmed true before `decide +kernel`, MachineWf decide
+  eval'd too). Axioms: FD7-exact (law/witness classical trio;
+  inversion + cert constructive). Audit block extended; root import
+  wired; `scripts/ci` green (the slice's recorded differential
+  stands — zero runtime edits in this commit either).

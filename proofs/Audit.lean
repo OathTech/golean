@@ -687,6 +687,29 @@ open Lean in
 /-- info: 'GoLean.Iris.chanRendezvousTerminatesNormallyC' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Iris.chanRendezvousTerminatesNormallyC
 
+-- The CLOSE law (the family's write-path member, same slice): close on
+-- an OWNED open cell — no pairing branch exists at a close apply
+-- (chanArrivalPlan_close), so the successor is deterministic and the
+-- cell write rides genHeap_update. WITNESS: the close probe
+-- (Specs/ChanCloseProbe.lean) — a sequential-degenerate walk whose
+-- triple pins the CLOSED cell in the post (the first triple recording
+-- a channel-cell state change), with its D1-BOTH pair. Same
+-- name-existence-tripwire scope as the block above.
+/-- info: 'GoLean.Iris.chanArrivalPlan_close' depends on axioms: [propext] -/
+#guard_msgs in #print axioms GoLean.Iris.chanArrivalPlan_close
+/-- info: 'GoLean.Iris.wpD_close_owned' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.wpD_close_owned
+/-- info: 'GoLean.Iris.wpD_chan_close_witness' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.wpD_chan_close_witness
+/-- info: 'GoLean.Iris.chanCloseTripleC' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.chanCloseTripleC
+/-- info: 'GoLean.Iris.chanCloseReadoutC' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.chanCloseReadoutC
+/-- info: 'GoLean.Iris.chanCloseAllStreamsCert' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.chanCloseAllStreamsCert
+/-- info: 'GoLean.Iris.chanCloseTerminatesNormallyC' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.chanCloseTerminatesNormallyC
+
 -- The exit pipes.
 /-- info: 'GoLean.Iris.goSpec_of_wp' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Iris.goSpec_of_wp
