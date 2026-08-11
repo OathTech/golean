@@ -1872,7 +1872,7 @@ example := @GoLean.GoCore.NegativeSpecs.div_nonzero_no_panic
 -/
 
 
-/-! ## The completion-pin gate, ROUND 3 (S1 gate-verification round)
+/-! ## The completion-pin gate, ROUND 4 (S1 gate-verification, generation 4)
 
 **Doctrine (user, 2026-08-11 — the TCB-grounding principle):** the
 TRUSTED claim of a triple-carrying export is its boring interpreter
@@ -1937,44 +1937,58 @@ this gate must flag forever (`ZzVacuityGateFixtures` +
 - Fail-closed guards throughout: anchors resolve; every fixture and
   allowlist name resolves; every fixture flags in its EXPECTED class;
   the known positive exports classify AND stay paired; walk budget
-  exhaustion throws. -/
+  exhaustion throws.
+
+ROUND 4 (generation-4 review; every probe a tracked fixture): the
+kind filter made EXHAUSTIVE (the walk-wildcard bug's sibling — see
+`exportKind`'s comment; `fixtureOpaqueTriple`/`fixtureOpaqueEdge`);
+pins must be BINDER-FREE (an assertion under a premise is not an
+assertion — `fixtureFalseGuardedPin`; the doctrine tension with
+CLAUDE.md's external-premise allowance for LAWS is recorded at the
+pin pass); fixture exclusion is EXACT-NAME ONLY (the suffix whitelist
+was abusable — `fixtureDefTriple.eq_realExport`); the name skip is
+`_private`-rooted only (`_fixtureUnderscoreTriple`); the pairing key
+is `(env₀, prog)` (`fixtureEnvMismatchTriple`); reverse-edge coverage
+uses an upstream-root DENYLIST so unknown module roots are included
+by default.
+
+**THE RECORDED LIMIT (say it wherever the gate is described):** this
+gate enforces completion-anchor EXISTENCE per `(env₀, prog)`. It does
+NOT check that the pin's seed state satisfies the export's
+precondition — pre-side vacuity (`.pure False` and friends) is
+outside the gate, and remains the WITNESS DISCIPLINE's job: the D1
+readout pair discharges each export's `InitialSplit` at the pin's own
+seed (slice note §10). The gate is a structural floor, not the
+non-vacuity story. -/
 
 open Lean in
-/-- All `args[argIdx]` of SATURATED applications (exact arity) of the
-given head constants anywhere inside `e` (the completion-pin gate's
-syntactic extractor). -/
-private partial def gateCollectArgs (heads : List (Name × Nat × Nat))
+/-- All SATURATED applications (exact arity) of the given head
+constants anywhere inside `e` (the completion-pin gate's syntactic
+extractor; the caller projects the argument positions it needs). -/
+private partial def gateCollectApps (heads : List (Name × Nat))
     (e : Expr) : Array Expr :=
   let here :=
     if e.isApp then
       match e.getAppFn with
       | .const n _ =>
         match heads.find? (fun h => h.1 == n) with
-        | some (_, arity, idx) =>
-          if e.getAppNumArgs == arity then #[e.getAppArgs[idx]!] else #[]
+        | some (_, arity) =>
+          if e.getAppNumArgs == arity then #[e] else #[]
         | none => #[]
       | _ => #[]
     else #[]
   let sub :=
     match e with
-    | .app f a => gateCollectArgs heads f ++ gateCollectArgs heads a
-    | .lam _ t b _ => gateCollectArgs heads t ++ gateCollectArgs heads b
-    | .forallE _ t b _ => gateCollectArgs heads t ++ gateCollectArgs heads b
+    | .app f a => gateCollectApps heads f ++ gateCollectApps heads a
+    | .lam _ t b _ => gateCollectApps heads t ++ gateCollectApps heads b
+    | .forallE _ t b _ => gateCollectApps heads t ++ gateCollectApps heads b
     | .letE _ t v b _ =>
-        gateCollectArgs heads t ++ gateCollectArgs heads v
-          ++ gateCollectArgs heads b
-    | .mdata _ b => gateCollectArgs heads b
-    | .proj _ _ b => gateCollectArgs heads b
+        gateCollectApps heads t ++ gateCollectApps heads v
+          ++ gateCollectApps heads b
+    | .mdata _ b => gateCollectApps heads b
+    | .proj _ _ b => gateCollectApps heads b
     | _ => #[]
   here ++ sub
-
-open Lean in
-/-- The type's CONCLUSION: the expression after the binder telescope
-(the pin rule reads assertions here, never in hypotheses). -/
-private partial def gateConclusion : Expr → Expr
-  | .forallE _ _ b _ => gateConclusion b
-  | .mdata _ b => gateConclusion b
-  | e => e
 
 open Lean in
 #eval show CoreM Unit from do
@@ -1986,9 +2000,18 @@ open Lean in
       let m := mods[idx.toNat]!.toString
       m == "GoLeanProofs" || m.startsWith "GoLeanProofs."
     | none => false
-  let isGoLeanMod (n : Name) : Bool :=
+  -- Reverse-edge coverage (round 4, note-6 fix): instead of an
+  -- ALLOWLIST of our roots (whose complement was an unenforced
+  -- invariant), a DENYLIST of the upstream toolchain/package roots —
+  -- which CANNOT reference GoTripleC, because lake package
+  -- dependencies are acyclic and those packages build before this
+  -- repo's. A NEW or unknown module root is therefore INCLUDED by
+  -- default: the failure direction is closed.
+  let upstreamRoots : List String :=
+    ["Init", "Lean", "Std", "Iris", "Qq", "Batteries"]
+  let coveredMod (n : Name) : Bool :=
     match env.getModuleIdxFor? n with
-    | some idx => mods[idx.toNat]!.getRoot.toString.startsWith "GoLean"
+    | some idx => !(upstreamRoots.contains mods[idx.toNat]!.getRoot.toString)
     | none => false
   -- FIXTURES: exact names (docstring). Exclusion = the exact name, or
   -- the name extended ONLY by generated components (equation/match/
@@ -2000,10 +2023,17 @@ open Lean in
      `GoLean.Surface.fixtureSelfPin,
      `GoLean.Surface.fixtureDecoyTriple,
      `GoLean.Surface.fixtureDefTriple.namespaceChildProbe,
-     `GoLean.Surface.fixtureOutOfSpecsTriple]
+     `GoLean.Surface.fixtureOutOfSpecsTriple,
+     -- round-4 shapes (each a docstring in ZzVacuityGateFixtures):
+     `GoLean.Surface.fixtureOpaqueTriple,
+     `GoLean.Surface.fixtureGuardedTriple,
+     `GoLean.Surface.fixtureDefTriple.eq_realExport,
+     `GoLean.Surface._fixtureUnderscoreTriple,
+     `GoLean.Surface.fixtureEnvMismatchTriple]
   let fixtureWrapper : List Name :=
     [`GoLean.Surface.fixtureWrappedTriple,
-     `GoLean.Surface.fixtureStructWrapped]
+     `GoLean.Surface.fixtureStructWrapped,
+     `GoLean.Surface.fixtureOpaqueEdge]
   let fixtureOpen : List Name :=
     [`GoLean.Surface.fixtureOpenProgTriple]
   -- generated satellites of the P2 fixture STRUCTURE (the projection
@@ -2016,20 +2046,20 @@ open Lean in
   let fixtureStructAux : List Name :=
     [`GoLean.Surface.ZzStructWrappedTriple.triple,
      `GoLean.Surface.ZzStructWrappedTriple.casesOn,
-     `GoLean.Surface.ZzStructWrappedTriple.recOn]
+     `GoLean.Surface.ZzStructWrappedTriple.recOn,
+     -- surfaced when the round-4 `_private`-only name skip replaced
+     -- the blanket `isInternal` one (the flat-constructor def carries
+     -- the field's triple app in its type):
+     `GoLean.Surface.ZzStructWrappedTriple.mk._flat_ctor]
   let fixtureRoots := fixtureUnpaired ++ fixtureWrapper ++ fixtureOpen
       ++ fixtureStructAux
-  let genComponent : Name → Bool := fun c =>
-    match c with
-    | .str _ s => s.startsWith "eq_" || s.startsWith "match_"
-        || s.startsWith "_" || s.startsWith "proof_"
-    | .num _ _ => true
-    | _ => false
-  let isExcluded : Name → Bool := fun n =>
-    fixtureRoots.any (fun r =>
-      r == n ||
-      (r.isPrefixOf n &&
-        ((n.components.drop r.components.length).all genComponent)))
+  -- Exclusion is by EXACT NAME ONLY (round 4, finding-3 fix: the
+  -- round-3 generated-suffix whitelist let a pseudo-generated child
+  -- name — fixtureDefTriple.eq_realExport, now a tracked fixture —
+  -- slip out of enforcement silently). A compiler-generated satellite
+  -- that is not exact-listed FAILS LOUD and is added here exactly,
+  -- with its reason.
+  let isExcluded : Name → Bool := fun n => fixtureRoots.contains n
   -- ALLOWLIST: genuine ∀-program lemmas — METHOD, not exports; each
   -- entry carries its reason here and nowhere else (adding to this
   -- list is a gate change, reviewed as such):
@@ -2054,7 +2084,7 @@ open Lean in
   let names : Array Name := env.constants.fold (fun acc n _ => acc.push n) #[]
   let mut rev : Std.HashMap Name (Array Name) := {}
   for n in names do
-    unless isGoLeanMod n do continue
+    unless coveredMod n do continue
     let some ci := env.find? n | continue
     let mut deps : Array Name := ci.type.getUsedConstants
     match ci with
@@ -2086,29 +2116,71 @@ open Lean in
     match env.find? n with
     | some ci => ci.type.getUsedConstants.any (fun d => reach.contains d)
     | none => false
-  let tripleHeads : List (Name × Nat × Nat) :=
-    [(``GoLean.Surface.GoTripleC, 7, 5), (``GoLean.Surface.GoSpecC, 7, 5)]
-  -- pass 1: PINS — conclusion-headed TerminatesNormallyC over a
-  -- CLOSED program (docstring: mention-is-not-assertion; open pin
-  -- programs dropped)
-  let mut pinProgs : Array Expr := #[]
+  let tripleHeads : List (Name × Nat) :=
+    [(``GoLean.Surface.GoTripleC, 7), (``GoLean.Surface.GoSpecC, 7)]
+  -- Kind eligibility — EXHAUSTIVE over ConstantInfo, no wildcard
+  -- (round 4, finding-1 fix: the round-3 rebuild removed the walk's
+  -- wildcard but left this one in the kind filter — the SAME bug one
+  -- level up; a new ConstantInfo kind must fail compilation here).
+  -- thm/defn/opaque are proof-carrying export kinds; axiom
+  -- declarations are already build-fatal (the axiom sweep above);
+  -- inductive/ctor/rec/quot are type-formers, not proofs — a triple
+  -- STORED through one is caught at its consumer (the wrapper-hidden
+  -- class; fixtureStructWrapped/fixtureOpaqueEdge).
+  let exportKind : ConstantInfo → Bool := fun ci =>
+    match ci with
+    | .thmInfo _ => true
+    | .defnInfo _ => true
+    | .opaqueInfo _ => true
+    | .axiomInfo _ => false
+    | .inductInfo _ => false
+    | .ctorInfo _ => false
+    | .recInfo _ => false
+    | .quotInfo _ => false
+  -- Name skip — `_private`-ROOTED only (round 4, finding-4 fix:
+  -- `Name.isInternal` also drops user-writable leading-underscore
+  -- names — `_fixtureUnderscoreTriple` is the tracked shape; module-
+  -- private declarations are not exports, everything else classifies
+  -- and generated satellites are exact-listed).
+  let skipName : Name → Bool := fun n => n.getRoot == `_private
+  -- pass 1: PINS — a pin's TYPE must be BINDER-FREE with
+  -- TerminatesNormallyC as its head over CLOSED env₀/prog (round 4,
+  -- finding-2 fix: round 3 peeled the whole telescope, so a
+  -- False-guarded "pin" counted — fixtureFalseGuardedPin is the
+  -- tracked shape). DOCTRINE TENSION, recorded: CLAUDE.md's
+  -- non-vacuity rule blesses genuinely-external premises on LAWS,
+  -- but a COMPLETION PIN is the existence witness itself — a premise
+  -- would defeat it. If a legitimately-conditional pin ever arises,
+  -- it goes on an exact-name allowlist here with the premise argued
+  -- in its reason; none exists today (all current pins are
+  -- binder-free — verified at round 4).
+  -- PAIRING KEY (round 4, finding-5 fix): (env₀, prog), both closed —
+  -- a pin under one environment no longer anchors an export under
+  -- another (fixtureEnvMismatchTriple is the tracked shape).
+  -- RECORDED LIMIT, prominently: this gate enforces anchor EXISTENCE
+  -- per (env₀, prog). It does NOT check that the pin's seed state
+  -- satisfies the export's precondition — pre-side vacuity
+  -- (`.pure False` and friends) is OUTSIDE the gate and remains the
+  -- witness discipline's job (the D1 readout pair: every readout
+  -- discharges its InitialSplit at the pin's own seed; see the slice
+  -- note §10).
+  let mut pinKeys : Array (Expr × Expr) := #[]
   let mut pinCount := 0
   for n in names do
     unless inScope n do continue
     let some ci := env.find? n | continue
-    let kindOk := match ci with
-      | .thmInfo _ => true | .defnInfo _ => true | _ => false
-    unless kindOk do continue
-    if n.isInternal then continue
-    let concl := gateConclusion ci.type
-    if concl.isApp then
-      match concl.getAppFn with
+    unless exportKind ci do continue
+    if skipName n then continue
+    let t := ci.type
+    if t.isApp && !t.isForall then
+      match t.getAppFn with
       | .const c _ =>
         if c == ``GoLean.Surface.TerminatesNormallyC
-            && concl.getAppNumArgs == 3 then
-          let pr := concl.getAppArgs[2]!
-          unless pr.hasLooseBVars do
-            pinProgs := pinProgs.push pr
+            && t.getAppNumArgs == 3 then
+          let envArg := t.getAppArgs[0]!
+          let pr := t.getAppArgs[2]!
+          unless envArg.hasLooseBVars || pr.hasLooseBVars do
+            pinKeys := pinKeys.push (envArg, pr)
             pinCount := pinCount + 1
       | _ => pure ()
   -- pass 2: classify + extract + pair
@@ -2119,22 +2191,30 @@ open Lean in
   for n in names do
     unless inScope n do continue
     let some ci := env.find? n | continue
-    let kindOk := match ci with
-      | .thmInfo _ => true | .defnInfo _ => true | _ => false
-    unless kindOk do continue
-    if n.isInternal then continue
+    unless exportKind ci do continue
+    if skipName n then continue
     unless reachesTriple n do continue
     if allowlist.contains n then continue
     classified := classified.push n
-    let progs := gateCollectArgs tripleHeads ci.type
-    if progs.isEmpty then
+    let apps := gateCollectApps tripleHeads ci.type
+    let keys := apps.map (fun a => (a.getAppArgs[3]!, a.getAppArgs[5]!))
+    if keys.isEmpty then
       wrapperHidden := wrapperHidden.push n
-    else if progs.any (fun e => e.hasLooseBVars) then
+    else if keys.any (fun k => k.1.hasLooseBVars || k.2.hasLooseBVars) then
       openTerm := openTerm.push n
     else
-      for pr in progs do
-        unless pinProgs.contains pr do
-          unpaired := unpaired.push (n, toString pr)
+      for k in keys do
+        unless pinKeys.contains k do
+          unpaired := unpaired.push (n, toString k.2)
+  -- NEGATIVE TEST on the EXCLUSION FUNCTION itself (round 4: a
+  -- regression back to the suffix whitelist changes only ENFORCEMENT,
+  -- never the raw sets, so no declared fixture can catch it — the
+  -- tracked suffix-abuse fixture is exact-listed): a NON-listed
+  -- pseudo-generated child of a fixture root must NOT be excluded.
+  if isExcluded (.str `GoLean.Surface.fixtureDefTriple "eq_unlistedProbe") then
+    throwError "completion-pin gate NEGATIVE TEST FAILED: the fixture \
+      exclusion excludes a NON-listed pseudo-generated child — exclusion \
+      must be by exact name only"
   -- NEGATIVE TESTS: every fixture flags in its EXPECTED class
   for fx in fixtureUnpaired do
     unless classified.contains fx do
@@ -2147,7 +2227,8 @@ open Lean in
   for fx in fixtureWrapper do
     unless classified.contains fx do
       throwError "completion-pin gate NEGATIVE TEST FAILED: fixture {fx} \
-        not CLASSIFIED — the inductive/opaque walk arms have gone inert"
+        not CLASSIFIED — a wrapper walk arm has gone inert (defn value / \
+        inductive ctors / opaque value, depending on the fixture)"
     unless wrapperHidden.contains fx do
       throwError "completion-pin gate NEGATIVE TEST FAILED: fixture {fx} \
         not flagged WRAPPER-HIDDEN — the fail-closed extraction arm has \
@@ -2175,7 +2256,7 @@ open Lean in
   let realWrapper := wrapperHidden.filter (fun n => !(isExcluded n))
   let realOpen := openTerm.filter (fun n => !(isExcluded n))
   if realUnpaired.isEmpty && realWrapper.isEmpty && realOpen.isEmpty then
-    IO.println s!"completion-pin gate (round 3): {classified.size} \
+    IO.println s!"completion-pin gate (round 4): {classified.size} \
 triple-carrying constants env-wide over GoLeanProofs.*, {pinCount} \
 conclusion-asserted closed pins, {allowlist.length} allowlisted \
 generic lemmas; all non-fixture exports program-paired (fixtures \

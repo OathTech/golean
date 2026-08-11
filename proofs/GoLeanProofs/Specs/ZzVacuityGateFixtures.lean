@@ -1,4 +1,5 @@
 import GoLeanProofs.ZzGateFixtureSupport
+import GoLeanProofs.Specs.GoldenTargets
 
 /-!
 # Completion-pin gate: the ESCAPE-SHAPE fixtures (S1 audit round 2)
@@ -128,6 +129,86 @@ checker and excluded only because it is LISTED by its exact name.
 Expected gate class: UNPAIRED. -/
 theorem fixtureDefTriple.namespaceChildProbe :
     GoTripleC [] #[] #[] [] (.pure False) zzChildProg .emp :=
+  fun _hp _na _hP _F hinit => (hinit.sat_pre.1).elim
+
+/-! ## Round-4 escape shapes (S1 gate-verification generation 4 —
+the standing rule: every attacker shape becomes a tracked fixture) -/
+
+/-- Fixture-private program for the opaque-export shape. -/
+def zzOpaqueProg : Stmt := .seqn #[.block #[] #[]]
+
+/-- R4-1a — the OPAQUE EXPORT: round 3 removed the walk's wildcard but
+left one in the classification KIND filter (`| _ => false`), so an
+`opaque` triple was never classified — the round-3 critical's exact
+signature, one level up. Expected gate class: UNPAIRED. -/
+opaque fixtureOpaqueTriple :
+    GoTripleC [] #[] #[] [] (.pure False) zzOpaqueProg .emp :=
+  fun _hp _na _hP _F hinit => (hinit.sat_pre.1).elim
+
+/-- R4-1b (mutation trigger for the `.opaqueInfo → value` EDGE arm,
+which no round-3 fixture exercised): an opaque `Prop` whose VALUE is
+the triple — reachable only through that arm. -/
+opaque ZzOpaqueWrappedProp : Prop :=
+  GoTripleC [] #[] #[] [] (.pure False) zzOpaqueProg .emp
+
+/-- R4-1b (the classified consumer): its type mentions the opaque
+`Prop`, so it is classified iff the opaque-VALUE edge arm is alive.
+Expected gate class: WRAPPER-HIDDEN. -/
+theorem fixtureOpaqueEdge : ZzOpaqueWrappedProp → True := fun _ => trivial
+
+/-- Fixture-private program for the guarded-pin shape. -/
+def zzGuardedProg : Stmt := .seqn #[.block #[] #[], .seqn #[]]
+
+/-- R4-2a — the HYPOTHESIS-GUARDED PIN: an assertion under an
+undischarged premise is not an assertion (round 3's
+mention-is-not-assertion, one level up: `gateConclusion` peeled
+hypothesis binders too). Pins must be BINDER-FREE; this one must
+never count. -/
+theorem fixtureFalseGuardedPin (h : False) :
+    TerminatesNormallyC [] {} zzGuardedProg :=
+  h.elim
+
+/-- R4-2b — the export the guarded pin would have "paired". Expected
+gate class: UNPAIRED (the guarded pin does not save it). -/
+theorem fixtureGuardedTriple :
+    GoTripleC [] #[] #[] [] (.pure False) zzGuardedProg .emp :=
+  fun _hp _na _hP _F hinit => (hinit.sat_pre.1).elim
+
+/-- Fixture-private program for the suffix-abuse shape. -/
+def zzSuffixProg : Stmt := .seqn #[.seqn #[.block #[] #[]]]
+
+/-- R4-3 — the GENERATED-SUFFIX ABUSE: a real export named as a
+pseudo-generated child (`eq_*`) of a listed fixture root; round 3's
+suffix whitelist silently excluded it. Exclusion under fixture roots
+is now by EXACT LIST ONLY, so this fixture is flagged and excluded
+only because it is listed by its exact name. Expected gate class:
+UNPAIRED. -/
+theorem fixtureDefTriple.eq_realExport :
+    GoTripleC [] #[] #[] [] (.pure False) zzSuffixProg .emp :=
+  fun _hp _na _hP _F hinit => (hinit.sat_pre.1).elim
+
+/-- Fixture-private program for the underscore shape. -/
+def zzUnderscoreProg : Stmt := .seqn #[.seqn #[], .block #[] #[]]
+
+/-- R4-4 — the LEADING-UNDERSCORE NAME: `Name.isInternal` treats it as
+compiler-internal, but it is user-writable; round 3's blanket
+`isInternal` skip dropped it from both passes. The skip is now
+`_private`-root only. Expected gate class: UNPAIRED. -/
+theorem _fixtureUnderscoreTriple :
+    GoTripleC [] #[] #[] [] (.pure False) zzUnderscoreProg .emp :=
+  fun _hp _na _hP _F hinit => (hinit.sat_pre.1).elim
+
+/-- R4-5 — the ENVIRONMENT-MISMATCH export: `goldenDriver` HAS a
+completion pin (`goldenTerminatesNormallyC`, under `outEnv`), but this
+export states a triple for the same program under a DIFFERENT `env₀`
+(`[]`) — round 3's prog-only pairing key would have paired them. The
+key is now `(env₀, prog)`. Expected gate class: UNPAIRED. (The
+remaining, deliberately UNCHECKED axis is the pin-seed-vs-export-pre
+relation — the gate enforces anchor existence per `(env₀, prog)`,
+never precondition satisfaction; that stays the witness discipline's
+job, recorded at the gate.) -/
+theorem fixtureEnvMismatchTriple :
+    GoTripleC [] #[] #[] [] (.pure False) goldenDriver .emp :=
   fun _hp _na _hP _F hinit => (hinit.sat_pre.1).elim
 
 end GoLean.Surface

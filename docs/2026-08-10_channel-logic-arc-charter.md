@@ -207,7 +207,13 @@ twice-grown bug), env-wide scope over the proofs package,
 conclusion-asserted CLOSED pins only, per-program pairing,
 wrapper-hidden and open-term exports fail closed, an exact-name
 allowlist for genuine ∀-program lemmas, and every attacker shape from
-all three review rounds kept as a tracked negative-tested fixture). Run-conditioned triples ALONE anchor nothing (the
+all FOUR review rounds kept as a tracked negative-tested fixture; at
+round 4: exhaustive kind filter, binder-free pins, exact-name-only
+exclusions, `(env₀, prog)` pairing keys, upstream-root denylist
+coverage). RECORDED LIMIT: the gate enforces anchor EXISTENCE per
+`(env₀, prog)` only — it never checks a pin's seed against an
+export's precondition; pre-side vacuity remains the witness
+discipline's job (the D1 readout pair). Run-conditioned triples ALONE anchor nothing (the
 permanent demonstration: Specs/ChanVacuityWarning.lean); the
 sub-branch audits review the walk as a standing dimension.
 

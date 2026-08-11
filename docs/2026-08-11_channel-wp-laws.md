@@ -746,10 +746,14 @@ none of it appears in any exported statement (the statements above
 mention only `execProg`/`loadLoc`/`GoTripleC`/`TerminatesNormallyC`,
 all interpreter-vocabulary surface definitions), and the differential
 (§11) plus the kernel certificates are what ground the interpreter
-itself. The completion-pin gate (`Audit.lean`) enforces the
-triple-must-carry-its-anchor pairing structurally. The matching
-charter addendum makes this walk a per-slice review criterion for the
-rest of the arc.
+itself. The completion-pin gate (`Audit.lean`) enforces
+completion-anchor EXISTENCE per `(env₀, prog)` — a structural floor,
+with its RECORDED LIMIT (round 4): it does not check that a pin's
+seed satisfies an export's precondition, so pre-side vacuity stays
+exactly where this table puts it — in the witness discipline (each
+readout row discharges its `InitialSplit` at the pin's own seed).
+The matching charter addendum makes this walk a per-slice review
+criterion for the rest of the arc.
 
 ## 11. The confluent-lane discharge (charter validation addition,
 ## owed by the audit's C2 — recorded and RUN at the fix round)
@@ -957,3 +961,76 @@ through the frontend, they become ordinary confluent rows.
   and the statement-TCB gate at 48 designated, byte-identical; audit
   sweep 13537 declarations axiom-clean. Doc-only record commit over
   the run's own commit, per the established discipline.
+
+## 14. S1 gate-verification generation 4 (round 4: 2 latent majors +
+## 3 minors + 2 notes — the LAST patch round by operator direction)
+
+- **MAJOR — the kind-filter wildcard** (the round-3 critical's exact
+  signature one level up: `kindOk`'s `| _ => false` silently dropped
+  `opaque` exports, count-invisible). Fixed: `exportKind` matches all
+  eight `ConstantInfo` cases explicitly with per-arm reasons (a new
+  kind is a compile error); the gate section was swept for remaining
+  `| _ =>` arms — none remain. Fixtures: `fixtureOpaqueTriple`
+  (opaque export, UNPAIRED) and `fixtureOpaqueEdge` (the
+  `.opaqueInfo → value` EDGE arm's mutation trigger, WRAPPER-HIDDEN —
+  round 3 had NO fixture on that arm and its negative-test message
+  misleadingly claimed otherwise; message fixed).
+- **MAJOR — hypothesis-guarded pins** (`gateConclusion` peeled premise
+  binders, so `(h : False) → TerminatesNormallyC …` counted). Fixed:
+  a pin's TYPE must be BINDER-FREE (verified free today — all 21
+  pins have zero binders). The doctrine tension is recorded at the
+  pin pass: CLAUDE.md blesses genuinely-external premises on LAWS,
+  but a completion PIN is the existence witness itself — a
+  conditional pin, if ever legitimate, goes on an exact-name
+  allowlist with the premise argued. Fixtures:
+  `fixtureFalseGuardedPin` + `fixtureGuardedTriple`.
+- **MINOR — suffix abuse**: exclusion under fixture roots is EXACT
+  LIST ONLY (the generated-suffix whitelist was abusable); the P2
+  structure's satellites are exact-listed (now four — the
+  `mk._flat_ctor` def surfaced when the name skip narrowed). Fixture:
+  `fixtureDefTriple.eq_realExport` — plus a direct negative test ON
+  the exclusion FUNCTION (a non-listed pseudo-generated child must
+  not be excluded), because that mutation changes only enforcement
+  and no declared fixture can see it.
+- **MINOR — `isInternal` over-skip**: the name skip is now
+  `_private`-rooted only; user-writable leading-underscore names
+  classify. Fixture: `_fixtureUnderscoreTriple`.
+- **MINOR — pairing key**: now `(env₀, prog)`, both closed (a pin
+  under one environment no longer anchors an export under another).
+  Fixture: `fixtureEnvMismatchTriple` (`goldenDriver` under `[]` vs
+  its pin under `outEnv`). THE RECORDED LIMIT, stated at the gate, in
+  §10, and in the charter: the gate enforces anchor EXISTENCE per
+  `(env₀, prog)` — it does NOT check the pin's seed against the
+  export's precondition; pre-side vacuity remains the witness
+  discipline's job (the D1 readout pair discharges `InitialSplit` at
+  the pin's own seed). Overclaim wording removed at all three sites.
+- **NOTE — reverse-edge coverage**: the `isGoLeanMod` allowlist (an
+  unenforced invariant) became an upstream-root DENYLIST
+  (`Init/Lean/Std/Iris/Qq/Batteries` — packages that build before
+  this repo and cannot reference `GoTripleC` by lake's acyclic
+  dependency order): an unknown/new module root is now INCLUDED by
+  default — the failure direction is closed structurally, no
+  invariant assertion needed.
+- **MUTATION VERIFICATION** (all six run against the built
+  environment, each firing its expected negative test): opaque-edge
+  arm dropped → `fixtureOpaqueEdge not CLASSIFIED`; pin peeling
+  restored → `fixtureGuardedTriple not flagged UNPAIRED`; prog-only
+  key restored → `fixtureEnvMismatchTriple not flagged UNPAIRED`;
+  opaque kind dropped → `fixtureOpaqueTriple not CLASSIFIED`; suffix
+  exclusion restored → the exclusion-function negative test fires;
+  `isInternal` restored → `_fixtureUnderscoreTriple not CLASSIFIED`.
+- **COUNTS, re-explained**: round-3's 27/21/2 → round-4's **34
+  classified / 21 pins / 2 allowlisted** (+6 new fixtures, +1
+  `mk._flat_ctor` satellite exact-listed; pins unchanged — the
+  guarded pin is REJECTED, and no new pin was added). Fixtures
+  flagged: 12 unpaired + 3 wrapper-hidden + 1 open-term.
+- **The restructure question** (operator asked): patching remained
+  cheaper THIS round — all findings were narrow with validated
+  probes, and the round-3 verifier confirmed everything else held
+  under attack. IF the final verification finds another major in the
+  same class, the restructure worth taking is the GENERATED-MANIFEST
+  form: the gate emits the full computed classification (constant →
+  class → pin key) and diffs it against a TRACKED manifest, so every
+  change to the classified set becomes reviewable drift instead of a
+  silent-escape surface; the checker then only needs to be trusted
+  for completeness of ENUMERATION, not for per-shape rules.
