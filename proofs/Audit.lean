@@ -610,6 +610,108 @@ open Lean in
 /-- info: 'GoLean.Iris.stepDC_shape_cases' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Iris.stepDC_shape_cases
 
+-- THE MEDIATED DM-LANGUAGE (channel-logic slice 2, LangDM.lean —
+-- design note docs/2026-08-11_channel-protocol-layer.md §§1-2): the
+-- cell-mediated per-thread relation StepDM (every delivered value
+-- transits the physical cell — the O1(b) refinement, REQUIRED for any
+-- value protocol: on StepDC no ghost can pin a delivered value, the
+-- note's §1 impossibility finding), the raw-cell round-trip kit
+-- (P-CL1-1's storeLoc round-trip family at .base scope, incl. the
+-- normalizer's chanData success-identity), the waiter-scan and
+-- arrival-analysis provenance inversions, the mediated pairing
+-- SIMULATION (deposit-then-drain through the cell; the restricted
+-- ∃-residue at non-.base cells), the run erasure, the .MaybeStuck
+-- heap-handover adequacy (parked-empty configs are irreducible on
+-- this carrier BY DESIGN — no spins, no Löb, no phantom completions
+-- for .base-parked plain shapes), THE EXIT goTripleC_of_wpDM, and
+-- the ported wpDM law kit incl. the STORE core the delivery-frame
+-- walks need. Consumers land in ChanDM.lean (the Ψ-protocol laws)
+-- and Specs/ChanRendezvousVal.lean (the value-pinning exemplar) —
+-- same-slice commits. Name-existence-tripwire scope: every public
+-- theorem of LangDM.lean is anchored here.
+-- AXIOM NOTE (investigated, 2026-08-11): several kit/simulation
+-- entries below carry Classical.choice where LangD's lane is
+-- constructive. Root cause measured, not guessed: `BEq.rfl`/
+-- `eq_of_beq` at `Loc` go through the `LawfulBEq Loc` instance
+-- (GoLean/GoCore/Value.lean), whose proof leans on core String/Int
+-- beq lawfulness that is classical at this toolchain — a probe of
+-- `(l == l) = true := BEq.rfl` alone reports the trio. Every
+-- `Heap.set`/`Heap.lookup` beq-if reduction and every waiter-scan
+-- `eq_of_beq` inherits it; the LangD lane never reasons about Loc
+-- beq, which is why it stayed constructive. Constructivizing the
+-- upstream instance is parked (P-CL2-6, design note §7) — a
+-- reversible cleanup, no soundness content.
+/-- info: 'GoLean.Iris.heap_set_set' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.heap_set_set
+/-- info: 'GoLean.Iris.heap_set_lookup_self' depends on axioms: [propext] -/
+#guard_msgs in #print axioms GoLean.Iris.heap_set_lookup_self
+/-- info: 'GoLean.Iris.heap_lookup_set' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.heap_lookup_set
+/-- info: 'GoLean.Iris.setCell_setCell' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.setCell_setCell
+/-- info: 'GoLean.Iris.setCell_self' depends on axioms: [propext] -/
+#guard_msgs in #print axioms GoLean.Iris.setCell_self
+/-- info: 'GoLean.Iris.lookup_setCell' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.lookup_setCell
+/-- info: 'GoLean.Iris.chanCell_base_inv' depends on axioms: [propext] -/
+#guard_msgs in #print axioms GoLean.Iris.chanCell_base_inv
+/-- info: 'GoLean.Iris.chanCell_setCell' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.chanCell_setCell
+/-- info: 'GoLean.Iris.normalize_chanData_id' depends on axioms: [propext] -/
+#guard_msgs in #print axioms GoLean.Iris.normalize_chanData_id
+/-- info: 'GoLean.Iris.storeLoc_chanData_raw' depends on axioms: [propext] -/
+#guard_msgs in #print axioms GoLean.Iris.storeLoc_chanData_raw
+/-- info: 'GoLean.Iris.storeLoc_chanData_ok' depends on axioms: [propext] -/
+#guard_msgs in #print axioms GoLean.Iris.storeLoc_chanData_ok
+/-- info: 'GoLean.Iris.array_push_getElem?_zero_of_nonempty' depends on axioms: [propext] -/
+#guard_msgs in #print axioms GoLean.Iris.array_push_getElem?_zero_of_nonempty
+/-- info: 'GoLean.Iris.array_push_getElem?_zero_empty' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.array_push_getElem?_zero_empty
+/-- info: 'GoLean.Iris.array_eraseIdx_push' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.array_eraseIdx_push
+/-- info: 'GoLean.Iris.recvSideWaiters_mem' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.recvSideWaiters_mem
+/-- info: 'GoLean.Iris.sendSideWaiters_mem' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.sendSideWaiters_mem
+/-- info: 'GoLean.Iris.chanArrivalPlan_send_inv_full' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.chanArrivalPlan_send_inv_full
+/-- info: 'GoLean.Iris.chanArrivalPlan_recv_inv_full' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.chanArrivalPlan_recv_inv_full
+/-- info: 'GoLean.Iris.selectArrivalCases_single_inv' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.selectArrivalCases_single_inv
+/-- info: 'GoLean.Iris.selectArrivalCases_multi_pair_inv' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.selectArrivalCases_multi_pair_inv
+/-- info: 'GoLean.Iris.poolStepDM_at' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.poolStepDM_at
+/-- info: 'GoLean.Iris.poolStepDM_two' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.poolStepDM_two
+/-- info: 'GoLean.Iris.pair_erasedDM' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.pair_erasedDM
+/-- info: 'GoLean.Iris.stepM_erasedDM' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.stepM_erasedDM
+/-- info: 'GoLean.Iris.execProgLoop_erasedDM' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.execProgLoop_erasedDM
+/-- info: 'GoLean.Iris.execProg_erasedDM' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.execProg_erasedDM
+/-- info: 'GoLean.Iris.goDM_heap_adequacy_own' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.goDM_heap_adequacy_own
+/-- info: 'GoLean.Iris.goTripleC_of_wpDM' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.goTripleC_of_wpDM
+/-- info: 'GoLean.Iris.stepDM_shape_cases' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.stepDM_shape_cases
+/-- info: 'GoLean.Iris.wpDM_pure_det' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.wpDM_pure_det
+/-- info: 'GoLean.Iris.wpDM_spawned_strip' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.wpDM_spawned_strip
+/-- info: 'GoLean.Iris.wpDM_det_step_keep' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.wpDM_det_step_keep
+/-- info: 'GoLean.Iris.wpDM_eval_var' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.wpDM_eval_var
+/-- info: 'GoLean.Iris.wpDM_store_step' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.wpDM_store_step
+/-- info: 'GoLean.Iris.wpDM_fork_alloc₁' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.wpDM_fork_alloc₁
+
 -- THE CHANNEL WP LAW FAMILY, slice 1 of the channel-logic arc
 -- (ChanD.lean + Specs/ChanRendezvous.lean; design note
 -- docs/2026-08-11_channel-wp-laws.md). The rendezvous-class laws over
