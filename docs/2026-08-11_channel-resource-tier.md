@@ -1,0 +1,316 @@
+# The channel RESOURCE tier and the dsp flagship (channel-logic arc, slice 3)
+
+Status: DESIGN OF RECORD for the slice, opened before building (the
+binding discipline). Charter: `docs/2026-08-10_channel-logic-arc-charter.md`
+work-plan item 3 on slice 2's measured prerequisites
+(`docs/2026-08-11_channel-protocol-layer.md` §6: the dsp attempt blocks
+on RESOURCE TRANSFER — pure-Ψp capability limit — plus the wpDM
+sequential-law surface; P-CL2-3 with dsp its named flagship consumer;
+P-CL2-4 the deferral this slice pays). Branch `channel-logic-s3` off
+`channel-logic` @ 477a8871. FD1–FD9 apply. Everything in this slice is
+proofs-side (FD6): no machine change, no new `Choices` site, no
+envelope change, zero corpus effect.
+
+## 1. The resource tier: `chanInv` with an `IProp`-valued per-element Ψ
+
+Tier §3b(b)-first-form of the slice-2 note, now with its consumer. The
+invariant is the `[∗list]` shape the S2 note originally sketched:
+
+    chanInv (a : Addr) (cap : Nat) (Ψ : GoValue → IProp GF) : IProp GF :=
+      ∃ buf : Array GoValue,
+        ([∗list] v ∈ buf.toList, Ψ v)
+          ∗ a.id ↦ (⟨none, .chanData buf cap false⟩ : HeapCell)
+
+pinning exactly what `chanInvP` pins — the machine-real untyped cell
+(`declaredTy = none`, what `makeChan` allocates: measured,
+`applyStmtOpCore` `.makeChan` arm is `s.alloc (.chanData #[] capacity
+false)`, the one-argument `alloc`), the OPEN shape (`closed = false`;
+close-protocols remain the P-CL2-3 ghost tier), arbitrary capacity —
+but each buffered element now CARRIES A RESOURCE `Ψ v`, not a pure
+fact. What send and recv atomically exchange:
+
+- **send/deposit** (arriving or parked): to complete, the sender
+  re-establishes the invariant with the pushed buffer — it PAYS `Ψ v'`
+  (a separation-logic resource, e.g. a points-to), which the big-op
+  absorbs (`bigOpL` append/snoc). The send-side tie is carrier-fact:
+  on `StepDM` a `.base` plain send has no phantom completion (S2 §2b
+  rule 11), so every completion writes the value AND deposits the
+  resource.
+- **recv/drain** (arriving or parked): the receiver opens the
+  invariant, observes `buf = v :: rest`, splits `Ψ v` off the big-op
+  (`array_toList_head_erase`, the S2 hinge), re-establishes with
+  `rest`, and the continuation RECEIVES `Ψ v`: ownership enters the
+  receiving thread's walk with the message. This is the defining move
+  of a session protocol and precisely what §6-obstacle-1 of the S2
+  note proved the pure tier cannot do.
+
+Law forms (`proofs/GoLeanProofs/ChanDMRes.lean`, prefix `wpDM_*_inv`):
+`wpDM_send_inv`, `wpDM_blocked_send_inv`, `wpDM_recv_inv`,
+`wpDM_blocked_recv_inv` — statement-for-statement the four `*_invP`
+laws of `ChanDM.lean` with the pure obligation `Ψp v'` replaced by the
+resource `Ψ v'` on the paying side, and the receive continuations
+changed from `⌜… ∨ ∃ v, c' = deliverCfg v ∧ Ψp v⌝` to
+`(⌜c' = park⌝ ∨ ∃ v, ⌜c' = deliverCfg v⌝ ∗ Ψ v)` — the delivered
+disjunct is now a separating conjunction because it hands over a
+resource. The parked-receive law stays the one `.MaybeStuck`-fixed
+member (carrier irreducibility, S2 §2c — unchanged). House
+obligations unchanged: FD7 axiom sets, same-commit witnesses, Audit
+registration, docstrings scoped to the witness.
+
+**The pure tier remains as the degenerate case.** `chanInvP` is
+recovered by `Ψ v := ⌜Ψp v⌝` — `[∗list] v ∈ l, ⌜Ψp v⌝ ⊣⊢ ⌜∀ v ∈ l, Ψp
+v⌝` (`bigOpL_pure`-shaped lemma, proved with the tier if cheap at the
+pin, else recorded as a noted equivalence). The `*_invP` laws and
+their exemplar are UNTOUCHED — no consumer migrates; the two tiers
+coexist, the pure one as the cheaper interface for pure protocols
+(every branch obligation a plain hypothesis, no big-op management).
+
+**Scope: `.base` only, verified against the flagship.** The resource
+tier inherits the mediated rules' `.base` scope (S2 §2a). dsp's
+channels are machine-allocated — `makeChan` → `ExecState.alloc` →
+`.base` cells — measured from the pinned lowering
+(`Specs/ImportedGooseActris.lean`: both channels come from
+`Stmt.makeChan`, no adversarial-seed path-loc anywhere in the row).
+The non-`.base` ∃-residue (P-CL2-1) is untouched and still has no law
+targeting it. The phantom-residue constraint from S2 §2 is therefore
+inert for this slice: every cell any slice-3 law touches is `.base`.
+
+**HoCAP/atomic-update forms: NOT taken this slice.** P-CL2-3's second
+form (auth-ghost `own_chan` logical contents + au-style accessor laws
+derived over the tier-1 laws) has no slice-3 consumer: dsp needs
+ownership TRANSFER (the `[∗list]` tier), not logical-contents
+tracking. Recording the option's status: it stays parked in P-CL2-3
+for close-protocols/buffered-histories (with S2 §2c's closed-zero
+forward warning), and nothing this slice builds obstructs deriving it
+over `chanInv` later — the invariant's contents are exactly the
+physical buffer, which is what an auth-ghost would mirror.
+
+## 2. THE REPLY-LEG TIE — the phantom-name problem and the ghost tie
+## taken (the slice's one genuinely new design point)
+
+dsp's session (upstream `DSPExample`, Actris 2.0 prog3; our pinned
+lowering): main allocates a cell `a` (`new(40)` — runtime address),
+sends the boxed pointer on `c`; the child receives it, writes
+`*ptr += 2`, and signals on `signal`; main receives the signal and
+returns `*ptr` — 42. The points-to for `a` travels main → child on
+`c`'s message and child → main on `signal`'s. The outbound leg is
+tier-1: `Ψc v := ∃ a, ⌜v = box(ptr a)⌝ ∗ a.id ↦ ⟨40⟩ ∗ …`. The REPLY
+leg is where a per-channel Ψ is structurally short: main must learn
+that the cell coming back through `signal` is ITS `a` (its deref of
+`ptr` needs `a.id ↦ ⟨42⟩` at that exact address), but
+
+**the phantom-name problem:** both channels' protocols are fixed when
+their invariants are created — BEFORE `a` exists (`makeChan` ×2 and
+the fork precede `new(40)` in the body; the child needs both
+`is_chan` assertions at spawn). So `Ψsignal` cannot mention `a`, and
+`Ψsignal v := ∃ a', a'.id ↦ ⟨42⟩` alone delivers SOME written cell,
+not main's. Upstream never meets this problem: Actris's dependent
+protocol (`ref_prot` at `channel_dsp.v`, pin 43d4efa) binds `l`
+ACROSS the two messages — `<! (l:loc) (x:Z)> MSG … {{ l ↦ x }} ; <?>
+MSG … {{ l ↦ x+2 }}` — the iProto binder is the tie. We do not port
+iProto (FD2: native; the Actris-lite port is the standing recorded
+future option); we need a native tie.
+
+Options at this latitude point:
+
+- **(a) TAKEN — the gen_heap META tie.** The pin's gen_heap carries
+  location METADATA: every `genHeap_alloc` yields `metaToken l ⊤`
+  alongside the points-to (measured at the pin: `genHeap_alloc`'s
+  conclusion), `meta_set : metaToken l E ==∗ metaInfo l N x` (↑N ⊆ E),
+  `metaInfo` is PERSISTENT, and `meta_agree : metaInfo l N x₁ ∗
+  metaInfo l N x₂ ⊢ ⌜x₁ = x₂⌝`. The tie: attach the late-chosen
+  address as metadata ON AN ADDRESS BOTH PROTOCOLS ALREADY KNOW — the
+  signal channel's own cell `sa`, whose address IS available when the
+  invariants are created (it is `is_chan`'s parameter). Main's
+  `makeChan signal` law hands out `metaToken sa ⊤` (the machine
+  allocation's token, threaded through the law — §3); main holds it
+  until `new(40)` produces `a`, then `meta_set` pins
+  `metaInfo sa N a` (persistent — main keeps a copy);
+  `Ψc v := ∃ a, ⌜v = box(ptr a)⌝ ∗ metaInfo sa N a ∗ a.id ↦ ⟨40⟩`
+  carries the (duplicable) knowledge to the child with the pointer;
+  `Ψsignal v := ∃ a, metaInfo sa N a ∗ a.id ↦ ⟨42⟩` carries it back;
+  `meta_agree` at main's receive closes the loop: `a' = a`, the
+  points-to is main's cell, the deref reads 42. Both Ψ's are
+  `sa`-parametric — legal, `sa` is in scope at creation. Zero new
+  ghost machinery, zero functor-bundle change, everything proven at
+  the pin. Cost: a `Pos.Countable Addr` instance (the pin has
+  Char/String/List/Pos only — a small local Nat/Addr instance,
+  FD9-authorized local construction, recorded here).
+- **(b) fallback, not taken — a ghost-map name allocated early, shot
+  late.** Add a slot-7 functor to `GoCoreS` (`HeapView Nat (Agree
+  (LeibnizO Addr)) GoHeapF`) + a `GhostMapG GoCoreS Nat Addr`
+  instance; allocate `γ` empty before the invariants
+  (`ghost_map_alloc_empty`), mention `γ` in both Ψ's,
+  `ghost_map_insert_persist` 0 ↦ a after `new`, agree via
+  `ghost_map_elem_agree`. Equivalent strength; rejected because it
+  edits the concrete adequacy bundle (`Adequacy.lean`) that every
+  proof in the repo elaborates against, for something (a) gets from
+  machinery the bundle already carries. Kept as the fallback if (a)'s
+  countability or reservation-map plumbing fights back (it did not).
+- **(c) not taken — the `own_chan`/session tier.** Subsumes the tie
+  (a logical session state ties the legs) at the cost of the full
+  tier P-CL2-3 records; dsp does not need it, and building it
+  flagship-first would be scaffold-shaped.
+
+**What the invariant owns vs what transfers, stated for the flagship:**
+each channel invariant owns its physical cell and the Ψ-resources of
+the values CURRENTLY BUFFERED (at cap 0, transiently during the
+deposit-drain decomposition); the points-to `a.id ↦ _` is owned by
+main (birth → send), the channel invariant (send → recv, one machine
+pairing decomposed as deposit-then-drain), the child (recv → signal
+send), the signal invariant (transiently), then main again. The
+`metaInfo` tie is persistent knowledge — owned by everyone who has
+seen it, never returned. The handle cells (`c`/`signal` variable
+cells, read by both threads after the fork — the child derefs its
+`*chan` params into them) are PERSISTED read-only via
+`pointsTo_persist` (`↦□`, available at the pin) — the same move as
+upstream's `iPersist "c signal"` at the same program point; read laws
+are stated at `↦{dq}` so both `↦` and `↦□` consumers use them.
+
+## 3. The wpDM law-port inventory (S2 §6 obstacle 2, named ports)
+
+The S1→S2 port pattern: same machine-equation content as the
+sequential `Laws/*` family, restated on the DM carrier over the DM
+cores, side-conditions `hsp/hsc/hblk/hpos` (all `rfl` at sequential
+shapes — `stepDM_shape_cases` refutes the mediated rules away from
+apply/blocked positions). New cores in `LangDM.lean` (internal
+machinery, consumed by the ports, per the `Lifting.lean` precedent):
+
+- `wpDM_alloc_step` — ONE fresh cell, continuation `∀ pa`-parametric
+  (the `wp_init`/`enterFrame` allocation shape; `genHeap_alloc` +
+  `HeapWf.fresh_get?`, the `wpDM_fork_alloc₁` interior). **Hands out
+  the allocation's `metaToken pa ⊤`** — new to the DM kit, needed by
+  §2(a); the sequential family discards it, ours must not.
+- `wpDM_alloc_store_step` — fresh cell + a store into an owned cell
+  (the `newValue`/`makeChan` shape: allocate the payload, store the
+  handle/pointer into the target var's cell). Token handed out too.
+- `wpDM_store_step₂` — the two-cell store (`wp_store_step₂`'s port:
+  read `pa`, write `a` — the child's `*ptr = *ptr + 2`).
+- `wpDM_fork_alloc₂` — the two-parameter spawn (`allocMany σ [p₁,
+  p₂]`, child continuation over consecutive fresh addresses): dsp's
+  `go lit0(&c, &signal)` shape, measured from the lowering.
+- `wpDM_eval_var`/read laws generalized to `↦{dq}` (read-only needs
+  `genHeap_valid`, which is dq-generic at the pin) — the persisted
+  handle cells.
+
+The named ports (`proofs/GoLeanProofs/LawsDM.lean`), each consumed by
+the flagship walk and/or the §4 witnesses in the same commit:
+
+| port | source pattern | dsp site |
+|---|---|---|
+| `wpDM_block_nil` | `wp_block_nil` | every body (`block #[] #[…]`) |
+| `wpDM_init` | `wp_init` (alloc core) | 9 `initialization`s |
+| `wpDM_make_chan` | NEW (P-CL1-6 closes; `applyStmtOpCore` `.makeChan` + alloc-store core; no sequential counterpart exists) | `make(chan any)` ×2 |
+| `wpDM_new_value` | `wp_new_value` | `new(40)` |
+| `wpDM_call_start` / `wpDM_call_enter_ret1` | `wp_call_start`/`wp_call_enter_ret1` | driver → `goleanDSPExample` → `DSPExample` (both nullary/1-int-result) |
+| `wpDM_frame_return_int` | `wp_frame_return_int` | both frame exits |
+| strict-spine ports (`wpDM_eval_strict`, `wpDM_strict_shift`, `wpDM_strict_apply_pure/pin/read`) | `Laws/Eval.lean` | `toInterface` (boxing, types-pinned), `typeAssert` (unboxing), `add`, `deref` (read at `↦{dq}`) |
+| assign/tgtop-spine ports (`wpDM_assign_start`, `wpDM_tgtop_*`, `wpDM_rhs_*`, `wpDM_assign_store`, `wpDM_stores_done*`) | `Laws/Eval.lean` | `assign` ×5, `assignMany` (the phase-split `tgtOpK`/`rhsK`/`storeK` machinery — `assignMany` has no one-shot plan, BUG-025) |
+| control ports (`wpDM_seqn`, `wpDM_seq_next`, `wpDM_seq_done`, `wpDM_frame_fall`, `wpDM_return`, `wpDM_eval_intLit`, `wpDM_eval_ref`) | `Laws/Control.lean`, `Laws/Eval.lean` | everywhere |
+
+A port that turns conceptual (a rule shape fighting the DM carrier)
+becomes a section here, not a silent hack — none did at build time
+except where noted in §6's log.
+
+## 4. Witnesses (non-vacuity, same-commit)
+
+- **The resource tier's witness — `Specs/ChanTransfer.lean`
+  (mini-dsp):** worker `(ch chan *int, p *int) { *p = 42; ch <- p }`,
+  main `go worker(chv, &x); <-chv` over a pre-seeded rendezvous
+  channel (the S1/S2 seed convention), pre `harness ∗ handle ∗
+  chanCell ∗ x ↦ 40`, post `harness ∗ handle ∗ x ↦ 42`. The child
+  owns `x`'s cell at its store (handed at fork), main re-acquires it
+  ONLY through the message resource (`Ψ v := ⌜v = ptr x⌝ ∗ x.id ↦
+  ⟨42⟩`) — the pure tier provably cannot state this post (S2 §6
+  obstacle 1's shape, one leg). Discharges: all four resource laws +
+  `wpDM_fork_alloc₂` + the store cores. D1-BOTH + completion pin per
+  the convention.
+- **The port witnesses:** the flagship walk itself is the named
+  consumer for every port (§3's table, same commit as nothing — the
+  ports land BEFORE the flagship). To keep the witness discipline
+  same-commit, the port commit carries a compact single-threaded
+  kitchen-sink witness (`Specs/SeqWalkDM.lean`-shaped: a driver
+  calling a nullary/1-result function whose body runs `initialization`,
+  `makeChan`, `newValue`, `toInterface`-boxing, `typeAssert`,
+  `assignMany`, `returnStmt`) walked end-to-end on the DM carrier with
+  a D1 readout — every port fires at least once, premises discharged
+  at a concrete program.
+
+## 5. The flagship route (P-CL2-4 pays)
+
+`Specs/ChanDSP.lean`: the compositional re-proof of the dsp row over
+the PINNED lowering (`actrisLowered` — the staleness-guarded frontend
+term, not a hand transcription), at the row's established seed
+convention (`dspDriver`/`dspEnv`/`dspSeed`,
+`Specs/GooseParityTargets.lean`):
+
+    GoTripleC actrisLowered.typeDefs.toList actrisLowered.funcs #[]
+      dspEnv importedCell0-shaped-pre dspDriver (r ↦ ⟨int, 42⟩)
+
+via laws → `wpDM` walk (both frames, the fork, the two protocol
+channels under `chanInv` with §2(a)'s Ψ's, the meta tie) →
+`goTripleC_of_wpDM`. D1-BOTH: the run-conditioned first-order readout
+pinning `loadLoc σf r = 42` at the seed, + the completion pin — the
+row ALREADY carries `dspTerminatesNormallyC` (designated-set-adjacent
+kernel certificate family, `Specs/GooseParityChannels.lean` at fuel
+400): the pair cites it rather than re-proving it; 42 is upstream's
+`TestDSPExample` expected result and the differential row's pinned
+verdict. The six rows' certificate families are untouched (they stay
+validation; the triple becomes the headline for THIS row — charter
+work-plan item 3's contract).
+
+TCB-grounding walk (the per-slice criterion): the trusted endpoints
+are (i) the run-conditioned `execProg`/`loadLoc` readout at the seed
+pinning 42, and (ii) the pre-existing kernel completion certificate;
+`chanInv`, the meta tie, `StepDM`, every law and the walk are
+proof-side METHOD appearing in no exported statement (Iris deletion
+test per statement; StepDM/StepDC are in the statement-TCB forbidden
+set — S2 fix round — and all slice-3 exports stay
+`execProg`/`loadLoc`/`GoTripleC`/`TerminatesNormallyC` vocabulary).
+
+## 6. Build log (appended as built)
+
+- **Commit 1** — this note.
+
+## 7. Perennial comparison (shape reference, deltas both directions)
+
+Upstream's dsp proof (`channel_dsp.v` @ 43d4efa, `wp_DSPExample`,
+Qed): Actris-style `iProto` (`ref_prot`), the `dsp` idiom pairing the
+two raw channels into one session endpoint (`dsp_session_init`), `↣`
+endpoint ownership, `wp_send/wp_recv` proofmode. Deltas, recorded and
+deliberate:
+
+- THEIRS: the location binder is shared across the protocol's two
+  messages (dependent protocols — the tie is iProto's binder
+  structure). OURS: two per-channel `chanInv` protocols + the
+  persistent gen_heap meta tie (§2a) — strictly less machinery, no
+  protocol calculus, at the cost of a per-session ghost-tying idiom
+  rather than a reusable session-type combinator language. The
+  combinator language remains the recorded future option (FD2, P-CL2-3).
+- THEIRS: `iPersist "c signal"` persists the handle heap cells. OURS:
+  identical move (`pointsTo_persist`, `↦{dq}` read laws) — recorded as
+  convergence, adopted from reading their proof.
+- THEIRS: session init consumes both channels' `own_chan` at creation.
+  OURS: `inv_alloc` per channel at the walk's makeChan sites.
+- OURS ONLY: the executable grounding — the triple is run-conditioned
+  over `execProg` with the differential-validated interpreter and the
+  row's kernel completion certificate; their WP is over a Rocq model
+  no test executes. THEIRS ONLY: `NotStuck` (deadlock-freedom-shaped
+  safety) — ours is `.MaybeStuck` by carrier design (S2 §2c), with
+  deadlock classes covered separately by the row's certificate family
+  (`dspNoDeadlock`, kernel-checked, all schedules at the seed).
+
+## 8. Parking ledger (slice 3)
+
+- **P-CL3-1 — `bigOpL` pure-collapse lemma**: if `[∗list] ⌜·⌝ ⊣⊢ ⌜∀·⌝`
+  is not already at the pin, the degenerate-case equivalence (§1) is
+  recorded prose, not a theorem; revisit with an actual consumer.
+- **P-CL3-2 — loop-invariant machinery for the muxer `client` row**:
+  reach-check outcome recorded in §9 when measured.
+- (appended as the build parks items)
+
+## 9. Reach check (charter item: measured AFTER the ports land)
+
+To be appended with measurements: muxer `client` (the one row with a
+live loop — `Serve`'s `for { s.res <- f(<-s.req) }`) and `async`
+against the landed law surface. The select trio stays P-CL1-2's.
