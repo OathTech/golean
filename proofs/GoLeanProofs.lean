@@ -67,6 +67,7 @@ import GoLeanProofs.Specs.SpawnNoopProgress
 import GoLeanProofs.Specs.ChanRendezvousVal
 import GoLeanProofs.Specs.ChanTransfer
 import GoLeanProofs.Specs.SeqWalkDM
+import GoLeanProofs.Specs.ChanDSP
 
 /-!
 # GoCore ⇒ Iris — the proof layer (root)

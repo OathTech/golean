@@ -332,6 +332,49 @@ set — S2 fix round — and all slice-3 exports stay
   `seqWalkTripleC` + readout + fuel-500 completion pin
   (`#eval`-confirmed first). Axiom sets FD7-exact. `scripts/ci` green
   at the commit.
+- **Commit 4 — THE FLAGSHIP: dsp PROVED** (`Specs/ChanDSP.lean`;
+  Audit block + root import; **P-CL2-4 PAYS in full — no deferral**).
+  `dspCompTripleC`: the dsp row as a compositional frame-quantified
+  `GoTripleC` over the PINNED lowering at the row's established seed
+  convention — every `.normal` completion leaves the harness cell at
+  **42**, proved laws → wpDM → resource tier → meta tie → exit,
+  never by execution. §5's route held exactly; in-build findings:
+  - **The meta tie worked as designed** (§2(a)): `Pos.Countable`
+    Nat/Addr local instances (the FD9-recorded construction),
+    `metaInfo` Timeless/Persistent by instance inference at the pin,
+    `meta_set` on the signal `makeChan`'s token after `new(40)`,
+    `meta_agree` closing `x' = x` at main's receive. Zero
+    functor-bundle changes — option (b) never needed.
+  - **Pinned-lowering fidelity is `rfl`-anchored**: the three
+    transcribed bodies (`dspChildBody_eq`/`dspMainFn_eq`/
+    `dspGoleanFn_eq`, axiom-FREE equations against `actrisLowered`) —
+    a transcription or frontend drift fails the build in the same run
+    that trips `check-imported-pins`. One real transcription error
+    (the fork's ref args sit in the `funcVal`'s CAPTURED list, not
+    the `goStmt` args) was caught by exactly this anchor.
+  - **One value-kind correction caught by the walk**: dsp's `new(40)`
+    is `intLit 40 (.int)` — the transferred cell holds `.int 40 .int`
+    (the S2-style exemplars use the default unbounded kind); `dspΨC`
+    pins the machine-real kind.
+  - **A go_walk table finding**: `wpDM_strict_apply_read` was
+    UNREGISTERED from the table — its `happly` discharges by `rfl` at
+    any PURE strict apply while the owned cell stays
+    meta-undetermined, so `iframe` grabs an arbitrary points-to (a
+    spurious resource capture, observed renaming a live hypothesis).
+    Genuine reads supply the law explicitly; docstring records the
+    hazard. (The sequential twin's registration is left untouched —
+    out of this slice's concern; flagged for the audit.)
+  - Walk structure: three private tail lemmas (`dsp_child_after_recv`,
+    `dsp_main_after_send`, `dsp_main_final`) shared across the
+    park/immediate branches at each rendezvous — the branch tails are
+    proved ONCE.
+  D1-BOTH: `dspCompReadoutC` (run-conditioned first-order 42 readout
+  at `dspSeed`) + `dspCompTerminatesNormallyC` (the row's STANDING
+  fuel-400 kernel pin, restated beside the triple per the
+  completion-pin convention; certificate not re-proved). Axiom sets
+  FD7-exact (triple/readout/witness the classical trio; norm helpers
+  `[propext]`; transcription anchors axiom-free). `scripts/ci` green
+  at the commit.
 
 ## 7. Perennial comparison (shape reference, deltas both directions)
 

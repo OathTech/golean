@@ -400,8 +400,14 @@ theorem wpDM_eval_strict_nullary_pin {e : Expr} {op : StrictOp}
 
 /-- State-READING strict apply at an arbitrary fraction
 (`wp_strict_apply_read`'s port, generalized to `↦{dq}` — a persisted
-`↦□` handle cell serves the dsp child's `*c$cap` derefs). -/
-@[go_walk_law]
+`↦□` handle cell serves the dsp child's `*c$cap` derefs).
+
+Deliberately NOT `@[go_walk_law]`-registered (slice-3 finding, design
+note §6 commit-4 log): its `happly` can be discharged by `rfl` at any
+PURE strict apply while its owned cell stays meta-undetermined, so the
+walk's `iframe` would grab an arbitrary context points-to as the
+"read" cell — a spurious resource capture (observed renaming a live
+hypothesis in the dsp child walk). Genuine reads supply it explicitly. -/
 theorem wpDM_strict_apply_read {op : StrictOp} {done : List GoValue}
     {v out : GoValue} {a : Addr} {dq : DFrac} {cell : HeapCell}
     {env : LocalEnv} {k : Cont}

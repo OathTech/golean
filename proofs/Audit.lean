@@ -993,6 +993,55 @@ open Lean in
 /-- info: 'GoLean.Iris.seqWalkTerminatesNormallyC' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Iris.seqWalkTerminatesNormallyC
 
+-- THE FLAGSHIP: the dsp row re-proved COMPOSITIONALLY (channel-logic
+-- slice 3, Specs/ChanDSP.lean; design note
+-- docs/2026-08-11_channel-resource-tier.md §5 — P-CL2-4 PAYS).
+-- dspCompTripleC: a frame-quantified GoTripleC over the PINNED
+-- frontend lowering (actrisLowered; the transcription anchors
+-- dspChildBody_eq/dspMainFn_eq/dspGoleanFn_eq are axiom-free rfl
+-- equations against the staleness-guarded pin) at the row's
+-- established seed convention — every .normal completion leaves the
+-- harness cell at 42 (upstream TestDSPExample's expected result and
+-- the differential row's pinned verdict), proved laws → wpDM →
+-- RESOURCE TIER → META TIE → exit, never by execution: c's protocol
+-- carries the pointed-to cell WITH the boxed pointer, signal's
+-- carries it BACK at 42, and the reply leg is tied by gen_heap
+-- metadata on the signal cell's own address (meta_set from the
+-- makeChan token; meta_agree at main's receive; the local
+-- Pos.Countable Nat/Addr instances are the FD9-recorded
+-- construction), with both handle cells persisted (↦{.discard}) for
+-- the two-thread reads. D1-BOTH: dspCompReadoutC (run-conditioned
+-- first-order 42 readout at dspSeed, InitialSplit discharged by
+-- kernel decide) + dspCompTerminatesNormallyC (the row's STANDING
+-- fuel-400 kernel completion pin, restated beside the triple — the
+-- certificate families remain as validation; this module is the
+-- row's compositional headline). Axiom sets FD7-exact; the DM lane's
+-- recorded BEq.rfl/Ord deviation (P-CL2-6) inherited unchanged.
+-- Name-existence tripwire: every public theorem of ChanDSP.lean is
+-- anchored here.
+/-- info: 'GoLean.Iris.dspNormIfaceStruct' depends on axioms: [propext] -/
+#guard_msgs in #print axioms GoLean.Iris.dspNormIfaceStruct
+/-- info: 'GoLean.Iris.dspNormPtrChan' depends on axioms: [propext] -/
+#guard_msgs in #print axioms GoLean.Iris.dspNormPtrChan
+/-- info: 'GoLean.Iris.dspNormChan' depends on axioms: [propext] -/
+#guard_msgs in #print axioms GoLean.Iris.dspNormChan
+/-- info: 'GoLean.Iris.dspChildBody_eq' does not depend on any axioms -/
+#guard_msgs in #print axioms GoLean.Iris.dspChildBody_eq
+/-- info: 'GoLean.Iris.dspMainFn_eq' does not depend on any axioms -/
+#guard_msgs in #print axioms GoLean.Iris.dspMainFn_eq
+/-- info: 'GoLean.Iris.dspGoleanFn_eq' does not depend on any axioms -/
+#guard_msgs in #print axioms GoLean.Iris.dspGoleanFn_eq
+/-- info: 'GoLean.Iris.dspChildDel' depends on axioms: [propext] -/
+#guard_msgs in #print axioms GoLean.Iris.dspChildDel
+/-- info: 'GoLean.Iris.wpDM_dsp_witness' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.wpDM_dsp_witness
+/-- info: 'GoLean.Iris.dspCompTripleC' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.dspCompTripleC
+/-- info: 'GoLean.Iris.dspCompReadoutC' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.dspCompReadoutC
+/-- info: 'GoLean.Iris.dspCompTerminatesNormallyC' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.dspCompTerminatesNormallyC
+
 -- THE CHANNEL WP LAW FAMILY, slice 1 of the channel-logic arc
 -- (ChanD.lean + Specs/ChanRendezvous.lean; design note
 -- docs/2026-08-11_channel-wp-laws.md). The rendezvous-class laws over
