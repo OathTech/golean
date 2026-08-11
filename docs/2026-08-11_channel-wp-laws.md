@@ -946,3 +946,14 @@ through the frontend, they become ordinary confluent rows.
   design) +1 `spawnNoopTerminatesNormallyC` (env-wide scope now sees
   it). Fixtures flagged: 7 unpaired + 2 wrapper-hidden + 1 open-term,
   every one negative-asserted in its class.
+- **The round-3 clean differential record**: full
+  `GOLEAN_MEM_MAX=48G scripts/ci --diff` at the round-3 tip
+  `d1cf54b8`, committed clean tree — meta `git_commit d1cf54b8`,
+  `git_dirty false`, `manifest_cases 1483`. **RESULT: PASS — baseline
+  diff FULL (1483/1483, no regression), negative lane 311 no
+  regression, all gates green** including the round-3 completion-pin
+  gate (27 classified / 21 conclusion-asserted closed pins / 2
+  allowlisted / fixtures 7+2+1 flagged, every negative test in-build)
+  and the statement-TCB gate at 48 designated, byte-identical; audit
+  sweep 13537 declarations axiom-clean. Doc-only record commit over
+  the run's own commit, per the established discipline.
