@@ -201,4 +201,12 @@ theorem explicitBlockTotalReadout :
   goSpec_seeded_totalReadout explicitBlockSpec (by decide +kernel)
     (by exact blockTerminates)
 
+/-- The POOL-carrier ∃-completion member for `explicitBlockSpecC`
+(channel-logic S1 audit round 2 — the completion-pin gate's pin for
+this row's program; sequential completion lifted by conservation). -/
+theorem explicitBlockTerminatesNormallyC :
+    TerminatesNormallyC importedEnv (importedSeed blockLowered) explicitBlockDriver :=
+  goSpec_seeded_terminatesNormallyC explicitBlockSpec (by decide +kernel)
+    (by exact blockTerminates)
+
 end GoLean.ImportedGoose.SemanticsBlock

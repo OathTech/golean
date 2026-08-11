@@ -539,6 +539,14 @@ theorem compareNilToNilTotalReadout :
   goSpec_seeded_totalReadout compareNilToNilSpec (by decide +kernel)
     (by exact testCompareNilToNilTerminates)
 
+/-- The POOL-carrier ∃-completion member for `compareNilToNilSpecC`
+(channel-logic S1 audit round 2 — the completion-pin gate's pin for
+this row's program; sequential completion lifted by conservation). -/
+theorem compareNilToNilTerminatesNormallyC :
+    TerminatesNormallyC importedEnv (importedSeed nilLowered) compareNilDriver :=
+  goSpec_seeded_terminatesNormallyC compareNilToNilSpec (by decide +kernel)
+    (by exact testCompareNilToNilTerminates)
+
 /-! ## Scaling across the unit (slice-3 phase 3)
 
 The other four WALKABLE nil oracles, driven by `go_walk` + the kit —
@@ -717,6 +725,14 @@ theorem compareSliceToNilTotalReadout :
   goSpec_seeded_totalReadout compareSliceToNilSpec (by decide +kernel)
     (by exact testCompareSliceToNilTerminates)
 
+/-- The POOL-carrier ∃-completion member for `compareSliceToNilSpecC`
+(channel-logic S1 audit round 2 — the completion-pin gate's pin for
+this row's program; sequential completion lifted by conservation). -/
+theorem compareSliceToNilTerminatesNormallyC :
+    TerminatesNormallyC importedEnv (importedSeed nilLowered) compareSliceDriver :=
+  goSpec_seeded_terminatesNormallyC compareSliceToNilSpec (by decide +kernel)
+    (by exact testCompareSliceToNilTerminates)
+
 /-! ### testComparePointerToNil (`s := new(uint64); return s != nil`) -/
 
 def comparePointerFunc : Func :=
@@ -862,6 +878,14 @@ theorem comparePointerToNilTotalReadout :
           comparePointerDriver = .ok (.normal σf, ch')
         ∧ loadLoc σf (.base ⟨0⟩) = .ok (.int 1 .int) :=
   goSpec_seeded_totalReadout comparePointerToNilSpec (by decide +kernel)
+    (by exact testComparePointerToNilTerminates)
+
+/-- The POOL-carrier ∃-completion member for `comparePointerToNilSpecC`
+(channel-logic S1 audit round 2 — the completion-pin gate's pin for
+this row's program; sequential completion lifted by conservation). -/
+theorem comparePointerToNilTerminatesNormallyC :
+    TerminatesNormallyC importedEnv (importedSeed nilLowered) comparePointerDriver :=
+  goSpec_seeded_terminatesNormallyC comparePointerToNilSpec (by decide +kernel)
     (by exact testComparePointerToNilTerminates)
 
 /-! ### testComparePointerWrappedToNil
@@ -1022,6 +1046,14 @@ theorem comparePointerWrappedToNilTotalReadout :
     (by decide +kernel)
     (by exact testComparePointerWrappedToNilTerminates)
 
+/-- The POOL-carrier ∃-completion member for `comparePointerWrappedToNilSpecC`
+(channel-logic S1 audit round 2 — the completion-pin gate's pin for
+this row's program; sequential completion lifted by conservation). -/
+theorem comparePointerWrappedToNilTerminatesNormallyC :
+    TerminatesNormallyC importedEnv (importedSeed nilLowered) compareWrappedDriver :=
+  goSpec_seeded_terminatesNormallyC comparePointerWrappedToNilSpec (by decide +kernel)
+    (by exact testComparePointerWrappedToNilTerminates)
+
 /-! ### testComparePointerWrappedDefaultToNil
 (`var s []byte; return s == nil`) -/
 
@@ -1153,6 +1185,14 @@ theorem comparePointerWrappedDefaultToNilTotalReadout :
         ∧ loadLoc σf (.base ⟨0⟩) = .ok (.int 1 .int) :=
   goSpec_seeded_totalReadout comparePointerWrappedDefaultToNilSpec
     (by decide +kernel)
+    (by exact testComparePointerWrappedDefaultToNilTerminates)
+
+/-- The POOL-carrier ∃-completion member for `comparePointerWrappedDefaultToNilSpecC`
+(channel-logic S1 audit round 2 — the completion-pin gate's pin for
+this row's program; sequential completion lifted by conservation). -/
+theorem comparePointerWrappedDefaultToNilTerminatesNormallyC :
+    TerminatesNormallyC importedEnv (importedSeed nilLowered) compareWrappedDefaultDriver :=
+  goSpec_seeded_terminatesNormallyC comparePointerWrappedDefaultToNilSpec (by decide +kernel)
     (by exact testComparePointerWrappedDefaultToNilTerminates)
 
 end GoLean.ImportedGoose.SemanticsNil

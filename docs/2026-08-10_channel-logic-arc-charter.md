@@ -197,11 +197,16 @@ METHOD only. Every slice record from S1 on carries a grounding walk
 (the S1 form: docs/2026-08-11_channel-wp-laws.md §10) naming, per
 exported artifact, (i) the interpreter proposition it reduces to,
 (ii) that all machinery is proof-side, (iii) the executable anchor —
-and every exported channel-triple bundle carries its ∃-completion
-member, enforced by the completion-pin gate (Audit.lean, negative-
-tested). Run-conditioned triples ALONE anchor nothing (the permanent
-demonstration: Specs/ChanVacuityWarning.lean); the sub-branch audits
-review the walk as a standing dimension.
+and every exported triple-carrying constant (`GoTripleC`, `GoSpecC`,
+or anything whose type closure reaches them) across ALL
+`GoLeanProofs.Specs.*` modules carries a `TerminatesNormallyC`
+∃-completion member FOR ITS PROGRAM, enforced by the completion-pin
+gate (Audit.lean — SEMANTIC since audit round 2: deep
+`defnInfo`-unfolding classification, per-program pairing,
+wrapper-hidden exports fail closed, escape shapes negative-tested via
+tracked fixtures). Run-conditioned triples ALONE anchor nothing (the
+permanent demonstration: Specs/ChanVacuityWarning.lean); the
+sub-branch audits review the walk as a standing dimension.
 
 ## Exit criterion
 

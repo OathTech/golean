@@ -720,8 +720,9 @@ open Lean in
 -- THE PERMANENT VACUITY-WARNING FIXTURE (S1 audit fix, 2026-08-11;
 -- Specs/ChanVacuityWarning.lean — negative knowledge, keep forever): a
 -- frame-quantified GoTripleC through the SHIPPED laws for a program the
--- interpreter deadlocks on every schedule (deadlockRecvDeadlocks, the
--- boring kernel-evaluated fact), plus the three pinned envelope members
+-- interpreter deadlocks (deadlockRecvDeadlocks + the adversarial-stream
+-- sibling — pinned streams; the ∀-stream form is deliberately not
+-- claimed, scope at the theorem), plus the three pinned envelope members
 -- (nil-park spin, nil-park release, cross-channel phantom release) the
 -- corrected design note cites. Doubles as the completion-pin gate's
 -- negative-test fixture (the gate block below the sweeps). Name
@@ -739,6 +740,93 @@ open Lean in
 #guard_msgs in #print axioms GoLean.Iris.nilParkReleases
 /-- info: 'GoLean.Iris.crossChannelSendRelease' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Iris.crossChannelSendRelease
+/-- info: 'GoLean.Iris.deadlockRecvDeadlocksAdv' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.deadlockRecvDeadlocksAdv
+
+-- THE COMPLETION PINS FOR EVERY GoSpecC EXPORT (S1 audit round 2 —
+-- the rebuilt SEMANTIC gate classifies GoSpecC through its conjunct,
+-- so every sequential-degenerate GoSpecC row now carries a genuine
+-- POOL-carrier ∃-completion member: the sequential completion lifted
+-- by conservation (terminatesNormallyC_of_terminatesNormally /
+-- goSpec_seeded_terminatesNormallyC). Name tripwire, house scope.
+/-- info: 'GoLean.Surface.terminatesNormallyC_of_terminatesNormally' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Surface.terminatesNormallyC_of_terminatesNormally
+/-- info: 'GoLean.ImportedGoose.goSpec_seeded_terminatesNormallyC' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.ImportedGoose.goSpec_seeded_terminatesNormallyC
+/-- info: 'GoLean.Surface.goldenTerminatesNormallyC' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Surface.goldenTerminatesNormallyC
+/--
+info: 'GoLean.ImportedGoose.SemanticsNil.compareNilToNilTerminatesNormallyC' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+-/
+#guard_msgs in #print axioms GoLean.ImportedGoose.SemanticsNil.compareNilToNilTerminatesNormallyC
+/--
+info: 'GoLean.ImportedGoose.SemanticsNil.compareSliceToNilTerminatesNormallyC' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+-/
+#guard_msgs in #print axioms GoLean.ImportedGoose.SemanticsNil.compareSliceToNilTerminatesNormallyC
+/--
+info: 'GoLean.ImportedGoose.SemanticsNil.comparePointerToNilTerminatesNormallyC' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+-/
+#guard_msgs in #print axioms GoLean.ImportedGoose.SemanticsNil.comparePointerToNilTerminatesNormallyC
+/--
+info: 'GoLean.ImportedGoose.SemanticsNil.comparePointerWrappedToNilTerminatesNormallyC' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+-/
+#guard_msgs in #print axioms GoLean.ImportedGoose.SemanticsNil.comparePointerWrappedToNilTerminatesNormallyC
+/--
+info: 'GoLean.ImportedGoose.SemanticsNil.comparePointerWrappedDefaultToNilTerminatesNormallyC' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+-/
+#guard_msgs in #print axioms GoLean.ImportedGoose.SemanticsNil.comparePointerWrappedDefaultToNilTerminatesNormallyC
+/--
+info: 'GoLean.ImportedGoose.SemanticsNew.nilDefaultTerminatesNormallyC' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+-/
+#guard_msgs in #print axioms GoLean.ImportedGoose.SemanticsNew.nilDefaultTerminatesNormallyC
+/-- info: 'GoLean.ImportedGoose.SemanticsNew.nilValTerminatesNormallyC' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.ImportedGoose.SemanticsNew.nilValTerminatesNormallyC
+/--
+info: 'GoLean.ImportedGoose.SemanticsVars.pointerAssignmentTerminatesNormallyC' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+-/
+#guard_msgs in #print axioms GoLean.ImportedGoose.SemanticsVars.pointerAssignmentTerminatesNormallyC
+/--
+info: 'GoLean.ImportedGoose.SemanticsVars.anonymousAssignTerminatesNormallyC' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+-/
+#guard_msgs in #print axioms GoLean.ImportedGoose.SemanticsVars.anonymousAssignTerminatesNormallyC
+/--
+info: 'GoLean.ImportedGoose.SemanticsBlock.explicitBlockTerminatesNormallyC' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+-/
+#guard_msgs in #print axioms GoLean.ImportedGoose.SemanticsBlock.explicitBlockTerminatesNormallyC
+
+-- The gate-escape fixtures (Specs/ZzVacuityGateFixtures.lean — the
+-- round-2 escape shapes, tracked; honest vacuous-by-unsatisfiable-pre
+-- proofs, docstrings state exactly what each demonstrates).
+/--
+info: 'GoLean.Surface.fixtureSpecCUnpinned' depends on axioms: [propext, Classical.choice, Quot.sound]
+-/
+#guard_msgs in #print axioms GoLean.Surface.fixtureSpecCUnpinned
+/--
+info: 'GoLean.Surface.fixtureDefTriple' depends on axioms: [propext, Classical.choice, Quot.sound]
+-/
+#guard_msgs in #print axioms GoLean.Surface.fixtureDefTriple
+/--
+info: 'GoLean.Surface.fixtureWrappedTriple' depends on axioms: [propext, Classical.choice, Quot.sound]
+-/
+#guard_msgs in #print axioms GoLean.Surface.fixtureWrappedTriple
 
 -- The exit pipes.
 /-- info: 'GoLean.Iris.goSpec_of_wp' depends on axioms: [propext, Classical.choice, Quot.sound] -/
@@ -1784,75 +1872,208 @@ example := @GoLean.GoCore.NegativeSpecs.div_nonzero_no_panic
 -/
 
 
-/-! ## The completion-pin gate (channel-logic S1 audit fix, 2026-08-11)
+/-! ## The completion-pin gate, REBUILT SEMANTIC (S1 audit round 2)
 
 **Doctrine (user, 2026-08-11 — the TCB-grounding principle):** for
 every soundness property the TRUSTED claim must be a boring,
 semantically-trivial property of the interpreter; the Iris/Löb/
-simulation machinery is untrusted METHOD only. For channel triples the
-instantiation is: `GoTripleC` is run-conditioned partial correctness —
-vacuously provable for programs with no completing runs
+simulation machinery is untrusted METHOD only. `GoTripleC` (and every
+judgment carrying it, `GoSpecC` included) is run-conditioned partial
+correctness — vacuously provable for programs with no completing runs
 (`Specs/ChanVacuityWarning.lean` is the permanent demonstration) — so
-**every exported channel-triple bundle must carry its ∃-completion
-member** (a `TerminatesNormallyC`-class theorem, discharged by kernel
-evaluation of the interpreter). This gate enforces the pairing
-structurally: every module under `GoLeanProofs.Specs.Chan*` that
-declares a theorem whose TYPE mentions `GoTripleC` must also declare
-one whose type mentions `TerminatesNormallyC`. Fail-closed guards: the
-two anchor constants must resolve, the scope must contain the known
-positive modules (a prefix drift cannot silently empty the gate), and
-the WARNING FIXTURE — whose deadlocking program can have no completion
-pin, by construction — must be flagged by the raw checker (the
-NEGATIVE TEST) and is excluded from enforcement by exact name with
-this recorded reason. -/
+**every exported triple-carrying constant must be paired with the
+∃-completion member for ITS program** (a `TerminatesNormallyC`-typed
+theorem about the same program).
+
+The round-2 delta review proved the first gate's name/glob/module
+mechanics escapable four ways (GoSpecC-shaped exports, out-of-glob
+modules, `def` exports, wrapper types). This rebuild is SEMANTIC, on
+the statement-TCB gate's own idiom (the exhaustive `.defnInfo`-
+unfolding closure walk above):
+
+- **Classification is by closure**: a constant (`theorem` OR `def`,
+  any module under `GoLeanProofs.Specs.`) is TRIPLE-CARRYING iff its
+  TYPE's transitive constant closure — unfolding definition VALUES —
+  reaches `GoLean.Surface.GoTripleC`. `GoSpecC` reaches it through
+  its conjunct; any future wrapper reaches it the same way. Budget
+  exhaustion on the walk FAILS the build (never a silent skip).
+  Hypothesis-position mentions classify too — a deliberate
+  over-approximation whose failure direction is loud.
+- **Pairing is per-PROGRAM, scope-wide**: from each classified
+  constant's stated type, every `prog` argument of a saturated
+  `GoTripleC`/`GoSpecC` application is extracted syntactically and
+  must appear among the `prog` arguments of `TerminatesNormallyC`-
+  typed theorems anywhere in the `Specs` scope (cross-module pins are
+  legitimate — the golden row's pin lives in `TotalPins`). A
+  classified constant whose stated type yields NO extractable
+  application (a wrapper-hidden triple) FAILS CLOSED: state the
+  export directly.
+- **The PIN side stays a shallow syntactic scan** (recorded choice,
+  per the round-2 verifier's asymmetry note): its failure direction
+  is closed — a pin the scan misses can only cause a loud spurious
+  gate failure, never a silent pass.
+- **Fixtures** (`ChanVacuityWarning`'s deadlock triple and the three
+  escape shapes in `ZzVacuityGateFixtures`, whose module name is
+  itself the out-of-glob scope fixture) are excluded from enforcement
+  by exact constant-name PREFIX only, and the NEGATIVE TESTS assert
+  each is flagged by the raw checker in its expected class — the
+  checker going inert fails the build.
+- Fail-closed guards: the anchor constants must resolve; the known
+  positive exports must be classified AND paired (scope drift or a
+  pin rename fails loud). -/
+
+open Lean in
+/-- All `args[argIdx]` of SATURATED applications (exact arity) of the
+given head constants anywhere inside `e` (the completion-pin gate's
+syntactic extractor). -/
+private partial def gateCollectArgs (heads : List (Name × Nat × Nat))
+    (e : Expr) : Array Expr :=
+  let here :=
+    if e.isApp then
+      match e.getAppFn with
+      | .const n _ =>
+        match heads.find? (fun h => h.1 == n) with
+        | some (_, arity, idx) =>
+          if e.getAppNumArgs == arity then #[e.getAppArgs[idx]!] else #[]
+        | none => #[]
+      | _ => #[]
+    else #[]
+  let sub :=
+    match e with
+    | .app f a => gateCollectArgs heads f ++ gateCollectArgs heads a
+    | .lam _ t b _ => gateCollectArgs heads t ++ gateCollectArgs heads b
+    | .forallE _ t b _ => gateCollectArgs heads t ++ gateCollectArgs heads b
+    | .letE _ t v b _ =>
+        gateCollectArgs heads t ++ gateCollectArgs heads v
+          ++ gateCollectArgs heads b
+    | .mdata _ b => gateCollectArgs heads b
+    | .proj _ _ b => gateCollectArgs heads b
+    | _ => #[]
+  here ++ sub
 
 open Lean in
 #eval show CoreM Unit from do
   let env ← getEnv
   let mods := env.header.moduleNames
-  let scopePrefix := "GoLeanProofs.Specs.Chan"
-  let fixture := "GoLeanProofs.Specs.ChanVacuityWarning"
-  -- fail-closed: the anchors must exist under their expected names
-  for anchor in [``GoLean.Surface.GoTripleC, ``GoLean.Surface.TerminatesNormallyC] do
+  let scopePrefix := "GoLeanProofs.Specs."
+  -- fixture constants, excluded from ENFORCEMENT by name prefix
+  -- (prefix, not exact match, so equation/auxiliary constants derived
+  -- from a fixture cannot resurface as phantom violations)
+  let fixtureRoots : List Name :=
+    [`GoLean.Iris.deadlockRecvTripleC,
+     `GoLean.Surface.fixtureSpecCUnpinned,
+     `GoLean.Surface.fixtureDefTriple,
+     `GoLean.Surface.fixtureWrappedTriple]
+  let isFixture : Name → Bool := fun n =>
+    fixtureRoots.any (fun r => r == n || r.isPrefixOf n)
+  -- fail-closed: anchors and fixture roots must resolve
+  for anchor in [``GoLean.Surface.GoTripleC, ``GoLean.Surface.GoSpecC,
+      ``GoLean.Surface.TerminatesNormallyC] ++ fixtureRoots do
     let some _ := env.find? anchor
-      | throwError "completion-pin gate: anchor constant {anchor} is MISSING \
+      | throwError "completion-pin gate: constant {anchor} is MISSING \
           (renamed without re-pointing the gate?)"
+  -- deep classification: TYPE closure, unfolding definition values
+  let reaches (root : Name) : CoreM Bool := do
+    let some ci := env.find? root | return false
+    let mut seen : NameSet := {}
+    let mut queue : Array Name := ci.type.getUsedConstants
+    let mut fuel := 2000000
+    while queue.size > 0 do
+      if fuel == 0 then
+        throwError "completion-pin gate: closure walk budget exhausted \
+          at {root} — raise the budget, never skip"
+      fuel := fuel - 1
+      let n := queue.back!
+      queue := queue.pop
+      if seen.contains n then continue
+      seen := seen.insert n
+      if n == ``GoLean.Surface.GoTripleC then return true
+      let some ci2 := env.find? n | continue
+      let mut next : Array Name := ci2.type.getUsedConstants
+      match ci2 with
+      | .defnInfo v => next := next ++ v.value.getUsedConstants
+      | _ => pure ()
+      queue := queue ++ next
+    return false
+  let tripleHeads : List (Name × Nat × Nat) :=
+    [(``GoLean.Surface.GoTripleC, 7, 5), (``GoLean.Surface.GoSpecC, 7, 5)]
+  let pinHeads : List (Name × Nat × Nat) :=
+    [(``GoLean.Surface.TerminatesNormallyC, 3, 2)]
   let names : Array Name := env.constants.fold (fun acc n _ => acc.push n) #[]
-  let mut tripleMods : Array String := #[]
-  let mut pinMods : Array String := #[]
+  -- pass 1: the pin-program set (shallow, theorems only — see docstring)
+  let mut pinProgs : Array Expr := #[]
   for n in names do
     let some idx := env.getModuleIdxFor? n | continue
-    let m := mods[idx.toNat]!.toString
-    unless m.startsWith scopePrefix do continue
+    unless (mods[idx.toNat]!.toString.startsWith scopePrefix) do continue
     let some ci := env.find? n | continue
-    let isThm := match ci with | .thmInfo _ => true | _ => false
-    unless isThm do continue
-    let used := ci.type.getUsedConstants
-    if used.contains ``GoLean.Surface.GoTripleC then
-      unless tripleMods.contains m do tripleMods := tripleMods.push m
-    if used.contains ``GoLean.Surface.TerminatesNormallyC then
-      unless pinMods.contains m do pinMods := pinMods.push m
-  -- fail-closed: the known positives must be in scope (prefix drift guard)
-  for known in ["GoLeanProofs.Specs.ChanRendezvous",
-      "GoLeanProofs.Specs.ChanCloseProbe", fixture] do
-    unless tripleMods.contains known do
-      throwError "completion-pin gate: expected module {known} to declare a \
-        GoTripleC theorem in scope — scope drift or a renamed module; \
-        re-point the gate"
-  let violating := tripleMods.filter (fun m => !(pinMods.contains m))
-  -- THE NEGATIVE TEST: the warning fixture must trip the raw checker
-  unless violating.contains fixture do
-    throwError "completion-pin gate NEGATIVE TEST FAILED: the warning \
-      fixture {fixture} was not flagged — the checker has gone inert \
-      (did the fixture gain a completion pin, or did the type scan \
-      break?)"
-  let real := violating.filter (fun m => m != fixture)
-  if real.isEmpty then
-    IO.println s!"completion-pin gate: {tripleMods.size} GoTripleC-declaring \
-module(s) in scope, all paired with a completion pin (fixture correctly \
-flagged and excluded)"
+    unless (match ci with | .thmInfo _ => true | _ => false) do continue
+    if n.isInternal then continue
+    pinProgs := pinProgs ++ gateCollectArgs pinHeads ci.type
+  -- pass 2: classify + extract + pair
+  let mut classified : Array Name := #[]
+  let mut unpaired : Array (Name × String) := #[]
+  let mut wrapperHidden : Array Name := #[]
+  for n in names do
+    let some idx := env.getModuleIdxFor? n | continue
+    unless (mods[idx.toNat]!.toString.startsWith scopePrefix) do continue
+    let some ci := env.find? n | continue
+    let kindOk := match ci with
+      | .thmInfo _ => true | .defnInfo _ => true | _ => false
+    unless kindOk do continue
+    if n.isInternal then continue
+    unless (← reaches n) do continue
+    classified := classified.push n
+    let progs := gateCollectArgs tripleHeads ci.type
+    if progs.isEmpty then
+      wrapperHidden := wrapperHidden.push n
+    else
+      for pr in progs do
+        unless pinProgs.contains pr do
+          unpaired := unpaired.push (n, toString pr)
+  -- NEGATIVE TESTS: every fixture must be flagged in its expected class
+  for (fx, expectWrapper) in
+      [(`GoLean.Iris.deadlockRecvTripleC, false),
+       (`GoLean.Surface.fixtureSpecCUnpinned, false),
+       (`GoLean.Surface.fixtureDefTriple, false),
+       (`GoLean.Surface.fixtureWrappedTriple, true)] do
+    unless classified.contains fx do
+      throwError "completion-pin gate NEGATIVE TEST FAILED: fixture {fx} \
+        was not CLASSIFIED — the deep walk has gone inert"
+    if expectWrapper then
+      unless wrapperHidden.contains fx do
+        throwError "completion-pin gate NEGATIVE TEST FAILED: fixture {fx} \
+          was not flagged WRAPPER-HIDDEN — the fail-closed extraction arm \
+          has gone inert"
+    else
+      unless (unpaired.any (fun v => v.1 == fx)) do
+        throwError "completion-pin gate NEGATIVE TEST FAILED: fixture {fx} \
+          was not flagged UNPAIRED — the per-program pairing has gone inert"
+  -- fail-closed: the known positive exports must be classified AND clean
+  for known in [`GoLean.Iris.chanRendezvousTripleC,
+      `GoLean.Iris.chanCloseTripleC, `GoLean.Surface.goldenSpecC,
+      `GoLean.ImportedGoose.SemanticsNil.compareNilToNilSpecC] do
+    unless classified.contains known do
+      throwError "completion-pin gate: expected export {known} was not \
+        classified — scope drift or a renamed module; re-point the gate"
+    if unpaired.any (fun v => v.1 == known) then
+      throwError "completion-pin gate: known export {known} lost its \
+        completion pin"
+  let realUnpaired := unpaired.filter (fun v => !(isFixture v.1))
+  let realWrapper := wrapperHidden.filter (fun n => !(isFixture n))
+  if realUnpaired.isEmpty && realWrapper.isEmpty then
+    IO.println s!"completion-pin gate (semantic): {classified.size} \
+triple-carrying constants across GoLeanProofs.Specs.*, \
+{pinProgs.size} pin instances; all non-fixture exports \
+program-paired (fixtures correctly flagged: 3 unpaired + 1 \
+wrapper-hidden)"
   else
-    throwError "completion-pin gate FAILED — GoTripleC-declaring module(s) \
-      without a TerminatesNormallyC completion pin: {real}"
+    let lines := (realWrapper.map
+        (fun n => s!"  {n}: triple-carrying but NO extractable \
+GoTripleC/GoSpecC application in its stated type (wrapper-hidden — \
+state the export directly)"))
+      ++ (realUnpaired.map (fun v => s!"  {v.1}: no TerminatesNormallyC \
+pin for its program {v.2}"))
+    let msg := String.intercalate "\n" lines.toList
+    throwError "completion-pin gate FAILED:\n{msg}"
 
 end GoLean.Iris.Audit

@@ -720,4 +720,21 @@ def TerminatesNormallyC (env₀ : LocalEnv) (σ₀ : ExecState) (prog : Stmt) : 
     ∃ (σf : ExecState) (ch' : Choices),
       execProg fuel env₀ σ₀ ch prog = .ok (.normal σf, ch')
 
+/-- **Carrier transfer for the completion pin** (channel-logic S1
+audit round 2): a sequential `TerminatesNormally` lifts to the pool
+carrier verbatim — completing runs are in the conservation theorem's
+transferable class, so `execProg_single_eq_execStmt` transfers each
+one at the same fuel bound. This is what lets every
+sequential-degenerate `GoSpecC` bundle carry a genuine POOL-carrier
+∃-completion member (the completion-pin gate's pin class), rather
+than a grandfathered sequential stand-in. -/
+theorem terminatesNormallyC_of_terminatesNormally {env₀ : LocalEnv}
+    {σ₀ : ExecState} {prog : Stmt}
+    (h : TerminatesNormally env₀ σ₀ prog) :
+    TerminatesNormallyC env₀ σ₀ prog := by
+  obtain ⟨N, hN⟩ := h
+  refine ⟨N, fun fuel hfuel ch => ?_⟩
+  obtain ⟨σf, ch', hrun⟩ := hN fuel hfuel ch
+  exact ⟨σf, ch', execProg_single_eq_execStmt hrun trivial⟩
+
 end GoLean.Surface

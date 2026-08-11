@@ -6,9 +6,10 @@ import GoLeanProofs.Specs.ChanRendezvous
 
 **Negative knowledge — keep forever.** This module proves, through the
 SHIPPED channel laws and the shipped exit, a full frame-quantified
-`GoTripleC` for a program the interpreter classifies `.deadlock` on
-every schedule (`deadlockRecvDeadlocks` below is the boring executable
-fact). Nothing here is a bug: `GoTripleC` is RUN-CONDITIONED partial
+`GoTripleC` for a program the interpreter classifies `.deadlock`
+(`deadlockRecvDeadlocks`/`deadlockRecvDeadlocksAdv` below are the
+boring executable facts — pinned STREAMS, see their docstrings for the
+honest scope). Nothing here is a bug: `GoTripleC` is RUN-CONDITIONED partial
 correctness (`Surface.lean` — every premise chain starts from
 `execProg … = .ok (.normal σf, _)`), so a program with no completing
 runs satisfies ANY triple vacuously, by design. What this module
@@ -60,13 +61,30 @@ def deadlockRecvSeed : ExecState :=
     nextAddr := 3 }
 
 /-- **THE BORING FACT** (the trusted half of this fixture, interpreter
-vocabulary only, kernel-evaluated): the program deadlocks — under the
-canonical stream, and `.deadlock` is stream-independent here (one
-goroutine, no choice site ever consumed). This is what the triple
-below is compatible with. -/
+vocabulary only, kernel-evaluated): the program deadlocks under the
+CANONICAL stream. Honest scope (S1 audit round 2 — three prose sites
+had claimed "every schedule" for this single-stream theorem): the
+∀-stream form is NOT proved. It is true empirically (the round-2
+verifier probed eight streams, all `.deadlock`; one goroutine, no
+choice site consumed) but not mechanical to prove: the conservation
+kit's `transferable` class deliberately EXCLUDES `.deadlock` (its
+docstring records why), so no existing lemma transfers or quantifies
+it, and `allStreamsOkPool` certifies completions only. The
+adversarial-stream pin below adds a second pinned instance; the
+∀-stream strengthening would need a stream-obliviousness lemma for
+deadlocking runs — recorded, not claimed. -/
 theorem deadlockRecvDeadlocks :
     (match execProg 200 deadlockRecvEnv deadlockRecvSeed {} deadlockRecvProg
       with
+      | .error .deadlock => true
+      | _ => false) = true := by
+  decide +kernel
+
+/-- The adversarial-stream sibling pin (descending picks — the
+`forkJoinStreamAdversarial` idiom): same classification. -/
+theorem deadlockRecvDeadlocksAdv :
+    (match execProg 200 deadlockRecvEnv deadlockRecvSeed
+        [9, 8, 7, 6, 5, 4, 3, 2, 1, 0] deadlockRecvProg with
       | .error .deadlock => true
       | _ => false) = true := by
   decide +kernel

@@ -188,6 +188,14 @@ theorem nilDefaultTotalReadout :
   goSpec_seeded_totalReadout nilDefaultSpec (by decide +kernel)
     (by exact testNilDefaultTerminates)
 
+/-- The POOL-carrier ∃-completion member for `nilDefaultSpecC`
+(channel-logic S1 audit round 2 — the completion-pin gate's pin for
+this row's program; sequential completion lifted by conservation). -/
+theorem nilDefaultTerminatesNormallyC :
+    TerminatesNormallyC importedEnv (importedSeed newLowered) nilDefaultDriver :=
+  goSpec_seeded_terminatesNormallyC nilDefaultSpec (by decide +kernel)
+    (by exact testNilDefaultTerminates)
+
 /-! ### testNilVal (`x := new(3); return *x == 3` — goose's
 value-carrying `new` extension, lowered as `newValue` with a literal
 operand) -/
@@ -334,6 +342,14 @@ theorem nilValTotalReadout :
           nilValDriver = .ok (.normal σf, ch')
         ∧ loadLoc σf (.base ⟨0⟩) = .ok (.int 1 .int) :=
   goSpec_seeded_totalReadout nilValSpec (by decide +kernel)
+    (by exact testNilValTerminates)
+
+/-- The POOL-carrier ∃-completion member for `nilValSpecC`
+(channel-logic S1 audit round 2 — the completion-pin gate's pin for
+this row's program; sequential completion lifted by conservation). -/
+theorem nilValTerminatesNormallyC :
+    TerminatesNormallyC importedEnv (importedSeed newLowered) nilValDriver :=
+  goSpec_seeded_terminatesNormallyC nilValSpec (by decide +kernel)
     (by exact testNilValTerminates)
 
 end GoLean.ImportedGoose.SemanticsNew

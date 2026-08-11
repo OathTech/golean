@@ -455,4 +455,30 @@ theorem goSpec_seeded_totalReadout {p : Program} {prog : Stmt} {v : Int}
   exact ⟨σf, ch', hrun,
     goSpec_seeded_readout hspec hwf fuel ch σf ch' hrun⟩
 
+/-- **The seeded POOL-carrier completion pin** (channel-logic S1 audit
+round 2 — the completion-pin gate's pin class, for the sequential
+class-1 rows): same premises as `goSpec_seeded_totalReadout`,
+conclusion `TerminatesNormallyC` at the same seed — the sequential
+completion lifted by `terminatesNormallyC_of_terminatesNormally`
+(conservation). One call per row makes every `GoSpecC` export carry
+its ∃-completion member on the judgment's own carrier. -/
+theorem goSpec_seeded_terminatesNormallyC {p : Program} {prog : Stmt}
+    {v : Int}
+    (hspec : GoSpec p.typeDefs.toList p.funcs p.methods importedEnv
+      importedCell0 prog (importedCellV v))
+    (hwf : Machine.MachineWf
+      { functions := p.funcs,
+        heap := [(.base ⟨0⟩, ⟨some (.int .int), .int 0 .int⟩)],
+        nextAddr := 1 }
+      (.exec prog importedEnv .stop))
+    (hterm : Terminates importedEnv (importedSeed p) prog) :
+    TerminatesNormallyC importedEnv (importedSeed p) prog := by
+  have hsat : sat (heapletOf [(.base ⟨0⟩, ⟨some (.int .int), .int 0 .int⟩)])
+      importedCell0 := rfl
+  have hsplit := InitialSplit.noFrame (P := importedCell0)
+    (hp := [(.base ⟨0⟩, ⟨some (.int .int), .int 0 .int⟩)]) (na := 1)
+    (funcs := p.funcs) (env₀ := importedEnv) (prog := prog) hsat hwf
+  exact terminatesNormallyC_of_terminatesNormally
+    (terminatesNormally_of_progressExec hsplit hspec.2 hterm)
+
 end GoLean.ImportedGoose

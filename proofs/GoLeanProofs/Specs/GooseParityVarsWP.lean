@@ -167,6 +167,14 @@ theorem pointerAssignmentTotalReadout :
   goSpec_seeded_totalReadout pointerAssignmentSpec (by decide +kernel)
     (by exact testPointerAssignmentTerminates)
 
+/-- The POOL-carrier ∃-completion member for `pointerAssignmentSpecC`
+(channel-logic S1 audit round 2 — the completion-pin gate's pin for
+this row's program; sequential completion lifted by conservation). -/
+theorem pointerAssignmentTerminatesNormallyC :
+    TerminatesNormallyC importedEnv (importedSeed varsLowered) pointerAssignmentDriver :=
+  goSpec_seeded_terminatesNormallyC pointerAssignmentSpec (by decide +kernel)
+    (by exact testPointerAssignmentTerminates)
+
 /-! ### testAnonymousAssign (`_ = uint64(1) + uint64(2); return true` —
 the blank-assign lowers to a `$blank0` local; the sum is
 constant-folded to `3` by the frontend) -/
@@ -297,6 +305,14 @@ theorem anonymousAssignTotalReadout :
           anonymousAssignDriver = .ok (.normal σf, ch')
         ∧ loadLoc σf (.base ⟨0⟩) = .ok (.int 1 .int) :=
   goSpec_seeded_totalReadout anonymousAssignSpec (by decide +kernel)
+    (by exact testAnonymousAssignTerminates)
+
+/-- The POOL-carrier ∃-completion member for `anonymousAssignSpecC`
+(channel-logic S1 audit round 2 — the completion-pin gate's pin for
+this row's program; sequential completion lifted by conservation). -/
+theorem anonymousAssignTerminatesNormallyC :
+    TerminatesNormallyC importedEnv (importedSeed varsLowered) anonymousAssignDriver :=
+  goSpec_seeded_terminatesNormallyC anonymousAssignSpec (by decide +kernel)
     (by exact testAnonymousAssignTerminates)
 
 end GoLean.ImportedGoose.SemanticsVars
