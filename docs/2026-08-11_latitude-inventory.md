@@ -98,15 +98,25 @@ The race detector replays consumption without consuming
   back-edge / bounded-compute interval inside boundary-free segments —
   enough that a goroutine stuck in a registry-free loop can always be
   descheduled, which is what every real Go implementation does.
-- WHY IT IS THE DOCTRINE'S KNOWN FIRST ITEM (register #1): the spinner
-  divergence — a program whose spawned goroutine loops with no registry
-  op. Once a stream picks the spinner at any boundary, the machine runs
-  it privately forever: `fuelOut`, while gc preempts and exits 0
-  (doctrine's recorded probe: gc exit-0 100/100). `observed ∉ modeled`
-  on those streams — definitionally a bug, and it also poisons the
-  ∀-stream claims' shape: `TerminatesNormallyC` is FALSE for programs
-  gc always terminates (the fairness note's spinner family is the same
-  structure seen from the termination side).
+- WHY IT IS THE DOCTRINE'S KNOWN FIRST ITEM (register #1): the
+  SEND-THEN-SPIN wedge (recorded probe:
+  `docs/evidence/2026-08-12_scheduler-wedge-probes/`) — a worker
+  performs one registry op (a cap-1 send that wakes main) and then
+  loops with no further registry op. The fused effect boundary (C3)
+  offers no post-op scheduling point and forced continuation (this
+  entry) runs the registry-free tail privately forever, so the woken,
+  runnable main is never scheduled again: exit-0 unreachable on EVERY
+  stream (511/511 fuel-out in the probe's exhaustive mod-2 depth-8
+  sweep, default stream included) while gc exits 0 (60/60, +20/20 at
+  GOMAXPROCS=1). `observed ∉ modeled` — definitionally a bug — and it
+  poisons the ∀-stream claims' shape: `TerminatesNormallyC` is FALSE
+  for a program gc always terminates. (Exhibit corrected at the
+  2026-08-12 audit: a REGISTRY-FREE spinner — no registry op anywhere
+  — is NOT this bug: gc's exit-0 there is in the modeled set via the
+  default stream; its extra never-yielding streams are the too-wide,
+  transfer-safe direction, and ∀-stream termination on that shape is
+  the fairness quantifier's territory, not this re-envelope's. The
+  probe record carries both shapes.)
 - RE-ENVELOPE OBLIGATION + COST: add preemption points inside segments
   (loop back-edges are the registry-granularity-style candidate) —
   boundary-set change ⇒ every pinned stream shifts (BUG-040 precedent:
@@ -438,9 +448,9 @@ or tracked in BUGS.md, not latitude.
   doctrine's TOO-NARROW, soundness-relevant direction: theorems over
   our order do NOT transfer to gc executions of hidden-dep programs.
   The deferral is UNGUARDED — no frontend check detects the shape; the
-  case is a permanent differential red with the realized order
-  mechanically pinned (check-golden deviation-observation pin), so
-  drift to a third order is caught.
+  case is a standing differential red (queued: §7 item 3) with the
+  realized order mechanically pinned (check-golden
+  deviation-observation pin), so drift to a third order is caught.
 - PLAUSIBLE ENVELOPE: all conforming initialization orders (the
   lexical-reference partial order's linear extensions, with
   hidden-dep-affected variables freed).
@@ -805,19 +815,25 @@ concurrency-relevance (the charter: concurrency matters most),
 (iii) cost. The known first item is fixed by the doctrine.
 
 1. **C2+C3 — forced continuation + fused effect boundary** (the
-   doctrine's designated first item). Oracle-visible TODAY (the spinner:
-   gc exit-0 100/100 vs machine fuelOut — definitional bug), maximally
+   doctrine's designated first item). Oracle-visible TODAY (the
+   send-then-spin wedge: gc exit-0 60/60 vs machine fuel-out on every
+   stream — definitional bug; recorded probe at
+   `docs/evidence/2026-08-12_scheduler-wedge-probes/`), maximally
    concurrency-relevant (it IS the scheduling envelope's missing
    dimension; register #1/#5), highest cost — which is why it is
    first: everything else in the concurrency queue (NPDRF's final
    form, FairStream, enumerator work) reshapes around the boundary
-   set, so this pin's removal should precede them.
+   set, so this pin's removal should precede them. Scope: this
+   re-envelope fixes the WEDGE shape (a woken runnable partner must
+   be schedulable); registry-free-spinner termination is FairStream's
+   quantifier question, not this item's (widening only ADDS streams —
+   the never-yielding stream survives).
 2. **E9/BUG-005 — live map iteration.** Oracle-red today (three
    differential pins + the race-invisibility pin), violates a FORCED
    spec point (worse than latitude), couples into the detector (U1) —
    concurrency-relevant through the race lane. Cost: moderate, already
    scoped in BUG-005 (its own slice).
-3. **E7 — hidden-dep init order.** Oracle-red today (permanent
+3. **E7 — hidden-dep init order.** Oracle-red today (standing
    deviation record), the only pin KNOWN to sit beside the oracle's
    realization on the SEQUENTIAL side, soundness-direction
    (no-transfer), and UNGUARDED — the interim frontend detector
@@ -916,10 +932,14 @@ The inter-target axis is pinned to OUR left-to-right point with gc
 KNOWN elsewhere (compiler-internal, unpinnable), and the early-store
 axis to the spec-literal point with gc elsewhere — both recorded as
 OPEN envelope in BUG-032. Hidden-dep order (E7) is likewise pinned to
-go/types' point with gc KNOWN elsewhere. The register entry should say
-"pinned, each to a recorded conforming point — gc's where pinnable,
-ours where gc's is compiler-internal — with the known ≠ gc cases
-carried as permanent deviation records."
+go/types' point with gc KNOWN elsewhere. ADOPTED (2026-08-12, audit
+fix round): register #2 now carries this correction's substance, with
+one deliberate change — "permanent deviation records" is superseded by
+"standing deviation records queued for re-envelope", because these
+points sit in §7's queue (items 3 and 5) and under the doctrine's bug
+definition a probed gc-elsewhere observation is an observed-∉-modeled
+candidate, not a divergence to be at peace with. (The record is
+permanent; the deviation is not.)
 
 ## 9. Records-vs-code flags found by the sweep
 
@@ -953,8 +973,10 @@ carried as permanent deviation records."
 
 ## 10. Counts
 
-- (a) ENVELOPED: 7 sites / 6 entries (C1, C4, C5, C6, C8, E9, R2 —
-  C8 rides C1's site; E9's order axis).
+- (a) ENVELOPED: 7 sites / 7 entries (C1, C4, C5, C6, C8, E9, R2 —
+  C6 owns two sites (L2 entry + arrival), C8 rides C1's site; E9's
+  order axis). (Count corrected 2026-08-12 — the old "6 entries" was
+  off by one against this line's own list.)
 - (b) PINNED: 14 entries — structural: C2, C3; sequential order: E2,
   E3 (known ≠ gc), E4, E5, E7 (known ≠ gc), E10, E11; representation/
   runtime: R1, R8, R9, R10, R11 (+R12 harness-level).
@@ -965,5 +987,5 @@ carried as permanent deviation records."
 - (d) UNKNOWN: 7 (U-1 … U-7).
 - REFUSED standing in for latitude: 9 (§5).
 - Known-≠-oracle deterministic points (the honesty-critical subset of
-  (b)): E3, E5, E7, R3(escaping path) — plus C2's spinner as the
-  oracle-visible structural instance.
+  (b)): E3, E5, E7, R3(escaping path) — plus the C2+C3 send-then-spin
+  wedge as the oracle-visible structural instance.

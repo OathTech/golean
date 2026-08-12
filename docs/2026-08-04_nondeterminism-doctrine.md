@@ -92,13 +92,16 @@ pool step succeeds — obliviousness holds per certified shape
 Headline theorems ∀-quantify the stream: true under EVERY resolution of
 the MODELED latitude. The charter scopes the old boast here: "stronger
 than any single Go implementation" is earned envelope-by-envelope,
-never assumed — where the machine is pinned or structurally narrowed
-(inventory C2/C3, the scheduling-granularity pins), the stream
-quantifier ranges over FEWER behaviors than conforming Go has, and a
-∀-stream claim shape can even be FALSE of programs gc always satisfies
-(the spinner: `TerminatesNormallyC` false where gc exits 0, 100/100 —
-register #1). A ∀-stream theorem is exactly as strong as the envelope
-it quantifies.
+never assumed — where the machine is pinned or structurally narrowed,
+the stream quantifier ranges over FEWER behaviors than conforming Go
+has, and the census counts the under-coverage honestly: 14 pins and 6
+recorded narrowings, 4 of them KNOWN ≠ gc (inventory §10; C2/C3 are
+the structural scheduling pair). A ∀-stream claim shape can even be
+FALSE of programs gc always satisfies (send-then-spin:
+`TerminatesNormallyC` false — fuel-out on every stream — where gc
+exits 0, 60/60; register #1, recorded probe at
+`docs/evidence/2026-08-12_scheduler-wedge-probes/`). A ∀-stream
+theorem is exactly as strong as the envelope it quantifies.
 
 ## The lanes beneath the bounds (2026-08-12)
 
@@ -140,10 +143,14 @@ membership lane exists (general-coverage arc, slice 3; since delivered
 
 ## The epistemic limits, re-derived from the bounds
 
-Differential testing is VERIFICATION for deterministic behavior and
-degrades to SANITY-CHECKING at the nondeterministic frontier — in
-two-bounds terms, it is the lower bound entire, and nothing else. The
-failure directions are asymmetric:
+Differential equality is VERIFICATION only where Go FORCES one
+behavior — there the modeled set is a singleton, so a membership fact
+IS an agreement fact. At every latitude point, pinned or enveloped, it
+is membership sampling; at a PINNED point in particular it verifies
+the pin's realization, never Go-the-language. It degrades to
+SANITY-CHECKING at the nondeterministic frontier — in two-bounds
+terms, it is the lower bound entire, and nothing else. The failure
+directions are asymmetric:
 
 - **Too NARROW** (real Go exhibits a behavior outside our envelope) is
   the bug definition itself: `observed ∉ modeled`, definitionally red.
@@ -158,8 +165,13 @@ failure directions are asymmetric:
   sampling is nearly useless (the runtime explores a tiny biased corner
   — see the concurrency inputs below). Where sampling is weak, the pins
   and narrowings in that region are the ones most likely to be hiding
-  an observed-∉-modeled instance — which is exactly how the spinner
-  divergence (inventory C2) sat unnoticed under green gates.
+  an observed-∉-modeled instance. (Attribution corrected at the
+  2026-08-12 audit: the send-then-spin wedge (inventory C2+C3) sat
+  unnoticed NOT because sampling was weak — gc's exit-0 on that shape
+  is a deterministic point, and a corpus case would fail loudly today,
+  red on the default stream itself — but because no such case existed:
+  the guardrails-first rule's gap, an unexercised path. The remedy is
+  the missing case, not sampling density.)
 - **Too WIDE** (we admit behaviors no conforming Go could exhibit) is
   UNDETECTABLE by any oracle — go run cannot demonstrate a behavior it
   never has — and it is the transfer-safe direction: ∀-stream theorems
@@ -304,17 +316,36 @@ model's granularity DESIGN, with the NPDRF reduction as the bridge that
 would justify claiming more. Under the charter the reading inverts:
 
 - **The narrowing is a definitional bug, queued for re-envelope.** It
-  is oracle-visible TODAY: the spinner probe (a spawned goroutine
-  looping with no registry op — gc exit-0 100/100, machine fuelOut on
-  every stream that ever picks the spinner) is `observed ∉ modeled`,
-  register #1's entry, and it poisons ∀-stream claim shapes
-  (`TerminatesNormallyC` is FALSE for programs gc always terminates;
-  the fairness note's spinner family is the same structure from the
-  termination side). C2+C3 land together as "the fused-boundary/
+  is oracle-visible TODAY, and the recorded exhibit is SEND-THEN-SPIN
+  (`docs/evidence/2026-08-12_scheduler-wedge-probes/`): a worker
+  performs one registry op (a cap-1 send that wakes main) and then
+  spins with no further registry op; the fused effect boundary (C3)
+  offers no post-op scheduling point, forced continuation (C2) runs
+  the registry-free tail privately forever, and the woken, runnable
+  main is never scheduled again — exit-0 unreachable on EVERY stream
+  (511/511 fuel-out in the exhaustive mod-2 depth-8 sweep, default
+  stream included) where gc exits 0, 60/60. `observed ∉ modeled` —
+  register #1's entry — and it poisons ∀-stream claim shapes
+  (`TerminatesNormallyC` is FALSE for a program gc always terminates).
+  Exhibit corrected at the 2026-08-12 audit — the REGISTRY-FREE
+  spinner (no registry op anywhere) that earlier drafts named here is
+  NOT this bug: gc's exit-0 there IS in the modeled set (the default
+  stream produces it), the machine's extra never-yielding streams are
+  the too-WIDE, transfer-safe direction above (and possibly not
+  over-wide at all — the spec has zero scheduling text (C1), so a
+  cooperative non-preempting implementation could conformingly hang
+  there), and ∀-stream termination claims on that shape are the
+  FAIRNESS quantifier's territory. The scopes split cleanly: the C2+C3
+  re-envelope fixes the WEDGE (a woken runnable partner must be
+  schedulable); it cannot and need not remove the registry-free
+  spinner's divergent branches — adding preemption points only ADDS
+  streams, and the never-yielding stream survives any boundary-set
+  widening. C2+C3 land together as "the fused-boundary/
   forced-continuation" item — priority 1 in the inventory's re-envelope
   queue (§7), the largest single re-envelope and the highest-value one.
   BUG-040 and BUG-044 were pointwise instances of the same class, fixed
-  pointwise; C3 records the remaining mid-program gap (unprobed — U-1).
+  pointwise; C3 records the remaining mid-program abort gap (unprobed —
+  U-1).
 - **The reduction line resumes AFTER the machine widens, as the
   upper-bound theorem it should always have been.** Once preemption
   points exist inside segments, NPDRF's job is the scheduling upper
@@ -327,11 +358,16 @@ would justify claiming more. Under the charter the reading inverts:
   reduction line's exact state** — its charter
   (`docs/2026-08-10_channel-logic-arc-charter.md`, slice 4: the
   statement was already marked REFUTABLE-AS-WRITTEN there) and the
-  parked `channel-logic-s4` branch's slice notes and commit records,
-  which drove the statement through refutation and repair before the
-  arc parked. This doctrine cites that record rather than restating a
-  snapshot of it; the phrase "the NPDRF obligation" in the lane
-  captions below remains correct as a scope marker and resolves there.
+  parked `channel-logic-s4` branch's records, whose strongest form is
+  the branch's binding design note `docs/2026-08-11_npdrf-reduction.md`
+  and the "NPDRF status — SETTLED captions" section it adds to THIS
+  file — both BRANCH-ONLY today (they exist on `channel-logic-s4`, not
+  on main; the branch is the record, so do not prune it without
+  landing or archiving them) — which drove the statement through
+  refutation and repair before the arc parked. This doctrine cites
+  that record rather than restating a snapshot of it; the phrase "the
+  NPDRF obligation" in the lane captions below remains correct as a
+  scope marker and resolves there.
 
 Every caption below that scopes a claim to "the registry-point path
 set" or "registry granularity" is stating this section's pins as
@@ -362,10 +398,19 @@ what the concurrency design was required to honor:
   schedules starve the writer). Concurrency termination claims need an
   explicit fairness-constrained quantifier, decided in the design note
   — not discovered as an unprovable theorem. Taken up in
-  `docs/2026-08-07_fairness-precision-note.md`; note that the spinner
-  family there is ALSO C2's definitional bug seen from the termination
-  side — fairness machinery constrains the quantifier, but only the
-  C2/C3 re-envelope makes the underlying schedule set honest.
+  `docs/2026-08-07_fairness-precision-note.md`. Scope note (corrected
+  at the 2026-08-12 audit; the old bridge sentence fused two defects):
+  the note's enumerated spinner idioms are registry-BEARING — they
+  cross a boundary every iteration — so their infinite trees are
+  honest latitude under unfair schedules, the FairStream quantifier's
+  territory, untouched by the C2/C3 re-envelope (widening only ADDS
+  streams). C2/C3's definitional bug is the different,
+  boundary-free-TAIL shape (the send-then-spin wedge, register #1).
+  The two interact in exactly one direction: fairness over a
+  boundary-free segment is vacuous — no quantifier over choice points
+  can rescue a goroutine that never reaches one — so the C2/C3
+  boundary-set widening precedes the fairness machinery, and each
+  fixes only its own shape.
 
 ## The racy-negative lane, live (channels arc slice 3, 2026-08-07)
 
