@@ -54,6 +54,17 @@ theorem wp_loop_next {c : Expr} {b : Stmt} {env k} :
       WP (Config.next (.loop c b env k)) @ s ; E {{ Φ }} :=
   wp_pure_det rfl trivial (fun _ => Step.loopNext)
 
+/-- Pure, deterministic step: `break` unwinding reaches the governing
+loop and exits it (`Step.loopBreak`) — the loop pops and control resumes
+at its continuation. First consumer: the fib exemplar's loop exit
+(verified-examples slice 1; the frontend's `for`-desugar exits every
+loop through `break`). -/
+@[go_walk_law]
+theorem wp_breaking_loop {c : Expr} {b : Stmt} {env k} :
+    (|={E}[E]▷=> £ 1 -∗ WP (Config.next k) @ s ; E {{ Φ }}) ⊢
+      WP (Config.breaking (.loop c b env k)) @ s ; E {{ Φ }} :=
+  wp_pure_det rfl trivial (fun _ => Step.loopBreak)
+
 /-- **The while-invariant law** (Hoare while-rule, partial correctness;
 Goose `wp_forBreak_cond` shape). `I : Bool → IProp` is the loop invariant
 indexed by the condition's value.
@@ -121,6 +132,95 @@ theorem wp_while_inv {c : Expr} {b : Stmt} {env k} {I : Bool → IProp GF}
     isplitl [HId']
     · iexact HId'
     · iexact Hexit
+
+/-- **The break-aware while-invariant law** (verified-examples slice 1;
+Goose `wp_forBreak_cond`'s break leg, which `wp_while_inv` deliberately
+deferred "with a witness needing them" — the witness arrived: the
+frontend lowers EVERY Go `for` loop to `while true { …; if cond {} else
+{ break }; body }`, so no frontend-lowered loop walks without this law).
+
+Same `I : Bool → IProp` invariant and `Hcond` premise as
+`wp_while_inv`. `Hbody` differs: one body iteration from `I true` may
+end at EITHER continuation — completing normally re-establishing `I`
+(the loop back edge), or `break`ing out establishing the break
+postcondition `Q`. The two continuations are handed to the body as an
+ADDITIVE conjunction (`∧`): a body run reaches exactly one of them, and
+`∧` lets the body proof keep the whole context for whichever it
+reaches — while the law's Löb proof can put the induction hypothesis
+and the exit wand in both branches without duplicating resources.
+
+Conclusion: the exit continuation receives `I false ∨ Q` — condition
+exit or break exit. `wp_while_inv` is the `Q := False` corner (a body
+that never breaks never uses the right branch); it stays as the
+simpler law for hand-built condition-exit loops. -/
+theorem wp_while_inv_break {c : Expr} {b : Stmt} {env k}
+    {I : Bool → IProp GF} {Q : IProp GF}
+    (Hcond : ∀ d : Bool,
+      iprop(I d ∗ (I d -∗
+          WP (Config.retV (.bool d) (.whileK c b env k)) @ s ; E {{ Φ }}))
+        ⊢ WP (Config.evalE c env (.whileK c b env k)) @ s ; E {{ Φ }})
+    (Hbody : iprop(I true
+        ∗ (((∃ d, I d) -∗ WP (Config.next (.loop c b env k)) @ s ; E {{ Φ }})
+           ∧ (Q -∗ WP (Config.breaking (.loop c b env k)) @ s ; E {{ Φ }})))
+        ⊢ WP (Config.exec b env (.loop c b env k)) @ s ; E {{ Φ }}) :
+    iprop((∃ d, I d)
+      ∗ ((I false ∨ Q) -∗ WP (Config.next k) @ s ; E {{ Φ }}))
+      ⊢ WP (Config.exec (.while c b) env k) @ s ; E {{ Φ }} := by
+  apply BI.wand_entails
+  iloeb as IH
+  iintro ⟨⟨%d, HId⟩, Hexit⟩
+  iapply wp_while_start
+  iapply fupd_intro
+  inext
+  iapply fupd_intro
+  iintro Hcred
+  iapply (Hcond d)
+  isplitl [HId]
+  · iexact HId
+  iintro HId
+  cases d with
+  | false =>
+    iapply wp_while_bool (b := false)
+    iapply fupd_intro
+    inext
+    iapply fupd_intro
+    iintro Hcred₂
+    rw [if_neg Bool.false_ne_true]
+    iapply Hexit
+    ileft
+    iexact HId
+  | true =>
+    iapply wp_while_bool (b := true)
+    iapply fupd_intro
+    inext
+    iapply fupd_intro
+    iintro Hcred₂
+    rw [if_pos rfl]
+    iapply Hbody
+    isplitl [HId]
+    · iexact HId
+    isplit
+    · -- the loop back edge: re-enter through the Löb hypothesis
+      iintro HId'
+      iapply wp_loop_next
+      iapply fupd_intro
+      inext
+      iapply fupd_intro
+      iintro Hcred₃
+      iapply IH
+      isplitl [HId']
+      · iexact HId'
+      · iexact Hexit
+    · -- the break edge: pop the loop, exit with `Q`
+      iintro HQ
+      iapply wp_breaking_loop
+      iapply fupd_intro
+      inext
+      iapply fupd_intro
+      iintro Hcred₃
+      iapply Hexit
+      iright
+      iexact HQ
 
 /-- **The discharge witness: `while (x == 0) { x = x + 1 }`** — the
 corpus-pinned single-iteration loop (`control-flow/while-eq-single-

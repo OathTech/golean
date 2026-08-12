@@ -1,0 +1,7 @@
+# id	subject	args	expected_status	expected_reason	features
+zero	fib	0	ok	-	ints,widths,loops
+one	fib	1	ok	-	ints,widths,loops
+two	fib	2	ok	-	ints,widths,loops
+ten	fib	10	ok	-	ints,widths,loops
+ninety-three	fib	93	ok	-	ints,widths,loops
+ninety-four-wrap	fib	94	ok	-	ints,widths,loops

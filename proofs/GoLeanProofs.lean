@@ -55,6 +55,8 @@ import GoLeanProofs.Specs.ImportedGooseMapliteral
 import GoLeanProofs.Specs.ImportedGooseConst
 import GoLeanProofs.Specs.ImportedGooseRune
 import GoLeanProofs.NegativeSpecs
+import GoLeanProofs.Examples.FibProgram
+import GoLeanProofs.Examples.Fib
 
 /-!
 # GoCore ⇒ Iris — the proof layer (root)

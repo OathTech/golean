@@ -239,6 +239,68 @@ theorem wp_alloc_step₄ {cell₀ cell₁ cell₂ cell₃ : HeapCell} {c₀ : Co
           [$Hp0 $Hp1 $Hp2 $Hp3]
       · itrivial
 
+/-- **Shared core: a deterministic step that ALLOCATES two fresh cells.**
+The `wp_alloc_step₄` engine at the arity the fib exemplar forces: ONE
+parameter and ONE result (`func fib(n uint64) uint64` —
+verified-examples slice 1). Same discipline as its siblings; the
+list-indexed generalization stays owed (the standing scope note on
+`wp_alloc_step₄`). -/
+theorem wp_alloc_step₂ {cell₀ cell₁ : HeapCell} {c₀ : Config}
+    (kof : Addr → Addr → Config)
+    (hnv : ToVal.toVal c₀ = (none : Option Unit))
+    (hred : ∀ σ₁ : ExecState, σ₁.functions = GoCoreGS.prog GF →
+      σ₁.methods = GoCoreGS.methods GF → σ₁.types = GoCoreGS.types GF →
+      Step c₀ σ₁
+          (kof ⟨σ₁.nextAddr⟩ ⟨σ₁.nextAddr + 1⟩)
+          (allocMany σ₁ [cell₀, cell₁]) ∧
+      (∀ c' s', Step c₀ σ₁ c' s' →
+          c' = kof ⟨σ₁.nextAddr⟩ ⟨σ₁.nextAddr + 1⟩ ∧
+          s' = allocMany σ₁ [cell₀, cell₁])) :
+    iprop(∀ a₀ : Addr, ∀ a₁ : Addr,
+        a₀.id ↦ cell₀ ∗ a₁.id ↦ cell₁ -∗
+          WP (kof a₀ a₁) @ s ; E {{ Φ }})
+      ⊢ WP c₀ @ s ; E {{ Φ }} := by
+  iintro Hcont
+  iapply wp_lift_step (h := hnv)
+  iintro %σ₁ %ns %obs %obs' %nt Hσ
+  simp only [stateInterp]
+  icases Hσ with ⟨Hσ, %Hinv⟩
+  obtain ⟨hfns, hmeths, htypes, hwf⟩ := Hinv
+  have hf0 : get? (heapToMap σ₁.heap) σ₁.nextAddr = none := hwf.fresh_get?
+  have hf1 : get? (insert (heapToMap σ₁.heap) σ₁.nextAddr cell₀)
+      (σ₁.nextAddr + 1) = none := by
+    rw [get?_insert_ne (by omega)]
+    rw [get?_heapToMap]; exact hwf _ (by omega)
+  iapply fupd_mask_intro Std.LawfulSet.empty_subset
+  iintro Hclose
+  isplitr
+  · ipureintro
+    cases s
+    · exact ⟨[], _, _, [], GoPrimStep.step (hred σ₁ hfns hmeths htypes).1⟩
+    · trivial
+  inext
+  iintro %e₂ %σ₂ %eₜ %Hstep Hcred
+  cases Hstep with
+  | step st =>
+    obtain ⟨rfl, rfl⟩ := (hred σ₁ hfns hmeths htypes).2 _ _ st
+    simp only [allocMany]
+    imod (genHeap_alloc (v := cell₀) hf0) $$ Hσ with ⟨Hσ, Hp0, Ht0⟩
+    imod (genHeap_alloc (v := cell₁) hf1) $$ Hσ with ⟨Hσ, Hp1, Ht1⟩
+    imod Hclose
+    imodintro
+    simp only [Algebra.BigOpL.bigOpL_nil]
+    isplitl [Hσ]
+    · isplitl [Hσ]
+      · iapply (genHeapInterp_eqv
+          (fun kk => (heapToMap_set_base₂ σ₁.heap ⟨σ₁.nextAddr⟩
+            ⟨σ₁.nextAddr + 1⟩ cell₀ cell₁ kk).symm)) $$ Hσ
+      · ipureintro
+        exact ⟨hfns, hmeths, htypes, HeapWf.allocMany [cell₀, cell₁] hwf⟩
+    · isplitl [Hp0 Hp1 Hcont]
+      · iapply Hcont $$ %(⟨σ₁.nextAddr⟩ : Addr) %(⟨σ₁.nextAddr + 1⟩ : Addr)
+          [$Hp0 $Hp1]
+      · itrivial
+
 /-- **Shared core: a deterministic step that ALLOCATES three fresh cells.**
 The `wp_alloc_step₄` engine at the other frame-entry arity the Go corpus
 forces: two parameters and ONE result (`func (c Config, l Indexer) Index`

@@ -1,23 +1,16 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-10  commit: spec-parity arc-end fix round
+# recorded: 2026-08-12  commit: verified-examples slice 1 (fib exemplar)
+#   re-pin reason: 6 NEW explained rows — examples/fib/{zero,one,two,ten,
+#   ninety-three,ninety-four-wrap}, the verified-examples arc's first
+#   corpus example (headline-form exemplar; n=94 pins the mod-2^64 wrap).
+#   No other id moved (PASS/FAIL sets and stages unchanged from the
+#   2026-08-10 record).
 #   frontend: native  oracle: go run (strict lane) / go-run membership in the
 #   machine-enumerated observation set, sampled plain AND under -race
 #   (membership lane; go1.26.5) / schedule-tree singleton certification +
 #   strict go-run equality (confluent lane) / every-enumerated-path-refuses
 #   + go run -race red (racy lane; never combined with deadlock)
-# manifest_cases: 1483  pass: 1364  fail: 119
-# Re-pin reason: arc-end fix round — 18 new ids, zero drift on all 1465
-#   prior ids. New PASSing: the BUG-053 satisfaction pins (7:
-#   sync/satisfaction/* + satisfaction-locker-sig, plus 2 definite-no
-#   controls green from birth), the BUG-054 payload-class pin, the two
-#   BUG-055 int32-wrap pins, and mutex-unlock-fatal/during-panic-unwind
-#   (the tab-indented mid-unwind extractor). New permanent
-#   frontend-export markers (5): sync/iface-dispatch/* (interface-
-#   dispatch calls refuse per-stub — was runtime stuck) and
-#   sync/composite-literal/* (capability-naming refusal — was
-#   sync.noCopy). The rwmutex-order certified record re-certified in
-#   this change (wire sha moved with the stub schema; set and stats
-#   reproduced bit-for-bit).
+# manifest_cases: 1489  pass: 1370  fail: 119
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
 PASS	arrays/array-copy	-
@@ -365,6 +358,12 @@ PASS	embedding/promoted-pointer-receiver-method-set/value-box	-
 PASS	embedding/value-embedded-pointer-promotion/dynamic-dispatch	-
 PASS	embedding/value-embedded-pointer-promotion/static-call	-
 PASS	embedding/value-embedded-pointer-promotion/value-box-satisfies	-
+PASS	examples/fib/ninety-four-wrap	-
+PASS	examples/fib/ninety-three	-
+PASS	examples/fib/one	-
+PASS	examples/fib/ten	-
+PASS	examples/fib/two	-
+PASS	examples/fib/zero	-
 PASS	floats/compound-assign	-
 PASS	floats/defined-incdec	-
 PASS	floats/defined-type-ops	-

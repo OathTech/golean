@@ -1619,6 +1619,39 @@ example := @GoLean.GoCore.NegativeSpecs.unbound_var_stuck
 example := @GoLean.GoCore.NegativeSpecs.terminal_stuck
 example := @GoLean.GoCore.NegativeSpecs.div_nonzero_no_panic
 
+/-! ## The verified-examples exemplar (slice 1, 2026-08-12)
+
+`✓` **the fib exemplar + the break-aware loop spine**
+(`Examples/Fib.lean`, `docs/2026-08-12_example-spec-form.md`). The six
+new laws ship with the fib walk as their same-commit discharge witness
+(non-vacuity): `wp_while_inv_break` (the break-aware invariant rule —
+every frontend-lowered `for` loop needs it, since the desugar exits
+through `break`) is discharged at the fib loop with the Fibonacci pair
+invariant; `wp_break`/`wp_breaking_seq`/`wp_breaking_loop` at the
+loop's exit test; `wp_assign_many_start` at `a, b = b, a+b`;
+`wp_call_enter₁₁` (+ `wp_alloc_step₂`, `bindParams₁`) at the driver's
+one-argument frame entry. Same name-existence-tripwire scope as the
+blocks above (the exhaustive sweep covers the proofs; witness-citation
+drift stays the audit's job). Scope honesty: the fib theorems are
+USABILITY evidence per the verified-examples charter's two-questions
+separation — never machine-hardening evidence. -/
+example := @GoLean.Iris.wp_while_inv_break
+example := @GoLean.Iris.wp_break
+example := @GoLean.Iris.wp_breaking_seq
+example := @GoLean.Iris.wp_breaking_loop
+example := @GoLean.Iris.wp_assign_many_start
+example := @GoLean.Iris.wp_call_enter₁₁
+example := @GoLean.Iris.wp_alloc_step₂
+example := @GoLean.Iris.bindParams₁
+example := @GoLean.Examples.Fib.fibGoSpec
+example := @GoLean.Examples.Fib.fibTerminates
+example := @GoLean.Examples.Fib.fibGoSpecC
+example := @GoLean.Examples.Fib.fib_wrapsC
+/-- info: 'GoLean.Examples.Fib.fib_ok' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Examples.Fib.fib_ok
+/-- info: 'GoLean.Examples.Fib.fib_wraps' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Examples.Fib.fib_wraps
+
 /-! ## Three-state ledger
 
 - `✓ Machine correspondence` (reshape S5, 2026-07-23) — `stepFn_sound` +

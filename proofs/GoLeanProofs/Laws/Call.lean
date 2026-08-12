@@ -517,6 +517,83 @@ theorem allocDecls₁ {σ : ExecState} {env : LocalEnv} {r₀ : Param} {d₀ : G
   simp [allocDecls, h0, ExecState.alloc, ExecState.freshLoc,
     Bind.bind, Except.bind]
 
+/-- `bindParams` at ONE parameter: a single normalized allocation.
+General (sibling of `bindParams₂`). -/
+theorem bindParams₁ {σ : ExecState} {p₀ : Param} {v₀ w₀ : GoValue}
+    (h0 : normalizeValueForTy σ p₀.typ v₀ = .ok w₀) :
+    bindParams [] σ [p₀] [v₀]
+      = .ok ([[(p₀.id, Loc.base ⟨σ.nextAddr⟩)]],
+          allocMany σ [⟨some p₀.typ, w₀⟩]) := by
+  simp only [allocMany]
+  simp [bindParams, h0, ExecState.alloc, ExecState.freshLoc,
+    LocalEnv.declare, Bind.bind, Except.bind]
+
+/-- **Frame entry, ONE argument / ONE result, STATIC callee** — the
+arity the fib exemplar forces (`func fib(n uint64) uint64`,
+verified-examples slice 1: the ∀-input examples pass the quantified
+input as the call's one argument). Sibling of `wp_call_enter₂₁` with
+the argument list shortened by one; two cells are allocated in the
+single step, so it rides the `wp_alloc_step₂` core. Callee, names,
+types and values are law variables; only the arity is fixed (the
+family's standing scope note, `wp_alloc_step₄`). -/
+theorem wp_call_enter₁₁ {fid : FuncId} {func : Func}
+    {v₀ w₀ dv₀ : GoValue}
+    {pid₀ rid₀ : String} {pty₀ rty₀ : Ty}
+    {locs : List (TargetShape × List Expr)} {env k}
+    (hfind : findFunctionIn? (GoCoreGS.prog GF) fid = some func)
+    (hargs : func.args = #[⟨pid₀, pty₀⟩])
+    (hres : func.results = #[⟨rid₀, rty₀⟩])
+    (hnodisp : ∀ σ : ExecState, σ.functions = GoCoreGS.prog GF →
+      σ.methods = GoCoreGS.methods GF → σ.types = GoCoreGS.types GF →
+      dynamicDispatch? σ func #[v₀] = .ok none)
+    (hnorm₀ : ∀ σ : ExecState, σ.types = GoCoreGS.types GF →
+      normalizeValueForTy σ pty₀ v₀ = .ok w₀)
+    (hdef₀ : ∀ σ : ExecState, σ.types = GoCoreGS.types GF →
+      defaultValue σ rty₀ = .ok dv₀) :
+    iprop(∀ a₀ : Addr, ∀ a₁ : Addr,
+        a₀.id ↦ (⟨some pty₀, w₀⟩ : HeapCell)
+          ∗ a₁.id ↦ (⟨some rty₀, dv₀⟩ : HeapCell) -∗
+        WP (Config.exec func.body
+              [[(rid₀, Loc.base a₁), (pid₀, Loc.base a₀)]]
+              (.frame locs env [Loc.base a₁] [] k func.wrapper)) @ s ; E {{ Φ }})
+      ⊢ WP (Config.retV v₀ (.callArgsK fid locs [] [] env k))
+          @ s ; E {{ Φ }} := by
+  have henter : ∀ σ : ExecState, σ.functions = GoCoreGS.prog GF →
+      σ.methods = GoCoreGS.methods GF → σ.types = GoCoreGS.types GF →
+      enterFrame σ fid [v₀]
+        = .ok (func,
+            [[(rid₀, Loc.base ⟨σ.nextAddr + 1⟩), (pid₀, Loc.base ⟨σ.nextAddr⟩)]],
+            [Loc.base ⟨σ.nextAddr + 1⟩],
+            allocMany σ [⟨some pty₀, w₀⟩, ⟨some rty₀, dv₀⟩]) := by
+    intro σ hfns hmeths htypes
+    have hbind := bindParams₁ (σ := σ) (p₀ := ⟨pid₀, pty₀⟩)
+      (v₀ := v₀) (w₀ := w₀) (hnorm₀ σ htypes)
+    have hdecl := allocDecls₁
+      (σ := allocMany σ [⟨some pty₀, w₀⟩])
+      (env := [[(pid₀, Loc.base ⟨σ.nextAddr⟩)]])
+      (r₀ := ⟨rid₀, rty₀⟩) (d₀ := dv₀) (hdef₀ _ htypes)
+    simp only [allocMany] at hbind hdecl ⊢
+    unfold enterFrame
+    rw [hfns, hfind]
+    simp [hnodisp σ hfns hmeths htypes, hargs, hres, hbind, hdecl,
+      pinResultLocs, LocalEnv.declare, LocalEnv.lookup, Scope.lookup,
+      Bind.bind, Except.bind]
+    exact hfns
+  iintro Hcont
+  iapply (wp_alloc_step₂ (hnv := rfl)
+    (kof := fun a₀ a₁ => Config.exec func.body
+      [[(rid₀, Loc.base a₁), (pid₀, Loc.base a₀)]]
+      (.frame locs env [Loc.base a₁] [] k func.wrapper))
+    (hred := by
+      intro σ₁ hfns hmeths htypes
+      have hstep := Step.callArgsDoneEnter (vals := []) (plans := locs)
+        (env := env) (k := k) (by simpa using henter σ₁ hfns hmeths htypes)
+      refine ⟨hstep, ?_⟩
+      intro c' s' hst
+      obtain ⟨h1, h2⟩ := step_det (by trivial) hstep hst
+      exact ⟨h1.symm, h2.symm⟩))
+  iexact Hcont
+
 /-- **Frame entry, two arguments / ONE result, STATIC callee** — the
 arity of every quorum entry point (`run(c, l) Index`,
 `(MajorityConfig).CommittedIndex(l) Index`). Sibling of `wp_call_enter₂`

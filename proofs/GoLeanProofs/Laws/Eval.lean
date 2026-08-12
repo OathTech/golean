@@ -264,6 +264,29 @@ theorem wp_assign_start {lhs : Assignee} {rhs e : Expr} {sh : TargetShape}
     (by simp [Config.choiceFree, stmtPlan])
     (fun _ => Step.assignFirst hplan)
 
+/-- Begin a MULTI-assignment (`a, b = e₀, e₁`): the spine entry
+(`assignManyFirst`) — evaluate the first target's first operand under
+the `tgtOpK` frame with the remaining targets pending, all RHS
+expressions carried for `rhsK`. Go's order: every target operand and
+every RHS evaluates before any store lands (phase 1), then the stores
+go left-to-right (phase 2) — the existing spine laws
+(`wp_tgtop_next`/`wp_tgtop_rhs`/`wp_rhs_shift`/`wp_rhs_stores_vals`)
+walk the rest. First consumer: the fib exemplar's `a, b = b, a+b`
+(verified-examples slice 1). -/
+@[go_walk_law]
+theorem wp_assign_many_start {left : Array Assignee} {right : Array Expr}
+    {sh : TargetShape} {e : Expr} {ops : List Expr}
+    {rest : List (TargetShape × List Expr)} {env k}
+    (hsize : left.size = right.size)
+    (hplan : targetsPlan left.toList = some ((sh, e :: ops) :: rest)) :
+    (|={E}[E]▷=> £ 1 -∗
+      WP (Config.evalE e env (.tgtOpK sh [] ops [] rest .vals right.toList []
+        (.seqn #[]) env k)) @ s ; E {{ Φ }}) ⊢
+      WP (Config.exec (.assignMany left right) env k) @ s ; E {{ Φ }} :=
+  wp_pure_det rfl
+    (by simp [Config.choiceFree, stmtPlan])
+    (fun _ => Step.assignManyFirst hsize hplan)
+
 /-- Shift to the current target's next phase-1 operand. -/
 @[go_walk_law]
 theorem wp_tgtop_shift {sh : TargetShape} {ops : List GoValue} {v : GoValue}

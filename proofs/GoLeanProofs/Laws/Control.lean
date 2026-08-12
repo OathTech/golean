@@ -172,6 +172,27 @@ theorem wp_seq_return {rest : List Stmt} {env k} :
       | step st => cases st <;> simp_all [stmtPlan, chanPlan, syncPlan, selectOperands, loadMany, storeMany, allocDecls]))
   iexact H
 
+/-- Pure, deterministic step: `break` starts unwinding
+(`Step.breakStmt`). First consumer: the fib exemplar (verified-examples
+slice 1) — the frontend's uniform `for`-desugar ends every loop body's
+exit test in a `break`, so no frontend-lowered Go loop walks without
+this law. -/
+@[go_walk_law]
+theorem wp_break {env k} :
+    (|={E}[E]▷=> £ 1 -∗ WP (Config.breaking k) @ s ; E {{ Φ }}) ⊢
+      WP (Config.exec .breakStmt env k) @ s ; E {{ Φ }} :=
+  wp_pure_det rfl (by simp [Config.choiceFree, stmtPlan])
+    (fun _ => Step.breakStmt)
+
+/-- Pure, deterministic step: `break` unwinds past a sequence
+continuation, discarding that scope (`Step.seqBreak`) — the `breaking`
+twin of `wp_seq_return`. Same first consumer as `wp_break`. -/
+@[go_walk_law]
+theorem wp_breaking_seq {rest : List Stmt} {env k} :
+    (|={E}[E]▷=> £ 1 -∗ WP (Config.breaking k) @ s ; E {{ Φ }}) ⊢
+      WP (Config.breaking (.seq rest env k)) @ s ; E {{ Φ }} :=
+  wp_pure_det rfl trivial (fun _ => Step.seqBreak)
+
 /-- Pure, deterministic control step: an exhausted sequence pops to its
 continuation (discarding that scope's env — CEK scope exit). Mirror of
 `wp_seqn` for `Step.seqDone`. -/
