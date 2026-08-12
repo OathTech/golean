@@ -55,6 +55,7 @@ import GoLeanProofs.Specs.ImportedGooseMapliteral
 import GoLeanProofs.Specs.ImportedGooseConst
 import GoLeanProofs.Specs.ImportedGooseRune
 import GoLeanProofs.NegativeSpecs
+import GoLeanProofs.FuelMeasure
 import GoLeanProofs.Examples.FibProgram
 import GoLeanProofs.Examples.Fib
 

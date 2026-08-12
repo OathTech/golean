@@ -59,20 +59,23 @@ def fibSpec : Nat → Nat
   | n + 2 => fibSpec n + fibSpec (n + 1)
 ```
 
-Beside it, the full-domain companion (also shipped):
+Beside it, the full-domain TOTAL companion (also shipped; upgraded
+from run-conditioned at slice 1.5, when the fuel-measure rule paid the
+termination debt — §5c):
 
 ```lean
-theorem fib_wraps (n : Nat) (hn : n < 2 ^ 64) :
-    ∀ (fuel : Nat) (ch : Choices) (σf : ExecState) (ch' : Choices),
-      execStmt fuel fibEnv fibSeed ch (fibCall n) = .ok (.normal σf, ch') →
-      loadLoc σf (.base ⟨0⟩)
-        = .ok (.int ((fibSpec n % 2 ^ 64 : Nat) : Int) .uint64)
+theorem fib_total (n : Nat) (hn : n < 2 ^ 64) :
+    ∃ N : Nat, ∀ fuel : Nat, N ≤ fuel → ∀ ch : Choices,
+      ∃ (σf : ExecState) (ch' : Choices),
+        execStmt fuel fibEnv fibSeed ch (fibCall n) = .ok (.normal σf, ch')
+        ∧ loadLoc σf (.base ⟨0⟩)
+            = .ok (.int ((fibSpec n % 2 ^ 64 : Nat) : Int) .uint64)
 ```
 
-*for every value of the Go argument type, every normal completion
-returns `fibSpec n % 2^64`* — machine-integer honesty (FD-E3): what
-Go's wrapping arithmetic actually computes past n = 93, run-conditioned
-because full-domain termination is the recorded debt (§4).
+*for every value of the Go argument type, execution completes normally
+and returns `fibSpec n % 2^64`* — machine-integer honesty (FD-E3):
+what Go's wrapping arithmetic actually computes past n = 93. The
+run-conditioned readout half remains available as `fib_wraps`.
 
 ## §3 The latitude points — options and recommendations
 
@@ -165,44 +168,34 @@ the frame-closed `GoSpec` remains available beneath as `fibGoSpec`.
   carries the English claim + the scope-honesty paragraph; the headline
   theorem's docstring is the one-sentence English reading.
 
-### L5 — the termination cost (bounded-domain total claims)
+### L5 — the termination cost — SUPERSEDED at the checkpoint (slice 1.5)
 
-The headline's completion half is kernel-enumerated: `allStreamsOk` at
-fuel 6000 over all 94 seeds, one `decide +kernel`, measured **≈2:15
-kernel time** (single n=93 run ≈3.5 s; whole module ≈223 s; the
-desugared loop costs ~60 machine steps per iteration). This lands in
-every proofs build via the in-build Audit gate. Options:
-
-- (a) **Pay it** (BUILT): honest, simple; the cost is one module,
-  parallelizable in the build graph.
-- (b) **Trim the headline domain** (e.g. n ≤ 32): cheaper, but the
-  bound stops meaning anything — 93 is the overflow boundary; 32 is a
-  budget. Rejected unless build cost becomes a real problem.
-- (c) **Symbolic termination machinery** (loop variants / a
-  termination measure over the interpreter): the real fix, and the
-  same machinery would upgrade `fib_wraps` to full-domain total. This
-  is an arc of its own (§4).
-
-**Recommendation: (a) now, (c) as the recorded debt's consumer.** If
-2:15/build is judged too heavy at the checkpoint, (b)-with-a-recorded-
-reason beats deleting the total claim.
+The slice-1 build discharged the headline's completion half by kernel
+enumeration (94 `allStreamsOk` runs, ≈2:15 per proofs build) and this
+section originally presented pay/trim/build-symbolic options. The
+checkpoint RULING (2026-08-12): **enumeration is banned as a proof
+method, corpus-wide** — every theorem in the examples corpus is
+symbolic in its inputs; kernel enumeration is per-instance evidence
+only (corpus oracle rows). The enumeration is DELETED and the symbolic
+machinery was built in-slice: the fuel-measure rule family (§5c).
+Measured delta: the fib module built in **223 s** with the enumeration
+and builds in **≈3 s** with the symbolic proof — the 2:15 vanished,
+and the claim WIDENED (completion now covers the full uint64 domain,
+so `fib_total` — full-domain total correctness — ships where slice 1
+recorded a debt).
 
 ## §4 Foundation debt recorded (charter FD-E3 fallback clause)
 
-**Symbolic (∀-input) termination does not exist.** `Terminates` is
-dischargeable only by per-seed kernel evaluation of the ∀-streams
-checker (`allStreamsOk`), so: (1) the total claim's domain must be
-kernel-enumerable — `fib_ok` is 94 checker runs, ≈2:15 of kernel time
-per proofs build (L5); (2) the full-uint64-domain claim (`fib_wraps`)
-is run-conditioned, NOT total — the "completes" half at 2^64 inputs is
-out of reach. What closing it needs: a loop-variant/termination-measure
-rule over the interpreter (or a WP-total carrier), i.e. new general
-machinery — a future arc, not an example-lane patch (machine changes
-are must-park here). Consumers: every loop example in slice 2 inherits
-the same shape; the sequential-width arc's re-proof capstone inherits
-the same bound. This entry is the debt record; the arc charter's honest
-position ("concrete-domain fallbacks RECORDED as foundation debt") is
-met by `fib_ok`'s enumerated bound.
+**Symbolic (∀-input) termination — PAID at slice 1.5** for
+measured-loop shapes: the checkpoint ruling promoted this debt to
+in-slice work, and the fuel-measure rule family (§5c) now discharges
+`Terminates` symbolically — fib's completion covers the full uint64
+domain (`fib_total`), no enumeration anywhere. What REMAINS owed in
+this direction: recursion (non-loop) termination, nested-loop
+composition sugar (the rule composes manually today), and tactic
+packaging of the segment/cleanup boilerplate (a golean-wp family,
+§5b.1). Consumers: slice 2's loop examples use the rule as-is; the
+width arc's re-proof inherits the same machinery.
 
 **The `$forFirst` desugar tax** (reasoning friction, recorded for the
 slice-3 friction list): the frontend lowers EVERY `for` loop — even
@@ -337,6 +330,73 @@ allowlist; the in-build sweep). golean-wp inherits this posture by
 construction: it can only ever make proofs cheaper, never claims
 wider.
 
+## §5c The fuel-measure rule family (slice 1.5 — the completion half)
+
+Built at the checkpoint ruling (promoted from §4's parked debt):
+`proofs/GoLeanProofs/FuelMeasure.lean`, the symbolic discharge of
+`Terminates`, designed as `wp_while_inv_break`'s completion-side twin —
+the pair split the loop exactly as the brick-wp `stmt_spec`
+convergence (§5b.2) suggested treating statement obligations: the
+VALUE half is the Iris invariant walk, the COMPLETION half is plain
+induction over the executable.
+
+**Why there is no Iris in the termination half** (ruling, recorded):
+standard Iris WP is partial-by-construction — step-indexing/Löb
+induction cannot prove termination; iris-lean at our pin has no total
+WP (`twp`); the Iris-world alternatives (a twp port, time credits,
+Transfinite Iris) are real machinery we do not need, because our
+claims are about a fuel-indexed EXECUTABLE function. The split IS the
+TCB-grounding principle: Iris stays a proof device for the value half;
+completion is boring induction over `execStmtLoop`. A twp port remains
+the recorded option if termination-inside-the-logic is ever wanted.
+
+**The rule** (`completesIn_measure_loop`): given a loop-head
+configuration and a state family `S : Nat → ExecState → Prop` (the
+loop invariant indexed by the REMAINING measure) such that (i) every
+`S (μ+1)` state runs one iteration back to the head within `c_iter`
+interpreter steps reaching `S μ'` with `μ' ≤ μ`, and (ii) every `S 0`
+state completes from the head within `c_exit` fuel, every `S μ` state
+completes within `c_iter·μ + c_exit`. Strong induction on the measure;
+supporting kit: `CompletesIn` (completion at configuration
+granularity), `completesIn_comp` (segment composition),
+`stepFnIter_chain`/`execStmtLoop_of_stepFnIter` (fuel-arithmetic
+folding), `terminates_of_completesIn` (the `Terminates` bridge).
+
+**The fib instantiation** (the same-commit witness): four run segments
+proven by `with_unfolding_all rfl` — pure definitional evaluation of
+the interpreter with `n` symbolic, split exactly at the loop's exit
+test (the one point control depends on an open term). The
+`@[irreducible]` sealing of the value-walk wrappers (de-WF design,
+2026-08-03) is why plain `rfl` fails and `with_unfolding_all` is the
+documented opt-in; a naive `simp [stepFn]` route measured 2.5 min per
+segment, the `rfl` route ≈1.5 s for all four. Measure: `μ = n - m`
+(unit decrease); fuel bound `56·n + 113`, verified against the
+concrete trace (n=3: 277 steps exactly).
+
+**Instantiation sketches for slice 2** (stated, not built — the
+generality check):
+
+- **gcd** (`for b != 0 { a, b = b, a%b }`): measure `μ :=` the
+  `b`-value's Nat magnitude. The iteration premise delivers `S μ'`
+  with `μ' = a % b < b = μ+1`, i.e. `μ' ≤ μ` — the rule's ≤-decrease
+  shape absorbs the NON-UNIT decrease directly; no rule variant
+  needed. The per-iteration segments are the same
+  `with_unfolding_all rfl` shape (the exit test `b != 0` is the one
+  open-term branch). New pure lemmas needed: `%`-wrap arithmetic on
+  uint64 (the `unorm` family extended to `emod`), nothing structural.
+- **binary search** (`for lo < hi { mid := (lo+hi)/2; … }`): measure
+  `μ := hi - lo`; each branch delivers `μ' ∈ {mid - lo, hi - mid - 1}`,
+  both `≤ μ/2 < μ+1` — again within the ≤-decrease shape. The segment
+  split gains ONE extra open-term branch point (the probe comparison
+  inside the body picks the half), so the iteration premise
+  case-splits twice — the rule is untouched; the per-example segment
+  count grows with the number of data-dependent branches, as expected.
+
+If a slice-2 shape genuinely fails the ≤-decrease form (none of the
+listed set should), the named variant to build is a
+well-founded-relation-indexed rule (`completesIn_measure_loop_wf`) —
+recorded here so the finding has an address.
+
 ## §6 TCB-grounding walk for `fib_ok` (per-export discipline)
 
 Statement closure, every identifier to its ground: `execStmt`,
@@ -374,9 +434,9 @@ func fib(n uint64) uint64 {
 number fits in `uint64` — `fib(n)` completes normally (no panic, no
 error, no non-termination: with enough fuel, under every
 nondeterminism choice) and returns exactly the `n`-th Fibonacci number.
-For every `n` in the full `uint64` domain, any normal completion
-returns `fib(n) mod 2^64` — Go's wrapping arithmetic, stated rather
-than hidden.
+For every `n` in the full `uint64` domain, `fib(n)` completes normally
+and returns `fib(n) mod 2^64` — Go's wrapping arithmetic, stated
+rather than hidden. Every quantifier is discharged symbolically.
 
 **The theorems** (`proofs/GoLeanProofs/Examples/Fib.lean`):
 
@@ -392,11 +452,12 @@ theorem fib_ok (n : Nat) (hn : n ≤ 93) :
         execStmt fuel fibEnv fibSeed ch (fibCall n) = .ok (.normal σf, ch')
         ∧ loadLoc σf (.base ⟨0⟩) = .ok (.int (fibSpec n) .uint64)
 
-theorem fib_wraps (n : Nat) (hn : n < 2 ^ 64) :
-    ∀ (fuel : Nat) (ch : Choices) (σf : ExecState) (ch' : Choices),
-      execStmt fuel fibEnv fibSeed ch (fibCall n) = .ok (.normal σf, ch') →
-      loadLoc σf (.base ⟨0⟩)
-        = .ok (.int ((fibSpec n % 2 ^ 64 : Nat) : Int) .uint64)
+theorem fib_total (n : Nat) (hn : n < 2 ^ 64) :
+    ∃ N : Nat, ∀ fuel : Nat, N ≤ fuel → ∀ ch : Choices,
+      ∃ (σf : ExecState) (ch' : Choices),
+        execStmt fuel fibEnv fibSeed ch (fibCall n) = .ok (.normal σf, ch')
+        ∧ loadLoc σf (.base ⟨0⟩)
+            = .ok (.int ((fibSpec n % 2 ^ 64 : Nat) : Int) .uint64)
 ```
 
 **Axioms:** `[propext, Classical.choice, Quot.sound]` (Lean's classical
@@ -418,4 +479,5 @@ differentially tested against `go run`, including the n = 94 wrap.
   curation, not designated here.
 - The `VerifiedExample` bundling structure and any gallery renderer —
   slice 3.
-- Symbolic termination — future arc (§4 debt).
+- Recursion/nested-loop termination + tactic packaging — the residue
+  of the §4 debt after slice 1.5 paid the loop case (§5c).

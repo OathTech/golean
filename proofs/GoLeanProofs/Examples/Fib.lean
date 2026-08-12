@@ -1,5 +1,6 @@
 import GoLeanProofs.Examples.FibProgram
 import GoLeanProofs.SurfaceExit
+import GoLeanProofs.FuelMeasure
 import GoLeanProofs.Laws.Control
 import GoLeanProofs.Laws.Eval
 import GoLeanProofs.Laws.Assign
@@ -17,30 +18,31 @@ the canonical corpus source `Corpus/coverage/exec/examples/fib/main.go`
 (differentially green against `go run`, incl. the n=94 mod-2^64 wrap
 row); `fibLowered` is its pinned frontend lowering.
 
-The two user-facing statements:
+The user-facing statements:
 
 * `fib_ok` — the PROPOSED HEADLINE: for every `n ≤ 93` (the largest
   argument whose Fibonacci number fits in uint64), the program
   completes normally — no panic, no stuck state, no error, at every
   sufficient fuel and every nondeterminism-choice stream — and returns
   exactly `fibSpec n`.
-* `fib_wraps` — the FULL-DOMAIN companion: for every `n < 2^64` (every
-  value of the Go argument type), every normal completion returns
-  `fibSpec n % 2^64` — machine-integer honesty (FD-E3): what Go's
-  uint64 arithmetic actually computes past the overflow boundary.
+* `fib_total` — FULL-DOMAIN total correctness: for every `n < 2^64`
+  (every value of the Go argument type), execution completes normally
+  and returns `fibSpec n % 2^64` — machine-integer honesty (FD-E3):
+  what Go's uint64 arithmetic actually computes past the overflow
+  boundary. `fib_wraps` is its run-conditioned readout half.
+
+EVERYTHING HERE IS SYMBOLIC IN `n` (checkpoint ruling 2026-08-12:
+enumeration is banned as a proof method). The value half is the WP
+walk through `wp_while_inv_break` with the Fibonacci pair invariant;
+the completion half is the fuel-measure rule
+(`FuelMeasure.completesIn_measure_loop`, its same-commit discharge
+witness) instantiated at four `with_unfolding_all rfl` run segments —
+the termination section below records the shape.
 
 Scope honesty (the charter's two-questions separation): these theorems
 are USABILITY evidence — the reasoning layer carrying a natural spec
 through a real program — never machine-hardening evidence; the machine
 itself is validated by the differential corpus and audited separately.
-
-Foundation debt, recorded (see the design note §4): the termination
-half of `fib_ok` is kernel-enumerated per seed (`n ≤ 93` is 94 checker
-runs), because symbolic (∀-input) termination machinery does not exist
-yet — which is also exactly why `fib_wraps` cannot be upgraded to a
-full-domain TOTAL statement. Consumer: a future
-termination-measure/loop-variant arc; the width arc's re-proof
-inherits the same bound.
 -/
 
 open Iris Iris.ProgramLogic Iris.Std Iris.Std.PartialMap
@@ -933,27 +935,250 @@ private theorem fib_seeded_readout {prog : Stmt} {v : Int}
   rw [heaplet_get?_eq, heapletOf_eq_heapToMap, get?_heapToMap] at hget
   exact loadLoc_base_of_lookup hget
 
-/-! ## Termination on the headline domain (kernel-enumerated)
+/-! ## Termination, symbolic (the fuel-measure route)
 
-Foundation debt (design note §4): this is 94 per-seed checker runs in
-one kernel evaluation — the bounded-domain price of not yet having
-symbolic termination. -/
+Checkpoint ruling 2026-08-12: enumeration is banned as a proof method —
+the 94-seed kernel enumeration that first discharged this domain is
+DELETED and replaced by `FuelMeasure.completesIn_measure_loop`, the
+completion-side twin of `wp_while_inv_break` (see the module docstring
+there for why this half deliberately has no Iris in it).
 
-private theorem fib_allStreamsOk :
-    ((List.range 94).all fun n =>
-      allStreamsOk 6000 fibSeed (.exec (fibCall n) fibEnv .stop)) = true := by
-  decide +kernel
+The instantiation: four run SEGMENTS, each a `with_unfolding_all rfl`
+computation of the interpreter with the input symbolic (`rfl` because
+every step is definitional once the sealed value-walk wrappers are
+opened — the open subterms, `n` and the `fibSpec` values, are carried
+as data and only the loop's exit test branches on them, which is
+exactly where the segments split):
 
-/-- The program terminates from the seeded state — at every
-nondeterminism-choice stream, past fuel 6000 — for every `n ≤ 93`. -/
-theorem fibTerminates (n : Nat) (hn : n ≤ 93) :
+* entry (57 steps): seed → the loop head at `m = 0`;
+* head → exit test (25 steps on the first pass, 29 after — the
+  `$forFirst` desugar's two dispatch branches);
+* test-true → head (27 steps): the pair update, re-establishing the
+  head state at `m + 1` — the measure (`n - m`) strictly decreases;
+* test-false → the `.normal` terminal (27 steps): break, result
+  assignment, return, frame exit.
+
+The measure rule then yields completion at fuel `56·n + 113` for EVERY
+`n < 2^64` — the FULL Go domain, not an enumerable bound: the
+per-iteration facts are one proof each, symbolic in both `n` and the
+iteration count. -/
+
+private def fibLoopEnv : LocalEnv :=
+  [[("$forFirst", .base ⟨6⟩)], [("i", .base ⟨5⟩)],
+   [("b", .base ⟨4⟩), ("a", .base ⟨3⟩)],
+   [("$res0", .base ⟨2⟩), ("n", .base ⟨1⟩)]]
+
+/-- The loop-head continuation (scope drains, the trailing
+`$res0 = a; return`, the caller frame). -/
+private def fibHeadCont : Cont :=
+  .seq [] fibLoopEnv
+    (.seq [] [[("i", .base ⟨5⟩)], [("b", .base ⟨4⟩), ("a", .base ⟨3⟩)],
+              [("$res0", .base ⟨2⟩), ("n", .base ⟨1⟩)]]
+      (.seq [.seqn #[.assign (.var "$res0") (.var "a"), .returnStmt]]
+        [[("b", .base ⟨4⟩), ("a", .base ⟨3⟩)],
+         [("$res0", .base ⟨2⟩), ("n", .base ⟨1⟩)]]
+        (.frame [(.chain [], [.ref "$callres"])] [[("$callres", .base ⟨0⟩)]]
+          [.base ⟨2⟩] [] .stop false)))
+
+/-- The loop-head configuration — `completesIn_measure_loop`'s `chead`. -/
+private def fibHeadConfig : Config :=
+  .exec (.while (.boolLit true) fibWhileBody) fibLoopEnv fibHeadCont
+
+/-- The exit test's delivery continuation (segment split point). -/
+private def fibCmpCont : Cont :=
+  .ifK (.seqn #[]) .breakStmt fibLoopEnv.pushScope
+    (.seq [fibIterBlock] fibLoopEnv.pushScope
+      (.loop (.boolLit true) fibWhileBody fibLoopEnv fibHeadCont))
+
+private def fibHeap (nv av bv iv : Int) (ffv : Bool) : Heap :=
+  [(.base ⟨0⟩, u64cell 0), (.base ⟨1⟩, u64cell nv), (.base ⟨2⟩, u64cell 0),
+   (.base ⟨3⟩, u64cell av), (.base ⟨4⟩, u64cell bv),
+   (.base ⟨5⟩, u64cell iv), (.base ⟨6⟩, boolcell ffv)]
+
+private def fibState (h : Heap) : ExecState :=
+  { types := fibLowered.typeDefs.toList, functions := fibLowered.funcs,
+    methods := fibLowered.methods, heap := h, nextAddr := 7 }
+
+/-- The loop-head state after `m` completed iterations: the pair holds
+the wrapped `fibSpec m`/`fibSpec (m+1)`, the counter lags one
+(saturating at the first pass), the flag marks the first pass. -/
+private def fibHeadState (n m : Nat) : ExecState :=
+  fibState (fibHeap (n : Int) (fibv m) (fibv (m + 1))
+    ((m - 1 : Nat) : Int) (m == 0))
+
+/-- The state at the exit test: flag down, counter caught up to `m`. -/
+private def fibCmpState (n m : Nat) : ExecState :=
+  fibState (fibHeap (n : Int) (fibv m) (fibv (m + 1)) ((m : Nat) : Int) false)
+
+private theorem fib_entry_raw (n : Nat) (ch : Choices) :
+    stepFnIter 57 fibSeed (.exec (fibCall n) fibEnv .stop) ch
+      = .ok (fibHeadConfig,
+          fibState (fibHeap
+            (IntKind.normalize .uint64 (IntKind.normalize .uint64 (n : Int)))
+            0 1 0 true), ch) := by
+  with_unfolding_all rfl
+
+/-- Entry segment, cleaned: seed → head at `m = 0`. -/
+private theorem fib_entry (n : Nat) (hn : n < 2 ^ 64) (ch : Choices) :
+    stepFnIter 57 fibSeed (.exec (fibCall n) fibEnv .stop) ch
+      = .ok (fibHeadConfig, fibHeadState n 0, ch) := by
+  rw [fib_entry_raw,
+    show fibState (fibHeap
+        (IntKind.normalize .uint64 (IntKind.normalize .uint64 (n : Int)))
+        0 1 0 true) = fibHeadState n 0 from by
+      simp only [fibHeadState, unorm_nat_of_lt hn,
+        show fibv 0 = 0 from rfl, show fibv (0 + 1) = 1 from rfl,
+        show ((0 - 1 : Nat) : Int) = 0 from rfl,
+        show (((0 : Nat) == 0) : Bool) = true from rfl]]
+
+/-- First-pass dispatch: head at `m = 0` → the exit test (the
+`$forFirst` then-branch: unset the flag; the counter stays 0). -/
+private theorem fib_segA0 (n : Nat) (ch : Choices) :
+    stepFnIter 25 (fibHeadState n 0) fibHeadConfig ch
+      = .ok (.retV (.bool (decide ((0 : Int) < (n : Int)))) fibCmpCont,
+          fibCmpState n 0, ch) := by
+  with_unfolding_all rfl
+
+private theorem fib_segA1_raw (n m : Nat) (ch : Choices) :
+    stepFnIter 29 (fibHeadState n (m + 1)) fibHeadConfig ch
+      = .ok (.retV (.bool (decide
+            (IntKind.normalize .uint64 (IntKind.normalize .uint64 ((m : Int) + 1))
+              < (n : Int)))) fibCmpCont,
+          fibState (fibHeap (n : Int) (fibv (m + 1)) (fibv (m + 2))
+            (IntKind.normalize .uint64
+              (IntKind.normalize .uint64 ((m : Int) + 1))) false), ch) := by
+  with_unfolding_all rfl
+
+/-- Later-pass dispatch, cleaned: head at `m + 1` → the exit test (the
+else-branch: increment the counter). -/
+private theorem fib_segA1 (n m : Nat) (hm : m + 1 < 2 ^ 64) (ch : Choices) :
+    stepFnIter 29 (fibHeadState n (m + 1)) fibHeadConfig ch
+      = .ok (.retV (.bool (decide (((m + 1 : Nat) : Int) < (n : Int))))
+            fibCmpCont,
+          fibCmpState n (m + 1), ch) := by
+  rw [fib_segA1_raw,
+    show ((m : Int) + 1) = ((m + 1 : Nat) : Int) from by omega,
+    unorm_nat_of_lt hm, unorm_nat_of_lt hm]
+  rfl
+
+private theorem fib_segBC_raw (n m : Nat) (ch : Choices) :
+    stepFnIter 27 (fibCmpState n m) (.retV (.bool true) fibCmpCont) ch
+      = .ok (fibHeadConfig,
+          fibState (fibHeap (n : Int)
+            (IntKind.normalize .uint64 (fibv (m + 1)))
+            (IntKind.normalize .uint64 (IntKind.normalize .uint64
+              (fibv m + fibv (m + 1))))
+            ((m : Nat) : Int) false), ch) := by
+  with_unfolding_all rfl
+
+/-- Continue segment, cleaned: exit test true → head at `m + 1`
+(`a, b = b, a+b`, wrapping — the measure decreases). -/
+private theorem fib_segBC (n m : Nat) (ch : Choices) :
+    stepFnIter 27 (fibCmpState n m) (.retV (.bool true) fibCmpCont) ch
+      = .ok (fibHeadConfig, fibHeadState n (m + 1), ch) := by
+  rw [fib_segBC_raw, unorm_fibv_add, unorm_fibv, unorm_fibv,
+    show fibHeadState n (m + 1)
+        = fibState (fibHeap (n : Int) (fibv (m + 1)) (fibv (m + 2))
+            ((m : Nat) : Int) false) from by
+      simp only [fibHeadState, show (m + 1 - 1 : Nat) = m from by omega,
+        show (((m + 1 : Nat) == 0) : Bool) = false from by simp]]
+
+/-- Break segment: exit test false → the `.normal` terminal (break,
+`$res0 = a`, return, frame exit into the harness cell). -/
+private theorem fib_segBE_raw (n m : Nat) (ch : Choices) :
+    stepFnIter 27 (fibCmpState n m) (.retV (.bool false) fibCmpCont) ch
+      = .ok (.next .stop,
+          fibState [(.base ⟨0⟩, u64cell (IntKind.normalize .uint64
+              (IntKind.normalize .uint64 (fibv m)))),
+            (.base ⟨1⟩, u64cell (n : Int)),
+            (.base ⟨2⟩, u64cell (IntKind.normalize .uint64 (fibv m))),
+            (.base ⟨3⟩, u64cell (fibv m)),
+            (.base ⟨4⟩, u64cell (fibv (m + 1))),
+            (.base ⟨5⟩, u64cell ((m : Nat) : Int)),
+            (.base ⟨6⟩, boolcell false)], ch) := by
+  with_unfolding_all rfl
+
+/-- One full iteration: head at `m` → head at `m + 1`, within 56
+interpreter steps (52 on the first pass). -/
+private theorem fib_iter (n m : Nat) (hn : n < 2 ^ 64) (hlt : m < n)
+    (ch : Choices) :
+    ∃ k, k ≤ 56 ∧ stepFnIter k (fibHeadState n m) fibHeadConfig ch
+      = .ok (fibHeadConfig, fibHeadState n (m + 1), ch) := by
+  match m, hlt with
+  | 0, hlt =>
+    refine ⟨25 + 27, by omega, ?_⟩
+    have hA := fib_segA0 n ch
+    rw [show (decide ((0 : Int) < (n : Int))) = true from
+      decide_eq_true (by omega)] at hA
+    exact stepFnIter_chain hA (fib_segBC n 0 ch)
+  | m' + 1, hlt =>
+    refine ⟨29 + 27, by omega, ?_⟩
+    have hA := fib_segA1 n m' (by omega) ch
+    rw [show (decide (((m' + 1 : Nat) : Int) < (n : Int))) = true from
+      decide_eq_true (by omega)] at hA
+    exact stepFnIter_chain hA (fib_segBC n (m' + 1) ch)
+
+/-- The exit pass: head at `m = n` → completion, within 56 fuel. -/
+private theorem fib_exit (n : Nat) (hn : n < 2 ^ 64) :
+    CompletesIn 56 (fibHeadState n n) fibHeadConfig := by
+  intro ch
+  match n, hn with
+  | 0, _ =>
+    have hA := fib_segA0 0 ch
+    rw [show (decide ((0 : Int) < ((0 : Nat) : Int))) = false from by decide]
+      at hA
+    have hchain0 := stepFnIter_chain hA (fib_segBE_raw 0 0 ch)
+    obtain ⟨σf, hchain⟩ : ∃ σf, stepFnIter (25 + 27) (fibHeadState 0 0)
+        fibHeadConfig ch = .ok (.next .stop, σf, ch) := ⟨_, hchain0⟩
+    have hrun : execStmtLoop 56 (fibHeadState 0 0) fibHeadConfig ch
+        = .ok (.normal σf, ch) := by
+      rw [show (56 : Nat) = 25 + 27 + 4 from by omega,
+        execStmtLoop_of_stepFnIter hchain 4, execStmtLoop_next_stop]
+    exact ⟨_, _, hrun⟩
+  | n' + 1, hn =>
+    have hA := fib_segA1 (n' + 1) n' (by omega) ch
+    rw [show (decide (((n' + 1 : Nat) : Int) < ((n' + 1 : Nat) : Int)))
+        = false from decide_eq_false (by omega)] at hA
+    have hchain0 := stepFnIter_chain hA (fib_segBE_raw (n' + 1) (n' + 1) ch)
+    obtain ⟨σf, hchain⟩ : ∃ σf, stepFnIter (29 + 27)
+        (fibHeadState (n' + 1) (n' + 1)) fibHeadConfig ch
+        = .ok (.next .stop, σf, ch) := ⟨_, hchain0⟩
+    have hrun : execStmtLoop 56 (fibHeadState (n' + 1) (n' + 1))
+        fibHeadConfig ch = .ok (.normal σf, ch) := by
+      rw [show (56 : Nat) = 29 + 27 + 0 from by omega,
+        execStmtLoop_of_stepFnIter hchain 0, execStmtLoop_next_stop]
+    exact ⟨_, _, hrun⟩
+
+/-- The loop completes from the head at `m = 0` within `56·n + 56`
+fuel — `completesIn_measure_loop` at the invariant "`m` iterations
+done, `μ = n - m` remain". -/
+private theorem fib_loop_completes (n : Nat) (hn : n < 2 ^ 64) :
+    CompletesIn (56 * n + 56) (fibHeadState n 0) fibHeadConfig := by
+  refine completesIn_measure_loop
+    (S := fun μ σ => ∃ m, m + μ = n ∧ σ = fibHeadState n m)
+    (hiter := ?_) (hexit := ?_) n (fibHeadState n 0) ⟨0, by omega, rfl⟩
+  · intro μ σ hS ch
+    obtain ⟨m, hm, rfl⟩ := hS
+    obtain ⟨k, hk, hstep⟩ := fib_iter n m hn (by omega) ch
+    exact ⟨k, fibHeadState n (m + 1), ch, μ, hk, Nat.le_refl _, hstep,
+      m + 1, by omega, rfl⟩
+  · intro σ hS
+    obtain ⟨m, hm, rfl⟩ := hS
+    have hmn : m = n := by omega
+    subst hmn
+    exact fib_exit m hn
+
+/-- **The program terminates from the seeded state, for EVERY `n` in
+the full uint64 domain** — at every nondeterminism-choice stream, past
+fuel `56·n + 113`. Symbolic in `n` (the fuel-measure rule; no
+enumeration anywhere). -/
+theorem fibTerminates (n : Nat) (hn : n < 2 ^ 64) :
     Terminates fibEnv fibSeed (fibCall n) := by
-  have h1 : allStreamsOk 6000 fibSeed (.exec (fibCall n) fibEnv .stop)
-      = true :=
-    List.all_eq_true.mp fib_allStreamsOk n (List.mem_range.mpr (by omega))
-  refine ⟨6000, fun fuel hfuel ch => ?_⟩
-  obtain ⟨out, ch', hrun⟩ := execStmtLoop_ok_of_allStreamsOk h1 ch
-  exact ⟨out, ch', execStmtLoop_mono 6000 fuel _ _ _ _ hfuel hrun⟩
+  apply terminates_of_completesIn (N := 57 + (56 * n + 56))
+  apply completesIn_comp (k₀ := 57)
+  intro ch
+  exact ⟨57, fibHeadConfig, fibHeadState n 0, ch, Nat.le_refl _,
+    fib_entry n hn ch, fib_loop_completes n hn⟩
 
 /-! ## The user-facing statements -/
 
@@ -963,14 +1188,40 @@ value `n` of the Go argument type `uint64`, every run of
 leaves `fibSpec n % 2^64` in the result cell — exactly what Go's
 wrapping uint64 arithmetic computes, on the whole domain, past the
 overflow boundary at `n = 94`. Genuinely ∀-input: one symbolic proof,
-no enumeration. (Run-conditioned — the full-domain TOTAL form is the
-recorded symbolic-termination debt, design note §4.) -/
+no enumeration. -/
 theorem fib_wraps (n : Nat) (hn : n < 2 ^ 64) :
     ∀ (fuel : Nat) (ch : Choices) (σf : ExecState) (ch' : Choices),
       execStmt fuel fibEnv fibSeed ch (fibCall n) = .ok (.normal σf, ch') →
       loadLoc σf (.base ⟨0⟩)
         = .ok (.int ((fibSpec n % 2 ^ 64 : Nat) : Int) .uint64) :=
   fib_seeded_readout (fibGoSpec n hn) (fibSeedWf n)
+
+/-- **Full-domain TOTAL correctness**: for EVERY value `n` of the Go
+argument type `uint64`, execution completes normally — no panic, no
+stuck state, no error; past one fuel bound, at every
+nondeterminism-choice stream — and the result cell holds
+`fibSpec n % 2^64`. The completion half is the symbolic fuel-measure
+proof (`fibTerminates`); nothing here is enumerated. -/
+theorem fib_total (n : Nat) (hn : n < 2 ^ 64) :
+    ∃ N : Nat, ∀ fuel : Nat, N ≤ fuel → ∀ ch : Choices,
+      ∃ (σf : ExecState) (ch' : Choices),
+        execStmt fuel fibEnv fibSeed ch (fibCall n) = .ok (.normal σf, ch')
+        ∧ loadLoc σf (.base ⟨0⟩)
+            = .ok (.int ((fibSpec n % 2 ^ 64 : Nat) : Int) .uint64) := by
+  have hsat : sat
+      (heapletOf [(.base ⟨0⟩, ⟨some (.int .uint64), .int 0 .uint64⟩)])
+      fibCell0 := rfl
+  have hsplit := InitialSplit.noFrame (P := fibCell0)
+    (hp := [(.base ⟨0⟩, ⟨some (.int .uint64), .int 0 .uint64⟩)]) (na := 1)
+    (funcs := fibLowered.funcs) (env₀ := fibEnv) (prog := fibCall n)
+    hsat (fibSeedWf n)
+  have hnorm : TerminatesNormally fibEnv fibSeed (fibCall n) :=
+    terminatesNormally_of_progressExec hsplit (fibGoSpec n hn).2
+      (fibTerminates n hn)
+  obtain ⟨N, hN⟩ := hnorm
+  refine ⟨N, fun fuel hfuel ch => ?_⟩
+  obtain ⟨σf, ch', hrun⟩ := hN fuel hfuel ch
+  exact ⟨σf, ch', hrun, fib_wraps n hn fuel ch σf ch' hrun⟩
 
 /-- **THE PROPOSED HEADLINE** (design note §2; slice-1 checkpoint
 object): for every `n ≤ 93` — the largest argument whose Fibonacci
@@ -980,7 +1231,9 @@ past one fuel bound, at every nondeterminism-choice stream) and the
 result cell holds EXACTLY `fibSpec n`.
 
 Total correctness, read right off the executable interpreter: the
-completion and the value in one statement, quantified over the input. -/
+completion and the value in one statement, quantified over the input —
+the `fib_total` full-domain claim at the exact-value domain (the bound
+is the overflow boundary, not a proof-method limit). -/
 theorem fib_ok (n : Nat) (hn : n ≤ 93) :
     ∃ N : Nat, ∀ fuel : Nat, N ≤ fuel → ∀ ch : Choices,
       ∃ (σf : ExecState) (ch' : Choices),
@@ -992,20 +1245,9 @@ theorem fib_ok (n : Nat) (hn : n ≤ 93) :
   have hfib : fibSpec n < 2 ^ 64 := fibSpec_lt_of_le_93 hn
   have hmod : ((fibSpec n % 2 ^ 64 : Nat) : Int) = (fibSpec n : Int) := by
     rw [Nat.mod_eq_of_lt hfib]
-  have hsat : sat
-      (heapletOf [(.base ⟨0⟩, ⟨some (.int .uint64), .int 0 .uint64⟩)])
-      fibCell0 := rfl
-  have hsplit := InitialSplit.noFrame (P := fibCell0)
-    (hp := [(.base ⟨0⟩, ⟨some (.int .uint64), .int 0 .uint64⟩)]) (na := 1)
-    (funcs := fibLowered.funcs) (env₀ := fibEnv) (prog := fibCall n)
-    hsat (fibSeedWf n)
-  have hnorm : TerminatesNormally fibEnv fibSeed (fibCall n) :=
-    terminatesNormally_of_progressExec hsplit (fibGoSpec n hn64).2
-      (fibTerminates n hn)
-  obtain ⟨N, hN⟩ := hnorm
+  obtain ⟨N, hN⟩ := fib_total n hn64
   refine ⟨N, fun fuel hfuel ch => ?_⟩
-  obtain ⟨σf, ch', hrun⟩ := hN fuel hfuel ch
-  have hread := fib_wraps n hn64 fuel ch σf ch' hrun
+  obtain ⟨σf, ch', hrun, hread⟩ := hN fuel hfuel ch
   rw [hmod] at hread
   exact ⟨σf, ch', hrun, hread⟩
 
@@ -1062,3 +1304,4 @@ theorem fib_wrapsC (n : Nat) (hn : n < 2 ^ 64) :
     cases hpool
 
 end GoLean.Examples.Fib
+

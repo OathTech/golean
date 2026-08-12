@@ -1647,10 +1647,35 @@ example := @GoLean.Examples.Fib.fibGoSpec
 example := @GoLean.Examples.Fib.fibTerminates
 example := @GoLean.Examples.Fib.fibGoSpecC
 example := @GoLean.Examples.Fib.fib_wrapsC
+
+/-! ## The fuel-measure termination kit (slice 1.5, 2026-08-12)
+
+`✓` **the symbolic-termination rule family + its fib witness**
+(`FuelMeasure.lean`; checkpoint ruling 2026-08-12 — enumeration is
+banned as a proof method, and the 94-seed kernel enumeration that
+first discharged `fib_ok`'s completion half is DELETED, replaced by
+`completesIn_measure_loop`, the completion-side twin of
+`wp_while_inv_break`: loop invariant indexed by a decreasing measure,
+per-iteration fuel bound, strong induction over the EXECUTABLE — no
+Iris in the termination half by design, see the module docstring).
+Same-commit discharge witness: `fibTerminates` (anchored above) now
+covers the FULL uint64 domain, and `fib_total` is the full-domain
+total-correctness form. Name-existence tripwire scope as usual. -/
+example := @GoLean.Surface.CompletesIn
+example := @GoLean.Surface.completesIn_measure_loop
+example := @GoLean.Surface.completesIn_comp
+example := @GoLean.Surface.terminates_of_completesIn
+example := @GoLean.Surface.execStmtLoop_of_stepFnIter
+example := @GoLean.Surface.stepFnIter_chain
+example := @GoLean.Examples.Fib.fib_total
 /-- info: 'GoLean.Examples.Fib.fib_ok' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Examples.Fib.fib_ok
 /-- info: 'GoLean.Examples.Fib.fib_wraps' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Examples.Fib.fib_wraps
+/-- info: 'GoLean.Examples.Fib.fib_total' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Examples.Fib.fib_total
+/-- info: 'GoLean.Surface.completesIn_measure_loop' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Surface.completesIn_measure_loop
 
 /-! ## Three-state ledger
 
