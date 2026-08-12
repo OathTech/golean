@@ -75,6 +75,27 @@ discussion here.
 - CHECKPOINTED (not front-loaded): the headline statement form —
   slice-1 exit, decided by the user on the concrete fib theorem.
 
+## Checkpoint rulings (user, 2026-08-12 — slice 1)
+
+1. **L1/L2 as recommended**: the inline ∃N-∀fuel≥N completion idiom
+   stands (wrappable later, uniformly, if surface readability wins);
+   BOTH theorems (bounded exact-value + full-domain wrapped) per
+   arithmetic example.
+2. **ENUMERATION IS BANNED AS A PROOF METHOD, corpus-wide**: this is a
+   symbolic reasoning project — every theorem in the examples corpus
+   is symbolic in its inputs. Kernel enumeration is legitimate ONLY as
+   per-instance evidence (corpus oracle rows, e.g. fib's n=94 wrap
+   row), never the discharge of a quantified claim. (The slice-1
+   exemplar's 94-seed completion enumeration was replaced accordingly
+   in slice 1.5 by the fuel-measure rule family,
+   `proofs/GoLeanProofs/FuelMeasure.lean`.)
+3. **The fuel-measure rule family is arc scope** (promoted from parked
+   debt at the checkpoint): loop invariant + per-iteration fuel bound
+   + decreasing measure ⇒ completion, by induction over the executable
+   semantics; designed as `wp_while_inv_break`'s completion-side twin;
+   no Iris in the termination half (rationale recorded in the design
+   note and the module).
+
 ## Must-park
 
 Machine changes of ANY kind (this arc is proofs/records only — width
