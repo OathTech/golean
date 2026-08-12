@@ -42,8 +42,12 @@ achievements. Full doctrine + the simplifying-assumptions register:
    a skip (2026-08-09): a killed `--diff` deletes the record up front, and
    "nothing has checked the corpus" used to exit PASS. A fresh clone therefore
    goes red until you run `scripts/ci --diff` once; an environment that never
-   records one (CI's fast gate) sets `GOLEAN_ALLOW_NO_DIFF=1` explicitly and
-   reports a visible `note`.
+   records one — CI's fast gate, or a fresh lane worktree on a docs-only arc
+   where no runtime change owes a differential — sets `GOLEAN_ALLOW_NO_DIFF=1`
+   explicitly and reports a visible `note` (scope widened 2026-08-12: the
+   worktree-per-lane discipline makes fresh checkouts routine, and the audit
+   flagged that the old text scoped the hatch to CI alone while docs-only
+   lanes were already using it, correctly).
 
 A green build is not evidence of correctness. The cheap, decisive signal is the
 failing-set diff — it is what kept 13 consecutive cleanup slices at zero
@@ -130,10 +134,13 @@ contort around it, and record the decision.
 Before building a feature of the tool (a frontend, a lowering path, a semantic
 construct), add the differential corpus cases that pin its target behavior
 first — isolated per feature, with edge cases. The Go oracle (`go run`) is free
-and authoritative, so writing the case first costs almost nothing and fixes the
-target before the implementation can drift. A tool feature is not "started"
-until its guardrail cases exist and classify correctly (a case the tool can't
-yet handle should be visibly frontend/feature-blocked, never a false pass).
+and authoritative for the LOWER bound — at a forced point that is the whole
+story; at a latitude point a case witnesses one member, never the envelope's
+width (the two bounds above) — so writing the case first costs almost nothing
+and fixes the target before the implementation can drift. A tool feature is
+not "started" until its guardrail cases exist and classify correctly (a case
+the tool can't yet handle should be visibly frontend/feature-blocked, never a
+false pass).
 This is why the corpus is frontend-independent: canonical Go is the input to
 both `go run` and the tool. Aim for suites strong enough that *green implies the
 target is covered* — see the three-layer sufficiency strategy in

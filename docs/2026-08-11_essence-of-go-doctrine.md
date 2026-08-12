@@ -73,16 +73,32 @@ costs. We do not BS ourselves about the distance to the goal.
 1. **Scheduling is gc-shaped.** The coarse scheduler's
    forced-continuation (run-to-boundary) and the fused effect boundary
    narrow scheduling latitude below what Go permits — including one
-   oracle-visible divergence (the spinner program: gc exit-0 100/100,
-   machine fuelOut — a definitional bug, first in the re-envelope
-   queue).
-2. **Sequential evaluation-order latitude is pinned** at several points
-   — one axis to gc's realization (call-vs-operand order, BUG-052), but
-   two (inter-target order, early-store-across-phase) to OUR conforming
-   point with gc KNOWN to realize a different one, and hidden-dep init
-   order likewise (the inventory §8's correction: these are
-   observed-∉-modeled candidates under the bug definition, not mere
-   pins).
+   oracle-visible divergence, the SEND-THEN-SPIN wedge: a worker
+   performs one registry op (a cap-1 send that wakes main) and then
+   spins with no further registry op, and the machine pins the
+   scheduler on the worker forever — exit-0 unreachable on EVERY
+   stream (511/511 fuel-out in an exhaustive mod-2 depth-8 sweep)
+   where gc exits 0, 60/60. `observed ∉ modeled` — a definitional
+   bug, first in the re-envelope queue; recorded probe:
+   `docs/evidence/2026-08-12_scheduler-wedge-probes/`. (Exhibit
+   corrected at the 2026-08-12 audit: a REGISTRY-FREE spinner — no
+   registry op anywhere — is NOT this bug: gc's exit-0 there is in
+   the modeled set via the default stream; its extra never-yielding
+   streams are the too-wide, transfer-safe direction, and ∀-stream
+   termination on that shape is the fairness quantifier's territory,
+   not this re-envelope's.)
+2. **Sequential evaluation-order latitude is pinned**, each axis to a
+   recorded conforming point — gc's where pinnable (call-vs-operand
+   order, BUG-052), OURS where gc's realization is compiler-internal
+   (inter-target order, early-store-across-phase), and hidden-dep init
+   order to go/types' point — with the known ≠ gc cases (E3, E5, E7)
+   carried as standing deviation records queued for re-envelope
+   (inventory §7 items 3 and 5). This wording adopts and supersedes
+   §8's prescribed sentence: its "permanent deviation records" phrase
+   is dropped, because under the bug definition a probed gc-elsewhere
+   observation is an observed-∉-modeled candidate — a debt with a
+   queue position, never a divergence we are at peace with (that
+   stronger reading is this register's own gloss, not §8's).
 3. **One-implementation evidence base**: the differential oracle is gc
    at a pinned version; no cross-implementation lane exists yet.
 4. **SC-only interleaving within DRF**: correct per the memory model's
