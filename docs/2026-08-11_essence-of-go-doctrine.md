@@ -1,6 +1,6 @@
 # The essence-of-Go doctrine — the two bounds (2026-08-11)
 
-Status: DRAFT for user review — the project-charter articulation (Mike,
+Status: ACCEPTED (user, 2026-08-12) with the de-facto-spec evidence class added at acceptance — the project-charter articulation (Mike,
 2026-08-11), written as binding doctrine. On acceptance: CLAUDE.md carries
 the compact form; the nondeterminism doctrine is rewritten beneath this;
 every future charter names the portable semantics as the goal.
@@ -37,13 +37,21 @@ red, never latitude.
 ## Evidence classes for the upper bound
 
 In rough order of authority: the language spec's text; the memory model
-document; runtime/library documentation; cross-implementation observation
-(gc across versions, gccgo, tinygo); proposal and issue-tracker
-archaeology (committee-intent reconstruction, Cerberus-style); measured
-gc behavior (a lower-bound instrument that can also *motivate* narrowing
-arguments, never conclude them). All of these lanes eventually feed the
-model. Simplifying assumptions are permitted — recorded in the register
-below, never silently.
+document; runtime/library documentation; **the deployed-program corpus as
+de-facto spec** — "does this program behave as people expect" is a
+powerful argument, because an implementation cannot plausibly break
+behaviors that a large body of running code depends on (this is much of
+why C is such a mess: decades of old code pinning committee-unintended
+behavior; Go is the best-behaved case — the Go 1 compatibility promise
+institutionalizes the constraint, and the team's deliberate map-iteration
+randomization shows them actively *preventing* de-facto pins they don't
+want honored); cross-implementation observation (gc across versions,
+gccgo, tinygo); proposal and issue-tracker archaeology (committee-intent
+reconstruction, Cerberus-style); measured gc behavior (a lower-bound
+instrument that can also *motivate* narrowing arguments, never conclude
+them). All of these lanes eventually feed the model. Simplifying
+assumptions are permitted — recorded in the register below, never
+silently.
 
 ## Pins are scaffolding
 
@@ -69,8 +77,12 @@ costs. We do not BS ourselves about the distance to the goal.
    machine fuelOut — a definitional bug, first in the re-envelope
    queue).
 2. **Sequential evaluation-order latitude is pinned** at several points
-   (call-vs-operand order BUG-052, inter-target order, hidden-dep
-   order) to gc's realization.
+   — one axis to gc's realization (call-vs-operand order, BUG-052), but
+   two (inter-target order, early-store-across-phase) to OUR conforming
+   point with gc KNOWN to realize a different one, and hidden-dep init
+   order likewise (the inventory §8's correction: these are
+   observed-∉-modeled candidates under the bug definition, not mere
+   pins).
 3. **One-implementation evidence base**: the differential oracle is gc
    at a pinned version; no cross-implementation lane exists yet.
 4. **SC-only interleaving within DRF**: correct per the memory model's

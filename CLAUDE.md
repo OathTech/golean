@@ -10,6 +10,21 @@ Goal: build a fast, careful Go-to-Lean verifier. North star target:
 `etcd-io/raft` (`docs/roadmap.md`). Move aggressively; the practices below
 exist because they let us do that without accumulating debt, not as ceremony.
 
+## The two bounds — what we are building (2026-08-11, doctrine)
+
+**A trustworthy, PORTABLE Go semantics** — the weakest machine Go can
+plausibly ever do, exercising all degrees of freedom latent in the
+language — never a model of one scheduler or of behavior already seen.
+**Differential testing is the LOWER bound** (observed ∈ modeled — its
+whole meaning is membership); **spec/memory-model/docs/the deployed-code
+corpus argue the UPPER bound**. If a conforming implementation does
+something the machine cannot, that is DEFINITIONALLY a bug (almost
+always ours). Deterministic gc-pins of latitude are velocity
+scaffolding carrying re-envelope obligations — never fidelity
+achievements. Full doctrine + the simplifying-assumptions register:
+`docs/2026-08-11_essence-of-go-doctrine.md`; the per-point census:
+`docs/2026-08-11_latitude-inventory.md`.
+
 ## The validation gate (always, before any commit that touches runtime code)
 
 0. **Run `scripts/ci`** — the one-command gate that bundles the steps below
