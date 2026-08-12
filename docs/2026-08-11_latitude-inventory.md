@@ -1,7 +1,7 @@
 # Latitude inventory — every point where Go permits multiple behaviors and the machine chooses (2026-08-11)
 
-Status: companion to `docs/2026-08-11_essence-of-go-doctrine.md` (DRAFT,
-awaiting user review). This is the doctrine's promised enumeration: every
+Status: companion to `docs/2026-08-11_essence-of-go-doctrine.md`
+(ACCEPTED, user 2026-08-12). This is the doctrine's promised enumeration: every
 point where the Go spec / memory model / library documentation permits
 multiple behaviors and GoLean's machine resolves the choice — with the
 classification, the evidence status, the re-envelope obligation and cost
