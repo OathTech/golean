@@ -2024,17 +2024,49 @@ destructured, erase-and-max-fold invariant), both halves in the
 symbolic-address regime (finding 12). `wordcount_empty_ok` is the §11
 HARNESS form at the zero-parameter degenerate (runFunctionWithContextM
 of `maxCountEmpty`, `[propext, Quot.sound]` — the Classical.choice-free
-pattern again). The parameterized harness headline `wordcount_ok` over
-`wordcount_harness(n, seed)` is NAMED DEBT **G1** (session note §7;
-seed-wrap caveat: the i%3 family collides at `seed ≥ 2^64 − 2`, so the
-G1 statement carries `hseed : seed < 2^64 − 2` or the collision
-arithmetic); the map machinery (mapCells/mapVal §10a vocabulary, the
-map executable facts, both loop inductions) is form-independent and
-already carries it. -/
+pattern again).
+
+**G1 STATUS (2026-08-13, honest gap record — NOT closed).** The
+parameterized harness headline `wordcount_ok` over
+`wordcount_harness(n, seed)` remains NAMED DEBT. What landed green
+this round: the pure family layer (`wcFamily`, `wcFamily_maxMult`),
+the pinned `wordcountHarnessFunc` + its `rfl` link, the §11 entry
+equation, the whole setup phase, and EVERY per-segment `rfl` lemma of
+the phase-C tower re-instantiated at the harness placement — the
+recipe's premise ("the rfl segments survive re-instantiation") held.
+What resisted: the two COMPOSITION proofs (`wcH_count_iter`,
+`wcH_count_loop`) — verbatim address-renames of the canonical
+originals — hit an elaborator isDefEq/whnf storm (heartbeat-linear
+grind at 2M/4M/12M, RSS to 52 GB), while the canonical originals pass
+under 2M. Explicitly NOT a false goal (the `#eval`-first doctrine
+applied: every segment `rfl`-checks and the concrete `(4,7)` run
+agrees end to end at 841 steps returning 2); the trigger is isolated
+to a `rw`-surgered hypothesis plus a subsequent large application, with
+a self-contained repro and a three-step pickup plan in the module's
+`## The parameterized harness` docstring. Recorded as the first
+intended consumer of the promotion-ledger consolidation slice (note
+§8), not as a semantics doubt.
+
+**SEED-WRAP CAVEAT REFUTED (correction of this file's own earlier
+text).** The previous record claimed the `i%3` family "collides at
+`seed ≥ 2^64 − 2`" and that G1 would need `hseed : seed < 2^64 − 2`.
+That is WRONG: family values are `(seed + r) mod 2^64` for
+`r ∈ {0,1,2}`, equal only when `r ≡ r' (mod 2^64)` — impossible for
+distinct `r, r' ≤ 2`. No collision exists at ANY seed; the wrap belongs
+in the family definition, and the returned max count is `(n+2)/3`
+UNCONDITIONALLY. Now a theorem (`wcFamily_maxMult`, no seed hypothesis
+at all) — this is where the no-collision analysis is actually
+consumed — and independently cross-checked against `go run` at seeds
+including `2^64−3/−2/−1`. -/
 example := @GoLean.Examples.WordCount.multiplicity
 example := @GoLean.Examples.WordCount.maxMultiplicity
+example := @GoLean.Examples.WordCount.wcFamily
+example := @GoLean.Examples.WordCount.wcFamily_maxMult
+example := @GoLean.Examples.WordCount.wordcountHarnessFunc
 example := @GoLean.Examples.WordCount.maxCount_total_canonical
 example := @GoLean.Examples.WordCount.wordcount_empty_ok
+/-- info: 'GoLean.Examples.WordCount.wcFamily_maxMult' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Examples.WordCount.wcFamily_maxMult
 /-- info: 'GoLean.Examples.WordCount.maxCount_total_canonical' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Examples.WordCount.maxCount_total_canonical
 /-- info: 'GoLean.Examples.WordCount.wordcount_empty_ok' depends on axioms: [propext, Quot.sound] -/

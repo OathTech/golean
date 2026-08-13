@@ -3,6 +3,7 @@ import GoLeanProofs.SliceMem
 import GoLeanProofs.FuelMeasure
 import GoLeanProofs.Frame.Transfer
 import GoLeanProofs.Frame.RenameId
+import GoLeanProofs.Laws.StmtOps
 
 /-!
 # Verified example: word count over a Go map (verified-examples slice 2c,
@@ -32,12 +33,22 @@ Lean-side heap vocabulary. What THIS module ships against that form:
   family).
 * `wordcount_empty_ok` — the harness FORM, witnessed end to end at the
   pinned `maxCountEmpty` harness (the zero-parameter instance).
-* NAMED DEBT (§10d clause, now pointing at the harness form): the
-  `(n, seed)`-parameterized `wordcount_ok` over `wordcount_harness` —
-  its remaining cost is purely the MACHINE-LAYER RE-INSTANTIATION of
-  this module's address-concrete configuration tower at the harness
-  placement (see the slice report's gap G1); the two loop inductions
-  and every executable fact are placement-generic already.
+* NAMED DEBT (gap G1, NARROWED but not closed 2026-08-13 — see the
+  gap record at `## The parameterized harness` below): the
+  `(n, seed)`-parameterized `wordcount_ok` over `wordcount_harness`.
+  This session landed green: `wcFamily` + the closed-form
+  `wcFamily_maxMult` (the recorded seed-wrap caveat REFUTED — no
+  seed hypothesis needed), the pinned `wordcountHarnessFunc`, the §11
+  entry equation, the full setup phase (makeSlice at symbolic `n` +
+  the 57-step fill induction), the setup-exit → subject-entry
+  segments, and EVERY per-segment `rfl` lemma of the phase-C tower
+  re-instantiated at the harness placement (16 concrete front cells,
+  symbolic region from 16). The precise remainder: the two
+  COMPOSITION proofs (`wcH_count_iter`/`wcH_count_loop`, verbatim
+  renames of the canonical `wc_count_iter`/`wc_count_loop`) hit an
+  elaborator isDefEq/whnf storm — see the gap record for the
+  bisection evidence and pickup plan — and the range/exit segment
+  copies + final composition are unwritten behind them.
 
 **The teaching point (§10b): the ∀-choices quantifier does REAL work
 here.** `for … range m` consumes one `Choices` pick per iteration
@@ -2995,5 +3006,1076 @@ theorem wordcount_empty_ok :
     with_unfolding_all rfl
   rw [hshape, hfull]
   with_unfolding_all rfl
+
+/-! ## The parameterized harness (gap G1 — GROUNDWORK GREEN, HEADLINE
+STILL OPEN; honest gap record, 2026-08-13)
+
+The `(n, seed)`-parameterized §11 headline over `wordcount_harness`
+(setup builds `w[i] = seed + i%3`, the call under test runs
+`maxCount(w)`, the max count returns as data) is NOT shipped in this
+module yet. What IS green below: the pure family layer (`wcFamily`,
+`wcFamily_maxMult`), the pinned `wordcountHarnessFunc` + entry
+equation, the whole setup phase, the setup-exit → subject-entry
+segments, and every per-segment `rfl` lemma of the phase-C tower
+re-instantiated at the harness placement (probe-verified layout,
+below). All of it compiles with zero escape hatches and is consumed
+verbatim by the intended completion.
+
+**THE PRECISE GAP (where it resisted, evidence, pickup plan).** The
+two COMPOSITION proofs — the 53-step counting iteration
+(`wcH_count_iter`) and the `84·n + 23` counting-loop induction
+(`wcH_count_loop`), both VERBATIM copies of the canonical
+`wc_count_iter`/`wc_count_loop` above with only address renames
+(front 9 → 16 cells, map data 5 → 12, `frameK` → the harness
+`frameKH`) — hit an elaborator isDefEq/whnf storm: timeouts at
+2M/4M/12M heartbeats (heartbeat-linear grind: `BEq.beq` unfolds 2.0M
+@4M vs 6.1M @12M; `Heap.lookup` reduced ~134k times @4M; the
+`f a =?= f b` defeq heuristic ~1M hits; RSS observed to 52 GB), while
+the canonical originals pass under 2M. This is NOT a false goal: every
+segment equation `rfl`-checks (the kernel accepts the same shapes),
+and the concrete run agrees end to end (probe: `(n,seed) = (4,7)`
+terminates at step 841 returning 2 = `(4+2)/3`). Bisection (scratch
+copies `wcB-mod-v3a…v3b8`, session 2026-08-13): everything through
+the `h2` chain elaborates fine; the storm ignites at the
+`storeTarget_addr` application for the `$c1` store and is INSENSITIVE
+to argument style (named `(σ := …)`, hoisted `with_unfolding_all rfl`
+side conditions, fully-explicit `@`-application all storm). The same
+application with the same types is INSTANT in a standalone file (also
+with the real `wordCountLowered` payload), and the structure-update
+vs `σH`-spelling defeq and a mixed-spelling `stepFnIter_chain` are
+instant in isolation; a faithful context copy reproduces the storm,
+and dropping the `h1`/`h2` chains does NOT cure it — so the trigger
+is the COMBINATION of the `rw`-surgered `stepFn_init_seq` hypothesis
+(`hInit1`, which after rewriting carries `Param`-projection cells and
+`declare`-spelled envs) and/or the segment-lemma haves in context
+with a subsequent big application. Pickup plan: iterate on the
+self-contained repro (`.tmp/wcB-repro4.lean`, storms at 4M in
+minutes) — (i) bisect the context haves (chains already exonerated);
+(ii) replace the `rw`-surgery route with placement-specific
+conditioned step lemmas STATED in the `σH` spelling on both sides
+(so no re-spelled state ever enters an application site — finding
+15c's remedy applied at lemma granularity); (iii) if the storm
+persists, seal `σH`/`frontH` behind explicitly-typed intermediate
+`have`s or `@[irreducible]` during composition. The range-loop and
+exit segments (R1–R5/R4e/Rexit/X1/X2a/X2b + the 24-step harness
+X2c′) and the final composition (`wcH_runs` → `wordcount_ok` at fuel
+`229 + 165·n` → `wordcount_readout`) are unwritten pending that fix;
+the step counts and terminal shapes are probe-pinned in the layout
+note below.
+
+**THE SEED-WRAP CAVEAT, SETTLED (recorded finding)**: the gap record
+carried `hseed : seed + 2 < 2^64` on the theory that family values
+collide near the wrap boundary and change `maxMultiplicity`. That is
+WRONG: the family's values are `(seed + r) mod 2^64` for `r ∈ {0,1,2}`,
+and two of those are equal iff `r ≡ r' (mod 2^64)` — impossible for
+distinct `r, r' ≤ 2`. So no collision exists at ANY seed, the wrap
+belongs in the family definition (`wcFamily`, mirroring the sibling
+`isFamily`), the shipped hypothesis is just the uint64 domain
+`hseed : seed < 2^64` (consumed only by the entry equation's argument
+normalization), and the returned value is `⌈n/3⌉ = (n+2)/3`
+unconditionally — proven as `wcFamily_maxMult`, where the
+no-collision analysis is actually consumed.
+
+Address layout (probe-verified at `(n, seed) = (4, 7)`; every raw
+segment below re-checks the transcription by `rfl`): 0 = `n`,
+1 = `seed`, 2 = the harness `$res0`, 3 = `$c9` (the make temp),
+4 = the `w` BACKING array, 5 = `w`, 6 = the setup counter (parked at
+`n`), 7 = the setup flag, 8 = `$c10` (the call-result temp), 9 = the
+subject's `words` parameter, 10 = the subject's `$res0`, 11 = `$c0`,
+12 = the map DATA cell, 13 = `counts`, 14 = the subject's `i`,
+15 = the subject's `$forFirst` — then the symbolic region from 16
+(two dead cells per counting iteration, `best` at `16 + 2n`, one per
+range iteration). Fuel bound: `229 + 165·n` (probe: the whole
+`(4, 7)` run is 841 steps; the bound gives 889). -/
+
+/-- **The input family**: the slice contents the setup phase builds from
+`(n, seed)` — `w[i] = seed + i%3`, wrapped at `2^64` (Go's uint64
+addition; the wrap is part of the family by design, so the family
+covers wrap-boundary seeds). -/
+def wcFamily (n seed : Nat) : List Int :=
+  (List.range n).map (fun i => (((seed + i % 3) % 2 ^ 64 : Nat) : Int))
+
+private theorem wcFamily_length (n seed : Nat) :
+    (wcFamily n seed).length = n := by
+  simp [wcFamily]
+
+private theorem wcFamily_range (n seed : Nat) :
+    ∀ v ∈ wcFamily n seed, 0 ≤ v ∧ v < 2 ^ 64 := by
+  intro v hv
+  simp only [wcFamily, List.mem_map, List.mem_range] at hv
+  obtain ⟨i, -, rfl⟩ := hv
+  have : (seed + i % 3) % 2 ^ 64 < 2 ^ 64 := Nat.mod_lt _ (by omega)
+  omega
+
+private theorem wcFamilyZ_range {n seed i : Nat} :
+    ∀ v ∈ wcFamily i seed ++ List.replicate (n - i) (0 : Int),
+      0 ≤ v ∧ v < 2 ^ 64 := by
+  intro v hv
+  rcases List.mem_append.mp hv with hv | hv
+  · exact wcFamily_range i seed v hv
+  · rcases List.mem_replicate.mp hv with ⟨-, rfl⟩
+    omega
+
+private theorem wcFamily_succ (i seed : Nat) :
+    wcFamily (i + 1) seed
+      = wcFamily i seed ++ [(((seed + i % 3) % 2 ^ 64 : Nat) : Int)] := by
+  simp [wcFamily, List.range_succ]
+
+/-- One setup store advances the family prefix. -/
+private theorem wcFamily_set {n seed i : Nat} (hi : i < n) :
+    (wcFamily i seed ++ List.replicate (n - i) 0).set i
+        (((seed + i % 3) % 2 ^ 64 : Nat) : Int)
+      = wcFamily (i + 1) seed ++ List.replicate (n - (i + 1)) 0 := by
+  have hlen : (wcFamily i seed).length = i := wcFamily_length i seed
+  have hnm : n - i = (n - (i + 1)) + 1 := by omega
+  rw [List.set_append_right _ _ (by omega), hlen, Nat.sub_self, hnm,
+    List.replicate_succ, List.set_cons_zero, wcFamily_succ]
+  simp
+
+/-! ### The closed-form value: `maxMultiplicity (wcFamily n seed)
+= ⌈n/3⌉`, at EVERY seed — the no-collision analysis, consumed -/
+
+/-- The family's value at residue `r`. -/
+private def wcVal (seed r : Nat) : Int := (((seed + r) % 2 ^ 64 : Nat) : Int)
+
+/-- **No collision at any seed**: two residue values are equal only at
+equal residues — `(seed + a) ≡ (seed + b) (mod 2^64)` forces `a = b`
+for `a, b < 3 ≤ 2^64`. This refutes the recorded `seed + 2 < 2^64`
+caveat. -/
+private theorem wcVal_inj {seed a b : Nat} (ha : a < 3) (hb : b < 3)
+    (h : wcVal seed a = wcVal seed b) : a = b := by
+  have h' : (seed + a) % 2 ^ 64 = (seed + b) % 2 ^ 64 := by
+    have h2 := h
+    simp only [wcVal] at h2
+    exact_mod_cast h2
+  omega
+
+private theorem multiplicity_append_one (v w : Int) (ws : List Int) :
+    multiplicity v (ws ++ [w])
+      = multiplicity v ws + (if w = v then 1 else 0) := by
+  simp only [multiplicity, List.filter_append, List.length_append]
+  by_cases h : w = v
+  · simp [h]
+  · simp [h]
+
+/-- Residue `r`'s multiplicity in the family is the count of `i < n`
+with `i % 3 = r`, in closed form. -/
+private theorem multiplicity_wcVal (seed r : Nat) (hr : r < 3) :
+    ∀ n : Nat, multiplicity (wcVal seed r) (wcFamily n seed)
+      = (n + (2 - r)) / 3 := by
+  intro n
+  induction n with
+  | zero =>
+      have h0 : multiplicity (wcVal seed r) (wcFamily 0 seed) = 0 := rfl
+      rw [h0]
+      omega
+  | succ m ih =>
+      rw [wcFamily_succ, multiplicity_append_one, ih,
+        show (((seed + m % 3) % 2 ^ 64 : Nat) : Int) = wcVal seed (m % 3)
+          from rfl]
+      by_cases h : m % 3 = r
+      · rw [if_pos (show wcVal seed (m % 3) = wcVal seed r from by rw [h])]
+        omega
+      · rw [if_neg (fun hc =>
+          h (wcVal_inj (Nat.mod_lt _ (by omega)) hr hc))]
+        omega
+
+private theorem mem_wcFamily_eq {n seed : Nat} {v : Int}
+    (hv : v ∈ wcFamily n seed) : ∃ i, i < n ∧ v = wcVal seed (i % 3) := by
+  simp only [wcFamily, List.mem_map, List.mem_range] at hv
+  obtain ⟨i, hi, rfl⟩ := hv
+  exact ⟨i, hi, rfl⟩
+
+private theorem wcVal_mem {n seed i : Nat} (hi : i < n) :
+    wcVal seed (i % 3) ∈ wcFamily n seed := by
+  simp only [wcFamily, List.mem_map, List.mem_range]
+  exact ⟨i, hi, rfl⟩
+
+/-- **The headline's returned value in closed arithmetic form**: the
+max multiplicity of the setup family is `⌈n/3⌉ = (n+2)/3`, at EVERY
+seed — residue 0 is always (weakly) most frequent, and no seed makes
+two residue values collide (`wcVal_inj`). -/
+theorem wcFamily_maxMult (n seed : Nat) :
+    maxMultiplicity (wcFamily n seed) = (n + 2) / 3 := by
+  rcases Nat.eq_zero_or_pos n with rfl | hn
+  · rfl
+  · apply Nat.le_antisymm
+    · apply maxMult_le
+      intro v hv
+      obtain ⟨i, hi, rfl⟩ := mem_wcFamily_eq hv
+      rw [multiplicity_wcVal seed (i % 3) (Nat.mod_lt _ (by omega)) n]
+      omega
+    · have h0 : multiplicity (wcVal seed 0) (wcFamily n seed)
+          = (n + 2) / 3 := multiplicity_wcVal seed 0 (by omega) n
+      rw [← h0]
+      apply mult_le_maxMult
+      have := wcVal_mem (seed := seed) (i := 0) hn
+      simpa using this
+
+/-! ### The harness `Func`, pinned -/
+
+/-- The harness `Func` record, verbatim from the pinned lowering (the
+`example` pin below ties it by `rfl`): setup `w := make([]uint64, n)`
+filled with `w[i] = seed + i%3`, the call under test `maxCount(w)`,
+the max count returned as data. -/
+def wordcountHarnessFunc : Func :=
+  { id := { key := "wordcount_harness" },
+    args := #[{ id := "n", typ := .int .uint64 },
+              { id := "seed", typ := .int .uint64 }],
+    results := #[{ id := "$res0", typ := .int .uint64 }],
+    body := .block
+      #[]
+      #[.seqn
+          #[.initialization { id := "$c9", typ := .slice (.int .uint64) },
+            .makeSlice (.var "$c9") (.int .uint64) (.var "n") none],
+        .seqn
+          #[.initialization { id := "w", typ := .slice (.int .uint64) },
+            .assign (.var "w") (.var "$c9")],
+        .block
+          #[]
+          #[.seqn
+              #[.initialization { id := "i", typ := .int .uint64 },
+                .assign (.var "i") (.intLit 0 .uint64)],
+            .block
+              #[]
+              #[.initialization { id := "$forFirst", typ := .bool },
+                .assign (.var "$forFirst") (.boolLit true),
+                .while (.boolLit true) suBody]],
+        .seqn
+          #[.initialization { id := "$c10", typ := .int .uint64 },
+            .call #[.var "$c10"] { key := "maxCount" } #[.var "w"]],
+        .seqn
+          #[.assign (.var "$res0") (.var "$c10"),
+            .returnStmt]],
+    variadic := false,
+    wrapper := false }
+  where
+    /-- The setup loop's desugared body: the `$forFirst` dispatch, the
+    exit test, the fill block `{ w[i] = seed + i%3 }`. -/
+    suBody : Stmt :=
+      .block
+        #[]
+        #[.ifThenElse (.var "$forFirst")
+            (.assign (.var "$forFirst") (.boolLit false))
+            (.assign (.var "i")
+              (.add (.var "i") (.intLit 1 .uint64))),
+          .seqn #[],
+          .ifThenElse (.lessCmp (.var "i") (.var "n"))
+            (.seqn #[])
+            .breakStmt,
+          .block
+            #[]
+            #[.seqn
+                #[.assign (.addr (.indexAddr (.var "w") (.var "i")))
+                    (.add (.var "seed")
+                      (.mod (.var "i") (.intLit 3 .uint64)))]]]
+
+/-- The lowering pin: the harness subject IS the frontend's lowering. -/
+example : findFunctionIn? wordCountLowered.funcs ⟨"wordcount_harness"⟩
+    = some wordcountHarnessFunc := rfl
+
+/-! ### The entry equation and the setup phase (harness addresses
+0–8; every segment `with_unfolding_all rfl` except the conditioned
+makeSlice / `%` / element-store steps) -/
+
+private def hWScope0 : Scope :=
+  [("$res0", .base ⟨2⟩), ("seed", .base ⟨1⟩), ("n", .base ⟨0⟩)]
+
+/-- The machine entry's post-prelude state: the three frame cells the
+prelude allocates from the EMPTY heap (arguments normalized at their
+declared uint64 — the normalize is applied at the ARGUMENT position so
+the headline's hypotheses can collapse it). -/
+private def σWH0 (nv sv : Int) : ExecState :=
+  { types := wordCountLowered.typeDefs.toList,
+    functions := wordCountLowered.funcs,
+    methods := wordCountLowered.methods,
+    heap := [(.base ⟨0⟩, u64cell nv), (.base ⟨1⟩, u64cell sv),
+             (.base ⟨2⟩, u64cell 0)],
+    nextAddr := 3 }
+
+private def hWFrame0 : Cont := .frame [] [] [] [] .stop
+
+/-- **The entry equation** (§11 glue, wordcount instance): the machine
+entry IS its post-prelude `runConfig` form — `with_unfolding_all rfl`
+at fully symbolic arguments, fuel, and choices. -/
+private theorem wcH_entry_eq (nv sv : Int) (fuel : Nat) (ch : Choices) :
+    runFunctionWithContextM fuel wordCountLowered.typeDefs.toList
+        wordCountLowered.funcs wordcountHarnessFunc
+        #[.int nv .uint64, .int sv .uint64]
+        wordCountLowered.methods ch
+      = (do
+          let r ← runConfig fuel
+            (σWH0 (IntKind.normalize .uint64 nv)
+              (IntKind.normalize .uint64 sv))
+            (.exec wordcountHarnessFunc.body [hWScope0] hWFrame0) ch
+          return { values := (← loadMany r.1 [.base ⟨2⟩]).toArray }) := by
+  with_unfolding_all rfl
+
+/-- The harness slice handle: backing at its fixed address 4. -/
+private abbrev wHandleCell (n : Nat) : HeapCell :=
+  ⟨some (.slice tU64), .slice ⟨some (.base ⟨4⟩), 0, n, n⟩⟩
+private abbrev wSliceH (n : Nat) : GoValue :=
+  .slice ⟨some (.base ⟨4⟩), 0, n, n⟩
+
+/-- The harness body's top statement list (projection of the pinned
+record — reducible data, so the `rfl` segments see through it). -/
+private def hWBodyList : List Stmt :=
+  match wordcountHarnessFunc.body with
+  | .block _ ss => ss.toList
+  | _ => []
+
+private def envWC9 : LocalEnv := [[("$c9", .base ⟨3⟩)], hWScope0]
+private def hWAfterMsK : Cont := .seq (hWBodyList.drop 1) envWC9 hWFrame0
+private def hWMsK : Cont :=
+  .stmtOpK (.makeSlice tU64 false) 1 [.addr (.base ⟨3⟩)] [] envWC9
+    hWAfterMsK
+
+/-- `$c9` declared (default slice), the makeSlice length delivered. -/
+private def σWStartC9 (nv sv : Int) : ExecState :=
+  { σWH0 nv sv with
+    heap := (σWH0 nv sv).heap
+      ++ [(.base ⟨3⟩, ⟨some (.slice tU64), .slice ⟨none, 0, 0, 0⟩⟩)],
+    nextAddr := 4 }
+
+/-- Entry A: harness body start → the makeSlice length delivery.
+10 steps. -/
+private theorem wcH_E1_raw (n seed : Nat) (ch : Choices) :
+    stepFnIter 10 (σWH0 ((n : Nat) : Int) ((seed : Nat) : Int))
+      (.exec wordcountHarnessFunc.body [hWScope0] hWFrame0) ch
+      = .ok (.retV (.int ((n : Nat) : Int) .uint64) hWMsK,
+          σWStartC9 ((n : Nat) : Int) ((seed : Nat) : Int), ch) := by
+  with_unfolding_all rfl
+
+private theorem natFromNonneg_cast' (ctx : String) (n : Nat) :
+    natFromNonnegativeInt ctx ((n : Nat) : Int) = .ok n := by
+  simp only [natFromNonnegativeInt, Int.toNat_natCast]
+  rw [if_neg (show ¬(((n : Nat) : Int) < 0) by omega)]
+  rfl
+
+/-- The wide-op apply step, conditioned on the apply fact. -/
+private theorem stepFn_stmtOp_apply' {σ σ' : ExecState} {op : StmtOp}
+    {nt : Nat} {done : List GoValue} {v : GoValue} {env : LocalEnv}
+    {k : Cont} {ch ch' : Choices}
+    (h : applyStmtOp σ ch op nt (v :: done).reverse = .ok (σ', ch')) :
+    stepFn σ (.retV v (.stmtOpK op nt done [] env k)) ch
+      = .ok (.next k, σ', ch') := by
+  simp only [stepFn]
+  rw [h]
+  rfl
+
+/-- Post-makeSlice: the handle in `$c9`, the zeroed backing at 4. -/
+private def σWMkS (n seed : Nat) : ExecState :=
+  { types := wordCountLowered.typeDefs.toList,
+    functions := wordCountLowered.funcs,
+    methods := wordCountLowered.methods,
+    heap := [(.base ⟨0⟩, u64cell (n : Int)), (.base ⟨1⟩, u64cell (seed : Int)),
+             (.base ⟨2⟩, u64cell 0),
+             (.base ⟨3⟩, wHandleCell n),
+             (.base ⟨4⟩, arrCell n (List.replicate n 0))],
+    nextAddr := 5 }
+
+/-- **The makeSlice apply at a SYMBOLIC length**: allocates the zeroed
+backing at 4 and stores the handle in `$c9`
+(`GoLean.Iris.buildDefaultArrayValue_int`, proof-side import). -/
+private theorem wcH_makeSlice (n seed : Nat) (ch : Choices) :
+    stepFn (σWStartC9 ((n : Nat) : Int) ((seed : Nat) : Int))
+      (.retV (.int ((n : Nat) : Int) .uint64) hWMsK) ch
+      = .ok (.next hWAfterMsK, σWMkS n seed, ch) := by
+  have hb := GoLean.Iris.buildDefaultArrayValue_int
+    (σWStartC9 ((n : Nat) : Int) ((seed : Nat) : Int)) .uint64 n
+  have harr : (List.replicate n (GoValue.int 0 .uint64)).toArray
+      = (⟨(List.replicate n (0 : Int)).map
+          (fun v => GoValue.int v .uint64)⟩ : Array GoValue) := by
+    simp [List.map_replicate]
+  rw [harr] at hb
+  have hnn1 := natFromNonneg_cast'
+    "runtime error: makeslice: len out of range" n
+  have hnn2 := natFromNonneg_cast'
+    "runtime error: makeslice: cap out of range" n
+  have happly : applyStmtOp (σWStartC9 ((n : Nat) : Int) ((seed : Nat) : Int))
+      ch (.makeSlice tU64 false) 1
+      [.addr (.base ⟨3⟩), .int ((n : Nat) : Int) .uint64]
+      = .ok (σWMkS n seed, ch) := by
+    simp only [applyStmtOp, applyStmtOpCore, valueAsInt, valueAsLoc,
+      hnn1, hnn2, hb, Bind.bind, Except.bind, pure, Except.pure]
+    rw [if_neg (Nat.lt_irrefl n)]
+    with_unfolding_all rfl
+  exact stepFn_stmtOp_apply'
+    (done := [.addr (.base ⟨3⟩)]) (v := .int ((n : Nat) : Int) .uint64)
+    happly
+
+/-! ### The setup loop (fixed cells 0–7; the loop never allocates) -/
+
+private def wScopeH : Scope := [("w", .base ⟨5⟩), ("$c9", .base ⟨3⟩)]
+private def suWEnv : LocalEnv :=
+  [[("$forFirst", .base ⟨7⟩)], [("i", .base ⟨6⟩)], wScopeH, hWScope0]
+
+/-- The setup-loop state family: backing list `l`, counter `iv`,
+flag. -/
+private def sWSU (n : Nat) (sv : Int) (l : List Int) (iv : Int)
+    (ff : Bool) : ExecState :=
+  { types := wordCountLowered.typeDefs.toList,
+    functions := wordCountLowered.funcs,
+    methods := wordCountLowered.methods,
+    heap := [(.base ⟨0⟩, u64cell (n : Int)), (.base ⟨1⟩, u64cell sv),
+             (.base ⟨2⟩, u64cell 0), (.base ⟨3⟩, wHandleCell n),
+             (.base ⟨4⟩, arrCell n l), (.base ⟨5⟩, wHandleCell n),
+             (.base ⟨6⟩, u64cell iv), (.base ⟨7⟩, bcell ff)],
+    nextAddr := 8 }
+
+private def suWTail : Cont :=
+  .seq [] suWEnv
+    (.seq [] [[("i", .base ⟨6⟩)], wScopeH, hWScope0]
+      (.seq (hWBodyList.drop 3) [wScopeH, hWScope0] hWFrame0))
+private def suWHeadCfg : Config :=
+  .exec (.while (.boolLit true) wordcountHarnessFunc.suBody) suWEnv suWTail
+private def suWLoopK : Cont :=
+  .loop (.boolLit true) wordcountHarnessFunc.suBody suWEnv suWTail
+private def suWStoreBlk : Stmt :=
+  .block #[]
+    #[.seqn
+        #[.assign (.addr (.indexAddr (.var "w") (.var "i")))
+            (.add (.var "seed") (.mod (.var "i") (.intLit 3 .uint64)))]]
+private def suWCmpK : Cont :=
+  .ifK (.seqn #[]) .breakStmt ([] :: suWEnv)
+    (.seq [suWStoreBlk] ([] :: suWEnv) suWLoopK)
+private def envW6 : LocalEnv := [] :: [] :: suWEnv
+private def suWRef (n : Nat) (iv : Int) : TargetRef :=
+  .chain (wSliceH n) [.int iv .uint64] [.index]
+private def suWStoreTail : Cont :=
+  .seq [] envW6 (.seq [] ([] :: suWEnv) suWLoopK)
+private def suWRhsK (n : Nat) (iv : Int) : Cont :=
+  .rhsK .vals [suWRef n iv] [] [] (.seqn #[]) envW6 suWStoreTail
+private def suWAddK (n : Nat) (sv iv : Int) : Cont :=
+  .strictK .add [.int sv .uint64] [] envW6 (suWRhsK n iv)
+private def suWModK (n : Nat) (sv iv : Int) : Cont :=
+  .strictK .mod [.int iv .uint64] [] envW6 (suWAddK n sv iv)
+
+/-- Entry B: makeSlice done → `w := $c9`, `i := 0`, the flag block →
+the setup loop head. 42 steps. -/
+private theorem wcH_E2_raw (n seed : Nat) (ch : Choices) :
+    stepFnIter 42 (σWMkS n seed) (.next hWAfterMsK) ch
+      = .ok (suWHeadCfg,
+          sWSU n (seed : Int) (List.replicate n 0) 0 true, ch) := by
+  with_unfolding_all rfl
+
+/-- Setup first-pass dispatch: the flag drops, the exit test `i < n`
+delivers. 25 steps. -/
+private theorem wcH_suA0_raw (n : Nat) (sv iv : Int) (l : List Int)
+    (ch : Choices) :
+    stepFnIter 25 (sWSU n sv l iv true) suWHeadCfg ch
+      = .ok (.retV (.bool (decide (iv < ((n : Nat) : Int)))) suWCmpK,
+          sWSU n sv l iv false, ch) := by
+  with_unfolding_all rfl
+
+/-- Setup fill phase A: test true → the `%` apply point (the divisor
+literal delivered; the one data-dependent arithmetic branch is the
+divide-by-zero check, discharged by the conditioned step below).
+19 steps. -/
+private theorem wcH_suB1a_raw (n : Nat) (sv iv : Int) (l : List Int)
+    (ch : Choices) :
+    stepFnIter 19 (sWSU n sv l iv false) (.retV (.bool true) suWCmpK) ch
+      = .ok (.retV (.int 3 .uint64) (suWModK n sv iv),
+          sWSU n sv l iv false, ch) := by
+  with_unfolding_all rfl
+
+/-- **The `%` executable fact** (gcd's `applyStrictOp_mod_u64`, copied
+privately — shared-kit promotion candidate, third consumer). -/
+private theorem applyStrictOp_mod_u64 {σ : ExecState} {a b : Nat}
+    (hb : 0 < b) (hb64 : b < 2 ^ 64) :
+    applyStrictOp σ .mod [.int (a : Int) .uint64, .int (b : Int) .uint64]
+      = .ok (.int ((a % b : Nat) : Int) .uint64, σ) := by
+  have hbne : (((b : Nat) : Int) == 0) = false := by
+    simp only [beq_eq_false_iff_ne, ne_eq, Int.natCast_eq_zero]
+    omega
+  have htmod : Int.tmod (a : Int) (b : Int) = ((a % b : Nat) : Int) := rfl
+  have hnorm : IntKind.normalize .uint64 ((a % b : Nat) : Int)
+      = ((a % b : Nat) : Int) := by
+    refine unorm_of_range (by omega) ?_
+    have : a % b < b := Nat.mod_lt _ hb
+    exact_mod_cast (by omega : a % b < 2 ^ 64)
+  simp only [applyStrictOp, valueAsInt, hbne, intBinaryResult,
+    valueAsIntValue, htmod, IntKind.compatibleResult,
+    Bool.false_eq_true, if_false, Bind.bind, Except.bind, pure, Except.pure]
+  simp only [show (IntKind.uint64 == IntKind.uint64) = true from rfl,
+    if_true, hnorm]
+
+/-- Setup fill phase B: the `%` result delivered → the add runs → the
+element-store point (the wrapped `seed + i%3` riding). 2 steps. -/
+private theorem wcH_suB1b_raw (n : Nat) (sv iv rv : Int) (l : List Int)
+    (ch : Choices) :
+    stepFnIter 2 (sWSU n sv l iv false)
+      (.retV (.int rv .uint64) (suWAddK n sv iv)) ch
+      = .ok (.next (.storeK [suWRef n iv]
+            [.int (IntKind.normalize .uint64 (sv + rv)) .uint64]
+            (.seqn #[]) envW6 suWStoreTail),
+          sWSU n sv l iv false, ch) := by
+  with_unfolding_all rfl
+
+/-- Setup fill tail: store done → back to the loop head. 5 steps. -/
+private theorem wcH_suD_raw (n : Nat) (sv iv : Int) (l : List Int)
+    (ch : Choices) :
+    stepFnIter 5 (sWSU n sv l iv false)
+      (.next (.storeK [] [] (.seqn #[]) envW6 suWStoreTail)) ch
+      = .ok (suWHeadCfg, sWSU n sv l iv false, ch) := by
+  with_unfolding_all rfl
+
+/-- Setup later-pass dispatch: `i++`, then the exit test. 29 steps. -/
+private theorem wcH_suA1_raw (n : Nat) (sv iv : Int) (l : List Int)
+    (ch : Choices) :
+    stepFnIter 29 (sWSU n sv l iv false) suWHeadCfg ch
+      = .ok (.retV (.bool (decide
+            (IntKind.normalize .uint64 (IntKind.normalize .uint64 (iv + 1))
+              < ((n : Nat) : Int)))) suWCmpK,
+          sWSU n sv l
+            (IntKind.normalize .uint64 (IntKind.normalize .uint64 (iv + 1)))
+            false, ch) := by
+  with_unfolding_all rfl
+
+/-- Wrapped uint64 addition of two Nat-cast values (reverse's
+`unorm_add_nat`, copied privately — promotion candidate). -/
+private theorem unorm_add_nat (a b : Nat) :
+    IntKind.normalize .uint64 ((a : Int) + (b : Int))
+      = (((a + b) % 2 ^ 64 : Nat) : Int) := by
+  rw [show ((a : Int) + (b : Int)) = ((a + b : Nat) : Int) from by omega]
+  simp [IntKind.normalize, IntKind.bits?, IntKind.signed]
+
+/-- One setup iteration from the exit-test's true delivery at `i`:
+`i % 3` (conditioned), the wrapped add, the element store, back to the
+head, `i++`, the next test — the family prefix advanced. 57 steps. -/
+private theorem wcH_su_iter (n seed i : Nat) (hn : n < 2 ^ 63)
+    (hi : i < n) (ch : Choices) :
+    stepFnIter 57
+      (sWSU n (seed : Int) (wcFamily i seed ++ List.replicate (n - i) 0)
+        ((i : Nat) : Int) false)
+      (.retV (.bool true) suWCmpK) ch
+      = .ok (.retV (.bool (decide
+            (((i + 1 : Nat) : Int) < ((n : Nat) : Int)))) suWCmpK,
+          sWSU n (seed : Int)
+            (wcFamily (i + 1) seed ++ List.replicate (n - (i + 1)) 0)
+            ((i + 1 : Nat) : Int) false, ch) := by
+  have hB1a := wcH_suB1a_raw n (seed : Int) ((i : Nat) : Int)
+    (wcFamily i seed ++ List.replicate (n - i) 0) ch
+  -- the % apply, conditioned
+  have hmod := stepFnIter_one (stepFn_strict_apply
+    (done := [.int ((i : Nat) : Int) .uint64])
+    (env := envW6) (k := suWAddK n (seed : Int) ((i : Nat) : Int))
+    (ch := ch)
+    (applyStrictOp_mod_u64
+      (σ := sWSU n (seed : Int) (wcFamily i seed ++ List.replicate (n - i) 0)
+        ((i : Nat) : Int) false)
+      (a := i) (b := 3) (by omega) (by omega)))
+  have h1 := stepFnIter_chain hB1a hmod
+  -- the add + rhs collect
+  have hB1b := wcH_suB1b_raw n (seed : Int) ((i : Nat) : Int)
+    ((i % 3 : Nat) : Int) (wcFamily i seed ++ List.replicate (n - i) 0) ch
+  rw [unorm_add_nat seed (i % 3)] at hB1b
+  have h2 := stepFnIter_chain h1 hB1b
+  -- the element store
+  have hw : (0 : Int) ≤ (((seed + i % 3) % 2 ^ 64 : Nat) : Int)
+      ∧ (((seed + i % 3) % 2 ^ 64 : Nat) : Int) < 2 ^ 64 := by
+    have := Nat.mod_lt (seed + i % 3) (y := 2 ^ 64) (by omega)
+    omega
+  have hst := storeTarget_slice_u64
+    (σ := sWSU n (seed : Int) (wcFamily i seed ++ List.replicate (n - i) 0)
+      ((i : Nat) : Int) false)
+    (a := ⟨4⟩) (off := 0) (len := n) (cap := n) (i := i) (n := n)
+    (ik := .uint64) (l := wcFamily i seed ++ List.replicate (n - i) 0)
+    (w := (((seed + i % 3) % 2 ^ 64 : Nat) : Int))
+    rfl (Nat.le_refl n) hi
+    (by rw [List.length_append, wcFamily_length, List.length_replicate]
+        omega)
+    (by rw [List.length_append, wcFamily_length, List.length_replicate]
+        omega)
+    wcFamilyZ_range hw
+  rw [Nat.zero_add, wcFamily_set hi] at hst
+  have h3 := stepFnIter_chain h2
+    (stepFnIter_one (stepFn_store_step hst))
+  -- store drain → head → i++ → the next test
+  have hD := wcH_suD_raw n (seed : Int) ((i : Nat) : Int)
+    (wcFamily (i + 1) seed ++ List.replicate (n - (i + 1)) 0) ch
+  have h4 := stepFnIter_chain h3 hD
+  have hA1 := wcH_suA1_raw n (seed : Int) ((i : Nat) : Int)
+    (wcFamily (i + 1) seed ++ List.replicate (n - (i + 1)) 0) ch
+  rw [show ((i : Nat) : Int) + 1 = ((i + 1 : Nat) : Int) from by omega,
+    unorm_of_range (v := ((i + 1 : Nat) : Int)) (by omega) (by omega),
+    unorm_of_range (v := ((i + 1 : Nat) : Int)) (by omega) (by omega)] at hA1
+  exact stepFnIter_chain h4 hA1
+
+/-- **The setup loop**, by strong induction on `n - i`: exactly
+`57·(n-i)` steps materialize the wrapped `seed + i%3` family. No
+seed hypothesis — the wrap is the family's own definition; only the
+length domain `n < 2^63` is consumed, for the counter arithmetic. -/
+private theorem wcH_setup_loop (n seed : Nat) (hn : n < 2 ^ 63) :
+    ∀ μ i, μ = n - i → i ≤ n → ∀ ch : Choices,
+    stepFnIter (57 * (n - i))
+      (sWSU n (seed : Int) (wcFamily i seed ++ List.replicate (n - i) 0)
+        ((i : Nat) : Int) false)
+      (.retV (.bool (decide (((i : Nat) : Int) < ((n : Nat) : Int))))
+        suWCmpK) ch
+      = .ok (.retV (.bool (decide
+            (((n : Nat) : Int) < ((n : Nat) : Int)))) suWCmpK,
+          sWSU n (seed : Int) (wcFamily n seed) ((n : Nat) : Int) false,
+          ch) := by
+  intro μ
+  induction μ using Nat.strongRecOn with
+  | _ μ ih =>
+    intro i hμ hin ch
+    rcases Nat.lt_or_ge i n with hlt | hge
+    · rw [show (decide (((i : Nat) : Int) < ((n : Nat) : Int))) = true from
+        decide_eq_true (by exact_mod_cast hlt)]
+      have hiter := wcH_su_iter n seed i hn hlt ch
+      have hrec := ih (n - (i + 1)) (by omega) (i + 1) rfl (by omega) ch
+      have hc := stepFnIter_chain hiter hrec
+      rw [show 57 + 57 * (n - (i + 1)) = 57 * (n - i) from by omega] at hc
+      exact hc
+    · have hEq : i = n := by omega
+      subst hEq
+      simp only [Nat.sub_self, Nat.mul_zero, List.replicate_zero,
+        List.append_nil]
+      rfl
+
+/-! ### The subject phase at the harness placement (front cells 0–15,
+symbolic region from 16) — the phase-C tower re-instantiated: same
+statements, same step counts, new concrete addresses, and the subject
+frame sitting on the harness's after-call continuation instead of the
+driver's `frameK` -/
+
+private def envWCall : LocalEnv :=
+  [[("$c10", .base ⟨8⟩), ("w", .base ⟨5⟩), ("$c9", .base ⟨3⟩)], hWScope0]
+private def afterCallKW : Cont := .seq (hWBodyList.drop 4) envWCall hWFrame0
+private def callKW : Cont :=
+  .callArgsK ⟨"maxCount"⟩ [(.chain [], [.ref "$c10"])] [] [] envWCall
+    afterCallKW
+/-- The subject's call frame: result loc 10, write-back target `$c10`,
+returning into the harness's tail — the abstract-outer-continuation
+point of the re-instantiation. -/
+private def frameKH : Cont :=
+  .frame [(.chain [], [.ref "$c10"])] envWCall [.base ⟨10⟩] [] afterCallKW
+
+private def sc0H : Scope := [("$res0", .base ⟨10⟩), ("words", .base ⟨9⟩)]
+private def sc1H : Scope := [("counts", .base ⟨13⟩), ("$c0", .base ⟨11⟩)]
+private def envR0H : LocalEnv := [sc1H, sc0H]
+private def envBH : LocalEnv :=
+  [[("$forFirst", .base ⟨15⟩)], [("i", .base ⟨14⟩)], sc1H, sc0H]
+private def envB1H : LocalEnv := [[("i", .base ⟨14⟩)], sc1H, sc0H]
+private def env2H : LocalEnv := [] :: envBH
+private def env3H : LocalEnv := [] :: env2H
+private def u1EnvH (na : Nat) : LocalEnv := [("$c1", .base ⟨na⟩)] :: env2H
+private def uEnvH (na : Nat) : LocalEnv :=
+  [("$c2", .base ⟨na + 1⟩), ("$c1", .base ⟨na⟩)] :: env2H
+
+private def tailBH : Cont :=
+  .seq [] envBH (.seq [] envB1H
+    (.seq [bestSeqn, wcMapRangeStmt, retSeqn] envR0H frameKH))
+/-- The counting-loop head configuration (harness placement). -/
+private def headCH : Config :=
+  .exec (.while (.boolLit true) wcWhileBody) envBH tailBH
+private def loopKCH : Cont := .loop (.boolLit true) wcWhileBody envBH tailBH
+private def bodyTailH : Cont := .seq [wcCountBody] env2H loopKCH
+private def cmpContCH : Cont := .ifK (.seqn #[]) .breakStmt env2H bodyTailH
+private def lenKH (iv : Int) : Cont :=
+  .strictK (.lengthOf (some (.slice tU64))) [] [] env2H
+    (.strictK .lessCmp [.int iv .int] [] env2H cmpContCH)
+private def postBodyKH : Cont := .seq [] env2H loopKCH
+
+private abbrev mhCellW : HeapCell := ⟨some tMap, .map ⟨some (.base ⟨12⟩)⟩⟩
+
+/-- The sixteen concrete front cells during the harness counting loop
+(`sv` = the parked `seed` cell, `siv` = the parked setup counter). -/
+private def frontH (L : Nat) (sv siv : Int) (ws : List Int)
+    (kvs : List (Int × Nat)) (iv : Int) (ff : Bool) : Heap :=
+  [(.base ⟨0⟩, u64cell (L : Int)), (.base ⟨1⟩, u64cell sv),
+   (.base ⟨2⟩, u64cell 0), (.base ⟨3⟩, wHandleCell L),
+   (.base ⟨4⟩, arrCell L ws), (.base ⟨5⟩, wHandleCell L),
+   (.base ⟨6⟩, u64cell siv), (.base ⟨7⟩, bcell false),
+   (.base ⟨8⟩, u64cell 0), (.base ⟨9⟩, wHandleCell L),
+   (.base ⟨10⟩, u64cell 0), (.base ⟨11⟩, mhCellW),
+   (.base ⟨12⟩, mdCell kvs), (.base ⟨13⟩, mhCellW),
+   (.base ⟨14⟩, intcell iv), (.base ⟨15⟩, bcell ff)]
+
+/-- The harness phase-C state: concrete front + the symbolic dead-cell
+tail. -/
+private def σH (L : Nat) (sv siv : Int) (ws : List Int)
+    (kvs : List (Int × Nat)) (iv : Int) (ff : Bool) (dead : Heap)
+    (na : Nat) : ExecState :=
+  { types := wordCountLowered.typeDefs.toList,
+    functions := wordCountLowered.funcs,
+    methods := wordCountLowered.methods,
+    heap := frontH L sv siv ws kvs iv ff ++ dead, nextAddr := na }
+
+private theorem lookup_frontH_none (L : Nat) (sv siv : Int) (ws : List Int)
+    (kvs : List (Int × Nat)) (iv : Int) (ff : Bool) {x : Nat}
+    (hx : 16 ≤ x) :
+    Heap.lookup (frontH L sv siv ws kvs iv ff) (.base ⟨x⟩) = none := by
+  simp only [frontH, Heap.lookup,
+    base_beq_false (by omega : (0 : Nat) ≠ x),
+    base_beq_false (by omega : (1 : Nat) ≠ x),
+    base_beq_false (by omega : (2 : Nat) ≠ x),
+    base_beq_false (by omega : (3 : Nat) ≠ x),
+    base_beq_false (by omega : (4 : Nat) ≠ x),
+    base_beq_false (by omega : (5 : Nat) ≠ x),
+    base_beq_false (by omega : (6 : Nat) ≠ x),
+    base_beq_false (by omega : (7 : Nat) ≠ x),
+    base_beq_false (by omega : (8 : Nat) ≠ x),
+    base_beq_false (by omega : (9 : Nat) ≠ x),
+    base_beq_false (by omega : (10 : Nat) ≠ x),
+    base_beq_false (by omega : (11 : Nat) ≠ x),
+    base_beq_false (by omega : (12 : Nat) ≠ x),
+    base_beq_false (by omega : (13 : Nat) ≠ x),
+    base_beq_false (by omega : (14 : Nat) ≠ x),
+    base_beq_false (by omega : (15 : Nat) ≠ x),
+    Bool.false_eq_true, if_false]
+
+/-- `$c10` declared: the setup-exit state at the call's argument
+delivery (cells 0–8, allocator at 9). -/
+private def σWCallg (n : Nat) (sv : Int) (l : List Int) (iv : Int) :
+    ExecState :=
+  { types := wordCountLowered.typeDefs.toList,
+    functions := wordCountLowered.funcs,
+    methods := wordCountLowered.methods,
+    heap := [(.base ⟨0⟩, u64cell (n : Int)), (.base ⟨1⟩, u64cell sv),
+             (.base ⟨2⟩, u64cell 0), (.base ⟨3⟩, wHandleCell n),
+             (.base ⟨4⟩, arrCell n l), (.base ⟨5⟩, wHandleCell n),
+             (.base ⟨6⟩, u64cell iv), (.base ⟨7⟩, bcell false),
+             (.base ⟨8⟩, u64cell 0)],
+    nextAddr := 9 }
+
+/-- Setup exit: test false → break unwinding → `$c10` declared → the
+call's `w` argument delivered at the frame-entry point. 13 steps. -/
+private theorem wcH_X_raw (n : Nat) (sv iv : Int) (l : List Int)
+    (ch : Choices) :
+    stepFnIter 13 (sWSU n sv l iv false) (.retV (.bool false) suWCmpK) ch
+      = .ok (.retV (wSliceH n) callKW, σWCallg n sv l iv, ch) := by
+  with_unfolding_all rfl
+
+/-- Subject entry: frame entered (`words` at 9, `$res0` at 10), the
+subject prologue (`$c0`/makeMap/`counts`/`i`/`$forFirst`) → the
+counting-loop head at `nextAddr = 16`. 52 steps — the harness twin of
+the canonical `wc_entryB_raw`. -/
+private theorem wcH_entryS_raw (n : Nat) (sv iv : Int) (l : List Int)
+    (ch : Choices) :
+    stepFnIter 52 (σWCallg n sv l iv) (.retV (wSliceH n) callKW) ch
+      = .ok (headCH, σH n sv iv l [] 0 true [] 16, ch) := by
+  with_unfolding_all rfl
+
+/-! ### The counting-loop segments at the harness placement (step
+counts identical to the canonical tower — the statements are the same;
+only addresses and the outer continuation differ) -/
+
+/-- First-pass dispatch: head with the flag up → the `len(words)`
+apply point. 25 steps. -/
+private theorem wcH_segA0_raw (L : Nat) (sv siv : Int) (ws : List Int)
+    (kvs : List (Int × Nat)) (iv : Int) (dead : Heap) (na : Nat)
+    (ch : Choices) :
+    stepFnIter 25 (σH L sv siv ws kvs iv true dead na) headCH ch
+      = .ok (.retV (wSliceH L) (lenKH iv),
+          σH L sv siv ws kvs iv false dead na, ch) := by
+  with_unfolding_all rfl
+
+/-- Later-pass dispatch: head with the flag down → `i++`, then the
+`len(words)` apply point. 29 steps. -/
+private theorem wcH_segA1_raw (L : Nat) (sv siv : Int) (ws : List Int)
+    (kvs : List (Int × Nat)) (iv : Int) (dead : Heap) (na : Nat)
+    (ch : Choices) :
+    stepFnIter 29 (σH L sv siv ws kvs iv false dead na) headCH ch
+      = .ok (.retV (wSliceH L)
+            (lenKH (IntKind.normalize .int (IntKind.normalize .int (iv + 1)))),
+          σH L sv siv ws kvs
+            (IntKind.normalize .int (IntKind.normalize .int (iv + 1)))
+            false dead na, ch) := by
+  with_unfolding_all rfl
+
+/-- The `<` apply after the length delivery: one step. -/
+private theorem wcH_cmp_raw (L : Nat) (sv siv : Int) (ws : List Int)
+    (kvs : List (Int × Nat)) (iv jv : Int) (dead : Heap) (na : Nat)
+    (ch : Choices) :
+    stepFnIter 1 (σH L sv siv ws kvs iv false dead na)
+      (.retV (.int (L : Int) .int)
+        (.strictK .lessCmp [.int jv .int] [] env2H cmpContCH)) ch
+      = .ok (.retV (.bool (decide (jv < (L : Int)))) cmpContCH,
+          σH L sv siv ws kvs iv false dead na, ch) := by
+  with_unfolding_all rfl
+
+private def stK0H (na : Nat) : Cont :=
+  .stmtOpK (.mapAssign tU64 tU64) 0 []
+    [.var "$c2",
+     .add (.mapGet (.var "$c1") (.var "$c2") tU64 tU64) (.intLit 1 .uint64)]
+    (uEnvH na) (.seq [] (uEnvH na) postBodyKH)
+private def stK2H (na : Nat) (w : Int) : Cont :=
+  .stmtOpK (.mapAssign tU64 tU64) 0
+    [.int w .uint64, .map ⟨some (.base ⟨12⟩)⟩] []
+    (uEnvH na) (.seq [] (uEnvH na) postBodyKH)
+private def addKH (na : Nat) (w : Int) : Cont :=
+  .strictK .add [] [.intLit 1 .uint64] (uEnvH na) (stK2H na w)
+private def mapGetKH (na : Nat) (w : Int) : Cont :=
+  .strictK (.mapGet tU64 tU64) [.map ⟨some (.base ⟨12⟩)⟩] [] (uEnvH na)
+    (addKH na w)
+
+/-- C1: exit test true → the `$c1` initialization. 7 steps. -/
+private theorem wcH_segC1_raw (L : Nat) (sv siv : Int) (ws : List Int)
+    (kvs : List (Int × Nat)) (iv : Int) (tail : Heap) (na : Nat)
+    (ch : Choices) :
+    stepFnIter 7 (σH L sv siv ws kvs iv false tail na)
+      (.retV (.bool true) cmpContCH) ch
+      = .ok (.exec (.initialization { id := "$c1", typ := tMap }) env3H
+            (.seq [asgnC1, seqnC2, mapAsgnStmt] env3H postBodyKH),
+          σH L sv siv ws kvs iv false tail na, ch) := by
+  with_unfolding_all rfl
+
+/-- C2: `$c1` declared → its store point. 6 steps. -/
+private theorem wcH_segC2_raw (L : Nat) (sv siv : Int) (ws : List Int)
+    (kvs : List (Int × Nat)) (iv : Int) (tail : Heap) (na₀ na : Nat)
+    (ch : Choices) :
+    stepFnIter 6 (σH L sv siv ws kvs iv false tail na)
+      (.next (.seq [asgnC1, seqnC2, mapAsgnStmt] (u1EnvH na₀) postBodyKH)) ch
+      = .ok (.next (.storeK [.chain (.addr (.base ⟨na₀⟩)) [] []]
+            [.map ⟨some (.base ⟨12⟩)⟩] (.seqn #[]) (u1EnvH na₀)
+            (.seq [seqnC2, mapAsgnStmt] (u1EnvH na₀) postBodyKH)),
+          σH L sv siv ws kvs iv false tail na, ch) := by
+  with_unfolding_all rfl
+
+/-- C3 (composed from the generic glue): `$c1` stored → the `$c2`
+initialization. 5 steps. -/
+private theorem wcH_segC3_raw (L : Nat) (sv siv : Int) (ws : List Int)
+    (kvs : List (Int × Nat)) (iv : Int) (tail : Heap) (na₀ na : Nat)
+    (ch : Choices) :
+    stepFnIter 5 (σH L sv siv ws kvs iv false tail na)
+      (.next (.storeK [] [] (.seqn #[]) (u1EnvH na₀)
+        (.seq [seqnC2, mapAsgnStmt] (u1EnvH na₀) postBodyKH))) ch
+      = .ok (.exec (.initialization { id := "$c2", typ := tU64 }) (u1EnvH na₀)
+            (.seq [.assign (.var "$c2")
+                (.indexGet (.var "words") (.var "i")), mapAsgnStmt]
+              (u1EnvH na₀) postBodyKH),
+          σH L sv siv ws kvs iv false tail na, ch) := by
+  have h1 := stepFnIter_one (stepFn_storeK_nil
+    (σ := σH L sv siv ws kvs iv false tail na) (body := .seqn #[])
+    (env := u1EnvH na₀)
+    (k := .seq [seqnC2, mapAsgnStmt] (u1EnvH na₀) postBodyKH) (ch := ch))
+  have h2 := stepFnIter_one (stepFn_seqn
+    (σ := σH L sv siv ws kvs iv false tail na) (ss := #[]) (env := u1EnvH na₀)
+    (rest := [seqnC2, mapAsgnStmt]) (k := postBodyKH) (ch := ch))
+  have h3 := stepFnIter_one (stepFn_seq_pop
+    (σ := σH L sv siv ws kvs iv false tail na) (t := seqnC2)
+    (rest := [mapAsgnStmt]) (env := u1EnvH na₀) (k := postBodyKH) (ch := ch))
+  have h4 := stepFnIter_one (stepFn_seqn
+    (σ := σH L sv siv ws kvs iv false tail na)
+    (ss := #[.initialization { id := "$c2", typ := tU64 },
+      .assign (.var "$c2") (.indexGet (.var "words") (.var "i"))])
+    (env := u1EnvH na₀) (rest := [mapAsgnStmt]) (k := postBodyKH) (ch := ch))
+  have h5 := stepFnIter_one (stepFn_seq_pop
+    (σ := σH L sv siv ws kvs iv false tail na)
+    (t := .initialization { id := "$c2", typ := tU64 })
+    (rest := [.assign (.var "$c2")
+      (.indexGet (.var "words") (.var "i")), mapAsgnStmt])
+    (env := u1EnvH na₀) (k := postBodyKH) (ch := ch))
+  exact stepFnIter_chain (stepFnIter_chain (stepFnIter_chain
+    (stepFnIter_chain h1 h2) h3) h4) h5
+
+/-- C4: `$c2` declared → the `words[i]` read point. 8 steps. -/
+private theorem wcH_segC4_raw (L : Nat) (sv siv : Int) (ws : List Int)
+    (kvs : List (Int × Nat)) (iv : Int) (tail : Heap) (na₀ na : Nat)
+    (ch : Choices) :
+    stepFnIter 8 (σH L sv siv ws kvs iv false tail na)
+      (.next (.seq [.assign (.var "$c2")
+          (.indexGet (.var "words") (.var "i")), mapAsgnStmt]
+        (uEnvH na₀) postBodyKH)) ch
+      = .ok (.retV (.int iv .int)
+            (.strictK .indexGet [wSliceH L] [] (uEnvH na₀)
+              (.rhsK .vals [.chain (.addr (.base ⟨na₀ + 1⟩)) [] []] [] []
+                (.seqn #[]) (uEnvH na₀)
+                (.seq [mapAsgnStmt] (uEnvH na₀) postBodyKH))),
+          σH L sv siv ws kvs iv false tail na, ch) := by
+  with_unfolding_all rfl
+
+/-- C5: element delivered → its store point. 1 step. -/
+private theorem wcH_segC5_raw (L : Nat) (sv siv : Int) (ws : List Int)
+    (kvs : List (Int × Nat)) (iv : Int) (tail : Heap) (na₀ na : Nat)
+    (w : GoValue) (ch : Choices) :
+    stepFnIter 1 (σH L sv siv ws kvs iv false tail na)
+      (.retV w
+        (.rhsK .vals [.chain (.addr (.base ⟨na₀ + 1⟩)) [] []] [] []
+          (.seqn #[]) (uEnvH na₀) (.seq [mapAsgnStmt] (uEnvH na₀) postBodyKH)))
+      ch
+      = .ok (.next (.storeK [.chain (.addr (.base ⟨na₀ + 1⟩)) [] []] [w]
+            (.seqn #[]) (uEnvH na₀)
+            (.seq [mapAsgnStmt] (uEnvH na₀) postBodyKH)),
+          σH L sv siv ws kvs iv false tail na, ch) := by
+  with_unfolding_all rfl
+
+/-- C6 (composed): `$c2` stored → the `mapAssign` operand walk's first
+`$c1` read. 4 steps. -/
+private theorem wcH_segC6_raw (L : Nat) (sv siv : Int) (ws : List Int)
+    (kvs : List (Int × Nat)) (iv : Int) (tail : Heap) (na₀ na : Nat)
+    (ch : Choices) :
+    stepFnIter 4 (σH L sv siv ws kvs iv false tail na)
+      (.next (.storeK [] [] (.seqn #[]) (uEnvH na₀)
+        (.seq [mapAsgnStmt] (uEnvH na₀) postBodyKH))) ch
+      = .ok (.evalE (.var "$c1") (uEnvH na₀) (stK0H na₀),
+          σH L sv siv ws kvs iv false tail na, ch) := by
+  have h1 := stepFnIter_one (stepFn_storeK_nil
+    (σ := σH L sv siv ws kvs iv false tail na) (body := .seqn #[])
+    (env := uEnvH na₀) (k := .seq [mapAsgnStmt] (uEnvH na₀) postBodyKH)
+    (ch := ch))
+  have h2 := stepFnIter_one (stepFn_seqn
+    (σ := σH L sv siv ws kvs iv false tail na) (ss := #[]) (env := uEnvH na₀)
+    (rest := [mapAsgnStmt]) (k := postBodyKH) (ch := ch))
+  have h3 : stepFnIter 2 (σH L sv siv ws kvs iv false tail na)
+      (.next (.seq ((#[] : Array Stmt).toList ++ [mapAsgnStmt]) (uEnvH na₀)
+        postBodyKH)) ch
+      = .ok (.evalE (.var "$c1") (uEnvH na₀) (stK0H na₀),
+          σH L sv siv ws kvs iv false tail na, ch) := by
+    with_unfolding_all rfl
+  exact stepFnIter_chain (stepFnIter_chain h1 h2) h3
+
+/-- C7: map handle delivered → the `$c2` operand read. 1 step. -/
+private theorem wcH_segC7_raw (L : Nat) (sv siv : Int) (ws : List Int)
+    (kvs : List (Int × Nat)) (iv : Int) (tail : Heap) (na₀ na : Nat)
+    (ch : Choices) :
+    stepFnIter 1 (σH L sv siv ws kvs iv false tail na)
+      (.retV (.map ⟨some (.base ⟨12⟩)⟩) (stK0H na₀)) ch
+      = .ok (.evalE (.var "$c2") (uEnvH na₀)
+            (.stmtOpK (.mapAssign tU64 tU64) 0 [.map ⟨some (.base ⟨12⟩)⟩]
+              [.add (.mapGet (.var "$c1") (.var "$c2") tU64 tU64)
+                (.intLit 1 .uint64)]
+              (uEnvH na₀) (.seq [] (uEnvH na₀) postBodyKH)),
+          σH L sv siv ws kvs iv false tail na, ch) := by
+  with_unfolding_all rfl
+
+/-- C8: key delivered → the `mapGet`'s `$c1` read. 3 steps. -/
+private theorem wcH_segC8_raw (L : Nat) (sv siv : Int) (ws : List Int)
+    (kvs : List (Int × Nat)) (iv : Int) (tail : Heap) (na₀ na : Nat)
+    (w : Int) (ch : Choices) :
+    stepFnIter 3 (σH L sv siv ws kvs iv false tail na)
+      (.retV (.int w .uint64)
+        (.stmtOpK (.mapAssign tU64 tU64) 0 [.map ⟨some (.base ⟨12⟩)⟩]
+          [.add (.mapGet (.var "$c1") (.var "$c2") tU64 tU64)
+            (.intLit 1 .uint64)]
+          (uEnvH na₀) (.seq [] (uEnvH na₀) postBodyKH))) ch
+      = .ok (.evalE (.var "$c1") (uEnvH na₀)
+            (.strictK (.mapGet tU64 tU64) [] [.var "$c2"] (uEnvH na₀)
+              (addKH na₀ w)),
+          σH L sv siv ws kvs iv false tail na, ch) := by
+  with_unfolding_all rfl
+
+/-- C9: `mapGet`'s handle delivered → its `$c2` read. 1 step. -/
+private theorem wcH_segC9_raw (L : Nat) (sv siv : Int) (ws : List Int)
+    (kvs : List (Int × Nat)) (iv : Int) (tail : Heap) (na₀ na : Nat)
+    (w : Int) (ch : Choices) :
+    stepFnIter 1 (σH L sv siv ws kvs iv false tail na)
+      (.retV (.map ⟨some (.base ⟨12⟩)⟩)
+        (.strictK (.mapGet tU64 tU64) [] [.var "$c2"] (uEnvH na₀)
+          (addKH na₀ w))) ch
+      = .ok (.evalE (.var "$c2") (uEnvH na₀) (mapGetKH na₀ w),
+          σH L sv siv ws kvs iv false tail na, ch) := by
+  with_unfolding_all rfl
+
+/-- C10: the count delivered → the `+ 1` runs → the `mapAssign` apply
+point. 3 steps. -/
+private theorem wcH_segC10_raw (L : Nat) (sv siv : Int) (ws : List Int)
+    (kvs : List (Int × Nat)) (iv : Int) (tail : Heap) (na₀ na : Nat)
+    (w cv : Int) (ch : Choices) :
+    stepFnIter 3 (σH L sv siv ws kvs iv false tail na)
+      (.retV (.int cv .uint64) (addKH na₀ w)) ch
+      = .ok (.retV (.int (IntKind.normalize .uint64 (cv + 1)) .uint64)
+            (stK2H na₀ w),
+          σH L sv siv ws kvs iv false tail na, ch) := by
+  with_unfolding_all rfl
+
+/-- C11: `mapAssign` applied → back to the loop head. 3 steps. -/
+private theorem wcH_segC11_raw (L : Nat) (sv siv : Int) (ws : List Int)
+    (kvs : List (Int × Nat)) (iv : Int) (tail : Heap) (na₀ na : Nat)
+    (ch : Choices) :
+    stepFnIter 3 (σH L sv siv ws kvs iv false tail na)
+      (.next (.seq [] (uEnvH na₀) postBodyKH)) ch
+      = .ok (headCH, σH L sv siv ws kvs iv false tail na, ch) := by
+  with_unfolding_all rfl
+
+/-- The `mapAssign` wide-op apply step at the harness data cell,
+conditioned on the `mapAssignValue` fact. -/
+private theorem stepFn_mapAssign_applyH {σ σ' : ExecState}
+    {b kv vv : GoValue} {env : LocalEnv} {k : Cont} {ch : Choices}
+    (h : mapAssignValue σ tU64 tU64 b kv vv = .ok σ') :
+    stepFn σ (.retV vv (.stmtOpK (.mapAssign tU64 tU64) 0 [kv, b] [] env k))
+      ch
+      = .ok (.next k, σ', ch) :=
+  stepFn_mapAssign_apply h
+
+
+/-! ### Counting-loop exit → the range head (harness placement) -/
+
+private def envRBH (B : Nat) : LocalEnv :=
+  (("best", .base ⟨B⟩) :: sc1H) :: [sc0H]
+private def kRH (B : Nat) : Cont := .seq [retSeqn] (envRBH B) frameKH
+/-- The range-loop head: the `mapIterK` pick point at snapshot `rem`. -/
+private def rangeHeadH (B : Nat) (rem : List (Int × Nat)) : Config :=
+  .next (.mapIterK none (some "c") tU64 tU64 wcRangeBody (toEntries rem)
+    (envRBH B) (kRH B))
+
+/-- X0: exit test false → break unwinding → the `best` initialization.
+9 steps. -/
+private theorem wcH_segX0_raw (L : Nat) (sv siv : Int) (ws : List Int)
+    (kvs : List (Int × Nat)) (iv : Int) (tail : Heap) (na : Nat)
+    (ch : Choices) :
+    stepFnIter 9 (σH L sv siv ws kvs iv false tail na)
+      (.retV (.bool false) cmpContCH) ch
+      = .ok (.exec (.initialization { id := "best", typ := tU64 }) envR0H
+            (.seq [.assign (.var "best") (.intLit 0 .uint64),
+              wcMapRangeStmt, retSeqn] envR0H frameKH),
+          σH L sv siv ws kvs iv false tail na, ch) := by
+  with_unfolding_all rfl
+
+/-- X0b: `best` declared → its zeroing store point. 6 steps. -/
+private theorem wcH_segX0b_raw (L : Nat) (sv siv : Int) (ws : List Int)
+    (kvs : List (Int × Nat)) (iv : Int) (tail : Heap) (B na : Nat)
+    (ch : Choices) :
+    stepFnIter 6 (σH L sv siv ws kvs iv false tail na)
+      (.next (.seq [.assign (.var "best") (.intLit 0 .uint64),
+        wcMapRangeStmt, retSeqn] (envRBH B) frameKH)) ch
+      = .ok (.next (.storeK [.chain (.addr (.base ⟨B⟩)) [] []]
+            [.int 0 .uint64] (.seqn #[]) (envRBH B)
+            (.seq [wcMapRangeStmt, retSeqn] (envRBH B) frameKH)),
+          σH L sv siv ws kvs iv false tail na, ch) := by
+  with_unfolding_all rfl
+
+/-- X0c: `best` stored → the ranged map handle delivered at the
+snapshot point. 5 steps (one `.seqn` splice glued). -/
+private theorem wcH_segX0c_raw (L : Nat) (sv siv : Int) (ws : List Int)
+    (kvs : List (Int × Nat)) (iv : Int) (tail : Heap) (B na : Nat)
+    (ch : Choices) :
+    stepFnIter 5 (σH L sv siv ws kvs iv false tail na)
+      (.next (.storeK [] [] (.seqn #[]) (envRBH B)
+        (.seq [wcMapRangeStmt, retSeqn] (envRBH B) frameKH))) ch
+      = .ok (.retV (.map ⟨some (.base ⟨12⟩)⟩)
+            (.mapRangeK none (some "c") tU64 tU64 wcRangeBody (envRBH B)
+              (kRH B)),
+          σH L sv siv ws kvs iv false tail na, ch) := by
+  have h1 := stepFnIter_one (stepFn_storeK_nil
+    (σ := σH L sv siv ws kvs iv false tail na) (body := .seqn #[])
+    (env := envRBH B) (k := .seq [wcMapRangeStmt, retSeqn] (envRBH B) frameKH)
+    (ch := ch))
+  have h2 := stepFnIter_one (stepFn_seqn
+    (σ := σH L sv siv ws kvs iv false tail na) (ss := #[]) (env := envRBH B)
+    (rest := [wcMapRangeStmt, retSeqn]) (k := frameKH) (ch := ch))
+  have h3 : stepFnIter 3 (σH L sv siv ws kvs iv false tail na)
+      (.next (.seq ((#[] : Array Stmt).toList ++ [wcMapRangeStmt, retSeqn])
+        (envRBH B) frameKH)) ch
+      = .ok (.retV (.map ⟨some (.base ⟨12⟩)⟩)
+            (.mapRangeK none (some "c") tU64 tU64 wcRangeBody (envRBH B)
+              (kRH B)),
+          σH L sv siv ws kvs iv false tail na, ch) := by
+    with_unfolding_all rfl
+  exact stepFnIter_chain (stepFnIter_chain h1 h2) h3
+
+/-- The `mapRangeK` snapshot step at the harness placement. -/
+private theorem stepFn_snapshotH {σ : ExecState} {v : GoValue}
+    {entries : Array (GoValue × GoValue)} {body : Stmt} {env : LocalEnv}
+    {k : Cont} {ch : Choices}
+    (h : mapRangeSnapshotEntries σ tU64 tU64 v = .ok entries) :
+    stepFn σ (.retV v (.mapRangeK none (some "c") tU64 tU64 body env k)) ch
+      = .ok (.next (.mapIterK none (some "c") tU64 tU64 body entries env k),
+          σ, ch) :=
+  stepFn_snapshot h
+
 
 end GoLean.Examples.WordCount

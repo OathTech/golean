@@ -100,7 +100,7 @@ form — all specified in the worker briefs verbatim.
 | min/max | **HARNESS-RESTATED**: `minmax_ok` over `runFunctionWithContextM` (minmax_harness, setup family `s[i] = seed + i`, returned pair = `minSpec/maxSpec (mmFamily n seed)`; input-family honesty recorded); memory forms kept as `minmax_framed`/`minmax_framed_readout` | setup-loop invariant over make-replicate backing + ported induction | **RESTATED + COMMITTED**, classical trio |
 | binary search | **HARNESS-RESTATED**: `search_ok` over `runFunctionWithContextM` (search_harness: sorted family `seed + 2i` under `hnowrap`, raw target; returned index = `findSpec (bsFamily n seed) t`; the 2^62 Bloch bound carries over); memory forms kept as `search_framed`/`search_framed_readout` | setup-loop induction + full subject-phase port under the harness continuation | **RESTATED + COMMITTED**, classical trio, fuel `220 + 132·n` |
 | insertion sort | **HARNESS-RESTATED (gap closed 2026-08-13)**: `isort_ok` over `runFunctionWithContextM` (isort_harness(n, seed): setup family `s[i] = seed·(i+1) mod 2^64`; verdict 1 = sortedness scan AND count-based permutation check, both IN GO) + `isort_readout` twin; memory forms kept as `isort_framed`/`isort_framed_readout` | subject-phase port under the harness continuation + the whole test phase: scan/rebuild/count proven as ONE canonical run from the post-subject 11-cell state, transferred in a SINGLE frame application; second frame-rebase layer (threshold 21, retire 4/pass) for the count loops | **RESTATED + COMMITTED**, classical trio, fuel `(92n+160)n + (110n+220)n + 285n + 505` |
-| word-count | **CANONICAL TOTAL PROVEN, ∀ws ∀ch**: `maxCount_total_canonical` (whole subject incl. the ENVELOPED map range — the ∀ch quantifier does real work; order-independent `maxMultiplicity` by necessity, §10b) + `wordcount_empty_ok` (§11 harness form, zero-parameter degenerate, axioms `[propext, Quot.sound]`) | §10 design executed: countsList counting induction + choice-pick strong induction, both in the symbolic-address regime (finding 12) | committed; **G1 named debt**: the parameterized harness `wordcount_ok` over `wordcount_harness(n, seed)` — statement drafted, seed-wrap caveat `hseed < 2^64 − 2`, machinery form-independent and already landed |
+| word-count | **CANONICAL TOTAL PROVEN, ∀ws ∀ch**: `maxCount_total_canonical` (whole subject incl. the ENVELOPED map range — the ∀ch quantifier does real work; order-independent `maxMultiplicity` by necessity, §10b) + `wordcount_empty_ok` (§11 harness form, zero-parameter degenerate, axioms `[propext, Quot.sound]`) | §10 design executed: countsList counting induction + choice-pick strong induction, both in the symbolic-address regime (finding 12) | committed. **G1 STILL OPEN (2026-08-13 attempt — groundwork green, headline blocked)**: `wcFamily` + `wcFamily_maxMult` (= `(n+2)/3`, NO seed hypothesis — the seed-wrap caveat is REFUTED, see finding 20), the pinned `wordcountHarnessFunc`, the entry equation, the whole setup phase, and every phase-C `rfl` segment re-instantiated at the harness placement all landed green; the two COMPOSITION proofs storm the elaborator (finding 21). Precise gap record + repro + pickup plan in the module's `## The parameterized harness` docstring |
 
 ## §4 Findings so far
 
@@ -215,6 +215,74 @@ form — all specified in the worker briefs verbatim.
     three wordcount verification commands, recorded here; the full
     builds and gates below went back through the cap wrapper
     normally.
+
+20. **(wordcount) THE SEED-WRAP CAVEAT IS REFUTED** — a recorded
+    caveat that was simply wrong, caught by re-deriving it instead of
+    encoding it. The slice record and the Audit prose both claimed the
+    `i%3` family "collides at `seed ≥ 2^64 − 2`", so G1 would need
+    `hseed : seed + 2 < 2^64`. Family values are `(seed + r) mod 2^64`
+    for `r ∈ {0,1,2}`; two are equal iff `r ≡ r' (mod 2^64)`, which is
+    impossible for distinct `r, r' ≤ 2`. **No collision exists at any
+    seed.** So the wrap belongs INSIDE the family definition (`wcFamily`,
+    mirroring isort's `isFamily`), the only seed hypothesis is the
+    uint64 domain `seed < 2^64` (consumed solely by the entry
+    equation's argument normalization), and the returned max count is
+    `⌈n/3⌉ = (n+2)/3` UNCONDITIONALLY — now the theorem
+    `wcFamily_maxMult`, which is where the no-collision analysis is
+    actually consumed. Cross-checked against the `go run` oracle at
+    seeds `0, 50, 2^63−1, 2^64−3, 2^64−2, 2^64−1` before any Lean was
+    written. Method note: the cheap move was deriving the caveat from
+    the Go semantics rather than inheriting it from the record — an
+    inherited hypothesis that nobody re-derives is how a statement
+    silently narrows.
+
+21. **(wordcount — the G1 blocker, and a NEW obstruction class)** The
+    recipe's premise held exactly where it was tested: every
+    per-segment `with_unfolding_all rfl` lemma of the phase-C tower
+    re-instantiates at the harness placement (16-cell front, map data
+    at 12, the harness after-call continuation), as do the entry
+    equation and the whole setup phase. What does NOT port is the
+    **composition** layer: `wcH_count_iter`/`wcH_count_loop`, verbatim
+    address-renames of canonical originals that pass under 2M
+    heartbeats, hit an elaborator isDefEq/whnf storm — heartbeat-linear
+    grind at 2M/4M/12M (`BEq.beq` unfolds 2.0M @4M vs 6.1M @12M,
+    `Heap.lookup` reduced ~134k times @4M, ~1M `f a =?= f b` heuristic
+    hits), RSS observed to 52 GB.
+    **This is explicitly NOT a false goal** — the `#eval`-before-you-
+    decide doctrine was applied and cleared it: every segment equation
+    `rfl`-checks and the concrete `(n,seed) = (4,7)` run agrees end to
+    end (841 steps, returns `2 = (4+2)/3`). Bisected across scratch
+    copies `wcB-mod-v3a…v3b8`: ignites at the `storeTarget_addr`
+    application for the `$c1` store, insensitive to argument style,
+    instant in isolation even with the real payload, and NOT cured by
+    dropping the segment chains — the trigger is the combination of a
+    `rw`-surgered hypothesis (carrying `Param`-projection cells and
+    `declare`-spelled envs) with a subsequent large application.
+    Self-contained repro `.tmp/wcB-repro4.lean`; three-step pickup plan
+    in the module docstring. This is the ELABORATOR-COST cousin of
+    finding 15c (re-spelling a state term the unifier could infer sends
+    `isDefEq` into a whnf storm) — 15c priced it as a hazard to avoid at
+    an application site; here it is load-bearing enough to block a
+    headline, which promotes it from method note to obstruction class.
+    Disposition (operator direction): G1 is re-attempted AFTER the §8
+    consolidation slice builds the shared kit, as that kit's first
+    consumer — the placement-generic segment/composition lift is
+    exactly the >200-line row the grind flagged (~800+ lines on this
+    module alone, and it removes the storm class rather than working
+    around it).
+
+22. **(process) Two 64 G-capped elaborations over-committed the box.**
+    Mid-session the wordcount lane had two probe elaborations running
+    concurrently at 52 GB and 24 GB, each inside its own verified 64 G
+    scope, on a 125 G machine also hosting an unrelated build — 35 GB
+    free and both still climbing. The per-job cap did its job (no job
+    could take the box alone) but the CAP BUDGET is not enforced by
+    anything: two legal caps sum past the machine. The lead killed the
+    stale scope and moved probe work to `GOLEAN_MEM_MAX=24G`. Recorded
+    as a live instance of CLAUDE.md's cap-budget rule (which scoped it
+    to parallel LANES; it applies just as much to parallel PROBES
+    inside one lane), and as evidence that a probe needing >24 GB is a
+    diagnostic signal, not a memory request.
 
 ## §5 Gallery entry drafts
 
@@ -531,7 +599,39 @@ readable recursion) + literal seed/call defs over the pinned
 `searchLowered`. No Iris/WP/Frame names in the statement closure;
 deletion-test clean.
 
-(walks for the remaining examples appended at integration)
+**`isort_ok`/`isort_readout` (the §11 HARNESS headline, gap closed
+2026-08-13)** — statement closure, every identifier to its ground:
+`runFunctionWithContextM`, `Choices`, `Result`, `GoValue.int`,
+`IntKind.uint64` — interpreter/native-entry vocabulary (the
+differentially validated trust surface); `isortLowered.typeDefs`/
+`.funcs`/`.methods` — GENERATED from the frontend's lowering of the
+corpus source, byte-pinned by `scripts/check-golden` (both links);
+`isortHarnessFunc` — the harness `Func` record transcribed literally
+and tied to the lowering by an `rfl` pin; `Nat`/`Int`/`∃`/`∀` — Lean
+core. **NO heap vocabulary at all**: no `loadLoc`, no `Heap.lookup`,
+no `sliceCells`, no seed/env/frame names, no `MachineWf` — the verdict
+is computed IN GO inside the verified footprint, which is precisely
+the §11 ruling's point (2) and (3). No Iris, no WP, no Frame names;
+the frame theorem appears only in proofs (now at THREE in-run
+consumption sites plus the ∀-placement transfer). Deletion test: run
+this session — the statement elaborates against
+`Examples/InsertionSortProgram` + `FuelMeasure` alone, with the whole
+proof layer gone.
+
+**`isort_framed`/`isort_framed_readout`** — unchanged from the
+memory-quantified walk above (same closure: interpreter vocabulary +
+`sliceCells` + `SliceMem.Sorted` + `insertSpec`/`sortSpec` + literal
+seed/call defs over the pinned `isortLowered`); the rename does not
+touch the closure.
+
+**`wcFamily_maxMult` (wordcount, the only new wordcount export)** —
+closure is PURE: `wcFamily` (one `List.range`/`map` line, the wrap in
+the definition), `maxMultiplicity`/`multiplicity` (in-module folds over
+`List.filter`), `Nat` arithmetic. No interpreter vocabulary at all —
+it is the pure arithmetic content the refuted seed caveat was really
+about. The G1 headline's walk is NOT written, because the headline is
+not shipped (an unwritten walk for an unshipped theorem, not a gap in
+a shipped one).
 
 ## §7 Harness-restatement round (post-ruling; appended at integration)
 
