@@ -1,7 +1,10 @@
--- The executable frame theorem's helper-commutation layer (verified-
--- examples slice 2b; docs/2026-08-13_executable-frame-theorem.md §5
--- steps 1-2, complete). The arm induction (StepSim/Transfer) joins
--- these imports when it lands sorry-free — see the build handoff note.
+-- The executable frame theorem (verified-examples slice 2b;
+-- docs/2026-08-13_executable-frame-theorem.md): the helper-commutation
+-- layer (§5 steps 1-2), the store-spine glue (Ops2), the ~200-arm
+-- per-step simulation (StepSim), and the iterated/driver-level transfer
+-- corollaries (Transfer). All sorry-free; axiom footprint the classical
+-- trio (Classical.choice inherited from the core MachineSound layer via
+-- Machine.Heap.lookup_set_ne — recorded in the Audit gates below).
 import GoLeanProofs.Frame.Rename
 import GoLeanProofs.Frame.Sim
 import GoLeanProofs.Frame.TypeCongr
@@ -17,6 +20,9 @@ import GoLeanProofs.Frame.PanicFrame
 import GoLeanProofs.Frame.ChanSync
 import GoLeanProofs.Frame.StmtOps
 import GoLeanProofs.Frame.StrictOps
+import GoLeanProofs.Frame.Ops2
+import GoLeanProofs.Frame.StepSim
+import GoLeanProofs.Frame.Transfer
 import GoLeanProofs.Lang
 import GoLeanProofs.LangC
 import GoLeanProofs.LangD

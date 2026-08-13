@@ -1684,6 +1684,26 @@ example := @GoLean.Examples.Fib.fib_framed
 /-- info: 'GoLean.Examples.Fib.fib_framed' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Examples.Fib.fib_framed
 
+-- The executable frame theorem (slice 2b part 1, 2026-08-13;
+-- docs/2026-08-13_executable-frame-theorem.md §1): the ~200-arm
+-- per-step simulation, its iteration, the driver-level success-run
+-- transfer, and the completion-transfer corollary the ∀-frame TOTAL
+-- headlines consume. `Classical.choice` is INHERITED from the core
+-- MachineSound layer (root: `Machine.Heap.lookup_set_ne`, which every
+-- heap-touching commutation lemma consumes) — not introduced by the
+-- Frame layer's own proofs (e.g. `loadLoc_sim` is choice-free).
+example := @GoLean.Frame.FrameSim
+example := @GoLean.Frame.ShiftSpec
+example := @GoLean.Frame.uniformShift_spec
+/-- info: 'GoLean.Frame.stepFn_sim' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Frame.stepFn_sim
+/-- info: 'GoLean.Frame.stepFnIter_sim' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Frame.stepFnIter_sim
+/-- info: 'GoLean.Frame.execStmtLoop_ren' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Frame.execStmtLoop_ren
+/-- info: 'GoLean.Frame.completesIn_ren' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Frame.completesIn_ren
+
 /-! ## Three-state ledger
 
 - `✓ Machine correspondence` (reshape S5, 2026-07-23) — `stepFn_sound` +
