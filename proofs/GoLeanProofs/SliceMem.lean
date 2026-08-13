@@ -1,0 +1,232 @@
+import GoLean.GoCore.MachineSound
+
+/-!
+# Slice-in-memory vocabulary + the executable slice-op facts
+(verified-examples slice 2b, 2026-08-13; design note
+`docs/2026-08-12_example-spec-form.md` §9a)
+
+The corpus vocabulary for a Go `[]uint64` input living in memory:
+`sliceCells` (the backing cell) and `sliceVal` (the handle the program
+receives), exactly as §9a specifies — offset 0, cap = len pinned for
+v1 (sub-slice generality is a recorded 2b+ option, not widened here).
+
+Placement decision (recorded): §9a proposed this vocabulary "in the
+Reverse example module or a small shared module under `Examples/`"; it
+lives HERE, at the shared `GoLeanProofs` top level, because the WP law
+layer (`Laws/Slice.lean`) discharges its premises through the same
+executable facts and `Laws/*` must not import target-specific
+`Examples/*` modules (layering doctrine 2026-08-01: general
+infrastructure stays separated from target-specific infrastructure).
+
+Beside the vocabulary: the EXECUTABLE slice-operation facts — what
+`applyStrictOp`/`storeTarget` compute at slice operands, conditioned on
+the bounds/normal-form hypotheses. These are the shared discharge
+lemmas for (a) the WP slice laws' premises and (b) the direct
+machine-step segments of the reverse exemplar. No Iris here: this
+module is statement-side-safe.
+-/
+
+namespace GoLean.SliceMem
+
+open GoLean GoLean.GoCore GoLean.GoCore.Machine
+
+/-! ## §9a: the input-in-memory vocabulary -/
+
+/-- The heap representation of a Go `[]uint64` holding `xs`: one
+backing cell at `base` with the array of wrapped values. The slice
+HANDLE the program receives is `sliceVal xs base` — base pointer,
+offset 0, length and capacity `xs.length`. -/
+def sliceCells (xs : List Int) (base : Nat) : Heap :=
+  [(.base ⟨base⟩,
+    ⟨some (.array xs.length (.int .uint64)),
+     .array ⟨xs.map (fun v => .int v .uint64)⟩⟩)]
+
+def sliceVal (xs : List Int) (base : Nat) : GoValue :=
+  .slice ⟨some (.base ⟨base⟩), 0, xs.length, xs.length⟩
+
+/-! ## Machine-integer normal forms -/
+
+/-- A `uint64` value in Go range is its own normal form. -/
+theorem unorm_of_range {v : Int} (h0 : 0 ≤ v) (h1 : v < 2 ^ 64) :
+    IntKind.normalize .uint64 v = v := by
+  simp only [IntKind.normalize, IntKind.bits?, IntKind.signed]
+  simp only [Bool.false_eq_true, if_false]
+  omega
+
+/-- A signed-`int` value in Go range is its own normal form. -/
+theorem inorm_of_range {v : Int} (h0 : -(2 ^ 63) ≤ v) (h1 : v < 2 ^ 63) :
+    IntKind.normalize .int v = v := by
+  simp only [IntKind.normalize, IntKind.bits?, IntKind.signed, if_true]
+  split <;> omega
+
+/-- The `Nat`-cast corner of `inorm_of_range` (loop counters). -/
+theorem inorm_nat_of_lt {x : Nat} (h : x < 2 ^ 63) :
+    IntKind.normalize .int (x : Int) = (x : Int) :=
+  inorm_of_range (by omega) (by exact_mod_cast h)
+
+/-! ## The executable slice-op facts -/
+
+theorem validateSlice_ok {b : Loc} {off len cap : Nat} (hcap : len ≤ cap) :
+    validateSlice ⟨some b, off, len, cap⟩ = .ok () := by
+  simp [validateSlice, Nat.not_lt.mpr hcap, Bind.bind, Except.bind]
+
+/-- The element location of `s[i]` at an in-bounds `Nat` index. -/
+theorem sliceIndexLoc_ok {b : Loc} {off len cap i : Nat}
+    (hcap : len ≤ cap) (hi : i < len) :
+    sliceIndexLoc ⟨some b, off, len, cap⟩ (i : Nat) =
+      .ok (.index b (Int.ofNat (off + i))) := by
+  simp only [sliceIndexLoc, validateSlice_ok hcap, Bind.bind, Except.bind,
+    pure, Except.pure, Int.toNat_natCast, Int.ofNat_eq_natCast]
+  rw [if_neg (by omega)]
+  simp [hi]
+
+/-- `s[i]` (the `indexGet` strict-op application) at a slice handle:
+loads the backing array through the owned cell and returns the
+element. Bounds check at EVALUATION (the expression-position check). -/
+theorem applyStrictOp_indexGet_slice {σ : ExecState} {a : Addr}
+    {dty : Option Ty} {off len cap i : Nat} {ik : IntKind}
+    {vs : Array GoValue} {w : GoValue}
+    (hlook : Heap.lookup σ.heap (.base a) = some ⟨dty, .array vs⟩)
+    (hcap : len ≤ cap) (hi : i < len)
+    (hget : vs[off + i]? = some w) :
+    applyStrictOp σ .indexGet
+      [.slice ⟨some (.base a), off, len, cap⟩, .int (i : Nat) ik]
+      = .ok (w, σ) := by
+  have hsz : off + i < vs.size := by
+    cases Nat.lt_or_ge (off + i) vs.size with
+    | inl h => exact h
+    | inr h => rw [Array.getElem?_eq_none h] at hget; cases hget
+  simp only [applyStrictOp, valueAsInt, pure, Except.pure,
+    sliceIndexLoc_ok hcap hi, loadLoc, hlook, arrayGet, arrayIndexNat,
+    Bind.bind, Except.bind, Int.ofNat_eq_natCast, Int.toNat_natCast]
+  rw [if_neg (by omega)]
+  rw [if_pos hsz]
+  simp [hget]
+
+/-- `len(s)` at a slice handle is the handle's length — state-free
+(the handle carries its length; no heap read). Stated at the
+slice-annotated form the frontend emits for `len` over `[]T`. -/
+theorem applyStrictOp_len_slice {σ : ExecState} {b : Loc}
+    {off len cap : Nat} {elem : Ty}
+    (hcap : len ≤ cap) :
+    applyStrictOp σ (.lengthOf (some (.slice elem)))
+      [.slice ⟨some b, off, len, cap⟩]
+      = .ok (.int (len : Nat) .int, σ) := by
+  simp only [applyStrictOp, validateSlice_ok (b := b) hcap]
+  rfl
+
+/-- The slice expression `(&arr)[lo:hi]` over a pointer-to-array base:
+the handle via `sliceFromArray` (the driver-seed shape: `lo = 0`,
+`hi = L = the array's length`). -/
+theorem applyStrictOp_sliceExpr_array {σ : ExecState} {a : Addr}
+    {dty : Option Ty} {ik ik' : IntKind} {vs : Array GoValue} {L : Nat}
+    (hlook : Heap.lookup σ.heap (.base a) = some ⟨dty, .array vs⟩)
+    (hsz : vs.size = L) :
+    applyStrictOp σ (.sliceExpr false)
+      [.addr (.base a), .int 0 ik, .int (L : Nat) ik']
+      = .ok (.slice ⟨some (.base a), 0, L, L⟩, σ) := by
+  simp only [applyStrictOp, valueAsInt, applySlice, loadLoc, hlook,
+    sliceFromArray, checkSliceBounds, Bind.bind, Except.bind, pure,
+    Except.pure, hsz]
+  rw [if_neg (by omega), if_neg (by omega), if_neg (by omega),
+    if_neg (by omega)]
+  simp
+
+/-! ### The uint64 element-store fact
+
+The store side normalizes the whole backing array against the cell's
+declared type, so the fact is stated at the `[]uint64` fragment: a
+backing list of in-range values stays itself elementwise, and the
+stored element lands wrapped (in-range: unchanged). -/
+
+private theorem normalizeListWith_u64 {σ : ExecState} {fuel : Nat}
+    (hf : 0 < fuel)
+    (l : List Int) (hl : ∀ v ∈ l, 0 ≤ v ∧ v < 2 ^ 64) :
+    normalizeListWith (normalizeValueForTyFuel fuel σ (.int .uint64))
+      (l.map (fun v => .int v .uint64))
+      = .ok ⟨l.map (fun v => .int v .uint64)⟩ := by
+  match fuel, hf with
+  | f + 1, _ =>
+    induction l with
+    | nil => simp [normalizeListWith]
+    | cons v rest ih =>
+        have hv := hl v (by simp)
+        have hrest := ih (fun w hw => hl w (by simp [hw]))
+        simp [normalizeListWith, normalizeValueForTyFuel,
+          unorm_of_range hv.1 hv.2, hrest, Bind.bind, Except.bind]
+
+/-- Membership in `List.set` comes from the new element or the old
+list. -/
+private theorem mem_of_mem_set {l : List Int} {i : Nat} {w v : Int}
+    (h : v ∈ l.set i w) : v = w ∨ v ∈ l := by
+  induction l generalizing i with
+  | nil => simp [List.set] at h
+  | cons x rest ih =>
+      cases i with
+      | zero =>
+          simp only [List.set, List.mem_cons] at h
+          rcases h with h | h
+          · exact .inl h
+          · exact .inr (by simp [h])
+      | succ n =>
+          simp only [List.set, List.mem_cons] at h
+          rcases h with h | h
+          · exact .inr (by simp [h])
+          · rcases ih h with h | h
+            · exact .inl h
+            · exact .inr (by simp [h])
+
+/-- **The phase-2 element store through an index-chain target**
+(`s[i] = w` on `[]uint64`): `storeTarget` replays the chain — the
+bounds check fires HERE, at store time (BUG-029) — and the write lands
+in the BACKING cell: the array with element `off + i` set. The cell's
+declared array type re-normalizes the array on store; on the in-range
+`[]uint64` fragment that is the identity, which is what the range
+hypotheses are for. -/
+theorem storeTarget_slice_u64 {σ : ExecState} {a : Addr}
+    {off len cap i n : Nat} {ik : IntKind} {l : List Int} {w : Int}
+    (hlook : Heap.lookup σ.heap (.base a)
+      = some ⟨some (.array n (.int .uint64)),
+              .array ⟨l.map (fun v => .int v .uint64)⟩⟩)
+    (hcap : len ≤ cap) (hi : i < len)
+    (hsz : off + i < l.length) (hn : l.length = n)
+    (hl : ∀ v ∈ l, 0 ≤ v ∧ v < 2 ^ 64)
+    (hw : 0 ≤ w ∧ w < 2 ^ 64) :
+    storeTarget σ
+      (.chain (.slice ⟨some (.base a), off, len, cap⟩) [.int (i : Nat) ik]
+        [.index])
+      (.int w .uint64)
+      = .ok { σ with heap := (Heap.set σ.heap (.base a)
+          ⟨some (.array n (.int .uint64)),
+           .array ⟨(l.set (off + i) w).map (fun v => .int v .uint64)⟩⟩) } := by
+  have hglist : l[off + i]? = some (l[off + i]'hsz) :=
+    List.getElem?_eq_getElem hsz
+  have hset : ∀ v ∈ l.set (off + i) w, 0 ≤ v ∧ v < 2 ^ 64 := by
+    intro v hv
+    rcases mem_of_mem_set hv with rfl | hv
+    · exact hw
+    · exact hl v hv
+  have harrset : arraySet (⟨l.map (fun v => .int v .uint64)⟩ : Array GoValue)
+      (Int.ofNat (off + i)) (.int w .uint64)
+      = .ok ⟨(l.set (off + i) w).map (fun v => .int v .uint64)⟩ := by
+    have hidx : ((off + i : Nat) : Int).toNat = off + i := by omega
+    simp only [arraySet, arrayIndexNat, Bind.bind, Except.bind,
+      Int.ofNat_eq_natCast, hidx]
+    rw [if_neg (by omega), if_pos (by simpa using hsz)]
+    simp [hglist, coerceStoredValue, unorm_of_range hw.1 hw.2,
+      Array.set!, pure, Except.pure]
+  have hnorm : normalizeValueForTy σ (.array n (.int .uint64))
+      (.array ⟨(l.set (off + i) w).map (fun v => .int v .uint64)⟩)
+      = .ok (.array ⟨(l.set (off + i) w).map (fun v => .int v .uint64)⟩) := by
+    rw [normalizeValueForTy, typeResolutionFuel]
+    simp only [normalizeValueForTyFuel]
+    rw [if_neg (by simp [hn])]
+    have hlist := normalizeListWith_u64 (σ := σ) (fuel := 1023) (by omega)
+      (l.set (off + i) w) hset
+    simp only [List.map_set] at hlist
+    simp [hlist, Bind.bind, Except.bind, Functor.map, Except.map]
+  simp only [storeTarget, resolveChain, indexTargetLoc, valueAsInt,
+    valueAsLoc, sliceIndexLoc_ok hcap hi, Bind.bind, Except.bind, storeLoc,
+    loadLoc, hlook, harrset, hnorm, pure, Except.pure]
+
+end GoLean.SliceMem

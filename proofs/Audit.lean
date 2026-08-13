@@ -1727,6 +1727,37 @@ example := @GoLean.Frame.swapShift_not_uniform
 /-- info: 'GoLean.Frame.allocatorIndependence' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Frame.allocatorIndependence
 
+/-! ## The §9e slice-index WP laws (slice 2b, 2026-08-13)
+
+`✓` **the slice-index law family + witnesses** (`Laws/Slice.lean`,
+`GoLeanProofs/SliceMem.lean`; build list in
+`docs/2026-08-12_example-spec-form.md` §9e). Same-commit discharge
+witnesses (non-vacuity): `wp_index_get_witness` (the read law on a
+concrete two-element slice), `wp_len_slice_witness` (`len(s)`), and
+`wp_swap_witness` — the FULL two-target index-shape multi-assign
+`s[0], s[1] = s[1], s[0]`, which discharges `wp_store_index_slice_u64`
+(both stores) and doubles as the build list's item 4: the tgtOpK spine
+at index-step target shapes needs NO new law (the spine laws are
+shape-generic; `completeTargetRef` at `.chain [.index]` discharges by
+`rfl`) — the witness exercises those instances rather than merely
+claiming them. `sliceCells`/`sliceVal` are the §9a shared corpus
+vocabulary. Scope honesty: the store law is stated on the `[]uint64`
+fragment (the store path re-normalizes the whole backing array at the
+cell's declared type; a value/type-generic law is a recorded growth
+point, `Laws/Slice.lean` docstring). -/
+example := @GoLean.SliceMem.sliceCells
+example := @GoLean.SliceMem.sliceVal
+example := @GoLean.Iris.wp_index_get_slice
+example := @GoLean.Iris.wp_len_slice
+example := @GoLean.Iris.wp_store_index_slice_u64
+example := @GoLean.Iris.wp_index_get_witness
+example := @GoLean.Iris.wp_len_slice_witness
+example := @GoLean.Iris.wp_swap_witness
+/-- info: 'GoLean.Iris.wp_store_index_slice_u64' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.wp_store_index_slice_u64
+/-- info: 'GoLean.Iris.wp_swap_witness' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Iris.wp_swap_witness
+
 /-! ## Three-state ledger
 
 - `✓ Machine correspondence` (reshape S5, 2026-07-23) — `stepFn_sound` +
