@@ -1,0 +1,7 @@
+# id	subject	args	expected_status	expected_reason	features
+four	minMaxFour	3,1,4,1	ok	-	slices,indexing,loops,if
+four-desc	minMaxFour	9,7,5,3	ok	-	slices,indexing,loops,if
+four-big	minMaxFour	9223372036854775807,0,7,9223372036854775807	ok	-	slices,indexing,loops,if
+three-same	minMaxThree	5,5,5	ok	-	slices,indexing,loops,if
+one	minMaxOne	42	ok	-	slices,indexing,loops,if
+empty-panics	minMaxEmpty	-	panic	index out of range	slices,indexing,panic

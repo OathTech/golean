@@ -1,0 +1,8 @@
+# id	subject	args	expected_status	expected_reason	features
+zero-zero	gcd	0,0	ok	-	ints,widths,loops,multi_assign
+a-zero	gcd	7,0	ok	-	ints,widths,loops,multi_assign
+zero-b	gcd	0,9	ok	-	ints,widths,loops,multi_assign
+coprime	gcd	17,13	ok	-	ints,widths,loops,multi_assign
+common	gcd	12,18	ok	-	ints,widths,loops,multi_assign
+chain	gcd	270,192	ok	-	ints,widths,loops,multi_assign
+big	gcd	9223372036854775807,3074457345618258602	ok	-	ints,widths,loops,multi_assign

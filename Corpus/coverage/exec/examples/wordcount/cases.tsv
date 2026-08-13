@@ -1,0 +1,7 @@
+# id	subject	args	expected_status	expected_reason	features
+distinct	maxCountFour	1,2,3,4	ok	-	slices,maps,range,loops,if
+all-same	maxCountFour	5,5,5,5	ok	-	slices,maps,range,loops,if
+mode-three	maxCountFour	7,3,7,7	ok	-	slices,maps,range,loops,if
+two-pairs	maxCountFour	8,9,9,8	ok	-	slices,maps,range,loops,if
+one	maxCountOne	42	ok	-	slices,maps,range,loops,if
+empty	maxCountEmpty	-	ok	-	slices,maps,range,loops,if

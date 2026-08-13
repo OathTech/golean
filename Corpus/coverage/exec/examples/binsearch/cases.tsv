@@ -1,0 +1,12 @@
+# id	subject	args	expected_status	expected_reason	features
+found-first	searchFour	2,3,5,8,2	ok	-	slices,indexing,loops,if
+found-mid	searchFour	2,3,5,8,5	ok	-	slices,indexing,loops,if
+found-last	searchFour	2,3,5,8,8	ok	-	slices,indexing,loops,if
+absent-below	searchFour	2,3,5,8,1	ok	-	slices,indexing,loops,if
+absent-gap	searchFour	2,3,5,8,4	ok	-	slices,indexing,loops,if
+absent-above	searchFour	2,3,5,8,9	ok	-	slices,indexing,loops,if
+duplicates-lower	searchFour	2,2,2,5,2	ok	-	slices,indexing,loops,if
+big-boundary	searchFour	0,1,4611686018427387904,9223372036854775807,9223372036854775807	ok	-	slices,indexing,loops,if
+one-found	searchOne	7,7	ok	-	slices,indexing,loops,if
+one-absent	searchOne	7,8	ok	-	slices,indexing,loops,if
+empty	searchEmpty	3	ok	-	slices,indexing,loops,if
