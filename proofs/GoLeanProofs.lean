@@ -1,3 +1,22 @@
+-- The executable frame theorem's helper-commutation layer (verified-
+-- examples slice 2b; docs/2026-08-13_executable-frame-theorem.md §5
+-- steps 1-2, complete). The arm induction (StepSim/Transfer) joins
+-- these imports when it lands sorry-free — see the build handoff note.
+import GoLeanProofs.Frame.Rename
+import GoLeanProofs.Frame.Sim
+import GoLeanProofs.Frame.TypeCongr
+import GoLeanProofs.Frame.Values
+import GoLeanProofs.Frame.Compare
+import GoLeanProofs.Frame.NoPanic
+import GoLeanProofs.Frame.Plans
+import GoLeanProofs.Frame.ContOps
+import GoLeanProofs.Frame.HeapOps
+import GoLeanProofs.Frame.MachineRel
+import GoLeanProofs.Frame.Builders
+import GoLeanProofs.Frame.PanicFrame
+import GoLeanProofs.Frame.ChanSync
+import GoLeanProofs.Frame.StmtOps
+import GoLeanProofs.Frame.StrictOps
 import GoLeanProofs.Lang
 import GoLeanProofs.LangC
 import GoLeanProofs.LangD
