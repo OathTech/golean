@@ -1972,6 +1972,41 @@ example := @GoLean.Examples.BinSearch.bsFamily_sorted
 /-- info: 'GoLean.Examples.BinSearch.search_framed_readout' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Examples.BinSearch.search_framed_readout
 
+/-! ## The word-count example (scale-out slice 2c, 2026-08-13)
+
+`✓` **`maxCount_total_canonical` — the map example's canonical TOTAL,
+∀ arbitrary word lists, EVERY choice stream doing real work**
+(`Examples/WordCount.lean` over the pinned `wordCountLowered`): for
+any `[]uint64` list below Go's int length domain, execution of the
+canonical-placement driver completes normally past fuel `132 + 108·n`
+at EVERY nondeterminism-choice stream — the map range consumes one
+pick per iteration, so the ∀ch quantifier is doing genuine work here
+(the §10b teaching point: the spec `maxMultiplicity` is
+order-independent BY NECESSITY; an order-dependent claim would be
+unprovable against the enveloped iteration) — with the max
+multiplicity in the result cell and the input backing unchanged.
+Proof: the §10 design executed — countsList assoc-invariant counting
+induction + the choice-pick strong induction (`Choices.consume`
+destructured, erase-and-max-fold invariant), both halves in the
+symbolic-address regime (finding 12). `wordcount_empty_ok` is the §11
+HARNESS form at the zero-parameter degenerate (runFunctionWithContextM
+of `maxCountEmpty`, `[propext, Quot.sound]` — the Classical.choice-free
+pattern again). The parameterized harness headline `wordcount_ok` over
+`wordcount_harness(n, seed)` is NAMED DEBT **G1** (session note §7;
+seed-wrap caveat: the i%3 family collides at `seed ≥ 2^64 − 2`, so the
+G1 statement carries `hseed : seed < 2^64 − 2` or the collision
+arithmetic); the map machinery (mapCells/mapVal §10a vocabulary, the
+map executable facts, both loop inductions) is form-independent and
+already carries it. -/
+example := @GoLean.Examples.WordCount.multiplicity
+example := @GoLean.Examples.WordCount.maxMultiplicity
+example := @GoLean.Examples.WordCount.maxCount_total_canonical
+example := @GoLean.Examples.WordCount.wordcount_empty_ok
+/-- info: 'GoLean.Examples.WordCount.maxCount_total_canonical' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Examples.WordCount.maxCount_total_canonical
+/-- info: 'GoLean.Examples.WordCount.wordcount_empty_ok' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Examples.WordCount.wordcount_empty_ok
+
 /-! ## Three-state ledger
 
 - `✓ Machine correspondence` (reshape S5, 2026-07-23) — `stepFn_sound` +

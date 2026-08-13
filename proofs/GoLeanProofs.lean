@@ -98,6 +98,7 @@ import GoLeanProofs.Examples.BinSearch
 import GoLeanProofs.Examples.InsertionSortProgram
 import GoLeanProofs.Examples.InsertionSort
 import GoLeanProofs.Examples.WordCountProgram
+import GoLeanProofs.Examples.WordCount
 
 /-!
 # GoCore ⇒ Iris — the proof layer (root)

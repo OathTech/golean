@@ -100,7 +100,7 @@ form — all specified in the worker briefs verbatim.
 | min/max | **HARNESS-RESTATED**: `minmax_ok` over `runFunctionWithContextM` (minmax_harness, setup family `s[i] = seed + i`, returned pair = `minSpec/maxSpec (mmFamily n seed)`; input-family honesty recorded); memory forms kept as `minmax_framed`/`minmax_framed_readout` | setup-loop invariant over make-replicate backing + ported induction | **RESTATED + COMMITTED**, classical trio |
 | binary search | **HARNESS-RESTATED**: `search_ok` over `runFunctionWithContextM` (search_harness: sorted family `seed + 2i` under `hnowrap`, raw target; returned index = `findSpec (bsFamily n seed) t`; the 2^62 Bloch bound carries over); memory forms kept as `search_framed`/`search_framed_readout` | setup-loop induction + full subject-phase port under the harness continuation | **RESTATED + COMMITTED**, classical trio, fuel `220 + 132·n` |
 | insertion sort | HARNESS GAP RECORDED (honest fallback): groundwork landed green (`isFamily`, pinned `isortHarnessFunc`, entry equation, setup-loop induction); subject-phase port + Go-side test-phase inductions (sortedness scan, rebuild, O(n²) count loops needing a SECOND frame-rebase layer) are the precise gap, pickup plan in the module header | `isort_ok` remains the memory-quantified form (still the strongest isort claim shipped), re-marked proof-side per §11 | groundwork committed; harness headline = named debt with pickup plan |
-| word-count | `wordcount_ok` — map build + enveloped range; spec `maxMultiplicity`, order-independent BY NECESSITY (the ∀-choices quantifier does real work — the teaching point) | §10 design: counting-loop assoc-list invariant + choice-pick induction; symbolic-address glue per §10c | worker in flight; §10d fallback = named foundation debt |
+| word-count | **CANONICAL TOTAL PROVEN, ∀ws ∀ch**: `maxCount_total_canonical` (whole subject incl. the ENVELOPED map range — the ∀ch quantifier does real work; order-independent `maxMultiplicity` by necessity, §10b) + `wordcount_empty_ok` (§11 harness form, zero-parameter degenerate, axioms `[propext, Quot.sound]`) | §10 design executed: countsList counting induction + choice-pick strong induction, both in the symbolic-address regime (finding 12) | committed; **G1 named debt**: the parameterized harness `wordcount_ok` over `wordcount_harness(n, seed)` — statement drafted, seed-wrap caveat `hseed < 2^64 − 2`, machinery form-independent and already landed |
 
 ## §4 Findings so far
 
@@ -200,7 +200,21 @@ form — all specified in the worker briefs verbatim.
     form-independent and survives the harness restatement; its
     remaining gap at the stop order was one goal in the §10b range
     induction + the exit segments.
-    (further findings appended as workers report)
+    18. **(wordcount, verification-method)** Two of the wordcount
+    worker's intermediate "green" checks were FALSE greens — emptied
+    command output read as success. Its final state was re-verified at
+    integration with explicit exit codes (elaboration exit 0, zero
+    hatches, axiom prints matching). Standing rule reaffirmed: an
+    empty output stream is not a verdict; only an explicit exit code
+    plus the artifact is (CLAUDE.md's async-diagnosis note, now bitten
+    from the other side).
+19. **(infra)** During the post-outage re-verification the systemd
+    user manager reported `degraded` and `scripts/capped` scopes were
+    killed at ~90s regardless of cap size (RSS ~180MB — not memory).
+    The loud `GOLEAN_MEM_MAX=none` opt-out was used for exactly the
+    three wordcount verification commands, recorded here; the full
+    builds and gates below went back through the cap wrapper
+    normally.
 
 ## §5 Gallery entry drafts
 
