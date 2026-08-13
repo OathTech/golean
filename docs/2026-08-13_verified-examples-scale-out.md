@@ -99,7 +99,7 @@ form — all specified in the worker briefs verbatim.
 | gcd | **HARNESS-RESTATED**: `gcd_ok` over `runFunctionWithContextM` (returned data = `Nat.gcd a b`, full uint64²) + `gcd_readout` twin; memory forms kept as `gcd_framed`/`gcd_framed_readout` | segments + b-value induction ported; entry equation | **RESTATED + COMMITTED**, classical trio, fuel `91 + 45·b` |
 | min/max | **HARNESS-RESTATED**: `minmax_ok` over `runFunctionWithContextM` (minmax_harness, setup family `s[i] = seed + i`, returned pair = `minSpec/maxSpec (mmFamily n seed)`; input-family honesty recorded); memory forms kept as `minmax_framed`/`minmax_framed_readout` | setup-loop invariant over make-replicate backing + ported induction | **RESTATED + COMMITTED**, classical trio |
 | binary search | **HARNESS-RESTATED**: `search_ok` over `runFunctionWithContextM` (search_harness: sorted family `seed + 2i` under `hnowrap`, raw target; returned index = `findSpec (bsFamily n seed) t`; the 2^62 Bloch bound carries over); memory forms kept as `search_framed`/`search_framed_readout` | setup-loop induction + full subject-phase port under the harness continuation | **RESTATED + COMMITTED**, classical trio, fuel `220 + 132·n` |
-| insertion sort | HARNESS GAP RECORDED (honest fallback): groundwork landed green (`isFamily`, pinned `isortHarnessFunc`, entry equation, setup-loop induction); subject-phase port + Go-side test-phase inductions (sortedness scan, rebuild, O(n²) count loops needing a SECOND frame-rebase layer) are the precise gap, pickup plan in the module header | `isort_ok` remains the memory-quantified form (still the strongest isort claim shipped), re-marked proof-side per §11 | groundwork committed; harness headline = named debt with pickup plan |
+| insertion sort | **HARNESS-RESTATED (gap closed 2026-08-13)**: `isort_ok` over `runFunctionWithContextM` (isort_harness(n, seed): setup family `s[i] = seed·(i+1) mod 2^64`; verdict 1 = sortedness scan AND count-based permutation check, both IN GO) + `isort_readout` twin; memory forms kept as `isort_framed`/`isort_framed_readout` | subject-phase port under the harness continuation + the whole test phase: scan/rebuild/count proven as ONE canonical run from the post-subject 11-cell state, transferred in a SINGLE frame application; second frame-rebase layer (threshold 21, retire 4/pass) for the count loops | **RESTATED + COMMITTED**, classical trio, fuel `(92n+160)n + (110n+220)n + 285n + 505` |
 | word-count | **CANONICAL TOTAL PROVEN, ∀ws ∀ch**: `maxCount_total_canonical` (whole subject incl. the ENVELOPED map range — the ∀ch quantifier does real work; order-independent `maxMultiplicity` by necessity, §10b) + `wordcount_empty_ok` (§11 harness form, zero-parameter degenerate, axioms `[propext, Quot.sound]`) | §10 design executed: countsList counting induction + choice-pick strong induction, both in the symbolic-address regime (finding 12) | committed; **G1 named debt**: the parameterized harness `wordcount_ok` over `wordcount_harness(n, seed)` — statement drafted, seed-wrap caveat `hseed < 2^64 − 2`, machinery form-independent and already landed |
 
 ## §4 Findings so far
@@ -575,3 +575,46 @@ Fib + reverse (the exemplars) and gcd/minmax/binsearch restated over
     memory-form record (superseded as gallery material, kept as the
     proof-side layer's documentation). Slice 3 renders from the
     harness headlines.
+
+## §8 PROMOTION-CANDIDATES LEDGER (operator direction, 2026-08-13)
+
+Standing rule adopted mid-slice: **every time a pattern is instantiated
+for the SECOND-or-later time, it gets a row here** — pattern, consumers,
+approximate per-use line cost, and whether the lift is a LEMMA or a
+TACTIC/macro shape. The lifting itself is NOT done in this lane; a
+dedicated consolidation slice follows (brick-wp lesson: repeated
+patterns become shared abstractions for leverage, and grind is the
+signal that one is missing). Costs are measured from the landed files
+and marked approximate where the pattern is interleaved with
+example-specific algebra.
+
+Hard density figures behind the rows (measured at the gap-closing tip):
+`with_unfolding_all rfl` segments per module — fib 18, reverse 37,
+gcd 14, minmax 42, binsearch 59, **isort 78**, **wordcount 66**; and
+6–8 duplicated `private` kit lemmas in EACH of reverse / minmax /
+binsearch / isort / wordcount.
+
+| # | pattern | consumers | ~per-use cost | lift shape |
+|---|---|---|---|---|
+| P1 | `stepFnIter_one`, `stepFn_strict_apply`, `stepFn_store_step` (conditioned one-step glue) | reverse, gcd, minmax, binsearch, isort, wordcount (6) | ~25 lines | **LEMMA** (straight move to the FuelMeasure kit; zero design work) |
+| P2 | `getElem?_mapU`, `getD_mem`, `locSup_mapU`, `mem_set_of_mem` (slice-value plumbing) | reverse, minmax, binsearch, isort, wordcount (5) | ~30 lines | **LEMMA** (SliceMem) |
+| P3 | `unorm_of_range` / `unorm_nat_mod` / `inorm_nat_of_lt` normalization cleanups | all 7 | ~10 lines, but invoked 5–15× per module | **LEMMA + simp set** — a `unorm` simp-set is the real win, not the individual lemmas |
+| P4 | **The §11 entry equation** (`σ*0` state def + env def + `with_unfolding_all rfl` mirror of the source do-syntax) | fib, reverse, gcd, minmax, binsearch, isort, wordcount (7) | ~30 lines | **TACTIC/macro** — the state term is mechanically derivable from the `Func` record's args/results; a `derive_entry_equation` elaborator would erase all 7 copies (finding 13 already says the RHS is a syntactic mirror) |
+| P5 | **The setup-loop induction over `make([]uint64, n)` + a scalar family** (makeSlice apply at symbolic `n`, replicate-backing start, `fam i ++ replicate (n−i) 0` invariant, `storeTarget_slice_u64` element store, `57·(n−i)`-style step accounting) | reverse (`su_loop`), minmax, binsearch, isort (`hIsetup_loop`), wordcount (4) | **~250–350 lines** | **LEMMA (parameterized)** — one induction abstracted over the family function `f : Nat → Nat → Int` and the backing/handle addresses. Highest-value row in the table. isort instantiates it TWICE inside one module (setup + the test phase's rebuild loop). |
+| P6 | `natFromNonneg_cast'` + the symbolic-`n` makeSlice apply | reverse, binsearch, isort (×2 in-module: cells 3/4 and 14/15), wordcount | ~40 lines | **LEMMA** |
+| P7 | **The test-phase verdict walk** (flat `for` scan whose body conditionally clears `ok`, invariant "`ok` stays 1 given a pure fact") | reverse (`tst_loop`), isort (sortedness scan + the count-loop verdict) | ~150 lines | **LEMMA (parameterized)** — abstract over the per-index predicate and the pure discharge |
+| P8 | **Frame-rebase-into-garbage at a threshold** (`transfer_seg`/`rebaseSim`/`frameSim_zero` plumbing: prove a pass at a tight canonical placement, transfer at the accumulated-garbage shift, retire the dead cell block into the frame) | isort ×3 IN ONE FILE (thresholds 4, 11, 21; retire 2 / 0 / 4 cells per pass), binsearch's alternative (garbage-suffix invariant) | ~200 lines per instantiation | **LEMMA family** — "retire-prefix-into-frame at threshold K, retire r cells/pass" in `Frame/`. Finding 8 predicted this growth point at a THIRD nested-allocation example; it arrived as a third instantiation inside the FIRST such example. |
+| P9 | `stepFn_seqn_splice` (the `if_pos rfl` discharge for `seqCont`'s environment `DecidableEq` blocking defeq under symbolic addresses) | binsearch, wordcount | ~15 lines | **LEMMA** (finding 11 already flagged it as a strong candidate) |
+| P10 | Accumulator ↔ `List.count`/`List.filter` bridge (`cntSpec`/`cntSpec_eq_count`/`cntSpec_take_succ`) | isort (count loops), wordcount (`countsList`/`multiplicity`) | ~80 lines | **LEMMA** — wanted by any future counting harness |
+| P11 | Heap-append/lookup reasoning at a symbolic split (`lookup_append_right` + a `front*_none` side condition per state family) | binsearch, isort, wordcount | ~40 lines | **LEMMA + simp set** |
+
+**Where a lift would have saved >200 lines on a gap ground out this
+session** (the consolidation slice's priority order): **P5** (isort's
+gap paid the setup-loop induction a second time in-module for the
+rebuild loop — a parameterized version saves ~300 lines there alone,
+and wordcount's gap paid it a fourth time across the arc); **P8**
+(three hand-instantiated frame-rebase layers in isort ≈ 600 lines, of
+which a lemma family would leave maybe 60); **P4** (7 copies × ~30
+lines, and it is the ONE pattern that is purely syntactic — the
+cheapest lift with the widest reach). P1–P3 are near-zero-risk moves
+that should ride along.
