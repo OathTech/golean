@@ -140,6 +140,21 @@ deletion test, D1-BOTH beneath the headline, zero corpus drift beyond
 the new examples' explained additions, 48 designated byte-identical,
 worktree discipline, commit-on-agreement.
 
+## Arc-end audit marker (user pre-specified dimension, 2026-08-13)
+
+The pre-merge audit ask (unchanged protocol: proposed to the user at
+arc completion) carries a user-pre-specified dimension:
+**half-built/redundant machinery cleanup** — *"make sure we don't have
+half-built things kicking around we don't need (maintenance pain is
+real)."* Concretely: unreferenced WP laws, statement shells not
+deleted after harness restatement, vocabulary with no remaining
+consumer, anything orphaned by the harness pivot or the SL-theory
+freeze (form note §11's method-investment disposition) — with the
+doctrinal KEEPS (frame-theorem layer, allocator-independence quotient,
+fuel-measure kit) explicitly distinguished from cuttable method.
+While building: prefer deleting orphaned shells immediately over
+leaving them for the audit; never delete the three keeps.
+
 ## Exit criterion
 
 The gallery renders with every listed example proved in the agreed

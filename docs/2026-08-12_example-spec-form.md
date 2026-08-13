@@ -884,6 +884,20 @@ the FORM is revisited only when a CLAIM itself is not
 return-observable. Scope line: good abstraction for now, revisit at
 that horizon.
 
+**Method-investment disposition (user, 2026-08-13, agreed — recorded
+near-verbatim):** *"the half-built separation logic theory over the
+interpreter may be redundant if we expect Iris to do all our heavy
+lifting"* — resolved: the interpreter-level SL theory is FROZEN at
+what is built; no further frame/WP-composition buildout. What stays,
+and why: the **allocator-independence quotient** (a machine FACT — it
+discharges the doctrine's re-envelope obligation and is the coverage
+argument for synthesized pre-states) and the **fuel-measure kit +
+direct segment/entry-glue method** (sole owner of the TOTALITY half of
+headlines: iris-lean at our pin has no `twp`, Iris WP is
+partial-by-construction). Iris is the designated heavy-lifter for
+concurrency. If sequential examples ever outgrow direct reasoning, the
+move is porting `twp` — not growing the bespoke layer.
+
 **Status of the §9 memory-quantified form:** PROOF-SIDE / RESERVE.
 The committed memory-quantified theorems (fib_framed/fib_total_framed,
 reverse_ok, gcd_ok, minmax_ok, search_ok, isort_ok pre-restatement)
