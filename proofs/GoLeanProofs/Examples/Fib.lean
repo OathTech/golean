@@ -1303,5 +1303,122 @@ theorem fib_wrapsC (n : Nat) (hn : n < 2 ^ 64) :
     rw [hrun'] at hpool
     cases hpool
 
+/-! ## The framed (memory-quantified) form — slice 2a (2026-08-13)
+
+Form ruling (user, 2026-08-13): headlines unify to the
+memory-quantified form — input data + an arbitrary disjoint frame, with
+frame preservation VISIBLE in the statement. This is fib's retrofit:
+the input stays a call argument (fib takes no memory input); what
+changes is the frame story — *"touches nothing but the result cell"*
+becomes part of the claim. The exact frame structure is under the
+slice-2a checkpoint (design note §9); this theorem is the PROPOSAL
+instantiated.
+
+Scope honesty: run-conditioned over the framed seeds — the completion
+half at an ARBITRARY framed seed needs ∀-admissible-state termination
+(allocation addresses depend on `nextAddr`, so the canonical run's
+segment computations do not transfer verbatim); that gap is priced in
+the design note (§9c) and ruled on at the checkpoint. Completion at
+the canonical seed is `fib_total`. -/
+
+/-- fib's framed seed: the result cell plus an arbitrary frame `fr`,
+allocator at `na`. -/
+def fibSeedFr (fr : Heap) (na : Nat) : ExecState :=
+  { types := fibLowered.typeDefs.toList, functions := fibLowered.funcs,
+    methods := fibLowered.methods,
+    heap := (.base ⟨0⟩, ⟨some (.int .uint64), .int 0 .uint64⟩) :: fr,
+    nextAddr := na }
+
+/-- **The memory-quantified fib claim (slice-2a proposal)**: for every
+`n` in the uint64 domain, every frame `fr` — ANY other memory contents,
+not mentioning the result cell — and every admissible allocator bound,
+every normal completion of `$callres = fib(n)` from the framed seed
+(1) delivers `fibSpec n % 2^64` in the result cell and
+(2) PRESERVES THE FRAME: every cell of `fr` is still there, unchanged.
+Cells the run allocates (the callee's frame) are fresh — they are
+outside both the input and `fr` — and are deliberately not claimed. -/
+theorem fib_framed (n : Nat) (hn : n < 2 ^ 64) (fr : Heap) (na : Nat)
+    (hfr : Heap.lookup fr (.base ⟨0⟩) = none)
+    (hwf : MachineWf
+      { functions := fibLowered.funcs,
+        heap := (.base ⟨0⟩, ⟨some (.int .uint64), .int 0 .uint64⟩) :: fr,
+        nextAddr := na }
+      (.exec (fibCall n) fibEnv .stop)) :
+    ∀ (fuel : Nat) (ch : Choices) (σf : ExecState) (ch' : Choices),
+      execStmt fuel fibEnv (fibSeedFr fr na) ch (fibCall n)
+        = .ok (.normal σf, ch') →
+      loadLoc σf (.base ⟨0⟩)
+          = .ok (.int ((fibSpec n % 2 ^ 64 : Nat) : Int) .uint64)
+        ∧ ∀ (a : Nat) (c : HeapCell),
+            Heap.lookup fr (.base ⟨a⟩) = some c →
+            Heap.lookup σf.heap (.base ⟨a⟩) = some c := by
+  intro fuel ch σf ch' hrun
+  -- the admissible split: footprint = the result cell, frame = fr
+  have hF0 : (heapletOf fr).get? 0 = none := by
+    rw [heaplet_get?_eq, heapletOf_eq_heapToMap, get?_heapToMap]
+    exact hfr
+  have hsplit : InitialSplit fibCell0
+      ((.base ⟨0⟩, ⟨some (.int .uint64), .int 0 .uint64⟩) :: fr) na
+      ((∅ : Heaplet).insert 0 ⟨some (.int .uint64), .int 0 .uint64⟩)
+      (heapletOf fr) fibLowered.funcs fibEnv (fibCall n) := {
+    disj := by
+      intro k
+      by_cases hk : k = 0
+      · subst hk
+        exact .inr hF0
+      · left
+        rw [heaplet_get?_eq, heaplet_insert_eq]
+        rw [LawfulPartialMap.get?_insert_ne (M := GoHeapF)
+          (fun h => hk h.symm)]
+        exact LawfulPartialMap.get?_empty (M := GoHeapF) (k := k)
+    cover := by
+      intro k c
+      rw [heaplet_get?_eq, heapletOf_eq_heapToMap, heapToMap_cons_base,
+        heaplet_get?_eq, heaplet_insert_eq, heaplet_get?_eq,
+        heapletOf_eq_heapToMap]
+      by_cases hk : k = 0
+      · subst hk
+        rw [LawfulPartialMap.get?_insert_eq (M := GoHeapF) rfl,
+          LawfulPartialMap.get?_insert_eq (M := GoHeapF) rfl]
+        constructor
+        · exact fun h => .inl h
+        · rintro (h | h)
+          · exact h
+          · rw [heaplet_get?_eq, heapletOf_eq_heapToMap] at hF0
+            rw [hF0] at h
+            cases h
+      · rw [LawfulPartialMap.get?_insert_ne (M := GoHeapF)
+            (fun h => hk h.symm),
+          LawfulPartialMap.get?_insert_ne (M := GoHeapF)
+            (fun h => hk h.symm),
+          LawfulPartialMap.get?_empty (M := GoHeapF) (k := k)]
+        constructor
+        · exact fun h => .inr h
+        · rintro (h | h)
+          · cases h
+          · exact h
+    sat_pre := rfl
+    wf := hwf }
+  have hres := (fibGoSpec n hn).1 _ na _ (heapletOf fr) hsplit
+    fuel ch σf ch' hrun
+  obtain ⟨hQ, _hd, hQsub, hFsub, hsatQ⟩ := hres
+  constructor
+  · -- the readout, through the Q-footprint
+    rw [show hQ = (∅ : Heaplet).insert 0
+        ⟨some (.int .uint64), .int (fibv n) .uint64⟩ from hsatQ] at hQsub
+    have hget := hQsub 0 ⟨some (.int .uint64), .int (fibv n) .uint64⟩ (by
+      rw [heaplet_get?_eq, heaplet_insert_eq]
+      exact LawfulPartialMap.get?_insert_eq rfl)
+    rw [heaplet_get?_eq, heapletOf_eq_heapToMap, get?_heapToMap] at hget
+    exact loadLoc_base_of_lookup hget
+  · -- frame preservation, pointwise
+    intro a c hac
+    have hFa : (heapletOf fr).get? a = some c := by
+      rw [heaplet_get?_eq, heapletOf_eq_heapToMap, get?_heapToMap]
+      exact hac
+    have := hFsub a c hFa
+    rw [heaplet_get?_eq, heapletOf_eq_heapToMap, get?_heapToMap] at this
+    exact this
+
 end GoLean.Examples.Fib
 

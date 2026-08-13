@@ -469,6 +469,223 @@ differentially tested against `go run`, including the n = 94 wrap.
 
 ---
 
+## §9 The memory-quantified form (slice 2a — checkpoint packet)
+
+Form ruling (user, 2026-08-13): headlines UNIFY to the
+memory-quantified form — input data + arbitrary disjoint frame, frame
+preservation VISIBLE in the statement. Slice 2a designs the frame
+structure on one memory-input exemplar (slice reverse) plus the fib
+retrofit, and stops for the ruling; 2b scales. Everything below is
+grounded in the shipped machinery (`fib_framed` is PROVEN in this
+form; the reverse headline is stated against the same derivation
+path).
+
+### §9a How the input-in-memory is quantified
+
+∀ over the ABSTRACT data + ∀ over placement, with an abstraction
+function tying them to the heap. For slices the crux definition
+(proposed corpus vocabulary; built with its first consumer in 2b):
+
+```lean
+/-- The heap representation of a Go `[]uint64` holding `xs`: one
+backing cell at `base` with the array of wrapped values. The slice
+HANDLE the program receives is `sliceVal xs base` — base pointer,
+offset 0, length and capacity `xs.length`. -/
+def sliceCells (xs : List Int) (base : Nat) : Heap :=
+  [(.base ⟨base⟩,
+    ⟨some (.array xs.length (.int .uint64)),
+     .array ⟨xs.map (fun v => .int v .uint64)⟩⟩)]
+
+def sliceVal (xs : List Int) (base : Nat) : GoValue :=
+  .slice ⟨some (.base ⟨base⟩), 0, xs.length, xs.length⟩
+```
+
+Options considered: (i) quantify the heap directly and EXTRACT the
+list (an inverse function) — rejected: the ∀ reads backwards ("for
+every heap that happens to encode a list") and the extraction
+function is a worse TCB citizen than the constructor; (ii) **(chosen)
+quantify `xs : List Int` (with the honesty bound `∀ v ∈ xs, v` in
+uint64 range — or carry `List (Fin (2^64))`-free phrasing via the
+bound) and `base : Nat`, and SEED the representation** — the
+abstraction function appears once, is 5 lines of first-order
+constructor application, and becomes shared corpus vocabulary exactly
+like `fibSpec`. Offset/capacity generality (sub-slices) deliberately
+starts pinned at `offset = 0, cap = len`; widening is a recorded 2b+
+option, not a v1 requirement.
+
+### §9b How the frame is stated
+
+The MECHANISM is the existing `InitialSplit`/`GoSpec` frame closure
+(the triple already quantifies every admissible split and returns
+`F.sub` at the terminal state). The HEADLINE choices for rendering it:
+
+- (i) **(chosen) pointwise `Heap.lookup` clauses, inline** — the form
+  `fib_framed` ships:
+  - the framed seed is literally `input-cells :: fr` (list append —
+    the decomposition is visible as data, not as a predicate);
+  - admissibility is two hypotheses: `Heap.lookup fr <input-locs> =
+    none` (disjointness, one clause per input cell) and `MachineWf
+    seed config` (well-formedness — a DECIDABLE interpreter-vocabulary
+    predicate: allocator bound above every mentioned address, no
+    dangling locs);
+  - preservation is `∀ a c, Heap.lookup fr (.base ⟨a⟩) = some c →
+    Heap.lookup σf.heap (.base ⟨a⟩) = some c`.
+  Deletion-test status: CLEAN — `Heap.lookup`, `MachineWf`, `Heap`,
+  `HeapCell` are interpreter vocabulary; no `Heaplet`, no `HProp`, no
+  `InitialSplit` in the statement closure (they appear only in the
+  PROOF). This is the hard constraint met.
+- (ii) explicit heap-decomposition equations on the FINAL state
+  (`σf.heap = output-cells ∪ fr ∪ fresh`) — rejected: false as stated
+  (the heap is an ordered list; allocation interleaves), and fixing it
+  needs multiset/permutation vocabulary that fails the readability
+  bar.
+- (iii) a named `MemorySpec input output frame` predicate (≤5
+  first-order lines bundling (i)'s clauses) — genuinely attractive for
+  UNIFORMITY once 2b scales (one definition read once, like
+  `fibSpec`); costs one definitional hop on the deletion-test walk.
+  Recommendation: adopt at 2b IF the ruling prefers the compact
+  surface; (i) and (iii) are the same claim, so nothing re-proves.
+
+### §9c What preservation says, and allocation honesty
+
+Preservation = **pointwise lookup preservation** (same address, same
+cell — `HeapCell` equality covers both declared type and value, so
+this IS "byte-identical" at the model's granularity). NOT claimed:
+domain equality of the final heap. The program ALLOCATES (parameter
+and result cells at frame entry; `new`/`make`/`append` in general
+programs), so the final heap strictly extends input+frame; the honest
+statement claims (1) the output cells' contents, (2) every frame
+cell's preservation, and says nothing about fresh cells. Available
+strengthening (recorded option, not v1): freshness — every address
+outside input ∪ frame that is allocated satisfies `na ≤ a` (from
+`StateWf`); adds a clause of real content but doubtful gallery value.
+
+**The completion-half gap, priced honestly**: `fib_framed` (and the
+reverse headline) are RUN-CONDITIONED over framed seeds. The full
+memory-quantified TOTAL form — `∀ frame: completes ∧ value ∧ frame
+preserved` — needs termination from EVERY admissible framed seed, and
+the fuel-measure segments do not transfer verbatim: allocation
+addresses depend on `nextAddr`, which the frame moves, so the
+canonical run's `rfl` computations (concrete addresses) become
+symbolic-address computations. Two attack routes, both real work,
+neither in 2a: (α) hypothesis-parametric segments (the simp route with
+address-inequality side conditions — measured ~2.5 min/segment when
+tried naively; needs engineering to be affordable); (β) an executable
+frame/weakening theorem (run from `H` simulates run from `H ++ F` up
+to an address renaming — the general tool, subsumes (α), sizable).
+Until one lands, the honest unified headline is: TOTAL at the
+canonical placement (`fib_total`) + framed run-conditioned
+(`fib_framed`); equivalently "it completes; and however you frame it,
+any completion delivers the value and touches nothing else". The
+checkpoint should rule whether 2b requires (α)/(β) first or scales
+with this split.
+
+### §9d The English rendering convention
+
+*"For any list `xs` (of uint64 values), wherever it lives in memory,
+with anything else present: `reverse` completes normally, the slice
+then holds `xs` reversed, and no other memory is touched."* — the
+three clauses map 1:1 to (input ∀ + placement ∀ + frame ∀), the
+completion+value conjunction, and the pointwise preservation clause.
+For argument-input examples the middle clause degenerates: fib reads
+*"…with anything else in memory: fib(n) completes normally, returns
+fib(n) mod 2^64, and touches nothing but its result cell."*
+
+### §9e The reverse exemplar — PROPOSED headline (2b proves it)
+
+Canonical Go (`Corpus/coverage/exec/examples/reverse/main.go`, 5/5
+differential rows green incl. odd/even lengths, singleton, empty, and
+an int64-boundary value):
+
+```go
+func reverse(s []uint64) {
+	for i, j := 0, len(s)-1; i < j; i, j = i+1, j-1 {
+		s[i], s[j] = s[j], s[i]
+	}
+}
+```
+
+```lean
+theorem reverse_ok (xs : List Int) (hxs : ∀ v ∈ xs, 0 ≤ v ∧ v < 2 ^ 64)
+    (base : Nat) (fr : Heap) (na : Nat)
+    (hb : Heap.lookup fr (.base ⟨base⟩) = none)
+    (hwf : MachineWf
+      { functions := reverseLowered.funcs,
+        heap := sliceCells xs base ++ fr, nextAddr := na }
+      (.exec (reverseCall xs base) [] .stop)) :
+    ∃ N : Nat, ∀ fuel : Nat, N ≤ fuel → ∀ ch : Choices,
+      ∃ (σf : ExecState) (ch' : Choices),
+        execStmt fuel [] (reverseSeed xs base fr na) ch
+            (reverseCall xs base)
+          = .ok (.normal σf, ch')
+        ∧ Heap.lookup σf.heap (.base ⟨base⟩)
+            = some ⟨some (.array xs.length (.int .uint64)),
+                .array ⟨xs.reverse.map (fun v => .int v .uint64)⟩⟩
+        ∧ ∀ (a : Nat) (c : HeapCell),
+            Heap.lookup fr (.base ⟨a⟩) = some c →
+            Heap.lookup σf.heap (.base ⟨a⟩) = some c
+```
+
+(`reverseCall xs base` = the driver `reverse(s)` with the slice handle
+`sliceVal xs base` as the literal argument — the same
+argument-as-quantifier convention as fib, lifted to a memory-backed
+value. Modulo the §9c completion split: the ∃N completion clause holds
+at the canonical placement; the framed instances are run-conditioned
+until (α)/(β).)
+
+Measure-rule fit: `μ := j - i` decreases by 2 per iteration — within
+the ≤-decrease shape, no variant needed. The 2b build list for the
+value half, discovered against the machinery: slice-index WP laws do
+NOT exist yet — needed are the index-read law (`s[i]` evaluation:
+handle load, backing-cell read, bounds check), the index-target store
+law (`s[i] = v`: `resolveChain`/`indexTargetLoc` through the backing
+cell, bounds check at store), `len(s)` evaluation, and the multi-assign
+walk at INDEX targets (the spine is general; the target-shape plans
+gain index steps). Plus pure `List.set`/`reverse` surgery lemmas for
+the two-pointer invariant. Termination additionally reuses the §5c
+segment technique with the backing-cell content symbolic (a list — the
+loads/stores hit one concrete address, so the `rfl` route carries).
+
+### §9f The fib retrofit — old vs new, verbatim
+
+OLD (slice 1, canonical seed only — statement unchanged, still
+shipped):
+
+```lean
+theorem fib_total (n : Nat) (hn : n < 2 ^ 64) :
+    ∃ N : Nat, ∀ fuel : Nat, N ≤ fuel → ∀ ch : Choices,
+      ∃ (σf : ExecState) (ch' : Choices),
+        execStmt fuel fibEnv fibSeed ch (fibCall n) = .ok (.normal σf, ch')
+        ∧ loadLoc σf (.base ⟨0⟩)
+            = .ok (.int ((fibSpec n % 2 ^ 64 : Nat) : Int) .uint64)
+```
+
+NEW (slice 2a, SHIPPED and proven — the memory-quantified companion):
+
+```lean
+theorem fib_framed (n : Nat) (hn : n < 2 ^ 64) (fr : Heap) (na : Nat)
+    (hfr : Heap.lookup fr (.base ⟨0⟩) = none)
+    (hwf : MachineWf
+      { functions := fibLowered.funcs,
+        heap := (.base ⟨0⟩, ⟨some (.int .uint64), .int 0 .uint64⟩) :: fr,
+        nextAddr := na }
+      (.exec (fibCall n) fibEnv .stop)) :
+    ∀ (fuel : Nat) (ch : Choices) (σf : ExecState) (ch' : Choices),
+      execStmt fuel fibEnv (fibSeedFr fr na) ch (fibCall n)
+        = .ok (.normal σf, ch') →
+      loadLoc σf (.base ⟨0⟩)
+          = .ok (.int ((fibSpec n % 2 ^ 64 : Nat) : Int) .uint64)
+        ∧ ∀ (a : Nat) (c : HeapCell),
+            Heap.lookup fr (.base ⟨a⟩) = some c →
+            Heap.lookup σf.heap (.base ⟨a⟩) = some c
+```
+
+English: *for every n, with ANYTHING else in memory: any normal
+completion returns fib(n) mod 2^64 and touches nothing but its result
+cell.* The completion clause stays with `fib_total` per §9c; unifying
+them into one framed-total statement is exactly what the (α)/(β)
+ruling decides.
+
 ## §8 Parked / out of scope (recorded)
 
 - Machine/frontend changes (must-park): the `$forFirst` desugar tax

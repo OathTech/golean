@@ -1676,6 +1676,13 @@ example := @GoLean.Examples.Fib.fib_total
 #guard_msgs in #print axioms GoLean.Examples.Fib.fib_total
 /-- info: 'GoLean.Surface.completesIn_measure_loop' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Surface.completesIn_measure_loop
+-- Slice 2a (2026-08-13): the memory-quantified form's fib retrofit —
+-- ∀-frame run-conditioned readout + pointwise frame preservation,
+-- derived from the GoSpec frame closure at an explicit framed split
+-- (form under the slice-2a checkpoint; design note §9).
+example := @GoLean.Examples.Fib.fib_framed
+/-- info: 'GoLean.Examples.Fib.fib_framed' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Examples.Fib.fib_framed
 
 /-! ## Three-state ledger
 

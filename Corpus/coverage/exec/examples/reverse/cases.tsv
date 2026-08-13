@@ -1,0 +1,6 @@
+# id	subject	args	expected_status	expected_reason	features
+four	reverseFour	1,2,3,4	ok	-	slices,indexing,loops,multi_assign
+four-big	reverseFour	9223372036854775807,7,0,9	ok	-	slices,indexing,loops,multi_assign
+three	reverseThree	10,20,30	ok	-	slices,indexing,loops,multi_assign
+one	reverseOne	42	ok	-	slices,indexing,loops,multi_assign
+empty	reverseEmpty	-	ok	-	slices,indexing,loops,multi_assign

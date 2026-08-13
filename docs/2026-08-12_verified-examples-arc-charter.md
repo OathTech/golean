@@ -96,6 +96,16 @@ discussion here.
    no Iris in the termination half (rationale recorded in the design
    note and the module).
 
+## Form ruling (user, 2026-08-13) — slice 2 split
+
+Headlines UNIFY to the MEMORY-QUANTIFIED form: input data + arbitrary
+disjoint frame, with frame preservation VISIBLE in the statement. The
+exact frame structure is under iteration, so slice 2 splits: **2a**
+designs the form on one memory-input exemplar (slice reverse) plus the
+fib retrofit and STOPS AT A CHECKPOINT (packet: design note §9);
+**2b** scales to gcd/min-max/binsearch/insertion-sort/word-count after
+the frame-structure ruling. The enumeration ban binds everything.
+
 ## Must-park
 
 Machine changes of ANY kind (this arc is proofs/records only — width

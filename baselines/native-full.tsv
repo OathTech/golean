@@ -1,16 +1,16 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-12  commit: verified-examples slice 1 (fib exemplar)
-#   re-pin reason: 6 NEW explained rows — examples/fib/{zero,one,two,ten,
-#   ninety-three,ninety-four-wrap}, the verified-examples arc's first
-#   corpus example (headline-form exemplar; n=94 pins the mod-2^64 wrap).
-#   No other id moved (PASS/FAIL sets and stages unchanged from the
-#   2026-08-10 record).
+# recorded: 2026-08-13  commit: verified-examples slice 2a (reverse exemplar rows)
+#   re-pin reason: 5 NEW explained rows — examples/reverse/{four,four-big,
+#   three,one,empty}, the memory-form exemplar's oracle rows (slice 2a;
+#   in-place slice reverse: even/odd lengths, singleton, empty, an
+#   int64-boundary value). No other id moved (PASS/FAIL sets and stages
+#   unchanged from the 2026-08-12 record).
 #   frontend: native  oracle: go run (strict lane) / go-run membership in the
 #   machine-enumerated observation set, sampled plain AND under -race
 #   (membership lane; go1.26.5) / schedule-tree singleton certification +
 #   strict go-run equality (confluent lane) / every-enumerated-path-refuses
 #   + go run -race red (racy lane; never combined with deadlock)
-# manifest_cases: 1489  pass: 1370  fail: 119
+# manifest_cases: 1494  pass: 1375  fail: 119
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
 PASS	arrays/array-copy	-
@@ -364,6 +364,11 @@ PASS	examples/fib/one	-
 PASS	examples/fib/ten	-
 PASS	examples/fib/two	-
 PASS	examples/fib/zero	-
+PASS	examples/reverse/empty	-
+PASS	examples/reverse/four	-
+PASS	examples/reverse/four-big	-
+PASS	examples/reverse/one	-
+PASS	examples/reverse/three	-
 PASS	floats/compound-assign	-
 PASS	floats/defined-incdec	-
 PASS	floats/defined-type-ops	-
