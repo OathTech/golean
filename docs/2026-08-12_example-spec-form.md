@@ -576,9 +576,11 @@ to an address renaming — the general tool, subsumes (α), sizable).
 Until one lands, the honest unified headline is: TOTAL at the
 canonical placement (`fib_total`) + framed run-conditioned
 (`fib_framed`); equivalently "it completes; and however you frame it,
-any completion delivers the value and touches nothing else". The
-checkpoint should rule whether 2b requires (α)/(β) first or scales
-with this split.
+any completion delivers the value and touches nothing else". RULED
+(user, 2026-08-13): route (β) — the executable frame theorem (command
+locality up to fresh-address renaming); design of record
+`docs/2026-08-13_executable-frame-theorem.md`, which also cross-records
+the NPDRF/P-S4NP-2 heap-iso convergence.
 
 ### §9d The English rendering convention
 
