@@ -1801,12 +1801,18 @@ witness): a total headline already determines every normal completion
 result). Scope honesty: usability evidence per the charter's
 two-questions separation. -/
 example := @GoLean.Surface.normal_readout_of_total
+-- HARNESS RESTATEMENT (form note §11, 2026-08-13): `gcd_ok` is now the
+-- harness headline over `runFunctionWithContextM` (three-phase
+-- gcd_harness; full uint64² domain, exact Nat.gcd, returned data);
+-- the memory-quantified forms are KEPT proof-side as `gcd_framed` /
+-- `gcd_framed_readout` (renamed, ruling (a)).
 example := @GoLean.Examples.Gcd.gcd_ok
-example := @GoLean.Examples.Gcd.gcd_readout
+example := @GoLean.Examples.Gcd.gcd_framed
+example := @GoLean.Examples.Gcd.gcd_framed_readout
 /-- info: 'GoLean.Examples.Gcd.gcd_ok' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Examples.Gcd.gcd_ok
-/-- info: 'GoLean.Examples.Gcd.gcd_readout' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs in #print axioms GoLean.Examples.Gcd.gcd_readout
+/-- info: 'GoLean.Examples.Gcd.gcd_framed' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Examples.Gcd.gcd_framed
 
 /-! ## The min/max example (scale-out slice 2c, 2026-08-13)
 
@@ -1826,12 +1832,19 @@ direct machine-step segments + ONE strong induction on `len − m`
 carrying value and completion; frame transfer through the
 input-relocating renaming with cells 0/1 ρ-fixed. D1 twin:
 `minmax_readout` via `normal_readout_of_total`. -/
+-- HARNESS RESTATEMENT (form note §11): `minmax_ok` is now the harness
+-- headline (minmax_harness: setup family s[i] = seed + i, returned
+-- min/max pair = minSpec/maxSpec of `mmFamily n seed` — the recorded
+-- input-family honesty vs the designed-not-built ∀xs input pick);
+-- memory-quantified forms kept proof-side as `minmax_framed` /
+-- `minmax_framed_readout`.
 example := @GoLean.Examples.MinMax.minmax_ok
-example := @GoLean.Examples.MinMax.minmax_readout
+example := @GoLean.Examples.MinMax.minmax_framed
+example := @GoLean.Examples.MinMax.minmax_framed_readout
 /-- info: 'GoLean.Examples.MinMax.minmax_ok' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Examples.MinMax.minmax_ok
-/-- info: 'GoLean.Examples.MinMax.minmax_readout' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs in #print axioms GoLean.Examples.MinMax.minmax_readout
+/-- info: 'GoLean.Examples.MinMax.minmax_framed' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Examples.MinMax.minmax_framed
 
 /-! ## The insertion-sort example (scale-out slice 2c, 2026-08-13)
 

@@ -3,6 +3,7 @@ import GoLeanProofs.SliceMem
 import GoLeanProofs.FuelMeasure
 import GoLeanProofs.Frame.Transfer
 import GoLeanProofs.Frame.RenameId
+import GoLeanProofs.Laws.StmtOps
 
 /-!
 # Verified example: min/max of a slice (verified-examples slice 2c,
@@ -1201,8 +1202,8 @@ private theorem lookup_final2 (xs : List Int) :
 
 /-! ## The headline -/
 
-/-- **THE HEADLINE** (verified-examples slice 2c; the §9
-memory-quantified form in the reverse shape): *for any nonempty list
+/-- **The framed total form — proof-side supporting layer per §11 (the
+memory-quantified form, kept)**: *for any nonempty list
 `xs` of uint64 values, wherever it lives in memory, with anything else
 present: `$mn, $mx = minMax(s)` completes normally — past one fuel
 bound, at every nondeterminism-choice stream — the result cells then
@@ -1225,8 +1226,10 @@ success-run transfer `execStmtLoop_ren` at the input-RELOCATING
 renaming `relocShift base na`. Value readout transfers through the
 terminal `FrameSim`'s pointwise heap characterization (cells 0/1 are
 `ρ`-fixed; the backing cell maps `2 ↦ base`); frame preservation is its
-`frame_pres` clause verbatim. -/
-theorem minmax_ok (xs : List Int) (hne : xs ≠ [])
+`frame_pres` clause verbatim. The USER-FACING headline is `minmax_ok`
+below (harness ruling 2026-08-13, design note §11); this
+memory-quantified form stays as the supporting layer. -/
+theorem minmax_framed (xs : List Int) (hne : xs ≠ [])
     (hxs : ∀ v ∈ xs, 0 ≤ v ∧ v < 2 ^ 64) (hlen : xs.length < 2 ^ 63)
     (base : Nat) (hb0 : base ≠ 0) (hb1 : base ≠ 1)
     (fr : Heap) (na : Nat)
@@ -1285,11 +1288,12 @@ theorem minmax_ok (xs : List Int) (hne : xs ≠ [])
   | broke σF => exact hout.elim
   | continued σF => exact hout.elim
 
-/-- **The D1 run-conditioned twin**: any normal completion of the
-framed driver, at ANY fuel and choice stream, delivers the same four
-clauses — derived from the total headline via
+/-- **The framed D1 run-conditioned twin — proof-side supporting layer
+per §11 (the memory-quantified form, kept)**: any normal completion of
+the framed driver, at ANY fuel and choice stream, delivers the same
+four clauses — derived from `minmax_framed` via
 `normal_readout_of_total`, no second walk. -/
-theorem minmax_readout (xs : List Int) (hne : xs ≠ [])
+theorem minmax_framed_readout (xs : List Int) (hne : xs ≠ [])
     (hxs : ∀ v ∈ xs, 0 ≤ v ∧ v < 2 ^ 64) (hlen : xs.length < 2 ^ 63)
     (base : Nat) (hb0 : base ≠ 0) (hb1 : base ≠ 1)
     (fr : Heap) (na : Nat)
@@ -1313,6 +1317,1227 @@ theorem minmax_readout (xs : List Int) (hne : xs ≠ [])
           Heap.lookup fr (.base ⟨a⟩) = some c →
           Heap.lookup σf.heap (.base ⟨a⟩) = some c :=
   GoLean.Surface.normal_readout_of_total
-    (minmax_ok xs hne hxs hlen base hb0 hb1 fr na hfb hf0 hf1 hwf)
+    (minmax_framed xs hne hxs hlen base hb0 hb1 fr na hfb hf0 hf1 hwf)
+
+/-! ## The harness restatement (harness ruling 2026-08-13, design note
+`docs/2026-08-12_example-spec-form.md` §11)
+
+The USER-FACING form: one fixed three-phase Go harness
+
+```go
+func minmax_harness(n, seed uint64) (uint64, uint64) {
+    s := make([]uint64, n)              // setup: build the input family
+    for i := uint64(0); i < n; i++ { s[i] = seed + i }
+    return minMax(s)                    // call under test; returned pair
+}                                       // is the observable
+```
+
+stated over the machine's native function entry
+`runFunctionWithContextM`: termination + the returned values only — no
+heap readback, no seed/cell/frame vocabulary (the implicit framing
+property is inherent in the empty-heap entry).
+
+**INPUT-FAMILY HONESTY** (recorded per §11's designed-not-built input
+pick): the `(n, seed)` quantification covers exactly the `mmFamily`
+family `s[i] = (seed + i) mod 2^64` — an input FAMILY, honestly weaker
+than a ∀xs claim over all slices (that form is `minmax_framed` above,
+the kept proof-side layer; the ∀xs HARNESS form waits on the
+choice-consuming input pick, §11). The family WRAPS at `2^64`
+deliberately: when `seed + i` crosses the boundary the wrapped values
+fall BELOW `seed`, so min/max are genuinely data-dependent — the
+minimum is not always `s[0]` and the maximum not always `s[n-1]`; that
+is the family's value as a test vector.
+
+Statement hypotheses, recorded honestly: `h1 : 1 ≤ n` is Go's OWN
+empty-slice panic boundary (`minMax` of an empty slice panics at
+`s[0]`; corpus row `examples/minmax/empty-panics` pins it — the claim
+as stated would be false at `n = 0`); `hn : n < 2^63` is Go's `int`
+domain for `len` (the reverse precedent); `hseed : seed < 2^64` is the
+argument's own type domain.
+
+Proof route: the setup loop gets its own plain induction (invariant:
+backing = family-prefix ++ zeros; the element store discharged by
+`SliceMem.storeTarget_slice_u64` with `l := prefix ++ replicate`); the
+`make([]uint64, n)` apply at SYMBOLIC `n` is one conditioned step
+(`applyStmtOp_makeSlice_u64`, via the shared
+`buildDefaultArrayValue_int`); then the minMax segments and the
+prefix-min/max strong induction port from the framed layer above at
+the harness's address layout, over `mmFamily n seed` as the abstract
+list (elements in range by construction — the `% 2^64` in the family).
+Address layout: 0 = `n`, 1 = `seed`, 2/3 = the harness results,
+4 = `$c12`, 5 = the backing array, 6 = `s`, 7 = the setup `i`,
+8 = the setup `$forFirst`, 9/10 = `$c13`/`$c14`, 11–17 = the minMax
+frame (`s`, `$res0`, `$res1`, `lo`, `hi`, `i`, `$forFirst`); allocator
+parked at 18 for the whole minMax loop. -/
+
+/-- **The input family** (in the headline statement): the slice the
+harness's setup loop builds — `s[i] = (seed + i) mod 2^64`, the
+machine's own wrapping uint64 addition, as abstract data. -/
+def mmFamily (n seed : Nat) : List Int :=
+  (List.range n).map (fun i => (((seed + i) % 2 ^ 64 : Nat) : Int))
+
+/-- The harness's `Func` record, verbatim from the pinned lowering (the
+`example` pin below ties it by `rfl`). -/
+def mmHarnessFunc : Func :=
+  { id := { key := "minmax_harness" },
+    args := #[{ id := "n", typ := .int .uint64 },
+              { id := "seed", typ := .int .uint64 }],
+    results := #[{ id := "$res0", typ := .int .uint64 },
+                 { id := "$res1", typ := .int .uint64 }],
+    body := .block #[]
+      #[.seqn
+          #[.initialization { id := "$c12", typ := .slice (.int .uint64) },
+            .makeSlice (.var "$c12") (.int .uint64) (.var "n") none],
+        .seqn
+          #[.initialization { id := "s", typ := .slice (.int .uint64) },
+            .assign (.var "s") (.var "$c12")],
+        .block #[]
+          #[.seqn
+              #[.initialization { id := "i", typ := .int .uint64 },
+                .assign (.var "i") (.intLit 0 .uint64)],
+            .block #[]
+              #[.initialization { id := "$forFirst", typ := .bool },
+                .assign (.var "$forFirst") (.boolLit true),
+                .while (.boolLit true) shBody]],
+        .seqn
+          #[.initialization { id := "$c13", typ := .int .uint64 },
+            .initialization { id := "$c14", typ := .int .uint64 },
+            .call #[.var "$c13", .var "$c14"] ⟨"minMax"⟩ #[.var "s"]],
+        .seqn
+          #[.assign (.var "$res0") (.var "$c13"),
+            .assign (.var "$res1") (.var "$c14"),
+            .returnStmt]],
+    variadic := false,
+    wrapper := false }
+where
+  /-- The setup loop's `for`-desugar body. -/
+  shBody : Stmt :=
+    .block #[]
+      #[.ifThenElse (.var "$forFirst")
+          (.assign (.var "$forFirst") (.boolLit false))
+          (.assign (.var "i") (.add (.var "i") (.intLit 1 .uint64))),
+        .seqn #[],
+        .ifThenElse (.lessCmp (.var "i") (.var "n")) (.seqn #[]) .breakStmt,
+        .block #[]
+          #[.seqn #[.assign (.addr (.indexAddr (.var "s") (.var "i")))
+              (.add (.var "seed") (.var "i"))]]]
+
+/-- The lowering pin: the harness in the theorem IS the frontend's
+lowering of the corpus harness. -/
+example : findFunctionIn? minMaxLowered.funcs ⟨"minmax_harness"⟩
+    = some mmHarnessFunc := rfl
+
+/-! ### The pure layer: the family and the setup-prefix surgery -/
+
+private theorem mmFamily_length (n seed : Nat) :
+    (mmFamily n seed).length = n := by
+  simp [mmFamily]
+
+private theorem mmFamily_ne_nil {n seed : Nat} (h1 : 1 ≤ n) :
+    mmFamily n seed ≠ [] := by
+  intro hc
+  have := congrArg List.length hc
+  simp [mmFamily_length] at this
+  omega
+
+private theorem mmFamily_getD {n seed i : Nat} (hi : i < n) :
+    (mmFamily n seed).getD i 0 = (((seed + i) % 2 ^ 64 : Nat) : Int) := by
+  simp [mmFamily, List.getD_eq_getElem?_getD, List.getElem?_map,
+    List.getElem?_range hi]
+
+private theorem mmFamily_range (n seed : Nat) :
+    ∀ v ∈ mmFamily n seed, 0 ≤ v ∧ v < 2 ^ 64 := by
+  intro v hv
+  simp only [mmFamily, List.mem_map] at hv
+  obtain ⟨i, -, rfl⟩ := hv
+  constructor
+  · omega
+  · exact_mod_cast Nat.mod_lt _ (by omega)
+
+/-- The setup-loop invariant list: the built family prefix, then the
+`make`'s zeros. -/
+private def setupList (n seed i : Nat) : List Int :=
+  (mmFamily n seed).take i ++ List.replicate (n - i) 0
+
+private theorem setupList_zero (n seed : Nat) :
+    setupList n seed 0 = List.replicate n 0 := by
+  simp [setupList]
+
+private theorem setupList_full (n seed : Nat) :
+    setupList n seed n = mmFamily n seed := by
+  rw [setupList, Nat.sub_self, List.replicate_zero, List.append_nil,
+    List.take_of_length_le (Nat.le_of_eq (mmFamily_length n seed))]
+
+private theorem setupList_length {n seed i : Nat} (hi : i ≤ n) :
+    (setupList n seed i).length = n := by
+  simp only [setupList, List.length_append, List.length_take,
+    List.length_replicate, mmFamily_length]
+  omega
+
+private theorem setupList_range (n seed i : Nat) :
+    ∀ v ∈ setupList n seed i, 0 ≤ v ∧ v < 2 ^ 64 := by
+  intro v hv
+  rcases List.mem_append.mp hv with h | h
+  · exact mmFamily_range n seed v (List.mem_of_mem_take h)
+  · rw [List.eq_of_mem_replicate h]
+    omega
+
+private theorem set_append_first {xs ys : List Int} {w : Int} :
+    (xs ++ ys).set xs.length w = xs ++ ys.set 0 w := by
+  induction xs with
+  | nil => simp
+  | cons x t ih => simp only [List.cons_append, List.length_cons, List.set, ih]
+
+/-- **One setup store advances the prefix**: writing the family value
+at position `i` turns invariant list `i` into invariant list `i + 1`. -/
+private theorem setupList_set {n seed i : Nat} (hi : i < n) :
+    (setupList n seed i).set i (((seed + i) % 2 ^ 64 : Nat) : Int)
+      = setupList n seed (i + 1) := by
+  have hlen : ((mmFamily n seed).take i).length = i := by
+    simp only [List.length_take, mmFamily_length]
+    omega
+  have hset := set_append_first (xs := (mmFamily n seed).take i)
+    (ys := List.replicate (n - i) 0)
+    (w := (((seed + i) % 2 ^ 64 : Nat) : Int))
+  rw [hlen] at hset
+  rw [setupList, hset, show n - i = (n - i - 1) + 1 from by omega,
+    List.replicate_succ, List.set_cons_zero, setupList,
+    take_succ_snoc (by rw [mmFamily_length]; exact hi), mmFamily_getD hi,
+    show n - (i + 1) = n - i - 1 from by omega]
+  simp [List.append_assoc]
+
+/-! ### Machine-integer facts for the setup arithmetic -/
+
+/-- The wrapping normal form of a `Nat`-cast sum — the machine's uint64
+`+` IS the family's `% 2^64`. -/
+private theorem unorm_nat_wrap (x : Nat) :
+    IntKind.normalize .uint64 ((x : Nat) : Int)
+      = ((x % 2 ^ 64 : Nat) : Int) := by
+  simp only [IntKind.normalize, IntKind.bits?, IntKind.signed]
+  simp only [Bool.false_eq_true, if_false]
+  omega
+
+private theorem unorm_nat_of_lt {x : Nat} (h : x < 2 ^ 64) :
+    IntKind.normalize .uint64 ((x : Nat) : Int) = ((x : Nat) : Int) :=
+  unorm_of_range (by omega) (by exact_mod_cast h)
+
+/-! ### Harness-layout environments, continuations, and states -/
+
+private def hEnvA : LocalEnv :=
+  [[("$res1", .base ⟨3⟩), ("$res0", .base ⟨2⟩),
+    ("seed", .base ⟨1⟩), ("n", .base ⟨0⟩)]]
+private def hEnvMS : LocalEnv :=
+  [[("$c12", .base ⟨4⟩)],
+   [("$res1", .base ⟨3⟩), ("$res0", .base ⟨2⟩),
+    ("seed", .base ⟨1⟩), ("n", .base ⟨0⟩)]]
+private def hEnvS : LocalEnv :=
+  [[("s", .base ⟨6⟩), ("$c12", .base ⟨4⟩)],
+   [("$res1", .base ⟨3⟩), ("$res0", .base ⟨2⟩),
+    ("seed", .base ⟨1⟩), ("n", .base ⟨0⟩)]]
+private def shEnvIn : LocalEnv :=
+  [("$forFirst", .base ⟨8⟩)] :: [("i", .base ⟨7⟩)] :: hEnvS
+private def shEnvC : LocalEnv := [] :: shEnvIn
+private def shEnvB2 : LocalEnv := [] :: shEnvC
+private def hEnvC : LocalEnv :=
+  [[("$c14", .base ⟨10⟩), ("$c13", .base ⟨9⟩),
+    ("s", .base ⟨6⟩), ("$c12", .base ⟨4⟩)],
+   [("$res1", .base ⟨3⟩), ("$res0", .base ⟨2⟩),
+    ("seed", .base ⟨1⟩), ("n", .base ⟨0⟩)]]
+
+private abbrev hSInitSeqn : Stmt :=
+  .seqn #[.initialization { id := "s", typ := .slice (.int .uint64) },
+          .assign (.var "s") (.var "$c12")]
+private abbrev shLoopBlock : Stmt :=
+  .block #[]
+    #[.seqn #[.initialization { id := "i", typ := .int .uint64 },
+              .assign (.var "i") (.intLit 0 .uint64)],
+      .block #[]
+        #[.initialization { id := "$forFirst", typ := .bool },
+          .assign (.var "$forFirst") (.boolLit true),
+          .while (.boolLit true) mmHarnessFunc.shBody]]
+private abbrev hCallSeqn : Stmt :=
+  .seqn #[.initialization { id := "$c13", typ := .int .uint64 },
+          .initialization { id := "$c14", typ := .int .uint64 },
+          .call #[.var "$c13", .var "$c14"] ⟨"minMax"⟩ #[.var "s"]]
+private abbrev hEpilogue : Stmt :=
+  .seqn #[.assign (.var "$res0") (.var "$c13"),
+          .assign (.var "$res1") (.var "$c14"),
+          .returnStmt]
+private abbrev shStoreBlock : Stmt :=
+  .block #[]
+    #[.seqn #[.assign (.addr (.indexAddr (.var "s") (.var "i")))
+        (.add (.var "seed") (.var "i"))]]
+
+/-- The continuation after the `makeSlice` statement. -/
+private def hkMS : Cont :=
+  .seq [hSInitSeqn, shLoopBlock, hCallSeqn, hEpilogue] hEnvMS
+    (.frame [] [] [] [] .stop false)
+/-- The continuation below the setup loop. -/
+private def shTailK : Cont :=
+  .seq [hCallSeqn, hEpilogue] hEnvS (.frame [] [] [] [] .stop false)
+private def shHeadTail : Cont :=
+  .seq [] shEnvIn (.seq [] ([("i", .base ⟨7⟩)] :: hEnvS) shTailK)
+/-- The setup loop-head configuration. -/
+private def shHeadCfg : Config :=
+  .exec (.while (.boolLit true) mmHarnessFunc.shBody) shEnvIn shHeadTail
+private def shLoopK : Cont :=
+  .loop (.boolLit true) mmHarnessFunc.shBody shEnvIn shHeadTail
+/-- The setup exit test's delivery continuation (segment split
+point). -/
+private def shCmpK : Cont :=
+  .ifK (.seqn #[]) .breakStmt shEnvC (.seq [shStoreBlock] shEnvC shLoopK)
+private def shStTail : Cont :=
+  .seq [] shEnvB2 (.seq [] shEnvC shLoopK)
+
+private abbrev sliceH5 (n : Nat) : GoValue :=
+  .slice ⟨some (.base ⟨5⟩), 0, n, n⟩
+private abbrev hcellH (n : Nat) : HeapCell :=
+  ⟨some (.slice (.int .uint64)), sliceH5 n⟩
+
+/-- The prelude-built entry seed (two bound parameters, two zeroed
+result cells). -/
+private def mhSeedI (nv sv : Int) : ExecState :=
+  { types := minMaxLowered.typeDefs.toList,
+    functions := minMaxLowered.funcs, methods := minMaxLowered.methods,
+    heap := [(.base ⟨0⟩, ucell nv), (.base ⟨1⟩, ucell sv),
+             (.base ⟨2⟩, ucell 0), (.base ⟨3⟩, ucell 0)],
+    nextAddr := 4 }
+
+/-- The harness-body start configuration (the prelude's `c₀`). -/
+private def mhc₀ : Config :=
+  .exec mmHarnessFunc.body hEnvA (.frame [] [] [] [] .stop false)
+
+/-- At the `makeSlice` apply point (`$c12` allocated at its default). -/
+private def σMS (nv sv : Int) : ExecState :=
+  { types := minMaxLowered.typeDefs.toList,
+    functions := minMaxLowered.funcs, methods := minMaxLowered.methods,
+    heap := [(.base ⟨0⟩, ucell nv), (.base ⟨1⟩, ucell sv),
+             (.base ⟨2⟩, ucell 0), (.base ⟨3⟩, ucell 0),
+             (.base ⟨4⟩, ⟨some (.slice (.int .uint64)),
+                .slice ⟨none, 0, 0, 0⟩⟩)],
+    nextAddr := 5 }
+
+/-- After the `makeSlice` apply: the handle at 4, the zeroed backing at
+5. -/
+private def σMS' (nv sv : Int) (n : Nat) : ExecState :=
+  { types := minMaxLowered.typeDefs.toList,
+    functions := minMaxLowered.funcs, methods := minMaxLowered.methods,
+    heap := [(.base ⟨0⟩, ucell nv), (.base ⟨1⟩, ucell sv),
+             (.base ⟨2⟩, ucell 0), (.base ⟨3⟩, ucell 0),
+             (.base ⟨4⟩, hcellH n),
+             (.base ⟨5⟩, arrCell n (List.replicate n 0))],
+    nextAddr := 6 }
+
+/-- The setup-loop state: parameters, the handle cells, the backing
+list `l`, the setup counter, the setup flag. -/
+private def shState (nv sv : Int) (n : Nat) (l : List Int) (iv : Int)
+    (ffv : Bool) : ExecState :=
+  { types := minMaxLowered.typeDefs.toList,
+    functions := minMaxLowered.funcs, methods := minMaxLowered.methods,
+    heap := [(.base ⟨0⟩, ucell nv), (.base ⟨1⟩, ucell sv),
+             (.base ⟨2⟩, ucell 0), (.base ⟨3⟩, ucell 0),
+             (.base ⟨4⟩, hcellH n), (.base ⟨5⟩, arrCell n l),
+             (.base ⟨6⟩, hcellH n), (.base ⟨7⟩, ucell iv),
+             (.base ⟨8⟩, bcell ffv)],
+    nextAddr := 9 }
+
+/-! ### The minMax frame at the harness layout -/
+
+private def mEnvB : LocalEnv :=
+  [[("hi", .base ⟨15⟩), ("lo", .base ⟨14⟩)],
+   [("$res1", .base ⟨13⟩), ("$res0", .base ⟨12⟩), ("s", .base ⟨11⟩)]]
+private def mEnvI : LocalEnv := [("i", .base ⟨16⟩)] :: mEnvB
+private def mEnvIn : LocalEnv := [("$forFirst", .base ⟨17⟩)] :: mEnvI
+private def mEnvC : LocalEnv := [] :: mEnvIn
+private def mEnvB2 : LocalEnv := [] :: mEnvC
+private def mEnvB3 : LocalEnv := [] :: mEnvB2
+
+private def mShapes : List (TargetShape × List Expr) :=
+  [(.chain [], [.ref "$c13"]), (.chain [], [.ref "$c14"])]
+private def mFrameK : Cont :=
+  .frame mShapes hEnvC [.base ⟨12⟩, .base ⟨13⟩] []
+    (.seq [hEpilogue] hEnvC (.frame [] [] [] [] .stop false)) false
+private def mEntryTail : Cont := .seq [mmIffBlock, mmTailSeqn] mEnvB mFrameK
+private def mtref14 : TargetRef := .chain (.addr (.base ⟨14⟩)) [] []
+private def mtref15 : TargetRef := .chain (.addr (.base ⟨15⟩)) [] []
+private def mRhs1K : Cont :=
+  .rhsK .vals [mtref14, mtref15] []
+    [.indexGet (.var "s") (.intLit 0 .int)] (.seqn #[]) mEnvB mEntryTail
+private def mRhs2K (w : Int) : Cont :=
+  .rhsK .vals [mtref14, mtref15] [.int w .uint64] [] (.seqn #[]) mEnvB
+    mEntryTail
+
+private def mHeadTail : Cont :=
+  .seq [] mEnvIn (.seq [] mEnvI (.seq [mmTailSeqn] mEnvB mFrameK))
+/-- The minMax loop-head configuration at the harness layout. -/
+private def mHeadCfg : Config :=
+  .exec (.while (.boolLit true) mmWhileBody) mEnvIn mHeadTail
+private def mLoopK : Cont := .loop (.boolLit true) mmWhileBody mEnvIn mHeadTail
+private def mCmpIfK : Cont :=
+  .ifK (.seqn #[]) .breakStmt mEnvC
+    (.seq [.block #[] #[mmLoIf, mmHiIf]] mEnvC mLoopK)
+private def mLenApplyK (iv : Int) : Cont :=
+  .strictK (.lengthOf (some (.slice (.int .uint64)))) [] [] mEnvC
+    (.strictK .lessCmp [.int iv .int] [] mEnvC mCmpIfK)
+
+private def mLoIfK : Cont :=
+  .ifK (.block #[]
+      #[.seqn #[.assign (.var "lo") (.indexGet (.var "s") (.var "i"))]])
+    (.seqn #[]) mEnvB2 (.seq [mmHiIf] mEnvB2 (.seq [] mEnvC mLoopK))
+private def mLoCmpK : Cont := .strictK .lessCmp [] [.var "lo"] mEnvB2 mLoIfK
+private def mLoStoreK : Cont :=
+  .rhsK .vals [mtref14] [] [] (.seqn #[]) mEnvB3
+    (.seq [] mEnvB3 (.seq [mmHiIf] mEnvB2 (.seq [] mEnvC mLoopK)))
+private def mHiIfK : Cont :=
+  .ifK (.block #[]
+      #[.seqn #[.assign (.var "hi") (.indexGet (.var "s") (.var "i"))]])
+    (.seqn #[]) mEnvB2 (.seq [] mEnvB2 (.seq [] mEnvC mLoopK))
+private def mHiCmpK : Cont := .strictK .greaterCmp [] [.var "hi"] mEnvB2 mHiIfK
+private def mHiStoreK : Cont :=
+  .rhsK .vals [mtref15] [] [] (.seqn #[]) mEnvB3
+    (.seq [] mEnvB3 (.seq [] mEnvB2 (.seq [] mEnvC mLoopK)))
+
+/-- The mid-entry state: minMax frame entered, `lo`/`hi` at defaults
+(the setup counter parked at `n`). -/
+private def σM1 (nv sv : Int) (n : Nat) (l : List Int) : ExecState :=
+  { types := minMaxLowered.typeDefs.toList,
+    functions := minMaxLowered.funcs, methods := minMaxLowered.methods,
+    heap := [(.base ⟨0⟩, ucell nv), (.base ⟨1⟩, ucell sv),
+             (.base ⟨2⟩, ucell 0), (.base ⟨3⟩, ucell 0),
+             (.base ⟨4⟩, hcellH n), (.base ⟨5⟩, arrCell n l),
+             (.base ⟨6⟩, hcellH n), (.base ⟨7⟩, ucell ((n : Nat) : Int)),
+             (.base ⟨8⟩, bcell false),
+             (.base ⟨9⟩, ucell 0), (.base ⟨10⟩, ucell 0),
+             (.base ⟨11⟩, hcellH n),
+             (.base ⟨12⟩, ucell 0), (.base ⟨13⟩, ucell 0),
+             (.base ⟨14⟩, ucell 0), (.base ⟨15⟩, ucell 0)],
+    nextAddr := 16 }
+
+/-- The in-minMax-loop state at the harness layout. -/
+private def mState (nv sv : Int) (n : Nat) (l : List Int)
+    (lov hiv iv : Int) (ffv : Bool) : ExecState :=
+  { types := minMaxLowered.typeDefs.toList,
+    functions := minMaxLowered.funcs, methods := minMaxLowered.methods,
+    heap := [(.base ⟨0⟩, ucell nv), (.base ⟨1⟩, ucell sv),
+             (.base ⟨2⟩, ucell 0), (.base ⟨3⟩, ucell 0),
+             (.base ⟨4⟩, hcellH n), (.base ⟨5⟩, arrCell n l),
+             (.base ⟨6⟩, hcellH n), (.base ⟨7⟩, ucell ((n : Nat) : Int)),
+             (.base ⟨8⟩, bcell false),
+             (.base ⟨9⟩, ucell 0), (.base ⟨10⟩, ucell 0),
+             (.base ⟨11⟩, hcellH n),
+             (.base ⟨12⟩, ucell 0), (.base ⟨13⟩, ucell 0),
+             (.base ⟨14⟩, ucell lov), (.base ⟨15⟩, ucell hiv),
+             (.base ⟨16⟩, icell iv), (.base ⟨17⟩, bcell ffv)],
+    nextAddr := 18 }
+
+/-- The exit-test state after the dispatch of iteration `m`. -/
+private abbrev mCmpState (nv sv : Int) (n : Nat) (l : List Int) (m : Nat) :
+    ExecState :=
+  mState nv sv n l (minSpec (l.take m)) (maxSpec (l.take m))
+    ((m : Nat) : Int) false
+
+/-- The terminal state: results delivered through the minMax frame,
+`$c13`/`$c14`, and the harness result cells. -/
+private def mhFinal (nv sv : Int) (n : Nat) (l : List Int) : ExecState :=
+  { types := minMaxLowered.typeDefs.toList,
+    functions := minMaxLowered.funcs, methods := minMaxLowered.methods,
+    heap := [(.base ⟨0⟩, ucell nv), (.base ⟨1⟩, ucell sv),
+             (.base ⟨2⟩, ucell (minSpec l)), (.base ⟨3⟩, ucell (maxSpec l)),
+             (.base ⟨4⟩, hcellH n), (.base ⟨5⟩, arrCell n l),
+             (.base ⟨6⟩, hcellH n), (.base ⟨7⟩, ucell ((n : Nat) : Int)),
+             (.base ⟨8⟩, bcell false),
+             (.base ⟨9⟩, ucell (minSpec l)), (.base ⟨10⟩, ucell (maxSpec l)),
+             (.base ⟨11⟩, hcellH n),
+             (.base ⟨12⟩, ucell (minSpec l)), (.base ⟨13⟩, ucell (maxSpec l)),
+             (.base ⟨14⟩, ucell (minSpec l)), (.base ⟨15⟩, ucell (maxSpec l)),
+             (.base ⟨16⟩, icell ((n : Nat) : Int)),
+             (.base ⟨17⟩, bcell false)],
+    nextAddr := 18 }
+
+/-! ### Heap-lookup facts and step glue -/
+
+private theorem lookup_shState (nv sv : Int) (n : Nat) (l : List Int)
+    (iv : Int) (ffv : Bool) :
+    Heap.lookup (shState nv sv n l iv ffv).heap (.base ⟨5⟩)
+      = some ⟨some (.array n (.int .uint64)),
+          .array ⟨l.map (fun v => .int v .uint64)⟩⟩ := by
+  simp [shState, Heap.lookup]
+
+private theorem lookup_σM1 (nv sv : Int) (n : Nat) (l : List Int) :
+    Heap.lookup (σM1 nv sv n l).heap (.base ⟨5⟩)
+      = some ⟨some (.array n (.int .uint64)),
+          .array ⟨l.map (fun v => .int v .uint64)⟩⟩ := by
+  simp [σM1, Heap.lookup]
+
+private theorem lookup_mState (nv sv : Int) (n : Nat) (l : List Int)
+    (lov hiv iv : Int) (ffv : Bool) :
+    Heap.lookup (mState nv sv n l lov hiv iv ffv).heap (.base ⟨5⟩)
+      = some ⟨some (.array n (.int .uint64)),
+          .array ⟨l.map (fun v => .int v .uint64)⟩⟩ := by
+  simp [mState, Heap.lookup]
+
+/-- The phase-2 store machine step, conditioned on the store fact
+(reverse's `stepFn_store_step`). -/
+private theorem stepFn_store_step {σ σ' : ExecState} {r : TargetRef}
+    {val : GoValue} {rs : List TargetRef} {vs : List GoValue} {body : Stmt}
+    {env : LocalEnv} {k : Cont} {ch : Choices}
+    (h : storeTarget σ r val = .ok σ') :
+    stepFn σ (.next (.storeK (r :: rs) (val :: vs) body env k)) ch
+      = .ok (.next (.storeK rs vs body env k), σ', ch) := by
+  simp only [stepFn]
+  rw [h]
+  rfl
+
+/-- The wide-statement apply machine step, conditioned on the op fact
+(the `stmtOpK` analog of `stepFn_strict_apply`). -/
+private theorem stepFn_stmtOp_apply {σ σ' : ExecState} {op : StmtOp}
+    {nt : Nat} {done : List GoValue} {v : GoValue} {env : LocalEnv}
+    {k : Cont} {ch : Choices}
+    (h : applyStmtOp σ ch op nt (v :: done).reverse = .ok (σ', ch)) :
+    stepFn σ (.retV v (.stmtOpK op nt done [] env k)) ch
+      = .ok (.next k, σ', ch) := by
+  simp only [stepFn]
+  rw [h]
+  rfl
+
+/-- **The `make([]uint64, n)` apply at SYMBOLIC length** — the one
+data-dependent step of the setup phase: the length check discharged by
+`n : Nat`, the backing built by the shared `buildDefaultArrayValue_int`
+(a replicate of zeros), the handle stored at the target cell. -/
+private theorem applyStmtOp_makeSlice_u64 (nv sv : Int) (n : Nat)
+    (ch : Choices) :
+    applyStmtOp (σMS nv sv) ch (.makeSlice (.int .uint64) false) 1
+      [.addr (.base ⟨4⟩), .int (n : Int) .uint64]
+      = .ok (σMS' nv sv n, ch) := by
+  have hbd := GoLean.Iris.buildDefaultArrayValue_int (σMS nv sv) .uint64 n
+  have h1 : ¬ ((n : Int) < 0) := by omega
+  have h2 : ¬ (n < n) := Nat.lt_irrefl n
+  simp only [applyStmtOp, applyStmtOpCore, valueAsInt, natFromNonnegativeInt,
+    Bind.bind, Except.bind, pure, Except.pure, if_neg h1, if_neg h2,
+    Int.toNat_natCast, hbd]
+  have hval : (GoValue.array (List.replicate n (GoValue.int 0 IntKind.uint64)).toArray)
+      = .array ⟨(List.replicate n ((0 : Int))).map (fun v => .int v .uint64)⟩ := by
+    simp [List.map_replicate]
+  rw [hval]
+  with_unfolding_all rfl
+
+/-! ### Raw run segments (`with_unfolding_all rfl`; splits exactly at
+the data-dependent points: the `makeSlice` apply, the element stores,
+the value-dependent `if` deliveries, the five `indexGet` applies, the
+per-pass `len(s)` apply) -/
+
+/-- Entry A: harness-body start → the `makeSlice` apply point (`$c12`
+allocated at its default). 10 steps. -/
+private theorem mmh_entryA_raw (nv sv : Int) (ch : Choices) :
+    stepFnIter 10 (mhSeedI nv sv) mhc₀ ch
+      = .ok (.retV (.int nv .uint64)
+            (.stmtOpK (.makeSlice (.int .uint64) false) 1
+              [.addr (.base ⟨4⟩)] [] hEnvMS hkMS),
+          σMS nv sv, ch) := by
+  with_unfolding_all rfl
+
+/-- Entry B: after the `makeSlice` apply → the setup loop head (`s`
+bound to the handle, `i := 0`, the `$forFirst` block). 42 steps. -/
+private theorem mmh_entryB_raw (nv sv : Int) (n : Nat) (ch : Choices) :
+    stepFnIter 42 (σMS' nv sv n) (.next hkMS) ch
+      = .ok (shHeadCfg,
+          shState nv sv n (List.replicate n 0) 0 true, ch) := by
+  with_unfolding_all rfl
+
+/-- Setup first-pass dispatch: head with the flag up → the exit-test
+delivery (`i < n` on the PARAMETER cell — `nv` symbolic). 25 steps. -/
+private theorem sh_dispA_raw (nv sv : Int) (n : Nat) (l : List Int)
+    (iv : Int) (ch : Choices) :
+    stepFnIter 25 (shState nv sv n l iv true) shHeadCfg ch
+      = .ok (.retV (.bool (decide (iv < nv))) shCmpK,
+          shState nv sv n l iv false, ch) := by
+  with_unfolding_all rfl
+
+/-- Setup later-pass dispatch: head with the flag down → `i = i + 1`
+(uint64: the stored and riding values carry the machine's double
+normalization), the exit test. 29 steps. -/
+private theorem sh_dispB_raw (nv sv : Int) (n : Nat) (l : List Int)
+    (iv : Int) (ch : Choices) :
+    stepFnIter 29 (shState nv sv n l iv false) shHeadCfg ch
+      = .ok (.retV (.bool (decide
+            (IntKind.normalize .uint64 (IntKind.normalize .uint64 (iv + 1))
+              < nv))) shCmpK,
+          shState nv sv n l
+            (IntKind.normalize .uint64 (IntKind.normalize .uint64 (iv + 1)))
+            false, ch) := by
+  with_unfolding_all rfl
+
+/-- Setup body: exit test true → the element-store point (`s[i]`'s
+target chain resolved, `seed + i` computed — the machine's wrapping
+uint64 add rides as one `normalize`). 18 steps. -/
+private theorem sh_body_raw (nv sv : Int) (n : Nat) (l : List Int)
+    (iv : Int) (ch : Choices) :
+    stepFnIter 18 (shState nv sv n l iv false) (.retV (.bool true) shCmpK) ch
+      = .ok (.next (.storeK
+            [.chain (sliceH5 n) [.int iv .uint64] [.index]]
+            [.int (IntKind.normalize .uint64 (sv + iv)) .uint64]
+            (.seqn #[]) shEnvB2 shStTail),
+          shState nv sv n l iv false, ch) := by
+  with_unfolding_all rfl
+
+/-- Setup store drain: element stored → back to the loop head. 5
+steps. -/
+private theorem sh_drain_raw (nv sv : Int) (n : Nat) (l : List Int)
+    (iv : Int) (ch : Choices) :
+    stepFnIter 5 (shState nv sv n l iv false)
+      (.next (.storeK [] [] (.seqn #[]) shEnvB2 shStTail)) ch
+      = .ok (shHeadCfg, shState nv sv n l iv false, ch) := by
+  with_unfolding_all rfl
+
+/-- Setup exit: test false → break unwinding, `$c13`/`$c14`
+declarations, the `minMax` call's frame entry, `lo`/`hi` declarations,
+the first `s[0]` operand walk → the first index-read apply point. 33
+steps. -/
+private theorem sh_exitC_raw (nv sv : Int) (n : Nat) (l : List Int)
+    (ch : Choices) :
+    stepFnIter 33 (shState nv sv n l ((n : Nat) : Int) false)
+      (.retV (.bool false) shCmpK) ch
+      = .ok (.retV (.int 0 .int)
+            (.strictK .indexGet [sliceH5 n] [] mEnvB mRhs1K),
+          σM1 nv sv n l, ch) := by
+  with_unfolding_all rfl
+
+/-- minMax entry C: first element delivered → the second `s[0]` apply
+point. 5 steps. -/
+private theorem mmh_entryC_raw (nv sv : Int) (n : Nat) (l : List Int)
+    (w : Int) (ch : Choices) :
+    stepFnIter 5 (σM1 nv sv n l) (.retV (.int w .uint64) mRhs1K) ch
+      = .ok (.retV (.int 0 .int)
+            (.strictK .indexGet [sliceH5 n] [] mEnvB (mRhs2K w)),
+          σM1 nv sv n l, ch) := by
+  with_unfolding_all rfl
+
+/-- minMax entry D: both reads delivered → the `lo`/`hi` stores,
+`i := 1`, the `$forFirst` block → the minMax loop head. 34 steps. -/
+private theorem mmh_entryD_raw (nv sv : Int) (n : Nat) (l : List Int)
+    (w1 w2 : Int) (ch : Choices) :
+    stepFnIter 34 (σM1 nv sv n l) (.retV (.int w2 .uint64) (mRhs2K w1)) ch
+      = .ok (mHeadCfg,
+          mState nv sv n l (IntKind.normalize .uint64 w1)
+            (IntKind.normalize .uint64 w2) 1 true, ch) := by
+  with_unfolding_all rfl
+
+/-- minMax first-pass dispatch: head with the flag up → the `len(s)`
+apply point. 25 steps. -/
+private theorem mh_dispA_raw (nv sv : Int) (n : Nat) (l : List Int)
+    (lov hiv iv : Int) (ch : Choices) :
+    stepFnIter 25 (mState nv sv n l lov hiv iv true) mHeadCfg ch
+      = .ok (.retV (sliceH5 n) (mLenApplyK iv),
+          mState nv sv n l lov hiv iv false, ch) := by
+  with_unfolding_all rfl
+
+/-- minMax later-pass dispatch: `i = i + 1` (int: double
+normalization), then the `len(s)` apply point. 29 steps. -/
+private theorem mh_dispB_raw (nv sv : Int) (n : Nat) (l : List Int)
+    (lov hiv iv : Int) (ch : Choices) :
+    stepFnIter 29 (mState nv sv n l lov hiv iv false) mHeadCfg ch
+      = .ok (.retV (sliceH5 n)
+            (mLenApplyK
+              (IntKind.normalize .int (IntKind.normalize .int (iv + 1)))),
+          mState nv sv n l lov hiv
+            (IntKind.normalize .int (IntKind.normalize .int (iv + 1))) false,
+          ch) := by
+  with_unfolding_all rfl
+
+/-- minMax body entry: exit test true → the `s[i]` apply point of the
+first conditional. 11 steps. -/
+private theorem mh_bodyA_raw (nv sv : Int) (n : Nat) (l : List Int)
+    (lov hiv iv : Int) (ch : Choices) :
+    stepFnIter 11 (mState nv sv n l lov hiv iv false)
+      (.retV (.bool true) mCmpIfK) ch
+      = .ok (.retV (.int iv .int)
+            (.strictK .indexGet [sliceH5 n] [] mEnvB2 mLoCmpK),
+          mState nv sv n l lov hiv iv false, ch) := by
+  with_unfolding_all rfl
+
+/-- minMax body: element delivered → `lo` load, the `<` compare
+delivery. 3 steps. -/
+private theorem mh_bodyB_raw (nv sv : Int) (n : Nat) (l : List Int)
+    (lov hiv iv w : Int) (ch : Choices) :
+    stepFnIter 3 (mState nv sv n l lov hiv iv false)
+      (.retV (.int w .uint64) mLoCmpK) ch
+      = .ok (.retV (.bool (decide (w < lov))) mLoIfK,
+          mState nv sv n l lov hiv iv false, ch) := by
+  with_unfolding_all rfl
+
+/-- `lo`-branch taken: → the `s[i]` apply point of the assignment's
+RHS. 12 steps. -/
+private theorem mh_loT_raw (nv sv : Int) (n : Nat) (l : List Int)
+    (lov hiv iv : Int) (ch : Choices) :
+    stepFnIter 12 (mState nv sv n l lov hiv iv false)
+      (.retV (.bool true) mLoIfK) ch
+      = .ok (.retV (.int iv .int)
+            (.strictK .indexGet [sliceH5 n] [] mEnvB3 mLoStoreK),
+          mState nv sv n l lov hiv iv false, ch) := by
+  with_unfolding_all rfl
+
+/-- `lo`-branch store: element delivered → `lo := w` → the `s[i]` apply
+point of the second conditional. 12 steps. -/
+private theorem mh_loT2_raw (nv sv : Int) (n : Nat) (l : List Int)
+    (lov hiv iv w : Int) (ch : Choices) :
+    stepFnIter 12 (mState nv sv n l lov hiv iv false)
+      (.retV (.int w .uint64) mLoStoreK) ch
+      = .ok (.retV (.int iv .int)
+            (.strictK .indexGet [sliceH5 n] [] mEnvB2 mHiCmpK),
+          mState nv sv n l (IntKind.normalize .uint64 w) hiv iv false,
+          ch) := by
+  with_unfolding_all rfl
+
+/-- `lo`-branch skipped: → the `s[i]` apply point of the second
+conditional, state untouched. 9 steps. -/
+private theorem mh_loF_raw (nv sv : Int) (n : Nat) (l : List Int)
+    (lov hiv iv : Int) (ch : Choices) :
+    stepFnIter 9 (mState nv sv n l lov hiv iv false)
+      (.retV (.bool false) mLoIfK) ch
+      = .ok (.retV (.int iv .int)
+            (.strictK .indexGet [sliceH5 n] [] mEnvB2 mHiCmpK),
+          mState nv sv n l lov hiv iv false, ch) := by
+  with_unfolding_all rfl
+
+/-- Second conditional: element delivered → `hi` load, the `>` compare
+delivery. 3 steps. -/
+private theorem mh_hiB_raw (nv sv : Int) (n : Nat) (l : List Int)
+    (lov hiv iv w : Int) (ch : Choices) :
+    stepFnIter 3 (mState nv sv n l lov hiv iv false)
+      (.retV (.int w .uint64) mHiCmpK) ch
+      = .ok (.retV (.bool (decide (hiv < w))) mHiIfK,
+          mState nv sv n l lov hiv iv false, ch) := by
+  with_unfolding_all rfl
+
+/-- `hi`-branch taken: → the `s[i]` apply point of the assignment's
+RHS. 12 steps. -/
+private theorem mh_hiT_raw (nv sv : Int) (n : Nat) (l : List Int)
+    (lov hiv iv : Int) (ch : Choices) :
+    stepFnIter 12 (mState nv sv n l lov hiv iv false)
+      (.retV (.bool true) mHiIfK) ch
+      = .ok (.retV (.int iv .int)
+            (.strictK .indexGet [sliceH5 n] [] mEnvB3 mHiStoreK),
+          mState nv sv n l lov hiv iv false, ch) := by
+  with_unfolding_all rfl
+
+/-- `hi`-branch store: element delivered → `hi := w` → back to the loop
+head. 8 steps. -/
+private theorem mh_hiT2_raw (nv sv : Int) (n : Nat) (l : List Int)
+    (lov hiv iv w : Int) (ch : Choices) :
+    stepFnIter 8 (mState nv sv n l lov hiv iv false)
+      (.retV (.int w .uint64) mHiStoreK) ch
+      = .ok (mHeadCfg,
+          mState nv sv n l lov (IntKind.normalize .uint64 w) iv false,
+          ch) := by
+  with_unfolding_all rfl
+
+/-- `hi`-branch skipped: → back to the loop head, state untouched. 5
+steps. -/
+private theorem mh_hiF_raw (nv sv : Int) (n : Nat) (l : List Int)
+    (lov hiv iv : Int) (ch : Choices) :
+    stepFnIter 5 (mState nv sv n l lov hiv iv false)
+      (.retV (.bool false) mHiIfK) ch
+      = .ok (mHeadCfg, mState nv sv n l lov hiv iv false, ch) := by
+  with_unfolding_all rfl
+
+/-- Exit: test false → break unwinding, the minMax epilogue, the frame
+exit into `$c13`/`$c14`, the harness epilogue, the entry barrier → the
+entry terminal. 62 steps; each store re-normalizes. -/
+private theorem mmh_exit_raw (nv sv : Int) (n : Nat) (l : List Int)
+    (lov hiv iv : Int) (ch : Choices) :
+    stepFnIter 62 (mState nv sv n l lov hiv iv false)
+      (.retV (.bool false) mCmpIfK) ch
+      = .ok (.next .stop,
+          { types := minMaxLowered.typeDefs.toList,
+            functions := minMaxLowered.funcs,
+            methods := minMaxLowered.methods,
+            heap := [(.base ⟨0⟩, ucell nv), (.base ⟨1⟩, ucell sv),
+              (.base ⟨2⟩, ucell (IntKind.normalize .uint64
+                (IntKind.normalize .uint64 (IntKind.normalize .uint64 lov)))),
+              (.base ⟨3⟩, ucell (IntKind.normalize .uint64
+                (IntKind.normalize .uint64 (IntKind.normalize .uint64 hiv)))),
+              (.base ⟨4⟩, hcellH n), (.base ⟨5⟩, arrCell n l),
+              (.base ⟨6⟩, hcellH n), (.base ⟨7⟩, ucell ((n : Nat) : Int)),
+              (.base ⟨8⟩, bcell false),
+              (.base ⟨9⟩, ucell (IntKind.normalize .uint64
+                (IntKind.normalize .uint64 lov))),
+              (.base ⟨10⟩, ucell (IntKind.normalize .uint64
+                (IntKind.normalize .uint64 hiv))),
+              (.base ⟨11⟩, hcellH n),
+              (.base ⟨12⟩, ucell (IntKind.normalize .uint64 lov)),
+              (.base ⟨13⟩, ucell (IntKind.normalize .uint64 hiv)),
+              (.base ⟨14⟩, ucell lov), (.base ⟨15⟩, ucell hiv),
+              (.base ⟨16⟩, icell iv), (.base ⟨17⟩, bcell false)],
+            nextAddr := 18 }, ch) := by
+  with_unfolding_all rfl
+
+/-! ### The setup-loop induction -/
+
+/-- **The setup loop**: from the exit-test delivery at counter `i` with
+the invariant list (family prefix + zeros), exactly `53·(n − i)` steps
+reach the final `false` delivery with the WHOLE family built. Plain
+induction on the remaining count; the element store is the one
+conditioned step per iteration. -/
+private theorem sh_loop (n seed : Nat) (hn : n < 2 ^ 63) :
+    ∀ μ i : Nat, i + μ = n → ∀ ch : Choices,
+      stepFnIter (53 * μ)
+        (shState (n : Int) (seed : Int) n (setupList n seed i)
+          ((i : Nat) : Int) false)
+        (.retV (.bool (decide (((i : Nat) : Int) < ((n : Nat) : Int))))
+          shCmpK) ch
+        = .ok (.retV (.bool false) shCmpK,
+            shState (n : Int) (seed : Int) n (mmFamily n seed)
+              ((n : Nat) : Int) false, ch) := by
+  intro μ
+  induction μ with
+  | zero =>
+      intro i hi ch
+      have heq : i = n := by omega
+      subst heq
+      rw [show (decide (((i : Nat) : Int) < ((i : Nat) : Int))) = false from
+        decide_eq_false (by omega), setupList_full]
+      rfl
+  | succ μ' ih =>
+      intro i hi ch
+      have hilt : i < n := by omega
+      rw [show (decide (((i : Nat) : Int) < ((n : Nat) : Int))) = true from
+        decide_eq_true (by exact_mod_cast hilt)]
+      -- the body, with the wrapped sum cleaned to the family value
+      have hB := sh_body_raw (n : Int) (seed : Int) n (setupList n seed i)
+        ((i : Nat) : Int) ch
+      rw [show IntKind.normalize .uint64 ((seed : Int) + ((i : Nat) : Int))
+          = (((seed + i) % 2 ^ 64 : Nat) : Int) from by
+        rw [show ((seed : Int) + ((i : Nat) : Int))
+            = (((seed + i : Nat)) : Int) from by omega]
+        exact unorm_nat_wrap _] at hB
+      -- the element store
+      have hw : (0 : Int) ≤ (((seed + i) % 2 ^ 64 : Nat) : Int)
+          ∧ (((seed + i) % 2 ^ 64 : Nat) : Int) < 2 ^ 64 := by
+        constructor
+        · omega
+        · exact_mod_cast Nat.mod_lt _ (by omega)
+      have hst := storeTarget_slice_u64
+        (σ := shState (n : Int) (seed : Int) n (setupList n seed i)
+          ((i : Nat) : Int) false)
+        (a := ⟨5⟩) (off := 0) (len := n) (cap := n) (i := i) (n := n)
+        (ik := .uint64) (l := setupList n seed i)
+        (w := (((seed + i) % 2 ^ 64 : Nat) : Int))
+        (lookup_shState _ _ _ _ _ _) (Nat.le_refl n) hilt
+        (by rw [setupList_length (by omega)]; omega)
+        (setupList_length (by omega)) (setupList_range n seed i) hw
+      rw [Nat.zero_add] at hst
+      have hstore : storeTarget
+          (shState (n : Int) (seed : Int) n (setupList n seed i)
+            ((i : Nat) : Int) false)
+          (.chain (sliceH5 n) [.int ((i : Nat) : Int) .uint64] [.index])
+          (.int (((seed + i) % 2 ^ 64 : Nat) : Int) .uint64)
+          = .ok (shState (n : Int) (seed : Int) n (setupList n seed (i + 1))
+              ((i : Nat) : Int) false) := by
+        rw [← setupList_set hilt]
+        exact hst
+      -- the drain and the next dispatch
+      have hD := sh_drain_raw (n : Int) (seed : Int) n
+        (setupList n seed (i + 1)) ((i : Nat) : Int) ch
+      have hDB := sh_dispB_raw (n : Int) (seed : Int) n
+        (setupList n seed (i + 1)) ((i : Nat) : Int) ch
+      rw [show ((i : Nat) : Int) + 1 = ((i + 1 : Nat) : Int) from by omega,
+        unorm_nat_of_lt (by omega : i + 1 < 2 ^ 64),
+        unorm_nat_of_lt (by omega : i + 1 < 2 ^ 64)] at hDB
+      -- the IH at i + 1
+      have hIH := ih (i + 1) (by omega) ch
+      have hchain := stepFnIter_chain
+        (stepFnIter_chain
+          (stepFnIter_chain
+            (stepFnIter_chain hB (stepFnIter_one (stepFn_store_step hstore)))
+            hD)
+          hDB)
+        hIH
+      rw [show 53 * (μ' + 1) = 18 + 1 + 5 + 29 + 53 * μ' from by omega]
+      exact hchain
+
+/-! ### The minMax loop induction (the framed layer's prefix-min/max
+strong induction, at the harness layout) -/
+
+/-- **One minMax iteration, cleaned** (the framed layer's `mm_iter`,
+ported): exit test true at counter `m` → the next exit-test delivery,
+prefix min/max advanced to `m + 1`. -/
+private theorem mh_iter (nv sv : Int) (n : Nat) (l : List Int) (m : Nat)
+    (hln : l.length = n) (hxs : ∀ v ∈ l, 0 ≤ v ∧ v < 2 ^ 64)
+    (hn : n < 2 ^ 63) (hm1 : 1 ≤ m) (hm : m < n) (ch : Choices) :
+    ∃ k : Nat, k ≤ 96 ∧
+      stepFnIter k (mCmpState nv sv n l m) (.retV (.bool true) mCmpIfK) ch
+        = .ok (.retV (.bool (decide
+              (((m + 1 : Nat) : Int) < ((n : Nat) : Int)))) mCmpIfK,
+            mCmpState nv sv n l (m + 1), ch) := by
+  have hm' : m < l.length := by omega
+  have hne : l ≠ [] := by
+    intro hc
+    rw [hc] at hln
+    simp at hln
+    omega
+  have hw := hxs _ (getD_mem hm')
+  have hget : (⟨l.map (fun v => .int v .uint64)⟩ : Array GoValue)[0 + m]?
+      = some (.int (l.getD m 0) .uint64) := by
+    rw [Nat.zero_add, getElem?_mapU _ _ hm']
+  -- Phase 1: through the first conditional, lo advanced.
+  have phase1 : ∃ k₁ : Nat, k₁ ≤ 40 ∧
+      stepFnIter k₁ (mCmpState nv sv n l m) (.retV (.bool true) mCmpIfK) ch
+        = .ok (.retV (.int ((m : Nat) : Int) .int)
+              (.strictK .indexGet [sliceH5 n] [] mEnvB2 mHiCmpK),
+            mState nv sv n l (minSpec (l.take (m + 1)))
+              (maxSpec (l.take m)) ((m : Nat) : Int) false, ch) := by
+    have hA := mh_bodyA_raw nv sv n l (minSpec (l.take m))
+      (maxSpec (l.take m)) ((m : Nat) : Int) ch
+    have hidx1 : stepFn (mCmpState nv sv n l m)
+        (.retV (.int ((m : Nat) : Int) .int)
+          (.strictK .indexGet [sliceH5 n] [] mEnvB2 mLoCmpK)) ch
+        = .ok (.retV (.int (l.getD m 0) .uint64) mLoCmpK,
+            mCmpState nv sv n l m, ch) :=
+      stepFn_strict_apply
+        (applyStrictOp_indexGet_slice (lookup_mState _ _ _ _ _ _ _ _)
+          (Nat.le_refl _) hm hget)
+    have hB := mh_bodyB_raw nv sv n l (minSpec (l.take m))
+      (maxSpec (l.take m)) ((m : Nat) : Int) (l.getD m 0) ch
+    have h15 := stepFnIter_chain
+      (stepFnIter_chain hA (stepFnIter_one hidx1)) hB
+    by_cases hlt : l.getD m 0 < minSpec (l.take m)
+    · rw [show (decide (l.getD m 0 < minSpec (l.take m))) = true from
+        decide_eq_true hlt] at h15
+      have hC := mh_loT_raw nv sv n l (minSpec (l.take m))
+        (maxSpec (l.take m)) ((m : Nat) : Int) ch
+      have hidx2 : stepFn (mCmpState nv sv n l m)
+          (.retV (.int ((m : Nat) : Int) .int)
+            (.strictK .indexGet [sliceH5 n] [] mEnvB3 mLoStoreK)) ch
+          = .ok (.retV (.int (l.getD m 0) .uint64) mLoStoreK,
+              mCmpState nv sv n l m, ch) :=
+        stepFn_strict_apply
+          (applyStrictOp_indexGet_slice (lookup_mState _ _ _ _ _ _ _ _)
+            (Nat.le_refl _) hm hget)
+      have hD := mh_loT2_raw nv sv n l (minSpec (l.take m))
+        (maxSpec (l.take m)) ((m : Nat) : Int) (l.getD m 0) ch
+      rw [unorm_of_range hw.1 hw.2] at hD
+      refine ⟨40, Nat.le_refl _, ?_⟩
+      rw [show minSpec (l.take (m + 1)) = l.getD m 0 from by
+        rw [minSpec_take_succ hm1 hm']; omega]
+      exact stepFnIter_chain
+        (stepFnIter_chain (stepFnIter_chain h15 hC) (stepFnIter_one hidx2)) hD
+    · rw [show (decide (l.getD m 0 < minSpec (l.take m))) = false from
+        decide_eq_false hlt] at h15
+      have hC := mh_loF_raw nv sv n l (minSpec (l.take m))
+        (maxSpec (l.take m)) ((m : Nat) : Int) ch
+      refine ⟨24, by omega, ?_⟩
+      rw [show minSpec (l.take (m + 1)) = minSpec (l.take m) from by
+        rw [minSpec_take_succ hm1 hm']; omega]
+      exact stepFnIter_chain h15 hC
+  obtain ⟨k₁, hk₁, h1⟩ := phase1
+  -- Phase 2: through the second conditional, hi advanced.
+  have phase2 : ∃ k₂ : Nat, k₂ ≤ 25 ∧
+      stepFnIter k₂
+        (mState nv sv n l (minSpec (l.take (m + 1)))
+          (maxSpec (l.take m)) ((m : Nat) : Int) false)
+        (.retV (.int ((m : Nat) : Int) .int)
+          (.strictK .indexGet [sliceH5 n] [] mEnvB2 mHiCmpK)) ch
+        = .ok (mHeadCfg,
+            mState nv sv n l (minSpec (l.take (m + 1)))
+              (maxSpec (l.take (m + 1))) ((m : Nat) : Int) false, ch) := by
+    have hidx3 : stepFn
+        (mState nv sv n l (minSpec (l.take (m + 1)))
+          (maxSpec (l.take m)) ((m : Nat) : Int) false)
+        (.retV (.int ((m : Nat) : Int) .int)
+          (.strictK .indexGet [sliceH5 n] [] mEnvB2 mHiCmpK)) ch
+        = .ok (.retV (.int (l.getD m 0) .uint64) mHiCmpK,
+            mState nv sv n l (minSpec (l.take (m + 1)))
+              (maxSpec (l.take m)) ((m : Nat) : Int) false, ch) :=
+      stepFn_strict_apply
+        (applyStrictOp_indexGet_slice (lookup_mState _ _ _ _ _ _ _ _)
+          (Nat.le_refl _) hm hget)
+    have hB := mh_hiB_raw nv sv n l (minSpec (l.take (m + 1)))
+      (maxSpec (l.take m)) ((m : Nat) : Int) (l.getD m 0) ch
+    have h4 := stepFnIter_chain (stepFnIter_one hidx3) hB
+    by_cases hgt : maxSpec (l.take m) < l.getD m 0
+    · rw [show (decide (maxSpec (l.take m) < l.getD m 0)) = true from
+        decide_eq_true hgt] at h4
+      have hC := mh_hiT_raw nv sv n l (minSpec (l.take (m + 1)))
+        (maxSpec (l.take m)) ((m : Nat) : Int) ch
+      have hidx4 : stepFn
+          (mState nv sv n l (minSpec (l.take (m + 1)))
+            (maxSpec (l.take m)) ((m : Nat) : Int) false)
+          (.retV (.int ((m : Nat) : Int) .int)
+            (.strictK .indexGet [sliceH5 n] [] mEnvB3 mHiStoreK)) ch
+          = .ok (.retV (.int (l.getD m 0) .uint64) mHiStoreK,
+              mState nv sv n l (minSpec (l.take (m + 1)))
+                (maxSpec (l.take m)) ((m : Nat) : Int) false, ch) :=
+        stepFn_strict_apply
+          (applyStrictOp_indexGet_slice (lookup_mState _ _ _ _ _ _ _ _)
+            (Nat.le_refl _) hm hget)
+      have hD := mh_hiT2_raw nv sv n l (minSpec (l.take (m + 1)))
+        (maxSpec (l.take m)) ((m : Nat) : Int) (l.getD m 0) ch
+      rw [unorm_of_range hw.1 hw.2] at hD
+      refine ⟨25, Nat.le_refl _, ?_⟩
+      rw [show maxSpec (l.take (m + 1)) = l.getD m 0 from by
+        rw [maxSpec_take_succ hm1 hm']; omega]
+      exact stepFnIter_chain
+        (stepFnIter_chain (stepFnIter_chain h4 hC) (stepFnIter_one hidx4)) hD
+    · rw [show (decide (maxSpec (l.take m) < l.getD m 0)) = false from
+        decide_eq_false hgt] at h4
+      have hC := mh_hiF_raw nv sv n l (minSpec (l.take (m + 1)))
+        (maxSpec (l.take m)) ((m : Nat) : Int) ch
+      refine ⟨9, by omega, ?_⟩
+      rw [show maxSpec (l.take (m + 1)) = maxSpec (l.take m) from by
+        rw [maxSpec_take_succ hm1 hm']; omega]
+      exact stepFnIter_chain h4 hC
+  obtain ⟨k₂, hk₂, h2⟩ := phase2
+  -- Phase 3: the later-pass dispatch, the exit test.
+  have hDisp := mh_dispB_raw nv sv n l (minSpec (l.take (m + 1)))
+    (maxSpec (l.take (m + 1))) ((m : Nat) : Int) ch
+  rw [show ((m : Nat) : Int) + 1 = ((m + 1 : Nat) : Int) from by omega,
+    inorm_of_range (v := ((m + 1 : Nat) : Int)) (by omega) (by omega),
+    inorm_of_range (v := ((m + 1 : Nat) : Int)) (by omega) (by omega)]
+    at hDisp
+  have hlenap : applyStrictOp
+      (mState nv sv n l (minSpec (l.take (m + 1)))
+        (maxSpec (l.take (m + 1))) ((m + 1 : Nat) : Int) false)
+      (.lengthOf (some (.slice (.int .uint64)))) [sliceH5 n]
+      = .ok (.int ((n : Nat) : Int) .int,
+          mState nv sv n l (minSpec (l.take (m + 1)))
+            (maxSpec (l.take (m + 1))) ((m + 1 : Nat) : Int) false) :=
+    applyStrictOp_len_slice (Nat.le_refl _)
+  have h3a := stepFnIter_chain hDisp
+    (stepFnIter_one (stepFn_strict_apply (done := []) hlenap))
+  have h3 := stepFnIter_chain h3a
+    (stepFnIter_one (stepFn_strict_apply
+      (done := [.int ((m + 1 : Nat) : Int) .int]) applyStrictOp_lessCmp_int))
+  exact ⟨k₁ + (k₂ + 31), by omega,
+    stepFnIter_chain h1 (stepFnIter_chain h2 h3)⟩
+
+/-- **The minMax loop** (the framed layer's `mm_loop`, ported): from
+the exit-test delivery of iteration `m`, the run reaches the ENTRY
+terminal within `96·μ + 62` steps, at the pinned terminal state. -/
+private theorem mh_loop (nv sv : Int) (n : Nat) (l : List Int)
+    (hln : l.length = n) (hxs : ∀ v ∈ l, 0 ≤ v ∧ v < 2 ^ 64)
+    (hn : n < 2 ^ 63) :
+    ∀ μ m, 1 ≤ m → m ≤ n → μ = n - m → ∀ ch : Choices,
+      ∃ k : Nat, k ≤ 96 * μ + 62 ∧
+        stepFnIter k (mCmpState nv sv n l m)
+          (.retV (.bool (decide
+            (((m : Nat) : Int) < ((n : Nat) : Int)))) mCmpIfK) ch
+          = .ok (.next .stop, mhFinal nv sv n l, ch) := by
+  intro μ
+  induction μ using Nat.strongRecOn with
+  | _ μ ih =>
+    intro m hm1 hmn hμ ch
+    rcases Nat.lt_or_ge m n with hlt | hge
+    · -- iterate
+      rw [show (decide (((m : Nat) : Int) < ((n : Nat) : Int)))
+          = true from decide_eq_true (by exact_mod_cast hlt)]
+      obtain ⟨k₁, hk₁, hiter⟩ := mh_iter nv sv n l m hln hxs hn hm1 hlt ch
+      obtain ⟨k₂, hk₂, hrest⟩ := ih (n - (m + 1)) (by omega) (m + 1)
+        (by omega) (by omega) rfl ch
+      exact ⟨k₁ + k₂, by omega, stepFnIter_chain hiter hrest⟩
+    · -- exit: m = n
+      have hmeq : m = n := by omega
+      subst hmeq
+      have hne : l ≠ [] := by
+        intro hc
+        rw [hc] at hln
+        simp at hln
+        omega
+      rw [show (decide (((m : Nat) : Int) < ((m : Nat) : Int)))
+          = false from decide_eq_false (by omega)]
+      have hlo := minTake_range (m := m) hxs hm1 hne
+      have hhi := maxTake_range (m := m) hxs hm1 hne
+      have hX := mmh_exit_raw nv sv m l (minSpec (l.take m))
+        (maxSpec (l.take m)) ((m : Nat) : Int) ch
+      rw [unorm_of_range hlo.1 hlo.2, unorm_of_range hlo.1 hlo.2,
+        unorm_of_range hlo.1 hlo.2,
+        unorm_of_range hhi.1 hhi.2, unorm_of_range hhi.1 hhi.2,
+        unorm_of_range hhi.1 hhi.2] at hX
+      have htake : l.take m = l := by rw [← hln]; exact List.take_length
+      rw [htake] at hX
+      refine ⟨62, by omega, ?_⟩
+      show stepFnIter 62
+          (mState nv sv m l (minSpec (l.take m)) (maxSpec (l.take m))
+            ((m : Nat) : Int) false)
+          (.retV (.bool false) mCmpIfK) ch
+        = .ok (.next .stop, mhFinal nv sv m l, ch)
+      rw [htake]
+      exact hX
+
+/-! ### The end-to-end canonical run and the entry equation -/
+
+/-- **The harness run, end to end**: from the entry seed the run
+reaches the entry terminal within `145 + 149·n` steps, with the
+family's min/max in the harness result cells. -/
+private theorem mmh_runs (n seed : Nat) (h1 : 1 ≤ n) (hn : n < 2 ^ 63)
+    (ch : Choices) :
+    ∃ k : Nat, k ≤ 145 + 149 * n ∧
+      stepFnIter k (mhSeedI (n : Int) (seed : Int)) mhc₀ ch
+        = .ok (.next .stop,
+            mhFinal (n : Int) (seed : Int) n (mmFamily n seed), ch) := by
+  have hfam_len := mmFamily_length n seed
+  have hfam_rng := mmFamily_range n seed
+  have hfam_ne : mmFamily n seed ≠ [] := mmFamily_ne_nil h1
+  have h0lt : 0 < (mmFamily n seed).length := by omega
+  have hv0 := hfam_rng _ (getD_mem h0lt)
+  -- entry A + the makeSlice apply + entry B
+  have hA := mmh_entryA_raw (n : Int) (seed : Int) ch
+  have hMS : stepFn (σMS (n : Int) (seed : Int))
+      (.retV (.int (n : Int) .uint64)
+        (.stmtOpK (.makeSlice (.int .uint64) false) 1
+          [.addr (.base ⟨4⟩)] [] hEnvMS hkMS)) ch
+      = .ok (.next hkMS, σMS' (n : Int) (seed : Int) n, ch) :=
+    stepFn_stmtOp_apply (done := [.addr (.base ⟨4⟩)])
+      (applyStmtOp_makeSlice_u64 (n : Int) (seed : Int) n ch)
+  have hB := mmh_entryB_raw (n : Int) (seed : Int) n ch
+  have h53 := stepFnIter_chain (stepFnIter_chain hA (stepFnIter_one hMS)) hB
+  -- the first setup dispatch and the setup loop
+  have hDA := sh_dispA_raw (n : Int) (seed : Int) n (List.replicate n 0) 0 ch
+  have h78 := stepFnIter_chain h53 hDA
+  have hloop := sh_loop n seed hn n 0 (by omega) ch
+  rw [Int.natCast_zero, setupList_zero] at hloop
+  have hsetup := stepFnIter_chain h78 hloop
+  -- the setup exit into the minMax frame, the two s[0] reads
+  have hEC := sh_exitC_raw (n : Int) (seed : Int) n (mmFamily n seed) ch
+  have hget0 : (⟨(mmFamily n seed).map (fun v => .int v .uint64)⟩ :
+      Array GoValue)[0 + 0]?
+      = some (.int ((mmFamily n seed).getD 0 0) .uint64) := by
+    rw [Nat.zero_add, getElem?_mapU _ _ h0lt]
+  have hidx1 : stepFn (σM1 (n : Int) (seed : Int) n (mmFamily n seed))
+      (.retV (.int 0 .int)
+        (.strictK .indexGet [sliceH5 n] [] mEnvB mRhs1K)) ch
+      = .ok (.retV (.int ((mmFamily n seed).getD 0 0) .uint64) mRhs1K,
+          σM1 (n : Int) (seed : Int) n (mmFamily n seed), ch) :=
+    stepFn_strict_apply
+      (applyStrictOp_indexGet_slice (off := 0) (len := n) (cap := n) (i := 0)
+        (lookup_σM1 _ _ _ _) (Nat.le_refl _) (by omega) hget0)
+  have hC := mmh_entryC_raw (n : Int) (seed : Int) n (mmFamily n seed)
+    ((mmFamily n seed).getD 0 0) ch
+  have hidx2 : stepFn (σM1 (n : Int) (seed : Int) n (mmFamily n seed))
+      (.retV (.int 0 .int)
+        (.strictK .indexGet [sliceH5 n] [] mEnvB
+          (mRhs2K ((mmFamily n seed).getD 0 0)))) ch
+      = .ok (.retV (.int ((mmFamily n seed).getD 0 0) .uint64)
+            (mRhs2K ((mmFamily n seed).getD 0 0)),
+          σM1 (n : Int) (seed : Int) n (mmFamily n seed), ch) :=
+    stepFn_strict_apply
+      (applyStrictOp_indexGet_slice (off := 0) (len := n) (cap := n) (i := 0)
+        (lookup_σM1 _ _ _ _) (Nat.le_refl _) (by omega) hget0)
+  have hD := mmh_entryD_raw (n : Int) (seed : Int) n (mmFamily n seed)
+    ((mmFamily n seed).getD 0 0) ((mmFamily n seed).getD 0 0) ch
+  rw [unorm_of_range hv0.1 hv0.2] at hD
+  have hentry := stepFnIter_chain
+    (stepFnIter_chain
+      (stepFnIter_chain
+        (stepFnIter_chain (stepFnIter_chain hsetup hEC)
+          (stepFnIter_one hidx1))
+        hC)
+      (stepFnIter_one hidx2))
+    hD
+  -- the first minMax dispatch and the exit test at m = 1
+  have hMDA := mh_dispA_raw (n : Int) (seed : Int) n (mmFamily n seed)
+    ((mmFamily n seed).getD 0 0) ((mmFamily n seed).getD 0 0) 1 ch
+  have hlenap : applyStrictOp
+      (mState (n : Int) (seed : Int) n (mmFamily n seed)
+        ((mmFamily n seed).getD 0 0) ((mmFamily n seed).getD 0 0) 1 false)
+      (.lengthOf (some (.slice (.int .uint64)))) [sliceH5 n]
+      = .ok (.int ((n : Nat) : Int) .int,
+          mState (n : Int) (seed : Int) n (mmFamily n seed)
+            ((mmFamily n seed).getD 0 0) ((mmFamily n seed).getD 0 0) 1
+            false) :=
+    applyStrictOp_len_slice (Nat.le_refl _)
+  have hpre := stepFnIter_chain
+    (stepFnIter_chain (stepFnIter_chain hentry hMDA)
+      (stepFnIter_one (stepFn_strict_apply (done := []) hlenap)))
+    (stepFnIter_one (stepFn_strict_apply
+      (done := [.int (1 : Int) .int]) applyStrictOp_lessCmp_int))
+  -- the minMax loop from m = 1
+  obtain ⟨k, hk, hloop2⟩ := mh_loop (n : Int) (seed : Int) n
+    (mmFamily n seed) hfam_len hfam_rng hn (n - 1) 1 (Nat.le_refl 1)
+    (by omega) rfl ch
+  rw [Int.natCast_one] at hloop2
+  rw [show mCmpState (n : Int) (seed : Int) n (mmFamily n seed) 1
+      = mState (n : Int) (seed : Int) n (mmFamily n seed)
+          ((mmFamily n seed).getD 0 0) ((mmFamily n seed).getD 0 0) 1
+          false from by
+    show mState (n : Int) (seed : Int) n (mmFamily n seed)
+        (minSpec ((mmFamily n seed).take 1))
+        (maxSpec ((mmFamily n seed).take 1)) ((1 : Nat) : Int) false = _
+    rw [minSpec_take_one hfam_ne, maxSpec_take_one hfam_ne,
+      Int.natCast_one]] at hloop2
+  exact ⟨10 + 1 + 42 + 25 + 53 * n + 33 + 1 + 5 + 1 + 34 + 25 + 1 + 1 + k,
+    by omega, stepFnIter_chain hpre hloop2⟩
+
+/-- **The entry equation**: `runFunctionWithContextM` on the harness at
+symbolic arguments IS `runConfig` from the prelude-built seed plus the
+two-location readback — the prelude is fuel-independent and
+definitional at the concrete shapes; the parameters land
+once-normalized. -/
+private theorem mmh_entry_eq (n seed : Nat) (fuel : Nat) (ch : Choices) :
+    runFunctionWithContextM fuel minMaxLowered.typeDefs.toList
+        minMaxLowered.funcs mmHarnessFunc
+        #[.int (n : Int) .uint64, .int (seed : Int) .uint64]
+        minMaxLowered.methods ch
+      = (do
+          let (sF, _) ← runConfig fuel
+            (mhSeedI (IntKind.normalize .uint64 (n : Int))
+              (IntKind.normalize .uint64 (seed : Int)))
+            mhc₀ ch
+          return { values := (← loadMany sF [.base ⟨2⟩, .base ⟨3⟩]).toArray }) := by
+  with_unfolding_all rfl
+
+/-! ### The user-facing headline -/
+
+/-- **THE HEADLINE** (harness ruling 2026-08-13, design note §11): *for
+every `1 ≤ n < 2^63` and every `seed < 2^64`,
+`minmax_harness(n, seed)` — the fixed three-phase Go harness whose
+setup loop builds the input family `s[i] = (seed + i) mod 2^64` —
+completes normally through the machine's native function entry, past
+one fuel bound, at every nondeterminism-choice stream, and returns
+exactly the pair `(minSpec, maxSpec)` of the family.*
+
+The statement observes termination + the returned values only: no heap
+readback, no seed/cell/frame vocabulary (the implicit framing property
+is inherent in the empty-heap entry). INPUT-FAMILY HONESTY (module
+docstring §"harness restatement"): the `(n, seed)` quantification is
+the `mmFamily` FAMILY — deliberately wrapping at `2^64`, so min/max are
+genuinely data-dependent when `seed + n` crosses the boundary — and is
+honestly weaker than the ∀xs memory-quantified form kept beneath as
+`minmax_framed`. `h1` is Go's own empty-slice panic boundary; `hn` is
+Go's `int` domain for `len`; `hseed` is the argument's type domain. -/
+theorem minmax_ok (n seed : Nat) (h1 : 1 ≤ n) (hn : n < 2 ^ 63)
+    (hseed : seed < 2 ^ 64) :
+    ∃ N : Nat, ∀ fuel : Nat, N ≤ fuel → ∀ ch : Choices,
+      runFunctionWithContextM fuel minMaxLowered.typeDefs.toList
+          minMaxLowered.funcs mmHarnessFunc
+          #[.int (n : Int) .uint64, .int (seed : Int) .uint64]
+          minMaxLowered.methods ch
+        = .ok { values := #[.int (minSpec (mmFamily n seed)) .uint64,
+                            .int (maxSpec (mmFamily n seed)) .uint64] } := by
+  refine ⟨145 + 149 * n, fun fuel hfuel ch => ?_⟩
+  rw [mmh_entry_eq n seed fuel ch,
+    unorm_nat_of_lt (by omega : n < 2 ^ 64), unorm_nat_of_lt hseed]
+  obtain ⟨k, hk, hrun⟩ := mmh_runs n seed h1 hn ch
+  have hfold := runConfig_of_stepFnIter hrun (fuel - k)
+  rw [show k + (fuel - k) = fuel from by omega] at hfold
+  rw [hfold, runConfig_next_stop]
+  rfl
+
+/-- **The D1 run-conditioned twin of the harness headline**: ANY
+successful completion of the harness entry, at any fuel and any choice
+stream, returns exactly the family's `(minSpec, maxSpec)` pair —
+derived from `minmax_ok` via the shared `harness_readout_of_total`
+bridge (the `.ok`-equation headline already determines every
+successful run; nothing is re-proven). -/
+theorem minmax_readout (n seed : Nat) (h1 : 1 ≤ n) (hn : n < 2 ^ 63)
+    (hseed : seed < 2 ^ 64) :
+    ∀ (fuel : Nat) (ch : Choices) (r : Result),
+      runFunctionWithContextM fuel minMaxLowered.typeDefs.toList
+          minMaxLowered.funcs mmHarnessFunc
+          #[.int (n : Int) .uint64, .int (seed : Int) .uint64]
+          minMaxLowered.methods ch
+        = .ok r →
+      r = { values := #[.int (minSpec (mmFamily n seed)) .uint64,
+                        .int (maxSpec (mmFamily n seed)) .uint64] } :=
+  GoLean.Surface.harness_readout_of_total (minmax_ok n seed h1 hn hseed)
 
 end GoLean.Examples.MinMax
