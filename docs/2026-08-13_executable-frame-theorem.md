@@ -236,9 +236,15 @@ inventory entry.
 ## §6 Status
 
 Part 1 (this design) — DONE, grounded per-arm against the machine.
-Parts 2–4 — NOT STARTED in this session (capacity; recorded honestly):
-the rename-algebra module, the ~100-arm induction, the fib/reverse
-consumption, and the 2c scale-out are the continuation work list, in
-that order, with this note as the contract. The statement above does
-not deviate from the ruling's (b) — no checkpoint triggered; the next
-session proves.
+Parts 2–3 — **PROVEN AND COMMITTED** (2026-08-13, `foundation-s1`):
+the rename algebra + helper tower (handoff §1), the full ~200-arm
+`stepFn_sim` induction (`Frame/StepSim.lean`, sorry-free at 4bc3052a),
+`stepFnIter_sim`/`execStmtLoop_ren`/`completesIn_ren`
+(`Frame/Transfer.lean`), the rename-identity-below-`na₀` family
+(`Frame/RenameId.lean`), and the allocation-quotient corollary
+(`Frame/AllocIndep.lean`, §5b). Axiom footprint: the classical trio;
+`Classical.choice` inherited from core MachineSound
+(`Machine.Heap.lookup_set_ne`), recorded in the Audit gates.
+Part 4 consumption — `fib_total_framed` PROVEN (the ∀-frame TOTAL,
+cce81c4d); the reverse exemplar + 2c scale-out continue per the
+build-handoff record's §6.

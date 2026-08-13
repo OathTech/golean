@@ -159,3 +159,51 @@ delegated (Plans/ContOps/Compare/Builders/ChanSync/StmtOps/StrictOps —
 all delivered their statements exactly as specified; their per-file
 reports are summarized in the module docstrings and §3.4). StepSim +
 Transfer live only in the worktree pending the 22 arms above.
+
+## §6 COMPLETION RECORD (2026-08-13, the finishing session)
+
+**The theorem is done.** Commits 4bc3052a (Ops2 + the 22 arms +
+Transfer + Audit gates) and cce81c4d (RenameId + `fib_total_framed` +
+AllocIndep + records); `scripts/ci` green at each.
+
+The 22 arms vs the §2 recipes — all template instances, none resisted;
+ONE recorded deviation of method (not of statement): the catch-all
+entry arms (63/64/78/79/80) and the named-scrutinee/guarded entries
+(41/60/56) do NOT re-case the syntax inside the induction as §2
+sketched. Private entry-reduction lemmas (`stepFn_exec_wide`,
+`stepFn_evalE_strict`, `stepFn_exec_chanRecv`, `stepFn_exec_sync`,
+`stepFn_exec_assignMany`, StepSim.lean) pay the per-constructor bash
+once each, OUTSIDE the induction, keyed on the plan fact (via
+`stepFn.eq_def` + `rw [hplan]` — the conditional catch-all equations
+that stalled the in-induction attempt never arise); the arms then
+rewrite with the `*_ren` plan lemmas. This also avoided §2's
+heartbeat-timeout hazard entirely. Case 64's hypothesis is NOT
+vacuous (contra a mid-session hypothesis): `stmtPlan` always emits
+nonempty operand lists, but the entry-lemma route handles it uniformly
+without needing that fact. The `Ops2` glue landed as specified (~330
+lines incl. an ExSim-form `buildAppendBackingValue_sim` in place of a
+NoPanic detour).
+
+Axiom footprint, investigated per the BEq.rfl/Ord precedent:
+`[propext, Classical.choice, Quot.sound]` on all four frame theorems
+and both consumption theorems. `Classical.choice` is INHERITED from
+the core MachineSound layer — root `Machine.Heap.lookup_set_ne`
+(pre-existing, committed before this arc), consumed by every
+heap-touching commutation lemma; the Frame layer's own leaves are
+choice-free (`loadLoc_sim`: `[propext, Quot.sound]`; `seqCont_ren`:
+`[propext]`). Recorded in the Audit gate comments.
+
+Consumption landed: `fib_total_framed` (Fib.lean — seed FrameSim at
+the tight two-cell seed exactly as §4 walked it; `renameBodies_id`
+discharges `bodies_inv` from `funcListSup ≤ 1` by `decide`). The
+allocator-independence corollary + records rode the same commit (user
+direction 2026-08-13; frame note §5b, inventory class (q), doctrine
+register entry 6). The reverse exemplar (§9e laws + `reverse_ok`) is
+in flight as a delegated arc at the time of this record.
+
+**Differential record standing-window note**: this lane is proofs-only
+since 3356e4f (no Corpus/, frontend, or interpreter change in any
+commit of the arc — Frame/*, Examples/*.lean proofs, Audit, docs). The
+tracked baseline (1494/1494) passes at every gate run with the
+staleness note visible; the full `--diff` refresh is left to the
+operator per the no-background-diff rule.
