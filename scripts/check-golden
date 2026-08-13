@@ -21,6 +21,7 @@ PINS=(
   "Corpus/coverage/exec/panic-recover/recover-direct|baselines/golden/recover-lowered.repr|GoLean.Iris.GoldenRecover.recoverLowered"
   "Corpus/coverage/exec/quorum/committed-index-real|baselines/golden/quorum-lowered.repr|GoLean.Iris.GoldenQuorum.quorumLowered"
   "Corpus/coverage/exec/examples/fib|baselines/golden/fib-lowered.repr|GoLean.Examples.Fib.fibLowered"
+  "Corpus/coverage/exec/examples/reverse|baselines/golden/reverse-lowered.repr|GoLean.Examples.Reverse.reverseLowered"
 )
 
 WORK="${TMPDIR:-/tmp}/golden-check.$$"
@@ -38,7 +39,7 @@ export GOCACHE="${GOCACHE:-$ROOT/artifacts/go-build-cache}"
 # means not relying on the next run's self-heal, on either link.)
 lake build GoLean.NativeToIR > /dev/null \
   || { echo "check-golden: FAIL — NativeToIR (decoder) build failed (fail closed)" >&2; exit 1; }
-(cd proofs && lake build GoLeanProofs.Specs.GoldenProgram GoLeanProofs.Specs.GoldenQuorum GoLeanProofs.Examples.FibProgram > /dev/null) \
+(cd proofs && lake build GoLeanProofs.Specs.GoldenProgram GoLeanProofs.Specs.GoldenQuorum GoLeanProofs.Examples.FibProgram GoLeanProofs.Examples.ReverseProgram > /dev/null) \
   || { echo "check-golden: FAIL — pin module build failed (fail closed)" >&2; exit 1; }
 
 for pin in "${PINS[@]}"; do
@@ -75,6 +76,7 @@ LEAN
 import GoLeanProofs.Specs.GoldenProgram
 import GoLeanProofs.Specs.GoldenQuorum
 import GoLeanProofs.Examples.FibProgram
+import GoLeanProofs.Examples.ReverseProgram
 def main : IO Unit :=
   IO.println (repr $TERM)
 LEAN

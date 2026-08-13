@@ -85,6 +85,7 @@ import GoLeanProofs.NegativeSpecs
 import GoLeanProofs.FuelMeasure
 import GoLeanProofs.Examples.FibProgram
 import GoLeanProofs.Examples.Fib
+import GoLeanProofs.Examples.ReverseProgram
 
 /-!
 # GoCore ⇒ Iris — the proof layer (root)
