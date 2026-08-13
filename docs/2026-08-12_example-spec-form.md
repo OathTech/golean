@@ -792,6 +792,108 @@ map row; the §10a-c design is the executable plan) rather than forced
 through — the charter's fights-the-form rule applied to schedule
 rather than shape.
 
+## §11 THE HARNESS RULING (user, 2026-08-13 — FINAL headline form;
+supersedes §2/§9 as the USER-FACING form; §9 demotes to
+proof-side/reserve)
+
+Ruled by the user 2026-08-13 (explicit agreement on the full form;
+relayed through the operator — quoted fragments below are the user's
+words as relayed; the harness sketch is reconstructed to the agreed
+schema and marked so).
+
+**The form.** Every example ships ONE fixed Go harness function with
+three phases:
+
+```go
+// reconstructed to the agreed schema (fib_harness is the user's own
+// sketch shape): setup — call under test — test.
+func fib_harness(n uint64) uint64 {
+	// setup_fib_state: builds all memory the test needs from the
+	// parameters (pre-allocation context; empty for fib)
+	r := fib(n) // the call under test
+	// test_fib_state: memory ANALYSIS in Go — readbacks and checks
+	// fold into the returned values (identity for fib)
+	return r
+}
+```
+
+The Lean statement observes ONLY termination + returned values,
+through the machine's native function entry:
+
+```
+∀ x y … (well-typed, pre) → ∃ N, ∀ fuel ≥ N, ∀ ch : Choices,
+  runFunctionWithContextM fuel Γ fns harness #[x, y, …] ch
+    = .ok ⟨#[v, …]⟩  ∧  post(v, …, x, y, …)
+```
+
+(`runProgramM` for whole-program/globals harnesses.) Postconditions
+are over RETURNED VALUES only — either returned data = a spec
+function of the inputs, or a Go-computed verdict value; per-example
+choice, preferring returned data where arity permits.
+
+**The three key properties (rulings, not preferences):**
+1. **No AST splicing / program families** — quantification is over
+   instantiated `GoValue` ARGUMENTS at the call boundary, the
+   machine's native mechanism; the entry builds the empty-heap state
+   itself.
+2. **No Lean-side heap readback in headlines** — no `loadLoc`, no
+   cell/seed/env vocabulary in any user-facing statement:
+   `test_*_state` does the memory analysis IN GO, inside the verified
+   footprint. In the user's words: at the top level *"we do not have
+   any memory reasoning at all."*
+3. **No frame clauses anywhere user-facing** — the implicit framing
+   property (the harness touches only what it allocates) is INHERENT
+   in the empty-heap entry (the user's implicit-framing remark, as
+   relayed).
+
+**The CBMC parallel** (user's, as relayed): the harness style is the
+bounded-model-checking harness discipline — a closed test program
+quantified over its inputs — with our ∃N-∀fuel-∀ch totalization on
+top.
+
+**Concurrency extension** (user, as relayed): a fork harness under the
+same ∀ch quantifier; *"the reasoning necessary may be deeply complex
+(that's Iris) but our top level spec is very boring."* The boring top
+level is the point: Iris stays proof-side machinery under an
+observable-return headline.
+
+**Variable-size inputs (∀ slice contents — DESIGNED, NOT BUILT; this
+arc uses scalar-parameterized setup loops instead).** The designed
+mechanism is a CHOICE-CONSUMING INPUT PICK (the CBMC `nondet_*`
+pattern): a setup-phase primitive that consumes `Choices` picks to
+materialize input data, putting the input under the headline's ∀ch.
+DIFFERENTIAL OBLIGATION recorded with it: the pick needs a go-run
+counterpart (args/stdin-driven instantiation) so the oracle can
+witness picked inputs — an enveloped site with a lower-bound story,
+like every Choices site. Not built this arc (ruling (d)); until then,
+setup loops parameterized by scalars (length, seed) give input
+FAMILIES, honestly weaker than ∀xs, recorded per example.
+
+**The known horizon (user addendum, 2026-08-13, near-verbatim):**
+*"this will eventually get tougher when we need ghost variables, which
+is the pain of this exact style. No free lunch, basically. But I think
+this is a good abstraction FOR NOW as we build."* The boundary, drawn
+precisely: ghosts that are computable observation-only HISTORY are
+harness-materializable (setup snapshots / shadow copies — real Go,
+part of the verified footprint); the genuine wall is ghosts that must
+live INSIDE the code under test — prophecy variables, linearization
+witnesses, mid-run safety claims not observable at the return
+boundary — i.e. exactly fine-grained concurrency claims. Escape hatch
+when reached: proof-side Iris ghost state remains untrusted method;
+the FORM is revisited only when a CLAIM itself is not
+return-observable. Scope line: good abstraction for now, revisit at
+that horizon.
+
+**Status of the §9 memory-quantified form:** PROOF-SIDE / RESERVE.
+The committed memory-quantified theorems (fib_framed/fib_total_framed,
+reverse_ok, gcd_ok, minmax_ok, search_ok, isort_ok pre-restatement)
+and the `sliceCells`/frame vocabulary remain as the supporting layer
+(the canonical-run segments and inductions carry every harness
+headline; the frame theorem remains the ∀-placement engine
+proof-side). User-facing restatement over `runFunctionWithContextM`
+follows per example; old cell-readback headline shells are deleted
+AFTER their restatements land (ruling (a)).
+
 ## §8 Parked / out of scope (recorded)
 
 - Machine/frontend changes (must-park): the `$forFirst` desugar tax

@@ -96,7 +96,7 @@ discussion here.
    no Iris in the termination half (rationale recorded in the design
    note and the module).
 
-## Form ruling (user, 2026-08-13) — slice 2 split
+## Form ruling (user, 2026-08-13, SUPERSEDED same day — see below)
 
 Headlines UNIFY to the MEMORY-QUANTIFIED form: input data + arbitrary
 disjoint frame, with frame preservation VISIBLE in the statement. The
@@ -105,6 +105,25 @@ designs the form on one memory-input exemplar (slice reverse) plus the
 fib retrofit and STOPS AT A CHECKPOINT (packet: design note §9);
 **2b** scales to gcd/min-max/binsearch/insertion-sort/word-count after
 the frame-structure ruling. The enumeration ban binds everything.
+
+## THE HARNESS RULING (user, 2026-08-13 — final headline form)
+
+Headlines are HARNESS-shaped: one fixed three-phase Go function per
+example (`setup_*_state` from scalar parameters → the call under test
+→ `test_*_state` folding memory analysis into return values), with the
+Lean statement over the machine's native entry
+(`runFunctionWithContextM`, `runProgramM` for whole-program): ∀
+well-typed argument values, ∃N-∀fuel≥N-∀ch, the run returns `.ok` with
+the specified values. NO Lean-side heap readback, NO frame clauses, NO
+AST splicing in user-facing statements — memory analysis happens in Go
+inside the verified footprint; implicit framing is inherent in the
+empty-heap entry. The §9 memory-quantified form demotes to proof-side/
+reserve (segments, inductions, and the frame theorem carry the harness
+headlines; nothing is re-proven). Full record incl. the user's quoted
+rulings, the CBMC parallel, the designed-not-built choice-consuming
+input pick (+ its differential obligation), the concurrency extension,
+and the ghost-variable horizon addendum:
+`docs/2026-08-12_example-spec-form.md` §11.
 
 ## Must-park
 

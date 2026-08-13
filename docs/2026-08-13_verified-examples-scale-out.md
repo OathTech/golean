@@ -1,5 +1,20 @@
 # Verified-examples scale-out (slice 2c) — session record (2026-08-13)
 
+**HOLD RESOLVED (2026-08-13): THE HARNESS RULING** — final form ruled
+by the user; full record in the form note §11 (charter cross-marked).
+Consequences executed in order: (i) records (this banner, §11, charter);
+(ii) three-phase harness functions added to every example's corpus
+program with harness-shaped oracle rows + re-pin; (iii) the shared
+entry-layer glue (`runConfig` fold/terminal lemmas) + the fib
+restatement as exemplar; (iv) per-example restatements over
+`runFunctionWithContextM` (old cell-readback headline shells deleted
+at each restatement; framed theorems + sliceCells/frame vocabulary
+KEPT as the proof-side supporting layer per the ruling); (v) gallery
+drafts re-rendered harness-style. Ledger below updated per example as
+restatements land.
+
+The original hold banner, kept for the record:
+
 **FORM HOLD (2026-08-13, mid-slice — operator direction)**: a
 harness-only alternative headline form (closed specs: inputs as
 harness parameters, harness-allocated memory, canonical seed) is under
@@ -174,6 +189,17 @@ form — all specified in the worker briefs verbatim.
     evaluation whenever the env carries a symbolic address — the
     module's `stepFn_seqn_splice` (an `if_pos rfl` discharge) is the
     reusable fix and a strong shared-kit candidate.
+12. **(wordcount, from the paused worker's state report — the owed
+    ledger note)** Phase C (the counting loop) ALSO allocates two
+    fresh cells per iteration (`$c1`/`$c2` composite-literal temps),
+    so BOTH halves of wordcount sit in the symbolic-address regime —
+    §10c's assumption that only the range half pays the α-route cost
+    was wrong by half. The worker's delivered machinery (map
+    executable facts, countsList invariant, counting-loop induction at
+    fuel `84n+23`, choice-pick glue incl. `stepFn_pick`) is
+    form-independent and survives the harness restatement; its
+    remaining gap at the stop order was one goal in the §10b range
+    induction + the exit segments.
     (further findings appended as workers report)
 
 ## §5 Gallery entry drafts
