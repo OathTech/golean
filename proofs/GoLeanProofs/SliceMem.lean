@@ -296,6 +296,14 @@ theorem locSup_mapU (l : List Int) :
   | nil => rfl
   | cons v rest ih => simpa [goValueListSup, GoValue.locSup] using ih
 
+/-- The integer `<` strict-op fact (both operand kinds free: the
+machine compares the `Int` payloads; promoted from the MinMax
+private, second consumer the placement-generic wordcount loop). -/
+theorem applyStrictOp_lessCmp_int {σ : ExecState} {a b : Int}
+    {k k' : IntKind} :
+    applyStrictOp σ .lessCmp [.int a k, .int b k']
+      = .ok (.bool (decide (a < b)), σ) := rfl
+
 /-- **The `%` executable fact** (promoted from Gcd/WordCount privates):
 uint64 `%` at a positive divisor is Nat `%`, wrapped nowhere — the
 divide-by-zero check is the one data-dependent branch. -/

@@ -428,13 +428,6 @@ private def mmFinal (xs : List Int) : ExecState :=
              (.base ⟨9⟩, bcell false)],
     nextAddr := 10 }
 
-/-- The integer `<` strict-op fact (both operand kinds free: the
-machine compares the `Int` payloads). -/
-private theorem applyStrictOp_lessCmp_int {σ : ExecState} {a b : Int}
-    {k k' : IntKind} :
-    applyStrictOp σ .lessCmp [.int a k, .int b k']
-      = .ok (.bool (decide (a < b)), σ) := rfl
-
 /-! ## Heap lookup facts at the pinned states -/
 
 private theorem lookup_seed (xs : List Int) :
