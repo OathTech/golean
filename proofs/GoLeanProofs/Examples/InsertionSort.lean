@@ -1,6 +1,7 @@
 import GoLeanProofs.Examples.InsertionSortProgram
 import GoLeanProofs.SliceMem
 import GoLeanProofs.FuelMeasure
+import GoLeanProofs.StepKit
 import GoLeanProofs.Frame.Transfer
 import GoLeanProofs.Frame.RenameId
 import GoLeanProofs.Laws.StmtOps
@@ -650,36 +651,6 @@ private def σIn (n : Nat) (l : List Int) (iv jv : Int) (ffIv : Bool) :
     ExecState :=
   σOutT n l iv false [(.base ⟨4⟩, intcell jv), (.base ⟨5⟩, bcell ffIv)] 6
 
-/-! ## Generic single-step glue (private copies — reverse's pattern) -/
-
-private theorem stepFnIter_one {σ : ExecState} {c : Config} {ch : Choices}
-    {r : Config × ExecState × Choices}
-    (h : stepFn σ c ch = .ok r) : stepFnIter 1 σ c ch = .ok r := by
-  obtain ⟨c', σ', ch'⟩ := r
-  simp [stepFnIter, h, Bind.bind, Except.bind]
-
-/-- The strict-apply machine step, conditioned on the op fact. -/
-private theorem stepFn_strict_apply {σ σ' : ExecState} {op : StrictOp}
-    {done : List GoValue} {v out : GoValue} {env : LocalEnv} {k : Cont}
-    {ch : Choices}
-    (h : applyStrictOp σ op (v :: done).reverse = .ok (out, σ')) :
-    stepFn σ (.retV v (.strictK op done [] env k)) ch
-      = .ok (.retV out k, σ', ch) := by
-  simp only [stepFn]
-  rw [h]
-  rfl
-
-/-- The phase-2 store machine step, conditioned on the store fact. -/
-private theorem stepFn_store_step {σ σ' : ExecState} {r : TargetRef}
-    {val : GoValue} {rs : List TargetRef} {vs : List GoValue} {body : Stmt}
-    {env : LocalEnv} {k : Cont} {ch : Choices}
-    (h : storeTarget σ r val = .ok σ') :
-    stepFn σ (.next (.storeK (r :: rs) (val :: vs) body env k)) ch
-      = .ok (.next (.storeK rs vs body env k), σ', ch) := by
-  simp only [stepFn]
-  rw [h]
-  rfl
-
 /-! ## Raw run segments (`with_unfolding_all rfl`) -/
 
 private def entryK : Cont := .callArgsK ⟨"insertionSort"⟩ [] [] [] [] .stop
@@ -859,36 +830,6 @@ private theorem isort_segSD_raw (n : Nat) (l : List Int) (iv jv : Int)
   with_unfolding_all rfl
 
 /-! ## Cleaned discharge facts -/
-
-private theorem getD_mem {xs : List Int} {k : Nat} (hk : k < xs.length) :
-    xs.getD k 0 ∈ xs := by
-  rw [List.getD_eq_getElem?_getD, List.getElem?_eq_getElem hk]
-  exact List.getElem_mem hk
-
-private theorem mem_set_of_mem {l : List Int} {i : Nat} {w v : Int}
-    (h : v ∈ l.set i w) : v = w ∨ v ∈ l := by
-  induction l generalizing i with
-  | nil => simp [List.set] at h
-  | cons x rest ih =>
-      cases i with
-      | zero =>
-          simp only [List.set, List.mem_cons] at h
-          rcases h with h | h
-          · exact .inl h
-          · exact .inr (by simp [h])
-      | succ n =>
-          simp only [List.set, List.mem_cons] at h
-          rcases h with h | h
-          · exact .inr (by simp [h])
-          · rcases ih h with h | h
-            · exact .inl h
-            · exact .inr (by simp [h])
-
-private theorem getElem?_mapU (l : List Int) (k : Nat) (hk : k < l.length) :
-    (⟨l.map (fun v => .int v .uint64)⟩ : Array GoValue)[k]?
-      = some (.int (l.getD k 0) .uint64) := by
-  simp [List.getElem?_map, List.getD_eq_getElem?_getD,
-    List.getElem?_eq_getElem hk]
 
 private theorem getD_append_left {l1 l2 : List Int} {k : Nat}
     (h : k < l1.length) : (l1 ++ l2).getD k 0 = l1.getD k 0 := by
@@ -1239,14 +1180,6 @@ private theorem shiftSpec_ρsh (d : Nat) : ShiftSpec (ρsh d) 4 (4 + d) := by
     simp only [ρsh]
     rw [if_neg (by omega)]
     omega
-
-/-- Loc-freedom of the wrapped-integer backing array. -/
-private theorem locSup_mapU (l : List Int) :
-    GoValue.locSup (.array ⟨l.map (fun v => .int v .uint64)⟩) = 0 := by
-  show goValueListSup (l.map (fun v => .int v .uint64)) = 0
-  induction l with
-  | nil => rfl
-  | cons v rest ih => simpa [goValueListSup, GoValue.locSup] using ih
 
 private theorem renCell_arr (ρ : Nat → Nat) (n : Nat) (l : List Int) :
     renameCell ρ (arrCell n l) = arrCell n l := by
@@ -2456,23 +2389,6 @@ private theorem hseg_IA1_raw (n seed : Nat) (ch : Choices) :
           σIStartC4 n seed, ch) := by
   with_unfolding_all rfl
 
-private theorem natFromNonneg_cast' (ctx : String) (n : Nat) :
-    natFromNonnegativeInt ctx ((n : Nat) : Int) = .ok n := by
-  simp only [natFromNonnegativeInt, Int.toNat_natCast]
-  rw [if_neg (show ¬(((n : Nat) : Int) < 0) by omega)]
-  rfl
-
-/-- The wide-op apply step, conditioned on the apply fact. -/
-private theorem stepFn_stmtOp_apply' {σ σ' : ExecState} {op : StmtOp}
-    {nt : Nat} {done : List GoValue} {v : GoValue} {env : LocalEnv}
-    {k : Cont} {ch ch' : Choices}
-    (h : applyStmtOp σ ch op nt (v :: done).reverse = .ok (σ', ch')) :
-    stepFn σ (.retV v (.stmtOpK op nt done [] env k)) ch
-      = .ok (.next k, σ', ch') := by
-  simp only [stepFn]
-  rw [h]
-  rfl
-
 /-- **The makeSlice apply at a SYMBOLIC length**: allocates the zeroed
 backing at 4 and stores the handle in `$c4`. -/
 private theorem hstep_ImakeSlice (n seed : Nat) (ch : Choices) :
@@ -2486,9 +2402,9 @@ private theorem hstep_ImakeSlice (n seed : Nat) (ch : Choices) :
           (fun v => GoValue.int v .uint64)⟩ : Array GoValue) := by
     simp [List.map_replicate]
   rw [harr] at hb
-  have hnn1 := natFromNonneg_cast'
+  have hnn1 := natFromNonneg_cast
     "runtime error: makeslice: len out of range" n
-  have hnn2 := natFromNonneg_cast'
+  have hnn2 := natFromNonneg_cast
     "runtime error: makeslice: cap out of range" n
   have happly : applyStmtOp (σIStartC4 n seed) ch
       (.makeSlice (.int .uint64) false) 1
@@ -2498,7 +2414,7 @@ private theorem hstep_ImakeSlice (n seed : Nat) (ch : Choices) :
       hnn1, hnn2, hb, Bind.bind, Except.bind, pure, Except.pure]
     rw [if_neg (Nat.lt_irrefl n)]
     with_unfolding_all rfl
-  exact stepFn_stmtOp_apply'
+  exact stepFn_stmtOp_apply
     (done := [.addr (.base ⟨3⟩)]) (v := .int ((n : Nat) : Int) .uint64)
     happly
 
@@ -3914,9 +3830,9 @@ private theorem hstep_Ims2 (n seed : Nat) (ivF : Int) (l : List Int)
           (fun v => GoValue.int v .uint64)⟩ : Array GoValue) := by
     simp [List.map_replicate]
   rw [harr] at hb
-  have hnn1 := natFromNonneg_cast'
+  have hnn1 := natFromNonneg_cast
     "runtime error: makeslice: len out of range" n
-  have hnn2 := natFromNonneg_cast'
+  have hnn2 := natFromNonneg_cast
     "runtime error: makeslice: cap out of range" n
   have happly : applyStmtOp (σSCc5 n seed ivF l sciv) ch
       (.makeSlice (.int .uint64) false) 1
@@ -3926,7 +3842,7 @@ private theorem hstep_Ims2 (n seed : Nat) (ivF : Int) (l : List Int)
       hnn1, hnn2, hb, Bind.bind, Except.bind, pure, Except.pure]
     rw [if_neg (Nat.lt_irrefl n)]
     with_unfolding_all rfl
-  exact stepFn_stmtOp_apply'
+  exact stepFn_stmtOp_apply
     (done := [.addr (.base ⟨14⟩)]) (v := .int ((n : Nat) : Int) .uint64)
     happly
 

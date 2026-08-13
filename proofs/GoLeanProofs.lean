@@ -83,6 +83,7 @@ import GoLeanProofs.Specs.ImportedGooseConst
 import GoLeanProofs.Specs.ImportedGooseRune
 import GoLeanProofs.NegativeSpecs
 import GoLeanProofs.FuelMeasure
+import GoLeanProofs.StepKit
 import GoLeanProofs.Examples.FibProgram
 import GoLeanProofs.Examples.Fib
 import GoLeanProofs.SliceMem

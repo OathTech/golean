@@ -83,11 +83,44 @@ completed before unification.
 
 | module | contents | consumers retrofitted |
 |---|---|---|
-| `proofs/GoLeanProofs/StepKit.lean` (NEW) | P1 conditioned one-step glue (`stepFnIter_one`, `stepFn_strict_apply`, `stepFn_store_step`, `stepFn_stmtOp_apply`, `stepFn_var`, `stepFn_init_seq`, `stepFn_seqn`, `stepFn_seq_pop`, `stepFn_storeK_nil`, `stepFn_mapAssign_apply`, `stepFn_snapshot`, `storeTarget_addr`), P9 `stepFn_seqn_splice`, P11 heap-append/set kit (`lookup_append_left/right`, `set_append_right`, `set_fresh`, `base_beq_false`, `lookup_cons_ne`, `set_cons_ne`, `set_singleton_self`, `lookup_singleton_self`) | (in progress) |
+| `proofs/GoLeanProofs/StepKit.lean` (NEW, namespace `GoLean.Surface`) | P1 conditioned one-step glue (`stepFnIter_one`, `stepFn_strict_apply`, `stepFn_store_step`, `stepFn_stmtOp_apply` — the general `ch'` form, subsuming MinMax's `ch = ch'` copy, `stepFn_var` — absorbing BinSearch's `stepFn_var_load`, `stepFn_init_seq`, `stepFn_seq_pop`, `stepFn_storeK_nil`, `stepFn_mapAssign_apply` + `stepFn_snapshot` — GENERALIZED from WordCount's `tU64`/`"c"`-specialized copies to arbitrary key/value types and bound names, `storeTarget_addr`), P9 `stepFn_seqn_splice` (absorbing WordCount's `stepFn_seqn`), P11 heap-append/set kit (`lookup_append_left/right`, `set_append_right`, `set_fresh`, `base_beq_false`, `lookup_cons_ne`, `set_cons_ne`, `set_singleton_self`, `lookup_singleton_self`), `natFromNonneg_cast` | Gcd, Reverse, MinMax, BinSearch, InsertionSort, WordCount (all six machine-layer examples; the retrofits are the fixture witnesses) |
+| `proofs/GoLeanProofs/SliceMem.lean` (extended) | P2 slice-value plumbing (`getElem?_mapU`, `getD_mem`, `mem_set_of_mem`, `locSup_mapU`), P3 normal-form additions (`unorm_nat_of_lt`, `unorm_add_nat`), `applyStrictOp_mod_u64` | same six |
+
+Layering call (recorded): the step glue sits in a NEW top-level module
+(not FuelMeasure — that stays the fuel/termination kit; not SliceMem —
+that stays statement-side-safe slice vocabulary), in the
+`GoLean.Surface` namespace so the example modules' existing `open`s
+resolve the promoted names with zero call-site churn. Pure-list and
+`applyStrictOp`-fact lemmas go to SliceMem beside their existing
+family.
 
 ## §3 Per-lift measurements (rule (c))
 
-(recorded per retrofit as they land)
+**C1 (StepKit + SliceMem promotion, rows P1/P2/P3/P9/P11 + glue):**
+
+Line deltas (git diff): −663 duplicated lines across the six example
+files (BinSearch −130, WordCount −282, InsertionSort −98, Reverse −77,
+MinMax −64, Gcd −52); +79 SliceMem, +254 StepKit (new) ⇒ net −330,
+and every future example starts ~110 lines lighter.
+
+Elaboration-time deltas (single-file `lean`, same machine, before →
+after): Gcd 0.78→0.76 s, Reverse 2.75→2.77 s, MinMax 3.02→3.00 s,
+BinSearch 8.72→8.48 s, InsertionSort 9.63→9.59 s, WordCount ≈150→151 s
+(peak RSS ≈55 GB, unchanged). Within noise, as expected — P1–P3/P9/P11
+are duplication lifts, not elaboration-cost lifts; the cost lift is the
+placement-generic layer (§1 fix 2).
+
+Cap-budget note (recorded deviation): the slice instruction set full
+gates at `GOLEAN_MEM_MAX=48G`, but WordCount's SINGLE-FILE elaboration
+peak is a measured ~55 GB (52 GB under a 48 G cap = kill, reproduced) —
+the gate runs at the default 64 G, one build at a time, nothing
+parallel. Finding-22-adjacent evidence: the heavy module, not
+concurrency, owns the budget.
+
+## §3b Gate state per commit
+
+* C1: `scripts/ci` PASS (full summary green; baseline diff FULL
+  1550/1550 no regression; escape-hatch preflight clean).
 
 ## §4 Gap B status
 

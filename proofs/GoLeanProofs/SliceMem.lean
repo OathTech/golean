@@ -74,6 +74,19 @@ theorem inorm_nat_of_lt {x : Nat} (h : x < 2 ^ 63) :
     IntKind.normalize .int (x : Int) = (x : Int) :=
   inorm_of_range (by omega) (by exact_mod_cast h)
 
+/-- The `Nat`-cast corner of `unorm_of_range` (consolidation slice
+2026-08-13: promoted from per-example privates, P3). -/
+theorem unorm_nat_of_lt {x : Nat} (h : x < 2 ^ 64) :
+    IntKind.normalize .uint64 (x : Int) = (x : Int) :=
+  unorm_of_range (by omega) (by exact_mod_cast h)
+
+/-- Wrapped uint64 addition of two `Nat`-cast values (promoted, P3). -/
+theorem unorm_add_nat (a b : Nat) :
+    IntKind.normalize .uint64 ((a : Int) + (b : Int))
+      = (((a + b) % 2 ^ 64 : Nat) : Int) := by
+  rw [show ((a : Int) + (b : Int)) = ((a + b : Nat) : Int) from by omega]
+  simp [IntKind.normalize, IntKind.bits?, IntKind.signed]
+
 /-! ## The executable slice-op facts -/
 
 theorem validateSlice_ok {b : Loc} {off len cap : Nat} (hcap : len ≤ cap) :
@@ -238,5 +251,71 @@ theorem storeTarget_slice_u64 {σ : ExecState} {a : Addr}
   simp only [storeTarget, resolveChain, indexTargetLoc, valueAsInt,
     valueAsLoc, sliceIndexLoc_ok hcap hi, Bind.bind, Except.bind, storeLoc,
     loadLoc, hlook, harrset, hnorm, pure, Except.pure]
+
+/-! ## Slice-value plumbing (consolidation slice 2026-08-13: promoted
+from 4–5 per-example private copies, ledger row P2) -/
+
+/-- Reading the mapped-to-`GoValue` backing at an in-range index. -/
+theorem getElem?_mapU (l : List Int) (k : Nat) (hk : k < l.length) :
+    (⟨l.map (fun v => .int v .uint64)⟩ : Array GoValue)[k]?
+      = some (.int (l.getD k 0) .uint64) := by
+  simp [List.getElem?_map, List.getD_eq_getElem?_getD,
+    List.getElem?_eq_getElem hk]
+
+/-- The house total-read idiom hits a member at an in-range index. -/
+theorem getD_mem {xs : List Int} {k : Nat} (hk : k < xs.length) :
+    xs.getD k 0 ∈ xs := by
+  rw [List.getD_eq_getElem?_getD, List.getElem?_eq_getElem hk]
+  exact List.getElem_mem hk
+
+/-- Membership after a `set` is the new value or an old member. -/
+theorem mem_set_of_mem {l : List Int} {i : Nat} {w v : Int}
+    (h : v ∈ l.set i w) : v = w ∨ v ∈ l := by
+  induction l generalizing i with
+  | nil => simp [List.set] at h
+  | cons x rest ih =>
+      cases i with
+      | zero =>
+          simp only [List.set, List.mem_cons] at h
+          rcases h with h | h
+          · exact .inl h
+          · exact .inr (by simp [h])
+      | succ n =>
+          simp only [List.set, List.mem_cons] at h
+          rcases h with h | h
+          · exact .inr (by simp [h])
+          · rcases ih h with h | h
+            · exact .inl h
+            · exact .inr (by simp [h])
+
+/-- An all-int backing array owns no locations. -/
+theorem locSup_mapU (l : List Int) :
+    GoValue.locSup (.array ⟨l.map (fun v => .int v .uint64)⟩) = 0 := by
+  show goValueListSup (l.map (fun v => .int v .uint64)) = 0
+  induction l with
+  | nil => rfl
+  | cons v rest ih => simpa [goValueListSup, GoValue.locSup] using ih
+
+/-- **The `%` executable fact** (promoted from Gcd/WordCount privates):
+uint64 `%` at a positive divisor is Nat `%`, wrapped nowhere — the
+divide-by-zero check is the one data-dependent branch. -/
+theorem applyStrictOp_mod_u64 {σ : ExecState} {a b : Nat}
+    (hb : 0 < b) (hb64 : b < 2 ^ 64) :
+    applyStrictOp σ .mod [.int (a : Int) .uint64, .int (b : Int) .uint64]
+      = .ok (.int ((a % b : Nat) : Int) .uint64, σ) := by
+  have hbne : (((b : Nat) : Int) == 0) = false := by
+    simp only [beq_eq_false_iff_ne, ne_eq, Int.natCast_eq_zero]
+    omega
+  have htmod : Int.tmod (a : Int) (b : Int) = ((a % b : Nat) : Int) := rfl
+  have hnorm : IntKind.normalize .uint64 ((a % b : Nat) : Int)
+      = ((a % b : Nat) : Int) :=
+    unorm_nat_of_lt (by
+      have : a % b < b := Nat.mod_lt _ hb
+      omega)
+  simp only [applyStrictOp, valueAsInt, hbne, intBinaryResult,
+    valueAsIntValue, htmod, IntKind.compatibleResult,
+    Bool.false_eq_true, if_false, Bind.bind, Except.bind, pure, Except.pure]
+  simp only [show (IntKind.uint64 == IntKind.uint64) = true from rfl,
+    if_true, hnorm]
 
 end GoLean.SliceMem

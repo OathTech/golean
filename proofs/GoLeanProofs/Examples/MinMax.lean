@@ -1,6 +1,7 @@
 import GoLeanProofs.Examples.MinMaxProgram
 import GoLeanProofs.SliceMem
 import GoLeanProofs.FuelMeasure
+import GoLeanProofs.StepKit
 import GoLeanProofs.Frame.Transfer
 import GoLeanProofs.Frame.RenameId
 import GoLeanProofs.Laws.StmtOps
@@ -173,11 +174,6 @@ def minMaxSeed (xs : List Int) (base : Nat) (fr : Heap) (na : Nat) :
     heap := resCells ++ sliceCells xs base ++ fr, nextAddr := na }
 
 /-! ## The pure layer: prefix min/max surgery -/
-
-private theorem getD_mem {xs : List Int} {k : Nat} (hk : k < xs.length) :
-    xs.getD k 0 ∈ xs := by
-  rw [List.getD_eq_getElem?_getD, List.getElem?_eq_getElem hk]
-  exact List.getElem_mem hk
 
 private theorem take_ne_nil {xs : List Int} {m : Nat} (hm1 : 1 ≤ m)
     (hne : xs ≠ []) : xs.take m ≠ [] := by
@@ -432,25 +428,6 @@ private def mmFinal (xs : List Int) : ExecState :=
              (.base ⟨9⟩, bcell false)],
     nextAddr := 10 }
 
-/-! ## Generic single-step glue (the branchy steps) -/
-
-private theorem stepFnIter_one {σ : ExecState} {c : Config} {ch : Choices}
-    {r : Config × ExecState × Choices}
-    (h : stepFn σ c ch = .ok r) : stepFnIter 1 σ c ch = .ok r := by
-  obtain ⟨c', σ', ch'⟩ := r
-  simp [stepFnIter, h, Bind.bind, Except.bind]
-
-/-- The strict-apply machine step, conditioned on the op fact. -/
-private theorem stepFn_strict_apply {σ σ' : ExecState} {op : StrictOp}
-    {done : List GoValue} {v out : GoValue} {env : LocalEnv} {k : Cont}
-    {ch : Choices}
-    (h : applyStrictOp σ op (v :: done).reverse = .ok (out, σ')) :
-    stepFn σ (.retV v (.strictK op done [] env k)) ch
-      = .ok (.retV out k, σ', ch) := by
-  simp only [stepFn]
-  rw [h]
-  rfl
-
 /-- The integer `<` strict-op fact (both operand kinds free: the
 machine compares the `Int` payloads). -/
 private theorem applyStrictOp_lessCmp_int {σ : ExecState} {a b : Int}
@@ -478,12 +455,6 @@ private theorem lookup_state (n : Nat) (l : List Int) (lov hiv iv : Int)
       = some ⟨some (.array n (.int .uint64)),
           .array ⟨l.map (fun v => .int v .uint64)⟩⟩ := by
   simp [mmStateP, Heap.lookup]
-
-private theorem getElem?_mapU (l : List Int) (k : Nat) (hk : k < l.length) :
-    (⟨l.map (fun v => .int v .uint64)⟩ : Array GoValue)[k]?
-      = some (.int (l.getD k 0) .uint64) := by
-  simp [List.getElem?_map, List.getD_eq_getElem?_getD,
-    List.getElem?_eq_getElem hk]
 
 /-! ## Raw run segments (`with_unfolding_all rfl` — pure definitional
 evaluation of the interpreter with the list content, `lo`/`hi`, and the
@@ -997,15 +968,6 @@ open GoLean.Frame
 private def relocShift (base na : Nat) : Nat → Nat :=
   fun x => if x = 0 then 0 else if x = 1 then 1 else if x = 2 then base
     else na + (x - 3)
-
-/-- Loc-freedom of the wrapped-integer backing array (the rename
-identity's premise). -/
-private theorem locSup_mapU (l : List Int) :
-    GoValue.locSup (.array ⟨l.map (fun v => .int v .uint64)⟩) = 0 := by
-  show goValueListSup (l.map (fun v => .int v .uint64)) = 0
-  induction l with
-  | nil => rfl
-  | cons v rest ih => simpa [goValueListSup, GoValue.locSup] using ih
 
 /-- The seed simulation: the canonical seed beside the framed seed at
 an arbitrary admissible placement, through the relocating shift. -/
@@ -1775,30 +1737,6 @@ private theorem lookup_mState (nv sv : Int) (n : Nat) (l : List Int)
       = some ⟨some (.array n (.int .uint64)),
           .array ⟨l.map (fun v => .int v .uint64)⟩⟩ := by
   simp [mState, Heap.lookup]
-
-/-- The phase-2 store machine step, conditioned on the store fact
-(reverse's `stepFn_store_step`). -/
-private theorem stepFn_store_step {σ σ' : ExecState} {r : TargetRef}
-    {val : GoValue} {rs : List TargetRef} {vs : List GoValue} {body : Stmt}
-    {env : LocalEnv} {k : Cont} {ch : Choices}
-    (h : storeTarget σ r val = .ok σ') :
-    stepFn σ (.next (.storeK (r :: rs) (val :: vs) body env k)) ch
-      = .ok (.next (.storeK rs vs body env k), σ', ch) := by
-  simp only [stepFn]
-  rw [h]
-  rfl
-
-/-- The wide-statement apply machine step, conditioned on the op fact
-(the `stmtOpK` analog of `stepFn_strict_apply`). -/
-private theorem stepFn_stmtOp_apply {σ σ' : ExecState} {op : StmtOp}
-    {nt : Nat} {done : List GoValue} {v : GoValue} {env : LocalEnv}
-    {k : Cont} {ch : Choices}
-    (h : applyStmtOp σ ch op nt (v :: done).reverse = .ok (σ', ch)) :
-    stepFn σ (.retV v (.stmtOpK op nt done [] env k)) ch
-      = .ok (.next k, σ', ch) := by
-  simp only [stepFn]
-  rw [h]
-  rfl
 
 /-- **The `make([]uint64, n)` apply at SYMBOLIC length** — the one
 data-dependent step of the setup phase: the length check discharged by

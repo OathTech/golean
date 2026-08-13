@@ -1,6 +1,7 @@
 import GoLeanProofs.Examples.BinSearchProgram
 import GoLeanProofs.SliceMem
 import GoLeanProofs.FuelMeasure
+import GoLeanProofs.StepKit
 import GoLeanProofs.Frame.Transfer
 import GoLeanProofs.Frame.RenameId
 import GoLeanProofs.Laws.StmtOps
@@ -415,32 +416,6 @@ private theorem set_append_of_none {p q : Heap} {l : Loc} {c : HeapCell}
       · rw [if_neg hk] at h
         simp only [List.cons_append, Heap.set, if_neg hk, ih h]
 
-private theorem set_fresh {q : Heap} {l : Loc} {c : HeapCell}
-    (h : Heap.lookup q l = none) :
-    Heap.set q l c = q ++ [(l, c)] := by
-  induction q with
-  | nil => rfl
-  | cons e rest ih =>
-      obtain ⟨k, c₀⟩ := e
-      simp only [Heap.lookup] at h
-      by_cases hk : (k == l) = true
-      · rw [if_pos hk] at h
-        cases h
-      · rw [if_neg hk] at h
-        simp only [Heap.set, if_neg hk, List.cons_append, ih h]
-
-private theorem lookup_singleton {l : Loc} {c : HeapCell} :
-    Heap.lookup [(l, c)] l = some c := by
-  simp [Heap.lookup]
-
-private theorem set_singleton {l : Loc} {c c' : HeapCell} :
-    Heap.set [(l, c)] l c' = [(l, c')] := by
-  simp [Heap.set]
-
-private theorem base_beq_false {a b : Nat} (h : a ≠ b) :
-    ((Loc.base ⟨a⟩ : Loc) == Loc.base ⟨b⟩) = false :=
-  beq_false_of_ne (by simpa using h)
-
 /-- Lookups above the canonical prefix fall through to the garbage. -/
 private theorem lookup_sP_high {n : Nat} {xs : List Int}
     {t r0 res lo hi : Int} {ff : Bool} {g : Heap} {na a : Nat}
@@ -489,60 +464,6 @@ private theorem lookup_sP_res {n : Nat} {xs : List Int}
     Heap.lookup (sP n xs t r0 res lo hi ff g na).heap (.base ⟨0⟩)
       = some (icell r0) := by
   simp [sP, Heap.lookup]
-
-/-! ## Generic single-step glue (the branchy steps between `rfl`
-segments) -/
-
-private theorem stepFnIter_one {σ : ExecState} {c : Config} {ch : Choices}
-    {r : Config × ExecState × Choices}
-    (h : stepFn σ c ch = .ok r) : stepFnIter 1 σ c ch = .ok r := by
-  obtain ⟨c', σ', ch'⟩ := r
-  simp [stepFnIter, h, Bind.bind, Except.bind]
-
-/-- The strict-apply machine step, conditioned on the op fact. -/
-private theorem stepFn_strict_apply {σ σ' : ExecState} {op : StrictOp}
-    {done : List GoValue} {v out : GoValue} {env : LocalEnv} {k : Cont}
-    {ch : Choices}
-    (h : applyStrictOp σ op (v :: done).reverse = .ok (out, σ')) :
-    stepFn σ (.retV v (.strictK op done [] env k)) ch
-      = .ok (.retV out k, σ', ch) := by
-  simp only [stepFn]
-  rw [h]
-  rfl
-
-/-- The phase-2 store machine step, conditioned on the store fact. -/
-private theorem stepFn_store_step {σ σ' : ExecState} {r : TargetRef}
-    {val : GoValue} {rs : List TargetRef} {vs : List GoValue} {body : Stmt}
-    {env : LocalEnv} {k : Cont} {ch : Choices}
-    (h : storeTarget σ r val = .ok σ') :
-    stepFn σ (.next (.storeK (r :: rs) (val :: vs) body env k)) ch
-      = .ok (.next (.storeK rs vs body env k), σ', ch) := by
-  simp only [stepFn]
-  rw [h]
-  rfl
-
-/-- The statement-sequence splice step at a MATCHING environment:
-`seqCont` decides `env' = env`, which cannot reduce when the
-environment carries the symbolic `mid` address — this lemma discharges
-the test by `rfl` once and for all (the iteration segments split at
-every splice under a `mid`-carrying scope). -/
-private theorem stepFn_seqn_splice {σ : ExecState} {ss : Array Stmt}
-    {env : LocalEnv} {rest : List Stmt} {k : Cont} {ch : Choices} :
-    stepFn σ (.exec (.seqn ss) env (.seq rest env k)) ch
-      = .ok (.next (.seq (ss.toList ++ rest) env k), σ, ch) := by
-  simp only [stepFn, seqCont]
-  rw [if_pos trivial]
-  rfl
-
-/-- The variable-read machine step, conditioned on the heap fact (the
-`mid` reads — the cell sits at a symbolic address). -/
-private theorem stepFn_var_load {σ : ExecState} {env : LocalEnv} {x : String}
-    {A : Addr} {c : HeapCell} {k : Cont} {ch : Choices}
-    (h1 : LocalEnv.lookup env x = some (.base A))
-    (h2 : Heap.lookup σ.heap (.base A) = some c) :
-    stepFn σ (.evalE (.var x) env k) ch = .ok (.retV c.value k, σ, ch) := by
-  simp only [stepFn, h1, loadLoc, h2]
-  rfl
 
 /-- The base-address int store fact (the `mid` cell's store — replayed
 by `storeTarget` through the trivial chain, normalized at the cell's
@@ -730,10 +651,10 @@ private theorem step_store_mid (n : Nat) (xs : List Int)
   have hlook : Heap.lookup
       (sP n xs t 0 0 lo hi false (g ++ [(.base ⟨ma⟩, icell w)]) na').heap
       (.base ⟨ma⟩) = some ⟨some (.int .int), .int w .int⟩ := by
-    rw [lookup_sP_high hma, lookup_append_of_none hg, lookup_singleton]
+    rw [lookup_sP_high hma, lookup_append_of_none hg, lookup_singleton_self]
   have hstore := storeTarget_base_int (σ := sP n xs t 0 0 lo hi false
     (g ++ [(.base ⟨ma⟩, icell w)]) na') (A := ⟨ma⟩) (ik := ik) m hlook
-  rw [set_sP_high hma, set_append_of_none hg, set_singleton] at hstore
+  rw [set_sP_high hma, set_append_of_none hg, set_singleton_self] at hstore
   exact stepFnIter_one (stepFn_store_step hstore)
 
 private def thenBlk : Stmt :=
@@ -803,8 +724,8 @@ private theorem step_load_mid (n : Nat) (xs : List Int)
   have hlook : Heap.lookup
       (sP n xs t 0 0 lo hi false (g ++ [(.base ⟨ma⟩, icell mv)]) na').heap
       (.base ⟨ma⟩) = some (icell mv) := by
-    rw [lookup_sP_high hma, lookup_append_of_none hg, lookup_singleton]
-  exact stepFnIter_one (stepFn_var_load henv hlook)
+    rw [lookup_sP_high hma, lookup_append_of_none hg, lookup_singleton_self]
+  exact stepFnIter_one (stepFn_var henv hlook)
 
 /-- Element delivered → the probe comparison's delivery (`target` read,
 `<` applied). -/
@@ -1049,12 +970,6 @@ private theorem seg_exitMiss_raw (n : Nat) (xs : List Int) (t lo hi : Int)
   with_unfolding_all rfl
 
 /-! ## Cleaned segments and the loop induction -/
-
-private theorem getElem?_mapU (l : List Int) (k : Nat) (hk : k < l.length) :
-    (⟨l.map (fun v => .int v .uint64)⟩ : Array GoValue)[k]?
-      = some (.int (l.getD k 0) .uint64) := by
-  simp [List.getElem?_map, List.getD_eq_getElem?_getD,
-    List.getElem?_eq_getElem hk]
 
 private theorem lookup_single_none {A a : Nat} {c : HeapCell} (h : A ≠ a) :
     Heap.lookup [(.base ⟨A⟩, c)] (.base ⟨a⟩) = none := by
@@ -1423,15 +1338,6 @@ open GoLean.Frame
 /-- The relocating renaming: `0 ↦ 0`, `1 ↦ base`, `2 + k ↦ na + k`. -/
 private def relocS (base na : Nat) : Nat → Nat :=
   fun x => if x = 0 then 0 else if x = 1 then base else na + (x - 2)
-
-/-- Loc-freedom of the wrapped-integer backing array (the rename
-identity's premise). -/
-private theorem locSup_mapU (l : List Int) :
-    GoValue.locSup (.array ⟨l.map (fun v => .int v .uint64)⟩) = 0 := by
-  show goValueListSup (l.map (fun v => .int v .uint64)) = 0
-  induction l with
-  | nil => rfl
-  | cons v rest ih => simpa [goValueListSup, GoValue.locSup] using ih
 
 /-- The seed simulation: the canonical seed beside the framed seed at
 an arbitrary admissible placement, through the relocating renaming. -/
@@ -1983,24 +1889,6 @@ private theorem hseg_A1_raw (n seed : Nat) (tv : Int) (ch : Choices) :
           σStartC6 n seed tv, ch) := by
   with_unfolding_all rfl
 
-private theorem natFromNonneg_cast (ctx : String) (n : Nat) :
-    natFromNonnegativeInt ctx ((n : Nat) : Int) = .ok n := by
-  simp only [natFromNonnegativeInt, Int.toNat_natCast]
-  rw [if_neg (show ¬(((n : Nat) : Int) < 0) by omega)]
-  rfl
-
-/-- The wide-op apply step, conditioned on the apply fact (mirror of
-`stepFn_strict_apply` for the statement-op spine). -/
-private theorem stepFn_stmtOp_apply {σ σ' : ExecState} {op : StmtOp}
-    {nt : Nat} {done : List GoValue} {v : GoValue} {env : LocalEnv}
-    {k : Cont} {ch ch' : Choices}
-    (h : applyStmtOp σ ch op nt (v :: done).reverse = .ok (σ', ch')) :
-    stepFn σ (.retV v (.stmtOpK op nt done [] env k)) ch
-      = .ok (.next k, σ', ch') := by
-  simp only [stepFn]
-  rw [h]
-  rfl
-
 /-- **The makeSlice apply at a SYMBOLIC length** (conditioned only on
 the length being a `Nat` cast — the bounds checks and `Int.toNat`
 cannot reduce on an open term): allocates the zeroed backing at 5 and
@@ -2500,9 +2388,9 @@ private theorem hstep_store_mid (n : Nat) (sv : Int) (xs : List Int)
       (hsP n sv xs t 0 0 0 lo hi false
         (g ++ [(.base ⟨ma⟩, icell w)]) na').heap
       (.base ⟨ma⟩) = some ⟨some (.int .int), .int w .int⟩ := by
-    rw [lookup_hsP_high hma, lookup_append_of_none hg, lookup_singleton]
+    rw [lookup_hsP_high hma, lookup_append_of_none hg, lookup_singleton_self]
   have hstore := storeTarget_base_int (ik := ik) m hlook
-  rw [set_hsP_high hma, set_append_of_none hg, set_singleton] at hstore
+  rw [set_hsP_high hma, set_append_of_none hg, set_singleton_self] at hstore
   exact stepFnIter_one (stepFn_store_step hstore)
 
 /-- The continuation below the probe's `if` (harness placement). -/
@@ -2575,8 +2463,8 @@ private theorem hstep_load_mid (n : Nat) (sv : Int) (xs : List Int)
       (hsP n sv xs t 0 0 0 lo hi false
         (g ++ [(.base ⟨ma⟩, icell mv)]) na').heap
       (.base ⟨ma⟩) = some (icell mv) := by
-    rw [lookup_hsP_high hma, lookup_append_of_none hg, lookup_singleton]
-  exact stepFnIter_one (stepFn_var_load henv hlook)
+    rw [lookup_hsP_high hma, lookup_append_of_none hg, lookup_singleton_self]
+  exact stepFnIter_one (stepFn_var henv hlook)
 
 /-- Element delivered → the probe comparison's delivery. -/
 private theorem hseg_iter4_raw (n : Nat) (sv : Int) (xs : List Int)

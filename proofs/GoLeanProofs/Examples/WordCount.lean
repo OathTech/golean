@@ -1,6 +1,7 @@
 import GoLeanProofs.Examples.WordCountProgram
 import GoLeanProofs.SliceMem
 import GoLeanProofs.FuelMeasure
+import GoLeanProofs.StepKit
 import GoLeanProofs.Frame.Transfer
 import GoLeanProofs.Frame.RenameId
 import GoLeanProofs.Laws.StmtOps
@@ -563,80 +564,6 @@ The in-loop cells live at length-dependent addresses past the nine
 concrete front cells, so their reads/writes are discharged by this
 small append algebra instead of definitional reduction. -/
 
-private theorem lookup_append_left {h₁ h₂ : Heap} {l : Loc} {c : HeapCell}
-    (h : Heap.lookup h₁ l = some c) :
-    Heap.lookup (h₁ ++ h₂) l = some c := by
-  induction h₁ with
-  | nil => cases h
-  | cons p rest ih =>
-      obtain ⟨k, c'⟩ := p
-      simp only [Heap.lookup, List.cons_append] at h ⊢
-      cases hb : (k == l) with
-      | true => simpa [hb] using h
-      | false =>
-          rw [hb] at h
-          simpa [hb] using ih h
-
-private theorem lookup_append_right {h₁ h₂ : Heap} {l : Loc}
-    (h : Heap.lookup h₁ l = none) :
-    Heap.lookup (h₁ ++ h₂) l = Heap.lookup h₂ l := by
-  induction h₁ with
-  | nil => rfl
-  | cons p rest ih =>
-      obtain ⟨k, c'⟩ := p
-      simp only [Heap.lookup, List.cons_append] at h ⊢
-      cases hb : (k == l) with
-      | true => simp [hb] at h
-      | false =>
-          rw [hb] at h
-          simpa [hb] using ih h
-
-private theorem set_append_right {h₁ h₂ : Heap} {l : Loc} {c : HeapCell}
-    (h : Heap.lookup h₁ l = none) :
-    Heap.set (h₁ ++ h₂) l c = h₁ ++ Heap.set h₂ l c := by
-  induction h₁ with
-  | nil => rfl
-  | cons p rest ih =>
-      obtain ⟨k, c'⟩ := p
-      simp only [Heap.lookup] at h
-      cases hb : (k == l) with
-      | true => simp [hb] at h
-      | false =>
-          rw [hb] at h
-          simp only [List.cons_append, Heap.set, hb, Bool.false_eq_true,
-            if_false]
-          exact congrArg _ (ih h)
-
-private theorem set_fresh {h : Heap} {l : Loc} {c : HeapCell}
-    (hmiss : Heap.lookup h l = none) :
-    Heap.set h l c = h ++ [(l, c)] := by
-  induction h with
-  | nil => rfl
-  | cons p rest ih =>
-      obtain ⟨k, c'⟩ := p
-      simp only [Heap.lookup] at hmiss
-      cases hb : (k == l) with
-      | true => simp [hb] at hmiss
-      | false =>
-          rw [hb] at hmiss
-          simp only [Heap.set, hb, Bool.false_eq_true, if_false,
-            List.cons_append]
-          exact congrArg _ (ih hmiss)
-
-private theorem base_beq_false {a b : Nat} (h : a ≠ b) :
-    ((Loc.base ⟨a⟩ : Loc) == Loc.base ⟨b⟩) = false :=
-  beq_false_of_ne (by simp [h])
-
-private theorem lookup_cons_ne {k : Loc} {c : HeapCell} {h : Heap} {l : Loc}
-    (hne : (k == l) = false) :
-    Heap.lookup ((k, c) :: h) l = Heap.lookup h l := by
-  simp [Heap.lookup, hne]
-
-private theorem set_cons_ne {k : Loc} {c₀ : HeapCell} {h : Heap} {l : Loc}
-    {c : HeapCell} (hne : (k == l) = false) :
-    Heap.set ((k, c₀) :: h) l c = (k, c₀) :: Heap.set h l c := by
-  simp [Heap.set, hne]
-
 /-! ## The pure counts layer: `bump`, `countsList`, and the max fold -/
 
 /-- One word lands in the counts list: increment the first occurrence
@@ -1130,93 +1057,6 @@ private def σC (L : Nat) (ws : List Int) (kvs : List (Int × Nat))
     methods := wordCountLowered.methods,
     heap := frontC L ws kvs iv ff ++ dead, nextAddr := na }
 
-/-! ### Generic single-step glue -/
-
-private theorem stepFnIter_one {σ : ExecState} {c : Config} {ch : Choices}
-    {r : Config × ExecState × Choices}
-    (h : stepFn σ c ch = .ok r) : stepFnIter 1 σ c ch = .ok r := by
-  obtain ⟨c', σ', ch'⟩ := r
-  simp [stepFnIter, h, Bind.bind, Except.bind]
-
-/-- The strict-apply machine step, conditioned on the op fact. -/
-private theorem stepFn_strict_apply {σ σ' : ExecState} {op : StrictOp}
-    {done : List GoValue} {v out : GoValue} {env : LocalEnv} {k : Cont}
-    {ch : Choices}
-    (h : applyStrictOp σ op (v :: done).reverse = .ok (out, σ')) :
-    stepFn σ (.retV v (.strictK op done [] env k)) ch
-      = .ok (.retV out k, σ', ch) := by
-  simp only [stepFn]
-  rw [h]
-  rfl
-
-/-- The phase-2 store machine step, conditioned on the store fact. -/
-private theorem stepFn_store_step {σ σ' : ExecState} {r : TargetRef}
-    {val : GoValue} {rs : List TargetRef} {vs : List GoValue} {body : Stmt}
-    {env : LocalEnv} {k : Cont} {ch : Choices}
-    (h : storeTarget σ r val = .ok σ') :
-    stepFn σ (.next (.storeK (r :: rs) (val :: vs) body env k)) ch
-      = .ok (.next (.storeK rs vs body env k), σ', ch) := by
-  simp only [stepFn]
-  rw [h]
-  rfl
-
-/-- A plain-variable store target is a `storeLoc` at its cell. -/
-private theorem storeTarget_addr {σ : ExecState} {a : Addr} {ty : Ty}
-    {old v v' : GoValue}
-    (hlook : Heap.lookup σ.heap (.base a) = some ⟨some ty, old⟩)
-    (hnorm : normalizeValueForTy σ ty v = .ok v') :
-    storeTarget σ (.chain (.addr (.base a)) [] []) v
-      = .ok { σ with heap := Heap.set σ.heap (.base a) ⟨some ty, v'⟩ } := by
-  simp only [storeTarget, resolveChain, valueAsLoc, Bind.bind, Except.bind,
-    pure, Except.pure, storeLoc, hlook, hnorm]
-
-/-- The variable-read step at a symbolic heap address, conditioned on
-the env binding and the cell lookup. -/
-private theorem stepFn_var {σ : ExecState} {x : String} {env : LocalEnv}
-    {a : Addr} {k : Cont} {ch : Choices} {c : HeapCell}
-    (henv : LocalEnv.lookup env x = some (.base a))
-    (hlook : Heap.lookup σ.heap (.base a) = some c) :
-    stepFn σ (.evalE (.var x) env k) ch = .ok (.retV c.value k, σ, ch) := by
-  simp only [stepFn, henv, loadLoc, hlook, Bind.bind, Except.bind, pure,
-    Except.pure]
-
-/-- The `initialization` step under its governing sequence: allocate the
-zero value at the CURRENT `nextAddr` (symbolic in-loop), declare. -/
-private theorem stepFn_init_seq {σ : ExecState} {p : Param}
-    {rest : List Stmt} {env : LocalEnv} {k : Cont} {ch : Choices}
-    {v : GoValue}
-    (hdef : defaultValue σ p.typ = .ok v) :
-    stepFn σ (.exec (.initialization p) env (.seq rest env k)) ch
-      = .ok (.next (.seq rest (env.declare p.id (.base ⟨σ.nextAddr⟩)) k),
-          { σ with heap := (Heap.set σ.heap (.base ⟨σ.nextAddr⟩)
-              ⟨some p.typ, v⟩), nextAddr := σ.nextAddr + 1 }, ch) := by
-  simp only [stepFn]
-  rw [if_pos trivial]
-  simp only [hdef, Bind.bind, Except.bind, pure, Except.pure,
-    ExecState.alloc, ExecState.freshLoc]
-
-/-- The `mapAssign` wide-op apply step, conditioned on the
-`mapAssignValue` fact. -/
-private theorem stepFn_mapAssign_apply {σ σ' : ExecState}
-    {b kv vv : GoValue} {env : LocalEnv} {k : Cont} {ch : Choices}
-    (h : mapAssignValue σ tU64 tU64 b kv vv = .ok σ') :
-    stepFn σ (.retV vv (.stmtOpK (.mapAssign tU64 tU64) 0 [kv, b] [] env k))
-      ch
-      = .ok (.next k, σ', ch) := by
-  simp only [stepFn, applyStmtOp, applyStmtOpCore, List.reverse_cons,
-    List.reverse_nil, List.nil_append, List.cons_append, h, Bind.bind,
-    Except.bind, pure, Except.pure]
-
-/-- The `mapRangeK` snapshot step, conditioned on the snapshot fact. -/
-private theorem stepFn_snapshot {σ : ExecState} {v : GoValue}
-    {entries : Array (GoValue × GoValue)} {body : Stmt} {env : LocalEnv}
-    {k : Cont} {ch : Choices}
-    (h : mapRangeSnapshotEntries σ tU64 tU64 v = .ok entries) :
-    stepFn σ (.retV v (.mapRangeK none (some "c") tU64 tU64 body env k)) ch
-      = .ok (.next (.mapIterK none (some "c") tU64 tU64 body entries env k),
-          σ, ch) := by
-  simp only [stepFn, h, Bind.bind, Except.bind, pure, Except.pure]
-
 /-- **The choice-pick step** (§10b): at a nonempty snapshot, ONE choice
 is consumed (`idx < size` from `Choices.consume`'s `% bound` contract),
 the picked entry's VALUE cell is freshly allocated at the current
@@ -1345,17 +1185,6 @@ private theorem lookup_frontC_none (L : Nat) (ws : List Int)
     base_beq_false (by omega : (8 : Nat) ≠ x),
     Bool.false_eq_true, if_false]
 
-private theorem set_singleton_self {l : Loc} {c₀ c : HeapCell} :
-    Heap.set [(l, c₀)] l c = [(l, c)] := by
-  simp [Heap.set]
-
-/-- Element read of the wrapped-uint64 backing array. -/
-private theorem getElem?_mapU (l : List Int) (k : Nat) (hk : k < l.length) :
-    (⟨l.map (fun v => .int v .uint64)⟩ : Array GoValue)[k]?
-      = some (.int (l.getD k 0) .uint64) := by
-  simp [List.getElem?_map, List.getD_eq_getElem?_getD,
-    List.getElem?_eq_getElem hk]
-
 private def stK0 (na : Nat) : Cont :=
   .stmtOpK (.mapAssign tU64 tU64) 0 []
     [.var "$c2",
@@ -1395,28 +1224,6 @@ private theorem wc_segC2_raw (L : Nat) (ws : List Int)
           σC L ws kvs iv false tail na, ch) := by
   with_unfolding_all rfl
 
-/-- The `.seqn`-splice step under a symbolic-address environment (the
-`seqCont` env comparison does not kernel-reduce there — glue). -/
-private theorem stepFn_seqn {σ : ExecState} {ss : Array Stmt}
-    {env : LocalEnv} {rest : List Stmt} {k : Cont} {ch : Choices} :
-    stepFn σ (.exec (.seqn ss) env (.seq rest env k)) ch
-      = .ok (.next (.seq (ss.toList ++ rest) env k), σ, ch) := by
-  simp only [stepFn, seqCont]
-  rw [if_pos trivial]
-  rfl
-
-/-- One `.seq`-pop step (statement dispatch; no env comparison). -/
-private theorem stepFn_seq_pop {σ : ExecState} {t : Stmt}
-    {rest : List Stmt} {env : LocalEnv} {k : Cont} {ch : Choices} :
-    stepFn σ (.next (.seq (t :: rest) env k)) ch
-      = .ok (.exec t env (.seq rest env k), σ, ch) := rfl
-
-/-- The empty-store drain step. -/
-private theorem stepFn_storeK_nil {σ : ExecState} {body : Stmt}
-    {env : LocalEnv} {k : Cont} {ch : Choices} :
-    stepFn σ (.next (.storeK [] [] body env k)) ch
-      = .ok (.exec body env k, σ, ch) := rfl
-
 /-- C3 (composed from glue: two `.seqn` splices under the symbolic env):
 `$c1` stored → the `$c2` initialization. 5 steps. -/
 private theorem wc_segC3_raw (L : Nat) (ws : List Int)
@@ -1434,13 +1241,13 @@ private theorem wc_segC3_raw (L : Nat) (ws : List Int)
     (σ := σC L ws kvs iv false tail na) (body := .seqn #[])
     (env := u1Env na₀)
     (k := .seq [seqnC2, mapAsgnStmt] (u1Env na₀) postBodyK) (ch := ch))
-  have h2 := stepFnIter_one (stepFn_seqn
+  have h2 := stepFnIter_one (stepFn_seqn_splice
     (σ := σC L ws kvs iv false tail na) (ss := #[]) (env := u1Env na₀)
     (rest := [seqnC2, mapAsgnStmt]) (k := postBodyK) (ch := ch))
   have h3 := stepFnIter_one (stepFn_seq_pop
     (σ := σC L ws kvs iv false tail na) (t := seqnC2)
     (rest := [mapAsgnStmt]) (env := u1Env na₀) (k := postBodyK) (ch := ch))
-  have h4 := stepFnIter_one (stepFn_seqn
+  have h4 := stepFnIter_one (stepFn_seqn_splice
     (σ := σC L ws kvs iv false tail na)
     (ss := #[.initialization { id := "$c2", typ := tU64 },
       .assign (.var "$c2") (.indexGet (.var "words") (.var "i"))])
@@ -1499,7 +1306,7 @@ private theorem wc_segC6_raw (L : Nat) (ws : List Int)
     (σ := σC L ws kvs iv false tail na) (body := .seqn #[])
     (env := uEnv na₀) (k := .seq [mapAsgnStmt] (uEnv na₀) postBodyK)
     (ch := ch))
-  have h2 := stepFnIter_one (stepFn_seqn
+  have h2 := stepFnIter_one (stepFn_seqn_splice
     (σ := σC L ws kvs iv false tail na) (ss := #[]) (env := uEnv na₀)
     (rest := [mapAsgnStmt]) (k := postBodyK) (ch := ch))
   have h3 : stepFnIter 2 (σC L ws kvs iv false tail na)
@@ -1591,15 +1398,6 @@ private theorem cnt_take_le {ws : List Int} {i : Nat} (w : Int) :
     rw [List.length_take]
     exact Nat.min_le_left _ _
   omega
-
-private theorem getD_mem {xs : List Int} {k : Nat} (hk : k < xs.length) :
-    xs.getD k 0 ∈ xs := by
-  rw [List.getD_eq_getElem?_getD, List.getElem?_eq_getElem hk]
-  exact List.getElem_mem hk
-
-private theorem lookup_singleton_self {l : Loc} {c : HeapCell} :
-    Heap.lookup [(l, c)] l = some c := by
-  simp [Heap.lookup]
 
 /-- **One counting iteration** (exit test true at word `i`): the map
 data cell advances from the counts of `ws.take i` to those of
@@ -1944,7 +1742,7 @@ private theorem wc_segX0c_raw (L : Nat) (ws : List Int)
     (σ := σC L ws kvs iv false tail na) (body := .seqn #[])
     (env := envRB B) (k := .seq [wcMapRangeStmt, retSeqn] (envRB B) frameK)
     (ch := ch))
-  have h2 := stepFnIter_one (stepFn_seqn
+  have h2 := stepFnIter_one (stepFn_seqn_splice
     (σ := σC L ws kvs iv false tail na) (ss := #[]) (env := envRB B)
     (rest := [wcMapRangeStmt, retSeqn]) (k := frameK) (ch := ch))
   have h3 : stepFnIter 3 (σC L ws kvs iv false tail na)
@@ -2306,7 +2104,7 @@ private theorem wc_segR5_raw (L : Nat) (ws : List Int)
   have h1 := stepFnIter_one (stepFn_storeK_nil
     (σ := σC L ws kvs iv false tail na) (body := .seqn #[])
     (env := env4 B na₀) (k := storeBestK B na₀ rem) (ch := ch))
-  have h2 := stepFnIter_one (stepFn_seqn
+  have h2 := stepFnIter_one (stepFn_seqn_splice
     (σ := σC L ws kvs iv false tail na) (ss := #[]) (env := env4 B na₀)
     (rest := []) (k := .seq [] (envIf B na₀) (iterK B rem)) (ch := ch))
   have h3 : stepFnIter 2 (σC L ws kvs iv false tail na)
@@ -2330,7 +2128,7 @@ private theorem wc_segR4e_raw (L : Nat) (ws : List Int)
             (.seq [] (envIf B na₀) (iterK B rem)),
           σC L ws kvs iv false tail na, ch) := by
     with_unfolding_all rfl
-  have h2 := stepFnIter_one (stepFn_seqn
+  have h2 := stepFnIter_one (stepFn_seqn_splice
     (σ := σC L ws kvs iv false tail na) (ss := #[]) (env := envIf B na₀)
     (rest := []) (k := iterK B rem) (ch := ch))
   have h3 : stepFnIter 1 (σC L ws kvs iv false tail na)
@@ -2490,7 +2288,7 @@ private theorem wc_range_loop (ws : List Int) (kvs : List (Int × Nat)) :
           (tail ++ [(.base ⟨na⟩, ⟨some tU64, .int (p.2 : Int) .uint64⟩)])
           B na (na + 1) ch₂
         have h7 := stepFnIter_chain h6 hR4a
-        have h8 := stepFnIter_chain h7 (stepFnIter_one (stepFn_seqn
+        have h8 := stepFnIter_chain h7 (stepFnIter_one (stepFn_seqn_splice
           (σ := σC ws.length ws kvs (ws.length : Int) false
             (tail ++ [(.base ⟨na⟩, ⟨some tU64, .int (p.2 : Int) .uint64⟩)])
             (na + 1))
@@ -2658,7 +2456,7 @@ private theorem wc_segX1_raw (L : Nat) (ws : List Int)
       = .ok (.exec retSeqn (envRB B) (.seq [] (envRB B) frameK),
           σX L ws kvs r0 r3 tail na, ch) := by
     with_unfolding_all rfl
-  have h2 := stepFnIter_one (stepFn_seqn
+  have h2 := stepFnIter_one (stepFn_seqn_splice
     (σ := σX L ws kvs r0 r3 tail na)
     (ss := #[.assign (.var "$res0") (.var "best"), .returnStmt])
     (env := envRB B) (rest := []) (k := frameK) (ch := ch))
@@ -2702,7 +2500,7 @@ private theorem wc_segX2b_raw (L : Nat) (ws : List Int)
   have h1 := stepFnIter_one (stepFn_storeK_nil
     (σ := σX L ws kvs r0 r3 tail na) (body := .seqn #[]) (env := envRB B)
     (k := .seq [.returnStmt] (envRB B) frameK) (ch := ch))
-  have h2 := stepFnIter_one (stepFn_seqn
+  have h2 := stepFnIter_one (stepFn_seqn_splice
     (σ := σX L ws kvs r0 r3 tail na) (ss := #[]) (env := envRB B)
     (rest := [.returnStmt]) (k := frameK) (ch := ch))
   exact stepFnIter_chain h1 h2
@@ -3346,23 +3144,6 @@ private theorem wcH_E1_raw (n seed : Nat) (ch : Choices) :
           σWStartC9 ((n : Nat) : Int) ((seed : Nat) : Int), ch) := by
   with_unfolding_all rfl
 
-private theorem natFromNonneg_cast' (ctx : String) (n : Nat) :
-    natFromNonnegativeInt ctx ((n : Nat) : Int) = .ok n := by
-  simp only [natFromNonnegativeInt, Int.toNat_natCast]
-  rw [if_neg (show ¬(((n : Nat) : Int) < 0) by omega)]
-  rfl
-
-/-- The wide-op apply step, conditioned on the apply fact. -/
-private theorem stepFn_stmtOp_apply' {σ σ' : ExecState} {op : StmtOp}
-    {nt : Nat} {done : List GoValue} {v : GoValue} {env : LocalEnv}
-    {k : Cont} {ch ch' : Choices}
-    (h : applyStmtOp σ ch op nt (v :: done).reverse = .ok (σ', ch')) :
-    stepFn σ (.retV v (.stmtOpK op nt done [] env k)) ch
-      = .ok (.next k, σ', ch') := by
-  simp only [stepFn]
-  rw [h]
-  rfl
-
 /-- Post-makeSlice: the handle in `$c9`, the zeroed backing at 4. -/
 private def σWMkS (n seed : Nat) : ExecState :=
   { types := wordCountLowered.typeDefs.toList,
@@ -3388,9 +3169,9 @@ private theorem wcH_makeSlice (n seed : Nat) (ch : Choices) :
           (fun v => GoValue.int v .uint64)⟩ : Array GoValue) := by
     simp [List.map_replicate]
   rw [harr] at hb
-  have hnn1 := natFromNonneg_cast'
+  have hnn1 := natFromNonneg_cast
     "runtime error: makeslice: len out of range" n
-  have hnn2 := natFromNonneg_cast'
+  have hnn2 := natFromNonneg_cast
     "runtime error: makeslice: cap out of range" n
   have happly : applyStmtOp (σWStartC9 ((n : Nat) : Int) ((seed : Nat) : Int))
       ch (.makeSlice tU64 false) 1
@@ -3400,7 +3181,7 @@ private theorem wcH_makeSlice (n seed : Nat) (ch : Choices) :
       hnn1, hnn2, hb, Bind.bind, Except.bind, pure, Except.pure]
     rw [if_neg (Nat.lt_irrefl n)]
     with_unfolding_all rfl
-  exact stepFn_stmtOp_apply'
+  exact stepFn_stmtOp_apply
     (done := [.addr (.base ⟨3⟩)]) (v := .int ((n : Nat) : Int) .uint64)
     happly
 
@@ -3479,27 +3260,6 @@ private theorem wcH_suB1a_raw (n : Nat) (sv iv : Int) (l : List Int)
           sWSU n sv l iv false, ch) := by
   with_unfolding_all rfl
 
-/-- **The `%` executable fact** (gcd's `applyStrictOp_mod_u64`, copied
-privately — shared-kit promotion candidate, third consumer). -/
-private theorem applyStrictOp_mod_u64 {σ : ExecState} {a b : Nat}
-    (hb : 0 < b) (hb64 : b < 2 ^ 64) :
-    applyStrictOp σ .mod [.int (a : Int) .uint64, .int (b : Int) .uint64]
-      = .ok (.int ((a % b : Nat) : Int) .uint64, σ) := by
-  have hbne : (((b : Nat) : Int) == 0) = false := by
-    simp only [beq_eq_false_iff_ne, ne_eq, Int.natCast_eq_zero]
-    omega
-  have htmod : Int.tmod (a : Int) (b : Int) = ((a % b : Nat) : Int) := rfl
-  have hnorm : IntKind.normalize .uint64 ((a % b : Nat) : Int)
-      = ((a % b : Nat) : Int) := by
-    refine unorm_of_range (by omega) ?_
-    have : a % b < b := Nat.mod_lt _ hb
-    exact_mod_cast (by omega : a % b < 2 ^ 64)
-  simp only [applyStrictOp, valueAsInt, hbne, intBinaryResult,
-    valueAsIntValue, htmod, IntKind.compatibleResult,
-    Bool.false_eq_true, if_false, Bind.bind, Except.bind, pure, Except.pure]
-  simp only [show (IntKind.uint64 == IntKind.uint64) = true from rfl,
-    if_true, hnorm]
-
 /-- Setup fill phase B: the `%` result delivered → the add runs → the
 element-store point (the wrapped `seed + i%3` riding). 2 steps. -/
 private theorem wcH_suB1b_raw (n : Nat) (sv iv rv : Int) (l : List Int)
@@ -3531,14 +3291,6 @@ private theorem wcH_suA1_raw (n : Nat) (sv iv : Int) (l : List Int)
             (IntKind.normalize .uint64 (IntKind.normalize .uint64 (iv + 1)))
             false, ch) := by
   with_unfolding_all rfl
-
-/-- Wrapped uint64 addition of two Nat-cast values (reverse's
-`unorm_add_nat`, copied privately — promotion candidate). -/
-private theorem unorm_add_nat (a b : Nat) :
-    IntKind.normalize .uint64 ((a : Int) + (b : Int))
-      = (((a + b) % 2 ^ 64 : Nat) : Int) := by
-  rw [show ((a : Int) + (b : Int)) = ((a + b : Nat) : Int) from by omega]
-  simp [IntKind.normalize, IntKind.bits?, IntKind.signed]
 
 /-- One setup iteration from the exit-test's true delivery at `i`:
 `i % 3` (conditioned), the wrapped add, the element store, back to the
@@ -3852,13 +3604,13 @@ private theorem wcH_segC3_raw (L : Nat) (sv siv : Int) (ws : List Int)
     (σ := σH L sv siv ws kvs iv false tail na) (body := .seqn #[])
     (env := u1EnvH na₀)
     (k := .seq [seqnC2, mapAsgnStmt] (u1EnvH na₀) postBodyKH) (ch := ch))
-  have h2 := stepFnIter_one (stepFn_seqn
+  have h2 := stepFnIter_one (stepFn_seqn_splice
     (σ := σH L sv siv ws kvs iv false tail na) (ss := #[]) (env := u1EnvH na₀)
     (rest := [seqnC2, mapAsgnStmt]) (k := postBodyKH) (ch := ch))
   have h3 := stepFnIter_one (stepFn_seq_pop
     (σ := σH L sv siv ws kvs iv false tail na) (t := seqnC2)
     (rest := [mapAsgnStmt]) (env := u1EnvH na₀) (k := postBodyKH) (ch := ch))
-  have h4 := stepFnIter_one (stepFn_seqn
+  have h4 := stepFnIter_one (stepFn_seqn_splice
     (σ := σH L sv siv ws kvs iv false tail na)
     (ss := #[.initialization { id := "$c2", typ := tU64 },
       .assign (.var "$c2") (.indexGet (.var "words") (.var "i"))])
@@ -3917,7 +3669,7 @@ private theorem wcH_segC6_raw (L : Nat) (sv siv : Int) (ws : List Int)
     (σ := σH L sv siv ws kvs iv false tail na) (body := .seqn #[])
     (env := uEnvH na₀) (k := .seq [mapAsgnStmt] (uEnvH na₀) postBodyKH)
     (ch := ch))
-  have h2 := stepFnIter_one (stepFn_seqn
+  have h2 := stepFnIter_one (stepFn_seqn_splice
     (σ := σH L sv siv ws kvs iv false tail na) (ss := #[]) (env := uEnvH na₀)
     (rest := [mapAsgnStmt]) (k := postBodyKH) (ch := ch))
   have h3 : stepFnIter 2 (σH L sv siv ws kvs iv false tail na)
@@ -4054,7 +3806,7 @@ private theorem wcH_segX0c_raw (L : Nat) (sv siv : Int) (ws : List Int)
     (σ := σH L sv siv ws kvs iv false tail na) (body := .seqn #[])
     (env := envRBH B) (k := .seq [wcMapRangeStmt, retSeqn] (envRBH B) frameKH)
     (ch := ch))
-  have h2 := stepFnIter_one (stepFn_seqn
+  have h2 := stepFnIter_one (stepFn_seqn_splice
     (σ := σH L sv siv ws kvs iv false tail na) (ss := #[]) (env := envRBH B)
     (rest := [wcMapRangeStmt, retSeqn]) (k := frameKH) (ch := ch))
   have h3 : stepFnIter 3 (σH L sv siv ws kvs iv false tail na)

@@ -1,6 +1,7 @@
 import GoLeanProofs.Examples.ReverseProgram
 import GoLeanProofs.SliceMem
 import GoLeanProofs.FuelMeasure
+import GoLeanProofs.StepKit
 import GoLeanProofs.Frame.Transfer
 import GoLeanProofs.Frame.RenameId
 import GoLeanProofs.Laws.StmtOps
@@ -338,36 +339,6 @@ private def cmpState (xs : List Int) (m : Nat) : ExecState :=
   revStateP xs.length (revSwap xs m) (m : Nat)
     ((xs.length - 1 - m : Nat) : Int) false
 
-/-! ## Generic single-step lemmas (the branchy steps' glue) -/
-
-private theorem stepFnIter_one {σ : ExecState} {c : Config} {ch : Choices}
-    {r : Config × ExecState × Choices}
-    (h : stepFn σ c ch = .ok r) : stepFnIter 1 σ c ch = .ok r := by
-  obtain ⟨c', σ', ch'⟩ := r
-  simp [stepFnIter, h, Bind.bind, Except.bind]
-
-/-- The strict-apply machine step, conditioned on the op fact. -/
-private theorem stepFn_strict_apply {σ σ' : ExecState} {op : StrictOp}
-    {done : List GoValue} {v out : GoValue} {env : LocalEnv} {k : Cont}
-    {ch : Choices}
-    (h : applyStrictOp σ op (v :: done).reverse = .ok (out, σ')) :
-    stepFn σ (.retV v (.strictK op done [] env k)) ch
-      = .ok (.retV out k, σ', ch) := by
-  simp only [stepFn]
-  rw [h]
-  rfl
-
-/-- The phase-2 store machine step, conditioned on the store fact. -/
-private theorem stepFn_store_step {σ σ' : ExecState} {r : TargetRef}
-    {val : GoValue} {rs : List TargetRef} {vs : List GoValue} {body : Stmt}
-    {env : LocalEnv} {k : Cont} {ch : Choices}
-    (h : storeTarget σ r val = .ok σ') :
-    stepFn σ (.next (.storeK (r :: rs) (val :: vs) body env k)) ch
-      = .ok (.next (.storeK rs vs body env k), σ', ch) := by
-  simp only [stepFn]
-  rw [h]
-  rfl
-
 /-! ## Raw run segments (`with_unfolding_all rfl` — pure definitional
 evaluation of the interpreter with the list content and counters
 symbolic; the segments split exactly at the data-dependent branch
@@ -503,36 +474,6 @@ private theorem rev_exit_raw (n : Nat) (l : List Int) (iv jv : Int)
   with_unfolding_all rfl
 
 /-! ## Cleaned segments and the loop induction -/
-
-private theorem getD_mem {xs : List Int} {k : Nat} (hk : k < xs.length) :
-    xs.getD k 0 ∈ xs := by
-  rw [List.getD_eq_getElem?_getD, List.getElem?_eq_getElem hk]
-  exact List.getElem_mem hk
-
-private theorem mem_set_of_mem {l : List Int} {i : Nat} {w v : Int}
-    (h : v ∈ l.set i w) : v = w ∨ v ∈ l := by
-  induction l generalizing i with
-  | nil => simp [List.set] at h
-  | cons x rest ih =>
-      cases i with
-      | zero =>
-          simp only [List.set, List.mem_cons] at h
-          rcases h with h | h
-          · exact .inl h
-          · exact .inr (by simp [h])
-      | succ n =>
-          simp only [List.set, List.mem_cons] at h
-          rcases h with h | h
-          · exact .inr (by simp [h])
-          · rcases ih h with h | h
-            · exact .inl h
-            · exact .inr (by simp [h])
-
-private theorem getElem?_mapU (l : List Int) (k : Nat) (hk : k < l.length) :
-    (⟨l.map (fun v => .int v .uint64)⟩ : Array GoValue)[k]?
-      = some (.int (l.getD k 0) .uint64) := by
-  simp [List.getElem?_map, List.getD_eq_getElem?_getD,
-    List.getElem?_eq_getElem hk]
 
 /-- The canonical seed's backing-cell lookup. -/
 private theorem lookup_seed (xs : List Int) :
@@ -855,15 +796,6 @@ open GoLean.Frame
 /-- The input-relocating renaming: `0 ↦ base`, `1 + k ↦ na + k`. -/
 private def relocShift (base na : Nat) : Nat → Nat :=
   fun x => if x = 0 then base else na + (x - 1)
-
-/-- Loc-freedom of the wrapped-integer backing array (the rename
-identity's premise). -/
-private theorem locSup_mapU (l : List Int) :
-    GoValue.locSup (.array ⟨l.map (fun v => .int v .uint64)⟩) = 0 := by
-  show goValueListSup (l.map (fun v => .int v .uint64)) = 0
-  induction l with
-  | nil => rfl
-  | cons v rest ih => simpa [goValueListSup, GoValue.locSup] using ih
 
 /-- The seed simulation: reverse's canonical seed beside the framed
 seed at an arbitrary placement, through the relocating shift. -/
@@ -1263,13 +1195,6 @@ private theorem getD_reverse_revFamily {n seed m : Nat} (hm : m < n) :
   simp only [revFamily, List.getElem?_map, List.getElem?_range
     (by omega : n - 1 - m < n)]
   rfl
-
-/-- Wrapped uint64 addition of two Nat-cast values. -/
-private theorem unorm_add_nat (a b : Nat) :
-    IntKind.normalize .uint64 ((a : Int) + (b : Int))
-      = (((a + b) % 2 ^ 64 : Nat) : Int) := by
-  rw [show ((a : Int) + (b : Int)) = ((a + b : Nat) : Int) from by omega]
-  simp [IntKind.normalize, IntKind.bits?, IntKind.signed]
 
 /-! ### The machine layer: harness address layout (probe-verified;
 every raw segment re-checks the transcription by `rfl`).

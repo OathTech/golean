@@ -1,6 +1,7 @@
 import GoLeanProofs.Examples.GcdProgram
 import GoLeanProofs.SliceMem
 import GoLeanProofs.FuelMeasure
+import GoLeanProofs.StepKit
 import GoLeanProofs.Frame.Transfer
 import GoLeanProofs.Frame.RenameId
 
@@ -190,53 +191,10 @@ private def gcdEndState (g : Int) : ExecState :=
              (.base ⟨4⟩, bcell false)],
     nextAddr := 5 }
 
-/-! ## Machine-integer normal forms and the `%` executable fact -/
-
-private theorem unorm_nat_of_lt {x : Nat} (h : x < 2 ^ 64) :
-    IntKind.normalize .uint64 (x : Int) = (x : Int) :=
-  unorm_of_range (by omega) (by exact_mod_cast h)
-
-/-- The generic single-step glue (reverse's `stepFnIter_one`). -/
-private theorem stepFnIter_one {σ : ExecState} {c : Config} {ch : Choices}
-    {r : Config × ExecState × Choices}
-    (h : stepFn σ c ch = .ok r) : stepFnIter 1 σ c ch = .ok r := by
-  obtain ⟨c', σ', ch'⟩ := r
-  simp [stepFnIter, h, Bind.bind, Except.bind]
-
-/-- The strict-apply machine step, conditioned on the op fact
-(reverse's `stepFn_strict_apply`). -/
-private theorem stepFn_strict_apply {σ σ' : ExecState} {op : StrictOp}
-    {done : List GoValue} {v out : GoValue} {env : LocalEnv} {k : Cont}
-    {ch : Choices}
-    (h : applyStrictOp σ op (v :: done).reverse = .ok (out, σ')) :
-    stepFn σ (.retV v (.strictK op done [] env k)) ch
-      = .ok (.retV out k, σ', ch) := by
-  simp only [stepFn]
-  rw [h]
-  rfl
-
-/-- **The `%` executable fact** (§5c's predicted `emod` extension of
-the `unorm` family): uint64 `%` at a positive divisor is Nat `%`,
-wrapped nowhere — the divide-by-zero check is the one data-dependent
-branch inside a gcd iteration, and this fact discharges it. -/
-private theorem applyStrictOp_mod_u64 {σ : ExecState} {a b : Nat}
-    (hb : 0 < b) (hb64 : b < 2 ^ 64) :
-    applyStrictOp σ .mod [.int (a : Int) .uint64, .int (b : Int) .uint64]
-      = .ok (.int ((a % b : Nat) : Int) .uint64, σ) := by
-  have hbne : (((b : Nat) : Int) == 0) = false := by
-    simp only [beq_eq_false_iff_ne, ne_eq, Int.natCast_eq_zero]
-    omega
-  have htmod : Int.tmod (a : Int) (b : Int) = ((a % b : Nat) : Int) := rfl
-  have hnorm : IntKind.normalize .uint64 ((a % b : Nat) : Int)
-      = ((a % b : Nat) : Int) :=
-    unorm_nat_of_lt (by
-      have : a % b < b := Nat.mod_lt _ hb
-      omega)
-  simp only [applyStrictOp, valueAsInt, hbne, intBinaryResult,
-    valueAsIntValue, htmod, IntKind.compatibleResult,
-    Bool.false_eq_true, if_false, Bind.bind, Except.bind, pure, Except.pure]
-  simp only [show (IntKind.uint64 == IntKind.uint64) = true from rfl,
-    if_true, hnorm]
+/-! ## Machine-integer normal forms and the `%` executable fact:
+consolidated 2026-08-13 — `unorm_nat_of_lt`, `applyStrictOp_mod_u64`
+now come from `SliceMem`; `stepFnIter_one`, `stepFn_strict_apply` from
+the `StepKit` glue (ledger rows P1/P3, form note §12). -/
 
 /-! ## Raw run segments (`with_unfolding_all rfl` — pure definitional
 evaluation of the interpreter with the pair values symbolic; splits at
