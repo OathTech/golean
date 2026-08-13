@@ -366,6 +366,362 @@ def isortLowered : Program :=
                                         (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))))),
                                  GoLean.GoCore.Stmt.returnStmt]],
                  variadic := false,
+                 wrapper := false },
+               { id := { key := "isort_harness" },
+                 args := #[{ id := "n", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64) },
+                           { id := "seed", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64) }],
+                 results := #[{ id := "$res0", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64) }],
+                 body := GoLean.GoCore.Stmt.block
+                           #[]
+                           #[GoLean.GoCore.Stmt.seqn
+                               #[GoLean.GoCore.Stmt.initialization
+                                   { id := "$c4",
+                                     typ := GoLean.GoCore.Ty.slice
+                                              (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64)) },
+                                 GoLean.GoCore.Stmt.makeSlice
+                                   (GoLean.GoCore.Assignee.var "$c4")
+                                   (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))
+                                   (GoLean.GoCore.Expr.var "n")
+                                   none],
+                             GoLean.GoCore.Stmt.seqn
+                               #[GoLean.GoCore.Stmt.initialization
+                                   { id := "s",
+                                     typ := GoLean.GoCore.Ty.slice
+                                              (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64)) },
+                                 GoLean.GoCore.Stmt.assign
+                                   (GoLean.GoCore.Assignee.var "s")
+                                   (GoLean.GoCore.Expr.var "$c4")],
+                             GoLean.GoCore.Stmt.block
+                               #[]
+                               #[GoLean.GoCore.Stmt.seqn
+                                   #[GoLean.GoCore.Stmt.initialization
+                                       { id := "i", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64) },
+                                     GoLean.GoCore.Stmt.assign
+                                       (GoLean.GoCore.Assignee.var "i")
+                                       (GoLean.GoCore.Expr.intLit 0 (GoLean.GoCore.IntKind.uint64))],
+                                 GoLean.GoCore.Stmt.block
+                                   #[]
+                                   #[GoLean.GoCore.Stmt.initialization
+                                       { id := "$forFirst", typ := GoLean.GoCore.Ty.bool },
+                                     GoLean.GoCore.Stmt.assign
+                                       (GoLean.GoCore.Assignee.var "$forFirst")
+                                       (GoLean.GoCore.Expr.boolLit true),
+                                     GoLean.GoCore.Stmt.while
+                                       (GoLean.GoCore.Expr.boolLit true)
+                                       (GoLean.GoCore.Stmt.block
+                                         #[]
+                                         #[GoLean.GoCore.Stmt.ifThenElse
+                                             (GoLean.GoCore.Expr.var "$forFirst")
+                                             (GoLean.GoCore.Stmt.assign
+                                               (GoLean.GoCore.Assignee.var "$forFirst")
+                                               (GoLean.GoCore.Expr.boolLit false))
+                                             (GoLean.GoCore.Stmt.assign
+                                               (GoLean.GoCore.Assignee.var "i")
+                                               (GoLean.GoCore.Expr.add
+                                                 (GoLean.GoCore.Expr.var "i")
+                                                 (GoLean.GoCore.Expr.intLit 1 (GoLean.GoCore.IntKind.uint64)))),
+                                           GoLean.GoCore.Stmt.seqn #[],
+                                           GoLean.GoCore.Stmt.ifThenElse
+                                             (GoLean.GoCore.Expr.lessCmp
+                                               (GoLean.GoCore.Expr.var "i")
+                                               (GoLean.GoCore.Expr.var "n"))
+                                             (GoLean.GoCore.Stmt.seqn #[])
+                                             (GoLean.GoCore.Stmt.breakStmt),
+                                           GoLean.GoCore.Stmt.block
+                                             #[]
+                                             #[GoLean.GoCore.Stmt.seqn
+                                                 #[GoLean.GoCore.Stmt.assign
+                                                     (GoLean.GoCore.Assignee.addr
+                                                       (GoLean.GoCore.Expr.indexAddr
+                                                         (GoLean.GoCore.Expr.var "s")
+                                                         (GoLean.GoCore.Expr.var "i")))
+                                                     (GoLean.GoCore.Expr.mul
+                                                       (GoLean.GoCore.Expr.var "seed")
+                                                       (GoLean.GoCore.Expr.add
+                                                         (GoLean.GoCore.Expr.var "i")
+                                                         (GoLean.GoCore.Expr.intLit
+                                                           1
+                                                           (GoLean.GoCore.IntKind.uint64))))]]])]],
+                             GoLean.GoCore.Stmt.call #[] { key := "insertionSort" } #[GoLean.GoCore.Expr.var "s"],
+                             GoLean.GoCore.Stmt.seqn
+                               #[GoLean.GoCore.Stmt.initialization
+                                   { id := "ok", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64) },
+                                 GoLean.GoCore.Stmt.assign
+                                   (GoLean.GoCore.Assignee.var "ok")
+                                   (GoLean.GoCore.Expr.intLit 1 (GoLean.GoCore.IntKind.uint64))],
+                             GoLean.GoCore.Stmt.block
+                               #[]
+                               #[GoLean.GoCore.Stmt.seqn
+                                   #[GoLean.GoCore.Stmt.initialization
+                                       { id := "i", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64) },
+                                     GoLean.GoCore.Stmt.assign
+                                       (GoLean.GoCore.Assignee.var "i")
+                                       (GoLean.GoCore.Expr.intLit 1 (GoLean.GoCore.IntKind.uint64))],
+                                 GoLean.GoCore.Stmt.block
+                                   #[]
+                                   #[GoLean.GoCore.Stmt.initialization
+                                       { id := "$forFirst", typ := GoLean.GoCore.Ty.bool },
+                                     GoLean.GoCore.Stmt.assign
+                                       (GoLean.GoCore.Assignee.var "$forFirst")
+                                       (GoLean.GoCore.Expr.boolLit true),
+                                     GoLean.GoCore.Stmt.while
+                                       (GoLean.GoCore.Expr.boolLit true)
+                                       (GoLean.GoCore.Stmt.block
+                                         #[]
+                                         #[GoLean.GoCore.Stmt.ifThenElse
+                                             (GoLean.GoCore.Expr.var "$forFirst")
+                                             (GoLean.GoCore.Stmt.assign
+                                               (GoLean.GoCore.Assignee.var "$forFirst")
+                                               (GoLean.GoCore.Expr.boolLit false))
+                                             (GoLean.GoCore.Stmt.assign
+                                               (GoLean.GoCore.Assignee.var "i")
+                                               (GoLean.GoCore.Expr.add
+                                                 (GoLean.GoCore.Expr.var "i")
+                                                 (GoLean.GoCore.Expr.intLit 1 (GoLean.GoCore.IntKind.uint64)))),
+                                           GoLean.GoCore.Stmt.seqn #[],
+                                           GoLean.GoCore.Stmt.ifThenElse
+                                             (GoLean.GoCore.Expr.lessCmp
+                                               (GoLean.GoCore.Expr.var "i")
+                                               (GoLean.GoCore.Expr.var "n"))
+                                             (GoLean.GoCore.Stmt.seqn #[])
+                                             (GoLean.GoCore.Stmt.breakStmt),
+                                           GoLean.GoCore.Stmt.block
+                                             #[]
+                                             #[GoLean.GoCore.Stmt.ifThenElse
+                                                 (GoLean.GoCore.Expr.greaterCmp
+                                                   (GoLean.GoCore.Expr.indexGet
+                                                     (GoLean.GoCore.Expr.var "s")
+                                                     (GoLean.GoCore.Expr.sub
+                                                       (GoLean.GoCore.Expr.var "i")
+                                                       (GoLean.GoCore.Expr.intLit 1 (GoLean.GoCore.IntKind.uint64))))
+                                                   (GoLean.GoCore.Expr.indexGet
+                                                     (GoLean.GoCore.Expr.var "s")
+                                                     (GoLean.GoCore.Expr.var "i")))
+                                                 (GoLean.GoCore.Stmt.block
+                                                   #[]
+                                                   #[GoLean.GoCore.Stmt.seqn
+                                                       #[GoLean.GoCore.Stmt.assign
+                                                           (GoLean.GoCore.Assignee.var "ok")
+                                                           (GoLean.GoCore.Expr.intLit 0 (GoLean.GoCore.IntKind.uint64))]])
+                                                 (GoLean.GoCore.Stmt.seqn #[])]])]],
+                             GoLean.GoCore.Stmt.seqn
+                               #[GoLean.GoCore.Stmt.initialization
+                                   { id := "$c5",
+                                     typ := GoLean.GoCore.Ty.slice
+                                              (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64)) },
+                                 GoLean.GoCore.Stmt.makeSlice
+                                   (GoLean.GoCore.Assignee.var "$c5")
+                                   (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))
+                                   (GoLean.GoCore.Expr.var "n")
+                                   none],
+                             GoLean.GoCore.Stmt.seqn
+                               #[GoLean.GoCore.Stmt.initialization
+                                   { id := "t",
+                                     typ := GoLean.GoCore.Ty.slice
+                                              (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64)) },
+                                 GoLean.GoCore.Stmt.assign
+                                   (GoLean.GoCore.Assignee.var "t")
+                                   (GoLean.GoCore.Expr.var "$c5")],
+                             GoLean.GoCore.Stmt.block
+                               #[]
+                               #[GoLean.GoCore.Stmt.seqn
+                                   #[GoLean.GoCore.Stmt.initialization
+                                       { id := "i", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64) },
+                                     GoLean.GoCore.Stmt.assign
+                                       (GoLean.GoCore.Assignee.var "i")
+                                       (GoLean.GoCore.Expr.intLit 0 (GoLean.GoCore.IntKind.uint64))],
+                                 GoLean.GoCore.Stmt.block
+                                   #[]
+                                   #[GoLean.GoCore.Stmt.initialization
+                                       { id := "$forFirst", typ := GoLean.GoCore.Ty.bool },
+                                     GoLean.GoCore.Stmt.assign
+                                       (GoLean.GoCore.Assignee.var "$forFirst")
+                                       (GoLean.GoCore.Expr.boolLit true),
+                                     GoLean.GoCore.Stmt.while
+                                       (GoLean.GoCore.Expr.boolLit true)
+                                       (GoLean.GoCore.Stmt.block
+                                         #[]
+                                         #[GoLean.GoCore.Stmt.ifThenElse
+                                             (GoLean.GoCore.Expr.var "$forFirst")
+                                             (GoLean.GoCore.Stmt.assign
+                                               (GoLean.GoCore.Assignee.var "$forFirst")
+                                               (GoLean.GoCore.Expr.boolLit false))
+                                             (GoLean.GoCore.Stmt.assign
+                                               (GoLean.GoCore.Assignee.var "i")
+                                               (GoLean.GoCore.Expr.add
+                                                 (GoLean.GoCore.Expr.var "i")
+                                                 (GoLean.GoCore.Expr.intLit 1 (GoLean.GoCore.IntKind.uint64)))),
+                                           GoLean.GoCore.Stmt.seqn #[],
+                                           GoLean.GoCore.Stmt.ifThenElse
+                                             (GoLean.GoCore.Expr.lessCmp
+                                               (GoLean.GoCore.Expr.var "i")
+                                               (GoLean.GoCore.Expr.var "n"))
+                                             (GoLean.GoCore.Stmt.seqn #[])
+                                             (GoLean.GoCore.Stmt.breakStmt),
+                                           GoLean.GoCore.Stmt.block
+                                             #[]
+                                             #[GoLean.GoCore.Stmt.seqn
+                                                 #[GoLean.GoCore.Stmt.assign
+                                                     (GoLean.GoCore.Assignee.addr
+                                                       (GoLean.GoCore.Expr.indexAddr
+                                                         (GoLean.GoCore.Expr.var "t")
+                                                         (GoLean.GoCore.Expr.var "i")))
+                                                     (GoLean.GoCore.Expr.mul
+                                                       (GoLean.GoCore.Expr.var "seed")
+                                                       (GoLean.GoCore.Expr.add
+                                                         (GoLean.GoCore.Expr.var "i")
+                                                         (GoLean.GoCore.Expr.intLit
+                                                           1
+                                                           (GoLean.GoCore.IntKind.uint64))))]]])]],
+                             GoLean.GoCore.Stmt.block
+                               #[]
+                               #[GoLean.GoCore.Stmt.seqn
+                                   #[GoLean.GoCore.Stmt.initialization
+                                       { id := "i", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64) },
+                                     GoLean.GoCore.Stmt.assign
+                                       (GoLean.GoCore.Assignee.var "i")
+                                       (GoLean.GoCore.Expr.intLit 0 (GoLean.GoCore.IntKind.uint64))],
+                                 GoLean.GoCore.Stmt.block
+                                   #[]
+                                   #[GoLean.GoCore.Stmt.initialization
+                                       { id := "$forFirst", typ := GoLean.GoCore.Ty.bool },
+                                     GoLean.GoCore.Stmt.assign
+                                       (GoLean.GoCore.Assignee.var "$forFirst")
+                                       (GoLean.GoCore.Expr.boolLit true),
+                                     GoLean.GoCore.Stmt.while
+                                       (GoLean.GoCore.Expr.boolLit true)
+                                       (GoLean.GoCore.Stmt.block
+                                         #[]
+                                         #[GoLean.GoCore.Stmt.ifThenElse
+                                             (GoLean.GoCore.Expr.var "$forFirst")
+                                             (GoLean.GoCore.Stmt.assign
+                                               (GoLean.GoCore.Assignee.var "$forFirst")
+                                               (GoLean.GoCore.Expr.boolLit false))
+                                             (GoLean.GoCore.Stmt.assign
+                                               (GoLean.GoCore.Assignee.var "i")
+                                               (GoLean.GoCore.Expr.add
+                                                 (GoLean.GoCore.Expr.var "i")
+                                                 (GoLean.GoCore.Expr.intLit 1 (GoLean.GoCore.IntKind.uint64)))),
+                                           GoLean.GoCore.Stmt.seqn #[],
+                                           GoLean.GoCore.Stmt.ifThenElse
+                                             (GoLean.GoCore.Expr.lessCmp
+                                               (GoLean.GoCore.Expr.var "i")
+                                               (GoLean.GoCore.Expr.var "n"))
+                                             (GoLean.GoCore.Stmt.seqn #[])
+                                             (GoLean.GoCore.Stmt.breakStmt),
+                                           GoLean.GoCore.Stmt.block
+                                             #[]
+                                             #[GoLean.GoCore.Stmt.seqn
+                                                 #[GoLean.GoCore.Stmt.initialization
+                                                     { id := "cs",
+                                                       typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64) },
+                                                   GoLean.GoCore.Stmt.assign
+                                                     (GoLean.GoCore.Assignee.var "cs")
+                                                     (GoLean.GoCore.Expr.intLit 0 (GoLean.GoCore.IntKind.uint64))],
+                                               GoLean.GoCore.Stmt.seqn
+                                                 #[GoLean.GoCore.Stmt.initialization
+                                                     { id := "ct",
+                                                       typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64) },
+                                                   GoLean.GoCore.Stmt.assign
+                                                     (GoLean.GoCore.Assignee.var "ct")
+                                                     (GoLean.GoCore.Expr.intLit 0 (GoLean.GoCore.IntKind.uint64))],
+                                               GoLean.GoCore.Stmt.block
+                                                 #[]
+                                                 #[GoLean.GoCore.Stmt.seqn
+                                                     #[GoLean.GoCore.Stmt.initialization
+                                                         { id := "j",
+                                                           typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64) },
+                                                       GoLean.GoCore.Stmt.assign
+                                                         (GoLean.GoCore.Assignee.var "j")
+                                                         (GoLean.GoCore.Expr.intLit 0 (GoLean.GoCore.IntKind.uint64))],
+                                                   GoLean.GoCore.Stmt.block
+                                                     #[]
+                                                     #[GoLean.GoCore.Stmt.initialization
+                                                         { id := "$forFirst", typ := GoLean.GoCore.Ty.bool },
+                                                       GoLean.GoCore.Stmt.assign
+                                                         (GoLean.GoCore.Assignee.var "$forFirst")
+                                                         (GoLean.GoCore.Expr.boolLit true),
+                                                       GoLean.GoCore.Stmt.while
+                                                         (GoLean.GoCore.Expr.boolLit true)
+                                                         (GoLean.GoCore.Stmt.block
+                                                           #[]
+                                                           #[GoLean.GoCore.Stmt.ifThenElse
+                                                               (GoLean.GoCore.Expr.var "$forFirst")
+                                                               (GoLean.GoCore.Stmt.assign
+                                                                 (GoLean.GoCore.Assignee.var "$forFirst")
+                                                                 (GoLean.GoCore.Expr.boolLit false))
+                                                               (GoLean.GoCore.Stmt.assign
+                                                                 (GoLean.GoCore.Assignee.var "j")
+                                                                 (GoLean.GoCore.Expr.add
+                                                                   (GoLean.GoCore.Expr.var "j")
+                                                                   (GoLean.GoCore.Expr.intLit
+                                                                     1
+                                                                     (GoLean.GoCore.IntKind.uint64)))),
+                                                             GoLean.GoCore.Stmt.seqn #[],
+                                                             GoLean.GoCore.Stmt.ifThenElse
+                                                               (GoLean.GoCore.Expr.lessCmp
+                                                                 (GoLean.GoCore.Expr.var "j")
+                                                                 (GoLean.GoCore.Expr.var "n"))
+                                                               (GoLean.GoCore.Stmt.seqn #[])
+                                                               (GoLean.GoCore.Stmt.breakStmt),
+                                                             GoLean.GoCore.Stmt.block
+                                                               #[]
+                                                               #[GoLean.GoCore.Stmt.ifThenElse
+                                                                   (GoLean.GoCore.Expr.eqCmp
+                                                                     (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))
+                                                                     (GoLean.GoCore.Expr.indexGet
+                                                                       (GoLean.GoCore.Expr.var "s")
+                                                                       (GoLean.GoCore.Expr.var "j"))
+                                                                     (GoLean.GoCore.Expr.indexGet
+                                                                       (GoLean.GoCore.Expr.var "t")
+                                                                       (GoLean.GoCore.Expr.var "i")))
+                                                                   (GoLean.GoCore.Stmt.block
+                                                                     #[]
+                                                                     #[GoLean.GoCore.Stmt.assign
+                                                                         (GoLean.GoCore.Assignee.var "cs")
+                                                                         (GoLean.GoCore.Expr.add
+                                                                           (GoLean.GoCore.Expr.var "cs")
+                                                                           (GoLean.GoCore.Expr.intLit
+                                                                             1
+                                                                             (GoLean.GoCore.IntKind.uint64)))])
+                                                                   (GoLean.GoCore.Stmt.seqn #[]),
+                                                                 GoLean.GoCore.Stmt.ifThenElse
+                                                                   (GoLean.GoCore.Expr.eqCmp
+                                                                     (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))
+                                                                     (GoLean.GoCore.Expr.indexGet
+                                                                       (GoLean.GoCore.Expr.var "t")
+                                                                       (GoLean.GoCore.Expr.var "j"))
+                                                                     (GoLean.GoCore.Expr.indexGet
+                                                                       (GoLean.GoCore.Expr.var "t")
+                                                                       (GoLean.GoCore.Expr.var "i")))
+                                                                   (GoLean.GoCore.Stmt.block
+                                                                     #[]
+                                                                     #[GoLean.GoCore.Stmt.assign
+                                                                         (GoLean.GoCore.Assignee.var "ct")
+                                                                         (GoLean.GoCore.Expr.add
+                                                                           (GoLean.GoCore.Expr.var "ct")
+                                                                           (GoLean.GoCore.Expr.intLit
+                                                                             1
+                                                                             (GoLean.GoCore.IntKind.uint64)))])
+                                                                   (GoLean.GoCore.Stmt.seqn #[])]])]],
+                                               GoLean.GoCore.Stmt.ifThenElse
+                                                 (GoLean.GoCore.Expr.neqCmp
+                                                   (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))
+                                                   (GoLean.GoCore.Expr.var "cs")
+                                                   (GoLean.GoCore.Expr.var "ct"))
+                                                 (GoLean.GoCore.Stmt.block
+                                                   #[]
+                                                   #[GoLean.GoCore.Stmt.seqn
+                                                       #[GoLean.GoCore.Stmt.assign
+                                                           (GoLean.GoCore.Assignee.var "ok")
+                                                           (GoLean.GoCore.Expr.intLit 0 (GoLean.GoCore.IntKind.uint64))]])
+                                                 (GoLean.GoCore.Stmt.seqn #[])]])]],
+                             GoLean.GoCore.Stmt.seqn
+                               #[GoLean.GoCore.Stmt.assign
+                                   (GoLean.GoCore.Assignee.var "$res0")
+                                   (GoLean.GoCore.Expr.var "ok"),
+                                 GoLean.GoCore.Stmt.returnStmt]],
+                 variadic := false,
                  wrapper := false }],
     methods := #[],
     globals := #[],

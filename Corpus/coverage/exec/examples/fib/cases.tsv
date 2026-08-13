@@ -5,3 +5,5 @@ two	fib	2	ok	-	ints,widths,loops
 ten	fib	10	ok	-	ints,widths,loops
 ninety-three	fib	93	ok	-	ints,widths,loops
 ninety-four-wrap	fib	94	ok	-	ints,widths,loops
+harness-ten	fib_harness	10	ok	-	ints,widths,loops
+harness-wrap	fib_harness	94	ok	-	ints,widths,loops

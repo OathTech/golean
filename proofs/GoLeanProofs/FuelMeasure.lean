@@ -194,6 +194,80 @@ theorem normal_readout_of_total {env : LocalEnv} {σ : ExecState}
   injection hout with hσ
   exact hσ ▸ hP
 
+/-! ### The harness-entry glue (harness ruling 2026-08-13, form note
+§11): the same fold/terminal lemmas as `execStmtLoop`'s, for
+`runConfig` — the loop inside the machine's native function entry
+`runFunctionWithContextM`, which every harness headline states. Built
+once, shared by every example's restatement. -/
+
+/-- `runConfig`, unfolded to its match (the `execStmtLoop_unfold`
+mirror). -/
+theorem runConfig_unfold (fuel : Nat) (σ : ExecState) (c : Config)
+    (ch : Choices) :
+    runConfig fuel σ c ch
+      = (match c with
+         | .next .stop => .ok (σ, ch)
+         | .panicked msg => throw (.panic msg)
+         | .blockedSend _ _ _ => throw .deadlock
+         | .blockedRecv _ _ _ _ _ => throw .deadlock
+         | .blockedSelect _ _ _ => throw .deadlock
+         | .blockedSync _ _ _ _ => throw .deadlock
+         | c =>
+             match fuel with
+             | 0 => throw .fuelOut
+             | fuel + 1 => do
+                 let (c', σ', choices') ← stepFn σ c ch
+                 runConfig fuel σ' c' choices') := by
+  rw [runConfig.eq_def]
+  rfl
+
+/-- One successful step folds into `runConfig` (the
+`execStmtLoop_step` mirror): `stepFn` throws on every terminal
+configuration, so a successful step excludes the terminal arms. -/
+theorem runConfig_step {fuel : Nat} {σ : ExecState} {c : Config}
+    {ch : Choices} {c₁ : Config} {σ₁ : ExecState} {ch₁ : Choices}
+    (h : stepFn σ c ch = .ok (c₁, σ₁, ch₁)) :
+    runConfig (fuel + 1) σ c ch = runConfig fuel σ₁ c₁ ch₁ := by
+  rw [runConfig_unfold (fuel + 1) σ c ch]
+  split
+  · simp [stepFn, throw, throwThe, MonadExceptOf.throw] at h
+  · simp [stepFn, throw, throwThe, MonadExceptOf.throw] at h
+  · simp [stepFn, throw, throwThe, MonadExceptOf.throw] at h
+  · simp [stepFn, throw, throwThe, MonadExceptOf.throw] at h
+  · simp [stepFn, throw, throwThe, MonadExceptOf.throw] at h
+  · simp [stepFn, throw, throwThe, MonadExceptOf.throw] at h
+  · simp only [Bind.bind]
+    rw [h]
+    rfl
+
+/-- A successful `stepFnIter` prefix folds into `runConfig`
+(`execStmtLoop_of_stepFnIter`'s mirror). -/
+theorem runConfig_of_stepFnIter :
+    ∀ {k : Nat} {σ : ExecState} {c : Config} {ch : Choices}
+      {c' : Config} {σ' : ExecState} {ch' : Choices},
+      stepFnIter k σ c ch = .ok (c', σ', ch') →
+      ∀ f : Nat, runConfig (k + f) σ c ch = runConfig f σ' c' ch' := by
+  intro k
+  induction k with
+  | zero =>
+    intro σ c ch c' σ' ch' h f
+    simp only [stepFnIter, Except.ok.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl, rfl⟩ := h
+    simp
+  | succ n ih =>
+    intro σ c ch c' σ' ch' h f
+    simp only [stepFnIter, bind_eq_ok] at h
+    obtain ⟨⟨c₁, σ₁, ch₁⟩, hstep, hrest⟩ := h
+    have : n + 1 + f = (n + f) + 1 := by omega
+    rw [this, runConfig_step hstep]
+    exact ih hrest f
+
+/-- The driver terminal: `.next .stop` returns the state at ANY fuel
+(the terminal arm precedes the fuel check). -/
+theorem runConfig_next_stop {f : Nat} {σ : ExecState} {ch : Choices} :
+    runConfig f σ (.next .stop) ch = .ok (σ, ch) := by
+  rw [runConfig_unfold]
+
 /-- Chain two successful `stepFnIter` prefixes. -/
 theorem stepFnIter_chain :
     ∀ {a : Nat} {b : Nat} {σ : ExecState} {c : Config} {ch : Choices}

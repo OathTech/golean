@@ -35,6 +35,17 @@ func minMaxEmpty() (uint64, uint64) {
 	return minMax(s)
 }
 
+// minmax_harness: three-phase harness — setup builds the family
+// s[i] = seed + i (wrapping); the returned pair is the observable
+// (returned data preferred over a verdict where arity permits).
+func minmax_harness(n, seed uint64) (uint64, uint64) {
+	s := make([]uint64, n)
+	for i := uint64(0); i < n; i++ {
+		s[i] = seed + i
+	}
+	return minMax(s)
+}
+
 func main() {
 	lo, hi := minMaxFour(3, 1, 4, 1)
 	fmt.Printf(

@@ -32,6 +32,25 @@ func reverseEmpty() int {
 	return len(s)
 }
 
+// reverse_harness: three-phase harness (harness ruling 2026-08-13).
+// setup_reverse_state: build s from the scalar parameters — the
+// input FAMILY s[i] = seed + i (wrapping); test_reverse_state:
+// verify the reversal element-wise in Go and fold into a verdict.
+func reverse_harness(n, seed uint64) uint64 {
+	s := make([]uint64, n)
+	for i := uint64(0); i < n; i++ {
+		s[i] = seed + i
+	}
+	reverse(s)
+	ok := uint64(1)
+	for i := uint64(0); i < n; i++ {
+		if s[i] != seed+(n-1-i) {
+			ok = 0
+		}
+	}
+	return ok
+}
+
 func main() {
 	a, b, c, d := reverseFour(1, 2, 3, 4)
 	fmt.Printf(

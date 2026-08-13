@@ -10,3 +10,6 @@ big-boundary	searchFour	0,1,4611686018427387904,9223372036854775807,922337203685
 one-found	searchOne	7,7	ok	-	slices,indexing,loops,if
 one-absent	searchOne	7,8	ok	-	slices,indexing,loops,if
 empty	searchEmpty	3	ok	-	slices,indexing,loops,if
+harness-found	search_harness	6,10,14	ok	-	slices,indexing,loops,if
+harness-gap	search_harness	6,10,15	ok	-	slices,indexing,loops,if
+harness-empty	search_harness	0,10,3	ok	-	slices,indexing,loops,if

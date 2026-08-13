@@ -1,19 +1,18 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-13  commit: verified-examples slice 2c (scale-out oracle rows)
-#   re-pin reason: 38 NEW explained rows — the five scale-out examples'
-#   guardrail corpora (verified-examples slice 2c): examples/gcd/* (7),
-#   examples/minmax/* (6, incl. the empty-slice PANIC row),
-#   examples/binsearch/* (11, incl. duplicates lower-bound and the
-#   int64-boundary row), examples/isort/* (8, incl. duplicates and
-#   already/reverse-sorted), examples/wordcount/* (6, map build + range;
-#   order-independent readouts). All 38 PASS. No other id moved
-#   (PASS/FAIL sets and stages unchanged from the 2026-08-13 record).
+# recorded: 2026-08-13  commit: verified-examples slice 2c (harness rows, harness ruling)
+#   re-pin reason: 18 NEW explained rows — the harness ruling (form note
+#   §11) added a three-phase harness function to each of the seven
+#   examples' programs; rows instantiate each harness at concrete args
+#   (examples/{fib,gcd,reverse,minmax,binsearch,isort,wordcount}/harness-*,
+#   incl. minmax's empty-slice PANIC harness row and reverse's
+#   wrap-boundary family row). All 18 PASS. No other id moved (PASS/FAIL
+#   sets and stages unchanged from the earlier 2026-08-13 record).
 #   frontend: native  oracle: go run (strict lane) / go-run membership in the
 #   machine-enumerated observation set, sampled plain AND under -race
 #   (membership lane; go1.26.5) / schedule-tree singleton certification +
 #   strict go-run equality (confluent lane) / every-enumerated-path-refuses
 #   + go run -race red (racy lane; never combined with deadlock)
-# manifest_cases: 1532  pass: 1413  fail: 119
+# manifest_cases: 1550  pass: 1431  fail: 119
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
 PASS	arrays/array-copy	-
@@ -370,8 +369,13 @@ PASS	examples/binsearch/empty	-
 PASS	examples/binsearch/found-first	-
 PASS	examples/binsearch/found-last	-
 PASS	examples/binsearch/found-mid	-
+PASS	examples/binsearch/harness-empty	-
+PASS	examples/binsearch/harness-found	-
+PASS	examples/binsearch/harness-gap	-
 PASS	examples/binsearch/one-absent	-
 PASS	examples/binsearch/one-found	-
+PASS	examples/fib/harness-ten	-
+PASS	examples/fib/harness-wrap	-
 PASS	examples/fib/ninety-four-wrap	-
 PASS	examples/fib/ninety-three	-
 PASS	examples/fib/one	-
@@ -383,6 +387,8 @@ PASS	examples/gcd/big	-
 PASS	examples/gcd/chain	-
 PASS	examples/gcd/common	-
 PASS	examples/gcd/coprime	-
+PASS	examples/gcd/harness-common	-
+PASS	examples/gcd/harness-zero	-
 PASS	examples/gcd/zero-b	-
 PASS	examples/gcd/zero-zero	-
 PASS	examples/isort/empty	-
@@ -391,22 +397,33 @@ PASS	examples/isort/four-duplicates	-
 PASS	examples/isort/four-reversed	-
 PASS	examples/isort/four-shuffled	-
 PASS	examples/isort/four-sorted	-
+PASS	examples/isort/harness-dups	-
+PASS	examples/isort/harness-empty	-
+PASS	examples/isort/harness-five	-
 PASS	examples/isort/one	-
 PASS	examples/isort/three	-
 PASS	examples/minmax/empty-panics	-
 PASS	examples/minmax/four	-
 PASS	examples/minmax/four-big	-
 PASS	examples/minmax/four-desc	-
+PASS	examples/minmax/harness-empty-panics	-
+PASS	examples/minmax/harness-five	-
+PASS	examples/minmax/harness-one	-
 PASS	examples/minmax/one	-
 PASS	examples/minmax/three-same	-
 PASS	examples/reverse/empty	-
 PASS	examples/reverse/four	-
 PASS	examples/reverse/four-big	-
+PASS	examples/reverse/harness-empty	-
+PASS	examples/reverse/harness-five	-
+PASS	examples/reverse/harness-wrapping	-
 PASS	examples/reverse/one	-
 PASS	examples/reverse/three	-
 PASS	examples/wordcount/all-same	-
 PASS	examples/wordcount/distinct	-
 PASS	examples/wordcount/empty	-
+PASS	examples/wordcount/harness-empty	-
+PASS	examples/wordcount/harness-seven	-
 PASS	examples/wordcount/mode-three	-
 PASS	examples/wordcount/one	-
 PASS	examples/wordcount/two-pairs	-

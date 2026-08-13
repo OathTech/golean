@@ -5,3 +5,6 @@ four-big	minMaxFour	9223372036854775807,0,7,9223372036854775807	ok	-	slices,inde
 three-same	minMaxThree	5,5,5	ok	-	slices,indexing,loops,if
 one	minMaxOne	42	ok	-	slices,indexing,loops,if
 empty-panics	minMaxEmpty	-	panic	index out of range	slices,indexing,panic
+harness-five	minmax_harness	5,40	ok	-	slices,indexing,loops,if
+harness-one	minmax_harness	1,7	ok	-	slices,indexing,loops,if
+harness-empty-panics	minmax_harness	0,3	panic	index out of range	slices,indexing,panic

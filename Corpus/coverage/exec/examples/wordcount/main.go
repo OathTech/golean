@@ -28,6 +28,17 @@ func maxCountEmpty() uint64 {
 	return maxCount([]uint64{})
 }
 
+// wordcount_harness: three-phase harness — setup builds the word
+// family w[i] = seed + i%3 (controllable multiplicities); the
+// returned max count is the observable (returned data).
+func wordcount_harness(n, seed uint64) uint64 {
+	w := make([]uint64, n)
+	for i := uint64(0); i < n; i++ {
+		w[i] = seed + i%3
+	}
+	return maxCount(w)
+}
+
 func main() {
 	fmt.Printf("{\"status\":\"ok\",\"values\":[{\"tag\":\"int\",\"value\":%d}]}\n", maxCountFour(7, 3, 7, 7))
 }

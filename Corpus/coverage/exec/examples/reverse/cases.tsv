@@ -4,3 +4,6 @@ four-big	reverseFour	9223372036854775807,7,0,9	ok	-	slices,indexing,loops,multi_
 three	reverseThree	10,20,30	ok	-	slices,indexing,loops,multi_assign
 one	reverseOne	42	ok	-	slices,indexing,loops,multi_assign
 empty	reverseEmpty	-	ok	-	slices,indexing,loops,multi_assign
+harness-five	reverse_harness	5,100	ok	-	slices,indexing,loops,multi_assign
+harness-empty	reverse_harness	0,7	ok	-	slices,indexing,loops,multi_assign
+harness-wrapping	reverse_harness	4,9223372036854775805	ok	-	slices,indexing,loops,multi_assign

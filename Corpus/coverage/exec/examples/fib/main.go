@@ -10,6 +10,14 @@ func fib(n uint64) uint64 {
 	return a
 }
 
+// fib_harness: the harness ruling's three-phase shape (2026-08-13).
+// setup_fib_state: nothing — fib takes no memory input.
+// test_fib_state: identity — the result IS the observable.
+func fib_harness(n uint64) uint64 {
+	r := fib(n)
+	return r
+}
+
 func main() {
 	fmt.Printf("{\"status\":\"ok\",\"values\":[{\"tag\":\"int\",\"value\":%d}]}\n", fib(10))
 }

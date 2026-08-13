@@ -44,6 +44,26 @@
                                  (GoLean.GoCore.Expr.var "a"),
                                GoLean.GoCore.Stmt.returnStmt]],
                variadic := false,
+               wrapper := false },
+             { id := { key := "gcd_harness" },
+               args := #[{ id := "a", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64) },
+                         { id := "b", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64) }],
+               results := #[{ id := "$res0", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64) }],
+               body := GoLean.GoCore.Stmt.block
+                         #[]
+                         #[GoLean.GoCore.Stmt.seqn
+                             #[GoLean.GoCore.Stmt.initialization
+                                 { id := "r", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64) },
+                               GoLean.GoCore.Stmt.call
+                                 #[GoLean.GoCore.Assignee.var "r"]
+                                 { key := "gcd" }
+                                 #[GoLean.GoCore.Expr.var "a", GoLean.GoCore.Expr.var "b"]],
+                           GoLean.GoCore.Stmt.seqn
+                             #[GoLean.GoCore.Stmt.assign
+                                 (GoLean.GoCore.Assignee.var "$res0")
+                                 (GoLean.GoCore.Expr.var "r"),
+                               GoLean.GoCore.Stmt.returnStmt]],
+               variadic := false,
                wrapper := false }],
   methods := #[],
   globals := #[],
