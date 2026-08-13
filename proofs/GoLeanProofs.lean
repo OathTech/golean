@@ -92,6 +92,7 @@ import GoLeanProofs.Examples.Reverse
 import GoLeanProofs.Examples.GcdProgram
 import GoLeanProofs.Examples.Gcd
 import GoLeanProofs.Examples.MinMaxProgram
+import GoLeanProofs.Examples.MinMax
 import GoLeanProofs.Examples.BinSearchProgram
 import GoLeanProofs.Examples.InsertionSortProgram
 import GoLeanProofs.Examples.WordCountProgram

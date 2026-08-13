@@ -64,7 +64,7 @@ form — all specified in the worker briefs verbatim.
 | example | headline | route | status |
 |---|---|---|---|
 | gcd | `gcd_ok` — framed TOTAL, full uint64², EXACT `Nat.gcd a b`; + `gcd_readout` | direct segments; ONE strong induction on the b-value (§5c non-unit ≤-decrease realized directly); `%`'s divide-by-zero branch = the single conditioned step (`applyStrictOp_mod_u64`, the §5c-predicted emod fact); frame transfer = fib's uniformShift pattern | **PROVEN + COMMITTED** (`c264c9f7`), axioms classical trio, fuel `71 + 45·b` |
-| min/max | `minmax_ok` — memory-input read-only, TOTAL-HEAP preservation (result cells + input cell pinned + frame pointwise); `hne : xs ≠ []` (Go panics on empty — corpus row pins it) | reverse's route; relocation fixing result cells 0/1 | worker in flight |
+| min/max | `minmax_ok` — memory-input read-only, TOTAL-HEAP preservation (result cells + input cell pinned + frame pointwise); `hne : xs ≠ []` (Go panics on empty — corpus row pins it) | reverse's route; ONE strong induction on `len − m`; relocation fixing result cells 0/1; headline landed VERBATIM as designed (zero statement deltas) | **PROVEN + COMMITTED**, axioms classical trio, fuel `37 + 96·len` |
 | binary search | `search_ok` — sorted precondition (`SliceMem.Sorted`), `findSpec` first-occurrence-or-−1, **domain `len < 2^62`: the Bloch mid-overflow bug carried as the honest domain bound (the teaching point)** | reverse's route; strong induction on `hi − lo` (halving absorbed by strict decrease); short-circuit `&&` laziness in the post-loop guard is load-bearing | worker in flight |
 | insertion sort | `isort_ok` — memory-input read-write, `sortSpec` + `sortSpec_sorted`/`sortSpec_count` corollaries ("sorted permutation" said honestly) | direct segments; **nested-loop composition = plain nested strong inductions on the direct route — no measure-rule variant needed** (the rule-composition sugar gap is a WP-route concern only); quadratic fuel | worker in flight |
 | word-count | `wordcount_ok` — map build + enveloped range; spec `maxMultiplicity`, order-independent BY NECESSITY (the ∀-choices quantifier does real work — the teaching point) | §10 design: counting-loop assoc-list invariant + choice-pick induction; symbolic-address glue per §10c | worker in flight; §10d fallback = named foundation debt |
@@ -85,6 +85,33 @@ form — all specified in the worker briefs verbatim.
    is computed in Go int and wraps at `2^63` — the classic "nearly all
    binary searches are broken" bug surfaces as a DOMAIN CONDITION in
    the theorem. Pending worker confirmation of the exact boundary.
+5. (minmax route notes, from the build) (a) `len(s)` sits inside the
+   for-condition, so EVERY iteration pays a conditioned
+   `applyStrictOp_len_slice` step (reverse computed its bound once at
+   entry); (b) Go's lowering re-evaluates `s[i]` afresh in a taken
+   branch's RHS — up to 5 conditioned indexGet steps per iteration;
+   (c) results double-normalize at exit (`$res` store + frame-exit
+   store), cleaned by two `unorm_of_range` rewrites; (d) the machine's
+   `>` transcribes as flipped `decide (· < ·)` — no greaterCmp fact
+   needed.
+6. **Shared-kit promotion candidates (flagged, not moved)**:
+   `stepFnIter_one` + `stepFn_strict_apply` now have THREE private
+   copies (Reverse, Gcd, MinMax) — promote to the FuelMeasure kit at
+   the next shared-file window; `applyStrictOp_lessCmp_int`,
+   `getElem?_mapU`, `getD_mem`, `locSup_mapU` likewise (second/third
+   copies). Held out of this slice's commits to keep worker-parallel
+   file ownership disjoint; recorded so the audit sees the
+   duplication as deliberate.
+7. **Gate mechanics while workers are in flight (recorded)**:
+   `scripts/ci`'s proofs-file audit-coverage step enumerates ALL
+   on-disk `proofs/**/*.lean`, so a sibling worker's in-progress module
+   keeps the FULL gate red until integrated. Per-example integration
+   commits are therefore validated by the capped proofs build (the
+   in-build Audit axiom/non-vacuity gate) + escape-hatch scan of the
+   committed files; the full `scripts/ci` (and `--diff` standing) is
+   re-established at the slice tip. No gate is weakened — the coverage
+   step's complaint is precisely "file exists but not yet in the
+   audited closure", which integration resolves in order.
    (further findings appended as workers report)
 
 ## §5 Gallery entry drafts
@@ -143,8 +170,79 @@ against `go run` (`Corpus/coverage/exec/examples/gcd/`, 7 rows incl.
 `gcd(0,0) = 0`, one-sided zeros, coprime, and the int64-boundary
 pair).
 
-(minmax / binsearch / isort / wordcount drafts appended at
-integration from the worker reports)
+### minmax — min and max of a slice
+
+```go
+func minMax(s []uint64) (uint64, uint64) {
+	lo, hi := s[0], s[0]
+	for i := 1; i < len(s); i++ {
+		if s[i] < lo { lo = s[i] }
+		if s[i] > hi { hi = s[i] }
+	}
+	return lo, hi
+}
+```
+
+**Claim.** For any nonempty list `xs` of uint64 values, wherever it
+lives in memory, with anything else present: `minMax(s)` completes
+normally (no panic, no error, no non-termination: with enough fuel,
+under every nondeterminism choice), the result cells then hold exactly
+the minimum and maximum of `xs`, the slice itself is unchanged — the
+program is read-only on its input — and no other memory is touched.
+On the empty slice Go panics at `s[0]`; the theorem excludes it
+honestly (`xs ≠ []`), and the corpus pins the panic against `go run`.
+Every quantifier is discharged symbolically.
+
+**The theorems** (`proofs/GoLeanProofs/Examples/MinMax.lean`):
+
+```lean
+def minSpec : List Int → Int
+  | [] => 0
+  | [v] => v
+  | v :: w :: rest => min v (minSpec (w :: rest))
+
+def maxSpec : List Int → Int
+  | [] => 0
+  | [v] => v
+  | v :: w :: rest => max v (maxSpec (w :: rest))
+
+theorem minmax_ok (xs : List Int) (hne : xs ≠ [])
+    (hxs : ∀ v ∈ xs, 0 ≤ v ∧ v < 2 ^ 64) (hlen : xs.length < 2 ^ 63)
+    (base : Nat) (hb0 : base ≠ 0) (hb1 : base ≠ 1)
+    (fr : Heap) (na : Nat)
+    (hfb : Heap.lookup fr (.base ⟨base⟩) = none)
+    (hf0 : Heap.lookup fr (.base ⟨0⟩) = none)
+    (hf1 : Heap.lookup fr (.base ⟨1⟩) = none)
+    (hwf : MachineWf
+      { functions := minMaxLowered.funcs,
+        heap := resCells ++ sliceCells xs base ++ fr, nextAddr := na }
+      (.exec (minMaxCall xs base) minMaxEnv .stop)) :
+    ∃ N : Nat, ∀ fuel : Nat, N ≤ fuel → ∀ ch : Choices,
+      ∃ (σf : ExecState) (ch' : Choices),
+        execStmt fuel minMaxEnv (minMaxSeed xs base fr na) ch
+            (minMaxCall xs base)
+          = .ok (.normal σf, ch')
+        ∧ loadLoc σf (.base ⟨0⟩) = .ok (.int (minSpec xs) .uint64)
+        ∧ loadLoc σf (.base ⟨1⟩) = .ok (.int (maxSpec xs) .uint64)
+        ∧ Heap.lookup σf.heap (.base ⟨base⟩)
+            = some ⟨some (.array xs.length (.int .uint64)),
+                .array ⟨xs.map (fun v => .int v .uint64)⟩⟩
+        ∧ ∀ (a : Nat) (c : HeapCell),
+            Heap.lookup fr (.base ⟨a⟩) = some c →
+            Heap.lookup σf.heap (.base ⟨a⟩) = some c
+```
+
+(`minmax_readout` beneath it: the run-conditioned reading, derived.)
+
+**Axioms:** `[propext, Classical.choice, Quot.sound]`.
+
+**Ground:** pinned lowering of the source above (check-golden, both
+links); differentially tested on 6 rows in
+`Corpus/coverage/exec/examples/minmax/`, including `empty-panics` (the
+`s[0]` panic pinned against `go run`) and an int64-boundary value.
+
+(binsearch / isort / wordcount drafts appended at integration from
+the worker reports)
 
 ## §6 TCB-grounding walks (per-export discipline)
 
@@ -162,4 +260,12 @@ no WP, no Frame vocabulary in the statement closure (`FrameSim`/
 `renameLoc` appear only in proofs). Deletion test: the statements
 survive deleting the entire proof layer.
 
-(walks for the four in-flight examples appended at integration)
+**`minmax_ok`/`minmax_readout`**: interpreter vocabulary as gcd's plus
+`sliceCells` (SliceMem, the §9a shared constructor — 5 lines of
+first-order constructor application); `minSpec`/`maxSpec` — six-line
+recursive references, in-module; `resCells`/`minMaxEnv`/`minMaxCall`/
+`minMaxSeed` — literal defs over `minMaxLowered` (GENERATED, byte-
+pinned by check-golden). No Iris/WP/Frame names in the statement
+closure; deletion-test clean.
+
+(walks for the remaining examples appended at integration)

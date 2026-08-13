@@ -1808,6 +1808,31 @@ example := @GoLean.Examples.Gcd.gcd_readout
 /-- info: 'GoLean.Examples.Gcd.gcd_readout' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Examples.Gcd.gcd_readout
 
+/-! ## The min/max example (scale-out slice 2c, 2026-08-13)
+
+`✓` **`minmax_ok` — the §9 memory-quantified headline, reverse shape,
+read-only input** (`Examples/MinMax.lean` over the pinned
+`minMaxLowered`): for any NONEMPTY `[]uint64` input list, at ANY
+placement (`base ∉ {0, 1}` — the harness result cells sit there),
+beside ANY disjoint frame: execution completes normally past one fuel
+bound at every choice stream, the result cells hold exactly
+`minSpec xs` / `maxSpec xs`, the input's backing cell is UNCHANGED
+(the read-only story pinned IN the statement — total-heap
+preservation), and every frame cell is preserved verbatim. `hne` is
+Go's own boundary — the empty slice PANICS at `s[0]` (corpus row
+`examples/minmax/empty-panics` pins it against `go run`);
+`hlen : xs.length < 2^63` is the reverse precedent. Route (recorded):
+direct machine-step segments + ONE strong induction on `len − m`
+carrying value and completion; frame transfer through the
+input-relocating renaming with cells 0/1 ρ-fixed. D1 twin:
+`minmax_readout` via `normal_readout_of_total`. -/
+example := @GoLean.Examples.MinMax.minmax_ok
+example := @GoLean.Examples.MinMax.minmax_readout
+/-- info: 'GoLean.Examples.MinMax.minmax_ok' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Examples.MinMax.minmax_ok
+/-- info: 'GoLean.Examples.MinMax.minmax_readout' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Examples.MinMax.minmax_readout
+
 /-! ## Three-state ledger
 
 - `✓ Machine correspondence` (reshape S5, 2026-07-23) — `stepFn_sound` +
