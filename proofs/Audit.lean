@@ -1667,12 +1667,21 @@ example := @GoLean.Surface.completesIn_comp
 example := @GoLean.Surface.terminates_of_completesIn
 example := @GoLean.Surface.execStmtLoop_of_stepFnIter
 example := @GoLean.Surface.stepFnIter_chain
-example := @GoLean.Examples.Fib.fib_total
-/-- info: 'GoLean.Examples.Fib.fib_ok' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+-- HARNESS RESTATEMENT (form note §11, 2026-08-13): `fib_ok`/`fib_total`
+-- are now the harness headlines over `runFunctionWithContextM`
+-- (three-phase fib_harness; the old cell-readback fib_ok is DELETED;
+-- old fib_total/fib_wraps renamed `fib_total_seeded`/`fib_wraps_seeded`
+-- — proof-side supporting layer feeding fib_total_framed). NOTE the
+-- harness pair's axiom set DROPS Classical.choice (no Iris, no frame
+-- layer in its derivation) — the pins below assert the smaller set.
+example := @GoLean.Examples.Fib.fibHarnessFunc
+example := @GoLean.Examples.Fib.fib_readout
+example := @GoLean.Examples.Fib.fib_total_seeded
+/-- info: 'GoLean.Examples.Fib.fib_ok' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Examples.Fib.fib_ok
-/-- info: 'GoLean.Examples.Fib.fib_wraps' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs in #print axioms GoLean.Examples.Fib.fib_wraps
-/-- info: 'GoLean.Examples.Fib.fib_total' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+/-- info: 'GoLean.Examples.Fib.fib_wraps_seeded' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Examples.Fib.fib_wraps_seeded
+/-- info: 'GoLean.Examples.Fib.fib_total' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Examples.Fib.fib_total
 /-- info: 'GoLean.Surface.completesIn_measure_loop' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Surface.completesIn_measure_loop
@@ -1777,9 +1786,35 @@ strong induction on the two-pointer measure — one induction delivers
 value AND completion; the Iris WP slice laws are witnessed separately
 (block above) and deliberately not consumed here. Scope honesty:
 usability evidence per the charter's two-questions separation. -/
+-- HARNESS RESTATEMENT (form note §11): `reverse_ok` is now the harness
+-- headline (reverse_harness: setup family s[i] = seed + i wrapping;
+-- Go-side element-wise reversal check → verdict 1; input-family
+-- honesty recorded). The memory-quantified ∀xs form above is KEPT
+-- proof-side as `reverse_framed` (renamed; genuinely stronger on the
+-- input quantifier — which is why it stays).
 example := @GoLean.Examples.Reverse.reverse_ok
+example := @GoLean.Examples.Reverse.reverse_framed
+example := @GoLean.Examples.Reverse.revFamily
+example := @GoLean.Examples.Reverse.reverseHarnessFunc
+example := @GoLean.Examples.Reverse.reverse_readout
 /-- info: 'GoLean.Examples.Reverse.reverse_ok' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Examples.Reverse.reverse_ok
+/-- info: 'GoLean.Examples.Reverse.reverse_framed' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Examples.Reverse.reverse_framed
+
+/-! ## The harness-entry glue (form note §11; FuelMeasure)
+
+`✓` fuel monotonicity of the native entry + the D1 readout bridge for
+harness headlines — same-commit discharge witnesses `fib_readout` /
+`reverse_readout` (and the gcd/minmax twins). -/
+example := @GoLean.Surface.runConfig_unfold
+example := @GoLean.Surface.runConfig_of_stepFnIter
+example := @GoLean.Surface.runConfig_next_stop
+example := @GoLean.Surface.runConfig_mono
+example := @GoLean.Surface.runFunctionWithContextM_mono
+example := @GoLean.Surface.harness_readout_of_total
+/-- info: 'GoLean.Surface.harness_readout_of_total' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Surface.harness_readout_of_total
 
 /-! ## The gcd example (scale-out slice 2c, 2026-08-13)
 
@@ -1807,6 +1842,7 @@ example := @GoLean.Surface.normal_readout_of_total
 -- the memory-quantified forms are KEPT proof-side as `gcd_framed` /
 -- `gcd_framed_readout` (renamed, ruling (a)).
 example := @GoLean.Examples.Gcd.gcd_ok
+example := @GoLean.Examples.Gcd.gcd_readout
 example := @GoLean.Examples.Gcd.gcd_framed
 example := @GoLean.Examples.Gcd.gcd_framed_readout
 /-- info: 'GoLean.Examples.Gcd.gcd_ok' depends on axioms: [propext, Classical.choice, Quot.sound] -/
@@ -1839,6 +1875,7 @@ input-relocating renaming with cells 0/1 ρ-fixed. D1 twin:
 -- memory-quantified forms kept proof-side as `minmax_framed` /
 -- `minmax_framed_readout`.
 example := @GoLean.Examples.MinMax.minmax_ok
+example := @GoLean.Examples.MinMax.minmax_readout
 example := @GoLean.Examples.MinMax.minmax_framed
 example := @GoLean.Examples.MinMax.minmax_framed_readout
 /-- info: 'GoLean.Examples.MinMax.minmax_ok' depends on axioms: [propext, Classical.choice, Quot.sound] -/
@@ -1847,6 +1884,18 @@ example := @GoLean.Examples.MinMax.minmax_framed_readout
 #guard_msgs in #print axioms GoLean.Examples.MinMax.minmax_framed
 
 /-! ## The insertion-sort example (scale-out slice 2c, 2026-08-13)
+
+HARNESS STATUS (§11, recorded): isort's restatement took the honest
+fallback — the GROUNDWORK is landed green (`isFamily`, the pinned
+`isortHarnessFunc`, the §11 entry equation, the complete setup-loop
+machinery) and the remaining subject-phase port + Go-side test-phase
+inductions (sortedness scan, rebuild, O(n²) count loops with a second
+frame-rebase layer) are a PRECISE RECORDED GAP in the module header
+with the pickup plan. `isort_ok` below therefore remains the
+memory-quantified form — proof-side supporting layer per §11, still
+the strongest claim shipped for isort; the harness `isort_ok` replaces
+it only when the gap closes (never a weakened statement under the
+headline name).
 
 `✓` **`isort_ok` — the nested-loop memory-input headline**
 (`Examples/InsertionSort.lean` over the pinned `isortLowered`). For
@@ -1906,13 +1955,22 @@ DecidableEq blocks `rfl` under `mid`-carrying scopes, discharged by
 the module's `stepFn_seqn_splice`. The element-range hypothesis `hxs`
 is deliberately unconsumed (the machine's comparisons are
 kind-agnostic; it stays as the honest uint64-domain restriction).
-`search_readout` is the D1 twin via `normal_readout_of_total`. -/
+`search_framed_readout` is the framed D1 twin. -/
+-- HARNESS RESTATEMENT (form note §11): `search_ok` is now the harness
+-- headline (search_harness: sorted family s[i] = seed + 2i under
+-- hnowrap; raw target parameter; returned index = findSpec of the
+-- family; the 2^62 Bloch bound carries over as the subject's own
+-- domain; the past-the-end miss walks the short-circuit && lazily).
+-- Memory-quantified forms kept proof-side as `search_framed`/
+-- `search_framed_readout` (renamed).
 example := @GoLean.Examples.BinSearch.search_ok
-example := @GoLean.Examples.BinSearch.search_readout
+example := @GoLean.Examples.BinSearch.search_framed
+example := @GoLean.Examples.BinSearch.search_framed_readout
+example := @GoLean.Examples.BinSearch.bsFamily_sorted
 /-- info: 'GoLean.Examples.BinSearch.search_ok' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Examples.BinSearch.search_ok
-/-- info: 'GoLean.Examples.BinSearch.search_readout' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs in #print axioms GoLean.Examples.BinSearch.search_readout
+/-- info: 'GoLean.Examples.BinSearch.search_framed_readout' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Examples.BinSearch.search_framed_readout
 
 /-! ## Three-state ledger
 

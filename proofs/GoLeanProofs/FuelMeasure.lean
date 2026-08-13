@@ -268,6 +268,77 @@ theorem runConfig_next_stop {f : Nat} {σ : ExecState} {ch : Choices} :
     runConfig f σ (.next .stop) ch = .ok (σ, ch) := by
   rw [runConfig_unfold]
 
+/-- A completed `runConfig` run is stable under more fuel
+(`execStmtLoop_mono`'s mirror): the loop stops at the terminal before
+consulting the surplus. -/
+theorem runConfig_mono :
+    ∀ (fuel fuel' : Nat) (σ : ExecState) (c : Config) (ch : Choices)
+      (r : ExecState × Choices),
+    fuel ≤ fuel' → runConfig fuel σ c ch = .ok r →
+    runConfig fuel' σ c ch = .ok r := by
+  intro fuel
+  induction fuel with
+  | zero =>
+    intro fuel' σ c ch r _ h
+    unfold runConfig at h ⊢
+    split at h <;> simp_all
+  | succ n ih =>
+    intro fuel' σ c ch r hle h
+    obtain ⟨m, rfl⟩ : ∃ m, fuel' = m + 1 := ⟨fuel' - 1, by omega⟩
+    unfold runConfig at h ⊢
+    split at h <;> try simp_all
+    rw [bind_eq_ok] at h
+    obtain ⟨⟨c', σ', ch'⟩, hstep, hrest⟩ := h
+    rw [bind_eq_ok]
+    exact ⟨(c', σ', ch'), hstep, ih _ _ _ _ r.1 r.2 (by omega) hrest⟩
+
+/-- Fuel monotonicity of the machine's native function entry: the
+prelude (size check, `bindParams`, `allocDecls`, `pinResultLocs`) and
+the readback are fuel-independent; `runConfig_mono` carries the run
+between them. -/
+theorem runFunctionWithContextM_mono {N fuel : Nat} {types : TypeEnv}
+    {functions : Array Func} {func : Func} {args : Array GoValue}
+    {methods : Array MethodInfo} {ch : Choices} {r : Result}
+    (hle : N ≤ fuel)
+    (h : runFunctionWithContextM N types functions func args methods ch
+      = .ok r) :
+    runFunctionWithContextM fuel types functions func args methods ch
+      = .ok r := by
+  unfold runFunctionWithContextM at h ⊢
+  by_cases hc : (func.args.size != args.size) = true
+  · rw [if_pos hc] at h
+    exact absurd h
+      (by simp [throw, throwThe, MonadExceptOf.throw, Bind.bind, Except.bind])
+  · rw [if_neg hc] at h ⊢
+    simp only [bind_eq_ok, pure, Except.pure, Except.ok.injEq] at h ⊢
+    obtain ⟨u, hu, ⟨env, s₁⟩, hbp, ⟨frameEnv, s₂⟩, had, locs, hpin,
+      ⟨sF, chF⟩, hrc, vs, hload, hres⟩ := h
+    exact ⟨u, hu, (env, s₁), hbp, (frameEnv, s₂), had, locs, hpin,
+      (sF, chF), runConfig_mono N fuel _ _ _ _ hle hrc, vs, hload, hres⟩
+
+/-- **The D1 run-conditioned readout for harness headlines**: the
+`.ok`-equation headline form (∃N-∀fuel≥N-∀ch, entry = `.ok r₀`)
+already determines EVERY successful completion — the entry is a
+function of `(fuel, ch)` and a success is fuel-monotone with the same
+result, so a completion at any fuel meets the headline's run past its
+bound. One lemma; every harness example gets its run-conditioned twin
+(`<x>_readout`) without a second walk. -/
+theorem harness_readout_of_total {types : TypeEnv}
+    {functions : Array Func} {func : Func} {args : Array GoValue}
+    {methods : Array MethodInfo} {r₀ : Result}
+    (h : ∃ N : Nat, ∀ fuel : Nat, N ≤ fuel → ∀ ch : Choices,
+      runFunctionWithContextM fuel types functions func args methods ch
+        = .ok r₀) :
+    ∀ (fuel : Nat) (ch : Choices) (r : Result),
+      runFunctionWithContextM fuel types functions func args methods ch
+        = .ok r → r = r₀ := by
+  intro fuel ch r hrun
+  obtain ⟨N, hN⟩ := h
+  have h1 := runFunctionWithContextM_mono (Nat.le_max_right N fuel) hrun
+  have h2 := hN (max N fuel) (Nat.le_max_left _ _) ch
+  rw [h1] at h2
+  exact Except.ok.inj h2
+
 /-- Chain two successful `stepFnIter` prefixes. -/
 theorem stepFnIter_chain :
     ∀ {a : Nat} {b : Nat} {σ : ExecState} {c : Config} {ch : Choices}

@@ -3,6 +3,7 @@ import GoLeanProofs.SliceMem
 import GoLeanProofs.FuelMeasure
 import GoLeanProofs.Frame.Transfer
 import GoLeanProofs.Frame.RenameId
+import GoLeanProofs.Laws.StmtOps
 
 /-!
 # Verified example: in-place slice reversal (verified-examples slice 2b,
@@ -14,13 +15,25 @@ canonical corpus source `Corpus/coverage/exec/examples/reverse/main.go`
 (5/5 differentially green against `go run`); `reverseLowered` is its
 pinned frontend lowering (`scripts/check-golden`, both links).
 
-The user-facing statement is `reverse_ok` — the §9e headline with the
-completion split CLOSED: the executable frame theorem
-(`docs/2026-08-13_executable-frame-theorem.md`; `Frame/`) landed, so
-the ∃N completion clause holds at EVERY admissible framed placement,
+The user-facing statement is `reverse_ok` — THE HARNESS FORM (harness
+ruling 2026-08-13, design note §11): the three-phase Go harness
+`reverse_harness(n, seed)` (setup: `s := make([]uint64, n)` filled
+with `s[i] = seed + i`; call under test: `reverse(s)`; test: an
+element-wise check of the reversal folding into the returned verdict
+`ok ∈ {0, 1}`), stated through the machine's native function entry
+`runFunctionWithContextM` — termination + returned values only, no
+cell/seed/env vocabulary. The §9e memory-quantified headline is KEPT
+as the proof-side supporting layer under the name `reverse_framed`
+(§11 status note: framed forms are the reserve layer; the harness
+restatement takes the `reverse_ok` name).
+
+`reverse_framed` (the old §9e headline) closed the completion split
+with the executable frame theorem
+(`docs/2026-08-13_executable-frame-theorem.md`; `Frame/`): the ∃N
+completion clause holds at EVERY admissible framed placement,
 transferred from the canonical run — nothing is re-run at a framed
 placement. Statement deltas against the §9e block, both recorded
-honestly in the docstring of `reverse_ok`:
+honestly in the docstring of `reverse_framed`:
 
 * `hlen : xs.length < 2 ^ 63` was ADDED. §9e was drafted with the
   completion clause split off; with completion IN the statement the
@@ -958,15 +971,20 @@ private theorem rev_cfg_ren (xs : List Int) (base na : Nat) :
   simp [renameConfig, renameCont, renameEnv, renameStmt, reverseCall,
     renameExprList, renameExpr, renameOptExpr, renameLoc, relocShift]
 
-/-! ## The §9e headline -/
+/-! ## The §9e memory-quantified form (proof-side supporting layer per
+§11 — kept; the user-facing statement is the harness `reverse_ok`
+below) -/
 
-/-- **THE §9e HEADLINE, completion split closed** (design note
+/-- **Proof-side supporting layer per §11 (the memory-quantified form,
+kept)** — the §9e headline, completion split closed (design note
 `docs/2026-08-12_example-spec-form.md` §9e; the frame theorem supplies
 the ∀-frame completion): *for any list `xs` of uint64 values, wherever
 it lives in memory, with anything else present: `reverse` completes
 normally — past one fuel bound, at every nondeterminism-choice
 stream — the backing cell then holds `xs` reversed, and no other
-memory is touched.*
+memory is touched.* Genuinely ∀-input over the slice contents — the
+memory-quantified reserve form the harness headline's input FAMILY
+does not subsume; kept per the §11 status ruling.
 
 Recorded statement deltas against the §9e draft (module docstring for
 the full reasoning): `hlen : xs.length < 2 ^ 63` added — with the
@@ -984,7 +1002,7 @@ generality; nothing is re-run at the framed placement). Value readout
 transfers through the terminal `FrameSim`'s pointwise heap
 characterization; frame preservation is its `frame_pres` clause
 verbatim. -/
-theorem reverse_ok (xs : List Int) (hxs : ∀ v ∈ xs, 0 ≤ v ∧ v < 2 ^ 64)
+theorem reverse_framed (xs : List Int) (hxs : ∀ v ∈ xs, 0 ≤ v ∧ v < 2 ^ 64)
     (hlen : xs.length < 2 ^ 63)
     (base : Nat) (fr : Heap) (na : Nat)
     (hb : Heap.lookup fr (.base ⟨base⟩) = none)
@@ -1034,5 +1052,1263 @@ theorem reverse_ok (xs : List Int) (hxs : ∀ v ∈ xs, 0 ≤ v ∧ v < 2 ^ 64)
   | returned σF => exact hout.elim
   | broke σF => exact hout.elim
   | continued σF => exact hout.elim
+
+/-! ## The harness restatement (THE HARNESS RULING, 2026-08-13 —
+design note §11: the final user-facing form)
+
+The user-facing statement `reverse_ok` states the three-phase Go
+harness `reverse_harness(n, seed)` through the machine's NATIVE
+function entry `runFunctionWithContextM`:
+
+* **setup** (`setup_reverse_state`): `s := make([]uint64, n)`, then
+  `for i { s[i] = seed + i }` — builds all memory the test needs from
+  the scalar parameters;
+* **the call under test**: `reverse(s)`;
+* **test** (`test_reverse_state`): `for i { if s[i] != seed+((n-1)-i)
+  { ok = 0 } }` — the memory ANALYSIS happens IN GO, inside the
+  verified footprint, folding into the returned verdict `ok ∈ {0,1}`.
+
+The statement observes termination + the returned verdict only: no
+`loadLoc`, no cell/seed/env vocabulary (§11 ruling (2)); framing is
+implicit in the empty-heap entry (§11 ruling (3)); quantification is
+over instantiated `GoValue` arguments at the call boundary (§11
+ruling (1) — no AST splicing, no program families).
+
+**INPUT-FAMILY HONESTY (recorded per §11's variable-size-inputs
+ruling)**: the quantification is over the SCALARS `(n, seed)` — i.e.
+over the input family `revFamily n seed = [seed, seed+1, …,
+seed+(n-1)] (mod 2^64)`, honestly WEAKER than ∀xs over arbitrary
+slice contents (the designed-not-built choice-consuming input pick,
+§11; until it lands, setup loops parameterized by scalars give input
+FAMILIES). The ∀xs claim remains available proof-side as
+`reverse_framed`. The WRAPPING family is deliberate: `seed + i` wraps
+at `2^64`, so the family covers wrap boundaries — matching the corpus
+rows, which exercise the harness at concrete arguments including a
+near-`2^63` seed.
+
+Proof route (the fib harness pattern + three loops): the entry
+equation (`revH_entry_eq`, `with_unfolding_all rfl`); the makeSlice
+step at SYMBOLIC `n` (`buildDefaultArrayValue_int` supplies the
+replicate-shaped backing); one strong induction per loop — the setup
+loop (invariant: backing = family-prefix ++ zeros), the reverse
+two-pointer loop (the `revSwap` machinery above, re-derived at the
+harness address layout), the test loop (invariant: backing = the
+reversed family, verdict pinned 1) — each pinning the exact machine
+state; `runConfig_of_stepFnIter` + `runConfig_next_stop` fold the
+run and the readback computes definitionally. -/
+
+/-- **The input family**: the slice contents the setup phase builds
+from `(n, seed)` — `n` consecutive uint64 values from `seed`, wrapped
+at `2^64` (Go's uint64 addition; the wrap is part of the family by
+design). -/
+def revFamily (n seed : Nat) : List Int :=
+  (List.range n).map (fun i => (((seed + i) % 2 ^ 64 : Nat) : Int))
+
+/-- The harness `Func` record, verbatim from the pinned lowering (the
+`example` pin below ties it by `rfl`). -/
+def reverseHarnessFunc : Func :=
+  { id := { key := "reverse_harness" },
+    args := #[{ id := "n", typ := .int .uint64 },
+              { id := "seed", typ := .int .uint64 }],
+    results := #[{ id := "$res0", typ := .int .uint64 }],
+    body := .block
+      #[]
+      #[.seqn
+          #[.initialization { id := "$c4", typ := .slice (.int .uint64) },
+            .makeSlice (.var "$c4") (.int .uint64) (.var "n") none],
+        .seqn
+          #[.initialization { id := "s", typ := .slice (.int .uint64) },
+            .assign (.var "s") (.var "$c4")],
+        .block
+          #[]
+          #[.seqn
+              #[.initialization { id := "i", typ := .int .uint64 },
+                .assign (.var "i") (.intLit 0 .uint64)],
+            .block
+              #[]
+              #[.initialization { id := "$forFirst", typ := .bool },
+                .assign (.var "$forFirst") (.boolLit true),
+                .while (.boolLit true) suBody]],
+        .call #[] ⟨"reverse"⟩ #[.var "s"],
+        .seqn
+          #[.initialization { id := "ok", typ := .int .uint64 },
+            .assign (.var "ok") (.intLit 1 .uint64)],
+        .block
+          #[]
+          #[.seqn
+              #[.initialization { id := "i", typ := .int .uint64 },
+                .assign (.var "i") (.intLit 0 .uint64)],
+            .block
+              #[]
+              #[.initialization { id := "$forFirst", typ := .bool },
+                .assign (.var "$forFirst") (.boolLit true),
+                .while (.boolLit true) tstBody]],
+        .seqn
+          #[.assign (.var "$res0") (.var "ok"),
+            .returnStmt]],
+    variadic := false,
+    wrapper := false }
+  where
+    /-- The setup loop's desugared body: the `$forFirst` dispatch, the
+    exit test, the fill block `{ s[i] = seed + i }`. -/
+    suBody : Stmt :=
+      .block
+        #[]
+        #[.ifThenElse (.var "$forFirst")
+            (.assign (.var "$forFirst") (.boolLit false))
+            (.assign (.var "i")
+              (.add (.var "i") (.intLit 1 .uint64))),
+          .seqn #[],
+          .ifThenElse (.lessCmp (.var "i") (.var "n"))
+            (.seqn #[])
+            .breakStmt,
+          .block
+            #[]
+            #[.seqn
+                #[.assign
+                    (.addr (.indexAddr (.var "s") (.var "i")))
+                    (.add (.var "seed") (.var "i"))]]]
+    /-- The test loop's desugared body: dispatch, exit test, the check
+    block `{ if s[i] != seed+((n-1)-i) { ok = 0 } }`. -/
+    tstBody : Stmt :=
+      .block
+        #[]
+        #[.ifThenElse (.var "$forFirst")
+            (.assign (.var "$forFirst") (.boolLit false))
+            (.assign (.var "i")
+              (.add (.var "i") (.intLit 1 .uint64))),
+          .seqn #[],
+          .ifThenElse (.lessCmp (.var "i") (.var "n"))
+            (.seqn #[])
+            .breakStmt,
+          .block
+            #[]
+            #[.ifThenElse
+                (.neqCmp (.int .uint64)
+                  (.indexGet (.var "s") (.var "i"))
+                  (.add (.var "seed")
+                    (.sub (.sub (.var "n") (.intLit 1 .uint64))
+                      (.var "i"))))
+                (.block #[] #[.seqn
+                    #[.assign (.var "ok") (.intLit 0 .uint64)]])
+                (.seqn #[])]]
+
+/-- The lowering pin: the harness subject IS the frontend's lowering. -/
+example : findFunctionIn? reverseLowered.funcs ⟨"reverse_harness"⟩
+    = some reverseHarnessFunc := rfl
+
+/-! ### The pure layer: the family, the setup prefix, the test reads -/
+
+private theorem length_revFamily (n seed : Nat) :
+    (revFamily n seed).length = n := by
+  simp [revFamily]
+
+private theorem mem_revFamily {n seed : Nat} {v : Int}
+    (h : v ∈ revFamily n seed) : 0 ≤ v ∧ v < 2 ^ 64 := by
+  simp only [revFamily, List.mem_map, List.mem_range] at h
+  obtain ⟨i, -, rfl⟩ := h
+  have : (seed + i) % 2 ^ 64 < 2 ^ 64 := Nat.mod_lt _ (by omega)
+  omega
+
+/-- The setup loop's backing after `m` fill iterations: the family
+prefix, then still-zero slots. -/
+private def suList (n seed m : Nat) : List Int :=
+  revFamily m seed ++ List.replicate (n - m) 0
+
+private theorem suList_zero (n seed : Nat) :
+    suList n seed 0 = List.replicate n 0 := by
+  simp [suList, revFamily]
+
+private theorem length_suList {n seed m : Nat} (hm : m ≤ n) :
+    (suList n seed m).length = n := by
+  simp [suList, length_revFamily]
+  omega
+
+private theorem mem_suList {n seed m : Nat} {v : Int}
+    (h : v ∈ suList n seed m) : 0 ≤ v ∧ v < 2 ^ 64 := by
+  simp only [suList, List.mem_append, List.mem_replicate] at h
+  rcases h with h | h
+  · exact mem_revFamily h
+  · omega
+
+private theorem revFamily_succ (m seed : Nat) :
+    revFamily (m + 1) seed
+      = revFamily m seed ++ [(((seed + m) % 2 ^ 64 : Nat) : Int)] := by
+  simp [revFamily, List.range_succ]
+
+/-- One fill store advances the prefix. -/
+private theorem suList_set {n seed m : Nat} (hm : m < n) :
+    (suList n seed m).set m (((seed + m) % 2 ^ 64 : Nat) : Int)
+      = suList n seed (m + 1) := by
+  have hlen : (revFamily m seed).length = m := length_revFamily m seed
+  have hnm : n - m = (n - (m + 1)) + 1 := by omega
+  rw [suList, List.set_append_right _ _ (by omega), hlen, Nat.sub_self,
+    hnm, List.replicate_succ, List.set_cons_zero, suList, revFamily_succ]
+  simp
+
+private theorem suList_full (n seed : Nat) :
+    suList n seed n = revFamily n seed := by
+  simp [suList]
+
+/-- The test loop's element read: position `m` of the REVERSED family
+holds `seed + (n-1-m)`, wrapped. -/
+private theorem getD_reverse_revFamily {n seed m : Nat} (hm : m < n) :
+    (revFamily n seed).reverse.getD m 0
+      = (((seed + (n - 1 - m)) % 2 ^ 64 : Nat) : Int) := by
+  have hlen : (revFamily n seed).length = n := length_revFamily n seed
+  have hrev : (revFamily n seed).reverse[m]?
+      = (revFamily n seed)[n - 1 - m]? := by
+    rw [List.getElem?_reverse (by omega), hlen]
+  rw [List.getD, hrev]
+  simp only [revFamily, List.getElem?_map, List.getElem?_range
+    (by omega : n - 1 - m < n)]
+  rfl
+
+/-- Wrapped uint64 addition of two Nat-cast values. -/
+private theorem unorm_add_nat (a b : Nat) :
+    IntKind.normalize .uint64 ((a : Int) + (b : Int))
+      = (((a + b) % 2 ^ 64 : Nat) : Int) := by
+  rw [show ((a : Int) + (b : Int)) = ((a + b : Nat) : Int) from by omega]
+  simp [IntKind.normalize, IntKind.bits?, IntKind.signed]
+
+/-! ### The machine layer: harness address layout (probe-verified;
+every raw segment re-checks the transcription by `rfl`).
+
+Addresses: 0 = `n`, 1 = `seed`, 2 = `$res0`, 3 = `$c4` (the slice
+handle), 4 = the backing array, 5 = `s`, 6 = the setup counter,
+7 = the setup flag, 8 = reverse's `s` parameter, 9/10 = reverse's
+`i`/`j`, 11 = reverse's flag, 12 = `ok`, 13 = the test counter,
+14 = the test flag. -/
+
+private abbrev hu64 (v : Int) : HeapCell := ⟨some (.int .uint64), .int v .uint64⟩
+/-- The harness slice handle: backing at 4, offset 0, len = cap = `n`. -/
+private abbrev hSlice (n : Nat) : GoValue := .slice ⟨some (.base ⟨4⟩), 0, n, n⟩
+private abbrev hSliceCell (n : Nat) : HeapCell :=
+  ⟨some (.slice (.int .uint64)), hSlice n⟩
+private abbrev hArrCell (n : Nat) (l : List Int) : HeapCell :=
+  ⟨some (.array n (.int .uint64)), .array ⟨l.map (fun v => .int v .uint64)⟩⟩
+
+private def baseEnvH : Scope :=
+  [("$res0", .base ⟨2⟩), ("seed", .base ⟨1⟩), ("n", .base ⟨0⟩)]
+
+/-- The machine entry's post-prelude state: the three frame cells the
+prelude allocates from the EMPTY heap. -/
+private def revHSeed (nv sv : Int) : ExecState :=
+  { types := reverseLowered.typeDefs.toList,
+    functions := reverseLowered.funcs,
+    methods := reverseLowered.methods,
+    heap := [(.base ⟨0⟩, hu64 nv), (.base ⟨1⟩, hu64 sv),
+             (.base ⟨2⟩, hu64 0)],
+    nextAddr := 3 }
+
+/-- The post-prelude configuration. -/
+private def revHC₀ : Config :=
+  .exec reverseHarnessFunc.body [[("$res0", .base ⟨2⟩),
+    ("seed", .base ⟨1⟩), ("n", .base ⟨0⟩)]] (.frame [] [] [] [] .stop)
+
+/-- **The entry equation** (the §11 glue, reverse instance): the
+machine entry IS its post-prelude `runConfig` form — pure
+`with_unfolding_all rfl` at fully symbolic `n`, `seed`, `fuel`, `ch`. -/
+private theorem revH_entry_eq (n seed fuel : Nat) (ch : Choices) :
+    runFunctionWithContextM fuel reverseLowered.typeDefs.toList
+        reverseLowered.funcs reverseHarnessFunc
+        #[.int (n : Int) .uint64, .int (seed : Int) .uint64]
+        reverseLowered.methods ch
+      = (do
+          let (sF, _) ← runConfig fuel
+            (revHSeed (IntKind.normalize .uint64 (n : Int))
+              (IntKind.normalize .uint64 (seed : Int))) revHC₀ ch
+          return { values := (← loadMany sF [Loc.base ⟨2⟩]).toArray }) := by
+  with_unfolding_all rfl
+
+/-! ### Harness statement pieces and continuations (probe-verified) -/
+
+private def hS2 : Stmt :=
+  .seqn #[.initialization { id := "s", typ := .slice (.int .uint64) },
+          .assign (.var "s") (.var "$c4")]
+private def hS3 : Stmt :=
+  .block #[]
+    #[.seqn #[.initialization { id := "i", typ := .int .uint64 },
+              .assign (.var "i") (.intLit 0 .uint64)],
+      .block #[]
+        #[.initialization { id := "$forFirst", typ := .bool },
+          .assign (.var "$forFirst") (.boolLit true),
+          .while (.boolLit true) reverseHarnessFunc.suBody]]
+private def hS4 : Stmt := .call #[] ⟨"reverse"⟩ #[.var "s"]
+private def hS5 : Stmt :=
+  .seqn #[.initialization { id := "ok", typ := .int .uint64 },
+          .assign (.var "ok") (.intLit 1 .uint64)]
+private def hS6 : Stmt :=
+  .block #[]
+    #[.seqn #[.initialization { id := "i", typ := .int .uint64 },
+              .assign (.var "i") (.intLit 0 .uint64)],
+      .block #[]
+        #[.initialization { id := "$forFirst", typ := .bool },
+          .assign (.var "$forFirst") (.boolLit true),
+          .while (.boolLit true) reverseHarnessFunc.tstBody]]
+private def hS7 : Stmt :=
+  .seqn #[.assign (.var "$res0") (.var "ok"), .returnStmt]
+
+private def envC4H : LocalEnv := [[("$c4", .base ⟨3⟩)], baseEnvH]
+private def sScopeH : Scope := [("s", .base ⟨5⟩), ("$c4", .base ⟨3⟩)]
+private def suEnv : LocalEnv :=
+  [[("$forFirst", .base ⟨7⟩)], [("i", .base ⟨6⟩)], sScopeH, baseEnvH]
+private def suEnv2 : LocalEnv := [] :: [] :: suEnv
+
+/-- The setup-loop head continuation. -/
+private def suHeadTail : Cont :=
+  .seq [] suEnv
+    (.seq [] [[("i", .base ⟨6⟩)], sScopeH, baseEnvH]
+      (.seq [hS4, hS5, hS6, hS7] [sScopeH, baseEnvH]
+        (.frame [] [] [] [] .stop)))
+private def suHeadCfg : Config :=
+  .exec (.while (.boolLit true) reverseHarnessFunc.suBody) suEnv suHeadTail
+private def suLoopK : Cont :=
+  .loop (.boolLit true) reverseHarnessFunc.suBody suEnv suHeadTail
+private def suStoreBlock : Stmt :=
+  .block #[]
+    #[.seqn #[.assign (.addr (.indexAddr (.var "s") (.var "i")))
+        (.add (.var "seed") (.var "i"))]]
+private def suCmpCont : Cont :=
+  .ifK (.seqn #[]) .breakStmt ([] :: suEnv)
+    (.seq [suStoreBlock] ([] :: suEnv) suLoopK)
+private def suRef (n : Nat) (iv : Int) : TargetRef :=
+  .chain (hSlice n) [.int iv .uint64] [.index]
+private def suSwTail : Cont := .seq [] suEnv2 (.seq [] ([] :: suEnv) suLoopK)
+
+/-- Reverse-phase continuations (the standalone module's tower with the
+harness addresses, sitting on the after-call continuation). -/
+private def revEnvInH : LocalEnv :=
+  [[("$forFirst", .base ⟨11⟩)], [("j", .base ⟨10⟩), ("i", .base ⟨9⟩)],
+   [], [("s", .base ⟨8⟩)]]
+private def revEnvMidH : LocalEnv :=
+  [[("j", .base ⟨10⟩), ("i", .base ⟨9⟩)], [], [("s", .base ⟨8⟩)]]
+private def revEnvOutH : LocalEnv := [[], [("s", .base ⟨8⟩)]]
+private def revHAfterCall : Cont :=
+  .seq [hS5, hS6, hS7] [sScopeH, baseEnvH] (.frame [] [] [] [] .stop)
+private def revFrameH : Cont :=
+  .frame [] [sScopeH, baseEnvH] [] [] revHAfterCall false
+private def revHHeadTail : Cont :=
+  .seq [] revEnvInH (.seq [] revEnvMidH (.seq [] revEnvOutH revFrameH))
+private def revHHeadCfg : Config :=
+  .exec (.while (.boolLit true) revWhileBody) revEnvInH revHHeadTail
+private def revHLoopK : Cont :=
+  .loop (.boolLit true) revWhileBody revEnvInH revHHeadTail
+private def revHCmpCont : Cont :=
+  .ifK (.seqn #[]) .breakStmt ([] :: revEnvInH)
+    (.seq [revSwapBlock] ([] :: revEnvInH) revHLoopK)
+private def envIn2H : LocalEnv := [] :: [] :: revEnvInH
+private def swTailH : Cont :=
+  .seq [] envIn2H (.seq [] ([] :: revEnvInH) revHLoopK)
+private def hRefv (n : Nat) (v : Int) : TargetRef :=
+  .chain (hSlice n) [.int v .int] [.index]
+private def hRhsK1 (n : Nat) (iv jv : Int) : Cont :=
+  .rhsK .vals [hRefv n iv, hRefv n jv] [] [.indexGet (.var "s") (.var "i")]
+    (.seqn #[]) envIn2H swTailH
+private def hRhsK2 (n : Nat) (iv jv : Int) (wj : GoValue) : Cont :=
+  .rhsK .vals [hRefv n iv, hRefv n jv] [wj] [] (.seqn #[]) envIn2H swTailH
+private def entryRhsKH : Cont :=
+  .rhsK .vals
+    [.chain (.addr (.base ⟨9⟩)) [] [], .chain (.addr (.base ⟨10⟩)) [] []]
+    [.int 0 .int] [] (.seqn #[]) revEnvMidH
+    (.seq [ffBlock] revEnvMidH (.seq [] revEnvOutH revFrameH))
+
+/-- Test-phase continuations. -/
+private def okScopeH : Scope :=
+  [("ok", .base ⟨12⟩), ("s", .base ⟨5⟩), ("$c4", .base ⟨3⟩)]
+private def tstEnv : LocalEnv :=
+  [[("$forFirst", .base ⟨14⟩)], [("i", .base ⟨13⟩)], okScopeH, baseEnvH]
+private def tstEnv2 : LocalEnv := [] :: [] :: tstEnv
+private def tstHeadTail : Cont :=
+  .seq [] tstEnv
+    (.seq [] [[("i", .base ⟨13⟩)], okScopeH, baseEnvH]
+      (.seq [hS7] [okScopeH, baseEnvH] (.frame [] [] [] [] .stop)))
+private def tstHeadCfg : Config :=
+  .exec (.while (.boolLit true) reverseHarnessFunc.tstBody) tstEnv tstHeadTail
+private def tstLoopK : Cont :=
+  .loop (.boolLit true) reverseHarnessFunc.tstBody tstEnv tstHeadTail
+private def tstAddExpr : Expr :=
+  .add (.var "seed")
+    (.sub (.sub (.var "n") (.intLit 1 .uint64)) (.var "i"))
+private def tstCheckBlock : Stmt :=
+  .block #[]
+    #[.ifThenElse
+        (.neqCmp (.int .uint64) (.indexGet (.var "s") (.var "i")) tstAddExpr)
+        (.block #[] #[.seqn #[.assign (.var "ok") (.intLit 0 .uint64)]])
+        (.seqn #[])]
+private def tstCmpCont : Cont :=
+  .ifK (.seqn #[]) .breakStmt ([] :: tstEnv)
+    (.seq [tstCheckBlock] ([] :: tstEnv) tstLoopK)
+private def tstIfK : Cont :=
+  .ifK (.block #[] #[.seqn #[.assign (.var "ok") (.intLit 0 .uint64)]])
+    (.seqn #[]) tstEnv2 (.seq [] tstEnv2 (.seq [] ([] :: tstEnv) tstLoopK))
+private def tstNeqK : Cont :=
+  .strictK (.neqCmp (.int .uint64)) [] [tstAddExpr] tstEnv2 tstIfK
+
+/-! ### State families (harness layout) -/
+
+private def σE1st (n seed : Nat) : ExecState :=
+  { types := reverseLowered.typeDefs.toList,
+    functions := reverseLowered.funcs,
+    methods := reverseLowered.methods,
+    heap := [(.base ⟨0⟩, hu64 (n : Int)), (.base ⟨1⟩, hu64 (seed : Int)),
+             (.base ⟨2⟩, hu64 0),
+             (.base ⟨3⟩, ⟨some (.slice (.int .uint64)),
+               .slice ⟨none, 0, 0, 0⟩⟩)],
+    nextAddr := 4 }
+
+private def σMake (n seed : Nat) : ExecState :=
+  { types := reverseLowered.typeDefs.toList,
+    functions := reverseLowered.funcs,
+    methods := reverseLowered.methods,
+    heap := [(.base ⟨0⟩, hu64 (n : Int)), (.base ⟨1⟩, hu64 (seed : Int)),
+             (.base ⟨2⟩, hu64 0), (.base ⟨3⟩, hSliceCell n),
+             (.base ⟨4⟩, hArrCell n (List.replicate n 0))],
+    nextAddr := 5 }
+
+/-- The setup-loop state: backing list `l`, counter `iv`, flag. -/
+private def suState (n seed : Nat) (l : List Int) (iv : Int) (ffv : Bool) :
+    ExecState :=
+  { types := reverseLowered.typeDefs.toList,
+    functions := reverseLowered.funcs,
+    methods := reverseLowered.methods,
+    heap := [(.base ⟨0⟩, hu64 (n : Int)), (.base ⟨1⟩, hu64 (seed : Int)),
+             (.base ⟨2⟩, hu64 0), (.base ⟨3⟩, hSliceCell n),
+             (.base ⟨4⟩, hArrCell n l), (.base ⟨5⟩, hSliceCell n),
+             (.base ⟨6⟩, hu64 iv), (.base ⟨7⟩, bcell ffv)],
+    nextAddr := 8 }
+
+/-- Mid reverse-entry: reverse's `s` bound, `i`/`j` at defaults. -/
+private def σRevEntry (n seed : Nat) (l : List Int) (siv : Int) : ExecState :=
+  { types := reverseLowered.typeDefs.toList,
+    functions := reverseLowered.funcs,
+    methods := reverseLowered.methods,
+    heap := [(.base ⟨0⟩, hu64 (n : Int)), (.base ⟨1⟩, hu64 (seed : Int)),
+             (.base ⟨2⟩, hu64 0), (.base ⟨3⟩, hSliceCell n),
+             (.base ⟨4⟩, hArrCell n l), (.base ⟨5⟩, hSliceCell n),
+             (.base ⟨6⟩, hu64 siv), (.base ⟨7⟩, bcell false),
+             (.base ⟨8⟩, hSliceCell n), (.base ⟨9⟩, intcell 0),
+             (.base ⟨10⟩, intcell 0)],
+    nextAddr := 11 }
+
+/-- The reverse-phase in-loop state (`siv` = the parked setup counter). -/
+private def hrevState (n seed : Nat) (siv : Int) (l : List Int)
+    (iv jv : Int) (ffv : Bool) : ExecState :=
+  { types := reverseLowered.typeDefs.toList,
+    functions := reverseLowered.funcs,
+    methods := reverseLowered.methods,
+    heap := [(.base ⟨0⟩, hu64 (n : Int)), (.base ⟨1⟩, hu64 (seed : Int)),
+             (.base ⟨2⟩, hu64 0), (.base ⟨3⟩, hSliceCell n),
+             (.base ⟨4⟩, hArrCell n l), (.base ⟨5⟩, hSliceCell n),
+             (.base ⟨6⟩, hu64 siv), (.base ⟨7⟩, bcell false),
+             (.base ⟨8⟩, hSliceCell n), (.base ⟨9⟩, intcell iv),
+             (.base ⟨10⟩, intcell jv), (.base ⟨11⟩, bcell ffv)],
+    nextAddr := 12 }
+
+/-- The test-phase in-loop state (`rif`/`rjf` = reverse's parked final
+counters — inert; the verdict cell 12 is pinned 1). -/
+private def tstState (n seed : Nat) (siv rif rjf : Int) (l : List Int)
+    (iv : Int) (ffv : Bool) : ExecState :=
+  { types := reverseLowered.typeDefs.toList,
+    functions := reverseLowered.funcs,
+    methods := reverseLowered.methods,
+    heap := [(.base ⟨0⟩, hu64 (n : Int)), (.base ⟨1⟩, hu64 (seed : Int)),
+             (.base ⟨2⟩, hu64 0), (.base ⟨3⟩, hSliceCell n),
+             (.base ⟨4⟩, hArrCell n l), (.base ⟨5⟩, hSliceCell n),
+             (.base ⟨6⟩, hu64 siv), (.base ⟨7⟩, bcell false),
+             (.base ⟨8⟩, hSliceCell n), (.base ⟨9⟩, intcell rif),
+             (.base ⟨10⟩, intcell rjf), (.base ⟨11⟩, bcell false),
+             (.base ⟨12⟩, hu64 1), (.base ⟨13⟩, hu64 iv),
+             (.base ⟨14⟩, bcell ffv)],
+    nextAddr := 15 }
+
+/-- The terminal state: verdict 1 delivered to the result cell. -/
+private def tstEndState (n seed : Nat) (siv rif rjf : Int) (l : List Int)
+    (iv : Int) : ExecState :=
+  { types := reverseLowered.typeDefs.toList,
+    functions := reverseLowered.funcs,
+    methods := reverseLowered.methods,
+    heap := [(.base ⟨0⟩, hu64 (n : Int)), (.base ⟨1⟩, hu64 (seed : Int)),
+             (.base ⟨2⟩, hu64 1), (.base ⟨3⟩, hSliceCell n),
+             (.base ⟨4⟩, hArrCell n l), (.base ⟨5⟩, hSliceCell n),
+             (.base ⟨6⟩, hu64 siv), (.base ⟨7⟩, bcell false),
+             (.base ⟨8⟩, hSliceCell n), (.base ⟨9⟩, intcell rif),
+             (.base ⟨10⟩, intcell rjf), (.base ⟨11⟩, bcell false),
+             (.base ⟨12⟩, hu64 1), (.base ⟨13⟩, hu64 iv),
+             (.base ⟨14⟩, bcell false)],
+    nextAddr := 15 }
+
+/-! ### Raw run segments (`with_unfolding_all rfl`; splits at the
+data-dependent points: the makeSlice apply, each loop's exit test,
+the setup store, the two swap reads and stores, the test read, the
+check-if delivery). -/
+
+private theorem revH_E1_raw (nv sv : Int) (ch : Choices) :
+    stepFnIter 10 (revHSeed nv sv) revHC₀ ch
+      = .ok (.retV (.int nv .uint64)
+          (.stmtOpK (.makeSlice (.int .uint64) false) 1
+            [.addr (.base ⟨3⟩)] [] envC4H
+            (.seq [hS2, hS3, hS4, hS5, hS6, hS7] envC4H
+              (.frame [] [] [] [] .stop))),
+        { types := reverseLowered.typeDefs.toList,
+          functions := reverseLowered.funcs,
+          methods := reverseLowered.methods,
+          heap := [(.base ⟨0⟩, hu64 nv), (.base ⟨1⟩, hu64 sv),
+                   (.base ⟨2⟩, hu64 0),
+                   (.base ⟨3⟩, ⟨some (.slice (.int .uint64)),
+                     .slice ⟨none, 0, 0, 0⟩⟩)],
+          nextAddr := 4 }, ch) := by
+  with_unfolding_all rfl
+
+/-- **The makeSlice apply at SYMBOLIC `n`** — the one entry-phase
+branch point (the machine's non-negativity check on the length). The
+backing is `n` zeros (`buildDefaultArrayValue_int`). -/
+private theorem revH_make_apply (n seed : Nat) (hn : n < 2 ^ 63)
+    (ch : Choices) :
+    applyStmtOp (σE1st n seed) ch (.makeSlice (.int .uint64) false) 1
+      [.addr (.base ⟨3⟩), .int (n : Nat) .uint64]
+      = .ok (σMake n seed, ch) := by
+  have hnat : ∀ s : String,
+      natFromNonnegativeInt s ((n : Nat) : Int) = .ok n := by
+    intro s
+    simp only [natFromNonnegativeInt]
+    rw [if_neg (by omega : ¬ (((n : Nat) : Int) < 0))]
+    rfl
+  have hback := GoLean.Iris.buildDefaultArrayValue_int (σE1st n seed) .uint64 n
+  simp only [applyStmtOp, applyStmtOpCore, valueAsInt, Bind.bind,
+    Except.bind, pure, Except.pure, hnat, hback]
+  rw [if_neg (by omega : ¬ (n < n))]
+  simp only [ExecState.alloc, ExecState.freshLoc, valueAsLoc, Except.bind,
+    storeLoc, Heap.lookup, normalizeValueForTy, normalizeValueForTyFuel,
+    typeResolutionFuel, Heap.set, pure, Except.pure, σE1st, σMake,
+    hArrCell, hSliceCell, hSlice, hu64, List.map_replicate]
+  rfl
+
+/-- The makeSlice machine step, conditioned on the apply fact. -/
+private theorem stepFn_makeSlice_step {σ σ' : ExecState} {n : Nat}
+    {tv : GoValue} {env : LocalEnv} {k : Cont} {ch : Choices}
+    (happly : applyStmtOp σ ch (.makeSlice (.int .uint64) false) 1
+      [tv, .int (n : Nat) .uint64] = .ok (σ', ch)) :
+    stepFn σ (.retV (.int (n : Nat) .uint64)
+      (.stmtOpK (.makeSlice (.int .uint64) false) 1 [tv] [] env k)) ch
+      = .ok (.next k, σ', ch) := by
+  simp only [stepFn, List.reverse_cons, List.reverse_nil,
+    List.nil_append, List.cons_append]
+  rw [happly]
+  rfl
+
+private theorem revH_E2_raw (n seed : Nat) (ch : Choices) :
+    stepFnIter 42 (σMake n seed)
+      (.next (.seq [hS2, hS3, hS4, hS5, hS6, hS7] envC4H
+        (.frame [] [] [] [] .stop))) ch
+      = .ok (suHeadCfg, suState n seed (List.replicate n 0) 0 true, ch) := by
+  with_unfolding_all rfl
+
+/-- Setup first-pass dispatch: head with the flag up → the exit test. -/
+private theorem su_A0_raw (n seed : Nat) (l : List Int) (iv : Int)
+    (ch : Choices) :
+    stepFnIter 25 (suState n seed l iv true) suHeadCfg ch
+      = .ok (.retV (.bool (decide (iv < (n : Int)))) suCmpCont,
+          suState n seed l iv false, ch) := by
+  with_unfolding_all rfl
+
+/-- Setup later-pass dispatch: `i++`, then the exit test. -/
+private theorem su_A1_raw (n seed : Nat) (l : List Int) (iv : Int)
+    (ch : Choices) :
+    stepFnIter 29 (suState n seed l iv false) suHeadCfg ch
+      = .ok (.retV (.bool (decide
+            (IntKind.normalize .uint64 (IntKind.normalize .uint64 (iv + 1))
+              < (n : Int)))) suCmpCont,
+          suState n seed l
+            (IntKind.normalize .uint64 (IntKind.normalize .uint64 (iv + 1)))
+            false, ch) := by
+  with_unfolding_all rfl
+
+/-- Setup fill phase 1: test true → target + RHS evaluated, the store
+pending (`seed + i`, wrapped once by the add). -/
+private theorem su_B1_raw (n seed : Nat) (l : List Int) (iv : Int)
+    (ch : Choices) :
+    stepFnIter 18 (suState n seed l iv false) (.retV (.bool true) suCmpCont)
+      ch
+      = .ok (.next (.storeK [suRef n iv]
+            [.int (IntKind.normalize .uint64 ((seed : Int) + iv)) .uint64]
+            (.seqn #[]) suEnv2 suSwTail),
+          suState n seed l iv false, ch) := by
+  with_unfolding_all rfl
+
+/-- Setup fill tail: store done → back to the loop head. -/
+private theorem su_D_raw (n seed : Nat) (l : List Int) (iv : Int)
+    (ch : Choices) :
+    stepFnIter 5 (suState n seed l iv false)
+      (.next (.storeK [] [] (.seqn #[]) suEnv2 suSwTail)) ch
+      = .ok (suHeadCfg, suState n seed l iv false, ch) := by
+  with_unfolding_all rfl
+
+/-- Setup exit → the reverse call's frame entered, `i`/`j` declared,
+`len(s)` at its apply point. -/
+private theorem su_X_raw (n seed : Nat) (l : List Int) (iv : Int)
+    (ch : Choices) :
+    stepFnIter 30 (suState n seed l iv false) (.retV (.bool false) suCmpCont)
+      ch
+      = .ok (.retV (hSlice n)
+          (.strictK (.lengthOf (some (.slice (.int .uint64)))) [] []
+            revEnvMidH (.strictK .sub [] [.intLit 1 .int] revEnvMidH
+              entryRhsKH)),
+        σRevEntry n seed l iv, ch) := by
+  with_unfolding_all rfl
+
+/-- Reverse entry tail: `len - 1` delivered → `i, j` stored, the flag
+block run, the reverse loop head. -/
+private theorem su_Y_raw (n seed : Nat) (l : List Int) (siv : Int)
+    (ch : Choices) :
+    stepFnIter 22 (σRevEntry n seed l siv)
+      (.retV (.int (n : Nat) .int)
+        (.strictK .sub [] [.intLit 1 .int] revEnvMidH entryRhsKH)) ch
+      = .ok (revHHeadCfg,
+          hrevState n seed siv l 0
+            (IntKind.normalize .int
+              (IntKind.normalize .int ((n : Int) - 1))) true, ch) := by
+  with_unfolding_all rfl
+
+/-- Reverse first-pass dispatch. -/
+private theorem rh_A0_raw (n seed : Nat) (siv : Int) (l : List Int)
+    (iv jv : Int) (ch : Choices) :
+    stepFnIter 25 (hrevState n seed siv l iv jv true) revHHeadCfg ch
+      = .ok (.retV (.bool (decide (iv < jv))) revHCmpCont,
+          hrevState n seed siv l iv jv false, ch) := by
+  with_unfolding_all rfl
+
+/-- Reverse later-pass dispatch: `i, j = i+1, j-1`, then the test. -/
+private theorem rh_A1_raw (n seed : Nat) (siv : Int) (l : List Int)
+    (iv jv : Int) (ch : Choices) :
+    stepFnIter 40 (hrevState n seed siv l iv jv false) revHHeadCfg ch
+      = .ok (.retV (.bool (decide
+              (IntKind.normalize .int (IntKind.normalize .int (iv + 1))
+                < IntKind.normalize .int (IntKind.normalize .int (jv - 1)))))
+            revHCmpCont,
+          hrevState n seed siv l
+            (IntKind.normalize .int (IntKind.normalize .int (iv + 1)))
+            (IntKind.normalize .int (IntKind.normalize .int (jv - 1)))
+            false, ch) := by
+  with_unfolding_all rfl
+
+/-- Swap phase 1a: test true → the first index-read apply (`s[j]`). -/
+private theorem rh_swapA_raw (n seed : Nat) (siv : Int) (l : List Int)
+    (iv jv : Int) (ch : Choices) :
+    stepFnIter 20 (hrevState n seed siv l iv jv false)
+      (.retV (.bool true) revHCmpCont) ch
+      = .ok (.retV (.int jv .int)
+            (.strictK .indexGet [hSlice n] [] envIn2H (hRhsK1 n iv jv)),
+          hrevState n seed siv l iv jv false, ch) := by
+  with_unfolding_all rfl
+
+/-- Swap phase 1b: first read delivered → the second read apply. -/
+private theorem rh_swapB_raw (n seed : Nat) (siv : Int) (l : List Int)
+    (iv jv : Int) (wj : GoValue) (ch : Choices) :
+    stepFnIter 5 (hrevState n seed siv l iv jv false)
+      (.retV wj (hRhsK1 n iv jv)) ch
+      = .ok (.retV (.int iv .int)
+            (.strictK .indexGet [hSlice n] [] envIn2H (hRhsK2 n iv jv wj)),
+          hrevState n seed siv l iv jv false, ch) := by
+  with_unfolding_all rfl
+
+/-- Swap phase 1 → 2: both reads banked, the stores begin. -/
+private theorem rh_swapC_raw (n seed : Nat) (siv : Int) (l : List Int)
+    (iv jv : Int) (wj wi : GoValue) (ch : Choices) :
+    stepFnIter 1 (hrevState n seed siv l iv jv false)
+      (.retV wi (hRhsK2 n iv jv wj)) ch
+      = .ok (.next (.storeK [hRefv n iv, hRefv n jv] [wj, wi] (.seqn #[])
+            envIn2H swTailH),
+          hrevState n seed siv l iv jv false, ch) := by
+  with_unfolding_all rfl
+
+/-- Swap tail: stores done → back to the loop head. -/
+private theorem rh_swapD_raw (n seed : Nat) (siv : Int) (l : List Int)
+    (iv jv : Int) (ch : Choices) :
+    stepFnIter 5 (hrevState n seed siv l iv jv false)
+      (.next (.storeK [] [] (.seqn #[]) envIn2H swTailH)) ch
+      = .ok (revHHeadCfg, hrevState n seed siv l iv jv false, ch) := by
+  with_unfolding_all rfl
+
+/-- Reverse exit → frame exit, `ok := 1`, the test loop's counter and
+flag declared, the test loop head. -/
+private theorem rh_X_raw (n seed : Nat) (siv : Int) (l : List Int)
+    (iv jv : Int) (ch : Choices) :
+    stepFnIter 50 (hrevState n seed siv l iv jv false)
+      (.retV (.bool false) revHCmpCont) ch
+      = .ok (tstHeadCfg, tstState n seed siv iv jv l 0 true, ch) := by
+  with_unfolding_all rfl
+
+/-- Test first-pass dispatch. -/
+private theorem tst_A0_raw (n seed : Nat) (siv rif rjf : Int)
+    (l : List Int) (iv : Int) (ch : Choices) :
+    stepFnIter 25 (tstState n seed siv rif rjf l iv true) tstHeadCfg ch
+      = .ok (.retV (.bool (decide (iv < (n : Int)))) tstCmpCont,
+          tstState n seed siv rif rjf l iv false, ch) := by
+  with_unfolding_all rfl
+
+/-- Test later-pass dispatch: `i++`, then the exit test. -/
+private theorem tst_A1_raw (n seed : Nat) (siv rif rjf : Int)
+    (l : List Int) (iv : Int) (ch : Choices) :
+    stepFnIter 29 (tstState n seed siv rif rjf l iv false) tstHeadCfg ch
+      = .ok (.retV (.bool (decide
+            (IntKind.normalize .uint64 (IntKind.normalize .uint64 (iv + 1))
+              < (n : Int)))) tstCmpCont,
+          tstState n seed siv rif rjf l
+            (IntKind.normalize .uint64 (IntKind.normalize .uint64 (iv + 1)))
+            false, ch) := by
+  with_unfolding_all rfl
+
+/-- Test check phase 1: test true → the element read apply (`s[i]`). -/
+private theorem tst_B1_raw (n seed : Nat) (siv rif rjf : Int)
+    (l : List Int) (iv : Int) (ch : Choices) :
+    stepFnIter 11 (tstState n seed siv rif rjf l iv false)
+      (.retV (.bool true) tstCmpCont) ch
+      = .ok (.retV (.int iv .uint64)
+            (.strictK .indexGet [hSlice n] [] tstEnv2 tstNeqK),
+          tstState n seed siv rif rjf l iv false, ch) := by
+  with_unfolding_all rfl
+
+/-- Test check phase 2: element banked → the expected value computed
+(`seed + ((n-1) - i)`, uint64-wrapped) and the `!=` delivered. -/
+private theorem tst_B2_raw (n seed : Nat) (siv rif rjf : Int)
+    (l : List Int) (iv wv : Int) (ch : Choices) :
+    stepFnIter 15 (tstState n seed siv rif rjf l iv false)
+      (.retV (.int wv .uint64) tstNeqK) ch
+      = .ok (.retV (.bool (!(wv ==
+            IntKind.normalize .uint64 ((seed : Int) +
+              IntKind.normalize .uint64
+                (IntKind.normalize .uint64 ((n : Int) - 1) - iv)))))
+            tstIfK,
+          tstState n seed siv rif rjf l iv false, ch) := by
+  with_unfolding_all rfl
+
+/-- Test check phase 3 (the equal case): the else branch drains back to
+the loop head. -/
+private theorem tst_B3_raw (n seed : Nat) (siv rif rjf : Int)
+    (l : List Int) (iv : Int) (ch : Choices) :
+    stepFnIter 5 (tstState n seed siv rif rjf l iv false)
+      (.retV (.bool false) tstIfK) ch
+      = .ok (tstHeadCfg, tstState n seed siv rif rjf l iv false, ch) := by
+  with_unfolding_all rfl
+
+/-- Test exit: verdict 1 to the result cell, return, barrier exit —
+the driver terminal, terminal state pinned. -/
+private theorem tst_X_raw (n seed : Nat) (siv rif rjf : Int)
+    (l : List Int) (iv : Int) (ch : Choices) :
+    stepFnIter 21 (tstState n seed siv rif rjf l iv false)
+      (.retV (.bool false) tstCmpCont) ch
+      = .ok (.next .stop, tstEndState n seed siv rif rjf l iv, ch) := by
+  with_unfolding_all rfl
+
+/-! ### The backing-cell lookups (the conditioned steps' premises) -/
+
+private theorem lookup_su (n seed : Nat) (l : List Int) (iv : Int)
+    (ffv : Bool) :
+    Heap.lookup (suState n seed l iv ffv).heap (.base ⟨4⟩)
+      = some ⟨some (.array n (.int .uint64)),
+          .array ⟨l.map (fun v => .int v .uint64)⟩⟩ := by
+  simp [suState, Heap.lookup, hArrCell]
+
+private theorem lookup_hrev (n seed : Nat) (siv : Int) (l : List Int)
+    (iv jv : Int) (ffv : Bool) :
+    Heap.lookup (hrevState n seed siv l iv jv ffv).heap (.base ⟨4⟩)
+      = some ⟨some (.array n (.int .uint64)),
+          .array ⟨l.map (fun v => .int v .uint64)⟩⟩ := by
+  simp [hrevState, Heap.lookup, hArrCell]
+
+private theorem lookup_tst (n seed : Nat) (siv rif rjf : Int)
+    (l : List Int) (iv : Int) (ffv : Bool) :
+    Heap.lookup (tstState n seed siv rif rjf l iv ffv).heap (.base ⟨4⟩)
+      = some ⟨some (.array n (.int .uint64)),
+          .array ⟨l.map (fun v => .int v .uint64)⟩⟩ := by
+  simp [tstState, Heap.lookup, hArrCell]
+
+/-! ### The setup loop: one fill iteration, then the induction -/
+
+/-- One setup iteration from the exit-test's true delivery at `m`:
+fill `s[m] = seed + m` (wrapped), return to the head, dispatch, and
+deliver the next test — the family prefix advanced. 53 steps. -/
+private theorem su_iter (n seed : Nat) (_hseed : seed < 2 ^ 64)
+    (m : Nat) (hn64 : n < 2 ^ 64) (hm : m < n) (ch : Choices) :
+    stepFnIter 53 (suState n seed (suList n seed m) ((m : Nat) : Int) false)
+      (.retV (.bool true) suCmpCont) ch
+      = .ok (.retV (.bool (decide (((m + 1 : Nat) : Int) < (n : Int))))
+            suCmpCont,
+          suState n seed (suList n seed (m + 1)) ((m + 1 : Nat) : Int) false,
+          ch) := by
+  have hB1 := su_B1_raw n seed (suList n seed m) ((m : Nat) : Int) ch
+  rw [unorm_add_nat seed m] at hB1
+  have hw : (0 : Int) ≤ (((seed + m) % 2 ^ 64 : Nat) : Int)
+      ∧ (((seed + m) % 2 ^ 64 : Nat) : Int) < 2 ^ 64 := by
+    have := Nat.mod_lt (seed + m) (y := 2 ^ 64) (by omega)
+    omega
+  have hst := storeTarget_slice_u64 (a := ⟨4⟩) (off := 0) (len := n)
+    (cap := n) (i := m) (n := n) (ik := .uint64) (l := suList n seed m)
+    (w := (((seed + m) % 2 ^ 64 : Nat) : Int))
+    (lookup_su n seed (suList n seed m) ((m : Nat) : Int) false)
+    (Nat.le_refl _) hm (by rw [length_suList (by omega)]; omega)
+    (length_suList (by omega)) (fun v hv => mem_suList hv) hw
+  rw [Nat.zero_add, suList_set hm] at hst
+  have hstore : storeTarget
+      (suState n seed (suList n seed m) ((m : Nat) : Int) false)
+      (suRef n ((m : Nat) : Int))
+      (.int (((seed + m) % 2 ^ 64 : Nat) : Int) .uint64)
+      = .ok (suState n seed (suList n seed (m + 1)) ((m : Nat) : Int)
+          false) := hst
+  have hD := su_D_raw n seed (suList n seed (m + 1)) ((m : Nat) : Int) ch
+  have hA1 := su_A1_raw n seed (suList n seed (m + 1)) ((m : Nat) : Int) ch
+  rw [show ((m : Nat) : Int) + 1 = ((m + 1 : Nat) : Int) from by omega,
+    unorm_of_range (v := ((m + 1 : Nat) : Int)) (by omega) (by omega),
+    unorm_of_range (v := ((m + 1 : Nat) : Int)) (by omega) (by omega)] at hA1
+  exact stepFnIter_chain (stepFnIter_chain (stepFnIter_chain hB1
+    (stepFnIter_one (stepFn_store_step hstore))) hD) hA1
+
+/-- **The setup loop**, by strong induction on the remaining measure:
+from the exit-test delivery at `m` the run reaches the REVERSE LOOP
+HEAD with the full family in the backing array, within `53·μ + 53`
+steps (the base case runs the setup exit, the call's frame entry and
+reverse's prologue). -/
+private theorem su_loop (n seed : Nat) (hn : n < 2 ^ 63)
+    (hseed : seed < 2 ^ 64) :
+    ∀ μ m : Nat, m + μ = n → ∀ ch : Choices,
+    ∃ k : Nat, k ≤ 53 * μ + 53 ∧
+      stepFnIter k (suState n seed (suList n seed m) ((m : Nat) : Int) false)
+        (.retV (.bool (decide (((m : Nat) : Int) < (n : Int)))) suCmpCont) ch
+        = .ok (revHHeadCfg,
+            hrevState n seed ((n : Nat) : Int) (revFamily n seed) 0
+              ((n : Int) - 1) true, ch) := by
+  intro μ
+  induction μ using Nat.strongRecOn with
+  | _ μ ih =>
+    intro m hm ch
+    rcases Nat.lt_or_ge m n with hlt | hge
+    · rw [show (decide (((m : Nat) : Int) < (n : Int))) = true from
+        decide_eq_true (by exact_mod_cast hlt)]
+      obtain ⟨k, hk, hrun⟩ := ih (μ - 1) (by omega) (m + 1) (by omega) ch
+      exact ⟨53 + k, by omega,
+        stepFnIter_chain (su_iter n seed hseed m (by omega) hlt ch) hrun⟩
+    · have hmn : m = n := by omega
+      subst hmn
+      rw [show (decide (((m : Nat) : Int) < (m : Int))) = false from
+        decide_eq_false (by omega)]
+      have hX := su_X_raw m seed (suList m seed m) ((m : Nat) : Int) ch
+      rw [suList_full] at hX
+      have happ : applyStrictOp
+          (σRevEntry m seed (revFamily m seed) ((m : Nat) : Int))
+          (.lengthOf (some (.slice (.int .uint64)))) [hSlice m]
+          = .ok (.int (m : Nat) .int,
+              σRevEntry m seed (revFamily m seed) ((m : Nat) : Int)) :=
+        applyStrictOp_len_slice (Nat.le_refl m)
+      have hlen := stepFnIter_one (ch := ch) (stepFn_strict_apply
+        (done := []) (env := revEnvMidH)
+        (k := .strictK .sub [] [.intLit 1 .int] revEnvMidH entryRhsKH) happ)
+      have hY := su_Y_raw m seed (revFamily m seed) ((m : Nat) : Int) ch
+      rw [inorm_of_range (v := (m : Int) - 1) (by omega) (by omega),
+        inorm_of_range (v := (m : Int) - 1) (by omega) (by omega)] at hY
+      refine ⟨30 + 1 + 22, by omega, ?_⟩
+      rw [suList_full]
+      exact stepFnIter_chain (stepFnIter_chain hX hlen) hY
+
+/-! ### The reverse loop: the two-pointer induction at the harness
+layout (the standalone module's `revSwap` machinery re-consumed) -/
+
+/-- The reverse-phase exit-test delivery state at iteration `m`. -/
+private abbrev hrevCmpState (n seed : Nat) (siv : Int) (m : Nat) :
+    ExecState :=
+  hrevState n seed siv (revSwap (revFamily n seed) m) ((m : Nat) : Int)
+    ((n - 1 - m : Nat) : Int) false
+
+/-- One swap at the harness layout: 35 steps from the true test back
+to the head, the partial reversal advanced. -/
+private theorem rh_swap_seg (n seed : Nat) (siv : Int) (m : Nat)
+    (_hseed : seed < 2 ^ 64) (hm : 2 * m + 1 < n) (ch : Choices) :
+    stepFnIter 35 (hrevCmpState n seed siv m)
+      (.retV (.bool true) revHCmpCont) ch
+      = .ok (revHHeadCfg,
+          hrevState n seed siv (revSwap (revFamily n seed) (m + 1))
+            ((m : Nat) : Int) ((n - 1 - m : Nat) : Int) false, ch) := by
+  have hxs : ∀ v ∈ revFamily n seed, 0 ≤ v ∧ v < 2 ^ 64 :=
+    fun v hv => mem_revFamily hv
+  have hlenxs : (revFamily n seed).length = n := length_revFamily n seed
+  have hlenm : (revSwap (revFamily n seed) m).length = n := by
+    rw [length_revSwap, hlenxs]
+  have hrangeSwap : ∀ v ∈ revSwap (revFamily n seed) m, 0 ≤ v ∧ v < 2 ^ 64 :=
+    fun v hv => hxs v (mem_revSwap hv)
+  have hwj_range : 0 ≤ (revFamily n seed).getD ((revFamily n seed).length - 1 - m) 0
+      ∧ (revFamily n seed).getD ((revFamily n seed).length - 1 - m) 0 < 2 ^ 64 :=
+    hxs _ (getD_mem (by omega))
+  have hwi_range : 0 ≤ (revFamily n seed).getD m 0
+      ∧ (revFamily n seed).getD m 0 < 2 ^ 64 :=
+    hxs _ (getD_mem (by omega))
+  have hA := rh_swapA_raw n seed siv (revSwap (revFamily n seed) m)
+    ((m : Nat) : Int) ((n - 1 - m : Nat) : Int) ch
+  -- the s[j] read
+  have hget_j : (⟨(revSwap (revFamily n seed) m).map
+      (fun v => .int v .uint64)⟩ : Array GoValue)[0 + (n - 1 - m)]?
+      = some (.int ((revFamily n seed).getD
+          ((revFamily n seed).length - 1 - m) 0) .uint64) := by
+    rw [Nat.zero_add, getElem?_mapU _ _ (by omega),
+      show n - 1 - m = (revFamily n seed).length - 1 - m from by omega,
+      getD_revSwap_hi (by omega)]
+  have hread_j := stepFn_strict_apply (done := [hSlice n])
+    (env := envIn2H)
+    (k := hRhsK1 n ((m : Nat) : Int) ((n - 1 - m : Nat) : Int)) (ch := ch)
+    (applyStrictOp_indexGet_slice (ik := .int)
+      (lookup_hrev n seed siv (revSwap (revFamily n seed) m)
+        ((m : Nat) : Int) ((n - 1 - m : Nat) : Int) false)
+      (Nat.le_refl n) (by omega : n - 1 - m < n) hget_j)
+  have hB := rh_swapB_raw n seed siv (revSwap (revFamily n seed) m)
+    ((m : Nat) : Int) ((n - 1 - m : Nat) : Int)
+    (.int ((revFamily n seed).getD ((revFamily n seed).length - 1 - m) 0)
+      .uint64) ch
+  have hget_i : (⟨(revSwap (revFamily n seed) m).map
+      (fun v => .int v .uint64)⟩ : Array GoValue)[0 + m]?
+      = some (.int ((revFamily n seed).getD m 0) .uint64) := by
+    rw [Nat.zero_add, getElem?_mapU _ _ (by omega),
+      getD_revSwap_lo (by omega)]
+  have hread_i := stepFn_strict_apply (done := [hSlice n])
+    (env := envIn2H)
+    (k := hRhsK2 n ((m : Nat) : Int) ((n - 1 - m : Nat) : Int)
+      (.int ((revFamily n seed).getD ((revFamily n seed).length - 1 - m) 0)
+        .uint64)) (ch := ch)
+    (applyStrictOp_indexGet_slice (ik := .int)
+      (lookup_hrev n seed siv (revSwap (revFamily n seed) m)
+        ((m : Nat) : Int) ((n - 1 - m : Nat) : Int) false)
+      (Nat.le_refl n) (by omega : m < n) hget_i)
+  have hC := rh_swapC_raw n seed siv (revSwap (revFamily n seed) m)
+    ((m : Nat) : Int) ((n - 1 - m : Nat) : Int)
+    (.int ((revFamily n seed).getD ((revFamily n seed).length - 1 - m) 0)
+      .uint64)
+    (.int ((revFamily n seed).getD m 0) .uint64) ch
+  -- store 1: s[i] := old s[j]
+  have hst1 := storeTarget_slice_u64 (a := ⟨4⟩) (off := 0) (len := n)
+    (cap := n) (i := m) (n := n) (ik := .int) (l := revSwap (revFamily n seed) m)
+    (w := (revFamily n seed).getD ((revFamily n seed).length - 1 - m) 0)
+    (lookup_hrev n seed siv (revSwap (revFamily n seed) m) ((m : Nat) : Int)
+      ((n - 1 - m : Nat) : Int) false)
+    (Nat.le_refl _) (by omega) (by omega) hlenm hrangeSwap hwj_range
+  rw [Nat.zero_add] at hst1
+  have hstore1 : storeTarget (hrevCmpState n seed siv m)
+      (hRefv n ((m : Nat) : Int))
+      (.int ((revFamily n seed).getD ((revFamily n seed).length - 1 - m) 0) .uint64)
+      = .ok (hrevState n seed siv
+          ((revSwap (revFamily n seed) m).set m ((revFamily n seed).getD ((revFamily n seed).length - 1 - m) 0))
+          ((m : Nat) : Int) ((n - 1 - m : Nat) : Int) false) := hst1
+  -- store 2: s[j] := old s[i]
+  have hlen1 : ((revSwap (revFamily n seed) m).set m ((revFamily n seed).getD ((revFamily n seed).length - 1 - m) 0)).length
+      = n := by simp [hlenm]
+  have hrange1 : ∀ v ∈ (revSwap (revFamily n seed) m).set m ((revFamily n seed).getD ((revFamily n seed).length - 1 - m) 0),
+      0 ≤ v ∧ v < 2 ^ 64 := by
+    intro v hv
+    rcases mem_set_of_mem hv with rfl | hv
+    · exact hwj_range
+    · exact hrangeSwap v hv
+  have hst2 := storeTarget_slice_u64 (a := ⟨4⟩) (off := 0) (len := n)
+    (cap := n) (i := n - 1 - m) (n := n) (ik := .int)
+    (l := (revSwap (revFamily n seed) m).set m ((revFamily n seed).getD ((revFamily n seed).length - 1 - m) 0))
+    (w := (revFamily n seed).getD m 0)
+    (lookup_hrev n seed siv
+      ((revSwap (revFamily n seed) m).set m ((revFamily n seed).getD ((revFamily n seed).length - 1 - m) 0))
+      ((m : Nat) : Int) ((n - 1 - m : Nat) : Int) false)
+    (Nat.le_refl _) (by omega) (by omega) hlen1 hrange1 hwi_range
+  rw [Nat.zero_add] at hst2
+  have hstore2 : storeTarget
+      (hrevState n seed siv
+        ((revSwap (revFamily n seed) m).set m ((revFamily n seed).getD ((revFamily n seed).length - 1 - m) 0))
+        ((m : Nat) : Int) ((n - 1 - m : Nat) : Int) false)
+      (hRefv n ((n - 1 - m : Nat) : Int)) (.int ((revFamily n seed).getD m 0) .uint64)
+      = .ok (hrevState n seed siv (revSwap (revFamily n seed) (m + 1)) ((m : Nat) : Int)
+          ((n - 1 - m : Nat) : Int) false) := by
+    rw [show n - 1 - m = (revFamily n seed).length - 1 - m from by omega] at hst2 ⊢
+    rw [← revSwap_step (by omega)]
+    exact hst2
+  have hD := rh_swapD_raw n seed siv (revSwap (revFamily n seed) (m + 1)) ((m : Nat) : Int)
+    ((n - 1 - m : Nat) : Int) ch
+  have h1 := stepFnIter_chain hA (stepFnIter_one hread_j)
+  have h2 := stepFnIter_chain h1 hB
+  have h3 := stepFnIter_chain h2 (stepFnIter_one hread_i)
+  have h4 := stepFnIter_chain h3 hC
+  have h5 := stepFnIter_chain h4
+    (stepFnIter_one (stepFn_store_step hstore1))
+  have h6 := stepFnIter_chain h5
+    (stepFnIter_one (stepFn_store_step hstore2))
+  exact stepFnIter_chain h6 hD
+
+/-- The later-pass dispatch, cleaned: counters advance to
+`(m+1, n-1-(m+1))` and the next test delivers. -/
+private theorem rh_dispatch (n seed : Nat) (siv : Int) (m : Nat)
+    (hn : n < 2 ^ 63) (hm : 2 * m + 1 < n) (ch : Choices) :
+    stepFnIter 40 (hrevState n seed siv (revSwap (revFamily n seed) (m + 1))
+        ((m : Nat) : Int) ((n - 1 - m : Nat) : Int) false) revHHeadCfg ch
+      = .ok (.retV (.bool (decide (((m + 1 : Nat) : Int)
+              < ((n - 1 - (m + 1) : Nat) : Int)))) revHCmpCont,
+          hrevCmpState n seed siv (m + 1), ch) := by
+  have hA := rh_A1_raw n seed siv (revSwap (revFamily n seed) (m + 1))
+    ((m : Nat) : Int) ((n - 1 - m : Nat) : Int) ch
+  rw [show ((m : Nat) : Int) + 1 = ((m + 1 : Nat) : Int) from by omega,
+    show ((n - 1 - m : Nat) : Int) - 1
+      = ((n - 1 - (m + 1) : Nat) : Int) from by omega] at hA
+  rw [inorm_of_range (v := ((m + 1 : Nat) : Int)) (by omega) (by omega),
+    inorm_of_range (v := ((m + 1 : Nat) : Int)) (by omega) (by omega),
+    inorm_of_range (v := ((n - 1 - (m + 1) : Nat) : Int))
+      (by omega) (by omega),
+    inorm_of_range (v := ((n - 1 - (m + 1) : Nat) : Int))
+      (by omega) (by omega)] at hA
+  exact hA
+
+/-- **The reverse loop**, by strong induction on `(n-1) - 2m`: from
+the exit-test delivery at iteration `m`, the run reaches the TEST LOOP
+HEAD — the reversal complete in the backing array, the verdict cell
+initialized to 1 — within `75·μ + 50` steps, at some final iteration
+count `m'` past the crossing point. -/
+private theorem rh_loop (n seed : Nat) (hn : n < 2 ^ 63)
+    (hseed : seed < 2 ^ 64) (siv : Int) :
+    ∀ μ m : Nat, μ = (n - 1) - 2 * m → ∀ ch : Choices,
+    ∃ (k m' : Nat), k ≤ 75 * μ + 50 ∧ n ≤ 2 * m' + 1 ∧
+      stepFnIter k (hrevCmpState n seed siv m)
+        (.retV (.bool (decide (((m : Nat) : Int)
+          < ((n - 1 - m : Nat) : Int)))) revHCmpCont) ch
+        = .ok (tstHeadCfg,
+            tstState n seed siv ((m' : Nat) : Int)
+              ((n - 1 - m' : Nat) : Int)
+              (revSwap (revFamily n seed) m') 0 true, ch) := by
+  intro μ
+  induction μ using Nat.strongRecOn with
+  | _ μ ih =>
+    intro m hμ ch
+    rcases Nat.lt_or_ge (2 * m + 1) n with hlt | hge
+    · rw [show (decide (((m : Nat) : Int) < ((n - 1 - m : Nat) : Int)))
+          = true from decide_eq_true (by
+            have : m < n - 1 - m := by omega
+            exact_mod_cast this)]
+      obtain ⟨k, m', hk, hm', hrun⟩ := ih ((n - 1) - 2 * (m + 1))
+        (by omega) (m + 1) rfl ch
+      refine ⟨35 + 40 + k, m', by omega, hm', ?_⟩
+      exact stepFnIter_chain
+        (stepFnIter_chain (rh_swap_seg n seed siv m hseed hlt ch)
+          (rh_dispatch n seed siv m hn hlt ch)) hrun
+    · rw [show (decide (((m : Nat) : Int) < ((n - 1 - m : Nat) : Int)))
+          = false from decide_eq_false (by
+            have : ¬ (m < n - 1 - m) := by omega
+            exact_mod_cast this)]
+      exact ⟨50, m, by omega, by omega,
+        rh_X_raw n seed siv (revSwap (revFamily n seed) m) ((m : Nat) : Int)
+          ((n - 1 - m : Nat) : Int) ch⟩
+
+/-! ### The test loop: one verified read per iteration -/
+
+/-- One test iteration from the exit-test's true delivery at `m`: read
+`s[m]` (the reversed family's element), compute the expected value in
+Go's wrapping uint64 arithmetic, find them EQUAL (the verdict stays
+1), return to the head, dispatch, deliver the next test. 61 steps. -/
+private theorem tst_iter (n seed : Nat) (hn : n < 2 ^ 63)
+    (_hseed : seed < 2 ^ 64) (siv rif rjf : Int) (m : Nat) (hm : m < n)
+    (ch : Choices) :
+    stepFnIter 61 (tstState n seed siv rif rjf
+        ((revFamily n seed).reverse) ((m : Nat) : Int) false)
+      (.retV (.bool true) tstCmpCont) ch
+      = .ok (.retV (.bool (decide (((m + 1 : Nat) : Int) < (n : Int))))
+            tstCmpCont,
+          tstState n seed siv rif rjf ((revFamily n seed).reverse)
+            ((m + 1 : Nat) : Int) false, ch) := by
+  have hB1 := tst_B1_raw n seed siv rif rjf ((revFamily n seed).reverse)
+    ((m : Nat) : Int) ch
+  -- the element read: position m of the reversed family
+  have hget : (⟨((revFamily n seed).reverse).map
+      (fun v => .int v .uint64)⟩ : Array GoValue)[0 + m]?
+      = some (.int ((((seed + (n - 1 - m)) % 2 ^ 64 : Nat)) : Int)
+          .uint64) := by
+    rw [Nat.zero_add,
+      getElem?_mapU _ _ (by rw [List.length_reverse, length_revFamily]; omega),
+      getD_reverse_revFamily hm]
+  have hread := stepFn_strict_apply (done := [hSlice n])
+    (env := tstEnv2) (k := tstNeqK) (ch := ch)
+    (applyStrictOp_indexGet_slice (ik := .uint64)
+      (lookup_tst n seed siv rif rjf ((revFamily n seed).reverse)
+        ((m : Nat) : Int) false)
+      (Nat.le_refl n) hm hget)
+  have hB2 := tst_B2_raw n seed siv rif rjf ((revFamily n seed).reverse)
+    ((m : Nat) : Int) ((((seed + (n - 1 - m)) % 2 ^ 64 : Nat)) : Int) ch
+  rw [show IntKind.normalize .uint64 ((n : Int) - 1)
+        = ((n - 1 : Nat) : Int) from by
+      rw [show (n : Int) - 1 = ((n - 1 : Nat) : Int) from by omega]
+      exact unorm_of_range (by omega) (by omega),
+    show IntKind.normalize .uint64 (((n - 1 : Nat) : Int) - ((m : Nat) : Int))
+        = ((n - 1 - m : Nat) : Int) from by
+      rw [show ((n - 1 : Nat) : Int) - ((m : Nat) : Int)
+          = ((n - 1 - m : Nat) : Int) from by omega]
+      exact unorm_of_range (by omega) (by omega),
+    unorm_add_nat seed (n - 1 - m),
+    show ((((seed + (n - 1 - m)) % 2 ^ 64 : Nat) : Int) ==
+        (((seed + (n - 1 - m)) % 2 ^ 64 : Nat) : Int)) = true from
+      beq_self_eq_true _,
+    Bool.not_true] at hB2
+  have hB3 := tst_B3_raw n seed siv rif rjf ((revFamily n seed).reverse)
+    ((m : Nat) : Int) ch
+  have hA1 := tst_A1_raw n seed siv rif rjf ((revFamily n seed).reverse)
+    ((m : Nat) : Int) ch
+  rw [show ((m : Nat) : Int) + 1 = ((m + 1 : Nat) : Int) from by omega,
+    unorm_of_range (v := ((m + 1 : Nat) : Int)) (by omega) (by omega),
+    unorm_of_range (v := ((m + 1 : Nat) : Int)) (by omega) (by omega)] at hA1
+  have h1 := stepFnIter_chain hB1 (stepFnIter_one hread)
+  have h2 := stepFnIter_chain h1 hB2
+  have h3 := stepFnIter_chain h2 hB3
+  exact stepFnIter_chain h3 hA1
+
+/-- **The test loop**: from the exit-test delivery at `m`, the run
+reaches the driver terminal with the verdict 1 delivered, within
+`61·μ + 21` steps. -/
+private theorem tst_loop (n seed : Nat) (hn : n < 2 ^ 63)
+    (hseed : seed < 2 ^ 64) (siv rif rjf : Int) :
+    ∀ μ m : Nat, m + μ = n → ∀ ch : Choices,
+    ∃ k : Nat, k ≤ 61 * μ + 21 ∧
+      stepFnIter k (tstState n seed siv rif rjf
+          ((revFamily n seed).reverse) ((m : Nat) : Int) false)
+        (.retV (.bool (decide (((m : Nat) : Int) < (n : Int)))) tstCmpCont)
+        ch
+        = .ok (.next .stop,
+            tstEndState n seed siv rif rjf ((revFamily n seed).reverse)
+              ((n : Nat) : Int), ch) := by
+  intro μ
+  induction μ using Nat.strongRecOn with
+  | _ μ ih =>
+    intro m hm ch
+    rcases Nat.lt_or_ge m n with hlt | hge
+    · rw [show (decide (((m : Nat) : Int) < (n : Int))) = true from
+        decide_eq_true (by exact_mod_cast hlt)]
+      obtain ⟨k, hk, hrun⟩ := ih (μ - 1) (by omega) (m + 1) (by omega) ch
+      exact ⟨61 + k, by omega, stepFnIter_chain
+        (tst_iter n seed hn hseed siv rif rjf m hlt ch) hrun⟩
+    · have hmn : m = n := by omega
+      subst hmn
+      rw [show (decide (((m : Nat) : Int) < (m : Int))) = false from
+        decide_eq_false (by omega)]
+      exact ⟨21, by omega, tst_X_raw m seed siv rif rjf
+        ((revFamily m seed).reverse) ((m : Nat) : Int) ch⟩
+
+/-! ### The canonical run, end to end -/
+
+/-- **The harness run**: from the post-prelude state, the harness
+completes at the driver terminal within `189·n + 260` steps —
+terminal state pinned up to reverse's parked final counters, verdict
+1 in the result cell. -/
+private theorem revH_runs (n seed : Nat) (hn : n < 2 ^ 63)
+    (hseed : seed < 2 ^ 64) (ch : Choices) :
+    ∃ (k : Nat) (rif rjf : Int), k ≤ 189 * n + 260 ∧
+      stepFnIter k (revHSeed (n : Int) (seed : Int)) revHC₀ ch
+        = .ok (.next .stop,
+            tstEndState n seed ((n : Nat) : Int) rif rjf
+              ((revFamily n seed).reverse) ((n : Nat) : Int), ch) := by
+  -- entry: prelude state → the setup loop head
+  have hE1 := revH_E1_raw (n : Int) (seed : Int) ch
+  have hmk := stepFnIter_one
+    (stepFn_makeSlice_step (env := envC4H)
+      (k := .seq [hS2, hS3, hS4, hS5, hS6, hS7] envC4H
+        (.frame [] [] [] [] .stop))
+      (revH_make_apply n seed hn ch))
+  have hE2 := revH_E2_raw n seed ch
+  have hA0 := su_A0_raw n seed (List.replicate n 0) 0 ch
+  obtain ⟨k1, hk1, hsu⟩ := su_loop n seed hn hseed n 0 (by omega) ch
+  rw [suList_zero, show (((0 : Nat) : Int)) = (0 : Int) from rfl] at hsu
+  have hentry := stepFnIter_chain (stepFnIter_chain (stepFnIter_chain
+    (stepFnIter_chain hE1 hmk) hE2) hA0) hsu
+  -- the reverse phase's first test
+  have hrA0 := rh_A0_raw n seed ((n : Nat) : Int) (revFamily n seed) 0
+    ((n : Int) - 1) ch
+  rcases Nat.lt_or_ge n 2 with hshort | hlong
+  · -- n ≤ 1: the first test fails; nothing swaps
+    rw [show (decide ((0 : Int) < (n : Int) - 1)) = false from
+      decide_eq_false (by omega)] at hrA0
+    have hX := rh_X_raw n seed ((n : Nat) : Int) (revFamily n seed) 0
+      ((n : Int) - 1) ch
+    have hrevshort : (revFamily n seed).reverse = revFamily n seed :=
+      reverse_short (by rw [length_revFamily]; omega)
+    have htA0 := tst_A0_raw n seed ((n : Nat) : Int) 0 ((n : Int) - 1)
+      (revFamily n seed) 0 ch
+    obtain ⟨k2, hk2, htst⟩ := tst_loop n seed hn hseed ((n : Nat) : Int) 0
+      ((n : Int) - 1) n 0 (by omega) ch
+    rw [hrevshort, show (((0 : Nat) : Int)) = (0 : Int) from rfl] at htst
+    refine ⟨10 + 1 + 42 + 25 + k1 + (25 + 50 + 25 + k2), 0, (n : Int) - 1,
+      by omega, ?_⟩
+    rw [hrevshort]
+    exact stepFnIter_chain hentry (stepFnIter_chain (stepFnIter_chain
+      (stepFnIter_chain hrA0 hX) htA0) htst)
+  · -- n ≥ 2: enter the two-pointer loop at iteration 0
+    rw [show (decide ((0 : Int) < (n : Int) - 1)) = true from
+      decide_eq_true (by omega)] at hrA0
+    obtain ⟨k2, m', hk2, hm', hrh⟩ := rh_loop n seed hn hseed
+      ((n : Nat) : Int) ((n - 1) - 2 * 0) 0 rfl ch
+    simp only [hrevCmpState] at hrh
+    rw [show revSwap (revFamily n seed) 0 = revFamily n seed from
+        revSwap_zero _,
+      show (((0 : Nat) : Int)) = (0 : Int) from rfl,
+      show ((n - 1 - 0 : Nat) : Int) = (n : Int) - 1 from by omega,
+      show (decide ((0 : Int) < (n : Int) - 1)) = true from
+        decide_eq_true (by omega)] at hrh
+    have hrev := stepFnIter_chain hrA0 hrh
+    -- the reversal is complete at the crossing point
+    rw [revSwap_reverse (by rw [length_revFamily]; omega)] at hrev
+    have htA0 := tst_A0_raw n seed ((n : Nat) : Int) ((m' : Nat) : Int)
+      ((n - 1 - m' : Nat) : Int) ((revFamily n seed).reverse) 0 ch
+    obtain ⟨k3, hk3, htst⟩ := tst_loop n seed hn hseed ((n : Nat) : Int)
+      ((m' : Nat) : Int) ((n - 1 - m' : Nat) : Int) n 0 (by omega) ch
+    rw [show (((0 : Nat) : Int)) = (0 : Int) from rfl] at htst
+    refine ⟨10 + 1 + 42 + 25 + k1 + (25 + k2 + 25 + k3),
+      ((m' : Nat) : Int), ((n - 1 - m' : Nat) : Int), by omega, ?_⟩
+    exact stepFnIter_chain hentry (stepFnIter_chain (stepFnIter_chain
+      hrev htA0) htst)
+
+/-! ### The user-facing statement (§11) -/
+
+/-- **THE HEADLINE (§11 harness form)**: for every `n < 2^63` (Go's
+`int` domain for lengths — `make([]uint64, n)` panics past it) and
+every `seed < 2^64` (the full uint64 domain), running the three-phase
+Go harness `reverse_harness(n, seed)` through the machine's native
+function entry — empty-heap state, both arguments at the call
+boundary — completes normally past one fuel bound, at every
+nondeterminism-choice stream, and RETURNS the verdict 1: the test
+phase, IN GO and inside the verified footprint, checked element-wise
+that `reverse` turned `[seed, seed+1, …, seed+(n-1)] (mod 2^64)` into
+its reversal.
+
+INPUT-FAMILY HONESTY (§11, recorded): the quantification is over the
+scalars `(n, seed)` — the input family `revFamily n seed`, honestly
+weaker than ∀xs over arbitrary contents (the choice-consuming input
+pick is designed, not built; `reverse_framed` above keeps the ∀xs
+claim proof-side). The wrapping family is deliberate: `seed + i`
+wraps at `2^64`, so the family covers wrap boundaries — the corpus
+oracle rows exercise the same harness at concrete arguments,
+including a near-`2^63` seed. -/
+theorem reverse_ok (n seed : Nat) (hn : n < 2 ^ 63) (hseed : seed < 2 ^ 64) :
+    ∃ N : Nat, ∀ fuel : Nat, N ≤ fuel → ∀ ch : Choices,
+      runFunctionWithContextM fuel reverseLowered.typeDefs.toList
+          reverseLowered.funcs reverseHarnessFunc
+          #[.int (n : Int) .uint64, .int (seed : Int) .uint64]
+          reverseLowered.methods ch
+        = .ok { values := #[.int 1 .uint64] } := by
+  refine ⟨189 * n + 260, fun fuel hfuel ch => ?_⟩
+  obtain ⟨k, rif, rjf, hk, hrun⟩ := revH_runs n seed hn hseed ch
+  have hfold := runConfig_of_stepFnIter hrun (fuel - k)
+  rw [show k + (fuel - k) = fuel from by omega] at hfold
+  rw [revH_entry_eq, unorm_of_range (v := (n : Int)) (by omega) (by omega),
+    unorm_of_range (v := (seed : Int)) (by omega) (by omega),
+    hfold, runConfig_next_stop]
+  with_unfolding_all rfl
+
+/-- **The D1 run-conditioned twin**: any successful completion of the
+harness entry, at any fuel and any choice stream, returns the verdict
+1 — derived from `reverse_ok` via `harness_readout_of_total` (the
+total headline already determines every completion). -/
+theorem reverse_readout (n seed : Nat) (hn : n < 2 ^ 63)
+    (hseed : seed < 2 ^ 64) :
+    ∀ (fuel : Nat) (ch : Choices) (r : Result),
+      runFunctionWithContextM fuel reverseLowered.typeDefs.toList
+          reverseLowered.funcs reverseHarnessFunc
+          #[.int (n : Int) .uint64, .int (seed : Int) .uint64]
+          reverseLowered.methods ch
+        = .ok r →
+      r = { values := #[.int 1 .uint64] } :=
+  harness_readout_of_total (reverse_ok n seed hn hseed)
 
 end GoLean.Examples.Reverse

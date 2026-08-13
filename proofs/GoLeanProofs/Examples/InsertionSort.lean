@@ -3,6 +3,7 @@ import GoLeanProofs.SliceMem
 import GoLeanProofs.FuelMeasure
 import GoLeanProofs.Frame.Transfer
 import GoLeanProofs.Frame.RenameId
+import GoLeanProofs.Laws.StmtOps
 
 /-!
 # Verified example: in-place insertion sort — NESTED loops
@@ -15,11 +16,31 @@ canonical corpus source `Corpus/coverage/exec/examples/isort/main.go`
 and already/reverse-sorted inputs); `isortLowered` is its pinned
 frontend lowering (`scripts/check-golden`).
 
-The user-facing statement is `isort_ok` — reverse's §9e headline shape
-on the sorting claim: the backing cell ends holding `sortSpec xs`, a
-readable structural insertion sort whose support corollaries
-(`sortSpec_sorted`, `sortSpec_count`, `sortSpec_length`) make the
-"sorted permutation" reading a theorem, not a naming convention.
+`isort_ok` here is (still) the §9 memory-input form — the backing cell
+ends holding `sortSpec xs`, a readable structural insertion sort whose
+support corollaries (`sortSpec_sorted`, `sortSpec_count`,
+`sortSpec_length`) make the "sorted permutation" reading a theorem,
+not a naming convention.
+
+**Harness-ruling status (2026-08-13, design note §11 — RECORDED GAP).**
+The final user-facing form is the three-phase harness headline over
+`runFunctionWithContextM` (`isort_harness(n, seed)`: setup builds the
+wrapped multiplicative family `s[i] = seed*(i+1)`; `insertionSort(s)`;
+the TEST PHASE — sortedness scan plus the count-based permutation
+check against the rebuilt family, IN GO, inside the verified
+footprint — folds into the returned verdict `ok ∈ {0,1}`; headline:
+verdict = 1). This module carries the GROUNDWORK for that restatement
+(the `isFamily` input family, the pinned `isortHarnessFunc`, the §11
+entry equation over `runConfig`, and the setup-loop machinery — all
+below, green); the SUBJECT-phase port to the harness placement (the
+committed pass/frame-rebase machinery re-derived under the harness
+continuation) and the TEST-phase inductions (sortedness scan, rebuild
+loop, the O(n²) count loops — one further frame-rebase layer for the
+per-pass `cs`/`ct`/`j` allocations) are the precise remaining gap.
+Per the never-a-weakened-statement rule, the `isort_ok` name is NOT
+restated until the full harness proof lands; the committed
+memory-quantified theorems below stand unchanged as the §11
+proof-side supporting layer.
 
 **The nested-loop composition (route of record, with one machine-forced
 deviation from the arc design).** The design called for two plain
@@ -1767,10 +1788,14 @@ private theorem isort_cfg_ren (xs : List Int) (base na : Nat) :
   simp [renameConfig, renameCont, renameEnv, renameStmt, isortCall,
     renameExprList, renameExpr, renameOptExpr, renameLoc, relocShift]
 
-/-! ## The headline -/
+/-! ## The memory-quantified form (proof-side supporting layer per §11;
+the harness restatement is the recorded gap — module header) -/
 
-/-- **THE HEADLINE** (verified-examples slice 2c; the §9 memory-input
-form on the nested-loop subject): *for any list `xs` of uint64 values,
+/-- **The memory-quantified total-correctness form** (the §9
+memory-input form on the nested-loop subject; since the harness ruling
+2026-08-13 this is the PROOF-SIDE SUPPORTING LAYER — the user-facing
+restatement over `runFunctionWithContextM` is the module's recorded
+gap): *for any list `xs` of uint64 values,
 wherever it lives in memory, with anything else present:
 `insertionSort` completes normally — past one fuel bound, at every
 nondeterminism-choice stream — the backing cell then holds a SORTED
@@ -1841,9 +1866,10 @@ theorem isort_ok (xs : List Int) (hxs : ∀ v ∈ xs, 0 ≤ v ∧ v < 2 ^ 64)
   | broke σF => exact hout.elim
   | continued σF => exact hout.elim
 
-/-- **The D1 run-conditioned twin**: any normal completion, at ANY fuel
-and stream, delivers the sorted permutation and frame preservation —
-derived from the total headline, no second walk. -/
+/-- **The D1 run-conditioned twin of the memory-quantified form**
+(proof-side supporting layer per §11): any normal completion, at ANY
+fuel and stream, delivers the sorted permutation and frame
+preservation — derived from the total form, no second walk. -/
 theorem isort_readout (xs : List Int)
     (hxs : ∀ v ∈ xs, 0 ≤ v ∧ v < 2 ^ 64) (hlen : xs.length < 2 ^ 63)
     (base : Nat) (fr : Heap) (na : Nat)
@@ -1862,5 +1888,785 @@ theorem isort_readout (xs : List Int)
             Heap.lookup fr (.base ⟨a⟩) = some c →
             Heap.lookup σf.heap (.base ⟨a⟩) = some c :=
   normal_readout_of_total (isort_ok xs hxs hlen base fr na hb hwf)
+
+/-! # Harness-form groundwork (ruling 2026-08-13, §11 — the recorded
+gap's completed half; module header for the gap statement)
+
+Harness address layout (probe `.tmp/his-probe1.lean`, n=4 seed=3):
+0 = `n`, 1 = `seed`, 2 = the harness `$res0` (the VERDICT cell),
+3 = `$c4` (make handle), 4 = the `s` BACKING, 5 = `s`, 6/7 = the setup
+`i`/`$forFirst`; the subject frame: 8 = `s` param, 9 = the subject
+`i`, 10 = the outer `$forFirst`, per-pass `j`/`$forFirst` pairs from
+11; then the test phase: `ok`, the sortedness scan's `i`/`ff`,
+`$c5`/the `t` BACKING/`t`, the rebuild `i`/`ff`, the count loops'
+`i`/`ff` + per-pass `cs`/`ct`/`j`/`ff`. -/
+
+/-- **The input family**: the wrapped multiplicative sequence the
+harness's setup phase materializes — `isFamily n seed` has entries
+`(seed * (i+1)) mod 2^64` as mathematical integers; the wrap is IN the
+definition, so the family needs no no-wrap hypothesis (duplicates and
+non-monotone orders are exactly the interesting sort inputs). -/
+def isFamily (n seed : Nat) : List Int :=
+  (List.range n).map (fun i => (((seed * (i + 1)) % 2 ^ 64 : Nat) : Int))
+
+theorem isFamily_length (n seed : Nat) : (isFamily n seed).length = n := by
+  simp [isFamily]
+
+private theorem isFamily_range (n seed : Nat) :
+    ∀ v ∈ isFamily n seed, 0 ≤ v ∧ v < 2 ^ 64 := by
+  intro v hv
+  simp only [isFamily, List.mem_map, List.mem_range] at hv
+  obtain ⟨i, hi, rfl⟩ := hv
+  have := Nat.mod_lt (seed * (i + 1)) (y := 2 ^ 64) (by omega)
+  omega
+
+private theorem isFamilyZ_range {n seed i : Nat} (_hin : i ≤ n) :
+    ∀ v ∈ isFamily i seed ++ List.replicate (n - i) (0 : Int),
+      0 ≤ v ∧ v < 2 ^ 64 := by
+  intro v hv
+  rcases List.mem_append.mp hv with hv | hv
+  · exact isFamily_range i seed v hv
+  · rw [List.eq_of_mem_replicate hv]
+    omega
+
+/-- The one-step family extension the setup-loop invariant consumes. -/
+private theorem isFamily_set {n seed i : Nat} (hi : i < n) :
+    (isFamily i seed ++ List.replicate (n - i) 0).set i
+        (((seed * (i + 1)) % 2 ^ 64 : Nat) : Int)
+      = isFamily (i + 1) seed ++ List.replicate (n - (i + 1)) 0 := by
+  have hrep : List.replicate (n - i) (0 : Int)
+      = 0 :: List.replicate (n - (i + 1)) 0 := by
+    rw [show n - i = (n - (i + 1)) + 1 from by omega, List.replicate_succ]
+  have hfam : isFamily (i + 1) seed
+      = isFamily i seed ++ [(((seed * (i + 1)) % 2 ^ 64 : Nat) : Int)] := by
+    rw [isFamily, isFamily, List.range_succ, List.map_append]
+    rfl
+  rw [hrep, hfam, List.append_assoc]
+  have hlen : (isFamily i seed).length = i := isFamily_length i seed
+  rw [List.set_append_right _ _ (by omega), hlen, Nat.sub_self]
+  rfl
+
+/-- The uint64 normalization of a `Nat` cast IS the mod-2^64 wrap (the
+family's own wrap — no range hypothesis). -/
+private theorem unorm_nat_mod (m : Nat) :
+    IntKind.normalize .uint64 ((m : Nat) : Int)
+      = (((m % 2 ^ 64 : Nat)) : Int) := by
+  simp [IntKind.normalize, IntKind.bits?, IntKind.signed]
+
+/-- The harness's `Func` record, verbatim from the pinned lowering
+(the `example` pin below ties it by `rfl`). -/
+def isortHarnessFunc : Func :=
+  { id := { key := "isort_harness" },
+    args := #[{ id := "n", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64) },
+              { id := "seed", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64) }],
+    results := #[{ id := "$res0", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64) }],
+    body := GoLean.GoCore.Stmt.block
+              #[]
+              #[GoLean.GoCore.Stmt.seqn
+                  #[GoLean.GoCore.Stmt.initialization
+                      { id := "$c4",
+                        typ := GoLean.GoCore.Ty.slice
+                                 (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64)) },
+                    GoLean.GoCore.Stmt.makeSlice
+                      (GoLean.GoCore.Assignee.var "$c4")
+                      (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))
+                      (GoLean.GoCore.Expr.var "n")
+                      none],
+                GoLean.GoCore.Stmt.seqn
+                  #[GoLean.GoCore.Stmt.initialization
+                      { id := "s",
+                        typ := GoLean.GoCore.Ty.slice
+                                 (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64)) },
+                    GoLean.GoCore.Stmt.assign
+                      (GoLean.GoCore.Assignee.var "s")
+                      (GoLean.GoCore.Expr.var "$c4")],
+                GoLean.GoCore.Stmt.block
+                  #[]
+                  #[GoLean.GoCore.Stmt.seqn
+                      #[GoLean.GoCore.Stmt.initialization
+                          { id := "i", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64) },
+                        GoLean.GoCore.Stmt.assign
+                          (GoLean.GoCore.Assignee.var "i")
+                          (GoLean.GoCore.Expr.intLit 0 (GoLean.GoCore.IntKind.uint64))],
+                    GoLean.GoCore.Stmt.block
+                      #[]
+                      #[GoLean.GoCore.Stmt.initialization
+                          { id := "$forFirst", typ := GoLean.GoCore.Ty.bool },
+                        GoLean.GoCore.Stmt.assign
+                          (GoLean.GoCore.Assignee.var "$forFirst")
+                          (GoLean.GoCore.Expr.boolLit true),
+                        GoLean.GoCore.Stmt.while
+                          (GoLean.GoCore.Expr.boolLit true)
+                          (GoLean.GoCore.Stmt.block
+                            #[]
+                            #[GoLean.GoCore.Stmt.ifThenElse
+                                (GoLean.GoCore.Expr.var "$forFirst")
+                                (GoLean.GoCore.Stmt.assign
+                                  (GoLean.GoCore.Assignee.var "$forFirst")
+                                  (GoLean.GoCore.Expr.boolLit false))
+                                (GoLean.GoCore.Stmt.assign
+                                  (GoLean.GoCore.Assignee.var "i")
+                                  (GoLean.GoCore.Expr.add
+                                    (GoLean.GoCore.Expr.var "i")
+                                    (GoLean.GoCore.Expr.intLit 1 (GoLean.GoCore.IntKind.uint64)))),
+                              GoLean.GoCore.Stmt.seqn #[],
+                              GoLean.GoCore.Stmt.ifThenElse
+                                (GoLean.GoCore.Expr.lessCmp
+                                  (GoLean.GoCore.Expr.var "i")
+                                  (GoLean.GoCore.Expr.var "n"))
+                                (GoLean.GoCore.Stmt.seqn #[])
+                                (GoLean.GoCore.Stmt.breakStmt),
+                              GoLean.GoCore.Stmt.block
+                                #[]
+                                #[GoLean.GoCore.Stmt.seqn
+                                    #[GoLean.GoCore.Stmt.assign
+                                        (GoLean.GoCore.Assignee.addr
+                                          (GoLean.GoCore.Expr.indexAddr
+                                            (GoLean.GoCore.Expr.var "s")
+                                            (GoLean.GoCore.Expr.var "i")))
+                                        (GoLean.GoCore.Expr.mul
+                                          (GoLean.GoCore.Expr.var "seed")
+                                          (GoLean.GoCore.Expr.add
+                                            (GoLean.GoCore.Expr.var "i")
+                                            (GoLean.GoCore.Expr.intLit
+                                              1
+                                              (GoLean.GoCore.IntKind.uint64))))]]])]],
+                GoLean.GoCore.Stmt.call #[] { key := "insertionSort" } #[GoLean.GoCore.Expr.var "s"],
+                GoLean.GoCore.Stmt.seqn
+                  #[GoLean.GoCore.Stmt.initialization
+                      { id := "ok", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64) },
+                    GoLean.GoCore.Stmt.assign
+                      (GoLean.GoCore.Assignee.var "ok")
+                      (GoLean.GoCore.Expr.intLit 1 (GoLean.GoCore.IntKind.uint64))],
+                GoLean.GoCore.Stmt.block
+                  #[]
+                  #[GoLean.GoCore.Stmt.seqn
+                      #[GoLean.GoCore.Stmt.initialization
+                          { id := "i", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64) },
+                        GoLean.GoCore.Stmt.assign
+                          (GoLean.GoCore.Assignee.var "i")
+                          (GoLean.GoCore.Expr.intLit 1 (GoLean.GoCore.IntKind.uint64))],
+                    GoLean.GoCore.Stmt.block
+                      #[]
+                      #[GoLean.GoCore.Stmt.initialization
+                          { id := "$forFirst", typ := GoLean.GoCore.Ty.bool },
+                        GoLean.GoCore.Stmt.assign
+                          (GoLean.GoCore.Assignee.var "$forFirst")
+                          (GoLean.GoCore.Expr.boolLit true),
+                        GoLean.GoCore.Stmt.while
+                          (GoLean.GoCore.Expr.boolLit true)
+                          (GoLean.GoCore.Stmt.block
+                            #[]
+                            #[GoLean.GoCore.Stmt.ifThenElse
+                                (GoLean.GoCore.Expr.var "$forFirst")
+                                (GoLean.GoCore.Stmt.assign
+                                  (GoLean.GoCore.Assignee.var "$forFirst")
+                                  (GoLean.GoCore.Expr.boolLit false))
+                                (GoLean.GoCore.Stmt.assign
+                                  (GoLean.GoCore.Assignee.var "i")
+                                  (GoLean.GoCore.Expr.add
+                                    (GoLean.GoCore.Expr.var "i")
+                                    (GoLean.GoCore.Expr.intLit 1 (GoLean.GoCore.IntKind.uint64)))),
+                              GoLean.GoCore.Stmt.seqn #[],
+                              GoLean.GoCore.Stmt.ifThenElse
+                                (GoLean.GoCore.Expr.lessCmp
+                                  (GoLean.GoCore.Expr.var "i")
+                                  (GoLean.GoCore.Expr.var "n"))
+                                (GoLean.GoCore.Stmt.seqn #[])
+                                (GoLean.GoCore.Stmt.breakStmt),
+                              GoLean.GoCore.Stmt.block
+                                #[]
+                                #[GoLean.GoCore.Stmt.ifThenElse
+                                    (GoLean.GoCore.Expr.greaterCmp
+                                      (GoLean.GoCore.Expr.indexGet
+                                        (GoLean.GoCore.Expr.var "s")
+                                        (GoLean.GoCore.Expr.sub
+                                          (GoLean.GoCore.Expr.var "i")
+                                          (GoLean.GoCore.Expr.intLit 1 (GoLean.GoCore.IntKind.uint64))))
+                                      (GoLean.GoCore.Expr.indexGet
+                                        (GoLean.GoCore.Expr.var "s")
+                                        (GoLean.GoCore.Expr.var "i")))
+                                    (GoLean.GoCore.Stmt.block
+                                      #[]
+                                      #[GoLean.GoCore.Stmt.seqn
+                                          #[GoLean.GoCore.Stmt.assign
+                                              (GoLean.GoCore.Assignee.var "ok")
+                                              (GoLean.GoCore.Expr.intLit 0 (GoLean.GoCore.IntKind.uint64))]])
+                                    (GoLean.GoCore.Stmt.seqn #[])]])]],
+                GoLean.GoCore.Stmt.seqn
+                  #[GoLean.GoCore.Stmt.initialization
+                      { id := "$c5",
+                        typ := GoLean.GoCore.Ty.slice
+                                 (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64)) },
+                    GoLean.GoCore.Stmt.makeSlice
+                      (GoLean.GoCore.Assignee.var "$c5")
+                      (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))
+                      (GoLean.GoCore.Expr.var "n")
+                      none],
+                GoLean.GoCore.Stmt.seqn
+                  #[GoLean.GoCore.Stmt.initialization
+                      { id := "t",
+                        typ := GoLean.GoCore.Ty.slice
+                                 (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64)) },
+                    GoLean.GoCore.Stmt.assign
+                      (GoLean.GoCore.Assignee.var "t")
+                      (GoLean.GoCore.Expr.var "$c5")],
+                GoLean.GoCore.Stmt.block
+                  #[]
+                  #[GoLean.GoCore.Stmt.seqn
+                      #[GoLean.GoCore.Stmt.initialization
+                          { id := "i", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64) },
+                        GoLean.GoCore.Stmt.assign
+                          (GoLean.GoCore.Assignee.var "i")
+                          (GoLean.GoCore.Expr.intLit 0 (GoLean.GoCore.IntKind.uint64))],
+                    GoLean.GoCore.Stmt.block
+                      #[]
+                      #[GoLean.GoCore.Stmt.initialization
+                          { id := "$forFirst", typ := GoLean.GoCore.Ty.bool },
+                        GoLean.GoCore.Stmt.assign
+                          (GoLean.GoCore.Assignee.var "$forFirst")
+                          (GoLean.GoCore.Expr.boolLit true),
+                        GoLean.GoCore.Stmt.while
+                          (GoLean.GoCore.Expr.boolLit true)
+                          (GoLean.GoCore.Stmt.block
+                            #[]
+                            #[GoLean.GoCore.Stmt.ifThenElse
+                                (GoLean.GoCore.Expr.var "$forFirst")
+                                (GoLean.GoCore.Stmt.assign
+                                  (GoLean.GoCore.Assignee.var "$forFirst")
+                                  (GoLean.GoCore.Expr.boolLit false))
+                                (GoLean.GoCore.Stmt.assign
+                                  (GoLean.GoCore.Assignee.var "i")
+                                  (GoLean.GoCore.Expr.add
+                                    (GoLean.GoCore.Expr.var "i")
+                                    (GoLean.GoCore.Expr.intLit 1 (GoLean.GoCore.IntKind.uint64)))),
+                              GoLean.GoCore.Stmt.seqn #[],
+                              GoLean.GoCore.Stmt.ifThenElse
+                                (GoLean.GoCore.Expr.lessCmp
+                                  (GoLean.GoCore.Expr.var "i")
+                                  (GoLean.GoCore.Expr.var "n"))
+                                (GoLean.GoCore.Stmt.seqn #[])
+                                (GoLean.GoCore.Stmt.breakStmt),
+                              GoLean.GoCore.Stmt.block
+                                #[]
+                                #[GoLean.GoCore.Stmt.seqn
+                                    #[GoLean.GoCore.Stmt.assign
+                                        (GoLean.GoCore.Assignee.addr
+                                          (GoLean.GoCore.Expr.indexAddr
+                                            (GoLean.GoCore.Expr.var "t")
+                                            (GoLean.GoCore.Expr.var "i")))
+                                        (GoLean.GoCore.Expr.mul
+                                          (GoLean.GoCore.Expr.var "seed")
+                                          (GoLean.GoCore.Expr.add
+                                            (GoLean.GoCore.Expr.var "i")
+                                            (GoLean.GoCore.Expr.intLit
+                                              1
+                                              (GoLean.GoCore.IntKind.uint64))))]]])]],
+                GoLean.GoCore.Stmt.block
+                  #[]
+                  #[GoLean.GoCore.Stmt.seqn
+                      #[GoLean.GoCore.Stmt.initialization
+                          { id := "i", typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64) },
+                        GoLean.GoCore.Stmt.assign
+                          (GoLean.GoCore.Assignee.var "i")
+                          (GoLean.GoCore.Expr.intLit 0 (GoLean.GoCore.IntKind.uint64))],
+                    GoLean.GoCore.Stmt.block
+                      #[]
+                      #[GoLean.GoCore.Stmt.initialization
+                          { id := "$forFirst", typ := GoLean.GoCore.Ty.bool },
+                        GoLean.GoCore.Stmt.assign
+                          (GoLean.GoCore.Assignee.var "$forFirst")
+                          (GoLean.GoCore.Expr.boolLit true),
+                        GoLean.GoCore.Stmt.while
+                          (GoLean.GoCore.Expr.boolLit true)
+                          (GoLean.GoCore.Stmt.block
+                            #[]
+                            #[GoLean.GoCore.Stmt.ifThenElse
+                                (GoLean.GoCore.Expr.var "$forFirst")
+                                (GoLean.GoCore.Stmt.assign
+                                  (GoLean.GoCore.Assignee.var "$forFirst")
+                                  (GoLean.GoCore.Expr.boolLit false))
+                                (GoLean.GoCore.Stmt.assign
+                                  (GoLean.GoCore.Assignee.var "i")
+                                  (GoLean.GoCore.Expr.add
+                                    (GoLean.GoCore.Expr.var "i")
+                                    (GoLean.GoCore.Expr.intLit 1 (GoLean.GoCore.IntKind.uint64)))),
+                              GoLean.GoCore.Stmt.seqn #[],
+                              GoLean.GoCore.Stmt.ifThenElse
+                                (GoLean.GoCore.Expr.lessCmp
+                                  (GoLean.GoCore.Expr.var "i")
+                                  (GoLean.GoCore.Expr.var "n"))
+                                (GoLean.GoCore.Stmt.seqn #[])
+                                (GoLean.GoCore.Stmt.breakStmt),
+                              GoLean.GoCore.Stmt.block
+                                #[]
+                                #[GoLean.GoCore.Stmt.seqn
+                                    #[GoLean.GoCore.Stmt.initialization
+                                        { id := "cs",
+                                          typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64) },
+                                      GoLean.GoCore.Stmt.assign
+                                        (GoLean.GoCore.Assignee.var "cs")
+                                        (GoLean.GoCore.Expr.intLit 0 (GoLean.GoCore.IntKind.uint64))],
+                                  GoLean.GoCore.Stmt.seqn
+                                    #[GoLean.GoCore.Stmt.initialization
+                                        { id := "ct",
+                                          typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64) },
+                                      GoLean.GoCore.Stmt.assign
+                                        (GoLean.GoCore.Assignee.var "ct")
+                                        (GoLean.GoCore.Expr.intLit 0 (GoLean.GoCore.IntKind.uint64))],
+                                  GoLean.GoCore.Stmt.block
+                                    #[]
+                                    #[GoLean.GoCore.Stmt.seqn
+                                        #[GoLean.GoCore.Stmt.initialization
+                                            { id := "j",
+                                              typ := GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64) },
+                                          GoLean.GoCore.Stmt.assign
+                                            (GoLean.GoCore.Assignee.var "j")
+                                            (GoLean.GoCore.Expr.intLit 0 (GoLean.GoCore.IntKind.uint64))],
+                                      GoLean.GoCore.Stmt.block
+                                        #[]
+                                        #[GoLean.GoCore.Stmt.initialization
+                                            { id := "$forFirst", typ := GoLean.GoCore.Ty.bool },
+                                          GoLean.GoCore.Stmt.assign
+                                            (GoLean.GoCore.Assignee.var "$forFirst")
+                                            (GoLean.GoCore.Expr.boolLit true),
+                                          GoLean.GoCore.Stmt.while
+                                            (GoLean.GoCore.Expr.boolLit true)
+                                            (GoLean.GoCore.Stmt.block
+                                              #[]
+                                              #[GoLean.GoCore.Stmt.ifThenElse
+                                                  (GoLean.GoCore.Expr.var "$forFirst")
+                                                  (GoLean.GoCore.Stmt.assign
+                                                    (GoLean.GoCore.Assignee.var "$forFirst")
+                                                    (GoLean.GoCore.Expr.boolLit false))
+                                                  (GoLean.GoCore.Stmt.assign
+                                                    (GoLean.GoCore.Assignee.var "j")
+                                                    (GoLean.GoCore.Expr.add
+                                                      (GoLean.GoCore.Expr.var "j")
+                                                      (GoLean.GoCore.Expr.intLit
+                                                        1
+                                                        (GoLean.GoCore.IntKind.uint64)))),
+                                                GoLean.GoCore.Stmt.seqn #[],
+                                                GoLean.GoCore.Stmt.ifThenElse
+                                                  (GoLean.GoCore.Expr.lessCmp
+                                                    (GoLean.GoCore.Expr.var "j")
+                                                    (GoLean.GoCore.Expr.var "n"))
+                                                  (GoLean.GoCore.Stmt.seqn #[])
+                                                  (GoLean.GoCore.Stmt.breakStmt),
+                                                GoLean.GoCore.Stmt.block
+                                                  #[]
+                                                  #[GoLean.GoCore.Stmt.ifThenElse
+                                                      (GoLean.GoCore.Expr.eqCmp
+                                                        (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))
+                                                        (GoLean.GoCore.Expr.indexGet
+                                                          (GoLean.GoCore.Expr.var "s")
+                                                          (GoLean.GoCore.Expr.var "j"))
+                                                        (GoLean.GoCore.Expr.indexGet
+                                                          (GoLean.GoCore.Expr.var "t")
+                                                          (GoLean.GoCore.Expr.var "i")))
+                                                      (GoLean.GoCore.Stmt.block
+                                                        #[]
+                                                        #[GoLean.GoCore.Stmt.assign
+                                                            (GoLean.GoCore.Assignee.var "cs")
+                                                            (GoLean.GoCore.Expr.add
+                                                              (GoLean.GoCore.Expr.var "cs")
+                                                              (GoLean.GoCore.Expr.intLit
+                                                                1
+                                                                (GoLean.GoCore.IntKind.uint64)))])
+                                                      (GoLean.GoCore.Stmt.seqn #[]),
+                                                    GoLean.GoCore.Stmt.ifThenElse
+                                                      (GoLean.GoCore.Expr.eqCmp
+                                                        (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))
+                                                        (GoLean.GoCore.Expr.indexGet
+                                                          (GoLean.GoCore.Expr.var "t")
+                                                          (GoLean.GoCore.Expr.var "j"))
+                                                        (GoLean.GoCore.Expr.indexGet
+                                                          (GoLean.GoCore.Expr.var "t")
+                                                          (GoLean.GoCore.Expr.var "i")))
+                                                      (GoLean.GoCore.Stmt.block
+                                                        #[]
+                                                        #[GoLean.GoCore.Stmt.assign
+                                                            (GoLean.GoCore.Assignee.var "ct")
+                                                            (GoLean.GoCore.Expr.add
+                                                              (GoLean.GoCore.Expr.var "ct")
+                                                              (GoLean.GoCore.Expr.intLit
+                                                                1
+                                                                (GoLean.GoCore.IntKind.uint64)))])
+                                                      (GoLean.GoCore.Stmt.seqn #[])]])]],
+                                  GoLean.GoCore.Stmt.ifThenElse
+                                    (GoLean.GoCore.Expr.neqCmp
+                                      (GoLean.GoCore.Ty.int (GoLean.GoCore.IntKind.uint64))
+                                      (GoLean.GoCore.Expr.var "cs")
+                                      (GoLean.GoCore.Expr.var "ct"))
+                                    (GoLean.GoCore.Stmt.block
+                                      #[]
+                                      #[GoLean.GoCore.Stmt.seqn
+                                          #[GoLean.GoCore.Stmt.assign
+                                              (GoLean.GoCore.Assignee.var "ok")
+                                              (GoLean.GoCore.Expr.intLit 0 (GoLean.GoCore.IntKind.uint64))]])
+                                    (GoLean.GoCore.Stmt.seqn #[])]])]],
+                GoLean.GoCore.Stmt.seqn
+                  #[GoLean.GoCore.Stmt.assign
+                      (GoLean.GoCore.Assignee.var "$res0")
+                      (GoLean.GoCore.Expr.var "ok"),
+                    GoLean.GoCore.Stmt.returnStmt]],
+    variadic := false,
+    wrapper := false }
+
+/-- The lowering pin: the proof subject IS the frontend's lowering. -/
+example : findFunctionIn? isortLowered.funcs ⟨"isort_harness"⟩
+    = some isortHarnessFunc := rfl
+
+
+/-! ## The entry equation (§11 glue) -/
+
+/-- The entry frame environment (probe-pinned). -/
+private def hIEnv0 : LocalEnv :=
+  [[("$res0", .base ⟨2⟩), ("seed", .base ⟨1⟩), ("n", .base ⟨0⟩)]]
+
+private abbrev ucell (v : Int) : HeapCell :=
+  ⟨some (.int .uint64), .int v .uint64⟩
+private abbrev ucellU (v : Int) : HeapCell :=
+  ⟨some (.int .uint64), .int (IntKind.normalize .uint64 v) .uint64⟩
+
+/-- The initial state `runFunctionWithContextM` builds: the two
+parameters normalized at `uint64`, the (uint64) verdict cell at its
+default. -/
+private def σIH0 (nv sv : Int) : ExecState :=
+  { types := isortLowered.typeDefs.toList,
+    functions := isortLowered.funcs,
+    methods := isortLowered.methods,
+    heap := [(.base ⟨0⟩, ucellU nv), (.base ⟨1⟩, ucellU sv),
+             (.base ⟨2⟩, ucell 0)],
+    nextAddr := 3 }
+
+/-- **The entry equation**: the native entry IS its `runConfig` loop
+from the probed initial state, plus the verdict read at `.base ⟨2⟩` —
+∀ fuel, ∀ choices, definitionally. -/
+private theorem iharness_entry_eq (nv sv : Int) (fuel : Nat)
+    (ch : Choices) :
+    runFunctionWithContextM fuel isortLowered.typeDefs.toList
+        isortLowered.funcs isortHarnessFunc
+        #[.int nv .uint64, .int sv .uint64]
+        isortLowered.methods ch
+      = (do
+          let r ← runConfig fuel (σIH0 nv sv)
+            (.exec isortHarnessFunc.body hIEnv0
+              (.frame [] [] [] [] .stop false)) ch
+          return { values := (← loadMany r.1 [.base ⟨2⟩]).toArray }) := by
+  with_unfolding_all rfl
+
+/-! ## The setup phase (the family materialized — the first third of
+the harness run; segment counts probe-pinned, re-checked by `rfl`) -/
+
+/-- The `s` handle over the backing array at its fixed address 4. -/
+private abbrev hIHandleCell (n : Nat) : HeapCell :=
+  ⟨some (.slice (.int .uint64)), .slice ⟨some (.base ⟨4⟩), 0, n, n⟩⟩
+private abbrev hISliceH (n : Nat) : GoValue :=
+  .slice ⟨some (.base ⟨4⟩), 0, n, n⟩
+
+private def hIScope0 : List (String × Loc) :=
+  [("$res0", .base ⟨2⟩), ("seed", .base ⟨1⟩), ("n", .base ⟨0⟩)]
+
+/-- The cleaned start state. -/
+private def σIStart (n seed : Nat) : ExecState :=
+  { types := isortLowered.typeDefs.toList,
+    functions := isortLowered.funcs,
+    methods := isortLowered.methods,
+    heap := [(.base ⟨0⟩, ucell (n : Int)), (.base ⟨1⟩, ucell (seed : Int)),
+             (.base ⟨2⟩, ucell 0)],
+    nextAddr := 3 }
+
+/-- `$c4` declared (default slice), the makeSlice length delivered. -/
+private def σIStartC4 (n seed : Nat) : ExecState :=
+  { σIStart n seed with
+    heap := (σIStart n seed).heap
+      ++ [(.base ⟨3⟩, ⟨some (.slice (.int .uint64)),
+            .slice ⟨none, 0, 0, 0⟩⟩)],
+    nextAddr := 4 }
+
+/-- Post-makeSlice: the handle in `$c4`, the zeroed backing at 4. -/
+private def σIMkS (n seed : Nat) : ExecState :=
+  { types := isortLowered.typeDefs.toList,
+    functions := isortLowered.funcs,
+    methods := isortLowered.methods,
+    heap := [(.base ⟨0⟩, ucell (n : Int)), (.base ⟨1⟩, ucell (seed : Int)),
+             (.base ⟨2⟩, ucell 0),
+             (.base ⟨3⟩, hIHandleCell n),
+             (.base ⟨4⟩, arrCell n (List.replicate n 0))],
+    nextAddr := 5 }
+
+private def envC4 : LocalEnv := [[("$c4", .base ⟨3⟩)], hIScope0]
+
+/-- The harness body's top statement list (projection of the pinned
+record — reducible data, so the `rfl` segments see through it). -/
+private def hIBodyList : List Stmt :=
+  match isortHarnessFunc.body with
+  | .block _ ss => ss.toList
+  | _ => []
+
+private def hIFrame0 : Cont := .frame [] [] [] [] .stop false
+
+/-- The continuation below the makeSlice apply. -/
+private def hIAfterMsK : Cont :=
+  .seq (hIBodyList.drop 1) envC4 hIFrame0
+
+private def hIMsK : Cont :=
+  .stmtOpK (.makeSlice (.int .uint64) false) 1 [.addr (.base ⟨3⟩)] []
+    envC4 hIAfterMsK
+
+/-- Entry A: harness body start → the makeSlice length delivery. -/
+private theorem hseg_IA1_raw (n seed : Nat) (ch : Choices) :
+    stepFnIter 10 (σIStart n seed)
+      (.exec isortHarnessFunc.body hIEnv0 hIFrame0) ch
+      = .ok (.retV (.int ((n : Nat) : Int) .uint64) hIMsK,
+          σIStartC4 n seed, ch) := by
+  with_unfolding_all rfl
+
+private theorem natFromNonneg_cast' (ctx : String) (n : Nat) :
+    natFromNonnegativeInt ctx ((n : Nat) : Int) = .ok n := by
+  simp only [natFromNonnegativeInt, Int.toNat_natCast]
+  rw [if_neg (show ¬(((n : Nat) : Int) < 0) by omega)]
+  rfl
+
+/-- The wide-op apply step, conditioned on the apply fact. -/
+private theorem stepFn_stmtOp_apply' {σ σ' : ExecState} {op : StmtOp}
+    {nt : Nat} {done : List GoValue} {v : GoValue} {env : LocalEnv}
+    {k : Cont} {ch ch' : Choices}
+    (h : applyStmtOp σ ch op nt (v :: done).reverse = .ok (σ', ch')) :
+    stepFn σ (.retV v (.stmtOpK op nt done [] env k)) ch
+      = .ok (.next k, σ', ch') := by
+  simp only [stepFn]
+  rw [h]
+  rfl
+
+/-- **The makeSlice apply at a SYMBOLIC length**: allocates the zeroed
+backing at 4 and stores the handle in `$c4`. -/
+private theorem hstep_ImakeSlice (n seed : Nat) (ch : Choices) :
+    stepFn (σIStartC4 n seed)
+      (.retV (.int ((n : Nat) : Int) .uint64) hIMsK) ch
+      = .ok (.next hIAfterMsK, σIMkS n seed, ch) := by
+  have hb := GoLean.Iris.buildDefaultArrayValue_int (σIStartC4 n seed)
+    .uint64 n
+  have harr : (List.replicate n (GoValue.int 0 .uint64)).toArray
+      = (⟨(List.replicate n (0 : Int)).map
+          (fun v => GoValue.int v .uint64)⟩ : Array GoValue) := by
+    simp [List.map_replicate]
+  rw [harr] at hb
+  have hnn1 := natFromNonneg_cast'
+    "runtime error: makeslice: len out of range" n
+  have hnn2 := natFromNonneg_cast'
+    "runtime error: makeslice: cap out of range" n
+  have happly : applyStmtOp (σIStartC4 n seed) ch
+      (.makeSlice (.int .uint64) false) 1
+      [.addr (.base ⟨3⟩), .int ((n : Nat) : Int) .uint64]
+      = .ok (σIMkS n seed, ch) := by
+    simp only [applyStmtOp, applyStmtOpCore, valueAsInt, valueAsLoc,
+      hnn1, hnn2, hb, Bind.bind, Except.bind, pure, Except.pure]
+    rw [if_neg (Nat.lt_irrefl n)]
+    with_unfolding_all rfl
+  exact stepFn_stmtOp_apply'
+    (done := [.addr (.base ⟨3⟩)]) (v := .int ((n : Nat) : Int) .uint64)
+    happly
+
+/-- The setup-loop state family (fixed cells 0–7; the setup loop never
+allocates). -/
+private def sISU (n : Nat) (sv : Int) (l : List Int) (iv : Int)
+    (ff : Bool) : ExecState :=
+  { types := isortLowered.typeDefs.toList,
+    functions := isortLowered.funcs,
+    methods := isortLowered.methods,
+    heap := [(.base ⟨0⟩, ucell (n : Int)), (.base ⟨1⟩, ucell sv),
+             (.base ⟨2⟩, ucell 0), (.base ⟨3⟩, hIHandleCell n),
+             (.base ⟨4⟩, arrCell n l), (.base ⟨5⟩, hIHandleCell n),
+             (.base ⟨6⟩, ucell iv), (.base ⟨7⟩, bcell ff)],
+    nextAddr := 8 }
+
+/-- The setup loop's `for`-desugar body (the multiplicative store). -/
+abbrev isortSetupBody : Stmt :=
+  .block #[]
+    #[.ifThenElse (.var "$forFirst")
+        (.assign (.var "$forFirst") (.boolLit false))
+        (.assign (.var "i")
+          (.add (.var "i") (.intLit 1 .uint64))),
+      .seqn #[],
+      .ifThenElse (.lessCmp (.var "i") (.var "n"))
+        (.seqn #[])
+        .breakStmt,
+      .block #[]
+        #[.seqn
+            #[.assign
+                (.addr (.indexAddr (.var "s") (.var "i")))
+                (.mul (.var "seed")
+                  (.add (.var "i") (.intLit 1 .uint64)))]]]
+
+private def envISU : LocalEnv :=
+  [[("$forFirst", .base ⟨7⟩)], [("i", .base ⟨6⟩)],
+   [("s", .base ⟨5⟩), ("$c4", .base ⟨3⟩)], hIScope0]
+private def envISU2 : LocalEnv :=
+  [[("i", .base ⟨6⟩)], [("s", .base ⟨5⟩), ("$c4", .base ⟨3⟩)], hIScope0]
+private def envIH2 : LocalEnv :=
+  [[("s", .base ⟨5⟩), ("$c4", .base ⟨3⟩)], hIScope0]
+
+private def suITail : Cont :=
+  .seq [] envISU (.seq [] envISU2
+    (.seq (hIBodyList.drop 3) envIH2 hIFrame0))
+/-- The setup loop-head configuration. -/
+private def suIHeadCfg : Config :=
+  .exec (.while (.boolLit true) isortSetupBody) envISU suITail
+private def suILoopK : Cont :=
+  .loop (.boolLit true) isortSetupBody envISU suITail
+
+private def suIStoreBlk : Stmt :=
+  .block #[]
+    #[.seqn
+        #[.assign
+            (.addr (.indexAddr (.var "s") (.var "i")))
+            (.mul (.var "seed")
+              (.add (.var "i") (.intLit 1 .uint64)))]]
+
+/-- The setup exit test's delivery continuation. -/
+private def suICmpK : Cont :=
+  .ifK (.seqn #[]) .breakStmt ([] :: envISU)
+    (.seq [suIStoreBlk] ([] :: envISU) suILoopK)
+
+private def suIStoreTail : Cont :=
+  .seq [] ([] :: [] :: envISU) (.seq [] ([] :: envISU) suILoopK)
+
+/-- Entry A2: makeSlice done → `s := $c4`, `i := 0`, the `$forFirst`
+block → the setup loop head. -/
+private theorem hseg_IA2_raw (n seed : Nat) (ch : Choices) :
+    stepFnIter 42 (σIMkS n seed) (.next hIAfterMsK) ch
+      = .ok (suIHeadCfg,
+          sISU n (seed : Int) (List.replicate n 0) 0 true, ch) := by
+  with_unfolding_all rfl
+
+/-- Setup first-pass dispatch: flag drops, the exit test `i < n`. -/
+private theorem hsegISU_d0_raw (n : Nat) (sv iv : Int) (l : List Int)
+    (ch : Choices) :
+    stepFnIter 25 (sISU n sv l iv true) suIHeadCfg ch
+      = .ok (.retV (.bool (decide (iv < ((n : Nat) : Int)))) suICmpK,
+          sISU n sv l iv false, ch) := by
+  with_unfolding_all rfl
+
+/-- Setup body: test true → the store point of `s[i] = seed*(i+1)`. -/
+private theorem hsegISU_body_raw (n : Nat) (sv iv : Int) (l : List Int)
+    (ch : Choices) :
+    stepFnIter 22 (sISU n sv l iv false) (.retV (.bool true) suICmpK) ch
+      = .ok (.next (.storeK
+            [.chain (hISliceH n) [.int iv .uint64] [.index]]
+            [.int (IntKind.normalize .uint64
+                (sv * IntKind.normalize .uint64 (iv + 1))) .uint64]
+            (.seqn #[]) ([] :: [] :: envISU) suIStoreTail),
+          sISU n sv l iv false, ch) := by
+  with_unfolding_all rfl
+
+/-- The setup element store, cleaned. -/
+private theorem hstep_Istore_setup (n : Nat) (sv : Int) (l : List Int)
+    (i : Nat) (w : Int) (hi : i < n) (hlen : l.length = n)
+    (hl : ∀ v ∈ l, 0 ≤ v ∧ v < 2 ^ 64) (hw : 0 ≤ w ∧ w < 2 ^ 64)
+    (iv : Int) (ch : Choices) :
+    stepFnIter 1 (sISU n sv l iv false)
+      (.next (.storeK [.chain (hISliceH n) [.int ((i : Nat) : Int) .uint64]
+          [.index]]
+        [.int w .uint64] (.seqn #[]) ([] :: [] :: envISU) suIStoreTail))
+      ch
+      = .ok (.next (.storeK [] [] (.seqn #[]) ([] :: [] :: envISU)
+            suIStoreTail),
+          sISU n sv (l.set i w) iv false, ch) := by
+  have hstore := storeTarget_slice_u64 (σ := sISU n sv l iv false)
+    (a := ⟨4⟩) (off := 0) (len := n) (cap := n) (i := i) (n := n)
+    (ik := .uint64) (l := l) (w := w) rfl (Nat.le_refl n) hi
+    (by omega) hlen hl hw
+  rw [Nat.zero_add] at hstore
+  exact stepFnIter_one (stepFn_store_step hstore)
+
+/-- Setup dispatch (later passes): store done → the loop head →
+`i := i + 1` → the exit test delivery. -/
+private theorem hsegISU_d1_raw (n : Nat) (sv iv : Int) (l : List Int)
+    (ch : Choices) :
+    stepFnIter 34 (sISU n sv l iv false)
+      (.next (.storeK [] [] (.seqn #[]) ([] :: [] :: envISU)
+        suIStoreTail)) ch
+      = .ok (.retV (.bool (decide
+            (IntKind.normalize .uint64 (IntKind.normalize .uint64 (iv + 1))
+              < ((n : Nat) : Int)))) suICmpK,
+          sISU n sv l
+            (IntKind.normalize .uint64 (IntKind.normalize .uint64 (iv + 1)))
+            false, ch) := by
+  with_unfolding_all rfl
+
+/-- **The setup loop**, by induction on `n - i`: exactly `57·(n-i)`
+steps materialize the wrapped multiplicative family. No no-wrap
+hypothesis — the wrap is the family's own definition; only the length
+domain `n < 2^63` (Go `int`, the committed subject's own bound) is
+consumed, for the counter arithmetic. -/
+private theorem hIsetup_loop (n seed : Nat) (hn : n < 2 ^ 63) :
+    ∀ μ i, μ = n - i → i ≤ n → ∀ ch : Choices,
+    stepFnIter (57 * (n - i))
+      (sISU n (seed : Int) (isFamily i seed ++ List.replicate (n - i) 0)
+        ((i : Nat) : Int) false)
+      (.retV (.bool (decide (((i : Nat) : Int) < ((n : Nat) : Int))))
+        suICmpK) ch
+      = .ok (.retV (.bool (decide (((n : Nat) : Int) < ((n : Nat) : Int))))
+            suICmpK,
+          sISU n (seed : Int) (isFamily n seed) ((n : Nat) : Int) false,
+          ch) := by
+  intro μ
+  induction μ using Nat.strongRecOn with
+  | _ μ ih =>
+    intro i hμ hin ch
+    rcases Nat.lt_or_ge i n with hlt | hge
+    · rw [show (decide (((i : Nat) : Int) < ((n : Nat) : Int))) = true from
+        decide_eq_true (by omega)]
+      have h1 := hsegISU_body_raw n (seed : Int) ((i : Nat) : Int)
+        (isFamily i seed ++ List.replicate (n - i) 0) ch
+      -- clean the stored value: (seed * (i+1)) mod 2^64
+      rw [show ((i : Nat) : Int) + 1 = ((i + 1 : Nat) : Int) from by omega,
+        unorm_of_range (by omega)
+          (by omega : ((i + 1 : Nat) : Int) < 2 ^ 64),
+        show ((seed : Nat) : Int) * ((i + 1 : Nat) : Int)
+          = ((seed * (i + 1) : Nat) : Int) from
+          (Int.natCast_mul seed (i + 1)).symm,
+        unorm_nat_mod (seed * (i + 1))] at h1
+      have h2 := hstep_Istore_setup n (seed : Int)
+        (isFamily i seed ++ List.replicate (n - i) 0) i
+        (((seed * (i + 1)) % 2 ^ 64 : Nat) : Int) hlt
+        (by rw [List.length_append, isFamily_length, List.length_replicate]
+            omega)
+        (isFamilyZ_range (by omega))
+        ⟨by omega, by
+          have := Nat.mod_lt (seed * (i + 1)) (y := 2 ^ 64) (by omega)
+          omega⟩
+        ((i : Nat) : Int) ch
+      rw [isFamily_set hlt] at h2
+      have h3 := hsegISU_d1_raw n (seed : Int) ((i : Nat) : Int)
+        (isFamily (i + 1) seed ++ List.replicate (n - (i + 1)) 0) ch
+      rw [show ((i : Nat) : Int) + 1 = ((i + 1 : Nat) : Int) from by omega,
+        unorm_of_range (by omega)
+          (by omega : ((i + 1 : Nat) : Int) < 2 ^ 64),
+        unorm_of_range (by omega)
+          (by omega : ((i + 1 : Nat) : Int) < 2 ^ 64)] at h3
+      have hrec := ih (n - (i + 1)) (by omega) (i + 1) rfl (by omega) ch
+      have hc := stepFnIter_chain (stepFnIter_chain (stepFnIter_chain h1 h2)
+        h3) hrec
+      rw [show 22 + 1 + 34 + 57 * (n - (i + 1)) = 57 * (n - i) from by
+        omega] at hc
+      exact hc
+    · have hEq : i = n := by omega
+      subst hEq
+      simp only [Nat.sub_self, Nat.mul_zero, List.replicate_zero,
+        List.append_nil]
+      rfl
+
+/-! The remainder of the harness restatement — the subject-phase port
+(the committed pass/frame-rebase machinery under the harness
+continuation `hIBodyList.drop 3`) and the test-phase inductions
+(sortedness scan over `sortSpec (isFamily n seed)` via
+`sortSpec_sorted`, the rebuild loop (this setup machinery re-run at
+the `t` placement), and the O(n²) count loops whose accumulator
+invariants close by `sortSpec_count`/`sortSpec_length`) — is the
+module's RECORDED GAP (header). Everything above is green and is
+consumed as-is by that restatement. -/
 
 end GoLean.Examples.InsertionSort

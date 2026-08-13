@@ -96,10 +96,10 @@ form — all specified in the worker briefs verbatim.
 
 | example | headline | route | status |
 |---|---|---|---|
-| gcd | **HARNESS-RESTATED**: `gcd_ok` over `runFunctionWithContextM` (gcd_harness, returned data = `Nat.gcd a b`, full uint64²); memory forms kept as `gcd_framed`/`gcd_framed_readout` | segments + b-value induction ported to the harness layout; entry equation + runConfig glue | **RESTATED + COMMITTED**, classical trio, fuel `91 + 45·b` |
+| gcd | **HARNESS-RESTATED**: `gcd_ok` over `runFunctionWithContextM` (returned data = `Nat.gcd a b`, full uint64²) + `gcd_readout` twin; memory forms kept as `gcd_framed`/`gcd_framed_readout` | segments + b-value induction ported; entry equation | **RESTATED + COMMITTED**, classical trio, fuel `91 + 45·b` |
 | min/max | **HARNESS-RESTATED**: `minmax_ok` over `runFunctionWithContextM` (minmax_harness, setup family `s[i] = seed + i`, returned pair = `minSpec/maxSpec (mmFamily n seed)`; input-family honesty recorded); memory forms kept as `minmax_framed`/`minmax_framed_readout` | setup-loop invariant over make-replicate backing + ported induction | **RESTATED + COMMITTED**, classical trio |
-| binary search | `search_ok` — sorted precondition (`SliceMem.Sorted`), `findSpec` first-occurrence-or-−1, **domain `len < 2^62`: the Bloch mid-overflow bug carried as the honest domain bound (the teaching point)**; landed character-for-character as designed | reverse's route; strong induction on `hi − lo` (strict decrease both branches); post-loop `&&` walked lazily (the `lo = len` exit provably never reads `s[lo]`); per-iteration `mid` allocation handled by a garbage-suffix freshness invariant | **PROVEN + COMMITTED**, axioms classical trio, fuel `123 + 75·len` |
-| insertion sort | `isort_ok` — memory-input read-write, `sortSpec` + `sortSpec_sorted`/`sortSpec_count`/`sortSpec_length` corollaries ("sorted permutation" said honestly); statement landed as designed (only the pre-recorded `hlen` delta) | direct segments; **nested-loop composition = plain nested strong inductions — no measure-rule variant needed** (the sugar gap is WP-route-only); PLUS the finding-8 in-run frame-rebase composition | **PROVEN + COMMITTED**, axioms classical trio (pure corollaries `[propext, Quot.sound]`), fuel `76 + (92·len + 160)·len` (quadratic, explicit) |
+| binary search | **HARNESS-RESTATED**: `search_ok` over `runFunctionWithContextM` (search_harness: sorted family `seed + 2i` under `hnowrap`, raw target; returned index = `findSpec (bsFamily n seed) t`; the 2^62 Bloch bound carries over); memory forms kept as `search_framed`/`search_framed_readout` | setup-loop induction + full subject-phase port under the harness continuation | **RESTATED + COMMITTED**, classical trio, fuel `220 + 132·n` |
+| insertion sort | HARNESS GAP RECORDED (honest fallback): groundwork landed green (`isFamily`, pinned `isortHarnessFunc`, entry equation, setup-loop induction); subject-phase port + Go-side test-phase inductions (sortedness scan, rebuild, O(n²) count loops needing a SECOND frame-rebase layer) are the precise gap, pickup plan in the module header | `isort_ok` remains the memory-quantified form (still the strongest isort claim shipped), re-marked proof-side per §11 | groundwork committed; harness headline = named debt with pickup plan |
 | word-count | `wordcount_ok` — map build + enveloped range; spec `maxMultiplicity`, order-independent BY NECESSITY (the ∀-choices quantifier does real work — the teaching point) | §10 design: counting-loop assoc-list invariant + choice-pick induction; symbolic-address glue per §10c | worker in flight; §10d fallback = named foundation debt |
 
 ## §4 Findings so far
@@ -518,3 +518,46 @@ readable recursion) + literal seed/call defs over the pinned
 deletion-test clean.
 
 (walks for the remaining examples appended at integration)
+
+## §7 Harness-restatement round (post-ruling; appended at integration)
+
+Fib + reverse (the exemplars) and gcd/minmax/binsearch restated over
+`runFunctionWithContextM`; isort = recorded gap with groundwork
+(ledger). Key round findings:
+
+13. **The entry-equation recipe works first-try when the RHS mirrors
+    the source's own do-syntax** (both exemplar workers converged on
+    it independently): one `with_unfolding_all rfl` per example, ∀
+    fuel ∀ ch — the prelude is fuel-independent and branch-on-
+    constructors, so symbolic argument payloads ride through;
+    bindParams leaves ONE stuck `IntKind.normalize` per argument,
+    cleaned after the rewrite, never inside the equation.
+14. **fib's harness pair drops `Classical.choice`** —
+    `[propext, Quot.sound]` only: no Iris and no frame layer anywhere
+    in the direct-segment + entry-glue derivation. The reverse/gcd/
+    minmax/binsearch headlines keep the trio solely through
+    `Machine.Heap.lookup_set_ne`-rooted facts (e.g.
+    `buildDefaultArrayValue_int`).
+15. **The harness form's own frictions, priced by the round**: (a) the
+    harness tail stacks a THIRD normalizing store on every returned
+    value (subject `$res0` → local write-back → harness `$res0`) —
+    three `unorm` collapses per value is the whole cost; (b)
+    `make([]uint64, n)` at symbolic `n` is one conditioned step via
+    the pre-existing `buildDefaultArrayValue_int` (Laws/StmtOps),
+    imported PROOF-SIDE by the memory-input example modules — the
+    statement closures stay Iris-free; (c) an elaborator hazard worth
+    a method note: re-spelling a large state term at an application
+    site the unifier could infer sends `isDefEq` into a whnf storm —
+    always let the hypothesis pin the state.
+16. **FuelMeasure gained the full shared entry kit**: `runConfig_unfold/
+    step/of_stepFnIter/next_stop/mono`, `runFunctionWithContextM_mono`,
+    `harness_readout_of_total` — witnesses `fib_readout`,
+    `reverse_readout`, `gcd_readout`, `minmax_readout`. The `_seeded`
+    renames (fib) and `_framed` renames (all others) keep every old
+    proof layer compiling; binsearch's temporary Audit-compat stub was
+    deleted at integration (the orphaned-shell rule).
+17. **Gallery drafts for the harness round live in the worker reports
+    and the Audit prose**; the §5 drafts above remain the
+    memory-form record (superseded as gallery material, kept as the
+    proof-side layer's documentation). Slice 3 renders from the
+    harness headlines.
