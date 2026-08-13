@@ -233,6 +233,103 @@ output, pointer order, `unsafe` conversions, address-dependent map
 iteration) RE-OPENS the pin; that condition is recorded on the
 inventory entry.
 
+## §5c THEORY CONSEQUENCES — the three dispositions for allocation
+nondeterminism (options packet for the user discussion; NO decision
+taken here)
+
+The classical locality decomposition (Yang & O'Hearn, *A semantic
+basis for local reasoning*, 2002; Calcagno–O'Hearn–Yang, *Local
+Action and Abstract Separation Logic*, LICS 2007) validates the frame
+rule from two semantic properties: **safety monotonicity** (a command
+safe on a small state is safe on any extension) and the **frame
+property** (any big-state execution projects to a small-state
+execution leaving the frame untouched). The standard models get the
+frame property *on the nose* only by making allocation
+NONDETERMINISTIC (a fresh cell may land anywhere outside the domain);
+with a deterministic allocator, running beside a frame visibly shifts
+fresh addresses and the frame property holds only *up to a renaming of
+locations* — the folklore fix is to quotient the model by location
+permutation (in the relational-verification lineage: location
+bijections, Banerjee–Naumann). Our machine has a deterministic
+allocator by design (executability, differential comparability), so
+the three available dispositions are exactly:
+
+**Option Q — envelope-by-quotient (what this arc SHIPPED).** Keep the
+sequential allocator; prove command locality up to fresh-address
+renaming (`stepFn_sim`/`execStmtLoop_ren`) and allocator independence
+(`allocatorIndependence`, §5b). Consequences:
+- *Adequacy*: the machine stays a total executable function; headline
+  theorems still read off `execStmt` runs; the frame/locality content
+  lives in ONE proved theorem rather than in the semantics' shape.
+  Safety monotonicity we get in the success direction (a canonical
+  `.ok` run transfers framed — §4 records why the converse is the
+  delicate direction and that no headline needs it).
+- *Lane economics*: cheapest of the three at scale — termination
+  segments and value walks are proven ONCE at the canonical placement
+  (concrete addresses, `rfl`-computable) and transferred; the measured
+  alternative was ~2.5 min/segment of symbolic-address simp per
+  example (§9c route (α), rejected).
+- *Observation-model boundary*: the quotient is sound exactly while
+  the modeled pointer surface is equality-only; the boundary is now a
+  RECORDED, load-bearing invariant (inventory C11's re-opening
+  condition). Any address-exposing channel (`%p`, pointer order,
+  `unsafe`) forces a move to Option C or a scope cut.
+- *What a future SL inherits*: a frame rule validated against the
+  renamed simulation — postconditions must be renaming-closed, which
+  points-to-style assertions are by construction (they name addresses
+  only through binders); the Iris-side `HProp` layer already
+  quantifies locations existentially, so the quotient composes with
+  the existing `InitialSplit`/`GoSpec` closure without re-proof. The
+  renaming kit is also the NPDRF revival kit (§1) — one artifact,
+  both consumers.
+
+**Option C — Choices-site allocation (envelope exercised in the
+machine).** Make `freshLoc` consume from the `Choices` stream (any
+unused address), turning allocation into class-(a) ENVELOPED latitude.
+Consequences:
+- *Adequacy*: matches the COY model on the nose — the frame property
+  holds per-stream up to equality, no quotient needed; metatheory is
+  textbook.
+- *Lane economics*: the expensive direction everywhere else — every
+  termination segment, WP law, and example proof goes
+  symbolic-in-addresses (route (α)'s cost, now mandatory, per proof
+  rather than once); `CompletesIn`'s ∀-stream quantifier now also
+  ranges over placements, and fuel bounds must be shown
+  placement-invariant (true, but another proof dimension).
+- *Differential*: NO ORACLE for the new width — `go run` cannot be
+  driven to a chosen address; the whole envelope-too-wide direction
+  would rest on review alone (the nondeterminism doctrine's known
+  blind side, now at every allocation). The membership lane gains a
+  stream dimension with nothing to validate it against.
+- *What a future SL inherits*: the cleanest frame-rule story, at the
+  price above; adequacy statements stop being "read the executable
+  run" and become "for every address stream".
+
+**Option P — plain pin, no theorem (the status quo ante).**
+Deterministic allocator recorded as a (b) PIN with a standing
+re-envelope obligation. Consequences:
+- *Adequacy*: unchanged, but the frame property is FALSE on raw
+  outcomes (framed runs produce differently-addressed heaps), so no
+  frame rule can be validated against the machine at all; every
+  ∀-frame headline stays run-conditioned (the pre-arc state of
+  `fib_framed`).
+- *Lane economics*: zero up-front, maximal deferral — a future SL
+  layer must construct exactly this arc's renaming machinery inside
+  its own adequacy proof, or axiomatize the frame rule against the
+  relation (weakening the read-off-the-interpreter doctrine).
+- This option is listed for completeness: the arc has already paid
+  Option Q's cost, and Q strictly dominates P (P is Q minus the
+  theorem).
+
+The live question for the user is not Q-vs-P (Q shipped and P is its
+strict subset) but whether any future width work should migrate
+allocation toward C — the packet's recommendation-shaped observation,
+made without deciding: C buys textbook metatheory that Q already
+delivers at the observation boundary we actually model, and C's costs
+land on the two things this project treats as load-bearing (executable
+adequacy, differential grounding). The recorded re-opening condition
+on Q is the tripwire that would force the C discussion.
+
 ## §6 Status
 
 Part 1 (this design) — DONE, grounded per-arm against the machine.
