@@ -104,6 +104,18 @@ theorem bind {x : Except GoError α} {y : Except GoError β}
           exact rfl
       | _ => trivial
 
+theorem stuck' {msg : String} {y : Except GoError β} :
+    ExSim R (.error (.stuck msg)) y := by
+  exact skip fun m h => GoError.noConfusion h
+
+theorem unsupported' {msg : String} {y : Except GoError β} :
+    ExSim R (.error (.unsupported msg)) y := by
+  exact skip fun m h => GoError.noConfusion h
+
+theorem internal' {msg : String} {y : Except GoError β} :
+    ExSim R (.error (.internal msg)) y := by
+  exact skip fun m h => GoError.noConfusion h
+
 /-- Reflexivity at equal computations (loc-free operations). -/
 theorem refl (x : Except GoError α) : ExSim Eq x x := by
   cases x with
@@ -120,6 +132,17 @@ theorem ite_congr {c : Prop} [Decidable c] {x₁ x₂ : Except GoError α}
   · exact he ‹_›
 
 end ExSim
+
+/-! ### Result-shape normalizers (the `throw` spellings, as rfl-lemmas) -/
+
+@[simp] theorem stuck_eq {α : Type} (msg : String) :
+    (GoCore.stuck msg : Except GoError α) = .error (.stuck msg) := rfl
+
+@[simp] theorem unsupported_eq {α : Type} (msg : String) :
+    (GoCore.unsupported msg : Except GoError α) = .error (.unsupported msg) := rfl
+
+@[simp] theorem panic_eq {α : Type} (msg : String) :
+    (GoCore.panic msg : Except GoError α) = .error (.panic msg) := rfl
 
 /-! ## Heap pointwise algebra -/
 
