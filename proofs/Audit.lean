@@ -1781,6 +1781,33 @@ example := @GoLean.Examples.Reverse.reverse_ok
 /-- info: 'GoLean.Examples.Reverse.reverse_ok' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Examples.Reverse.reverse_ok
 
+/-! ## The gcd example (scale-out slice 2c, 2026-08-13)
+
+`✓` **`gcd_ok` — framed TOTAL, full uint64 × uint64 domain, EXACT
+value** (`Examples/Gcd.lean` over the pinned `gcdLowered`): for every
+`(a, b)`, beside ANY disjoint frame, execution completes normally past
+one fuel bound at every choice stream, the result cell holds exactly
+`Nat.gcd a b`, and every frame cell is preserved verbatim. The fib
+bounded/wrapped pair COLLAPSES here — `a % b` and `Nat.gcd` cannot
+wrap — recorded in the module docstring (FD-E3: no wrap exists to
+state). Route (recorded): direct machine-step segments, one strong
+induction on the `b`-value (the §5c non-unit ≤-decrease realized
+directly; the `%` divide-by-zero branch discharged by the private
+executable fact `applyStrictOp_mod_u64`). `gcd_readout` is the D1
+run-conditioned twin, derived via `normal_readout_of_total` — the new
+shared bridge (this commit; gcd_readout is its same-commit discharge
+witness): a total headline already determines every normal completion
+(`execStmt` is a function; success is fuel-monotone with the same
+result). Scope honesty: usability evidence per the charter's
+two-questions separation. -/
+example := @GoLean.Surface.normal_readout_of_total
+example := @GoLean.Examples.Gcd.gcd_ok
+example := @GoLean.Examples.Gcd.gcd_readout
+/-- info: 'GoLean.Examples.Gcd.gcd_ok' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Examples.Gcd.gcd_ok
+/-- info: 'GoLean.Examples.Gcd.gcd_readout' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Examples.Gcd.gcd_readout
+
 /-! ## Three-state ledger
 
 - `✓ Machine correspondence` (reshape S5, 2026-07-23) — `stepFn_sound` +

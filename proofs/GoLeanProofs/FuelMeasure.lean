@@ -169,6 +169,31 @@ theorem execStmtLoop_next_stop {f : Nat} {σ : ExecState} {ch : Choices} :
     execStmtLoop f σ (.next .stop) ch = .ok (.normal σ, ch) := by
   rw [execStmtLoop_unfold]
 
+/-- **The D1 run-conditioned readout, derived from a total headline**
+(verified-examples slice 2c): the ∃N completes-AND-verdict form already
+determines every normal completion's final state — `execStmt` is a
+function of `(fuel, ch)`, and a success is fuel-monotone with the SAME
+result, so any normal completion at any fuel meets the headline's run
+at `max N fuel` and inherits its σf-predicate. One lemma, so every
+direct-route example ships its run-conditioned twin (`<x>_readout`)
+without a second walk. -/
+theorem normal_readout_of_total {env : LocalEnv} {σ : ExecState}
+    {prog : Stmt} {P : ExecState → Prop}
+    (h : ∃ N : Nat, ∀ fuel : Nat, N ≤ fuel → ∀ ch : Choices,
+      ∃ (σf : ExecState) (ch' : Choices),
+        execStmt fuel env σ ch prog = .ok (.normal σf, ch') ∧ P σf) :
+    ∀ (fuel : Nat) (ch : Choices) (σf : ExecState) (ch' : Choices),
+      execStmt fuel env σ ch prog = .ok (.normal σf, ch') → P σf := by
+  intro fuel ch σf ch' hrun
+  obtain ⟨N, hN⟩ := h
+  obtain ⟨σf', ch'', hrun', hP⟩ := hN (max N fuel) (Nat.le_max_left _ _) ch
+  have hmono := execStmt_mono (Nat.le_max_right N fuel) hrun
+  rw [hmono] at hrun'
+  injection hrun' with hpair
+  injection hpair with hout hch
+  injection hout with hσ
+  exact hσ ▸ hP
+
 /-- Chain two successful `stepFnIter` prefixes. -/
 theorem stepFnIter_chain :
     ∀ {a : Nat} {b : Nat} {σ : ExecState} {c : Config} {ch : Choices}
