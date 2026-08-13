@@ -387,10 +387,6 @@ section Builders
 
 variable {σ σF : ExecState} (htypes : σF.types = σ.types)
 
-private theorem renFields_size (fs : Array (String × GoValue)) :
-    ((renameValueFields ρ fs.toList).toArray).size = fs.size := by
-  simp [renameValueFields_eq_map]
-
 include htypes
 
 theorem buildStructFields_ren :
@@ -494,17 +490,16 @@ theorem buildArrayValue_ren {len : Nat} {elem : Ty}
       ?_ (by simp [renameValueList]) hvs₁
     intro a ha b rr hr
     simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq] at hr
-    obtain ⟨d, hd, _, rfl, hrr⟩ := hr
+    obtain ⟨d, hd, -, -, hrr⟩ := hr
     subst hrr
-    simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq]
-    exact ⟨_, defaultValue_ren ρ htypes hd, _, rfl,
-      by simp [renStep, renArray_push]⟩
+    rw [defaultValue_ren ρ htypes hd]
+    simp [Bind.bind, Except.bind, renStep, renArray_push, renameValueList_eq_map]
   · -- keyed-entry loop: keys unchanged, values renamed
     rw [← Array.forIn_toList]
     refine forIn_list_ren
       (T := fun p : Int × GoValue => (p.1, renameValue ρ p.2))
       (ren := fun st : MProd (Array Int) (Array GoValue) =>
-        ⟨st.1, (renameValueList ρ st.2.toList).toArray⟩)
+        MProd.mk st.1 ((renameValueList ρ st.2.toList).toArray))
       ?_ (by simp [renameValueEntriesKeyed]) rfl hloop
     intro a ha b rr hr
     obtain ⟨key, value⟩ := a
@@ -524,13 +519,11 @@ theorem buildArrayValue_ren {len : Nat} {elem : Ty}
           rw [if_neg hnc]
           simp only [pure_bind]
           rw [if_neg hneg]
-          simp only [pure_bind]
           rw [renArray_getElem?, hold]
-          simp only [Option.map_some]
-          simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq]
-          refine ⟨_, normalizeValueForTy_ren ρ htypes hnv,
-            _, coerceStoredValue_ren ρ old nv c hc, ?_⟩
-          simp [renStep, renArray_set!]
+          simp [Option.map_some, Bind.bind, Except.bind,
+            normalizeValueForTy_ren ρ htypes hnv,
+            coerceStoredValue_ren ρ old nv c hc,
+            renStep, renArray_set!, renameValueList_eq_map, List.map_set]
         · simp [Bind.bind, Except.bind] at hr
 
 theorem buildDefaultArrayValue_ren {len : Nat} {elem : Ty} {r : GoValue}
@@ -561,11 +554,10 @@ theorem buildAppendBackingValue_ren {elem : Ty}
       (by simp [renameValueList]) hloop1
     intro a ha b rr hr
     simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq] at hr
-    obtain ⟨nv, hnv, _, rfl, hrr⟩ := hr
+    obtain ⟨nv, hnv, -, -, hrr⟩ := hr
     subst hrr
-    simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq]
-    exact ⟨_, normalizeValueForTy_ren ρ htypes hnv, _, rfl,
-      by simp [renStep, renArray_push]⟩
+    rw [normalizeValueForTy_ren ρ htypes hnv]
+    simp [Bind.bind, Except.bind, renStep, renArray_push, renameValueList_eq_map]
   · rw [renArray_size]
     split at h
     · simp [Bind.bind, Except.bind] at h
@@ -583,13 +575,11 @@ theorem buildAppendBackingValue_ren {elem : Ty}
         ?_ rfl hloop2
       intro a ha b rr hr
       simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq] at hr
-      obtain ⟨d, hd, _, rfl, hrr⟩ := hr
+      obtain ⟨d, hd, -, -, hrr⟩ := hr
       subst hrr
-      simp only [bind_eq_ok, pure_eq_ok, Except.ok.injEq]
-      refine ⟨d, by rw [defaultValue_congr htypes]; exact hd, _, rfl, ?_⟩
-      have hp := renArray_push ρ b d
-      rw [defaultValue_ren_id ρ hd] at hp
-      simp [renStep, hp]
+      rw [defaultValue_congr htypes, hd]
+      simp [Bind.bind, Except.bind, renStep, renameValueList_eq_map,
+        defaultValue_ren_id ρ hd]
 
 /-! ### Type assertion -/
 
