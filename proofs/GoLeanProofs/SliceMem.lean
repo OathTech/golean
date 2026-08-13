@@ -44,6 +44,16 @@ def sliceCells (xs : List Int) (base : Nat) : Heap :=
 def sliceVal (xs : List Int) (base : Nat) : GoValue :=
   .slice ⟨some (.base ⟨base⟩), 0, xs.length, xs.length⟩
 
+/-- **Sortedness, first-order and readable** (shared spec vocabulary,
+verified-examples slice 2c): every earlier position holds a value ≤
+every later position. Used as binary search's precondition and
+insertion sort's postcondition — ONE definition so the gallery's
+"sorted" means one thing. On the abstract `List Int`, like everything
+in this vocabulary; `getD _ 0` is the house total-read idiom (the
+domain condition `j < xs.length` makes the default irrelevant). -/
+def Sorted (xs : List Int) : Prop :=
+  ∀ i j : Nat, i < j → j < xs.length → xs.getD i 0 ≤ xs.getD j 0
+
 /-! ## Machine-integer normal forms -/
 
 /-- A `uint64` value in Go range is its own normal form. -/

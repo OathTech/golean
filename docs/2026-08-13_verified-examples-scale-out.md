@@ -66,7 +66,7 @@ form — all specified in the worker briefs verbatim.
 | gcd | `gcd_ok` — framed TOTAL, full uint64², EXACT `Nat.gcd a b`; + `gcd_readout` | direct segments; ONE strong induction on the b-value (§5c non-unit ≤-decrease realized directly); `%`'s divide-by-zero branch = the single conditioned step (`applyStrictOp_mod_u64`, the §5c-predicted emod fact); frame transfer = fib's uniformShift pattern | **PROVEN + COMMITTED** (`c264c9f7`), axioms classical trio, fuel `71 + 45·b` |
 | min/max | `minmax_ok` — memory-input read-only, TOTAL-HEAP preservation (result cells + input cell pinned + frame pointwise); `hne : xs ≠ []` (Go panics on empty — corpus row pins it) | reverse's route; ONE strong induction on `len − m`; relocation fixing result cells 0/1; headline landed VERBATIM as designed (zero statement deltas) | **PROVEN + COMMITTED**, axioms classical trio, fuel `37 + 96·len` |
 | binary search | `search_ok` — sorted precondition (`SliceMem.Sorted`), `findSpec` first-occurrence-or-−1, **domain `len < 2^62`: the Bloch mid-overflow bug carried as the honest domain bound (the teaching point)** | reverse's route; strong induction on `hi − lo` (halving absorbed by strict decrease); short-circuit `&&` laziness in the post-loop guard is load-bearing | worker in flight |
-| insertion sort | `isort_ok` — memory-input read-write, `sortSpec` + `sortSpec_sorted`/`sortSpec_count` corollaries ("sorted permutation" said honestly) | direct segments; **nested-loop composition = plain nested strong inductions on the direct route — no measure-rule variant needed** (the rule-composition sugar gap is a WP-route concern only); quadratic fuel | worker in flight |
+| insertion sort | `isort_ok` — memory-input read-write, `sortSpec` + `sortSpec_sorted`/`sortSpec_count`/`sortSpec_length` corollaries ("sorted permutation" said honestly); statement landed as designed (only the pre-recorded `hlen` delta) | direct segments; **nested-loop composition = plain nested strong inductions — no measure-rule variant needed** (the sugar gap is WP-route-only); PLUS the finding-8 in-run frame-rebase composition | **PROVEN + COMMITTED**, axioms classical trio (pure corollaries `[propext, Quot.sound]`), fuel `76 + (92·len + 160)·len` (quadratic, explicit) |
 | word-count | `wordcount_ok` — map build + enveloped range; spec `maxMultiplicity`, order-independent BY NECESSITY (the ∀-choices quantifier does real work — the teaching point) | §10 design: counting-loop assoc-list invariant + choice-pick induction; symbolic-address glue per §10c | worker in flight; §10d fallback = named foundation debt |
 
 ## §4 Findings so far
@@ -112,6 +112,29 @@ form — all specified in the worker briefs verbatim.
    re-established at the slice tip. No gate is weakened — the coverage
    step's complaint is precisely "file exists but not yet in the
    audited closure", which integration resolves in order.
+8. **(isort — the slice's principal nested-loop finding)** The machine
+   RE-ALLOCATES the inner loop's `j`/`$forFirst` cells on every outer
+   pass (the inner `for`'s declarations re-enter their block;
+   `nextAddr` grows by 2 per pass, dead cells accumulate) — so
+   reverse-style fixed-address segments cannot describe the outer head
+   at one placement. Resolution (machine-forced, recorded in the
+   module): each pass is proven ONCE at a tight 6-cell canonical
+   placement and transferred through the executable frame theorem at
+   the accumulated-garbage shift, with the retired cell pair REBASED
+   into the frame between passes — i.e. the frame theorem is
+   load-bearing INSIDE the canonical run (garbage cells are frames),
+   then consumed a second time at the input-relocating renaming for
+   the ∀-placement headline. Nothing is re-run at any framed
+   placement. This is a new consumption pattern for the frame theorem
+   (beyond §9c's original transfer role); a generalized
+   "retire-prefix-into-frame" Frame/ lemma is a recorded growth point
+   if a third nested-allocation example appears.
+9. **(isort/binsearch) Short-circuit `&&` machine shape**: `Expr.and`
+   pushes an `andK` continuation; a false left conjunct short-circuits
+   in ONE step to the if-continuation — at `j = 0` the machine
+   provably never reads `s[j-1]` (the `isort_andFalse_raw` one-step
+   segment IS that fact). The laziness is load-bearing and now
+   exhibited in a theorem, not just oracle rows.
    (further findings appended as workers report)
 
 ## §5 Gallery entry drafts
@@ -241,8 +264,74 @@ links); differentially tested on 6 rows in
 `Corpus/coverage/exec/examples/minmax/`, including `empty-panics` (the
 `s[0]` panic pinned against `go run`) and an int64-boundary value.
 
-(binsearch / isort / wordcount drafts appended at integration from
-the worker reports)
+### isort — insertion sort (nested loops, short-circuit `&&`)
+
+```go
+func insertionSort(s []uint64) {
+	for i := 1; i < len(s); i++ {
+		for j := i; j > 0 && s[j-1] > s[j]; j-- {
+			s[j-1], s[j] = s[j], s[j-1]
+		}
+	}
+}
+```
+
+**Claim.** For any list `xs` of uint64 values, wherever it lives in
+memory, with anything else present: `insertionSort` completes
+normally — past one fuel bound, at every nondeterminism-choice
+stream — the slice then holds a **sorted permutation of `xs`**
+(`sortSpec_sorted`: the result is sorted; `sortSpec_count`: every
+value keeps its multiplicity; `sortSpec_length`), and no other memory
+is touched. The strict `>` keeps equal elements in place (stability,
+visible in `insertSpec`'s `≤` branch). At `j = 0` the machine provably
+never reads `s[j-1]` — Go's short-circuit `&&`, realized as the
+model's one-step false delivery. Every quantifier is discharged
+symbolically.
+
+**The theorems** (`proofs/GoLeanProofs/Examples/InsertionSort.lean`):
+
+```lean
+def insertSpec (v : Int) : List Int → List Int
+  | [] => [v]
+  | w :: rest => if w ≤ v then w :: insertSpec v rest else v :: w :: rest
+
+def sortSpec (xs : List Int) : List Int :=
+  xs.foldl (fun acc v => insertSpec v acc) []
+
+theorem isort_ok (xs : List Int) (hxs : ∀ v ∈ xs, 0 ≤ v ∧ v < 2 ^ 64)
+    (hlen : xs.length < 2 ^ 63)
+    (base : Nat) (fr : Heap) (na : Nat)
+    (hb : Heap.lookup fr (.base ⟨base⟩) = none)
+    (hwf : MachineWf
+      { functions := isortLowered.funcs,
+        heap := sliceCells xs base ++ fr, nextAddr := na }
+      (.exec (isortCall xs base) [] .stop)) :
+    ∃ N : Nat, ∀ fuel : Nat, N ≤ fuel → ∀ ch : Choices,
+      ∃ (σf : ExecState) (ch' : Choices),
+        execStmt fuel [] (isortSeed xs base fr na) ch (isortCall xs base)
+          = .ok (.normal σf, ch')
+        ∧ Heap.lookup σf.heap (.base ⟨base⟩)
+            = some ⟨some (.array xs.length (.int .uint64)),
+                .array ⟨(sortSpec xs).map (fun v => .int v .uint64)⟩⟩
+        ∧ ∀ (a : Nat) (c : HeapCell),
+            Heap.lookup fr (.base ⟨a⟩) = some c →
+            Heap.lookup σf.heap (.base ⟨a⟩) = some c
+```
+
+(plus `sortSpec_sorted` / `sortSpec_count` / `sortSpec_length` and the
+derived `isort_readout`.)
+
+**Axioms:** `isort_ok`/`isort_readout`:
+`[propext, Classical.choice, Quot.sound]`; the pure corollaries:
+`[propext, Quot.sound]`.
+
+**Ground:** pinned lowering of
+`Corpus/coverage/exec/examples/isort/main.go` (check-golden, both
+links); differentially green on 8 rows
+(shuffled/sorted/reversed/duplicates/int64-boundary/three/one/empty).
+
+(binsearch / wordcount drafts appended at integration from the worker
+reports)
 
 ## §6 TCB-grounding walks (per-export discipline)
 
@@ -267,5 +356,12 @@ recursive references, in-module; `resCells`/`minMaxEnv`/`minMaxCall`/
 `minMaxSeed` — literal defs over `minMaxLowered` (GENERATED, byte-
 pinned by check-golden). No Iris/WP/Frame names in the statement
 closure; deletion-test clean.
+
+**`isort_ok`/`isort_readout` + corollaries**: interpreter vocabulary +
+`sliceCells` + `SliceMem.Sorted` (shared, first-order) +
+`insertSpec`/`sortSpec` (in-module, readable recursion/fold) + literal
+seed/call defs over the pinned `isortLowered`. The frame theorem's
+vocabulary appears ONLY in proofs (both consumption sites — the
+in-run rebase and the ∀-placement transfer); deletion-test clean.
 
 (walks for the remaining examples appended at integration)

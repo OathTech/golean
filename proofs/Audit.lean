@@ -1833,6 +1833,44 @@ example := @GoLean.Examples.MinMax.minmax_readout
 /-- info: 'GoLean.Examples.MinMax.minmax_readout' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Examples.MinMax.minmax_readout
 
+/-! ## The insertion-sort example (scale-out slice 2c, 2026-08-13)
+
+`✓` **`isort_ok` — the nested-loop memory-input headline**
+(`Examples/InsertionSort.lean` over the pinned `isortLowered`). For
+any `[]uint64` input list, at ANY placement, beside ANY disjoint
+frame: execution completes normally past one fuel bound at every
+choice stream, the backing cell holds `sortSpec xs` — a SORTED
+PERMUTATION (`sortSpec_sorted` / `sortSpec_count` /
+`sortSpec_length`, same module; `Sorted` is the shared
+`SliceMem.Sorted` vocabulary, this commit its first committed
+consumer) — and every frame cell is preserved verbatim. Statement
+delta: `hlen : xs.length < 2^63` (Go's `int` domain, the reverse
+precedent). Proof route (recorded): TWO PLAIN NESTED strong
+inductions over direct machine-step segments — no fuel-measure-rule
+variant needed (that sugar gap is the WP route's only) — with the
+arc's principal nested-loop finding: the machine RE-ALLOCATES the
+inner `j`/`$forFirst` pair every outer pass, so each pass is proven
+once at a tight canonical placement and transferred through the
+executable frame theorem at the accumulated-garbage shift, retired
+cells REBASED into the frame between passes — the frame theorem is
+load-bearing INSIDE the canonical run, then consumed again at the
+input-relocating renaming for the ∀-placement form. Short-circuit
+`&&` is realized as the model's one-step false delivery: at `j = 0`
+the machine provably never reads `s[j-1]`. D1 twin: `isort_readout`
+via `normal_readout_of_total`. -/
+example := @GoLean.SliceMem.Sorted
+example := @GoLean.Examples.InsertionSort.isort_ok
+example := @GoLean.Examples.InsertionSort.isort_readout
+example := @GoLean.Examples.InsertionSort.sortSpec_sorted
+example := @GoLean.Examples.InsertionSort.sortSpec_count
+example := @GoLean.Examples.InsertionSort.sortSpec_length
+/-- info: 'GoLean.Examples.InsertionSort.isort_ok' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Examples.InsertionSort.isort_ok
+/-- info: 'GoLean.Examples.InsertionSort.isort_readout' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Examples.InsertionSort.isort_readout
+/-- info: 'GoLean.Examples.InsertionSort.sortSpec_sorted' depends on axioms: [propext, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Examples.InsertionSort.sortSpec_sorted
+
 /-! ## Three-state ledger
 
 - `✓ Machine correspondence` (reshape S5, 2026-07-23) — `stepFn_sound` +
