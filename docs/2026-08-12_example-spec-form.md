@@ -920,3 +920,37 @@ AFTER their restatements land (ruling (a)).
   slice 3.
 - Recursion/nested-loop termination + tactic packaging — the residue
   of the §4 debt after slice 1.5 paid the loop case (§5c).
+
+## §12 THE ACTIVE-ABSTRACTION LOOP (user ruling 2026-08-13 — standing
+convention for shared proof-kit growth)
+
+The consolidation discipline for lifting repeated proof patterns into
+shared kit modules (first exercised by the 2026-08-13 consolidation
+slice, `docs/2026-08-13_consolidation-slice.md`):
+
+(a) **Consumer-driven only.** Every lift retrofits **≥2 existing
+    consumers in the same commit**, with a fixture witness (the
+    retrofitted consumers themselves, plus a discharge instance where
+    the lemma's premises deserve one). Never speculative API: if a
+    second consumer does not exist yet, the pattern stays a private
+    copy and a promotion-ledger row (form note §8 of the scale-out
+    record).
+
+(b) **Automation lives strictly in the untrusted-method zone.**
+    Tactics, macros, and proof-side lemmas NEVER become headline
+    statement vocabulary. Headline statements stay byte-identical
+    under any kit retrofit (deletion tests + Audit designations stay
+    green); the §11 statement closure is FROZEN vocabulary and the kit
+    sits strictly beneath it.
+
+(c) **Success is MEASURED.** Every lift reports line-count and
+    elaboration-time deltas per retrofitted file, before vs after, in
+    the slice record. A lift that saves nothing measurable is
+    reverted, not kept for elegance.
+
+(d) **Grind is the signal — both ways.** A missing abstraction
+    announces itself as repeated grind (the brick-wp lesson); but if a
+    lift itself enters a probe loop (>5 iterations without net
+    progress in the artifact), STOP that item, record precisely where
+    it resisted, and move on. An honest "kit insufficient because X"
+    is a valid deliverable.
