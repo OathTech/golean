@@ -711,6 +711,87 @@ cell.* The completion clause stays with `fib_total` per §9c; unifying
 them into one framed-total statement is exactly what the (α)/(β)
 ruling decides.
 
+## §10 The map form (scale-out slice 2c, 2026-08-13 — designed BEFORE
+proving, per the arc instruction)
+
+The word-count example (`Corpus/coverage/exec/examples/wordcount/`,
+subject `maxCount`: build `counts : map[uint64]uint64` from a `[]uint64`
+of word-ids, then `for _, c := range counts` take the max count) is the
+corpus's first map-heap example. Its two design questions, settled here:
+
+### §10a The map-in-memory vocabulary (the `sliceCells` analog)
+
+A Go map value is a HANDLE (`GoValue.map ⟨some dataLoc⟩`) to a data
+cell holding `GoValue.mapData entries` — an insertion-ordered
+`Array (GoValue × GoValue)`. The proposed vocabulary, on the
+`map[uint64]uint64` fragment (mirroring `sliceCells`'s `[]uint64`
+scoping):
+
+```lean
+/-- The heap representation of a `map[uint64]uint64` holding the
+association list `kvs` (insertion order = list order): one data cell at
+`base`. The handle the program carries is `mapVal base`. -/
+def mapCells (kvs : List (Int × Int)) (base : Nat) : Heap :=
+  [(.base ⟨base⟩,
+    ⟨none, .mapData ⟨kvs.map (fun kv => (.int kv.1 .uint64, .int kv.2 .uint64))⟩⟩)]
+def mapVal (base : Nat) : GoValue := .map ⟨some (.base ⟨base⟩)⟩
+```
+
+TWO abstraction levels, deliberately separated: the heap layer speaks
+`List (Int × Int)` WITH its insertion order (the machine's mapData is
+ordered — a determinized representation the reasoning must see through,
+not deny); the SPEC layer must be order-independent (below). Duplicate
+keys are excluded by a `kvs.Nodup`-on-keys side condition where the
+vocabulary is consumed (mapAssign maintains it).
+
+### §10b The order-independence discipline (the teaching point)
+
+`for … range m` consumes ONE `Choices` pick per iteration
+(`stepFn`'s `mapIterK` arm: `choices.consume remaining.size`, erase the
+picked index, allocate fresh key/value cells, run the body). The ∀-ch
+quantifier every headline already carries therefore does REAL work on a
+map example — the claim holds at EVERY iteration order, which forces
+the spec function to be an order-independent fold. For word-count:
+`maxMultiplicity ws := the max over v ∈ ws of count v ws` (0 for the
+empty list) — commutative-idempotent max, provably invariant under the
+pick. A spec that read "the first key with maximal count" would be
+UNPROVABLE (too strong: different orders yield different firsts) — and
+that unprovability is the design working, not failing: the envelope
+rejects order-dependent claims. Proof shape for the range half:
+induction on `remaining.size`, ∀ remaining (as a list/array), ∀ acc
+with `acc = max over consumed`, ∀ ch — the pick is destructured through
+`Choices.consume` (`idx < size` from its `% bound` contract), the body
+re-establishes the invariant at `remaining.eraseIdx idx`, and max-fold
+lemmas (`max over (erase idx) ∪ {picked} = max over all`) close the
+step. No enumeration of orders anywhere — the ban binds.
+
+### §10c What the range loop costs the segment technique (priced,
+recorded as the slice's known obstruction)
+
+`bindIterVars` ALLOCATES two fresh cells per iteration, so `nextAddr`
+grows by 2m across the loop and every in-loop address is symbolic in
+the iteration count — `with_unfolding_all rfl` segments (which need
+address-concrete heap lookups) do NOT carry the range body the way they
+carry fib/gcd/reverse bodies. The (a)-route from §9c applies at loop
+granularity: the body's ~10 steps become HAND-GLUED conditioned steps
+(stepFn unfoldings + `Heap.lookup`/`storeLoc` facts at symbolic
+addresses, closed by `beq_self` simp — not rfl). Priced at roughly the
+§9c α-route cost per iteration segment. The counting half
+(`counts[w]++`) additionally needs executable facts for
+`mapAssignValue`/`mapEntryIndex?` on the `map[uint64]uint64` fragment
+(the `storeTarget_slice_u64` analogs) with an assoc-list update spec.
+
+### §10d Scope ruling for slice 2c (recorded honestly)
+
+The corpus program, oracle rows (6, incl. all-same / two-pairs /
+empty), and pinned lowering LANDED with the scale-out infra commit;
+the vocabulary and proof are staged AFTER the four slice/argument
+examples integrate, and if the session ends first, the word-count
+headline is recorded as NAMED FOUNDATION DEBT (consumer: the gallery's
+map row; the §10a-c design is the executable plan) rather than forced
+through — the charter's fights-the-form rule applied to schedule
+rather than shape.
+
 ## §8 Parked / out of scope (recorded)
 
 - Machine/frontend changes (must-park): the `$forFirst` desugar tax
