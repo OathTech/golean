@@ -1,5 +1,23 @@
 # Verified-examples scale-out (slice 2c) — session record (2026-08-13)
 
+**FORM HOLD (2026-08-13, mid-slice — operator direction)**: a
+harness-only alternative headline form (closed specs: inputs as
+harness parameters, harness-allocated memory, canonical seed) is under
+active discussion with the user, vs the committed memory-quantified
+form. Ruling pending. Consequences recorded honestly: gcd / minmax /
+isort / binsearch were ALREADY COMMITTED in the memory-quantified form
+before the hold arrived — their statement layers are THIN (a
+canonical-run private theorem carries ~all of each proof; the framed
+headline is a frame-theorem corollary; the readout twin is derived),
+so a harness-only ruling re-derives new headlines over the SAME
+segments without re-proving anything. The §5 gallery drafts below are
+DRAFTS, form-contingent, not gallery finalizations. Word-count's
+statement layer is held in-flight (worker instructed: deliver the
+form-independent machinery + canonical-run theorem; hold the framed
+headline). Audit registrations already landed for the four committed
+examples stand as records of what was proven; re-registration follows
+the ruling if the form changes.
+
 Status: IN PROGRESS (updated as examples land). Charter:
 `docs/2026-08-12_verified-examples-arc-charter.md` (slice 2 → 2c after
 the 2a/2b split); form of record:
