@@ -22,7 +22,7 @@ set_option linter.unusedSimpArgs false
 
 /-- The `stepFn` result relation: renamed configuration, related
 states, IDENTICAL choice stream. -/
-def TripSim (ρ : Nat → Nat) (na₀ na : Nat) (fr : Heap) :
+abbrev TripSim (ρ : Nat → Nat) (na₀ na : Nat) (fr : Heap) :
     Config × ExecState × Choices → Config × ExecState × Choices → Prop :=
   fun r rF => rF.1 = renameConfig ρ r.1
     ∧ FrameSim ρ na₀ na fr r.2.1 rF.2.1 ∧ rF.2.2 = r.2.2
@@ -221,8 +221,9 @@ variable {ρ : Nat → Nat} {na₀ na : Nat} {fr : Heap} {σ σF : ExecState}
 theorem enterFrameStep_sim (hS : FrameSim ρ na₀ na fr σ σF)
     (fid : FuncId) (args : List GoValue)
     (mk mkF : Func → LocalEnv → List Loc → Config) (k : Cont) (ch : Choices)
-    (hmk : ∀ f e ls, mkF f (renameEnv ρ e) (ls.map (renameLoc ρ))
-        = renameConfig ρ (mk f e ls)) :
+    (hmk : ∀ f e ls, renameStmt ρ f.body = f.body →
+        mkF f (renameEnv ρ e) (ls.map (renameLoc ρ))
+          = renameConfig ρ (mk f e ls)) :
     ExSim (TripSim ρ na₀ na fr)
       (enterFrameStep σ fid args mk k ch)
       (enterFrameStep σF fid (renameValueList ρ args) mkF
@@ -233,11 +234,11 @@ theorem enterFrameStep_sim (hS : FrameSim ρ na₀ na fr σ σF)
       obtain ⟨f, e, ls, σ'⟩ := r
       obtain ⟨rF, hrF, hrel⟩ := (enterFrame_sim hS fid args).ok_inv henter
       obtain ⟨fF, eF, lsF, σF'⟩ := rF
-      obtain ⟨hf, he, hls, hS'⟩ := hrel
-      dsimp only at hf he hls hS'
+      obtain ⟨hf, he, hls, hS', hbody⟩ := hrel
+      dsimp only at hf he hls hS' hbody
       subst hf he hls
       rw [hrF]
-      exact ExSim.ok ⟨hmk _ _ _, hS', rfl⟩
+      exact ExSim.ok ⟨hmk _ _ _ hbody, hS', rfl⟩
   | error err =>
       cases err
       case panic m =>
@@ -250,7 +251,8 @@ theorem enterFrameDeferPanicking_sim (hS : FrameSim ρ na₀ na fr σ σF)
     (fid : FuncId) (args : List GoValue)
     (mk mkF : Func → LocalEnv → Config) (chain : List PanicEntry)
     (krest : Cont) (ch : Choices)
-    (hmk : ∀ f e, mkF f (renameEnv ρ e) = renameConfig ρ (mk f e)) :
+    (hmk : ∀ f e, renameStmt ρ f.body = f.body →
+        mkF f (renameEnv ρ e) = renameConfig ρ (mk f e)) :
     ExSim (TripSim ρ na₀ na fr)
       (enterFrameDeferPanicking σ fid args mk chain krest ch)
       (enterFrameDeferPanicking σF fid (renameValueList ρ args) mkF
@@ -261,11 +263,11 @@ theorem enterFrameDeferPanicking_sim (hS : FrameSim ρ na₀ na fr σ σF)
       obtain ⟨f, e, ls, σ'⟩ := r
       obtain ⟨rF, hrF, hrel⟩ := (enterFrame_sim hS fid args).ok_inv henter
       obtain ⟨fF, eF, lsF, σF'⟩ := rF
-      obtain ⟨hf, he, hls, hS'⟩ := hrel
-      dsimp only at hf he hls hS'
+      obtain ⟨hf, he, hls, hS', hbody⟩ := hrel
+      dsimp only at hf he hls hS' hbody
       subst hf he hls
       rw [hrF]
-      exact ExSim.ok ⟨by rw [hmk], hS', rfl⟩
+      exact ExSim.ok ⟨by rw [hmk _ _ hbody], hS', rfl⟩
   | error err =>
       cases err
       case panic m =>

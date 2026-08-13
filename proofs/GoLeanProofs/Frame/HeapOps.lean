@@ -629,17 +629,148 @@ theorem dynamicDispatch?_sim (hS : FrameSim ρ na₀ na fr σ σF)
               case nil => exact ExSim.panic
               all_goals exact ExSim.ok rfl
 
+theorem findFunctionIn?_mem {funcs : Array Func} {fid : FuncId} {f : Func}
+    (h : findFunctionIn? funcs fid = some f) : f ∈ funcs.toList := by
+  unfold findFunctionIn? at h
+  rw [← Array.foldl_toList] at h
+  have hgen : ∀ (l : List Func) (acc : Option Func),
+      List.foldl
+        (fun found func =>
+          match found with
+          | some f => some f
+          | none => if func.id == fid then some func else none)
+        acc l = some f →
+      acc = some f ∨ f ∈ l := by
+    intro l
+    induction l with
+    | nil => intro acc hacc; exact Or.inl hacc
+    | cons g gs ih =>
+        intro acc hacc
+        cases acc with
+        | some f' =>
+            cases ih _ hacc with
+            | inl h' => exact Or.inl h'
+            | inr h' => exact Or.inr (List.mem_cons_of_mem _ h')
+        | none =>
+            by_cases hg : (g.id == fid) = true
+            · rw [List.foldl_cons] at hacc
+              simp only [hg, if_true] at hacc
+              cases ih _ hacc with
+              | inl h' =>
+                  simp only [Option.some.injEq] at h'
+                  subst h'
+                  exact Or.inr List.mem_cons_self
+              | inr h' => exact Or.inr (List.mem_cons_of_mem _ h')
+            · rw [List.foldl_cons] at hacc
+              simp only [hg, if_false] at hacc
+              cases ih _ hacc with
+              | inl h' => cases h'
+              | inr h' => exact Or.inr (List.mem_cons_of_mem _ h')
+  cases hgen _ _ h with
+  | inl h' => cases h'
+  | inr h' => exact h'
+
+/-- `dynamicDispatch?_sim` plus body-invariance of any dispatch target
+(the target is drawn from the FUNCTION TABLE, whose bodies are
+`ρ`-invariant by `bodies_inv`). -/
+theorem dynamicDispatch?_sim' (hS : FrameSim ρ na₀ na fr σ σF)
+    (func : Func) (args : Array GoValue) :
+    ExSim (fun o oF => (oF = o.map (fun p =>
+        (p.1, (renameValueList ρ p.2.toList).toArray)))
+        ∧ ∀ tf ta, o = some (tf, ta) → renameStmt ρ tf.body = tf.body)
+      (dynamicDispatch? σ func args)
+      (dynamicDispatch? σF func ((renameValueList ρ args.toList).toArray)) := by
+  have hbase := dynamicDispatch?_sim hS func args
+  cases hd : dynamicDispatch? σ func args with
+  | error e =>
+      rw [hd] at hbase
+      cases e
+      case panic m =>
+        rw [hbase.panic_inv rfl]
+        exact ExSim.panic
+      all_goals exact ExSim.skip fun m h => GoError.noConfusion h
+  | ok o =>
+      obtain ⟨oF, hoF, hrel⟩ := hbase.ok_inv hd
+      rw [hoF]
+      refine ExSim.ok ⟨hrel, ?_⟩
+      intro tf ta hsome
+      subst hsome
+      -- the dispatch target came from findFunctionIn? on the table
+      revert hd
+      simp only [dynamicDispatch?]
+      cases methodInfoByFuncId? σ func.id with
+      | none => intro hd; simp [pure, Except.pure] at hd
+      | some method =>
+          dsimp only
+          cases methodRecvInterfaceName? σ method with
+          | none => intro hd; simp [pure, Except.pure] at hd
+          | some iname =>
+              dsimp only
+              cases args[0]? with
+              | none => intro hd; simp [pure, Except.pure] at hd
+              | some v =>
+                  cases v <;> intro hd <;>
+                    first
+                    | (simp [pure, Except.pure] at hd; done)
+                    | skip
+                  case interface dynTy inner =>
+                    dsimp only at hd
+                    cases hcm : concreteMethodForDynamic? σ dynTy method.name with
+                    | none =>
+                        rw [hcm] at hd
+                        simp only [throw, throwThe, MonadExceptOf.throw] at hd
+                        simp at hd
+                    | some hit =>
+                        obtain ⟨concrete, needsDeref⟩ := hit
+                        rw [hcm] at hd
+                        dsimp only at hd
+                        cases hfind2 : findFunctionIn? σ.functions concrete.funcId with
+                        | none =>
+                            rw [hfind2] at hd
+                            simp only [stuck_eq, Bind.bind, Except.bind] at hd
+                            simp at hd
+                        | some targetFunc =>
+                            rw [hfind2] at hd
+                            simp only [pure_bind] at hd
+                            have htf : tf = targetFunc := by
+                              cases needsDeref with
+                              | true =>
+                                  rw [if_pos rfl] at hd
+                                  cases inner with
+                                  | addr loc =>
+                                      rw [bind_eq_ok] at hd
+                                      obtain ⟨rv, hrv, hd2⟩ := hd
+                                      simp only [pure, Except.pure,
+                                        Except.ok.injEq, Option.some.injEq,
+                                        Prod.mk.injEq] at hd2
+                                      exact hd2.1.symm
+                                  | nil =>
+                                      simp [Bind.bind, Except.bind, throw,
+                                        throwThe, MonadExceptOf.throw] at hd
+                                  | _ =>
+                                      simp [Bind.bind, Except.bind] at hd
+                              | false =>
+                                  rw [if_neg (by simp)] at hd
+                                  simp only [pure, Except.pure,
+                                    Except.ok.injEq, Option.some.injEq,
+                                    Prod.mk.injEq] at hd
+                                  exact hd.1.symm
+                            rw [htf]
+                            exact hS.bodies_inv targetFunc
+                              (findFunctionIn?_mem hfind2)
+
 theorem enterFrame_sim (hS : FrameSim ρ na₀ na fr σ σF)
     (fid : FuncId) (args : List GoValue) :
     ExSim (fun (r rF : Func × LocalEnv × List Loc × ExecState) =>
         rF.1 = r.1 ∧ rF.2.1 = renameEnv ρ r.2.1
           ∧ rF.2.2.1 = r.2.2.1.map (renameLoc ρ)
-          ∧ FrameSim ρ na₀ na fr r.2.2.2 rF.2.2.2)
+          ∧ FrameSim ρ na₀ na fr r.2.2.2 rF.2.2.2
+          ∧ renameStmt ρ r.1.body = r.1.body)
       (enterFrame σ fid args)
       (enterFrame σF fid (renameValueList ρ args)) := by
   simp only [enterFrame]
   rw [hS.funcs_eq]
-  cases findFunctionIn? σ.functions fid with
+  cases hfind : findFunctionIn? σ.functions fid with
   | none => exact ExSim.stuck'
   | some func =>
       simp only [pure_bind]
@@ -652,8 +783,9 @@ theorem enterFrame_sim (hS : FrameSim ρ na₀ na fr σ σF)
             = (renameValueList ρ (args.toArray).toList).toArray := by
           rw [List.toList_toArray]
         rw [hddargs]
-        refine ExSim.bind (dynamicDispatch?_sim hS func args.toArray) ?_
+        refine ExSim.bind (dynamicDispatch?_sim' hS func args.toArray) ?_
         intro o oF hoF
+        obtain ⟨hoF, hbodies⟩ := hoF
         subst hoF
         cases o with
         | none =>
@@ -676,7 +808,8 @@ theorem enterFrame_sim (hS : FrameSim ρ na₀ na fr σ σF)
             refine ExSim.bind (pinResultLocs_sim env2 func.results.toList) ?_
             intro ls lsF hls
             subst hls
-            exact ExSim.ok ⟨rfl, rfl, rfl, hS2⟩
+            exact ExSim.ok ⟨rfl, rfl, rfl, hS2,
+              hS.bodies_inv func (findFunctionIn?_mem hfind)⟩
         | some hit =>
             obtain ⟨tf, ta⟩ := hit
             dsimp only [Option.map_some]
@@ -704,7 +837,7 @@ theorem enterFrame_sim (hS : FrameSim ρ na₀ na fr σ σF)
               refine ExSim.bind (pinResultLocs_sim env2 tf.results.toList) ?_
               intro ls lsF hls
               subst hls
-              exact ExSim.ok ⟨rfl, rfl, rfl, hS2⟩
+              exact ExSim.ok ⟨rfl, rfl, rfl, hS2, hbodies tf ta rfl⟩
 
 end FrameEntry
 
