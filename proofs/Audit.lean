@@ -1871,6 +1871,36 @@ example := @GoLean.Examples.InsertionSort.sortSpec_length
 /-- info: 'GoLean.Examples.InsertionSort.sortSpec_sorted' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Examples.InsertionSort.sortSpec_sorted
 
+/-! ## The binsearch example (scale-out slice 2c, 2026-08-13)
+
+`✓` **`search_ok` — framed TOTAL first-occurrence binary search**
+(`Examples/BinSearch.lean` over the pinned `searchLowered`): for any
+SORTED `[]uint64` input below length `2^62`, any in-range target, at
+ANY placement (`base`), beside ANY disjoint frame: execution completes
+normally past one fuel bound at every choice stream, the result cell
+holds `findSpec xs t` (FIRST occurrence or -1 — the duplicates
+lower-bound behavior, oracle-pinned), the backing array is unchanged,
+and every frame cell is preserved verbatim. Statement deltas vs the
+design block: none. The `2^62` bound is the midpoint-overflow teaching
+point (`lo + hi` computed in Go `int` — the Bloch bug; the proof
+carries `lo + hi < 2^63` through every iteration; the exact unsafe
+boundary starts at `2^62 + 1`, recorded in the module). The post-loop
+`&&` is walked LAZILY: the `lo = len` exit segment provably never
+reads `s[lo]`. Route notes (recorded): per-iteration `mid :=`
+declarations allocate at symbolic addresses — loop states carry a
+garbage suffix with a freshness invariant; `seqCont`'s environment
+DecidableEq blocks `rfl` under `mid`-carrying scopes, discharged by
+the module's `stepFn_seqn_splice`. The element-range hypothesis `hxs`
+is deliberately unconsumed (the machine's comparisons are
+kind-agnostic; it stays as the honest uint64-domain restriction).
+`search_readout` is the D1 twin via `normal_readout_of_total`. -/
+example := @GoLean.Examples.BinSearch.search_ok
+example := @GoLean.Examples.BinSearch.search_readout
+/-- info: 'GoLean.Examples.BinSearch.search_ok' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Examples.BinSearch.search_ok
+/-- info: 'GoLean.Examples.BinSearch.search_readout' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Examples.BinSearch.search_readout
+
 /-! ## Three-state ledger
 
 - `✓ Machine correspondence` (reshape S5, 2026-07-23) — `stepFn_sound` +

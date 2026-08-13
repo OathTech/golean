@@ -94,6 +94,7 @@ import GoLeanProofs.Examples.Gcd
 import GoLeanProofs.Examples.MinMaxProgram
 import GoLeanProofs.Examples.MinMax
 import GoLeanProofs.Examples.BinSearchProgram
+import GoLeanProofs.Examples.BinSearch
 import GoLeanProofs.Examples.InsertionSortProgram
 import GoLeanProofs.Examples.InsertionSort
 import GoLeanProofs.Examples.WordCountProgram

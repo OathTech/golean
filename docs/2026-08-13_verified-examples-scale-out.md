@@ -65,7 +65,7 @@ form — all specified in the worker briefs verbatim.
 |---|---|---|---|
 | gcd | `gcd_ok` — framed TOTAL, full uint64², EXACT `Nat.gcd a b`; + `gcd_readout` | direct segments; ONE strong induction on the b-value (§5c non-unit ≤-decrease realized directly); `%`'s divide-by-zero branch = the single conditioned step (`applyStrictOp_mod_u64`, the §5c-predicted emod fact); frame transfer = fib's uniformShift pattern | **PROVEN + COMMITTED** (`c264c9f7`), axioms classical trio, fuel `71 + 45·b` |
 | min/max | `minmax_ok` — memory-input read-only, TOTAL-HEAP preservation (result cells + input cell pinned + frame pointwise); `hne : xs ≠ []` (Go panics on empty — corpus row pins it) | reverse's route; ONE strong induction on `len − m`; relocation fixing result cells 0/1; headline landed VERBATIM as designed (zero statement deltas) | **PROVEN + COMMITTED**, axioms classical trio, fuel `37 + 96·len` |
-| binary search | `search_ok` — sorted precondition (`SliceMem.Sorted`), `findSpec` first-occurrence-or-−1, **domain `len < 2^62`: the Bloch mid-overflow bug carried as the honest domain bound (the teaching point)** | reverse's route; strong induction on `hi − lo` (halving absorbed by strict decrease); short-circuit `&&` laziness in the post-loop guard is load-bearing | worker in flight |
+| binary search | `search_ok` — sorted precondition (`SliceMem.Sorted`), `findSpec` first-occurrence-or-−1, **domain `len < 2^62`: the Bloch mid-overflow bug carried as the honest domain bound (the teaching point)**; landed character-for-character as designed | reverse's route; strong induction on `hi − lo` (strict decrease both branches); post-loop `&&` walked lazily (the `lo = len` exit provably never reads `s[lo]`); per-iteration `mid` allocation handled by a garbage-suffix freshness invariant | **PROVEN + COMMITTED**, axioms classical trio, fuel `123 + 75·len` |
 | insertion sort | `isort_ok` — memory-input read-write, `sortSpec` + `sortSpec_sorted`/`sortSpec_count`/`sortSpec_length` corollaries ("sorted permutation" said honestly); statement landed as designed (only the pre-recorded `hlen` delta) | direct segments; **nested-loop composition = plain nested strong inductions — no measure-rule variant needed** (the sugar gap is WP-route-only); PLUS the finding-8 in-run frame-rebase composition | **PROVEN + COMMITTED**, axioms classical trio (pure corollaries `[propext, Quot.sound]`), fuel `76 + (92·len + 160)·len` (quadratic, explicit) |
 | word-count | `wordcount_ok` — map build + enveloped range; spec `maxMultiplicity`, order-independent BY NECESSITY (the ∀-choices quantifier does real work — the teaching point) | §10 design: counting-loop assoc-list invariant + choice-pick induction; symbolic-address glue per §10c | worker in flight; §10d fallback = named foundation debt |
 
@@ -135,7 +135,28 @@ form — all specified in the worker briefs verbatim.
    provably never reads `s[j-1]` (the `isort_andFalse_raw` one-step
    segment IS that fact). The laziness is load-bearing and now
    exhibited in a theorem, not just oracle rows.
-   (further findings appended as workers report)
+10. **(binsearch) The 2^62 boundary, verified while proving**: the
+    midpoint is computed only under `lo < hi`, so `lo + hi ≤ 2·len−1`
+    and the first UNSAFE length is `2^62 + 1` (`len = 2^62` itself
+    still safe); the stated `< 2^62` is the clean power-of-two bound
+    one step inside. One lemma (`mid_clean`) consumes it. The
+    element-range hypothesis `hxs` turned out UNCONSUMED by the proof
+    (the machine's `<`/`==` are kind-agnostic and the program never
+    writes the array) — kept in the statement as the honest
+    uint64-domain restriction, recorded in-module.
+11. **(binsearch — a second per-iteration-allocation resolution)**
+    Unlike isort's frame-rebase, binsearch handles its per-iteration
+    `mid :=` allocation by carrying an ABSTRACT GARBAGE SUFFIX in the
+    loop-state family with a freshness invariant (∀ a ≥ na, the
+    suffix owns no ⟨a⟩) — no frame-theorem consumption inside the
+    canonical run. Two working patterns for the same machine behavior
+    are now on record (suffix-invariant vs rebase-into-frame); which
+    generalizes better is a cleanup-arc question. Related: `seqCont`'s
+    environment DecidableEq (`if env' = env`) BLOCKS definitional
+    evaluation whenever the env carries a symbolic address — the
+    module's `stepFn_seqn_splice` (an `if_pos rfl` discharge) is the
+    reusable fix and a strong shared-kit candidate.
+    (further findings appended as workers report)
 
 ## §5 Gallery entry drafts
 
@@ -330,8 +351,90 @@ derived `isort_readout`.)
 links); differentially green on 8 rows
 (shuffled/sorted/reversed/duplicates/int64-boundary/three/one/empty).
 
-(binsearch / wordcount drafts appended at integration from the worker
-reports)
+### binsearch — first-occurrence binary search over a sorted []uint64
+
+```go
+func search(s []uint64, target uint64) int {
+	lo, hi := 0, len(s)
+	for lo < hi {
+		mid := (lo + hi) / 2
+		if s[mid] < target {
+			lo = mid + 1
+		} else {
+			hi = mid
+		}
+	}
+	if lo < len(s) && s[lo] == target {
+		return lo
+	}
+	return -1
+}
+```
+
+**Claim.** For any SORTED list `xs` of uint64 values of length below
+`2^62`, any in-range target, wherever the input lives in memory, with
+anything else present: `search(s, target)` completes normally — with
+enough fuel, under every nondeterminism choice — and returns the index
+of the FIRST occurrence of the target, or `-1`; the input array is
+unchanged and no other memory is touched. The `2^62` length bound is
+the program's own domain, not ours: `mid := (lo + hi) / 2` computes
+`lo + hi` in Go `int`, and at greater lengths the sum can wrap
+negative — the classic "nearly all binary searches are broken"
+overflow bug (Bloch 2006); below the bound the proof carries the
+no-wrap fact through every iteration. The post-loop `&&` is proved
+lazy: when `lo = len(s)`, the out-of-bounds read `s[lo]` never
+happens.
+
+**The theorems** (`proofs/GoLeanProofs/Examples/BinSearch.lean`):
+
+```lean
+def Sorted (xs : List Int) : Prop :=          -- GoLean.SliceMem.Sorted, shared
+  ∀ i j : Nat, i < j → j < xs.length → xs.getD i 0 ≤ xs.getD j 0
+
+def findSpec (xs : List Int) (t : Int) : Int :=
+  match xs with
+  | [] => -1
+  | v :: rest =>
+      if v = t then 0
+      else if findSpec rest t < 0 then -1 else findSpec rest t + 1
+
+theorem search_ok (xs : List Int) (t : Int)
+    (hxs : ∀ v ∈ xs, 0 ≤ v ∧ v < 2 ^ 64) (ht : 0 ≤ t ∧ t < 2 ^ 64)
+    (hsorted : GoLean.SliceMem.Sorted xs)
+    (hlen : xs.length < 2 ^ 62)
+    (base : Nat) (hb0 : base ≠ 0)
+    (fr : Heap) (na : Nat)
+    (hfb : Heap.lookup fr (.base ⟨base⟩) = none)
+    (hf0 : Heap.lookup fr (.base ⟨0⟩) = none)
+    (hwf : MachineWf
+      { functions := searchLowered.funcs,
+        heap := resCell ++ sliceCells xs base ++ fr, nextAddr := na }
+      (.exec (searchCall xs base t) searchEnv .stop)) :
+    ∃ N : Nat, ∀ fuel : Nat, N ≤ fuel → ∀ ch : Choices,
+      ∃ (σf : ExecState) (ch' : Choices),
+        execStmt fuel searchEnv (searchSeed xs base fr na) ch
+            (searchCall xs base t)
+          = .ok (.normal σf, ch')
+        ∧ loadLoc σf (.base ⟨0⟩) = .ok (.int (findSpec xs t) .int)
+        ∧ Heap.lookup σf.heap (.base ⟨base⟩)
+            = some ⟨some (.array xs.length (.int .uint64)),
+                .array ⟨xs.map (fun v => .int v .uint64)⟩⟩
+        ∧ ∀ (a : Nat) (c : HeapCell),
+            Heap.lookup fr (.base ⟨a⟩) = some c →
+            Heap.lookup σf.heap (.base ⟨a⟩) = some c
+```
+
+(`search_readout` beneath it: the run-conditioned reading, derived.)
+
+**Axioms:** `[propext, Classical.choice, Quot.sound]`.
+
+**Ground:** pinned lowering of
+`Corpus/coverage/exec/examples/binsearch/main.go` (check-golden, both
+links); differentially green on 11 rows incl. the
+duplicates-lower-bound row (first occurrence, not any occurrence) and
+an int64-boundary value.
+
+(the wordcount draft appended at integration from the worker report)
 
 ## §6 TCB-grounding walks (per-export discipline)
 
@@ -363,5 +466,11 @@ closure; deletion-test clean.
 seed/call defs over the pinned `isortLowered`. The frame theorem's
 vocabulary appears ONLY in proofs (both consumption sites — the
 in-run rebase and the ∀-placement transfer); deletion-test clean.
+
+**`search_ok`/`search_readout`**: interpreter vocabulary +
+`sliceCells` + `SliceMem.Sorted` (shared) + `findSpec` (in-module,
+readable recursion) + literal seed/call defs over the pinned
+`searchLowered`. No Iris/WP/Frame names in the statement closure;
+deletion-test clean.
 
 (walks for the remaining examples appended at integration)
