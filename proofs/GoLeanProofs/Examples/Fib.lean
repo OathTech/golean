@@ -1,6 +1,8 @@
 import GoLeanProofs.Examples.FibProgram
 import GoLeanProofs.SurfaceExit
 import GoLeanProofs.FuelMeasure
+import GoLeanProofs.Frame.Transfer
+import GoLeanProofs.Frame.RenameId
 import GoLeanProofs.Laws.Control
 import GoLeanProofs.Laws.Eval
 import GoLeanProofs.Laws.Assign
@@ -1419,6 +1421,158 @@ theorem fib_framed (n : Nat) (hn : n < 2 ^ 64) (fr : Heap) (na : Nat)
     have := hFsub a c hFa
     rw [heaplet_get?_eq, heapletOf_eq_heapToMap, get?_heapToMap] at this
     exact this
+
+/-! ## The ∀-frame TOTAL form (slice 2b — the frame theorem consumed)
+
+`fib_total_framed` = `fib_total`'s completion + the executable frame
+theorem's completion transfer (`Frame.completesIn_ren` machinery via
+`Frame.execStmtLoop_ren`, which also preserves the `.normal` tag) at
+the seed simulation below. The canonical seed is TIGHT (dom = {0},
+`na₀ = 1`) — exactly what `fr_avoid`'s seed discharge needs (build
+handoff §3 finding 3: `MachineWf` enters only here, never through the
+induction). -/
+
+open GoLean.Frame
+
+/-- The seed simulation: fib's canonical seed beside the framed seed,
+through the uniform shift `[1, ∞) ≃ [na, ∞)`. -/
+private theorem fibSeedFrameSim (n : Nat) (fr : Heap) (na : Nat)
+    (hfr : Heap.lookup fr (.base ⟨0⟩) = none)
+    (hwf : MachineWf
+      { functions := fibLowered.funcs,
+        heap := (.base ⟨0⟩, ⟨some (.int .uint64), .int 0 .uint64⟩) :: fr,
+        nextAddr := na }
+      (.exec (fibCall n) fibEnv .stop)) :
+    FrameSim (uniformShift 1 na) 1 na fr fibSeed (fibSeedFr fr na) := by
+  have h1na : 1 ≤ na := by
+    have hs := hwf.1
+    simp only [StateWf, ExecState.locSup, Heap.locSup, Loc.locSup,
+      Loc.rootBase, Nat.max_le] at hs
+    omega
+  have hfrsup : Heap.locSup fr ≤ na := by
+    have hs := hwf.1
+    simp only [StateWf, ExecState.locSup, Heap.locSup, Nat.max_le] at hs
+    omega
+  have hren0 : renameLoc (uniformShift 1 na) (.base ⟨0⟩) = .base ⟨0⟩ := by
+    simp [renameLoc, uniformShift]
+  refine ⟨uniformShift_spec h1na, rfl, rfl, rfl, rfl, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  · -- next_eq: na = ρ 1
+    simp [fibSeedFr, fibSeed, uniformShift]
+  · -- alloc_reg
+    exact Nat.le_refl 1
+  · -- lookup_img
+    intro l
+    by_cases hl : l = .base ⟨0⟩
+    · subst hl
+      rw [hren0]
+      simp [fibSeedFr, fibSeed, Heap.lookup, renameCell, renameValue]
+    · have hcanon : Heap.lookup fibSeed.heap l = none := by
+        have hne : ((.base ⟨0⟩ : Loc) == l) = false :=
+          beq_false_of_ne (fun h => hl h.symm)
+        simp [fibSeed, Heap.lookup, hne]
+      rw [hcanon]
+      have hne' : ((.base ⟨0⟩ : Loc) == renameLoc (uniformShift 1 na) l)
+          = false := by
+        refine beq_false_of_ne (fun hc => ?_)
+        cases l with
+        | base a =>
+            simp only [renameLoc, Loc.base.injEq, Addr.mk.injEq] at hc
+            have : a.id = 0 := by
+              by_cases ha : a.id < 1
+              · omega
+              · exfalso
+                simp only [uniformShift, if_neg (by omega)] at hc
+                omega
+            exact hl (by cases a; simp_all)
+        | field b tid f => simp [renameLoc] at hc
+        | index b i => simp [renameLoc] at hc
+      simp [fibSeedFr, Heap.lookup, hne']
+  · -- frame_pres
+    intro l c hl
+    have hne : ((.base ⟨0⟩ : Loc) == l) = false := by
+      refine beq_false_of_ne (fun hc => ?_)
+      rw [← hc, hfr] at hl
+      cases hl
+    simp [fibSeedFr, Heap.lookup, hne]
+    exact hl
+  · -- fr_avoid
+    intro a
+    by_cases ha : a < 1
+    · have : a = 0 := by omega
+      subst this
+      simpa [uniformShift] using hfr
+    · cases hlk : Heap.lookup fr (.base ⟨uniformShift 1 na a⟩) with
+      | none => rfl
+      | some c =>
+          exfalso
+          have hkey := Heap.lookup_key_locSup hlk
+          simp only [Loc.locSup, Loc.rootBase] at hkey
+          simp only [uniformShift, if_neg ha] at hkey
+          omega
+  · -- bodies_inv
+    exact renameBodies_id (fun x hx => uniformShift_low hx)
+      (n := 1) (by decide)
+
+/-- **The ∀-frame TOTAL fib claim (slice 2b)**: for every `n` in the
+uint64 domain, every disjoint frame, and every admissible allocator
+bound, execution from the FRAMED seed completes normally — past one
+fuel bound, at every choice stream — with `fibSpec n % 2^64` in the
+result cell and every frame cell preserved verbatim. `fib_total`'s
+completion transfers through the executable frame theorem; nothing is
+re-run at the framed placement. -/
+theorem fib_total_framed (n : Nat) (hn : n < 2 ^ 64) (fr : Heap) (na : Nat)
+    (hfr : Heap.lookup fr (.base ⟨0⟩) = none)
+    (hwf : MachineWf
+      { functions := fibLowered.funcs,
+        heap := (.base ⟨0⟩, ⟨some (.int .uint64), .int 0 .uint64⟩) :: fr,
+        nextAddr := na }
+      (.exec (fibCall n) fibEnv .stop)) :
+    ∃ N : Nat, ∀ fuel : Nat, N ≤ fuel → ∀ ch : Choices,
+      ∃ (σf : ExecState) (ch' : Choices),
+        execStmt fuel fibEnv (fibSeedFr fr na) ch (fibCall n)
+          = .ok (.normal σf, ch')
+        ∧ loadLoc σf (.base ⟨0⟩)
+            = .ok (.int ((fibSpec n % 2 ^ 64 : Nat) : Int) .uint64)
+        ∧ ∀ (a : Nat) (c : HeapCell),
+            Heap.lookup fr (.base ⟨a⟩) = some c →
+            Heap.lookup σf.heap (.base ⟨a⟩) = some c := by
+  have hSF := fibSeedFrameSim n fr na hfr hwf
+  have hcfg : renameConfig (uniformShift 1 na)
+      (.exec (fibCall n) fibEnv .stop) = .exec (fibCall n) fibEnv .stop := by
+    have hstmt : renameStmt (uniformShift 1 na) (fibCall n) = fibCall n :=
+      Frame.renameStmt_id (n := 1) (fun x hx => Frame.uniformShift_low hx)
+        _ (by
+          simp [fibCall, Stmt.locSup, assigneeListSup, Assignee.locSup,
+            exprListSup, Expr.locSup])
+    have henv : renameEnv (uniformShift 1 na) fibEnv = fibEnv :=
+      Frame.renameEnv_id (n := 1) (fun x hx => Frame.uniformShift_low hx)
+        _ (by
+          simp [fibEnv, LocalEnv.locSup, Scope.locSup, Loc.locSup,
+            Loc.rootBase])
+    simp [renameConfig, renameCont, hstmt, henv]
+  obtain ⟨N, hN⟩ := fib_total n hn
+  refine ⟨N, fun fuel hfuel ch => ?_⟩
+  obtain ⟨σc, ch', hrun, hread⟩ := hN fuel hfuel ch
+  have hrunL : execStmtLoop fuel fibSeed (.exec (fibCall n) fibEnv .stop) ch
+      = .ok (.normal σc, ch') := hrun
+  obtain ⟨outF, hrunF, hout⟩ := Frame.execStmtLoop_ren fuel hSF hrunL
+  rw [hcfg] at hrunF
+  cases outF with
+  | normal σF =>
+      obtain ⟨hSF', -⟩ := hout
+      refine ⟨σF, ch', hrunF, ?_, ?_⟩
+      · have hload := Frame.loadLoc_sim hSF' (.base ⟨0⟩)
+        obtain ⟨vF, hvF, hrel⟩ := hload.ok_inv hread
+        have hren0 : renameLoc (uniformShift 1 na) (.base ⟨0⟩)
+            = .base ⟨0⟩ := by simp [renameLoc, uniformShift]
+        rw [hren0] at hvF
+        rw [hvF, hrel]
+        simp [renameValue]
+      · intro a c hac
+        exact hSF'.frame_pres (.base ⟨a⟩) c hac
+  | returned σF => exact hout.elim
+  | broke σF => exact hout.elim
+  | continued σF => exact hout.elim
 
 end GoLean.Examples.Fib
 

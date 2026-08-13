@@ -23,6 +23,8 @@ import GoLeanProofs.Frame.StrictOps
 import GoLeanProofs.Frame.Ops2
 import GoLeanProofs.Frame.StepSim
 import GoLeanProofs.Frame.Transfer
+import GoLeanProofs.Frame.RenameId
+import GoLeanProofs.Frame.AllocIndep
 import GoLeanProofs.Lang
 import GoLeanProofs.LangC
 import GoLeanProofs.LangD

@@ -200,6 +200,39 @@ silent weakening. Expected resisters, pre-named: none structural; the
 channel/sync arms are bookkeeping-heavy but address-blind (registries
 key on renamed locs uniformly).
 
+## §5b The allocation envelope (user direction 2026-08-13, recorded at landing)
+
+The Go facts: the language promises NO address determinism — a
+conforming implementation hands out whatever fresh addresses it likes,
+run to run; the gc runtime additionally MOVES stacks intra-run
+(transparently — unobservable without `unsafe`, which the fragment
+refuses). The modeled observable surface for pointers is EQUALITY ONLY:
+`valueEqFuel`'s `.addr` arm is `Loc`-structural `==`, there is no
+pointer ordering or hashing (§3.3), no int↔ptr conversion (§3.1), and
+the machine models no `%p`-style output observable (pointer formatting
+is unsupported/fail-closed).
+
+The DISCHARGE is this theorem re-read: `ρ` is generalized to ANY
+injection with the fresh-region shift law (`ShiftSpec`; the uniform
+shift is one instance, the input-permuting `swapShift` a deliberately
+non-uniform witness — `Frame/AllocIndep.lean`), equality observations
+are injection-invariant, and `execStmtLoop_ren` transfers a run to any
+conforming relabeling at the same fuel/stream/outcome tag with
+`FrameSim`-related terminals (`allocatorIndependence`, stated at the
+empty frame). So the machine's sequential allocator is a QUOTIENT
+REPRESENTATIVE of Go's unpromised address choices — the deterministic
+`nextAddr` bump is scaffolding whose re-envelope obligation is
+DISCHARGED BY THEOREM, not a fidelity claim. Latitude-inventory entry:
+C11's allocation-addressing bullet, upgraded to the new
+ENVELOPE-BY-QUOTIENT disposition (the first pin fully redeemed this
+way — the model case for the class).
+
+Honest scope: the quotient covers the MODELED observable fragment. Any
+future observation channel that exposes addresses (modeling `%p`
+output, pointer order, `unsafe` conversions, address-dependent map
+iteration) RE-OPENS the pin; that condition is recorded on the
+inventory entry.
+
 ## §6 Status
 
 Part 1 (this design) — DONE, grounded per-arm against the machine.

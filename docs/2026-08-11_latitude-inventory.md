@@ -29,6 +29,14 @@ Classes (per the inventory charter):
 - **(c) FORCED** — the spec mandates the behavior; no latitude.
 - **(d) UNKNOWN** — latitude suspected, not yet analyzed; the open
   question is stated instead of guessed at.
+- **(q) ENVELOPE-BY-QUOTIENT** (added 2026-08-13) — the machine keeps
+  ONE deterministic realization as a canonical representative, and a
+  THEOREM proves every conforming alternative observationally equal
+  (the latitude is real but quotiented away by the modeled observation
+  surface). Unlike (b), the re-envelope obligation is DISCHARGED — by
+  proof, not by exercising the latitude — conditional on the recorded
+  observation-surface scope; a new observation channel re-opens the
+  entry. First (and model) case: C11's allocation addressing.
 - **REFUSED** — not a latitude class: a spec-open point the machine
   resolves by failing closed (visible red, never an answer). Listed
   because refusals are how several latitude points are currently
@@ -329,6 +337,22 @@ The race detector replays consumption without consuming
   keys. The one place allocation identity WOULD be observable —
   gc's eface-identity `[recovered]` collapse — is fail-closed
   (R10/BUG-004 item 1).
+  **UPGRADED 2026-08-13 — heap addressing is (q) ENVELOPE-BY-QUOTIENT,
+  discharged by theorem.** Go promises no address determinism (and gc
+  moves stacks intra-run, transparently); the sequential `nextAddr`
+  allocator is now PROVEN to be a quotient representative:
+  `Frame.allocatorIndependence` (over `execStmtLoop_ren`, the
+  executable frame theorem `docs/2026-08-13_executable-frame-theorem.md`
+  §5b) transfers any run to any conforming address relabeling — any
+  `ShiftSpec` injection; `swapShift` witnesses the non-uniform width —
+  at the same fuel/stream/outcome with related terminals, and the
+  modeled pointer surface is equality-only, which injections preserve.
+  The re-envelope obligation this bullet's class carried is DISCHARGED
+  BY THEOREM — the first pin fully redeemed this way, the model case
+  for class (q). RE-OPENING CONDITION (scope honesty): the quotient
+  covers the modeled observable fragment only — modeling `%p` output,
+  pointer ordering, `unsafe` int↔ptr, or any address-exposing channel
+  re-opens this entry.
 - Goroutine EXIT has no HB edge (Race.lean:752–762, go_mem quoted:
   exit "is not guaranteed to happen before any event in the program")
   — forced by the memory model.

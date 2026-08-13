@@ -110,6 +110,19 @@ costs. We do not BS ourselves about the distance to the goal.
    fused-boundary discovery shows the current point set is incomplete
    (termination-ordering races are schedule-observable without data
    races).
+6. **Sequential allocation addressing — DISCHARGED BY QUOTIENT
+   (2026-08-13), the register's first theorem-closed entry.** The
+   deterministic `nextAddr` allocator models less than Go promises
+   (which is: nothing — addresses vary run to run, stacks move
+   intra-run), but the executable frame theorem's generalized renaming
+   proves every conforming address choice observationally equal
+   (`Frame.allocatorIndependence`; inventory C11's (q)
+   ENVELOPE-BY-QUOTIENT upgrade; frame-theorem note §5b). The
+   assumption stays listed because its discharge is CONDITIONAL on the
+   modeled observation surface (pointer equality only): an
+   address-exposing channel (`%p`, pointer order, `unsafe`) re-opens
+   it. Cost of removal already paid — by proof, not by widening the
+   machine.
 
 ## Why (the mission)
 

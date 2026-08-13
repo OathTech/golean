@@ -1704,6 +1704,29 @@ example := @GoLean.Frame.uniformShift_spec
 /-- info: 'GoLean.Frame.completesIn_ren' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Frame.completesIn_ren
 
+-- The frame theorem CONSUMED (slice 2b consumption, 2026-08-13):
+-- fib's ∀-frame TOTAL form — fib_total's completion transferred to
+-- every admissible framed placement through the seed FrameSim (tight
+-- canonical seed, dom = {0}, na₀ = 1); readout + frame clauses from
+-- the terminal FrameSim. Same-commit discharge witness for the
+-- transfer corollaries.
+example := @GoLean.Examples.Fib.fib_total_framed
+/-- info: 'GoLean.Examples.Fib.fib_total_framed' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Examples.Fib.fib_total_framed
+
+-- Allocator independence (user direction 2026-08-13): the sequential
+-- allocator is a QUOTIENT REPRESENTATIVE of Go's unpromised address
+-- choices — every conforming relabeling (any ShiftSpec injection;
+-- swapShift witnesses the non-uniform width) yields an observationally
+-- equal execution. The allocation-addressing pin's re-envelope
+-- obligation is DISCHARGED BY THEOREM (latitude inventory, envelope-
+-- by-quotient disposition).
+example := @GoLean.Frame.allocatorIndependence
+example := @GoLean.Frame.swapShift_spec
+example := @GoLean.Frame.swapShift_not_uniform
+/-- info: 'GoLean.Frame.allocatorIndependence' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Frame.allocatorIndependence
+
 /-! ## Three-state ledger
 
 - `✓ Machine correspondence` (reshape S5, 2026-07-23) — `stepFn_sound` +
