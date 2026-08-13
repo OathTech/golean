@@ -648,6 +648,29 @@ the two-pointer invariant. Termination additionally reuses the §5c
 segment technique with the backing-cell content symbolic (a list — the
 loads/stores hit one concrete address, so the `rfl` route carries).
 
+**STATUS 2026-08-13: PROVEN** (`Examples/Reverse.lean`, `reverse_ok` —
+∀-frame ∀-placement TOTAL; the frame theorem closed the completion
+split, consumed at the input-RELOCATING `ShiftSpec` renaming, so the
+`base` quantifier transfers from the canonical placement with nothing
+re-run). Build-list outcomes, recorded: (i) the three slice laws exist
+and are witnessed (`Laws/Slice.lean` + `SliceMem.lean`); the
+multi-assign-at-index-targets item needed NO new law — the tgtOpK
+spine laws are shape-generic, and `wp_swap_witness` exercises the
+index-shape instances. (ii) The reverse proof itself took the DIRECT
+machine-step segment route for BOTH halves (one strong induction on
+`(len-1) - 2m` pins the exact loop-head state, array contents
+included, so value + completion come from the same segments); the WP
+laws stand as witnessed general machinery, deliberately not consumed
+by reverse. (iii) Statement delta vs the block above:
+`hlen : xs.length < 2^63` ADDED — with completion in the statement the
+draft is FALSE past Go's `int` domain (the driver's `len` literal
+wraps negative; slice-bounds panic). The §5c `rfl`-segment prediction
+held with one refinement: bounds checks and the backing-array
+element lookup are data-dependent branch points INSIDE an iteration,
+so each iteration is a chain of `rfl` sub-segments glued across four
+single branchy steps (two `indexGet` applies, two chain stores),
+discharged by the `SliceMem` executable facts.
+
 ### §9f The fib retrofit — old vs new, verbatim
 
 OLD (slice 1, canonical seed only — statement unchanged, still

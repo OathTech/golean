@@ -88,6 +88,7 @@ import GoLeanProofs.Examples.Fib
 import GoLeanProofs.SliceMem
 import GoLeanProofs.Laws.Slice
 import GoLeanProofs.Examples.ReverseProgram
+import GoLeanProofs.Examples.Reverse
 
 /-!
 # GoCore ⇒ Iris — the proof layer (root)

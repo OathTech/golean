@@ -1758,6 +1758,29 @@ example := @GoLean.Iris.wp_swap_witness
 /-- info: 'GoLean.Iris.wp_swap_witness' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Iris.wp_swap_witness
 
+/-! ## The reverse exemplar (slice 2b, 2026-08-13)
+
+`✓` **`reverse_ok` — the §9e memory-input headline, completion split
+CLOSED** (`Examples/Reverse.lean` over the pinned `reverseLowered`;
+design note §9e + the executable frame theorem). For any `[]uint64`
+input list, at ANY placement (`base`), beside ANY disjoint frame:
+execution completes normally past one fuel bound at every choice
+stream, the backing cell holds the reversal, and every frame cell is
+preserved verbatim. Statement deltas vs the §9e draft, recorded in the
+module: `hlen : xs.length < 2^63` added (with completion IN the
+statement the draft is false past Go's `int` domain — the driver's
+bounds check panics); the ∀-placement is realized by the
+input-RELOCATING renaming `relocShift` through the frame theorem's
+generalized `ShiftSpec` (build-handoff §3 finding 1's payoff,
+consumed). Proof route (recorded): direct machine-step segments +
+strong induction on the two-pointer measure — one induction delivers
+value AND completion; the Iris WP slice laws are witnessed separately
+(block above) and deliberately not consumed here. Scope honesty:
+usability evidence per the charter's two-questions separation. -/
+example := @GoLean.Examples.Reverse.reverse_ok
+/-- info: 'GoLean.Examples.Reverse.reverse_ok' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Examples.Reverse.reverse_ok
+
 /-! ## Three-state ledger
 
 - `✓ Machine correspondence` (reshape S5, 2026-07-23) — `stepFn_sound` +
