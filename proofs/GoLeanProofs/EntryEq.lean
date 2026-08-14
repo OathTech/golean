@@ -279,6 +279,24 @@ def elabDeriveEntryEq : CommandElab := fun stx => do
     --    Refuse to emit a theorem whose rfl the kernel would grind on.
     let probeArgs ← kinds.mapM (fun k => `(GoValue.int 1 $k))
     let probeNorm ← kinds.mapM (fun k => `(IntKind.normalize $k 1))
+    -- 5a. FIRST: the probe run must actually COMPLETE (pre-merge audit
+    --     finding, 2026-08-15). The comparison below is an equality of
+    --     two `Except GoError Result` values, so two runs that both end
+    --     in `.error .fuelOut` — or both stick the same way — compare
+    --     EQUAL and the guard passes on a run that never happened. The
+    --     `.ok` assertion on the machine-entry side removes that
+    --     vacuous pass: what is compared is a real completed run.
+    let probeOkStx ← `(
+      match (runFunctionWithContextM 100000 ($progId).typeDefs.toList
+          ($progId).funcs $funcId #[$probeArgs,*] ($progId).methods []) with
+      | .ok _ => true
+      | .error _ => false)
+    unless (← liftTermElabM (evalBool probeOkStx)) do
+      throwError "derive_entry_eq: the probe run (all args = 1, fuel = \
+        100000) did NOT complete — it returned an error (fuel exhaustion, \
+        a panic, or a stuck state). An equality of both sides would then \
+        be vacuous, so the macro refuses to emit rather than certify the \
+        entry equation on a run that never happened."
     let probeStx ← `(
       reprStr (runFunctionWithContextM 100000 ($progId).typeDefs.toList
           ($progId).funcs $funcId #[$probeArgs,*] ($progId).methods [])

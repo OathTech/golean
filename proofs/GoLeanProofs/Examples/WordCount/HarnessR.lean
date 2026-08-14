@@ -105,11 +105,10 @@ Comparator Challenge's trusted closure imports. -/
 
 /-! ## Extra pure facts -/
 
-/-- The family is prefix-closed. -/
-theorem wcFamily_take {N seed m : Nat} (h : m ≤ N) :
-    (wcFamily N seed).take m = wcFamily m seed := by
-  simp only [wcFamily, ← List.map_take, List.take_range,
-    Nat.min_eq_left h]
+-- (`wcFamily_take`, the prefix-closure fact, was DELETED in the
+-- 2026-08-15 audit response: it had zero consumers — the copy-loop
+-- induction carries `wcPre` instead — and an unused lemma in a proof
+-- module is a maintenance surface, not a fact anyone reads.)
 
 /-- The family's element at an in-range index. -/
 theorem wcFamily_getD {n seed m : Nat} (hm : m < n) :

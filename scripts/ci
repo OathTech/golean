@@ -108,17 +108,32 @@ else
   _mem="${GOLEAN_MEM_MAX:-64G}"
   # Bytes-per-thread budget: 8G. Chosen from the measured per-thread peaks of
   # the heavy example modules; floor 2 so a small cap still builds in parallel.
+  #
+  # THE DIGIT GUARD RUNS BEFORE ANY ARITHMETIC (pre-merge audit finding,
+  # 2026-08-15). The earlier form matched the `*M` suffix first and then
+  # evaluated `$(( ${_mem%[Mm]} / 1024 ))`, so a malformed value like `abcM`
+  # reached `$(( … ))` unvalidated — bash evaluates the text as an arithmetic
+  # EXPRESSION (a bare name, or a syntax error printed raw to stderr), which
+  # both bypassed the documented fallback and showed the operator a shell
+  # diagnostic instead of the note. So: strip at most one size suffix, require
+  # what remains to be a non-empty run of digits, and only then compute.
   _gb=""
   case "$_mem" in
-    none)              _gb="" ;;
-    *G|*g)             _gb="${_mem%[Gg]}" ;;
-    *M|*m)             _gb=$(( ${_mem%[Mm]} / 1024 )) ;;
-    ''|*[!0-9]*)       _gb="" ;;                       # unparseable
-    *)                 _gb=$(( _mem / 1073741824 )) ;; # bare bytes
+    none)  _num="" ; _unit="" ;;
+    *[Gg]) _num="${_mem%[Gg]}" ; _unit=G ;;
+    *[Mm]) _num="${_mem%[Mm]}" ; _unit=M ;;
+    *)     _num="$_mem"        ; _unit=B ;;   # bare bytes
   esac
-  case "$_gb" in
-    ''|*[!0-9]*) _gb="" ;;   # e.g. "64.5G" — not an integer count of GiB
+  case "$_num" in
+    ''|*[!0-9]*) _num="" ;;  # "", "64.5G", "abcM", "infinity" — not an integer
   esac
+  if [ -n "$_num" ]; then
+    case "$_unit" in
+      G) _gb="$_num" ;;
+      M) _gb=$(( _num / 1024 )) ;;
+      B) _gb=$(( _num / 1073741824 )) ;;
+    esac
+  fi
   if [ -z "$_gb" ]; then
     PAR_NOTE="LEAN_NUM_THREADS unset (cap '$_mem' is not an integer GiB size — toolchain default, $(nproc) cores)"
   else
@@ -161,6 +176,41 @@ if [ -n "$hatch" ]; then
 else
   echo "  none found"
   ok "escape-hatch preflight"
+fi
+
+# 1a2. META-LAYER escape hatches (examples phase-2 pre-merge audit, 2026-08-15).
+#      `unsafe`, `opaque` and `@[implemented_by]` let a declaration's COMPILED
+#      behaviour diverge from its logical content — the same class as
+#      native_decide, and invisible to `#print axioms` because the divergence
+#      is in the evaluator, not the proof term. The scan is DECLARATION-ANCHORED
+#      rather than token-based: all three words appear in prose throughout the
+#      docstrings (block comments are not stripped by the pipeline above), so
+#      matching bare tokens would be noise. Speedbump standard: any NEW hit
+#      fails loud and is either removed or added here with a reason.
+step "meta-layer escape hatches (unsafe / opaque / @[implemented_by] outside the allowlist)"
+# THE ALLOWLIST — one entry, one reason, both load-bearing:
+#   proofs/GoLeanProofs/EntryEq.lean — the `derive_entry_eq` macro's
+#   compiler-evaluation plumbing (`Meta.evalExpr` reached through
+#   `@[implemented_by]` + `opaque`, the standard Lean meta idiom). META-LAYER
+#   ONLY: these four names shape SYNTAX that the elaborator and the kernel then
+#   check like any hand-written declaration — a wrong evaluation can at worst
+#   emit a theorem whose `rfl` is then REFUSED. The 2026-08-15 pre-merge audit
+#   verified they sit outside every proof closure (the emitted theorems'
+#   `#print axioms` is the classical trio, no `Lean.ofReduceBool`-class axiom
+#   and no meta name).
+META_HATCH_ALLOW='proofs/GoLeanProofs/EntryEq.lean'
+meta_hatch="$(find GoLean proofs -name '*.lean' -not -path '*/.lake/*' \
+              -not -path 'proofs/Challenge.lean' -print0 2>/dev/null \
+              | xargs -0 grep -nE \
+                  '^[[:space:]]*unsafe[[:space:]]+(def|abbrev|instance|structure|inductive|theorem|example)\b|^[[:space:]]*opaque[[:space:]]+[A-Za-z_][A-Za-z0-9_'"'"'.]*[[:space:]]*[({:]|^[[:space:]]*@\[implemented_by' \
+                  2>/dev/null \
+              | grep -v "^${META_HATCH_ALLOW}:" || true)"
+if [ -n "$meta_hatch" ]; then
+  echo "$meta_hatch"
+  bad "meta-layer escape hatches outside the allowlist — remove them, or allowlist with a reason"
+else
+  echo "  none outside ${META_HATCH_ALLOW}"
+  ok "meta-layer escape hatches (allowlist: ${META_HATCH_ALLOW})"
 fi
 
 # 1b2. Proofs-file audit coverage (tamper audit F2): a NEW proofs/*.lean that
@@ -342,6 +392,27 @@ check_surface_imports proofs/GoLeanProofs/Specs/GooseParityTargets.lean \
 # trusted closure at the D3 designation, so its imports are pinned).
 check_surface_imports proofs/GoLeanProofs/Specs/ImportedGooseActris.lean \
   '^import GoLean\.'
+# The seven pinned example lowerings (examples phase-2 pre-merge audit,
+# 2026-08-15). `Examples/Targets.lean` — itself in Challenge's trusted
+# closure — imports all seven, so each one is trusted surface too, and
+# until this block existed they entered that closure behind a WILDCARD
+# with no pin of their own: a new import inside any of them was
+# unreviewed. All seven are core-only today (`GoLean.GoCore.Syntax`),
+# pinned here one file at a time, in the ImportedGooseActris style.
+check_surface_imports proofs/GoLeanProofs/Examples/FibProgram.lean \
+  '^import GoLean\.'
+check_surface_imports proofs/GoLeanProofs/Examples/GcdProgram.lean \
+  '^import GoLean\.'
+check_surface_imports proofs/GoLeanProofs/Examples/ReverseProgram.lean \
+  '^import GoLean\.'
+check_surface_imports proofs/GoLeanProofs/Examples/MinMaxProgram.lean \
+  '^import GoLean\.'
+check_surface_imports proofs/GoLeanProofs/Examples/BinSearchProgram.lean \
+  '^import GoLean\.'
+check_surface_imports proofs/GoLeanProofs/Examples/InsertionSortProgram.lean \
+  '^import GoLean\.'
+check_surface_imports proofs/GoLeanProofs/Examples/WordCountProgram.lean \
+  '^import GoLean\.'
 # The fork/join pool witnesses (channels arc slice 2): statement-bearing,
 # Iris-free by chain — GoLean core + the surface + its own def-only
 # targets module (audit F4 split). NOT importable from Challenge (it
@@ -367,8 +438,14 @@ check_surface_imports proofs/Challenge.lean \
 # intact rather than opening a hole in it. Its imports are pinned to the
 # core plus the (themselves def-only, core-only) pinned-lowering
 # modules, so Challenge's trusted closure gains nothing else.
+# The seven lowerings are listed BY NAME, not as `[A-Za-z]+Program`
+# (audit fix, 2026-08-15): under the wildcard a NEW `*Program` module
+# could join the trusted closure with no gate edit and so no review —
+# and, before the block above, with no import pin either. Adding an
+# eighth example now costs one reviewable line here and one pin above,
+# which is the point.
 check_surface_imports proofs/GoLeanProofs/Examples/Targets.lean \
-  '^import (GoLean\.|GoLeanProofs\.Examples\.[A-Za-z]+Program$)'
+  '^import (GoLean\.|GoLeanProofs\.Examples\.(Fib|Gcd|Reverse|MinMax|BinSearch|InsertionSort|WordCount)Program$)'
 # AutomationTargets is statement-bearing but MIXED BY DESIGN: it holds the
 # range-rule target (a statement ABOUT the Iris-side proof infrastructure,
 # quantifying over IProp) and the phase-2 acceptance pins that reference
