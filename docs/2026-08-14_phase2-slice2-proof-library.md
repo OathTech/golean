@@ -45,11 +45,37 @@ commit, measure — their charter waived the two-consumer rule for one
 arc and paid for it with synthetic tests; we keep the rule and pay by
 deferring W3/W4-shaped machinery until demand exists.
 
-## §2 Sealed interfaces for StepKit and SliceMem (W6 adapted) — see
-the commit for the diff
+## §2 Sealed interfaces for StepKit and SliceMem (W6 adapted) — LANDED
 
-Recorded in this file after landing; see the module docstrings for the
-normative contracts.
+The normative contracts are the "PUBLIC API — the sealed interface"
+sections of the two module docstrings; this is the record of what
+moved.
+
+* **`SliceMem`** — three internals went `private`, each at ZERO
+  external references (grepped across `proofs/` + `compat/` before the
+  move): `validateSlice_ok`, `sliceIndexLoc_ok`,
+  `normalizeListWith_u64` — the decomposition steps of the public
+  index/store facts. One dedup as part of the seal: the module carried
+  a `private mem_of_mem_set` that was a VERBATIM duplicate of the
+  public `mem_set_of_mem` (the slice-1 record's privacy gotcha, now
+  moot); the public lemma is hoisted to the store-fact section and the
+  duplicate deleted. Everything else stays public — every remaining
+  name has external consumers (e.g. `unorm_of_range` ~96 uses,
+  `applyStrictOp_indexGet_slice` ~44).
+* **`StepKit`** — nothing could go private: every theorem has ≥3
+  external consumers (`stepFnIter_one` ~197 uses). The seal is the
+  docstring contract: the API grouped and enumerated, statements (the
+  conditioned-fact hypothesis shapes + the abstract-`σ` E-form) are
+  the dependable surface, proof bodies are not, additions go through
+  §12.
+* Both contracts state the Lean-vs-Rocq honesty note: `private` hides
+  names without sealing definitional transparency (no `Module Type`
+  opaque ascription here), so the seal is name-level + review
+  discipline; the statement layer keeps its own kernel-checked gate
+  (statement-TCB closure), and §12b bans kit names from headline
+  statements regardless.
+* NO functional changes: statements untouched, axiom pins byte
+  identical (in-build Audit gate green), `scripts/ci` PASS.
 
 ## §3 P5 / P8: closed for now (recorded per the slice brief)
 

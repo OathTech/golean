@@ -106,6 +106,46 @@ empty or its entry check reduces structurally. The conditioned
 call-entry step is now `stepFn_call_enter` below (P1 family, promoted
 from `EmptyRun`'s in-module copy in phase-2 slice 1 when the
 `reverse_harness_v` entry became its second consumer).
+
+## PUBLIC API — the sealed interface (phase-2 slice 2, 2026-08-14;
+the brick-wp W6 convention adapted to Lean 4)
+
+**Every theorem in this module is public API** — measured, not
+asserted: at the seal date every name has ≥3 external consumers
+(`stepFnIter_one` alone has ~200 use sites), so nothing here can be
+`private`. The API groups, which consumers may depend on:
+
+* heap reasoning at a symbolic split (P11): `lookup_append_left`,
+  `lookup_append_right`, `set_append_right`, `set_fresh`,
+  `base_beq_false`, `lookup_cons_ne`, `set_singleton_self`,
+  `lookup_singleton_self`;
+* the conditioned one-step glue (P1): `stepFnIter_one`,
+  `stepFn_call_enter`, `stepFn_makeSlice_u64_step`,
+  `stepFn_strict_apply`, `stepFn_store_step`, `stepFn_stmtOp_apply`,
+  `stepFn_var`, `stepFn_init_seq`, `stepFn_seqn_splice` (P9),
+  `stepFn_seq_pop`, `stepFn_storeK_nil`, `storeTarget_addr`,
+  `stepFn_mapAssign_apply`, `stepFn_snapshot`;
+* shared op plumbing: `natFromNonneg_cast`.
+
+**The API discipline** (C2 decoupling rule, harness-style scoping
+note: spec-style adapters are thin layers over a style-neutral core —
+they depend on APIs, not internals):
+
+1. Everything here is UNTRUSTED METHOD (proof-side): no name from this
+   module may appear in a headline statement closure (form note §12b);
+   the statement layer is frozen vocabulary with its own gate
+   (statement-TCB) and this kit sits strictly beneath it.
+2. What consumers may rely on is each lemma's STATEMENT — the
+   conditioned-fact hypothesis shapes (`enterFrame`/`applyStrictOp`/
+   `storeTarget`/`Heap.lookup` equations) and the abstract-`σ` E-form.
+   Proof bodies and internal decompositions may be rewritten freely.
+3. Additions follow the active-abstraction loop (form note §12):
+   ≥2 consumers retrofitted in the lifting commit, measured deltas;
+   single-consumer shapes stay private copies in their example module
+   with a promotion-ledger row.
+4. Lean has no Rocq-style opaque `Module Type` ascription: the seal is
+   name-level + this contract (`private` where reference counts allow
+   — here they do not), enforced at review, not by the kernel.
 -/
 
 open GoLean GoLean.GoCore GoLean.GoCore.Machine

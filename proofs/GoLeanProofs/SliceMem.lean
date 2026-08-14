@@ -24,6 +24,45 @@ the bounds/normal-form hypotheses. These are the shared discharge
 lemmas for (a) the WP slice laws' premises and (b) the direct
 machine-step segments of the reverse exemplar. No Iris here: this
 module is statement-side-safe.
+
+## PUBLIC API — the sealed interface (phase-2 slice 2, 2026-08-14;
+the brick-wp W6 convention adapted to Lean 4)
+
+**What consumers may depend on** (and nothing else):
+
+* statement-adjacent vocabulary: `sliceCells`, `sliceVal`, `Sorted`;
+* machine-integer normal forms: `unorm_of_range`, `inorm_of_range`,
+  `inorm_nat_of_lt`, `unorm_nat_of_lt`, `unorm_add_nat`;
+* the executable op facts, each conditioned on exactly its
+  bounds/range hypotheses: `applyStrictOp_indexGet_slice`,
+  `applyStrictOp_len_slice`, `applyStrictOp_sliceExpr_array`,
+  `applyStrictOp_lessCmp_int`, `applyStrictOp_mod_u64`,
+  `storeTarget_slice_u64`, `storeTarget_arrayLocal_u64`,
+  `normalizeValueForTy_arr_u64`;
+* slice-value plumbing: `getElem?_mapU`, `getD_mem`,
+  `mem_set_of_mem`, `locSup_mapU`.
+
+**Internal** (`private` — spelling may change without notice):
+`validateSlice_ok`, `sliceIndexLoc_ok`, `normalizeListWith_u64` — the
+decomposition steps of the public store/index facts. Consumers state
+their needs against the PUBLIC facts' hypothesis shapes, never against
+how a fact is discharged internally.
+
+**The API discipline** (C2 decoupling rule, harness-style scoping
+note: spec-style adapters are thin layers over a style-neutral core —
+they depend on APIs, not internals):
+
+1. Everything here is UNTRUSTED METHOD except the three vocabulary
+   defs, and even those enter a headline only under the §11 statement
+   closure rules — a kit lemma NAME never appears in a headline
+   statement (form note §12b).
+2. Additions follow the active-abstraction loop (form note §12):
+   ≥2 consumers retrofitted in the lifting commit, measured deltas.
+   Single-consumer shapes stay private copies in their example module.
+3. Lean has no Rocq-style opaque `Module Type` ascription: `private`
+   hides names but does not seal definitional transparency. The seal
+   is therefore name-level + this contract; the statement layer has
+   its own frozen closure and gate (statement-TCB).
 -/
 
 namespace GoLean.SliceMem
@@ -89,12 +128,12 @@ theorem unorm_add_nat (a b : Nat) :
 
 /-! ## The executable slice-op facts -/
 
-theorem validateSlice_ok {b : Loc} {off len cap : Nat} (hcap : len ≤ cap) :
+private theorem validateSlice_ok {b : Loc} {off len cap : Nat} (hcap : len ≤ cap) :
     validateSlice ⟨some b, off, len, cap⟩ = .ok () := by
   simp [validateSlice, Nat.not_lt.mpr hcap, Bind.bind, Except.bind]
 
 /-- The element location of `s[i]` at an in-bounds `Nat` index. -/
-theorem sliceIndexLoc_ok {b : Loc} {off len cap i : Nat}
+private theorem sliceIndexLoc_ok {b : Loc} {off len cap i : Nat}
     (hcap : len ≤ cap) (hi : i < len) :
     sliceIndexLoc ⟨some b, off, len, cap⟩ (i : Nat) =
       .ok (.index b (Int.ofNat (off + i))) := by
@@ -162,7 +201,7 @@ declared type, so the fact is stated at the `[]uint64` fragment: a
 backing list of in-range values stays itself elementwise, and the
 stored element lands wrapped (in-range: unchanged). -/
 
-theorem normalizeListWith_u64 {σ : ExecState} {fuel : Nat}
+private theorem normalizeListWith_u64 {σ : ExecState} {fuel : Nat}
     (hf : 0 < fuel)
     (l : List Int) (hl : ∀ v ∈ l, 0 ≤ v ∧ v < 2 ^ 64) :
     normalizeListWith (normalizeValueForTyFuel fuel σ (.int .uint64))
@@ -178,9 +217,11 @@ theorem normalizeListWith_u64 {σ : ExecState} {fuel : Nat}
         simp [normalizeListWith, normalizeValueForTyFuel,
           unorm_of_range hv.1 hv.2, hrest, Bind.bind, Except.bind]
 
-/-- Membership in `List.set` comes from the new element or the old
-list. -/
-private theorem mem_of_mem_set {l : List Int} {i : Nat} {w v : Int}
+/-- Membership after a `set` is the new value or an old member.
+(Hoisted from the slice-value plumbing section, phase-2 slice 2: the
+store facts below use it, and the module carried a `private` verbatim
+duplicate `mem_of_mem_set` — deduplicated as part of the API seal.) -/
+theorem mem_set_of_mem {l : List Int} {i : Nat} {w v : Int}
     (h : v ∈ l.set i w) : v = w ∨ v ∈ l := by
   induction l generalizing i with
   | nil => simp [List.set] at h
@@ -226,7 +267,7 @@ theorem storeTarget_slice_u64 {σ : ExecState} {a : Addr}
     List.getElem?_eq_getElem hsz
   have hset : ∀ v ∈ l.set (off + i) w, 0 ≤ v ∧ v < 2 ^ 64 := by
     intro v hv
-    rcases mem_of_mem_set hv with rfl | hv
+    rcases mem_set_of_mem hv with rfl | hv
     · exact hw
     · exact hl v hv
   have harrset : arraySet (⟨l.map (fun v => .int v .uint64)⟩ : Array GoValue)
@@ -305,7 +346,7 @@ theorem storeTarget_arrayLocal_u64 {σ : ExecState} {a : Addr} {N i : Nat}
   have hglist : l[i]? = some (l[i]'hi) := List.getElem?_eq_getElem hi
   have hset : ∀ v ∈ l.set i w, 0 ≤ v ∧ v < 2 ^ 64 := by
     intro v hv
-    rcases mem_of_mem_set hv with rfl | hv
+    rcases mem_set_of_mem hv with rfl | hv
     · exact hw
     · exact hl v hv
   have hidxn : arrayIndexNat (⟨l.map (fun v => .int v .uint64)⟩ : Array GoValue)
@@ -343,26 +384,6 @@ theorem getD_mem {xs : List Int} {k : Nat} (hk : k < xs.length) :
     xs.getD k 0 ∈ xs := by
   rw [List.getD_eq_getElem?_getD, List.getElem?_eq_getElem hk]
   exact List.getElem_mem hk
-
-/-- Membership after a `set` is the new value or an old member. -/
-theorem mem_set_of_mem {l : List Int} {i : Nat} {w v : Int}
-    (h : v ∈ l.set i w) : v = w ∨ v ∈ l := by
-  induction l generalizing i with
-  | nil => simp [List.set] at h
-  | cons x rest ih =>
-      cases i with
-      | zero =>
-          simp only [List.set, List.mem_cons] at h
-          rcases h with h | h
-          · exact .inl h
-          · exact .inr (by simp [h])
-      | succ n =>
-          simp only [List.set, List.mem_cons] at h
-          rcases h with h | h
-          · exact .inr (by simp [h])
-          · rcases ih h with h | h
-            · exact .inl h
-            · exact .inr (by simp [h])
 
 /-- An all-int backing array owns no locations. -/
 theorem locSup_mapU (l : List Int) :
