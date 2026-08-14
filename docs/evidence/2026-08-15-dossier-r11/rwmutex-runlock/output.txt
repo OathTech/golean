@@ -1,0 +1,13 @@
+fatal error: sync: RUnlock of unlocked RWMutex
+
+goroutine 1 [running]:
+sync.fatal({0x494a88?, 0x48a960?})
+	/usr/local/go/src/runtime/panic.go:1161 +0x18
+sync.(*RWMutex).rUnlockSlow(0x23954959c000, 0x494981e0?)
+	/usr/local/go/src/sync/rwmutex.go:132 +0x2f
+sync.(*RWMutex).RUnlock(...)
+	/usr/local/go/src/sync/rwmutex.go:122
+main.main()
+	/home/dev/projects/golean/.claude/worktrees/gc-dossiers/docs/evidence/2026-08-15-dossier-r11/rwmutex-runlock/main.go:8 +0x30
+exit status 2
+go-run exit: 1

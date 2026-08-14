@@ -1,0 +1,15 @@
+fatal error: sync: unlock of unlocked mutex
+
+goroutine 1 [running]:
+internal/sync.fatal({0x493d48?, 0x486460?})
+	/usr/local/go/src/runtime/panic.go:1191 +0x18
+internal/sync.(*Mutex).unlockSlow(0x33609c11c000, 0xffffffff)
+	/usr/local/go/src/internal/sync/mutex.go:204 +0x35
+internal/sync.(*Mutex).Unlock(...)
+	/usr/local/go/src/internal/sync/mutex.go:198
+sync.(*Mutex).Unlock(...)
+	/usr/local/go/src/sync/mutex.go:65
+main.main()
+	/home/dev/projects/golean/.claude/worktrees/gc-dossiers/docs/evidence/2026-08-15-dossier-r11/unlock-unlocked/main.go:14 +0x4b
+exit status 2
+go-run exit: 1
