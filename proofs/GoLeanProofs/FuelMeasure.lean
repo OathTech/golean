@@ -363,4 +363,69 @@ theorem stepFnIter_chain :
     simp only [stepFnIter, bind_eq_ok]
     exact ⟨(cm, σm, chm), hstep, ih hrest h₂⟩
 
+/-! ### The setup-loop iteration schema (Gallery Campaign G0 item 3a,
+2026-08-15 — the P5 promotion, reopened from the scale-out ledger)
+
+Every shipped array example proves the same strong induction for its
+setup loop (and isort a second time for its rebuild loop): a loop
+whose every iteration runs the SAME number of interpreter steps from
+the `i`-indexed configuration/state to the `i+1`-indexed one, iterated
+to `n`. The 8 shipped instances each carried the identical
+`Nat.strongRecOn` + chain + `c + c·(n−(i+1)) = c·(n−i)` + exit-case
+boilerplate; this is that induction stated ONCE. The per-iteration
+composite stays example-local (it chains that example's raw segments)
+— the schema consumes it as the `hstep` hypothesis, whose type pins
+both states (the storm-diagnosis rule). Landed fixtures: the isort
+setup loop and the wordcount harness setup loop, retrofitted in the
+lifting commit; chartered consumers: every G1 array-setup candidate. -/
+
+/-- **The uniform-iteration schema**: if every iteration `i < n` runs
+exactly `c` interpreter steps from `(T i, C i)` to `(T (i+1), C (i+1))`
+(threading the choice stream unchanged — these loops are choice-free),
+then from any `i ≤ n` the loop reaches `(T n, C n)` in exactly
+`c * (n - i)` steps. Induction on `n - i`; no per-example
+`strongRecOn` needed. -/
+theorem stepFnIter_iterate {c n : Nat} {T : Nat → ExecState}
+    {C : Nat → Config}
+    (hstep : ∀ i, i < n → ∀ ch : Choices,
+      stepFnIter c (T i) (C i) ch = .ok (C (i + 1), T (i + 1), ch)) :
+    ∀ i, i ≤ n → ∀ ch : Choices,
+      stepFnIter (c * (n - i)) (T i) (C i) ch = .ok (C n, T n, ch) := by
+  suffices key : ∀ μ i, μ = n - i → i ≤ n → ∀ ch : Choices,
+      stepFnIter (c * (n - i)) (T i) (C i) ch = .ok (C n, T n, ch) by
+    intro i hin ch
+    exact key (n - i) i rfl hin ch
+  intro μ
+  induction μ with
+  | zero =>
+      intro i hμ hin ch
+      have heq : i = n := by omega
+      subst heq
+      rw [Nat.sub_self, Nat.mul_zero]
+      rfl
+  | succ μ' ih =>
+      intro i hμ hin ch
+      have hlt : i < n := by omega
+      have hc := stepFnIter_chain (hstep i hlt ch)
+        (ih (i + 1) (by omega) (by omega) ch)
+      have harith : c + c * (n - (i + 1)) = c * (n - i) := by
+        rw [show n - i = (n - (i + 1)) + 1 from by omega, Nat.mul_succ]
+        omega
+      rw [harith] at hc
+      exact hc
+
+/-- The iterate-then-exit composition: the schema above plus an exit
+segment from `(T n, C n)` — the shape of the `∃k`-style setup loops
+that absorb their exit into the loop lemma. -/
+theorem stepFnIter_iterate_exit {c e n : Nat} {T : Nat → ExecState}
+    {C : Nat → Config} {cf : Config} {Tf : ExecState}
+    (hstep : ∀ i, i < n → ∀ ch : Choices,
+      stepFnIter c (T i) (C i) ch = .ok (C (i + 1), T (i + 1), ch))
+    (hexit : ∀ ch : Choices,
+      stepFnIter e (T n) (C n) ch = .ok (cf, Tf, ch)) :
+    ∀ i, i ≤ n → ∀ ch : Choices,
+      stepFnIter (c * (n - i) + e) (T i) (C i) ch = .ok (cf, Tf, ch) :=
+  fun i hin ch =>
+    stepFnIter_chain (stepFnIter_iterate hstep i hin ch) (hexit ch)
+
 end GoLean.Surface

@@ -338,23 +338,22 @@ theorem wcH_setup_loop (n seed : Nat) (hn : n < 2 ^ 63) :
             (((n : Nat) : Int) < ((n : Nat) : Int)))) suWCmpK,
           sWSU n (seed : Int) (wcFamily n seed) ((n : Nat) : Int) false,
           ch) := by
-  intro μ
-  induction μ using Nat.strongRecOn with
-  | _ μ ih =>
-    intro i hμ hin ch
-    rcases Nat.lt_or_ge i n with hlt | hge
-    · rw [show (decide (((i : Nat) : Int) < ((n : Nat) : Int))) = true from
-        decide_eq_true (by exact_mod_cast hlt)]
-      have hiter := wcH_su_iter n seed i hn hlt ch
-      have hrec := ih (n - (i + 1)) (by omega) (i + 1) rfl (by omega) ch
-      have hc := stepFnIter_chain hiter hrec
-      rw [show 57 + 57 * (n - (i + 1)) = 57 * (n - i) from by omega] at hc
-      exact hc
-    · have hEq : i = n := by omega
-      subst hEq
-      simp only [Nat.sub_self, Nat.mul_zero, List.replicate_zero,
-        List.append_nil]
-      rfl
+  -- The P5 iteration schema (`stepFnIter_iterate`) at the existing
+  -- per-iteration composite `wcH_su_iter`; the `strongRecOn`
+  -- boilerplate deleted (Gallery Campaign G0 item 3a retrofit).
+  -- Statement unchanged (vestigial `μ` binder kept for consumers).
+  intro _ i _ hin ch
+  have hgen := stepFnIter_iterate (c := 57) (n := n)
+    (T := fun j => sWSU n (seed : Int)
+      (wcFamily j seed ++ List.replicate (n - j) 0) ((j : Nat) : Int) false)
+    (C := fun j => .retV (.bool (decide (((j : Nat) : Int)
+      < ((n : Nat) : Int)))) suWCmpK)
+    (fun j hj ch' => by
+      rw [show (decide (((j : Nat) : Int) < ((n : Nat) : Int))) = true from
+        decide_eq_true (by exact_mod_cast hj)]
+      exact wcH_su_iter n seed j hn hj ch')
+    i hin ch
+  simpa using hgen
 
 
 end GoLean.Examples.WordCount

@@ -289,11 +289,57 @@ private theorem hsegISU_d1_raw (n : Nat) (sv iv : Int) (l : List Int)
             false, ch) := by
   with_unfolding_all rfl
 
-/-- **The setup loop**, by induction on `n - i`: exactly `57·(n-i)`
-steps materialize the wrapped multiplicative family. No no-wrap
-hypothesis — the wrap is the family's own definition; only the length
-domain `n < 2^63` (Go `int`, the committed subject's own bound) is
-consumed, for the counter arithmetic. -/
+/-- One setup iteration from the exit-test's true delivery at `i`:
+body → the element store (the wrapped multiplicative family value) →
+head → `i++` → the next test delivery. 57 steps. The per-iteration
+composite the P5 iteration schema consumes. -/
+private theorem hIsu_iter (n seed i : Nat) (hn : n < 2 ^ 63) (hi : i < n)
+    (ch : Choices) :
+    stepFnIter 57
+      (sISU n (seed : Int) (isFamily i seed ++ List.replicate (n - i) 0)
+        ((i : Nat) : Int) false)
+      (.retV (.bool true) suICmpK) ch
+      = .ok (.retV (.bool (decide
+            (((i + 1 : Nat) : Int) < ((n : Nat) : Int)))) suICmpK,
+          sISU n (seed : Int)
+            (isFamily (i + 1) seed ++ List.replicate (n - (i + 1)) 0)
+            ((i + 1 : Nat) : Int) false, ch) := by
+  have h1 := hsegISU_body_raw n (seed : Int) ((i : Nat) : Int)
+    (isFamily i seed ++ List.replicate (n - i) 0) ch
+  -- clean the stored value: (seed * (i+1)) mod 2^64
+  rw [show ((i : Nat) : Int) + 1 = ((i + 1 : Nat) : Int) from by omega,
+    unorm_of_range (by omega)
+      (by omega : ((i + 1 : Nat) : Int) < 2 ^ 64),
+    show ((seed : Nat) : Int) * ((i + 1 : Nat) : Int)
+      = ((seed * (i + 1) : Nat) : Int) from
+      (Int.natCast_mul seed (i + 1)).symm,
+    unorm_nat_mod (seed * (i + 1))] at h1
+  have h2 := hstep_Istore_setup n (seed : Int)
+    (isFamily i seed ++ List.replicate (n - i) 0) i
+    (((seed * (i + 1)) % 2 ^ 64 : Nat) : Int) hi
+    (by rw [List.length_append, isFamily_length, List.length_replicate]
+        omega)
+    (isFamilyZ_range (by omega))
+    ⟨by omega, by
+      have := Nat.mod_lt (seed * (i + 1)) (y := 2 ^ 64) (by omega)
+      omega⟩
+    ((i : Nat) : Int) ch
+  rw [isFamily_set hi] at h2
+  have h3 := hsegISU_d1_raw n (seed : Int) ((i : Nat) : Int)
+    (isFamily (i + 1) seed ++ List.replicate (n - (i + 1)) 0) ch
+  rw [show ((i : Nat) : Int) + 1 = ((i + 1 : Nat) : Int) from by omega,
+    unorm_of_range (by omega)
+      (by omega : ((i + 1 : Nat) : Int) < 2 ^ 64),
+    unorm_of_range (by omega)
+      (by omega : ((i + 1 : Nat) : Int) < 2 ^ 64)] at h3
+  exact stepFnIter_chain (stepFnIter_chain h1 h2) h3
+
+/-- **The setup loop**: exactly `57·(n-i)` steps materialize the
+wrapped multiplicative family — the P5 iteration schema
+(`stepFnIter_iterate`) at the per-iteration composite above; the
+per-example `strongRecOn` boilerplate this theorem used to carry is
+deleted (Gallery Campaign G0 item 3a retrofit). Statement unchanged
+(the vestigial `μ` binder kept for consumer compatibility). -/
 theorem hIsetup_loop (n seed : Nat) (hn : n < 2 ^ 63) :
     ∀ μ i, μ = n - i → i ≤ n → ∀ ch : Choices,
     stepFnIter (57 * (n - i))
@@ -305,52 +351,18 @@ theorem hIsetup_loop (n seed : Nat) (hn : n < 2 ^ 63) :
             suICmpK,
           sISU n (seed : Int) (isFamily n seed) ((n : Nat) : Int) false,
           ch) := by
-  intro μ
-  induction μ using Nat.strongRecOn with
-  | _ μ ih =>
-    intro i hμ hin ch
-    rcases Nat.lt_or_ge i n with hlt | hge
-    · rw [show (decide (((i : Nat) : Int) < ((n : Nat) : Int))) = true from
+  intro _ i _ hin ch
+  have hgen := stepFnIter_iterate (c := 57) (n := n)
+    (T := fun j => sISU n (seed : Int)
+      (isFamily j seed ++ List.replicate (n - j) 0) ((j : Nat) : Int) false)
+    (C := fun j => .retV (.bool (decide (((j : Nat) : Int)
+      < ((n : Nat) : Int)))) suICmpK)
+    (fun j hj ch' => by
+      rw [show (decide (((j : Nat) : Int) < ((n : Nat) : Int))) = true from
         decide_eq_true (by omega)]
-      have h1 := hsegISU_body_raw n (seed : Int) ((i : Nat) : Int)
-        (isFamily i seed ++ List.replicate (n - i) 0) ch
-      -- clean the stored value: (seed * (i+1)) mod 2^64
-      rw [show ((i : Nat) : Int) + 1 = ((i + 1 : Nat) : Int) from by omega,
-        unorm_of_range (by omega)
-          (by omega : ((i + 1 : Nat) : Int) < 2 ^ 64),
-        show ((seed : Nat) : Int) * ((i + 1 : Nat) : Int)
-          = ((seed * (i + 1) : Nat) : Int) from
-          (Int.natCast_mul seed (i + 1)).symm,
-        unorm_nat_mod (seed * (i + 1))] at h1
-      have h2 := hstep_Istore_setup n (seed : Int)
-        (isFamily i seed ++ List.replicate (n - i) 0) i
-        (((seed * (i + 1)) % 2 ^ 64 : Nat) : Int) hlt
-        (by rw [List.length_append, isFamily_length, List.length_replicate]
-            omega)
-        (isFamilyZ_range (by omega))
-        ⟨by omega, by
-          have := Nat.mod_lt (seed * (i + 1)) (y := 2 ^ 64) (by omega)
-          omega⟩
-        ((i : Nat) : Int) ch
-      rw [isFamily_set hlt] at h2
-      have h3 := hsegISU_d1_raw n (seed : Int) ((i : Nat) : Int)
-        (isFamily (i + 1) seed ++ List.replicate (n - (i + 1)) 0) ch
-      rw [show ((i : Nat) : Int) + 1 = ((i + 1 : Nat) : Int) from by omega,
-        unorm_of_range (by omega)
-          (by omega : ((i + 1 : Nat) : Int) < 2 ^ 64),
-        unorm_of_range (by omega)
-          (by omega : ((i + 1 : Nat) : Int) < 2 ^ 64)] at h3
-      have hrec := ih (n - (i + 1)) (by omega) (i + 1) rfl (by omega) ch
-      have hc := stepFnIter_chain (stepFnIter_chain (stepFnIter_chain h1 h2)
-        h3) hrec
-      rw [show 22 + 1 + 34 + 57 * (n - (i + 1)) = 57 * (n - i) from by
-        omega] at hc
-      exact hc
-    · have hEq : i = n := by omega
-      subst hEq
-      simp only [Nat.sub_self, Nat.mul_zero, List.replicate_zero,
-        List.append_nil]
-      rfl
+      exact hIsu_iter n seed j hn hj ch')
+    i hin ch
+  simpa using hgen
 
 
 end GoLean.Examples.InsertionSort
