@@ -1,0 +1,2 @@
+const tiny != 1.0 (exact): true
+float64(tiny) == 1.0: true

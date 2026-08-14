@@ -1,0 +1,6 @@
+== frontend on 1<<500 program ==
+exit: 0
+== frontend on 1<<512 program ==
+nativefrontend: type-check: .tmp/r14fe/main.go:3:13: constant shift overflow
+exit status 1
+exit: 1

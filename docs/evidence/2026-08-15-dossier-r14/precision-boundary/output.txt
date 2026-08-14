@@ -1,0 +1,7 @@
+== 1<<511 (in-program) ==
+1
+== 1<<512 / multiplication to 2000 bits (rejections, verbatim) ==
+# command-line-arguments
+.tmp/r14b/s.go:3:13: constant shift overflow
+# command-line-arguments
+.tmp/r14b/m.go:4:19: constant multiplication overflow

@@ -1,0 +1,3 @@
+# command-line-arguments
+docs/evidence/2026-08-15-dossier-r14/precision-5000/main.go:5:17: invalid operation: invalid shift count 5000 (untyped int constant)
+docs/evidence/2026-08-15-dossier-r14/precision-5000/main.go:5:31: invalid operation: invalid shift count 4990 (untyped int constant)
