@@ -1,0 +1,3 @@
+equal-key inversions after sort.Slice: 30
+stable? false
+SliceStable inversions: 0
