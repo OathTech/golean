@@ -1,0 +1,1 @@
+recovered: interface conversion: main.T is not main.I: missing method Alpha
