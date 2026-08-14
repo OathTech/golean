@@ -1,6 +1,12 @@
 import Lean
 import GoLeanProofs
 import GoLean
+import Audit.Reverse
+import Audit.Gcd
+import Audit.MinMax
+import Audit.InsertionSort
+import Audit.BinSearch
+import Audit.WordCount
 
 /-!
 # In-build epistemic gate for the Iris proof layer
@@ -1767,41 +1773,21 @@ example := @GoLean.Iris.wp_swap_witness
 /-- info: 'GoLean.Iris.wp_swap_witness' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Iris.wp_swap_witness
 
-/-! ## The reverse exemplar (slice 2b, 2026-08-13)
+/-! ## Per-example axiom gates — sharded (slice 0 lever 3, 2026-08-14)
 
-`✓` **`reverse_ok` — the §9e memory-input headline, completion split
-CLOSED** (`Examples/Reverse.lean` over the pinned `reverseLowered`;
-design note §9e + the executable frame theorem). For any `[]uint64`
-input list, at ANY placement (`base`), beside ANY disjoint frame:
-execution completes normally past one fuel bound at every choice
-stream, the backing cell holds the reversal, and every frame cell is
-preserved verbatim. Statement deltas vs the §9e draft, recorded in the
-module: `hlen : xs.length < 2^63` added (with completion IN the
-statement the draft is false past Go's `int` domain — the driver's
-bounds check panics); the ∀-placement is realized by the
-input-RELOCATING renaming `relocShift` through the frame theorem's
-generalized `ShiftSpec` (build-handoff §3 finding 1's payoff,
-consumed). Proof route (recorded): direct machine-step segments +
-strong induction on the two-pointer measure — one induction delivers
-value AND completion; the Iris WP slice laws are witnessed separately
-(block above) and deliberately not consumed here. Scope honesty:
-usability evidence per the charter's two-questions separation. -/
--- HARNESS RESTATEMENT (form note §11): `reverse_ok` is now the harness
--- headline (reverse_harness: setup family s[i] = seed + i wrapping;
--- Go-side element-wise reversal check → verdict 1; input-family
--- honesty recorded). The memory-quantified ∀xs form above is KEPT
--- proof-side as `reverse_framed` (renamed; genuinely stronger on the
--- input quantifier — which is why it stays).
-example := @GoLean.Examples.Reverse.reverse_ok
-example := @GoLean.Examples.Reverse.reverse_framed
-example := @GoLean.Examples.Reverse.revFamily
-example := @GoLean.Examples.Reverse.reverseHarnessFunc
-example := @GoLean.Examples.Reverse.reverse_readout
-/-- info: 'GoLean.Examples.Reverse.reverse_ok' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs in #print axioms GoLean.Examples.Reverse.reverse_ok
-/-- info: 'GoLean.Examples.Reverse.reverse_framed' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs in #print axioms GoLean.Examples.Reverse.reverse_framed
-
+The per-example `example :=` witness references and
+`#guard_msgs #print axioms` pins live in `proofs/Audit/<Example>.lean`,
+imported at the top of this file and moved there VERBATIM. Each shard
+imports only its own example module (the `deps/brick-wp` per-file
+dependency shape), so one example's change re-checks one shard instead
+of every pin in the tree. The exhaustive sweep at the top of THIS file
+is unaffected: it walks the whole environment of the audited build, and
+the shards are in it by import. `scripts/ci`'s proofs-file
+audit-coverage step fails closed if a shard ever falls out of the
+closure. Shards: Reverse, Gcd, MinMax, InsertionSort, BinSearch,
+WordCount. Fib's references stay in the exemplar section above — that
+section pins the WP-law kit, not the example.
+-/
 /-! ## The harness-entry glue (form note §11; FuelMeasure)
 
 `✓` fuel monotonicity of the native entry + the D1 readout bridge for
@@ -1815,274 +1801,6 @@ example := @GoLean.Surface.runFunctionWithContextM_mono
 example := @GoLean.Surface.harness_readout_of_total
 /-- info: 'GoLean.Surface.harness_readout_of_total' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Surface.harness_readout_of_total
-
-/-! ## The gcd example (scale-out slice 2c, 2026-08-13)
-
-`✓` **`gcd_ok` — framed TOTAL, full uint64 × uint64 domain, EXACT
-value** (`Examples/Gcd.lean` over the pinned `gcdLowered`): for every
-`(a, b)`, beside ANY disjoint frame, execution completes normally past
-one fuel bound at every choice stream, the result cell holds exactly
-`Nat.gcd a b`, and every frame cell is preserved verbatim. The fib
-bounded/wrapped pair COLLAPSES here — `a % b` and `Nat.gcd` cannot
-wrap — recorded in the module docstring (FD-E3: no wrap exists to
-state). Route (recorded): direct machine-step segments, one strong
-induction on the `b`-value (the §5c non-unit ≤-decrease realized
-directly; the `%` divide-by-zero branch discharged by the private
-executable fact `applyStrictOp_mod_u64`). `gcd_readout` is the D1
-run-conditioned twin, derived via `normal_readout_of_total` — the new
-shared bridge (this commit; gcd_readout is its same-commit discharge
-witness): a total headline already determines every normal completion
-(`execStmt` is a function; success is fuel-monotone with the same
-result). Scope honesty: usability evidence per the charter's
-two-questions separation. -/
-example := @GoLean.Surface.normal_readout_of_total
--- HARNESS RESTATEMENT (form note §11, 2026-08-13): `gcd_ok` is now the
--- harness headline over `runFunctionWithContextM` (three-phase
--- gcd_harness; full uint64² domain, exact Nat.gcd, returned data);
--- the memory-quantified forms are KEPT proof-side as `gcd_framed` /
--- `gcd_framed_readout` (renamed, ruling (a)).
-example := @GoLean.Examples.Gcd.gcd_ok
-example := @GoLean.Examples.Gcd.gcd_readout
-example := @GoLean.Examples.Gcd.gcd_framed
-example := @GoLean.Examples.Gcd.gcd_framed_readout
-/-- info: 'GoLean.Examples.Gcd.gcd_ok' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs in #print axioms GoLean.Examples.Gcd.gcd_ok
-/-- info: 'GoLean.Examples.Gcd.gcd_framed' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs in #print axioms GoLean.Examples.Gcd.gcd_framed
-
-/-! ## The min/max example (scale-out slice 2c, 2026-08-13)
-
-`✓` **`minmax_ok` — the §9 memory-quantified headline, reverse shape,
-read-only input** (`Examples/MinMax.lean` over the pinned
-`minMaxLowered`): for any NONEMPTY `[]uint64` input list, at ANY
-placement (`base ∉ {0, 1}` — the harness result cells sit there),
-beside ANY disjoint frame: execution completes normally past one fuel
-bound at every choice stream, the result cells hold exactly
-`minSpec xs` / `maxSpec xs`, the input's backing cell is UNCHANGED
-(the read-only story pinned IN the statement — total-heap
-preservation), and every frame cell is preserved verbatim. `hne` is
-Go's own boundary — the empty slice PANICS at `s[0]` (corpus row
-`examples/minmax/empty-panics` pins it against `go run`);
-`hlen : xs.length < 2^63` is the reverse precedent. Route (recorded):
-direct machine-step segments + ONE strong induction on `len − m`
-carrying value and completion; frame transfer through the
-input-relocating renaming with cells 0/1 ρ-fixed. D1 twin:
-`minmax_readout` via `normal_readout_of_total`. -/
--- HARNESS RESTATEMENT (form note §11): `minmax_ok` is now the harness
--- headline (minmax_harness: setup family s[i] = seed + i, returned
--- min/max pair = minSpec/maxSpec of `mmFamily n seed` — the recorded
--- input-family honesty vs the designed-not-built ∀xs input pick);
--- memory-quantified forms kept proof-side as `minmax_framed` /
--- `minmax_framed_readout`.
-example := @GoLean.Examples.MinMax.minmax_ok
-example := @GoLean.Examples.MinMax.minmax_readout
-example := @GoLean.Examples.MinMax.minmax_framed
-example := @GoLean.Examples.MinMax.minmax_framed_readout
-/-- info: 'GoLean.Examples.MinMax.minmax_ok' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs in #print axioms GoLean.Examples.MinMax.minmax_ok
-/-- info: 'GoLean.Examples.MinMax.minmax_framed' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs in #print axioms GoLean.Examples.MinMax.minmax_framed
-
-/-! ## The insertion-sort example (scale-out slice 2c, 2026-08-13)
-
-HARNESS STATUS (§11): **GAP CLOSED 2026-08-13** — the recorded gap
-(subject-phase port + the Go-side test-phase inductions: sortedness
-scan, rebuild, the O(n²) count loops with a second frame-rebase layer)
-is now proven, so `isort_ok` IS the §11 harness headline over
-`runFunctionWithContextM`, exactly as the never-a-weakened-statement
-rule required. The memory-quantified pair is renamed
-`isort_framed`/`isort_framed_readout` and kept green as the proof-side
-supporting layer (the gcd/minmax/binsearch/reverse `_framed`
-precedent) — it remains the STRONGER input claim (∀xs over arbitrary
-slice contents vs the harness's scalar-parameterized family), which is
-the recorded input-family honesty of the harness form.
-
-`✓` **`isort_ok` — the nested-loop HARNESS headline** (§11 form,
-`Examples/InsertionSort.lean` over the pinned `isortLowered`): for
-every `n < 2^63` and every `seed < 2^64`, the three-phase Go harness
-`isort_harness(n, seed)` — observed ONLY through the machine's native
-function entry, empty-heap state, both arguments at the call boundary,
-no Lean-side heap readback anywhere in the statement — completes
-normally past `N = (92·n+160)·n + (110·n+220)·n + 285·n + 505`
-(quadratic: the count loops are O(n²)) at EVERY nondeterminism-choice
-stream and RETURNS THE VERDICT 1. The verdict is computed IN GO inside
-the verified footprint: setup materializes the wrapped multiplicative
-family `seed·(i+1) mod 2^64` (duplicates and non-monotone orders —
-exactly the interesting sort inputs; `seed = 0` is the all-equal
-case, an oracle row), `insertionSort` runs, then the test phase checks
-sortedness pairwise AND permutation by the count-based check against
-the rebuilt family. Route findings (recorded): the scan/rebuild/count
-remainder is proven as ONE canonical run from the post-subject 11-cell
-state and transferred to the true subject-garbage placement in a
-SINGLE frame-theorem application — that is what keeps those segments
-address-concrete despite sitting behind n-dependent garbage; the
-predicted second frame-rebase layer (threshold 21, 4 cells retired per
-pass) is exactly what the count loops needed. D1 twin: `isort_readout`
-via `harness_readout_of_total`. Grounding: corpus rows
-`examples/isort/harness-five` (5,37), `harness-dups` (6,0),
-`harness-empty` (0,5), differentially green against `go run`.
-
-`✓` **`isort_framed` — the nested-loop memory-input form** (proof-side
-supporting layer per §11)
-(`Examples/InsertionSort.lean` over the pinned `isortLowered`). For
-any `[]uint64` input list, at ANY placement, beside ANY disjoint
-frame: execution completes normally past one fuel bound at every
-choice stream, the backing cell holds `sortSpec xs` — a SORTED
-PERMUTATION (`sortSpec_sorted` / `sortSpec_count` /
-`sortSpec_length`, same module; `Sorted` is the shared
-`SliceMem.Sorted` vocabulary, this commit its first committed
-consumer) — and every frame cell is preserved verbatim. Statement
-delta: `hlen : xs.length < 2^63` (Go's `int` domain, the reverse
-precedent). Proof route (recorded): TWO PLAIN NESTED strong
-inductions over direct machine-step segments — no fuel-measure-rule
-variant needed (that sugar gap is the WP route's only) — with the
-arc's principal nested-loop finding: the machine RE-ALLOCATES the
-inner `j`/`$forFirst` pair every outer pass, so each pass is proven
-once at a tight canonical placement and transferred through the
-executable frame theorem at the accumulated-garbage shift, retired
-cells REBASED into the frame between passes — the frame theorem is
-load-bearing INSIDE the canonical run, then consumed again at the
-input-relocating renaming for the ∀-placement form. Short-circuit
-`&&` is realized as the model's one-step false delivery: at `j = 0`
-the machine provably never reads `s[j-1]`. D1 twin:
-`isort_framed_readout` via `normal_readout_of_total`. -/
-example := @GoLean.SliceMem.Sorted
-example := @GoLean.Examples.InsertionSort.isort_ok
-example := @GoLean.Examples.InsertionSort.isort_readout
-example := @GoLean.Examples.InsertionSort.isort_framed
-example := @GoLean.Examples.InsertionSort.isort_framed_readout
-example := @GoLean.Examples.InsertionSort.isFamily
-example := @GoLean.Examples.InsertionSort.sortSpec_sorted
-example := @GoLean.Examples.InsertionSort.sortSpec_count
-example := @GoLean.Examples.InsertionSort.sortSpec_length
-/-- info: 'GoLean.Examples.InsertionSort.isort_ok' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs in #print axioms GoLean.Examples.InsertionSort.isort_ok
-/-- info: 'GoLean.Examples.InsertionSort.isort_readout' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs in #print axioms GoLean.Examples.InsertionSort.isort_readout
-/-- info: 'GoLean.Examples.InsertionSort.isort_framed' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs in #print axioms GoLean.Examples.InsertionSort.isort_framed
-/-- info: 'GoLean.Examples.InsertionSort.isort_framed_readout' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs in #print axioms GoLean.Examples.InsertionSort.isort_framed_readout
-/-- info: 'GoLean.Examples.InsertionSort.sortSpec_sorted' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in #print axioms GoLean.Examples.InsertionSort.sortSpec_sorted
-
-/-! ## The binsearch example (scale-out slice 2c, 2026-08-13)
-
-`✓` **`search_ok` — framed TOTAL first-occurrence binary search**
-(`Examples/BinSearch.lean` over the pinned `searchLowered`): for any
-SORTED `[]uint64` input below length `2^62`, any in-range target, at
-ANY placement (`base`), beside ANY disjoint frame: execution completes
-normally past one fuel bound at every choice stream, the result cell
-holds `findSpec xs t` (FIRST occurrence or -1 — the duplicates
-lower-bound behavior, oracle-pinned), the backing array is unchanged,
-and every frame cell is preserved verbatim. Statement deltas vs the
-design block: none. The `2^62` bound is the midpoint-overflow teaching
-point (`lo + hi` computed in Go `int` — the Bloch bug; the proof
-carries `lo + hi < 2^63` through every iteration; the exact unsafe
-boundary starts at `2^62 + 1`, recorded in the module). The post-loop
-`&&` is walked LAZILY: the `lo = len` exit segment provably never
-reads `s[lo]`. Route notes (recorded): per-iteration `mid :=`
-declarations allocate at symbolic addresses — loop states carry a
-garbage suffix with a freshness invariant; `seqCont`'s environment
-DecidableEq blocks `rfl` under `mid`-carrying scopes, discharged by
-the module's `stepFn_seqn_splice`. The element-range hypothesis `hxs`
-is deliberately unconsumed (the machine's comparisons are
-kind-agnostic; it stays as the honest uint64-domain restriction).
-`search_framed_readout` is the framed D1 twin. -/
--- HARNESS RESTATEMENT (form note §11): `search_ok` is now the harness
--- headline (search_harness: sorted family s[i] = seed + 2i under
--- hnowrap; raw target parameter; returned index = findSpec of the
--- family; the 2^62 Bloch bound carries over as the subject's own
--- domain; the past-the-end miss walks the short-circuit && lazily).
--- Memory-quantified forms kept proof-side as `search_framed`/
--- `search_framed_readout` (renamed).
-example := @GoLean.Examples.BinSearch.search_ok
-example := @GoLean.Examples.BinSearch.search_framed
-example := @GoLean.Examples.BinSearch.search_framed_readout
-example := @GoLean.Examples.BinSearch.bsFamily_sorted
-/-- info: 'GoLean.Examples.BinSearch.search_ok' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs in #print axioms GoLean.Examples.BinSearch.search_ok
-/-- info: 'GoLean.Examples.BinSearch.search_framed_readout' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs in #print axioms GoLean.Examples.BinSearch.search_framed_readout
-
-/-! ## The word-count example (scale-out slice 2c, 2026-08-13)
-
-`✓` **`maxCount_total_canonical` — the map example's canonical TOTAL,
-∀ arbitrary word lists, EVERY choice stream doing real work**
-(`Examples/WordCount.lean` over the pinned `wordCountLowered`): for
-any `[]uint64` list below Go's int length domain, execution of the
-canonical-placement driver completes normally past fuel `132 + 108·n`
-at EVERY nondeterminism-choice stream — the map range consumes one
-pick per iteration, so the ∀ch quantifier is doing genuine work here
-(the §10b teaching point: the spec `maxMultiplicity` is
-order-independent BY NECESSITY; an order-dependent claim would be
-unprovable against the enveloped iteration) — with the max
-multiplicity in the result cell and the input backing unchanged.
-Proof: the §10 design executed — countsList assoc-invariant counting
-induction + the choice-pick strong induction (`Choices.consume`
-destructured, erase-and-max-fold invariant), both halves in the
-symbolic-address regime (finding 12). `wordcount_empty_ok` is the §11
-HARNESS form at the zero-parameter degenerate (runFunctionWithContextM
-of `maxCountEmpty`, `[propext, Quot.sound]` — the Classical.choice-free
-pattern again).
-
-`✓` **G1 CLOSED (consolidation slice, 2026-08-13/14) —
-`wordcount_ok`, the parameterized §11 harness headline over
-`wordcount_harness(n, seed)`.** For every `n < 2^63` and EVERY uint64
-`seed` (the refuted seed-wrap caveat — no collision hypothesis), past
-fuel `229 + 165·n`, at EVERY nondeterminism-choice stream (the map
-range consumes one pick per iteration — the ∀ch quantifier is doing
-real work), the harness run over `runFunctionWithContextM` returns
-EXACTLY `⌈n/3⌉ = (n+2)/3` — the closed form `wcFamily_maxMult` proves
-for the setup family `w[i] = seed + i%3`. `wordcount_readout` is the
-derived D1 twin (`harness_readout_of_total`). The former blocker — the
-2026-08-13 elaborator isDefEq/whnf storm on the harness composition
-proofs — was DIAGNOSED (postponed-elaboration metas inside big state
-arguments defeat structural unification; the delta fallback compares
-`Heap.lookup` over the concrete front at a symbolic address,
-exponential in front length: 2^9 canonical vs 2^16 harness; record:
-`docs/2026-08-13_consolidation-slice.md` §1) and REMOVED structurally:
-the counting and range compositions are stated ONCE over an abstract
-state family (`wcIter_generic`/`wcLoop_generic`/`wcRange_generic`)
-with per-segment transition facts as hypotheses whose types pin every
-intermediate state; both the canonical and harness placements are
-instantiations. Statement closure: interpreter/native-entry vocabulary
-(`runFunctionWithContextM`, `Choices`, `Result`) + the pinned
-`wordcountHarnessFunc` (`rfl`-linked to the lowering) + `Nat`/`Int`
-arithmetic — no heap vocabulary, no Iris, no Frame names; deletion-test
-clean by construction (the statement elaborates from
-`WordCountProgram` + `FuelMeasure` alone).
-
-**SEED-WRAP CAVEAT REFUTED (correction of this file's own earlier
-text).** The previous record claimed the `i%3` family "collides at
-`seed ≥ 2^64 − 2`" and that G1 would need `hseed : seed < 2^64 − 2`.
-That is WRONG: family values are `(seed + r) mod 2^64` for
-`r ∈ {0,1,2}`, equal only when `r ≡ r' (mod 2^64)` — impossible for
-distinct `r, r' ≤ 2`. No collision exists at ANY seed; the wrap belongs
-in the family definition, and the returned max count is `(n+2)/3`
-UNCONDITIONALLY. Now a theorem (`wcFamily_maxMult`, no seed hypothesis
-at all) — this is where the no-collision analysis is actually
-consumed — and independently cross-checked against `go run` at seeds
-including `2^64−3/−2/−1`. -/
-example := @GoLean.Examples.WordCount.multiplicity
-example := @GoLean.Examples.WordCount.maxMultiplicity
-example := @GoLean.Examples.WordCount.wcFamily
-example := @GoLean.Examples.WordCount.wcFamily_maxMult
-example := @GoLean.Examples.WordCount.wordcountHarnessFunc
-example := @GoLean.Examples.WordCount.maxCount_total_canonical
-example := @GoLean.Examples.WordCount.wordcount_empty_ok
-example := @GoLean.Examples.WordCount.wordcount_ok
-example := @GoLean.Examples.WordCount.wordcount_readout
-/-- info: 'GoLean.Examples.WordCount.wcFamily_maxMult' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in #print axioms GoLean.Examples.WordCount.wcFamily_maxMult
-/-- info: 'GoLean.Examples.WordCount.maxCount_total_canonical' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs in #print axioms GoLean.Examples.WordCount.maxCount_total_canonical
-/-- info: 'GoLean.Examples.WordCount.wordcount_empty_ok' depends on axioms: [propext, Quot.sound] -/
-#guard_msgs in #print axioms GoLean.Examples.WordCount.wordcount_empty_ok
-/-- info: 'GoLean.Examples.WordCount.wordcount_ok' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs in #print axioms GoLean.Examples.WordCount.wordcount_ok
-/-- info: 'GoLean.Examples.WordCount.wordcount_readout' depends on axioms: [propext, Classical.choice, Quot.sound] -/
-#guard_msgs in #print axioms GoLean.Examples.WordCount.wordcount_readout
 
 /-! ## The harness lowering pins (audit fix round, 2026-08-14)
 
