@@ -841,25 +841,35 @@ theorem su_loopR (σ : ExecState) (n seed : Nat) (hn : n < 2 ^ 63) :
         = .ok (cpHeadCfgR,
             rSt σ (rHeapCp (n : Int) (seed : Int) n (mmFamily n seed) zeros8
               ((n : Nat) : Int) 0 true) 13, ch) := by
-  intro μ
-  induction μ using Nat.strongRecOn with
-  | _ μ ih =>
-    intro m hm ch
-    rcases Nat.lt_or_ge m n with hlt | hge
-    · rw [show (decide (((m : Nat) : Int) < (n : Int))) = true from
-        decide_eq_true (by exact_mod_cast hlt)]
-      obtain ⟨k, hk, hrun⟩ := ih (μ - 1) (by omega) (m + 1) (by omega) ch
-      exact ⟨53 + k, by omega,
-        stepFnIter_chain (su_iterR σ n seed m hn hlt ch) hrun⟩
-    · have hmn : m = n := by omega
-      subst hmn
-      rw [show (decide (((m : Nat) : Int) < (m : Int))) = false from
-        decide_eq_false (by omega)]
-      have hX := su_X_rawR σ (m : Int) (seed : Int) m (setupList m seed m)
-        ((m : Nat) : Int) ch
-      refine ⟨39, by omega, ?_⟩
-      rw [← setupList_full (n := m) (seed := seed)]
-      exact hX
+  -- The P5 iterate-then-exit schema (`stepFnIter_iterate_exit`) at
+  -- `su_iterR` + the exit segment; the `strongRecOn` boilerplate
+  -- deleted (G0 item 3a P6 rollback). Statement unchanged.
+  intro μ m hm ch
+  have hexit : ∀ ch' : Choices, stepFnIter 39
+      (rSt σ (rHeapSu (n : Int) (seed : Int) n (setupList n seed n)
+        ((n : Nat) : Int) false) 10)
+      (.retV (.bool (decide (((n : Nat) : Int) < (n : Int)))) suCmpKR) ch'
+      = .ok (cpHeadCfgR,
+          rSt σ (rHeapCp (n : Int) (seed : Int) n (mmFamily n seed) zeros8
+            ((n : Nat) : Int) 0 true) 13, ch') := by
+    intro ch'
+    rw [show (decide (((n : Nat) : Int) < (n : Int))) = false from
+      decide_eq_false (by omega)]
+    have hX := su_X_rawR σ (n : Int) (seed : Int) n (setupList n seed n)
+      ((n : Nat) : Int) ch'
+    rw [← setupList_full (n := n) (seed := seed)]
+    exact hX
+  refine ⟨53 * (n - m) + 39, by omega, ?_⟩
+  exact stepFnIter_iterate_exit (c := 53) (e := 39) (n := n)
+    (T := fun j => rSt σ (rHeapSu (n : Int) (seed : Int) n
+      (setupList n seed j) ((j : Nat) : Int) false) 10)
+    (C := fun j => .retV (.bool (decide (((j : Nat) : Int) < (n : Int))))
+      suCmpKR)
+    (fun j hj ch'' => by
+      rw [show (decide (((j : Nat) : Int) < (n : Int))) = true from
+        decide_eq_true (by exact_mod_cast hj)]
+      exact su_iterR σ n seed j hn hj ch'')
+    hexit m (by omega) ch
 
 /-! ## The copy loop, cleaned + its induction
 

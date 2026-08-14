@@ -881,31 +881,40 @@ theorem su_loopV (σ : ExecState) (n seed : Nat) (hn : n < 2 ^ 63) :
         = .ok (cpHeadCfgV,
             vSt σ (vHeapCp n seed ((n : Nat) : Int) (revFamily n seed)
               (List.replicate n 0) 0 true) 13, ch) := by
-  intro μ
-  induction μ using Nat.strongRecOn with
-  | _ μ ih =>
-    intro m hm ch
-    rcases Nat.lt_or_ge m n with hlt | hge
-    · rw [show (decide (((m : Nat) : Int) < (n : Int))) = true from
-        decide_eq_true (by exact_mod_cast hlt)]
-      obtain ⟨k, hk, hrun⟩ := ih (μ - 1) (by omega) (m + 1) (by omega) ch
-      exact ⟨53 + k, by omega,
-        stepFnIter_chain (su_iterV σ n seed m (by omega) hlt ch) hrun⟩
-    · have hmn : m = n := by omega
-      subst hmn
-      rw [show (decide (((m : Nat) : Int) < (m : Int))) = false from
-        decide_eq_false (by omega)]
-      have hX := su_X_rawV σ m seed (suList m seed m) ((m : Nat) : Int) ch
-      rw [suList_full] at hX
-      have hmk := stepFnIter_one
-        (stepFn_makeSliceV (env := [c6ScopeV, baseEnvV])
-          (k := .seq [vS5, vS6, vS7, vS8, vS9, vS10] [c6ScopeV, baseEnvV]
-            (.frame [] [] [] [] .stop))
-          (vH_makeT_apply σ m seed (revFamily m seed) ((m : Nat) : Int) ch))
-      have hE := cp_E_rawV σ m seed (revFamily m seed) ((m : Nat) : Int) ch
-      refine ⟨15 + 1 + 42, by omega, ?_⟩
-      rw [suList_full]
-      exact stepFnIter_chain (stepFnIter_chain hX hmk) hE
+  -- The P5 iterate-then-exit schema (`stepFnIter_iterate_exit`) at
+  -- `su_iterV` + the exit tower; the `strongRecOn` boilerplate deleted
+  -- (G0 item 3a P6 rollback). Statement unchanged.
+  intro μ m hm ch
+  have hexit : ∀ ch' : Choices, stepFnIter 58
+      (vSt σ (vHeapSu n seed (suList n seed n) ((n : Nat) : Int) false) 8)
+      (.retV (.bool (decide (((n : Nat) : Int) < (n : Int)))) suCmpContV) ch'
+      = .ok (cpHeadCfgV,
+          vSt σ (vHeapCp n seed ((n : Nat) : Int) (revFamily n seed)
+            (List.replicate n 0) 0 true) 13, ch') := by
+    intro ch'
+    rw [show (decide (((n : Nat) : Int) < (n : Int))) = false from
+      decide_eq_false (by omega)]
+    have hX := su_X_rawV σ n seed (suList n seed n) ((n : Nat) : Int) ch'
+    rw [suList_full] at hX
+    have hmk := stepFnIter_one
+      (stepFn_makeSliceV (env := [c6ScopeV, baseEnvV])
+        (k := .seq [vS5, vS6, vS7, vS8, vS9, vS10] [c6ScopeV, baseEnvV]
+          (.frame [] [] [] [] .stop))
+        (vH_makeT_apply σ n seed (revFamily n seed) ((n : Nat) : Int) ch'))
+    have hE := cp_E_rawV σ n seed (revFamily n seed) ((n : Nat) : Int) ch'
+    rw [suList_full]
+    exact stepFnIter_chain (stepFnIter_chain hX hmk) hE
+  refine ⟨53 * (n - m) + 58, by omega, ?_⟩
+  exact stepFnIter_iterate_exit (c := 53) (e := 58) (n := n)
+    (T := fun j => vSt σ (vHeapSu n seed (suList n seed j)
+      ((j : Nat) : Int) false) 8)
+    (C := fun j => .retV (.bool (decide (((j : Nat) : Int) < (n : Int))))
+      suCmpContV)
+    (fun j hj ch'' => by
+      rw [show (decide (((j : Nat) : Int) < (n : Int))) = true from
+        decide_eq_true (by exact_mod_cast hj)]
+      exact su_iterV σ n seed j (by omega) hj ch'')
+    hexit m (by omega) ch
 
 /-! ## The copy loop, cleaned + its induction
 

@@ -1981,11 +1981,49 @@ private theorem hsegSU_d1_raw (n : Nat) (sv tv iv : Int) (l : List Int)
             false, ch) := by
   with_unfolding_all rfl
 
-/-- **The setup loop**, by induction on `n - i`: from the exit-test
-delivery at counter `i`, backing `bsFamily i seed ++ zeros`, exactly
-`57·(n-i)` steps reach the exit-test delivery at counter `n` with the
-family fully materialized. The `hnowrap` hypothesis is what collapses
-every store's uint64 normalization onto the mathematical family. -/
+/-- One setup iteration from the exit-test's true delivery at `i`
+(body → element store → head → `i++` → the next test). 57 steps. -/
+private theorem hsu_iter (n seed : Nat) (tv : Int) (i : Nat)
+    (_hn : n < 2 ^ 62) (hnw : seed + 2 * n < 2 ^ 64) (hi : i < n)
+    (ch : Choices) :
+    stepFnIter 57
+      (sSU n (seed : Int) tv (bsFamily i seed ++ List.replicate (n - i) 0)
+        ((i : Nat) : Int) false)
+      (.retV (.bool true) suCmpK) ch
+      = .ok (.retV (.bool (decide
+            (((i + 1 : Nat) : Int) < ((n : Nat) : Int)))) suCmpK,
+          sSU n (seed : Int) tv
+            (bsFamily (i + 1) seed ++ List.replicate (n - (i + 1)) 0)
+            ((i + 1 : Nat) : Int) false, ch) := by
+  have h1 := hsegSU_body_raw n (seed : Int) tv ((i : Nat) : Int)
+    (bsFamily i seed ++ List.replicate (n - i) 0) ch
+  -- clean the stored value: seed + 2*i, no wrap
+  have hmul : (2 : Int) * ((i : Nat) : Int) = ((2 * i : Nat) : Int) := by
+    omega
+  rw [hmul, unorm_of_range (by omega) (by omega : ((2 * i : Nat) : Int) < 2 ^ 64),
+    show ((seed : Nat) : Int) + ((2 * i : Nat) : Int)
+      = ((seed + 2 * i : Nat) : Int) from by omega,
+    unorm_of_range (by omega)
+      (by omega : ((seed + 2 * i : Nat) : Int) < 2 ^ 64)] at h1
+  have h2 := hstep_store_setup n (seed : Int) tv
+    (bsFamily i seed ++ List.replicate (n - i) 0) i
+    ((seed + 2 * i : Nat) : Int) hi
+    (by rw [List.length_append, bsFamily_length, List.length_replicate]
+        omega)
+    (bsFamilyZ_range hnw (by omega))
+    ⟨by omega, by omega⟩ ((i : Nat) : Int) ch
+  rw [bsFamily_set hi] at h2
+  have h3 := hsegSU_d1_raw n (seed : Int) tv ((i : Nat) : Int)
+    (bsFamily (i + 1) seed ++ List.replicate (n - (i + 1)) 0) ch
+  rw [show ((i : Nat) : Int) + 1 = ((i + 1 : Nat) : Int) from by omega,
+    unorm_of_range (by omega) (by omega : ((i + 1 : Nat) : Int) < 2 ^ 64),
+    unorm_of_range (by omega)
+      (by omega : ((i + 1 : Nat) : Int) < 2 ^ 64)] at h3
+  exact stepFnIter_chain (stepFnIter_chain h1 h2) h3
+
+/-- **The setup loop** — the P5 iteration schema (`stepFnIter_iterate`)
+at the composite above; the `strongRecOn` boilerplate deleted (G0 item
+3a P6 rollback). Statement unchanged. -/
 private theorem hsetup_loop (n seed : Nat) (tv : Int)
     (hn : n < 2 ^ 62) (hnw : seed + 2 * n < 2 ^ 64) :
     ∀ μ i, μ = n - i → i ≤ n → ∀ ch : Choices,
@@ -1998,50 +2036,18 @@ private theorem hsetup_loop (n seed : Nat) (tv : Int)
             suCmpK,
           sSU n (seed : Int) tv (bsFamily n seed) ((n : Nat) : Int) false,
           ch) := by
-  intro μ
-  induction μ using Nat.strongRecOn with
-  | _ μ ih =>
-    intro i hμ hin ch
-    rcases Nat.lt_or_ge i n with hlt | hge
-    · -- one more store
-      rw [show (decide (((i : Nat) : Int) < ((n : Nat) : Int))) = true from
+  intro _ i _ hin ch
+  have hgen := stepFnIter_iterate (c := 57) (n := n)
+    (T := fun j => sSU n (seed : Int) tv
+      (bsFamily j seed ++ List.replicate (n - j) 0) ((j : Nat) : Int) false)
+    (C := fun j => .retV (.bool (decide (((j : Nat) : Int)
+      < ((n : Nat) : Int)))) suCmpK)
+    (fun j hj ch' => by
+      rw [show (decide (((j : Nat) : Int) < ((n : Nat) : Int))) = true from
         decide_eq_true (by omega)]
-      have h1 := hsegSU_body_raw n (seed : Int) tv ((i : Nat) : Int)
-        (bsFamily i seed ++ List.replicate (n - i) 0) ch
-      -- clean the stored value: seed + 2*i, no wrap
-      have hmul : (2 : Int) * ((i : Nat) : Int) = ((2 * i : Nat) : Int) := by
-        omega
-      rw [hmul, unorm_of_range (by omega) (by omega : ((2 * i : Nat) : Int) < 2 ^ 64),
-        show ((seed : Nat) : Int) + ((2 * i : Nat) : Int)
-          = ((seed + 2 * i : Nat) : Int) from by omega,
-        unorm_of_range (by omega)
-          (by omega : ((seed + 2 * i : Nat) : Int) < 2 ^ 64)] at h1
-      have h2 := hstep_store_setup n (seed : Int) tv
-        (bsFamily i seed ++ List.replicate (n - i) 0) i
-        ((seed + 2 * i : Nat) : Int) hlt
-        (by rw [List.length_append, bsFamily_length, List.length_replicate]
-            omega)
-        (bsFamilyZ_range hnw (by omega))
-        ⟨by omega, by omega⟩ ((i : Nat) : Int) ch
-      rw [bsFamily_set hlt] at h2
-      have h3 := hsegSU_d1_raw n (seed : Int) tv ((i : Nat) : Int)
-        (bsFamily (i + 1) seed ++ List.replicate (n - (i + 1)) 0) ch
-      rw [show ((i : Nat) : Int) + 1 = ((i + 1 : Nat) : Int) from by omega,
-        unorm_of_range (by omega) (by omega : ((i + 1 : Nat) : Int) < 2 ^ 64),
-        unorm_of_range (by omega)
-          (by omega : ((i + 1 : Nat) : Int) < 2 ^ 64)] at h3
-      have hrec := ih (n - (i + 1)) (by omega) (i + 1) rfl (by omega) ch
-      have hc := stepFnIter_chain (stepFnIter_chain (stepFnIter_chain h1 h2)
-        h3) hrec
-      rw [show 22 + 1 + 34 + 57 * (n - (i + 1)) = 57 * (n - i) from by
-        omega] at hc
-      exact hc
-    · -- i = n: zero further steps
-      have hEq : i = n := by omega
-      subst hEq
-      simp only [Nat.sub_self, Nat.mul_zero, List.replicate_zero,
-        List.append_nil]
-      rfl
+      exact hsu_iter n seed tv j hn hnw hj ch')
+    i hin ch
+  simpa using hgen
 
 /-! ## The subject phase at the harness placement
 

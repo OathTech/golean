@@ -1745,37 +1745,45 @@ private theorem su_loop (n seed : Nat) (hn : n < 2 ^ 63)
         = .ok (revHHeadCfg,
             hrevState n seed ((n : Nat) : Int) (revFamily n seed) 0
               ((n : Int) - 1) true, ch) := by
-  intro μ
-  induction μ using Nat.strongRecOn with
-  | _ μ ih =>
-    intro m hm ch
-    rcases Nat.lt_or_ge m n with hlt | hge
-    · rw [show (decide (((m : Nat) : Int) < (n : Int))) = true from
-        decide_eq_true (by exact_mod_cast hlt)]
-      obtain ⟨k, hk, hrun⟩ := ih (μ - 1) (by omega) (m + 1) (by omega) ch
-      exact ⟨53 + k, by omega,
-        stepFnIter_chain (su_iter n seed hseed m (by omega) hlt ch) hrun⟩
-    · have hmn : m = n := by omega
-      subst hmn
-      rw [show (decide (((m : Nat) : Int) < (m : Int))) = false from
-        decide_eq_false (by omega)]
-      have hX := su_X_raw m seed (suList m seed m) ((m : Nat) : Int) ch
-      rw [suList_full] at hX
-      have happ : applyStrictOp
-          (σRevEntry m seed (revFamily m seed) ((m : Nat) : Int))
-          (.lengthOf (some (.slice (.int .uint64)))) [hSlice m]
-          = .ok (.int (m : Nat) .int,
-              σRevEntry m seed (revFamily m seed) ((m : Nat) : Int)) :=
-        applyStrictOp_len_slice (Nat.le_refl m)
-      have hlen := stepFnIter_one (ch := ch) (stepFn_strict_apply
-        (done := []) (env := revEnvMidH)
-        (k := .strictK .sub [] [.intLit 1 .int] revEnvMidH entryRhsKH) happ)
-      have hY := su_Y_raw m seed (revFamily m seed) ((m : Nat) : Int) ch
-      rw [inorm_of_range (v := (m : Int) - 1) (by omega) (by omega),
-        inorm_of_range (v := (m : Int) - 1) (by omega) (by omega)] at hY
-      refine ⟨30 + 1 + 22, by omega, ?_⟩
-      rw [suList_full]
-      exact stepFnIter_chain (stepFnIter_chain hX hlen) hY
+  -- The P5 iterate-then-exit schema (`stepFnIter_iterate_exit`) at
+  -- `su_iter` + the exit tower; the `strongRecOn` boilerplate deleted
+  -- (G0 item 3a P6 rollback). Statement unchanged.
+  intro μ m hm ch
+  have hexit : ∀ ch' : Choices, stepFnIter 53
+      (suState n seed (suList n seed n) ((n : Nat) : Int) false)
+      (.retV (.bool (decide (((n : Nat) : Int) < (n : Int)))) suCmpCont) ch'
+      = .ok (revHHeadCfg,
+          hrevState n seed ((n : Nat) : Int) (revFamily n seed) 0
+            ((n : Int) - 1) true, ch') := by
+    intro ch'
+    rw [show (decide (((n : Nat) : Int) < (n : Int))) = false from
+      decide_eq_false (by omega)]
+    have hX := su_X_raw n seed (suList n seed n) ((n : Nat) : Int) ch'
+    rw [suList_full] at hX
+    have happ : applyStrictOp
+        (σRevEntry n seed (revFamily n seed) ((n : Nat) : Int))
+        (.lengthOf (some (.slice (.int .uint64)))) [hSlice n]
+        = .ok (.int (n : Nat) .int,
+            σRevEntry n seed (revFamily n seed) ((n : Nat) : Int)) :=
+      applyStrictOp_len_slice (Nat.le_refl n)
+    have hlen := stepFnIter_one (ch := ch') (stepFn_strict_apply
+      (done := []) (env := revEnvMidH)
+      (k := .strictK .sub [] [.intLit 1 .int] revEnvMidH entryRhsKH) happ)
+    have hY := su_Y_raw n seed (revFamily n seed) ((n : Nat) : Int) ch'
+    rw [inorm_of_range (v := (n : Int) - 1) (by omega) (by omega),
+      inorm_of_range (v := (n : Int) - 1) (by omega) (by omega)] at hY
+    rw [suList_full]
+    exact stepFnIter_chain (stepFnIter_chain hX hlen) hY
+  refine ⟨53 * (n - m) + 53, by omega, ?_⟩
+  exact stepFnIter_iterate_exit (c := 53) (e := 53) (n := n)
+    (T := fun j => suState n seed (suList n seed j) ((j : Nat) : Int) false)
+    (C := fun j => .retV (.bool (decide (((j : Nat) : Int) < (n : Int))))
+      suCmpCont)
+    (fun j hj ch'' => by
+      rw [show (decide (((j : Nat) : Int) < (n : Int))) = true from
+        decide_eq_true (by exact_mod_cast hj)]
+      exact su_iter n seed hseed j (by omega) hj ch'')
+    hexit m (by omega) ch
 
 /-! ### The reverse loop: the two-pointer induction at the harness
 layout (the standalone module's `revSwap` machinery re-consumed) -/

@@ -1982,11 +1982,69 @@ private theorem mmh_exit_raw (nv sv : Int) (n : Nat) (l : List Int)
 
 /-! ### The setup-loop induction -/
 
-/-- **The setup loop**: from the exit-test delivery at counter `i` with
-the invariant list (family prefix + zeros), exactly `53·(n − i)` steps
-reach the final `false` delivery with the WHOLE family built. Plain
-induction on the remaining count; the element store is the one
-conditioned step per iteration. -/
+/-- One setup iteration from the exit-test's true delivery at `i`
+(body with the wrapped family value → element store → drain → `i++` →
+the next test). 53 steps. -/
+private theorem sh_iter (n seed i : Nat) (hn : n < 2 ^ 63) (hi : i < n)
+    (ch : Choices) :
+    stepFnIter 53
+      (shState (n : Int) (seed : Int) n (setupList n seed i)
+        ((i : Nat) : Int) false)
+      (.retV (.bool true) shCmpK) ch
+      = .ok (.retV (.bool (decide
+            (((i + 1 : Nat) : Int) < ((n : Nat) : Int)))) shCmpK,
+          shState (n : Int) (seed : Int) n (setupList n seed (i + 1))
+            ((i + 1 : Nat) : Int) false, ch) := by
+  -- the body, with the wrapped sum cleaned to the family value
+  have hB := sh_body_raw (n : Int) (seed : Int) n (setupList n seed i)
+    ((i : Nat) : Int) ch
+  rw [show IntKind.normalize .uint64 ((seed : Int) + ((i : Nat) : Int))
+      = (((seed + i) % 2 ^ 64 : Nat) : Int) from by
+    rw [show ((seed : Int) + ((i : Nat) : Int))
+        = (((seed + i : Nat)) : Int) from by omega]
+    exact unorm_nat_wrap _] at hB
+  -- the element store
+  have hw : (0 : Int) ≤ (((seed + i) % 2 ^ 64 : Nat) : Int)
+      ∧ (((seed + i) % 2 ^ 64 : Nat) : Int) < 2 ^ 64 := by
+    constructor
+    · omega
+    · exact_mod_cast Nat.mod_lt _ (by omega)
+  have hst := storeTarget_slice_u64
+    (σ := shState (n : Int) (seed : Int) n (setupList n seed i)
+      ((i : Nat) : Int) false)
+    (a := ⟨5⟩) (off := 0) (len := n) (cap := n) (i := i) (n := n)
+    (ik := .uint64) (l := setupList n seed i)
+    (w := (((seed + i) % 2 ^ 64 : Nat) : Int))
+    (lookup_shState _ _ _ _ _ _) (Nat.le_refl n) hi
+    (by rw [setupList_length (by omega)]; omega)
+    (setupList_length (by omega)) (setupList_range n seed i) hw
+  rw [Nat.zero_add] at hst
+  have hstore : storeTarget
+      (shState (n : Int) (seed : Int) n (setupList n seed i)
+        ((i : Nat) : Int) false)
+      (.chain (sliceH5 n) [.int ((i : Nat) : Int) .uint64] [.index])
+      (.int (((seed + i) % 2 ^ 64 : Nat) : Int) .uint64)
+      = .ok (shState (n : Int) (seed : Int) n (setupList n seed (i + 1))
+          ((i : Nat) : Int) false) := by
+    rw [← setupList_set hi]
+    exact hst
+  -- the drain and the next dispatch
+  have hD := sh_drain_raw (n : Int) (seed : Int) n
+    (setupList n seed (i + 1)) ((i : Nat) : Int) ch
+  have hDB := sh_dispB_raw (n : Int) (seed : Int) n
+    (setupList n seed (i + 1)) ((i : Nat) : Int) ch
+  rw [show ((i : Nat) : Int) + 1 = ((i + 1 : Nat) : Int) from by omega,
+    unorm_nat_of_lt (by omega : i + 1 < 2 ^ 64),
+    unorm_nat_of_lt (by omega : i + 1 < 2 ^ 64)] at hDB
+  exact stepFnIter_chain
+    (stepFnIter_chain
+      (stepFnIter_chain hB (stepFnIter_one (stepFn_store_step hstore)))
+      hD)
+    hDB
+
+/-- The setup loop — the P5 iteration schema (`stepFnIter_iterate`)
+at the composite above; the per-example induction deleted (G0 item 3a
+P6 rollback). Statement unchanged. -/
 private theorem sh_loop (n seed : Nat) (hn : n < 2 ^ 63) :
     ∀ μ i : Nat, i + μ = n → ∀ ch : Choices,
       stepFnIter (53 * μ)
@@ -1997,72 +2055,21 @@ private theorem sh_loop (n seed : Nat) (hn : n < 2 ^ 63) :
         = .ok (.retV (.bool false) shCmpK,
             shState (n : Int) (seed : Int) n (mmFamily n seed)
               ((n : Nat) : Int) false, ch) := by
-  intro μ
-  induction μ with
-  | zero =>
-      intro i hi ch
-      have heq : i = n := by omega
-      subst heq
-      rw [show (decide (((i : Nat) : Int) < ((i : Nat) : Int))) = false from
-        decide_eq_false (by omega), setupList_full]
-      rfl
-  | succ μ' ih =>
-      intro i hi ch
-      have hilt : i < n := by omega
-      rw [show (decide (((i : Nat) : Int) < ((n : Nat) : Int))) = true from
-        decide_eq_true (by exact_mod_cast hilt)]
-      -- the body, with the wrapped sum cleaned to the family value
-      have hB := sh_body_raw (n : Int) (seed : Int) n (setupList n seed i)
-        ((i : Nat) : Int) ch
-      rw [show IntKind.normalize .uint64 ((seed : Int) + ((i : Nat) : Int))
-          = (((seed + i) % 2 ^ 64 : Nat) : Int) from by
-        rw [show ((seed : Int) + ((i : Nat) : Int))
-            = (((seed + i : Nat)) : Int) from by omega]
-        exact unorm_nat_wrap _] at hB
-      -- the element store
-      have hw : (0 : Int) ≤ (((seed + i) % 2 ^ 64 : Nat) : Int)
-          ∧ (((seed + i) % 2 ^ 64 : Nat) : Int) < 2 ^ 64 := by
-        constructor
-        · omega
-        · exact_mod_cast Nat.mod_lt _ (by omega)
-      have hst := storeTarget_slice_u64
-        (σ := shState (n : Int) (seed : Int) n (setupList n seed i)
-          ((i : Nat) : Int) false)
-        (a := ⟨5⟩) (off := 0) (len := n) (cap := n) (i := i) (n := n)
-        (ik := .uint64) (l := setupList n seed i)
-        (w := (((seed + i) % 2 ^ 64 : Nat) : Int))
-        (lookup_shState _ _ _ _ _ _) (Nat.le_refl n) hilt
-        (by rw [setupList_length (by omega)]; omega)
-        (setupList_length (by omega)) (setupList_range n seed i) hw
-      rw [Nat.zero_add] at hst
-      have hstore : storeTarget
-          (shState (n : Int) (seed : Int) n (setupList n seed i)
-            ((i : Nat) : Int) false)
-          (.chain (sliceH5 n) [.int ((i : Nat) : Int) .uint64] [.index])
-          (.int (((seed + i) % 2 ^ 64 : Nat) : Int) .uint64)
-          = .ok (shState (n : Int) (seed : Int) n (setupList n seed (i + 1))
-              ((i : Nat) : Int) false) := by
-        rw [← setupList_set hilt]
-        exact hst
-      -- the drain and the next dispatch
-      have hD := sh_drain_raw (n : Int) (seed : Int) n
-        (setupList n seed (i + 1)) ((i : Nat) : Int) ch
-      have hDB := sh_dispB_raw (n : Int) (seed : Int) n
-        (setupList n seed (i + 1)) ((i : Nat) : Int) ch
-      rw [show ((i : Nat) : Int) + 1 = ((i + 1 : Nat) : Int) from by omega,
-        unorm_nat_of_lt (by omega : i + 1 < 2 ^ 64),
-        unorm_nat_of_lt (by omega : i + 1 < 2 ^ 64)] at hDB
-      -- the IH at i + 1
-      have hIH := ih (i + 1) (by omega) ch
-      have hchain := stepFnIter_chain
-        (stepFnIter_chain
-          (stepFnIter_chain
-            (stepFnIter_chain hB (stepFnIter_one (stepFn_store_step hstore)))
-            hD)
-          hDB)
-        hIH
-      rw [show 53 * (μ' + 1) = 18 + 1 + 5 + 29 + 53 * μ' from by omega]
-      exact hchain
+  intro μ i hi ch
+  rw [show μ = n - i from by omega]
+  have hgen := stepFnIter_iterate (c := 53) (n := n)
+    (T := fun j => shState (n : Int) (seed : Int) n (setupList n seed j)
+      ((j : Nat) : Int) false)
+    (C := fun j => .retV (.bool (decide (((j : Nat) : Int)
+      < ((n : Nat) : Int)))) shCmpK)
+    (fun j hj ch' => by
+      rw [show (decide (((j : Nat) : Int) < ((n : Nat) : Int))) = true from
+        decide_eq_true (by exact_mod_cast hj)]
+      exact sh_iter n seed j hn hj ch')
+    i (by omega) ch
+  rw [show (decide (((n : Nat) : Int) < ((n : Nat) : Int))) = false from
+    decide_eq_false (by omega), setupList_full] at hgen
+  exact hgen
 
 /-! ### The minMax loop induction (the framed layer's prefix-min/max
 strong induction, at the harness layout) -/
