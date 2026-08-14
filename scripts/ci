@@ -548,6 +548,23 @@ fi
 step "proofs build incl. Audit gate (axiom allowlist + non-vacuity)"
 if ( cd proofs && lake build 2>&1 | tail -4 ); then ok "proofs + Audit gate"; else bad "proofs + Audit gate"; fi
 
+# 3c. PROOF-COST TREND — REPORT-ONLY SPEEDBUMP (examples phase-2 slice 0,
+#     lever 6, 2026-08-14). Prints per-module wall/peak growth over +25% vs
+#     that module's own previous recording (artifacts/proof-costs.tsv, written
+#     by scripts/proof-costs; artifacts/ is gitignored, so this is a local
+#     trend line and never a tracked baseline). No record present is NOT an
+#     error — it prints a line saying so.
+#     DO NOT HARDEN: this step must never call bad(), never set fail, and
+#     never gain a threshold that blocks a landing. Proof cost is a budget
+#     question for a human; a legitimate cost increase (a new phase, a harder
+#     theorem) must not have to argue with a gate. Every other step here
+#     defends a claim that must be TRUE; this one makes a number VISIBLE.
+step "proof-cost trend (report-only speedbump — never blocks; scripts/proof-costs to record)"
+costout="$(./scripts/proof-costs --check 2>&1)"
+printf '%s\n' "$costout"
+ngrow="$(printf '%s\n' "$costout" | grep -c '^  note ' || true)"
+RESULTS+=("  note proof-cost trend: $ngrow module(s) over +25% vs their previous recording (report-only)")
+
 # 3v. Verdi compat gate (merge window 2026-08-10, verdi-p1 lane queue
 # item 1): the standalone compat/verdi package — the Verdi Raft spec
 # port + the differential harness's LEAN leg only. The Rocq extraction
