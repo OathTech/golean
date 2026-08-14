@@ -21,7 +21,7 @@ intended order, not a shortcut.
 |---|---|---|---|---|
 | reverse | `reverse_harness_v` | S1 copy-relational | `harness-v-five`, `harness-v-empty`, `harness-v-wrapping` | green |
 | minmax | `minmax_harness_r` | S3 relational | `harness-r-five`, `harness-r-one`, `harness-r-eight`, `harness-r-empty-panics` | green |
-| wordcount | — | S3 relational | — (REVERTED, see below) | — |
+| wordcount | `wordcount_harness_r` | S3 relational | `harness-r-seven`, `harness-r-eight`, `harness-r-empty` (re-landed by slice 1.5; was REVERTED, see below) | green |
 
 * Both new harnesses are **ghost rung 0**: ordinary Go. reverse's
   pre-copy `t` is a HISTORY GHOST materialized as real harness code
@@ -200,13 +200,19 @@ this class (next-heaviest module ≈ 2.0 GiB).
 | item | before | after |
 |---|---|---|
 | `EmptyRun` shard elaboration (proof-costs / `time -v`) | 76–82 s, **50.8–53.5 GiB** | 86 s, **1.9 GiB** (24G-capped) |
-| the same with `wordcount_harness_r` added | **~77 GiB** (breaks 64G cap) | see the re-landing row below |
+| the same with `wordcount_harness_r` added | **~77 GiB** (breaks 64G cap) | **1.94 GiB** (whole WordCount subtree + Audit, 24G-capped, 2:12) |
+| full `scripts/ci` | needs 64G (one declaration) | **PASS at `GOLEAN_MEM_MAX=48G`** — slice-0 lever-1 acceptance met |
 | `wordcount_empty_ok` axioms | `[propext, Quot.sound]` | identical (Audit `#guard_msgs` pin, unchanged, green) |
 
-**The real test — `wordcount_harness_r` re-landed:** the corpus
-addition that broke the build now ships (details + gate state recorded
-in the re-landing commit); growth in the pinned program no longer
-moves `EmptyRun`.
+**The real test — `wordcount_harness_r` re-landed:** the exact corpus
+addition that broke the build now ships (harness text as recorded in
+scoping §4.7; rows `examples/wordcount/harness-r-{seven,eight,empty}`,
+all differentially green; golden + `WordCountProgram.lean` re-pins
+purely additive, both `check-golden` links green; tracked baseline
+re-pinned from a full 1560-case run — drift exactly the 3 new ids).
+Growth in the pinned program no longer moves `EmptyRun`: the program
+constant is only unfolded at the `enterFrame`/pin `rfl` discharges,
+never inside the step reduction.
 
 ## Handoff: the proof designs, ready to build
 

@@ -7,3 +7,6 @@ one	maxCountOne	42	ok	-	slices,maps,range,loops,if
 empty	maxCountEmpty	-	ok	-	slices,maps,range,loops,if
 harness-seven	wordcount_harness	7,50	ok	-	slices,maps,range,loops,if
 harness-empty	wordcount_harness	0,9	ok	-	slices,maps,range,loops,if
+harness-r-seven	wordcount_harness_r	7,50	ok	-	slices,maps,range,loops,if,arrays
+harness-r-eight	wordcount_harness_r	8,3	ok	-	slices,maps,range,loops,if,arrays
+harness-r-empty	wordcount_harness_r	0,9	ok	-	slices,maps,range,loops,if,arrays

@@ -1,5 +1,20 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-14  commit: examples phase-2 slice 1 (spec-style swap harnesses)
+# recorded: 2026-08-14  commit: examples phase-2 slice 1.5 (wordcount_harness_r re-landed)
+#   re-pin reason: 3 NEW explained rows — slice 1.5 retired the
+#   `wc_empty_run` long-concrete-run cost blocker (the proof is now
+#   program-generic; 50.8 GiB -> 1.9 GiB, statement byte-identical), so
+#   the `wordcount_harness_r` S3 relational harness REVERTED in slice 1
+#   is re-landed exactly as recorded (scoping study §4.7; slice record
+#   §"Slice 1.5"): examples/wordcount/harness-r-{seven,eight,empty}.
+#   All 3 PASS. No other id moved (PASS/FAIL sets and stages unchanged
+#   from the slice-1 record; drift check: exactly the 3 new ids).
+#   frontend: native  oracle: go run (strict lane) / go-run membership in the
+#   machine-enumerated observation set, sampled plain AND under -race
+#   (membership lane; go1.26.5) / schedule-tree singleton certification +
+#   strict go-run equality (confluent lane) / every-enumerated-path-refuses
+#   + go run -race red (racy lane; never combined with deadlock)
+# manifest_cases: 1560  pass: 1441  fail: 119
+# previous record: 2026-08-14  commit: examples phase-2 slice 1 (spec-style swap harnesses)
 #   re-pin reason: 7 NEW explained rows — the slice-1 spec-style swaps added
 #   a second harness to two example programs (scoping study §9's
 #   recommendations, ghost rung 0 / real Go):
@@ -15,20 +30,6 @@
 #   written and green but REVERTED — see
 #   `docs/2026-08-14_phase2-slice1-spec-swaps.md` for the measured
 #   `wc_empty_run` cost blocker.
-# previous record: 2026-08-13  commit: verified-examples slice 2c (harness rows, harness ruling)
-#   re-pin reason: 18 NEW explained rows — the harness ruling (form note
-#   §11) added a three-phase harness function to each of the seven
-#   examples' programs; rows instantiate each harness at concrete args
-#   (examples/{fib,gcd,reverse,minmax,binsearch,isort,wordcount}/harness-*,
-#   incl. minmax's empty-slice PANIC harness row and reverse's
-#   wrap-boundary family row). All 18 PASS. No other id moved (PASS/FAIL
-#   sets and stages unchanged from the earlier 2026-08-13 record).
-#   frontend: native  oracle: go run (strict lane) / go-run membership in the
-#   machine-enumerated observation set, sampled plain AND under -race
-#   (membership lane; go1.26.5) / schedule-tree singleton certification +
-#   strict go-run equality (confluent lane) / every-enumerated-path-refuses
-#   + go run -race red (racy lane; never combined with deadlock)
-# manifest_cases: 1557  pass: 1438  fail: 119
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
 PASS	arrays/array-copy	-
@@ -446,6 +447,9 @@ PASS	examples/wordcount/all-same	-
 PASS	examples/wordcount/distinct	-
 PASS	examples/wordcount/empty	-
 PASS	examples/wordcount/harness-empty	-
+PASS	examples/wordcount/harness-r-eight	-
+PASS	examples/wordcount/harness-r-empty	-
+PASS	examples/wordcount/harness-r-seven	-
 PASS	examples/wordcount/harness-seven	-
 PASS	examples/wordcount/mode-three	-
 PASS	examples/wordcount/one	-
