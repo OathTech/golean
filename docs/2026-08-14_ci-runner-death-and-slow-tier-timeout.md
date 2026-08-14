@@ -30,9 +30,32 @@ tower, consolidation). All changed `.lean` files live under `proofs/`;
   Its cache-restore step had already run 2× slower than the green run's
   (40 s vs 19 s).
 
-**Verdict: degraded/evicted runner VM (Azure westus3), not the code.**
-Confirmed by re-running the same run untouched (attempt 2, started
-2026-08-14 ~21:45 — outcome recorded below when it lands).
+**Verdict: platform-side VM shutdowns, not the code — twice.** Attempt 2
+(same commit, untouched, started 21:41 UTC, Azure centralus vs attempt 1's
+westus3) died again in the SAME phase — ~7.5 min into the proofs build —
+but with grace this time: `scripts/ci` exited 143 (SIGTERM), the log ends
+with the verbatim runner error "The runner has received a shutdown
+signal. This can happen when the runner service is stopped, or a manually
+started runner is canceled.", and the agent still completed the job and
+uploaded logs. A clean external TERM is not an OOM kill (that would be
+SIGKILL/137 inside the step) and not a gate failure (a failed lake build
+surfaces as a red `scripts/ci` summary exiting 1) — consistent with the
+resource refutations above. Two shutdowns in different regions on the
+same afternoon (the morning nightly and the 08-12 lane pushes were fine;
+githubstatus.com showed no open incident at 21:19 UTC) reads as a
+hosted-runner capacity/maintenance event. If the post-merge push dies the
+same way, the next probe is a `workflow_dispatch` on a larger-runner
+label (different VM pool).
+
+**Attempt 2 also falsified a load-bearing assumption:** plain
+`actions/cache@v4` does NOT save on a failed job — its post-step ran only
+on success, so "Post Cache" was skipped and the failed run banked
+nothing. That is why retries never converge on a failing state. Fixed in
+this lane: the cache is split into `actions/cache/restore@v4` + an
+explicit `actions/cache/save@v4` at the end of the job with
+`if: always()`, so a red-but-alive gate still saves its build progress
+and the retry resumes from it. (A runner that dies outright still saves
+nothing — no step outlives the VM.)
 
 **Aggravating factors, both real, both addressed:**
 
@@ -96,14 +119,14 @@ flake source. Nothing semantic moved; the certified set is intact.
 
 ## Follow-ups / open items
 
-- **Re-run outcome:** pending at the time of writing; to be recorded here
-  before this lane merges. If the re-run reproduces the death, the next
-  probe is a `workflow_dispatch` on a larger runner to seed the cache,
-  then reassess.
-- The first push after this lane merges should show the lever-5 cache
-  actually cycling (restore from a source-hashed key + save on change);
-  worth one glance at the cache list
-  (`gh api repos/OathTech/golean/actions/caches`).
+- **The lever-5 cache is still unseeded** (both attempts died before any
+  save; the frozen 2026-07-21 entry is still the only one). The first
+  COMPLETED run after this lane merges — even a red one, thanks to the
+  always() save — seeds it; worth one glance at the cache list
+  (`gh api repos/OathTech/golean/actions/caches`) to confirm cycling.
+- If the post-merge push dies the runner-shutdown way again, probe with
+  `workflow_dispatch` on a larger-runner label (different VM pool), and
+  the new diagnostics step gives each attempt's machine shape.
 - `confluent`/`racy` lane enumerations still run under the 300 s budget;
   neither lane has a slow-tier row today, so they were left untouched
   (scope discipline). If one ever grows past ~100 s single-core, give it
