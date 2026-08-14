@@ -1,0 +1,6 @@
+local    len 5 cap 5
+escaping len 5 cap 5
+local    len 33 cap 33
+escaping len 33 cap 48
+local    len 100 cap 100
+escaping len 100 cap 112
