@@ -1,0 +1,6 @@
+1.0/z   = +Inf
+-1.0/z  = -Inf
+1.0/nz  = -Inf
+z/z     = NaN
+f32/z32 = +Inf
+reached end: no panic
