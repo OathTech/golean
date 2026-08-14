@@ -1,7 +1,11 @@
 # Examples phase-2, slice 1 — spec-style swaps: slice record (2026-08-14)
 
-Status: **PARTIAL — guardrail half landed, proof half NOT landed.** Read
-this before continuing the slice; it is the handoff.
+Status: **PARTIAL — guardrail half landed; proof half landed for
+REVERSE only (swap 1 of 3).** Read this before continuing the slice; it
+is the handoff. The session record for the proof half is
+§"Proof half — session 2" near the end of this file; the sections
+between here and there are the ORIGINAL session-1 record, kept verbatim
+for the measurement trail.
 
 Charter: `docs/2026-08-14_examples-phase2-arc-charter.md` §"Slice 1".
 Per-example recommendations: `docs/2026-08-14_harness-style-scoping.md`
@@ -371,3 +375,160 @@ needs ≥2 consumers + a fixture in the same commit, per form note §12):
   (slice→slice) and minmax/wordcount (slice→array). Same shape as the
   existing `suList` setup-loop schema, which is the argument for lifting
   all three together rather than one at a time.
+
+---
+
+## Proof half — session 2 (2026-08-14): swap 1 of 3 LANDED
+
+### What landed: reverse (S1 copy-relational)
+
+`reverse_ok` is now the verdict theorem over `reverse_harness_v`, in a
+new shard `proofs/GoLeanProofs/Examples/Reverse/HarnessV.lean`
+(~1050 lines). Verbatim statement:
+
+```lean
+theorem reverse_ok (n seed : Nat) (hn : n < 2 ^ 63) (hseed : seed < 2 ^ 64) :
+    ∃ N : Nat, ∀ fuel : Nat, N ≤ fuel → ∀ ch : Choices,
+      runFunctionWithContextM fuel reverseLowered.typeDefs.toList
+          reverseLowered.funcs reverseHarnessVFunc
+          #[.int (n : Int) .uint64, .int (seed : Int) .uint64]
+          reverseLowered.methods ch
+        = .ok { values := #[.int 1 .uint64] } := by
+```
+
+* Fuel bound `N = 205·n + 335` — the measured law of the handoff above,
+  reached (not the loose `242n + 335` the naive measure gives) by
+  bounding the two-pointer loop with `75 * ((μ + 1) / 2) + 50` instead
+  of `75 * μ + 50`: the measure `μ = (n-1) - 2m` drops by TWO per swap,
+  so counting swaps rather than measure units is what makes the
+  coefficient `167 + 75/2 ≤ 205`.
+* Axioms `[propext, Classical.choice, Quot.sound]` (`#guard_msgs` pinned
+  in `Audit/Reverse.lean`, green). No `sorry`, no `native_decide`, no
+  project axioms. `reverse_readout` is the D1 twin, also pinned.
+* Old-headline disposition: `reverse_ok` → `reverse_ok_v1`,
+  `reverse_readout` → `reverse_readout_v1` — KEPT unweakened, proofs
+  and corpus rows untouched, both re-pinned. `reverse_framed` (the
+  genuinely-∀xs form) unchanged.
+* Deletion test: dropping `hn` makes the `make([]uint64, n)` length
+  wrap negative (the v1 precedent); dropping `hseed` breaks the
+  `unorm_of_range` normalization of the `seed` argument at the entry
+  equation. Both hypotheses are load-bearing at the statement, not
+  proof convenience.
+
+### What went generic, and the honest limit
+
+**PROGRAM-generic, 22 of 22 raw segments.** Every segment is stated
+over `vSt σ H na = { σ with heap := H, nextAddr := na }` with `σ`
+abstract, so the kernel never whnf's a state embedding
+`reverseLowered.funcs`. The pinned program is unfolded exactly TWICE in
+the module: the lowering pin, and the single `enterFrame` discharge at
+the `reverse(s)` call.
+
+Measured effect, and it is the headline cost result of this session:
+**4 s wall / ≤0.4 GiB** for a FOUR-loop example (setup, copy,
+two-pointer, test) over a 20-cell heap. The v1 layer, address- and
+program-concrete, is ~1250 lines inside a 3.0 s / 1.97 GiB module. The
+whole segment layer of the new module elaborates in 2.7 s; the module
+is nowhere near the 2.5 GiB bar.
+
+**PLACEMENT (address) genericity was assessed and NOT taken** — the
+brief's preferred shape, refused on measurement. The four loop phases
+touch a heap cell at nearly every step, so an address-abstract
+statement cannot close by `with_unfolding_all rfl` at all: each ~25-step
+segment would become ~25 conditioned one-steps (`stepFn_var` +
+`storeTarget` + `applyStrictOp` facts), i.e. roughly 10× the source for
+a layer that already costs seconds. With only two prospective
+instantiations (minmax, wordcount) whose LAYOUTS DIFFER ANYWAY — 20
+cells vs 22, different scopes, different result arities — the generic
+layer would not be shared even after paying for it. Program-genericity
+is the lever that actually moved the number, and it is what the
+`StepKit` docstring already recommends. Recorded so the next session
+does not re-litigate it from taste.
+
+### Promotion (form note §12): one lift SHIPPED
+
+**`stepFn_call_enter`** (ledger row P1) lifted from
+`WordCount/EmptyRun.lean`'s in-module `wc_empty_enterFrame_step` into
+`GoLeanProofs/StepKit.lean`, now that a second consumer exists (this
+module's `reverse` frame entry). Both consumers retrofitted in the
+promotion commit and are its fixture witnesses; EmptyRun's local name
+survives as a one-liner over the kit lemma, so its statement pins are
+untouched. This is the promotion the 1.5 record predicted, discharged.
+
+Not promoted (deltas to the ledger):
+
+* **`goArr8`** — not reached; the S3 statement adapter is still
+  candidate-only, still owed the §11 closure treatment when minmax
+  lands.
+* **the array-local store fact** — SCOPED but not written. Probe-pinned
+  shape (this session): the target is
+  `.chain (.addr (.base ⟨10⟩)) [.int iv .uint64] [.index]`, i.e. an
+  ADDRESS-rooted chain, so `indexTargetLoc` takes the
+  `.addr baseLoc → .array` arm and yields `Loc.index baseLoc i`; the
+  store then bottoms out in the same `arraySet` + declared-type
+  re-normalization tail as `storeTarget_slice_u64`. The lemma is a
+  close mirror of that one and belongs beside it in `SliceMem`, with
+  minmax and wordcount as its two consumers.
+* **the copy-into-observation loop schema** — the reverse instance is
+  built and works, but it is one consumer. Notably the copy loop needed
+  NO new pure layer: `t[i] = s[i]` copies exactly the family element
+  the setup loop wrote, so `suList`/`suList_set` serve both invariants
+  and the only new pure fact in the whole swap is `getD_revFamily`.
+
+### Reuse: the pure layer was shared, not restated
+
+22 names in `Examples/Reverse.lean` were un-`private`d (the `revSwap`
+two-pointer surgery, the `revFamily`/`suList` family surgery,
+`getD_reverse_revFamily`, `reverse_short`, `ffBlock`) and consumed
+verbatim by the new shard. No pure layer was duplicated.
+
+### The probe recipe, extended (reusable)
+
+`.tmp/s1/rvprobe.lean` / `.tmp/s1/mmprobe.lean` — the 1.5 recipe plus a
+`trace` mode that prints ONE LINE PER STEP with a constructor tag
+(`exec WHILE`, `retV bool | ifK`, `next storeK`, `exec CALL f`, …).
+Grepping that trace for `WHILE|CALL|makeSlice|break|return` gives the
+whole phase map (every loop head, every exit, the call point) in one
+run, and the arithmetic between markers gives every segment's exact
+step count BEFORE any Lean is written. That is what made this swap
+transcription-bound rather than search-bound: the entire 22-segment
+layer was written from one trace plus three `dump`s, and every segment
+closed by `with_unfolding_all rfl` on the first attempt. Keep it.
+
+### Gallery
+
+The reverse entry is re-rendered for the swap: the new harness Go
+verbatim; the verdict claim states "the check returned `1`" and says
+what `1` means in the Go; a new paragraph states what the copy DOES buy
+(annotation-readiness at ghost rung 1 — the v1 harness's check encodes
+the family and so can never take a ∀-data input with the same test
+phase) and what it does NOT (the input quantifier is still the scalar
+family); the machine-idealization clause is kept and extended to name
+the second observation-only allocation. `scripts/render-gallery` 45/45.
+
+### NOT landed this session, and the honest reason
+
+**minmax (swap 2) and wordcount (swap 3) proof halves.** Reverse
+consumed the session. Both remain exactly as the handoff above
+describes them, with these additions from this session's probing:
+
+* **minmax layout re-confirmed and phase-mapped** (`n = 2`, seed 100):
+  entry 0–53; setup loop heads 53/102/155, exit test 184; `var pre`
+  + copy preamble 184→223 (NO makeSlice — `pre` is an array-typed
+  local, one `.initialization`); copy loop heads 223/272/325, exit test
+  355; `minMax` call at 367, frame entry allocating `s` at 15; minMax
+  loop heads 428/504, exit 536; two returns (minMax's at 562, the
+  harness's at 603); terminal 606 = `234 + 186·2` exactly.
+  The copy body has the SAME 25/16/1/1/1/5 shape as reverse's, so
+  `cp_*` transcribes directly.
+* **The minMax segment layer ports by an address REMAP** from the
+  shipped `minmax_harness` layer: setup-phase cells shift +1 (three
+  result cells now, `$c15` at 5 vs `$c12` at 4), the minMax frame
+  shifts +4 (old 11–17 → new 15–21), the call temporaries move 9/10 →
+  13/14, and cells 10/11/12 (`pre`, copy `i`, copy flag) are new. The
+  branch-heavy `mm_iter` case analysis ports unchanged.
+* **wordcount** is unblocked (slice 1.5) but untouched.
+
+Divergence guard: not triggered — no proof in this session took more
+than a handful of probe iterations. The gap is budget, not difficulty,
+and the next session starts from a worked template plus a phase map.
