@@ -2084,6 +2084,26 @@ example := @GoLean.Examples.WordCount.wordcount_readout
 /-- info: 'GoLean.Examples.WordCount.wordcount_readout' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Examples.WordCount.wordcount_readout
 
+/-! ## The harness lowering pins (audit fix round, 2026-08-14)
+
+`✓` the seven `<example>_harness` lowering pins — each one an `rfl`
+tying the harness `Func` the proofs step through to the frontend's
+lowering of the corpus program (`findFunctionIn? <lowered>.funcs
+⟨"<name>_harness"⟩ = some <name>HarnessFunc`). They were anonymous
+`example`s in their modules, so nothing could cite them and nothing
+noticed if one disappeared; naming them makes the "the theorem's
+subject IS the lowering" step referenceable from the gallery and the
+design notes. Name-existence tripwire scope, as for every block here —
+the pins are load-bearing for the headlines above, whose statements
+mention the same `*HarnessFunc` constants. -/
+example := @GoLean.Examples.Fib.fibHarness_pin
+example := @GoLean.Examples.Gcd.gcdHarness_pin
+example := @GoLean.Examples.Reverse.reverseHarness_pin
+example := @GoLean.Examples.MinMax.minmaxHarness_pin
+example := @GoLean.Examples.BinSearch.searchHarness_pin
+example := @GoLean.Examples.InsertionSort.isortHarness_pin
+example := @GoLean.Examples.WordCount.wordcountHarness_pin
+
 /-! ## Three-state ledger
 
 - `✓ Machine correspondence` (reshape S5, 2026-07-23) — `stepFn_sound` +

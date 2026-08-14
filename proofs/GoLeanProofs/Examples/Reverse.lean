@@ -1126,7 +1126,8 @@ def reverseHarnessFunc : Func :=
                 (.seqn #[])]]
 
 /-- The lowering pin: the harness subject IS the frontend's lowering. -/
-example : findFunctionIn? reverseLowered.funcs ⟨"reverse_harness"⟩
+theorem reverseHarness_pin :
+    findFunctionIn? reverseLowered.funcs ⟨"reverse_harness"⟩
     = some reverseHarnessFunc := rfl
 
 /-! ### The pure layer: the family, the setup prefix, the test reads -/

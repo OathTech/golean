@@ -22,3 +22,8 @@
 /tools/nativefrontend/nativefrontend
 /deps/
 /side/
+# Scratch working notes and probe files. Referred to as gitignored scratch
+# since 2026-08-07 (docs/2026-08-07_grossmith-campaign.md) — actually
+# ignored only from 2026-08-14 (audit fix round); until then the sentence
+# was aspirational and .tmp/ showed up as untracked in every status.
+/.tmp/

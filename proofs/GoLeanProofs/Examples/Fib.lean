@@ -1,4 +1,5 @@
 import GoLeanProofs.Examples.FibProgram
+import GoLeanProofs.SliceMem
 import GoLeanProofs.SurfaceExit
 import GoLeanProofs.FuelMeasure
 import GoLeanProofs.Frame.Transfer
@@ -58,6 +59,7 @@ itself is validated by the differential corpus and audited separately.
 open Iris Iris.ProgramLogic Iris.Std Iris.Std.PartialMap
 open GoLean GoLean.GoCore GoLean.GoCore.Machine
 open GoLean.Surface GoLean.Iris
+open GoLean.SliceMem
 
 namespace GoLean.Examples.Fib
 
@@ -121,10 +123,6 @@ private def fibv (m : Nat) : Int := (fibSpec m % 2 ^ 64 : Nat)
 private theorem unorm_nat (x : Nat) :
     IntKind.normalize .uint64 (x : Int) = ((x % 2 ^ 64 : Nat) : Int) := by
   simp [IntKind.normalize, IntKind.bits?, IntKind.signed]
-
-private theorem unorm_nat_of_lt {x : Nat} (h : x < 2 ^ 64) :
-    IntKind.normalize .uint64 (x : Int) = (x : Int) := by
-  rw [unorm_nat, Nat.mod_eq_of_lt h]
 
 private theorem unorm_fibv (m : Nat) :
     IntKind.normalize .uint64 (fibv m) = fibv m := by
@@ -1604,7 +1602,7 @@ def fibHarnessFunc : Func :=
     wrapper := false }
 
 /-- The lowering pin: the harness subject IS the frontend's lowering. -/
-example : findFunctionIn? fibLowered.funcs ⟨"fib_harness"⟩
+theorem fibHarness_pin : findFunctionIn? fibLowered.funcs ⟨"fib_harness"⟩
     = some fibHarnessFunc := rfl
 
 /-- The machine entry's post-prelude state: exactly the two frame

@@ -2280,7 +2280,8 @@ def isortHarnessFunc : Func :=
     wrapper := false }
 
 /-- The lowering pin: the proof subject IS the frontend's lowering. -/
-example : findFunctionIn? isortLowered.funcs ⟨"isort_harness"⟩
+theorem isortHarness_pin :
+    findFunctionIn? isortLowered.funcs ⟨"isort_harness"⟩
     = some isortHarnessFunc := rfl
 
 

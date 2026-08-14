@@ -1129,10 +1129,6 @@ composition + the conditioned state-massage discharges were. -/
 def DeadFrom (dead : Heap) (na : Nat) : Prop :=
   ∀ x : Nat, na ≤ x → Heap.lookup dead (.base ⟨x⟩) = none
 
-theorem DeadFrom.mono {dead : Heap} {na na' : Nat} (h : DeadFrom dead na)
-    (hle : na ≤ na') : DeadFrom dead na' :=
-  fun x hx => h x (by omega)
-
 theorem DeadFrom.push {dead : Heap} {na : Nat} {c : HeapCell}
     (h : DeadFrom dead na) :
     DeadFrom (dead ++ [(.base ⟨na⟩, c)]) (na + 1) := by
@@ -3725,7 +3721,8 @@ def wordcountHarnessFunc : Func :=
                       (.mod (.var "i") (.intLit 3 .uint64)))]]]
 
 /-- The lowering pin: the harness subject IS the frontend's lowering. -/
-example : findFunctionIn? wordCountLowered.funcs ⟨"wordcount_harness"⟩
+theorem wordcountHarness_pin :
+    findFunctionIn? wordCountLowered.funcs ⟨"wordcount_harness"⟩
     = some wordcountHarnessFunc := rfl
 
 /-! ### The entry equation and the setup phase (harness addresses
@@ -4399,16 +4396,6 @@ private theorem wcH_segC11_raw (L : Nat) (sv siv : Int) (ws : List Int)
       = .ok (headCH, σH L sv siv ws kvs iv false tail na, ch) := by
   with_unfolding_all rfl
 
-/-- The `mapAssign` wide-op apply step at the harness data cell,
-conditioned on the `mapAssignValue` fact. -/
-private theorem stepFn_mapAssign_applyH {σ σ' : ExecState}
-    {b kv vv : GoValue} {env : LocalEnv} {k : Cont} {ch : Choices}
-    (h : mapAssignValue σ tU64 tU64 b kv vv = .ok σ') :
-    stepFn σ (.retV vv (.stmtOpK (.mapAssign tU64 tU64) 0 [kv, b] [] env k))
-      ch
-      = .ok (.next k, σ', ch) :=
-  stepFn_mapAssign_apply h
-
 
 /-! ### Counting-loop exit → the range head (harness placement) -/
 
@@ -4474,16 +4461,6 @@ private theorem wcH_segX0c_raw (L : Nat) (sv siv : Int) (ws : List Int)
           σH L sv siv ws kvs iv false tail na, ch) := by
     with_unfolding_all rfl
   exact stepFnIter_chain (stepFnIter_chain h1 h2) h3
-
-/-- The `mapRangeK` snapshot step at the harness placement. -/
-private theorem stepFn_snapshotH {σ : ExecState} {v : GoValue}
-    {entries : Array (GoValue × GoValue)} {body : Stmt} {env : LocalEnv}
-    {k : Cont} {ch : Choices}
-    (h : mapRangeSnapshotEntries σ tU64 tU64 v = .ok entries) :
-    stepFn σ (.retV v (.mapRangeK none (some "c") tU64 tU64 body env k)) ch
-      = .ok (.next (.mapIterK none (some "c") tU64 tU64 body entries env k),
-          σ, ch) :=
-  stepFn_snapshot h
 
 
 /-! ## The harness counting tower — the generic layer's SECOND consumer

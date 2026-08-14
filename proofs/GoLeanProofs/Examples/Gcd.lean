@@ -589,7 +589,7 @@ def gcdHarnessFunc : Func :=
 
 /-- The lowering pin: the harness in the theorem IS the frontend's
 lowering of the corpus harness. -/
-example : findFunctionIn? gcdLowered.funcs ⟨"gcd_harness"⟩
+theorem gcdHarness_pin : findFunctionIn? gcdLowered.funcs ⟨"gcd_harness"⟩
     = some gcdHarnessFunc := rfl
 
 /-! ### Machine-layer configurations at the harness layout

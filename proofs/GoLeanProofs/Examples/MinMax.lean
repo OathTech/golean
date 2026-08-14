@@ -1379,7 +1379,8 @@ where
 
 /-- The lowering pin: the harness in the theorem IS the frontend's
 lowering of the corpus harness. -/
-example : findFunctionIn? minMaxLowered.funcs ⟨"minmax_harness"⟩
+theorem minmaxHarness_pin :
+    findFunctionIn? minMaxLowered.funcs ⟨"minmax_harness"⟩
     = some mmHarnessFunc := rfl
 
 /-! ### The pure layer: the family and the setup-prefix surgery -/
@@ -1471,10 +1472,6 @@ private theorem unorm_nat_wrap (x : Nat) :
   simp only [IntKind.normalize, IntKind.bits?, IntKind.signed]
   simp only [Bool.false_eq_true, if_false]
   omega
-
-private theorem unorm_nat_of_lt {x : Nat} (h : x < 2 ^ 64) :
-    IntKind.normalize .uint64 ((x : Nat) : Int) = ((x : Nat) : Int) :=
-  unorm_of_range (by omega) (by exact_mod_cast h)
 
 /-! ### Harness-layout environments, continuations, and states -/
 

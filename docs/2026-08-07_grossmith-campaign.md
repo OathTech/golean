@@ -2,9 +2,12 @@
 
 (Committed to docs/ 2026-08-07, verbatim from the working-note
 .tmp/grossmith-campaign-2026-08-07.md — this provenance paragraph is
-the only addition. Artifact paths under .tmp/ are gitignored scratch:
-every case regenerates deterministically from (generator rev, seed)
-as described below.)
+the only addition. Artifact paths under .tmp/ are scratch: every case
+regenerates deterministically from (generator rev, seed) as described
+below. This sentence claimed .tmp/ was "gitignored" from the day it was
+written; it was not — the `/.tmp/` rule landed in .gitignore on
+2026-08-14, in the verified-examples audit fix round, which is what
+made the claim true.)
 
 Campaign worker report (grossmith generator at `5b4c5b0`, main; GoLean at
 `458386de87119bbdc422a930c2b9db207a36138e`, the channels-arc merged tip, built

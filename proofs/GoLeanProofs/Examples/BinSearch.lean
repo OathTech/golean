@@ -1675,14 +1675,6 @@ theorem bsFamily_sorted (n seed : Nat) : Sorted (bsFamily n seed) := by
   rw [bsFamily_getD (by omega), bsFamily_getD hj]
   omega
 
-private theorem bsFamily_range {n seed : Nat}
-    (hnw : seed + 2 * n < 2 ^ 64) :
-    ∀ v ∈ bsFamily n seed, 0 ≤ v ∧ v < 2 ^ 64 := by
-  intro v hv
-  simp only [bsFamily, List.mem_map, List.mem_range] at hv
-  obtain ⟨i, hi, rfl⟩ := hv
-  omega
-
 /-- The one-step family extension the setup-loop invariant consumes:
 storing `seed + 2*i` at position `i` of `family-prefix ++ zeros`. -/
 private theorem bsFamily_set {n seed i : Nat} (hi : i < n) :
@@ -1767,7 +1759,8 @@ def searchHarnessFunc : Func :=
     wrapper := false }
 
 /-- The lowering pin: the proof subject IS the frontend's lowering. -/
-example : findFunctionIn? searchLowered.funcs ⟨"search_harness"⟩
+theorem searchHarness_pin :
+    findFunctionIn? searchLowered.funcs ⟨"search_harness"⟩
     = some searchHarnessFunc := rfl
 
 /-! ## The entry equation (the §11 glue: `runFunctionWithContextM`

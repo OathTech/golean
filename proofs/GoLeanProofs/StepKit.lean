@@ -99,11 +99,6 @@ theorem lookup_cons_ne {k : Loc} {c : HeapCell} {h : Heap} {l : Loc}
     Heap.lookup ((k, c) :: h) l = Heap.lookup h l := by
   simp [Heap.lookup, hne]
 
-theorem set_cons_ne {k : Loc} {c₀ : HeapCell} {h : Heap} {l : Loc}
-    {c : HeapCell} (hne : (k == l) = false) :
-    Heap.set ((k, c₀) :: h) l c = (k, c₀) :: Heap.set h l c := by
-  simp [Heap.set, hne]
-
 theorem set_singleton_self {l : Loc} {c₀ c : HeapCell} :
     Heap.set [(l, c₀)] l c = [(l, c)] := by
   simp [Heap.set]
