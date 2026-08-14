@@ -68,15 +68,21 @@ exhaustion.
   and it says nothing about whether the lowering is faithful. The translation
   step itself is validated by the differential corpus, not verified.
 - **No proof machinery leaks into the statements.** They mention interpreter
-  vocabulary, the pinned program, and specification functions defined in the
-  same file (`fibSpec`, `findSpec`, …). No separation logic, no
-  weakest-precondition machinery, no Iris appears in any statement — those are
-  proof devices, and deleting the entire proof layer leaves these statements
-  elaborating unchanged. That deletion test was checked by review and
-  independently re-derived in the 2026-08-14 pre-merge audit; the example
-  headlines are **not yet in the mechanized designation gate** (deliberate —
-  designation triggers the comparator landmark; the candidates are recorded
-  for the merge window).
+  vocabulary, the pinned program, and specification functions (`fibSpec`,
+  `findSpec`, …) that live with the other statement vocabulary in one
+  definition-only module, `proofs/GoLeanProofs/Examples/Targets.lean` —
+  readable on its own, and importing nothing but the interpreter and the
+  pinned lowerings. No separation logic, no weakest-precondition machinery,
+  no Iris appears in any statement — those are proof devices, and deleting
+  the entire proof layer leaves these statements elaborating unchanged. That
+  deletion test was checked by review and independently re-derived in the
+  2026-08-14 pre-merge audit; as of 2026-08-14 the eight headlines quoted
+  below are **designated in the mechanized gate** (`proofs/Audit.lean`), so
+  every build now walks each statement's transitive definition closure and
+  fails if it reaches Iris or the Prop-level transition relation — the
+  deletion test stopped being a thing we check by reading. Designation also
+  puts them in front of the independent Comparator judge, which re-checks
+  the proofs by kernel replay against these statements alone.
 - **The heap is empty at entry.** Each theorem starts the harness from an
   empty state with its arguments at the call boundary, so the harness
   allocates everything it touches. There is nothing to frame, and no
@@ -166,9 +172,9 @@ answer stops fitting. A companion theorem covers the **whole** `uint64`
 argument domain and returns `fibSpec n mod 2^64` — what Go's wrapping
 arithmetic actually computes past the boundary, stated rather than hidden.
 
-**The specification function** (`proofs/GoLeanProofs/Examples/Fib.lean`):
+**The specification function** (`proofs/GoLeanProofs/Examples/Targets.lean`):
 
-<!-- verbatim: proofs/GoLeanProofs/Examples/Fib.lean -->
+<!-- verbatim: proofs/GoLeanProofs/Examples/Targets.lean -->
 ```lean
 def fibSpec : Nat → Nat
   | 0 => 0
@@ -507,10 +513,10 @@ unbounded heap, allocation always succeeds), so the theorem's domain is the
 model's. Because the family wraps at `2^64`, the answer is not simply the
 first and last element once `seed + n` crosses the boundary.
 
-**The specification functions** (`proofs/GoLeanProofs/Examples/MinMax.lean`;
+**The specification functions** (`proofs/GoLeanProofs/Examples/Targets.lean`;
 their `[]` cases are unreachable here, since `n ≥ 1`):
 
-<!-- verbatim: proofs/GoLeanProofs/Examples/MinMax.lean -->
+<!-- verbatim: proofs/GoLeanProofs/Examples/Targets.lean -->
 ```lean
 def minSpec : List Int → Int
   | [] => 0
@@ -518,7 +524,7 @@ def minSpec : List Int → Int
   | v :: w :: rest => min v (minSpec (w :: rest))
 ```
 
-<!-- verbatim: proofs/GoLeanProofs/Examples/MinMax.lean -->
+<!-- verbatim: proofs/GoLeanProofs/Examples/Targets.lean -->
 ```lean
 def maxSpec : List Int → Int
   | [] => 0
@@ -527,9 +533,9 @@ def maxSpec : List Int → Int
 ```
 
 **The returned-array adapter** — the whole of the S3 statement vocabulary
-(`proofs/GoLeanProofs/Examples/MinMax/HarnessR.lean`):
+(`proofs/GoLeanProofs/Examples/Targets.lean`):
 
-<!-- verbatim: proofs/GoLeanProofs/Examples/MinMax/HarnessR.lean -->
+<!-- verbatim: proofs/GoLeanProofs/Examples/Targets.lean -->
 ```lean
 def goArr8 (xs : List Int) : GoValue :=
   .array ⟨(xs ++ List.replicate (8 - xs.length) 0).map
@@ -650,9 +656,9 @@ Input honesty: the quantifiers are the scalars `(n, seed, t)` — an input
 family, not all sorted slices.
 
 **The specification function and the family**
-(`proofs/GoLeanProofs/Examples/BinSearch.lean`):
+(`proofs/GoLeanProofs/Examples/Targets.lean`):
 
-<!-- verbatim: proofs/GoLeanProofs/Examples/BinSearch.lean -->
+<!-- verbatim: proofs/GoLeanProofs/Examples/Targets.lean -->
 ```lean
 def findSpec (xs : List Int) (t : Int) : Int :=
   match xs with
@@ -662,7 +668,7 @@ def findSpec (xs : List Int) (t : Int) : Int :=
       else if findSpec rest t < 0 then -1 else findSpec rest t + 1
 ```
 
-<!-- verbatim: proofs/GoLeanProofs/Examples/BinSearch.lean -->
+<!-- verbatim: proofs/GoLeanProofs/Examples/Targets.lean -->
 ```lean
 def bsFamily (n seed : Nat) : List Int :=
   (List.range n).map (fun i => ((seed + 2 * i : Nat) : Int))
@@ -942,15 +948,15 @@ Three honesty clauses, none of them small print:
   map. The theorem's domain is the model's, not the practical one.
 
 **The specification functions**
-(`proofs/GoLeanProofs/Examples/WordCount/Pure.lean`):
+(`proofs/GoLeanProofs/Examples/Targets.lean`):
 
-<!-- verbatim: proofs/GoLeanProofs/Examples/WordCount/Pure.lean -->
+<!-- verbatim: proofs/GoLeanProofs/Examples/Targets.lean -->
 ```lean
 def multiplicity (v : Int) (ws : List Int) : Nat :=
   (ws.filter (· = v)).length
 ```
 
-<!-- verbatim: proofs/GoLeanProofs/Examples/WordCount/Pure.lean -->
+<!-- verbatim: proofs/GoLeanProofs/Examples/Targets.lean -->
 ```lean
 def maxMultiplicity (ws : List Int) : Nat :=
   ws.foldl (fun acc v => max acc (multiplicity v ws)) 0
@@ -962,9 +968,9 @@ position, which is precisely why the fold is a legitimate specification for a
 loop whose visit order the machine chooses.
 
 **The returned-array adapter** — the whole of the S3 statement vocabulary
-(`proofs/GoLeanProofs/Examples/WordCount/HarnessR.lean`):
+(`proofs/GoLeanProofs/Examples/Targets.lean`):
 
-<!-- verbatim: proofs/GoLeanProofs/Examples/WordCount/HarnessR.lean -->
+<!-- verbatim: proofs/GoLeanProofs/Examples/Targets.lean -->
 ```lean
 def goArr8 (xs : List Int) : GoValue :=
   .array ⟨(xs ++ List.replicate (8 - xs.length) 0).map

@@ -356,7 +356,19 @@ check_surface_imports proofs/GoLeanProofs/Specs/GoldenForkJoin.lean \
 # GoldenForkJoin PROOF module was removed from this list 2026-08-07,
 # restoring the statement-only import discipline).
 check_surface_imports proofs/Challenge.lean \
-  '^import (GoLeanProofs\.Specs\.Statements$|GoLeanProofs\.Specs\.GoldenTargets$|GoLeanProofs\.Specs\.ForkJoinTargets$|GoLeanProofs\.Specs\.GooseParityTargets$)'
+  '^import (GoLeanProofs\.Specs\.Statements$|GoLeanProofs\.Specs\.GoldenTargets$|GoLeanProofs\.Specs\.ForkJoinTargets$|GoLeanProofs\.Specs\.GooseParityTargets$|GoLeanProofs\.Examples\.Targets$)'
+# The verified-examples gallery statement targets (examples phase-2 arc
+# end, 2026-08-14 designation): the DEF-ONLY module the eight designated
+# gallery headlines reference. It sits under Examples/ rather than
+# Specs/ ON PURPOSE — step 1d below forbids every non-Specs module under
+# proofs/GoLeanProofs/ from importing GoLeanProofs.Specs.*, "Exceptions:
+# NONE", and the example modules must import their own hoisted
+# vocabulary; siting the targets module inside Examples/ keeps that lint
+# intact rather than opening a hole in it. Its imports are pinned to the
+# core plus the (themselves def-only, core-only) pinned-lowering
+# modules, so Challenge's trusted closure gains nothing else.
+check_surface_imports proofs/GoLeanProofs/Examples/Targets.lean \
+  '^import (GoLean\.|GoLeanProofs\.Examples\.[A-Za-z]+Program$)'
 # AutomationTargets is statement-bearing but MIXED BY DESIGN: it holds the
 # range-rule target (a statement ABOUT the Iris-side proof infrastructure,
 # quantifying over IProp) and the phase-2 acceptance pins that reference

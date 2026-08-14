@@ -5,6 +5,7 @@ import GoLeanProofs.StepKit
 import GoLeanProofs.Frame.Transfer
 import GoLeanProofs.Frame.RenameId
 import GoLeanProofs.Laws.StmtOps
+import GoLeanProofs.Examples.Targets
 
 /-!
 # Verified example: min/max of a slice (verified-examples slice 2c,
@@ -67,19 +68,15 @@ set_option linter.unusedSimpArgs false
 
 /-! ## The mathematical reference functions -/
 
-/-- Minimum of a list of `Int`s (0 on `[]` — the headline never
-consumes that case, `hne` excludes it). -/
-def minSpec : List Int → Int
-  | [] => 0
-  | [v] => v
-  | v :: w :: rest => min v (minSpec (w :: rest))
+-- HOISTED to `GoLeanProofs/Examples/Targets.lean` (designation, 2026-08-14):
+-- `minSpec` is statement vocabulary of a DESIGNATED gallery headline, so it must
+-- live in a def-only module inside the Comparator Challenge's trusted import
+-- closure. The definition is unchanged and still visible here via the import.
 
-/-- Maximum of a list of `Int`s (0 on `[]` — never consumed, as
-`minSpec`). -/
-def maxSpec : List Int → Int
-  | [] => 0
-  | [v] => v
-  | v :: w :: rest => max v (maxSpec (w :: rest))
+-- HOISTED to `GoLeanProofs/Examples/Targets.lean` (designation, 2026-08-14):
+-- `maxSpec` is statement vocabulary of a DESIGNATED gallery headline, so it must
+-- live in a def-only module inside the Comparator Challenge's trusted import
+-- closure. The definition is unchanged and still visible here via the import.
 
 /-! ## The program-side statement vocabulary -/
 
@@ -1331,51 +1328,10 @@ machine's own wrapping uint64 addition, as abstract data. -/
 def mmFamily (n seed : Nat) : List Int :=
   (List.range n).map (fun i => (((seed + i) % 2 ^ 64 : Nat) : Int))
 
-/-- The harness's `Func` record, verbatim from the pinned lowering (the
-`example` pin below ties it by `rfl`). -/
-def mmHarnessFunc : Func :=
-  { id := { key := "minmax_harness" },
-    args := #[{ id := "n", typ := .int .uint64 },
-              { id := "seed", typ := .int .uint64 }],
-    results := #[{ id := "$res0", typ := .int .uint64 },
-                 { id := "$res1", typ := .int .uint64 }],
-    body := .block #[]
-      #[.seqn
-          #[.initialization { id := "$c12", typ := .slice (.int .uint64) },
-            .makeSlice (.var "$c12") (.int .uint64) (.var "n") none],
-        .seqn
-          #[.initialization { id := "s", typ := .slice (.int .uint64) },
-            .assign (.var "s") (.var "$c12")],
-        .block #[]
-          #[.seqn
-              #[.initialization { id := "i", typ := .int .uint64 },
-                .assign (.var "i") (.intLit 0 .uint64)],
-            .block #[]
-              #[.initialization { id := "$forFirst", typ := .bool },
-                .assign (.var "$forFirst") (.boolLit true),
-                .while (.boolLit true) shBody]],
-        .seqn
-          #[.initialization { id := "$c13", typ := .int .uint64 },
-            .initialization { id := "$c14", typ := .int .uint64 },
-            .call #[.var "$c13", .var "$c14"] ⟨"minMax"⟩ #[.var "s"]],
-        .seqn
-          #[.assign (.var "$res0") (.var "$c13"),
-            .assign (.var "$res1") (.var "$c14"),
-            .returnStmt]],
-    variadic := false,
-    wrapper := false }
-where
-  /-- The setup loop's `for`-desugar body. -/
-  shBody : Stmt :=
-    .block #[]
-      #[.ifThenElse (.var "$forFirst")
-          (.assign (.var "$forFirst") (.boolLit false))
-          (.assign (.var "i") (.add (.var "i") (.intLit 1 .uint64))),
-        .seqn #[],
-        .ifThenElse (.lessCmp (.var "i") (.var "n")) (.seqn #[]) .breakStmt,
-        .block #[]
-          #[.seqn #[.assign (.addr (.indexAddr (.var "s") (.var "i")))
-              (.add (.var "seed") (.var "i"))]]]
+-- HOISTED to `GoLeanProofs/Examples/Targets.lean` (designation, 2026-08-14):
+-- `mmHarnessFunc` is statement vocabulary of a DESIGNATED gallery headline, so it must
+-- live in a def-only module inside the Comparator Challenge's trusted import
+-- closure. The definition is unchanged and still visible here via the import.
 
 /-- The lowering pin: the harness in the theorem IS the frontend's
 lowering of the corpus harness. -/

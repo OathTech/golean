@@ -1,4 +1,5 @@
 import GoLeanProofs.Examples.WordCount
+import GoLeanProofs.Examples.Targets
 
 /-!
 # WordCount — the S3 RELATIONAL harness (`wordcount_harness_r`)
@@ -89,17 +90,18 @@ abbrev wSt (σ : ExecState) (H : Heap) (na : Nat) : ExecState :=
 /-! ## The S3 statement adapter
 
 `goArr8` is STATEMENT vocabulary: it is what "the returned
-`[wordcountCapN]uint64`" means as a `GoValue`. It is introduced here,
-in the example's own module, under the §11 closure rules — never in a
-proof-kit module, and deliberately NOT shared with the identically
-shaped `MinMax.goArr8`: a statement that had to be read through a kit
-import would defeat the rule it is obeying. -/
+`[wordcountCapN]uint64`" means as a `GoValue`. Under the §11 closure
+rules it is never a proof-kit definition, and it stays deliberately NOT
+shared with the identically shaped `MinMax.goArr8` — unifying them would
+change what these statements say. It was introduced in this module until
+the 2026-08-14 designation moved it, unchanged and still a separate def
+in its own namespace, to the def-only `Examples/Targets.lean` that the
+Comparator Challenge's trusted closure imports. -/
 
-/-- The returned fixed-cap array: the observed word list, zero-padded
-to the harness's `wordcountCapN = 8` slots. -/
-def goArr8 (xs : List Int) : GoValue :=
-  .array ⟨(xs ++ List.replicate (8 - xs.length) 0).map
-    (fun v => .int v .uint64)⟩
+-- HOISTED to `GoLeanProofs/Examples/Targets.lean` (designation, 2026-08-14):
+-- `goArr8` is statement vocabulary of a DESIGNATED gallery headline, so it must
+-- live in a def-only module inside the Comparator Challenge's trusted import
+-- closure. The definition is unchanged and still visible here via the import.
 
 /-! ## Extra pure facts -/
 
@@ -155,62 +157,10 @@ abbrev zeros8 : List Int := List.replicate 8 0
 
 /-! ## The harness `Func`, verbatim from the pinned lowering -/
 
-/-- The relational harness's `Func` record, verbatim from the pinned
-lowering. The setup loop body is `wordcount_harness`'s, shared. -/
-def wcHarnessRFunc : Func :=
-  { id := { key := "wordcount_harness_r" },
-    args := #[{ id := "n", typ := .int .uint64 },
-              { id := "seed", typ := .int .uint64 }],
-    results := #[{ id := "$res0", typ := .array 8 (.int .uint64) },
-                 { id := "$res1", typ := .int .uint64 }],
-    body := .block #[]
-      #[.seqn
-          #[.initialization { id := "$c11", typ := .slice (.int .uint64) },
-            .makeSlice (.var "$c11") (.int .uint64) (.var "n") none],
-        .seqn
-          #[.initialization { id := "w", typ := .slice (.int .uint64) },
-            .assign (.var "w") (.var "$c11")],
-        .block #[]
-          #[.seqn
-              #[.initialization { id := "i", typ := .int .uint64 },
-                .assign (.var "i") (.intLit 0 .uint64)],
-            .block #[]
-              #[.initialization { id := "$forFirst", typ := .bool },
-                .assign (.var "$forFirst") (.boolLit true),
-                .while (.boolLit true) wordcountHarnessFunc.suBody]],
-        .seqn
-          #[.initialization { id := "words", typ := .array 8 (.int .uint64) }],
-        .block #[]
-          #[.seqn
-              #[.initialization { id := "i", typ := .int .uint64 },
-                .assign (.var "i") (.intLit 0 .uint64)],
-            .block #[]
-              #[.initialization { id := "$forFirst", typ := .bool },
-                .assign (.var "$forFirst") (.boolLit true),
-                .while (.boolLit true) cpBody]],
-        .seqn
-          #[.initialization { id := "best", typ := .int .uint64 },
-            .call #[.var "best"] ⟨"maxCount"⟩ #[.var "w"]],
-        .seqn
-          #[.assign (.var "$res0") (.var "words"),
-            .assign (.var "$res1") (.var "best"),
-            .returnStmt]],
-    variadic := false,
-    wrapper := false }
-  where
-    /-- The COPY loop's desugared body: `words[i] = w[i]` — the store
-    target is an ADDRESS-rooted index chain (`.ref "words"`), because
-    `words` is an array-typed LOCAL, not a slice handle. -/
-    cpBody : Stmt :=
-      .block #[]
-        #[.ifThenElse (.var "$forFirst")
-            (.assign (.var "$forFirst") (.boolLit false))
-            (.assign (.var "i") (.add (.var "i") (.intLit 1 .uint64))),
-          .seqn #[],
-          .ifThenElse (.lessCmp (.var "i") (.var "n")) (.seqn #[]) .breakStmt,
-          .block #[]
-            #[.seqn #[.assign (.addr (.indexAddr (.ref "words") (.var "i")))
-                (.indexGet (.var "w") (.var "i"))]]]
+-- HOISTED to `GoLeanProofs/Examples/Targets.lean` (designation, 2026-08-14):
+-- `wcHarnessRFunc` is statement vocabulary of a DESIGNATED gallery headline, so it must
+-- live in a def-only module inside the Comparator Challenge's trusted import
+-- closure. The definition is unchanged and still visible here via the import.
 
 /-- The lowering pin: the harness subject IS the frontend's lowering. -/
 theorem wordcountHarnessR_pin :

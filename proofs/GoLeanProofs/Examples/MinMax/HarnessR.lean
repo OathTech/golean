@@ -1,4 +1,5 @@
 import GoLeanProofs.Examples.MinMax
+import GoLeanProofs.Examples.Targets
 
 /-!
 # MinMax — the S3 RELATIONAL harness (`minmax_harness_r`)
@@ -64,15 +65,17 @@ abbrev rSt (σ : ExecState) (H : Heap) (na : Nat) : ExecState :=
 /-! ## The S3 statement adapter
 
 `goArr8` is STATEMENT vocabulary: it is what "the returned
-`[minmaxCapN]uint64`" means as a `GoValue`. It is introduced here, in
-the example's own module, under the §11 closure rules — never in a
-proof-kit module. -/
+`[minmaxCapN]uint64`" means as a `GoValue`. Under the §11 closure rules
+it is never a proof-kit definition — it belongs to the example. It was
+introduced in this module until the 2026-08-14 designation moved it,
+unchanged, to the def-only `Examples/Targets.lean`, which is what the
+Comparator Challenge's trusted closure can import; the rule it obeys is
+the same one, now enforced by a gate instead of by convention. -/
 
-/-- The returned fixed-cap array: the observed list, zero-padded to the
-harness's `minmaxCapN = 8` slots. -/
-def goArr8 (xs : List Int) : GoValue :=
-  .array ⟨(xs ++ List.replicate (8 - xs.length) 0).map
-    (fun v => .int v .uint64)⟩
+-- HOISTED to `GoLeanProofs/Examples/Targets.lean` (designation, 2026-08-14):
+-- `goArr8` is statement vocabulary of a DESIGNATED gallery headline, so it must
+-- live in a def-only module inside the Comparator Challenge's trusted import
+-- closure. The definition is unchanged and still visible here via the import.
 
 /-! ## Extra pure facts -/
 
@@ -106,65 +109,10 @@ abbrev rNilSlice : HeapCell :=
 
 /-! ## The harness `Func`, verbatim from the pinned lowering -/
 
-/-- The relational harness's `Func` record, verbatim from the pinned
-lowering. The setup loop body is `minmax_harness`'s, shared. -/
-def mmHarnessRFunc : Func :=
-  { id := { key := "minmax_harness_r" },
-    args := #[{ id := "n", typ := .int .uint64 },
-              { id := "seed", typ := .int .uint64 }],
-    results := #[{ id := "$res0", typ := .array 8 (.int .uint64) },
-                 { id := "$res1", typ := .int .uint64 },
-                 { id := "$res2", typ := .int .uint64 }],
-    body := .block #[]
-      #[.seqn
-          #[.initialization { id := "$c15", typ := .slice (.int .uint64) },
-            .makeSlice (.var "$c15") (.int .uint64) (.var "n") none],
-        .seqn
-          #[.initialization { id := "s", typ := .slice (.int .uint64) },
-            .assign (.var "s") (.var "$c15")],
-        .block #[]
-          #[.seqn
-              #[.initialization { id := "i", typ := .int .uint64 },
-                .assign (.var "i") (.intLit 0 .uint64)],
-            .block #[]
-              #[.initialization { id := "$forFirst", typ := .bool },
-                .assign (.var "$forFirst") (.boolLit true),
-                .while (.boolLit true) mmHarnessFunc.shBody]],
-        .seqn
-          #[.initialization { id := "pre", typ := .array 8 (.int .uint64) }],
-        .block #[]
-          #[.seqn
-              #[.initialization { id := "i", typ := .int .uint64 },
-                .assign (.var "i") (.intLit 0 .uint64)],
-            .block #[]
-              #[.initialization { id := "$forFirst", typ := .bool },
-                .assign (.var "$forFirst") (.boolLit true),
-                .while (.boolLit true) cpBody]],
-        .seqn
-          #[.initialization { id := "lo", typ := .int .uint64 },
-            .initialization { id := "hi", typ := .int .uint64 },
-            .call #[.var "lo", .var "hi"] ⟨"minMax"⟩ #[.var "s"]],
-        .seqn
-          #[.assign (.var "$res0") (.var "pre"),
-            .assign (.var "$res1") (.var "lo"),
-            .assign (.var "$res2") (.var "hi"),
-            .returnStmt]],
-    variadic := false,
-    wrapper := false }
-  where
-    /-- The COPY loop's desugared body: `pre[i] = s[i]` — the store
-    target is an ADDRESS-rooted index chain (`.ref "pre"`), because
-    `pre` is an array-typed LOCAL, not a slice handle. -/
-    cpBody : Stmt :=
-      .block #[]
-        #[.ifThenElse (.var "$forFirst")
-            (.assign (.var "$forFirst") (.boolLit false))
-            (.assign (.var "i") (.add (.var "i") (.intLit 1 .uint64))),
-          .seqn #[],
-          .ifThenElse (.lessCmp (.var "i") (.var "n")) (.seqn #[]) .breakStmt,
-          .block #[]
-            #[.seqn #[.assign (.addr (.indexAddr (.ref "pre") (.var "i")))
-                (.indexGet (.var "s") (.var "i"))]]]
+-- HOISTED to `GoLeanProofs/Examples/Targets.lean` (designation, 2026-08-14):
+-- `mmHarnessRFunc` is statement vocabulary of a DESIGNATED gallery headline, so it must
+-- live in a def-only module inside the Comparator Challenge's trusted import
+-- closure. The definition is unchanged and still visible here via the import.
 
 /-- The lowering pin: the harness subject IS the frontend's lowering. -/
 theorem minmaxHarnessR_pin :

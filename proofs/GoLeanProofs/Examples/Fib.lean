@@ -11,6 +11,7 @@ import GoLeanProofs.Laws.Assign
 import GoLeanProofs.Laws.Call
 import GoLeanProofs.Laws.Loop
 import GoLeanProofs.Laws.Init
+import GoLeanProofs.Examples.Targets
 
 /-!
 # Verified example: iterative Fibonacci (verified-examples arc slice 1, 2026-08-12)
@@ -70,14 +71,10 @@ set_option linter.unusedSimpArgs false
 
 /-! ## The mathematical reference -/
 
-/-- **The specification function**: the Fibonacci sequence, defined the
-way a mathematician would write it. This is the entire mathematical
-content of the example's claim — the theorems below say the Go program
-computes THIS function. -/
-def fibSpec : Nat → Nat
-  | 0 => 0
-  | 1 => 1
-  | n + 2 => fibSpec n + fibSpec (n + 1)
+-- HOISTED to `GoLeanProofs/Examples/Targets.lean` (designation, 2026-08-14):
+-- `fibSpec` is statement vocabulary of a DESIGNATED gallery headline, so it must
+-- live in a def-only module inside the Comparator Challenge's trusted import
+-- closure. The definition is unchanged and still visible here via the import.
 
 /-- Iterative pair form — proof-internal (a linear-time evaluator for
 `fibSpec`, so facts like `fibSpec 93 < 2^64` are one cheap `decide`
@@ -1585,22 +1582,10 @@ Proof route (the §5c segment technique, one call frame deeper):
   the `loadMany` readback computes definitionally on the pinned
   terminal state. -/
 
-/-- The harness `Func` record, verbatim from the pinned lowering (the
-`example` pin below ties it by `rfl`). -/
-def fibHarnessFunc : Func :=
-  { id := { key := "fib_harness" },
-    args := #[{ id := "n", typ := .int .uint64 }],
-    results := #[{ id := "$res0", typ := .int .uint64 }],
-    body := .block
-      #[]
-      #[.seqn
-          #[.initialization { id := "r", typ := .int .uint64 },
-            .call #[.var "r"] ⟨"fib"⟩ #[.var "n"]],
-        .seqn
-          #[.assign (.var "$res0") (.var "r"),
-            .returnStmt]],
-    variadic := false,
-    wrapper := false }
+-- HOISTED to `GoLeanProofs/Examples/Targets.lean` (designation, 2026-08-14):
+-- `fibHarnessFunc` is statement vocabulary of a DESIGNATED gallery headline, so it must
+-- live in a def-only module inside the Comparator Challenge's trusted import
+-- closure. The definition is unchanged and still visible here via the import.
 
 /-- The lowering pin: the harness subject IS the frontend's lowering. -/
 theorem fibHarness_pin : findFunctionIn? fibLowered.funcs ⟨"fib_harness"⟩

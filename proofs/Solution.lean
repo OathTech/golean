@@ -336,4 +336,112 @@ theorem dspAllSchedules :
           ∧ cellIsInt 42 σf = true :=
   GoLean.ImportedGoose.ChannelActris.dspAllSchedules
 
+/-! ## The verified-examples gallery — the seven headline claims
+
+`docs/verified-examples.md` is the project's public object of agreement:
+seven Go programs, each with one theorem a non-Lean-expert can read.
+Those headlines joined the designated set on 2026-08-14 (user ruling:
+the specification functions are *definitionally* part of the TCB, so
+hoisting them into the Comparator set is exactly right). The
+designated set is the eight statements the gallery quotes VERBATIM —
+`fib_ok`/`fib_total` and the six other `<example>_ok`, the last three
+in their post-swap S3 forms. Supporting material the gallery only
+NAMES in prose (the `_readout` twins, `_v1` pairs, `_framed`
+companions, `maxCount_total_canonical`, `wordcount_empty_ok`) is
+deliberately NOT designated: it is not quoted as a headline, and
+`maxCount_total_canonical` is additionally stated in run-internal
+vocabulary (`wcEnv`/`wcSeed`/`wcCall`), which designation would drag
+into this trusted closure against the layering doctrine.
+
+The statement vocabulary lives in the def-only
+`GoLeanProofs/Examples/Targets.lean` (see its docstring for why it
+sits under `Examples/` rather than `Specs/`). -/
+
+open GoLean.Examples.Fib in
+theorem fib_ok (n : Nat) (hn : n ≤ 93) :
+    ∃ N : Nat, ∀ fuel : Nat, N ≤ fuel → ∀ ch : Choices,
+      runFunctionWithContextM fuel fibLowered.typeDefs.toList
+          fibLowered.funcs fibHarnessFunc #[.int (n : Int) .uint64]
+          fibLowered.methods ch
+        = .ok { values := #[.int (fibSpec n) .uint64] } :=
+  GoLean.Examples.Fib.fib_ok n hn
+
+open GoLean.Examples.Fib in
+theorem fib_total (n : Nat) (hn : n < 2 ^ 64) :
+    ∃ N : Nat, ∀ fuel : Nat, N ≤ fuel → ∀ ch : Choices,
+      runFunctionWithContextM fuel fibLowered.typeDefs.toList
+          fibLowered.funcs fibHarnessFunc #[.int (n : Int) .uint64]
+          fibLowered.methods ch
+        = .ok { values := #[.int ((fibSpec n % 2 ^ 64 : Nat) : Int) .uint64] } :=
+  GoLean.Examples.Fib.fib_total n hn
+
+open GoLean.Examples.Gcd in
+theorem gcd_ok (a b : Nat) (ha : a < 2 ^ 64) (hb : b < 2 ^ 64) :
+    ∃ N : Nat, ∀ fuel : Nat, N ≤ fuel → ∀ ch : Choices,
+      runFunctionWithContextM fuel gcdLowered.typeDefs.toList
+          gcdLowered.funcs gcdHarnessFunc
+          #[.int (a : Int) .uint64, .int (b : Int) .uint64]
+          gcdLowered.methods ch
+        = .ok { values := #[.int ((Nat.gcd a b : Nat) : Int) .uint64] } :=
+  GoLean.Examples.Gcd.gcd_ok a b ha hb
+
+open GoLean.Examples.Reverse in
+theorem reverse_ok (n seed : Nat) (hn : n < 2 ^ 63) (hseed : seed < 2 ^ 64) :
+    ∃ N : Nat, ∀ fuel : Nat, N ≤ fuel → ∀ ch : Choices,
+      runFunctionWithContextM fuel reverseLowered.typeDefs.toList
+          reverseLowered.funcs reverseHarnessVFunc
+          #[.int (n : Int) .uint64, .int (seed : Int) .uint64]
+          reverseLowered.methods ch
+        = .ok { values := #[.int 1 .uint64] } :=
+  GoLean.Examples.Reverse.reverse_ok n seed hn hseed
+
+open GoLean.Examples.MinMax in
+theorem minmax_ok (n seed : Nat) (h1 : 1 ≤ n) (hcap : n ≤ 8)
+    (hseed : seed < 2 ^ 64) :
+    ∃ pre : List Int, pre.length = n ∧
+      ∃ N : Nat, ∀ fuel : Nat, N ≤ fuel → ∀ ch : Choices,
+        runFunctionWithContextM fuel minMaxLowered.typeDefs.toList
+            minMaxLowered.funcs mmHarnessRFunc
+            #[.int (n : Int) .uint64, .int (seed : Int) .uint64]
+            minMaxLowered.methods ch
+          = .ok { values := #[goArr8 pre,
+                              .int (minSpec pre) .uint64,
+                              .int (maxSpec pre) .uint64] } :=
+  GoLean.Examples.MinMax.minmax_ok n seed h1 hcap hseed
+
+open GoLean.Examples.BinSearch in
+theorem search_ok (n seed : Nat) (t : Int)
+    (hn : n < 2 ^ 62) (hnowrap : seed + 2 * n < 2 ^ 64)
+    (ht : 0 ≤ t ∧ t < 2 ^ 64) :
+    ∃ N : Nat, ∀ fuel : Nat, N ≤ fuel → ∀ ch : Choices,
+      runFunctionWithContextM fuel searchLowered.typeDefs.toList
+          searchLowered.funcs searchHarnessFunc
+          #[.int (n : Int) .uint64, .int (seed : Int) .uint64,
+            .int t .uint64]
+          searchLowered.methods ch
+        = .ok { values := #[.int (findSpec (bsFamily n seed) t) .int] } :=
+  GoLean.Examples.BinSearch.search_ok n seed t hn hnowrap ht
+
+open GoLean.Examples.InsertionSort in
+theorem isort_ok (n seed : Nat) (hn : n < 2 ^ 63) (hseed : seed < 2 ^ 64) :
+    ∃ N : Nat, ∀ fuel : Nat, N ≤ fuel → ∀ ch : Choices,
+      runFunctionWithContextM fuel isortLowered.typeDefs.toList
+          isortLowered.funcs isortHarnessFunc
+          #[.int (n : Int) .uint64, .int (seed : Int) .uint64]
+          isortLowered.methods ch
+        = .ok { values := #[.int 1 .uint64] } :=
+  GoLean.Examples.InsertionSort.isort_ok n seed hn hseed
+
+open GoLean.Examples.WordCount in
+theorem wordcount_ok (n seed : Nat) (hcap : n ≤ 8) (hseed : seed < 2 ^ 64) :
+    ∃ words : List Int, words.length = n ∧
+      ∃ N : Nat, ∀ fuel : Nat, N ≤ fuel → ∀ ch : Choices,
+        runFunctionWithContextM fuel wordCountLowered.typeDefs.toList
+            wordCountLowered.funcs wcHarnessRFunc
+            #[.int (n : Int) .uint64, .int (seed : Int) .uint64]
+            wordCountLowered.methods ch
+          = .ok { values := #[goArr8 words,
+                              .int (maxMultiplicity words : Nat) .uint64] } :=
+  GoLean.Examples.WordCount.wordcount_ok n seed hcap hseed
+
 end Judge

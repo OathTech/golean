@@ -5,6 +5,7 @@ import GoLeanProofs.StepKit
 import GoLeanProofs.Frame.Transfer
 import GoLeanProofs.Frame.RenameId
 import GoLeanProofs.Laws.StmtOps
+import GoLeanProofs.Examples.Targets
 
 /-!
 # Verified example: in-place slice reversal (verified-examples slice 2b,
@@ -1036,94 +1037,10 @@ design). -/
 def revFamily (n seed : Nat) : List Int :=
   (List.range n).map (fun i => (((seed + i) % 2 ^ 64 : Nat) : Int))
 
-/-- The harness `Func` record, verbatim from the pinned lowering (the
-`example` pin below ties it by `rfl`). -/
-def reverseHarnessFunc : Func :=
-  { id := { key := "reverse_harness" },
-    args := #[{ id := "n", typ := .int .uint64 },
-              { id := "seed", typ := .int .uint64 }],
-    results := #[{ id := "$res0", typ := .int .uint64 }],
-    body := .block
-      #[]
-      #[.seqn
-          #[.initialization { id := "$c4", typ := .slice (.int .uint64) },
-            .makeSlice (.var "$c4") (.int .uint64) (.var "n") none],
-        .seqn
-          #[.initialization { id := "s", typ := .slice (.int .uint64) },
-            .assign (.var "s") (.var "$c4")],
-        .block
-          #[]
-          #[.seqn
-              #[.initialization { id := "i", typ := .int .uint64 },
-                .assign (.var "i") (.intLit 0 .uint64)],
-            .block
-              #[]
-              #[.initialization { id := "$forFirst", typ := .bool },
-                .assign (.var "$forFirst") (.boolLit true),
-                .while (.boolLit true) suBody]],
-        .call #[] ⟨"reverse"⟩ #[.var "s"],
-        .seqn
-          #[.initialization { id := "ok", typ := .int .uint64 },
-            .assign (.var "ok") (.intLit 1 .uint64)],
-        .block
-          #[]
-          #[.seqn
-              #[.initialization { id := "i", typ := .int .uint64 },
-                .assign (.var "i") (.intLit 0 .uint64)],
-            .block
-              #[]
-              #[.initialization { id := "$forFirst", typ := .bool },
-                .assign (.var "$forFirst") (.boolLit true),
-                .while (.boolLit true) tstBody]],
-        .seqn
-          #[.assign (.var "$res0") (.var "ok"),
-            .returnStmt]],
-    variadic := false,
-    wrapper := false }
-  where
-    /-- The setup loop's desugared body: the `$forFirst` dispatch, the
-    exit test, the fill block `{ s[i] = seed + i }`. -/
-    suBody : Stmt :=
-      .block
-        #[]
-        #[.ifThenElse (.var "$forFirst")
-            (.assign (.var "$forFirst") (.boolLit false))
-            (.assign (.var "i")
-              (.add (.var "i") (.intLit 1 .uint64))),
-          .seqn #[],
-          .ifThenElse (.lessCmp (.var "i") (.var "n"))
-            (.seqn #[])
-            .breakStmt,
-          .block
-            #[]
-            #[.seqn
-                #[.assign
-                    (.addr (.indexAddr (.var "s") (.var "i")))
-                    (.add (.var "seed") (.var "i"))]]]
-    /-- The test loop's desugared body: dispatch, exit test, the check
-    block `{ if s[i] != seed+((n-1)-i) { ok = 0 } }`. -/
-    tstBody : Stmt :=
-      .block
-        #[]
-        #[.ifThenElse (.var "$forFirst")
-            (.assign (.var "$forFirst") (.boolLit false))
-            (.assign (.var "i")
-              (.add (.var "i") (.intLit 1 .uint64))),
-          .seqn #[],
-          .ifThenElse (.lessCmp (.var "i") (.var "n"))
-            (.seqn #[])
-            .breakStmt,
-          .block
-            #[]
-            #[.ifThenElse
-                (.neqCmp (.int .uint64)
-                  (.indexGet (.var "s") (.var "i"))
-                  (.add (.var "seed")
-                    (.sub (.sub (.var "n") (.intLit 1 .uint64))
-                      (.var "i"))))
-                (.block #[] #[.seqn
-                    #[.assign (.var "ok") (.intLit 0 .uint64)]])
-                (.seqn #[])]]
+-- HOISTED to `GoLeanProofs/Examples/Targets.lean` (designation, 2026-08-14):
+-- `reverseHarnessFunc` is statement vocabulary of a DESIGNATED gallery headline, so it must
+-- live in a def-only module inside the Comparator Challenge's trusted import
+-- closure. The definition is unchanged and still visible here via the import.
 
 /-- The lowering pin: the harness subject IS the frontend's lowering. -/
 theorem reverseHarness_pin :

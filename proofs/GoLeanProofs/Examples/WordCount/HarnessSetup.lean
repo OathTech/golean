@@ -6,6 +6,7 @@ import GoLeanProofs.Frame.Transfer
 import GoLeanProofs.Frame.RenameId
 import GoLeanProofs.Laws.StmtOps
 import GoLeanProofs.Examples.WordCount.Family
+import GoLeanProofs.Examples.Targets
 
 /-!
 # WordCount — HarnessSetup
@@ -30,61 +31,10 @@ set_option linter.unusedSimpArgs false
 
 /-! ### The harness `Func`, pinned -/
 
-/-- The harness `Func` record, verbatim from the pinned lowering (the
-`example` pin below ties it by `rfl`): setup `w := make([]uint64, n)`
-filled with `w[i] = seed + i%3`, the call under test `maxCount(w)`,
-the max count returned as data. -/
-def wordcountHarnessFunc : Func :=
-  { id := { key := "wordcount_harness" },
-    args := #[{ id := "n", typ := .int .uint64 },
-              { id := "seed", typ := .int .uint64 }],
-    results := #[{ id := "$res0", typ := .int .uint64 }],
-    body := .block
-      #[]
-      #[.seqn
-          #[.initialization { id := "$c9", typ := .slice (.int .uint64) },
-            .makeSlice (.var "$c9") (.int .uint64) (.var "n") none],
-        .seqn
-          #[.initialization { id := "w", typ := .slice (.int .uint64) },
-            .assign (.var "w") (.var "$c9")],
-        .block
-          #[]
-          #[.seqn
-              #[.initialization { id := "i", typ := .int .uint64 },
-                .assign (.var "i") (.intLit 0 .uint64)],
-            .block
-              #[]
-              #[.initialization { id := "$forFirst", typ := .bool },
-                .assign (.var "$forFirst") (.boolLit true),
-                .while (.boolLit true) suBody]],
-        .seqn
-          #[.initialization { id := "$c10", typ := .int .uint64 },
-            .call #[.var "$c10"] { key := "maxCount" } #[.var "w"]],
-        .seqn
-          #[.assign (.var "$res0") (.var "$c10"),
-            .returnStmt]],
-    variadic := false,
-    wrapper := false }
-  where
-    /-- The setup loop's desugared body: the `$forFirst` dispatch, the
-    exit test, the fill block `{ w[i] = seed + i%3 }`. -/
-    suBody : Stmt :=
-      .block
-        #[]
-        #[.ifThenElse (.var "$forFirst")
-            (.assign (.var "$forFirst") (.boolLit false))
-            (.assign (.var "i")
-              (.add (.var "i") (.intLit 1 .uint64))),
-          .seqn #[],
-          .ifThenElse (.lessCmp (.var "i") (.var "n"))
-            (.seqn #[])
-            .breakStmt,
-          .block
-            #[]
-            #[.seqn
-                #[.assign (.addr (.indexAddr (.var "w") (.var "i")))
-                    (.add (.var "seed")
-                      (.mod (.var "i") (.intLit 3 .uint64)))]]]
+-- HOISTED to `GoLeanProofs/Examples/Targets.lean` (designation, 2026-08-14):
+-- `wordcountHarnessFunc` is statement vocabulary of a DESIGNATED gallery headline, so it must
+-- live in a def-only module inside the Comparator Challenge's trusted import
+-- closure. The definition is unchanged and still visible here via the import.
 
 /-- The lowering pin: the harness subject IS the frontend's lowering. -/
 theorem wordcountHarness_pin :

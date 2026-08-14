@@ -102,6 +102,12 @@ import GoLeanProofs.Examples.InsertionSortProgram
 import GoLeanProofs.Examples.InsertionSort
 import GoLeanProofs.Examples.WordCountProgram
 import GoLeanProofs.Examples.WordCount
+-- The S3 relational harness carrying the designated headline
+-- `wordcount_ok` (2026-08-14 designation): it was reachable only via
+-- `Audit/WordCount.lean`, so `Solution.lean` — which imports this
+-- aggregator — could not see it. Its two sibling S3 harnesses
+-- (`Reverse.HarnessV`, `MinMax.HarnessR`) were already listed here.
+import GoLeanProofs.Examples.WordCount.HarnessR
 
 /-!
 # GoCore ⇒ Iris — the proof layer (root)

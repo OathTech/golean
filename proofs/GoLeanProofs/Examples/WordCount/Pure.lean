@@ -5,6 +5,7 @@ import GoLeanProofs.StepKit
 import GoLeanProofs.Frame.Transfer
 import GoLeanProofs.Frame.RenameId
 import GoLeanProofs.Laws.StmtOps
+import GoLeanProofs.Examples.Targets
 
 /-!
 # WordCount — Pure
@@ -29,15 +30,15 @@ set_option linter.unusedSimpArgs false
 
 /-! ## The specification layer (order-independent, per §10b) -/
 
-/-- Occurrences of `v` in `ws`. -/
-def multiplicity (v : Int) (ws : List Int) : Nat :=
-  (ws.filter (· = v)).length
+-- HOISTED to `GoLeanProofs/Examples/Targets.lean` (designation, 2026-08-14):
+-- `multiplicity` is statement vocabulary of a DESIGNATED gallery headline, so it must
+-- live in a def-only module inside the Comparator Challenge's trusted import
+-- closure. The definition is unchanged and still visible here via the import.
 
-/-- The largest multiplicity any value attains in `ws` (`0` for `[]`) —
-a commutative-idempotent max-fold, so it is invariant under iteration
-order: the shape the ∀-choices quantifier forces (§10b). -/
-def maxMultiplicity (ws : List Int) : Nat :=
-  ws.foldl (fun acc v => max acc (multiplicity v ws)) 0
+-- HOISTED to `GoLeanProofs/Examples/Targets.lean` (designation, 2026-08-14):
+-- `maxMultiplicity` is statement vocabulary of a DESIGNATED gallery headline, so it must
+-- live in a def-only module inside the Comparator Challenge's trusted import
+-- closure. The definition is unchanged and still visible here via the import.
 
 /-! ## The §10a map-in-memory vocabulary
 

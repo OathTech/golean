@@ -49,7 +49,15 @@
     "Judge.compareNilToNilSpecC",
     "Judge.compareNilToNilReadoutC",
     "Judge.dspCert",
-    "Judge.dspAllSchedules"
+    "Judge.dspAllSchedules",
+    "Judge.fib_ok",
+    "Judge.fib_total",
+    "Judge.gcd_ok",
+    "Judge.reverse_ok",
+    "Judge.minmax_ok",
+    "Judge.search_ok",
+    "Judge.isort_ok",
+    "Judge.wordcount_ok"
   ],
   "permitted_axioms": [
     "propext",

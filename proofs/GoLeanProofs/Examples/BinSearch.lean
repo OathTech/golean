@@ -5,6 +5,7 @@ import GoLeanProofs.StepKit
 import GoLeanProofs.Frame.Transfer
 import GoLeanProofs.Frame.RenameId
 import GoLeanProofs.Laws.StmtOps
+import GoLeanProofs.Examples.Targets
 
 /-!
 # Verified example: binary search (verified-examples slice 2c, 2026-08-13)
@@ -84,16 +85,10 @@ set_option linter.unusedSimpArgs false
 
 /-! ## The mathematical reference -/
 
-/-- **The specification function**: index of the FIRST occurrence of
-`t` in `xs`, or `-1` — defined the way a functional programmer would
-write it, by structural recursion on the list. The theorems below say
-the Go program computes THIS function. -/
-def findSpec (xs : List Int) (t : Int) : Int :=
-  match xs with
-  | [] => -1
-  | v :: rest =>
-      if v = t then 0
-      else if findSpec rest t < 0 then -1 else findSpec rest t + 1
+-- HOISTED to `GoLeanProofs/Examples/Targets.lean` (designation, 2026-08-14):
+-- `findSpec` is statement vocabulary of a DESIGNATED gallery headline, so it must
+-- live in a def-only module inside the Comparator Challenge's trusted import
+-- closure. The definition is unchanged and still visible here via the import.
 
 /-- On a hit, `findSpec` is the first index holding `t`. -/
 private theorem findSpec_eq_first : ∀ (xs : List Int) (t : Int) (L : Nat),
@@ -1651,12 +1646,10 @@ frame: 10 = `s` param, 11 = `target`, 12 = the subject `$res0`,
 13 = `lo`, 14 = `hi`, 15 = the subject `$forFirst`, and the dead
 per-iteration `mid` cells from 16 up (the garbage suffix `g`). -/
 
-/-- **The input family**: the sorted, gapped sequence the harness's
-setup phase materializes — `bsFamily n seed = [seed, seed+2, …,
-seed+2(n-1)]` (as mathematical integers; `hnowrap` in the headline is
-what makes the machine's wrapped uint64 stores agree with it). -/
-def bsFamily (n seed : Nat) : List Int :=
-  (List.range n).map (fun i => ((seed + 2 * i : Nat) : Int))
+-- HOISTED to `GoLeanProofs/Examples/Targets.lean` (designation, 2026-08-14):
+-- `bsFamily` is statement vocabulary of a DESIGNATED gallery headline, so it must
+-- live in a def-only module inside the Comparator Challenge's trusted import
+-- closure. The definition is unchanged and still visible here via the import.
 
 theorem bsFamily_length (n seed : Nat) : (bsFamily n seed).length = n := by
   simp [bsFamily]
@@ -1707,56 +1700,15 @@ private theorem bsFamilyZ_range {n seed i : Nat}
 
 /-! ## The harness lowering, transcribed (pinned by `rfl`) -/
 
-/-- The setup loop's `for`-desugar body: dispatch (`i++` on later
-passes), exit test `i < n`, the store `s[i] = seed + 2*i`. -/
-abbrev setupBody : Stmt :=
-  .block #[]
-    #[.ifThenElse (.var "$forFirst")
-        (.assign (.var "$forFirst") (.boolLit false))
-        (.assign (.var "i")
-          (.add (.var "i") (.intLit 1 .uint64))),
-      .seqn #[],
-      .ifThenElse (.lessCmp (.var "i") (.var "n"))
-        (.seqn #[])
-        .breakStmt,
-      .block #[]
-        #[.seqn
-            #[.assign
-                (.addr (.indexAddr (.var "s") (.var "i")))
-                (.add (.var "seed")
-                  (.mul (.intLit 2 .uint64) (.var "i")))]]]
+-- HOISTED to `GoLeanProofs/Examples/Targets.lean` (designation, 2026-08-14):
+-- `setupBody` is statement vocabulary of a DESIGNATED gallery headline, so it must
+-- live in a def-only module inside the Comparator Challenge's trusted import
+-- closure. The definition is unchanged and still visible here via the import.
 
-/-- The harness's `Func` record, verbatim from the pinned lowering (the
-`example` pin below ties it by `rfl`). -/
-def searchHarnessFunc : Func :=
-  { id := { key := "search_harness" },
-    args := #[{ id := "n", typ := .int .uint64 },
-              { id := "seed", typ := .int .uint64 },
-              { id := "t", typ := .int .uint64 }],
-    results := #[{ id := "$res0", typ := .int .int }],
-    body := .block #[]
-      #[.seqn
-          #[.initialization { id := "$c6", typ := .slice (.int .uint64) },
-            .makeSlice (.var "$c6") (.int .uint64) (.var "n") none],
-        .seqn
-          #[.initialization { id := "s", typ := .slice (.int .uint64) },
-            .assign (.var "s") (.var "$c6")],
-        .block #[]
-          #[.seqn
-              #[.initialization { id := "i", typ := .int .uint64 },
-                .assign (.var "i") (.intLit 0 .uint64)],
-            .block #[]
-              #[.initialization { id := "$forFirst", typ := .bool },
-                .assign (.var "$forFirst") (.boolLit true),
-                .while (.boolLit true) setupBody]],
-        .seqn
-          #[.initialization { id := "$c7", typ := .int .int },
-            .call #[.var "$c7"] ⟨"search"⟩ #[.var "s", .var "t"]],
-        .seqn
-          #[.assign (.var "$res0") (.var "$c7"),
-            .returnStmt]],
-    variadic := false,
-    wrapper := false }
+-- HOISTED to `GoLeanProofs/Examples/Targets.lean` (designation, 2026-08-14):
+-- `searchHarnessFunc` is statement vocabulary of a DESIGNATED gallery headline, so it must
+-- live in a def-only module inside the Comparator Challenge's trusted import
+-- closure. The definition is unchanged and still visible here via the import.
 
 /-- The lowering pin: the proof subject IS the frontend's lowering. -/
 theorem searchHarness_pin :

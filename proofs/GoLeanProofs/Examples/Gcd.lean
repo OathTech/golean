@@ -5,6 +5,7 @@ import GoLeanProofs.StepKit
 import GoLeanProofs.EntryEq
 import GoLeanProofs.Frame.Transfer
 import GoLeanProofs.Frame.RenameId
+import GoLeanProofs.Examples.Targets
 
 /-!
 # Verified example: Euclid's gcd (verified-examples slice 2c, 2026-08-13)
@@ -570,23 +571,10 @@ walk at the harness's address layout (params at 0/1, harness result at
 2, `r` at 3, the gcd frame at 4–7); the `%` executable fact and the
 pure gcd-recursion step port verbatim from the framed layer above. -/
 
-/-- The harness's `Func` record, verbatim from the pinned lowering (the
-`example` pin below ties it by `rfl`). -/
-def gcdHarnessFunc : Func :=
-  { id := { key := "gcd_harness" },
-    args := #[{ id := "a", typ := .int .uint64 },
-              { id := "b", typ := .int .uint64 }],
-    results := #[{ id := "$res0", typ := .int .uint64 }],
-    body := .block
-      #[]
-      #[.seqn
-          #[.initialization { id := "r", typ := .int .uint64 },
-            .call #[.var "r"] ⟨"gcd"⟩ #[.var "a", .var "b"]],
-        .seqn
-          #[.assign (.var "$res0") (.var "r"),
-            .returnStmt]],
-    variadic := false,
-    wrapper := false }
+-- HOISTED to `GoLeanProofs/Examples/Targets.lean` (designation, 2026-08-14):
+-- `gcdHarnessFunc` is statement vocabulary of a DESIGNATED gallery headline, so it must
+-- live in a def-only module inside the Comparator Challenge's trusted import
+-- closure. The definition is unchanged and still visible here via the import.
 
 /-- The lowering pin: the harness in the theorem IS the frontend's
 lowering of the corpus harness. -/

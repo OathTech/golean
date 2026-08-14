@@ -310,7 +310,49 @@ open Lean in
     ``GoLean.ImportedGoose.SemanticsNil.compareNilToNilSpecC,
     ``GoLean.ImportedGoose.SemanticsNil.compareNilToNilReadoutC,
     ``GoLean.ImportedGoose.ChannelActris.dspCert,
-    ``GoLean.ImportedGoose.ChannelActris.dspAllSchedules]
+    ``GoLean.ImportedGoose.ChannelActris.dspAllSchedules,
+    -- Examples phase-2 arc end (2026-08-14): the VERIFIED-EXAMPLES
+    -- GALLERY headlines — the public object of agreement
+    -- (`docs/verified-examples.md`). Designation was deferred from the
+    -- foundation merge BY RULING (swapping three statements then
+    -- designating pays the comparator landmark once, not twice); the
+    -- swaps are final, so they join here. 48 → 56.
+    --
+    -- USER RULING (2026-08-14, verbatim): "this is basically saying
+    -- that *in order to state the theorems* we need definitions of what
+    -- fib and whatever mean. That's in the TCB necessarily. So what
+    -- we're doing here is hoisting things into the Comparator set which
+    -- are definitionally part of the TCB. This all seems fine, go
+    -- ahead."
+    --
+    -- THE SET IS WHAT THE GALLERY QUOTES VERBATIM AS A HEADLINE — the
+    -- eight `**The theorem(s)**` blocks, enumerated from the doc rather
+    -- than from memory. Supporting material the gallery only NAMES in
+    -- prose is deliberately NOT designated: the `_readout` twins (no
+    -- readout STATEMENT is quoted anywhere; two axiom-pin LINES are,
+    -- which is a different gate), the `_v1` pairs, the `_framed`
+    -- companions, `maxCount_total_canonical` and `wordcount_empty_ok`.
+    -- `maxCount_total_canonical` carries an extra reason: it is stated
+    -- in run-internal vocabulary (`wcEnv`/`wcSeed`/`wcCall`), so
+    -- designating it would pull proof scaffolding into the Challenge's
+    -- trusted closure — the layering doctrine's exact prohibition.
+    --
+    -- Statement vocabulary hoisted to the def-only
+    -- `GoLeanProofs/Examples/Targets.lean` (F4 discipline; that file's
+    -- docstring records why it sits under `Examples/` and not `Specs/`
+    -- — ci's import-direction lint forbids `Examples/*` from importing
+    -- `Specs/*` with "Exceptions: NONE", and siting it here keeps that
+    -- lint intact instead of punching a hole in it). The Comparator
+    -- landmark for this designated-set change is this arc's arc-end
+    -- step (never part of ci).
+    ``GoLean.Examples.Fib.fib_ok,
+    ``GoLean.Examples.Fib.fib_total,
+    ``GoLean.Examples.Gcd.gcd_ok,
+    ``GoLean.Examples.Reverse.reverse_ok,
+    ``GoLean.Examples.MinMax.minmax_ok,
+    ``GoLean.Examples.BinSearch.search_ok,
+    ``GoLean.Examples.InsertionSort.isort_ok,
+    ``GoLean.Examples.WordCount.wordcount_ok]
   let mut lines : Array String := #[]
   let mut violations : Array String := #[]
   for t in designated do

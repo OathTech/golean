@@ -1,4 +1,5 @@
 import GoLeanProofs.Examples.Reverse
+import GoLeanProofs.Examples.Targets
 
 /-!
 # Reverse — the S1 COPY-RELATIONAL harness (`reverse_harness_v`)
@@ -77,112 +78,10 @@ abbrev vSt (σ : ExecState) (H : Heap) (na : Nat) : ExecState :=
 
 /-! ## The harness `Func`, verbatim from the pinned lowering -/
 
-/-- The copy-relational harness's `Func` record, verbatim from the
-pinned lowering (the pin below ties it by `rfl`). The setup loop body
-is literally the one `reverse_harness` uses, so it is shared rather
-than restated. -/
-def reverseHarnessVFunc : Func :=
-  { id := { key := "reverse_harness_v" },
-    args := #[{ id := "n", typ := .int .uint64 },
-              { id := "seed", typ := .int .uint64 }],
-    results := #[{ id := "$res0", typ := .int .uint64 }],
-    body := .block
-      #[]
-      #[.seqn
-          #[.initialization { id := "$c5", typ := .slice (.int .uint64) },
-            .makeSlice (.var "$c5") (.int .uint64) (.var "n") none],
-        .seqn
-          #[.initialization { id := "s", typ := .slice (.int .uint64) },
-            .assign (.var "s") (.var "$c5")],
-        .block
-          #[]
-          #[.seqn
-              #[.initialization { id := "i", typ := .int .uint64 },
-                .assign (.var "i") (.intLit 0 .uint64)],
-            .block
-              #[]
-              #[.initialization { id := "$forFirst", typ := .bool },
-                .assign (.var "$forFirst") (.boolLit true),
-                .while (.boolLit true) reverseHarnessFunc.suBody]],
-        .seqn
-          #[.initialization { id := "$c6", typ := .slice (.int .uint64) },
-            .makeSlice (.var "$c6") (.int .uint64) (.var "n") none],
-        .seqn
-          #[.initialization { id := "t", typ := .slice (.int .uint64) },
-            .assign (.var "t") (.var "$c6")],
-        .block
-          #[]
-          #[.seqn
-              #[.initialization { id := "i", typ := .int .uint64 },
-                .assign (.var "i") (.intLit 0 .uint64)],
-            .block
-              #[]
-              #[.initialization { id := "$forFirst", typ := .bool },
-                .assign (.var "$forFirst") (.boolLit true),
-                .while (.boolLit true) cpBody]],
-        .call #[] ⟨"reverse"⟩ #[.var "s"],
-        .seqn
-          #[.initialization { id := "ok", typ := .int .uint64 },
-            .assign (.var "ok") (.intLit 1 .uint64)],
-        .block
-          #[]
-          #[.seqn
-              #[.initialization { id := "i", typ := .int .uint64 },
-                .assign (.var "i") (.intLit 0 .uint64)],
-            .block
-              #[]
-              #[.initialization { id := "$forFirst", typ := .bool },
-                .assign (.var "$forFirst") (.boolLit true),
-                .while (.boolLit true) tvBody]],
-        .seqn
-          #[.assign (.var "$res0") (.var "ok"),
-            .returnStmt]],
-    variadic := false,
-    wrapper := false }
-  where
-    /-- The COPY loop's desugared body: dispatch, exit test, the copy
-    block `{ t[i] = s[i] }` (the history ghost being materialized). -/
-    cpBody : Stmt :=
-      .block
-        #[]
-        #[.ifThenElse (.var "$forFirst")
-            (.assign (.var "$forFirst") (.boolLit false))
-            (.assign (.var "i")
-              (.add (.var "i") (.intLit 1 .uint64))),
-          .seqn #[],
-          .ifThenElse (.lessCmp (.var "i") (.var "n"))
-            (.seqn #[])
-            .breakStmt,
-          .block
-            #[]
-            #[.seqn
-                #[.assign
-                    (.addr (.indexAddr (.var "t") (.var "i")))
-                    (.indexGet (.var "s") (.var "i"))]]]
-    /-- The test loop's desugared body: dispatch, exit test, the
-    RELATIONAL check block `{ if s[i] != t[n-1-i] { ok = 0 } }`. -/
-    tvBody : Stmt :=
-      .block
-        #[]
-        #[.ifThenElse (.var "$forFirst")
-            (.assign (.var "$forFirst") (.boolLit false))
-            (.assign (.var "i")
-              (.add (.var "i") (.intLit 1 .uint64))),
-          .seqn #[],
-          .ifThenElse (.lessCmp (.var "i") (.var "n"))
-            (.seqn #[])
-            .breakStmt,
-          .block
-            #[]
-            #[.ifThenElse
-                (.neqCmp (.int .uint64)
-                  (.indexGet (.var "s") (.var "i"))
-                  (.indexGet (.var "t")
-                    (.sub (.sub (.var "n") (.intLit 1 .uint64))
-                      (.var "i"))))
-                (.block #[] #[.seqn
-                    #[.assign (.var "ok") (.intLit 0 .uint64)]])
-                (.seqn #[])]]
+-- HOISTED to `GoLeanProofs/Examples/Targets.lean` (designation, 2026-08-14):
+-- `reverseHarnessVFunc` is statement vocabulary of a DESIGNATED gallery headline, so it must
+-- live in a def-only module inside the Comparator Challenge's trusted import
+-- closure. The definition is unchanged and still visible here via the import.
 
 /-- The lowering pin: the harness subject IS the frontend's lowering. -/
 theorem reverseHarnessV_pin :
