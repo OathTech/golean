@@ -2,6 +2,7 @@ import GoLeanProofs.Examples.GcdProgram
 import GoLeanProofs.SliceMem
 import GoLeanProofs.FuelMeasure
 import GoLeanProofs.StepKit
+import GoLeanProofs.EntryEq
 import GoLeanProofs.Frame.Transfer
 import GoLeanProofs.Frame.RenameId
 
@@ -600,9 +601,6 @@ below re-checks the transcription by `rfl`. Address layout: 0 = `a`,
 4 = `a`, 5 = `b`, 6 = `$res0`, 7 = `$forFirst` (the gcd frame);
 allocator parked at 8 for the whole loop. -/
 
-/-- The entry's frame environment (bindParams + allocDecls). -/
-private def hEnv₀ : LocalEnv :=
-  [[("$res0", .base ⟨2⟩), ("b", .base ⟨1⟩), ("a", .base ⟨0⟩)]]
 /-- The harness scope at the call point (`r` declared). -/
 private def hEnvH : LocalEnv :=
   [[("r", .base ⟨3⟩)],
@@ -642,18 +640,14 @@ private def hModTail (bv : Int) : Cont :=
     [.int bv .uint64] [] (.seqn #[]) hEnvIn2
     (.seq [] hEnvIn2 (.seq [] ([] :: hEnvIn) hLoopK))
 
-/-- The entry seed: the two bound parameters and the zeroed harness
-result cell (the state `runFunctionWithContextM`'s prelude builds). -/
-private def hSeedI (av bv : Int) : ExecState :=
-  { types := gcdLowered.typeDefs.toList, functions := gcdLowered.funcs,
-    methods := gcdLowered.methods,
-    heap := [(.base ⟨0⟩, u64cell av), (.base ⟨1⟩, u64cell bv),
-             (.base ⟨2⟩, u64cell 0)],
-    nextAddr := 3 }
-
-/-- The harness-body start configuration (the prelude's `c₀`). -/
-private def hc₀ : Config :=
-  .exec gcdHarnessFunc.body hEnv₀ (.frame [] [] [] [] .stop false)
+/- The entry seed (`hSeedI`), the start configuration (`hc₀`), and the
+entry equation (`gcdh_entry_eq`, below its old position) are DERIVED —
+the P4 entry-equation macro (phase-2 slice 2,
+`GoLeanProofs/EntryEq.lean`). The emitted statement binds the
+parameters at `Int` (the old form bound `(a b : Nat)` with the casts
+in the argument array); the headline instantiates at `↑a ↑b` exactly
+as before. -/
+derive_entry_eq gcdh_entry_eq gcdLowered gcdHarnessFunc hSeedI hc₀
 
 /-- The in-loop state: harness cells fixed (`a₀`/`b₀` in the parameter
 cells), pair cells `av`/`bv`, the `$forFirst` flag. -/
@@ -677,25 +671,8 @@ private def hEndState (a₀ b₀ g : Int) : ExecState :=
              (.base ⟨6⟩, u64cell g), (.base ⟨7⟩, bcell false)],
     nextAddr := 8 }
 
-/-! ### The entry equation and the raw run segments -/
-
-/-- **The entry equation**: `runFunctionWithContextM` on the harness at
-symbolic arguments IS `runConfig` from the prelude-built seed plus the
-result-location readback — the prelude (arity check, `bindParams`,
-`allocDecls`, `pinResultLocs`) is fuel-independent and definitional at
-the concrete shapes; the parameters land once-normalized. -/
-private theorem gcdh_entry_eq (a b : Nat) (fuel : Nat) (ch : Choices) :
-    runFunctionWithContextM fuel gcdLowered.typeDefs.toList
-        gcdLowered.funcs gcdHarnessFunc
-        #[.int (a : Int) .uint64, .int (b : Int) .uint64]
-        gcdLowered.methods ch
-      = (do
-          let (sF, _) ← runConfig fuel
-            (hSeedI (IntKind.normalize .uint64 (a : Int))
-              (IntKind.normalize .uint64 (b : Int)))
-            hc₀ ch
-          return { values := (← loadMany sF [.base ⟨2⟩]).toArray }) := by
-  with_unfolding_all rfl
+/-! ### The raw run segments (the entry equation `gcdh_entry_eq` is
+derived above by `derive_entry_eq`) -/
 
 /-- Entry: harness-body start → the gcd loop head (`r` declaration,
 call frame entry — the arguments re-normalize at the parameter cells —

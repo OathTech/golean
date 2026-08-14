@@ -6,6 +6,7 @@ import GoLeanProofs.Frame.Transfer
 import GoLeanProofs.Frame.RenameId
 import GoLeanProofs.Laws.Control
 import GoLeanProofs.Laws.Eval
+import GoLeanProofs.EntryEq
 import GoLeanProofs.Laws.Assign
 import GoLeanProofs.Laws.Call
 import GoLeanProofs.Laws.Loop
@@ -1605,36 +1606,14 @@ def fibHarnessFunc : Func :=
 theorem fibHarness_pin : findFunctionIn? fibLowered.funcs ⟨"fib_harness"⟩
     = some fibHarnessFunc := rfl
 
-/-- The machine entry's post-prelude state: exactly the two frame
-cells the prelude allocates from the EMPTY heap — the `n` argument at
-address 0 (normalized at its declared type), the `$res0` result cell
-at 1. -/
-private def fibHSeed (nv : Int) : ExecState :=
-  { types := fibLowered.typeDefs.toList, functions := fibLowered.funcs,
-    methods := fibLowered.methods,
-    heap := [(.base ⟨0⟩, u64cell nv), (.base ⟨1⟩, u64cell 0)],
-    nextAddr := 2 }
-
-/-- The post-prelude configuration: the harness body inside the
-entry's barrier frame. -/
-private def fibHC₀ : Config :=
-  .exec fibHarnessFunc.body [[("$res0", .base ⟨1⟩), ("n", .base ⟨0⟩)]]
-    (.frame [] [] [] [] .stop)
-
-/-- **The entry equation** (the §11 glue, fib instance): the machine
-entry IS its post-prelude `runConfig` form — the prelude is
-fuel-independent and definitional on the concrete-shape argument
-array, so the equation is a pure `with_unfolding_all rfl` at fully
-symbolic `n`, `fuel` and `ch`. -/
-private theorem fibH_entry_eq (n : Nat) (fuel : Nat) (ch : Choices) :
-    runFunctionWithContextM fuel fibLowered.typeDefs.toList
-        fibLowered.funcs fibHarnessFunc #[.int (n : Int) .uint64]
-        fibLowered.methods ch
-      = (do
-          let (sF, _) ← runConfig fuel
-            (fibHSeed (IntKind.normalize .uint64 (n : Int))) fibHC₀ ch
-          return { values := (← loadMany sF [Loc.base ⟨1⟩]).toArray }) := by
-  with_unfolding_all rfl
+/- The post-prelude state (`fibHSeed`), the start configuration
+(`fibHC₀`), and the entry equation (`fibH_entry_eq`) are DERIVED — the
+P4 entry-equation macro (phase-2 slice 2, `GoLeanProofs/EntryEq.lean`)
+replaces the ~30-line hand-written dance this module carried. The
+statement it emits binds the parameter at `Int` (the old hand-written
+form bound `(n : Nat)` and applied the cast in the argument array);
+the consumers below instantiate at `↑n` exactly as before. -/
+derive_entry_eq fibH_entry_eq fibLowered fibHarnessFunc fibHSeed fibHC₀
 
 /-! ### The harness-layout machine configurations (probe-verified;
 every raw segment below re-checks the transcription by `rfl`). -/
