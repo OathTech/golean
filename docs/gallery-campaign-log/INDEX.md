@@ -25,8 +25,8 @@ overstates.
 
 | goal | done | remaining | notes |
 |---|---|---|---|
-| G0 (opening kit phase) | 5 of 5 mandatory units; (d) assessed → deferred to its pulling G1 example | 0 — G0 CLOSED (flagship rule discharges inside G1 by charter design) | see `g0.md` |
-| G1 (gallery to twenty) | 0 of ≥13 new COMPLETE entries | ≥13 (7 shipped pre-campaign) | |
+| G0 (opening kit phase) | 5 of 5 mandatory units; (d) assessed → deferred to its pulling G1 example; **item 4 (flagship rule) DISCHARGED** by G1.1 | 0 — G0 CLOSED | see `g0.md`; the flagship's kit-gap report is in `g1.md` |
+| G1 (gallery to twenty) | **1 of ≥13** new COMPLETE entries (`histogram`, the flagship — all 8 checklist items met; also discharges G0 item 4) | ≥12 | see `g1.md`; the KIT-GAP list there is the flagship's acceptance report |
 | G2 (extensions) | 0 of ≥3 | ≥3 of E1–E4 | |
 | G3 (evidence dossiers) | 0 | register = denominator, fixed at dossier-lane start | register lives in `g3.md`, **enumerated by the dossier lane's first commit** (process amendment `ea7c689a`: the register is that lane's deliverable, not G0's) |
 | G4 (infrastructure debt) | 0 of 4 | 4 | |
@@ -34,6 +34,30 @@ overstates.
 ## Checkpoint summaries
 
 (at least every 5 units; newest first)
+
+- 2026-08-15, checkpoint 2 (unit G1.1, 2 commits): THE FLAGSHIP
+  LANDED. `histogram` — a `map[uint64]uint64` count map, a queried-key
+  read and a VARIABLE-FREE `for range` — is COMPLETE on all eight
+  checklist items: 13 differentially green corpus rows (campaign's
+  first corpus touch; full 1573-case run + negative run recorded,
+  baseline re-pinned same-commit with a reason that was CORRECTED after
+  checking it), golden pin green on both links, headline
+  `histogram_ok` over `runFunctionWithContextM` at the classical trio
+  with 13 axiom pins in a new Audit shard, shipped fuel bound
+  `210·n + 344` with the exact measured count `194·n +
+  16·distinctCount vals + 344` recorded separately, deletion test RUN
+  (4/4 binders load-bearing), gallery entry rendered (52 verbatim
+  blocks, exit 0), peak cost 2045 MiB (bar 2.5 GiB), `scripts/ci` PASS.
+  **Five KIT GAPS recorded with exact shapes** (GAP-C1 the counting
+  layer's name specialization ~600 lines, GAP-R1 the range induction's
+  body/binder specialization ~130, GAP-P1 the counting fold ~150,
+  GAP-P2 the setup family ~83, GAP-M1 the pick step ~45, GAP-M2
+  `DeadFrom` ~30) — all ABSTRACTION gaps, none capability gaps; the kit
+  carried every machine step (366 invocations, zero hand-rolled `stepFn`
+  unfoldings). Honest verdict: the kit carried the example at the STEP
+  level, not the STRUCTURE level; ~27% of the example's Lean is
+  gap-witness code that closing GAP-C1/R1 would delete. Totals: G0 5/5
+  + item 4 discharged; G1 1 of ≥13; G2 0; G3 22/22 dossiers; G4 0/4.
 
 - 2026-08-15, checkpoint 1 (units G0.1–G0.4 + (d), 7 commits): G0
   CLOSED. Log init; brick-wp mapping note; P5 setup-iteration schema

@@ -1,6 +1,6 @@
 # Verified examples — the gallery (2026-08-14)
 
-Seven Go programs, and for each one a GoLean theorem you can read.
+Eight Go programs, and for each one a GoLean theorem you can read.
 
 This file is the **object of agreement**: it exists so that a reader who is
 not a Lean expert can check, by eye, that the top-level statement really
@@ -87,13 +87,23 @@ exhaustion.
   no Iris appears in any statement — those are proof devices, and deleting
   the entire proof layer leaves these statements elaborating unchanged. That
   deletion test was checked by review and independently re-derived in the
-  2026-08-14 pre-merge audit; as of 2026-08-14 the eight headlines quoted
-  below are **designated in the mechanized gate** (`proofs/Audit.lean`), so
+  2026-08-14 pre-merge audit; as of 2026-08-14 the first eight headlines
+  quoted below are **designated in the mechanized gate**
+  (`proofs/Audit.lean`), so
   every build now walks each statement's transitive definition closure and
   fails if it reaches Iris or the Prop-level transition relation — the
   deletion test stopped being a thing we check by reading. Designation also
   puts them in front of the independent Comparator judge, which re-checks
   the proofs by kernel replay against these statements alone.
+  **The ninth entry, `histogram`, is NOT designated.** It was added by the
+  gallery campaign (2026-08-15) and designation is a separate, user-signed
+  act at the end of that arc: it is deliberately absent from
+  `Examples/Targets.lean`, from `scripts/ci`'s trusted-closure allowlist and
+  from the Comparator judge's set. Its deletion test was therefore RUN by
+  hand rather than by the gate — `lean_minimal_hypotheses` on
+  `histogram_ok`, all four explicit binders load-bearing — and that is
+  exactly the weaker standing that undesignated means. Its axioms are pinned
+  in-build like everyone else's (`proofs/Audit/Histogram.lean`).
 - **Where the audits are.** Two adversarial pre-merge audits stand behind
   this file, and entries below cite both by date. The **2026-08-15** one —
   the phase-2 arc's, which swapped three headlines and designated all eight
@@ -114,13 +124,13 @@ exhaustion.
 
 `Choices` is the stream of nondeterministic decisions the machine consumes at
 points where Go does not promise an outcome. `∀ ch : Choices` says the claim
-holds at **every** such stream. For six of the seven examples this quantifier
-is cheap (their runs consume no choices). For word-count it does real work:
-`for … range` over a Go map consumes one choice per iteration, because Go
-deliberately does not fix map iteration order — so the theorem covers every
-order, and the specification is *forced* to be order-independent. A spec
-saying "the count of the first key" would be unprovable there. That
-unprovability is the model working.
+holds at **every** such stream. For six of the eight examples this quantifier
+is cheap (their runs consume no choices). For word-count and histogram it
+does real work: `for … range` over a Go map consumes one choice per
+iteration, because Go deliberately does not fix map iteration order — so the
+theorem covers every order, and the specification is *forced* to be
+order-independent. A spec saying "the count of the first key" would be
+unprovable there. That unprovability is the model working.
 
 ## What fuel is, and what the bound is
 
@@ -1083,6 +1093,203 @@ closed form behind `wordcount_ok_v1` was additionally cross-checked against
 any of it was written in Lean.
 
 ---
+
+---
+
+## histogram — a queried count and a distinct-key count via a Go map
+
+**The Go** (`Corpus/coverage/exec/examples/histogram/main.go`):
+
+<!-- verbatim: Corpus/coverage/exec/examples/histogram/main.go -->
+```go
+func histogram(vals []uint64, q uint64) (uint64, uint64) {
+	counts := make(map[uint64]uint64)
+	for i := 0; i < len(vals); i++ {
+		counts[vals[i]]++
+	}
+	hits := counts[q]
+	distinct := uint64(0)
+	for range counts {
+		distinct++
+	}
+	return hits, distinct
+}
+```
+
+<!-- verbatim: Corpus/coverage/exec/examples/histogram/main.go -->
+```go
+// histogram_harness_r: the S3 RELATIONAL harness (gallery campaign G1,
+// 2026-08-15). Setup builds the value family v[i] = seed + i%3
+// (controllable multiplicities); the harness returns the VALUES it
+// counted (as a fixed-cap array, the pass-by-value fragment's
+// unbounded-data workaround) alongside both summaries, so the Lean
+// postcondition relates the returned data DIRECTLY — no family function
+// re-describing the setup. Real Go, ghost ladder rung 0.
+func histogram_harness_r(n, seed, q uint64) ([histogramCapN]uint64, uint64, uint64) {
+	v := make([]uint64, n)
+	for i := uint64(0); i < n; i++ {
+		v[i] = seed + i%3
+	}
+	var vals [histogramCapN]uint64
+	for i := uint64(0); i < n; i++ {
+		vals[i] = v[i]
+	}
+	hits, distinct := histogram(v, q)
+	return vals, hits, distinct
+}
+```
+
+**The claim.** For every `n ≤ 8`, every `seed < 2^64` and every queried key
+`q < 2^64`, `histogram_harness_r(n, seed, q)` finishes normally, at every
+nondeterminism choice, and returns three values: a list `vals` of length `n`
+(as the fixed-cap array the Go returns), the number of times `q` occurs in
+that very list, and the number of distinct values that very list holds.
+**The postcondition is a relation over the RETURNED data** — neither the
+setup family nor any closed form appears in it.
+
+**This is the second entry where `∀ ch : Choices` earns its keep, and here
+the order-invariance is load-bearing for the *third* value.** `for range
+counts` iterates a Go map, whose order Go deliberately does not fix; the
+machine consumes one nondeterministic choice per iteration and the theorem
+holds at every one of them. That is possible because `distinctCount` is a
+function of the returned values alone — it cannot see the order the machine
+chose. So "the third value is how many distinct values the returned array
+holds" means exactly what it sounds like. A spec naming an order-dependent
+witness — "the count of the first key visited" — would be *unprovable*, and
+that unprovability would be the envelope rejecting the claim by
+construction.
+
+There is a second thing worth noticing about the machine here, because it is
+what makes this example cheap: `for range counts { … }` binds **neither** a
+key nor a value, so the machine's per-iteration bookkeeping allocates
+nothing at all. Its only effect is "one fewer entry in the snapshot". The
+number of iterations is therefore the number of entries, at every stream —
+which is the whole proof of the third value.
+
+Four honesty clauses, none of them small print:
+
+* **The queried count is the map READ, zero value included.** Go's
+  `counts[q]` on a key that was never counted yields `0`, not an error, and
+  `occurrences q vals` is `0` in exactly that case. This is a real Go
+  semantics point rather than a convenience: the corpus rows `miss`,
+  `one-miss` and `harness-r-miss` pin it against `go run` before any of it
+  was written in Lean.
+* **The cap `n ≤ 8` is a toy bound, and it is the price of this style.**
+  Go's pass-by-value fragment cannot return unbounded data, so the harness
+  returns `[histogramCapN]uint64` with `histogramCapN = 8` — visible in the
+  Go — and the copy loop and the zero padding exist *only* so the counted
+  values can cross the observation boundary. The theorem carries `n ≤ 8` as
+  a hypothesis rather than hiding it.
+* **`∃ vals` is still family-determined.** The witness the proof supplies is
+  `v[i] = (seed + i%3) mod 2^64`; the statement merely does not *say* so.
+  What the S3 form buys is on the postcondition side — both answers are
+  asserted about observed output. Turning the input into genuine ∀-data
+  needs the ghost rung-1 annotation, which is designed and not built.
+* **Machine idealization**, as elsewhere: entry from an empty heap, an
+  unbounded heap, allocation always succeeds — and this harness also grows a
+  map. The theorem's domain is the model's, not the practical one. The three
+  arithmetic domains are separated as usual: `n ≤ 8` is *the program's own*
+  (the array cap), `seed < 2^64` and `q < 2^64` are *Go's* uint64 domain at
+  the call boundary, and the counting itself is mathematics.
+
+**The specification functions**
+(`proofs/GoLeanProofs/Examples/Histogram/Pure.lean`):
+
+<!-- verbatim: proofs/GoLeanProofs/Examples/Histogram/Pure.lean -->
+```lean
+def occurrences (v : Int) (l : List Int) : Nat :=
+  (l.filter (· = v)).length
+```
+
+<!-- verbatim: proofs/GoLeanProofs/Examples/Histogram/Pure.lean -->
+```lean
+def distinctCount : List Int → Nat
+  | [] => 0
+  | v :: rest => (if v ∈ rest then 0 else 1) + distinctCount rest
+```
+
+Read the second one alongside the order-invariance paragraph above: it
+counts each value once, at its last occurrence, and it is a function of the
+list — nothing about visit order can be recovered from it, which is
+precisely why it is a legitimate specification for a loop whose visit order
+the machine chooses. The bridge to the machine's map is a theorem of its
+own, `countsList_length : (countsList l).length = distinctCount l`.
+
+**The returned-array adapter** — the rest of the statement vocabulary
+(`proofs/GoLeanProofs/Examples/Histogram/Machine.lean`):
+
+<!-- verbatim: proofs/GoLeanProofs/Examples/Histogram/Machine.lean -->
+```lean
+def histArr8 (xs : List Int) : GoValue :=
+  .array ⟨(xs ++ List.replicate (8 - xs.length) 0).map
+    (fun v => .int v .uint64)⟩
+```
+
+**The theorem** (`proofs/GoLeanProofs/Examples/Histogram.lean`):
+
+<!-- verbatim: proofs/GoLeanProofs/Examples/Histogram.lean -->
+```lean
+theorem histogram_ok (n seed q : Nat) (hcap : n ≤ 8) (hseed : seed < 2 ^ 64)
+    (hq : q < 2 ^ 64) :
+    ∃ vals : List Int, vals.length = n ∧
+      ∃ N : Nat, ∀ fuel : Nat, N ≤ fuel → ∀ ch : Choices,
+        runFunctionWithContextM fuel histogramLowered.typeDefs.toList
+            histogramLowered.funcs histHarnessRFunc
+            #[.int (n : Int) .uint64, .int (seed : Int) .uint64,
+              .int (q : Int) .uint64]
+            histogramLowered.methods ch
+          = .ok { values := #[histArr8 vals,
+                              .int (occurrences (q : Int) vals : Nat) .uint64,
+                              .int (distinctCount vals : Nat) .uint64] } := by
+```
+
+**Axioms** (pinned in `proofs/Audit/Histogram.lean`):
+
+<!-- verbatim: proofs/Audit/Histogram.lean -->
+```lean
+/-- info: 'GoLean.Examples.Histogram.histogram_ok' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+```
+
+<!-- verbatim: proofs/Audit/Histogram.lean -->
+```lean
+/-- info: 'GoLean.Examples.Histogram.histogram_readout' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+```
+
+Lean's classical trio; no `sorry`, no native evaluation, no project axioms.
+
+**Fuel bound.** Explicit and affine: `N = 210·n + 344`. This is the
+branch-UNIFORM worst case — 57 steps per setup iteration, 53 per copy
+iteration, 84 per counting iteration, 16 per range iteration, with the range
+loop charged `n` iterations rather than the `distinctCount vals ≤ n` it
+actually runs. **The measured step count is a different number, and the
+difference is worth stating plainly.** It is *exactly*
+`194·n + 16·distinctCount vals + 344`, verified by direct machine
+measurement at `n = 0…8` and found independent of both the choice stream and
+`q`. That measurement is **not affine in `n`**, because the family
+`v[i] = seed + i%3` stops adding entries to the map after the third value,
+so the shipped bound and the measurement coincide only while every value is
+new (`n ≤ 3`). The bound the theorem ships is `210·n + 344`; the measurement
+is the formula above; neither is presented as the other.
+
+**Status.** NOT DESIGNATED — see the note in *How to read an entry*: this
+example post-dates the 2026-08-14 designation, and designation is arc-end
+work under user sign-off, so its statement is not walked by the mechanized
+statement-TCB gate and not replayed by the Comparator judge. What it does
+have, in-build: the `rfl` lowering pins (`histogram_pin`,
+`histogramHarnessR_pin`), the golden-lowering guard on both links, and the
+axiom pins above. `histogram_readout` is the run-conditioned twin. There is
+no ∀-data companion claim here yet (the analogue of wordcount's
+`maxCount_total_canonical`) — the subject-level claim over arbitrary value
+lists is not proved, and this entry does not imply it.
+
+**Ground.** Differentially green on 13 corpus rows: the all-distinct /
+all-same / mode-of-three / query-miss / one / one-miss / empty drivers, and
+the relational harness at `harness-r-seven`, `harness-r-eight`,
+`harness-r-one`, `harness-r-empty`, `harness-r-miss` (a query that is
+absent) and `harness-r-wrap` (`seed = q = 2^63 − 1`, the largest value the
+differential driver can pass — the `--arg` int64 ceiling is a *driver*
+limit, not a machine one, and it is why no row reaches the true uint64 wrap
+region).
 
 ## The derived twins, and the one axiom line they share
 

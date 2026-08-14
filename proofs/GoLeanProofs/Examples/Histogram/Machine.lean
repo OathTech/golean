@@ -356,6 +356,391 @@ theorem consume_lt (ch : Choices) {n : Nat} (hn : 0 < n) :
       rw [this]
       exact Nat.mod_lt _ hn
 
+/-! ## The placement: environments, continuations, heap fronts
+
+Every definition in this section is SHARED between the run shards
+(`Histogram.CountLoop`, `Histogram.HarnessR`), which is why it lives
+here rather than in either. Names follow the wordcount `*R` convention
+with an `H` suffix. -/
+
+abbrev zeros8 : List Int := List.replicate 8 0
+
+abbrev hSliceV (n : Nat) : GoValue := .slice ⟨some (.base ⟨7⟩), 0, n, n⟩
+abbrev hHandleV (n : Nat) : HeapCell := ⟨some (.slice tU64), hSliceV n⟩
+abbrev hNilSlice : HeapCell := ⟨some (.slice tU64), .slice ⟨none, 0, 0, 0⟩⟩
+abbrev mhCellH : HeapCell := ⟨some tMap, .map ⟨some (.base ⟨21⟩)⟩⟩
+
+/-! ### The harness body's top-level statement pieces -/
+
+def hS2 : Stmt :=
+  .seqn #[.initialization { id := "v", typ := .slice (.int .uint64) },
+          .assign (.var "v") (.var "$c12")]
+def hS3 : Stmt :=
+  .block #[]
+    #[.seqn #[.initialization { id := "i", typ := .int .uint64 },
+              .assign (.var "i") (.intLit 0 .uint64)],
+      .block #[]
+        #[.initialization { id := "$forFirst", typ := .bool },
+          .assign (.var "$forFirst") (.boolLit true),
+          .while (.boolLit true) histHarnessRFunc.suBody]]
+def hS4 : Stmt :=
+  .seqn #[.initialization { id := "vals", typ := .array 8 (.int .uint64) }]
+def hS5 : Stmt :=
+  .block #[]
+    #[.seqn #[.initialization { id := "i", typ := .int .uint64 },
+              .assign (.var "i") (.intLit 0 .uint64)],
+      .block #[]
+        #[.initialization { id := "$forFirst", typ := .bool },
+          .assign (.var "$forFirst") (.boolLit true),
+          .while (.boolLit true) histHarnessRFunc.cpBody]]
+def hS6 : Stmt :=
+  .seqn #[.initialization { id := "hits", typ := .int .uint64 },
+          .initialization { id := "distinct", typ := .int .uint64 },
+          .call #[.var "hits", .var "distinct"] ⟨"histogram"⟩
+            #[.var "v", .var "q"]]
+def hS7 : Stmt :=
+  .seqn #[.assign (.var "$res0") (.var "vals"),
+          .assign (.var "$res1") (.var "hits"),
+          .assign (.var "$res2") (.var "distinct"),
+          .returnStmt]
+
+/-! ### Harness environments -/
+
+def baseEnvH : Scope :=
+  [("$res2", .base ⟨5⟩), ("$res1", .base ⟨4⟩), ("$res0", .base ⟨3⟩),
+   ("q", .base ⟨2⟩), ("seed", .base ⟨1⟩), ("n", .base ⟨0⟩)]
+def envC12H : LocalEnv := [[("$c12", .base ⟨6⟩)], baseEnvH]
+def vScopeH : Scope := [("v", .base ⟨8⟩), ("$c12", .base ⟨6⟩)]
+def valsScopeH : Scope :=
+  [("vals", .base ⟨11⟩), ("v", .base ⟨8⟩), ("$c12", .base ⟨6⟩)]
+def callScopeH : Scope :=
+  [("distinct", .base ⟨15⟩), ("hits", .base ⟨14⟩), ("vals", .base ⟨11⟩),
+   ("v", .base ⟨8⟩), ("$c12", .base ⟨6⟩)]
+def callEnvH : LocalEnv := [callScopeH, baseEnvH]
+
+def suEnvH : LocalEnv :=
+  [[("$forFirst", .base ⟨10⟩)], [("i", .base ⟨9⟩)], vScopeH, baseEnvH]
+def suEnvH2 : LocalEnv := [] :: [] :: suEnvH
+def cpEnvH : LocalEnv :=
+  [[("$forFirst", .base ⟨13⟩)], [("i", .base ⟨12⟩)], valsScopeH, baseEnvH]
+def cpEnvH2 : LocalEnv := [] :: [] :: cpEnvH
+
+/-! ### Harness continuations -/
+
+def hTailAfterSetup : Cont :=
+  .seq [hS4, hS5, hS6, hS7] [vScopeH, baseEnvH] (.frame [] [] [] [] .stop)
+def suHeadTailH : Cont :=
+  .seq [] suEnvH
+    (.seq [] [[("i", .base ⟨9⟩)], vScopeH, baseEnvH] hTailAfterSetup)
+def suHeadCfgH : Config :=
+  .exec (.while (.boolLit true) histHarnessRFunc.suBody) suEnvH suHeadTailH
+def suLoopKH : Cont :=
+  .loop (.boolLit true) histHarnessRFunc.suBody suEnvH suHeadTailH
+def suStoreBlockH : Stmt :=
+  .block #[]
+    #[.seqn #[.assign (.addr (.indexAddr (.var "v") (.var "i")))
+        (.add (.var "seed") (.mod (.var "i") (.intLit 3 .uint64)))]]
+def suCmpKH : Cont :=
+  .ifK (.seqn #[]) .breakStmt ([] :: suEnvH)
+    (.seq [suStoreBlockH] ([] :: suEnvH) suLoopKH)
+def suRefH (n : Nat) (iv : Int) : TargetRef :=
+  .chain (hSliceV n) [.int iv .uint64] [.index]
+def suStTailH : Cont :=
+  .seq [] suEnvH2 (.seq [] ([] :: suEnvH) suLoopKH)
+def suRhsKH (n : Nat) (iv : Int) : Cont :=
+  .rhsK .vals [suRefH n iv] [] [] (.seqn #[]) suEnvH2 suStTailH
+def suAddKH (n : Nat) (sv iv : Int) : Cont :=
+  .strictK .add [.int sv .uint64] [] suEnvH2 (suRhsKH n iv)
+def suModKH (n : Nat) (sv iv : Int) : Cont :=
+  .strictK .mod [.int iv .uint64] [] suEnvH2 (suAddKH n sv iv)
+
+def hTailAfterCopy : Cont :=
+  .seq [hS6, hS7] [valsScopeH, baseEnvH] (.frame [] [] [] [] .stop)
+def cpHeadTailH : Cont :=
+  .seq [] cpEnvH
+    (.seq [] [[("i", .base ⟨12⟩)], valsScopeH, baseEnvH] hTailAfterCopy)
+def cpHeadCfgH : Config :=
+  .exec (.while (.boolLit true) histHarnessRFunc.cpBody) cpEnvH cpHeadTailH
+def cpLoopKH : Cont :=
+  .loop (.boolLit true) histHarnessRFunc.cpBody cpEnvH cpHeadTailH
+def cpStoreBlockH : Stmt :=
+  .block #[]
+    #[.seqn #[.assign (.addr (.indexAddr (.ref "vals") (.var "i")))
+        (.indexGet (.var "v") (.var "i"))]]
+def cpCmpKH : Cont :=
+  .ifK (.seqn #[]) .breakStmt ([] :: cpEnvH)
+    (.seq [cpStoreBlockH] ([] :: cpEnvH) cpLoopKH)
+def cpRefH (iv : Int) : TargetRef :=
+  .chain (.addr (.base ⟨11⟩)) [.int iv .uint64] [.index]
+def cpStTailH : Cont :=
+  .seq [] cpEnvH2 (.seq [] ([] :: cpEnvH) cpLoopKH)
+def cpRhsKH (iv : Int) : Cont :=
+  .rhsK .vals [cpRefH iv] [] [] (.seqn #[]) cpEnvH2 cpStTailH
+
+/-! ### The `histogram` call: TWO arguments, TWO results -/
+
+def hAfterCall : Cont := .seq [hS7] callEnvH (.frame [] [] [] [] .stop)
+def hCallPlans : List (TargetShape × List Expr) :=
+  [(.chain [], [.ref "hits"]), (.chain [], [.ref "distinct"])]
+/-- The `callArgsK` after `v` is delivered and `q` still pending. -/
+def hCallArgsK2 (n : Nat) : Cont :=
+  .callArgsK ⟨"histogram"⟩ hCallPlans [hSliceV n] [] callEnvH hAfterCall
+/-- The subject's call frame: result locs 18/19, write-back targets
+`hits`/`distinct`, returning into the harness's epilogue. -/
+def frameKH : Cont :=
+  .frame hCallPlans callEnvH [.base ⟨18⟩, .base ⟨19⟩] [] hAfterCall
+def hFrameEnv : LocalEnv :=
+  [[("$res1", .base ⟨19⟩), ("$res0", .base ⟨18⟩), ("q", .base ⟨17⟩),
+    ("vals", .base ⟨16⟩)]]
+
+/-! ### Subject environments and continuations -/
+
+def sc0H : Scope :=
+  [("$res1", .base ⟨19⟩), ("$res0", .base ⟨18⟩), ("q", .base ⟨17⟩),
+   ("vals", .base ⟨16⟩)]
+def sc1H : Scope := [("counts", .base ⟨22⟩), ("$c0", .base ⟨20⟩)]
+def envR0H : LocalEnv := [sc1H, sc0H]
+def envBH : LocalEnv :=
+  [[("$forFirst", .base ⟨24⟩)], [("i", .base ⟨23⟩)], sc1H, sc0H]
+def envB1H : LocalEnv := [[("i", .base ⟨23⟩)], sc1H, sc0H]
+def env2H : LocalEnv := [] :: envBH
+def env3H : LocalEnv := [] :: env2H
+def u1EnvH (na : Nat) : LocalEnv := [("$c1", .base ⟨na⟩)] :: env2H
+def uEnvH (na : Nat) : LocalEnv :=
+  [("$c2", .base ⟨na + 1⟩), ("$c1", .base ⟨na⟩)] :: env2H
+
+abbrev asgnC1H : Stmt := .assign (.var "$c1") (.var "counts")
+abbrev seqnC2H : Stmt :=
+  .seqn
+    #[.initialization { id := "$c2", typ := tU64 },
+      .assign (.var "$c2") (.indexGet (.var "vals") (.var "i"))]
+abbrev mapAsgnStmtH : Stmt :=
+  .mapAssign (.var "$c1") (.var "$c2")
+    (.add (.mapGet (.var "$c1") (.var "$c2") tU64 tU64) (.intLit 1 .uint64))
+    tU64 tU64
+
+def tailBH : Cont :=
+  .seq [] envBH (.seq [] envB1H
+    (.seq [hitsSeqn, distinctSeqn, hMapRangeStmt, hRetSeqn] envR0H frameKH))
+/-- The counting-loop head configuration. -/
+def headCH : Config := .exec (.while (.boolLit true) hWhileBody) envBH tailBH
+def loopKCH : Cont := .loop (.boolLit true) hWhileBody envBH tailBH
+def bodyTailH : Cont := .seq [hCountBody] env2H loopKCH
+def cmpContCH : Cont := .ifK (.seqn #[]) .breakStmt env2H bodyTailH
+def lenKH (iv : Int) : Cont :=
+  .strictK (.lengthOf (some (.slice tU64))) [] [] env2H
+    (.strictK .lessCmp [.int iv .int] [] env2H cmpContCH)
+def postBodyKH : Cont := .seq [] env2H loopKCH
+
+def stK0H (na : Nat) : Cont :=
+  .stmtOpK (.mapAssign tU64 tU64) 0 []
+    [.var "$c2",
+     .add (.mapGet (.var "$c1") (.var "$c2") tU64 tU64) (.intLit 1 .uint64)]
+    (uEnvH na) (.seq [] (uEnvH na) postBodyKH)
+def stK2H (na : Nat) (w : Int) : Cont :=
+  .stmtOpK (.mapAssign tU64 tU64) 0
+    [.int w .uint64, .map ⟨some (.base ⟨21⟩)⟩] []
+    (uEnvH na) (.seq [] (uEnvH na) postBodyKH)
+def addKH (na : Nat) (w : Int) : Cont :=
+  .strictK .add [] [.intLit 1 .uint64] (uEnvH na) (stK2H na w)
+def mapGetKH (na : Nat) (w : Int) : Cont :=
+  .strictK (.mapGet tU64 tU64) [.map ⟨some (.base ⟨21⟩)⟩] [] (uEnvH na)
+    (addKH na w)
+
+/-! ### The query / range / return tail, at `hits = B`, `distinct = B+1` -/
+
+def envRBH (B : Nat) : LocalEnv := (("hits", .base ⟨B⟩) :: sc1H) :: [sc0H]
+def envRBDH (B : Nat) : LocalEnv :=
+  (("distinct", .base ⟨B + 1⟩) :: ("hits", .base ⟨B⟩) :: sc1H) :: [sc0H]
+def kRH (B : Nat) : Cont := .seq [hRetSeqn] (envRBDH B) frameKH
+def iterKH (B : Nat) (rem : List (Int × Nat)) : Cont :=
+  .mapIterK none none tU64 tU64 hRangeBody (toEntries rem) (envRBDH B) (kRH B)
+def envIt1 (B : Nat) : LocalEnv := [] :: envRBDH B
+def envIt2 (B : Nat) : LocalEnv := [] :: envIt1 B
+def rngRef (B : Nat) : TargetRef := .chain (.addr (.base ⟨B + 1⟩)) [] []
+def rngStoreK (B : Nat) (rem : List (Int × Nat)) : Cont :=
+  .seq [] (envIt2 B) (iterKH B rem)
+def rngRhsK (B : Nat) (rem : List (Int × Nat)) : Cont :=
+  .rhsK .vals [rngRef B] [] [] (.seqn #[]) (envIt2 B) (rngStoreK B rem)
+def rngAddK (B : Nat) (rem : List (Int × Nat)) : Cont :=
+  .strictK .add [] [.intLit 1 .uint64] (envIt2 B) (rngRhsK B rem)
+
+/-! ### Heap fronts (program-generic) -/
+
+def hHeap0 (nv sv qv : Int) : Heap :=
+  [(.base ⟨0⟩, u64cell nv), (.base ⟨1⟩, u64cell sv), (.base ⟨2⟩, u64cell qv),
+   (.base ⟨3⟩, arrCell 8 zeros8), (.base ⟨4⟩, u64cell 0),
+   (.base ⟨5⟩, u64cell 0)]
+
+def hHeapC12 (nv sv qv : Int) : Heap :=
+  hHeap0 nv sv qv ++ [(.base ⟨6⟩, hNilSlice)]
+
+def hHeapMake (nv sv qv : Int) (n : Nat) : Heap :=
+  hHeap0 nv sv qv ++
+    [(.base ⟨6⟩, hHandleV n), (.base ⟨7⟩, arrCell n (List.replicate n 0))]
+
+def hHeapSu (nv sv qv : Int) (n : Nat) (l : List Int) (iv : Int) (ff : Bool) :
+    Heap :=
+  hHeap0 nv sv qv ++
+    [(.base ⟨6⟩, hHandleV n), (.base ⟨7⟩, arrCell n l),
+     (.base ⟨8⟩, hHandleV n), (.base ⟨9⟩, u64cell iv), (.base ⟨10⟩, bcell ff)]
+
+def hHeapCp (nv sv qv : Int) (n : Nat) (l lp : List Int) (siv civ : Int)
+    (ff : Bool) : Heap :=
+  hHeapSu nv sv qv n l siv false ++
+    [(.base ⟨11⟩, arrCell 8 lp), (.base ⟨12⟩, u64cell civ),
+     (.base ⟨13⟩, bcell ff)]
+
+def hHeapCall (nv sv qv : Int) (n : Nat) (l lp : List Int) (siv civ : Int) :
+    Heap :=
+  hHeapCp nv sv qv n l lp siv civ false ++
+    [(.base ⟨14⟩, u64cell 0), (.base ⟨15⟩, u64cell 0)]
+
+def hHeapHFrame (nv sv qv : Int) (n : Nat) (l lp : List Int) (siv civ : Int) :
+    Heap :=
+  hHeapCall nv sv qv n l lp siv civ ++
+    [(.base ⟨16⟩, hHandleV n), (.base ⟨17⟩, u64cell qv),
+     (.base ⟨18⟩, u64cell 0), (.base ⟨19⟩, u64cell 0)]
+
+/-- The twenty-five concrete front cells during the subject's counting
+and range phases. -/
+def frontH (L : Nat) (sv qv siv civ : Int) (ws lp : List Int)
+    (kvs : List (Int × Nat)) (iv : Int) (ff : Bool) : Heap :=
+  [(.base ⟨0⟩, u64cell (L : Int)), (.base ⟨1⟩, u64cell sv),
+   (.base ⟨2⟩, u64cell qv), (.base ⟨3⟩, arrCell 8 zeros8),
+   (.base ⟨4⟩, u64cell 0), (.base ⟨5⟩, u64cell 0),
+   (.base ⟨6⟩, hHandleV L), (.base ⟨7⟩, arrCell L ws),
+   (.base ⟨8⟩, hHandleV L), (.base ⟨9⟩, u64cell siv),
+   (.base ⟨10⟩, bcell false), (.base ⟨11⟩, arrCell 8 lp),
+   (.base ⟨12⟩, u64cell civ), (.base ⟨13⟩, bcell false),
+   (.base ⟨14⟩, u64cell 0), (.base ⟨15⟩, u64cell 0),
+   (.base ⟨16⟩, hHandleV L), (.base ⟨17⟩, u64cell qv),
+   (.base ⟨18⟩, u64cell 0), (.base ⟨19⟩, u64cell 0),
+   (.base ⟨20⟩, mhCellH), (.base ⟨21⟩, mdCell kvs), (.base ⟨22⟩, mhCellH),
+   (.base ⟨23⟩, intcell iv), (.base ⟨24⟩, bcell ff)]
+
+/-- The subject-phase state: concrete front + the symbolic dead-cell
+tail, over an ABSTRACT program context. -/
+def σH (σ : ExecState) (L : Nat) (sv qv siv civ : Int) (ws lp : List Int)
+    (kvs : List (Int × Nat)) (iv : Int) (ff : Bool) (dead : Heap)
+    (na : Nat) : ExecState :=
+  hSt σ (frontH L sv qv siv civ ws lp kvs iv ff ++ dead) na
+
+theorem lookup_frontH_none (L : Nat) (sv qv siv civ : Int) (ws lp : List Int)
+    (kvs : List (Int × Nat)) (iv : Int) (ff : Bool) {x : Nat} (hx : 25 ≤ x) :
+    Heap.lookup (frontH L sv qv siv civ ws lp kvs iv ff) (.base ⟨x⟩)
+      = none := by
+  simp only [frontH, Heap.lookup,
+    base_beq_false (by omega : (0 : Nat) ≠ x),
+    base_beq_false (by omega : (1 : Nat) ≠ x),
+    base_beq_false (by omega : (2 : Nat) ≠ x),
+    base_beq_false (by omega : (3 : Nat) ≠ x),
+    base_beq_false (by omega : (4 : Nat) ≠ x),
+    base_beq_false (by omega : (5 : Nat) ≠ x),
+    base_beq_false (by omega : (6 : Nat) ≠ x),
+    base_beq_false (by omega : (7 : Nat) ≠ x),
+    base_beq_false (by omega : (8 : Nat) ≠ x),
+    base_beq_false (by omega : (9 : Nat) ≠ x),
+    base_beq_false (by omega : (10 : Nat) ≠ x),
+    base_beq_false (by omega : (11 : Nat) ≠ x),
+    base_beq_false (by omega : (12 : Nat) ≠ x),
+    base_beq_false (by omega : (13 : Nat) ≠ x),
+    base_beq_false (by omega : (14 : Nat) ≠ x),
+    base_beq_false (by omega : (15 : Nat) ≠ x),
+    base_beq_false (by omega : (16 : Nat) ≠ x),
+    base_beq_false (by omega : (17 : Nat) ≠ x),
+    base_beq_false (by omega : (18 : Nat) ≠ x),
+    base_beq_false (by omega : (19 : Nat) ≠ x),
+    base_beq_false (by omega : (20 : Nat) ≠ x),
+    base_beq_false (by omega : (21 : Nat) ≠ x),
+    base_beq_false (by omega : (22 : Nat) ≠ x),
+    base_beq_false (by omega : (23 : Nat) ≠ x),
+    base_beq_false (by omega : (24 : Nat) ≠ x),
+    Bool.false_eq_true, if_false]
+
+/-- The exit-phase front: the harness results (3/4/5), the harness
+`hits`/`distinct` (14/15) and the subject results (18/19) generalized;
+the counting counter parked at `L`. -/
+def frontXH (L : Nat) (sv qv siv civ : Int) (ws lp r3 : List Int)
+    (kvs : List (Int × Nat)) (r4 r5 r14 r15 r18 r19 : Int) : Heap :=
+  [(.base ⟨0⟩, u64cell (L : Int)), (.base ⟨1⟩, u64cell sv),
+   (.base ⟨2⟩, u64cell qv), (.base ⟨3⟩, arrCell 8 r3),
+   (.base ⟨4⟩, u64cell r4), (.base ⟨5⟩, u64cell r5),
+   (.base ⟨6⟩, hHandleV L), (.base ⟨7⟩, arrCell L ws),
+   (.base ⟨8⟩, hHandleV L), (.base ⟨9⟩, u64cell siv),
+   (.base ⟨10⟩, bcell false), (.base ⟨11⟩, arrCell 8 lp),
+   (.base ⟨12⟩, u64cell civ), (.base ⟨13⟩, bcell false),
+   (.base ⟨14⟩, u64cell r14), (.base ⟨15⟩, u64cell r15),
+   (.base ⟨16⟩, hHandleV L), (.base ⟨17⟩, u64cell qv),
+   (.base ⟨18⟩, u64cell r18), (.base ⟨19⟩, u64cell r19),
+   (.base ⟨20⟩, mhCellH), (.base ⟨21⟩, mdCell kvs), (.base ⟨22⟩, mhCellH),
+   (.base ⟨23⟩, intcell ((L : Nat) : Int)), (.base ⟨24⟩, bcell false)]
+
+def σXH (σ : ExecState) (L : Nat) (sv qv siv civ : Int)
+    (ws lp r3 : List Int) (kvs : List (Int × Nat))
+    (r4 r5 r14 r15 r18 r19 : Int) (tail : Heap) (na : Nat) : ExecState :=
+  hSt σ (frontXH L sv qv siv civ ws lp r3 kvs r4 r5 r14 r15 r18 r19 ++ tail)
+    na
+
+theorem lookup_frontXH_none (L : Nat) (sv qv siv civ : Int)
+    (ws lp r3 : List Int) (kvs : List (Int × Nat))
+    (r4 r5 r14 r15 r18 r19 : Int) {x : Nat} (hx : 25 ≤ x) :
+    Heap.lookup (frontXH L sv qv siv civ ws lp r3 kvs r4 r5 r14 r15 r18 r19)
+        (.base ⟨x⟩) = none := by
+  simp only [frontXH, Heap.lookup,
+    base_beq_false (by omega : (0 : Nat) ≠ x),
+    base_beq_false (by omega : (1 : Nat) ≠ x),
+    base_beq_false (by omega : (2 : Nat) ≠ x),
+    base_beq_false (by omega : (3 : Nat) ≠ x),
+    base_beq_false (by omega : (4 : Nat) ≠ x),
+    base_beq_false (by omega : (5 : Nat) ≠ x),
+    base_beq_false (by omega : (6 : Nat) ≠ x),
+    base_beq_false (by omega : (7 : Nat) ≠ x),
+    base_beq_false (by omega : (8 : Nat) ≠ x),
+    base_beq_false (by omega : (9 : Nat) ≠ x),
+    base_beq_false (by omega : (10 : Nat) ≠ x),
+    base_beq_false (by omega : (11 : Nat) ≠ x),
+    base_beq_false (by omega : (12 : Nat) ≠ x),
+    base_beq_false (by omega : (13 : Nat) ≠ x),
+    base_beq_false (by omega : (14 : Nat) ≠ x),
+    base_beq_false (by omega : (15 : Nat) ≠ x),
+    base_beq_false (by omega : (16 : Nat) ≠ x),
+    base_beq_false (by omega : (17 : Nat) ≠ x),
+    base_beq_false (by omega : (18 : Nat) ≠ x),
+    base_beq_false (by omega : (19 : Nat) ≠ x),
+    base_beq_false (by omega : (20 : Nat) ≠ x),
+    base_beq_false (by omega : (21 : Nat) ≠ x),
+    base_beq_false (by omega : (22 : Nat) ≠ x),
+    base_beq_false (by omega : (23 : Nat) ≠ x),
+    base_beq_false (by omega : (24 : Nat) ≠ x),
+    Bool.false_eq_true, if_false]
+
+/-- Freshness of a heap tail from an address up (the wordcount
+`DeadFrom`, re-derived — GAP-M2: this and its two `push` lemmas are
+kit-shaped and live in `Examples/WordCount/Machine.lean`). -/
+def DeadFrom (dead : Heap) (na : Nat) : Prop :=
+  ∀ x : Nat, na ≤ x → Heap.lookup dead (.base ⟨x⟩) = none
+
+theorem DeadFrom.push {dead : Heap} {na : Nat} {c : HeapCell}
+    (h : DeadFrom dead na) :
+    DeadFrom (dead ++ [(.base ⟨na⟩, c)]) (na + 1) := by
+  intro x hx
+  rw [GoLean.Surface.lookup_append_right (h x (by omega)),
+    GoLean.Surface.lookup_cons_ne
+      (GoLean.Surface.base_beq_false (by omega : na ≠ x))]
+  rfl
+
+theorem DeadFrom.push2 {dead : Heap} {na : Nat} {c c' : HeapCell}
+    (h : DeadFrom dead na) :
+    DeadFrom (dead ++ [(.base ⟨na⟩, c), (.base ⟨na + 1⟩, c')]) (na + 2) := by
+  intro x hx
+  rw [GoLean.Surface.lookup_append_right (h x (by omega)),
+    GoLean.Surface.lookup_cons_ne
+      (GoLean.Surface.base_beq_false (by omega : na ≠ x)),
+    GoLean.Surface.lookup_cons_ne
+      (GoLean.Surface.base_beq_false (by omega : na + 1 ≠ x))]
+  rfl
+
 /-! ## The pinned program and the entry equation -/
 
 /-- The pinned program as an empty-heap state — with the
