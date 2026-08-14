@@ -49,17 +49,34 @@ exhaustion.
   every theorem here inherits that error. The standing check is the
   differential corpus: the same Go sources are run by real `go run` and by the
   machine, and every example's rows are green (per-entry, below).
+- **The frontend is trust surface too.** The Go source is turned into the
+  GoCore program the theorems talk about by `tools/nativefrontend` +
+  `NativeToIR`, and *nothing here verifies that translation*. If the frontend
+  lowers a Go construct wrongly, the theorem is a true statement about the
+  wrong program. What checks it is the same differential corpus as the
+  interpreter, and it checks the two **jointly**: frontend and interpreter
+  together reproduce `go run`'s observable behaviour on every corpus row. That
+  is validation, not proof, and it is the honest status of every claim below.
 - **The program in each theorem is not retyped by hand.** It is the
   frontend's lowering of the corpus `main.go`, pinned by `scripts/check-golden`
   on both links — a fresh frontend emit + decode must reproduce the checked-in
   baseline, and the checked-in Lean term must print the same. Each proof module
-  additionally pins the harness function *inside* that lowering by `rfl`, so
-  "the theorem is about this Go file" is a checked chain rather than a claim.
-- **Nothing else.** The statements mention interpreter vocabulary, the pinned
-  program, and specification functions defined in the same file (`fibSpec`,
-  `findSpec`, …). No separation logic, no weakest-precondition machinery, no
-  Iris appears in any statement — those are proof devices, and deleting the
-  entire proof layer leaves these statements elaborating unchanged.
+  additionally pins the harness function *inside* that lowering by `rfl`
+  (`fibHarness_pin` and its six siblings, registered in `proofs/Audit.lean`).
+  So "the theorem is about this Go file" is a **staleness-checked** chain: it
+  catches a lowering that drifts from the source or a hand-edited Lean term,
+  and it says nothing about whether the lowering is faithful. The translation
+  step itself is validated by the differential corpus, not verified.
+- **No proof machinery leaks into the statements.** They mention interpreter
+  vocabulary, the pinned program, and specification functions defined in the
+  same file (`fibSpec`, `findSpec`, …). No separation logic, no
+  weakest-precondition machinery, no Iris appears in any statement — those are
+  proof devices, and deleting the entire proof layer leaves these statements
+  elaborating unchanged. That deletion test was checked by review and
+  independently re-derived in the 2026-08-14 pre-merge audit; the example
+  headlines are **not yet in the mechanized designation gate** (deliberate —
+  designation triggers the comparator landmark; the candidates are recorded
+  for the merge window).
 - **The heap is empty at entry.** Each theorem starts the harness from an
   empty state with its arguments at the call boundary, so the harness
   allocates everything it touches. There is nothing to frame, and no
@@ -100,10 +117,17 @@ quantifier here is discharged symbolically.
   said plainly in each such entry. Where a genuinely ∀-data companion is
   proven, it is named in the entry's status line as supporting material.
 - **Domain conditions are part of the claim.** Where a bound appears
-  (`n ≤ 93`, `len < 2^63`, `len < 2^62`), the entry says whether it is the
-  mathematics, Go's own type domain, or the program's own arithmetic —
-  including where the bound exists because the program has a real,
-  famous bug.
+  (`n ≤ 93`, `len < 2^63`, `len < 2^62`), the entry says which of four kinds
+  it is: the mathematics, Go's own type domain *as the model represents it*,
+  the program's own arithmetic — including where the bound exists because the
+  program has a real, famous bug — or **machine idealization**. That fourth
+  kind is the one to watch: the machine's heap is unbounded and allocation
+  always succeeds, so a `2^63` length bound is where Go's `int` domain ends
+  *in the model*, not where a real Go program stops working. Real Go is
+  memory-bounded — `make([]uint64, n)` can fail long before `2^63` — so the
+  practical domain of every allocating entry below is strictly smaller than
+  the stated one. The theorems state the model's domain; that is honest only
+  if said out loud (register entry: `docs/2026-08-11_essence-of-go-doctrine.md`).
 
 ---
 
@@ -313,15 +337,20 @@ element-wise — in Go, inside the verified footprint — that `s[i]` now equals
 `seed + (n-1-i)` (again in wrapping `uint64` arithmetic). The claim is exactly
 *"that check passed, for every `(n, seed)` in the domain"*, and no more.
 
-The bound `n < 2^63` is **Go teaching us its own domain**, not a proof
-limitation: `make([]uint64, n)` takes a Go `int`, so past `2^63` the length is
-no longer an `int` value at all — it wraps negative and the program panics.
-The statement says where the program works rather than pretending the
-boundary is not there.
+The bound `n < 2^63` is where Go's `int` domain ends **in the model**:
+`make([]uint64, n)` takes a Go `int`, so past `2^63` the length no longer fits
+Go's `int` and `make` panics. Note what the bound is not — it is not the
+practical domain of the Go program. The machine models allocation as always
+succeeding (entry from an empty heap, an unbounded heap, no allocation
+failure), while real Go is memory-bounded and `make([]uint64, n)` fails far
+below `2^63`. So the theorem's domain is the model's domain, wider than the
+one a real process has; the machine idealization, not the theorem, is what
+buys the extra width.
 
 Input honesty: the quantifiers are the scalars `(n, seed)` — an input
-*family*, not all slices. The wrapping is deliberate, so the family crosses
-the `2^64` boundary.
+*family*, not all slices. The wrapping is deliberate and the theorem covers
+every seed below `2^64`, including the ones where `seed + i` wraps; the
+differential rows below do not reach that region (see **Ground**).
 
 **The family** (`proofs/GoLeanProofs/Examples/Reverse.lean`):
 
@@ -356,16 +385,23 @@ Lean's classical trio; no `sorry`, no native evaluation, no project axioms.
 **Fuel bound.** Explicit and affine: `N = 189·n + 260`.
 
 **Status.** `reverse_readout` is the run-conditioned twin. The stronger
-input claim lives beneath as `reverse_framed`: for **any** list of `uint64`
-values, wherever it sits in memory and whatever else is present, `reverse`
-finishes and that memory then holds the list reversed with nothing else
-touched. It is genuinely ∀-data — the harness family does not subsume it —
-and it is kept as supporting material because the user-facing form observes
-only returned values.
+input claim lives beneath as `reverse_framed`: for any list of `uint64`
+values **of length below `2^63`**, at any placement, beside any frame that
+does not already occupy that placement, and under the module's stated
+well-formedness and frame-disjointness side conditions (`MachineWf` on the
+seed state, `hb`/`hxs` — see the module), `reverse` finishes and that memory
+then holds the list reversed with every frame cell preserved. It is
+genuinely ∀-data — the harness family does not subsume it — and it is kept as
+supporting material because the user-facing form observes only returned
+values.
 
 **Ground.** Differentially green on 8 corpus rows (four/three/one/empty
 element drivers and an `int64`-boundary value) plus the harness at `(5,100)`,
-`(0,7)` and a near-`2^63` wrapping seed.
+`(0,7)` and a near-`2^63` seed — the largest a corpus row can express, since
+the differential driver parses `int64` arguments, so no oracle row reaches the
+`uint64` wrap region. The wrap region was checked by direct `go run` probes in
+the 2026-08-14 audit and agrees with the machine; extending the driver is
+recorded as an input for the successor arc.
 
 ---
 
@@ -412,9 +448,10 @@ so the claim is the value itself.
 Two bounds, both Go's own. `1 ≤ n`: `minMax` reads `s[0]`, so the empty slice
 panics — the theorem excludes it honestly instead of quietly succeeding, and
 the corpus pins that panic against `go run` (row `harness-empty-panics`).
-`n < 2^63`: Go's `int` domain for lengths again. Because the family wraps at
-`2^64`, the answer is not simply the first and last element once `seed + n`
-crosses the boundary.
+`n < 2^63`: Go's `int` domain for lengths again — the model's domain, wider
+than the practical one (the machine's allocation never fails; see reverse and
+the fourth bound kind above). Because the family wraps at `2^64`, the answer
+is not simply the first and last element once `seed + n` crosses the boundary.
 
 **The specification functions** (`proofs/GoLeanProofs/Examples/MinMax.lean`;
 their `[]` cases are unreachable here, since `n ≥ 1`):
@@ -468,9 +505,13 @@ Lean's classical trio; no `sorry`, no native evaluation, no project axioms.
 **Fuel bound.** Explicit and affine: `N = 145 + 149·n`.
 
 **Status.** `minmax_readout` is the run-conditioned twin; `minmax_framed` /
-`minmax_framed_readout` are the memory-quantified companions — ∀ list, with
-the additional claim that the input slice comes back unchanged (the program
-is read-only on its input) and other memory is untouched. Supporting
+`minmax_framed_readout` are the memory-quantified companions — for any
+**non-empty** list of `uint64` values of length below `2^63`, at any
+placement other than the two result cells, and under the module's stated
+well-formedness and frame-disjointness side conditions (`MachineWf`, the
+three `Heap.lookup fr … = none` clauses — see the module), with the
+additional claim that the input slice comes back unchanged (the program is
+read-only on its input) and every frame cell is preserved. Supporting
 material.
 
 **Ground.** Differentially green on 9 corpus rows including the empty-slice
@@ -586,8 +627,11 @@ Lean's classical trio; no `sorry`, no native evaluation, no project axioms.
 harness form** — `search_framed_readout` exists for the memory-quantified
 companion only. `search_framed` is that companion (∀ sorted list, at any
 placement, other memory preserved, input array unchanged); both are
-supporting material. Also proved on the way: the post-loop `&&` really is
-lazy — when `lo = len(s)`, the out-of-bounds read `s[lo]` never happens.
+supporting material. Also shown on the way: the post-loop `&&` really is
+lazy — when `lo = len(s)`, the out-of-bounds read `s[lo]` never happens. That
+is shown by the proof's step-walk (the segment completes without a panic, and
+the machine panics on out-of-range reads); the carrier lemmas are
+proof-internal.
 
 **Ground.** Differentially green on 14 corpus rows: first/middle/last hits,
 misses below, in the gap and above, the duplicates lower-bound row (first
@@ -666,8 +710,10 @@ which, the two having the same length, is a permutation check. The claim is
 that this verdict is `1` for every `(n, seed)` in the domain; it is exactly
 as strong as the check printed above, and no stronger.
 
-`n < 2^63` is Go's `int` domain for lengths, as in reverse. Input honesty:
-the quantifiers are the scalars `(n, seed)`.
+`n < 2^63` is Go's `int` domain for lengths, as in reverse — the model's
+domain: this harness allocates two slices, and the machine's allocation never
+fails, so the practical Go domain is much smaller. Input honesty: the
+quantifiers are the scalars `(n, seed)`.
 
 **The family** (`proofs/GoLeanProofs/Examples/InsertionSort.lean`):
 
@@ -710,15 +756,18 @@ count-based permutation check is O(n²):
 
 **Status.** `isort_readout` is the run-conditioned twin. The mathematical
 sortedness claim lives beneath, in the memory-quantified companion
-`isort_framed`: for **any** list of `uint64` values, wherever it sits in
-memory, the slice afterwards holds `sortSpec xs` — proven sorted
-(`sortSpec_sorted`), of the same length (`sortSpec_length`) and a permutation
-(`sortSpec_count`: every value keeps its multiplicity) — with other memory
-untouched. That companion, not the harness verdict, is where "insertion sort
-sorts" is stated in mathematics. Also proved on the way: at `j = 0` the
-machine provably never reads `s[j-1]` — Go's short-circuit `&&` is
-load-bearing here, and it is exhibited in a theorem rather than only in
-tests.
+`isort_framed`: for any list of `uint64` values **of length below `2^63`**,
+at any placement, beside any disjoint frame, and under the module's stated
+well-formedness and frame-disjointness side conditions (`MachineWf`,
+`hb`/`hxs` — see the module), the slice afterwards holds `sortSpec xs` —
+proven sorted (`sortSpec_sorted`), of the same length (`sortSpec_length`) and
+a permutation (`sortSpec_count`: every value keeps its multiplicity) — with
+every frame cell preserved. That companion, not the harness verdict, is where
+"insertion sort sorts" is stated in mathematics. Also proved on the way: at
+`j = 0` the machine provably never reads `s[j-1]` — Go's short-circuit `&&`
+is load-bearing here, and that is shown by the proof's step-walk (the segment
+completes without a panic, and the machine panics on out-of-range reads); the
+carrier lemmas are proof-internal.
 
 **Ground.** Differentially green on 11 corpus rows
 (shuffled/sorted/reversed/duplicates/`int64`-boundary/three/one/empty) plus
@@ -779,8 +828,9 @@ of the first key visited" would not be, since different orders would give
 different answers. The envelope rejects order-dependent claims by
 construction.
 
-`n < 2^63` is Go's `int` domain for lengths; `seed < 2^64` is just the
-argument's type.
+`n < 2^63` is Go's `int` domain for lengths — again the model's domain, not
+the practical one (unbounded heap, allocation never fails, and this harness
+also grows a map); `seed < 2^64` is just the argument's type.
 
 **The specification layer** (`proofs/GoLeanProofs/Examples/WordCount.lean`):
 
