@@ -286,6 +286,13 @@ form — all specified in the worker briefs verbatim.
 
 ## §5 Gallery entry drafts
 
+Read note (2026-08-14): the statements printed in this section are the
+PRE-PIVOT memory-quantified forms. The harness ruling (form note §11)
+moved those names to the harness headlines and renamed the forms below
+`<example>_framed`/`<example>_framed_readout` — so `gcd_ok` here is
+today's `gcd_framed`, and so on. The shipped gallery is
+`docs/verified-examples.md`.
+
 ### gcd — Euclid's algorithm over uint64
 
 ```go
@@ -550,7 +557,8 @@ theorem search_ok (xs : List Int) (t : Int)
             Heap.lookup σf.heap (.base ⟨a⟩) = some c
 ```
 
-(`search_readout` beneath it: the run-conditioned reading, derived.)
+(`search_framed_readout` beneath it: the run-conditioned reading,
+derived.)
 
 **Axioms:** `[propext, Classical.choice, Quot.sound]`.
 
@@ -564,7 +572,7 @@ an int64-boundary value.
 
 ## §6 TCB-grounding walks (per-export discipline)
 
-**`gcd_ok`/`gcd_readout`** statement closure, every identifier to its
+**`gcd_framed`/`gcd_framed_readout`** statement closure, every identifier to its
 ground: `execStmt`, `execStmtLoop`, `loadLoc`, `Heap.lookup`,
 `ExecState`, `Choices`, `ExecOutcome.normal`, `GoValue.int`,
 `IntKind.uint64`, `Loc.base`, `HeapCell`, `MachineWf` — interpreter
@@ -578,7 +586,7 @@ no WP, no Frame vocabulary in the statement closure (`FrameSim`/
 `renameLoc` appear only in proofs). Deletion test: the statements
 survive deleting the entire proof layer.
 
-**`minmax_ok`/`minmax_readout`**: interpreter vocabulary as gcd's plus
+**`minmax_framed`/`minmax_framed_readout`**: interpreter vocabulary as gcd's plus
 `sliceCells` (SliceMem, the §9a shared constructor — 5 lines of
 first-order constructor application); `minSpec`/`maxSpec` — six-line
 recursive references, in-module; `resCells`/`minMaxEnv`/`minMaxCall`/
@@ -586,14 +594,14 @@ recursive references, in-module; `resCells`/`minMaxEnv`/`minMaxCall`/
 pinned by check-golden). No Iris/WP/Frame names in the statement
 closure; deletion-test clean.
 
-**`isort_ok`/`isort_readout` + corollaries**: interpreter vocabulary +
+**`isort_framed`/`isort_framed_readout` + corollaries**: interpreter vocabulary +
 `sliceCells` + `SliceMem.Sorted` (shared, first-order) +
 `insertSpec`/`sortSpec` (in-module, readable recursion/fold) + literal
 seed/call defs over the pinned `isortLowered`. The frame theorem's
 vocabulary appears ONLY in proofs (both consumption sites — the
 in-run rebase and the ∀-placement transfer); deletion-test clean.
 
-**`search_ok`/`search_readout`**: interpreter vocabulary +
+**`search_framed`/`search_framed_readout`**: interpreter vocabulary +
 `sliceCells` + `SliceMem.Sorted` (shared) + `findSpec` (in-module,
 readable recursion) + literal seed/call defs over the pinned
 `searchLowered`. No Iris/WP/Frame names in the statement closure;
@@ -629,9 +637,12 @@ closure is PURE: `wcFamily` (one `List.range`/`map` line, the wrap in
 the definition), `maxMultiplicity`/`multiplicity` (in-module folds over
 `List.filter`), `Nat` arithmetic. No interpreter vocabulary at all —
 it is the pure arithmetic content the refuted seed caveat was really
-about. The G1 headline's walk is NOT written, because the headline is
-not shipped (an unwritten walk for an unshipped theorem, not a gap in
-a shipped one).
+about. (Superseded 2026-08-14: this paragraph used to close by saying
+the G1 headline's walk was not written because the headline was not
+shipped. `wordcount_ok` SHIPPED at `f8820d62` — gap G1 closed — and its
+statement-closure walk lives in `proofs/Audit.lean` (the wordcount
+block, "Statement closure: interpreter/native-entry vocabulary …"), so
+there is no unwritten walk here.)
 
 ## §7 Harness-restatement round (post-ruling; appended at integration)
 

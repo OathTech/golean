@@ -1,7 +1,10 @@
 # Harness spec-style scoping study (2026-08-14)
 
 Status: SCOPING STUDY — no verification, no proofs. All seven gallery
-examples were drafted in each candidate harness spec style; every draft
+examples were drafted in every candidate harness spec style that is not a
+degenerate repeat, EXCEPT three S4 cells (minmax, binsearch, wordcount)
+noted in the matrix as the same pattern as an already-drafted cell —
+13 drafts and 9 probes on disk. Every draft
 was **executed** (`go run` — real test code) and **run through the real
 pipeline** (`tools/nativefrontend` emit → `golean native-json-run`),
 and every proposed Lean headline was **elaborated** against the actual
@@ -136,8 +139,10 @@ they just have no checked-in Lean decode, which scoping does not need).
 ## §3 The matrix — 7 examples × 4 styles
 
 Legend: **SHIPPED** = the current gallery entry is this style.
-DEGEN = degenerates to another cell. All non-DEGEN cells were drafted
-and executed; ✓go = `go run` green, ✓m = machine run green.
+DEGEN = degenerates to another cell. Every non-DEGEN cell was drafted and
+executed except the three marked "not drafted (same pattern)", which were
+judged from an already-executed sibling cell rather than run; ✓go =
+`go run` green, ✓m = machine run green.
 
 | Example | S1 verdict | S2 value+family | S3 relational-value | S4 relational-string |
 |---|---|---|---|---|

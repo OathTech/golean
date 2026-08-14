@@ -123,6 +123,24 @@ costs. We do not BS ourselves about the distance to the goal.
    address-exposing channel (`%p`, pointer order, `unsafe`) re-opens
    it. Cost of removal already paid — by proof, not by widening the
    machine.
+7. **Unbounded memory / allocation never fails** (added 2026-08-14 from
+   the verified-examples pre-merge audit, finding R1-F1). The machine's
+   heap is unbounded and every allocation succeeds: `make`, composite
+   literals and frame allocation have no failure mode, and runs start
+   from an empty heap. Real Go is memory-bounded — an allocation can
+   fail (OOM, or the runtime's own limits) at any size, and long before
+   a length reaches `2^63`. Consequence, and the reason this is
+   recorded rather than shrugged off: a theorem's domain condition
+   states the MODEL's domain, which is wider than the practical Go
+   domain, so `n < 2^63` in the gallery means "where Go's `int` domain
+   ends in the model", never "where the program stops working"
+   (`docs/verified-examples.md` says this at each entry). Disposition:
+   STANDING IDEALIZATION, not a gc-pin — it carries no re-envelope
+   obligation, because the too-wide direction here does not threaten
+   theorem transfer to real runs that DO allocate successfully. Cost of
+   removal (only if resource-bounded claims are ever wanted): an
+   allocation-failure outcome in the machine plus a memory budget in
+   every statement — deliberately not paid.
 
 ## Why (the mission)
 

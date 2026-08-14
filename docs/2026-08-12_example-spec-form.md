@@ -35,7 +35,15 @@ mod-2^64 wrap). The proof subject is the frontend's ACTUAL lowering,
 pinned by `scripts/check-golden` (`baselines/golden/fib-lowered.repr`),
 so "the theorem is about this Go file" is a checked chain, not a claim.
 
-## §2 THE PROPOSED HEADLINE (decision object)
+## §2 THE PROPOSED HEADLINE (decision object) — SUPERSEDED by §11
+
+The headline form below is the slice-1 proposal, kept as the record of
+what was decided and why. The FINAL form is the harness ruling in §11
+(user, 2026-08-13): headlines run the three-phase Go harness through
+`runFunctionWithContextM` from an empty heap and observe only returned
+values — no `execStmt`, no `loadLoc` cell readback, no `fibSeed`/`fibEnv`
+in the statement. The name `fib_ok` survives the move and now denotes the
+harness theorem, so read every occurrence below as the pre-pivot subject.
 
 ```lean
 theorem fib_ok (n : Nat) (hn : n ≤ 93) :
@@ -75,7 +83,7 @@ theorem fib_total (n : Nat) (hn : n < 2 ^ 64) :
 *for every value of the Go argument type, execution completes normally
 and returns `fibSpec n % 2^64`* — machine-integer honesty (FD-E3):
 what Go's wrapping arithmetic actually computes past n = 93. The
-run-conditioned readout half remains available as `fib_wraps`.
+run-conditioned readout half remains available as `fib_wraps_seeded`.
 
 ## §3 The latitude points — options and recommendations
 
@@ -117,7 +125,7 @@ retrofit; the proofs do not change.
   `fibSpec_lt_of_le_93` from a linear-time pair evaluator, no
   exponential unfolding) — so the domain condition teaches the overflow
   boundary instead of hiding it.
-- **(b) Full-domain wrapped claim** (BUILT, as `fib_wraps`):
+- **(b) Full-domain wrapped claim** (BUILT, as `fib_wraps_seeded`):
   `∀ n < 2^64 … = fibSpec n % 2^64`, run-conditioned. The genuinely
   ∀-input symbolic result — one WP proof covers 2^64 inputs; nothing is
   enumerated. Weaker on the completion side (§4's debt), stronger on
@@ -150,7 +158,7 @@ the frame-closed `GoSpec` remains available beneath as `fibGoSpec`.
 
 ### L4 — readability devices
 
-- Naming: `fib_ok` (the total claim), `fib_wraps` (the boundary
+- Naming: `fib_ok` (the total claim), `fib_wraps_seeded` (the boundary
   claim), `fibSpec` (the mathematics). Verb-ish suffixes over
   jargon — proposal: `<example>_ok` / `<example>_wraps` as the
   slice-2 convention.
@@ -237,6 +245,13 @@ same-commit-witnessed by fib per the non-vacuity rule)
   is the seed work list of the golean-wp tactics layer — §5b.
 
 ## §5b The golean-wp tactics layer — prior art and growth plan
+
+Supersession note (2026-08-14): the growth plan below assumes the WP
+route as the proof method. §11's method freeze settled that differently —
+the shipped examples are proved by DIRECT machine-step segments plus
+induction, with the WP/Iris layer witnessed separately and deliberately
+not consumed in the headlines. So this section records prior art and an
+option that was not taken, not the arc's plan; nothing in it was built.
 
 Prior art (user-provided mid-slice, 2026-08-12): `deps/brick-wp` — the
 user's own Rocq WP-tactics library for BRiCk/cpp2v C++ proofs
@@ -397,7 +412,15 @@ listed set should), the named variant to build is a
 well-founded-relation-indexed rule (`completesIn_measure_loop_wf`) —
 recorded here so the finding has an address.
 
-## §6 TCB-grounding walk for `fib_ok` (per-export discipline)
+## §6 TCB-grounding walk for `fib_ok` — SUPERSEDED by §11
+
+The walk below grounds the PRE-PIVOT `fib_ok` (the seeded
+`execStmt`/`loadLoc` driver form). It is left exactly as written, as
+the record of the discipline; today's `fib_ok` is the harness theorem,
+whose closure is walked in the `proofs/Audit.lean` prose for the
+verified-examples blocks, and the model walk for the current form is
+the isort harness walk in `docs/2026-08-13_verified-examples-scale-out.md`
+§6 (no heap vocabulary at all — the verdict is computed in Go).
 
 Statement closure, every identifier to its ground: `execStmt`,
 `loadLoc`, `ExecState`, `Choices`, `ExecOutcome.normal`, `GoValue.int`,
@@ -412,9 +435,15 @@ no tactic-layer name in the statement closure (deletion test:
 `Examples/Fib.lean`'s statements survive deleting the entire proof
 layer; the proofs of course do not). Axioms: classical trio only,
 pinned in `proofs/Audit.lean` (`#guard_msgs` on `fib_ok` and
-`fib_wraps`).
+`fib_wraps_seeded`).
 
-## §7 Draft gallery entry (what a user would see)
+## §7 Draft gallery entry (what a user would see) — SUPERSEDED by §11
+
+The draft below predates the harness ruling (§11) and the shipped
+gallery. What a user actually sees is `docs/verified-examples.md`, whose
+entries print the harness in full and quote every theorem verbatim; the
+statement printed below is the pre-pivot seeded-driver form. Kept as the
+design record of the entry's SHAPE, which the gallery did inherit.
 
 ---
 
@@ -460,8 +489,11 @@ theorem fib_total (n : Nat) (hn : n < 2 ^ 64) :
             = .ok (.int ((fibSpec n % 2 ^ 64 : Nat) : Int) .uint64)
 ```
 
-**Axioms:** `[propext, Classical.choice, Quot.sound]` (Lean's classical
-trio; no `sorry`, no native evaluation, no extra axioms).
+**Axioms:** `[propext, Quot.sound]` (no `sorry`, no native evaluation, no
+extra axioms; corrected 2026-08-14 — the draft said the classical trio,
+but the shipped `fib_total` pin in `proofs/Audit.lean` drops
+`Classical.choice`, since its derivation goes through no Iris and no
+frame layer).
 
 **Ground:** the program in the theorem is the toolchain's pinned
 lowering of the Go source above (staleness-guarded); the same source is
@@ -469,7 +501,14 @@ differentially tested against `go run`, including the n = 94 wrap.
 
 ---
 
-## §9 The memory-quantified form (slice 2a — checkpoint packet)
+## §9 The memory-quantified form (slice 2a) — SUPERSEDED by §11
+
+The "headlines UNIFY to the memory-quantified form" ruling recorded here
+was itself superseded on 2026-08-13 by the harness ruling (§11): the
+memory-quantified forms are KEPT, but as the proof-side supporting layer
+(`fib_framed`, `reverse_framed`, `minmax_framed`, …), while the headlines
+observe a harness run's returned values from an empty heap. Read this
+section as the design of that supporting layer.
 
 Form ruling (user, 2026-08-13): headlines UNIFY to the
 memory-quantified form — input data + arbitrary disjoint frame, frame
@@ -913,7 +952,7 @@ AFTER their restatements land (ruling (a)).
 - Machine/frontend changes (must-park): the `$forFirst` desugar tax
   (§4) goes to a frontend arc; no Choices sites touched; no
   interpreter edits.
-- Designation: `fib_ok`/`fib_wraps` are designation CANDIDATES
+- Designation: `fib_ok`/`fib_wraps_seeded` are designation CANDIDATES
   (statement-TCB-clean, first-order); recorded for merge-window
   curation, not designated here.
 - The `VerifiedExample` bundling structure and any gallery renderer —
