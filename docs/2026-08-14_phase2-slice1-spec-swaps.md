@@ -129,6 +129,22 @@ Run it with `scripts/capped lake env lean --run <file>` from `proofs/`.
 This is the loop that makes the segment layer transcription-bound
 rather than search-bound; it is worth keeping.
 
+Two gotchas, both hit and both cheap to avoid: `Func` has no
+`Inhabited` instance (use a `match … with | some f => f | none => …`
+rather than `.get!`), and a driver that single-steps to the terminal
+—
+
+```lean
+while k < 3000 && !done do
+  match stepFn σ cur [] with
+  | .ok (c', σ', _) => cur := c'; σ := σ'; k := k + 1
+                       match c' with | .next .stop => done := true | _ => pure ()
+  | .error e => IO.println s!"ERROR at k={k}: {repr e}"; done := true
+```
+
+— gives the exact step count per `n` in one run, which is how the fuel
+bound below was measured rather than guessed.
+
 ## Handoff: the proof designs, ready to build
 
 ### reverse — S1 copy-relational (`reverse_harness_v`)
@@ -143,11 +159,34 @@ also the nondet-annotation-ready form (ghost rung 1 later: annotating
 the one setup assignment makes it ∀-data with the SAME test phase; the
 family-formula version cannot, because its check encodes the family).
 
-Predicted address layout (probe before trusting): 0=`n`, 1=`seed`,
-2=`$res0`, 3=`$c5` (s handle), 4=s backing, 5=`s`, 6=setup `i`,
-7=setup flag, 8=`$c6` (t handle), 9=t backing, 10=`t`, 11=copy `i`,
-12=copy flag, 13=reverse's `s` param, 14/15=reverse's `i`/`j`,
-16=reverse's flag, 17=`ok`, 18=test `i`, 19=test flag.
+**Address layout — MEASURED, not predicted** (probe run 2026-08-14,
+`nextAddr = 20` at every `n`, so the layout is `n`-independent):
+
+| addr | cell | | addr | cell |
+|---|---|---|---|---|
+| 0 | `n` | | 10 | `t` |
+| 1 | `seed` | | 11 | copy `i` |
+| 2 | `$res0` | | 12 | copy `$forFirst` |
+| 3 | `$c5` (s handle) | | 13 | reverse's `s` param |
+| 4 | s backing array | | 14 | reverse's `i` |
+| 5 | `s` | | 15 | reverse's `j` |
+| 6 | setup `i` | | 16 | reverse's `$forFirst` |
+| 7 | setup `$forFirst` | | 17 | `ok` |
+| 8 | `$c6` (t handle) | | 18 | test `i` |
+| 9 | t backing array | | 19 | test `$forFirst` |
+
+**Step counts — MEASURED** (terminal `.next .stop`, seed 100):
+
+| n | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 |
+|---|---|---|---|---|---|---|---|---|---|
+| steps | 335 | 502 | 744 | 911 | 1153 | 1320 | 1562 | 1729 | 1971 |
+
+The first differences alternate 167 / 242 — the 75-step gap is one
+two-pointer swap, which happens every OTHER iteration, exactly as in
+the shipped proof. So **`335 + 205·n` is a valid affine fuel bound**
+(checked against all nine points; tight at even `n`). For comparison
+the shipped `reverse_ok` bound is `189·n + 260`; the copy phase is the
+whole difference.
 
 Reusable as-is from `Examples/Reverse.lean` (drop `private`): the pure
 layers `revFamily`, `suList`+`suList_set`+`suList_full`, the two-pointer
@@ -195,9 +234,29 @@ the charter says NEW proofs start placement-generic (StepKit's E-form
 docstring). Do that here rather than re-transcribing concretely; minmax
 is the natural first consumer, wordcount the second.
 
-Predicted layout: 0=`n`, 1=`seed`, 2=`$res0`, 3=`$res1`, 4=`$res2`,
-5=`$c15` (handle), 6=backing, 7=`s`, 8=setup `i`, 9=setup flag,
-10=`pre`, 11=copy `i`, 12=copy flag, 13+=minMax's frame.
+**Address layout — MEASURED** (probe run 2026-08-14; `nextAddr = 22`
+at every `n`, declared types read straight off the terminal heap):
+
+| addr | type | cell |
+|---|---|---|
+| 0 | `uint64` | `n` |
+| 1 | `uint64` | `seed` |
+| 2 | `[8]uint64` | `$res0` |
+| 3 | `uint64` | `$res1` |
+| 4 | `uint64` | `$res2` |
+| 5 | `[]uint64` | `$c15` (handle) |
+| 6 | `[n]uint64` | backing array (the ONE `n`-dependent type) |
+| 7 | `[]uint64` | `s` |
+| 8 | `uint64` | setup `i` |
+| 9 | `bool` | setup `$forFirst` |
+| 10 | `[8]uint64` | `pre` |
+| 11 | `uint64` | copy `i` |
+| 12 | `bool` | copy `$forFirst` |
+| 13–21 | — | `minMax`'s frame (`$mn`,`$mx`, the `s` param at 15, `lo`/`hi`, the `int` loop counter at 20, `$forFirst` at 21) |
+
+**Step counts — MEASURED**: exactly 186 per element, no alternation
+(minmax has one uniform loop body), so `k = 234 + 186·n`, checked at
+`n = 1…8` (420, 606, 792, 978, 1164, 1350, 1536, 1722).
 
 Honesty clauses the gallery entry must carry when this lands
 (scoping §4.3/§4.4, audited conventions): (i) the cap `n ≤ 8` is a toy
