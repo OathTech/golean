@@ -1,0 +1,12 @@
+== go run <dir> (package mode) ==
+go: cannot find main module, but found .git/config in /home/dev/projects/golean
+	to create a module there, run:
+	cd ../../.. && go mod init
+== go run main.go za.go zb.go (sorted order) ==
+ab
+== go run zb.go za.go main.go (REVERSED argument order) ==
+ba
+== go run . in the probe dir (package mode, GO111MODULE=off) ==
+ab
+== go build -o .tmp/e8 zb.go za.go main.go (build, reversed) ==
+ba
