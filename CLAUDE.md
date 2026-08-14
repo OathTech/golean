@@ -191,7 +191,7 @@ audit, then nearly re-shipped as `wp_deref_store`). So: **every user-facing
 WP/Hoare law ships in the same commit with a discharge *witness*** — a theorem
 that instantiates it on a concrete program and discharges every premise but the
 genuinely-external ones (a store-typing side-condition is fine to leave). See
-`wp_assign_lit`, `wp_deref_store_ref`. No witness ⇒ the law is a scaffold; mark
+`wp_assign_lit`, `wp_index_get_witness`. No witness ⇒ the law is a scaffold; mark
 it so in its docstring, and never let the docstring claim applicability the
 witness doesn't demonstrate. A premise quantified `∀σ` over the *state* is the
 smell to check first.
