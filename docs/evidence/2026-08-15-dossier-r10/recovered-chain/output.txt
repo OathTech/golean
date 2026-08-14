@@ -1,0 +1,12 @@
+panic: first [recovered]
+	panic: second
+
+goroutine 1 [running]:
+main.main.func1()
+	/home/dev/projects/golean/.claude/worktrees/gc-dossiers/docs/evidence/2026-08-15-dossier-r10/recovered-chain/main.go:10 +0x26
+panic({0x4811e0?, 0x497d08?})
+	/usr/local/go/src/runtime/panic.go:860 +0x13a
+main.main()
+	/home/dev/projects/golean/.claude/worktrees/gc-dossiers/docs/evidence/2026-08-15-dossier-r10/recovered-chain/main.go:12 +0x3e
+exit status 2
+exit: 1

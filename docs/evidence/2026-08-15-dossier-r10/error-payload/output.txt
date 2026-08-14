@@ -1,0 +1,7 @@
+panic: custom error text
+
+goroutine 1 [running]:
+main.main()
+	/home/dev/projects/golean/.claude/worktrees/gc-dossiers/docs/evidence/2026-08-15-dossier-r10/error-payload/main.go:11 +0x25
+exit status 2
+exit: 1
