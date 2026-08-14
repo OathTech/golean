@@ -118,6 +118,17 @@ for measurement 2 above.
 ## Slice 1 — spec-style swaps (the scoping study's recommendations,
 `docs/2026-08-14_harness-style-scoping.md` §9–10)
 
+**STATUS 2026-08-14: PARTIAL — guardrail half landed, proof half not.
+Slice record and handoff: `docs/2026-08-14_phase2-slice1-spec-swaps.md`
+(read it first).** The reverse copy-relational and minmax S3 harnesses
+are in the corpus, differentially green and golden-pinned; no headline
+proof, gallery re-render or old-headline demotion has happened yet, and
+the gallery still describes the old harnesses. wordcount's swap is
+BLOCKED on a measured proof-cost wall — `wc_empty_run` goes 50.8 GiB →
+~77 GiB when one function is added to that corpus program, past the
+default 64G cap — so lever 2/4 work on that declaration is now a
+PREREQUISITE for the wordcount swap, not just a nice-to-have.
+
 - reverse → copy-relational S1 (checks against a saved pre-copy — real
   Go history ghost, rung 0).
 - minmax → S3 relational (returned pre + `(lo,hi)`; post
