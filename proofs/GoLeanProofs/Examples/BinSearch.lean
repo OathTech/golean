@@ -1,4 +1,5 @@
 import GoLeanProofs.Examples.BinSearchProgram
+import GoLeanProofs.EntryEq
 import GoLeanProofs.SliceMem
 import GoLeanProofs.FuelMeasure
 import GoLeanProofs.StepKit
@@ -1726,33 +1727,13 @@ private def hEnv0 : LocalEnv :=
 private abbrev ucellU (v : Int) : HeapCell :=
   ⟨some (.int .uint64), .int (IntKind.normalize .uint64 v) .uint64⟩
 
-/-- The initial state `runFunctionWithContextM` builds: the three
-parameters normalized at `uint64`, the result cell at its `int`
-default. -/
-private def σH0 (nv sv tv : Int) : ExecState :=
-  { types := searchLowered.typeDefs.toList,
-    functions := searchLowered.funcs,
-    methods := searchLowered.methods,
-    heap := [(.base ⟨0⟩, ucellU nv), (.base ⟨1⟩, ucellU sv),
-             (.base ⟨2⟩, ucellU tv), (.base ⟨3⟩, icell 0)],
-    nextAddr := 4 }
-
-/-- **The entry equation**: the native entry IS its `runConfig` loop
-from the probed initial state, plus the result read at `.base ⟨3⟩` —
-∀ fuel, ∀ choices, definitionally (the prelude — arity check,
-`bindParams`, `allocDecls`, `pinResultLocs` — is fuel-independent). -/
-private theorem harness_entry_eq (nv sv tv : Int) (fuel : Nat)
-    (ch : Choices) :
-    runFunctionWithContextM fuel searchLowered.typeDefs.toList
-        searchLowered.funcs searchHarnessFunc
-        #[.int nv .uint64, .int sv .uint64, .int tv .uint64]
-        searchLowered.methods ch
-      = (do
-          let r ← runConfig fuel (σH0 nv sv tv)
-            (.exec searchHarnessFunc.body hEnv0
-              (.frame [] [] [] [] .stop false)) ch
-          return { values := (← loadMany r.1 [.base ⟨3⟩]).toArray }) := by
-  with_unfolding_all rfl
+/- The post-prelude state (`σH0`), the start configuration (`bsHC₀`),
+and the entry equation (`harness_entry_eq`) are DERIVED — the P4
+entry-equation macro (G0 item 3c retrofit). CONVENTION CHANGE,
+absorbed at the one consumer: the emitted `σH0` receives
+ALREADY-normalized parameter values (the macro's convention), where
+the old hand-written def normalized internally (`ucellU`). -/
+derive_entry_eq harness_entry_eq searchLowered searchHarnessFunc σH0 bsHC₀
 
 /-! ## The harness machine layer (probe-verified; every raw segment
 below re-checks the transcription by `rfl`) -/
@@ -2946,8 +2927,7 @@ private theorem hsearch_runs (n seed : Nat) (t : Int)
     (hn : n < 2 ^ 62) (hnw : seed + 2 * n < 2 ^ 64)
     (ht : 0 ≤ t ∧ t < 2 ^ 64) (ch : Choices) :
     ∃ (k : Nat) (σf : ExecState), k ≤ 220 + 132 * n ∧
-      stepFnIter k (σStart n seed t)
-        (.exec searchHarnessFunc.body hEnv0 hFrame0) ch
+      stepFnIter k (σStart n seed t) bsHC₀ ch
         = .ok (.next .stop, σf, ch)
       ∧ Heap.lookup σf.heap (.base ⟨3⟩)
           = some (icell (findSpec (bsFamily n seed) t)) := by
@@ -3040,19 +3020,20 @@ theorem search_ok (n seed : Nat) (t : Int)
         = .ok { values := #[.int (findSpec (bsFamily n seed) t) .int] } := by
   refine ⟨220 + 132 * n, fun fuel hfuel ch => ?_⟩
   obtain ⟨k, σf, hk, hrun, hres⟩ := hsearch_runs n seed t hn hnowrap ht ch
-  rw [harness_entry_eq]
+  rw [harness_entry_eq,
+    unorm_of_range (by omega : (0 : Int) ≤ ((n : Nat) : Int))
+      (by omega : ((n : Nat) : Int) < 2 ^ 64),
+    unorm_of_range (by omega : (0 : Int) ≤ ((seed : Nat) : Int))
+      (by omega : ((seed : Nat) : Int) < 2 ^ 64),
+    unorm_of_range ht.1 ht.2]
+  -- The macro-emitted σH0 receives already-normalized values (G0 item
+  -- 3c), so the unorm collapse moved from inside hσ0 to the rw above.
   have hσ0 : σH0 ((n : Nat) : Int) ((seed : Nat) : Int) t
       = σStart n seed t := by
-    simp only [σH0, σStart, ucellU, ucell,
-      unorm_of_range (by omega : (0 : Int) ≤ ((n : Nat) : Int))
-        (by omega : ((n : Nat) : Int) < 2 ^ 64),
-      unorm_of_range (by omega : (0 : Int) ≤ ((seed : Nat) : Int))
-        (by omega : ((seed : Nat) : Int) < 2 ^ 64),
-      unorm_of_range ht.1 ht.2]
+    simp only [σH0, σStart, ucell, icell]
   rw [hσ0]
   have hfold := runConfig_of_stepFnIter hrun (fuel - k)
   rw [show k + (fuel - k) = fuel from by omega] at hfold
-  simp only [hFrame0] at hfold
   rw [hfold, runConfig_next_stop]
   have hload : loadMany σf [.base ⟨3⟩]
       = .ok [.int (findSpec (bsFamily n seed) t) .int] := by

@@ -204,11 +204,15 @@ theorem wordcount_ok_v1 (n seed : Nat) (hn : n < 2 ^ 63)
   rw [show k + (fuel - k) = fuel from by omega] at hfold
   have hfull : runConfig fuel
       (σWH0 ((n : Nat) : Int) ((seed : Nat) : Int))
-      (.exec wordcountHarnessFunc.body [hWScope0] hWFrame0) ch
+      wcHC₀ ch
       = .ok (σXH n ((seed : Nat) : Int) ((n : Nat) : Int)
           (wcFamily n seed) (countsList (wcFamily n seed))
           (((n + 2) / 3 : Nat) : Int) (((n + 2) / 3 : Nat) : Int)
           (((n + 2) / 3 : Nat) : Int) tail na, ch') := by
+    -- the recorded show-bridge: the macro-emitted wcHC₀ is the old
+    -- inline start config, definitionally (G0 item 3c)
+    show runConfig fuel (σWH0 ((n : Nat) : Int) ((seed : Nat) : Int))
+      (.exec wordcountHarnessFunc.body [hWScope0] hWFrame0) ch = _
     rw [hfold, runConfig_next_stop]
   rw [hentry, hfull]
   with_unfolding_all rfl

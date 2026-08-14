@@ -1,4 +1,5 @@
 import GoLeanProofs.Examples.MinMaxProgram
+import GoLeanProofs.EntryEq
 import GoLeanProofs.SliceMem
 import GoLeanProofs.FuelMeasure
 import GoLeanProofs.StepKit
@@ -1527,18 +1528,14 @@ private abbrev sliceH5 (n : Nat) : GoValue :=
 private abbrev hcellH (n : Nat) : HeapCell :=
   ⟨some (.slice (.int .uint64)), sliceH5 n⟩
 
-/-- The prelude-built entry seed (two bound parameters, two zeroed
-result cells). -/
-private def mhSeedI (nv sv : Int) : ExecState :=
-  { types := minMaxLowered.typeDefs.toList,
-    functions := minMaxLowered.funcs, methods := minMaxLowered.methods,
-    heap := [(.base ⟨0⟩, ucell nv), (.base ⟨1⟩, ucell sv),
-             (.base ⟨2⟩, ucell 0), (.base ⟨3⟩, ucell 0)],
-    nextAddr := 4 }
-
-/-- The harness-body start configuration (the prelude's `c₀`). -/
-private def mhc₀ : Config :=
-  .exec mmHarnessFunc.body hEnvA (.frame [] [] [] [] .stop false)
+/- The entry seed (`mhSeedI`), the start configuration (`mhc₀`), and
+the entry equation (`mmh_entry_eq`, formerly hand-written further
+down) are DERIVED — the P4 entry-equation macro
+(`GoLeanProofs/EntryEq.lean`; Gallery Campaign G0 item 3c retrofit).
+The emitted statement binds the parameters at `Int` (the old form
+bound `(n seed : Nat)` with casts in the argument array); the
+headline instantiates via the coercions exactly as before. -/
+derive_entry_eq mmh_entry_eq minMaxLowered mmHarnessFunc mhSeedI mhc₀
 
 /-- At the `makeSlice` apply point (`$c12` allocated at its default). -/
 private def σMS (nv sv : Int) : ExecState :=
@@ -2382,24 +2379,6 @@ private theorem mmh_runs (n seed : Nat) (h1 : 1 ≤ n) (hn : n < 2 ^ 63)
       Int.natCast_one]] at hloop2
   exact ⟨10 + 1 + 42 + 25 + 53 * n + 33 + 1 + 5 + 1 + 34 + 25 + 1 + 1 + k,
     by omega, stepFnIter_chain hpre hloop2⟩
-
-/-- **The entry equation**: `runFunctionWithContextM` on the harness at
-symbolic arguments IS `runConfig` from the prelude-built seed plus the
-two-location readback — the prelude is fuel-independent and
-definitional at the concrete shapes; the parameters land
-once-normalized. -/
-private theorem mmh_entry_eq (n seed : Nat) (fuel : Nat) (ch : Choices) :
-    runFunctionWithContextM fuel minMaxLowered.typeDefs.toList
-        minMaxLowered.funcs mmHarnessFunc
-        #[.int (n : Int) .uint64, .int (seed : Int) .uint64]
-        minMaxLowered.methods ch
-      = (do
-          let (sF, _) ← runConfig fuel
-            (mhSeedI (IntKind.normalize .uint64 (n : Int))
-              (IntKind.normalize .uint64 (seed : Int)))
-            mhc₀ ch
-          return { values := (← loadMany sF [.base ⟨2⟩, .base ⟨3⟩]).toArray }) := by
-  with_unfolding_all rfl
 
 /-! ### The user-facing headline -/
 

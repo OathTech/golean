@@ -1,4 +1,5 @@
 import GoLeanProofs.Examples.WordCountProgram
+import GoLeanProofs.EntryEq
 import GoLeanProofs.SliceMem
 import GoLeanProofs.FuelMeasure
 import GoLeanProofs.StepKit
@@ -48,35 +49,17 @@ makeSlice / `%` / element-store steps) -/
 def hWScope0 : Scope :=
   [("$res0", .base ⟨2⟩), ("seed", .base ⟨1⟩), ("n", .base ⟨0⟩)]
 
-/-- The machine entry's post-prelude state: the three frame cells the
-prelude allocates from the EMPTY heap (arguments normalized at their
-declared uint64 — the normalize is applied at the ARGUMENT position so
-the headline's hypotheses can collapse it). -/
-def σWH0 (nv sv : Int) : ExecState :=
-  { types := wordCountLowered.typeDefs.toList,
-    functions := wordCountLowered.funcs,
-    methods := wordCountLowered.methods,
-    heap := [(.base ⟨0⟩, u64cell nv), (.base ⟨1⟩, u64cell sv),
-             (.base ⟨2⟩, u64cell 0)],
-    nextAddr := 3 }
-
 def hWFrame0 : Cont := .frame [] [] [] [] .stop
 
-/-- **The entry equation** (§11 glue, wordcount instance): the machine
-entry IS its post-prelude `runConfig` form — `with_unfolding_all rfl`
-at fully symbolic arguments, fuel, and choices. -/
-theorem wcH_entry_eq (nv sv : Int) (fuel : Nat) (ch : Choices) :
-    runFunctionWithContextM fuel wordCountLowered.typeDefs.toList
-        wordCountLowered.funcs wordcountHarnessFunc
-        #[.int nv .uint64, .int sv .uint64]
-        wordCountLowered.methods ch
-      = (do
-          let r ← runConfig fuel
-            (σWH0 (IntKind.normalize .uint64 nv)
-              (IntKind.normalize .uint64 sv))
-            (.exec wordcountHarnessFunc.body [hWScope0] hWFrame0) ch
-          return { values := (← loadMany r.1 [.base ⟨2⟩]).toArray }) := by
-  with_unfolding_all rfl
+/- The post-prelude state (`σWH0`), the start configuration (`wcHC₀`),
+and the entry equation (`wcH_entry_eq`) are DERIVED — the P4
+entry-equation macro (G0 item 3c retrofit). Same conventions as the
+old hand-written forms (already-normalized state arguments, normalize
+at the equation's argument positions); the one spelling change is the
+named start config `wcHC₀` replacing the inline
+`.exec … [hWScope0] hWFrame0` (definitionally equal — the headline
+carries the one-line show-bridge). -/
+derive_entry_eq wcH_entry_eq wordCountLowered wordcountHarnessFunc σWH0 wcHC₀
 
 /-- The harness slice handle: backing at its fixed address 4. -/
 abbrev wHandleCell (n : Nat) : HeapCell :=

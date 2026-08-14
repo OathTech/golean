@@ -191,13 +191,16 @@ theorem isort_ok (n seed : Nat) (hn : n < 2 ^ 63) (hseed : seed < 2 ^ 64) :
   refine ⟨(92 * n + 160) * n + (110 * n + 220) * n + 285 * n + 505,
     fun fuel hfuel ch => ?_⟩
   obtain ⟨k, σf, hk, hrun, hlook⟩ := isortH_runs n seed hn ch
+  -- The macro-emitted σIH0 receives already-normalized values, so the
+  -- unorm collapse moves from inside hσ to the rw chain (G0 item 3c).
   have hσ : σIH0 ((n : Nat) : Int) ((seed : Nat) : Int) = σIStart n seed := by
-    simp only [σIH0, σIStart, ucellU, ucell,
-      unorm_of_range (v := ((n : Nat) : Int)) (by omega) (by omega),
-      unorm_of_range (v := ((seed : Nat) : Int)) (by omega) (by omega)]
+    simp only [σIH0, σIStart, ucell]
   have hfold := runConfig_of_stepFnIter hrun (fuel - k)
   rw [show k + (fuel - k) = fuel from by omega] at hfold
-  rw [iharness_entry_eq, hσ, hfold, runConfig_next_stop]
+  rw [iharness_entry_eq,
+    unorm_of_range (v := ((n : Nat) : Int)) (by omega) (by omega),
+    unorm_of_range (v := ((seed : Nat) : Int)) (by omega) (by omega),
+    hσ, hfold, runConfig_next_stop]
   have hload : loadMany σf [.base ⟨2⟩] = .ok [.int 1 .uint64] := by
     simp [loadMany, loadLoc, hlook, ucell, pure, Except.pure, Bind.bind,
       Except.bind]

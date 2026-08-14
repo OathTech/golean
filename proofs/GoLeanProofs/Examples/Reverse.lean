@@ -1,4 +1,5 @@
 import GoLeanProofs.Examples.ReverseProgram
+import GoLeanProofs.EntryEq
 import GoLeanProofs.SliceMem
 import GoLeanProofs.FuelMeasure
 import GoLeanProofs.StepKit
@@ -1158,35 +1159,11 @@ private abbrev hArrCell (n : Nat) (l : List Int) : HeapCell :=
 private def baseEnvH : Scope :=
   [("$res0", .base ⟨2⟩), ("seed", .base ⟨1⟩), ("n", .base ⟨0⟩)]
 
-/-- The machine entry's post-prelude state: the three frame cells the
-prelude allocates from the EMPTY heap. -/
-private def revHSeed (nv sv : Int) : ExecState :=
-  { types := reverseLowered.typeDefs.toList,
-    functions := reverseLowered.funcs,
-    methods := reverseLowered.methods,
-    heap := [(.base ⟨0⟩, hu64 nv), (.base ⟨1⟩, hu64 sv),
-             (.base ⟨2⟩, hu64 0)],
-    nextAddr := 3 }
-
-/-- The post-prelude configuration. -/
-private def revHC₀ : Config :=
-  .exec reverseHarnessFunc.body [[("$res0", .base ⟨2⟩),
-    ("seed", .base ⟨1⟩), ("n", .base ⟨0⟩)]] (.frame [] [] [] [] .stop)
-
-/-- **The entry equation** (the §11 glue, reverse instance): the
-machine entry IS its post-prelude `runConfig` form — pure
-`with_unfolding_all rfl` at fully symbolic `n`, `seed`, `fuel`, `ch`. -/
-private theorem revH_entry_eq (n seed fuel : Nat) (ch : Choices) :
-    runFunctionWithContextM fuel reverseLowered.typeDefs.toList
-        reverseLowered.funcs reverseHarnessFunc
-        #[.int (n : Int) .uint64, .int (seed : Int) .uint64]
-        reverseLowered.methods ch
-      = (do
-          let (sF, _) ← runConfig fuel
-            (revHSeed (IntKind.normalize .uint64 (n : Int))
-              (IntKind.normalize .uint64 (seed : Int))) revHC₀ ch
-          return { values := (← loadMany sF [Loc.base ⟨2⟩]).toArray }) := by
-  with_unfolding_all rfl
+/- The entry seed (`revHSeed`), the start configuration (`revHC₀`),
+and the entry equation (`revH_entry_eq`) are DERIVED — the P4
+entry-equation macro (G0 item 3c retrofit). The emitted statement
+binds `(n seed : Int)`; consumers instantiate via coercions. -/
+derive_entry_eq revH_entry_eq reverseLowered reverseHarnessFunc revHSeed revHC₀
 
 /-! ### Harness statement pieces and continuations (probe-verified) -/
 

@@ -216,15 +216,42 @@ def binderIdentFor (goName : String) (i : Nat) : Ident :=
     | c :: rest => c.isAlpha && rest.all (fun c => c.isAlphanum || c == '_')
   mkIdent (Name.mkSimple (if ok then goName else s!"a{i}"))
 
-/-! ### The command -/
+/-! ### The command
+
+Two forms (the optional trailing ident is the PROGRAM-GENERIC
+extension, Gallery Campaign G0 item 3c, 2026-08-15):
+
+```
+derive_entry_eq thm prog func state cont        -- flat state def
+derive_entry_eq thm prog func state cont base   -- program-generic
+```
+
+In the six-ident form, `base` names an existing `ExecState` constant —
+the module's program-as-empty-heap state (the `vProg`/`rProg`
+convention of the program-generic modules) — and the emitted state def
+is the RECORD UPDATE `{ base with heap := …, nextAddr := … }` instead
+of a flat record literal. This preserves the record-update structure
+the σ-generic segment lemmas are stated over (`rSt σ H na` =
+`{ σ with heap := H, nextAddr := na }`), so the consumer's one
+show-bridge line between the emitted def and the module's
+compositional spelling (`rSt rProg (rHeap0 …) na`) is a STRUCTURAL
+`rfl` — record updates of the same base — never a whnf of the
+program constant (the storm class the program-generic form exists to
+avoid; slice-2 record §3's recorded show-bridge).
+
+Fail-closed note: the macro does not separately check that `base`'s
+program fields agree with `prog`'s — a mismatch makes the probe run a
+DIFFERENT program on the `runConfig` side, so the probe (or, past the
+probe point, the final `rfl`) refuses. -/
 
 syntax (name := deriveEntryEq)
-  "derive_entry_eq " ident ident ident ident ident : command
+  "derive_entry_eq " ident ident ident ident ident (ident)? : command
 
 @[command_elab deriveEntryEq]
 def elabDeriveEntryEq : CommandElab := fun stx => do
   match stx with
-  | `(command| derive_entry_eq $thmId $progId $funcId $stateId $contId) => do
+  | `(command| derive_entry_eq $thmId $progId $funcId $stateId $contId
+        $[$baseId?]?) => do
     -- 1. Compute the layout (compiler evaluation of the executable
     --    `computeEntryLayout` at the caller's program + Func).
     let layoutStx ← `(GoLean.Surface.EntryEq.computeEntryLayout
@@ -257,17 +284,31 @@ def elabDeriveEntryEq : CommandElab := fun stx => do
       heapItems := heapItems.push (← `(($loc, ⟨some $tyT, $vT⟩)))
     let heapT ← `([$heapItems,*])
     let na := quote (p + layout.results.length)
-    elabCommand (← `(command|
-      /-- The machine entry's post-prelude state (derived by
-      `derive_entry_eq` from the pinned lowering): argument cells at
-      `0…p−1` — this def receives the ALREADY-normalized parameter
-      values — result cells at their defaults after them. -/
-      def $stateId ($binderF* : Int) : ExecState :=
-        { types := ($progId).typeDefs.toList,
-          functions := ($progId).funcs,
-          methods := ($progId).methods,
-          heap := $heapT,
-          nextAddr := $na }))
+    match baseId? with
+    | some baseId =>
+      -- Program-generic form: a record update of the caller's
+      -- program-as-empty-heap base state, so σ-generic segment
+      -- machinery bridges structurally (module docstring above).
+      elabCommand (← `(command|
+        /-- The machine entry's post-prelude state (derived by
+        `derive_entry_eq`, program-generic form): the base state with
+        argument cells at `0…p−1` — this def receives the
+        ALREADY-normalized parameter values — and result cells at
+        their defaults after them. -/
+        def $stateId ($binderF* : Int) : ExecState :=
+          { $baseId with heap := $heapT, nextAddr := $na }))
+    | none =>
+      elabCommand (← `(command|
+        /-- The machine entry's post-prelude state (derived by
+        `derive_entry_eq` from the pinned lowering): argument cells at
+        `0…p−1` — this def receives the ALREADY-normalized parameter
+        values — result cells at their defaults after them. -/
+        def $stateId ($binderF* : Int) : ExecState :=
+          { types := ($progId).typeDefs.toList,
+            functions := ($progId).funcs,
+            methods := ($progId).methods,
+            heap := $heapT,
+            nextAddr := $na }))
     -- 3. The start configuration: one scope, reverse-declaration
     --    order (params then results, `LocalEnv.declare` conses).
     let allNames := layout.args.map (·.1) ++ layout.results.map (·.1)

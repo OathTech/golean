@@ -114,9 +114,7 @@ theorem isortH_runs (n seed : Nat) (hn : n < 2 ^ 63)
     (ch : Choices) :
     ∃ (k : Nat) (σf : ExecState),
       k ≤ (92 * n + 160) * n + (110 * n + 220) * n + 285 * n + 505 ∧
-      stepFnIter k (σIStart n seed)
-        (.exec isortHarnessFunc.body hIEnv0 (.frame [] [] [] [] .stop false))
-        ch
+      stepFnIter k (σIStart n seed) iHC₀ ch
         = .ok (.next .stop, σf, ch)
       ∧ Heap.lookup σf.heap (.base ⟨2⟩) = some (ucell 1) := by
   -- the prelude → the setup loop

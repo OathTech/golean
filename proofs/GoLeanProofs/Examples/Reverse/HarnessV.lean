@@ -371,9 +371,23 @@ def vHeapEnd (n seed : Nat) (siv civ rif rjf : Int) (ls lt : List Int)
    (.base ⟨16⟩, vbool false), (.base ⟨17⟩, vu64 1),
    (.base ⟨18⟩, vu64 iv), (.base ⟨19⟩, vbool false)]
 
-/-- The post-prelude configuration. -/
-def vHC₀ : Config :=
-  .exec reverseHarnessVFunc.body [baseEnvV] (.frame [] [] [] [] .stop)
+/-- The pinned program as a state with an empty heap — with the
+`derive_entry_eq` invocation below, the one place this module carries
+`reverseLowered` (moved up from the run section for the macro's sake,
+G0 item 3c). -/
+def vProg : ExecState :=
+  { types := reverseLowered.typeDefs.toList,
+    functions := reverseLowered.funcs,
+    methods := reverseLowered.methods,
+    heap := [], nextAddr := 0 }
+
+/- The post-prelude state (`vHSeed`), the start configuration
+(`vHC₀`), and the entry equation (`revHV_entry_eq`, formerly
+hand-written in the run section) are DERIVED — the P4 entry-equation
+macro in its PROGRAM-GENERIC form (G0 item 3c): the emitted state is
+the record update `{ vProg with … }`, so the headline's show-bridge to
+the compositional `vSt vProg (vHeap0 …) 3` spelling is structural. -/
+derive_entry_eq revHV_entry_eq reverseLowered reverseHarnessVFunc vHSeed vHC₀ vProg
 
 /-! ## The backing-cell lookups (the conditioned steps' premises) -/
 
@@ -1457,14 +1471,6 @@ theorem vH_runs_generic (σ : ExecState) (n seed : Nat) (hn : n < 2 ^ 63)
     exact stepFnIter_chain hthruCopy (stepFnIter_chain (stepFnIter_chain
       hrev htA0) htv)
 
-/-- The pinned program as a state with an empty heap — the ONE place
-this module carries `reverseLowered`. -/
-def vProg : ExecState :=
-  { types := reverseLowered.typeDefs.toList,
-    functions := reverseLowered.funcs,
-    methods := reverseLowered.methods,
-    heap := [], nextAddr := 0 }
-
 /-- The `enterFrame` discharge at the pinned program: the SECOND and
 last unfolding of `reverseLowered` in this module (`reverse` is the
 funcs array's head, so the scan stops immediately). -/
@@ -1474,21 +1480,6 @@ theorem vH_enterFrame_fact (n seed : Nat) (siv civ : Int)
         ⟨"reverse"⟩ [vSliceS n]
       = .ok (reverseFunc, [[("s", .base ⟨13⟩)]], [],
           vSt vProg (vHeapRvFrame n seed siv civ ls lt) 14) := by
-  with_unfolding_all rfl
-
-/-- **The entry equation**: the machine entry IS its post-prelude
-`runConfig` form — pure `with_unfolding_all rfl` at fully symbolic
-`n`, `seed`, `fuel`, `ch`. -/
-theorem revHV_entry_eq (n seed fuel : Nat) (ch : Choices) :
-    runFunctionWithContextM fuel reverseLowered.typeDefs.toList
-        reverseLowered.funcs reverseHarnessVFunc
-        #[.int (n : Int) .uint64, .int (seed : Int) .uint64]
-        reverseLowered.methods ch
-      = (do
-          let (sF, _) ← runConfig fuel
-            (vSt vProg (vHeap0 (IntKind.normalize .uint64 (n : Int))
-              (IntKind.normalize .uint64 (seed : Int))) 3) vHC₀ ch
-          return { values := (← loadMany sF [Loc.base ⟨2⟩]).toArray }) := by
   with_unfolding_all rfl
 
 /-! ## The user-facing statement -/
@@ -1533,9 +1524,12 @@ theorem reverse_ok (n seed : Nat) (hn : n < 2 ^ 63) (hseed : seed < 2 ^ 64) :
     vH_runs_generic vProg n seed hn (vH_enterFrame_fact n seed) ch
   have hfold := runConfig_of_stepFnIter hrun (fuel - k)
   rw [show k + (fuel - k) = fuel from by omega] at hfold
+  -- the recorded show-bridge (structural: record updates of vProg)
+  have hst : vHSeed ((n : Nat) : Int) ((seed : Nat) : Int)
+      = vSt vProg (vHeap0 ((n : Nat) : Int) ((seed : Nat) : Int)) 3 := rfl
   rw [revHV_entry_eq, unorm_of_range (v := (n : Int)) (by omega) (by omega),
     unorm_of_range (v := (seed : Int)) (by omega) (by omega),
-    hfold, runConfig_next_stop]
+    hst, hfold, runConfig_next_stop]
   with_unfolding_all rfl
 
 /-- **The D1 run-conditioned twin**: any successful completion of the

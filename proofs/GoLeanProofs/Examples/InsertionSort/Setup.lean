@@ -1,4 +1,5 @@
 import GoLeanProofs.Examples.InsertionSortProgram
+import GoLeanProofs.EntryEq
 import GoLeanProofs.SliceMem
 import GoLeanProofs.FuelMeasure
 import GoLeanProofs.StepKit
@@ -39,32 +40,15 @@ abbrev ucell (v : Int) : HeapCell :=
 abbrev ucellU (v : Int) : HeapCell :=
   ⟨some (.int .uint64), .int (IntKind.normalize .uint64 v) .uint64⟩
 
-/-- The initial state `runFunctionWithContextM` builds: the two
-parameters normalized at `uint64`, the (uint64) verdict cell at its
-default. -/
-def σIH0 (nv sv : Int) : ExecState :=
-  { types := isortLowered.typeDefs.toList,
-    functions := isortLowered.funcs,
-    methods := isortLowered.methods,
-    heap := [(.base ⟨0⟩, ucellU nv), (.base ⟨1⟩, ucellU sv),
-             (.base ⟨2⟩, ucell 0)],
-    nextAddr := 3 }
-
-/-- **The entry equation**: the native entry IS its `runConfig` loop
-from the probed initial state, plus the verdict read at `.base ⟨2⟩` —
-∀ fuel, ∀ choices, definitionally. -/
-theorem iharness_entry_eq (nv sv : Int) (fuel : Nat)
-    (ch : Choices) :
-    runFunctionWithContextM fuel isortLowered.typeDefs.toList
-        isortLowered.funcs isortHarnessFunc
-        #[.int nv .uint64, .int sv .uint64]
-        isortLowered.methods ch
-      = (do
-          let r ← runConfig fuel (σIH0 nv sv)
-            (.exec isortHarnessFunc.body hIEnv0
-              (.frame [] [] [] [] .stop false)) ch
-          return { values := (← loadMany r.1 [.base ⟨2⟩]).toArray }) := by
-  with_unfolding_all rfl
+/- The post-prelude state (`σIH0`), the start configuration (`iHC₀`),
+and the entry equation (`iharness_entry_eq`) are DERIVED — the P4
+entry-equation macro (G0 item 3c retrofit). CONVENTION CHANGE,
+absorbed by the headline's existing unorm rewrites: the emitted
+`σIH0` receives ALREADY-normalized parameter values (the macro's
+convention), where the old hand-written def normalized internally
+(`ucellU`); the entry equation applies it at
+`IntKind.normalize .uint64 _` argument positions. -/
+derive_entry_eq iharness_entry_eq isortLowered isortHarnessFunc σIH0 iHC₀
 
 /-! ## The setup phase (the family materialized — the first third of
 the harness run; segment counts probe-pinned, re-checked by `rfl`) -/

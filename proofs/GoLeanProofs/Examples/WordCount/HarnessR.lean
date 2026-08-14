@@ -459,9 +459,23 @@ theorem lookup_frontXR_none (L : Nat) (sv siv civ : Int)
     base_beq_false (by omega : (19 : Nat) ≠ x),
     Bool.false_eq_true, if_false]
 
-/-- The post-prelude configuration. -/
-def rHC0 : Config :=
-  .exec wcHarnessRFunc.body [baseEnvR] (.frame [] [] [] [] .stop)
+/-- The pinned program as an empty-heap state — with the
+`derive_entry_eq` invocation below, the one place this module carries
+`wordCountLowered` (moved up from the run section for the macro's
+sake, G0 item 3c). -/
+def rProg : ExecState :=
+  { types := wordCountLowered.typeDefs.toList,
+    functions := wordCountLowered.funcs,
+    methods := wordCountLowered.methods,
+    heap := [], nextAddr := 0 }
+
+/- The post-prelude state (`rHSeed`), the start configuration
+(`rHC0`), and the entry equation (`rH_entry_eq`, formerly hand-written
+in the run section) are DERIVED — the P4 entry-equation macro in its
+PROGRAM-GENERIC form (G0 item 3c): the emitted state is the record
+update `{ rProg with … }`, so the headline's show-bridge to the
+compositional `wSt rProg (rHeap0 …) 4` spelling is structural. -/
+derive_entry_eq rH_entry_eq wordCountLowered wcHarnessRFunc rHSeed rHC0 rProg
 
 /-! ## Heap-lookup facts -/
 
@@ -1884,14 +1898,6 @@ theorem lookup_res0_X (σ : ExecState) (L : Nat) (sv siv civ : Int)
 
 /-! ## The run, end to end -/
 
-/-- The pinned program as an empty-heap state — the ONE place this
-module carries `wordCountLowered`. -/
-def rProg : ExecState :=
-  { types := wordCountLowered.typeDefs.toList,
-    functions := wordCountLowered.funcs,
-    methods := wordCountLowered.methods,
-    heap := [], nextAddr := 0 }
-
 /-- The `enterFrame` discharge at the pinned program: the second and
 last unfolding of `wordCountLowered` in this module. -/
 theorem r_enterFrame_fact (n seed : Nat) (l lp : List Int) (siv civ : Int) :
@@ -2082,22 +2088,6 @@ theorem r_runs_generic (σ : ExecState) (n seed : Nat) (hcap : n ≤ 8)
     omega
   omega
 
-/-- **The entry equation**: the machine entry IS its post-prelude
-`runConfig` form — `with_unfolding_all rfl` at symbolic `n`, `seed`,
-`fuel`, `ch`. -/
-theorem rH_entry_eq (n seed fuel : Nat) (ch : Choices) :
-    runFunctionWithContextM fuel wordCountLowered.typeDefs.toList
-        wordCountLowered.funcs wcHarnessRFunc
-        #[.int (n : Int) .uint64, .int (seed : Int) .uint64]
-        wordCountLowered.methods ch
-      = (do
-          let (sF, _) ← runConfig fuel
-            (wSt rProg (rHeap0 (IntKind.normalize .uint64 (n : Int))
-              (IntKind.normalize .uint64 (seed : Int))) 4) rHC0 ch
-          return { values := (← loadMany sF
-            [Loc.base ⟨2⟩, Loc.base ⟨3⟩]).toArray }) := by
-  with_unfolding_all rfl
-
 /-! ## The user-facing statement -/
 
 /-- **THE HEADLINE (§11 harness form, S3 RELATIONAL)**: for every
@@ -2163,9 +2153,12 @@ theorem wordcount_ok (n seed : Nat) (hcap : n ≤ 8) (hseed : seed < 2 ^ 64) :
     r_runs_generic rProg n seed hcap (r_enterFrame_fact n seed) ch
   have hfold := runConfig_of_stepFnIter hrun (fuel - k)
   rw [show k + (fuel - k) = fuel from by omega] at hfold
+  -- the recorded show-bridge (structural: record updates of rProg)
+  have hst : rHSeed ((n : Nat) : Int) ((seed : Nat) : Int)
+      = wSt rProg (rHeap0 ((n : Nat) : Int) ((seed : Nat) : Int)) 4 := rfl
   rw [rH_entry_eq, unorm_of_range (v := (n : Int)) (by omega) (by omega),
     unorm_of_range (v := (seed : Int)) (by omega) (by omega),
-    hfold, runConfig_next_stop]
+    hst, hfold, runConfig_next_stop]
   show (Except.ok { values := #[.array _, .int _ .uint64] } :
       Except GoError Result) = _
   rw [goArr8, ← wcPre_full]

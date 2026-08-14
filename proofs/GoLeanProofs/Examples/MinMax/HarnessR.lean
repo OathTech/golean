@@ -402,9 +402,23 @@ def rHeapEnd (nv sv : Int) (n : Nat) (l lp : List Int) (siv civ : Int)
    (.base ⟨18⟩, ru64 lov), (.base ⟨19⟩, ru64 hiv),
    (.base ⟨20⟩, rint iv), (.base ⟨21⟩, rbool false)]
 
-/-- The post-prelude configuration. -/
-def rHC0 : Config :=
-  .exec mmHarnessRFunc.body [baseEnvR] (.frame [] [] [] [] .stop)
+/-- The pinned program as an empty-heap state — with the
+`derive_entry_eq` invocation below, the one place this module carries
+`minMaxLowered` (moved up from the run section for the macro's sake,
+G0 item 3c). -/
+def rProg : ExecState :=
+  { types := minMaxLowered.typeDefs.toList,
+    functions := minMaxLowered.funcs,
+    methods := minMaxLowered.methods,
+    heap := [], nextAddr := 0 }
+
+/- The post-prelude state (`rHSeed`), the start configuration
+(`rHC0`), and the entry equation (`rH_entry_eq`, formerly hand-written
+in the run section) are DERIVED — the P4 entry-equation macro in its
+PROGRAM-GENERIC form (G0 item 3c): the emitted state is the record
+update `{ rProg with … }`, so the headline's show-bridge to the
+compositional `rSt rProg (rHeap0 …) 5` spelling is structural. -/
+derive_entry_eq rH_entry_eq minMaxLowered mmHarnessRFunc rHSeed rHC0 rProg
 
 /-! ## Heap-lookup facts -/
 
@@ -1207,14 +1221,6 @@ theorem mh_loopR (σ : ExecState) (nv sv : Int) (n : Nat) (l lp : List Int)
 
 /-! ## The run, end to end -/
 
-/-- The pinned program as an empty-heap state — the ONE place this
-module carries `minMaxLowered`. -/
-def rProg : ExecState :=
-  { types := minMaxLowered.typeDefs.toList,
-    functions := minMaxLowered.funcs,
-    methods := minMaxLowered.methods,
-    heap := [], nextAddr := 0 }
-
 /-- The `enterFrame` discharge at the pinned program: the second and
 last unfolding of `minMaxLowered` in this module. -/
 theorem r_enterFrame_fact (n seed : Nat) (l lp : List Int) (siv civ : Int) :
@@ -1317,22 +1323,6 @@ theorem r_runs_generic (σ : ExecState) (n seed : Nat) (h1 : 1 ≤ n)
   exact stepFnIter_chain hthru (stepFnIter_chain (stepFnIter_chain
     (stepFnIter_chain hdA hlenstep) hcmp) hmm)
 
-/-- **The entry equation**: the machine entry IS its post-prelude
-`runConfig` form — `with_unfolding_all rfl` at symbolic `n`, `seed`,
-`fuel`, `ch`. -/
-theorem rH_entry_eq (n seed fuel : Nat) (ch : Choices) :
-    runFunctionWithContextM fuel minMaxLowered.typeDefs.toList
-        minMaxLowered.funcs mmHarnessRFunc
-        #[.int (n : Int) .uint64, .int (seed : Int) .uint64]
-        minMaxLowered.methods ch
-      = (do
-          let (sF, _) ← runConfig fuel
-            (rSt rProg (rHeap0 (IntKind.normalize .uint64 (n : Int))
-              (IntKind.normalize .uint64 (seed : Int))) 5) rHC0 ch
-          return { values := (← loadMany sF
-            [Loc.base ⟨2⟩, Loc.base ⟨3⟩, Loc.base ⟨4⟩]).toArray }) := by
-  with_unfolding_all rfl
-
 /-! ## The user-facing statement -/
 
 /-- **THE HEADLINE (§11 harness form, S3 RELATIONAL)**: for every
@@ -1392,9 +1382,12 @@ theorem minmax_ok (n seed : Nat) (h1 : 1 ≤ n) (hcap : n ≤ 8)
     r_runs_generic rProg n seed h1 hcap hseed (r_enterFrame_fact n seed) ch
   have hfold := runConfig_of_stepFnIter hrun (fuel - k)
   rw [show k + (fuel - k) = fuel from by omega] at hfold
+  -- the recorded show-bridge (structural: record updates of rProg)
+  have hst : rHSeed ((n : Nat) : Int) ((seed : Nat) : Int)
+      = rSt rProg (rHeap0 ((n : Nat) : Int) ((seed : Nat) : Int)) 5 := rfl
   rw [rH_entry_eq, unorm_of_range (v := (n : Int)) (by omega) (by omega),
     unorm_of_range (v := (seed : Int)) (by omega) (by omega),
-    hfold, runConfig_next_stop]
+    hst, hfold, runConfig_next_stop]
   show (Except.ok { values := #[.array _, .int _ .uint64, .int _ .uint64] } :
       Except GoError Result) = _
   rw [goArr8, preList_full hcap,
