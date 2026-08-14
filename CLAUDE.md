@@ -89,9 +89,11 @@ Still uncapped, so treat with care: `scripts/coverage`, `diff-one`,
 `test-lane-validation`, `comparator-setup`, `diff-coverage` when invoked
 DIRECTLY (via `scripts/ci` they inherit the scope), and — the one most likely
 to hit a pathological file — **the Lean language server**, which elaborates on
-file open with no wrapper in the loop. CI opts out deliberately
-(`GOLEAN_MEM_MAX=none` in the workflow): GitHub runners have no systemd user
-bus, and a disposable runner is not what the cap protects.
+file open with no wrapper in the loop. CI keeps `GOLEAN_MEM_MAX=none` (no
+systemd user bus on hosted runners) but the workflow wraps each gate step in
+a SYSTEM-scope cgroup cap via passwordless sudo (2026-08-14): a runner VM
+that dies uploads no logs and saves no cache, so "disposable, let it die" was
+the wrong frame — `docs/2026-08-14_ci-runner-death-and-slow-tier-timeout.md`.
 
 ### Baseline pinning (the "recorded baseline" in step 3)
 

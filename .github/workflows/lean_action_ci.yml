@@ -59,8 +59,19 @@ jobs:
       # the intended trade — a warm recent state beats a frozen old one.
       # HIT RATE IS NOT MEASURED HERE: it can only be observed on a real
       # runner, over at least two pushes (first saves, second restores).
-      - name: Cache toolchains and build artifacts
-        uses: actions/cache@v4
+      # SPLIT RESTORE/SAVE (2026-08-14): plain actions/cache@v4 only saves
+      # in its post-step when the JOB SUCCEEDED — attempt 2 of the 4f29a44f
+      # run proved it (gate TERMed by a runner shutdown -> job failed ->
+      # "Post Cache" skipped -> nothing saved), which is why a failing
+      # state never converges across retries: every retry restores the
+      # same old entry and re-elaborates the same modules. The explicit
+      # save step at the END of the job runs `if: always()`, so a
+      # failed-but-alive job still banks its build progress. (A runner
+      # that DIES outright saves nothing — no step outlives the VM; the
+      # cap + diagnostics below are that half of the mitigation.)
+      - name: Restore toolchains and build artifacts
+        id: lake-cache
+        uses: actions/cache/restore@v4
         with:
           path: |
             ~/.elan
@@ -82,17 +93,25 @@ jobs:
           git clone --quiet https://github.com/goose-lang/goose deps/goose
           git -C deps/goose checkout --quiet 3be88bbb4982f58e5813b6f0344302d5582c8e8a
 
-      # MEMORY CAP OPT-OUT, deliberate and loud. scripts/ci re-execs itself
-      # through scripts/capped, which needs a systemd USER manager + session
-      # D-Bus (`systemd-run --user`). GitHub-hosted runners spawn steps
-      # without a PAM login session, so that bus is absent and the wrapper
-      # fails closed — which would take the whole gate down rather than the
-      # build it is meant to bound (pre-merge audit F1, 2026-08-09).
-      # =none is correct HERE and nowhere else: the cap exists to stop a
-      # runaway build killing the developer's session, and a runner is
-      # ephemeral and disposable — if a build eats it, the job just fails,
-      # which is the outcome we wanted anyway. scripts/capped prints a
-      # WARNING on this path, so an uncapped run is never silent.
+      # RUNNER-SIDE MEMORY CAP (2026-08-14; supersedes the bare =none
+      # opt-out of 2026-08-09). scripts/capped still cannot run here — a
+      # hosted runner has no systemd USER manager/session bus, so the
+      # wrapper fails closed and would take the gate down (pre-merge audit
+      # F1, 2026-08-09); GOLEAN_MEM_MAX=none therefore stays, and
+      # scripts/capped still prints its WARNING. But the old claim that
+      # "if a build eats the runner the job just fails, which is the
+      # outcome we wanted anyway" was DISPROVED by the 4f29a44f push run:
+      # when the VM itself dies, GitHub reports "runner lost
+      # communication" with ZERO uploaded logs and NO post-steps — no
+      # diagnostics, no cache save, so every retry starts just as cold.
+      # Hosted runners DO have passwordless sudo and a system manager, so
+      # each gate step below runs inside a SYSTEM cgroup scope capped
+      # just under the VM's RAM, swap forbidden: a memory blowout now
+      # kills the BUILD (red job, logs uploaded, partial .lake banked by
+      # the always() save step) instead of the runner — the same
+      # blast-radius philosophy as scripts/capped, one level up.
+      # Investigation record:
+      # docs/2026-08-14_ci-runner-death-and-slow-tier-timeout.md.
       - name: Set up Go (pinned to the oracle family)
         uses: actions/setup-go@v5
         with:
@@ -107,19 +126,27 @@ jobs:
           go-version: '1.26.x'
           cache: false
 
+      # Forensics floor: the 4f29a44f runner death left no record even of
+      # the machine's shape. One cheap line each, before anything heavy.
+      - name: Runner diagnostics (forensics floor)
+        run: |
+          nproc; free -h; df -h /; swapon --show || true
+
       - name: Fast gate (scripts/ci)
         if: github.event_name == 'push' || github.event_name == 'pull_request'
-        env:
-          GOLEAN_MEM_MAX: none
-          # A fresh runner has no artifacts/ (gitignored), so it has no
-          # recorded differential or negative run — legitimately, since this
-          # step is the FAST gate and never produces one. Absent records are
-          # now a FAIL rather than a silent skip (audit F4), so this
-          # environment says so explicitly instead of being exempted in the
-          # script. The scheduled --diff/--slow steps below produce their own
-          # records and must NOT set this.
-          GOLEAN_ALLOW_NO_DIFF: 1
-        run: ./scripts/ci
+        # GOLEAN_ALLOW_NO_DIFF: a fresh runner has no artifacts/
+        # (gitignored), so it has no recorded differential or negative
+        # run — legitimately, since this step is the FAST gate and never
+        # produces one. Absent records are a FAIL rather than a silent
+        # skip (audit F4), so this environment says so explicitly instead
+        # of being exempted in the script. The scheduled --diff/--slow
+        # step below produces its own records and must NOT set this.
+        # (env is passed inside the wrapper: sudo resets the environment.)
+        run: |
+          total_mb=$(free -m | awk '/^Mem:/{print $2}')
+          sudo -n systemd-run --scope -p "MemoryMax=$((total_mb - 1200))M" -p MemorySwapMax=0 \
+            runuser -u "$(id -un)" -- env "PATH=$PATH" \
+              GOLEAN_MEM_MAX=none GOLEAN_ALLOW_NO_DIFF=1 ./scripts/ci
 
       # (Go setup moved above the fast gate and pinned — both gates use it;
       # the old conditional stable-floating step let the fast gate run on
@@ -127,11 +154,33 @@ jobs:
 
       - name: Full gate incl. differential corpus (scheduled/dispatch; --slow re-certifies tier=slow rows)
         if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
-        env:
-          GOLEAN_MEM_MAX: none   # see the opt-out rationale on the fast gate above
+        # Same runner-side cgroup cap as the fast gate (rationale above);
+        # GOLEAN_MEM_MAX=none is passed inside the wrapper for the same
+        # sudo-resets-environment reason.
         run: |
+          total_mb=$(free -m | awk '/^Mem:/{print $2}')
+          cap() {
+            sudo -n systemd-run --scope -p "MemoryMax=$((total_mb - 1200))M" -p MemorySwapMax=0 \
+              runuser -u "$(id -un)" -- env "PATH=$PATH" GOLEAN_MEM_MAX=none "$@"
+          }
           if [ "${{ github.event_name }}" = "schedule" ] || [ "${{ inputs.slow }}" != "false" ]; then
-            ./scripts/ci --slow
+            cap ./scripts/ci --slow
           else
-            ./scripts/ci --diff
+            cap ./scripts/ci --diff
           fi
+
+      # The save half of the split cache — see the restore step's comment.
+      # `always()` is the point: a red gate still saves, so the retry
+      # resumes from the failed run's build progress instead of the last
+      # green run's. Skipped on an exact-key hit (nothing new to save;
+      # paths and key mirror the restore step, keep them in lockstep).
+      - name: Save toolchains and build artifacts (runs even on a red gate)
+        if: always() && steps.lake-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            ~/.elan
+            .lake
+            proofs/.lake
+            compat/verdi/.lake
+          key: ${{ steps.lake-cache.outputs.cache-primary-key }}
