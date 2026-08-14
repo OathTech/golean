@@ -162,7 +162,7 @@ declared type, so the fact is stated at the `[]uint64` fragment: a
 backing list of in-range values stays itself elementwise, and the
 stored element lands wrapped (in-range: unchanged). -/
 
-private theorem normalizeListWith_u64 {σ : ExecState} {fuel : Nat}
+theorem normalizeListWith_u64 {σ : ExecState} {fuel : Nat}
     (hf : 0 < fuel)
     (l : List Int) (hl : ∀ v ∈ l, 0 ≤ v ∧ v < 2 ^ 64) :
     normalizeListWith (normalizeValueForTyFuel fuel σ (.int .uint64))

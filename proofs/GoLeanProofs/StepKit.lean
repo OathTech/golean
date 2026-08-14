@@ -223,6 +223,24 @@ theorem stepFn_call_enter {σ σ' : ExecState} {fid : FuncId}
           (.frame plans env locs [] k func.wrapper), σ', ch) := by
   simp only [stepFn, enterFrameStep, h]
 
+/-- The `make([]uint64, n)` machine step, conditioned on the apply
+fact — the wide-op mirror of `stepFn_stmtOp_apply` at the one shape the
+harness examples build their input with. Promoted (phase-2 slice 1)
+from per-example copies once the reverse and minmax S-swap layers both
+needed it; both are retrofitted in the promotion commit and are its
+fixture witnesses. -/
+theorem stepFn_makeSlice_u64_step {σ σ' : ExecState} {n : Nat}
+    {tv : GoValue} {env : LocalEnv} {k : Cont} {ch : Choices}
+    (happly : applyStmtOp σ ch (.makeSlice (.int .uint64) false) 1
+      [tv, .int (n : Nat) .uint64] = .ok (σ', ch)) :
+    stepFn σ (.retV (.int (n : Nat) .uint64)
+      (.stmtOpK (.makeSlice (.int .uint64) false) 1 [tv] [] env k)) ch
+      = .ok (.next k, σ', ch) := by
+  simp only [stepFn, List.reverse_cons, List.reverse_nil,
+    List.nil_append, List.cons_append]
+  rw [happly]
+  rfl
+
 /-- The strict-apply machine step, conditioned on the op fact. -/
 theorem stepFn_strict_apply {σ σ' : ExecState} {op : StrictOp}
     {done : List GoValue} {v out : GoValue} {env : LocalEnv} {k : Cont}

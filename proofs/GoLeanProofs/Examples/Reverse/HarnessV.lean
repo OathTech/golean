@@ -542,18 +542,18 @@ theorem vH_E1_raw (σ : ExecState) (n seed : Nat) (ch : Choices) :
         vSt σ (vHeapC5 n seed) 4, ch) := by
   with_unfolding_all rfl
 
-/-- The `makeSlice` machine step, conditioned on the apply fact. -/
+/-- The `makeSlice` machine step, conditioned on the apply fact.
+PROMOTED to `StepKit.stepFn_makeSlice_u64_step` (phase-2 slice 1, second
+consumer: the minmax S3 layer); this module is one of the promotion's
+two fixture witnesses. -/
 theorem stepFn_makeSliceV {σ σ' : ExecState} {n : Nat}
     {tv : GoValue} {env : LocalEnv} {k : Cont} {ch : Choices}
     (happly : applyStmtOp σ ch (.makeSlice (.int .uint64) false) 1
       [tv, .int (n : Nat) .uint64] = .ok (σ', ch)) :
     stepFn σ (.retV (.int (n : Nat) .uint64)
       (.stmtOpK (.makeSlice (.int .uint64) false) 1 [tv] [] env k)) ch
-      = .ok (.next k, σ', ch) := by
-  simp only [stepFn, List.reverse_cons, List.reverse_nil,
-    List.nil_append, List.cons_append]
-  rw [happly]
-  rfl
+      = .ok (.next k, σ', ch) :=
+  stepFn_makeSlice_u64_step happly
 
 /-- **`make([]uint64, n)` at SYMBOLIC `n`, for `s`** — the entry
 phase's one branch point (the machine's non-negativity check on the

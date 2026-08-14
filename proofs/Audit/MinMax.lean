@@ -1,5 +1,6 @@
 import Lean
 import GoLeanProofs.Examples.MinMax
+import GoLeanProofs.Examples.MinMax.HarnessR
 
 /-!
 # In-build axiom gate — the MinMax example
@@ -43,12 +44,32 @@ input-relocating renaming with cells 0/1 ρ-fixed. D1 twin:
 -- input-family honesty vs the designed-not-built ∀xs input pick);
 -- memory-quantified forms kept proof-side as `minmax_framed` /
 -- `minmax_framed_readout`.
+--
+-- SPEC-STYLE SWAP (examples phase-2 slice 1, 2026-08-14): `minmax_ok`
+-- is now the S3 RELATIONAL harness `minmax_harness_r`
+-- (`Examples/MinMax/HarnessR.lean`) — the Go returns the PRE-STATE
+-- alongside `(lo, hi)`, so the postcondition relates RETURNED DATA
+-- (`lo = minSpec pre`, `hi = maxSpec pre`) and `mmFamily` leaves the
+-- statement entirely. Honesty carried IN the statement: the fixed-cap
+-- `hcap : n ≤ 8` (Go's pass-by-value fragment cannot return unbounded
+-- data), and `∃ pre` is still family-DETERMINED — the statement merely
+-- avoids saying so. The previous family-in-the-statement headline is
+-- KEPT unweakened as `minmax_ok_v1` / `minmax_readout_v1`.
 example := @GoLean.Examples.MinMax.minmax_ok
 example := @GoLean.Examples.MinMax.minmax_readout
+example := @GoLean.Examples.MinMax.goArr8
+example := @GoLean.Examples.MinMax.mmHarnessRFunc
+example := @GoLean.Examples.MinMax.minmaxHarnessR_pin
+example := @GoLean.Examples.MinMax.minmax_ok_v1
+example := @GoLean.Examples.MinMax.minmax_readout_v1
 example := @GoLean.Examples.MinMax.minmax_framed
 example := @GoLean.Examples.MinMax.minmax_framed_readout
 /-- info: 'GoLean.Examples.MinMax.minmax_ok' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Examples.MinMax.minmax_ok
+/-- info: 'GoLean.Examples.MinMax.minmax_readout' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Examples.MinMax.minmax_readout
+/-- info: 'GoLean.Examples.MinMax.minmax_ok_v1' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Examples.MinMax.minmax_ok_v1
 /-- info: 'GoLean.Examples.MinMax.minmax_framed' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Examples.MinMax.minmax_framed
 

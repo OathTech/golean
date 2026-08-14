@@ -454,31 +454,58 @@ func minMax(s []uint64) (uint64, uint64) {
 
 <!-- verbatim: Corpus/coverage/exec/examples/minmax/main.go -->
 ```go
-// minmax_harness: three-phase harness — setup builds the family
-// s[i] = seed + i (wrapping); the returned pair is the observable
-// (returned data preferred over a verdict where arity permits).
-func minmax_harness(n, seed uint64) (uint64, uint64) {
+// minmax_harness_r: the S3 RELATIONAL harness (examples phase-2 slice
+// 1, 2026-08-14; scoping study §4.4). Returns the PRE-STATE (as a
+// fixed-cap array, the pass-by-value fragment's unbounded-data
+// workaround) alongside the subject's `(lo, hi)`, so the Lean
+// postcondition relates the returned data DIRECTLY —
+// `lo = minSpec pre`, `hi = maxSpec pre` — with no family function
+// re-describing the setup. Real Go, ghost ladder rung 0.
+func minmax_harness_r(n, seed uint64) ([minmaxCapN]uint64, uint64, uint64) {
 	s := make([]uint64, n)
 	for i := uint64(0); i < n; i++ {
 		s[i] = seed + i
 	}
-	return minMax(s)
+	var pre [minmaxCapN]uint64
+	for i := uint64(0); i < n; i++ {
+		pre[i] = s[i]
+	}
+	lo, hi := minMax(s)
+	return pre, lo, hi
 }
 ```
 
-**The claim.** For every `n` with `1 ≤ n < 2^63` and every `seed < 2^64`,
-`minmax_harness(n, seed)` finishes normally, at every nondeterminism choice,
-and returns exactly the pair (minimum, maximum) of the family
-`s[i] = (seed + i) mod 2^64`. Here the harness returns *data*, not a verdict,
-so the claim is the value itself.
+**The claim.** For every `n` with `1 ≤ n ≤ 8` and every `seed < 2^64`,
+`minmax_harness_r(n, seed)` finishes normally, at every nondeterminism
+choice, and returns three values: a list `pre` of length `n` (as the
+fixed-cap array the Go returns) together with the pair
+`(minSpec pre, maxSpec pre)`. **The postcondition is a relation over the
+RETURNED data** — min and max of the very array the program handed back. No
+family function appears in the claim.
 
-Two bounds, both Go's own. `1 ≤ n`: `minMax` reads `s[0]`, so the empty slice
-panics — the theorem excludes it honestly instead of quietly succeeding, and
-the corpus pins that panic against `go run` (row `harness-empty-panics`).
-`n < 2^63`: Go's `int` domain for lengths again — the model's domain, wider
-than the practical one (the machine's allocation never fails; see reverse and
-the fourth bound kind above). Because the family wraps at `2^64`, the answer
-is not simply the first and last element once `seed + n` crosses the boundary.
+Three honesty clauses, none of them small print:
+
+* **The cap `n ≤ 8` is a toy bound, and it is the price of this style.** Go's
+  pass-by-value fragment cannot return unbounded data, so the harness returns
+  `[minmaxCapN]uint64` with `minmaxCapN = 8` — visible in the Go — and the
+  second loop and the zero padding exist *only* so the pre-state can cross
+  the observation boundary. The theorem carries `n ≤ 8` as a hypothesis
+  rather than hiding it.
+* **`∃ pre` is still family-determined.** The witness the proof supplies is
+  `s[i] = (seed + i) mod 2^64`; the statement merely does not *say* so. What
+  the swap buys is on the postcondition side, not the input side: the old
+  headline (kept as `minmax_ok_v1`) asserts `minSpec (mmFamily n seed)`,
+  naming the setup family inside the claim, and this one asserts
+  `minSpec pre` about observed output. Turning the input into genuine
+  ∀-data needs the ghost rung-1 annotation, which is designed and not built.
+* **`1 ≤ n` is Go's own boundary**, not proof convenience: `minMax` reads
+  `s[0]`, so the empty slice panics, and the corpus pins that panic against
+  `go run`.
+
+As elsewhere, the machine idealizes allocation (entry from an empty heap, an
+unbounded heap, allocation always succeeds), so the theorem's domain is the
+model's. Because the family wraps at `2^64`, the answer is not simply the
+first and last element once `seed + n` crosses the boundary.
 
 **The specification functions** (`proofs/GoLeanProofs/Examples/MinMax.lean`;
 their `[]` cases are unreachable here, since `n ≥ 1`):
@@ -499,28 +526,34 @@ def maxSpec : List Int → Int
   | v :: w :: rest => max v (maxSpec (w :: rest))
 ```
 
-<!-- verbatim: proofs/GoLeanProofs/Examples/MinMax.lean -->
+**The returned-array adapter** — the whole of the S3 statement vocabulary
+(`proofs/GoLeanProofs/Examples/MinMax/HarnessR.lean`):
+
+<!-- verbatim: proofs/GoLeanProofs/Examples/MinMax/HarnessR.lean -->
 ```lean
-def mmFamily (n seed : Nat) : List Int :=
-  (List.range n).map (fun i => (((seed + i) % 2 ^ 64 : Nat) : Int))
+def goArr8 (xs : List Int) : GoValue :=
+  .array ⟨(xs ++ List.replicate (8 - xs.length) 0).map
+    (fun v => .int v .uint64)⟩
 ```
 
-**The theorem** (`proofs/GoLeanProofs/Examples/MinMax.lean`):
+**The theorem** (`proofs/GoLeanProofs/Examples/MinMax/HarnessR.lean`):
 
-<!-- verbatim: proofs/GoLeanProofs/Examples/MinMax.lean -->
+<!-- verbatim: proofs/GoLeanProofs/Examples/MinMax/HarnessR.lean -->
 ```lean
-theorem minmax_ok (n seed : Nat) (h1 : 1 ≤ n) (hn : n < 2 ^ 63)
+theorem minmax_ok (n seed : Nat) (h1 : 1 ≤ n) (hcap : n ≤ 8)
     (hseed : seed < 2 ^ 64) :
-    ∃ N : Nat, ∀ fuel : Nat, N ≤ fuel → ∀ ch : Choices,
-      runFunctionWithContextM fuel minMaxLowered.typeDefs.toList
-          minMaxLowered.funcs mmHarnessFunc
-          #[.int (n : Int) .uint64, .int (seed : Int) .uint64]
-          minMaxLowered.methods ch
-        = .ok { values := #[.int (minSpec (mmFamily n seed)) .uint64,
-                            .int (maxSpec (mmFamily n seed)) .uint64] } := by
+    ∃ pre : List Int, pre.length = n ∧
+      ∃ N : Nat, ∀ fuel : Nat, N ≤ fuel → ∀ ch : Choices,
+        runFunctionWithContextM fuel minMaxLowered.typeDefs.toList
+            minMaxLowered.funcs mmHarnessRFunc
+            #[.int (n : Int) .uint64, .int (seed : Int) .uint64]
+            minMaxLowered.methods ch
+          = .ok { values := #[goArr8 pre,
+                              .int (minSpec pre) .uint64,
+                              .int (maxSpec pre) .uint64] } := by
 ```
 
-**Axioms** (pinned in `proofs/Audit.lean`):
+**Axioms** (pinned in `proofs/Audit/MinMax.lean`):
 
 <!-- verbatim: proofs/Audit/MinMax.lean -->
 ```lean
@@ -529,9 +562,19 @@ theorem minmax_ok (n seed : Nat) (h1 : 1 ≤ n) (hn : n < 2 ^ 63)
 
 Lean's classical trio; no `sorry`, no native evaluation, no project axioms.
 
-**Fuel bound.** Explicit and affine: `N = 145 + 149·n`.
+**Fuel bound.** Explicit and affine: `N = 202·n + 218`. This is the
+branch-UNIFORM worst case — either `if` inside `minMax` may fire, at 16 steps
+each. The *measured* law at a non-wrapping seed is `186·n + 234`, and that is
+also a true bound, because `s[i] < lo` and `s[i] > hi` cannot both hold in one
+iteration; proving the tighter number would mean carrying `lo ≤ hi` through
+the loop induction, which buys nothing when the statement is `∃N`. The bound
+quoted here is the one the theorem actually ships.
 
-**Status.** `minmax_readout` is the run-conditioned twin; `minmax_framed` /
+**Status.** `minmax_readout` is the run-conditioned twin. Beneath sit
+`minmax_ok_v1` / `minmax_readout_v1` — the previous headline over
+`minmax_harness`, which returns only the pair and states
+`minSpec (mmFamily n seed)`, naming the family in the claim; kept unweakened
+with its corpus rows. Below those, `minmax_framed` /
 `minmax_framed_readout` are the memory-quantified companions — for any
 **non-empty** list of `uint64` values of length below `2^63`, at any
 placement other than the two result cells, and under the module's stated
@@ -541,9 +584,11 @@ additional claim that the input slice comes back unchanged (the program is
 read-only on its input) and every frame cell is preserved. Supporting
 material.
 
-**Ground.** Differentially green on 9 corpus rows including the empty-slice
-panic (both through the driver and through the harness) and an
-`int64`-boundary value, plus the harness at `(5,40)` and `(1,7)`.
+**Ground.** Differentially green on 13 corpus rows: the four/three/one/empty
+drivers and an `int64`-boundary value, the empty-slice panic through both the
+driver and the harness, the pair harness at `(5,40)` and `(1,7)`, and the
+relational harness at `harness-r-five`, `harness-r-one`, `harness-r-eight`
+and `harness-r-empty-panics`.
 
 ---
 

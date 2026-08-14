@@ -175,7 +175,7 @@ def minMaxSeed (xs : List Int) (base : Nat) (fr : Heap) (na : Nat) :
 
 /-! ## The pure layer: prefix min/max surgery -/
 
-private theorem take_ne_nil {xs : List Int} {m : Nat} (hm1 : 1 ≤ m)
+theorem take_ne_nil {xs : List Int} {m : Nat} (hm1 : 1 ≤ m)
     (hne : xs ≠ []) : xs.take m ≠ [] := by
   cases xs with
   | nil => exact absurd rfl hne
@@ -185,7 +185,7 @@ private theorem take_ne_nil {xs : List Int} {m : Nat} (hm1 : 1 ≤ m)
       simp only [List.length_take, List.length_cons, List.length_nil] at hlen
       omega
 
-private theorem take_succ_snoc {xs : List Int} {m : Nat}
+theorem take_succ_snoc {xs : List Int} {m : Nat}
     (hm : m < xs.length) :
     xs.take (m + 1) = xs.take m ++ [xs.getD m 0] := by
   have hx : xs[m]? = some (xs.getD m 0) := by
@@ -194,7 +194,7 @@ private theorem take_succ_snoc {xs : List Int} {m : Nat}
   rfl
 
 /-- Appending one element to a nonempty list steps `minSpec` by `min`. -/
-private theorem minSpec_snoc (w : Int) (t : List Int) (v : Int) :
+theorem minSpec_snoc (w : Int) (t : List Int) (v : Int) :
     minSpec ((w :: t) ++ [v]) = min (minSpec (w :: t)) v := by
   induction t generalizing w with
   | nil => simp [minSpec]
@@ -206,7 +206,7 @@ private theorem minSpec_snoc (w : Int) (t : List Int) (v : Int) :
         = min (min w (minSpec (x :: rest))) v
       omega
 
-private theorem maxSpec_snoc (w : Int) (t : List Int) (v : Int) :
+theorem maxSpec_snoc (w : Int) (t : List Int) (v : Int) :
     maxSpec ((w :: t) ++ [v]) = max (maxSpec (w :: t)) v := by
   induction t generalizing w with
   | nil => simp [maxSpec]
@@ -219,7 +219,7 @@ private theorem maxSpec_snoc (w : Int) (t : List Int) (v : Int) :
       omega
 
 /-- **One machine iteration advances the prefix minimum**. -/
-private theorem minSpec_take_succ {xs : List Int} {m : Nat}
+theorem minSpec_take_succ {xs : List Int} {m : Nat}
     (hm1 : 1 ≤ m) (hm : m < xs.length) :
     minSpec (xs.take (m + 1)) = min (minSpec (xs.take m)) (xs.getD m 0) := by
   have hne : xs ≠ [] := by intro hc; subst hc; simp at hm
@@ -227,7 +227,7 @@ private theorem minSpec_take_succ {xs : List Int} {m : Nat}
   match hx : xs.take m, take_ne_nil hm1 hne with
   | w :: t, _ => exact minSpec_snoc w t _
 
-private theorem maxSpec_take_succ {xs : List Int} {m : Nat}
+theorem maxSpec_take_succ {xs : List Int} {m : Nat}
     (hm1 : 1 ≤ m) (hm : m < xs.length) :
     maxSpec (xs.take (m + 1)) = max (maxSpec (xs.take m)) (xs.getD m 0) := by
   have hne : xs ≠ [] := by intro hc; subst hc; simp at hm
@@ -235,20 +235,20 @@ private theorem maxSpec_take_succ {xs : List Int} {m : Nat}
   match hx : xs.take m, take_ne_nil hm1 hne with
   | w :: t, _ => exact maxSpec_snoc w t _
 
-private theorem minSpec_take_one {xs : List Int} (hne : xs ≠ []) :
+theorem minSpec_take_one {xs : List Int} (hne : xs ≠ []) :
     minSpec (xs.take 1) = xs.getD 0 0 := by
   cases xs with
   | nil => exact absurd rfl hne
   | cons v t => simp [minSpec, List.take]
 
-private theorem maxSpec_take_one {xs : List Int} (hne : xs ≠ []) :
+theorem maxSpec_take_one {xs : List Int} (hne : xs ≠ []) :
     maxSpec (xs.take 1) = xs.getD 0 0 := by
   cases xs with
   | nil => exact absurd rfl hne
   | cons v t => simp [maxSpec, List.take]
 
 /-- The prefix minimum is an element (the range hypotheses transport). -/
-private theorem minSpec_mem : ∀ {l : List Int}, l ≠ [] → minSpec l ∈ l := by
+theorem minSpec_mem : ∀ {l : List Int}, l ≠ [] → minSpec l ∈ l := by
   intro l
   induction l with
   | nil => exact fun h => absurd rfl h
@@ -265,7 +265,7 @@ private theorem minSpec_mem : ∀ {l : List Int}, l ≠ [] → minSpec l ∈ l :
           · rw [h]
             exact List.mem_cons_of_mem _ (ih (by simp))
 
-private theorem maxSpec_mem : ∀ {l : List Int}, l ≠ [] → maxSpec l ∈ l := by
+theorem maxSpec_mem : ∀ {l : List Int}, l ≠ [] → maxSpec l ∈ l := by
   intro l
   induction l with
   | nil => exact fun h => absurd rfl h
@@ -282,12 +282,12 @@ private theorem maxSpec_mem : ∀ {l : List Int}, l ≠ [] → maxSpec l ∈ l :
           · rw [h]
             exact List.mem_cons_of_mem _ (ih (by simp))
 
-private theorem minTake_range {xs : List Int} {m : Nat}
+theorem minTake_range {xs : List Int} {m : Nat}
     (hxs : ∀ v ∈ xs, 0 ≤ v ∧ v < 2 ^ 64) (hm1 : 1 ≤ m) (hne : xs ≠ []) :
     0 ≤ minSpec (xs.take m) ∧ minSpec (xs.take m) < 2 ^ 64 :=
   hxs _ (List.mem_of_mem_take (minSpec_mem (take_ne_nil hm1 hne)))
 
-private theorem maxTake_range {xs : List Int} {m : Nat}
+theorem maxTake_range {xs : List Int} {m : Nat}
     (hxs : ∀ v ∈ xs, 0 ≤ v ∧ v < 2 ^ 64) (hm1 : 1 ≤ m) (hne : xs ≠ []) :
     0 ≤ maxSpec (xs.take m) ∧ maxSpec (xs.take m) < 2 ^ 64 :=
   hxs _ (List.mem_of_mem_take (maxSpec_mem (take_ne_nil hm1 hne)))
@@ -327,10 +327,10 @@ private def frameK : Cont :=
   .frame mmShapes minMaxEnv [.base ⟨4⟩, .base ⟨5⟩] [] .stop false
 private def entryK : Cont := .callArgsK ⟨"minMax"⟩ mmShapes [] [] minMaxEnv .stop
 
-private def mmTailSeqn : Stmt :=
+def mmTailSeqn : Stmt :=
   .seqn #[.assign (.var "$res0") (.var "lo"),
           .assign (.var "$res1") (.var "hi"), .returnStmt]
-private def mmIffBlock : Stmt :=
+def mmIffBlock : Stmt :=
   .block #[]
     #[.seqn #[.initialization { id := "i", typ := .int .int },
               .assign (.var "i") (.intLit 1 .int)],
@@ -1385,23 +1385,23 @@ theorem minmaxHarness_pin :
 
 /-! ### The pure layer: the family and the setup-prefix surgery -/
 
-private theorem mmFamily_length (n seed : Nat) :
+theorem mmFamily_length (n seed : Nat) :
     (mmFamily n seed).length = n := by
   simp [mmFamily]
 
-private theorem mmFamily_ne_nil {n seed : Nat} (h1 : 1 ≤ n) :
+theorem mmFamily_ne_nil {n seed : Nat} (h1 : 1 ≤ n) :
     mmFamily n seed ≠ [] := by
   intro hc
   have := congrArg List.length hc
   simp [mmFamily_length] at this
   omega
 
-private theorem mmFamily_getD {n seed i : Nat} (hi : i < n) :
+theorem mmFamily_getD {n seed i : Nat} (hi : i < n) :
     (mmFamily n seed).getD i 0 = (((seed + i) % 2 ^ 64 : Nat) : Int) := by
   simp [mmFamily, List.getD_eq_getElem?_getD, List.getElem?_map,
     List.getElem?_range hi]
 
-private theorem mmFamily_range (n seed : Nat) :
+theorem mmFamily_range (n seed : Nat) :
     ∀ v ∈ mmFamily n seed, 0 ≤ v ∧ v < 2 ^ 64 := by
   intro v hv
   simp only [mmFamily, List.mem_map] at hv
@@ -1412,25 +1412,25 @@ private theorem mmFamily_range (n seed : Nat) :
 
 /-- The setup-loop invariant list: the built family prefix, then the
 `make`'s zeros. -/
-private def setupList (n seed i : Nat) : List Int :=
+def setupList (n seed i : Nat) : List Int :=
   (mmFamily n seed).take i ++ List.replicate (n - i) 0
 
-private theorem setupList_zero (n seed : Nat) :
+theorem setupList_zero (n seed : Nat) :
     setupList n seed 0 = List.replicate n 0 := by
   simp [setupList]
 
-private theorem setupList_full (n seed : Nat) :
+theorem setupList_full (n seed : Nat) :
     setupList n seed n = mmFamily n seed := by
   rw [setupList, Nat.sub_self, List.replicate_zero, List.append_nil,
     List.take_of_length_le (Nat.le_of_eq (mmFamily_length n seed))]
 
-private theorem setupList_length {n seed i : Nat} (hi : i ≤ n) :
+theorem setupList_length {n seed i : Nat} (hi : i ≤ n) :
     (setupList n seed i).length = n := by
   simp only [setupList, List.length_append, List.length_take,
     List.length_replicate, mmFamily_length]
   omega
 
-private theorem setupList_range (n seed i : Nat) :
+theorem setupList_range (n seed i : Nat) :
     ∀ v ∈ setupList n seed i, 0 ≤ v ∧ v < 2 ^ 64 := by
   intro v hv
   rcases List.mem_append.mp hv with h | h
@@ -1438,7 +1438,7 @@ private theorem setupList_range (n seed i : Nat) :
   · rw [List.eq_of_mem_replicate h]
     omega
 
-private theorem set_append_first {xs ys : List Int} {w : Int} :
+theorem set_append_first {xs ys : List Int} {w : Int} :
     (xs ++ ys).set xs.length w = xs ++ ys.set 0 w := by
   induction xs with
   | nil => simp
@@ -1446,7 +1446,7 @@ private theorem set_append_first {xs ys : List Int} {w : Int} :
 
 /-- **One setup store advances the prefix**: writing the family value
 at position `i` turns invariant list `i` into invariant list `i + 1`. -/
-private theorem setupList_set {n seed i : Nat} (hi : i < n) :
+theorem setupList_set {n seed i : Nat} (hi : i < n) :
     (setupList n seed i).set i (((seed + i) % 2 ^ 64 : Nat) : Int)
       = setupList n seed (i + 1) := by
   have hlen : ((mmFamily n seed).take i).length = i := by
@@ -1466,7 +1466,7 @@ private theorem setupList_set {n seed i : Nat} (hi : i < n) :
 
 /-- The wrapping normal form of a `Nat`-cast sum — the machine's uint64
 `+` IS the family's `% 2^64`. -/
-private theorem unorm_nat_wrap (x : Nat) :
+theorem unorm_nat_wrap (x : Nat) :
     IntKind.normalize .uint64 ((x : Nat) : Int)
       = ((x % 2 ^ 64 : Nat) : Int) := by
   simp only [IntKind.normalize, IntKind.bits?, IntKind.signed]
@@ -2432,7 +2432,7 @@ genuinely data-dependent when `seed + n` crosses the boundary — and is
 honestly weaker than the ∀xs memory-quantified form kept beneath as
 `minmax_framed`. `h1` is Go's own empty-slice panic boundary; `hn` is
 Go's `int` domain for `len`; `hseed` is the argument's type domain. -/
-theorem minmax_ok (n seed : Nat) (h1 : 1 ≤ n) (hn : n < 2 ^ 63)
+theorem minmax_ok_v1 (n seed : Nat) (h1 : 1 ≤ n) (hn : n < 2 ^ 63)
     (hseed : seed < 2 ^ 64) :
     ∃ N : Nat, ∀ fuel : Nat, N ≤ fuel → ∀ ch : Choices,
       runFunctionWithContextM fuel minMaxLowered.typeDefs.toList
@@ -2456,7 +2456,7 @@ stream, returns exactly the family's `(minSpec, maxSpec)` pair —
 derived from `minmax_ok` via the shared `harness_readout_of_total`
 bridge (the `.ok`-equation headline already determines every
 successful run; nothing is re-proven). -/
-theorem minmax_readout (n seed : Nat) (h1 : 1 ≤ n) (hn : n < 2 ^ 63)
+theorem minmax_readout_v1 (n seed : Nat) (h1 : 1 ≤ n) (hn : n < 2 ^ 63)
     (hseed : seed < 2 ^ 64) :
     ∀ (fuel : Nat) (ch : Choices) (r : Result),
       runFunctionWithContextM fuel minMaxLowered.typeDefs.toList
@@ -2466,6 +2466,6 @@ theorem minmax_readout (n seed : Nat) (h1 : 1 ≤ n) (hn : n < 2 ^ 63)
         = .ok r →
       r = { values := #[.int (minSpec (mmFamily n seed)) .uint64,
                         .int (maxSpec (mmFamily n seed)) .uint64] } :=
-  GoLean.Surface.harness_readout_of_total (minmax_ok n seed h1 hn hseed)
+  GoLean.Surface.harness_readout_of_total (minmax_ok_v1 n seed h1 hn hseed)
 
 end GoLean.Examples.MinMax
