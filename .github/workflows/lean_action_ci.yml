@@ -40,6 +40,25 @@ jobs:
           curl -sSfL https://elan.lean-lang.org/elan-init.sh | sh -s -- -y --default-toolchain none
           echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
 
+      # OLEAN CACHING (examples phase-2 slice 0, lever 5, 2026-08-14).
+      # The key has THREE layers, and the third one is the fix: keyed on
+      # toolchain + manifest ALONE, every proofs commit hit the same key
+      # exactly, and actions/cache does not SAVE on an exact hit — so the
+      # entry froze at whatever the first save contained and every later
+      # run re-elaborated everything that had changed since, forever.
+      # Adding a source-tree hash makes each distinct source state save
+      # its own entry; the layered restore-keys then fall back to the
+      # newest entry sharing the toolchain+manifest prefix, which is the
+      # incremental-reuse case (Lake re-elaborates exactly the modules
+      # whose hashes moved). compat/verdi/.lake joins the cached paths
+      # because the gate builds that package on every run.
+      #
+      # Cost, recorded honestly: a fresh entry per source state churns
+      # the repo's 10 GB cache budget (proofs/.lake with iris is GBs), so
+      # GitHub evicts LRU and only the last few states stay warm. That is
+      # the intended trade — a warm recent state beats a frozen old one.
+      # HIT RATE IS NOT MEASURED HERE: it can only be observed on a real
+      # runner, over at least two pushes (first saves, second restores).
       - name: Cache toolchains and build artifacts
         uses: actions/cache@v4
         with:
@@ -47,8 +66,11 @@ jobs:
             ~/.elan
             .lake
             proofs/.lake
-          key: lake-${{ runner.os }}-${{ hashFiles('lean-toolchain', 'proofs/lean-toolchain', 'proofs/lake-manifest.json') }}
-          restore-keys: lake-${{ runner.os }}-
+            compat/verdi/.lake
+          key: lake-${{ runner.os }}-${{ hashFiles('lean-toolchain', 'proofs/lean-toolchain', 'proofs/lake-manifest.json') }}-${{ hashFiles('GoLean/**/*.lean', 'proofs/**/*.lean', 'compat/verdi/**/*.lean') }}
+          restore-keys: |
+            lake-${{ runner.os }}-${{ hashFiles('lean-toolchain', 'proofs/lean-toolchain', 'proofs/lake-manifest.json') }}-
+            lake-${{ runner.os }}-
 
       # The imported-goose guards (ci steps 1c3-1c5) verify landed corpus
       # bytes and R2 pin terms against the PINNED goose checkout and fail
