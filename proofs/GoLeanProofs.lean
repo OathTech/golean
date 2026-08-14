@@ -90,6 +90,7 @@ import GoLeanProofs.SliceMem
 import GoLeanProofs.Laws.Slice
 import GoLeanProofs.Examples.ReverseProgram
 import GoLeanProofs.Examples.Reverse
+import GoLeanProofs.Examples.Reverse.HarnessV
 import GoLeanProofs.Examples.GcdProgram
 import GoLeanProofs.Examples.Gcd
 import GoLeanProofs.Examples.MinMaxProgram

@@ -194,11 +194,11 @@ theorem wc_empty_seg1 (σ : ExecState) (ch : Choices) :
   with_unfolding_all rfl
 
 /-- The conditioned frame-entry step: a `.retV` at a drained
-`callArgsK` is exactly one `enterFrame`, keyed on its result. The
-P1-family shape (`StepKit`), stated in-module pending a second consumer
-(promotion candidate: the parameterized harness instances and the
-minmax/wordcount S3 entry layers — promote to `StepKit` as
-`stepFn_call_enter` when one lands). -/
+`callArgsK` is exactly one `enterFrame`, keyed on its result. PROMOTED
+to `StepKit.stepFn_call_enter` (phase-2 slice 1) when its second
+consumer landed — the `reverse_harness_v` entry into `reverse`. This
+module is one of the promotion's two fixture witnesses; the abbreviation
+below keeps the local name a one-liner over the kit lemma. -/
 theorem wc_empty_enterFrame_step {σ σ' : ExecState} {fid : FuncId}
     {v : GoValue} {vals : List GoValue}
     {plans : List (TargetShape × List Expr)} {env : LocalEnv} {k : Cont}
@@ -206,8 +206,8 @@ theorem wc_empty_enterFrame_step {σ σ' : ExecState} {fid : FuncId}
     (h : enterFrame σ fid (vals ++ [v]) = .ok (func, frameEnv, locs, σ')) :
     stepFn σ (.retV v (.callArgsK fid plans vals [] env k)) ch
       = .ok (.exec func.body frameEnv
-          (.frame plans env locs [] k func.wrapper), σ', ch) := by
-  simp only [stepFn, enterFrameStep, h]
+          (.frame plans env locs [] k func.wrapper), σ', ch) :=
+  stepFn_call_enter h
 
 set_option maxHeartbeats 12000000 in
 /-- Segment 2: the whole `maxCount` body on the empty slice (zero

@@ -1,5 +1,6 @@
 import Lean
 import GoLeanProofs.Examples.Reverse
+import GoLeanProofs.Examples.Reverse.HarnessV
 
 /-!
 # In-build axiom gate — the Reverse example
@@ -38,19 +39,37 @@ strong induction on the two-pointer measure — one induction delivers
 value AND completion; the Iris WP slice laws are witnessed separately
 (block above) and deliberately not consumed here. Scope honesty:
 usability evidence per the charter's two-questions separation. -/
--- HARNESS RESTATEMENT (form note §11): `reverse_ok` is now the harness
--- headline (reverse_harness: setup family s[i] = seed + i wrapping;
--- Go-side element-wise reversal check → verdict 1; input-family
--- honesty recorded). The memory-quantified ∀xs form above is KEPT
--- proof-side as `reverse_framed` (renamed; genuinely stronger on the
--- input quantifier — which is why it stays).
+-- HARNESS RESTATEMENT (form note §11): `reverse_ok` is the harness
+-- headline (setup family s[i] = seed + i wrapping; Go-side
+-- element-wise reversal check → verdict 1; input-family honesty
+-- recorded). The memory-quantified ∀xs form above is KEPT proof-side
+-- as `reverse_framed` (renamed; genuinely stronger on the input
+-- quantifier — which is why it stays).
+--
+-- SPEC-STYLE SWAP (examples phase-2 slice 1, 2026-08-14): `reverse_ok`
+-- is now the S1 COPY-RELATIONAL harness `reverse_harness_v`
+-- (`Examples/Reverse/HarnessV.lean`) — the test phase checks `s[i]`
+-- against the SAVED PRE-COPY `t[n-1-i]`, so the check IS the reversal
+-- relation rather than the setup algebra, and the harness is the
+-- annotation-ready form (ghost rung 1 keeps the same test phase). The
+-- previous verdict headline over `reverse_harness` is KEPT unweakened
+-- as `reverse_ok_v1` / `reverse_readout_v1`, with its corpus rows and
+-- its pin; both are re-pinned below.
 example := @GoLean.Examples.Reverse.reverse_ok
+example := @GoLean.Examples.Reverse.reverse_readout
+example := @GoLean.Examples.Reverse.reverseHarnessVFunc
+example := @GoLean.Examples.Reverse.reverseHarnessV_pin
+example := @GoLean.Examples.Reverse.reverse_ok_v1
+example := @GoLean.Examples.Reverse.reverse_readout_v1
 example := @GoLean.Examples.Reverse.reverse_framed
 example := @GoLean.Examples.Reverse.revFamily
 example := @GoLean.Examples.Reverse.reverseHarnessFunc
-example := @GoLean.Examples.Reverse.reverse_readout
 /-- info: 'GoLean.Examples.Reverse.reverse_ok' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Examples.Reverse.reverse_ok
+/-- info: 'GoLean.Examples.Reverse.reverse_readout' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Examples.Reverse.reverse_readout
+/-- info: 'GoLean.Examples.Reverse.reverse_ok_v1' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Examples.Reverse.reverse_ok_v1
 /-- info: 'GoLean.Examples.Reverse.reverse_framed' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Examples.Reverse.reverse_framed
 

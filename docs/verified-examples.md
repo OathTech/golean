@@ -309,19 +309,26 @@ func reverse(s []uint64) {
 
 <!-- verbatim: Corpus/coverage/exec/examples/reverse/main.go -->
 ```go
-// reverse_harness: three-phase harness (harness ruling 2026-08-13).
-// setup_reverse_state: build s from the scalar parameters — the
-// input FAMILY s[i] = seed + i (wrapping); test_reverse_state:
-// verify the reversal element-wise in Go and fold into a verdict.
-func reverse_harness(n, seed uint64) uint64 {
+// reverse_harness_v: the COPY-RELATIONAL harness (examples phase-2
+// slice 1, 2026-08-14; scoping study §4.3). Setup builds the family
+// AND saves a pre-copy `t`; the test phase checks `s` against the
+// SAVED COPY — the check is the reversal RELATION itself, not the
+// setup algebra, so the Go reads as an ordinary unit test. The saved
+// copy is a HISTORY GHOST materialized as real Go (ghost ladder rung
+// 0): no annotations anywhere.
+func reverse_harness_v(n, seed uint64) uint64 {
 	s := make([]uint64, n)
 	for i := uint64(0); i < n; i++ {
 		s[i] = seed + i
 	}
+	t := make([]uint64, n)
+	for i := uint64(0); i < n; i++ {
+		t[i] = s[i]
+	}
 	reverse(s)
 	ok := uint64(1)
 	for i := uint64(0); i < n; i++ {
-		if s[i] != seed+(n-1-i) {
+		if s[i] != t[n-1-i] {
 			ok = 0
 		}
 	}
@@ -330,12 +337,17 @@ func reverse_harness(n, seed uint64) uint64 {
 ```
 
 **The claim.** For every length `n < 2^63` and every `seed < 2^64`,
-`reverse_harness(n, seed)` finishes normally, at every nondeterminism choice,
-and returns `1`. **What `1` means is in the Go above**: setup builds
-`s[i] = (seed + i) mod 2^64`, `reverse` runs, and the test phase checks
-element-wise — in Go, inside the verified footprint — that `s[i]` now equals
-`seed + (n-1-i)` (again in wrapping `uint64` arithmetic). The claim is exactly
-*"that check passed, for every `(n, seed)` in the domain"*, and no more.
+`reverse_harness_v(n, seed)` finishes normally, at every nondeterminism
+choice, and **the check returned `1`**. What `1` means is in the Go above:
+setup builds `s[i] = (seed + i) mod 2^64` and copies it into `t`, `reverse`
+runs on `s`, and the test phase checks element-wise — in Go, inside the
+verified footprint — that `s[i]` equals `t[n-1-i]`. The claim is exactly
+*"that check returned 1, for every `(n, seed)` in the domain"*, and no more.
+
+What the copy buys, and what it does not: the check now compares two reads
+of the machine's own memory rather than re-deriving the setup formula, so
+the Go says "reversal" and not "the family's algebra". It does NOT widen the
+input quantifier — see Input honesty below.
 
 The bound `n < 2^63` is where Go's `int` domain ends **in the model**:
 `make([]uint64, n)` takes a Go `int`, so past `2^63` the length no longer fits
@@ -345,12 +357,17 @@ succeeding (entry from an empty heap, an unbounded heap, no allocation
 failure), while real Go is memory-bounded and `make([]uint64, n)` fails far
 below `2^63`. So the theorem's domain is the model's domain, wider than the
 one a real process has; the machine idealization, not the theorem, is what
-buys the extra width.
+buys the extra width. The harness also allocates a second `n`-element slice
+that exists only so the check can be stated over observed data.
 
 Input honesty: the quantifiers are the scalars `(n, seed)` — an input
-*family*, not all slices. The wrapping is deliberate and the theorem covers
-every seed below `2^64`, including the ones where `seed + i` wraps; the
-differential rows below do not reach that region (see **Ground**).
+*family*, not all slices. The copy-relational check does not change that; it
+makes the harness the ANNOTATION-READY form, because at ghost rung 1
+annotating the one setup assignment would make the input ∀-data with the same
+test phase, which the verdict harness below (`reverse_ok_v1`, whose check
+re-derives `seed+(n-1-i)`) could never do. The wrapping is deliberate and the
+theorem covers every seed below `2^64`, including the ones where `seed + i`
+wraps; the differential rows below do not reach that region (see **Ground**).
 
 **The family** (`proofs/GoLeanProofs/Examples/Reverse.lean`):
 
@@ -360,20 +377,20 @@ def revFamily (n seed : Nat) : List Int :=
   (List.range n).map (fun i => (((seed + i) % 2 ^ 64 : Nat) : Int))
 ```
 
-**The theorem** (`proofs/GoLeanProofs/Examples/Reverse.lean`):
+**The theorem** (`proofs/GoLeanProofs/Examples/Reverse/HarnessV.lean`):
 
-<!-- verbatim: proofs/GoLeanProofs/Examples/Reverse.lean -->
+<!-- verbatim: proofs/GoLeanProofs/Examples/Reverse/HarnessV.lean -->
 ```lean
 theorem reverse_ok (n seed : Nat) (hn : n < 2 ^ 63) (hseed : seed < 2 ^ 64) :
     ∃ N : Nat, ∀ fuel : Nat, N ≤ fuel → ∀ ch : Choices,
       runFunctionWithContextM fuel reverseLowered.typeDefs.toList
-          reverseLowered.funcs reverseHarnessFunc
+          reverseLowered.funcs reverseHarnessVFunc
           #[.int (n : Int) .uint64, .int (seed : Int) .uint64]
           reverseLowered.methods ch
         = .ok { values := #[.int 1 .uint64] } := by
 ```
 
-**Axioms** (pinned in `proofs/Audit.lean`):
+**Axioms** (pinned in `proofs/Audit/Reverse.lean`):
 
 <!-- verbatim: proofs/Audit/Reverse.lean -->
 ```lean
@@ -382,26 +399,36 @@ theorem reverse_ok (n seed : Nat) (hn : n < 2 ^ 63) (hseed : seed < 2 ^ 64) :
 
 Lean's classical trio; no `sorry`, no native evaluation, no project axioms.
 
-**Fuel bound.** Explicit and affine: `N = 189·n + 260`.
+**Fuel bound.** Explicit and affine: `N = 205·n + 335`. (The measured law is
+`335 + 205·n`, first differences alternating 167/242 because a two-pointer
+swap happens every other iteration; the proof's bound is tight at the
+measured points.)
 
-**Status.** `reverse_readout` is the run-conditioned twin. The stronger
-input claim lives beneath as `reverse_framed`: for any list of `uint64`
-values **of length below `2^63`**, at any placement, beside any frame that
-does not already occupy that placement, and under the module's stated
-well-formedness and frame-disjointness side conditions (`MachineWf` on the
-seed state, `hb`/`hxs` — see the module), `reverse` finishes and that memory
-then holds the list reversed with every frame cell preserved. It is
-genuinely ∀-data — the harness family does not subsume it — and it is kept as
-supporting material because the user-facing form observes only returned
-values.
+**Status.** `reverse_readout` is the run-conditioned twin. Two supporting
+theorems sit beneath, both kept and both still proved:
 
-**Ground.** Differentially green on 8 corpus rows (four/three/one/empty
-element drivers and an `int64`-boundary value) plus the harness at `(5,100)`,
-`(0,7)` and a near-`2^63` seed — the largest a corpus row can express, since
-the differential driver parses `int64` arguments, so no oracle row reaches the
-`uint64` wrap region. The wrap region was checked by direct `go run` probes in
-the 2026-08-14 audit and agrees with the machine; extending the driver is
-recorded as an input for the successor arc.
+* `reverse_ok_v1` (with `reverse_readout_v1`) — the previous headline over
+  `reverse_harness`, whose test phase re-derives `seed+(n-1-i)` instead of
+  reading a saved copy. Same claim shape, different Go; its corpus rows stay.
+* `reverse_framed` — the stronger INPUT claim: for any list of `uint64`
+  values **of length below `2^63`**, at any placement, beside any frame that
+  does not already occupy that placement, and under the module's stated
+  well-formedness and frame-disjointness side conditions (`MachineWf` on the
+  seed state, `hb`/`hxs` — see the module), `reverse` finishes and that
+  memory then holds the list reversed with every frame cell preserved. It is
+  genuinely ∀-data — no harness family subsumes it — and it is kept as
+  supporting material because the user-facing form observes only returned
+  values.
+
+**Ground.** Differentially green on 11 corpus rows: four/three/one/empty
+element drivers and an `int64`-boundary value; the verdict harness at
+`(5,100)`, `(0,7)` and a near-`2^63` seed; and the copy-relational harness at
+`harness-v-five`, `harness-v-empty` and `harness-v-wrapping`. A near-`2^63`
+seed is the largest a corpus row can express, since the differential driver
+parses `int64` arguments, so no oracle row reaches the `uint64` wrap region.
+The wrap region was checked by direct `go run` probes in the 2026-08-14 audit
+and agrees with the machine; extending the driver is recorded as an input for
+the successor arc.
 
 ---
 

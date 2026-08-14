@@ -160,30 +160,30 @@ def reverseSeed (xs : List Int) (base : Nat) (fr : Heap) (na : Nat) :
 /-- The list after `m` two-pointer swap iterations: positions below `m`
 and at or above `length - m` hold the REVERSED elements; the middle is
 still the original. -/
-private def revSwap (xs : List Int) (m : Nat) : List Int :=
+def revSwap (xs : List Int) (m : Nat) : List Int :=
   (List.range xs.length).map fun k =>
     if k < m ∨ xs.length - m ≤ k then xs.getD (xs.length - 1 - k) 0
     else xs.getD k 0
 
-private theorem length_revSwap (xs : List Int) (m : Nat) :
+theorem length_revSwap (xs : List Int) (m : Nat) :
     (revSwap xs m).length = xs.length := by
   simp [revSwap]
 
-private theorem getElem?_revSwap (xs : List Int) (m k : Nat)
+theorem getElem?_revSwap (xs : List Int) (m k : Nat)
     (hk : k < xs.length) :
     (revSwap xs m)[k]? =
       some (if k < m ∨ xs.length - m ≤ k then xs.getD (xs.length - 1 - k) 0
         else xs.getD k 0) := by
   simp [revSwap, List.getElem?_map, List.getElem?_range, hk]
 
-private theorem getD_revSwap (xs : List Int) (m k : Nat)
+theorem getD_revSwap (xs : List Int) (m k : Nat)
     (hk : k < xs.length) :
     (revSwap xs m).getD k 0 =
       if k < m ∨ xs.length - m ≤ k then xs.getD (xs.length - 1 - k) 0
       else xs.getD k 0 := by
   simp [List.getD, getElem?_revSwap xs m k hk]
 
-private theorem revSwap_zero (xs : List Int) : revSwap xs 0 = xs := by
+theorem revSwap_zero (xs : List Int) : revSwap xs 0 = xs := by
   apply List.ext_getElem?
   intro k
   by_cases hk : k < xs.length
@@ -195,7 +195,7 @@ private theorem revSwap_zero (xs : List Int) : revSwap xs 0 = xs := by
 
 /-- Every element of the partial reversal is an element of the input
 (the range hypotheses transport). -/
-private theorem mem_revSwap {xs : List Int} {m : Nat} {v : Int}
+theorem mem_revSwap {xs : List Int} {m : Nat} {v : Int}
     (h : v ∈ revSwap xs m) : v ∈ xs := by
   simp only [revSwap, List.mem_map, List.mem_range] at h
   obtain ⟨k, hk, hv⟩ := h
@@ -209,12 +209,12 @@ private theorem mem_revSwap {xs : List Int} {m : Nat} {v : Int}
 
 /-- The untouched middle: while `m < length - 1 - m`, positions `m` and
 `length - 1 - m` still hold the ORIGINAL elements. -/
-private theorem getD_revSwap_lo {xs : List Int} {m : Nat}
+theorem getD_revSwap_lo {xs : List Int} {m : Nat}
     (h : 2 * m + 1 < xs.length) :
     (revSwap xs m).getD m 0 = xs.getD m 0 := by
   rw [getD_revSwap xs m m (by omega), if_neg (by omega)]
 
-private theorem getD_revSwap_hi {xs : List Int} {m : Nat}
+theorem getD_revSwap_hi {xs : List Int} {m : Nat}
     (h : 2 * m + 1 < xs.length) :
     (revSwap xs m).getD (xs.length - 1 - m) 0
       = xs.getD (xs.length - 1 - m) 0 := by
@@ -223,7 +223,7 @@ private theorem getD_revSwap_hi {xs : List Int} {m : Nat}
 /-- **One machine swap advances the partial reversal**: setting position
 `m` to the (still-original) element at `length - 1 - m` and vice versa
 is exactly `revSwap` at `m + 1`. -/
-private theorem revSwap_step {xs : List Int} {m : Nat}
+theorem revSwap_step {xs : List Int} {m : Nat}
     (h : 2 * m + 1 < xs.length) :
     ((revSwap xs m).set m (xs.getD (xs.length - 1 - m) 0)).set
         (xs.length - 1 - m) (xs.getD m 0)
@@ -256,7 +256,7 @@ private theorem revSwap_step {xs : List Int} {m : Nat}
 /-- **At the exit test's failure the reversal is complete**: once
 `length ≤ 2m + 1` (i.e. `i ≥ j`), the partial reversal IS the
 reversal. -/
-private theorem revSwap_reverse {xs : List Int} {m : Nat}
+theorem revSwap_reverse {xs : List Int} {m : Nat}
     (h : xs.length ≤ 2 * m + 1) :
     revSwap xs m = xs.reverse := by
   apply List.ext_getElem?
@@ -356,7 +356,7 @@ private theorem rev_entryA_raw (xs : List Int) (ch : Choices) :
           reverseSeed xs 0 [] 1, ch) := by
   with_unfolding_all rfl
 
-private def ffBlock : Stmt :=
+def ffBlock : Stmt :=
   .block #[]
     #[.initialization { id := "$forFirst", typ := .bool },
       .assign (.var "$forFirst") (.boolLit true),
@@ -706,7 +706,7 @@ private theorem rev_loop (xs : List Int) (hxs : ∀ v ∈ xs, 0 ≤ v ∧ v < 2 
         rev_exit_raw xs.length (revSwap xs m) ((m : Nat) : Int)
           ((xs.length - 1 - m : Nat) : Int) ch⟩
 
-private theorem reverse_short {xs : List Int} (h : xs.length ≤ 1) :
+theorem reverse_short {xs : List Int} (h : xs.length ≤ 1) :
     xs.reverse = xs := by
   match xs, h with
   | [], _ => rfl
@@ -1132,11 +1132,11 @@ theorem reverseHarness_pin :
 
 /-! ### The pure layer: the family, the setup prefix, the test reads -/
 
-private theorem length_revFamily (n seed : Nat) :
+theorem length_revFamily (n seed : Nat) :
     (revFamily n seed).length = n := by
   simp [revFamily]
 
-private theorem mem_revFamily {n seed : Nat} {v : Int}
+theorem mem_revFamily {n seed : Nat} {v : Int}
     (h : v ∈ revFamily n seed) : 0 ≤ v ∧ v < 2 ^ 64 := by
   simp only [revFamily, List.mem_map, List.mem_range] at h
   obtain ⟨i, -, rfl⟩ := h
@@ -1145,32 +1145,32 @@ private theorem mem_revFamily {n seed : Nat} {v : Int}
 
 /-- The setup loop's backing after `m` fill iterations: the family
 prefix, then still-zero slots. -/
-private def suList (n seed m : Nat) : List Int :=
+def suList (n seed m : Nat) : List Int :=
   revFamily m seed ++ List.replicate (n - m) 0
 
-private theorem suList_zero (n seed : Nat) :
+theorem suList_zero (n seed : Nat) :
     suList n seed 0 = List.replicate n 0 := by
   simp [suList, revFamily]
 
-private theorem length_suList {n seed m : Nat} (hm : m ≤ n) :
+theorem length_suList {n seed m : Nat} (hm : m ≤ n) :
     (suList n seed m).length = n := by
   simp [suList, length_revFamily]
   omega
 
-private theorem mem_suList {n seed m : Nat} {v : Int}
+theorem mem_suList {n seed m : Nat} {v : Int}
     (h : v ∈ suList n seed m) : 0 ≤ v ∧ v < 2 ^ 64 := by
   simp only [suList, List.mem_append, List.mem_replicate] at h
   rcases h with h | h
   · exact mem_revFamily h
   · omega
 
-private theorem revFamily_succ (m seed : Nat) :
+theorem revFamily_succ (m seed : Nat) :
     revFamily (m + 1) seed
       = revFamily m seed ++ [(((seed + m) % 2 ^ 64 : Nat) : Int)] := by
   simp [revFamily, List.range_succ]
 
 /-- One fill store advances the prefix. -/
-private theorem suList_set {n seed m : Nat} (hm : m < n) :
+theorem suList_set {n seed m : Nat} (hm : m < n) :
     (suList n seed m).set m (((seed + m) % 2 ^ 64 : Nat) : Int)
       = suList n seed (m + 1) := by
   have hlen : (revFamily m seed).length = m := length_revFamily m seed
@@ -1179,13 +1179,13 @@ private theorem suList_set {n seed m : Nat} (hm : m < n) :
     hnm, List.replicate_succ, List.set_cons_zero, suList, revFamily_succ]
   simp
 
-private theorem suList_full (n seed : Nat) :
+theorem suList_full (n seed : Nat) :
     suList n seed n = revFamily n seed := by
   simp [suList]
 
 /-- The test loop's element read: position `m` of the REVERSED family
 holds `seed + (n-1-m)`, wrapped. -/
-private theorem getD_reverse_revFamily {n seed m : Nat} (hm : m < n) :
+theorem getD_reverse_revFamily {n seed m : Nat} (hm : m < n) :
     (revFamily n seed).reverse.getD m 0
       = (((seed + (n - 1 - m)) % 2 ^ 64 : Nat) : Int) := by
   have hlen : (revFamily n seed).length = n := length_revFamily n seed
@@ -2206,7 +2206,7 @@ claim proof-side). The wrapping family is deliberate: `seed + i`
 wraps at `2^64`, so the family covers wrap boundaries — the corpus
 oracle rows exercise the same harness at concrete arguments,
 including a near-`2^63` seed. -/
-theorem reverse_ok (n seed : Nat) (hn : n < 2 ^ 63) (hseed : seed < 2 ^ 64) :
+theorem reverse_ok_v1 (n seed : Nat) (hn : n < 2 ^ 63) (hseed : seed < 2 ^ 64) :
     ∃ N : Nat, ∀ fuel : Nat, N ≤ fuel → ∀ ch : Choices,
       runFunctionWithContextM fuel reverseLowered.typeDefs.toList
           reverseLowered.funcs reverseHarnessFunc
@@ -2226,7 +2226,7 @@ theorem reverse_ok (n seed : Nat) (hn : n < 2 ^ 63) (hseed : seed < 2 ^ 64) :
 harness entry, at any fuel and any choice stream, returns the verdict
 1 — derived from `reverse_ok` via `harness_readout_of_total` (the
 total headline already determines every completion). -/
-theorem reverse_readout (n seed : Nat) (hn : n < 2 ^ 63)
+theorem reverse_readout_v1 (n seed : Nat) (hn : n < 2 ^ 63)
     (hseed : seed < 2 ^ 64) :
     ∀ (fuel : Nat) (ch : Choices) (r : Result),
       runFunctionWithContextM fuel reverseLowered.typeDefs.toList
@@ -2235,6 +2235,6 @@ theorem reverse_readout (n seed : Nat) (hn : n < 2 ^ 63)
           reverseLowered.methods ch
         = .ok r →
       r = { values := #[.int 1 .uint64] } :=
-  harness_readout_of_total (reverse_ok n seed hn hseed)
+  harness_readout_of_total (reverse_ok_v1 n seed hn hseed)
 
 end GoLean.Examples.Reverse

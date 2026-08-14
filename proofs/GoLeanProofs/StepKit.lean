@@ -103,10 +103,9 @@ program-free: `defaultValue`/`normalizeValueForTy` consult `σ.types`
 only at `.defined` types, and `mapRangeSnapshotEntries`'s
 self-normalization check is `σ.types`-free only when the snapshot is
 empty or its entry check reduces structurally. The conditioned
-call-entry step lemma (`wc_empty_enterFrame_step`) is a promotion
-candidate for this kit — P1 family, `stepFn_call_enter` — once a
-second consumer lands (the parameterized harness instances or the
-minmax/wordcount S3 entry layers).
+call-entry step is now `stepFn_call_enter` below (P1 family, promoted
+from `EmptyRun`'s in-module copy in phase-2 slice 1 when the
+`reverse_harness_v` entry became its second consumer).
 -/
 
 open GoLean GoLean.GoCore GoLean.GoCore.Machine
@@ -201,6 +200,28 @@ theorem stepFnIter_one {σ : ExecState} {c : Config} {ch : Choices}
     (h : stepFn σ c ch = .ok r) : stepFnIter 1 σ c ch = .ok r := by
   obtain ⟨c', σ', ch'⟩ := r
   simp [stepFnIter, h, Bind.bind, Except.bind]
+
+/-- The CALL-ENTRY machine step, conditioned on the `enterFrame` fact:
+a `.retV` at a drained `callArgsK` is exactly one `enterFrame`, keyed on
+its result. This is the one step of a first-order run that genuinely
+consults `σ.functions`, so it is the split point the PROGRAM-generic
+form (module docstring above) is built around — everything either side
+of it reduces by projection over an abstract `σ`.
+
+Promoted from `Examples/WordCount/EmptyRun.lean`'s in-module
+`wc_empty_enterFrame_step` (slice 1.5) when its second consumer landed
+(phase-2 slice 1: the `reverse_harness_v` entry into `reverse`);
+both consumers were retrofitted in the promotion commit and are its
+fixture witnesses. -/
+theorem stepFn_call_enter {σ σ' : ExecState} {fid : FuncId}
+    {v : GoValue} {vals : List GoValue}
+    {plans : List (TargetShape × List Expr)} {env : LocalEnv} {k : Cont}
+    {ch : Choices} {func : Func} {frameEnv : LocalEnv} {locs : List Loc}
+    (h : enterFrame σ fid (vals ++ [v]) = .ok (func, frameEnv, locs, σ')) :
+    stepFn σ (.retV v (.callArgsK fid plans vals [] env k)) ch
+      = .ok (.exec func.body frameEnv
+          (.frame plans env locs [] k func.wrapper), σ', ch) := by
+  simp only [stepFn, enterFrameStep, h]
 
 /-- The strict-apply machine step, conditioned on the op fact. -/
 theorem stepFn_strict_apply {σ σ' : ExecState} {op : StrictOp}
