@@ -1,6 +1,8 @@
 # Consolidation slice (verified-examples arc) — session record (2026-08-13)
 
-Status: IN PROGRESS. Charter: `docs/2026-08-12_verified-examples-arc-charter.md`;
+Status: SESSION COMPLETE (2026-08-14): C0–C4 landed, gap B closed as
+the kit's first consumer; P4/P5/P8 deferred with recorded shapes (§5).
+Charter: `docs/2026-08-12_verified-examples-arc-charter.md`;
 predecessor record: `docs/2026-08-13_verified-examples-scale-out.md`
 (findings 1–22, promotion ledger §8); convention of record: form note
 §12 (the active-abstraction loop, user ruling 2026-08-13). Lane
@@ -85,6 +87,7 @@ completed before unification.
 |---|---|---|
 | `proofs/GoLeanProofs/StepKit.lean` (NEW, namespace `GoLean.Surface`) | P1 conditioned one-step glue (`stepFnIter_one`, `stepFn_strict_apply`, `stepFn_store_step`, `stepFn_stmtOp_apply` — the general `ch'` form, subsuming MinMax's `ch = ch'` copy, `stepFn_var` — absorbing BinSearch's `stepFn_var_load`, `stepFn_init_seq`, `stepFn_seq_pop`, `stepFn_storeK_nil`, `stepFn_mapAssign_apply` + `stepFn_snapshot` — GENERALIZED from WordCount's `tU64`/`"c"`-specialized copies to arbitrary key/value types and bound names, `storeTarget_addr`), P9 `stepFn_seqn_splice` (absorbing WordCount's `stepFn_seqn`), P11 heap-append/set kit (`lookup_append_left/right`, `set_append_right`, `set_fresh`, `base_beq_false`, `lookup_cons_ne`, `set_cons_ne`, `set_singleton_self`, `lookup_singleton_self`), `natFromNonneg_cast` | Gcd, Reverse, MinMax, BinSearch, InsertionSort, WordCount (all six machine-layer examples; the retrofits are the fixture witnesses) |
 | `proofs/GoLeanProofs/SliceMem.lean` (extended) | P2 slice-value plumbing (`getElem?_mapU`, `getD_mem`, `mem_set_of_mem`, `locSup_mapU`), P3 normal-form additions (`unorm_nat_of_lt`, `unorm_add_nat`), `applyStrictOp_mod_u64` | same six |
+| `Examples/WordCount.lean` (in-module generic layer) | `wcIter_generic` / `wcLoop_generic` / `wcRange_generic` + σ-abstract range segments + `DeadFrom` kit (§2b) | canonical + harness placements (both instantiate) |
 
 Layering call (recorded): the step glue sits in a NEW top-level module
 (not FuelMeasure — that stays the fuel/termination kit; not SliceMem —
@@ -187,3 +190,62 @@ confirmed by `rfl` first try) + `wcH_runs` (the end-to-end
 composition) + the `runConfig` entry glue. Audit registration +
 axiom pins landed in `proofs/Audit.lean` (G1 section rewritten as a
 closure record; the refuted-caveat correction kept).
+
+Final measurement: `WordCount.lean` single-file elaboration
+**150 s (pre-slice) → 91 s (final)** at the same ~55 GB peak, while
+the file GAINED the entire harness back half (counting + range + exit
++ `wcH_runs` + the headline pair) — the deleted hand-compositions were
+the elaboration cost; the generic layer is near-free.
+
+## §5 Worklist disposition (rules (a)/(d) — honest records for the
+items not built this session)
+
+* **P4 (entry-equation macro, 7 copies × ~30 lines): DEFERRED.** The
+  right shape is a `derive_entry_equation` term-level elaborator that
+  builds the post-prelude state term from the `Func` record's
+  args/results and emits the `with_unfolding_all rfl` equation
+  (finding 13: the RHS is a syntactic mirror). That is a macro-writing
+  project with its own test surface; starting it at this session's
+  tail risked shipping an underbaked elaborator into seven headline
+  files. No lemma-shaped shortcut exists (the RHS shape is
+  per-example). Cost stands as ledger row P4.
+* **P5 (setup-loop induction, 4 consumers) and P8 (frame-rebase
+  family, isort ×3): DEFERRED.** Both are real lifts with existing
+  consumers; each is a multi-hour build touching 3–5 heavy files
+  (BinSearch/InsertionSort re-elaborations per iteration). The
+  counting/range generic layers built this session are the TEMPLATE
+  for both: state the composition over an abstract state family with
+  pinned transition hypotheses; the P5 lift should follow that recipe
+  rather than α-abstracting segments.
+* **MapMem promotion: RESOLVED AS "STAY IN-MODULE" (layering call,
+  recorded).** The map executable facts
+  (`applyStrictOp_mapGet`/`mapAssignValue_toEntries`/
+  `snapshot_toEntries`/`toEntries` bridges/`stepFn_pick`) have exactly
+  ONE example consuming them (wordcount; its two placements now share
+  them through the generic layer's hypotheses rather than through
+  copies). Under the §12 rule (a) consumer-driven bar, promotion to a
+  `MapMem` module before a second map example exists would be
+  speculative API. The heap-append kit and the conditioned stepFn glue
+  family — the parts of this worklist item with real multi-file
+  consumers — were promoted in C1 (`StepKit`, SliceMem). Revisit at
+  the second map example.
+* **isort retrofit (stretch item): NOT REACHED.** Budget went to the
+  acceptance test; isort's P5/P8 instantiations are the natural next
+  consumer of the recipe above.
+
+## §6 Gate state per commit (final)
+
+* C0 `87f6b695` docs (convention §12 + diagnosis) — no gate change.
+* C1 `08864b1a` StepKit/SliceMem promotion + six retrofits —
+  `scripts/ci` PASS.
+* C2 `f55e393d` placement-generic counting layer, both placements —
+  `scripts/ci` PASS.
+* C3 `f8820d62` generic range layer + harness exit + `wordcount_ok` —
+  `scripts/ci` PASS (baseline diff FULL 1550/1550, no regression, at
+  every gate).
+
+Cap-budget deviations, recorded: full gates and WordCount single-file
+elaborations ran at the 64 G default / `GOLEAN_MEM_MAX=62G` (one at a
+time, nothing concurrent) because WordCount's measured single-file
+peak is ~55 GB — the instructed 48 G cap kills it (reproduced at 48 G:
+SIGKILL at 51.8 GB). Probes ran at 24 G throughout.
