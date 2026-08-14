@@ -59,6 +59,25 @@ discussion here.
    speedbump standard); programs in Corpus/coverage/exec/examples/
    (differentially tested like all corpus Go); reasoning-friction list
    recorded as input to future arcs; claims sweep; arc-end audit ask.
+   - **GALLERY SLICE DONE (2026-08-14)**: `docs/verified-examples.md`
+     ships all seven entries in the §11 harness form — Go subject +
+     FULL harness (all three phases, never elided, per the §11
+     rendering rule), an English claim derivable from the theorem
+     statement alone, the theorem and its Audit axiom pins quoted
+     VERBATIM, the proof's explicit fuel bound, and an honest
+     status line naming the proof-side companions.
+     `scripts/render-gallery` re-checks all 45 quoted blocks
+     byte-for-byte (speedbump standard: ~150 lines, no Lean parsing,
+     DO-NOT-HARDEN comment, exit 0/1/2); standalone rather than wired
+     into `scripts/ci`, which has no docs-check hook to hang it on.
+     Claim-honesty resolutions recorded in the doc itself: the two
+     verdict-returning examples (reverse, isort) claim only "the Go
+     check printed above returned 1"; every scalar-parameterized entry
+     states its input-FAMILY honesty; the fuel bound is labelled as the
+     proof's witness, not part of the ∃N statement; binsearch is marked
+     as the one entry with no harness-level readout twin. Remaining
+     slice-3 items (friction list, claims sweep, audit ask) are
+     unchanged.
 
 ## Front-loaded (blessed with this charter) vs checkpointed
 
