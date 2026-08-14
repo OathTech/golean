@@ -87,6 +87,7 @@ import GoLeanProofs.StepKit
 import GoLeanProofs.Examples.FibProgram
 import GoLeanProofs.Examples.Fib
 import GoLeanProofs.SliceMem
+import GoLeanProofs.MapMem
 import GoLeanProofs.Laws.Slice
 import GoLeanProofs.Examples.ReverseProgram
 import GoLeanProofs.Examples.Reverse

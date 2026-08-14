@@ -23,6 +23,7 @@ namespace GoLean.Examples.WordCount
 
 open GoLean GoLean.GoCore GoLean.GoCore.Machine GoLean.Surface
 open GoLean.SliceMem
+open GoLean.MapMem
 
 set_option maxRecDepth 1000000
 set_option maxHeartbeats 2000000

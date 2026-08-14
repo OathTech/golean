@@ -1,4 +1,5 @@
 import GoLeanProofs.Examples.WordCountProgram
+import GoLeanProofs.MapMem
 import GoLeanProofs.SliceMem
 import GoLeanProofs.FuelMeasure
 import GoLeanProofs.StepKit
@@ -23,6 +24,7 @@ namespace GoLean.Examples.WordCount
 
 open GoLean GoLean.GoCore GoLean.GoCore.Machine GoLean.Surface
 open GoLean.SliceMem
+open GoLean.MapMem
 
 set_option maxRecDepth 1000000
 set_option maxHeartbeats 2000000
@@ -40,22 +42,10 @@ set_option linter.unusedSimpArgs false
 -- live in a def-only module inside the Comparator Challenge's trusted import
 -- closure. The definition is unchanged and still visible here via the import.
 
-/-! ## The §10a map-in-memory vocabulary
-
-Shipped verbatim from the design note as the shared-vocabulary
-candidate (report: SliceMem promotion). The headline itself never
-mentions the map — it is program-internal — so `mapCells`/`mapVal` are
-consumed here only through the private `Int × Nat` counts encoding
-(`toEntries` below; the bridge lemma ties them). -/
-
-/-- The heap representation of a `map[uint64]uint64` holding the
-association list `kvs` (insertion order = list order): one data cell at
-`base`. The handle the program carries is `mapVal base`. -/
-def mapCells (kvs : List (Int × Int)) (base : Nat) : Heap :=
-  [(.base ⟨base⟩,
-    ⟨none, .mapData ⟨kvs.map (fun kv => (.int kv.1 .uint64, .int kv.2 .uint64))⟩⟩)]
-
-def mapVal (base : Nat) : GoValue := .map ⟨some (.base ⟨base⟩)⟩
+-- PROMOTED to `GoLeanProofs/MapMem.lean` (Gallery Campaign G0 item 3b,
+-- 2026-08-15): the §10a map-in-memory vocabulary (`mapCells`/`mapVal`)
+-- now lives in the shared MapMem module beside the executable map-op
+-- facts; visible here via the import + `open GoLean.MapMem`.
 
 /-! ## The program-side statement vocabulary -/
 
@@ -161,336 +151,17 @@ def wcSeed (ws : List Int) (base : Nat) (fr : Heap) (na : Nat) : ExecState :=
     methods := wordCountLowered.methods,
     heap := wcResCell ++ sliceCells ws base ++ fr, nextAddr := na }
 
-/-! ## The private counts encoding and the machine map facts
+/-! ## The counts encoding and the machine map facts — PROMOTED
 
-The reasoning layer speaks `List (Int × Nat)` — keys with their `Nat`
-counts (the machine stores counts as wrapped uint64 `Int`s; `toEntries`
-is the encoding). These executable facts on the `map[uint64]uint64`
-fragment are the `storeTarget_slice_u64` analogs — SliceMem promotion
-candidates (recorded in the slice report; kept private here). -/
-
-/-- First index of key `w` (the machine's `mapEntryIndex?` order). -/
-def idxOf? : List (Int × Nat) → Int → Option Nat
-  | [], _ => none
-  | (k, _) :: rest, w => if k = w then some 0 else (idxOf? rest w).map (· + 1)
-
-/-- Assoc lookup at the FIRST occurrence, `0` when absent — exactly a
-Go map read's zero-value semantics on this fragment. -/
-def cnt : List (Int × Nat) → Int → Nat
-  | [], _ => 0
-  | (k, c) :: rest, w => if k = w then c else cnt rest w
-
-/-- Update the first occurrence of `w`, or append — exactly
-`mapAssignValue`'s update-or-insert on the entry list. -/
-def setk : List (Int × Nat) → Int → Nat → List (Int × Nat)
-  | [], w, v => [(w, v)]
-  | (k, c) :: rest, w, v =>
-      if k = w then (k, v) :: rest else (k, c) :: setk rest w v
-
-/-- The machine encoding of a counts list: insertion-ordered
-`mapData` entries of wrapped uint64 pairs. -/
-def toEntries (kvs : List (Int × Nat)) : Array (GoValue × GoValue) :=
-  ⟨kvs.map (fun kv => (.int kv.1 .uint64, .int (kv.2 : Int) .uint64))⟩
-
-/-- The §10a vocabulary coheres with the private encoding. -/
-example (kvs : List (Int × Nat)) (base : Nat) :
-    mapCells (kvs.map (fun p => (p.1, (p.2 : Int)))) base
-      = [(.base ⟨base⟩, ⟨none, .mapData (toEntries kvs)⟩)] := by
-  simp [mapCells, toEntries, List.map_map, Function.comp]
-
-private theorem valueEq_u64 (σ : ExecState) (l r : Int) :
-    valueEq σ (.int .uint64) (.int l .uint64) (.int r .uint64)
-      = .ok (l == r) := by
-  simp [valueEq, valueEqFuel, typeResolutionFuel]
-
-/-- The key-scan loop of `mapEntryIndex?` over an abstract body `f`
-(pinned only by its action on wrapped-integer entry pairs — the
-abstraction is what lets `rw` unify it with the do-elaborated lambda),
-generalized over the starting counter. -/
-private theorem scan_generic {w : Int}
-    (f : GoValue × GoValue → MProd (Option (Option Nat)) Nat →
-      Except GoError (ForInStep (MProd (Option (Option Nat)) Nat)))
-    (hf : ∀ (k : Int) (v : GoValue) (r : MProd (Option (Option Nat)) Nat),
-      f (.int k .uint64, v) r
-        = .ok (if k = w then .done ⟨some (some r.snd), r.snd⟩
-               else .yield ⟨none, r.snd + 1⟩)) :
-    ∀ (kvs : List (Int × Nat)) (i : Nat),
-    (forIn (m := Except GoError) (toEntries kvs)
-      (⟨none, i⟩ : MProd (Option (Option Nat)) Nat) f)
-      = pure (match idxOf? kvs w with
-        | some j => ⟨some (some (j + i)), j + i⟩
-        | none => ⟨none, i + kvs.length⟩) := by
-  intro kvs
-  induction kvs with
-  | nil => intro i; simp [toEntries, idxOf?]
-  | cons kv rest ih =>
-      intro i
-      obtain ⟨k, c⟩ := kv
-      simp only [toEntries, List.map_cons, ← Array.forIn_toList] at ih ⊢
-      rw [List.forIn_cons, hf]
-      by_cases hk : k = w
-      · simp [hk, idxOf?, Bind.bind, Except.bind]
-      · simp only [if_neg hk, idxOf?, Bind.bind, Except.bind]
-        rw [ih (i + 1)]
-        cases hidx : idxOf? rest w with
-        | none =>
-            simp only [Option.map_none, List.length_cons]
-            rw [show i + 1 + rest.length = i + (rest.length + 1) from by omega]
-        | some j =>
-            simp only [Option.map_some]
-            rw [show j + 1 + i = j + (i + 1) from by omega]
-
-/-- The machine's key scan over an abstract `uint64 → uint64`
-association list is the list-model first-index scan. -/
-private theorem mapEntryIndex?_toEntries (σ : ExecState)
-    (kvs : List (Int × Nat)) (w : Int) (b : Bool) :
-    mapEntryIndex? σ (.int .uint64) (toEntries kvs) (.int w .uint64) b
-      = .ok (idxOf? kvs w) := by
-  unfold mapEntryIndex?
-  rw [show checkKeyHashable σ (.int w .uint64) b (!(toEntries kvs).isEmpty)
-      = .ok () from by simp [checkKeyHashable, valueHashability]]
-  simp only [letFun]
-  rw [scan_generic (w := w) _ ?hf kvs 0]
-  case hf =>
-    intro k v r
-    simp only [valueEq_u64, Bind.bind, Except.bind]
-    by_cases hk : k = w
-    · simp [hk]
-    · have hkb : (k == w) = false := by simpa using hk
-      simp [hkb, hk]
-  cases h : idxOf? kvs w <;> simp [Bind.bind, Except.bind, pure, Except.pure]
-
-private theorem idxOf?_none_cnt {kvs : List (Int × Nat)} {w : Int}
-    (h : idxOf? kvs w = none) : cnt kvs w = 0 := by
-  induction kvs with
-  | nil => rfl
-  | cons kv rest ih =>
-      obtain ⟨k, c⟩ := kv
-      simp only [idxOf?] at h
-      by_cases hk : k = w
-      · simp [hk] at h
-      · simp only [if_neg hk] at h
-        simp only [cnt, if_neg hk]
-        exact ih (by cases hidx : idxOf? rest w <;> simp [hidx] at h ⊢)
-
-private theorem idxOf?_none_setk {kvs : List (Int × Nat)} {w : Int}
-    (h : idxOf? kvs w = none) (v : Nat) : kvs ++ [(w, v)] = setk kvs w v := by
-  induction kvs with
-  | nil => rfl
-  | cons kv rest ih =>
-      obtain ⟨k, c⟩ := kv
-      simp only [idxOf?] at h
-      by_cases hk : k = w
-      · simp [hk] at h
-      · simp only [if_neg hk] at h
-        simp only [List.cons_append, setk, if_neg hk]
-        exact congrArg _
-          (ih (by cases hidx : idxOf? rest w <;> simp [hidx] at h ⊢))
-
-private theorem idxOf?_some_snd {kvs : List (Int × Nat)} {w : Int} {j : Nat}
-    (h : idxOf? kvs w = some j) :
-    kvs[j]? = some (w, cnt kvs w) := by
-  induction kvs generalizing j with
-  | nil => cases h
-  | cons kv rest ih =>
-      obtain ⟨k, c⟩ := kv
-      simp only [idxOf?] at h
-      by_cases hk : k = w
-      · simp only [if_pos hk] at h
-        cases h
-        simp [cnt, hk]
-      · simp only [if_neg hk] at h
-        cases hidx : idxOf? rest w with
-        | none => simp [hidx] at h
-        | some j' =>
-            simp only [hidx, Option.map_some] at h
-            cases h
-            simp only [List.getElem?_cons_succ, cnt, if_neg hk]
-            exact ih hidx
-
-private theorem idxOf?_some_setk {kvs : List (Int × Nat)} {w : Int} {j : Nat}
-    (h : idxOf? kvs w = some j) (v : Nat) :
-    kvs.set j (w, v) = setk kvs w v := by
-  induction kvs generalizing j with
-  | nil => cases h
-  | cons kv rest ih =>
-      obtain ⟨k, c⟩ := kv
-      simp only [idxOf?] at h
-      by_cases hk : k = w
-      · simp only [if_pos hk] at h
-        cases h
-        simp [setk, hk, List.set]
-      · simp only [if_neg hk] at h
-        cases hidx : idxOf? rest w with
-        | none => simp [hidx] at h
-        | some j' =>
-            simp only [hidx, Option.map_some] at h
-            cases h
-            simp only [List.set, setk, if_neg hk]
-            exact congrArg _ (ih hidx)
-
-theorem toEntries_getElem? (kvs : List (Int × Nat)) (j : Nat)
-    {p : Int × Nat} (h : kvs[j]? = some p) :
-    (toEntries kvs)[j]?
-      = some (.int p.1 .uint64, .int (p.2 : Int) .uint64) := by
-  simp [toEntries, List.getElem?_map, h]
-
-/-- **The map-elem read** (`counts[w]`, expression position): a present
-key answers its count, an absent key the ZERO VALUE — which is exactly
-how `counts[w]++` starts a fresh key at 1. -/
-theorem applyStrictOp_mapGet {σ : ExecState} {a : Addr}
-    {kvs : List (Int × Nat)} {w : Int} {dty : Option Ty}
-    (hlook : Heap.lookup σ.heap (.base a)
-      = some ⟨dty, .mapData (toEntries kvs)⟩)
-    (hw : IntKind.normalize .uint64 w = w) :
-    applyStrictOp σ (.mapGet (.int .uint64) (.int .uint64))
-      [.map ⟨some (.base a)⟩, .int w .uint64]
-      = .ok (.int (cnt kvs w : Int) .uint64, σ) := by
-  simp only [applyStrictOp, valueAsMap, Bind.bind, Except.bind, pure,
-    Except.pure]
-  rw [show normalizeValueForTy σ (.int .uint64) (.int w .uint64)
-      = .ok (.int w .uint64) from by
-    simp [normalizeValueForTy, normalizeValueForTyFuel, typeResolutionFuel,
-      hw]]
-  simp only [loadLoc, hlook, pure, Except.pure]
-  rw [mapEntryIndex?_toEntries]
-  cases hidx : idxOf? kvs w with
-  | none =>
-      rw [idxOf?_none_cnt hidx]
-      simp [defaultValue, defaultValueFuel, typeResolutionFuel]
-  | some j =>
-      have hj := idxOf?_some_snd hidx
-      simp [toEntries_getElem? kvs j hj]
-
-private theorem toEntries_setk {kvs : List (Int × Nat)} {w : Int} {v : Nat} :
-    (match idxOf? kvs w with
-      | some i =>
-          (toEntries kvs).set! i (.int w .uint64, .int (v : Int) .uint64)
-      | none => (toEntries kvs).push (.int w .uint64, .int (v : Int) .uint64))
-      = toEntries (setk kvs w v) := by
-  cases hidx : idxOf? kvs w with
-  | none =>
-      show (toEntries kvs).push _ = _
-      apply Array.toList_inj.mp
-      simp [toEntries, ← idxOf?_none_setk hidx v]
-  | some j =>
-      show (toEntries kvs).set! j _ = _
-      apply Array.toList_inj.mp
-      simp only [Array.set!_eq_setIfInBounds, Array.toList_setIfInBounds,
-        toEntries, ← idxOf?_some_setk hidx v, List.map_set]
-
-/-- **The map-elem write** (`counts[w] = v`): `mapAssignValue`'s
-update-or-append on the abstract association list is `setk`. -/
-theorem mapAssignValue_toEntries {σ : ExecState} {a : Addr}
-    {kvs : List (Int × Nat)} {w : Int} {v : Nat}
-    (hlook : Heap.lookup σ.heap (.base a)
-      = some ⟨none, .mapData (toEntries kvs)⟩)
-    (hw : IntKind.normalize .uint64 w = w)
-    (hv : IntKind.normalize .uint64 (v : Int) = (v : Int)) :
-    mapAssignValue σ (.int .uint64) (.int .uint64)
-      (.map ⟨some (.base a)⟩) (.int w .uint64) (.int (v : Int) .uint64)
-      = .ok { σ with heap := (Heap.set σ.heap (.base a)
-          ⟨none, .mapData (toEntries (setk kvs w v))⟩) } := by
-  simp only [mapAssignValue, valueAsMap, Bind.bind, Except.bind, pure,
-    Except.pure]
-  rw [show normalizeValueForTy σ (.int .uint64) (.int w .uint64)
-      = .ok (.int w .uint64) from by
-    simp [normalizeValueForTy, normalizeValueForTyFuel, typeResolutionFuel,
-      hw]]
-  rw [show normalizeValueForTy σ (.int .uint64) (.int (v : Int) .uint64)
-      = .ok (.int (v : Int) .uint64) from by
-    simp [normalizeValueForTy, normalizeValueForTyFuel, typeResolutionFuel,
-      hv]]
-  simp only [mapEntries, valueAsMap, Bind.bind, Except.bind, pure,
-    Except.pure, loadLoc, hlook]
-  rw [mapEntryIndex?_toEntries]
-  cases hidx : idxOf? kvs w with
-  | some j =>
-      show storeLoc σ (.base a)
-        (.mapData ((toEntries kvs).set! j
-          (.int w .uint64, .int (v : Int) .uint64))) = _
-      rw [show (toEntries kvs).set! j
-          ((.int w .uint64 : GoValue), (.int (v : Int) .uint64 : GoValue))
-          = toEntries (setk kvs w v) from by
-        have h := toEntries_setk (kvs := kvs) (w := w) (v := v)
-        rw [hidx] at h
-        exact h]
-      simp only [storeLoc, hlook, coerceStoredValue, Bind.bind, Except.bind,
-        pure, Except.pure]
-  | none =>
-      show storeLoc σ (.base a)
-        (.mapData ((toEntries kvs).push
-          (.int w .uint64, .int (v : Int) .uint64))) = _
-      rw [show (toEntries kvs).push
-          ((.int w .uint64 : GoValue), (.int (v : Int) .uint64 : GoValue))
-          = toEntries (setk kvs w v) from by
-        have h := toEntries_setk (kvs := kvs) (w := w) (v := v)
-        rw [hidx] at h
-        exact h]
-      simp only [storeLoc, hlook, coerceStoredValue, Bind.bind, Except.bind,
-        pure, Except.pure]
-
-private theorem snapshot_norm (types : TypeEnv) :
-    ∀ kvs : List (Int × Nat),
-    (∀ p ∈ kvs, IntKind.normalize .uint64 p.1 = p.1
-      ∧ IntKind.normalize .uint64 (p.2 : Int) = (p.2 : Int)) →
-    snapshotEntriesSelfNormalizedList types (.int .uint64) (.int .uint64)
-      (kvs.map (fun kv =>
-        ((.int kv.1 .uint64 : GoValue), (.int (kv.2 : Int) .uint64 : GoValue))))
-      = true := by
-  intro kvs
-  induction kvs with
-  | nil => intro _; rfl
-  | cons p rest ih =>
-      intro hkv
-      have hp := hkv p (by simp)
-      have hrest := ih (fun q hq => hkv q (by simp [hq]))
-      simp only [List.map_cons, snapshotEntriesSelfNormalizedList]
-      rw [hrest]
-      simp [isNormalForTy, isNormalForTyFuel, typeResolutionFuel, hp.1, hp.2]
-
-/-- **The range snapshot** (`mapRangeK`): reads the data cell and
-validates every entry self-normalized — on the in-range fragment, the
-identity. -/
-theorem snapshot_toEntries {σ : ExecState} {a : Addr}
-    {kvs : List (Int × Nat)} {dty : Option Ty}
-    (hlook : Heap.lookup σ.heap (.base a)
-      = some ⟨dty, .mapData (toEntries kvs)⟩)
-    (hkv : ∀ p ∈ kvs, IntKind.normalize .uint64 p.1 = p.1
-      ∧ IntKind.normalize .uint64 (p.2 : Int) = (p.2 : Int)) :
-    mapRangeSnapshotEntries σ (.int .uint64) (.int .uint64)
-      (.map ⟨some (.base a)⟩)
-      = .ok (toEntries kvs) := by
-  have hnorm := snapshot_norm σ.types kvs hkv
-  simp only [mapRangeSnapshotEntries, mapRangeEntries, valueAsMap, Bind.bind,
-    Except.bind, pure, Except.pure, loadLoc, hlook,
-    snapshotEntriesSelfNormalized]
-  rw [show (toEntries kvs).toList
-      = kvs.map (fun kv =>
-        ((.int kv.1 .uint64 : GoValue), (.int (kv.2 : Int) .uint64 : GoValue)))
-      from rfl, hnorm]
-  simp
-
-theorem toEntries_size (kvs : List (Int × Nat)) :
-    (toEntries kvs).size = kvs.length := by
-  simp [toEntries]
-
-theorem map_eraseIdx {α β : Type} (f : α → β) :
-    ∀ (l : List α) (i : Nat), (l.map f).eraseIdx i = (l.eraseIdx i).map f := by
-  intro l
-  induction l with
-  | nil => intro i; simp
-  | cons a rest ih =>
-      intro i
-      cases i with
-      | zero => simp [List.eraseIdx]
-      | succ n => simp [List.eraseIdx, ih n]
-
-theorem toEntries_eraseIdx (kvs : List (Int × Nat)) (i : Nat)
-    (h : i < (toEntries kvs).size) :
-    (toEntries kvs).eraseIdx i h = toEntries (kvs.eraseIdx i) := by
-  apply Array.toList_inj.mp
-  simp [toEntries, Array.toList_eraseIdx, map_eraseIdx]
+The whole family — `idxOf?`/`cnt`/`setk`/`toEntries`, the model
+lemmas, `scan_generic`, `mapEntryIndex?_toEntries`,
+`applyStrictOp_mapGet`, `mapAssignValue_toEntries`,
+`snapshot_toEntries`, and the `toEntries` bridges — was born here
+flagged as a "SliceMem promotion candidate" and is now
+`GoLeanProofs/MapMem.lean` (Gallery Campaign G0 item 3b, 2026-08-15;
+landed consumer: this example, chartered: histogram + fibonacci-memo).
+Everything below consumes it via `open GoLean.MapMem`; only
+wordcount's own spec layer (`bump`/`countsList`/the max fold) stays. -/
 
 /-! ## The heap-append kit (symbolic-address algebra, §10c)
 
