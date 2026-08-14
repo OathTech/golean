@@ -1,0 +1,2 @@
+after Add(2^31-1): ok
+recovered: sync: negative WaitGroup counter
