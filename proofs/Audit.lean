@@ -343,8 +343,11 @@ open Lean in
     -- — ci's import-direction lint forbids `Examples/*` from importing
     -- `Specs/*` with "Exceptions: NONE", and siting it here keeps that
     -- lint intact instead of punching a hole in it). The Comparator
-    -- landmark for this designated-set change is this arc's arc-end
-    -- step (never part of ci).
+    -- landmark for this designated-set change was DISCHARGED 2026-08-14:
+    -- scripts/comparator-judge PASS — 56 theorems certified in 308 s,
+    -- fresh clone @ e42020397648 (run record + the wrapper's
+    -- dot-in-path finding: the comparator-judge sprint doc's landmark
+    -- log; never run as part of ci).
     ``GoLean.Examples.Fib.fib_ok,
     ``GoLean.Examples.Fib.fib_total,
     ``GoLean.Examples.Gcd.gcd_ok,

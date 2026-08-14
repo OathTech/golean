@@ -369,3 +369,47 @@ sem-adequacy arc's unrecorded run showed the precedent was mixed)
   validated the split operationally (the judge's trusted-side
   pre-build needed the recorded core-lib widening; see
   scripts/comparator-judge's F4 note).
+
+- **2026-08-14 — examples phase-2 arc end, gallery designation: PASS,
+  56/56 theorems certified in 308 s**, fresh clone @ `e42020397648`.
+  Verdict verbatim:
+
+  ```
+  Lean default kernel accepts the solution
+  Your solution is okay!
+  Finished with result: success
+  Service runtime: 5min 8.036s
+  CPU time consumed: 12min 30.331s
+  comparator-judge: PASS — 56 theorems certified in 308s (fresh clone @ e42020397648)
+  ```
+
+  This discharges the landmark owed by the designated-set change
+  48 → 56 (the eight verified-examples gallery headlines; the
+  statement vocabulary hoisted to the def-only
+  `GoLeanProofs/Examples/Targets.lean`). The set change is visible in
+  the run's own export list, which names `Judge.fib_ok` …
+  `Judge.wordcount_ok` alongside the previous 48.
+
+  **FINDING, recorded rather than patched — `scripts/comparator-judge`
+  cannot run from a path containing a dot, which means it cannot run
+  from ANY lane worktree.** The §3c Challenge closure walk resolves a
+  module to a file with `f="${f//.//}"`, a substitution over the WHOLE
+  path, so every dot in the repo root is rewritten to `/` as well.
+  Under the worktree-per-lane discipline the root is
+  `…/golean/.claude/worktrees/<lane>`, so `.claude` becomes `/claude`
+  and the walk reports `missing module GoLeanProofs.Specs.Statements`
+  — a FAIL-CLOSED abort that looks exactly like a real closure defect
+  and is not one. This landmark was therefore run from a dot-free
+  clone of the same commit (`/home/dev/golean-judge`, `git clone` of
+  the lane + `git checkout e42020397648`, pinned `deps/comparator`
+  copied in pristine at `fd2e25d` with its `lean4export` at
+  `8554815`); the judge did its own fresh clone from there, so what
+  was certified is the commit, not a working tree. The one-character
+  fix (anchor the substitution to the module part only, e.g. build the
+  relative path first and join it to `$CHECK_ROOT` afterwards) was NOT
+  applied here: this arc's mandate stopped at adding designated
+  entries plus the two authorized ci pins, and a gate edit belongs in
+  a change that can be reviewed as a gate edit. **Owed to the next arc
+  that touches the judge wrapper.** The bug is latent-since-2026-08-02
+  and invisible until the first landmark run from a worktree, which
+  this was.

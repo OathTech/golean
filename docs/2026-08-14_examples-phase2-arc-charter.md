@@ -177,6 +177,26 @@ fixtures, measured deltas):
   paying the landmark twice): designate the gallery headlines
   (post-swap forms) into the statement-TCB gate; run
   `scripts/comparator-judge`.
+  **DONE 2026-08-14** (`e42020397648`, landmark run recorded in
+  `docs/2026-08-02_comparator-judge-sprint.md`). Eight headlines
+  designated, 48 → 56: the theorems the gallery quotes VERBATIM in a
+  "**The theorem(s)**" block, enumerated from the doc. Supporting
+  material the gallery only NAMES in prose stays undesignated — the
+  `_readout` twins (no readout STATEMENT is quoted anywhere; two
+  readout axiom-pin LINES are, a different gate), the `_v1` pairs, the
+  `_framed` companions, `wordcount_empty_ok`, and
+  `maxCount_total_canonical`, which additionally is stated in
+  run-internal vocabulary (`wcEnv`/`wcSeed`/`wcCall`) that designation
+  would drag into the Challenge's trusted closure against the layering
+  doctrine. USER RULING (2026-08-14) authorized the prerequisite the
+  step turned out to carry: designation is not a list-append, it needs
+  the statement vocabulary hoisted into a def-only module Challenge can
+  import (`GoLeanProofs/Examples/Targets.lean` — under `Examples/`, not
+  `Specs/`, because ci step 1d forbids `Examples/*` from importing
+  `Specs/*` with "Exceptions: NONE"; siting it there keeps that lint
+  intact). Comparator PASS, 56/56 in 308 s. One finding, owed onward:
+  `scripts/comparator-judge` cannot run from a dotted path, hence from
+  no lane worktree — see the landmark log.
 - Standard merge protocol; audit ask sized to what the arc touched
   (slice 0 touches `scripts/ci` — gate-honesty dimension applies).
 
