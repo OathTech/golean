@@ -21,6 +21,61 @@ matches a variable state here, so no concrete heap front can enter an
 isDefEq problem through these lemmas. At application sites that DO
 mention big concrete states, pin the full result type on the `have`
 (the E-form) — never leave a re-spelled state for the unifier.
+
+## The DEFAULT SHAPE FOR NEW SEGMENT PROOFS (phase-2 slice 0 lever 4,
+2026-08-14 — recorded convention, no retrofit of what already ships)
+
+A new example's segment layer starts placement-generic and
+type-ascribed. Concretely, prefer
+
+```
+/-- R1: loop head → the `c` read. 4 steps. -/
+private theorem segR1_g (σ : ExecState) (rem : List (Int × Nat))
+    (B na₀ : Nat) (ch : Choices) :
+    stepFnIter 4 σ
+      (.exec wcRangeBody (envIterR envRBg B na₀) (iterKR envRBg kRg B rem))
+      ch
+      = .ok (.evalE (.var "c") (envIfR envRBg B na₀) …, σ, ch) := by
+  with_unfolding_all rfl
+```
+
+over the placement-CONCRETE form that spells the state out:
+
+```
+private theorem wc_segC1_raw (L : Nat) (ws : List Int) … :
+    stepFnIter 7 (σC L ws kvs iv false tail na) (.retV (.bool true) cmpContC)
+      ch = .ok (…, σC L ws kvs iv false tail na, ch) := by
+  with_unfolding_all rfl
+```
+
+Three rules, each earned by a measured failure rather than taste:
+
+1. **Abstract the state (`σ : ExecState`) whenever the segment does not
+   read or write a heap cell.** The state rides through `rfl`
+   untouched, so one statement serves every placement and the unifier
+   never sees a concrete front. The range body needed only FOUR
+   placement hypotheses this way (consolidation slice §2b).
+2. **Where a cell IS touched, take the lookup/store fact as a
+   HYPOTHESIS** (`Heap.lookup σ.heap a = some c`) and keep the address
+   abstract. The hypothesis type pins the state, which is what makes
+   the E-form structural instead of a discipline someone must remember.
+3. **At every application site that mentions a big concrete state, pin
+   the FULL result type on the `have`.** This is variant E of the §1
+   bisection: the same application is instant with a meta-free expected
+   type and storms (~2^N in the front length, 52 GB at N = 16) without
+   it, because postponed elaboration metas inside the state argument
+   defeat structural unification and drop isDefEq into uncached delta
+   comparison of `Heap.lookup` at a symbolic address.
+
+The payoff is a growth-RATE change, not a constant factor: generic
+layers elaborate in seconds because there is nothing to normalize, and
+per-placement instantiation is lemma application against fully-pinned
+statements. What this convention does NOT touch is the other cost
+class slice 0 measured — a single `with_unfolding_all rfl` over a long
+CONCRETE run (`wc_empty_run`: 158 steps, 82 s, 50.8 GiB by itself,
+which is the whole repo's memory ceiling). That one is a statement/
+proof-method question, and the recorded lever for it is verified
+reflection (phase-2 charter, "research direction"), not placement.
 -/
 
 open GoLean GoLean.GoCore GoLean.GoCore.Machine
