@@ -8,3 +8,7 @@ empty-panics	minMaxEmpty	-	panic	index out of range	slices,indexing,panic
 harness-five	minmax_harness	5,40	ok	-	slices,indexing,loops,if
 harness-one	minmax_harness	1,7	ok	-	slices,indexing,loops,if
 harness-empty-panics	minmax_harness	0,3	panic	index out of range	slices,indexing,panic
+harness-r-five	minmax_harness_r	5,40	ok	-	slices,indexing,loops,if,arrays
+harness-r-one	minmax_harness_r	1,7	ok	-	slices,indexing,loops,if,arrays
+harness-r-eight	minmax_harness_r	8,9223372036854775805	ok	-	slices,indexing,loops,if,arrays
+harness-r-empty-panics	minmax_harness_r	0,3	panic	index out of range	slices,indexing,panic,arrays

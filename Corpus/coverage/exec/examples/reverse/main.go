@@ -51,6 +51,32 @@ func reverse_harness(n, seed uint64) uint64 {
 	return ok
 }
 
+// reverse_harness_v: the COPY-RELATIONAL harness (examples phase-2
+// slice 1, 2026-08-14; scoping study §4.3). Setup builds the family
+// AND saves a pre-copy `t`; the test phase checks `s` against the
+// SAVED COPY — the check is the reversal RELATION itself, not the
+// setup algebra, so the Go reads as an ordinary unit test. The saved
+// copy is a HISTORY GHOST materialized as real Go (ghost ladder rung
+// 0): no annotations anywhere.
+func reverse_harness_v(n, seed uint64) uint64 {
+	s := make([]uint64, n)
+	for i := uint64(0); i < n; i++ {
+		s[i] = seed + i
+	}
+	t := make([]uint64, n)
+	for i := uint64(0); i < n; i++ {
+		t[i] = s[i]
+	}
+	reverse(s)
+	ok := uint64(1)
+	for i := uint64(0); i < n; i++ {
+		if s[i] != t[n-1-i] {
+			ok = 0
+		}
+	}
+	return ok
+}
+
 func main() {
 	a, b, c, d := reverseFour(1, 2, 3, 4)
 	fmt.Printf(

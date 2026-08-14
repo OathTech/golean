@@ -7,3 +7,6 @@ empty	reverseEmpty	-	ok	-	slices,indexing,loops,multi_assign
 harness-five	reverse_harness	5,100	ok	-	slices,indexing,loops,multi_assign
 harness-empty	reverse_harness	0,7	ok	-	slices,indexing,loops,multi_assign
 harness-wrapping	reverse_harness	4,9223372036854775805	ok	-	slices,indexing,loops,multi_assign
+harness-v-five	reverse_harness_v	5,100	ok	-	slices,indexing,loops,multi_assign
+harness-v-empty	reverse_harness_v	0,7	ok	-	slices,indexing,loops,multi_assign
+harness-v-wrapping	reverse_harness_v	4,9223372036854775805	ok	-	slices,indexing,loops,multi_assign

@@ -1,5 +1,21 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-13  commit: verified-examples slice 2c (harness rows, harness ruling)
+# recorded: 2026-08-14  commit: examples phase-2 slice 1 (spec-style swap harnesses)
+#   re-pin reason: 7 NEW explained rows — the slice-1 spec-style swaps added
+#   a second harness to two example programs (scoping study §9's
+#   recommendations, ghost rung 0 / real Go):
+#   `reverse_harness_v` (S1 copy-relational — checks against a saved
+#   pre-copy instead of re-deriving the setup formula) at
+#   examples/reverse/harness-v-{five,empty,wrapping}, and
+#   `minmax_harness_r` (S3 relational — returns the pre-state as a
+#   fixed-cap `[8]uint64` alongside `(lo,hi)`) at
+#   examples/minmax/harness-r-{five,one,eight,empty-panics}. All 7 PASS.
+#   New coverage bought: the fixed-size-array RETURN path and stores into
+#   an array-typed local. No other id moved (PASS/FAIL sets and stages
+#   unchanged from the 2026-08-13 record). wordcount's S3 harness was
+#   written and green but REVERTED — see
+#   `docs/2026-08-14_phase2-slice1-spec-swaps.md` for the measured
+#   `wc_empty_run` cost blocker.
+# previous record: 2026-08-13  commit: verified-examples slice 2c (harness rows, harness ruling)
 #   re-pin reason: 18 NEW explained rows — the harness ruling (form note
 #   §11) added a three-phase harness function to each of the seven
 #   examples' programs; rows instantiate each harness at concrete args
@@ -12,7 +28,7 @@
 #   (membership lane; go1.26.5) / schedule-tree singleton certification +
 #   strict go-run equality (confluent lane) / every-enumerated-path-refuses
 #   + go run -race red (racy lane; never combined with deadlock)
-# manifest_cases: 1550  pass: 1431  fail: 119
+# manifest_cases: 1557  pass: 1438  fail: 119
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
 PASS	arrays/array-copy	-
@@ -409,6 +425,10 @@ PASS	examples/minmax/four-desc	-
 PASS	examples/minmax/harness-empty-panics	-
 PASS	examples/minmax/harness-five	-
 PASS	examples/minmax/harness-one	-
+PASS	examples/minmax/harness-r-eight	-
+PASS	examples/minmax/harness-r-empty-panics	-
+PASS	examples/minmax/harness-r-five	-
+PASS	examples/minmax/harness-r-one	-
 PASS	examples/minmax/one	-
 PASS	examples/minmax/three-same	-
 PASS	examples/reverse/empty	-
@@ -416,6 +436,9 @@ PASS	examples/reverse/four	-
 PASS	examples/reverse/four-big	-
 PASS	examples/reverse/harness-empty	-
 PASS	examples/reverse/harness-five	-
+PASS	examples/reverse/harness-v-empty	-
+PASS	examples/reverse/harness-v-five	-
+PASS	examples/reverse/harness-v-wrapping	-
 PASS	examples/reverse/harness-wrapping	-
 PASS	examples/reverse/one	-
 PASS	examples/reverse/three	-
