@@ -27,6 +27,7 @@ PINS=(
   "Corpus/coverage/exec/examples/binsearch|baselines/golden/binsearch-lowered.repr|GoLean.Examples.BinSearch.searchLowered"
   "Corpus/coverage/exec/examples/isort|baselines/golden/isort-lowered.repr|GoLean.Examples.InsertionSort.isortLowered"
   "Corpus/coverage/exec/examples/wordcount|baselines/golden/wordcount-lowered.repr|GoLean.Examples.WordCount.wordCountLowered"
+  "Corpus/coverage/exec/examples/histogram|baselines/golden/histogram-lowered.repr|GoLean.Examples.Histogram.histogramLowered"
 )
 
 WORK="${TMPDIR:-/tmp}/golden-check.$$"
@@ -44,7 +45,7 @@ export GOCACHE="${GOCACHE:-$ROOT/artifacts/go-build-cache}"
 # means not relying on the next run's self-heal, on either link.)
 lake build GoLean.NativeToIR > /dev/null \
   || { echo "check-golden: FAIL — NativeToIR (decoder) build failed (fail closed)" >&2; exit 1; }
-(cd proofs && lake build GoLeanProofs.Specs.GoldenProgram GoLeanProofs.Specs.GoldenQuorum GoLeanProofs.Examples.FibProgram GoLeanProofs.Examples.ReverseProgram GoLeanProofs.Examples.GcdProgram GoLeanProofs.Examples.MinMaxProgram GoLeanProofs.Examples.BinSearchProgram GoLeanProofs.Examples.InsertionSortProgram GoLeanProofs.Examples.WordCountProgram > /dev/null) \
+(cd proofs && lake build GoLeanProofs.Specs.GoldenProgram GoLeanProofs.Specs.GoldenQuorum GoLeanProofs.Examples.FibProgram GoLeanProofs.Examples.ReverseProgram GoLeanProofs.Examples.GcdProgram GoLeanProofs.Examples.MinMaxProgram GoLeanProofs.Examples.BinSearchProgram GoLeanProofs.Examples.InsertionSortProgram GoLeanProofs.Examples.WordCountProgram GoLeanProofs.Examples.HistogramProgram > /dev/null) \
   || { echo "check-golden: FAIL — pin module build failed (fail closed)" >&2; exit 1; }
 
 for pin in "${PINS[@]}"; do
@@ -87,6 +88,7 @@ import GoLeanProofs.Examples.MinMaxProgram
 import GoLeanProofs.Examples.BinSearchProgram
 import GoLeanProofs.Examples.InsertionSortProgram
 import GoLeanProofs.Examples.WordCountProgram
+import GoLeanProofs.Examples.HistogramProgram
 def main : IO Unit :=
   IO.println (repr $TERM)
 LEAN

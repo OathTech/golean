@@ -117,6 +117,12 @@ import GoLeanProofs.Examples.WordCount
 -- follow-up (split the roots into `Core` shards —
 -- `docs/2026-08-15_phase2-premerge-audit.md`, C-H4/C-H5).
 import GoLeanProofs.Examples.WordCount.HarnessR
+-- The gallery campaign's flagship example (G1 unit 1, 2026-08-15). NOT
+-- designated: it is deliberately absent from `Examples/Targets.lean`
+-- and from the Comparator Challenge's trusted closure (charter §HARD
+-- BOUNDARIES — designation is arc-end work under user sign-off).
+import GoLeanProofs.Examples.HistogramProgram
+import GoLeanProofs.Examples.Histogram
 
 /-!
 # GoCore ⇒ Iris — the proof layer (root)

@@ -1,0 +1,14 @@
+# id	subject	args	expected_status	expected_reason	features
+distinct	histogramFour	1,2,3,4,3	ok	-	slices,maps,range,loops,if
+all-same	histogramFour	5,5,5,5,5	ok	-	slices,maps,range,loops,if
+mode-three	histogramFour	7,3,7,7,7	ok	-	slices,maps,range,loops,if
+miss	histogramFour	1,2,3,4,9	ok	-	slices,maps,range,loops,if
+one	histogramOne	42,42	ok	-	slices,maps,range,loops,if
+one-miss	histogramOne	42,0	ok	-	slices,maps,range,loops,if
+empty	histogramEmpty	7	ok	-	slices,maps,range,loops,if
+harness-r-seven	histogram_harness_r	7,50,51	ok	-	slices,maps,range,loops,if,arrays
+harness-r-eight	histogram_harness_r	8,3,3	ok	-	slices,maps,range,loops,if,arrays
+harness-r-one	histogram_harness_r	1,7,7	ok	-	slices,maps,range,loops,if,arrays
+harness-r-empty	histogram_harness_r	0,9,9	ok	-	slices,maps,range,loops,if,arrays
+harness-r-miss	histogram_harness_r	5,20,99	ok	-	slices,maps,range,loops,if,arrays
+harness-r-wrap	histogram_harness_r	5,9223372036854775807,9223372036854775807	ok	-	slices,maps,range,loops,if,arrays

@@ -413,6 +413,12 @@ check_surface_imports proofs/GoLeanProofs/Examples/InsertionSortProgram.lean \
   '^import GoLean\.'
 check_surface_imports proofs/GoLeanProofs/Examples/WordCountProgram.lean \
   '^import GoLean\.'
+# The eighth lowering (gallery campaign G1, histogram). It is NOT in
+# `Examples/Targets.lean`'s allowlist and NOT in Challenge's trusted
+# closure — this example is undesignated by charter — but the pin costs
+# nothing and keeps the module core-only from birth.
+check_surface_imports proofs/GoLeanProofs/Examples/HistogramProgram.lean \
+  '^import GoLean\.'
 # The fork/join pool witnesses (channels arc slice 2): statement-bearing,
 # Iris-free by chain — GoLean core + the surface + its own def-only
 # targets module (audit F4 split). NOT importable from Challenge (it
