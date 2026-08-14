@@ -85,6 +85,51 @@ step() { printf '\n\033[1m── %s\033[0m\n' "$1"; }
 ok()   { RESULTS+=("  ok   $1"); }
 bad()  { RESULTS+=("  FAIL $1"); fail=1; }
 
+# 0b. BUILD PARALLELISM, SCALED TO THE MEMORY CAP (examples phase-2 slice 0,
+#     lever 1, 2026-08-14). Lean's task-scheduler pool size (LEAN_NUM_THREADS)
+#     bounds BOTH the number of `lean` workers Lake runs concurrently AND the
+#     within-file parallel elaboration of declarations — and peak memory is a
+#     SUM OF PER-THREAD PEAKS. On this 32-core box an unbounded build therefore
+#     multiplies the heaviest module's peak by the number of live threads, which
+#     is how the full proofs build OOM-died inside a 48G cap while completing at
+#     64G (charter measurement, docs/2026-08-14_examples-phase2-arc-charter.md).
+#     Lake 5.0 has no -j/--jobs flag; this env var is the only knob.
+#
+#     THIS IS A PERFORMANCE KNOB, NOT A CORRECTNESS GATE: it changes how fast
+#     and in what memory the SAME build runs, never what is checked. So an
+#     unparseable cap falls back to the toolchain default with a visible note
+#     rather than failing the gate — and if that default then breaches the cap,
+#     the build dies loudly at the cgroup, which is the outcome we already have.
+#     An explicit LEAN_NUM_THREADS from the caller is always honoured.
+step "build parallelism (LEAN_NUM_THREADS scaled to the memory cap)"
+if [ -n "${LEAN_NUM_THREADS:-}" ]; then
+  PAR_NOTE="LEAN_NUM_THREADS=$LEAN_NUM_THREADS (set by the caller — honoured as-is)"
+else
+  _mem="${GOLEAN_MEM_MAX:-64G}"
+  # Bytes-per-thread budget: 8G. Chosen from the measured per-thread peaks of
+  # the heavy example modules; floor 2 so a small cap still builds in parallel.
+  _gb=""
+  case "$_mem" in
+    none)              _gb="" ;;
+    *G|*g)             _gb="${_mem%[Gg]}" ;;
+    *M|*m)             _gb=$(( ${_mem%[Mm]} / 1024 )) ;;
+    ''|*[!0-9]*)       _gb="" ;;                       # unparseable
+    *)                 _gb=$(( _mem / 1073741824 )) ;; # bare bytes
+  esac
+  case "$_gb" in
+    ''|*[!0-9]*) _gb="" ;;   # e.g. "64.5G" — not an integer count of GiB
+  esac
+  if [ -z "$_gb" ]; then
+    PAR_NOTE="LEAN_NUM_THREADS unset (cap '$_mem' is not an integer GiB size — toolchain default, $(nproc) cores)"
+  else
+    _jobs=$(( _gb / 8 )); [ "$_jobs" -lt 2 ] && _jobs=2
+    export LEAN_NUM_THREADS="$_jobs"
+    PAR_NOTE="cap $_mem -> LEAN_NUM_THREADS=$_jobs (cap/8G, floor 2; $(nproc) cores on this box)"
+  fi
+fi
+echo "  $PAR_NOTE"
+RESULTS+=("  note build parallelism: $PAR_NOTE")
+
 # 1. Escape-hatch preflight (cheap, no build). The authoritative axiom check is
 #    the in-build Audit gate (step 3); this catches obvious holes at edit time.
 step "escape-hatch preflight (sorry / admit / native_decide / axiom in proof-facing code)"
