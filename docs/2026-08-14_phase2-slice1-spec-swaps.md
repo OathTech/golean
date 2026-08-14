@@ -409,11 +409,17 @@ theorem reverse_ok (n seed : Nat) (hn : n < 2 ^ 63) (hseed : seed < 2 ^ 64) :
   `reverse_readout` → `reverse_readout_v1` — KEPT unweakened, proofs
   and corpus rows untouched, both re-pinned. `reverse_framed` (the
   genuinely-∀xs form) unchanged.
-* Deletion test: dropping `hn` makes the `make([]uint64, n)` length
-  wrap negative (the v1 precedent); dropping `hseed` breaks the
-  `unorm_of_range` normalization of the `seed` argument at the entry
-  equation. Both hypotheses are load-bearing at the statement, not
-  proof convenience.
+* Deletion test — RUN, not asserted (`lean_minimal_hypotheses`, which
+  drops each explicit binder and re-elaborates a scratch copy): all
+  three binders come back **load-bearing**. The mechanical break for
+  both `hn` and `hseed` is the entry equation's two `unorm_of_range`
+  rewrites — they are exactly what makes the machine's uint64 argument
+  cells equal the `Nat` casts the statement quantifies over — and `hn`
+  additionally fails `omega` inside the fuel-bound discharge. Beyond
+  the proof, `hn` is the statement-level Go `int` boundary (the v1
+  precedent: past `2^63` a `make([]uint64, n)` length wraps negative
+  and panics). `lean_verify` on `reverse_ok`: axioms
+  `[propext, Classical.choice, Quot.sound]`, source scan clean.
 
 ### What went generic, and the honest limit
 
@@ -532,3 +538,113 @@ describes them, with these additions from this session's probing:
 Divergence guard: not triggered — no proof in this session took more
 than a handful of probe iterations. The gap is budget, not difficulty,
 and the next session starts from a worked template plus a phase map.
+
+### Swap 2 (minmax) — the transcription pack, measured this session
+
+Not built, but taken from "needs probing" to "needs typing". Everything
+below is measured with `.tmp/s1/mmprobe.lean`, not predicted.
+
+**Address layout — CORRECTED.** The session-1 table above guessed the
+frame contents; the real layout (probe, `n = 2`) is:
+
+| addr | cell | | addr | cell |
+|---|---|---|---|---|
+| 0 | `n` | | 11 | copy `i` |
+| 1 | `seed` | | 12 | copy `$forFirst` |
+| 2 | `$res0` (`[8]uint64`) | | 13 | harness `lo` |
+| 3 | `$res1` | | 14 | harness `hi` |
+| 4 | `$res2` | | 15 | minMax's `s` param |
+| 5 | `$c15` (handle) | | 16 | minMax's `$res0` |
+| 6 | backing (`[n]uint64`) | | 17 | minMax's `$res1` |
+| 7 | `s` | | 18 | minMax's `lo` |
+| 8 | setup `i` | | 19 | minMax's `hi` |
+| 9 | setup `$forFirst` | | 20 | minMax's `i` (`int`) |
+| 10 | `pre` (`[8]uint64`) | | 21 | minMax's `$forFirst` |
+
+`nextAddr = 22`. Note 13/14 are the harness's OWN `lo`/`hi` locals
+(`lo, hi := minMax(s)`), not `$c`-temporaries; `enterFrame` allocates
+15/16/17 in one step.
+
+**Phase map and exact segment step counts** (every number a difference
+between two probe markers):
+
+| segment | steps | from → to |
+|---|---|---|
+| entry A | 10 | body start → the `$c15` makeSlice apply point |
+| makeSlice apply | 1 | conditioned |
+| entry B | 42 | → setup loop head (k=53) |
+| setup A0 / A1 | 25 / 29 | head → exit test |
+| setup body / store / drain | 18 / 1 / 5 | |
+| setup exit | 39 | test false → COPY loop head (k=223). NO makeSlice — `pre` is one `.initialization` |
+| copy A0 / A1 | 25 / 29 | |
+| copy B1 / read / B2 / store / drain | 16 / 1 / 1 / 1 / 5 | identical shape to reverse's copy loop |
+| copy exit | 15 | test false → `.retV (sliceH) (.callArgsK ⟨"minMax"⟩ …)` (k=369) |
+| **enterFrame** | 1 | `StepKit.stepFn_call_enter` — the ONE program-consulting step |
+| minMax prologue | 17 | → the first `s[0]` read apply point |
+| read / entry C / read / entry D | 1 / 5 / 1 / 34 | → minMax loop head (k=428) |
+| minMax dispA / dispB | 25 / 29 | → the `len(s)` apply point |
+| len apply / lessCmp apply | 1 / 1 | conditioned |
+| minMax bodyA / bodyB | 11 / 3 | |
+| loT / read / loT2 — loF | 12 / 1 / 12 — 9 | the `lo` branch |
+| hiB — hiT / read / hiT2 — hiF | 3 — 12 / 1 / 8 — 5 | the `hi` branch |
+| exit | 71 | test false → terminal (was 62 in the two-result harness; the third result and the ARRAY copy add 9) |
+
+Everything from `minMax dispA` down transcribes from the shipped
+`minmax_harness` layer unchanged except addresses (`mh_*_raw`,
+`mh_iter`, `mh_loop` in `Examples/MinMax.lean`) — same Go, same step
+counts.
+
+**THE FUEL BOUND IS NOT FREE — read this before writing the induction.**
+The handoff's `234 + 186·n` is real and IS a valid uniform bound, but
+the naive induction does not reach it. Measured (probe, several seeds):
+
+| n | seed 100 | a wrapping seed |
+|---|---|---|
+| 4 | 978 | 962 (`2^64-2`), 946 (`2^64-1`) |
+| 5 | 1164 | 1148 |
+| 8 | 1722 | 1690 |
+
+`234 + 186·n` is the MAXIMUM, hit at the non-wrapping seed; wrapping
+seeds are strictly cheaper. The reason: taking either `if` branch costs
+exactly 16 extra steps, and **at most ONE of the two can fire per
+iteration** — `s[i] < lo` and `s[i] > hi` cannot both hold because
+`lo ≤ hi` always. So the per-iteration cost is ≤ 80, not the
+branch-uniform 96 that the shipped `mh_iter` bounds.
+
+Consequence: a straight port of `mh_iter`'s `k ≤ 96` gives
+`N = 202·n + 218` (verified consistent: equal to `186n + 234` at
+`n = 1`, loose by exactly 16 per later iteration). To ship the measured
+`186·n + 234` the loop induction must carry the invariant
+`minSpec (l.take m) ≤ maxSpec (l.take m)` and use it to rule out the
+both-branches-fire case. `minSpec_mem`/`maxSpec_mem` are already in
+`Examples/MinMax.lean` and are the natural way to get it. **Either
+bound is honest** — `202n + 218` is true and cheaper to prove; if it
+ships, say in the gallery that the bound is the uniform worst case and
+that the measured law is `186n + 234`, rather than quoting the measured
+law as the theorem's.
+
+**The one genuinely new below-statement fact**, probe-pinned and still
+unwritten (promotion candidate, ≥2 consumers required before it moves
+to `SliceMem` — this is why it was NOT written speculatively this
+session): the `pre[i] = s[i]` store target is
+
+```
+.chain (.addr (.base ⟨10⟩)) [.int iv .uint64] [.index]
+```
+
+— an ADDRESS-rooted chain, so `indexTargetLoc` takes its
+`.addr baseLoc` arm, loads the array, bounds-checks with
+`arrayIndexNat`, and yields `Loc.index baseLoc i`; `storeLoc` at a
+`.index` loc then loads the base array, `arraySet`s, and re-stores at
+the base — the same `arraySet` + declared-type re-normalization tail
+`storeTarget_slice_u64` already handles. The lemma is a close mirror of
+that one (same `harrset`/`hnorm` shape, no `sliceIndexLoc`), and its
+two consumers are minmax and wordcount.
+
+**Statement vocabulary still owed**: `goArr8` under the §11 closure
+rules (STATEMENT-level, so not a kit module), plus the readback check —
+`$res0` is an `[8]uint64` cell, so `loadMany` returns a
+`GoValue.array` of 8 elements and the final `with_unfolding_all rfl`
+must line `goArr8 (mmFamily n seed)` up with
+`mmFamily n seed ++ List.replicate (8 - n) 0`; `mmFamily_length` is
+what makes `8 - (mmFamily n seed).length` reduce to `8 - n`.
