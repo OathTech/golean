@@ -1,0 +1,2 @@
+insert +0, overwrite -0:  1/k = -Inf  v = 2
+insert -0, overwrite +0:  1/k = +Inf  v = 2
