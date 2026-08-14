@@ -413,3 +413,14 @@ sem-adequacy arc's unrecorded run showed the precedent was mixed)
   that touches the judge wrapper.** The bug is latent-since-2026-08-02
   and invisible until the first landmark run from a worktree, which
   this was.
+
+  **Precision note (audit response, 2026-08-15):** the recording commit
+  `8101b726`'s message says the judge ran from "a dot-free clone of THIS
+  COMMIT", which reads as `8101b726` itself; what was certified is
+  `e42020397648`, its parent — the designation commit, as the verdict
+  line above states. `8101b726`'s own delta is this log entry, the
+  charter's arc-end item, and a COMMENT-only change to
+  `proofs/Audit.lean` (verified: no statement, no proof and no
+  designated name moved), so nothing certified changed underneath the
+  run. The record of what the kernel replayed is the hash in the
+  verdict, never the commit that files the verdict.

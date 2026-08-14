@@ -42,6 +42,20 @@ measure:
 5. **CI olean caching** (keyed on toolchain + manifest). Measure: CI
    proof step drops from from-scratch to incremental on doc/corpus
    commits.
+   **AS LANDED (`2d6ae0d2`), two deviations from this line — recorded
+   in the audit response, 2026-08-15, because the charter text alone
+   would misdescribe the lever.** (a) The KEY was re-designed, not
+   merely reused: toolchain + manifest alone was the bug — every proofs
+   commit hit that key EXACTLY, and `actions/cache` does not save on an
+   exact hit, so the entry froze at whatever the first save held. The
+   shipped key adds a source-tree hash (`GoLean/**`, `proofs/**`,
+   `compat/verdi/**`) as a third layer with two-level restore-keys.
+   (b) The acceptance measure above is NOT met locally and cannot be:
+   a cache-hit measurement needs a real runner and at least two pushes
+   (one to save under the new key, one to restore). What was checked on
+   this box is a YAML/semantic readback of the workflow — no linter was
+   available — and the commit says so. The lever is landed and
+   UNMEASURED; the first two pushes settle it.
 6. **Cost-tracker speedbump** (`scripts/proof-costs` or equivalent):
    per-module wall + peak RSS per gate run, a visible trend line.
    Speedbump standard — report, never block.
@@ -129,9 +143,20 @@ for measurement 2 above.
 ## Slice 1 — spec-style swaps (the scoping study's recommendations,
 `docs/2026-08-14_harness-style-scoping.md` §9–10)
 
-**STATUS 2026-08-14: PARTIAL — guardrail half landed, proof half not.
-Slice record and handoff: `docs/2026-08-14_phase2-slice1-spec-swaps.md`
-(read it first).** The reverse copy-relational and minmax S3 harnesses
+**DISCHARGED 2026-08-14 — all three swaps landed** (annotated in the
+audit response, 2026-08-15: the PARTIAL status below was left standing
+after the work completed, and a reader arriving at the charter was told
+the slice was half-done). The three headline proofs are `3fbecfa2`
+(reverse → S1 copy-relational), `3f4835ba` (minmax → S3 relational) and
+`67917d97` (wordcount → S3 relational, with the two array-store lifts);
+the gallery was re-rendered per swap, the old headlines demoted to
+`_v1` unweakened with their corpus rows, and the eight post-swap
+headlines designated at `e4202039`. Slice record and handoff:
+`docs/2026-08-14_phase2-slice1-spec-swaps.md`.
+
+The original status text, kept because the sequencing it records is the
+slice's history: *PARTIAL — guardrail half landed, proof half not.* The
+reverse copy-relational and minmax S3 harnesses
 are in the corpus, differentially green and golden-pinned; no headline
 proof, gallery re-render or old-headline demotion has happened yet, and
 the gallery still describes the old harnesses. wordcount's swap WAS
@@ -210,7 +235,9 @@ fixtures, measured deltas):
 - Relational unbounded-data mechanism (deep-decode vs emit-trace) —
   deferred until an example pulls it in.
 - Raft capstone work: conditioned-Agreement safety form, fixed 3/5
-  clusters (`docs/2026-08-14_harness-style-scoping.md` §10.5 ruling);
+  clusters (`docs/2026-08-14_harness-style-scoping.md` §10, open
+  decision 5 and its RULED block — the "§10.5" here was a dangling
+  pointer, fixed in the audit response 2026-08-15);
   behind the concurrency re-envelope, which carries the recorded
   fairness-definability requirement on `Choices`.
 
@@ -230,6 +257,14 @@ fixtures, measured deltas):
   now ~2 GiB and the full proofs build fits the slice-0 lever-1 48G
   acceptance again. Parallel-lane full gates are budget-feasible again
   under the standing `GOLEAN_MEM_MAX=48G`-per-lane rule.
+  **RE-CONFIRMED at the arc's final tip (audit-response fix round,
+  2026-08-15): `scripts/ci` PASS under `GOLEAN_MEM_MAX=48G`, the
+  parallelism lever resolving it to `LEAN_NUM_THREADS=6`.** The 48G
+  acceptance is met by the arc as it merges, not only by the commit
+  that first met it — which is the claim the charter was making and had
+  not re-checked.
 - `.tmp/` is gitignored as of `2efa4524`; scoping/audit scratch under
   it is referenced handoff material (inventory:
-  `docs/2026-08-14_harness-style-scoping.md` §11, sweep report §5).
+  `docs/2026-08-14_harness-style-scoping.md` §11 — the trailing "sweep
+  report §5" pointer named no document in this repo and was dropped in
+  the audit response, 2026-08-15).

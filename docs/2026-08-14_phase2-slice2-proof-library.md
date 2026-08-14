@@ -27,7 +27,7 @@ kit, not necessarily in a tactic.
 
 | wave | what brick-wp built | our analogue | status |
 |---|---|---|---|
-| W1 call-layer bridges (`wp_fptr_of_spec`, `_fupd`: module lemma + linkage ⟹ the call-site goal in one lemma) | The call boundary in one conditioned step: `StepKit.stepFn_call_enter` (frame entry keyed on its `enterFrame` fact — 3 consumers: EmptyRun, Reverse/HarnessV, WordCount/HarnessR). WP lane: `wp_call`'s pure `findFunctionIn?` premise over the pinned program (`Ghost.lean` `GoCoreGS.prog`; `docs/2026-07-20_call-law-design.md`) is the same "table bridge" move — turn linkage into a discharged pure fact. | **EXISTS** (both lanes) |
+| W1 call-layer bridges (`wp_fptr_of_spec`, `_fupd`: module lemma + linkage ⟹ the call-site goal in one lemma) | The call boundary in one conditioned step: `StepKit.stepFn_call_enter` (frame entry keyed on its `enterFrame` fact — 4 consumers: EmptyRun, Reverse/HarnessV, MinMax/HarnessR, WordCount/HarnessR; the count said 3 until the 2026-08-15 audit response — MinMax/HarnessR was missed). WP lane: `wp_call`'s pure `findFunctionIn?` premise over the pinned program (`Ghost.lean` `GoCoreGS.prog`; `docs/2026-07-20_call-law-design.md`) is the same "table bridge" move — turn linkage into a discharged pure fact. | **EXISTS** (both lanes) |
 | W2 `wp_provide_call` (the ~10-line fs_spec provision ritual as ONE tactic; evars pinned by unification) | The entry-equation dance (~15–30 lines of post-prelude state/env/cont defs + a do-syntax-mirror statement + `with_unfolding_all rfl`, repeated in 10 modules) as one macro invocation: `derive_entry_eq`. | **BUILT THIS SLICE** — the P4 item; outcome recorded in §3 below |
 | W3 call-readiness combinators (`call_ready1/2/3` over any spec; covariance for nesting a later call's readiness in an earlier take-away) | The entry-glue layer already exists as named lemmas with many consumers: `stepFnIter_chain`, `runConfig_of_stepFnIter`, `runConfig_next_stop`, and `harness_readout_of_total` (the "client walks away with the returned value" shape — the D1 readout twins, 10 consumers). The genuinely W3-specific part — CHAINED client calls with readiness nested in Φ — has ZERO consumers here: every shipped harness makes exactly one subject call, and the direct method composes segments by fuel arithmetic, not by continuation-passing readiness. | **EXISTS** (entry glue); chaining shape **not applicable** — no consumer, §12 forbids the speculative lift |
 | W4 generic ghost modules (Excl registry + capacity credits, `registryG`/`creditsG`) | None. The ghost ladder is pinned at rung 0 by ruling (form note §11-era rulings; harness-style scoping §0/§10): shipped statements carry NO ghost state. Our `Ghost.lean` `GoCoreGS` is WP-lane state interpretation, not module-state registries. Zero consumers. | **Not applicable at rung 0** — reopen when the ghost rung-1 annotation arc lands (it is designed, not built) |
@@ -117,7 +117,14 @@ closures). Because a FALSE entry equation handed to
 EVALUATES both sides of the derived equation at a concrete probe point
 (all args 1, fuel 100000, empty stream) with the compiler before
 emitting, and refuses on mismatch — a mis-derived layout fails in
-milliseconds with a message, never in the kernel. Scope is fail-closed
+milliseconds with a message rather than in the kernel. Two corrections
+from the 2026-08-15 audit response, both now in the module docstring:
+the probe asserts the machine-entry run is `.ok` BEFORE comparing (two
+runs that both end in `.error .fuelOut` compare equal, which would have
+been a vacuous pass), and the "never in the kernel" claim is softened —
+it is a SINGLE-POINT check, so a divergence away from the probe point
+still reaches `with_unfolding_all rfl`, which refuses it. Scope is
+fail-closed
 and explicit: ≥1 scalar-integer parameters, defaults quoted for
 scalars / arrays-of-scalars / nil slices+maps; anything else is a hard
 error naming the piece.
@@ -128,7 +135,11 @@ prove it; mass-retrofit deliberately NOT done):
 | module | before | after | consumer churn |
 |---|---|---|---|
 | `Examples/Fib.lean` (`fibHSeed`/`fibHC₀`/`fibH_entry_eq`) | 30 lines hand-written | 9 (comment + invocation + import) | ZERO — `fib_total`'s `rw [fibH_entry_eq, …]` unchanged |
-| `Examples/Gcd.lean` (`hEnv₀`+`hSeedI`/`hc₀`/`gcdh_entry_eq`) | 37 lines hand-written | 10 | ZERO — `gcd_ok`'s rw chain unchanged |
+| `Examples/Gcd.lean` (`hEnv₀`+`hSeedI`/`hc₀`/`gcdh_entry_eq`) | 34 lines hand-written | 11 | ZERO — `gcd_ok`'s rw chain unchanged |
+
+(The Gcd row's counts are the audit-response correction, 2026-08-15:
+34 → 11, not the 37 → 10 first recorded. The net below is unchanged —
+`(30−9) + (34−11) = 44` — which is how the miscount was found.)
 
 Net `−44` source lines on two consumers (git: +20/−64), and the
 derived layer is no longer transcribed knowledge: the binder-type

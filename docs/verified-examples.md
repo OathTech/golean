@@ -10,8 +10,11 @@ from a proof: every Go snippet, every theorem, and every axiom line below is
 quoted **verbatim** from the file it comes from, and `scripts/render-gallery`
 re-checks those quotes byte-for-byte (see *Staleness*, at the end).
 
-Arc record: `docs/2026-08-12_verified-examples-arc-charter.md`; the statement
-form and the rulings behind it: `docs/2026-08-12_example-spec-form.md` §11.
+Arc record: `docs/2026-08-14_examples-phase2-arc-charter.md` — the phase-2
+arc, which swapped three of the headlines and designated all eight; the
+founding arc is `docs/2026-08-12_verified-examples-arc-charter.md`. The
+statement form and the rulings behind it:
+`docs/2026-08-12_example-spec-form.md` §11.
 
 ## How to read an entry
 
@@ -61,8 +64,16 @@ exhaustion.
   frontend's lowering of the corpus `main.go`, pinned by `scripts/check-golden`
   on both links — a fresh frontend emit + decode must reproduce the checked-in
   baseline, and the checked-in Lean term must print the same. Each proof module
-  additionally pins the harness function *inside* that lowering by `rfl`
-  (`fibHarness_pin` and its six siblings, registered in `proofs/Audit.lean`).
+  additionally pins the harness function *inside* that lowering by `rfl`.
+  For the four unswapped examples that is `fibHarness_pin` and its siblings,
+  registered in `proofs/Audit.lean`. For the three examples whose headline was
+  swapped in phase-2 slice 1, the pin that carries the CURRENT headline lives
+  in the example's audit shard beside the new harness —
+  `reverseHarnessV_pin` (`proofs/Audit/Reverse.lean:61`), `minmaxHarnessR_pin`
+  (`proofs/Audit/MinMax.lean:62`), `wordcountHarnessR_pin`
+  (`proofs/Audit/WordCount.lean:110`) — while the `…Harness_pin` entries in
+  `proofs/Audit.lean` still pin the harnesses the demoted `_v1` theorems talk
+  about. Both sets are live; each theorem is pinned against its own harness.
   So "the theorem is about this Go file" is a **staleness-checked** chain: it
   catches a lowering that drifts from the source or a hand-edited Lean term,
   and it says nothing about whether the lowering is faithful. The translation
@@ -83,6 +94,16 @@ exhaustion.
   deletion test stopped being a thing we check by reading. Designation also
   puts them in front of the independent Comparator judge, which re-checks
   the proofs by kernel replay against these statements alone.
+- **Where the audits are.** Two adversarial pre-merge audits stand behind
+  this file, and entries below cite both by date. The **2026-08-15** one —
+  the phase-2 arc's, which swapped three headlines and designated all eight
+  — has its own record with every finding and disposition:
+  `docs/2026-08-15_phase2-premerge-audit.md`. The **2026-08-14** one, at the
+  foundation merge, predates that practice; it is recorded in the arc's
+  commits and in `docs/2026-08-12_verified-examples-arc-charter.md`
+  §"Arc-end audit marker". Neither audit is a proof of anything — both are
+  review, and where a claim below rests on one rather than on a gate or an
+  oracle, the entry says so.
 - **The heap is empty at entry.** Each theorem starts the harness from an
   empty state with its arguments at the call boundary, so the harness
   allocates everything it touches. There is nothing to frame, and no
@@ -279,7 +300,8 @@ theorem gcd_ok (a b : Nat) (ha : a < 2 ^ 64) (hb : b < 2 ^ 64) :
         = .ok { values := #[.int ((Nat.gcd a b : Nat) : Int) .uint64] } := by
 ```
 
-**Axioms** (pinned in `proofs/Audit.lean`):
+**Axioms** (pinned in `proofs/Audit/Gcd.lean`, the example's shard of
+`proofs/Audit.lean`):
 
 <!-- verbatim: proofs/Audit/Gcd.lean -->
 ```lean
@@ -405,10 +427,13 @@ theorem reverse_ok (n seed : Nat) (hn : n < 2 ^ 63) (hseed : seed < 2 ^ 64) :
 
 Lean's classical trio; no `sorry`, no native evaluation, no project axioms.
 
-**Fuel bound.** Explicit and affine: `N = 205·n + 335`. (The measured law is
-`335 + 205·n`, first differences alternating 167/242 because a two-pointer
-swap happens every other iteration; the proof's bound is tight at the
-measured points.)
+**Fuel bound.** Explicit and affine: `N = 205·n + 335`. The measured step
+counts are bounded above by that same expression — but it is a *bound on the
+measurements*, not a law, because the true counts are **not affine**: their
+first differences alternate 167/242, since a two-pointer swap happens every
+other iteration. The bound is tight only at `n = 0`, running 1 to 41 steps
+above the measurements at `n = 1…8`. There is no single affine measured law
+to quote here, so none is quoted.
 
 **Status.** `reverse_readout` is the run-conditioned twin. Two supporting
 theorems sit beneath, both kept and both still proved:
@@ -596,6 +621,16 @@ driver and the harness, the pair harness at `(5,40)` and `(1,7)`, and the
 relational harness at `harness-r-five`, `harness-r-one`, `harness-r-eight`
 and `harness-r-empty-panics`.
 
+What no row reaches, said as plainly as in reverse's entry: the theorem
+covers every `seed < 2^64`, including the seeds where `seed + i` wraps and
+the answer stops being "the first and last element" — but **no corpus row
+reaches that wrap region**, because the differential driver parses `int64`
+arguments, so the largest seed a row can express is near `2^63`. The wrap
+behaviour here was checked in the 2026-08-15 audit **on the machine only,
+with no `go run` oracle in the loop** — weaker evidence than reverse's
+entry, where the same region was probed against real Go. Extending the
+driver past `int64` is recorded as an input for the successor arc (E1).
+
 ---
 
 ## binsearch — first-occurrence binary search over a sorted []uint64
@@ -690,7 +725,8 @@ theorem search_ok (n seed : Nat) (t : Int)
         = .ok { values := #[.int (findSpec (bsFamily n seed) t) .int] } := by
 ```
 
-**Axioms** (pinned in `proofs/Audit.lean`):
+**Axioms** (pinned in `proofs/Audit/BinSearch.lean`, the example's shard of
+`proofs/Audit.lean`):
 
 <!-- verbatim: proofs/Audit/BinSearch.lean -->
 ```lean
@@ -793,7 +829,8 @@ domain: this harness allocates two slices, and the machine's allocation never
 fails, so the practical Go domain is much smaller. Input honesty: the
 quantifiers are the scalars `(n, seed)`.
 
-**The family** (`proofs/GoLeanProofs/Examples/InsertionSort.lean`):
+**The family** (`proofs/GoLeanProofs/Examples/InsertionSort/Family.lean`, the
+family shard of the split `InsertionSort` module):
 
 <!-- verbatim: proofs/GoLeanProofs/Examples/InsertionSort/Family.lean -->
 ```lean
@@ -814,7 +851,8 @@ theorem isort_ok (n seed : Nat) (hn : n < 2 ^ 63) (hseed : seed < 2 ^ 64) :
         = .ok { values := #[.int 1 .uint64] } := by
 ```
 
-**Axioms** (pinned in `proofs/Audit.lean`):
+**Axioms** (pinned in `proofs/Audit/InsertionSort.lean`, the example's shard
+of `proofs/Audit.lean`):
 
 <!-- verbatim: proofs/Audit/InsertionSort.lean -->
 ```lean
@@ -1013,10 +1051,13 @@ costs 12), and the map snapshot is bounded by the word count rather than by
 the three distinct values this particular family produces. **The measured
 step counts are a different number, and the difference is worth stating
 plainly.** They are bounded above by `206·n + 314`, which is tight at
-`n ≤ 3` — but that is an affine *upper bound on the measurements*, not a
-law, because the true counts are **not affine**: the first differences run
-206, 206, then 194, since the family `w[i] = seed + i%3` stops adding new
-entries to the map after the third word and every later word is cheaper.
+`1 ≤ n ≤ 3` — and *not* at `n = 0`, the point the earlier "tight at `n ≤ 3`"
+wording swept in, where the 2026-08-15 audit's measurement puts the bound 12
+steps high — but that is an
+affine *upper bound on the measurements*, not a law, because the true counts
+are **not affine**: the first differences run 218, 206, 206, then 194, since
+the family `w[i] = seed + i%3` stops adding new entries to the map after the
+third word and every later word is cheaper.
 There is no single measured law to quote here, so none is quoted; the bound
 the theorem ships is `218·n + 302` and the measurement envelope is
 `206·n + 314`, and neither is presented as the other.

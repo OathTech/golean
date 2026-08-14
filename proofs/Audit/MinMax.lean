@@ -72,5 +72,14 @@ example := @GoLean.Examples.MinMax.minmax_framed_readout
 #guard_msgs in #print axioms GoLean.Examples.MinMax.minmax_ok_v1
 /-- info: 'GoLean.Examples.MinMax.minmax_framed' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Examples.MinMax.minmax_framed
+-- The two derived twins' pins, ADDED in the 2026-08-15 audit response:
+-- `minmax_readout_v1` and `minmax_framed_readout` were referenced as
+-- `example :=` witnesses (so they are built) but never axiom-pinned,
+-- while their headlines were — a gap on the "everything the gallery
+-- names is pinned" story, not on the proofs themselves.
+/-- info: 'GoLean.Examples.MinMax.minmax_readout_v1' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Examples.MinMax.minmax_readout_v1
+/-- info: 'GoLean.Examples.MinMax.minmax_framed_readout' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Examples.MinMax.minmax_framed_readout
 
 end GoLean.Iris.Audit

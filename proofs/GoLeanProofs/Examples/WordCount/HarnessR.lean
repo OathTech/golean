@@ -2141,10 +2141,13 @@ bounds (`wcRange_generic` charges 24 per range iteration, the cost of
 the `c > best` THEN branch, though the else branch costs 12; the
 snapshot is bounded by the word count rather than by the ≤3 distinct
 family values). The MEASURED step counts are bounded above by
-`206·n + 314`, which is tight at `n ≤ 3`; that is an affine upper bound
+`206·n + 314`, which is tight at `1 ≤ n ≤ 3` (audit response,
+2026-08-15: NOT at `n = 0`, where it sits 12 steps high — the earlier
+`n ≤ 3` here swept that point in); that is an affine upper bound
 on the measurements, NOT a law — the true counts are not affine (first
-differences 206, 206, 194, because the family `w[i] = seed + i%3` stops
-adding new map entries after the third word, so later words are cheaper).
+differences 218, 206, 206, 194, because the family `w[i] = seed + i%3`
+stops adding new map entries after the third word, so later words are
+cheaper).
 Neither number is presented as the other. -/
 theorem wordcount_ok (n seed : Nat) (hcap : n ≤ 8) (hseed : seed < 2 ^ 64) :
     ∃ words : List Int, words.length = n ∧

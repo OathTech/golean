@@ -11,7 +11,8 @@ import GoLeanProofs.Examples.WordCountProgram
 /-!
 # The gallery examples' STATEMENT vocabulary — a def-only targets module
 
-The seven gallery headlines (`docs/verified-examples.md`) joined the
+The eight gallery headlines over seven examples — fib has two,
+`fib_ok` and `fib_total` — (`docs/verified-examples.md`) joined the
 statement-TCB gate's designated list on 2026-08-14 (user ruling, quoted
 in the designation commit: *"in order to state the theorems we need
 definitions of what fib and whatever mean. That's in the TCB

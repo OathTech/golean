@@ -59,11 +59,24 @@ macro emit a false statement — which the final `rfl` then refuses.
 A FALSE entry equation handed to `with_unfolding_all rfl` is the
 known 60 GB failure mode (CLAUDE.md: a decision procedure that must
 reduce to `False` has no reason to terminate politely). So before
-emitting the theorem, the macro EVALUATES both sides of the derived
-equation at a concrete probe point (all arguments `1`, generous fuel,
-empty choice stream) with the compiler — cheap — and refuses to emit
-if they differ, reporting both sides. A layout the macro mis-derives
-therefore fails loudly in milliseconds, never in the kernel.
+emitting the theorem, the macro EVALUATES the derived equation at ONE
+concrete probe point (all arguments `1`, generous fuel, empty choice
+stream) with the compiler — cheap — in two steps: it first requires
+the machine-entry run to be `.ok` there, and then requires both sides
+to agree, reporting them if they differ. The `.ok` step is not
+decoration (pre-merge audit, 2026-08-15): without it two runs that
+both end in `.error .fuelOut` compare EQUAL, and the guard would
+certify an equation on a run that never happened.
+
+What the guard does and does not buy, stated honestly: it is a
+SINGLE-POINT check of a statement that is symbolic in the arguments,
+the fuel and the choice stream. A layout wrong AT the probe point —
+the failure mode a mis-derived prelude actually produces, since the
+layout is argument-independent — fails loudly in milliseconds instead
+of in the kernel. A divergence that only appears away from the probe
+point would still reach `with_unfolding_all rfl`, which refuses it,
+expensively. The guard shortens the common failure; it does not
+remove the kernel as the thing that decides.
 
 ## Fail-closed scope (extend deliberately, never silently)
 

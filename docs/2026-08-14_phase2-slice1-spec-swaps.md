@@ -1,11 +1,17 @@
 # Examples phase-2, slice 1 — spec-style swaps: slice record (2026-08-14)
 
-Status: **PARTIAL — guardrail half landed; proof half landed for
-REVERSE only (swap 1 of 3).** Read this before continuing the slice; it
-is the handoff. The session record for the proof half is
-§"Proof half — session 2" near the end of this file; the sections
-between here and there are the ORIGINAL session-1 record, kept verbatim
-for the measurement trail.
+Status: **COMPLETE — all three swaps landed** (`3fbecfa2` reverse,
+`3f4835ba` minmax, `67917d97` wordcount; headlines designated at
+`e4202039`). Corrected in the audit response, 2026-08-15: this header
+still read *"PARTIAL — guardrail half landed; proof half landed for
+REVERSE only (swap 1 of 3)"* after swaps 2 and 3 landed in this same
+file's later sections, and its navigation pointer sent readers to
+§"Proof half — session 2" as if that were the end of the record. It is
+not: §"Proof half — session 2, part 2" (swap 2 landed) and §"Swap 3 …
+LANDED; SLICE 1 CLOSED" follow it, and the file ends at §"SLICE 1
+CLOSURE". Read it front to back — the sections are in landing order,
+and everything before the swap-1 proof section is the ORIGINAL
+session-1 record, kept verbatim for the measurement trail.
 
 Charter: `docs/2026-08-14_examples-phase2-arc-charter.md` §"Slice 1".
 Per-example recommendations: `docs/2026-08-14_harness-style-scoping.md`
@@ -257,7 +263,12 @@ family-formula version cannot, because its check encodes the family).
 The first differences alternate 167 / 242 — the 75-step gap is one
 two-pointer swap, which happens every OTHER iteration, exactly as in
 the shipped proof. So **`335 + 205·n` is a valid affine fuel bound**
-(checked against all nine points; tight at even `n`). For comparison
+(checked against all nine points). **CORRECTED (audit response,
+2026-08-15): it is a BOUND, not a law, and it is tight only at
+`n = 0`.** The earlier "tight at even `n`" here was wrong at four of
+the five even points — the bound runs 1, 2, 3, 4 steps above the
+measurements at `n = 2, 4, 6, 8` (and 38–41 above at odd `n`) — because
+the true counts are not affine at all. For comparison
 the shipped `reverse_ok` bound is `189·n + 260`; the copy phase is the
 whole difference.
 
@@ -396,7 +407,10 @@ theorem reverse_ok (n seed : Nat) (hn : n < 2 ^ 63) (hseed : seed < 2 ^ 64) :
         = .ok { values := #[.int 1 .uint64] } := by
 ```
 
-* Fuel bound `N = 205·n + 335` — the measured law of the handoff above,
+* Fuel bound `N = 205·n + 335` — the affine BOUND on the measurements
+  recorded in the handoff above (not a "measured law": the true counts
+  are non-affine and the bound is tight only at `n = 0`; corrected in
+  the audit response, 2026-08-15),
   reached (not the loose `242n + 335` the naive measure gives) by
   bounding the two-pointer loop with `75 * ((μ + 1) / 2) + 50` instead
   of `75 * μ + 50`: the measure `μ = (n-1) - 2m` drops by TWO per swap,
@@ -769,7 +783,9 @@ ARE the raw segments at the new layout. So swap 3 decomposes as:
    layout — the bulk of the work, and the part that is genuinely
    mechanical because the inductions themselves are already proved;
 4. post `best = maxMultiplicity words` over the RETURNED array
-   (`Pure.lean`'s `maxMultiplicity`, `Family.lean`'s
+   (`maxMultiplicity`, then in `Pure.lean` and since the arc-end
+   designation in `Examples/Targets.lean` — see the note at the end of
+   this record; `Family.lean`'s
    `wcFamily_maxMult : maxMultiplicity (wcFamily n seed) = (n+2)/3` is
    the v1 closed form and is NOT needed by the S3 statement — that is
    the whole point of the swap), `goArr8`-style adapter for the
@@ -869,7 +885,9 @@ So the generic instantiations become
    step minmax needed, because a symbolic-array value cannot
    re-normalize definitionally.
 6. Statement layer: post `best = maxMultiplicity words` over the
-   RETURNED array (`Pure.lean`'s `maxMultiplicity`), a `goArr8`-style
+   RETURNED array (`maxMultiplicity` — `Pure.lean` when this was
+   written, `Examples/Targets.lean` since the designation hoist), a
+   `goArr8`-style
    adapter, `wcFamily` OUT of the statement (`Family.lean`'s
    `wcFamily_maxMult : maxMultiplicity (wcFamily n seed) = (n+2)/3` is
    the v1 closed form and is deliberately NOT needed by the S3 claim —
@@ -999,9 +1017,13 @@ slack, both branch-uniform worst cases:
   for `n ≤ 4`; neither dominates, and neither equals `206·n + 314`.
 
 So the record is: **shipped `218·n + 302`; measurement envelope
-`206·n + 314`, tight at `n ≤ 3`; and there is NO measured law** — the
-true counts are not affine (first differences 206, 206, 194, because
-the family stops adding map entries after the third word). All three
+`206·n + 314`, tight at `1 ≤ n ≤ 3`; and there is NO measured law** —
+the true counts are not affine (first differences 218, 206, 206, 194,
+because the family stops adding map entries after the third word).
+CORRECTED in the audit response (2026-08-15): the tight range excludes
+`n = 0`, where the envelope sits 12 steps above the measurement — the
+measured table above starts at `n = 1`, which is how the `n ≤ 3`
+phrasing slipped in. All three
 facts are stated in the theorem docstring and the gallery, and none is
 presented as another. This is the same shape as swap 2's
 `202n + 218` vs `186n + 234`, and the same resolution.
@@ -1025,18 +1047,20 @@ statements and pins are untouched. The `mem_of_mem_set` privacy gotcha
 the previous session flagged is a non-issue once the lemma lives IN
 `SliceMem` (it uses the in-file private directly).
 
-Also promoted earlier this slice and now at THREE consumers each:
-`StepKit.stepFn_call_enter` (EmptyRun + reverse + wordcount) and
-`StepKit.stepFn_makeSlice_u64_step` (reverse + minmax + wordcount).
+Also promoted earlier this slice: `StepKit.stepFn_call_enter`, now at
+FOUR consumers (EmptyRun + reverse + minmax + wordcount — the count
+read "three" until the 2026-08-15 audit response found MinMax/HarnessR
+missing from it), and `StepKit.stepFn_makeSlice_u64_step` at three
+(reverse + minmax + wordcount).
 
 ### Promotion ledger — FINAL STATE for slice 1
 
 | candidate | consumers | disposition |
 |---|---|---|
-| `stepFn_call_enter` | 3 | **LIFTED** to `StepKit` (swap 1) |
+| `stepFn_call_enter` | 4 | **LIFTED** to `StepKit` (swap 1) |
 | `stepFn_makeSlice_u64_step` | 3 | **LIFTED** to `StepKit` (swap 2) |
-| `storeTarget_arrayLocal_u64` | 2 | **LIFTED** to `SliceMem` (swap 3), generalized to `N` |
-| `normalizeValueForTy_arr_u64` | 2 | **LIFTED** to `SliceMem` (swap 3), generalized to `N` |
+| `storeTarget_arrayLocal_u64` | 2 | **LIFTED** to `SliceMem` (swap 3) — already `N`-generic where it stood |
+| `normalizeValueForTy_arr_u64` | 2 | **LIFTED** to `SliceMem` (swap 3), genuinely generalized (`arr8` → `arr`, cap 8 → `N`) |
 | `goArr8` | 2 | **NOT lifted — deliberately, and permanently** |
 | the copy-into-observation loop schema | 3 instances | **NOT lifted — nothing shareable left** |
 
@@ -1049,6 +1073,15 @@ because a later session will otherwise re-propose them:
   into a kit module to save six lines would make both headlines read
   through a shared import — defeating the exact rule the definition
   exists to obey. Two identical copies is the correct cost.
+  **SUPERSEDED IN PART by the arc-end designation (`e4202039`), noted
+  here in the audit response (2026-08-15) so the ledger is not read as
+  current:** both copies of `goArr8` now live in
+  `Examples/Targets.lean`, because designating the two headlines forced
+  their whole statement vocabulary into a def-only module the Comparator
+  Challenge can import. The CONCLUSION above still stands — there are
+  still two definitions, one per example namespace, not one shared
+  adapter — and the §11 closure rule is still what forbids merging them;
+  what changed is the file they sit in, re-justified in that commit.
 * **The copy-loop schema has three instances and an EMPTY shareable
   part.** The raw segments (`cp_A0/A1/B1/B2/D/X`) are placement-concrete
   by the measured decision recorded in swap 1 (address-generic segments
@@ -1095,3 +1128,24 @@ family-DETERMINED and the statements merely avoid saying so; making the
 inputs genuine ∀-data is the ghost rung-1 annotation, which remains
 designed and not built. That annotation is the natural next slice — the
 S3 harnesses were shaped to be exactly the form it plugs into.
+
+### Superseded by the arc end, noted in the audit response (2026-08-15)
+
+Two facts recorded above moved at the arc-end designation (`e4202039`),
+so read them with this note attached rather than as current:
+
+* **The statement vocabulary left the example modules.** The designation
+  hoisted the transitive definition closure of the eight designated
+  headlines into the def-only `proofs/GoLeanProofs/Examples/Targets.lean`
+  — including `multiplicity`/`maxMultiplicity` (recorded above as
+  `Pure.lean`'s), `minSpec`/`maxSpec`, both `goArr8` copies, and every
+  pinned harness `Func`. Definitions are verbatim and in their original
+  namespaces, so every reference in this record still resolves; only the
+  file changed.
+* **The hoist's size, counted rather than remembered:** the module holds
+  **20** top-level definitions (19 `def` + one `abbrev`, `setupBody`).
+  `e4202039`'s message says 18 — it counts the two same-named `goArr8`
+  defs once, though they are two distinct definitions in two namespaces
+  and deliberately stay that way (unifying them would change what the
+  two statements say). Both numbers describe the same module; 20 is the
+  one you get by counting the file.

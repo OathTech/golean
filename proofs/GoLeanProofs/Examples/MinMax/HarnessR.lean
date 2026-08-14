@@ -125,8 +125,12 @@ theorem minmaxHarnessR_pin :
 `SliceMem.storeTarget_arrayLocal_u64` in phase-2 slice 1 (2026-08-14)
 once its second consumer landed — `Examples/WordCount/HarnessR.lean`'s
 `words[i] = w[i]` copy loop, whose store target is the same
-ADDRESS-rooted chain — and generalized there from this module's cap-8
-form to arbitrary `N`. The local name survives as a re-export so this
+ADDRESS-rooted chain. CORRECTED (audit response, 2026-08-15): the lift
+did NOT generalize this lemma — it was already stated at an arbitrary
+array length `N` where it stood here, and moved unchanged. The lemma
+generalized by that lift is its neighbour `normalizeValueForTy_arr_u64`
+(`normalizeValueForTy_arr8_u64`, cap 8 → `N`). The local name survives
+as a re-export so this
 module's uses are untouched; it is one of the lift's two fixture
 witnesses (form note §12). -/
 theorem storeTarget_arrayLocal_u64 {σ : ExecState} {a : Addr} {N i : Nat}

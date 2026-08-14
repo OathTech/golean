@@ -116,6 +116,7 @@ byte-identical to the pre-split module:
 | `HarnessSetup` | the harness `Func`, its pin, the entry equation and the setup loop |
 | `HarnessSubject` | the subject phase's configurations and segments at the harness placement |
 | `HarnessRun` | the harness discharges, both loops, the exit family and `wcH_runs` |
+| `HarnessR` | the S3 relational harness `wordcount_harness_r` — its `Func` pin, glue, discharges and the DESIGNATED headline `wordcount_ok` (added to this table in the 2026-08-15 audit response; it is a phase-2 slice-1 shard, not part of the lever-2 split, and it imports this module rather than the other way round — so `import GoLeanProofs.Examples.WordCount` does NOT reach it) |
 
 Declarations that were `private` and are referenced across a shard
 boundary lost that modifier (Lean's `private` is per-module); nothing

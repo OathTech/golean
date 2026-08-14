@@ -70,6 +70,12 @@ example := @GoLean.Examples.Reverse.reverseHarnessFunc
 #guard_msgs in #print axioms GoLean.Examples.Reverse.reverse_readout
 /-- info: 'GoLean.Examples.Reverse.reverse_ok_v1' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Examples.Reverse.reverse_ok_v1
+-- The demoted twin's pin, ADDED in the 2026-08-15 audit response: the
+-- swap re-pinned `reverse_ok_v1` but not its readout, so one of the two
+-- theorems the gallery names as "kept unweakened, with its pin" had no
+-- pin. It has one now.
+/-- info: 'GoLean.Examples.Reverse.reverse_readout_v1' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Examples.Reverse.reverse_readout_v1
 /-- info: 'GoLean.Examples.Reverse.reverse_framed' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Examples.Reverse.reverse_framed
 
