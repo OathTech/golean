@@ -1,0 +1,5 @@
+fatal error: all goroutines are asleep - deadlock!
+
+goroutine 1 [chan receive (nil chan)]:
+main.main()
+	/home/dev/projects/golean/.claude/worktrees/gc-dossiers/docs/evidence/2026-08-15-dossier-r12/exit-deadlock/main.go:5 +0x17

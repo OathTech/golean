@@ -1,0 +1,5 @@
+exit-ok: exit 0
+exit-explicit: exit 7
+exit-panic: exit 2
+exit-race (-race): exit 66
+exit-deadlock: exit 2
