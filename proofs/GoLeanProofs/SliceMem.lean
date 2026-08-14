@@ -252,6 +252,82 @@ theorem storeTarget_slice_u64 {σ : ExecState} {a : Addr}
     valueAsLoc, sliceIndexLoc_ok hcap hi, Bind.bind, Except.bind, storeLoc,
     loadLoc, hlook, harrset, hnorm, pure, Except.pure]
 
+/-! ### The ARRAY-local element store (phase-2 slice 1, 2026-08-14)
+
+The S3 relational harness style returns its observed data as a
+fixed-cap Go ARRAY, so it needs the array-typed-local analogue of
+`storeTarget_slice_u64`: `a[i] = w` where `a` is an array-typed LOCAL,
+not a slice handle. The target is then an ADDRESS-rooted chain
+(`.addr (.base a)`, from the frontend's `.indexAddr (.ref x)`), so
+`indexTargetLoc` takes its `.addr` arm — load the base array,
+bounds-check, yield `Loc.index base i` — and `storeLoc` at a `.index`
+loc `arraySet`s and re-stores at the base, where the declared array
+type re-normalizes. Same tail as `storeTarget_slice_u64`, different
+root.
+
+Promoted from `Examples/MinMax/HarnessR.lean`'s in-module copies (form
+note §12) now that the second consumer exists —
+`Examples/WordCount/HarnessR.lean`'s `words[i] = w[i]` copy loop — and
+generalized from minmax's cap-8 form to arbitrary `N`. Both consumers
+are retrofitted in the promotion commit and are its fixture witnesses;
+minmax keeps a thin cap-8 alias so its own statements are untouched. -/
+
+/-- Normalizing an in-range uint64 list at an array type is the
+identity — the side condition of every array-valued store. -/
+theorem normalizeValueForTy_arr_u64 {σ : ExecState} {N : Nat} {lp : List Int}
+    (hlen : lp.length = N) (hl : ∀ v ∈ lp, 0 ≤ v ∧ v < 2 ^ 64) :
+    normalizeValueForTy σ (.array N (.int .uint64))
+        (.array ⟨lp.map (fun v => .int v .uint64)⟩)
+      = .ok (.array ⟨lp.map (fun v => .int v .uint64)⟩) := by
+  rw [normalizeValueForTy, typeResolutionFuel]
+  simp only [normalizeValueForTyFuel]
+  rw [if_neg (by simp [hlen])]
+  have hlist := normalizeListWith_u64 (σ := σ) (fuel := 1023) (by omega) lp hl
+  simp [hlist, Bind.bind, Except.bind, Functor.map, Except.map]
+
+/-- **The element store through an ADDRESS-rooted index chain**
+(`a[i] = w` on an array-typed `[N]uint64` local). -/
+theorem storeTarget_arrayLocal_u64 {σ : ExecState} {a : Addr} {N i : Nat}
+    {ik : IntKind} {l : List Int} {w : Int}
+    (hlook : Heap.lookup σ.heap (.base a)
+      = some ⟨some (.array N (.int .uint64)),
+              .array ⟨l.map (fun v => .int v .uint64)⟩⟩)
+    (hi : i < l.length) (hn : l.length = N)
+    (hl : ∀ v ∈ l, 0 ≤ v ∧ v < 2 ^ 64) (hw : 0 ≤ w ∧ w < 2 ^ 64) :
+    storeTarget σ (.chain (.addr (.base a)) [.int (i : Nat) ik] [.index])
+        (.int w .uint64)
+      = .ok { σ with
+          heap := Heap.set σ.heap (.base a)
+            ⟨some (.array N (.int .uint64)),
+             .array ⟨(l.set i w).map (fun v => .int v .uint64)⟩⟩ } := by
+  have hsize : (⟨l.map (fun v => .int v .uint64)⟩ : Array GoValue).size
+      = l.length := by simp
+  have hglist : l[i]? = some (l[i]'hi) := List.getElem?_eq_getElem hi
+  have hset : ∀ v ∈ l.set i w, 0 ≤ v ∧ v < 2 ^ 64 := by
+    intro v hv
+    rcases mem_of_mem_set hv with rfl | hv
+    · exact hw
+    · exact hl v hv
+  have hidxn : arrayIndexNat (⟨l.map (fun v => .int v .uint64)⟩ : Array GoValue)
+      ((i : Nat) : Int) = .ok i := by
+    simp only [arrayIndexNat, Bind.bind, Except.bind]
+    rw [if_neg (by omega), Int.toNat_natCast,
+      if_pos (by simpa [hsize] using hi)]
+    rfl
+  have harrset : arraySet (⟨l.map (fun v => .int v .uint64)⟩ : Array GoValue)
+      ((i : Nat) : Int) (.int w .uint64)
+      = .ok ⟨(l.set i w).map (fun v => .int v .uint64)⟩ := by
+    simp only [arraySet, Bind.bind, Except.bind, hidxn]
+    simp [hglist, coerceStoredValue, unorm_of_range hw.1 hw.2,
+      Array.set!, pure, Except.pure]
+  have hnorm : normalizeValueForTy σ (.array N (.int .uint64))
+      (.array ⟨(l.set i w).map (fun v => .int v .uint64)⟩)
+      = .ok (.array ⟨(l.set i w).map (fun v => .int v .uint64)⟩) :=
+    normalizeValueForTy_arr_u64 (by rw [List.length_set]; exact hn) hset
+  simp only [storeTarget, resolveChain, indexTargetLoc, valueAsInt,
+    valueAsLoc, Bind.bind, Except.bind, storeLoc, loadLoc, hlook, hidxn,
+    harrset, hnorm, pure, Except.pure]
+
 /-! ## Slice-value plumbing (consolidation slice 2026-08-13: promoted
 from 4–5 per-example private copies, ledger row P2) -/
 

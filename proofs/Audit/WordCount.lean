@@ -1,5 +1,6 @@
 import Lean
 import GoLeanProofs.Examples.WordCount
+import GoLeanProofs.Examples.WordCount.HarnessR
 
 /-!
 # In-build axiom gate — the WordCount example
@@ -78,6 +79,23 @@ UNCONDITIONALLY. Now a theorem (`wcFamily_maxMult`, no seed hypothesis
 at all) — this is where the no-collision analysis is actually
 consumed — and independently cross-checked against `go run` at seeds
 including `2^64−3/−2/−1`. -/
+-- SPEC-STYLE SWAP (examples phase-2 slice 1 swap 3, 2026-08-14):
+-- `wordcount_ok` is now the S3 RELATIONAL harness `wordcount_harness_r`
+-- (`Examples/WordCount/HarnessR.lean`) — the Go returns the WORDS it
+-- counted alongside the subject's answer, so the postcondition relates
+-- RETURNED DATA (`best = maxMultiplicity words`) and BOTH `wcFamily`
+-- and its closed form `wcFamily_maxMult` leave the statement entirely.
+-- Honesty carried IN the statement: the fixed-cap `hcap : n ≤ 8` (Go's
+-- pass-by-value fragment cannot return unbounded data), and `∃ words`
+-- is still family-DETERMINED — the statement merely avoids saying so.
+-- The teaching point survives the swap and is now load-bearing for
+-- READING it: the claim holds at every choice stream (every map
+-- iteration order) precisely because `maxMultiplicity` is
+-- order-invariant. Fuel bound shipped `218·n + 302` (branch-uniform);
+-- the measured counts are bounded by `206·n + 314` but are NOT affine
+-- (first differences 206, 206, 194 — the family stops adding map
+-- entries after the third word). The previous closed-form headline is
+-- KEPT unweakened as `wordcount_ok_v1` / `wordcount_readout_v1`.
 example := @GoLean.Examples.WordCount.multiplicity
 example := @GoLean.Examples.WordCount.maxMultiplicity
 example := @GoLean.Examples.WordCount.wcFamily
@@ -87,6 +105,11 @@ example := @GoLean.Examples.WordCount.maxCount_total_canonical
 example := @GoLean.Examples.WordCount.wordcount_empty_ok
 example := @GoLean.Examples.WordCount.wordcount_ok
 example := @GoLean.Examples.WordCount.wordcount_readout
+example := @GoLean.Examples.WordCount.goArr8
+example := @GoLean.Examples.WordCount.wcHarnessRFunc
+example := @GoLean.Examples.WordCount.wordcountHarnessR_pin
+example := @GoLean.Examples.WordCount.wordcount_ok_v1
+example := @GoLean.Examples.WordCount.wordcount_readout_v1
 /-- info: 'GoLean.Examples.WordCount.wcFamily_maxMult' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Examples.WordCount.wcFamily_maxMult
 /-- info: 'GoLean.Examples.WordCount.maxCount_total_canonical' depends on axioms: [propext, Classical.choice, Quot.sound] -/
@@ -97,5 +120,9 @@ example := @GoLean.Examples.WordCount.wordcount_readout
 #guard_msgs in #print axioms GoLean.Examples.WordCount.wordcount_ok
 /-- info: 'GoLean.Examples.WordCount.wordcount_readout' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Examples.WordCount.wordcount_readout
+/-- info: 'GoLean.Examples.WordCount.wordcount_ok_v1' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Examples.WordCount.wordcount_ok_v1
+/-- info: 'GoLean.Examples.WordCount.wordcount_readout_v1' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Examples.WordCount.wordcount_readout_v1
 
 end GoLean.Iris.Audit

@@ -870,41 +870,79 @@ func maxCount(words []uint64) uint64 {
 
 <!-- verbatim: Corpus/coverage/exec/examples/wordcount/main.go -->
 ```go
-// wordcount_harness: three-phase harness — setup builds the word
-// family w[i] = seed + i%3 (controllable multiplicities); the
-// returned max count is the observable (returned data).
-func wordcount_harness(n, seed uint64) uint64 {
+// wordcount_harness_r: the S3 RELATIONAL harness (examples phase-2
+// slice 1, 2026-08-14; scoping study §4.7, re-landed by slice 1.5
+// after the `wc_empty_run` cost blocker was retired). Returns the
+// WORDS (as a fixed-cap array, the pass-by-value fragment's
+// unbounded-data workaround) alongside the subject's answer, so the
+// Lean postcondition relates the returned data DIRECTLY —
+// `best = maxMultiplicity words` — with no family function
+// re-describing the setup. Real Go, ghost ladder rung 0.
+func wordcount_harness_r(n, seed uint64) ([wordcountCapN]uint64, uint64) {
 	w := make([]uint64, n)
 	for i := uint64(0); i < n; i++ {
 		w[i] = seed + i%3
 	}
-	return maxCount(w)
+	var words [wordcountCapN]uint64
+	for i := uint64(0); i < n; i++ {
+		words[i] = w[i]
+	}
+	best := maxCount(w)
+	return words, best
 }
 ```
 
-**The claim.** For every `n < 2^63` and every `seed` in the `uint64` domain,
-`wordcount_harness(n, seed)` finishes normally and returns exactly
-`(n+2)/3` — that is `⌈n/3⌉`, the largest number of times any word id occurs
-in the family `w[i] = (seed + i%3) mod 2^64` (the ids cycle through three
-values, so the most frequent one appears `⌈n/3⌉` times — including the short
-cases `n = 0, 1, 2`). There is no side condition on `seed`: the three
-residues cannot collide at any seed, wrap included.
+**The claim.** For every `n ≤ 8` and every `seed < 2^64`,
+`wordcount_harness_r(n, seed)` finishes normally, at every nondeterminism
+choice, and returns two values: a list `words` of length `n` (as the
+fixed-cap array the Go returns) together with `maxMultiplicity words`.
+**The postcondition is a relation over the RETURNED data** — the greatest
+number of times any word id occurs in the very array the program handed
+back. Neither the setup family nor its solved closed form appears in the
+claim.
 
-**This is the entry where `∀ ch : Choices` earns its keep.** The subject
-iterates over a Go **map**, and Go deliberately does not fix map iteration
-order; the machine therefore consumes one nondeterministic choice per
-iteration, and the theorem holds at every one of them — i.e. **at every
-iteration order Go could exhibit**. That forces the specification to be
-order-independent: "the largest multiplicity" is provable, while "the count
-of the first key visited" would not be, since different orders would give
-different answers. The envelope rejects order-dependent claims by
-construction.
+**This is still the entry where `∀ ch : Choices` earns its keep — and after
+the swap that quantifier is load-bearing for READING the claim, not just for
+proving it.** The subject iterates over a Go **map**, and Go deliberately
+does not fix map iteration order; the machine therefore consumes one
+nondeterministic choice per iteration, and the theorem holds at every one of
+them — i.e. at every iteration order Go could exhibit. That is only possible
+because **`maxMultiplicity` is order-invariant**: it is a max-fold over
+multiplicities, and multiplicities do not depend on the order the entries
+were visited. So "the returned count is the greatest multiplicity among the
+returned words" means exactly what it sounds like. Had the specification
+named an order-dependent witness — "the count of the first key visited" —
+the statement would be *unprovable*, since different streams give different
+answers, and the envelope would be rejecting the claim by construction. This
+is the one place where the S3 "relation over returned data" framing could
+mislead a reader if the order-invariance were left implicit, so it is said
+here explicitly.
 
-`n < 2^63` is Go's `int` domain for lengths — again the model's domain, not
-the practical one (unbounded heap, allocation never fails, and this harness
-also grows a map); `seed < 2^64` is just the argument's type.
+Three honesty clauses, none of them small print:
 
-**The specification layer** (`proofs/GoLeanProofs/Examples/WordCount.lean`):
+* **The cap `n ≤ 8` is a toy bound, and it is the price of this style.** Go's
+  pass-by-value fragment cannot return unbounded data, so the harness returns
+  `[wordcountCapN]uint64` with `wordcountCapN = 8` — visible in the Go — and
+  the copy loop and the zero padding exist *only* so the counted words can
+  cross the observation boundary. The theorem carries `n ≤ 8` as a hypothesis
+  rather than hiding it. Note the contrast with minmax: there is no `1 ≤ n`
+  here, because `maxCount` of an empty slice returns `0` rather than
+  panicking, and the corpus pins that case.
+* **`∃ words` is still family-determined.** The witness the proof supplies is
+  `w[i] = (seed + i%3) mod 2^64`; the statement merely does not *say* so.
+  What the swap buys is on the postcondition side: the old headline (kept as
+  `wordcount_ok_v1`) asserts the *solved value* `⌈n/3⌉`, which names the
+  family and its combinatorics inside the claim, while this one asserts
+  `maxMultiplicity words` about observed output — and the closed form
+  `wcFamily_maxMult` is not used in the proof at all. Turning the input into
+  genuine ∀-data needs the ghost rung-1 annotation, which is designed and not
+  built.
+* **Machine idealization**, as elsewhere: entry from an empty heap, an
+  unbounded heap, allocation always succeeds — and this harness also grows a
+  map. The theorem's domain is the model's, not the practical one.
+
+**The specification functions**
+(`proofs/GoLeanProofs/Examples/WordCount/Pure.lean`):
 
 <!-- verbatim: proofs/GoLeanProofs/Examples/WordCount/Pure.lean -->
 ```lean
@@ -918,41 +956,37 @@ def maxMultiplicity (ws : List Int) : Nat :=
   ws.foldl (fun acc v => max acc (multiplicity v ws)) 0
 ```
 
-<!-- verbatim: proofs/GoLeanProofs/Examples/WordCount/Family.lean -->
+Read the second one alongside the order-invariance paragraph above: `max` is
+commutative and idempotent and `multiplicity v ws` does not depend on
+position, which is precisely why the fold is a legitimate specification for a
+loop whose visit order the machine chooses.
+
+**The returned-array adapter** — the whole of the S3 statement vocabulary
+(`proofs/GoLeanProofs/Examples/WordCount/HarnessR.lean`):
+
+<!-- verbatim: proofs/GoLeanProofs/Examples/WordCount/HarnessR.lean -->
 ```lean
-def wcFamily (n seed : Nat) : List Int :=
-  (List.range n).map (fun i => (((seed + i % 3) % 2 ^ 64 : Nat) : Int))
+def goArr8 (xs : List Int) : GoValue :=
+  .array ⟨(xs ++ List.replicate (8 - xs.length) 0).map
+    (fun v => .int v .uint64)⟩
 ```
 
-and the closed form that ties the family to the returned number:
+**The theorem** (`proofs/GoLeanProofs/Examples/WordCount/HarnessR.lean`):
 
-<!-- verbatim: proofs/GoLeanProofs/Examples/WordCount/Family.lean -->
+<!-- verbatim: proofs/GoLeanProofs/Examples/WordCount/HarnessR.lean -->
 ```lean
-theorem wcFamily_maxMult (n seed : Nat) :
-    maxMultiplicity (wcFamily n seed) = (n + 2) / 3 := by
+theorem wordcount_ok (n seed : Nat) (hcap : n ≤ 8) (hseed : seed < 2 ^ 64) :
+    ∃ words : List Int, words.length = n ∧
+      ∃ N : Nat, ∀ fuel : Nat, N ≤ fuel → ∀ ch : Choices,
+        runFunctionWithContextM fuel wordCountLowered.typeDefs.toList
+            wordCountLowered.funcs wcHarnessRFunc
+            #[.int (n : Int) .uint64, .int (seed : Int) .uint64]
+            wordCountLowered.methods ch
+          = .ok { values := #[goArr8 words,
+                              .int (maxMultiplicity words : Nat) .uint64] } := by
 ```
 
-**The theorem** (`proofs/GoLeanProofs/Examples/WordCount.lean`):
-
-<!-- verbatim: proofs/GoLeanProofs/Examples/WordCount.lean -->
-```lean
-theorem wordcount_ok (n seed : Nat) (hn : n < 2 ^ 63)
-    (hseed : seed < 2 ^ 64) :
-    ∃ N : Nat, ∀ fuel : Nat, N ≤ fuel → ∀ ch : Choices,
-      runFunctionWithContextM fuel wordCountLowered.typeDefs.toList
-          wordCountLowered.funcs wordcountHarnessFunc
-          #[.int ((n : Nat) : Int) .uint64, .int ((seed : Nat) : Int) .uint64]
-          wordCountLowered.methods ch
-        = .ok ⟨#[.int (((n + 2) / 3 : Nat) : Int) .uint64]⟩ := by
-```
-
-Two rendering notes, recorded rather than edited (statements are never
-reshaped for the gallery): `⟨#[…]⟩` is the same `Result` record the other
-entries spell `{ values := #[…] }`, written with the anonymous constructor;
-and `((n : Nat) : Int)` is a redundant-looking but harmless coercion of an
-argument that is already a `Nat`.
-
-**Axioms** (pinned in `proofs/Audit.lean`):
+**Axioms** (pinned in `proofs/Audit/WordCount.lean`):
 
 <!-- verbatim: proofs/Audit/WordCount.lean -->
 ```lean
@@ -966,18 +1000,38 @@ argument that is already a `Nat`.
 
 Lean's classical trio; no `sorry`, no native evaluation, no project axioms.
 
-**Fuel bound.** Explicit and affine: `N = 229 + 165·n`.
+**Fuel bound.** Explicit and affine: `N = 218·n + 302`. This is the
+branch-UNIFORM worst case: the range loop is charged 24 steps per iteration
+(the cost when `c > best` fires and `best` is rewritten; the else branch
+costs 12), and the map snapshot is bounded by the word count rather than by
+the three distinct values this particular family produces. **The measured
+step counts are a different number, and the difference is worth stating
+plainly.** They are bounded above by `206·n + 314`, which is tight at
+`n ≤ 3` — but that is an affine *upper bound on the measurements*, not a
+law, because the true counts are **not affine**: the first differences run
+206, 206, then 194, since the family `w[i] = seed + i%3` stops adding new
+entries to the map after the third word and every later word is cheaper.
+There is no single measured law to quote here, so none is quoted; the bound
+the theorem ships is `218·n + 302` and the measurement envelope is
+`206·n + 314`, and neither is presented as the other.
 
 **Status.** `wordcount_readout` is the run-conditioned twin. Beneath the
-harness form sits the stronger input claim `maxCount_total_canonical`: for
-**any** list of word ids (not just the three-residue family), at every
-choice stream, the subject finishes and delivers the maximum multiplicity —
-the ∀-data claim the scalar family does not subsume. `wordcount_empty_ok`
-covers the zero-argument degenerate harness. Supporting material.
+headline sit `wordcount_ok_v1` / `wordcount_readout_v1` — the previous
+headline over `wordcount_harness`, which returns only the scalar and states
+the solved `⌈n/3⌉`; kept unweakened with its corpus rows, since it and the
+S3 form make genuinely different claims rather than one superseding the
+other. Below those, `maxCount_total_canonical` is the stronger *input*
+claim: for **any** list of word ids (not just the three-residue family), at
+every choice stream, the subject finishes and delivers the maximum
+multiplicity — the ∀-data claim no scalar-parameterized harness subsumes.
+`wordcount_empty_ok` covers the zero-argument degenerate harness. Supporting
+material.
 
-**Ground.** Differentially green on 8 corpus rows (distinct / all-same /
-mode-of-three / two-pairs / one / empty) plus the harness at `(7,50)` and
-`(0,9)`; the `(n+2)/3` closed form was additionally cross-checked against
+**Ground.** Differentially green on 11 corpus rows: the distinct /
+all-same / mode-of-three / two-pairs / one / empty drivers, the scalar
+harness at `(7,50)` and `(0,9)`, and the relational harness at
+`harness-r-seven`, `harness-r-eight` and `harness-r-empty`. The `(n+2)/3`
+closed form behind `wordcount_ok_v1` was additionally cross-checked against
 `go run` at seeds `0`, `50`, `2^63−1`, `2^64−3`, `2^64−2`, `2^64−1` before
 any of it was written in Lean.
 

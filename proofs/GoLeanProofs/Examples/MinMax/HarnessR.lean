@@ -173,14 +173,14 @@ theorem minmaxHarnessR_pin :
 
 /-! ## The array-local element store
 
-The one genuinely new below-statement fact the S3 style needs
-(promotion candidate, slice record): `pre[i] = w` on an ARRAY-typed
-local resolves through `indexTargetLoc`'s `.addr` arm — load the base
-array, bounds-check, yield `Loc.index base i` — and `storeLoc` at a
-`.index` loc `arraySet`s and re-stores at the base, where the declared
-array type re-normalizes. Same tail as
-`SliceMem.storeTarget_slice_u64`, different root; kept in-module until
-a second consumer exists (form note §12). -/
+`pre[i] = w` on an ARRAY-typed local. LIFTED to
+`SliceMem.storeTarget_arrayLocal_u64` in phase-2 slice 1 (2026-08-14)
+once its second consumer landed — `Examples/WordCount/HarnessR.lean`'s
+`words[i] = w[i]` copy loop, whose store target is the same
+ADDRESS-rooted chain — and generalized there from this module's cap-8
+form to arbitrary `N`. The local name survives as a re-export so this
+module's uses are untouched; it is one of the lift's two fixture
+witnesses (form note §12). -/
 theorem storeTarget_arrayLocal_u64 {σ : ExecState} {a : Addr} {N i : Nat}
     {ik : IntKind} {l : List Int} {w : Int}
     (hlook : Heap.lookup σ.heap (.base a)
@@ -193,40 +193,8 @@ theorem storeTarget_arrayLocal_u64 {σ : ExecState} {a : Addr} {N i : Nat}
       = .ok { σ with
           heap := Heap.set σ.heap (.base a)
             ⟨some (.array N (.int .uint64)),
-             .array ⟨(l.set i w).map (fun v => .int v .uint64)⟩⟩ } := by
-  have hsize : (⟨l.map (fun v => .int v .uint64)⟩ : Array GoValue).size
-      = l.length := by simp
-  have hglist : l[i]? = some (l[i]'hi) := List.getElem?_eq_getElem hi
-  have hset : ∀ v ∈ l.set i w, 0 ≤ v ∧ v < 2 ^ 64 := by
-    intro v hv
-    rcases mem_set_of_mem hv with rfl | hv
-    · exact hw
-    · exact hl v hv
-  have hidxn : arrayIndexNat (⟨l.map (fun v => .int v .uint64)⟩ : Array GoValue)
-      ((i : Nat) : Int) = .ok i := by
-    simp only [arrayIndexNat, Bind.bind, Except.bind]
-    rw [if_neg (by omega), Int.toNat_natCast,
-      if_pos (by simpa [hsize] using hi)]
-    rfl
-  have harrset : arraySet (⟨l.map (fun v => .int v .uint64)⟩ : Array GoValue)
-      ((i : Nat) : Int) (.int w .uint64)
-      = .ok ⟨(l.set i w).map (fun v => .int v .uint64)⟩ := by
-    simp only [arraySet, Bind.bind, Except.bind, hidxn]
-    simp [hglist, coerceStoredValue, unorm_of_range hw.1 hw.2,
-      Array.set!, pure, Except.pure]
-  have hnorm : normalizeValueForTy σ (.array N (.int .uint64))
-      (.array ⟨(l.set i w).map (fun v => .int v .uint64)⟩)
-      = .ok (.array ⟨(l.set i w).map (fun v => .int v .uint64)⟩) := by
-    rw [normalizeValueForTy, typeResolutionFuel]
-    simp only [normalizeValueForTyFuel]
-    rw [if_neg (by simp [hn])]
-    have hlist := normalizeListWith_u64 (σ := σ) (fuel := 1023) (by omega)
-      (l.set i w) hset
-    simp only [List.map_set] at hlist
-    simp [hlist, Bind.bind, Except.bind, Functor.map, Except.map]
-  simp only [storeTarget, resolveChain, indexTargetLoc, valueAsInt,
-    valueAsLoc, Bind.bind, Except.bind, storeLoc, loadLoc, hlook, hidxn,
-    harrset, hnorm, pure, Except.pure]
+             .array ⟨(l.set i w).map (fun v => .int v .uint64)⟩⟩ } :=
+  GoLean.SliceMem.storeTarget_arrayLocal_u64 hlook hi hn hl hw
 
 /-! ## Statement pieces, environments, continuations -/
 
@@ -538,17 +506,15 @@ theorem lookup_preStore (σ : ExecState) (nv sv : Int) (n : Nat)
   simp [rHeapPreStore, rHeapSu, rHeap0, Heap.lookup, rArr8]
 
 /-- Normalizing an in-range uint64 list at an array type is the
-identity (the `$res0 = pre` store's side condition). -/
+identity (the `$res0 = pre` store's side condition). The thin cap-8
+alias of `SliceMem.normalizeValueForTy_arr_u64`, lifted with the store
+lemma above in phase-2 slice 1. -/
 theorem normalizeValueForTy_arr8_u64 {σ : ExecState} {lp : List Int}
     (hlen : lp.length = 8) (hl : ∀ v ∈ lp, 0 ≤ v ∧ v < 2 ^ 64) :
     normalizeValueForTy σ (.array 8 (.int .uint64))
         (.array ⟨lp.map (fun v => .int v .uint64)⟩)
-      = .ok (.array ⟨lp.map (fun v => .int v .uint64)⟩) := by
-  rw [normalizeValueForTy, typeResolutionFuel]
-  simp only [normalizeValueForTyFuel]
-  rw [if_neg (by simp [hlen])]
-  have hlist := normalizeListWith_u64 (σ := σ) (fuel := 1023) (by omega) lp hl
-  simp [hlist, Bind.bind, Except.bind, Functor.map, Except.map]
+      = .ok (.array ⟨lp.map (fun v => .int v .uint64)⟩) :=
+  GoLean.SliceMem.normalizeValueForTy_arr_u64 hlen hl
 
 def rEpiTail : Cont :=
   .seq [.assign (.var "$res1") (.var "lo"),

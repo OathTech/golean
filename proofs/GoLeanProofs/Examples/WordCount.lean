@@ -141,15 +141,25 @@ set_option maxRecDepth 1000000
 set_option maxHeartbeats 2000000
 set_option linter.unusedSimpArgs false
 
-/-- **The parameterized-harness headline (gap G1 CLOSED, consolidation
-slice 2026-08-13)** — the §11 harness form over `wordcount_harness`:
+/-- **The v1 parameterized-harness headline (gap G1 CLOSED,
+consolidation slice 2026-08-13; DEMOTED to `_v1` by the phase-2 slice-1
+spec-style swap, 2026-08-14).** Kept unweakened, with its corpus rows
+and its axiom pin: the S3 relational headline
+(`Examples/WordCount/HarnessR.lean`'s `wordcount_ok`) states the same
+program family through a DIFFERENT harness, so neither supersedes the
+other. The difference is what the postcondition may mention — this one
+names the family's SOLVED value `⌈n/3⌉` via `wcFamily_maxMult`, the S3
+one relates `maxMultiplicity` to the words the program returned and
+never uses the closed form.
+
+The §11 harness form over `wordcount_harness`:
 for every `n < 2^63` and every uint64 `seed`, past fuel `229 + 165·n`,
 at EVERY nondeterminism-choice stream (every map-iteration order), the
 harness run completes with EXACTLY `⌈n/3⌉ = (n+2)/3` as its returned
 value — the closed form `wcFamily_maxMult` proves for the setup family
 `w[i] = seed + i%3` at every seed (the refuted seed-wrap caveat,
 finding 20). -/
-theorem wordcount_ok (n seed : Nat) (hn : n < 2 ^ 63)
+theorem wordcount_ok_v1 (n seed : Nat) (hn : n < 2 ^ 63)
     (hseed : seed < 2 ^ 64) :
     ∃ N : Nat, ∀ fuel : Nat, N ≤ fuel → ∀ ch : Choices,
       runFunctionWithContextM fuel wordCountLowered.typeDefs.toList
@@ -178,7 +188,7 @@ theorem wordcount_ok (n seed : Nat) (hn : n < 2 ^ 63)
 /-- The D1 run-conditioned twin, derived (`harness_readout_of_total`):
 ANY successful completion, at any fuel and any choice stream, returns
 exactly `⌈n/3⌉`. -/
-theorem wordcount_readout (n seed : Nat) (hn : n < 2 ^ 63)
+theorem wordcount_readout_v1 (n seed : Nat) (hn : n < 2 ^ 63)
     (hseed : seed < 2 ^ 64) :
     ∀ (fuel : Nat) (ch : Choices) (r : Result),
       runFunctionWithContextM fuel wordCountLowered.typeDefs.toList
@@ -187,7 +197,7 @@ theorem wordcount_readout (n seed : Nat) (hn : n < 2 ^ 63)
           wordCountLowered.methods ch
         = .ok r →
       r = ⟨#[.int (((n + 2) / 3 : Nat) : Int) .uint64]⟩ :=
-  harness_readout_of_total (wordcount_ok n seed hn hseed)
+  harness_readout_of_total (wordcount_ok_v1 n seed hn hseed)
 
 
 end GoLean.Examples.WordCount

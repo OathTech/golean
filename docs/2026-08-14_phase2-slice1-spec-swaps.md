@@ -892,3 +892,206 @@ precisely because the spec function does not depend on that order. Say
 so in the entry; it is the teaching point this example exists for, and
 it is the one place where the S3 "relation over returned data" framing
 could mislead if left implicit.
+
+---
+
+## Swap 3 (wordcount S3) — LANDED; SLICE 1 CLOSED (2026-08-14, session 3)
+
+### What landed
+
+`wordcount_ok` is now the S3 relational theorem over
+`wordcount_harness_r` (`Examples/WordCount/HarnessR.lean`, ~2240 lines).
+Statement verbatim:
+
+```lean
+theorem wordcount_ok (n seed : Nat) (hcap : n ≤ 8) (hseed : seed < 2 ^ 64) :
+    ∃ words : List Int, words.length = n ∧
+      ∃ N : Nat, ∀ fuel : Nat, N ≤ fuel → ∀ ch : Choices,
+        runFunctionWithContextM fuel wordCountLowered.typeDefs.toList
+            wordCountLowered.funcs wcHarnessRFunc
+            #[.int (n : Int) .uint64, .int (seed : Int) .uint64]
+            wordCountLowered.methods ch
+          = .ok { values := #[goArr8 words,
+                              .int (maxMultiplicity words : Nat) .uint64] } := by
+```
+
+* **`wcFamily_maxMult` is not used at all** — the closed form `⌈n/3⌉`
+  leaves the claim entirely, which is the swap's whole point. The
+  family survives only as the existential's witness.
+* **NO `1 ≤ n`.** Unlike minmax, `maxCount` of an empty slice returns 0
+  rather than panicking, so the hypotheses are just the cap and the
+  seed's type. Deletion test RUN (`lean_minimal_hypotheses`): both are
+  load-bearing — `hcap` breaks the fuel-bound `omega` AND the
+  `wcPre_length` side condition of the array store; `hseed` breaks the
+  entry equation's `unorm_of_range` on the seed argument.
+* Axioms `[propext, Classical.choice, Quot.sound]` on `wordcount_ok`
+  and `wordcount_readout`, `#guard_msgs`-pinned in `Audit/WordCount.lean`
+  (green); `lean_verify` source scan clean. No `sorry`, no
+  `native_decide`, no project axioms.
+* Dispositions: `wordcount_ok → wordcount_ok_v1`,
+  `wordcount_readout → wordcount_readout_v1`, kept unweakened in
+  `Examples/WordCount.lean` with their corpus rows, both re-pinned.
+* Cost **10 s / 2.0 GiB** (48G-capped, `scripts/proof-costs`) — under
+  the 2.5 GiB bar but ~5× its siblings (reverse and minmax are ~0.4
+  GiB). The honest reason: this module carries ~30 `with_unfolding_all
+  rfl` segments over a **20-cell front containing two 8-element ARRAY
+  cells and a `mapData` cell**, where minmax's 22-cell front is almost
+  all scalars. The expectation of ~0.4 GiB recorded in the handoff was
+  wrong for this example; the number is recorded, not explained away.
+
+### PROGRAM-generic throughout, as designed
+
+Every raw segment is stated over `wSt σ H na`; the pinned program is
+unfolded exactly TWICE (the lowering pin `wordcountHarnessR_pin`, and
+the single `enterFrame` discharge `r_enterFrame_fact` at the
+`maxCount(w)` call). This mattered more here than anywhere: the same
+example's `EmptyRun` was the 50.8 GiB blocker precisely for not doing
+it. The subject phase is an INSTANTIATION of `wcIter_generic` /
+`wcLoop_generic` / `wcRange_generic` at `bArr = 5`, `bMap = 16`,
+`base0 = 20` — the third placement those layers now serve.
+
+### Transcription rate, and the one correction
+
+The handoff did its job: of ~30 raw segments, **all but one closed by
+`with_unfolding_all rfl` on the first attempt**. The single failure was
+not a step count but an ADDRESS BINDING: `r_prologue_rawR`'s output
+front ties cell 0 to `((n : Nat) : Int)` while its input `rHeapMFrame`
+had a free `nv`, so the two could not be definitionally equal. Fixed by
+instantiating the lemma at `nv := ((n : Nat) : Int)`, exactly as the
+`wordcount_harness` layer's `σWCallg` already does. Divergence guard:
+not triggered anywhere.
+
+Two step counts differ from the minmax template and are recorded so the
+next S3 harness does not copy the wrong ones:
+
+| segment | minmax | wordcount r | why |
+|---|---|---|---|
+| copy exit → drained `callArgsK` | 15 | **13** | minmax declares `lo`+`hi` before its call, this declares only `best` |
+| epilogue around the array store | 46 / 1 / 24 | **17 / 1 / 15** | minmax's frame exit carries two scalar results, this one |
+
+The subject prologue (frame entry → counting head) is **1 + 51**: the
+conditioned `StepKit.stepFn_call_enter` step, then 51 program-free
+steps. Setup loop 53 then 57 per iteration, copy loop 49 then 53 — both
+exactly as the handoff measured.
+
+### THE FUEL BOUND — the handoff's number could NOT be shipped
+
+The handoff said to quote `206·n + 314`. That number is real but it is
+**a bound on the MEASUREMENTS, not a provable bound for this proof**,
+and the two must not be conflated. What the induction actually yields is
+
+```
+53 (entry) + 25 + 57n (setup) + 39 + 25 + [53n + 65] (copy+call+prologue)
+  + 27 + [84n + 23] (counting) + [24·m + 1] (range) + 44 (exit)
+```
+
+with `m = (countsList ws).length ≤ n`, i.e. **`N = 218·n + 302`** — which
+is what shipped. It exceeds `206·n + 314` for `n ≥ 2`. Two sources of
+slack, both branch-uniform worst cases:
+
+* `wcRange_generic` charges **24** steps per range iteration (the `then`
+  branch, where `best` is rewritten); the `else` branch costs 12. At
+  `n = 2` the run takes 37 range steps where the bound charges 49 —
+  exactly the 12-step gap.
+* the snapshot length is bounded by the word count (`m ≤ n`), not by the
+  **three** distinct values this family produces. Bounding `m ≤ 3`
+  instead gives `194·n + 374`, which is tighter for `n ≥ 6` and looser
+  for `n ≤ 4`; neither dominates, and neither equals `206·n + 314`.
+
+So the record is: **shipped `218·n + 302`; measurement envelope
+`206·n + 314`, tight at `n ≤ 3`; and there is NO measured law** — the
+true counts are not affine (first differences 206, 206, 194, because
+the family stops adding map entries after the third word). All three
+facts are stated in the theorem docstring and the gallery, and none is
+presented as another. This is the same shape as swap 2's
+`202n + 218` vs `186n + 234`, and the same resolution.
+
+### Promotion (form note §12): the two staged lifts SHIPPED
+
+Landed in the commit immediately before their second consumer, in one
+series, so the §12 justification is true in the tree at every point:
+
+* **`SliceMem.storeTarget_arrayLocal_u64`** — the ADDRESS-rooted
+  `a[i] = w` store on an array-typed local, generalized from minmax's
+  cap-8 form to arbitrary `N`. Consumers: minmax's `pre[i] = s[i]` and
+  wordcount's `words[i] = w[i]` (the same `.indexAddr (.ref x)` chain).
+* **`SliceMem.normalizeValueForTy_arr_u64`** — the array-normalization
+  side condition, `8` generalized to `N`. Consumers: both S3 epilogue
+  `$res0 := <array>` stores.
+
+Minmax was retrofitted in the same commit and is the fixture witness;
+its local names survive as one-liners over the kit lemmas, so its
+statements and pins are untouched. The `mem_of_mem_set` privacy gotcha
+the previous session flagged is a non-issue once the lemma lives IN
+`SliceMem` (it uses the in-file private directly).
+
+Also promoted earlier this slice and now at THREE consumers each:
+`StepKit.stepFn_call_enter` (EmptyRun + reverse + wordcount) and
+`StepKit.stepFn_makeSlice_u64_step` (reverse + minmax + wordcount).
+
+### Promotion ledger — FINAL STATE for slice 1
+
+| candidate | consumers | disposition |
+|---|---|---|
+| `stepFn_call_enter` | 3 | **LIFTED** to `StepKit` (swap 1) |
+| `stepFn_makeSlice_u64_step` | 3 | **LIFTED** to `StepKit` (swap 2) |
+| `storeTarget_arrayLocal_u64` | 2 | **LIFTED** to `SliceMem` (swap 3), generalized to `N` |
+| `normalizeValueForTy_arr_u64` | 2 | **LIFTED** to `SliceMem` (swap 3), generalized to `N` |
+| `goArr8` | 2 | **NOT lifted — deliberately, and permanently** |
+| the copy-into-observation loop schema | 3 instances | **NOT lifted — nothing shareable left** |
+
+The two non-lifts are decisions, not deferrals, and both are recorded
+because a later session will otherwise re-propose them:
+
+* **`goArr8` must stay duplicated.** It is STATEMENT vocabulary, and
+  §11's closure rule is that a headline must be readable from the
+  example's own module over base definitions. Hoisting a 3-line adapter
+  into a kit module to save six lines would make both headlines read
+  through a shared import — defeating the exact rule the definition
+  exists to obey. Two identical copies is the correct cost.
+* **The copy-loop schema has three instances and an EMPTY shareable
+  part.** The raw segments (`cp_A0/A1/B1/B2/D/X`) are placement-concrete
+  by the measured decision recorded in swap 1 (address-generic segments
+  cannot close by `rfl` at all when nearly every step touches a cell —
+  ~10× the source for a layer that already costs seconds). What remains
+  is a ~60-line composition per example whose pure layer needed nothing
+  new in any of the three cases — reverse reused `suList`, minmax
+  reused `setupList`, wordcount reused `wcFamily`/`wcFamilyZ_range`. A
+  generic layer here would cost more in E-form hypotheses than the three
+  transcriptions it replaces. Closed.
+
+### SLICE 1 CLOSURE
+
+All three spec-style swaps have landed. `reverse_ok` is the S1
+copy-relational headline over `reverse_harness_v`, `minmax_ok` and
+`wordcount_ok` are the S3 relational headlines over `minmax_harness_r`
+and `wordcount_harness_r`; in every case the postcondition now relates
+RETURNED DATA and the setup family has left the statement (for
+wordcount, so has the solved closed form). All three old headlines are
+kept unweakened as `_v1` pairs with their corpus rows and axiom pins —
+nothing was superseded, weakened, or deleted, and no corpus case was
+edited or skipped. The guardrail half shipped first, as the repo's own
+rule requires: every harness was real, compiled, differentially green
+Go before a line of its proof existed.
+
+Totals: three new proof modules — `Reverse/HarnessV.lean` (~1050
+lines, 4 s / ≤0.4 GiB), `MinMax/HarnessR.lean` (~1490 lines, 4 s / 0.4
+GiB), `WordCount/HarnessR.lean` (~2240 lines, 10 s / 2.0 GiB) — all
+PROGRAM-generic, all axiom-clean at Lean's classical trio, all three
+deletion-tested with every binder load-bearing, all `#guard_msgs`-pinned
+in their Audit shards. Four kit lemmas promoted under §12, each with its
+consumers retrofitted in the promotion commit; two promotion candidates
+closed as permanent non-lifts with reasons. `scripts/ci` PASS per commit
+(the corpus is untouched by the proof half, so the full 1560-case record
+recorded at `cba113c` stands); `scripts/render-gallery` green, with all
+three entries re-rendered — including wordcount's order-invariance
+paragraph, which the swap made load-bearing for READING the claim rather
+than merely for proving it. `scripts/comparator-judge` is not owed: none
+of the three headlines is on the statement-TCB designated list.
+
+The honest limits carried forward, unchanged and unhidden: the S3 cap
+`n ≤ 8` is a toy bound visible in the Go; `∃ pre` / `∃ words` are still
+family-DETERMINED and the statements merely avoid saying so; making the
+inputs genuine ∀-data is the ghost rung-1 annotation, which remains
+designed and not built. That annotation is the natural next slice — the
+S3 harnesses were shaped to be exactly the form it plugs into.
