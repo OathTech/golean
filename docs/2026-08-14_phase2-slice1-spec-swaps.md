@@ -777,3 +777,118 @@ ARE the raw segments at the new layout. So swap 3 decomposes as:
 
 Probe left in place: `.tmp/s1/wcprobe.lean` (same `trace`/`dump`
 interface as the reverse and minmax probes).
+
+---
+
+## Swap 3 attempt (2026-08-14, session 2 part 3): STOPPED before building
+
+Directed to continue; I read the whole target layer, staged the two
+lifts, measured the job, and then **stopped without building** because
+the honest completion estimate exceeded the budget left. Nothing
+half-built shipped. What the attempt bought is below — swap 3 is now
+scoped to the individual theorem.
+
+### The lift was staged and then REVERTED — read this before redoing it
+
+`storeTarget_arrayLocal_u64` and `normalizeValueForTy_arr_u64` were
+written into `SliceMem` (generalized from minmax's cap-8 form to
+arbitrary `N`), minmax was retrofitted to the kit names, and both built
+green. **It was then reverted**, because the §12 rule that justifies
+the lift is TWO consumers, and wordcount — the second consumer — did
+not land. A lift whose second consumer is hypothetical is exactly the
+anti-pattern the active-abstraction loop exists to prevent, and the
+justification would have been false in the tree.
+
+The work is reproducible in minutes: hoist the two theorems verbatim
+out of `Examples/MinMax/HarnessR.lean` into `SliceMem` (just before the
+"Slice-value plumbing" section), generalize the array-normalization
+lemma's `8` to `N`, leave a thin cap-8 alias in the minmax module, and
+**land it in the same commit as the wordcount consumer.** Note
+`mem_of_mem_set` is `private` in `SliceMem` — the lifted store lemma
+uses it, which is fine in-file but is why the lemma cannot simply live
+in an example module without also un-`private`ing that helper (minmax
+uses the public `mem_set_of_mem` instead).
+
+### `wordcount_harness_r`'s `Func` — dumped, so it need not be re-probed
+
+`$c11` is the slice temp; results are `#[$res0 : [8]uint64, $res1 :
+uint64]`; the setup body is `wordcountHarnessFunc.shBody`'s shape with
+`.add (.var "seed") (.mod (.var "i") (.intLit 3 .uint64))`; the copy
+store target is `.addr (.indexAddr (.ref "words") (.var "i"))` — a
+`.ref`, i.e. the same ADDRESS-rooted chain minmax's `pre[i]` uses, so
+`storeTarget_arrayLocal_u64` applies unchanged; the call is
+`.call #[.var "best"] ⟨"maxCount"⟩ #[.var "w"]`; the epilogue is
+`$res0 := words; $res1 := best; return`.
+
+### The address remap, old harness → r-harness
+
+`wordcount_harness`'s layer uses front cells 0–15 with the symbolic
+region from 16. The r-harness uses front cells 0–19, symbolic from 20:
+
+| old | new | cell |
+|---|---|---|
+| 0,1 | 0,1 | `n`, `seed` |
+| — | 2 | `$res0` (`[8]uint64`) — NEW |
+| 2 | 3 | the scalar result (now `$res1`) |
+| 3,4,5 | 4,5,6 | handle, backing, `w` |
+| 6,7 | 7,8 | setup `i`, setup flag |
+| — | 9,10,11 | `words` array, copy `i`, copy flag — NEW |
+| 8 | 12 | the call temp (now named `best`) |
+| 9,10 | 13,14 | `maxCount`'s `words` param, its `$res0` |
+| 11,12,13 | 15,16,17 | `$c0` map handle, `mapData`, `counts` |
+| 14,15 | 18,19 | the counting loop's `int` counter, its flag |
+| base0 16 | base0 20 | the symbolic dead region |
+
+So the generic instantiations become
+`wcLoop_generic (σR …) ws 5 16 20 …` (was `4 12 16`) and
+`wcRange_generic envRBR kRR (σR …) … 20 …` (was `16`).
+
+### The exact work list (this is the whole job)
+
+1. The two lifts, WITH this consumer, in one commit.
+2. Harness glue at the new layout — entry (10 / makeSlice / 42), the
+   setup loop (25 / 29 / body / store / 5, **53 then 57 per iteration**
+   because of the `%3`), the setup exit (39 → copy head), the copy loop
+   (25 / 29 / 16 / 1 / 1 / 1 / 5 — transcribes from minmax's `cp_*`
+   verbatim modulo addresses), the `maxCount` `enterFrame` via
+   `StepKit.stepFn_call_enter`.
+3. Re-state ~20 subject segments at the new front — the shapes are
+   `HarnessSubject.lean`'s `wcH_segA0/A1/cmp/C1…C11/X0/X0b/X0c`, all
+   one-line `with_unfolding_all rfl` except `C3`/`C6`/`X0c`, which are
+   composed from `StepKit`'s `stepFn_storeK_nil`/`stepFn_seqn_splice`/
+   `stepFn_seq_pop` glue.
+4. Discharge the two generic layers' hypotheses. `wcLoop_generic` takes
+   nine: `hIter` (the composite counting iteration — `HarnessRun`'s
+   `wcH_count_iter`, the single biggest piece at ~140 lines), `hA1`,
+   `hX0`, `hInitBest`, `hX0b`, `hStBest`, `hX0c`, `hSnap`,
+   `countsList_norm`. `wcRange_generic` takes six: `hEnvBest` (a `rfl`),
+   `hPick`, `hR4b`, `hVarC`, `hVarBest`, `hStB`. All of these exist at
+   the old layout in `HarnessRun.lean` and port by address.
+5. The exit phase (`frontXH`/`σXH` and `X1H`/`X2aH`/`X2bH`/`X2cH`) plus
+   the array-store split for `$res0 := words` — the SAME conditioned
+   step minmax needed, because a symbolic-array value cannot
+   re-normalize definitionally.
+6. Statement layer: post `best = maxMultiplicity words` over the
+   RETURNED array (`Pure.lean`'s `maxMultiplicity`), a `goArr8`-style
+   adapter, `wcFamily` OUT of the statement (`Family.lean`'s
+   `wcFamily_maxMult : maxMultiplicity (wcFamily n seed) = (n+2)/3` is
+   the v1 closed form and is deliberately NOT needed by the S3 claim —
+   that is the swap's whole point), `wordcount_ok/_readout → _v1`.
+7. Bound: **`206·n + 314`**, quoted as an affine upper bound, with the
+   non-affine finding stated (first differences 206, 206, 194 — the
+   family stops adding map entries after the third word). Never present
+   it as "the measured law".
+
+Honest size: ~1200–1400 lines, i.e. the same order as the minmax module
+built this session. It is a session's work, not a slice-of-a-session's.
+
+### A gallery obligation to carry into swap 3
+
+The claim will be `best = maxMultiplicity words` over RETURNED data,
+and `maxMultiplicity` must be ORDER-INVARIANT for that to mean what a
+reader thinks it means — the map-range loop visits entries in a
+nondeterministic order, and the theorem holds at EVERY choice stream
+precisely because the spec function does not depend on that order. Say
+so in the entry; it is the teaching point this example exists for, and
+it is the one place where the S3 "relation over returned data" framing
+could mislead if left implicit.
