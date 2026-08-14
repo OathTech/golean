@@ -1,0 +1,13 @@
+index-oob       | runtime.Error | runtime error: index out of range [5] with length 3
+slice-bounds    | runtime.Error | runtime error: slice bounds out of range [:9] with capacity 3
+nil-map-write   | runtime.Error | assignment to entry in nil map
+nil-deref       | runtime.Error | runtime error: invalid memory address or nil pointer dereference
+iface-conv      | runtime.Error | interface conversion: interface {} is int, not string
+div-zero        | runtime.Error | runtime error: integer divide by zero
+make-chan-neg   | runtime.Error | makechan: size out of range
+make-slice-neg  | runtime.Error | runtime error: makeslice: len out of range
+close-nil       | runtime.Error | close of nil channel
+close-closed    | runtime.Error | close of closed channel
+send-closed     | runtime.Error | send on closed channel
+panic-nil       | runtime.Error | panic called with nil argument
+sync-string-box | plain string  | sync: negative WaitGroup counter
