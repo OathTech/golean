@@ -17,6 +17,8 @@ record in the campaign log (state, blocker, pickup plan), and report.
 
 ## DEFINITION OF DONE (all of the following, at the lane tip)
 
+0. **G0 met**: the brick-wp review recorded and the named preemptive
+   kit builds landed per G0's own checklist.
 1. **G1 met**: `docs/verified-examples.md` has ≥ 20 COMPLETE entries.
 2. **G2 met**: ≥ 3 of the named extensions E1–E4 landed, each
    guardrails-first, fail-closed, with ≥ 1 COMPLETE consuming entry.
@@ -33,6 +35,57 @@ record in the campaign log (state, blocker, pickup plan), and report.
    designation candidates for new headlines listed, the merge request
    drafted. THE AUDIT SIGN-OFF AND THE MERGE ARE THE USER'S — never
    part of the goal.
+
+## G0 — the opening kit phase (FIRST; user-directed 2026-08-15)
+
+Review the brick-wp promotion wave (deps/brick-wp @ `52f8a6e`, commits
+`944c555..52f8a6e` — READ-ONLY, trust-tools rule) and build the
+forecastable-leverage kit PREEMPTIVELY. The consumer-driven rule is not
+suspended — it is satisfied differently: at campaign start the
+consumers are SCHEDULED (G1's enumerated candidate list), so every
+preemptive lift must name its ≥ 2 chartered consumers, and its fixture
+obligation is discharged by retrofitting ≥ 2 EXISTING examples where
+the pattern already occurs (real consumers today). A lift with neither
+landed nor chartered consumers stays forbidden.
+
+G0 is done when:
+
+1. **The review mapping is recorded** (a dated docs/ note): each
+   promotion-wave pattern mapped to exists / build-now / not-applicable
+   with reasons, in the slice-2 mapping's format.
+2. **The named preemptive builds are landed**, each with chartered
+   consumers listed + existing-consumer retrofits as fixtures:
+   - **P5 setup-loop induction schema** (reopened: the ledger closed it
+     "reopenable on the repeated-instantiation grind signal" — a
+     13-example campaign IS that signal, in advance): the
+     family-backing setup induction stated once, generically;
+     chartered consumers = every array-setup candidate; retrofit ≥ 2
+     shipped examples.
+   - **MapMem promotion**: the WordCount map executable-fact family
+     into a shared module (histogram + fibonacci-memo are chartered
+     consumers; wordcount is a landed one — that is 3).
+   - **Entry-equation macro completion**: retrofit the 5 remaining
+     manual flat-state modules; extend to the program-generic shape
+     via the recorded show-bridge (slice-2 record §3). 10 total
+     consumers, all landed.
+   - Judgment call for anything further the review surfaces, under the
+     same chartered-consumer test.
+   - **The rollback half of every lift** (the P6 pattern): after each
+     lift, example-local copies it covers are DELETED or reduced to
+     delegations in the same commit series — a lift is not done while
+     its duplicates survive.
+3. **The kit surface gains axiom pins** (the promotion wave's audit
+   wiring, adapted): every public StepKit/SliceMem/MapMem/FuelMeasure
+   lemma and the macro's emitted-theorem fixtures get `#print axioms`
+   `#guard_msgs` pins in an Audit shard — the kit becomes an audited
+   surface like the examples.
+4. **The flagship rule is adopted** (discharged inside G1): the FIRST
+   new G1 example is the kit's integration exercise — proven
+   end-to-end using kit + macro only, no hand-rolled segment where a
+   kit form exists; deviations recorded as kit gaps and fed back.
+
+G0 measures: line/elaboration deltas per retrofit (the §12 standard),
+recorded in the campaign log.
 
 ## G1 — the gallery grows to twenty
 
