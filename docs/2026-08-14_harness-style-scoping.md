@@ -756,6 +756,20 @@ boundary); binsearch's `findSpec pre t` form WAITS at rung 1.
 5. **Capstone**: confirm the safety-first split (conditioned Agreement
    form as the raft target; `Fair` deferred) and fixed-3/5 clusters
    before quantified `num_threads`.
+   **RULED (user, 2026-08-14): safety-first confirmed, no fairness for
+   now — "but we want to make decisions that don't preclude it later."
+   Non-preclusion, concretely: (a) the safety form stays stated over
+   the SAME ∀ch streams a future `Fair : Choices → Prop` would
+   restrict, so the liveness upgrade is `∀ch, Fair ch → …` — a
+   strengthened hypothesis on the existing quantifier, never a new
+   statement language; (b) REQUIREMENT ON THE CONCURRENCY RE-ENVELOPE
+   ARC (recorded here as a design input): when the `Choices`
+   representation is reshaped for the widened envelope, it must retain
+   enough structure to DEFINE fairness — scheduling picks identifiable
+   as such, and the schedulable-set at each pick recoverable (a
+   fairness predicate must be able to say "every continuously
+   schedulable goroutine is eventually picked"). A stream of bare
+   naturals with no site structure would preclude this; do not flatten.
 6. **Frontend-arc inputs recorded here**: the short-circuit
    call-hoisting quarantine (S1 ergonomics), `fmt.Sprint` support
    (would make S4/debug harnesses idiomatic), non-integer `--arg-int`
