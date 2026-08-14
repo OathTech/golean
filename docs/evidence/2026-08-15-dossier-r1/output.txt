@@ -1,0 +1,17 @@
+== width-witness, native (linux/amd64) ==
+strconv.IntSize: 64
+unsafe.Sizeof(int(0)): 8
+unsafe.Sizeof(uint(0)): 8
+unsafe.Sizeof(uintptr(0)): 8
+bits in ^uint(0): 64
+== overflow-acceptance, native (linux/amd64) ==
+4611686018427387904
+== overflow-acceptance, GOARCH=386 (compile only) ==
+# command-line-arguments
+docs/evidence/2026-08-15-dossier-r1/overflow-acceptance/main.go:6:17: cannot use 1 << 62 (untyped int constant 4611686018427387904) as int value in constant declaration (overflows)
+(exit 1)
+== width-witness, GOARCH=386 build + run attempt ==
+(build exit 0 — cross-compilation succeeds; run attempt: no output,
+exit 133 = SIGTRAP: this host cannot execute linux/386 binaries. The
+32-bit RUNTIME datum is NOT-OBTAINED; the 32-bit ACCEPTANCE datum is
+obtained above via the GOARCH=386 compile rejection.)
