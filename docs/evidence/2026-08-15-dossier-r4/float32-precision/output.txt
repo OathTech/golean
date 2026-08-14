@@ -1,0 +1,3 @@
+a          = 1.6777216e+07
+a + 1 + 1  = 1.6777216e+07
+per-op rounding (b == a): true
