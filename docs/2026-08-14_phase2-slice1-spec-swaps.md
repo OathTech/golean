@@ -648,3 +648,132 @@ rules (STATEMENT-level, so not a kit module), plus the readback check —
 must line `goArr8 (mmFamily n seed)` up with
 `mmFamily n seed ++ List.replicate (8 - n) 0`; `mmFamily_length` is
 what makes `8 - (mmFamily n seed).length` reduce to `8 - n`.
+
+---
+
+## Proof half — session 2, part 2: swap 2 LANDED, swap 3 handed off
+
+### Swap 2 (minmax S3) — landed
+
+`minmax_ok` is now the relational theorem over `minmax_harness_r`
+(`Examples/MinMax/HarnessR.lean`, ~1450 lines). Statement verbatim:
+
+```lean
+theorem minmax_ok (n seed : Nat) (h1 : 1 ≤ n) (hcap : n ≤ 8)
+    (hseed : seed < 2 ^ 64) :
+    ∃ pre : List Int, pre.length = n ∧
+      ∃ N : Nat, ∀ fuel : Nat, N ≤ fuel → ∀ ch : Choices,
+        runFunctionWithContextM fuel minMaxLowered.typeDefs.toList
+            minMaxLowered.funcs mmHarnessRFunc
+            #[.int (n : Int) .uint64, .int (seed : Int) .uint64]
+            minMaxLowered.methods ch
+          = .ok { values := #[goArr8 pre,
+                              .int (minSpec pre) .uint64,
+                              .int (maxSpec pre) .uint64] } := by
+```
+
+* **Fuel bound shipped: `202·n + 218`** — the branch-uniform worst case,
+  per the coordinator's default. The measured `186·n + 234` is also a
+  true bound (at most one `if` fires per iteration since `lo ≤ hi`) but
+  needs that invariant threaded through the loop induction, which buys
+  nothing under `∃N`. First attempt with the uniform bound went through
+  without a fight, so the tighter one was not pursued. The gallery says
+  which is shipped and which is measured.
+* Axioms `[propext, Classical.choice, Quot.sound]` on `minmax_ok` and
+  `minmax_readout`, `#guard_msgs`-pinned. Deletion test RUN
+  (`lean_minimal_hypotheses`): all four binders load-bearing; `hcap` is
+  doubly so — it breaks the fuel-bound discharge AND the `preList_full`
+  readback that lines the zero padding up with `goArr8`.
+* Dispositions: `minmax_ok → minmax_ok_v1`,
+  `minmax_readout → minmax_readout_v1`, kept unweakened and re-pinned.
+* Cost 4 s / 0.4 GiB (24G-capped single-module rebuild), same as the
+  reverse swap, on a 22-cell heap with three loops.
+* **New machinery, kept in-module on purpose**:
+  `storeTarget_arrayLocal_u64` (the address-rooted `pre[i] = w` store —
+  the scoping study's predicted "one new fact family") and
+  `normalizeValueForTy_arr8_u64`. Neither is lifted: each has exactly
+  ONE consumer, and §12 forbids a lift without two. The second consumer
+  is wordcount, so the lift is the first thing swap 3 should do.
+* **Promotion shipped**: `stepFn_makeSlice_u64_step` into `StepKit`,
+  now that the reverse and minmax S-layers both need it; both
+  retrofitted in the same commit as fixture witnesses.
+* One shape worth remembering: the `$res0 = pre` epilogue store CANNOT
+  reduce definitionally, because re-normalizing an array whose contents
+  are a symbolic list is stuck. So the exit is `46 + 1 + 24` with the
+  store conditioned on `storeTarget_addr` + the array-normalization
+  fact, not one 71-step `rfl`. Any S3 harness returning an array will
+  hit the same split.
+
+### Swap 3 (wordcount S3) — NOT built; measured and scoped
+
+Deliberate stop, not a grind: the wordcount subject layer is ~1800
+lines across `HarnessSetup`/`HarnessSubject`/`HarnessRun` and the swap
+is a full session of its own. Everything below is measured this
+session so the next one starts transcription-bound.
+
+**Address layout (probe, `n = 4`, `nextAddr = 32`):** 0 = `n`,
+1 = `seed`, 2 = `$res0` (`[8]uint64`), 3 = `$res1`, 4 = `$c…` (handle),
+5 = backing (`[n]uint64`), 6 = `w`, 7 = setup `i`, 8 = setup flag,
+9 = `words` (`[8]uint64`), 10 = copy `i`, 11 = copy flag,
+12 = the harness's `best`, 13 = `maxCount`'s `words` param,
+14 = its `$res0`, 15/16 = the `counts` map handle and its `mapData`,
+18 = the counting loop's `int` counter, 19 = its flag, then TWO cells
+per counted word (21/23/25/27 at `n = 4`) and the range loop's cells at
+28–31. The allocator GROWS during the counting loop — that is the
+structural difference from reverse/minmax and the reason the subject
+layer is generic in `na` to begin with.
+
+**Phase map (probe, `n = 4`, seed 7):** entry 0→53 (identical shape to
+minmax: 10 + makeSlice + 42); setup loop heads 53/106/163/220/277 —
+**53 then 57 per iteration** (the `seed + i%3` formula costs 4 more
+than minmax's `seed + i`); setup exit test 306 → copy loop head 345
+(39 steps, same as minmax — `var words` is one `.initialization`);
+copy loop heads 345/394/447/500/553 — **49 then 53, byte-identical in
+shape to minmax's copy loop**, so `cp_*` transcribes directly;
+copy exit → `CALL maxCount` at 593; `maxCount` counting-loop heads
+647/727/811/895/979; break 1011; the map-range loop; two returns
+(1094, 1123); terminal 1126.
+
+**Step law — NOT affine, and the reason matters.** Measured at seed 7:
+
+| n | 1 | 2 | 3 | 5 | 8 |
+|---|---|---|---|---|---|
+| steps | 520 | 726 | 932 | 1320 | 1902 |
+
+First differences are 206, 206, then 194 — because the family
+`w[i] = seed + i%3` stops adding NEW map entries after the third word,
+so the per-element cost drops once the map stops growing. **`206·n +
+314` is a valid affine upper bound** (checked at all five points) and
+is the number to ship; do not quote a "measured law", because there
+isn't a single one.
+
+**The reuse plan — this is an INSTANTIATION job, not a re-derivation.**
+`WordCount/CountGeneric.lean`'s `wcLoop_generic` and
+`RangeGeneric.lean`'s `wcRange_generic` are already genuinely
+placement-generic: parameterized over a state family
+`S : List (Int × Nat) → Int → Bool → Heap → Nat → ExecState`, base
+addresses (`bArr`/`bMap`/`base0`), the head/cmp/exit continuations and
+the env families, with ~15 hypotheses to discharge. Those hypotheses
+ARE the raw segments at the new layout. So swap 3 decomposes as:
+
+1. lift `storeTarget_arrayLocal_u64` + `normalizeValueForTy_arr8_u64`
+   into `SliceMem` (second consumer now exists — this is the promotion
+   the ledger has been waiting on), retrofitting minmax in the same
+   commit;
+2. transcribe the harness glue at the new layout — entry (10/1/42),
+   setup loop (25/29/…/53/57), copy loop (25/29/16/1/1/1/5, verbatim
+   from minmax modulo addresses), the `maxCount` `enterFrame` via
+   `StepKit.stepFn_call_enter`, and the epilogue with the SAME
+   array-store split minmax needed;
+3. discharge `wcLoop_generic`/`wcRange_generic`'s hypotheses at that
+   layout — the bulk of the work, and the part that is genuinely
+   mechanical because the inductions themselves are already proved;
+4. post `best = maxMultiplicity words` over the RETURNED array
+   (`Pure.lean`'s `maxMultiplicity`, `Family.lean`'s
+   `wcFamily_maxMult : maxMultiplicity (wcFamily n seed) = (n+2)/3` is
+   the v1 closed form and is NOT needed by the S3 statement — that is
+   the whole point of the swap), `goArr8`-style adapter for the
+   returned words, `wordcount_ok/_readout → _v1`.
+
+Probe left in place: `.tmp/s1/wcprobe.lean` (same `trace`/`dump`
+interface as the reverse and minmax probes).
