@@ -275,7 +275,7 @@ theorem gcd_ok (a b : Nat) (ha : a < 2 ^ 64) (hb : b < 2 ^ 64) :
 
 **Axioms** (pinned in `proofs/Audit.lean`):
 
-<!-- verbatim: proofs/Audit.lean -->
+<!-- verbatim: proofs/Audit/Gcd.lean -->
 ```lean
 /-- info: 'GoLean.Examples.Gcd.gcd_ok' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 ```
@@ -375,7 +375,7 @@ theorem reverse_ok (n seed : Nat) (hn : n < 2 ^ 63) (hseed : seed < 2 ^ 64) :
 
 **Axioms** (pinned in `proofs/Audit.lean`):
 
-<!-- verbatim: proofs/Audit.lean -->
+<!-- verbatim: proofs/Audit/Reverse.lean -->
 ```lean
 /-- info: 'GoLean.Examples.Reverse.reverse_ok' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 ```
@@ -495,7 +495,7 @@ theorem minmax_ok (n seed : Nat) (h1 : 1 ≤ n) (hn : n < 2 ^ 63)
 
 **Axioms** (pinned in `proofs/Audit.lean`):
 
-<!-- verbatim: proofs/Audit.lean -->
+<!-- verbatim: proofs/Audit/MinMax.lean -->
 ```lean
 /-- info: 'GoLean.Examples.MinMax.minmax_ok' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 ```
@@ -614,7 +614,7 @@ theorem search_ok (n seed : Nat) (t : Int)
 
 **Axioms** (pinned in `proofs/Audit.lean`):
 
-<!-- verbatim: proofs/Audit.lean -->
+<!-- verbatim: proofs/Audit/BinSearch.lean -->
 ```lean
 /-- info: 'GoLean.Examples.BinSearch.search_ok' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 ```
@@ -717,7 +717,7 @@ quantifiers are the scalars `(n, seed)`.
 
 **The family** (`proofs/GoLeanProofs/Examples/InsertionSort.lean`):
 
-<!-- verbatim: proofs/GoLeanProofs/Examples/InsertionSort.lean -->
+<!-- verbatim: proofs/GoLeanProofs/Examples/InsertionSort/Family.lean -->
 ```lean
 def isFamily (n seed : Nat) : List Int :=
   (List.range n).map (fun i => (((seed * (i + 1)) % 2 ^ 64 : Nat) : Int))
@@ -738,12 +738,12 @@ theorem isort_ok (n seed : Nat) (hn : n < 2 ^ 63) (hseed : seed < 2 ^ 64) :
 
 **Axioms** (pinned in `proofs/Audit.lean`):
 
-<!-- verbatim: proofs/Audit.lean -->
+<!-- verbatim: proofs/Audit/InsertionSort.lean -->
 ```lean
 /-- info: 'GoLean.Examples.InsertionSort.isort_ok' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 ```
 
-<!-- verbatim: proofs/Audit.lean -->
+<!-- verbatim: proofs/Audit/InsertionSort.lean -->
 ```lean
 /-- info: 'GoLean.Examples.InsertionSort.isort_readout' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 ```
@@ -834,19 +834,19 @@ also grows a map); `seed < 2^64` is just the argument's type.
 
 **The specification layer** (`proofs/GoLeanProofs/Examples/WordCount.lean`):
 
-<!-- verbatim: proofs/GoLeanProofs/Examples/WordCount.lean -->
+<!-- verbatim: proofs/GoLeanProofs/Examples/WordCount/Pure.lean -->
 ```lean
 def multiplicity (v : Int) (ws : List Int) : Nat :=
   (ws.filter (· = v)).length
 ```
 
-<!-- verbatim: proofs/GoLeanProofs/Examples/WordCount.lean -->
+<!-- verbatim: proofs/GoLeanProofs/Examples/WordCount/Pure.lean -->
 ```lean
 def maxMultiplicity (ws : List Int) : Nat :=
   ws.foldl (fun acc v => max acc (multiplicity v ws)) 0
 ```
 
-<!-- verbatim: proofs/GoLeanProofs/Examples/WordCount.lean -->
+<!-- verbatim: proofs/GoLeanProofs/Examples/WordCount/Family.lean -->
 ```lean
 def wcFamily (n seed : Nat) : List Int :=
   (List.range n).map (fun i => (((seed + i % 3) % 2 ^ 64 : Nat) : Int))
@@ -854,7 +854,7 @@ def wcFamily (n seed : Nat) : List Int :=
 
 and the closed form that ties the family to the returned number:
 
-<!-- verbatim: proofs/GoLeanProofs/Examples/WordCount.lean -->
+<!-- verbatim: proofs/GoLeanProofs/Examples/WordCount/Family.lean -->
 ```lean
 theorem wcFamily_maxMult (n seed : Nat) :
     maxMultiplicity (wcFamily n seed) = (n + 2) / 3 := by
@@ -882,12 +882,12 @@ argument that is already a `Nat`.
 
 **Axioms** (pinned in `proofs/Audit.lean`):
 
-<!-- verbatim: proofs/Audit.lean -->
+<!-- verbatim: proofs/Audit/WordCount.lean -->
 ```lean
 /-- info: 'GoLean.Examples.WordCount.wordcount_ok' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 ```
 
-<!-- verbatim: proofs/Audit.lean -->
+<!-- verbatim: proofs/Audit/WordCount.lean -->
 ```lean
 /-- info: 'GoLean.Examples.WordCount.wordcount_readout' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 ```
