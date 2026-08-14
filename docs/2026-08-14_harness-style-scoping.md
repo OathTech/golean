@@ -716,6 +716,28 @@ encoder surface. Record it as the explored-and-rejected branch.
 
 ## §10 Open decisions for the user
 
+**RULING (user, 2026-08-14, resolving decisions 1–2 — recorded
+near-verbatim):** *"we don't introduce ghosts at all now, everything is
+real Go. We might in future need them in harnesses, but now we don't."*
+So: NO annotation vocabulary this arc — decision 1 is DEFERRED (the
+choice-input marker is a designed future rung, not the next build
+item), decision 2 is moot until then. The GHOST LADDER, recorded as the
+standing design (cheapest rung first, each adopted only when a claim
+needs it):
+  rung 0 — REAL GO (current position): history ghosts as ordinary
+    harness code (the copy-relational pre-copy), input families as
+    ordinary setup loops; no annotations anywhere.
+  rung 1 — `// @ghost nondet` (designed, §11 of the form note): binds a
+    site to the existing ∀ch; executable run = one witness stream (the
+    two-bounds coherence); carries the differential-counterpart
+    obligation and the choice-indexing alignment detail.
+  rung 2 — shadow signatures (Gobra/CN style, designed only): ghost
+    data crossing the SUBJECT boundary; fail-closed erasure check at
+    the NativeToIR quarantine. The "no free lunch" horizon lives here.
+Consequence for decision 3: feasible-now swaps are exactly the real-Go
+ones (reverse copy-relational; minmax/wordcount S3 at today's return
+boundary); binsearch's `findSpec pre t` form WAITS at rung 1.
+
 1. **Adopt the choice-input annotation as the next build item?** It is
    the single mechanism that converts the S3 drafts from
    bounded-cap curiosities into the direct ∀-data form, upgrades S1
