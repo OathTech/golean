@@ -122,6 +122,68 @@ concurrency, owns the budget.
 * C1: `scripts/ci` PASS (full summary green; baseline diff FULL
   1550/1550 no regression; escape-hatch preflight clean).
 
-## §4 Gap B status
+## §2b The placement-generic composition layer (worklist item 1 —
+BUILT; in-module, WordCount)
 
-(recorded at the first-consumer test)
+`wcIter_generic` (the 53-step counting iteration), `wcLoop_generic`
+(the `84n + 23` counting loop + exit to the range head), and
+`wcRange_generic` (the §10b choice-pick induction, `24m + 1`) — the
+wordcount composition layer stated ONCE over an abstract state family
+`S : List (Int × Nat) → Int → Bool → Heap → Nat → ExecState`, abstract
+placement environments/continuations, and the per-segment transition
+facts as hypotheses. Design decisions (recorded, informed by the §1
+diagnosis rather than the pre-diagnosis guess):
+
+* **Composition-generic, segment-concrete.** Full segment
+  α-abstraction (segments stated over abstract cell addresses) was
+  REJECTED: the `rfl` segments were never the storm site and are cheap
+  per placement; the storm lived in the composition's application
+  sites. Exception discovered while building: segments that touch NO
+  heap cell (the whole range body) ARE stated once over a fully
+  abstract `σ` — the state rides through `rfl` — so the range layer
+  needed only FOUR placement hypotheses (pick, `c`/`best` reads, the
+  `best` store) plus one env-lookup fact and one dispatch segment
+  (`hR4b`, whose `best`-target resolution penetrates the abstract
+  env).
+* **Hypothesis types pin the states** — every instantiation site
+  discharges a hypothesis whose type spells out the full transition
+  (the variant-E fix made structural): no concrete front ever enters
+  an isDefEq problem, so the storm class cannot ignite by
+  construction.
+* Consumers (rule (a)): the canonical placement (`wc_count_iter`,
+  `wc_count_loop`, `wc_range_loop` retrofitted to instantiations —
+  their ~800 lines of hand-composition deleted) and the harness
+  placement (`wcH_count_iter`/`wcH_count_loop`/`wcH_range_loop` — NEW,
+  the former storm site, closed by instantiation).
+* Supporting kit additions: `DeadFrom` (+ `mono`/`push`/`push2`) in
+  the module; `applyStrictOp_lessCmp_int` promoted to SliceMem
+  (consumers: MinMax retrofit + the generic loop).
+
+Measurements (rule (c)): WordCount single-file elaboration 150 s →
+108 s (C2 state) at the same ~55 GB peak while GAINING the whole
+harness counting tower; the generic layers themselves elaborate in
+seconds (abstract states — nothing for the unifier to normalize).
+
+## §4 Gap B status: CLOSED (the kit's acceptance test PASSED)
+
+`wordcount_ok (n seed : Nat) (hn : n < 2 ^ 63) (hseed : seed < 2 ^ 64)`
+— the §11 harness headline over `runFunctionWithContextM` at
+`wordcountHarnessFunc` with argument payload
+`#[.int n .uint64, .int seed .uint64]`, returned value exactly
+`.int ((n + 2) / 3) .uint64`, fuel bound `229 + 165·n` — plus
+`wordcount_readout`, the derived D1 twin. Axioms (verbatim):
+
+```
+'GoLean.Examples.WordCount.wordcount_ok' depends on axioms: [propext, Classical.choice, Quot.sound]
+'GoLean.Examples.WordCount.wordcount_readout' depends on axioms: [propext, Classical.choice, Quot.sound]
+'GoLean.Examples.WordCount.wcFamily_maxMult' depends on axioms: [propext, Quot.sound]
+```
+
+Route: the 2026-08-13 groundwork (entry equation, setup phase,
+harness segment tower) + the generic composition layer + a NEW harness
+exit family (`σXH`, cells 2/8/10 generalized) with four exit segments
+(X1H 6 / X2aH 2 / X2bH 2 / X2cH 24 — the probe-pinned "24-step X2c′"
+confirmed by `rfl` first try) + `wcH_runs` (the end-to-end
+composition) + the `runConfig` entry glue. Audit registration +
+axiom pins landed in `proofs/Audit.lean` (G1 section rewritten as a
+closure record; the refuted-caveat correction kept).

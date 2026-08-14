@@ -2026,26 +2026,32 @@ HARNESS form at the zero-parameter degenerate (runFunctionWithContextM
 of `maxCountEmpty`, `[propext, Quot.sound]` — the Classical.choice-free
 pattern again).
 
-**G1 STATUS (2026-08-13, honest gap record — NOT closed).** The
-parameterized harness headline `wordcount_ok` over
-`wordcount_harness(n, seed)` remains NAMED DEBT. What landed green
-this round: the pure family layer (`wcFamily`, `wcFamily_maxMult`),
-the pinned `wordcountHarnessFunc` + its `rfl` link, the §11 entry
-equation, the whole setup phase, and EVERY per-segment `rfl` lemma of
-the phase-C tower re-instantiated at the harness placement — the
-recipe's premise ("the rfl segments survive re-instantiation") held.
-What resisted: the two COMPOSITION proofs (`wcH_count_iter`,
-`wcH_count_loop`) — verbatim address-renames of the canonical
-originals — hit an elaborator isDefEq/whnf storm (heartbeat-linear
-grind at 2M/4M/12M, RSS to 52 GB), while the canonical originals pass
-under 2M. Explicitly NOT a false goal (the `#eval`-first doctrine
-applied: every segment `rfl`-checks and the concrete `(4,7)` run
-agrees end to end at 841 steps returning 2); the trigger is isolated
-to a `rw`-surgered hypothesis plus a subsequent large application, with
-a self-contained repro and a three-step pickup plan in the module's
-`## The parameterized harness` docstring. Recorded as the first
-intended consumer of the promotion-ledger consolidation slice (note
-§8), not as a semantics doubt.
+`✓` **G1 CLOSED (consolidation slice, 2026-08-13/14) —
+`wordcount_ok`, the parameterized §11 harness headline over
+`wordcount_harness(n, seed)`.** For every `n < 2^63` and EVERY uint64
+`seed` (the refuted seed-wrap caveat — no collision hypothesis), past
+fuel `229 + 165·n`, at EVERY nondeterminism-choice stream (the map
+range consumes one pick per iteration — the ∀ch quantifier is doing
+real work), the harness run over `runFunctionWithContextM` returns
+EXACTLY `⌈n/3⌉ = (n+2)/3` — the closed form `wcFamily_maxMult` proves
+for the setup family `w[i] = seed + i%3`. `wordcount_readout` is the
+derived D1 twin (`harness_readout_of_total`). The former blocker — the
+2026-08-13 elaborator isDefEq/whnf storm on the harness composition
+proofs — was DIAGNOSED (postponed-elaboration metas inside big state
+arguments defeat structural unification; the delta fallback compares
+`Heap.lookup` over the concrete front at a symbolic address,
+exponential in front length: 2^9 canonical vs 2^16 harness; record:
+`docs/2026-08-13_consolidation-slice.md` §1) and REMOVED structurally:
+the counting and range compositions are stated ONCE over an abstract
+state family (`wcIter_generic`/`wcLoop_generic`/`wcRange_generic`)
+with per-segment transition facts as hypotheses whose types pin every
+intermediate state; both the canonical and harness placements are
+instantiations. Statement closure: interpreter/native-entry vocabulary
+(`runFunctionWithContextM`, `Choices`, `Result`) + the pinned
+`wordcountHarnessFunc` (`rfl`-linked to the lowering) + `Nat`/`Int`
+arithmetic — no heap vocabulary, no Iris, no Frame names; deletion-test
+clean by construction (the statement elaborates from
+`WordCountProgram` + `FuelMeasure` alone).
 
 **SEED-WRAP CAVEAT REFUTED (correction of this file's own earlier
 text).** The previous record claimed the `i%3` family "collides at
@@ -2065,12 +2071,18 @@ example := @GoLean.Examples.WordCount.wcFamily_maxMult
 example := @GoLean.Examples.WordCount.wordcountHarnessFunc
 example := @GoLean.Examples.WordCount.maxCount_total_canonical
 example := @GoLean.Examples.WordCount.wordcount_empty_ok
+example := @GoLean.Examples.WordCount.wordcount_ok
+example := @GoLean.Examples.WordCount.wordcount_readout
 /-- info: 'GoLean.Examples.WordCount.wcFamily_maxMult' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Examples.WordCount.wcFamily_maxMult
 /-- info: 'GoLean.Examples.WordCount.maxCount_total_canonical' depends on axioms: [propext, Classical.choice, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Examples.WordCount.maxCount_total_canonical
 /-- info: 'GoLean.Examples.WordCount.wordcount_empty_ok' depends on axioms: [propext, Quot.sound] -/
 #guard_msgs in #print axioms GoLean.Examples.WordCount.wordcount_empty_ok
+/-- info: 'GoLean.Examples.WordCount.wordcount_ok' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Examples.WordCount.wordcount_ok
+/-- info: 'GoLean.Examples.WordCount.wordcount_readout' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+#guard_msgs in #print axioms GoLean.Examples.WordCount.wordcount_readout
 
 /-! ## Three-state ledger
 

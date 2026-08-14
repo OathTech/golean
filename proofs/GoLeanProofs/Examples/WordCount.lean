@@ -34,22 +34,19 @@ Lean-side heap vocabulary. What THIS module ships against that form:
   family).
 * `wordcount_empty_ok` — the harness FORM, witnessed end to end at the
   pinned `maxCountEmpty` harness (the zero-parameter instance).
-* NAMED DEBT (gap G1, NARROWED but not closed 2026-08-13 — see the
-  gap record at `## The parameterized harness` below): the
-  `(n, seed)`-parameterized `wordcount_ok` over `wordcount_harness`.
-  This session landed green: `wcFamily` + the closed-form
-  `wcFamily_maxMult` (the recorded seed-wrap caveat REFUTED — no
-  seed hypothesis needed), the pinned `wordcountHarnessFunc`, the §11
-  entry equation, the full setup phase (makeSlice at symbolic `n` +
-  the 57-step fill induction), the setup-exit → subject-entry
-  segments, and EVERY per-segment `rfl` lemma of the phase-C tower
-  re-instantiated at the harness placement (16 concrete front cells,
-  symbolic region from 16). The precise remainder: the two
-  COMPOSITION proofs (`wcH_count_iter`/`wcH_count_loop`, verbatim
-  renames of the canonical `wc_count_iter`/`wc_count_loop`) hit an
-  elaborator isDefEq/whnf storm — see the gap record for the
-  bisection evidence and pickup plan — and the range/exit segment
-  copies + final composition are unwritten behind them.
+* `wordcount_ok` — **gap G1 CLOSED (consolidation slice,
+  2026-08-14)**: the `(n, seed)`-parameterized §11 harness headline
+  over `wordcount_harness`, hypotheses just `n < 2^63` and
+  `seed < 2^64` (the seed-wrap caveat stays refuted), returned value
+  EXACTLY `(n+2)/3` via `wcFamily_maxMult`; `wordcount_readout` is the
+  derived D1 twin. Closed as the FIRST CONSUMER of the
+  placement-generic composition layer (`wcIter_generic`/
+  `wcLoop_generic`/`wcRange_generic` below): the compositions are
+  stated once over an abstract state family and instantiated at both
+  the canonical and harness placements — the 2026-08-13 elaborator
+  storm (diagnosed as exponential delta-fallback unification over
+  concrete fronts, `docs/2026-08-13_consolidation-slice.md` §1) is
+  structurally impossible in this form.
 
 **The teaching point (§10b): the ∀-choices quantifier does REAL work
 here.** `for … range m` consumes one `Choices` pick per iteration
@@ -2529,166 +2526,543 @@ private theorem mem_of_mem_eraseIdx {α : Type} :
           · exact List.mem_cons.mpr (.inl h)
           · exact List.mem_cons.mpr (.inr (ih h))
 
-/-! ### Range-body configurations -/
+/-! ### The placement-generic range loop (consolidation slice: the
+§10b choice-pick induction stated once)
 
-private def envIter (B na : Nat) : LocalEnv :=
-  [("c", .base ⟨na⟩)] :: envRB B
-private def envIf (B na : Nat) : LocalEnv := [] :: envIter B na
-private def thenBlk : Stmt :=
+The range body's segments never touch the heap — they are proven ONCE
+over a fully abstract `σ : ExecState` (the state rides through). The
+per-placement content is exactly four transitions: the pick (allocates
+the iteration's value cell), the two variable reads (`c`, `best`), and
+the `best` store — hypotheses whose types pin every state (the E-form
+made structural, as in the counting layer). -/
+
+section RangeGeneric
+
+variable (envRBg : Nat → LocalEnv) (kRg : Nat → Cont)
+
+/-- The iteration env: `c` at the pick cell over the placement's
+range env. -/
+private def envIterR (B na : Nat) : LocalEnv :=
+  [("c", .base ⟨na⟩)] :: envRBg B
+private def envIfR (B na : Nat) : LocalEnv := [] :: envIterR envRBg B na
+private def thenBlkR : Stmt :=
   .block #[] #[.seqn #[.assign (.var "best") (.var "c")]]
-private def iterK (B : Nat) (rem : List (Int × Nat)) : Cont :=
+private def iterKR (B : Nat) (rem : List (Int × Nat)) : Cont :=
   .mapIterK none (some "c") tU64 tU64 wcRangeBody (toEntries rem)
-    (envRB B) (kR B)
-private def ifKR (B na : Nat) (rem : List (Int × Nat)) : Cont :=
-  .ifK thenBlk (.seqn #[]) (envIf B na)
-    (.seq [] (envIf B na) (iterK B rem))
-private def env4 (B na : Nat) : LocalEnv := [] :: envIf B na
-private def storeBestK (B na : Nat) (rem : List (Int × Nat)) : Cont :=
-  .seq [] (env4 B na) (.seq [] (envIf B na) (iterK B rem))
+    (envRBg B) (kRg B)
+private def ifKRR (B na : Nat) (rem : List (Int × Nat)) : Cont :=
+  .ifK thenBlkR (.seqn #[]) (envIfR envRBg B na)
+    (.seq [] (envIfR envRBg B na) (iterKR envRBg kRg B rem))
+private def env4R (B na : Nat) : LocalEnv := [] :: envIfR envRBg B na
+private def storeBestKR (B na : Nat) (rem : List (Int × Nat)) : Cont :=
+  .seq [] (env4R envRBg B na)
+    (.seq [] (envIfR envRBg B na) (iterKR envRBg kRg B rem))
+/-- The range head at the placement. -/
+private def rangeHeadR (B : Nat) (rem : List (Int × Nat)) : Config :=
+  .next (iterKR envRBg kRg B rem)
 
-/-- R1: body entry → the `c` read of the comparison. 4 steps. -/
-private theorem wc_segR1_raw (L : Nat) (ws : List Int)
-    (kvs rem : List (Int × Nat)) (iv : Int) (tail : Heap) (B na₀ na : Nat)
-    (ch : Choices) :
-    stepFnIter 4 (σC L ws kvs iv false tail na)
-      (.exec wcRangeBody (envIter B na₀) (iterK B rem)) ch
-      = .ok (.evalE (.var "c") (envIf B na₀)
-            (.strictK .greaterCmp [] [.var "best"] (envIf B na₀)
-              (ifKR B na₀ rem)),
-          σC L ws kvs iv false tail na, ch) := by
+/-- R1: body entry → the `c` read of the comparison. 4 steps —
+σ-abstract (no heap touch). -/
+private theorem segR1_g (σ : ExecState) (rem : List (Int × Nat))
+    (B na₀ : Nat) (ch : Choices) :
+    stepFnIter 4 σ
+      (.exec wcRangeBody (envIterR envRBg B na₀) (iterKR envRBg kRg B rem))
+      ch
+      = .ok (.evalE (.var "c") (envIfR envRBg B na₀)
+            (.strictK .greaterCmp [] [.var "best"] (envIfR envRBg B na₀)
+              (ifKRR envRBg kRg B na₀ rem)),
+          σ, ch) := by
   with_unfolding_all rfl
 
 /-- R2: `c` delivered → the `best` read. 1 step. -/
-private theorem wc_segR2_raw (L : Nat) (ws : List Int)
-    (kvs rem : List (Int × Nat)) (iv : Int) (tail : Heap) (B na₀ na : Nat)
-    (cv : GoValue) (ch : Choices) :
-    stepFnIter 1 (σC L ws kvs iv false tail na)
+private theorem segR2_g (σ : ExecState) (rem : List (Int × Nat))
+    (B na₀ : Nat) (cv : GoValue) (ch : Choices) :
+    stepFnIter 1 σ
       (.retV cv
-        (.strictK .greaterCmp [] [.var "best"] (envIf B na₀)
-          (ifKR B na₀ rem))) ch
-      = .ok (.evalE (.var "best") (envIf B na₀)
-            (.strictK .greaterCmp [cv] [] (envIf B na₀) (ifKR B na₀ rem)),
-          σC L ws kvs iv false tail na, ch) := by
+        (.strictK .greaterCmp [] [.var "best"] (envIfR envRBg B na₀)
+          (ifKRR envRBg kRg B na₀ rem))) ch
+      = .ok (.evalE (.var "best") (envIfR envRBg B na₀)
+            (.strictK .greaterCmp [cv] [] (envIfR envRBg B na₀)
+              (ifKRR envRBg kRg B na₀ rem)),
+          σ, ch) := by
   with_unfolding_all rfl
 
 /-- R3: `best` delivered → the `>` apply, riding symbolically. 1
 step. -/
-private theorem wc_segR3_raw (L : Nat) (ws : List Int)
-    (kvs rem : List (Int × Nat)) (iv : Int) (tail : Heap) (B na₀ na : Nat)
-    (cv bv : Int) (ch : Choices) :
-    stepFnIter 1 (σC L ws kvs iv false tail na)
+private theorem segR3_g (σ : ExecState) (rem : List (Int × Nat))
+    (B na₀ : Nat) (cv bv : Int) (ch : Choices) :
+    stepFnIter 1 σ
       (.retV (.int bv .uint64)
-        (.strictK .greaterCmp [.int cv .uint64] [] (envIf B na₀)
-          (ifKR B na₀ rem))) ch
-      = .ok (.retV (.bool (decide (bv < cv))) (ifKR B na₀ rem),
-          σC L ws kvs iv false tail na, ch) := by
+        (.strictK .greaterCmp [.int cv .uint64] [] (envIfR envRBg B na₀)
+          (ifKRR envRBg kRg B na₀ rem))) ch
+      = .ok (.retV (.bool (decide (bv < cv))) (ifKRR envRBg kRg B na₀ rem),
+          σ, ch) := by
   with_unfolding_all rfl
 
-/-- R4 (then branch, part a): the comparison true → the inner `.seqn`
-splice point. 3 steps. -/
-private theorem wc_segR4a_raw (L : Nat) (ws : List Int)
-    (kvs rem : List (Int × Nat)) (iv : Int) (tail : Heap) (B na₀ na : Nat)
-    (ch : Choices) :
-    stepFnIter 3 (σC L ws kvs iv false tail na)
-      (.retV (.bool true) (ifKR B na₀ rem)) ch
-      = .ok (.exec (.seqn #[.assign (.var "best") (.var "c")]) (env4 B na₀)
-            (.seq [] (env4 B na₀) (.seq [] (envIf B na₀) (iterK B rem))),
-          σC L ws kvs iv false tail na, ch) := by
+/-- R4a (then): comparison true → the inner `.seqn` splice point. 3
+steps. -/
+private theorem segR4a_g (σ : ExecState) (rem : List (Int × Nat))
+    (B na₀ : Nat) (ch : Choices) :
+    stepFnIter 3 σ (.retV (.bool true) (ifKRR envRBg kRg B na₀ rem)) ch
+      = .ok (.exec (.seqn #[.assign (.var "best") (.var "c")])
+            (env4R envRBg B na₀)
+            (.seq [] (env4R envRBg B na₀)
+              (.seq [] (envIfR envRBg B na₀) (iterKR envRBg kRg B rem))),
+          σ, ch) := by
   with_unfolding_all rfl
 
-/-- R4 (then branch, part b): assign dispatch → the `c` read of the
-store. 4 steps. -/
-private theorem wc_segR4b_raw (L : Nat) (ws : List Int)
-    (kvs rem : List (Int × Nat)) (iv : Int) (tail : Heap) (B na₀ na : Nat)
-    (ch : Choices) :
-    stepFnIter 4 (σC L ws kvs iv false tail na)
-      (.next (.seq [.assign (.var "best") (.var "c")] (env4 B na₀)
-        (.seq [] (envIf B na₀) (iterK B rem)))) ch
-      = .ok (.evalE (.var "c") (env4 B na₀)
-            (.rhsK .vals [.chain (.addr (.base ⟨B⟩)) [] []] [] []
-              (.seqn #[]) (env4 B na₀) (storeBestK B na₀ rem)),
-          σC L ws kvs iv false tail na, ch) := by
-  with_unfolding_all rfl
-
-/-- R4 (then branch, part c): the store value delivered → the store
-point. 1 step. -/
-private theorem wc_segR4c_raw (L : Nat) (ws : List Int)
-    (kvs rem : List (Int × Nat)) (iv : Int) (tail : Heap) (B na₀ na : Nat)
-    (cv : GoValue) (ch : Choices) :
-    stepFnIter 1 (σC L ws kvs iv false tail na)
+/-- R4c: the store value delivered → the store point. 1 step. -/
+private theorem segR4c_g (σ : ExecState) (rem : List (Int × Nat))
+    (B na₀ : Nat) (cv : GoValue) (ch : Choices) :
+    stepFnIter 1 σ
       (.retV cv
         (.rhsK .vals [.chain (.addr (.base ⟨B⟩)) [] []] [] []
-          (.seqn #[]) (env4 B na₀) (storeBestK B na₀ rem))) ch
+          (.seqn #[]) (env4R envRBg B na₀)
+          (storeBestKR envRBg kRg B na₀ rem))) ch
       = .ok (.next (.storeK [.chain (.addr (.base ⟨B⟩)) [] []] [cv]
-            (.seqn #[]) (env4 B na₀) (storeBestK B na₀ rem)),
-          σC L ws kvs iv false tail na, ch) := by
+            (.seqn #[]) (env4R envRBg B na₀)
+            (storeBestKR envRBg kRg B na₀ rem)),
+          σ, ch) := by
   with_unfolding_all rfl
 
-/-- R5: `best` stored → the next pick point. 4 steps (one `.seqn`
-splice glued). -/
-private theorem wc_segR5_raw (L : Nat) (ws : List Int)
-    (kvs rem : List (Int × Nat)) (iv : Int) (tail : Heap) (B na₀ na : Nat)
-    (ch : Choices) :
-    stepFnIter 4 (σC L ws kvs iv false tail na)
-      (.next (.storeK [] [] (.seqn #[]) (env4 B na₀)
-        (storeBestK B na₀ rem))) ch
-      = .ok (rangeHead B rem, σC L ws kvs iv false tail na, ch) := by
+/-- R5: `best` stored → the next pick point. 4 steps. -/
+private theorem segR5_g (σ : ExecState) (rem : List (Int × Nat))
+    (B na₀ : Nat) (ch : Choices) :
+    stepFnIter 4 σ
+      (.next (.storeK [] [] (.seqn #[]) (env4R envRBg B na₀)
+        (storeBestKR envRBg kRg B na₀ rem))) ch
+      = .ok (rangeHeadR envRBg kRg B rem, σ, ch) := by
   have h1 := stepFnIter_one (stepFn_storeK_nil
-    (σ := σC L ws kvs iv false tail na) (body := .seqn #[])
-    (env := env4 B na₀) (k := storeBestK B na₀ rem) (ch := ch))
+    (σ := σ) (body := .seqn #[])
+    (env := env4R envRBg B na₀) (k := storeBestKR envRBg kRg B na₀ rem)
+    (ch := ch))
   have h2 := stepFnIter_one (stepFn_seqn_splice
-    (σ := σC L ws kvs iv false tail na) (ss := #[]) (env := env4 B na₀)
-    (rest := []) (k := .seq [] (envIf B na₀) (iterK B rem)) (ch := ch))
-  have h3 : stepFnIter 2 (σC L ws kvs iv false tail na)
-      (.next (.seq ((#[] : Array Stmt).toList ++ []) (env4 B na₀)
-        (.seq [] (envIf B na₀) (iterK B rem)))) ch
-      = .ok (rangeHead B rem, σC L ws kvs iv false tail na, ch) := by
+    (σ := σ) (ss := #[]) (env := env4R envRBg B na₀)
+    (rest := []) (k := .seq [] (envIfR envRBg B na₀)
+      (iterKR envRBg kRg B rem)) (ch := ch))
+  have h3 : stepFnIter 2 σ
+      (.next (.seq ((#[] : Array Stmt).toList ++ []) (env4R envRBg B na₀)
+        (.seq [] (envIfR envRBg B na₀) (iterKR envRBg kRg B rem)))) ch
+      = .ok (rangeHeadR envRBg kRg B rem, σ, ch) := by
     with_unfolding_all rfl
   exact stepFnIter_chain (stepFnIter_chain h1 h2) h3
 
-/-- R4' (else branch): the comparison false → the next pick point. 3
-steps (one `.seqn` splice glued). -/
-private theorem wc_segR4e_raw (L : Nat) (ws : List Int)
-    (kvs rem : List (Int × Nat)) (iv : Int) (tail : Heap) (B na₀ na : Nat)
-    (ch : Choices) :
-    stepFnIter 3 (σC L ws kvs iv false tail na)
-      (.retV (.bool false) (ifKR B na₀ rem)) ch
-      = .ok (rangeHead B rem, σC L ws kvs iv false tail na, ch) := by
-  have h1 : stepFnIter 1 (σC L ws kvs iv false tail na)
-      (.retV (.bool false) (ifKR B na₀ rem)) ch
-      = .ok (.exec (.seqn #[]) (envIf B na₀)
-            (.seq [] (envIf B na₀) (iterK B rem)),
-          σC L ws kvs iv false tail na, ch) := by
+/-- R4e (else): comparison false → the next pick point. 3 steps. -/
+private theorem segR4e_g (σ : ExecState) (rem : List (Int × Nat))
+    (B na₀ : Nat) (ch : Choices) :
+    stepFnIter 3 σ (.retV (.bool false) (ifKRR envRBg kRg B na₀ rem)) ch
+      = .ok (rangeHeadR envRBg kRg B rem, σ, ch) := by
+  have h1 : stepFnIter 1 σ
+      (.retV (.bool false) (ifKRR envRBg kRg B na₀ rem)) ch
+      = .ok (.exec (.seqn #[]) (envIfR envRBg B na₀)
+            (.seq [] (envIfR envRBg B na₀) (iterKR envRBg kRg B rem)),
+          σ, ch) := by
     with_unfolding_all rfl
   have h2 := stepFnIter_one (stepFn_seqn_splice
-    (σ := σC L ws kvs iv false tail na) (ss := #[]) (env := envIf B na₀)
-    (rest := []) (k := iterK B rem) (ch := ch))
-  have h3 : stepFnIter 1 (σC L ws kvs iv false tail na)
-      (.next (.seq ((#[] : Array Stmt).toList ++ []) (envIf B na₀)
-        (iterK B rem))) ch
-      = .ok (rangeHead B rem, σC L ws kvs iv false tail na, ch) := by
+    (σ := σ) (ss := #[]) (env := envIfR envRBg B na₀)
+    (rest := []) (k := iterKR envRBg kRg B rem) (ch := ch))
+  have h3 : stepFnIter 1 σ
+      (.next (.seq ((#[] : Array Stmt).toList ++ []) (envIfR envRBg B na₀)
+        (iterKR envRBg kRg B rem))) ch
+      = .ok (rangeHeadR envRBg kRg B rem, σ, ch) := by
     with_unfolding_all rfl
   exact stepFnIter_chain (stepFnIter_chain h1 h2) h3
 
 /-- The empty-snapshot drain: no choice consumed, the loop exits. 1
 step. -/
-private theorem wc_segRexit_raw (L : Nat) (ws : List Int)
-    (kvs : List (Int × Nat)) (iv : Int) (tail : Heap) (B na : Nat)
-    (ch : Choices) :
-    stepFnIter 1 (σC L ws kvs iv false tail na) (rangeHead B []) ch
-      = .ok (.next (kR B), σC L ws kvs iv false tail na, ch) := by
+private theorem segRexit_g (σ : ExecState) (B : Nat) (ch : Choices) :
+    stepFnIter 1 σ (rangeHeadR envRBg kRg B []) ch
+      = .ok (.next (kRg B), σ, ch) := by
   with_unfolding_all rfl
 
-/-! ### The §10b choice-pick induction -/
+/-- **The placement-generic range loop, at every choice stream** —
+induction on the snapshot size, ∀ remaining sub-list, ∀ accumulator
+`bv` with the max-fold invariant, ∀ choices (§10b). The placement
+enters through four pinned transition hypotheses: the choice-pick
+(allocating the iteration's value cell), the `c`/`best` reads, and the
+`best` store. -/
+private theorem wcRange_generic
+    (S : List (Int × Nat) → Int → Bool → Heap → Nat → ExecState)
+    (ivP : Int) (base0 bound : Nat)
+    (hbound : bound < 2 ^ 63)
+    (hEnvBest : ∀ B na₀ : Nat,
+      LocalEnv.lookup (envIfR envRBg B na₀) "best" = some (.base ⟨B⟩))
+    (hPick : ∀ (kvs rem : List (Int × Nat)) (idx : Nat) (ch ch₂ : Choices)
+      (p : Int × Nat) (tail : Heap) (B na : Nat),
+      Choices.consume ch rem.length = (idx, ch₂) → idx < rem.length →
+      rem[idx]? = some p →
+      IntKind.normalize .uint64 (p.2 : Int) = (p.2 : Int) →
+      base0 ≤ na → DeadFrom tail na →
+      stepFn (S kvs ivP false tail na) (rangeHeadR envRBg kRg B rem) ch
+        = .ok (.exec wcRangeBody (envIterR envRBg B na)
+              (iterKR envRBg kRg B (rem.eraseIdx idx)),
+            S kvs ivP false
+              (tail ++ [(.base ⟨na⟩, ⟨some tU64, .int (p.2 : Int) .uint64⟩)])
+              (na + 1), ch₂))
+    (hR4b : ∀ (kvs rem : List (Int × Nat)) (tail : Heap) (B na₀ na : Nat)
+      (ch : Choices),
+      stepFnIter 4 (S kvs ivP false tail na)
+          (.next (.seq [.assign (.var "best") (.var "c")]
+            (env4R envRBg B na₀)
+            (.seq [] (envIfR envRBg B na₀) (iterKR envRBg kRg B rem)))) ch
+        = .ok (.evalE (.var "c") (env4R envRBg B na₀)
+              (.rhsK .vals [.chain (.addr (.base ⟨B⟩)) [] []] [] []
+                (.seqn #[]) (env4R envRBg B na₀)
+                (storeBestKR envRBg kRg B na₀ rem)),
+            S kvs ivP false tail na, ch))
+    (hVarC : ∀ (kvs : List (Int × Nat)) (tail : Heap) (na₀ na : Nat)
+      (v : Int) (env : LocalEnv) (k : Cont) (ch : Choices),
+      LocalEnv.lookup env "c" = some (.base ⟨na₀⟩) →
+      base0 ≤ na₀ → DeadFrom tail na₀ →
+      stepFn (S kvs ivP false
+          (tail ++ [(.base ⟨na₀⟩, ⟨some tU64, .int v .uint64⟩)]) na)
+          (.evalE (.var "c") env k) ch
+        = .ok (.retV (.int v .uint64) k,
+            S kvs ivP false
+              (tail ++ [(.base ⟨na₀⟩, ⟨some tU64, .int v .uint64⟩)]) na, ch))
+    (hVarBest : ∀ (kvs : List (Int × Nat)) (tail : Heap) (B na : Nat)
+      (bv : Int) (env : LocalEnv) (k : Cont) (ch : Choices),
+      LocalEnv.lookup env "best" = some (.base ⟨B⟩) → base0 ≤ B →
+      Heap.lookup tail (.base ⟨B⟩) = some (u64cell bv) →
+      stepFn (S kvs ivP false tail na) (.evalE (.var "best") env k) ch
+        = .ok (.retV (.int bv .uint64) k, S kvs ivP false tail na, ch))
+    (hStB : ∀ (kvs rem : List (Int × Nat)) (tail : Heap) (B na₀ na : Nat)
+      (bv v : Int) (ch : Choices),
+      base0 ≤ B → Heap.lookup tail (.base ⟨B⟩) = some (u64cell bv) →
+      IntKind.normalize .uint64 v = v →
+      stepFn (S kvs ivP false tail na)
+          (.next (.storeK [.chain (.addr (.base ⟨B⟩)) [] []]
+            [.int v .uint64] (.seqn #[]) (env4R envRBg B na₀)
+            (storeBestKR envRBg kRg B na₀ rem))) ch
+        = .ok (.next (.storeK [] [] (.seqn #[]) (env4R envRBg B na₀)
+              (storeBestKR envRBg kRg B na₀ rem)),
+            S kvs ivP false
+              (Heap.set tail (.base ⟨B⟩) ⟨some tU64, .int v .uint64⟩) na,
+            ch)) :
+    ∀ (m : Nat) (kvs rem : List (Int × Nat)), rem.length = m →
+    ∀ (bv : Nat) (B na : Nat) (tail : Heap) (ch : Choices),
+    (∀ p ∈ rem, p.2 ≤ bound) → bv ≤ bound →
+    base0 ≤ B → B < na →
+    Heap.lookup tail (.base ⟨B⟩) = some (u64cell (bv : Int)) →
+    DeadFrom tail na →
+    ∃ (k : Nat) (ch' : Choices) (tail' : Heap) (na' : Nat),
+      k ≤ 24 * m + 1 ∧ na ≤ na'
+      ∧ Heap.lookup tail' (.base ⟨B⟩)
+          = some (u64cell ((max bv (maxOf (rem.map Prod.snd)) : Nat) : Int))
+      ∧ DeadFrom tail' na'
+      ∧ stepFnIter k (S kvs ivP false tail na)
+          (rangeHeadR envRBg kRg B rem) ch
+        = .ok (.next (kRg B), S kvs ivP false tail' na', ch') := by
+  intro m
+  induction m with
+  | zero =>
+      intro kvs rem hm bv B na tail ch hrem hbv hB hBna hbest htail
+      have hnil : rem = [] := List.eq_nil_of_length_eq_zero hm
+      subst hnil
+      refine ⟨1, ch, tail, na, by omega, Nat.le_refl na, ?_, htail, ?_⟩
+      · simpa [maxOf_nil] using hbest
+      · exact segRexit_g envRBg kRg (S kvs ivP false tail na) B ch
+  | succ m ih =>
+      intro kvs rem hm bv B na tail ch hrem hbv hB hBna hbest htail
+      rcases hcons : Choices.consume ch rem.length with ⟨idx, ch₂⟩
+      have hidx : idx < rem.length := by
+        have := consume_lt ch (show 0 < rem.length by omega)
+        rw [hcons] at this
+        exact this
+      obtain ⟨p, hp⟩ : ∃ p, rem[idx]? = some p :=
+        ⟨_, List.getElem?_eq_getElem hidx⟩
+      have hpmem : p ∈ rem := by
+        obtain ⟨h1, h2⟩ := List.getElem?_eq_some_iff.mp hp
+        exact h2 ▸ List.getElem_mem h1
+      have hpc : p.2 ≤ bound := hrem p hpmem
+      have hvnorm : IntKind.normalize .uint64 (p.2 : Int) = (p.2 : Int) := by
+        refine unorm_of_range (by omega) ?_
+        have : p.2 < 2 ^ 64 := by omega
+        exact_mod_cast this
+      have h1 := stepFnIter_one
+        (hPick kvs rem idx ch ch₂ p tail B na hcons hidx hp hvnorm
+          (by omega) htail)
+      have hR1 := segR1_g envRBg kRg
+        (S kvs ivP false
+          (tail ++ [(.base ⟨na⟩, ⟨some tU64, .int (p.2 : Int) .uint64⟩)])
+          (na + 1))
+        (rem.eraseIdx idx) B na ch₂
+      have h2 := stepFnIter_chain h1 hR1
+      have hbest₁ : Heap.lookup
+          (tail ++ [(.base ⟨na⟩, ⟨some tU64, .int (p.2 : Int) .uint64⟩)])
+          (.base ⟨B⟩) = some (u64cell (bv : Int)) :=
+        lookup_append_left hbest
+      have h3 := stepFnIter_chain h2 (stepFnIter_one
+        (hVarC kvs tail na (na + 1) (p.2 : Int)
+          (envIfR envRBg B na) _ ch₂ rfl (by omega) htail))
+      have hR2 := segR2_g envRBg kRg
+        (S kvs ivP false
+          (tail ++ [(.base ⟨na⟩, ⟨some tU64, .int (p.2 : Int) .uint64⟩)])
+          (na + 1))
+        (rem.eraseIdx idx) B na (.int (p.2 : Int) .uint64) ch₂
+      have h4 := stepFnIter_chain h3 hR2
+      have h5 := stepFnIter_chain h4 (stepFnIter_one
+        (hVarBest kvs
+          (tail ++ [(.base ⟨na⟩, ⟨some tU64, .int (p.2 : Int) .uint64⟩)])
+          B (na + 1) (bv : Int) (envIfR envRBg B na) _ ch₂ (hEnvBest B na)
+          hB hbest₁))
+      have hR3 := segR3_g envRBg kRg
+        (S kvs ivP false
+          (tail ++ [(.base ⟨na⟩, ⟨some tU64, .int (p.2 : Int) .uint64⟩)])
+          (na + 1))
+        (rem.eraseIdx idx) B na (p.2 : Int) (bv : Int) ch₂
+      have h6 := stepFnIter_chain h5 hR3
+      have hgetbang : (rem.map Prod.snd)[idx]! = p.2 := by
+        have hmap : (rem.map Prod.snd)[idx]? = some p.2 := by
+          simp [List.getElem?_map, hp]
+        simp [List.getElem!_eq_getElem?_getD, hmap]
+      have hmaxsplit : maxOf (rem.map Prod.snd)
+          = max p.2 (maxOf ((rem.eraseIdx idx).map Prod.snd)) := by
+        rw [← maxOf_eraseIdx (rem.map Prod.snd) idx
+            (by simpa using hidx), hgetbang, map_eraseIdx]
+      have hlenerase : (rem.eraseIdx idx).length = m := by
+        rw [List.length_eraseIdx_of_lt hidx]
+        omega
+      have hremerase : ∀ q ∈ rem.eraseIdx idx, q.2 ≤ bound :=
+        fun q hq => hrem q (mem_of_mem_eraseIdx hq)
+      by_cases hcmp : bv < p.2
+      · rw [show (decide ((bv : Int) < (p.2 : Int))) = true from
+          decide_eq_true (by exact_mod_cast hcmp)] at h6
+        have hR4a := segR4a_g envRBg kRg
+          (S kvs ivP false
+            (tail ++ [(.base ⟨na⟩, ⟨some tU64, .int (p.2 : Int) .uint64⟩)])
+            (na + 1))
+          (rem.eraseIdx idx) B na ch₂
+        have h7 := stepFnIter_chain h6 hR4a
+        have h8 := stepFnIter_chain h7 (stepFnIter_one (stepFn_seqn_splice
+          (σ := S kvs ivP false
+            (tail ++ [(.base ⟨na⟩, ⟨some tU64, .int (p.2 : Int) .uint64⟩)])
+            (na + 1))
+          (ss := #[.assign (.var "best") (.var "c")])
+          (env := env4R envRBg B na)
+          (rest := []) (k := .seq [] (envIfR envRBg B na)
+            (iterKR envRBg kRg B (rem.eraseIdx idx))) (ch := ch₂)))
+        have hR4b := hR4b kvs (rem.eraseIdx idx)
+          (tail ++ [(.base ⟨na⟩, ⟨some tU64, .int (p.2 : Int) .uint64⟩)])
+          B na (na + 1) ch₂
+        have h9 := stepFnIter_chain h8 hR4b
+        have h10 := stepFnIter_chain h9 (stepFnIter_one
+          (hVarC kvs tail na (na + 1) (p.2 : Int)
+            (env4R envRBg B na) _ ch₂ rfl (by omega) htail))
+        have hR4c := segR4c_g envRBg kRg
+          (S kvs ivP false
+            (tail ++ [(.base ⟨na⟩, ⟨some tU64, .int (p.2 : Int) .uint64⟩)])
+            (na + 1))
+          (rem.eraseIdx idx) B na (.int (p.2 : Int) .uint64) ch₂
+        have h11 := stepFnIter_chain h10 hR4c
+        have h12 := stepFnIter_chain h11 (stepFnIter_one
+          (hStB kvs (rem.eraseIdx idx)
+            (tail ++ [(.base ⟨na⟩, ⟨some tU64, .int (p.2 : Int) .uint64⟩)])
+            B na (na + 1) (bv : Int) (p.2 : Int) ch₂ hB hbest₁ hvnorm))
+        rw [set_append_left hbest] at h12
+        have hR5 := segR5_g envRBg kRg
+          (S kvs ivP false
+            (Heap.set tail (.base ⟨B⟩) ⟨some tU64, .int (p.2 : Int) .uint64⟩
+              ++ [(.base ⟨na⟩, ⟨some tU64, .int (p.2 : Int) .uint64⟩)])
+            (na + 1))
+          (rem.eraseIdx idx) B na ch₂
+        have h13 := stepFnIter_chain h12 hR5
+        have hbest' : Heap.lookup
+            (Heap.set tail (.base ⟨B⟩) ⟨some tU64, .int (p.2 : Int) .uint64⟩
+              ++ [(.base ⟨na⟩, ⟨some tU64, .int (p.2 : Int) .uint64⟩)])
+            (.base ⟨B⟩) = some (u64cell (p.2 : Int)) :=
+          lookup_append_left Frame.Heap.lookup_set_self
+        have htail' : DeadFrom
+            (Heap.set tail (.base ⟨B⟩)
+                ⟨some tU64, .int (p.2 : Int) .uint64⟩
+              ++ [(.base ⟨na⟩, ⟨some tU64, .int (p.2 : Int) .uint64⟩)])
+            (na + 1) := by
+          intro x hx
+          rw [lookup_append_right (by
+            rw [Machine.Heap.lookup_set_ne
+              (show (.base ⟨B⟩ : Loc) ≠ .base ⟨x⟩ from by
+                simp only [ne_eq, Loc.base.injEq, Addr.mk.injEq]
+                omega)]
+            exact htail x (by omega)),
+            lookup_cons_ne (base_beq_false (by omega : na ≠ x))]
+          rfl
+        obtain ⟨k', ch', tail₃, na₃, hk', hna₃, hbest₃, htail₃, hrun⟩ :=
+          ih kvs (rem.eraseIdx idx) hlenerase p.2 B (na + 1)
+            (Heap.set tail (.base ⟨B⟩) ⟨some tU64, .int (p.2 : Int) .uint64⟩
+              ++ [(.base ⟨na⟩, ⟨some tU64, .int (p.2 : Int) .uint64⟩)])
+            ch₂ hremerase hpc hB (by omega) hbest' htail'
+        refine ⟨1 + 4 + 1 + 1 + 1 + 1 + 3 + 1 + 4 + 1 + 1 + 1 + 4 + k',
+          ch', tail₃, na₃, by omega, by omega, ?_, htail₃, ?_⟩
+        · rw [show max bv (maxOf (rem.map Prod.snd))
+              = max p.2 (maxOf ((rem.eraseIdx idx).map Prod.snd)) from by
+            rw [hmaxsplit]
+            omega]
+          exact hbest₃
+        · exact stepFnIter_chain h13 hrun
+      · rw [show (decide ((bv : Int) < (p.2 : Int))) = false from
+          decide_eq_false (by
+            intro hc
+            exact hcmp (by exact_mod_cast hc))] at h6
+        have hR4e := segR4e_g envRBg kRg
+          (S kvs ivP false
+            (tail ++ [(.base ⟨na⟩, ⟨some tU64, .int (p.2 : Int) .uint64⟩)])
+            (na + 1))
+          (rem.eraseIdx idx) B na ch₂
+        have h7 := stepFnIter_chain h6 hR4e
+        have hbest' : Heap.lookup
+            (tail ++ [(.base ⟨na⟩, ⟨some tU64, .int (p.2 : Int) .uint64⟩)])
+            (.base ⟨B⟩) = some (u64cell (bv : Int)) :=
+          lookup_append_left hbest
+        have htail' : DeadFrom
+            (tail ++ [(.base ⟨na⟩, ⟨some tU64, .int (p.2 : Int) .uint64⟩)])
+            (na + 1) := DeadFrom.push htail
+        obtain ⟨k', ch', tail₃, na₃, hk', hna₃, hbest₃, htail₃, hrun⟩ :=
+          ih kvs (rem.eraseIdx idx) hlenerase bv B (na + 1)
+            (tail ++ [(.base ⟨na⟩, ⟨some tU64, .int (p.2 : Int) .uint64⟩)])
+            ch₂ hremerase hbv hB (by omega) hbest' htail'
+        refine ⟨1 + 4 + 1 + 1 + 1 + 1 + 3 + k', ch', tail₃, na₃, by omega,
+          by omega, ?_, htail₃, ?_⟩
+        · rw [show max bv (maxOf (rem.map Prod.snd))
+              = max bv (maxOf ((rem.eraseIdx idx).map Prod.snd)) from by
+            rw [hmaxsplit]
+            omega]
+          exact hbest₃
+        · exact stepFnIter_chain h7 hrun
 
-/-- **The range loop, at every choice stream** — induction on the
-snapshot size, ∀ remaining sub-list, ∀ accumulator `bv` with the
-max-fold invariant, ∀ choices: the pick is destructured through
-`Choices.consume` (`idx < size` from its `% bound` contract), the body
-re-establishes the invariant at `remaining.eraseIdx idx` (the
-pick-and-erase law `maxOf_eraseIdx`), and the loop exits with `best`
-holding `max bv (maxOf remaining)` — an ORDER-INDEPENDENT value, which
-is the §10b teaching point. -/
+end RangeGeneric
+
+
+/-! ### The canonical placement's range-loop discharges + wrapper -/
+
+private theorem wcC_pick (ws : List Int) :
+    ∀ (kvs rem : List (Int × Nat)) (idx : Nat) (ch ch₂ : Choices)
+      (p : Int × Nat) (tail : Heap) (B na : Nat),
+      Choices.consume ch rem.length = (idx, ch₂) → idx < rem.length →
+      rem[idx]? = some p →
+      IntKind.normalize .uint64 (p.2 : Int) = (p.2 : Int) →
+      9 ≤ na → DeadFrom tail na →
+      stepFn (σC ws.length ws kvs (ws.length : Int) false tail na)
+          (rangeHeadR envRB kR B rem) ch
+        = .ok (.exec wcRangeBody (envIterR envRB B na)
+              (iterKR envRB kR B (rem.eraseIdx idx)),
+            σC ws.length ws kvs (ws.length : Int) false
+              (tail ++ [(.base ⟨na⟩, ⟨some tU64, .int (p.2 : Int) .uint64⟩)])
+              (na + 1), ch₂) := by
+  intro kvs rem idx ch ch₂ p tail B na hcons hidx hp hvnorm hna htail
+  have hmiss : Heap.lookup
+      (frontC ws.length ws kvs (ws.length : Int) false ++ tail)
+      (.base ⟨na⟩) = none := by
+    rw [lookup_append_right (lookup_frontC_none ws.length ws kvs
+      (ws.length : Int) false hna)]
+    exact htail na (Nat.le_refl na)
+  have hPick := stepFn_pick
+    (σ := σC ws.length ws kvs (ws.length : Int) false tail na)
+    (body := wcRangeBody) (env := envRB B) (k := kR B)
+    hcons hidx hp hvnorm
+  rw [show (σC ws.length ws kvs (ws.length : Int) false tail
+        na).nextAddr = na from rfl,
+    show (σC ws.length ws kvs (ws.length : Int) false tail na).heap
+      = frontC ws.length ws kvs (ws.length : Int) false ++ tail
+      from rfl,
+    set_fresh hmiss, List.append_assoc] at hPick
+  exact hPick
+
+private theorem wcC_R4b (ws : List Int) :
+    ∀ (kvs rem : List (Int × Nat)) (tail : Heap) (B na₀ na : Nat)
+      (ch : Choices),
+      stepFnIter 4 (σC ws.length ws kvs (ws.length : Int) false tail na)
+          (.next (.seq [.assign (.var "best") (.var "c")]
+            (env4R envRB B na₀)
+            (.seq [] (envIfR envRB B na₀) (iterKR envRB kR B rem)))) ch
+        = .ok (.evalE (.var "c") (env4R envRB B na₀)
+              (.rhsK .vals [.chain (.addr (.base ⟨B⟩)) [] []] [] []
+                (.seqn #[]) (env4R envRB B na₀)
+                (storeBestKR envRB kR B na₀ rem)),
+            σC ws.length ws kvs (ws.length : Int) false tail na, ch) := by
+  intro kvs rem tail B na₀ na ch
+  with_unfolding_all rfl
+
+private theorem wcC_varC (ws : List Int) :
+    ∀ (kvs : List (Int × Nat)) (tail : Heap) (na₀ na : Nat)
+      (v : Int) (env : LocalEnv) (k : Cont) (ch : Choices),
+      LocalEnv.lookup env "c" = some (.base ⟨na₀⟩) →
+      9 ≤ na₀ → DeadFrom tail na₀ →
+      stepFn (σC ws.length ws kvs (ws.length : Int) false
+          (tail ++ [(.base ⟨na₀⟩, ⟨some tU64, .int v .uint64⟩)]) na)
+          (.evalE (.var "c") env k) ch
+        = .ok (.retV (.int v .uint64) k,
+            σC ws.length ws kvs (ws.length : Int) false
+              (tail ++ [(.base ⟨na₀⟩, ⟨some tU64, .int v .uint64⟩)]) na,
+            ch) := by
+  intro kvs tail na₀ na v env k ch henv hna hdead
+  refine stepFn_var (c := ⟨some tU64, .int v .uint64⟩) henv ?_
+  show Heap.lookup
+    (frontC ws.length ws kvs (ws.length : Int) false
+      ++ (tail ++ [(.base ⟨na₀⟩, ⟨some tU64, .int v .uint64⟩)]))
+    (.base ⟨na₀⟩) = some ⟨some tU64, .int v .uint64⟩
+  rw [lookup_append_right (lookup_frontC_none ws.length ws kvs
+      (ws.length : Int) false hna),
+    lookup_append_right (hdead na₀ (Nat.le_refl na₀))]
+  exact lookup_singleton_self
+
+private theorem wcC_varBest (ws : List Int) :
+    ∀ (kvs : List (Int × Nat)) (tail : Heap) (B na : Nat)
+      (bv : Int) (env : LocalEnv) (k : Cont) (ch : Choices),
+      LocalEnv.lookup env "best" = some (.base ⟨B⟩) → 9 ≤ B →
+      Heap.lookup tail (.base ⟨B⟩) = some (u64cell bv) →
+      stepFn (σC ws.length ws kvs (ws.length : Int) false tail na)
+          (.evalE (.var "best") env k) ch
+        = .ok (.retV (.int bv .uint64) k,
+            σC ws.length ws kvs (ws.length : Int) false tail na, ch) := by
+  intro kvs tail B na bv env k ch henv hB hlkB
+  refine stepFn_var (c := u64cell bv) henv ?_
+  show Heap.lookup
+    (frontC ws.length ws kvs (ws.length : Int) false ++ tail)
+    (.base ⟨B⟩) = some (u64cell bv)
+  rw [lookup_append_right (lookup_frontC_none ws.length ws kvs
+      (ws.length : Int) false hB)]
+  exact hlkB
+
+private theorem wcC_stB (ws : List Int) :
+    ∀ (kvs rem : List (Int × Nat)) (tail : Heap) (B na₀ na : Nat)
+      (bv v : Int) (ch : Choices),
+      9 ≤ B → Heap.lookup tail (.base ⟨B⟩) = some (u64cell bv) →
+      IntKind.normalize .uint64 v = v →
+      stepFn (σC ws.length ws kvs (ws.length : Int) false tail na)
+          (.next (.storeK [.chain (.addr (.base ⟨B⟩)) [] []]
+            [.int v .uint64] (.seqn #[]) (env4R envRB B na₀)
+            (storeBestKR envRB kR B na₀ rem))) ch
+        = .ok (.next (.storeK [] [] (.seqn #[]) (env4R envRB B na₀)
+              (storeBestKR envRB kR B na₀ rem)),
+            σC ws.length ws kvs (ws.length : Int) false
+              (Heap.set tail (.base ⟨B⟩) ⟨some tU64, .int v .uint64⟩) na,
+            ch) := by
+  intro kvs rem tail B na₀ na bv v ch hB hlkB hvn
+  have hlook : Heap.lookup
+      (σC ws.length ws kvs (ws.length : Int) false tail na).heap
+      (.base ⟨B⟩) = some ⟨some tU64, .int bv .uint64⟩ := by
+    show Heap.lookup
+      (frontC ws.length ws kvs (ws.length : Int) false ++ tail)
+      (.base ⟨B⟩) = some ⟨some tU64, .int bv .uint64⟩
+    rw [lookup_append_right (lookup_frontC_none ws.length ws kvs
+        (ws.length : Int) false hB)]
+    exact hlkB
+  have h := storeTarget_addr (v := .int v .uint64) (v' := .int v .uint64)
+    hlook
+    (by
+      simp only [normalizeValueForTy, normalizeValueForTyFuel,
+        typeResolutionFuel]
+      rw [hvn]
+      rfl)
+  rw [show (σC ws.length ws kvs (ws.length : Int) false tail na).heap
+      = frontC ws.length ws kvs (ws.length : Int) false ++ tail from rfl,
+    set_append_right (lookup_frontC_none ws.length ws kvs
+      (ws.length : Int) false hB)] at h
+  exact stepFn_store_step h
+
+/-- **The range loop, at every choice stream** — INSTANTIATED from the
+placement-generic `wcRange_generic` (§10b; consolidation slice
+2026-08-13). -/
 private theorem wc_range_loop (ws : List Int) (kvs : List (Int × Nat)) :
     ∀ (m : Nat) (rem : List (Int × Nat)), rem.length = m →
     ∀ (bv : Nat) (B na : Nat) (tail : Heap) (ch : Choices),
@@ -2705,239 +3079,16 @@ private theorem wc_range_loop (ws : List Int) (kvs : List (Int × Nat)) :
           (rangeHead B rem) ch
         = .ok (.next (kR B),
             σC ws.length ws kvs (ws.length : Int) false tail' na', ch') := by
-  intro m
-  induction m with
-  | zero =>
-      intro rem hm bv B na tail ch hrem hlen hbv hB hBna hbest htail
-      have hnil : rem = [] := List.eq_nil_of_length_eq_zero hm
-      subst hnil
-      refine ⟨1, ch, tail, na, by omega, Nat.le_refl na, ?_, htail, ?_⟩
-      · simpa [maxOf_nil] using hbest
-      · exact wc_segRexit_raw ws.length ws kvs (ws.length : Int) tail B na ch
-  | succ m ih =>
-      intro rem hm bv B na tail ch hrem hlen hbv hB hBna hbest htail
-      -- destructure the pick
-      rcases hcons : Choices.consume ch rem.length with ⟨idx, ch₂⟩
-      have hidx : idx < rem.length := by
-        have := consume_lt ch (show 0 < rem.length by omega)
-        rw [hcons] at this
-        exact this
-      obtain ⟨p, hp⟩ : ∃ p, rem[idx]? = some p :=
-        ⟨_, List.getElem?_eq_getElem hidx⟩
-      have hpmem : p ∈ rem := by
-        obtain ⟨h1, h2⟩ := List.getElem?_eq_some_iff.mp hp
-        exact h2 ▸ List.getElem_mem h1
-      have hpc : p.2 ≤ ws.length := hrem p hpmem
-      have hvnorm : IntKind.normalize .uint64 (p.2 : Int) = (p.2 : Int) := by
-        refine unorm_of_range (by omega) ?_
-        have : p.2 < 2 ^ 64 := by omega
-        exact_mod_cast this
-      -- the pick step
-      have hmiss : Heap.lookup
-          (frontC ws.length ws kvs (ws.length : Int) false ++ tail)
-          (.base ⟨na⟩) = none := by
-        rw [lookup_append_right (lookup_frontC_none ws.length ws kvs
-          (ws.length : Int) false (by omega))]
-        exact htail na (Nat.le_refl na)
-      have hPick := stepFn_pick
-        (σ := σC ws.length ws kvs (ws.length : Int) false tail na)
-        (body := wcRangeBody) (env := envRB B) (k := kR B)
-        hcons hidx hp hvnorm
-      rw [show (σC ws.length ws kvs (ws.length : Int) false tail
-            na).nextAddr = na from rfl,
-        show (σC ws.length ws kvs (ws.length : Int) false tail na).heap
-          = frontC ws.length ws kvs (ws.length : Int) false ++ tail
-          from rfl,
-        set_fresh hmiss, List.append_assoc] at hPick
-      have h1 := stepFnIter_one hPick
-      -- the body prefix to the comparison delivery
-      have hR1 := wc_segR1_raw ws.length ws kvs (rem.eraseIdx idx)
-        (ws.length : Int)
-        (tail ++ [(.base ⟨na⟩, ⟨some tU64, .int (p.2 : Int) .uint64⟩)])
-        B na (na + 1) ch₂
-      have h2 := stepFnIter_chain h1 hR1
-      have hlkc : Heap.lookup
-          (σC ws.length ws kvs (ws.length : Int) false
-            (tail ++ [(.base ⟨na⟩, ⟨some tU64, .int (p.2 : Int) .uint64⟩)])
-            (na + 1)).heap
-          (.base ⟨na⟩) = some ⟨some tU64, .int (p.2 : Int) .uint64⟩ := by
-        show Heap.lookup
-          (frontC ws.length ws kvs (ws.length : Int) false
-            ++ (tail ++ [(.base ⟨na⟩, ⟨some tU64, .int (p.2 : Int) .uint64⟩)]))
-          (.base ⟨na⟩) = some ⟨some tU64, .int (p.2 : Int) .uint64⟩
-        rw [lookup_append_right (lookup_frontC_none ws.length ws kvs
-            (ws.length : Int) false (by omega)),
-          lookup_append_right (htail na (Nat.le_refl na))]
-        exact lookup_singleton_self
-      have hlkb : Heap.lookup
-          (σC ws.length ws kvs (ws.length : Int) false
-            (tail ++ [(.base ⟨na⟩, ⟨some tU64, .int (p.2 : Int) .uint64⟩)])
-            (na + 1)).heap
-          (.base ⟨B⟩) = some (u64cell (bv : Int)) := by
-        show Heap.lookup
-          (frontC ws.length ws kvs (ws.length : Int) false
-            ++ (tail ++ [(.base ⟨na⟩, ⟨some tU64, .int (p.2 : Int) .uint64⟩)]))
-          (.base ⟨B⟩) = some (u64cell (bv : Int))
-        rw [lookup_append_right (lookup_frontC_none ws.length ws kvs
-            (ws.length : Int) false hB)]
-        exact lookup_append_left hbest
-      have h3 := stepFnIter_chain h2 (stepFnIter_one
-        (stepFn_var (x := "c") (env := envIf B na) (a := ⟨na⟩)
-          (ch := ch₂) rfl hlkc))
-      have hR2 := wc_segR2_raw ws.length ws kvs (rem.eraseIdx idx)
-        (ws.length : Int)
-        (tail ++ [(.base ⟨na⟩, ⟨some tU64, .int (p.2 : Int) .uint64⟩)])
-        B na (na + 1) (.int (p.2 : Int) .uint64) ch₂
-      have h4 := stepFnIter_chain h3 hR2
-      have h5 := stepFnIter_chain h4 (stepFnIter_one
-        (stepFn_var (x := "best") (env := envIf B na) (a := ⟨B⟩)
-          (ch := ch₂) rfl hlkb))
-      have hR3 := wc_segR3_raw ws.length ws kvs (rem.eraseIdx idx)
-        (ws.length : Int)
-        (tail ++ [(.base ⟨na⟩, ⟨some tU64, .int (p.2 : Int) .uint64⟩)])
-        B na (na + 1) (p.2 : Int) (bv : Int) ch₂
-      have h6 := stepFnIter_chain h5 hR3
-      -- the pick-and-erase law instances
-      have hgetbang : (rem.map Prod.snd)[idx]! = p.2 := by
-        have hmap : (rem.map Prod.snd)[idx]? = some p.2 := by
-          simp [List.getElem?_map, hp]
-        simp [List.getElem!_eq_getElem?_getD, hmap]
-      have hmaxsplit : maxOf (rem.map Prod.snd)
-          = max p.2 (maxOf ((rem.eraseIdx idx).map Prod.snd)) := by
-        rw [← maxOf_eraseIdx (rem.map Prod.snd) idx
-            (by simpa using hidx), hgetbang, map_eraseIdx]
-      have hlenerase : (rem.eraseIdx idx).length = m := by
-        rw [List.length_eraseIdx_of_lt hidx]
-        omega
-      have hremerase : ∀ q ∈ rem.eraseIdx idx, q.2 ≤ ws.length :=
-        fun q hq => hrem q (mem_of_mem_eraseIdx hq)
-      by_cases hcmp : bv < p.2
-      · -- the branch that improves `best`
-        rw [show (decide ((bv : Int) < (p.2 : Int))) = true from
-          decide_eq_true (by exact_mod_cast hcmp)] at h6
-        have hR4a := wc_segR4a_raw ws.length ws kvs (rem.eraseIdx idx)
-          (ws.length : Int)
-          (tail ++ [(.base ⟨na⟩, ⟨some tU64, .int (p.2 : Int) .uint64⟩)])
-          B na (na + 1) ch₂
-        have h7 := stepFnIter_chain h6 hR4a
-        have h8 := stepFnIter_chain h7 (stepFnIter_one (stepFn_seqn_splice
-          (σ := σC ws.length ws kvs (ws.length : Int) false
-            (tail ++ [(.base ⟨na⟩, ⟨some tU64, .int (p.2 : Int) .uint64⟩)])
-            (na + 1))
-          (ss := #[.assign (.var "best") (.var "c")]) (env := env4 B na)
-          (rest := []) (k := .seq [] (envIf B na)
-            (iterK B (rem.eraseIdx idx))) (ch := ch₂)))
-        have hR4b := wc_segR4b_raw ws.length ws kvs (rem.eraseIdx idx)
-          (ws.length : Int)
-          (tail ++ [(.base ⟨na⟩, ⟨some tU64, .int (p.2 : Int) .uint64⟩)])
-          B na (na + 1) ch₂
-        have h9 := stepFnIter_chain h8 hR4b
-        have h10 := stepFnIter_chain h9 (stepFnIter_one
-          (stepFn_var (x := "c") (env := env4 B na) (a := ⟨na⟩)
-            (ch := ch₂) rfl hlkc))
-        have hR4c := wc_segR4c_raw ws.length ws kvs (rem.eraseIdx idx)
-          (ws.length : Int)
-          (tail ++ [(.base ⟨na⟩, ⟨some tU64, .int (p.2 : Int) .uint64⟩)])
-          B na (na + 1) (.int (p.2 : Int) .uint64) ch₂
-        have h11 := stepFnIter_chain h10 hR4c
-        -- the store to `best`
-        have hstB := storeTarget_addr
-          (σ := σC ws.length ws kvs (ws.length : Int) false
-            (tail ++ [(.base ⟨na⟩, ⟨some tU64, .int (p.2 : Int) .uint64⟩)])
-            (na + 1))
-          (a := ⟨B⟩) (v := .int (p.2 : Int) .uint64)
-          (v' := .int (p.2 : Int) .uint64) hlkb
-          (by
-            simp only [normalizeValueForTy, normalizeValueForTyFuel,
-              typeResolutionFuel]
-            rw [hvnorm]
-            rfl)
-        rw [show (σC ws.length ws kvs (ws.length : Int) false
-              (tail ++ [(.base ⟨na⟩, ⟨some tU64, .int (p.2 : Int) .uint64⟩)])
-              (na + 1)).heap
-            = frontC ws.length ws kvs (ws.length : Int) false
-              ++ (tail
-                ++ [(.base ⟨na⟩, ⟨some tU64, .int (p.2 : Int) .uint64⟩)])
-            from rfl,
-          set_append_right (lookup_frontC_none ws.length ws kvs
-            (ws.length : Int) false hB),
-          set_append_left hbest] at hstB
-        have h12 := stepFnIter_chain h11
-          (stepFnIter_one (stepFn_store_step hstB))
-        have hR5 := wc_segR5_raw ws.length ws kvs (rem.eraseIdx idx)
-          (ws.length : Int)
-          (Heap.set tail (.base ⟨B⟩) ⟨some tU64, .int (p.2 : Int) .uint64⟩
-            ++ [(.base ⟨na⟩, ⟨some tU64, .int (p.2 : Int) .uint64⟩)])
-          B na (na + 1) ch₂
-        have h13 := stepFnIter_chain h12 hR5
-        -- recurse
-        have hbest' : Heap.lookup
-            (Heap.set tail (.base ⟨B⟩) ⟨some tU64, .int (p.2 : Int) .uint64⟩
-              ++ [(.base ⟨na⟩, ⟨some tU64, .int (p.2 : Int) .uint64⟩)])
-            (.base ⟨B⟩) = some (u64cell (p.2 : Int)) :=
-          lookup_append_left Frame.Heap.lookup_set_self
-        have htail' : ∀ x : Nat, na + 1 ≤ x →
-            Heap.lookup
-              (Heap.set tail (.base ⟨B⟩)
-                  ⟨some tU64, .int (p.2 : Int) .uint64⟩
-                ++ [(.base ⟨na⟩, ⟨some tU64, .int (p.2 : Int) .uint64⟩)])
-              (.base ⟨x⟩) = none := by
-          intro x hx
-          rw [lookup_append_right (by
-            rw [Machine.Heap.lookup_set_ne
-              (show (.base ⟨B⟩ : Loc) ≠ .base ⟨x⟩ from by
-                simp only [ne_eq, Loc.base.injEq, Addr.mk.injEq]
-                omega)]
-            exact htail x (by omega)),
-            lookup_cons_ne (base_beq_false (by omega : na ≠ x))]
-          rfl
-        obtain ⟨k', ch', tail₃, na₃, hk', hna₃, hbest₃, htail₃, hrun⟩ :=
-          ih (rem.eraseIdx idx) hlenerase p.2 B (na + 1)
-            (Heap.set tail (.base ⟨B⟩) ⟨some tU64, .int (p.2 : Int) .uint64⟩
-              ++ [(.base ⟨na⟩, ⟨some tU64, .int (p.2 : Int) .uint64⟩)])
-            ch₂ hremerase hlen hpc hB (by omega) hbest' htail'
-        refine ⟨1 + 4 + 1 + 1 + 1 + 1 + 3 + 1 + 4 + 1 + 1 + 1 + 4 + k',
-          ch', tail₃, na₃, by omega, by omega, ?_, htail₃, ?_⟩
-        · rw [show max bv (maxOf (rem.map Prod.snd))
-              = max p.2 (maxOf ((rem.eraseIdx idx).map Prod.snd)) from by
-            rw [hmaxsplit]
-            omega]
-          exact hbest₃
-        · exact stepFnIter_chain h13 hrun
-      · -- the branch that keeps `best`
-        rw [show (decide ((bv : Int) < (p.2 : Int))) = false from
-          decide_eq_false (by
-            intro hc
-            exact hcmp (by exact_mod_cast hc))] at h6
-        have hR4e := wc_segR4e_raw ws.length ws kvs (rem.eraseIdx idx)
-          (ws.length : Int)
-          (tail ++ [(.base ⟨na⟩, ⟨some tU64, .int (p.2 : Int) .uint64⟩)])
-          B na (na + 1) ch₂
-        have h7 := stepFnIter_chain h6 hR4e
-        have hbest' : Heap.lookup
-            (tail ++ [(.base ⟨na⟩, ⟨some tU64, .int (p.2 : Int) .uint64⟩)])
-            (.base ⟨B⟩) = some (u64cell (bv : Int)) :=
-          lookup_append_left hbest
-        have htail' : ∀ x : Nat, na + 1 ≤ x →
-            Heap.lookup
-              (tail ++ [(.base ⟨na⟩, ⟨some tU64, .int (p.2 : Int) .uint64⟩)])
-              (.base ⟨x⟩) = none := by
-          intro x hx
-          rw [lookup_append_right (htail x (by omega)),
-            lookup_cons_ne (base_beq_false (by omega : na ≠ x))]
-          rfl
-        obtain ⟨k', ch', tail₃, na₃, hk', hna₃, hbest₃, htail₃, hrun⟩ :=
-          ih (rem.eraseIdx idx) hlenerase bv B (na + 1)
-            (tail ++ [(.base ⟨na⟩, ⟨some tU64, .int (p.2 : Int) .uint64⟩)])
-            ch₂ hremerase hlen hbv hB (by omega) hbest' htail'
-        refine ⟨1 + 4 + 1 + 1 + 1 + 1 + 3 + k', ch', tail₃, na₃, by omega,
-          by omega, ?_, htail₃, ?_⟩
-        · rw [show max bv (maxOf (rem.map Prod.snd))
-              = max bv (maxOf ((rem.eraseIdx idx).map Prod.snd)) from by
-            rw [hmaxsplit]
-            omega]
-          exact hbest₃
-        · exact stepFnIter_chain h7 hrun
+  intro m rem hm bv B na tail ch hrem hlen hbv hB hBna hbest htail
+  obtain ⟨k, ch', tail', na', hk, hna', hbest', htail', hrun⟩ :=
+    wcRange_generic envRB kR (σC ws.length ws) (ws.length : Int) 9
+      ws.length hlen
+      (fun B na₀ => rfl)
+      (wcC_pick ws) (wcC_R4b ws) (wcC_varC ws) (wcC_varBest ws)
+      (wcC_stB ws)
+      m kvs rem hm bv B na tail ch hrem hbv hB hBna hbest htail
+  exact ⟨k, ch', tail', na', hk, hna', hbest', htail', hrun⟩
+
 
 /-! ## The return path (range exit → the driver terminal) -/
 
@@ -3337,74 +3488,47 @@ theorem wordcount_empty_ok :
   rw [hshape, hfull]
   with_unfolding_all rfl
 
-/-! ## The parameterized harness (gap G1 — GROUNDWORK GREEN, HEADLINE
-STILL OPEN; honest gap record, 2026-08-13)
+/-! ## The parameterized harness (gap G1 — CLOSED, consolidation
+slice 2026-08-14)
 
 The `(n, seed)`-parameterized §11 headline over `wordcount_harness`
 (setup builds `w[i] = seed + i%3`, the call under test runs
-`maxCount(w)`, the max count returns as data) is NOT shipped in this
-module yet. What IS green below: the pure family layer (`wcFamily`,
-`wcFamily_maxMult`), the pinned `wordcountHarnessFunc` + entry
-equation, the whole setup phase, the setup-exit → subject-entry
-segments, and every per-segment `rfl` lemma of the phase-C tower
-re-instantiated at the harness placement (probe-verified layout,
-below). All of it compiles with zero escape hatches and is consumed
-verbatim by the intended completion.
+`maxCount(w)`, the max count returns as data) is SHIPPED below as
+`wordcount_ok` (+ the derived `wordcount_readout`), fuel bound
+`229 + 165·n`, axioms the classical trio.
 
-**THE PRECISE GAP (where it resisted, evidence, pickup plan).** The
-two COMPOSITION proofs — the 53-step counting iteration
-(`wcH_count_iter`) and the `84·n + 23` counting-loop induction
-(`wcH_count_loop`), both VERBATIM copies of the canonical
-`wc_count_iter`/`wc_count_loop` above with only address renames
-(front 9 → 16 cells, map data 5 → 12, `frameK` → the harness
-`frameKH`) — hit an elaborator isDefEq/whnf storm: timeouts at
-2M/4M/12M heartbeats (heartbeat-linear grind: `BEq.beq` unfolds 2.0M
-@4M vs 6.1M @12M; `Heap.lookup` reduced ~134k times @4M; the
-`f a =?= f b` defeq heuristic ~1M hits; RSS observed to 52 GB), while
-the canonical originals pass under 2M. This is NOT a false goal: every
-segment equation `rfl`-checks (the kernel accepts the same shapes),
-and the concrete run agrees end to end (probe: `(n,seed) = (4,7)`
-terminates at step 841 returning 2 = `(4+2)/3`). Bisection (scratch
-copies `wcB-mod-v3a…v3b8`, session 2026-08-13): everything through
-the `h2` chain elaborates fine; the storm ignites at the
-`storeTarget_addr` application for the `$c1` store and is INSENSITIVE
-to argument style (named `(σ := …)`, hoisted `with_unfolding_all rfl`
-side conditions, fully-explicit `@`-application all storm). The same
-application with the same types is INSTANT in a standalone file (also
-with the real `wordCountLowered` payload), and the structure-update
-vs `σH`-spelling defeq and a mixed-spelling `stepFnIter_chain` are
-instant in isolation; a faithful context copy reproduces the storm,
-and dropping the `h1`/`h2` chains does NOT cure it — so the trigger
-is the COMBINATION of the `rw`-surgered `stepFn_init_seq` hypothesis
-(`hInit1`, which after rewriting carries `Param`-projection cells and
-`declare`-spelled envs) and/or the segment-lemma haves in context
-with a subsequent big application. Pickup plan: iterate on the
-self-contained repro (`.tmp/wcB-repro4.lean`, storms at 4M in
-minutes) — (i) bisect the context haves (chains already exonerated);
-(ii) replace the `rw`-surgery route with placement-specific
-conditioned step lemmas STATED in the `σH` spelling on both sides
-(so no re-spelled state ever enters an application site — finding
-15c's remedy applied at lemma granularity); (iii) if the storm
-persists, seal `σH`/`frontH` behind explicitly-typed intermediate
-`have`s or `@[irreducible]` during composition. The range-loop and
-exit segments (R1–R5/R4e/Rexit/X1/X2a/X2b + the 24-step harness
-X2c′) and the final composition (`wcH_runs` → `wordcount_ok` at fuel
-`229 + 165·n` → `wordcount_readout`) are unwritten pending that fix;
-the step counts and terminal shapes are probe-pinned in the layout
-note below.
+**HOW THE 2026-08-13 BLOCKER CLOSED (the record the old gap note owed
+its successor).** The former storm — the harness composition proofs
+(`wcH_count_iter`/`wcH_count_loop` as verbatim address-renames)
+grinding the elaborator at 52 GB — was DIAGNOSED by bisection
+(variants in `.tmp/prof-{A..E}.lean`; full record
+`docs/2026-08-13_consolidation-slice.md` §1): postponed-elaboration
+metavariables inside a big concrete-state argument defeat structural
+unification, and isDefEq's delta fallback compares `Heap.lookup` over
+the concrete front at a symbolic address — a stuck-`if` nest compared
+without caching, ~2^N in the front length (2^9 canonical squeaked by;
+2^16 harness stormed). The recorded "combination with the rw-surgered
+hypothesis" theory was REFUTED (a context-minimal variant storms
+identically); a full-type-ascribed application is INSTANT. Fix, made
+structural: the counting AND range compositions are stated ONCE over
+an abstract state family with every per-segment transition fact a
+hypothesis whose type pins the intermediate states
+(`wcIter_generic`/`wcLoop_generic`/`wcRange_generic`); the canonical
+and harness placements consume them by instantiation, so no concrete
+front ever reaches the unifier.
 
-**THE SEED-WRAP CAVEAT, SETTLED (recorded finding)**: the gap record
-carried `hseed : seed + 2 < 2^64` on the theory that family values
-collide near the wrap boundary and change `maxMultiplicity`. That is
-WRONG: the family's values are `(seed + r) mod 2^64` for `r ∈ {0,1,2}`,
-and two of those are equal iff `r ≡ r' (mod 2^64)` — impossible for
-distinct `r, r' ≤ 2`. So no collision exists at ANY seed, the wrap
-belongs in the family definition (`wcFamily`, mirroring the sibling
-`isFamily`), the shipped hypothesis is just the uint64 domain
-`hseed : seed < 2^64` (consumed only by the entry equation's argument
-normalization), and the returned value is `⌈n/3⌉ = (n+2)/3`
-unconditionally — proven as `wcFamily_maxMult`, where the
-no-collision analysis is actually consumed.
+**THE SEED-WRAP CAVEAT, SETTLED (recorded finding, kept)**: the gap
+record carried `hseed : seed + 2 < 2^64` on the theory that family
+values collide near the wrap boundary and change `maxMultiplicity`.
+That is WRONG: the family's values are `(seed + r) mod 2^64` for
+`r ∈ {0,1,2}`, and two of those are equal iff `r ≡ r' (mod 2^64)` —
+impossible for distinct `r, r' ≤ 2`. So no collision exists at ANY
+seed, the wrap belongs in the family definition (`wcFamily`), the
+shipped hypothesis is just the uint64 domain `hseed : seed < 2^64`
+(consumed only by the entry equation's argument normalization), and
+the returned value is `⌈n/3⌉ = (n+2)/3` unconditionally — proven as
+`wcFamily_maxMult`, where the no-collision analysis is actually
+consumed.
 
 Address layout (probe-verified at `(n, seed) = (4, 7)`; every raw
 segment below re-checks the transcription by `rfl`): 0 = `n`,
@@ -4824,5 +4948,463 @@ private theorem wcH_count_loop (ws : List Int) (sv siv : Int)
       (countsList_norm ws hws hlen)
       n i hn hi dead na hna hdead ch
   exact ⟨k, tail, hk, htail, hbest, hrun⟩
+
+/-! ### The HARNESS placement's range-loop discharges + wrapper -/
+
+private theorem wcH_pick (ws : List Int) (sv siv : Int) :
+    ∀ (kvs rem : List (Int × Nat)) (idx : Nat) (ch ch₂ : Choices)
+      (p : Int × Nat) (tail : Heap) (B na : Nat),
+      Choices.consume ch rem.length = (idx, ch₂) → idx < rem.length →
+      rem[idx]? = some p →
+      IntKind.normalize .uint64 (p.2 : Int) = (p.2 : Int) →
+      16 ≤ na → DeadFrom tail na →
+      stepFn (σH ws.length sv siv ws kvs (ws.length : Int) false tail na)
+          (rangeHeadR envRBH kRH B rem) ch
+        = .ok (.exec wcRangeBody (envIterR envRBH B na)
+              (iterKR envRBH kRH B (rem.eraseIdx idx)),
+            σH ws.length sv siv ws kvs (ws.length : Int) false
+              (tail ++ [(.base ⟨na⟩, ⟨some tU64, .int (p.2 : Int) .uint64⟩)])
+              (na + 1), ch₂) := by
+  intro kvs rem idx ch ch₂ p tail B na hcons hidx hp hvnorm hna htail
+  have hmiss : Heap.lookup
+      (frontH ws.length sv siv ws kvs (ws.length : Int) false ++ tail)
+      (.base ⟨na⟩) = none := by
+    rw [lookup_append_right (lookup_frontH_none ws.length sv siv ws kvs
+      (ws.length : Int) false hna)]
+    exact htail na (Nat.le_refl na)
+  have hPick := stepFn_pick
+    (σ := σH ws.length sv siv ws kvs (ws.length : Int) false tail na)
+    (body := wcRangeBody) (env := envRBH B) (k := kRH B)
+    hcons hidx hp hvnorm
+  rw [show (σH ws.length sv siv ws kvs (ws.length : Int) false tail
+        na).nextAddr = na from rfl,
+    show (σH ws.length sv siv ws kvs (ws.length : Int) false tail na).heap
+      = frontH ws.length sv siv ws kvs (ws.length : Int) false ++ tail
+      from rfl,
+    set_fresh hmiss, List.append_assoc] at hPick
+  exact hPick
+
+private theorem wcH_R4b (ws : List Int) (sv siv : Int) :
+    ∀ (kvs rem : List (Int × Nat)) (tail : Heap) (B na₀ na : Nat)
+      (ch : Choices),
+      stepFnIter 4 (σH ws.length sv siv ws kvs (ws.length : Int) false tail na)
+          (.next (.seq [.assign (.var "best") (.var "c")]
+            (env4R envRBH B na₀)
+            (.seq [] (envIfR envRBH B na₀) (iterKR envRBH kRH B rem)))) ch
+        = .ok (.evalE (.var "c") (env4R envRBH B na₀)
+              (.rhsK .vals [.chain (.addr (.base ⟨B⟩)) [] []] [] []
+                (.seqn #[]) (env4R envRBH B na₀)
+                (storeBestKR envRBH kRH B na₀ rem)),
+            σH ws.length sv siv ws kvs (ws.length : Int) false tail na, ch) := by
+  intro kvs rem tail B na₀ na ch
+  with_unfolding_all rfl
+
+private theorem wcH_varC (ws : List Int) (sv siv : Int) :
+    ∀ (kvs : List (Int × Nat)) (tail : Heap) (na₀ na : Nat)
+      (v : Int) (env : LocalEnv) (k : Cont) (ch : Choices),
+      LocalEnv.lookup env "c" = some (.base ⟨na₀⟩) →
+      16 ≤ na₀ → DeadFrom tail na₀ →
+      stepFn (σH ws.length sv siv ws kvs (ws.length : Int) false
+          (tail ++ [(.base ⟨na₀⟩, ⟨some tU64, .int v .uint64⟩)]) na)
+          (.evalE (.var "c") env k) ch
+        = .ok (.retV (.int v .uint64) k,
+            σH ws.length sv siv ws kvs (ws.length : Int) false
+              (tail ++ [(.base ⟨na₀⟩, ⟨some tU64, .int v .uint64⟩)]) na,
+            ch) := by
+  intro kvs tail na₀ na v env k ch henv hna hdead
+  refine stepFn_var (c := ⟨some tU64, .int v .uint64⟩) henv ?_
+  show Heap.lookup
+    (frontH ws.length sv siv ws kvs (ws.length : Int) false
+      ++ (tail ++ [(.base ⟨na₀⟩, ⟨some tU64, .int v .uint64⟩)]))
+    (.base ⟨na₀⟩) = some ⟨some tU64, .int v .uint64⟩
+  rw [lookup_append_right (lookup_frontH_none ws.length sv siv ws kvs
+      (ws.length : Int) false hna),
+    lookup_append_right (hdead na₀ (Nat.le_refl na₀))]
+  exact lookup_singleton_self
+
+private theorem wcH_varBest (ws : List Int) (sv siv : Int) :
+    ∀ (kvs : List (Int × Nat)) (tail : Heap) (B na : Nat)
+      (bv : Int) (env : LocalEnv) (k : Cont) (ch : Choices),
+      LocalEnv.lookup env "best" = some (.base ⟨B⟩) → 16 ≤ B →
+      Heap.lookup tail (.base ⟨B⟩) = some (u64cell bv) →
+      stepFn (σH ws.length sv siv ws kvs (ws.length : Int) false tail na)
+          (.evalE (.var "best") env k) ch
+        = .ok (.retV (.int bv .uint64) k,
+            σH ws.length sv siv ws kvs (ws.length : Int) false tail na, ch) := by
+  intro kvs tail B na bv env k ch henv hB hlkB
+  refine stepFn_var (c := u64cell bv) henv ?_
+  show Heap.lookup
+    (frontH ws.length sv siv ws kvs (ws.length : Int) false ++ tail)
+    (.base ⟨B⟩) = some (u64cell bv)
+  rw [lookup_append_right (lookup_frontH_none ws.length sv siv ws kvs
+      (ws.length : Int) false hB)]
+  exact hlkB
+
+private theorem wcH_stB (ws : List Int) (sv siv : Int) :
+    ∀ (kvs rem : List (Int × Nat)) (tail : Heap) (B na₀ na : Nat)
+      (bv v : Int) (ch : Choices),
+      16 ≤ B → Heap.lookup tail (.base ⟨B⟩) = some (u64cell bv) →
+      IntKind.normalize .uint64 v = v →
+      stepFn (σH ws.length sv siv ws kvs (ws.length : Int) false tail na)
+          (.next (.storeK [.chain (.addr (.base ⟨B⟩)) [] []]
+            [.int v .uint64] (.seqn #[]) (env4R envRBH B na₀)
+            (storeBestKR envRBH kRH B na₀ rem))) ch
+        = .ok (.next (.storeK [] [] (.seqn #[]) (env4R envRBH B na₀)
+              (storeBestKR envRBH kRH B na₀ rem)),
+            σH ws.length sv siv ws kvs (ws.length : Int) false
+              (Heap.set tail (.base ⟨B⟩) ⟨some tU64, .int v .uint64⟩) na,
+            ch) := by
+  intro kvs rem tail B na₀ na bv v ch hB hlkB hvn
+  have hlook : Heap.lookup
+      (σH ws.length sv siv ws kvs (ws.length : Int) false tail na).heap
+      (.base ⟨B⟩) = some ⟨some tU64, .int bv .uint64⟩ := by
+    show Heap.lookup
+      (frontH ws.length sv siv ws kvs (ws.length : Int) false ++ tail)
+      (.base ⟨B⟩) = some ⟨some tU64, .int bv .uint64⟩
+    rw [lookup_append_right (lookup_frontH_none ws.length sv siv ws kvs
+        (ws.length : Int) false hB)]
+    exact hlkB
+  have h := storeTarget_addr (v := .int v .uint64) (v' := .int v .uint64)
+    hlook
+    (by
+      simp only [normalizeValueForTy, normalizeValueForTyFuel,
+        typeResolutionFuel]
+      rw [hvn]
+      rfl)
+  rw [show (σH ws.length sv siv ws kvs (ws.length : Int) false tail na).heap
+      = frontH ws.length sv siv ws kvs (ws.length : Int) false ++ tail from rfl,
+    set_append_right (lookup_frontH_none ws.length sv siv ws kvs
+      (ws.length : Int) false hB)] at h
+  exact stepFn_store_step h
+
+/-- **The range loop, at every choice stream** — INSTANTIATED from the
+placement-generic `wcRange_generic` (§10b; consolidation slice
+2026-08-13). -/
+private theorem wcH_range_loop (ws : List Int) (sv siv : Int)
+    (kvs : List (Int × Nat)) :
+    ∀ (m : Nat) (rem : List (Int × Nat)), rem.length = m →
+    ∀ (bv : Nat) (B na : Nat) (tail : Heap) (ch : Choices),
+    (∀ p ∈ rem, p.2 ≤ ws.length) → ws.length < 2 ^ 63 → bv ≤ ws.length →
+    16 ≤ B → B < na →
+    Heap.lookup tail (.base ⟨B⟩) = some (u64cell (bv : Int)) →
+    (∀ x : Nat, na ≤ x → Heap.lookup tail (.base ⟨x⟩) = none) →
+    ∃ (k : Nat) (ch' : Choices) (tail' : Heap) (na' : Nat),
+      k ≤ 24 * m + 1 ∧ na ≤ na'
+      ∧ Heap.lookup tail' (.base ⟨B⟩)
+          = some (u64cell ((max bv (maxOf (rem.map Prod.snd)) : Nat) : Int))
+      ∧ (∀ x : Nat, na' ≤ x → Heap.lookup tail' (.base ⟨x⟩) = none)
+      ∧ stepFnIter k (σH ws.length sv siv ws kvs (ws.length : Int) false tail na)
+          (rangeHeadH B rem) ch
+        = .ok (.next (kRH B),
+            σH ws.length sv siv ws kvs (ws.length : Int) false tail' na', ch') := by
+  intro m rem hm bv B na tail ch hrem hlen hbv hB hBna hbest htail
+  obtain ⟨k, ch', tail', na', hk, hna', hbest', htail', hrun⟩ :=
+    wcRange_generic envRBH kRH (σH ws.length sv siv ws) (ws.length : Int)
+      16 ws.length hlen
+      (fun B na₀ => rfl)
+      (wcH_pick ws sv siv) (wcH_R4b ws sv siv) (wcH_varC ws sv siv) (wcH_varBest ws sv siv)
+      (wcH_stB ws sv siv)
+      m kvs rem hm bv B na tail ch hrem hbv hB hBna hbest htail
+  exact ⟨k, ch', tail', na', hk, hna', hbest', htail', hrun⟩
+
+
+
+/-- The harness exit-phase front: harness `$res0` (2), `$c10` (8), the
+subject's `$res0` (10) generalized. -/
+private def frontXH (L : Nat) (sv siv : Int) (ws : List Int)
+    (kvs : List (Int × Nat)) (r2 r8 r10 : Int) : Heap :=
+  [(.base ⟨0⟩, u64cell (L : Int)), (.base ⟨1⟩, u64cell sv),
+   (.base ⟨2⟩, u64cell r2), (.base ⟨3⟩, wHandleCell L),
+   (.base ⟨4⟩, arrCell L ws), (.base ⟨5⟩, wHandleCell L),
+   (.base ⟨6⟩, u64cell siv), (.base ⟨7⟩, bcell false),
+   (.base ⟨8⟩, u64cell r8), (.base ⟨9⟩, wHandleCell L),
+   (.base ⟨10⟩, u64cell r10), (.base ⟨11⟩, mhCellW),
+   (.base ⟨12⟩, mdCell kvs), (.base ⟨13⟩, mhCellW),
+   (.base ⟨14⟩, intcell ((L : Nat) : Int)), (.base ⟨15⟩, bcell false)]
+
+private def σXH (L : Nat) (sv siv : Int) (ws : List Int)
+    (kvs : List (Int × Nat)) (r2 r8 r10 : Int) (tail : Heap)
+    (na : Nat) : ExecState :=
+  { types := wordCountLowered.typeDefs.toList,
+    functions := wordCountLowered.funcs,
+    methods := wordCountLowered.methods,
+    heap := frontXH L sv siv ws kvs r2 r8 r10 ++ tail, nextAddr := na }
+
+/-- X1H: loop exit → the `best` read of `$res0 := best`. 6 steps. -/
+private theorem wcH_segX1_raw (L : Nat) (sv siv : Int) (ws : List Int)
+    (kvs : List (Int × Nat)) (r2 r8 r10 : Int) (tail : Heap) (B na : Nat)
+    (ch : Choices) :
+    stepFnIter 6 (σXH L sv siv ws kvs r2 r8 r10 tail na) (.next (kRH B)) ch
+      = .ok (.evalE (.var "best") (envRBH B)
+            (.rhsK .vals [.chain (.addr (.base ⟨10⟩)) [] []] [] []
+              (.seqn #[]) (envRBH B)
+              (.seq [.returnStmt] (envRBH B) frameKH)),
+          σXH L sv siv ws kvs r2 r8 r10 tail na, ch) := by
+  have h1 : stepFnIter 1 (σXH L sv siv ws kvs r2 r8 r10 tail na)
+      (.next (kRH B)) ch
+      = .ok (.exec retSeqn (envRBH B) (.seq [] (envRBH B) frameKH),
+          σXH L sv siv ws kvs r2 r8 r10 tail na, ch) := by
+    with_unfolding_all rfl
+  have h2 := stepFnIter_one (stepFn_seqn_splice
+    (σ := σXH L sv siv ws kvs r2 r8 r10 tail na)
+    (ss := #[.assign (.var "$res0") (.var "best"), .returnStmt])
+    (env := envRBH B) (rest := []) (k := frameKH) (ch := ch))
+  have h3 : stepFnIter 4 (σXH L sv siv ws kvs r2 r8 r10 tail na)
+      (.next (.seq
+        ((#[.assign (.var "$res0") (.var "best"),
+          .returnStmt] : Array Stmt).toList ++ [])
+        (envRBH B) frameKH)) ch
+      = .ok (.evalE (.var "best") (envRBH B)
+            (.rhsK .vals [.chain (.addr (.base ⟨10⟩)) [] []] [] []
+              (.seqn #[]) (envRBH B)
+              (.seq [.returnStmt] (envRBH B) frameKH)),
+          σXH L sv siv ws kvs r2 r8 r10 tail na, ch) := by
+    with_unfolding_all rfl
+  exact stepFnIter_chain (stepFnIter_chain h1 h2) h3
+
+/-- X2aH: the `best` value delivered → stored into the subject's
+`$res0` (cell 10). 2 steps. -/
+private theorem wcH_segX2a_raw (L : Nat) (sv siv : Int) (ws : List Int)
+    (kvs : List (Int × Nat)) (r2 r8 r10 bvv : Int) (tail : Heap) (B na : Nat)
+    (ch : Choices) :
+    stepFnIter 2 (σXH L sv siv ws kvs r2 r8 r10 tail na)
+      (.retV (.int bvv .uint64)
+        (.rhsK .vals [.chain (.addr (.base ⟨10⟩)) [] []] [] [] (.seqn #[])
+          (envRBH B) (.seq [.returnStmt] (envRBH B) frameKH))) ch
+      = .ok (.next (.storeK [] [] (.seqn #[]) (envRBH B)
+            (.seq [.returnStmt] (envRBH B) frameKH)),
+          σXH L sv siv ws kvs r2 r8 (IntKind.normalize .uint64 bvv) tail na,
+          ch) := by
+  with_unfolding_all rfl
+
+/-- X2bH: → the `returnStmt` dispatch point. 2 steps. -/
+private theorem wcH_segX2b_raw (L : Nat) (sv siv : Int) (ws : List Int)
+    (kvs : List (Int × Nat)) (r2 r8 r10 : Int) (tail : Heap) (B na : Nat)
+    (ch : Choices) :
+    stepFnIter 2 (σXH L sv siv ws kvs r2 r8 r10 tail na)
+      (.next (.storeK [] [] (.seqn #[]) (envRBH B)
+        (.seq [.returnStmt] (envRBH B) frameKH))) ch
+      = .ok (.next (.seq
+            (((#[] : Array Stmt).toList) ++ [.returnStmt]) (envRBH B)
+            frameKH),
+          σXH L sv siv ws kvs r2 r8 r10 tail na, ch) := by
+  have h1 := stepFnIter_one (stepFn_storeK_nil
+    (σ := σXH L sv siv ws kvs r2 r8 r10 tail na) (body := .seqn #[])
+    (env := envRBH B)
+    (k := .seq [.returnStmt] (envRBH B) frameKH) (ch := ch))
+  have h2 := stepFnIter_one (stepFn_seqn_splice
+    (σ := σXH L sv siv ws kvs r2 r8 r10 tail na) (ss := #[])
+    (env := envRBH B)
+    (rest := [.returnStmt]) (k := frameKH) (ch := ch))
+  exact stepFnIter_chain h1 h2
+
+/-- X2cH: `return`, the subject frame's result read + `$c10`
+write-back, the harness tail `$res0 := $c10; return`, the harness
+frame exit → the driver terminal. 24 steps. -/
+private theorem wcH_segX2c_raw (L : Nat) (sv siv : Int) (ws : List Int)
+    (kvs : List (Int × Nat)) (r2 r8 r10 : Int) (tail : Heap) (na : Nat)
+    (B : Nat) (ch : Choices) :
+    stepFnIter 24 (σXH L sv siv ws kvs r2 r8 r10 tail na)
+      (.next (.seq (((#[] : Array Stmt).toList) ++ [.returnStmt])
+        (envRBH B) frameKH)) ch
+      = .ok (.next .stop,
+          σXH L sv siv ws kvs
+            (IntKind.normalize .uint64 (IntKind.normalize .uint64 r10))
+            (IntKind.normalize .uint64 r10) r10 tail na, ch) := by
+  with_unfolding_all rfl
+
+private theorem lookup_frontXH_none (L : Nat) (sv siv : Int) (ws : List Int)
+    (kvs : List (Int × Nat)) (r2 r8 r10 : Int) {x : Nat} (hx : 16 ≤ x) :
+    Heap.lookup (frontXH L sv siv ws kvs r2 r8 r10) (.base ⟨x⟩) = none := by
+  simp only [frontXH, Heap.lookup,
+    base_beq_false (by omega : (0 : Nat) ≠ x),
+    base_beq_false (by omega : (1 : Nat) ≠ x),
+    base_beq_false (by omega : (2 : Nat) ≠ x),
+    base_beq_false (by omega : (3 : Nat) ≠ x),
+    base_beq_false (by omega : (4 : Nat) ≠ x),
+    base_beq_false (by omega : (5 : Nat) ≠ x),
+    base_beq_false (by omega : (6 : Nat) ≠ x),
+    base_beq_false (by omega : (7 : Nat) ≠ x),
+    base_beq_false (by omega : (8 : Nat) ≠ x),
+    base_beq_false (by omega : (9 : Nat) ≠ x),
+    base_beq_false (by omega : (10 : Nat) ≠ x),
+    base_beq_false (by omega : (11 : Nat) ≠ x),
+    base_beq_false (by omega : (12 : Nat) ≠ x),
+    base_beq_false (by omega : (13 : Nat) ≠ x),
+    base_beq_false (by omega : (14 : Nat) ≠ x),
+    base_beq_false (by omega : (15 : Nat) ≠ x),
+    Bool.false_eq_true, if_false]
+
+/-- **The harness run, end to end** (gap G1's composition): from the
+machine entry's post-prelude state, through setup, the subject's
+counting and range phases, and the harness return path, to the driver
+terminal — with `⌈n/3⌉` in the harness result cell. -/
+private theorem wcH_runs (n seed : Nat) (hn : n < 2 ^ 63) (ch : Choices) :
+    ∃ (k : Nat) (ch' : Choices) (tail : Heap) (na : Nat),
+      k ≤ 229 + 165 * n ∧
+      stepFnIter k (σWH0 ((n : Nat) : Int) ((seed : Nat) : Int))
+          (.exec wordcountHarnessFunc.body [hWScope0] hWFrame0) ch
+        = .ok (.next .stop,
+            σXH n ((seed : Nat) : Int) ((n : Nat) : Int)
+              (wcFamily n seed) (countsList (wcFamily n seed))
+              (((n + 2) / 3 : Nat) : Int) (((n + 2) / 3 : Nat) : Int)
+              (((n + 2) / 3 : Nat) : Int) tail na, ch') := by
+  have hws := wcFamily_range n seed
+  have hLen : (wcFamily n seed).length = n := wcFamily_length n seed
+  have hlen : (wcFamily n seed).length < 2 ^ 63 := by omega
+  have hM : maxMultiplicity (wcFamily n seed) = (n + 2) / 3 :=
+    wcFamily_maxMult n seed
+  have hMle : (n + 2) / 3 ≤ n ∨ n = 0 := by omega
+  have hMlt : (n + 2) / 3 < 2 ^ 64 := by omega
+  have hMnorm : IntKind.normalize .uint64 (((n + 2) / 3 : Nat) : Int)
+      = (((n + 2) / 3 : Nat) : Int) := by
+    refine unorm_of_range (by omega) ?_
+    exact_mod_cast hMlt
+  -- entry: E1 → makeSlice → E2
+  have hE := stepFnIter_chain
+    (stepFnIter_chain (wcH_E1_raw n seed ch)
+      (stepFnIter_one (wcH_makeSlice n seed ch)))
+    (wcH_E2_raw n seed ch)
+  -- setup: first dispatch, the fill loop, the exit
+  have hA0 := wcH_suA0_raw n ((seed : Nat) : Int) 0
+    (List.replicate n 0) ch
+  have hSU := wcH_setup_loop n seed hn (n - 0) 0 rfl (by omega) ch
+  have hS1 := stepFnIter_chain (stepFnIter_chain hE hA0) hSU
+  rw [show (decide (((n : Nat) : Int) < ((n : Nat) : Int))) = false from
+    decide_eq_false (by omega)] at hS1
+  have hX := wcH_X_raw n ((seed : Nat) : Int) ((n : Nat) : Int)
+    (wcFamily n seed) ch
+  have hS2 := stepFnIter_chain hS1 hX
+  have hES := wcH_entryS_raw n ((seed : Nat) : Int) ((n : Nat) : Int)
+    (wcFamily n seed) ch
+  have hS3 := stepFnIter_chain hS2 hES
+  -- the subject's first dispatch to the exit-test delivery
+  have hA0c := wcH_segA0_raw n ((seed : Nat) : Int) ((n : Nat) : Int)
+    (wcFamily n seed) [] 0 [] 16 ch
+  have hlenap := stepFnIter_one
+    (stepFn_strict_apply (done := []) (env := env2H)
+      (k := .strictK .lessCmp [.int (0 : Int) .int] [] env2H cmpContCH)
+      (ch := ch)
+      (applyStrictOp_len_slice
+        (σ := σH n ((seed : Nat) : Int) ((n : Nat) : Int)
+          (wcFamily n seed) [] 0 false [] 16)
+        (b := .base ⟨4⟩) (off := 0) (len := n) (cap := n) (elem := tU64)
+        (Nat.le_refl n)))
+  have hCmp := wcH_cmp_raw n ((seed : Nat) : Int) ((n : Nat) : Int)
+    (wcFamily n seed) [] 0 0 [] 16 ch
+  have hS4 := stepFnIter_chain (stepFnIter_chain (stepFnIter_chain hS3 hA0c)
+    hlenap) hCmp
+  -- the counting loop (instantiated at ws := wcFamily n seed, then the
+  -- length rewritten to n)
+  obtain ⟨k₁, tail₁, hk₁, htail₁, hbest₁, hrun₁⟩ :=
+    wcH_count_loop (wcFamily n seed) ((seed : Nat) : Int) ((n : Nat) : Int)
+      hws hlen ((wcFamily n seed).length - 0) 0 rfl (by omega) [] 16
+      (by omega) (fun _ _ => rfl) ch
+  rw [hLen] at hrun₁ hbest₁ htail₁ hk₁
+  have hS5 := stepFnIter_chain hS4 hrun₁
+  -- the range loop
+  obtain ⟨k₂, ch₂, tail₂, na₂, hk₂, hna₂, hbest₂, htail₂, hrun₂⟩ :=
+    wcH_range_loop (wcFamily n seed) ((seed : Nat) : Int) ((n : Nat) : Int)
+      (countsList (wcFamily n seed)) (countsList (wcFamily n seed)).length
+      (countsList (wcFamily n seed)) rfl 0 (16 + 2 * (n - 0))
+      (16 + 2 * (n - 0) + 1) tail₁ ch
+      (fun p hp => by
+        have := countsList_val_le (wcFamily n seed) hp
+        omega)
+      hlen (by omega) (by omega) (by omega) hbest₁ htail₁
+  rw [hLen] at hrun₂
+  have hS6 := stepFnIter_chain hS5 hrun₂
+  rw [show max 0 (maxOf ((countsList (wcFamily n seed)).map Prod.snd))
+      = (n + 2) / 3 from by
+    rw [Nat.zero_max, maxOf_countsList (wcFamily n seed), hM]] at hbest₂
+  -- the return path
+  have hX1 := wcH_segX1_raw n ((seed : Nat) : Int) ((n : Nat) : Int)
+    (wcFamily n seed) (countsList (wcFamily n seed)) 0 0 0 tail₂
+    (16 + 2 * (n - 0)) na₂ ch₂
+  have hS7 := stepFnIter_chain hS6 hX1
+  have hlkB : Heap.lookup
+      (σXH n ((seed : Nat) : Int) ((n : Nat) : Int) (wcFamily n seed)
+        (countsList (wcFamily n seed)) 0 0 0 tail₂ na₂).heap
+      (.base ⟨16 + 2 * (n - 0)⟩)
+      = some (u64cell (((n + 2) / 3 : Nat) : Int)) := by
+    show Heap.lookup
+      (frontXH n ((seed : Nat) : Int) ((n : Nat) : Int) (wcFamily n seed)
+        (countsList (wcFamily n seed)) 0 0 0 ++ tail₂)
+      (.base ⟨16 + 2 * (n - 0)⟩)
+      = some (u64cell (((n + 2) / 3 : Nat) : Int))
+    rw [lookup_append_right
+      (lookup_frontXH_none n ((seed : Nat) : Int) ((n : Nat) : Int)
+        (wcFamily n seed) (countsList (wcFamily n seed)) 0 0 0 (by omega))]
+    exact hbest₂
+  have hS8 := stepFnIter_chain hS7 (stepFnIter_one
+    (stepFn_var (x := "best") (env := envRBH (16 + 2 * (n - 0)))
+      (a := ⟨16 + 2 * (n - 0)⟩) (ch := ch₂) rfl hlkB))
+  have hX2a := wcH_segX2a_raw n ((seed : Nat) : Int) ((n : Nat) : Int)
+    (wcFamily n seed) (countsList (wcFamily n seed)) 0 0 0
+    (((n + 2) / 3 : Nat) : Int) tail₂ (16 + 2 * (n - 0)) na₂ ch₂
+  rw [hMnorm] at hX2a
+  have hS9 := stepFnIter_chain hS8 hX2a
+  have hS10 := stepFnIter_chain hS9
+    (wcH_segX2b_raw n ((seed : Nat) : Int) ((n : Nat) : Int)
+      (wcFamily n seed) (countsList (wcFamily n seed)) 0 0
+      (((n + 2) / 3 : Nat) : Int) tail₂ (16 + 2 * (n - 0)) na₂ ch₂)
+  have hX2c := wcH_segX2c_raw n ((seed : Nat) : Int) ((n : Nat) : Int)
+    (wcFamily n seed) (countsList (wcFamily n seed)) 0 0
+    (((n + 2) / 3 : Nat) : Int) tail₂ na₂ (16 + 2 * (n - 0)) ch₂
+  rw [hMnorm, hMnorm] at hX2c
+  have hS11 := stepFnIter_chain hS10 hX2c
+  refine ⟨_, ch₂, tail₂, na₂, ?_, hS11⟩
+  have hm : (countsList (wcFamily n seed)).length ≤ n := by
+    have := countsList_length_le (wcFamily n seed)
+    omega
+  omega
+
+/-- **The parameterized-harness headline (gap G1 CLOSED, consolidation
+slice 2026-08-13)** — the §11 harness form over `wordcount_harness`:
+for every `n < 2^63` and every uint64 `seed`, past fuel `229 + 165·n`,
+at EVERY nondeterminism-choice stream (every map-iteration order), the
+harness run completes with EXACTLY `⌈n/3⌉ = (n+2)/3` as its returned
+value — the closed form `wcFamily_maxMult` proves for the setup family
+`w[i] = seed + i%3` at every seed (the refuted seed-wrap caveat,
+finding 20). -/
+theorem wordcount_ok (n seed : Nat) (hn : n < 2 ^ 63)
+    (hseed : seed < 2 ^ 64) :
+    ∃ N : Nat, ∀ fuel : Nat, N ≤ fuel → ∀ ch : Choices,
+      runFunctionWithContextM fuel wordCountLowered.typeDefs.toList
+          wordCountLowered.funcs wordcountHarnessFunc
+          #[.int ((n : Nat) : Int) .uint64, .int ((seed : Nat) : Int) .uint64]
+          wordCountLowered.methods ch
+        = .ok ⟨#[.int (((n + 2) / 3 : Nat) : Int) .uint64]⟩ := by
+  refine ⟨229 + 165 * n, fun fuel hfuel ch => ?_⟩
+  obtain ⟨k, ch', tail, na, hk, hrun⟩ := wcH_runs n seed hn ch
+  have hentry := wcH_entry_eq ((n : Nat) : Int) ((seed : Nat) : Int) fuel ch
+  rw [unorm_nat_of_lt (show n < 2 ^ 64 by omega),
+    unorm_nat_of_lt hseed] at hentry
+  have hfold := runConfig_of_stepFnIter hrun (fuel - k)
+  rw [show k + (fuel - k) = fuel from by omega] at hfold
+  have hfull : runConfig fuel
+      (σWH0 ((n : Nat) : Int) ((seed : Nat) : Int))
+      (.exec wordcountHarnessFunc.body [hWScope0] hWFrame0) ch
+      = .ok (σXH n ((seed : Nat) : Int) ((n : Nat) : Int)
+          (wcFamily n seed) (countsList (wcFamily n seed))
+          (((n + 2) / 3 : Nat) : Int) (((n + 2) / 3 : Nat) : Int)
+          (((n + 2) / 3 : Nat) : Int) tail na, ch') := by
+    rw [hfold, runConfig_next_stop]
+  rw [hentry, hfull]
+  with_unfolding_all rfl
+
+/-- The D1 run-conditioned twin, derived (`harness_readout_of_total`):
+ANY successful completion, at any fuel and any choice stream, returns
+exactly `⌈n/3⌉`. -/
+theorem wordcount_readout (n seed : Nat) (hn : n < 2 ^ 63)
+    (hseed : seed < 2 ^ 64) :
+    ∀ (fuel : Nat) (ch : Choices) (r : Result),
+      runFunctionWithContextM fuel wordCountLowered.typeDefs.toList
+          wordCountLowered.funcs wordcountHarnessFunc
+          #[.int ((n : Nat) : Int) .uint64, .int ((seed : Nat) : Int) .uint64]
+          wordCountLowered.methods ch
+        = .ok r →
+      r = ⟨#[.int (((n + 2) / 3 : Nat) : Int) .uint64]⟩ :=
+  harness_readout_of_total (wordcount_ok n seed hn hseed)
 
 end GoLean.Examples.WordCount
