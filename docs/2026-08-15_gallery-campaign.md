@@ -254,10 +254,23 @@ log (one line: the call, the principle applied).
   `gallery-campaign`. First action: `scripts/setup-deps --from
   /home/dev/projects/golean` (fresh worktrees bootstrap their own
   `deps/`; fail-closed without it).
-- Campaign log: `docs/gallery-campaign-log.md` — per-unit entries
-  (example / extension / dossier / debt item: status, judgment calls,
-  findings, costs), checkpoint summaries at least every 5 units with
-  honest totals per goal (complete / gap / remaining).
+- **PARALLEL SUB-LANES (user-authorized 2026-08-15):** units may run
+  concurrently in sub-worktrees on sub-branches off `gallery-campaign`
+  when FILE-DISJOINT. The ownership map: proofs/kit/examples/corpus/
+  baselines = ONE owner at a time (kit-and-example units serialize);
+  dossier docs + `docs/evidence/` = the dossier lane (no Lake builds
+  there, so it also never contends for the build budget). Heavy builds
+  stay one-at-a-time box-wide regardless of lane. Integration: the
+  operator rebases each sub-branch onto the campaign tip and
+  fast-forwards — same legibility discipline as the main merge
+  protocol, applied one level down. The G3 dossier register is
+  enumerated in the dossier lane's FIRST commit (it needs no kit).
+- Campaign log: `docs/gallery-campaign-log/` — ONE FILE PER GOAL
+  (`g0.md` … `g4.md`) plus `INDEX.md` (the per-goal totals table +
+  checkpoint summaries), so parallel lanes never write the same file.
+  Per-unit entries as before (status, judgment calls, findings,
+  costs); checkpoint summaries at least every 5 units with honest
+  totals per goal (complete / gap / remaining).
 - Commit cadence: at minimum one commit per unit of work; the log
   updates in the same commit as the work it describes.
 - Findings outside the four goals (fidelity gaps beyond the register,
