@@ -88,6 +88,11 @@ memory ceiling"; this slice measured the growth law behind it: it is
 superlinear in the program the state carries, and the default 64G cap
 is already breached by one extra function.
 
+**RESOLVED by slice 1.5 (2026-08-14, operator-inserted): see the
+section "Slice 1.5" below.** The blocker record is kept as written for
+the measurement trail; route 2 below is what shipped, and the growth
+law is severed — the corpus program can grow again.
+
 **Prerequisite for the wordcount swap** (and for any further growth of
 that corpus program): restate `wc_empty_run`. Two routes, cheapest
 first —
@@ -144,6 +149,64 @@ while k < 3000 && !done do
 
 — gives the exact step count per `n` in one run, which is how the fuel
 bound below was measured rather than guessed.
+
+## Slice 1.5 — the long-concrete-run class RETIRED (2026-08-14)
+
+Operator-inserted slice: re-prove `wc_empty_run` (statement
+byte-identical, `wordcount_empty_ok`'s axiom pin unchanged) so the
+kernel never whnf's a configuration embedding the whole program, then
+re-land the reverted `wordcount_harness_r` as the real test.
+
+**The diagnosis, confirmed by controlled experiment** (probes capped
+24G): the memory went exactly where the blocker record guessed —
+elaborator+kernel whnf across the 158-step reduction carries the
+`ExecState` with `functions := wordCountLowered.funcs` through every
+intermediate term, and the per-step unfold/rebuild of that
+program-embedding state is what cost 50.8 GiB (superlinear in program
+size because the fronts are re-compared without sharing). The
+controlled half: the IDENTICAL 158-step run with only the program
+context σ-abstracted elaborates at **1.9 GiB** — same statement shape,
+same step count, ~29× memory drop, wall unchanged (~86 s, the whnf
+step-walk itself).
+
+**The fix (route 2, the E-form extended to PROGRAM-generic):** the run
+has exactly ONE step that consults the program context — the
+`maxCount` frame entry (probe-verified: every `defaultValue`/
+`normalizeValueForTy` use is at structural types, the empty snapshot's
+self-normalization check is vacuous, `methods` is `#[]`). So:
+
+* two segments stated over abstract `σ : ExecState` with only
+  `heap`/`nextAddr` pinned (`wc_empty_seg1`, 20 steps: harness
+  prelude; `wc_empty_seg2`, 137 steps: `maxCount` body + frame exit +
+  tail) — both close by `with_unfolding_all rfl` over ≤12-cell heaps;
+* the entry step conditioned on its `enterFrame` fact
+  (`wc_empty_enterFrame_step`, the P1-family shape, stated generically
+  in-module — promotion candidate `stepFn_call_enter`, waiting on a
+  second consumer per §12);
+* `stepFnIter_chain` composition (`wc_empty_run_generic`), then the
+  byte-identical `wc_empty_run` instantiates it, discharging the
+  `enterFrame` fact by `rfl` — the ONLY point the pinned program is
+  unfolded, and `maxCount` is the funcs array's head, so the scan
+  stops immediately.
+
+Technique recorded normatively in the StepKit module docstring
+("Long CONCRETE runs: the PROGRAM-generic form"); worked template is
+the EmptyRun shard itself. Promotion ledger: no lift shipped (single
+consumer); `proof-costs` confirms no other example has a member of
+this class (next-heaviest module ≈ 2.0 GiB).
+
+**Measurements (acceptance):**
+
+| item | before | after |
+|---|---|---|
+| `EmptyRun` shard elaboration (proof-costs / `time -v`) | 76–82 s, **50.8–53.5 GiB** | 86 s, **1.9 GiB** (24G-capped) |
+| the same with `wordcount_harness_r` added | **~77 GiB** (breaks 64G cap) | see the re-landing row below |
+| `wordcount_empty_ok` axioms | `[propext, Quot.sound]` | identical (Audit `#guard_msgs` pin, unchanged, green) |
+
+**The real test — `wordcount_harness_r` re-landed:** the corpus
+addition that broke the build now ships (details + gate state recorded
+in the re-landing commit); growth in the pinned program no longer
+moves `EmptyRun`.
 
 ## Handoff: the proof designs, ready to build
 

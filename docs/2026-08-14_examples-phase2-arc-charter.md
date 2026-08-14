@@ -92,6 +92,17 @@ until it is taken, every new harness that needs a long concrete run
 buys another ~50 GiB peak, and the honest planning number for a lane
 is 64G per heavy build, one at a time.
 
+**DISCHARGED by slice 1.5 (2026-08-14): verified reflection was NOT
+needed.** Lever 4's convention DOES reach the class once extended from
+placement-generic to PROGRAM-generic (abstract σ with only
+`heap`/`nextAddr` pinned; the one program-consulting step conditioned
+on its `enterFrame` fact). `wc_empty_run`: 50.8 GiB → 1.9 GiB,
+statement byte-identical, axiom pins unchanged, and the reverted
+`wordcount_harness_r` re-lands. Record:
+`docs/2026-08-14_phase2-slice1-spec-swaps.md` §"Slice 1.5"; normative
+recipe: the StepKit module docstring. The verified-reflection
+direction stays parked for a 10× corpus, not for this.
+
 ### Lever 4 convention (RECORDED, no retrofit): the default segment shape
 
 New example segment layers are **placement-generic and type-ascribed**
@@ -192,6 +203,11 @@ fixtures, measured deltas):
   thread cap nor the module split moves it. The 64G-per-heavy-build,
   one-at-a-time rule stands until the long-concrete-run proof class is
   re-done (see the Slice-0 measurements above).
+  **RE-DONE (slice 1.5, 2026-08-14):** `wc_empty_run` restated
+  program-generically at a 1.9 GiB peak; the heaviest proofs module is
+  now ~2 GiB and the full proofs build fits the slice-0 lever-1 48G
+  acceptance again. Parallel-lane full gates are budget-feasible again
+  under the standing `GOLEAN_MEM_MAX=48G`-per-lane rule.
 - `.tmp/` is gitignored as of `2efa4524`; scoping/audit scratch under
   it is referenced handoff material (inventory:
   `docs/2026-08-14_harness-style-scoping.md` §11, sweep report §5).

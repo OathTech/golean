@@ -122,13 +122,14 @@ boundary lost that modifier (Lean's `private` is per-module); nothing
 else about them changed. The public API — every name `proofs/Audit.lean`
 pins — is unchanged, and so are the recorded axiom sets.
 
-COST NOTE (measured 2026-08-14, one lean worker, `GOLEAN_MEM_MAX=62G`):
-`EmptyRun` is 81 s at a 50.8 GiB peak and every other shard is under
-0.3 GiB. The whole example's memory ceiling is ONE declaration —
-`wc_empty_run`'s 158-step `with_unfolding_all rfl` over a concrete
-configuration. The split makes that attributable; shrinking it is a
-proof change (the phase-2 charter's lever-4 convention and the
-verified-reflection research direction), not a placement one.
+COST NOTE (updated for slice 1.5, 2026-08-14): `EmptyRun` WAS the
+whole repo's memory ceiling — 81 s at a 50.8 GiB peak for ONE
+declaration, `wc_empty_run`'s 158-step `with_unfolding_all rfl` over a
+concrete configuration embedding the whole pinned program, growing
+superlinearly with the corpus program (+1 function → ~77 GiB). Slice
+1.5 restated the proof PROGRAM-generically (statement unchanged; see
+`EmptyRun`'s module docstring): measured 86 s at a 1.9 GiB peak, and
+the cost no longer tracks the corpus program's size.
 -/
 
 namespace GoLean.Examples.WordCount

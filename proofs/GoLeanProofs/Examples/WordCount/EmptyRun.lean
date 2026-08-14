@@ -11,12 +11,33 @@ import GoLeanProofs.Examples.WordCount.CanonRun
 # WordCount — EmptyRun
 
 Per-phase shard of `GoLeanProofs.Examples.WordCount` (examples phase-2
-slice 0, lever 2, 2026-08-14). Every statement and proof here is
-BYTE-IDENTICAL to the pre-split module; only file placement changed, so
-Lake's module-level caching can see the phases separately. The
-user-facing headline theorems live in the thin root module
-`GoLeanProofs.Examples.WordCount`; the module docstring there records
-the example's design.
+slice 0, lever 2, 2026-08-14). The user-facing headline theorems live in
+the thin root module `GoLeanProofs.Examples.WordCount`; the module
+docstring there records the example's design.
+
+## The program-generic run (slice 1.5, 2026-08-14)
+
+`wc_empty_run`'s STATEMENT is byte-identical to the pre-split module,
+but its proof was restated after the slice-1 blocker measurement: the
+original single 158-step `with_unfolding_all rfl` made the kernel whnf
+concrete configurations whose `ExecState` embeds the WHOLE pinned
+program (`wordCountLowered.funcs`), costing 82 s / 50.8 GiB alone and
+growing superlinearly with the corpus program (+1 harness function →
+~77 GiB, past the 64G cap — the slice-1 record has both measurements).
+
+The restatement is the E-form taken one step further — PROGRAM-generic,
+not just placement-generic: every segment is stated over an abstract
+`σ : ExecState` with only `heap`/`nextAddr` pinned concrete
+(`{ σ with heap := …, nextAddr := … }`), so the unifier and kernel only
+ever see 12-cell heaps and never a program-embedding state. The single
+step that genuinely consults the program — the `maxCount` frame entry —
+is conditioned on its `enterFrame` fact (`wc_empty_enterFrame_step`),
+discharged ONCE by `rfl` at the concrete instantiation. Measured effect:
+1.9 GiB / ~86 s for this whole shard (was 50.8 GiB), and the cost no
+longer grows with the corpus program. Same-file worked template for the
+parameterized instances (`maxCountOne`/`maxCountFour`); technique
+recorded in `docs/2026-08-14_phase2-slice1-spec-swaps.md` and the
+StepKit module docstring.
 -/
 
 namespace GoLean.Examples.WordCount
@@ -71,7 +92,7 @@ example : findFunctionIn? wordCountLowered.funcs ⟨"maxCountEmpty"⟩
     = some maxCountEmptyFunc := rfl
 
 /-- The harness run's terminal state (probe-pinned; re-checked by the
-`rfl` below). -/
+composition below). -/
 def σEmptyFin : ExecState :=
   { types := wordCountLowered.typeDefs.toList,
     functions := wordCountLowered.funcs,
@@ -91,10 +112,141 @@ def σEmptyFin : ExecState :=
       (.base ⟨11⟩, ⟨some tU64, .int 0 .uint64⟩)],
     nextAddr := 12 }
 
+/-! ## Phase-boundary vocabulary (probe-pinned, 2026-08-14)
+
+The three heap fronts of the empty run — after the harness prelude
+(4 cells), after `maxCount`'s frame entry (6 cells), and terminal
+(12 cells, `σEmptyFin.heap` verbatim) — plus the environments and
+continuations at the two internal boundaries. All addresses concrete;
+the program context stays abstract throughout. -/
+
+/-- Heap after the harness prelude (`$c7` slice made, `$c8` declared):
+step 20 of the run. -/
+def wcE_heapA : Heap :=
+  [(.base ⟨0⟩, ⟨some tU64, .int 0 .uint64⟩),
+   (.base ⟨1⟩, ⟨some (.slice tU64), .slice ⟨some (.base ⟨2⟩), 0, 0, 0⟩⟩),
+   (.base ⟨2⟩, ⟨some (.array 0 tU64), .array #[]⟩),
+   (.base ⟨3⟩, ⟨some tU64, .int 0 .uint64⟩)]
+
+/-- Heap after `maxCount`'s frame entry (`words` param at 4, `$res0`
+result at 5): step 21. -/
+def wcE_heapB : Heap :=
+  wcE_heapA ++
+  [(.base ⟨4⟩, ⟨some (.slice tU64), .slice ⟨some (.base ⟨2⟩), 0, 0, 0⟩⟩),
+   (.base ⟨5⟩, ⟨some tU64, .int 0 .uint64⟩)]
+
+/-- The terminal heap — `σEmptyFin.heap`, verbatim (the composition's
+final state is `{ σ with heap := wcE_heapFin, nextAddr := 12 }`, which
+is definitionally `σEmptyFin` at the concrete instantiation). -/
+def wcE_heapFin : Heap :=
+  [(.base ⟨0⟩, ⟨some tU64, .int 0 .uint64⟩),
+   (.base ⟨1⟩, ⟨some (.slice tU64), .slice ⟨some (.base ⟨2⟩), 0, 0, 0⟩⟩),
+   (.base ⟨2⟩, ⟨some (.array 0 tU64), .array #[]⟩),
+   (.base ⟨3⟩, ⟨some tU64, .int 0 .uint64⟩),
+   (.base ⟨4⟩, ⟨some (.slice tU64), .slice ⟨some (.base ⟨2⟩), 0, 0, 0⟩⟩),
+   (.base ⟨5⟩, ⟨some tU64, .int 0 .uint64⟩),
+   (.base ⟨6⟩, ⟨some tMap, .map ⟨some (.base ⟨7⟩)⟩⟩),
+   (.base ⟨7⟩, ⟨none, .mapData #[]⟩),
+   (.base ⟨8⟩, ⟨some tMap, .map ⟨some (.base ⟨7⟩)⟩⟩),
+   (.base ⟨9⟩, ⟨some (.int .int), .int 0 .int⟩),
+   (.base ⟨10⟩, ⟨some .bool, .bool false⟩),
+   (.base ⟨11⟩, ⟨some tU64, .int 0 .uint64⟩)]
+
+/-- The harness frame's environment after the prelude. -/
+def wcE_env : LocalEnv :=
+  [[("$c8", .base ⟨3⟩), ("$c7", .base ⟨1⟩)], [("$res0", .base ⟨0⟩)]]
+
+/-- The continuation below the call: the harness tail (`$res0 := $c8;
+return`) under the outer frame. -/
+def wcE_tailK : Cont :=
+  .seq [.seqn #[.assign (.var "$res0") (.var "$c8"), .returnStmt]] wcE_env
+    (.frame [] [] [] [] .stop)
+
+/-- The call's caller-target plan (`$c8` receives the result). -/
+def wcE_plans : List (TargetShape × List Expr) := [(.chain [], [.ref "$c8"])]
+
+/-- The empty slice `$c7` passes to `maxCount`. -/
+def wcE_sliceV : GoValue := .slice ⟨some (.base ⟨2⟩), 0, 0, 0⟩
+
+/-- `maxCount`'s frame environment (`$res0` at 5, `words` at 4). -/
+def wcE_frameEnv : LocalEnv := [[("$res0", .base ⟨5⟩), ("words", .base ⟨4⟩)]]
+
+/-! ## The program-generic segments
+
+Stated over an abstract `σ : ExecState` with only `heap`/`nextAddr`
+pinned — the storm-diagnosis rule extended from placement-generic to
+PROGRAM-generic: `stepFn` reduces definitionally through every step that
+does not consult `σ.types`/`σ.functions`/`σ.methods` (all
+`defaultValue`/`normalizeValueForTy` uses here are at structural types,
+and the empty snapshot's self-normalization check is vacuous), so the
+kernel only ever whnf's small concrete heaps. -/
+
+/-- Segment 1: the harness prelude — `$c7 := make([]uint64, 0)`, `$c8`
+declared, the call's argument evaluated. 20 steps, program-free. -/
+theorem wc_empty_seg1 (σ : ExecState) (ch : Choices) :
+    stepFnIter 20
+      { σ with heap := [(.base ⟨0⟩, ⟨some tU64, .int 0 .uint64⟩)], nextAddr := 1 }
+      (.exec maxCountEmptyFunc.body [[("$res0", .base ⟨0⟩)]]
+        (.frame [] [] [] [] .stop)) ch
+      = .ok (.retV wcE_sliceV
+          (.callArgsK ⟨"maxCount"⟩ wcE_plans [] [] wcE_env wcE_tailK),
+        { σ with heap := wcE_heapA, nextAddr := 4 }, ch) := by
+  with_unfolding_all rfl
+
+/-- The conditioned frame-entry step: a `.retV` at a drained
+`callArgsK` is exactly one `enterFrame`, keyed on its result. The
+P1-family shape (`StepKit`), stated in-module pending a second consumer
+(promotion candidate: the parameterized harness instances and the
+minmax/wordcount S3 entry layers — promote to `StepKit` as
+`stepFn_call_enter` when one lands). -/
+theorem wc_empty_enterFrame_step {σ σ' : ExecState} {fid : FuncId}
+    {v : GoValue} {vals : List GoValue}
+    {plans : List (TargetShape × List Expr)} {env : LocalEnv} {k : Cont}
+    {ch : Choices} {func : Func} {frameEnv : LocalEnv} {locs : List Loc}
+    (h : enterFrame σ fid (vals ++ [v]) = .ok (func, frameEnv, locs, σ')) :
+    stepFn σ (.retV v (.callArgsK fid plans vals [] env k)) ch
+      = .ok (.exec func.body frameEnv
+          (.frame plans env locs [] k func.wrapper), σ', ch) := by
+  simp only [stepFn, enterFrameStep, h]
+
 set_option maxHeartbeats 12000000 in
+/-- Segment 2: the whole `maxCount` body on the empty slice (zero
+counting iterations, empty-map snapshot picks nothing), the frame exit
+into `$c8`, and the harness tail through `return`. 137 steps,
+program-free given the entry. -/
+theorem wc_empty_seg2 (σ : ExecState) (ch : Choices) :
+    stepFnIter 137 { σ with heap := wcE_heapB, nextAddr := 6 }
+      (.exec maxCountFunc.body wcE_frameEnv
+        (.frame wcE_plans wcE_env [.base ⟨5⟩] [] wcE_tailK)) ch
+      = .ok (.next .stop,
+        { σ with heap := wcE_heapFin, nextAddr := 12 }, ch) := by
+  with_unfolding_all rfl
+
+/-- The whole 158-step empty run, program-generic: the ONLY fact about
+the program context is the `enterFrame` hypothesis. -/
+theorem wc_empty_run_generic (σ : ExecState) (ch : Choices)
+    (henter : enterFrame { σ with heap := wcE_heapA, nextAddr := 4 }
+        ⟨"maxCount"⟩ [wcE_sliceV]
+      = .ok (maxCountFunc, wcE_frameEnv, [.base ⟨5⟩],
+          { σ with heap := wcE_heapB, nextAddr := 6 })) :
+    stepFnIter 158
+      { σ with heap := [(.base ⟨0⟩, ⟨some tU64, .int 0 .uint64⟩)], nextAddr := 1 }
+      (.exec maxCountEmptyFunc.body [[("$res0", .base ⟨0⟩)]]
+        (.frame [] [] [] [] .stop)) ch
+      = .ok (.next .stop,
+        { σ with heap := wcE_heapFin, nextAddr := 12 }, ch) :=
+  stepFnIter_chain
+    (stepFnIter_chain (wc_empty_seg1 σ ch)
+      (stepFnIter_one (wc_empty_enterFrame_step henter)))
+    (wc_empty_seg2 σ ch)
+
 /-- The whole harness run at the empty-map instance: 158 steps, every
 address concrete, NO choice consumed (an empty snapshot picks
-nothing) — the stream rides through untouched. -/
+nothing) — the stream rides through untouched. Statement byte-identical
+to the original monolithic-`rfl` form; the proof instantiates the
+program-generic composition above, discharging the one `enterFrame`
+fact by `rfl` (the only place the pinned program is ever unfolded, and
+`maxCount` is the funcs array's head). -/
 theorem wc_empty_run (ch : Choices) :
     stepFnIter 158
       { types := wordCountLowered.typeDefs.toList,
@@ -104,8 +256,13 @@ theorem wc_empty_run (ch : Choices) :
       (.exec maxCountEmptyFunc.body [[("$res0", .base ⟨0⟩)]]
         (.frame [] [] [] [] .stop))
       ch
-      = .ok (.next .stop, σEmptyFin, ch) := by
-  with_unfolding_all rfl
+      = .ok (.next .stop, σEmptyFin, ch) :=
+  wc_empty_run_generic
+    { types := wordCountLowered.typeDefs.toList,
+      functions := wordCountLowered.funcs,
+      methods := wordCountLowered.methods,
+      heap := [], nextAddr := 0 } ch
+    (by with_unfolding_all rfl)
 
 
 end GoLean.Examples.WordCount

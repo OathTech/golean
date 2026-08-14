@@ -70,12 +70,43 @@ Three rules, each earned by a measured failure rather than taste:
 The payoff is a growth-RATE change, not a constant factor: generic
 layers elaborate in seconds because there is nothing to normalize, and
 per-placement instantiation is lemma application against fully-pinned
-statements. What this convention does NOT touch is the other cost
-class slice 0 measured — a single `with_unfolding_all rfl` over a long
-CONCRETE run (`wc_empty_run`: 158 steps, 82 s, 50.8 GiB by itself,
-which is the whole repo's memory ceiling). That one is a statement/
-proof-method question, and the recorded lever for it is verified
-reflection (phase-2 charter, "research direction"), not placement.
+statements.
+
+## Long CONCRETE runs: the PROGRAM-generic form (slice 1.5, 2026-08-14)
+
+The other cost class slice 0 measured — a single `with_unfolding_all
+rfl` over a long concrete run whose `ExecState` embeds the whole pinned
+program — is the SAME storm family one level up, and the same fix
+reaches it (verified reflection was NOT needed): `wc_empty_run` at 158
+steps was 82 s / 50.8 GiB alone, superlinear in the pinned program
+(+1 corpus function → ~77 GiB); restated it is ~86 s / 1.9 GiB and
+program-size-independent. The recipe (worked template:
+`Examples/WordCount/EmptyRun.lean`):
+
+1. state every segment over an abstract `σ : ExecState` with only
+   `heap`/`nextAddr` pinned — `{ σ with heap := H, nextAddr := n }` —
+   so `stepFn` reduces by projection and the kernel never whnf's a
+   program-embedding state (rule 1 above, extended to the program
+   fields);
+2. split at each step that genuinely consults
+   `σ.types`/`σ.functions`/`σ.methods` (for a first-order run that is
+   ONLY the `enterFrame` call-entry step) and condition it on the
+   executable fact — `enterFrame σᵢ fid args = .ok (func, env, locs,
+   σᵢ₊₁)` — whose type pins both states (rule 2);
+3. chain with `stepFnIter_chain`/`stepFnIter_one`, and discharge the
+   conditioned facts by `rfl` ONCE at the concrete instantiation — the
+   only point the program constant is ever unfolded (rule 3: the
+   instantiation site's statement is fully pinned).
+
+Watch for hidden program consultation before assuming a segment is
+program-free: `defaultValue`/`normalizeValueForTy` consult `σ.types`
+only at `.defined` types, and `mapRangeSnapshotEntries`'s
+self-normalization check is `σ.types`-free only when the snapshot is
+empty or its entry check reduces structurally. The conditioned
+call-entry step lemma (`wc_empty_enterFrame_step`) is a promotion
+candidate for this kit — P1 family, `stepFn_call_enter` — once a
+second consumer lands (the parameterized harness instances or the
+minmax/wordcount S3 entry layers).
 -/
 
 open GoLean GoLean.GoCore GoLean.GoCore.Machine
