@@ -107,6 +107,14 @@ import GoLeanProofs.Examples.WordCount
 -- `Audit/WordCount.lean`, so `Solution.lean` — which imports this
 -- aggregator — could not see it. Its two sibling S3 harnesses
 -- (`Reverse.HarnessV`, `MinMax.HarnessR`) were already listed here.
+-- STILL REQUIRED after the 2026-08-15 audit response (C-H5): all three
+-- swap shards must be listed in this aggregator BY NAME, because each
+-- one imports its example root rather than the other way round, so no
+-- `Examples.<X>` import reaches its own designated headline. Removing
+-- any of these three lines drops a designated theorem out of the
+-- audited build. The direction is repaired only by the recorded
+-- follow-up (split the roots into `Core` shards —
+-- `docs/2026-08-15_phase2-premerge-audit.md`, C-H4/C-H5).
 import GoLeanProofs.Examples.WordCount.HarnessR
 
 /-!

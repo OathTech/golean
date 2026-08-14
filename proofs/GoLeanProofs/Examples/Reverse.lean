@@ -17,8 +17,32 @@ canonical corpus source `Corpus/coverage/exec/examples/reverse/main.go`
 (5/5 differentially green against `go run`); `reverseLowered` is its
 pinned frontend lowering (`scripts/check-golden`, both links).
 
-The user-facing statement is `reverse_ok` — THE HARNESS FORM (harness
-ruling 2026-08-13, design note §11): the three-phase Go harness
+**WHERE THE HEADLINE LIVES — read this first** (examples phase-2 slice
+1 swap, 2026-08-14; recorded here in the audit response, 2026-08-15,
+which found this module claiming a headline it no longer declares).
+The DESIGNATED gallery headline `reverse_ok` is now the S1
+COPY-RELATIONAL form over `reverse_harness_v`, and it is declared in
+the swap shard `GoLeanProofs.Examples.Reverse.HarnessV` — not here.
+What THIS module declares is the previous headline, kept unweakened
+and renamed `reverse_ok_v1` (with `reverse_readout_v1`), plus the
+memory-quantified `reverse_framed`.
+
+The shard IMPORTS this module, so the reach is one-way: importing
+`GoLeanProofs.Examples.Reverse` does not give you `reverse_ok`, while
+importing `GoLeanProofs.Examples.Reverse.HarnessV` gives you both.
+Import the shard. The re-export that would make this module the single
+entry point is not expressible while the shard imports it — Lean's
+import graph is acyclic — so it waits on splitting this module's
+proofs into a `Core` shard, recorded as a post-merge follow-up in
+`docs/2026-08-15_phase2-premerge-audit.md` (C-H4/C-H5). The aggregator
+`GoLeanProofs.lean` imports both, so nothing is outside the audited
+build.
+
+The paragraph below describes `reverse_ok_v1` — it was written when
+that theorem held the `reverse_ok` name, and the name is the only
+thing that changed: the previous user-facing statement was THE HARNESS
+FORM (harness ruling 2026-08-13, design note §11): the three-phase Go
+harness
 `reverse_harness(n, seed)` (setup: `s := make([]uint64, n)` filled
 with `s[i] = seed + i`; call under test: `reverse(s)`; test: an
 element-wise check of the reversal folding into the returned verdict

@@ -20,7 +20,32 @@ row pins that boundary in the oracle, and the theorem honestly
 excludes it). `minMaxLowered` is the pinned frontend lowering
 (`scripts/check-golden`, both links).
 
-The user-facing statement is `minmax_ok` — the §9 memory-quantified
+**WHERE THE HEADLINE LIVES — read this first** (examples phase-2 slice
+1 swap, 2026-08-14; recorded here in the audit response, 2026-08-15,
+which found this module claiming a headline it no longer declares).
+The DESIGNATED gallery headline `minmax_ok` is now the S3 RELATIONAL
+form over `minmax_harness_r` — the Go returns the pre-state alongside
+`(lo, hi)`, so the postcondition relates RETURNED DATA — and it is
+declared in the swap shard `GoLeanProofs.Examples.MinMax.HarnessR`,
+not here. What THIS module declares is the demoted `minmax_ok_v1` /
+`minmax_readout_v1` (the family-in-the-statement harness form, kept
+unweakened) and the memory-quantified `minmax_framed` /
+`minmax_framed_readout`.
+
+The shard IMPORTS this module, so the reach is one-way: importing
+`GoLeanProofs.Examples.MinMax` does not give you `minmax_ok`, while
+importing `GoLeanProofs.Examples.MinMax.HarnessR` gives you both.
+Import the shard. The re-export that would make this module the single
+entry point is not expressible while the shard imports it — Lean's
+import graph is acyclic — so it waits on splitting this module's
+proofs into a `Core` shard, recorded as a post-merge follow-up in
+`docs/2026-08-15_phase2-premerge-audit.md` (C-H4/C-H5). The aggregator
+`GoLeanProofs.lean` imports both, so nothing is outside the audited
+build.
+
+The paragraph below is the ORIGINAL 2026-08-13 text and describes what
+is now `minmax_framed`: the then-user-facing `minmax_ok` was the §9
+memory-quantified
 headline in the reverse shape (design note
 `docs/2026-08-12_example-spec-form.md` §9): input slice `xs` at an
 arbitrary placement `base`, an arbitrary disjoint frame `fr`,

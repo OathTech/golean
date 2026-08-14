@@ -27,6 +27,28 @@ lowering (`scripts/check-golden`, both links). The subject `maxCount`
 builds `counts : map[uint64]uint64` from a `[]uint64` and takes the max
 count with `for _, c := range counts`.
 
+**WHERE THE HEADLINE LIVES — read this first** (examples phase-2 slice
+1 swap, 2026-08-14; recorded here in the audit response, 2026-08-15,
+which found this module described as the headline module while the
+designated headline sits elsewhere). The DESIGNATED gallery headline
+`wordcount_ok` is the S3 RELATIONAL form over `wordcount_harness_r` —
+the Go returns the counted words alongside the answer, so the
+postcondition relates RETURNED DATA — and it is declared in the swap
+shard `GoLeanProofs.Examples.WordCount.HarnessR`, not here. What THIS
+module declares is the demoted `wordcount_ok_v1` /
+`wordcount_readout_v1` (the solved-value form, kept unweakened).
+
+The shard IMPORTS this module, so the reach is one-way: importing
+`GoLeanProofs.Examples.WordCount` does not give you `wordcount_ok`,
+while importing `GoLeanProofs.Examples.WordCount.HarnessR` gives you
+both. Import the shard. The re-export that would make this module the
+single entry point is not expressible while the shard imports it —
+Lean's import graph is acyclic — so it waits on the shard being
+re-pointed at the phase modules it actually uses, recorded as a
+post-merge follow-up in `docs/2026-08-15_phase2-premerge-audit.md`
+(C-H4/C-H5). The aggregator `GoLeanProofs.lean` imports both, so
+nothing is outside the audited build.
+
 **Statement form of record (harness ruling 2026-08-13, form note §11)**:
 user-facing headlines are three-phase Go HARNESSES stated over
 `runFunctionWithContextM` — termination + returned values only, no
@@ -42,12 +64,14 @@ Lean-side heap vocabulary. What THIS module ships against that form:
   family).
 * `wordcount_empty_ok` — the harness FORM, witnessed end to end at the
   pinned `maxCountEmpty` harness (the zero-parameter instance).
-* `wordcount_ok` — **gap G1 CLOSED (consolidation slice,
-  2026-08-14)**: the `(n, seed)`-parameterized §11 harness headline
+* `wordcount_ok_v1` (named `wordcount_ok` when this was written, and
+  demoted by the slice-1 swap without being weakened) — **gap G1
+  CLOSED (consolidation slice, 2026-08-14)**: the
+  `(n, seed)`-parameterized §11 harness headline
   over `wordcount_harness`, hypotheses just `n < 2^63` and
   `seed < 2^64` (the seed-wrap caveat stays refuted), returned value
-  EXACTLY `(n+2)/3` via `wcFamily_maxMult`; `wordcount_readout` is the
-  derived D1 twin. Closed as the FIRST CONSUMER of the
+  EXACTLY `(n+2)/3` via `wcFamily_maxMult`; `wordcount_readout_v1` is
+  the derived D1 twin. Closed as the FIRST CONSUMER of the
   placement-generic composition layer (`wcIter_generic`/
   `wcLoop_generic`/`wcRange_generic` below): the compositions are
   stated once over an abstract state family and instantiated at both
@@ -95,7 +119,10 @@ evidence only — never machine-hardening evidence.
 2026-08-14)
 
 This file is the THIN HEADLINE module: it holds the user-facing §11
-harness statements and nothing else. The proof phases live in
+harness statements this module owns — since the slice-1 swap that is
+the demoted `wordcount_ok_v1` / `wordcount_readout_v1` pair, the
+current headline being the `HarnessR` shard's (see the note at the top
+of this file) — and nothing else. The proof phases live in
 `GoLeanProofs.Examples.WordCount.*`, imported above in dependency
 order, and were moved VERBATIM — every statement and proof is
 byte-identical to the pre-split module:

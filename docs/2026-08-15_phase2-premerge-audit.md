@@ -136,10 +136,12 @@ gate that passes while something is wrong.
 
 Three commits, in this order:
 
-1. **gate fixes** — A-MAJOR, A-MINOR, B-F6, B-F5 (code half), C-L1.
-2. **doc/gallery fixes + this record** — B-F1…B-F4, B-F5 (doc half),
-   B-F7…B-F9, and the C-level corrections above.
-3. **C-H5** — the root docstrings, per the constraint recorded above.
+1. `fd68832d` **gate fixes** — A-MAJOR, A-MINOR, B-F6, B-F5 (code
+   half), C-L1.
+2. `7d2c045f` **doc/gallery fixes + this record** — B-F1…B-F4, B-F5
+   (doc half), B-F7…B-F9, and the C-level corrections above.
+3. **C-H5** (the commit adding this line) — the three root docstrings
+   and the aggregator's note, per the constraint recorded above.
 
 `scripts/ci` PASS under `GOLEAN_MEM_MAX=48G` after each; `render-gallery`
 green (every edit is outside the verbatim blocks, which are byte-checked
