@@ -4,7 +4,8 @@ import GoLeanProofs.FuelMeasure
 import GoLeanProofs.StepKit
 import GoLeanProofs.Frame.Sim
 import GoLeanProofs.MapLoops
-import GoLeanProofs.Examples.WordCount.CanonCount
+import GoLeanProofs.Examples.WordCount.Machine
+import GoLeanProofs.Examples.WordCount.Pure
 
 /-!
 # WordCount — RangeGeneric

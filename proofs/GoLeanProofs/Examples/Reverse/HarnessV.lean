@@ -1,4 +1,4 @@
-import GoLeanProofs.Examples.Reverse
+import GoLeanProofs.Examples.Reverse.Core
 import GoLeanProofs.Examples.Targets
 
 /-!

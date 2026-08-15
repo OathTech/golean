@@ -4,6 +4,7 @@ import GoLeanProofs.FuelMeasure
 import GoLeanProofs.StepKit
 import GoLeanProofs.MapLoops
 import GoLeanProofs.Examples.WordCount.Machine
+import GoLeanProofs.Examples.WordCount.Pure
 
 /-!
 # WordCount — CanonCount

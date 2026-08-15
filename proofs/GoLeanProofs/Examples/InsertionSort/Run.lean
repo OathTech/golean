@@ -4,6 +4,12 @@ import GoLeanProofs.StepKit
 import GoLeanProofs.Frame.Rename
 import GoLeanProofs.Frame.Sim
 import GoLeanProofs.Examples.InsertionSort.Count
+import GoLeanProofs.Examples.InsertionSort.Family
+import GoLeanProofs.Examples.InsertionSort.Pure
+import GoLeanProofs.Examples.InsertionSort.Rebuild
+import GoLeanProofs.Examples.InsertionSort.Scan
+import GoLeanProofs.Examples.InsertionSort.Setup
+import GoLeanProofs.Examples.InsertionSort.Subject
 
 /-!
 # InsertionSort — Run

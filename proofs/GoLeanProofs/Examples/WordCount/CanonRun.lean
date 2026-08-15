@@ -2,6 +2,10 @@ import GoLeanProofs.MapMem
 import GoLeanProofs.SliceMem
 import GoLeanProofs.FuelMeasure
 import GoLeanProofs.StepKit
+import GoLeanProofs.Examples.WordCount.CanonCount
+import GoLeanProofs.Examples.WordCount.CanonRange
+import GoLeanProofs.Examples.WordCount.Machine
+import GoLeanProofs.Examples.WordCount.Pure
 import GoLeanProofs.Examples.WordCount.Return
 import GoLeanProofs.Examples.Targets
 

@@ -408,9 +408,9 @@ theorem covers every seed below `2^64`, including the ones where `seed + i`
 wraps; since extension E1 the differential rows DO reach that region
 (see **Ground**).
 
-**The family** (`proofs/GoLeanProofs/Examples/Reverse.lean`):
+**The family** (`proofs/GoLeanProofs/Examples/Reverse/Core.lean`):
 
-<!-- verbatim: proofs/GoLeanProofs/Examples/Reverse.lean -->
+<!-- verbatim: proofs/GoLeanProofs/Examples/Reverse/Core.lean -->
 ```lean
 def revFamily (n seed : Nat) : List Int :=
   (List.range n).map (fun i => (((seed + i) % 2 ^ 64 : Nat) : Int))

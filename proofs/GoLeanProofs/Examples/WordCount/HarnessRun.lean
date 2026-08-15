@@ -4,7 +4,14 @@ import GoLeanProofs.SliceMem
 import GoLeanProofs.FuelMeasure
 import GoLeanProofs.StepKit
 import GoLeanProofs.MapLoops
+import GoLeanProofs.Examples.WordCount.CanonCount
+import GoLeanProofs.Examples.WordCount.CanonRun
+import GoLeanProofs.Examples.WordCount.Family
+import GoLeanProofs.Examples.WordCount.HarnessSetup
 import GoLeanProofs.Examples.WordCount.HarnessSubject
+import GoLeanProofs.Examples.WordCount.Machine
+import GoLeanProofs.Examples.WordCount.Pure
+import GoLeanProofs.Examples.WordCount.RangeGeneric
 import GoLeanProofs.Examples.Targets
 
 /-!

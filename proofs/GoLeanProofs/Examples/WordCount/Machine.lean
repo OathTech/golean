@@ -1,6 +1,5 @@
 import GoLeanProofs.Examples.WordCountProgram
 import GoLeanProofs.MapMem
-import GoLeanProofs.Examples.WordCount.Pure
 
 /-!
 # WordCount — Machine

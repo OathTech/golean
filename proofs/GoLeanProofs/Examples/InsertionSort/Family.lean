@@ -1,5 +1,5 @@
 import GoLeanProofs.Examples.InsertionSortProgram
-import GoLeanProofs.Examples.InsertionSort.Canonical
+import GoLeanProofs.SliceMem
 import GoLeanProofs.Examples.Targets
 
 /-!
