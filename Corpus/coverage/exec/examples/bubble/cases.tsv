@@ -1,0 +1,15 @@
+# id	subject	args	expected_status	expected_reason	features
+four-shuffled	sortFour	4,2,3,1	ok	-	slices,indexing,loops,bools,multi_assign
+four-sorted	sortFour	1,2,3,4	ok	-	slices,indexing,loops,bools,multi_assign
+four-same	sortFour	7,7,7,7	ok	-	slices,indexing,loops,bools,multi_assign
+four-reversed	sortFour	9,7,5,3	ok	-	slices,indexing,loops,bools,multi_assign
+four-duplicates	sortFour	5,1,5,1	ok	-	slices,indexing,loops,bools,multi_assign
+four-extremes	sortFour	9223372036854775807,0,9223372036854775807,1	ok	-	slices,indexing,loops,bools,multi_assign
+three	sortThree	30,10,20	ok	-	slices,indexing,loops,bools,multi_assign
+one	sortOne	42	ok	-	slices,indexing,loops,bools,multi_assign
+empty	sortEmpty	-	ok	-	slices,indexing,loops,bools,multi_assign
+harness-r-empty	bubble_harness_r	0,5	ok	-	slices,indexing,loops,bools,multi_assign,arrays
+harness-r-one	bubble_harness_r	1,37	ok	-	slices,indexing,loops,bools,multi_assign,arrays
+harness-r-five	bubble_harness_r	5,37	ok	-	slices,indexing,loops,bools,multi_assign,arrays
+harness-r-cap	bubble_harness_r	8,37	ok	-	slices,indexing,loops,bools,multi_assign,arrays
+harness-r-big-seed	bubble_harness_r	6,9223372036854775807	ok	-	slices,indexing,loops,bools,multi_assign,arrays

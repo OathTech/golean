@@ -424,6 +424,8 @@ check_surface_imports proofs/GoLeanProofs/Examples/HistogramProgram.lean \
 # in Challenge's trusted closure (all are undesignated by charter), but
 # each is pinned core-only from birth so a proof lane cannot widen it
 # unreviewed.
+check_surface_imports proofs/GoLeanProofs/Examples/BubbleSortProgram.lean \
+  '^import GoLean\.'
 check_surface_imports proofs/GoLeanProofs/Examples/SelectionSortProgram.lean \
   '^import GoLean\.'
 # The fork/join pool witnesses (channels arc slice 2): statement-bearing,
