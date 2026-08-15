@@ -1,9 +1,14 @@
 import GoLeanProofs.Examples.SieveProgram
+import GoLeanProofs.Examples.Sieve.Pure
 
 /-!
 # Sieve — the `sieve` example (Gallery Campaign G1, guardrails wave)
 
-**STATUS: GUARDRAILS ONLY — no headline theorem yet.** This root carries
+**STATUS: GUARDRAILS + PURE SPEC LAYER — no headline theorem yet.**
+The pure specification layer (`Examples/Sieve/Pure.lean`: trial-division
+`isPrime`, the loop mirrors, and `sieveTable_spec`/`sieveAnswer_eq` — the
+sieve computes primality and the count is `primeCount`) is landed and in
+the audited closure via this import; the MACHINE half is the open work. This root carries
 exactly the corpus half of the G1 checklist: the pinned lowering (via
 `SieveProgram`, itself pinned by `scripts/check-golden` against
 `baselines/golden/sieve-lowered.repr`) and the named harness

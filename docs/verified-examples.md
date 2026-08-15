@@ -1,6 +1,6 @@
 # Verified examples — the gallery (2026-08-14)
 
-Twelve Go programs, and for each one a GoLean theorem you can read.
+Thirteen Go programs, and for each one a GoLean theorem you can read.
 
 This file is the **object of agreement**: it exists so that a reader who is
 not a Lean expert can check, by eye, that the top-level statement really
@@ -95,18 +95,19 @@ exhaustion.
   deletion test stopped being a thing we check by reading. Designation also
   puts them in front of the independent Comparator judge, which re-checks
   the proofs by kernel replay against these statements alone.
-  **The five newest entries — `histogram`, `powmod`, `dotprod`,
-  `kadane` and `dedup` — are NOT designated.** (Those eight designated
-  headlines span seven example sections, because `fib` carries two of
-  them.) The five were added by the gallery campaign (2026-08-15), and
-  designation is a separate, user-signed act at the end of that arc: all
-  five are deliberately absent from `Examples/Targets.lean`, from
+  **The six newest entries — `histogram`, `powmod`, `dotprod`,
+  `kadane`, `dedup` and `fibmemo` — are NOT designated.** (Those eight
+  designated headlines span seven example sections, because `fib` carries
+  two of them.) The six were added by the gallery campaign (2026-08-15),
+  and designation is a separate, user-signed act at the end of that arc:
+  all six are deliberately absent from `Examples/Targets.lean`, from
   `scripts/ci`'s trusted-closure allowlist and from the Comparator
   judge's set. Their
   deletion tests were therefore RUN by hand rather than by the gate —
   `lean_minimal_hypotheses` on `histogram_ok` (all four explicit binders
   load-bearing), on `powmod_ok` (all five), on `dotprod_ok` (all three),
-  on `kadane_ok` (all five) and on `dedup_ok` (all three) — and that is
+  on `kadane_ok` (all five), on `dedup_ok` (all three) and on
+  `fibmemo_ok` (both) — and that is
   exactly the weaker standing that undesignated means. Their axioms are
   pinned in-build like everyone else's (`proofs/Audit/Histogram.lean`,
   `proofs/Audit/PowMod.lean`, `proofs/Audit/DotProduct.lean`,
@@ -131,8 +132,8 @@ exhaustion.
 
 `Choices` is the stream of nondeterministic decisions the machine consumes at
 points where Go does not promise an outcome. `∀ ch : Choices` says the claim
-holds at **every** such stream. For ten of the twelve examples this quantifier
-is cheap (their runs consume no choices). For word-count and histogram it
+holds at **every** such stream. For eleven of the thirteen examples this
+quantifier is cheap (their runs consume no choices). For word-count and histogram it
 does real work: `for … range` over a Go map consumes one choice per
 iteration, because Go deliberately does not fix map iteration order — so the
 theorem covers every order, and the specification is *forced* to be
@@ -1913,6 +1914,137 @@ run-conditioned twin.
 relational harness at `harness-r-empty`, `harness-r-one`, `harness-r-mid`,
 `harness-r-cap` and `harness-r-big`. All five harness rows are inside the
 theorem's domain.
+
+## fibmemo — recursive Fibonacci over a live memo table
+
+**The Go** (`Corpus/coverage/exec/examples/fibmemo/main.go`):
+
+<!-- verbatim: Corpus/coverage/exec/examples/fibmemo/main.go -->
+```go
+func fibMemo(n uint64, memo map[uint64]uint64) uint64 {
+	if n < 2 {
+		return n
+	}
+	if v, ok := memo[n]; ok {
+		return v
+	}
+	r := fibMemo(n-1, memo) + fibMemo(n-2, memo)
+	memo[n] = r
+	return r
+}
+```
+
+<!-- verbatim: Corpus/coverage/exec/examples/fibmemo/main.go -->
+```go
+// fib: wrapper subject — allocates the memo table and runs the
+// memoized recursion.
+func fib(n uint64) uint64 {
+	memo := make(map[uint64]uint64)
+	return fibMemo(n, memo)
+}
+```
+
+<!-- verbatim: Corpus/coverage/exec/examples/fibmemo/main.go -->
+```go
+// fibmemo_harness: the harness ruling's three-phase shape, S2 scalar.
+// setup: nothing — fib takes no memory input (the memo is internal).
+// test: identity — the returned scalar IS the observable.
+func fibmemo_harness(n uint64) uint64 {
+	return fib(n)
+}
+```
+
+**The specification** is `fibSpec` — the same definition the designated
+`fib` entry states its headlines over, imported rather than redefined, so
+the gallery's "Fibonacci" means exactly one thing:
+
+<!-- verbatim: proofs/GoLeanProofs/Examples/Targets.lean -->
+```lean
+def fibSpec : Nat → Nat
+  | 0 => 0
+  | 1 => 1
+  | n + 2 => fibSpec n + fibSpec (n + 1)
+```
+
+**The theorem** (`proofs/GoLeanProofs/Examples/FibMemo.lean`):
+
+<!-- verbatim: proofs/GoLeanProofs/Examples/FibMemo.lean -->
+```lean
+theorem fibmemo_ok (n : Nat) (hn : n < 2 ^ 64) :
+    ∃ N : Nat, ∀ fuel : Nat, N ≤ fuel → ∀ ch : Choices,
+      runFunctionWithContextM fuel fibmemoLowered.typeDefs.toList
+          fibmemoLowered.funcs fibmemoHarnessFunc
+          #[.int (n : Int) .uint64] fibmemoLowered.methods ch
+        = .ok { values := #[.int ((fibSpec n % 2 ^ 64 : Nat) : Int) .uint64] } := by
+```
+
+**Axioms** (pinned in `proofs/Audit/FibMemo.lean`):
+
+<!-- verbatim: proofs/Audit/FibMemo.lean -->
+```lean
+/-- info: 'GoLean.Examples.FibMemo.fibmemo_ok' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+```
+
+<!-- verbatim: proofs/Audit/FibMemo.lean -->
+```lean
+/-- info: 'GoLean.Examples.FibMemo.fibmemo_readout' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+```
+
+Lean's classical trio; no `sorry`, no native evaluation, no project axioms.
+
+**Why this entry exists: it is the gallery's first RECURSION.** Every other
+entry's machine run stays inside one call frame and loops. `fibMemo` calls
+itself twice, so the machine pushes a genuine continuation stack, the heap
+interleaves live frames with the dead cells of completed sub-calls, and no
+finite description of "the" run shape exists — the shape grows with `n`. The
+proof's induction (`fmCall_build` in `Examples/FibMemo/Rec.lean`) is
+**continuation-stack-parametric**: each call-span lemma quantifies over the
+return continuation, so the recursive instantiation hands it the exact frame
+continuation the machine pushed one level up. The heap is carried as a
+small-footprint invariant — the memo's data cell, the caller's result cell,
+and whole-heap freshness above the allocation cursor — rather than as any
+concrete layout.
+
+**The memo is load-bearing, and the bound proves it.** The fuel bound
+`N = 170·n + 107` is LINEAR in `n`; an unmemoized double recursion would be
+exponential. The induction tracks the memo as exactly the table `{2..k}`
+(insertion-ordered, which is what the machine's append-on-insert produces),
+and after the first recursive call returns, the second always hits the
+table. The comma-ok read `v, ok := memo[n]` is the honest cache test the
+corpus comments call out: `fib(0) = 0` is indistinguishable from "absent"
+under a zero-value read, so `ok` does real work.
+
+**Domain bounds, attributed.** `n < 2^64` is **Go's domain**, all of it. The
+`% 2^64` in the postcondition is **the program's own arithmetic** — uint64
+addition wraps, and the claim states the wrapped value on the full domain
+(the same stance as the designated `fib_total`); for `n ≤ 93` the mod is the
+identity and the returned value IS `fibSpec n`. The Fibonacci function is
+**mathematics**. Machine idealization as elsewhere — in particular the
+recursion allocates a fresh frame per call and nothing bounds the depth but
+`n` itself.
+
+**Fuel bound.** `N = 170·n + 107` is a BOUND. **The measurement is a
+different number**: `107` for `n ≤ 1`, `249` at `n = 2`, and `170·n − 119`
+for `n ≥ 3` — probe-verified at `n = 3, 4, 5, 10` (391, 561, 731, 1581).
+Neither is presented as the other.
+
+**∀ choices is vacuous here, and stated anyway** — the memo map is only
+indexed, never ranged over, so this harness consumes no choices. (The
+corpus's separate `fibMemoSize` subject does range the memo; it is pinned by
+differential rows, not by this theorem.)
+
+**Status.** NOT DESIGNATED — see the note in *How to read an entry*. Added by
+the gallery campaign's hard lane (2026-08-15). In-build: the `rfl` lowering
+pins (`fibMemoFunc_pin` on the recursive subject, `fibmemoHarnessFunc_pin`
+on the harness), the golden-lowering guard on both links, and the axiom pins
+above. Its deletion test was RUN by hand — `lean_minimal_hypotheses` on
+`fibmemo_ok`, **both explicit binders load-bearing**. `fibmemo_readout` is
+the run-conditioned twin.
+
+**Ground.** Differentially green on 10 corpus rows: `zero`, `one`, `two`,
+`ten`, `thirty` (the `fib` wrapper), `memosize-zero`, `memosize-one`,
+`memosize-ten` (the map-ranging sibling subject), and the harness rows
+`harness-one` and `harness-thirty`. All ten are inside the theorem's domain.
 
 ## The derived twins, and the one axiom line they share
 
