@@ -1,6 +1,6 @@
 # Verified examples — the gallery (2026-08-14)
 
-Nine Go programs, and for each one a GoLean theorem you can read.
+Ten Go programs, and for each one a GoLean theorem you can read.
 
 This file is the **object of agreement**: it exists so that a reader who is
 not a Lean expert can check, by eye, that the top-level statement really
@@ -95,17 +95,18 @@ exhaustion.
   deletion test stopped being a thing we check by reading. Designation also
   puts them in front of the independent Comparator judge, which re-checks
   the proofs by kernel replay against these statements alone.
-  **The entries after the eighth — `histogram` and `powmod` — are NOT
-  designated.** They were added by the gallery campaign (2026-08-15) and
+  **The entries after the eighth — `histogram`, `powmod` and `dotprod` —
+  are NOT designated.** They were added by the gallery campaign (2026-08-15) and
   designation is a separate, user-signed act at the end of that arc: both are
   deliberately absent from `Examples/Targets.lean`, from `scripts/ci`'s
   trusted-closure allowlist and from the Comparator judge's set. Their
   deletion tests were therefore RUN by hand rather than by the gate —
   `lean_minimal_hypotheses` on `histogram_ok` (all four explicit binders
-  load-bearing) and on `powmod_ok` (all five load-bearing) — and that is
-  exactly the weaker standing that undesignated means. Their axioms are
-  pinned in-build like everyone else's (`proofs/Audit/Histogram.lean`,
-  `proofs/Audit/PowMod.lean`).
+  load-bearing), on `powmod_ok` (all five) and on `dotprod_ok` (all
+  three) — and that is exactly the weaker standing that undesignated
+  means. Their axioms are pinned in-build like everyone else's
+  (`proofs/Audit/Histogram.lean`, `proofs/Audit/PowMod.lean`,
+  `proofs/Audit/DotProduct.lean`).
 - **Where the audits are.** Two adversarial pre-merge audits stand behind
   this file, and entries below cite both by date. The **2026-08-15** one —
   the phase-2 arc's, which swapped three headlines and designated all eight
@@ -126,7 +127,7 @@ exhaustion.
 
 `Choices` is the stream of nondeterministic decisions the machine consumes at
 points where Go does not promise an outcome. `∀ ch : Choices` says the claim
-holds at **every** such stream. For seven of the nine examples this quantifier
+holds at **every** such stream. For eight of the ten examples this quantifier
 is cheap (their runs consume no choices). For word-count and histogram it
 does real work: `for … range` over a Go map consumes one choice per
 iteration, because Go deliberately does not fix map iteration order — so the
@@ -1464,6 +1465,144 @@ row inside the wrap region the theorem excludes), the fixed driver
 `two-ten` and `two-large`, and the harness at `harness-typical` and
 `harness-extreme`. Twelve of the thirteen are inside the theorem's
 domain — the differential and the proof overlap on all but `wrap`.
+
+## dotprod — an accumulate loop that genuinely wraps
+
+**The Go** (`Corpus/coverage/exec/examples/dotprod/main.go`):
+
+<!-- verbatim: Corpus/coverage/exec/examples/dotprod/main.go -->
+```go
+func dotProduct(a, b []uint64) uint64 {
+	n := len(a)
+	if len(b) < n {
+		n = len(b)
+	}
+	acc := uint64(0)
+	for i := 0; i < n; i++ {
+		acc += a[i] * b[i]
+	}
+	return acc
+}
+```
+
+<!-- verbatim: Corpus/coverage/exec/examples/dotprod/main.go -->
+```go
+// dotprod_harness_r: S3 RELATIONAL harness. Setup builds the families
+// a[i] = seed + i and b[i] = i + 1; two copy loops lift them into the
+// fixed-cap arrays av and bv (the pass-by-value fragment's
+// unbounded-data workaround, zero-padded past n); the observable is
+// (av, bv, dot) so the Lean postcondition can relate the returned data
+// directly. Real Go, ghost ladder rung 0; harness bound n <= 8.
+func dotprod_harness_r(n, seed uint64) ([dotCapN]uint64, [dotCapN]uint64, uint64) {
+	a := make([]uint64, n)
+	b := make([]uint64, n)
+	for i := uint64(0); i < n; i++ {
+		a[i] = seed + i
+		b[i] = i + 1
+	}
+	var av [dotCapN]uint64
+	for i := uint64(0); i < n; i++ {
+		av[i] = a[i]
+	}
+	var bv [dotCapN]uint64
+	for i := uint64(0); i < n; i++ {
+		bv[i] = b[i]
+	}
+	dot := dotProduct(a, b)
+	return av, bv, dot
+}
+```
+
+**The specification** (`proofs/GoLeanProofs/Examples/DotProduct.lean`):
+
+<!-- verbatim: proofs/GoLeanProofs/Examples/DotProduct.lean -->
+```lean
+def dotSpec (a b : List Int) : Int :=
+  (List.zipWith (· * ·) a b).sum % (2 ^ 64 : Int)
+```
+
+**This is the entry where the arithmetic wraps, and the claim says so.**
+`a[i] * b[i]` and the running accumulator are `uint64`; at large seeds they
+genuinely reduce mod 2⁶⁴, and four corpus rows exercise that deliberately.
+The theorem does **not** add a hypothesis excluding the wrap region — that
+would throw away exactly the interesting rows. Instead the specification is
+the wrapped one: `(Σ aᵢ·bᵢ) mod 2⁶⁴`, **one** modular reduction of the true
+integer sum. That single reduction equals the machine's per-step wrapping
+because `mod` distributes over the sum — and that equality is *proved*
+(`dpAcc_eq`), not assumed. Compare `powmod` just above, which made the
+opposite choice and excluded its wrap region; both are honest, and each
+entry says which it did.
+
+**The theorem** (`proofs/GoLeanProofs/Examples/DotProduct.lean`):
+
+<!-- verbatim: proofs/GoLeanProofs/Examples/DotProduct.lean -->
+```lean
+theorem dotprod_ok (n seed : Nat) (hcap : n ≤ 8) (hseed : seed < 2 ^ 64) :
+    ∃ av bv : List Int, av.length = n ∧ bv.length = n ∧
+      ∃ N : Nat, ∀ fuel : Nat, N ≤ fuel → ∀ ch : Choices,
+        runFunctionWithContextM fuel dotprodLowered.typeDefs.toList
+            dotprodLowered.funcs dotprodHarnessRFunc
+            #[.int (n : Int) .uint64, .int (seed : Int) .uint64]
+            dotprodLowered.methods ch
+          = .ok { values := #[dpArr8 av, dpArr8 bv,
+                              .int (dotSpec av bv) .uint64] } := by
+```
+
+**Axioms** (pinned in `proofs/Audit/DotProduct.lean`):
+
+<!-- verbatim: proofs/Audit/DotProduct.lean -->
+```lean
+/-- info: 'GoLean.Examples.DotProduct.dotprod_ok' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+```
+
+<!-- verbatim: proofs/Audit/DotProduct.lean -->
+```lean
+/-- info: 'GoLean.Examples.DotProduct.dotprod_readout' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+```
+
+Lean's classical trio; no `sorry`, no native evaluation, no project axioms.
+
+**Domain bounds, attributed.** `seed < 2^64` is **Go's domain**, the whole of
+it. `n ≤ 8` is **the program's own arithmetic** — `dotCapN = 8` is visible in
+the corpus Go, and the fixed-cap arrays plus zero padding exist only so the
+multiplied values can cross Go's pass-by-value observation boundary. The
+summation and the modular reduction are **mathematics**. Machine
+idealization as elsewhere: empty heap at entry, unbounded heap, allocation
+always succeeds.
+
+**Two disclosures the statement does not make on its face.** First, `∃ av bv`
+is **family-determined**: the witnesses are `av = [seed, seed+1, …]` (wrapped)
+and `bv = [1, …, n]`, and the statement merely avoids naming them — making
+the input genuine ∀-data needs the ghost rung-1 annotation, which is designed
+and not built. Second, the subject's **min-length guard is not exercised** by
+this harness: both slices have length `n`, so `len(b) < n` is false on every
+run the theorem covers. The mismatched-length corpus row `uneven` pins that
+branch differentially; the theorem claims the harness's runs and nothing
+more.
+
+**Fuel bound.** `N = 237·n + 398`, and for this harness the bound is
+**exact**: every loop iteration is branch-free, so the composed step count is
+an equality rather than a worst case, and the probe-measured counts coincide
+with it at `n = 0…8` (398, 635, 872, 1109, 1346, 1583, 1820, 2057, 2294).
+Per-loop: 70 steps per setup iteration (two stores), 53 per copy iteration in
+each of the two copy loops, 61 per accumulate iteration. Bound and
+measurement agree *here*; the entry says so rather than letting the reader
+assume it, because in `powmod` and `histogram` they do not.
+
+**Status.** NOT DESIGNATED — see the note in *How to read an entry*. Added by
+the gallery campaign (2026-08-15). In-build it has the `rfl` lowering pins
+(`dotProduct_pin` on the subject, `dotprodHarnessRFunc_pin` on the harness),
+the golden-lowering guard on both links, and the axiom pins above. Its
+deletion test was RUN by hand — `lean_minimal_hypotheses` on `dotprod_ok`,
+**all three explicit binders load-bearing**. `dotprod_readout` is the
+run-conditioned twin.
+
+**Ground.** Differentially green on 14 corpus rows: `four-typical`,
+`four-zero-vec`, `four-same`, `four-wrap`, `one`, `one-wrap`, `empty`,
+`uneven` (the min-length guard), and the relational harness at
+`harness-r-empty`, `harness-r-one`, `harness-r-mid`, `harness-r-cap`,
+`harness-r-wrap-max` and `harness-r-wrap-62`. The last four are the wrap
+region — inside the theorem's domain, not excluded from it.
 
 ## The derived twins, and the one axiom line they share
 
