@@ -1,0 +1,10 @@
+# id	subject	args	expected_status	expected_reason	features
+zero-zero	steinGCD	0,0	ok	-	ints,widths,loops,bools,if,multi_assign
+a-zero	steinGCD	7,0	ok	-	ints,widths,loops,bools,if,multi_assign
+zero-b	steinGCD	0,9	ok	-	ints,widths,loops,bools,if,multi_assign
+coprime	steinGCD	17,13	ok	-	ints,widths,loops,bools,if,multi_assign
+common	steinGCD	12,18	ok	-	ints,widths,loops,bools,if,multi_assign
+pow2	steinGCD	4096,1024	ok	-	ints,widths,loops,bools,if,multi_assign
+big	steinGCD	9223372036854775807,3074457345618258602	ok	-	ints,widths,loops,bools,if,multi_assign
+harness-common	stein_harness	12,18	ok	-	ints,widths,loops,bools,if,multi_assign
+harness-big	stein_harness	9223372036854775807,3074457345618258602	ok	-	ints,widths,loops,bools,if,multi_assign

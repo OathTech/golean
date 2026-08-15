@@ -44,6 +44,7 @@ PINS=(
   "Corpus/coverage/exec/examples/stack|baselines/golden/stack-lowered.repr|GoLean.Examples.SliceStack.stackLowered"
   "Corpus/coverage/exec/examples/queue|baselines/golden/queue-lowered.repr|GoLean.Examples.SliceQueue.queueLowered"
   "Corpus/coverage/exec/examples/strrev|baselines/golden/strrev-lowered.repr|GoLean.Examples.StringReverse.strrevLowered"
+  "Corpus/coverage/exec/examples/stein|baselines/golden/stein-lowered.repr|GoLean.Examples.Stein.steinLowered"
   "Corpus/coverage/exec/examples/selsort|baselines/golden/selsort-lowered.repr|GoLean.Examples.SelectionSort.selsortLowered"
 )
 
@@ -62,7 +63,7 @@ export GOCACHE="${GOCACHE:-$ROOT/artifacts/go-build-cache}"
 # means not relying on the next run's self-heal, on either link.)
 lake build GoLean.NativeToIR > /dev/null \
   || { echo "check-golden: FAIL — NativeToIR (decoder) build failed (fail closed)" >&2; exit 1; }
-(cd proofs && lake build GoLeanProofs.Specs.GoldenProgram GoLeanProofs.Specs.GoldenQuorum GoLeanProofs.Examples.FibProgram GoLeanProofs.Examples.ReverseProgram GoLeanProofs.Examples.GcdProgram GoLeanProofs.Examples.MinMaxProgram GoLeanProofs.Examples.BinSearchProgram GoLeanProofs.Examples.InsertionSortProgram GoLeanProofs.Examples.WordCountProgram GoLeanProofs.Examples.HistogramProgram GoLeanProofs.Examples.BubbleSortProgram GoLeanProofs.Examples.TwoSumProgram GoLeanProofs.Examples.RunLengthProgram GoLeanProofs.Examples.PowModProgram GoLeanProofs.Examples.ArrayPalindromeProgram GoLeanProofs.Examples.DedupAdjacentProgram GoLeanProofs.Examples.KadaneProgram GoLeanProofs.Examples.DotProductProgram GoLeanProofs.Examples.SieveProgram GoLeanProofs.Examples.MatMulProgram GoLeanProofs.Examples.SliceStackProgram GoLeanProofs.Examples.SliceQueueProgram GoLeanProofs.Examples.StringReverseProgram GoLeanProofs.Examples.SelectionSortProgram > /dev/null) \
+(cd proofs && lake build GoLeanProofs.Specs.GoldenProgram GoLeanProofs.Specs.GoldenQuorum GoLeanProofs.Examples.FibProgram GoLeanProofs.Examples.ReverseProgram GoLeanProofs.Examples.GcdProgram GoLeanProofs.Examples.MinMaxProgram GoLeanProofs.Examples.BinSearchProgram GoLeanProofs.Examples.InsertionSortProgram GoLeanProofs.Examples.WordCountProgram GoLeanProofs.Examples.HistogramProgram GoLeanProofs.Examples.BubbleSortProgram GoLeanProofs.Examples.TwoSumProgram GoLeanProofs.Examples.RunLengthProgram GoLeanProofs.Examples.PowModProgram GoLeanProofs.Examples.ArrayPalindromeProgram GoLeanProofs.Examples.DedupAdjacentProgram GoLeanProofs.Examples.KadaneProgram GoLeanProofs.Examples.DotProductProgram GoLeanProofs.Examples.SieveProgram GoLeanProofs.Examples.MatMulProgram GoLeanProofs.Examples.SliceStackProgram GoLeanProofs.Examples.SliceQueueProgram GoLeanProofs.Examples.StringReverseProgram GoLeanProofs.Examples.SteinProgram GoLeanProofs.Examples.SelectionSortProgram > /dev/null) \
   || { echo "check-golden: FAIL — pin module build failed (fail closed)" >&2; exit 1; }
 
 for pin in "${PINS[@]}"; do
@@ -119,6 +120,7 @@ import GoLeanProofs.Examples.MatMulProgram
 import GoLeanProofs.Examples.SliceStackProgram
 import GoLeanProofs.Examples.SliceQueueProgram
 import GoLeanProofs.Examples.StringReverseProgram
+import GoLeanProofs.Examples.SteinProgram
 import GoLeanProofs.Examples.SelectionSortProgram
 def main : IO Unit :=
   IO.println (repr $TERM)

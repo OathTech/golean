@@ -149,6 +149,8 @@ import GoLeanProofs.Examples.SliceQueueProgram
 import GoLeanProofs.Examples.SliceQueue
 import GoLeanProofs.Examples.StringReverseProgram
 import GoLeanProofs.Examples.StringReverse
+import GoLeanProofs.Examples.SteinProgram
+import GoLeanProofs.Examples.Stein
 import GoLeanProofs.Examples.SelectionSortProgram
 import GoLeanProofs.Examples.SelectionSort
 
