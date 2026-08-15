@@ -1,0 +1,14 @@
+# id	subject	args	expected_status	expected_reason	features
+# Go-run-confirmed expected splits (2026-08-15, .tmp/probes/wordfreq-expect):
+#   fcEmpty (0,"") · fcAllSpace (0,"") · fcSingle (1,"abc")
+#   fcLeadTrail (2,"ab|cd") · fcConsecMixed (4,"a|b|c|d")
+#   fcUnicodeSpace (5,"a|bc|d|d|e") · fcUnicodeNonSpace (2,"a​b|ÿc")
+#   fcInvalidUTF8 (2,"\xffa|b\xe2\x80")
+empty	fcEmpty	-	ok	-	strings,slices,loops,if,ints,stdlib
+all-space	fcAllSpace	-	ok	-	strings,slices,loops,if,ints,stdlib
+single	fcSingle	-	ok	-	strings,slices,loops,if,ints,stdlib
+lead-trail	fcLeadTrail	-	ok	-	strings,slices,loops,if,ints,stdlib
+consec-mixed	fcConsecMixed	-	ok	-	strings,slices,loops,if,ints,stdlib
+unicode-space	fcUnicodeSpace	-	ok	-	strings,slices,loops,if,ints,stdlib
+unicode-non-space	fcUnicodeNonSpace	-	ok	-	strings,slices,loops,if,ints,stdlib
+invalid-utf8	fcInvalidUTF8	-	ok	-	strings,slices,loops,if,ints,stdlib

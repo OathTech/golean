@@ -1,236 +1,25 @@
 # GoLean native-frontend full-corpus differential baseline
-# recorded: 2026-08-15  commit: gallery campaign G2 extension E3 BUILT
-#   (calls in short-circuit operands) — the frontend normalization + the
-#   46-row flip + the deliberate stein golden drift, one commit
-#   re-pin reason: EXACTLY 46 flips FAIL/frontend-export -> PASS/-, no
-#   other change; regenerated from this commit's full run. The
-#   normalization (tools/nativefrontend emitBinary + hoist + one wire.go
-#   field): the RHS of &&/|| is emitted once into its own accumulator
-#   with the quarantine still set and only the single hoist()
-#   temp-binding path admitted; an empty accumulator keeps the pre-E3
-#   inline lowering byte-identical; otherwise the operation normalizes
-#   to the spec's own rewrite as statements
-#     $cN := <x>; if $cN { <y hoists>; $cN = <y> }    (&&; || with !$cN)
-#   — fidelity argument, risk classes, boundary:
-#   docs/gallery-campaign-log/g2.md "E3 — THE FIDELITY ARGUMENT" and the
-#   BUILT record. NO GoCore change, NO decoder change.
-#   The 46 flipped ids, all the SAME standing quarantine lifted:
-#     the 28-row acceptance set — bools/short-circuit-effects/* (16, the
-#     E3 guardrails committed RED one commit earlier),
-#     bools/short-circuit-{and,or,call-operand} (3), examples/stein/*
-#     (9, E3's pulled consumer);
-#   PLUS 18 rows the acceptance set had not enumerated, surfaced by the
-#   full run (the quarantine's true blast radius — a FINDING, recorded
-#   in the BUILT record, not an anomaly): bools/left-to-right
-#   (mark(true,1) && mark(true,2)), interfaces/error-idioms/
-#   extra-interface-assertion (ok && x.Temporary(), an interface METHOD
-#   call in the RHS), and 16 imported-goose/* rows whose test idiom is
-#   literally `ok = ok && testFn(...)` (shortcircuiting/{and,or}-{f-t,t-f},
-#   operations/{add64,sub64,reverse-assign-ops64,failing-reverse-assign-
-#   ops32}-equals-family, closures/closure-basic, maps/iterate-map,
-#   structs/struct-updates, type-equality/{primitive,list,defined-str}-
-#   types-equal, generics/generic-conversion, interfaces/binary-expr-
-#   interface). Every one is a genuine differential PASS against go run.
-#   Fail-closed remainder probe-verified after the build: a channel
-#   receive and a make in a short-circuit RHS still refuse
-#   per-declaration with their standing reasons.
-#   The 8 comparisons/short-circuit/* panic-timing pins and the 2
-#   channels/recv-order BUG-032 fail-closed rows are byte-identical in
-#   this run — the pure-RHS inline lowering did not move.
-#   Golden drift, deliberate, same commit: baselines/golden/
-#   stein-lowered.repr (the steinGCD quarantine stub becomes the real
-#   lowering; SteinProgram.lean regenerated from the fresh repr;
-#   check-golden green on both links).
-#   Drift check on this run: EXACTLY the 46 flips above; nothing NEW,
-#   nothing MISSING, no other id changed result or stage.
-#   frontend: native  oracle: go run (strict lane) / go-run membership in the
-#   machine-enumerated observation set, sampled plain AND under -race
-#   (membership lane; go1.26.5) / schedule-tree singleton certification +
-#   strict go-run equality (confluent lane) / every-enumerated-path-refuses
-#   + go run -race red (racy lane; never combined with deadlock)
-# manifest_cases: 1807  pass: 1709  fail: 98
-# previous record: 2026-08-15  commit: gallery campaign G2 extension E3 GUARDRAILS
-#   (calls in short-circuit operands) — fidelity argument + risk-pinning
-#   rows, committed BEFORE the implementation
-#   re-pin reason: 16 NEW rows, all deliberate expected FAILs, no other
-#   change. bools/short-circuit-effects/* pins the E3 risk classes named
-#   in the fidelity argument (docs/gallery-campaign-log/g2.md, "E3 — THE
-#   FIDELITY ARGUMENT"): double evaluation and eager right-operand
-#   evaluation (scCount: result*100+evals over a package-level counter),
-#   left-to-right + exactly-when-needed order (scOrder: || digit trace),
-#   nested `f(a) && (g(b) || h(c))` (scNested), per-iteration
-#   re-evaluation of a short-circuit loop guard — the stein shape
-#   isolated (scLoop), and expression-position consumption (scAssign).
-#   Expected values hand-computed from the spec rewrite and verified
-#   against `go run` before landing (probe transcript in the unit
-#   record). All 16 classify verbatim
-#     stage=frontend-export
-#     "status":"unsupported"
-#     "normalizing frontend-quarantined: call/allocation in short-circuit
-#      operand (would change evaluation order)"
-#   — the SAME standing quarantine the 9 stein rows and the 3 older
-#   bools/short-circuit-* rows pin. Expected_status stays ok because
-#   that is the Go-side truth; nothing was hoisted to make them pass.
-#   Acceptance for the E3 build: these 16 + stein's 9 + the 3 older
-#   short-circuit rows flip to PASS with zero drift elsewhere (the 8
-#   comparisons/short-circuit/* panic-timing pins, all PASS, must NOT
-#   move — they pin the pure-RHS inline lowering the normalization
-#   leaves byte-identical).
-#   Drift check on this run: EXACTLY the 16 new ids, every one
-#   "NEW id" -> FAIL/frontend-export. No pre-existing id changed result
-#   or stage — the 1791 previously recorded cases are byte-identical in
-#   both columns.
-#   frontend: native  oracle: go run (strict lane) / go-run membership in the
-#   machine-enumerated observation set, sampled plain AND under -race
-#   (membership lane; go1.26.5) / schedule-tree singleton certification +
-#   strict go-run equality (confluent lane) / every-enumerated-path-refuses
-#   + go run -race red (racy lane; never combined with deadlock)
-# manifest_cases: 1807  pass: 1663  fail: 144
-# previous record: 2026-08-15  commit: gallery campaign G2 extension E1 (differential
-#   driver --arg past int64) — corpus + driver, one commit
-#   re-pin reason: 15 NEW rows and ONE PAIR OF RENAMES, no other change.
-#   E1 removed the ONE-SIDED limit that kept the differential's argument
-#   domain narrower than the machine's: the Go-oracle harness generator
-#   parsed arguments with strconv.ParseInt(part, 10, 64), so any literal
-#   in [2^63, 2^64) was rejected before `go run` ever saw it, verbatim
-#     invalid integer argument "18446744073709551615": strconv.ParseInt:
-#     parsing "18446744073709551615": value out of range
-#   while the machine side has always accepted the full uint64 range
-#   (--arg-int parses arbitrary-precision Int). tools/coverageharness now
-#   tries ParseInt first and falls back to ParseUint, so the signed domain
-#   (kadane reaches -9223372036854775808) is byte-identically unchanged and
-#   only [2^63, 2^64) is newly expressible.
-#   GUARDRAILS FIRST, and measured: all 15 rows were committed and RUN
-#   BEFORE the driver change — every one FAILED at stage=go-harness with
-#   the message above (15/15). After the change, 15/15 PASS: real `go run`
-#   and the machine agree everywhere in the wrap region. NO FIDELITY
-#   FINDING; the machine was not touched (no Lean source in this change).
-#   The 15 rows, in the region [2^63, 2^64):
-#     examples/dotprod/{four-wrap-u64max,one-wrap-u64max,
-#       harness-r-wrap-u64max,harness-r-wrap-63}  (the designated
-#       consumer's four probe-verified wrap shapes, lifted from the
-#       int64-max boundary into the true wrap region)
-#     examples/reverse/{four-u64max,harness-wrap-max,harness-v-wrap-max}
-#     examples/minmax/{four-u64max,harness-wrap-max,harness-r-wrap-max}
-#     examples/isort/{four-u64max,harness-wrap-max}
-#     examples/wordcount/{four-u64max,harness-wrap-max,harness-r-wrap-max}
-#   — the four families the 2026-08-14/15 audits probed at 2^64-1 BY HAND,
-#   now permanent oracle rows rather than transcript claims.
-#   THE CHARTERED RENAME IS *NOT* IN THIS RE-PIN, deliberately. E1's
-#   charter item also names a rename: examples/reverse/harness-wrapping ->
-#   harness-near-max (seed 9223372036854775805 with n=4 tops out at exactly
-#   2^63, so NOTHING WRAPS and the id names a behaviour it never
-#   exercised). It was made, it ran green, and then the re-pin guard in
-#   scripts/ci refused it: the guard compares PASS-id SETS, so a RENAMED id
-#   is indistinguishable from one that FLIPPED to FAIL, and its only
-#   discharge is a `- Cases:` line in docs/BUGS.md — the fidelity-bug
-#   index. Calling a rename a fidelity bug to buy a green gate is
-#   laundering, so the rename was BACKED OUT and the event handed to the
-#   operator with a drafted guard amendment (rename/retirement discharged
-#   HERE, in this header, where the explanation belongs; regression still
-#   discharged in BUGS.md). See docs/gallery-campaign-log/g2.md. No corpus
-#   id has ever been renamed or retired in the recorded history — the
-#   guard has never met this event, and it fails closed, which is right.
-#   Drift check on this run: EXACTLY 15 "NEW id", all -> PASS/-. Nothing
-#   MISSING, no id renamed, no other id changed result or stage — the 1776
-#   previously recorded cases are byte-identical in both columns, and the
-#   FAIL count is unchanged at 128 (still the 9 stein frontend-export rows
-#   plus the pre-existing 119).
-#   frontend: native  oracle: go run (strict lane) / go-run membership in the
-#   machine-enumerated observation set, sampled plain AND under -race
-#   (membership lane; go1.26.5) / schedule-tree singleton certification +
-#   strict go-run equality (confluent lane) / every-enumerated-path-refuses
-#   + go run -race red (racy lane; never combined with deadlock)
-# manifest_cases: 1791  pass: 1663  fail: 128
-# previous record: 2026-08-15  commit: gallery campaign G1 unit G1.2 (THE GUARDRAILS WAVE)
-#   re-pin reason: 203 NEW explained rows in ONE dated event — the
-#   corpus half of every remaining G1 gallery example, landed BEFORE any
-#   of their proofs exist (guardrails-first) so the proof units can then
-#   run as parallel lanes without contending on this file. Sixteen new
-#   directories under Corpus/coverage/exec/examples, one commit each:
-#     bubble 14  selsort 14  twosum 14  rle 14  powmod 13  palin 14
-#     dedup 13   kadane 14   dotprod 14  sieve 11  matmul 11  stack 13
-#     queue 13   strrev 12   fibmemo 10  ... all PASS (194 rows), and
-#     stein 9 ... all FAIL at stage frontend-export (see below).
-#   NO NEW FRONTEND CAPABILITY is claimed. Every construct these rows
-#   use was PROBED through the real pipeline before the examples were
-#   written (append, slice truncation/re-slicing, 2-D fixed arrays,
-#   []bool, signed int64 with negative args, the string constructs, map
-#   string keys, comma-ok map reads); what is new is the COMBINATION
-#   inside examples whose harnesses the Lean headlines will run.
-#   THE NINE FAILING ROWS ARE DELIBERATE AND EXPECTED, not a
-#   regression and not laundered: examples/stein/* is binary GCD in its
-#   NATURAL Go form, whose `for isEven(a) && isEven(b)` puts a call in a
-#   short-circuit operand. The frontend quarantines that, fail-closed
-#   and per-declaration, so all nine rows classify
-#     stage=frontend-export
-#     "status":"unsupported"
-#     "normalizing frontend-quarantined: call/allocation in short-circuit
-#      operand (would change evaluation order)"
-#   The rows keep expected_status = ok because that is the GO-side truth
-#   (steinGCD agrees with the gcd example's Euclid on a 100,000-pair
-#   sweep, zero mismatches); the calls were NOT hoisted to make them
-#   pass. They are the guardrail for extension E3, pinned before the
-#   extension is built — docs/gallery-campaign-log/g2.md records stein
-#   as E3's consumer-to-be, and when E3 lands these nine flipping to
-#   PASS is its acceptance test.
-#   Drift check on this run: EXACTLY the 203 new ids, every one reported
-#   as "NEW id (not in baseline)". No pre-existing id changed result or
-#   stage — the 1573 previously recorded cases are byte-identical in
-#   both columns.
-#   frontend: native  oracle: go run (strict lane) / go-run membership in the
-#   machine-enumerated observation set, sampled plain AND under -race
-#   (membership lane; go1.26.5) / schedule-tree singleton certification +
-#   strict go-run equality (confluent lane) / every-enumerated-path-refuses
-#   + go run -race red (racy lane; never combined with deadlock)
-# manifest_cases: 1776  pass: 1648  fail: 128
-# previous record: 2026-08-15  commit: gallery campaign G1 unit 1 (histogram, the flagship example)
-#   re-pin reason: 13 NEW explained rows — the campaign's first corpus
-#   touch adds the `histogram` map example
-#   (Corpus/coverage/exec/examples/histogram): the `histogram` subject
-#   (count map, then a queried-key index read and a variable-free
-#   `for range` over the map), three plain drivers, and the S3
-#   relational harness `histogram_harness_r`. These are GUARDRAIL rows
-#   for a proof-carrying gallery example, not new frontend capability:
-#   `for range m {}` is already exercised by maps/clear-during-range and
-#   native-smoke/maprange, and absent-key index reads by the maps/ rows.
-#   What is new is the COMBINATION inside an example whose harness the
-#   Lean headline runs. Rows: examples/histogram/{distinct,all-same,
-#   mode-three,miss,one,one-miss,empty,harness-r-seven,harness-r-eight,
-#   harness-r-one,harness-r-empty,harness-r-miss,harness-r-wrap}. All 13
-#   PASS. No other id moved (PASS/FAIL sets and stages unchanged from
-#   the 2026-08-14 record; drift check: exactly the 13 new ids).
-#   frontend: native  oracle: go run (strict lane) / go-run membership in the
-#   machine-enumerated observation set, sampled plain AND under -race
-#   (membership lane; go1.26.5) / schedule-tree singleton certification +
-#   strict go-run equality (confluent lane) / every-enumerated-path-refuses
-#   + go run -race red (racy lane; never combined with deadlock)
-# manifest_cases: 1573  pass: 1454  fail: 119
-# previous record: 2026-08-14  commit: examples phase-2 slice 1.5 (wordcount_harness_r re-landed)
-#   re-pin reason: 3 NEW explained rows — slice 1.5 retired the
-#   `wc_empty_run` long-concrete-run cost blocker (the proof is now
-#   program-generic; 50.8 GiB -> 1.9 GiB, statement byte-identical), so
-#   the `wordcount_harness_r` S3 relational harness REVERTED in slice 1
-#   is re-landed exactly as recorded (scoping study §4.7; slice record
-#   §"Slice 1.5"): examples/wordcount/harness-r-{seven,eight,empty}.
-#   All 3 PASS. No other id moved (PASS/FAIL sets and stages unchanged
-#   from the slice-1 record; drift check: exactly the 3 new ids).
-# previous record: 2026-08-14  commit: examples phase-2 slice 1 (spec-style swap harnesses)
-#   re-pin reason: 7 NEW explained rows — the slice-1 spec-style swaps added
-#   a second harness to two example programs (scoping study §9's
-#   recommendations, ghost rung 0 / real Go):
-#   `reverse_harness_v` (S1 copy-relational — checks against a saved
-#   pre-copy instead of re-deriving the setup formula) at
-#   examples/reverse/harness-v-{five,empty,wrapping}, and
-#   `minmax_harness_r` (S3 relational — returns the pre-state as a
-#   fixed-cap `[8]uint64` alongside `(lo,hi)`) at
-#   examples/minmax/harness-r-{five,one,eight,empty-panics}. All 7 PASS.
-#   New coverage bought: the fixed-size-array RETURN path and stores into
-#   an array-typed local. No other id moved (PASS/FAIL sets and stages
-#   unchanged from the 2026-08-13 record). wordcount's S3 harness was
-#   written and green but REVERTED — see
-#   `docs/2026-08-14_phase2-slice1-spec-swaps.md` for the measured
-#   `wc_empty_run` cost blocker.
+# recorded: 2026-08-15  commit: gallery campaign G2 extension E5 guardrails
+#   (stdlib selector-call shims, scoped to strings.Fields) — the fidelity
+#   argument + 23 guardrail rows, RED FIRST, before any frontend change
+#   re-pin reason: EXACTLY 23 NEW ids, no existing id changed result or
+#   stage; regenerated from this commit's full run. 22 of the new rows
+#   land FAIL/frontend-export at the standing quarantine verbatim
+#   ("selector call Fields is not a method value") — the E5 guardrails:
+#   examples/wordfreq/* (14 of 15: the consumer, word frequency over a
+#   string via strings.Fields + map[string]uint64) and
+#   strings/fields-conformance/* (8: the shim's dedicated conformance
+#   suite — empty/all-space/single/lead-trail/consec-mixed edges, the
+#   non-ASCII White_Space members, the White_Space=No negative pin, and
+#   invalid UTF-8; expected splits go-run-confirmed, recorded in that
+#   cases.tsv). The 23rd row (examples/wordfreq/build-text) exercises
+#   only the harness's setup builder and PASSES — the control.
+#   Fidelity argument, risk classes, scope boundary:
+#   docs/gallery-campaign-log/g2.md "E5 — THE FIDELITY ARGUMENT".
+#   NO frontend change, NO GoCore change, NO Lean change in this commit;
+#   the flip of the 22 red rows is E5's acceptance test when it builds.
+# columns: result, id, stage (features/detail omitted on purpose)
+# frontend: native (tools/nativefrontend + GoLean/NativeToIR.lean)
 PASS	arrays/array-bounds	-
 PASS	arrays/array-comparable	-
 PASS	arrays/array-copy	-
@@ -902,6 +691,21 @@ PASS	examples/wordcount/harness-wrap-max	-
 PASS	examples/wordcount/mode-three	-
 PASS	examples/wordcount/one	-
 PASS	examples/wordcount/two-pairs	-
+PASS	examples/wordfreq/build-text	-
+FAIL	examples/wordfreq/harness-eight	frontend-export
+FAIL	examples/wordfreq/harness-empty	frontend-export
+FAIL	examples/wordfreq/harness-mid	frontend-export
+FAIL	examples/wordfreq/harness-one	frontend-export
+FAIL	examples/wordfreq/harness-one-miss	frontend-export
+FAIL	examples/wordfreq/harness-qwrap	frontend-export
+FAIL	examples/wordfreq/harness-twelve	frontend-export
+FAIL	examples/wordfreq/harness-wrap	frontend-export
+FAIL	examples/wordfreq/lit-all-same	frontend-export
+FAIL	examples/wordfreq/lit-basic	frontend-export
+FAIL	examples/wordfreq/lit-empty	frontend-export
+FAIL	examples/wordfreq/lit-miss	frontend-export
+FAIL	examples/wordfreq/lit-space-only	frontend-export
+FAIL	examples/wordfreq/lit-tabs-newlines	frontend-export
 PASS	floats/compound-assign	-
 PASS	floats/defined-incdec	-
 PASS	floats/defined-type-ops	-
@@ -1870,6 +1674,14 @@ PASS	strings/byte-slice-to-string-copy	-
 PASS	strings/concat-eval-order	-
 PASS	strings/defined-copy-invalid-utf8	-
 FAIL	strings/defined-slice-string-conversion	lean-observation
+FAIL	strings/fields-conformance/all-space	frontend-export
+FAIL	strings/fields-conformance/consec-mixed	frontend-export
+FAIL	strings/fields-conformance/empty	frontend-export
+FAIL	strings/fields-conformance/invalid-utf8	frontend-export
+FAIL	strings/fields-conformance/lead-trail	frontend-export
+FAIL	strings/fields-conformance/single	frontend-export
+FAIL	strings/fields-conformance/unicode-non-space	frontend-export
+FAIL	strings/fields-conformance/unicode-space	frontend-export
 PASS	strings/index-eval-order	-
 PASS	strings/literal-edge/interpreted-nul-byte	-
 PASS	strings/literal-edge/interpreted-octal-hex-escapes	-

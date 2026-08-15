@@ -1,0 +1,16 @@
+# id	subject	args	expected_status	expected_reason	features
+lit-basic	wfBasic	-	ok	-	strings,maps,range,loops,if,ints,stdlib
+lit-all-same	wfAllSame	-	ok	-	strings,maps,range,loops,if,ints,stdlib
+lit-miss	wfMiss	-	ok	-	strings,maps,range,loops,if,ints,stdlib
+lit-empty	wfEmpty	-	ok	-	strings,maps,range,loops,if,ints,stdlib
+lit-space-only	wfSpaceOnly	-	ok	-	strings,maps,range,loops,if,ints,stdlib
+lit-tabs-newlines	wfTabsNewlines	-	ok	-	strings,maps,range,loops,if,ints,stdlib
+build-text	buildText	5,1	ok	-	strings,loops,if,ints
+harness-empty	wordfreq_harness_r	0,7,1	ok	-	strings,maps,range,loops,if,ints,stdlib
+harness-one	wordfreq_harness_r	1,0,0	ok	-	strings,maps,range,loops,if,ints,stdlib
+harness-one-miss	wordfreq_harness_r	1,0,2	ok	-	strings,maps,range,loops,if,ints,stdlib
+harness-mid	wordfreq_harness_r	5,2,0	ok	-	strings,maps,range,loops,if,ints,stdlib
+harness-eight	wordfreq_harness_r	8,1,2	ok	-	strings,maps,range,loops,if,ints,stdlib
+harness-twelve	wordfreq_harness_r	12,0,1	ok	-	strings,maps,range,loops,if,ints,stdlib
+harness-wrap	wordfreq_harness_r	5,18446744073709551615,0	ok	-	strings,maps,range,loops,if,ints,stdlib,widths
+harness-qwrap	wordfreq_harness_r	3,0,18446744073709551615	ok	-	strings,maps,range,loops,if,ints,stdlib,widths
