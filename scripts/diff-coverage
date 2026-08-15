@@ -19,13 +19,18 @@ LEAN_TIMEOUT_SECONDS="${LEAN_TIMEOUT_SECONDS:-30}"
 LEAN_ENUM_TIMEOUT_SECONDS="${LEAN_ENUM_TIMEOUT_SECONDS:-300}"
 # tier=slow re-certification gets a larger budget still. The biggest slow
 # row (imported-goose/channel/google-search, ~40M pool steps) measures
-# 94 s single-core on the dev box; a hosted 2-core runner's slower core
-# lands near ~300 s, so the shared 300 s default sat exactly on the cliff
-# and flipped with runner speed — the 2026-08-13 nightly FAIL vs the
-# 08-14 PASS on the SAME commit was this timeout, nothing semantic
-# (docs/2026-08-14_ci-runner-death-and-slow-tier-timeout.md). Still a
-# hard bound — the guard stays fail-closed, it just no longer sits
-# inside normal runner variance. Quick-lane enumerations keep 300 s.
+# 94 s single-core on the dev box; a hosted 2-core runner plausibly lands
+# near ~300 s (ESTIMATED — inferred from the flake itself, not measured),
+# so the shared 300 s default sat on the cliff and flipped with runner
+# speed: the 2026-08-13 nightly FAIL vs the 08-14 PASS on the SAME commit
+# is best explained by this timeout — the enumeration is a deterministic
+# DFS over a wire-hash-pinned input, so a semantic failure could not flip
+# between runs; an enumerator OOM kill (exit 137) is the one load-
+# dependent alternative, which the exit-code-naming below now makes
+# distinguishable (docs/2026-08-14_ci-runner-death-and-slow-tier-
+# timeout.md). Still a hard bound — the guard stays fail-closed, it just
+# no longer sits inside normal runner variance. Quick-lane enumerations
+# keep 300 s.
 LEAN_ENUM_SLOW_TIMEOUT_SECONDS="${LEAN_ENUM_SLOW_TIMEOUT_SECONDS:-1200}"
 
 # GATE INTEGRITY (grossmith findings §2,
@@ -43,6 +48,24 @@ LEAN_ENUM_SLOW_TIMEOUT_SECONDS="${LEAN_ENUM_SLOW_TIMEOUT_SECONDS:-1200}"
 # 1 = FAIL rows exist and published results ARE authoritative;
 # >=2 = infrastructure, nothing published, nothing readable.
 rm -f "$RESULTS_TSV" "$META_TSV"
+
+# Timeout knobs must be positive integers (audit F1, 2026-08-15): the
+# perl wrapper below hands the value to `alarm`, and perl numifies a
+# non-numeric string to 0 — `alarm 0` CANCELS the alarm, so a plausible
+# operator value like "20m" (or this repo's own "=none" opt-out idiom)
+# would silently DISABLE the guard instead of failing loud. Same
+# fail-loud standard the lane params already get in parse_lane_params.
+# Placed after the rm above so a run dying here leaves no readable
+# stale results pair (the gate-integrity invariant).
+for _tvar in LAKE_BUILD_TIMEOUT_SECONDS GO_TIMEOUT_SECONDS \
+    LEAN_TIMEOUT_SECONDS LEAN_ENUM_TIMEOUT_SECONDS \
+    LEAN_ENUM_SLOW_TIMEOUT_SECONDS; do
+  if [[ ! "${!_tvar}" =~ ^[1-9][0-9]*$ ]]; then
+    echo "diff-coverage: $_tvar must be a positive integer (seconds), got '${!_tvar}' — refusing to run with a disabled or malformed timeout" >&2
+    exit 2
+  fi
+done
+unset _tvar
 
 run_with_timeout() {
   local seconds="$1"
@@ -531,9 +554,19 @@ run_case_rows() {
         conf_args+=(--arg-int "$v2")
       done
     fi
-    if ! run_with_timeout "$LEAN_ENUM_TIMEOUT_SECONDS" "$GOLEAN_BIN" "${conf_args[@]}" \
-        > "$conf_dir/observations.txt" 2> "$conf_dir/enum-stats.txt"; then
-      report_fail "$id" "$features" "confluent" "enumerator failed (schedule-confluence not certified): $(cat "$conf_dir/enum-stats.txt")"
+    local conf_rc=0
+    run_with_timeout "$LEAN_ENUM_TIMEOUT_SECONDS" "$GOLEAN_BIN" "${conf_args[@]}" \
+        > "$conf_dir/observations.txt" 2> "$conf_dir/enum-stats.txt" || conf_rc=$?
+    if [[ "$conf_rc" -ne 0 ]]; then
+      # Timeouts NAMED here too (audit F4, 2026-08-15): the empty-detail-
+      # on-timeout nit was originally RECORDED against this lane
+      # (goose-parity-parked.md, muxer/make-greeting) yet the first fix
+      # round named timeouts only in the membership lane.
+      local conf_what="enumerator failed (exit $conf_rc; schedule-confluence not certified)"
+      if [[ "$conf_rc" -eq 124 ]]; then
+        conf_what="enumerator TIMED OUT after ${LEAN_ENUM_TIMEOUT_SECONDS}s (schedule-confluence not certified)"
+      fi
+      report_fail "$id" "$features" "confluent" "$conf_what: $(cat "$conf_dir/enum-stats.txt")"
       return 0
     fi
     local conf_count
@@ -614,9 +647,15 @@ run_case_rows() {
         racy_args+=(--arg-int "$v3")
       done
     fi
-    if ! run_with_timeout "$LEAN_ENUM_TIMEOUT_SECONDS" "$GOLEAN_BIN" "${racy_args[@]}" \
-        > "$racy_dir/observations.txt" 2> "$racy_dir/enum-stats.txt"; then
-      report_fail "$id" "$features" "racy" "enumerator failed — 'every enumerated path refuses' not certified: $(cat "$racy_dir/enum-stats.txt")"
+    local racy_rc=0
+    run_with_timeout "$LEAN_ENUM_TIMEOUT_SECONDS" "$GOLEAN_BIN" "${racy_args[@]}" \
+        > "$racy_dir/observations.txt" 2> "$racy_dir/enum-stats.txt" || racy_rc=$?
+    if [[ "$racy_rc" -ne 0 ]]; then
+      local racy_what="enumerator failed (exit $racy_rc) — 'every enumerated path refuses' not certified"
+      if [[ "$racy_rc" -eq 124 ]]; then
+        racy_what="enumerator TIMED OUT after ${LEAN_ENUM_TIMEOUT_SECONDS}s — 'every enumerated path refuses' not certified"
+      fi
+      report_fail "$id" "$features" "racy" "$racy_what: $(cat "$racy_dir/enum-stats.txt")"
       return 0
     fi
     report_pass_lane "$id" "$features" "racy" \

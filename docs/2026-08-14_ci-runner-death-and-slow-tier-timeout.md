@@ -90,18 +90,26 @@ now[FAIL/membership]`. The next nightly (2026-08-14) ran the SAME commit
 (`ba6398ab`) and passed — a flake, on the lane whose whole meaning is
 soundness (observed ∈ modeled), so worth pinning down precisely.
 
-**Cause: the slow-tier re-enumeration straddles the enumerator timeout.**
-Under `--slow`, the row's `tier=slow` certified set is fully re-enumerated:
-39,976,295 pool steps, measured **94 s single-core on the dev box** —
-reproducing the certified 6-member set (all arrival-order permutations)
-exactly. The enumeration ran under the shared
-`LEAN_ENUM_TIMEOUT_SECONDS=300` wall-clock guard; a hosted 2-core runner's
-slower core lands near ~300 s, so ordinary runner variance flips the case.
-Corroboration: the 08-13 runner was ~7 % slower than the 08-14 runner
-across the whole differential (30m05s vs 28m14s for 1483 cases), and the
-two runs' pass/fail counts differ by exactly this one case. The Go-sampling
-half (ten sub-second `go run`s under a 30 s cap each) is not a plausible
-flake source. Nothing semantic moved; the certified set is intact.
+**Cause (best explanation): the slow-tier re-enumeration straddles the
+enumerator timeout.** Under `--slow`, the row's `tier=slow` certified set
+is fully re-enumerated: 39,976,295 pool steps, measured **94 s
+single-core on the dev box** — reproducing the certified 6-member set
+(all arrival-order permutations) exactly. The enumeration ran under the
+shared `LEAN_ENUM_TIMEOUT_SECONDS=300` wall-clock guard; a hosted 2-core
+runner plausibly lands near ~300 s (ESTIMATED, not measured — the ~300 s
+figure is inferred from the flake itself: >300 s on 08-13, <300 s on
+08-14), so ordinary runner variance flips the case. Corroboration: the
+08-13 runner was ~7 % slower than the 08-14 runner across the whole
+differential (30m05s vs 28m14s for 1483 cases); the two runs' pass/fail
+counts differ by exactly this one case; and the enumeration is a
+deterministic DFS over a wire-hash-pinned input, so a *semantic* failure
+could not flip between two runs of the same commit. The one
+load-dependent alternative the CI logs could not exclude (the 08-13
+detail never said which guard fired) is an enumerator OOM kill — exit
+137 rather than the wrapper's 124 — which the new exit-code naming makes
+distinguishable if it ever recurs. The Go-sampling half (ten sub-second
+`go run`s under a 30 s cap each) is not a plausible flake source.
+Nothing semantic moved; the certified set is intact.
 
 **Fix (this lane):**
 
@@ -109,13 +117,29 @@ flake source. Nothing semantic moved; the certified set is intact.
   `scripts/diff-coverage`, used for the enumeration exactly when
   `tier == slow`; quick-lane enumerations keep 300 s. Still a hard bound —
   fail-closed is unchanged, the guard just no longer sits inside normal
-  runner variance (~4× headroom over the estimated runner cost).
+  runner variance (~4× headroom over the ~300 s estimate; if the true
+  contended runner cost is higher the real margin is smaller — the number
+  to trust is the 94 s single-core measurement, not the estimate).
 - Timeouts are now NAMED in the FAIL detail ("enumerator TIMED OUT after
-  Ns"; other failures carry their exit code). The 08-13 flake was
+  Ns"; other failures carry their exit code) — in ALL three enumerating
+  lanes (membership, confluent, racy; the empty-detail nit was originally
+  recorded against the confluent lane in `docs/goose-parity-parked.md`,
+  muxer/make-greeting, and is closed there too). The 08-13 flake was
   undiagnosable from CI logs partly because the generic "enumerator
   failed" detail with an empty stats file never said which guard fired.
+- All five timeout knobs are validated as positive integers at startup
+  (audit F1, 2026-08-15): perl's `alarm` numifies a non-numeric value to
+  0, which CANCELS the alarm — so `LEAN_ENUM_SLOW_TIMEOUT_SECONDS=20m`
+  or the repo's `=none` idiom would have silently disabled the guard.
+  Malformed values now exit 2 with nothing published.
 - The measured cost is recorded in the row's `cases.tsv` comment,
   mirroring `rwmutex-order`'s convention.
+- Composition caveat, recorded: per-row budgets do not compose with the
+  job-level `timeout-minutes: 120`. Today's two slow rows run
+  concurrently under the pool and fit comfortably; if slow rows ever
+  multiply past core count, a hung enumeration could push the nightly
+  into the job timeout, which kills the step with nothing published —
+  re-check this arithmetic when adding slow rows.
 
 ## Follow-ups / open items
 
