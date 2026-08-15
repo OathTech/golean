@@ -1,5 +1,8 @@
 import GoLeanProofs.MapMem
 import GoLeanProofs.StepKit
+import GoLeanProofs.Examples.WordCount.CanonCount
+import GoLeanProofs.Examples.WordCount.Machine
+import GoLeanProofs.Examples.WordCount.Pure
 import GoLeanProofs.Examples.WordCount.RangeGeneric
 
 /-!

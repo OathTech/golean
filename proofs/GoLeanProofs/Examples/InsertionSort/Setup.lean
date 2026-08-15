@@ -4,6 +4,7 @@ import GoLeanProofs.SliceMem
 import GoLeanProofs.FuelMeasure
 import GoLeanProofs.StepKit
 import GoLeanProofs.Laws.StmtOps
+import GoLeanProofs.Examples.InsertionSort.Canon
 import GoLeanProofs.Examples.InsertionSort.Family
 import GoLeanProofs.Examples.Targets
 

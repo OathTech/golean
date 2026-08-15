@@ -1,4 +1,4 @@
-import GoLeanProofs.Examples.MinMax
+import GoLeanProofs.Examples.MinMax.Core
 import GoLeanProofs.Examples.Targets
 
 /-!

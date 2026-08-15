@@ -1,6 +1,7 @@
 import GoLeanProofs.Examples.WordCountProgram
 import GoLeanProofs.FuelMeasure
 import GoLeanProofs.Examples.WordCount.EmptyRun
+import GoLeanProofs.Examples.WordCount.Machine
 import GoLeanProofs.Examples.Targets
 
 /-!

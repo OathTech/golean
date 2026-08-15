@@ -5,7 +5,11 @@ import GoLeanProofs.StepKit
 import GoLeanProofs.Frame.Rename
 import GoLeanProofs.Frame.Sim
 import GoLeanProofs.Frame.Transfer
+import GoLeanProofs.Examples.InsertionSort.Canon
+import GoLeanProofs.Examples.InsertionSort.PassFrame
 import GoLeanProofs.Examples.InsertionSort.Rebuild
+import GoLeanProofs.Examples.InsertionSort.Setup
+import GoLeanProofs.Examples.InsertionSort.Subject
 
 /-!
 # InsertionSort — Count
