@@ -1,6 +1,6 @@
 # Verified examples — the gallery (2026-08-14)
 
-Thirteen Go programs, and for each one a GoLean theorem you can read.
+Fourteen Go programs, and for each one a GoLean theorem you can read.
 
 This file is the **object of agreement**: it exists so that a reader who is
 not a Lean expert can check, by eye, that the top-level statement really
@@ -124,7 +124,7 @@ exhaustion.
 
 `Choices` is the stream of nondeterministic decisions the machine consumes at
 points where Go does not promise an outcome. `∀ ch : Choices` says the claim
-holds at **every** such stream. For eleven of the thirteen examples this quantifier
+holds at **every** such stream. For eleven of the fourteen examples this quantifier
 is cheap (their runs consume no choices). For word-count and histogram it
 does real work: `for … range` over a Go map consumes one choice per
 iteration, because Go deliberately does not fix map iteration order — so the
@@ -2281,6 +2281,217 @@ rebased into the frame), the isort precedent at threshold 16.
 already-sorted (early exit on the first pass), all-equal, reverse-sorted
 (full pass count), duplicate, and near-`2^63` inputs, plus the harness at
 `n = 0/1/5/8` and a near-`2^63` seed.
+
+## rle — run-length encoding via `append`
+
+**The Go** (`Corpus/coverage/exec/examples/rle/main.go`):
+
+<!-- verbatim: Corpus/coverage/exec/examples/rle/main.go -->
+```go
+// rle: run-length encode s into two parallel slices (runValues,
+// runCounts), built with append — walk s, extending the current run
+// while the value repeats, starting a new run otherwise. INTERNAL
+// subject: it returns slices, so it is never a corpus subject directly;
+// the scalar drivers and the fixed-cap harness below observe it.
+func rle(s []uint64) ([]uint64, []uint64) {
+	runVals := []uint64{}
+	runCounts := []uint64{}
+	for i := 0; i < len(s); i++ {
+		k := len(runVals)
+		extended := false
+		if k > 0 {
+			if runVals[k-1] == s[i] {
+				runCounts[k-1]++
+				extended = true
+			}
+		}
+		if !extended {
+			runVals = append(runVals, s[i])
+			runCounts = append(runCounts, 1)
+		}
+	}
+	return runVals, runCounts
+}
+```
+
+<!-- verbatim: Corpus/coverage/exec/examples/rle/main.go -->
+```go
+// rle_harness_r: the S3 RELATIONAL harness (gallery campaign G1,
+// 2026-08-15). Setup builds the family s[i] = seed + i/3, so runs of
+// length up to 3 appear; the harness returns the PRE-STATE alongside
+// the encoded (runVals, runCounts) — all as fixed-cap arrays, the
+// pass-by-value fragment's unbounded-data workaround — plus the run
+// count k, so the Lean postcondition relates the returned data
+// DIRECTLY, with no family function re-describing the setup. Real Go,
+// ghost ladder rung 0.
+func rle_harness_r(n, seed uint64) ([rleCapN]uint64, [rleCapN]uint64, [rleCapN]uint64, uint64) {
+	s := make([]uint64, n)
+	for i := uint64(0); i < n; i++ {
+		s[i] = seed + i/3
+	}
+	var pre [rleCapN]uint64
+	for i := uint64(0); i < n; i++ {
+		pre[i] = s[i]
+	}
+	vals, counts := rle(s)
+	var runVals [rleCapN]uint64
+	var runCounts [rleCapN]uint64
+	for i := 0; i < len(vals); i++ {
+		runVals[i] = vals[i]
+		runCounts[i] = counts[i]
+	}
+	return pre, runVals, runCounts, uint64(len(vals))
+}
+```
+
+**The claim.** For every `n ≤ 3` and every `seed < 2^64`,
+`rle_harness_r(n, seed)` finishes normally, at every nondeterminism
+choice, and returns four values related as follows: `pre` is the
+length-`n` encoded input (zero-padded to the cap), `runVals` and
+`runCounts` hold exactly the value and count projections of
+`rleSpec pre` — the mathematician's run-length encoding, grouped maximal
+runs — zero-padded past the live prefix, and `k = (rleSpec pre).length`.
+The first-order corollary `rle_decode` states the DECODE relation with
+no `rleSpec` in the statement: the returned `vals`/`counts` lists have
+equal length `k`, the returned count is `vals.length`, and expanding
+each `(vals[j], counts[j])` pair back into a run reproduces the
+returned `pre` exactly.
+
+**What `∀ choices` means HERE, specifically.** `rle` builds its output
+slices with `append`. The machine's append-spill draws the fresh
+backing array's CAPACITY from the nondeterminism-choice stream — the
+envelope `[newLen, max 32 (2·growth)]`, arguing spec §Appending's "a
+new, sufficiently large underlying array" (any capacity ≥ the length is
+conforming). The theorem quantifies over EVERY stream, so it covers
+every capacity in that envelope: both spill capacities are carried
+symbolically through the proof (`capV, capC ∈ [1, 32]`, existential,
+never pinned), and the theorem shows nothing the harness returns
+depends on the draw. This is a genuine nondeterminism-envelope claim,
+not a replay of one allocator behavior.
+
+**Scope honesty — the claim's `n ≤ 3` is NOT the harness's own cap.**
+The harness's visible bound is `n ≤ 8` (`rleCapN`); the theorem proves
+the SINGLE-RUN regime `n ≤ 3`, where the family `seed + i/3` is
+constant, exactly one new-run event fires, and both its `append`s spill
+from cap 0. For `n ∈ [4, 8]` a second new-run event fires at `i = 3`,
+and whether ITS appends spill (allocate) or extend in place depends on
+the FIRST spill's choice-drawn capacity — so the machine's allocation
+layout downstream is choice-dependent, which the current
+literal-address raw-segment proof technology cannot follow. That regime
+is a RECORDED HONEST GAP (kit-gap ledger, lane B): the theorem simply
+does not speak about `n > 3`, and this entry claims nothing there.
+Consequently the encoding exercised by the proof always has exactly one
+run (`k = 1`, or `0` at `n = 0`): the extend path, both spills, the
+zero-padding, and the count reporting are all covered; a mid-stream
+run BOUNDARY (a `false` extend test) is not.
+
+**Domain bounds, attributed.** `n ≤ 3` — the proof's own regime bound
+(above; not mathematics, not Go). `seed < 2^64` — Go's `uint64` domain.
+The family wraps mod `2^64` by the program's own arithmetic and the
+theorem covers wrapping seeds. The fixed cap `8` is a TOY bound existing
+only so the data can cross Go's pass-by-value observation boundary as
+`[8]uint64`s. Machine idealization as everywhere: entry from an empty
+heap, unbounded heap, allocation always succeeds.
+
+**Input honesty:** the quantifiers are the scalars `(n, seed)` — an
+input *family*, not all slices. `∃ pre` in the theorem is
+family-determined (the witness is `s[i] = seed + i/3`, constant on this
+domain); the statement merely avoids saying so. Genuine ∀-data needs
+ghost rung 1.
+
+**The spec** (`proofs/GoLeanProofs/Examples/RunLength/Pure.lean`):
+
+<!-- verbatim: proofs/GoLeanProofs/Examples/RunLength/Pure.lean -->
+```lean
+def rleSpec : List Int → List (Int × Nat)
+  | [] => []
+  | x :: xs =>
+    match rleSpec xs with
+    | [] => [(x, 1)]
+    | (y, c) :: rest =>
+      if x = y then (x, c + 1) :: rest else (x, 1) :: (y, c) :: rest
+```
+
+with the general decode theorem (proved for ALL lists, not just this
+domain):
+
+<!-- verbatim: proofs/GoLeanProofs/Examples/RunLength/Pure.lean -->
+```lean
+theorem rleSpec_decode (l : List Int) :
+    (rleSpec l).flatMap (fun p => List.replicate p.2 p.1) = l := by
+```
+
+**The theorem** (`proofs/GoLeanProofs/Examples/RunLength.lean`):
+
+<!-- verbatim: proofs/GoLeanProofs/Examples/RunLength.lean -->
+```lean
+theorem rle_ok (n seed : Nat) (hcap : n ≤ 3) (hseed : seed < 2 ^ 64) :
+    ∃ pre : List Int, pre.length = n ∧
+      ∃ N : Nat, ∀ fuel : Nat, N ≤ fuel → ∀ ch : Choices,
+        runFunctionWithContextM fuel rleLowered.typeDefs.toList
+            rleLowered.funcs rleHarnessRFunc
+            #[.int (n : Int) .uint64, .int (seed : Int) .uint64]
+            rleLowered.methods ch
+          = .ok { values :=
+              #[rleArr8 pre,
+                rleArr8 ((rleSpec pre).map Prod.fst),
+                rleArr8 ((rleSpec pre).map (fun p => ((p.2 : Nat) : Int))),
+                .int (((rleSpec pre).length : Nat) : Int) .uint64] } := by
+```
+
+and the first-order decode corollary:
+
+<!-- verbatim: proofs/GoLeanProofs/Examples/RunLength.lean -->
+```lean
+theorem rle_decode (n seed : Nat) (hcap : n ≤ 3) (hseed : seed < 2 ^ 64) :
+    ∃ pre : List Int, pre.length = n ∧
+      ∃ N : Nat, ∀ fuel : Nat, N ≤ fuel → ∀ ch : Choices,
+        ∃ (vals counts : List Int),
+          runFunctionWithContextM fuel rleLowered.typeDefs.toList
+              rleLowered.funcs rleHarnessRFunc
+              #[.int (n : Int) .uint64, .int (seed : Int) .uint64]
+              rleLowered.methods ch
+            = .ok { values :=
+                #[rleArr8 pre, rleArr8 vals, rleArr8 counts,
+                  .int ((vals.length : Nat) : Int) .uint64] }
+          ∧ vals.length = counts.length
+          ∧ (List.zip vals counts).flatMap
+              (fun p => List.replicate p.2.toNat p.1) = pre := by
+```
+
+**Axioms** (pinned in `proofs/Audit/RunLength.lean`):
+
+<!-- verbatim: proofs/Audit/RunLength.lean -->
+```lean
+/-- info: 'GoLean.Examples.RunLength.rle_ok' depends on axioms: [propext, Classical.choice, Quot.sound] -/
+```
+
+Lean's classical trio; no `sorry`, no native evaluation, no project
+axioms.
+
+**Fuel bound.** Explicit and affine: `N = 253·n + 527` — a BOUND, not a
+measured law. The measured counts (probe, then re-derived exactly as
+segment sums, and choice-independent — spilling and in-place appends
+cost the same steps): `419` at `n = 0`, `780` at `n = 1`, `1033` at
+`n = 2`, `1286` at `n = 3`. The bound over-charges by up to 108 steps
+(`n = 0`); the true counts are affine on `n ∈ [1, 3]` (`253·n + 527`
+exactly) with `n = 0` below the line.
+
+**Status.** `rle_readout` is the run-conditioned twin; `rle_decode` the
+first-order corollary. The deletion test was RUN (both hypotheses
+load-bearing: dropping `hcap` breaks the case split, dropping `hseed`
+the entry normalization). Not designated; absent from `Targets.lean`
+and the Comparator trusted closure.
+
+**Ground.** Differentially green on 14 corpus rows: five four-element
+`rleFourCount` drivers (mixed, distinct, all-same, alternating, and an
+`int64`-extreme pair), two `rleFourFirst` drivers, one-element and
+empty drivers, and the relational harness at `(0,5)`, `(1,7)`, `(5,40)`,
+`(8,10)` and `(8, int64-max)`. Note the harness rows at `n = 5` and
+`n = 8` sit in the `n ∈ [4, 8]` regime the theorem does NOT cover — the
+differential guards the gap regime's oracle behavior (multiple runs,
+mid-stream boundaries) even though it is outside the machine proof; the
+`rleFour*` driver rows exercise multi-run encodings end-to-end as well.
 
 ## The derived twins, and the one axiom line they share
 
