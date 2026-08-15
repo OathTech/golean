@@ -1,3 +1,11 @@
+import GoLeanProofs.Examples.WordCountProgram
+import GoLeanProofs.EntryEq
+import GoLeanProofs.MapMem
+import GoLeanProofs.SliceMem
+import GoLeanProofs.FuelMeasure
+import GoLeanProofs.StepKit
+import GoLeanProofs.Laws.StmtOps
+import GoLeanProofs.MapLoops
 import GoLeanProofs.Examples.WordCount
 import GoLeanProofs.Examples.Targets
 

@@ -1,10 +1,9 @@
 import GoLeanProofs.Examples.InsertionSortProgram
 import GoLeanProofs.SliceMem
-import GoLeanProofs.FuelMeasure
-import GoLeanProofs.StepKit
+import GoLeanProofs.Frame.Rename
+import GoLeanProofs.Frame.Sim
 import GoLeanProofs.Frame.Transfer
 import GoLeanProofs.Frame.RenameId
-import GoLeanProofs.Laws.StmtOps
 import GoLeanProofs.Examples.InsertionSort.Canon
 
 /-!
@@ -21,7 +20,7 @@ example's design and the shard map.
 
 namespace GoLean.Examples.InsertionSort
 
-open GoLean GoLean.GoCore GoLean.GoCore.Machine GoLean.Surface
+open GoLean GoLean.GoCore GoLean.GoCore.Machine
 open GoLean.SliceMem
 
 set_option maxRecDepth 1000000
